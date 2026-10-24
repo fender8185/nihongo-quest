@@ -6184,6 +6184,28 @@ function init() {
   route();
   requestPersistence();
   dailySnapshot();
+  registerServiceWorker();
+}
+
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.register('./sw.js').then((reg) => {
+    const promptUpdate = (worker) => {
+      toast('有新版本可用，點這裡重新整理', 8000);
+      const el = document.getElementById('toast');
+      if (el) el.addEventListener('click', () => worker.postMessage({ type: 'SKIP_WAITING' }), { once: true });
+    };
+    if (reg.waiting && navigator.serviceWorker.controller) promptUpdate(reg.waiting);
+    reg.addEventListener('updatefound', () => {
+      const w = reg.installing;
+      if (!w) return;
+      w.addEventListener('statechange', () => {
+        if (w.state === 'installed' && navigator.serviceWorker.controller) promptUpdate(w);
+      });
+    });
+  }).catch(() => { /* offline or unsupported: app works without it */ });
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloading) { reloading = true; location.reload(); } });
 }
 init();
 
