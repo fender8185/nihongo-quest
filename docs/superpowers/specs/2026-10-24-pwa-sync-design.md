@@ -210,3 +210,4 @@
 - 託管：**GitHub Pages**，repo 根目錄直接發佈（不另設 `docs/` 子目錄）。
 - Supabase 區域：**東京 `ap-northeast-1`**，免費方案。
 - App icon：純色底（`#0e0f13`）加白色「日」字的 SVG，用腳本產生 192 / 512 / apple-touch-icon 180 三個 PNG。
+- 託管網址：https://fender8185.github.io/nihongo-quest/ （repo: github.com/fender8185/nihongo-quest，Pages 從 main 根目錄發佈）
