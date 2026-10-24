@@ -346,7 +346,13 @@ body.furi-smart ruby.known rt { visibility: hidden; }
 .modal-title { font-weight: 600; font-size: 16px; }
 @media (max-width: 600px) { .modal-back { padding: 0; place-items: end stretch; } .modal { width: 100%; max-height: 92vh; border-radius: 16px 16px 0 0; } }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); z-index: 80; max-width: min(560px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 12px; background: var(--fg); color: var(--bg); font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; box-shadow: var(--shadow); }
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+.sync-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-3); cursor: pointer; white-space: nowrap; }
+.sync-chip::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--fg-3); flex: none; }
+.sync-chip.is-idle::before { background: var(--ok); }
+.sync-chip.is-pending::before, .sync-chip.is-syncing::before { background: var(--warn); }
+.sync-chip.is-error::before { background: var(--bad); }
+.topbar #syncChip { margin-left: auto; }
 @media (max-width: 900px) { .toast { bottom: calc(84px + env(safe-area-inset-bottom)); } body.practicing .toast { bottom: 24px; } }
 .banner { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--accent-line); background: var(--accent-soft); margin-bottom: 14px; font-size: 14px; }
 .banner.warn { border-color: transparent; background: var(--warn-soft); }
@@ -371,6 +377,7 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
   <div class="main">
     <header class="topbar">
       <div class="row"><div class="brand-mark">日</div><span class="topbar-title" id="topTitle">今日</span></div>
+      <span id="syncChip"></span>
       <div class="row" id="topActions"></div>
     </header>
     <main id="view" class="content" tabindex="-1"></main>
@@ -2874,6 +2881,22 @@ const NAV = [
 ];
 let lastMainRoute = '#/today';
 
+function syncChipLabel() {
+  switch (Sync.status) {
+    case 'idle': {
+      const t = Sync.meta && Sync.meta.lastSyncedAt ? new Date(Sync.meta.lastSyncedAt) : null;
+      return t ? `已同步 ${pad2(t.getHours())}:${pad2(t.getMinutes())}` : '已登入';
+    }
+    case 'pending': case 'syncing': return '同步中';
+    case 'error': return '同步失敗';
+    default: return '未登入';
+  }
+}
+function renderSyncChip() {
+  const html = `<span class="sync-chip is-${Sync.status}" data-act="sync-open" title="${Sync.status === 'error' ? esc(Sync.lastError || '') : '雲端同步'}">${syncChipLabel()}</span>`;
+  ['sideSync', 'syncChip'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = html; });
+}
+
 function go(hash) {
   if (location.hash === hash) route();
   else location.hash = hash;
@@ -2898,6 +2921,7 @@ function renderNav(active) {
     <div class="panel small">
       <div class="row between"><span class="muted">連續天數</span><b class="num">${st.current} 天</b></div>
       <div class="row between"><span class="muted">今日</span><b class="num">${dayTotal(state.dailyLogs[todayStr()])} / ${state.settings.dailyGoal}</b></div>
+      <div class="row between"><span class="muted">雲端</span><span id="sideSync"></span></div>
     </div>
     <button type="button" class="nav-item" data-act="toggle-furi" title="快速鍵 F">${icon('furi')}<span>振假名：${FURI_LABEL[furiState()]}</span></button>
     <button type="button" class="nav-item" data-act="settings">${icon('settings')}<span>設定</span></button>`;
@@ -2906,6 +2930,7 @@ function renderNav(active) {
     <button type="button" data-act="${n.id === 'more' ? 'more-menu' : 'nav'}" data-route="${n.route || ''}" ${n.id === active || (n.id === 'more' && ['exam', 'stats', 'tools'].includes(active)) ? 'aria-current="page"' : ''}>${icon(n.icon)}<span>${n.label}</span></button>`).join('');
   const navItem = NAV.find(n => n.id === active);
   document.getElementById('topTitle').textContent = navItem ? navItem.label : 'Nihongo Quest';
+  renderSyncChip();
   document.getElementById('topActions').innerHTML = `<button type="button" class="btn btn-ghost btn-icon" data-act="toggle-furi" title="振假名">${icon('furi')}</button><button type="button" class="btn btn-ghost btn-icon" data-act="settings" aria-label="設定">${icon('settings')}</button>`;
 }
 
@@ -2985,6 +3010,12 @@ function toggleFurigana() {
 
 // ---------- actions (event delegation) ----------
 const ACTIONS = {
+  'sync-open': () => openSettings('data'),
+  'sync-login': async () => { const inp = document.getElementById('syncEmail'); await Sync.signIn(inp ? inp.value : ''); },
+  'sync-now': async () => { await Sync.push(); await Sync.pull(); if (modalOpen()) refreshSettings(); },
+  'sync-retry': async () => { await Sync.push(); await Sync.pull(); if (modalOpen()) refreshSettings(); },
+  'sync-logout': async () => { await Sync.signOut(); if (modalOpen()) refreshSettings(); route(); },
+  'sync-delete-cloud': async () => { if (!confirm('確定刪除雲端上的進度？本機進度不受影響。')) return; await Sync.deleteCloud(); if (modalOpen()) refreshSettings(); },
   nav: (el) => go(el.dataset.route),
   settings: () => openSettings(),
   'more-menu': () => openModal('更多', `<div class="list">
@@ -4606,7 +4637,15 @@ function settingsData() {
   try { legacyExists = Boolean(localStorage.getItem(LEGACY_KEY)); } catch (e) { /* ignore */ }
   const size = new Blob([JSON.stringify(state)]).size;
   const hiddenN = state.hidden.length;
+  const syncBlock = !Sync.client
+    ? `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">這個版本尚未設定雲端同步。</div></div></div>`
+    : Sync.session
+      ? `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">已登入 <b>${esc(Sync.email || '')}</b>。${Sync.meta && Sync.meta.lastSyncedAt ? `最後同步 ${esc(new Date(Sync.meta.lastSyncedAt).toLocaleString('zh-TW', { hour12: false }))}。` : '尚未同步。'}${Sync.status === 'error' ? `<br><span class="bad">同步失敗：${esc(Sync.lastError || '')}</span>` : ''}</div></div>
+          <div class="row-wrap">${Sync.status === 'error' ? '<button type="button" class="btn btn-sm btn-primary" data-act="sync-retry">重試</button>' : '<button type="button" class="btn btn-sm btn-primary" data-act="sync-now">立即同步</button>'}<button type="button" class="btn btn-sm" data-act="sync-logout">登出</button><button type="button" class="btn btn-sm btn-ghost btn-danger" data-act="sync-delete-cloud">刪除雲端資料</button></div></div>`
+      : `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">每個人的資料各自獨立。AI 與語音設定（含 API 金鑰與位址）只留在這台裝置，不會上傳。第一次在新裝置登入時，會以雲端的進度為準。連結會寄到信箱，請用你要使用的那個瀏覽器或主畫面 app 點開。</div></div>
+          <div class="row-wrap"><input type="email" id="syncEmail" placeholder="you@example.com" autocomplete="email" inputmode="email" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-login">寄送登入連結</button></div></div>`;
   return `
+    ${syncBlock}
     <div class="setting-row"><div><div class="label">下載備份</div><div class="hint">包含進度、錯題本、字卡與考試紀錄（不含 Anki 音檔與圖片）。目前資料約 ${Math.max(1, Math.round(size / 1024))} KB。</div></div>
       <div class="row-wrap"><label class="switch"><input type="checkbox" id="bkKeys" /><span class="track"></span><span class="small">包含 API Key</span></label><button type="button" class="btn btn-sm btn-primary" data-act="backup-export">下載</button></div></div>
     <div class="setting-row"><div><div class="label">自動快照</div><div class="hint">每天第一次開啟時自動保存一份，保留最近 7 天。匯入或重設弄錯時，可以回到某一天的狀態。</div><div id="snapList" class="mt-2 small muted">讀取中…</div></div></div>
@@ -6139,6 +6178,7 @@ async function dailySnapshot() {
 
 function backupDue() {
   if (streakStats().days < 3) return false;
+  if (Sync.status !== 'off' && Sync.meta && Sync.meta.lastSyncedAt && daysBetween(Sync.meta.lastSyncedAt.slice(0, 10), todayStr()) < 7) return false;
   const last = [state.lastBackup, state.backupSnooze].filter(Boolean).sort().pop();
   return !last || daysBetween(last, todayStr()) >= (state.settings.backupEvery || 7);
 }
@@ -6236,9 +6276,10 @@ const Sync = {
     opts = opts || {};
     if (this.timer) { clearTimeout(this.timer); this.timer = null; }
     const cfg = window.NQ_CONFIG || {};
-    this.client = opts.client || ((cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase) ? supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey) : null);
+    // PKCE: a magic link only completes in the browser that asked for it, so a link someone else started cannot log this device into their account
+    this.client = opts.client || ((cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase) ? supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { flowType: 'pkce' } }) : null);
     this.meta = (await Store.get('meta')) || {};
-    this.meta = Object.assign({ deviceId: uid('dev'), pendingSync: false, lastSyncedAt: null, lastPulledUpdatedAt: null, everSynced: false }, this.meta);
+    this.meta = Object.assign({ deviceId: uid('dev'), userId: null, pendingSync: false, lastSyncedAt: null, lastPulledUpdatedAt: null, everSynced: false }, this.meta);
     await Store.set('meta', this.meta);
     if (!this.bound) {
       this.bound = true;
@@ -6263,8 +6304,14 @@ const Sync = {
     this.email = session && session.user ? session.user.email : null;
     if (!session) {
       if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+      if (this.meta && this.meta.pendingSync) { this.meta.pendingSync = false; Store.set('meta', this.meta); }
       this.setStatus('off');
       return;
+    }
+    // sync bookkeeping belongs to one account: a different user on this device starts as "never synced"
+    if (this.meta.userId !== session.user.id) {
+      Object.assign(this.meta, { userId: session.user.id, everSynced: false, pendingSync: false, lastSyncedAt: null, lastPulledUpdatedAt: null });
+      Store.set('meta', this.meta);
     }
     this.setStatus('idle');
     if (!had) this.pull();
@@ -6375,6 +6422,7 @@ function checkDayRollover() {
 
 async function init() {
   await loadState();
+  Sync.onChange = renderSyncChip;
   await Sync.init();
   buildRegistry();
   applyTheme();

@@ -4,27 +4,29 @@ const base = () => ({ v: 3, updatedAt: '2026-10-24T01:00:00.000Z',
   aiConfig: { provider: 'gemini', geminiKey: 'g1', openaiKey: 'o1' },
   ttsConfig: { deepgramKey: 'd1', openaiKey: 'o2' }, srs: { a: 1 } });
 
-test('stripSecrets clears four keys and does not mutate input', () => {
-  const s = base(); const out = C.stripSecrets(s);
-  assert.equal(out.aiConfig.geminiKey, ''); assert.equal(out.aiConfig.openaiKey, '');
-  assert.equal(out.ttsConfig.deepgramKey, ''); assert.equal(out.ttsConfig.openaiKey, '');
-  assert.equal(out.aiConfig.provider, 'gemini'); assert.deepEqual(out.srs, { a: 1 });
-  assert.equal(s.aiConfig.geminiKey, 'g1');
+test('stripSecrets removes the device-local AI and TTS configs entirely and does not mutate input', () => {
+  const s = base(); s.aiConfig.openaiUrl = 'http://evil.example'; const out = C.stripSecrets(s);
+  assert.equal(out.aiConfig, null); assert.equal(out.ttsConfig, null);
+  assert.deepEqual(out.srs, { a: 1 }); assert.equal(out.v, 3);
+  assert.equal(s.aiConfig.geminiKey, 'g1'); assert.equal(s.aiConfig.openaiUrl, 'http://evil.example');
 });
 test('stripSecrets tolerates null configs', () => {
   const out = C.stripSecrets({ v: 3, aiConfig: null, ttsConfig: null });
   assert.equal(out.aiConfig, null); assert.equal(out.ttsConfig, null);
 });
-test('keepLocalSecrets fills missing keys from local, keeps incoming when present', () => {
-  const inc = C.stripSecrets(base()); inc.aiConfig.openaiKey = 'new';
+test('keepLocalSecrets always prefers the local AI/TTS configs over whatever the cloud carries', () => {
+  const inc = base(); inc.aiConfig = { provider: 'openai', openaiUrl: 'http://evil.example', openaiKey: '' }; inc.settings = { dailyGoal: 9 };
   const out = C.keepLocalSecrets(inc, base());
-  assert.equal(out.aiConfig.geminiKey, 'g1'); assert.equal(out.aiConfig.openaiKey, 'new');
-  assert.equal(out.ttsConfig.deepgramKey, 'd1');
+  assert.deepEqual(out.aiConfig, base().aiConfig); assert.deepEqual(out.ttsConfig, base().ttsConfig);
+  assert.equal(out.settings.dailyGoal, 9, 'non-local fields come from incoming');
+  assert.equal(inc.aiConfig.openaiUrl, 'http://evil.example', 'input not mutated');
 });
-test('keepLocalSecrets with null local or null incoming configs', () => {
+test('keepLocalSecrets with null local keeps incoming; with null incoming configs uses local', () => {
   assert.equal(C.keepLocalSecrets(base(), null).aiConfig.geminiKey, 'g1');
   const out = C.keepLocalSecrets({ v: 3, aiConfig: null, ttsConfig: null }, base());
-  assert.equal(out.aiConfig.geminiKey, 'g1');
+  assert.equal(out.aiConfig.geminiKey, 'g1'); assert.equal(out.ttsConfig.deepgramKey, 'd1');
+  const none = C.keepLocalSecrets({ v: 3 }, { v: 3, aiConfig: null, ttsConfig: null });
+  assert.equal(none.aiConfig, undefined);
 });
 test('pickNewer', () => {
   const a = { updatedAt: '2026-10-24T01:00:00.000Z' }, b = { updatedAt: '2026-10-24T02:00:00.000Z' };

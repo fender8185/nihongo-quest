@@ -206,6 +206,13 @@
 3. **Supabase 登入 + 同步**：`sync-core.js`、`85_sync.js`、設定頁 UI、狀態圖示、測試。
 4. **收尾**：備份橫幅與同步狀態整合、說明文字、邊界案例驗證。
 
+## 10. 實作期間的修訂（2026-10-24）
+- **AI/TTS 設定整個視為裝置本機**：`aiConfig` 與 `ttsConfig`（含金鑰、`openaiUrl`、`ollamaUrl`、provider）上傳前整個移除、下拉時整個保留本機。原因：endpoint 與金鑰綁在一起，若只清金鑰、再把本機金鑰注回雲端帶來的 endpoint，被竄改的雲端列可把金鑰導到外部位址；且 Ollama 位址本來就是每台機器不同。`stripSecrets` / `keepLocalSecrets` 的語意隨之改變，與 `exportBackup(false)` 不再相同。
+- **裝置第一次同步一律採用雲端**：`meta.everSynced` 為 false 且雲端有資料時不走 `pickNewer`，否則新裝置的空白 state（`updatedAt` 為現在）會覆蓋雲端進度。
+- **同步 meta 綁定帳號**：`meta.userId` 記錄 meta 所屬使用者；以不同帳號登入時重設 `everSynced`、`pendingSync`、`lastSyncedAt`、`lastPulledUpdatedAt`；登出時清 `pendingSync`。
+- **登入採 PKCE flow**：`createClient(..., { auth: { flowType: 'pkce' } })`，magic link 只能在發起登入的瀏覽器完成，別人發起的連結無法把這台裝置登進他的帳號。
+- 測試策略：除 `sync-core` 的 Node 單元測試外，新增 `tests/e2e/`（headless Chrome + CDP，注入 fake Supabase client）涵蓋儲存遷移、同步決策與 UI。
+
 ## 9. 已確定的決策（2026-10-24）
 - 託管：**GitHub Pages**，repo 根目錄直接發佈（不另設 `docs/` 子目錄）。
 - Supabase 區域：**東京 `ap-northeast-1`**，免費方案。

@@ -25,7 +25,7 @@ window.__fake = (function () {
     }; }
   };
   return { client, calls, setRow(r) { row = r; }, getRow() { return row; },
-    login(email) { session = { user: { id: 'u1', email } }; listeners.forEach(cb => cb('SIGNED_IN', session)); } };
+    login(email, id) { session = { user: { id: id || 'u1', email } }; listeners.forEach(cb => cb('SIGNED_IN', session)); } };
 })(); true"""
 
 def boot(b, extra=()):
@@ -52,10 +52,10 @@ def test_save_pushes_after_debounce_without_secrets(b):
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
         ("eval", "state.settings.dailyGoal = 66; saveState(); Sync.status"),
         ("wait", "__fake.getRow() && __fake.getRow().state.settings.dailyGoal === 66"),
-        ("eval", "JSON.stringify({ key: __fake.getRow().state.aiConfig.geminiKey, uid: __fake.getRow().user_id, up: __fake.getRow().updated_at === state.updatedAt, st: Sync.status })"),
+        ("eval", "JSON.stringify({ ai: __fake.getRow().state.aiConfig, tts: __fake.getRow().state.ttsConfig, uid: __fake.getRow().user_id, up: __fake.getRow().updated_at === state.updatedAt, st: Sync.status })"),
     ])
     assert out[-2] == "pending", out[-2]
-    assert out[-1] == '{"key":"","uid":"u1","up":true,"st":"idle"}', out[-1]
+    assert out[-1] == '{"ai":null,"tts":null,"uid":"u1","up":true,"st":"idle"}', out[-1]
 
 def test_logout_during_debounce_cancels_push(b):
     out = boot(b, [
@@ -86,12 +86,26 @@ def test_pull_is_deferred_while_practicing(b):
     assert out[-3] != 123, "pull applied cloud state during a session"
     assert out[-1] == 123
 
+def test_switching_account_resets_device_binding_and_adopts_new_cloud(b):
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle' && Sync.meta.everSynced"),
+        ("eval", "JSON.stringify({ uid: Sync.meta.userId, ever: Sync.meta.everSynced })"),
+        ("eval", "Sync.signOut().then(() => JSON.stringify({ st: Sync.status, pend: Sync.meta.pendingSync }))"),
+        ("eval", "__fake.setRow({ user_id: 'u2', state: { v: 3, updatedAt: '2000-01-01T00:00:00.000Z', settings: { dailyGoal: 77 } }, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('b@c.d', 'u2'); true"),
+        ("wait", "Sync.status === 'idle' && Sync.meta.userId === 'u2'"),
+        ("eval", "JSON.stringify({ goal: state.settings.dailyGoal, uid: Sync.meta.userId, ever: Sync.meta.everSynced, key: state.aiConfig.geminiKey })"),
+    ])
+    assert out[-4] == '{"uid":"u1","ever":true}', out[-4]
+    assert out[-3] == '{"st":"off","pend":false}', out[-3]
+    assert out[-1] == '{"goal":77,"uid":"u2","ever":true,"key":"LOCALKEY"}', out[-1]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
     tests = [test_without_config_sync_is_off, test_first_sync_on_fresh_device_takes_cloud_even_if_local_newer,
              test_save_pushes_after_debounce_without_secrets, test_logout_during_debounce_cancels_push,
-             test_unreadable_or_bare_cloud_state_does_not_break_app, test_pull_is_deferred_while_practicing]
+             test_unreadable_or_bare_cloud_state_does_not_break_app, test_pull_is_deferred_while_practicing,
+             test_switching_account_resets_device_binding_and_adopts_new_cloud]
     failed = 0
     try:
         for t in tests:

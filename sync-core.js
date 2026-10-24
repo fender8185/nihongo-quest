@@ -1,29 +1,24 @@
 /* sync-core: pure helpers shared by the app (window.SyncCore) and Node tests (module.exports). No DOM, no network. */
 (function (root) {
-  const AI_KEYS = ['geminiKey', 'openaiKey'];
-  const TTS_KEYS = ['deepgramKey', 'openaiKey'];
-
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
 
-  // Deep-copies state and blanks the API keys so they never leave the device.
+  // AI and TTS configs are device-local: they hold API keys and endpoints (e.g. a localhost Ollama URL),
+  // so they never go to the cloud and a pulled copy never replaces the local ones.
+  const LOCAL_ONLY = ['aiConfig', 'ttsConfig'];
+
   function stripSecrets(state) {
     const out = clone(state);
-    if (out.aiConfig) AI_KEYS.forEach(k => { if (out.aiConfig[k]) out.aiConfig[k] = ''; });
-    if (out.ttsConfig) TTS_KEYS.forEach(k => { if (out.ttsConfig[k]) out.ttsConfig[k] = ''; });
+    LOCAL_ONLY.forEach(f => { if (f in out) out[f] = null; });
     return out;
   }
 
-  // Returns a copy of `incoming` whose blank/missing API keys are filled from `local`.
+  // Returns a copy of `incoming` whose device-local configs are taken from `local` when `local` has them.
   function keepLocalSecrets(incoming, local) {
     const out = clone(incoming);
-    const fill = (field, keys) => {
-      const loc = local && local[field];
-      if (!loc) return;
-      if (!out[field]) out[field] = {};
-      keys.forEach(k => { if (!out[field][k] && loc[k]) out[field][k] = loc[k]; });
-    };
-    fill('aiConfig', AI_KEYS);
-    fill('ttsConfig', TTS_KEYS);
+    LOCAL_ONLY.forEach(f => {
+      if (local && local[f]) out[f] = clone(local[f]);
+      else if (out[f] === null) delete out[f];   // let normalizeState fill the default instead of an explicit null
+    });
     return out;
   }
 
