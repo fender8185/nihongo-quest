@@ -2798,6 +2798,7 @@ function exitPractice() {
   SESSION = null;
   document.body.classList.remove('practicing');
   go(lastMainRoute || '#/today');
+  Sync.flushDeferred();
 }
 
 function renderSummary(view) {
@@ -2999,7 +3000,7 @@ const ACTIONS = {
   answer: (el) => answerCurrent(Number(el.dataset.i)),
   next: () => nextQuestion(),
   'exit-practice': () => exitPractice(),
-  'close-summary': () => { SESSION = null; document.body.classList.remove('practicing'); go(lastMainRoute || '#/today'); },
+  'close-summary': () => { SESSION = null; document.body.classList.remove('practicing'); go(lastMainRoute || '#/today'); Sync.flushDeferred(); },
   again: () => { const s = SESSION; SESSION = null; startSession(s.mode, s.opt || {}); },
   'retry-wrong': () => {
     const items = [];
@@ -4282,7 +4283,7 @@ Object.assign(ACTIONS, {
   },
   'exam-quit': () => {
     if (!confirm('離開考試？這次的作答不會計分。')) return;
-    clearInterval(examTimer); stopSpeaking(); EXAM = null; document.body.classList.remove('practicing'); go('#/exam');
+    clearInterval(examTimer); stopSpeaking(); EXAM = null; document.body.classList.remove('practicing'); go('#/exam'); Sync.flushDeferred();
   },
   'exam-again': () => { const o = { level: EXAM.level, size: EXAM.size, subjects: EXAM.subjects }; EXAM = null; startExam(o); },
   'exam-review': (el) => { const h = state.examHistory[Number(el.dataset.i)]; if (h) openModal(h.examTitle || '考卷回顧', examReviewHtml(h), { width: 760, noFocus: true }); },
@@ -6215,6 +6216,152 @@ const Store = {
   }
 };
 
+// ---- 85_sync.js ----
+/* ==========================================================================
+   Cloud sync (Supabase): magic-link login, debounced push, pull on open/foreground/online, last-write-wins.
+   Local state is the source of truth; the cloud row is a mirror. API keys never leave the device.
+   ========================================================================== */
+const Sync = {
+  client: null, session: null, email: null, status: 'off', lastError: null, onChange: null,
+  meta: null, timer: null, deferred: false, pulling: false, bound: false,
+
+  setStatus(next) {
+    if (this.status === next) return;
+    this.status = next;
+    if (this.onChange) { try { this.onChange(); } catch (e) { /* ignore */ } }
+  },
+
+  // opts.client lets tests inject a fake client; production builds one from NQ_CONFIG.
+  async init(opts) {
+    opts = opts || {};
+    if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+    const cfg = window.NQ_CONFIG || {};
+    this.client = opts.client || ((cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase) ? supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey) : null);
+    this.meta = (await Store.get('meta')) || {};
+    this.meta = Object.assign({ deviceId: uid('dev'), pendingSync: false, lastSyncedAt: null, lastPulledUpdatedAt: null, everSynced: false }, this.meta);
+    await Store.set('meta', this.meta);
+    if (!this.bound) {
+      this.bound = true;
+      saveHooks.push(() => Sync.schedulePush());
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) { if (Sync.meta && Sync.meta.pendingSync) Sync.push(); } else Sync.pull();
+      });
+      window.addEventListener('online', () => Sync.pull());
+    }
+    this.session = null; this.email = null;
+    if (!this.client) { this.setStatus('off'); return; }
+    this.client.auth.onAuthStateChange((_evt, session) => this.applySession(session));
+    try {
+      const res = await this.client.auth.getSession();
+      this.applySession(res && res.data && res.data.session);
+    } catch (e) { this.applySession(null); }
+  },
+
+  applySession(session) {
+    const had = Boolean(this.session);
+    this.session = session || null;
+    this.email = session && session.user ? session.user.email : null;
+    if (!session) {
+      if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+      this.setStatus('off');
+      return;
+    }
+    this.setStatus('idle');
+    if (!had) this.pull();
+  },
+
+  async signIn(email) {
+    if (!this.client) { toast('尚未設定雲端同步'); return; }
+    const addr = SyncCore.normalizeEmail(email);
+    if (!addr || !addr.includes('@')) { toast('請輸入正確的 email'); return; }
+    const { error } = await this.client.auth.signInWithOtp({ email: addr, options: { emailRedirectTo: location.origin + location.pathname } });
+    if (error) toast('寄送失敗：' + error.message, 5000);
+    else toast('已寄出登入連結，請用你要使用的這個瀏覽器或主畫面 app 點開信裡的連結', 6000);
+  },
+
+  async signOut() {
+    if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+    if (this.client) { try { await this.client.auth.signOut(); } catch (e) { /* ignore */ } }
+    this.applySession(null);
+  },
+
+  async deleteCloud() {
+    if (!this.client || !this.session) return;
+    const { error } = await this.client.from('progress').delete().eq('user_id', this.session.user.id);
+    if (error) { toast('刪除失敗：' + error.message, 5000); return; }
+    this.meta.everSynced = false; this.meta.lastPulledUpdatedAt = null; await Store.set('meta', this.meta);
+    toast('已刪除雲端資料，本機進度仍保留');
+  },
+
+  schedulePush() {
+    if (!this.session || !this.client) return;
+    this.meta.pendingSync = true; Store.set('meta', this.meta);
+    this.setStatus('pending');
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(() => { this.timer = null; this.push(); }, 2000);
+  },
+
+  async push() {
+    const session = this.session; // re-read: a logout during the debounce must cancel the upload
+    if (!session || !this.client) return;
+    if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+    this.setStatus('syncing');
+    try {
+      const payload = Object.assign({ user_id: session.user.id }, SyncCore.buildPushPayload(SyncCore.stripSecrets(state), this.meta.deviceId));
+      const { error } = await this.client.from('progress').upsert(payload);
+      if (error) throw error;
+      Object.assign(this.meta, { pendingSync: false, lastSyncedAt: new Date().toISOString(), lastPulledUpdatedAt: payload.updated_at, everSynced: true });
+      await Store.set('meta', this.meta);
+      this.lastError = null; this.setStatus('idle');
+    } catch (e) {
+      this.lastError = (e && e.message) || String(e); this.setStatus('error');
+    }
+  },
+
+  async pull() {
+    const session = this.session;
+    if (!session || !this.client) return;
+    if (SESSION || EXAM) { this.deferred = true; return; }   // never swap state under a running practice or exam
+    if (this.pulling) return;
+    this.pulling = true;
+    let next = null;
+    this.setStatus('syncing');
+    try {
+      const { data, error } = await this.client.from('progress').select('state, updated_at').eq('user_id', session.user.id).maybeSingle();
+      if (error) throw error;
+      if (!data) next = state.updatedAt ? 'push' : 'idle';
+      else {
+        // a device that has never synced must adopt the cloud copy, even though its fresh local state is "newer"
+        const pick = this.meta.everSynced ? SyncCore.pickNewer(state, data.state) : 'cloud';
+        if (pick === 'cloud') await this.applyCloud(data);
+        else next = pick === 'local' ? 'push' : 'idle';
+      }
+    } catch (e) {
+      this.lastError = (e && e.message) || String(e); this.setStatus('error');
+    } finally { this.pulling = false; }
+    if (next === 'push') await this.push();
+    else if (next === 'idle') this.setStatus('idle');
+  },
+
+  async applyCloud(data) {
+    try {
+      const next = normalizeState(SyncCore.keepLocalSecrets(data.state, state));
+      state = next;
+      await Store.set('state', state);   // not saveState(): that would echo the pull straight back to the cloud
+      Object.assign(this.meta, { pendingSync: false, lastSyncedAt: new Date().toISOString(), lastPulledUpdatedAt: data.updated_at, everSynced: true });
+      await Store.set('meta', this.meta);
+      buildRegistry(); applyTheme(); applyFurigana();
+      if (!modalOpen()) route();
+      toast('已從雲端更新進度');
+      this.lastError = null; this.setStatus('idle');
+    } catch (e) {
+      this.lastError = '雲端資料無法讀取，已保留本機進度'; this.setStatus('error'); toast(this.lastError, 5000);
+    }
+  },
+
+  flushDeferred() { if (this.deferred) { this.deferred = false; this.pull(); } }
+};
+
 // ---- 90_init.js ----
 /* ==========================================================================
    Start-up
@@ -6228,6 +6375,7 @@ function checkDayRollover() {
 
 async function init() {
   await loadState();
+  await Sync.init();
   buildRegistry();
   applyTheme();
   applyFurigana();
