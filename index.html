@@ -775,6 +775,7 @@ function defaultSettings() {
 function defaultState() {
   return {
     v: 3,
+    updatedAt: null,
     createdAt: todayStr(),
     settings: defaultSettings(),
     currentUnit: 'm1',
@@ -804,14 +805,29 @@ function defaultState() {
 let state = defaultState();
 let storageOk = true;
 
+const saveHooks = [];            // called after every saveState(); Sync registers here
+let pendingWrite = null;         // coalesces several saveState() calls in one tick into one write
+const STATE_CHANNEL = ('BroadcastChannel' in window) ? new BroadcastChannel('nq-state') : null;
+
 function saveState() {
-  try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(state));
-    storageOk = true;
-  } catch (e) {
+  state.updatedAt = new Date().toISOString();
+  if (!pendingWrite) pendingWrite = Promise.resolve().then(flushState);
+  saveHooks.forEach(h => { try { h(); } catch (e) { /* a sync hook must never break saving */ } });
+}
+
+async function flushState() {
+  pendingWrite = null;
+  const snapshot = state;
+  let ok = await Store.set('state', snapshot);
+  if (!ok) {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(snapshot)); ok = true; } catch (e) { ok = false; }
+  }
+  if (ok) storageOk = true;
+  else {
     if (storageOk) toast('瀏覽器儲存空間已滿，進度可能沒有存到。請到「設定 → 資料」下載備份，或清掉不用的匯入字卡。', 6000);
     storageOk = false;
   }
+  if (ok && STATE_CHANNEL) { try { STATE_CHANNEL.postMessage({ type: 'saved', updatedAt: snapshot.updatedAt }); } catch (e) { /* ignore */ } }
 }
 
 function normalizeState(s) {
@@ -826,11 +842,16 @@ function normalizeState(s) {
   return out;
 }
 
-function loadState() {
+async function loadState() {
+  const stored = await Store.get('state');
+  if (stored) {
+    try { state = normalizeState(stored); return 'loaded'; } catch (e) { console.warn('stored state invalid', e); }
+  }
   let raw = null;
   try { raw = localStorage.getItem(STORE_KEY); } catch (e) { storageOk = false; }
   if (raw) {
-    try { state = normalizeState(JSON.parse(raw)); return 'loaded'; } catch (e) { console.warn('state parse failed', e); }
+    // first run of this version: copy into IndexedDB, keep the localStorage copy as a safety net
+    try { state = normalizeState(JSON.parse(raw)); await Store.set('state', state); return 'migrated'; } catch (e) { console.warn('state parse failed', e); }
   }
   let legacyRaw = null;
   try { legacyRaw = localStorage.getItem(LEGACY_KEY); } catch (e) { /* ignore */ }
@@ -4595,7 +4616,7 @@ function settingsData() {
       <button type="button" class="btn btn-sm btn-ghost btn-danger" data-act="clear-custom-items">清除</button></div>` : ''}
     <div class="setting-row"><div><div class="label">重設所有進度</div><div class="hint">清除熟練度、錯題本、紀錄與自訂字卡。AI 與語音設定會保留。建議先下載備份。</div></div>
       <button type="button" class="btn btn-sm btn-danger" data-act="reset-all">重設</button></div>
-    <p class="hint mt-3">資料只存在這個瀏覽器的 localStorage。換電腦或換瀏覽器時，用「下載備份」與「從備份還原」搬移。</p>`;
+    <p class="hint mt-3">資料存在這個瀏覽器的本機儲存空間（IndexedDB）。登入雲端同步後會自動在裝置間同步；沒登入時可用「下載備份」與「從備份還原」搬移。</p>`;
 }
 
 function settingsLook() {
@@ -6145,6 +6166,52 @@ Object.assign(ACTIONS, {
   }
 });
 
+// ---- 84_store.js ----
+/* ==========================================================================
+   Local store: IndexedDB key-value (state + sync meta). Falls back to localStorage in saveState when unavailable.
+   ========================================================================== */
+const Store = {
+  DB: 'nihongo_quest_db', STORE: 'kv', dbp: null, available: false,
+  open() {
+    if (this.dbp) return this.dbp;
+    this.dbp = new Promise(resolve => {
+      try {
+        if (!('indexedDB' in window)) { resolve(null); return; }
+        const req = indexedDB.open(this.DB, 1);
+        req.onupgradeneeded = (ev) => { const db = ev.target.result; if (!db.objectStoreNames.contains(this.STORE)) db.createObjectStore(this.STORE); };
+        req.onsuccess = (ev) => { this.available = true; resolve(ev.target.result); };
+        req.onerror = () => resolve(null);
+        req.onblocked = () => resolve(null);
+      } catch (e) { resolve(null); }
+    });
+    return this.dbp;
+  },
+  async get(key) {
+    const db = await this.open();
+    if (!db) return undefined;
+    return new Promise(resolve => {
+      try {
+        const req = db.transaction(this.STORE).objectStore(this.STORE).get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve(undefined);
+      } catch (e) { resolve(undefined); }
+    });
+  },
+  async set(key, value) {
+    const db = await this.open();
+    if (!db) return false;
+    return new Promise(resolve => {
+      try {
+        const tx = db.transaction(this.STORE, 'readwrite');
+        tx.objectStore(this.STORE).put(value, key);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+        tx.onabort = () => resolve(false);
+      } catch (e) { resolve(false); }
+    });
+  }
+};
+
 // ---- 90_init.js ----
 /* ==========================================================================
    Start-up
@@ -6156,8 +6223,8 @@ function checkDayRollover() {
   if (!SESSION && !EXAM) route();
 }
 
-function init() {
-  loadState();
+async function init() {
+  await loadState();
   buildRegistry();
   applyTheme();
   applyFurigana();
@@ -6175,10 +6242,12 @@ function init() {
   setInterval(checkDayRollover, 60000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkDayRollover(); });
   // another tab saved newer progress: pick it up unless this tab is in the middle of something
-  window.addEventListener('storage', (e) => {
-    if (e.key !== STORE_KEY || !e.newValue || SESSION || EXAM) return;
-    try { state = normalizeState(JSON.parse(e.newValue)); buildRegistry(); if (!modalOpen()) route(); } catch (err) { /* ignore */ }
-  });
+  if (STATE_CHANNEL) STATE_CHANNEL.onmessage = async (e) => {
+    if (!e.data || e.data.type !== 'saved' || SESSION || EXAM) return;
+    const s = await Store.get('state');
+    if (!s || s.updatedAt === state.updatedAt) return;
+    try { state = normalizeState(s); buildRegistry(); if (!modalOpen()) route(); } catch (err) { /* ignore */ }
+  };
   window.addEventListener('beforeunload', (e) => { if (EXAM && !EXAM.finished) { e.preventDefault(); e.returnValue = ''; } });
   if (!location.hash || location.hash === '#') history.replaceState(null, '', '#/today');
   route();
