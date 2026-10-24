@@ -211,6 +211,7 @@
 - **裝置第一次同步一律採用雲端**：`meta.everSynced` 為 false 且雲端有資料時不走 `pickNewer`，否則新裝置的空白 state（`updatedAt` 為現在）會覆蓋雲端進度。
 - **同步 meta 綁定帳號**：`meta.userId` 記錄 meta 所屬使用者；以不同帳號登入時重設 `everSynced`、`pendingSync`、`lastSyncedAt`、`lastPulledUpdatedAt`；登出時清 `pendingSync`。
 - **登入採 PKCE flow**：`createClient(..., { auth: { flowType: 'pkce' } })`，magic link 只能在發起登入的瀏覽器完成，別人發起的連結無法把這台裝置登進他的帳號。
+- **Review 修正（同日）**：(a) `Sync.init()` 改在首次繪製後非同步啟動並 try/catch，離線或設定錯誤都不會讓畫面空白；(b) SW 只有在使用者點了更新提示才 reload（首次安裝的 `clients.claim()` 不再觸發自動重整），預快取用 `cache: 'reload'` 繞過 HTTP cache；(c) 考試結束停在結果頁時（`EXAM.finished`）不再阻擋 pull；(d) 首次同步若雲端列是空的而本機有真實進度，以本機為準上傳；採用雲端前先存 `pre-cloud-<日期>` 快照；(e) token refresh 不覆寫 error/pending 狀態；(f) push 前若 `updatedAt` 為 null 會補上；(g) 新增 **6 位數驗證碼登入**（`auth.verifyOtp`），因為 iOS 主畫面 app 無法接收信裡的連結，Supabase 的 Magic Link 信件範本需包含 `{{ .Token }}`。
 - 測試策略：除 `sync-core` 的 Node 單元測試外，新增 `tests/e2e/`（headless Chrome + CDP，注入 fake Supabase client）涵蓋儲存遷移、同步決策與 UI。
 
 ## 9. 已確定的決策（2026-10-24）

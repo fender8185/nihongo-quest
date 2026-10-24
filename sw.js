@@ -1,5 +1,5 @@
 /* Nihongo Quest service worker: versioned app-shell cache, cache-first for same-origin GETs. */
-const CACHE = 'nq-v2';
+const CACHE = 'nq-v3';
 const PRECACHE = [
   './',
   './index.html',
@@ -13,7 +13,8 @@ const PRECACHE = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)));
+  // cache: 'reload' bypasses the HTTP cache (GitHub Pages sends max-age=600) so a new release never precaches a stale index.html
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE.map((u) => new Request(u, { cache: 'reload' })))));
 });
 
 self.addEventListener('activate', (event) => {

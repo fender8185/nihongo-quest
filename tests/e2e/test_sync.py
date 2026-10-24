@@ -16,7 +16,8 @@ window.__fake = (function () {
       onAuthStateChange(cb) { listeners.push(cb); return { data: { subscription: { unsubscribe() {} } } }; },
       async getSession() { return { data: { session } } },
       async signInWithOtp({ email }) { calls.push(['otp', email]); return { error: null }; },
-      async signOut() { session = null; listeners.forEach(cb => cb('SIGNED_OUT', null)); return { error: null }; }
+      async signOut() { session = null; listeners.forEach(cb => cb('SIGNED_OUT', null)); return { error: null }; },
+      async verifyOtp({ email, token, type }) { calls.push(['verify', email, token, type]); return { error: null }; }
     },
     from() { return {
       select() { return { eq() { return { async maybeSingle() { return { data: row ? { state: row.state, updated_at: row.updated_at } : null, error: null }; } }; } }; },
@@ -99,13 +100,55 @@ def test_switching_account_resets_device_binding_and_adopts_new_cloud(b):
     assert out[-3] == '{"st":"off","pend":false}', out[-3]
     assert out[-1] == '{"goal":77,"uid":"u2","ever":true,"key":"LOCALKEY"}', out[-1]
 
+def test_pull_runs_after_exam_is_finished_but_still_on_result_screen(b):
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
+        ("eval", "EXAM = { finished: true }; __fake.setRow({ user_id: 'u1', state: Object.assign(JSON.parse(JSON.stringify(state)), { updatedAt: '2099-01-01T00:00:00.000Z', settings: Object.assign({}, state.settings, { dailyGoal: 321 }) }), updated_at: '2099-01-01T00:00:00.000Z' }); Sync.pull().then(() => state.settings.dailyGoal)"),
+    ])
+    assert out[-1] == 321, out[-1]
+
+def test_first_sync_keeps_real_local_progress_over_empty_cloud(b):
+    out = boot(b, [
+        ("eval", "state.vocab.push({ id: 'v1', jp: '猫', zh: '貓' }); saveState(); true"),
+        ("eval", "__fake.setRow({ user_id: 'u1', state: { v: 3, updatedAt: '2000-01-01T00:00:00.000Z' }, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('a@b.c'); true"),
+        ("wait", "Sync.status === 'idle' && Sync.meta.everSynced"),
+        ("eval", "JSON.stringify({ local: state.vocab.length, cloud: (__fake.getRow().state.vocab || []).length })"),
+    ])
+    assert out[-1] == '{"local":1,"cloud":1}', out[-1]
+
+def test_first_sync_adopting_cloud_snapshots_local_first(b):
+    out = boot(b, [
+        ("eval", "state.vocab.push({ id: 'v1', jp: '猫', zh: '貓' }); saveState(); true"),
+        ("eval", "__fake.setRow({ user_id: 'u1', state: { v: 3, updatedAt: '2000-01-01T00:00:00.000Z', vocab: [{ id: 'c1', jp: '犬', zh: '狗' }] }, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('a@b.c'); true"),
+        ("wait", "Sync.status === 'idle' && Sync.meta.everSynced"),
+        ("eval", "Snapshots.get('pre-cloud-' + todayStr()).then(j => JSON.stringify({ now: state.vocab[0].id, snap: j ? JSON.parse(j).vocab[0].id : null }))"),
+    ])
+    assert out[-1] == '{"now":"c1","snap":"v1"}', out[-1]
+
+def test_token_refresh_does_not_mask_error_status(b):
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
+        ("eval", "Sync.setStatus('error'); __fake.login('a@b.c'); Sync.status"),
+    ])
+    assert out[-1] == "error", out[-1]
+
+def test_manual_push_with_null_updated_at_still_sends_a_timestamp(b):
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
+        ("eval", "state.updatedAt = null; Sync.push().then(() => JSON.stringify({ up: typeof __fake.getRow().updated_at, st: Sync.status }))"),
+    ])
+    assert out[-1] == '{"up":"string","st":"idle"}', out[-1]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
     tests = [test_without_config_sync_is_off, test_first_sync_on_fresh_device_takes_cloud_even_if_local_newer,
              test_save_pushes_after_debounce_without_secrets, test_logout_during_debounce_cancels_push,
              test_unreadable_or_bare_cloud_state_does_not_break_app, test_pull_is_deferred_while_practicing,
-             test_switching_account_resets_device_binding_and_adopts_new_cloud]
+             test_switching_account_resets_device_binding_and_adopts_new_cloud,
+             test_pull_runs_after_exam_is_finished_but_still_on_result_screen, test_first_sync_keeps_real_local_progress_over_empty_cloud,
+             test_first_sync_adopting_cloud_snapshots_local_first, test_token_refresh_does_not_mask_error_status,
+             test_manual_push_with_null_updated_at_still_sends_a_timestamp]
     failed = 0
     try:
         for t in tests:

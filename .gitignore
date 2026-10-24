@@ -3,3 +3,4 @@ Anki/
 *.apkg
 node_modules/
 .superpowers/
+__pycache__/

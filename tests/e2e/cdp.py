@@ -24,7 +24,7 @@ class Browser:
         self.proc.terminate(); self.proc.wait(timeout=10)
         if self._own_profile: shutil.rmtree(self.profile, ignore_errors=True)
     def run(self, steps, timeout=20):
-        """steps: list of ('nav', url) | ('eval', js) | ('wait', js_predicate). Returns list of eval values."""
+        """steps: list of ('inject', js_before_page_scripts) | ('nav', url) | ('eval', js) | ('wait', js_predicate). Returns list of eval values."""
         async def go():
             out = []
             async with websockets.connect(self.ws_url, max_size=None) as ws:
@@ -42,7 +42,9 @@ class Browser:
                     return r["result"]["result"].get("value")
                 await call("Page.enable")
                 for kind, arg in steps:
-                    if kind == "nav":
+                    if kind == "inject":
+                        await call("Page.addScriptToEvaluateOnNewDocument", {"source": arg})
+                    elif kind == "nav":
                         await call("Page.navigate", {"url": arg}); await asyncio.sleep(0.3)
                         for _ in range(100):
                             if await ev("document.readyState") == "complete": break

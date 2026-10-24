@@ -37,6 +37,13 @@
 
   function normalizeEmail(s) { return String(s || '').trim().toLowerCase(); }
 
-  const SyncCore = { stripSecrets, keepLocalSecrets, pickNewer, buildPushPayload, normalizeEmail };
+  // True when a state holds no learning progress worth protecting (fresh install or wiped account).
+  function isEmptyProgress(s) {
+    if (!s) return true;
+    const n = (x) => (Array.isArray(x) ? x.length : (x && typeof x === 'object') ? Object.keys(x).length : 0);
+    return !(n(s.srs) || n(s.vocab) || n(s.dailyLogs) || n(s.examHistory));
+  }
+
+  const SyncCore = { stripSecrets, keepLocalSecrets, pickNewer, buildPushPayload, normalizeEmail, isEmptyProgress };
   if (typeof module !== 'undefined' && module.exports) module.exports = SyncCore; else root.SyncCore = SyncCore;
 })(typeof window !== 'undefined' ? window : globalThis);

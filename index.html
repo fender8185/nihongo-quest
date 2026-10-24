@@ -3012,6 +3012,8 @@ function toggleFurigana() {
 const ACTIONS = {
   'sync-open': () => openSettings('data'),
   'sync-login': async () => { const inp = document.getElementById('syncEmail'); await Sync.signIn(inp ? inp.value : ''); },
+  'sync-verify': async () => { const inp = document.getElementById('syncCode'); await Sync.verifyCode(inp ? inp.value : ''); },
+  'sync-cancel-code': () => { Sync.pendingEmail = null; if (modalOpen()) refreshSettings(); },
   'sync-now': async () => { await Sync.push(); await Sync.pull(); if (modalOpen()) refreshSettings(); },
   'sync-retry': async () => { await Sync.push(); await Sync.pull(); if (modalOpen()) refreshSettings(); },
   'sync-logout': async () => { await Sync.signOut(); if (modalOpen()) refreshSettings(); route(); },
@@ -4642,8 +4644,11 @@ function settingsData() {
     : Sync.session
       ? `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">已登入 <b>${esc(Sync.email || '')}</b>。${Sync.meta && Sync.meta.lastSyncedAt ? `最後同步 ${esc(new Date(Sync.meta.lastSyncedAt).toLocaleString('zh-TW', { hour12: false }))}。` : '尚未同步。'}${Sync.status === 'error' ? `<br><span class="bad">同步失敗：${esc(Sync.lastError || '')}</span>` : ''}</div></div>
           <div class="row-wrap">${Sync.status === 'error' ? '<button type="button" class="btn btn-sm btn-primary" data-act="sync-retry">重試</button>' : '<button type="button" class="btn btn-sm btn-primary" data-act="sync-now">立即同步</button>'}<button type="button" class="btn btn-sm" data-act="sync-logout">登出</button><button type="button" class="btn btn-sm btn-ghost btn-danger" data-act="sync-delete-cloud">刪除雲端資料</button></div></div>`
-      : `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">每個人的資料各自獨立。AI 與語音設定（含 API 金鑰與位址）只留在這台裝置，不會上傳。第一次在新裝置登入時，會以雲端的進度為準。連結會寄到信箱，請用你要使用的那個瀏覽器或主畫面 app 點開。</div></div>
-          <div class="row-wrap"><input type="email" id="syncEmail" placeholder="you@example.com" autocomplete="email" inputmode="email" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-login">寄送登入連結</button></div></div>`;
+      : Sync.pendingEmail
+        ? `<div class="setting-row"><div><div class="label">輸入驗證碼</div><div class="hint">登入信已寄到 <b>${esc(Sync.pendingEmail)}</b>。把信裡的 6 位數驗證碼輸入這裡（在 iPhone 主畫面 app 裡請用這個方式）；用電腦瀏覽器的話也可以直接點信裡的連結。</div></div>
+          <div class="row-wrap"><input type="text" id="syncCode" placeholder="123456" inputmode="numeric" autocomplete="one-time-code" maxlength="8" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-verify">登入</button><button type="button" class="btn btn-sm btn-ghost" data-act="sync-cancel-code">換一個 email</button></div></div>`
+        : `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">每個人的資料各自獨立。AI 與語音設定（含 API 金鑰與位址）只留在這台裝置，不會上傳。第一次在新裝置登入時，會以雲端的進度為準（這台若已有進度會先存一份快照）。</div></div>
+          <div class="row-wrap"><input type="email" id="syncEmail" placeholder="you@example.com" autocomplete="email" inputmode="email" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-login">寄送登入信</button></div></div>`;
   return `
     ${syncBlock}
     <div class="setting-row"><div><div class="label">下載備份</div><div class="hint">包含進度、錯題本、字卡與考試紀錄（不含 Anki 音檔與圖片）。目前資料約 ${Math.max(1, Math.round(size / 1024))} KB。</div></div>
@@ -6277,7 +6282,9 @@ const Sync = {
     if (this.timer) { clearTimeout(this.timer); this.timer = null; }
     const cfg = window.NQ_CONFIG || {};
     // PKCE: a magic link only completes in the browser that asked for it, so a link someone else started cannot log this device into their account
-    this.client = opts.client || ((cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase) ? supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { flowType: 'pkce' } }) : null);
+    try {
+      this.client = opts.client || ((cfg.supabaseUrl && cfg.supabaseAnonKey && window.supabase) ? supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey, { auth: { flowType: 'pkce' } }) : null);
+    } catch (e) { console.warn('supabase client not created', e); this.client = null; }
     this.meta = (await Store.get('meta')) || {};
     this.meta = Object.assign({ deviceId: uid('dev'), userId: null, pendingSync: false, lastSyncedAt: null, lastPulledUpdatedAt: null, everSynced: false }, this.meta);
     await Store.set('meta', this.meta);
@@ -6313,17 +6320,29 @@ const Sync = {
       Object.assign(this.meta, { userId: session.user.id, everSynced: false, pendingSync: false, lastSyncedAt: null, lastPulledUpdatedAt: null });
       Store.set('meta', this.meta);
     }
-    this.setStatus('idle');
-    if (!had) this.pull();
+    if (!had) { this.setStatus('idle'); this.pull(); }   // TOKEN_REFRESHED etc. keep whatever status we are in
   },
 
+  pendingEmail: null,
   async signIn(email) {
     if (!this.client) { toast('尚未設定雲端同步'); return; }
     const addr = SyncCore.normalizeEmail(email);
     if (!addr || !addr.includes('@')) { toast('請輸入正確的 email'); return; }
     const { error } = await this.client.auth.signInWithOtp({ email: addr, options: { emailRedirectTo: location.origin + location.pathname } });
-    if (error) toast('寄送失敗：' + error.message, 5000);
-    else toast('已寄出登入連結，請用你要使用的這個瀏覽器或主畫面 app 點開信裡的連結', 6000);
+    if (error) { toast('寄送失敗：' + error.message, 5000); return; }
+    this.pendingEmail = addr;
+    toast('已寄出登入信。在這個 app 裡輸入信中的 6 位數驗證碼，或用同一個瀏覽器點開信裡的連結', 7000);
+    if (modalOpen()) refreshSettings();
+  },
+
+  async verifyCode(code) {
+    if (!this.client || !this.pendingEmail) return;
+    const token = String(code || '').replace(/\D/g, '');
+    if (token.length < 6) { toast('請輸入信中的 6 位數驗證碼'); return; }
+    const { error } = await this.client.auth.verifyOtp({ email: this.pendingEmail, token, type: 'email' });
+    if (error) { toast('驗證失敗：' + error.message, 5000); return; }
+    this.pendingEmail = null;
+    if (modalOpen()) refreshSettings();
   },
 
   async signOut() {
@@ -6354,6 +6373,7 @@ const Sync = {
     if (this.timer) { clearTimeout(this.timer); this.timer = null; }
     this.setStatus('syncing');
     try {
+      if (!state.updatedAt) state.updatedAt = new Date().toISOString();   // e.g. right after the localStorage migration
       const payload = Object.assign({ user_id: session.user.id }, SyncCore.buildPushPayload(SyncCore.stripSecrets(state), this.meta.deviceId));
       const { error } = await this.client.from('progress').upsert(payload);
       if (error) throw error;
@@ -6368,7 +6388,7 @@ const Sync = {
   async pull() {
     const session = this.session;
     if (!session || !this.client) return;
-    if (SESSION || EXAM) { this.deferred = true; return; }   // never swap state under a running practice or exam
+    if (SESSION || (EXAM && !EXAM.finished)) { this.deferred = true; return; }   // never swap state under a running practice or exam (a finished exam only shows its result)
     if (this.pulling) return;
     this.pulling = true;
     let next = null;
@@ -6378,9 +6398,17 @@ const Sync = {
       if (error) throw error;
       if (!data) next = state.updatedAt ? 'push' : 'idle';
       else {
-        // a device that has never synced must adopt the cloud copy, even though its fresh local state is "newer"
-        const pick = this.meta.everSynced ? SyncCore.pickNewer(state, data.state) : 'cloud';
-        if (pick === 'cloud') await this.applyCloud(data);
+        // a device that has never synced adopts the cloud copy, even though its fresh local state is "newer" —
+        // unless the cloud row is empty and this device holds real progress (first upload came from an empty device)
+        let pick;
+        if (this.meta.everSynced) pick = SyncCore.pickNewer(state, data.state);
+        else pick = (SyncCore.isEmptyProgress(data.state) && !SyncCore.isEmptyProgress(state)) ? 'local' : 'cloud';
+        if (pick === 'cloud') {
+          if (!this.meta.everSynced && !SyncCore.isEmptyProgress(state)) {
+            try { await Snapshots.put('pre-cloud-' + todayStr(), JSON.stringify(state)); } catch (e) { /* best effort */ }
+          }
+          await this.applyCloud(data);
+        }
         else next = pick === 'local' ? 'push' : 'idle';
       }
     } catch (e) {
@@ -6423,7 +6451,6 @@ function checkDayRollover() {
 async function init() {
   await loadState();
   Sync.onChange = renderSyncChip;
-  await Sync.init();
   buildRegistry();
   applyTheme();
   applyFurigana();
@@ -6453,16 +6480,25 @@ async function init() {
   requestPersistence();
   dailySnapshot();
   registerServiceWorker();
+  // cloud sync starts after first paint: restoring an expired session can block on the network for a long time offline
+  Sync.init().catch((e) => { console.warn('sync init failed', e); Sync.client = null; Sync.setStatus('off'); });
 }
 
+let userWantsUpdate = false;
+let updateWorker = null;
 function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
   navigator.serviceWorker.register('./sw.js').then((reg) => {
     const promptUpdate = (worker) => {
+      updateWorker = worker;
       toast('有新版本可用，點這裡重新整理', 8000);
-      const el = document.getElementById('toast');
-      if (el) el.addEventListener('click', () => worker.postMessage({ type: 'SKIP_WAITING' }), { once: true });
+      setTimeout(() => { if (updateWorker === worker) updateWorker = null; }, 8000);   // a later, unrelated toast must not trigger the update
     };
+    document.getElementById('toast').addEventListener('click', () => {
+      if (!updateWorker) return;
+      userWantsUpdate = true;
+      updateWorker.postMessage({ type: 'SKIP_WAITING' });
+    });
     if (reg.waiting && navigator.serviceWorker.controller) promptUpdate(reg.waiting);
     reg.addEventListener('updatefound', () => {
       const w = reg.installing;
@@ -6473,7 +6509,8 @@ function registerServiceWorker() {
     });
   }).catch(() => { /* offline or unsupported: app works without it */ });
   let reloading = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloading) { reloading = true; location.reload(); } });
+  // first install also fires controllerchange (clients.claim); only reload when the user accepted an update
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (userWantsUpdate && !reloading) { reloading = true; location.reload(); } });
 }
 init();
 

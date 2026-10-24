@@ -43,3 +43,11 @@ test('buildPushPayload', () => {
   assert.equal(p.updated_at, '2026-10-24T01:00:00.000Z'); assert.equal(p.device_id, 'dev-1');
 });
 test('normalizeEmail', () => { assert.equal(C.normalizeEmail('  Foo@Example.COM '), 'foo@example.com'); });
+test('isEmptyProgress is true only when srs, vocab, dailyLogs and examHistory are all empty', () => {
+  assert.equal(C.isEmptyProgress({ v: 3 }), true);
+  assert.equal(C.isEmptyProgress({ v: 3, srs: {}, vocab: [], dailyLogs: {}, examHistory: [] }), true);
+  assert.equal(C.isEmptyProgress({ v: 3, srs: { a: {} } }), false);
+  assert.equal(C.isEmptyProgress({ v: 3, vocab: [{}] }), false);
+  assert.equal(C.isEmptyProgress({ v: 3, dailyLogs: { '2026-10-24': {} } }), false);
+  assert.equal(C.isEmptyProgress(null), true);
+});
