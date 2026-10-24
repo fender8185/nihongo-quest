@@ -1,12 +1,15 @@
 /* Nihongo Quest service worker: versioned app-shell cache, cache-first for same-origin GETs. */
-const CACHE = 'nq-v1';
+const CACHE = 'nq-v2';
 const PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
-  './icons/apple-touch-icon.png'
+  './icons/apple-touch-icon.png',
+  './vendor/supabase.js',
+  './sync-core.js',
+  './config.js'
 ];
 
 self.addEventListener('install', (event) => {
