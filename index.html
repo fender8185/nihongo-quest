@@ -193,6 +193,7 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.35; }
 .list-item { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
 .list-item:last-child { border-bottom: 0; }
 .list-item.clickable { cursor: pointer; border-radius: 10px; padding: 12px 10px; }
+.list-item > svg { width: 18px; height: 18px; flex: none; opacity: .85; }
 .list-item.clickable:hover { background: var(--bg-hover); }
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
 table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -272,6 +273,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .opt.wrong { border-color: var(--bad-line); background: var(--bad-soft); }
 .opt.wrong .kbd { border-color: var(--bad-line); color: var(--bad); }
 .opt.faded { opacity: .55; }
+.opt-zh { margin-left: auto; flex: 0 1 auto; max-width: 48%; text-align: right; font-size: 13px; line-height: 1.35; color: var(--fg-3); }
 .feedback { margin-top: 16px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg-sunken); }
 .feedback.ok { border-color: var(--ok-line); }
 .feedback.bad { border-color: var(--bad-line); }
@@ -1743,21 +1745,22 @@ function meaningOptions(v) {
   }
   return out.length === 3 ? out : null;
 }
-function recallOptions(v) {
+// `zh` (optional) collects the Chinese meaning of every distractor that is a real word, shown after answering
+function recallOptions(v, zh = {}) {
   const pool = vocabPeers(v).filter(x => x.p === v.p && !zhOverlap(x.m, v.m) && x.r !== v.r && jaPlain(x.w) !== jaPlain(v.w));
   const scored = pool.map(x => ({ x, s: (x.lv === v.lv ? 1 : 0) + (x.c === v.c ? 1 : 0) + Math.random() * 2 })).sort((a, b) => b.s - a.s);
   const out = [];
-  for (const { x } of scored) { if (!out.includes(x.w)) out.push(x.w); if (out.length === 3) break; }
+  for (const { x } of scored) { if (!out.includes(x.w)) { out.push(x.w); zh[x.w] = x.m; } if (out.length === 3) break; }
   return out.length === 3 ? out : null;
 }
-function clozeOptions(v, info) {
+function clozeOptions(v, info, zh = {}) {
   const pool = vocabPeers(v).filter(x => x.p === v.p && !zhOverlap(x.m, v.m));
   const scored = shuffle(pool).sort((a, b) => (b.lv === v.lv) - (a.lv === v.lv));
   const out = [];
   for (const x of scored) {
     const f = inflectLike(x, info);
     if (!f || JConj.normJa(f) === JConj.normJa(info.surface) || out.some(o => JConj.normJa(o) === JConj.normJa(f))) continue;
-    out.push(f);
+    out.push(f); zh[f] = x.m;
     if (out.length === 3) break;
   }
   return out.length === 3 ? out : null;
@@ -1819,13 +1822,13 @@ const KANJI_LOOKALIKE = [
 ].map(g => [...g]);
 const LOOKALIKE_OF = {};
 KANJI_LOOKALIKE.forEach(g => g.forEach(k => { LOOKALIKE_OF[k] = (LOOKALIKE_OF[k] || []).concat(g.filter(x => x !== k)); }));
-function kanjiOptions(v, surface, reading) {
+function kanjiOptions(v, surface, reading, zh = {}) {
   const out = [];
   // homophones from the word list (熱い/暑い, 会う/合う …)
   REG.vocab.forEach(x => {
     if (out.length >= 2 || x.key === v.key || x.r !== v.r || !HAS_KANJI.test(x.w) || x.w === v.w) return;
     const f = (vGroup(x) && vGroup(v) && vGroup(x) === vGroup(v)) ? inflectLike(x, vSurfaceInfo(v)) : (surface === v.w ? x.w : null);
-    if (f && JConj.normJa(f) !== JConj.normJa(surface)) out.push(f);
+    if (f && JConj.normJa(f) !== JConj.normJa(surface)) { out.push(f); zh[f] = x.m; }
   });
   // look-alike substitution
   const chars = [...surface];
@@ -1906,8 +1909,9 @@ function makeVocabQuestion(v, ctx = {}) {
   const lvTag = v.builtin ? v.lv : '自訂';
   const tryBuild = (f) => {
     const info = vSurfaceInfo(v);
+    const zh = {}; q.optZh = zh;   // option text -> Chinese meaning of that distractor word
     if (f === 'v-cloze') {
-      const opts = info && clozeOptions(v, info);
+      const opts = info && clozeOptions(v, info, zh);
       if (!opts) return false;
       q.fmt = f; q.label = `單字 · ${lvTag} · 例句填空`;
       q.instr = '選出填入空格的單字';
@@ -1919,7 +1923,7 @@ function makeVocabQuestion(v, ctx = {}) {
       return true;
     }
     if (f === 'v-recall') {
-      const opts = recallOptions(v);
+      const opts = recallOptions(v, zh);
       if (!opts) return false;
       q.fmt = f; q.label = `單字 · ${lvTag} · 中翻日`;
       q.instr = '日文怎麼說？';
@@ -1956,7 +1960,7 @@ function makeVocabQuestion(v, ctx = {}) {
       const surface = info && info.form !== 'raw' ? info.surface : v.w;
       const reading = info && info.form !== 'raw' ? readingOfSurface(v, info) : v.r;
       if (!reading) return false;
-      const opts = kanjiOptions(v, surface, reading);
+      const opts = kanjiOptions(v, surface, reading, zh);
       if (!opts) return false;
       q.fmt = f; q.label = `單字 · ${lvTag} · 漢字寫法`;
       q.instr = '畫線的部分寫成漢字是？';
@@ -2178,6 +2182,14 @@ function playButton(label = '再聽一次') {
 }
 // options read aloud after the prompt, numbered like the real test
 function spokenOptions(q) { return q.options.map((o, i) => `${i + 1}、${ttsText(o.text)}`); }
+function listenAudio(q) { return [q.audioLead || '', ...spokenOptions(q)].filter(Boolean).join('\n'); }
+// a copy of q with the options in a new order (the answer index and any spoken option list follow)
+function requeueQuestion(q, opts) {
+  const again = Object.assign({}, q, { id: uid('q'), options: opts, answer: opts.indexOf(q.options[q.answer]) });
+  delete again._rmap;
+  if (again.audioOptions) again.audio = listenAudio(again);
+  return again;
+}
 
 function makeListenQuestion(it) {
   const q = baseQ(it);
@@ -2201,7 +2213,8 @@ function makeListenQuestion(it) {
     q.instr = '聽對方說的話，選出最合適的回應。';
     finalizeOptions(q, it.a, others, true);
     q.stemHtml = playButton();
-    q.audio = audioOnly ? [it.line, ...spokenOptions(q)].join('\n') : it.line;
+    q.audioLead = it.line;
+    q.audio = audioOnly ? listenAudio(q) : it.line;
     q.audioScript = true;
     q.audioOptions = audioOnly;
     q.revealHtml = transcriptHtml(it.line, it.zh);
@@ -2212,7 +2225,7 @@ function makeListenQuestion(it) {
     q.instr = '看情境，選出最合適的說法。';
     finalizeOptions(q, it.a, others, true);
     q.stemHtml = `<div class="dim" style="font-size:17px;line-height:1.7">${esc(it.scene)}</div>${audioOnly ? playButton('再聽一次選項') : ''}`;
-    if (audioOnly) { q.audio = spokenOptions(q).join('\n'); q.audioScript = true; q.audioOptions = true; }
+    if (audioOnly) { q.audioLead = ''; q.audio = listenAudio(q); q.audioScript = true; q.audioOptions = true; }
     q.mistakePrompt = `【情境】${it.scene}`;
   }
   q.answerText = jaPlain(it.a);
@@ -2689,7 +2702,9 @@ function renderPractice() {
       else cls += ' faded';
     }
     const text = q.audioOptions && !answered ? `<span class="muted">選項 ${i + 1}</span>` : optionHtml(q, o);
-    return `<button type="button" class="${cls}" data-act="answer" data-i="${i}" ${answered ? 'disabled' : ''}><span class="kbd">${i + 1}</span><span class="${optClass(o)}">${text}</span></button>`;
+    // after answering, each wrong word shows what it actually means
+    const zh = answered && i !== q.answer && q.optZh ? q.optZh[o.text] || '' : '';
+    return `<button type="button" class="${cls}" data-act="answer" data-i="${i}" ${answered ? 'disabled' : ''}><span class="kbd">${i + 1}</span><span class="${optClass(o)}">${text}</span>${zh ? `<span class="opt-zh">${esc(zh)}</span>` : ''}</button>`;
   }).join('');
   const rec = q.key ? srsGet(q.key) : null;
   let stem = q.stemHtml;
@@ -2778,7 +2793,7 @@ function answerCurrent(i) {
     if (!e.requeued) {
       const at = Math.min(SESSION.entries.length, SESSION.idx + 3 + Math.floor(Math.random() * 3));
       const again = { item: e.item, mistake: e.mistake, requeued: true };
-      if (q) { again.q = Object.assign({}, q, { id: uid('q') }); const opts = shuffle(q.options); again.q.answer = opts.indexOf(q.options[q.answer]); again.q.options = opts; delete again.q._rmap; }
+      if (q) again.q = requeueQuestion(q, shuffle(q.options));
       SESSION.entries.splice(at, 0, again);
     }
   }
@@ -4645,8 +4660,8 @@ function settingsData() {
       ? `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">已登入 <b>${esc(Sync.email || '')}</b>。${Sync.meta && Sync.meta.lastSyncedAt ? `最後同步 ${esc(new Date(Sync.meta.lastSyncedAt).toLocaleString('zh-TW', { hour12: false }))}。` : '尚未同步。'}${Sync.status === 'error' ? `<br><span class="bad">同步失敗：${esc(Sync.lastError || '')}</span>` : ''}</div></div>
           <div class="row-wrap">${Sync.status === 'error' ? '<button type="button" class="btn btn-sm btn-primary" data-act="sync-retry">重試</button>' : '<button type="button" class="btn btn-sm btn-primary" data-act="sync-now">立即同步</button>'}<button type="button" class="btn btn-sm" data-act="sync-logout">登出</button><button type="button" class="btn btn-sm btn-ghost btn-danger" data-act="sync-delete-cloud">刪除雲端資料</button></div></div>`
       : Sync.pendingEmail
-        ? `<div class="setting-row"><div><div class="label">輸入驗證碼</div><div class="hint">登入信已寄到 <b>${esc(Sync.pendingEmail)}</b>。把信裡的 6 位數驗證碼輸入這裡（在 iPhone 主畫面 app 裡請用這個方式）；用電腦瀏覽器的話也可以直接點信裡的連結。</div></div>
-          <div class="row-wrap"><input type="text" id="syncCode" placeholder="123456" inputmode="numeric" autocomplete="one-time-code" maxlength="8" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-verify">登入</button><button type="button" class="btn btn-sm btn-ghost" data-act="sync-cancel-code">換一個 email</button></div></div>`
+        ? `<div class="setting-row"><div><div class="label">輸入驗證碼</div><div class="hint">登入信已寄到 <b>${esc(Sync.pendingEmail)}</b>。把信裡的 8 位數驗證碼輸入這裡（在 iPhone 主畫面 app 裡請用這個方式）；用電腦瀏覽器的話也可以直接點信裡的連結。</div></div>
+          <div class="row-wrap"><input type="text" id="syncCode" placeholder="12345678" inputmode="numeric" autocomplete="one-time-code" maxlength="8" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-verify">登入</button><button type="button" class="btn btn-sm btn-ghost" data-act="sync-cancel-code">換一個 email</button></div></div>`
         : `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">每個人的資料各自獨立。AI 與語音設定（含 API 金鑰與位址）只留在這台裝置，不會上傳。第一次在新裝置登入時，會以雲端的進度為準（這台若已有進度會先存一份快照）。</div></div>
           <div class="row-wrap"><input type="email" id="syncEmail" placeholder="you@example.com" autocomplete="email" inputmode="email" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-login">寄送登入信</button></div></div>`;
   return `
@@ -5160,7 +5175,23 @@ async function speakBrowser(text, gender, token) {
   const wait = 60 - (Date.now() - lastCancelAt);
   if (wait > 0) await sleep(wait);
   if (token !== speechToken) return;
-  await new Promise(resolve => {
+  // Browsers (Chrome, iOS Safari) sometimes swallow an utterance without any event when speak() lands while the
+  // previous one is winding down, and sometimes never fire onend. Each line is therefore watched: a line that never
+  // starts is spoken again once, and a line only counts as finished when the synthesizer is really idle, so the next
+  // line is never queued on top of it (the usual way the last option of a listening question got lost).
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const started = await speakUtterance(text, gender, token);
+    if (started || token !== speechToken) return;
+    try { window.speechSynthesis.cancel(); } catch (e) { /* ignore */ }
+    lastCancelAt = Date.now();
+    await sleep(120);
+    if (token !== speechToken) return;
+  }
+}
+const liveUtterances = new Set(); // keeps utterances reachable: a garbage-collected one never fires onend
+function speakUtterance(text, gender, token) {
+  const synth = window.speechSynthesis;
+  return new Promise(resolve => {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'ja-JP';
     u.rate = state.settings.speechRate || 1;
@@ -5168,11 +5199,25 @@ async function speakBrowser(text, gender, token) {
     if (voice) u.voice = voice;
     // when only one voice exists, a pitch change keeps the two speakers apart
     u.pitch = gender === 'm' && !(voice && MALE_VOICE.test(voice.name)) ? 0.8 : (gender === 'f' ? 1.08 : 1);
-    let finished = false;
-    const done = () => { if (!finished) { finished = true; resolve(); } };
-    u.onend = done; u.onerror = done;
-    setTimeout(done, 2500 + text.length * 350 / (u.rate || 1));
-    window.speechSynthesis.speak(u);
+    let began = false, finished = false, timer = null;
+    const finish = (ok) => { if (finished) return; finished = true; clearTimeout(timer); liveUtterances.delete(u); resolve(ok); };
+    u.onstart = () => { began = true; };
+    u.onend = () => finish(true);
+    u.onerror = () => finish(true);
+    const busy = () => { try { return Boolean(synth.speaking || synth.pending); } catch (e) { return false; } };
+    const estimate = 2500 + text.length * 350 / (u.rate || 1);
+    const deadline = Date.now() + estimate;
+    const hardStop = deadline + 20000;
+    const watch = () => {
+      if (finished) return;
+      if (token !== speechToken) { finish(true); return; }
+      if (!began && !busy()) { finish(false); return; }                        // swallowed: nothing is playing and it never started
+      if (Date.now() >= deadline && (!busy() || Date.now() >= hardStop)) { finish(true); return; }   // onend was lost; wait until idle
+      timer = setTimeout(watch, 250);
+    };
+    liveUtterances.add(u);
+    synth.speak(u);
+    timer = setTimeout(watch, 1200);
   });
 }
 
@@ -6331,14 +6376,14 @@ const Sync = {
     const { error } = await this.client.auth.signInWithOtp({ email: addr, options: { emailRedirectTo: location.origin + location.pathname } });
     if (error) { toast('寄送失敗：' + error.message, 5000); return; }
     this.pendingEmail = addr;
-    toast('已寄出登入信。在這個 app 裡輸入信中的 6 位數驗證碼，或用同一個瀏覽器點開信裡的連結', 7000);
+    toast('已寄出登入信。在這個 app 裡輸入信中的 8 位數驗證碼，或用同一個瀏覽器點開信裡的連結', 7000);
     if (modalOpen()) refreshSettings();
   },
 
   async verifyCode(code) {
     if (!this.client || !this.pendingEmail) return;
     const token = String(code || '').replace(/\D/g, '');
-    if (token.length < 6) { toast('請輸入信中的 6 位數驗證碼'); return; }
+    if (token.length < 8) { toast('請輸入信中的 8 位數驗證碼'); return; }
     const { error } = await this.client.auth.verifyOtp({ email: this.pendingEmail, token, type: 'email' });
     if (error) { toast('驗證失敗：' + error.message, 5000); return; }
     this.pendingEmail = null;

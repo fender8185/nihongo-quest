@@ -22,13 +22,13 @@ def test_login_button_sends_normalized_email(b):
     ])
     assert out[-1] == '[["otp","foo@x.com"]]', out[-1]
 
-def test_six_digit_code_from_the_email_logs_in(b):
+def test_eight_digit_code_from_the_email_logs_in(b):
     out = boot(b, [
         ("eval", "openSettings('data'); document.getElementById('syncEmail').value = 'foo@x.com'; document.querySelector('[data-act=sync-login]').click(); new Promise(r => setTimeout(r, 100)).then(() => !!document.getElementById('syncCode'))"),
-        ("eval", "document.getElementById('syncCode').value = ' 123456 '; document.querySelector('[data-act=sync-verify]').click(); new Promise(r => setTimeout(r, 100)).then(() => JSON.stringify(__fake.calls.filter(c => c[0] === 'verify')))"),
+        ("eval", "document.getElementById('syncCode').value = ' 12345678 '; document.querySelector('[data-act=sync-verify]').click(); new Promise(r => setTimeout(r, 100)).then(() => JSON.stringify(__fake.calls.filter(c => c[0] === 'verify')))"),
     ])
     assert out[-2] is True, "code input should appear after the link is sent"
-    assert out[-1] == '[["verify","foo@x.com","123456","email"]]', out[-1]
+    assert out[-1] == '[["verify","foo@x.com","12345678","email"]]', out[-1]
 
 def test_logged_in_chip_and_panel(b):
     out = boot(b, [
@@ -62,7 +62,7 @@ def test_toast_is_clickable_while_shown(b):
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
-    tests = [test_chip_shows_logged_out_and_opens_data_tab, test_login_button_sends_normalized_email, test_six_digit_code_from_the_email_logs_in, test_logged_in_chip_and_panel,
+    tests = [test_chip_shows_logged_out_and_opens_data_tab, test_login_button_sends_normalized_email, test_eight_digit_code_from_the_email_logs_in, test_logged_in_chip_and_panel,
              test_backup_banner_suppressed_when_recently_synced, test_toast_is_clickable_while_shown]
     failed = 0
     try:
