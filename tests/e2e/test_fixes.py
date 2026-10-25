@@ -55,20 +55,6 @@ def test_slow_option_does_not_get_the_next_one_queued_on_top(b):
     assert starts(log) == LINES, log
     assert not [x for x in log if x.startswith('overlap:')], log
 
-def test_requeued_listening_audio_follows_the_shuffled_options(b):
-    js = """(() => {
-      state.settings.audioOptions = true; state.settings.listening = true;
-      const it = REG.listen.find(x => x.t === 'resp');
-      const q = makeListenQuestion(it);
-      const opts = q.options.slice().reverse();   // a deterministic 'shuffle'
-      const re = requeueQuestion(q, opts);
-      const expected = [it.line, ...re.options.map((o, i) => `${spokenNum(i)}、${ttsText(o.text)}`)].join('\\n');
-      return JSON.stringify({ ok: re.audio === expected, ans: re.options[re.answer].text === it.a });
-    })()"""
-    out = b.run([("nav", URL), ("wait", READY), ("eval", "typeof REG.listen !== 'undefined' && REG.listen.length > 0"), ("eval", js)])
-    assert out[-2] is True, "no listening items"
-    assert out[-1] == '{"ok":true,"ans":true}', out[-1]
-
 def test_wrong_vocab_options_show_their_chinese_after_answering(b):
     js = """(() => {
       const v = REG.vocab.find(x => x.builtin && recallOptions(x));
@@ -150,12 +136,6 @@ def test_deepgram_lines_are_prefetched_and_all_play_through_one_player(b):
     assert r['played'] == 4 and r['oneEl'] and r['blob'], r
 
 # ---- 2026-10-25 (3): kana option numbers, less next-day repetition, new grammar spread across points ----
-def test_option_numbers_are_spoken_in_kana(b):
-    js = """(() => { state.settings.audioOptions = true; const it = REG.listen.find(x => x.t === 'resp'); const q = makeListenQuestion(it);
-      return JSON.stringify(spokenOptions(q).map(l => l.split('、')[0])); })()"""
-    out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
-    assert out[-1] in ('["いち","に","さん"]', '["いち","に","さん","よん"]'), out[-1]
-
 def test_first_correct_answer_waits_a_few_days_before_repeating(b):
     js = """(() => { const t = todayStr(); const g = REG.grammar[0]; const g2 = REG.grammar[1];
       const ok = srsAnswer(g.key, true); const ng = srsAnswer(g2.key, false);
@@ -170,13 +150,72 @@ def test_new_grammar_of_a_unit_rotates_through_its_points(b):
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
     assert out[-1] == '{"n":6,"pts":6}', out[-1]
 
+# ---- 2026-10-25 (4): audio-only options are played on demand, one button per option ----
+def test_audio_options_play_on_click_instead_of_being_read_in_sequence(b):
+    js = """(() => {
+      state.settings.audioOptions = true; state.settings.listening = true;
+      const it = REG.listen.find(x => x.t === 'resp');
+      const q = makeListenQuestion(it);
+      const again = requeueQuestion(q, q.options.slice().reverse());
+      startSession('vocab', { filter: 'all' });
+      SESSION.entries[SESSION.idx].q = q; SESSION.entries[SESSION.idx].autoPlayed = true; renderPractice();
+      const rows = [...document.querySelectorAll('.opt-audio')];
+      const plays = [...document.querySelectorAll('.opt-audio [data-act=speak]')];
+      const picks = [...document.querySelectorAll('.opt-audio [data-act=answer]')];
+      // the hashchange from startSession re-renders shortly after; wait for it before clicking live buttons
+      return new Promise(r => setTimeout(r, 300)).then(() => {
+        __tts.log.length = 0;
+        document.querySelectorAll('.opt-audio [data-act=speak]')[1].click();
+        return new Promise(r => setTimeout(r, 400));
+      }).then(() => {
+        const spoken = __tts.log.filter(x => x.startsWith('start:')).map(x => x.slice(6));
+        document.querySelectorAll('.opt-audio [data-act=answer]')[2].click();
+        const after = [...document.querySelectorAll('.opt')].map(el => el.textContent.trim());
+        return JSON.stringify({ audio: q.audio === it.line, againAudio: again.audio === it.line, rows: rows.length, plays: plays.length, picks: picks.length,
+          spoken, want: ttsText(q.options[1].text), answered: currentEntry().done, chosen: currentEntry().chosen, textShown: after.every(t => !t.includes('選項')) });
+      });
+    })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert r['audio'] and r['againAudio'], r              # the prompt line is the only auto-played audio
+    assert r['rows'] == 3 and r['plays'] == 3 and r['picks'] == 3, r
+    assert r['spoken'] == [r['want']], r                   # clicking option 2 speaks option 2 only
+    assert r['answered'] and r['chosen'] == 2 and r['textShown'], r
+
+def test_scene_audio_options_have_no_autoplay_and_play_on_click(b):
+    js = """(() => {
+      state.settings.audioOptions = true;
+      const it = REG.listen.find(x => x.t === 'scene');
+      const q = makeListenQuestion(it);
+      startSession('vocab', { filter: 'all' });
+      SESSION.entries[SESSION.idx].q = q; renderPractice();
+      return JSON.stringify({ audio: q.audio || '', rows: document.querySelectorAll('.opt-audio').length, plays: document.querySelectorAll('.opt-audio [data-act=speak]').length });
+    })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert r['audio'] == '' and r['rows'] == 3 and r['plays'] == 3, r
+
+def test_formal_exam_listening_options_play_on_click(b):
+    js = """(() => {
+      startExam({ level: 'N5', size: 'mini', subjects: ['S3'], formal: true });
+      const i = EXAM.paper.findIndex(q => q.m === 'S3-M4');
+      if (i < 0) return 'no S3-M4';
+      EXAM.idx = i; renderExamRunner();
+      const q = EXAM.paper[i];
+      return JSON.stringify({ audioHasOptions: q.audio.includes(ttsText(q.options[0].text)), rows: document.querySelectorAll('.opt-audio').length, plays: document.querySelectorAll('.opt-audio [data-act=speak]').length, picks: document.querySelectorAll('.opt-audio [data-act=exam-answer]').length });
+    })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert r['audioHasOptions'] is False, r
+    assert r['rows'] >= 3 and r['plays'] == r['rows'] and r['picks'] == r['rows'], r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
-    tests = [test_dropped_option_is_spoken_again, test_slow_option_does_not_get_the_next_one_queued_on_top, test_requeued_listening_audio_follows_the_shuffled_options,
-             test_wrong_vocab_options_show_their_chinese_after_answering, test_more_menu_icons_are_small, test_login_code_is_eight_digits,
+    tests = [test_dropped_option_is_spoken_again, test_slow_option_does_not_get_the_next_one_queued_on_top, test_wrong_vocab_options_show_their_chinese_after_answering, test_more_menu_icons_are_small, test_login_code_is_eight_digits,
              test_fresh_profile_starts_at_week_one, test_week_picker_sets_the_current_unit, test_deepgram_lines_are_prefetched_and_all_play_through_one_player,
-             test_option_numbers_are_spoken_in_kana, test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points]
+             test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
+             test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click]
     failed = 0
     try:
         for t in tests:

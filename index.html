@@ -273,6 +273,12 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .opt.wrong { border-color: var(--bad-line); background: var(--bad-soft); }
 .opt.wrong .kbd { border-color: var(--bad-line); color: var(--bad); }
 .opt.faded { opacity: .55; }
+.opt-audio { padding: 6px 8px 6px 12px; gap: 8px; cursor: default; }
+.opt-play { flex: 1 1 auto; display: inline-flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 4px; border: 0; background: none; color: var(--accent); font-size: 16px; font-weight: 500; cursor: pointer; text-align: left; border-radius: 8px; }
+.opt-play:hover { background: var(--bg-hover); }
+.opt-play svg { width: 20px; height: 20px; flex: none; }
+.opt-pick { flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--bg-elev); color: var(--fg-2); font-size: 14px; cursor: pointer; }
+.opt-pick:hover:not(:disabled) { border-color: var(--accent-line); background: var(--bg-hover); color: var(--fg); }
 .opt-zh { margin-left: auto; flex: 0 1 auto; max-width: 48%; text-align: right; font-size: 13px; line-height: 1.35; color: var(--fg-3); }
 .feedback { margin-top: 16px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg-sunken); }
 .feedback.ok { border-color: var(--ok-line); }
@@ -2181,17 +2187,24 @@ function makeMistakeCard(m) {
 function playButton(label = '再聽一次') {
   return `<div class="center"><button type="button" class="speak-big" data-act="replay">${icon('speaker')}<span>${label}</span></button></div>`;
 }
-// options read aloud after the prompt, numbered like the real test; the number is written in kana because
-// Deepgram (and some browser voices) silently skip a bare digit followed by 、
-const SPOKEN_NUM = ['いち', 'に', 'さん', 'よん', 'ご', 'ろく'];
-function spokenNum(i) { return SPOKEN_NUM[i] || String(i + 1); }
-function spokenOptions(q) { return q.options.map((o, i) => `${spokenNum(i)}、${ttsText(o.text)}`); }
-function listenAudio(q) { return [q.audioLead || '', ...spokenOptions(q)].filter(Boolean).join('\n'); }
-// a copy of q with the options in a new order (the answer index and any spoken option list follow)
+// Audio-only options (q.audioOptions): each option is a play button and is spoken only when tapped; nothing is
+// read in sequence, so no option can be skipped and no option number needs to be spoken.
+function audioOptionHtml(i, cls, o, answerAct, disabled) {
+  return `<div class="${cls} opt-audio">
+      <button type="button" class="opt-play" data-act="speak" data-text="${esc(jaPlain(o.text))}" title="播放選項 ${i + 1}">${icon('speaker')}<span>選項 ${i + 1}</span></button>
+      <button type="button" class="opt-pick" data-act="${answerAct}" data-i="${i}" ${disabled ? 'disabled' : ''}><span class="kbd">${i + 1}</span><span>選這個</span></button>
+    </div>`;
+}
+// external engines: fetch the option clips while the learner listens to the prompt, so a tap plays at once
+function prefetchSpeech(texts) {
+  const cfg = ttsConfig();
+  if (!cfg.engine || cfg.engine === 'browser_neural') return;
+  texts.forEach(t => { const x = ttsText(t); if (x) engineBlob(x, '').catch(() => {}); });
+}
+// a copy of q with the options in a new order (the answer index follows)
 function requeueQuestion(q, opts) {
   const again = Object.assign({}, q, { id: uid('q'), options: opts, answer: opts.indexOf(q.options[q.answer]) });
   delete again._rmap;
-  if (again.audioOptions) again.audio = listenAudio(again);
   return again;
 }
 
@@ -2217,8 +2230,7 @@ function makeListenQuestion(it) {
     q.instr = '聽對方說的話，選出最合適的回應。';
     finalizeOptions(q, it.a, others, true);
     q.stemHtml = playButton();
-    q.audioLead = it.line;
-    q.audio = audioOnly ? listenAudio(q) : it.line;
+    q.audio = it.line;
     q.audioScript = true;
     q.audioOptions = audioOnly;
     q.revealHtml = transcriptHtml(it.line, it.zh);
@@ -2228,8 +2240,8 @@ function makeListenQuestion(it) {
     q.label = `聽力 · ${it.lv} · 情境表達`;
     q.instr = '看情境，選出最合適的說法。';
     finalizeOptions(q, it.a, others, true);
-    q.stemHtml = `<div class="dim" style="font-size:17px;line-height:1.7">${esc(it.scene)}</div>${audioOnly ? playButton('再聽一次選項') : ''}`;
-    if (audioOnly) { q.audioLead = ''; q.audio = listenAudio(q); q.audioScript = true; q.audioOptions = true; }
+    q.stemHtml = `<div class="dim" style="font-size:17px;line-height:1.7">${esc(it.scene)}</div>`;
+    if (audioOnly) q.audioOptions = true;
     q.mistakePrompt = `【情境】${it.scene}`;
   }
   q.answerText = jaPlain(it.a);
@@ -2707,7 +2719,8 @@ function renderPractice() {
       else if (i === e.chosen) cls += ' wrong';
       else cls += ' faded';
     }
-    const text = q.audioOptions && !answered ? `<span class="muted">選項 ${i + 1}</span>` : optionHtml(q, o);
+    if (q.audioOptions && !answered) return audioOptionHtml(i, cls, o, 'answer', false);
+    const text = optionHtml(q, o);
     // after answering, each wrong word shows what it actually means
     const zh = answered && i !== q.answer && q.optZh ? q.optZh[o.text] || '' : '';
     return `<button type="button" class="${cls}" data-act="answer" data-i="${i}" ${answered ? 'disabled' : ''}><span class="kbd">${i + 1}</span><span class="${optClass(o)}">${text}</span>${zh ? `<span class="opt-zh">${esc(zh)}</span>` : ''}</button>`;
@@ -2743,6 +2756,7 @@ function renderPractice() {
       </div>
     </div>`;
   if (!answered && q.audio && !e.autoPlayed) { e.autoPlayed = true; setTimeout(() => (q.audioScript ? speakScript(q.audio) : speak(q.audio)), 150); }
+  if (!answered && q.audioOptions) prefetchSpeech(q.options.map(o => jaPlain(o.text)));
   if (answered) { const nb = document.getElementById('btnNext'); if (nb) nb.focus({ preventScroll: true }); }
 }
 
@@ -4098,7 +4112,7 @@ function startExam(opt = {}) {
     paper.forEach(q => {
       if (q.m !== 'S3-M3' && q.m !== 'S3-M4') return;
       q.audioOptions = true;
-      q.audio = [q.m === 'S3-M4' ? q.audio : '', ...q.options.map((o, i) => `${spokenNum(i)}、${ttsText(o.text)}`)].filter(Boolean).join('\n');
+      if (q.m === 'S3-M3') q.audio = '';   // the scene is read on screen; the replies are played per option
     });
   }
   const sizeLabel = { mini: '迷你', std: '標準', full: '完整' }[size];
@@ -4148,7 +4162,8 @@ function renderExamRunner() {
     let cls = 'opt' + (o.jp ? '' : ' zh') + (jaPlain(o.text).length > 14 ? ' long' : '');
     if (locked) { if (i === q.answer) cls += ' correct'; else if (i === ans) cls += ' wrong'; else cls += ' faded'; }
     else if (i === ans) cls += ' correct';
-    const text = q.audioOptions && !locked ? `<span class="muted">選項 ${i + 1}</span>` : optionHtml(q, o);
+    if (q.audioOptions && !locked) return audioOptionHtml(i, cls, o, 'exam-answer', false);
+    const text = optionHtml(q, o);
     return `<button type="button" class="${cls}" data-act="exam-answer" data-i="${i}" ${locked ? 'disabled' : ''}><span class="kbd">${i + 1}</span><span class="${optClass(o)}">${text}</span></button>`;
   }).join('');
   let stem = q.stemHtml || '';
@@ -4638,7 +4653,7 @@ function settingsSpeech() {
   return `
     ${boolRow('autoSpeak', '作答後自動朗讀', '答完題目會念出正確的單字或整句。')}
     ${boolRow('listening', '出聽力題', '單字練習中加入「聽發音選意思」，每日練習加入聽力題。')}
-    ${boolRow('audioOptions', '聽力選項只用聽的', '即時應答與情境表達的選項不顯示文字，只念出來，和正式考試一樣。')}
+    ${boolRow('audioOptions', '聽力選項只用聽的', '即時應答與情境表達的選項不顯示文字；點每個選項的播放鍵聽它的內容，再選答案。')}
     <div class="setting-row"><div><div class="label">語速</div><div class="hint">目前 ${Number(state.settings.speechRate).toFixed(2)} 倍</div></div>
       <input type="range" min="0.6" max="1.2" step="0.05" value="${esc(state.settings.speechRate)}" data-change="setting" data-key="speechRate" data-type="num" data-min="0.6" data-max="1.2" style="width:180px" /></div>
     ${selRow('engine', '語音服務', '', TTS_ENGINES, 'tts-cfg')}
