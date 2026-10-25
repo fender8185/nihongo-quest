@@ -874,8 +874,7 @@ async function loadState() {
       return 'migrated';
     } catch (e) { console.warn('legacy migration failed', e); }
   }
-  state = defaultState();
-  state.currentUnit = recommendUnit(state.settings.duolingoScore);
+  state = defaultState();   // currentUnit is m1: everyone starts at week 1 unless they pick another start in 課程
   saveState();
   return 'fresh';
 }
@@ -3433,17 +3432,33 @@ function renderUnit(view, uid, tab) {
 function levelPickerHtml() {
   const score = state.settings.duolingoScore || 22;
   const rec = unitById(recommendUnit(score));
+  const unitOpts = DATA.UNITS.map(u => `<option value="${u.id}" ${u.id === state.currentUnit ? 'selected' : ''}>${esc(u.weeks)}・${esc(u.short)}</option>`).join('');
   return `
-    <p class="dim small">輸入多鄰國（Duolingo）日語分數，系統會建議一個起點單元。這只是參考，之後可以隨時在課程頁改。</p>
+    <p class="dim small">選擇要從第幾週開始。預設從第 1 週開始；之後可以隨時在課程頁更改。</p>
     <div class="row-wrap mt-3">
-      <input class="input" type="number" min="1" max="160" id="duoScore" value="${score}" style="width:120px" />
-      <button type="button" class="btn" data-act="duo-preview">更新建議</button>
+      <select class="select" id="startUnit" style="width:auto;min-width:220px">${unitOpts}</select>
+      <button type="button" class="btn btn-primary" data-act="start-apply">設為目前單元</button>
     </div>
-    <div class="panel mt-3" id="duoRec">建議起點：<b>${esc(rec.weeks)}・${esc(rec.title)}</b></div>
-    <div class="row-wrap mt-4">
-      <button type="button" class="btn btn-primary" data-act="duo-apply">設為目前單元</button>
-      <label class="switch"><input type="checkbox" id="duoMarkPrev" /><span class="track"></span><span class="small">同時把之前的單元標為完成</span></label>
-    </div>`;
+    <label class="switch mt-3"><input type="checkbox" id="startMarkPrev" /><span class="track"></span><span class="small">同時把之前的單元標為完成</span></label>
+    <details class="disclose mt-4">
+      <summary>不確定從哪裡開始？用多鄰國（Duolingo）分數估計</summary>
+      <p class="dim small mt-2">輸入多鄰國日語分數，系統會建議一個起點單元。這只是參考。</p>
+      <div class="row-wrap mt-2">
+        <input class="input" type="number" min="1" max="160" id="duoScore" value="${score}" style="width:120px" />
+        <button type="button" class="btn" data-act="duo-preview">更新建議</button>
+      </div>
+      <div class="panel mt-3" id="duoRec">建議起點：<b>${esc(rec.weeks)}・${esc(rec.title)}</b></div>
+      <div class="row-wrap mt-3">
+        <button type="button" class="btn" data-act="duo-apply">採用建議的起點</button>
+      </div>
+    </details>`;
+}
+// make `unit` the current unit; optionally mark every earlier unit as completed
+function applyStartUnit(unit, markPrev) {
+  if (!DATA.UNITS.some(u => u.id === unit)) return;
+  state.currentUnit = unit;
+  if (markPrev) DATA.UNITS.slice(0, unitOrder(unit)).forEach(u => { if (!state.completedUnits.includes(u.id)) state.completedUnits.push(u.id); });
+  saveState(); closeModal(); toast(`目前單元：${unitById(unit).weeks}・${unitById(unit).short}`); route();
 }
 
 Object.assign(ACTIONS, {
@@ -3460,15 +3475,11 @@ Object.assign(ACTIONS, {
     const rec = unitById(recommendUnit(v));
     document.getElementById('duoRec').innerHTML = `建議起點：<b>${esc(rec.weeks)}・${esc(rec.title)}</b>`;
   },
+  'start-apply': () => applyStartUnit(document.getElementById('startUnit').value, document.getElementById('startMarkPrev').checked),
   'duo-apply': () => {
     const v = clamp(Number(document.getElementById('duoScore').value) || 22, 1, 160);
     state.settings.duolingoScore = v;
-    const rec = recommendUnit(v);
-    state.currentUnit = rec;
-    if (document.getElementById('duoMarkPrev').checked) {
-      DATA.UNITS.slice(0, unitOrder(rec)).forEach(u => { if (!state.completedUnits.includes(u.id)) state.completedUnits.push(u.id); });
-    }
-    saveState(); closeModal(); toast(`目前單元：${unitById(rec).weeks}`); route();
+    applyStartUnit(recommendUnit(v), document.getElementById('startMarkPrev').checked);
   },
   'ai-note': (el) => aiUnitNote(el.dataset.unit, (document.getElementById('aiNoteQ') || {}).value || '', el),
   'ai-note-clear': (el) => { delete state.unitAiNotes[el.dataset.unit]; saveState(); route(); },
@@ -4820,7 +4831,6 @@ Object.assign(ACTIONS, {
     const keep = { aiConfig: state.aiConfig, ttsConfig: state.ttsConfig, theme: state.settings.theme };
     state = defaultState();
     state.aiConfig = keep.aiConfig; state.ttsConfig = keep.ttsConfig; state.settings.theme = keep.theme;
-    state.currentUnit = recommendUnit(state.settings.duolingoScore);
     saveState(); buildRegistry(); AnkiMedia.clear();
     SESSION = null; FLASH = null; EXAM = null;
     closeModal(); toast('已重設'); go('#/today');
@@ -5153,7 +5163,36 @@ let currentAudio = null;
 let lastCancelAt = 0;
 let ttsWarned = false;
 const audioCache = new Map();
+const audioPending = new Map();   // cache key -> in-flight fetch, so a prefetch and the playback never fetch the same line twice
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// One <audio> element for every synthesized clip. iOS Safari only lets an element play without a user gesture
+// once that same element was started by one, so a fresh `new Audio()` after a network fetch is refused and the
+// line falls silent. The shared player is unlocked by the first tap/click with a 10 ms silent clip.
+const SILENT_WAV = 'data:audio/wav;base64,UklGRnQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
+let ttsPlayer = null;
+let ttsPlayerUnlocked = false;
+function getTtsPlayer() {
+  if (!ttsPlayer) {
+    ttsPlayer = document.createElement('audio');
+    ttsPlayer.setAttribute('playsinline', '');
+    ttsPlayer.preload = 'auto';
+    ttsPlayer.style.display = 'none';
+    document.body.appendChild(ttsPlayer);
+  }
+  return ttsPlayer;
+}
+function unlockTtsPlayer() {
+  if (ttsPlayerUnlocked) return;
+  const a = getTtsPlayer();
+  if (a.src && !a.paused) return;   // a real clip is already playing from this gesture
+  ttsPlayerUnlocked = true;
+  try {
+    a.src = SILENT_WAV;
+    const p = a.play();
+    if (p && p.catch) p.catch(() => { ttsPlayerUnlocked = false; });
+  } catch (e) { ttsPlayerUnlocked = false; }
+}
 
 function stopSpeaking() {
   speechToken++;
@@ -5221,52 +5260,52 @@ function speakUtterance(text, gender, token) {
   });
 }
 
-async function engineBlob(text, gender) {
+function engineBlob(text, gender) {
   const cfg = ttsConfig();
+  const rate = state.settings.speechRate || 1;
+  const ck = cfg.engine === 'deepgram' ? `dg|${gender === 'm' ? cfg.deepgramVoiceM : cfg.deepgramVoice}|${text}`
+    : cfg.engine === 'voicevox' ? `vv|${gender === 'm' ? cfg.voicevoxSpeakerM : cfg.voicevoxSpeaker}|${rate}|${text}`
+    : cfg.engine === 'openai_tts' ? `oa|${cfg.openaiModel}|${gender === 'm' ? cfg.openaiVoiceM : cfg.openaiVoice}|${rate}|${text}` : '';
+  if (!ck) return Promise.resolve(null);
+  if (audioCache.has(ck)) return Promise.resolve(audioCache.get(ck));
+  if (audioPending.has(ck)) return audioPending.get(ck);
+  const p = fetchEngineBlob(cfg, text, gender).then(blob => { audioCache.set(ck, blob); return blob; }).finally(() => audioPending.delete(ck));
+  audioPending.set(ck, p);
+  return p;
+}
+async function fetchEngineBlob(cfg, text, gender) {
   const rate = state.settings.speechRate || 1;
   if (cfg.engine === 'deepgram') {
     if (!cfg.deepgramKey) throw new Error('沒有 Deepgram API Key');
     const model = gender === 'm' ? cfg.deepgramVoiceM : cfg.deepgramVoice;
-    const ck = `dg|${model}|${text}`;
-    if (audioCache.has(ck)) return audioCache.get(ck);
     const resp = await fetch(`https://api.deepgram.com/v1/speak?model=${encodeURIComponent(model)}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Token ${cfg.deepgramKey.trim()}` }, body: JSON.stringify({ text })
     });
     if (!resp.ok) throw new Error(`Deepgram HTTP ${resp.status}`);
-    const blob = await resp.blob();
-    audioCache.set(ck, blob);
-    return blob;
+    return resp.blob();
   }
   if (cfg.engine === 'voicevox') {
     const base = String(cfg.voicevoxUrl || TTS_DEFAULT.voicevoxUrl).replace(/\/+$/, '');
     const host = /^https?:/.test(base) ? base : `http://${base}`;
     const speaker = gender === 'm' ? cfg.voicevoxSpeakerM : cfg.voicevoxSpeaker;
-    const ck = `vv|${speaker}|${rate}|${text}`;
-    if (audioCache.has(ck)) return audioCache.get(ck);
     const q = await fetch(`${host}/audio_query?text=${encodeURIComponent(text)}&speaker=${encodeURIComponent(speaker)}`, { method: 'POST' });
     if (!q.ok) throw new Error(`VOICEVOX HTTP ${q.status}`);
     const query = await q.json();
     query.speedScale = rate;
     const s = await fetch(`${host}/synthesis?speaker=${encodeURIComponent(speaker)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(query) });
     if (!s.ok) throw new Error(`VOICEVOX HTTP ${s.status}`);
-    const blob = await s.blob();
-    audioCache.set(ck, blob);
-    return blob;
+    return s.blob();
   }
   if (cfg.engine === 'openai_tts') {
     const key = (cfg.openaiKey || (state.aiConfig && state.aiConfig.openaiKey) || '').trim();
     if (!key) throw new Error('沒有 OpenAI API Key');
     const voice = gender === 'm' ? cfg.openaiVoiceM : cfg.openaiVoice;
-    const ck = `oa|${cfg.openaiModel}|${voice}|${rate}|${text}`;
-    if (audioCache.has(ck)) return audioCache.get(ck);
     const resp = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({ model: cfg.openaiModel || 'tts-1-hd', voice, input: text, speed: rate })
     });
     if (!resp.ok) throw new Error(`OpenAI TTS HTTP ${resp.status}`);
-    const blob = await resp.blob();
-    audioCache.set(ck, blob);
-    return blob;
+    return resp.blob();
   }
   return null;
 }
@@ -5274,14 +5313,26 @@ async function engineBlob(text, gender) {
 function playUrl(url, token, rate = 1) {
   return new Promise(resolve => {
     if (token !== speechToken) { resolve(true); return; }
-    const a = new Audio(url);
+    const a = getTtsPlayer();
+    let finished = false, started = false, timer = null;
+    const cleanup = () => { clearTimeout(timer); a.onended = a.onerror = a.onplaying = a.onloadedmetadata = null; };
+    const done = (ok, why) => { if (finished) return; finished = true; cleanup(); if (!ok && why) console.warn('audio playback failed:', why); resolve(ok); };
+    a.onended = () => done(true);
+    a.onerror = () => done(false, 'error');
+    a.onplaying = () => { started = true; };
+    // a clip that never starts (refused play, stalled decode) or never reports `ended` must not stall the whole script
+    a.onloadedmetadata = () => {
+      if (finished || !isFinite(a.duration)) return;
+      clearTimeout(timer);
+      timer = setTimeout(() => done(started, started ? '' : 'never started'), a.duration / (rate || 1) * 1000 + 4000);
+    };
+    timer = setTimeout(() => { if (!started) done(false, 'never started'); }, 6000);
+    try { a.pause(); } catch (e) { /* ignore */ }
+    a.src = url;
     a.playbackRate = rate;
     currentAudio = a;
-    let finished = false;
-    const done = (ok) => { if (!finished) { finished = true; resolve(ok); } };
-    a.onended = () => done(true);
-    a.onerror = () => done(false);
-    a.play().catch(() => done(false));
+    const p = a.play();
+    if (p && p.catch) p.catch(e => done(false, e && e.name));
   });
 }
 
@@ -5317,16 +5368,19 @@ function speak(text) {
 async function speakScript(script) {
   stopSpeaking();
   const token = speechToken;
-  const lines = String(script || '').split(/\n+/).map(l => l.trim()).filter(Boolean);
-  for (const line of lines) {
-    if (token !== speechToken) return;
+  const parts = String(script || '').split(/\n+/).map(l => l.trim()).filter(Boolean).map(line => {
     const m = /^([^：:]{1,6})[：:]\s*(.+)$/.exec(line);
     const who = m ? m[1] : '';
-    const gender = /男/.test(who) ? 'm' : (/女/.test(who) ? 'f' : '');
-    const text = ttsText(m ? m[2] : line);
-    if (!text) continue;
-    await speakLine(text, gender, token);
-    if (lines.length > 1) await sleep(280);
+    return { gender: /男/.test(who) ? 'm' : (/女/.test(who) ? 'f' : ''), text: ttsText(m ? m[2] : line) };
+  }).filter(p => p.text);
+  // external engines: fetch every line up front (Deepgram allows 15 in flight) so the options follow without
+  // network gaps and the first clip starts as soon as possible after the tap that triggered it
+  const cfg = ttsConfig();
+  if (cfg.engine && cfg.engine !== 'browser_neural') parts.forEach(p => { engineBlob(p.text, p.gender).catch(() => {}); });
+  for (const p of parts) {
+    if (token !== speechToken) return;
+    await speakLine(p.text, p.gender, token);
+    if (parts.length > 1) await sleep(280);
   }
 }
 
@@ -6500,6 +6554,8 @@ async function init() {
   applyTheme();
   applyFurigana();
   document.addEventListener('click', handleClick);
+  // first real gesture unlocks the shared audio player (iOS refuses play() on an element that never had one)
+  ['pointerdown', 'touchend', 'keydown'].forEach(ev => document.addEventListener(ev, unlockTtsPlayer, { capture: true, passive: true }));
   document.addEventListener('change', handleChange);
   document.addEventListener('keydown', handleKey);
   window.addEventListener('hashchange', route);
