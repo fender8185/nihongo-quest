@@ -1135,8 +1135,10 @@ function ensureFsrs(r) {
   return r;
 }
 function fsrsNext(r, g, elapsed) {
-  if (typeof r.s !== 'number') {   // first answer: a learning step, kept short
-    r.s = g === 1 ? FSRS_W[0] : g === 2 ? FSRS_W[1] * 0.7 : g === 3 ? FSRS_W[1] : FSRS_W[2];
+  if (typeof r.s !== 'number') {   // first answer: a learning step
+    // a first "good" starts between FSRS's good (1.4 d) and easy (3.7 d) stabilities: about 3 days. With the
+    // plain 1.4 d most of a day's new grammar came back the very next day, which felt like endless repetition.
+    r.s = g === 1 ? FSRS_W[0] : g === 2 ? FSRS_W[1] * 0.7 : g === 3 ? (FSRS_W[1] + FSRS_W[2]) / 2 : FSRS_W[2];
     r.d = fsrsD0(g === 2 ? 2 : g);
     return;
   }
@@ -2179,8 +2181,11 @@ function makeMistakeCard(m) {
 function playButton(label = '再聽一次') {
   return `<div class="center"><button type="button" class="speak-big" data-act="replay">${icon('speaker')}<span>${label}</span></button></div>`;
 }
-// options read aloud after the prompt, numbered like the real test
-function spokenOptions(q) { return q.options.map((o, i) => `${i + 1}、${ttsText(o.text)}`); }
+// options read aloud after the prompt, numbered like the real test; the number is written in kana because
+// Deepgram (and some browser voices) silently skip a bare digit followed by 、
+const SPOKEN_NUM = ['いち', 'に', 'さん', 'よん', 'ご', 'ろく'];
+function spokenNum(i) { return SPOKEN_NUM[i] || String(i + 1); }
+function spokenOptions(q) { return q.options.map((o, i) => `${spokenNum(i)}、${ttsText(o.text)}`); }
 function listenAudio(q) { return [q.audioLead || '', ...spokenOptions(q)].filter(Boolean).join('\n'); }
 // a copy of q with the options in a new order (the answer index and any spoken option list follow)
 function requeueQuestion(q, opts) {
@@ -2398,9 +2403,11 @@ function newVocabCandidates(pool, allowN4) {
   }
   return out;
 }
-function roundRobinByType(items) {
+function roundRobinByType(items) { return roundRobinBy(items, it => it.t || 'choice'); }
+// one item from each group in turn, so consecutive items differ in `keyOf` (grammar point, question type …)
+function roundRobinBy(items, keyOf) {
   const groups = {};
-  items.forEach(it => { (groups[it.t || 'choice'] = groups[it.t || 'choice'] || []).push(it); });
+  items.forEach(it => { const k = keyOf(it); (groups[k] = groups[k] || []).push(it); });
   const keys = Object.keys(groups);
   const out = [];
   let added = true;
@@ -2414,7 +2421,7 @@ function newGrammarCandidates(unitIdOnly) {
   const cur = unitIdOnly || state.currentUnit;
   const inUnit = REG.grammar.filter(g => g.u === cur && !state.srs[g.key]);
   const sorted = [];
-  [1, 2, 3].forEach(d => { sorted.push(...roundRobinByType(shuffle(inUnit.filter(g => (g.d || 2) === d)))); });
+  [1, 2, 3].forEach(d => { sorted.push(...roundRobinBy(roundRobinByType(shuffle(inUnit.filter(g => (g.d || 2) === d))), g => g.pt || '')); });
   if (unitIdOnly) return sorted;
   // fill gaps from earlier, unfinished units
   const curIdx = unitOrder(cur);
@@ -4091,7 +4098,7 @@ function startExam(opt = {}) {
     paper.forEach(q => {
       if (q.m !== 'S3-M3' && q.m !== 'S3-M4') return;
       q.audioOptions = true;
-      q.audio = [q.m === 'S3-M4' ? q.audio : '', ...q.options.map((o, i) => `${i + 1}、${ttsText(o.text)}`)].filter(Boolean).join('\n');
+      q.audio = [q.m === 'S3-M4' ? q.audio : '', ...q.options.map((o, i) => `${spokenNum(i)}、${ttsText(o.text)}`)].filter(Boolean).join('\n');
     });
   }
   const sizeLabel = { mini: '迷你', std: '標準', full: '完整' }[size];

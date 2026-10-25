@@ -62,7 +62,7 @@ def test_requeued_listening_audio_follows_the_shuffled_options(b):
       const q = makeListenQuestion(it);
       const opts = q.options.slice().reverse();   // a deterministic 'shuffle'
       const re = requeueQuestion(q, opts);
-      const expected = [it.line, ...re.options.map((o, i) => `${i + 1}、${ttsText(o.text)}`)].join('\\n');
+      const expected = [it.line, ...re.options.map((o, i) => `${spokenNum(i)}、${ttsText(o.text)}`)].join('\\n');
       return JSON.stringify({ ok: re.audio === expected, ans: re.options[re.answer].text === it.a });
     })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", "typeof REG.listen !== 'undefined' && REG.listen.length > 0"), ("eval", js)])
@@ -149,12 +149,34 @@ def test_deepgram_lines_are_prefetched_and_all_play_through_one_player(b):
     assert r['spread'] < 100, r                        # all fetches start together, not one after the other
     assert r['played'] == 4 and r['oneEl'] and r['blob'], r
 
+# ---- 2026-10-25 (3): kana option numbers, less next-day repetition, new grammar spread across points ----
+def test_option_numbers_are_spoken_in_kana(b):
+    js = """(() => { state.settings.audioOptions = true; const it = REG.listen.find(x => x.t === 'resp'); const q = makeListenQuestion(it);
+      return JSON.stringify(spokenOptions(q).map(l => l.split('、')[0])); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
+    assert out[-1] in ('["いち","に","さん"]', '["いち","に","さん","よん"]'), out[-1]
+
+def test_first_correct_answer_waits_a_few_days_before_repeating(b):
+    js = """(() => { const t = todayStr(); const g = REG.grammar[0]; const g2 = REG.grammar[1];
+      const ok = srsAnswer(g.key, true); const ng = srsAnswer(g2.key, false);
+      return JSON.stringify({ okDays: daysBetween(t, ok.rec.due), ngDays: daysBetween(t, ng.rec.due) }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert r['okDays'] >= 3, r
+    assert r['ngDays'] == 0, r
+
+def test_new_grammar_of_a_unit_rotates_through_its_points(b):
+    js = """(() => { const c = newGrammarCandidates('m1').slice(0, 6); return JSON.stringify({ n: c.length, pts: new Set(c.map(g => g.pt)).size }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
+    assert out[-1] == '{"n":6,"pts":6}', out[-1]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
     tests = [test_dropped_option_is_spoken_again, test_slow_option_does_not_get_the_next_one_queued_on_top, test_requeued_listening_audio_follows_the_shuffled_options,
              test_wrong_vocab_options_show_their_chinese_after_answering, test_more_menu_icons_are_small, test_login_code_is_eight_digits,
-             test_fresh_profile_starts_at_week_one, test_week_picker_sets_the_current_unit, test_deepgram_lines_are_prefetched_and_all_play_through_one_player]
+             test_fresh_profile_starts_at_week_one, test_week_picker_sets_the_current_unit, test_deepgram_lines_are_prefetched_and_all_play_through_one_player,
+             test_option_numbers_are_spoken_in_kana, test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points]
     failed = 0
     try:
         for t in tests:
