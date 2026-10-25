@@ -279,6 +279,9 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .opt-play svg { width: 20px; height: 20px; flex: none; }
 .opt-pick { flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--bg-elev); color: var(--fg-2); font-size: 14px; cursor: pointer; }
 .opt-pick:hover:not(:disabled) { border-color: var(--accent-line); background: var(--bg-hover); color: var(--fg); }
+.changelog { padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.changelog ul { margin: 4px 0 0; padding-left: 18px; }
+.changelog ul li { margin: 2px 0; line-height: 1.55; }
 .opt-zh { margin-left: auto; flex: 0 1 auto; max-width: 48%; text-align: right; font-size: 13px; line-height: 1.35; color: var(--fg-3); }
 .feedback { margin-top: 16px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg-sunken); }
 .feedback.ok { border-color: var(--ok-line); }
@@ -726,7 +729,16 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '3.0';
+const APP_VERSION = '9';   // keep equal to the number in sw.js CACHE ('nq-v9'); scripts/test.sh checks it
+// newest first; shown under 設定 › 外觀 › 版本紀錄
+const CHANGELOG = [
+  { v: '9', date: '2026-10-25', items: ['今日練習按鈕上的題數改為實際會出的題數，和點進去後一致。', '設定 › 外觀 新增版本紀錄。'] },
+  { v: '8', date: '2026-10-25', items: ['聽力「只用聽的」選項改成逐一點選播放（即時應答、情境表達、正式模擬考），不再依序朗讀 1、2、3。', '外部語音引擎會預先抓取選項音檔，點了立即播放。'] },
+  { v: '7', date: '2026-10-25', items: ['第一次答對的題目改為約 3 天後再複習，大幅減少隔天就重複出現的文法題。', '新文法題輪流跨不同考點，同一天不會連續出現同一個考點。'] },
+  { v: '6', date: '2026-10-25', items: ['課程 › 依程度選擇起點：可直接選擇從第幾週開始，新用戶預設第 1 週；多鄰國分數估計改為輔助選項。', 'Deepgram／VOICEVOX／OpenAI 語音改用單一播放器並預先抓取，修正 iPhone 上後面的句子沒有聲音。'] },
+  { v: '5', date: '2026-10-25', items: ['瀏覽器語音漏唸或吞掉的句子會自動重唸，不再少唸最後一個選項。', '單字題作答後，錯誤選項旁會顯示該字的中文意思。', '手機「更多」選單排版修正。', '登入驗證碼改為 8 位數。'] },
+  { v: '4', date: '2026-10-24', items: ['新增雲端同步（Email 驗證碼登入），多裝置共用進度。', '可安裝到主畫面（PWA），資料改存 IndexedDB，並有每日自動快照。'] }
+];
 const STORE_KEY = 'nihongo_quest_n4_v3';
 const LEGACY_KEY = 'nihongo_quest_n4_v1';
 
@@ -2571,6 +2583,20 @@ function buildDailyQueue(fullSize = state.settings.sessionSize) {
   return { items, plan, newCount: items.filter(isNew).length, reviewCount: items.filter(x => !isNew(x)).length };
 }
 
+// The Today page and 「開始練習」 share one built queue, so the button says exactly how many questions the session
+// holds (the plan numbers above it describe the whole day's workload, which can be more than one session).
+let DAILY_CACHE = null;
+function dailyQueue(size = state.settings.sessionSize) {
+  const key = `${todayStr()}|${state.updatedAt}|${size}|${state.currentUnit}|${speechAvailable() ? 1 : 0}`;
+  if (DAILY_CACHE && DAILY_CACHE.key === key) return DAILY_CACHE.r;
+  const r = buildDailyQueue(size);
+  r.items = r.items.filter(it => makeQuestion(it, {}));   // an item that cannot become a question would be dropped silently later
+  const isNew = (x) => !state.srs[x.key];
+  r.newCount = r.items.filter(isNew).length; r.reviewCount = r.items.length - r.newCount;
+  DAILY_CACHE = { key, r };
+  return r;
+}
+
 function buildUnitQueue(unitId, size = 15) {
   const t = todayStr();
   const items = unitItems(unitId);
@@ -2612,7 +2638,7 @@ function startSession(mode, opt = {}) {
   let entries = [];
   let meta = {};
   if (mode === 'daily') {
-    const r = buildDailyQueue(opt.size || state.settings.sessionSize);
+    const r = dailyQueue(opt.size || state.settings.sessionSize);
     entries = r.items.map(item => ({ item }));
     meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: r.plan.note };
   } else if (mode === 'unit') {
@@ -3165,7 +3191,7 @@ function renderToday(view) {
   const extraN = exK + exL + exR;
   const extraText = [exK && `漢字 ${exK}`, exL && `聽力 ${exL}`, exR && `閱讀 ${exR}`].filter(Boolean).join('・');
   const size = state.settings.sessionSize;
-  const sessionN = Math.min(size, reviewN + newN + extraN) || 0;
+  const sessionN = reviewN + newN + extraN ? dailyQueue(size).items.length : 0;
   const d = parseDate(t);
   const greeting = `${d.getMonth() + 1} 月 ${d.getDate()} 日（${weekdayZh(t)}）`;
 
@@ -3186,7 +3212,7 @@ function renderToday(view) {
       ${plan.note ? `<div class="banner warn">${esc(plan.note)}</div>` : ''}
       <div class="row-wrap">
         <button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・${sessionN} 題</button>
-        ${reviewN + newN + extraN > size ? `<span class="small muted">做完還有 ${reviewN + newN + extraN - size} 題，可以再練一組</span>` : ''}
+        ${reviewN + newN + extraN > sessionN ? `<span class="small muted">做完還有 ${reviewN + newN + extraN - sessionN} 題，可以再練一組</span>` : ''}
       </div>`;
   }
 
@@ -4720,7 +4746,11 @@ function settingsLook() {
     ${selRow('theme', '主題', '', [['dark', '深色'], ['light', '淺色'], ['auto', '跟隨系統']])}
     ${selRow('furiState', '振假名', '也可以隨時按 F 或側邊欄的按鈕切換。「熟練的字不標」會拿掉你已經熟練（約 3 週以上記得住）的單字讀音。', [['all', '全部顯示'], ['smart', '熟練的字不標'], ['off', '全部隱藏']])}
     <div class="setting-row"><div><div class="label">鍵盤快速鍵</div><div class="hint">練習：1–4 作答、Enter 下一題、R 發音、T 顯示中文、F 振假名、Esc 結束。字卡：Space 翻面、1–4 評分。</div></div></div>
-    <p class="hint mt-3">版本 ${APP_VERSION}</p>`;
+    <p class="hint mt-3">版本 ${APP_VERSION}</p>
+    <details class="disclose mt-2">
+      <summary>版本紀錄</summary>
+      <ul class="changelog small dim mt-2">${CHANGELOG.map(c => `<li><b>v${c.v}</b><span class="muted">・${c.date}</span><ul>${c.items.map(x => `<li>${esc(x)}</li>`).join('')}</ul></li>`).join('')}</ul>
+    </details>`;
 }
 
 // ---------- backup ----------
@@ -6582,7 +6612,7 @@ async function init() {
   document.addEventListener('keydown', handleKey);
   window.addEventListener('hashchange', route);
   if ('speechSynthesis' in window) {
-    window.speechSynthesis.onvoiceschanged = () => { if (modalOpen() && settingsTab === 'speech') refreshSettings(); };
+    window.speechSynthesis.onvoiceschanged = () => { if (modalOpen() && settingsTab === 'speech') refreshSettings(); else if (!modalOpen() && currentRoute().name === 'today' && !SESSION) route(); };
   }
   if (window.matchMedia) {
     const mq = window.matchMedia('(prefers-color-scheme: light)');

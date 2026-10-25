@@ -209,13 +209,39 @@ def test_formal_exam_listening_options_play_on_click(b):
     assert r['audioHasOptions'] is False, r
     assert r['rows'] >= 3 and r['plays'] == r['rows'] and r['picks'] == r['rows'], r
 
+# ---- 2026-10-25 (5): the 今日練習 button count is the real session size; version history in settings ----
+def test_today_button_count_matches_the_session(b):
+    js = """(() => { const out = []; for (const size of [20, 15, 25, 30]) { state.settings.sessionSize = size; saveState(); route();
+      const btn = document.querySelector('[data-act=start-daily]'); const shown = Number((btn.textContent.match(/(\\d+) 題/) || [])[1]);
+      startSession('daily'); const actual = SESSION.entries.length; SESSION = null; document.body.classList.remove('practicing'); location.hash = '#/today';
+      out.push([shown, actual]); } return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
+    pairs = __import__('json').loads(out[-1])
+    assert all(a == b_ and a > 0 for a, b_ in pairs), pairs
+
+def test_settings_show_the_version_and_its_history(b):
+    out = b.run([("nav", URL), ("wait", READY),
+        ("eval", "openSettings('look'); const t = document.querySelector('.modal').textContent; JSON.stringify({ ver: t.includes('版本 ' + APP_VERSION), hist: t.includes('版本紀錄'), n: document.querySelectorAll('.changelog li').length, first: (document.querySelector('.changelog li') || {}).textContent || '' })")])
+    r = __import__('json').loads(out[-1])
+    assert r['ver'] and r['hist'] and r['n'] >= 5, r
+    assert APP_VERSION_IN_SW(r), r
+
+def APP_VERSION_IN_SW(r):
+    import re
+    sw = open(os.path.join(ROOT, "sw.js"), encoding="utf-8").read()
+    html = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+    cache = re.search(r"CACHE = 'nq-v(\d+)'", sw).group(1)
+    ver = re.search(r"const APP_VERSION = '(\d+)'", html).group(1)
+    return cache == ver and r['first'].startswith('v' + ver)
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
     tests = [test_dropped_option_is_spoken_again, test_slow_option_does_not_get_the_next_one_queued_on_top, test_wrong_vocab_options_show_their_chinese_after_answering, test_more_menu_icons_are_small, test_login_code_is_eight_digits,
              test_fresh_profile_starts_at_week_one, test_week_picker_sets_the_current_unit, test_deepgram_lines_are_prefetched_and_all_play_through_one_player,
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
-             test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click]
+             test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
+             test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history]
     failed = 0
     try:
         for t in tests:
