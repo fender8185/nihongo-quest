@@ -545,6 +545,22 @@ def test_records_of_merged_builtin_words_move_to_the_kept_entry(b):
 
 TESTS += [test_vocab_content_pass_adds_keigo_common_words_and_removes_duplicates, test_kanji_table_covers_the_frequent_kanji_of_the_vocabulary, test_records_of_merged_builtin_words_move_to_the_kept_entry]
 
+# ---- 2026-10-27: a word may carry a second example (ex2 / exZh2) ----
+def test_questions_pick_either_of_a_words_two_examples_and_cards_show_both(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && x.w === '書く'); v.ex2 = '名前を{書いて}ください。'; v.exZh2 = '請寫名字。';
+      state.srs[v.key] = { b: 2, due: todayStr(), n: 3, ok: 3, ng: 0, s: 4, d: 5, last: todayStr(), f: {} };
+      const seen = new Set(); for (let i = 0; i < 40; i++) seen.add(makeVocabQuestion(v, { forceFmt: 'v-cloze' }).fullJp);
+      const fixed = makeVocabQuestion(v, { forceFmt: 'v-cloze', exIndex: 1 });
+      startSession('items', { items: [v] }); const e = currentEntry(); e.preview = true; e.previewDone = false; renderPractice(); const n = document.querySelectorAll('.example').length; SESSION = null; document.body.classList.remove('practicing');
+      const r = { seen: [...seen].sort(), fixedFull: fixed.fullJp, fixedZh: fixed.fullZh, itemEx: fixed.item.ex, n, why: fixed.why, canCloze: vocabFormats(v).some(x => x[0] === 'v-cloze') };
+      delete v.ex2; delete v.exZh2; delete state.srs[v.key]; return JSON.stringify(r); })()"""
+    r = json.loads(ev(b, js))
+    assert len(r['seen']) == 2 and '名前を書いてください。' in r['seen'], r
+    assert r['fixedFull'] == '名前を書いてください。' and r['fixedZh'] == '請寫名字。' and r['itemEx'] == '名前を{書いて}ください。', r
+    assert r['n'] == 2 and '名前を書いてください' in r['why'] and r['canCloze'], r
+
+TESTS += [test_questions_pick_either_of_a_words_two_examples_and_cards_show_both]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)

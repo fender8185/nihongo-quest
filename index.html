@@ -1828,6 +1828,25 @@ function vSurfaceInfo(v) {
   }
   return { surface, form, pre, post };
 }
+// A word may carry a second example (ex2 / exZh2). Questions take one of them so the sentence is not what gets memorised;
+// cards and previews show both.
+function vocabExamples(v) { const out = []; if (v.ex) out.push({ ex: v.ex, exZh: v.exZh || '' }); if (v.ex2) out.push({ ex: v.ex2, exZh: v.exZh2 || '' }); return out; }
+function withExample(v, i) {
+  const exs = vocabExamples(v); const e = exs[i];
+  if (!e || exs.length < 2) return v;
+  return Object.assign({}, v, { ex: e.ex, exZh: e.exZh, exIndex: i });
+}
+// indices of the examples whose bracketed form the builders understand (so 例句填空 / 漢字 questions work); all when none do
+function usableExamples(v) {
+  const n = vocabExamples(v).length; const ok = [];
+  for (let i = 0; i < n; i++) { const info = vSurfaceInfo(withExample(v, i)); if (info && info.form !== 'raw') ok.push(i); }
+  return ok.length ? ok : Array.from({ length: n }, (_, i) => i);
+}
+function pickExample(v, ctx = {}) {
+  if (vocabExamples(v).length < 2) return v;
+  const i = ctx.exIndex !== undefined ? ctx.exIndex : pick(usableExamples(v));
+  return withExample(v, i);
+}
 function inflectLike(word, info) {
   if (!info || info.form === 'as-is') return word.w;
   const [kind, f] = info.form.split(':');
@@ -2002,7 +2021,7 @@ function vocabFormats(v) {
   const can = {
     'v-meaning': Boolean(v.m),
     'v-recall': Boolean(v.m) && v.builtin,
-    'v-cloze': Boolean(info && info.form !== 'raw' && v.exZh),
+    'v-cloze': Boolean(v.exZh && usableExamples(v).some(i => { const inf = vSurfaceInfo(withExample(v, i)); return inf && inf.form !== 'raw'; })),
     'v-reading': Boolean(v.r && HAS_KANJI.test(v.w) && v.builtin),
     'v-kanji': Boolean(v.r && HAS_KANJI.test(v.w) && v.builtin && b >= 3),
     'v-listen': Boolean(v.m && speechAvailable()),
@@ -2049,11 +2068,12 @@ function exampleHtml(jp, zh, cls = '') {
 }
 function vocabWhy(v) {
   const head = `**${jaPlain(v.w)}**${v.r && v.r !== v.w ? `（${v.r}）` : ''}：${v.m}`;
-  const ex = v.ex ? `\n- 例：${jaPlain(exPlain(v.ex))}${v.exZh ? `（${v.exZh}）` : ''}` : '';
+  const ex = vocabExamples(v).map(e => `\n- 例：${jaPlain(exPlain(e.ex))}${e.exZh ? `（${e.exZh}）` : ''}`).join('');
   return head + ex;
 }
 
-function makeVocabQuestion(v, ctx = {}) {
+function makeVocabQuestion(v0, ctx = {}) {
+  const v = pickExample(v0, ctx);
   const formats = vocabFormats(v);
   const avoid = ctx.avoidFmts || ctx.avoidFmt;
   let fmt = Array.isArray(formats[0]) ? weightedPick(formats, avoid) : formats[0];
@@ -3095,7 +3115,7 @@ function previewHtml(e, pct, total) {
         ${reading ? `<div class="reading jp">${esc(reading)}</div>` : ''}
         <div class="meaning">${esc(v.m)}</div>
         ${v.p ? `<div class="mt-1">${posChip(v.p, v.posLabel)}</div>` : ''}
-        ${v.ex ? exampleHtml(v.ex, v.exZh) : ''}
+        ${vocabExamples(v).map(e => exampleHtml(e.ex, e.exZh)).join('')}
       </div>
     </div>
     <div class="pr-actions pr-next-sticky">
@@ -4228,7 +4248,7 @@ function renderVocab(view, tab, params) {
       ${v.r && v.r !== v.w ? `<div class="reading jp">${esc(v.r)}</div>` : ''}
       <div class="meaning">${esc(v.m)}</div>
       ${v.p ? `<div class="mt-1">${posChip(v.p, v.posLabel)}</div>` : ''}
-      ${v.ex ? `<div class="example mt-3" style="text-align:left"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="flash-speak" data-mode="ex" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${furi(exPlain(v.ex))}</div><div class="zh">${esc(v.exZh || '')}</div></div></div>` : ''}
+      ${vocabExamples(v).map((e, i) => `<div class="example ${i ? 'mt-2' : 'mt-3'}" style="text-align:left"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="${i ? 'speak' : 'flash-speak'}" data-mode="ex" data-text="${esc(jaPlain(exPlain(e.ex)))}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${furi(exPlain(e.ex))}</div><div class="zh">${esc(e.exZh || '')}</div></div></div>`).join('')}
       <div id="flashAiBox"></div>` : '';
     card = `<div class="card">
       <div class="row between small muted"><span>${F.idx + 1} / ${F.queue.length}・${r ? srsLevelLabel(r, v.key) : '新卡'}</span><span>${r ? srsDots(r.b) : '<span class="chip chip-accent">新</span>'}</span></div>
