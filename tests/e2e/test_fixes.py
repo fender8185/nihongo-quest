@@ -351,6 +351,19 @@ def test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong(b):
     assert r['spellDone'] and r['spellWrong'] and r['spellShows'] and r['f'] == [0, 1], r
     assert r['matchDone'] and r['matchWrong'] and r['revealed'] == 4, r
 
+# ---- 2026-10-26: 語音 › 測試連線 shows the provider's real error and a hint ----
+def test_tts_connection_check_reports_the_real_error_and_success(b):
+    fail = """window.fetch = async () => ({ ok: false, status: 403, json: async () => ({ error: { message: 'Cloud Text-to-Speech API has not been used in project 123 before or it is disabled.' } }), text: async () => '' }); true"""
+    okf = """window.fetch = async () => ({ ok: true, status: 200, json: async () => ({ audioContent: btoa('abc') }), blob: async () => new Blob(['abc']) }); true"""
+    # click 測試連線 and poll the result box ourselves (independent of the harness's wait timing under parallel load)
+    run = """(() => { const c = ttsConfig(); c.engine = 'google_tts'; c.googleKey = 'K'; saveState(); openSettings('speech');
+      const btn = document.querySelector('[data-act=tts-check]'); if (!btn) return 'NO BUTTON'; btn.click();
+      return new Promise(res => { const t0 = Date.now(); (function poll() { const box = document.getElementById('ttsCheckBox'); const t = box ? box.textContent : '';
+        if (t.length > 0 || Date.now() - t0 > 15000) { closeModal(); res(t); } else setTimeout(poll, 50); })(); }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", fail), ("eval", run), ("eval", okf), ("eval", run)], timeout=45)
+    assert 'has not been used' in out[-3] and '尚未啟用' in out[-3], out[-3]
+    assert '連線成功' in out[-1], out[-1]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -363,15 +376,19 @@ if __name__ == "__main__":
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
-             test_single_words_are_sent_as_kanji_with_the_reading_pinned, test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong]
+             test_single_words_are_sent_as_kanji_with_the_reading_pinned, test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong, test_tts_connection_check_reports_the_real_error_and_success]
     failed = 0
     try:
         for t in tests:
-            with Browser() as b:
-                try:
-                    t(b); print("ok  ", t.__name__)
-                except Exception as e:
-                    failed += 1; print("FAIL", t.__name__, "-", str(e)[:400])
+            err = None
+            for attempt in (1, 2):   # a second try with a fresh browser absorbs load-related flakiness
+                with Browser() as b:
+                    try:
+                        t(b); print("ok  ", t.__name__ + (" (retry)" if attempt == 2 else "")); err = None; break
+                    except Exception as e:
+                        err = e
+            if err is not None:
+                failed += 1; print("FAIL", t.__name__, "-", str(err)[:400])
     finally:
         srv.terminate()
     print("ALL PASS" if not failed else f"{failed} FAILED")

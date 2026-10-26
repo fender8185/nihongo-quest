@@ -28,7 +28,7 @@ class Browser:
     def __exit__(self, *a):
         self.proc.terminate(); self.proc.wait(timeout=10)
         if self._own_profile: shutil.rmtree(self.profile, ignore_errors=True)
-    def run(self, steps, timeout=20):
+    def run(self, steps, timeout=45):   # six files run in parallel; page loads can take a while under that load
         """steps: list of ('inject', js_before_page_scripts) | ('nav', url) | ('eval', js) | ('wait', js_predicate). Returns list of eval values."""
         async def go():
             out = []

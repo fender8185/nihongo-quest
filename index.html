@@ -771,9 +771,10 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '33';   // keep equal to the number in sw.js CACHE ('nq-v33'); scripts/test.sh checks it
+const APP_VERSION = '34';   // keep equal to the number in sw.js CACHE ('nq-v34'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '34', date: '2026-10-26', items: ['設定 › 語音 新增「測試連線」：顯示語音服務回傳的實際錯誤與對應的處理建議（API 未啟用、金鑰無效、網站限制、帳單未連結）。'] },
   { v: '33', date: '2026-10-26', items: ['唸單字時改送漢字寫法並固定讀音（Google 用 SSML，其他引擎交給模型判斷），不再送孤立的假名，發音更自然。', '假名拼字與配對題多一顆「我不會，看答案」，按下算答錯並顯示答案。'] },
   { v: '32', date: '2026-10-26', items: ['多裝置同步衝突時改為逐筆合併：每個字與文法取較晚作答的紀錄，每日紀錄取較大值，錯題與自訂字卡取聯集，其餘以較晚儲存的一方為準；不再丟掉任何一方的進度。'] },
   { v: '31', date: '2026-10-26', items: ['自訂字卡兩種題型答對過即可「已熟練」（內建字仍需三種）。', '振假名的「已熟練不顯示讀音」改用同一個熟練定義。', '主題字表不再顯示「自訂／匯入」篩選。', '「換個方式再考」的題目作答後也會顯示熟練度，並註明不影響排程。', '單字測驗、主題練習按鈕顯示題數。'] },
@@ -5305,7 +5306,8 @@ function settingsSpeech() {
       <input type="range" min="0.6" max="1.2" step="0.05" value="${esc(state.settings.speechRate)}" data-change="setting" data-key="speechRate" data-type="num" data-min="0.6" data-max="1.2" style="width:180px" /></div>
     ${selRow('engine', '語音服務', '', TTS_ENGINES, 'tts-cfg')}
     ${engine}
-    <div class="row-wrap mt-4"><button type="button" class="btn" data-act="tts-test">${icon('speaker')}試聽對話</button></div>`;
+    <div class="row-wrap mt-4"><button type="button" class="btn" data-act="tts-test">${icon('speaker')}試聽對話</button>${c.engine && c.engine !== 'browser_neural' ? '<button type="button" class="btn" data-act="tts-check">測試連線</button>' : ''}</div>
+    <div id="ttsCheckBox" class="small mt-2"></div>`;
 }
 
 function settingsAi() {
@@ -5471,6 +5473,20 @@ Object.assign(CHANGE_ACTIONS, {
 Object.assign(ACTIONS, {
   'settings-tab': (el) => { settingsTab = el.dataset.tab; refreshSettings(); },
   'tts-test': () => testVoice(),
+  'tts-check': async (el) => {
+    // look the result box up when writing: the speech tab may have been re-rendered meanwhile (voices loading)
+    const show = (html) => { const box = document.getElementById('ttsCheckBox'); if (box) box.innerHTML = html; };
+    const old = el.innerHTML; el.disabled = true; el.innerHTML = '<span class="spinner"></span> 測試中';
+    try {
+      audioCache.clear();
+      const blob = await engineBlob('テスト', '');
+      if (!blob) throw new Error('沒有回應');
+      show('<span class="ok">連線成功，可以使用。</span>');
+    } catch (e) {
+      const msg = (e && e.message) || String(e); const hint = ttsErrorHint(msg);
+      show(`<div class="bad">${esc(msg)}</div>${hint ? `<div class="mt-1">${esc(hint)}</div>` : ''}`);
+    } finally { const b2 = document.querySelector('[data-act=tts-check]') || el; b2.disabled = false; b2.innerHTML = old; }
+  },
   'ai-test': (el) => aiTestConnection(el),
   'ai-models': async (el) => {
     const key = (aiConfig().geminiKey || '').trim();
@@ -5966,6 +5982,22 @@ function engineBlob(text, gender, opt = {}) {
   audioPending.set(key, p);
   return p;
 }
+// the provider's own message (Google: error.message; Deepgram: err_msg; OpenAI: error.message), for 測試連線
+async function errorDetail(resp) {
+  try { const j = await resp.json(); const m = (j && j.error && (j.error.message || j.error)) || (j && (j.err_msg || j.message)); return m ? `：${typeof m === 'string' ? m : JSON.stringify(m)}` : ''; } catch (e) { return ''; }
+}
+// Turn a provider error into advice the learner can act on
+function ttsErrorHint(msg) {
+  const m = String(msg || '');
+  if (/not been used|is disabled|SERVICE_DISABLED/i.test(m)) return '這個專案尚未啟用 Cloud Text-to-Speech API：到 Google Cloud 的「API 和服務 › 程式庫」搜尋並啟用，再等一兩分鐘。';
+  if (/API key not valid|API_KEY_INVALID|invalid api key|Unauthorized|401/i.test(m)) return '金鑰無效：確認貼上的是完整的金鑰、前後沒有空白，而且是同一個專案建立的。';
+  if (/referer|referrer|HTTP referrers/i.test(m)) return '金鑰的「網站」限制不符：限制要寫成 https://fender8185.github.io/*，改完要等幾分鐘生效。';
+  if (/billing|BILLING/i.test(m)) return '專案還沒連結帳單帳戶：到 Google Cloud 的「帳單」把這個專案連結上去（免費額度內不會扣款）。';
+  if (/PERMISSION_DENIED|403/i.test(m)) return '被拒絕：通常是 API 未啟用、金鑰的 API 限制沒勾 Text-to-Speech、或帳單未連結。';
+  if (/429|quota|RESOURCE_EXHAUSTED/i.test(m)) return '超過配額或請求太頻繁，稍後再試。';
+  if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return '連不到服務：檢查網路，或瀏覽器的內容阻擋（Brave Shields）是否擋了這個網址。';
+  return '';
+}
 async function fetchEngineBlob(cfg, text, gender, opt = {}) {
   const rate = state.settings.speechRate || 1;
   // sentences: engines without SSML get known readings as kana; a single word keeps its written form (see speak)
@@ -5979,7 +6011,7 @@ async function fetchEngineBlob(cfg, text, gender, opt = {}) {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ input: { ssml }, voice: { languageCode: 'ja-JP', name }, audioConfig: { audioEncoding: 'MP3', speakingRate: rate } })
     });
-    if (!resp.ok) throw new Error(`Google TTS HTTP ${resp.status}`);
+    if (!resp.ok) throw new Error(`Google TTS HTTP ${resp.status}${await errorDetail(resp)}`);
     const j = await resp.json();
     const bin = atob(j.audioContent || ''); const bytes = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -5991,7 +6023,7 @@ async function fetchEngineBlob(cfg, text, gender, opt = {}) {
     const resp = await fetch(`https://api.deepgram.com/v1/speak?model=${encodeURIComponent(model)}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Token ${cfg.deepgramKey.trim()}` }, body: JSON.stringify({ text: spoken })
     });
-    if (!resp.ok) throw new Error(`Deepgram HTTP ${resp.status}`);
+    if (!resp.ok) throw new Error(`Deepgram HTTP ${resp.status}${await errorDetail(resp)}`);
     return resp.blob();
   }
   if (cfg.engine === 'voicevox') {
@@ -6014,7 +6046,7 @@ async function fetchEngineBlob(cfg, text, gender, opt = {}) {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({ model: cfg.openaiModel || 'tts-1-hd', voice, input: spoken, speed: rate })
     });
-    if (!resp.ok) throw new Error(`OpenAI TTS HTTP ${resp.status}`);
+    if (!resp.ok) throw new Error(`OpenAI TTS HTTP ${resp.status}${await errorDetail(resp)}`);
     return resp.blob();
   }
   return null;

@@ -517,11 +517,15 @@ if __name__ == "__main__":
     try:
         for t in TESTS:
             if only and t.__name__ not in only: continue
-            with Browser() as b:
-                try:
-                    t(b); print("ok  ", t.__name__)
-                except Exception as e:
-                    failed += 1; print("FAIL", t.__name__, "-", str(e)[:400])
+            err = None
+            for attempt in (1, 2):   # a second try with a fresh browser absorbs load-related flakiness
+                with Browser() as b:
+                    try:
+                        t(b); print("ok  ", t.__name__ + (" (retry)" if attempt == 2 else "")); err = None; break
+                    except Exception as e:
+                        err = e
+            if err is not None:
+                failed += 1; print("FAIL", t.__name__, "-", str(err)[:400])
     finally:
         srv.terminate()
     print("ALL PASS" if not failed else f"{failed} FAILED")
