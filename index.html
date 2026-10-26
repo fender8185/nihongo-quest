@@ -729,9 +729,10 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '10';   // keep equal to the number in sw.js CACHE ('nq-v10'); scripts/test.sh checks it
+const APP_VERSION = '11';   // keep equal to the number in sw.js CACHE ('nq-v11'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '11', date: '2026-10-26', items: ['雲端同步改為條件式寫入：上傳前確認雲端沒有被其他裝置更新過，舊的本機狀態不會再蓋掉別台的進度。', '若兩台裝置同時有未同步的變更，採用雲端版本，本機版本自動存成快照（設定 › 資料 可還原）。', '同步判斷不再依賴各裝置的時鐘。'] },
   { v: '10', date: '2026-10-26', items: ['文法、聽力、閱讀、漢字題同一天只出一次：答錯的隔天再出，補位時也不再拉回今天剛答過的題目。單字維持原本做法。'] },
   { v: '9', date: '2026-10-25', items: ['今日練習按鈕上的題數改為實際會出的題數，和點進去後一致。', '設定 › 外觀 新增版本紀錄。'] },
   { v: '8', date: '2026-10-25', items: ['聽力「只用聽的」選項改成逐一點選播放（即時應答、情境表達、正式模擬考），不再依序朗讀 1、2、3。', '外部語音引擎會預先抓取選項音檔，點了立即播放。'] },
@@ -6424,7 +6425,7 @@ const Store = {
    ========================================================================== */
 const Sync = {
   client: null, session: null, email: null, status: 'off', lastError: null, onChange: null,
-  meta: null, timer: null, deferred: false, pulling: false, bound: false,
+  meta: null, timer: null, deferred: false, pulling: false, bound: false, conflicted: false,
 
   setStatus(next) {
     if (this.status === next) return;
@@ -6523,16 +6524,36 @@ const Sync = {
     this.timer = setTimeout(() => { this.timer = null; this.push(); }, 2000);
   },
 
-  async push() {
+  busy() { return Boolean(SESSION || (EXAM && !EXAM.finished)); },   // never swap state under a running practice or exam (a finished exam only shows its result)
+
+  // Upload is conditional: once this device has synced, the row is only replaced when its updated_at is still the
+  // one we last pulled or pushed. Otherwise another device wrote in between and pull() decides (it keeps the
+  // cloud copy and snapshots ours). `final` stops a pull→push→pull loop if the condition keeps failing.
+  async push(final) {
     const session = this.session; // re-read: a logout during the debounce must cancel the upload
     if (!session || !this.client) return;
     if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+    if (this.conflicted && this.busy()) { this.deferred = true; this.setStatus('pending'); return; }   // already known: wait for the session to end
     this.setStatus('syncing');
     try {
       if (!state.updatedAt) state.updatedAt = new Date().toISOString();   // e.g. right after the localStorage migration
       const payload = Object.assign({ user_id: session.user.id }, SyncCore.buildPushPayload(SyncCore.stripSecrets(state), this.meta.deviceId));
-      const { error } = await this.client.from('progress').upsert(payload);
-      if (error) throw error;
+      const base = this.meta.everSynced ? this.meta.lastPulledUpdatedAt : null;
+      if (base) {
+        const { data, error } = await this.client.from('progress').update(payload).eq('user_id', session.user.id).eq('updated_at', base).select('updated_at');
+        if (error) throw error;
+        if (!data || !data.length) {
+          this.conflicted = true;
+          if (final) { this.lastError = '雲端資料與本機不一致，請按「立即同步」'; this.setStatus('error'); return; }
+          if (this.busy()) { this.deferred = true; this.setStatus('pending'); return; }
+          await this.pull({ afterConflict: true });
+          return;
+        }
+      } else {
+        const { error } = await this.client.from('progress').upsert(payload);
+        if (error) throw error;
+      }
+      this.conflicted = false;
       Object.assign(this.meta, { pendingSync: false, lastSyncedAt: new Date().toISOString(), lastPulledUpdatedAt: payload.updated_at, everSynced: true });
       await Store.set('meta', this.meta);
       this.lastError = null; this.setStatus('idle');
@@ -6541,10 +6562,11 @@ const Sync = {
     }
   },
 
-  async pull() {
+  async pull(opts) {
+    opts = opts || {};
     const session = this.session;
     if (!session || !this.client) return;
-    if (SESSION || (EXAM && !EXAM.finished)) { this.deferred = true; return; }   // never swap state under a running practice or exam (a finished exam only shows its result)
+    if (this.busy()) { this.deferred = true; return; }
     if (this.pulling) return;
     this.pulling = true;
     let next = null;
@@ -6552,38 +6574,34 @@ const Sync = {
     try {
       const { data, error } = await this.client.from('progress').select('state, updated_at').eq('user_id', session.user.id).maybeSingle();
       if (error) throw error;
-      if (!data) next = state.updatedAt ? 'push' : 'idle';
-      else {
-        // a device that has never synced adopts the cloud copy, even though its fresh local state is "newer" —
-        // unless the cloud row is empty and this device holds real progress (first upload came from an empty device)
-        let pick;
-        if (this.meta.everSynced) pick = SyncCore.pickNewer(state, data.state);
-        else pick = (SyncCore.isEmptyProgress(data.state) && !SyncCore.isEmptyProgress(state)) ? 'local' : 'cloud';
-        if (pick === 'cloud') {
-          if (!this.meta.everSynced && !SyncCore.isEmptyProgress(state)) {
-            try { await Snapshots.put('pre-cloud-' + todayStr(), JSON.stringify(state)); } catch (e) { /* best effort */ }
-          }
-          await this.applyCloud(data);
-        }
-        else next = pick === 'local' ? 'push' : 'idle';
+      const pick = SyncCore.pullDecision(this.meta, state, data);
+      if (pick === 'adopt' || pick === 'conflict') {
+        // adopting the cloud over real local progress keeps a copy: first sync as pre-cloud-, a lost race as conflict-
+        const snap = pick === 'conflict' ? 'conflict-' : (!this.meta.everSynced && !SyncCore.isEmptyProgress(state)) ? 'pre-cloud-' : null;
+        if (snap) { try { await Snapshots.put(snap + todayStr(), JSON.stringify(state)); } catch (e) { /* best effort */ } }
+        await this.applyCloud(data, pick === 'conflict');
+      } else {
+        if (!data) { this.meta.lastPulledUpdatedAt = null; await Store.set('meta', this.meta); }   // row gone (deleted elsewhere): the next push creates it
+        next = pick;
       }
     } catch (e) {
       this.lastError = (e && e.message) || String(e); this.setStatus('error');
     } finally { this.pulling = false; }
-    if (next === 'push') await this.push();
+    if (next === 'push') await this.push(Boolean(opts.afterConflict));
     else if (next === 'idle') this.setStatus('idle');
   },
 
-  async applyCloud(data) {
+  async applyCloud(data, conflict) {
     try {
       const next = normalizeState(SyncCore.keepLocalSecrets(data.state, state));
       state = next;
       await Store.set('state', state);   // not saveState(): that would echo the pull straight back to the cloud
+      this.conflicted = false;
       Object.assign(this.meta, { pendingSync: false, lastSyncedAt: new Date().toISOString(), lastPulledUpdatedAt: data.updated_at, everSynced: true });
       await Store.set('meta', this.meta);
       buildRegistry(); applyTheme(); applyFurigana();
       if (!modalOpen()) route();
-      toast('已從雲端更新進度');
+      toast(conflict ? '另一台裝置同時更新了進度，已採用雲端版本；這台未同步的進度存成快照，可在設定 › 資料還原。' : '已從雲端更新進度', conflict ? 8000 : undefined);
       this.lastError = null; this.setStatus('idle');
     } catch (e) {
       this.lastError = '雲端資料無法讀取，已保留本機進度'; this.setStatus('error'); toast(this.lastError, 5000);

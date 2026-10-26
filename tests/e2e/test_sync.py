@@ -22,6 +22,12 @@ window.__fake = (function () {
     from() { return {
       select() { return { eq() { return { async maybeSingle() { return { data: row ? { state: row.state, updated_at: row.updated_at } : null, error: null }; } }; } }; },
       async upsert(p) { calls.push(['upsert', p]); row = p; return { error: null }; },
+      // conditional write: UPDATE ... WHERE user_id = ? AND updated_at = ? RETURNING updated_at (same instant, any spelling)
+      update(p) { return { eq(k1, v1) { return { eq(k2, v2) { return { async select() {
+        const hit = row && row[k1] === v1 && new Date(row[k2]).getTime() === new Date(v2).getTime();
+        calls.push([hit ? 'update' : 'update-miss', p]);
+        if (hit) { row = Object.assign({}, row, p); return { data: [{ updated_at: row.updated_at }], error: null }; }
+        return { data: [], error: null }; } }; } }; } }; },
       delete() { return { async eq() { row = null; calls.push(['delete']); return { error: null }; } }; }
     }; }
   };
@@ -139,6 +145,57 @@ def test_manual_push_with_null_updated_at_still_sends_a_timestamp(b):
     ])
     assert out[-1] == '{"up":"string","st":"idle"}', out[-1]
 
+# ---- 2026-10-26: a push only lands when the cloud row is still the one we last saw ----
+OTHER = "Object.assign(JSON.parse(JSON.stringify(state)), { updatedAt: '2099-01-01T00:00:00.000Z', settings: Object.assign({}, state.settings, { dailyGoal: 123 }) })"
+def test_push_uses_a_conditional_update_once_the_device_has_synced(b):
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
+        ("eval", "state.settings.dailyGoal = 66; saveState(); true"),
+        ("wait", "__fake.getRow() && __fake.getRow().state.settings.dailyGoal === 66"),
+        ("eval", "JSON.stringify(__fake.calls.filter(c => c[0] !== 'otp').map(c => c[0]))"),
+    ])
+    assert out[-1] == '["upsert","update"]', out[-1]
+
+def test_stale_device_does_not_overwrite_progress_made_elsewhere(b):
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
+        ("eval", f"__fake.setRow({{ user_id: 'u1', state: {OTHER}, updated_at: '2099-01-01T00:00:00.000Z' }}); state.settings.dailyGoal = 5; saveState(); true"),
+        ("wait", "Sync.status === 'idle' && state.settings.dailyGoal === 123"),
+        ("eval", "Snapshots.get('conflict-' + todayStr()).then(j => JSON.stringify({ cloud: __fake.getRow().state.settings.dailyGoal, local: state.settings.dailyGoal, snap: j ? JSON.parse(j).settings.dailyGoal : null, pend: Sync.meta.pendingSync, miss: __fake.calls.filter(c => c[0] === 'update-miss').length }))"),
+    ])
+    assert out[-1] == '{"cloud":123,"local":123,"snap":5,"pend":false,"miss":1}', out[-1]
+
+def test_cloud_changed_elsewhere_is_adopted_even_when_its_clock_is_behind(b):
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
+        ("eval", "__fake.setRow({ user_id: 'u1', state: Object.assign(JSON.parse(JSON.stringify(state)), { updatedAt: '2000-01-01T00:00:00.000Z', settings: Object.assign({}, state.settings, { dailyGoal: 123 }) }), updated_at: '2000-01-01T00:00:00.000Z' }); Sync.pull().then(() => JSON.stringify({ goal: state.settings.dailyGoal, st: Sync.status }))"),
+    ])
+    assert out[-1] == '{"goal":123,"st":"idle"}', out[-1]
+
+def test_row_deleted_elsewhere_is_recreated_without_looping(b):
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
+        ("eval", "__fake.setRow(null); state.settings.dailyGoal = 42; saveState(); true"),
+        ("wait", "Sync.status === 'idle' && __fake.getRow() && __fake.getRow().state.settings.dailyGoal === 42"),
+        ("eval", "JSON.stringify({ miss: __fake.calls.filter(c => c[0] === 'update-miss').length, st: Sync.status })"),
+    ])
+    assert out[-1] == '{"miss":1,"st":"idle"}', out[-1]
+
+def test_conflict_during_a_session_waits_and_never_overwrites_the_cloud(b):
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
+        ("eval", f"SESSION = {{ fake: true }}; __fake.setRow({{ user_id: 'u1', state: {OTHER}, updated_at: '2099-01-01T00:00:00.000Z' }}); state.settings.dailyGoal = 5; saveState(); state.settings.dailyGoal = 6; saveState(); true"),
+        sleep_js(2600),
+        ("eval", "state.settings.dailyGoal = 7; saveState(); true"),
+        sleep_js(2600),
+        ("eval", "JSON.stringify({ local: state.settings.dailyGoal, cloud: __fake.getRow().state.settings.dailyGoal, st: Sync.status, net: __fake.calls.filter(c => c[0] === 'update-miss').length })"),
+        ("eval", "SESSION = null; Sync.flushDeferred(); true"),
+        ("wait", "Sync.status === 'idle' && state.settings.dailyGoal === 123"),
+        ("eval", "Snapshots.get('conflict-' + todayStr()).then(j => JSON.stringify({ snap: j ? JSON.parse(j).settings.dailyGoal : null, cloud: __fake.getRow().state.settings.dailyGoal }))"),
+    ])
+    assert out[-3] == '{"local":7,"cloud":123,"st":"pending","net":1}', out[-3]
+    assert out[-1] == '{"snap":7,"cloud":123}', out[-1]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -148,7 +205,9 @@ if __name__ == "__main__":
              test_switching_account_resets_device_binding_and_adopts_new_cloud,
              test_pull_runs_after_exam_is_finished_but_still_on_result_screen, test_first_sync_keeps_real_local_progress_over_empty_cloud,
              test_first_sync_adopting_cloud_snapshots_local_first, test_token_refresh_does_not_mask_error_status,
-             test_manual_push_with_null_updated_at_still_sends_a_timestamp]
+             test_manual_push_with_null_updated_at_still_sends_a_timestamp,
+             test_push_uses_a_conditional_update_once_the_device_has_synced, test_stale_device_does_not_overwrite_progress_made_elsewhere, test_cloud_changed_elsewhere_is_adopted_even_when_its_clock_is_behind,
+             test_row_deleted_elsewhere_is_recreated_without_looping, test_conflict_during_a_session_waits_and_never_overwrites_the_cloud]
     failed = 0
     try:
         for t in tests:

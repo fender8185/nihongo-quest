@@ -22,13 +22,26 @@
     return out;
   }
 
-  function stamp(s) { return (s && typeof s.updatedAt === 'string') ? s.updatedAt : ''; }
+  // Two timestamps for the same instant, however they are spelled ('…Z' from JS, '…+00:00' from Postgres).
+  function sameStamp(a, b) {
+    if (!a || !b) return false;
+    const x = new Date(a).getTime(), y = new Date(b).getTime();
+    return Number.isFinite(x) && x === y;
+  }
 
-  // Last-write-wins on ISO timestamps; anything that is not a string counts as oldest.
-  function pickNewer(local, cloud) {
-    const a = stamp(local), b = stamp(cloud);
-    if (a === b) return 'same';
-    return a > b ? 'local' : 'cloud';
+  // What pull should do with the cloud row (`cloud` is null when the user has no row yet).
+  //   push     – nothing in the cloud, or it is still the version this device last saw and local changes wait
+  //   idle     – cloud unchanged and nothing to upload
+  //   adopt    – another device moved the cloud and this one has no unsynced changes (or never synced)
+  //   conflict – another device moved the cloud AND this device has unsynced changes; the caller keeps the
+  //              cloud and snapshots the local copy. Device clocks play no part in this.
+  function pullDecision(meta, local, cloud) {
+    meta = meta || {};
+    if (!cloud) return 'push';
+    if (!meta.everSynced) return (isEmptyProgress(cloud.state) && !isEmptyProgress(local)) ? 'push' : 'adopt';
+    const moved = !sameStamp(cloud.updated_at, meta.lastPulledUpdatedAt);
+    if (!moved) return meta.pendingSync ? 'push' : 'idle';
+    return meta.pendingSync ? 'conflict' : 'adopt';
   }
 
   function buildPushPayload(state, deviceId) {
@@ -44,6 +57,6 @@
     return !(n(s.srs) || n(s.vocab) || n(s.dailyLogs) || n(s.examHistory));
   }
 
-  const SyncCore = { stripSecrets, keepLocalSecrets, pickNewer, buildPushPayload, normalizeEmail, isEmptyProgress };
+  const SyncCore = { stripSecrets, keepLocalSecrets, sameStamp, pullDecision, buildPushPayload, normalizeEmail, isEmptyProgress };
   if (typeof module !== 'undefined' && module.exports) module.exports = SyncCore; else root.SyncCore = SyncCore;
 })(typeof window !== 'undefined' ? window : globalThis);
