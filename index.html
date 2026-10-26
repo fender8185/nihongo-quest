@@ -250,6 +250,13 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .example { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: var(--bg-sunken); border: 1px solid var(--line); margin: 8px 0; }
 .example .jp { font-size: 17px; line-height: 1.9; }
 .example .zh { font-size: 13px; color: var(--fg-3); }
+.kana-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 10px 0 14px; max-width: 420px; }
+.kana-cell { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); font: inherit; cursor: pointer; }
+.kana-cell.empty { border-color: transparent; background: transparent; cursor: default; }
+.kana-cell .hira { font-size: 22px; line-height: 1.2; }
+.kana-cell .kata { font-size: 13px; color: var(--fg-2); }
+.kana-cell .roma { font-size: 11px; color: var(--fg-3); }
+.chip-link { cursor: pointer; border-style: dashed; font: inherit; font-size: inherit; }
 .tipbox { padding: 12px 14px; border-radius: 10px; background: var(--accent-soft); border: 1px solid transparent; color: var(--fg); font-size: 14px; }
 
 /* ---------- practice ---------- */
@@ -753,9 +760,10 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '25';   // keep equal to the number in sw.js CACHE ('nq-v25'); scripts/test.sh checks it
+const APP_VERSION = '26';   // keep equal to the number in sw.js CACHE ('nq-v26'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '26', date: '2026-10-26', items: ['新增「第 0 週：開始之前」入門講解（課程頁最上方）：假名表可點播放、句子骨架、品詞名稱、形容詞與動詞分類、動詞的形、敬體常體、助詞、數量詞、名稱對照表、app 用法。', '題目與字卡上的詞性標籤可以點，會跳出該名稱的說明。', '新用戶首頁會提示先看第 0 週。'] },
   { v: '25', date: '2026-10-26', items: ['語音服務新增 Google Cloud TTS（Neural2／WaveNet），需自備 API Key。', '朗讀時已知讀音的字會指定讀法：Google 以 SSML 標註，Deepgram 與 OpenAI 改送假名（可在設定關閉），減少「三」之類的誤讀。'] },
   { v: '24', date: '2026-10-26', items: ['文法單元的進度條改為三段：答對 3 次以上、答對過、出現過但還沒答對（課程頁、單元頁、首頁目前單元）。'] },
   { v: '23', date: '2026-10-26', items: ['例句都有播放鍵：新字預習卡、單字題作答後的例句，練習頁底部也多一顆「例句」。'] },
@@ -2031,7 +2039,7 @@ function makeVocabQuestion(v, ctx = {}) {
       q.fmt = f; q.label = `單字 · ${lvTag} · 中翻日`;
       q.instr = '日文怎麼說？';
       q.stemHtml = esc(v.m); q.stemClass = 'zhstem';
-      q.subHtml = `<span class="chip">${esc(posLabel(v.p, v.posLabel))}</span>`;
+      q.subHtml = posChip(v.p, v.posLabel);
       q.mistakePrompt = `「${v.m}」的日文`;
       finalizeOptions(q, v.w, opts, true);
       return true;
@@ -2101,7 +2109,7 @@ function makeVocabQuestion(v, ctx = {}) {
     q.instr = '這個字的意思是？';
     q.stemHtml = v.r && HAS_KANJI.test(v.w) && !/\[/.test(v.w) ? rubyHtml(jaPlain(v.w), v.r) : furi(v.w);
     q.stemClass = jaPlain(v.w).length > 8 ? '' : 'word';
-    if (v.p) q.subHtml = `<span class="chip">${esc(posLabel(v.p, v.posLabel))}</span>`;
+    if (v.p) q.subHtml = posChip(v.p, v.posLabel);
     finalizeOptions(q, v.m, opts, false);
     q.wide = q.options.some(o => o.text.length > 14);
     return true;
@@ -2967,7 +2975,7 @@ function previewHtml(e, pct, total) {
         <div class="word jp">${esc(jaPlain(v.w))}</div>
         ${reading ? `<div class="reading jp">${esc(reading)}</div>` : ''}
         <div class="meaning">${esc(v.m)}</div>
-        ${v.p ? `<div class="mt-1"><span class="chip">${esc(posLabel(v.p, v.posLabel))}</span></div>` : ''}
+        ${v.p ? `<div class="mt-1">${posChip(v.p, v.posLabel)}</div>` : ''}
         ${v.ex ? exampleHtml(v.ex, v.exZh) : ''}
       </div>
     </div>
@@ -3210,7 +3218,7 @@ function route() {
   renderNav(r.name === 'course' ? 'course' : r.name);
   try {
     if (r.name === 'today') renderToday(view);
-    else if (r.name === 'course') { if (r.parts[1]) renderUnit(view, r.parts[1], r.params.tab || 'lesson'); else renderCourse(view); }
+    else if (r.name === 'course') { if (r.parts[1] === 'intro') renderIntro(view); else if (r.parts[1]) renderUnit(view, r.parts[1], r.params.tab || 'lesson'); else renderCourse(view); }
     else if (r.name === 'vocab') renderVocab(view, r.parts[1] || 'cards', r.params);
     else if (r.name === 'mistakes') renderMistakes(view, r.params.f || 'active');
     else if (r.name === 'exam') renderExam(view, r.parts[1] || '', r.params);
@@ -3321,7 +3329,9 @@ const ACTIONS = {
   speak: (el) => speak(el.dataset.text),
   'ai-explain': () => aiExplainCurrent(),
   'report-item': () => reportCurrentItem(),
-  'dismiss-notice': (el) => { state.notices = state.notices.filter(n => n.id !== el.dataset.id); saveState(); route(); }
+  'dismiss-notice': (el) => { state.notices = state.notices.filter(n => n.id !== el.dataset.id); saveState(); route(); },
+  'intro-dismiss': () => { state.introSeen = true; saveState(); route(); },
+  glossary: (el) => { const h = glossaryHtml(el.dataset.term); if (h) openModal('這是什麼？', h, { width: 480, noFocus: true }); }
 };
 function handleClick(ev) {
   const el = ev.target.closest('[data-act]');
@@ -3462,8 +3472,12 @@ function renderToday(view) {
   mk.forEach(m => { catCount[m.cat || '綜合'] = (catCount[m.cat || '綜合'] || 0) + (m.count || 1); });
   const topCats = Object.entries(catCount).sort((a, b) => b[1] - a[1]).slice(0, 3);
 
+  const introBanner = !state.introSeen && Object.keys(state.srs).length < 40
+    ? `<div class="banner intro-banner"><div class="grow">第一次用？先看「第 0 週」：假名、句子骨架、以及題目上會出現的名詞（い形容詞、五段動詞……）。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button><button type="button" class="btn btn-sm btn-ghost" data-act="intro-dismiss">知道了</button></div></div>`
+    : '';
   view.innerHTML = `
     ${noticesHtml()}
+    ${introBanner}
     ${backupBannerHtml()}
     <div class="page-head">
       <div><div class="page-title">今日</div><div class="page-sub">${greeting}・連續 ${st.current} 天</div></div>
@@ -3639,16 +3653,159 @@ function renderCourse(view) {
       <div><div class="page-title">課程</div><div class="page-sub">18 個單元，每單元約兩週。整體完成度 ${cp.pct}%</div></div>
       <button type="button" class="btn" data-act="open-level">依程度選擇起點</button>
     </div>
+    <div class="card intro-card"><div class="row between" style="align-items:flex-start;gap:12px">
+      <div><div class="card-sub">第 0 週</div><div class="card-title">開始之前：假名、句子骨架、品詞名稱</div><div class="small muted mt-1">給完全沒學過日文的人看的入門講解，沒有練習題。看懂「い形容詞」「五段動詞」這些名稱，就可以從第 1 週開始。</div></div>
+      <button type="button" class="btn ${state.introSeen ? '' : 'btn-primary'}" data-act="nav" data-route="#/course/intro">${state.introSeen ? '再看一次' : '閱讀'}</button>
+    </div></div>
     ${phases}`;
+}
+
+
+// ---- 第 0 週：開始之前（給完全沒學過日文的人；沒有練習題） ----
+const KANA_ROWS = [['あ', 'い', 'う', 'え', 'お'], ['か', 'き', 'く', 'け', 'こ'], ['さ', 'し', 'す', 'せ', 'そ'], ['た', 'ち', 'つ', 'て', 'と'], ['な', 'に', 'ぬ', 'ね', 'の'], ['は', 'ひ', 'ふ', 'へ', 'ほ'], ['ま', 'み', 'む', 'め', 'も'], ['や', '', 'ゆ', '', 'よ'], ['ら', 'り', 'る', 'れ', 'ろ'], ['わ', '', '', '', 'を'], ['ん', '', '', '', '']];
+const KANA_ROMAJI = { あ: 'a', い: 'i', う: 'u', え: 'e', お: 'o', か: 'ka', き: 'ki', く: 'ku', け: 'ke', こ: 'ko', さ: 'sa', し: 'shi', す: 'su', せ: 'se', そ: 'so', た: 'ta', ち: 'chi', つ: 'tsu', て: 'te', と: 'to', な: 'na', に: 'ni', ぬ: 'nu', ね: 'ne', の: 'no', は: 'ha', ひ: 'hi', ふ: 'fu', へ: 'he', ほ: 'ho', ま: 'ma', み: 'mi', む: 'mu', め: 'me', も: 'mo', や: 'ya', ゆ: 'yu', よ: 'yo', ら: 'ra', り: 'ri', る: 'ru', れ: 're', ろ: 'ro', わ: 'wa', を: 'o', ん: 'n' };
+const KATA = { あ: 'ア', い: 'イ', う: 'ウ', え: 'エ', お: 'オ', か: 'カ', き: 'キ', く: 'ク', け: 'ケ', こ: 'コ', さ: 'サ', し: 'シ', す: 'ス', せ: 'セ', そ: 'ソ', た: 'タ', ち: 'チ', つ: 'ツ', て: 'テ', と: 'ト', な: 'ナ', に: 'ニ', ぬ: 'ヌ', ね: 'ネ', の: 'ノ', は: 'ハ', ひ: 'ヒ', ふ: 'フ', へ: 'ヘ', ほ: 'ホ', ま: 'マ', み: 'ミ', む: 'ム', め: 'メ', も: 'モ', や: 'ヤ', ゆ: 'ユ', よ: 'ヨ', ら: 'ラ', り: 'リ', る: 'ル', れ: 'レ', ろ: 'ロ', わ: 'ワ', を: 'ヲ', ん: 'ン' };
+function kanaGridHtml() {
+  return `<div class="kana-grid">${KANA_ROWS.map(row => row.map(k => k
+    ? `<button type="button" class="kana-cell" data-act="speak" data-text="${k}" title="播放"><span class="jp hira">${k}</span><span class="jp kata">${KATA[k]}</span><span class="roma">${KANA_ROMAJI[k]}</span></button>`
+    : '<span class="kana-cell empty"></span>').join('')).join('')}</div>`;
+}
+const INTRO_LESSON = {
+  formula: '假名 → 句子骨架 → 品詞名稱 → 動詞的形 → 助詞 → 怎麼用這個 app',
+  overview: '這一頁寫給完全沒學過日文的人。讀完不用會變化、不用背單字，只要能看懂後面課程裡出現的名詞（い形容詞、五段動詞、て形……）、知道一句日文長什麼樣，就可以直接從第 1 週開始。看不懂的詞隨時回來查，練習中點詞性標籤也會跳出說明。',
+  sections: [
+    { h: '1. 假名與發音', kana: true, points: [
+      '日文用三套文字：平假名（ひらがな，寫助詞、字尾、固有詞）、片假名（カタカナ，寫外來語、擬聲詞、強調）、漢字。下表每格上面是平假名、中間是片假名、下面是羅馬拼音，點一下可以聽。',
+      '濁音：か行、さ行、た行、は行加「゛」變成 が・ざ・だ・ば；は行加「゜」變成 ぱ。例：かき（柿子）／かぎ（鑰匙）。',
+      '長音：母音拉長一拍，意思會變。おばさん（阿姨）／おばあさん（奶奶）；片假名用「ー」：コーヒー。',
+      '促音：小寫的「っ」停頓一拍。きて（來）／きって（郵票）。',
+      '拗音：い段假名加小寫的 ゃ・ゅ・ょ 合成一拍：きゃ・しゅ・ちょ。',
+      '「は」當助詞時唸 wa，「へ」當助詞時唸 e，「を」只當助詞用，唸 o。',
+      '每個假名都是一拍，長度一樣；日文沒有像中文的聲調，但有高低的音調（アクセント），先不用管，多聽就會。'
+    ], ex: [{ jp: 'おはようございます。', zh: '早安。' }, { jp: 'コーヒーをください。', zh: '請給我咖啡。' }, { jp: 'ちょっと待[ま]ってください。', zh: '請稍等。' }] },
+    { h: '2. 一句日文長什麼樣', rule: '主題は　＋　其他成分　＋　述語（動詞／形容詞／名詞です）', points: [
+      '動詞放在句子最後，中文「我吃麵包」在日文是「私はパンを食べます」，順序是 我／麵包／吃。',
+      '每個名詞後面跟一個助詞，標明它在句子裡的角色（主題、受詞、地點……），所以語序比中文自由。',
+      '主語常常省略：知道在講誰，就不說「私は」。',
+      '肯定、否定、現在、過去，全部看句尾的變化：食べます／食べません／食べました／食べませんでした。',
+      '問句只要在句尾加「か」，不用改語序：食べますか。'
+    ], ex: [{ jp: '私[わたし]は毎朝[まいあさ]パンを食[た]べます。', zh: '我每天早上吃麵包。' }, { jp: '昨日[きのう]、映画[えいが]を見[み]ましたか。', zh: '昨天看了電影嗎？' }] },
+    { h: '3. 品詞：本課程會用到的名稱', points: [
+      '名詞：人、事、物的名字。本、学生、日本。',
+      '代名詞：代替名詞的詞。私（我）、あなた（你）、これ／それ／あれ（這個／那個／那個）。',
+      '疑問詞：何（什麼）、誰（誰）、どこ（哪裡）、いつ（什麼時候）、どう（怎麼樣）。',
+      '副詞：修飾動詞或形容詞，說明程度、頻率。とても（非常）、よく（常常）、もう（已經）。',
+      '接續詞：接在句子之間。そして（然後）、でも（但是）、だから（所以）。',
+      '數量詞：數字加單位。三つ、二人、五本。第 9 節會說明讀音會變的情況。',
+      '招呼語：固定說法，不用分析文法。こんにちは、ありがとう、すみません。',
+      '題目上方的標籤就是這些名稱；看到「五段動詞」「い形容詞」不懂時，點標籤會有說明。'
+    ] },
+    { h: '4. い形容詞與な形容詞怎麼分', rule: '辭書形以「い」結尾 → い形容詞　｜　其他 → な形容詞（接名詞時加な）', points: [
+      '日文形容詞分兩類，變化規則不同，所以本課程一直會標出是哪一類。',
+      'い形容詞：原形最後一個字是「い」：高い（高）、新しい（新）、おいしい（好吃）。接名詞直接放前面：高い山。',
+      'な形容詞：原形不以い結尾，或雖然以い結尾但其實是な形容詞：静か（安靜）、元気（有精神）、便利（方便）；例外：きれい（漂亮）、嫌い（討厭）、有名（有名）都是な形容詞。接名詞要加「な」：静かな部屋。',
+      '其他教材叫法：い形容詞＝形容詞／イ形容詞；な形容詞＝形容動詞／ナ形容詞。',
+      '第 3–4 週會學兩類形容詞的否定、過去與連接；現在只要會分辨就好。'
+    ], ex: [{ jp: 'この店[みせ]のラーメンはおいしいです。', zh: '這家店的拉麵很好吃。' }, { jp: '図書館[としょかん]は静[しず]かです。', zh: '圖書館很安靜。' }, { jp: '静[しず]かな部屋[へや]が好[す]きです。', zh: '我喜歡安靜的房間。' }] },
+    { h: '5. 動詞三類怎麼分', rule: '一段：〜る 且 る 前是 i 或 e 段　｜　不規則：する・来る　｜　其餘：五段', points: [
+      '動詞的變化方式由它屬於哪一類決定。本課程用「五段動詞」「一段動詞」「不規則動詞」三個標籤。',
+      '不規則動詞只有兩個：する（做）、来る（來），還有「勉強する」這類「名詞＋する」的動詞。',
+      '一段動詞：辭書形以「る」結尾，而且る前面那個音是 i 段或 e 段：食べる（たべる）、見る（みる）、起きる（おきる）、寝る（ねる）。變化時把る拿掉再接東西。',
+      '五段動詞：其他全部。書く、読む、話す、買う、待つ、飲む；以及一些長得像一段其實是五段的常用字：帰る（かえる）、入る（はいる）、知る（しる）、走る（はしる）、切る（きる）、要る（いる）。',
+      '其他教材叫法：五段＝Ⅰ類／u 動詞／グループ1；一段＝Ⅱ類／ru 動詞／グループ2；不規則＝Ⅲ類／グループ3。',
+      '第 5–6 週會正式學分類與て形，這裡先知道有三類、名字叫什麼。'
+    ], ex: [{ jp: '日本語[にほんご]を勉強[べんきょう]します。', zh: '學日文。（不規則）' }, { jp: '毎晩[まいばん]十一時[じゅういちじ]に寝[ね]ます。', zh: '每晚十一點睡。（一段）' }, { jp: '週末[しゅうまつ]は本[ほん]を読[よ]みます。', zh: '週末看書。（五段）' }] },
+    { h: '6. 動詞的「形」：名稱預告', points: [
+      '辭書形（原形）：字典上查到的樣子，常體的現在肯定。食べる、書く。',
+      'ます形：禮貌的現在肯定。食べます、書きます。本課程大部分題目用這個。',
+      'ない形：否定。食べない、書かない。',
+      'て形：接續用，後面接ください（請）、います（正在）等，第 5–8 週的重點。食べて、書いて。',
+      'た形：過去。食べた、書いた。',
+      '之後還會看到：可能形（能……）、意向形（……吧）、受身形（被……）、使役形（讓……）。看到這些名稱，表示該單元在教那個變化，不需要現在就會。'
+    ] },
+    { h: '7. 敬體與常體', rule: '敬體：〜です／〜ます　｜　常體：〜だ／辭書形', points: [
+      '敬體（丁寧体）：對不熟的人、長輩、公開場合。本課程的例句與題目以敬體為主。',
+      '常體（普通体）：對朋友、家人，也是寫文章、放在句子中間時的形式。',
+      '同一件事兩種說法：行きます／行く、学生です／学生だ、高いです／高い。',
+      'N5 以敬體為主，N4 開始大量用常體，所以兩種都要認得。'
+    ], ex: [{ jp: '明日[あした]学校[がっこう]に行[い]きます。', zh: '明天去學校。（敬體）' }, { jp: '明日[あした]学校[がっこう]に行[い]く。', zh: '明天去學校。（常體）' }] },
+    { h: '8. 助詞是什麼', rule: 'は 主題　が 主語　を 受詞　に 時間・地點・對象　で 場所・手段　へ 方向　と 一起・和　の 的', points: [
+      '助詞跟在名詞後面，一個假名就決定這個名詞在做什麼。中文靠語序，日文靠助詞。',
+      '私は（我，當主題）／本を（書，當受詞）／学校に（在學校／到學校）／バスで（搭巴士）／友達と（和朋友）。',
+      '第 1–2 週整個單元都在練這些助詞，這裡只要知道「名詞後面那個小字很重要」。'
+    ], ex: [{ jp: '私[わたし]は友達[ともだち]と学校[がっこう]でご飯[はん]を食[た]べます。', zh: '我和朋友在學校吃飯。' }] },
+    { h: '9. 數字與量詞入門', points: [
+      '1–10：いち、に、さん、し／よん、ご、ろく、しち／なな、はち、きゅう／く、じゅう。百＝ひゃく、千＝せん、万＝まん。',
+      '數東西要加量詞，而且讀音會變：一つ（ひとつ）、三本（さんぼん）、六枚（ろくまい）、八百（はっぴゃく）。',
+      '所以同一個「三」可能唸 さん、み、さんぼん 的 ぼん 前面……朗讀時聽到和想像不同，通常是量詞的音變，不是唸錯。',
+      '本課程的單字資料都有標讀音，遇到數量詞看讀音就好。'
+    ], ex: [{ jp: 'りんごを三[みっ]つください。', zh: '請給我三個蘋果。' }, { jp: '鉛筆[えんぴつ]が三本[さんぼん]あります。', zh: '有三枝鉛筆。' }] },
+    { h: '10. 名稱對照表', points: [
+      'い形容詞 ＝ 形容詞 ＝ イ形容詞 ＝ i-adjective',
+      'な形容詞 ＝ 形容動詞 ＝ ナ形容詞 ＝ na-adjective',
+      '五段動詞 ＝ Ⅰ類動詞 ＝ グループ1 ＝ u-verb',
+      '一段動詞 ＝ Ⅱ類動詞 ＝ グループ2 ＝ ru-verb',
+      '不規則動詞 ＝ Ⅲ類動詞 ＝ グループ3（する・来る）',
+      '辭書形 ＝ 原形 ＝ 基本形；ます形 ＝ 連用形＋ます；て形 ＝ テ形；ない形 ＝ 否定形',
+      '敬體 ＝ 丁寧体 ＝ です・ます体；常體 ＝ 普通体 ＝ だ・である体'
+    ] },
+    { h: '11. 這個 app 怎麼用', points: [
+      '首頁「開始練習」：每天一組，內容是到期的複習加上新內容。新單字會先給預習卡，看完再作答，同一組裡會換不同題型再考兩次。',
+      '答對的題目會隔幾天再出現，答錯的隔天就回來（這叫間隔重複，SRS）。不用自己安排複習，照每天的練習做就好。',
+      '單字頁：字卡可以自己評「忘記／模糊／記得／很熟」；「主題」分頁依主題看進度或單獨練一個主題。',
+      '課程頁：每單元兩週，有講義和練習；進度條三段顏色代表答對三次以上、答對過、出現過。',
+      '設定：每日目標、每天新單字與新文法的數量、語音服務（內建或外部）、振假名顯示方式。一開始用預設值即可。',
+      '練習中按鍵：1–4 選答案、Enter 下一題、R 發音、F 切換振假名、T 顯示中文。',
+      '讀完這頁，到課程頁從「第 1–2 週」開始，或直接按首頁的「開始練習」。'
+    ] }
+  ],
+  tip: '不用背這一頁。先記得三件事：動詞在句尾、名詞後面的小字是助詞、形容詞和動詞各有幾類而且名字會出現在題目標籤上。其他看到再回來查。'
+};
+// Short explanations for the part-of-speech chips shown on questions and cards
+const GLOSSARY = {
+  n: ['名詞', '人、事、物的名字，例如 本・学生・日本。後面接助詞來表示它在句子裡的角色。'],
+  pron: ['代名詞', '代替名詞的詞：私（我）、あなた（你）、これ／それ／あれ（這個／那個）。'],
+  q: ['疑問詞', '何（什麼）、誰（誰）、どこ（哪裡）、いつ（什麼時候）、どう（怎麼樣）。放在句中要問的位置，句尾加か。'],
+  v5: ['五段動詞', '動詞三類之一（其他教材叫 Ⅰ類／u 動詞）。辭書形不是「i 或 e 段＋る」的動詞大多屬於這類：書く、読む、話す、買う，以及帰る、入る、知る 等例外。變化時字尾會在五十音的五段之間變動，所以叫五段。'],
+  v1: ['一段動詞', '動詞三類之一（Ⅱ類／ru 動詞）。辭書形以る結尾，而且る前面是 i 段或 e 段：食べる、見る、起きる、寝る。變化時把る拿掉直接接：食べ＋ます、食べ＋ない。'],
+  vs: ['する動詞', '「名詞＋する」的動詞：勉強する、電話する。する是不規則動詞，變化要另外記：します、しない、して。'],
+  vk: ['来る', '不規則動詞，只有這一個：来る（くる）。變化時讀音會變：来ます（きます）、来ない（こない）、来て（きて）。'],
+  i: ['い形容詞', '原形最後一個字是「い」的形容詞：高い、新しい、おいしい（其他教材叫形容詞／イ形）。直接放在名詞前面：高い山。否定把い改成くない：高くない。'],
+  na: ['な形容詞', '原形不以い結尾的形容詞：静か、元気、便利；例外 きれい、嫌い、有名 也是這類（其他教材叫形容動詞／ナ形）。接名詞要加な：静かな部屋；否定用ではない。'],
+  adv: ['副詞', '修飾動詞或形容詞，說明程度、頻率、時間：とても（非常）、よく（常常）、もう（已經）、まだ（還）。不用變化，直接放在被修飾的詞前面。'],
+  conj: ['接續詞', '連接兩個句子：そして（然後）、でも（但是）、だから（所以）、それから（接著）。'],
+  cnt: ['數量詞', '數字加單位：三つ、二人、五本、十枚。讀音常常會變（一つ ひとつ、三本 さんぼん、八百 はっぴゃく），看讀音就好。'],
+  exp: ['招呼語', '固定說法，不用分析文法：こんにちは、ありがとうございます、すみません、お願いします。']
+};
+function glossaryHtml(p) {
+  const g = GLOSSARY[p];
+  if (!g) return '';
+  return `<div class="glossary"><div class="page-title" style="font-size:20px">${esc(g[0])}</div><p class="mt-2">${esc(g[1])}</p>
+    <div class="row-wrap mt-3"><button type="button" class="btn btn-sm" data-act="nav" data-route="#/course/intro">第 0 週：完整說明</button></div></div>`;
+}
+function posChip(p, fallback) {
+  return GLOSSARY[p] ? `<button type="button" class="chip chip-link" data-act="glossary" data-term="${esc(p)}" title="這是什麼？">${esc(posLabel(p, fallback))}</button>` : `<span class="chip">${esc(posLabel(p, fallback))}</span>`;
+}
+function renderIntro(view) {
+  if (!state.introSeen) { state.introSeen = true; saveState(); }
+  view.innerHTML = `
+    <div class="page-head"><div><div class="page-title">第 0 週・開始之前</div><div class="page-sub">給完全沒學過日文的人。沒有練習題，看懂名詞就能開始。</div></div>
+      <button type="button" class="btn" data-act="nav" data-route="#/course">回課程頁</button></div>
+    <div class="card">${lessonHtmlFrom(INTRO_LESSON)}</div>
+    <div class="row-wrap mb-4"><button type="button" class="btn btn-primary" data-act="nav" data-route="#/course/m1">從第 1–2 週開始</button><button type="button" class="btn" data-act="nav" data-route="#/today">回首頁開始練習</button></div>`;
 }
 
 function lessonHtml(uid) {
   const L = DATA.LESSONS[uid];
   if (!L) return '<div class="empty">這個單元還沒有講義。</div>';
+  return lessonHtmlFrom(L);
+}
+function lessonHtmlFrom(L) {
   const sections = (L.sections || []).map(s => `
     <h3>${bracketRuby(s.h)}</h3>
     ${s.rule ? `<div class="rule jp">${bracketRuby(s.rule)}</div>` : ''}
     <ul>${(s.points || []).map(p => `<li>${bracketRuby(p)}</li>`).join('')}</ul>
+    ${s.kana ? kanaGridHtml() : ''}
     ${(s.ex || []).map(e => `<div class="example"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(e.jp)}" aria-label="朗讀">${icon('speaker')}</button><div><div class="jp">${furi(e.jp)}</div><div class="zh">${esc(e.zh)}</div></div></div>`).join('')}
   `).join('');
   return `<div class="lesson">
@@ -3886,7 +4043,7 @@ function renderVocab(view, tab, params) {
       <div class="divider"></div>
       ${v.r && v.r !== v.w ? `<div class="reading jp">${esc(v.r)}</div>` : ''}
       <div class="meaning">${esc(v.m)}</div>
-      ${v.p ? `<div class="mt-1"><span class="chip">${esc(posLabel(v.p, v.posLabel))}</span></div>` : ''}
+      ${v.p ? `<div class="mt-1">${posChip(v.p, v.posLabel)}</div>` : ''}
       ${v.ex ? `<div class="example mt-3" style="text-align:left"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="flash-speak" data-mode="ex" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${furi(exPlain(v.ex))}</div><div class="zh">${esc(v.exZh || '')}</div></div></div>` : ''}
       <div id="flashAiBox"></div>` : '';
     card = `<div class="card">

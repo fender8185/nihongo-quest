@@ -341,6 +341,33 @@ def test_grammar_progress_bars_show_ok3_ok1_and_seen_segments(b):
 
 TESTS += [test_grammar_progress_bars_show_ok3_ok1_and_seen_segments]
 
+# ---- 2026-10-26 (9): 第 0 週 primer, new-user banner, glossary chips ----
+def test_intro_lesson_renders_with_kana_table_and_marks_itself_seen(b):
+    js = """(() => { location.hash = '#/course/intro'; route();
+      const h3 = document.querySelectorAll('.lesson h3').length, kana = document.querySelectorAll('.kana-grid [data-act=speak]').length;
+      const text = document.querySelector('.lesson').textContent; location.hash = '#/course'; route();
+      const card = document.querySelector('[data-route="#/course/intro"]');
+      return JSON.stringify({ h3, kana, seen: state.introSeen === true, hasAdj: text.includes('い形容詞') && text.includes('な形容詞'), hasVerbs: text.includes('五段') && text.includes('一段'), card: !!card }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['h3'] >= 8 and r['kana'] >= 46 and r['seen'] and r['hasAdj'] and r['hasVerbs'] and r['card'], r
+
+def test_new_user_banner_points_to_the_intro_until_dismissed(b):
+    js = """(() => { location.hash = '#/today'; route(); const before = !!document.querySelector('.intro-banner');
+      document.querySelector('.intro-banner [data-act=intro-dismiss]').click(); const after = !!document.querySelector('.intro-banner');
+      return JSON.stringify({ before, after, seen: state.introSeen === true }); })()"""
+    assert ev(b, js) == '{"before":true,"after":false,"seen":true}'
+
+def test_part_of_speech_chip_opens_the_glossary(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && x.p === 'i' && meaningOptions(x));
+      startSession('items', { items: [v] }); const e = currentEntry(); e.previewDone = true; e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice();
+      const chip = document.querySelector('.q-sub [data-act=glossary]'); if (chip) chip.click();
+      const text = modalOpen() ? document.querySelector('.modal').textContent : ''; closeModal(); SESSION = null; document.body.classList.remove('practicing');
+      return JSON.stringify({ chip: !!chip, term: chip ? chip.dataset.term : null, explains: text.includes('い形容詞') && text.length > 40, link: text.includes('第 0 週') }); })()"""
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['chip'] and r['term'] == 'i' and r['explains'] and r['link'], r
+
+TESTS += [test_intro_lesson_renders_with_kana_table_and_marks_itself_seen, test_new_user_banner_points_to_the_intro_until_dismissed, test_part_of_speech_chip_opens_the_glossary]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
