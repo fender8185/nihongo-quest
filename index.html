@@ -794,12 +794,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '47';   // keep equal to the number in sw.js CACHE ('nq-v47'); scripts/test.sh checks it
+const APP_VERSION = '48';   // keep equal to the number in sw.js CACHE ('nq-v48'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '47', from: '36', date: '2026-10-27', items: [
+  { v: '48', from: '36', date: '2026-10-27', items: [
+    '主選單：學習分析移到錯題本原本的位置，錯題本往下。',
     '錯題本改版：每天練習自動夾帶幾題錯題（錯最多、最久沒練的優先，設定可調）；題目達到「熟悉」就自動移到已掌握，手動／舊錯題則是隔天以上答對兩次；頁面改成一行一題的緊湊列表，可依類別篩選、排序，或依文法考點分組並直接練該考點；已掌握可一鍵清空。',
     '單字庫整理：新增「敬語」主題（16 個尊敬語／謙讓語動詞）、36 個常用 N5 字、26 個常用 N4 字；16 組「名詞＋する」合成一張卡（紀錄自動合併）；相同中文的字加上區別；漢字表新增 58 個常見 N4 漢字（共 342 個）。',
     '全部 1461 個內建單字每字兩句例句：填空、讀音、寫法與朗讀在兩句之間輪替，預習卡與字卡同時顯示兩句。',
@@ -3386,9 +3387,9 @@ const NAV = [
   { id: 'today', label: '今日', icon: 'today', route: '#/today' },
   { id: 'course', label: '課程', icon: 'course', route: '#/course' },
   { id: 'vocab', label: '單字', icon: 'vocab', route: '#/vocab' },
-  { id: 'mistakes', label: '錯題本', icon: 'mistakes', route: '#/mistakes' },
-  { id: 'exam', label: '模擬考', icon: 'exam', route: '#/exam' },
   { id: 'stats', label: '學習分析', icon: 'chart', route: '#/stats' },
+  { id: 'exam', label: '模擬考', icon: 'exam', route: '#/exam' },
+  { id: 'mistakes', label: '錯題本', icon: 'mistakes', route: '#/mistakes' },
   { id: 'tools', label: '工具與 AI', icon: 'tools', route: '#/tools' }
 ];
 let lastMainRoute = '#/today';
