@@ -329,6 +329,13 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .match-col { display: flex; flex-direction: column; gap: 8px; }
 .match-word, .match-meaning { padding: 12px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); font: inherit; font-size: 16px; cursor: pointer; text-align: center; }
 .match-word.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.mlist { padding: 0; } .mlist.card { padding: 4px 16px; }
+details.mrow { border-bottom: 1px solid var(--line); } details.mrow:last-child { border-bottom: none; }
+details.mrow > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 0; }
+details.mrow > summary::-webkit-details-marker { display: none; }
+details.mrow > summary .mprompt { flex: 1 1 240px; font-size: 16px; line-height: 1.8; min-width: 0; }
+details.mrow .mbody { padding: 4px 0 14px; }
+.mgroup .mlist { padding: 0; }
 .match-word.matched, .match-meaning.matched { border-color: var(--ok); color: var(--ok); opacity: .7; cursor: default; }
 @keyframes wrongFlash { 0%, 100% { border-color: var(--line); box-shadow: none; } 15%, 70% { border-color: var(--bad); box-shadow: 0 0 0 3px var(--bad-line); } }
 .match-word.wrong-flash, .match-meaning.wrong-flash { animation: wrongFlash .55s ease; }
@@ -787,12 +794,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '46';   // keep equal to the number in sw.js CACHE ('nq-v46'); scripts/test.sh checks it
+const APP_VERSION = '47';   // keep equal to the number in sw.js CACHE ('nq-v47'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '46', from: '36', date: '2026-10-27', items: [
+  { v: '47', from: '36', date: '2026-10-27', items: [
+    '錯題本改版：每天練習自動夾帶幾題錯題（錯最多、最久沒練的優先，設定可調）；題目達到「熟悉」就自動移到已掌握，手動／舊錯題則是隔天以上答對兩次；頁面改成一行一題的緊湊列表，可依類別篩選、排序，或依文法考點分組並直接練該考點；已掌握可一鍵清空。',
     '單字庫整理：新增「敬語」主題（16 個尊敬語／謙讓語動詞）、36 個常用 N5 字、26 個常用 N4 字；16 組「名詞＋する」合成一張卡（紀錄自動合併）；相同中文的字加上區別；漢字表新增 58 個常見 N4 漢字（共 342 個）。',
     '全部 1461 個內建單字每字兩句例句：填空、讀音、寫法與朗讀在兩句之間輪替，預習卡與字卡同時顯示兩句。',
     '單字新增「我會了」：單字表、字卡、作答回饋都可以按，直接標成已熟練、約六週後再確認；之後答錯就回到正常規則，單字表可「取消熟練」。',
@@ -883,6 +891,7 @@ function defaultSettings() {
     retention: 0.9,          // FSRS target recall
     furiMode: 'smart',       // smart: no furigana on mastered words | all — furigana:false hides all
     listenPerDay: 3,         // listening items in the daily mix
+    mistakesPerDay: 3,       // 錯題本 items carried into the daily mix (most-missed, longest unpractised first)
     newKanjiPerDay: 3,
     audioOptions: false,     // listening replies only spoken, like the real test
     backupEvery: 7
@@ -1337,6 +1346,7 @@ function markKnown(key) {
   r.s = Math.max(r.s || 0, 45); r.d = Math.min(r.d || 5, 4); r.b = levelFromS(r.s); r.known = 1;
   if (!r.lrn) r.lrn = t;
   r.due = addDays(t, fsrsDays(r.s, key)); r.last = t;
+  state.mistakes.forEach(m => { if (m.key === key && !m.mastered) { m.mastered = true; m.last = t; } });   // 我會了 clears it from the notebook
   saveState();
   return r;
 }
@@ -1408,7 +1418,7 @@ function addMistake(q, chosenText) {
   if (!prompt) return;
   let m = state.mistakes.find(x => (q.key && x.key === q.key) || x.prompt === prompt);
   if (m) {
-    m.count = (m.count || 1) + 1; m.streak = 0; m.mastered = false; m.wrong = chosenText || m.wrong; m.date = todayStr();
+    m.count = (m.count || 1) + 1; m.streak = 0; m.okDays = []; m.mastered = false; m.wrong = chosenText || m.wrong; m.date = todayStr(); m.last = todayStr();
   } else {
     m = { id: uid('mk'), key: q.key || '', cat: q.cat || '綜合', prompt, answer: q.answerText || '', wrong: chosenText || '', why: q.mistakeWhy || q.why || '', count: 1, streak: 0, mastered: false, note: '', date: todayStr() };
     state.mistakes.unshift(m);
@@ -1421,11 +1431,32 @@ function addMistake(q, chosenText) {
 function onCorrectForMistake(q) {
   const m = state.mistakes.find(x => !x.mastered && ((q.key && x.key === q.key) || (q.mistakeId && x.id === q.mistakeId)));
   if (!m) return null;
-  m.streak = (m.streak || 0) + 1;
-  if (m.streak >= 3) m.mastered = true;
+  const t = todayStr();
+  m.streak = (m.streak || 0) + 1; m.last = t;
+  if (m.key && REG.byKey.get(m.key)) {
+    const r = state.srs[m.key];                       // linked to the course: it leaves when the schedule says 熟悉
+    if (r && r.b >= SRS_LEARNED) m.mastered = true;
+  } else {
+    m.okDays = [...new Set((m.okDays || []).concat(t))].slice(-5);   // hand-made / legacy: right on two different days
+    if (m.okDays.length >= 2) m.mastered = true;
+  }
   return m;
 }
 function activeMistakes() { return state.mistakes.filter(m => !m.mastered); }
+function mistakeLast(m) { return m.last || m.date || ''; }
+// most-missed first, then the ones not practised for longest
+function mistakePriority(a, b) { return (b.count || 1) - (a.count || 1) || mistakeLast(a).localeCompare(mistakeLast(b)); }
+// course items from the notebook for today's mix: not already planned, not answered today
+function dailyMistakeItems(used, n) {
+  const t = todayStr(); const out = []; const seen = new Set();
+  activeMistakes().slice().sort(mistakePriority).forEach(m => {
+    if (out.length >= n || !m.key || used.has(m.key) || seen.has(m.key)) return;
+    const it = REG.byKey.get(m.key); if (!it || !['v', 'g', 'k'].includes(it.kind)) return;
+    const r = state.srs[m.key]; if (r && r.last === t) return;
+    seen.add(m.key); out.push(it);
+  });
+  return out;
+}
 
 // ---------- progress ----------
 function unitItems(uid) { return REG.grammar.filter(g => g.u === uid); }
@@ -2882,6 +2913,9 @@ function buildDailyQueue(fullSize = state.settings.sessionSize) {
     const moreVN = plan.newV.slice(v.news.length, v.news.length + spare); v.news = v.news.concat(moreVN); spare -= moreVN.length;
   }
   const used = new Set([...v.reviews, ...v.news, ...g.reviews, ...g.news].map(x => x.key));
+  // a few notebook items ride along on top of the plan (setting 每天夾帶的錯題)
+  const mist = dailyMistakeItems(used, clamp(Number(state.settings.mistakesPerDay) || 0, 0, 10));
+  mist.forEach(x => { used.add(x.key); (x.kind === 'g' ? g.reviews : v.reviews).push(x); });
   if (spare > 0) {
     const curIdx = unitOrder(state.currentUnit);
     const reinf = reinforcementItems(REG.vocab.filter(v => vocabEligibleForDaily(v, plan.n4Open)).concat(REG.grammar.filter(g => grammarInReach(g, curIdx))), used).slice(0, spare);
@@ -2897,7 +2931,7 @@ function buildDailyQueue(fullSize = state.settings.sessionSize) {
   L.forEach((x, i) => items.splice(Math.min(items.length, Math.round((i + 1) * items.length / (L.length + 1)) + i), 0, x));
   items.push(...R);
   const isNew = (x) => !state.srs[x.key];
-  return { items, plan, focus, newCount: items.filter(isNew).length, reviewCount: items.filter(x => !isNew(x)).length };
+  return { items, plan, focus, mistakeKeys: mist.map(x => x.key), newCount: items.filter(isNew).length, reviewCount: items.filter(x => !isNew(x)).length };
 }
 
 // The Today page and 「開始練習」 share one built queue, so the button says exactly how many questions the session
@@ -2910,6 +2944,7 @@ function dailyQueue(size = state.settings.sessionSize) {
   r.items = r.items.filter(it => makeQuestion(it, {}));   // an item that cannot become a question would be dropped silently later
   const isNew = (x) => !state.srs[x.key];
   r.newCount = r.items.filter(isNew).length; r.reviewCount = r.items.length - r.newCount;
+  r.mistakeN = (r.mistakeKeys || []).filter(k => r.items.some(x => x.key === k)).length;
   DAILY_CACHE = { key, r };
   return r;
 }
@@ -2957,7 +2992,7 @@ function startSession(mode, opt = {}) {
   let meta = {};
   if (mode === 'daily') {
     const r = dailyQueue(opt.size || state.settings.sessionSize);
-    entries = r.items.map(item => ({ item }));
+    entries = r.items.map(item => (r.mistakeKeys || []).includes(item.key) ? { item, fromMistake: true } : { item });
     meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: r.plan.note };
   } else if (mode === 'unit') {
     entries = buildUnitQueue(opt.unit, opt.size || 15).map(item => ({ item }));
@@ -3106,7 +3141,7 @@ function renderPractice() {
       <div class="pr-count">${SESSION.idx + 1} / ${total}</div>
     </div>
     <div class="q-card">
-      <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip chip-warn">再練一次</span>' : ''}${e.encore ? '<span class="chip chip-warn">換個方式再考</span>' : ''}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
+      <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip chip-warn">再練一次</span>' : ''}${e.fromMistake && !e.requeued ? '<span class="chip chip-warn">錯題</span>' : ''}${e.encore ? '<span class="chip chip-warn">換個方式再考</span>' : ''}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
       <div class="q-instr">${esc(q.instr || '')}</div>
       ${q.passageHtml ? `<div class="panel jp mb-3 passage">${q.passageHtml}</div>` : ''}
       ${stem ? `<div class="q-stem jp ${q.stemClass || ''}">${stem}</div>` : ''}
@@ -3212,7 +3247,7 @@ function feedbackHtml(e) {
   const srsInfo = e.srs ? `<span>${srsDots(e.srs.rec.b)}</span><span>${srsLevelLabel(e.srs.rec, q.key)}・${dueLabel(e.srs.rec)}</span>`
     : e.encore && cur ? `<span>${srsDots(cur.b)}</span><span>${srsLevelLabel(cur, q.key)}・這次不影響排程</span>` : '';
   const mistake = !ok && q.kind !== 'x' ? '<span>已加入錯題本</span>' : '';
-  const mNote = e.mistakeDone ? '<span class="chip chip-ok">錯題已連對 3 次，移出錯題本</span>' : '';
+  const mNote = e.mistakeDone ? '<span class="chip chip-ok">已移出錯題本</span>' : '';
   return `
     <div class="feedback ${ok ? 'ok' : 'bad'}">
       <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>' : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
@@ -3427,7 +3462,7 @@ function route() {
     if (r.name === 'today') renderToday(view);
     else if (r.name === 'course') { if (r.parts[1] === 'intro') renderIntro(view); else if (r.parts[1]) renderUnit(view, r.parts[1], r.params.tab || 'lesson'); else renderCourse(view); }
     else if (r.name === 'vocab') renderVocab(view, r.parts[1] || 'cards', r.params);
-    else if (r.name === 'mistakes') renderMistakes(view, r.params.f || 'active');
+    else if (r.name === 'mistakes') renderMistakes(view, r.params);
     else if (r.name === 'exam') renderExam(view, r.parts[1] || '', r.params);
     else if (r.name === 'tools') renderTools(view, r.params);
     else if (r.name === 'stats') renderStats(view);
@@ -3670,9 +3705,10 @@ function renderToday(view) {
   const exK = plan.dueK.length + plan.newK.length;
   const exL = Math.min(plan.dueL.length + plan.newL.length, state.settings.listenPerDay || 0);
   const exR = Math.min(1, plan.dueR.length + plan.newR.length);
-  const extraN = exK + exL + exR;
-  const extraText = [exK && `漢字 ${exK}`, exL && `聽力 ${exL}`, exR && `閱讀 ${exR}`].filter(Boolean).join('・');
   const size = state.settings.sessionSize;
+  const exM = dailyQueue(size).mistakeN || 0;
+  const extraN = exK + exL + exR + exM;
+  const extraText = [exK && `漢字 ${exK}`, exL && `聽力 ${exL}`, exR && `閱讀 ${exR}`, exM && `錯題 ${exM}`].filter(Boolean).join('・');
   const sessionN = reviewN + newN + extraN ? dailyQueue(size).items.length + encoreEstimate(dailyQueue(size).items) : 0;   // new words come back twice more
   const d = parseDate(t);
   const greeting = `${d.getMonth() + 1} 月 ${d.getDate()} 日（${weekdayZh(t)}）`;
@@ -4506,53 +4542,99 @@ Object.assign(CHANGE_ACTIONS, {
 /* ==========================================================================
    Mistake notebook
    ========================================================================== */
-function renderMistakes(view, filter) {
+function renderMistakes(view, params = {}) {
+  const filter = ['active', 'mastered', 'all'].includes(params.f) ? params.f : 'active';
+  const sort = ['count', 'recent', 'stale'].includes(params.s) ? params.s : 'count';
+  const cat = params.c || ''; const group = params.g === 'pt' ? 'pt' : '';
+  const link = (o) => '#/mistakes?' + Object.entries(Object.assign({ f: filter, s: sort, c: cat, g: group }, o)).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
   const all = state.mistakes;
   const active = all.filter(m => !m.mastered);
-  const list = filter === 'mastered' ? all.filter(m => m.mastered) : filter === 'all' ? all : active;
+  const base = filter === 'mastered' ? all.filter(m => m.mastered) : filter === 'all' ? all : active;
+  const sorters = { count: mistakePriority, recent: (a, b) => mistakeLast(b).localeCompare(mistakeLast(a)), stale: (a, b) => mistakeLast(a).localeCompare(mistakeLast(b)) };
+  const list = (cat ? base.filter(m => (m.cat || '綜合') === cat) : base).slice().sort(sorters[sort]);
   const cats = {};
-  active.forEach(m => { cats[m.cat || '綜合'] = (cats[m.cat || '綜合'] || 0) + 1; });
-  const catChips = Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<span class="chip">${esc(c)} ${n}</span>`).join(' ');
-  const cards = list.slice(0, 200).map(m => {
+  base.forEach(m => { cats[m.cat || '綜合'] = (cats[m.cat || '綜合'] || 0) + 1; });
+  const catChips = Object.entries(cats).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<button type="button" class="chip ${cat === c ? 'chip-accent' : ''}" data-act="nav" data-route="${link({ c: cat === c ? '' : c })}">${esc(c)} ${n}</button>`).join(' ');
+  const t = todayStr();
+  const row = (m) => {
     const linked = m.key && REG.byKey.get(m.key);
     const rec = m.key && state.srs[m.key];
-    return `<div class="card">
-      <div class="row between"><div class="row-wrap"><span class="chip">${esc(m.cat || '綜合')}</span><span class="small muted">錯 ${m.count || 1} 次${m.mastered ? '・已掌握' : `・連對 ${m.streak || 0}/3`}</span>${rec ? srsDots(rec.b) : ''}</div>
-        <div class="row"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(jaPlain(m.prompt))}" aria-label="朗讀">${icon('speaker')}</button></div></div>
-      <div class="jp mt-2" style="font-size:18px;line-height:1.9">${furi(tidyPrompt(m.prompt))}</div>
-      <div class="row-wrap mt-2 small">
-        <span>正確：<b class="jp">${furi(m.answer || '')}</b></span>
-        ${m.wrong ? `<span class="muted">你選過：<span class="jp">${esc(m.wrong)}</span></span>` : ''}
-      </div>
-      ${m.why ? `<details class="disclose mt-2"><summary>解析</summary><div class="mt-2 small">${md(m.why)}</div></details>` : ''}
-      <div class="row-wrap mt-3">
-        <input class="input grow" placeholder="自己的筆記或口訣" value="${esc(m.note || '')}" data-change="mistake-note" data-id="${esc(m.id)}" style="min-width:180px" />
-        ${isAiConfigured() ? `<button type="button" class="btn btn-sm" data-act="mistake-ai" data-id="${esc(m.id)}">AI 解析</button>` : ''}
-        <button type="button" class="btn btn-sm btn-ghost" data-act="mistake-toggle" data-id="${esc(m.id)}">${m.mastered ? '移回待複習' : '標為已掌握'}</button>
-        <button type="button" class="btn btn-sm btn-ghost btn-danger" data-act="mistake-del" data-id="${esc(m.id)}">刪除</button>
-      </div>
-      ${linked ? '' : '<div class="hint mt-2">這題來自舊版或手動新增，練習時會用這張卡片出題。</div>'}
-    </div>`;
-  }).join('');
+    const status = m.mastered ? '<span class="chip chip-ok">已掌握</span>'
+      : linked ? (rec ? `<span class="nowrap">${srsDots(rec.b)} <span class="tiny muted">${srsLevelLabel(rec, m.key)}</span></span>` : '')
+        : `<span class="tiny muted">答對 ${new Set(m.okDays || []).size}／2 天</span>`;
+    const when = mistakeLast(m); const ago = when ? daysBetween(when, t) : null;
+    return `<details class="mrow" data-id="${esc(m.id)}" data-count="${m.count || 1}">
+      <summary>
+        <span class="chip">${esc(m.cat || '綜合')}</span>
+        <span class="jp mprompt">${furi(tidyPrompt(m.prompt))}</span>
+        <span class="small nowrap">正確 <b class="jp">${furi(m.answer || '')}</b></span>
+        <span class="tiny muted nowrap">錯 ${m.count || 1} 次${ago === null ? '' : ago === 0 ? '・今天' : `・${ago} 天前`}</span>
+        ${status}
+      </summary>
+      <div class="mbody">
+        <div class="row-wrap small">${m.wrong ? `<span class="muted">你選過：<span class="jp">${esc(m.wrong)}</span></span>` : ''}<button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(jaPlain(m.prompt))}" aria-label="朗讀">${icon('speaker')}</button></div>
+        ${m.why ? `<div class="small mt-2">${md(m.why)}</div>` : ''}
+        <div class="row-wrap mt-2">
+          <input class="input grow" placeholder="自己的筆記或口訣" value="${esc(m.note || '')}" data-change="mistake-note" data-id="${esc(m.id)}" style="min-width:180px" />
+          ${isAiConfigured() ? `<button type="button" class="btn btn-sm" data-act="mistake-ai" data-id="${esc(m.id)}">AI 解析</button>` : ''}
+          <button type="button" class="btn btn-sm btn-ghost" data-act="mistake-toggle" data-id="${esc(m.id)}">${m.mastered ? '移回待複習' : '標為已掌握'}</button>
+          <button type="button" class="btn btn-sm btn-ghost btn-danger" data-act="mistake-del" data-id="${esc(m.id)}">刪除</button>
+        </div>
+        ${linked ? '' : '<div class="hint mt-2">這題來自舊版或手動新增，練習時用自評卡出題，隔天以上答對兩次就移到已掌握。</div>'}
+      </div></details>`;
+  };
+  let body;
+  if (group === 'pt') {
+    // grammar by 考點 (with a drill button), everything else by category
+    const groups = new Map();
+    list.forEach(m => {
+      const it = m.key && REG.byKey.get(m.key);
+      const name = it && it.kind === 'g' && it.pt ? it.pt : (m.cat || '綜合');
+      const g = groups.get(name) || groups.set(name, { name, pt: it && it.kind === 'g' ? it.pt : '', items: [] }).get(name);
+      g.items.push(m);
+    });
+    body = [...groups.values()].sort((a, b) => b.items.length - a.items.length).map(g => `<div class="card mgroup">
+        <div class="row between"><div><b>${esc(g.name)}</b> <span class="small muted">${g.items.length} 題</span></div>${g.pt ? `<button type="button" class="btn btn-sm" data-act="stats-drill" data-pt="${esc(g.pt)}">練這個考點</button>` : ''}</div>
+        <div class="mlist mt-2">${g.items.map(row).join('')}</div></div>`).join('');
+  } else {
+    body = `<div class="card mlist">${list.slice(0, 300).map(row).join('')}</div>`;
+  }
   view.innerHTML = `
     <div class="page-head">
-      <div><div class="page-title">錯題本</div><div class="page-sub">答錯的題目會自動收進來；同一題連續答對 3 次就會移到「已掌握」。</div></div>
+      <div><div class="page-title">錯題本</div><div class="page-sub">答錯的題目會自動收進來，每天練習會夾帶幾題（設定可調）；題目達到「熟悉」就移到「已掌握」。</div></div>
       <div class="row-wrap">
         <button type="button" class="btn btn-primary" data-act="start-mistakes" ${active.length ? '' : 'disabled'}>練習錯題（${active.length}）</button>
         <button type="button" class="btn" data-act="mistake-add">手動新增</button>
+        ${filter === 'mastered' && base.length ? `<button type="button" class="btn btn-ghost" data-act="mistake-clear-mastered">清空已掌握（${base.length}）</button>` : ''}
       </div>
     </div>
-    ${catChips ? `<div class="row-wrap mb-3">${catChips}</div>` : ''}
-    <div class="seg mb-4">
-      <button type="button" aria-pressed="${filter === 'active'}" data-act="nav" data-route="#/mistakes?f=active">待複習 ${active.length}</button>
-      <button type="button" aria-pressed="${filter === 'mastered'}" data-act="nav" data-route="#/mistakes?f=mastered">已掌握 ${all.length - active.length}</button>
-      <button type="button" aria-pressed="${filter === 'all'}" data-act="nav" data-route="#/mistakes?f=all">全部 ${all.length}</button>
+    <div class="row-wrap mb-3" style="align-items:center">
+      <div class="seg">
+        <button type="button" aria-pressed="${filter === 'active'}" data-act="nav" data-route="${link({ f: 'active', c: '' })}">待複習 ${active.length}</button>
+        <button type="button" aria-pressed="${filter === 'mastered'}" data-act="nav" data-route="${link({ f: 'mastered', c: '' })}">已掌握 ${all.length - active.length}</button>
+        <button type="button" aria-pressed="${filter === 'all'}" data-act="nav" data-route="${link({ f: 'all', c: '' })}">全部 ${all.length}</button>
+      </div>
+      <div class="seg">
+        <button type="button" aria-pressed="${group === ''}" data-act="nav" data-route="${link({ g: '' })}">列表</button>
+        <button type="button" aria-pressed="${group === 'pt'}" data-act="nav" data-route="${link({ g: 'pt' })}">依考點</button>
+      </div>
+      <select class="select" style="width:auto" data-change="mistake-sort" data-base="${esc(link({ s: '' }))}">
+        <option value="count" ${sort === 'count' ? 'selected' : ''}>錯最多次</option>
+        <option value="recent" ${sort === 'recent' ? 'selected' : ''}>最近錯的</option>
+        <option value="stale" ${sort === 'stale' ? 'selected' : ''}>最久沒練</option>
+      </select>
     </div>
-    ${cards || '<div class="card empty">這裡沒有題目。</div>'}
-    ${list.length > 200 ? '<p class="hint">只顯示前 200 題。</p>' : ''}`;
+    ${catChips ? `<div class="row-wrap mb-3">${catChips}</div>` : ''}
+    ${list.length ? body : '<div class="card empty">這裡沒有題目。</div>'}
+    ${list.length > 300 && group !== 'pt' ? '<p class="hint">只顯示前 300 題。</p>' : ''}`;
 }
 
 Object.assign(ACTIONS, {
+  'mistake-clear-mastered': () => {
+    const n = state.mistakes.filter(m => m.mastered).length;
+    if (!n || !confirm(`刪除 ${n} 題已掌握的錯題？`)) return;
+    state.mistakes = state.mistakes.filter(m => !m.mastered); saveState(); route();
+  },
   'mistake-toggle': (el) => {
     const m = state.mistakes.find(x => x.id === el.dataset.id);
     if (!m) return;
@@ -4584,6 +4666,7 @@ Object.assign(ACTIONS, {
   }
 });
 Object.assign(CHANGE_ACTIONS, {
+  'mistake-sort': (el) => go(`${el.dataset.base}&s=${el.value}`),
   'mistake-note': (el) => {
     const m = state.mistakes.find(x => x.id === el.dataset.id);
     if (m) { m.note = el.value; saveState(); toast('已儲存筆記'); }
@@ -5428,6 +5511,7 @@ function settingsLearn() {
     ${numRow('vocabShare', '單字所占比例', '每日練習中單字題的比例，其餘為文法題。', 0, 100, 10, '%')}
     ${numRow('newKanjiPerDay', '每天新漢字上限', 'N5 漢字都學過一次後，才會開始加入 N4 漢字。', 0, 15, 1, '個')}
     ${numRow('listenPerDay', '每天聽力題', '短對話、即時應答與情境表達；需要能播放語音。', 0, 10, 1, '題')}
+    ${numRow('mistakesPerDay', '每天夾帶的錯題', '從錯題本挑錯最多次、最久沒練的題目放進每日練習；0 表示不夾帶。', 0, 10, 1, '題')}
     ${selRow('retention', '複習強度', '越高越常複習，記得越牢，但每天的題目也越多。', [['0.85', '輕量（約記住 85%）'], ['0.9', '標準（約記住 90%）'], ['0.95', '加強（約記住 95%）']])}
     ${selRow('order', '出題順序', '', [['mix', '單字與文法交錯'], ['split', '先單字，再文法']])}
     ${boolRow('showZh', '題目下方直接顯示中文', '關閉時可按 T 或點「顯示中文」再看。需要中文才能判斷的題目仍會顯示。')}

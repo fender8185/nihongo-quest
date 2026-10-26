@@ -445,6 +445,51 @@ def test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them
     assert r['goal'] >= exp['v'] + exp['g'] + exp['k'] + exp['l'] and r['goal'] % 5 == 0 and 30 <= r['share'] <= 70, r
     assert r['after'].startswith('已是建議值') and 'disabled' in r['after'], r
 
+# ---- 2026-10-27: 錯題本 rework — mistakes join the daily mix, leave when the item reaches 熟悉, compact page with filters/sort/groups ----
+MIST_SEED = """(() => { const t = todayStr(); const gs = REG.grammar.filter(g => g.u === 'm1'); const far = (g, b) => { state.srs[g.key] = { b, due: addDays(t, 20), n: 14, ok: 12, ng: 2, s: b >= 3 ? 8 : 2, d: 6, last: addDays(t, -2), intro: addDays(t, -9) }; };
+  state.mistakes = []; far(gs[0], 1); far(gs[1], 1); far(gs[2], 1);
+  const mk = (g, count, daysAgo, cat) => ({ id: uid('mk'), key: g ? g.key : '', cat: cat || '文法', prompt: g ? g.key : 'オリジナル問題 ' + count, answer: g ? 'に' : 'で', wrong: 'で', why: '', count, streak: 0, mastered: false, note: '', date: addDays(t, -daysAgo), last: addDays(t, -daysAgo) });
+  state.mistakes.push(mk(gs[0], 5, 1), mk(gs[1], 1, 6), mk(gs[2], 2, 3), mk(null, 3, 2, '單字'));
+  state.settings.mistakesPerDay = 1; saveState(); window.__g = gs.slice(0, 3).map(g => g.key); return 'seeded'; })()"""
+
+def test_linked_mistakes_join_the_daily_mix_by_priority_up_to_the_setting(b):
+    probe = """(() => { const run = (n) => { state.settings.mistakesPerDay = n; saveState(); const r = dailyQueue(20); return __g.map(k => r.mistakeKeys.includes(k) && r.items.some(x => x.key === k)); };
+      const one = run(1), two = run(2); const zero = (() => { run(0); return dailyQueue(20).mistakeN; })(); state.settings.mistakesPerDay = 2; saveState(); startSession('daily'); const flagged = SESSION.entries.filter(e => e.fromMistake).map(e => e.item.key); SESSION = null; document.body.classList.remove('practicing');
+      return JSON.stringify({ one, two, zero, flagged: __g.map(k => flagged.includes(k)), n: dailyQueue(20).mistakeN }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", MIST_SEED), ("eval", probe)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['one'] == [True, False, False] and r['two'] == [True, False, True] and r['zero'] == 0, r   # count 5 first, then count 2
+    assert r['flagged'] == [True, False, True] and r['n'] == 2, r
+
+def test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days(b):
+    js = """(() => { const t = todayStr(); const m0 = state.mistakes[0]; const u = state.mistakes[3]; const out = {};
+      onCorrectForMistake({ key: m0.key }); out.linkedStillActive = !m0.mastered;
+      state.srs[m0.key].b = 3; onCorrectForMistake({ key: m0.key }); out.linkedMastered = m0.mastered;
+      onCorrectForMistake({ mistakeId: u.id }); onCorrectForMistake({ mistakeId: u.id }); out.unlinkedSameDay = !u.mastered;
+      u.okDays = [addDays(t, -1)]; onCorrectForMistake({ mistakeId: u.id }); out.unlinkedTwoDays = u.mastered;
+      const m1 = state.mistakes[1]; state.srs[m1.key].b = 1; markKnown(m1.key); out.knownMasters = m1.mastered;
+      return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", MIST_SEED), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r == {'linkedStillActive': True, 'linkedMastered': True, 'unlinkedSameDay': True, 'unlinkedTwoDays': True, 'knownMasters': True}, r
+
+def test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups(b):
+    probe = """(() => { const v = document.getElementById('view'); const rows = () => [...v.querySelectorAll('details.mrow')]; const go = (h) => { location.hash = h; route(); };
+      const firstCount = () => +rows()[0].dataset.count;
+      const out = { rows: rows().length, open: rows().filter(r => r.open).length, firstByCount: firstCount(), sort: !!v.querySelector('[data-change=mistake-sort]') };
+      go('#/mistakes?f=active&s=stale'); out.firstStale = firstCount();
+      go('#/mistakes?f=active&c=單字'); out.catRows = rows().length;
+      go('#/mistakes?f=active&g=pt'); out.groups = v.querySelectorAll('.mgroup').length; out.drill = v.querySelectorAll('.mgroup [data-act=stats-drill]').length;
+      state.mistakes[1].mastered = true; saveState(); go('#/mistakes?f=mastered'); out.mastered = rows().length; const clr = v.querySelector('[data-act=mistake-clear-mastered]'); out.clearBtn = !!clr;
+      window.confirm = () => true; if (clr) clr.click(); out.afterClear = state.mistakes.filter(m => m.mastered).length;
+      return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", MIST_SEED), ("nav", URL + "#/mistakes?f=active&s=count"), ("eval", probe)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['rows'] == 4 and r['open'] == 0 and r['firstByCount'] == 5 and r['sort'], r
+    assert r['firstStale'] == 1 and r['catRows'] == 1, r               # the count-1 one is 6 days stale; one 單字 mistake
+    assert r['groups'] >= 2 and r['drill'] >= 1, r
+    assert r['mastered'] == 1 and r['clearBtn'] and r['afterClear'] == 0, r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -460,7 +505,8 @@ if __name__ == "__main__":
              test_single_words_are_sent_as_kanji_with_the_reading_pinned, test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong, test_tts_connection_check_reports_the_real_error_and_success,
              test_tools_page_has_an_expandable_api_guide_for_every_provider,
              test_stats_shows_the_past_week_of_practice_and_what_was_learned, test_reaching_the_learned_level_records_the_date, test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading,
-             test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them]
+             test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them,
+             test_linked_mistakes_join_the_daily_mix_by_priority_up_to_the_setting, test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups]
     failed = 0
     try:
         for t in tests:
