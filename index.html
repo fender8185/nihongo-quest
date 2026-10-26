@@ -26,7 +26,7 @@
   --ok: #34d399; --ok-soft: rgba(52,211,153,.12); --ok-line: rgba(52,211,153,.5);
   --bad: #fb7185; --bad-soft: rgba(251,113,133,.12); --bad-line: rgba(251,113,133,.5);
   --warn: #fbbf24; --warn-soft: rgba(251,191,36,.12);
-  --heat-0: #1c1d24; --heat-1: #14432f; --heat-2: #17694a; --heat-3: #1f9a68; --heat-4: #43d39a;
+  --heat-0: #1c1d24; --heat-1: #14432f; --heat-2: #17694a; --heat-3: #1f9a68; --heat-4: #43d39a; --gauge-seen: #17694a;
   --shadow: 0 1px 2px rgba(0,0,0,.45), 0 8px 24px -12px rgba(0,0,0,.5);
   --ruby: #9ea1ad;
   color-scheme: dark;
@@ -39,7 +39,7 @@
   --ok: #04885b; --ok-soft: rgba(4,136,91,.09); --ok-line: rgba(4,136,91,.45);
   --bad: #d7264f; --bad-soft: rgba(215,38,79,.08); --bad-line: rgba(215,38,79,.45);
   --warn: #a35d00; --warn-soft: rgba(217,119,6,.1);
-  --heat-0: #e6e8ed; --heat-1: #b9e8cf; --heat-2: #74cfa1; --heat-3: #2fa96f; --heat-4: #0b7a4a;
+  --heat-0: #e6e8ed; --heat-1: #b9e8cf; --heat-2: #74cfa1; --heat-3: #2fa96f; --heat-4: #0b7a4a; --gauge-seen: #4dbd8a;
   --shadow: 0 1px 2px rgba(20,22,30,.06), 0 8px 24px -14px rgba(20,22,30,.18);
   --ruby: #6b6e79;
   color-scheme: light;
@@ -365,6 +365,14 @@ body.furi-smart ruby.known rt { visibility: hidden; }
 .cols .col .colbar { width: min(24px, 70%); background: var(--accent); border-radius: 4px 4px 0 0; min-height: 2px; }
 .cols .col .colbar.stack { display: flex; flex-direction: column; background: transparent; overflow: hidden; }
 tr.lag td { color: var(--warn, #d08a00); font-weight: 600; }
+.gauges { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.gauge { min-width: 0; } .gauge svg { width: 100%; max-width: 260px; height: auto; display: block; margin: 0 auto; }
+.gauge .track { fill: none; stroke: var(--heat-0); }
+.gauge path.arc { fill: none; outline: none; } .gauge path.arc:hover, .gauge path.arc:focus { filter: brightness(1.15); }
+.gauge .arc.seen { stroke: var(--gauge-seen); } .gauge .arc.learned { stroke: var(--heat-3); } .gauge .arc.mastered { stroke: var(--heat-4); }
+.gauge .needle { stroke: var(--fg); stroke-width: 2.5; stroke-linecap: round; } .gauge .pivot { fill: var(--fg); }
+.gauge .hero { fill: var(--fg); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; } .gauge .hero-l { fill: var(--fg-3); font-size: 11px; }
+.gauge .glegend { text-align: center; } .gauge .glegend span { white-space: nowrap; display: inline-block; margin: 0 5px; } .seg-dot.gseen { background: var(--gauge-seen); }
 .cseg { flex-basis: 0; min-height: 0; } .cseg.v, .seg-dot.v { background: var(--heat-4); } .cseg.g, .seg-dot.g { background: var(--heat-3); } .cseg.q, .seg-dot.q { background: var(--heat-2); }
 .cols .col:hover .colbar, .cols .col:focus .colbar { filter: brightness(1.15); }
 .cols .col .collabel { position: absolute; top: -20px; font-size: 12px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
@@ -776,9 +784,10 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '41';   // keep equal to the number in sw.js CACHE ('nq-v41'); scripts/test.sh checks it
+const APP_VERSION = '42';   // keep equal to the number in sw.js CACHE ('nq-v42'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '42', date: '2026-10-27', items: ['學習分析的明細改為「總進度」：單字與文法各一個半圓指針圖，三種顏色代表熟練程度，指針指向加權進度；移除「這 7 天變熟悉的／新學的」清單。'] },
   { v: '41', date: '2026-10-27', items: ['單字新增「我會了」：單字表每一列、字卡、作答後的回饋都可以按，字會直接標成已熟練、約六週後再確認一次；之後答錯就回到正常規則。單字表可按「取消熟練」收回。'] },
   { v: '40', date: '2026-10-27', items: ['設定 › 語音 的「測試連線」結果不再因為瀏覽器語音清單載入而消失。'] },
   { v: '39', date: '2026-10-27', items: ['N4 的 726 個單字也都有第二個例句了：全部 1461 個內建單字每字兩句，題目在兩句之間輪替。'] },
@@ -5776,18 +5785,41 @@ function weekPractice(days = 7) {
     return { date, v, g, q, total: v + g + q };
   });
 }
-// items first seen / first reaching 熟悉 within the past `days` days, newest first
-function recentlyLearned(days = 7) {
-  const t = todayStr();
-  const within = (d) => d && daysBetween(d, t) < days;
-  const fresh = [], learned = [];
-  Object.entries(state.srs).forEach(([k, r]) => {
-    const it = REG.byKey.get(k); if (!it) return;
-    if (within(r.intro)) fresh.push({ it, d: r.intro });
-    if (within(r.lrn) && r.b >= SRS_LEARNED) learned.push({ it, d: r.lrn });
+// overall progress of a bank in three mastery steps (counts) plus a weighted score: 已學 1・熟悉 2・熟練 3 points out of 3 per item
+function progressTotals(kind) {
+  const t = { kind, total: 0, seen: 0, learned: 0, mastered: 0 };
+  if (kind === 'v') {
+    REG.vocab.filter(v => v.builtin).forEach(v => { t.total++; const r = state.srs[v.key]; if (!r) return; const l = srsLevelLabel(r, v.key); if (l === '已熟練') t.mastered++; else if (r.b >= SRS_LEARNED) t.learned++; else t.seen++; });
+  } else {
+    REG.grammar.forEach(g => { t.total++; const r = state.srs[g.key]; if (!r) return; if ((r.ok || 0) >= 3) t.mastered++; else if ((r.ok || 0) >= 1) t.learned++; else t.seen++; });
+  }
+  t.pct = t.total ? Math.round((t.seen + t.learned * 2 + t.mastered * 3) / (t.total * 3) * 100) : 0;
+  return t;
+}
+// half-circle gauge: three arcs (dark = mastered on the left, lighter steps to the right) over a track, needle at the weighted score
+function gaugeHtml(t, title, labels) {
+  const R = 80, C = 100, W = 20;
+  const pt = (f) => { const a = Math.PI * (1 - f); return [C + R * Math.cos(a), C - R * Math.sin(a)]; };
+  const arc = (f0, f1) => { const [x0, y0] = pt(f0); const [x1, y1] = pt(f1); return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${R} ${R} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`; };
+  const gap = 2 / (Math.PI * R);   // a 2px surface gap between segments
+  const segs = [['mastered', t.mastered, labels[0]], ['learned', t.learned, labels[1]], ['seen', t.seen, labels[2]]];
+  let f = 0; const paths = [];
+  segs.forEach(([cls, n, label]) => {
+    if (!n || !t.total) return;
+    const f0 = f, f1 = f + n / t.total; f = f1;
+    const a0 = f0 > 0 ? f0 + gap / 2 : f0; let a1 = f1 < 1 ? f1 - gap / 2 : f1;
+    if (a1 - a0 < gap) a1 = Math.min(1, a0 + gap);   // a tiny count still shows as a sliver
+    paths.push(`<path class="arc ${cls}" d="${arc(a0, a1)}" stroke-width="${W}" tabindex="0" data-tip-title="${esc(label)}：${n}" data-tip-body="占 ${Math.round(n / t.total * 100)}%"></path>`);
   });
-  const byDate = (a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : 0);
-  return { fresh: fresh.sort(byDate), learned: learned.sort(byDate) };
+  const [nx, ny] = (() => { const a = Math.PI * (1 - t.pct / 100); return [C + (R - W / 2 - 4) * Math.cos(a), C - (R - W / 2 - 4) * Math.sin(a)]; })();   // ends just inside the ring
+  const legend = `<div class="glegend small muted mt-1"><span><i class="seg-dot mastered"></i>${esc(labels[0])} ${t.mastered}</span> <span><i class="seg-dot learned"></i>${esc(labels[1])} ${t.learned}</span> <span><i class="seg-dot gseen"></i>${esc(labels[2])} ${t.seen}</span> <span>未學 ${t.total - t.seen - t.learned - t.mastered}</span> <span>共 ${t.total}</span></div>`;
+  return `<div class="gauge" data-kind="${t.kind}" data-total="${t.total}" data-seen="${t.seen}" data-learned="${t.learned}" data-mastered="${t.mastered}" data-pct="${t.pct}">
+    <div class="small" style="text-align:center"><strong>${esc(title)}</strong></div>
+    <svg viewBox="0 0 200 146" role="img" aria-label="${esc(title)}總進度 ${t.pct}%：${esc(labels[0])} ${t.mastered}、${esc(labels[1])} ${t.learned}、${esc(labels[2])} ${t.seen}，共 ${t.total}">
+      <path class="track" d="${arc(0, 1)}" stroke-width="${W}"></path>${paths.join('')}
+      <line class="needle" x1="${C}" y1="${C}" x2="${nx.toFixed(2)}" y2="${ny.toFixed(2)}"></line><circle class="pivot" cx="${C}" cy="${C}" r="4"></circle>
+      <text class="hero" x="${C}" y="${C + 32}" text-anchor="middle">${t.pct}%</text><text class="hero-l" x="${C}" y="${C + 44}" text-anchor="middle">總進度</text>
+    </svg>${legend}</div>`;
 }
 // Daily quotas that would finish every bank before the mock-exam weeks: unseen items ÷ study days, per kind.
 // The daily goal adds room for reviews (about one and a half times the new items), rounded to fives.
@@ -5877,8 +5909,7 @@ function renderStats(view) {
   }).join('');
   const axis = wk.map((d, i) => `<span>${i === last ? '今天' : `${d.date.slice(5).replace('-', '/')}（${weeks[parseDate(d.date).getDay()]}）`}</span>`).join('');
   const wkTable = `<table class="table"><thead><tr><th>日期</th><th>單字</th><th>文法</th><th>其他</th><th>合計</th></tr></thead><tbody>${wk.map((d, i) => `<tr><td class="num">${i === last ? '今天' : d.date}</td><td class="num">${d.v}</td><td class="num">${d.g}</td><td class="num">${d.q}</td><td class="num">${d.total}</td></tr>`).join('')}</tbody></table>`;
-  const rl = recentlyLearned(7);
-  const learnedList = (arr) => arr.length ? `<div class="row-wrap mt-2">${arr.slice(0, 40).map(({ it }) => `<span class="chip"><span class="dim">${KIND_NAME[it.kind] || ''}</span> <span class="jp">${esc(itemLabel(it)).slice(0, 24)}</span></span>`).join('')}${arr.length > 40 ? `<span class="small muted">…共 ${arr.length} 項</span>` : ''}</div>` : '<div class="small muted mt-1">這 7 天還沒有。</div>';
+  const gauges = `<div class="gauges mt-3">${gaugeHtml(progressTotals('v'), '單字', ['已熟練', '熟悉', '已學'])}${gaugeHtml(progressTotals('g'), '文法', ['答對 3 次以上', '答對過', '出現過'])}</div>`;
 
   const weak = weakPoints();
   const weakRows = weak.map(a => `<div class="barrow">
@@ -5924,9 +5955,8 @@ function renderStats(view) {
       <div class="cols" role="img" aria-label="過去 7 天每天作答的題數">${cols}</div>
       <div class="col-axis">${axis}</div>
       <div class="small muted mt-2"><i class="seg-dot v"></i>單字・漢字　<i class="seg-dot g"></i>文法　<i class="seg-dot q"></i>聽力・閱讀・模擬考</div>
-      <details class="disclose mt-3"><summary>明細與最近學會的</summary><div class="table-wrap mt-2">${wkTable}</div>
-        <div class="small mt-3"><strong>這 7 天變熟悉的</strong>（${rl.learned.length}）</div>${learnedList(rl.learned)}
-        <div class="small mt-3"><strong>這 7 天新學的</strong>（${rl.fresh.length}）</div>${learnedList(rl.fresh)}</details>
+      <details class="disclose mt-3"><summary>明細與總進度</summary><div class="table-wrap mt-2">${wkTable}</div>
+        <div class="small mt-3"><strong>總進度</strong><span class="muted">　指針是加權分數：已學 1 分、熟悉 2 分、熟練 3 分，滿分 3 分一題</span></div>${gauges}</details>
     </div>
     <div class="grid grid-2">
       <div class="card">
