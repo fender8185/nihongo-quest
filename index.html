@@ -1909,7 +1909,8 @@ function vocabFormats(v) {
   return Object.entries(weights).filter(([f]) => can[f]).map(([f, w]) => [f, w]);
 }
 function weightedPick(pairs, avoid) {
-  let list = pairs.filter(([f]) => f !== avoid);
+  const av = Array.isArray(avoid) ? avoid : [avoid];
+  let list = pairs.filter(([f]) => !av.includes(f));
   if (!list.length) list = pairs;
   const total = list.reduce((a, [, w]) => a + w, 0);
   let r = Math.random() * total;
@@ -1939,7 +1940,8 @@ function vocabWhy(v) {
 
 function makeVocabQuestion(v, ctx = {}) {
   const formats = vocabFormats(v);
-  let fmt = Array.isArray(formats[0]) ? weightedPick(formats, ctx.avoidFmt) : formats[0];
+  const avoid = ctx.avoidFmts || ctx.avoidFmt;
+  let fmt = Array.isArray(formats[0]) ? weightedPick(formats, avoid) : formats[0];
   const q = baseQ(v);
   q.cat = '單字';
   q.lv = v.lv;
@@ -2047,6 +2049,17 @@ function makeVocabQuestion(v, ctx = {}) {
   };
   // the mock exam asks for one specific format (漢字読み / 表記) and needs nothing else
   if (ctx.forceFmt) return tryBuild(ctx.forceFmt) ? q : null;
+  if (ctx.encore) {
+    // an encore must use a format this word has not had in this session; when none can be built there is no encore
+    const used = [].concat(avoid || []);
+    let left = (Array.isArray(formats[0]) ? formats : [[formats[0], 1]]).filter(([f]) => !used.includes(f));
+    while (left.length) {
+      const f = weightedPick(left);
+      if (tryBuild(f)) return q;
+      left = left.filter(([x]) => x !== f);
+    }
+    return null;
+  }
   if (!tryBuild(fmt)) {
     const order = ['v-meaning', 'v-recall', 'v-cloze', 'v-sentence'];
     let ok = false;
@@ -2698,8 +2711,21 @@ function prepareEntry(i) {
   const e = SESSION.entries[i];
   if (!e || e.q) return;
   if (e.mistake) e.q = makeMistakeCard(e.mistake);
+  else if (e.encore) e.q = makeQuestion(e.item, { encore: true, avoidFmts: usedFormats(e.item.key) });
   else e.q = makeQuestion(e.item, { avoidFmt: SESSION.lastFmt });
   if (!e.q) { SESSION.entries.splice(i, 1); if (i < SESSION.entries.length) prepareEntry(i); }
+}
+
+// formats this word has already been asked in during the session (answered or queued ahead)
+function usedFormats(key) {
+  return SESSION.entries.filter(x => x.q && x.item && x.item.key === key).map(x => x.q.fmt);
+}
+// A word met for the first time comes back twice more in this session, each time in another format: once a few
+// questions later, once further on. Encores do not touch the SRS schedule; the first answer did that.
+function scheduleEncores(e) {
+  const at = (lo, hi) => Math.min(SESSION.entries.length, SESSION.idx + lo + Math.floor(Math.random() * (hi - lo + 1)));
+  SESSION.entries.splice(at(3, 5), 0, { item: e.item, encore: true });
+  SESSION.entries.splice(at(8, 11), 0, { item: e.item, encore: true });
 }
 
 // Consistent furigana for options: readings come from the correct answer so that a wrong
@@ -2795,7 +2821,7 @@ function renderPractice() {
       <div class="pr-count">${SESSION.idx + 1} / ${total}</div>
     </div>
     <div class="q-card">
-      <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip chip-warn">再練一次</span>' : ''}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
+      <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip chip-warn">再練一次</span>' : ''}${e.encore ? '<span class="chip chip-warn">換個方式再考</span>' : ''}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
       <div class="q-instr">${esc(q.instr || '')}</div>
       ${q.passageHtml ? `<div class="panel jp mb-3 passage">${q.passageHtml}</div>` : ''}
       ${stem ? `<div class="q-stem jp ${q.stemClass || ''}">${stem}</div>` : ''}
@@ -2884,11 +2910,12 @@ function answerCurrent(i) {
   e.done = true; e.chosen = i;
   const ok = i === q.answer;
   SESSION.lastFmt = q.fmt;
-  if (['v', 'g', 'l', 'r', 'k'].includes(q.kind)) {
+  if (['v', 'g', 'l', 'r', 'k'].includes(q.kind) && !e.encore) {
     e.srs = srsAnswer(q.key, ok);
     if (e.srs.isNew) SESSION.stats.newCount++;
   }
   if (q.kind === 'v' && q.fmt && q.fmt.startsWith('v-')) recordFormat(state.srs[q.key], q.fmt, ok);
+  if (e.srs && e.srs.isNew && q.kind === 'v' && !e.requeued) scheduleEncores(e);
   if (q.fmt) {
     const f = state.statsFmt[q.fmt] || (state.statsFmt[q.fmt] = { ok: 0, ng: 0 });
     if (ok) f.ok++; else f.ng++;
@@ -2903,7 +2930,7 @@ function answerCurrent(i) {
   } else {
     SESSION.stats.wrong++;
     addMistake(q, jaPlain(q.options[i].text));
-    if (!e.requeued) {
+    if (!e.requeued && !e.encore) {
       const at = Math.min(SESSION.entries.length, SESSION.idx + 3 + Math.floor(Math.random() * 3));
       const again = { item: e.item, mistake: e.mistake, requeued: true };
       if (q) again.q = requeueQuestion(q, shuffle(q.options));

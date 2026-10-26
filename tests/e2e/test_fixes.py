@@ -60,6 +60,7 @@ def test_wrong_vocab_options_show_their_chinese_after_answering(b):
       const v = REG.vocab.find(x => x.builtin && recallOptions(x));
       const q = makeVocabQuestion(v, { forceFmt: 'v-recall' });
       startSession('vocab', { filter: 'all' });
+      SESSION.entries[SESSION.idx].previewDone = true;   // these tests borrow a session for a custom question; skip the new-word preview card
       SESSION.entries[SESSION.idx].q = q; renderPractice();
       const before = document.querySelectorAll('.opt .opt-zh').length;
       const wrongIdx = q.options.findIndex((o, i) => i !== q.answer);
@@ -158,6 +159,7 @@ def test_audio_options_play_on_click_instead_of_being_read_in_sequence(b):
       const q = makeListenQuestion(it);
       const again = requeueQuestion(q, q.options.slice().reverse());
       startSession('vocab', { filter: 'all' });
+      SESSION.entries[SESSION.idx].previewDone = true;   // these tests borrow a session for a custom question; skip the new-word preview card
       SESSION.entries[SESSION.idx].q = q; SESSION.entries[SESSION.idx].autoPlayed = true; renderPractice();
       const rows = [...document.querySelectorAll('.opt-audio')];
       const plays = [...document.querySelectorAll('.opt-audio [data-act=speak]')];
@@ -188,6 +190,7 @@ def test_scene_audio_options_have_no_autoplay_and_play_on_click(b):
       const it = REG.listen.find(x => x.t === 'scene');
       const q = makeListenQuestion(it);
       startSession('vocab', { filter: 'all' });
+      SESSION.entries[SESSION.idx].previewDone = true;   // these tests borrow a session for a custom question; skip the new-word preview card
       SESSION.entries[SESSION.idx].q = q; renderPractice();
       return JSON.stringify({ audio: q.audio || '', rows: document.querySelectorAll('.opt-audio').length, plays: document.querySelectorAll('.opt-audio [data-act=speak]').length });
     })()"""

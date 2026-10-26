@@ -76,9 +76,42 @@ def test_new_word_shows_a_preview_card_before_its_question(b):
     assert r['before']['preview'] and r['before']['opts'] == 0 and r['before']['word'] == r['w'] and r['stillPreview'], r
     assert not r['after']['preview'] and r['after']['opts'] == 4 and r['after']['n'] == r['before']['n'] == 1, r
 
+# ---- Task 5: encores ----
+def test_a_new_word_comes_back_twice_in_other_formats_without_rescheduling(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.exZh && /[一-龯]/.test(x.w) && meaningOptions(x) && recallOptions(x));
+      const fill = REG.grammar.filter(g => state.srs[g.key] === undefined).slice(0, 12);
+      startSession('items', { items: [v, ...fill] }); const n0 = SESSION.entries.length;
+      const e = currentEntry(); e.previewDone = true; const fmt1 = e.q.fmt; answerCurrent(e.q.answer);
+      const enc = SESSION.entries.filter(x => x.encore && x.item.key === v.key);
+      const positions = SESSION.entries.map((x, i) => x.encore ? i : -1).filter(i => i >= 0);
+      let guard = 0;
+      while (!currentEntry().encore && guard++ < 30) { if (!currentEntry().done) answerCurrent(currentEntry().q.answer); nextQuestion(); }
+      const q2 = currentEntry().q; answerCurrent(q2.answer);
+      const out = { grew: SESSION.entries.length - n0, enc: enc.length, positions, fmt1, fmt2: q2.fmt, n: state.srs[v.key].n, fmts: Object.keys(state.srs[v.key].f).length,
+        chip: document.querySelector('.q-label .chip-warn') ? document.querySelector('.q-label .chip-warn').textContent : '' };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['grew'] == 2 and r['enc'] == 2 and r['fmt2'] != r['fmt1'] and r['n'] == 1 and r['fmts'] == 2 and r['chip'] == '換個方式再考', r
+    assert 3 <= r['positions'][0] <= 5 and 8 <= r['positions'][1] <= 11, r
+
+def test_no_encore_when_no_other_format_can_be_built(b):
+    # encores are built after the word's first answer, so the word already has a record (wider format choice than a brand-new word)
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && meaningOptions(x) && recallOptions(x)); srsAnswer(v.key, true); const all = Object.keys(FMT_NAME).filter(f => f.startsWith('v-'));
+      const q = makeQuestion(v, { encore: true, avoidFmts: all }); const q2 = makeQuestion(v, { encore: true, avoidFmts: ['v-meaning'] });
+      return JSON.stringify({ none: q === null, other: q2 ? q2.fmt : null }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['none'] and r['other'] not in (None, 'v-meaning'), r
+
+def test_words_already_known_get_no_encore(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && meaningOptions(x)); srsAnswer(v.key, true); state.srs[v.key].due = todayStr();
+      startSession('items', { items: [v] }); const e = currentEntry(); answerCurrent(e.q.answer); const n = SESSION.entries.length;
+      SESSION = null; document.body.classList.remove('practicing'); return n; })()"""
+    assert ev(b, js, [("eval", "location.hash = '#/today'; true")]) == 1
+
 TESTS = [test_themes_cover_every_builtin_word_once, test_theme_tab_lists_cards_and_opens_the_word_table, test_themed_practice_uses_only_that_theme,
          test_mastered_needs_three_passed_formats_for_words_only, test_answering_records_the_format_and_flash_ratings_count_as_one, test_unpassed_formats_are_preferred_on_review,
-         test_new_word_shows_a_preview_card_before_its_question]
+         test_new_word_shows_a_preview_card_before_its_question,
+         test_a_new_word_comes_back_twice_in_other_formats_without_rescheduling, test_no_encore_when_no_other_format_can_be_built, test_words_already_known_get_no_encore]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
