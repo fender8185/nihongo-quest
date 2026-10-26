@@ -416,6 +416,8 @@ details.disclose > summary { cursor: pointer; list-style: none; color: var(--fg-
 details.disclose > summary::-webkit-details-marker { display: none; }
 details.disclose > summary::before { content: "▸"; display: inline-block; width: 1em; color: var(--fg-3); transition: transform .15s; }
 details.disclose[open] > summary::before { transform: rotate(90deg); }
+.api-guide > summary { font-weight: 600; color: var(--fg); padding: 6px 0; }
+.api-steps { padding-left: 1.3em; } .api-steps li { margin: 6px 0; } .api-steps li > div { margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -771,9 +773,10 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '34';   // keep equal to the number in sw.js CACHE ('nq-v34'); scripts/test.sh checks it
+const APP_VERSION = '35';   // keep equal to the number in sw.js CACHE ('nq-v35'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '35', date: '2026-10-26', items: ['工具與 AI 頁底部新增「API 申請說明」：Google Cloud TTS、Gemini、OpenAI、Deepgram、VOICEVOX、Ollama 的申請步驟、費用與連結，可逐一展開；設定頁的金鑰欄位有「申請方式」連過去。'] },
   { v: '34', date: '2026-10-26', items: ['設定 › 語音 新增「測試連線」：顯示語音服務回傳的實際錯誤與對應的處理建議（API 未啟用、金鑰無效、網站限制、帳單未連結）。'] },
   { v: '33', date: '2026-10-26', items: ['唸單字時改送漢字寫法並固定讀音（Google 用 SSML，其他引擎交給模型判斷），不再送孤立的假名，發音更自然。', '假名拼字與配對題多一顆「我不會，看答案」，按下算答錯並顯示答案。'] },
   { v: '32', date: '2026-10-26', items: ['多裝置同步衝突時改為逐筆合併：每個字與文法取較晚作答的紀錄，每日紀錄取較大值，錯題與自訂字卡取聯集，其餘以較晚儲存的一方為準；不再丟掉任何一方的進度。'] },
@@ -3360,7 +3363,7 @@ function route() {
     else if (r.name === 'vocab') renderVocab(view, r.parts[1] || 'cards', r.params);
     else if (r.name === 'mistakes') renderMistakes(view, r.params.f || 'active');
     else if (r.name === 'exam') renderExam(view, r.parts[1] || '', r.params);
-    else if (r.name === 'tools') renderTools(view);
+    else if (r.name === 'tools') renderTools(view, r.params);
     else if (r.name === 'stats') renderStats(view);
     else renderToday(view);
   } catch (e) {
@@ -5129,8 +5132,82 @@ function offlineAnalysis(text) {
     </div>`;
 }
 
+// ---- API 申請說明：工具與 AI 頁底部的可展開指南；設定頁的金鑰欄位以 #/tools?guide=<id> 連到對應的一則 ----
+const API_GUIDES = [
+  { id: 'google_tts', name: 'Google Cloud Text-to-Speech（Neural2 語音）', use: '語音服務「Google Cloud TTS（Neural2）」。',
+    cost: '每月前 100 萬字元免費（本 app 一天約數千字元），之後每百萬字元 16 美元。必須先綁信用卡並連結帳單，免費額度內不會扣款。',
+    steps: [
+      ['建立專案', '登入 Google Cloud Console 後新增一個專案，名稱隨意，位置選「無機構」。接下來每一步都要確認頁面右上角顯示的是同一個專案。', 'https://console.cloud.google.com/projectcreate'],
+      ['啟用 Cloud Text-to-Speech API', '開啟 API 頁面按「啟用」。', 'https://console.cloud.google.com/apis/library/texttospeech.googleapis.com'],
+      ['連結帳單帳戶', '把這個專案連到你的帳單帳戶；沒有連結時 API 會直接拒絕請求。', 'https://console.cloud.google.com/billing/linkedaccount'],
+      ['建立 API 金鑰', '「API 和服務」›「憑證」›「建立憑證」›「API 金鑰」。金鑰以 AIza 開頭。', 'https://console.cloud.google.com/apis/credentials'],
+      ['限制金鑰', '點金鑰名稱進入編輯：應用程式限制選「網站」並新增 <code>${origin}/*</code>；API 限制選「限制金鑰」只勾 Cloud Text-to-Speech API。儲存後等兩三分鐘才會生效。'],
+      ['貼進 app', '設定 › 語音 › 語音服務選「Google Cloud TTS」，貼上金鑰，按「測試連線」。']
+    ],
+    tips: ['「Gemini Enterprise Agent Platform」或 AI Studio 頁面產生的金鑰不能用在這裡，會回 401「API keys are not supported by this API」；要在「API 和服務 › 憑證」建立的一般金鑰。', '401／403 時先檢查：API 是否已啟用、帳單是否已連結、網站限制有沒有包含目前的網址。'] },
+  { id: 'gemini', name: 'Google Gemini（AI Studio）', use: 'AI 服務「Google Gemini」：題目解析、出題、產生字卡、句子分析、學習建議。',
+    cost: 'AI Studio 的金鑰有免費方案（每分鐘與每日次數有上限），一般學習用量足夠。',
+    steps: [
+      ['開啟 Google AI Studio', '用 Google 帳號登入後到「Get API key」。', 'https://aistudio.google.com/apikey'],
+      ['建立金鑰', '按「建立 API 金鑰」，選一個既有專案或讓它新建一個，複製金鑰。'],
+      ['貼進 app', '設定 › AI › AI 服務選「Google Gemini」，貼上金鑰，按「測試連線」；「列出可用模型」會顯示這把金鑰能用的模型。']
+    ],
+    tips: ['AI Studio 的金鑰只能用在 Gemini，不能拿來當語音服務的金鑰；Cloud 的 Text-to-Speech 金鑰也不能用在這裡。'] },
+  { id: 'openai', name: 'OpenAI（AI 與 TTS 共用）', use: 'AI 服務「OpenAI 或相容服務」與語音服務「OpenAI TTS」，同一把金鑰兩邊都能用。',
+    cost: '預付制，需要先儲值（最低 5 美元）。AI 用 gpt-4o-mini 很便宜；語音 tts-1-hd 每百萬字元 30 美元。ChatGPT Plus 訂閱和 API 是分開計費的。',
+    steps: [
+      ['註冊並儲值', '登入 OpenAI Platform，到 Billing 加值。', 'https://platform.openai.com/settings/organization/billing/overview'],
+      ['建立金鑰', 'API keys ›「Create new secret key」。金鑰以 sk- 開頭，只會顯示一次，請立刻複製。', 'https://platform.openai.com/api-keys'],
+      ['貼進 app', '設定 › AI › 選「OpenAI 或相容服務」貼上。語音若也選 OpenAI TTS，金鑰欄留空會沿用 AI 的金鑰。']
+    ],
+    tips: ['OpenRouter、LM Studio 等相容服務：把「API 位址」改成該服務的網址，金鑰用它們發的。'] },
+  { id: 'deepgram', name: 'Deepgram Aura-2', use: '語音服務「Deepgram Aura-2」。',
+    cost: '註冊即有試用額度，不必先綁卡；之後 Aura-2 每千字元約 0.03 美元。',
+    steps: [
+      ['註冊 Deepgram Console', '用 Email 或 Google 帳號註冊。', 'https://console.deepgram.com/signup'],
+      ['建立金鑰', '左側「API Keys」›「Create a New API Key」，權限選 Member 即可。金鑰只顯示一次。', 'https://console.deepgram.com/'],
+      ['貼進 app', '設定 › 語音 › 語音服務選「Deepgram Aura-2」，貼上金鑰，按「測試連線」。']
+    ],
+    tips: [] },
+  { id: 'voicevox', name: 'VOICEVOX（本機、免費）', use: '語音服務「VOICEVOX（本機）」，不需要金鑰。',
+    cost: '免費。只在開著 VOICEVOX 的那台電腦上可用，手機用不了。',
+    steps: [
+      ['下載安裝', '到官方網站下載 Windows／Mac／Linux 版本。', 'https://voicevox.hiroshiba.jp/'],
+      ['開啟程式', '啟動 VOICEVOX 後，它的引擎會在 http://localhost:50021 等待連線；程式要一直開著。'],
+      ['貼進 app', '設定 › 語音 › 語音服務選「VOICEVOX」，位址用預設值，選想要的聲音。']
+    ],
+    tips: ['若瀏覽器擋下連線，請改用 Chrome 或 Edge；Brave 可能要在盾牌設定允許本機連線。'] },
+  { id: 'ollama', name: 'Ollama（本機 AI、免費）', use: 'AI 服務「Ollama（本機）」，不需要金鑰。',
+    cost: '免費。模型在自己的電腦上跑，7B 模型大約需要 8 GB 記憶體。',
+    steps: [
+      ['下載安裝', '到官方網站下載並安裝。', 'https://ollama.com/download'],
+      ['下載模型', '在終端機執行 <code>ollama pull qwen2.5:7b</code>（或其他支援中日文的模型）。'],
+      ['允許瀏覽器連線', '設定環境變數 <code>OLLAMA_ORIGINS=${origin}</code> 後重新啟動 Ollama，否則瀏覽器的請求會被拒絕。'],
+      ['貼進 app', '設定 › AI › 選「Ollama（本機）」，位址用預設值，模型填剛才下載的名稱。']
+    ],
+    tips: [] }
+];
+function apiGuidesHtml(openId) {
+  const origin = location.origin;
+  const fill = (t) => t.replace(/\$\{origin\}/g, esc(origin));
+  const one = (g) => `<details class="disclose api-guide mt-2" data-guide="${g.id}" ${g.id === openId ? 'open' : ''}><summary>${esc(g.name)}</summary>
+    <div class="mt-2 small">
+      <div><span class="dim">用在：</span>${esc(g.use)}</div>
+      <div class="mt-1"><span class="dim">費用：</span>${esc(g.cost)}</div>
+      <ol class="mt-2 api-steps">${g.steps.map(([h, body, url]) => `<li><strong>${esc(h)}</strong>${url ? ` <a href="${esc(url)}" target="_blank" rel="noopener noreferrer">開啟 ↗</a>` : ''}<div class="dim">${fill(body)}</div></li>`).join('')}</ol>
+      ${g.tips.length ? `<ul class="mt-2">${g.tips.map(t => `<li>${fill(t)}</li>`).join('')}</ul>` : ''}
+    </div></details>`;
+  return `<div class="card" id="apiGuides">
+    <div class="card-head"><div><div class="card-title">API 申請說明</div><div class="card-sub">語音與 AI 服務要自己申請金鑰。金鑰只存在這個瀏覽器裡，不會同步、也不會進備份；換裝置要再貼一次。</div></div></div>
+    ${API_GUIDES.map(one).join('')}
+  </div>`;
+}
+function guideLink(id) {
+  return `<a href="#" data-act="nav" data-route="#/tools?guide=${id}">申請方式</a>`;
+}
+
 let TOOLS_STATE = { conjWord: '書く', conjKind: 'auto', sentence: '', genUnit: '' };
-function renderTools(view) {
+function renderTools(view, params = {}) {
   const ai = isAiConfigured();
   const unitOpts = DATA.UNITS.map(u => `<option value="${u.id}" ${(TOOLS_STATE.genUnit || state.currentUnit) === u.id ? 'selected' : ''}>${esc(u.weeks)}・${esc(u.short)}</option>`).join('');
   view.innerHTML = `
@@ -5174,7 +5251,9 @@ function renderTools(view) {
         <div class="row-wrap mt-2"><button type="button" class="btn" data-act="study-advice" ${ai ? '' : 'disabled'}>${icon('spark')}產生建議</button></div>
         <div id="adviceOut"></div>
       </div>
-    </div>`;
+    </div>
+    ${apiGuidesHtml(params.guide)}`;
+  if (params.guide) { const d = view.querySelector(`details[data-guide="${params.guide}"]`); if (d) d.scrollIntoView({ block: 'start' }); }
 }
 
 Object.assign(ACTIONS, {
@@ -5282,18 +5361,18 @@ function settingsSpeech() {
     engine = voices.length ? selRow('browserVoiceURI', '瀏覽器語音', 'Edge 的 Nanami／Keita（Natural）或 Chrome 的 Google 日本語 聽起來最自然。', voiceOpts, 'tts-cfg')
       : '<div class="banner warn mt-3">這個瀏覽器沒有日語語音。聽力題會自動停用；可以改用 Edge、Chrome，或在下面選擇其他語音服務。</div>';
   } else if (c.engine === 'google_tts') {
-    engine = textRow('googleKey', 'Google Cloud API Key', '在 Google Cloud 啟用 Text-to-Speech API 後建立金鑰，建議限制只能用這個 API。每月前 100 萬字元免費。Key 只存在這個瀏覽器裡。', 'tts-cfg', { secret: true })
+    engine = textRow('googleKey', 'Google Cloud API Key', `在 Google Cloud 啟用 Text-to-Speech API 後建立金鑰，建議限制只能用這個 API。每月前 100 萬字元免費。Key 只存在這個瀏覽器裡。${guideLink('google_tts')}`, 'tts-cfg', { secret: true })
       + selRow('googleVoice', '主要聲音', '', GOOGLE_VOICES, 'tts-cfg') + selRow('googleVoiceM', '對話中的男聲', '', GOOGLE_VOICES, 'tts-cfg')
       + '<div class="hint mt-2">已知讀音的字會以 SSML 指定讀法（例如 三本→さんぼん），漢字保留給模型判斷語調。</div>';
   } else if (c.engine === 'deepgram') {
-    engine = textRow('deepgramKey', 'Deepgram API Key', '只存在這個瀏覽器裡。', 'tts-cfg', { secret: true })
+    engine = textRow('deepgramKey', 'Deepgram API Key', `只存在這個瀏覽器裡。${guideLink('deepgram')}`, 'tts-cfg', { secret: true })
       + selRow('deepgramVoice', '主要聲音', '', DEEPGRAM_VOICES, 'tts-cfg') + selRow('deepgramVoiceM', '對話中的男聲', '', DEEPGRAM_VOICES, 'tts-cfg')
       + selRow('kanaReadings', '已知讀音的字改用假名送出', '例如 三本 送成 さんぼん，避免模型唸錯；其餘保留漢字。', [['on', '開'], ['off', '關']], 'tts-cfg');
   } else if (c.engine === 'voicevox') {
-    engine = textRow('voicevoxUrl', 'VOICEVOX 位址', '需要在電腦上執行 VOICEVOX（預設 http://localhost:50021）。', 'tts-cfg', { ph: 'http://localhost:50021' })
+    engine = textRow('voicevoxUrl', 'VOICEVOX 位址', `需要在電腦上執行 VOICEVOX（預設 http://localhost:50021）。${guideLink('voicevox')}`, 'tts-cfg', { ph: 'http://localhost:50021' })
       + selRow('voicevoxSpeaker', '主要聲音', '', VOICEVOX_SPEAKERS, 'tts-cfg') + selRow('voicevoxSpeakerM', '對話中的男聲', '', VOICEVOX_SPEAKERS, 'tts-cfg');
   } else if (c.engine === 'openai_tts') {
-    engine = textRow('openaiKey', 'OpenAI API Key', '留空時會使用 AI 設定中的 OpenAI Key。', 'tts-cfg', { secret: true })
+    engine = textRow('openaiKey', 'OpenAI API Key', `留空時會使用 AI 設定中的 OpenAI Key。${guideLink('openai')}`, 'tts-cfg', { secret: true })
       + selRow('openaiModel', '模型', '', [['tts-1-hd', 'tts-1-hd（音質較好）'], ['tts-1', 'tts-1（較快）']], 'tts-cfg')
       + selRow('openaiVoice', '主要聲音', '', OPENAI_VOICES, 'tts-cfg') + selRow('openaiVoiceM', '對話中的男聲', '', OPENAI_VOICES, 'tts-cfg')
       + selRow('kanaReadings', '已知讀音的字改用假名送出', '例如 三本 送成 さんぼん，避免模型唸錯；其餘保留漢字。', [['on', '開'], ['off', '關']], 'tts-cfg');
@@ -5314,14 +5393,14 @@ function settingsAi() {
   const c = aiConfig();
   let fields = '';
   if (c.provider === 'gemini') {
-    fields = textRow('geminiKey', 'Gemini API Key', '可在 Google AI Studio 免費申請。Key 只存在這個瀏覽器裡。', 'ai-cfg', { secret: true })
+    fields = textRow('geminiKey', 'Gemini API Key', `可在 Google AI Studio 免費申請。Key 只存在這個瀏覽器裡。${guideLink('gemini')}`, 'ai-cfg', { secret: true })
       + `<div class="field mt-3"><label>模型</label><div class="row-wrap"><input class="input" style="max-width:260px" value="${esc(c.geminiModel)}" data-change="ai-cfg" data-key="geminiModel" /><button type="button" class="btn btn-sm" data-act="ai-models">列出可用模型</button></div><div id="aiModelList" class="mt-2"></div><div class="hint">模型停用時會自動改用帳號可用的其他模型。</div></div>`;
   } else if (c.provider === 'openai') {
     fields = textRow('openaiUrl', 'API 位址', '也可以填 OpenAI 相容的服務（例如 OpenRouter、LM Studio）。', 'ai-cfg', { ph: 'https://api.openai.com/v1' })
-      + textRow('openaiKey', 'API Key', '只存在這個瀏覽器裡。', 'ai-cfg', { secret: true })
+      + textRow('openaiKey', 'API Key', `只存在這個瀏覽器裡。${guideLink('openai')}`, 'ai-cfg', { secret: true })
       + textRow('openaiModel', '模型', '', 'ai-cfg', { ph: 'gpt-4o-mini' });
   } else {
-    fields = textRow('ollamaUrl', 'Ollama 位址', '需要在電腦上執行 ollama serve，並設定 OLLAMA_ORIGINS 允許瀏覽器連線。', 'ai-cfg', { ph: 'http://localhost:11434' })
+    fields = textRow('ollamaUrl', 'Ollama 位址', `需要在電腦上執行 ollama serve，並設定 OLLAMA_ORIGINS 允許瀏覽器連線。${guideLink('ollama')}`, 'ai-cfg', { ph: 'http://localhost:11434' })
       + textRow('ollamaModel', '模型', '', 'ai-cfg', { ph: 'qwen2.5:7b' });
   }
   return `

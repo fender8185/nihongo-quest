@@ -1,6 +1,6 @@
 """2026-10-25 fixes: listening reads every option, requeued listening audio follows the shuffled options,
 distractor meanings after answering a vocab question, the 更多 menu icons stay small, 8-digit login code."""
-import os, subprocess, sys, time
+import json, os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from cdp import Browser
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -364,6 +364,23 @@ def test_tts_connection_check_reports_the_real_error_and_success(b):
     assert 'has not been used' in out[-3] and '尚未啟用' in out[-3], out[-3]
     assert '連線成功' in out[-1], out[-1]
 
+def test_tools_page_has_an_expandable_api_guide_for_every_provider(b):
+    # the 工具與 AI page ends with a collapsed guide per service; ?guide=<id> opens that one; settings link to it
+    probe = """(() => { const card = document.getElementById('apiGuides'); if (!card) return 'NO CARD';
+      const ids = [...card.querySelectorAll('details[data-guide]')].map(d => d.dataset.guide + (d.open ? '*' : ''));
+      const links = card.querySelectorAll('a[target=_blank]').length;
+      const noopener = [...card.querySelectorAll('a[target=_blank]')].every(a => /noopener/.test(a.rel));
+      return JSON.stringify({ ids, links, noopener, title: card.querySelector('.card-title').textContent }); })()"""
+    link = """(() => { const c = ttsConfig(); c.engine = 'google_tts'; saveState(); openSettings('speech');
+      const a = document.querySelector('#modalBody [data-act=nav][data-route="#/tools?guide=google_tts"]'); closeModal(); return a ? a.textContent : 'NO LINK'; })()"""
+    out = b.run([("nav", URL + "#/tools"), ("wait", READY), ("eval", probe), ("nav", URL + "#/tools?guide=deepgram"), ("eval", probe), ("eval", link)], timeout=45)
+    first = json.loads(out[0]); opened = json.loads(out[1])
+    assert first['title'] == 'API 申請說明', first
+    assert first['ids'] == ['google_tts', 'gemini', 'openai', 'deepgram', 'voicevox', 'ollama'], first['ids']
+    assert first['links'] >= 8 and first['noopener'], first
+    assert 'deepgram*' in opened['ids'] and 'google_tts*' not in opened['ids'], opened['ids']
+    assert '申請' in out[2], out[2]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -376,7 +393,8 @@ if __name__ == "__main__":
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
-             test_single_words_are_sent_as_kanji_with_the_reading_pinned, test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong, test_tts_connection_check_reports_the_real_error_and_success]
+             test_single_words_are_sent_as_kanji_with_the_reading_pinned, test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong, test_tts_connection_check_reports_the_real_error_and_success,
+             test_tools_page_has_an_expandable_api_guide_for_every_provider]
     failed = 0
     try:
         for t in tests:
