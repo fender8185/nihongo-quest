@@ -786,9 +786,10 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '43';   // keep equal to the number in sw.js CACHE ('nq-v43'); scripts/test.sh checks it
+const APP_VERSION = '44';   // keep equal to the number in sw.js CACHE ('nq-v44'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '44', date: '2026-10-27', items: ['學習分析改排：總進度量表直接展開放最上方，接著是過去 7 天的練習量，數字、課程預估與每日建議移到後面。'] },
   { v: '43', date: '2026-10-27', items: ['單字配對題：配錯時兩個按鈕會閃紅框；作答後的解析列出四組的字、讀音與意思。'] },
   { v: '42', date: '2026-10-27', items: ['學習分析的明細改為「總進度」：單字與文法各一個半圓指針圖，三種顏色代表熟練程度，指針指向加權進度；移除「這 7 天變熟悉的／新學的」清單。'] },
   { v: '41', date: '2026-10-27', items: ['單字新增「我會了」：單字表每一列、字卡、作答後的回饋都可以按，字會直接標成已熟練、約六週後再確認一次；之後答錯就回到正常規則。單字表可按「取消熟練」收回。'] },
@@ -5914,7 +5915,10 @@ function renderStats(view) {
   }).join('');
   const axis = wk.map((d, i) => `<span>${i === last ? '今天' : `${d.date.slice(5).replace('-', '/')}（${weeks[parseDate(d.date).getDay()]}）`}</span>`).join('');
   const wkTable = `<table class="table"><thead><tr><th>日期</th><th>單字</th><th>文法</th><th>其他</th><th>合計</th></tr></thead><tbody>${wk.map((d, i) => `<tr><td class="num">${i === last ? '今天' : d.date}</td><td class="num">${d.v}</td><td class="num">${d.g}</td><td class="num">${d.q}</td><td class="num">${d.total}</td></tr>`).join('')}</tbody></table>`;
-  const gauges = `<div class="gauges mt-3">${gaugeHtml(progressTotals('v'), '單字', ['已熟練', '熟悉', '已學'])}${gaugeHtml(progressTotals('g'), '文法', ['答對 3 次以上', '答對過', '出現過'])}</div>`;
+  const progressCard = `<div class="card" id="progressCard">
+      <div class="card-head"><div><div class="card-title">總進度</div><div class="card-sub">指針是加權分數：已學 1 分、熟悉 2 分、熟練 3 分，滿分 3 分一題；顏色是三階熟練度。</div></div></div>
+      <div class="gauges">${gaugeHtml(progressTotals('v'), '單字', ['已熟練', '熟悉', '已學'])}${gaugeHtml(progressTotals('g'), '文法', ['答對 3 次以上', '答對過', '出現過'])}</div>
+    </div>`;
 
   const weak = weakPoints();
   const weakRows = weak.map(a => `<div class="barrow">
@@ -5944,6 +5948,14 @@ function renderStats(view) {
 
   view.innerHTML = `
     <div class="page-head"><div><div class="page-title">學習分析</div><div class="page-sub">依你的作答紀錄整理。數字會隨練習更新。</div></div></div>
+    ${progressCard}
+    <div class="card">
+      <div class="card-head"><div><div class="card-title">過去 7 天的練習量</div><div class="card-sub">每天作答的題數，依種類堆疊</div></div></div>
+      <div class="cols" role="img" aria-label="過去 7 天每天作答的題數">${cols}</div>
+      <div class="col-axis">${axis}</div>
+      <div class="small muted mt-2"><i class="seg-dot v"></i>單字・漢字　<i class="seg-dot g"></i>文法　<i class="seg-dot q"></i>聽力・閱讀・模擬考</div>
+      <details class="disclose mt-3"><summary>明細</summary><div class="table-wrap mt-2">${wkTable}</div></details>
+    </div>
     <div class="grid grid-4">
       <div class="card"><div class="stat"><span class="stat-v">${acc === null ? '—' : pctText(acc)}</span><span class="stat-l">最近 60 題正確率</span></div></div>
       <div class="card"><div class="stat"><span class="stat-v">${(total14 / 14).toFixed(1)}</span><span class="stat-l">近 14 天平均每天題數</span></div></div>
@@ -5955,14 +5967,6 @@ function renderStats(view) {
       <p class="small dim mb-0">${esc(paceText)}</p>
     </div>
     ${planAdviceHtml()}
-    <div class="card">
-      <div class="card-head"><div><div class="card-title">過去 7 天的練習量</div><div class="card-sub">每天作答的題數，依種類堆疊</div></div></div>
-      <div class="cols" role="img" aria-label="過去 7 天每天作答的題數">${cols}</div>
-      <div class="col-axis">${axis}</div>
-      <div class="small muted mt-2"><i class="seg-dot v"></i>單字・漢字　<i class="seg-dot g"></i>文法　<i class="seg-dot q"></i>聽力・閱讀・模擬考</div>
-      <details class="disclose mt-3"><summary>明細與總進度</summary><div class="table-wrap mt-2">${wkTable}</div>
-        <div class="small mt-3"><strong>總進度</strong><span class="muted">　指針是加權分數：已學 1 分、熟悉 2 分、熟練 3 分，滿分 3 分一題</span></div>${gauges}</details>
-    </div>
     <div class="grid grid-2">
       <div class="card">
         <div class="card-head"><div><div class="card-title">最弱的文法考點</div><div class="card-sub">至少作答 4 次、正確率低於 90%</div></div></div>
