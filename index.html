@@ -771,9 +771,10 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '31';   // keep equal to the number in sw.js CACHE ('nq-v31'); scripts/test.sh checks it
+const APP_VERSION = '32';   // keep equal to the number in sw.js CACHE ('nq-v32'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '32', date: '2026-10-26', items: ['多裝置同步衝突時改為逐筆合併：每個字與文法取較晚作答的紀錄，每日紀錄取較大值，錯題與自訂字卡取聯集，其餘以較晚儲存的一方為準；不再丟掉任何一方的進度。'] },
   { v: '31', date: '2026-10-26', items: ['自訂字卡兩種題型答對過即可「已熟練」（內建字仍需三種）。', '振假名的「已熟練不顯示讀音」改用同一個熟練定義。', '主題字表不再顯示「自訂／匯入」篩選。', '「換個方式再考」的題目作答後也會顯示熟練度，並註明不影響排程。', '單字測驗、主題練習按鈕顯示題數。'] },
   { v: '30', date: '2026-10-26', items: ['單字新增兩種題型：「假名拼字」（點假名方塊拼出讀音）與「配對」（四個單字配四個意思），學過一次之後加入輪替，也算進「已熟練」所需的題型。'] },
   { v: '29', date: '2026-10-26', items: ['N4 每個單元新增 2 題聽力對話、1 題即時應答、1 題情境表達與 1 篇閱讀（共 48 題聽力、12 篇閱讀），兩週的單元不再很快重複。'] },
@@ -7214,10 +7215,14 @@ const Sync = {
       if (error) throw error;
       const pick = SyncCore.pullDecision(this.meta, state, data);
       if (pick === 'adopt' || pick === 'conflict') {
-        // adopting the cloud over real local progress keeps a copy: first sync as pre-cloud-, a lost race as conflict-
+        // adopting the cloud over real local progress keeps a copy: first sync as pre-cloud-, a conflict as conflict-
         const snap = pick === 'conflict' ? 'conflict-' : (!this.meta.everSynced && !SyncCore.isEmptyProgress(state)) ? 'pre-cloud-' : null;
         if (snap) { try { await Snapshots.put(snap + todayStr(), JSON.stringify(state)); } catch (e) { /* best effort */ } }
-        await this.applyCloud(data, pick === 'conflict');
+        if (pick === 'conflict') {
+          // both sides changed: merge record by record, adopt the merge with the cloud's stamp as base, then upload it
+          await this.applyCloud({ state: SyncCore.mergeStates(state, data.state), updated_at: data.updated_at }, true);
+          next = 'push';
+        } else await this.applyCloud(data);
       } else {
         if (!data) { this.meta.lastPulledUpdatedAt = null; await Store.set('meta', this.meta); }   // row gone (deleted elsewhere): the next push creates it
         next = pick;
@@ -7239,7 +7244,7 @@ const Sync = {
       await Store.set('meta', this.meta);
       buildRegistry(); applyTheme(); applyFurigana();
       if (!modalOpen()) route();
-      toast(conflict ? '另一台裝置同時更新了進度，已採用雲端版本；這台未同步的進度存成快照，可在設定 › 資料還原。' : '已從雲端更新進度', conflict ? 8000 : undefined);
+      toast(conflict ? '另一台裝置同時更新了進度，已把兩邊的紀錄合併；合併前的本機版本存成快照（設定 › 資料）。' : '已從雲端更新進度', conflict ? 7000 : undefined);
       this.lastError = null; this.setStatus('idle');
     } catch (e) {
       this.lastError = '雲端資料無法讀取，已保留本機進度'; this.setStatus('error'); toast(this.lastError, 5000);

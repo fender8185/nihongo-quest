@@ -196,6 +196,15 @@ def test_conflict_during_a_session_waits_and_never_overwrites_the_cloud(b):
     assert out[-3] == '{"local":7,"cloud":123,"st":"pending","net":1}', out[-3]
     assert out[-1] == '{"snap":7,"cloud":123}', out[-1]
 
+def test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge(b):
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
+        ("eval", "const A = REG.grammar[0].key, B = REG.grammar[1].key; srsAnswer(A, true); const cloudState = JSON.parse(JSON.stringify(state)); delete cloudState.srs[A]; cloudState.srs[B] = { b: 1, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5, last: todayStr() }; cloudState.updatedAt = '2099-01-01T00:00:00.000Z'; __fake.setRow({ user_id: 'u1', state: cloudState, updated_at: '2099-01-01T00:00:00.000Z' }); saveState(); window.__AB = [A, B]; true"),
+        ("wait", "Sync.status === 'idle' && !!state.srs[__AB[1]] && __fake.getRow().state.srs[__AB[0]] && __fake.getRow().state.srs[__AB[1]]"),
+        ("eval", "JSON.stringify({ local: [!!state.srs[__AB[0]], !!state.srs[__AB[1]]], cloud: [!!__fake.getRow().state.srs[__AB[0]], !!__fake.getRow().state.srs[__AB[1]]], pend: Sync.meta.pendingSync })"),
+    ])
+    assert out[-1] == '{"local":[true,true],"cloud":[true,true],"pend":false}', out[-1]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -207,7 +216,7 @@ if __name__ == "__main__":
              test_first_sync_adopting_cloud_snapshots_local_first, test_token_refresh_does_not_mask_error_status,
              test_manual_push_with_null_updated_at_still_sends_a_timestamp,
              test_push_uses_a_conditional_update_once_the_device_has_synced, test_stale_device_does_not_overwrite_progress_made_elsewhere, test_cloud_changed_elsewhere_is_adopted_even_when_its_clock_is_behind,
-             test_row_deleted_elsewhere_is_recreated_without_looping, test_conflict_during_a_session_waits_and_never_overwrites_the_cloud]
+             test_row_deleted_elsewhere_is_recreated_without_looping, test_conflict_during_a_session_waits_and_never_overwrites_the_cloud, test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge]
     failed = 0
     try:
         for t in tests:
