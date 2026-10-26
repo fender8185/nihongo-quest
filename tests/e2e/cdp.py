@@ -1,22 +1,27 @@
 """Tiny Chrome DevTools Protocol driver for e2e checks (headless Chrome, no extra deps beyond `websockets`)."""
-import asyncio, json, shutil, subprocess, tempfile, time, urllib.request
+import asyncio, json, shutil, socket, subprocess, tempfile, time, urllib.request
 import websockets
 
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-PORT = 9333
+PORT = 9333  # default; each Browser picks a free port so test files can run in parallel
+
+def free_port():
+    with socket.socket() as sk:
+        sk.bind(('127.0.0.1', 0)); return sk.getsockname()[1]
 
 class Browser:
     def __init__(self, profile=None):
         self.profile = profile or tempfile.mkdtemp(prefix="nq-e2e-")
         self._own_profile = profile is None
         self.proc = None
+        self.port = free_port()
     def __enter__(self):
         self.proc = subprocess.Popen([CHROME, "--headless=new", "--disable-gpu", "--no-first-run",
-            f"--user-data-dir={self.profile}", f"--remote-debugging-port={PORT}", "about:blank"],
+            f"--user-data-dir={self.profile}", f"--remote-debugging-port={self.port}", "about:blank"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(100):
             try:
-                tabs = json.load(urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json")); break
+                tabs = json.load(urllib.request.urlopen(f"http://127.0.0.1:{self.port}/json")); break
             except Exception: time.sleep(0.1)
         self.ws_url = [t for t in tabs if t["type"] == "page"][0]["webSocketDebuggerUrl"]
         return self
