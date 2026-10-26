@@ -319,6 +319,17 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 }
 .speak-big { display: inline-flex; align-items: center; gap: 10px; margin: 8px auto; padding: 14px 22px; border-radius: 99px; border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--accent); cursor: pointer; font-size: 16px; }
 .speak-big svg { width: 22px; height: 22px; }
+.spell { text-align: center; }
+.spell-out { min-height: 48px; font-size: 30px; letter-spacing: 2px; padding: 6px 0 10px; border-bottom: 2px solid var(--line-2); margin: 0 auto 14px; max-width: 420px; }
+.spell-out.ok { border-color: var(--ok); } .spell-out.bad { border-color: var(--bad, #e5484d); }
+.spell-tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.spell-tile { width: 52px; height: 52px; font-size: 24px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); cursor: pointer; }
+.spell-tile:disabled { opacity: .25; cursor: default; }
+.match { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+.match-col { display: flex; flex-direction: column; gap: 8px; }
+.match-word, .match-meaning { padding: 12px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); font: inherit; font-size: 16px; cursor: pointer; text-align: center; }
+.match-word.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.match-word.matched, .match-meaning.matched { border-color: var(--ok); color: var(--ok); opacity: .7; cursor: default; }
 .preview { text-align: center; padding: 20px 10px 8px; }
 .preview .word { font-size: 44px; font-weight: 600; line-height: 1.5; }
 .preview .reading { font-size: 18px; color: var(--fg-3); }
@@ -760,9 +771,10 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '29';   // keep equal to the number in sw.js CACHE ('nq-v29'); scripts/test.sh checks it
+const APP_VERSION = '30';   // keep equal to the number in sw.js CACHE ('nq-v30'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '30', date: '2026-10-26', items: ['單字新增兩種題型：「假名拼字」（點假名方塊拼出讀音）與「配對」（四個單字配四個意思），學過一次之後加入輪替，也算進「已熟練」所需的題型。'] },
   { v: '29', date: '2026-10-26', items: ['N4 每個單元新增 2 題聽力對話、1 題即時應答、1 題情境表達與 1 篇閱讀（共 48 題聽力、12 篇閱讀），兩週的單元不再很快重複。'] },
   { v: '28', date: '2026-10-26', items: ['課程資料拆成獨立檔案並單獨版本化：之後更新程式時不必重新下載 650 KB 的題庫，更新更快。'] },
   { v: '27', date: '2026-10-26', items: ['文法填空題複習時會換成「選正確句」或「句意」問法，三種輪替、沒答對過的優先；第一次出現仍是填空，模擬考不受影響。'] },
@@ -1848,6 +1860,20 @@ function kanaOfInflected(word, info) {
   if (kind === 'i') return word.p === 'i' ? JConj.conjAdj(word.r, 'i', f) || null : null;
   return null;
 }
+// 配對: the word and three peers of the same part of speech (same theme preferred), distinct words and meanings
+function matchPairs(v) {
+  const pool = vocabPeers(v).filter(x => x.p === v.p && x.m !== v.m && !zhOverlap(x.m, v.m) && jaPlain(x.w) !== jaPlain(v.w));
+  const scored = pool.map(x => ({ x, s: (x.c === v.c ? 2 : 0) + (x.lv === v.lv ? 1 : 0) + Math.random() * 2 })).sort((a, b) => b.s - a.s);
+  const out = [[jaPlain(v.w), v.m]]; const ws = new Set([jaPlain(v.w)]); const ms = new Set([v.m]);
+  for (const { x } of scored) { const w = jaPlain(x.w); if (ws.has(w) || ms.has(x.m) || [...ms].some(m => zhOverlap(m, x.m))) continue; ws.add(w); ms.add(x.m); out.push([w, x.m]); if (out.length === 4) break; }
+  return out.length === 4 ? out : null;
+}
+// 假名拼字: the reading's characters plus three kana that are not in it
+function spellTiles(reading) {
+  const chars = [...reading];
+  const pool = Object.keys(KANA_ROMAJI).filter(k => !chars.includes(k) && k !== 'を');
+  return shuffle(chars.concat(shuffle(pool).slice(0, 3)));
+}
 function recallOptions(v, zh = {}, kana = {}) {
   const pool = vocabPeers(v).filter(x => x.p === v.p && !zhOverlap(x.m, v.m) && x.r !== v.r && jaPlain(x.w) !== jaPlain(v.w));
   const scored = pool.map(x => ({ x, s: (x.lv === v.lv ? 1 : 0) + (x.c === v.c ? 1 : 0) + Math.random() * 2 })).sort((a, b) => b.s - a.s);
@@ -1959,13 +1985,15 @@ function vocabFormats(v) {
     'v-cloze': Boolean(info && info.form !== 'raw' && v.exZh),
     'v-reading': Boolean(v.r && HAS_KANJI.test(v.w) && v.builtin),
     'v-kanji': Boolean(v.r && HAS_KANJI.test(v.w) && v.builtin && b >= 3),
-    'v-listen': Boolean(v.m && speechAvailable())
+    'v-listen': Boolean(v.m && speechAvailable()),
+    'v-spell': Boolean(v.builtin && v.r && !HAS_KANJI.test(v.r) && v.r.length >= 2 && v.r.length <= 8),
+    'v-match': Boolean(v.builtin && v.m && matchPairs(v))
   };
   let weights;
   if (b < 0) weights = { 'v-meaning': 1 };
   else if (b === 0) weights = { 'v-meaning': 3, 'v-listen': 1, 'v-recall': 1 };
-  else if (b <= 2) weights = { 'v-meaning': 2, 'v-recall': 2, 'v-cloze': 3, 'v-listen': 1, 'v-reading': 1 };
-  else weights = { 'v-cloze': 3, 'v-recall': 2, 'v-reading': 2, 'v-kanji': 1.5, 'v-listen': 1.5, 'v-meaning': 1 };
+  else if (b <= 2) weights = { 'v-meaning': 2, 'v-recall': 2, 'v-cloze': 3, 'v-listen': 1, 'v-reading': 1, 'v-spell': 1, 'v-match': 1 };
+  else weights = { 'v-cloze': 3, 'v-recall': 2, 'v-reading': 2, 'v-kanji': 1.5, 'v-listen': 1.5, 'v-meaning': 1, 'v-spell': 1.5, 'v-match': 1.5 };
   // a format this word has not passed yet is asked first, so it is proven in several ways rather than one
   if (b >= 1) for (const f in weights) if (!rec.f || !rec.f[f] || rec.f[f][0] === 0) weights[f] *= 3;
   return Object.entries(weights).filter(([f]) => can[f]).map(([f, w]) => [f, w]);
@@ -2093,6 +2121,28 @@ function makeVocabQuestion(v, ctx = {}) {
       q.audio = q.speakWord;
       q.revealHtml = `<div class="q-stem word jp">${furi(v.w)}</div>`;
       finalizeOptions(q, v.m, opts, false);
+      return true;
+    }
+    if (f === 'v-spell') {
+      if (!v.r || HAS_KANJI.test(v.r)) return false;
+      q.fmt = f; q.custom = f; q.label = `單字 · ${lvTag} · 假名拼字`;
+      q.instr = '點假名，拼出這個字的讀音';
+      q.stemHtml = esc(v.m); q.stemClass = 'zhstem';
+      q.subHtml = posChip(v.p, v.posLabel);
+      q.tiles = spellTiles(v.r);
+      q.mistakePrompt = `「${v.m}」的讀音`;
+      q.options = [{ text: v.r, jp: true }, { text: '', jp: true }]; q.answer = 0; q.answerText = v.r;
+      return true;
+    }
+    if (f === 'v-match') {
+      const pairs = matchPairs(v);
+      if (!pairs) return false;
+      q.fmt = f; q.custom = f; q.label = `單字 · ${lvTag} · 配對`;
+      q.instr = '先點單字，再點它的意思，把四組都配好';
+      q.stemHtml = '';
+      q.pairs = pairs; q.words = shuffle(pairs.map(x => x[0])); q.meanings = shuffle(pairs.map(x => x[1]));
+      q.mistakePrompt = `配對：${jaPlain(v.w)}`;
+      q.options = [{ text: v.m }, { text: '' }]; q.answer = 0; q.answerText = v.m;
       return true;
     }
     if (f === 'v-sentence') {
@@ -2972,6 +3022,7 @@ function renderPractice() {
   const rec = q.key ? srsGet(q.key) : null;
   let stem = q.stemHtml;
   if (answered && q.fillHtml) stem = stem.replace(/<span class="blank" data-blank>[\s\S]*?<!--\/blank-->/, `<span class="blank filled">${q.fillHtml}</span>`);
+  const custom = q.custom ? customInteractionHtml(e, answered) : '';
   view.innerHTML = `
     <div class="pr-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
@@ -2985,7 +3036,7 @@ function renderPractice() {
       ${stem ? `<div class="q-stem jp ${q.stemClass || ''}">${stem}</div>` : ''}
       ${answered && q.revealHtml ? q.revealHtml : ''}
       ${subParts.length ? `<div class="q-sub">${subParts.join(' ')}</div>` : ''}
-      <div class="opts ${q.wide ? 'wide' : ''}">${opts}</div>
+      ${custom || `<div class="opts ${q.wide ? 'wide' : ''}">${opts}</div>`}
       ${answered ? feedbackHtml(e) : ''}
     </div>
     <div class="pr-actions ${answered ? 'pr-next-sticky' : ''}">
@@ -3035,6 +3086,36 @@ function previewHtml(e, pct, total) {
         <button type="button" class="btn btn-primary" data-act="preview-go" id="btnNext">開始作答 <span class="kbd" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button>
       </div>
     </div>`;
+}
+
+// 假名拼字 / 配對 are answered by tapping, not by picking one of four options. They still end in answerCurrent():
+// option 0 is the correct text, option 1 receives what the learner produced when it was wrong.
+function customInteractionHtml(e, answered) {
+  const q = e.q;
+  if (q.custom === 'v-spell') {
+    const used = e.spell || [];
+    const typed = used.map(i => q.tiles[i]).join('');
+    return `<div class="spell">
+      <div class="spell-out jp ${answered ? (e.chosen === q.answer ? 'ok' : 'bad') : ''}">${esc(typed)}<span class="caret"></span></div>
+      <div class="spell-tiles">${q.tiles.map((ch, i) => `<button type="button" class="spell-tile jp" data-act="spell-tap" data-i="${i}" data-ch="${esc(ch)}" ${used.includes(i) || answered ? 'disabled' : ''}>${esc(ch)}</button>`).join('')}</div>
+      ${answered ? '' : `<div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="spell-back" ${used.length ? '' : 'disabled'}>退一格</button><span class="small muted">${typed.length} / ${[...q.options[0].text].length}</span></div>`}
+    </div>`;
+  }
+  if (q.custom === 'v-match') {
+    const m = e.match || { sel: null, matched: [], wrong: 0 };
+    const pairOf = (w) => q.pairs.find(p => p[0] === w);
+    return `<div class="match">
+      <div class="match-col">${q.words.map(w => `<button type="button" class="match-word jp ${m.matched.includes(w) ? 'matched' : ''} ${m.sel === w ? 'selected' : ''}" data-act="match-word" data-w="${esc(w)}" ${m.matched.includes(w) || answered ? 'disabled' : ''}>${esc(w)}</button>`).join('')}</div>
+      <div class="match-col">${q.meanings.map(mm => { const done = q.pairs.some(p => p[1] === mm && m.matched.includes(p[0])); return `<button type="button" class="match-meaning ${done ? 'matched' : ''}" data-act="match-meaning" data-m="${esc(mm)}" ${done || answered ? 'disabled' : ''}>${esc(mm)}</button>`; }).join('')}</div>
+      ${answered ? '' : `<div class="small muted" style="grid-column:1/-1">${m.wrong ? `錯了 ${m.wrong} 次` : m.sel ? `已選「${esc(m.sel)}」，點它的意思` : '點一個單字'}</div>`}
+    </div>`;
+  }
+  return '';
+}
+function finishCustom(e, ok, produced) {
+  const q = e.q;
+  if (!ok) q.options[1].text = produced;
+  answerCurrent(ok ? 0 : 1);
 }
 
 function srsBadge(key) {
@@ -3374,6 +3455,24 @@ const ACTIONS = {
   },
   'speak-full': () => { const e = currentEntry(); if (e && e.q) speak(e.q.fullJp); },
   'speak-example': () => { const e = currentEntry(); if (e && e.item && e.item.ex) speak(jaPlain(exPlain(e.item.ex))); },
+  'spell-tap': (el) => {
+    const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'v-spell') return;
+    e.spell = e.spell || []; const i = Number(el.dataset.i); if (e.spell.includes(i)) return;
+    e.spell.push(i);
+    const typed = e.spell.map(k => e.q.tiles[k]).join(''); const want = e.q.options[0].text;
+    if ([...typed].length >= [...want].length) finishCustom(e, typed === want, typed); else renderPractice();
+  },
+  'spell-back': () => { const e = currentEntry(); if (!e || e.done || !e.spell || !e.spell.length) return; e.spell.pop(); renderPractice(); },
+  'match-word': (el) => { const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'v-match') return; e.match = e.match || { sel: null, matched: [], wrong: 0 }; e.match.sel = e.match.sel === el.dataset.w ? null : el.dataset.w; renderPractice(); },
+  'match-meaning': (el) => {
+    const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'v-match') return;
+    const m = e.match = e.match || { sel: null, matched: [], wrong: 0 };
+    if (!m.sel) return;
+    const pair = e.q.pairs.find(p => p[0] === m.sel);
+    if (pair && pair[1] === el.dataset.m) m.matched.push(m.sel); else m.wrong++;
+    m.sel = null;
+    if (m.matched.length === e.q.pairs.length) finishCustom(e, m.wrong === 0, `配對時錯了 ${m.wrong} 次`); else renderPractice();
+  },
   speak: (el) => speak(el.dataset.text),
   'ai-explain': () => aiExplainCurrent(),
   'report-item': () => reportCurrentItem(),
@@ -3414,7 +3513,7 @@ function handleKey(ev) {
       else if (k === 'Escape') { ev.preventDefault(); exitPractice(); }
       return;
     }
-    if (['1', '2', '3', '4'].includes(k)) { ev.preventDefault(); if (e && !e.done) answerCurrent(Number(k) - 1); return; }
+    if (['1', '2', '3', '4'].includes(k)) { ev.preventDefault(); if (e && !e.done && !(e.q && e.q.custom)) answerCurrent(Number(k) - 1); return; }
     if (k === 'Enter' || k === ' ') { if (e && e.done) { ev.preventDefault(); nextQuestion(); } else if (!e) { ev.preventDefault(); } return; }
     if (k === 'r' || k === 'R') { ev.preventDefault(); ACTIONS.replay(); return; }
     if (k === 'f' || k === 'F') { ev.preventDefault(); toggleFurigana(); return; }
@@ -5472,7 +5571,7 @@ Object.assign(ACTIONS, {
    ========================================================================== */
 const FMT_NAME = {
   'v-meaning': '單字・看字選意思', 'v-recall': '單字・中翻日', 'v-cloze': '單字・例句填空', 'v-reading': '單字・漢字讀音', 'v-kanji': '單字・漢字寫法',
-  'v-listen': '單字・聽音選意思', 'v-sentence': '自訂句子', 'g-choice': '文法・填空', 'g-meaning': '文法・句意', 'g-order': '文法・排序',
+  'v-listen': '單字・聽音選意思', 'v-spell': '單字・假名拼字', 'v-match': '單字・配對', 'v-sentence': '自訂句子', 'g-choice': '文法・填空', 'g-meaning': '文法・句意', 'g-order': '文法・排序',
   'g-correct': '文法・選正確句', 'g-conj': '文法・動詞變化', 'g-adj': '文法・形容詞變化', 'g-identify': '文法・判斷動詞形',
   'k-meaning': '漢字・意思', 'k-shape': '漢字・選字', 'k-read': '漢字・讀音', 'l-dialog': '聽力・對話', 'l-resp': '聽力・即時應答',
   'l-scene': '聽力・情境表達', 'r-passage': '閱讀', 'm-card': '錯題卡'

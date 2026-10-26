@@ -415,6 +415,54 @@ def test_every_n4_unit_has_enough_listening_and_reading_and_all_build(b):
 
 TESTS += [test_every_n4_unit_has_enough_listening_and_reading_and_all_build]
 
+# ---- 2026-10-26 (12): kana spelling and matching formats ----
+SPELL_WORD = "REG.vocab.find(x => x.builtin && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 3 && x.r.length <= 6 && meaningOptions(x) && recallOptions(x))"
+def test_kana_spelling_question_is_answered_by_tapping_tiles(b):
+    js = """(() => { const v = __W__; srsAnswer(v.key, true); state.srs[v.key].due = todayStr();
+      startSession('items', { items: [v] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-spell' }); renderPractice();
+      const q = e.q; const tiles = [...document.querySelectorAll('.spell-tile')];
+      const out = { fmt: q.fmt, custom: q.custom, opts: document.querySelectorAll('.opt').length, tiles: tiles.length, covers: [...v.r].every(ch => q.tiles.filter(t => t === ch).length >= [...v.r].filter(c => c === ch).length), extra: q.tiles.length > v.r.length, ans: q.options[q.answer].text === v.r };
+      for (const ch of v.r) { const t = [...document.querySelectorAll('.spell-tile:not([disabled])')].find(el => el.dataset.ch === ch); t.click(); }
+      out.done = e.done; out.ok = e.chosen === q.answer; out.f = state.srs[v.key].f['v-spell'];
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__W__', SPELL_WORD)
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['fmt'] == 'v-spell' and r['opts'] == 0 and r['covers'] and r['extra'] and r['ans'] and r['done'] and r['ok'] and r['f'] == [1, 0], r
+
+def test_wrong_spelling_shows_the_right_reading_and_backspace_works(b):
+    js = """(() => { const v = __W__; srsAnswer(v.key, true);
+      startSession('items', { items: [v] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-spell' }); renderPractice();
+      const wrong = e.q.tiles.findIndex(t => t !== v.r[0]); document.querySelector(`.spell-tile[data-i="${wrong}"]`).click();
+      const typed1 = document.querySelector('.spell-out').textContent; document.querySelector('[data-act=spell-back]').click(); const typed2 = document.querySelector('.spell-out').textContent;
+      // now spell it wrong on purpose: first tile wrong, then fill up to length
+      document.querySelector(`.spell-tile[data-i="${wrong}"]`).click();
+      while (!e.done) { const t = document.querySelector('.spell-tile:not([disabled])'); if (!t) break; t.click(); }
+      const head = document.querySelector('.fb-head').textContent; const out = { typed1, typed2, done: e.done, ok: e.chosen === e.q.answer, showsRight: head.includes(v.r) };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__W__', SPELL_WORD)
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert len(r['typed1']) == 1 and r['typed2'] == '' and r['done'] and not r['ok'] and r['showsRight'], r
+
+def test_matching_question_pairs_four_words_with_their_meanings(b):
+    js = """(() => { const v = __W__; srsAnswer(v.key, true);
+      startSession('items', { items: [v] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-match' }); renderPractice();
+      const q = e.q; const out = { fmt: q.fmt, pairs: q.pairs.length, hasTarget: q.pairs.some(p => p[0] === jaPlain(v.w) && p[1] === v.m), words: document.querySelectorAll('.match-word').length, meanings: document.querySelectorAll('.match-meaning').length, opts: document.querySelectorAll('.opt').length };
+      // one wrong tap first, then match everything
+      const w0 = document.querySelector('.match-word'); w0.click(); const wrongM = [...document.querySelectorAll('.match-meaning')].find(m => m.dataset.m !== q.pairs.find(p => p[0] === w0.dataset.w)[1]); wrongM.click();
+      out.afterWrong = document.querySelectorAll('.match-word.matched').length;
+      for (const [w, m] of q.pairs) { document.querySelector(`.match-word[data-w="${w}"]`).click(); document.querySelector(`.match-meaning[data-m="${m}"]`).click(); }
+      out.matched = document.querySelectorAll('.match-word.matched').length; out.done = e.done; out.ok = e.chosen === q.answer; out.f = state.srs[v.key].f['v-match'];
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__W__', SPELL_WORD)
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['fmt'] == 'v-match' and r['pairs'] == 4 and r['hasTarget'] and r['words'] == 4 and r['meanings'] == 4 and r['opts'] == 0, r
+    assert r['afterWrong'] == 0 and r['matched'] == 4 and r['done'] and not r['ok'] and r['f'] == [0, 1], r
+
+def test_new_formats_join_the_rotation_after_the_first_sighting(b):
+    js = """(() => { const v = __W__; const fresh = vocabFormats(v).map(x => x[0]); srsAnswer(v.key, true); const seen = vocabFormats(v).map(x => x[0]);
+      return JSON.stringify({ fresh, seen }); })()""".replace('__W__', SPELL_WORD)
+    r = json.loads(ev(b, js))
+    assert 'v-spell' not in r['fresh'] and 'v-match' not in r['fresh'] and 'v-spell' in r['seen'] and 'v-match' in r['seen'], r
+
+TESTS += [test_kana_spelling_question_is_answered_by_tapping_tiles, test_wrong_spelling_shows_the_right_reading_and_backspace_works, test_matching_question_pairs_four_words_with_their_meanings, test_new_formats_join_the_rotation_after_the_first_sighting]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
