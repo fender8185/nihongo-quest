@@ -381,6 +381,45 @@ def test_tools_page_has_an_expandable_api_guide_for_every_provider(b):
     assert 'deepgram*' in opened['ids'] and 'google_tts*' not in opened['ids'], opened['ids']
     assert '申請' in out[2], out[2]
 
+def test_stats_shows_the_past_week_of_practice_and_what_was_learned(b):
+    seed = """(() => { const t = todayStr(); const y = addDays(t, -1);
+      state.dailyLogs[y] = { date: y, vocabCount: 4, grammarCount: 2, quizCount: 1, bonusCount: 0, minutes: 5, topics: [] };
+      const v = REG.vocab.find(x => x.builtin); const g = REG.grammar[0];
+      state.srs[v.key] = { b: 3, due: addDays(t, 9), n: 4, ok: 4, ng: 0, s: 9, d: 5, last: addDays(t, -2), intro: addDays(t, -20), lrn: addDays(t, -2) };
+      state.srs[g.key] = { b: 1, due: t, n: 1, ok: 1, ng: 0, s: 1, d: 5, last: y, intro: y };
+      saveState(); window.__lab = [itemLabel(v), itemLabel(g)]; return 'seeded'; })()"""
+    probe = """(() => { const v = document.getElementById('view'); const card = [...v.querySelectorAll('.card')].find(c => /過去 7 天/.test(c.textContent)); if (!card) return JSON.stringify({ card: false, future: /未來 7 天/.test(v.textContent) });
+      const cols = [...card.querySelectorAll('.cols .col')]; const y = cols[5]; const segs = [...y.querySelectorAll('.cseg')].map(x => x.className.replace('cseg ', '') + ':' + x.style.flexGrow);
+      const d = card.querySelector('details'); const txt = d ? d.textContent : '';
+      return JSON.stringify({ card: true, future: /未來 7 天/.test(v.textContent), n: cols.length, segs, label: y.textContent.trim(), summary: d && d.querySelector('summary').textContent,
+        learned: txt.includes(__lab[0]), fresh: txt.includes(__lab[1]), legend: /單字.*文法/.test(card.textContent) }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("nav", URL + "#/stats"), ("eval", probe)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['card'] and not r['future'], r
+    assert r['n'] == 7 and r['segs'] == ['q:1', 'g:2', 'v:4'] and r['label'] == '7', r
+    assert '學會' in r['summary'] and r['learned'] and r['fresh'] and r['legend'], r
+
+def test_reaching_the_learned_level_records_the_date(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin); const k = v.key; delete state.srs[k]; const out = [];
+      for (let i = 0; i < 6; i++) { if (state.srs[k]) state.srs[k].last = addDays(todayStr(), -10); const r = srsAnswer(k, true, { grade: 'easy' }); out.push([r.after, state.srs[k].lrn || null]); if (state.srs[k].lrn) break; }
+      const crossed = out.findIndex(x => x[0] >= SRS_LEARNED);
+      return JSON.stringify({ out, crossed, today: todayStr() }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['crossed'] >= 0, r
+    assert all(x[1] is None for x in r['out'][:r['crossed']]) and r['out'][r['crossed']][1] == r['today'], r
+
+def test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && /[一-龯]/.test(x.w) && x.r && matchPairs(x)); srsAnswer(v.key, true);
+      startSession('items', { items: [v] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-match' }); renderPractice();
+      window.__spoken = []; window.speak = (t, o) => { __spoken.push([t, o && o.reading]); return Promise.resolve(); };
+      const w = document.querySelector(`.match-word[data-w="${jaPlain(v.w)}"]`); w.click();
+      const again = document.querySelector(`.match-word[data-w="${jaPlain(v.w)}"]`); again.click();   // deselect: no second utterance
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify({ spoken: __spoken, w: jaPlain(v.w), r: v.r }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['spoken'] == [[r['w'], r['r']]], r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -394,7 +433,8 @@ if __name__ == "__main__":
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
              test_single_words_are_sent_as_kanji_with_the_reading_pinned, test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong, test_tts_connection_check_reports_the_real_error_and_success,
-             test_tools_page_has_an_expandable_api_guide_for_every_provider]
+             test_tools_page_has_an_expandable_api_guide_for_every_provider,
+             test_stats_shows_the_past_week_of_practice_and_what_was_learned, test_reaching_the_learned_level_records_the_date, test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading]
     failed = 0
     try:
         for t in tests:

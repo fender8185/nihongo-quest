@@ -363,6 +363,8 @@ body.furi-smart ruby.known rt { visibility: hidden; }
 .cols { display: flex; align-items: flex-end; gap: 10px; height: 150px; padding-top: 22px; border-bottom: 1px solid var(--line); }
 .cols .col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; outline: none; }
 .cols .col .colbar { width: min(24px, 70%); background: var(--accent); border-radius: 4px 4px 0 0; min-height: 2px; }
+.cols .col .colbar.stack { display: flex; flex-direction: column; background: transparent; overflow: hidden; }
+.cseg { flex-basis: 0; min-height: 0; } .cseg.v, .seg-dot.v { background: var(--heat-4); } .cseg.g, .seg-dot.g { background: var(--heat-3); } .cseg.q, .seg-dot.q { background: var(--heat-2); }
 .cols .col:hover .colbar, .cols .col:focus .colbar { filter: brightness(1.15); }
 .cols .col .collabel { position: absolute; top: -20px; font-size: 12px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
 .col-axis { display: flex; gap: 10px; margin-top: 6px; }
@@ -776,7 +778,7 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 const APP_VERSION = '35';   // keep equal to the number in sw.js CACHE ('nq-v35'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
-  { v: '35', date: '2026-10-26', items: ['工具與 AI 頁底部新增「API 申請說明」：Google Cloud TTS、Gemini、OpenAI、Deepgram、VOICEVOX、Ollama 的申請步驟、費用與連結，可逐一展開；設定頁的金鑰欄位有「申請方式」連過去。'] },
+  { v: '35', date: '2026-10-26', items: ['工具與 AI 頁底部新增「API 申請說明」：Google Cloud TTS、Gemini、OpenAI、Deepgram、VOICEVOX、Ollama 的申請步驟、費用與連結，可逐一展開；設定頁的金鑰欄位有「申請方式」連過去。', '學習分析：「未來 7 天的複習量」改成「過去 7 天的練習量」堆疊長條（單字・漢字／文法／其他），展開可看明細、這 7 天變熟悉的與新學的項目。', '單字配對題：點選日文字時會順便唸出來（漢字字以讀音指定）。'] },
   { v: '34', date: '2026-10-26', items: ['設定 › 語音 新增「測試連線」：顯示語音服務回傳的實際錯誤與對應的處理建議（API 未啟用、金鑰無效、網站限制、帳單未連結）。'] },
   { v: '33', date: '2026-10-26', items: ['唸單字時改送漢字寫法並固定讀音（Google 用 SSML，其他引擎交給模型判斷），不再送孤立的假名，發音更自然。', '假名拼字與配對題多一顆「我不會，看答案」，按下算答錯並顯示答案。'] },
   { v: '32', date: '2026-10-26', items: ['多裝置同步衝突時改為逐筆合併：每個字與文法取較晚作答的紀錄，每日紀錄取較大值，錯題與自訂字卡取聯集，其餘以較晚儲存的一方為準；不再丟掉任何一方的進度。'] },
@@ -1282,6 +1284,7 @@ function srsAnswer(key, correct, opt = {}) {
   r.n++;
   if (g > 1) { r.ok++; r.st++; } else { r.ng++; r.st = 0; if (before >= 2) r.lapse = (r.lapse || 0) + 1; }
   r.b = g === 1 ? Math.min(levelFromS(r.s), 1) : levelFromS(r.s);
+  if (before < SRS_LEARNED && r.b >= SRS_LEARNED) r.lrn = t;   // the day it became 熟悉 (學習分析 lists the recent ones)
   // A missed word comes back later the same day; grammar, listening, reading and kanji wait until tomorrow,
   // because seeing the very same question again within hours only tests memory of the answer.
   r.due = g === 1 ? (key.startsWith('v:') ? t : addDays(t, 1)) : addDays(t, fsrsDays(r.s, key));
@@ -1873,8 +1876,8 @@ function kanaOfInflected(word, info) {
 function matchPairs(v) {
   const pool = vocabPeers(v).filter(x => x.p === v.p && x.m !== v.m && !zhOverlap(x.m, v.m) && jaPlain(x.w) !== jaPlain(v.w));
   const scored = pool.map(x => ({ x, s: (x.c === v.c ? 2 : 0) + (x.lv === v.lv ? 1 : 0) + Math.random() * 2 })).sort((a, b) => b.s - a.s);
-  const out = [[jaPlain(v.w), v.m]]; const ws = new Set([jaPlain(v.w)]); const ms = new Set([v.m]);
-  for (const { x } of scored) { const w = jaPlain(x.w); if (ws.has(w) || ms.has(x.m) || [...ms].some(m => zhOverlap(m, x.m))) continue; ws.add(w); ms.add(x.m); out.push([w, x.m]); if (out.length === 4) break; }
+  const out = [[jaPlain(v.w), v.m, v.r]]; const ws = new Set([jaPlain(v.w)]); const ms = new Set([v.m]);   // [word, meaning, reading]
+  for (const { x } of scored) { const w = jaPlain(x.w); if (ws.has(w) || ms.has(x.m) || [...ms].some(m => zhOverlap(m, x.m))) continue; ws.add(w); ms.add(x.m); out.push([w, x.m, x.r]); if (out.length === 4) break; }
   return out.length === 4 ? out : null;
 }
 // 假名拼字: the reading's characters plus three kana that are not in it
@@ -3482,7 +3485,13 @@ const ACTIONS = {
     finishCustom(e, false, '（看了答案）');
   },
   'spell-back': () => { const e = currentEntry(); if (!e || e.done || !e.spell || !e.spell.length) return; e.spell.pop(); renderPractice(); },
-  'match-word': (el) => { const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'v-match') return; e.match = e.match || { sel: null, matched: [], wrong: 0 }; e.match.sel = e.match.sel === el.dataset.w ? null : el.dataset.w; renderPractice(); },
+  'match-word': (el) => {
+    const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'v-match') return;
+    e.match = e.match || { sel: null, matched: [], wrong: 0 };
+    e.match.sel = e.match.sel === el.dataset.w ? null : el.dataset.w;
+    if (e.match.sel) { const p = e.q.pairs.find(x => x[0] === e.match.sel); speak(e.match.sel, p && p[2] && p[2] !== e.match.sel ? { reading: p[2] } : undefined); }   // hear the word as you pick it
+    renderPractice();
+  },
   'match-meaning': (el) => {
     const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'v-match') return;
     const m = e.match = e.match || { sel: null, matched: [], wrong: 0 };
@@ -5678,7 +5687,7 @@ Object.assign(ACTIONS, {
 
 // ---- 79_stats.js ----
 /* ==========================================================================
-   Learning analysis: pace, review forecast, weak points, question types, leeches
+   Learning analysis: pace, past week, weak points, question types, leeches
    ========================================================================== */
 const FMT_NAME = {
   'v-meaning': '單字・看字選意思', 'v-recall': '單字・中翻日', 'v-cloze': '單字・例句填空', 'v-reading': '單字・漢字讀音', 'v-kanji': '單字・漢字寫法',
@@ -5689,26 +5698,27 @@ const FMT_NAME = {
 };
 const KIND_NAME = { v: '單字', g: '文法', k: '漢字', l: '聽力', r: '閱讀' };
 
-// what the daily mix may show on a given day (same rules as dailyPlan)
-function inDailyMix(it, ctx) {
-  if (it.kind === 'g' || it.kind === 'l' || it.kind === 'r') { if (unitOrder(it.u) > ctx.curIdx) return false; return it.kind !== 'l' || ctx.listenOn; }
-  if (it.kind === 'v') return vocabEligibleForDaily(it, ctx.n4Open);
-  if (it.kind === 'k') return it.lv === 'N5' || ctx.k4Open;
-  return false;
-}
-function reviewForecast(days = 7) {
+// the past week's practice, from the daily logs: 單字（含漢字）／文法／其他（聽力、閱讀、模擬考）
+function weekPractice(days = 7) {
   const t = todayStr();
-  const ctx = { curIdx: unitOrder(state.currentUnit), n4Open: n5WordsLeft() === 0, k4Open: n5KanjiLeft() === 0, listenOn: state.settings.listening && speechAvailable() };
-  const out = Array.from({ length: days }, (_, d) => ({ date: addDays(t, d), total: 0, by: {} }));
-  Object.entries(state.srs).forEach(([key, r]) => {
-    const it = REG.byKey.get(key);
-    if (!it || !inDailyMix(it, ctx)) return;
-    const d = r.due <= t ? 0 : daysBetween(t, r.due);
-    if (d >= days) return;
-    out[d].total++;
-    out[d].by[it.kind] = (out[d].by[it.kind] || 0) + 1;
+  return Array.from({ length: days }, (_, i) => {
+    const date = addDays(t, i - (days - 1)); const e = state.dailyLogs[date] || {};
+    const v = e.vocabCount || 0, g = e.grammarCount || 0, q = (e.quizCount || 0) + (e.bonusCount || 0);
+    return { date, v, g, q, total: v + g + q };
   });
-  return out;
+}
+// items first seen / first reaching 熟悉 within the past `days` days, newest first
+function recentlyLearned(days = 7) {
+  const t = todayStr();
+  const within = (d) => d && daysBetween(d, t) < days;
+  const fresh = [], learned = [];
+  Object.entries(state.srs).forEach(([k, r]) => {
+    const it = REG.byKey.get(k); if (!it) return;
+    if (within(r.intro)) fresh.push({ it, d: r.intro });
+    if (within(r.lrn) && r.b >= SRS_LEARNED) learned.push({ it, d: r.lrn });
+  });
+  const byDate = (a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : 0);
+  return { fresh: fresh.sort(byDate), learned: learned.sort(byDate) };
 }
 function grammarPace() {
   const t = todayStr();
@@ -5752,18 +5762,22 @@ function renderStats(view) {
   const learned = {};
   Object.entries(state.srs).forEach(([k, r]) => { if (r.b >= SRS_LEARNED) learned[k[0]] = (learned[k[0]] || 0) + 1; });
   const pace = grammarPace();
-  const fc = reviewForecast(7);
-  const maxF = Math.max(1, ...fc.map(d => d.total));
-  const peak = fc.reduce((a, d, i) => (d.total > fc[a].total ? i : a), 0);
+  const wk = weekPractice(7);
+  const maxW = Math.max(1, ...wk.map(d => d.total));
+  const peak = wk.reduce((a, d, i) => (d.total > wk[a].total ? i : a), 0);
   const weeks = '日一二三四五六';
-  const cols = fc.map((d, i) => {
-    const h = Math.round(d.total / maxF * 100);
-    const tip = Object.entries(d.by).map(([k, n]) => `${KIND_NAME[k] || k} ${n}`).join('・') || '沒有到期的項目';
-    const label = (i === 0 || i === peak) && d.total ? `<span class="collabel">${d.total}</span>` : '';
-    return `<div class="col" tabindex="0" data-tip-title="${esc(i === 0 ? '今天（含之前沒複習的）' : d.date.slice(5).replace('-', '/'))}：${d.total} 題" data-tip-body="${esc(tip)}">${label}<div class="colbar" style="height:${Math.max(h, d.total ? 3 : 0)}%"></div></div>`;
+  const last = wk.length - 1;
+  const cols = wk.map((d, i) => {
+    const h = Math.round(d.total / maxW * 100);
+    const tip = d.total ? `單字 ${d.v}・文法 ${d.g}・其他 ${d.q}` : '沒有練習';
+    const label = (i === last || i === peak) && d.total ? `<span class="collabel">${d.total}</span>` : '';
+    const segs = [['q', d.q], ['g', d.g], ['v', d.v]].map(([k, n]) => `<div class="cseg ${k}" style="flex-grow:${n}"></div>`).join('');
+    return `<div class="col" tabindex="0" data-tip-title="${esc(i === last ? '今天' : d.date.slice(5).replace('-', '/'))}：${d.total} 題" data-tip-body="${esc(tip)}">${label}<div class="colbar stack" style="height:${Math.max(h, d.total ? 3 : 0)}%">${segs}</div></div>`;
   }).join('');
-  const axis = fc.map((d, i) => `<span>${i === 0 ? '今天' : `${d.date.slice(5).replace('-', '/')}（${weeks[parseDate(d.date).getDay()]}）`}</span>`).join('');
-  const fcTable = `<table class="table"><thead><tr><th>日期</th><th>題數</th><th>內容</th></tr></thead><tbody>${fc.map((d, i) => `<tr><td class="num">${i === 0 ? '今天' : d.date}</td><td class="num">${d.total}</td><td class="small">${esc(Object.entries(d.by).map(([k, n]) => `${KIND_NAME[k] || k} ${n}`).join('、'))}</td></tr>`).join('')}</tbody></table>`;
+  const axis = wk.map((d, i) => `<span>${i === last ? '今天' : `${d.date.slice(5).replace('-', '/')}（${weeks[parseDate(d.date).getDay()]}）`}</span>`).join('');
+  const wkTable = `<table class="table"><thead><tr><th>日期</th><th>單字</th><th>文法</th><th>其他</th><th>合計</th></tr></thead><tbody>${wk.map((d, i) => `<tr><td class="num">${i === last ? '今天' : d.date}</td><td class="num">${d.v}</td><td class="num">${d.g}</td><td class="num">${d.q}</td><td class="num">${d.total}</td></tr>`).join('')}</tbody></table>`;
+  const rl = recentlyLearned(7);
+  const learnedList = (arr) => arr.length ? `<div class="row-wrap mt-2">${arr.slice(0, 40).map(({ it }) => `<span class="chip"><span class="dim">${KIND_NAME[it.kind] || ''}</span> <span class="jp">${esc(itemLabel(it)).slice(0, 24)}</span></span>`).join('')}${arr.length > 40 ? `<span class="small muted">…共 ${arr.length} 項</span>` : ''}</div>` : '<div class="small muted mt-1">這 7 天還沒有。</div>';
 
   const weak = weakPoints();
   const weakRows = weak.map(a => `<div class="barrow">
@@ -5804,10 +5818,13 @@ function renderStats(view) {
       <p class="small dim mb-0">${esc(paceText)}</p>
     </div>
     <div class="card">
-      <div class="card-head"><div><div class="card-title">未來 7 天的複習量</div><div class="card-sub">只計算每日練習會出現的範圍</div></div></div>
-      <div class="cols" role="img" aria-label="未來 7 天每天的複習題數">${cols}</div>
+      <div class="card-head"><div><div class="card-title">過去 7 天的練習量</div><div class="card-sub">每天作答的題數，依種類堆疊</div></div></div>
+      <div class="cols" role="img" aria-label="過去 7 天每天作答的題數">${cols}</div>
       <div class="col-axis">${axis}</div>
-      <details class="disclose mt-3"><summary>表格</summary><div class="table-wrap mt-2">${fcTable}</div></details>
+      <div class="small muted mt-2"><i class="seg-dot v"></i>單字・漢字　<i class="seg-dot g"></i>文法　<i class="seg-dot q"></i>聽力・閱讀・模擬考</div>
+      <details class="disclose mt-3"><summary>明細與最近學會的</summary><div class="table-wrap mt-2">${wkTable}</div>
+        <div class="small mt-3"><strong>這 7 天變熟悉的</strong>（${rl.learned.length}）</div>${learnedList(rl.learned)}
+        <div class="small mt-3"><strong>這 7 天新學的</strong>（${rl.fresh.length}）</div>${learnedList(rl.fresh)}</details>
     </div>
     <div class="grid grid-2">
       <div class="card">
