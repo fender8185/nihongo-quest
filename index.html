@@ -363,12 +363,21 @@ body.furi-smart ruby.known rt { visibility: hidden; }
 .md strong { color: var(--fg); }
 
 /* ---------- modal & toast ---------- */
-.modal-back { position: fixed; inset: 0; z-index: 60; background: rgba(5,6,10,.62); backdrop-filter: blur(2px); display: grid; place-items: center; padding: 16px; }
-.modal { width: min(720px, 100%); max-height: min(88vh, 900px); overflow: auto; background: var(--bg-elev); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 24px 64px -16px rgba(0,0,0,.6); }
-.modal-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; background: var(--bg-elev); border-bottom: 1px solid var(--line); }
-.modal-body { padding: 16px 18px 20px; }
+/* The dialog is a column: fixed header, scrolling body, (mobile) footer with a close button. Heights use the small
+   viewport unit so a mobile browser's toolbar never hides the header; no backdrop-filter (Brave repaint issues). */
+.modal-back { position: fixed; inset: 0; z-index: 60; background: rgba(5,6,10,.7); display: grid; place-items: center; padding: 16px; }
+.modal { display: flex; flex-direction: column; width: min(720px, 100%); max-height: min(88svh, 900px); overflow: hidden; background: var(--bg-elev); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 24px 64px -16px rgba(0,0,0,.6); }
+.modal-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; background: var(--bg-elev); border-bottom: 1px solid var(--line); }
+.modal-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px 18px 20px; }
+.modal-foot { display: none; flex: none; padding: 10px 18px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--bg-elev); }
 .modal-title { font-weight: 600; font-size: 16px; }
-@media (max-width: 600px) { .modal-back { padding: 0; place-items: end stretch; } .modal { width: 100%; max-height: 92vh; border-radius: 16px 16px 0 0; } }
+@supports (height: 1dvh) { .modal { max-height: min(88dvh, 900px); } }
+@media (max-width: 600px) {
+  .modal-back { padding: 0; place-items: end stretch; }
+  .modal { width: 100%; max-height: calc(100svh - env(safe-area-inset-top) - 8px); border-radius: 16px 16px 0 0; }
+  @supports (height: 1dvh) { .modal { max-height: calc(100dvh - env(safe-area-inset-top) - 8px); } }
+  .modal-foot { display: flex; justify-content: flex-end; }
+}
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); z-index: 80; max-width: min(560px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 12px; background: var(--fg); color: var(--bg); font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; box-shadow: var(--shadow); }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
 .sync-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg-3); cursor: pointer; white-space: nowrap; }
@@ -742,9 +751,10 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '21';   // keep equal to the number in sw.js CACHE ('nq-v21'); scripts/test.sh checks it
+const APP_VERSION = '22';   // keep equal to the number in sw.js CACHE ('nq-v22'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '22', date: '2026-10-26', items: ['設定等彈出視窗改為標題固定、內容區捲動，高度改以手機實際可見範圈計算，瀏覽器工具列不再蓋住關閉鍵與分頁；手機版底部多一顆關閉。'] },
   { v: '21', date: '2026-10-26', items: ['首頁的「單字主題」固定顯示這組練習會出的主題：只剩自訂字卡時寫「自訂字卡」，今天的單字做完時寫已完成。'] },
   { v: '19', date: '2026-10-26', items: ['新文法不再被複習擠掉：每天固定出到上限（正確率低時仍會自動減量），只有新單字會因複習太多而減少，且不低於上限的一半。', '每組練習的文法名額先放新題，剩下才放複習；複習以答對次數最少的優先，同一單元的題目熟練度會拉平。'] },
   { v: '18', date: '2026-10-26', items: ['今日練習的單字集中在 1 到 3 個主題：新字來自目前的兩個主題，複習優先出到期最多的那個主題；其他主題的到期字等這些做完才補上。首頁的「單字主題」顯示的是這組實際會碰到的主題。'] },
@@ -3202,7 +3212,8 @@ function openModal(title, bodyHtml, opt = {}) {
   const root = document.getElementById('modalRoot');
   root.innerHTML = `<div class="modal-back" data-act="modal-back"><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}" style="${opt.width ? `width:min(${opt.width}px,100%)` : ''}">
     <div class="modal-head"><div class="modal-title">${esc(title)}</div><button type="button" class="btn btn-ghost btn-icon" data-act="close-modal" aria-label="關閉">${icon('close')}</button></div>
-    <div class="modal-body" id="modalBody">${bodyHtml}</div></div></div>`;
+    <div class="modal-body" id="modalBody">${bodyHtml}</div>
+    <div class="modal-foot"><button type="button" class="btn" data-act="close-modal">關閉</button></div></div></div>`;
   document.body.style.overflow = 'hidden';
   const first = root.querySelector('.modal-body input, .modal-body select, .modal-body button');
   if (first && !opt.noFocus) first.focus({ preventScroll: true });

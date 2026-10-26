@@ -279,6 +279,24 @@ def test_heatmap_starts_at_the_week_the_learner_began(b):
     assert r['fromLogs'][0] == r['fromLogs'][1] and 12 <= r['fromLogs'][0] <= 13, r
     assert r['old'] == 26, r
 
+# ---- 2026-10-26: settings modal usable on mobile browsers whose toolbar eats the top of the viewport ----
+def test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close(b):
+    js = """(() => { openSettings('learn');
+      const modal = document.querySelector('.modal'), head = document.querySelector('.modal-head'), body = document.getElementById('modalBody'), back = document.querySelector('.modal-back');
+      const cs = (el) => getComputedStyle(el);
+      const before = head.getBoundingClientRect().top;
+      body.scrollTop = 99999; const after = head.getBoundingClientRect().top;
+      const rules = [...document.styleSheets].flatMap(sh => { try { return [...sh.cssRules]; } catch (e) { return []; } }).flatMap(r => r.cssRules ? [...r.cssRules] : [r]).filter(r => r.selectorText && /\\.modal(\\s|$|,)/.test(r.selectorText)).map(r => r.cssText).join(' ');
+      const foot = document.querySelector('.modal-foot [data-act=close-modal]');
+      const out = { display: cs(modal).display, bodyOverflow: cs(body).overflowY, headStatic: cs(head).position !== 'sticky', before, after, scrolled: body.scrollTop > 0,
+        svh: /svh|dvh/.test(rules), noBlur: cs(back).backdropFilter === 'none' || !cs(back).backdropFilter, foot: !!foot };
+      if (foot) foot.click(); out.closedByFoot = !modalOpen(); return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert r['display'] == 'flex' and r['bodyOverflow'] == 'auto' and r['headStatic'], r
+    assert r['scrolled'] and r['before'] == r['after'], r
+    assert r['svh'] and r['noBlur'] and r['foot'] and r['closedByFoot'], r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -288,7 +306,8 @@ if __name__ == "__main__":
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
              test_wrong_non_vocab_item_waits_until_tomorrow_but_wrong_vocab_stays_due_today, test_reinforcement_skips_grammar_and_kanji_answered_today_but_not_vocab,
-             test_heatmap_starts_at_the_week_the_learner_began]
+             test_heatmap_starts_at_the_week_the_learner_began,
+             test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close]
     failed = 0
     try:
         for t in tests:
