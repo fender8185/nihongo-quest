@@ -771,9 +771,10 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '32';   // keep equal to the number in sw.js CACHE ('nq-v32'); scripts/test.sh checks it
+const APP_VERSION = '33';   // keep equal to the number in sw.js CACHE ('nq-v33'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '33', date: '2026-10-26', items: ['唸單字時改送漢字寫法並固定讀音（Google 用 SSML，其他引擎交給模型判斷），不再送孤立的假名，發音更自然。', '假名拼字與配對題多一顆「我不會，看答案」，按下算答錯並顯示答案。'] },
   { v: '32', date: '2026-10-26', items: ['多裝置同步衝突時改為逐筆合併：每個字與文法取較晚作答的紀錄，每日紀錄取較大值，錯題與自訂字卡取聯集，其餘以較晚儲存的一方為準；不再丟掉任何一方的進度。'] },
   { v: '31', date: '2026-10-26', items: ['自訂字卡兩種題型答對過即可「已熟練」（內建字仍需三種）。', '振假名的「已熟練不顯示讀音」改用同一個熟練定義。', '主題字表不再顯示「自訂／匯入」篩選。', '「換個方式再考」的題目作答後也會顯示熟練度，並註明不影響排程。', '單字測驗、主題練習按鈕顯示題數。'] },
   { v: '30', date: '2026-10-26', items: ['單字新增兩種題型：「假名拼字」（點假名方塊拼出讀音）與「配對」（四個單字配四個意思），學過一次之後加入輪替，也算進「已熟練」所需的題型。'] },
@@ -2047,7 +2048,8 @@ function makeVocabQuestion(v, ctx = {}) {
   q.why = vocabWhy(v);
   q.fullJp = v.ex ? exPlain(v.ex) : v.w;
   q.fullZh = v.exZh || '';
-  q.speakWord = v.r && !HAS_KANJI.test(v.r) ? v.r : jaPlain(v.w);
+  q.speakWord = jaPlain(v.w);
+  q.speakReading = v.r && !HAS_KANJI.test(v.r) && v.r !== jaPlain(v.w) ? v.r : '';
   q.mistakePrompt = `${jaPlain(v.w)}${v.r && v.r !== v.w ? `（${v.r}）` : ''}`;
   const lvTag = v.builtin ? v.lv : '自訂';
   const tryBuild = (f) => {
@@ -3000,7 +3002,7 @@ function renderPractice() {
   const pct = Math.round(SESSION.idx / total * 100);
   if (e.preview && !e.previewDone) {
     view.innerHTML = previewHtml(e, pct, total);
-    if (!e.autoPlayedPreview) { e.autoPlayedPreview = true; if (state.settings.autoSpeak) setTimeout(() => speak(q.speakWord || jaPlain(e.item.w)), 150); }
+    if (!e.autoPlayedPreview) { e.autoPlayedPreview = true; if (state.settings.autoSpeak) setTimeout(() => speak(q.speakWord || jaPlain(e.item.w), speakOpts(q, q.speakWord)), 150); }
     return;
   }
   const showZh = q.zhText && (state.settings.showZh || q.forceZh || e.zhShown);
@@ -3055,7 +3057,7 @@ function renderPractice() {
         ${answered ? `<button type="button" class="btn btn-primary" data-act="next" id="btnNext">${SESSION.idx + 1 < total ? '下一題' : '看結果'} <span class="kbd" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button>` : '<span class="tiny muted">按 1–4 作答</span>'}
       </div>
     </div>`;
-  if (!answered && q.audio && !e.autoPlayed) { e.autoPlayed = true; setTimeout(() => (q.audioScript ? speakScript(q.audio) : speak(q.audio)), 150); }
+  if (!answered && q.audio && !e.autoPlayed) { e.autoPlayed = true; setTimeout(() => (q.audioScript ? speakScript(q.audio) : speak(q.audio, speakOpts(q, q.audio))), 150); }
   if (!answered && q.audioOptions) prefetchSpeech(q.options.map(o => jaPlain(o.text)));
   if (answered) { const nb = document.getElementById('btnNext'); if (nb) nb.focus({ preventScroll: true }); }
 }
@@ -3102,7 +3104,7 @@ function customInteractionHtml(e, answered) {
     return `<div class="spell">
       <div class="spell-out jp ${answered ? (e.chosen === q.answer ? 'ok' : 'bad') : ''}">${esc(typed)}<span class="caret"></span></div>
       <div class="spell-tiles">${q.tiles.map((ch, i) => `<button type="button" class="spell-tile jp" data-act="spell-tap" data-i="${i}" data-ch="${esc(ch)}" ${used.includes(i) || answered ? 'disabled' : ''}>${esc(ch)}</button>`).join('')}</div>
-      ${answered ? '' : `<div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="spell-back" ${used.length ? '' : 'disabled'}>退一格</button><span class="small muted">${typed.length} / ${[...q.options[0].text].length}</span></div>`}
+      ${answered ? '' : `<div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="spell-back" ${used.length ? '' : 'disabled'}>退一格</button><span class="small muted">${typed.length} / ${[...q.options[0].text].length}</span><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">我不會，看答案</button></div>`}
     </div>`;
   }
   if (q.custom === 'v-match') {
@@ -3111,7 +3113,7 @@ function customInteractionHtml(e, answered) {
     return `<div class="match">
       <div class="match-col">${q.words.map(w => `<button type="button" class="match-word jp ${m.matched.includes(w) ? 'matched' : ''} ${m.sel === w ? 'selected' : ''}" data-act="match-word" data-w="${esc(w)}" ${m.matched.includes(w) || answered ? 'disabled' : ''}>${esc(w)}</button>`).join('')}</div>
       <div class="match-col">${q.meanings.map(mm => { const done = q.pairs.some(p => p[1] === mm && m.matched.includes(p[0])); return `<button type="button" class="match-meaning ${done ? 'matched' : ''}" data-act="match-meaning" data-m="${esc(mm)}" ${done || answered ? 'disabled' : ''}>${esc(mm)}</button>`; }).join('')}</div>
-      ${answered ? '' : `<div class="small muted" style="grid-column:1/-1">${m.wrong ? `錯了 ${m.wrong} 次` : m.sel ? `已選「${esc(m.sel)}」，點它的意思` : '點一個單字'}</div>`}
+      ${answered ? '' : `<div class="row between small muted" style="grid-column:1/-1"><span>${m.wrong ? `錯了 ${m.wrong} 次` : m.sel ? `已選「${esc(m.sel)}」，點它的意思` : '點一個單字'}</span><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">我不會，看答案</button></div>`}
     </div>`;
   }
   return '';
@@ -3192,7 +3194,7 @@ function answerCurrent(i) {
   renderPractice();
   if (state.settings.autoSpeak) {
     const text = q.fmt === 'v-meaning' || q.fmt === 'v-recall' || q.fmt === 'v-listen' || q.fmt === 'v-reading' || q.fmt === 'v-kanji' ? q.speakWord : q.fullJp;
-    if (text) speak(text);
+    if (text) speak(text, speakOpts(q, text));
   }
 }
 function nextQuestion() {
@@ -3457,6 +3459,7 @@ const ACTIONS = {
     // before answering a grammar question the full sentence would give the answer away
     const text = q.audio || (e.done ? (q.fullJp || q.speakWord) : (q.fmt && q.fmt.startsWith('g-') ? '' : q.speakWord)) || '';
     if (!text) { toast('作答後可以聽整句。'); return; }
+    if (text === q.speakWord && q.speakReading) { speak(text, { reading: q.speakReading }); return; }
     if (q.audioScript && text === q.audio) speakScript(text); else speak(text);
   },
   'speak-full': () => { const e = currentEntry(); if (e && e.q) speak(e.q.fullJp); },
@@ -3467,6 +3470,12 @@ const ACTIONS = {
     e.spell.push(i);
     const typed = e.spell.map(k => e.q.tiles[k]).join(''); const want = e.q.options[0].text;
     if ([...typed].length >= [...want].length) finishCustom(e, typed === want, typed); else renderPractice();
+  },
+  'custom-giveup': () => {
+    const e = currentEntry(); if (!e || e.done || !e.q || !e.q.custom) return;
+    if (e.q.custom === 'v-spell') { e.spell = [...e.q.options[0].text].map(ch => e.q.tiles.indexOf(ch)); }   // show the right spelling
+    if (e.q.custom === 'v-match') { e.match = { sel: null, matched: e.q.pairs.map(p => p[0]), wrong: (e.match || {}).wrong || 0 }; }   // reveal every pair
+    finishCustom(e, false, '（看了答案）');
   },
   'spell-back': () => { const e = currentEntry(); if (!e || e.done || !e.spell || !e.spell.length) return; e.spell.pop(); renderPractice(); },
   'match-word': (el) => { const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'v-match') return; e.match = e.match || { sel: null, matched: [], wrong: 0 }; e.match.sel = e.match.sel === el.dataset.w ? null : el.dataset.w; renderPractice(); },
@@ -3479,7 +3488,7 @@ const ACTIONS = {
     m.sel = null;
     if (m.matched.length === e.q.pairs.length) finishCustom(e, m.wrong === 0, `配對時錯了 ${m.wrong} 次`); else renderPractice();
   },
-  speak: (el) => speak(el.dataset.text),
+  speak: (el) => speak(el.dataset.text, el.dataset.reading ? { reading: el.dataset.reading } : undefined),
   'ai-explain': () => aiExplainCurrent(),
   'report-item': () => reportCurrentItem(),
   'dismiss-notice': (el) => { state.notices = state.notices.filter(n => n.id !== el.dataset.id); saveState(); route(); },
@@ -4274,7 +4283,7 @@ function renderVocabList(view, params) {
       <td><div>${esc(v.m)}</div><div class="tiny muted">${esc(v.builtin ? `${v.lv}・${posLabel(v.p)}` : (v.posLabel || '自訂'))}</div></td>
       <td class="nowrap small">${r ? `${srsDots(r.b)}<div class="tiny muted">${r.due <= t ? '今天' : dueLabel(r).replace('複習', '')}</div>` : '<span class="muted">未學</span>'}</td>
       <td class="nowrap" style="text-align:right">
-        <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(v.r || jaPlain(v.w))}" aria-label="發音">${icon('speaker')}</button>
+        <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(jaPlain(v.w))}" data-reading="${esc(v.r && !HAS_KANJI.test(v.r) ? v.r : '')}" aria-label="發音">${icon('speaker')}</button>
         <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-remove" data-key="${esc(v.key)}">${v.builtin ? '隱藏' : '刪除'}</button>
       </td></tr>`;
   }).join('');
@@ -5941,30 +5950,34 @@ function speakUtterance(text, gender, token) {
   });
 }
 
-function engineBlob(text, gender) {
+function engineBlob(text, gender, opt = {}) {
   const cfg = ttsConfig();
   const rate = state.settings.speechRate || 1;
+  const pin = opt.reading ? `|r:${opt.reading}` : '';
   const ck = cfg.engine === 'deepgram' ? `dg|${gender === 'm' ? cfg.deepgramVoiceM : cfg.deepgramVoice}|${cfg.kanaReadings}|${text}`
     : cfg.engine === 'google_tts' ? `gg|${gender === 'm' ? cfg.googleVoiceM : cfg.googleVoice}|${rate}|${text}`
     : cfg.engine === 'voicevox' ? `vv|${gender === 'm' ? cfg.voicevoxSpeakerM : cfg.voicevoxSpeaker}|${rate}|${text}`
     : cfg.engine === 'openai_tts' ? `oa|${cfg.openaiModel}|${gender === 'm' ? cfg.openaiVoiceM : cfg.openaiVoice}|${rate}|${text}` : '';
   if (!ck) return Promise.resolve(null);
-  if (audioCache.has(ck)) return Promise.resolve(audioCache.get(ck));
-  if (audioPending.has(ck)) return audioPending.get(ck);
-  const p = fetchEngineBlob(cfg, text, gender).then(blob => { audioCache.set(ck, blob); return blob; }).finally(() => audioPending.delete(ck));
-  audioPending.set(ck, p);
+  const key = ck + pin;
+  if (audioCache.has(key)) return Promise.resolve(audioCache.get(key));
+  if (audioPending.has(key)) return audioPending.get(key);
+  const p = fetchEngineBlob(cfg, text, gender, opt).then(blob => { audioCache.set(key, blob); return blob; }).finally(() => audioPending.delete(key));
+  audioPending.set(key, p);
   return p;
 }
-async function fetchEngineBlob(cfg, text, gender) {
+async function fetchEngineBlob(cfg, text, gender, opt = {}) {
   const rate = state.settings.speechRate || 1;
-  const spoken = cfg.kanaReadings === 'off' ? text : kanaReadings(text);   // engines without SSML get the readings as kana
+  // sentences: engines without SSML get known readings as kana; a single word keeps its written form (see speak)
+  const spoken = opt.reading || cfg.kanaReadings === 'off' ? text : kanaReadings(text);
+  const ssml = opt.reading ? `<speak><sub alias="${esc(opt.reading)}">${esc(text)}</sub></speak>` : ssmlReadings(text);
   if (cfg.engine === 'google_tts') {
     const key = (cfg.googleKey || '').trim();
     if (!key) throw new Error('沒有 Google Cloud API Key');
     const name = gender === 'm' ? cfg.googleVoiceM : cfg.googleVoice;
     const resp = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(key)}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input: { ssml: ssmlReadings(text) }, voice: { languageCode: 'ja-JP', name }, audioConfig: { audioEncoding: 'MP3', speakingRate: rate } })
+      body: JSON.stringify({ input: { ssml }, voice: { languageCode: 'ja-JP', name }, audioConfig: { audioEncoding: 'MP3', speakingRate: rate } })
     });
     if (!resp.ok) throw new Error(`Google TTS HTTP ${resp.status}`);
     const j = await resp.json();
@@ -6033,11 +6046,11 @@ function playUrl(url, token, rate = 1) {
   });
 }
 
-async function speakLine(text, gender, token) {
+async function speakLine(text, gender, token, opt) {
   const cfg = ttsConfig();
   if (cfg.engine && cfg.engine !== 'browser_neural') {
     try {
-      const blob = await engineBlob(text, gender);
+      const blob = await engineBlob(text, gender, opt);
       if (token !== speechToken) return;
       if (blob) {
         const url = URL.createObjectURL(blob);
@@ -6054,12 +6067,15 @@ async function speakLine(text, gender, token) {
   await speakBrowser(text, gender, token);
 }
 
-function speak(text) {
+// opt.reading: the exact reading of a single word. The word is sent in its written form (a lone kana string is
+// read with odd pitch and segmentation) and the reading is pinned: SSML alias on Google, otherwise trusted to the model.
+function speak(text, opt) {
   const t = ttsText(text);
   if (!t) return Promise.resolve();
   stopSpeaking();
-  return speakLine(t, '', speechToken);
+  return speakLine(t, '', speechToken, opt);
 }
+function speakOpts(q, text) { return q && text && text === q.speakWord && q.speakReading ? { reading: q.speakReading } : undefined; }
 
 // Listening scripts: one line per speaker, 「男：」 lines in a male voice when one is available
 async function speakScript(script) {
@@ -6085,7 +6101,8 @@ async function speakScript(script) {
 async function playVocabAudio(v, mode = 'word') {
   if (!v) return;
   const file = mode === 'ex' ? (v.audioEx || '') : (v.audioWord || '');
-  const text = mode === 'ex' ? exPlain(v.ex || v.w || '') : (v.r && !HAS_KANJI.test(v.r) ? v.r : jaPlain(v.w));
+  const text = mode === 'ex' ? exPlain(v.ex || v.w || '') : jaPlain(v.w);
+  const reading = mode === 'word' && v.r && !HAS_KANJI.test(v.r) && v.r !== jaPlain(v.w) ? v.r : '';
   if (file) {
     const url = await AnkiMedia.url(file);
     if (url) {
@@ -6095,7 +6112,7 @@ async function playVocabAudio(v, mode = 'word') {
     }
   }
   if (mode === 'ex' && !v.ex) return;
-  speak(text);
+  speak(text, reading ? { reading } : undefined);
 }
 
 function testVoice() {

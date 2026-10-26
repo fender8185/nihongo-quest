@@ -323,6 +323,34 @@ def test_deepgram_gets_kana_for_known_readings_unless_turned_off(b):
     assert r['off'] == '三本の鉛筆があります。', r
     assert r['fn'] == 'きょうはなんようびですか。', r
 
+# ---- 2026-10-26: single words are spoken from their written form with the reading pinned; spelling/matching can give up ----
+def test_single_words_are_sent_as_kanji_with_the_reading_pinned(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && /[一-龯]/.test(x.w) && x.r && meaningOptions(x)); const w = jaPlain(v.w);
+      const c = ttsConfig(); c.engine = 'google_tts'; c.googleKey = 'K'; saveState();
+      return speak(w, { reading: v.r }).then(() => { c.engine = 'deepgram'; c.deepgramKey = 'D'; return speak(w, { reading: v.r }); }).then(() => {
+        const q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); const calls = []; const orig = speak; speak = (t, o) => { calls.push([t, o && o.reading]); return Promise.resolve(); };
+        startSession('items', { items: [v] }); const e = currentEntry(); e.previewDone = true; e.q = q; renderPractice(); ACTIONS.replay(); SESSION = null; document.body.classList.remove('practicing'); speak = orig;
+        return JSON.stringify({ google: __calls[0].body.input.ssml, deepgram: __calls[1].body.text, w, r: v.r, speakWord: q.speakWord, speakReading: q.speakReading, replay: calls[calls.length - 1] }); }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE_FETCH), ("eval", "location.hash = '#/today'; true"), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert r['google'] == f"<speak><sub alias=\"{r['r']}\">{r['w']}</sub></speak>", r
+    assert r['deepgram'] == r['w'], r
+    assert r['speakWord'] == r['w'] and r['speakReading'] == r['r'] and r['replay'] == [r['w'], r['r']], r
+
+def test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 3 && x.r.length <= 6 && meaningOptions(x) && recallOptions(x)); srsAnswer(v.key, true);
+      startSession('items', { items: [v, v] }); let e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-spell' }); renderPractice();
+      document.querySelector('[data-act=custom-giveup]').click();
+      const out = { spellDone: e.done, spellWrong: e.chosen !== e.q.answer, spellShows: document.querySelector('.fb-head').textContent.includes(v.r), f: state.srs[v.key].f['v-spell'] };
+      nextQuestion(); e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-match' }); renderPractice();
+      document.querySelector('[data-act=custom-giveup]').click();
+      out.matchDone = e.done; out.matchWrong = e.chosen !== e.q.answer; out.revealed = document.querySelectorAll('.match-word.matched').length;
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", "location.hash = '#/today'; true"), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert r['spellDone'] and r['spellWrong'] and r['spellShows'] and r['f'] == [0, 1], r
+    assert r['matchDone'] and r['matchWrong'] and r['revealed'] == 4, r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -334,7 +362,8 @@ if __name__ == "__main__":
              test_wrong_non_vocab_item_waits_until_tomorrow_but_wrong_vocab_stays_due_today, test_reinforcement_skips_grammar_and_kanji_answered_today_but_not_vocab,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
-             test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off]
+             test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
+             test_single_words_are_sent_as_kanji_with_the_reading_pinned, test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong]
     failed = 0
     try:
         for t in tests:
