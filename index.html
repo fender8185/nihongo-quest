@@ -372,6 +372,7 @@ tr.lag td { color: var(--warn, #d08a00); font-weight: 600; }
 .gauge .track { fill: none; stroke: var(--heat-0); }
 .gauge path.arc { fill: none; outline: none; } .gauge path.arc:hover, .gauge path.arc:focus { filter: brightness(1.15); }
 .gauge .arc.seen { stroke: var(--gauge-seen); } .gauge .arc.learned { stroke: var(--heat-3); } .gauge .arc.mastered { stroke: var(--heat-4); }
+.gauge .tick { stroke: var(--fg-3); stroke-width: 1; opacity: .55; } .gauge .tick-l { fill: var(--fg-3); font-size: 8px; opacity: .8; }
 .gauge .needle { stroke: var(--fg); stroke-width: 2.5; stroke-linecap: round; } .gauge .pivot { fill: var(--fg); }
 .gauge .hero { fill: var(--fg); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; } .gauge .hero-l { fill: var(--fg-3); font-size: 11px; }
 .gauge .glegend { text-align: center; } .gauge .glegend span { white-space: nowrap; display: inline-block; margin: 0 5px; } .seg-dot.gseen { background: var(--gauge-seen); }
@@ -786,16 +787,16 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '45';   // keep equal to the number in sw.js CACHE ('nq-v45'); scripts/test.sh checks it
+const APP_VERSION = '46';   // keep equal to the number in sw.js CACHE ('nq-v46'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '45', from: '36', date: '2026-10-27', items: [
+  { v: '46', from: '36', date: '2026-10-27', items: [
     '單字庫整理：新增「敬語」主題（16 個尊敬語／謙讓語動詞）、36 個常用 N5 字、26 個常用 N4 字；16 組「名詞＋する」合成一張卡（紀錄自動合併）；相同中文的字加上區別；漢字表新增 58 個常見 N4 漢字（共 342 個）。',
     '全部 1461 個內建單字每字兩句例句：填空、讀音、寫法與朗讀在兩句之間輪替，預習卡與字卡同時顯示兩句。',
     '單字新增「我會了」：單字表、字卡、作答回饋都可以按，直接標成已熟練、約六週後再確認；之後答錯就回到正常規則，單字表可「取消熟練」。',
-    '學習分析改版：最上方是單字與文法的「總進度」半圓指針圖（三段顏色＝熟練度，指針＝加權分數），接著是過去 7 天的練習量堆疊圖；新增「每日練習量建議」，依題庫剩餘量與考前天數推算，可一鍵套用到學習設定。',
+    '學習分析改版：最上方是單字與文法的「總進度」半圓指針圖（三段顏色＝熟練度，指針＝加權分數），量表上有一道淺刻度標出 N5 與 N4 的分界；接著是過去 7 天的練習量堆疊圖；新增「每日練習量建議」，依題庫剩餘量與考前天數推算，可一鍵套用到學習設定。',
     '配對題：配錯時兩個按鈕閃紅框；點日文字會朗讀；作答後的解析列出四組字、讀音與意思。',
     '工具與 AI 頁底部新增「API 申請說明」（Google Cloud TTS、Gemini、OpenAI、Deepgram、VOICEVOX、Ollama），設定頁的金鑰欄位有「申請方式」連過去；語音「測試連線」顯示服務回傳的實際錯誤與處理建議。',
     '版本紀錄改為按日期分組，只寫最終狀態。'
@@ -5791,11 +5792,12 @@ function weekPractice(days = 7) {
 }
 // overall progress of a bank in three mastery steps (counts) plus a weighted score: 已學 1・熟悉 2・熟練 3 points out of 3 per item
 function progressTotals(kind) {
-  const t = { kind, total: 0, seen: 0, learned: 0, mastered: 0 };
+  const t = { kind, total: 0, seen: 0, learned: 0, mastered: 0, n5: 0 };   // n5: how many of the items are N5 (a faint mark on the gauge)
+  const n5Units = new Set(DATA.UNITS.filter(u => u.lv === 'N5').map(u => u.id));
   if (kind === 'v') {
-    REG.vocab.filter(v => v.builtin).forEach(v => { t.total++; const r = state.srs[v.key]; if (!r) return; const l = srsLevelLabel(r, v.key); if (l === '已熟練') t.mastered++; else if (r.b >= SRS_LEARNED) t.learned++; else t.seen++; });
+    REG.vocab.filter(v => v.builtin).forEach(v => { t.total++; if (v.lv === 'N5') t.n5++; const r = state.srs[v.key]; if (!r) return; const l = srsLevelLabel(r, v.key); if (l === '已熟練') t.mastered++; else if (r.b >= SRS_LEARNED) t.learned++; else t.seen++; });
   } else {
-    REG.grammar.forEach(g => { t.total++; const r = state.srs[g.key]; if (!r) return; if ((r.ok || 0) >= 3) t.mastered++; else if ((r.ok || 0) >= 1) t.learned++; else t.seen++; });
+    REG.grammar.forEach(g => { t.total++; if (n5Units.has(g.u)) t.n5++; const r = state.srs[g.key]; if (!r) return; if ((r.ok || 0) >= 3) t.mastered++; else if ((r.ok || 0) >= 1) t.learned++; else t.seen++; });
   }
   t.pct = t.total ? Math.round((t.seen + t.learned * 2 + t.mastered * 3) / (t.total * 3) * 100) : 0;
   return t;
@@ -5815,12 +5817,18 @@ function gaugeHtml(t, title, labels) {
     if (a1 - a0 < gap) a1 = Math.min(1, a0 + gap);   // a tiny count still shows as a sliver
     paths.push(`<path class="arc ${cls}" d="${arc(a0, a1)}" stroke-width="${W}" tabindex="0" data-tip-title="${esc(label)}：${n}" data-tip-body="占 ${Math.round(n / t.total * 100)}%"></path>`);
   });
+  // faint tick where the N5 items end, with N5 / N4 labels on either side just outside the ring
+  const tf = t.total && t.n5 > 0 && t.n5 < t.total ? t.n5 / t.total : null;
+  const tick = tf === null ? '' : (() => { const a = Math.PI * (1 - tf); const rr = (r2) => [C + r2 * Math.cos(a), C - r2 * Math.sin(a)];
+    const [x0, y0] = rr(R - W / 2 - 3), [x1, y1] = rr(R + W / 2 + 3); const off = 0.09; const al = Math.PI * (1 - tf + off), ar = Math.PI * (1 - tf - off);
+    const lab = (ang, txt) => `<text class="tick-l" x="${(C + (R + W / 2 + 9) * Math.cos(ang)).toFixed(1)}" y="${(C - (R + W / 2 + 9) * Math.sin(ang) + 3).toFixed(1)}" text-anchor="middle">${txt}</text>`;
+    return `<line class="tick" data-f="${tf.toFixed(4)}" x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}"></line>${lab(al, 'N5')}${lab(ar, 'N4')}`; })();
   const [nx, ny] = (() => { const a = Math.PI * (1 - t.pct / 100); return [C + (R - W / 2 - 4) * Math.cos(a), C - (R - W / 2 - 4) * Math.sin(a)]; })();   // ends just inside the ring
   const legend = `<div class="glegend small muted mt-1"><span><i class="seg-dot mastered"></i>${esc(labels[0])} ${t.mastered}</span> <span><i class="seg-dot learned"></i>${esc(labels[1])} ${t.learned}</span> <span><i class="seg-dot gseen"></i>${esc(labels[2])} ${t.seen}</span> <span>未學 ${t.total - t.seen - t.learned - t.mastered}</span> <span>共 ${t.total}</span></div>`;
   return `<div class="gauge" data-kind="${t.kind}" data-total="${t.total}" data-seen="${t.seen}" data-learned="${t.learned}" data-mastered="${t.mastered}" data-pct="${t.pct}">
     <div class="small" style="text-align:center"><strong>${esc(title)}</strong></div>
-    <svg viewBox="0 0 200 146" role="img" aria-label="${esc(title)}總進度 ${t.pct}%：${esc(labels[0])} ${t.mastered}、${esc(labels[1])} ${t.learned}、${esc(labels[2])} ${t.seen}，共 ${t.total}">
-      <path class="track" d="${arc(0, 1)}" stroke-width="${W}"></path>${paths.join('')}
+    <svg viewBox="-6 0 212 146" role="img" aria-label="${esc(title)}總進度 ${t.pct}%：${esc(labels[0])} ${t.mastered}、${esc(labels[1])} ${t.learned}、${esc(labels[2])} ${t.seen}，共 ${t.total}">
+      <path class="track" d="${arc(0, 1)}" stroke-width="${W}"></path>${paths.join('')}${tick}
       <line class="needle" x1="${C}" y1="${C}" x2="${nx.toFixed(2)}" y2="${ny.toFixed(2)}"></line><circle class="pivot" cx="${C}" cy="${C}" r="4"></circle>
       <text class="hero" x="${C}" y="${C + 32}" text-anchor="middle">${t.pct}%</text><text class="hero-l" x="${C}" y="${C + 44}" text-anchor="middle">總進度</text>
     </svg>${legend}</div>`;
