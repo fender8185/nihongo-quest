@@ -108,10 +108,36 @@ def test_words_already_known_get_no_encore(b):
       SESSION = null; document.body.classList.remove('practicing'); return n; })()"""
     assert ev(b, js, [("eval", "location.hash = '#/today'; true")]) == 1
 
+# ---- review fixes ----
+def test_wrong_first_answer_keeps_requeue_and_encores_apart_and_requeue_does_not_count_as_a_pass(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.exZh && /[一-龯]/.test(x.w) && meaningOptions(x) && recallOptions(x));
+      const fill = REG.grammar.filter(g => !state.srs[g.key]).slice(0, 14);
+      startSession('items', { items: [v, ...fill] }); const e = currentEntry(); e.previewDone = true; const fmt1 = e.q.fmt;
+      answerCurrent((e.q.answer + 1) % e.q.options.length);
+      const pos = SESSION.entries.map((x, i) => x.item && x.item.key === v.key ? i : -1).filter(i => i >= 0);
+      const adjacent = pos.some((p, i) => i > 0 && p === pos[i - 1] + 1);
+      let guard = 0; while (!currentEntry().requeued && guard++ < 30) { if (!currentEntry().done) answerCurrent(currentEntry().q.answer); nextQuestion(); }
+      answerCurrent(currentEntry().q.answer);
+      const f = JSON.parse(JSON.stringify(state.srs[v.key].f)); SESSION = null; document.body.classList.remove('practicing');
+      return JSON.stringify({ pos, adjacent, f, fmt1 }); })()"""
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert len(r['pos']) == 4 and not r['adjacent'], r
+    assert r['f'] == {r['fmt1']: [0, 1]}, r
+
+def test_preview_card_only_speaks_when_auto_reading_is_on(b):
+    js = """(() => { const calls = []; const orig = speak; speak = (t) => calls.push(t);
+      const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x));
+      const run = () => { startSession('items', { items: [v] }); renderPractice(); return new Promise(r => setTimeout(r, 300)).then(() => { SESSION = null; document.body.classList.remove('practicing'); }); };
+      state.settings.autoSpeak = false;
+      return run().then(() => { const off = calls.length; state.settings.autoSpeak = true; return run().then(() => { speak = orig; return JSON.stringify({ off, on: calls.length - off }); }); }); })()"""
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r == {'off': 0, 'on': 1}, r
+
 TESTS = [test_themes_cover_every_builtin_word_once, test_theme_tab_lists_cards_and_opens_the_word_table, test_themed_practice_uses_only_that_theme,
          test_mastered_needs_three_passed_formats_for_words_only, test_answering_records_the_format_and_flash_ratings_count_as_one, test_unpassed_formats_are_preferred_on_review,
          test_new_word_shows_a_preview_card_before_its_question,
-         test_a_new_word_comes_back_twice_in_other_formats_without_rescheduling, test_no_encore_when_no_other_format_can_be_built, test_words_already_known_get_no_encore]
+         test_a_new_word_comes_back_twice_in_other_formats_without_rescheduling, test_no_encore_when_no_other_format_can_be_built, test_words_already_known_get_no_encore,
+         test_wrong_first_answer_keeps_requeue_and_encores_apart_and_requeue_does_not_count_as_a_pass, test_preview_card_only_speaks_when_auto_reading_is_on]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

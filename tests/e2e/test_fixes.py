@@ -216,7 +216,7 @@ def test_formal_exam_listening_options_play_on_click(b):
 def test_today_button_count_matches_the_session(b):
     js = """(() => { const out = []; for (const size of [20, 15, 25, 30]) { state.settings.sessionSize = size; saveState(); route();
       const btn = document.querySelector('[data-act=start-daily]'); const shown = Number((btn.textContent.match(/(\\d+) 題/) || [])[1]);
-      startSession('daily'); const actual = SESSION.entries.length; SESSION = null; document.body.classList.remove('practicing'); location.hash = '#/today';
+      startSession('daily'); const enc = 2 * SESSION.entries.filter(e => e.item.kind === 'v' && e.item.builtin && !state.srs[e.item.key]).length; const actual = SESSION.entries.length + enc; SESSION = null; document.body.classList.remove('practicing'); location.hash = '#/today';
       out.push([shown, actual]); } return JSON.stringify(out); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
     pairs = __import__('json').loads(out[-1])

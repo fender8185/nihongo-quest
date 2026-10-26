@@ -2723,11 +2723,15 @@ function usedFormats(key) {
 }
 // A word met for the first time comes back twice more in this session, each time in another format: once a few
 // questions later, once further on. Encores do not touch the SRS schedule; the first answer did that.
-function scheduleEncores(e) {
+// After a miss the 再練一次 copy takes the 3–5 window, so the encores move back to keep the word from appearing twice in a row.
+function scheduleEncores(e, ok) {
+  const shift = ok ? 0 : 3;
   const at = (lo, hi) => Math.min(SESSION.entries.length, SESSION.idx + lo + Math.floor(Math.random() * (hi - lo + 1)));
-  SESSION.entries.splice(at(3, 5), 0, { item: e.item, encore: true });
-  SESSION.entries.splice(at(8, 11), 0, { item: e.item, encore: true });
+  SESSION.entries.splice(at(3 + shift, 5 + shift), 0, { item: e.item, encore: true });
+  SESSION.entries.splice(at(8 + shift, 11 + shift), 0, { item: e.item, encore: true });
 }
+// How many encore questions a queue will add once its new words are answered (two per new built-in word).
+function encoreEstimate(items) { return 2 * items.filter(it => it.kind === 'v' && it.builtin && !state.srs[it.key]).length; }
 
 // Consistent furigana for options: readings come from the correct answer so that a wrong
 // conjugation is not given away by missing furigana.
@@ -2789,7 +2793,7 @@ function renderPractice() {
   const pct = Math.round(SESSION.idx / total * 100);
   if (e.preview && !e.previewDone) {
     view.innerHTML = previewHtml(e, pct, total);
-    if (!e.autoPlayedPreview) { e.autoPlayedPreview = true; setTimeout(() => speak(q.speakWord || jaPlain(e.item.w)), 150); }
+    if (!e.autoPlayedPreview) { e.autoPlayedPreview = true; if (state.settings.autoSpeak) setTimeout(() => speak(q.speakWord || jaPlain(e.item.w)), 150); }
     return;
   }
   const showZh = q.zhText && (state.settings.showZh || q.forceZh || e.zhShown);
@@ -2915,8 +2919,8 @@ function answerCurrent(i) {
     e.srs = srsAnswer(q.key, ok);
     if (e.srs.isNew) SESSION.stats.newCount++;
   }
-  if (q.kind === 'v' && q.fmt && q.fmt.startsWith('v-')) recordFormat(state.srs[q.key], q.fmt, ok);
-  if (e.srs && e.srs.isNew && q.kind === 'v' && !e.requeued) scheduleEncores(e);
+  if (q.kind === 'v' && q.fmt && q.fmt.startsWith('v-') && !e.requeued) recordFormat(state.srs[q.key], q.fmt, ok);   // a 再練一次 copy shows the answer first: not proof
+  if (e.srs && e.srs.isNew && q.kind === 'v' && !e.requeued) scheduleEncores(e, ok);
   if (q.fmt) {
     const f = state.statsFmt[q.fmt] || (state.statsFmt[q.fmt] = { ok: 0, ng: 0 });
     if (ok) f.ok++; else f.ng++;
@@ -3294,7 +3298,7 @@ function renderToday(view) {
   const extraN = exK + exL + exR;
   const extraText = [exK && `漢字 ${exK}`, exL && `聽力 ${exL}`, exR && `閱讀 ${exR}`].filter(Boolean).join('・');
   const size = state.settings.sessionSize;
-  const sessionN = reviewN + newN + extraN ? dailyQueue(size).items.length : 0;
+  const sessionN = reviewN + newN + extraN ? dailyQueue(size).items.length + encoreEstimate(dailyQueue(size).items) : 0;   // new words come back twice more
   const d = parseDate(t);
   const greeting = `${d.getMonth() + 1} 月 ${d.getDate()} 日（${weekdayZh(t)}）`;
 
