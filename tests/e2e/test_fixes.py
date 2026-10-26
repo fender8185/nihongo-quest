@@ -137,8 +137,8 @@ def test_deepgram_lines_are_prefetched_and_all_play_through_one_player(b):
 
 # ---- 2026-10-25 (3): kana option numbers, less next-day repetition, new grammar spread across points ----
 def test_first_correct_answer_waits_a_few_days_before_repeating(b):
-    js = """(() => { const t = todayStr(); const g = REG.grammar[0]; const g2 = REG.grammar[1];
-      const ok = srsAnswer(g.key, true); const ng = srsAnswer(g2.key, false);
+    js = """(() => { const t = todayStr(); const g = REG.grammar[0]; const v = REG.vocab.find(x => x.builtin);
+      const ok = srsAnswer(g.key, true); const ng = srsAnswer(v.key, false);
       return JSON.stringify({ okDays: daysBetween(t, ok.rec.due), ngDays: daysBetween(t, ng.rec.due) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
     r = __import__('json').loads(out[-1])
@@ -234,6 +234,28 @@ def APP_VERSION_IN_SW(r):
     ver = re.search(r"const APP_VERSION = '(\d+)'", html).group(1)
     return cache == ver and r['first'].startswith('v' + ver)
 
+# ---- 2026-10-26: grammar, listening, reading and kanji do not come back the same day ----
+def test_wrong_non_vocab_item_waits_until_tomorrow_but_wrong_vocab_stays_due_today(b):
+    js = """(() => { const t = todayStr(); const out = {};
+      const pick = { g: REG.grammar[0], l: REG.listen[0], r: REG.read[0], k: REG.kanji[0], v: REG.vocab.find(x => x.builtin) };
+      for (const [kind, it] of Object.entries(pick)) out[kind] = daysBetween(t, srsAnswer(it.key, false).rec.due);
+      return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert r == {'g': 1, 'l': 1, 'r': 1, 'k': 1, 'v': 0}, r
+
+def test_reinforcement_skips_grammar_and_kanji_answered_today_but_not_vocab(b):
+    # a first correct answer leaves an item at a low level and not yet due: exactly what the spare-slot filler looks for
+    js = """(() => { const g = REG.grammar[0]; const k = REG.kanji[0]; const v = REG.vocab.find(x => x.builtin);
+      [g, k, v].forEach(it => srsAnswer(it.key, true));
+      const low = [g, k, v].every(it => state.srs[it.key].b <= 2 && state.srs[it.key].due > todayStr());
+      const picked = reinforcementItems([g, k, v], new Set()).map(it => it.kind);
+      return JSON.stringify({ low, picked }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert r['low'], r
+    assert r['picked'] == ['v'], r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -241,7 +263,8 @@ if __name__ == "__main__":
              test_fresh_profile_starts_at_week_one, test_week_picker_sets_the_current_unit, test_deepgram_lines_are_prefetched_and_all_play_through_one_player,
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
-             test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history]
+             test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
+             test_wrong_non_vocab_item_waits_until_tomorrow_but_wrong_vocab_stays_due_today, test_reinforcement_skips_grammar_and_kanji_answered_today_but_not_vocab]
     failed = 0
     try:
         for t in tests:

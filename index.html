@@ -729,9 +729,10 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '9';   // keep equal to the number in sw.js CACHE ('nq-v9'); scripts/test.sh checks it
+const APP_VERSION = '10';   // keep equal to the number in sw.js CACHE ('nq-v10'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '10', date: '2026-10-26', items: ['文法、聽力、閱讀、漢字題同一天只出一次：答錯的隔天再出，補位時也不再拉回今天剛答過的題目。單字維持原本做法。'] },
   { v: '9', date: '2026-10-25', items: ['今日練習按鈕上的題數改為實際會出的題數，和點進去後一致。', '設定 › 外觀 新增版本紀錄。'] },
   { v: '8', date: '2026-10-25', items: ['聽力「只用聽的」選項改成逐一點選播放（即時應答、情境表達、正式模擬考），不再依序朗讀 1、2、3。', '外部語音引擎會預先抓取選項音檔，點了立即播放。'] },
   { v: '7', date: '2026-10-25', items: ['第一次答對的題目改為約 3 天後再複習，大幅減少隔天就重複出現的文法題。', '新文法題輪流跨不同考點，同一天不會連續出現同一個考點。'] },
@@ -1202,7 +1203,9 @@ function srsAnswer(key, correct, opt = {}) {
   r.n++;
   if (g > 1) { r.ok++; r.st++; } else { r.ng++; r.st = 0; if (before >= 2) r.lapse = (r.lapse || 0) + 1; }
   r.b = g === 1 ? Math.min(levelFromS(r.s), 1) : levelFromS(r.s);
-  r.due = g === 1 ? t : addDays(t, fsrsDays(r.s, key));
+  // A missed word comes back later the same day; grammar, listening, reading and kanji wait until tomorrow,
+  // because seeing the very same question again within hours only tests memory of the answer.
+  r.due = g === 1 ? (key.startsWith('v:') ? t : addDays(t, 1)) : addDays(t, fsrsDays(r.s, key));
   r.last = t;
   if ((r.lapse || 0) >= LEECH_LAPSES) r.leech = true;
   if (isNew) {
@@ -2453,9 +2456,11 @@ function newGrammarCandidates(unitIdOnly) {
     .sort((a, b) => unitOrder(a.u) - unitOrder(b.u) || (a.d || 2) - (b.d || 2));
   return sorted.concat(earlier);
 }
+// Low-level items that are not due yet, used to fill spare slots. Words may be drilled again the same day;
+// anything else answered today is left alone until tomorrow (see srsAnswer).
 function reinforcementItems(pool, exclude) {
   const t = todayStr();
-  return pool.filter(it => { const r = state.srs[it.key]; return r && r.due > t && r.b <= 2 && !exclude.has(it.key); })
+  return pool.filter(it => { const r = state.srs[it.key]; return r && r.due > t && r.b <= 2 && !exclude.has(it.key) && (it.kind === 'v' || r.last !== t); })
     .sort((a, b) => state.srs[a.key].due.localeCompare(state.srs[b.key].due) || state.srs[a.key].b - state.srs[b.key].b);
 }
 function adaptiveFactor() {
