@@ -753,9 +753,10 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '24';   // keep equal to the number in sw.js CACHE ('nq-v24'); scripts/test.sh checks it
+const APP_VERSION = '25';   // keep equal to the number in sw.js CACHE ('nq-v25'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '25', date: '2026-10-26', items: ['語音服務新增 Google Cloud TTS（Neural2／WaveNet），需自備 API Key。', '朗讀時已知讀音的字會指定讀法：Google 以 SSML 標註，Deepgram 與 OpenAI 改送假名（可在設定關閉），減少「三」之類的誤讀。'] },
   { v: '24', date: '2026-10-26', items: ['文法單元的進度條改為三段：答對 3 次以上、答對過、出現過但還沒答對（課程頁、單元頁、首頁目前單元）。'] },
   { v: '23', date: '2026-10-26', items: ['例句都有播放鍵：新字預習卡、單字題作答後的例句，練習頁底部也多一顆「例句」。'] },
   { v: '22', date: '2026-10-26', items: ['設定等彈出視窗改為標題固定、內容區捲動，高度改以手機實際可見範圈計算，瀏覽器工具列不再蓋住關閉鍵與分頁；手機版底部多一顆關閉。'] },
@@ -4959,16 +4960,22 @@ function settingsSpeech() {
   if (c.engine === 'browser_neural') {
     engine = voices.length ? selRow('browserVoiceURI', '瀏覽器語音', 'Edge 的 Nanami／Keita（Natural）或 Chrome 的 Google 日本語 聽起來最自然。', voiceOpts, 'tts-cfg')
       : '<div class="banner warn mt-3">這個瀏覽器沒有日語語音。聽力題會自動停用；可以改用 Edge、Chrome，或在下面選擇其他語音服務。</div>';
+  } else if (c.engine === 'google_tts') {
+    engine = textRow('googleKey', 'Google Cloud API Key', '在 Google Cloud 啟用 Text-to-Speech API 後建立金鑰，建議限制只能用這個 API。每月前 100 萬字元免費。Key 只存在這個瀏覽器裡。', 'tts-cfg', { secret: true })
+      + selRow('googleVoice', '主要聲音', '', GOOGLE_VOICES, 'tts-cfg') + selRow('googleVoiceM', '對話中的男聲', '', GOOGLE_VOICES, 'tts-cfg')
+      + '<div class="hint mt-2">已知讀音的字會以 SSML 指定讀法（例如 三本→さんぼん），漢字保留給模型判斷語調。</div>';
   } else if (c.engine === 'deepgram') {
     engine = textRow('deepgramKey', 'Deepgram API Key', '只存在這個瀏覽器裡。', 'tts-cfg', { secret: true })
-      + selRow('deepgramVoice', '主要聲音', '', DEEPGRAM_VOICES, 'tts-cfg') + selRow('deepgramVoiceM', '對話中的男聲', '', DEEPGRAM_VOICES, 'tts-cfg');
+      + selRow('deepgramVoice', '主要聲音', '', DEEPGRAM_VOICES, 'tts-cfg') + selRow('deepgramVoiceM', '對話中的男聲', '', DEEPGRAM_VOICES, 'tts-cfg')
+      + selRow('kanaReadings', '已知讀音的字改用假名送出', '例如 三本 送成 さんぼん，避免模型唸錯；其餘保留漢字。', [['on', '開'], ['off', '關']], 'tts-cfg');
   } else if (c.engine === 'voicevox') {
     engine = textRow('voicevoxUrl', 'VOICEVOX 位址', '需要在電腦上執行 VOICEVOX（預設 http://localhost:50021）。', 'tts-cfg', { ph: 'http://localhost:50021' })
       + selRow('voicevoxSpeaker', '主要聲音', '', VOICEVOX_SPEAKERS, 'tts-cfg') + selRow('voicevoxSpeakerM', '對話中的男聲', '', VOICEVOX_SPEAKERS, 'tts-cfg');
   } else if (c.engine === 'openai_tts') {
     engine = textRow('openaiKey', 'OpenAI API Key', '留空時會使用 AI 設定中的 OpenAI Key。', 'tts-cfg', { secret: true })
       + selRow('openaiModel', '模型', '', [['tts-1-hd', 'tts-1-hd（音質較好）'], ['tts-1', 'tts-1（較快）']], 'tts-cfg')
-      + selRow('openaiVoice', '主要聲音', '', OPENAI_VOICES, 'tts-cfg') + selRow('openaiVoiceM', '對話中的男聲', '', OPENAI_VOICES, 'tts-cfg');
+      + selRow('openaiVoice', '主要聲音', '', OPENAI_VOICES, 'tts-cfg') + selRow('openaiVoiceM', '對話中的男聲', '', OPENAI_VOICES, 'tts-cfg')
+      + selRow('kanaReadings', '已知讀音的字改用假名送出', '例如 三本 送成 さんぼん，避免模型唸錯；其餘保留漢字。', [['on', '開'], ['off', '關']], 'tts-cfg');
   }
   return `
     ${boolRow('autoSpeak', '作答後自動朗讀', '答完題目會念出正確的單字或整句。')}
@@ -5454,10 +5461,13 @@ Object.assign(ACTIONS, {
 const TTS_DEFAULT = {
   engine: 'browser_neural', browserVoiceURI: '',
   deepgramKey: '', deepgramVoice: 'aura-2-izanami-ja', deepgramVoiceM: 'aura-2-fujin-ja',
+  googleKey: '', googleVoice: 'ja-JP-Neural2-B', googleVoiceM: 'ja-JP-Neural2-C',
+  kanaReadings: 'on',   // Deepgram / OpenAI: send known readings as kana so 三本 is さんぼん, not whatever the model guesses
   voicevoxUrl: 'http://localhost:50021', voicevoxSpeaker: '2', voicevoxSpeakerM: '13',
   openaiKey: '', openaiModel: 'tts-1-hd', openaiVoice: 'nova', openaiVoiceM: 'onyx'
 };
-const TTS_ENGINES = [['browser_neural', '瀏覽器內建語音（免設定）'], ['deepgram', 'Deepgram Aura-2'], ['voicevox', 'VOICEVOX（本機）'], ['openai_tts', 'OpenAI TTS']];
+const TTS_ENGINES = [['browser_neural', '瀏覽器內建語音（免設定）'], ['google_tts', 'Google Cloud TTS（Neural2）'], ['deepgram', 'Deepgram Aura-2'], ['voicevox', 'VOICEVOX（本機）'], ['openai_tts', 'OpenAI TTS']];
+const GOOGLE_VOICES = [['ja-JP-Neural2-B', 'Neural2 B（女聲）'], ['ja-JP-Neural2-C', 'Neural2 C（男聲）'], ['ja-JP-Neural2-D', 'Neural2 D（男聲）'], ['ja-JP-Wavenet-A', 'WaveNet A（女聲）'], ['ja-JP-Wavenet-B', 'WaveNet B（女聲）'], ['ja-JP-Wavenet-C', 'WaveNet C（男聲）'], ['ja-JP-Wavenet-D', 'WaveNet D（男聲）']];
 const DEEPGRAM_VOICES = [['aura-2-izanami-ja', 'イザナミ（女聲）'], ['aura-2-uzume-ja', 'ウズメ（女聲）'], ['aura-2-ama-ja', 'アマ（女聲）'], ['aura-2-fujin-ja', 'フウジン（男聲）'], ['aura-2-ebisu-ja', 'エビス（男聲）']];
 const VOICEVOX_SPEAKERS = [['2', '四国めたん（女聲）'], ['8', '春日部つむぎ（女聲）'], ['14', '冥鳴ひまり（女聲）'], ['3', 'ずんだもん'], ['13', '青山龍星（男聲）']];
 const OPENAI_VOICES = [['nova', 'Nova（女聲）'], ['shimmer', 'Shimmer（女聲）'], ['alloy', 'Alloy（中性）'], ['onyx', 'Onyx（男聲）']];
@@ -5469,6 +5479,19 @@ function ttsConfig() {
 }
 
 // Text that should be read aloud: readings resolved (来[こ]ない → こない), markup and blanks removed
+// Readings we are sure of (the furigana dictionary, bracket readings, counters) applied to a sentence for speech.
+// readingSegments → ['机' → つくえ, 'の', '上' → うえ …]; kanaReadings swaps them for kana (engines without SSML);
+// ssmlReadings keeps the kanji for the model's prosody and pins the pronunciation with <sub alias>.
+const UNESC = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
+function unesc(s) { return String(s || '').replace(/&(amp|lt|gt|quot|#39);/g, (m) => UNESC[m]); }
+function readingSegments(text) {
+  const html = furi(text);
+  const out = []; const re = /<ruby[^>]*>([^<]+)<rt>([^<]+)<\/rt><\/ruby>|<[^>]+>|([^<]+)/g; let m;
+  while ((m = re.exec(html))) { if (m[1] !== undefined) out.push({ k: unesc(m[1]), r: unesc(m[2]) }); else if (m[3]) out.push(unesc(m[3])); }
+  return out;
+}
+function kanaReadings(text) { return readingSegments(text).map(x => typeof x === 'string' ? x : x.r).join(''); }
+function ssmlReadings(text) { return '<speak>' + readingSegments(text).map(x => typeof x === 'string' ? esc(x) : `<sub alias="${esc(x.r)}">${esc(x.k)}</sub>`).join('') + '</speak>'; }
 function ttsText(s) {
   return jaKana(String(s || ''))
     .replace(/<[^>]+>/g, '')
@@ -5609,7 +5632,8 @@ function speakUtterance(text, gender, token) {
 function engineBlob(text, gender) {
   const cfg = ttsConfig();
   const rate = state.settings.speechRate || 1;
-  const ck = cfg.engine === 'deepgram' ? `dg|${gender === 'm' ? cfg.deepgramVoiceM : cfg.deepgramVoice}|${text}`
+  const ck = cfg.engine === 'deepgram' ? `dg|${gender === 'm' ? cfg.deepgramVoiceM : cfg.deepgramVoice}|${cfg.kanaReadings}|${text}`
+    : cfg.engine === 'google_tts' ? `gg|${gender === 'm' ? cfg.googleVoiceM : cfg.googleVoice}|${rate}|${text}`
     : cfg.engine === 'voicevox' ? `vv|${gender === 'm' ? cfg.voicevoxSpeakerM : cfg.voicevoxSpeaker}|${rate}|${text}`
     : cfg.engine === 'openai_tts' ? `oa|${cfg.openaiModel}|${gender === 'm' ? cfg.openaiVoiceM : cfg.openaiVoice}|${rate}|${text}` : '';
   if (!ck) return Promise.resolve(null);
@@ -5621,11 +5645,26 @@ function engineBlob(text, gender) {
 }
 async function fetchEngineBlob(cfg, text, gender) {
   const rate = state.settings.speechRate || 1;
+  const spoken = cfg.kanaReadings === 'off' ? text : kanaReadings(text);   // engines without SSML get the readings as kana
+  if (cfg.engine === 'google_tts') {
+    const key = (cfg.googleKey || '').trim();
+    if (!key) throw new Error('沒有 Google Cloud API Key');
+    const name = gender === 'm' ? cfg.googleVoiceM : cfg.googleVoice;
+    const resp = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(key)}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ input: { ssml: ssmlReadings(text) }, voice: { languageCode: 'ja-JP', name }, audioConfig: { audioEncoding: 'MP3', speakingRate: rate } })
+    });
+    if (!resp.ok) throw new Error(`Google TTS HTTP ${resp.status}`);
+    const j = await resp.json();
+    const bin = atob(j.audioContent || ''); const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: 'audio/mpeg' });
+  }
   if (cfg.engine === 'deepgram') {
     if (!cfg.deepgramKey) throw new Error('沒有 Deepgram API Key');
     const model = gender === 'm' ? cfg.deepgramVoiceM : cfg.deepgramVoice;
     const resp = await fetch(`https://api.deepgram.com/v1/speak?model=${encodeURIComponent(model)}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Token ${cfg.deepgramKey.trim()}` }, body: JSON.stringify({ text })
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Token ${cfg.deepgramKey.trim()}` }, body: JSON.stringify({ text: spoken })
     });
     if (!resp.ok) throw new Error(`Deepgram HTTP ${resp.status}`);
     return resp.blob();
@@ -5648,7 +5687,7 @@ async function fetchEngineBlob(cfg, text, gender) {
     const voice = gender === 'm' ? cfg.openaiVoiceM : cfg.openaiVoice;
     const resp = await fetch('https://api.openai.com/v1/audio/speech', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model: cfg.openaiModel || 'tts-1-hd', voice, input: text, speed: rate })
+      body: JSON.stringify({ model: cfg.openaiModel || 'tts-1-hd', voice, input: spoken, speed: rate })
     });
     if (!resp.ok) throw new Error(`OpenAI TTS HTTP ${resp.status}`);
     return resp.blob();

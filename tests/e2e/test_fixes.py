@@ -130,9 +130,9 @@ def test_week_picker_sets_the_current_unit(b):
 
 def test_deepgram_lines_are_prefetched_and_all_play_through_one_player(b):
     out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE_DEEPGRAM),
-        ("eval", f"speakScript('{SCRIPT}').then(() => JSON.stringify({{ calls: __dg.calls.map(c => c.text), spread: Math.max(...__dg.calls.map(c => c.at)) - Math.min(...__dg.calls.map(c => c.at)), played: __dg.played.length, oneEl: __dg.played.every(p => p.el === __dg.played[0].el), blob: __dg.played.every(p => p.src === 'blob:') }}))")], timeout=40)
+        ("eval", f"speakScript('{SCRIPT}').then(() => JSON.stringify({{ calls: __dg.calls.map(c => c.text), want: {__import__('json').dumps(LINES, ensure_ascii=False)}.map(kanaReadings), spread: Math.max(...__dg.calls.map(c => c.at)) - Math.min(...__dg.calls.map(c => c.at)), played: __dg.played.length, oneEl: __dg.played.every(p => p.el === __dg.played[0].el), blob: __dg.played.every(p => p.src === 'blob:') }}))")], timeout=40)
     r = __import__('json').loads(out[-1])
-    assert r['calls'] == LINES, r                     # each line fetched exactly once
+    assert r['calls'] == r['want'] and len(r['calls']) == len(LINES), r   # each line fetched exactly once, with known readings as kana
     assert r['spread'] < 100, r                        # all fetches start together, not one after the other
     assert r['played'] == 4 and r['oneEl'] and r['blob'], r
 
@@ -297,6 +297,32 @@ def test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close(b)
     assert r['scrolled'] and r['before'] == r['after'], r
     assert r['svh'] and r['noBlur'] and r['foot'] and r['closedByFoot'], r
 
+# ---- 2026-10-26: Google Cloud TTS engine; known readings sent as SSML aliases / kana ----
+FAKE_FETCH = """window.__calls = []; window.fetch = async (url, opt) => { __calls.push({ url: String(url), body: opt && opt.body ? JSON.parse(opt.body) : null }); return { ok: true, status: 200, json: async () => ({ audioContent: btoa('abc') }), blob: async () => new Blob(['abc']) }; }; true"""
+
+def test_google_tts_engine_sends_ssml_with_known_readings(b):
+    js = """(() => { const c = ttsConfig(); c.engine = 'google_tts'; c.googleKey = 'K'; saveState();
+      return engineBlob('机の上に本があります。', '').then(blob => engineBlob('はい。', 'm').then(() => {
+        openSettings('speech'); const ui = { key: !!document.querySelector('[data-key=googleKey]'), voice: !!document.querySelector('[data-key=googleVoice]') }; closeModal();
+        return JSON.stringify({ blob: blob instanceof Blob && blob.size > 0, url: __calls[0].url, body: __calls[0].body, male: __calls[1].body.voice.name, ui, avail: speechAvailable() }); })); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE_FETCH), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert r['blob'] and r['url'].startswith('https://texttospeech.googleapis.com/v1/text:synthesize?key=K'), r
+    body = r['body']
+    assert body['voice'] == {'languageCode': 'ja-JP', 'name': 'ja-JP-Neural2-B'} and body['audioConfig']['audioEncoding'] == 'MP3', r
+    assert body['input']['ssml'].startswith('<speak>') and '<sub alias="つくえ">机</sub>' in body['input']['ssml'] and '<sub alias="ほん">本</sub>' in body['input']['ssml'], r
+    assert r['male'] == 'ja-JP-Neural2-C' and r['ui'] == {'key': True, 'voice': True} and r['avail'], r
+
+def test_deepgram_gets_kana_for_known_readings_unless_turned_off(b):
+    js = """(() => { const c = ttsConfig(); c.engine = 'deepgram'; c.deepgramKey = 'D'; saveState();
+      return engineBlob('三本の鉛筆があります。', '').then(() => { c.kanaReadings = 'off'; return engineBlob('三本の鉛筆があります。', ''); }).then(() =>
+        JSON.stringify({ on: __calls[0].body.text, off: __calls[1].body.text, fn: kanaReadings('今日は何曜日ですか。') })); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE_FETCH), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert 'さんぼん' in r['on'] and 'えんぴつ' in r['on'] and not __import__('re').search('[一-龯]', r['on']), r
+    assert r['off'] == '三本の鉛筆があります。', r
+    assert r['fn'] == 'きょうはなんようびですか。', r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -307,7 +333,8 @@ if __name__ == "__main__":
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
              test_wrong_non_vocab_item_waits_until_tomorrow_but_wrong_vocab_stays_due_today, test_reinforcement_skips_grammar_and_kanji_answered_today_but_not_vocab,
              test_heatmap_starts_at_the_week_the_learner_began,
-             test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close]
+             test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
+             test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off]
     failed = 0
     try:
         for t in tests:
