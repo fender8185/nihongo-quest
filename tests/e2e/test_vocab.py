@@ -139,6 +139,31 @@ TESTS = [test_themes_cover_every_builtin_word_once, test_theme_tab_lists_cards_a
          test_a_new_word_comes_back_twice_in_other_formats_without_rescheduling, test_no_encore_when_no_other_format_can_be_built, test_words_already_known_get_no_encore,
          test_wrong_first_answer_keeps_requeue_and_encores_apart_and_requeue_does_not_count_as_a_pass, test_preview_card_only_speaks_when_auto_reading_is_on]
 
+# ---- 2026-10-26 (2): two active themes feed the new-word order ----
+def test_new_words_come_from_two_themes_interleaved(b):
+    js = """(() => { const pool = REG.vocab.filter(v => v.builtin);
+      const th = activeThemes(pool, false); const c = newVocabCandidates(pool, false).slice(0, 8).map(vocabTheme);
+      REG.vocab.filter(v => v.builtin && v.lv === 'N5' && vocabTheme(v) === th[0]).forEach(v => { state.srs[v.key] = { b: 1, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5, f: {} }; });
+      const th2 = activeThemes(pool, false); const c2 = newVocabCandidates(pool, false).slice(0, 6).map(vocabTheme);
+      REG.vocab.filter(v => v.builtin && v.lv === 'N5' && vocabTheme(v) !== '副詞').forEach(v => { state.srs[v.key] = { b: 1, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5, f: {} }; });
+      const th3 = activeThemes(pool, false); const c3 = newVocabCandidates(pool, false).slice(0, 4);
+      return JSON.stringify({ th, c, th2, c2, th3, c3: c3.map(vocabTheme), lv3: c3.map(v => v.lv) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['th'] == ['問候', '指示'] and r['c'] == ['問候', '指示'] * 4, r
+    assert r['th2'] == ['指示', '代名詞'] and r['c2'] == ['指示', '代名詞'] * 3, r
+    assert r['th3'] == ['副詞'] and r['c3'] == ['副詞'] * 4 and r['lv3'] == ['N5'] * 4, r
+
+def test_custom_cards_still_alternate_with_builtins(b):
+    js = """(() => { state.vocab.push({ id: 'c1', w: '猫', r: 'ねこ', m: '貓' }, { id: 'c2', w: '犬', r: 'いぬ', m: '狗' }); buildRegistry();
+      const c = newVocabCandidates(REG.vocab, false).slice(0, 4).map(v => v.builtin ? 'b' : 'c'); return JSON.stringify(c); })()"""
+    assert ev(b, js) == '["b","c","b","c"]'
+
+def test_today_names_the_active_themes(b):
+    out = b.run([("nav", URL), ("wait", READY), ("eval", "location.hash = '#/today'; route(); document.querySelector('.plan-line').textContent")])
+    assert '今天的主題：問候・指示' in out[-1], out[-1]
+
+TESTS += [test_new_words_come_from_two_themes_interleaved, test_custom_cards_still_alternate_with_builtins, test_today_names_the_active_themes]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)

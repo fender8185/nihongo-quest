@@ -2452,9 +2452,28 @@ function vocabEligibleForDaily(v, n4Open) {
   if (mode === 'words') return isWordLike(v);
   return true;
 }
+// New words are introduced theme by theme, two themes at a time (interleaved, so a day's new words come in two
+// related groups rather than one long list of look-alikes). The pair is the first two themes, in THEME_ORDER,
+// that still have unintroduced words of the lowest open level (N5 first; N4 only once allowed).
+function themeRank(c) { const i = THEME_ORDER.indexOf(c); return i < 0 ? THEME_ORDER.length : i; }
+function activeThemes(pool, allowN4) {
+  const fresh = pool.filter(v => v.builtin && !state.srs[v.key] && (v.lv === 'N5' || allowN4));
+  const lv = fresh.some(v => v.lv === 'N5') ? 'N5' : 'N4';
+  const themes = [...new Set(fresh.filter(v => v.lv === lv).map(vocabTheme))].sort((a, b) => themeRank(a) - themeRank(b) || a.localeCompare(b, 'zh-Hant'));
+  return themes.slice(0, 2);
+}
 function newVocabCandidates(pool, allowN4) {
-  const built = pool.filter(v => v.builtin && !state.srs[v.key] && (v.lv === 'N5' || allowN4))
-    .sort((a, b) => ((a.lv === 'N4') - (b.lv === 'N4')) || (hashStr(a.id) % 9973) - (hashStr(b.id) % 9973));
+  const th = activeThemes(pool, allowN4);
+  const fresh = pool.filter(v => v.builtin && !state.srs[v.key] && (v.lv === 'N5' || allowN4));
+  const lv = fresh.some(v => v.lv === 'N5') ? 'N5' : 'N4';
+  const inLane = (v) => v.lv === lv && th.includes(vocabTheme(v));
+  const byId = (a, b) => a.id.localeCompare(b.id);
+  const lanes = th.map(c => fresh.filter(v => inLane(v) && vocabTheme(v) === c).sort(byId));
+  const rest = fresh.filter(v => !inLane(v))
+    .sort((a, b) => (a.lv === 'N4') - (b.lv === 'N4') || themeRank(vocabTheme(a)) - themeRank(vocabTheme(b)) || byId(a, b));
+  const built = [];
+  for (let i = 0; lanes.some(l => i < l.length); i++) lanes.forEach(l => { if (i < l.length) built.push(l[i]); });
+  built.push(...rest);
   const custom = pool.filter(v => !v.builtin && !state.srs[v.key]);
   const out = [];
   let i = 0; let j = 0;
@@ -3314,6 +3333,7 @@ function renderToday(view) {
       <div class="plan-line">
         <span>待複習 <b>${reviewN}</b>（單字 ${plan.dueV.length}・文法 ${plan.dueG.length}）</span>
         <span>新內容 <b>${newN}</b>（單字 ${plan.newV.length}・文法 ${plan.newG.length}）</span>
+        ${plan.newV.length ? `<span>今天的主題：${esc(activeThemes(REG.vocab, plan.n4Open).join('・'))}</span>` : ''}
         ${extraN ? `<span>另有 <b>${extraN}</b>（${extraText}）</span>` : ''}
       </div>
       ${plan.note ? `<div class="banner warn">${esc(plan.note)}</div>` : ''}
