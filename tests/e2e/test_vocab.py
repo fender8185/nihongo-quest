@@ -164,6 +164,38 @@ def test_today_names_the_active_themes(b):
 
 TESTS += [test_new_words_come_from_two_themes_interleaved, test_custom_cards_still_alternate_with_builtins, test_today_names_the_active_themes]
 
+# ---- 2026-10-26 (2): kana options ----
+def test_kana_options_replace_kanji_uniformly(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && /[一-龯]/.test(x.w) && x.exZh && recallOptions(x)); srsAnswer(v.key, true);
+      const k = makeVocabQuestion(v, { forceFmt: 'v-recall', kana: true }); const n = makeVocabQuestion(v, { forceFmt: 'v-recall', kana: false });
+      const cz = makeVocabQuestion(v, { forceFmt: 'v-cloze', kana: true });
+      const html = (q) => q.options.map(o => optionHtml(q, o));
+      const kanji = (s) => /[一-龯]/.test(s);
+      return JSON.stringify({ k: !!k.kanaOptions, kAll: html(k).every(h => !kanji(h)), kAns: optionHtml(k, k.options[k.answer]) === v.r,
+        n: !!n.kanaOptions, nSome: html(n).some(kanji), cz: cz ? [!!cz.kanaOptions, html(cz).every(h => !kanji(h))] : 'nocloze' }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['k'] and r['kAll'] and r['kAns'] and not r['n'] and r['nSome'], r
+    assert r['cz'] == 'nocloze' or r['cz'] == [True, True], r
+
+def test_kana_options_only_after_the_first_sighting_and_sometimes(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && /[一-龯]/.test(x.w) && recallOptions(x));
+      const build = () => { let n = 0; for (let i = 0; i < 120; i++) if (makeVocabQuestion(v, { forceFmt: 'v-recall' }).kanaOptions) n++; return n; };
+      const fresh = build(); srsAnswer(v.key, true); const seen = build();
+      const exam = makeVocabQuestion(REG.vocab.find(x => x.builtin && x.r && /[一-龯]/.test(x.w)), { forceFmt: 'v-reading', kana: true });
+      return JSON.stringify({ fresh, seen, exam: !!(exam && exam.kanaOptions) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['fresh'] == 0 and 15 <= r['seen'] <= 70 and not r['exam'], r
+
+def test_feedback_shows_written_form_and_reading_after_a_kana_question(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && /[一-龯]/.test(x.w) && recallOptions(x)); srsAnswer(v.key, true); state.srs[v.key].due = todayStr();
+      startSession('items', { items: [v] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-recall', kana: true }); renderPractice();
+      answerCurrent((e.q.answer + 1) % 4); const head = document.querySelector('.fb-head').textContent;
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify({ head, w: jaPlain(v.w), r: v.r }); })()"""
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert f"{r['w']}（{r['r']}）" in r['head'], r
+
+TESTS += [test_kana_options_replace_kanji_uniformly, test_kana_options_only_after_the_first_sighting_and_sometimes, test_feedback_shows_written_form_and_reading_after_a_kana_question]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
