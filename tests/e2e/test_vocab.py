@@ -573,6 +573,30 @@ def test_every_builtin_word_has_a_usable_second_example(b):
 
 TESTS += [test_every_builtin_word_has_a_usable_second_example]
 
+# ---- 2026-10-27: 「我會了」 marks a word mastered until it is missed ----
+def test_i_know_this_word_marks_it_mastered_until_it_is_missed(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key]); const theme = vocabTheme(v); const before = vocabThemes().find(g => g.c === theme).mastered;
+      ACTIONS['vocab-known']({ dataset: { key: v.key } }); const r = state.srs[v.key];
+      const out = { label: srsLevelLabel(r, v.key), due: daysBetween(todayStr(), r.due), mastered: vocabThemes().find(g => g.c === theme).mastered - before, known: r.known };
+      srsAnswer(v.key, false); out.afterMiss = srsLevelLabel(state.srs[v.key], v.key); out.knownAfterMiss = state.srs[v.key].known || null;
+      ACTIONS['vocab-known']({ dataset: { key: v.key } }); ACTIONS['vocab-unknown']({ dataset: { key: v.key } }); out.afterUndo = srsLevelLabel(state.srs[v.key], v.key);
+      delete state.srs[v.key]; return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['label'] == '已熟練' and r['due'] >= 30 and r['mastered'] == 1 and r['known'] == 1, r
+    assert r['afterMiss'] != '已熟練' and r['knownAfterMiss'] is None and r['afterUndo'] == '熟悉', r
+
+def test_i_know_this_word_button_is_on_the_word_list_and_the_practice_feedback(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x)); const theme = vocabTheme(v);
+      renderVocabList(document.getElementById('view'), { c: theme }); const row = document.querySelector(`[data-act=vocab-known][data-key="${v.key}"]`); const out = { listBtn: !!row };
+      startSession('items', { items: [v] }); const e = currentEntry(); e.preview = false; e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice(); answerCurrent(e.q.answer);
+      const btn = document.querySelector('.feedback [data-act=vocab-known]'); out.fbBtn = !!btn; if (btn) btn.click();
+      out.meta = (document.querySelector('.fb-meta') || {}).textContent || ''; out.encoresLeft = SESSION.entries.filter(x => x.encore && x.item.key === v.key).length; out.label = srsLevelLabel(state.srs[v.key], v.key);
+      SESSION = null; document.body.classList.remove('practicing'); delete state.srs[v.key]; return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['listBtn'] and r['fbBtn'] and r['label'] == '已熟練' and '已熟練' in r['meta'] and r['encoresLeft'] == 0, r
+
+TESTS += [test_i_know_this_word_marks_it_mastered_until_it_is_missed, test_i_know_this_word_button_is_on_the_word_list_and_the_practice_feedback]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)

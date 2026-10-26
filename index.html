@@ -776,9 +776,10 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '40';   // keep equal to the number in sw.js CACHE ('nq-v40'); scripts/test.sh checks it
+const APP_VERSION = '41';   // keep equal to the number in sw.js CACHE ('nq-v41'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '41', date: '2026-10-27', items: ['單字新增「我會了」：單字表每一列、字卡、作答後的回饋都可以按，字會直接標成已熟練、約六週後再確認一次；之後答錯就回到正常規則。單字表可按「取消熟練」收回。'] },
   { v: '40', date: '2026-10-27', items: ['設定 › 語音 的「測試連線」結果不再因為瀏覽器語音清單載入而消失。'] },
   { v: '39', date: '2026-10-27', items: ['N4 的 726 個單字也都有第二個例句了：全部 1461 個內建單字每字兩句，題目在兩句之間輪替。'] },
   { v: '38', date: '2026-10-27', items: ['N5 的 735 個單字每字新增第二個例句：例句填空、漢字讀音、漢字寫法與朗讀會在兩句之間輪替，預習卡與字卡同時顯示兩句。'] },
@@ -1295,7 +1296,7 @@ function srsAnswer(key, correct, opt = {}) {
   if (isNew) delete r.s;
   fsrsNext(r, g, elapsed);
   r.n++;
-  if (g > 1) { r.ok++; r.st++; } else { r.ng++; r.st = 0; if (before >= 2) r.lapse = (r.lapse || 0) + 1; }
+  if (g > 1) { r.ok++; r.st++; } else { r.ng++; r.st = 0; if (before >= 2) r.lapse = (r.lapse || 0) + 1; delete r.known; }   // a miss ends the 我會了 vouch: back to the normal rules
   r.b = g === 1 ? Math.min(levelFromS(r.s), 1) : levelFromS(r.s);
   if (before < SRS_LEARNED && r.b >= SRS_LEARNED) r.lrn = t;   // the day it became 熟悉 (學習分析 lists the recent ones)
   // A missed word comes back later the same day; grammar, listening, reading and kanji wait until tomorrow,
@@ -1318,10 +1319,30 @@ function srsDots(b) {
   return `<span class="dots" aria-label="熟練度 ${lit}/5">${[0, 1, 2, 3, 4].map(i => `<i class="${i < lit ? 'on' : ''}"></i>`).join('')}</span>`;
 }
 // `key` (optional) tells custom cards apart: they have fewer possible formats, so two passed formats are enough
+// 「我會了」: the learner vouches for a word. It counts as 已熟練 at once and comes back for a check in about six weeks;
+// answering it wrong later drops the vouch and the ordinary rules apply again. 取消 puts it at the 熟悉 threshold.
+function markKnown(key) {
+  const t = todayStr();
+  let r = state.srs[key];
+  if (!r) r = state.srs[key] = { b: 0, due: t, n: 0, ok: 0, ng: 0, st: 0, last: null, lapse: 0, intro: t, f: {} };
+  ensureFsrs(r);
+  r.s = Math.max(r.s || 0, 45); r.d = Math.min(r.d || 5, 4); r.b = levelFromS(r.s); r.known = 1;
+  if (!r.lrn) r.lrn = t;
+  r.due = addDays(t, fsrsDays(r.s, key)); r.last = t;
+  saveState();
+  return r;
+}
+function unmarkKnown(key) {
+  const r = state.srs[key]; if (!r) return null;
+  delete r.known; r.s = Math.min(r.s || 0, LEVEL_FROM_S[SRS_LEARNED - 1]); r.b = levelFromS(r.s);
+  r.due = addDays(todayStr(), fsrsDays(r.s, key));
+  saveState();
+  return r;
+}
 function masterFormatsFor(key) { const it = key && REG.byKey && REG.byKey.get(key); return it && it.kind === 'v' && !it.builtin ? 2 : MASTER_FORMATS; }
 function srsLevelLabel(rec, key) {
   if (!rec) return '新內容';
-  if (rec.b >= SRS_MASTERED && (!rec.f || formatsPassed(rec) >= masterFormatsFor(key))) return '已熟練';
+  if (rec.b >= SRS_MASTERED && (rec.known || !rec.f || formatsPassed(rec) >= masterFormatsFor(key))) return '已熟練';   // known: the learner vouched for it (我會了)
   if (rec.b >= SRS_LEARNED) return '熟悉';
   if (rec.b >= 1) return '學習中';
   return '待加強';
@@ -3188,7 +3209,7 @@ function feedbackHtml(e) {
       <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>' : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
       ${full}${example}
       ${why ? `<div class="fb-why mt-2">${md(why)}</div>` : ''}
-      <div class="fb-meta">${q.point ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${mNote}</div>
+      <div class="fb-meta">${q.point ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${mNote}${q.kind === 'v' && q.key && ok && cur && srsLevelLabel(cur, q.key) !== '已熟練' ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(q.key)}">這個字我已經會了</button>` : ''}</div>
       <div id="aiExplainBox"></div>
     </div>`;
 }
@@ -4256,7 +4277,7 @@ function renderVocab(view, tab, params) {
       ${vocabExamples(v).map((e, i) => `<div class="example ${i ? 'mt-2' : 'mt-3'}" style="text-align:left"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="${i ? 'speak' : 'flash-speak'}" data-mode="ex" data-text="${esc(jaPlain(exPlain(e.ex)))}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${furi(exPlain(e.ex))}</div><div class="zh">${esc(e.exZh || '')}</div></div></div>`).join('')}
       <div id="flashAiBox"></div>` : '';
     card = `<div class="card">
-      <div class="row between small muted"><span>${F.idx + 1} / ${F.queue.length}・${r ? srsLevelLabel(r, v.key) : '新卡'}</span><span>${r ? srsDots(r.b) : '<span class="chip chip-accent">新</span>'}</span></div>
+      <div class="row between small muted"><span>${F.idx + 1} / ${F.queue.length}・${r ? srsLevelLabel(r, v.key) : '新卡'}</span><span>${r ? srsDots(r.b) : '<span class="chip chip-accent">新</span>'}${r && srsLevelLabel(r, v.key) === '已熟練' ? '' : ` <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="直接標成熟練，約六週後再確認">我會了</button>`}</span></div>
       <div class="flash">
         <div class="word jp">${esc(jaPlain(v.w))}</div>
         ${media}
@@ -4330,6 +4351,7 @@ function renderVocabList(view, params) {
       <td class="nowrap small">${r ? `${srsDots(r.b)}<div class="tiny muted">${r.due <= t ? '今天' : dueLabel(r).replace('複習', '')}</div>` : '<span class="muted">未學</span>'}</td>
       <td class="nowrap" style="text-align:right">
         <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(jaPlain(v.w))}" data-reading="${esc(v.r && !HAS_KANJI.test(v.r) ? v.r : '')}" aria-label="發音">${icon('speaker')}</button>
+        ${r && r.known ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-unknown" data-key="${esc(v.key)}" title="取消「我會了」，回到正常排程">取消熟練</button>` : (r && srsLevelLabel(r, v.key) === '已熟練' ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="這個字已經會了：直接標成熟練，約六週後再確認">我會了</button>`)}
         <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-remove" data-key="${esc(v.key)}">${v.builtin ? '隱藏' : '刪除'}</button>
       </td></tr>`;
   }).join('');
@@ -4424,6 +4446,18 @@ Object.assign(ACTIONS, {
   'flash-ai': () => aiEnrichCard(flashCurrent()),
   'flash-translate': () => aiTranslateCards([flashCurrent()]),
   'vocab-filter': (el) => { const q = (document.getElementById('vocabSearch') || {}).value || ''; const c = currentRoute().params.c; go(`#/vocab/list?lv=${el.dataset.lv}&q=${encodeURIComponent(q)}${c ? `&c=${encodeURIComponent(c)}` : ''}`); },
+  'vocab-known': (el) => {
+    const v = REG.byKey.get(el.dataset.key); if (!v) return;
+    markKnown(v.key);
+    if (SESSION && SESSION.entries) SESSION.entries = SESSION.entries.filter((x, i) => i <= SESSION.idx || !(x.encore && x.item && x.item.key === v.key));   // no more encores for it
+    toast(`「${jaPlain(v.w)}」已標成熟練，約六週後再確認一次`);
+    if (SESSION && document.body.classList.contains('practicing')) renderPractice(); else route();
+  },
+  'vocab-unknown': (el) => {
+    const v = REG.byKey.get(el.dataset.key); if (!v) return;
+    unmarkKnown(v.key); toast(`「${jaPlain(v.w)}」回到熟悉，照正常排程複習`);
+    if (SESSION && document.body.classList.contains('practicing')) renderPractice(); else route();
+  },
   'vocab-remove': (el) => {
     const v = REG.byKey.get(el.dataset.key);
     if (!v) return;
