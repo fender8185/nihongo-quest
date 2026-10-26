@@ -327,6 +327,20 @@ def test_example_sentences_have_play_buttons_on_preview_feedback_and_footer(b):
 
 TESTS += [test_example_sentences_have_play_buttons_on_preview_feedback_and_footer]
 
+# ---- 2026-10-26 (8): grammar progress bars in three segments ----
+def test_grammar_progress_bars_show_ok3_ok1_and_seen_segments(b):
+    js = """(() => { const gs = REG.grammar.filter(g => g.u === 'm1'); const rec = (ok) => ({ b: 2, due: '2099-01-01', n: ok + 1, ok, ng: ok ? 0 : 1, s: 3, d: 5 });
+      gs.slice(0, 4).forEach(g => { state.srs[g.key] = rec(3); }); gs.slice(4, 7).forEach(g => { state.srs[g.key] = rec(1); }); gs.slice(7, 9).forEach(g => { state.srs[g.key] = rec(0); });
+      const read = (el) => el ? [Number(el.dataset.mastered), Number(el.dataset.learned), Number(el.dataset.seen)] : null;
+      location.hash = '#/course'; route(); const course = read(document.querySelector('.unit-row[data-route="#/course/m1"] .bar.stack'));
+      location.hash = '#/course/m1'; route(); const unit = read(document.querySelector('.bar.stack')); const legend = document.body.textContent.includes('答對 3 次以上 4');
+      location.hash = '#/today'; route(); const today = read(document.querySelector('.bar.stack'));
+      const st = unitStats('m1'); return JSON.stringify({ course, unit, today, legend, stats: [st.ok3, st.ok1, st.seen0] }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['stats'] == [4, 3, 2] and r['course'] == [4, 3, 2] and r['unit'] == [4, 3, 2] and r['today'] == [4, 3, 2] and r['legend'], r
+
+TESTS += [test_grammar_progress_bars_show_ok3_ok1_and_seen_segments]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)

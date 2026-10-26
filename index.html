@@ -178,6 +178,8 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.35; }
 .bar.ok > span { background: var(--ok); }
 .bar.thin { height: 5px; }
 .bar.stack { height: 10px; background-repeat: no-repeat; background-size: 100% 100%; }
+.bar.stack.thin { height: 6px; }
+.bar.stack.grow { margin-top: 0; }
 .seg-dot.mastered { background: var(--heat-4); }
 .seg-dot.learned { background: var(--heat-3); }
 .seg-dot.seen { background: var(--heat-2); }
@@ -751,9 +753,10 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '23';   // keep equal to the number in sw.js CACHE ('nq-v23'); scripts/test.sh checks it
+const APP_VERSION = '24';   // keep equal to the number in sw.js CACHE ('nq-v24'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '24', date: '2026-10-26', items: ['文法單元的進度條改為三段：答對 3 次以上、答對過、出現過但還沒答對（課程頁、單元頁、首頁目前單元）。'] },
   { v: '23', date: '2026-10-26', items: ['例句都有播放鍵：新字預習卡、單字題作答後的例句，練習頁底部也多一顆「例句」。'] },
   { v: '22', date: '2026-10-26', items: ['設定等彈出視窗改為標題固定、內容區捲動，高度改以手機實際可見範圈計算，瀏覽器工具列不再蓋住關閉鍵與分頁；手機版底部多一顆關閉。'] },
   { v: '21', date: '2026-10-26', items: ['首頁的「單字主題」固定顯示這組練習會出的主題：只剩自訂字卡時寫「自訂字卡」，今天的單字做完時寫已完成。'] },
@@ -1350,14 +1353,17 @@ function activeMistakes() { return state.mistakes.filter(m => !m.mastered); }
 function unitItems(uid) { return REG.grammar.filter(g => g.u === uid); }
 function unitStats(uid) {
   const items = unitItems(uid);
-  let score = 0; let seen = 0; let learned = 0; let due = 0;
+  let score = 0; let seen = 0; let learned = 0; let due = 0; let ok3 = 0; let ok1 = 0; let seen0 = 0;
   const t = todayStr();
   items.forEach(it => {
     const r = state.srs[it.key];
-    if (r) { seen++; score += Math.min(r.b, SRS_LEARNED); if (r.b >= SRS_LEARNED) learned++; if (r.due <= t) due++; }
+    if (r) {
+      seen++; score += Math.min(r.b, SRS_LEARNED); if (r.b >= SRS_LEARNED) learned++; if (r.due <= t) due++;
+      if ((r.ok || 0) >= 3) ok3++; else if ((r.ok || 0) >= 1) ok1++; else seen0++;
+    }
   });
   const pct = items.length ? Math.round(score / (items.length * SRS_LEARNED) * 100) : 0;
-  return { total: items.length, seen, learned, due, pct, done: state.completedUnits.includes(uid) };
+  return { total: items.length, seen, learned, due, pct, ok3, ok1, seen0, done: state.completedUnits.includes(uid) };
 }
 function vocabPool(level) {
   return REG.vocab.filter(v => (level === 'all' || !level) ? true : (level === 'custom' ? !v.builtin : (v.builtin && v.lv === level)));
@@ -3477,8 +3483,8 @@ function renderToday(view) {
         <div><div class="card-sub">目前單元</div><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div></div>
         <span class="chip">${esc(cur.lv)}</span>
       </div>
-      <div class="row"><div class="bar grow"><span style="width:${us.pct}%"></span></div><span class="small num muted">${us.pct}%</span></div>
-      <div class="small muted mt-2">已學 ${us.seen} / ${us.total} 題・熟悉 ${us.learned} 題${us.due ? `・今天要複習 ${us.due} 題` : ''}</div>
+      <div class="row">${unitBarHtml(us, 'grow')}<span class="small num muted">${us.pct}%</span></div>
+      <div class="small muted mt-2">${unitLegendHtml(us)}${us.due ? `・今天要複習 ${us.due} 題` : ''}</div>
       ${us.pct >= 85 && !us.done ? `<div class="banner mt-3"><div class="grow">這個單元已經很熟了，可以前往下一單元。</div><button type="button" class="btn btn-sm btn-primary" data-act="advance-unit">前往下一單元</button></div>` : ''}
       <div class="row-wrap mt-3">
         <button type="button" class="btn" data-act="nav" data-route="#/course/${cur.id}">看講義</button>
@@ -3622,7 +3628,7 @@ function renderCourse(view) {
       return `<div class="unit-row ${isCur ? 'current' : ''}" data-act="nav" data-route="#/course/${u.id}" role="button" tabindex="0">
         <div class="unit-weeks">${esc(u.weeks)}</div>
         <div class="grow"><div class="unit-title">${esc(u.title)}</div><div class="unit-desc">${esc(u.desc)}</div></div>
-        <div><div class="row between small"><span>${status}</span><span class="muted num">${s.done ? 100 : s.pct}%</span></div><div class="bar thin mt-1 ${s.done ? 'ok' : ''}"><span style="width:${s.done ? 100 : s.pct}%"></span></div></div>
+        <div><div class="row between small"><span>${status}</span><span class="muted num">${s.done ? 100 : s.pct}%</span></div>${unitBarHtml(s, 'thin mt-1')}</div>
       </div>`;
     }).join('');
     return `<div class="card"><div class="card-head"><div><div class="card-title">${esc(ph.title)}</div><div class="card-sub">${esc(ph.span)}</div></div></div><div class="list">${rows}</div></div>`;
@@ -3699,9 +3705,9 @@ function renderUnit(view, uid, tab) {
       </div>
     </div>
     <div class="card">
-      <div class="row"><div class="bar grow ${s.done ? 'ok' : ''}"><span style="width:${s.done ? 100 : s.pct}%"></span></div><span class="small num muted">${s.pct}%</span></div>
+      <div class="row">${unitBarHtml(s, 'grow')}<span class="small num muted">${s.pct}%</span></div>
       <div class="row between mt-2 small">
-        <span class="muted">已學 ${s.seen} / ${s.total} 題・熟悉 ${s.learned} 題${legacy ? `・舊版累計作答 ${legacy.seen} 題` : ''}</span>
+        <span class="muted">${unitLegendHtml(s)}${legacy ? `・舊版累計作答 ${legacy.seen} 題` : ''}</span>
         <button type="button" class="btn btn-sm btn-ghost" data-act="toggle-done" data-unit="${uid}">${s.done ? '取消完成標記' : '標記為已完成'}</button>
       </div>
       ${isAiConfigured() ? `<div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="ai-unit-items" data-unit="${uid}">${icon('spark')}用 AI 為本單元多出 5 題</button></div>` : ''}
@@ -3794,13 +3800,19 @@ function vocabThemes() {
   return [...by.values()].sort((a, b) => rank(a.c) - rank(b.c) || a.c.localeCompare(b.c, 'zh-Hant'));
 }
 // three stacked segments: mastered, learned (not yet mastered), seen (not yet learned)
-function stackBarHtml(g) {
-  // one element, painted with a gradient: no child layout to go wrong on any browser
-  const pct = (n) => (n / Math.max(1, g.total) * 100).toFixed(1) + '%';
-  const a = pct(g.mastered), b = pct(g.learned), c = pct(g.seen);   // cumulative stops: mastered ⊂ learned ⊂ seen
-  const bg = `linear-gradient(to right, var(--heat-4) 0 ${a}, var(--heat-3) ${a} ${b}, var(--heat-2) ${b} ${c}, transparent ${c} 100%)`;
-  return `<div class="bar stack mt-2" data-mastered="${g.mastered}" data-learned="${g.learned - g.mastered}" data-seen="${g.seen - g.learned}" style="background-image:${bg}"></div>`;
+// Three-segment bar painted as one gradient (no child layout to go wrong on any browser): segs = [[name, count]]
+// left to right, brightest first. Names mastered / learned / seen map to heat-4 / heat-3 / heat-2.
+const SEG_COLOR = { mastered: 'var(--heat-4)', learned: 'var(--heat-3)', seen: 'var(--heat-2)' };
+function segBarHtml(total, segs, cls = 'mt-2') {
+  let acc = 0; const stops = [];
+  const attrs = segs.map(([name, n]) => { const from = acc; acc += n; stops.push(`${SEG_COLOR[name]} ${(from / Math.max(1, total) * 100).toFixed(1)}% ${(acc / Math.max(1, total) * 100).toFixed(1)}%`); return `data-${name}="${n}"`; }).join(' ');
+  stops.push(`transparent ${(acc / Math.max(1, total) * 100).toFixed(1)}% 100%`);
+  return `<div class="bar stack ${cls}" ${attrs} style="background-image:linear-gradient(to right, ${stops.join(', ')})"></div>`;
 }
+function stackBarHtml(g) { return segBarHtml(g.total, [['mastered', g.mastered], ['learned', g.learned - g.mastered], ['seen', g.seen - g.learned]]); }
+// grammar units: answered correctly 3+ times / answered correctly / seen but not yet right
+function unitBarHtml(s, cls) { return segBarHtml(s.total, [['mastered', s.ok3], ['learned', s.ok1], ['seen', s.seen0]], cls); }
+function unitLegendHtml(s) { return `<i class="seg-dot mastered"></i>答對 3 次以上 ${s.ok3}　<i class="seg-dot learned"></i>答對過 ${s.ok1}　<i class="seg-dot seen"></i>出現過 ${s.seen0}　共 ${s.total} 題`; }
 function renderVocabThemes(view) {
   const cards = vocabThemes().map(g => `<div class="card theme-card" data-c="${esc(g.c)}">
       <div class="row between"><div class="card-title">${esc(g.c)}</div><span class="tiny muted">N5 ${g.N5}・N4 ${g.N4}</span></div>
