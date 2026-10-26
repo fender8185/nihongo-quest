@@ -159,8 +159,8 @@ def test_custom_cards_still_alternate_with_builtins(b):
     assert ev(b, js) == '["b","c","b","c"]'
 
 def test_today_names_the_active_themes(b):
-    out = b.run([("nav", URL), ("wait", READY), ("eval", "location.hash = '#/today'; route(); document.querySelector('.plan-line').textContent")])
-    assert '今天的主題：問候・指示' in out[-1], out[-1]
+    out = b.run([("nav", URL), ("wait", READY), ("eval", "location.hash = '#/today'; route(); document.querySelector('.plan-topics').textContent")])
+    assert '問候・指示' in out[-1], out[-1]
 
 TESTS += [test_new_words_come_from_two_themes_interleaved, test_custom_cards_still_alternate_with_builtins, test_today_names_the_active_themes]
 
@@ -231,20 +231,20 @@ def test_theme_card_bar_has_three_segments_for_seen_learned_mastered(b):
     r = json.loads(ev(b, js))
     assert r['segs'] == [['mastered', 2], ['learned', 3], ['seen', 4]], r
 
-def test_today_shows_a_session_outline_instead_of_a_bare_plan_line(b):
+def test_today_lists_the_vocab_themes_and_grammar_points_of_the_session(b):
     js = """(() => { location.hash = '#/today'; route();
-      const o = document.querySelector('.plan-outline'); const items = [...o.querySelectorAll('li')].map(li => li.textContent.replace(/\\s+/g, ' ').trim());
-      const q = dailyQueue(state.settings.sessionSize); const newV = q.items.filter(it => it.kind === 'v' && !state.srs[it.key]).length;
-      const warnBanner = !!document.querySelector('.card .banner.warn');
+      const box = document.querySelector('.plan-topics'); const text = box ? box.textContent.replace(/\\s+/g, ' ') : '';
+      const q = dailyQueue(state.settings.sessionSize);
+      const pts = [...new Set(q.items.filter(it => it.kind === 'g').map(it => it.pt).filter(Boolean))];
       recentAccuracy = () => 0.5; route();
-      const withNote = [...document.querySelector('.plan-outline').querySelectorAll('li')].map(li => li.textContent);
-      return JSON.stringify({ items, newV, themes: activeThemes(REG.vocab, false).join('・'), warnBanner, noteShown: withNote.some(t => t.includes('正確率')) }); })()"""
+      return JSON.stringify({ text, themes: activeThemes(REG.vocab, false).join('・'), pts, outline: !!document.querySelector('.plan-outline'), planLine: document.querySelector('.plan-line').textContent,
+        note: (document.querySelector('.plan-note') || {}).textContent || '' }); })()"""
     r = json.loads(ev(b, js))
-    assert any(f"新單字 {r['newV']} 個" in t and r['themes'] in t and '預習卡' in t for t in r['items']), r
-    assert any(t.startswith('新文法') for t in r['items']) and any('題型' in t for t in r['items']), r
-    assert not r['warnBanner'] and r['noteShown'], r
+    assert r['themes'] and r['themes'] in r['text'] and '單字主題' in r['text'], r
+    assert r['pts'] and '文法' in r['text'] and sum(1 for p in r['pts'] if p in r['text']) >= min(3, len(r['pts'])), r
+    assert not r['outline'] and '今天的主題' not in r['planLine'] and '正確率' in r['note'], r
 
-TESTS += [test_theme_card_bar_has_three_segments_for_seen_learned_mastered, test_today_shows_a_session_outline_instead_of_a_bare_plan_line]
+TESTS += [test_theme_card_bar_has_three_segments_for_seen_learned_mastered, test_today_lists_the_vocab_themes_and_grammar_points_of_the_session]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
