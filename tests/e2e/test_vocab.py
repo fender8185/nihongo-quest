@@ -61,8 +61,24 @@ def test_unpassed_formats_are_preferred_on_review(b):
     r = json.loads(ev(b, js))
     assert r['cloze'] == 9 and r['meaning'] == 2 and r['recall'] == 2, r
 
+# ---- Task 4: preview card ----
+def test_new_word_shows_a_preview_card_before_its_question(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x));
+      startSession('items', { items: [v] }); renderPractice();
+      const before = { preview: !!document.querySelector('.preview'), opts: document.querySelectorAll('.opt').length, word: (document.querySelector('.preview .word') || {}).textContent, n: SESSION.entries.length };
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true }));
+      const stillPreview = !!document.querySelector('.preview') && !currentEntry().done;
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      const after = { preview: !!document.querySelector('.preview'), opts: document.querySelectorAll('.opt').length, n: SESSION.entries.length };
+      SESSION = null; document.body.classList.remove('practicing');
+      return JSON.stringify({ before, stillPreview, after, w: jaPlain(v.w) }); })()"""
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['before']['preview'] and r['before']['opts'] == 0 and r['before']['word'] == r['w'] and r['stillPreview'], r
+    assert not r['after']['preview'] and r['after']['opts'] == 4 and r['after']['n'] == r['before']['n'] == 1, r
+
 TESTS = [test_themes_cover_every_builtin_word_once, test_theme_tab_lists_cards_and_opens_the_word_table, test_themed_practice_uses_only_that_theme,
-         test_mastered_needs_three_passed_formats_for_words_only, test_answering_records_the_format_and_flash_ratings_count_as_one, test_unpassed_formats_are_preferred_on_review]
+         test_mastered_needs_three_passed_formats_for_words_only, test_answering_records_the_format_and_flash_ratings_count_as_one, test_unpassed_formats_are_preferred_on_review,
+         test_new_word_shows_a_preview_card_before_its_question]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

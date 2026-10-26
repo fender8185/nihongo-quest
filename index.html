@@ -301,6 +301,11 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 }
 .speak-big { display: inline-flex; align-items: center; gap: 10px; margin: 8px auto; padding: 14px 22px; border-radius: 99px; border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--accent); cursor: pointer; font-size: 16px; }
 .speak-big svg { width: 22px; height: 22px; }
+.preview { text-align: center; padding: 20px 10px 8px; }
+.preview .word { font-size: 44px; font-weight: 600; line-height: 1.5; }
+.preview .reading { font-size: 18px; color: var(--fg-3); }
+.preview .meaning { font-size: 22px; font-weight: 600; margin-top: 6px; }
+.preview .example { margin-top: 16px; text-align: left; padding: 12px 14px; border-radius: 12px; background: var(--bg-sunken); }
 .flash { text-align: center; padding: 28px 18px; }
 .flash .word { font-size: 46px; font-weight: 600; line-height: 1.6; }
 .flash .reading { font-size: 18px; color: var(--fg-3); }
@@ -2679,6 +2684,8 @@ function startSession(mode, opt = {}) {
     toast(mode === 'mistakes' ? '錯題本目前是空的。' : '現在沒有需要練習的題目，明天再來，或到課程頁預習下一單元。');
     return false;
   }
+  // a word seen for the first time is shown on a preview card before its question
+  if (mode !== 'mistakes') entries.forEach(e => { if (e.item && e.item.kind === 'v' && !state.srs[e.item.key]) e.preview = true; });
   SESSION = {
     mode, title: opt.title || MODE_TITLE[mode] || '練習', entries, idx: 0, meta,
     stats: { correct: 0, wrong: 0, newCount: 0 }, results: [], startedAt: Date.now(), lastFmt: '', opt
@@ -2753,6 +2760,11 @@ function renderPractice() {
   const q = currentEntry().q;
   const total = SESSION.entries.length;
   const pct = Math.round(SESSION.idx / total * 100);
+  if (e.preview && !e.previewDone) {
+    view.innerHTML = previewHtml(e, pct, total);
+    if (!e.autoPlayedPreview) { e.autoPlayedPreview = true; setTimeout(() => speak(q.speakWord || jaPlain(e.item.w)), 150); }
+    return;
+  }
   const showZh = q.zhText && (state.settings.showZh || q.forceZh || e.zhShown);
   const subParts = [];
   if (q.subHtml) subParts.push(q.subHtml);
@@ -2806,6 +2818,38 @@ function renderPractice() {
   if (!answered && q.audio && !e.autoPlayed) { e.autoPlayed = true; setTimeout(() => (q.audioScript ? speakScript(q.audio) : speak(q.audio)), 150); }
   if (!answered && q.audioOptions) prefetchSpeech(q.options.map(o => jaPlain(o.text)));
   if (answered) { const nb = document.getElementById('btnNext'); if (nb) nb.focus({ preventScroll: true }); }
+}
+
+// New word: show it before asking. Enter/Space (or the button) goes on to the question.
+function previewHtml(e, pct, total) {
+  const v = e.item;
+  const reading = v.r && v.r !== jaPlain(v.w) ? v.r : '';
+  return `
+    <div class="pr-top">
+      <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
+      <div class="bar"><span style="width:${pct}%"></span></div>
+      <div class="pr-count">${SESSION.idx + 1} / ${total}</div>
+    </div>
+    <div class="q-card">
+      <div class="q-label"><span>新單字${v.builtin ? ` · ${esc(v.lv)} · ${esc(vocabTheme(v))}` : ''}</span><span class="chip chip-accent">新</span></div>
+      <div class="q-instr">先看一遍，接著會用幾種方式考這個字。</div>
+      <div class="preview">
+        <div class="word jp">${esc(jaPlain(v.w))}</div>
+        ${reading ? `<div class="reading jp">${esc(reading)}</div>` : ''}
+        <div class="meaning">${esc(v.m)}</div>
+        ${v.p ? `<div class="mt-1"><span class="chip">${esc(posLabel(v.p, v.posLabel))}</span></div>` : ''}
+        ${v.ex ? `<div class="example"><div class="jp" style="font-size:18px">${furi(exPlain(v.ex))}</div>${v.exZh ? `<div class="small muted mt-1">${esc(v.exZh)}</div>` : ''}</div>` : ''}
+      </div>
+    </div>
+    <div class="pr-actions pr-next-sticky">
+      <div class="left">
+        <button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>
+        <button type="button" class="btn btn-sm btn-ghost" data-act="toggle-furi" title="切換振假名（F）">振假名：${FURI_LABEL[furiState()]}</button>
+      </div>
+      <div class="right">
+        <button type="button" class="btn btn-primary" data-act="preview-go" id="btnNext">開始作答 <span class="kbd" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button>
+      </div>
+    </div>`;
 }
 
 function srsBadge(key) {
@@ -3116,6 +3160,7 @@ const ACTIONS = {
   'start-mistakes': () => startSession('mistakes'),
   answer: (el) => answerCurrent(Number(el.dataset.i)),
   next: () => nextQuestion(),
+  'preview-go': () => { const e = currentEntry(); if (e && e.preview && !e.previewDone) { e.previewDone = true; renderPractice(); window.scrollTo({ top: 0 }); } },
   'exit-practice': () => exitPractice(),
   'close-summary': () => { SESSION = null; document.body.classList.remove('practicing'); go(lastMainRoute || '#/today'); Sync.flushDeferred(); },
   again: () => { const s = SESSION; SESSION = null; startSession(s.mode, s.opt || {}); },
@@ -3168,6 +3213,13 @@ function handleKey(ev) {
   const k = ev.key;
   if (r.name === 'practice' && SESSION) {
     const e = currentEntry();
+    if (e && e.preview && !e.previewDone) {
+      if (k === 'Enter' || k === ' ') { ev.preventDefault(); ACTIONS['preview-go'](); }
+      else if (k === 'r' || k === 'R') { ev.preventDefault(); ACTIONS.replay(); }
+      else if (k === 'f' || k === 'F') { ev.preventDefault(); toggleFurigana(); }
+      else if (k === 'Escape') { ev.preventDefault(); exitPractice(); }
+      return;
+    }
     if (['1', '2', '3', '4'].includes(k)) { ev.preventDefault(); if (e && !e.done) answerCurrent(Number(k) - 1); return; }
     if (k === 'Enter' || k === ' ') { if (e && e.done) { ev.preventDefault(); nextQuestion(); } else if (!e) { ev.preventDefault(); } return; }
     if (k === 'r' || k === 'R') { ev.preventDefault(); ACTIONS.replay(); return; }
