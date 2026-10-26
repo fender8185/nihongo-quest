@@ -561,6 +561,18 @@ def test_questions_pick_either_of_a_words_two_examples_and_cards_show_both(b):
 
 TESTS += [test_questions_pick_either_of_a_words_two_examples_and_cards_show_both]
 
+def test_every_n5_word_has_a_usable_second_example(b):
+    js = """(() => { const V = REG.vocab.filter(v => v.builtin && v.lv === 'N5'); const bad = [];
+      V.forEach(v => { if (!v.ex2 || !v.exZh2) { bad.push(v.w + ':missing'); return; }
+        const info = vSurfaceInfo(withExample(v, 1)); if (!info || info.form === 'raw') bad.push(v.w + ':form');
+        if (v.ex2.replace(/[{}]/g, '') === v.ex.replace(/[{}]/g, '')) bad.push(v.w + ':same');
+        if (/[一-龯]/.test(furi(v.ex2.replace(/[{}]/g, '')).replace(/<ruby>.*?<[/]ruby>/g, ''))) bad.push(v.w + ':furi'); });
+      return JSON.stringify({ n: V.length, bad: bad.slice(0, 20), nbad: bad.length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['nbad'] == 0, r
+
+TESTS += [test_every_n5_word_has_a_usable_second_example]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)

@@ -28,7 +28,7 @@ JS = """((cands) => { const out = []; const plainOf = (t) => t.replace(/[{}]/g, 
     const bare = furi(plainOf(ex2)).replace(/<ruby>.*?<[/]ruby>/g, '').match(/[一-龯々]+/g);
     if (bare) out.push([id, 'kanji without furigana (use words the app knows): ' + bare.join(' ')]);
     if (!v.ex2) { const vv = Object.assign({}, v, { ex2, exZh2: zh }); state.srs[v.key] = { b: 2, due: todayStr(), n: 3, ok: 3, ng: 0, s: 4, d: 5, last: todayStr(), f: {} };
-      try { const q = makeVocabQuestion(vv, { forceFmt: 'v-cloze', exIndex: 1 }); if (!q || q.fmt !== 'v-cloze') out.push([id, 'cannot build 例句填空 from it']); } catch (e) { out.push([id, 'builder error ' + e.message]); }
+      try { const q = makeVocabQuestion(vv, { forceFmt: 'v-cloze', exIndex: 1 }); if ((!q || q.fmt !== 'v-cloze') && v.p !== 'vk') out.push([id, 'cannot build 例句填空 from it']); /* 来る has no peers of its kind */ } catch (e) { out.push([id, 'builder error ' + e.message]); }
       delete state.srs[v.key]; }
   });
   return JSON.stringify({ problems: out, n: Object.keys(cands).length }); })(%s)""" % json.dumps(cands, ensure_ascii=False)
