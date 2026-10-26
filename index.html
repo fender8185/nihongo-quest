@@ -2617,9 +2617,10 @@ function buildUnitQueue(unitId, size = 15) {
 }
 function buildVocabQueue(filter = 'all', size = 20) {
   const t = todayStr();
-  // choosing the N4 list on purpose opens N4 words right away
-  const n4Open = filter === 'N4' || n5WordsLeft() === 0;
-  const pool = REG.vocab.filter(v => filter === 'all' ? vocabEligibleForDaily(v, n4Open) : filter === 'custom' ? !v.builtin : (v.builtin && v.lv === filter));
+  // choosing the N4 list or a theme on purpose opens N4 words right away
+  const theme = filter.startsWith('c:') ? filter.slice(2) : null;
+  const n4Open = Boolean(theme) || filter === 'N4' || n5WordsLeft() === 0;
+  const pool = REG.vocab.filter(v => theme ? (v.builtin && vocabTheme(v) === theme) : filter === 'all' ? vocabEligibleForDaily(v, n4Open) : filter === 'custom' ? !v.builtin : (v.builtin && v.lv === filter));
   const due = pool.filter(v => { const r = state.srs[v.key]; return r && r.due <= t; }).sort(byDue);
   const left = Math.max(0, state.settings.newVocabPerDay - state.today.newV);
   const fresh = newVocabCandidates(pool, n4Open).slice(0, Math.max(left, Math.min(5, size - due.length)));
@@ -2652,6 +2653,7 @@ function startSession(mode, opt = {}) {
     entries = buildUnitQueue(opt.unit, opt.size || 15).map(item => ({ item }));
     meta = { unit: opt.unit };
   } else if (mode === 'vocab') {
+    if ((opt.filter || '').startsWith('c:')) opt.title = opt.title || `主題練習・${opt.filter.slice(2)}`;
     entries = buildVocabQueue(opt.filter || 'all', opt.size || 20).map(item => ({ item }));
   } else if (mode === 'mistakes') {
     entries = buildMistakeQueue(opt.size || 20);
