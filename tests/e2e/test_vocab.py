@@ -233,7 +233,7 @@ def test_theme_card_bar_has_three_segments_for_seen_learned_mastered(b):
 
 def test_today_shows_a_session_outline_instead_of_a_bare_plan_line(b):
     js = """(() => { location.hash = '#/today'; route();
-      const o = document.querySelector('.plan-outline'); const items = [...o.querySelectorAll('li')].map(li => li.textContent.replace(/\s+/g, ' ').trim());
+      const o = document.querySelector('.plan-outline'); const items = [...o.querySelectorAll('li')].map(li => li.textContent.replace(/\\s+/g, ' ').trim());
       const q = dailyQueue(state.settings.sessionSize); const newV = q.items.filter(it => it.kind === 'v' && !state.srs[it.key]).length;
       const warnBanner = !!document.querySelector('.card .banner.warn');
       recentAccuracy = () => 0.5; route();
