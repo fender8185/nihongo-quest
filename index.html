@@ -751,9 +751,10 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '22';   // keep equal to the number in sw.js CACHE ('nq-v22'); scripts/test.sh checks it
+const APP_VERSION = '23';   // keep equal to the number in sw.js CACHE ('nq-v23'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '23', date: '2026-10-26', items: ['例句都有播放鍵：新字預習卡、單字題作答後的例句，練習頁底部也多一顆「例句」。'] },
   { v: '22', date: '2026-10-26', items: ['設定等彈出視窗改為標題固定、內容區捲動，高度改以手機實際可見範圈計算，瀏覽器工具列不再蓋住關閉鍵與分頁；手機版底部多一顆關閉。'] },
   { v: '21', date: '2026-10-26', items: ['首頁的「單字主題」固定顯示這組練習會出的主題：只剩自訂字卡時寫「自訂字卡」，今天的單字做完時寫已完成。'] },
   { v: '19', date: '2026-10-26', items: ['新文法不再被複習擠掉：每天固定出到上限（正確率低時仍會自動減量），只有新單字會因複習太多而減少，且不低於上限的一半。', '每組練習的文法名額先放新題，剩下才放複習；複習以答對次數最少的優先，同一單元的題目熟練度會拉平。'] },
@@ -1975,6 +1976,11 @@ function finalizeOptions(q, correct, wrongs, jp) {
 function posLabel(p, fallback) {
   return ({ n: '名詞', v5: '五段動詞', v1: '一段動詞', vs: 'する動詞', vk: '來る', i: 'い形容詞', na: 'な形容詞', adv: '副詞', conj: '接續詞', pron: '代名詞', q: '疑問詞', cnt: '數量詞', exp: '招呼語' })[p] || fallback || '單字';
 }
+// One example block everywhere: play button, sentence with furigana, Chinese.
+function exampleHtml(jp, zh, cls = '') {
+  const plain = jaPlain(exPlain(jp));
+  return `<div class="example ${cls}"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(plain)}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${furi(exPlain(jp))}</div>${zh ? `<div class="zh">${esc(zh)}</div>` : ''}</div></div>`;
+}
 function vocabWhy(v) {
   const head = `**${jaPlain(v.w)}**${v.r && v.r !== v.w ? `（${v.r}）` : ''}：${v.m}`;
   const ex = v.ex ? `\n- 例：${jaPlain(exPlain(v.ex))}${v.exZh ? `（${v.exZh}）` : ''}` : '';
@@ -2923,6 +2929,7 @@ function renderPractice() {
     <div class="pr-actions ${answered ? 'pr-next-sticky' : ''}">
       <div class="left">
         <button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>
+        ${q.kind === 'v' && q.item && q.item.ex && (answered || q.fmt !== 'v-cloze') ? '<button type="button" class="btn btn-sm btn-ghost" data-act="speak-example" title="朗讀例句">例句</button>' : ''}
         <button type="button" class="btn btn-sm btn-ghost" data-act="toggle-furi" title="切換振假名（F）">振假名：${FURI_LABEL[furiState()]}</button>
         ${answered && isAiConfigured() ? '<button type="button" class="btn btn-sm btn-ghost" data-act="ai-explain">AI 解析</button>' : ''}
         ${answered && q.kind !== 'm' ? '<button type="button" class="btn btn-sm btn-ghost" data-act="report-item" title="題目有誤或不自然時，把它移出題庫">這題有問題</button>' : ''}
@@ -2954,7 +2961,7 @@ function previewHtml(e, pct, total) {
         ${reading ? `<div class="reading jp">${esc(reading)}</div>` : ''}
         <div class="meaning">${esc(v.m)}</div>
         ${v.p ? `<div class="mt-1"><span class="chip">${esc(posLabel(v.p, v.posLabel))}</span></div>` : ''}
-        ${v.ex ? `<div class="example"><div class="jp" style="font-size:18px">${furi(exPlain(v.ex))}</div>${v.exZh ? `<div class="small muted mt-1">${esc(v.exZh)}</div>` : ''}</div>` : ''}
+        ${v.ex ? exampleHtml(v.ex, v.exZh) : ''}
       </div>
     </div>
     <div class="pr-actions pr-next-sticky">
@@ -2979,14 +2986,17 @@ function feedbackHtml(e) {
   const ok = e.chosen === q.answer;
   const right = q.options[q.answer];
   const full = q.fullJp && (q.fmt.startsWith('g-') || q.fmt === 'v-cloze' || q.fmt === 'm-card') ? `<div class="fb-full jp">${furi(q.fullJp)} <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak-full" title="朗讀">${icon('speaker')}</button></div>${q.zhText ? `<div class="small muted">${esc(q.zhText)}</div>` : ''}` : '';
+  // other vocabulary formats: the word's example sentence, with its own play button (so it is not buried in the note text)
+  const example = q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-cloze' ? exampleHtml(q.item.ex, q.item.exZh, 'mt-2') : '';
+  const why = example ? String(q.why || '').replace(/\n- 例：[^\n]*/g, '') : q.why;
   const srsInfo = e.srs ? `<span>${srsDots(e.srs.rec.b)}</span><span>${srsLevelLabel(e.srs.rec)}・${dueLabel(e.srs.rec)}</span>` : '';
   const mistake = !ok && q.kind !== 'x' ? '<span>已加入錯題本</span>' : '';
   const mNote = e.mistakeDone ? '<span class="chip chip-ok">錯題已連對 3 次，移出錯題本</span>' : '';
   return `
     <div class="feedback ${ok ? 'ok' : 'bad'}">
       <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>' : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
-      ${full}
-      ${q.why ? `<div class="fb-why mt-2">${md(q.why)}</div>` : ''}
+      ${full}${example}
+      ${why ? `<div class="fb-why mt-2">${md(why)}</div>` : ''}
       <div class="fb-meta">${q.point ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${mNote}</div>
       <div id="aiExplainBox"></div>
     </div>`;
@@ -3300,6 +3310,7 @@ const ACTIONS = {
     if (q.audioScript && text === q.audio) speakScript(text); else speak(text);
   },
   'speak-full': () => { const e = currentEntry(); if (e && e.q) speak(e.q.fullJp); },
+  'speak-example': () => { const e = currentEntry(); if (e && e.item && e.item.ex) speak(jaPlain(exPlain(e.item.ex))); },
   speak: (el) => speak(el.dataset.text),
   'ai-explain': () => aiExplainCurrent(),
   'report-item': () => reportCurrentItem(),

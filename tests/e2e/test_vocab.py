@@ -308,6 +308,25 @@ def test_topics_line_names_custom_cards_or_a_finished_day_instead_of_disappearin
 
 TESTS += [test_topics_line_names_custom_cards_or_a_finished_day_instead_of_disappearing]
 
+# ---- 2026-10-26 (7): every example sentence has a play button ----
+def test_example_sentences_have_play_buttons_on_preview_feedback_and_footer(b):
+    js = """(() => { const calls = []; const orig = speak; speak = (t) => calls.push(t);
+      const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.ex && meaningOptions(x)); const ex = exPlain(v.ex);
+      startSession('items', { items: [v] }); renderPractice();
+      const pv = document.querySelector('.preview .example [data-act=speak]');
+      const out = { preview: pv ? pv.dataset.text === ex : false };
+      ACTIONS['preview-go'](); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice();
+      const foot = document.querySelector('.pr-actions [data-act=speak-example]'); out.footBefore = !!foot;
+      if (foot) { foot.click(); out.footSpeaks = calls[calls.length - 1] === ex; }
+      answerCurrent(e.q.answer);
+      const fb = document.querySelector('.feedback .example [data-act=speak]'); out.feedback = fb ? fb.dataset.text === ex : false;
+      out.whyHasNoDuplicateExample = !document.querySelector('.fb-why') || !document.querySelector('.fb-why').textContent.includes('例：');
+      SESSION = null; document.body.classList.remove('practicing'); speak = orig; return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r == {'preview': True, 'footBefore': True, 'footSpeaks': True, 'feedback': True, 'whyHasNoDuplicateExample': True}, r
+
+TESTS += [test_example_sentences_have_play_buttons_on_preview_feedback_and_footer]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
