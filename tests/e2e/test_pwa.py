@@ -32,10 +32,20 @@ def test_app_renders_and_sync_is_off_when_client_creation_throws(b):
         ("eval", "new Promise(r => setTimeout(r, 300)).then(() => JSON.stringify({ st: Sync.status, chip: document.querySelector('#sideSync .sync-chip').textContent.trim() }))")], timeout=6)
     assert out[-1] == '{"st":"off","chip":"未登入"}', out[-1]
 
+def test_data_lives_in_its_own_versioned_file_and_is_precached(b):
+    js = """navigator.serviceWorker.ready.then(() => caches.keys()).then(ks => caches.open(ks.find(k => k.startsWith('nq-v'))).then(c => c.keys()))
+      .then(reqs => { const tagEl = document.querySelector('script[src*="data.js"]'); const tag = tagEl ? tagEl.getAttribute('src') : null;
+        return JSON.stringify({ urls: reqs.map(r => { const u = new URL(r.url); return u.pathname + u.search; }), data: typeof DATA === 'object' && Array.isArray(DATA.VOCAB), tag,
+          inline: !document.documentElement.outerHTML.includes('const DATA = {"PHASES"') }); })"""
+    out = b.run([("nav", URL), ("wait", READY), ("wait", "!!navigator.serviceWorker.controller"), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert r['data'] and r['tag'] and r['tag'].startswith('./data.js?v=') and r['inline'], r
+    assert any(u.endswith(r['tag'][1:]) for u in r['urls']), r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
-    tests = [test_first_visit_does_not_reload_itself, test_app_renders_while_auth_session_restore_hangs, test_app_renders_and_sync_is_off_when_client_creation_throws]
+    tests = [test_first_visit_does_not_reload_itself, test_app_renders_while_auth_session_restore_hangs, test_app_renders_and_sync_is_off_when_client_creation_throws, test_data_lives_in_its_own_versioned_file_and_is_precached]
     failed = 0
     try:
         for t in tests:

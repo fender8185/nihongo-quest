@@ -1,5 +1,5 @@
 /* Nihongo Quest service worker: versioned app-shell cache, cache-first for same-origin GETs. */
-const CACHE = 'nq-v27';
+const CACHE = 'nq-v28';
 const PRECACHE = [
   './',
   './index.html',
@@ -9,12 +9,23 @@ const PRECACHE = [
   './icons/apple-touch-icon.png',
   './vendor/supabase.js',
   './sync-core.js',
-  './config.js'
+  './config.js',
+  './data.js?v=1'
 ];
+// Versioned, immutable files: when the previous cache already holds the same URL, copy it instead of downloading
+const IMMUTABLE = /\?v=\d+$/;
 
 self.addEventListener('install', (event) => {
   // cache: 'reload' bypasses the HTTP cache (GitHub Pages sends max-age=600) so a new release never precaches a stale index.html
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE.map((u) => new Request(u, { cache: 'reload' })))));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    const fresh = [];
+    for (const u of PRECACHE) {
+      if (IMMUTABLE.test(u)) { const old = await caches.match(u); if (old) { await cache.put(u, old); continue; } }
+      fresh.push(new Request(u, { cache: 'reload' }));
+    }
+    await cache.addAll(fresh);
+  })());
 });
 
 self.addEventListener('activate', (event) => {
