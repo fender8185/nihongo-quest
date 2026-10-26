@@ -729,9 +729,10 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '11';   // keep equal to the number in sw.js CACHE ('nq-v11'); scripts/test.sh checks it
+const APP_VERSION = '12';   // keep equal to the number in sw.js CACHE ('nq-v12'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '12', date: '2026-10-26', items: ['學習紀錄的日曆從開始使用那一週畫起（最少 4 週、最多 26 週），寬螢幕不再出現大片空白日期。'] },
   { v: '11', date: '2026-10-26', items: ['雲端同步改為條件式寫入：上傳前確認雲端沒有被其他裝置更新過，舊的本機狀態不會再蓋掉別台的進度。', '若兩台裝置同時有未同步的變更，採用雲端版本，本機版本自動存成快照（設定 › 資料 可還原）。', '同步判斷不再依賴各裝置的時鐘。'] },
   { v: '10', date: '2026-10-26', items: ['文法、聽力、閱讀、漢字題同一天只出一次：答錯的隔天再出，補位時也不再拉回今天剛答過的題目。單字維持原本做法。'] },
   { v: '9', date: '2026-10-25', items: ['今日練習按鈕上的題數改為實際會出的題數，和點進去後一致。', '設定 › 外觀 新增版本紀錄。'] },
@@ -3309,8 +3310,19 @@ function renderToday(view) {
 }
 
 function heatLevel(n) { return n <= 0 ? 0 : n < 6 ? 1 : n < 15 ? 2 : n < 26 ? 3 : 4; }
+// The grid runs from the week the learner started (first day with a record, or the day the profile was created) to
+// this week, so a wide screen does not show months of blank cells before the first green one. At least 4 weeks so
+// a brand-new profile still reads as a calendar; at most 26, as before.
+function heatmapWeeks() {
+  const t = todayStr();
+  const monday = (ds) => { const d = parseDate(ds); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d; };
+  let first = state.createdAt && state.createdAt < t ? state.createdAt : t;
+  for (const ds of Object.keys(state.dailyLogs)) if (dayTotal(state.dailyLogs[ds]) > 0 && ds < first) first = ds;
+  const span = Math.round((monday(t) - monday(first)) / 864e5 / 7) + 1;
+  return clamp(span, 4, 26);
+}
 function heatmapHtml() {
-  const weeks = 26;
+  const weeks = heatmapWeeks();
   const today = parseDate(todayStr());
   const dow = (today.getDay() + 6) % 7; // Monday = 0
   const start = new Date(today); start.setDate(start.getDate() - dow - (weeks - 1) * 7);

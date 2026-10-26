@@ -256,6 +256,26 @@ def test_reinforcement_skips_grammar_and_kanji_answered_today_but_not_vocab(b):
     assert r['low'], r
     assert r['picked'] == ['v'], r
 
+def test_heatmap_starts_at_the_week_the_learner_began(b):
+    # columns = weeks from the Monday of the first-use week to this week; at least 4, at most 26
+    js = """(() => {
+      const cols = () => heatmapHtml().match(/<i /g).length / 7;
+      const monday = (d) => { const x = parseDate(d); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; };
+      const expect = (d) => Math.round((monday(todayStr()) - monday(d)) / 864e5 / 7) + 1;
+      const out = {};
+      state.dailyLogs = {};
+      state.createdAt = addDays(todayStr(), -10); out.young = cols();
+      state.createdAt = addDays(todayStr(), -70); out.tenWeeks = [cols(), expect(state.createdAt)];
+      state.createdAt = todayStr(); state.dailyLogs[addDays(todayStr(), -84)] = { vocabCount: 3 }; out.fromLogs = [cols(), expect(addDays(todayStr(), -84))];
+      state.dailyLogs = {}; state.createdAt = addDays(todayStr(), -800); out.old = cols();
+      return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert r['young'] == 4, r
+    assert r['tenWeeks'][0] == r['tenWeeks'][1] and 10 <= r['tenWeeks'][0] <= 11, r
+    assert r['fromLogs'][0] == r['fromLogs'][1] and 12 <= r['fromLogs'][0] <= 13, r
+    assert r['old'] == 26, r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -264,7 +284,8 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_wrong_non_vocab_item_waits_until_tomorrow_but_wrong_vocab_stays_due_today, test_reinforcement_skips_grammar_and_kanji_answered_today_but_not_vocab]
+             test_wrong_non_vocab_item_waits_until_tomorrow_but_wrong_vocab_stays_due_today, test_reinforcement_skips_grammar_and_kanji_answered_today_but_not_vocab,
+             test_heatmap_starts_at_the_week_the_learner_began]
     failed = 0
     try:
         for t in tests:
