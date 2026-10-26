@@ -330,6 +330,8 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .match-word, .match-meaning { padding: 12px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); font: inherit; font-size: 16px; cursor: pointer; text-align: center; }
 .match-word.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 .match-word.matched, .match-meaning.matched { border-color: var(--ok); color: var(--ok); opacity: .7; cursor: default; }
+@keyframes wrongFlash { 0%, 100% { border-color: var(--line); box-shadow: none; } 15%, 70% { border-color: var(--bad); box-shadow: 0 0 0 3px var(--bad-line); } }
+.match-word.wrong-flash, .match-meaning.wrong-flash { animation: wrongFlash .55s ease; }
 .preview { text-align: center; padding: 20px 10px 8px; }
 .preview .word { font-size: 44px; font-weight: 600; line-height: 1.5; }
 .preview .reading { font-size: 18px; color: var(--fg-3); }
@@ -784,9 +786,10 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '42';   // keep equal to the number in sw.js CACHE ('nq-v42'); scripts/test.sh checks it
+const APP_VERSION = '43';   // keep equal to the number in sw.js CACHE ('nq-v43'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '43', date: '2026-10-27', items: ['單字配對題：配錯時兩個按鈕會閃紅框；作答後的解析列出四組的字、讀音與意思。'] },
   { v: '42', date: '2026-10-27', items: ['學習分析的明細改為「總進度」：單字與文法各一個半圓指針圖，三種顏色代表熟練程度，指針指向加權進度；移除「這 7 天變熟悉的／新學的」清單。'] },
   { v: '41', date: '2026-10-27', items: ['單字新增「我會了」：單字表每一列、字卡、作答後的回饋都可以按，字會直接標成已熟練、約六週後再確認一次；之後答錯就回到正常規則。單字表可按「取消熟練」收回。'] },
   { v: '40', date: '2026-10-27', items: ['設定 › 語音 的「測試連線」結果不再因為瀏覽器語音清單載入而消失。'] },
@@ -2218,6 +2221,7 @@ function makeVocabQuestion(v0, ctx = {}) {
       q.stemHtml = '';
       q.pairs = pairs; q.words = shuffle(pairs.map(x => x[0])); q.meanings = shuffle(pairs.map(x => x[1]));
       q.mistakePrompt = `配對：${jaPlain(v.w)}`;
+      q.why = pairs.map(([w, mm, r]) => `**${w}**${r && r !== w ? `（${r}）` : ''}：${mm}`).join('\n\n') + vocabExamples(v).map(x => `\n- 例：${jaPlain(exPlain(x.ex))}${x.exZh ? `（${x.exZh}）` : ''}`).join('');   // all four pairs, then the target's examples
       q.options = [{ text: v.m }, { text: '' }]; q.answer = 0; q.answerText = v.m;
       return true;
     }
@@ -3181,8 +3185,8 @@ function customInteractionHtml(e, answered) {
     const m = e.match || { sel: null, matched: [], wrong: 0 };
     const pairOf = (w) => q.pairs.find(p => p[0] === w);
     return `<div class="match">
-      <div class="match-col">${q.words.map(w => `<button type="button" class="match-word jp ${m.matched.includes(w) ? 'matched' : ''} ${m.sel === w ? 'selected' : ''}" data-act="match-word" data-w="${esc(w)}" ${m.matched.includes(w) || answered ? 'disabled' : ''}>${esc(w)}</button>`).join('')}</div>
-      <div class="match-col">${q.meanings.map(mm => { const done = q.pairs.some(p => p[1] === mm && m.matched.includes(p[0])); return `<button type="button" class="match-meaning ${done ? 'matched' : ''}" data-act="match-meaning" data-m="${esc(mm)}" ${done || answered ? 'disabled' : ''}>${esc(mm)}</button>`; }).join('')}</div>
+      <div class="match-col">${q.words.map(w => `<button type="button" class="match-word jp ${m.matched.includes(w) ? 'matched' : ''} ${m.sel === w ? 'selected' : ''} ${m.flash && m.flash.w === w ? 'wrong-flash' : ''}" data-act="match-word" data-w="${esc(w)}" ${m.matched.includes(w) || answered ? 'disabled' : ''}>${esc(w)}</button>`).join('')}</div>
+      <div class="match-col">${q.meanings.map(mm => { const done = q.pairs.some(p => p[1] === mm && m.matched.includes(p[0])); return `<button type="button" class="match-meaning ${done ? 'matched' : ''} ${m.flash && m.flash.m === mm ? 'wrong-flash' : ''}" data-act="match-meaning" data-m="${esc(mm)}" ${done || answered ? 'disabled' : ''}>${esc(mm)}</button>`; }).join('')}</div>
       ${answered ? '' : `<div class="row between small muted" style="grid-column:1/-1"><span>${m.wrong ? `錯了 ${m.wrong} 次` : m.sel ? `已選「${esc(m.sel)}」，點它的意思` : '點一個單字'}</span><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">我不會，看答案</button></div>`}
     </div>`;
   }
@@ -3560,7 +3564,8 @@ const ACTIONS = {
     const m = e.match = e.match || { sel: null, matched: [], wrong: 0 };
     if (!m.sel) return;
     const pair = e.q.pairs.find(p => p[0] === m.sel);
-    if (pair && pair[1] === el.dataset.m) m.matched.push(m.sel); else m.wrong++;
+    if (pair && pair[1] === el.dataset.m) { m.matched.push(m.sel); delete m.flash; }
+    else { m.wrong++; m.flash = { w: m.sel, m: el.dataset.m, at: Date.now() }; setTimeout(() => { if (m.flash && Date.now() - m.flash.at >= 550) delete m.flash; }, 600); }   // flash the wrong pair red
     m.sel = null;
     if (m.matched.length === e.q.pairs.length) finishCustom(e, m.wrong === 0, `配對時錯了 ${m.wrong} 次`); else renderPractice();
   },

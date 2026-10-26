@@ -597,6 +597,23 @@ def test_i_know_this_word_button_is_on_the_word_list_and_the_practice_feedback(b
 
 TESTS += [test_i_know_this_word_marks_it_mastered_until_it_is_missed, test_i_know_this_word_button_is_on_the_word_list_and_the_practice_feedback]
 
+# ---- 2026-10-27: matching — a wrong pair flashes red, the feedback explains all four pairs ----
+def test_matching_flashes_a_wrong_pair_and_explains_every_pair_afterwards(b):
+    js = """(() => { const v = __W__; srsAnswer(v.key, true);
+      startSession('items', { items: [v] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-match' }); renderPractice(); const q = e.q;
+      const w0 = document.querySelector('.match-word'); const w = w0.dataset.w; w0.click();
+      const wrongM = [...document.querySelectorAll('.match-meaning')].find(m => m.dataset.m !== q.pairs.find(p => p[0] === w)[1]); const wm = wrongM.dataset.m; wrongM.click();
+      const out = { flashW: !!document.querySelector(`.match-word[data-w="${w}"].wrong-flash`), flashM: !!document.querySelector(`.match-meaning[data-m="${wm}"].wrong-flash`), flashOthers: document.querySelectorAll('.wrong-flash').length };
+      for (const [pw, pm] of q.pairs) { document.querySelector(`.match-word[data-w="${pw}"]`).click(); document.querySelector(`.match-meaning[data-m="${pm}"]`).click(); }
+      const fb = (document.querySelector('.feedback') || {}).textContent || '';
+      out.allWords = q.pairs.every(p => fb.includes(p[0]) && fb.includes(p[1])); out.done = e.done;
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__W__', SPELL_WORD)
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['flashW'] and r['flashM'] and r['flashOthers'] == 2, r
+    assert r['done'] and r['allWords'], r
+
+TESTS += [test_matching_flashes_a_wrong_pair_and_explains_every_pair_afterwards]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
