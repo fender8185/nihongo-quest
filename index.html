@@ -329,6 +329,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .match-col { display: flex; flex-direction: column; gap: 8px; }
 .match-word, .match-meaning { padding: 12px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); font: inherit; font-size: 16px; cursor: pointer; text-align: center; }
 .match-word.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.preview.grammar .rule { text-align: left; max-width: 560px; margin-left: auto; margin-right: auto; }
 .mlist { padding: 0; } .mlist.card { padding: 4px 16px; }
 details.mrow { border-bottom: 1px solid var(--line); } details.mrow:last-child { border-bottom: none; }
 details.mrow > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 0; }
@@ -794,12 +795,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '48';   // keep equal to the number in sw.js CACHE ('nq-v48'); scripts/test.sh checks it
+const APP_VERSION = '49';   // keep equal to the number in sw.js CACHE ('nq-v49'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '48', from: '36', date: '2026-10-27', items: [
+  { v: '49', from: '36', date: '2026-10-27', items: [
+    '學習法調整：預習卡看完後，題目改在 4–6 題之後才出；新單字在同一組只再考一次（隔 8 題以上），第二次改成隔天複習；新文法考點第一次出現先看一句話規則與一個例句；每日夾帶的錯題保持兩天以上的間隔；答錯後可按「手滑，不算」，不進錯題本、排程維持原狀。',
     '主選單：學習分析移到錯題本原本的位置，錯題本往下。',
     '錯題本改版：每天練習自動夾帶幾題錯題（錯最多、最久沒練的優先，設定可調）；題目達到「熟悉」就自動移到已掌握，手動／舊錯題則是隔天以上答對兩次；頁面改成一行一題的緊湊列表，可依類別篩選、排序，或依文法考點分組並直接練該考點；已掌握可一鍵清空。',
     '單字庫整理：新增「敬語」主題（16 個尊敬語／謙讓語動詞）、36 個常用 N5 字、26 個常用 N4 字；16 組「名詞＋する」合成一張卡（紀錄自動合併）；相同中文的字加上區別；漢字表新增 58 個常見 N4 漢字（共 342 個）。',
@@ -1313,6 +1315,7 @@ function srsAnswer(key, correct, opt = {}) {
   const elapsed = r.last ? daysBetween(r.last, t) : 0;
   if (isNew) delete r.s;
   fsrsNext(r, g, elapsed);
+  if (isNew && g === 3 && key.startsWith('v:')) r.s = Math.min(r.s, 1);   // a new word's first check is tomorrow, then FSRS takes over
   r.n++;
   if (g > 1) { r.ok++; r.st++; } else { r.ng++; r.st = 0; if (before >= 2) r.lapse = (r.lapse || 0) + 1; delete r.known; }   // a miss ends the 我會了 vouch: back to the normal rules
   r.b = g === 1 ? Math.min(levelFromS(r.s), 1) : levelFromS(r.s);
@@ -1454,6 +1457,7 @@ function dailyMistakeItems(used, n) {
     if (out.length >= n || !m.key || used.has(m.key) || seen.has(m.key)) return;
     const it = REG.byKey.get(m.key); if (!it || !['v', 'g', 'k'].includes(it.kind)) return;
     const r = state.srs[m.key]; if (r && r.last === t) return;
+    if (r && r.last && daysBetween(r.last, t) < 2 && m.date !== r.last) return;   // answered right yesterday: keep the spacing
     seen.add(m.key); out.push(it);
   });
   return out;
@@ -3014,6 +3018,8 @@ function startSession(mode, opt = {}) {
   }
   // a word seen for the first time is shown on a preview card before its question
   if (mode !== 'mistakes') entries.forEach(e => { if (e.item && e.item.kind === 'v' && !state.srs[e.item.key]) e.preview = true; });
+  // a grammar point seen for the first time gets a one-line rule card first (daily and unit practice)
+  if (mode === 'daily' || mode === 'unit') entries.forEach(e => { if (e.item && e.item.kind === 'g' && !state.srs[e.item.key]) e.preview = true; });
   SESSION = {
     mode, title: opt.title || MODE_TITLE[mode] || '練習', entries, idx: 0, meta,
     stats: { correct: 0, wrong: 0, newCount: 0 }, results: [], startedAt: Date.now(), lastFmt: '', opt
@@ -3038,14 +3044,14 @@ function usedFormats(key) {
 // A word met for the first time comes back twice more in this session, each time in another format: once a few
 // questions later, once further on. Encores do not touch the SRS schedule; the first answer did that.
 // After a miss the 再練一次 copy takes the 3–5 window, so the encores move back to keep the word from appearing twice in a row.
+// One encore in another format, 8–11 items later (a few minutes of spacing); the second look is tomorrow's review.
 function scheduleEncores(e, ok) {
   const shift = ok ? 0 : 3;
   const at = (lo, hi) => Math.min(SESSION.entries.length, SESSION.idx + lo + Math.floor(Math.random() * (hi - lo + 1)));
-  SESSION.entries.splice(at(3 + shift, 5 + shift), 0, { item: e.item, encore: true });
   SESSION.entries.splice(at(8 + shift, 11 + shift), 0, { item: e.item, encore: true });
 }
-// How many encore questions a queue will add once its new words are answered (two per new built-in word).
-function encoreEstimate(items) { return 2 * items.filter(it => it.kind === 'v' && it.builtin && !state.srs[it.key]).length; }
+// How many encore questions a queue will add once its new words are answered (one per new built-in word).
+function encoreEstimate(items) { return items.filter(it => it.kind === 'v' && it.builtin && !state.srs[it.key]).length; }
 
 // Consistent furigana for options: readings come from the correct answer so that a wrong
 // conjugation is not given away by missing furigana.
@@ -3108,7 +3114,7 @@ function renderPractice() {
   const pct = Math.round(SESSION.idx / total * 100);
   if (e.preview && !e.previewDone) {
     view.innerHTML = previewHtml(e, pct, total);
-    if (!e.autoPlayedPreview) { e.autoPlayedPreview = true; if (state.settings.autoSpeak) setTimeout(() => speak(q.speakWord || jaPlain(e.item.w), speakOpts(q, q.speakWord)), 150); }
+    if (!e.autoPlayedPreview) { e.autoPlayedPreview = true; if (state.settings.autoSpeak && e.item.kind === 'v') setTimeout(() => speak(q.speakWord || jaPlain(e.item.w), speakOpts(q, q.speakWord)), 150); }
     return;
   }
   const showZh = q.zhText && (state.settings.showZh || q.forceZh || e.zhShown);
@@ -3169,7 +3175,19 @@ function renderPractice() {
 }
 
 // New word: show it before asking. Enter/Space (or the button) goes on to the question.
+// After a preview the question is asked 4–6 items later, so it is a recall and not a copy of what was just shown.
+function dismissPreview() {
+  const e = currentEntry(); if (!e || !e.preview || e.previewDone) return;
+  e.previewDone = true;
+  if (SESSION.entries.length - SESSION.idx > 1) {
+    SESSION.entries.splice(SESSION.idx, 1);
+    const at = Math.min(SESSION.entries.length, SESSION.idx + 4 + Math.floor(Math.random() * 3));
+    SESSION.entries.splice(at, 0, e);
+  }
+  renderPractice(); window.scrollTo({ top: 0 });
+}
 function previewHtml(e, pct, total) {
+  if (e.item.kind === 'g') return grammarPreviewHtml(e, pct, total);
   const v = e.item;
   const reading = v.r && v.r !== jaPlain(v.w) ? v.r : '';
   return `
@@ -3247,14 +3265,15 @@ function feedbackHtml(e) {
   const cur = q.key ? state.srs[q.key] : null;
   const srsInfo = e.srs ? `<span>${srsDots(e.srs.rec.b)}</span><span>${srsLevelLabel(e.srs.rec, q.key)}・${dueLabel(e.srs.rec)}</span>`
     : e.encore && cur ? `<span>${srsDots(cur.b)}</span><span>${srsLevelLabel(cur, q.key)}・這次不影響排程</span>` : '';
-  const mistake = !ok && q.kind !== 'x' ? '<span>已加入錯題本</span>' : '';
+  const mistake = !ok && q.kind !== 'x' && !e.slip ? '<span>已加入錯題本</span>' : '';
+  const slip = e.slip ? '<span class="chip">手滑，不算</span>' : (!ok && e.undo ? '<button type="button" class="btn btn-sm btn-ghost" data-act="slip" title="選錯鍵、看錯行：不進錯題本，排程維持原狀">手滑，不算</button>' : '');
   const mNote = e.mistakeDone ? '<span class="chip chip-ok">已移出錯題本</span>' : '';
   return `
     <div class="feedback ${ok ? 'ok' : 'bad'}">
       <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>' : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
       ${full}${example}
       ${why ? `<div class="fb-why mt-2">${md(why)}</div>` : ''}
-      <div class="fb-meta">${q.point ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${mNote}${q.kind === 'v' && q.key && ok && cur && srsLevelLabel(cur, q.key) !== '已熟練' ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(q.key)}">這個字我已經會了</button>` : ''}</div>
+      <div class="fb-meta">${q.point ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}${q.kind === 'v' && q.key && ok && cur && srsLevelLabel(cur, q.key) !== '已熟練' ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(q.key)}">這個字我已經會了</button>` : ''}</div>
       <div id="aiExplainBox"></div>
     </div>`;
 }
@@ -3267,6 +3286,10 @@ function answerCurrent(i) {
   e.done = true; e.chosen = i;
   const ok = i === q.answer;
   SESSION.lastFmt = q.fmt;
+  if (!ok && !e.encore && !e.requeued) {   // kept so 「手滑，不算」 can put everything back
+    const m0 = state.mistakes.find(x => (q.key && x.key === q.key) || x.prompt === (q.mistakePrompt || q.plainStem || ''));
+    e.undo = { srs: q.key && state.srs[q.key] ? JSON.parse(JSON.stringify(state.srs[q.key])) : null, mistake: m0 ? JSON.parse(JSON.stringify(m0)) : null, mistakesLen: state.mistakes.length, today: Object.assign({}, state.today) };
+  }
   if (['v', 'g', 'l', 'r', 'k'].includes(q.kind) && !e.encore) {
     e.srs = srsAnswer(q.key, ok);
     if (e.srs.isNew) SESSION.stats.newCount++;
@@ -3546,7 +3569,23 @@ const ACTIONS = {
   'start-mistakes': () => startSession('mistakes'),
   answer: (el) => answerCurrent(Number(el.dataset.i)),
   next: () => nextQuestion(),
-  'preview-go': () => { const e = currentEntry(); if (e && e.preview && !e.previewDone) { e.previewDone = true; renderPractice(); window.scrollTo({ top: 0 }); } },
+  'preview-go': () => dismissPreview(),
+  slip: () => {   // 「手滑，不算」: the answer was a mis-tap, not a gap — schedule, notebook and stats go back to before it
+    const e = currentEntry(); if (!e || !e.done || e.slip || !e.undo) return;
+    const q = e.q, u = e.undo;
+    if (q.key) { if (u.srs) state.srs[q.key] = u.srs; else delete state.srs[q.key]; }
+    state.today = u.today;
+    if (u.mistake) { const i = state.mistakes.findIndex(x => x.id === u.mistake.id); if (i >= 0) state.mistakes[i] = u.mistake; }
+    else if (state.mistakes.length > u.mistakesLen) state.mistakes.shift();
+    const f = state.statsFmt[q.fmt]; if (f && f.ng > 0) f.ng--;
+    if (state.recent.length) state.recent.pop();
+    if (e.srs && e.srs.isNew) SESSION.stats.newCount = Math.max(0, SESSION.stats.newCount - 1);
+    SESSION.stats.wrong = Math.max(0, SESSION.stats.wrong - 1);
+    SESSION.entries = SESSION.entries.filter((x, i) => i <= SESSION.idx || !(x.requeued && x.item === e.item));
+    const last = SESSION.results[SESSION.results.length - 1]; if (last && last.q === q) SESSION.results.pop();
+    e.slip = true; e.srs = null; e.mistakeDone = false; delete e.undo;
+    saveState(); renderPractice(); toast('這題不算，排程維持原狀');
+  },
   'exit-practice': () => exitPractice(),
   'close-summary': () => { SESSION = null; document.body.classList.remove('practicing'); go(lastMainRoute || '#/today'); Sync.flushDeferred(); },
   again: () => { const s = SESSION; SESSION = null; startSession(s.mode, s.opt || {}); },
@@ -3635,7 +3674,7 @@ function handleKey(ev) {
   if (r.name === 'practice' && SESSION) {
     const e = currentEntry();
     if (e && e.preview && !e.previewDone) {
-      if (k === 'Enter' || k === ' ') { ev.preventDefault(); ACTIONS['preview-go'](); }
+      if (k === 'Enter' || k === ' ') { ev.preventDefault(); dismissPreview(); }
       else if (k === 'r' || k === 'R') { ev.preventDefault(); ACTIONS.replay(); }
       else if (k === 'f' || k === 'F') { ev.preventDefault(); toggleFurigana(); }
       else if (k === 'Escape') { ev.preventDefault(); exitPractice(); }
@@ -6090,6 +6129,36 @@ function planAdviceHtml() {
       <p class="small dim">${esc(lead)}</p>
       <div class="table-wrap"><table class="table"><thead><tr><th>題庫</th><th>已學 / 總數</th><th>還沒學</th><th>建議每天</th><th>目前設定</th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="small muted mt-2">套用後的設定：每日目標 ${a.rec.dailyGoal} 題・每組 ${a.rec.sessionSize} 題・單字比例 ${a.rec.vocabShare}%・新單字 ${a.rec.newVocabPerDay}・新文法 ${a.rec.newGrammarPerDay}・新漢字 ${a.rec.newKanjiPerDay}・聽力 ${a.rec.listenPerDay}${a.studyDays > 0 ? '' : '（已無學習天數，新題全部為 0）'}。閱讀題跟著單元進度出，不另外設定。</div>
+    </div>`;
+}
+
+// First sighting of a grammar point: its name, the unit formula, the one-line rule and a sibling example (never this item's own sentence).
+function grammarPreviewHtml(e, pct, total) {
+  const g = e.item; const u = unitById(g.u); const lesson = DATA.LESSONS[g.u];
+  const sib = REG.grammar.find(x => x.pt === g.pt && x.key !== g.key && (x.t || 'choice') === 'choice' && x.a && /（[\s　]*）/.test(x.jp || ''));
+  // most points have no sibling question: fall back to a lesson example that uses the same answer, then the first lesson example
+  const lessonExs = lesson ? lesson.sections.flatMap(sec => sec.ex || []) : [];
+  const lex = lessonExs.find(x => g.a && x.jp && x.jp.includes(g.a)) || lessonExs[0];
+  const ex = sib ? exampleHtml(sib.jp.replace(/（[\s　]*）/, sib.a), sib.zh || '', 'mt-3') : lex ? exampleHtml(lex.jp, lex.zh || '', 'mt-3') : '';
+  return `
+    <div class="pr-top">
+      <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
+      <div class="bar"><span style="width:${pct}%"></span></div>
+      <div class="pr-count">${SESSION.idx + 1} / ${total}</div>
+    </div>
+    <div class="q-card">
+      <div class="q-label"><span>新文法 · ${esc(u.short)}</span><span class="chip chip-accent">新</span></div>
+      <div class="q-instr">先看一句話規則，等一下會用這個考點出題。</div>
+      <div class="preview grammar">
+        <div class="word">${esc(g.pt)}</div>
+        ${lesson && lesson.formula ? `<div class="small muted mt-1">${esc(lesson.formula)}</div>` : ''}
+        ${g.why ? `<div class="rule small mt-3">${md(g.why)}</div>` : ''}
+        ${ex}
+      </div>
+    </div>
+    <div class="pr-actions pr-next-sticky">
+      <div class="left"><button type="button" class="btn btn-sm btn-ghost" data-act="nav" data-route="#/course/${esc(g.u)}?tab=lesson">看完整講義</button></div>
+      <div class="right"><button type="button" class="btn btn-primary" data-act="preview-go" id="btnNext">開始作答 <span class="kbd" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button></div>
     </div>`;
 }
 

@@ -216,7 +216,7 @@ def test_formal_exam_listening_options_play_on_click(b):
 def test_today_button_count_matches_the_session(b):
     js = """(() => { const out = []; for (const size of [20, 15, 25, 30]) { state.settings.sessionSize = size; saveState(); route();
       const btn = document.querySelector('[data-act=start-daily]'); const shown = Number((btn.textContent.match(/(\\d+) 題/) || [])[1]);
-      startSession('daily'); const enc = 2 * SESSION.entries.filter(e => e.item.kind === 'v' && e.item.builtin && !state.srs[e.item.key]).length; const actual = SESSION.entries.length + enc; SESSION = null; document.body.classList.remove('practicing'); location.hash = '#/today';
+      startSession('daily'); const enc = encoreEstimate(SESSION.entries.map(e => e.item)); const actual = SESSION.entries.length + enc; SESSION = null; document.body.classList.remove('practicing'); location.hash = '#/today';
       out.push([shown, actual]); } return JSON.stringify(out); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
     pairs = __import__('json').loads(out[-1])
@@ -490,6 +490,69 @@ def test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_grou
     assert r['groups'] >= 2 and r['drill'] >= 1, r
     assert r['mastered'] == 1 and r['clearBtn'] and r['afterClear'] == 0, r
 
+# ---- 2026-10-27: learning-science pass — delayed first test after a preview, one spaced encore + 1-day first interval,
+#      grammar mini-lesson on first sighting, spacing for carried mistakes, 「手滑」 undo ----
+def test_dismissing_a_preview_asks_the_question_a_few_items_later(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x)); const fill = REG.grammar.filter(g => state.srs[g.key]).concat(REG.grammar).slice(0, 9).map(g => { srsAnswer(g.key, true); return g; });
+      startSession('items', { items: [v, ...fill] }); renderPractice(); const wasPreview = !!document.querySelector('.preview');
+      ACTIONS['preview-go'](); const cur = currentEntry(); const pos = SESSION.entries.findIndex(x => x.item && x.item.key === v.key);
+      const out = { wasPreview, movedAway: cur.item.key !== v.key, idx: SESSION.idx, pos, stillPreviewDone: SESSION.entries[pos].previewDone === true, len: SESSION.entries.length };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['wasPreview'] and r['movedAway'] and r['stillPreviewDone'] and r['len'] == 10, r
+    assert r['idx'] + 4 <= r['pos'] <= r['idx'] + 6, r
+
+def test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow(b):
+    js = """(() => { const t = todayStr(); const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.exZh && /[一-龯]/.test(x.w) && meaningOptions(x) && recallOptions(x));
+      const fill = REG.grammar.filter(g => !state.srs[g.key]).slice(0, 14);
+      const est = encoreEstimate([v]); startSession('items', { items: [v, ...fill] }); const e = currentEntry(); e.previewDone = true; answerCurrent(e.q.answer);
+      const positions = SESSION.entries.map((x, i) => x.encore && x.item.key === v.key ? i : -1).filter(i => i >= 0);
+      const g = REG.grammar.find(x => !state.srs[x.key]); const gr = srsAnswer(g.key, true);
+      const out = { enc: positions.length, pos: positions[0], due: daysBetween(t, state.srs[v.key].due), gDue: daysBetween(t, gr.rec.due), est };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['enc'] == 1 and 8 <= r['pos'] <= 11 and r['est'] == 1, r
+    assert r['due'] == 1 and r['gDue'] >= 3, r
+
+def test_first_sighting_of_a_grammar_point_shows_a_mini_lesson_in_daily_practice(b):
+    js = """(() => { startSession('unit', { unit: 'm1' }); const hasSib = (x) => REG.grammar.some(y => y.pt === x.pt && y.key !== x.key && (y.t || 'choice') === 'choice');
+      const i = SESSION.entries.findIndex(x => x.preview && x.item && x.item.kind === 'g' && (x.item.t || 'choice') === 'choice' && hasSib(x.item)); SESSION.idx = i; const e = currentEntry(); const g = e.item; renderPractice();
+      const txt = document.getElementById('view').textContent;
+      const out = { preview: e.preview === true && !e.previewDone, card: !!document.querySelector('.preview.grammar'), pt: txt.includes(g.pt), rule: txt.includes(String(g.why).replace(/[*][*]/g, '').slice(0, 12)), example: (() => { const fills = REG.grammar.filter(y => y.pt === g.pt && y.key !== g.key && (y.t || 'choice') === 'choice' && y.a && /（[ 　]*）/.test(y.jp || '')).map(y => y.jp.replace(/（[ 　]*）/, y.a)); const btn = document.querySelector('.preview.grammar .example [data-act=speak]'); return !!btn && fills.includes(btn.dataset.text); })(), ownSentence: txt.includes((g.jp || '').slice(0, 8)) };
+      ACTIONS['preview-go'](); out.movedAway = !currentEntry().item || currentEntry().item.key !== g.key;
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['preview'] and r['card'] and r['pt'] and r['rule'] and r['example'] and not r['ownSentence'] and r['movedAway'], r
+
+def test_carried_mistakes_keep_two_days_of_spacing_unless_the_last_answer_was_wrong(b):
+    js = """(() => { const t = todayStr(); const gs = REG.grammar.filter(g => g.u === 'm1').slice(0, 2); state.mistakes = []; state.settings.mistakesPerDay = 2;
+      const rec = (g, last) => { state.srs[g.key] = { b: 1, due: addDays(t, 20), n: 14, ok: 12, ng: 2, s: 2, d: 6, last, intro: addDays(t, -9) }; };
+      const y = addDays(t, -1); rec(gs[0], y); rec(gs[1], y);
+      state.mistakes.push({ id: uid('mk'), key: gs[0].key, cat: '文法', prompt: 'a', answer: 'に', count: 3, mastered: false, date: addDays(t, -5), last: addDays(t, -5) });   // answered right yesterday → wait
+      state.mistakes.push({ id: uid('mk'), key: gs[1].key, cat: '文法', prompt: 'b', answer: 'に', count: 3, mastered: false, date: y, last: y });                               // wrong yesterday → carry
+      saveState(); const r = dailyQueue(20); return JSON.stringify({ keys: r.mistakeKeys, a: gs[0].key, b: gs[1].key }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['keys'] == [r['b']], r
+
+def test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && meaningOptions(x)); srsAnswer(v.key, true); state.srs[v.key].last = addDays(todayStr(), -3); state.srs[v.key].due = todayStr();
+      const before = JSON.stringify(state.srs[v.key]); const mist = state.mistakes.length; const rec0 = state.recent.length; const ng0 = (state.statsFmt['v-meaning'] || { ng: 0 }).ng;
+      const fill = REG.grammar.filter(g => state.srs[g.key]).concat(REG.grammar).slice(0, 6).map(g => { srsAnswer(g.key, true); return g; });
+      startSession('items', { items: [v, ...fill] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice();
+      answerCurrent((e.q.answer + 1) % e.q.options.length);
+      const out = { btn: !!document.querySelector('.feedback [data-act=slip]'), added: state.mistakes.length - mist, requeued: SESSION.entries.filter(x => x.requeued).length };
+      ACTIONS.slip(); out.restored = JSON.stringify(state.srs[v.key]) === before; out.mistBack = state.mistakes.length === mist; out.requeueGone = SESSION.entries.filter(x => x.requeued).length === 0;
+      out.recent = state.recent.length === rec0; out.ng = (state.statsFmt['v-meaning'] || { ng: 0 }).ng === ng0; out.chip = /手滑/.test((document.querySelector('.fb-meta') || {}).textContent || ''); out.btnGone = !document.querySelector('.feedback [data-act=slip]');
+      out.wrongStat = SESSION.stats.wrong; SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['btn'] and r['added'] == 1 and r['requeued'] == 1, r
+    assert r['restored'] and r['mistBack'] and r['requeueGone'] and r['recent'] and r['ng'] and r['chip'] and r['btnGone'] and r['wrongStat'] == 0, r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -506,7 +569,9 @@ if __name__ == "__main__":
              test_tools_page_has_an_expandable_api_guide_for_every_provider,
              test_stats_shows_the_past_week_of_practice_and_what_was_learned, test_reaching_the_learned_level_records_the_date, test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading,
              test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them,
-             test_linked_mistakes_join_the_daily_mix_by_priority_up_to_the_setting, test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups]
+             test_linked_mistakes_join_the_daily_mix_by_priority_up_to_the_setting, test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
+             test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_sighting_of_a_grammar_point_shows_a_mini_lesson_in_daily_practice,
+             test_carried_mistakes_keep_two_days_of_spacing_unless_the_last_answer_was_wrong, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue]
     failed = 0
     try:
         for t in tests:

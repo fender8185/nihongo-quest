@@ -77,7 +77,7 @@ def test_new_word_shows_a_preview_card_before_its_question(b):
     assert not r['after']['preview'] and r['after']['opts'] == 4 and r['after']['n'] == r['before']['n'] == 1, r
 
 # ---- Task 5: encores ----
-def test_a_new_word_comes_back_twice_in_other_formats_without_rescheduling(b):
+def test_a_new_word_comes_back_once_in_another_format_without_rescheduling(b):
     js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.exZh && /[一-龯]/.test(x.w) && meaningOptions(x) && recallOptions(x));
       const fill = REG.grammar.filter(g => state.srs[g.key] === undefined).slice(0, 12);
       startSession('items', { items: [v, ...fill] }); const n0 = SESSION.entries.length;
@@ -91,8 +91,8 @@ def test_a_new_word_comes_back_twice_in_other_formats_without_rescheduling(b):
         chip: document.querySelector('.q-label .chip-warn') ? document.querySelector('.q-label .chip-warn').textContent : '' };
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
-    assert r['grew'] == 2 and r['enc'] == 2 and r['fmt2'] != r['fmt1'] and r['n'] == 1 and r['fmts'] == 2 and r['chip'] == '換個方式再考', r
-    assert 3 <= r['positions'][0] <= 5 and 8 <= r['positions'][1] <= 11, r
+    assert r['grew'] == 1 and r['enc'] == 1 and r['fmt2'] != r['fmt1'] and r['n'] == 1 and r['fmts'] == 2 and r['chip'] == '換個方式再考', r
+    assert 8 <= r['positions'][0] <= 11, r
 
 def test_no_encore_when_no_other_format_can_be_built(b):
     # encores are built after the word's first answer, so the word already has a record (wider format choice than a brand-new word)
@@ -121,7 +121,7 @@ def test_wrong_first_answer_keeps_requeue_and_encores_apart_and_requeue_does_not
       const f = JSON.parse(JSON.stringify(state.srs[v.key].f)); SESSION = null; document.body.classList.remove('practicing');
       return JSON.stringify({ pos, adjacent, f, fmt1 }); })()"""
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
-    assert len(r['pos']) == 4 and not r['adjacent'], r
+    assert len(r['pos']) == 3 and not r['adjacent'], r
     assert r['f'] == {r['fmt1']: [0, 1]}, r
 
 def test_preview_card_only_speaks_when_auto_reading_is_on(b):
@@ -136,7 +136,7 @@ def test_preview_card_only_speaks_when_auto_reading_is_on(b):
 TESTS = [test_themes_cover_every_builtin_word_once, test_theme_tab_lists_cards_and_opens_the_word_table, test_themed_practice_uses_only_that_theme,
          test_mastered_needs_three_passed_formats_for_words_only, test_answering_records_the_format_and_flash_ratings_count_as_one, test_unpassed_formats_are_preferred_on_review,
          test_new_word_shows_a_preview_card_before_its_question,
-         test_a_new_word_comes_back_twice_in_other_formats_without_rescheduling, test_no_encore_when_no_other_format_can_be_built, test_words_already_known_get_no_encore,
+         test_a_new_word_comes_back_once_in_another_format_without_rescheduling, test_no_encore_when_no_other_format_can_be_built, test_words_already_known_get_no_encore,
          test_wrong_first_answer_keeps_requeue_and_encores_apart_and_requeue_does_not_count_as_a_pass, test_preview_card_only_speaks_when_auto_reading_is_on]
 
 # ---- 2026-10-26 (2): two active themes feed the new-word order ----
