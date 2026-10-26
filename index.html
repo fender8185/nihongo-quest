@@ -742,9 +742,10 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '17';   // keep equal to the number in sw.js CACHE ('nq-v17'); scripts/test.sh checks it
+const APP_VERSION = '18';   // keep equal to the number in sw.js CACHE ('nq-v18'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '18', date: '2026-10-26', items: ['今日練習的單字集中在 1 到 3 個主題：新字來自目前的兩個主題，複習優先出到期最多的那個主題；其他主題的到期字等這些做完才補上。首頁的「單字主題」顯示的是這組實際會碰到的主題。'] },
   { v: '17', date: '2026-10-26', items: ['主題卡進度條改用單一元素的漸層繪製，排除瀏覽器排版差異。'] },
   { v: '16', date: '2026-10-26', items: ['主題卡進度條的「已學」段改用較明顯的綠色（v15 第一版太淡，看起來像空的）。'] },
   { v: '15', date: '2026-10-26', items: ['主題卡的進度條改為三段顏色：已學、熟悉、熟練。', '首頁列出這組練習會碰到的單字主題與文法考點。'] },
@@ -2630,8 +2631,20 @@ function interleave(vList, gList, mode) {
   return out;
 }
 
+// The words of one session stay within one to three themes: the themes today's new words come from, then the
+// theme(s) holding the most due reviews. Reviews from other themes are used only when those run out.
+function focusThemes(plan) {
+  const out = plan.newV.length ? activeThemes(REG.vocab, plan.n4Open) : [];
+  const count = {};
+  plan.dueV.forEach(v => { if (v.builtin) { const c = vocabTheme(v); if (!out.includes(c)) count[c] = (count[c] || 0) + 1; } });
+  Object.entries(count).sort((a, b) => b[1] - a[1] || themeRank(a[0]) - themeRank(b[0])).forEach(([c]) => { if (out.length < 3) out.push(c); });
+  return out;
+}
 function buildDailyQueue(fullSize = state.settings.sessionSize) {
   const plan = dailyPlan(fullSize);
+  const focus = focusThemes(plan);
+  const inFocus = (v) => !v.builtin || focus.includes(vocabTheme(v));
+  const dueV = plan.dueV.slice().sort((a, b) => inFocus(b) - inFocus(a) || byDue(a, b));
   const lCap = Math.min(state.settings.listenPerDay || 0, Math.round(fullSize * 0.2));
   const L = plan.dueL.slice(0, lCap);
   L.push(...plan.newL.slice(0, Math.max(0, lCap - L.length)));
@@ -2649,13 +2662,13 @@ function buildDailyQueue(fullSize = state.settings.sessionSize) {
     const news = fresh.slice(0, Math.max(0, slots - reviews.length));
     return { reviews, news };
   };
-  let v = take(plan.dueV, plan.newV, vSlots);
+  let v = take(dueV, plan.newV, vSlots);
   let g = take(plan.dueG, plan.newG, gSlots);
   // hand unused slots to the other track
   let spare = size - (v.reviews.length + v.news.length + g.reviews.length + g.news.length);
   if (spare > 0) {
     const moreG = plan.dueG.slice(g.reviews.length, g.reviews.length + spare); g.reviews = g.reviews.concat(moreG); spare -= moreG.length;
-    const moreV = plan.dueV.slice(v.reviews.length, v.reviews.length + spare); v.reviews = v.reviews.concat(moreV); spare -= moreV.length;
+    const moreV = dueV.slice(v.reviews.length, v.reviews.length + spare); v.reviews = v.reviews.concat(moreV); spare -= moreV.length;
     const moreGN = plan.newG.slice(g.news.length, g.news.length + spare); g.news = g.news.concat(moreGN); spare -= moreGN.length;
     const moreVN = plan.newV.slice(v.news.length, v.news.length + spare); v.news = v.news.concat(moreVN); spare -= moreVN.length;
   }
@@ -2675,7 +2688,7 @@ function buildDailyQueue(fullSize = state.settings.sessionSize) {
   L.forEach((x, i) => items.splice(Math.min(items.length, Math.round((i + 1) * items.length / (L.length + 1)) + i), 0, x));
   items.push(...R);
   const isNew = (x) => !state.srs[x.key];
-  return { items, plan, newCount: items.filter(isNew).length, reviewCount: items.filter(x => !isNew(x)).length };
+  return { items, plan, focus, newCount: items.filter(isNew).length, reviewCount: items.filter(x => !isNew(x)).length };
 }
 
 // The Today page and 「開始練習」 share one built queue, so the button says exactly how many questions the session
@@ -3340,12 +3353,9 @@ function noticesHtml() {
 // themes most of the review words belong to) and the grammar points of its grammar questions, new ones first.
 function sessionTopicsHtml(q, plan) {
   const words = q.items.filter(it => it.kind === 'v' && it.builtin);
-  let themes = words.some(it => !state.srs[it.key]) ? activeThemes(REG.vocab, plan.n4Open) : [];
-  if (!themes.length && words.length) {
-    const count = {}; words.forEach(it => { const c = vocabTheme(it); count[c] = (count[c] || 0) + 1; });
-    const all = Object.entries(count).sort((a, b) => b[1] - a[1]).map(([c]) => c);
-    themes = all.slice(0, 3); if (all.length > 3) themes.push(`等 ${all.length} 個`);
-  }
+  const present = new Set(words.map(vocabTheme));
+  const all = (q.focus || []).filter(c => present.has(c)).concat([...present].filter(c => !(q.focus || []).includes(c)));
+  const themes = all.slice(0, 3); if (all.length > 3) themes.push(`等 ${all.length} 個`);
   const gItems = q.items.filter(it => it.kind === 'g');
   const pts = [];
   gItems.filter(it => !state.srs[it.key]).concat(gItems.filter(it => state.srs[it.key])).forEach(g => { if (g.pt && !pts.includes(g.pt)) pts.push(g.pt); });
