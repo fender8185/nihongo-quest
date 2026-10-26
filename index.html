@@ -12,7 +12,7 @@
 <script src="./vendor/supabase.js"></script>
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
-<script src="./data.js?v=4"></script>
+<script src="./data.js?v=5"></script>
 <title>Nihongo Quest N4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -776,9 +776,10 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '38';   // keep equal to the number in sw.js CACHE ('nq-v38'); scripts/test.sh checks it
+const APP_VERSION = '39';   // keep equal to the number in sw.js CACHE ('nq-v39'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '39', date: '2026-10-27', items: ['N4 的 726 個單字也都有第二個例句了：全部 1461 個內建單字每字兩句，題目在兩句之間輪替。'] },
   { v: '38', date: '2026-10-27', items: ['N5 的 735 個單字每字新增第二個例句：例句填空、漢字讀音、漢字寫法與朗讀會在兩句之間輪替，預習卡與字卡同時顯示兩句。'] },
   { v: '37', date: '2026-10-27', items: ['學習分析新增「每日練習量建議」：依每種題庫還沒學的題數與考前可學習天數，算出每天該學的新單字、文法、漢字、聽力題，指出哪一種落後最多；按「使用建議」直接套用到學習設定。'] },
   { v: '36', date: '2026-10-27', items: ['單字庫整理：新增「敬語」主題 16 個尊敬語／謙讓語動詞、36 個常用 N5 字（飲食、店家、顏色、位置）、26 個常用 N4 字；16 組「名詞＋する」合成一張卡（紀錄會自動併到保留的那張）；相同中文的字加上區別；三個動詞的例句改成可出填空題。', '漢字表新增 58 個單字裡常出現的 N4 漢字（冷・予・晩・番・全・部・熱・最・両・歯…），漢字題會考到。'] },
@@ -3501,7 +3502,7 @@ const ACTIONS = {
     if (q.audioScript && text === q.audio) speakScript(text); else speak(text);
   },
   'speak-full': () => { const e = currentEntry(); if (e && e.q) speak(e.q.fullJp); },
-  'speak-example': () => { const e = currentEntry(); if (e && e.item && e.item.ex) speak(jaPlain(exPlain(e.item.ex))); },
+  'speak-example': () => { const e = currentEntry(); const it = e && ((e.q && e.q.item) || e.item); if (it && it.ex) speak(jaPlain(exPlain(it.ex))); },   // the example the question used
   'spell-tap': (el) => {
     const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'v-spell') return;
     e.spell = e.spell || []; const i = Number(el.dataset.i); if (e.spell.includes(i)) return;

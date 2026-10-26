@@ -311,15 +311,15 @@ TESTS += [test_topics_line_names_custom_cards_or_a_finished_day_instead_of_disap
 # ---- 2026-10-26 (7): every example sentence has a play button ----
 def test_example_sentences_have_play_buttons_on_preview_feedback_and_footer(b):
     js = """(() => { const calls = []; const orig = speak; speak = (t) => calls.push(t);
-      const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.ex && meaningOptions(x)); const ex = exPlain(v.ex);
+      const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.ex && meaningOptions(x)); const ex = exPlain(v.ex); const exs = vocabExamples(v).map(x => exPlain(x.ex));   // a question uses either example
       startSession('items', { items: [v] }); renderPractice();
       const pv = document.querySelector('.preview .example [data-act=speak]');
       const out = { preview: pv ? pv.dataset.text === ex : false };
       ACTIONS['preview-go'](); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice();
       const foot = document.querySelector('.pr-actions [data-act=speak-example]'); out.footBefore = !!foot;
-      if (foot) { foot.click(); out.footSpeaks = calls[calls.length - 1] === ex; }
+      let spoken = ''; if (foot) { foot.click(); spoken = calls[calls.length - 1]; out.footSpeaks = exs.includes(spoken); }
       answerCurrent(e.q.answer);
-      const fb = document.querySelector('.feedback .example [data-act=speak]'); out.feedback = fb ? fb.dataset.text === ex : false;
+      const fb = document.querySelector('.feedback .example [data-act=speak]'); out.feedback = fb ? exs.includes(fb.dataset.text) && fb.dataset.text === spoken : false;
       out.whyHasNoDuplicateExample = !document.querySelector('.fb-why') || !document.querySelector('.fb-why').textContent.includes('例：');
       SESSION = null; document.body.classList.remove('practicing'); speak = orig; return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
@@ -561,8 +561,8 @@ def test_questions_pick_either_of_a_words_two_examples_and_cards_show_both(b):
 
 TESTS += [test_questions_pick_either_of_a_words_two_examples_and_cards_show_both]
 
-def test_every_n5_word_has_a_usable_second_example(b):
-    js = """(() => { const V = REG.vocab.filter(v => v.builtin && v.lv === 'N5'); const bad = [];
+def test_every_builtin_word_has_a_usable_second_example(b):
+    js = """(() => { const V = REG.vocab.filter(v => v.builtin); const bad = [];
       V.forEach(v => { if (!v.ex2 || !v.exZh2) { bad.push(v.w + ':missing'); return; }
         const info = vSurfaceInfo(withExample(v, 1)); if (!info || info.form === 'raw') bad.push(v.w + ':form');
         if (v.ex2.replace(/[{}]/g, '') === v.ex.replace(/[{}]/g, '')) bad.push(v.w + ':same');
@@ -571,7 +571,7 @@ def test_every_n5_word_has_a_usable_second_example(b):
     r = json.loads(ev(b, js))
     assert r['nbad'] == 0, r
 
-TESTS += [test_every_n5_word_has_a_usable_second_example]
+TESTS += [test_every_builtin_word_has_a_usable_second_example]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
