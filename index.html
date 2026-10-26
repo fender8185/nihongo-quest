@@ -177,11 +177,10 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.35; }
 .bar > span { display: block; height: 100%; border-radius: 99px; background: var(--accent); transition: width .3s; }
 .bar.ok > span { background: var(--ok); }
 .bar.thin { height: 5px; }
-.bar.stack { display: flex; height: 10px; }
-.bar.stack > span { border-radius: 0; transition: none; }
-.bar.stack > [data-seg="mastered"], .seg-dot.mastered { background: var(--heat-4); }
-.bar.stack > [data-seg="learned"], .seg-dot.learned { background: var(--heat-3); }
-.bar.stack > [data-seg="seen"], .seg-dot.seen { background: var(--heat-2); }   /* heat-1 is too close to the track colour */
+.bar.stack { height: 10px; background-repeat: no-repeat; background-size: 100% 100%; }
+.seg-dot.mastered { background: var(--heat-4); }
+.seg-dot.learned { background: var(--heat-3); }
+.seg-dot.seen { background: var(--heat-2); }
 .seg-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
 .plan-topics { display: flex; flex-direction: column; gap: 4px; margin: -6px 0 14px; color: var(--fg-2); font-size: 14px; line-height: 1.6; }
 .plan-topics b { color: var(--fg-3); font-weight: 500; font-size: 12px; margin-right: 8px; }
@@ -743,9 +742,10 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '16';   // keep equal to the number in sw.js CACHE ('nq-v16'); scripts/test.sh checks it
+const APP_VERSION = '17';   // keep equal to the number in sw.js CACHE ('nq-v17'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '17', date: '2026-10-26', items: ['主題卡進度條改用單一元素的漸層繪製，排除瀏覽器排版差異。'] },
   { v: '16', date: '2026-10-26', items: ['主題卡進度條的「已學」段改用較明顯的綠色（v15 第一版太淡，看起來像空的）。'] },
   { v: '15', date: '2026-10-26', items: ['主題卡的進度條改為三段顏色：已學、熟悉、熟練。', '首頁列出這組練習會碰到的單字主題與文法考點。'] },
   { v: '14', date: '2026-10-26', items: ['每天的新單字改為從兩個主題交錯出現，首頁會顯示今天的主題；複習仍照到期混合出題。', '中翻日與例句填空的選項有時改用假名顯示，避免直接從漢字看出答案；答完會顯示漢字與讀音。'] },
@@ -3754,8 +3754,11 @@ function vocabThemes() {
 }
 // three stacked segments: mastered, learned (not yet mastered), seen (not yet learned)
 function stackBarHtml(g) {
-  const seg = (name, n) => `<span data-seg="${name}" data-n="${n}" style="width:${(n / Math.max(1, g.total) * 100).toFixed(1)}%"></span>`;
-  return `<div class="bar stack mt-2">${seg('mastered', g.mastered)}${seg('learned', g.learned - g.mastered)}${seg('seen', g.seen - g.learned)}</div>`;
+  // one element, painted with a gradient: no child layout to go wrong on any browser
+  const pct = (n) => (n / Math.max(1, g.total) * 100).toFixed(1) + '%';
+  const a = pct(g.mastered), b = pct(g.learned), c = pct(g.seen);   // cumulative stops: mastered ⊂ learned ⊂ seen
+  const bg = `linear-gradient(to right, var(--heat-4) 0 ${a}, var(--heat-3) ${a} ${b}, var(--heat-2) ${b} ${c}, transparent ${c} 100%)`;
+  return `<div class="bar stack mt-2" data-mastered="${g.mastered}" data-learned="${g.learned - g.mastered}" data-seen="${g.seen - g.learned}" style="background-image:${bg}"></div>`;
 }
 function renderVocabThemes(view) {
   const cards = vocabThemes().map(g => `<div class="card theme-card" data-c="${esc(g.c)}">

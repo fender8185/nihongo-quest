@@ -226,10 +226,10 @@ def test_theme_card_bar_has_three_segments_for_seen_learned_mastered(b):
       ws.slice(5, 9).forEach(v => { state.srs[v.key] = rec(1, {}); });
       location.hash = '#/vocab/themes'; route();
       const card = document.querySelector('.theme-card[data-c="顏色"]');
-      const segs = [...card.querySelectorAll('.bar.stack > span')].map(el => [el.dataset.seg, Number(el.dataset.n)]);
-      return JSON.stringify({ total: ws.length, segs }); })()"""
+      const bar = card.querySelector('.bar.stack'); const d = bar.dataset; const bg = getComputedStyle(bar).backgroundImage;
+      return JSON.stringify({ total: ws.length, segs: [Number(d.mastered), Number(d.learned), Number(d.seen)], gradient: bg.startsWith('linear-gradient'), stops: (bg.match(/%/g) || []).length }); })()"""
     r = json.loads(ev(b, js))
-    assert r['segs'] == [['mastered', 2], ['learned', 3], ['seen', 4]], r
+    assert r['segs'] == [2, 3, 4] and r['gradient'] and r['stops'] >= 6, r
 
 def test_today_lists_the_vocab_themes_and_grammar_points_of_the_session(b):
     js = """(() => { location.hash = '#/today'; route();
