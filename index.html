@@ -742,9 +742,10 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '18';   // keep equal to the number in sw.js CACHE ('nq-v18'); scripts/test.sh checks it
+const APP_VERSION = '19';   // keep equal to the number in sw.js CACHE ('nq-v19'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '19', date: '2026-10-26', items: ['新文法不再被複習擠掉：每天固定出到上限（正確率低時仍會自動減量），只有新單字會因複習太多而減少，且不低於上限的一半。', '每組練習的文法名額先放新題，剩下才放複習；複習以答對次數最少的優先，同一單元的題目熟練度會拉平。'] },
   { v: '18', date: '2026-10-26', items: ['今日練習的單字集中在 1 到 3 個主題：新字來自目前的兩個主題，複習優先出到期最多的那個主題；其他主題的到期字等這些做完才補上。首頁的「單字主題」顯示的是這組實際會碰到的主題。'] },
   { v: '17', date: '2026-10-26', items: ['主題卡進度條改用單一元素的漸層繪製，排除瀏覽器排版差異。'] },
   { v: '16', date: '2026-10-26', items: ['主題卡進度條的「已學」段改用較明顯的綠色（v15 第一版太淡，看起來像空的）。'] },
@@ -2552,7 +2553,7 @@ function newGrammarCandidates(unitIdOnly) {
 function reinforcementItems(pool, exclude) {
   const t = todayStr();
   return pool.filter(it => { const r = state.srs[it.key]; return r && r.due > t && r.b <= 2 && !exclude.has(it.key) && (it.kind === 'v' || r.last !== t); })
-    .sort((a, b) => state.srs[a.key].due.localeCompare(state.srs[b.key].due) || state.srs[a.key].b - state.srs[b.key].b);
+    .sort((a, b) => ((state.srs[a.key].ok || 0) - (state.srs[b.key].ok || 0)) || state.srs[a.key].due.localeCompare(state.srs[b.key].due) || state.srs[a.key].b - state.srs[b.key].b);
 }
 function adaptiveFactor() {
   const acc = recentAccuracy();
@@ -2601,19 +2602,17 @@ function dailyPlan(size = state.settings.sessionSize) {
   const dueG = REG.grammar.filter(g => { const r = state.srs[g.key]; return r && r.due <= t && grammarInReach(g, curIdx); }).sort(byDue);
   const maxV = Math.round(s.newVocabPerDay * ad.factor);
   const maxG = Math.round(s.newGrammarPerDay * ad.factor);
-  const doneNew = state.today.newV + state.today.newG;
   const ex = extrasPlan(curIdx);
   const room = s.dailyGoal - dayTotal(state.dailyLogs[t]) - dueV.length - dueG.length - ex.dueK.length - Math.min(ex.dueL.length, s.listenPerDay || 0);
-  let allowance = clamp(room + doneNew, Math.min(MIN_NEW_PER_DAY, maxV + maxG), maxV + maxG) - doneNew;
-  allowance = Math.max(0, allowance);
+  // Grammar drives the course: its new items come every day regardless of the review load (the accuracy-based
+  // factor still applies). Only new words give way to a review backlog, and never below about half their quota.
+  const wantG = Math.max(0, maxG - state.today.newG);
+  const roomV = room - wantG + state.today.newV;
+  const wantV = Math.max(0, clamp(roomV, Math.min(Math.ceil(maxV / 2), maxV), maxV) - state.today.newV);
   let note = ad.note;
-  if (!note && room < MIN_NEW_PER_DAY && maxV + maxG > MIN_NEW_PER_DAY && dueV.length + dueG.length > 0) {
-    note = `今天待複習的題目比較多，新內容先減為 ${allowance} 題；複習完成後，之後幾天就會再增加。`;
+  if (!note && wantV < Math.max(0, maxV - state.today.newV) && dueV.length + dueG.length > 0) {
+    note = `今天待複習的題目比較多，新單字先減為 ${wantV} 個，新文法照常；複習完成後，之後幾天就會再增加。`;
   }
-  // split the allowance between vocabulary and grammar; grammar drives the course, so it gets at least about half
-  const gShare = maxV + maxG > 0 ? Math.max(maxG / (maxV + maxG), maxG > 0 ? 0.55 : 0) : 0;
-  const wantG = Math.min(Math.max(0, maxG - state.today.newG), Math.ceil(allowance * gShare));
-  const wantV = Math.min(Math.max(0, maxV - state.today.newV), allowance - wantG);
   const newG = newGrammarCandidates().slice(0, wantG);
   const newV = newVocabCandidates(vPool, n4Open).slice(0, wantV + Math.max(0, wantG - newG.length));
   return Object.assign({ dueV, dueG, newV, newG, note, factor: ad.factor, size, n4Open }, ex);
@@ -2655,6 +2654,10 @@ function buildDailyQueue(fullSize = state.settings.sessionSize) {
   const size = Math.max(6, fullSize - L.length - R.length - K.length);
   const vSlots = Math.round(size * state.settings.vocabShare / 100);
   const gSlots = size - vSlots;
+  // grammar: new items first, then the reviews answered correctly the fewest times (so the items of a unit level
+  // out instead of the same well-known ones coming back while unseen ones wait)
+  const byPractice = (a, b) => ((state.srs[a.key].ok || 0) - (state.srs[b.key].ok || 0)) || byDue(a, b);
+  const dueG = plan.dueG.slice().sort(byPractice);
   // keep about a quarter of each track for new material so a review backlog cannot crowd it out
   const take = (due, fresh, slots) => {
     const keepNew = Math.min(fresh.length, Math.round(slots * 0.25));
@@ -2663,11 +2666,12 @@ function buildDailyQueue(fullSize = state.settings.sessionSize) {
     return { reviews, news };
   };
   let v = take(dueV, plan.newV, vSlots);
-  let g = take(plan.dueG, plan.newG, gSlots);
+  const gNews = plan.newG.slice(0, gSlots);
+  let g = { news: gNews, reviews: dueG.slice(0, gSlots - gNews.length) };
   // hand unused slots to the other track
   let spare = size - (v.reviews.length + v.news.length + g.reviews.length + g.news.length);
   if (spare > 0) {
-    const moreG = plan.dueG.slice(g.reviews.length, g.reviews.length + spare); g.reviews = g.reviews.concat(moreG); spare -= moreG.length;
+    const moreG = dueG.slice(g.reviews.length, g.reviews.length + spare); g.reviews = g.reviews.concat(moreG); spare -= moreG.length;
     const moreV = dueV.slice(v.reviews.length, v.reviews.length + spare); v.reviews = v.reviews.concat(moreV); spare -= moreV.length;
     const moreGN = plan.newG.slice(g.news.length, g.news.length + spare); g.news = g.news.concat(moreGN); spare -= moreGN.length;
     const moreVN = plan.newV.slice(v.news.length, v.news.length + spare); v.news = v.news.concat(moreVN); spare -= moreVN.length;

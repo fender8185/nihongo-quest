@@ -271,6 +271,26 @@ def test_daily_reviews_fill_from_other_themes_only_when_the_chosen_ones_run_out(
 
 TESTS += [test_daily_reviews_prefer_the_active_themes_plus_one_more, test_daily_reviews_fill_from_other_themes_only_when_the_chosen_ones_run_out]
 
+# ---- 2026-10-26 (5): new grammar first, least-practised reviews first ----
+def test_new_grammar_is_not_squeezed_out_by_a_review_backlog(b):
+    js = """(() => { const due = (v, ok) => { state.srs[v.key] = { b: 2, due: addDays(todayStr(), -1), n: ok, ok, ng: 0, s: 3, d: 5, f: {}, last: addDays(todayStr(), -4) }; };
+      REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 40).forEach(v => due(v, 2)); saveState();
+      const plan = dailyPlan(20); return JSON.stringify({ newG: plan.newG.length, limit: state.settings.newGrammarPerDay, dueV: plan.dueV.length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['dueV'] == 40 and r['newG'] == r['limit'], r
+
+def test_grammar_slots_take_new_items_first_then_the_least_practised_reviews(b):
+    js = """(() => { const due = (g, ok) => { state.srs[g.key] = { b: 2, due: addDays(todayStr(), -2 - (ok % 3)), n: ok, ok, ng: 0, s: 3, d: 5, last: addDays(todayStr(), -5) }; };
+      const gs = REG.grammar.filter(g => g.u === 'm1'); gs.slice(0, 10).forEach(g => due(g, 3)); gs.slice(10, 15).forEach(g => due(g, 1)); saveState();
+      const q = dailyQueue(20); const G = q.items.filter(it => it.kind === 'g');
+      const fresh = G.filter(it => !state.srs[it.key]).length; const revOk = G.filter(it => state.srs[it.key]).map(it => state.srs[it.key].ok);
+      return JSON.stringify({ fresh, revOk, limit: state.settings.newGrammarPerDay }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['fresh'] >= min(r['limit'], 5), r
+    assert sum(1 for ok in r['revOk'] if ok == 1) == 5, r   # every least-practised item is in before any well-known one
+
+TESTS += [test_new_grammar_is_not_squeezed_out_by_a_review_backlog, test_grammar_slots_take_new_items_first_then_the_least_practised_reviews]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
