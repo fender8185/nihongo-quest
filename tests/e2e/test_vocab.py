@@ -217,6 +217,35 @@ def test_homophones_never_produce_two_identical_kana_options(b):
 
 TESTS += [test_kana_options_need_four_distinct_readings, test_homophones_never_produce_two_identical_kana_options]
 
+# ---- 2026-10-26 (3): stacked theme bars, Today outline ----
+def test_theme_card_bar_has_three_segments_for_seen_learned_mastered(b):
+    js = """(() => { const ws = REG.vocab.filter(v => v.builtin && vocabTheme(v) === '顏色');
+      const rec = (b, f) => ({ b, due: '2099-01-01', n: 5, ok: 5, ng: 0, s: 30, d: 5, f });
+      ws.slice(0, 2).forEach(v => { state.srs[v.key] = rec(6, { 'v-meaning': [1, 0], 'v-recall': [1, 0], 'v-cloze': [1, 0] }); });
+      ws.slice(2, 5).forEach(v => { state.srs[v.key] = rec(3, {}); });
+      ws.slice(5, 9).forEach(v => { state.srs[v.key] = rec(1, {}); });
+      location.hash = '#/vocab/themes'; route();
+      const card = document.querySelector('.theme-card[data-c="顏色"]');
+      const segs = [...card.querySelectorAll('.bar.stack > span')].map(el => [el.dataset.seg, Number(el.dataset.n)]);
+      return JSON.stringify({ total: ws.length, segs }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['segs'] == [['mastered', 2], ['learned', 3], ['seen', 4]], r
+
+def test_today_shows_a_session_outline_instead_of_a_bare_plan_line(b):
+    js = """(() => { location.hash = '#/today'; route();
+      const o = document.querySelector('.plan-outline'); const items = [...o.querySelectorAll('li')].map(li => li.textContent.replace(/\s+/g, ' ').trim());
+      const q = dailyQueue(state.settings.sessionSize); const newV = q.items.filter(it => it.kind === 'v' && !state.srs[it.key]).length;
+      const warnBanner = !!document.querySelector('.card .banner.warn');
+      recentAccuracy = () => 0.5; route();
+      const withNote = [...document.querySelector('.plan-outline').querySelectorAll('li')].map(li => li.textContent);
+      return JSON.stringify({ items, newV, themes: activeThemes(REG.vocab, false).join('・'), warnBanner, noteShown: withNote.some(t => t.includes('正確率')) }); })()"""
+    r = json.loads(ev(b, js))
+    assert any(f"新單字 {r['newV']} 個" in t and r['themes'] in t and '預習卡' in t for t in r['items']), r
+    assert any(t.startswith('新文法') for t in r['items']) and any('題型' in t for t in r['items']), r
+    assert not r['warnBanner'] and r['noteShown'], r
+
+TESTS += [test_theme_card_bar_has_three_segments_for_seen_learned_mastered, test_today_shows_a_session_outline_instead_of_a_bare_plan_line]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)

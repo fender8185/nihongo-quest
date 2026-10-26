@@ -177,6 +177,15 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.35; }
 .bar > span { display: block; height: 100%; border-radius: 99px; background: var(--accent); transition: width .3s; }
 .bar.ok > span { background: var(--ok); }
 .bar.thin { height: 5px; }
+.bar.stack { display: flex; height: 8px; }
+.bar.stack > span { border-radius: 0; transition: none; }
+.bar.stack > [data-seg="mastered"], .seg-dot.mastered { background: var(--heat-4); }
+.bar.stack > [data-seg="learned"], .seg-dot.learned { background: var(--heat-3); }
+.bar.stack > [data-seg="seen"], .seg-dot.seen { background: var(--heat-1); }
+.seg-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.plan-outline { margin: 0 0 14px; padding-left: 20px; color: var(--fg-2); font-size: 14px; line-height: 1.65; }
+.plan-outline li { margin: 3px 0; }
+.plan-outline li.note { color: var(--fg); background: var(--warn-soft); border-radius: 8px; padding: 6px 10px; list-style: none; margin-left: -20px; }
 .dots { display: inline-flex; gap: 3px; vertical-align: middle; }
 .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line-2); display: inline-block; }
 .dots i.on { background: var(--ok); }
@@ -734,9 +743,10 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '14';   // keep equal to the number in sw.js CACHE ('nq-v14'); scripts/test.sh checks it
+const APP_VERSION = '15';   // keep equal to the number in sw.js CACHE ('nq-v15'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '15', date: '2026-10-26', items: ['主題卡的進度條改為三段顏色：已學、熟悉、熟練。', '首頁改為顯示今天這組練習的大綱：複習與新內容各幾題、新單字的主題與考法、聽力閱讀，以及單字題型的輪替規則；原本的提醒併入大綱。'] },
   { v: '14', date: '2026-10-26', items: ['每天的新單字改為從兩個主題交錯出現，首頁會顯示今天的主題；複習仍照到期混合出題。', '中翻日與例句填空的選項有時改用假名顯示，避免直接從漢字看出答案；答完會顯示漢字與讀音。'] },
   { v: '13', date: '2026-10-26', items: ['單字頁新增「主題」分頁：內建單字依主題分組，可單獨看字表或練習一個主題。', '新單字先顯示預習卡（字、讀音、意思、例句），再開始作答。', '新單字在同一組練習裡會換兩種題型再考一次，加深記憶。', '每個字記錄各題型是否答對過，複習時優先出還沒過的題型；三種題型都答對過才算「已熟練」，既有的熟練字會先回到「熟悉」。'] },
   { v: '12', date: '2026-10-26', items: ['學習紀錄的日曆從開始使用那一週畫起（最少 4 週、最多 26 週），寬螢幕不再出現大片空白日期。'] },
@@ -3325,6 +3335,25 @@ function noticesHtml() {
     </div>`).join('');
 }
 
+// What the session the 開始練習 button starts is made of, in the learner's words: counts come from the built queue.
+function sessionOutlineHtml(q, plan) {
+  const isNew = (it) => !state.srs[it.key];
+  const n = (kind, fresh) => q.items.filter(it => it.kind === kind && isNew(it) === fresh).length;
+  const rev = { v: n('v', false), g: n('g', false), k: n('k', false) };
+  const revN = rev.v + rev.g + rev.k;
+  const newV = n('v', true), newG = n('g', true), newK = n('k', true);
+  const listenN = q.items.filter(it => it.kind === 'l').length, readN = q.items.filter(it => it.kind === 'r').length;
+  const lines = [];
+  if (revN) lines.push(`複習 <b>${revN}</b> 題：${[rev.v && `單字 ${rev.v}`, rev.g && `文法 ${rev.g}`, rev.k && `漢字 ${rev.k}`].filter(Boolean).join('・')}，到期越久的越先出。`);
+  if (newV) lines.push(`新單字 <b>${newV}</b> 個（主題 ${esc(activeThemes(REG.vocab, plan.n4Open).join('・'))}）：每個先看預習卡，答完後在這組裡再換兩種題型各考一次，共 ${newV + encoreEstimate(q.items)} 題。`);
+  if (newG) lines.push(`新文法 <b>${newG}</b> 題，來自「${esc(unitById(state.currentUnit).short)}」與之前還沒學完的單元。`);
+  if (newK) lines.push(`新漢字 <b>${newK}</b> 個。`);
+  if (listenN || readN) lines.push([listenN && `聽力 ${listenN} 題`, readN && `閱讀 ${readN} 篇`].filter(Boolean).join('・') + '，散在這組練習中。');
+  lines.push('單字題型依熟練度輪替：剛學的字考看字選意思、聽發音選意思；熟悉後改考中翻日、例句填空、漢字讀音與寫法，還沒答對過的題型優先，選項偶爾改用假名。文法題為填空、句意或排序。');
+  const note = plan.note ? `<li class="note">${esc(plan.note)}</li>` : '';
+  return `<ul class="plan-outline">${lines.map(l => `<li>${l}</li>`).join('')}${note}</ul>`;
+}
+
 function renderToday(view) {
   const t = todayStr();
   const goal = state.settings.dailyGoal;
@@ -3363,7 +3392,7 @@ function renderToday(view) {
         ${plan.newV.length ? `<span>今天的主題：${esc(activeThemes(REG.vocab, plan.n4Open).join('・'))}</span>` : ''}
         ${extraN ? `<span>另有 <b>${extraN}</b>（${extraText}）</span>` : ''}
       </div>
-      ${plan.note ? `<div class="banner warn">${esc(plan.note)}</div>` : ''}
+      ${sessionOutlineHtml(dailyQueue(size), plan)}
       <div class="row-wrap">
         <button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・${sessionN} 題</button>
         ${reviewN + newN + extraN > sessionN ? `<span class="small muted">做完還有 ${reviewN + newN + extraN - sessionN} 題，可以再練一組</span>` : ''}
@@ -3721,11 +3750,16 @@ function vocabThemes() {
   const rank = (c) => { const i = THEME_ORDER.indexOf(c); return i < 0 ? THEME_ORDER.length : i; };
   return [...by.values()].sort((a, b) => rank(a.c) - rank(b.c) || a.c.localeCompare(b.c, 'zh-Hant'));
 }
+// three stacked segments: mastered, learned (not yet mastered), seen (not yet learned)
+function stackBarHtml(g) {
+  const seg = (name, n) => `<span data-seg="${name}" data-n="${n}" style="width:${(n / Math.max(1, g.total) * 100).toFixed(1)}%"></span>`;
+  return `<div class="bar stack mt-2">${seg('mastered', g.mastered)}${seg('learned', g.learned - g.mastered)}${seg('seen', g.seen - g.learned)}</div>`;
+}
 function renderVocabThemes(view) {
   const cards = vocabThemes().map(g => `<div class="card theme-card" data-c="${esc(g.c)}">
       <div class="row between"><div class="card-title">${esc(g.c)}</div><span class="tiny muted">N5 ${g.N5}・N4 ${g.N4}</span></div>
-      <div class="bar thin mt-2 ${g.learned === g.total ? 'ok' : ''}"><span style="width:${Math.round(g.learned / Math.max(1, g.total) * 100)}%"></span></div>
-      <div class="small muted mt-2">已學 ${g.seen}／熟悉 ${g.learned}／熟練 ${g.mastered}，共 ${g.total} 字${g.due ? `・今天到期 ${g.due}` : ''}</div>
+      ${stackBarHtml(g)}
+      <div class="small muted mt-2"><i class="seg-dot seen"></i>已學 ${g.seen}　<i class="seg-dot learned"></i>熟悉 ${g.learned}　<i class="seg-dot mastered"></i>熟練 ${g.mastered}　共 ${g.total} 字${g.due ? `・今天到期 ${g.due}` : ''}</div>
       <div class="row-wrap mt-3">
         <button type="button" class="btn btn-sm" data-act="nav" data-route="#/vocab/list?c=${encodeURIComponent(g.c)}">字表</button>
         <button type="button" class="btn btn-sm btn-primary" data-act="start-vocab" data-filter="c:${esc(g.c)}">練習</button>
