@@ -1791,6 +1791,11 @@ function meaningOptions(v) {
 // Options shown in kana instead of kanji, now and then: a Chinese reader often knows the answer from the characters
 // alone. Applies to 中翻日 and 例句填空 once the word has been seen, to every option at once.
 const KANA_OPTION_RATE = 1 / 3;
+// kana mode needs a reading for every option and no two alike (花／鼻 are both はな): otherwise the kanji stay
+function kanaOptionsDistinct(q) {
+  const ks = q.options.map(o => q.optKana && q.optKana[o.text]);
+  return ks.every(Boolean) && new Set(ks).size === ks.length;
+}
 // reading of a peer word put into the same form as the target (`info` from vSurfaceInfo)
 function kanaOfInflected(word, info) {
   if (!word.r) return null;
@@ -2066,7 +2071,7 @@ function makeVocabQuestion(v, ctx = {}) {
   };
   const finish = () => {
     const want = ctx.kana === true || (ctx.kana === undefined && srsGet(v.key) && Math.random() < KANA_OPTION_RATE);
-    if (want && (q.fmt === 'v-recall' || q.fmt === 'v-cloze') && q.options.every(o => q.optKana[o.text])) q.kanaOptions = true;
+    if (want && (q.fmt === 'v-recall' || q.fmt === 'v-cloze') && kanaOptionsDistinct(q)) q.kanaOptions = true;
     return q;
   };
   // the mock exam asks for one specific format (漢字読み / 表記) and needs nothing else

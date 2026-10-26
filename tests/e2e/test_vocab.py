@@ -196,6 +196,27 @@ def test_feedback_shows_written_form_and_reading_after_a_kana_question(b):
 
 TESTS += [test_kana_options_replace_kanji_uniformly, test_kana_options_only_after_the_first_sighting_and_sometimes, test_feedback_shows_written_form_and_reading_after_a_kana_question]
 
+def test_kana_options_need_four_distinct_readings(b):
+    js = """(() => { const mk = (texts, kana) => ({ options: texts.map(t => ({ text: t, jp: true })), optKana: kana });
+      const dup = mk(['花', '鼻', '山', '川'], { 花: 'はな', 鼻: 'はな', 山: 'やま', 川: 'かわ' });
+      const ok = mk(['花', '犬', '山', '川'], { 花: 'はな', 犬: 'いぬ', 山: 'やま', 川: 'かわ' });
+      const missing = mk(['花', '犬', '山', '川'], { 花: 'はな', 犬: 'いぬ', 山: 'やま' });
+      return JSON.stringify([kanaOptionsDistinct(dup), kanaOptionsDistinct(ok), kanaOptionsDistinct(missing)]); })()"""
+    assert ev(b, js) == '[false,true,false]'
+
+def test_homophones_never_produce_two_identical_kana_options(b):
+    js = """(() => { const byR = {}; REG.vocab.filter(v => v.builtin).forEach(v => (byR[v.p + '|' + v.r] = byR[v.p + '|' + v.r] || []).push(v));
+      const targets = Object.values(byR).filter(g => g.length > 1).map(g => g[0]).slice(0, 12);
+      let builds = 0, dups = 0;
+      for (const v of targets) { srsAnswer(v.key, true); for (const fmt of ['v-recall', 'v-cloze']) for (let i = 0; i < 40; i++) {
+        const q = makeVocabQuestion(v, { forceFmt: fmt, kana: true }); if (!q || !q.kanaOptions) continue; builds++;
+        const shown = q.options.map(o => optionHtml(q, o)); if (new Set(shown).size < shown.length) dups++; } }
+      return JSON.stringify({ targets: targets.length, builds, dups }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['targets'] >= 5 and r['builds'] > 100 and r['dups'] == 0, r
+
+TESTS += [test_kana_options_need_four_distinct_readings, test_homophones_never_produce_two_identical_kana_options]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
