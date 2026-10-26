@@ -12,7 +12,7 @@
 <script src="./vendor/supabase.js"></script>
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
-<script src="./data.js?v=2"></script>
+<script src="./data.js?v=3"></script>
 <title>Nihongo Quest N4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -775,9 +775,10 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '35';   // keep equal to the number in sw.js CACHE ('nq-v35'); scripts/test.sh checks it
+const APP_VERSION = '36';   // keep equal to the number in sw.js CACHE ('nq-v36'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '36', date: '2026-10-27', items: ['單字庫整理：新增「敬語」主題 16 個尊敬語／謙讓語動詞、36 個常用 N5 字（飲食、店家、顏色、位置）、26 個常用 N4 字；16 組「名詞＋する」合成一張卡（紀錄會自動併到保留的那張）；相同中文的字加上區別；三個動詞的例句改成可出填空題。', '漢字表新增 58 個單字裡常出現的 N4 漢字（冷・予・晩・番・全・部・熱・最・両・歯…），漢字題會考到。'] },
   { v: '35', date: '2026-10-26', items: ['工具與 AI 頁底部新增「API 申請說明」：Google Cloud TTS、Gemini、OpenAI、Deepgram、VOICEVOX、Ollama 的申請步驟、費用與連結，可逐一展開；設定頁的金鑰欄位有「申請方式」連過去。', '學習分析：「未來 7 天的複習量」改成「過去 7 天的練習量」堆疊長條（單字・漢字／文法／其他），展開可看明細、這 7 天變熟悉的與新學的項目。', '單字配對題：點選日文字時會順便唸出來（漢字字以讀音指定）。'] },
   { v: '34', date: '2026-10-26', items: ['設定 › 語音 新增「測試連線」：顯示語音服務回傳的實際錯誤與對應的處理建議（API 未啟用、金鑰無效、網站限制、帳單未連結）。'] },
   { v: '33', date: '2026-10-26', items: ['唸單字時改送漢字寫法並固定讀音（Google 用 SSML，其他引擎交給模型判斷），不再送孤立的假名，發音更自然。', '假名拼字與配對題多一顆「我不會，看答案」，按下算答錯並顯示答案。'] },
@@ -941,6 +942,13 @@ function normalizeState(s) {
   if (!out.today || out.today.date !== todayStr()) out.today = { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0 };
   Object.values(out.srs).forEach(ensureFsrs);
   Object.entries(out.srs).forEach(([k, r]) => { if (k.startsWith('v:') && (!r.f || typeof r.f !== 'object')) r.f = {}; });   // words answered before per-format tracking
+  // built-in words merged into another entry (名詞 + 名詞する → one card): the record follows; when both exist the one answered more stays
+  Object.entries(DATA.VOCAB_MERGED || {}).forEach(([from, to]) => {
+    const a = out.srs['v:' + from]; if (!a) return;
+    const b = out.srs['v:' + to];
+    if (!b || (a.n || 0) > (b.n || 0)) out.srs['v:' + to] = a;
+    delete out.srs['v:' + from];
+  });
   return out;
 }
 
@@ -4117,7 +4125,7 @@ let FLASH = null;   // { deck, queue: [key], idx, flipped, extraNew }
 const DECKS = [['all', '全部'], ['N5', 'N5'], ['N4', 'N4'], ['custom', '自訂／匯入']];
 
 // ---- themes: the built-in words carry a theme (`c`); custom cards have none and stay in their own deck ----
-const THEME_ORDER = ['問候', '指示', '代名詞', '疑問', '數量', '時間', '人物', '家庭', '身體', '飲食', '生活', '地點', '位置', '移動', '交通', '學校', '工作', '購物', '衣物', '顏色', '天氣', '自然', '興趣', '休閒', '動作', '形容', '副詞', '接續', '狀態', '溝通', '健康', '旅行', '社會', '抽象', '心情', '情感', '思考', '人際', '自他動詞', '其他'];
+const THEME_ORDER = ['問候', '指示', '代名詞', '疑問', '數量', '時間', '人物', '家庭', '身體', '飲食', '生活', '地點', '位置', '移動', '交通', '學校', '工作', '購物', '衣物', '顏色', '天氣', '自然', '興趣', '休閒', '動作', '形容', '副詞', '接續', '狀態', '溝通', '健康', '旅行', '社會', '抽象', '心情', '情感', '思考', '人際', '敬語', '自他動詞', '其他'];
 function vocabTheme(v) { return !v.c || v.c === '舊版' ? '其他' : v.c; }
 function vocabThemes() {
   const t = todayStr();

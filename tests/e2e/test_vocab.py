@@ -16,7 +16,7 @@ def test_themes_cover_every_builtin_word_once(b):
     js = """(() => { const th = vocabThemes(); const n = REG.vocab.filter(v => v.builtin).length;
       return JSON.stringify({ sum: th.reduce((a, t) => a + t.total, 0), n, old: th.some(t => t.c === '舊版'), first: th[0].c, hasOther: th.some(t => t.c === '其他') }); })()"""
     r = json.loads(ev(b, js))
-    assert r['sum'] == r['n'] and not r['old'] and r['hasOther'] and r['first'] == '問候', r
+    assert r['sum'] == r['n'] and not r['old'] and not r['hasOther'] and r['first'] == '問候', r   # every built-in word has a theme since DATA_VERSION 3
 
 def test_theme_tab_lists_cards_and_opens_the_word_table(b):
     out = b.run([("nav", URL), ("wait", READY),
@@ -508,6 +508,42 @@ def test_vocab_practice_buttons_show_the_question_count(b):
     assert r['card'] == f"練習・{r['cardWant']} 題" and r['head'] == f"單字測驗・{r['headWant']} 題" and r['detail'] == f"練習這個主題・{r['cardWant']} 題", r
 
 TESTS += [test_furigana_known_hiding_follows_the_mastered_label, test_theme_word_table_hides_the_custom_deck_button, test_encore_feedback_shows_the_level_and_says_it_does_not_reschedule, test_vocab_practice_buttons_show_the_question_count]
+
+# ---- 2026-10-27: content pass (DATA_VERSION 3) ----
+def test_vocab_content_pass_adds_keigo_common_words_and_removes_duplicates(b):
+    js = """(() => { const V = REG.vocab.filter(v => v.builtin); const byW = (w) => V.find(v => v.w === w);
+      const dupM = {}; V.forEach(v => { dupM[v.m] = (dupM[v.m] || 0) + 1; }); const dups = Object.entries(dupM).filter(([, n]) => n > 1).map(([m]) => m);
+      const keigo = V.filter(v => v.c === '敬語').map(v => v.w);
+      const raw = ['吸う', '鳴く', 'かぶる'].map(w => vSurfaceInfo(byW(w)).form);
+      const bare = V.filter(v => /^(n5e|n4f)-/.test(v.id)).filter(v => /[一-龯]/.test(furi(v.ex.replace(/[{}]/g, '')).replace(/<ruby>.*?<[/]ruby>/g, '')) ).map(v => v.w);
+      return JSON.stringify({ n: V.length, dups, keigo, old: V.filter(v => v.c === '舊版').length, themes: THEME_ORDER.includes('敬語'),
+        added: ['おにぎり', '紫', '村', '役に立つ', '召し上がる', 'ピンク'].map(w => Boolean(byW(w))), merged: [Boolean(byW('旅行')), Boolean(byW('旅行する')), Boolean(byW('運動')), Boolean(byW('運動する'))], raw, bare }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['n'] >= 1440 and r['dups'] == [] and r['old'] == 0 and r['themes'], r
+    assert len(r['keigo']) >= 14 and all(w in r['keigo'] for w in ['いらっしゃる', 'おっしゃる', '召し上がる', '申し上げる', '伺う', 'いただく']), r['keigo']
+    assert all(r['added']) and r['merged'] == [False, True, False, True], r
+    assert all(f != 'raw' for f in r['raw']) and r['bare'] == [], r
+
+def test_kanji_table_covers_the_frequent_kanji_of_the_vocabulary(b):
+    js = """(() => { const K = REG.kanji || DATA.KANJI; const has = (c) => K.some(k => k.k === c);
+      const want = '冷予晩留機当失結変番約内昨階全部背晴飛交誰礼消熱汚夫嫌初具席成法議付案美術段相連決残無再鳴割訳最歳両歯腹曇向黄園差';
+      const missing = [...want].filter(c => !has(c));
+      const bad = K.filter(k => !k.m || !(k.ex || []).some(([w, r]) => w && r && r.length >= 2 && w !== r)).map(k => k.k);
+      const used = new Set(); REG.vocab.filter(v => v.builtin).forEach(v => [...jaPlain(v.w)].forEach(ch => { if (/[一-龯]/.test(ch)) used.add(ch); }));
+      return JSON.stringify({ n: K.length, missing, bad, notInTable: [...used].filter(c => !has(c)).length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['n'] >= 340 and r['missing'] == [] and r['bad'] == [], r
+    assert r['notInTable'] < 460, r
+
+def test_records_of_merged_builtin_words_move_to_the_kept_entry(b):
+    js = """(() => { const rec = (n) => ({ b: 2, due: todayStr(), n, ok: n, ng: 0, s: 3, d: 5, last: todayStr(), f: {} });
+      const s1 = normalizeState({ srs: { 'v:n5b-118': rec(4) } });                                    // only the dropped 旅行 → moves to 旅行する
+      const s2 = normalizeState({ srs: { 'v:n4a-051': rec(7), 'v:n4b-103': rec(2) } });               // both 卒業 and 卒業する → the one answered more wins
+      return JSON.stringify({ moved: s1.srs['v:n5c-105'] && s1.srs['v:n5c-105'].n, gone: 'v:n5b-118' in s1.srs, kept: s2.srs['v:n4b-103'].n, gone2: 'v:n4a-051' in s2.srs }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'moved': 4, 'gone': False, 'kept': 7, 'gone2': False}, r
+
+TESTS += [test_vocab_content_pass_adds_keigo_common_words_and_removes_duplicates, test_kanji_table_covers_the_frequent_kanji_of_the_vocabulary, test_records_of_merged_builtin_words_move_to_the_kept_entry]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

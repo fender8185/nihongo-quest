@@ -1,5 +1,5 @@
 /* Nihongo Quest service worker: versioned app-shell cache, cache-first for same-origin GETs. */
-const CACHE = 'nq-v35';
+const CACHE = 'nq-v36';
 const PRECACHE = [
   './',
   './index.html',
@@ -10,7 +10,7 @@ const PRECACHE = [
   './vendor/supabase.js',
   './sync-core.js',
   './config.js',
-  './data.js?v=2'
+  './data.js?v=3'
 ];
 // Versioned, immutable files: when the previous cache already holds the same URL, copy it instead of downloading
 const IMMUTABLE = /\?v=\d+$/;
