@@ -776,9 +776,10 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '39';   // keep equal to the number in sw.js CACHE ('nq-v39'); scripts/test.sh checks it
+const APP_VERSION = '40';   // keep equal to the number in sw.js CACHE ('nq-v40'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '40', date: '2026-10-27', items: ['設定 › 語音 的「測試連線」結果不再因為瀏覽器語音清單載入而消失。'] },
   { v: '39', date: '2026-10-27', items: ['N4 的 726 個單字也都有第二個例句了：全部 1461 個內建單字每字兩句，題目在兩句之間輪替。'] },
   { v: '38', date: '2026-10-27', items: ['N5 的 735 個單字每字新增第二個例句：例句填空、漢字讀音、漢字寫法與朗讀會在兩句之間輪替，預習卡與字卡同時顯示兩句。'] },
   { v: '37', date: '2026-10-27', items: ['學習分析新增「每日練習量建議」：依每種題庫還沒學的題數與考前可學習天數，算出每天該學的新單字、文法、漢字、聽力題，指出哪一種落後最多；按「使用建議」直接套用到學習設定。'] },
@@ -5427,7 +5428,7 @@ function settingsSpeech() {
     ${selRow('engine', '語音服務', '', TTS_ENGINES, 'tts-cfg')}
     ${engine}
     <div class="row-wrap mt-4"><button type="button" class="btn" data-act="tts-test">${icon('speaker')}試聽對話</button>${c.engine && c.engine !== 'browser_neural' ? '<button type="button" class="btn" data-act="tts-check">測試連線</button>' : ''}</div>
-    <div id="ttsCheckBox" class="small mt-2"></div>`;
+    <div id="ttsCheckBox" class="small mt-2">${ttsCheckHtml}</div>`;
 }
 
 function settingsAi() {
@@ -5576,6 +5577,7 @@ Object.assign(CHANGE_ACTIONS, {
   },
   'tts-cfg': (el) => {
     ttsConfig()[el.dataset.key] = el.value.trim();
+    if (el.dataset.key === 'engine' || /Key$|Url$/.test(el.dataset.key)) ttsCheckHtml = '';   // the last check no longer applies
     ttsWarned = false;
     saveState();
     if (el.dataset.key === 'engine') refreshSettings();
@@ -5595,7 +5597,8 @@ Object.assign(ACTIONS, {
   'tts-test': () => testVoice(),
   'tts-check': async (el) => {
     // look the result box up when writing: the speech tab may have been re-rendered meanwhile (voices loading)
-    const show = (html) => { const box = document.getElementById('ttsCheckBox'); if (box) box.innerHTML = html; };
+    const show = (html) => { ttsCheckHtml = html; const box = document.getElementById('ttsCheckBox'); if (box) box.innerHTML = html; };   // kept so a re-render (voices loading) does not wipe it
+    show('');   // a new check starts from a blank box
     const old = el.innerHTML; el.disabled = true; el.innerHTML = '<span class="spinner"></span> 測試中';
     try {
       audioCache.clear();
@@ -5974,6 +5977,7 @@ Object.assign(ACTIONS, {
 /* ==========================================================================
    Speech: browser voices, Deepgram Aura-2, VOICEVOX, OpenAI TTS, Anki audio
    ========================================================================== */
+let ttsCheckHtml = '';   // result of the last 設定 › 語音 › 測試連線
 const TTS_SECRET_KEYS = ['deepgramKey', 'openaiKey', 'googleKey'];   // never leave the device: stripped from backups, kept on import
 const TTS_DEFAULT = {
   engine: 'browser_neural', browserVoiceURI: '',
