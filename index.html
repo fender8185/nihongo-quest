@@ -5069,7 +5069,7 @@ function exportBackup(withKeys) {
   const copy = deepClone(state);
   if (!withKeys) {
     if (copy.aiConfig) ['geminiKey', 'openaiKey'].forEach(k => { if (copy.aiConfig[k]) copy.aiConfig[k] = ''; });
-    if (copy.ttsConfig) ['deepgramKey', 'openaiKey'].forEach(k => { if (copy.ttsConfig[k]) copy.ttsConfig[k] = ''; });
+    if (copy.ttsConfig) TTS_SECRET_KEYS.forEach(k => { if (copy.ttsConfig[k]) copy.ttsConfig[k] = ''; });
   }
   const payload = { app: 'nihongo-quest', v: 3, exportedAt: new Date().toISOString(), state: copy };
   downloadFile(`nihongo-quest-backup-${todayStr()}.json`, JSON.stringify(payload));
@@ -5081,7 +5081,7 @@ function applyImportedState(next, msg) {
   state = normalizeState(next);
   // a backup saved without keys should not wipe the keys already entered here
   if (hadAi && !isAiConfigured()) state.aiConfig = keepAi;
-  if (keepTts && !(state.ttsConfig && (state.ttsConfig.deepgramKey || state.ttsConfig.openaiKey))) state.ttsConfig = Object.assign({}, state.ttsConfig || {}, { deepgramKey: keepTts.deepgramKey || '', openaiKey: keepTts.openaiKey || '' });
+  if (keepTts && !(state.ttsConfig && TTS_SECRET_KEYS.some(k => state.ttsConfig[k]))) state.ttsConfig = Object.assign({}, state.ttsConfig || {}, Object.fromEntries(TTS_SECRET_KEYS.map(k => [k, keepTts[k] || ''])));
   saveState(); buildRegistry(); applyTheme(); applyFurigana();
   SESSION = null; FLASH = null; EXAM = null;
   closeModal(); toast(msg, 4000); go('#/today');
@@ -5458,6 +5458,7 @@ Object.assign(ACTIONS, {
 /* ==========================================================================
    Speech: browser voices, Deepgram Aura-2, VOICEVOX, OpenAI TTS, Anki audio
    ========================================================================== */
+const TTS_SECRET_KEYS = ['deepgramKey', 'openaiKey', 'googleKey'];   // never leave the device: stripped from backups, kept on import
 const TTS_DEFAULT = {
   engine: 'browser_neural', browserVoiceURI: '',
   deepgramKey: '', deepgramVoice: 'aura-2-izanami-ja', deepgramVoiceM: 'aura-2-fujin-ja',
