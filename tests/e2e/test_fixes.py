@@ -420,6 +420,23 @@ def test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading(b):
     r = json.loads(out[-1])
     assert r['spoken'] == [[r['w'], r['r']]], r
 
+def test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them(b):
+    seed = """(() => { state.settings.examDate = addDays(todayStr(), 121); state.settings.newVocabPerDay = 8; state.settings.newGrammarPerDay = 6; state.settings.newKanjiPerDay = 3; state.settings.listenPerDay = 3; saveState();
+      const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
+      window.__exp = { v: Math.ceil(unseen(REG.vocab.filter(x => x.builtin)) / 100), g: Math.ceil(unseen(REG.grammar) / 100), k: Math.min(15, Math.ceil(unseen(REG.kanji) / 100)), l: Math.min(10, Math.ceil(unseen(REG.listen) / 100)) };
+      return JSON.stringify(__exp); })()"""
+    probe = """(() => { const card = document.getElementById('planAdvice'); if (!card) return 'NO CARD';
+      const btn = card.querySelector('[data-act=apply-advice]'); const before = btn ? btn.textContent.trim() : 'NO BUTTON';
+      const txt = card.textContent; if (btn) btn.click();
+      const s = state.settings; const after = document.querySelector('#planAdvice [data-act=apply-advice]');
+      return JSON.stringify({ before, hasDays: /100 天/.test(txt), rows: card.querySelectorAll('tbody tr').length, s: [s.newVocabPerDay, s.newGrammarPerDay, s.newKanjiPerDay, s.listenPerDay], goal: s.dailyGoal, after: after ? after.textContent.trim() + (after.disabled ? '|disabled' : '') : 'gone', share: s.vocabShare }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("nav", URL + "#/stats"), ("eval", probe)], timeout=45)
+    exp = json.loads(out[0]); r = json.loads(out[1])
+    assert r['before'] == '使用建議' and r['hasDays'] and r['rows'] >= 4, r
+    assert r['s'] == [exp['v'], exp['g'], exp['k'], exp['l']], (r, exp)
+    assert r['goal'] >= exp['v'] + exp['g'] + exp['k'] + exp['l'] and r['goal'] % 5 == 0 and 30 <= r['share'] <= 70, r
+    assert r['after'].startswith('已是建議值') and 'disabled' in r['after'], r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -434,7 +451,8 @@ if __name__ == "__main__":
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
              test_single_words_are_sent_as_kanji_with_the_reading_pinned, test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong, test_tts_connection_check_reports_the_real_error_and_success,
              test_tools_page_has_an_expandable_api_guide_for_every_provider,
-             test_stats_shows_the_past_week_of_practice_and_what_was_learned, test_reaching_the_learned_level_records_the_date, test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading]
+             test_stats_shows_the_past_week_of_practice_and_what_was_learned, test_reaching_the_learned_level_records_the_date, test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading,
+             test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them]
     failed = 0
     try:
         for t in tests:

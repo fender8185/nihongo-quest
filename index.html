@@ -364,6 +364,7 @@ body.furi-smart ruby.known rt { visibility: hidden; }
 .cols .col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; outline: none; }
 .cols .col .colbar { width: min(24px, 70%); background: var(--accent); border-radius: 4px 4px 0 0; min-height: 2px; }
 .cols .col .colbar.stack { display: flex; flex-direction: column; background: transparent; overflow: hidden; }
+tr.lag td { color: var(--warn, #d08a00); font-weight: 600; }
 .cseg { flex-basis: 0; min-height: 0; } .cseg.v, .seg-dot.v { background: var(--heat-4); } .cseg.g, .seg-dot.g { background: var(--heat-3); } .cseg.q, .seg-dot.q { background: var(--heat-2); }
 .cols .col:hover .colbar, .cols .col:focus .colbar { filter: brightness(1.15); }
 .cols .col .collabel { position: absolute; top: -20px; font-size: 12px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
@@ -775,9 +776,10 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '36';   // keep equal to the number in sw.js CACHE ('nq-v36'); scripts/test.sh checks it
+const APP_VERSION = '37';   // keep equal to the number in sw.js CACHE ('nq-v37'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '37', date: '2026-10-27', items: ['學習分析新增「每日練習量建議」：依每種題庫還沒學的題數與考前可學習天數，算出每天該學的新單字、文法、漢字、聽力題，指出哪一種落後最多；按「使用建議」直接套用到學習設定。'] },
   { v: '36', date: '2026-10-27', items: ['單字庫整理：新增「敬語」主題 16 個尊敬語／謙讓語動詞、36 個常用 N5 字（飲食、店家、顏色、位置）、26 個常用 N4 字；16 組「名詞＋する」合成一張卡（紀錄會自動併到保留的那張）；相同中文的字加上區別；三個動詞的例句改成可出填空題。', '漢字表新增 58 個單字裡常出現的 N4 漢字（冷・予・晩・番・全・部・熱・最・両・歯…），漢字題會考到。'] },
   { v: '35', date: '2026-10-26', items: ['工具與 AI 頁底部新增「API 申請說明」：Google Cloud TTS、Gemini、OpenAI、Deepgram、VOICEVOX、Ollama 的申請步驟、費用與連結，可逐一展開；設定頁的金鑰欄位有「申請方式」連過去。', '學習分析：「未來 7 天的複習量」改成「過去 7 天的練習量」堆疊長條（單字・漢字／文法／其他），展開可看明細、這 7 天變熟悉的與新學的項目。', '單字配對題：點選日文字時會順便唸出來（漢字字以讀音指定）。'] },
   { v: '34', date: '2026-10-26', items: ['設定 › 語音 新增「測試連線」：顯示語音服務回傳的實際錯誤與對應的處理建議（API 未啟用、金鑰無效、網站限制、帳單未連結）。'] },
@@ -5748,6 +5750,38 @@ function recentlyLearned(days = 7) {
   const byDate = (a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : 0);
   return { fresh: fresh.sort(byDate), learned: learned.sort(byDate) };
 }
+// Daily quotas that would finish every bank before the mock-exam weeks: unseen items ÷ study days, per kind.
+// The daily goal adds room for reviews (about one and a half times the new items), rounded to fives.
+function planAdvice() {
+  const s = state.settings;
+  const pace = examPace();
+  const studyDays = Math.max(0, pace.daysLeft - 21);
+  const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
+  const banks = [
+    { k: 'v', name: '單字', total: REG.vocab.filter(x => x.builtin).length, left: unseen(REG.vocab.filter(x => x.builtin)), key: 'newVocabPerDay', max: 40 },
+    { k: 'g', name: '文法', total: REG.grammar.length, left: unseen(REG.grammar), key: 'newGrammarPerDay', max: 30 },
+    { k: 'k', name: '漢字', total: REG.kanji.length, left: unseen(REG.kanji), key: 'newKanjiPerDay', max: 15 },
+    { k: 'l', name: '聽力', total: REG.listen.length, left: unseen(REG.listen), key: 'listenPerDay', max: 10 },
+    { k: 'r', name: '閱讀', total: REG.read.length, left: unseen(REG.read) }
+  ];
+  banks.forEach(b2 => {
+    b2.done = b2.total - b2.left;
+    b2.need = studyDays > 0 ? b2.left / studyDays : (b2.left ? Infinity : 0);
+    b2.cur = b2.key ? Number(s[b2.key] || 0) : null;
+    b2.rec = b2.key ? clamp(Math.ceil(studyDays > 0 ? b2.left / studyDays : b2.left), 0, b2.max) : null;
+    b2.gap = b2.key ? (b2.cur > 0 ? b2.need / b2.cur : (b2.need > 0 ? Infinity : 0)) : null;   // >1: the current setting cannot finish in time
+  });
+  const quota = banks.filter(b2 => b2.key);
+  const newPerDay = quota.reduce((a, b2) => a + b2.rec, 0);
+  const dailyGoal = clamp(Math.ceil(newPerDay * 2.5 / 5) * 5, 5, 200);
+  const sessionSize = clamp(Math.ceil(Math.min(60, dailyGoal) / 5) * 5, 5, 60);
+  const v = quota.find(b2 => b2.k === 'v').rec, g = quota.find(b2 => b2.k === 'g').rec;
+  const vocabShare = clamp(Math.round((v + g ? v / (v + g) : 0.5) * 10) * 10, 30, 70);
+  const rec = { dailyGoal, sessionSize, vocabShare }; quota.forEach(b2 => { rec[b2.key] = b2.rec; });
+  const applied = Object.keys(rec).every(k => Number(s[k]) === rec[k]);
+  const lagging = quota.filter(b2 => b2.gap > 1.15).sort((a, b2) => b2.gap - a.gap);
+  return { studyDays, daysLeft: pace.daysLeft, banks, rec, applied, lagging, newPerDay };
+}
 function grammarPace() {
   const t = todayStr();
   const intro = Object.entries(state.srs).filter(([k]) => k.startsWith('g:')).map(([, r]) => r.intro || r.last).filter(Boolean).sort();
@@ -5845,6 +5879,7 @@ function renderStats(view) {
       <div class="card-head"><div class="card-title">課程進度預估</div>${pace.late > 0 ? '<span class="chip chip-warn">稍慢</span>' : pace.rate ? '<span class="chip chip-ok">趕得上</span>' : ''}</div>
       <p class="small dim mb-0">${esc(paceText)}</p>
     </div>
+    ${planAdviceHtml()}
     <div class="card">
       <div class="card-head"><div><div class="card-title">過去 7 天的練習量</div><div class="card-sub">每天作答的題數，依種類堆疊</div></div></div>
       <div class="cols" role="img" aria-label="過去 7 天每天作答的題數">${cols}</div>
@@ -5871,6 +5906,24 @@ function renderStats(view) {
   attachChartTips(view);
 }
 
+function planAdviceHtml() {
+  const a = planAdvice();
+  const rows = a.banks.map(b2 => `<tr${a.lagging[0] === b2 ? ' class="lag"' : ''}><td>${esc(b2.name)}</td><td class="num">${b2.done} / ${b2.total}</td><td class="num">${b2.left}</td><td class="num">${b2.key ? b2.rec : '—'}</td><td class="num">${b2.key ? b2.cur : '—'}</td></tr>`).join('');
+  let lead;
+  if (a.daysLeft <= 0) lead = '考試日期已經過了。到設定裡改成下一次的日期，這裡會重新計算。';
+  else if (a.studyDays <= 0) lead = `距離考試只剩 ${a.daysLeft} 天，不到三週：建議停止新題、只做複習與模擬考。`;
+  else if (a.lagging.length) lead = `還有 ${a.studyDays} 天可以學新內容（考前三週留給模擬考）。照目前設定，${a.lagging.map(b2 => b2.name).join('、')}到時候學不完，${a.lagging[0].name}落後最多；建議每天新 ${a.lagging[0].name} 從 ${a.lagging[0].cur} 調到 ${a.lagging[0].rec}。`;
+  else lead = `還有 ${a.studyDays} 天可以學新內容（考前三週留給模擬考）。照目前設定，每一種題庫都來得及學完。`;
+  const btn = a.applied ? '<button type="button" class="btn btn-sm" data-act="apply-advice" disabled>已是建議值</button>'
+    : `<button type="button" class="btn btn-sm btn-primary" data-act="apply-advice">使用建議</button>`;
+  return `<div class="card" id="planAdvice">
+      <div class="card-head"><div><div class="card-title">每日練習量建議</div><div class="card-sub">用「還沒學過的題數 ÷ 可學習天數」算出每天該學的新題，複習量另外加上。</div></div>${btn}</div>
+      <p class="small dim">${esc(lead)}</p>
+      <div class="table-wrap"><table class="table"><thead><tr><th>題庫</th><th>已學 / 總數</th><th>還沒學</th><th>建議每天</th><th>目前設定</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="small muted mt-2">套用後的設定：每日目標 ${a.rec.dailyGoal} 題・每組 ${a.rec.sessionSize} 題・單字比例 ${a.rec.vocabShare}%・新單字 ${a.rec.newVocabPerDay}・新文法 ${a.rec.newGrammarPerDay}・新漢字 ${a.rec.newKanjiPerDay}・聽力 ${a.rec.listenPerDay}${a.studyDays > 0 ? '' : '（已無學習天數，新題全部為 0）'}。閱讀題跟著單元進度出，不另外設定。</div>
+    </div>`;
+}
+
 // ---------- tooltip for chart marks (values are also in the table / labels) ----------
 function attachChartTips(root) {
   let tip = document.getElementById('chartTip');
@@ -5895,6 +5948,7 @@ function attachChartTips(root) {
 }
 
 Object.assign(ACTIONS, {
+  'apply-advice': () => { const a = planAdvice(); Object.assign(state.settings, a.rec); saveState(); toast('已套用建議的每日練習量'); route(); },
   'stats-drill': (el) => {
     const items = REG.grammar.filter(g => g.pt === el.dataset.pt);
     if (!items.length) return;
