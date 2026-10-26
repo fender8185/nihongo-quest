@@ -400,6 +400,21 @@ def test_answering_a_grammar_variant_records_gf_but_not_the_word_format_record(b
 
 TESTS += [test_grammar_choice_item_builds_three_formats_on_demand, test_grammar_formats_rotate_after_the_first_sighting_and_prefer_unpassed, test_answering_a_grammar_variant_records_gf_but_not_the_word_format_record]
 
+# ---- 2026-10-26 (11): N4 listening and reading pools are deep enough for a two-week unit ----
+def test_every_n4_unit_has_enough_listening_and_reading_and_all_build(b):
+    js = """(() => { const units = DATA.UNITS.filter(u => u.lv === 'N4').map(u => u.id);
+      const per = units.map(u => ({ u, l: REG.listen.filter(x => x.u === u).length, r: REG.read.filter(x => x.u === u).length }));
+      const ids = new Set(); let dup = 0; [...DATA.LISTEN, ...DATA.READ].forEach(x => { if (ids.has(x.id)) dup++; ids.add(x.id); });
+      const bad = REG.listen.concat(REG.read).filter(it => !makeQuestion(it, {})).map(it => it.id);
+      const schema = DATA.LISTEN.filter(x => !(x.op && x.op.includes(x.a) && ((x.t === 'dialog' && x.op.length === 4 && x.script && x.q) || (x.t === 'resp' && x.op.length === 3 && x.line) || (x.t === 'scene' && x.op.length === 3 && x.scene)))).map(x => x.id)
+        .concat(DATA.READ.filter(x => !(x.op && x.op.length === 4 && x.op.includes(x.a) && x.passage && x.q && x.zh)).map(x => x.id));
+      return JSON.stringify({ per, dup, bad, schema }); })()"""
+    r = json.loads(ev(b, js))
+    assert all(x['l'] >= 11 and x['r'] >= 3 for x in r['per']), r['per']
+    assert r['dup'] == 0 and r['bad'] == [] and r['schema'] == [], r
+
+TESTS += [test_every_n4_unit_has_enough_listening_and_reading_and_all_build]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)

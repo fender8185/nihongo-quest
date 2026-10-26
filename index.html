@@ -12,7 +12,7 @@
 <script src="./vendor/supabase.js"></script>
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
-<script src="./data.js?v=1"></script>
+<script src="./data.js?v=2"></script>
 <title>Nihongo Quest N4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -760,9 +760,10 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '28';   // keep equal to the number in sw.js CACHE ('nq-v28'); scripts/test.sh checks it
+const APP_VERSION = '29';   // keep equal to the number in sw.js CACHE ('nq-v29'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '29', date: '2026-10-26', items: ['N4 每個單元新增 2 題聽力對話、1 題即時應答、1 題情境表達與 1 篇閱讀（共 48 題聽力、12 篇閱讀），兩週的單元不再很快重複。'] },
   { v: '28', date: '2026-10-26', items: ['課程資料拆成獨立檔案並單獨版本化：之後更新程式時不必重新下載 650 KB 的題庫，更新更快。'] },
   { v: '27', date: '2026-10-26', items: ['文法填空題複習時會換成「選正確句」或「句意」問法，三種輪替、沒答對過的優先；第一次出現仍是填空，模擬考不受影響。'] },
   { v: '26', date: '2026-10-26', items: ['新增「第 0 週：開始之前」入門講解（課程頁最上方）：假名表可點播放、句子骨架、品詞名稱、形容詞與動詞分類、動詞的形、敬體常體、助詞、數量詞、名稱對照表、app 用法。', '題目與字卡上的詞性標籤可以點，會跳出該名稱的說明。', '新用戶首頁會提示先看第 0 週。'] },
