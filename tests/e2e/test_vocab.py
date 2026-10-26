@@ -463,6 +463,52 @@ def test_new_formats_join_the_rotation_after_the_first_sighting(b):
 
 TESTS += [test_kana_spelling_question_is_answered_by_tapping_tiles, test_wrong_spelling_shows_the_right_reading_and_backspace_works, test_matching_question_pairs_four_words_with_their_meanings, test_new_formats_join_the_rotation_after_the_first_sighting]
 
+# ---- 2026-10-26 (13): custom cards reach 已熟練 with two formats ----
+def test_custom_cards_are_mastered_with_two_formats_builtins_still_need_three(b):
+    js = """(() => { state.vocab.push({ id: 'cm1', w: '猫', r: 'ねこ', m: '貓' }); buildRegistry();
+      const c = REG.vocab.find(x => x.id === 'cm1'); const v = REG.vocab.find(x => x.builtin);
+      const rec = () => ({ b: 6, due: '2099-01-01', n: 9, ok: 9, ng: 0, s: 60, d: 5, f: { 'v-meaning': [2, 0], flash: [1, 0] } });
+      state.srs[c.key] = rec(); state.srs[v.key] = rec();
+      return JSON.stringify({ custom: srsLevelLabel(state.srs[c.key], c.key), builtin: srsLevelLabel(state.srs[v.key], v.key), noKey: srsLevelLabel(state.srs[v.key]) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'custom': '已熟練', 'builtin': '熟悉', 'noKey': '熟悉'}, r
+
+TESTS += [test_custom_cards_are_mastered_with_two_formats_builtins_still_need_three]
+
+# ---- 2026-10-26 (14): review leftovers — furigana known rule, theme list deck button, encore feedback, session counts ----
+def test_furigana_known_hiding_follows_the_mastered_label(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && x.w === '今日'); const rec = (f) => ({ b: 6, due: '2099-01-01', n: 9, ok: 9, ng: 0, s: 60, d: 5, f });
+      state.srs[v.key] = rec({}); const a = /class="known"/.test(furi('今日は'));
+      state.srs[v.key] = rec({ 'v-meaning': [1, 0], 'v-recall': [1, 0], 'v-cloze': [1, 0] }); const c = /class="known"/.test(furi('今日は'));
+      return JSON.stringify({ a, c }); })()"""
+    assert ev(b, js) == '{"a":false,"c":true}'
+
+def test_theme_word_table_hides_the_custom_deck_button(b):
+    js = """(() => { location.hash = '#/vocab/list?c=飲食'; route(); const inTheme = !!document.querySelector('.seg [data-lv=custom]');
+      location.hash = '#/vocab/list'; route(); const plain = !!document.querySelector('.seg [data-lv=custom]'); return JSON.stringify({ inTheme, plain }); })()"""
+    assert ev(b, js) == '{"inTheme":false,"plain":true}'
+
+def test_encore_feedback_shows_the_level_and_says_it_does_not_reschedule(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.exZh && /[一-龯]/.test(x.w) && meaningOptions(x) && recallOptions(x));
+      const fill = REG.grammar.filter(g => !state.srs[g.key]).slice(0, 12); startSession('items', { items: [v, ...fill] });
+      const e = currentEntry(); e.previewDone = true; answerCurrent(e.q.answer);
+      let guard = 0; while (!currentEntry().encore && guard++ < 30) { if (!currentEntry().done) answerCurrent(currentEntry().q.answer); nextQuestion(); }
+      answerCurrent(currentEntry().q.answer); const meta = document.querySelector('.fb-meta').textContent;
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify({ meta }); })()"""
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert '不影響排程' in r['meta'] and ('學習中' in r['meta'] or '待加強' in r['meta'] or '熟悉' in r['meta']), r
+
+def test_vocab_practice_buttons_show_the_question_count(b):
+    js = """(() => { location.hash = '#/vocab/themes'; route(); const card = document.querySelector('.theme-card[data-c="飲食"] [data-act=start-vocab]').textContent;
+      const want = (f) => { const items = buildVocabQueue(f, 20); return items.length + encoreEstimate(items); };
+      location.hash = '#/vocab'; route(); const head = document.querySelector('.page-head [data-act=start-vocab]').textContent;
+      location.hash = '#/vocab/list?c=飲食'; route(); const detail = document.querySelector('.page-head [data-act=start-vocab]').textContent;
+      return JSON.stringify({ card, cardWant: want('c:飲食'), head, headWant: want('all'), detail }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['card'] == f"練習・{r['cardWant']} 題" and r['head'] == f"單字測驗・{r['headWant']} 題" and r['detail'] == f"練習這個主題・{r['cardWant']} 題", r
+
+TESTS += [test_furigana_known_hiding_follows_the_mastered_label, test_theme_word_table_hides_the_custom_deck_button, test_encore_feedback_shows_the_level_and_says_it_does_not_reschedule, test_vocab_practice_buttons_show_the_question_count]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)

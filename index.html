@@ -771,9 +771,10 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '30';   // keep equal to the number in sw.js CACHE ('nq-v30'); scripts/test.sh checks it
+const APP_VERSION = '31';   // keep equal to the number in sw.js CACHE ('nq-v31'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '31', date: '2026-10-26', items: ['自訂字卡兩種題型答對過即可「已熟練」（內建字仍需三種）。', '振假名的「已熟練不顯示讀音」改用同一個熟練定義。', '主題字表不再顯示「自訂／匯入」篩選。', '「換個方式再考」的題目作答後也會顯示熟練度，並註明不影響排程。', '單字測驗、主題練習按鈕顯示題數。'] },
   { v: '30', date: '2026-10-26', items: ['單字新增兩種題型：「假名拼字」（點假名方塊拼出讀音）與「配對」（四個單字配四個意思），學過一次之後加入輪替，也算進「已熟練」所需的題型。'] },
   { v: '29', date: '2026-10-26', items: ['N4 每個單元新增 2 題聽力對話、1 題即時應答、1 題情境表達與 1 篇閱讀（共 48 題聽力、12 篇閱讀），兩週的單元不再很快重複。'] },
   { v: '28', date: '2026-10-26', items: ['課程資料拆成獨立檔案並單獨版本化：之後更新程式時不必重新下載 650 KB 的題庫，更新更快。'] },
@@ -1294,9 +1295,11 @@ function srsDots(b) {
   const lit = b <= 0 ? 0 : b <= 2 ? b : b <= 4 ? 3 + (b === 4 ? 1 : 0) : 5;
   return `<span class="dots" aria-label="熟練度 ${lit}/5">${[0, 1, 2, 3, 4].map(i => `<i class="${i < lit ? 'on' : ''}"></i>`).join('')}</span>`;
 }
-function srsLevelLabel(rec) {
+// `key` (optional) tells custom cards apart: they have fewer possible formats, so two passed formats are enough
+function masterFormatsFor(key) { const it = key && REG.byKey && REG.byKey.get(key); return it && it.kind === 'v' && !it.builtin ? 2 : MASTER_FORMATS; }
+function srsLevelLabel(rec, key) {
   if (!rec) return '新內容';
-  if (rec.b >= SRS_MASTERED && (!rec.f || formatsPassed(rec) >= MASTER_FORMATS)) return '已熟練';
+  if (rec.b >= SRS_MASTERED && (!rec.f || formatsPassed(rec) >= masterFormatsFor(key))) return '已熟練';
   if (rec.b >= SRS_LEARNED) return '熟悉';
   if (rec.b >= 1) return '學習中';
   return '待加強';
@@ -1529,7 +1532,7 @@ function buildFuriganaIndex() {
 function knownCls(key) {
   const src = FURI_SRC.get(key);
   const r = src && state.srs[src];
-  return r && r.b >= SRS_MASTERED ? 'known' : '';
+  return r && srsLevelLabel(r, src) === '已熟練' ? 'known' : '';
 }
 
 // Align a reading onto a word that mixes kanji and kana: 間に合う/まにあう → [[間,ま],[に],[合,あ],[う]]
@@ -3132,7 +3135,9 @@ function feedbackHtml(e) {
   // other vocabulary formats: the word's example sentence, with its own play button (so it is not buried in the note text)
   const example = q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-cloze' ? exampleHtml(q.item.ex, q.item.exZh, 'mt-2') : '';
   const why = example ? String(q.why || '').replace(/\n- 例：[^\n]*/g, '') : q.why;
-  const srsInfo = e.srs ? `<span>${srsDots(e.srs.rec.b)}</span><span>${srsLevelLabel(e.srs.rec)}・${dueLabel(e.srs.rec)}</span>` : '';
+  const cur = q.key ? state.srs[q.key] : null;
+  const srsInfo = e.srs ? `<span>${srsDots(e.srs.rec.b)}</span><span>${srsLevelLabel(e.srs.rec, q.key)}・${dueLabel(e.srs.rec)}</span>`
+    : e.encore && cur ? `<span>${srsDots(cur.b)}</span><span>${srsLevelLabel(cur, q.key)}・這次不影響排程</span>` : '';
   const mistake = !ok && q.kind !== 'x' ? '<span>已加入錯題本</span>' : '';
   const mNote = e.mistakeDone ? '<span class="chip chip-ok">錯題已連對 3 次，移出錯題本</span>' : '';
   return `
@@ -4099,7 +4104,7 @@ function vocabThemes() {
     const g = by.get(c) || by.set(c, { c, total: 0, seen: 0, learned: 0, mastered: 0, due: 0, N5: 0, N4: 0 }).get(c);
     g.total++; g[v.lv === 'N4' ? 'N4' : 'N5']++;
     const r = state.srs[v.key];
-    if (r) { g.seen++; if (r.b >= SRS_LEARNED) g.learned++; if (srsLevelLabel(r) === '已熟練') g.mastered++; if (r.due <= t) g.due++; }
+    if (r) { g.seen++; if (r.b >= SRS_LEARNED) g.learned++; if (srsLevelLabel(r, v.key) === '已熟練') g.mastered++; if (r.due <= t) g.due++; }
   });
   const rank = (c) => { const i = THEME_ORDER.indexOf(c); return i < 0 ? THEME_ORDER.length : i; };
   return [...by.values()].sort((a, b) => rank(a.c) - rank(b.c) || a.c.localeCompare(b.c, 'zh-Hant'));
@@ -4118,6 +4123,7 @@ function stackBarHtml(g) { return segBarHtml(g.total, [['mastered', g.mastered],
 // grammar units: answered correctly 3+ times / answered correctly / seen but not yet right
 function unitBarHtml(s, cls) { return segBarHtml(s.total, [['mastered', s.ok3], ['learned', s.ok1], ['seen', s.seen0]], cls); }
 function unitLegendHtml(s) { return `<i class="seg-dot mastered"></i>答對 3 次以上 ${s.ok3}　<i class="seg-dot learned"></i>答對過 ${s.ok1}　<i class="seg-dot seen"></i>出現過 ${s.seen0}　共 ${s.total} 題`; }
+function vocabSessionCount(filter) { const items = buildVocabQueue(filter, 20); return items.length + encoreEstimate(items); }
 function renderVocabThemes(view) {
   const cards = vocabThemes().map(g => `<div class="card theme-card" data-c="${esc(g.c)}">
       <div class="row between"><div class="card-title">${esc(g.c)}</div><span class="tiny muted">N5 ${g.N5}・N4 ${g.N4}</span></div>
@@ -4125,7 +4131,7 @@ function renderVocabThemes(view) {
       <div class="small muted mt-2"><i class="seg-dot seen"></i>已學 ${g.seen}　<i class="seg-dot learned"></i>熟悉 ${g.learned}　<i class="seg-dot mastered"></i>熟練 ${g.mastered}　共 ${g.total} 字${g.due ? `・今天到期 ${g.due}` : ''}</div>
       <div class="row-wrap mt-3">
         <button type="button" class="btn btn-sm" data-act="nav" data-route="#/vocab/list?c=${encodeURIComponent(g.c)}">字表</button>
-        <button type="button" class="btn btn-sm btn-primary" data-act="start-vocab" data-filter="c:${esc(g.c)}">練習</button>
+        <button type="button" class="btn btn-sm btn-primary" data-act="start-vocab" data-filter="c:${esc(g.c)}">練習・${vocabSessionCount('c:' + g.c)} 題</button>
       </div></div>`).join('');
   view.innerHTML = `
     <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">依主題分組的內建單字。每個主題都可以單獨看字表或練習。</div></div></div>
@@ -4194,7 +4200,7 @@ function renderVocab(view, tab, params) {
       ${v.ex ? `<div class="example mt-3" style="text-align:left"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="flash-speak" data-mode="ex" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${furi(exPlain(v.ex))}</div><div class="zh">${esc(v.exZh || '')}</div></div></div>` : ''}
       <div id="flashAiBox"></div>` : '';
     card = `<div class="card">
-      <div class="row between small muted"><span>${F.idx + 1} / ${F.queue.length}・${r ? srsLevelLabel(r) : '新卡'}</span><span>${r ? srsDots(r.b) : '<span class="chip chip-accent">新</span>'}</span></div>
+      <div class="row between small muted"><span>${F.idx + 1} / ${F.queue.length}・${r ? srsLevelLabel(r, v.key) : '新卡'}</span><span>${r ? srsDots(r.b) : '<span class="chip chip-accent">新</span>'}</span></div>
       <div class="flash">
         <div class="word jp">${esc(jaPlain(v.w))}</div>
         ${media}
@@ -4218,7 +4224,7 @@ function renderVocab(view, tab, params) {
   }
   view.innerHTML = `
     <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">今天待複習 ${vs.due} 張・N5 熟悉 ${vs.N5.learned}/${vs.N5.total}・N4 熟悉 ${vs.N4.learned}/${vs.N4.total}</div></div>
-      <button type="button" class="btn" data-act="start-vocab" data-filter="${deck}">單字測驗</button></div>
+      <button type="button" class="btn" data-act="start-vocab" data-filter="${deck}">單字測驗・${vocabSessionCount(deck)} 題</button></div>
     ${vocabTabs('cards')}
     <div class="row-wrap mb-3"><span class="small muted">牌組</span><div class="seg">${DECKS.map(([k, l]) => `<button type="button" aria-pressed="${deck === k}" data-act="flash-deck" data-deck="${k}">${l}</button>`).join('')}</div></div>
     ${card}
@@ -4273,11 +4279,11 @@ function renderVocabList(view, params) {
   }).join('');
   view.innerHTML = `
     <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">${theme ? `主題「${esc(theme)}」・${list.length} 個字` : `共 ${REG.vocab.length} 個單字`}</div></div>
-      ${theme ? `<div class="row-wrap"><button type="button" class="btn btn-primary" data-act="start-vocab" data-filter="c:${esc(theme)}">練習這個主題</button><button type="button" class="btn btn-ghost" data-act="nav" data-route="#/vocab/themes">所有主題</button></div>` : ''}</div>
+      ${theme ? `<div class="row-wrap"><button type="button" class="btn btn-primary" data-act="start-vocab" data-filter="c:${esc(theme)}">練習這個主題・${vocabSessionCount('c:' + theme)} 題</button><button type="button" class="btn btn-ghost" data-act="nav" data-route="#/vocab/themes">所有主題</button></div>` : ''}</div>
     ${vocabTabs('list')}
     <div class="row-wrap mb-3">
       <input class="input" style="max-width:320px" placeholder="搜尋日文、假名或中文" value="${esc(params.q || '')}" data-change="vocab-search" id="vocabSearch" />
-      <div class="seg">${DECKS.map(([k, l]) => `<button type="button" aria-pressed="${lv === k}" data-act="vocab-filter" data-lv="${k}">${l}</button>`).join('')}</div>
+      <div class="seg">${DECKS.filter(([k]) => !theme || k !== 'custom').map(([k, l]) => `<button type="button" aria-pressed="${lv === k}" data-act="vocab-filter" data-lv="${k}">${l}</button>`).join('')}</div>
     </div>
     <div class="table-wrap"><table class="table"><thead><tr><th>單字</th><th>意思</th><th>熟練度</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="empty">沒有符合的單字</td></tr>'}</tbody></table></div>
     ${list.length > shown.length ? `<p class="hint mt-2">只顯示前 ${shown.length} 筆，請用搜尋縮小範圍。</p>` : ''}`;
