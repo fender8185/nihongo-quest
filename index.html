@@ -3558,6 +3558,37 @@ Object.assign(ACTIONS, {
 let FLASH = null;   // { deck, queue: [key], idx, flipped, extraNew }
 const DECKS = [['all', '全部'], ['N5', 'N5'], ['N4', 'N4'], ['custom', '自訂／匯入']];
 
+// ---- themes: the built-in words carry a theme (`c`); custom cards have none and stay in their own deck ----
+const THEME_ORDER = ['問候', '指示', '代名詞', '疑問', '數量', '時間', '人物', '家庭', '身體', '飲食', '生活', '地點', '位置', '移動', '交通', '學校', '工作', '購物', '衣物', '顏色', '天氣', '自然', '興趣', '休閒', '動作', '形容', '副詞', '接續', '狀態', '溝通', '健康', '旅行', '社會', '抽象', '心情', '情感', '思考', '人際', '自他動詞', '其他'];
+function vocabTheme(v) { return !v.c || v.c === '舊版' ? '其他' : v.c; }
+function vocabThemes() {
+  const t = todayStr();
+  const by = new Map();
+  REG.vocab.filter(v => v.builtin).forEach(v => {
+    const c = vocabTheme(v);
+    const g = by.get(c) || by.set(c, { c, total: 0, seen: 0, learned: 0, mastered: 0, due: 0, N5: 0, N4: 0 }).get(c);
+    g.total++; g[v.lv === 'N4' ? 'N4' : 'N5']++;
+    const r = state.srs[v.key];
+    if (r) { g.seen++; if (r.b >= SRS_LEARNED) g.learned++; if (srsLevelLabel(r) === '已熟練') g.mastered++; if (r.due <= t) g.due++; }
+  });
+  const rank = (c) => { const i = THEME_ORDER.indexOf(c); return i < 0 ? THEME_ORDER.length : i; };
+  return [...by.values()].sort((a, b) => rank(a.c) - rank(b.c) || a.c.localeCompare(b.c, 'zh-Hant'));
+}
+function renderVocabThemes(view) {
+  const cards = vocabThemes().map(g => `<div class="card theme-card" data-c="${esc(g.c)}">
+      <div class="row between"><div class="card-title">${esc(g.c)}</div><span class="tiny muted">N5 ${g.N5}・N4 ${g.N4}</span></div>
+      <div class="bar thin mt-2 ${g.learned === g.total ? 'ok' : ''}"><span style="width:${Math.round(g.learned / Math.max(1, g.total) * 100)}%"></span></div>
+      <div class="small muted mt-2">已學 ${g.seen}／熟悉 ${g.learned}／熟練 ${g.mastered}，共 ${g.total} 字${g.due ? `・今天到期 ${g.due}` : ''}</div>
+      <div class="row-wrap mt-3">
+        <button type="button" class="btn btn-sm" data-act="nav" data-route="#/vocab/list?c=${encodeURIComponent(g.c)}">字表</button>
+        <button type="button" class="btn btn-sm btn-primary" data-act="start-vocab" data-filter="c:${esc(g.c)}">練習</button>
+      </div></div>`).join('');
+  view.innerHTML = `
+    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">依主題分組的內建單字。每個主題都可以單獨看字表或練習。</div></div></div>
+    ${vocabTabs('themes')}
+    <div class="grid grid-3 theme-grid">${cards}</div>`;
+}
+
 function deckPool(deck) {
   if (deck === 'custom') return REG.vocab.filter(v => !v.builtin);
   if (deck === 'N5' || deck === 'N4') return REG.vocab.filter(v => v.builtin && v.lv === deck);
@@ -3582,6 +3613,7 @@ function ensureFlash(deck) {
 function vocabTabs(tab) {
   return `<div class="seg mb-4">
     <button type="button" aria-pressed="${tab === 'cards'}" data-act="nav" data-route="#/vocab">字卡</button>
+    <button type="button" aria-pressed="${tab === 'themes'}" data-act="nav" data-route="#/vocab/themes">主題</button>
     <button type="button" aria-pressed="${tab === 'kanji'}" data-act="nav" data-route="#/vocab/kanji">漢字</button>
     <button type="button" aria-pressed="${tab === 'list'}" data-act="nav" data-route="#/vocab/list">單字表</button>
     <button type="button" aria-pressed="${tab === 'import'}" data-act="nav" data-route="#/vocab/import">匯入與新增</button>
@@ -3590,6 +3622,7 @@ function vocabTabs(tab) {
 
 function renderVocab(view, tab, params) {
   if (tab === 'list') return renderVocabList(view, params);
+  if (tab === 'themes') return renderVocabThemes(view);
   if (tab === 'kanji') return renderKanji(view, params);
   if (tab === 'import') return renderVocabImport(view);
   const deck = params.deck || (FLASH && FLASH.deck) || 'all';
@@ -3675,8 +3708,10 @@ function flashCurrent() { return FLASH && REG.byKey.get(FLASH.queue[FLASH.idx]);
 function renderVocabList(view, params) {
   const q = (params.q || '').trim().toLowerCase();
   const lv = params.lv || 'all';
+  const theme = params.c || '';
   const t = todayStr();
   let list = REG.vocab;
+  if (theme) list = list.filter(v => v.builtin && vocabTheme(v) === theme);
   if (lv === 'custom') list = list.filter(v => !v.builtin);
   else if (lv !== 'all') list = list.filter(v => v.builtin && v.lv === lv);
   if (q) list = list.filter(v => [v.w, v.r, v.m].some(x => String(x || '').toLowerCase().includes(q)));
@@ -3693,7 +3728,8 @@ function renderVocabList(view, params) {
       </td></tr>`;
   }).join('');
   view.innerHTML = `
-    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">共 ${REG.vocab.length} 個單字</div></div></div>
+    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">${theme ? `主題「${esc(theme)}」・${list.length} 個字` : `共 ${REG.vocab.length} 個單字`}</div></div>
+      ${theme ? `<div class="row-wrap"><button type="button" class="btn btn-primary" data-act="start-vocab" data-filter="c:${esc(theme)}">練習這個主題</button><button type="button" class="btn btn-ghost" data-act="nav" data-route="#/vocab/themes">所有主題</button></div>` : ''}</div>
     ${vocabTabs('list')}
     <div class="row-wrap mb-3">
       <input class="input" style="max-width:320px" placeholder="搜尋日文、假名或中文" value="${esc(params.q || '')}" data-change="vocab-search" id="vocabSearch" />
@@ -3780,7 +3816,7 @@ Object.assign(ACTIONS, {
   'flash-speak': (el) => { const v = flashCurrent(); if (!v) return; playVocabAudio(v, el.dataset.mode === 'ex' ? 'ex' : 'word'); },
   'flash-ai': () => aiEnrichCard(flashCurrent()),
   'flash-translate': () => aiTranslateCards([flashCurrent()]),
-  'vocab-filter': (el) => { const q = (document.getElementById('vocabSearch') || {}).value || ''; go(`#/vocab/list?lv=${el.dataset.lv}&q=${encodeURIComponent(q)}`); },
+  'vocab-filter': (el) => { const q = (document.getElementById('vocabSearch') || {}).value || ''; const c = currentRoute().params.c; go(`#/vocab/list?lv=${el.dataset.lv}&q=${encodeURIComponent(q)}${c ? `&c=${encodeURIComponent(c)}` : ''}`); },
   'vocab-remove': (el) => {
     const v = REG.byKey.get(el.dataset.key);
     if (!v) return;
@@ -3811,7 +3847,7 @@ Object.assign(ACTIONS, {
   'ai-translate-batch': () => aiTranslateCards(REG.vocab.filter(v => !v.builtin && isEnglishOnly(v.m)).slice(0, 20))
 });
 Object.assign(CHANGE_ACTIONS, {
-  'vocab-search': (el) => { const lv = currentRoute().params.lv || 'all'; go(`#/vocab/list?lv=${lv}&q=${encodeURIComponent(el.value)}`); },
+  'vocab-search': (el) => { const { lv = 'all', c } = currentRoute().params; go(`#/vocab/list?lv=${lv}&q=${encodeURIComponent(el.value)}${c ? `&c=${encodeURIComponent(c)}` : ''}`); },
   'anki-file': (el) => { const f = el.files && el.files[0]; if (f) importAnkiFile(f); el.value = ''; }
 });
 

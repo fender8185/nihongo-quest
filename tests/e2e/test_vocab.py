@@ -1,0 +1,49 @@
+"""2026-10-26: vocabulary themes (主題 tab, themed practice) and multi-format practice (preview card, encores,
+per-format record, 已熟練 needs three formats)."""
+import json, os, subprocess, sys, time
+sys.path.insert(0, os.path.dirname(__file__))
+from cdp import Browser
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+PORT = 8799
+URL = f"http://127.0.0.1:{PORT}/"
+READY = "typeof state === 'object' && !!state.updatedAt && typeof speakScript === 'function'"
+
+def ev(b, js, pre=()):
+    return b.run([("nav", URL), ("wait", READY)] + list(pre) + [("eval", js)])[-1]
+
+# ---- Task 1: themes ----
+def test_themes_cover_every_builtin_word_once(b):
+    js = """(() => { const th = vocabThemes(); const n = REG.vocab.filter(v => v.builtin).length;
+      return JSON.stringify({ sum: th.reduce((a, t) => a + t.total, 0), n, old: th.some(t => t.c === '舊版'), first: th[0].c, hasOther: th.some(t => t.c === '其他') }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['sum'] == r['n'] and not r['old'] and r['hasOther'] and r['first'] == '問候', r
+
+def test_theme_tab_lists_cards_and_opens_the_word_table(b):
+    out = b.run([("nav", URL), ("wait", READY),
+        ("eval", "location.hash = '#/vocab/themes'; true"), ("wait", "document.querySelectorAll('.theme-card').length > 0"),
+        ("eval", "JSON.stringify({ cards: document.querySelectorAll('.theme-card').length, themes: vocabThemes().length, pressed: document.querySelector('.seg [aria-pressed=\"true\"]').textContent })"),
+        ("eval", "document.querySelector('.theme-card[data-c=\"飲食\"] [data-act=nav]').click(); true"),
+        ("wait", "location.hash.includes('c=')"),
+        ("eval", "JSON.stringify({ hash: decodeURIComponent(location.hash), rows: document.querySelectorAll('tbody tr').length, total: vocabThemes().find(t => t.c === '飲食').total, sub: document.querySelector('.page-sub').textContent })")])
+    a = json.loads(out[-3]); assert a['cards'] == a['themes'] and a['pressed'] == '主題', a
+    r = json.loads(out[-1]); assert r['hash'] == '#/vocab/list?c=飲食' and r['rows'] == r['total'] and '飲食' in r['sub'], r
+
+TESTS = [test_themes_cover_every_builtin_word_once, test_theme_tab_lists_cards_and_opens_the_word_table]
+
+if __name__ == "__main__":
+    srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(0.8)
+    only = sys.argv[1:]
+    failed = 0
+    try:
+        for t in TESTS:
+            if only and t.__name__ not in only: continue
+            with Browser() as b:
+                try:
+                    t(b); print("ok  ", t.__name__)
+                except Exception as e:
+                    failed += 1; print("FAIL", t.__name__, "-", str(e)[:400])
+    finally:
+        srv.terminate()
+    print("ALL PASS" if not failed else f"{failed} FAILED")
+    sys.exit(1 if failed else 0)
