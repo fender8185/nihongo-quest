@@ -304,7 +304,7 @@ def test_topics_line_names_custom_cards_or_a_finished_day_instead_of_disappearin
       return JSON.stringify({ customOnly, allCustom: words.length > 0 && words.every(it => !it.builtin), noWords, none: words2.length === 0 }); })()"""
     r = json.loads(ev(b, js))
     assert r['allCustom'] and r['customOnly'] and '單字主題' in r['customOnly'] and '自訂字卡' in r['customOnly'], r
-    assert r['none'] and r['noWords'] and '單字' in r['noWords'] and '已完成' in r['noWords'], r
+    assert r['none'] and r['noWords'] and '單字主題今天的單字已完成' in r['noWords'] and '明天' not in r['noWords'], r
 
 TESTS += [test_topics_line_names_custom_cards_or_a_finished_day_instead_of_disappearing]
 
