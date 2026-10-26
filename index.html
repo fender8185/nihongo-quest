@@ -760,9 +760,10 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '26';   // keep equal to the number in sw.js CACHE ('nq-v26'); scripts/test.sh checks it
+const APP_VERSION = '27';   // keep equal to the number in sw.js CACHE ('nq-v27'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '27', date: '2026-10-26', items: ['文法填空題複習時會換成「選正確句」或「句意」問法，三種輪替、沒答對過的優先；第一次出現仍是填空，模擬考不受影響。'] },
   { v: '26', date: '2026-10-26', items: ['新增「第 0 週：開始之前」入門講解（課程頁最上方）：假名表可點播放、句子骨架、品詞名稱、形容詞與動詞分類、動詞的形、敬體常體、助詞、數量詞、名稱對照表、app 用法。', '題目與字卡上的詞性標籤可以點，會跳出該名稱的說明。', '新用戶首頁會提示先看第 0 週。'] },
   { v: '25', date: '2026-10-26', items: ['語音服務新增 Google Cloud TTS（Neural2／WaveNet），需自備 API Key。', '朗讀時已知讀音的字會指定讀法：Google 以 SSML 標註，Deepgram 與 OpenAI 改送假名（可在設定關閉），減少「三」之類的誤讀。'] },
   { v: '24', date: '2026-10-26', items: ['文法單元的進度條改為三段：答對 3 次以上、答對過、出現過但還沒答對（課程頁、單元頁、首頁目前單元）。'] },
@@ -1183,10 +1184,10 @@ const SRS_MASTERED = 5;  // level at which an item counts as mastered (stability
 const MASTER_FORMATS = 3; // a word is mastered only after it has been answered correctly in this many question formats
 
 // Per-format history of a word: rec.f = { 'v-cloze': [ok, ng], flash: [ok, ng], … }. Only vocabulary records carry it.
-function recordFormat(rec, fmt, ok) {
+function recordFormat(rec, fmt, ok, field = 'f') {   // words keep `f` (counts toward 已熟練); grammar keeps `gf` (format rotation only)
   if (!rec || !fmt) return;
-  rec.f = rec.f || {};
-  const x = rec.f[fmt] || (rec.f[fmt] = [0, 0]);
+  const bag = rec[field] || (rec[field] = {});
+  const x = bag[fmt] || (bag[fmt] = [0, 0]);
   x[ok ? 0 : 1]++;
 }
 function formatsPassed(rec) { return rec && rec.f ? Object.values(rec.f).filter(x => x[0] > 0).length : 0; }
@@ -2142,6 +2143,24 @@ function makeVocabQuestion(v, ctx = {}) {
 }
 
 // ---------- grammar ----------
+// Chinese meanings of other items of the same unit (then nearby units) as 句意 distractors
+function grammarMeaningDistractors(g) {
+  const seen = new Set([g.zh]); const out = [];
+  const pools = [REG.grammar.filter(x => x.u === g.u && x.key !== g.key), REG.grammar.filter(x => x.u !== g.u)];
+  for (const pool of pools) { for (const x of shuffle(pool)) { if (x.zh && !seen.has(x.zh) && !zhOverlap(x.zh, g.zh)) { seen.add(x.zh); out.push(x.zh); if (out.length === 3) return out; } } }
+  return out.length === 3 ? out : null;
+}
+function grammarFormats(g, opts, ans) {
+  const f = ['g-choice'];
+  if (opts.filter(o => o !== ans).length >= 3) f.push('g-correct');
+  if (g.zh && grammarMeaningDistractors(g)) f.push('g-meaning');
+  return f;
+}
+function pickGrammarFormat(g, rec, opts, ans, avoid) {
+  if (!rec) return 'g-choice';
+  const pairs = grammarFormats(g, opts, ans).map(f => [f, (!rec.gf || !rec.gf[f] || rec.gf[f][0] === 0) ? 3 : 1]);
+  return weightedPick(pairs, avoid);
+}
 function splitBlank(jp) {
   const m = BLANK_RE.exec(jp);
   if (!m) return null;
@@ -2173,6 +2192,32 @@ function makeGrammarQuestion(g, ctx = {}) {
     if (!b) return null;
     const opts = (g.op || []).map(parenReadingToBracket);
     const ans = parenReadingToBracket(g.a);
+    // A fill-in item is also asked as 選正確句 (every option filled in) and 句意, so a review is not the same
+    // question with the answer remembered. First sighting is always the plain fill-in.
+    const fmt = ctx.forceFmt || pickGrammarFormat(g, rec, opts, ans, ctx.avoidFmt);
+    if (fmt === 'g-correct') {
+      const fill = (o) => b.pre + o + b.post;
+      q.fmt = 'g-correct';
+      q.instr = '哪一句是正確的？';
+      q.stemHtml = '';
+      q.fullJp = fill(ans);
+      q.mistakePrompt = `正確的句子：${fill(ans)}`;
+      finalizeOptions(q, fill(ans), opts.filter(o => o !== ans).slice(0, 3).map(fill), true);
+      q.wide = true;
+      return q;
+    }
+    if (fmt === 'g-meaning') {
+      const full = b.pre + ans + b.post;
+      q.fmt = 'g-meaning';
+      q.instr = '這句話的意思是？';
+      q.stemHtml = furi(full);
+      q.fullJp = full;
+      q.zhText = '';
+      q.mistakePrompt = `${full} 的意思`;
+      finalizeOptions(q, g.zh, grammarMeaningDistractors(g), false);
+      q.wide = true;
+      return q;
+    }
     q.fmt = 'g-choice';
     q.instr = '選出最適合填入空格的選項';
     q.stemHtml = `${furi(b.pre)}${blankChip(b.hint)}${furi(b.post)}`;
@@ -3030,6 +3075,7 @@ function answerCurrent(i) {
     if (e.srs.isNew) SESSION.stats.newCount++;
   }
   if (q.kind === 'v' && q.fmt && q.fmt.startsWith('v-') && !e.requeued) recordFormat(state.srs[q.key], q.fmt, ok);   // a 再練一次 copy shows the answer first: not proof
+  if (q.kind === 'g' && q.item && (q.item.t || 'choice') === 'choice' && q.fmt && !e.requeued) recordFormat(state.srs[q.key], q.fmt, ok, 'gf');
   if (e.srs && e.srs.isNew && q.kind === 'v' && !e.requeued) scheduleEncores(e, ok);
   if (q.fmt) {
     const f = state.statsFmt[q.fmt] || (state.statsFmt[q.fmt] = { ok: 0, ng: 0 });
@@ -4453,7 +4499,7 @@ function derivedQuestion(item, m) {
     q = makeVocabQuestion(item, { forceFmt: fmt });
     if (!q || q.fmt !== fmt) return null;
   } else {
-    q = makeGrammarQuestion(item, {});
+    q = makeGrammarQuestion(item, { forceFmt: 'g-choice' });   // the mock exam always asks the plain fill-in
     if (!q || q.forceZh || !['g-choice', 'g-conj', 'g-adj', 'g-order'].includes(q.fmt)) return null;
   }
   return Object.assign(q, { examId: 'd:' + item.key + ':' + m, m, srcKey: item.key, zhText: '', label: '' });
