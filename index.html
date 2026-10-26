@@ -742,9 +742,10 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '19';   // keep equal to the number in sw.js CACHE ('nq-v19'); scripts/test.sh checks it
+const APP_VERSION = '20';   // keep equal to the number in sw.js CACHE ('nq-v20'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '20', date: '2026-10-26', items: ['首頁的「單字主題」固定顯示：只剩自訂字卡時寫「自訂字卡」，今天的單字做完時寫已完成並預告明天的主題。'] },
   { v: '19', date: '2026-10-26', items: ['新文法不再被複習擠掉：每天固定出到上限（正確率低時仍會自動減量），只有新單字會因複習太多而減少，且不低於上限的一半。', '每組練習的文法名額先放新題，剩下才放複習；複習以答對次數最少的優先，同一單元的題目熟練度會拉平。'] },
   { v: '18', date: '2026-10-26', items: ['今日練習的單字集中在 1 到 3 個主題：新字來自目前的兩個主題，複習優先出到期最多的那個主題；其他主題的到期字等這些做完才補上。首頁的「單字主題」顯示的是這組實際會碰到的主題。'] },
   { v: '17', date: '2026-10-26', items: ['主題卡進度條改用單一元素的漸層繪製，排除瀏覽器排版差異。'] },
@@ -3356,17 +3357,22 @@ function noticesHtml() {
 // The topics the 開始練習 session touches: vocabulary themes (the active pair when new words are in, otherwise the
 // themes most of the review words belong to) and the grammar points of its grammar questions, new ones first.
 function sessionTopicsHtml(q, plan) {
-  const words = q.items.filter(it => it.kind === 'v' && it.builtin);
+  const allWords = q.items.filter(it => it.kind === 'v');
+  const words = allWords.filter(it => it.builtin);
   const present = new Set(words.map(vocabTheme));
   const all = (q.focus || []).filter(c => present.has(c)).concat([...present].filter(c => !(q.focus || []).includes(c)));
   const themes = all.slice(0, 3); if (all.length > 3) themes.push(`等 ${all.length} 個`);
+  if (allWords.length > words.length) themes.push('自訂字卡');
+  // the line is always there: custom cards have no theme, and a finished day says so and names what comes next
+  const next = activeThemes(REG.vocab, plan.n4Open);
+  const vocabText = themes.length ? themes.join('・') : `今天的單字已完成${next.length ? `，明天：${next.join('・')}` : ''}`;
   const gItems = q.items.filter(it => it.kind === 'g');
   const pts = [];
   gItems.filter(it => !state.srs[it.key]).concat(gItems.filter(it => state.srs[it.key])).forEach(g => { if (g.pt && !pts.includes(g.pt)) pts.push(g.pt); });
   const shown = pts.slice(0, 5); if (pts.length > 5) shown.push(`等 ${pts.length} 個考點`);
   const note = plan.note ? `<div class="plan-note">${esc(plan.note)}</div>` : '';
   return `<div class="plan-topics">
-      ${themes.length ? `<span><b>單字主題</b>${esc(themes.join('・'))}</span>` : ''}
+      <span><b>單字主題</b>${esc(vocabText)}</span>
       ${shown.length ? `<span><b>文法</b>${esc(shown.join('・'))}</span>` : ''}
     </div>${note}`;
 }

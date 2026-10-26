@@ -291,6 +291,23 @@ def test_grammar_slots_take_new_items_first_then_the_least_practised_reviews(b):
 
 TESTS += [test_new_grammar_is_not_squeezed_out_by_a_review_backlog, test_grammar_slots_take_new_items_first_then_the_least_practised_reviews]
 
+# ---- 2026-10-26 (6): the 單字主題 line never vanishes ----
+def test_topics_line_names_custom_cards_or_a_finished_day_instead_of_disappearing(b):
+    js = """(() => { const snap = () => { location.hash = '#/today'; route(); const t = document.querySelector('.plan-topics'); return t ? t.textContent.replace(/\\s+/g, ' ').trim() : null; };
+      state.settings.newVocabPerDay = 0;
+      for (let i = 0; i < 6; i++) { state.vocab.push({ id: 'cx' + i, w: '猫' + i, r: 'ねこ', m: '貓' + i }); }
+      buildRegistry(); REG.vocab.filter(v => !v.builtin).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(todayStr(), -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, f: {}, last: addDays(todayStr(), -3) }; });
+      saveState(); const customOnly = snap();
+      const words = dailyQueue(state.settings.sessionSize).items.filter(it => it.kind === 'v');
+      state.settings.includeImported = 'off'; saveState(); const noWords = snap();
+      const words2 = dailyQueue(state.settings.sessionSize).items.filter(it => it.kind === 'v');
+      return JSON.stringify({ customOnly, allCustom: words.length > 0 && words.every(it => !it.builtin), noWords, none: words2.length === 0 }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['allCustom'] and r['customOnly'] and '單字主題' in r['customOnly'] and '自訂字卡' in r['customOnly'], r
+    assert r['none'] and r['noWords'] and '單字' in r['noWords'] and '已完成' in r['noWords'], r
+
+TESTS += [test_topics_line_names_custom_cards_or_a_finished_day_instead_of_disappearing]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
