@@ -177,7 +177,7 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.35; }
 .bar > span { display: block; height: 100%; border-radius: 99px; background: var(--accent); transition: width .3s; }
 .bar.ok > span { background: var(--ok); }
 .bar.thin { height: 5px; }
-.bar.stack { display: flex; height: 8px; }
+.bar.stack { display: flex; height: 10px; }
 .bar.stack > span { border-radius: 0; transition: none; }
 .bar.stack > [data-seg="mastered"], .seg-dot.mastered { background: var(--heat-4); }
 .bar.stack > [data-seg="learned"], .seg-dot.learned { background: var(--heat-3); }
@@ -743,9 +743,10 @@ const DATA = {"PHASES":[{"id":1,"title":"第一階段：N5 文法","span":"第 1
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '15';   // keep equal to the number in sw.js CACHE ('nq-v15'); scripts/test.sh checks it
+const APP_VERSION = '16';   // keep equal to the number in sw.js CACHE ('nq-v16'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 const CHANGELOG = [
+  { v: '16', date: '2026-10-26', items: ['主題卡進度條的「已學」段改用較明顯的綠色（v15 第一版太淡，看起來像空的）。'] },
   { v: '15', date: '2026-10-26', items: ['主題卡的進度條改為三段顏色：已學、熟悉、熟練。', '首頁列出這組練習會碰到的單字主題與文法考點。'] },
   { v: '14', date: '2026-10-26', items: ['每天的新單字改為從兩個主題交錯出現，首頁會顯示今天的主題；複習仍照到期混合出題。', '中翻日與例句填空的選項有時改用假名顯示，避免直接從漢字看出答案；答完會顯示漢字與讀音。'] },
   { v: '13', date: '2026-10-26', items: ['單字頁新增「主題」分頁：內建單字依主題分組，可單獨看字表或練習一個主題。', '新單字先顯示預習卡（字、讀音、意思、例句），再開始作答。', '新單字在同一組練習裡會換兩種題型再考一次，加深記憶。', '每個字記錄各題型是否答對過，複習時優先出還沒過的題型；三種題型都答對過才算「已熟練」，既有的熟練字會先回到「熟悉」。'] },
