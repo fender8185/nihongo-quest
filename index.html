@@ -812,12 +812,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '65';   // keep equal to the number in sw.js CACHE ('nq-v65'); scripts/test.sh checks it
+const APP_VERSION = '66';   // keep equal to the number in sw.js CACHE ('nq-v66'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '65', from: '36', date: '2026-10-27', items: [
+  { v: '66', from: '36', date: '2026-10-27', items: [
+    '修正：每日練習最後一題按「看結果」沒有反應（v65 改圓環後結算頁壞掉）。結算頁的圓環和「今天還有 N 題」改成和首頁一樣算今天的工作。',
     '「每日目標」改成「每天負荷上限」（預設 40，舊設定低於 40 的一律改成 40）：只當煞車用，當天到期複習加新題超過它時先減新單字（最少減到額度一半），再停新漢字、新聽力，到期的複習永遠不減。首頁圓環改成「今天做了 N／今天的工作」，做完剛好填滿，和「今天完成了」一致。',
     '考試日期接到每日練習：目前的新題額度追不上考試進度時，首頁「考試倒數」卡會列出建議的額度（例如 新單字 8→12）與「套用建議」；額度夠就不顯示。學習分析的「每日練習量建議」不再推薦每日目標。',
     '答錯後幾題的「再練一次」改成換一種格式出（看中文選日文改成看日文選意思、填空改成選正確句……），沒有第二種格式的題才原題洗牌；一樣不寫排程。',
@@ -3545,6 +3546,8 @@ function renderSummary(view) {
   s.results.filter(r => !r.ok).forEach(r => { if (!wrongKeys.has(r.q.mistakePrompt)) wrongKeys.set(r.q.mistakePrompt, r); });
   const dayDone = dailyPlan().remaining === 0;
   const todayN = dayTotal(state.dailyLogs[todayStr()]);
+  const dq = dailyQueue(state.settings.sessionSize);
+  const workTotal = todayN + dq.total + encoreEstimate(dq.plan.newV.concat(dq.plan.newG));   // same ring as 今日: done / today's whole work
   const wrongList = [...wrongKeys.values()].map(r => `<div class="list-item"><div class="grow"><div class="jp">${furi(tidyPrompt(r.q.mistakePrompt || ''))}</div><div class="small muted">正確：<span class="jp">${esc(jaPlain(r.q.options[r.q.answer].text))}</span>・你選：<span class="jp">${esc(jaPlain(r.q.options[r.chosen].text))}</span></div></div></div>`).join('');
   view.innerHTML = `
     <div class="pr-top"><button type="button" class="btn btn-ghost btn-icon" data-act="close-summary" aria-label="關閉">${icon('close')}</button><div class="grow"></div></div>
@@ -3554,7 +3557,7 @@ function renderSummary(view) {
           <div class="page-title">${n ? '完成了' : '已結束'}</div>
           <div class="page-sub">${esc(s.title)}・作答 ${n} 題・正確率 ${acc}%</div>
         </div>
-        ${ringHtml(Math.min(1, todayN / Math.max(1, goal)), `<b>${todayN}</b><span class="tiny muted">/ ${goal}</span>`)}
+        ${ringHtml(Math.min(1, todayN / Math.max(1, workTotal)), `<b>${todayN}</b><span class="tiny muted">/ ${workTotal}</span>`)}
       </div>
       <div class="grid grid-4 mt-4">
         <div class="stat"><span class="stat-v">${s.stats.correct}</span><span class="stat-l">答對</span></div>
@@ -3562,7 +3565,7 @@ function renderSummary(view) {
         <div class="stat"><span class="stat-v">${s.stats.newCount}</span><span class="stat-l">新學</span></div>
         <div class="stat"><span class="stat-v">${Math.max(1, Math.round((Date.now() - s.startedAt) / 60000))}</span><span class="stat-l">分鐘</span></div>
       </div>
-      ${dayDone ? '<div class="banner mt-4">今天的進度完成了。答對的題目會在幾天後再出現，答錯的明天再複習。</div>' : `<div class="hint mt-4">今天還差 ${goal - todayN} 題達成目標。</div>`}
+      ${dayDone ? '<div class="banner mt-4">今天的進度完成了。答對的題目會在幾天後再出現，答錯的明天再複習。</div>' : `<div class="hint mt-4">今天還有 ${Math.max(0, workTotal - todayN)} 題。</div>`}
       <div class="row-wrap mt-4">
         <button type="button" class="btn btn-primary" data-act="again">再練一組</button>
         ${wrongKeys.size ? '<button type="button" class="btn" data-act="retry-wrong">重練答錯的題目</button>' : ''}
