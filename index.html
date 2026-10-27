@@ -1346,9 +1346,9 @@ function srsAnswer(key, correct, opt = {}) {
   if (g > 1) { r.ok++; r.st++; } else { r.ng++; r.st = 0; if (before >= 2) r.lapse = (r.lapse || 0) + 1; delete r.known; }   // a miss ends the 我會了 vouch: back to the normal rules
   r.b = g === 1 ? Math.min(levelFromS(r.s), 1) : levelFromS(r.s);
   if (before < SRS_LEARNED && r.b >= SRS_LEARNED) r.lrn = t;   // the day it became 熟悉 (學習分析 lists the recent ones)
-  // A missed word comes back later the same day; grammar, listening, reading and kanji wait until tomorrow,
-  // because seeing the very same question again within hours only tests memory of the answer.
-  r.due = g === 1 ? (key.startsWith('v:') ? t : addDays(t, 1)) : addDays(t, fsrsDays(r.s, key));
+  // A miss comes back tomorrow, whatever the kind: the same-day look is the session's 再練一次 copy, which does not
+  // touch the schedule (seeing the very same question again within hours only tests memory of the answer).
+  r.due = g === 1 ? addDays(t, 1) : addDays(t, fsrsDays(r.s, key));
   // a dialogue heard again within days tests memory of the answer, not listening: at least two weeks, then six+
   if (key.startsWith('l:') && g > 1) r.due = addDays(t, Math.max(daysBetween(t, r.due), r.ok >= 2 ? 45 : 14));
   r.last = t;
@@ -3439,13 +3439,21 @@ function answerCurrent(i) {
     const m0 = state.mistakes.find(x => (q.key && x.key === q.key) || x.prompt === (q.mistakePrompt || q.plainStem || ''));
     e.undo = { srs: q.key && state.srs[q.key] ? JSON.parse(JSON.stringify(state.srs[q.key])) : null, mistake: m0 ? JSON.parse(JSON.stringify(m0)) : null, mistakesLen: state.mistakes.length, today: Object.assign({}, state.today) };
   }
+  // the 再練一次 copy is a learning step: it counts as a question done today, nothing else (the first answer set the schedule)
+  if (e.requeued) {
+    recordAction(q.kind === 'v' || q.kind === 'k' ? 'v' : q.kind === 'g' ? 'g' : 'q', null);
+    SESSION.stats[ok ? 'correct' : 'wrong']++;
+    SESSION.results.push({ key: q.key, ok, q, chosen: i, requeued: true });
+    saveState(); renderPractice(); speakAnswered(q);
+    return;
+  }
   if (['v', 'g', 'l', 'r', 'k'].includes(q.kind) && !e.encore) {
     e.srs = srsAnswer(q.key, ok);
     if (e.srs.isNew) SESSION.stats.newCount++;
   }
-  if (q.kind === 'v' && q.fmt && q.fmt.startsWith('v-') && !e.requeued) recordFormat(state.srs[q.key], q.fmt, ok);   // a 再練一次 copy shows the answer first: not proof
-  if (q.kind === 'g' && q.item && (q.item.t || 'choice') === 'choice' && q.fmt && !e.requeued) recordFormat(state.srs[q.key], q.fmt, ok, 'gf');
-  if (e.srs && e.srs.isNew && q.kind === 'v' && !e.requeued) scheduleEncores(e, ok);
+  if (q.kind === 'v' && q.fmt && q.fmt.startsWith('v-')) recordFormat(state.srs[q.key], q.fmt, ok);
+  if (q.kind === 'g' && q.item && (q.item.t || 'choice') === 'choice' && q.fmt) recordFormat(state.srs[q.key], q.fmt, ok, 'gf');
+  if (e.srs && e.srs.isNew && q.kind === 'v') scheduleEncores(e, ok);
   if (q.fmt) {
     const f = state.statsFmt[q.fmt] || (state.statsFmt[q.fmt] = { ok: 0, ng: 0 });
     if (ok) f.ok++; else f.ng++;
@@ -3460,7 +3468,7 @@ function answerCurrent(i) {
   } else {
     SESSION.stats.wrong++;
     addMistake(q, jaPlain(q.options[i].text));
-    if (!e.requeued && !e.encore) {
+    if (!e.encore) {
       const at = Math.min(SESSION.entries.length, SESSION.idx + 3 + Math.floor(Math.random() * 3));
       const again = { item: e.item, mistake: e.mistake, requeued: true };
       if (q) again.q = requeueQuestion(q, shuffle(q.options));
@@ -3470,10 +3478,12 @@ function answerCurrent(i) {
   SESSION.results.push({ key: q.key, ok, q, chosen: i });
   saveState();
   renderPractice();
-  if (state.settings.autoSpeak) {
-    const text = q.fmt === 'v-meaning' || q.fmt === 'v-recall' || q.fmt === 'v-listen' || q.fmt === 'v-reading' || q.fmt === 'v-kanji' ? q.speakWord : q.fullJp;
-    if (text) speak(text, speakOpts(q, text));
-  }
+  speakAnswered(q);
+}
+function speakAnswered(q) {
+  if (!state.settings.autoSpeak) return;
+  const text = q.fmt === 'v-meaning' || q.fmt === 'v-recall' || q.fmt === 'v-listen' || q.fmt === 'v-reading' || q.fmt === 'v-kanji' ? q.speakWord : q.fullJp;
+  if (text) speak(text, speakOpts(q, text));
 }
 function nextQuestion() {
   const e = currentEntry();

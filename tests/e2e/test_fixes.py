@@ -144,7 +144,7 @@ def test_first_correct_answer_waits_a_few_days_before_repeating(b):
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
     r = __import__('json').loads(out[-1])
     assert r['okDays'] >= 3, r
-    assert r['ngDays'] == 0, r
+    assert r['ngDays'] == 1, r   # a miss waits until tomorrow (v63); the same-day look is the session's 再練一次
 
 def test_new_grammar_of_a_unit_rotates_through_its_points(b):
     js = """(() => { const c = newGrammarCandidates('m1').slice(0, 6); return JSON.stringify({ n: c.length, pts: new Set(c.map(g => g.pt)).size }); })()"""
@@ -238,14 +238,35 @@ def APP_VERSION_IN_SW(r):
     return cache == ver and r['first'].startswith('v' + ver)
 
 # ---- 2026-10-26: grammar, listening, reading and kanji do not come back the same day ----
-def test_wrong_non_vocab_item_waits_until_tomorrow_but_wrong_vocab_stays_due_today(b):
+def test_every_wrong_answer_waits_until_tomorrow(b):
     js = """(() => { const t = todayStr(); const out = {};
       const pick = { g: REG.grammar[0], l: REG.listen[0], r: REG.read[0], k: REG.kanji[0], v: REG.vocab.find(x => x.builtin) };
       for (const [kind, it] of Object.entries(pick)) out[kind] = daysBetween(t, srsAnswer(it.key, false).rec.due);
       return JSON.stringify(out); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
     r = __import__('json').loads(out[-1])
-    assert r == {'g': 1, 'l': 1, 'r': 1, 'k': 1, 'v': 0}, r
+    assert r == {'g': 1, 'l': 1, 'r': 1, 'k': 1, 'v': 1}, r
+
+def test_miss_then_requeue_does_not_return_today(b):
+    js = """(() => { const t = todayStr(); const out = {};
+      for (const kind of ['g', 'v']) {
+        const it = kind === 'g' ? REG.grammar.find(x => !state.srs[x.key]) : REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x));
+        const fill = REG.grammar.filter(x => !state.srs[x.key] && x !== it).slice(0, 10);
+        const mist = state.mistakes.length; startSession('items', { items: [it, ...fill] }); let e = currentEntry(); e.previewDone = true;
+        answerCurrent((e.q.answer + 1) % e.q.options.length);                       // miss
+        const n1 = state.srs[it.key].n;
+        while (!(currentEntry() || {}).requeued) { nextQuestion(); const c = currentEntry(); if (!c) break; if (!c.requeued) { c.previewDone = true; answerCurrent(c.q.answer); } }
+        e = currentEntry(); answerCurrent(e.q.answer);                                 // the 再練一次 copy, right
+        out[kind] = { n: state.srs[it.key].n, due: daysBetween(t, state.srs[it.key].due), n1, mistakes: state.mistakes.length - mist,
+          inDaily: dailyQueue(20).items.some(x => x.key === it.key), encores: SESSION.entries.filter(x => x.encore && x.item.key === it.key).length };
+        SESSION = null; document.body.classList.remove('practicing');
+      }
+      return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
+    r = json.loads(out[-1])
+    for kind in ('g', 'v'):
+        assert r[kind]['n'] == 1 and r[kind]['n1'] == 1 and r[kind]['due'] == 1 and r[kind]['mistakes'] == 1 and not r[kind]['inDaily'], r
+    assert r['v']['encores'] == 1, r
 
 def test_reinforcement_takes_only_items_two_days_quiet_with_a_short_correct_streak(b):
     # a first correct answer leaves an item at a low level and not yet due; it must not come back as filler the next day, and
@@ -695,7 +716,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_wrong_non_vocab_item_waits_until_tomorrow_but_wrong_vocab_stays_due_today, test_reinforcement_takes_only_items_two_days_quiet_with_a_short_correct_streak, test_an_extra_session_brings_new_material_and_upcoming_reviews_instead_of_todays_answers, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_reinforcement_takes_only_items_two_days_quiet_with_a_short_correct_streak, test_an_extra_session_brings_new_material_and_upcoming_reviews_instead_of_todays_answers, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
