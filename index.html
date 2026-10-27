@@ -936,6 +936,7 @@ function defaultState() {
     customExam: [],
     hidden: [],             // ids of hidden built-in items
     lessonSeen: [],         // lesson sections already shown as a card in practice ('m1:0')
+    themeLane: { order: [], count: {} },   // new-word theme lanes: rotation order and words supplied per theme (see laneOrder)
     mistakes: [],
     dailyLogs: {},
     examHistory: [],
@@ -988,6 +989,8 @@ function normalizeState(s) {
   ['srs', 'dailyLogs', 'questionHistory', 'dimensionScores', 'unitAiNotes', 'statsFmt'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
+  if (!out.themeLane || !Array.isArray(out.themeLane.order)) out.themeLane = { order: [], count: {} };
+  if (!out.themeLane.count || typeof out.themeLane.count !== 'object') out.themeLane.count = {};
   if (!out.today || out.today.date !== todayStr()) out.today = { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0 };
   Object.values(out.srs).forEach(ensureFsrs);
   Object.entries(out.srs).forEach(([k, r]) => { if (k.startsWith('v:') && (!r.f || typeof r.f !== 'object')) r.f = {}; });   // words answered before per-format tracking
@@ -1352,7 +1355,7 @@ function srsAnswer(key, correct, opt = {}) {
   r.last = t;
   if ((r.lapse || 0) >= LEECH_LAPSES) r.leech = true;
   if (isNew) {
-    if (key.startsWith('v:')) state.today.newV++;
+    if (key.startsWith('v:')) { state.today.newV++; noteThemeIntro(key); }
     else if (key.startsWith('g:')) state.today.newG++;
     else if (key.startsWith('k:')) state.today.newK = (state.today.newK || 0) + 1;
     else if (key.startsWith('l:')) state.today.newL = (state.today.newL || 0) + 1;
@@ -2827,11 +2830,33 @@ function vocabEligibleForDaily(v, n4Open) {
 // related groups rather than one long list of look-alikes). The pair is the first two themes, in THEME_ORDER,
 // that still have unintroduced words of the lowest open level (N5 first; N4 only once allowed).
 function themeRank(c) { const i = THEME_ORDER.indexOf(c); return i < 0 ? THEME_ORDER.length : i; }
+// The lanes follow state.themeLane.order (THEME_ORDER to begin with). A theme holds a lane for at most three days'
+// worth of new words (THEME_LANE_DAYS × newVocabPerDay); then it moves to the back of the order and the next theme
+// with unintroduced words takes the lane, so a big theme (生活 has 148 words) cannot occupy a lane for a month.
+const THEME_LANE_DAYS = 3;
+function laneOrder() {
+  const lane = state.themeLane && Array.isArray(state.themeLane.order) ? state.themeLane : (state.themeLane = { order: [], count: {} });
+  if (!lane.count || typeof lane.count !== 'object') lane.count = {};
+  THEME_ORDER.forEach(c => { if (!lane.order.includes(c)) lane.order.push(c); });
+  return lane.order;
+}
+function laneCap() { return THEME_LANE_DAYS * Math.max(1, Number(state.settings.newVocabPerDay) || 0); }
 function activeThemes(pool, allowN4) {
   const fresh = pool.filter(v => v.builtin && !state.srs[v.key] && (v.lv === 'N5' || allowN4));
   const lv = fresh.some(v => v.lv === 'N5') ? 'N5' : 'N4';
-  const themes = [...new Set(fresh.filter(v => v.lv === lv).map(vocabTheme))].sort((a, b) => themeRank(a) - themeRank(b) || a.localeCompare(b, 'zh-Hant'));
-  return themes.slice(0, 2);
+  const open = new Set(fresh.filter(v => v.lv === lv).map(vocabTheme));
+  return laneOrder().filter(c => open.has(c)).slice(0, 2);
+}
+// a new built-in word was introduced: count it against its theme's lane and rotate the lane when the cap is reached
+function noteThemeIntro(key) {
+  const v = REG.byKey && REG.byKey.get(key); if (!v || v.kind !== 'v' || !v.builtin) return;
+  const c = vocabTheme(v); const order = laneOrder(); const lane = state.themeLane;
+  lane.count[c] = (lane.count[c] || 0) + 1;
+  if (lane.count[c] < laneCap()) return;
+  lane.count[c] = 0;
+  const i = order.indexOf(c); if (i >= 0) order.splice(i, 1);
+  order.push(c);
+  DAILY_CACHE = null;
 }
 function newVocabCandidates(pool, allowN4) {
   const th = activeThemes(pool, allowN4);

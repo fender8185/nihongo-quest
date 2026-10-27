@@ -333,6 +333,21 @@ def test_done_state_and_extra_session(b):
     assert r['aheadIn'] == 3 and r['aheadN'] == 3 and r['bad'] == 0 and 0 < r['newN'] <= 10, r
     assert '3 題提前複習' in r['note'] and '額外的新內容' in r['note'] and r['gone'] and r['tomorrow'], r
 
+def test_theme_lane_rotates_after_three_days_of_words(b):
+    js = """(() => { const keep = JSON.stringify({ srs: state.srs, lane: state.themeLane, q: state.settings.newVocabPerDay }); state.settings.newVocabPerDay = 8; state.themeLane = { order: [], count: {} };
+      // the first themes of THEME_ORDER are small (問候 23, 指示 12 …): mark them introduced so the first lane holds a theme with more than 24 words left
+      REG.vocab.filter(v => v.builtin && ['問候', '指示', '代名詞', '疑問'].includes(vocabTheme(v))).forEach(v => { state.srs[v.key] = { b: 1, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5, last: '2026-01-01', f: {} }; });
+      const pool = REG.vocab.filter(v => v.builtin); const th0 = activeThemes(pool, false);
+      const big = th0[0]; const words = newVocabCandidates(pool, false).filter(v => vocabTheme(v) === big);
+      words.slice(0, 23).forEach(v => srsAnswer(v.key, true)); const th23 = activeThemes(pool, false); const c23 = state.themeLane.count[big];
+      srsAnswer(words[23].key, true); const th24 = activeThemes(pool, false);
+      const out = { th0, th23, c23, th24, count: state.themeLane.count[big] || 0, last: state.themeLane.order[state.themeLane.order.length - 1], left: words.length - 24 };
+      const k = JSON.parse(keep); state.srs = k.srs; state.themeLane = k.lane; state.settings.newVocabPerDay = k.q; saveState(); DAILY_CACHE = null; return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['left'] > 0 and r['th23'] == r['th0'] and r['c23'] == 23, r
+    assert r['th24'][0] != r['th0'][0] and r['count'] == 0 and r['last'] == r['th0'][0], r
+
 def test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers(b):
     js = """(() => { const t = todayStr(); const items = unitItems('m1'); const before = JSON.stringify(Object.fromEntries(items.map(g => [g.key, state.srs[g.key] || null])));
       items.forEach(g => srsAnswer(g.key, true));   // every m1 item answered today
@@ -724,7 +739,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
