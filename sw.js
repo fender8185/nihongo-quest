@@ -1,5 +1,7 @@
 /* Nihongo Quest service worker: versioned app-shell cache, cache-first for same-origin GETs. */
-const CACHE = 'nq-v69';
+const CACHE = 'nq-v70';
+const AUDIO_CACHE = 'nq-audio';   // 雲端音檔 heard so far: kept across releases
+const AUDIO_PATH = '/storage/v1/object/public/JPY_audio/';
 const PRECACHE = [
   './',
   './index.html',
@@ -31,7 +33,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== AUDIO_CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -39,7 +41,12 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
-  if (new URL(req.url).origin !== self.location.origin) return; // Supabase, fonts, APIs: network only
+  const url = new URL(req.url);
+  if (url.pathname.includes(AUDIO_PATH)) {   // a clip is immutable (named by its hash): cache first, forever
+    event.respondWith(caches.open(AUDIO_CACHE).then((cache) => cache.match(req).then((hit) => hit || fetch(req).then((res) => { if (res && res.ok) cache.put(req, res.clone()); return res; }))));
+    return;
+  }
+  if (url.origin !== self.location.origin) return; // Supabase, fonts, APIs: network only
   event.respondWith(
     caches.match(req).then((hit) => {
       if (hit) return hit;

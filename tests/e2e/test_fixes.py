@@ -32,7 +32,7 @@ __tts.n = 0; __tts.cancelled = 0;
 const origCancel = fake.cancel; fake.cancel = function () { __tts.cancelled = __tts.n; origCancel.call(this); };
 Object.defineProperty(window, 'speechSynthesis', { value: fake, configurable: true });
 window.SpeechSynthesisUtterance = function (text) { this.text = text; };
-state.settings.speechRate = 1; true"""
+state.settings.speechRate = 1; ttsConfig().engine = 'browser_neural'; true"""
 
 SCRIPT = "女：きょうは何曜日ですか。\\n1、げつようびです。\\n2、はい、そうです。\\n3、いいえ、ちがいます。"
 LINES = ["きょうは何曜日ですか。", "1、げつようびです。", "2、はい、そうです。", "3、いいえ、ちがいます。"]
@@ -679,6 +679,68 @@ def test_today_counts_relearning_items_among_reviews_and_puts_them_first(b):
     assert r['onLadder'][:3] == [True, True, True] and not any(r['onLadder'][3:]), r
     assert r['chip'] is True, r
 
+def test_cloud_audio_path_is_stable_and_pins_readings(b):
+    js = """(async () => { const a = await cloudAudioPath('三本ください', ''); const a2 = await cloudAudioPath('三本ください', 'f'); const m = await cloudAudioPath('三本ください', 'm');
+      const r1 = await cloudAudioPath('日本', '', { reading: 'にほん' }); const r2 = await cloudAudioPath('日本', '', { reading: 'にっぽん' }); const plain = await cloudAudioPath('日本', '');
+      return JSON.stringify({ a, same: a === a2, m, r1, r2, plain, base: cloudAudioBase() }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)
+    r = json.loads(out[-1])
+    assert re.fullmatch(r"f/[0-9a-f]{32}\.mp3", r['a']) and r['same'] and re.fullmatch(r"m/[0-9a-f]{32}\.mp3", r['m']) and r['m'][2:] != r['a'][2:], r
+    assert r['r1'] == r['plain'] and r['r2'] != r['plain'], r   # the dictionary already pins 日本→にほん (same file); another reading is another file
+    assert r['base'].endswith('/storage/v1/object/public/JPY_audio/v1'), r
+
+def test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss(b):
+    js = """(async () => { ttsConfig().engine = 'cloud'; localStorage.removeItem('nq_audio_miss'); const calls = [];
+      const realFetch = window.fetch; window.fetch = (u, o) => { calls.push(String(u)); return Promise.resolve(new Response('', { status: 404 })); };
+      await speak('こんにちは'); await speak('こんにちは');   // the second time the miss is remembered: no request
+      const log = __tts.log.slice(); const miss = JSON.parse(localStorage.getItem('nq_audio_miss') || '[]');
+      window.fetch = (u, o) => Promise.resolve(new Response(new Blob([new Uint8Array([1, 2, 3])], { type: 'audio/mpeg' }), { status: 200 }));
+      audioCache.clear(); cloudMisses.clear(); const blob = await engineBlob('さようなら', 'm');
+      window.fetch = realFetch; ttsConfig().engine = 'browser_neural';
+      return JSON.stringify({ calls, log, miss, blobSize: blob ? blob.size : null }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", js)], timeout=40)
+    r = json.loads(out[-1])
+    assert len(r['calls']) == 1 and '/storage/v1/object/public/JPY_audio/v1/f/' in r['calls'][0], r
+    assert [x for x in r['log'] if x == 'start:こんにちは'] and r['miss'] == [{'text': 'こんにちは', 'gender': '', 'reading': ''}], r
+    assert r['blobSize'] == 3, r
+
+def test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing(b):
+    js = """(async () => { const all = cloudAudioTexts(); const w = REG.vocab.find(v => v.builtin); const male = all.find(x => x.gender === 'm');
+      const hasWord = all.some(x => x.text === jaPlain(w.w)); const hasEx = all.some(x => x.text === ttsText(exPlain(w.ex))); const pinned = all.filter(x => x.reading).length;
+      const sample = all.slice(0, 6); cloudAudioTexts = () => sample;
+      const paths = await Promise.all(sample.map(x => cloudAudioPath(x.text, x.gender, x.reading ? { reading: x.reading } : {}))); const uniq = [...new Set(paths)]; const firstTodo = uniq.filter(p => p !== paths[0])[0];
+      const calls = []; const realFetch = window.fetch;
+      window.fetch = (u, o) => { u = String(u); calls.push({ u, method: (o && o.method) || 'GET', headers: (o && o.headers) || {}, body: o && typeof o.body === 'string' ? o.body : null, blob: o && o.body && o.body.size || 0 });
+        if (u.includes('/storage/v1/object/list/')) { const pre = JSON.parse(o.body).prefix; return Promise.resolve(new Response(JSON.stringify(pre.endsWith('/f') ? [{ name: paths[0].slice(2) }] : []), { status: 200 })); }   // the first file already exists
+        if (u.includes('texttospeech.googleapis.com')) return Promise.resolve(new Response(JSON.stringify({ audioContent: btoa('abc') }), { status: 200 }));
+        if (u.includes('/storage/v1/object/JPY_audio/')) return Promise.resolve(new Response('{}', { status: 200 }));
+        return Promise.resolve(new Response('', { status: 404 })); };
+      await cloudGenStart('GKEY', 'SKEY'); window.fetch = realFetch;
+      const g = Object.assign({}, CLOUD_GEN); const ups = calls.filter(c => c.u.includes('/storage/v1/object/JPY_audio/')); const goog = calls.filter(c => c.u.includes('texttospeech'));
+      const leaked = JSON.stringify(state).includes('SKEY') || JSON.stringify(localStorage).includes('SKEY');
+      return JSON.stringify({ n: all.length, hasWord, hasEx, male: male ? male.text.slice(0, 8) : null, pinned, g, upN: ups.length, upUrl: ups[0] && ups[0].u, upAuth: ups[0] && ups[0].headers.Authorization, upType: ups[0] && ups[0].headers['Content-Type'], upBlob: ups[0] && ups[0].blob,
+        googN: goog.length, googBody: goog[0] && JSON.parse(goog[0].body), expectUrl: ((window.NQ_CONFIG || {}).supabaseUrl) + '/storage/v1/object/JPY_audio/v1/' + firstTodo, uniq: uniq.length, leaked, keyKept: ttsConfig().googleKey }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=120)
+    r = json.loads(out[-1])
+    assert r['n'] > 8000 and r['hasWord'] and r['hasEx'] and r['male'] and r['pinned'] > 500, r
+    assert r['g']['phase'] == '完成' and r['g']['total'] == r['uniq'] and r['g']['skipped'] == 1 and r['g']['done'] == r['uniq'] - 1 and r['g']['failed'] == 0, r
+    assert r['upN'] == r['uniq'] - 1 and r['googN'] == r['uniq'] - 1 and r['upUrl'] == r['expectUrl'] and r['upAuth'] == 'Bearer SKEY' and r['upType'] == 'audio/mpeg' and r['upBlob'] == 3, r
+    assert r['googBody']['audioConfig']['speakingRate'] == 1 and r['googBody']['input']['ssml'].startswith('<speak>'), r
+    assert not r['leaked'] and r['keyKept'] != 'GKEY', r   # the keys live only in the run
+
+def test_cloud_audio_is_the_default_engine_with_an_admin_generator_section(b):
+    js = """(async () => { const fresh = (() => { const keep = state.ttsConfig; state.ttsConfig = null; const e = ttsConfig().engine; state.ttsConfig = keep; return e; })();
+      const moved = (() => { const keep = state.ttsConfig; state.ttsConfig = { engine: 'browser_neural' }; const e = ttsConfig().engine; state.ttsConfig = keep; return e; })();
+      const stays = (() => { const keep = state.ttsConfig; state.ttsConfig = { engine: 'google_tts', googleKey: 'K' }; const e = ttsConfig().engine; state.ttsConfig = keep; return e; })();
+      const chosen = (() => { const keep = state.ttsConfig; state.ttsConfig = { engine: 'browser_neural', cloudDefault: true }; const e = ttsConfig().engine; state.ttsConfig = keep; return e; })();
+      ttsConfig().engine = 'cloud'; const html = settingsSpeech(); const sw = await (await fetch('./sw.js')).text();
+      return JSON.stringify({ fresh, moved, stays, chosen, admin: /管理者：生成雲端音檔/.test(html), inputs: /id="cloudGoogleKey"/.test(html) && /id="cloudSecretKey"/.test(html) && /data-act="cloud-gen-start"/.test(html),
+        option: /<option value="cloud"/.test(html), available: speechAvailable(), swAudio: /nq-audio/.test(sw) && /JPY_audio/.test(sw) }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)
+    r = json.loads(out[-1])
+    assert r['fresh'] == 'cloud' and r['moved'] == 'cloud' and r['stays'] == 'google_tts' and r['chosen'] == 'browser_neural', r
+    assert r['admin'] and r['inputs'] and r['option'] and r['available'] and r['swAudio'], r
+
 def test_today_offers_the_exam_pace_quotas_when_behind(b):
     js = """(() => { state.settings.examDate = addDays(todayStr(), 121); Object.assign(state.settings, { newVocabPerDay: 1, newGrammarPerDay: 1 }); saveState();
       location.hash = '#/today'; route(); const el = document.querySelector('.hero-advice, [data-act=apply-advice]'); const btn = document.querySelector('.card [data-act=apply-advice]');
@@ -956,7 +1018,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_load_cap_replaces_the_daily_goal_and_brakes_new_items_in_order, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_today_offers_the_exam_pace_quotas_when_behind, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_load_cap_replaces_the_daily_goal_and_brakes_new_items_in_order, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_today_offers_the_exam_pace_quotas_when_behind, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,

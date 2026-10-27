@@ -807,12 +807,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '69';   // keep equal to the number in sw.js CACHE ('nq-v69'); scripts/test.sh checks it
+const APP_VERSION = '70';   // keep equal to the number in sw.js CACHE ('nq-v70'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '69', from: '36', date: '2026-10-27', items: [
+  { v: '70', from: '36', date: '2026-10-27', items: [
+    '語音服務新增「雲端音檔」並設為預設：教材句子預先用 Google Neural2 生成放在雲端，不用設定金鑰；播過的留在裝置上離線也能聽，找不到的句子退回瀏覽器語音。設定 › 語音有管理者用的一次性生成工具。',
     '錯題自動排進每日練習：單字、文法、漢字答錯後，第 1、3、7 天各複習一次（答對才往下一步，中途再錯就重來），三次都對才回到正常間隔並自動離開錯題本。首頁待複習會標「其中錯題 N」，場內排在複習的前段，題目上標「錯題複習 n/3」；不用再自己翻錯題本，快速過一輪保留當額外的翻卡。',
     '每天負荷上限預設改為 100（原本 40 的一律升到 100，自己調過的不動），設定頁最高 300。上限只壓新題，到期複習永遠全出，所以總量會隨學過的內容增加；考前一天幾百題是正常的。',
     '首頁與練習中的「題」統一指今天的項目（到期複習與新題）：細項加總等於「共 N 題」，按鈕是這一組的項目數，圓環是「今天答過的項目／今天的項目」，做完剛好填滿；練習畫面的計數只數項目，換個方式再考與答錯再練另標「加考 n」，不再一邊做一邊變多。',
@@ -5966,7 +5967,16 @@ function settingsSpeech() {
   const voices = jaVoices();
   const voiceOpts = [['', voices.length ? `自動（${voices[0].name}）` : '自動']].concat(voices.map(v => [v.voiceURI, `${v.name}${v.localService ? '' : '（線上）'}`]));
   let engine = '';
-  if (c.engine === 'browser_neural') {
+  if (c.engine === 'cloud') {
+    engine = `<div class="hint mt-2">教材的句子已經用 Google Neural2 預先生成放在雲端，播過的會留在這個裝置上，離線也能聽；找不到的句子（自訂、AI 生成的題目）改用瀏覽器語音。語速用上面的滑桿調。</div>
+      <details class="mt-4"><summary class="small muted" style="cursor:pointer">管理者：生成雲端音檔</summary>
+        <div class="hint mt-2">把全部教材句子生成一次並上傳到 Supabase 的 ${CLOUD_AUDIO.bucket}。兩把金鑰只在這一次執行中使用：不儲存、不同步、關掉頁面就消失；跑完請到 Supabase 後台刪掉 Secret key。已存在的檔案會略過，可以中斷再續跑。</div>
+        <div class="field mt-3"><label>Google Cloud API Key</label><input class="input" type="password" autocomplete="off" id="cloudGoogleKey" value="${esc(c.googleKey || '')}" /></div>
+        <div class="field mt-3"><label>Supabase Secret key（service role）</label><input class="input" type="password" autocomplete="off" id="cloudSecretKey" /></div>
+        <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="cloud-gen-start">開始生成</button><button type="button" class="btn" data-act="cloud-gen-stop">停止</button></div>
+        <div id="cloudGenBox" class="small mt-2">${cloudGenHtml()}</div>
+      </details>`;
+  } else if (c.engine === 'browser_neural') {
     engine = voices.length ? selRow('browserVoiceURI', '瀏覽器語音', 'Edge 的 Nanami／Keita（Natural）或 Chrome 的 Google 日本語 聽起來最自然。', voiceOpts, 'tts-cfg')
       : '<div class="banner warn mt-3">這個瀏覽器沒有日語語音。聽力題會自動停用；可以改用 Edge、Chrome，或在下面選擇其他語音服務。</div>';
   } else if (c.engine === 'google_tts') {
@@ -6174,15 +6184,22 @@ Object.assign(ACTIONS, {
     show('');   // a new check starts from a blank box
     const old = el.innerHTML; el.disabled = true; el.innerHTML = '<span class="spinner"></span> 測試中';
     try {
-      audioCache.clear();
-      const blob = await engineBlob('テスト', '');
-      if (!blob) throw new Error('沒有回應');
+      audioCache.clear(); cloudMisses.clear();
+      const cloud = ttsConfig().engine === 'cloud'; const sample = cloud ? jaPlain((REG.vocab.find(v => v.builtin) || { w: 'テスト' }).w) : 'テスト';
+      const blob = await engineBlob(sample, '');
+      if (!blob) throw new Error(cloud ? `雲端連得上，但沒有「${sample}」的音檔：還沒生成，或 bucket 名稱不對。` : '沒有回應');
       show('<span class="ok">連線成功，可以使用。</span>');
     } catch (e) {
       const msg = (e && e.message) || String(e); const hint = ttsErrorHint(msg);
       show(`<div class="bad">${esc(msg)}</div>${hint ? `<div class="mt-1">${esc(hint)}</div>` : ''}`);
     } finally { const b2 = document.querySelector('[data-act=tts-check]') || el; b2.disabled = false; b2.innerHTML = old; }
   },
+  'cloud-gen-start': () => {
+    const gk = ((document.getElementById('cloudGoogleKey') || {}).value || '').trim(); const sk = ((document.getElementById('cloudSecretKey') || {}).value || '').trim();
+    if (!gk || !sk) { toast('兩把金鑰都要填。'); return; }
+    cloudGenStart(gk, sk);
+  },
+  'cloud-gen-stop': () => { if (CLOUD_GEN) CLOUD_GEN.stop = true; },
   'ai-test': (el) => aiTestConnection(el),
   'ai-models': async (el) => {
     const key = (aiConfig().geminiKey || '').trim();
@@ -6605,14 +6622,14 @@ Object.assign(ACTIONS, {
 let ttsCheckHtml = '';   // result of the last 設定 › 語音 › 測試連線
 const TTS_SECRET_KEYS = ['deepgramKey', 'openaiKey', 'googleKey'];   // never leave the device: stripped from backups, kept on import
 const TTS_DEFAULT = {
-  engine: 'browser_neural', browserVoiceURI: '',
+  engine: 'cloud', browserVoiceURI: '',
   deepgramKey: '', deepgramVoice: 'aura-2-izanami-ja', deepgramVoiceM: 'aura-2-fujin-ja',
   googleKey: '', googleVoice: 'ja-JP-Neural2-B', googleVoiceM: 'ja-JP-Neural2-C',
   kanaReadings: 'on',   // Deepgram / OpenAI: send known readings as kana so 三本 is さんぼん, not whatever the model guesses
   voicevoxUrl: 'http://localhost:50021', voicevoxSpeaker: '2', voicevoxSpeakerM: '13',
   openaiKey: '', openaiModel: 'tts-1-hd', openaiVoice: 'nova', openaiVoiceM: 'onyx'
 };
-const TTS_ENGINES = [['browser_neural', '瀏覽器內建語音（免設定）'], ['google_tts', 'Google Cloud TTS（Neural2）'], ['deepgram', 'Deepgram Aura-2'], ['voicevox', 'VOICEVOX（本機）'], ['openai_tts', 'OpenAI TTS']];
+const TTS_ENGINES = [['cloud', '雲端音檔（免設定，預先生成）'], ['browser_neural', '瀏覽器內建語音（免設定）'], ['google_tts', 'Google Cloud TTS（Neural2）'], ['deepgram', 'Deepgram Aura-2'], ['voicevox', 'VOICEVOX（本機）'], ['openai_tts', 'OpenAI TTS']];
 const GOOGLE_VOICES = [['ja-JP-Neural2-B', 'Neural2 B（女聲）'], ['ja-JP-Neural2-C', 'Neural2 C（男聲）'], ['ja-JP-Neural2-D', 'Neural2 D（男聲）'], ['ja-JP-Wavenet-A', 'WaveNet A（女聲）'], ['ja-JP-Wavenet-B', 'WaveNet B（女聲）'], ['ja-JP-Wavenet-C', 'WaveNet C（男聲）'], ['ja-JP-Wavenet-D', 'WaveNet D（男聲）']];
 const DEEPGRAM_VOICES = [['aura-2-izanami-ja', 'イザナミ（女聲）'], ['aura-2-uzume-ja', 'ウズメ（女聲）'], ['aura-2-ama-ja', 'アマ（女聲）'], ['aura-2-fujin-ja', 'フウジン（男聲）'], ['aura-2-ebisu-ja', 'エビス（男聲）']];
 const VOICEVOX_SPEAKERS = [['2', '四国めたん（女聲）'], ['8', '春日部つむぎ（女聲）'], ['14', '冥鳴ひまり（女聲）'], ['3', 'ずんだもん'], ['13', '青山龍星（男聲）']];
@@ -6621,7 +6638,39 @@ const OPENAI_VOICES = [['nova', 'Nova（女聲）'], ['shimmer', 'Shimmer（女�
 function ttsConfig() {
   if (!state.ttsConfig || typeof state.ttsConfig !== 'object') state.ttsConfig = {};
   Object.keys(TTS_DEFAULT).forEach(k => { if (state.ttsConfig[k] === undefined) state.ttsConfig[k] = TTS_DEFAULT[k]; });
+  // v70: the pre-generated cloud audio became the default; a browser-voice setting from before is moved once (a chosen engine stays)
+  if (!state.ttsConfig.cloudDefault) { if (state.ttsConfig.engine === 'browser_neural') state.ttsConfig.engine = 'cloud'; state.ttsConfig.cloudDefault = true; }
   return state.ttsConfig;
+}
+
+/* ---- 雲端音檔: every built-in sentence synthesized once (Google Neural2) and kept in a public Supabase bucket ----
+   The file name is a hash of exactly what Google is sent (SSML with the readings pinned, voice gender), so the generator
+   (設定 › 語音 › 管理者) and the player agree by construction. A missing file (custom cards, AI items) falls back to the
+   browser voice and is noted locally so the next generator run covers it. */
+const CLOUD_AUDIO = { bucket: 'JPY_audio', set: 'v1' };
+const cloudMisses = new Set();   // paths that were not on the server this session: straight to the browser voice next time
+function cloudAudioBase() { return `${((window.NQ_CONFIG || {}).supabaseUrl || '').replace(/\/$/, '')}/storage/v1/object/public/${CLOUD_AUDIO.bucket}/${CLOUD_AUDIO.set}`; }
+function cloudAudioSsml(text, opt = {}) { return opt.reading ? `<speak><sub alias="${esc(opt.reading)}">${esc(text)}</sub></speak>` : ssmlReadings(text); }
+async function cloudAudioPath(text, gender, opt = {}) {
+  const g = gender === 'm' ? 'm' : 'f';
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${CLOUD_AUDIO.set}|${g}|${cloudAudioSsml(text, opt)}`));
+  return `${g}/${[...new Uint8Array(buf)].slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('')}.mp3`;
+}
+function cloudMissList() { try { return JSON.parse(localStorage.getItem('nq_audio_miss') || '[]'); } catch (e) { return []; } }
+function noteCloudMiss(text, gender, opt = {}) {
+  try {
+    const list = cloudMissList(); const reading = opt.reading || '';
+    if (list.some(m => m.text === text && m.gender === (gender || '') && (m.reading || '') === reading)) return;
+    list.push({ text, gender: gender || '', reading }); localStorage.setItem('nq_audio_miss', JSON.stringify(list.slice(-2000)));
+  } catch (e) { /* ignore */ }
+}
+// a listening script: one line per speaker, 「男：」 lines in the male voice (shared by the player and the generator)
+function scriptParts(script) {
+  return String(script || '').split(/\n+/).map(l => l.trim()).filter(Boolean).map(line => {
+    const m = /^([^：:]{1,6})[：:]\s*(.+)$/.exec(line);
+    const who = m ? m[1] : '';
+    return { gender: /男/.test(who) ? 'm' : (/女/.test(who) ? 'f' : ''), text: ttsText(m ? m[2] : line) };
+  }).filter(p => p.text);
 }
 
 // Text that should be read aloud: readings resolved (来[こ]ない → こない), markup and blanks removed
@@ -6779,7 +6828,8 @@ function engineBlob(text, gender, opt = {}) {
   const cfg = ttsConfig();
   const rate = state.settings.speechRate || 1;
   const pin = opt.reading ? `|r:${opt.reading}` : '';
-  const ck = cfg.engine === 'deepgram' ? `dg|${gender === 'm' ? cfg.deepgramVoiceM : cfg.deepgramVoice}|${cfg.kanaReadings}|${text}`
+  const ck = cfg.engine === 'cloud' ? `cl|${gender === 'm' ? 'm' : 'f'}|${text}`
+    : cfg.engine === 'deepgram' ? `dg|${gender === 'm' ? cfg.deepgramVoiceM : cfg.deepgramVoice}|${cfg.kanaReadings}|${text}`
     : cfg.engine === 'google_tts' ? `gg|${gender === 'm' ? cfg.googleVoiceM : cfg.googleVoice}|${rate}|${text}`
     : cfg.engine === 'voicevox' ? `vv|${gender === 'm' ? cfg.voicevoxSpeakerM : cfg.voicevoxSpeaker}|${rate}|${text}`
     : cfg.engine === 'openai_tts' ? `oa|${cfg.openaiModel}|${gender === 'm' ? cfg.openaiVoiceM : cfg.openaiVoice}|${rate}|${text}` : '';
@@ -6808,10 +6858,17 @@ function ttsErrorHint(msg) {
   return '';
 }
 async function fetchEngineBlob(cfg, text, gender, opt = {}) {
-  const rate = state.settings.speechRate || 1;
+  const rate = opt.rate || state.settings.speechRate || 1;
   // sentences: engines without SSML get known readings as kana; a single word keeps its written form (see speak)
   const spoken = opt.reading || cfg.kanaReadings === 'off' ? text : kanaReadings(text);
-  const ssml = opt.reading ? `<speak><sub alias="${esc(opt.reading)}">${esc(text)}</sub></speak>` : ssmlReadings(text);
+  const ssml = cloudAudioSsml(text, opt);
+  if (cfg.engine === 'cloud') {
+    const path = await cloudAudioPath(text, gender, opt);
+    if (cloudMisses.has(path)) return null;
+    const resp = await fetch(`${cloudAudioBase()}/${path}`);
+    if (!resp.ok) { cloudMisses.add(path); noteCloudMiss(text, gender, opt); return null; }   // not generated: the browser voice reads it
+    return resp.blob();
+  }
   if (cfg.engine === 'google_tts') {
     const key = (cfg.googleKey || '').trim();
     if (!key) throw new Error('沒有 Google Cloud API Key');
@@ -6896,7 +6953,7 @@ async function speakLine(text, gender, token, opt) {
       if (token !== speechToken) return;
       if (blob) {
         const url = URL.createObjectURL(blob);
-        const ok = await playUrl(url, token, cfg.engine === 'deepgram' ? (state.settings.speechRate || 1) : 1);
+        const ok = await playUrl(url, token, cfg.engine === 'deepgram' || cfg.engine === 'cloud' ? (state.settings.speechRate || 1) : 1);
         setTimeout(() => URL.revokeObjectURL(url), 1000);
         if (ok) return;
       }
@@ -6923,11 +6980,7 @@ function speakOpts(q, text) { return q && text && text === q.speakWord && q.spea
 async function speakScript(script) {
   stopSpeaking();
   const token = speechToken;
-  const parts = String(script || '').split(/\n+/).map(l => l.trim()).filter(Boolean).map(line => {
-    const m = /^([^：:]{1,6})[：:]\s*(.+)$/.exec(line);
-    const who = m ? m[1] : '';
-    return { gender: /男/.test(who) ? 'm' : (/女/.test(who) ? 'f' : ''), text: ttsText(m ? m[2] : line) };
-  }).filter(p => p.text);
+  const parts = scriptParts(script);
   // external engines: fetch every line up front (Deepgram allows 15 in flight) so the options follow without
   // network gaps and the first clip starts as soon as possible after the tap that triggered it
   const cfg = ttsConfig();
@@ -6941,6 +6994,99 @@ async function speakScript(script) {
     if (parts.length > 1) await sleep(280);
   }
   if (token === speechToken) speechProgEnd();
+}
+
+// ---- 雲端音檔 generator (設定 › 語音 › 管理者): every sentence the app can read aloud from built-in data, hashed like the player does ----
+function cloudAudioTexts() {
+  const seen = new Map();
+  const add = (raw, gender = '', reading = '') => { const text = ttsText(raw); if (!text) return; const g = gender === 'm' ? 'm' : 'f'; const k = `${g}|${reading}|${text}`; if (!seen.has(k)) seen.set(k, { text, gender: g, reading }); };
+  const addScript = (sc) => scriptParts(sc).forEach(p => add(p.text, p.gender));
+  const addQ = (q) => {
+    if (!q) return;
+    if (q.speakWord) add(q.speakWord, '', q.speakReading || '');
+    if (q.fullJp) add(q.fullJp);
+    if (q.audio) addScript(q.audio);
+    if (q.kind === 'l' || q.audioOptions) (q.options || []).forEach(o => add(jaPlain(o.text)));   // listening replies are played per option
+  };
+  REG.vocab.filter(v => v.builtin).forEach(v => {
+    const w = jaPlain(v.w); const pin = v.r && !HAS_KANJI.test(v.r) && v.r !== w ? v.r : '';
+    add(w, '', pin); add(w); if (v.r) add(v.r);   // the question (reading pinned), the list button, the flashcard reading
+    if (v.ex) add(exPlain(v.ex)); if (v.ex2) add(exPlain(v.ex2));
+  });
+  REG.grammar.forEach(g => {
+    const fmts = (g.t || 'choice') === 'choice' && g.op ? grammarFormats(g, (g.op || []).map(parenReadingToBracket), parenReadingToBracket(g.a)) : [];
+    (fmts.length ? fmts.map(f => makeGrammarQuestion(g, { forceFmt: f })) : [makeQuestion(g, {})]).forEach(addQ);
+  });
+  REG.kanji.forEach(k => addQ(makeQuestion(k, {})));
+  REG.listen.forEach(it => addQ(makeQuestion(it, {})));
+  REG.read.forEach(it => addQ(makeQuestion(it, {})));
+  (DATA.EXAM || []).forEach(x => { if (x.speak) add(x.speak); if (x.script) addScript(x.script); if (x.line) addScript(x.line); if (/^S3/.test(String(x.m))) { if (x.q) add(x.q); (x.op || []).forEach(o => add(o)); } });
+  Object.values(DATA.LESSONS || {}).forEach(L => (L.sections || []).forEach(sec => (sec.ex || []).forEach(x => { if (x && x.jp) add(x.jp); })));
+  cloudMissList().forEach(m => add(m.text, m.gender, m.reading || ''));
+  return [...seen.values()];
+}
+let CLOUD_GEN = null;
+function cloudGenHtml() {
+  const g = CLOUD_GEN; if (!g) return '';
+  const n = g.done + g.failed; const left = Math.max(0, g.total - g.skipped - n);
+  return `<div><b>${esc(g.phase)}</b>${g.total ? `・共 ${g.total} 段，已有 ${g.skipped}，這次上傳 ${g.done}，失敗 ${g.failed}，剩 ${left}` : ''}</div>
+    ${g.errors.length ? `<div class="bad mt-1">${g.errors.map(esc).join('<br>')}</div>` : ''}`;
+}
+function cloudGenRender() { const box = document.getElementById('cloudGenBox'); if (box) box.innerHTML = cloudGenHtml(); }
+async function cloudListExisting(base, secret) {
+  const have = new Set();
+  for (const g of ['f', 'm']) {
+    for (let offset = 0; ; offset += 1000) {
+      const r = await fetch(`${base}/storage/v1/object/list/${CLOUD_AUDIO.bucket}`, { method: 'POST', headers: { Authorization: `Bearer ${secret}`, apikey: secret, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prefix: `${CLOUD_AUDIO.set}/${g}`, limit: 1000, offset, sortBy: { column: 'name', order: 'asc' } }) });
+      if (!r.ok) throw new Error(`列出雲端檔案失敗 HTTP ${r.status}${await errorDetail(r)}`);
+      const rows = await r.json();
+      (rows || []).forEach(x => { if (x && x.name) have.add(`${g}/${x.name}`); });
+      if (!rows || rows.length < 1000) break;
+    }
+  }
+  return have;
+}
+// Runs in the browser: the Google key (site-restricted, as set up) and the Supabase secret key are used for this run only —
+// never stored, never synced, gone when the page closes. Existing files are skipped, so a stopped run can continue.
+async function cloudGenStart(googleKey, secret) {
+  if (CLOUD_GEN && CLOUD_GEN.running) return;
+  const base = ((window.NQ_CONFIG || {}).supabaseUrl || '').replace(/\/$/, '');
+  CLOUD_GEN = { running: true, stop: false, phase: '整理句子', total: 0, done: 0, skipped: 0, failed: 0, errors: [] };
+  cloudGenRender();
+  try {
+    const list = cloudAudioTexts();
+    const paths = await Promise.all(list.map(x => cloudAudioPath(x.text, x.gender, x.reading ? { reading: x.reading } : {})));
+    const files = new Map(); list.forEach((x, i) => { if (!files.has(paths[i])) files.set(paths[i], x); });   // a pinned reading the dictionary already knows is the same file
+    CLOUD_GEN.phase = '查雲端已有的檔案'; cloudGenRender();
+    const have = await cloudListExisting(base, secret);
+    const todo = [...files].filter(([path]) => !have.has(path)).map(([path, x]) => ({ x, path }));
+    CLOUD_GEN.total = files.size; CLOUD_GEN.skipped = files.size - todo.length; CLOUD_GEN.phase = '生成並上傳'; cloudGenRender();
+    const cfg = Object.assign({}, ttsConfig(), { engine: 'google_tts', googleKey });
+    let i = 0;
+    const worker = async () => {
+      while (i < todo.length && !CLOUD_GEN.stop) {
+        const t = todo[i++];
+        try {
+          const blob = await fetchEngineBlob(cfg, t.x.text, t.x.gender, Object.assign({ rate: 1 }, t.x.reading ? { reading: t.x.reading } : {}));
+          const r = await fetch(`${base}/storage/v1/object/${CLOUD_AUDIO.bucket}/${CLOUD_AUDIO.set}/${t.path}`, { method: 'POST',
+            headers: { Authorization: `Bearer ${secret}`, apikey: secret, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'max-age=31536000', 'x-upsert': 'true' }, body: blob });
+          if (!r.ok) throw new Error(`上傳 HTTP ${r.status}${await errorDetail(r)}`);
+          CLOUD_GEN.done++;
+        } catch (e) {
+          CLOUD_GEN.failed++; const msg = (e && e.message) || String(e);
+          if (CLOUD_GEN.errors.length < 12) CLOUD_GEN.errors.push(`${t.x.text.slice(0, 24)}：${msg}${ttsErrorHint(msg) ? `（${ttsErrorHint(msg)}）` : ''}`);
+          if (/HTTP 40[13]|API key not valid|Unauthorized/i.test(msg)) CLOUD_GEN.stop = true;   // a bad key fails every file: stop instead of looping
+        }
+        if ((CLOUD_GEN.done + CLOUD_GEN.failed) % 5 === 0) cloudGenRender();
+      }
+    };
+    await Promise.all([0, 1, 2, 3].map(worker));
+    CLOUD_GEN.phase = CLOUD_GEN.stop ? '已停止（再按開始會接著跑）' : '完成';
+    if (!CLOUD_GEN.stop) { cloudMisses.clear(); try { localStorage.removeItem('nq_audio_miss'); } catch (e) { /* ignore */ } }
+  } catch (e) { CLOUD_GEN.phase = `失敗：${(e && e.message) || e}`; }
+  CLOUD_GEN.running = false;
+  cloudGenRender();
 }
 
 // Anki cards keep their own recordings; everything else is synthesized
