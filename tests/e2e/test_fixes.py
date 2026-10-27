@@ -336,19 +336,20 @@ def test_done_state_and_extra_session(b):
 def test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers(b):
     js = """(() => { const t = todayStr(); const items = unitItems('m1'); const before = JSON.stringify(Object.fromEntries(items.map(g => [g.key, state.srs[g.key] || null])));
       items.forEach(g => srsAnswer(g.key, true));   // every m1 item answered today
-      const unit = buildUnitQueue('m1', 15).length;
-      items.forEach(g => { state.srs[g.key].last = addDays(t, -1); }); const unitY = buildUnitQueue('m1', 15).length;   // …or yesterday
-      items.forEach(g => { state.srs[g.key].last = addDays(t, -2); }); const unitQuiet = buildUnitQueue('m1', 15).length;   // two quiet days: usable again
+      const u0 = buildUnitQueue('m1', 15); const unit = u0.length; const unitDrill = Boolean(u0.drill);
+      items.forEach(g => { state.srs[g.key].last = addDays(t, -1); }); const u1 = buildUnitQueue('m1', 15); const unitY = u1.length >= 5 && u1.drill === true;   // yesterday: nothing due, so a labelled drill of the shakiest
+      startSession('unit', { unit: 'm1' }); renderPractice(); const noteShown = /這組是加練/.test(document.getElementById('view').textContent); SESSION = null; document.body.classList.remove('practicing');
       const theme = vocabTheme(REG.vocab.find(x => x.builtin)); const words = REG.vocab.filter(v => v.builtin && vocabTheme(v) === theme);
       const wBefore = JSON.stringify(words.map(v => state.srs[v.key] || null)); const quota = state.settings.newVocabPerDay; state.settings.newVocabPerDay = 0;
       words.forEach(v => srsAnswer(v.key, true));
       const vq = buildVocabQueue('c:' + theme, 20); const repeats = vq.filter(v => state.srs[v.key] && state.srs[v.key].last === t).length;
+      state.settings.newVocabPerDay = 8; state.today.newV = 8; const freshOverQuota = buildVocabQueue('all', 20).filter(v => !state.srs[v.key]).length;   // quota used up: no new words beyond it
       JSON.parse(before) && items.forEach(g => { const r = JSON.parse(before)[g.key]; if (r) state.srs[g.key] = r; else delete state.srs[g.key]; });
-      JSON.parse(wBefore).forEach((r, i) => { if (r) state.srs[words[i].key] = r; else delete state.srs[words[i].key]; }); state.settings.newVocabPerDay = quota; saveState();
-      return JSON.stringify({ unit, unitY, unitQuiet, repeats, vq: vq.length }); })()"""
+      JSON.parse(wBefore).forEach((r, i) => { if (r) state.srs[words[i].key] = r; else delete state.srs[words[i].key]; }); state.settings.newVocabPerDay = quota; state.today.newV = 0; saveState();
+      return JSON.stringify({ unit, unitDrill, unitY, noteShown, repeats, vq: vq.length, freshOverQuota }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
     r = json.loads(out[-1])
-    assert r['unit'] == 0 and r['unitY'] == 0 and r['unitQuiet'] > 0 and r['repeats'] == 0, r
+    assert r == {'unit': 0, 'unitDrill': False, 'unitY': True, 'noteShown': True, 'repeats': 0, 'vq': 0, 'freshOverQuota': 0}, r
 
 def test_heatmap_starts_at_the_week_the_learner_began(b):
     # columns = weeks from the Monday of the first-use week to this week; at least 4, at most 26

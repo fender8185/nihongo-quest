@@ -2880,20 +2880,6 @@ function newGrammarCandidates(unitIdOnly) {
     .sort((a, b) => unitOrder(a.u) - unitOrder(b.u) || (a.d || 2) - (b.d || 2));
   return sorted.concat(earlier);
 }
-// Weak items that are not due yet, used to fill spare slots: low level, not answered in the last two days, and not on a
-// correct streak of two. A first correct answer leaves an item at level 2 for about four days; without the quiet gap
-// and the streak rule it came back as filler every day until its real review (the second look is the scheduled one).
-function quietDays(r, t) { return r.last ? daysBetween(r.last, t) : 999; }
-function reinforcementItems(pool, exclude) {
-  const t = todayStr();
-  return pool.filter(it => { const r = state.srs[it.key]; return r && r.due > t && r.b <= 2 && !exclude.has(it.key) && quietDays(r, t) >= 2 && (r.st || 0) < 2; })
-    .sort((a, b) => ((state.srs[a.key].ok || 0) - (state.srs[b.key].ok || 0)) || state.srs[a.key].due.localeCompare(state.srs[b.key].due) || state.srs[a.key].b - state.srs[b.key].b);
-}
-// Reviews due within the next `days` days, pulled forward when today's work is done (not answered today)
-function aheadItems(pool, exclude, days = 2) {
-  const t = todayStr(); const until = addDays(t, days);
-  return pool.filter(it => { const r = state.srs[it.key]; return r && r.due > t && r.due <= until && !exclude.has(it.key) && r.last !== t; }).sort(byDue);
-}
 function adaptiveFactor() {
   const acc = recentAccuracy();
   if (acc === null) return { factor: 1, note: '' };
@@ -3040,32 +3026,35 @@ function dailyQueue(size = state.settings.sessionSize) {
   return r;
 }
 
-function buildUnitQueue(unitId, size = 15) {
+// A practice the learner starts on purpose (單元／單字／漢字): what is due today in that scope and the new items still
+// within today's quota. When that is under five questions the set becomes a labelled drill (`drill`): items of the scope
+// not answered today, the shakiest first (shortest correct streak, lowest level).
+function scopeQueue(pool, fresh, size) {
   const t = todayStr();
-  const items = unitItems(unitId);
-  const due = items.filter(g => { const r = state.srs[g.key]; return r && r.due <= t; }).sort(byDue);
-  const fresh = newGrammarCandidates(unitId);
-  const rest = items.filter(g => state.srs[g.key] && state.srs[g.key].due > t && quietDays(state.srs[g.key], t) >= 2).sort((a, b) => (state.srs[a.key].st || 0) - (state.srs[b.key].st || 0) || state.srs[a.key].b - state.srs[b.key].b || Math.random() - 0.5);   // nothing answered in the last two days; shakiest first
+  const due = pool.filter(x => isDueToday(x, t)).sort(byDue);
   const list = due.slice(0, size);
-  list.push(...fresh.slice(0, Math.max(0, Math.min(size - list.length, 10))));
-  list.push(...rest.slice(0, Math.max(0, size - list.length)));
-  return shuffle(list.slice(0, due.length)).concat(list.slice(due.length));
+  list.push(...fresh.slice(0, Math.max(0, size - list.length)));
+  const out = shuffle(list.slice(0, due.length)).concat(list.slice(due.length));
+  if (out.length < 5) {
+    const used = new Set(out.map(x => x.key));
+    const rest = pool.filter(x => { const r = state.srs[x.key]; return r && r.last !== t && !used.has(x.key); })
+      .sort((a, b) => (state.srs[a.key].st || 0) - (state.srs[b.key].st || 0) || state.srs[a.key].b - state.srs[b.key].b || Math.random() - 0.5);
+    const add = rest.slice(0, size - out.length);
+    if (add.length) { out.push(...add); out.drill = true; }
+  }
+  return out;
+}
+function buildUnitQueue(unitId, size = 15) {
+  const left = Math.max(0, state.settings.newGrammarPerDay - state.today.newG);
+  return scopeQueue(unitItems(unitId), newGrammarCandidates(unitId).slice(0, left), size);
 }
 function buildVocabQueue(filter = 'all', size = 20) {
-  const t = todayStr();
   // choosing the N4 list or a theme on purpose opens N4 words right away
   const theme = filter.startsWith('c:') ? filter.slice(2) : null;
   const n4Open = Boolean(theme) || filter === 'N4' || n4WordsOpen();
   const pool = REG.vocab.filter(v => theme ? (v.builtin && vocabTheme(v) === theme) : filter === 'all' ? vocabEligibleForDaily(v, n4Open) : filter === 'custom' ? !v.builtin : (v.builtin && v.lv === filter));
-  const due = pool.filter(v => { const r = state.srs[v.key]; return r && r.due <= t; }).sort(byDue);
   const left = Math.max(0, state.settings.newVocabPerDay - state.today.newV);
-  const fresh = newVocabCandidates(pool, n4Open).slice(0, Math.max(left, Math.min(5, size - due.length)));
-  const weak = reinforcementItems(pool, new Set(due.map(x => x.key)));
-  const list = due.slice(0, size);
-  list.push(...fresh.slice(0, Math.max(0, size - list.length)));
-  list.push(...weak.slice(0, Math.max(0, size - list.length)));
-  list.push(...aheadItems(pool, new Set(list.map(x => x.key))).slice(0, Math.max(0, size - list.length)));   // then reviews due in the next two days
-  return shuffle(list.slice(0, due.length)).concat(list.slice(due.length));
+  return scopeQueue(pool, newVocabCandidates(pool, n4Open).slice(0, left), size);
 }
 function buildMistakeQueue(size = 20) {
   const list = [];
@@ -3078,6 +3067,7 @@ function buildMistakeQueue(size = 20) {
 }
 
 // ---------- session lifecycle ----------
+const DRILL_NOTE = '這個範圍今天沒有到期的題目，這組是加練，挑最不穩的先練。';
 const MODE_TITLE = { daily: '今日練習', unit: '單元練習', vocab: '單字練習', mistakes: '錯題練習', ai: 'AI 題目', kanji: '漢字練習', items: '練習' };
 function startSession(mode, opt = {}) {
   let entries = [];
@@ -3087,15 +3077,20 @@ function startSession(mode, opt = {}) {
     entries = r.items.map(item => ({ item }));
     meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: opt.extra ? extraNote(r) : (r.plan.note || '') };
   } else if (mode === 'unit') {
-    entries = buildUnitQueue(opt.unit, opt.size || 15).map(item => ({ item }));
-    meta = { unit: opt.unit };
+    const uq = buildUnitQueue(opt.unit, opt.size || 15);
+    entries = uq.map(item => ({ item }));
+    meta = { unit: opt.unit, note: uq.drill ? DRILL_NOTE : '' };
   } else if (mode === 'vocab') {
     if ((opt.filter || '').startsWith('c:')) opt.title = opt.title || `主題練習・${opt.filter.slice(2)}`;
-    entries = buildVocabQueue(opt.filter || 'all', opt.size || 20).map(item => ({ item }));
+    const vq = buildVocabQueue(opt.filter || 'all', opt.size || 20);
+    entries = vq.map(item => ({ item }));
+    meta = { note: vq.drill ? DRILL_NOTE : '' };
   } else if (mode === 'mistakes') {
     entries = buildMistakeQueue(opt.size || 20);
   } else if (mode === 'kanji') {
-    entries = buildKanjiQueue(opt.size || 15).map(item => ({ item }));
+    const kq = buildKanjiQueue(opt.size || 15);
+    entries = kq.map(item => ({ item }));
+    meta = { note: kq.drill ? DRILL_NOTE : '' };
   } else if (mode === 'items') {
     entries = (opt.items || []).map(item => ({ item }));
   }
@@ -3237,6 +3232,7 @@ function renderPractice() {
       <div class="bar"><span style="width:${pct}%"></span></div>
       <div class="pr-count">${SESSION.idx + 1} / ${total}</div>
     </div>
+    ${SESSION.idx === 0 && !answered && SESSION.meta && SESSION.meta.note ? `<div class="plan-note">${esc(SESSION.meta.note)}</div>` : ''}
     <div class="q-card">
       <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip chip-warn">再練一次</span>' : ''}${e.encore ? '<span class="chip chip-warn">換個方式再考</span>' : ''}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
       <div class="q-instr">${esc(q.instr || '')}</div>
@@ -6042,18 +6038,10 @@ function kanjiDetailHtml(k) {
 }
 
 function buildKanjiQueue(size = 15) {
-  const t = todayStr();
   const k4 = n5KanjiLeft() === 0;
   const pool = REG.kanji.filter(k => k.lv === 'N5' || k4);
-  const due = pool.filter(k => { const r = state.srs[k.key]; return r && r.due <= t; }).sort(byDue);
   const left = Math.max(0, (state.settings.newKanjiPerDay || 0) - (state.today.newK || 0));
-  const fresh = newKanjiCandidates(k4).slice(0, Math.max(left, Math.min(5, size - due.length)));
-  const weak = reinforcementItems(pool, new Set(due.map(x => x.key)));
-  const list = due.slice(0, size);
-  list.push(...fresh.slice(0, Math.max(0, size - list.length)));
-  list.push(...weak.slice(0, Math.max(0, size - list.length)));
-  list.push(...aheadItems(pool, new Set(list.map(x => x.key))).slice(0, Math.max(0, size - list.length)));   // then reviews due in the next two days
-  return shuffle(list.slice(0, due.length)).concat(list.slice(due.length));
+  return scopeQueue(pool, newKanjiCandidates(k4).slice(0, left), size);
 }
 
 Object.assign(ACTIONS, {
