@@ -807,12 +807,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '67';   // keep equal to the number in sw.js CACHE ('nq-v67'); scripts/test.sh checks it
+const APP_VERSION = '68';   // keep equal to the number in sw.js CACHE ('nq-v68'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '67', from: '36', date: '2026-10-27', items: [
+  { v: '68', from: '36', date: '2026-10-27', items: [
+    '首頁與練習中的「題」統一指今天的項目（到期複習與新題）：細項加總等於「共 N 題」，按鈕是這一組的項目數，圓環是「今天答過的項目／今天的項目」，做完剛好填滿；練習畫面的計數只數項目，換個方式再考與答錯再練另標「加考 n」，不再一邊做一邊變多。',
     '修正：每日練習最後一題按「看結果」沒有反應（v65 改圓環後結算頁壞掉）。結算頁的圓環和「今天還有 N 題」改成和首頁一樣算今天的工作。課程頁的入門說明不再提「每日目標」。',
     '「每日目標」改成「每天負荷上限」（預設 40，舊設定低於 40 的一律改成 40）：只當煞車用，當天到期複習加新題超過它時先減新單字（最少減到額度一半），再停新漢字、新聽力，到期的複習永遠不減。首頁圓環改成「今天做了 N／今天的工作」，做完剛好填滿，和「今天完成了」一致。',
     '考試日期接到每日練習：目前的新題額度追不上考試進度時，首頁「考試倒數」卡會列出建議的額度（例如 新單字 8→12）與「套用建議」；額度夠就不顯示。學習分析的「每日練習量建議」不再推薦每日目標。',
@@ -1422,6 +1423,10 @@ function logEntry(d = todayStr()) {
   return state.dailyLogs[d];
 }
 function dayTotal(e) { return e ? (e.vocabCount || 0) + (e.grammarCount || 0) + (e.quizCount || 0) + (e.bonusCount || 0) : 0; }
+// Items answered today (the schedule records each one once; encores and 再練一次 copies write nothing). Every count on the
+// Today page and the ring are in these items, not in questions pressed: done / (done + remaining) fills exactly when the day is done.
+function itemsDoneToday(t = todayStr()) { let n = 0; for (const k in state.srs) if (state.srs[k].last === t) n++; return n; }
+function dayProgress() { const done = itemsDoneToday(); const left = dailyPlan().remaining; return { done, left, total: done + left }; }
 function recordAction(type, topic) {
   const e = logEntry();
   if (type === 'v') e.vocabCount = (e.vocabCount || 0) + 1;
@@ -3270,10 +3275,9 @@ function renderPractice() {
   if (!e.q) prepareEntry(SESSION.idx);
   if (!currentEntry()) { renderSummary(view); return; }
   const q = currentEntry().q;
-  const total = SESSION.entries.length;
-  const pct = Math.round(SESSION.idx / total * 100);
+  const pct = Math.round(sessionCount().before / Math.max(1, sessionCount().total) * 100);
   if (e.preview && !e.previewDone) {
-    view.innerHTML = previewHtml(e, pct, total);
+    view.innerHTML = previewHtml(e, pct);
     if (!e.autoPlayedPreview) { e.autoPlayedPreview = true; if (state.settings.autoSpeak && e.item.kind === 'v') setTimeout(() => speak(q.speakWord || jaPlain(e.item.w), speakOpts(q, q.speakWord)), 150); }
     return;
   }
@@ -3305,7 +3309,7 @@ function renderPractice() {
     <div class="pr-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
       <div class="bar"><span style="width:${pct}%"></span></div>
-      <div class="pr-count">${SESSION.idx + 1} / ${total}</div>
+      ${prCountHtml()}
     </div>
     ${SESSION.idx === 0 && !answered && SESSION.meta && SESSION.meta.note ? `<div class="plan-note">${esc(SESSION.meta.note)}</div>` : ''}
     <div class="q-card">
@@ -3327,7 +3331,7 @@ function renderPractice() {
         ${answered && q.kind !== 'm' ? '<button type="button" class="btn btn-sm btn-ghost" data-act="report-item" title="題目有誤或不自然時，把它移出題庫">這題有問題</button>' : ''}
       </div>
       <div class="right">
-        ${answered ? `<button type="button" class="btn btn-primary" data-act="next" id="btnNext">${SESSION.idx + 1 < total ? '下一題' : '看結果'} <span class="kbd" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button>` : '<span class="tiny muted">按 1–4 作答</span>'}
+        ${answered ? `<button type="button" class="btn btn-primary" data-act="next" id="btnNext">${SESSION.idx + 1 < SESSION.entries.length ? '下一題' : '看結果'} <span class="kbd" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button>` : '<span class="tiny muted">按 1–4 作答</span>'}
       </div>
     </div>`;
   if (!answered && q.audio && !e.autoPlayed) { e.autoPlayed = true; setTimeout(() => (q.audioScript ? speakScript(q.audio) : speak(q.audio, speakOpts(q, q.audio))), 150); }
@@ -3348,15 +3352,27 @@ function dismissPreview() {
   }
   renderPractice(); window.scrollTo({ top: 0 });
 }
-function previewHtml(e, pct, total) {
-  if (e.item.kind === 'g') return grammarPreviewHtml(e, pct, total);
+// The counter counts the session's planned items; an encore or a 再練一次 copy is shown apart as 加考 and moves neither number.
+function sessionCount() {
+  const planned = (x) => !x.encore && !x.requeued;
+  const es = SESSION.entries; let before = 0, extra = 0;
+  for (let i = 0; i < Math.min(SESSION.idx, es.length); i++) { if (planned(es[i])) before++; else extra++; }
+  const cur = es[SESSION.idx]; const curPlanned = cur ? planned(cur) : false;
+  return { before, n: before + (curPlanned ? 1 : 0), total: es.filter(planned).length, extra: extra + (cur && !curPlanned ? 1 : 0) };
+}
+function prCountHtml() {
+  const c = sessionCount();
+  return `<div class="pr-count">${c.n} / ${c.total}${c.extra ? ` <span class="tiny muted">加考 ${c.extra}</span>` : ''}</div>`;
+}
+function previewHtml(e, pct) {
+  if (e.item.kind === 'g') return grammarPreviewHtml(e, pct);
   const v = e.item;
   const reading = v.r && v.r !== jaPlain(v.w) ? v.r : '';
   return `
     <div class="pr-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
       <div class="bar"><span style="width:${pct}%"></span></div>
-      <div class="pr-count">${SESSION.idx + 1} / ${total}</div>
+      ${prCountHtml()}
     </div>
     <div class="q-card">
       <div class="q-label"><span>新單字${v.builtin ? ` · ${esc(v.lv)} · ${esc(vocabTheme(v))}` : ''}</span><span class="chip chip-accent">新</span></div>
@@ -3531,10 +3547,8 @@ function renderSummary(view) {
   const acc = n ? Math.round(s.stats.correct / n * 100) : 0;
   const wrongKeys = new Map();
   s.results.filter(r => !r.ok).forEach(r => { if (!wrongKeys.has(r.q.mistakePrompt)) wrongKeys.set(r.q.mistakePrompt, r); });
-  const dayDone = dailyPlan().remaining === 0;
-  const todayN = dayTotal(state.dailyLogs[todayStr()]);
-  const dq = dailyQueue(state.settings.sessionSize);
-  const workTotal = todayN + dq.total + encoreEstimate(dq.plan.newV.concat(dq.plan.newG));   // same ring as 今日: done / today's whole work
+  const prog = dayProgress();   // same ring as 今日: items answered today / today's items
+  const dayDone = prog.left === 0;
   const wrongList = [...wrongKeys.values()].map(r => `<div class="list-item"><div class="grow"><div class="jp">${furi(tidyPrompt(r.q.mistakePrompt || ''))}</div><div class="small muted">正確：<span class="jp">${esc(jaPlain(r.q.options[r.q.answer].text))}</span>・你選：<span class="jp">${esc(jaPlain(r.q.options[r.chosen].text))}</span></div></div></div>`).join('');
   view.innerHTML = `
     <div class="pr-top"><button type="button" class="btn btn-ghost btn-icon" data-act="close-summary" aria-label="關閉">${icon('close')}</button><div class="grow"></div></div>
@@ -3544,7 +3558,7 @@ function renderSummary(view) {
           <div class="page-title">${n ? '完成了' : '已結束'}</div>
           <div class="page-sub">${esc(s.title)}・作答 ${n} 題・正確率 ${acc}%</div>
         </div>
-        ${ringHtml(Math.min(1, todayN / Math.max(1, workTotal)), `<b>${todayN}</b><span class="tiny muted">/ ${workTotal}</span>`)}
+        ${ringHtml(Math.min(1, prog.done / Math.max(1, prog.total)), `<b>${prog.done}</b><span class="tiny muted">/ ${prog.total}</span>`)}
       </div>
       <div class="grid grid-4 mt-4">
         <div class="stat"><span class="stat-v">${s.stats.correct}</span><span class="stat-l">答對</span></div>
@@ -3552,7 +3566,7 @@ function renderSummary(view) {
         <div class="stat"><span class="stat-v">${s.stats.newCount}</span><span class="stat-l">新學</span></div>
         <div class="stat"><span class="stat-v">${Math.max(1, Math.round((Date.now() - s.startedAt) / 60000))}</span><span class="stat-l">分鐘</span></div>
       </div>
-      ${dayDone ? '<div class="banner mt-4">今天的進度完成了。答對的題目會在幾天後再出現，答錯的明天再複習。</div>' : `<div class="hint mt-4">今天還有 ${Math.max(0, workTotal - todayN)} 題。</div>`}
+      ${dayDone ? '<div class="banner mt-4">今天的進度完成了。答對的題目會在幾天後再出現，答錯的明天再複習。</div>' : `<div class="hint mt-4">今天還有 ${prog.left} 題。</div>`}
       <div class="row-wrap mt-4">
         <button type="button" class="btn btn-primary" data-act="again">再練一組</button>
         ${wrongKeys.size ? '<button type="button" class="btn" data-act="retry-wrong">重練答錯的題目</button>' : ''}
@@ -3947,14 +3961,14 @@ function renderToday(view) {
   const extraN = exK + exL + exR;
   const extraText = [exK && `漢字 ${exK}`, exL && `聽力 ${exL}`, exR && `閱讀 ${exR}`].filter(Boolean).join('・');
   const dq = dailyQueue(size);
-  const sessionN = dq.items.length + encoreEstimate(dq.items);   // new words and new grammar come back once more
-  const workTotal = doneToday + dq.total + encoreEstimate(plan.newV.concat(plan.newG));   // the ring: done / today's whole work
+  const encoreN = encoreEstimate(dq.items);   // new words and multi-format grammar come back once more in the session; shown apart, never counted
+  const prog = dayProgress();   // the ring: items answered today / today's items
   const d = parseDate(t);
   const greeting = `${d.getMonth() + 1} 月 ${d.getDate()} 日（${weekdayZh(t)}）`;
 
   let heroBody;
   if (plan.remaining === 0) {
-    const xq = extraQueue(size); const xn = xq.items.length + encoreEstimate(xq.items);
+    const xq = extraQueue(size); const xn = xq.items.length;
     heroBody = `<p class="dim">今天做了 ${doneToday} 題。${xn ? '' : '明天再來，或到課程頁預習下一單元。'}</p>
       <div class="row-wrap">
         ${xn ? `<button type="button" class="btn btn-primary" data-act="start-extra">加練・${xn} 題</button>` : ''}
@@ -3968,12 +3982,14 @@ function renderToday(view) {
         <span>待複習 <b>${reviewN}</b>（單字 ${plan.dueV.length}・文法 ${plan.dueG.length}）</span>
         <span>新內容 <b>${newN}</b>（單字 ${plan.newV.length}・文法 ${plan.newG.length}）</span>
         ${extraN ? `<span>另有 <b>${extraN}</b>（${extraText}）</span>` : ''}
+        <span>共 <b>${plan.remaining}</b> 題</span>
       </div>
       ${sessionTopicsHtml(dailyQueue(size), plan)}
       <div class="row-wrap">
-        <button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・${sessionN} 題</button>
+        <button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・${dq.items.length} 題</button>
         ${dq.total > dq.items.length ? `<span class="small muted">做完還有 ${dq.total - dq.items.length} 題，可以再練一組</span>` : ''}
-      </div>`;
+      </div>
+      ${encoreN ? `<div class="small muted mt-2">新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）；答錯的幾題後再練一次。</div>` : ''}`;
   }
 
   const paceText = pace.daysLeft === 0 ? '考試日期已到或已過，可在設定中更新考試日期。'
@@ -4009,7 +4025,7 @@ function renderToday(view) {
           <div class="small muted mt-1">每一題都是今天到期的複習或今天的新內容；答錯會在幾題後再練一次，明天再正式複習。答對的越熟出現得越少。</div>
           ${heroBody}
         </div>
-        ${ringHtml(doneToday / Math.max(1, workTotal), `<b>${doneToday}</b><div class="tiny muted">/ ${workTotal} 題</div>`, 110)}
+        ${ringHtml(prog.done / Math.max(1, prog.total), `<b>${prog.done}</b><div class="tiny muted">/ ${prog.total} 題</div>`, 110)}
       </div>
     </div>
 
@@ -6496,13 +6512,13 @@ function lessonSecKey(g) {
   return L && Number.isInteger(g.sec) && g.sec >= 0 && L.sections[g.sec] ? `${g.u}:${g.sec}` : null;
 }
 // First new question from a lesson section: the section itself (heading, rule, points and its examples) before the question. Shown once per section.
-function grammarPreviewHtml(e, pct, total) {
+function grammarPreviewHtml(e, pct) {
   const g = e.item; const u = unitById(g.u); const sec = DATA.LESSONS[g.u].sections[g.sec];
   return `
     <div class="pr-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
       <div class="bar"><span style="width:${pct}%"></span></div>
-      <div class="pr-count">${SESSION.idx + 1} / ${total}</div>
+      ${prCountHtml()}
     </div>
     <div class="q-card">
       <div class="q-label"><span>新文法 · ${esc(u.short)}</span><span class="chip chip-accent">新</span></div>

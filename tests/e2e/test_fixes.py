@@ -218,11 +218,12 @@ def test_formal_exam_listening_options_play_on_click(b):
 def test_today_button_count_matches_the_session(b):
     js = """(() => { const out = []; for (const size of [20, 15, 25, 30]) { state.settings.sessionSize = size; saveState(); route();
       const btn = document.querySelector('[data-act=start-daily]'); const shown = Number((btn.textContent.match(/(\\d+) 題/) || [])[1]);
-      startSession('daily'); const enc = encoreEstimate(SESSION.entries.map(e => e.item)); const actual = SESSION.entries.length + enc; SESSION = null; document.body.classList.remove('practicing'); location.hash = '#/today';
-      out.push([shown, actual]); } return JSON.stringify(out); })()"""
+      const note = (document.querySelector('.hero').textContent.match(/換個方式再考一次（約 (\\d+) 題/) || [])[1];
+      startSession('daily'); const enc = encoreEstimate(SESSION.entries.map(e => e.item)); const actual = SESSION.entries.length; SESSION = null; document.body.classList.remove('practicing'); location.hash = '#/today';
+      out.push([shown, actual, Number(note), enc]); } return JSON.stringify(out); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
-    pairs = __import__('json').loads(out[-1])
-    assert all(a == b_ and a > 0 for a, b_ in pairs), pairs
+    rows = __import__('json').loads(out[-1])
+    assert all(a == b_ and a > 0 and n == enc for a, b_, n, enc in rows), rows   # the button is the items of this session; encores are a note, not part of the count
 
 def test_settings_show_the_version_and_its_history(b):
     out = b.run([("nav", URL), ("wait", READY),
@@ -563,13 +564,16 @@ def test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them
 # ---- 2026-10-27 (v65): ring = done / today's work; 每日目標 → 每天負荷上限; exam-pace quotas on Today; 再練一次 in another format; grammar encore ----
 def test_ring_counts_todays_work_and_fills_when_the_day_is_done(b):
     js = """(() => { const t = todayStr(); const read = () => { location.hash = '#/today'; route(); const m = /(\\d+)\\s*\\/\\s*(\\d+) 題/.exec(document.querySelector('.hero').textContent.replace(/\\s+/g, ' ')); return m ? [Number(m[1]), Number(m[2])] : null; };
-      const r0 = read(); const dq = dailyQueue(state.settings.sessionSize); const expect0 = dq.total + encoreEstimate(dq.plan.newV.concat(dq.plan.newG));
-      logEntry(t).vocabCount = 5; saveState(); DAILY_CACHE = null; const r1 = read();
+      const r0 = read(); const expect0 = dailyPlan().remaining; const hero0 = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');
+      const num = (re) => { const m = re.exec(hero0); return m ? Number(m[1]) : 0; }; const sum = num(/待複習 (\\d+)/) + num(/新內容 (\\d+)/) + num(/另有 (\\d+)/); const shownTotal = num(/共 (\\d+) 題/);
+      // five words answered today in some other practice (the schedule records them); encores and requeues write nothing, so they never move the ring
+      REG.vocab.filter(v => v.builtin && v.lv === 'N5' && !state.srs[v.key]).slice(-5).forEach(v => { state.srs[v.key] = { b: 1, due: addDays(t, 1), n: 1, ok: 1, ng: 0, s: 1, d: 5, last: t, intro: t, f: {} }; });
+      logEntry(t).vocabCount = 9; saveState(); DAILY_CACHE = null; const r1 = read();
       Object.assign(state.settings, { newVocabPerDay: 0, newGrammarPerDay: 0, newKanjiPerDay: 0, listenPerDay: 0 }); state.today.newR = 1; saveState(); DAILY_CACHE = null; const r2 = read();
-      return JSON.stringify({ r0, expect0, r1, r2, done: /今天完成了/.test(document.querySelector('.hero').textContent) }); })()"""
+      return JSON.stringify({ r0, expect0, sum, shownTotal, r1, r2, done: /今天完成了/.test(document.querySelector('.hero').textContent) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['r0'] == [0, r['expect0']] and r['expect0'] > 0, r
+    assert r['r0'] == [0, r['expect0']] and r['expect0'] > 0 and r['sum'] == r['expect0'] == r['shownTotal'], r   # the breakdown, its 共 N 題 and the ring agree
     assert r['r1'] == [5, r['expect0'] + 5], r
     assert r['r2'] == [5, 5] and r['done'], r
 
@@ -598,7 +602,7 @@ def test_pressing_see_results_after_the_last_question_shows_the_summary(b):
       const label = btn ? btn.textContent.trim() : null;
       let err = null; try { nextQuestion(); } catch (e) { err = String(e); }
       const v = document.querySelector('.view.active') || document.body; const title = v.querySelector('.page-title'); const ring = v.querySelector('.ring-txt');
-      const home = (() => { const t = todayStr(); const dq = dailyQueue(state.settings.sessionSize); return dayTotal(state.dailyLogs[t]) + dq.total + encoreEstimate(dq.plan.newV.concat(dq.plan.newG)); })();
+      const home = itemsDoneToday() + dailyPlan().remaining;
       const m = ring && /(\\d+)\\s*\\/\\s*(\\d+)/.exec(ring.textContent.replace(/\\s+/g, ' '));
       SESSION = null; document.body.classList.remove('practicing');
       return JSON.stringify({ label, err, title: title ? title.textContent : null, ring: m ? [Number(m[1]), Number(m[2])] : null, home, text: v.textContent.replace(/\\s+/g, ' ').slice(0, 300) }); })()"""
@@ -608,6 +612,26 @@ def test_pressing_see_results_after_the_last_question_shows_the_summary(b):
     assert r['err'] is None and r['title'] == '完成了', r
     assert r['ring'] and r['ring'][1] == r['home'] and r['ring'][0] >= 1, r
     assert '目標' not in r['text'], r
+
+def test_practice_counter_counts_the_planned_items_and_shows_extras_apart(b):
+    js = """(() => { startSession('daily', {}); route(); const n0 = SESSION.entries.length; const count = () => document.querySelector('.pr-count').textContent.replace(/\\s+/g, ' ').trim();
+      const first = count(); const seen = []; let steps = 0, firstExtra = null, wrongDone = false;
+      while (SESSION.idx < SESSION.entries.length && steps++ < 200) {
+        const e = currentEntry(); if (e.preview && !e.previewDone) { dismissPreview(); continue; }
+        if (e.done) { nextQuestion(); continue; }
+        if ((e.encore || e.requeued) && firstExtra === null) firstExtra = { label: count(), idx: SESSION.idx, kind: e.encore ? 'encore' : 'requeue' };
+        if (e.q && e.q.custom) finishCustom(e, true, ''); else { const miss = !wrongDone && !e.encore && !e.requeued && !!state.srs[e.item.key]; if (miss) wrongDone = true; answerCurrent(miss ? (e.q.answer + 1) % e.q.options.length : e.q.answer); }
+        seen.push(count());
+      }
+      const last = seen[seen.length - 1]; const extras = SESSION.entries.filter(x => x.encore || x.requeued).length; const total = SESSION.entries.length;
+      SESSION = null; document.body.classList.remove('practicing');
+      return JSON.stringify({ n0, first, firstExtra, last, extras, total }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=90)
+    r = json.loads(out[-1])
+    assert r['first'] == f"1 / {r['n0']}", r
+    assert r['extras'] > 0 and r['total'] == r['n0'] + r['extras'], r
+    assert r['firstExtra'] and re.fullmatch(rf"\d+ / {r['n0']} 加考 1", r['firstExtra']['label']), r   # an extra does not move the planned count, it is counted apart
+    assert r['last'] == f"{r['n0']} / {r['n0']} 加考 {r['extras']}", r
 
 def test_today_offers_the_exam_pace_quotas_when_behind(b):
     js = """(() => { state.settings.examDate = addDays(todayStr(), 121); Object.assign(state.settings, { newVocabPerDay: 1, newGrammarPerDay: 1 }); saveState();
@@ -886,7 +910,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_load_cap_replaces_the_daily_goal_and_brakes_new_items_in_order, test_pressing_see_results_after_the_last_question_shows_the_summary, test_today_offers_the_exam_pace_quotas_when_behind, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_load_cap_replaces_the_daily_goal_and_brakes_new_items_in_order, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_today_offers_the_exam_pace_quotas_when_behind, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
