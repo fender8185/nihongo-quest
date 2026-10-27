@@ -516,16 +516,21 @@ def test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow(b):
     assert r['enc'] == 1 and 8 <= r['pos'] <= 11 and r['est'] == 1, r
     assert r['due'] == 1 and r['gDue'] >= 3, r
 
-def test_first_sighting_of_a_grammar_point_shows_a_mini_lesson_in_daily_practice(b):
-    js = """(() => { startSession('unit', { unit: 'm1' }); const hasSib = (x) => REG.grammar.some(y => y.pt === x.pt && y.key !== x.key && (y.t || 'choice') === 'choice');
-      const i = SESSION.entries.findIndex(x => x.preview && x.item && x.item.kind === 'g' && (x.item.t || 'choice') === 'choice' && hasSib(x.item)); SESSION.idx = i; const e = currentEntry(); const g = e.item; renderPractice();
-      const txt = document.getElementById('view').textContent;
-      const out = { preview: e.preview === true && !e.previewDone, card: !!document.querySelector('.preview.grammar'), pt: txt.includes(g.pt), rule: txt.includes(String(g.why).replace(/[*][*]/g, '').slice(0, 12)), example: (() => { const fills = REG.grammar.filter(y => y.pt === g.pt && y.key !== g.key && (y.t || 'choice') === 'choice' && y.a && /（[ 　]*）/.test(y.jp || '')).map(y => y.jp.replace(/（[ 　]*）/, y.a)); const btn = document.querySelector('.preview.grammar .example [data-act=speak]'); return !!btn && fills.includes(btn.dataset.text); })(), ownSentence: txt.includes((g.jp || '').slice(0, 8)) };
-      ACTIONS['preview-go'](); out.movedAway = !currentEntry().item || currentEntry().item.key !== g.key;
+def test_first_new_question_of_a_lesson_section_shows_that_section_once(b):
+    js = """(() => { state.lessonSeen = []; saveState(); startSession('unit', { unit: 'm1' });
+      const previews = SESSION.entries.filter(x => x.preview && x.item && x.item.kind === 'g'); const secs = previews.map(x => x.item.sec);
+      const out = { previews: previews.length, onePerSection: new Set(secs).size === secs.length && secs.every(s => Number.isInteger(s) && s >= 0) };
+      const i = SESSION.entries.findIndex(x => x.preview && x.item && x.item.kind === 'g'); SESSION.idx = i; const e = currentEntry(); const g = e.item; const sec = DATA.LESSONS.m1.sections[g.sec]; renderPractice();
+      const txt = document.getElementById('view').textContent; const spoken = [...document.querySelectorAll('.preview.grammar .example [data-act=speak]')].map(x => x.dataset.text);
+      Object.assign(out, { card: !!document.querySelector('.preview.grammar'), heading: txt.includes(sec.h.replace(/\\[[^\\]]*\\]/g, '')), rule: txt.includes(sec.rule.slice(0, 8)), point: txt.includes(sec.points[0].replace(/\\[[^\\]]*\\]/g, '').slice(0, 8)), examples: sec.ex.length > 1 && sec.ex.every(x => spoken.includes(x.jp)), lesson: !!document.querySelector('[data-route="#/course/m1?tab=lesson"]') });
+      ACTIONS['preview-go'](); out.movedAway = currentEntry().item.key !== g.key; out.seen = state.lessonSeen.includes('m1:' + g.sec);
+      SESSION = null; document.body.classList.remove('practicing');
+      startSession('unit', { unit: 'm1' }); out.noSecondCard = !SESSION.entries.some(x => x.preview && x.item && x.item.kind === 'g' && x.item.sec === g.sec);
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['preview'] and r['card'] and r['pt'] and r['rule'] and r['example'] and not r['ownSentence'] and r['movedAway'], r
+    assert r['previews'] >= 1 and r['onePerSection'] and r['card'] and r['heading'] and r['rule'] and r['point'] and r['examples'] and r['lesson'], r
+    assert r['movedAway'] and r['seen'] and r['noSecondCard'], r
 
 def test_carried_mistakes_keep_two_days_of_spacing_unless_the_last_answer_was_wrong(b):
     js = """(() => { const t = todayStr(); const gs = REG.grammar.filter(g => g.u === 'm1').slice(0, 2); state.mistakes = []; state.settings.mistakesPerDay = 2;
@@ -607,7 +612,7 @@ if __name__ == "__main__":
              test_stats_shows_the_past_week_of_practice_and_what_was_learned, test_reaching_the_learned_level_records_the_date, test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading,
              test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them,
              test_linked_mistakes_join_the_daily_mix_by_priority_up_to_the_setting, test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
-             test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_sighting_of_a_grammar_point_shows_a_mini_lesson_in_daily_practice,
+             test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_carried_mistakes_keep_two_days_of_spacing_unless_the_last_answer_was_wrong, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
              test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model]
     failed = 0

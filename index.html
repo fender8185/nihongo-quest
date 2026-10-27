@@ -12,7 +12,7 @@
 <script src="./vendor/supabase.js"></script>
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
-<script src="./data.js?v=5"></script>
+<script src="./data.js?v=6"></script>
 <title>Nihongo Quest N4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -329,7 +329,10 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .match-col { display: flex; flex-direction: column; gap: 8px; }
 .match-word, .match-meaning { padding: 12px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); font: inherit; font-size: 16px; cursor: pointer; text-align: center; }
 .match-word.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
-.preview.grammar .rule { text-align: left; max-width: 560px; margin-left: auto; margin-right: auto; }
+.preview.grammar .word { font-size: 24px; line-height: 1.4; }
+.preview.grammar .rule { display: inline-block; text-align: left; font-size: 14px; color: var(--fg-2); background: var(--bg-sunken); border: 1px solid var(--line); padding: 6px 12px; border-radius: 8px; }
+.preview.grammar .points { text-align: left; max-width: 560px; margin: 14px auto 0; padding-left: 20px; color: var(--fg-2); line-height: 1.7; }
+.preview.grammar .points li + li { margin-top: 4px; }
 .mlist { padding: 0; } .mlist.card { padding: 4px 16px; }
 details.mrow { border-bottom: 1px solid var(--line); } details.mrow:last-child { border-bottom: none; }
 details.mrow > summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 0; }
@@ -795,15 +798,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '52';   // keep equal to the number in sw.js CACHE ('nq-v52'); scripts/test.sh checks it
+const APP_VERSION = '53';   // keep equal to the number in sw.js CACHE ('nq-v53'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '52', from: '36', date: '2026-10-27', items: [
+  { v: '53', from: '36', date: '2026-10-27', items: [
     'Gemini 更穩也更快：模型預設「自動」，被限額（429）、過載或 20 秒沒回應的模型會記住冷卻時間、自動換下一個，不再改動你的選擇；關閉模型的「思考」步驟，解析不再動輒等十幾秒；preview／thinking 類的實驗模型排到最後才用；全部限額時用白話說明幾秒後再試；AI 解析會在本機快取，同一題不再重問，並標示是哪個模型回答的。',
     '文法句意題改良：助詞題改問「畫線的助詞在這句表示什麼」，選項是同單元的其他考點；其他題目的錯誤選項改挑字面最相近的句子，不再一眼就能排除。',
-    '學習法調整：預習卡看完後，題目改在 4–6 題之後才出；新單字在同一組只再考一次（隔 8 題以上），第二次改成隔天複習；新文法考點第一次出現先看一句話規則與一個例句；每日夾帶的錯題保持兩天以上的間隔；答錯後可按「手滑，不算」，不進錯題本、排程維持原狀。',
+    '學習法調整：預習卡看完後，題目改在 4–6 題之後才出；新單字在同一組只再考一次（隔 8 題以上），第二次改成隔天複習；新文法第一次遇到時，先看它所屬的那一段講義（標題、規則、要點與該段例句），每一段只看一次，之後同段的新題直接作答；每日夾帶的錯題保持兩天以上的間隔；答錯後可按「手滑，不算」，不進錯題本、排程維持原狀。',
     '主選單：學習分析移到錯題本原本的位置，錯題本往下。',
     '錯題本改版：每天練習自動夾帶幾題錯題（錯最多、最久沒練的優先，設定可調）；題目達到「熟悉」就自動移到已掌握，手動／舊錯題則是隔天以上答對兩次；頁面改成一行一題的緊湊列表，可依類別篩選、排序，或依文法考點分組並直接練該考點；已掌握可一鍵清空。',
     '單字庫整理：新增「敬語」主題（16 個尊敬語／謙讓語動詞）、36 個常用 N5 字、26 個常用 N4 字；16 組「名詞＋する」合成一張卡（紀錄自動合併）；相同中文的字加上區別；漢字表新增 58 個常見 N4 漢字（共 342 個）。',
@@ -915,6 +918,7 @@ function defaultState() {
     customGrammar: [],      // AI-generated or user-added grammar items
     customExam: [],
     hidden: [],             // ids of hidden built-in items
+    lessonSeen: [],         // lesson sections already shown as a card in practice ('m1:0')
     mistakes: [],
     dailyLogs: {},
     examHistory: [],
@@ -965,7 +969,7 @@ function normalizeState(s) {
   const out = Object.assign(base, s || {});
   out.settings = Object.assign(defaultSettings(), (s && s.settings) || {});
   ['srs', 'dailyLogs', 'questionHistory', 'dimensionScores', 'unitAiNotes', 'statsFmt'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
-  ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
+  ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
   if (!out.today || out.today.date !== todayStr()) out.today = { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0 };
   Object.values(out.srs).forEach(ensureFsrs);
@@ -3064,8 +3068,11 @@ function startSession(mode, opt = {}) {
   }
   // a word seen for the first time is shown on a preview card before its question
   if (mode !== 'mistakes') entries.forEach(e => { if (e.item && e.item.kind === 'v' && !state.srs[e.item.key]) e.preview = true; });
-  // a grammar point seen for the first time gets a one-line rule card first (daily and unit practice)
-  if (mode === 'daily' || mode === 'unit') entries.forEach(e => { if (e.item && e.item.kind === 'g' && !state.srs[e.item.key]) e.preview = true; });
+  // the first new question from a lesson section the learner has not been shown yet gets that section's card first (daily and unit practice); each section once
+  if (mode === 'daily' || mode === 'unit') {
+    const shown = new Set(state.lessonSeen || []);
+    entries.forEach(e => { const g = e.item; if (!g || g.kind !== 'g' || state.srs[g.key]) return; const k = lessonSecKey(g); if (!k || shown.has(k)) return; shown.add(k); e.preview = true; });
+  }
   SESSION = {
     mode, title: opt.title || MODE_TITLE[mode] || '練習', entries, idx: 0, meta,
     stats: { correct: 0, wrong: 0, newCount: 0 }, results: [], startedAt: Date.now(), lastFmt: '', opt
@@ -3225,6 +3232,7 @@ function renderPractice() {
 function dismissPreview() {
   const e = currentEntry(); if (!e || !e.preview || e.previewDone) return;
   e.previewDone = true;
+  if (e.item.kind === 'g') { const k = lessonSecKey(e.item); if (k && !(state.lessonSeen || []).includes(k)) { (state.lessonSeen = state.lessonSeen || []).push(k); saveState(); } }
   if (SESSION.entries.length - SESSION.idx > 1) {
     SESSION.entries.splice(SESSION.idx, 1);
     const at = Math.min(SESSION.entries.length, SESSION.idx + 4 + Math.floor(Math.random() * 3));
@@ -6180,14 +6188,14 @@ function planAdviceHtml() {
     </div>`;
 }
 
-// First sighting of a grammar point: its name, the unit formula, the one-line rule and a sibling example (never this item's own sentence).
+// Lesson section a built-in grammar item belongs to (data.js `sec`); null for AI-made items and the few that match no section
+function lessonSecKey(g) {
+  const L = g && DATA.LESSONS[g.u];
+  return L && Number.isInteger(g.sec) && g.sec >= 0 && L.sections[g.sec] ? `${g.u}:${g.sec}` : null;
+}
+// First new question from a lesson section: the section itself (heading, rule, points and its examples) before the question. Shown once per section.
 function grammarPreviewHtml(e, pct, total) {
-  const g = e.item; const u = unitById(g.u); const lesson = DATA.LESSONS[g.u];
-  const sib = REG.grammar.find(x => x.pt === g.pt && x.key !== g.key && (x.t || 'choice') === 'choice' && x.a && /（[\s　]*）/.test(x.jp || ''));
-  // most points have no sibling question: fall back to a lesson example that uses the same answer, then the first lesson example
-  const lessonExs = lesson ? lesson.sections.flatMap(sec => sec.ex || []) : [];
-  const lex = lessonExs.find(x => g.a && x.jp && x.jp.includes(g.a)) || lessonExs[0];
-  const ex = sib ? exampleHtml(sib.jp.replace(/（[\s　]*）/, sib.a), sib.zh || '', 'mt-3') : lex ? exampleHtml(lex.jp, lex.zh || '', 'mt-3') : '';
+  const g = e.item; const u = unitById(g.u); const sec = DATA.LESSONS[g.u].sections[g.sec];
   return `
     <div class="pr-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
@@ -6196,12 +6204,12 @@ function grammarPreviewHtml(e, pct, total) {
     </div>
     <div class="q-card">
       <div class="q-label"><span>新文法 · ${esc(u.short)}</span><span class="chip chip-accent">新</span></div>
-      <div class="q-instr">先看一句話規則，等一下會用這個考點出題。</div>
+      <div class="q-instr">先看這一段講義，接下來的題目會考這裡的用法。</div>
       <div class="preview grammar">
-        <div class="word">${esc(g.pt)}</div>
-        ${lesson && lesson.formula ? `<div class="small muted mt-1">${esc(lesson.formula)}</div>` : ''}
-        ${g.why ? `<div class="rule small mt-3">${md(g.why)}</div>` : ''}
-        ${ex}
+        <div class="word">${bracketRuby(sec.h)}</div>
+        ${sec.rule ? `<div class="rule jp mt-2">${bracketRuby(sec.rule)}</div>` : ''}
+        ${(sec.points || []).length ? `<ul class="points small">${sec.points.map(p => `<li>${bracketRuby(p)}</li>`).join('')}</ul>` : ''}
+        ${(sec.ex || []).map((x, i) => `<div class="example ${i ? 'mt-2' : 'mt-3'}"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(x.jp)}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${furi(x.jp)}</div><div class="zh">${esc(x.zh || '')}</div></div></div>`).join('')}
       </div>
     </div>
     <div class="pr-actions pr-next-sticky">

@@ -3,6 +3,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 node --check sw.js && node --check sync-core.js && node --check data.js
+# every built-in grammar item names the lesson section it belongs to (-1 = none; the practice card is skipped for those)
+node -e "const D=JSON.parse(require('fs').readFileSync('data.js','utf8').split('\n')[2].replace(/^const DATA = /,'').replace(/;\s*$/,''));const bad=D.GRAMMAR.filter(g=>!Number.isInteger(g.sec)||g.sec<-1||g.sec>=(D.LESSONS[g.u]||{sections:[]}).sections.length);if(bad.length){console.log('grammar items without a valid sec:',bad.slice(0,5).map(g=>g.id).join(' '),bad.length);process.exit(1)}"
 # the version shown in settings must match the service-worker cache name
 [ "$(grep -o "nq-v[0-9]*" sw.js | head -1 | tr -d -c 0-9)" = "$(grep -o "const APP_VERSION = '[0-9]*'" index.html | tr -d -c 0-9)" ] || { echo "APP_VERSION and sw.js CACHE differ"; exit 1; }
 # the data file version must agree in index.html (<script src>), sw.js (PRECACHE) and data.js (header)

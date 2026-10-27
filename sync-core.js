@@ -49,7 +49,7 @@
   //   dailyLogs     per day: the larger count of each kind
   //   statsFmt      per format: the larger ok / ng
   //   lists by id   (mistakes, custom cards, custom grammar/exam, exam history): union, the later copy's version
-  //   id sets       (completedUnits, hidden): union
+  //   id sets       (completedUnits, hidden, lessonSeen): union
   //   everything else (settings, currentUnit, today, …): from the copy saved later
   function stampOf(s) { return (s && typeof s.updatedAt === 'string') ? s.updatedAt : ''; }
   function pickRec(x, y) {
@@ -82,7 +82,7 @@
       (newer[f] || []).forEach(x => by.set(x && x.id !== undefined ? x.id : JSON.stringify(x), x));
       out[f] = [...by.values()];
     });
-    ['completedUnits', 'hidden'].forEach(f => { out[f] = [...new Set([...(older[f] || []), ...(newer[f] || [])])]; });
+    ['completedUnits', 'hidden', 'lessonSeen'].forEach(f => { out[f] = [...new Set([...(older[f] || []), ...(newer[f] || [])])]; });
     out.updatedAt = new Date().toISOString();
     return out;
   }
