@@ -247,17 +247,55 @@ def test_wrong_non_vocab_item_waits_until_tomorrow_but_wrong_vocab_stays_due_tod
     r = __import__('json').loads(out[-1])
     assert r == {'g': 1, 'l': 1, 'r': 1, 'k': 1, 'v': 0}, r
 
-def test_reinforcement_skips_grammar_and_kanji_answered_today_but_not_vocab(b):
-    # a first correct answer leaves an item at a low level and not yet due: exactly what the spare-slot filler looks for
+def test_reinforcement_skips_everything_answered_today(b):
+    # a first correct answer leaves an item at a low level and not yet due: exactly what the spare-slot filler looks for — but not on the same day
     js = """(() => { const g = REG.grammar[0]; const k = REG.kanji[0]; const v = REG.vocab.find(x => x.builtin);
       [g, k, v].forEach(it => srsAnswer(it.key, true));
       const low = [g, k, v].every(it => state.srs[it.key].b <= 2 && state.srs[it.key].due > todayStr());
       const picked = reinforcementItems([g, k, v], new Set()).map(it => it.kind);
-      return JSON.stringify({ low, picked }); })()"""
+      const y = addDays(todayStr(), -1); [g, k, v].forEach(it => { state.srs[it.key].last = y; });   // the same records as of tomorrow
+      const tomorrow = reinforcementItems([g, k, v], new Set()).map(it => it.kind).sort();
+      return JSON.stringify({ low, picked, tomorrow }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
     r = __import__('json').loads(out[-1])
     assert r['low'], r
-    assert r['picked'] == ['v'], r
+    assert r['picked'] == [] and r['tomorrow'] == ['g', 'k', 'v'], r
+
+def test_an_extra_session_brings_new_material_and_upcoming_reviews_instead_of_todays_answers(b):
+    js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.settings);
+      const today = JSON.stringify(state.today);   // the day's quotas are used up (an extra session), not switched off
+      Object.assign(state.settings, { newVocabPerDay: 5, newGrammarPerDay: 5, mistakesPerDay: 0, listenPerDay: 0, newKanjiPerDay: 0, sessionSize: 20 }); Object.assign(state.today, { newV: 5, newG: 5 });
+      // six words answered correctly today (low level, not due) and four due the day after tomorrow (answered yesterday)
+      const words = REG.vocab.filter(x => x.builtin && !state.srs[x.key]).slice(0, 10);
+      words.slice(0, 6).forEach(v => srsAnswer(v.key, true));
+      words.slice(6).forEach(v => { srsAnswer(v.key, true); Object.assign(state.srs[v.key], { last: addDays(t, -1), due: addDays(t, 2), b: 3 }); });   // not weak, just due soon
+      saveState(); DAILY_CACHE = null; const q = dailyQueue(20);
+      const todays = q.items.filter(it => state.srs[it.key] && state.srs[it.key].last === t).length;
+      const ahead = q.items.filter(it => words.slice(6).some(w => w.key === it.key)).length;
+      const fresh = q.items.filter(it => !state.srs[it.key] && (it.kind === 'v' || it.kind === 'g')).length;
+      startSession('daily'); const note = SESSION.meta.note || ''; SESSION = null; document.body.classList.remove('practicing');
+      const out = { n: q.items.length, todays, ahead, fresh, extra: q.extra, note };
+      words.forEach(v => delete state.srs[v.key]); Object.assign(state.settings, JSON.parse(keep)); state.today = JSON.parse(today); saveState(); DAILY_CACHE = null; return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
+    r = json.loads(out[-1])
+    assert r['n'] >= 10 and r['todays'] == 0, r
+    assert r['fresh'] > 0 and r['ahead'] == 4 and r['extra']['newN'] == r['fresh'] and r['extra']['aheadN'] == 4, r
+    assert '額外' in r['note'] and '提前複習' in r['note'], r
+
+def test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers(b):
+    js = """(() => { const t = todayStr(); const items = unitItems('m1'); const before = JSON.stringify(Object.fromEntries(items.map(g => [g.key, state.srs[g.key] || null])));
+      items.forEach(g => srsAnswer(g.key, true));   // every m1 item answered today
+      const unit = buildUnitQueue('m1', 15).length;
+      const theme = vocabTheme(REG.vocab.find(x => x.builtin)); const words = REG.vocab.filter(v => v.builtin && vocabTheme(v) === theme);
+      const wBefore = JSON.stringify(words.map(v => state.srs[v.key] || null)); const quota = state.settings.newVocabPerDay; state.settings.newVocabPerDay = 0;
+      words.forEach(v => srsAnswer(v.key, true));
+      const vq = buildVocabQueue('c:' + theme, 20); const repeats = vq.filter(v => state.srs[v.key] && state.srs[v.key].last === t).length;
+      JSON.parse(before) && items.forEach(g => { const r = JSON.parse(before)[g.key]; if (r) state.srs[g.key] = r; else delete state.srs[g.key]; });
+      JSON.parse(wBefore).forEach((r, i) => { if (r) state.srs[words[i].key] = r; else delete state.srs[words[i].key]; }); state.settings.newVocabPerDay = quota; saveState();
+      return JSON.stringify({ unit, repeats, vq: vq.length }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
+    r = json.loads(out[-1])
+    assert r['unit'] == 0 and r['repeats'] == 0, r
 
 def test_heatmap_starts_at_the_week_the_learner_began(b):
     # columns = weeks from the Monday of the first-use week to this week; at least 4, at most 26
@@ -603,7 +641,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_wrong_non_vocab_item_waits_until_tomorrow_but_wrong_vocab_stays_due_today, test_reinforcement_skips_grammar_and_kanji_answered_today_but_not_vocab,
+             test_wrong_non_vocab_item_waits_until_tomorrow_but_wrong_vocab_stays_due_today, test_reinforcement_skips_everything_answered_today, test_an_extra_session_brings_new_material_and_upcoming_reviews_instead_of_todays_answers, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
