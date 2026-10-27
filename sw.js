@@ -1,5 +1,5 @@
 /* Nihongo Quest service worker: versioned app-shell cache, cache-first for same-origin GETs. */
-const CACHE = 'nq-v66';
+const CACHE = 'nq-v67';
 const PRECACHE = [
   './',
   './index.html',
