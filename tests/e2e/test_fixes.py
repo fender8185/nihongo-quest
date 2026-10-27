@@ -311,6 +311,28 @@ def test_new_items_spread_across_sessions(b):
     assert r['n'] == 20 and r['total'] > 60 and 2 <= r['firstNew'] <= 8, r
     assert int(re.search(r'開始練習・(\d+) 題', r['btn']).group(1)) >= 20 and f"做完還有 {r['total'] - 20} 題" in r['rest'], r   # the button adds the new words' encores
 
+def test_done_state_and_extra_session(b):
+    js = """(() => { const t = todayStr(); const keep = JSON.stringify({ srs: state.srs, today: state.today, settings: state.settings });
+      Object.assign(state.settings, { newVocabPerDay: 4, newGrammarPerDay: 2, newKanjiPerDay: 0, listenPerDay: 0, sessionSize: 20 }); Object.assign(state.today, { newV: 4, newG: 2, newR: 1 });
+      Object.keys(state.srs).forEach(k => { if (state.srs[k].due <= t) state.srs[k].last = t; });   // nothing due left
+      const ahead = REG.vocab.filter(v => v.builtin && !state.srs[v.key]).slice(0, 3);
+      ahead.forEach(v => { state.srs[v.key] = { b: 3, due: addDays(t, 2), n: 3, ok: 3, ng: 0, s: 6, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
+      saveState(); DAILY_CACHE = null;
+      location.hash = '#/today'; route(); const h2 = document.querySelector('.hero h2').textContent; const btn = document.querySelector('[data-act=start-extra]');
+      const q = extraQueue(20); const aheadIn = ahead.filter(v => q.items.some(x => x.key === v.key)).length;
+      const bad = q.items.filter(it => { const r = state.srs[it.key]; return r && (r.due <= t || r.last === t || r.due > addDays(t, 2)); }).length;
+      startSession('daily', { extra: true }); const note = SESSION.meta.note; SESSION = null; document.body.classList.remove('practicing');
+      // nothing to pull forward and no new quota: the button goes away
+      ahead.forEach(v => { state.srs[v.key].last = t; }); Object.assign(state.settings, { newVocabPerDay: 0, newGrammarPerDay: 0 }); saveState(); DAILY_CACHE = null; location.hash = '#/today'; route();
+      const gone = !document.querySelector('[data-act=start-extra]'); const tomorrow = /明天再來/.test(document.querySelector('.hero').textContent);
+      const k = JSON.parse(keep); state.srs = k.srs; state.today = k.today; state.settings = k.settings; saveState(); DAILY_CACHE = null;
+      return JSON.stringify({ h2, btn: btn ? btn.textContent : null, n: q.items.length, aheadIn, bad, newN: q.newN, aheadN: q.aheadN, note, gone, tomorrow }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
+    r = json.loads(out[-1])
+    assert r['h2'] == '今天完成了' and r['btn'] and r['btn'].startswith('加練・') and r['n'] > 0, r
+    assert r['aheadIn'] == 3 and r['aheadN'] == 3 and r['bad'] == 0 and 0 < r['newN'] <= 10, r
+    assert '3 題提前複習' in r['note'] and '額外的新內容' in r['note'] and r['gone'] and r['tomorrow'], r
+
 def test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers(b):
     js = """(() => { const t = todayStr(); const items = unitItems('m1'); const before = JSON.stringify(Object.fromEntries(items.map(g => [g.key, state.srs[g.key] || null])));
       items.forEach(g => srsAnswer(g.key, true));   // every m1 item answered today
@@ -701,7 +723,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,

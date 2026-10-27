@@ -3005,7 +3005,27 @@ function buildDailyQueue(size = state.settings.sessionSize) {
 }
 
 // what an extra session holds once the day's plan is done (shown on the Today page and at the start of practice)
-function extraNote(q) { return ''; }
+// 加練, once the day's work is done: reviews due tomorrow or the day after (not answered today), then new items beyond
+// the quota (grammar and words in halves, a track whose quota is 0 stays closed, at most half the session)
+function extraQueue(size = state.settings.sessionSize) {
+  const t = todayStr(); const until = addDays(t, 2);
+  const plan = dailyPlan(size);
+  const curIdx = unitOrder(state.currentUnit);
+  const pool = REG.vocab.filter(x => vocabEligibleForDaily(x, plan.n4Open)).concat(REG.grammar.filter(x => grammarInReach(x, curIdx)), REG.kanji.filter(k => k.lv === 'N5' || n5KanjiLeft() === 0));
+  const ahead = pool.filter(it => { const r = state.srs[it.key]; return r && r.due > t && r.due <= until && r.last !== t; }).sort(byDue).slice(0, size);
+  const used = new Set(ahead.map(x => x.key));
+  const cap = Math.min(size - ahead.length, Math.ceil(size / 2));
+  const gs = state.settings.newGrammarPerDay > 0 ? newGrammarCandidates().filter(x => !used.has(x.key)).slice(0, Math.ceil(cap / 2)) : [];
+  const vs = state.settings.newVocabPerDay > 0 ? newVocabCandidates(REG.vocab.filter(x => vocabEligibleForDaily(x, plan.n4Open)), plan.n4Open).filter(x => !used.has(x.key)).slice(0, cap - gs.length) : [];
+  const fresh = interleave(vs, gs, 'mixed');
+  const items = shuffle(ahead).concat(fresh);
+  return { items, plan, aheadN: ahead.length, newN: fresh.length, newCount: fresh.length, reviewCount: ahead.length };
+}
+function extraNote(q) {
+  if (!q || !(q.newN || q.aheadN)) return '';
+  const parts = []; if (q.aheadN) parts.push(`${q.aheadN} 題提前複習（明後天到期）`); if (q.newN) parts.push(`${q.newN} 題額外的新內容`);
+  return `今天的進度已完成，這組是 ${parts.join('與 ')}；今天答過的題目不再出現。`;
+}
 // The Today page and 「開始練習」 share one built queue, so the button says exactly how many questions the session
 // holds (the plan numbers above it describe the whole day's workload, which can be more than one session).
 let DAILY_CACHE = null;
@@ -3063,9 +3083,9 @@ function startSession(mode, opt = {}) {
   let entries = [];
   let meta = {};
   if (mode === 'daily') {
-    const r = dailyQueue(opt.size || state.settings.sessionSize);
+    const r = opt.extra ? extraQueue(opt.size || state.settings.sessionSize) : dailyQueue(opt.size || state.settings.sessionSize);
     entries = r.items.map(item => ({ item }));
-    meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: r.plan.note || '' };
+    meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: opt.extra ? extraNote(r) : (r.plan.note || '') };
   } else if (mode === 'unit') {
     entries = buildUnitQueue(opt.unit, opt.size || 15).map(item => ({ item }));
     meta = { unit: opt.unit };
@@ -3655,6 +3675,7 @@ const ACTIONS = {
   'modal-back': (el, ev) => { if (ev.target === el) closeModal(); },
   'toggle-furi': () => toggleFurigana(),
   'start-daily': (el) => startSession('daily', { size: Number(el.dataset.size) || undefined }),
+  'start-extra': () => startSession('daily', { extra: true }),
   'start-unit': (el) => startSession('unit', { unit: el.dataset.unit, title: `${unitById(el.dataset.unit).short}・單元練習` }),
   'start-vocab': (el) => startSession('vocab', { filter: el.dataset.filter || 'all' }),
   'start-mistakes': () => startSession('mistakes'),
@@ -3856,12 +3877,15 @@ function renderToday(view) {
   const greeting = `${d.getMonth() + 1} 月 ${d.getDate()} 日（${weekdayZh(t)}）`;
 
   let heroBody;
-  if (reviewN + newN + extraN === 0) {
-    heroBody = `<p class="dim">今天沒有到期的複習，新內容也已經學完今天的份量。</p>
+  if (plan.remaining === 0) {
+    const xq = extraQueue(size); const xn = xq.items.length + encoreEstimate(xq.items);
+    heroBody = `<p class="dim">今天做了 ${doneToday} 題。${xn ? '' : '明天再來，或到課程頁預習下一單元。'}</p>
       <div class="row-wrap">
-        <button type="button" class="btn btn-primary" data-act="start-unit" data-unit="${cur.id}">練習目前單元</button>
-        ${mk.length ? `<button type="button" class="btn" data-act="start-mistakes">複習錯題（${mk.length}）</button>` : ''}
-      </div>`;
+        ${xn ? `<button type="button" class="btn btn-primary" data-act="start-extra">加練・${xn} 題</button>` : ''}
+        ${mk.length ? `<button type="button" class="btn" data-act="nav" data-route="#/mistakes">錯題本（${mk.length}）</button>` : ''}
+        <button type="button" class="btn btn-ghost" data-act="start-unit" data-unit="${cur.id}">練習目前單元</button>
+      </div>
+      ${xn ? `<div class="plan-note">${esc(extraNote(xq))}</div>` : ''}`;
   } else {
     heroBody = `
       <div class="plan-line">
@@ -3902,7 +3926,7 @@ function renderToday(view) {
     <div class="card">
       <div class="hero">
         <div>
-          <h2>${doneToday >= goal ? '今天的目標完成了' : '今日練習'}</h2>
+          <h2>${plan.remaining === 0 ? '今天完成了' : '今日練習'}</h2>
           <div class="small muted mt-1">答對的題目會隔幾天再出現，越熟出現得越少；答錯的題目會在練習中再考一次，之後也會優先複習。</div>
           ${heroBody}
         </div>
