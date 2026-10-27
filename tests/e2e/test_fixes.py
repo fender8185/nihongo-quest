@@ -579,18 +579,19 @@ def test_ring_counts_todays_work_and_fills_when_the_day_is_done(b):
 
 def test_load_cap_replaces_the_daily_goal_and_brakes_new_items_in_order(b):
     js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.srs); const s = state.settings;
-      const mig = { low: normalizeState({ settings: { dailyGoal: 20 } }).settings, high: normalizeState({ settings: { dailyGoal: 100 } }).settings, fresh: defaultSettings() };
+      const mig = { low: normalizeState({ settings: { dailyGoal: 20 } }).settings, high: normalizeState({ settings: { dailyGoal: 100 } }).settings, fresh: defaultSettings(),
+        raised: normalizeState({ settings: { loadCap: 40 } }).settings.loadCap, kept: normalizeState({ settings: { loadCap: 40, capRaised: true } }).settings.loadCap, own: normalizeState({ settings: { loadCap: 60 } }).settings.loadCap };
       REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 30).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
       const plan = (cap) => { s.loadCap = cap; saveState(); DAILY_CACHE = null; const p = dailyPlan(); return [p.newV.length, p.newG.length, p.newK.length, p.newL.length]; };
       const wide = plan(200), tight = plan(10);
       state.srs = JSON.parse(keep); s.loadCap = 40; saveState(); DAILY_CACHE = null;
       const txt = settingsLearn().replace(/<[^>]+>/g, ' '); location.hash = '#/today'; route();
-      return JSON.stringify({ mig: { low: [mig.low.loadCap, 'dailyGoal' in mig.low], high: mig.high.loadCap, fresh: [mig.fresh.loadCap, 'dailyGoal' in mig.fresh] }, wide, tight, row: /每天負荷上限/.test(txt), oldRow: /每日目標|dailyGoal/.test(txt), setGoal: !!document.querySelector('[data-act=set-goal]') }); })()"""
+      return JSON.stringify({ mig: { low: [mig.low.loadCap, 'dailyGoal' in mig.low], high: mig.high.loadCap, fresh: [mig.fresh.loadCap, 'dailyGoal' in mig.fresh], raised: mig.raised, kept: mig.kept, own: mig.own }, wide, tight, row: /每天負荷上限/.test(txt), max300: /data-key="loadCap"[^>]*max="300"|max="300"[^>]*data-key="loadCap"/.test(settingsLearn()), oldRow: /每日目標|dailyGoal/.test(txt), setGoal: !!document.querySelector('[data-act=set-goal]') }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['mig'] == {'low': [40, False], 'high': 100, 'fresh': [40, False]}, r
+    assert r['mig'] == {'low': [100, False], 'high': 100, 'fresh': [100, False], 'raised': 100, 'kept': 40, 'own': 60}, r   # v69: the v65 default of 40 is raised to 100 once; a cap someone set stays
     assert r['wide'] == [8, 6, 3, 3] and r['tight'] == [4, 6, 0, 0], r   # reviews never shrink; words to half, then kanji, then listening; grammar untouched
-    assert r['row'] and not r['oldRow'] and not r['setGoal'], r
+    assert r['row'] and r['max300'] and not r['oldRow'] and not r['setGoal'], r
 
 def test_pressing_see_results_after_the_last_question_shows_the_summary(b):
     # v65 took the daily goal out of the summary but left the ring reading it: the last 看結果 threw and the screen froze
@@ -632,6 +633,51 @@ def test_practice_counter_counts_the_planned_items_and_shows_extras_apart(b):
     assert r['extras'] > 0 and r['total'] == r['n0'] + r['extras'], r
     assert r['firstExtra'] and re.fullmatch(rf"\d+ / {r['n0']} 加考 1", r['firstExtra']['label']), r   # an extra does not move the planned count, it is counted apart
     assert r['last'] == f"{r['n0']} / {r['n0']} 加考 {r['extras']}", r
+
+FAKE_DAYS = """const RealDate = Date; window.__shift = 0;
+window.Date = class extends RealDate { constructor(...a) { if (a.length) super(...a); else { super(); this.setDate(this.getDate() + window.__shift); } } static now() { return RealDate.now() + window.__shift * 86400000; } };
+window.__day = (n) => { window.__shift = n; DAILY_CACHE = null; }; true"""
+
+def test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook(b):
+    # a missed word, grammar item or kanji comes back on days 1, 3 and 7; three right answers in a row hand it back to FSRS and
+    # clear it from the notebook; a miss on the way restarts the ladder. Listening is not on the ladder (a dialogue heard again
+    # within days tests memory of the answer).
+    js = """(() => { const t0 = todayStr(); const v = REG.vocab.find(x => x.builtin && x.lv === 'N5'); const g = REG.grammar.find(x => (x.t || 'choice') === 'choice' && x.op); const l = REG.listen[0];
+      const seed = (it) => { state.srs[it.key] = { b: 2, due: t0, n: 3, ok: 3, ng: 0, s: 4, d: 5, last: addDays(t0, -4), intro: addDays(t0, -10), f: {} }; }; [v, g, l].forEach(seed);
+      const play = (it, ok) => { startSession('items', { items: [it] }); if (currentEntry().preview) dismissPreview(); const q = currentEntry().q; answerCurrent(ok ? q.answer : (q.answer + 1) % q.options.length); SESSION = null; document.body.classList.remove('practicing'); };
+      const rec = (it) => { const r = state.srs[it.key]; return [daysBetween(t0, r.due), typeof r.rl === 'number' ? r.rl : null]; };
+      const inBook = (it) => activeMistakes().some(m => m.key === it.key);
+      const out = {};
+      __day(0); play(v, false); out.d0 = [rec(v), inBook(v)];
+      __day(1); play(v, true); out.d1 = [rec(v), inBook(v)];
+      __day(3); play(v, true); out.d3 = [rec(v), inBook(v)];
+      __day(7); play(v, true); out.d7 = [rec(v), inBook(v)];
+      __day(0); play(g, false); __day(1); play(g, true); __day(3); play(g, false); out.gRestart = [rec(g), inBook(g)];
+      __day(0); play(l, false); out.l0 = rec(l); __day(1); play(l, true); out.l1 = rec(l);
+      __day(0); return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE_DAYS), ("eval", js)], timeout=60)
+    r = json.loads(out[-1])
+    assert r['d0'] == [[1, 0], True], r
+    assert r['d1'] == [[3, 1], True], r
+    assert r['d3'] == [[7, 2], True], r
+    assert r['d7'][0][1] is None and r['d7'][0][0] > 8 and r['d7'][1] is False, r
+    assert r['gRestart'] == [[4, 0], True], r
+    assert r['l0'] == [1, None] and r['l1'][1] is None and r['l1'][0] >= 15, r
+
+def test_today_counts_relearning_items_among_reviews_and_puts_them_first(b):
+    js = """(() => { const t = todayStr(); const words = REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 12);
+      words.forEach((v, i) => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: i < 3 ? 1 : 0, s: 3, d: 5, last: addDays(t, -2), intro: addDays(t, -9), f: {} }; if (i < 3) state.srs[v.key].rl = 0; });
+      saveState(); DAILY_CACHE = null; location.hash = '#/today'; route(); const hero = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');
+      const dq = dailyQueue(state.settings.sessionSize); const reviews = dq.items.filter(x => x.kind === 'v' && state.srs[x.key]); const onLadder = reviews.map(x => typeof state.srs[x.key].rl === 'number');
+      startSession('daily', {}); route(); let chip = null, steps = 0;
+      while (steps++ < 40) { const e = currentEntry(); if (e.preview && !e.previewDone) { dismissPreview(); continue; } if (e.item && e.item.kind === 'v' && typeof state.srs[e.item.key].rl === 'number') { chip = /錯題複習/.test(document.querySelector('.q-label').textContent); break; } answerCurrent(e.q.answer); if (currentEntry() && currentEntry().done) nextQuestion(); }
+      SESSION = null; document.body.classList.remove('practicing');
+      return JSON.stringify({ line: (hero.match(/待複習 \\d+（[^）]*）/) || [''])[0], onLadder, chip }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
+    r = json.loads(out[-1])
+    assert '其中錯題 3' in r['line'], r
+    assert r['onLadder'][:3] == [True, True, True] and not any(r['onLadder'][3:]), r
+    assert r['chip'] is True, r
 
 def test_today_offers_the_exam_pace_quotas_when_behind(b):
     js = """(() => { state.settings.examDate = addDays(todayStr(), 121); Object.assign(state.settings, { newVocabPerDay: 1, newGrammarPerDay: 1 }); saveState();
@@ -712,7 +758,7 @@ MIST_SEED = """(() => { const t = todayStr(); const gs = REG.grammar.filter(g =>
 def test_mistake_loop_grades_once_per_day(b):
     js = """(() => { const t = todayStr(); const m0 = state.mistakes[0]; const u = state.mistakes[3];   // MIST_SEED: m0 linked (count 5), u unlinked
       location.hash = '#/mistakes'; route(); const entry = document.querySelector('[data-act=mloop-start]'); const label = entry ? entry.textContent : null;
-      state.srs[m0.key].d = 10;   // a hard item: one 記得 does not lift it to 熟悉, so it stays in the notebook for the later rounds
+      state.srs[m0.key].rl = 0;   // on the relearning ladder: one 記得 moves it a step, so it stays in the notebook for the later rounds
       ACTIONS['mloop-start'](); const first = MLOOP.queue[0] === m0.id; const n0 = state.srs[m0.key].n;
       ACTIONS['mloop-flip'](); ACTIONS['mloop-rate']({ dataset: { g: 'good' } }); const n1 = state.srs[m0.key].n; const last1 = state.srs[m0.key].last;
       // the same card in a later round today: no second SRS write, but the notebook still notes the look
@@ -730,10 +776,10 @@ def test_mistake_loop_grades_once_per_day(b):
     assert r['n0'] == 14 and r['n1'] == 15 and r['last1'] and r['n2'] == 15 and r['count'] == 6 and r['due'] >= 1, r
     assert r['uActive'] and r['done'] and r['spokenIsWord'] and r['spokenU'], r
 
-def test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days(b):
+def test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days(b):
     js = """(() => { const t = todayStr(); const m0 = state.mistakes[0]; const u = state.mistakes[3]; const out = {};
-      onCorrectForMistake({ key: m0.key }); out.linkedStillActive = !m0.mastered;
-      state.srs[m0.key].b = 3; onCorrectForMistake({ key: m0.key }); out.linkedMastered = m0.mastered;
+      state.srs[m0.key].rl = 1; onCorrectForMistake({ key: m0.key }); out.linkedStillActive = !m0.mastered;   // still on the relearning ladder
+      delete state.srs[m0.key].rl; onCorrectForMistake({ key: m0.key }); out.linkedMastered = m0.mastered;   // ladder walked (or a legacy entry with none): leaves
       onCorrectForMistake({ mistakeId: u.id }); onCorrectForMistake({ mistakeId: u.id }); out.unlinkedSameDay = !u.mastered;
       u.okDays = [addDays(t, -1)]; onCorrectForMistake({ mistakeId: u.id }); out.unlinkedTwoDays = u.mastered;
       const m1 = state.mistakes[1]; state.srs[m1.key].b = 1; markKnown(m1.key); out.knownMasters = m1.mastered;
@@ -910,7 +956,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_load_cap_replaces_the_daily_goal_and_brakes_new_items_in_order, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_today_offers_the_exam_pace_quotas_when_behind, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_load_cap_replaces_the_daily_goal_and_brakes_new_items_in_order, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_today_offers_the_exam_pace_quotas_when_behind, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
@@ -918,7 +964,7 @@ if __name__ == "__main__":
              test_tools_page_has_an_expandable_api_guide_for_every_provider,
              test_stats_shows_the_past_week_of_practice_and_what_was_learned, test_reaching_the_learned_level_records_the_date, test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading,
              test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them,
-             test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
+             test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
              test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model]

@@ -807,12 +807,14 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '68';   // keep equal to the number in sw.js CACHE ('nq-v68'); scripts/test.sh checks it
+const APP_VERSION = '69';   // keep equal to the number in sw.js CACHE ('nq-v69'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '68', from: '36', date: '2026-10-27', items: [
+  { v: '69', from: '36', date: '2026-10-27', items: [
+    '錯題自動排進每日練習：單字、文法、漢字答錯後，第 1、3、7 天各複習一次（答對才往下一步，中途再錯就重來），三次都對才回到正常間隔並自動離開錯題本。首頁待複習會標「其中錯題 N」，場內排在複習的前段，題目上標「錯題複習 n/3」；不用再自己翻錯題本，快速過一輪保留當額外的翻卡。',
+    '每天負荷上限預設改為 100（原本 40 的一律升到 100，自己調過的不動），設定頁最高 300。上限只壓新題，到期複習永遠全出，所以總量會隨學過的內容增加；考前一天幾百題是正常的。',
     '首頁與練習中的「題」統一指今天的項目（到期複習與新題）：細項加總等於「共 N 題」，按鈕是這一組的項目數，圓環是「今天答過的項目／今天的項目」，做完剛好填滿；練習畫面的計數只數項目，換個方式再考與答錯再練另標「加考 n」，不再一邊做一邊變多。',
     '修正：每日練習最後一題按「看結果」沒有反應（v65 改圓環後結算頁壞掉）。結算頁的圓環和「今天還有 N 題」改成和首頁一樣算今天的工作。課程頁的入門說明不再提「每日目標」。',
     '「每日目標」改成「每天負荷上限」（預設 40，舊設定低於 40 的一律改成 40）：只當煞車用，當天到期複習加新題超過它時先減新單字（最少減到額度一半），再停新漢字、新聽力，到期的複習永遠不減。首頁圓環改成「今天做了 N／今天的工作」，做完剛好填滿，和「今天完成了」一致。',
@@ -908,7 +910,7 @@ function markTarget(ex, w) {
 // ---------- default state ----------
 function defaultSettings() {
   return {
-    loadCap: 40,             // 每天負荷上限: when due reviews + new items exceed it, new items shrink (words to half, then kanji, then listening)
+    loadCap: 100,            // 每天負荷上限: when due reviews + new items exceed it, new items shrink (words to half, then kanji, then listening)
     sessionSize: 20,
     newVocabPerDay: 8,
     newGrammarPerDay: 6,
@@ -999,6 +1001,9 @@ function normalizeState(s) {
   // v65: 每日目標 became 每天負荷上限 (a brake, not a target); an old goal below 40 would brake every day
   if (!(s && s.settings && 'loadCap' in s.settings)) out.settings.loadCap = Math.max(40, Number(out.settings.dailyGoal) || 0);
   delete out.settings.dailyGoal;
+  // v69: the v65 default of 40 became 100 (reviews are never cut, so 40 braked the new items within weeks); raised once, a cap set by hand stays
+  if (out.settings.loadCap === 40 && !out.settings.capRaised) out.settings.loadCap = 100;
+  out.settings.capRaised = true;
   ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
@@ -1289,6 +1294,13 @@ function recordFormat(rec, fmt, ok, field = 'f') {   // words keep `f` (counts t
 function formatsPassed(rec) { return rec && rec.f ? Object.values(rec.f).filter(x => x[0] > 0).length : 0; }
 const LEECH_LAPSES = 4;
 const GRADE = { again: 1, hard: 2, good: 3, easy: 4 };
+// 錯題重學階梯: a missed word, grammar item or kanji comes back after 1 day, then 2 more, then 4 more (days 1, 3, 7); three right
+// answers in a row hand it back to FSRS spacing, a miss on the way restarts it. `rl` on the record is the step reached; the
+// notebook lists exactly the items on the ladder. Listening and reading stay off it (hearing a dialogue again within days
+// tests memory of the answer, not listening).
+const RELEARN_GAPS = [2, 4];
+const RELEARN_KINDS = /^[vgk]:/;
+function onLadder(key) { const r = state.srs[key]; return Boolean(r) && typeof r.rl === 'number'; }
 function srsGet(key) { return state.srs[key] || null; }
 
 function fsrsD0(g) { return clamp(FSRS_W[4] - (g - 3) * FSRS_W[5], 1, 10); }
@@ -1363,6 +1375,10 @@ function srsAnswer(key, correct, opt = {}) {
   r.due = g === 1 ? addDays(t, 1) : addDays(t, fsrsDays(r.s, key));
   // a dialogue heard again within days tests memory of the answer, not listening: at least two weeks, then six+
   if (key.startsWith('l:') && g > 1) r.due = addDays(t, Math.max(daysBetween(t, r.due), r.ok >= 2 ? 45 : 14));
+  if (RELEARN_KINDS.test(key)) {
+    if (g === 1) r.rl = 0;
+    else if (typeof r.rl === 'number') { if (r.rl < RELEARN_GAPS.length) { r.due = addDays(t, RELEARN_GAPS[r.rl]); r.rl++; } else delete r.rl; }
+  }
   r.last = t;
   if ((r.lapse || 0) >= LEECH_LAPSES) r.leech = true;
   if (isNew) {
@@ -1482,8 +1498,8 @@ function onCorrectForMistake(q) {
   const t = todayStr();
   m.streak = (m.streak || 0) + 1; m.last = t;
   if (m.key && REG.byKey.get(m.key)) {
-    const r = state.srs[m.key];                       // linked to the course: it leaves when the schedule says 熟悉
-    if (r && r.b >= SRS_LEARNED) m.mastered = true;
+    const r = state.srs[m.key];                       // linked to the course: it leaves once the relearning ladder is walked
+    if (r && typeof r.rl !== 'number') m.mastered = true;
   } else {
     m.okDays = [...new Set((m.okDays || []).concat(t))].slice(-5);   // hand-made / legacy: right on two different days
     if (m.okDays.length >= 2) m.mastered = true;
@@ -3003,7 +3019,7 @@ function dailyPlan(size = state.settings.sessionSize) {
   const fullV = Math.max(0, maxV - state.today.newV);
   let wantV = fullV;
   let over = dayTotal(state.dailyLogs[t]) + dueV.length + dueG.length + ex.dueK.length + ex.dueL.length + ex.dueR.length
-    + wantG + wantV + ex.newK.length + ex.newL.length + ex.newR.length - (Number(s.loadCap) || 40);
+    + wantG + wantV + ex.newK.length + ex.newL.length + ex.newR.length - (Number(s.loadCap) || 100);
   if (over > 0) { const floorV = Math.max(0, Math.min(Math.ceil(maxV / 2), maxV) - state.today.newV); const cut = Math.max(0, Math.min(over, wantV - floorV)); wantV -= cut; over -= cut; }
   const cutK = over > 0 ? Math.min(over, ex.newK.length) : 0; over -= cutK;
   const cutL = over > 0 ? Math.min(over, ex.newL.length) : 0; over -= cutL;
@@ -3017,7 +3033,8 @@ function dailyPlan(size = state.settings.sessionSize) {
   const newG = newGrammarCandidates().slice(0, wantG);
   const newV = newVocabCandidates(vPool, n4Open).slice(0, wantV + Math.max(0, wantG - newG.length));
   const remaining = dueV.length + dueG.length + newV.length + newG.length + ex.dueK.length + ex.newK.length + ex.dueL.length + ex.newL.length + ex.dueR.length + ex.newR.length;
-  return Object.assign({ dueV, dueG, newV, newG, note, factor: ad.factor, size, n4Open, remaining }, ex);
+  const relearnN = dueV.concat(dueG).filter(x => onLadder(x.key)).length;   // reviews that are missed items on the ladder (shown as 其中錯題)
+  return Object.assign({ dueV, dueG, newV, newG, note, factor: ad.factor, size, n4Open, remaining, relearnN }, ex);
 }
 
 function interleave(vList, gList, mode) {
@@ -3038,7 +3055,8 @@ function interleave(vList, gList, mode) {
 function buildDailyQueue(size = state.settings.sessionSize) {
   const plan = dailyPlan(size);
   const byPractice = (a, b) => ((state.srs[a.key].ok || 0) - (state.srs[b.key].ok || 0)) || byDue(a, b);
-  const reviews = interleave(plan.dueV.concat(plan.dueK).sort(byDue), plan.dueG.slice().sort(byPractice), 'mixed');
+  const ladderFirst = (list) => list.filter(x => onLadder(x.key)).concat(list.filter(x => !onLadder(x.key)));   // missed items are the weakest: first
+  const reviews = interleave(ladderFirst(plan.dueV.concat(plan.dueK).sort(byDue)), ladderFirst(plan.dueG.slice().sort(byPractice)), 'mixed');
   const fresh = interleave(plan.newV.concat(plan.newK), plan.newG, 'mixed');
   const day = interleave(reviews, fresh, 'mixed');   // proportional, so each session of the day gets its share of new items
   const L = plan.dueL.concat(plan.newL); const R = plan.dueR.concat(plan.newR).slice(0, 1);
@@ -3047,8 +3065,8 @@ function buildDailyQueue(size = state.settings.sessionSize) {
   const take = day.slice(0, Math.max(0, size - Ls.length - R.length));
   const isNew = (x) => !state.srs[x.key];
   // within the session: reviews shuffled, new items after them (a new word gets its preview card first)
-  const vList = shuffle(take.filter(x => x.kind !== 'g' && !isNew(x))).concat(take.filter(x => x.kind !== 'g' && isNew(x)));
-  const gList = shuffle(take.filter(x => x.kind === 'g' && !isNew(x))).concat(take.filter(x => x.kind === 'g' && isNew(x)));
+  const vList = ladderFirst(shuffle(take.filter(x => x.kind !== 'g' && !isNew(x)))).concat(take.filter(x => x.kind !== 'g' && isNew(x)));
+  const gList = ladderFirst(shuffle(take.filter(x => x.kind === 'g' && !isNew(x)))).concat(take.filter(x => x.kind === 'g' && isNew(x)));
   const items = interleave(vList, gList, state.settings.order);
   // listening spread through the session, the reading passage last
   Ls.forEach((x, i) => items.splice(Math.min(items.length, Math.round((i + 1) * items.length / (Ls.length + 1)) + i), 0, x));
@@ -3313,7 +3331,7 @@ function renderPractice() {
     </div>
     ${SESSION.idx === 0 && !answered && SESSION.meta && SESSION.meta.note ? `<div class="plan-note">${esc(SESSION.meta.note)}</div>` : ''}
     <div class="q-card">
-      <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip chip-warn">再練一次</span>' : ''}${e.encore ? '<span class="chip chip-warn">換個方式再考</span>' : ''}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
+      <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip chip-warn">再練一次</span>' : ''}${e.encore ? '<span class="chip chip-warn">換個方式再考</span>' : ''}${rec && typeof rec.rl === 'number' && !e.requeued && !e.encore && !(e.srs && e.srs.isNew) ? `<span class="chip chip-warn" title="答錯過的題：第 1、3、7 天各複習一次，三次都對才離開錯題本">錯題複習 ${rec.rl + 1}/3</span>` : ''}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
       <div class="q-instr">${esc(q.instr || '')}</div>
       ${q.passageHtml ? `<div class="panel jp mb-3 passage">${q.passageHtml}</div>` : ''}
       ${stem ? `<div class="q-stem jp ${q.stemClass || ''}">${stem}</div>` : ''}
@@ -3979,7 +3997,7 @@ function renderToday(view) {
   } else {
     heroBody = `
       <div class="plan-line">
-        <span>待複習 <b>${reviewN}</b>（單字 ${plan.dueV.length}・文法 ${plan.dueG.length}）</span>
+        <span>待複習 <b>${reviewN}</b>（單字 ${plan.dueV.length}・文法 ${plan.dueG.length}${plan.relearnN ? `・其中錯題 ${plan.relearnN}` : ''}）</span>
         <span>新內容 <b>${newN}</b>（單字 ${plan.newV.length}・文法 ${plan.newG.length}）</span>
         ${extraN ? `<span>另有 <b>${extraN}</b>（${extraText}）</span>` : ''}
         <span>共 <b>${plan.remaining}</b> 題</span>
@@ -4022,7 +4040,7 @@ function renderToday(view) {
       <div class="hero">
         <div>
           <h2>${plan.remaining === 0 ? '今天完成了' : '今日練習'}</h2>
-          <div class="small muted mt-1">每一題都是今天到期的複習或今天的新內容；答錯會在幾題後再練一次，明天再正式複習。答對的越熟出現得越少。</div>
+          <div class="small muted mt-1">每一題都是今天到期的複習或今天的新內容；答錯的幾題後再練一次，之後第 1、3、7 天各複習一次，三次都對才離開錯題本。答對的越熟出現得越少。</div>
           ${heroBody}
         </div>
         ${ringHtml(prog.done / Math.max(1, prog.total), `<b>${prog.done}</b><div class="tiny muted">/ ${prog.total} 題</div>`, 110)}
@@ -5926,7 +5944,7 @@ function settingsLearn() {
   return `
     <div class="setting-row"><div><div class="label">我已有基礎</div><div class="hint">一鍵套用：每天新單字 20、新文法 10、新漢字 5，現在就開放 N4 單字，題目不預設顯示中文。之後仍可逐項調整。</div></div>
       <button type="button" class="btn btn-sm" data-act="apply-experienced">套用</button></div>
-    ${numRow('loadCap', '每天負荷上限', '當天到期複習加新題超過這個數時，先減新單字（最少減到額度一半），再停新漢字、新聽力；到期的複習不會減。首頁圓環顯示的是當天實際的題數。', 10, 200, 5, '題')}
+    ${numRow('loadCap', '每天負荷上限', '當天到期複習加新題超過這個數時，先減新單字（最少減到額度一半），再停新漢字、新聽力；到期的複習不會減，所以總量會隨學過的內容增加。考前一天幾百題是正常的，可以拉高。', 10, 300, 5, '題')}
     ${numRow('sessionSize', '每組練習題數', '按「開始練習」時一次出幾題；當天到期與新題會分成幾組出完。', 5, 60, 5, '題')}
     ${numRow('newVocabPerDay', '每天新單字上限', '其餘時間用來複習到期的單字。', 0, 40, 1, '個')}
     ${numRow('newGrammarPerDay', '每天新文法題上限', '照講義段落順序從目前單元挑；本單元出完會接著下一單元並自動切換。', 0, 30, 1, '題')}
