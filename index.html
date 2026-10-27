@@ -795,12 +795,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '49';   // keep equal to the number in sw.js CACHE ('nq-v49'); scripts/test.sh checks it
+const APP_VERSION = '50';   // keep equal to the number in sw.js CACHE ('nq-v50'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '49', from: '36', date: '2026-10-27', items: [
+  { v: '50', from: '36', date: '2026-10-27', items: [
+    '文法句意題改良：助詞題改問「畫線的助詞在這句表示什麼」，選項是同單元的其他考點；其他題目的錯誤選項改挑字面最相近的句子，不再一眼就能排除。',
     '學習法調整：預習卡看完後，題目改在 4–6 題之後才出；新單字在同一組只再考一次（隔 8 題以上），第二次改成隔天複習；新文法考點第一次出現先看一句話規則與一個例句；每日夾帶的錯題保持兩天以上的間隔；答錯後可按「手滑，不算」，不進錯題本、排程維持原狀。',
     '主選單：學習分析移到錯題本原本的位置，錯題本往下。',
     '錯題本改版：每天練習自動夾帶幾題錯題（錯最多、最久沒練的優先，設定可調）；題目達到「熟悉」就自動移到已掌握，手動／舊錯題則是隔天以上答對兩次；頁面改成一行一題的緊湊列表，可依類別篩選、排序，或依文法考點分組並直接練該考點；已掌握可一鍵清空。',
@@ -2308,16 +2309,48 @@ function makeVocabQuestion(v0, ctx = {}) {
 
 // ---------- grammar ----------
 // Chinese meanings of other items of the same unit (then nearby units) as 句意 distractors
+// 句意 distractors: the sentences that LOOK most like the right one (shared content characters), so the grammar has to be read;
+// a near-copy is skipped because it could pass as a second right answer.
+const ZH_STOP = new Set([...'的了是我你他她在有不也和就都很這那個一要會嗎呢吧']);
+function zhContent(z) { const out = new Set(); for (const c of String(z || '')) if (/[\u4e00-\u9fff]/.test(c) && !ZH_STOP.has(c)) out.add(c); return out; }
 function grammarMeaningDistractors(g) {
-  const seen = new Set([g.zh]); const out = [];
-  const pools = [REG.grammar.filter(x => x.u === g.u && x.key !== g.key), REG.grammar.filter(x => x.u !== g.u)];
-  for (const pool of pools) { for (const x of shuffle(pool)) { if (x.zh && !seen.has(x.zh) && !zhOverlap(x.zh, g.zh)) { seen.add(x.zh); out.push(x.zh); if (out.length === 3) return out; } } }
+  if (!g.zh) return null;
+  const mine = zhContent(g.zh); const seen = new Set([g.zh]); const scored = [];
+  REG.grammar.forEach(x => {
+    if (x.key === g.key || !x.zh || seen.has(x.zh)) return;
+    seen.add(x.zh);
+    const theirs = zhContent(x.zh); let n = 0; theirs.forEach(c => { if (mine.has(c)) n++; });
+    if (n >= Math.max(3, Math.min(mine.size, theirs.size) * 0.85)) return;
+    scored.push({ zh: x.zh, s: n + (x.u === g.u ? 0.5 : 0) + Math.random() * 0.4 });
+  });
+  scored.sort((a, b) => b.s - a.s);
+  const out = scored.slice(0, 3).map(x => x.zh);
   return out.length === 3 ? out : null;
+}
+// 用法 question for a particle blank: "what does this に express here?" with the unit's other points as options (same phase as a
+// reserve). A point for the same particle is a distractor only when its name shares little with the right one — otherwise it is
+// the same usage under another name and would be a second right answer.
+const PARTICLES = new Set(['に', 'で', 'を', 'が', 'へ', 'と', 'は', 'から', 'まで', 'の', 'も', 'より', 'か', 'や', 'でも', 'だけ', 'しか', 'ほど', 'くらい', 'ぐらい', 'など', 'ので', 'のに', 'けど', 'ても', 'たら', 'ば', 'なら']);
+const PURE_PT = /^[\u4e00-\u9fff]{2,8}$/;
+function ptShared(a, b) { const A = new Set(a); let n = 0; for (const c of new Set(b)) if (A.has(c)) n++; return n; }
+function grammarUsageDistractors(g) {
+  if (!PARTICLES.has(g.a) || !PURE_PT.test(g.pt || '')) return null;
+  const ph = unitById(g.u).ph;
+  const pools = [REG.grammar.filter(x => x.u === g.u), REG.grammar.filter(x => x.u !== g.u && unitById(x.u).ph === ph)];
+  const picked = []; const seen = new Set([g.pt]);
+  for (const pool of pools) {
+    const pts = new Map();
+    pool.forEach(x => { if (!PURE_PT.test(x.pt || '') || seen.has(x.pt)) return; const e = pts.get(x.pt) || pts.set(x.pt, { pt: x.pt, same: false }).get(x.pt); if (x.a === g.a) e.same = true; });
+    const ok = [...pts.values()].filter(e => ptShared(e.pt, g.pt) < Math.min(e.pt.length, g.pt.length) && !(e.same && ptShared(e.pt, g.pt) >= 2));
+    shuffle(ok.filter(e => e.same)).concat(shuffle(ok.filter(e => !e.same))).forEach(e => { if (picked.length < 3 && !seen.has(e.pt)) { seen.add(e.pt); picked.push(e.pt); } });
+    if (picked.length === 3) return picked;
+  }
+  return null;
 }
 function grammarFormats(g, opts, ans) {
   const f = ['g-choice'];
   if (opts.filter(o => o !== ans).length >= 3) f.push('g-correct');
-  if (g.zh && grammarMeaningDistractors(g)) f.push('g-meaning');
+  if (g.zh && (grammarUsageDistractors(g) || grammarMeaningDistractors(g))) f.push('g-meaning');
   return f;
 }
 function pickGrammarFormat(g, rec, opts, ans, avoid) {
@@ -2373,13 +2406,24 @@ function makeGrammarQuestion(g, ctx = {}) {
     if (fmt === 'g-meaning') {
       const full = b.pre + ans + b.post;
       q.fmt = 'g-meaning';
-      q.instr = '這句話的意思是？';
-      q.stemHtml = furi(full);
       q.fullJp = full;
       q.zhText = '';
-      q.mistakePrompt = `${full} 的意思`;
-      finalizeOptions(q, g.zh, grammarMeaningDistractors(g), false);
-      q.wide = true;
+      const usage = grammarUsageDistractors(g);
+      if (usage) {   // particle: ask what it expresses here, options are point names
+        q.instr = `畫線的「${esc(jaPlain(ans))}」在這句表示什麼？`;
+        q.stemHtml = `${furi(b.pre)}<span class="uline">${furi(ans)}</span>${furi(b.post)}`;
+        q.mistakePrompt = `${full} 中「${jaPlain(ans)}」的用法`;
+        finalizeOptions(q, g.pt, usage, false);
+        q.answerText = g.pt;
+        q.wide = false;
+      } else {
+        q.instr = '這句話的意思是？';
+        q.stemHtml = furi(full);
+        q.mistakePrompt = `${full} 的意思`;
+        finalizeOptions(q, g.zh, grammarMeaningDistractors(g), false);
+        q.answerText = g.zh;
+        q.wide = true;
+      }
       return q;
     }
     q.fmt = 'g-choice';
@@ -5898,7 +5942,7 @@ Object.assign(ACTIONS, {
    ========================================================================== */
 const FMT_NAME = {
   'v-meaning': '單字・看字選意思', 'v-recall': '單字・中翻日', 'v-cloze': '單字・例句填空', 'v-reading': '單字・漢字讀音', 'v-kanji': '單字・漢字寫法',
-  'v-listen': '單字・聽音選意思', 'v-spell': '單字・假名拼字', 'v-match': '單字・配對', 'v-sentence': '自訂句子', 'g-choice': '文法・填空', 'g-meaning': '文法・句意', 'g-order': '文法・排序',
+  'v-listen': '單字・聽音選意思', 'v-spell': '單字・假名拼字', 'v-match': '單字・配對', 'v-sentence': '自訂句子', 'g-choice': '文法・填空', 'g-meaning': '文法・句意／用法', 'g-order': '文法・排序',
   'g-correct': '文法・選正確句', 'g-conj': '文法・動詞變化', 'g-adj': '文法・形容詞變化', 'g-identify': '文法・判斷動詞形',
   'k-meaning': '漢字・意思', 'k-shape': '漢字・選字', 'k-read': '漢字・讀音', 'l-dialog': '聽力・對話', 'l-resp': '聽力・即時應答',
   'l-scene': '聽力・情境表達', 'r-passage': '閱讀', 'm-card': '錯題卡'

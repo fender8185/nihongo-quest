@@ -375,7 +375,7 @@ def test_grammar_choice_item_builds_three_formats_on_demand(b):
       const c = makeGrammarQuestion(g, { forceFmt: 'g-correct' }); const m = makeGrammarQuestion(g, { forceFmt: 'g-meaning' }); const o = makeGrammarQuestion(g, { forceFmt: 'g-choice' });
       const txt = (q) => q.options.map(x => x.text);
       return JSON.stringify({ cFmt: c.fmt, cAns: txt(c)[c.answer] === full, cAll: txt(c).every(t => t.startsWith(b0.pre) && t.endsWith(b0.post)) && new Set(txt(c)).size === 4,
-        mFmt: m.fmt, mAns: txt(m)[m.answer] === g.zh, mZhHidden: m.zhText === '', mStem: jaPlain(m.fullJp) === jaPlain(full), mDistinct: new Set(txt(m)).size === 4,
+        mFmt: m.fmt, mAns: txt(m)[m.answer] === g.zh || txt(m)[m.answer] === g.pt, mZhHidden: m.zhText === '', mStem: jaPlain(m.fullJp) === jaPlain(full), mDistinct: new Set(txt(m)).size === 4,
         oFmt: o.fmt, oAns: txt(o)[o.answer] === parenReadingToBracket(g.a) }); })()"""
     r = json.loads(ev(b, js))
     assert r['cFmt'] == 'g-correct' and r['cAns'] and r['cAll'], r
@@ -613,6 +613,31 @@ def test_matching_flashes_a_wrong_pair_and_explains_every_pair_afterwards(b):
     assert r['done'] and r['allWords'], r
 
 TESTS += [test_matching_flashes_a_wrong_pair_and_explains_every_pair_afterwards]
+
+# ---- 2026-10-27: 句意 distractors — particle questions ask for the usage (point names), others use look-alike sentences ----
+def test_particle_questions_ask_for_the_usage_with_other_points_as_options(b):
+    js = """(() => { const g = REG.grammar.find(x => x.u === 'm1' && (x.t || 'choice') === 'choice' && x.pt === '動作場所'); srsAnswer(g.key, true);
+      const q = makeGrammarQuestion(g, { forceFmt: 'g-meaning' }); const opts = q.options.map(o => o.text);
+      const sameParticle = (pt) => REG.grammar.some(y => y.pt === pt && y.a === g.a);
+      const shared = (a, b2) => [...new Set(a)].filter(c => b2.includes(c)).length;
+      const badSynonym = opts.filter(o => o !== g.pt && sameParticle(o) && shared(o, g.pt) >= 2);
+      return JSON.stringify({ fmt: q.fmt, ans: opts[q.answer], n: new Set(opts).size, instr: q.instr, allPts: opts.every(o => REG.grammar.some(y => y.pt === o)), badSynonym, hasExistence: opts.includes('靜態存在場所') || opts.some(o => /存在/.test(o)), stem: /uline/.test(q.stemHtml), zh: q.zhText }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['fmt'] == 'g-meaning' and r['ans'] == '動作場所' and r['n'] == 4 and r['allPts'] and r['badSynonym'] == [] and r['stem'] and r['zh'] == '', r
+    assert '用法' in r['instr'] or '表示' in r['instr'], r
+
+def test_meaning_distractors_for_other_items_are_look_alike_sentences(b):
+    js = """(() => { const g = REG.grammar.find(x => x.u === 'm7' && (x.t || 'choice') === 'choice' && x.zh && !/^[にでをがへとはの]$/.test(x.a)); srsAnswer(g.key, true);
+      const content = (z) => [...z].filter(c => /[\u4e00-\u9fff]/.test(c) && !'的了是我你他她在有不也和就都很'.includes(c));
+      const shared = (z) => content(z).filter(c => g.zh.includes(c)).length;
+      const q = makeGrammarQuestion(g, { forceFmt: 'g-meaning' }); const d = q.options.map(o => o.text).filter(t => t !== g.zh);
+      const pool = REG.grammar.filter(x => x.key !== g.key && x.zh && x.zh !== g.zh).map(x => shared(x.zh)); const best = pool.sort((a, b2) => b2 - a).slice(0, 3);
+      return JSON.stringify({ fmt: q.fmt, ans: q.options[q.answer].text === g.zh, d: d.map(shared), best, nd: d.length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['fmt'] == 'g-meaning' and r['ans'] and r['nd'] == 3, r
+    assert min(r['d']) >= 2 and r['best'][0] >= 2, r   # every distractor shares content characters with the right sentence
+
+TESTS += [test_particle_questions_ask_for_the_usage_with_other_points_as_options, test_meaning_distractors_for_other_items_are_look_alike_sentences]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
