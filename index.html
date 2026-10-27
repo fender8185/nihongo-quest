@@ -807,14 +807,14 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '71';   // keep equal to the number in sw.js CACHE ('nq-v71'); scripts/test.sh checks it
+const APP_VERSION = '72';   // keep equal to the number in sw.js CACHE ('nq-v72'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '71', from: '70', date: '2026-10-28', items: [
+  { v: '72', from: '70', date: '2026-10-28', items: [
     '語音服務新增「雲端音檔」並設為預設：教材的一萬段句子已經用 Google Neural2 生成放在雲端，不用設定任何金鑰；播到哪句抓哪句（單字幾 KB、句子幾十 KB），播過的留在裝置上，離線也能聽；找不到的句子（自訂、AI 生成）退回瀏覽器語音。',
-    '設定 › 語音新增「下載全部音檔」（約 200 MB）：想完全離線用的人按一下，全部存進裝置；可中斷續跑，已下載的會略過。',
+    '設定 › 語音收合的「完全離線使用（進階）」裡有「下載全部音檔」（約 200 MB）：只給長時間沒網路的情況用，平常不建議按；可中斷續跑，已下載的會略過。',
   ] },
   { v: '69', from: '36', date: '2026-10-27', items: [
     '錯題自動排進每日練習：單字、文法、漢字答錯後，第 1、3、7 天各複習一次（答對才往下一步，中途再錯就重來），三次都對才回到正常間隔並自動離開錯題本。首頁待複習會標「其中錯題 N」，場內排在複習的前段，題目上標「錯題複習 n/3」；不用再自己翻錯題本，快速過一輪保留當額外的翻卡。',
@@ -5972,9 +5972,11 @@ function settingsSpeech() {
   let engine = '';
   if (c.engine === 'cloud') {
     engine = `<div class="hint mt-2">教材的句子已經用 Google Neural2 預先生成放在雲端，播到哪句抓哪句，播過的會留在這個裝置上，離線也能聽；找不到的句子（自訂、AI 生成的題目）改用瀏覽器語音。語速用上面的滑桿調。</div>
-      <div class="row-wrap mt-3"><button type="button" class="btn" data-act="cloud-dl-all">下載全部音檔（約 200 MB）</button><button type="button" class="btn btn-ghost" data-act="cloud-dl-stop">停止</button></div>
-      <div class="hint mt-1">想完全離線用再按；平常不用，播過的句子本來就會留下來。可以中斷，再按會接著下載，已下載的會略過。</div>
-      <div id="cloudDlBox" class="small mt-2">${cloudDlHtml()}</div>
+      <details class="mt-3"><summary class="small muted" style="cursor:pointer">完全離線使用（進階，通常不需要）</summary>
+        <div class="hint mt-2"><b>不特別需要離線請不要按。</b>平常播到哪句抓哪句、播過的就留在裝置上，不會重複下載；這個按鈕會一次抓完全部約 200 MB，只適合長時間沒有網路（長途飛機、出國沒流量）的情況。可以中斷，再按會接著下載，已下載的會略過。</div>
+        <div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-all">下載全部音檔（約 200 MB）</button><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-stop">停止</button></div>
+        <div id="cloudDlBox" class="small mt-2">${cloudDlHtml()}</div>
+      </details>
       <details class="mt-4"><summary class="small muted" style="cursor:pointer">管理者：生成雲端音檔</summary>
         <div class="hint mt-2">把全部教材句子生成一次並上傳到 Supabase 的 ${CLOUD_AUDIO.bucket}。兩把金鑰只在這一次執行中使用：不儲存、不同步、關掉頁面就消失；跑完請到 Supabase 後台刪掉 Secret key。已存在的檔案會略過，可以中斷再續跑。</div>
         <div class="field mt-3"><label>Google Cloud API Key</label><input class="input" type="password" autocomplete="off" id="cloudGoogleKey" value="${esc(c.googleKey || '')}" /></div>
