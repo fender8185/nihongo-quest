@@ -639,6 +639,53 @@ def test_meaning_distractors_for_other_items_are_look_alike_sentences(b):
 
 TESTS += [test_particle_questions_ask_for_the_usage_with_other_points_as_options, test_meaning_distractors_for_other_items_are_look_alike_sentences]
 
+# ---- 2026-10-27: learners with a base — open N4 words early, bulk 我會了, 我會了 on the preview card, one-click fast settings ----
+def test_n4_words_can_be_opened_before_n5_is_finished(b):
+    js = """(() => { const n4 = REG.vocab.find(x => x.builtin && x.lv === 'N4' && !state.srs[x.key]); const was = state.settings.n4Words; state.settings.n4Words = 'auto';
+      const out = { left: n5WordsLeft(), closed: !n4WordsOpen() && !inDailyReach(n4) && !deckAllowsN4('all') };
+      state.settings.n4Words = 'open'; out.open = n4WordsOpen() && inDailyReach(n4) && deckAllowsN4('all');
+      renderToday(document.getElementById('view')); out.text = document.getElementById('view').textContent.includes('N4 已開放');
+      state.settings.n4Words = was; saveState(); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['left'] > 0 and r['closed'] and r['open'] and r['text'], r
+
+def test_bulk_i_know_marks_the_filtered_words_and_can_be_undone(b):
+    js = """(() => { const theme = vocabThemes().find(g => g.c && REG.vocab.filter(v => v.builtin && vocabTheme(v) === g.c && !state.srs[v.key]).length >= 3).c;
+      const words = REG.vocab.filter(v => v.builtin && vocabTheme(v) === theme); const snapshot = JSON.stringify(words.map(v => state.srs[v.key] || null));
+      const todo = words.filter(v => !(state.srs[v.key] && state.srs[v.key].known)).length;
+      history.replaceState(null, '', '#/vocab/list?c=' + encodeURIComponent(theme)); renderVocabList(document.getElementById('view'), { c: theme });
+      const btn = document.querySelector('[data-act=vocab-known-all]'); const out = { btn: !!btn, count: btn ? Number(btn.dataset.n) : 0, todo };
+      ACTIONS['vocab-known-all'](); out.known = words.filter(v => state.srs[v.key] && state.srs[v.key].known).length; out.total = words.length;
+      out.undoBtn = !!document.querySelector('[data-act=vocab-known-undo]');
+      ACTIONS['vocab-known-undo'](); out.restored = JSON.stringify(words.map(v => state.srs[v.key] || null)) === snapshot; out.undoGone = !document.querySelector('[data-act=vocab-known-undo]');
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['btn'] and r['count'] == r['todo'] and r['known'] == r['total'] and r['undoBtn'] and r['restored'] and r['undoGone'], r
+
+def test_preview_card_has_i_know_which_skips_the_word_and_its_encore(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key]); const others = REG.vocab.filter(x => x.builtin && x.key !== v.key).slice(0, 3);
+      startSession('items', { items: [v, ...others] }); renderPractice();
+      const btn = document.querySelector('.pr-actions [data-act=preview-known]'); const out = { btn: !!btn, len0: SESSION.entries.length };
+      ACTIONS['preview-known'](); const r = state.srs[v.key];
+      Object.assign(out, { known: r && r.known === 1, label: srsLevelLabel(r, v.key), gone: SESSION.entries.every(x => !x.item || x.item.key !== v.key), len: SESSION.entries.length, idx: SESSION.idx, next: currentEntry() && currentEntry().item.key !== v.key });
+      SESSION = null; document.body.classList.remove('practicing'); delete state.srs[v.key]; saveState(); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['btn'] and r['known'] and r['label'] == '已熟練' and r['gone'] and r['len'] == 3 and r['idx'] == 0 and r['next'], r
+
+def test_experienced_shortcut_applies_the_fast_settings_from_settings_and_the_level_picker(b):
+    js = """(() => { const keep = JSON.stringify(state.settings); const unit = state.currentUnit;
+      Object.assign(state.settings, { newVocabPerDay: 8, newGrammarPerDay: 6, n4Words: 'auto', showZh: true });
+      ACTIONS['apply-experienced'](); const s = state.settings; const out = { v: s.newVocabPerDay, g: s.newGrammarPerDay, n4: s.n4Words, zh: s.showZh };
+      Object.assign(state.settings, { newVocabPerDay: 8, n4Words: 'auto', showZh: true });
+      openModal('x', levelPickerHtml()); out.box = !!document.getElementById('startExperienced'); document.getElementById('startUnit').value = 'm7'; document.getElementById('startExperienced').checked = true;
+      ACTIONS['start-apply'](); out.unit = state.currentUnit; out.v2 = state.settings.newVocabPerDay; out.n42 = state.settings.n4Words;
+      Object.assign(state.settings, JSON.parse(keep)); state.currentUnit = unit; saveState(); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['v'] == 20 and r['g'] == 10 and r['n4'] == 'open' and r['zh'] is False, r
+    assert r['box'] and r['unit'] == 'm7' and r['v2'] == 20 and r['n42'] == 'open', r
+
+TESTS += [test_n4_words_can_be_opened_before_n5_is_finished, test_bulk_i_know_marks_the_filtered_words_and_can_be_undone, test_preview_card_has_i_know_which_skips_the_word_and_its_encore, test_experienced_shortcut_applies_the_fast_settings_from_settings_and_the_level_picker]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)

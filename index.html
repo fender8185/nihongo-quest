@@ -798,12 +798,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '57';   // keep equal to the number in sw.js CACHE ('nq-v57'); scripts/test.sh checks it
+const APP_VERSION = '58';   // keep equal to the number in sw.js CACHE ('nq-v58'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '57', from: '36', date: '2026-10-27', items: [
+  { v: '58', from: '36', date: '2026-10-27', items: [
+    '給已有基礎的人：設定與「依程度選擇起點」都有「我已有基礎」一鍵套用（每天新單字 20、新文法 10、新漢字 5、現在就開放 N4 單字、不預設顯示中文）；N4 單字不必再等 N5 全部學完（設定可選）；單字表可把目前篩選的字整批標成「我會了」並可復原；新字預習卡上也有「我會了」，按了就跳過這個字的題目。',
     '文法題庫補題：整併後題數不到 3 題的考點各補到 3 題，共新增 76 題填空（第 1–12 週 24 題、第 13–24 週 15 題、第 25–36 週 37 題），每題都經過出題函式與選項檢查。',
     '文法考點整併：原本 786 個零碎的考點標籤（同一件事常有三種叫法）依講義段落整併成 288 個，錯題本的依考點分組、學習分析的考點統計、練習時的考點輪替都跟著變合理；助詞用法題（「這個に表示什麼」）能用的考點從少數幾題擴大到全部助詞題。',
     'Gemini 更穩也更快：模型預設「自動」，被限額（429）、過載或 20 秒沒回應的模型會記住冷卻時間、自動換下一個，不再改動你的選擇；關閉模型的「思考」步驟，解析不再動輒等十幾秒；preview／thinking 類的實驗模型排到最後才用；全部限額時用白話說明幾秒後再試；AI 解析會在本機快取，同一題不再重問，並標示是哪個模型回答的。',
@@ -893,6 +894,7 @@ function defaultSettings() {
     listening: true,
     speechRate: 1.0,
     includeImported: 'words',  // off | words | all
+    n4Words: 'auto',           // auto: N4 words join once every N5 word has been seen | open: now (learners with a base)
     theme: 'dark',
     examDate: '2027-07-04',
     duolingoScore: 22,
@@ -1351,7 +1353,7 @@ function srsDots(b) {
 // `key` (optional) tells custom cards apart: they have fewer possible formats, so two passed formats are enough
 // 「我會了」: the learner vouches for a word. It counts as 已熟練 at once and comes back for a check in about six weeks;
 // answering it wrong later drops the vouch and the ordinary rules apply again. 取消 puts it at the 熟悉 threshold.
-function markKnown(key) {
+function markKnown(key, save = true) {
   const t = todayStr();
   let r = state.srs[key];
   if (!r) r = state.srs[key] = { b: 0, due: t, n: 0, ok: 0, ng: 0, st: 0, last: null, lapse: 0, intro: t, f: {} };
@@ -1360,7 +1362,7 @@ function markKnown(key) {
   if (!r.lrn) r.lrn = t;
   r.due = addDays(t, fsrsDays(r.s, key)); r.last = t;
   state.mistakes.forEach(m => { if (m.key === key && !m.mastered) { m.mastered = true; m.last = t; } });   // 我會了 clears it from the notebook
-  saveState();
+  if (save) saveState();
   return r;
 }
 function unmarkKnown(key) {
@@ -1494,7 +1496,7 @@ function vocabPool(level) {
 function vocabStats() {
   const t = todayStr();
   const out = { N5: { total: 0, learned: 0 }, N4: { total: 0, learned: 0 }, custom: { total: 0, learned: 0 }, due: 0, seen: 0, n5Left: n5WordsLeft() };
-  const n4Open = out.n5Left === 0;
+  const n4Open = n4WordsOpen();
   REG.vocab.forEach(v => {
     const bucket = !v.builtin ? out.custom : (v.lv === 'N4' ? out.N4 : out.N5);
     bucket.total++;
@@ -2767,13 +2769,15 @@ function byDue(a, b) {
 // What the daily mix may contain: grammar from the current unit and the units before it, and N4 words
 // only after every N5 word has been introduced once. Items further ahead keep their records and come
 // back when the learner gets there.
+// N4 words join the new-word pool once every N5 word has been seen, or earlier when the learner opens them (設定／我已有基礎)
+function n4WordsOpen() { return state.settings.n4Words === 'open' || n5WordsLeft() === 0; }
 function n5WordsLeft() {
   let n = 0;
   for (const v of REG.vocab) if (v.builtin && v.lv === 'N5' && !state.srs[v.key]) n++;
   return n;
 }
 function grammarInReach(g, curIdx = unitOrder(state.currentUnit)) { return unitOrder(g.u) <= curIdx; }
-function inDailyReach(it, n4Open = n5WordsLeft() === 0) {
+function inDailyReach(it, n4Open = n4WordsOpen()) {
   if (it.kind === 'g') return grammarInReach(it);
   return !it.builtin || it.lv !== 'N4' || n4Open;
 }
@@ -2888,7 +2892,7 @@ function dailyPlan(size = state.settings.sessionSize) {
   const t = todayStr();
   const s = state.settings;
   const ad = adaptiveFactor();
-  const n4Open = n5WordsLeft() === 0;
+  const n4Open = n4WordsOpen();
   const curIdx = unitOrder(state.currentUnit);
   const vPool = REG.vocab.filter(v => vocabEligibleForDaily(v, n4Open));
   const dueV = vPool.filter(v => { const r = state.srs[v.key]; return r && r.due <= t; }).sort(byDue);
@@ -3021,7 +3025,7 @@ function buildVocabQueue(filter = 'all', size = 20) {
   const t = todayStr();
   // choosing the N4 list or a theme on purpose opens N4 words right away
   const theme = filter.startsWith('c:') ? filter.slice(2) : null;
-  const n4Open = Boolean(theme) || filter === 'N4' || n5WordsLeft() === 0;
+  const n4Open = Boolean(theme) || filter === 'N4' || n4WordsOpen();
   const pool = REG.vocab.filter(v => theme ? (v.builtin && vocabTheme(v) === theme) : filter === 'all' ? vocabEligibleForDaily(v, n4Open) : filter === 'custom' ? !v.builtin : (v.builtin && v.lv === filter));
   const due = pool.filter(v => { const r = state.srs[v.key]; return r && r.due <= t; }).sort(byDue);
   const left = Math.max(0, state.settings.newVocabPerDay - state.today.newV);
@@ -3267,6 +3271,7 @@ function previewHtml(e, pct, total) {
       <div class="left">
         <button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>
         <button type="button" class="btn btn-sm btn-ghost" data-act="toggle-furi" title="切換振假名（F）">振假名：${FURI_LABEL[furiState()]}</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-act="preview-known" title="這個字我已經會了：標成已熟練、跳過它的題目，約六週後再確認">我會了</button>
       </div>
       <div class="right">
         <button type="button" class="btn btn-primary" data-act="preview-go" id="btnNext">開始作答 <span class="kbd" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button>
@@ -3893,7 +3898,7 @@ function renderToday(view) {
       <div class="card">
         <div class="card-head"><div class="card-title">單字</div><span class="chip">${vs.due} 待複習</span></div>
         <div class="small dim">N5 已熟悉 ${vs.N5.learned} / ${vs.N5.total}</div>
-        <div class="small dim">${vs.n5Left ? `N4：N5 單字都學過一次後開始（還剩 ${vs.n5Left} 個）` : `N4 已熟悉 ${vs.N4.learned} / ${vs.N4.total}`}</div>
+        <div class="small dim">${vs.n5Left && !n4WordsOpen() ? `N4：N5 單字都學過一次後開始（還剩 ${vs.n5Left} 個）` : `N4 ${vs.n5Left ? '已開放・' : ''}已熟悉 ${vs.N4.learned} / ${vs.N4.total}`}</div>
         ${vs.custom.total ? `<div class="small dim">自訂字卡 ${vs.custom.learned} / ${vs.custom.total}</div>` : ''}
         <div class="row-wrap mt-3"><button type="button" class="btn btn-sm" data-act="nav" data-route="#/vocab">翻字卡</button></div>
       </div>
@@ -4259,6 +4264,8 @@ function levelPickerHtml() {
       <button type="button" class="btn btn-primary" data-act="start-apply">設為目前單元</button>
     </div>
     <label class="switch mt-3"><input type="checkbox" id="startMarkPrev" /><span class="track"></span><span class="small">同時把之前的單元標為完成</span></label>
+    <label class="switch mt-2"><input type="checkbox" id="startExperienced" /><span class="track"></span><span class="small">我已有基礎：每天新單字 20、新文法 10，現在就開放 N4 單字，不預設顯示中文</span></label>
+    <p class="hint mt-2">已經會的單字可以到「單字 → 單字表」依級別或主題整批標成「我會了」，練習時的新字預習卡上也有「我會了」。</p>
     <details class="disclose mt-4">
       <summary>不確定從哪裡開始？用多鄰國（Duolingo）分數估計</summary>
       <p class="dim small mt-2">輸入多鄰國日語分數，系統會建議一個起點單元。這只是參考。</p>
@@ -4272,12 +4279,16 @@ function levelPickerHtml() {
       </div>
     </details>`;
 }
-// make `unit` the current unit; optionally mark every earlier unit as completed
-function applyStartUnit(unit, markPrev) {
+// 「我已有基礎」: faster new-item quotas, N4 words open now, no Chinese shown by default. Every value stays adjustable in 設定.
+const EXPERIENCED_SETTINGS = { newVocabPerDay: 20, newGrammarPerDay: 10, newKanjiPerDay: 5, n4Words: 'open', showZh: false };
+function applyExperienced() { Object.assign(state.settings, EXPERIENCED_SETTINGS); saveState(); }
+// make `unit` the current unit; optionally mark every earlier unit as completed and apply the 我已有基礎 settings
+function applyStartUnit(unit, markPrev, experienced = false) {
   if (!DATA.UNITS.some(u => u.id === unit)) return;
   state.currentUnit = unit;
   if (markPrev) DATA.UNITS.slice(0, unitOrder(unit)).forEach(u => { if (!state.completedUnits.includes(u.id)) state.completedUnits.push(u.id); });
-  saveState(); closeModal(); toast(`目前單元：${unitById(unit).weeks}・${unitById(unit).short}`); route();
+  if (experienced) applyExperienced();
+  saveState(); closeModal(); toast(`目前單元：${unitById(unit).weeks}・${unitById(unit).short}${experienced ? '・已套用「我已有基礎」設定' : ''}`); route();
 }
 
 Object.assign(ACTIONS, {
@@ -4294,11 +4305,12 @@ Object.assign(ACTIONS, {
     const rec = unitById(recommendUnit(v));
     document.getElementById('duoRec').innerHTML = `建議起點：<b>${esc(rec.weeks)}・${esc(rec.title)}</b>`;
   },
-  'start-apply': () => applyStartUnit(document.getElementById('startUnit').value, document.getElementById('startMarkPrev').checked),
+  'start-apply': () => applyStartUnit(document.getElementById('startUnit').value, document.getElementById('startMarkPrev').checked, (document.getElementById('startExperienced') || {}).checked),
+  'apply-experienced': () => { applyExperienced(); toast('已套用「我已有基礎」：每天新單字 20、新文法 10、N4 單字開放、不預設顯示中文'); if (modalOpen()) refreshSettings(); else route(); },
   'duo-apply': () => {
     const v = clamp(Number(document.getElementById('duoScore').value) || 22, 1, 160);
     state.settings.duolingoScore = v;
-    applyStartUnit(recommendUnit(v), document.getElementById('startMarkPrev').checked);
+    applyStartUnit(recommendUnit(v), document.getElementById('startMarkPrev').checked, (document.getElementById('startExperienced') || {}).checked);
   },
   'ai-note': (el) => aiUnitNote(el.dataset.unit, (document.getElementById('aiNoteQ') || {}).value || '', el),
   'ai-note-clear': (el) => { delete state.unitAiNotes[el.dataset.unit]; saveState(); route(); },
@@ -4362,10 +4374,10 @@ function deckPool(deck) {
   if (deck === 'custom') return REG.vocab.filter(v => !v.builtin);
   if (deck === 'N5' || deck === 'N4') return REG.vocab.filter(v => v.builtin && v.lv === deck);
   // the mixed deck follows the daily rule: N4 words only after every N5 word has been introduced
-  const n4Open = n5WordsLeft() === 0;
+  const n4Open = n4WordsOpen();
   return REG.vocab.filter(v => (v.builtin ? (v.lv !== 'N4' || n4Open) : state.settings.includeImported !== 'off'));
 }
-function deckAllowsN4(deck) { return deck === 'N4' || n5WordsLeft() === 0; }
+function deckAllowsN4(deck) { return deck === 'N4' || n4WordsOpen(); }
 function buildFlashQueue(deck, extraNew = 0) {
   const t = todayStr();
   const pool = deckPool(deck);
@@ -4474,16 +4486,25 @@ function flashKey(ev) {
 function flashCurrent() { return FLASH && REG.byKey.get(FLASH.queue[FLASH.idx]); }
 
 // ---------- word list ----------
-function renderVocabList(view, params) {
+// the word table's current selection (search, level tab, theme)
+function vocabListFiltered(params) {
   const q = (params.q || '').trim().toLowerCase();
   const lv = params.lv || 'all';
   const theme = params.c || '';
-  const t = todayStr();
   let list = REG.vocab;
   if (theme) list = list.filter(v => v.builtin && vocabTheme(v) === theme);
   if (lv === 'custom') list = list.filter(v => !v.builtin);
   else if (lv !== 'all') list = list.filter(v => v.builtin && v.lv === lv);
   if (q) list = list.filter(v => [v.w, v.r, v.m].some(x => String(x || '').toLowerCase().includes(q)));
+  return list;
+}
+let LAST_BULK_KNOWN = null;   // { keys, prev } of the last 整批我會了, so it can be undone exactly
+function renderVocabList(view, params) {
+  const lv = params.lv || 'all';
+  const theme = params.c || '';
+  const t = todayStr();
+  const list = vocabListFiltered(params);
+  const notKnown = list.filter(v => !(state.srs[v.key] && state.srs[v.key].known)).length;
   const shown = list.slice(0, 300);
   const rows = shown.map(v => {
     const r = state.srs[v.key];
@@ -4504,6 +4525,11 @@ function renderVocabList(view, params) {
     <div class="row-wrap mb-3">
       <input class="input" style="max-width:320px" placeholder="搜尋日文、假名或中文" value="${esc(params.q || '')}" data-change="vocab-search" id="vocabSearch" />
       <div class="seg">${DECKS.filter(([k]) => !theme || k !== 'custom').map(([k, l]) => `<button type="button" aria-pressed="${lv === k}" data-act="vocab-filter" data-lv="${k}">${l}</button>`).join('')}</div>
+    </div>
+    <div class="row-wrap mb-3">
+      ${notKnown ? `<button type="button" class="btn btn-sm" data-act="vocab-known-all" data-n="${notKnown}" title="把目前列出的字全部標成已熟練，約六週後再各確認一次；答錯就回到正常排程">這 ${notKnown} 個字我都會了</button>` : ''}
+      ${LAST_BULK_KNOWN ? `<span class="small muted">已把 ${LAST_BULK_KNOWN.keys.length} 個字標成我會了</span><button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known-undo">復原</button>` : ''}
+      <span class="hint">已經會的字可以整批標記，之後只會偶爾確認一次。</span>
     </div>
     <div class="table-wrap"><table class="table"><thead><tr><th>單字</th><th>意思</th><th>熟練度</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="empty">沒有符合的單字</td></tr>'}</tbody></table></div>
     ${list.length > shown.length ? `<p class="hint mt-2">只顯示前 ${shown.length} 筆，請用搜尋縮小範圍。</p>` : ''}`;
@@ -4599,6 +4625,27 @@ Object.assign(ACTIONS, {
     const v = REG.byKey.get(el.dataset.key); if (!v) return;
     unmarkKnown(v.key); toast(`「${jaPlain(v.w)}」回到熟悉，照正常排程複習`);
     if (SESSION && document.body.classList.contains('practicing')) renderPractice(); else route();
+  },
+  // 整批我會了: every word in the current table selection that is not vouched for yet; the previous records are kept for 復原
+  'vocab-known-all': () => {
+    const keys = vocabListFiltered(currentRoute().params).filter(v => !(state.srs[v.key] && state.srs[v.key].known)).map(v => v.key);
+    if (!keys.length) return;
+    const prev = {}; keys.forEach(k => { prev[k] = state.srs[k] ? JSON.parse(JSON.stringify(state.srs[k])) : null; markKnown(k, false); });
+    saveState(); LAST_BULK_KNOWN = { keys, prev };
+    toast(`已把 ${keys.length} 個字標成我會了，約六週後再各確認一次`); route();
+  },
+  'vocab-known-undo': () => {
+    if (!LAST_BULK_KNOWN) return;
+    Object.entries(LAST_BULK_KNOWN.prev).forEach(([k, r]) => { if (r) state.srs[k] = r; else delete state.srs[k]; });
+    const n = LAST_BULK_KNOWN.keys.length; LAST_BULK_KNOWN = null; saveState(); toast(`已復原 ${n} 個字的紀錄`); route();
+  },
+  // 我會了 on the new-word preview card: vouch for the word and drop it (and any encore) from this session
+  'preview-known': () => {
+    const e = currentEntry(); if (!e || !e.preview || e.previewDone || !e.item || e.item.kind !== 'v') return;
+    const v = e.item; markKnown(v.key);
+    SESSION.entries = SESSION.entries.filter((x, i) => i !== SESSION.idx && !(x.item && x.item.key === v.key));
+    toast(`「${jaPlain(v.w)}」已標成熟練，約六週後再確認一次`);
+    renderPractice(); window.scrollTo({ top: 0 });
   },
   'vocab-remove': (el) => {
     const v = REG.byKey.get(el.dataset.key);
@@ -5600,10 +5647,13 @@ function settingsLearn() {
   const s = state.settings;
   const cur = unitById(state.currentUnit);
   return `
+    <div class="setting-row"><div><div class="label">我已有基礎</div><div class="hint">一鍵套用：每天新單字 20、新文法 10、新漢字 5，現在就開放 N4 單字，題目不預設顯示中文。之後仍可逐項調整。</div></div>
+      <button type="button" class="btn btn-sm" data-act="apply-experienced">套用</button></div>
     ${numRow('dailyGoal', '每日目標', '首頁圓環與連續天數的計算標準。', 5, 200, 5, '題')}
     ${numRow('sessionSize', '每組練習題數', '按「開始練習」時一次出幾題。', 5, 60, 5, '題')}
     ${numRow('newVocabPerDay', '每天新單字上限', '其餘時間用來複習到期的單字。', 0, 40, 1, '個')}
     ${numRow('newGrammarPerDay', '每天新文法題上限', '新題只從目前單元（及之前沒學完的單元）挑選。', 0, 30, 1, '題')}
+    ${selRow('n4Words', 'N4 單字何時加入', '預設等 N5 單字都學過一次才加入 N4 新字；已有基礎的人可以直接開放。', [['auto', 'N5 學過一次後自動加入'], ['open', '現在就開放']])}
     ${numRow('vocabShare', '單字所占比例', '每日練習中單字題的比例，其餘為文法題。', 0, 100, 10, '%')}
     ${numRow('newKanjiPerDay', '每天新漢字上限', 'N5 漢字都學過一次後，才會開始加入 N4 漢字。', 0, 15, 1, '個')}
     ${numRow('listenPerDay', '每天聽力題', '短對話、即時應答與情境表達；需要能播放語音。', 0, 10, 1, '題')}
