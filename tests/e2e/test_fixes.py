@@ -559,6 +559,25 @@ MIST_SEED = """(() => { const t = todayStr(); const gs = REG.grammar.filter(g =>
   state.mistakes.push(mk(gs[0], 5, 1), mk(gs[1], 1, 6), mk(gs[2], 2, 3), mk(null, 3, 2, '單字'));
   saveState(); window.__g = gs.slice(0, 3).map(g => g.key); return 'seeded'; })()"""
 
+def test_mistake_loop_grades_once_per_day(b):
+    js = """(() => { const t = todayStr(); const m0 = state.mistakes[0]; const u = state.mistakes[3];   // MIST_SEED: m0 linked (count 5), u unlinked
+      location.hash = '#/mistakes'; route(); const entry = document.querySelector('[data-act=mloop-start]'); const label = entry ? entry.textContent : null;
+      state.srs[m0.key].d = 10;   // a hard item: one 記得 does not lift it to 熟悉, so it stays in the notebook for the later rounds
+      ACTIONS['mloop-start'](); const first = MLOOP.queue[0] === m0.id; const n0 = state.srs[m0.key].n;
+      ACTIONS['mloop-flip'](); ACTIONS['mloop-rate']({ dataset: { g: 'good' } }); const n1 = state.srs[m0.key].n; const last1 = state.srs[m0.key].last;
+      // the same card in a later round today: no second SRS write, but the notebook still notes the look
+      startMistakeLoop([m0.id]); ACTIONS['mloop-flip'](); ACTIONS['mloop-rate']({ dataset: { g: 'again' } });
+      const n2 = state.srs[m0.key].n; const count = m0.count; const due = daysBetween(t, state.srs[m0.key].due);
+      // unlinked: 記得 twice the same day stays active
+      startMistakeLoop([u.id]); ACTIONS['mloop-flip'](); ACTIONS['mloop-rate']({ dataset: { g: 'good' } }); startMistakeLoop([u.id]); ACTIONS['mloop-flip'](); ACTIONS['mloop-rate']({ dataset: { g: 'good' } });
+      MLOOP.idx = MLOOP.queue.length; MLOOP.again = []; route();
+      return JSON.stringify({ label, first, n0, n1, last1: last1 === t, n2, count, due, uActive: !u.mastered, done: /這一輪/.test(document.getElementById('view').textContent) }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", MIST_SEED), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['label'] and '快速過一輪' in r['label'] and r['first'], r
+    assert r['n0'] == 14 and r['n1'] == 15 and r['last1'] and r['n2'] == 15 and r['count'] == 6 and r['due'] >= 1, r
+    assert r['uActive'] and r['done'], r
+
 def test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days(b):
     js = """(() => { const t = todayStr(); const m0 = state.mistakes[0]; const u = state.mistakes[3]; const out = {};
       onCorrectForMistake({ key: m0.key }); out.linkedStillActive = !m0.mastered;
@@ -747,7 +766,7 @@ if __name__ == "__main__":
              test_tools_page_has_an_expandable_api_guide_for_every_provider,
              test_stats_shows_the_past_week_of_practice_and_what_was_learned, test_reaching_the_learned_level_records_the_date, test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading,
              test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them,
-             test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
+             test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
              test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model]

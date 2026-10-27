@@ -365,6 +365,8 @@ details.mrow .mbody { padding: 4px 0 14px; }
 .flash .reading { font-size: 18px; color: var(--fg-3); }
 .flash .meaning { font-size: 22px; font-weight: 600; margin-top: 8px; }
 .rate { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+.rate.two { grid-template-columns: repeat(2, 1fr); }
+.flash .front-stem { font-size: 24px; line-height: 1.8; }
 .rate .btn { flex-direction: column; gap: 0; min-height: 56px; }
 .rate .btn small { font-size: 11px; color: var(--fg-3); font-weight: 400; }
 
@@ -3618,7 +3620,7 @@ function route() {
     if (r.name === 'today') renderToday(view);
     else if (r.name === 'course') { if (r.parts[1] === 'intro') renderIntro(view); else if (r.parts[1]) renderUnit(view, r.parts[1], r.params.tab || 'lesson'); else renderCourse(view); }
     else if (r.name === 'vocab') renderVocab(view, r.parts[1] || 'cards', r.params);
-    else if (r.name === 'mistakes') renderMistakes(view, r.params);
+    else if (r.name === 'mistakes') { if (r.parts[1] === 'loop') renderMistakeLoop(view); else renderMistakes(view, r.params); }
     else if (r.name === 'exam') renderExam(view, r.parts[1] || '', r.params);
     else if (r.name === 'tools') renderTools(view, r.params);
     else if (r.name === 'stats') renderStats(view);
@@ -3833,6 +3835,7 @@ function handleKey(ev) {
   }
   if (r.name === 'exam' && r.parts[1] === 'run') { examKey(ev); return; }
   if (r.name === 'vocab' && (r.parts[1] || 'cards') === 'cards') { flashKey(ev); return; }
+  if (r.name === 'mistakes' && r.parts[1] === 'loop') { mloopKey(ev); return; }
   if (k === 'f' || k === 'F') { ev.preventDefault(); toggleFurigana(); }
 }
 
@@ -4771,6 +4774,121 @@ Object.assign(CHANGE_ACTIONS, {
 /* ==========================================================================
    Mistake notebook
    ========================================================================== */
+// ---------- 錯題快速循環: flip cards over the active notebook, 忘了／記得 ----------
+// One pass over the active mistakes (most missed, longest unpractised first). A grade writes the item's schedule once a
+// day — the first grade of the day; later looks only update the notebook. Cards marked 忘了 come back once at the end
+// of the round, for a look without a grade.
+const MLOOP_MAX = 30;
+let MLOOP = null;   // { queue: [mistakeId], idx, flipped, again: [], rated: {id: grade}, date, stats: { ok, ng, left } }
+function buildMistakeLoop(max = MLOOP_MAX, first = []) {
+  const ids = activeMistakes().slice().sort(mistakePriority).map(m => m.id);
+  return first.filter(id => ids.includes(id)).concat(ids.filter(id => !first.includes(id))).slice(0, max);
+}
+function startMistakeLoop(first = []) {
+  MLOOP = { queue: buildMistakeLoop(MLOOP_MAX, first), idx: 0, flipped: false, again: [], rated: {}, date: todayStr(), stats: { ok: 0, ng: 0, left: 0 } };
+  go('#/mistakes/loop');
+}
+function mloopCurrent() { return MLOOP && state.mistakes.find(m => m.id === MLOOP.queue[MLOOP.idx]); }
+function mistakeCardFaces(m) {
+  const it = m.key && REG.byKey.get(m.key);
+  if (it && it.kind === 'v') {
+    const ex = vocabExamples(it)[0];
+    return {
+      front: `<div class="word jp">${furi(it.w)}</div>`,
+      back: `${it.r && it.r !== jaPlain(it.w) ? `<div class="reading jp">${esc(it.r)}</div>` : ''}<div class="meaning">${esc(it.m)}</div>
+        ${ex ? `<div class="example mt-3 jp" style="text-align:left">${furi(ex.ex)}${ex.exZh ? `<div class="small muted">${esc(ex.exZh)}</div>` : ''}</div>` : ''}
+        ${vocabWhy(it) ? `<div class="small mt-2" style="text-align:left">${md(vocabWhy(it))}</div>` : ''}`
+    };
+  }
+  const b = splitBlank(m.prompt || '');
+  const front = b ? `${furi(b.pre)}${blankChip(b.hint)}${furi(b.post)}` : furi(m.prompt || '');
+  const pt = it && it.kind === 'g' && it.pt ? `<div class="small muted mt-2">考點：${esc(it.pt)}</div>` : '';
+  return {
+    front: `<div class="front-stem jp">${front}</div>`,
+    back: `<div class="meaning jp">${furi(m.answer || '')}</div>${pt}${m.why ? `<div class="small mt-2" style="text-align:left">${md(m.why)}</div>` : ''}`
+  };
+}
+function mloopRate(g) {
+  const m = mloopCurrent(); if (!m || !MLOOP.flipped) return;
+  const t = todayStr(); const good = g === 'good';
+  const it = m.key && REG.byKey.get(m.key); const r = it && state.srs[m.key];
+  const wasMastered = m.mastered;
+  if (!MLOOP.rated[m.id]) {
+    MLOOP.rated[m.id] = g;
+    MLOOP.stats[good ? 'ok' : 'ng']++;
+    if (!good) MLOOP.again.push(m.id);
+    if (it && (!r || r.last !== t)) {   // the first grade of the day sets the schedule
+      const res = srsAnswer(m.key, good, { grade: good ? 'good' : 'again' });
+      if (it.kind === 'v') recordFormat(res.rec, 'flash', good);
+      recordAction(it.kind === 'g' ? 'g' : it.kind === 'v' || it.kind === 'k' ? 'v' : 'q', it.kind === 'g' ? unitById(it.u).short : it.kind === 'v' ? `單字「${jaPlain(it.w)}」` : it.kind === 'k' ? `漢字「${it.k}」` : null);
+      recordAccuracy(good);
+      if (good) onCorrectForMistake({ key: m.key });
+      else addMistake({ key: m.key, cat: m.cat, mistakePrompt: m.prompt, answerText: m.answer, why: m.why }, '錯題循環：忘記');
+    } else if (it) {                      // already answered today: the notebook notes the look, the schedule stands
+      m.last = t;
+      if (!good) { m.count = (m.count || 1) + 1; m.streak = 0; }
+    } else if (good) onCorrectForMistake({ mistakeId: m.id });
+    else { m.count = (m.count || 1) + 1; m.streak = 0; m.okDays = []; m.last = t; }
+    if (!wasMastered && m.mastered) MLOOP.stats.left++;
+    saveState();
+  }
+  mloopAdvance();
+}
+function mloopAdvance() {
+  MLOOP.idx++; MLOOP.flipped = false;
+  if (MLOOP.idx >= MLOOP.queue.length && MLOOP.again.length) { MLOOP.queue = MLOOP.queue.concat(MLOOP.again); MLOOP.again = []; }
+  route();
+}
+function renderMistakeLoop(view) {
+  if (!MLOOP || MLOOP.date !== todayStr()) { startMistakeLoop(); return; }
+  const m = mloopCurrent();
+  if (!m) {
+    const s = MLOOP.stats;
+    view.innerHTML = `<div class="card center"><div class="flash">
+      <div class="page-title">這一輪：記得 ${s.ok}・忘了 ${s.ng}</div>
+      <p class="dim mt-2">${s.left ? `今天移出錯題本 ${s.left} 題。` : ''}${activeMistakes().length ? `錯題本還有 ${activeMistakes().length} 題待複習。` : '錯題本清空了。'}</p>
+      <div class="row-wrap mt-3" style="justify-content:center">
+        ${activeMistakes().length ? '<button type="button" class="btn btn-primary" data-act="mloop-again">再一輪</button>' : ''}
+        <button type="button" class="btn" data-act="nav" data-route="#/mistakes">回錯題本</button>
+      </div></div></div>`;
+    return;
+  }
+  const faces = mistakeCardFaces(m);
+  const second = Boolean(MLOOP.rated[m.id]);
+  const rec = m.key && state.srs[m.key];
+  view.innerHTML = `<div class="card">
+      <div class="row between small muted"><span>${MLOOP.idx + 1} / ${MLOOP.queue.length}・${esc(m.cat || '綜合')}・錯 ${m.count || 1} 次${second ? '・再看一次' : ''}</span><span>${rec ? srsDots(rec.b) : ''}</span></div>
+      <div class="flash">
+        ${faces.front}
+        ${MLOOP.flipped ? `<div class="divider"></div>${faces.back}${m.note ? `<div class="small muted mt-2">筆記：${esc(m.note)}</div>` : ''}` : ''}
+      </div>
+      ${!MLOOP.flipped ? `<button type="button" class="btn btn-primary btn-block btn-lg" data-act="mloop-flip">看答案 <span class="kbd" style="background:transparent;border-color:currentColor;color:inherit">Space</span></button>`
+        : second ? `<button type="button" class="btn btn-primary btn-block btn-lg" data-act="mloop-next">下一張 <span class="kbd" style="background:transparent;border-color:currentColor;color:inherit">Space</span></button>`
+        : `<div class="rate two">
+          <button type="button" class="btn" data-act="mloop-rate" data-g="again">忘了<small>1・這一輪最後再看</small></button>
+          <button type="button" class="btn btn-primary" data-act="mloop-rate" data-g="good">記得<small>2</small></button>
+        </div>`}
+      <div class="row-wrap mt-3" style="justify-content:space-between">
+        <button type="button" class="btn btn-sm btn-ghost" data-act="speak" data-text="${esc(jaPlain(m.prompt || ''))}">${icon('speaker')}朗讀</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-act="nav" data-route="#/mistakes">結束</button>
+      </div>
+    </div>`;
+}
+function mloopKey(ev) {
+  if (!MLOOP) return;
+  const k = ev.key; const m = mloopCurrent();
+  if (k === ' ' || k === 'Enter') { ev.preventDefault(); if (!MLOOP.flipped) ACTIONS['mloop-flip'](); else if (m && MLOOP.rated[m.id]) ACTIONS['mloop-next'](); return; }
+  if (MLOOP.flipped && m && !MLOOP.rated[m.id] && (k === '1' || k === '2')) { ev.preventDefault(); ACTIONS['mloop-rate']({ dataset: { g: k === '1' ? 'again' : 'good' } }); return; }
+  if (k === 'f' || k === 'F') { ev.preventDefault(); toggleFurigana(); }
+}
+Object.assign(ACTIONS, {
+  'mloop-start': () => startMistakeLoop(),
+  'mloop-again': () => startMistakeLoop(MLOOP ? Object.keys(MLOOP.rated).filter(id => MLOOP.rated[id] === 'again') : []),
+  'mloop-flip': () => { if (!MLOOP || MLOOP.flipped) return; MLOOP.flipped = true; route(); const m = mloopCurrent(); if (m && state.settings.autoSpeak) speak(jaPlain(m.prompt || '')); },
+  'mloop-rate': (el) => mloopRate(el.dataset.g),
+  'mloop-next': () => { if (!MLOOP || !MLOOP.flipped) return; mloopAdvance(); }
+});
+
 function renderMistakes(view, params = {}) {
   const filter = ['active', 'mastered', 'all'].includes(params.f) ? params.f : 'active';
   const sort = ['count', 'recent', 'stale'].includes(params.s) ? params.s : 'count';
@@ -4830,9 +4948,10 @@ function renderMistakes(view, params = {}) {
   }
   view.innerHTML = `
     <div class="page-head">
-      <div><div class="page-title">錯題本</div><div class="page-sub">答錯的題目會自動收進來，每天練習會夾帶幾題（設定可調）；題目達到「熟悉」就移到「已掌握」。</div></div>
+      <div><div class="page-title">錯題本</div><div class="page-sub">答錯的題目會自動收進來；用字卡快速過一輪，忘了／記得直接回寫複習排程。題目達到「熟悉」就移到「已掌握」。</div></div>
       <div class="row-wrap">
-        <button type="button" class="btn btn-primary" data-act="start-mistakes" ${active.length ? '' : 'disabled'}>練習錯題（${active.length}）</button>
+        ${active.length ? `<button type="button" class="btn btn-primary" data-act="mloop-start">快速過一輪・${Math.min(active.length, MLOOP_MAX)} 張</button>` : ''}
+        <button type="button" class="btn" data-act="start-mistakes" ${active.length ? '' : 'disabled'}>用測驗練（${active.length}）</button>
         <button type="button" class="btn" data-act="mistake-add">手動新增</button>
         ${filter === 'mastered' && base.length ? `<button type="button" class="btn btn-ghost" data-act="mistake-clear-mastered">清空已掌握（${base.length}）</button>` : ''}
       </div>
