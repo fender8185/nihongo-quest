@@ -741,6 +741,21 @@ def test_cloud_audio_is_the_default_engine_with_an_admin_generator_section(b):
     assert r['fresh'] == 'cloud' and r['moved'] == 'cloud' and r['stays'] == 'google_tts' and r['chosen'] == 'browser_neural', r
     assert r['admin'] and r['inputs'] and r['option'] and r['available'] and r['swAudio'], r
 
+def test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there(b):
+    js = """(async () => { const all = cloudAudioTexts(); const sample = all.slice(0, 5); cloudAudioTexts = () => sample;
+      const base = cloudAudioBase(); await caches.delete('nq-audio'); const realFetch = window.fetch; let calls = 0;
+      window.fetch = (u) => { calls++; return Promise.resolve(new Response(new Blob([new Uint8Array([9, 9])], { type: 'audio/mpeg' }), { status: 200 })); };
+      await cloudDownloadAll(); const first = Object.assign({}, CLOUD_DL); const c1 = calls;
+      const cache = await caches.open('nq-audio'); const keys = (await cache.keys()).map(r => r.url); const paths = await Promise.all(sample.map(x => cloudAudioPath(x.text, x.gender, x.reading ? { reading: x.reading } : {})));
+      await cloudDownloadAll(); const second = Object.assign({}, CLOUD_DL); const c2 = calls - c1;
+      window.fetch = realFetch; await caches.delete('nq-audio'); ttsConfig().engine = 'cloud'; const html = settingsSpeech();
+      return JSON.stringify({ first, second, c1, c2, keysOk: [...new Set(paths)].every(p => keys.includes(`${base}/${p}`)), nKeys: keys.length, uniq: new Set(paths).size, btn: /data-act="cloud-dl-all"/.test(html) }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=90)
+    r = json.loads(out[-1])
+    assert r['first']['total'] == r['uniq'] and r['first']['done'] == r['uniq'] and r['first']['have'] == 0 and r['first']['failed'] == 0 and r['c1'] == r['uniq'], r
+    assert r['keysOk'] and r['nKeys'] == r['uniq'], r
+    assert r['second']['have'] == r['uniq'] and r['second']['done'] == 0 and r['c2'] == 0 and r['btn'], r   # already there: no request
+
 def test_today_offers_the_exam_pace_quotas_when_behind(b):
     js = """(() => { state.settings.examDate = addDays(todayStr(), 121); Object.assign(state.settings, { newVocabPerDay: 1, newGrammarPerDay: 1 }); saveState();
       location.hash = '#/today'; route(); const el = document.querySelector('.hero-advice, [data-act=apply-advice]'); const btn = document.querySelector('.card [data-act=apply-advice]');
@@ -1018,7 +1033,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_load_cap_replaces_the_daily_goal_and_brakes_new_items_in_order, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_today_offers_the_exam_pace_quotas_when_behind, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_load_cap_replaces_the_daily_goal_and_brakes_new_items_in_order, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_today_offers_the_exam_pace_quotas_when_behind, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,

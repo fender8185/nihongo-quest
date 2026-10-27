@@ -807,13 +807,16 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '70';   // keep equal to the number in sw.js CACHE ('nq-v70'); scripts/test.sh checks it
+const APP_VERSION = '71';   // keep equal to the number in sw.js CACHE ('nq-v71'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '70', from: '36', date: '2026-10-27', items: [
-    '語音服務新增「雲端音檔」並設為預設：教材句子預先用 Google Neural2 生成放在雲端，不用設定金鑰；播過的留在裝置上離線也能聽，找不到的句子退回瀏覽器語音。設定 › 語音有管理者用的一次性生成工具。',
+  { v: '71', from: '70', date: '2026-10-28', items: [
+    '語音服務新增「雲端音檔」並設為預設：教材的一萬段句子已經用 Google Neural2 生成放在雲端，不用設定任何金鑰；播到哪句抓哪句（單字幾 KB、句子幾十 KB），播過的留在裝置上，離線也能聽；找不到的句子（自訂、AI 生成）退回瀏覽器語音。',
+    '設定 › 語音新增「下載全部音檔」（約 200 MB）：想完全離線用的人按一下，全部存進裝置；可中斷續跑，已下載的會略過。',
+  ] },
+  { v: '69', from: '36', date: '2026-10-27', items: [
     '錯題自動排進每日練習：單字、文法、漢字答錯後，第 1、3、7 天各複習一次（答對才往下一步，中途再錯就重來），三次都對才回到正常間隔並自動離開錯題本。首頁待複習會標「其中錯題 N」，場內排在複習的前段，題目上標「錯題複習 n/3」；不用再自己翻錯題本，快速過一輪保留當額外的翻卡。',
     '每天負荷上限預設改為 100（原本 40 的一律升到 100，自己調過的不動），設定頁最高 300。上限只壓新題，到期複習永遠全出，所以總量會隨學過的內容增加；考前一天幾百題是正常的。',
     '首頁與練習中的「題」統一指今天的項目（到期複習與新題）：細項加總等於「共 N 題」，按鈕是這一組的項目數，圓環是「今天答過的項目／今天的項目」，做完剛好填滿；練習畫面的計數只數項目，換個方式再考與答錯再練另標「加考 n」，不再一邊做一邊變多。',
@@ -5968,7 +5971,10 @@ function settingsSpeech() {
   const voiceOpts = [['', voices.length ? `自動（${voices[0].name}）` : '自動']].concat(voices.map(v => [v.voiceURI, `${v.name}${v.localService ? '' : '（線上）'}`]));
   let engine = '';
   if (c.engine === 'cloud') {
-    engine = `<div class="hint mt-2">教材的句子已經用 Google Neural2 預先生成放在雲端，播過的會留在這個裝置上，離線也能聽；找不到的句子（自訂、AI 生成的題目）改用瀏覽器語音。語速用上面的滑桿調。</div>
+    engine = `<div class="hint mt-2">教材的句子已經用 Google Neural2 預先生成放在雲端，播到哪句抓哪句，播過的會留在這個裝置上，離線也能聽；找不到的句子（自訂、AI 生成的題目）改用瀏覽器語音。語速用上面的滑桿調。</div>
+      <div class="row-wrap mt-3"><button type="button" class="btn" data-act="cloud-dl-all">下載全部音檔（約 200 MB）</button><button type="button" class="btn btn-ghost" data-act="cloud-dl-stop">停止</button></div>
+      <div class="hint mt-1">想完全離線用再按；平常不用，播過的句子本來就會留下來。可以中斷，再按會接著下載，已下載的會略過。</div>
+      <div id="cloudDlBox" class="small mt-2">${cloudDlHtml()}</div>
       <details class="mt-4"><summary class="small muted" style="cursor:pointer">管理者：生成雲端音檔</summary>
         <div class="hint mt-2">把全部教材句子生成一次並上傳到 Supabase 的 ${CLOUD_AUDIO.bucket}。兩把金鑰只在這一次執行中使用：不儲存、不同步、關掉頁面就消失；跑完請到 Supabase 後台刪掉 Secret key。已存在的檔案會略過，可以中斷再續跑。</div>
         <div class="field mt-3"><label>Google Cloud API Key</label><input class="input" type="password" autocomplete="off" id="cloudGoogleKey" value="${esc(c.googleKey || '')}" /></div>
@@ -6200,6 +6206,8 @@ Object.assign(ACTIONS, {
     cloudGenStart(gk, sk);
   },
   'cloud-gen-stop': () => { if (CLOUD_GEN) CLOUD_GEN.stop = true; },
+  'cloud-dl-all': () => cloudDownloadAll(),
+  'cloud-dl-stop': () => { if (CLOUD_DL) CLOUD_DL.stop = true; },
   'ai-test': (el) => aiTestConnection(el),
   'ai-models': async (el) => {
     const key = (aiConfig().geminiKey || '').trim();
@@ -7024,6 +7032,42 @@ function cloudAudioTexts() {
   Object.values(DATA.LESSONS || {}).forEach(L => (L.sections || []).forEach(sec => (sec.ex || []).forEach(x => { if (x && x.jp) add(x.jp); })));
   cloudMissList().forEach(m => add(m.text, m.gender, m.reading || ''));
   return [...seen.values()];
+}
+// ---- 下載全部音檔: every clip into the service worker's audio cache, for learners who want the whole course offline ----
+let CLOUD_DL = null;
+function cloudDlHtml() {
+  const d = CLOUD_DL; if (!d) return '';
+  const left = Math.max(0, d.total - d.have - d.done - d.failed);
+  return `<div><b>${esc(d.phase)}</b>${d.total ? `・共 ${d.total} 段，已在裝置上 ${d.have}，這次下載 ${d.done}${d.failed ? `，失敗 ${d.failed}` : ''}，剩 ${left}` : ''}</div>`;
+}
+function cloudDlRender() { const box = document.getElementById('cloudDlBox'); if (box) box.innerHTML = cloudDlHtml(); }
+async function cloudDownloadAll() {
+  if (CLOUD_DL && CLOUD_DL.running) return;
+  if (!window.caches) { toast('這個瀏覽器不支援離線快取。'); return; }
+  CLOUD_DL = { running: true, stop: false, phase: '整理清單', total: 0, have: 0, done: 0, failed: 0 };
+  cloudDlRender();
+  try {
+    const list = cloudAudioTexts();
+    const paths = [...new Set(await Promise.all(list.map(x => cloudAudioPath(x.text, x.gender, x.reading ? { reading: x.reading } : {}))))];
+    const cache = await caches.open('nq-audio');   // the service worker's clip cache (sw.js AUDIO_CACHE)
+    try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) { /* ignore */ }
+    const base = cloudAudioBase(); const todo = [];
+    for (const p of paths) { if (CLOUD_DL.stop) break; if (await cache.match(`${base}/${p}`)) CLOUD_DL.have++; else todo.push(p); }
+    CLOUD_DL.total = paths.length; CLOUD_DL.phase = '下載中'; cloudDlRender();
+    let i = 0;
+    const worker = async () => {
+      while (i < todo.length && !CLOUD_DL.stop) {
+        const p = todo[i++]; const url = `${base}/${p}`;
+        try { const r = await fetch(url); if (!r.ok) throw new Error(String(r.status)); await cache.put(url, r); CLOUD_DL.done++; }
+        catch (e) { CLOUD_DL.failed++; if (/Failed to fetch|NetworkError|Load failed/i.test(String(e && e.message))) CLOUD_DL.stop = true; }   // offline: stop instead of failing every file
+        if ((CLOUD_DL.done + CLOUD_DL.failed) % 20 === 0) cloudDlRender();
+      }
+    };
+    await Promise.all([0, 1, 2, 3, 4, 5].map(worker));
+    CLOUD_DL.phase = CLOUD_DL.stop ? '已停止（再按會接著下載）' : (CLOUD_DL.failed ? '完成（有些句子雲端還沒有）' : '完成，全部音檔都在裝置上了');
+  } catch (e) { CLOUD_DL.phase = `失敗：${(e && e.message) || e}`; }
+  CLOUD_DL.running = false;
+  cloudDlRender();
 }
 let CLOUD_GEN = null;
 function cloudGenHtml() {
