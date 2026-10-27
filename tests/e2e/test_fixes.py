@@ -147,9 +147,11 @@ def test_first_correct_answer_waits_a_few_days_before_repeating(b):
     assert r['ngDays'] == 1, r   # a miss waits until tomorrow (v63); the same-day look is the session's 再練一次
 
 def test_new_grammar_of_a_unit_rotates_through_its_points(b):
-    js = """(() => { const c = newGrammarCandidates('m1').slice(0, 6); return JSON.stringify({ n: c.length, pts: new Set(c.map(g => g.pt)).size }); })()"""
+    # v64: new grammar follows the lesson sections, so the rotation is across the points of the first section
+    js = """(() => { const all = newGrammarCandidates('m1'); const sec0 = all.filter(g => g.sec === all[0].sec); const k = new Set(sec0.map(g => g.pt)).size; const c = all.slice(0, k);
+      return JSON.stringify({ n: c.length, k, pts: new Set(c.map(g => g.pt)).size }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
-    assert out[-1] == '{"n":6,"pts":6}', out[-1]
+    r = json.loads(out[-1]); assert r['k'] >= 3 and r['n'] == r['k'] and r['pts'] == r['k'], r
 
 # ---- 2026-10-25 (4): audio-only options are played on demand, one button per option ----
 def test_audio_options_play_on_click_instead_of_being_read_in_sequence(b):
@@ -559,6 +561,33 @@ def test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them
     assert r['goal'] >= exp['v'] + exp['g'] + exp['k'] + exp['l'] and r['goal'] % 5 == 0, r
     assert r['after'].startswith('已是建議值') and 'disabled' in r['after'], r
 
+# ---- 2026-10-27 (v64): new grammar follows the lesson sections; the unit advances by itself ----
+def test_new_grammar_follows_lesson_sections_with_points_rotating(b):
+    js = """(() => { const c = newGrammarCandidates('m1'); const secOf = (g) => Number.isInteger(g.sec) && g.sec >= 0 ? g.sec : 999;
+      const secs = c.map(secOf); const ordered = secs.every((x, i) => i === 0 || x >= secs[i - 1]);
+      const first = c.filter(g => secOf(g) === secs[0]); const pts = new Set(first.map(g => g.pt)); const head = first.slice(0, pts.size).map(g => g.pt);
+      const again = newGrammarCandidates('m1').map(g => g.id);
+      const easyFirst = first.filter(g => g.pt === head[0]).map(g => g.d || 2); const sorted = easyFirst.every((x, i) => i === 0 || x >= easyFirst[i - 1]);
+      return JSON.stringify({ n: c.length, ordered, rotates: new Set(head).size === pts.size, stable: JSON.stringify(again) === JSON.stringify(c.map(g => g.id)), sorted }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
+    r = json.loads(out[-1])
+    assert r['n'] > 0 and r['ordered'] and r['rotates'] and r['stable'] and r['sorted'], r
+
+def test_unit_advances_when_its_grammar_is_all_introduced(b):
+    js = """(() => { const t = todayStr(); const m1 = unitItems('m1'); const m2 = unitItems('m2');
+      m1.slice(0, -1).forEach(g => srsAnswer(g.key, true));            // one m1 item still unseen: stay
+      const stillM1 = newGrammarCandidates()[0].u === 'm1' && state.currentUnit === 'm1';
+      srsAnswer(m1[m1.length - 1].key, true);                            // m1 fully introduced: candidates continue into m2, unit not yet switched
+      const next = newGrammarCandidates(); const intoM2 = next.length > 0 && next.every(g => g.u === 'm2') && state.currentUnit === 'm1';
+      const firstSec = Number.isInteger(next[0].sec) ? next[0].sec : -1;
+      srsAnswer(next[0].key, true);                                      // the first m2 answer moves the unit
+      const moved = state.currentUnit === 'm2' && state.completedUnits.includes('m1');
+      const reach = REG.listen.some(x => x.u === 'm2') ? listenReachable().some(x => x.u === 'm2') : true;
+      return JSON.stringify({ stillM1, intoM2, firstSec, moved, reach, newG: state.today.newG }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
+    r = json.loads(out[-1])
+    assert r['stillM1'] and r['intoM2'] and r['firstSec'] == 0 and r['moved'] and r['reach'], r
+
 # ---- 2026-10-27: 錯題本 rework — mistakes join the daily mix, leave when the item reaches 熟悉, compact page with filters/sort/groups ----
 MIST_SEED = """(() => { const t = todayStr(); const gs = REG.grammar.filter(g => g.u === 'm1'); const far = (g, b) => { state.srs[g.key] = { b, due: addDays(t, 20), n: 14, ok: 12, ng: 2, s: b >= 3 ? 8 : 2, d: 6, last: addDays(t, -2), intro: addDays(t, -9) }; };
   state.mistakes = []; far(gs[0], 1); far(gs[1], 1); far(gs[2], 1);
@@ -767,7 +796,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
