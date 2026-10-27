@@ -807,12 +807,14 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '72';   // keep equal to the number in sw.js CACHE ('nq-v72'); scripts/test.sh checks it
+const APP_VERSION = '73';   // keep equal to the number in sw.js CACHE ('nq-v73'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '72', from: '70', date: '2026-10-28', items: [
+  { v: '73', from: '70', date: '2026-10-28', items: [
+    '「學習紀錄」（熱力圖、連續天數、最近的每日紀錄）從首頁搬到學習分析。每日紀錄改成數據：各種類題數（單字、文法、漢字、聽力、閱讀、模擬考）、新學與升到熟悉的個數、當天正確率、完成的單元；不再列單字名稱和錯題。種類、正確率、完成單元從這版起才有紀錄。',
+    '學習分析移除「常錯的題目」。練習中的「常錯」標籤保留。',
     '語音服務新增「雲端音檔」並設為預設：教材的一萬段句子已經用 Google Neural2 生成放在雲端，不用設定任何金鑰；播到哪句抓哪句（單字幾 KB、句子幾十 KB），播過的留在裝置上，離線也能聽；找不到的句子（自訂、AI 生成）退回瀏覽器語音。',
     '設定 › 語音收合的「完全離線使用（進階）」裡有「下載全部音檔」（約 200 MB）：只給長時間沒網路的情況用，平常不建議按；可中斷續跑，已下載的會略過。',
   ] },
@@ -1442,16 +1444,34 @@ function logEntry(d = todayStr()) {
   if (!state.dailyLogs[d]) state.dailyLogs[d] = { date: d, vocabCount: 0, grammarCount: 0, quizCount: 0, bonusCount: 0, minutes: 0, topics: [], mistakeTopics: [] };
   return state.dailyLogs[d];
 }
+function noteUnitDone(uid) { const e = logEntry(); const u = unitById(uid); if (!u) return; if (!Array.isArray(e.units)) e.units = []; if (!e.units.includes(u.short)) e.units.push(u.short); }
+// One day's numbers: questions by kind (since v73; older days have 單字／文法／其他), items met for the first time and items that
+// reached 熟悉 (from the schedule, any day), the day's accuracy and the units finished (since v73)
+function dayStats(d) {
+  const e = state.dailyLogs[d] || {};
+  const kinds = LOG_KINDS.map(([k, name]) => [name, e['k' + k.toUpperCase()] || 0]).filter(([, n]) => n);
+  let fresh = 0, learned = 0; for (const k in state.srs) { const r = state.srs[k]; if (r.intro === d) fresh++; if (r.lrn === d) learned++; }
+  const n = (e.ok || 0) + (e.ng || 0);
+  return { total: dayTotal(e), kinds, fresh, learned, acc: n ? Math.round((e.ok || 0) / n * 100) : null, units: e.units || [], old: [['單字', e.vocabCount || 0], ['文法', e.grammarCount || 0], ['其他', (e.quizCount || 0) + (e.bonusCount || 0)]].filter(([, x]) => x) };
+}
+function dayStatsText(d) {
+  const x = dayStats(d);
+  const by = (x.kinds.length ? x.kinds : x.old).map(([name, n]) => `${name} ${n}`).join('・');
+  return `${x.total} 題${by ? `（${by}）` : ''}・新學 ${x.fresh}・升到熟悉 ${x.learned}${x.acc !== null ? `・正確率 ${x.acc}%` : ''}${x.units.length ? `・完成單元：${esc(x.units.join('、'))}` : ''}`;
+}
 function dayTotal(e) { return e ? (e.vocabCount || 0) + (e.grammarCount || 0) + (e.quizCount || 0) + (e.bonusCount || 0) : 0; }
 // Items answered today (the schedule records each one once; encores and 再練一次 copies write nothing). Every count on the
 // Today page and the ring are in these items, not in questions pressed: done / (done + remaining) fills exactly when the day is done.
 function itemsDoneToday(t = todayStr()) { let n = 0; for (const k in state.srs) if (state.srs[k].last === t) n++; return n; }
 function dayProgress() { const done = itemsDoneToday(); const left = dailyPlan().remaining; return { done, left, total: done + left }; }
-function recordAction(type, topic) {
+const LOG_KINDS = [['v', '單字'], ['g', '文法'], ['k', '漢字'], ['l', '聽力'], ['r', '閱讀'], ['x', '模擬考・其他']];
+function recordAction(type, topic, kind) {
   const e = logEntry();
   if (type === 'v') e.vocabCount = (e.vocabCount || 0) + 1;
   else if (type === 'g') e.grammarCount = (e.grammarCount || 0) + 1;
   else e.quizCount = (e.quizCount || 0) + 1;
+  const kk = 'k' + (LOG_KINDS.some(([k]) => k === kind) ? kind : 'x').toUpperCase();   // per kind since v73 (flat numbers: sync keeps the larger)
+  e[kk] = (e[kk] || 0) + 1;
   e.minutes = (e.minutes || 0) + (type === 'v' ? 0.5 : 1);
   if (topic) {
     if (!Array.isArray(e.topics)) e.topics = [];
@@ -1459,6 +1479,7 @@ function recordAction(type, topic) {
   }
 }
 function recordAccuracy(correct) {
+  const e = logEntry(); if (correct) e.ok = (e.ok || 0) + 1; else e.ng = (e.ng || 0) + 1;   // the day's accuracy (since v73)
   state.recent.push(correct ? 1 : 0);
   if (state.recent.length > 60) state.recent = state.recent.slice(-60);
 }
@@ -2951,6 +2972,7 @@ function autoAdvanceUnit(key) {
   if (unitOrder(g.u) !== i + 1) return;
   if (REG.grammar.some(x => x.u === state.currentUnit && !state.srs[x.key])) return;
   if (!state.completedUnits.includes(state.currentUnit)) state.completedUnits.push(state.currentUnit);
+  noteUnitDone(state.currentUnit);
   state.currentUnit = g.u;
   DAILY_CACHE = null;
 }
@@ -3500,7 +3522,7 @@ function answerCurrent(i) {
   }
   // the 再練一次 copy is a learning step: it counts as a question done today, nothing else (the first answer set the schedule)
   if (e.requeued) {
-    recordAction(q.kind === 'v' || q.kind === 'k' ? 'v' : q.kind === 'g' ? 'g' : 'q', null);
+    recordAction(q.kind === 'v' || q.kind === 'k' ? 'v' : q.kind === 'g' ? 'g' : 'q', null, q.kind);
     SESSION.stats[ok ? 'correct' : 'wrong']++;
     SESSION.results.push({ key: q.key, ok, q, chosen: i, requeued: true });
     saveState(); renderPractice(); speakAnswered(q);
@@ -3519,7 +3541,7 @@ function answerCurrent(i) {
     if (ok) f.ok++; else f.ng++;
   }
   const topic = q.kind === 'g' ? unitById(q.unit).short : q.kind === 'v' ? `單字「${jaPlain(q.item.w)}」` : q.kind === 'k' ? `漢字「${q.item.k}」` : q.kind === 'l' ? '聽力' : q.kind === 'r' ? '閱讀' : null;
-  recordAction(q.kind === 'v' || q.kind === 'k' ? 'v' : q.kind === 'g' ? 'g' : 'q', topic);
+  recordAction(q.kind === 'v' || q.kind === 'k' ? 'v' : q.kind === 'g' ? 'g' : 'q', topic, q.kind);
   recordAccuracy(ok);
   if (ok) {
     SESSION.stats.correct++;
@@ -4086,6 +4108,13 @@ function renderToday(view) {
       </div>
     </div>
 
+`;
+}
+
+// 學習紀錄 (學習分析): the calendar, streak tiles and the recent days
+function historyCardHtml() {
+  const st = streakStats();
+  return `
     <div class="card">
       <div class="card-head">
         <div class="card-title">學習紀錄</div>
@@ -4094,7 +4123,7 @@ function renderToday(view) {
       <div class="heat-row">
         <div style="min-width:0;max-width:100%">
           ${heatmapHtml()}
-          <div class="small muted mt-2" id="heatInfo">點一下方格可以看那天的紀錄。</div>
+          <div class="small muted mt-2" id="heatInfo">點一下方格可以看那天的數據。</div>
         </div>
         <div class="grid grid-2 heat-stats">
           <div class="stat"><span class="stat-v">${st.current}</span><span class="stat-l">目前連續天數</span></div>
@@ -4149,11 +4178,8 @@ function recentLogsHtml() {
   if (!days.length) return '<div class="empty">還沒有紀錄，完成第一組練習後就會出現。</div>';
   return `<div class="list mt-2">${days.map(d => {
     const e = state.dailyLogs[d];
-    const topics = (e.topics || []).slice(0, 4).join('、');
     return `<div class="list-item"><div class="grow">
-      <div class="row-wrap"><b class="num">${d}</b><span class="small muted">單字 ${e.vocabCount || 0}・文法 ${e.grammarCount || 0}・其他 ${(e.quizCount || 0) + (e.bonusCount || 0)}</span></div>
-      ${topics ? `<div class="small dim">${esc(topics)}</div>` : ''}
-      ${e.mistakeTopics && e.mistakeTopics.length ? `<div class="small muted">錯：${esc(e.mistakeTopics.slice(0, 3).join('、'))}</div>` : ''}
+      <div class="row-wrap"><b class="num">${d}</b><span class="small muted">${dayStatsText(d)}</span></div>
     </div><span class="chip num">${dayTotal(e)} 題</span>
     <button type="button" class="btn btn-sm btn-ghost" data-act="del-log" data-date="${d}" title="刪除這天的紀錄">刪除</button></div>`;
   }).join('')}</div>`;
@@ -4164,7 +4190,7 @@ Object.assign(ACTIONS, {
     const d = el.dataset.date; const e = state.dailyLogs[d]; const n = dayTotal(e);
     const box = document.getElementById('heatInfo');
     if (!box) return;
-    box.innerHTML = n ? `<b class="num">${d}</b>：${n} 題（單字 ${e.vocabCount || 0}・文法 ${e.grammarCount || 0}・其他 ${(e.quizCount || 0) + (e.bonusCount || 0)}）${(e.topics || []).length ? '・' + esc(e.topics.slice(0, 4).join('、')) : ''}` : `<b class="num">${d}</b>：沒有紀錄`;
+    box.innerHTML = n ? `<b class="num">${d}</b>：${dayStatsText(d)}` : `<b class="num">${d}</b>：沒有練習。`;
   },
   'del-log': (el) => {
     const d = el.dataset.date;
@@ -4174,6 +4200,7 @@ Object.assign(ACTIONS, {
   'advance-unit': () => {
     const i = unitOrder(state.currentUnit);
     if (!state.completedUnits.includes(state.currentUnit)) state.completedUnits.push(state.currentUnit);
+    noteUnitDone(state.currentUnit);
     if (i < DATA.UNITS.length - 1) state.currentUnit = DATA.UNITS[i + 1].id;
     saveState();
     toast(`目前單元：${unitById(state.currentUnit).weeks}・${unitById(state.currentUnit).short}`);
@@ -4768,7 +4795,7 @@ Object.assign(ACTIONS, {
     const g = el.dataset.g;
     const res = srsAnswer(v.key, g !== 'again', { grade: g });
     recordFormat(res.rec, 'flash', g !== 'again');
-    recordAction('v', `單字「${jaPlain(v.w)}」`);
+    recordAction('v', `單字「${jaPlain(v.w)}」`, 'v');
     recordAccuracy(g !== 'again');
     if (g === 'again') {
       addMistake({ key: v.key, cat: '單字', mistakePrompt: `${jaPlain(v.w)}${v.r && v.r !== v.w ? `（${v.r}）` : ''}`, answerText: v.m, why: vocabWhy(v) }, '字卡：忘記');
@@ -4914,7 +4941,7 @@ function mloopRate(g) {
     if (it && (!r || r.last !== t)) {   // the first grade of the day sets the schedule
       const res = srsAnswer(m.key, good, { grade: good ? 'good' : 'again' });
       if (it.kind === 'v') recordFormat(res.rec, 'flash', good);
-      recordAction(it.kind === 'g' ? 'g' : it.kind === 'v' || it.kind === 'k' ? 'v' : 'q', it.kind === 'g' ? unitById(it.u).short : it.kind === 'v' ? `單字「${jaPlain(it.w)}」` : it.kind === 'k' ? `漢字「${it.k}」` : null);
+      recordAction(it.kind === 'g' ? 'g' : it.kind === 'v' || it.kind === 'k' ? 'v' : 'q', it.kind === 'g' ? unitById(it.u).short : it.kind === 'v' ? `單字「${jaPlain(it.w)}」` : it.kind === 'k' ? `漢字「${it.k}」` : null, it.kind);
       recordAccuracy(good);
       if (good) onCorrectForMistake({ key: m.key });
       else addMistake({ key: m.key, cat: m.cat, mistakePrompt: m.prompt, answerText: m.answer, why: m.why }, '錯題循環：忘記');
@@ -5486,7 +5513,7 @@ function recordExamAnswer(q, i) {
   const h = state.questionHistory[q.examId] || { count: 0, correctCount: 0 };
   h.count++; if (ok) h.correctCount++; h.lastResult = ok ? 'correct' : 'wrong'; h.lastDate = todayStr();
   state.questionHistory[q.examId] = h;
-  recordAction('q');
+  recordAction('q', null, 'x');
   recordAccuracy(ok);
   // the exam may ask about later units; it only starts tracking items the course has already reached
   const src = q.srcKey && REG.byKey.get(q.srcKey);
@@ -6483,13 +6510,6 @@ function renderStats(view) {
       <span class="val">${pctText(x.acc)}・${x.n} 次</span>
     </div>`).join('');
 
-  const leeches = Object.entries(state.srs).filter(([, r]) => r.leech).map(([k, r]) => ({ it: REG.byKey.get(k), r })).filter(x => x.it).sort((a, b) => (b.r.lapse || 0) - (a.r.lapse || 0));
-  const leechRows = leeches.slice(0, 30).map(({ it, r }) => `<div class="list-item">
-      <span class="chip">${KIND_NAME[it.kind] || ''}</span>
-      <div class="grow jp small">${esc(itemLabel(it)).slice(0, 80)}</div>
-      <span class="tiny muted nowrap">忘記 ${r.lapse || 0} 次</span>
-      <button type="button" class="btn btn-sm btn-ghost" data-act="stats-suspend" data-key="${esc(it.key)}" title="先不出這題，可在設定 → 資料還原">暫停</button>
-    </div>`).join('');
 
   const paceText = !pace.rate ? '開始練習幾天後，這裡會依你的速度推算。'
     : pace.late > 0 ? `照最近每天約 ${pace.rate.toFixed(1)} 個新文法題的速度，會在 ${pace.finish.replace(/-/g, '/')} 學完，比預定（考前三週）晚 ${pace.late} 天。`
@@ -6511,6 +6531,7 @@ function renderStats(view) {
       <div class="card"><div class="stat"><span class="stat-v">${(learned.v || 0) + (learned.g || 0) + (learned.k || 0)}</span><span class="stat-l">已熟悉（單字 ${learned.v || 0}・文法 ${learned.g || 0}・漢字 ${learned.k || 0}）</span></div></div>
       <div class="card"><div class="stat"><span class="stat-v">${pace.left}</span><span class="stat-l">還沒學的文法題</span></div></div>
     </div>
+    ${historyCardHtml()}
     <div class="card">
       <div class="card-head"><div class="card-title">課程進度預估</div>${pace.late > 0 ? '<span class="chip chip-warn">稍慢</span>' : pace.rate ? '<span class="chip chip-ok">趕得上</span>' : ''}</div>
       <p class="small dim mb-0">${esc(paceText)}</p>
@@ -6526,9 +6547,6 @@ function renderStats(view) {
         ${fmtRows || '<div class="empty">還沒有足夠的資料。</div>'}
       </div>
     </div>
-    <div class="card">
-      <div class="card-head"><div><div class="card-title">常錯的題目</div><div class="card-sub">熟了之後又忘記 ${LEECH_LAPSES} 次以上</div></div>${leeches.length ? `<button type="button" class="btn btn-sm" data-act="stats-leech-practice">一起練習（${Math.min(leeches.length, 20)}）</button>` : ''}</div>
-      ${leechRows ? `<div class="list">${leechRows}</div><p class="hint mt-2">一直記不住的題目，可以先看解說或講義；真的用不到的可以暫停。</p>` : '<div class="empty">目前沒有。</div>'}
     </div>`;
   attachChartTips(view);
 }
@@ -6610,18 +6628,6 @@ Object.assign(ACTIONS, {
     const items = REG.grammar.filter(g => g.pt === el.dataset.pt);
     if (!items.length) return;
     startSession('items', { items: shuffle(items).slice(0, 15), title: `考點練習：${el.dataset.pt}` });
-  },
-  'stats-leech-practice': () => {
-    const items = Object.entries(state.srs).filter(([, r]) => r.leech).map(([k]) => REG.byKey.get(k)).filter(Boolean);
-    startSession('items', { items: shuffle(items).slice(0, 20), title: '常錯的題目' });
-  },
-  'stats-suspend': (el) => {
-    const it = REG.byKey.get(el.dataset.key);
-    if (!it) return;
-    if (it.builtin) { if (!state.hidden.includes(it.id)) state.hidden.push(it.id); }
-    else if (it.kind === 'g') state.customGrammar = state.customGrammar.filter(g => g.id !== it.id);
-    else if (it.kind === 'v') state.vocab = state.vocab.filter(v => v.id !== it.id);
-    saveState(); buildRegistry(); toast('已暫停這題'); route();
   }
 });
 
