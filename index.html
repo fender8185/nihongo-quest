@@ -812,12 +812,16 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '64';   // keep equal to the number in sw.js CACHE ('nq-v64'); scripts/test.sh checks it
+const APP_VERSION = '65';   // keep equal to the number in sw.js CACHE ('nq-v65'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '64', from: '36', date: '2026-10-27', items: [
+  { v: '65', from: '36', date: '2026-10-27', items: [
+    '「每日目標」改成「每天負荷上限」（預設 40，舊設定低於 40 的一律改成 40）：只當煞車用，當天到期複習加新題超過它時先減新單字（最少減到額度一半），再停新漢字、新聽力，到期的複習永遠不減。首頁圓環改成「今天做了 N／今天的工作」，做完剛好填滿，和「今天完成了」一致。',
+    '考試日期接到每日練習：目前的新題額度追不上考試進度時，首頁「考試倒數」卡會列出建議的額度（例如 新單字 8→12）與「套用建議」；額度夠就不顯示。學習分析的「每日練習量建議」不再推薦每日目標。',
+    '答錯後幾題的「再練一次」改成換一種格式出（看中文選日文改成看日文選意思、填空改成選正確句……），沒有第二種格式的題才原題洗牌；一樣不寫排程。',
+    '新文法第一次答對後，8 到 11 題後也會「換個方式再考」一次（和新單字一樣，不寫排程）；答錯的由「再練一次」接手，不另外再考。',
     '新文法照講義段落順序出：一段出完才到下一段（沒有對應段落的題排在單元最後），同一段內各考點輪流、同考點內先易後難，不再隨機；一天的新題排好就固定。',
     '單元自動推進：目前單元的文法全部出過一次後，新文法接著從下一單元的第一段出；答到下一單元的第一題新題時，目前單元自動標完成、切到下一單元，聽力與閱讀的範圍跟著放開。課程頁的「完成單元」保留，想跳或倒回都可以。',
     '今日練習的規則重整：每一題不是今天到期的複習就是今天的新內容，沒有第三種。原本的「補位加強題」「提前複習」「每天夾帶的錯題」「單字比例」都拿掉，複習時機完全交給間隔排程。',
@@ -907,7 +911,7 @@ function markTarget(ex, w) {
 // ---------- default state ----------
 function defaultSettings() {
   return {
-    dailyGoal: 20,
+    loadCap: 40,             // 每天負荷上限: when due reviews + new items exceed it, new items shrink (words to half, then kanji, then listening)
     sessionSize: 20,
     newVocabPerDay: 8,
     newGrammarPerDay: 6,
@@ -996,6 +1000,9 @@ function normalizeState(s) {
   const base = defaultState();
   const out = Object.assign(base, s || {});
   out.settings = Object.assign(defaultSettings(), (s && s.settings) || {});
+  // v65: 每日目標 became 每天負荷上限 (a brake, not a target); an old goal below 40 would brake every day
+  if (!(s && s.settings && 'loadCap' in s.settings)) out.settings.loadCap = Math.max(40, Number(out.settings.dailyGoal) || 0);
+  delete out.settings.dailyGoal;
   ['srs', 'dailyLogs', 'questionHistory', 'dimensionScores', 'unitAiNotes', 'statsFmt'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
@@ -1083,7 +1090,7 @@ function migrateLegacy(old) {
   const s = state;
   const notes = [];
   const st = s.settings;
-  if (typeof old.dailyGoal === 'number') { st.dailyGoal = old.dailyGoal; st.sessionSize = clamp(old.dailyGoal, 10, 40); }
+  if (typeof old.dailyGoal === 'number') { st.loadCap = Math.max(40, old.dailyGoal); st.sessionSize = clamp(old.dailyGoal, 10, 40); }
   if (typeof old.speechRate === 'number') st.speechRate = old.speechRate;
   if (typeof old.duolingoScore === 'number') st.duolingoScore = old.duolingoScore;
   st.furigana = old.showFurigana !== false;
@@ -1528,15 +1535,6 @@ function courseProgress() {
 }
 // How much new material per day the exam date asks for, and the practice load that implies
 // (a new item costs about four reviews in its first month).
-function contentPace() {
-  const pace = examPace();
-  const days = Math.max(14, pace.daysLeft - 21);
-  const curIdx = unitOrder(state.currentUnit);
-  const gLeft = REG.grammar.filter(g => unitOrder(g.u) >= curIdx && !state.srs[g.key]).length;
-  const vLeft = REG.vocab.filter(v => v.builtin && !state.srs[v.key]).length;
-  const perDay = (gLeft + vLeft) / days;
-  return { perDay: Math.max(1, Math.ceil(perDay)), load: Math.max(15, Math.ceil(perDay) * 5), left: gLeft + vLeft };
-}
 function examPace() {
   const t = todayStr();
   const exam = state.settings.examDate || '2027-07-04';
@@ -3003,15 +3001,23 @@ function dailyPlan(size = state.settings.sessionSize) {
   const maxV = Math.round(s.newVocabPerDay * ad.factor);
   const maxG = Math.round(s.newGrammarPerDay * ad.factor);
   const ex = extrasPlan(curIdx);
-  const room = s.dailyGoal - dayTotal(state.dailyLogs[t]) - dueV.length - dueG.length - ex.dueK.length - ex.dueL.length;
-  // Grammar drives the course: its new items come every day regardless of the review load (the accuracy-based
-  // factor still applies). Only new words give way to a review backlog, and never below about half their quota.
+  // 每天負荷上限 (settings.loadCap) is a brake: when today's work (done + due + new) would exceed it, new words shrink
+  // first (never below about half their quota), then new kanji stop, then new listening. Due reviews never shrink, and
+  // grammar drives the course: its new items come every day (the accuracy-based factor still applies).
   const wantG = Math.max(0, maxG - state.today.newG);
-  const roomV = room - wantG + state.today.newV;
-  const wantV = Math.max(0, clamp(roomV, Math.min(Math.ceil(maxV / 2), maxV), maxV) - state.today.newV);
+  const fullV = Math.max(0, maxV - state.today.newV);
+  let wantV = fullV;
+  let over = dayTotal(state.dailyLogs[t]) + dueV.length + dueG.length + ex.dueK.length + ex.dueL.length + ex.dueR.length
+    + wantG + wantV + ex.newK.length + ex.newL.length + ex.newR.length - (Number(s.loadCap) || 40);
+  if (over > 0) { const floorV = Math.max(0, Math.min(Math.ceil(maxV / 2), maxV) - state.today.newV); const cut = Math.max(0, Math.min(over, wantV - floorV)); wantV -= cut; over -= cut; }
+  const cutK = over > 0 ? Math.min(over, ex.newK.length) : 0; over -= cutK;
+  const cutL = over > 0 ? Math.min(over, ex.newL.length) : 0; over -= cutL;
+  if (cutK) ex.newK = ex.newK.slice(0, ex.newK.length - cutK);
+  if (cutL) ex.newL = ex.newL.slice(0, ex.newL.length - cutL);
   let note = ad.note;
-  if (!note && wantV < Math.max(0, maxV - state.today.newV) && dueV.length + dueG.length > 0) {
-    note = `今天待複習的題目比較多，新單字先減為 ${wantV} 個，新文法照常；複習完成後，之後幾天就會再增加。`;
+  if (!note && (wantV < fullV || cutK || cutL)) {
+    const parts = []; if (wantV < fullV) parts.push(`新單字先減為 ${wantV} 個`); if (cutK) parts.push('新漢字先停'); if (cutL) parts.push('新聽力先停');
+    note = `今天的題數超過負荷上限，${parts.join('、')}，新文法照常；複習完成後，之後幾天就會再增加。`;
   }
   const newG = newGrammarCandidates().slice(0, wantG);
   const newV = newVocabCandidates(vPool, n4Open).slice(0, wantV + Math.max(0, wantG - newG.length));
@@ -3184,14 +3190,26 @@ function prepareEntry(i) {
   const e = SESSION.entries[i];
   if (!e || e.q) return;
   if (e.mistake) e.q = makeMistakeCard(e.mistake);
-  else if (e.encore) e.q = makeQuestion(e.item, { encore: true, avoidFmts: usedFormats(e.item.key) });
+  else if (e.encore) e.q = otherFormatQuestion(e.item) || null;
+  else if (e.requeued) e.q = otherFormatQuestion(e.item) || requeueQuestion(e.orig, shuffle(e.orig.options));   // 再練一次: another format when the item has one
   else e.q = makeQuestion(e.item, { avoidFmt: SESSION.lastFmt });
   if (!e.q) { SESSION.entries.splice(i, 1); if (i < SESSION.entries.length) prepareEntry(i); }
 }
 
-// formats this word has already been asked in during the session (answered or queued ahead)
+// formats this item has already been asked in during the session (answered or queued ahead)
 function usedFormats(key) {
   return SESSION.entries.filter(x => x.q && x.item && x.item.key === key).map(x => x.q.fmt);
+}
+// the same item in a format not yet used this session; null when it has no other format
+function otherFormatQuestion(item) {
+  const used = usedFormats(item.key);
+  const q = makeQuestion(item, { encore: true, avoidFmts: used, avoidFmt: used });
+  return q && q.fmt && !used.includes(q.fmt) ? q : null;
+}
+// a grammar fill-in item that can also be asked as 選正確句 or 句意
+function grammarHasFormats(g) {
+  if (!g || g.kind !== 'g' || (g.t || 'choice') !== 'choice' || !splitBlank(g.jp || '')) return false;
+  return grammarFormats(g, (g.op || []).map(parenReadingToBracket), parenReadingToBracket(g.a)).length >= 2;
 }
 // A word met for the first time comes back twice more in this session, each time in another format: once a few
 // questions later, once further on. Encores do not touch the SRS schedule; the first answer did that.
@@ -3202,8 +3220,8 @@ function scheduleEncores(e, ok) {
   const at = (lo, hi) => Math.min(SESSION.entries.length, SESSION.idx + lo + Math.floor(Math.random() * (hi - lo + 1)));
   SESSION.entries.splice(at(8 + shift, 11 + shift), 0, { item: e.item, encore: true });
 }
-// How many encore questions a queue will add once its new words are answered (one per new built-in word).
-function encoreEstimate(items) { return items.filter(it => it.kind === 'v' && it.builtin && !state.srs[it.key]).length; }
+// How many encore questions a queue will add once its new items are answered (one per new built-in word or multi-format grammar item).
+function encoreEstimate(items) { return items.filter(it => !state.srs[it.key] && ((it.kind === 'v' && it.builtin) || (it.kind === 'g' && grammarHasFormats(it)))).length; }
 
 // Consistent furigana for options: readings come from the correct answer so that a wrong
 // conjugation is not given away by missing furigana.
@@ -3468,7 +3486,8 @@ function answerCurrent(i) {
   }
   if (q.kind === 'v' && q.fmt && q.fmt.startsWith('v-')) recordFormat(state.srs[q.key], q.fmt, ok);
   if (q.kind === 'g' && q.item && (q.item.t || 'choice') === 'choice' && q.fmt) recordFormat(state.srs[q.key], q.fmt, ok, 'gf');
-  if (e.srs && e.srs.isNew && q.kind === 'v') scheduleEncores(e, ok);
+  // a new word comes back once more in another format; so does a new grammar item answered right (a miss gets the 再練一次 copy instead)
+  if (e.srs && e.srs.isNew && (q.kind === 'v' || (q.kind === 'g' && ok && grammarHasFormats(q.item)))) scheduleEncores(e, ok);
   if (q.fmt) {
     const f = state.statsFmt[q.fmt] || (state.statsFmt[q.fmt] = { ok: 0, ng: 0 });
     if (ok) f.ok++; else f.ng++;
@@ -3485,8 +3504,8 @@ function answerCurrent(i) {
     addMistake(q, jaPlain(q.options[i].text));
     if (!e.encore) {
       const at = Math.min(SESSION.entries.length, SESSION.idx + 3 + Math.floor(Math.random() * 3));
-      const again = { item: e.item, mistake: e.mistake, requeued: true };
-      if (q) again.q = requeueQuestion(q, shuffle(q.options));
+      const again = { item: e.item, mistake: e.mistake, requeued: true, orig: q };
+      if (!e.item && q) again.q = requeueQuestion(q, shuffle(q.options));   // a notebook card has no other format
       SESSION.entries.splice(at, 0, again);
     }
   }
@@ -3524,7 +3543,7 @@ function renderSummary(view) {
   const acc = n ? Math.round(s.stats.correct / n * 100) : 0;
   const wrongKeys = new Map();
   s.results.filter(r => !r.ok).forEach(r => { if (!wrongKeys.has(r.q.mistakePrompt)) wrongKeys.set(r.q.mistakePrompt, r); });
-  const goal = state.settings.dailyGoal;
+  const dayDone = dailyPlan().remaining === 0;
   const todayN = dayTotal(state.dailyLogs[todayStr()]);
   const wrongList = [...wrongKeys.values()].map(r => `<div class="list-item"><div class="grow"><div class="jp">${furi(tidyPrompt(r.q.mistakePrompt || ''))}</div><div class="small muted">正確：<span class="jp">${esc(jaPlain(r.q.options[r.q.answer].text))}</span>・你選：<span class="jp">${esc(jaPlain(r.q.options[r.chosen].text))}</span></div></div></div>`).join('');
   view.innerHTML = `
@@ -3543,7 +3562,7 @@ function renderSummary(view) {
         <div class="stat"><span class="stat-v">${s.stats.newCount}</span><span class="stat-l">新學</span></div>
         <div class="stat"><span class="stat-v">${Math.max(1, Math.round((Date.now() - s.startedAt) / 60000))}</span><span class="stat-l">分鐘</span></div>
       </div>
-      ${todayN >= goal ? '<div class="banner mt-4">今天的目標達成了。答對的題目會在幾天後再出現，答錯的明天再複習。</div>' : `<div class="hint mt-4">今天還差 ${goal - todayN} 題達成目標。</div>`}
+      ${dayDone ? '<div class="banner mt-4">今天的進度完成了。答對的題目會在幾天後再出現，答錯的明天再複習。</div>' : `<div class="hint mt-4">今天還差 ${goal - todayN} 題達成目標。</div>`}
       <div class="row-wrap mt-4">
         <button type="button" class="btn btn-primary" data-act="again">再練一組</button>
         ${wrongKeys.size ? '<button type="button" class="btn" data-act="retry-wrong">重練答錯的題目</button>' : ''}
@@ -3630,7 +3649,7 @@ function renderNav(active) {
   document.getElementById('sideFoot').innerHTML = `
     <div class="panel small">
       <div class="row between"><span class="muted">連續天數</span><b class="num">${st.current} 天</b></div>
-      <div class="row between"><span class="muted">今日</span><b class="num">${dayTotal(state.dailyLogs[todayStr()])} / ${state.settings.dailyGoal}</b></div>
+      <div class="row between"><span class="muted">今日</span><b class="num">${dayTotal(state.dailyLogs[todayStr()])} 題</b></div>
       <div class="row between"><span class="muted">雲端</span><span id="sideSync"></span></div>
     </div>
     <button type="button" class="nav-item" data-act="toggle-furi" title="快速鍵 F">${icon('furi')}<span>振假名：${FURI_LABEL[furiState()]}</span></button>
@@ -3918,7 +3937,6 @@ function sessionTopicsHtml(q, plan) {
 
 function renderToday(view) {
   const t = todayStr();
-  const goal = state.settings.dailyGoal;
   const doneToday = dayTotal(state.dailyLogs[t]);
   const plan = dailyPlan();
   const st = streakStats();
@@ -3936,7 +3954,8 @@ function renderToday(view) {
   const extraN = exK + exL + exR;
   const extraText = [exK && `漢字 ${exK}`, exL && `聽力 ${exL}`, exR && `閱讀 ${exR}`].filter(Boolean).join('・');
   const dq = dailyQueue(size);
-  const sessionN = dq.items.length + encoreEstimate(dq.items);   // new words come back once more
+  const sessionN = dq.items.length + encoreEstimate(dq.items);   // new words and new grammar come back once more
+  const workTotal = doneToday + dq.total + encoreEstimate(plan.newV.concat(plan.newG));   // the ring: done / today's whole work
   const d = parseDate(t);
   const greeting = `${d.getMonth() + 1} 月 ${d.getDate()} 日（${weekdayZh(t)}）`;
 
@@ -3967,10 +3986,13 @@ function renderToday(view) {
   const paceText = pace.daysLeft === 0 ? '考試日期已到或已過，可在設定中更新考試日期。'
     : pace.status === 'behind' ? `剩下 ${pace.remainingUnits} 個單元，每個單元平均只有約 ${pace.perUnit} 天，建議加快一點或提高每日題數。`
     : `剩下 ${pace.remainingUnits} 個單元，每個單元可用約 ${pace.perUnit} 天，並保留最後三週做模擬考。`;
-  const cpace = contentPace();
-  const goalHint = cpace.left && state.settings.dailyGoal + 5 <= cpace.load
-    ? `<div class="small dim mt-2">照考試日期，每天約要學 ${cpace.perDay} 個新項目，加上複習大約 ${cpace.load} 題。</div><div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-act="set-goal" data-goal="${cpace.load}">每日目標改為 ${cpace.load} 題</button></div>`
-    : (cpace.left ? `<div class="small muted mt-2">照考試日期，每天約要學 ${cpace.perDay} 個新項目。</div>` : '');
+  // the exam-date pace reaches the daily practice here: when the current new-item quotas cannot finish the banks in
+  // time, the recommended quotas (學習分析「每日練習量建議」) are offered with one tap; nothing changes until tapped
+  const adv = planAdvice();
+  const advRows = adv.banks.filter(b2 => b2.key && b2.cur !== b2.rec);
+  const goalHint = adv.studyDays > 0 && adv.lagging.length && advRows.length
+    ? `<div class="small dim mt-2 hero-advice">照考試日期，建議每天：${advRows.map(b2 => `${esc(b2.name)} ${b2.cur}→${b2.rec}`).join('、')}。</div><div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-act="apply-advice">套用建議</button></div>`
+    : '';
   const paceChip = pace.status === 'behind' ? '<span class="chip chip-warn">稍微落後</span>' : pace.status === 'ahead' ? '<span class="chip chip-ok">進度充裕</span>' : '<span class="chip chip-ok">進度正常</span>';
 
   const catCount = {};
@@ -3994,7 +4016,7 @@ function renderToday(view) {
           <div class="small muted mt-1">每一題都是今天到期的複習或今天的新內容；答錯會在幾題後再練一次，明天再正式複習。答對的越熟出現得越少。</div>
           ${heroBody}
         </div>
-        ${ringHtml(doneToday / Math.max(1, goal), `<b>${doneToday}</b><div class="tiny muted">/ ${goal} 題</div>`, 110)}
+        ${ringHtml(doneToday / Math.max(1, workTotal), `<b>${doneToday}</b><div class="tiny muted">/ ${workTotal} 題</div>`, 110)}
       </div>
     </div>
 
@@ -4117,11 +4139,6 @@ Object.assign(ACTIONS, {
     const d = el.dataset.date;
     if (!confirm(`刪除 ${d} 的學習紀錄？`)) return;
     delete state.dailyLogs[d]; saveState(); route();
-  },
-  'set-goal': (el) => {
-    const g = clamp(Number(el.dataset.goal) || 20, 5, 200);
-    state.settings.dailyGoal = g;
-    saveState(); toast(`每日目標：${g} 題`); route();
   },
   'advance-unit': () => {
     const i = unitOrder(state.currentUnit);
@@ -5900,10 +5917,10 @@ function settingsLearn() {
   return `
     <div class="setting-row"><div><div class="label">我已有基礎</div><div class="hint">一鍵套用：每天新單字 20、新文法 10、新漢字 5，現在就開放 N4 單字，題目不預設顯示中文。之後仍可逐項調整。</div></div>
       <button type="button" class="btn btn-sm" data-act="apply-experienced">套用</button></div>
-    ${numRow('dailyGoal', '每日目標', '首頁圓環與連續天數的計算標準。', 5, 200, 5, '題')}
+    ${numRow('loadCap', '每天負荷上限', '當天到期複習加新題超過這個數時，先減新單字（最少減到額度一半），再停新漢字、新聽力；到期的複習不會減。首頁圓環顯示的是當天實際的題數。', 10, 200, 5, '題')}
     ${numRow('sessionSize', '每組練習題數', '按「開始練習」時一次出幾題；當天到期與新題會分成幾組出完。', 5, 60, 5, '題')}
     ${numRow('newVocabPerDay', '每天新單字上限', '其餘時間用來複習到期的單字。', 0, 40, 1, '個')}
-    ${numRow('newGrammarPerDay', '每天新文法題上限', '新題只從目前單元（及之前沒學完的單元）挑選。', 0, 30, 1, '題')}
+    ${numRow('newGrammarPerDay', '每天新文法題上限', '照講義段落順序從目前單元挑；本單元出完會接著下一單元並自動切換。', 0, 30, 1, '題')}
     ${selRow('n4Words', 'N4 單字何時加入', '預設等 N5 單字都學過一次才加入 N4 新字；已有基礎的人可以直接開放。', [['auto', 'N5 學過一次後自動加入'], ['open', '現在就開放']])}
     ${numRow('newKanjiPerDay', '每天新漢字上限', 'N5 漢字都學過一次後，才會開始加入 N4 漢字。', 0, 15, 1, '個')}
     ${numRow('listenPerDay', '每天聽力題', '短對話、即時應答與情境表達；需要能播放語音。', 0, 10, 1, '題')}
@@ -6330,10 +6347,9 @@ function planAdvice() {
   });
   const quota = banks.filter(b2 => b2.key);
   const newPerDay = quota.reduce((a, b2) => a + b2.rec, 0);
-  const dailyGoal = clamp(Math.ceil(newPerDay * 2.5 / 5) * 5, 5, 200);
-  const sessionSize = clamp(Math.ceil(Math.min(60, dailyGoal) / 5) * 5, 5, 60);
-  const v = quota.find(b2 => b2.k === 'v').rec, g = quota.find(b2 => b2.k === 'g').rec;
-  const rec = { dailyGoal, sessionSize }; quota.forEach(b2 => { rec[b2.key] = b2.rec; });
+  const load = clamp(Math.ceil(newPerDay * 2.5 / 5) * 5, 5, 200);   // new items plus their reviews, roughly
+  const sessionSize = clamp(Math.ceil(Math.min(60, load) / 5) * 5, 5, 60);
+  const rec = { sessionSize }; quota.forEach(b2 => { rec[b2.key] = b2.rec; });
   const applied = Object.keys(rec).every(k => Number(s[k]) === rec[k]);
   const lagging = quota.filter(b2 => b2.gap > 1.15).sort((a, b2) => b2.gap - a.gap);
   return { studyDays, daysLeft: pace.daysLeft, banks, rec, applied, lagging, newPerDay };
@@ -6477,7 +6493,7 @@ function planAdviceHtml() {
       <div class="card-head"><div><div class="card-title">每日練習量建議</div><div class="card-sub">用「還沒學過的題數 ÷ 可學習天數」算出每天該學的新題，複習量另外加上。</div></div>${btn}</div>
       <p class="small dim">${esc(lead)}</p>
       <div class="table-wrap"><table class="table"><thead><tr><th>題庫</th><th>已學 / 總數</th><th>還沒學</th><th>建議每天</th><th>目前設定</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <div class="small muted mt-2">套用後的設定：每日目標 ${a.rec.dailyGoal} 題・每組 ${a.rec.sessionSize} 題・新單字 ${a.rec.newVocabPerDay}・新文法 ${a.rec.newGrammarPerDay}・新漢字 ${a.rec.newKanjiPerDay}・聽力 ${a.rec.listenPerDay}${a.studyDays > 0 ? '' : '（已無學習天數，新題全部為 0）'}。閱讀題跟著單元進度出，不另外設定。</div>
+      <div class="small muted mt-2">套用後的設定：每組 ${a.rec.sessionSize} 題・新單字 ${a.rec.newVocabPerDay}・新文法 ${a.rec.newGrammarPerDay}・新漢字 ${a.rec.newKanjiPerDay}・聽力 ${a.rec.listenPerDay}${a.studyDays > 0 ? '' : '（已無學習天數，新題全部為 0）'}。閱讀題跟著單元進度出，不另外設定。</div>
     </div>`;
 }
 
@@ -7383,7 +7399,7 @@ async function aiStudyAdvice(btn) {
   const prompt = `根據學生的學習數據，給 3 點具體建議（共 200 字內，Markdown 條列，每點先寫結論）：
 - 距離 JLPT（${pace.exam}）還有 ${pace.daysLeft} 天，剩 ${pace.remainingUnits} 個單元，每單元平均可用 ${pace.perUnit} 天。
 - 目前單元：${cur.weeks}・${cur.title}，完成度 ${us.pct}%（熟悉 ${us.learned}/${us.total} 題）。
-- 最近 7 天：${days || '沒有紀錄'}；每日目標 ${state.settings.dailyGoal} 題；連續 ${st.current} 天。
+- 最近 7 天：${days || '沒有紀錄'}；連續 ${st.current} 天。
 - 最近正確率：${acc === null ? '資料不足' : Math.round(acc * 100) + '%'}。
 - 單字：N5 熟悉 ${vs.N5.learned}/${vs.N5.total}、N4 熟悉 ${vs.N4.learned}/${vs.N4.total}，今天待複習 ${vs.due} 張。
 - 錯題本：${Object.entries(cats).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([c, n]) => `${c} ${n} 題`).join('、') || '沒有待複習的錯題'}。`;

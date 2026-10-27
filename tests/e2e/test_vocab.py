@@ -85,13 +85,13 @@ def test_a_new_word_comes_back_once_in_another_format_without_rescheduling(b):
       const enc = SESSION.entries.filter(x => x.encore && x.item.key === v.key);
       const positions = SESSION.entries.map((x, i) => x.encore ? i : -1).filter(i => i >= 0);
       let guard = 0;
-      while (!currentEntry().encore && guard++ < 30) { if (!currentEntry().done) answerCurrent(currentEntry().q.answer); nextQuestion(); }
+      while (!(currentEntry().encore && currentEntry().item.key === v.key) && guard++ < 40) { if (!currentEntry().done) answerCurrent(currentEntry().q.answer); nextQuestion(); }   // v65: new grammar gets encores too, skip those
       const q2 = currentEntry().q; answerCurrent(q2.answer);
       const out = { grew: SESSION.entries.length - n0, enc: enc.length, positions, fmt1, fmt2: q2.fmt, n: state.srs[v.key].n, fmts: Object.keys(state.srs[v.key].f).length,
         chip: document.querySelector('.q-label .chip-warn') ? document.querySelector('.q-label .chip-warn').textContent : '' };
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
-    assert r['grew'] == 1 and r['enc'] == 1 and r['fmt2'] != r['fmt1'] and r['n'] == 1 and r['fmts'] == 2 and r['chip'] == '換個方式再考', r
+    assert r['grew'] >= 1 and r['enc'] == 1 and r['fmt2'] != r['fmt1'] and r['n'] == 1 and r['fmts'] == 2 and r['chip'] == '換個方式再考', r
     assert 8 <= r['positions'][0] <= 11, r
 
 def test_no_encore_when_no_other_format_can_be_built(b):

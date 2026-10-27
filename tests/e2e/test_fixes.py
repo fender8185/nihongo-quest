@@ -553,13 +553,82 @@ def test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them
       const btn = card.querySelector('[data-act=apply-advice]'); const before = btn ? btn.textContent.trim() : 'NO BUTTON';
       const txt = card.textContent; if (btn) btn.click();
       const s = state.settings; const after = document.querySelector('#planAdvice [data-act=apply-advice]');
-      return JSON.stringify({ before, hasDays: /100 天/.test(txt), rows: card.querySelectorAll('tbody tr').length, s: [s.newVocabPerDay, s.newGrammarPerDay, s.newKanjiPerDay, s.listenPerDay], goal: s.dailyGoal, after: after ? after.textContent.trim() + (after.disabled ? '|disabled' : '') : 'gone' }); })()"""
+      return JSON.stringify({ before, hasDays: /100 天/.test(txt), rows: card.querySelectorAll('tbody tr').length, s: [s.newVocabPerDay, s.newGrammarPerDay, s.newKanjiPerDay, s.listenPerDay], after: after ? after.textContent.trim() + (after.disabled ? '|disabled' : '') : 'gone' }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("nav", URL + "#/stats"), ("eval", probe)], timeout=45)
     exp = json.loads(out[0]); r = json.loads(out[1])
     assert r['before'] == '使用建議' and r['hasDays'] and r['rows'] >= 4, r
     assert r['s'] == [exp['v'], exp['g'], exp['k'], exp['l']], (r, exp)
-    assert r['goal'] >= exp['v'] + exp['g'] + exp['k'] + exp['l'] and r['goal'] % 5 == 0, r
     assert r['after'].startswith('已是建議值') and 'disabled' in r['after'], r
+
+# ---- 2026-10-27 (v65): ring = done / today's work; 每日目標 → 每天負荷上限; exam-pace quotas on Today; 再練一次 in another format; grammar encore ----
+def test_ring_counts_todays_work_and_fills_when_the_day_is_done(b):
+    js = """(() => { const t = todayStr(); const read = () => { location.hash = '#/today'; route(); const m = /(\\d+)\\s*\\/\\s*(\\d+) 題/.exec(document.querySelector('.hero').textContent.replace(/\\s+/g, ' ')); return m ? [Number(m[1]), Number(m[2])] : null; };
+      const r0 = read(); const dq = dailyQueue(state.settings.sessionSize); const expect0 = dq.total + encoreEstimate(dq.plan.newV.concat(dq.plan.newG));
+      logEntry(t).vocabCount = 5; saveState(); DAILY_CACHE = null; const r1 = read();
+      Object.assign(state.settings, { newVocabPerDay: 0, newGrammarPerDay: 0, newKanjiPerDay: 0, listenPerDay: 0 }); state.today.newR = 1; saveState(); DAILY_CACHE = null; const r2 = read();
+      return JSON.stringify({ r0, expect0, r1, r2, done: /今天完成了/.test(document.querySelector('.hero').textContent) }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['r0'] == [0, r['expect0']] and r['expect0'] > 0, r
+    assert r['r1'] == [5, r['expect0'] + 5], r
+    assert r['r2'] == [5, 5] and r['done'], r
+
+def test_load_cap_replaces_the_daily_goal_and_brakes_new_items_in_order(b):
+    js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.srs); const s = state.settings;
+      const mig = { low: normalizeState({ settings: { dailyGoal: 20 } }).settings, high: normalizeState({ settings: { dailyGoal: 100 } }).settings, fresh: defaultSettings() };
+      REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 30).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
+      const plan = (cap) => { s.loadCap = cap; saveState(); DAILY_CACHE = null; const p = dailyPlan(); return [p.newV.length, p.newG.length, p.newK.length, p.newL.length]; };
+      const wide = plan(200), tight = plan(10);
+      state.srs = JSON.parse(keep); s.loadCap = 40; saveState(); DAILY_CACHE = null;
+      const txt = settingsLearn().replace(/<[^>]+>/g, ' '); location.hash = '#/today'; route();
+      return JSON.stringify({ mig: { low: [mig.low.loadCap, 'dailyGoal' in mig.low], high: mig.high.loadCap, fresh: [mig.fresh.loadCap, 'dailyGoal' in mig.fresh] }, wide, tight, row: /每天負荷上限/.test(txt), oldRow: /每日目標|dailyGoal/.test(txt), setGoal: !!document.querySelector('[data-act=set-goal]') }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['mig'] == {'low': [40, False], 'high': 100, 'fresh': [40, False]}, r
+    assert r['wide'] == [8, 6, 3, 3] and r['tight'] == [4, 6, 0, 0], r   # reviews never shrink; words to half, then kanji, then listening; grammar untouched
+    assert r['row'] and not r['oldRow'] and not r['setGoal'], r
+
+def test_today_offers_the_exam_pace_quotas_when_behind(b):
+    js = """(() => { state.settings.examDate = addDays(todayStr(), 121); Object.assign(state.settings, { newVocabPerDay: 1, newGrammarPerDay: 1 }); saveState();
+      location.hash = '#/today'; route(); const el = document.querySelector('.hero-advice, [data-act=apply-advice]'); const btn = document.querySelector('.card [data-act=apply-advice]');
+      const text = el ? el.closest('.card').textContent : ''; const a = planAdvice();
+      ACTIONS['apply-advice'](); location.hash = '#/today'; route(); const after = !!document.querySelector('[data-act=apply-advice]');
+      return JSON.stringify({ shown: !!btn, arrow: /1→\\d+/.test(text), rec: [state.settings.newVocabPerDay, state.settings.newGrammarPerDay], exp: [a.rec.newVocabPerDay, a.rec.newGrammarPerDay], after }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['shown'] and r['arrow'] and r['rec'] == r['exp'] and not r['after'], r
+
+def test_requeue_uses_another_format_when_the_item_has_one(b):
+    js = """(() => { const out = {};
+      const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.exZh && /[一-龯]/.test(x.w) && meaningOptions(x) && recallOptions(x));   // formats open up once the word has a record
+      const g = REG.grammar.find(x => !state.srs[x.key] && (x.t || 'choice') === 'choice' && x.zh && grammarMeaningDistractors(x));
+      for (const [kind, it] of [['v', v], ['g', g]]) {
+        const fill = REG.grammar.filter(x => !state.srs[x.key] && x !== it && x !== g).slice(0, 8);
+        startSession('items', { items: [it, ...fill] }); let e = currentEntry(); e.previewDone = true; const f0 = e.q.fmt;
+        answerCurrent((e.q.answer + 1) % e.q.options.length);
+        while (!(currentEntry() || {}).requeued) { nextQuestion(); const c = currentEntry(); if (!c) break; if (!c.requeued) { c.previewDone = true; answerCurrent(c.q.answer); } }
+        e = currentEntry(); out[kind] = { f0, f1: e.q.fmt, sameItem: e.q.key === it.key };
+        SESSION = null; document.body.classList.remove('practicing');
+      }
+      return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
+    r = json.loads(out[-1])
+    for k in ('v', 'g'):
+        assert r[k]['sameItem'] and r[k]['f1'] != r[k]['f0'], r
+
+def test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right(b):
+    js = """(() => { const t = todayStr(); const gs = REG.grammar.filter(x => !state.srs[x.key] && (x.t || 'choice') === 'choice' && x.zh && grammarMeaningDistractors(x));
+      const run = (ok) => { const g = gs.shift(); const fill = REG.grammar.filter(x => !state.srs[x.key] && !gs.includes(x) && x !== g).slice(0, 14);
+        const est = encoreEstimate([g]); startSession('items', { items: [g, ...fill] }); const e = currentEntry(); e.previewDone = true; const f0 = e.q.fmt;
+        answerCurrent(ok ? e.q.answer : (e.q.answer + 1) % e.q.options.length);
+        const pos = SESSION.entries.map((x, i) => x.encore && x.item.key === g.key ? i : -1).filter(i => i >= 0);
+        let f1 = null; if (pos.length) { prepareEntry(pos[0]); f1 = SESSION.entries[pos[0]].q ? SESSION.entries[pos[0]].q.fmt : 'dropped'; }
+        const n = state.srs[g.key].n; SESSION = null; document.body.classList.remove('practicing'); return { est, enc: pos.length, pos: pos[0], f0, f1, n }; };
+      return JSON.stringify({ ok: run(true), miss: run(false) }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
+    r = json.loads(out[-1])
+    assert r['ok']['est'] == 1 and r['ok']['enc'] == 1 and 8 <= r['ok']['pos'] <= 11 and r['ok']['f1'] not in (None, 'dropped', r['ok']['f0']) and r['ok']['n'] == 1, r
+    assert r['miss']['enc'] == 0, r
 
 # ---- 2026-10-27 (v64): new grammar follows the lesson sections; the unit advances by itself ----
 def test_new_grammar_follows_lesson_sections_with_points_rotating(b):
@@ -796,7 +865,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_load_cap_replaces_the_daily_goal_and_brakes_new_items_in_order, test_today_offers_the_exam_pace_quotas_when_behind, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,

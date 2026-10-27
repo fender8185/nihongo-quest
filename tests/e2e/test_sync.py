@@ -48,17 +48,17 @@ def test_without_config_sync_is_off(b):
 
 def test_first_sync_on_fresh_device_takes_cloud_even_if_local_newer(b):
     out = boot(b, [
-        ("eval", "__fake.setRow({ user_id: 'u1', state: { v: 3, updatedAt: '2000-01-01T00:00:00.000Z', settings: { dailyGoal: 55 }, aiConfig: { provider: 'gemini', geminiKey: '' } }, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('a@b.c'); true"),
+        ("eval", "__fake.setRow({ user_id: 'u1', state: { v: 3, updatedAt: '2000-01-01T00:00:00.000Z', settings: { loadCap: 55 }, aiConfig: { provider: 'gemini', geminiKey: '' } }, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('a@b.c'); true"),
         ("wait", "Sync.status === 'idle'"),
-        ("eval", "JSON.stringify({ goal: state.settings.dailyGoal, key: state.aiConfig.geminiKey, ever: Sync.meta.everSynced })"),
+        ("eval", "JSON.stringify({ goal: state.settings.loadCap, key: state.aiConfig.geminiKey, ever: Sync.meta.everSynced })"),
     ])
     assert out[-1] == '{"goal":55,"key":"LOCALKEY","ever":true}', out[-1]
 
 def test_save_pushes_after_debounce_without_secrets(b):
     out = boot(b, [
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
-        ("eval", "state.settings.dailyGoal = 66; saveState(); Sync.status"),
-        ("wait", "__fake.getRow() && __fake.getRow().state.settings.dailyGoal === 66"),
+        ("eval", "state.settings.loadCap = 66; saveState(); Sync.status"),
+        ("wait", "__fake.getRow() && __fake.getRow().state.settings.loadCap === 66"),
         ("eval", "JSON.stringify({ ai: __fake.getRow().state.aiConfig, tts: __fake.getRow().state.ttsConfig, uid: __fake.getRow().user_id, up: __fake.getRow().updated_at === state.updatedAt, st: Sync.status })"),
     ])
     assert out[-2] == "pending", out[-2]
@@ -67,7 +67,7 @@ def test_save_pushes_after_debounce_without_secrets(b):
 def test_logout_during_debounce_cancels_push(b):
     out = boot(b, [
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
-        ("eval", "const n0 = __fake.calls.filter(c => c[0] === 'upsert').length; state.settings.dailyGoal = 99; saveState(); Sync.signOut().then(() => n0)"),
+        ("eval", "const n0 = __fake.calls.filter(c => c[0] === 'upsert').length; state.settings.loadCap = 99; saveState(); Sync.signOut().then(() => n0)"),
         sleep_js(2600),
         ("eval", "JSON.stringify({ upserts: __fake.calls.filter(c => c[0] === 'upsert').length, st: Sync.status })"),
     ])
@@ -85,10 +85,10 @@ def test_unreadable_or_bare_cloud_state_does_not_break_app(b):
 def test_pull_is_deferred_while_practicing(b):
     out = boot(b, [
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
-        ("eval", "SESSION = { fake: true }; __fake.setRow({ user_id: 'u1', state: Object.assign(JSON.parse(JSON.stringify(state)), { updatedAt: '2099-01-01T00:00:00.000Z', settings: Object.assign({}, state.settings, { dailyGoal: 123 }) }), updated_at: '2099-01-01T00:00:00.000Z' }); Sync.pull().then(() => state.settings.dailyGoal)"),
+        ("eval", "SESSION = { fake: true }; __fake.setRow({ user_id: 'u1', state: Object.assign(JSON.parse(JSON.stringify(state)), { updatedAt: '2099-01-01T00:00:00.000Z', settings: Object.assign({}, state.settings, { loadCap: 123 }) }), updated_at: '2099-01-01T00:00:00.000Z' }); Sync.pull().then(() => state.settings.loadCap)"),
         ("eval", "SESSION = null; Sync.flushDeferred(); true"),
-        ("wait", "state.settings.dailyGoal === 123"),
-        ("eval", "state.settings.dailyGoal"),
+        ("wait", "state.settings.loadCap === 123"),
+        ("eval", "state.settings.loadCap"),
     ])
     assert out[-3] != 123, "pull applied cloud state during a session"
     assert out[-1] == 123
@@ -98,9 +98,9 @@ def test_switching_account_resets_device_binding_and_adopts_new_cloud(b):
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle' && Sync.meta.everSynced"),
         ("eval", "JSON.stringify({ uid: Sync.meta.userId, ever: Sync.meta.everSynced })"),
         ("eval", "Sync.signOut().then(() => JSON.stringify({ st: Sync.status, pend: Sync.meta.pendingSync }))"),
-        ("eval", "__fake.setRow({ user_id: 'u2', state: { v: 3, updatedAt: '2000-01-01T00:00:00.000Z', settings: { dailyGoal: 77 } }, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('b@c.d', 'u2'); true"),
+        ("eval", "__fake.setRow({ user_id: 'u2', state: { v: 3, updatedAt: '2000-01-01T00:00:00.000Z', settings: { loadCap: 77 } }, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('b@c.d', 'u2'); true"),
         ("wait", "Sync.status === 'idle' && Sync.meta.userId === 'u2'"),
-        ("eval", "JSON.stringify({ goal: state.settings.dailyGoal, uid: Sync.meta.userId, ever: Sync.meta.everSynced, key: state.aiConfig.geminiKey })"),
+        ("eval", "JSON.stringify({ goal: state.settings.loadCap, uid: Sync.meta.userId, ever: Sync.meta.everSynced, key: state.aiConfig.geminiKey })"),
     ])
     assert out[-4] == '{"uid":"u1","ever":true}', out[-4]
     assert out[-3] == '{"st":"off","pend":false}', out[-3]
@@ -109,7 +109,7 @@ def test_switching_account_resets_device_binding_and_adopts_new_cloud(b):
 def test_pull_runs_after_exam_is_finished_but_still_on_result_screen(b):
     out = boot(b, [
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
-        ("eval", "EXAM = { finished: true }; __fake.setRow({ user_id: 'u1', state: Object.assign(JSON.parse(JSON.stringify(state)), { updatedAt: '2099-01-01T00:00:00.000Z', settings: Object.assign({}, state.settings, { dailyGoal: 321 }) }), updated_at: '2099-01-01T00:00:00.000Z' }); Sync.pull().then(() => state.settings.dailyGoal)"),
+        ("eval", "EXAM = { finished: true }; __fake.setRow({ user_id: 'u1', state: Object.assign(JSON.parse(JSON.stringify(state)), { updatedAt: '2099-01-01T00:00:00.000Z', settings: Object.assign({}, state.settings, { loadCap: 321 }) }), updated_at: '2099-01-01T00:00:00.000Z' }); Sync.pull().then(() => state.settings.loadCap)"),
     ])
     assert out[-1] == 321, out[-1]
 
@@ -146,12 +146,12 @@ def test_manual_push_with_null_updated_at_still_sends_a_timestamp(b):
     assert out[-1] == '{"up":"string","st":"idle"}', out[-1]
 
 # ---- 2026-10-26: a push only lands when the cloud row is still the one we last saw ----
-OTHER = "Object.assign(JSON.parse(JSON.stringify(state)), { updatedAt: '2099-01-01T00:00:00.000Z', settings: Object.assign({}, state.settings, { dailyGoal: 123 }) })"
+OTHER = "Object.assign(JSON.parse(JSON.stringify(state)), { updatedAt: '2099-01-01T00:00:00.000Z', settings: Object.assign({}, state.settings, { loadCap: 123 }) })"
 def test_push_uses_a_conditional_update_once_the_device_has_synced(b):
     out = boot(b, [
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
-        ("eval", "state.settings.dailyGoal = 66; saveState(); true"),
-        ("wait", "__fake.getRow() && __fake.getRow().state.settings.dailyGoal === 66"),
+        ("eval", "state.settings.loadCap = 66; saveState(); true"),
+        ("wait", "__fake.getRow() && __fake.getRow().state.settings.loadCap === 66"),
         ("eval", "JSON.stringify(__fake.calls.filter(c => c[0] !== 'otp').map(c => c[0]))"),
     ])
     assert out[-1] == '["upsert","update"]', out[-1]
@@ -159,24 +159,24 @@ def test_push_uses_a_conditional_update_once_the_device_has_synced(b):
 def test_stale_device_does_not_overwrite_progress_made_elsewhere(b):
     out = boot(b, [
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
-        ("eval", f"__fake.setRow({{ user_id: 'u1', state: {OTHER}, updated_at: '2099-01-01T00:00:00.000Z' }}); state.settings.dailyGoal = 5; saveState(); true"),
-        ("wait", "Sync.status === 'idle' && state.settings.dailyGoal === 123"),
-        ("eval", "Snapshots.get('conflict-' + todayStr()).then(j => JSON.stringify({ cloud: __fake.getRow().state.settings.dailyGoal, local: state.settings.dailyGoal, snap: j ? JSON.parse(j).settings.dailyGoal : null, pend: Sync.meta.pendingSync, miss: __fake.calls.filter(c => c[0] === 'update-miss').length }))"),
+        ("eval", f"__fake.setRow({{ user_id: 'u1', state: {OTHER}, updated_at: '2099-01-01T00:00:00.000Z' }}); state.settings.loadCap = 5; saveState(); true"),
+        ("wait", "Sync.status === 'idle' && state.settings.loadCap === 123"),
+        ("eval", "Snapshots.get('conflict-' + todayStr()).then(j => JSON.stringify({ cloud: __fake.getRow().state.settings.loadCap, local: state.settings.loadCap, snap: j ? JSON.parse(j).settings.loadCap : null, pend: Sync.meta.pendingSync, miss: __fake.calls.filter(c => c[0] === 'update-miss').length }))"),
     ])
     assert out[-1] == '{"cloud":123,"local":123,"snap":5,"pend":false,"miss":1}', out[-1]
 
 def test_cloud_changed_elsewhere_is_adopted_even_when_its_clock_is_behind(b):
     out = boot(b, [
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
-        ("eval", "__fake.setRow({ user_id: 'u1', state: Object.assign(JSON.parse(JSON.stringify(state)), { updatedAt: '2000-01-01T00:00:00.000Z', settings: Object.assign({}, state.settings, { dailyGoal: 123 }) }), updated_at: '2000-01-01T00:00:00.000Z' }); Sync.pull().then(() => JSON.stringify({ goal: state.settings.dailyGoal, st: Sync.status }))"),
+        ("eval", "__fake.setRow({ user_id: 'u1', state: Object.assign(JSON.parse(JSON.stringify(state)), { updatedAt: '2000-01-01T00:00:00.000Z', settings: Object.assign({}, state.settings, { loadCap: 123 }) }), updated_at: '2000-01-01T00:00:00.000Z' }); Sync.pull().then(() => JSON.stringify({ goal: state.settings.loadCap, st: Sync.status }))"),
     ])
     assert out[-1] == '{"goal":123,"st":"idle"}', out[-1]
 
 def test_row_deleted_elsewhere_is_recreated_without_looping(b):
     out = boot(b, [
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
-        ("eval", "__fake.setRow(null); state.settings.dailyGoal = 42; saveState(); true"),
-        ("wait", "Sync.status === 'idle' && __fake.getRow() && __fake.getRow().state.settings.dailyGoal === 42"),
+        ("eval", "__fake.setRow(null); state.settings.loadCap = 42; saveState(); true"),
+        ("wait", "Sync.status === 'idle' && __fake.getRow() && __fake.getRow().state.settings.loadCap === 42"),
         ("eval", "JSON.stringify({ miss: __fake.calls.filter(c => c[0] === 'update-miss').length, st: Sync.status })"),
     ])
     assert out[-1] == '{"miss":1,"st":"idle"}', out[-1]
@@ -184,14 +184,14 @@ def test_row_deleted_elsewhere_is_recreated_without_looping(b):
 def test_conflict_during_a_session_waits_and_never_overwrites_the_cloud(b):
     out = boot(b, [
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
-        ("eval", f"SESSION = {{ fake: true }}; __fake.setRow({{ user_id: 'u1', state: {OTHER}, updated_at: '2099-01-01T00:00:00.000Z' }}); state.settings.dailyGoal = 5; saveState(); state.settings.dailyGoal = 6; saveState(); true"),
+        ("eval", f"SESSION = {{ fake: true }}; __fake.setRow({{ user_id: 'u1', state: {OTHER}, updated_at: '2099-01-01T00:00:00.000Z' }}); state.settings.loadCap = 5; saveState(); state.settings.loadCap = 6; saveState(); true"),
         sleep_js(2600),
-        ("eval", "state.settings.dailyGoal = 7; saveState(); true"),
+        ("eval", "state.settings.loadCap = 7; saveState(); true"),
         sleep_js(2600),
-        ("eval", "JSON.stringify({ local: state.settings.dailyGoal, cloud: __fake.getRow().state.settings.dailyGoal, st: Sync.status, net: __fake.calls.filter(c => c[0] === 'update-miss').length })"),
+        ("eval", "JSON.stringify({ local: state.settings.loadCap, cloud: __fake.getRow().state.settings.loadCap, st: Sync.status, net: __fake.calls.filter(c => c[0] === 'update-miss').length })"),
         ("eval", "SESSION = null; Sync.flushDeferred(); true"),
-        ("wait", "Sync.status === 'idle' && state.settings.dailyGoal === 123"),
-        ("eval", "Snapshots.get('conflict-' + todayStr()).then(j => JSON.stringify({ snap: j ? JSON.parse(j).settings.dailyGoal : null, cloud: __fake.getRow().state.settings.dailyGoal }))"),
+        ("wait", "Sync.status === 'idle' && state.settings.loadCap === 123"),
+        ("eval", "Snapshots.get('conflict-' + todayStr()).then(j => JSON.stringify({ snap: j ? JSON.parse(j).settings.loadCap : null, cloud: __fake.getRow().state.settings.loadCap }))"),
     ])
     assert out[-3] == '{"local":7,"cloud":123,"st":"pending","net":1}', out[-3]
     assert out[-1] == '{"snap":7,"cloud":123}', out[-1]

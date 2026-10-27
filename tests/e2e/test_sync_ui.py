@@ -35,7 +35,7 @@ def test_logged_in_chip_and_panel(b):
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
         ("eval", "JSON.stringify({ txt: document.querySelector('#sideSync .sync-chip').textContent.trim().slice(0, 3), cls: document.querySelector('#sideSync .sync-chip').className })"),
         ("eval", "openSettings('data'); JSON.stringify({ email: document.querySelector('#settingsBody, .modal, body').textContent.includes('a@b.c'), now: !!document.querySelector('[data-act=sync-now]'), out: !!document.querySelector('[data-act=sync-logout]'), del: !!document.querySelector('[data-act=sync-delete-cloud]'), login: !!document.getElementById('syncEmail') })"),
-        ("eval", "closeModal(); state.settings.dailyGoal = 31; saveState(); JSON.stringify({ txt: document.querySelector('#sideSync .sync-chip').textContent.trim(), cls: document.querySelector('#sideSync .sync-chip').className })"),
+        ("eval", "closeModal(); state.settings.loadCap = 31; saveState(); JSON.stringify({ txt: document.querySelector('#sideSync .sync-chip').textContent.trim(), cls: document.querySelector('#sideSync .sync-chip').className })"),
         ("wait", "Sync.status === 'idle'"),
     ])
     assert out[-3] == '{"txt":"已同步","cls":"sync-chip is-idle"}', out[-3]
