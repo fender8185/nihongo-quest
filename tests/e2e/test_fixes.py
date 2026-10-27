@@ -570,6 +570,37 @@ def test_first_new_question_of_a_lesson_section_shows_that_section_once(b):
     assert r['previews'] >= 1 and r['onePerSection'] and r['card'] and r['heading'] and r['rule'] and r['point'] and r['examples'] and r['lesson'], r
     assert r['movedAway'] and r['seen'] and r['noSecondCard'], r
 
+def test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks(b):
+    js = """(() => { const unit = state.currentUnit; const t = todayStr();
+      state.currentUnit = 'm1'; const n5 = listenReachable().length; const first = extrasPlan(unitOrder('m1')).newL.map(x => x.u);
+      state.currentUnit = 'm3'; const near = listenReachable().slice(0, 30).map(x => x.u); const c3 = REG.listen.filter(x => x.u === 'm3').length, c2 = REG.listen.filter(x => x.u === 'm2').length;
+      state.currentUnit = 'm7'; const all = listenReachable().length;
+      const l = REG.listen[0]; const prev = state.srs[l.key] ? JSON.parse(JSON.stringify(state.srs[l.key])) : null;
+      delete state.srs[l.key]; srsAnswer(l.key, true); const d1 = daysBetween(t, state.srs[l.key].due);
+      Object.assign(state.srs[l.key], { last: addDays(t, -20), due: t }); srsAnswer(l.key, true); const d2 = daysBetween(t, state.srs[l.key].due);
+      srsAnswer(l.key, false); const d3 = daysBetween(t, state.srs[l.key].due);
+      if (prev) state.srs[l.key] = prev; else delete state.srs[l.key]; state.currentUnit = unit; saveState();
+      return JSON.stringify({ n5, total: REG.listen.length, n5Items: REG.listen.filter(x => x.lv === 'N5').length, first, near, c3, c2, all, d1, d2, d3 }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['n5'] == r['n5Items'] and r['n5'] > 60 and r['all'] == r['total'], r
+    assert r['first'] and all(u == 'm1' for u in r['first']), r
+    assert set(r['near'][:r['c3']]) == {'m3'} and set(r['near'][r['c3']:r['c3'] + r['c2']]) == {'m2'}, r
+    assert r['d1'] >= 14 and r['d2'] >= 45 and r['d3'] == 1, r
+
+def test_listening_playback_shows_a_progress_bar_with_the_line_count(b):
+    js = """(() => { const it = REG.listen.find(x => x.t === 'dialog'); startSession('items', { items: [it] }); const e = currentEntry(); e.autoPlayed = true; renderPractice();
+      const prog = document.getElementById('speechProg'); const out = { has: !!prog, hiddenAtFirst: !!(prog && prog.hidden) };
+      const lines = String(currentEntry().q.audio).split(/\\n+/).filter(Boolean).length;
+      const p = speakScript(currentEntry().q.audio);
+      return new Promise(res => setTimeout(() => { const el = document.getElementById('speechProg'); out.midLabel = el.querySelector('.lab').textContent; out.midHidden = el.hidden; out.midWidth = el.querySelector('.bar span').style.width;
+        p.then(() => setTimeout(() => { const el2 = document.getElementById('speechProg'); out.endLabel = el2.querySelector('.lab').textContent; out.endWidth = el2.querySelector('.bar span').style.width; out.lines = lines;
+          SESSION = null; document.body.classList.remove('practicing'); res(JSON.stringify(out)); }, 250)); }, 150)); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", js)], timeout=60)
+    r = json.loads(out[-1])
+    assert r['has'] and r['hiddenAtFirst'] and not r['midHidden'] and r['midLabel'] == f"第 1 / {r['lines']} 句", r
+    assert r['endLabel'] == '播放完畢' and r['endWidth'] == '100%', r
+
 def test_carried_mistakes_keep_two_days_of_spacing_unless_the_last_answer_was_wrong(b):
     js = """(() => { const t = todayStr(); const gs = REG.grammar.filter(g => g.u === 'm1').slice(0, 2); state.mistakes = []; state.settings.mistakesPerDay = 2;
       const rec = (g, last) => { state.srs[g.key] = { b: 1, due: addDays(t, 20), n: 14, ok: 12, ng: 2, s: 2, d: 6, last, intro: addDays(t, -9) }; };
@@ -651,7 +682,7 @@ if __name__ == "__main__":
              test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them,
              test_linked_mistakes_join_the_daily_mix_by_priority_up_to_the_setting, test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
-             test_carried_mistakes_keep_two_days_of_spacing_unless_the_last_answer_was_wrong, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
+             test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_carried_mistakes_keep_two_days_of_spacing_unless_the_last_answer_was_wrong, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
              test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model]
     failed = 0
     try:

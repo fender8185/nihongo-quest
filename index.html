@@ -319,6 +319,11 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 }
 .speak-big { display: inline-flex; align-items: center; gap: 10px; margin: 8px auto; padding: 14px 22px; border-radius: 99px; border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--accent); cursor: pointer; font-size: 16px; }
 .speak-big svg { width: 22px; height: 22px; }
+.speech-prog { max-width: 320px; margin: 2px auto 0; }
+.speech-prog .bar { height: 6px; border-radius: 99px; background: var(--bg-sunken); border: 1px solid var(--line); overflow: hidden; }
+.speech-prog .bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s linear; }
+.speech-prog.done .bar span { background: var(--ok); }
+.speech-prog .lab { margin-top: 4px; text-align: center; }
 .spell { text-align: center; }
 .spell-out { min-height: 48px; font-size: 30px; letter-spacing: 2px; padding: 6px 0 10px; border-bottom: 2px solid var(--line-2); margin: 0 auto 14px; max-width: 420px; }
 .spell-out.ok { border-color: var(--ok); } .spell-out.bad { border-color: var(--bad, #e5484d); }
@@ -798,12 +803,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '59';   // keep equal to the number in sw.js CACHE ('nq-v59'); scripts/test.sh checks it
+const APP_VERSION = '60';   // keep equal to the number in sw.js CACHE ('nq-v60'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '59', from: '36', date: '2026-10-27', items: [
+  { v: '60', from: '36', date: '2026-10-27', items: [
+    '聽力：題目改從整個級別抽（N5 學習者 72 題、N4 全部 208 題），離目前單元近的優先，不再只有本單元的 12 題一直輪；答對的對話至少兩週後才會再出、答對兩次改六週以上。播放時按鈕下方有進度條與「第 n / N 句」，播完顯示「播放完畢」（外部語音引擎用實際時間，瀏覽器語音用長度估算、每句校正）。',
     '超量練習不再重複：今天答對過的題目當天不會再出現（原本單字會一組一組重複）；每日進度做完後再開練習，改補「額度外的新內容」與「明後天到期的提前複習」，首頁與練習開頭會說明這組的內容；單元、單字、漢字練習套同一規則。',
     '給已有基礎的人：設定與「依程度選擇起點」都有「我已有基礎」一鍵套用（每天新單字 20、新文法 10、新漢字 5、現在就開放 N4 單字、不預設顯示中文）；N4 單字不必再等 N5 全部學完（設定可選）；單字表可把目前篩選的字整批標成「我會了」並可復原；新字預習卡上也有「我會了」，按了就跳過這個字的題目。',
     '文法題庫補題：整併後題數不到 3 題的考點各補到 3 題，共新增 76 題填空（第 1–12 週 24 題、第 13–24 週 15 題、第 25–36 週 37 題），每題都經過出題函式與選項檢查。',
@@ -1335,6 +1341,8 @@ function srsAnswer(key, correct, opt = {}) {
   // A missed word comes back later the same day; grammar, listening, reading and kanji wait until tomorrow,
   // because seeing the very same question again within hours only tests memory of the answer.
   r.due = g === 1 ? (key.startsWith('v:') ? t : addDays(t, 1)) : addDays(t, fsrsDays(r.s, key));
+  // a dialogue heard again within days tests memory of the answer, not listening: at least two weeks, then six+
+  if (key.startsWith('l:') && g > 1) r.due = addDays(t, Math.max(daysBetween(t, r.due), r.ok >= 2 ? 45 : 14));
   r.last = t;
   if ((r.lapse || 0) >= LEECH_LAPSES) r.leech = true;
   if (isNew) {
@@ -2569,7 +2577,25 @@ function makeMistakeCard(m) {
    More question types: listening, reading passages, kanji
    ========================================================================== */
 function playButton(label = '再聽一次') {
-  return `<div class="center"><button type="button" class="speak-big" data-act="replay">${icon('speaker')}<span>${label}</span></button></div>`;
+  return `<div class="center"><button type="button" class="speak-big" data-act="replay">${icon('speaker')}<span>${label}</span></button>
+    <div class="speech-prog" id="speechProg" hidden><div class="bar"><span></span></div><div class="tiny muted lab"></div></div></div>`;
+}
+// Playback progress of a listening script: line n of N, the bar advancing by the clip's real time (external engines) or
+// by the length estimate (browser voice, which reports no progress), snapping at each line boundary.
+const SPEECH_PROG = { token: -1, total: 0, idx: 0, start: 0, est: 0, real: null, done: false, timer: null };
+function speechProgStart(token, total) { Object.assign(SPEECH_PROG, { token, total, idx: 0, start: Date.now(), est: 1, real: null, done: false }); if (!SPEECH_PROG.timer) SPEECH_PROG.timer = setInterval(renderSpeechProg, 120); renderSpeechProg(); }
+function speechProgLine(i, text, rate) { Object.assign(SPEECH_PROG, { idx: i, start: Date.now(), est: 2500 + String(text).length * 350 / (rate || 1), real: null }); renderSpeechProg(); }
+function speechProgEnd() { SPEECH_PROG.done = true; renderSpeechProg(); }
+function renderSpeechProg() {
+  const el = document.getElementById('speechProg');
+  const live = SPEECH_PROG.token === speechToken && SPEECH_PROG.total > 0;
+  if (!live || !el) { if (!live && SPEECH_PROG.timer) { clearInterval(SPEECH_PROG.timer); SPEECH_PROG.timer = null; } if (el && !live) el.hidden = true; return; }
+  const P = SPEECH_PROG;
+  const frac = P.done ? 1 : (P.idx + (P.real != null ? P.real : Math.min(0.95, (Date.now() - P.start) / P.est))) / P.total;
+  el.hidden = false; el.classList.toggle('done', P.done);
+  el.querySelector('.bar span').style.width = `${Math.round(frac * 100)}%`;
+  el.querySelector('.lab').textContent = P.done ? '播放完畢' : `第 ${P.idx + 1} / ${P.total} 句`;
+  if (P.done && P.timer) { clearInterval(P.timer); P.timer = null; }
 }
 // Audio-only options (q.audioOptions): each option is a play button and is spoken only when tapped; nothing is
 // read in sequence, so no option can be skipped and no option number needs to be spoken.
@@ -2873,6 +2899,14 @@ function n5KanjiLeft() { let n = 0; for (const k of REG.kanji) if (k.lv === 'N5'
 function newKanjiCandidates(allowN4) {
   return REG.kanji.filter(k => !state.srs[k.key] && (k.lv === 'N5' || allowN4)).sort((a, b) => (a.lv === 'N4') - (b.lv === 'N4') || a.order - b.order);
 }
+// Listening is not tied to a unit's grammar: the pool is the whole level (N5 learners: N5; N4 learners: everything),
+// nearest units first (the current one, then earlier ones from the nearest, then later ones). A unit alone has ~12
+// items, which came back every few days.
+function listenReachable(curIdx = unitOrder(state.currentUnit)) {
+  const n4 = /N4/.test(unitById(state.currentUnit).lv);
+  const key = (x) => { const d = unitOrder(x.u) - curIdx; return (d > 0 ? 1000 + d : -d) * 1000 + (hashStr(x.id) % 997); };
+  return REG.listen.filter(x => n4 || x.lv === 'N5').sort((a, b) => key(a) - key(b));
+}
 function extrasPlan(curIdx) {
   const t = todayStr();
   const s = state.settings;
@@ -2880,8 +2914,9 @@ function extrasPlan(curIdx) {
   const isDue = (x) => { const r = state.srs[x.key]; return r && r.due <= t; };
   const byUnit = (a, b) => unitOrder(a.u) - unitOrder(b.u) || (hashStr(a.id) % 997) - (hashStr(b.id) % 997);
   const listenOn = s.listening && s.listenPerDay > 0 && speechAvailable();
-  const dueL = listenOn ? REG.listen.filter(x => reach(x) && isDue(x)).sort(byDue) : [];
-  const newL = listenOn ? REG.listen.filter(x => reach(x) && !state.srs[x.key]).sort(byUnit).slice(0, Math.max(0, s.listenPerDay - (state.today.newL || 0))) : [];
+  const lPool = listenOn ? listenReachable(curIdx) : [];
+  const dueL = lPool.filter(isDue).sort(byDue);
+  const newL = lPool.filter(x => !state.srs[x.key]).slice(0, Math.max(0, s.listenPerDay - (state.today.newL || 0)));
   const dueR = REG.read.filter(x => reach(x) && isDue(x)).sort(byDue);
   const newR = (state.today.newR || 0) < 1 ? REG.read.filter(x => reach(x) && !state.srs[x.key]).sort(byUnit).slice(0, 1) : [];
   const k4 = n5KanjiLeft() === 0;
@@ -6605,7 +6640,8 @@ function playUrl(url, token, rate = 1) {
     if (token !== speechToken) { resolve(true); return; }
     const a = getTtsPlayer();
     let finished = false, started = false, timer = null;
-    const cleanup = () => { clearTimeout(timer); a.onended = a.onerror = a.onplaying = a.onloadedmetadata = null; };
+    const cleanup = () => { clearTimeout(timer); a.onended = a.onerror = a.onplaying = a.onloadedmetadata = a.ontimeupdate = null; };
+    a.ontimeupdate = () => { if (token === SPEECH_PROG.token && isFinite(a.duration) && a.duration > 0) SPEECH_PROG.real = Math.min(1, a.currentTime / a.duration); };   // real progress for the bar
     const done = (ok, why) => { if (finished) return; finished = true; cleanup(); if (!ok && why) console.warn('audio playback failed:', why); resolve(ok); };
     a.onended = () => done(true);
     a.onerror = () => done(false, 'error');
@@ -6670,11 +6706,15 @@ async function speakScript(script) {
   // network gaps and the first clip starts as soon as possible after the tap that triggered it
   const cfg = ttsConfig();
   if (cfg.engine && cfg.engine !== 'browser_neural') parts.forEach(p => { engineBlob(p.text, p.gender).catch(() => {}); });
-  for (const p of parts) {
+  speechProgStart(token, parts.length);
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
     if (token !== speechToken) return;
+    speechProgLine(i, p.text, state.settings.speechRate || 1);
     await speakLine(p.text, p.gender, token);
     if (parts.length > 1) await sleep(280);
   }
+  if (token === speechToken) speechProgEnd();
 }
 
 // Anki cards keep their own recordings; everything else is synthesized
