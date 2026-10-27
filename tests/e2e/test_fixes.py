@@ -553,6 +553,43 @@ def test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue(b):
     assert r['btn'] and r['added'] == 1 and r['requeued'] == 1, r
     assert r['restored'] and r['mistBack'] and r['requeueGone'] and r['recent'] and r['ng'] and r['chip'] and r['btnGone'] and r['wrongStat'] == 0, r
 
+# ---- 2026-10-27: Gemini — transient errors rotate models without changing the preference, cooldowns, auto mode, caching ----
+GEMINI_MOCK = """(() => { window.__calls = []; window.__fail = { 'gemini-z-flash': 429 }; window.__retryMsg = 'Quota exceeded for quota metric ... Please retry in 12.5s.';
+  window.fetch = async (url, init) => { url = String(url); __calls.push(url.replace(/[?].*$/, ''));
+    if (/[/]models[?]/.test(url)) return { ok: true, status: 200, json: async () => ({ models: ['gemini-z-flash', 'gemini-b-flash', 'gemini-c-pro'].map(n => ({ name: 'models/' + n, supportedGenerationMethods: ['generateContent'] })) }) };
+    const m = (url.match(/models[/]([^:]+):generateContent/) || [])[1]; const st = __fail[m] || (['gemini-z-flash', 'gemini-b-flash', 'gemini-c-pro'].includes(m) ? 0 : 404);
+    if (st) return { ok: false, status: st, text: async () => JSON.stringify({ error: { code: st, message: st === 429 ? __retryMsg : 'The model is overloaded.' } }) };
+    return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: 'answer from ' + m }] } }] }) }; };
+  aiConfig().provider = 'gemini'; aiConfig().geminiKey = 'K'; aiConfig().geminiModel = 'auto'; saveState(); GEMINI_COOL.clear(); try { localStorage.removeItem('nq_gemini_models'); localStorage.removeItem('nq_ai_cache'); } catch (e) {} return 'mocked'; })()"""
+
+def test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown(b):
+    js = """callAi('hi').then(out1 => { const callsA = __calls.filter(u => /gemini-z-flash/.test(u)).length; return callAi('hi again').then(out2 => JSON.stringify({ out1, out2, callsA, callsA2: __calls.filter(u => /gemini-z-flash/.test(u)).length, cool: GEMINI_COOL.has('gemini-z-flash'), secs: Math.round((GEMINI_COOL.get('gemini-z-flash') - Date.now()) / 1000), last: AI_LAST.model, pref: aiConfig().geminiModel })); })"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", GEMINI_MOCK), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['out1'] == 'answer from gemini-b-flash' and r['out2'] == 'answer from gemini-b-flash' and r['last'] == 'gemini-b-flash', r
+    assert r['callsA'] == 1 and r['callsA2'] == 1 and r['cool'] and 10 <= r['secs'] <= 13 and r['pref'] == 'auto', r
+
+def test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference(b):
+    js = """(() => { aiConfig().geminiModel = 'gemini-z-flash'; saveState(); return callAi('hi').then(out => JSON.stringify({ out, pref: aiConfig().geminiModel, last: AI_LAST.model })); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", GEMINI_MOCK), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['out'] == 'answer from gemini-b-flash' and r['pref'] == 'gemini-z-flash' and r['last'] == 'gemini-b-flash', r
+
+def test_gemini_reports_a_plain_message_when_every_model_is_cooling_down(b):
+    js = """(() => { __fail['gemini-b-flash'] = 429; __fail['gemini-c-pro'] = 429; return callAi('hi').then(() => 'no error', e => e.message); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", GEMINI_MOCK), ("eval", js)], timeout=45)
+    assert '額度' in out[-1] and '秒' in out[-1], out[-1]
+
+def test_ai_explanations_are_cached_per_question_and_show_the_model(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && meaningOptions(x)); srsAnswer(v.key, true); startSession('items', { items: [v] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice(); answerCurrent(e.q.answer);
+      const n0 = __calls.filter(u => /generateContent/.test(u)).length;
+      return aiExplainCurrent().then(() => { const n1 = __calls.filter(u => /generateContent/.test(u)).length; const html1 = document.getElementById('aiExplainBox').innerHTML; renderPractice();
+        return aiExplainCurrent().then(() => { const n2 = __calls.filter(u => /generateContent/.test(u)).length; const txt = document.getElementById('aiExplainBox').textContent; SESSION = null; document.body.classList.remove('practicing');
+          return JSON.stringify({ first: n1 - n0, second: n2 - n1, hasModel: /gemini-b-flash/.test(txt), hasAnswer: /answer from/.test(txt), html1: html1.length > 0 }); }); }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", GEMINI_MOCK), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['first'] >= 1 and r['second'] == 0 and r['hasModel'] and r['hasAnswer'] and r['html1'], r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -571,7 +608,8 @@ if __name__ == "__main__":
              test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them,
              test_linked_mistakes_join_the_daily_mix_by_priority_up_to_the_setting, test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_sighting_of_a_grammar_point_shows_a_mini_lesson_in_daily_practice,
-             test_carried_mistakes_keep_two_days_of_spacing_unless_the_last_answer_was_wrong, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue]
+             test_carried_mistakes_keep_two_days_of_spacing_unless_the_last_answer_was_wrong, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
+             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model]
     failed = 0
     try:
         for t in tests:

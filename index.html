@@ -795,12 +795,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '50';   // keep equal to the number in sw.js CACHE ('nq-v50'); scripts/test.sh checks it
+const APP_VERSION = '51';   // keep equal to the number in sw.js CACHE ('nq-v51'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '50', from: '36', date: '2026-10-27', items: [
+  { v: '51', from: '36', date: '2026-10-27', items: [
+    'Gemini 更穩：模型預設「自動」，被限額（429）或過載的模型會記住冷卻時間、自動換下一個，不再改動你的選擇；全部限額時用白話說明幾秒後再試；AI 解析會在本機快取，同一題不再重問，並標示是哪個模型回答的。',
     '文法句意題改良：助詞題改問「畫線的助詞在這句表示什麼」，選項是同單元的其他考點；其他題目的錯誤選項改挑字面最相近的句子，不再一眼就能排除。',
     '學習法調整：預習卡看完後，題目改在 4–6 題之後才出；新單字在同一組只再考一次（隔 8 題以上），第二次改成隔天複習；新文法考點第一次出現先看一句話規則與一個例句；每日夾帶的錯題保持兩天以上的間隔；答錯後可按「手滑，不算」，不進錯題本、排程維持原狀。',
     '主選單：學習分析移到錯題本原本的位置，錯題本往下。',
@@ -969,6 +970,7 @@ function normalizeState(s) {
   if (!out.today || out.today.date !== todayStr()) out.today = { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0 };
   Object.values(out.srs).forEach(ensureFsrs);
   Object.entries(out.srs).forEach(([k, r]) => { if (k.startsWith('v:') && (!r.f || typeof r.f !== 'object')) r.f = {}; });   // words answered before per-format tracking
+  if (out.aiConfig && out.aiConfig.geminiModel === 'gemini-3.8-flash') out.aiConfig.geminiModel = 'auto';   // the old default name: auto picks a live model
   // built-in words merged into another entry (名詞 + 名詞する → one card): the record follows; when both exist the one answered more stays
   Object.entries(DATA.VOCAB_MERGED || {}).forEach(([from, to]) => {
     const a = out.srs['v:' + from]; if (!a) return;
@@ -5648,7 +5650,9 @@ function settingsAi() {
   let fields = '';
   if (c.provider === 'gemini') {
     fields = textRow('geminiKey', 'Gemini API Key', `可在 Google AI Studio 免費申請。Key 只存在這個瀏覽器裡。${guideLink('gemini')}`, 'ai-cfg', { secret: true })
-      + `<div class="field mt-3"><label>模型</label><div class="row-wrap"><input class="input" style="max-width:260px" value="${esc(c.geminiModel)}" data-change="ai-cfg" data-key="geminiModel" /><button type="button" class="btn btn-sm" data-act="ai-models">列出可用模型</button></div><div id="aiModelList" class="mt-2"></div><div class="hint">模型停用時會自動改用帳號可用的其他模型。</div></div>`;
+      + (() => { let list = []; try { const cc = JSON.parse(localStorage.getItem('nq_gemini_models') || 'null'); if (cc && cc.list) list = cc.list; } catch (e) { /* ignore */ }
+        const cur = c.geminiModel || 'auto'; const opts = [['auto', '自動（優先 flash，額度用完時換下一個）']].concat(list.map(n => [n, n])); if (cur !== 'auto' && !list.includes(cur)) opts.push([cur, cur]);
+        return `<div class="field mt-3"><label>模型</label><div class="row-wrap"><select class="select" style="max-width:300px" data-change="ai-cfg" data-key="geminiModel">${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select><button type="button" class="btn btn-sm" data-act="ai-models">列出可用模型</button></div><div id="aiModelList" class="mt-2"></div><div class="hint">免費額度是按模型分開算的：被限額或過載的模型會暫時跳過，自動改用下一個，不會改動這裡的選擇。</div></div>`; })();
   } else if (c.provider === 'openai') {
     fields = textRow('openaiUrl', 'API 位址', '也可以填 OpenAI 相容的服務（例如 OpenRouter、LM Studio）。', 'ai-cfg', { ph: 'https://api.openai.com/v1' })
       + textRow('openaiKey', 'API Key', `只存在這個瀏覽器裡。${guideLink('openai')}`, 'ai-cfg', { secret: true })
@@ -6618,11 +6622,34 @@ function testVoice() {
    AI: provider calls (Gemini / OpenAI-compatible / Ollama) and every AI feature
    ========================================================================== */
 const AI_DEFAULT = {
-  provider: 'gemini', geminiKey: '', geminiModel: 'gemini-3.8-flash',
+  provider: 'gemini', geminiKey: '', geminiModel: 'auto',
   ollamaUrl: 'http://localhost:11434', ollamaModel: 'qwen2.5:7b',
   openaiUrl: 'https://api.openai.com/v1', openaiKey: '', openaiModel: 'gpt-4o-mini'
 };
-const GEMINI_FALLBACK = ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest', 'gemini-2.5-flash'];
+const GEMINI_FALLBACK = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];   // only when the account's list cannot be fetched
+const AI_LAST = { model: '' };   // which model answered the last call (shown under AI output)
+// Free-tier quotas are per model: a rate-limited or overloaded model is skipped for a while and the next one is tried,
+// without touching the model the learner picked. Cooldowns survive a reload.
+const GEMINI_COOL = new Map();
+(() => { try { Object.entries(JSON.parse(localStorage.getItem('nq_gemini_cool') || '{}')).forEach(([m, t]) => { if (t > Date.now()) GEMINI_COOL.set(m, t); }); } catch (e) { /* ignore */ } })();
+function coolModel(m, ms) { GEMINI_COOL.set(m, Date.now() + ms); try { localStorage.setItem('nq_gemini_cool', JSON.stringify(Object.fromEntries(GEMINI_COOL))); } catch (e) { /* ignore */ } }
+function geminiRetryMs(raw) {
+  const t = String(raw || '');
+  if (/per[ _]?day|daily|PerDay/i.test(t)) { const d = new Date(); d.setHours(24, 5, 0, 0); return d - Date.now(); }   // daily quota: tomorrow
+  const m = /retry[^0-9]{0,16}([0-9.]+)\s*s/i.exec(t);
+  return m ? Math.ceil(parseFloat(m[1]) * 1000) : 60000;
+}
+async function geminiModelsCached(key) {
+  const sig = hashStr(key);
+  try { const c = JSON.parse(localStorage.getItem('nq_gemini_models') || 'null'); if (c && c.date === todayStr() && c.key === sig && c.list.length) return c.list; } catch (e) { /* ignore */ }
+  const list = await geminiModels(key);
+  if (list.length) try { localStorage.setItem('nq_gemini_models', JSON.stringify({ date: todayStr(), key: sig, list })); } catch (e) { /* ignore */ }
+  return list;
+}
+// small on-device cache for AI answers (explanations are asked for the same question again and again)
+function aiCacheGet(k) { try { return JSON.parse(localStorage.getItem('nq_ai_cache') || '[]').find(x => x.k === k) || null; } catch (e) { return null; } }
+function aiCacheSet(k, text, model) { try { const a = JSON.parse(localStorage.getItem('nq_ai_cache') || '[]').filter(x => x.k !== k); a.unshift({ k, text, model, t: Date.now() }); localStorage.setItem('nq_ai_cache', JSON.stringify(a.slice(0, 300))); } catch (e) { /* ignore */ } }
+function aiCaption(model, cached) { return model ? `<div class="tiny muted mt-1">由 ${esc(model)} 產生${cached ? '・已儲存，不再重問' : ''}</div>` : ''; }
 
 function aiConfig() {
   if (!state.aiConfig || typeof state.aiConfig !== 'object') state.aiConfig = {};
@@ -6639,7 +6666,7 @@ function isAiConfigured() {
 }
 function aiLabel() {
   const c = aiConfig();
-  if (c.provider === 'gemini') return `Gemini（${c.geminiModel}）`;
+  if (c.provider === 'gemini') return `Gemini（${c.geminiModel === 'auto' || !c.geminiModel ? (AI_LAST.model ? `自動・${AI_LAST.model}` : '自動') : c.geminiModel}）`;
   if (c.provider === 'ollama') return `Ollama（${c.ollamaModel}）`;
   return `OpenAI 相容（${c.openaiModel}）`;
 }
@@ -6684,26 +6711,34 @@ async function callAi(prompt, opt = {}) {
       if (!out) throw new Error('Gemini 沒有回傳內容');
       return out;
     };
-    const model = String(c.geminiModel || AI_DEFAULT.geminiModel).replace(/^models\//, '');
-    try {
-      return await tryModel(model);
-    } catch (err) {
-      if (![400, 404].includes(err.status)) throw err;
-      // the model may have been retired: try names suggested by the error, then the account's model list
-      const cands = [];
-      ((err.raw || '').match(/models\/[a-zA-Z0-9._-]+/g) || []).forEach(m => { const n = m.replace('models/', ''); if (n !== model && !cands.includes(n)) cands.push(n); });
-      (await geminiModels(key)).forEach(n => { if (n !== model && !cands.includes(n)) cands.push(n); });
-      GEMINI_FALLBACK.forEach(n => { if (n !== model && !cands.includes(n)) cands.push(n); });
-      for (const n of cands.slice(0, 8)) {
-        try {
-          const out = await tryModel(n);
-          c.geminiModel = n; saveState();
-          toast(`原本的模型無法使用，已改用 ${n}`);
-          return out;
-        } catch (e) { /* try next */ }
-      }
-      throw err;
+    const pref = String(c.geminiModel || 'auto').replace(/^models\//, '');
+    const order = pref !== 'auto' ? [pref] : [];
+    (await geminiModelsCached(key)).concat(GEMINI_FALLBACK).forEach(n => { if (!order.includes(n)) order.push(n); });
+    const now = Date.now();
+    const ready = order.filter(m => !(GEMINI_COOL.get(m) > now));
+    if (!ready.length) {
+      const soonest = Math.min(...order.map(m => GEMINI_COOL.get(m) || now));
+      throw new Error(`Gemini 的免費額度暫時用完：約 ${Math.max(1, Math.ceil((soonest - now) / 1000))} 秒後再試。`);
     }
+    let lastErr = null; let quotaHit = false;
+    for (const m of ready.slice(0, 6)) {
+      try {
+        let out;
+        try { out = await tryModel(m); }
+        catch (e1) { if (![500, 503].includes(e1.status)) throw e1; await new Promise(r => setTimeout(r, 1500)); out = await tryModel(m); }   // overloaded: one quick retry
+        AI_LAST.model = m;
+        if (pref !== 'auto' && m !== pref) toast(`${pref} 暫時無法使用，這次改用 ${m}`);
+        return out;
+      } catch (e) {
+        lastErr = e;
+        if (e.status === 429) { quotaHit = true; coolModel(m, geminiRetryMs(e.raw)); }
+        else if ([500, 503].includes(e.status)) coolModel(m, 30000);
+        else if ([400, 404].includes(e.status)) coolModel(m, 24 * 3600 * 1000);   // retired or misspelled model
+        else throw e;   // 401/403: the key itself
+      }
+    }
+    if (quotaHit) throw new Error(`Gemini 的免費額度暫時用完（${ready.length} 個模型都在限額中）：約 ${Math.max(1, Math.ceil((Math.min(...ready.map(m => GEMINI_COOL.get(m) || now)) - now) / 1000))} 秒後再試。`);
+    throw lastErr || new Error('Gemini 沒有可用的模型');
   }
   if (c.provider === 'ollama') {
     const base = String(c.ollamaUrl).replace(/\/+$/, '');
@@ -6773,9 +6808,13 @@ async function aiExplainCurrent() {
 選項：${q.options.map(o => jaPlain(o.text)).join('／')}
 正確答案：${jaPlain(q.options[q.answer].text)}
 我的答案：${jaPlain(q.options[e.chosen].text)}`;
+  const ck = `explain|${q.key || stem}|${q.fmt}|${jaPlain(q.options[e.chosen].text)}`;
+  const hit = aiCacheGet(ck);
+  if (hit) { if (box) box.innerHTML = `<div class="panel mt-3">${md(hit.text)}${aiCaption(hit.model, true)}</div>`; return; }
   await withBusy(btn, 'AI 解析中', async () => {
     const out = await callAi(prompt);
-    if (box && box.isConnected) box.innerHTML = `<div class="panel mt-3">${md(out)}</div>`;
+    aiCacheSet(ck, out, AI_LAST.model);
+    if (box && box.isConnected) box.innerHTML = `<div class="panel mt-3">${md(out)}${aiCaption(AI_LAST.model, false)}</div>`;
   });
 }
 
