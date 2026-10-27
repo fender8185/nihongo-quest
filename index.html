@@ -795,13 +795,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '51';   // keep equal to the number in sw.js CACHE ('nq-v51'); scripts/test.sh checks it
+const APP_VERSION = '52';   // keep equal to the number in sw.js CACHE ('nq-v52'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '51', from: '36', date: '2026-10-27', items: [
-    'Gemini 更穩：模型預設「自動」，被限額（429）或過載的模型會記住冷卻時間、自動換下一個，不再改動你的選擇；全部限額時用白話說明幾秒後再試；AI 解析會在本機快取，同一題不再重問，並標示是哪個模型回答的。',
+  { v: '52', from: '36', date: '2026-10-27', items: [
+    'Gemini 更穩也更快：模型預設「自動」，被限額（429）、過載或 20 秒沒回應的模型會記住冷卻時間、自動換下一個，不再改動你的選擇；關閉模型的「思考」步驟，解析不再動輒等十幾秒；preview／thinking 類的實驗模型排到最後才用；全部限額時用白話說明幾秒後再試；AI 解析會在本機快取，同一題不再重問，並標示是哪個模型回答的。',
     '文法句意題改良：助詞題改問「畫線的助詞在這句表示什麼」，選項是同單元的其他考點；其他題目的錯誤選項改挑字面最相近的句子，不再一眼就能排除。',
     '學習法調整：預習卡看完後，題目改在 4–6 題之後才出；新單字在同一組只再考一次（隔 8 題以上），第二次改成隔天複習；新文法考點第一次出現先看一句話規則與一個例句；每日夾帶的錯題保持兩天以上的間隔；答錯後可按「手滑，不算」，不進錯題本、排程維持原狀。',
     '主選單：學習分析移到錯題本原本的位置，錯題本往下。',
@@ -5650,7 +5650,7 @@ function settingsAi() {
   let fields = '';
   if (c.provider === 'gemini') {
     fields = textRow('geminiKey', 'Gemini API Key', `可在 Google AI Studio 免費申請。Key 只存在這個瀏覽器裡。${guideLink('gemini')}`, 'ai-cfg', { secret: true })
-      + (() => { let list = []; try { const cc = JSON.parse(localStorage.getItem('nq_gemini_models') || 'null'); if (cc && cc.list) list = cc.list; } catch (e) { /* ignore */ }
+      + (() => { let list = []; try { const cc = JSON.parse(localStorage.getItem('nq_gemini_models2') || 'null'); if (cc && cc.list) list = cc.list; } catch (e) { /* ignore */ }
         const cur = c.geminiModel || 'auto'; const opts = [['auto', '自動（優先 flash，額度用完時換下一個）']].concat(list.map(n => [n, n])); if (cur !== 'auto' && !list.includes(cur)) opts.push([cur, cur]);
         return `<div class="field mt-3"><label>模型</label><div class="row-wrap"><select class="select" style="max-width:300px" data-change="ai-cfg" data-key="geminiModel">${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select><button type="button" class="btn btn-sm" data-act="ai-models">列出可用模型</button></div><div id="aiModelList" class="mt-2"></div><div class="hint">免費額度是按模型分開算的：被限額或過載的模型會暫時跳過，自動改用下一個，不會改動這裡的選擇。</div></div>`; })();
   } else if (c.provider === 'openai') {
@@ -6628,6 +6628,7 @@ const AI_DEFAULT = {
 };
 const GEMINI_FALLBACK = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];   // only when the account's list cannot be fetched
 const AI_LAST = { model: '' };   // which model answered the last call (shown under AI output)
+const GEMINI_TIMEOUT_MS = 20000;   // a model that stays silent this long is treated like an overloaded one and the next is tried
 // Free-tier quotas are per model: a rate-limited or overloaded model is skipped for a while and the next one is tried,
 // without touching the model the learner picked. Cooldowns survive a reload.
 const GEMINI_COOL = new Map();
@@ -6641,9 +6642,9 @@ function geminiRetryMs(raw) {
 }
 async function geminiModelsCached(key) {
   const sig = hashStr(key);
-  try { const c = JSON.parse(localStorage.getItem('nq_gemini_models') || 'null'); if (c && c.date === todayStr() && c.key === sig && c.list.length) return c.list; } catch (e) { /* ignore */ }
+  try { const c = JSON.parse(localStorage.getItem('nq_gemini_models2') || 'null'); if (c && c.date === todayStr() && c.key === sig && c.list.length) return c.list; } catch (e) { /* ignore */ }
   const list = await geminiModels(key);
-  if (list.length) try { localStorage.setItem('nq_gemini_models', JSON.stringify({ date: todayStr(), key: sig, list })); } catch (e) { /* ignore */ }
+  if (list.length) try { localStorage.setItem('nq_gemini_models2', JSON.stringify({ date: todayStr(), key: sig, list })); } catch (e) { /* ignore */ }
   return list;
 }
 // small on-device cache for AI answers (explanations are asked for the same question again and again)
@@ -6682,6 +6683,7 @@ function aiSystemPrompt() {
   ].join('\n');
 }
 
+const slowName = (n) => /preview|exp|thinking/i.test(n) ? 1 : 0;
 async function geminiModels(key) {
   try {
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`);
@@ -6691,7 +6693,7 @@ async function geminiModels(key) {
       .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
       .map(m => String(m.name || '').replace(/^models\//, ''))
       .filter(n => /^gemini-/.test(n) && !/(tts|embedding|image|imagen|live|vision|audio|robotics|computer-use|research)/i.test(n))
-      .sort((a, b) => (/flash/.test(b) - /flash/.test(a)) || (/lite/.test(a) - /lite/.test(b)) || b.localeCompare(a));
+      .sort((a, b) => (slowName(a) - slowName(b)) || (/flash/.test(b) - /flash/.test(a)) || (/lite/.test(a) - /lite/.test(b)) || b.localeCompare(a));   // stable flash first; preview / exp / thinking variants (slower, tighter quotas) last
   } catch (e) { return []; }
 }
 
@@ -6701,10 +6703,20 @@ async function callAi(prompt, opt = {}) {
   if (!isAiConfigured()) throw new Error('尚未設定 AI。請到「設定 → AI」填入 API Key。');
   if (c.provider === 'gemini') {
     const key = c.geminiKey.trim();
-    const body = { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: Object.assign({ temperature: opt.temperature ?? 0.7 }, opt.json ? { responseMimeType: 'application/json' } : {}) };
-    const tryModel = async (model) => {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      if (!r.ok) { const t = await r.text(); const e = new Error(`Gemini 回應錯誤（${r.status}）${t.slice(0, 160)}`); e.status = r.status; e.raw = t; throw e; }
+    const genCfg = Object.assign({ temperature: opt.temperature ?? 0.7 }, opt.json ? { responseMimeType: 'application/json' } : {});
+    // thinking off: a quiz explanation does not need deliberation, and default thinking makes flash models take 10 s or more
+    const mkBody = (think) => ({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: think ? genCfg : Object.assign({ thinkingConfig: { thinkingBudget: 0 } }, genCfg) });
+    const tryModel = async (model, think = false) => {
+      const ac = new AbortController(); const timer = setTimeout(() => ac.abort(), GEMINI_TIMEOUT_MS);
+      let r;
+      try { r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(mkBody(think)), signal: ac.signal }); }
+      catch (err) { if (ac.signal.aborted) { const e = new Error(`Gemini 回應逾時（${Math.round(GEMINI_TIMEOUT_MS / 1000)} 秒沒有回應）`); e.timeout = true; throw e; } throw err; }
+      finally { clearTimeout(timer); }
+      if (!r.ok) {
+        const t = await r.text();
+        if (r.status === 400 && !think && /thinking/i.test(t)) return tryModel(model, true);   // this model cannot switch thinking off: ask again without the setting
+        const e = new Error(`Gemini 回應錯誤（${r.status}）${t.slice(0, 160)}`); e.status = r.status; e.raw = t; throw e;
+      }
       const d = await r.json();
       const text = (((d.candidates || [])[0] || {}).content || {}).parts;
       const out = (text || []).map(p => p.text || '').join('');
@@ -6725,14 +6737,14 @@ async function callAi(prompt, opt = {}) {
       try {
         let out;
         try { out = await tryModel(m); }
-        catch (e1) { if (![500, 503].includes(e1.status)) throw e1; await new Promise(r => setTimeout(r, 1500)); out = await tryModel(m); }   // overloaded: one quick retry
+        catch (e1) { if (![500, 503].includes(e1.status)) throw e1; await new Promise(r => setTimeout(r, 1500)); out = await tryModel(m); }   // overloaded: one quick retry (a timeout is not retried: it would cost another wait)
         AI_LAST.model = m;
         if (pref !== 'auto' && m !== pref) toast(`${pref} 暫時無法使用，這次改用 ${m}`);
         return out;
       } catch (e) {
         lastErr = e;
         if (e.status === 429) { quotaHit = true; coolModel(m, geminiRetryMs(e.raw)); }
-        else if ([500, 503].includes(e.status)) coolModel(m, 30000);
+        else if ([500, 503].includes(e.status) || e.timeout) coolModel(m, 30000);   // overloaded or silent: skip it for a while
         else if ([400, 404].includes(e.status)) coolModel(m, 24 * 3600 * 1000);   // retired or misspelled model
         else throw e;   // 401/403: the key itself
       }
