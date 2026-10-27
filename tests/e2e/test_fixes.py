@@ -606,6 +606,24 @@ def test_listening_playback_shows_a_progress_bar_with_the_line_count(b):
     assert r['has'] and r['hiddenAtFirst'] and not r['midHidden'] and r['midLabel'] == f"第 1 / {r['lines']} 句", r
     assert r['endLabel'] == '播放完畢' and r['endWidth'] == '100%', r
 
+def test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam(b):
+    js = """(() => { const items = REG.grammar.filter(g => g.t === 'order').slice(0, 3); const [a, bItem, c] = items;
+      const tap = (e, text) => ACTIONS['order-tap']({ dataset: { i: String(e.q.tiles.indexOf(text)) } });
+      startSession('items', { items: [a, bItem, c] }); let e = currentEntry(); renderPractice();
+      const out = { custom: e.q.custom, tiles: document.querySelectorAll('.order-tiles .order-tile').length, noOpts: document.querySelectorAll('button.opt').length === 0, shuffled: e.q.tiles.join('') !== a.parts.join('') };
+      a.parts.forEach(p => tap(e, p)); out.okDone = e.done === true && e.chosen === 0; out.fullShown = !!document.querySelector('.order-out.ok') && !!document.querySelector('.fb-full');
+      nextQuestion(); e = currentEntry(); renderPractice(); const wrong = bItem.parts.slice().reverse(); wrong.forEach(p => tap(e, p));
+      out.wrongDone = e.done === true && e.chosen === 1; out.produced = e.q.options[1].text; out.wrongText = (bItem.pre || '') + wrong.join('') + (bItem.post || '');
+      nextQuestion(); e = currentEntry(); renderPractice(); tap(e, c.parts[2]); ACTIONS['order-back'](); out.backEmpty = !(e.order || []).length; ACTIONS['custom-giveup'](); out.gaveUp = e.done === true && e.chosen === 1 && e.order.map(i => e.q.tiles[i]).join('') === c.parts.join('');
+      const exam = makeGrammarQuestion(a, { forceFmt: 'g-choice' }); out.exam = { fmt: exam.fmt, custom: exam.custom || null, opts: exam.options.length, star: exam.options[exam.answer].text === a.parts[a.star] };
+      SESSION = null; document.body.classList.remove('practicing'); [a, bItem, c].forEach(g => delete state.srs[g.key]); saveState(); return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
+    r = json.loads(out[-1])
+    assert r['custom'] == 'g-order' and r['tiles'] == 4 and r['noOpts'] and r['shuffled'], r
+    assert r['okDone'] and r['fullShown'] and r['wrongDone'] and r['produced'] == r['wrongText'], r
+    assert r['backEmpty'] and r['gaveUp'], r
+    assert r['exam'] == {'fmt': 'g-order', 'custom': None, 'opts': 4, 'star': True}, r
+
 def test_carried_mistakes_keep_two_days_of_spacing_unless_the_last_answer_was_wrong(b):
     js = """(() => { const t = todayStr(); const gs = REG.grammar.filter(g => g.u === 'm1').slice(0, 2); state.mistakes = []; state.settings.mistakesPerDay = 2;
       const rec = (g, last) => { state.srs[g.key] = { b: 1, due: addDays(t, 20), n: 14, ok: 12, ng: 2, s: 2, d: 6, last, intro: addDays(t, -9) }; };
@@ -687,7 +705,7 @@ if __name__ == "__main__":
              test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them,
              test_linked_mistakes_join_the_daily_mix_by_priority_up_to_the_setting, test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
-             test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_carried_mistakes_keep_two_days_of_spacing_unless_the_last_answer_was_wrong, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
+             test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_carried_mistakes_keep_two_days_of_spacing_unless_the_last_answer_was_wrong, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
              test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model]
     failed = 0
     try:

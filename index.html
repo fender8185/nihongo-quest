@@ -330,6 +330,13 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .spell-tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .spell-tile { width: 52px; height: 52px; font-size: 24px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); cursor: pointer; }
 .spell-tile:disabled { opacity: .25; cursor: default; }
+.order-out { min-height: 48px; font-size: 22px; line-height: 2; padding: 6px 0 10px; border-bottom: 2px solid var(--line-2); margin: 0 auto 14px; max-width: 560px; text-align: center; }
+.order-out.ok { border-color: var(--ok); } .order-out.bad { border-color: var(--bad, #e5484d); }
+.order-slot { display: inline-block; min-width: 2.2em; margin: 0 3px; border-bottom: 2px solid var(--line-2); text-align: center; color: var(--fg-3); }
+.order-slot.filled { color: var(--fg); border-color: var(--accent); }
+.order-tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.order-tile { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 20px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); cursor: pointer; }
+.order-tile:disabled { opacity: .25; cursor: default; }
 .match { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
 .match-col { display: flex; flex-direction: column; gap: 8px; }
 .match-word, .match-meaning { padding: 12px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); font: inherit; font-size: 16px; cursor: pointer; text-align: center; }
@@ -803,12 +810,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '61';   // keep equal to the number in sw.js CACHE ('nq-v61'); scripts/test.sh checks it
+const APP_VERSION = '62';   // keep equal to the number in sw.js CACHE ('nq-v62'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '61', from: '36', date: '2026-10-27', items: [
+  { v: '62', from: '36', date: '2026-10-27', items: [
+    '排序題改成真的排序：練習時依順序點選四個部分排成一句話（可退一格、看答案，鍵盤 1–4 也能點），錯了會顯示你排的順序與正確順序；模擬考維持 JLPT 的「★ 的位置是哪一個」形式。',
     '聽力：題目改從整個級別抽（N5 學習者 72 題、N4 全部 208 題），離目前單元近的優先，不再只有本單元的 12 題一直輪；答對的對話至少兩週後才會再出、答對兩次改六週以上。播放時按鈕下方有進度條與「第 n / N 句」，播完顯示「播放完畢」（外部語音引擎用實際時間，瀏覽器語音用長度估算、每句校正）。',
     '超量練習不再重複：今天答對過的題目當天不會再出現（原本單字會一組一組重複）；補位的加強題只拿兩天以上沒答過、而且還沒連續答對兩次的題，剛答對一次的題不會在正式到期前天天被拿來補位；每日進度做完後再開練習，改補「額度外的新內容」與「明後天到期的提前複習」，首頁與練習開頭會說明這組的內容；單元、單字、漢字練習套同一規則。',
     '給已有基礎的人：設定與「依程度選擇起點」都有「我已有基礎」一鍵套用（每天新單字 20、新文法 10、新漢字 5、現在就開放 N4 單字、不預設顯示中文）；N4 單字不必再等 N5 全部學完（設定可選）；單字表可把目前篩選的字整批標成「我會了」並可復原；新字預習卡上也有「我會了」，按了就跳過這個字的題目。',
@@ -2468,15 +2476,28 @@ function makeGrammarQuestion(g, ctx = {}) {
   }
   if (t === 'order') {
     const parts = g.parts || [];
-    const slots = parts.map((_, i) => i === g.star ? '<span class="blank star" data-blank>★</span>' : '<span class="blank" style="min-width:2.4em">＿</span>');
     q.fmt = 'g-order';
-    q.instr = '把四個選項排成正確的句子，★ 的位置是哪一個？';
-    q.stemHtml = `${furi(g.pre || '')}${slots.join('')}${furi(g.post || '')}`;
     q.fullJp = (g.pre || '') + parts.join('') + (g.post || '');
     q.orderParts = parts;
-    q.mistakePrompt = `${g.pre || ''}${parts.map((p, i) => i === g.star ? '★' : '＿').join(' ')}${g.post || ''}`;
-    finalizeOptions(q, parts[g.star], parts.filter((_, i) => i !== g.star), true);
     q.why = `正確順序：${parts.join(' → ')}\n\n${g.why || ''}`;
+    if (ctx.forceFmt === 'g-choice') {   // the mock exam keeps the JLPT form: which piece lands on ★
+      const slots = parts.map((_, i) => i === g.star ? '<span class="blank star" data-blank>★</span>' : '<span class="blank" style="min-width:2.4em">＿</span>');
+      q.instr = '把四個選項排成正確的句子，★ 的位置是哪一個？';
+      q.stemHtml = `${furi(g.pre || '')}${slots.join('')}${furi(g.post || '')}`;
+      q.mistakePrompt = `${g.pre || ''}${parts.map((p, i) => i === g.star ? '★' : '＿').join(' ')}${g.post || ''}`;
+      finalizeOptions(q, parts[g.star], parts.filter((_, i) => i !== g.star), true);
+      return q;
+    }
+    // practice: arrange the four pieces by tapping them in order (option 0 the sentence, option 1 what the learner built)
+    q.custom = 'g-order';
+    q.instr = '依正確的順序點選四個部分，排成一句話';
+    q.stemHtml = '';
+    q.pre = g.pre || ''; q.post = g.post || '';
+    let tiles = shuffle(parts.slice()); if (tiles.join('') === parts.join('')) tiles = tiles.slice(1).concat(tiles[0]);   // never hand out the answer
+    q.tiles = tiles;
+    q.mistakePrompt = `排序：${q.pre}＿＿＿＿${q.post}（${parts.join('・')}）`;
+    q.options = [{ text: q.fullJp, jp: true }, { text: '', jp: true }]; q.answer = 0; q.answerText = q.fullJp;
+    q.wide = true;
     return q;
   }
   if (t === 'correct') {
@@ -3350,6 +3371,15 @@ function customInteractionHtml(e, answered) {
       ${answered ? '' : `<div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="spell-back" ${used.length ? '' : 'disabled'}>退一格</button><span class="small muted">${typed.length} / ${[...q.options[0].text].length}</span><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">我不會，看答案</button></div>`}
     </div>`;
   }
+  if (q.custom === 'g-order') {
+    const used = e.order || [];
+    const built = `${furi(q.pre)}${q.orderParts.map((_, i) => used[i] !== undefined ? `<span class="order-slot filled">${furi(q.tiles[used[i]])}</span>` : '<span class="order-slot">＿</span>').join('')}${furi(q.post)}`;
+    return `<div class="order">
+      <div class="order-out jp ${answered ? (e.chosen === q.answer ? 'ok' : 'bad') : ''}">${built}</div>
+      <div class="order-tiles">${q.tiles.map((p, i) => `<button type="button" class="order-tile jp" data-act="order-tap" data-i="${i}" ${used.includes(i) || answered ? 'disabled' : ''}><span class="kbd">${i + 1}</span>${furi(p)}</button>`).join('')}</div>
+      ${answered ? '' : `<div class="row between mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="order-back" ${used.length ? '' : 'disabled'}>退一格</button><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">看答案</button></div>`}
+    </div>`;
+  }
   if (q.custom === 'v-match') {
     const m = e.match || { sel: null, matched: [], wrong: 0 };
     const pairOf = (w) => q.pairs.find(p => p[0] === w);
@@ -3739,8 +3769,18 @@ const ACTIONS = {
     const e = currentEntry(); if (!e || e.done || !e.q || !e.q.custom) return;
     if (e.q.custom === 'v-spell') { e.spell = [...e.q.options[0].text].map(ch => e.q.tiles.indexOf(ch)); }   // show the right spelling
     if (e.q.custom === 'v-match') { e.match = { sel: null, matched: e.q.pairs.map(p => p[0]), wrong: (e.match || {}).wrong || 0 }; }   // reveal every pair
+    if (e.q.custom === 'g-order') { e.order = e.q.orderParts.map(p => e.q.tiles.indexOf(p)); }   // show the right order
     finishCustom(e, false, '（看了答案）');
   },
+  'order-tap': (el) => {
+    const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'g-order') return;
+    e.order = e.order || []; const i = Number(el.dataset.i); if (!(i >= 0 && i < e.q.tiles.length) || e.order.includes(i)) return;
+    e.order.push(i);
+    if (e.order.length < e.q.orderParts.length) { renderPractice(); return; }
+    const built = e.order.map(k => e.q.tiles[k]).join('');
+    finishCustom(e, built === e.q.orderParts.join(''), e.q.pre + built + e.q.post);
+  },
+  'order-back': () => { const e = currentEntry(); if (!e || e.done || !e.order || !e.order.length) return; e.order.pop(); renderPractice(); },
   'spell-back': () => { const e = currentEntry(); if (!e || e.done || !e.spell || !e.spell.length) return; e.spell.pop(); renderPractice(); },
   'match-word': (el) => {
     const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'v-match') return;
@@ -3799,7 +3839,7 @@ function handleKey(ev) {
       else if (k === 'Escape') { ev.preventDefault(); exitPractice(); }
       return;
     }
-    if (['1', '2', '3', '4'].includes(k)) { ev.preventDefault(); if (e && !e.done && !(e.q && e.q.custom)) answerCurrent(Number(k) - 1); return; }
+    if (['1', '2', '3', '4'].includes(k)) { ev.preventDefault(); if (e && !e.done && e.q && e.q.custom === 'g-order') ACTIONS['order-tap']({ dataset: { i: String(Number(k) - 1) } }); else if (e && !e.done && !(e.q && e.q.custom)) answerCurrent(Number(k) - 1); return; }
     if (k === 'Enter' || k === ' ') { if (e && e.done) { ev.preventDefault(); nextQuestion(); } else if (!e) { ev.preventDefault(); } return; }
     if (k === 'r' || k === 'R') { ev.preventDefault(); ACTIONS.replay(); return; }
     if (k === 'f' || k === 'F') { ev.preventDefault(); toggleFurigana(); return; }
