@@ -12,7 +12,7 @@
 <script src="./vendor/supabase.js"></script>
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
-<script src="./data.js?v=7"></script>
+<script src="./data.js?v=8"></script>
 <title>Nihongo Quest N4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -798,12 +798,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '54';   // keep equal to the number in sw.js CACHE ('nq-v54'); scripts/test.sh checks it
+const APP_VERSION = '55';   // keep equal to the number in sw.js CACHE ('nq-v55'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '54', from: '36', date: '2026-10-27', items: [
+  { v: '55', from: '36', date: '2026-10-27', items: [
+    '文法題庫補題：整併後題數不到 3 題的考點各補到 3 題，第一階段（第 1–12 週）新增 24 題填空。',
     '文法考點整併：原本 786 個零碎的考點標籤（同一件事常有三種叫法）依講義段落整併成 288 個，錯題本的依考點分組、學習分析的考點統計、練習時的考點輪替都跟著變合理；助詞用法題（「這個に表示什麼」）能用的考點從少數幾題擴大到全部助詞題。',
     'Gemini 更穩也更快：模型預設「自動」，被限額（429）、過載或 20 秒沒回應的模型會記住冷卻時間、自動換下一個，不再改動你的選擇；關閉模型的「思考」步驟，解析不再動輒等十幾秒；preview／thinking 類的實驗模型排到最後才用；全部限額時用白話說明幾秒後再試；AI 解析會在本機快取，同一題不再重問，並標示是哪個模型回答的。',
     '文法句意題改良：助詞題改問「畫線的助詞在這句表示什麼」，選項是同單元的其他考點；其他題目的錯誤選項改挑字面最相近的句子，不再一眼就能排除。',
