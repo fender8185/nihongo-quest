@@ -248,28 +248,6 @@ TESTS += [test_theme_card_bar_has_three_segments_for_seen_learned_mastered, test
 
 # ---- 2026-10-26 (4): the daily session keeps its words within 1–3 themes ----
 DUE = "(v) => { state.srs[v.key] = { b: 2, due: addDays(todayStr(), -1), n: 3, ok: 3, ng: 0, s: 3, d: 5, f: {}, last: addDays(todayStr(), -4) }; }"
-def test_daily_reviews_prefer_the_active_themes_plus_one_more(b):
-    js = """(() => { const due = __DUE__; const by = (c) => REG.vocab.filter(v => v.builtin && v.lv === 'N5' && vocabTheme(v) === c);
-      by('飲食').slice(0, 12).forEach(due); ['交通', '天氣', '自然', '身體', '衣物'].forEach(c => by(c).slice(0, 2).forEach(due)); saveState();
-      const q = dailyQueue(20); const words = q.items.filter(it => it.kind === 'v' && it.builtin);
-      const themes = [...new Set(words.map(vocabTheme))]; const reviews = words.filter(it => state.srs[it.key]).map(vocabTheme);
-      return JSON.stringify({ themes, reviews, active: activeThemes(REG.vocab, false), focus: q.focus }); })()""".replace('__DUE__', DUE)
-    r = json.loads(ev(b, js))
-    assert len(r['themes']) <= 3 and set(r['themes']) <= set(r['active'] + ['飲食']), r
-    assert r['reviews'] and all(t == '飲食' for t in r['reviews']), r
-    assert r['focus'] == r['active'] + ['飲食'], r
-
-def test_daily_reviews_fill_from_other_themes_only_when_the_chosen_ones_run_out(b):
-    js = """(() => { const due = __DUE__; state.settings.newVocabPerDay = 0; saveState();
-      ['飲食', '交通', '天氣', '自然'].forEach(c => REG.vocab.filter(v => v.builtin && v.lv === 'N5' && vocabTheme(v) === c).slice(0, 3).forEach(due)); saveState();
-      const q = dailyQueue(20); const words = q.items.filter(it => it.kind === 'v' && it.builtin && state.srs[it.key]);
-      const seq = words.map(vocabTheme); const firstThree = [...new Set(seq.slice(0, 7))];
-      return JSON.stringify({ n: seq.length, firstThree, focus: q.focus, fresh: q.items.filter(it => it.kind === 'v' && !state.srs[it.key]).length }); })()""".replace('__DUE__', DUE)
-    r = json.loads(ev(b, js))
-    assert r['fresh'] == 0 and len(r['focus']) == 3 and set(r['focus']) <= {'飲食', '交通', '天氣', '自然'}, r
-    assert r['n'] >= 7 and len(r['firstThree']) <= 3 and set(r['firstThree']) <= set(r['focus']), r
-
-TESTS += [test_daily_reviews_prefer_the_active_themes_plus_one_more, test_daily_reviews_fill_from_other_themes_only_when_the_chosen_ones_run_out]
 
 # ---- 2026-10-26 (5): new grammar first, least-practised reviews first ----
 def test_new_grammar_is_not_squeezed_out_by_a_review_backlog(b):
@@ -282,11 +260,11 @@ def test_new_grammar_is_not_squeezed_out_by_a_review_backlog(b):
 def test_grammar_slots_take_new_items_first_then_the_least_practised_reviews(b):
     js = """(() => { const due = (g, ok) => { state.srs[g.key] = { b: 2, due: addDays(todayStr(), -2 - (ok % 3)), n: ok, ok, ng: 0, s: 3, d: 5, last: addDays(todayStr(), -5) }; };
       const gs = REG.grammar.filter(g => g.u === 'm1'); gs.slice(0, 10).forEach(g => due(g, 3)); gs.slice(10, 15).forEach(g => due(g, 1)); saveState();
-      const q = dailyQueue(20); const G = q.items.filter(it => it.kind === 'g');
+      const q = dailyQueue(20); const G = q.items.filter(it => it.kind === 'g'); const all = dailyQueue(q.total).items.filter(it => it.kind === 'g');
       const fresh = G.filter(it => !state.srs[it.key]).length; const revOk = G.filter(it => state.srs[it.key]).map(it => state.srs[it.key].ok);
-      return JSON.stringify({ fresh, revOk, limit: state.settings.newGrammarPerDay }); })()"""
+      return JSON.stringify({ fresh, dayFresh: all.filter(it => !state.srs[it.key]).length, revOk, limit: state.settings.newGrammarPerDay }); })()"""
     r = json.loads(ev(b, js))
-    assert r['fresh'] >= min(r['limit'], 5), r
+    assert r['fresh'] >= 2 and r['dayFresh'] == r['limit'], r   # a session holds its share of the day's new grammar; the whole day holds the quota
     assert sum(1 for ok in r['revOk'] if ok == 1) == 5, r   # every least-practised item is in before any well-known one
 
 TESTS += [test_new_grammar_is_not_squeezed_out_by_a_review_backlog, test_grammar_slots_take_new_items_first_then_the_least_practised_reviews]

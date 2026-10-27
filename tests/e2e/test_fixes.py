@@ -1,6 +1,6 @@
 """2026-10-25 fixes: listening reads every option, requeued listening audio follows the shuffled options,
 distractor meanings after answering a vocab question, the 更多 menu icons stay small, 8-digit login code."""
-import json, os, subprocess, sys, time
+import json, os, re, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from cdp import Browser
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -268,43 +268,48 @@ def test_miss_then_requeue_does_not_return_today(b):
         assert r[kind]['n'] == 1 and r[kind]['n1'] == 1 and r[kind]['due'] == 1 and r[kind]['mistakes'] == 1 and not r[kind]['inDaily'], r
     assert r['v']['encores'] == 1, r
 
-def test_reinforcement_takes_only_items_two_days_quiet_with_a_short_correct_streak(b):
-    # a first correct answer leaves an item at a low level and not yet due; it must not come back as filler the next day, and
-    # once it has been answered right twice in a row it is left to its schedule
-    js = """(() => { const t = todayStr(); const g = REG.grammar[0]; const k = REG.kanji[0]; const v = REG.vocab.find(x => x.builtin);
-      [g, k, v].forEach(it => srsAnswer(it.key, true));
-      const low = [g, k, v].every(it => state.srs[it.key].b <= 2 && state.srs[it.key].due > t);
-      const today = reinforcementItems([g, k, v], new Set()).length;
-      [g, k, v].forEach(it => { state.srs[it.key].last = addDays(t, -1); }); const yesterday = reinforcementItems([g, k, v], new Set()).length;
-      [g, k, v].forEach(it => { state.srs[it.key].last = addDays(t, -2); }); const twoDays = reinforcementItems([g, k, v], new Set()).map(it => it.kind).sort();
-      [g, k, v].forEach(it => { state.srs[it.key].st = 2; }); const streak = reinforcementItems([g, k, v], new Set()).length;
-      [g, k, v].forEach(it => delete state.srs[it.key]); saveState();
-      return JSON.stringify({ low, today, yesterday, twoDays, streak }); })()"""
-    out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
-    r = __import__('json').loads(out[-1])
-    assert r['low'] and r['today'] == 0 and r['yesterday'] == 0, r
-    assert r['twoDays'] == ['g', 'k', 'v'] and r['streak'] == 0, r
-
-def test_an_extra_session_brings_new_material_and_upcoming_reviews_instead_of_todays_answers(b):
-    js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.settings);
-      const today = JSON.stringify(state.today);   // the day's quotas are used up (an extra session), not switched off
-      Object.assign(state.settings, { newVocabPerDay: 5, newGrammarPerDay: 5, mistakesPerDay: 0, listenPerDay: 0, newKanjiPerDay: 0, sessionSize: 20 }); Object.assign(state.today, { newV: 5, newG: 5 });
-      // six words answered correctly today (low level, not due) and four due the day after tomorrow (answered yesterday)
-      const words = REG.vocab.filter(x => x.builtin && !state.srs[x.key]).slice(0, 10);
-      words.slice(0, 6).forEach(v => srsAnswer(v.key, true));
-      words.slice(6).forEach(v => { srsAnswer(v.key, true); Object.assign(state.srs[v.key], { last: addDays(t, -1), due: addDays(t, 2), b: 3 }); });   // not weak, just due soon
-      saveState(); DAILY_CACHE = null; const q = dailyQueue(20);
-      const todays = q.items.filter(it => state.srs[it.key] && state.srs[it.key].last === t).length;
-      const ahead = q.items.filter(it => words.slice(6).some(w => w.key === it.key)).length;
-      const fresh = q.items.filter(it => !state.srs[it.key] && (it.kind === 'v' || it.kind === 'g')).length;
-      startSession('daily'); const note = SESSION.meta.note || ''; SESSION = null; document.body.classList.remove('practicing');
-      const out = { n: q.items.length, todays, ahead, fresh, extra: q.extra, note };
-      words.forEach(v => delete state.srs[v.key]); Object.assign(state.settings, JSON.parse(keep)); state.today = JSON.parse(today); saveState(); DAILY_CACHE = null; return JSON.stringify(out); })()"""
-    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
+def test_daily_queue_has_only_due_or_new(b):
+    js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.srs);
+      const rec = (it, o) => { state.srs[it.key] = Object.assign({ b: 1, n: 3, ok: 2, ng: 1, s: 2, d: 6, intro: addDays(t, -9), f: {} }, o); };
+      const gs = REG.grammar.filter(g => g.u === 'm1'); const vs = REG.vocab.filter(v => v.builtin && v.lv === 'N5');
+      rec(gs[0], { due: t, last: addDays(t, -3) });                 // due → in
+      rec(gs[1], { due: addDays(t, -5), last: addDays(t, -9) });    // overdue → in, first
+      rec(gs[2], { due: addDays(t, 1), last: addDays(t, -3) });     // tomorrow → out
+      rec(gs[3], { due: t, last: t });                              // answered today (e.g. in 單元練習) → out
+      rec(vs[0], { due: t, last: addDays(t, -2) });
+      rec(vs[1], { due: addDays(t, 2), last: addDays(t, -3), b: 0, st: 0 });   // weak but not due → out
+      rec(vs[2], { due: t, last: t });                              // answered today in 單字練習 → out
+      saveState(); DAILY_CACHE = null; const q = dailyQueue(20); const keys = q.items.map(x => x.key);
+      const bad = q.items.filter(it => { const r = state.srs[it.key]; return r && (r.due > t || r.last === t); }).map(x => x.key);
+      const out = { bad, has: [gs[0], gs[1], vs[0]].map(g => keys.includes(g.key)), extra: 'extra' in q, mist: 'mistakeKeys' in q };
+      state.srs = JSON.parse(keep); saveState(); DAILY_CACHE = null; return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['n'] >= 10 and r['todays'] == 0, r
-    assert r['fresh'] > 0 and r['ahead'] == 4 and r['extra']['newN'] == r['fresh'] and r['extra']['aheadN'] == 4, r
-    assert '額外' in r['note'] and '提前複習' in r['note'], r
+    assert r['bad'] == [] and r['has'] == [True, True, True], r
+    assert not r['extra'] and not r['mist'], r
+
+def test_listening_and_reading_are_capped_per_day(b):
+    js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.srs); const s = state.settings.listenPerDay; state.settings.listenPerDay = 3;
+      listenReachable().slice(0, 10).forEach(x => { state.srs[x.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -15), intro: addDays(t, -20) }; });
+      REG.read.filter(x => unitOrder(x.u) <= unitOrder(state.currentUnit)).slice(0, 3).forEach(x => { state.srs[x.key] = { b: 2, due: t, n: 1, ok: 1, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -4) }; });
+      saveState(); DAILY_CACHE = null; const p = dailyPlan(); const out = { l: p.dueL.length + p.newL.length, r: p.dueR.length + p.newR.length };
+      state.srs = JSON.parse(keep); state.settings.listenPerDay = s; saveState(); DAILY_CACHE = null; return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r == {'l': 3, 'r': 1}, r
+
+def test_new_items_spread_across_sessions(b):
+    # 60 due reviews + the default new quotas, sessionSize 20: every session holds new items and the button counts the rest
+    js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.srs); const size = state.settings.sessionSize; state.settings.sessionSize = 20;
+      REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 60).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
+      saveState(); DAILY_CACHE = null; const q = dailyQueue(20);
+      const firstNew = q.items.filter(it => !state.srs[it.key]).length;
+      location.hash = '#/today'; route(); const btn = document.querySelector('[data-act=start-daily]').textContent; const rest = (document.querySelector('.hero .row-wrap .small') || {}).textContent || '';
+      state.srs = JSON.parse(keep); state.settings.sessionSize = size; saveState(); DAILY_CACHE = null; return JSON.stringify({ n: q.items.length, total: q.total, firstNew, btn, rest }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['n'] == 20 and r['total'] > 60 and 2 <= r['firstNew'] <= 8, r
+    assert int(re.search(r'開始練習・(\d+) 題', r['btn']).group(1)) >= 20 and f"做完還有 {r['total'] - 20} 題" in r['rest'], r   # the button adds the new words' encores
 
 def test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers(b):
     js = """(() => { const t = todayStr(); const items = unitItems('m1'); const before = JSON.stringify(Object.fromEntries(items.map(g => [g.key, state.srs[g.key] || null])));
@@ -501,12 +506,12 @@ def test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them
       const btn = card.querySelector('[data-act=apply-advice]'); const before = btn ? btn.textContent.trim() : 'NO BUTTON';
       const txt = card.textContent; if (btn) btn.click();
       const s = state.settings; const after = document.querySelector('#planAdvice [data-act=apply-advice]');
-      return JSON.stringify({ before, hasDays: /100 天/.test(txt), rows: card.querySelectorAll('tbody tr').length, s: [s.newVocabPerDay, s.newGrammarPerDay, s.newKanjiPerDay, s.listenPerDay], goal: s.dailyGoal, after: after ? after.textContent.trim() + (after.disabled ? '|disabled' : '') : 'gone', share: s.vocabShare }); })()"""
+      return JSON.stringify({ before, hasDays: /100 天/.test(txt), rows: card.querySelectorAll('tbody tr').length, s: [s.newVocabPerDay, s.newGrammarPerDay, s.newKanjiPerDay, s.listenPerDay], goal: s.dailyGoal, after: after ? after.textContent.trim() + (after.disabled ? '|disabled' : '') : 'gone' }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("nav", URL + "#/stats"), ("eval", probe)], timeout=45)
     exp = json.loads(out[0]); r = json.loads(out[1])
     assert r['before'] == '使用建議' and r['hasDays'] and r['rows'] >= 4, r
     assert r['s'] == [exp['v'], exp['g'], exp['k'], exp['l']], (r, exp)
-    assert r['goal'] >= exp['v'] + exp['g'] + exp['k'] + exp['l'] and r['goal'] % 5 == 0 and 30 <= r['share'] <= 70, r
+    assert r['goal'] >= exp['v'] + exp['g'] + exp['k'] + exp['l'] and r['goal'] % 5 == 0, r
     assert r['after'].startswith('已是建議值') and 'disabled' in r['after'], r
 
 # ---- 2026-10-27: 錯題本 rework — mistakes join the daily mix, leave when the item reaches 熟悉, compact page with filters/sort/groups ----
@@ -514,16 +519,7 @@ MIST_SEED = """(() => { const t = todayStr(); const gs = REG.grammar.filter(g =>
   state.mistakes = []; far(gs[0], 1); far(gs[1], 1); far(gs[2], 1);
   const mk = (g, count, daysAgo, cat) => ({ id: uid('mk'), key: g ? g.key : '', cat: cat || '文法', prompt: g ? g.key : 'オリジナル問題 ' + count, answer: g ? 'に' : 'で', wrong: 'で', why: '', count, streak: 0, mastered: false, note: '', date: addDays(t, -daysAgo), last: addDays(t, -daysAgo) });
   state.mistakes.push(mk(gs[0], 5, 1), mk(gs[1], 1, 6), mk(gs[2], 2, 3), mk(null, 3, 2, '單字'));
-  state.settings.mistakesPerDay = 1; saveState(); window.__g = gs.slice(0, 3).map(g => g.key); return 'seeded'; })()"""
-
-def test_linked_mistakes_join_the_daily_mix_by_priority_up_to_the_setting(b):
-    probe = """(() => { const run = (n) => { state.settings.mistakesPerDay = n; saveState(); const r = dailyQueue(20); return __g.map(k => r.mistakeKeys.includes(k) && r.items.some(x => x.key === k)); };
-      const one = run(1), two = run(2); const zero = (() => { run(0); return dailyQueue(20).mistakeN; })(); state.settings.mistakesPerDay = 2; saveState(); startSession('daily'); const flagged = SESSION.entries.filter(e => e.fromMistake).map(e => e.item.key); SESSION = null; document.body.classList.remove('practicing');
-      return JSON.stringify({ one, two, zero, flagged: __g.map(k => flagged.includes(k)), n: dailyQueue(20).mistakeN }); })()"""
-    out = b.run([("nav", URL), ("wait", READY), ("eval", MIST_SEED), ("eval", probe)], timeout=45)
-    r = json.loads(out[-1])
-    assert r['one'] == [True, False, False] and r['two'] == [True, False, True] and r['zero'] == 0, r   # count 5 first, then count 2
-    assert r['flagged'] == [True, False, True] and r['n'] == 2, r
+  saveState(); window.__g = gs.slice(0, 3).map(g => g.key); return 'seeded'; })()"""
 
 def test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days(b):
     js = """(() => { const t = todayStr(); const m0 = state.mistakes[0]; const u = state.mistakes[3]; const out = {};
@@ -645,17 +641,6 @@ def test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay
     assert r['backEmpty'] and r['gaveUp'], r
     assert r['exam'] == {'fmt': 'g-order', 'custom': None, 'opts': 4, 'star': True}, r
 
-def test_carried_mistakes_keep_two_days_of_spacing_unless_the_last_answer_was_wrong(b):
-    js = """(() => { const t = todayStr(); const gs = REG.grammar.filter(g => g.u === 'm1').slice(0, 2); state.mistakes = []; state.settings.mistakesPerDay = 2;
-      const rec = (g, last) => { state.srs[g.key] = { b: 1, due: addDays(t, 20), n: 14, ok: 12, ng: 2, s: 2, d: 6, last, intro: addDays(t, -9) }; };
-      const y = addDays(t, -1); rec(gs[0], y); rec(gs[1], y);
-      state.mistakes.push({ id: uid('mk'), key: gs[0].key, cat: '文法', prompt: 'a', answer: 'に', count: 3, mastered: false, date: addDays(t, -5), last: addDays(t, -5) });   // answered right yesterday → wait
-      state.mistakes.push({ id: uid('mk'), key: gs[1].key, cat: '文法', prompt: 'b', answer: 'に', count: 3, mastered: false, date: y, last: y });                               // wrong yesterday → carry
-      saveState(); const r = dailyQueue(20); return JSON.stringify({ keys: r.mistakeKeys, a: gs[0].key, b: gs[1].key }); })()"""
-    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
-    r = json.loads(out[-1])
-    assert r['keys'] == [r['b']], r
-
 def test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue(b):
     js = """(() => { const v = REG.vocab.find(x => x.builtin && meaningOptions(x)); srsAnswer(v.key, true); state.srs[v.key].last = addDays(todayStr(), -3); state.srs[v.key].due = todayStr();
       const before = JSON.stringify(state.srs[v.key]); const mist = state.mistakes.length; const rec0 = state.recent.length; const ng0 = (state.statsFmt['v-meaning'] || { ng: 0 }).ng;
@@ -716,7 +701,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_reinforcement_takes_only_items_two_days_quiet_with_a_short_correct_streak, test_an_extra_session_brings_new_material_and_upcoming_reviews_instead_of_todays_answers, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
@@ -724,9 +709,9 @@ if __name__ == "__main__":
              test_tools_page_has_an_expandable_api_guide_for_every_provider,
              test_stats_shows_the_past_week_of_practice_and_what_was_learned, test_reaching_the_learned_level_records_the_date, test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading,
              test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them,
-             test_linked_mistakes_join_the_daily_mix_by_priority_up_to_the_setting, test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
+             test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
-             test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_carried_mistakes_keep_two_days_of_spacing_unless_the_last_answer_was_wrong, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
+             test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
              test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model]
     failed = 0
     try:

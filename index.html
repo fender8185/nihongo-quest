@@ -901,7 +901,6 @@ function defaultSettings() {
     sessionSize: 20,
     newVocabPerDay: 8,
     newGrammarPerDay: 6,
-    vocabShare: 50,
     order: 'mix',              // mix | split
     showZh: true,
     furigana: true,
@@ -918,7 +917,6 @@ function defaultSettings() {
     retention: 0.9,          // FSRS target recall
     furiMode: 'smart',       // smart: no furigana on mastered words | all — furigana:false hides all
     listenPerDay: 3,         // listening items in the daily mix
-    mistakesPerDay: 3,       // 錯題本 items carried into the daily mix (most-missed, longest unpractised first)
     newKanjiPerDay: 3,
     audioOptions: false,     // listening replies only spoken, like the real test
     backupEvery: 7
@@ -1478,19 +1476,6 @@ function activeMistakes() { return state.mistakes.filter(m => !m.mastered); }
 function mistakeLast(m) { return m.last || m.date || ''; }
 // most-missed first, then the ones not practised for longest
 function mistakePriority(a, b) { return (b.count || 1) - (a.count || 1) || mistakeLast(a).localeCompare(mistakeLast(b)); }
-// course items from the notebook for today's mix: not already planned, not answered today
-function dailyMistakeItems(used, n) {
-  const t = todayStr(); const out = []; const seen = new Set();
-  activeMistakes().slice().sort(mistakePriority).forEach(m => {
-    if (out.length >= n || !m.key || used.has(m.key) || seen.has(m.key)) return;
-    const it = REG.byKey.get(m.key); if (!it || !['v', 'g', 'k'].includes(it.kind)) return;
-    const r = state.srs[m.key]; if (r && r.last === t) return;
-    if (r && r.last && daysBetween(r.last, t) < 2 && m.date !== r.last) return;   // answered right yesterday: keep the spacing
-    seen.add(m.key); out.push(it);
-  });
-  return out;
-}
-
 // ---------- progress ----------
 function unitItems(uid) { return REG.grammar.filter(g => g.u === uid); }
 function unitStats(uid) {
@@ -2814,6 +2799,8 @@ function byDue(a, b) {
   const ra = state.srs[a.key]; const rb = state.srs[b.key];
   return (ra.due < rb.due ? -1 : ra.due > rb.due ? 1 : 0) || (ra.b - rb.b);
 }
+// due today and not yet answered today: an item answered anywhere in the app (any practice mode) is done for the day
+function isDueToday(x, t = todayStr()) { const r = state.srs[x.key]; return Boolean(r && r.due <= t && r.last !== t); }
 // What the daily mix may contain: grammar from the current unit and the units before it, and N4 words
 // only after every N5 word has been introduced once. Items further ahead keep their records and come
 // back when the learner gets there.
@@ -2934,14 +2921,15 @@ function extrasPlan(curIdx) {
   const t = todayStr();
   const s = state.settings;
   const reach = (x) => unitOrder(x.u) <= curIdx;
-  const isDue = (x) => { const r = state.srs[x.key]; return r && r.due <= t; };
+  const isDue = (x) => isDueToday(x, t);
   const byUnit = (a, b) => unitOrder(a.u) - unitOrder(b.u) || (hashStr(a.id) % 997) - (hashStr(b.id) % 997);
   const listenOn = s.listening && s.listenPerDay > 0 && speechAvailable();
   const lPool = listenOn ? listenReachable(curIdx) : [];
-  const dueL = lPool.filter(isDue).sort(byDue);
-  const newL = lPool.filter(x => !state.srs[x.key]).slice(0, Math.max(0, s.listenPerDay - (state.today.newL || 0)));
-  const dueR = REG.read.filter(x => reach(x) && isDue(x)).sort(byDue);
-  const newR = (state.today.newR || 0) < 1 ? REG.read.filter(x => reach(x) && !state.srs[x.key]).sort(byUnit).slice(0, 1) : [];
+  // listening: at most listenPerDay a day (due first, the rest of the due ones wait); reading: one a day
+  const dueL = lPool.filter(isDue).sort(byDue).slice(0, s.listenPerDay || 0);
+  const newL = lPool.filter(x => !state.srs[x.key]).slice(0, Math.max(0, Math.min(s.listenPerDay - (state.today.newL || 0), (s.listenPerDay || 0) - dueL.length)));
+  const dueR = REG.read.filter(x => reach(x) && isDue(x)).sort(byDue).slice(0, 1);
+  const newR = !dueR.length && (state.today.newR || 0) < 1 ? REG.read.filter(x => reach(x) && !state.srs[x.key]).sort(byUnit).slice(0, 1) : [];
   const k4 = n5KanjiLeft() === 0;
   const dueK = REG.kanji.filter(k => (k.lv === 'N5' || k4) && isDue(k)).sort(byDue);
   const newK = newKanjiCandidates(k4).slice(0, Math.max(0, (s.newKanjiPerDay || 0) - (state.today.newK || 0)));
@@ -2959,12 +2947,12 @@ function dailyPlan(size = state.settings.sessionSize) {
   const n4Open = n4WordsOpen();
   const curIdx = unitOrder(state.currentUnit);
   const vPool = REG.vocab.filter(v => vocabEligibleForDaily(v, n4Open));
-  const dueV = vPool.filter(v => { const r = state.srs[v.key]; return r && r.due <= t; }).sort(byDue);
-  const dueG = REG.grammar.filter(g => { const r = state.srs[g.key]; return r && r.due <= t && grammarInReach(g, curIdx); }).sort(byDue);
+  const dueV = vPool.filter(v => isDueToday(v, t)).sort(byDue);
+  const dueG = REG.grammar.filter(g => isDueToday(g, t) && grammarInReach(g, curIdx)).sort(byDue);
   const maxV = Math.round(s.newVocabPerDay * ad.factor);
   const maxG = Math.round(s.newGrammarPerDay * ad.factor);
   const ex = extrasPlan(curIdx);
-  const room = s.dailyGoal - dayTotal(state.dailyLogs[t]) - dueV.length - dueG.length - ex.dueK.length - Math.min(ex.dueL.length, s.listenPerDay || 0);
+  const room = s.dailyGoal - dayTotal(state.dailyLogs[t]) - dueV.length - dueG.length - ex.dueK.length - ex.dueL.length;
   // Grammar drives the course: its new items come every day regardless of the review load (the accuracy-based
   // factor still applies). Only new words give way to a review backlog, and never below about half their quota.
   const wantG = Math.max(0, maxG - state.today.newG);
@@ -2976,7 +2964,8 @@ function dailyPlan(size = state.settings.sessionSize) {
   }
   const newG = newGrammarCandidates().slice(0, wantG);
   const newV = newVocabCandidates(vPool, n4Open).slice(0, wantV + Math.max(0, wantG - newG.length));
-  return Object.assign({ dueV, dueG, newV, newG, note, factor: ad.factor, size, n4Open }, ex);
+  const remaining = dueV.length + dueG.length + newV.length + newG.length + ex.dueK.length + ex.newK.length + ex.dueL.length + ex.newL.length + ex.dueR.length + ex.newR.length;
+  return Object.assign({ dueV, dueG, newV, newG, note, factor: ad.factor, size, n4Open, remaining }, ex);
 }
 
 function interleave(vList, gList, mode) {
@@ -2991,88 +2980,32 @@ function interleave(vList, gList, mode) {
   return out;
 }
 
-// The words of one session stay within one to three themes: the themes today's new words come from, then the
-// theme(s) holding the most due reviews. Reviews from other themes are used only when those run out.
-function focusThemes(plan) {
-  const out = plan.newV.length ? activeThemes(REG.vocab, plan.n4Open) : [];
-  const count = {};
-  plan.dueV.forEach(v => { if (v.builtin) { const c = vocabTheme(v); if (!out.includes(c)) count[c] = (count[c] || 0) + 1; } });
-  Object.entries(count).sort((a, b) => b[1] - a[1] || themeRank(a[0]) - themeRank(b[0])).forEach(([c]) => { if (out.length < 3) out.push(c); });
-  return out;
-}
-function buildDailyQueue(fullSize = state.settings.sessionSize) {
-  const plan = dailyPlan(fullSize);
-  const focus = focusThemes(plan);
-  const inFocus = (v) => !v.builtin || focus.includes(vocabTheme(v));
-  const dueV = plan.dueV.slice().sort((a, b) => inFocus(b) - inFocus(a) || byDue(a, b));
-  const lCap = Math.min(state.settings.listenPerDay || 0, Math.round(fullSize * 0.2));
-  const L = plan.dueL.slice(0, lCap);
-  L.push(...plan.newL.slice(0, Math.max(0, lCap - L.length)));
-  const R = plan.dueR.length ? plan.dueR.slice(0, 1) : plan.newR.slice(0, 1);
-  const kCap = Math.max(2, Math.round(fullSize * 0.15));
-  const kNew = Math.min(plan.newK.length, Math.max(1, Math.round(kCap / 3)));
-  const K = plan.dueK.slice(0, kCap - kNew).concat(plan.newK.slice(0, kNew));
-  const size = Math.max(6, fullSize - L.length - R.length - K.length);
-  const vSlots = Math.round(size * state.settings.vocabShare / 100);
-  const gSlots = size - vSlots;
-  // grammar: new items first, then the reviews answered correctly the fewest times (so the items of a unit level
-  // out instead of the same well-known ones coming back while unseen ones wait)
+// One session of today's work: the day list is every due review (most overdue first; grammar answered right the fewest
+// times first) with the day's new items spread through it; a session takes the first `size`. Nothing else joins —
+// an item is here because it is due today or because it is new today.
+function buildDailyQueue(size = state.settings.sessionSize) {
+  const plan = dailyPlan(size);
   const byPractice = (a, b) => ((state.srs[a.key].ok || 0) - (state.srs[b.key].ok || 0)) || byDue(a, b);
-  const dueG = plan.dueG.slice().sort(byPractice);
-  // keep about a quarter of each track for new material so a review backlog cannot crowd it out
-  const take = (due, fresh, slots) => {
-    const keepNew = Math.min(fresh.length, Math.round(slots * 0.25));
-    const reviews = due.slice(0, slots - keepNew);
-    const news = fresh.slice(0, Math.max(0, slots - reviews.length));
-    return { reviews, news };
-  };
-  let v = take(dueV, plan.newV, vSlots);
-  const gNews = plan.newG.slice(0, gSlots);
-  let g = { news: gNews, reviews: dueG.slice(0, gSlots - gNews.length) };
-  // hand unused slots to the other track
-  let spare = size - (v.reviews.length + v.news.length + g.reviews.length + g.news.length);
-  if (spare > 0) {
-    const moreG = dueG.slice(g.reviews.length, g.reviews.length + spare); g.reviews = g.reviews.concat(moreG); spare -= moreG.length;
-    const moreV = dueV.slice(v.reviews.length, v.reviews.length + spare); v.reviews = v.reviews.concat(moreV); spare -= moreV.length;
-    const moreGN = plan.newG.slice(g.news.length, g.news.length + spare); g.news = g.news.concat(moreGN); spare -= moreGN.length;
-    const moreVN = plan.newV.slice(v.news.length, v.news.length + spare); v.news = v.news.concat(moreVN); spare -= moreVN.length;
-  }
-  const used = new Set([...v.reviews, ...v.news, ...g.reviews, ...g.news].map(x => x.key));
-  // a few notebook items ride along on top of the plan (setting 每天夾帶的錯題)
-  const mist = dailyMistakeItems(used, clamp(Number(state.settings.mistakesPerDay) || 0, 0, 10));
-  mist.forEach(x => { used.add(x.key); (x.kind === 'g' ? g.reviews : v.reviews).push(x); });
-  const extra = { newN: 0, aheadN: 0 };
-  if (spare > 0) {
-    const curIdx = unitOrder(state.currentUnit);
-    const vPool = REG.vocab.filter(x => vocabEligibleForDaily(x, plan.n4Open)); const gPool = REG.grammar.filter(x => grammarInReach(x, curIdx));
-    const add = (list, bucket) => { list.forEach(x => { used.add(x.key); (x.kind === 'v' ? v : g)[bucket].push(x); }); spare -= list.length; return list.length; };
-    // 1. weak items from earlier days
-    add(reinforcementItems(vPool.concat(gPool), used).slice(0, spare), 'reviews');
-    // Only once today's new-item quotas are used up (an extra session): 2. new material beyond the quota (at most half the
-    // session; a track whose quota is 0 stays closed), 3. reviews due in the next two days, 4. more new material
-    const quotaDone = plan.newV.length === 0 && plan.newG.length === 0;
-    const moreNew = (cap) => { const gs = state.settings.newGrammarPerDay > 0 ? newGrammarCandidates().filter(x => !used.has(x.key)).slice(0, Math.ceil(cap / 2)) : []; const vs = state.settings.newVocabPerDay > 0 ? newVocabCandidates(vPool, plan.n4Open).filter(x => !used.has(x.key)).slice(0, cap - gs.length) : []; return gs.concat(vs).slice(0, cap); };
-    if (quotaDone && spare > 0) extra.newN += add(moreNew(Math.min(spare, Math.ceil(size / 2))), 'news');
-    if (quotaDone && spare > 0) extra.aheadN += add(aheadItems(vPool.concat(gPool), used).slice(0, spare), 'reviews');
-    if (quotaDone && spare > 0) extra.newN += add(moreNew(spare), 'news');
-  }
-  const kRev = K.filter(k => state.srs[k.key]); const kNewList = K.filter(k => !state.srs[k.key]);
-  const vList = shuffle(v.reviews.concat(kRev)).concat(v.news, kNewList);
-  const gList = shuffle(g.reviews).concat(g.news);
+  const reviews = interleave(plan.dueV.concat(plan.dueK).sort(byDue), plan.dueG.slice().sort(byPractice), 'mixed');
+  const fresh = interleave(plan.newV.concat(plan.newK), plan.newG, 'mixed');
+  const day = interleave(reviews, fresh, 'mixed');   // proportional, so each session of the day gets its share of new items
+  const L = plan.dueL.concat(plan.newL); const R = plan.dueR.concat(plan.newR).slice(0, 1);
+  const total = day.length + L.length + R.length;
+  const Ls = L.slice(0, Math.min(L.length, Math.round(size * 0.2)));
+  const take = day.slice(0, Math.max(0, size - Ls.length - R.length));
+  const isNew = (x) => !state.srs[x.key];
+  // within the session: reviews shuffled, new items after them (a new word gets its preview card first)
+  const vList = shuffle(take.filter(x => x.kind !== 'g' && !isNew(x))).concat(take.filter(x => x.kind !== 'g' && isNew(x)));
+  const gList = shuffle(take.filter(x => x.kind === 'g' && !isNew(x))).concat(take.filter(x => x.kind === 'g' && isNew(x)));
   const items = interleave(vList, gList, state.settings.order);
   // listening spread through the session, the reading passage last
-  L.forEach((x, i) => items.splice(Math.min(items.length, Math.round((i + 1) * items.length / (L.length + 1)) + i), 0, x));
+  Ls.forEach((x, i) => items.splice(Math.min(items.length, Math.round((i + 1) * items.length / (Ls.length + 1)) + i), 0, x));
   items.push(...R);
-  const isNew = (x) => !state.srs[x.key];
-  return { items, plan, focus, extra, mistakeKeys: mist.map(x => x.key), newCount: items.filter(isNew).length, reviewCount: items.filter(x => !isNew(x)).length };
+  return { items, plan, total, newCount: items.filter(isNew).length, reviewCount: items.filter(x => !isNew(x)).length };
 }
 
 // what an extra session holds once the day's plan is done (shown on the Today page and at the start of practice)
-function extraNote(q) {
-  const x = q && q.extra; if (!x || !(x.newN || x.aheadN)) return '';
-  const parts = []; if (x.newN) parts.push(`${x.newN} 題額外的新內容`); if (x.aheadN) parts.push(`${x.aheadN} 題提前複習（明後天到期）`);
-  return `今天的進度已完成，這組是 ${parts.join('與')}；今天答對過的題目不再重複出現。`;
-}
+function extraNote(q) { return ''; }
 // The Today page and 「開始練習」 share one built queue, so the button says exactly how many questions the session
 // holds (the plan numbers above it describe the whole day's workload, which can be more than one session).
 let DAILY_CACHE = null;
@@ -3083,7 +3016,6 @@ function dailyQueue(size = state.settings.sessionSize) {
   r.items = r.items.filter(it => makeQuestion(it, {}));   // an item that cannot become a question would be dropped silently later
   const isNew = (x) => !state.srs[x.key];
   r.newCount = r.items.filter(isNew).length; r.reviewCount = r.items.length - r.newCount;
-  r.mistakeN = (r.mistakeKeys || []).filter(k => r.items.some(x => x.key === k)).length;
   DAILY_CACHE = { key, r };
   return r;
 }
@@ -3132,8 +3064,8 @@ function startSession(mode, opt = {}) {
   let meta = {};
   if (mode === 'daily') {
     const r = dailyQueue(opt.size || state.settings.sessionSize);
-    entries = r.items.map(item => (r.mistakeKeys || []).includes(item.key) ? { item, fromMistake: true } : { item });
-    meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: [extraNote(r), r.plan.note].filter(Boolean).join(' ') };
+    entries = r.items.map(item => ({ item }));
+    meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: r.plan.note || '' };
   } else if (mode === 'unit') {
     entries = buildUnitQueue(opt.unit, opt.size || 15).map(item => ({ item }));
     meta = { unit: opt.unit };
@@ -3286,7 +3218,7 @@ function renderPractice() {
       <div class="pr-count">${SESSION.idx + 1} / ${total}</div>
     </div>
     <div class="q-card">
-      <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip chip-warn">再練一次</span>' : ''}${e.fromMistake && !e.requeued ? '<span class="chip chip-warn">錯題</span>' : ''}${e.encore ? '<span class="chip chip-warn">換個方式再考</span>' : ''}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
+      <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip chip-warn">再練一次</span>' : ''}${e.encore ? '<span class="chip chip-warn">換個方式再考</span>' : ''}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
       <div class="q-instr">${esc(q.instr || '')}</div>
       ${q.passageHtml ? `<div class="panel jp mb-3 passage">${q.passageHtml}</div>` : ''}
       ${stem ? `<div class="q-stem jp ${q.stemClass || ''}">${stem}</div>` : ''}
@@ -3882,7 +3814,7 @@ function sessionTopicsHtml(q, plan) {
   const allWords = q.items.filter(it => it.kind === 'v');
   const words = allWords.filter(it => it.builtin);
   const present = new Set(words.map(vocabTheme));
-  const all = (q.focus || []).filter(c => present.has(c)).concat([...present].filter(c => !(q.focus || []).includes(c)));
+  const all = [...present].sort((a, b) => themeRank(a) - themeRank(b));
   const themes = all.slice(0, 3); if (all.length > 3) themes.push(`等 ${all.length} 個`);
   if (allWords.length > words.length) themes.push('自訂字卡');
   // the line is always there: custom cards have no theme, and a finished day just says so
@@ -3916,10 +3848,10 @@ function renderToday(view) {
   const exL = Math.min(plan.dueL.length + plan.newL.length, state.settings.listenPerDay || 0);
   const exR = Math.min(1, plan.dueR.length + plan.newR.length);
   const size = state.settings.sessionSize;
-  const exM = dailyQueue(size).mistakeN || 0;
-  const extraN = exK + exL + exR + exM;
-  const extraText = [exK && `漢字 ${exK}`, exL && `聽力 ${exL}`, exR && `閱讀 ${exR}`, exM && `錯題 ${exM}`].filter(Boolean).join('・');
-  const sessionN = reviewN + newN + extraN ? dailyQueue(size).items.length + encoreEstimate(dailyQueue(size).items) : 0;   // new words come back twice more
+  const extraN = exK + exL + exR;
+  const extraText = [exK && `漢字 ${exK}`, exL && `聽力 ${exL}`, exR && `閱讀 ${exR}`].filter(Boolean).join('・');
+  const dq = dailyQueue(size);
+  const sessionN = dq.items.length + encoreEstimate(dq.items);   // new words come back once more
   const d = parseDate(t);
   const greeting = `${d.getMonth() + 1} 月 ${d.getDate()} 日（${weekdayZh(t)}）`;
 
@@ -3940,7 +3872,7 @@ function renderToday(view) {
       ${sessionTopicsHtml(dailyQueue(size), plan)}
       <div class="row-wrap">
         <button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・${sessionN} 題</button>
-        ${reviewN + newN + extraN > sessionN ? `<span class="small muted">做完還有 ${reviewN + newN + extraN - sessionN} 題，可以再練一組</span>` : ''}
+        ${dq.total > dq.items.length ? `<span class="small muted">做完還有 ${dq.total - dq.items.length} 題，可以再練一組</span>` : ''}
       </div>`;
   }
 
@@ -5759,14 +5691,12 @@ function settingsLearn() {
     <div class="setting-row"><div><div class="label">我已有基礎</div><div class="hint">一鍵套用：每天新單字 20、新文法 10、新漢字 5，現在就開放 N4 單字，題目不預設顯示中文。之後仍可逐項調整。</div></div>
       <button type="button" class="btn btn-sm" data-act="apply-experienced">套用</button></div>
     ${numRow('dailyGoal', '每日目標', '首頁圓環與連續天數的計算標準。', 5, 200, 5, '題')}
-    ${numRow('sessionSize', '每組練習題數', '按「開始練習」時一次出幾題。', 5, 60, 5, '題')}
+    ${numRow('sessionSize', '每組練習題數', '按「開始練習」時一次出幾題；當天到期與新題會分成幾組出完。', 5, 60, 5, '題')}
     ${numRow('newVocabPerDay', '每天新單字上限', '其餘時間用來複習到期的單字。', 0, 40, 1, '個')}
     ${numRow('newGrammarPerDay', '每天新文法題上限', '新題只從目前單元（及之前沒學完的單元）挑選。', 0, 30, 1, '題')}
     ${selRow('n4Words', 'N4 單字何時加入', '預設等 N5 單字都學過一次才加入 N4 新字；已有基礎的人可以直接開放。', [['auto', 'N5 學過一次後自動加入'], ['open', '現在就開放']])}
-    ${numRow('vocabShare', '單字所占比例', '每日練習中單字題的比例，其餘為文法題。', 0, 100, 10, '%')}
     ${numRow('newKanjiPerDay', '每天新漢字上限', 'N5 漢字都學過一次後，才會開始加入 N4 漢字。', 0, 15, 1, '個')}
     ${numRow('listenPerDay', '每天聽力題', '短對話、即時應答與情境表達；需要能播放語音。', 0, 10, 1, '題')}
-    ${numRow('mistakesPerDay', '每天夾帶的錯題', '從錯題本挑錯最多次、最久沒練的題目放進每日練習；0 表示不夾帶。', 0, 10, 1, '題')}
     ${selRow('retention', '複習強度', '越高越常複習，記得越牢，但每天的題目也越多。', [['0.85', '輕量（約記住 85%）'], ['0.9', '標準（約記住 90%）'], ['0.95', '加強（約記住 95%）']])}
     ${selRow('order', '出題順序', '', [['mix', '單字與文法交錯'], ['split', '先單字，再文法']])}
     ${boolRow('showZh', '題目下方直接顯示中文', '關閉時可按 T 或點「顯示中文」再看。需要中文才能判斷的題目仍會顯示。')}
@@ -6201,8 +6131,7 @@ function planAdvice() {
   const dailyGoal = clamp(Math.ceil(newPerDay * 2.5 / 5) * 5, 5, 200);
   const sessionSize = clamp(Math.ceil(Math.min(60, dailyGoal) / 5) * 5, 5, 60);
   const v = quota.find(b2 => b2.k === 'v').rec, g = quota.find(b2 => b2.k === 'g').rec;
-  const vocabShare = clamp(Math.round((v + g ? v / (v + g) : 0.5) * 10) * 10, 30, 70);
-  const rec = { dailyGoal, sessionSize, vocabShare }; quota.forEach(b2 => { rec[b2.key] = b2.rec; });
+  const rec = { dailyGoal, sessionSize }; quota.forEach(b2 => { rec[b2.key] = b2.rec; });
   const applied = Object.keys(rec).every(k => Number(s[k]) === rec[k]);
   const lagging = quota.filter(b2 => b2.gap > 1.15).sort((a, b2) => b2.gap - a.gap);
   return { studyDays, daysLeft: pace.daysLeft, banks, rec, applied, lagging, newPerDay };
@@ -6346,7 +6275,7 @@ function planAdviceHtml() {
       <div class="card-head"><div><div class="card-title">每日練習量建議</div><div class="card-sub">用「還沒學過的題數 ÷ 可學習天數」算出每天該學的新題，複習量另外加上。</div></div>${btn}</div>
       <p class="small dim">${esc(lead)}</p>
       <div class="table-wrap"><table class="table"><thead><tr><th>題庫</th><th>已學 / 總數</th><th>還沒學</th><th>建議每天</th><th>目前設定</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <div class="small muted mt-2">套用後的設定：每日目標 ${a.rec.dailyGoal} 題・每組 ${a.rec.sessionSize} 題・單字比例 ${a.rec.vocabShare}%・新單字 ${a.rec.newVocabPerDay}・新文法 ${a.rec.newGrammarPerDay}・新漢字 ${a.rec.newKanjiPerDay}・聽力 ${a.rec.listenPerDay}${a.studyDays > 0 ? '' : '（已無學習天數，新題全部為 0）'}。閱讀題跟著單元進度出，不另外設定。</div>
+      <div class="small muted mt-2">套用後的設定：每日目標 ${a.rec.dailyGoal} 題・每組 ${a.rec.sessionSize} 題・新單字 ${a.rec.newVocabPerDay}・新文法 ${a.rec.newGrammarPerDay}・新漢字 ${a.rec.newKanjiPerDay}・聽力 ${a.rec.listenPerDay}${a.studyDays > 0 ? '' : '（已無學習天數，新題全部為 0）'}。閱讀題跟著單元進度出，不另外設定。</div>
     </div>`;
 }
 
