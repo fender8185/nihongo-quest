@@ -2944,11 +2944,15 @@ function extrasPlan(curIdx) {
   const byUnit = (a, b) => unitOrder(a.u) - unitOrder(b.u) || (hashStr(a.id) % 997) - (hashStr(b.id) % 997);
   const listenOn = s.listening && s.listenPerDay > 0 && speechAvailable();
   const lPool = listenOn ? listenReachable(curIdx) : [];
-  // listening: at most listenPerDay a day (due first, the rest of the due ones wait); reading: one a day
-  const dueL = lPool.filter(isDue).sort(byDue).slice(0, s.listenPerDay || 0);
-  const newL = lPool.filter(x => !state.srs[x.key]).slice(0, Math.max(0, Math.min(s.listenPerDay - (state.today.newL || 0), (s.listenPerDay || 0) - dueL.length)));
-  const dueR = REG.read.filter(x => reach(x) && isDue(x)).sort(byDue).slice(0, 1);
-  const newR = !dueR.length && (state.today.newR || 0) < 1 ? REG.read.filter(x => reach(x) && !state.srs[x.key]).sort(byUnit).slice(0, 1) : [];
+  // listening: at most listenPerDay a day counting what was already answered today (due first; the rest of the due
+  // ones wait until tomorrow); reading: one a day
+  const doneToday = (pool) => pool.filter(x => { const r = state.srs[x.key]; return r && r.last === t; }).length;
+  const capL = Math.max(0, (s.listenPerDay || 0) - doneToday(lPool));
+  const dueL = lPool.filter(isDue).sort(byDue).slice(0, capL);
+  const newL = lPool.filter(x => !state.srs[x.key]).slice(0, Math.max(0, Math.min(s.listenPerDay - (state.today.newL || 0), capL - dueL.length)));
+  const rPool = REG.read.filter(reach);
+  const dueR = doneToday(rPool) ? [] : rPool.filter(isDue).sort(byDue).slice(0, 1);
+  const newR = !dueR.length && !doneToday(rPool) && (state.today.newR || 0) < 1 ? rPool.filter(x => !state.srs[x.key]).sort(byUnit).slice(0, 1) : [];
   const k4 = n5KanjiLeft() === 0;
   const dueK = REG.kanji.filter(k => (k.lv === 'N5' || k4) && isDue(k)).sort(byDue);
   const newK = newKanjiCandidates(k4).slice(0, Math.max(0, (s.newKanjiPerDay || 0) - (state.today.newK || 0)));
@@ -3100,13 +3104,15 @@ function buildMistakeQueue(size = 20) {
 }
 
 // ---------- session lifecycle ----------
-const DRILL_NOTE = '這個範圍今天沒有到期的題目，這組是加練，挑最不穩的先練。';
+const DRILL_NOTE = '這個範圍今天到期的題目不到五題，這組是加練：補上最不穩的題目先練。';
 const MODE_TITLE = { daily: '今日練習', unit: '單元練習', vocab: '單字練習', mistakes: '錯題練習', ai: 'AI 題目', kanji: '漢字練習', items: '練習' };
 function startSession(mode, opt = {}) {
   let entries = [];
   let meta = {};
   if (mode === 'daily') {
-    const r = opt.extra ? extraQueue(opt.size || state.settings.sessionSize) : dailyQueue(opt.size || state.settings.sessionSize);
+    const size = opt.size || state.settings.sessionSize;
+    if (!opt.extra && dailyPlan(size).remaining === 0) opt = Object.assign({}, opt, { extra: true });   // the day is done (e.g. 再練一組 on the summary): offer the 加練 set
+    const r = opt.extra ? extraQueue(size) : dailyQueue(size);
     entries = r.items.map(item => ({ item }));
     meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: opt.extra ? extraNote(r) : (r.plan.note || '') };
   } else if (mode === 'unit') {
@@ -3509,7 +3515,7 @@ function renderSummary(view) {
         <div class="stat"><span class="stat-v">${s.stats.newCount}</span><span class="stat-l">新學</span></div>
         <div class="stat"><span class="stat-v">${Math.max(1, Math.round((Date.now() - s.startedAt) / 60000))}</span><span class="stat-l">分鐘</span></div>
       </div>
-      ${todayN >= goal ? '<div class="banner mt-4">今天的目標達成了。答對的題目會在幾天後再出現，答錯的會優先複習。</div>' : `<div class="hint mt-4">今天還差 ${goal - todayN} 題達成目標。</div>`}
+      ${todayN >= goal ? '<div class="banner mt-4">今天的目標達成了。答對的題目會在幾天後再出現，答錯的明天再複習。</div>' : `<div class="hint mt-4">今天還差 ${goal - todayN} 題達成目標。</div>`}
       <div class="row-wrap mt-4">
         <button type="button" class="btn btn-primary" data-act="again">再練一組</button>
         ${wrongKeys.size ? '<button type="button" class="btn" data-act="retry-wrong">重練答錯的題目</button>' : ''}
@@ -4814,6 +4820,12 @@ function mistakeCardFaces(m) {
     back: `<div class="meaning jp">${furi(m.answer || '')}</div>${pt}${m.why ? `<div class="small mt-2" style="text-align:left">${md(m.why)}</div>` : ''}`
   };
 }
+// what the loop reads aloud: the word itself for a word mistake (its prompt is often Chinese or a cloze), else the prompt
+function mloopSpeakText(m) {
+  const it = m && m.key && REG.byKey.get(m.key);
+  if (it && it.kind === 'v') return it.r || jaPlain(it.w);
+  return jaPlain((m && m.prompt) || '');
+}
 function mloopRate(g) {
   const m = mloopCurrent(); if (!m || !MLOOP.flipped) return;
   const t = todayStr(); const good = g === 'good';
@@ -4875,7 +4887,7 @@ function renderMistakeLoop(view) {
           <button type="button" class="btn btn-primary" data-act="mloop-rate" data-g="good">記得<small>2</small></button>
         </div>`}
       <div class="row-wrap mt-3" style="justify-content:space-between">
-        <button type="button" class="btn btn-sm btn-ghost" data-act="speak" data-text="${esc(jaPlain(m.prompt || ''))}">${icon('speaker')}朗讀</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-act="speak" data-text="${esc(mloopSpeakText(m))}">${icon('speaker')}朗讀</button>
         <button type="button" class="btn btn-sm btn-ghost" data-act="nav" data-route="#/mistakes">結束</button>
       </div>
     </div>`;
@@ -4890,7 +4902,7 @@ function mloopKey(ev) {
 Object.assign(ACTIONS, {
   'mloop-start': () => startMistakeLoop(),
   'mloop-again': () => startMistakeLoop(MLOOP ? Object.keys(MLOOP.rated).filter(id => MLOOP.rated[id] === 'again') : []),
-  'mloop-flip': () => { if (!MLOOP || MLOOP.flipped) return; MLOOP.flipped = true; route(); const m = mloopCurrent(); if (m && state.settings.autoSpeak) speak(jaPlain(m.prompt || '')); },
+  'mloop-flip': () => { if (!MLOOP || MLOOP.flipped) return; MLOOP.flipped = true; route(); const m = mloopCurrent(); if (m && state.settings.autoSpeak) speak(mloopSpeakText(m)); },
   'mloop-rate': (el) => mloopRate(el.dataset.g),
   'mloop-next': () => { if (!MLOOP || !MLOOP.flipped) return; mloopAdvance(); }
 });

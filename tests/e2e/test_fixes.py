@@ -293,10 +293,13 @@ def test_listening_and_reading_are_capped_per_day(b):
       listenReachable().slice(0, 10).forEach(x => { state.srs[x.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -15), intro: addDays(t, -20) }; });
       REG.read.filter(x => unitOrder(x.u) <= unitOrder(state.currentUnit)).slice(0, 3).forEach(x => { state.srs[x.key] = { b: 2, due: t, n: 1, ok: 1, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -4) }; });
       saveState(); DAILY_CACHE = null; const p = dailyPlan(); const out = { l: p.dueL.length + p.newL.length, r: p.dueR.length + p.newR.length };
+      // the day's three listening items and the passage answered (a first session): the cap holds for the rest of the day
+      p.dueL.forEach(x => srsAnswer(x.key, true)); p.dueR.forEach(x => srsAnswer(x.key, true)); DAILY_CACHE = null; const p2 = dailyPlan();
+      out.l2 = p2.dueL.length + p2.newL.length; out.r2 = p2.dueR.length + p2.newR.length;
       state.srs = JSON.parse(keep); state.settings.listenPerDay = s; saveState(); DAILY_CACHE = null; return JSON.stringify(out); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r == {'l': 3, 'r': 1}, r
+    assert r == {'l': 3, 'r': 1, 'l2': 0, 'r2': 0}, r
 
 def test_new_items_spread_across_sessions(b):
     # 60 due reviews + the default new quotas, sessionSize 20: every session holds new items and the button counts the rest
@@ -322,16 +325,18 @@ def test_done_state_and_extra_session(b):
       const q = extraQueue(20); const aheadIn = ahead.filter(v => q.items.some(x => x.key === v.key)).length;
       const bad = q.items.filter(it => { const r = state.srs[it.key]; return r && (r.due <= t || r.last === t || r.due > addDays(t, 2)); }).length;
       startSession('daily', { extra: true }); const note = SESSION.meta.note; SESSION = null; document.body.classList.remove('practicing');
+      const againOk = startSession('daily', {}); const againNote = againOk ? SESSION.meta.note : ''; SESSION = null; document.body.classList.remove('practicing');   // the summary's 再練一組 with the day done
       // nothing to pull forward and no new quota: the button goes away
       ahead.forEach(v => { state.srs[v.key].last = t; }); Object.assign(state.settings, { newVocabPerDay: 0, newGrammarPerDay: 0 }); saveState(); DAILY_CACHE = null; location.hash = '#/today'; route();
       const gone = !document.querySelector('[data-act=start-extra]'); const tomorrow = /明天再來/.test(document.querySelector('.hero').textContent);
       const k = JSON.parse(keep); state.srs = k.srs; state.today = k.today; state.settings = k.settings; saveState(); DAILY_CACHE = null;
-      return JSON.stringify({ h2, btn: btn ? btn.textContent : null, n: q.items.length, aheadIn, bad, newN: q.newN, aheadN: q.aheadN, note, gone, tomorrow }); })()"""
+      return JSON.stringify({ h2, btn: btn ? btn.textContent : null, n: q.items.length, aheadIn, bad, newN: q.newN, aheadN: q.aheadN, note, againOk, againNote, gone, tomorrow }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
     r = json.loads(out[-1])
     assert r['h2'] == '今天完成了' and r['btn'] and r['btn'].startswith('加練・') and r['n'] > 0, r
     assert r['aheadIn'] == 3 and r['aheadN'] == 3 and r['bad'] == 0 and 0 < r['newN'] <= 10, r
     assert '3 題提前複習' in r['note'] and '額外的新內容' in r['note'] and r['gone'] and r['tomorrow'], r
+    assert r['againOk'] and '提前複習' in r['againNote'], r
 
 def test_theme_lane_rotates_after_three_days_of_words(b):
     js = """(() => { const keep = JSON.stringify({ srs: state.srs, lane: state.themeLane, q: state.settings.newVocabPerDay }); state.settings.newVocabPerDay = 8; state.themeLane = { order: [], count: {} };
@@ -354,6 +359,8 @@ def test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers(b):
       const u0 = buildUnitQueue('m1', 15); const unit = u0.length; const unitDrill = Boolean(u0.drill);
       items.forEach(g => { state.srs[g.key].last = addDays(t, -1); }); const u1 = buildUnitQueue('m1', 15); const unitY = u1.length >= 5 && u1.drill === true;   // yesterday: nothing due, so a labelled drill of the shakiest
       startSession('unit', { unit: 'm1' }); renderPractice(); const noteShown = /這組是加練/.test(document.getElementById('view').textContent); SESSION = null; document.body.classList.remove('practicing');
+      items.slice(0, 2).forEach(g => { state.srs[g.key].due = t; }); startSession('unit', { unit: 'm1' }); renderPractice();   // two due: the note must not say nothing is due
+      const noteHonest = /這組是加練/.test(document.getElementById('view').textContent) && !/沒有到期/.test(document.getElementById('view').textContent); SESSION = null; document.body.classList.remove('practicing'); items.slice(0, 2).forEach(g => { state.srs[g.key].due = addDays(t, 5); });
       const theme = vocabTheme(REG.vocab.find(x => x.builtin)); const words = REG.vocab.filter(v => v.builtin && vocabTheme(v) === theme);
       const wBefore = JSON.stringify(words.map(v => state.srs[v.key] || null)); const quota = state.settings.newVocabPerDay; state.settings.newVocabPerDay = 0;
       words.forEach(v => srsAnswer(v.key, true));
@@ -361,10 +368,10 @@ def test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers(b):
       state.settings.newVocabPerDay = 8; state.today.newV = 8; const freshOverQuota = buildVocabQueue('all', 20).filter(v => !state.srs[v.key]).length;   // quota used up: no new words beyond it
       JSON.parse(before) && items.forEach(g => { const r = JSON.parse(before)[g.key]; if (r) state.srs[g.key] = r; else delete state.srs[g.key]; });
       JSON.parse(wBefore).forEach((r, i) => { if (r) state.srs[words[i].key] = r; else delete state.srs[words[i].key]; }); state.settings.newVocabPerDay = quota; state.today.newV = 0; saveState();
-      return JSON.stringify({ unit, unitDrill, unitY, noteShown, repeats, vq: vq.length, freshOverQuota }); })()"""
+      return JSON.stringify({ unit, unitDrill, unitY, noteShown, noteHonest, repeats, vq: vq.length, freshOverQuota }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
     r = json.loads(out[-1])
-    assert r == {'unit': 0, 'unitDrill': False, 'unitY': True, 'noteShown': True, 'repeats': 0, 'vq': 0, 'freshOverQuota': 0}, r
+    assert r == {'unit': 0, 'unitDrill': False, 'unitY': True, 'noteShown': True, 'noteHonest': True, 'repeats': 0, 'vq': 0, 'freshOverQuota': 0}, r
 
 def test_heatmap_starts_at_the_week_the_learner_began(b):
     # columns = weeks from the Monday of the first-use week to this week; at least 4, at most 26
@@ -571,12 +578,14 @@ def test_mistake_loop_grades_once_per_day(b):
       // unlinked: 記得 twice the same day stays active
       startMistakeLoop([u.id]); ACTIONS['mloop-flip'](); ACTIONS['mloop-rate']({ dataset: { g: 'good' } }); startMistakeLoop([u.id]); ACTIONS['mloop-flip'](); ACTIONS['mloop-rate']({ dataset: { g: 'good' } });
       MLOOP.idx = MLOOP.queue.length; MLOOP.again = []; route();
-      return JSON.stringify({ label, first, n0, n1, last1: last1 === t, n2, count, due, uActive: !u.mastered, done: /這一輪/.test(document.getElementById('view').textContent) }); })()"""
+      const w = REG.vocab.find(x => x.builtin && /[一-龯]/.test(x.w)); const wm = { id: 'x', key: w.key, cat: '單字', prompt: '「' + w.m + '」的日文', answer: jaPlain(w.w) };
+      const spoken = mloopSpeakText(wm); const spokenU = mloopSpeakText(u);
+      return JSON.stringify({ label, first, n0, n1, last1: last1 === t, n2, count, due, uActive: !u.mastered, done: /這一輪/.test(document.getElementById('view').textContent), spokenIsWord: spoken === (w.r || jaPlain(w.w)), spokenU: spokenU === jaPlain(u.prompt) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", MIST_SEED), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['label'] and '快速過一輪' in r['label'] and r['first'], r
     assert r['n0'] == 14 and r['n1'] == 15 and r['last1'] and r['n2'] == 15 and r['count'] == 6 and r['due'] >= 1, r
-    assert r['uActive'] and r['done'], r
+    assert r['uActive'] and r['done'] and r['spokenIsWord'] and r['spokenU'], r
 
 def test_a_linked_mistake_leaves_when_its_item_reaches_熟悉_and_an_unlinked_one_after_two_days(b):
     js = """(() => { const t = todayStr(); const m0 = state.mistakes[0]; const u = state.mistakes[3]; const out = {};
