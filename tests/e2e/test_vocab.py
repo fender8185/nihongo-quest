@@ -20,13 +20,13 @@ def test_themes_cover_every_builtin_word_once(b):
 
 def test_theme_tab_lists_cards_and_opens_the_word_table(b):
     out = b.run([("nav", URL), ("wait", READY),
-        ("eval", "location.hash = '#/vocab/themes'; true"), ("wait", "document.querySelectorAll('.theme-card').length > 0"),
-        ("eval", "JSON.stringify({ cards: document.querySelectorAll('.theme-card').length, themes: vocabThemes().length, pressed: document.querySelector('.seg [aria-pressed=\"true\"]').textContent })"),
+        ("eval", "location.hash = '#/vocab/level?lv=N5'; true"), ("wait", "document.querySelectorAll('.theme-card').length > 0"),   # 1.0.9: themes live on the level pages
+        ("eval", "JSON.stringify({ cards: document.querySelectorAll('.theme-card').length, themes: themeStats('N5').length, pressed: document.querySelector('.seg [aria-pressed=\"true\"]').textContent })"),
         ("eval", "document.querySelector('.theme-card[data-c=\"飲食\"] [data-act=nav]').click(); true"),
         ("wait", "location.hash.includes('c=')"),
-        ("eval", "JSON.stringify({ hash: decodeURIComponent(location.hash), rows: document.querySelectorAll('tbody tr').length, total: vocabThemes().find(t => t.c === '飲食').total, sub: document.querySelector('.page-sub').textContent })")])
-    a = json.loads(out[-3]); assert a['cards'] == a['themes'] and a['pressed'] == '主題', a
-    r = json.loads(out[-1]); assert r['hash'] == '#/vocab/list?c=飲食' and r['rows'] == r['total'] and '飲食' in r['sub'], r
+        ("eval", "JSON.stringify({ hash: decodeURIComponent(location.hash), rows: document.querySelectorAll('tbody tr').length, total: themeStats('N5').find(t => t.c === '飲食').total, sub: document.querySelector('.page-sub').textContent })")])
+    a = json.loads(out[-3]); assert a['cards'] == a['themes'] and a['pressed'] == 'N5', a
+    r = json.loads(out[-1]); assert r['hash'] == '#/vocab/list?lv=N5&c=飲食' and r['rows'] == r['total'] and '飲食' in r['sub'], r
 
 # ---- Task 2: themed practice ----
 def test_themed_practice_uses_only_that_theme(b):
@@ -484,13 +484,14 @@ def test_encore_feedback_shows_the_level_and_says_it_does_not_reschedule(b):
     assert '不影響排程' in r['meta'] and ('學習中' in r['meta'] or '待加強' in r['meta'] or '熟悉' in r['meta']), r
 
 def test_vocab_practice_buttons_show_the_question_count(b):
-    js = """(() => { location.hash = '#/vocab/themes'; route(); const card = document.querySelector('.theme-card[data-c="飲食"] [data-act=start-vocab]').textContent;
+    js = """(() => { location.hash = '#/vocab/level?lv=N5'; route(); const card = document.querySelector('.theme-card[data-c="飲食"] [data-act=start-vocab]').textContent;
       const want = (f) => { const items = buildVocabQueue(f, 20); return items.length + encoreEstimate(items); };
-      location.hash = '#/vocab'; route(); const head = document.querySelector('.page-head [data-act=start-vocab]').textContent;
+      const level = document.querySelector('.page-head [data-act=start-vocab]').textContent;
+      location.hash = '#/vocab/cards'; route(); const head = document.querySelector('.page-head [data-act=start-vocab]').textContent;
       location.hash = '#/vocab/list?c=飲食'; route(); const detail = document.querySelector('.page-head [data-act=start-vocab]').textContent;
-      return JSON.stringify({ card, cardWant: want('c:飲食'), head, headWant: want('all'), detail }); })()"""
+      return JSON.stringify({ card, cardWant: want('t:N5:飲食'), level, levelWant: want('N5'), head, headWant: want('all'), detail, detailWant: want('c:飲食') }); })()"""
     r = json.loads(ev(b, js))
-    assert r['card'] == f"練習・{r['cardWant']} 題" and r['head'] == f"單字測驗・{r['headWant']} 題" and r['detail'] == f"練習這個主題・{r['cardWant']} 題", r
+    assert r['card'] == f"練習・{r['cardWant']} 題" and r['level'] == f"練這個等級・{r['levelWant']} 題" and r['head'] == f"單字測驗・{r['headWant']} 題" and r['detail'] == f"練習這個主題・{r['detailWant']} 題", r
 
 TESTS += [test_furigana_known_hiding_follows_the_mastered_label, test_theme_word_table_hides_the_custom_deck_button, test_encore_feedback_shows_the_level_and_says_it_does_not_reschedule, test_vocab_practice_buttons_show_the_question_count]
 
@@ -629,7 +630,7 @@ def test_n4_words_can_be_opened_before_n5_is_finished(b):
     js = """(() => { const n4 = REG.vocab.find(x => x.builtin && x.lv === 'N4' && !state.srs[x.key]); const was = state.settings.n4Words; state.settings.n4Words = 'auto';
       const out = { left: n5WordsLeft(), closed: !n4WordsOpen() && !inDailyReach(n4) && !deckAllowsN4('all') };
       state.settings.n4Words = 'open'; out.open = n4WordsOpen() && inDailyReach(n4) && deckAllowsN4('all');
-      location.hash = '#/vocab'; route(); out.text = document.getElementById('view').textContent.includes('N4 已開放');   // the note moved to the vocab page header
+      location.hash = '#/vocab/cards'; route(); out.text = document.getElementById('view').textContent.includes('N4 已開放');   // the note lives on the 字卡 page header
       state.settings.n4Words = was; saveState(); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
     assert r['left'] > 0 and r['closed'] and r['open'] and r['text'], r

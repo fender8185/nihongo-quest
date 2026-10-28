@@ -335,6 +335,14 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .kana-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 10px 0 14px; max-width: 420px; }
 .kana-cell { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); font: inherit; cursor: pointer; }
 .kana-cell.empty { border-color: transparent; background: transparent; cursor: default; }
+.kana-heat { display: grid; gap: 4px; margin: 8px 0; overflow-x: auto; }
+.kana-heat-row { display: grid; grid-template-columns: 22px repeat(10, minmax(0, 1fr)); gap: 4px; align-items: stretch; }
+.kana-heat .kana-cell { padding: 4px 0; font-size: 16px; min-width: 0; }
+.kana-heat .kana-cell .hira { font-size: 17px; }
+.kana-heat .kana-cell:nth-child(7) { margin-left: 6px; }
+.kana-cell.heat-1 { background: var(--heat-1); } .kana-cell.heat-2 { background: var(--heat-2); } .kana-cell.heat-3 { background: var(--heat-3); color: #fff; } .kana-cell.heat-4 { background: var(--heat-4); color: #fff; }
+.kana-row-btn { border: 1px solid var(--line); background: var(--bg-elev-2); border-radius: 8px; font-size: 10px; cursor: pointer; color: inherit; }
+.kanji-chip { cursor: pointer; font-size: 15px; padding: 1px 8px; }
 .kana-cell .hira { font-size: 22px; line-height: 1.2; }
 .kana-cell .kata { font-size: 13px; color: var(--fg-2); }
 .kana-cell .roma { font-size: 11px; color: var(--fg-3); }
@@ -4094,7 +4102,10 @@ function route() {
   try {
     if (r.name === 'today') renderToday(view);
     else if (r.name === 'course') { if (r.parts[1] === 'intro') renderIntro(view); else if (r.parts[1]) renderUnit(view, r.parts[1], r.params.tab || 'lesson'); else renderCourse(view); }
-    else if (r.name === 'vocab') { if (r.parts[1] === 'listen') renderListen(view); else renderVocab(view, r.parts[1] || 'cards', r.params); }
+    else if (r.name === 'vocab') {
+      if (!r.parts[1]) { location.hash = '#/vocab/level?lv=' + defaultVocabLevel(); return route(); }   // the vocab page opens on the learner's level
+      if (r.parts[1] === 'listen') renderListen(view); else renderVocab(view, r.parts[1], r.params);
+    }
     else if (r.name === 'mistakes') { if (r.parts[1] === 'loop') renderMistakeLoop(view); else if (r.parts[1] === 'listen') renderListen(view); else renderMistakes(view, r.params); }
     else if (r.name === 'exam') renderExam(view, r.parts[1] || '', r.params);
     else if (r.name === 'tools') renderTools(view, r.params);
@@ -5037,7 +5048,7 @@ function segBarHtml(total, segs, cls = 'mt-2') {
   let acc = 0; const stops = [];
   const attrs = segs.map(([name, n]) => { const from = acc; acc += n; stops.push(`${SEG_COLOR[name]} ${(from / Math.max(1, total) * 100).toFixed(1)}% ${(acc / Math.max(1, total) * 100).toFixed(1)}%`); return `data-${name}="${n}"`; }).join(' ');
   stops.push(`transparent ${(acc / Math.max(1, total) * 100).toFixed(1)}% 100%`);
-  return `<div class="bar stack ${cls}" ${attrs} style="background-image:linear-gradient(to right, ${stops.join(', ')})"></div>`;
+  return `<div class="bar stack ${cls}" data-total="${total}" ${attrs} style="background-image:linear-gradient(to right, ${stops.join(', ')})"></div>`;
 }
 function stackBarHtml(g) { return segBarHtml(g.total, [['mastered', g.mastered], ['learned', g.learned - g.mastered], ['seen', g.seen - g.learned]]); }
 // grammar units: answered correctly 3+ times / answered correctly / seen but not yet right
@@ -5045,6 +5056,45 @@ function unitBarHtml(s, cls) { return segBarHtml(s.total, [['mastered', s.ok3], 
 // 熟練 = answered right 3+ times, 熟悉 = answered right at least once, 初識 = seen but never right yet
 function unitLegendHtml(s) { return `<span class="leg"><i class="seg-dot mastered"></i>熟練 ${s.ok3}</span><span class="leg"><i class="seg-dot learned"></i>熟悉 ${s.ok1}</span><span class="leg"><i class="seg-dot seen"></i>初識 ${s.seen0}</span><span class="leg">共 ${s.total} 題</span>`; }
 function vocabSessionCount(filter) { const items = buildVocabQueue(filter, 20); return items.length + encoreEstimate(items); }
+// 五十音 coloured by how well each kana is known; a button per row starts that row
+function kanaHeatGridHtml() {
+  const heat = (ch) => { const r = state.srs['a:' + ch]; return !r ? 0 : r.b <= 1 ? 1 : r.b === 2 ? 2 : r.b <= 4 ? 3 : 4; };
+  const rows = KANA_ROWS.concat(DAKUTEN_ROWS);
+  const cell = (ch) => `<span class="kana-cell heat-${heat(ch)}" data-ch="${ch}"><span class="jp hira">${ch}</span></span>`;
+  return `<div class="kana-heat">${rows.map((row, i) => `<div class="kana-heat-row"><button type="button" class="kana-row-btn" data-act="kana-row" data-row="${i}" title="練這一行">▶</button>${row.map(h => h ? cell(h) : '<span class="kana-cell empty"></span>').join('')}${row.map(h => h ? cell(KATA[h]) : '<span class="kana-cell empty"></span>').join('')}</div>`).join('')}</div>`;
+}
+function renderVocabLevel(view, lv) {
+  const L = levelStats(lv); const themes = themeStats(lv);
+  const desktop = window.matchMedia('(min-width: 761px)').matches;
+  const ring = ringHtml(L.total ? L.learned / L.total : 0, `<div class="num" style="font-size:18px">${L.total ? Math.round(L.learned / L.total * 100) : 0}%</div>`, 84);
+  const cards = themes.map(g => `<div class="card theme-card" data-c="${esc(g.c)}" data-lv="${lv}">
+      <div class="row between"><div><div class="card-title">${esc(g.c)}</div>${g.desc ? `<div class="tiny muted">${esc(g.desc)}</div>` : ''}</div><span class="tiny muted">${g.total} 字</span></div>
+      ${stackBarHtml(g)}
+      <div class="small muted mt-2"><i class="seg-dot seen"></i>已學 ${g.seen}　<i class="seg-dot learned"></i>熟悉 ${g.learned}　<i class="seg-dot mastered"></i>熟練 ${g.mastered}${g.due ? `・今天到期 ${g.due}` : ''}</div>
+      ${g.kanji.length ? `<div class="small mt-2 row-wrap" style="gap:4px;align-items:center"><span class="muted">漢字</span>${g.kanji.map(k => `<button type="button" class="chip jp kanji-chip" data-act="kanji-open" data-k="${esc(k)}">${esc(k)}</button>`).join('')}</div>` : ''}
+      <div class="row-wrap mt-3">
+        <button type="button" class="btn btn-sm" data-act="nav" data-route="#/vocab/list?lv=${lv}&c=${encodeURIComponent(g.c)}">字表</button>
+        <button type="button" class="btn btn-sm btn-primary" data-act="start-vocab" data-filter="t:${lv}:${esc(g.c)}">練習・${vocabSessionCount(`t:${lv}:${g.c}`)} 題</button>
+        <button type="button" class="btn btn-sm" data-act="listen-theme-start" data-theme="${esc(g.c)}">${icon('play')}播放字卡</button>
+      </div></div>`).join('');
+  // kanji of this level grouped by the theme that uses them most
+  const groups = new Map(); const order = themes.map(t => t.c).concat(['其他']);
+  REG.kanji.filter(k => k.lv === lv).forEach(k => { const c = kanjiThemeOf(k, lv) || '其他'; (groups.get(c) || groups.set(c, []).get(c)).push(k); });
+  const kanjiHtml = order.filter(c => groups.has(c)).map(c => `<div class="kanji-group mt-3"><div class="small muted mb-1">${esc(c)}・${groups.get(c).length} 字</div><div class="kanji-grid">${groups.get(c).map(k => `<button type="button" class="kanji-tile jp ${kanjiLevelClass(k)}" data-act="kanji-open" data-k="${esc(k.k)}" title="${esc(k.m)}" aria-label="${esc(k.k)}">${esc(k.k)}</button>`).join('')}</div></div>`).join('');
+  const kanaBox = lv === 'PRE_N5' ? `<details class="disclose kana-box card mt-3" ${desktop ? 'open' : ''}><summary>五十音（已認得 ${L.kana.seen}／${L.kana.total}）</summary>
+      <div class="small muted mt-2">顏色越深越熟；按每行前面的 ▶ 只練那一行。</div>${kanaHeatGridHtml()}
+      <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-act="kana-practice">練全部假名</button></div></details>` : '';
+  view.innerHTML = `
+    <div class="page-head"><div><div class="page-title">單字 · ${lvLabel(lv)}</div><div class="page-sub">已學 ${L.seen}／共 ${L.total}・熟悉 ${L.learned}・熟練 ${L.mastered}${L.due ? `・今天到期 ${L.due}` : ''}</div></div>
+      <div class="row" style="gap:12px">${ring}<button type="button" class="btn btn-primary" data-act="start-vocab" data-filter="${lv}">練這個等級・${vocabSessionCount(lv)} 題</button></div></div>
+    ${vocabTabs(lv)}
+    ${kanaBox}
+    <div class="grid grid-3 theme-grid mt-3">${cards}</div>
+    <details class="disclose kanji-box card mt-3" ${desktop ? 'open' : ''}><summary>漢字 ${lvLabel(lv)}（已學 ${L.kanji.seen}／${L.kanji.total}）</summary>
+      ${kanjiHtml || '<p class="hint mt-2">這一級沒有漢字。</p>'}
+      ${L.kanji.total ? `<div class="row-wrap mt-3"><button type="button" class="btn btn-sm" data-act="start-kanji-level" data-lv="${lv}">練這一級的漢字</button></div>` : ''}
+    </details>`;
+}
 function renderVocabThemes(view) {
   const cards = vocabThemes().map(g => `<div class="card theme-card" data-c="${esc(g.c)}">
       <div class="row between"><div class="card-title">${esc(g.c)}</div><span class="tiny muted">${[['PRE_N5', '入門'], ['N5', 'N5'], ['N4', 'N4']].filter(([k]) => g[k]).map(([k, l]) => `${l} ${g[k]}`).join('・')}</span></div>
@@ -5082,17 +5132,22 @@ function ensureFlash(deck) {
   return FLASH;
 }
 
+// which level the vocab page opens on: 入門 while in that stage, then N5, then N4 once N5 is all seen and open
+function defaultVocabLevel() {
+  if (inPreStage()) return 'PRE_N5';
+  return n4WordsOpen() && !REG.vocab.some(v => v.builtin && v.lv === 'N5' && !state.srs[v.key]) ? 'N4' : 'N5';   /* level-literal-ok: N5 itself finished */
+}
 function vocabTabs(tab) {
   return `<div class="seg mb-4">
-    <button type="button" aria-pressed="${tab === 'cards'}" data-act="nav" data-route="#/vocab">字卡</button>
-    <button type="button" aria-pressed="${tab === 'themes'}" data-act="nav" data-route="#/vocab/themes">主題</button>
-    <button type="button" aria-pressed="${tab === 'kanji'}" data-act="nav" data-route="#/vocab/kanji">漢字</button>
+    ${['PRE_N5', 'N5', 'N4'].map(l => `<button type="button" aria-pressed="${tab === l}" data-act="nav" data-route="#/vocab/level?lv=${l}">${lvLabel(l)}</button>`).join('')}
+    <button type="button" aria-pressed="${tab === 'cards'}" data-act="nav" data-route="#/vocab/cards">字卡</button>
     <button type="button" aria-pressed="${tab === 'list'}" data-act="nav" data-route="#/vocab/list">單字表</button>
     <button type="button" aria-pressed="${tab === 'import'}" data-act="nav" data-route="#/vocab/import">匯入與新增</button>
   </div>`;
 }
 
 function renderVocab(view, tab, params) {
+  if (tab === 'level') return renderVocabLevel(view, ['PRE_N5', 'N5', 'N4'].includes(params.lv) ? params.lv : defaultVocabLevel());
   if (tab === 'list') return renderVocabList(view, params);
   if (tab === 'themes') return renderVocabThemes(view);
   if (tab === 'kanji') return renderKanji(view, params);
@@ -7209,7 +7264,9 @@ Object.assign(ACTIONS, {
     const k = REG.byKey.get('k:' + el.dataset.k);
     if (k) openModal(`漢字「${k.k}」`, kanjiDetailHtml(k), { width: 520, noFocus: true });
   },
-  'start-kanji': () => startSession('kanji')
+  'start-kanji': () => startSession('kanji'),
+  'start-kanji-level': (el) => startSession('kanji', { lv: el.dataset.lv }),
+  'kana-row': (el) => startSession('kana', { row: Number(el.dataset.row) })
 });
 
 // ---- 79_stats.js ----

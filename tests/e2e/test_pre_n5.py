@@ -274,6 +274,42 @@ def test_level_theme_filter_is_level_scoped(b):
     assert r['lvs'] == ['N5'] and r['themes'] == ['飲食'] and r['n'] > 0 and r['kl'] == ['PRE_N5'], r
     assert r['row'] == ['か', 'き', 'く', 'け', 'こ', 'カ', 'キ', 'ク', 'ケ', 'コ'], r
 
+def test_vocab_opens_on_the_learners_level(b):
+    js = """(() => { const go = () => { location.hash = '#/vocab'; route(); return decodeURIComponent(location.hash); };
+      state.stage = 'pre'; const a = go(); state.stage = 'main'; state.srs = {}; state.settings.n4Words = 'auto'; DAILY_CACHE = null; const b2 = go();
+      REG.vocab.filter(v => v.builtin && v.lv !== 'N4').forEach(v => { state.srs[v.key] = { b: 2, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5 }; }); DAILY_CACHE = null; const c = go();
+      const tabs = [...document.querySelectorAll('.seg.mb-4 button')].map(x => x.textContent.trim()); return JSON.stringify({ a, b: b2, c, tabs }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['a'] == '#/vocab/level?lv=PRE_N5' and r['b'] == '#/vocab/level?lv=N5' and r['c'] == '#/vocab/level?lv=N4', r
+    assert r['tabs'] == ['入門', 'N5', 'N4', '字卡', '單字表', '匯入與新增'], r
+
+def test_level_page_sections(b):
+    js = """(() => { location.hash = '#/vocab/level?lv=N5'; route(); const v = document.getElementById('view');
+      const cards = [...v.querySelectorAll('.theme-card')]; const sum = cards.reduce((a, c) => a + Number(c.querySelector('.bar.stack').dataset.total || 0), 0);
+      return JSON.stringify({ n: cards.length, lvs: [...new Set(cards.map(c => c.dataset.lv))], ring: Boolean(v.querySelector('.ring')), kanjiBox: Boolean(v.querySelector('.kanji-box')), kanaBox: Boolean(v.querySelector('.kana-box')),
+        tiles: v.querySelectorAll('.kanji-box .kanji-tile').length, groups: v.querySelectorAll('.kanji-box .kanji-group').length, practice: v.querySelector('[data-act="start-vocab"][data-filter="N5"]') !== null,
+        themeBtn: Boolean(v.querySelector('[data-act="start-vocab"][data-filter="t:N5:飲食"]')), total: REG.vocab.filter(x => x.builtin && x.lv === 'N5').length, sum }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['n'] == 17 and r['lvs'] == ['N5'] and r['ring'] and r['kanjiBox'] and not r['kanaBox'] and r['tiles'] == 77 and r['groups'] >= 5, r
+    assert r['practice'] and r['themeBtn'] and r['sum'] == r['total'], r
+
+def test_theme_card_kanji_open_detail(b):
+    js = """(() => { location.hash = '#/vocab/level?lv=PRE_N5'; route(); const chip = document.querySelector('.theme-card [data-act="kanji-open"]'); const k = chip && chip.dataset.k; chip.click();
+      const title = document.querySelector('.modal-title'); const t = title ? title.textContent : ''; closeModal(true);
+      return JSON.stringify({ k, opened: t.includes(k) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['k'] and r['opened'], r
+
+def test_kana_heat_grid(b):
+    js = """(() => { const t = todayStr(); state.srs = {}; state.srs['a:あ'] = { b: 2, due: t, n: 1, ok: 1, ng: 0, s: 3, d: 5 }; state.srs['a:い'] = { b: 5, due: t, n: 3, ok: 3, ng: 0, s: 40, d: 5 };
+      location.hash = '#/vocab/level?lv=PRE_N5'; route(); const cells = [...document.querySelectorAll('.kana-box .kana-cell:not(.empty)')];
+      const cls = (ch) => (cells.find(c => c.dataset.ch === ch) || {}).className || '';
+      document.querySelector('.kana-box [data-act="kana-row"][data-row="2"]').click(); const row = SESSION.entries.map(e => e.item.ch);
+      return JSON.stringify({ n: cells.length, a: /heat-2/.test(cls('あ')), i: /heat-4/.test(cls('い')), u: /heat-0/.test(cls('う')), row }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['n'] == 142 and r['a'] and r['i'] and r['u'], r
+    assert r['row'] == ['さ', 'し', 'す', 'せ', 'そ', 'サ', 'シ', 'ス', 'セ', 'ソ'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
