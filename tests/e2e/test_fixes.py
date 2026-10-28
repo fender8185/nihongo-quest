@@ -1250,6 +1250,25 @@ def test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_fi
     assert q['scroll'] <= q['inner'] and q['viewScroll'] <= q['viewH'] and 150 <= q['cardH'] <= 420 and q['optsBottom'] <= q['navTop'] and q['countAtBottomRight'], q
     assert r['keptPlaying'] and r['switched'] and r['emptyNote'] and r['off'], r
 
+# ---- 2026-10-28: the install hint ----
+def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed(b):
+    js = """(() => { localStorage.removeItem('nq_install_hint'); state.introSeen = true; state.lastBackup = todayStr(); saveState(); const view = document.getElementById('view'); const show = () => { location.hash = '#/today'; route(); return view.querySelector('.install-banner'); };
+      INSTALL_FORCE = { platform: 'ios', safari: true }; const ios = show(); const iosBtns = ios ? [...ios.querySelectorAll('[data-act]')].map(b => b.dataset.act) : null;
+      ACTIONS['install-how'](); const modal = document.querySelector('.modal'); const guide = modal ? modal.textContent : ''; closeModal(true);
+      const iosGuide = /加入主畫面/.test(guide) && /分享/.test(guide) && /獨立的儲存空間/.test(guide) && !/⋮/.test(guide);
+      INSTALL_FORCE = { platform: 'ios', safari: false }; const chromeIos = /改用 Safari/.test(installGuideHtml());
+      INSTALL_FORCE = { platform: 'android', canPrompt: true }; const and = show(); const andBtns = and ? [...and.querySelectorAll('[data-act]')].map(b => b.dataset.act) : null; const andGuide = /安裝應用程式/.test(installGuideHtml()) && /data-act="install-prompt"/.test(installGuideHtml());
+      INSTALL_FORCE = { platform: 'desktop', firefox: true, touch: false }; const desk = !show() && /Firefox 不支援/.test(installGuideHtml());
+      INSTALL_FORCE = { platform: 'ios', standalone: true }; const standalone = !show() && /安裝好的 app/.test(installGuideHtml());
+      INSTALL_FORCE = { platform: 'ios' }; show(); ACTIONS['install-dismiss'](); const dismissed = !view.querySelector('.install-banner') && !!localStorage.getItem('nq_install_hint');
+      openSettings('look'); const inSettings = /加到主畫面（安裝成 app）/.test(document.querySelector('.modal').textContent) && /加入主畫面/.test(document.querySelector('.modal').textContent); closeModal(true);
+      INSTALL_FORCE = null; localStorage.removeItem('nq_install_hint'); return JSON.stringify({ ios: !!ios, iosBtns, iosGuide, chromeIos, and: !!and, andBtns, andGuide, desk, standalone, dismissed, inSettings }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['ios'] and r['iosBtns'] == ['install-how', 'install-dismiss'] and r['iosGuide'] and r['chromeIos'], r
+    assert r['and'] and r['andBtns'] == ['install-prompt', 'install-dismiss'] and r['andGuide'], r
+    assert r['desk'] and r['standalone'] and r['dismissed'] and r['inSettings'], r
+
 def test_ai_explanations_are_cached_per_question_and_show_the_model(b):
     js = """(() => { const v = REG.vocab.find(x => x.builtin && meaningOptions(x)); srsAnswer(v.key, true); startSession('items', { items: [v] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice(); answerCurrent(e.q.answer);
       const n0 = __calls.filter(u => /generateContent/.test(u)).length;
@@ -1279,7 +1298,7 @@ if __name__ == "__main__":
              test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
-             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read]
+             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed]
     failed = 0
     try:
         for t in tests:
