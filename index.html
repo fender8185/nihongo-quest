@@ -319,7 +319,10 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .pr-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .pr-actions .left, .pr-actions .right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 @media (hover: none) and (pointer: coarse) { .kbd-hint { display: none !important; } }   /* touch screens: no keyboard, no key hints */
-.hero-help summary { font-size: 12px; } .hero-help { margin: 2px 0 6px; }
+.hero-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+.hero-tab { font: inherit; font-size: 12px; color: var(--fg-3); background: transparent; border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; cursor: pointer; }
+.hero-tab::before { content: "▸ "; } .hero-tab.open { color: var(--fg); border-color: var(--line-2); background: var(--bg-sunken); } .hero-tab.open::before { content: "▾ "; }
+.hero-panel { margin: 0 0 12px; } .hero-panel .plan-topics { margin: 0; }
 .banner.compact { padding: 8px 12px; font-size: 13px; gap: 8px 12px; }
 .pr-next { display: flex; justify-content: flex-end; margin-top: 12px; }
 @media (max-width: 600px) {
@@ -820,12 +823,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '75';   // keep equal to the number in sw.js CACHE ('nq-v75'); scripts/test.sh checks it
+const APP_VERSION = '76';   // keep equal to the number in sw.js CACHE ('nq-v76'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '75', from: '70', date: '2026-10-28', items: [
+  { v: '76', from: '70', date: '2026-10-28', items: [
+    '今日練習的標題下改成兩個可收合的小標「說明」「今天的範圍」（單字主題、文法考點），一次只展開一個，平常都收著；負荷上限或正確率的提示仍直接顯示。',
     '零碎排版：目前單元的圖例每一項不再斷在數字中間；模擬考的三個科目開關各一行；設定頁的說明字縮小變淡，輸入框不再被擠窄。',
     '手機排版：答完題只有「下一題」固定在底部，工具列和解說不再被蓋住；首頁的進度圓環在手機上也看得到（縮小放在右上）；備份提醒縮成一行；今日練習的說明收成「說明」，點開才看；觸控裝置不再顯示 Enter／Space／1–4 等鍵盤提示；學習分析的兩個儀表並排、連續天數改 2×2、每日練習量建議表少一欄。',
     '「學習紀錄」（熱力圖、連續天數、最近的每日紀錄）從首頁搬到學習分析。每日紀錄改成數據：各種類題數（單字、文法、漢字、聽力、閱讀、模擬考）、新學與升到熟悉的個數、當天正確率、完成的單元；不再列單字名稱和錯題。種類、正確率、完成單元從這版起才有紀錄。',
@@ -3992,13 +3996,14 @@ function sessionTopicsHtml(q, plan) {
   const pts = [];
   gItems.filter(it => !state.srs[it.key]).concat(gItems.filter(it => state.srs[it.key])).forEach(g => { if (g.pt && !pts.includes(g.pt)) pts.push(g.pt); });
   const shown = pts.slice(0, 5); if (pts.length > 5) shown.push(`等 ${pts.length} 個考點`);
-  const noteText = [extraNote(q), plan.note].filter(Boolean).join(' ');
-  const note = noteText ? `<div class="plan-note">${esc(noteText)}</div>` : '';
   return `<div class="plan-topics">
       <span><b>單字主題</b>${esc(vocabText)}</span>
       ${shown.length ? `<span><b>文法</b>${esc(shown.join('・'))}</span>` : ''}
-    </div>${note}`;
+    </div>`;
 }
+function planNoteHtml(q, plan) { const noteText = [extraNote(q), plan.note].filter(Boolean).join(' '); return noteText ? `<div class="plan-note">${esc(noteText)}</div>` : ''; }
+// 說明 / 今天的範圍 under the 今日練習 title: two toggles, at most one open (kept while the app is open)
+let heroTab = null;
 
 function renderToday(view) {
   const t = todayStr();
@@ -4042,7 +4047,7 @@ function renderToday(view) {
         ${extraN ? `<span>另有 <b>${extraN}</b>（${extraText}）</span>` : ''}
         <span>共 <b>${plan.remaining}</b> 題</span>
       </div>
-      ${sessionTopicsHtml(dailyQueue(size), plan)}
+      ${planNoteHtml(dailyQueue(size), plan)}
       <div class="row-wrap">
         <button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・${dq.items.length} 題</button>
         ${dq.total > dq.items.length ? `<span class="small muted">做完還有 ${dq.total - dq.items.length} 題，可以再練一組</span>` : ''}
@@ -4080,7 +4085,12 @@ function renderToday(view) {
       <div class="hero">
         <div>
           <h2>${plan.remaining === 0 ? '今天完成了' : '今日練習'}</h2>
-          <details class="disclose hero-help"><summary class="small muted">說明</summary><div class="small muted mt-1">每一題都是今天到期的複習或今天的新內容；答錯的幾題後再練一次，之後第 1、3、7 天各複習一次，三次都對才離開錯題本。答對的越熟出現得越少。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div></details>
+          <div class="hero-tabs">
+            <button type="button" class="hero-tab${heroTab === 'help' ? ' open' : ''}" data-act="hero-tab" data-tab="help" aria-expanded="${heroTab === 'help'}">說明</button>
+            ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">今天的範圍</button>` : ''}
+          </div>
+          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>每一題都是今天到期的複習或今天的新內容；答錯的幾題後再練一次，之後第 1、3、7 天各複習一次，三次都對才離開錯題本。答對的越熟出現得越少。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
+          ${plan.remaining ? `<div class="hero-panel" data-panel="scope" ${heroTab === 'scope' ? '' : 'hidden'}>${sessionTopicsHtml(dailyQueue(size), plan)}</div>` : ''}
           ${heroBody}
         </div>
         ${ringHtml(prog.done / Math.max(1, prog.total), `<b>${prog.done}</b><div class="tiny muted">/ ${prog.total} 題</div>`, 110)}
@@ -6249,6 +6259,12 @@ Object.assign(ACTIONS, {
     cloudGenStart(gk, sk);
   },
   'cloud-gen-stop': () => { if (CLOUD_GEN) CLOUD_GEN.stop = true; },
+  'hero-tab': (el) => {
+    heroTab = heroTab === el.dataset.tab ? null : el.dataset.tab;
+    const hero = el.closest('.hero'); if (!hero) return;
+    hero.querySelectorAll('.hero-tab').forEach(b => { const on = b.dataset.tab === heroTab; b.classList.toggle('open', on); b.setAttribute('aria-expanded', String(on)); });
+    hero.querySelectorAll('.hero-panel').forEach(p => { p.hidden = p.dataset.panel !== heroTab; });
+  },
   'cloud-dl-all': () => cloudDownloadAll(),
   'cloud-dl-stop': () => { if (CLOUD_DL) CLOUD_DL.stop = true; },
   'ai-test': (el) => aiTestConnection(el),
