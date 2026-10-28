@@ -143,6 +143,54 @@ def test_no_level_gate_still_says_n5_literally(b):
     hits = [l.strip()[:120] for l in src.split('\n') if re.search(r"\.lv === 'N5'", l) and 'level-literal-ok' not in l and not re.search(r"listen|LISTEN|read\b|READ|lPool|rPool", l)]
     assert hits == [], hits[:6]
 
+# ---- fixes from the 1.0.6 whole-branch review ----
+def test_pre_stage_keeps_due_reviews_and_extra_practice_has_no_grammar(b):
+    js = """(() => { const t = todayStr(); const g = REG.grammar.find(x => x.u === 'm1'); const w = REG.vocab.find(v => v.builtin && v.lv === 'N5');
+      const rec = { b: 2, due: t, n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -5) }; state.srs[g.key] = Object.assign({}, rec); state.srs[w.key] = Object.assign({}, rec); DAILY_CACHE = null;
+      const p = dailyPlan(); const out = { dueV: p.dueV.some(x => x.key === w.key), dueG: p.dueG.some(x => x.key === g.key), newG: p.newG.length };
+      const xq = extraQueue(20); out.extraKinds = [...new Set(xq.items.filter(x => !state.srs[x.key]).map(x => x.kind))];
+      location.hash = '#/today'; route(); out.unitBtn = Boolean(document.querySelector('[data-act="start-unit"]')); out.unitTab = Boolean(document.querySelector('.hero-tab[data-tab="unit"]'));
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
+    assert r['dueV'] and r['dueG'] and r['newG'] == 0, r          # due reviews of every kind stay in 入門
+    assert set(r['extraKinds']) <= {'a'}, r                        # 加練 before the kana gate: kana only
+    assert not r['unitBtn'] and not r['unitTab'], r
+
+def test_kanji_page_has_an_intro_tab_and_still_shows_every_kanji(b):
+    js = """(() => { const count = (lv) => { location.hash = '#/vocab/kanji?lv=' + lv; route(); return document.querySelectorAll('.kanji-tile').length; };
+      const n = { pre: count('PRE_N5'), n5: count('N5'), n4: count('N4') }; n.sum = n.pre + n.n5 + n.n4; n.total = REG.kanji.length;
+      n.tab = Boolean(document.querySelector('[data-route="#/vocab/kanji?lv=PRE_N5"]')); n.text = document.querySelector('.kanji-levels').textContent; return JSON.stringify(n); })()"""
+    r = json.loads(ev(b, js))
+    assert r['pre'] == 27 and r['sum'] == r['total'] and r['tab'] and '入門' in r['text'] and 'PRE_N5' not in r['text'], r
+
+def test_vocab_decks_cover_every_level(b):
+    js = """(() => { const builtin = REG.vocab.filter(v => v.builtin).length; const vs = vocabStats();
+      location.hash = '#/vocab/list?lv=PRE_N5'; route(); const rows = document.querySelectorAll('.table tbody tr').length;
+      return JSON.stringify({ decks: DECKS.map(d => d[0]), sum: deckPool('PRE_N5').length + deckPool('N5').length + deckPool('N4').length, builtin, rows,
+        pre: vs.PRE_N5 && vs.PRE_N5.total, n5: vs.N5.total, n4: vs.N4.total }); })()"""
+    r = json.loads(ev(b, js))
+    assert 'PRE_N5' in r['decks'] and r['sum'] == r['builtin'] and r['rows'] >= 100, r
+    assert r['pre'] == 303 and r['pre'] + r['n5'] + r['n4'] == r['builtin'], r
+
+def test_sound_format_needs_speech(b):
+    js = """(() => { const it = REG.byKey.get('a:あ'); state.srs[it.key] = { b: 2, due: todayStr(), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(todayStr(), -3) };
+      const orig = speechAvailable; window.speechAvailable = () => false; const seen = {}; for (let i = 0; i < 60; i++) seen[makeQuestion(it, {}).fmt] = 1; window.speechAvailable = orig; delete state.srs[it.key];
+      return JSON.stringify(Object.keys(seen).sort()); })()"""
+    r = json.loads(ev(b, js))
+    assert 'a-sound' not in r and r, r
+
+def test_enter_main_keeps_the_unit_of_a_learner_with_grammar_records(b):
+    js = """(() => { const t = todayStr(); state.stage = 'pre'; state.currentUnit = 'm8'; const g = REG.grammar.find(x => x.u === 'm8'); state.srs[g.key] = { b: 2, due: t, n: 1, ok: 1, ng: 0, s: 3, d: 5, last: t };
+      ACTIONS['enter-main'](); const kept = state.currentUnit; state.stage = 'pre'; state.srs = {}; ACTIONS['enter-main'](); return JSON.stringify({ kept, fresh: state.currentUnit }); })()"""
+    r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
+    assert r == {'kept': 'm8', 'fresh': 'm1'}, r
+
+def test_homophone_kana_never_decoy_each_other(b):
+    js = """(() => { const bad = []; ['を', 'ヲ', 'じ', 'ず', 'ぢ', 'づ'].forEach(ch => { const it = REG.byKey.get('a:' + ch); for (let i = 0; i < 150; i++) kanaLookalikes(it).forEach(c => { if (KANA_ROMAJI[c] === it.roma || KANA_ROMAJI[Object.keys(KATA).find(h => KATA[h] === c)] === it.roma) bad.push(ch + c); }); });
+      return JSON.stringify([...new Set(bad)]); })()"""
+    r = json.loads(ev(b, js))
+    assert r == [], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
