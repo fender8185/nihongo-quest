@@ -841,12 +841,12 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '86';   // keep equal to the number in sw.js CACHE ('nq-v86'); scripts/test.sh checks it
+const APP_VERSION = '87';   // keep equal to the number in sw.js CACHE ('nq-v87'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '86', from: '70', date: '2026-10-28', items: [
+  { v: '87', from: '70', date: '2026-10-28', items: [
     '聽一輪的膠囊改成圖示：單字／文法（二選一，錯題本模式才有）、隨機（亮起＝隨機）、1／2（日文→中文，或日文→中文→日文）、速度（一、二、三個箭頭＝0.8×、1×、1.3×，只影響聽一輪，會記住）；中文一定會唸，開關拿掉。首頁卡上調整設定不再跳到獨立頁面。',
     '首頁的「考試倒數」（天數、單元進度、依考試日期的額度建議）搬到模擬考頁最上面。',
     '首頁的「聽一輪」卡合併了單字卡：切「錯題本」或「單字」，單字模式選一個主題就循環播放那個主題的全部單字（單字→中文→單字→例句）。單字頁的每個主題卡也多了「播放字卡」。上次選的來源和主題會記住。',
@@ -5100,8 +5100,11 @@ function listenInit(source = listenSourceFromPref()) {
   // defaults: words only, shuffled, Chinese on, 兩次 (Japanese → Chinese → Japanese again); no words in the notebook → everything
   LISTEN = Object.assign({ source, all: listenSourceEntries(source), items: [], idx: 0, round: 1, playing: false, order: 'random', scope: 'v', zh: true, twice: true, rate: LISTEN_RATES.includes(listenPref().rate) ? listenPref().rate : 1, run: 0, wake: null }, keep || {});
   LISTEN.zh = true;   // Chinese is always read
-  if (source.kind === 'theme' || LISTEN.scope === 'all') LISTEN.scope = 'v';
-  if (source.kind !== 'theme' && !LISTEN.all.some(e => e.kind === LISTEN.scope)) LISTEN.scope = LISTEN.scope === 'v' ? 'g' : 'v';   // an empty side: start on the other
+  // words by default; a kept scope with nothing in it (the notebook was empty, or those entries left) goes back to words,
+  // and only a notebook with grammar but no words opens on grammar
+  const has = (k) => LISTEN.all.some(e => e.kind === k);
+  if (source.kind === 'theme' || LISTEN.scope === 'all' || !has(LISTEN.scope)) LISTEN.scope = 'v';
+  if (source.kind !== 'theme' && !has('v') && has('g')) LISTEN.scope = 'g';
   listenBuild();
   return LISTEN.items.length > 0;
 }
