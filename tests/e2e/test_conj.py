@@ -89,7 +89,8 @@ def test_new_conj_item_answered_right_comes_back_typed_and_a_typed_miss_requeues
     js = f"""(() => {{ const g = {CONJ_ITEM}; state.settings.conjInput = 'auto';
       startSession('items', {{ items: [g, g, g, g, g, g, g, g, g, g, g, g] }}); const e = currentEntry(); e.q = makeGrammarQuestion(g, {{}}); renderPractice();
       answerCurrent(e.q.answer);   // 新題四選一答對 → 排一個 encore
-      const enc = SESSION.entries.find(x => x.encore); if (enc) prepareEntry(SESSION.entries.indexOf(enc));
+      const enc = SESSION.entries.find(x => x.encore); const r0 = Math.random; Math.random = () => 0;   // 0 would pick the 辨識 variant: the encore must still be the spelled one
+      if (enc) prepareEntry(SESSION.entries.indexOf(enc)); Math.random = r0;
       const out = {{ first: e.q.fmt, encore: enc ? enc.q && enc.q.fmt : null }};
       {TEARDOWN}
       // 第二場：輸入版答錯 → 再練一次仍是輸入版
