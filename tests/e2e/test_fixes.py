@@ -310,7 +310,7 @@ def test_new_items_spread_across_sessions(b):
       REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 60).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
       saveState(); DAILY_CACHE = null; const q = dailyQueue(20);
       const firstNew = q.items.filter(it => !state.srs[it.key]).length;
-      location.hash = '#/today'; route(); const btn = document.querySelector('[data-act=start-daily]').textContent; const rest = (document.querySelector('.hero .row-wrap .small') || {}).textContent || '';
+      location.hash = '#/today'; route(); const btn = document.querySelector('[data-act=start-daily]').textContent; const rest = (document.querySelector('.hero [data-panel=scope]') || {}).textContent || '';   // the rest-of-day line lives in the 今天的範圍 panel
       state.srs = JSON.parse(keep); state.settings.sessionSize = size; saveState(); DAILY_CACHE = null; return JSON.stringify({ n: q.items.length, total: q.total, firstNew, btn, rest }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
@@ -820,14 +820,16 @@ def test_hero_help_and_scope_toggles_open_one_at_a_time(b):
       const tab = (k) => ACTIONS['hero-tab'](hero.querySelector(`.hero-tab[data-tab=${k}]`));
       const s0 = st(); tab('help'); const s1 = st(); tab('scope'); const s2 = st(); tab('scope'); const s3 = st();
       tab('help'); route(); const s4 = (() => { const h = document.querySelector('.hero'); return { help: !h.querySelector('[data-panel=help]').hidden, scope: !h.querySelector('[data-panel=scope]').hidden }; })();
-      const scopeText = document.querySelector('[data-panel=scope]').textContent; const noteOutside = !document.querySelector('.hero-panel .plan-note');
-      heroTab = null; return JSON.stringify({ s0, s1, s2, s3, s4, scopeText: /單字主題/.test(scopeText), noteOutside }); })()"""
+      const scopeText = document.querySelector('[data-panel=scope]').textContent.replace(/\\s+/g, ' '); const noteOutside = !document.querySelector('.hero-panel .plan-note');
+      const outside = [...document.querySelector('.hero').children[0].children].filter(x => !x.classList.contains('hero-panel') && !x.classList.contains('hero-tabs')).map(x => x.textContent.replace(/\\s+/g, ' ').trim());
+      heroTab = null; return JSON.stringify({ s0, s1, s2, s3, s4, scopeText: /單字主題/.test(scopeText) && /待複習 \\d+/.test(scopeText) && /共 \\d+ 題/.test(scopeText) && /做完還有 \\d+ 題/.test(scopeText), noteOutside, outside }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)
     r = json.loads(out[-1])
     assert r['s0'] == {'help': False, 'scope': False, 'open': []}, r['s0']
     assert r['s1'] == {'help': True, 'scope': False, 'open': ['help']} and r['s2'] == {'help': False, 'scope': True, 'open': ['scope']}, r
     assert r['s3'] == {'help': False, 'scope': False, 'open': []} and r['s4'] == {'help': True, 'scope': False}, r   # the choice survives a re-render
     assert r['scopeText'] and r['noteOutside'], r
+    assert not any(('待複習' in x or '做完還有' in x) for x in r['outside']) and any(x.startswith('開始練習・') for x in r['outside']), r['outside']   # folded: title, toggles, button
 
 def test_today_offers_the_exam_pace_quotas_when_behind(b):
     js = """(() => { state.settings.examDate = addDays(todayStr(), 121); Object.assign(state.settings, { newVocabPerDay: 1, newGrammarPerDay: 1 }); saveState();
