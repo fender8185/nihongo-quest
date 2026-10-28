@@ -330,7 +330,7 @@ def test_intro_lesson_renders_with_kana_table_and_marks_itself_seen(b):
     assert r['h3'] >= 8 and r['kana'] >= 46 and r['seen'] and r['hasAdj'] and r['hasVerbs'] and r['card'], r
 
 def test_new_user_banner_points_to_the_intro_until_dismissed(b):
-    js = """(() => { location.hash = '#/today'; route(); const before = !!document.querySelector('.intro-banner');
+    js = """(() => { state.startChosen = true; location.hash = '#/today'; route(); const before = !!document.querySelector('.intro-banner');   // after the 起點 choice (1.0.6) the 第 0 週 banner shows
       document.querySelector('.intro-banner [data-act=intro-dismiss]').click(); const after = !!document.querySelector('.intro-banner');
       return JSON.stringify({ before, after, seen: state.introSeen === true }); })()"""
     assert ev(b, js) == '{"before":true,"after":false,"seen":true}'

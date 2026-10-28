@@ -98,6 +98,32 @@ def test_completion_card_needs_words_and_open_gate(b):
     assert r['n'] > 0 and r['wordsOnly'] is False and r['both'] is True and r['card'] is True, r
     assert r['stage'] == 'main' and r['unit'] == 'm1', r
 
+FRESH = TAG_PRE + "state.srs = {}; state.startChosen = false; state.stage = 'main'; state.kanaKnown = false; DAILY_CACHE = null; location.hash = '#/today'; true"
+
+def test_new_account_banner_sets_the_stage(b):
+    js = """(() => { route(); const out = { btns: ['start-zero', 'start-kana', 'start-basics'].map(a => Boolean(document.querySelector(`[data-act="${a}"]`))) };
+      document.querySelector('[data-act="start-zero"]').click(); out.stage = state.stage; out.gone = !document.querySelector('[data-act="start-zero"]');
+      state.startChosen = false; route(); document.querySelector('[data-act="start-basics"]').click(); out.stage2 = state.stage; out.n4 = state.settings.n4Words; out.known = state.kanaKnown;
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("eval", FRESH)]))
+    assert r == {'btns': [True, True, True], 'stage': 'pre', 'gone': True, 'stage2': 'main', 'n4': 'open', 'known': True}, r
+
+def test_course_card_and_kana_session(b):
+    js = """(() => { state.stage = 'pre'; location.hash = '#/course'; route();
+      const card = document.querySelector('.card.pre-card'); const out = { card: Boolean(card), text: card ? card.textContent : '' };
+      document.querySelector('[data-act="kana-practice"]').click(); out.kinds = [...new Set(SESSION.entries.map(e => e.item && e.item.kind))];
+      out.first = SESSION.entries[0].item.ch; return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("eval", FRESH)]))
+    assert r['card'] and '142' in r['text'] and '漢字' in r['text'] and '單字' in r['text'], r   # the 27 PRE_N5 kanji are asserted by the data test
+    assert r['kinds'] == ['a'] and r['first'] == 'あ', r
+
+def test_i_know_kana_opens_words_without_marking_kana_seen(b):
+    js = """(() => { state.stage = 'pre'; location.hash = '#/course'; route(); document.querySelector('[data-act="kana-known"]').click(); DAILY_CACHE = null;
+      const p = dailyPlan(); openSettings('learn'); const row = Boolean(document.querySelector('[data-key="newKanaPerDay"]')); closeModal(true);
+      return JSON.stringify({ open: kanaGateOpen(), v: p.newV.length, a: p.newA.length, seen: Object.keys(state.srs).filter(k => k.startsWith('a:')).length, row }); })()"""
+    r = json.loads(ev(b, js, [("eval", FRESH)]))
+    assert r['open'] and r['v'] > 0 and r['a'] > 0 and r['seen'] == 0 and r['row'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

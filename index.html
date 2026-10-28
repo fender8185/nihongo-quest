@@ -3474,7 +3474,7 @@ function buildMistakeQueue(size = 20) {
 
 // ---------- session lifecycle ----------
 const DRILL_NOTE = '這個範圍今天到期的題目不到五題，這組是加練：補上最不穩的題目先練。';
-const MODE_TITLE = { daily: '今日練習', unit: '單元練習', vocab: '單字練習', mistakes: '錯題練習', ai: 'AI 題目', kanji: '漢字練習', items: '練習' };
+const MODE_TITLE = { daily: '今日練習', unit: '單元練習', vocab: '單字練習', mistakes: '錯題練習', ai: 'AI 題目', kanji: '漢字練習', kana: '假名', items: '練習' };
 function startSession(mode, opt = {}) {
   let entries = [];
   let meta = {};
@@ -3499,6 +3499,10 @@ function startSession(mode, opt = {}) {
     const kq = buildKanjiQueue(opt.size || 15);
     entries = kq.map(item => ({ item }));
     meta = { note: kq.drill ? DRILL_NOTE : '' };
+  } else if (mode === 'kana') {   // 假名: due ones first, then the next unseen in 五十音 order
+    const t = todayStr(); const size = opt.size || state.settings.sessionSize;
+    const due = REG.kana.filter(x => isDueToday(x, t)).sort(byDue); const fresh = REG.kana.filter(x => !state.srs[x.key]).sort((a, b) => a.order - b.order);
+    entries = due.concat(fresh).slice(0, size).map(item => ({ item }));
   } else if (mode === 'items') {
     entries = (opt.items || []).map(item => ({ item }));
   }
@@ -4245,6 +4249,11 @@ const ACTIONS = {
   'report-item': () => reportCurrentItem(),
   'dismiss-notice': (el) => { state.notices = state.notices.filter(n => n.id !== el.dataset.id); saveState(); route(); },
   'intro-dismiss': () => { state.introSeen = true; saveState(); route(); },
+  'start-zero': () => chooseStart('zero'),
+  'start-kana': () => chooseStart('kana'),
+  'start-basics': () => chooseStart('basics'),
+  'kana-known': () => { state.kanaKnown = true; saveState(); DAILY_CACHE = null; toast('入門單字從今天開始'); route(); },
+  'kana-practice': () => startSession('kana'),
   'enter-main': () => { state.stage = 'main'; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null; toast('進入第 1 週'); route(); },
   'enter-pre': () => { state.stage = 'pre'; saveState(); DAILY_CACHE = null; toast('回到入門'); route(); },
   'pre-done-later': () => { state.preDoneDismissed = todayStr(); saveState(); route(); },
@@ -4399,7 +4408,10 @@ function renderToday(view) {
   const live = (kind) => LISTEN && LISTEN.playing && LISTEN.source.kind === kind ? '<i class="seg-live" title="播放中"></i>' : '';
   const segBtn = (tab, label) => `<button type="button" aria-pressed="${todayTab === tab}" data-act="today-tab" data-tab="${tab}">${label}</button>`;
 
-  const introBanner = !state.introSeen && Object.keys(state.srs).length < 40
+  const startBanner = !state.startChosen && Object.keys(state.srs).length === 0
+    ? `<div class="banner intro-banner"><div class="grow">第一次用？完全沒學過：從零開始（先認假名）。會假名了：已會假名。學過 N5：已有 N5 基礎。</div><div class="row-wrap">${startButtonsHtml()}<button type="button" class="btn btn-sm btn-ghost" data-act="nav" data-route="#/course/intro">先看第 0 週</button></div></div>`
+    : '';
+  const introBanner = startBanner ? '' : !state.introSeen && Object.keys(state.srs).length < 40
     ? `<div class="banner intro-banner"><div class="grow">第一次用？先看「第 0 週」：假名、句子骨架、以及題目上會出現的名詞（い形容詞、五段動詞……）。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button><button type="button" class="btn btn-sm btn-ghost" data-act="intro-dismiss">知道了</button></div></div>`
     : '';
   const preDoneCard = inPreStage() && preDone() && state.preDoneDismissed !== t
@@ -4443,7 +4455,7 @@ function renderToday(view) {
       ${listenReady ? listenPanelHtml(false) : `<div class="small muted">${isTheme ? '這個主題沒有單字。' : '目前沒有可以聽的錯題。'}</div>`}`;
   view.innerHTML = `
     ${noticesHtml()}
-    ${introBanner}
+    ${startBanner}${introBanner}
     ${backupBannerHtml()}
     ${installBannerHtml()}
     <div class="page-head today-head"><div><div class="page-title">今日</div><div class="page-sub">${greeting}・連續 ${st.current} 天</div></div></div>
@@ -4564,6 +4576,20 @@ function renderCourse(view) {
         <div class="grow"><div class="unit-title">開始之前：假名、句子骨架、品詞名稱</div><div class="unit-desc">給完全沒學過日文的人的入門講解，沒有練習題。</div></div>
         <div><div class="row between small"><span>${state.introSeen ? '<span class="chip chip-ok">看過</span>' : ''}</span><span></span></div></div>
       </div>`;
+  const preCard = (() => {
+    const kanaSeen = REG.kana.filter(x => state.srs[x.key]).length;
+    const words = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5'); const wordsSeen = words.filter(v => state.srs[v.key]).length;
+    const kanji = REG.kanji.filter(k => k.lv === 'PRE_N5'); const kanjiSeen = kanji.filter(k => state.srs[k.key]).length;
+    const pre = inPreStage();
+    const line = (label, seen, total) => `<div class="row between small"><span>${label}</span><span class="muted num">${seen}／${total}</span></div>${segBarHtml(total, [['learned', seen]], 'thin mt-1 mb-2')}`;
+    return `<div class="card pre-card ${pre ? 'current' : ''}"><div class="card-head"><div><div class="card-title">入門 <span class="chip">PRE_N5</span>${pre ? ' <span class="chip chip-accent">目前</span>' : ''}</div><div class="card-sub">假名辨識與入門單字；沒有文法。不算週數，單字都看過就進第 1 週。</div></div></div>
+      ${line('假名', kanaSeen, REG.kana.length)}${line('單字', wordsSeen, words.length)}${line('漢字', kanjiSeen, kanji.length)}
+      <div class="row-wrap mt-2">
+        <button type="button" class="btn btn-sm" data-act="kana-practice">練假名</button>
+        ${pre && !kanaGateOpen() ? '<button type="button" class="btn btn-sm" data-act="kana-known">我已認得假名</button>' : ''}
+        ${pre ? '<button type="button" class="btn btn-sm btn-primary" data-act="enter-main">進入第 1 週</button>' : '<button type="button" class="btn btn-sm btn-ghost" data-act="enter-pre">回到入門</button>'}
+      </div></div>`;
+  })();
   const phases = DATA.PHASES.map((ph, pi) => {
     const rows = (pi === 0 ? introRow : '') + DATA.UNITS.filter(u => u.ph === ph.id).map(u => {
       const s = unitStats(u.id);
@@ -4582,7 +4608,7 @@ function renderCourse(view) {
       <div><div class="page-title">課程</div><div class="page-sub">18 個單元，每單元約兩週。整體完成度 ${cp.pct}%</div></div>
       <button type="button" class="btn" data-act="open-level">依程度選擇起點</button>
     </div>
-    ${phases}`;
+    ${preCard}${phases}`;
 }
 
 
@@ -4834,6 +4860,9 @@ function levelPickerHtml() {
   const rec = unitById(recommendUnit(score));
   const unitOpts = DATA.UNITS.map(u => `<option value="${u.id}" ${u.id === state.currentUnit ? 'selected' : ''}>${esc(u.weeks)}・${esc(u.short)}</option>`).join('');
   return `
+    <div class="row-wrap">${startButtonsHtml()}</div>
+    <p class="hint mt-2">完全沒學過：從零開始（先認假名，再學入門單字）。會假名了：已會假名。學過 N5：已有 N5 基礎。</p>
+    <div class="divider"></div>
     <p class="dim small">選擇要從第幾週開始。預設從第 1 週開始；之後可以隨時在課程頁更改。</p>
     <div class="row-wrap mt-3">
       <select class="select" id="startUnit" style="width:auto;min-width:220px">${unitOpts}</select>
@@ -4856,6 +4885,20 @@ function levelPickerHtml() {
     </details>`;
 }
 // 「我已有基礎」: faster new-item quotas, N4 words open now, no Chinese shown by default. Every value stays adjustable in 設定.
+// 起點三選一: 從零開始 (入門: kana first) / 已會假名 (main course, kana never scheduled as new) / 已有 N5 基礎 (plus the 我已有基礎 settings)
+function chooseStart(kind) {
+  state.stage = kind === 'zero' ? 'pre' : 'main';
+  state.kanaKnown = kind !== 'zero';
+  if (kind === 'basics') applyExperienced();
+  state.startChosen = true;
+  saveState(); DAILY_CACHE = null; closeModal(true);
+  toast(kind === 'zero' ? '從假名開始。每天的練習在今日頁。' : kind === 'kana' ? '從第 1 週開始' : '已套用「我已有基礎」設定');
+  route();
+}
+function startButtonsHtml(small = true) {
+  const c = small ? 'btn btn-sm' : 'btn';
+  return `<button type="button" class="${c} btn-primary" data-act="start-zero">從零開始</button><button type="button" class="${c}" data-act="start-kana">已會假名</button><button type="button" class="${c}" data-act="start-basics">已有 N5 基礎</button>`;
+}
 const EXPERIENCED_SETTINGS = { newVocabPerDay: 20, newGrammarPerDay: 10, newKanjiPerDay: 5, n4Words: 'open', showZh: false };
 function applyExperienced() { Object.assign(state.settings, EXPERIENCED_SETTINGS); saveState(); }
 // make `unit` the current unit; optionally mark every earlier unit as completed and apply the 我已有基礎 settings
@@ -6721,6 +6764,9 @@ function settingsLearn() {
     ${numRow('newGrammarPerDay', '每天新文法題上限', '照講義段落順序從目前單元挑；本單元出完會接著下一單元並自動切換。', 0, 30, 1, '題')}
     ${selRow('n4Words', 'N4 單字何時加入', '預設等 N5 單字都學過一次才加入 N4 新字；已有基礎的人可以直接開放。', [['auto', 'N5 學過一次後自動加入'], ['open', '現在就開放']])}
     ${numRow('newKanjiPerDay', '每天新漢字上限', 'N5 漢字都學過一次後，才會開始加入 N4 漢字。', 0, 15, 1, '個')}
+    ${numRow('newKanaPerDay', '每天新假名', '平假名與片假名一起，照五十音順序；入門階段才會排新的。', 0, 30, 1, '個')}
+    <div class="setting-row"><div><div class="label">目前階段：${inPreStage() ? '入門（假名與入門單字）' : '正課（第 1 週起）'}</div><div class="hint">入門階段的每天練習只有假名、入門單字與漢字；正課才有文法、聽力、閱讀。</div></div>
+      <button type="button" class="btn btn-sm" data-act="${inPreStage() ? 'enter-main' : 'enter-pre'}">${inPreStage() ? '進入第 1 週' : '回到入門'}</button></div>
     ${numRow('conjDrillPerDay', '每天變化練習', '以形態為單位排程，動詞從你學過的單字裡隨機抽；只出目前單元以前教過的形態。', 0, 10, 1, '題')}
     ${numRow('listenPerDay', '每天聽力題', '短對話、即時應答與情境表達；需要能播放語音。', 0, 10, 1, '題')}
     ${selRow('retention', '複習強度', '越高越常複習，記得越牢，但每天的題目也越多。', [['0.85', '輕量（約記住 85%）'], ['0.9', '標準（約記住 90%）'], ['0.95', '加強（約記住 95%）']])}
