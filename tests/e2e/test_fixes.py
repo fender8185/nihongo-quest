@@ -843,7 +843,7 @@ def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in
     play = """(async () => { speechSynthesis.getVoices = () => [{ name: 'Kyoko', lang: 'ja-JP', voiceURI: 'kyoko', localService: true }, { name: 'Meijia', lang: 'zh-TW', voiceURI: 'mj', localService: true }];
       LISTEN_GAP.short = 30; LISTEN_GAP.long = 30; __tts.log.length = 0;
       ACTIONS['listen-start']({ dataset: { cat: '' } }); route();
-      const items0 = LISTEN.items.map(e => e.kind); const hash = location.hash;
+      const items0 = LISTEN.items.map(e => e.kind); const hash = location.hash; const svgBtns = ['listen-prev', 'listen-toggle', 'listen-next'].every(a => !!document.querySelector(`[data-act=${a}] svg`)) && !/[\\u23EE\\u23ED\\u25B6\\u275A]/.test(document.querySelector('.listen-ctl').textContent);
       const until = (f, ms) => new Promise(res => { const t0 = Date.now(); const tick = () => { if (f() || Date.now() - t0 > ms) res(f()); else setTimeout(tick, 40); }; tick(); });
       const reached = await until(() => __tts.log.filter(x => x.startsWith('start:')).length >= 9, 20000);   // two words (3 each) and the sentence (3)
       const log = __tts.log.filter(x => x.startsWith('start:')).map(x => x.slice(6)).slice(0, 9);
@@ -852,11 +852,11 @@ def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in
       ACTIONS['listen-set']({ dataset: { key: 'scope', value: 'g' } }); const scoped = LISTEN.items.map(e => e.kind);
       ACTIONS['listen-set']({ dataset: { key: 'zh', value: 'false' } }); const zhOff = LISTEN.zh;
       location.hash = '#/mistakes'; route(); const gone = LISTEN === null;
-      return JSON.stringify({ items0, hash, reached, log, card, paused, quiet, scoped, zhOff, gone, vs: __vs, g: __g }); })()"""
+      return JSON.stringify({ items0, hash, reached, log, card, paused, quiet, scoped, zhOff, gone, svgBtns, vs: __vs, g: __g }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("eval", page), ("eval", FAKE_TTS), ("eval", play)], timeout=90)
     r = json.loads(out[-3]); p = json.loads(out[-1])
     assert r['has'] and r['open'] is False and r['sum'].startswith('分類篩選（') and r['chips'] >= 2 and r['sum2'].startswith('分類：單字') and r['clear'] and r['btn'], r
-    assert p['items0'] == ['v', 'v', 'g'] and p['hash'] == '#/mistakes/listen' and p['reached'], p
+    assert p['items0'] == ['v', 'v', 'g'] and p['hash'] == '#/mistakes/listen' and p['reached'] and p['svgBtns'], p   # SVG icons, never emoji-prone characters
     (w0, m0, e0), (w1, m1, e1) = p['vs']
     assert p['log'] == [w0, m0, e0, w1, m1, e1, p['g']['s'], p['g']['zh'], p['g']['s']], p['log']   # word → meaning → example; sentence → translation → sentence
     assert '文法' in p['card'] and p['paused'] and p['quiet'] and p['scoped'] == ['g'] and p['zhOff'] is False and p['gone'], p
