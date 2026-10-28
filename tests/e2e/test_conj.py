@@ -84,6 +84,25 @@ def test_settings_page_offers_the_input_mode(b):
     js = "(() => { openSettings('learn'); const s = document.querySelector('select[data-key=conjInput]'); const out = s ? [...s.options].map(o => o.value) : null; closeModal(); return JSON.stringify(out); })()"
     assert json.loads(ev(b, js)) == ['auto', 'choice', 'tiles', 'type']
 
+# ---- Task 3: 再練一次／換個方式再考沿用輸入版 ----
+def test_new_conj_item_answered_right_comes_back_typed_and_a_typed_miss_requeues_typed(b):
+    js = f"""(() => {{ const g = {CONJ_ITEM}; state.settings.conjInput = 'auto';
+      startSession('items', {{ items: [g, g, g, g, g, g, g, g, g, g, g, g] }}); const e = currentEntry(); e.q = makeGrammarQuestion(g, {{}}); renderPractice();
+      answerCurrent(e.q.answer);   // 新題四選一答對 → 排一個 encore
+      const enc = SESSION.entries.find(x => x.encore); if (enc) prepareEntry(SESSION.entries.indexOf(enc));
+      const out = {{ first: e.q.fmt, encore: enc ? enc.q && enc.q.fmt : null }};
+      {TEARDOWN}
+      // 第二場：輸入版答錯 → 再練一次仍是輸入版
+      state.srs[g.key].b = 1; startSession('items', {{ items: [g, g, g, g, g, g, g] }}); const e2 = currentEntry(); e2.q = makeGrammarQuestion(g, {{}}); renderPractice();
+      e2.q.options[1].text = 'x'; answerCurrent(1);
+      const rq = SESSION.entries.find(x => x.requeued); prepareEntry(SESSION.entries.indexOf(rq));
+      out.second = e2.q.fmt; out.requeued = rq.q.fmt; out.rqCustom = rq.q.custom;
+      state.settings.conjInput = 'choice'; out.noFormats = grammarHasFormats(g);
+      {TEARDOWN} return JSON.stringify(out); }})()"""
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['first'] == 'g-conj' and r['encore'] == 'g-conj-type', r
+    assert r['second'] == 'g-conj-type' and r['requeued'] == 'g-conj-type' and r['rqCustom'] == 'g-conj-type' and r['noFormats'] is False, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

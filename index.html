@@ -2720,8 +2720,14 @@ function makeGrammarQuestion(g, ctx = {}) {
     }
     // 輸入模式: the learner spells the form with kana tiles or types it (no options to eliminate)
     const typedFmt = isV ? 'g-conj-type' : 'g-adj-type';
-    const mode = ctx.forceFmt === typedFmt ? (state.settings.conjInput === 'type' ? 'type' : 'tiles')
+    const avoid = [].concat(ctx.avoidFmts || ctx.avoidFmt || []);
+    const choiceFmt = isV ? 'g-conj' : 'g-adj';
+    let mode = ctx.forceFmt === typedFmt ? (state.settings.conjInput === 'type' ? 'type' : 'tiles')
       : (ctx.forceFmt === 'g-conj' || ctx.forceFmt === 'g-adj') ? 'choice' : conjInputMode(rec);
+    if (!ctx.forceFmt && avoid.length) {   // 換個方式再考: the format not yet used this session
+      if (avoid.includes(choiceFmt) && !avoid.includes(typedFmt)) mode = state.settings.conjInput === 'type' ? 'type' : 'tiles';
+      else if (avoid.includes(typedFmt) && !avoid.includes(choiceFmt)) { if ((state.settings.conjInput || 'auto') === 'auto') mode = 'choice'; else return null; }
+    }
     if (mode !== 'choice') {
       q.fmt = typedFmt; q.custom = typedFmt; q.inputMode = mode;
       q.instr = mode === 'tiles' ? (isV ? '點假名，拼出正確的動詞變化' : '點假名，拼出正確的形容詞變化') : (isV ? '輸入正確的動詞變化' : '輸入正確的形容詞變化');
@@ -3383,6 +3389,7 @@ function prepareEntry(i) {
   if (!e || e.q) return;
   if (e.mistake) e.q = makeMistakeCard(e.mistake);
   else if (e.encore) e.q = otherFormatQuestion(e.item) || null;
+  else if (e.requeued && e.orig && e.orig.fmt && e.orig.fmt.endsWith('-type')) e.q = makeQuestion(e.item, { forceFmt: e.orig.fmt });   // 再練一次 of a spelled conjugation: spell it again, never back to options
   else if (e.requeued) e.q = otherFormatQuestion(e.item) || requeueQuestion(e.orig, shuffle(e.orig.options));   // 再練一次: another format when the item has one
   else e.q = makeQuestion(e.item, { avoidFmt: SESSION.lastFmt });
   if (!e.q) { SESSION.entries.splice(i, 1); if (i < SESSION.entries.length) prepareEntry(i); }
@@ -3400,6 +3407,7 @@ function otherFormatQuestion(item) {
 }
 // a grammar fill-in item that can also be asked as 選正確句 or 句意
 function grammarHasFormats(g) {
+  if (g && g.kind === 'g' && (g.t === 'conj' || g.t === 'adj')) return (state.settings.conjInput || 'auto') !== 'choice';   // four options ↔ spelled
   if (!g || g.kind !== 'g' || (g.t || 'choice') !== 'choice' || !splitBlank(g.jp || '')) return false;
   return grammarFormats(g, (g.op || []).map(parenReadingToBracket), parenReadingToBracket(g.a)).length >= 2;
 }
