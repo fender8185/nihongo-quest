@@ -213,6 +213,21 @@ def test_same_theme_name_across_levels(b):
     r = json.loads(ev(b, js))
     assert r['n5Only'] and r['lvs'] == ['N5', 'PRE_N5'], r
 
+def test_check_vocab_script_flags_bad_candidates(b):
+    fx = {"words": [
+      {"w": "りんご", "r": "りんご", "m": "蘋果", "p": "n", "lv": "PRE_N5", "c": "飲食", "ex": "{りんご}を食べます。", "exZh": "吃蘋果。"},
+      {"w": "牛丼", "r": "ぎゅうどん", "m": "牛肉蓋飯", "p": "n", "lv": "PRE_N5", "c": "飲食", "ex": "{牛丼}を食べます。", "exZh": "吃牛肉蓋飯。"},
+      {"w": "ラーメン", "r": "らーめん", "m": "拉麵", "p": "n", "lv": "PRE_N5", "c": "不存在", "ex": "{ラーメン}が好きです。", "exZh": "喜歡拉麵。"},
+      {"w": "黒板", "r": "こくばん", "m": "黑板", "p": "n", "lv": "PRE_N5", "c": "日常物品", "ex": "大学の{黒板}を見ます。", "exZh": "看大學的黑板。"},
+      {"w": "時計", "r": "とけい", "m": "鐘錶", "p": "n", "lv": "N5", "c": "居家生活", "ex": "{時計}を買いました。", "exZh": "買了鐘。", "ex2": "{時計}を買いました。", "exZh2": "買了鐘。"}
+    ]}
+    path = os.path.join(ROOT, '.superpowers', 'check-vocab-fixture.json'); os.makedirs(os.path.dirname(path), exist_ok=True)
+    json.dump(fx, open(path, 'w'), ensure_ascii=False)
+    out = subprocess.run([sys.executable, '-I', os.path.join(ROOT, 'scripts', 'check-vocab.py'), path, '8790'], capture_output=True, text=True)
+    assert out.returncode == 1, out.stdout + out.stderr
+    for msg in ['already in the bank', 'unknown theme', 'pre-example-vocab', 'same as the first example']:
+        assert msg in out.stdout, (msg, out.stdout)
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
