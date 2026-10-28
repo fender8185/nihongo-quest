@@ -1377,6 +1377,24 @@ def test_ai_explanations_are_cached_per_question_and_show_the_model(b):
     r = json.loads(out[-1])
     assert r['first'] >= 1 and r['second'] == 0 and r['hasModel'] and r['hasAnswer'] and r['html1'], r
 
+# ---- 2026-10-28: 聽一輪 keeps the shared player busy between lines (iOS lock screen) and pauses on a refused clip ----
+def test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip(b):
+    js = """(() => { LISTEN = null; setListenPref({ source: 'theme', theme: vocabThemes()[0].c }); location.hash = '#/vocab/listen'; route();
+      const u = silenceUrl(350); const wav = fetch(u).then(r => r.arrayBuffer()).then(ab => { const w = new Uint8Array(ab); return { size: w.length, riff: String.fromCharCode(...w.slice(0, 4)), wave: String.fromCharCode(...w.slice(8, 12)), body: w.slice(44).every(x => x === 128), same: silenceUrl(350) === u }; });
+      // a refused clip: speak resolves false -> the player pauses on that very item instead of skipping on
+      const s0 = speak, z0 = speakZh; LISTEN.idx = 2; const L = LISTEN; speak = () => Promise.resolve(false); speakZh = () => Promise.resolve();
+      listenPlay(); const wasPlaying = LISTEN.playing;
+      return sleep(250).then(() => wav).then(w => { const r = { w, wasPlaying, playing: LISTEN.playing, idx: LISTEN.idx, same: LISTEN === L, state: navigator.mediaSession.playbackState };
+        // the gap goes through the shared player once it is unlocked; when play() is refused it falls back to a plain wait
+        const a = getTtsPlayer(); const calls = []; const p0 = a.play; a.play = function () { calls.push(this.src.slice(0, 5)); return Promise.reject(Object.assign(new Error('x'), { name: 'NotAllowedError' })); };
+        ttsPlayerUnlocked = true; ttsConfig().engine = 'cloud'; const t0 = Date.now();
+        return playSilence(120).then(() => { r.silence = { calls: calls.length, blob: calls[0], waited: Date.now() - t0 >= 110, flagCleared: !a.dataset.silent }; a.play = p0; ttsConfig().engine = 'browser_neural'; speak = s0; speakZh = z0; LISTEN = null; localStorage.removeItem('nq_listen_pref'); return JSON.stringify(r); }); }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['w'] == {'size': 44 + 2800, 'riff': 'RIFF', 'wave': 'WAVE', 'body': True, 'same': True}, r['w']
+    assert r['wasPlaying'] and r['playing'] is False and r['idx'] == 2 and r['same'] and r['state'] == 'paused', r
+    assert r['silence'] == {'calls': 1, 'blob': 'blob:', 'waited': True, 'flagCleared': True}, r['silence']
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -1396,7 +1414,7 @@ if __name__ == "__main__":
              test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
-             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box]
+             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box]
     failed = 0
     try:
         for t in tests:

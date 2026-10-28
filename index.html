@@ -917,12 +917,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.2';   // keep equal to the version in sw.js CACHE ('nq-v1.0.1'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.3';   // keep equal to the version in sw.js CACHE ('nq-v1.0.3'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.3', date: '2026-10-28', items: [
+    '聽一輪：iPhone 手動鎖屏後也會一直播下去。句與句之間改成播一段靜音，播放器從頭到尾不停，系統就不會在空檔把它收掉；頁面或鎖定畫面的 ▶ 也會先接上播放器再抓下一句。播放真的被系統擋下時，播放器會停在那個字並顯示 ▶，不再默默往前跳。'
+  ] },
   { v: '1.0.2', date: '2026-10-28', items: [
     '課程頁的「第 0 週」不再是獨立的卡和「再看一次」按鈕，改成第一階段裡的第一列，和其他週次一樣點進去就好；看過的會標「看過」。',
     '頁名統一：手機上所有主頁都不顯示頁名（頂欄已經有）；電腦版每個主頁都有頁名，今日頁也補上「今日」和日期。'
@@ -937,7 +940,7 @@ const CHANGELOG = [
     '練習：單字有看字選意思、中翻日、例句填空、讀音、寫法、聽音選意思、假名拼字、配對；文法有填空、選正確句、句意、真的排序；另有漢字、聽力（整個級別抽題）、閱讀。新字先看預習卡再考；答錯幾題後換一種格式「再練一次」，不寫排程；按「手滑，不算」可撤銷；單字可按「我會了」直接標熟練。手機上作答只有「下一題」固定在底部，畫面避開瀏海、不能縮放。',
     '課程：18 個單元（每單元約兩週）的講義，加上「第 0 週：開始之前」的入門（假名、句子骨架、品詞、動詞的形、助詞、數量詞）；可依程度選起點或一鍵「我已有基礎」。文法考點整併成 288 個，每個考點至少 3 題。',
     '單字：1461 個內建單字（含敬語、名詞＋する合併卡），每字兩句例句；依主題分組，每個主題有已學／熟悉／熟練三段進度條，可看字表、翻字卡、練習或播放字卡；N4 單字在 N5 學過一次後開放（設定可提前）。漢字 342 個另有讀音與字義題。自訂字卡可匯入。',
-    '聽一輪：循環朗讀，不寫排程、不算題數。來源是錯題本（單字→中文→單字→例句→例句中文；文法整句→中文→整句，只唸有中文且答案標得進句子的題）或單字主題（含自動收錄「已學但還沒熟練」的「初識單詞」，上次的選擇會記住）。膠囊：字｜文、隨機、一次／兩次、速度 0.8／1／1.3。放大圖示進全螢幕：直立手機整頁轉成橫的，日文在上、中文在下、例句最下，字依螢幕放到最大；✕ 回首頁播放不斷。雲端語音時鎖定畫面可控制（iPhone 鎖屏仍可能停）。',
+    '聽一輪：循環朗讀，不寫排程、不算題數。來源是錯題本（單字→中文→單字→例句→例句中文；文法整句→中文→整句，只唸有中文且答案標得進句子的題）或單字主題（含自動收錄「已學但還沒熟練」的「初識單詞」，上次的選擇會記住）。膠囊：字｜文、隨機、一次／兩次、速度 0.8／1／1.3。放大圖示進全螢幕：直立手機整頁轉成橫的，日文在上、中文在下、例句最下，字依螢幕放到最大；✕ 回首頁播放不斷。雲端語音時鎖定畫面可控制，鎖屏後持續播放（句間播靜音讓播放器不中斷）。',
     '錯題本：答錯的題目自動收進來，可依類別篩選、排序或依文法考點分組直接練；「快速過一輪」翻卡用忘了／記得回寫排程；題目達到「熟悉」就移到已掌握。',
     '模擬考：依 JLPT 三個科目與大題順序出題，同一份不重複，結束換算 180 分制；最上面有考試倒數、單元進度和依考試日期算的新題額度建議（可一鍵套用）。',
     '學習分析：單字與文法的總進度半圓儀表（三段熟練度、N5／N4 分界）、過去 7 天練習量、學習紀錄熱力圖與每日數據（各類題數、新學與升熟悉、正確率、完成單元）、每日練習量建議。',
@@ -5190,6 +5193,14 @@ function startListen(source = { kind: 'mistakes', cat: '' }) {
   return true;
 }
 function listenCurrent() { return LISTEN && LISTEN.items[LISTEN.idx]; }
+// the next item's clips into memory while this one plays, so the swap after the silence is a microtask, not a fetch
+function listenPrefetch(e) {
+  if (!e || ttsConfig().engine !== 'cloud') return;
+  const ja = (text, opt) => { const t = ttsText(text); if (t) engineBlob(t, '', opt).catch(() => {}); };
+  const zh = (text) => { if (text && LISTEN && LISTEN.zh) engineBlob(String(text), '', { lang: 'zh' }).catch(() => {}); };
+  if (e.kind === 'v') { ja(e.word, e.reading ? { reading: e.reading } : undefined); zh(e.meaning); if (e.ex) { ja(exPlain(e.ex.ex)); zh(e.ex.exZh); } }
+  else { ja(e.sentence); zh(e.zh); }
+}
 async function listenWake(on) {
   try {
     if (on) { if (LISTEN && !LISTEN.wake && navigator.wakeLock) LISTEN.wake = await navigator.wakeLock.request('screen'); }
@@ -5200,16 +5211,17 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 function listenPlay() {
   if (!LISTEN || !LISTEN.items.length) return;
   LISTEN.playing = true; speechRateOverride = LISTEN.rate || 1; listenWake(true); listenRenderNow();
+  primeTtsPlayer();   // still inside the tap (page button or lock screen): the player starts now, the first line only swaps the source
   listenRun();
 }
 function listenPause() {
   if (!LISTEN) return;
-  if (LISTEN.playing) stopSpeaking();   // only a playing player owns the speech; a paused one must not cut a listening question
+  if (LISTEN.playing) { stopSpeaking(); stopSilence(); }   // only a playing player owns the speech; a paused one must not cut a listening question
   LISTEN.playing = false; LISTEN.run++; speechRateOverride = 0; listenWake(false); listenRenderNow();
 }
 function listenStop(silent) {
   if (!LISTEN) return;
-  if (LISTEN.playing) stopSpeaking();
+  if (LISTEN.playing) { stopSpeaking(); stopSilence(); }
   const back = LISTEN.source && LISTEN.source.kind === 'theme' ? '#/vocab/themes' : '#/mistakes';
   LISTEN.playing = false; LISTEN.run++; speechRateOverride = 0; listenWake(false); LISTEN = null;
   if (!silent) go(back);
@@ -5243,8 +5255,18 @@ async function listenRun() {
     L.idx++;
   }
 }
+// Between lines the shared <audio> plays silence instead of idling (iOS stops a hidden page's audio for good once the
+// element goes idle); a line whose clip the system refused pauses the player on that item instead of skipping on.
 async function listenSpeak(e, alive) {
-  const step = async (fn, gap) => { if (!alive()) return false; await fn(); if (!alive()) return false; await sleep(gap); return alive(); };
+  const step = async (fn, gap) => {
+    if (!alive()) return false;
+    const r = await fn();
+    if (r === false) { if (alive()) listenPause(); return false; }
+    if (!alive()) return false;
+    await playSilence(gap);
+    return alive();
+  };
+  if (LISTEN && LISTEN.items.length > 1) listenPrefetch(LISTEN.items[(LISTEN.idx + 1) % LISTEN.items.length]);
   const again = LISTEN.twice && LISTEN.zh;   // 兩次: the Japanese once more after the Chinese
   if (e.kind === 'v') {
     const word = () => speak(e.word, e.reading ? { reading: e.reading } : undefined);
@@ -7203,7 +7225,8 @@ async function speakZh(text) {
         const url = URL.createObjectURL(blob);
         const ok = await playUrl(url, token, speechRate());
         setTimeout(() => URL.revokeObjectURL(url), 1000);
-        if (ok) return;
+        if (ok) return true;
+        if (playRefused && document.hidden) return false;
       }
     } catch (e) { /* the device voice reads it */ }
   }
@@ -7258,8 +7281,9 @@ function stopSpeaking() {
       lastCancelAt = Date.now();
     }
   } catch (e) { /* ignore */ }
-  if (currentAudio) { try { currentAudio.pause(); } catch (e) { /* ignore */ } currentAudio = null; }
+  if (currentAudio) { try { if (!currentAudio.dataset.silent) currentAudio.pause(); } catch (e) { /* ignore */ } currentAudio = null; }   // silence stays: the next clip replaces it, a pause cuts it with stopSilence()
 }
+function stopSilence() { const a = ttsPlayer; if (a && a.dataset.silent) { try { a.pause(); } catch (e) { /* ignore */ } } }
 
 async function speakBrowser(text, gender, token) {
   if (!('speechSynthesis' in window)) {
@@ -7416,26 +7440,75 @@ function playUrl(url, token, rate = 1) {
     if (token !== speechToken) { resolve(true); return; }
     const a = getTtsPlayer();
     let finished = false, started = false, timer = null;
-    const cleanup = () => { clearTimeout(timer); a.onended = a.onerror = a.onplaying = a.onloadedmetadata = a.ontimeupdate = null; };
-    a.ontimeupdate = () => { if (token === SPEECH_PROG.token && isFinite(a.duration) && a.duration > 0) SPEECH_PROG.real = Math.min(1, a.currentTime / a.duration); };   // real progress for the bar
-    const done = (ok, why) => { if (finished) return; finished = true; cleanup(); if (!ok && why) console.warn('audio playback failed:', why); resolve(ok); };
-    a.onended = () => done(true);
-    a.onerror = () => done(false, 'error');
-    a.onplaying = () => { started = true; };
+    const onTime = () => { if (token === SPEECH_PROG.token && isFinite(a.duration) && a.duration > 0) SPEECH_PROG.real = Math.min(1, a.currentTime / a.duration); };   // real progress for the bar
+    const onEnded = () => done(true), onError = () => done(false, 'error'), onPlaying = () => { started = true; };
     // a clip that never starts (refused play, stalled decode) or never reports `ended` must not stall the whole script
-    a.onloadedmetadata = () => {
+    const onMeta = () => {
       if (finished || !isFinite(a.duration)) return;
       clearTimeout(timer);
       timer = setTimeout(() => done(started, started ? '' : 'never started'), a.duration / (rate || 1) * 1000 + 4000);
     };
+    // only its own handlers come off: a late timer must not strip those of the clip or silence that followed
+    const cleanup = () => { clearTimeout(timer); [['onended', onEnded], ['onerror', onError], ['onplaying', onPlaying], ['onloadedmetadata', onMeta], ['ontimeupdate', onTime]].forEach(([k, f]) => { if (a[k] === f) a[k] = null; }); };
+    const done = (ok, why) => { if (finished) return; finished = true; cleanup(); if (!ok && why) console.warn('audio playback failed:', why); resolve(ok); };
+    a.ontimeupdate = onTime; a.onended = onEnded; a.onerror = onError; a.onplaying = onPlaying; a.onloadedmetadata = onMeta;
     timer = setTimeout(() => { if (!started) done(false, 'never started'); }, 6000);
+    playRefused = false;
     try { a.pause(); } catch (e) { /* ignore */ }
-    a.src = url;
+    a.src = url; a.loop = false; delete a.dataset.silent;
     a.playbackRate = rate;
     currentAudio = a;
     const p = a.play();
-    if (p && p.catch) p.catch(e => done(false, e && e.name));
+    if (p && p.catch) p.catch(e => { playRefused = !!e && e.name === 'NotAllowedError'; done(false, e && e.name); });
   });
+}
+
+// ---- Silence on the shared player. iOS keeps a hidden page's audio going only while the element is playing: once
+// it goes idle (the screen was locked by hand), the next play() is refused and so is the browser voice. So the pauses
+// between the lines of 聽一輪 are silent WAVs on the same element, and ▶ starts a looping second of silence inside the
+// tap, so the line that follows (after its fetch) only swaps the source of a playing element.
+const silenceUrls = new Map();
+function silenceUrl(ms) {   // an 8 kHz 8-bit mono WAV of `ms` silence (8 bytes per ms)
+  if (silenceUrls.has(ms)) return silenceUrls.get(ms);
+  const n = Math.max(8, Math.round(ms * 8));
+  const b = new Uint8Array(44 + n); const dv = new DataView(b.buffer);
+  const tag = (o, t) => { for (let i = 0; i < 4; i++) b[o + i] = t.charCodeAt(i); };
+  tag(0, 'RIFF'); dv.setUint32(4, 36 + n, true); tag(8, 'WAVE'); tag(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, 8000, true); dv.setUint32(28, 8000, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true); tag(36, 'data'); dv.setUint32(40, n, true);
+  b.fill(128, 44);
+  const url = URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
+  silenceUrls.set(ms, url);
+  return url;
+}
+let playRefused = false;   // the last clip's play() was refused (NotAllowedError): no gesture, or a page in the background
+function playSilence(ms) {   // resolves when the silence ends or is cut; when it cannot play, after a plain wait instead
+  if (!ttsPlayerUnlocked || ttsConfig().engine === 'browser_neural') return sleep(ms);
+  return new Promise(resolve => {
+    const a = getTtsPlayer();
+    let finished = false, started = false, timer = null;
+    const onEnded = () => done(), onPlaying = () => { started = true; }, onPause = () => { if (started) done(); };   // the pause the source swap itself queues comes before `playing`
+    const cleanup = () => { clearTimeout(timer); if (a.onended === onEnded) a.onended = a.onerror = null; if (a.onpause === onPause) a.onpause = null; if (a.onplaying === onPlaying) a.onplaying = null; };   // only its own handlers: the clip that followed keeps its
+    const done = () => { if (finished) return; finished = true; cleanup(); resolve(); };
+    try { a.pause(); } catch (e) { /* ignore */ }
+    a.src = silenceUrl(ms); a.loop = false; a.playbackRate = 1; a.dataset.silent = '1';
+    a.onplaying = onPlaying; a.onended = a.onerror = onEnded; a.onpause = onPause;
+    timer = setTimeout(done, ms + 1500);   // a lost `ended` must not stall the player
+    currentAudio = a;
+    const p = a.play();
+    if (p && p.catch) p.catch(() => { if (finished) return; finished = true; cleanup(); delete a.dataset.silent; sleep(ms).then(resolve); });
+  });
+}
+function primeTtsPlayer() {   // inside a tap: a looping second of silence keeps the element playing while the first line is fetched
+  if (ttsConfig().engine === 'browser_neural') return;
+  const a = getTtsPlayer();
+  if (a.src && !a.paused && !a.ended && !a.dataset.silent) return;   // a real clip is already playing from this gesture
+  ttsPlayerUnlocked = true;
+  try {
+    a.src = silenceUrl(1000); a.loop = true; a.playbackRate = 1; a.dataset.silent = '1';
+    currentAudio = a;
+    const p = a.play();
+    if (p && p.catch) p.catch(() => { delete a.dataset.silent; });
+  } catch (e) { /* ignore */ }
 }
 
 async function speakLine(text, gender, token, opt) {
@@ -7448,7 +7521,8 @@ async function speakLine(text, gender, token, opt) {
         const url = URL.createObjectURL(blob);
         const ok = await playUrl(url, token, cfg.engine === 'deepgram' || cfg.engine === 'cloud' ? (speechRate()) : 1);
         setTimeout(() => URL.revokeObjectURL(url), 1000);
-        if (ok) return;
+        if (ok) return true;
+        if (playRefused && document.hidden) return false;   // refused in the background (screen locked): the browser voice would be refused too, so the caller stops instead of skipping
       }
     } catch (e) {
       console.warn('TTS engine failed, using browser voice', e);
