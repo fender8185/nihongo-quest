@@ -4299,7 +4299,7 @@ function renderCourse(view) {
   const introRow = `<div class="unit-row" data-act="nav" data-route="#/course/intro" role="button" tabindex="0">
         <div class="unit-weeks">第 0 週</div>
         <div class="grow"><div class="unit-title">開始之前：假名、句子骨架、品詞名稱</div><div class="unit-desc">給完全沒學過日文的人的入門講解，沒有練習題。</div></div>
-        <div><div class="row between small"><span>${state.introSeen ? '<span class="chip chip-ok">看過</span>' : ''}</span><span class="muted num">${state.introSeen ? '✓' : ''}</span></div></div>
+        <div><div class="row between small"><span>${state.introSeen ? '<span class="chip chip-ok">看過</span>' : ''}</span><span></span></div></div>
       </div>`;
   const phases = DATA.PHASES.map((ph, pi) => {
     const rows = (pi === 0 ? introRow : '') + DATA.UNITS.filter(u => u.ph === ph.id).map(u => {
