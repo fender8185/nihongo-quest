@@ -46,7 +46,7 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
-html { touch-action: manipulation; }   /* no double-tap zoom; pinch zoom is off too (viewport meta + the gesture handlers below): a zoomed page breaks the one-screen layout */
+html { touch-action: manipulation; overscroll-behavior: none; }   /* …and no rubber-band past the content (iOS 16+, Android) or pull-to-refresh */   /* no double-tap zoom; pinch zoom is off too (viewport meta + the gesture handlers below): a zoomed page breaks the one-screen layout */
 body {
   background: var(--bg); color: var(--fg);
   font-family: "Noto Sans TC", system-ui, -apple-system, "PingFang TC", "Microsoft JhengHei", "Noto Sans JP", sans-serif;
@@ -84,6 +84,8 @@ a { color: var(--accent); }
   .sidebar { display: none; }
   .topbar { display: flex; }
   .content { padding: 16px 16px calc(92px + env(safe-area-inset-bottom)); }
+  body.practicing .content { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }   /* no tab bar while practising, so no room kept for it */
+  body.practicing .content:has(.pr-next) { padding-bottom: 0; }   /* the sticky 下一題 strip carries its own bottom padding: the page ends exactly under the button */
   .bottomnav { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--bg-elev) 94%, transparent); backdrop-filter: blur(10px); border-top: 1px solid var(--line); }
   .bottomnav button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; border: 0; background: transparent; color: var(--fg-3); font-size: 11px; cursor: pointer; border-radius: 8px; }
   .bottomnav button svg { width: 22px; height: 22px; }
@@ -239,7 +241,8 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 /* the player: icon and (word mode) the theme select, or a link to the notebook, on one line */
 .listen-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .listen-icon { display: inline-grid; place-items: center; color: var(--fg-2); flex: none; } .listen-icon svg { width: 22px; height: 22px; }
-.listen-head .select { min-width: 0; flex: 1 1 0; max-width: 280px; padding-top: 7px; padding-bottom: 7px; font-size: 13px; }
+.listen-head .select { min-width: 0; flex: 1 1 0; padding-top: 7px; padding-bottom: 7px; font-size: 13px; }   /* fills to the card's right edge, flush with the switch above */
+@media (min-width: 901px) { .listen-head .select { max-width: 280px; } }
 .listen-open { margin-left: auto; padding-left: 6px; padding-right: 6px; } .listen-open svg { width: 18px; height: 18px; }
 /* phones and tablets: the today page is one screen — the listen card takes whatever height the practice card leaves */
 @media (max-width: 900px) {
@@ -872,14 +875,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '94';   // keep equal to the number in sw.js CACHE ('nq-v94'); scripts/test.sh checks it
+const APP_VERSION = '95';   // keep equal to the number in sw.js CACHE ('nq-v95'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '94', from: '70', date: '2026-10-28', items: [
+  { v: '95', from: '70', date: '2026-10-28', items: [
     '裝成 app 後，練習和模擬考的畫面不再頂到 iPhone 的狀態列底下（✕ 和進度條會避開瀏海）。',
-    '手機上不能再用兩指縮放或連點兩下放大頁面，避免把排版弄跑。',
+    '手機上不能再用兩指縮放或連點兩下放大頁面，避免把排版弄跑；頁面也不能再拉過頭回彈。作答時「下一題」底下不再多一截可以捲的空白。',
+    '首頁聽一輪的主題下拉選單在手機上撐滿到右邊，和上面的切換切齊。',
     '錯題本的聽一輪：單字／文法切換改成一顆「字｜文」膠囊，亮的那邊是現在聽的，點一下換邊。',
     '進首頁時「目前單元」預設是展開的（單元名稱、進度條、看講義／練習本單元一眼看到）；點別的小標或收起來後，在首頁內都會記住，離開再回來又回到展開。',
     '在瀏覽器裡開的手機版，首頁會提示「加到主畫面」：點「怎麼做」有分步驟說明（iPhone／Android／電腦各一份），iPhone 有「用 Safari 開啟」和「複製網址」（Brave 等瀏覽器沒有加入主畫面，一定要用 Safari），Android Chrome／Brave 可以直接按「安裝」；按「知道了」就不再出現。同一份說明放在「設定 › 外觀 › 加到主畫面」。',

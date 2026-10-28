@@ -800,14 +800,14 @@ def test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints(b):
       SESSION = null; document.body.classList.remove('practicing');
       location.hash = '#/stats'; route(); const th = [...document.querySelectorAll('th.col-left')].length; const td = [...document.querySelectorAll('td.col-left')].length;
       const css = document.querySelector('style').textContent;
-      return JSON.stringify({ help: !!help, helpText: help ? help.textContent : '', ring: !!ring, banner, before, after, th, td, hover: /hover: none/.test(css) && /kbd-hint/.test(css), ringCss: /\\.hero-center > \\.ring \\{[^}]*order: -1/.test(css) && !/\\.hero \\.ring \\{[^}]*display: none/.test(css) && hero.classList.contains('hero-center'), safeTop: /body\\.practicing \\.content \\{[^}]*padding-top: calc\\(18px \\+ env\\(safe-area-inset-top/.test(css), noZoom: /maximum-scale=1/.test(document.querySelector('meta[name=viewport]').content) && /user-scalable=no/.test(document.querySelector('meta[name=viewport]').content) && /html \\{ touch-action: manipulation/.test(css) }); })()"""
+      return JSON.stringify({ help: !!help, helpText: help ? help.textContent : '', ring: !!ring, banner, before, after, th, td, hover: /hover: none/.test(css) && /kbd-hint/.test(css), ringCss: /\\.hero-center > \\.ring \\{[^}]*order: -1/.test(css) && !/\\.hero \\.ring \\{[^}]*display: none/.test(css) && hero.classList.contains('hero-center'), safeTop: /body\\.practicing \\.content \\{[^}]*padding-top: calc\\(18px \\+ env\\(safe-area-inset-top/.test(css), noZoom: /maximum-scale=1/.test(document.querySelector('meta[name=viewport]').content) && /user-scalable=no/.test(document.querySelector('meta[name=viewport]').content) && /html \\{ touch-action: manipulation; overscroll-behavior: none/.test(css), noTail: /body\\.practicing \\.content \\{ padding-bottom: calc\\(12px \\+ env\\(safe-area-inset-bottom/.test(css) && /body\\.practicing \\.content:has\\(\\.pr-next\\) \\{ padding-bottom: 0/.test(css) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
     r = json.loads(out[-1])
     assert r['help'] and '換個方式再考一次' in r['helpText'] and r['ring'], r
     assert 'compact' in r['banner'] and '稍後' in r['banner'] and 'backup-now' in r['banner'], r['banner']
     assert r['before'] == {'hint': True, 'next': False}, r['before']
     assert r['after'] == {'nextInStrip': True, 'stickyClass': False, 'tools': True, 'enterHint': True, 'hint': False}, r['after']
-    assert r['th'] == 1 and r['td'] >= 3 and r['hover'] and r['ringCss'] and r['safeTop'] and r['noZoom'], r   # practice hides the topbar, so its content clears the notch itself
+    assert r['th'] == 1 and r['td'] >= 3 and r['hover'] and r['ringCss'] and r['safeTop'] and r['noZoom'] and r['noTail'], r   # practice hides the topbar, so its content clears the notch itself
 
 def test_unit_legend_chips_exam_subject_rows_and_setting_hints(b):
     js = """(() => { location.hash = '#/today'; route(); const legs = [...document.querySelectorAll('.legs .leg')].map(x => x.textContent.trim());
@@ -1236,7 +1236,8 @@ def test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_fi
       const opts = listen.querySelector('.listen-opts').getBoundingClientRect(); const nav = document.querySelector('.bottomnav').getBoundingClientRect();
       const countBox = listen.querySelector('.listen-opts #listenCount.listen-count'); const cr = countBox.getBoundingClientRect(); const lr = listen.getBoundingClientRect(); const pills = [...listen.querySelectorAll('.lopt')].map(x => x.getBoundingClientRect());
       const countAtBottomRight = /第 \\d+ 輪/.test(countBox.textContent) && Math.abs(cr.right - (lr.right - 18)) <= 2 && cr.bottom <= lr.bottom - 10 && cr.bottom >= lr.bottom - 60 && pills.every(p => p.right <= cr.left);
-      const player = { ...fitsNow(), cards: view.querySelectorAll('.card').length, one: view.querySelectorAll('.today-seg').length === 1 && !view.querySelector('.hero'), pressed: view.querySelector('.today-seg [aria-pressed=true]').dataset.tab, select: !!listen.querySelector('.listen-head select[data-change=listen-theme]'), cardH, optsBottom: Math.round(opts.bottom), navTop: Math.round(nav.top), countAtBottomRight, kind: LISTEN.source.kind };
+      const flush = Math.abs(listen.querySelector('.listen-head select').getBoundingClientRect().right - listen.querySelector('.today-seg').getBoundingClientRect().right) <= 1 && Math.abs(listen.querySelector('.listen-icon').getBoundingClientRect().left - listen.querySelector('.today-seg').getBoundingClientRect().left) <= 1;
+      const player = { ...fitsNow(), flush, cards: view.querySelectorAll('.card').length, one: view.querySelectorAll('.today-seg').length === 1 && !view.querySelector('.hero'), pressed: view.querySelector('.today-seg [aria-pressed=true]').dataset.tab, select: !!listen.querySelector('.listen-head select[data-change=listen-theme]'), cardH, optsBottom: Math.round(opts.bottom), navTop: Math.round(nav.top), countAtBottomRight, kind: LISTEN.source.kind };
       // playing on, back to 練習: the player keeps going and the 單字 switch shows a dot; 錯題本 (another source) stops it
       listenPlay(); ACTIONS['today-tab']({ dataset: { tab: 'practice' } }); const keptPlaying = LISTEN && LISTEN.playing && LISTEN.source.kind === 'theme' && !!view.querySelector('.today-seg [data-tab=theme] .seg-live') && !!view.querySelector('.hero-center');
       ACTIONS['today-tab']({ dataset: { tab: 'mistakes' } }); const switched = !LISTEN || LISTEN.source.kind === 'mistakes'; const emptyNote = /目前沒有可以聽的錯題/.test(view.textContent);
@@ -1249,7 +1250,7 @@ def test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_fi
     assert r['tabs'] == ['help', 'scope', 'unit'] and r['unitTab'].strip() == '目前單元' and r['unitOpen'] and r['opened'] and r['kept'] and r['backToUnit'], r
     assert r['unitPanelHas']['bar'] and r['unitPanelHas']['lecture'] and r['unitPanelHas']['drill'] and [l.split(' ')[0] for l in r['unitPanelHas']['legs'][:3]] == ['熟練', '熟悉', '初識'], r['unitPanelHas']
     p = r['practice']; assert p['fit'] and p['scroll'] <= p['inner'] and p['viewScroll'] <= p['viewH'] and p['ringFirst'] and p['noPlayer'] and p['text'], p
-    q = r['player']; assert q['cards'] == 1 and q['one'] and q['pressed'] == 'theme' and q['select'] and q['kind'] == 'theme', q
+    q = r['player']; assert q['cards'] == 1 and q['one'] and q['pressed'] == 'theme' and q['select'] and q['kind'] == 'theme' and q['flush'], q   # the head row is flush with the switch on both sides
     assert q['scroll'] <= q['inner'] and q['viewScroll'] <= q['viewH'] and 150 <= q['cardH'] <= 420 and q['optsBottom'] <= q['navTop'] and q['countAtBottomRight'], q
     assert r['keptPlaying'] and r['switched'] and r['emptyNote'] and r['off'], r
 
