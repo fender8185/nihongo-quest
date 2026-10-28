@@ -518,7 +518,7 @@ def test_kanji_table_covers_the_frequent_kanji_of_the_vocabulary(b):
       return JSON.stringify({ n: K.length, missing, bad, notInTable: [...used].filter(c => !has(c)).length }); })()"""
     r = json.loads(ev(b, js))
     assert r['n'] >= 340 and r['missing'] == [] and r['bad'] == [], r
-    assert r['notInTable'] < 460, r
+    assert r['notInTable'] < 530, r   # 1.0.8 added 200 words (牛丼、味噌汁…); kanji outside the table still get furigana from the word itself
 
 def test_records_of_merged_builtin_words_move_to_the_kept_entry(b):
     js = """(() => { const rec = (n) => ({ b: 2, due: todayStr(), n, ok: n, ng: 0, s: 3, d: 5, last: todayStr(), f: {} });
@@ -547,7 +547,7 @@ def test_questions_pick_either_of_a_words_two_examples_and_cards_show_both(b):
 TESTS += [test_questions_pick_either_of_a_words_two_examples_and_cards_show_both]
 
 def test_every_builtin_word_has_a_usable_second_example(b):
-    js = """(() => { const V = REG.vocab.filter(v => v.builtin); const bad = [];
+    js = """(() => { const V = REG.vocab.filter(v => v.builtin && v.lv !== 'PRE_N5'); const bad = [];   // 入門 words carry one example by design (spec §4.2)
       V.forEach(v => { if (!v.ex2 || !v.exZh2) { bad.push(v.w + ':missing'); return; }
         const info = vSurfaceInfo(withExample(v, 1)); if (!info || info.form === 'raw') bad.push(v.w + ':form');
         if (v.ex2.replace(/[{}]/g, '') === v.ex.replace(/[{}]/g, '')) bad.push(v.w + ':same');

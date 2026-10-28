@@ -12,7 +12,7 @@
 <script src="./vendor/supabase.js"></script>
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
-<script src="./data.js?v=12"></script>
+<script src="./data.js?v=13"></script>
 <title>Nihongo Quest N4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -1924,11 +1924,12 @@ function furi(text, opt = {}) {
       const close = s.indexOf(']', i);
       if (close > i && /^[ぁ-ゖー]+$/.test(s.slice(i + 1, close))) { i = close + 1; continue; }
     }
-    // kana-initial keys such as お茶 / ご飯
-    if (!opt.plain && isK(s[i + 1])) {
+    // kana-initial keys such as お茶 / ご飯 / バス停 / パン屋 (one or more kana, then kanji within the key)
+    if (!opt.plain && KANJI_RE.test(s.substr(i + 1, Math.max(0, FURI_MAX - 1)))) {
       let done = false;
       for (let L = Math.min(FURI_MAX, s.length - i); L >= 2; L--) {
         const k = s.substr(i, L);
+        if (!KANJI_RE.test(k)) continue;
         const r = FURI.get(k);
         if (!r) continue;
         if (isK(k[k.length - 1]) && isK(s[i + L])) continue;

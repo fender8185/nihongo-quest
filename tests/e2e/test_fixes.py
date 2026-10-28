@@ -510,7 +510,7 @@ def test_stats_shows_the_past_week_of_practice_and_what_was_learned(b):
       const d = card.querySelector('details'); const txt = d ? d.textContent : '';
       const cards = [...v.querySelectorAll(':scope > .card, :scope > .grid')]; const order = [cards.indexOf(document.getElementById('progressCard')), cards.indexOf(card), cards.findIndex(c => c.classList.contains('grid-4'))];
       const g = [...document.querySelectorAll('#progressCard .gauge')].map(x => ({ k: x.dataset.kind, total: +x.dataset.total, seen: +x.dataset.seen, learned: +x.dataset.learned, mastered: +x.dataset.mastered, pct: +x.dataset.pct, needle: !!x.querySelector('.needle'), arcs: x.querySelectorAll('path.arc').length, tick: x.querySelector('.tick') ? +x.querySelector('.tick').dataset.f : null, tickLabels: [...x.querySelectorAll('.tick-l')].map(t => t.textContent).join('/') }));
-      return JSON.stringify({ card: true, future: /未來 7 天/.test(v.textContent), n: cols.length, segs, label: y.textContent.trim(), summary: d && d.querySelector('summary').textContent,
+      return JSON.stringify({ card: true, nonN4: REG.vocab.filter(x => x.builtin && x.lv !== 'N4').length, future: /未來 7 天/.test(v.textContent), n: cols.length, segs, label: y.textContent.trim(), summary: d && d.querySelector('summary').textContent,
         learned: txt.includes(__lab[0]), fresh: txt.includes(__lab[1]), legend: /單字.*文法/.test(card.textContent), g, order, hasLegend: /已熟練|熟練/.test(document.getElementById('progressCard').textContent) && /熟悉/.test(document.getElementById('progressCard').textContent) && /已學/.test(document.getElementById('progressCard').textContent) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("nav", URL + "#/stats"), ("eval", probe)], timeout=45)
     r = json.loads(out[-1])
@@ -521,7 +521,7 @@ def test_stats_shows_the_past_week_of_practice_and_what_was_learned(b):
     g = {x['k']: x for x in r['g']}; assert set(g) == {'v', 'g'}, r['g']
     assert g['v']['learned'] == 1 and g['v']['mastered'] == 0 and g['v']['total'] >= 1400 and g['v']['needle'] and g['v']['arcs'] == 1 and 0 <= g['v']['pct'] < 100, g['v']
     assert g['g']['seen'] + g['g']['learned'] + g['g']['mastered'] == 1 and g['g']['total'] >= 1000, g['g']
-    assert abs(g['v']['tick'] - 735 / g['v']['total']) < 0.002 and g['v']['tickLabels'] == 'N5/N4', g['v']   # a faint mark where N5 ends
+    assert abs(g['v']['tick'] - r['nonN4'] / g['v']['total']) < 0.002 and g['v']['tickLabels'] == 'N5/N4', g['v']   # a faint mark where N4 begins (入門＋N5 before it)
     assert 0.2 < g['g']['tick'] < 0.6 and g['g']['tickLabels'] == 'N5/N4', g['g']
 
 def test_reaching_the_learned_level_records_the_date(b):

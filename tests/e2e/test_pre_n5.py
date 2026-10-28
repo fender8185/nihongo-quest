@@ -133,7 +133,7 @@ def test_pre_n5_words_and_kanji_are_tagged(b):
         greet: pre.some(v => v.w === 'おはようございます'),
         n4Gate: typeof n5WordsLeft() === 'number' && n5WordsLeft() >= pre.filter(v => !state.srs[v.key]).length }); })()"""
     r = json.loads(ev(b, js))
-    assert 260 <= r['n'] <= 310 and r['lvs'] == ['N4', 'N5', 'PRE_N5'], r
+    assert 400 <= r['n'] <= 450 and r['lvs'] == ['N4', 'N5', 'PRE_N5'], r   # 303 moved + 120 new
     assert 'conj' not in r['pos'] and r['greet'], r
     assert sorted(r['kanji']) == sorted(PRE_KANJI) and r['n5k'] == 104 - 27, r
     assert r['n4Gate'], r
@@ -170,7 +170,7 @@ def test_vocab_decks_cover_every_level(b):
         pre: vs.PRE_N5 && vs.PRE_N5.total, n5: vs.N5.total, n4: vs.N4.total }); })()"""
     r = json.loads(ev(b, js))
     assert 'PRE_N5' in r['decks'] and r['sum'] == r['builtin'] and r['rows'] >= 100, r
-    assert r['pre'] == 303 and r['pre'] + r['n5'] + r['n4'] == r['builtin'], r
+    assert r['pre'] >= 400 and r['pre'] + r['n5'] + r['n4'] == r['builtin'], r
 
 def test_sound_format_needs_speech(b):
     js = """(() => { const it = REG.byKey.get('a:あ'); state.srs[it.key] = { b: 2, due: todayStr(), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(todayStr(), -3) };
@@ -227,6 +227,27 @@ def test_check_vocab_script_flags_bad_candidates(b):
     assert out.returncode == 1, out.stdout + out.stderr
     for msg in ['already in the bank', 'unknown theme', 'pre-example-vocab', 'same as the first example']:
         assert msg in out.stdout, (msg, out.stdout)
+
+def test_bank_has_the_new_pre_n5_and_n5_words(b):
+    js = """(() => { const V = REG.vocab.filter(v => v.builtin); const pre = V.filter(v => v.lv === 'PRE_N5'), n5 = V.filter(v => v.lv === 'N5');
+      const preSet = new Set(pre.map(v => jaPlain(v.w)));
+      const bad = pre.filter(v => v.id.startsWith('p5a-')).filter(v => { const h = furi(v.ex.replace(/[{}]/g, '')); const re = /<ruby>([^<]+)<rt>/g; let m; while ((m = re.exec(h))) { if (!preSet.has(m[1]) && !pre.some(x => jaPlain(x.w).includes(m[1]))) return true; } return false; }).map(v => v.id);
+      return JSON.stringify({ pre: pre.length, n5: n5.length, p5a: pre.filter(v => v.id.startsWith('p5a-')).length, n5f: n5.filter(v => v.id.startsWith('n5f-')).length,
+        ex: V.every(v => v.ex && v.exZh), ex2: n5.filter(v => v.id.startsWith('n5f-')).every(v => v.ex2 && v.exZh2), noEx2: pre.filter(v => v.id.startsWith('p5a-')).every(v => !v.ex2), bad: bad.slice(0, 5) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['p5a'] == 120 and r['n5f'] == 80 and r['pre'] >= 420 and r['n5'] >= 510, r
+    assert r['ex'] and r['ex2'] and r['noEx2'] and r['bad'] == [], r
+
+def test_every_builtin_kanji_word_renders_furigana_matching_its_reading(b):
+    js = """(() => { const hira = (s) => s.replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60)); const bare = [], mismatch = [];
+      REG.vocab.filter(v => v.builtin && /[一-鿿]/.test(jaPlain(v.w))).forEach(v => { const plain = jaPlain(v.w); const h = furi(plain);
+        const b = h.replace(/<ruby>.*?<\\/ruby>/g, '').match(/[一-鿿々〆ヶ]+/g); if (b) { bare.push(v.id + ':' + v.w); return; }
+        const read = hira(h.replace(/<ruby>[^<]+<rt>([^<]+)<\\/rt><\\/ruby>/g, '$1').replace(/<[^>]+>/g, ''));
+        if (read !== hira(v.r)) mismatch.push(v.id + ':' + v.w + ':' + read + '≠' + v.r); });
+      return JSON.stringify({ bare, newMismatch: mismatch.filter(x => /^(p5a|n5f)-/.test(x)), oldMismatch: mismatch.filter(x => !/^(p5a|n5f)-/.test(x)) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['bare'] == [] and r['newMismatch'] == [], r
+    assert len(r['oldMismatch']) <= 2, r['oldMismatch']   # 汚す (きたなす from 汚い) and この頃 (ころ) predate 1.0.8
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
