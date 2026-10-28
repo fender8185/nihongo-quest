@@ -1,5 +1,5 @@
 /* Nihongo Quest service worker: versioned app-shell cache, cache-first for same-origin GETs. */
-const CACHE = 'nq-v1.0.4';
+const CACHE = 'nq-v1.0.5';
 const AUDIO_CACHE = 'nq-audio';   // 雲端音檔 heard so far: kept across releases
 const AUDIO_PATH = '/storage/v1/object/public/JPY_audio/';
 const PRECACHE = [
@@ -12,7 +12,7 @@ const PRECACHE = [
   './vendor/supabase.js',
   './sync-core.js',
   './config.js',
-  './data.js?v=10'
+  './data.js?v=11'
 ];
 // Versioned, immutable files: when the previous cache already holds the same URL, copy it instead of downloading
 const IMMUTABLE = /\?v=\d+$/;

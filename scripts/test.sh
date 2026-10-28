@@ -22,12 +22,12 @@ if git rev-parse --verify -q origin/main >/dev/null 2>&1; then
 fi
 # e2e files run in parallel (each starts its own http.server port and headless Chrome); results are printed per file
 tmp="$(mktemp -d)"; pids=()
-for t in tests/e2e/test_storage.py tests/e2e/test_pwa.py tests/e2e/test_sync.py tests/e2e/test_sync_ui.py tests/e2e/test_fixes.py tests/e2e/test_vocab.py tests/e2e/test_conj.py; do
+for t in tests/e2e/test_storage.py tests/e2e/test_pwa.py tests/e2e/test_sync.py tests/e2e/test_sync_ui.py tests/e2e/test_fixes.py tests/e2e/test_vocab.py tests/e2e/test_conj.py tests/e2e/test_content.py; do
   ( set +e; python3 -I "$t" > "$tmp/$(basename "$t").log" 2>&1; echo $? > "$tmp/$(basename "$t").rc" ) & pids+=($!)   # set +e: a failing file must still record its exit code
 done
 wait "${pids[@]}"
 fail=0
-for t in tests/e2e/test_storage.py tests/e2e/test_pwa.py tests/e2e/test_sync.py tests/e2e/test_sync_ui.py tests/e2e/test_fixes.py tests/e2e/test_vocab.py tests/e2e/test_conj.py; do
+for t in tests/e2e/test_storage.py tests/e2e/test_pwa.py tests/e2e/test_sync.py tests/e2e/test_sync_ui.py tests/e2e/test_fixes.py tests/e2e/test_vocab.py tests/e2e/test_conj.py tests/e2e/test_content.py; do
   n="$(basename "$t")"; rc="$(cat "$tmp/$n.rc" 2>/dev/null || echo 1)"; echo "$n: $(tail -1 "$tmp/$n.log")"
   if [ "$rc" != "0" ]; then fail=1; grep -E "^(FAIL|not ok)" "$tmp/$n.log" | head -5; fi
 done
