@@ -1236,7 +1236,7 @@ def test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_fi
       const opts = listen.querySelector('.listen-opts').getBoundingClientRect(); const nav = document.querySelector('.bottomnav').getBoundingClientRect();
       const countBox = listen.querySelector('.listen-opts #listenCount.listen-count'); const cr = countBox.getBoundingClientRect(); const lr = listen.getBoundingClientRect(); const pills = [...listen.querySelectorAll('.lopt')].map(x => x.getBoundingClientRect());
       const countAtBottomRight = /第 \\d+ 輪/.test(countBox.textContent) && Math.abs(cr.right - (lr.right - 18)) <= 2 && cr.bottom <= lr.bottom - 10 && cr.bottom >= lr.bottom - 60 && pills.every(p => p.right <= cr.left);
-      const flush = Math.abs(listen.querySelector('.listen-head select').getBoundingClientRect().right - listen.querySelector('.today-seg').getBoundingClientRect().right) <= 1 && Math.abs(listen.querySelector('.listen-icon').getBoundingClientRect().left - listen.querySelector('.today-seg').getBoundingClientRect().left) <= 1;
+      const flush = Math.abs(listen.querySelector('.listen-head .listen-full').getBoundingClientRect().right - listen.querySelector('.today-seg').getBoundingClientRect().right) <= 1 && listen.querySelector('.listen-head select').getBoundingClientRect().right < listen.querySelector('.listen-head .listen-full').getBoundingClientRect().left && Math.abs(listen.querySelector('.listen-icon').getBoundingClientRect().left - listen.querySelector('.today-seg').getBoundingClientRect().left) <= 1;
       const player = { ...fitsNow(), flush, cards: view.querySelectorAll('.card').length, one: view.querySelectorAll('.today-seg').length === 1 && !view.querySelector('.hero'), pressed: view.querySelector('.today-seg [aria-pressed=true]').dataset.tab, select: !!listen.querySelector('.listen-head select[data-change=listen-theme]'), cardH, optsBottom: Math.round(opts.bottom), navTop: Math.round(nav.top), countAtBottomRight, kind: LISTEN.source.kind };
       // playing on, back to 練習: the player keeps going and the 單字 switch shows a dot; 錯題本 (another source) stops it
       listenPlay(); ACTIONS['today-tab']({ dataset: { tab: 'practice' } }); const keptPlaying = LISTEN && LISTEN.playing && LISTEN.source.kind === 'theme' && !!view.querySelector('.today-seg [data-tab=theme] .seg-live') && !!view.querySelector('.hero-center');
@@ -1266,6 +1266,37 @@ def test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answe
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)
     r = json.loads(out[-1])
     assert r['ids'] == ['ok', 'word'] and r['okMarked'] and r['meaningUnmarked'], r   # 'meaning' has no blank, 'nokey' has no Chinese, 'nozh' (if any) has no Chinese
+
+# ---- 2026-10-28: 沉浸播放 — the full-page player from the Today card ----
+def test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab(b):
+    js = """(() => { localStorage.removeItem('nq_listen_pref'); LISTEN = null; location.hash = '#/vocab'; route(); location.hash = '#/today'; route(); ACTIONS['today-tab']({ dataset: { tab: 'theme' } });
+      const view = document.getElementById('view'); const btn = view.querySelector('.listen-head [data-act=listen-full]'); const L = LISTEN; LISTEN.idx = 2; listenPlay();
+      ACTIONS['listen-full'](btn); route(); const full = { hash: location.hash, same: LISTEN === L, playing: LISTEN.playing, idx: LISTEN.idx, immersive: document.body.classList.contains('immersive'), card: !!view.querySelector('.card.listen.full .lplay'), close: !!view.querySelector('[data-act=listen-close]'), exitBtn: !!view.querySelector('[data-act=listen-exit]'), head: /單字・/.test(view.querySelector('.card.listen.full').textContent), topbarHidden: getComputedStyle(document.querySelector('.topbar')).display === 'none', navHidden: getComputedStyle(document.querySelector('.bottomnav')).display === 'none', wordPx: parseFloat(getComputedStyle(view.querySelector('.flash .word')).fontSize) };
+      const ms = navigator.mediaSession ? { title: navigator.mediaSession.metadata && navigator.mediaSession.metadata.title, state: navigator.mediaSession.playbackState } : null; const cur = listenCurrent();
+      ACTIONS['listen-close'](); route(); const back = { hash: location.hash, tab: todayTab, same: LISTEN === L, playing: LISTEN && LISTEN.playing, idx: LISTEN && LISTEN.idx, immersive: document.body.classList.contains('immersive'), compact: !!view.querySelector('.card.today-card.listen.compact .lplay') };
+      listenPause();
+      // opened from the vocab themes page instead: ✕ ends the player and goes back there
+      const tbtn = (location.hash = '#/vocab/themes', route(), document.querySelector('.theme-card [data-act=listen-theme-start]')); ACTIONS['listen-theme-start'](tbtn); route(); const fromThemes = document.body.classList.contains('immersive') && !!document.querySelector('[data-act=listen-close]');
+      ACTIONS['listen-close'](); route(); const ended = LISTEN === null && location.hash === '#/vocab/themes' && !document.body.classList.contains('immersive');
+      const css = document.querySelector('style').textContent; const landscape = /orientation: landscape\\) and \\(max-height: 520px\\)/.test(css) && /\\.listen\\.full \\.flash \\{ display: grid; grid-template-columns: 1fr 1fr/.test(css);
+      localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ full, ms, curTitle: cur ? cur.word + '　' + cur.meaning : null, back, fromThemes, ended, landscape }); })()"""
+    out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    f = r['full']; assert f['hash'] == '#/vocab/listen' and f['same'] and f['playing'] and f['idx'] == 2 and f['immersive'] and f['card'] and f['close'] and not f['exitBtn'] and f['head'], f
+    assert f['topbarHidden'] and f['navHidden'] and f['wordPx'] >= 50, f
+    if r['ms'] is not None: assert r['ms']['title'] == r['curTitle'] and r['ms']['state'] == 'playing', r
+    bk = r['back']; assert bk == {'hash': '#/today', 'tab': 'theme', 'same': True, 'playing': True, 'idx': 2, 'immersive': False, 'compact': True}, bk
+    assert r['fromThemes'] and r['ended'] and r['landscape'], r
+
+def test_fullscreen_player_lays_out_two_columns_on_a_phone_held_sideways(b):
+    js = """(() => { localStorage.removeItem('nq_listen_pref'); LISTEN = null; const v = REG.vocab.find(x => x.builtin && vocabExamples(x)[0]); setListenPref({ source: 'theme', theme: vocabTheme(v) }); location.hash = '#/vocab/listen'; route();
+      LISTEN.idx = LISTEN.items.findIndex(e => e.ex); listenRenderNow(); const flash = document.querySelector('.card.listen.full .flash'); const cs = getComputedStyle(flash);
+      const word = flash.querySelector('.word').getBoundingClientRect(); const ex = flash.querySelector('.listen-ex').getBoundingClientRect();
+      const r = { cols: cs.gridTemplateColumns.split(' ').length, display: cs.display, sideBySide: ex.left > word.right - 1 && Math.abs(ex.top - word.top) < 200, wordPx: parseFloat(getComputedStyle(flash.querySelector('.word')).fontSize), fits: document.documentElement.scrollHeight <= innerHeight, play: !!document.querySelector('.lplay') };
+      listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify(r); })()"""
+    out = b.run([("metrics", (844, 390)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['display'] == 'grid' and r['cols'] == 2 and r['sideBySide'] and r['wordPx'] >= 60 and r['fits'] and r['play'], r
 
 # ---- 2026-10-28: the install hint ----
 def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed(b):
@@ -1316,7 +1347,7 @@ if __name__ == "__main__":
              test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
-             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer]
+             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_lays_out_two_columns_on_a_phone_held_sideways]
     failed = 0
     try:
         for t in tests:

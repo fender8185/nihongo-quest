@@ -238,6 +238,24 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .listen.compact .listen-opts { position: relative; }
 @media (max-width: 600px) { .listen.compact .listen-opts { padding-right: 84px; } }   /* the pills keep clear of the count at the corner */
 .listen.compact .listen-count { position: absolute; right: 0; bottom: 6px; font-size: 11px; color: var(--fg-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* 沉浸播放 (the full-page player): no chrome, the card fills the screen, bigger type; a phone held sideways gets two columns */
+body.immersive .sidebar, body.immersive .bottomnav, body.immersive .topbar { display: none; }
+body.immersive .app { grid-template-columns: 1fr; height: 100svh; } @supports (height: 1dvh) { body.immersive .app { height: 100dvh; } }
+body.immersive .main { min-height: 0; }
+body.immersive .content { max-width: 1000px; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding: calc(10px + env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px)); }
+body.immersive .card.listen.full { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+body.immersive .listen.full #listenCard { contain: size; flex: 1 1 0; height: auto; min-height: 160px; }
+.listen.full .flash .word { font-size: 56px; } .listen.full .flash .meaning { font-size: 26px; } .listen.full .listen-sentence { font-size: 30px; } .listen.full .example .jp { font-size: 20px; } .listen.full .example .zh { font-size: 15px; }
+.listen-full { margin-left: auto; }
+@media (orientation: landscape) and (max-height: 520px) {
+  body.immersive .listen.full .flash { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; align-items: center; text-align: left; padding: 6px 12px; }
+  body.immersive .listen.full .flash:not(:has(.listen-ex)) { grid-template-columns: 1fr; text-align: center; }
+  body.immersive .listen.full .flash > .small { grid-column: 1 / -1; }
+  body.immersive .listen.full .flash .listen-ex { grid-column: 2; grid-row: 1 / span 3; margin: 0; }
+  body.immersive .listen.full .flash .word { font-size: 64px; line-height: 1.3; }
+  body.immersive .listen.full .listen-ctl { margin-top: 6px; gap: 36px; } body.immersive .listen.full .listen-opts { margin-top: 8px; } body.immersive .listen.full .hint { display: none; }
+  body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive .listen.full .lplay svg { width: 26px; height: 26px; }
+}
 /* the player: icon and (word mode) the theme select, or a link to the notebook, on one line */
 .listen-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .listen-icon { display: inline-grid; place-items: center; color: var(--fg-2); flex: none; } .listen-icon svg { width: 22px; height: 22px; }
@@ -874,12 +892,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '96';   // keep equal to the number in sw.js CACHE ('nq-v96'); scripts/test.sh checks it
+const APP_VERSION = '97';   // keep equal to the number in sw.js CACHE ('nq-v97'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '96', from: '70', date: '2026-10-28', items: [
+  { v: '97', from: '70', date: '2026-10-28', items: [
+    '聽一輪多了全螢幕播放：首頁播放器右上角的放大圖示，點了只剩字卡和播放鍵、字放大、頂欄和分頁列都藏起來，✕ 回到首頁同一個分頁、播放不中斷。手機轉橫時字更大、單字和例句左右並排；Android 會順便進全螢幕並轉橫（iPhone 不支援這兩項，手動轉就有橫式版面）。用雲端語音時，鎖定畫面和控制中心會顯示現在唸的字，上一個／下一個可以用（實驗性；iPhone 鎖屏仍可能停）。',
     '首頁錯題本播放頁右上角的「打開錯題本」捷徑拿掉（錯題本在「更多」裡）。',
     '錯題本的聽一輪只唸完整的句子：沒有對應中文的文法題（例如內容理解）、答案沒辦法標進句子裡（沒有藍字）的題目不再播。',
     '裝成 app 後，練習和模擬考的畫面不再頂到 iPhone 的狀態列底下（✕ 和進度條會避開瀏海）。',
@@ -1981,6 +2000,7 @@ const ICONS = {
   speaker: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
   listen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13" width="4.5" height="7" rx="1.6"/><rect x="16.5" y="13" width="4.5" height="7" rx="1.6"/></svg>',
   practice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M13.5 8.5l3 3"/></svg>',
+  expand: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>',
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
   cross: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7 7 17"/></svg>',
@@ -3819,6 +3839,7 @@ function route() {
   const view = document.getElementById('view');
   view.classList.toggle('fit', r.name === 'today'); document.body.classList.toggle('today', r.name === 'today');
   if (r.name !== 'today') { todayTab = 'practice'; heroTab = 'unit'; }
+  document.body.classList.toggle('immersive', (r.name === 'mistakes' || r.name === 'vocab') && r.parts[1] === 'listen');
   const tip = document.getElementById('chartTip');
   if (tip) tip.classList.remove('show');
   if (r.name !== 'practice') { document.body.classList.remove('practicing'); }
@@ -4183,6 +4204,7 @@ function renderToday(view) {
         <span class="listen-icon" title="聽一輪" aria-label="聽一輪">${icon('listen')}</span>
         ${isTheme ? `<select class="select grow" data-change="listen-theme" aria-label="單字主題">${vocabThemes().map(g => `<option value="${esc(g.c)}" ${LISTEN && LISTEN.source.theme === g.c ? 'selected' : ''}>${esc(g.c)}（${g.total} 字）</option>`).join('')}</select>`
           : `<span class="small muted">錯題本${mk.length ? `・${mk.length} 條` : ''}</span>`}
+        ${listenReady ? `<button type="button" class="btn btn-sm btn-ghost btn-icon listen-full" data-act="listen-full" title="全螢幕播放" aria-label="全螢幕播放">${icon('expand')}</button>` : ''}
       </div>
       ${listenReady ? listenPanelHtml(false) : `<div class="small muted">${isTheme ? '這個主題沒有單字。' : '目前沒有可以聽的錯題。'}</div>`}`;
   view.innerHTML = `
@@ -5266,11 +5288,12 @@ function listenRenderNow() {
   const n = document.getElementById('listenCount'); if (n) n.textContent = `${Math.min(L.idx + 1, L.items.length)} / ${L.items.length}・第 ${L.round} 輪`;
   const b = document.querySelector('[data-act=listen-toggle]'); if (b) b.innerHTML = icon(L.playing ? 'pause' : 'play');
   const bar = document.getElementById('listenBar'); if (bar) bar.style.width = `${L.items.length ? Math.round((Math.min(L.idx, L.items.length - 1) + 1) / L.items.length * 100) : 0}%`;
+  mediaSessionUpdate();
 }
 function listenPanelHtml(full) {
   const L = LISTEN;
   return `
-      ${full ? '<div class="row between small muted"><span id="listenCount"></span><button type="button" class="btn btn-sm btn-ghost" data-act="listen-exit">結束</button></div>' : ''}
+      ${full ? `<div class="row between small muted"><span id="listenCount"></span><span class="grow" style="text-align:center">${L.source.kind === 'theme' ? `單字・${esc(L.source.theme || '')}` : '錯題本'}</span><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="listen-close" aria-label="關閉">${icon('close')}</button></div>` : ''}
       <div id="listenCard"></div>
       <div class="listen-bar"><span id="listenBar"></span></div>
       <div class="listen-ctl">
@@ -5289,8 +5312,32 @@ function listenPanelHtml(full) {
 }
 function renderListen(view) {
   if (!LISTEN && !listenInit()) { toast('沒有可以聽的內容。'); go('#/today'); return; }
-  view.innerHTML = `<div class="card listen">${listenPanelHtml(true)}</div>`;
+  view.innerHTML = `<div class="card listen full">${listenPanelHtml(true)}</div>`;
   listenRenderNow();
+}
+// 沉浸播放: the full-page player hides the chrome (body.immersive, like practising); Android also goes fullscreen and
+// turns landscape when it may (iOS ignores both calls); ✕ returns to where the player was opened from
+function immersiveEnter() {
+  try { if (document.fullscreenEnabled && !document.fullscreenElement && !(matchMedia('(display-mode: standalone)').matches)) document.documentElement.requestFullscreen().catch(() => {}); } catch (e) { /* not available */ }
+  try { if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {}); } catch (e) { /* not available */ }
+}
+function immersiveLeave() {
+  try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (e) { /* ignore */ }
+  try { if (document.fullscreenElement) document.exitFullscreen().catch(() => {}); } catch (e) { /* ignore */ }
+}
+// lock screen / control centre: title and transport buttons while a real audio clip plays (the cloud voice); the browser voice has no media session
+function mediaSessionUpdate() {
+  const ms = navigator.mediaSession; if (!ms) return;
+  const L = LISTEN; const e = listenCurrent();
+  try {
+    if (!L || !e) { ms.metadata = null; ms.playbackState = 'none'; return; }
+    ms.metadata = new MediaMetadata({ title: e.kind === 'v' ? `${e.word}　${e.meaning}` : e.sentence, artist: L.source.kind === 'theme' ? `單字・${L.source.theme}` : '錯題本', album: 'Nihongo Quest 聽一輪', artwork: [{ src: './icons/icon-512.png', sizes: '512x512', type: 'image/png' }] });
+    ms.playbackState = L.playing ? 'playing' : 'paused';
+    if (!mediaSessionUpdate.bound) {
+      mediaSessionUpdate.bound = true;
+      [['play', () => listenPlay()], ['pause', () => listenPause()], ['previoustrack', () => listenSeek(-1)], ['nexttrack', () => listenSeek(1)]].forEach(([k, fn]) => { try { ms.setActionHandler(k, fn); } catch (err) { /* unsupported action */ } });
+    }
+  } catch (err) { /* no MediaMetadata */ }
 }
 function listenKey(ev) {
   const k = ev.key;
@@ -5314,6 +5361,8 @@ Object.assign(ACTIONS, {
   'listen-next': () => listenSeek(1),
   'listen-prev': () => listenSeek(-1),
   'listen-exit': () => listenStop(),
+  'listen-full': () => { if (!LISTEN) return; LISTEN.from = 'today'; immersiveEnter(); go(LISTEN.source.kind === 'theme' ? '#/vocab/listen' : '#/mistakes/listen'); },
+  'listen-close': () => { const L = LISTEN; immersiveLeave(); if (L && L.from === 'today') { L.from = ''; todayTab = L.source.kind === 'theme' ? 'theme' : 'mistakes'; go('#/today'); } else listenStop(); },
   'listen-set': (el) => listenSet(el.dataset.key, el.dataset.key === 'zh' ? el.dataset.value === 'true' : el.dataset.value),
   'listen-cycle': (el) => {
     const k = el.dataset.key; if (!LISTEN) return;
