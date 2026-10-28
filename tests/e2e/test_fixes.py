@@ -909,7 +909,7 @@ def test_today_notebook_card_is_the_listen_player(b):
       ACTIONS['today-tab']({ dataset: { tab: 'mistakes' } }); const card = view.querySelector('.card.listen');
       // the player was first built over an empty notebook (page load), then words arrived: it must open on words, not on the empty-side flip
       const scopeAfterRefill = (() => { LISTEN = null; const keepM = state.mistakes; state.mistakes = []; listenInit(); state.mistakes = keepM; listenInit(); return LISTEN.scope; })(); route();
-      const a = { player: !!card.querySelector('.lplay'), pills: card.querySelectorAll('.lopt').length, link: !!card.querySelector('.listen-head [data-route="#/mistakes"]') && /錯題本 1/.test(card.querySelector('.seg').textContent), icon: !!card.querySelector('.listen-head .listen-icon svg') && !/聽一輪/.test(card.textContent), oldBtn: !!view.querySelector('[data-act=start-mistakes]'), compact: card.classList.contains('compact'), paused: LISTEN && !LISTEN.playing, count: (card.querySelector('#listenCount') || {}).textContent, word: /\\S/.test((card.querySelector('#listenCard') || {}).textContent || ''), grid3: !!view.querySelector('.grid-3') };
+      const a = { player: !!card.querySelector('.lplay'), pills: card.querySelectorAll('.lopt').length, link: !card.querySelector('.listen-head [data-route="#/mistakes"]') && /錯題本 1/.test(card.querySelector('.seg').textContent), icon: !!card.querySelector('.listen-head .listen-icon svg') && !/聽一輪/.test(card.textContent), oldBtn: !!view.querySelector('[data-act=start-mistakes]'), compact: card.classList.contains('compact'), paused: LISTEN && !LISTEN.playing, count: (card.querySelector('#listenCount') || {}).textContent, word: /\\S/.test((card.querySelector('#listenCard') || {}).textContent || ''), grid3: !!view.querySelector('.grid-3') };
       ACTIONS['listen-cycle']({ dataset: { key: 'twice' } }); const stays = location.hash === '#/today' && !!document.querySelector('.card.listen.compact') && !document.querySelector('[data-act=listen-exit]') && document.querySelector('[data-key=twice]').dataset.value === '1';
       // switch the card to a word theme: every entry is a word of that theme, no scope pill, the theme select shows
       ACTIONS['listen-source']({ dataset: { source: 'theme' } }); const c2 = document.querySelector('.card.listen'); const theme = LISTEN.source.theme; const n = REG.vocab.filter(x => x.builtin && vocabTheme(x) === theme).length;
@@ -1254,6 +1254,19 @@ def test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_fi
     assert q['scroll'] <= q['inner'] and q['viewScroll'] <= q['viewH'] and 150 <= q['cardH'] <= 420 and q['optsBottom'] <= q['navTop'] and q['countAtBottomRight'], q
     assert r['keptPlaying'] and r['switched'] and r['emptyNote'] and r['off'], r
 
+# ---- 2026-10-28: the notebook player skips grammar it cannot read as a marked sentence with Chinese ----
+def test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer(b):
+    js = """(() => { const t = todayStr(); const g = REG.grammar.find(x => (x.t || 'choice') === 'choice' && x.op && x.zh && splitBlank(x.jp)); const gNoZh = REG.grammar.find(x => (x.t || 'choice') === 'choice' && x.op && !x.zh && splitBlank(x.jp)); const v = REG.vocab.find(x => x.builtin);
+      const bg = splitBlank(g.jp); const blank = bg.pre + '（　）' + bg.post; const row = (id, key, prompt, answer, cat) => ({ id, key, cat, prompt, answer, wrong: 'x', why: '', count: 1, streak: 0, mastered: false, date: t, last: t });
+      state.mistakes = [row('ok', g.key, blank, g.a, '文法'), row('meaning', g.key, '「' + bg.pre + g.a + bg.post + '」的意思是？', g.zh, '文法'), row('nokey', '', blank, g.a, '文法'), row('word', v.key, '「' + v.m + '」的日文', jaPlain(v.w), '單字')];
+      if (gNoZh) { const b2 = splitBlank(gNoZh.jp); state.mistakes.push(row('nozh', gNoZh.key, b2.pre + '（　）' + b2.post, gNoZh.a, '文法')); }
+      saveState(); const ids = listenSourceEntries({ kind: 'mistakes', cat: '' }).map(e => e.id).sort();
+      const e = listenEntry(state.mistakes[0]); const meaningE = listenEntry(state.mistakes[1]);
+      state.mistakes = []; saveState(); return JSON.stringify({ ids, hasNoZh: !!gNoZh, okMarked: e.marked && /fill-ans/.test(e.html) && !!e.zh, meaningUnmarked: !meaningE.marked && !/fill-ans/.test(meaningE.html) }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)
+    r = json.loads(out[-1])
+    assert r['ids'] == ['ok', 'word'] and r['okMarked'] and r['meaningUnmarked'], r   # 'meaning' has no blank, 'nokey' has no Chinese, 'nozh' (if any) has no Chinese
+
 # ---- 2026-10-28: the install hint ----
 def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed(b):
     js = """(() => { localStorage.removeItem('nq_install_hint'); state.introSeen = true; state.lastBackup = todayStr(); saveState(); const view = document.getElementById('view'); const show = () => { location.hash = '#/today'; route(); return view.querySelector('.install-banner'); };
@@ -1303,7 +1316,7 @@ if __name__ == "__main__":
              test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
-             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed]
+             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer]
     failed = 0
     try:
         for t in tests:

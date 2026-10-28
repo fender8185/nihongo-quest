@@ -243,7 +243,6 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .listen-icon { display: inline-grid; place-items: center; color: var(--fg-2); flex: none; } .listen-icon svg { width: 22px; height: 22px; }
 .listen-head .select { min-width: 0; flex: 1 1 0; padding-top: 7px; padding-bottom: 7px; font-size: 13px; }   /* fills to the card's right edge, flush with the switch above */
 @media (min-width: 901px) { .listen-head .select { max-width: 280px; } }
-.listen-open { margin-left: auto; padding-left: 6px; padding-right: 6px; } .listen-open svg { width: 18px; height: 18px; }
 /* phones and tablets: the today page is one screen — the listen card takes whatever height the practice card leaves */
 @media (max-width: 900px) {
   /* a fixed-height shell (min-height alone never lets flex items shrink); the content area scrolls on its own when a banner or a short screen needs it */
@@ -875,12 +874,14 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '95';   // keep equal to the number in sw.js CACHE ('nq-v95'); scripts/test.sh checks it
+const APP_VERSION = '96';   // keep equal to the number in sw.js CACHE ('nq-v96'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '95', from: '70', date: '2026-10-28', items: [
+  { v: '96', from: '70', date: '2026-10-28', items: [
+    '首頁錯題本播放頁右上角的「打開錯題本」捷徑拿掉（錯題本在「更多」裡）。',
+    '錯題本的聽一輪只唸完整的句子：沒有對應中文的文法題（例如內容理解）、答案沒辦法標進句子裡（沒有藍字）的題目不再播。',
     '裝成 app 後，練習和模擬考的畫面不再頂到 iPhone 的狀態列底下（✕ 和進度條會避開瀏海）。',
     '手機上不能再用兩指縮放或連點兩下放大頁面，避免把排版弄跑；頁面也不能再拉過頭回彈。作答時「下一題」底下不再多一截可以捲的空白。',
     '首頁聽一輪的主題下拉選單在手機上撐滿到右邊，和上面的切換切齊。',
@@ -4181,7 +4182,7 @@ function renderToday(view) {
       <div class="listen-head">
         <span class="listen-icon" title="聽一輪" aria-label="聽一輪">${icon('listen')}</span>
         ${isTheme ? `<select class="select grow" data-change="listen-theme" aria-label="單字主題">${vocabThemes().map(g => `<option value="${esc(g.c)}" ${LISTEN && LISTEN.source.theme === g.c ? 'selected' : ''}>${esc(g.c)}（${g.total} 字）</option>`).join('')}</select>`
-          : `<button type="button" class="btn btn-sm btn-ghost listen-open" data-act="nav" data-route="#/mistakes" title="打開錯題本" aria-label="打開錯題本">${icon('next')}</button>`}
+          : `<span class="small muted">錯題本${mk.length ? `・${mk.length} 條` : ''}</span>`}
       </div>
       ${listenReady ? listenPanelHtml(false) : `<div class="small muted">${isTheme ? '這個主題沒有單字。' : '目前沒有可以聽的錯題。'}</div>`}`;
   view.innerHTML = `
@@ -5102,13 +5103,16 @@ function listenEntry(m) {
   if (it && it.kind === 'g' && Array.isArray(it.parts)) {   // 排序題 (practice or the mock exam's ★ form): the full sentence, the ★ piece marked
     const parts = it.parts.map(parenReadingToBracket);
     return { kind: 'g', id: m.id, m, sentence: (it.pre || '') + parts.join('') + (it.post || ''),
-      html: `${furi(it.pre || '')}${parts.map((x, i) => i === it.star ? `<span class="fill-ans">${furi(x)}</span>` : furi(x)).join('')}${furi(it.post || '')}`, zh: it.zh || '', pt: it.pt || m.cat || '' };
+      html: `${furi(it.pre || '')}${parts.map((x, i) => i === it.star ? `<span class="fill-ans">${furi(x)}</span>` : furi(x)).join('')}${furi(it.post || '')}`, zh: it.zh || '', pt: it.pt || m.cat || '', marked: true };
   }
   const b = splitBlank(m.prompt || ''); const ans = m.answer || '';
   const sentence = b ? b.pre + ans + b.post : (m.prompt || '');
   const html = b ? `${furi(b.pre)}<span class="fill-ans">${furi(ans)}</span>${furi(b.post)}` : furi(m.prompt || '');
-  return { kind: 'g', id: m.id, m, sentence, html, zh: (it && it.zh) || '', pt: (it && it.kind === 'g' && it.pt) || m.cat || '' };
+  return { kind: 'g', id: m.id, m, sentence, html, zh: (it && it.zh) || '', pt: (it && it.kind === 'g' && it.pt) || m.cat || '', marked: Boolean(b) };   // marked: the answer sits in the sentence (the blue part)
 }
+// a grammar entry is worth hearing only as a complete sentence with its Chinese: a question about meaning (內容理解,
+// no blank to fill, so nothing to mark) or one without a translation is left out of the player
+function listenPlayable(e) { return e.kind !== 'g' || (Boolean(e.zh) && e.marked); }
 // listening and reading questions are about the passage, not a sentence to absorb: the player skips them
 function listenable(m) {
   const it = m.key && REG.byKey.get(m.key);
@@ -5134,7 +5138,7 @@ function listenDefaultTheme() {
 function listenSourceFromPref() { const p = listenPref(); return p.source === 'theme' ? { kind: 'theme', theme: listenDefaultTheme() } : { kind: 'mistakes', cat: '' }; }
 function listenSourceEntries(source) {
   if (source.kind === 'theme') return REG.vocab.filter(v => v.builtin && vocabTheme(v) === source.theme).map(v => listenEntryVocab(v, null));
-  return activeMistakes().filter(m => listenable(m) && (!source.cat || (m.cat || '綜合') === source.cat)).map(listenEntry);
+  return activeMistakes().filter(m => listenable(m) && (!source.cat || (m.cat || '綜合') === source.cat)).map(listenEntry).filter(listenPlayable);
 }
 // a paused player over a source (the Today card and the full page share it); an existing paused one is refreshed
 function listenInit(source = listenSourceFromPref()) {
