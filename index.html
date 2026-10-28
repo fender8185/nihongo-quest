@@ -85,6 +85,7 @@ a { color: var(--accent); }
   .topbar { display: flex; }
   .content { padding: 16px 16px calc(92px + env(safe-area-inset-bottom)); }
   .page-head .page-title.dup-title { display: none; }   /* the topbar shows it already */
+  .page-head.today-head { display: none; }   /* 今日: the card carries the date on a phone */
   .page-head .page-title.dup-title + .page-sub { margin-top: 0; }
   .page-head { margin-bottom: 14px; }
   body.practicing .content { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }   /* no tab bar while practising, so no room kept for it */
@@ -231,6 +232,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .today-seg .n { font-size: 11px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
 .seg-live { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
 .install-guide ol { padding-left: 20px; margin: 4px 0 0; } .install-guide li { margin-bottom: 4px; } .install-guide p { margin: 6px 0 0; }
+@media (min-width: 901px) { .hero-center .hero-date { display: none; } }   /* the page head shows the date on wide screens */
 /* 練習: the ring on top, then the start button, the date and the fold tabs, all centred */
 .hero.hero-center { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; padding: 14px 0 4px; }
 .hero-center > .ring { order: -1; }
@@ -915,12 +917,16 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.1';   // keep equal to the version in sw.js CACHE ('nq-v1.0.1'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.2';   // keep equal to the version in sw.js CACHE ('nq-v1.0.1'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.2', date: '2026-10-28', items: [
+    '課程頁的「第 0 週」不再是獨立的卡和「再看一次」按鈕，改成第一階段裡的第一列，和其他週次一樣點進去就好；看過的會標「看過」。',
+    '頁名統一：手機上所有主頁都不顯示頁名（頂欄已經有）；電腦版每個主頁都有頁名，今日頁也補上「今日」和日期。'
+  ] },
   { v: '1.0.1', date: '2026-10-28', items: [
     '版本號改成 1.0.x：1.0.0 就是原本的 v100，之後每次更新 x 加一。版本紀錄重新整理：1.0.0 是整個 app 現在的樣子，1.0 之前的過程壓成幾條里程碑收在「更早的版本」。',
     '手機上各頁最上面不再重複頂欄已經寫的頁名（課程、單字、學習分析、錯題本、模擬考、工具與 AI），只留一行說明；單元名稱、考試分數這類不同的標題照常顯示。'
@@ -4177,6 +4183,7 @@ function renderToday(view) {
     ${introBanner}
     ${backupBannerHtml()}
     ${installBannerHtml()}
+    <div class="page-head today-head"><div><div class="page-title">今日</div><div class="page-sub">${greeting}・連續 ${st.current} 天</div></div></div>
     <div class="card today-card${todayTab === 'practice' ? '' : ' listen compact'}">
       <div class="seg today-seg">${segBtn('practice', '練習')}${segBtn('mistakes', `錯題本${mk.length ? ` <span class="n">${mk.length}</span>` : ''}${live('mistakes')}`)}${segBtn('theme', `單字${live('theme')}`)}</div>
       ${todayTab === 'practice' ? practiceHtml : playerHtml}
@@ -4289,8 +4296,13 @@ Object.assign(ACTIONS, {
 function renderCourse(view) {
   const cp = courseProgress();
   const cur = state.currentUnit;
-  const phases = DATA.PHASES.map(ph => {
-    const rows = DATA.UNITS.filter(u => u.ph === ph.id).map(u => {
+  const introRow = `<div class="unit-row" data-act="nav" data-route="#/course/intro" role="button" tabindex="0">
+        <div class="unit-weeks">第 0 週</div>
+        <div class="grow"><div class="unit-title">開始之前：假名、句子骨架、品詞名稱</div><div class="unit-desc">給完全沒學過日文的人的入門講解，沒有練習題。</div></div>
+        <div><div class="row between small"><span>${state.introSeen ? '<span class="chip chip-ok">看過</span>' : ''}</span><span class="muted num">${state.introSeen ? '✓' : ''}</span></div></div>
+      </div>`;
+  const phases = DATA.PHASES.map((ph, pi) => {
+    const rows = (pi === 0 ? introRow : '') + DATA.UNITS.filter(u => u.ph === ph.id).map(u => {
       const s = unitStats(u.id);
       const isCur = u.id === cur;
       const status = s.done ? '<span class="chip chip-ok">完成</span>' : isCur ? '<span class="chip chip-accent">目前</span>' : s.seen ? '<span class="chip">進行中</span>' : '';
@@ -4307,10 +4319,6 @@ function renderCourse(view) {
       <div><div class="page-title">課程</div><div class="page-sub">18 個單元，每單元約兩週。整體完成度 ${cp.pct}%</div></div>
       <button type="button" class="btn" data-act="open-level">依程度選擇起點</button>
     </div>
-    <div class="card intro-card"><div class="row between" style="align-items:flex-start;gap:12px">
-      <div><div class="card-sub">第 0 週</div><div class="card-title">開始之前：假名、句子骨架、品詞名稱</div><div class="small muted mt-1">給完全沒學過日文的人看的入門講解，沒有練習題。看懂「い形容詞」「五段動詞」這些名稱，就可以從第 1 週開始。</div></div>
-      <button type="button" class="btn ${state.introSeen ? '' : 'btn-primary'}" data-act="nav" data-route="#/course/intro">${state.introSeen ? '再看一次' : '閱讀'}</button>
-    </div></div>
     ${phases}`;
 }
 

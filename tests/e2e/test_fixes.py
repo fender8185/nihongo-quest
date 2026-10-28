@@ -1229,7 +1229,7 @@ def test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_fi
       const unitOpen = !hero.querySelector('[data-panel=unit]').hidden && hero.querySelector('.hero-tab[data-tab=unit]').classList.contains('open') && hero.querySelector('[data-panel=help]').hidden;   // 目前單元 is open on arrival
       const unitPanelHas = { bar: !!hero.querySelector('[data-panel=unit] .bar.stack'), legs: [...hero.querySelectorAll('[data-panel=unit] .legs .leg')].map(x => x.textContent.trim()), lecture: !!hero.querySelector('[data-panel=unit] [data-route^="#/course/"]'), drill: !!hero.querySelector('[data-panel=unit] [data-act=start-unit]') };
       const ringFirst = hero.querySelector('.ring').getBoundingClientRect().top < hero.querySelector('[data-act=start-daily]').getBoundingClientRect().top;
-      const practice = { fit: view.classList.contains('fit') && document.body.classList.contains('today'), ...fitsNow(), ringFirst, noPlayer: !view.querySelector('.lplay') && !view.querySelector('.card.listen'), text: !/今日練習|聽一輪/.test(view.textContent) && /連續 \\d+ 天/.test(hero.textContent) && !view.querySelector('.page-head') };
+      const practice = { fit: view.classList.contains('fit') && document.body.classList.contains('today'), ...fitsNow(), ringFirst, noPlayer: !view.querySelector('.lplay') && !view.querySelector('.card.listen'), text: !/今日練習|聽一輪/.test(view.textContent) && /連續 \\d+ 天/.test(hero.textContent) && getComputedStyle(view.querySelector('.page-head.today-head')).display === 'none' };
       ACTIONS['hero-tab'](hero.querySelector('.hero-tab[data-tab=help]')); const opened = !hero.querySelector('[data-panel=help]').hidden && hero.querySelector('[data-panel=unit]').hidden;   // one at a time
       route(); const kept = heroTab === 'help' && !document.querySelector('[data-panel=help]').hidden;   // a re-render inside the page keeps the choice
       // 單字: the same card becomes the player and takes the rest of the screen; the count sits at the card's bottom right, clear of the pills
@@ -1331,17 +1331,21 @@ def test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until
 
 # ---- 2026-10-28: no page title that repeats the phone topbar ----
 def test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones(b):
-    js = """(() => { const look = (hash) => { location.hash = hash; route(); const t = document.querySelector('.page-head .page-title'); const sub = document.querySelector('.page-head .page-sub'); return { top: document.getElementById('topTitle').textContent, title: t ? t.textContent.trim() : null, shown: t ? getComputedStyle(t).display !== 'none' : null, sub: sub ? getComputedStyle(sub).display !== 'none' : null }; };
-      const r = { course: look('#/course'), vocab: look('#/vocab'), stats: look('#/stats'), exam: look('#/exam'), mistakes: look('#/mistakes'), tools: look('#/tools'), unit: look('#/course/' + DATA.UNITS[0].id), intro: look('#/course/intro') };
+    js = """(() => { const look = (hash) => { location.hash = hash; route(); const t = document.querySelector('.page-head .page-title'); const sub = document.querySelector('.page-head .page-sub'); const vis = (el) => el ? el.getClientRects().length > 0 : null;   // really on screen (a hidden ancestor hides it too)
+      return { top: document.getElementById('topTitle').textContent, title: t ? t.textContent.trim() : null, shown: vis(t), sub: vis(sub) }; };
+      const r = { course: look('#/course'), vocab: look('#/vocab'), stats: look('#/stats'), exam: look('#/exam'), mistakes: look('#/mistakes'), tools: look('#/tools'), unit: look('#/course/' + DATA.UNITS[0].id), intro: look('#/course/intro'), today: look('#/today') };
+      location.hash = '#/course'; route(); r.week0 = { row: !!document.querySelector('.card .list .unit-row[data-route="#/course/intro"]'), firstPhase: document.querySelector('.card .list .unit-row').dataset.route === '#/course/intro', noCard: !document.querySelector('.intro-card') && !/再看一次/.test(document.getElementById('view').textContent) };
       location.hash = '#/today'; route(); return JSON.stringify(r); })()"""
     out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     for k in ('course', 'vocab', 'stats', 'exam', 'mistakes', 'tools'):
         assert r[k]['title'] == r[k]['top'] and r[k]['shown'] is False and r[k]['sub'], (k, r[k])   # same as the topbar: hidden, the subtitle stays
     assert r['unit']['title'] != r['unit']['top'] and r['unit']['shown'] and r['intro']['shown'], r   # a unit's own name is not a repeat
+    assert r['today']['title'] == '今日' and r['today']['shown'] is False and r['today']['sub'] is False, r['today']   # the today head is hidden whole on a phone (the card has the date)
+    assert r['week0'] == {'row': True, 'firstPhase': True, 'noCard': True}, r['week0']
     out2 = b.run([("metrics", (1100, 900, False)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=45)   # desktop (no topbar): titles stay
     r2 = json.loads(out2[-1])
-    assert r2['course']['shown'] and r2['vocab']['shown'] and r2['stats']['shown'], r2
+    assert r2['course']['shown'] and r2['vocab']['shown'] and r2['stats']['shown'] and r2['today']['shown'] and r2['today']['sub'], r2   # desktop: every main page, 今日 included, has its title
 
 # ---- 2026-10-28: the install hint ----
 def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed(b):
