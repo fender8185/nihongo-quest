@@ -247,6 +247,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
   #view.fit { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
   #view.fit > * { flex: none; }
   #view.fit > .today-card { flex: 1 1 auto; display: flex; flex-direction: column; }
+  #view.fit > .today-card > .hero-center { flex: 1 1 auto; justify-content: center; padding-bottom: 24px; }   /* 練習: the group sits in the middle of the card instead of leaving the bottom empty */
   /* contain: size — the item area's content does not count toward the card's minimum height, so the card shrinks until the
      area is 150px (then the content area scrolls) and never ends up shorter than its own controls */
   #view.fit .listen.compact #listenCard { contain: size; flex: 1 1 0; height: auto; min-height: 150px; max-height: 420px; }
@@ -868,12 +869,12 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '90';   // keep equal to the number in sw.js CACHE ('nq-v90'); scripts/test.sh checks it
+const APP_VERSION = '91';   // keep equal to the number in sw.js CACHE ('nq-v91'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '90', from: '70', date: '2026-10-28', items: [
+  { v: '91', from: '70', date: '2026-10-28', items: [
     '首頁只剩一張卡：最上面「練習／錯題本／單字」三段切換，一次只顯示一種，每次進首頁都在「練習」。練習：進度圓環、開始練習、日期與連續天數，以及「說明」「範圍」「目前單元」三個收合小標（單元的進度條、圖例、看講義／練習本單元都在裡面）。錯題本／單字：就是聽一輪播放器，字卡區在手機上吃掉剩下的高度，「1 / 23・第 1 輪」在卡片右下角；播放中切回「練習」不會停，切換上會有綠點。頁首「今日」拿掉；單元進度的圖例改成「熟練／熟悉／初識」。',
     '聽一輪：按 1／2、隨機、速度不再跳到別的項目（原本首頁重畫時會把播放器重建、重洗）；單字的例句唸完接著唸例句的中文。',
     '聽一輪的膠囊改成圖示：單字／文法（二選一，錯題本模式才有）、隨機（亮起＝隨機）、1／2（日文→中文，或日文→中文→日文）、速度（一、二、三個箭頭＝0.8×、1×、1.3×，只影響聽一輪，會記住）；中文一定會唸，開關拿掉。首頁卡上調整設定不再跳到獨立頁面。',
