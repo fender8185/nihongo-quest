@@ -707,8 +707,9 @@ def test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss(b):
 def test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing(b):
     js = """(async () => { const all = cloudAudioTexts(); const w = REG.vocab.find(v => v.builtin); const male = all.find(x => x.gender === 'm');
       const hasWord = all.some(x => x.text === jaPlain(w.w)); const hasEx = all.some(x => x.text === ttsText(exPlain(w.ex))); const pinned = all.filter(x => x.reading).length;
-      const sample = all.slice(0, 6); cloudAudioTexts = () => sample;
-      const paths = await Promise.all(sample.map(x => cloudAudioPath(x.text, x.gender, x.reading ? { reading: x.reading } : {}))); const uniq = [...new Set(paths)]; const firstTodo = uniq.filter(p => p !== paths[0])[0];
+      const zhN = all.filter(x => x.lang === 'zh').length; const zh0 = all.find(x => x.lang === 'zh');
+      const sample = all.slice(0, 6).concat([zh0]); cloudAudioTexts = () => sample;
+      const paths = await Promise.all(sample.map(x => cloudAudioPath(x.text, x.gender, { reading: x.reading || '', lang: x.lang || '' }))); const uniq = [...new Set(paths)]; const firstTodo = uniq.filter(p => p !== paths[0])[0];
       const calls = []; const realFetch = window.fetch;
       window.fetch = (u, o) => { u = String(u); calls.push({ u, method: (o && o.method) || 'GET', headers: (o && o.headers) || {}, body: o && typeof o.body === 'string' ? o.body : null, blob: o && o.body && o.body.size || 0 });
         if (u.includes('/storage/v1/object/list/')) { const pre = JSON.parse(o.body).prefix; return Promise.resolve(new Response(JSON.stringify(pre.endsWith('/f') ? [{ name: paths[0].slice(2) }] : []), { status: 200 })); }   // the first file already exists
@@ -719,13 +720,14 @@ def test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_
       const g = Object.assign({}, CLOUD_GEN); const ups = calls.filter(c => c.u.includes('/storage/v1/object/JPY_audio/')); const goog = calls.filter(c => c.u.includes('texttospeech'));
       const leaked = JSON.stringify(state).includes('SKEY') || JSON.stringify(localStorage).includes('SKEY');
       return JSON.stringify({ n: all.length, hasWord, hasEx, male: male ? male.text.slice(0, 8) : null, pinned, g, upN: ups.length, upUrl: ups[0] && ups[0].u, upAuth: ups[0] && ups[0].headers.Authorization, upType: ups[0] && ups[0].headers['Content-Type'], upBlob: ups[0] && ups[0].blob,
-        googN: goog.length, googBody: goog[0] && JSON.parse(goog[0].body), expectUrl: ((window.NQ_CONFIG || {}).supabaseUrl) + '/storage/v1/object/JPY_audio/v1/' + firstTodo, uniq: uniq.length, leaked, keyKept: ttsConfig().googleKey }); })()"""
+        googN: goog.length, googBody: goog[0] && JSON.parse(goog[0].body), zhN, zhPath: paths[paths.length - 1], zhBody: (goog.map(c => JSON.parse(c.body)).find(b2 => b2.input && b2.input.text) || null), expectUrl: ((window.NQ_CONFIG || {}).supabaseUrl) + '/storage/v1/object/JPY_audio/v1/' + firstTodo, uniq: uniq.length, leaked, keyKept: ttsConfig().googleKey }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=120)
     r = json.loads(out[-1])
     assert r['n'] > 8000 and r['hasWord'] and r['hasEx'] and r['male'] and r['pinned'] > 500, r
     assert r['g']['phase'] == '完成' and r['g']['total'] == r['uniq'] and r['g']['skipped'] == 1 and r['g']['done'] == r['uniq'] - 1 and r['g']['failed'] == 0, r
     assert r['upN'] == r['uniq'] - 1 and r['googN'] == r['uniq'] - 1 and r['upUrl'] == r['expectUrl'] and r['upAuth'] == 'Bearer SKEY' and r['upType'] == 'audio/mpeg' and r['upBlob'] == 3, r
     assert r['googBody']['audioConfig']['speakingRate'] == 1 and r['googBody']['input']['ssml'].startswith('<speak>'), r
+    assert r['zhN'] > 5000 and r['zhPath'].startswith('zh/') and r['zhBody'] and r['zhBody']['voice']['languageCode'] == 'cmn-TW' and r['zhBody']['input']['text'], r   # Chinese: plain text, Taiwanese Mandarin voice
     assert not r['leaked'] and r['keyKept'] != 'GKEY', r   # the keys live only in the run
 
 def test_cloud_audio_is_the_default_engine_with_an_admin_generator_section(b):
@@ -841,6 +843,10 @@ def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in
       location.hash = '#/mistakes?c=%E5%96%AE%E5%AD%97'; route(); const d2 = document.querySelector('details.cat-filter');
       return JSON.stringify({ has: !!d, open: d ? d.open : null, sum: d ? d.querySelector('summary').textContent.trim() : '', chips: d ? d.querySelectorAll('.chip').length : 0, sum2: d2 ? d2.querySelector('summary').textContent.trim() : '', clear: !!(d2 && d2.querySelector('summary [data-act=nav]')), btn: !!document.querySelector('[data-act=listen-start]') }); })()"""
     play = """(async () => { speechSynthesis.getVoices = () => [{ name: 'Kyoko', lang: 'ja-JP', voiceURI: 'kyoko', localService: true }, { name: 'Meijia', lang: 'zh-TW', voiceURI: 'mj', localService: true }];
+      const zhCalls = []; const realFetch = window.fetch; window.fetch = (u, o) => { u = String(u); if (u.includes('/JPY_audio/v1/zh/')) { zhCalls.push(u); return Promise.resolve(new Response(new Blob([new Uint8Array([1])], { type: 'audio/mpeg' }), { status: 200 })); } return Promise.resolve(new Response('', { status: 404 })); };
+      ttsConfig().engine = 'cloud'; const zhPath = await cloudAudioPath('今天', '', { lang: 'zh' }); await speakZh('今天'); window.fetch = realFetch; ttsConfig().engine = 'browser_neural';
+      const zhCloud = zhCalls.length === 1 && zhCalls[0].endsWith('/' + zhPath) && __tts.log.some(x => x === 'start:今天');
+      speechSynthesis.getVoices = () => [{ name: 'Kyoko', lang: 'ja-JP', voiceURI: 'kyoko', localService: true }, { name: 'Meijia', lang: 'zh-TW', voiceURI: 'mj', localService: true }];
       LISTEN_GAP.short = 30; LISTEN_GAP.long = 30; __tts.log.length = 0;
       ACTIONS['listen-start']({ dataset: { cat: '' } }); route();
       const items0 = LISTEN.items.map(e => e.kind); const hash = location.hash; const svgBtns = ['listen-prev', 'listen-toggle', 'listen-next'].every(a => !!document.querySelector(`[data-act=${a}] svg`)) && !/[\\u23EE\\u23ED\\u25B6\\u275A]/.test(document.querySelector('.listen-ctl').textContent);
@@ -852,7 +858,7 @@ def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in
       ACTIONS['listen-set']({ dataset: { key: 'scope', value: 'g' } }); const scoped = LISTEN.items.map(e => e.kind);
       ACTIONS['listen-set']({ dataset: { key: 'zh', value: 'false' } }); const zhOff = LISTEN.zh;
       location.hash = '#/mistakes'; route(); const gone = LISTEN === null;
-      return JSON.stringify({ items0, hash, reached, log, card, paused, quiet, scoped, zhOff, gone, svgBtns, vs: __vs, g: __g }); })()"""
+      return JSON.stringify({ items0, hash, reached, log, card, paused, quiet, scoped, zhOff, gone, svgBtns, zhCloud, vs: __vs, g: __g }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("eval", page), ("eval", FAKE_TTS), ("eval", play)], timeout=90)
     r = json.loads(out[-3]); p = json.loads(out[-1])
     assert r['has'] and r['open'] is False and r['sum'].startswith('分類篩選（') and r['chips'] >= 2 and r['sum2'].startswith('分類：單字') and r['clear'] and r['btn'], r
@@ -860,6 +866,7 @@ def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in
     (w0, m0, e0), (w1, m1, e1) = p['vs']
     assert p['log'] == [w0, m0, e0, w1, m1, e1, p['g']['s'], p['g']['zh'], p['g']['s']], p['log']   # word → meaning → example; sentence → translation → sentence
     assert '文法' in p['card'] and p['paused'] and p['quiet'] and p['scoped'] == ['g'] and p['zhOff'] is False and p['gone'], p
+    assert p['zhCloud'], p   # Chinese: the zh/ clip is asked for first; when it cannot play, the device voice reads it
 
 def test_today_offers_the_exam_pace_quotas_when_behind(b):
     js = """(() => { state.settings.examDate = addDays(todayStr(), 121); Object.assign(state.settings, { newVocabPerDay: 1, newGrammarPerDay: 1 }); saveState();

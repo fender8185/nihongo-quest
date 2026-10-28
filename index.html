@@ -830,12 +830,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '79';   // keep equal to the number in sw.js CACHE ('nq-v79'); scripts/test.sh checks it
+const APP_VERSION = '80';   // keep equal to the number in sw.js CACHE ('nq-v80'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '79', from: '70', date: '2026-10-28', items: [
+  { v: '80', from: '70', date: '2026-10-28', items: [
+    '中文也有雲端音檔：單字意思、例句與文法的翻譯、漢字字義用 Google 的台灣華語聲音預先生成（約 6,000 段），「聽一輪」的中文優先用它，沒有的句子才退回裝置內建的中文語音。生成工具同一顆按鈕一起跑，已有的檔案略過。',
     '錯題本新增「聽一輪」：一直循環朗讀待複習的錯題，只要聽就好。單字是「唸單字 → 中文意思 → 例句」，文法是「整句 → 中文 → 整句再一次」；中文用裝置內建的語音。可以切單字／文法、錯最多次／隨機、中文開關，上一個／下一個，Space 暫停。不寫排程、不算題數；播放中保持螢幕亮著（iPhone 鎖屏會停，是 Safari 的限制）。',
     '錯題本的分類標籤收進「分類篩選（N 類）」，預設收起；選了某一類時小標顯示「分類：…」和清除鈕。',
     '今日練習的標題下改成兩個可收合的小標「說明」「今天的範圍」，一次只展開一個，平常都收著。範圍裡有單字主題、文法考點、待複習／新內容／另有／共幾題、做完還有幾題；收起時卡片只剩標題、圓環和「開始練習」。負荷上限或正確率的提示仍直接顯示。',
@@ -6203,7 +6204,7 @@ function settingsSpeech() {
         <div id="cloudDlBox" class="small mt-2">${cloudDlHtml()}</div>
       </details>
       <details class="mt-4"><summary class="small muted" style="cursor:pointer">管理者：生成雲端音檔</summary>
-        <div class="hint mt-2">把全部教材句子生成一次並上傳到 Supabase 的 ${CLOUD_AUDIO.bucket}。兩把金鑰只在這一次執行中使用：不儲存、不同步、關掉頁面就消失；跑完請到 Supabase 後台刪掉 Secret key。已存在的檔案會略過，可以中斷再續跑。</div>
+        <div class="hint mt-2">把全部教材句子生成一次並上傳到 Supabase 的 ${CLOUD_AUDIO.bucket}；日文用上面選的 Neural2 聲音，中文（單字意思、例句與文法的翻譯、漢字字義）用 Google 的台灣華語聲音，給「聽一輪」用。兩把金鑰只在這一次執行中使用：不儲存、不同步、關掉頁面就消失；跑完請到 Supabase 後台刪掉 Secret key。已存在的檔案會略過，可以中斷再續跑。</div>
         <div class="field mt-3"><label>Google Cloud API Key</label><input class="input" type="password" autocomplete="off" id="cloudGoogleKey" value="${esc(c.googleKey || '')}" /></div>
         <div class="field mt-3"><label>Supabase Secret key（service role）</label><input class="input" type="password" autocomplete="off" id="cloudSecretKey" /></div>
         <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="cloud-gen-start">開始生成</button><button type="button" class="btn" data-act="cloud-gen-stop">停止</button></div>
@@ -6871,9 +6872,11 @@ const CLOUD_AUDIO = { bucket: 'JPY_audio', set: 'v1' };
 const cloudMisses = new Set();   // paths that were not on the server this session: straight to the browser voice next time
 function cloudAudioBase() { return `${((window.NQ_CONFIG || {}).supabaseUrl || '').replace(/\/$/, '')}/storage/v1/object/public/${CLOUD_AUDIO.bucket}/${CLOUD_AUDIO.set}`; }
 function cloudAudioSsml(text, opt = {}) { return opt.reading ? `<speak><sub alias="${esc(opt.reading)}">${esc(text)}</sub></speak>` : ssmlReadings(text); }
+const CLOUD_ZH_VOICE = { languageCode: 'cmn-TW', name: 'cmn-TW-Wavenet-A' };   // meanings and translations (opt.lang === 'zh'): one Taiwanese Mandarin voice
 async function cloudAudioPath(text, gender, opt = {}) {
-  const g = gender === 'm' ? 'm' : 'f';
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${CLOUD_AUDIO.set}|${g}|${cloudAudioSsml(text, opt)}`));
+  const g = opt.lang === 'zh' ? 'zh' : gender === 'm' ? 'm' : 'f';
+  const input = g === 'zh' ? String(text) : cloudAudioSsml(text, opt);
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${CLOUD_AUDIO.set}|${g}|${input}`));
   return `${g}/${[...new Uint8Array(buf)].slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('')}.mp3`;
 }
 function cloudMissList() { try { return JSON.parse(localStorage.getItem('nq_audio_miss') || '[]'); } catch (e) { return []; } }
@@ -6956,7 +6959,23 @@ function zhVoice() {
   const rank = (v) => (/TW|Hant|HK/i.test(v.lang) ? 0 : 1) + (v.localService ? 0 : 0.5);
   return vs.sort((a, b) => rank(a) - rank(b))[0] || null;
 }
-function speakZh(text) {
+async function speakZh(text) {
+  if (!text) return;
+  if (ttsConfig().engine === 'cloud') {
+    try {
+      stopSpeaking(); const token = speechToken;
+      const blob = await engineBlob(String(text), '', { lang: 'zh' });
+      if (blob && token === speechToken) {
+        const url = URL.createObjectURL(blob);
+        const ok = await playUrl(url, token, state.settings.speechRate || 1);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        if (ok) return;
+      }
+    } catch (e) { /* the device voice reads it */ }
+  }
+  await speakZhBrowser(text);
+}
+function speakZhBrowser(text) {
   return new Promise(resolve => {
     const voice = zhVoice();
     if (!voice || !text) { setTimeout(resolve, 1200); return; }
@@ -7067,7 +7086,7 @@ function engineBlob(text, gender, opt = {}) {
   const cfg = ttsConfig();
   const rate = state.settings.speechRate || 1;
   const pin = opt.reading ? `|r:${opt.reading}` : '';
-  const ck = cfg.engine === 'cloud' ? `cl|${gender === 'm' ? 'm' : 'f'}|${text}`
+  const ck = cfg.engine === 'cloud' ? `cl|${opt.lang === 'zh' ? 'zh' : gender === 'm' ? 'm' : 'f'}|${text}`
     : cfg.engine === 'deepgram' ? `dg|${gender === 'm' ? cfg.deepgramVoiceM : cfg.deepgramVoice}|${cfg.kanaReadings}|${text}`
     : cfg.engine === 'google_tts' ? `gg|${gender === 'm' ? cfg.googleVoiceM : cfg.googleVoice}|${rate}|${text}`
     : cfg.engine === 'voicevox' ? `vv|${gender === 'm' ? cfg.voicevoxSpeakerM : cfg.voicevoxSpeaker}|${rate}|${text}`
@@ -7112,9 +7131,10 @@ async function fetchEngineBlob(cfg, text, gender, opt = {}) {
     const key = (cfg.googleKey || '').trim();
     if (!key) throw new Error('沒有 Google Cloud API Key');
     const name = gender === 'm' ? cfg.googleVoiceM : cfg.googleVoice;
+    const req = opt.lang === 'zh' ? { input: { text: String(text) }, voice: CLOUD_ZH_VOICE } : { input: { ssml }, voice: { languageCode: 'ja-JP', name } };
     const resp = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(key)}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input: { ssml }, voice: { languageCode: 'ja-JP', name }, audioConfig: { audioEncoding: 'MP3', speakingRate: rate } })
+      body: JSON.stringify(Object.assign(req, { audioConfig: { audioEncoding: 'MP3', speakingRate: rate } }))
     });
     if (!resp.ok) throw new Error(`Google TTS HTTP ${resp.status}${await errorDetail(resp)}`);
     const j = await resp.json();
@@ -7261,6 +7281,10 @@ function cloudAudioTexts() {
   REG.read.forEach(it => addQ(makeQuestion(it, {})));
   (DATA.EXAM || []).forEach(x => { if (x.speak) add(x.speak); if (x.script) addScript(x.script); if (x.line) addScript(x.line); if (/^S3/.test(String(x.m))) { if (x.q) add(x.q); (x.op || []).forEach(o => add(o)); } });
   Object.values(DATA.LESSONS || {}).forEach(L => (L.sections || []).forEach(sec => (sec.ex || []).forEach(x => { if (x && x.jp) add(x.jp); })));
+  const addZh = (raw) => { const text = String(raw || '').replace(/\s+/g, ' ').trim(); if (!text) return; const k = `zh||${text}`; if (!seen.has(k)) seen.set(k, { text, gender: '', reading: '', lang: 'zh' }); };
+  REG.vocab.filter(v => v.builtin).forEach(v => { addZh(v.m); addZh(v.exZh); addZh(v.exZh2); });
+  REG.grammar.forEach(g => addZh(g.zh));
+  REG.kanji.forEach(k => { addZh(k.m); (k.ex || []).forEach(x => addZh(x[2])); });
   cloudMissList().forEach(m => add(m.text, m.gender, m.reading || ''));
   return [...seen.values()];
 }
@@ -7279,7 +7303,7 @@ async function cloudDownloadAll() {
   cloudDlRender();
   try {
     const list = cloudAudioTexts();
-    const paths = [...new Set(await Promise.all(list.map(x => cloudAudioPath(x.text, x.gender, x.reading ? { reading: x.reading } : {}))))];
+    const paths = [...new Set(await Promise.all(list.map(x => cloudAudioPath(x.text, x.gender, { reading: x.reading || '', lang: x.lang || '' }))))];
     const cache = await caches.open('nq-audio');   // the service worker's clip cache (sw.js AUDIO_CACHE)
     try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) { /* ignore */ }
     const base = cloudAudioBase(); const todo = [];
@@ -7310,7 +7334,7 @@ function cloudGenHtml() {
 function cloudGenRender() { const box = document.getElementById('cloudGenBox'); if (box) box.innerHTML = cloudGenHtml(); }
 async function cloudListExisting(base, secret) {
   const have = new Set();
-  for (const g of ['f', 'm']) {
+  for (const g of ['f', 'm', 'zh']) {
     for (let offset = 0; ; offset += 1000) {
       const r = await fetch(`${base}/storage/v1/object/list/${CLOUD_AUDIO.bucket}`, { method: 'POST', headers: { Authorization: `Bearer ${secret}`, apikey: secret, 'Content-Type': 'application/json' },
         body: JSON.stringify({ prefix: `${CLOUD_AUDIO.set}/${g}`, limit: 1000, offset, sortBy: { column: 'name', order: 'asc' } }) });
@@ -7331,7 +7355,7 @@ async function cloudGenStart(googleKey, secret) {
   cloudGenRender();
   try {
     const list = cloudAudioTexts();
-    const paths = await Promise.all(list.map(x => cloudAudioPath(x.text, x.gender, x.reading ? { reading: x.reading } : {})));
+    const paths = await Promise.all(list.map(x => cloudAudioPath(x.text, x.gender, { reading: x.reading || '', lang: x.lang || '' })));
     const files = new Map(); list.forEach((x, i) => { if (!files.has(paths[i])) files.set(paths[i], x); });   // a pinned reading the dictionary already knows is the same file
     CLOUD_GEN.phase = '查雲端已有的檔案'; cloudGenRender();
     const have = await cloudListExisting(base, secret);
@@ -7343,7 +7367,7 @@ async function cloudGenStart(googleKey, secret) {
       while (i < todo.length && !CLOUD_GEN.stop) {
         const t = todo[i++];
         try {
-          const blob = await fetchEngineBlob(cfg, t.x.text, t.x.gender, Object.assign({ rate: 1 }, t.x.reading ? { reading: t.x.reading } : {}));
+          const blob = await fetchEngineBlob(cfg, t.x.text, t.x.gender, { rate: 1, reading: t.x.reading || '', lang: t.x.lang || '' });
           const r = await fetch(`${base}/storage/v1/object/${CLOUD_AUDIO.bucket}/${CLOUD_AUDIO.set}/${t.path}`, { method: 'POST',
             headers: { Authorization: `Bearer ${secret}`, apikey: secret, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'max-age=31536000', 'x-upsert': 'true' }, body: blob });
           if (!r.ok) throw new Error(`上傳 HTTP ${r.status}${await errorDetail(r)}`);
