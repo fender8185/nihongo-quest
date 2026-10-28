@@ -34,7 +34,9 @@ JS = r"""((c) => { const problems = [], warnings = [];
     texts.forEach(([f, t]) => { if (!String(t || '').trim()) p('missing ' + f); });
     const all = texts.filter(x => x[0] !== 'zh' && x[0] !== 'scene').map(x => x[1]).concat(it.op || []).join('\n');   // Japanese fields only
     const b = bare(all); if (b.length) p('kanji without furigana (use words the app knows): ' + [...new Set(b)].join(' '));
-    const n4 = [...new Set(bases(all).filter(w => N4.has(w) && !N5.has(w)))]; if (n4.length) warnings.push([label, 'N4 word: ' + n4.join(' ')]);
+    // a ruby base that is part of an N5 word (会 of 会う, 楽 of 楽しい, 子 of 子ども) is not an N4 word
+    const N5list = [...N5];
+    const n4 = [...new Set(bases(all).filter(w => N4.has(w) && !N5.has(w) && !N5list.some(x => x.includes(w))))]; if (n4.length) warnings.push([label, 'N4 word: ' + n4.join(' ')]);
     const main = jaPlain(it.script || it.line || it.scene || it.passage || '');
     if (seen.has(main)) p('same text as ' + seen.get(main)); else seen.set(main, label);
   };

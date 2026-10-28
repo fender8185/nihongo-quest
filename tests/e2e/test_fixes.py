@@ -1109,7 +1109,7 @@ def test_first_new_question_of_a_lesson_section_shows_that_section_once(b):
 def test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks(b):
     js = """(() => { const unit = state.currentUnit; const t = todayStr();
       state.currentUnit = 'm1'; const n5 = listenReachable().length; const first = extrasPlan(unitOrder('m1')).newL.map(x => x.u);
-      state.currentUnit = 'm3'; const near = listenReachable().slice(0, 30).map(x => x.u); const c3 = REG.listen.filter(x => x.u === 'm3').length, c2 = REG.listen.filter(x => x.u === 'm2').length;
+      state.currentUnit = 'm3'; const c3 = REG.listen.filter(x => x.u === 'm3').length, c2 = REG.listen.filter(x => x.u === 'm2').length; const near = listenReachable().slice(0, c3 + c2).map(x => x.u);
       state.currentUnit = 'm7'; const all = listenReachable().length;
       const l = REG.listen[0]; const prev = state.srs[l.key] ? JSON.parse(JSON.stringify(state.srs[l.key])) : null;
       delete state.srs[l.key]; srsAnswer(l.key, true); const d1 = daysBetween(t, state.srs[l.key].due);
