@@ -860,14 +860,15 @@ def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in
       const log = __tts.log.filter(x => x.startsWith('start:')).map(x => x.slice(6)).slice(0, 11);
       const card = document.getElementById('listenCard').textContent.replace(/\\s+/g, ' ');
       listenPause(); const paused = !LISTEN.playing; const n1 = __tts.log.length; await sleep(300); const quiet = __tts.log.filter(x => x.startsWith('start:')).length === log.length;
-      const opts = () => [...document.querySelectorAll('.listen-opts .lopt')].map(b => b.textContent.trim() + (b.classList.contains('on') ? '*' : '')); const o0 = opts();
-      ACTIONS['listen-cycle']({ dataset: { key: 'scope' } }); const o1 = opts(); ACTIONS['listen-cycle']({ dataset: { key: 'scope' } }); const scoped = LISTEN.items.map(e => e.kind); const o2 = opts();
-      ACTIONS['listen-cycle']({ dataset: { key: 'zh' } }); const zhOff = LISTEN.zh; const o3 = opts(); const oneRow = (() => { const r = [...document.querySelectorAll('.listen-opts .lopt')].map(b => b.getBoundingClientRect().top); return Math.max(...r) - Math.min(...r) < 2; })();
+      const opts = () => [...document.querySelectorAll('.listen-opts .lopt')].map(b => b.dataset.key + ':' + b.dataset.value + (b.classList.contains('on') ? '*' : '')); const o0 = opts();
+      ACTIONS['listen-cycle']({ dataset: { key: 'scope' } }); const o1 = opts(); const scoped = LISTEN.items.map(e => e.kind); ACTIONS['listen-cycle']({ dataset: { key: 'scope' } }); const o2 = opts();
+      const zhOff = LISTEN.zh; const o3 = [...document.querySelectorAll('.listen-opts .lopt')].every(b => b.querySelector('svg') || /^[12]$/.test(b.textContent.trim())); const oneRow = (() => { const r = [...document.querySelectorAll('.listen-opts .lopt')].map(b => b.getBoundingClientRect().top); return Math.max(...r) - Math.min(...r) < 2; })();
       const transport = !!document.querySelector('.listen-ctl .lplay svg') && document.querySelectorAll('.listen-ctl .lbtn svg').length === 2;
-      ACTIONS['listen-cycle']({ dataset: { key: 'twice' } }); const once = [LISTEN.twice, opts()[3]];
+      ACTIONS['listen-cycle']({ dataset: { key: 'twice' } }); const once = [LISTEN.twice, opts()[2]];
+      const rates = []; for (let i = 0; i < 4; i++) { rates.push([LISTEN.rate, opts()[3], speechRate()]); ACTIONS['listen-cycle']({ dataset: { key: 'rate' } }); } const ratePref = JSON.parse(localStorage.getItem('nq_listen_pref') || '{}').rate; const idleRate = (listenPause(), speechRate()); listenSet('rate', 1);
       const ctlTop = () => document.querySelector('.listen-ctl').getBoundingClientRect().top; const topG = ctlTop(); listenSet('scope', 'v'); const topV = ctlTop(); const steady = Math.abs(topG - topV) < 1;   // a word card and a sentence card: the controls stay put
       location.hash = '#/mistakes'; route(); const gone = LISTEN === null;
-      return JSON.stringify({ steady, defaults, items0, hash, reached, log, card, paused, quiet, scoped, zhOff, gone, svgBtns, zhCloud, o0, o1, o2, o3, once, oneRow, transport, gaps: [LISTEN_GAP.short, LISTEN_GAP.long], vs: __vs, g: __g }); })()"""
+      return JSON.stringify({ rates, ratePref, idleRate, steady, defaults, items0, hash, reached, log, card, paused, quiet, scoped, zhOff, gone, svgBtns, zhCloud, o0, o1, o2, o3, once, oneRow, transport, gaps: [LISTEN_GAP.short, LISTEN_GAP.long], vs: __vs, g: __g }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("eval", page), ("eval", FAKE_TTS), ("eval", play)], timeout=90)
     r = json.loads(out[-3]); p = json.loads(out[-1])
     assert r['has'] and r['open'] is False and r['sum'].startswith('分類篩選（') and r['chips'] >= 2 and r['sum2'].startswith('分類：單字') and r['clear'] and r['btn'], r
@@ -875,10 +876,11 @@ def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in
     (w0, m0, e0), (w1, m1, e1) = p['vs']
     assert p['log'] == [w0, m0, w0, e0, w1, m1, w1, e1, p['g']['s'], p['g']['zh'], p['g']['s']], p['log']   # 兩次: word → meaning → word → example; sentence → translation → sentence
     assert p['defaults'] == {'scope': 'v', 'order': 'random', 'zh': True, 'twice': True, 'kinds': ['v']}, p['defaults']
-    assert '文法' in p['card'] and p['paused'] and p['quiet'] and p['scoped'] == ['g'] and p['zhOff'] is False and p['gone'], p
+    assert '文法' in p['card'] and p['paused'] and p['quiet'] and p['scoped'] == ['g'] and p['zhOff'] is True and p['gone'], p
     assert p['zhCloud'], p   # Chinese: the zh/ clip is asked for first; when it cannot play, the device voice reads it
-    assert p['o0'] == ['全部', '錯最多次', '中文*', '兩次*'] and p['o1'] == ['只單字*', '錯最多次', '中文*', '兩次*'] and p['o2'] == ['只文法*', '錯最多次', '中文*', '兩次*'] and p['o3'] == ['只文法*', '錯最多次', '中文關', '兩次*'], p
-    assert p['once'] == [False, '一次'] and p['steady'], p
+    assert p['o0'] == ['scope:v', 'order:count', 'twice:2*', 'rate:1'] and p['o1'] == ['scope:g', 'order:count', 'twice:2*', 'rate:1'] and p['o2'] == ['scope:v', 'order:count', 'twice:2*', 'rate:1'] and p['o3'], p   # icons only; words or grammar, never both; no Chinese switch
+    assert p['rates'] == [[1, 'rate:1', 1], [1.3, 'rate:1.3*', 1], [0.8, 'rate:0.8*', 1], [1, 'rate:1', 1]] and p['ratePref'] == 1.3 and p['idleRate'] == 1, p   # four taps end on 1.3; paused here, so the setting's rate stays in force; the choice is remembered
+    assert p['once'] == [False, 'twice:1'] and p['steady'], p
     assert p['oneRow'] and p['transport'], p
 
 def test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading(b):
@@ -905,6 +907,7 @@ def test_today_notebook_card_is_the_listen_player(b):
     js = """(() => { const t = todayStr(); const v = REG.vocab.find(x => x.builtin); state.mistakes = [{ id: 'tp1', key: v.key, cat: '單字', prompt: '「' + v.m + '」的日文', answer: jaPlain(v.w), count: 2, mastered: false, date: t, last: t }]; saveState();
       LISTEN = null; location.hash = '#/today'; route(); const view = document.getElementById('view'); localStorage.removeItem('nq_listen_pref'); route(); const card = view.querySelector('.card.listen');
       const a = { player: !!card.querySelector('.lplay'), pills: card.querySelectorAll('.lopt').length, link: /打開錯題本/.test(card.textContent) && /錯題本 1/.test(card.querySelector('.seg').textContent), oldBtn: !!view.querySelector('[data-act=start-mistakes]'), compact: card.classList.contains('compact'), paused: LISTEN && !LISTEN.playing, count: (card.querySelector('#listenCount') || {}).textContent, word: /\\S/.test((card.querySelector('#listenCard') || {}).textContent || ''), grid3: !!view.querySelector('.grid-3') };
+      ACTIONS['listen-cycle']({ dataset: { key: 'twice' } }); const stays = location.hash === '#/today' && !!document.querySelector('.card.listen.compact') && !document.querySelector('[data-act=listen-exit]') && document.querySelector('[data-key=twice]').dataset.value === '1';
       // switch the card to a word theme: every entry is a word of that theme, no scope pill, the theme select shows
       ACTIONS['listen-source']({ dataset: { source: 'theme' } }); const c2 = document.querySelector('.card.listen'); const theme = LISTEN.source.theme; const n = REG.vocab.filter(x => x.builtin && vocabTheme(x) === theme).length;
       const th = { kind: LISTEN.source.kind, all: LISTEN.all.length === n && n > 0 && LISTEN.all.every(e => e.kind === 'v' && !e.m), select: !!c2.querySelector('select[data-change=listen-theme]'), scopePill: !!c2.querySelector('[data-key=scope]'), link: /單字主題/.test(c2.textContent), label: /單字・/.test(c2.querySelector('#listenCard').textContent) };
@@ -912,10 +915,11 @@ def test_today_notebook_card_is_the_listen_player(b):
       ACTIONS['listen-source']({ dataset: { source: 'mistakes' } }); const backToNotes = LISTEN.source.kind === 'mistakes';
       location.hash = '#/stats'; route(); const stopped = LISTEN === null;
       state.mistakes = []; saveState(); location.hash = '#/today'; route(); const empty = /目前沒有可以聽的錯題/.test(document.getElementById('view').textContent) && !document.querySelector('.lplay');
-      localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ a, th, switched, backToNotes, stopped, empty }); })()"""
+      localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ a, stays, th, switched, backToNotes, stopped, empty }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['a'] == {'player': True, 'pills': 4, 'link': True, 'oldBtn': False, 'compact': True, 'paused': True, 'count': '1 / 1・第 1 輪', 'word': True, 'grid3': False}, r['a']
+    assert r['stays'], r   # a pill on the Today card re-renders the card, never the standalone page
     assert r['th'] == {'kind': 'theme', 'all': True, 'select': True, 'scopePill': False, 'link': True, 'label': True} and r['switched'] and r['backToNotes'], r
     assert r['stopped'] and r['empty'], r
 

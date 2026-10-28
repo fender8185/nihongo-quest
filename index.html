@@ -394,7 +394,7 @@ details.mrow .mbody { padding: 4px 0 14px; }
 .lplay svg { width: 32px; height: 32px; } .lplay:active { transform: scale(.96); }
 .listen-opts { display: flex; justify-content: center; gap: 8px; margin-top: 18px; }
 .lopt { font: inherit; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--line); background: transparent; color: var(--fg-3); cursor: pointer; white-space: nowrap; }
-.lopt svg { width: 14px; height: 14px; } .lopt.on { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
+.lopt svg { width: 16px; height: 16px; } .lopt { min-width: 44px; justify-content: center; font-weight: 600; } .lopt.on { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
 .rate { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
 .rate.two { grid-template-columns: repeat(2, 1fr); }
 .flash .front-stem { font-size: 24px; line-height: 1.8; }
@@ -841,12 +841,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '85';   // keep equal to the number in sw.js CACHE ('nq-v85'); scripts/test.sh checks it
+const APP_VERSION = '86';   // keep equal to the number in sw.js CACHE ('nq-v86'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '85', from: '70', date: '2026-10-28', items: [
+  { v: '86', from: '70', date: '2026-10-28', items: [
+    '聽一輪的膠囊改成圖示：單字／文法（二選一，錯題本模式才有）、隨機（亮起＝隨機）、1／2（日文→中文，或日文→中文→日文）、速度（一、二、三個箭頭＝0.8×、1×、1.3×，只影響聽一輪，會記住）；中文一定會唸，開關拿掉。首頁卡上調整設定不再跳到獨立頁面。',
     '首頁的「考試倒數」（天數、單元進度、依考試日期的額度建議）搬到模擬考頁最上面。',
     '首頁的「聽一輪」卡合併了單字卡：切「錯題本」或「單字」，單字模式選一個主題就循環播放那個主題的全部單字（單字→中文→單字→例句）。單字頁的每個主題卡也多了「播放字卡」。上次選的來源和主題會記住。',
     '離線下載分成「日文音檔」和「中文音檔」兩顆按鈕，一樣收在設定 › 語音的「完全離線使用（進階）」裡。',
@@ -1941,6 +1942,11 @@ const ICONS = {
   play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>',
   pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4.5" height="14" rx="1"/><rect x="13.5" y="5" width="4.5" height="14" rx="1"/></svg>',
   shuffle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>',
+  word: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><text x="12" y="16.5" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor" stroke="none">あ</text></svg>',
+  grammar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h10M4 17h13"/></svg>',
+  speed1: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  speed2: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6l6 6-6 6M13 6l6 6-6 6"/></svg>',
+  speed3: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l6 6-6 6M9 6l6 6-6 6M16 6l6 6-6 6"/></svg>',
   prev: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5.5" width="2.5" height="13" rx="0.8"/><path d="M19 5.5v13l-10-6.5z"/></svg>',
   next: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="16.5" y="5.5" width="2.5" height="13" rx="0.8"/><path d="M5 5.5v13l10-6.5z"/></svg>',
   flame: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c4 0 6.5-2.7 6.5-6.3 0-3.6-2.6-5.6-3.8-9.2-.3 2-1.3 3.4-2.6 4.2.2-2.7-1-5.4-3.4-6.7.2 3-1.5 4.6-2.8 6.4A7.2 7.2 0 0 0 5.5 14.7C5.5 18.3 8 21 12 21Z"/></svg>',
@@ -5073,7 +5079,8 @@ function listenBuild() {
 }
 // what the player reads: the notebook ({ kind: 'mistakes', cat }) or every word of a theme ({ kind: 'theme', theme });
 // the last choice is kept on the device so the Today card opens on it
-function listenPref() { try { return Object.assign({ source: 'mistakes', theme: '' }, JSON.parse(localStorage.getItem('nq_listen_pref') || '{}')); } catch (e) { return { source: 'mistakes', theme: '' }; } }
+const LISTEN_RATES = [0.8, 1, 1.3];
+function listenPref() { try { return Object.assign({ source: 'mistakes', theme: '', rate: 1 }, JSON.parse(localStorage.getItem('nq_listen_pref') || '{}')); } catch (e) { return { source: 'mistakes', theme: '', rate: 1 }; } }
 function setListenPref(patch) { try { localStorage.setItem('nq_listen_pref', JSON.stringify(Object.assign(listenPref(), patch))); } catch (e) { /* ignore */ } }
 function listenDefaultTheme() {
   const pref = listenPref().theme; const themes = vocabThemes();
@@ -5089,11 +5096,12 @@ function listenSourceEntries(source) {
 // a paused player over a source (the Today card and the full page share it); an existing paused one is refreshed
 function listenInit(source = listenSourceFromPref()) {
   if (LISTEN && LISTEN.playing) return LISTEN.items.length > 0;
-  const keep = LISTEN ? { order: LISTEN.order, scope: LISTEN.scope, zh: LISTEN.zh, twice: LISTEN.twice } : null;
+  const keep = LISTEN ? { order: LISTEN.order, scope: LISTEN.scope, zh: LISTEN.zh, twice: LISTEN.twice, rate: LISTEN.rate } : null;
   // defaults: words only, shuffled, Chinese on, 兩次 (Japanese → Chinese → Japanese again); no words in the notebook → everything
-  LISTEN = Object.assign({ source, all: listenSourceEntries(source), items: [], idx: 0, round: 1, playing: false, order: 'random', scope: 'v', zh: true, twice: true, run: 0, wake: null }, keep || {});
-  if (source.kind === 'theme') LISTEN.scope = 'v';
-  else if (!LISTEN.all.some(e => e.kind === 'v')) LISTEN.scope = 'all';
+  LISTEN = Object.assign({ source, all: listenSourceEntries(source), items: [], idx: 0, round: 1, playing: false, order: 'random', scope: 'v', zh: true, twice: true, rate: LISTEN_RATES.includes(listenPref().rate) ? listenPref().rate : 1, run: 0, wake: null }, keep || {});
+  LISTEN.zh = true;   // Chinese is always read
+  if (source.kind === 'theme' || LISTEN.scope === 'all') LISTEN.scope = 'v';
+  if (source.kind !== 'theme' && !LISTEN.all.some(e => e.kind === LISTEN.scope)) LISTEN.scope = LISTEN.scope === 'v' ? 'g' : 'v';   // an empty side: start on the other
   listenBuild();
   return LISTEN.items.length > 0;
 }
@@ -5115,19 +5123,19 @@ async function listenWake(on) {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && LISTEN && LISTEN.playing) listenWake(true); });
 function listenPlay() {
   if (!LISTEN || !LISTEN.items.length) return;
-  LISTEN.playing = true; listenWake(true); listenRenderNow();
+  LISTEN.playing = true; speechRateOverride = LISTEN.rate || 1; listenWake(true); listenRenderNow();
   listenRun();
 }
 function listenPause() {
   if (!LISTEN) return;
   if (LISTEN.playing) stopSpeaking();   // only a playing player owns the speech; a paused one must not cut a listening question
-  LISTEN.playing = false; LISTEN.run++; listenWake(false); listenRenderNow();
+  LISTEN.playing = false; LISTEN.run++; speechRateOverride = 0; listenWake(false); listenRenderNow();
 }
 function listenStop(silent) {
   if (!LISTEN) return;
   if (LISTEN.playing) stopSpeaking();
   const back = LISTEN.source && LISTEN.source.kind === 'theme' ? '#/vocab/themes' : '#/mistakes';
-  LISTEN.playing = false; LISTEN.run++; listenWake(false); LISTEN = null;
+  LISTEN.playing = false; LISTEN.run++; speechRateOverride = 0; listenWake(false); LISTEN = null;
   if (!silent) go(back);
 }
 function listenSeek(delta) {
@@ -5140,9 +5148,11 @@ function listenSeek(delta) {
 function listenSet(key, value) {
   if (!LISTEN) return;
   LISTEN.run++; stopSpeaking(); LISTEN[key] = value;
-  if (key !== 'zh' && key !== 'twice') listenBuild();
-  const view = document.getElementById('view'); if (view) renderListen(view);
-  if (LISTEN.playing) listenRun();
+  if (key === 'rate') { setListenPref({ rate: value }); if (LISTEN.playing) speechRateOverride = value; }
+  if (key !== 'zh' && key !== 'twice' && key !== 'rate') listenBuild();
+  const playing = LISTEN.playing; LISTEN.playing = false;   // route() must not refresh the player; it is re-rendered in place
+  route(); LISTEN.playing = playing;
+  if (playing) listenRun(); else listenRenderNow();
 }
 async function listenRun() {
   const L = LISTEN; if (!L) return;
@@ -5201,7 +5211,6 @@ function listenRenderNow() {
 }
 function listenPanelHtml(full) {
   const L = LISTEN;
-  const scopeLabel = { all: '全部', v: '只單字', g: '只文法' }[L.scope] || '全部';
   return `
       <div class="row between small muted"><span id="listenCount"></span>${full ? '<button type="button" class="btn btn-sm btn-ghost" data-act="listen-exit">結束</button>' : ''}</div>
       <div id="listenCard"></div>
@@ -5212,10 +5221,10 @@ function listenPanelHtml(full) {
         <button type="button" class="lbtn" data-act="listen-next" aria-label="下一個">${icon('next')}</button>
       </div>
       <div class="listen-opts">
-        ${L.source.kind === 'theme' ? '' : `<button type="button" class="lopt${L.scope !== 'all' ? ' on' : ''}" data-act="listen-cycle" data-key="scope" title="範圍：全部／只單字／只文法">${esc(scopeLabel)}</button>`}
-        <button type="button" class="lopt${L.order === 'random' ? ' on' : ''}" data-act="listen-cycle" data-key="order" title="順序：錯最多次優先／隨機">${icon('shuffle')}${L.order === 'random' ? '隨機' : '錯最多次'}</button>
-        <button type="button" class="lopt${L.zh ? ' on' : ''}" data-act="listen-cycle" data-key="zh" title="唸中文意思／翻譯">${L.zh ? '中文' : '中文關'}</button>
-        <button type="button" class="lopt${L.twice ? ' on' : ''}" data-act="listen-cycle" data-key="twice" title="一次：日文→中文；兩次：日文→中文→日文">${L.twice ? '兩次' : '一次'}</button>
+        ${L.source.kind === 'theme' ? '' : `<button type="button" class="lopt" data-act="listen-cycle" data-key="scope" data-value="${L.scope === 'g' ? 'g' : 'v'}" title="${L.scope === 'g' ? '文法（點一下改單字）' : '單字（點一下改文法）'}" aria-label="${L.scope === 'g' ? '文法' : '單字'}">${icon(L.scope === 'g' ? 'grammar' : 'word')}</button>`}
+        <button type="button" class="lopt${L.order === 'random' ? ' on' : ''}" data-act="listen-cycle" data-key="order" data-value="${L.order}" title="隨機（亮起）／錯最多次優先" aria-label="隨機">${icon('shuffle')}</button>
+        <button type="button" class="lopt${L.twice ? ' on' : ''}" data-act="listen-cycle" data-key="twice" data-value="${L.twice ? '2' : '1'}" title="1：日文→中文；2：日文→中文→日文" aria-label="${L.twice ? '兩次' : '一次'}">${L.twice ? '2' : '1'}</button>
+        <button type="button" class="lopt${L.rate !== 1 ? ' on' : ''}" data-act="listen-cycle" data-key="rate" data-value="${L.rate}" title="速度 ${L.rate}×（0.8 → 1 → 1.3）" aria-label="速度 ${L.rate} 倍">${icon('speed' + (Math.max(0, LISTEN_RATES.indexOf(L.rate)) + 1))}</button>
       </div>
       ${full ? '<p class="hint mt-3" style="text-align:center">循環唸到你按停；不寫排程、不算題數。播放中螢幕保持亮著，iPhone 鎖屏會停（Safari 的限制）。</p>' : ''}`;
 }
@@ -5242,10 +5251,10 @@ Object.assign(ACTIONS, {
   'listen-set': (el) => listenSet(el.dataset.key, el.dataset.key === 'zh' ? el.dataset.value === 'true' : el.dataset.value),
   'listen-cycle': (el) => {
     const k = el.dataset.key; if (!LISTEN) return;
-    if (k === 'scope') listenSet('scope', { all: 'v', v: 'g', g: 'all' }[LISTEN.scope] || 'all');
+    if (k === 'scope') listenSet('scope', LISTEN.scope === 'g' ? 'v' : 'g');   // words or grammar, never both
     else if (k === 'order') listenSet('order', LISTEN.order === 'random' ? 'count' : 'random');
     else if (k === 'twice') listenSet('twice', !LISTEN.twice);
-    else listenSet('zh', !LISTEN.zh);
+    else if (k === 'rate') listenSet('rate', LISTEN_RATES[(LISTEN_RATES.indexOf(LISTEN.rate) + 1) % LISTEN_RATES.length]);
   }
 });
 
@@ -7031,6 +7040,8 @@ let ttsWarned = false;
 const audioCache = new Map();
 const audioPending = new Map();   // cache key -> in-flight fetch, so a prefetch and the playback never fetch the same line twice
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+let speechRateOverride = 0;   // 聽一輪 sets its own speed while it runs; 0 = the setting
+function speechRate() { return speechRateOverride || state.settings.speechRate || 1; }
 // Chinese (meanings, translations) through the device's own zh voice; without one the caller just gets a pause
 function zhVoice() {
   if (!('speechSynthesis' in window)) return null;
@@ -7046,7 +7057,7 @@ async function speakZh(text) {
       const blob = await engineBlob(String(text), '', { lang: 'zh' });
       if (blob && token === speechToken) {
         const url = URL.createObjectURL(blob);
-        const ok = await playUrl(url, token, state.settings.speechRate || 1);
+        const ok = await playUrl(url, token, speechRate());
         setTimeout(() => URL.revokeObjectURL(url), 1000);
         if (ok) return;
       }
@@ -7059,7 +7070,7 @@ function speakZhBrowser(text) {
     const voice = zhVoice();
     if (!voice || !text) { setTimeout(resolve, 1200); return; }
     const u = new SpeechSynthesisUtterance(String(text));
-    u.lang = voice.lang; u.voice = voice; u.rate = state.settings.speechRate || 1;
+    u.lang = voice.lang; u.voice = voice; u.rate = speechRate();
     let done = false; const fin = () => { if (done) return; done = true; liveUtterances.delete(u); resolve(); };
     u.onend = fin; u.onerror = fin; setTimeout(fin, 2500 + String(text).length * 300);
     liveUtterances.add(u);
@@ -7134,7 +7145,7 @@ function speakUtterance(text, gender, token) {
   return new Promise(resolve => {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'ja-JP';
-    u.rate = state.settings.speechRate || 1;
+    u.rate = speechRate();
     const voice = pickVoice(gender);
     if (voice) u.voice = voice;
     // when only one voice exists, a pitch change keeps the two speakers apart
@@ -7163,7 +7174,7 @@ function speakUtterance(text, gender, token) {
 
 function engineBlob(text, gender, opt = {}) {
   const cfg = ttsConfig();
-  const rate = state.settings.speechRate || 1;
+  const rate = speechRate();
   const pin = opt.reading ? `|r:${opt.reading}` : '';
   const ck = cfg.engine === 'cloud' ? `cl|${opt.lang === 'zh' ? 'zh' : gender === 'm' ? 'm' : 'f'}|${text}`
     : cfg.engine === 'deepgram' ? `dg|${gender === 'm' ? cfg.deepgramVoiceM : cfg.deepgramVoice}|${cfg.kanaReadings}|${text}`
@@ -7195,7 +7206,7 @@ function ttsErrorHint(msg) {
   return '';
 }
 async function fetchEngineBlob(cfg, text, gender, opt = {}) {
-  const rate = opt.rate || state.settings.speechRate || 1;
+  const rate = opt.rate || speechRate();
   // sentences: engines without SSML get known readings as kana; a single word keeps its written form (see speak)
   const spoken = opt.reading || cfg.kanaReadings === 'off' ? text : kanaReadings(text);
   const ssml = cloudAudioSsml(text, opt);
@@ -7291,7 +7302,7 @@ async function speakLine(text, gender, token, opt) {
       if (token !== speechToken) return;
       if (blob) {
         const url = URL.createObjectURL(blob);
-        const ok = await playUrl(url, token, cfg.engine === 'deepgram' || cfg.engine === 'cloud' ? (state.settings.speechRate || 1) : 1);
+        const ok = await playUrl(url, token, cfg.engine === 'deepgram' || cfg.engine === 'cloud' ? (speechRate()) : 1);
         setTimeout(() => URL.revokeObjectURL(url), 1000);
         if (ok) return;
       }
@@ -7327,7 +7338,7 @@ async function speakScript(script) {
   for (let i = 0; i < parts.length; i++) {
     const p = parts[i];
     if (token !== speechToken) return;
-    speechProgLine(i, p.text, state.settings.speechRate || 1);
+    speechProgLine(i, p.text, speechRate());
     await speakLine(p.text, p.gender, token);
     if (parts.length > 1) await sleep(280);
   }
@@ -7477,7 +7488,7 @@ async function playVocabAudio(v, mode = 'word') {
     const url = await AnkiMedia.url(file);
     if (url) {
       stopSpeaking();
-      const ok = await playUrl(url, speechToken, state.settings.speechRate || 1);
+      const ok = await playUrl(url, speechToken, speechRate());
       if (ok) return;
     }
   }
