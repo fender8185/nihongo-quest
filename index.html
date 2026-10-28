@@ -220,19 +220,21 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .hero h2 { font-size: 20px; }
 .plan-line { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0 14px; color: var(--fg-2); font-size: 14px; }
 .plan-line b { color: var(--fg); font-variant-numeric: tabular-nums; }
-.hero-title { display: flex; align-items: center; gap: 12px; }
-.hero-icon { display: inline-grid; place-items: center; color: var(--fg-2); flex: none; } .hero-icon svg { width: 24px; height: 24px; }
-.hero-tabs .hero-date { align-self: center; white-space: nowrap; }
-@media (min-width: 601px) { .hero-tabs .hero-date { margin-left: auto; } }   /* one line on wide screens; its own left-aligned line on a phone */
+.today-seg { display: flex; margin-bottom: 12px; }
+.today-seg button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+.today-seg .n { font-size: 11px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
+.seg-live { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+/* 練習: the ring on top, then the start button, the date and the fold tabs, all centred */
+.hero.hero-center { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; padding: 14px 0 4px; }
+.hero-center > .ring { order: -1; }
+.hero-center > div { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; min-width: 0; }
+.hero-center .hero-tabs { justify-content: center; margin: 0; }
+.hero-center .hero-panel { text-align: left; width: 100%; }
+.hero-center .plan-note { width: 100%; }
 .listen.compact .listen-opts { position: relative; }
 @media (max-width: 600px) { .listen.compact .listen-opts { padding-right: 84px; } }   /* the pills keep clear of the count at the corner */
 .listen.compact .listen-count { position: absolute; right: 0; bottom: 6px; font-size: 11px; color: var(--fg-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
-@media (max-width: 600px) {
-  .hero { gap: 12px; align-items: start; }
-  .hero .ring { width: 64px !important; height: 64px !important; margin-top: 2px; }
-  .hero .ring .ring-txt b { font-size: 17px; } .hero .ring .ring-txt .tiny { font-size: 10px; }
-}
-/* the listen card: icon, source switch and (word mode) the theme select on one line */
+/* the player: icon and (word mode) the theme select, or a link to the notebook, on one line */
 .listen-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .listen-icon { display: inline-grid; place-items: center; color: var(--fg-2); flex: none; } .listen-icon svg { width: 22px; height: 22px; }
 .listen-head .select { min-width: 0; flex: 1 1 0; max-width: 280px; padding-top: 7px; padding-bottom: 7px; font-size: 13px; }
@@ -244,7 +246,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
   body.today .main { min-height: 0; }
   #view.fit { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
   #view.fit > * { flex: none; }
-  #view.fit > .card.listen.compact { flex: 1 1 auto; display: flex; flex-direction: column; }
+  #view.fit > .today-card { flex: 1 1 auto; display: flex; flex-direction: column; }
   /* contain: size — the item area's content does not count toward the card's minimum height, so the card shrinks until the
      area is 150px (then the content area scrolls) and never ends up shorter than its own controls */
   #view.fit .listen.compact #listenCard { contain: size; flex: 1 1 0; height: auto; min-height: 150px; max-height: 420px; }
@@ -866,13 +868,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '89';   // keep equal to the number in sw.js CACHE ('nq-v89'); scripts/test.sh checks it
+const APP_VERSION = '90';   // keep equal to the number in sw.js CACHE ('nq-v90'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '89', from: '70', date: '2026-10-28', items: [
-    '首頁壓成一個畫面（手機）：頁首「今日」拿掉；今日練習改成鉛筆圖示，「開始練習」鈕縮小放在圖示右邊，日期與連續天數縮成小字；「範圍」「目前單元」和「說明」一樣是收合的小標（單元的進度條、圖例、看講義／練習本單元都在裡面）；聽一輪的字卡區改成吃掉剩下的高度，標題改成耳機圖示，單字主題的下拉選單併進同一列，「1 / 23・第 1 輪」移到卡片右下角。單元進度的圖例改成「熟練／熟悉／初識」。',
+  { v: '90', from: '70', date: '2026-10-28', items: [
+    '首頁只剩一張卡：最上面「練習／錯題本／單字」三段切換，一次只顯示一種，每次進首頁都在「練習」。練習：進度圓環、開始練習、日期與連續天數，以及「說明」「範圍」「目前單元」三個收合小標（單元的進度條、圖例、看講義／練習本單元都在裡面）。錯題本／單字：就是聽一輪播放器，字卡區在手機上吃掉剩下的高度，「1 / 23・第 1 輪」在卡片右下角；播放中切回「練習」不會停，切換上會有綠點。頁首「今日」拿掉；單元進度的圖例改成「熟練／熟悉／初識」。',
     '聽一輪：按 1／2、隨機、速度不再跳到別的項目（原本首頁重畫時會把播放器重建、重洗）；單字的例句唸完接著唸例句的中文。',
     '聽一輪的膠囊改成圖示：單字／文法（二選一，錯題本模式才有）、隨機（亮起＝隨機）、1／2（日文→中文，或日文→中文→日文）、速度（一、二、三個箭頭＝0.8×、1×、1.3×，只影響聽一輪，會記住）；中文一定會唸，開關拿掉。首頁卡上調整設定不再跳到獨立頁面。',
     '首頁的「考試倒數」（天數、單元進度、依考試日期的額度建議）搬到模擬考頁最上面。',
@@ -3802,6 +3804,7 @@ function route() {
   const r = currentRoute();
   const view = document.getElementById('view');
   view.classList.toggle('fit', r.name === 'today'); document.body.classList.toggle('today', r.name === 'today');
+  if (r.name !== 'today') todayTab = 'practice';
   const tip = document.getElementById('chartTip');
   if (tip) tip.classList.remove('show');
   if (r.name !== 'practice') { document.body.classList.remove('practicing'); }
@@ -4075,6 +4078,7 @@ function sessionTopicsHtml(q, plan) {
 function planNoteHtml(q, plan) { const noteText = [extraNote(q), plan.note].filter(Boolean).join(' '); return noteText ? `<div class="plan-note">${esc(noteText)}</div>` : ''; }
 // 說明 / 今天的範圍 under the 今日練習 title: two toggles, at most one open (kept while the app is open)
 let heroTab = null;
+let todayTab = 'practice';   // the today card's switch: 'practice' | 'mistakes' | 'theme'; back to 練習 whenever the page is entered from elsewhere
 
 function renderToday(view) {
   const t = todayStr();
@@ -4123,28 +4127,24 @@ function renderToday(view) {
     heroBody = planNoteHtml(dq, plan);
   }
 
-  const listenReady = listenInit();   // the 聽一輪 card: the notebook or a word theme (paused until tapped; keeps playing if it already was)
-  const isTheme = LISTEN && LISTEN.source.kind === 'theme';
+  // the card's switch: 練習 (default) or the player over the notebook / a word theme; a playing player keeps going behind 練習
+  const isTheme = todayTab === 'theme';
+  const listenReady = todayTab === 'practice' ? false : listenInit(isTheme ? { kind: 'theme', theme: listenDefaultTheme() } : { kind: 'mistakes', cat: '' });
+  const live = (kind) => LISTEN && LISTEN.playing && LISTEN.source.kind === kind ? '<i class="seg-live" title="播放中"></i>' : '';
+  const segBtn = (tab, label) => `<button type="button" aria-pressed="${todayTab === tab}" data-act="today-tab" data-tab="${tab}">${label}</button>`;
 
   const introBanner = !state.introSeen && Object.keys(state.srs).length < 40
     ? `<div class="banner intro-banner"><div class="grow">第一次用？先看「第 0 週」：假名、句子骨架、以及題目上會出現的名詞（い形容詞、五段動詞……）。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button><button type="button" class="btn btn-sm btn-ghost" data-act="intro-dismiss">知道了</button></div></div>`
     : '';
-  view.innerHTML = `
-    ${noticesHtml()}
-    ${introBanner}
-    ${backupBannerHtml()}
-    <div class="card">
-      <div class="hero">
+  const practiceHtml = `
+      <div class="hero hero-center">
         <div>
-          <div class="hero-title">
-            <span class="hero-icon" title="${plan.remaining === 0 ? '今天完成了' : '今日練習'}" aria-label="${plan.remaining === 0 ? '今天完成了' : '今日練習'}">${icon(plan.remaining === 0 ? 'check' : 'practice')}</span>
-            ${plan.remaining ? `<button type="button" class="btn btn-primary" data-act="start-daily">開始練習・${dq.items.length} 題</button>` : `<h2>今天完成了</h2>`}
-          </div>
+          ${plan.remaining === 0 ? '<h2>今天完成了</h2>' : `<div><button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・${dq.items.length} 題</button></div>`}
+          <div class="tiny muted hero-date">${greeting}・連續 ${st.current} 天</div>
           <div class="hero-tabs">
             <button type="button" class="hero-tab${heroTab === 'help' ? ' open' : ''}" data-act="hero-tab" data-tab="help" aria-expanded="${heroTab === 'help'}">說明</button>
             ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">範圍</button>` : ''}
             <button type="button" class="hero-tab${heroTab === 'unit' ? ' open' : ''}" data-act="hero-tab" data-tab="unit" aria-expanded="${heroTab === 'unit'}">目前單元</button>
-            <span class="tiny muted hero-date">${greeting}・連續 ${st.current} 天</span>
           </div>
           <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>每一題都是今天到期的複習或今天的新內容；答錯的幾題後再練一次，之後第 1、3、7 天各複習一次，三次都對才離開錯題本。答對的越熟出現得越少。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
           ${plan.remaining ? `<div class="hero-panel" data-panel="scope" ${heroTab === 'scope' ? '' : 'hidden'}>${scopeHtml}</div>` : ''}
@@ -4161,19 +4161,22 @@ function renderToday(view) {
           ${heroBody}
         </div>
         ${ringHtml(prog.done / Math.max(1, prog.total), `<b>${prog.done}</b><div class="tiny muted">/ ${prog.total} 題</div>`, 110)}
-      </div>
-    </div>
-
-    <div class="card listen compact">
+      </div>`;
+  const playerHtml = `
       <div class="listen-head">
         <span class="listen-icon" title="聽一輪" aria-label="聽一輪">${icon('listen')}</span>
-        <div class="seg"><button type="button" aria-pressed="${isTheme ? 'false' : 'true'}" data-act="listen-source" data-source="mistakes">錯題本${mk.length ? ` ${mk.length}` : ''}</button><button type="button" aria-pressed="${isTheme ? 'true' : 'false'}" data-act="listen-source" data-source="theme">單字</button></div>
         ${isTheme ? `<select class="select grow" data-change="listen-theme" aria-label="單字主題">${vocabThemes().map(g => `<option value="${esc(g.c)}" ${LISTEN && LISTEN.source.theme === g.c ? 'selected' : ''}>${esc(g.c)}（${g.total} 字）</option>`).join('')}</select>`
           : `<button type="button" class="btn btn-sm btn-ghost listen-open" data-act="nav" data-route="#/mistakes" title="打開錯題本" aria-label="打開錯題本">${icon('next')}</button>`}
       </div>
-      ${listenReady ? listenPanelHtml(false) : `<div class="small muted">${isTheme ? '這個主題沒有單字。' : '目前沒有可以聽的錯題。'}</div>`}
+      ${listenReady ? listenPanelHtml(false) : `<div class="small muted">${isTheme ? '這個主題沒有單字。' : '目前沒有可以聽的錯題。'}</div>`}`;
+  view.innerHTML = `
+    ${noticesHtml()}
+    ${introBanner}
+    ${backupBannerHtml()}
+    <div class="card today-card${todayTab === 'practice' ? '' : ' listen compact'}">
+      <div class="seg today-seg">${segBtn('practice', '練習')}${segBtn('mistakes', `錯題本${mk.length ? ` <span class="n">${mk.length}</span>` : ''}${live('mistakes')}`)}${segBtn('theme', `單字${live('theme')}`)}</div>
+      ${todayTab === 'practice' ? practiceHtml : playerHtml}
     </div>
-
 `;
   listenRenderNow();
 }
@@ -5279,7 +5282,14 @@ function listenKey(ev) {
 Object.assign(ACTIONS, {
   'listen-start': (el) => startListen({ kind: 'mistakes', cat: el.dataset.cat || '' }),
   'listen-theme-start': (el) => startListen({ kind: 'theme', theme: el.dataset.theme || listenDefaultTheme() }),
-  'listen-source': (el) => { setListenPref({ source: el.dataset.source === 'theme' ? 'theme' : 'mistakes' }); if (LISTEN) { if (LISTEN.playing) listenStop(true); else LISTEN = null; } route(); },
+  'today-tab': (el) => {
+    const tab = ['practice', 'mistakes', 'theme'].includes(el.dataset.tab) ? el.dataset.tab : 'practice';
+    todayTab = tab;
+    // a player over the other source gives way; the same source (or 練習) keeps it, playing or paused
+    if (tab !== 'practice') { setListenPref({ source: tab }); if (LISTEN && LISTEN.source.kind !== tab) { if (LISTEN.playing) listenStop(true); else LISTEN = null; } }
+    route();
+  },
+  'listen-source': (el) => ACTIONS['today-tab']({ dataset: { tab: el.dataset.source === 'theme' ? 'theme' : 'mistakes' } }),
   'listen-toggle': () => { if (LISTEN && LISTEN.playing) listenPause(); else listenPlay(); },
   'listen-next': () => listenSeek(1),
   'listen-prev': () => listenSeek(-1),
