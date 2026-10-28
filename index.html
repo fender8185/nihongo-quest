@@ -3489,8 +3489,9 @@ function buildUnitQueue(unitId, size = 15) {
 function buildVocabQueue(filter = 'all', size = 20) {
   // choosing the N4 list or a theme on purpose opens N4 words right away
   const theme = filter.startsWith('c:') ? filter.slice(2) : null;
-  const n4Open = Boolean(theme) || filter === 'N4' || n4WordsOpen();
-  const pool = REG.vocab.filter(v => theme ? (v.builtin && vocabTheme(v) === theme) : filter === 'all' ? vocabEligibleForDaily(v, n4Open) : filter === 'custom' ? !v.builtin : (v.builtin && v.lv === filter));
+  const lt = filter.startsWith('t:') ? filter.slice(2).split(':') : null;   // t:<lv>:<theme> — one level's theme (the level pages)
+  const n4Open = Boolean(theme) || Boolean(lt) || filter === 'N4' || n4WordsOpen();
+  const pool = REG.vocab.filter(v => lt ? (v.builtin && v.lv === lt[0] && vocabTheme(v) === lt.slice(1).join(':')) : theme ? (v.builtin && vocabTheme(v) === theme) : filter === 'all' ? vocabEligibleForDaily(v, n4Open) : filter === 'custom' ? !v.builtin : (v.builtin && v.lv === filter));
   const left = Math.max(0, state.settings.newVocabPerDay - state.today.newV);
   return scopeQueue(pool, newVocabCandidates(pool, n4Open).slice(0, left), size);
 }
@@ -3528,13 +3529,14 @@ function startSession(mode, opt = {}) {
   } else if (mode === 'mistakes') {
     entries = buildMistakeQueue(opt.size || 20);
   } else if (mode === 'kanji') {
-    const kq = buildKanjiQueue(opt.size || 15);
+    const kq = buildKanjiQueue(opt.size || 15, opt.lv || null);
     entries = kq.map(item => ({ item }));
     meta = { note: kq.drill ? DRILL_NOTE : '' };
   } else if (mode === 'kana') {   // 假名: due ones first, then the next unseen in 五十音 order
     const t = todayStr(); const size = opt.size || state.settings.sessionSize;
-    const due = REG.kana.filter(x => isDueToday(x, t)).sort(byDue); const fresh = REG.kana.filter(x => !state.srs[x.key]).sort((a, b) => a.order - b.order);
-    entries = due.concat(fresh).slice(0, size).map(item => ({ item }));
+    const rowOk = (x) => opt.row === undefined || x.row === opt.row;   // one row of the table on purpose
+    const due = REG.kana.filter(x => rowOk(x) && isDueToday(x, t)).sort(byDue); const fresh = REG.kana.filter(x => rowOk(x) && !state.srs[x.key]).sort((a, b) => a.order - b.order);
+    entries = (opt.row === undefined ? due.concat(fresh) : REG.kana.filter(rowOk).sort((a, b) => a.order - b.order)).slice(0, size).map(item => ({ item }));
   } else if (mode === 'items') {
     entries = (opt.items || []).map(item => ({ item }));
   }
@@ -4981,6 +4983,39 @@ const THEME_ORDER = [...new Set([].concat(...['PRE_N5', 'N5', 'N4'].map(l => ((D
 // old theme names (before 1.0.8) → the N5 name, or the N4 name for N4-only themes; normalizeState migrates state.themeLane with it
 const THEME_MIGRATE = {"問候": "問候與溝通", "溝通": "問候與溝通", "指示": "疑問與指示", "代名詞": "疑問與指示", "疑問": "疑問與指示", "人物": "人物與家庭", "家庭": "人物與家庭", "身體": "身體與健康", "健康": "身體與健康", "衣物": "衣物與購物", "購物": "衣物與購物", "生活": "居家生活", "學校": "學校與工作", "工作": "學校與工作", "交通": "交通與移動", "移動": "交通與移動", "地點": "地點與位置", "位置": "地點與位置", "自然": "自然與天氣", "天氣": "自然與天氣", "興趣": "興趣與休閒", "休閒": "興趣與休閒", "形容": "形容與狀態", "狀態": "形容與狀態", "顏色": "形容與狀態", "副詞": "副詞與接續", "接續": "副詞與接續", "社會": "社會與人際", "人際": "社會與人際", "敬語": "溝通與敬語", "情感": "情感與心情", "心情": "情感與心情", "思考": "思考與抽象", "抽象": "思考與抽象", "旅行": "交通旅行與移動"};
 function vocabTheme(v) { return v.builtin ? v.c : '其他'; }   // every built-in word carries a theme of its level (data test); custom cards have none
+// ---- 單字頁 (1.0.9): one level at a time → its themes → the kanji met in them ----
+function levelStats(lv) {
+  const t = todayStr();
+  const out = { lv, total: 0, seen: 0, learned: 0, mastered: 0, due: 0, kanji: { total: 0, seen: 0, learned: 0 } };
+  REG.vocab.filter(v => v.builtin && v.lv === lv).forEach(v => { out.total++; const r = state.srs[v.key]; if (!r) return; out.seen++; if (r.b >= SRS_LEARNED) out.learned++; if (srsLevelLabel(r, v.key) === '已熟練') out.mastered++; if (r.due <= t) out.due++; });
+  REG.kanji.filter(k => k.lv === lv).forEach(k => { out.kanji.total++; const r = state.srs[k.key]; if (!r) return; out.kanji.seen++; if (r.b >= SRS_LEARNED) out.kanji.learned++; });
+  if (lv === 'PRE_N5') { out.kana = { total: REG.kana.length, seen: 0, learned: 0 }; REG.kana.forEach(k => { const r = state.srs[k.key]; if (!r) return; out.kana.seen++; if (r.b >= SRS_LEARNED) out.kana.learned++; }); }
+  return out;
+}
+// kanji counted per (level, theme) from the built-in words that contain them
+function kanjiCountsByTheme(lv) {
+  const by = new Map();   // theme → Map(kanji → count)
+  REG.vocab.filter(v => v.builtin && v.lv === lv).forEach(v => {
+    const c = vocabTheme(v); const m = by.get(c) || by.set(c, new Map()).get(c);
+    new Set([...jaPlain(v.w)].filter(ch => KANJI_RE.test(ch) && REG.byKey.has('k:' + ch))).forEach(ch => m.set(ch, (m.get(ch) || 0) + 1));
+  });
+  return by;
+}
+function themeStats(lv) {
+  const t = todayStr(); const counts = kanjiCountsByTheme(lv);
+  return ((DATA.THEMES || {})[lv] || []).map(th => {
+    const g = { c: th.c, desc: th.desc || '', total: 0, seen: 0, learned: 0, mastered: 0, due: 0, kanji: [] };
+    REG.vocab.filter(v => v.builtin && v.lv === lv && vocabTheme(v) === th.c).forEach(v => { g.total++; const r = state.srs[v.key]; if (!r) return; g.seen++; if (r.b >= SRS_LEARNED) g.learned++; if (srsLevelLabel(r, v.key) === '已熟練') g.mastered++; if (r.due <= t) g.due++; });
+    g.kanji = [...(counts.get(th.c) || new Map()).entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 8).map(([k]) => k);
+    return g;
+  });
+}
+// the theme a kanji belongs to on a level page: the theme whose words (of that level) contain it most often
+function kanjiThemeOf(k, lv) {
+  let best = null, n = 0;
+  kanjiCountsByTheme(lv).forEach((m, c) => { const x = m.get(k.k) || 0; if (x > n) { n = x; best = c; } });
+  return best;
+}
 function vocabThemes() {
   const t = todayStr();
   const by = new Map();
@@ -7158,8 +7193,12 @@ function kanjiDetailHtml(k) {
     ${looks.length ? `<div class="small muted mt-3">容易混淆的字</div><div class="row-wrap mt-1">${looks.map(x => `<button type="button" class="btn btn-sm" data-act="kanji-open" data-k="${esc(x.k)}"><span class="jp" style="font-size:18px">${esc(x.k)}</span><span class="small muted">${esc(x.m)}</span></button>`).join('')}</div>` : ''}`;
 }
 
-function buildKanjiQueue(size = 15) {
+function buildKanjiQueue(size = 15, lv = null) {
   const k4 = n5KanjiLeft() === 0;
+  if (lv) {   // one level on purpose (the level page): due first, then unseen in table order
+    const pool = REG.kanji.filter(k => k.lv === lv);
+    return scopeQueue(pool, pool.filter(k => !state.srs[k.key]).sort((a, b) => a.order - b.order), size);
+  }
   const pool = REG.kanji.filter(k => k.lv !== 'N4' || k4);
   const left = Math.max(0, (state.settings.newKanjiPerDay || 0) - (state.today.newK || 0));
   return scopeQueue(pool, newKanjiCandidates(k4).slice(0, left), size);

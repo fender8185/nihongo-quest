@@ -249,6 +249,31 @@ def test_every_builtin_kanji_word_renders_furigana_matching_its_reading(b):
     assert r['bare'] == [] and r['newMismatch'] == [], r
     assert len(r['oldMismatch']) <= 2, r['oldMismatch']   # 汚す (きたなす from 汚い) and この頃 (ころ) predate 1.0.8
 
+# ---- 1.0.9: vocab page by level ----
+def test_level_and_theme_stats(b):
+    js = """(() => { const L = ['PRE_N5', 'N5', 'N4'].map(levelStats); const T = themeStats('N5');
+      return JSON.stringify({ totals: L.map(x => x.total), sum: L.reduce((a, x) => a + x.total, 0), builtin: REG.vocab.filter(v => v.builtin).length,
+        kana: L[0].kana && L[0].kana.total, kanji: L.map(x => x.kanji.total), tn: T.length, names: T.map(t => t.c).slice(0, 3), tsum: T.reduce((a, t) => a + t.total, 0) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['sum'] == r['builtin'] and r['kana'] == 142 and r['kanji'] == [27, 77, 238], r
+    assert r['tn'] == 17 and r['names'] == ['問候與溝通', '疑問與指示', '時間'] and r['tsum'] == r['totals'][1], r
+
+def test_kanji_theme_mapping_is_grounded(b):
+    js = """(() => { const bad = []; ['PRE_N5', 'N5', 'N4'].forEach(lv => themeStats(lv).forEach(t => t.kanji.forEach(k => {
+        const ok = REG.vocab.some(v => v.builtin && v.lv === lv && vocabTheme(v) === t.c && jaPlain(v.w).includes(k)) && REG.byKey.has('k:' + k); if (!ok) bad.push(lv + ':' + t.c + ':' + k); })));
+      const pre = themeStats('PRE_N5'); const food = pre.find(t => t.c === '飲食');
+      return JSON.stringify({ bad: bad.slice(0, 5), foodKanji: food.kanji, maxLen: Math.max(...pre.map(t => t.kanji.length)), of: kanjiThemeOf(REG.byKey.get('k:日'), 'PRE_N5') }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['bad'] == [] and r['maxLen'] <= 8 and r['of'] in ('時間曆日', '數字與量詞'), r
+
+def test_level_theme_filter_is_level_scoped(b):
+    js = """(() => { state.srs = {}; state.today.newV = 0; DAILY_CACHE = null;
+      const q = buildVocabQueue('t:N5:飲食', 60); const k = buildKanjiQueue(50, 'PRE_N5'); startSession('kana', { row: 1 }); const row = SESSION.entries.map(e => e.item.ch);
+      return JSON.stringify({ lvs: [...new Set(q.map(x => x.lv))], themes: [...new Set(q.map(vocabTheme))], n: q.length, kl: [...new Set(k.map(x => x.lv))], row }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['lvs'] == ['N5'] and r['themes'] == ['飲食'] and r['n'] > 0 and r['kl'] == ['PRE_N5'], r
+    assert r['row'] == ['か', 'き', 'く', 'け', 'こ', 'カ', 'キ', 'ク', 'ケ', 'コ'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
