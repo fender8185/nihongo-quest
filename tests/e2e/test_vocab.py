@@ -622,7 +622,7 @@ def test_n4_words_can_be_opened_before_n5_is_finished(b):
     js = """(() => { const n4 = REG.vocab.find(x => x.builtin && x.lv === 'N4' && !state.srs[x.key]); const was = state.settings.n4Words; state.settings.n4Words = 'auto';
       const out = { left: n5WordsLeft(), closed: !n4WordsOpen() && !inDailyReach(n4) && !deckAllowsN4('all') };
       state.settings.n4Words = 'open'; out.open = n4WordsOpen() && inDailyReach(n4) && deckAllowsN4('all');
-      renderToday(document.getElementById('view')); out.text = document.getElementById('view').textContent.includes('N4 已開放');
+      location.hash = '#/vocab'; route(); out.text = document.getElementById('view').textContent.includes('N4 已開放');   // the note moved to the vocab page header
       state.settings.n4Words = was; saveState(); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
     assert r['left'] > 0 and r['closed'] and r['open'] and r['text'], r

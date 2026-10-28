@@ -903,25 +903,42 @@ def test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_rea
 
 def test_today_notebook_card_is_the_listen_player(b):
     js = """(() => { const t = todayStr(); const v = REG.vocab.find(x => x.builtin); state.mistakes = [{ id: 'tp1', key: v.key, cat: '單字', prompt: '「' + v.m + '」的日文', answer: jaPlain(v.w), count: 2, mastered: false, date: t, last: t }]; saveState();
-      LISTEN = null; location.hash = '#/today'; route(); const view = document.getElementById('view'); const card = [...view.querySelectorAll('.card')].find(c => { const h = c.querySelector('.card-title'); return h && /錯題本・聽一輪/.test(h.textContent); });
-      const a = { player: !!card.querySelector('.lplay'), pills: card.querySelectorAll('.lopt').length, link: /打開錯題本（1）/.test(card.textContent), oldBtn: !!view.querySelector('[data-act=start-mistakes]'), compact: card.classList.contains('compact'), paused: LISTEN && !LISTEN.playing, count: (card.querySelector('#listenCount') || {}).textContent, word: /\\S/.test((card.querySelector('#listenCard') || {}).textContent || ''), grid3: !!view.querySelector('.grid-3') };
+      LISTEN = null; location.hash = '#/today'; route(); const view = document.getElementById('view'); localStorage.removeItem('nq_listen_pref'); route(); const card = view.querySelector('.card.listen');
+      const a = { player: !!card.querySelector('.lplay'), pills: card.querySelectorAll('.lopt').length, link: /打開錯題本/.test(card.textContent) && /錯題本 1/.test(card.querySelector('.seg').textContent), oldBtn: !!view.querySelector('[data-act=start-mistakes]'), compact: card.classList.contains('compact'), paused: LISTEN && !LISTEN.playing, count: (card.querySelector('#listenCount') || {}).textContent, word: /\\S/.test((card.querySelector('#listenCard') || {}).textContent || ''), grid3: !!view.querySelector('.grid-3') };
+      // switch the card to a word theme: every entry is a word of that theme, no scope pill, the theme select shows
+      ACTIONS['listen-source']({ dataset: { source: 'theme' } }); const c2 = document.querySelector('.card.listen'); const theme = LISTEN.source.theme; const n = REG.vocab.filter(x => x.builtin && vocabTheme(x) === theme).length;
+      const th = { kind: LISTEN.source.kind, all: LISTEN.all.length === n && n > 0 && LISTEN.all.every(e => e.kind === 'v' && !e.m), select: !!c2.querySelector('select[data-change=listen-theme]'), scopePill: !!c2.querySelector('[data-key=scope]'), link: /單字主題/.test(c2.textContent), label: /單字・/.test(c2.querySelector('#listenCard').textContent) };
+      const sel = c2.querySelector('select'); const other = [...sel.options].map(o => o.value).find(x => x !== theme); sel.value = other; CHANGE_ACTIONS['listen-theme'](sel); const switched = LISTEN.source.theme === other && JSON.parse(localStorage.getItem('nq_listen_pref')).theme === other;
+      ACTIONS['listen-source']({ dataset: { source: 'mistakes' } }); const backToNotes = LISTEN.source.kind === 'mistakes';
       location.hash = '#/stats'; route(); const stopped = LISTEN === null;
       state.mistakes = []; saveState(); location.hash = '#/today'; route(); const empty = /目前沒有可以聽的錯題/.test(document.getElementById('view').textContent) && !document.querySelector('.lplay');
-      return JSON.stringify({ a, stopped, empty }); })()"""
+      localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ a, th, switched, backToNotes, stopped, empty }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['a'] == {'player': True, 'pills': 4, 'link': True, 'oldBtn': False, 'compact': True, 'paused': True, 'count': '1 / 1・第 1 輪', 'word': True, 'grid3': False}, r['a']
+    assert r['th'] == {'kind': 'theme', 'all': True, 'select': True, 'scopePill': False, 'link': True, 'label': True} and r['switched'] and r['backToNotes'], r
     assert r['stopped'] and r['empty'], r
+
+def test_vocab_theme_card_plays_the_theme(b):
+    js = """(() => { location.hash = '#/vocab/themes'; route(); const btn = document.querySelector('.theme-card [data-act=listen-theme-start]'); const theme = btn.dataset.theme;
+      ACTIONS['listen-theme-start'](btn); route(); listenPause(); const n = REG.vocab.filter(x => x.builtin && vocabTheme(x) === theme).length;
+      const r = { hash: location.hash, kind: LISTEN.source.kind, theme: LISTEN.source.theme === theme, n: LISTEN.all.length === n, page: !!document.querySelector('.card.listen .lplay'), noScope: !document.querySelector('[data-key=scope]'), pref: JSON.parse(localStorage.getItem('nq_listen_pref')) };
+      listenStop(); r.back = location.hash; localStorage.removeItem('nq_listen_pref'); return JSON.stringify(r); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['hash'] == '#/vocab/listen' and r['kind'] == 'theme' and r['theme'] and r['n'] and r['page'] and r['noScope'], r
+    assert r['pref']['source'] == 'theme' and r['back'] == '#/vocab/themes', r
 
 def test_today_offers_the_exam_pace_quotas_when_behind(b):
     js = """(() => { state.settings.examDate = addDays(todayStr(), 121); Object.assign(state.settings, { newVocabPerDay: 1, newGrammarPerDay: 1 }); saveState();
-      location.hash = '#/today'; route(); const el = document.querySelector('.hero-advice, [data-act=apply-advice]'); const btn = document.querySelector('.card [data-act=apply-advice]');
-      const text = el ? el.closest('.card').textContent : ''; const a = planAdvice();
-      ACTIONS['apply-advice'](); location.hash = '#/today'; route(); const after = !!document.querySelector('[data-act=apply-advice]');
-      return JSON.stringify({ shown: !!btn, arrow: /1→\\d+/.test(text), rec: [state.settings.newVocabPerDay, state.settings.newGrammarPerDay], exp: [a.rec.newVocabPerDay, a.rec.newGrammarPerDay], after }); })()"""
+      location.hash = '#/exam'; route(); const el = document.querySelector('.hero-advice, [data-act=apply-advice]'); const btn = document.querySelector('.card [data-act=apply-advice]');
+      const text = el ? el.closest('.card').textContent : ''; const a = planAdvice(); const onExam = /考試倒數/.test(document.getElementById('view').textContent);
+      ACTIONS['apply-advice'](); location.hash = '#/exam'; route(); const after = !!document.querySelector('[data-act=apply-advice]');
+      location.hash = '#/today'; route(); const offToday = !/考試倒數/.test(document.getElementById('view').textContent);
+      return JSON.stringify({ shown: !!btn, arrow: /1→\\d+/.test(text), rec: [state.settings.newVocabPerDay, state.settings.newGrammarPerDay], exp: [a.rec.newVocabPerDay, a.rec.newGrammarPerDay], after, onExam, offToday }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['shown'] and r['arrow'] and r['rec'] == r['exp'] and not r['after'], r
+    assert r['shown'] and r['arrow'] and r['rec'] == r['exp'] and not r['after'] and r['onExam'] and r['offToday'], r   # the countdown lives on 模擬考 now
 
 def test_requeue_uses_another_format_when_the_item_has_one(b):
     js = """(() => { const out = {};
@@ -1190,7 +1207,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_load_cap_replaces_the_daily_goal_and_brakes_new_items_in_order, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_hero_help_and_scope_toggles_open_one_at_a_time, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_today_offers_the_exam_pace_quotas_when_behind, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_load_cap_replaces_the_daily_goal_and_brakes_new_items_in_order, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_hero_help_and_scope_toggles_open_one_at_a_time, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_today_offers_the_exam_pace_quotas_when_behind, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,

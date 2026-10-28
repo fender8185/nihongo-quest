@@ -841,12 +841,14 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '84';   // keep equal to the number in sw.js CACHE ('nq-v84'); scripts/test.sh checks it
+const APP_VERSION = '85';   // keep equal to the number in sw.js CACHE ('nq-v85'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '84', from: '70', date: '2026-10-28', items: [
+  { v: '85', from: '70', date: '2026-10-28', items: [
+    '首頁的「考試倒數」（天數、單元進度、依考試日期的額度建議）搬到模擬考頁最上面。',
+    '首頁的「聽一輪」卡合併了單字卡：切「錯題本」或「單字」，單字模式選一個主題就循環播放那個主題的全部單字（單字→中文→單字→例句）。單字頁的每個主題卡也多了「播放字卡」。上次選的來源和主題會記住。',
     '離線下載分成「日文音檔」和「中文音檔」兩顆按鈕，一樣收在設定 › 語音的「完全離線使用（進階）」裡。',
     '首頁的錯題本卡直接是「聽一輪」播放器（同樣的控制列），原本的分類統計和按鈕拿掉；右上「打開錯題本」進完整頁。在首頁和錯題本的播放頁之間切換不會中斷播放。播放器的內容區固定高度，單字卡換成文法卡時按鈕不會跳。',
     '「聽一輪」唸排序題時改唸排好的完整句子（★ 的片段標色），不再把空格挖掉唸；聽力和閱讀的錯題不進聽一輪。',
@@ -3767,7 +3769,7 @@ function route() {
   const tip = document.getElementById('chartTip');
   if (tip) tip.classList.remove('show');
   if (r.name !== 'practice') { document.body.classList.remove('practicing'); }
-  if (LISTEN && !(r.name === 'today' || (r.name === 'mistakes' && r.parts[1] === 'listen'))) listenStop(true);   // leaving the pages that host the player ends it
+  if (LISTEN && !(r.name === 'today' || ((r.name === 'mistakes' || r.name === 'vocab') && r.parts[1] === 'listen'))) listenStop(true);   // leaving the pages that host the player ends it
   if (r.name === 'practice') { renderPractice(); return; }
   if (r.name === 'exam' && r.parts[1] === 'run') { renderExamRunner(); return; }
   lastMainRoute = location.hash || '#/today';
@@ -3777,7 +3779,7 @@ function route() {
   try {
     if (r.name === 'today') renderToday(view);
     else if (r.name === 'course') { if (r.parts[1] === 'intro') renderIntro(view); else if (r.parts[1]) renderUnit(view, r.parts[1], r.params.tab || 'lesson'); else renderCourse(view); }
-    else if (r.name === 'vocab') renderVocab(view, r.parts[1] || 'cards', r.params);
+    else if (r.name === 'vocab') { if (r.parts[1] === 'listen') renderListen(view); else renderVocab(view, r.parts[1] || 'cards', r.params); }
     else if (r.name === 'mistakes') { if (r.parts[1] === 'loop') renderMistakeLoop(view); else if (r.parts[1] === 'listen') renderListen(view); else renderMistakes(view, r.params); }
     else if (r.name === 'exam') renderExam(view, r.parts[1] || '', r.params);
     else if (r.name === 'tools') renderTools(view, r.params);
@@ -3958,7 +3960,9 @@ function handleClick(ev) {
   if (el.tagName === 'A') ev.preventDefault();
   fn(el, ev);
 }
-const CHANGE_ACTIONS = {};
+const CHANGE_ACTIONS = {
+  'listen-theme': (el) => { setListenPref({ source: 'theme', theme: el.value }); if (LISTEN) { if (LISTEN.playing) listenStop(true); else LISTEN = null; } route(); }
+};
 function handleChange(ev) {
   const el = ev.target.closest('[data-change]');
   if (!el) return;
@@ -3994,7 +3998,7 @@ function handleKey(ev) {
   if (r.name === 'exam' && r.parts[1] === 'run') { examKey(ev); return; }
   if (r.name === 'vocab' && (r.parts[1] || 'cards') === 'cards') { flashKey(ev); return; }
   if (r.name === 'mistakes' && r.parts[1] === 'loop') { mloopKey(ev); return; }
-  if (r.name === 'mistakes' && r.parts[1] === 'listen') { listenKey(ev); return; }
+  if ((r.name === 'mistakes' || r.name === 'vocab') && r.parts[1] === 'listen') { listenKey(ev); return; }
   if (k === 'f' || k === 'F') { ev.preventDefault(); toggleFurigana(); }
 }
 
@@ -4088,19 +4092,8 @@ function renderToday(view) {
 `;
   }
 
-  const paceText = pace.daysLeft === 0 ? '考試日期已到或已過，可在設定中更新考試日期。'
-    : pace.status === 'behind' ? `剩下 ${pace.remainingUnits} 個單元，每個單元平均只有約 ${pace.perUnit} 天，建議加快一點或提高每日題數。`
-    : `剩下 ${pace.remainingUnits} 個單元，每個單元可用約 ${pace.perUnit} 天，並保留最後三週做模擬考。`;
-  // the exam-date pace reaches the daily practice here: when the current new-item quotas cannot finish the banks in
-  // time, the recommended quotas (學習分析「每日練習量建議」) are offered with one tap; nothing changes until tapped
-  const adv = planAdvice();
-  const advRows = adv.banks.filter(b2 => b2.key && b2.cur !== b2.rec);
-  const goalHint = adv.studyDays > 0 && adv.lagging.length && advRows.length
-    ? `<div class="small dim mt-2 hero-advice">照考試日期，建議每天：${advRows.map(b2 => `${esc(b2.name)} ${b2.cur}→${b2.rec}`).join('、')}。</div><div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-act="apply-advice">套用建議</button></div>`
-    : '';
-  const paceChip = pace.status === 'behind' ? '<span class="chip chip-warn">稍微落後</span>' : pace.status === 'ahead' ? '<span class="chip chip-ok">進度充裕</span>' : '<span class="chip chip-ok">進度正常</span>';
-
-  const listenReady = listenInit();   // the notebook card is the 聽一輪 player (paused until tapped; keeps playing if it already was)
+  const listenReady = listenInit();   // the 聽一輪 card: the notebook or a word theme (paused until tapped; keeps playing if it already was)
+  const isTheme = LISTEN && LISTEN.source.kind === 'theme';
 
   const introBanner = !state.introSeen && Object.keys(state.srs).length < 40
     ? `<div class="banner intro-banner"><div class="grow">第一次用？先看「第 0 週」：假名、句子骨架、以及題目上會出現的名詞（い形容詞、五段動詞……）。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button><button type="button" class="btn btn-sm btn-ghost" data-act="intro-dismiss">知道了</button></div></div>`
@@ -4143,23 +4136,13 @@ function renderToday(view) {
     </div>
 
     <div class="card listen compact">
-      <div class="card-head"><div class="card-title">錯題本・聽一輪</div><button type="button" class="btn btn-sm btn-ghost" data-act="nav" data-route="#/mistakes">打開錯題本${mk.length ? `（${mk.length}）` : ''}</button></div>
-      ${listenReady ? listenPanelHtml(false) : '<div class="small muted">目前沒有可以聽的錯題。</div>'}
-    </div>
-    <div class="grid grid-2">
-      <div class="card">
-        <div class="card-head"><div class="card-title">考試倒數</div>${paceChip}</div>
-        <div class="stat"><span class="stat-v">${pace.daysLeft} 天</span><span class="stat-l">距離 ${esc(pace.exam.replace(/-/g, '/'))} JLPT</span></div>
-        <p class="small dim mt-2 mb-0">${esc(paceText)}</p>
-        ${goalHint}
+      <div class="card-head">
+        <div class="row" style="gap:10px"><div class="card-title">聽一輪</div>
+          <div class="seg"><button type="button" aria-pressed="${isTheme ? 'false' : 'true'}" data-act="listen-source" data-source="mistakes">錯題本${mk.length ? ` ${mk.length}` : ''}</button><button type="button" aria-pressed="${isTheme ? 'true' : 'false'}" data-act="listen-source" data-source="theme">單字</button></div></div>
+        <button type="button" class="btn btn-sm btn-ghost" data-act="nav" data-route="${isTheme ? '#/vocab/themes' : '#/mistakes'}">${isTheme ? '單字主題' : '打開錯題本'}</button>
       </div>
-      <div class="card">
-        <div class="card-head"><div class="card-title">單字</div><span class="chip">${vs.due} 待複習</span></div>
-        <div class="small dim">N5 已熟悉 ${vs.N5.learned} / ${vs.N5.total}</div>
-        <div class="small dim">${vs.n5Left && !n4WordsOpen() ? `N4：N5 單字都學過一次後開始（還剩 ${vs.n5Left} 個）` : `N4 ${vs.n5Left ? '已開放・' : ''}已熟悉 ${vs.N4.learned} / ${vs.N4.total}`}</div>
-        ${vs.custom.total ? `<div class="small dim">自訂字卡 ${vs.custom.learned} / ${vs.custom.total}</div>` : ''}
-        <div class="row-wrap mt-3"><button type="button" class="btn btn-sm" data-act="nav" data-route="#/vocab">翻字卡</button></div>
-      </div>
+      ${isTheme ? `<div class="row-wrap mb-2"><select class="select" data-change="listen-theme" style="max-width:100%">${vocabThemes().map(g => `<option value="${esc(g.c)}" ${LISTEN && LISTEN.source.theme === g.c ? 'selected' : ''}>${esc(g.c)}（${g.total} 字）</option>`).join('')}</select></div>` : ''}
+      ${listenReady ? listenPanelHtml(false) : `<div class="small muted">${isTheme ? '這個主題沒有單字。' : '目前沒有可以聽的錯題。'}</div>`}
     </div>
 
 `;
@@ -4622,6 +4605,7 @@ function renderVocabThemes(view) {
       <div class="row-wrap mt-3">
         <button type="button" class="btn btn-sm" data-act="nav" data-route="#/vocab/list?c=${encodeURIComponent(g.c)}">字表</button>
         <button type="button" class="btn btn-sm btn-primary" data-act="start-vocab" data-filter="c:${esc(g.c)}">練習・${vocabSessionCount('c:' + g.c)} 題</button>
+        <button type="button" class="btn btn-sm" data-act="listen-theme-start" data-theme="${esc(g.c)}">${icon('play')}播放字卡</button>
       </div></div>`).join('');
   view.innerHTML = `
     <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">依主題分組的內建單字。每個主題都可以單獨看字表或練習。</div></div></div>
@@ -4713,7 +4697,7 @@ function renderVocab(view, tab, params) {
     </div>`;
   }
   view.innerHTML = `
-    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">今天待複習 ${vs.due} 張・N5 熟悉 ${vs.N5.learned}/${vs.N5.total}・N4 熟悉 ${vs.N4.learned}/${vs.N4.total}</div></div>
+    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">今天待複習 ${vs.due} 張・N5 熟悉 ${vs.N5.learned}/${vs.N5.total}・${vs.n5Left && !n4WordsOpen() ? `N4：N5 單字都學過一次後開始（還剩 ${vs.n5Left} 個）` : `N4 ${vs.n5Left ? '已開放・' : ''}熟悉 ${vs.N4.learned}/${vs.N4.total}`}${vs.custom.total ? `・自訂字卡 ${vs.custom.learned}/${vs.custom.total}` : ''}</div></div>
       <button type="button" class="btn" data-act="start-vocab" data-filter="${deck}">單字測驗・${vocabSessionCount(deck)} 題</button></div>
     ${vocabTabs('cards')}
     <div class="row-wrap mb-3"><span class="small muted">牌組</span><div class="seg">${DECKS.map(([k, l]) => `<button type="button" aria-pressed="${deck === k}" data-act="flash-deck" data-deck="${k}">${l}</button>`).join('')}</div></div>
@@ -5054,12 +5038,13 @@ function renderMistakeLoop(view) {
 // sentence again. Pure listening: no schedule, no counts. The screen shows everything at once, no flipping. ----
 let LISTEN = null;   // { all, items, idx, round, playing, order: 'count'|'random', scope: 'all'|'v'|'g', zh, run, wake }
 const LISTEN_GAP = { short: 350, long: 900 };
+function listenEntryVocab(it, m) {
+  const w = jaPlain(it.w); const pin = it.r && !HAS_KANJI.test(it.r) && it.r !== w ? it.r : '';
+  return { kind: 'v', id: m ? m.id : it.key, m: m || null, word: w, wordHtml: furi(it.w), reading: pin, meaning: it.m || '', ex: vocabExamples(it)[0] || null };
+}
 function listenEntry(m) {
   const it = m.key && REG.byKey.get(m.key);
-  if (it && it.kind === 'v') {
-    const w = jaPlain(it.w); const pin = it.r && !HAS_KANJI.test(it.r) && it.r !== w ? it.r : '';
-    return { kind: 'v', id: m.id, m, word: w, wordHtml: furi(it.w), reading: pin, meaning: it.m || '', ex: vocabExamples(it)[0] || null };
-  }
+  if (it && it.kind === 'v') return listenEntryVocab(it, m);
   if (it && it.kind === 'k') {
     const ex = (it.ex || [])[0];
     return ex ? { kind: 'v', id: m.id, m, word: ex[0], wordHtml: furi(ex[0]), reading: ex[1] || '', meaning: ex[2] || it.m || '', ex: null, note: `漢字「${it.k}」` }
@@ -5086,21 +5071,37 @@ function listenBuild() {
   list = L.order === 'random' ? shuffle(list) : list.slice().sort((a, b) => mistakePriority(a.m, b.m));
   L.items = list; L.idx = 0;
 }
-// a paused player over the notebook (the Today card and the full page share it); an existing paused one is refreshed
-function listenInit(cat = '') {
-  const src = activeMistakes().filter(m => listenable(m) && (!cat || (m.cat || '綜合') === cat));
+// what the player reads: the notebook ({ kind: 'mistakes', cat }) or every word of a theme ({ kind: 'theme', theme });
+// the last choice is kept on the device so the Today card opens on it
+function listenPref() { try { return Object.assign({ source: 'mistakes', theme: '' }, JSON.parse(localStorage.getItem('nq_listen_pref') || '{}')); } catch (e) { return { source: 'mistakes', theme: '' }; } }
+function setListenPref(patch) { try { localStorage.setItem('nq_listen_pref', JSON.stringify(Object.assign(listenPref(), patch))); } catch (e) { /* ignore */ } }
+function listenDefaultTheme() {
+  const pref = listenPref().theme; const themes = vocabThemes();
+  if (pref && themes.some(g => g.c === pref)) return pref;
+  const fresh = dailyPlan().newV[0]; if (fresh) return vocabTheme(fresh);   // today's new words' theme
+  return themes.length ? themes[0].c : '';
+}
+function listenSourceFromPref() { const p = listenPref(); return p.source === 'theme' ? { kind: 'theme', theme: listenDefaultTheme() } : { kind: 'mistakes', cat: '' }; }
+function listenSourceEntries(source) {
+  if (source.kind === 'theme') return REG.vocab.filter(v => v.builtin && vocabTheme(v) === source.theme).map(v => listenEntryVocab(v, null));
+  return activeMistakes().filter(m => listenable(m) && (!source.cat || (m.cat || '綜合') === source.cat)).map(listenEntry);
+}
+// a paused player over a source (the Today card and the full page share it); an existing paused one is refreshed
+function listenInit(source = listenSourceFromPref()) {
   if (LISTEN && LISTEN.playing) return LISTEN.items.length > 0;
   const keep = LISTEN ? { order: LISTEN.order, scope: LISTEN.scope, zh: LISTEN.zh, twice: LISTEN.twice } : null;
   // defaults: words only, shuffled, Chinese on, 兩次 (Japanese → Chinese → Japanese again); no words in the notebook → everything
-  LISTEN = Object.assign({ all: src.map(listenEntry), items: [], idx: 0, round: 1, playing: false, order: 'random', scope: 'v', zh: true, twice: true, run: 0, wake: null }, keep || {});
-  if (!LISTEN.all.some(e => e.kind === 'v')) LISTEN.scope = 'all';
+  LISTEN = Object.assign({ source, all: listenSourceEntries(source), items: [], idx: 0, round: 1, playing: false, order: 'random', scope: 'v', zh: true, twice: true, run: 0, wake: null }, keep || {});
+  if (source.kind === 'theme') LISTEN.scope = 'v';
+  else if (!LISTEN.all.some(e => e.kind === 'v')) LISTEN.scope = 'all';
   listenBuild();
   return LISTEN.items.length > 0;
 }
-function startListen(cat = '') {
-  if (LISTEN && !LISTEN.playing) LISTEN = null;
-  if (!listenInit(cat)) { toast('錯題本目前是空的。'); return false; }
-  go('#/mistakes/listen');
+function startListen(source = { kind: 'mistakes', cat: '' }) {
+  if (LISTEN) { if (LISTEN.playing) listenStop(true); else LISTEN = null; }
+  if (!listenInit(source)) { toast(source.kind === 'theme' ? '這個主題沒有單字。' : '錯題本目前是空的。'); return false; }
+  setListenPref(source.kind === 'theme' ? { source: 'theme', theme: source.theme } : { source: 'mistakes' });
+  go(source.kind === 'theme' ? '#/vocab/listen' : '#/mistakes/listen');
   listenPlay();
   return true;
 }
@@ -5125,8 +5126,9 @@ function listenPause() {
 function listenStop(silent) {
   if (!LISTEN) return;
   if (LISTEN.playing) stopSpeaking();
+  const back = LISTEN.source && LISTEN.source.kind === 'theme' ? '#/vocab/themes' : '#/mistakes';
   LISTEN.playing = false; LISTEN.run++; listenWake(false); LISTEN = null;
-  if (!silent) go('#/mistakes');
+  if (!silent) go(back);
 }
 function listenSeek(delta) {
   if (!LISTEN || !LISTEN.items.length) return;
@@ -5178,14 +5180,14 @@ function listenCardHtml() {
   if (!e) return '<div class="flash"><div class="muted">這個範圍沒有錯題。</div></div>';
   if (e.kind === 'v') {
     return `<div class="flash">
-      <div class="small muted">單字${e.note ? `・${esc(e.note)}` : ''}・錯 ${e.m.count || 1} 次</div>
+      <div class="small muted">單字${e.note ? `・${esc(e.note)}` : ''}・${e.m ? `錯 ${e.m.count || 1} 次` : esc(LISTEN.source.theme || '')}</div>
       <div class="word jp">${e.wordHtml}</div>
       <div class="meaning">${esc(e.meaning)}</div>
       ${e.ex ? exampleHtml(e.ex.ex, e.ex.exZh, 'mt-3 listen-ex') : ''}
     </div>`;
   }
   return `<div class="flash">
-    <div class="small muted">文法${e.pt ? `・${esc(e.pt)}` : ''}・錯 ${e.m.count || 1} 次</div>
+    <div class="small muted">文法${e.pt ? `・${esc(e.pt)}` : ''}${e.m ? `・錯 ${e.m.count || 1} 次` : ''}</div>
     <div class="jp listen-sentence">${e.html}</div>
     ${e.zh ? `<div class="meaning" style="font-weight:400">${esc(e.zh)}</div>` : ''}
   </div>`;
@@ -5210,7 +5212,7 @@ function listenPanelHtml(full) {
         <button type="button" class="lbtn" data-act="listen-next" aria-label="下一個">${icon('next')}</button>
       </div>
       <div class="listen-opts">
-        <button type="button" class="lopt${L.scope !== 'all' ? ' on' : ''}" data-act="listen-cycle" data-key="scope" title="範圍：全部／只單字／只文法">${esc(scopeLabel)}</button>
+        ${L.source.kind === 'theme' ? '' : `<button type="button" class="lopt${L.scope !== 'all' ? ' on' : ''}" data-act="listen-cycle" data-key="scope" title="範圍：全部／只單字／只文法">${esc(scopeLabel)}</button>`}
         <button type="button" class="lopt${L.order === 'random' ? ' on' : ''}" data-act="listen-cycle" data-key="order" title="順序：錯最多次優先／隨機">${icon('shuffle')}${L.order === 'random' ? '隨機' : '錯最多次'}</button>
         <button type="button" class="lopt${L.zh ? ' on' : ''}" data-act="listen-cycle" data-key="zh" title="唸中文意思／翻譯">${L.zh ? '中文' : '中文關'}</button>
         <button type="button" class="lopt${L.twice ? ' on' : ''}" data-act="listen-cycle" data-key="twice" title="一次：日文→中文；兩次：日文→中文→日文">${L.twice ? '兩次' : '一次'}</button>
@@ -5218,7 +5220,7 @@ function listenPanelHtml(full) {
       ${full ? '<p class="hint mt-3" style="text-align:center">循環唸到你按停；不寫排程、不算題數。播放中螢幕保持亮著，iPhone 鎖屏會停（Safari 的限制）。</p>' : ''}`;
 }
 function renderListen(view) {
-  if (!LISTEN && !listenInit()) { toast('錯題本目前是空的。'); go('#/mistakes'); return; }
+  if (!LISTEN && !listenInit()) { toast('沒有可以聽的內容。'); go('#/today'); return; }
   view.innerHTML = `<div class="card listen">${listenPanelHtml(true)}</div>`;
   listenRenderNow();
 }
@@ -5230,7 +5232,9 @@ function listenKey(ev) {
   else if (k === 'Escape') { ev.preventDefault(); listenStop(); }
 }
 Object.assign(ACTIONS, {
-  'listen-start': (el) => startListen(el.dataset.cat || ''),
+  'listen-start': (el) => startListen({ kind: 'mistakes', cat: el.dataset.cat || '' }),
+  'listen-theme-start': (el) => startListen({ kind: 'theme', theme: el.dataset.theme || listenDefaultTheme() }),
+  'listen-source': (el) => { setListenPref({ source: el.dataset.source === 'theme' ? 'theme' : 'mistakes' }); if (LISTEN) { if (LISTEN.playing) listenStop(true); else LISTEN = null; } route(); },
   'listen-toggle': () => { if (LISTEN && LISTEN.playing) listenPause(); else listenPlay(); },
   'listen-next': () => listenSeek(1),
   'listen-prev': () => listenSeek(-1),
@@ -5565,6 +5569,28 @@ function assemblePaper(level, size, subjects) {
 }
 
 // ---------- exam page ----------
+// 考試倒數 (模擬考 page): days left, the unit pace, and the exam-date advice on the daily quotas (one tap to apply)
+function examCountdownHtml() {
+  const pace = examPace();
+  const paceText = pace.daysLeft === 0 ? '考試日期已到或已過，可在設定中更新考試日期。'
+    : pace.status === 'behind' ? `剩下 ${pace.remainingUnits} 個單元，每個單元平均只有約 ${pace.perUnit} 天，建議加快一點或提高每日題數。`
+    : `剩下 ${pace.remainingUnits} 個單元，每個單元可用約 ${pace.perUnit} 天，並保留最後三週做模擬考。`;
+  // the exam-date pace reaches the daily practice here: when the current new-item quotas cannot finish the banks in
+  // time, the recommended quotas (學習分析「每日練習量建議」) are offered with one tap; nothing changes until tapped
+  const adv = planAdvice();
+  const advRows = adv.banks.filter(b2 => b2.key && b2.cur !== b2.rec);
+  const goalHint = adv.studyDays > 0 && adv.lagging.length && advRows.length
+    ? `<div class="small dim mt-2 hero-advice">照考試日期，建議每天：${advRows.map(b2 => `${esc(b2.name)} ${b2.cur}→${b2.rec}`).join('、')}。</div><div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-act="apply-advice">套用建議</button></div>`
+    : '';
+  const paceChip = pace.status === 'behind' ? '<span class="chip chip-warn">稍微落後</span>' : pace.status === 'ahead' ? '<span class="chip chip-ok">進度充裕</span>' : '<span class="chip chip-ok">進度正常</span>';
+
+  return `<div class="card">
+      <div class="card-head"><div class="card-title">考試倒數</div>${paceChip}</div>
+      <div class="stat"><span class="stat-v">${pace.daysLeft} 天</span><span class="stat-l">距離 ${esc(pace.exam.replace(/-/g, '/'))} JLPT</span></div>
+      <p class="small dim mt-2 mb-0">${esc(paceText)}</p>
+      ${goalHint}
+    </div>`;
+}
 function renderExam(view, sub, params) {
   if (sub === 'result' && EXAM && EXAM.finished) { renderExamResult(view); return; }
   const hist = state.examHistory || [];
@@ -5582,6 +5608,7 @@ function renderExam(view, sub, params) {
   const lvDefault = unitOrder(state.currentUnit) >= 6 ? 'N4' : 'N5';
   view.innerHTML = `
     <div class="page-head"><div><div class="page-title">模擬考</div><div class="page-sub">依照 JLPT 的三個科目與大題順序出題，同一份考卷不會重複題目。</div></div></div>
+    ${examCountdownHtml()}
     <div class="card">
       <div class="grid grid-3">
         <div class="field"><label>級數</label><select class="select" id="exLevel">${['N5', 'N4'].map(l => `<option ${l === lvDefault ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
