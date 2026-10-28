@@ -267,6 +267,15 @@ body.immersive .listen.full .example .jp { font-size: 22px; } body.immersive .li
 body.immersive .listen.full .listen-ctl { margin-top: 4px; gap: 36px; } body.immersive .listen.full .hint { display: none; } body.immersive .listen.full .listen-bar { margin-top: 4px; }
 body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive .listen.full .lplay svg { width: 26px; height: 26px; }
 .listen-full { margin-left: auto; }
+/* the theme picker button: name + count over a thin progress bar */
+.theme-pick { font: inherit; text-align: left; min-width: 0; padding: 6px 10px 7px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--bg-elev-2); color: var(--fg); cursor: pointer; }
+.theme-pick .tp-row { display: flex; align-items: baseline; gap: 8px; } .theme-pick .tp-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.theme-pick .tp-n { margin-left: auto; white-space: nowrap; } .theme-pick .tp-caret { color: var(--fg-3); line-height: 1; }
+.theme-pick .tp-bar { margin-top: 5px; height: 4px; }
+.theme-list { display: flex; flex-direction: column; gap: 6px; }
+.theme-row { font: inherit; text-align: left; width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg-elev); color: var(--fg); cursor: pointer; }
+.theme-row.on { border-color: var(--accent-line); background: var(--accent-soft); } .theme-row:disabled { opacity: .45; cursor: default; }
+.theme-row .tp-name { font-weight: 500; } .theme-row .bar { margin-top: 8px; }
 /* the player: icon and (word mode) the theme select, or a link to the notebook, on one line */
 .listen-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .listen-icon { display: inline-grid; place-items: center; color: var(--fg-2); flex: none; } .listen-icon svg { width: 22px; height: 22px; }
@@ -903,12 +912,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '99';   // keep equal to the number in sw.js CACHE ('nq-v99'); scripts/test.sh checks it
+const APP_VERSION = '100';   // keep equal to the number in sw.js CACHE ('nq-v100'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '99', from: '70', date: '2026-10-28', items: [
+  { v: '100', from: '70', date: '2026-10-28', items: [
+    '單字播放器多了「初識單詞」主題：自動收錄已學但還沒熟練的字，第一次用時預設就是它；之後選過哪個主題會記住。主題選單改成按鈕，上面有該主題的進度條（已學／熟悉／熟練），點開的清單裡每個主題也都有進度條和字數。',
     '聽一輪多了全螢幕播放：首頁播放器那排最右邊的放大圖示。點了畫面直接轉成橫的（手機不用轉、也不管有沒有鎖定旋轉），只剩字卡和播放鍵：日文在上、中文在下、例句最下，字依螢幕放到最大但整張塞得進去、不會捲動；✕ 回到首頁同一個分頁、播放不中斷。手機真的轉橫就用真的橫向。用雲端語音時，鎖定畫面和控制中心會顯示現在唸的字，上一個／下一個可以用（實驗性；iPhone 鎖屏仍可能停）。',
     '首頁錯題本播放頁右上角的「打開錯題本」捷徑拿掉（錯題本在「更多」裡）。',
     '錯題本的聽一輪只唸完整的句子：沒有對應中文的文法題（例如內容理解）、答案沒辦法標進句子裡（沒有藍字）的題目不再播。',
@@ -4046,7 +4056,7 @@ function handleClick(ev) {
   fn(el, ev);
 }
 const CHANGE_ACTIONS = {
-  'listen-theme': (el) => { setListenPref({ source: 'theme', theme: el.value }); if (LISTEN) { if (LISTEN.playing) listenStop(true); else LISTEN = null; } route(); }
+  'listen-theme': (el) => ACTIONS['listen-theme-pick']({ dataset: { theme: el.value } })
 };
 function handleChange(ev) {
   const el = ev.target.closest('[data-change]');
@@ -4213,7 +4223,7 @@ function renderToday(view) {
   const playerHtml = `
       <div class="listen-head">
         <span class="listen-icon" title="聽一輪" aria-label="聽一輪">${icon('listen')}</span>
-        ${isTheme ? `<select class="select grow" data-change="listen-theme" aria-label="單字主題">${vocabThemes().map(g => `<option value="${esc(g.c)}" ${LISTEN && LISTEN.source.theme === g.c ? 'selected' : ''}>${esc(g.c)}（${g.total} 字）</option>`).join('')}</select>`
+        ${isTheme ? themePickHtml(LISTEN ? LISTEN.source.theme : listenDefaultTheme())
           : `<span class="small muted">錯題本${mk.length ? `・${mk.length} 條` : ''}</span>`}
         ${listenReady ? `<button type="button" class="btn btn-sm btn-ghost btn-icon listen-full" data-act="listen-full" title="全螢幕播放" aria-label="全螢幕播放">${icon('expand')}</button>` : ''}
       </div>
@@ -5162,15 +5172,40 @@ function listenBuild() {
 const LISTEN_RATES = [0.8, 1, 1.3];
 function listenPref() { try { return Object.assign({ source: 'mistakes', theme: '', rate: 1 }, JSON.parse(localStorage.getItem('nq_listen_pref') || '{}')); } catch (e) { return { source: 'mistakes', theme: '', rate: 1 }; } }
 function setListenPref(patch) { try { localStorage.setItem('nq_listen_pref', JSON.stringify(Object.assign(listenPref(), patch))); } catch (e) { /* ignore */ } }
+// 初識單詞: a virtual theme for the player — every built-in word already met but not yet 熟練 (the ones worth hearing again)
+const REVIEW_THEME = '初識單詞';
+function listenThemeWords(theme) {
+  if (theme === REVIEW_THEME) return REG.vocab.filter(v => v.builtin && state.srs[v.key] && srsLevelLabel(state.srs[v.key], v.key) !== '已熟練');
+  return REG.vocab.filter(v => v.builtin && vocabTheme(v) === theme);
+}
+// the picker's rows: 初識單詞 first (seen / 熟悉 split, nothing 熟練 by definition), then the real themes with their bars
+function listenThemes() {
+  const words = listenThemeWords(REVIEW_THEME); const learned = words.filter(v => state.srs[v.key].b >= SRS_LEARNED).length;
+  return [{ c: REVIEW_THEME, total: words.length, seen: words.length, learned, mastered: 0, virtual: true }].concat(vocabThemes());
+}
 function listenDefaultTheme() {
-  const pref = listenPref().theme; const themes = vocabThemes();
-  if (pref && themes.some(g => g.c === pref)) return pref;
-  const fresh = dailyPlan().newV[0]; if (fresh) return vocabTheme(fresh);   // today's new words' theme
-  return themes.length ? themes[0].c : '';
+  const pref = listenPref().theme; const themes = listenThemes();
+  if (pref && themes.some(g => g.c === pref)) return pref;   // the last choice, wherever it was
+  if (themes[0].total) return REVIEW_THEME;   // otherwise the words met but not yet mastered
+  const fresh = dailyPlan().newV[0]; if (fresh) return vocabTheme(fresh);   // nothing met yet: today's new words' theme
+  return themes.length > 1 ? themes[1].c : '';
+}
+// the theme picker: a button showing the theme over its progress bar; tapping opens the list (name, bar, counts)
+function themePickHtml(theme) {
+  const g = listenThemes().find(x => x.c === theme) || { c: theme || '—', total: 0, seen: 0, learned: 0, mastered: 0 };
+  return `<button type="button" class="theme-pick grow" data-act="theme-pick" title="選單字主題" aria-label="單字主題：${esc(g.c)}"><span class="tp-row"><span class="tp-name">${esc(g.c)}</span><span class="tp-n tiny muted">${g.total} 字</span><span class="tp-caret">⌄</span></span>${stackBarHtml(g).replace('mt-2', 'tp-bar thin')}</button>`;
+}
+function themePickerModal() {
+  const cur = LISTEN && LISTEN.source.kind === 'theme' ? LISTEN.source.theme : listenDefaultTheme();
+  const rows = listenThemes().map(g => `<button type="button" class="theme-row${g.c === cur ? ' on' : ''}" data-act="listen-theme-pick" data-theme="${esc(g.c)}" ${g.total ? '' : 'disabled'}>
+      <span class="row between"><span class="tp-name">${esc(g.c)}</span><span class="tiny muted">${g.virtual ? `已學 ${g.seen - g.learned}・熟悉 ${g.learned}` : `已學 ${g.seen}・熟悉 ${g.learned}・熟練 ${g.mastered}`}・共 ${g.total} 字</span></span>
+      ${g.virtual ? '<span class="tiny muted" style="display:block;margin-top:2px">自動收錄已學但還沒熟練的字</span>' : ''}
+      ${stackBarHtml(g)}</button>`).join('');
+  openModal('單字主題', `<div class="theme-list">${rows}</div>`, { width: 560 });
 }
 function listenSourceFromPref() { const p = listenPref(); return p.source === 'theme' ? { kind: 'theme', theme: listenDefaultTheme() } : { kind: 'mistakes', cat: '' }; }
 function listenSourceEntries(source) {
-  if (source.kind === 'theme') return REG.vocab.filter(v => v.builtin && vocabTheme(v) === source.theme).map(v => listenEntryVocab(v, null));
+  if (source.kind === 'theme') return listenThemeWords(source.theme).map(v => listenEntryVocab(v, null));
   return activeMistakes().filter(m => listenable(m) && (!source.cat || (m.cat || '綜合') === source.cat)).map(listenEntry).filter(listenPlayable);
 }
 // a paused player over a source (the Today card and the full page share it); an existing paused one is refreshed
@@ -5397,6 +5432,8 @@ Object.assign(ACTIONS, {
   'listen-next': () => listenSeek(1),
   'listen-prev': () => listenSeek(-1),
   'listen-exit': () => listenStop(),
+  'theme-pick': () => themePickerModal(),
+  'listen-theme-pick': (el) => { const theme = el.dataset.theme || ''; closeModal(true); setListenPref({ source: 'theme', theme }); todayTab = 'theme'; if (LISTEN) { if (LISTEN.playing) listenStop(true); else LISTEN = null; } route(); },
   'listen-full': () => { if (!LISTEN) return; LISTEN.from = 'today'; immersiveEnter(); go(LISTEN.source.kind === 'theme' ? '#/vocab/listen' : '#/mistakes/listen'); },
   'listen-close': () => { const L = LISTEN; immersiveLeave(); if (L && L.from === 'today') { L.from = ''; todayTab = L.source.kind === 'theme' ? 'theme' : 'mistakes'; go('#/today'); } else listenStop(); },
   'listen-set': (el) => listenSet(el.dataset.key, el.dataset.key === 'zh' ? el.dataset.value === 'true' : el.dataset.value),
