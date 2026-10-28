@@ -1271,32 +1271,40 @@ def test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answe
 def test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab(b):
     js = """(() => { localStorage.removeItem('nq_listen_pref'); LISTEN = null; location.hash = '#/vocab'; route(); location.hash = '#/today'; route(); ACTIONS['today-tab']({ dataset: { tab: 'theme' } });
       const view = document.getElementById('view'); const btn = view.querySelector('.listen-head [data-act=listen-full]'); const L = LISTEN; LISTEN.idx = 2; listenPlay();
-      ACTIONS['listen-full'](btn); route(); const full = { hash: location.hash, same: LISTEN === L, playing: LISTEN.playing, idx: LISTEN.idx, immersive: document.body.classList.contains('immersive'), card: !!view.querySelector('.card.listen.full .lplay'), close: !!view.querySelector('[data-act=listen-close]'), exitBtn: !!view.querySelector('[data-act=listen-exit]'), head: /單字・/.test(view.querySelector('.card.listen.full').textContent), topbarHidden: getComputedStyle(document.querySelector('.topbar')).display === 'none', navHidden: getComputedStyle(document.querySelector('.bottomnav')).display === 'none', wordPx: parseFloat(getComputedStyle(view.querySelector('.flash .word')).fontSize) };
+      ACTIONS['listen-full'](btn); route(); const full = { hash: location.hash, same: LISTEN === L, playing: LISTEN.playing, idx: LISTEN.idx, immersive: document.body.classList.contains('immersive'), card: !!view.querySelector('.card.listen.full .lplay'), close: !!view.querySelector('[data-act=listen-close]'), exitBtn: !!view.querySelector('[data-act=listen-exit]'), head: /單字・/.test(view.querySelector('.card.listen.full').textContent), topbarHidden: getComputedStyle(document.querySelector('.topbar')).display === 'none', navHidden: getComputedStyle(document.querySelector('.bottomnav')).display === 'none', wordPx: parseFloat(getComputedStyle(view.querySelector('.flash .word')).fontSize), wordFills: view.querySelector('.flash .word').scrollWidth <= view.querySelector('.flash .word').clientWidth + 1 };
       const ms = navigator.mediaSession ? { title: navigator.mediaSession.metadata && navigator.mediaSession.metadata.title, state: navigator.mediaSession.playbackState } : null; const cur = listenCurrent();
       ACTIONS['listen-close'](); route(); const back = { hash: location.hash, tab: todayTab, same: LISTEN === L, playing: LISTEN && LISTEN.playing, idx: LISTEN && LISTEN.idx, immersive: document.body.classList.contains('immersive'), compact: !!view.querySelector('.card.today-card.listen.compact .lplay') };
       listenPause();
       // opened from the vocab themes page instead: ✕ ends the player and goes back there
       const tbtn = (location.hash = '#/vocab/themes', route(), document.querySelector('.theme-card [data-act=listen-theme-start]')); ACTIONS['listen-theme-start'](tbtn); route(); const fromThemes = document.body.classList.contains('immersive') && !!document.querySelector('[data-act=listen-close]');
       ACTIONS['listen-close'](); route(); const ended = LISTEN === null && location.hash === '#/vocab/themes' && !document.body.classList.contains('immersive');
-      const css = document.querySelector('style').textContent; const landscape = /orientation: landscape\\) and \\(max-height: 520px\\)/.test(css) && /\\.listen\\.full \\.flash \\{ display: grid; grid-template-columns: 1fr 1fr/.test(css);
+      const css = document.querySelector('style').textContent; const landscape = /orientation: portrait\\) \\{\\s*body\\.immersive \\.main \\{ position: fixed/.test(css) && /\\.listen\\.full \\.flash \\{ height: 100%; display: grid; grid-template-columns: minmax\\(0, 1fr\\) minmax\\(0, 1fr\\)/.test(css);
       localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ full, ms, curTitle: cur ? cur.word + '　' + cur.meaning : null, back, fromThemes, ended, landscape }); })()"""
     out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     f = r['full']; assert f['hash'] == '#/vocab/listen' and f['same'] and f['playing'] and f['idx'] == 2 and f['immersive'] and f['card'] and f['close'] and not f['exitBtn'] and f['head'], f
-    assert f['topbarHidden'] and f['navHidden'] and f['wordPx'] >= 50, f
+    assert f['topbarHidden'] and f['navHidden'] and f['wordPx'] >= 28 and f['wordFills'], f   # sized to its column, never overflowing it
     if r['ms'] is not None: assert r['ms']['title'] == r['curTitle'] and r['ms']['state'] == 'playing', r
     bk = r['back']; assert bk == {'hash': '#/today', 'tab': 'theme', 'same': True, 'playing': True, 'idx': 2, 'immersive': False, 'compact': True}, bk
     assert r['fromThemes'] and r['ended'] and r['landscape'], r
 
-def test_fullscreen_player_lays_out_two_columns_on_a_phone_held_sideways(b):
-    js = """(() => { localStorage.removeItem('nq_listen_pref'); LISTEN = null; const v = REG.vocab.find(x => x.builtin && vocabExamples(x)[0]); setListenPref({ source: 'theme', theme: vocabTheme(v) }); location.hash = '#/vocab/listen'; route();
-      LISTEN.idx = LISTEN.items.findIndex(e => e.ex); listenRenderNow(); const flash = document.querySelector('.card.listen.full .flash'); const cs = getComputedStyle(flash);
-      const word = flash.querySelector('.word').getBoundingClientRect(); const ex = flash.querySelector('.listen-ex').getBoundingClientRect();
-      const r = { cols: cs.gridTemplateColumns.split(' ').length, display: cs.display, sideBySide: ex.left > word.right - 1 && Math.abs(ex.top - word.top) < 200, wordPx: parseFloat(getComputedStyle(flash.querySelector('.word')).fontSize), fits: document.documentElement.scrollHeight <= innerHeight, play: !!document.querySelector('.lplay') };
-      listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify(r); })()"""
-    out = b.run([("metrics", (844, 390)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+def test_fullscreen_player_turns_a_portrait_phone_sideways_and_fills_the_columns(b):
+    js = """(() => { localStorage.removeItem('nq_listen_pref'); LISTEN = null; const v = REG.vocab.find(x => x.builtin && vocabExamples(x)[0] && jaPlain(x.w).length <= 4); setListenPref({ source: 'theme', theme: vocabTheme(v) }); location.hash = '#/vocab/listen'; route();
+      LISTEN.idx = LISTEN.items.findIndex(e => e.id === v.key); listenRenderNow(); const main = document.querySelector('.main'); const mr = main.getBoundingClientRect(); const flash = document.querySelector('.card.listen.full .flash'); const cs = getComputedStyle(flash);
+      const word = flash.querySelector('.word'); const wr = word.getBoundingClientRect(); const ex = flash.querySelector('.listen-ex').getBoundingClientRect();
+      const r = { rotated: getComputedStyle(main).transform !== 'none', box: [Math.round(mr.left), Math.round(mr.top), Math.round(mr.width), Math.round(mr.height)], cols: cs.gridTemplateColumns.split(' ').length, display: cs.display,
+        wordPx: parseFloat(word.style.fontSize), fills: word.scrollWidth <= word.clientWidth + 1 && word.scrollWidth >= word.clientWidth * 0.6, meaningPx: parseFloat(flash.querySelector('.meaning').style.fontSize),
+        exRightOfWord: (() => { const a = [wr.left, wr.top, wr.right, wr.bottom], b = [ex.left, ex.top, ex.right, ex.bottom]; return JSON.stringify({ a: a.map(Math.round), b: b.map(Math.round) }); })(), noPageScroll: document.documentElement.scrollHeight <= innerHeight + 1 && document.querySelector('.content').scrollHeight <= document.querySelector('.content').clientHeight + 1, play: !!document.querySelector('.lplay') };
+      // a grammar sentence (no example): one column, the sentence sized to fit its box
+      const g = LISTEN.items.find(e => e.kind === 'g'); let sent = null; if (g) { LISTEN.idx = LISTEN.items.indexOf(g); listenRenderNow(); const sEl = document.querySelector('.listen-sentence'); sent = { px: parseFloat(sEl.style.fontSize), cols: getComputedStyle(document.querySelector('.flash')).gridTemplateColumns.split(' ').length, fits: sEl.scrollHeight <= document.getElementById('listenCard').clientHeight }; }
+      listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify(Object.assign(r, { sent })); })()"""
+    out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['display'] == 'grid' and r['cols'] == 2 and r['sideBySide'] and r['wordPx'] >= 60 and r['fits'] and r['play'], r
+    assert r['rotated'] and r['box'] == [0, 0, 390, 844], r   # the rotated page still covers exactly the portrait screen
+    assert r['display'] == 'grid' and r['cols'] == 2 and r['wordPx'] >= 60 and r['fills'] and 20 <= r['meaningPx'] <= 48 and r['noPageScroll'] and r['play'], r
+    out2 = b.run([("metrics", (844, 390)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r2 = json.loads(out2[-1])
+    assert not r2['rotated'] and r2['box'] == [0, 0, 844, 390] and r2['cols'] == 2 and r2['wordPx'] >= 60 and r2['fills'] and r2['noPageScroll'], r2   # a phone really held sideways: no CSS turn
 
 # ---- 2026-10-28: the install hint ----
 def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed(b):
@@ -1347,7 +1355,7 @@ if __name__ == "__main__":
              test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
-             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_lays_out_two_columns_on_a_phone_held_sideways]
+             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fills_the_columns]
     failed = 0
     try:
         for t in tests:
