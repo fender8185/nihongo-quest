@@ -138,6 +138,50 @@ def test_daily_queue_carries_the_drills_and_the_today_page_counts_them(b):
     r = json.loads(ev(b, js))
     assert r['c'] >= 1 and r['c'] <= 3 and r['newC'] == r['c'] and r['remaining'] and r['shows'], r
 
+# ---- Final review fixes ----
+def test_previous_question_format_does_not_change_the_answer_mode_of_an_ordinary_item(b):
+    # prepareEntry passes avoidFmt: SESSION.lastFmt (a string) for every ordinary question; only an encore may steer the mode
+    js = f"""(() => {{ const g = {CONJ_ITEM}; const out = {{}};
+      state.settings.conjInput = 'auto'; out.newAfterChoice = makeGrammarQuestion(g, {{ avoidFmt: 'g-conj' }}).fmt;
+      srsAnswer(g.key, true); state.srs[g.key].b = 1;
+      out.learnedAfterTyped = makeGrammarQuestion(g, {{ avoidFmt: 'g-conj-type' }}).fmt;
+      state.settings.conjInput = 'tiles'; const q = makeGrammarQuestion(g, {{ avoidFmt: 'g-conj-type' }}); out.tilesAfterTyped = q && q.fmt;
+      state.settings.conjInput = 'type'; const q2 = makeGrammarQuestion(g, {{ avoidFmt: 'g-conj-type' }}); out.typeAfterTyped = q2 && q2.fmt;
+      out.encoreStill = makeGrammarQuestion(g, {{ encore: true, avoidFmts: ['g-conj-type'], avoidFmt: ['g-conj-type'] }});
+      return JSON.stringify(out); }})()"""
+    r = json.loads(ev(b, js))
+    assert r['newAfterChoice'] == 'g-conj' and r['learnedAfterTyped'] == 'g-conj-type', r
+    assert r['tilesAfterTyped'] == 'g-conj-type' and r['typeAfterTyped'] == 'g-conj-type' and r['encoreStill'] is None, r
+
+def test_drill_cap_counts_what_was_answered_today(b):
+    js = """(() => { state.currentUnit = 'm18'; state.settings.conjDrillPerDay = 3; const t = todayStr();
+      REG.drills.forEach(d => { srsAnswer(d.key, true); state.srs[d.key].due = t; state.srs[d.key].last = addDays(t, -3); });   // every family due today
+      const p1 = dailyPlan(); const first = p1.dueC.length;
+      p1.dueC.slice(0, 2).forEach(d => srsAnswer(d.key, true));   // two answered today
+      const p2 = dailyPlan();
+      return JSON.stringify({ first, second: p2.dueC.length, newC: p2.newC.length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'first': 3, 'second': 1, 'newC': 0}, r
+
+def test_enter_during_ime_composition_does_not_submit(b):
+    js = "(() => { " + setup('type') + """
+      const inp = document.querySelector('input.conj-in'); inp.value = 'いっ';
+      inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true })); const open1 = !e.done;
+      inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 229, bubbles: true })); const open2 = !e.done;
+      inp.value = answerKana(ans); inp.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); const out = { open1, open2, done: e.done, ok: e.chosen === q.answer };
+      """ + TEARDOWN + " return JSON.stringify(out); })()"
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['open1'] and r['open2'] and r['done'] and r['ok'], r
+
+def test_first_wrong_character_is_found_against_the_kana_answer_when_kana_was_typed(b):
+    js = "(() => { " + setup('type') + """
+      const kana = answerKana(ans); const bad = kana.slice(0, -1) + (kana.endsWith('た') ? 'て' : 'た');   // 行って → いった: only the last kana differs
+      document.querySelector('input.conj-in').value = bad; document.querySelector('[data-act=conj-submit]').click();
+      const mark = document.querySelector('.fb-diff mark'); const out = { marked: mark && mark.textContent, expected: bad.slice(-1), ok: e.chosen === q.answer };
+      """ + TEARDOWN + " return JSON.stringify(out); })()"
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert not r['ok'] and r['marked'] == r['expected'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

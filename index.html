@@ -2772,7 +2772,7 @@ function makeGrammarQuestion(g, ctx = {}) {
     }
     // 輸入模式: the learner spells the form with kana tiles or types it (no options to eliminate)
     const typedFmt = isV ? 'g-conj-type' : 'g-adj-type';
-    const avoid = [].concat(ctx.avoidFmts || ctx.avoidFmt || []);
+    const avoid = ctx.encore ? [].concat(ctx.avoidFmts || ctx.avoidFmt || []) : [];   // only an encore is steered by the formats used; an ordinary question follows mastery
     const choiceFmt = isV ? 'g-conj' : 'g-adj';
     let mode = ctx.forceFmt === typedFmt ? (state.settings.conjInput === 'type' ? 'type' : 'tiles')
       : (ctx.forceFmt === 'g-conj' || ctx.forceFmt === 'g-adj') ? 'choice' : conjInputMode(rec);
@@ -3270,8 +3270,9 @@ function dailyPlan(size = state.settings.sessionSize) {
   }
   const newG = newGrammarCandidates().slice(0, wantG);
   // 變化練習: due families first, then families not started yet, at most conjDrillPerDay a day; only forms a reached unit teaches
-  const capC = Math.max(0, Number(s.conjDrillPerDay) || 0);
   const cPool = (REG.drills || []).filter(d => unitOrder(d.u) <= curIdx);
+  const doneC = cPool.filter(d => { const r = state.srs[d.key]; return r && r.last === t; }).length;
+  const capC = Math.max(0, (Number(s.conjDrillPerDay) || 0) - doneC);
   const dueC = cPool.filter(d => isDueToday(d, t)).sort(byDue).slice(0, capC);
   const newC = cPool.filter(d => !state.srs[d.key]).sort((a, b) => unitOrder(a.u) - unitOrder(b.u)).slice(0, Math.max(0, Math.min(capC - dueC.length, capC - (state.today.newC || 0))));
   const newV = newVocabCandidates(vPool, n4Open).slice(0, wantV + Math.max(0, wantG - newG.length));
@@ -3737,7 +3738,9 @@ function feedbackHtml(e) {
   // a spelled or typed conjugation: show what was produced, the first wrong character marked
   let diff = '';
   if (!ok && q.custom && q.custom.endsWith('-type') && q.options[1].text && q.options[1].text !== '（看了答案）') {
-    const typed = [...jaPlain(q.options[1].text)]; const i = firstDiff(typed.join(''), jaPlain(right.text));
+    const typed = [...jaPlain(q.options[1].text)];
+    const target = HAS_KANJI.test(typed.join('')) ? jaPlain(right.text) : kanaKey(answerKana(right.text));   // kana typed → compare with the kana form, else the first char is always "wrong"
+    const i = firstDiff(typed.join(''), target);
     const marked = i < 0 ? esc(typed.join('')) : `${esc(typed.slice(0, i).join(''))}<mark>${esc(typed[i] || '＿')}</mark>${esc(typed.slice(i + 1).join(''))}`;
     diff = `<div class="fb-diff jp">你的答案：${marked}</div>`;
   }
@@ -4187,7 +4190,10 @@ function handleChange(ev) {
 
 // ---------- keyboard ----------
 function handleKey(ev) {
-  if (ev.key === 'Enter' && ev.target && ev.target.classList && ev.target.classList.contains('conj-in')) { ev.preventDefault(); ACTIONS['conj-submit'](); return; }
+  if (ev.key === 'Enter' && ev.target && ev.target.classList && ev.target.classList.contains('conj-in')) {
+    if (ev.isComposing || ev.keyCode === 229) return;   // the Enter that commits an IME conversion (Japanese keyboard) is not a submit
+    ev.preventDefault(); ACTIONS['conj-submit'](); return;
+  }
   const tag = (ev.target && ev.target.tagName || '').toUpperCase();
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (ev.target && ev.target.isContentEditable)) return;
   if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
