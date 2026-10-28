@@ -6,7 +6,7 @@ node --check sw.js && node --check sync-core.js && node --check data.js
 # every built-in grammar item names the lesson section it belongs to (-1 = none; the practice card is skipped for those)
 node -e "const D=JSON.parse(require('fs').readFileSync('data.js','utf8').split('\n')[2].replace(/^const DATA = /,'').replace(/;\s*$/,''));const bad=D.GRAMMAR.filter(g=>!Number.isInteger(g.sec)||g.sec<-1||g.sec>=(D.LESSONS[g.u]||{sections:[]}).sections.length);if(bad.length){console.log('grammar items without a valid sec:',bad.slice(0,5).map(g=>g.id).join(' '),bad.length);process.exit(1)}"
 # the version shown in settings must match the service-worker cache name
-[ "$(grep -o "nq-v[0-9]*" sw.js | head -1 | tr -d -c 0-9)" = "$(grep -o "const APP_VERSION = '[0-9]*'" index.html | tr -d -c 0-9)" ] || { echo "APP_VERSION and sw.js CACHE differ"; exit 1; }
+[ "$(grep -o "nq-v[0-9.]*" sw.js | head -1 | tr -d -c 0-9.)" = "$(grep -o "const APP_VERSION = '[0-9.]*'" index.html | tr -d -c 0-9.)" ] || { echo "APP_VERSION and sw.js CACHE differ"; exit 1; }
 # the data file version must agree in index.html (<script src>), sw.js (PRECACHE) and data.js (header)
 dv="$(grep -o 'data.js?v=[0-9]*' index.html | tr -d -c 0-9)"
 [ "$dv" = "$(grep -o 'data.js?v=[0-9]*' sw.js | tr -d -c 0-9)" ] && [ "$dv" = "$(grep -o 'DATA_VERSION [0-9]*' data.js | tr -d -c 0-9)" ] || { echo "data.js version differs between index.html, sw.js and data.js"; exit 1; }
@@ -14,7 +14,7 @@ node tests/sync-core.test.js | grep -E "^# (pass|fail)"
 # a release must carry a new version: app files changed against origin/main ⇒ APP_VERSION differs; data.js changed ⇒ data version differs
 if git rev-parse --verify -q origin/main >/dev/null 2>&1; then
   if ! git diff --quiet origin/main -- index.html sw.js sync-core.js; then
-    [ "$(git show origin/main:index.html | grep -o "const APP_VERSION = '[0-9]*'")" != "$(grep -o "const APP_VERSION = '[0-9]*'" index.html)" ] || { echo "index.html/sw.js/sync-core.js changed since origin/main but APP_VERSION is unchanged"; exit 1; }
+    [ "$(git show origin/main:index.html | grep -o "const APP_VERSION = '[0-9.]*'")" != "$(grep -o "const APP_VERSION = '[0-9.]*'" index.html)" ] || { echo "index.html/sw.js/sync-core.js changed since origin/main but APP_VERSION is unchanged"; exit 1; }
   fi
   if ! git diff --quiet origin/main -- data.js; then
     [ "$(git show origin/main:data.js 2>/dev/null | grep -o 'DATA_VERSION [0-9]*')" != "$(grep -o 'DATA_VERSION [0-9]*' data.js)" ] || { echo "data.js changed since origin/main but its DATA_VERSION is unchanged"; exit 1; }
