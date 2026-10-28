@@ -1255,17 +1255,18 @@ def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_aw
     js = """(() => { localStorage.removeItem('nq_install_hint'); state.introSeen = true; state.lastBackup = todayStr(); saveState(); const view = document.getElementById('view'); const show = () => { location.hash = '#/today'; route(); return view.querySelector('.install-banner'); };
       INSTALL_FORCE = { platform: 'ios', safari: true }; const ios = show(); const iosBtns = ios ? [...ios.querySelectorAll('[data-act]')].map(b => b.dataset.act) : null;
       ACTIONS['install-how'](); const modal = document.querySelector('.modal'); const guide = modal ? modal.textContent : ''; closeModal(true);
-      const iosGuide = /加入主畫面/.test(guide) && /分享/.test(guide) && /獨立的儲存空間/.test(guide) && !/⋮/.test(guide);
-      INSTALL_FORCE = { platform: 'ios', safari: false }; const chromeIos = /改用 Safari/.test(installGuideHtml());
+      const iosGuide = /加入主畫面/.test(guide) && /分享/.test(guide) && /獨立的儲存空間/.test(guide) && !/⋮/.test(guide) && /Brave/.test(guide);
+      const iosHtml = installGuideHtml(); const chromeIos = /href="x-safari-https?:\\/\\/[^"]+#\\/today"/.test(iosHtml) && /data-act="copy-url"/.test(iosHtml) && /用 Safari 開啟/.test(iosHtml);
+      INSTALL_FORCE = { platform: 'android', brave: true }; const braveAnd = /Brave 點右上角/.test(installGuideHtml()) && /加到主畫面」，再選「安裝」/.test(installGuideHtml()) && !/x-safari/.test(installGuideHtml());
       INSTALL_FORCE = { platform: 'android', canPrompt: true }; const and = show(); const andBtns = and ? [...and.querySelectorAll('[data-act]')].map(b => b.dataset.act) : null; const andGuide = /安裝應用程式/.test(installGuideHtml()) && /data-act="install-prompt"/.test(installGuideHtml());
       INSTALL_FORCE = { platform: 'desktop', firefox: true, touch: false }; const desk = !show() && /Firefox 不支援/.test(installGuideHtml());
       INSTALL_FORCE = { platform: 'ios', standalone: true }; const standalone = !show() && /安裝好的 app/.test(installGuideHtml());
       INSTALL_FORCE = { platform: 'ios' }; show(); ACTIONS['install-dismiss'](); const dismissed = !view.querySelector('.install-banner') && !!localStorage.getItem('nq_install_hint');
       openSettings('look'); const inSettings = /加到主畫面（安裝成 app）/.test(document.querySelector('.modal').textContent) && /加入主畫面/.test(document.querySelector('.modal').textContent); closeModal(true);
-      INSTALL_FORCE = null; localStorage.removeItem('nq_install_hint'); return JSON.stringify({ ios: !!ios, iosBtns, iosGuide, chromeIos, and: !!and, andBtns, andGuide, desk, standalone, dismissed, inSettings }); })()"""
+      INSTALL_FORCE = null; localStorage.removeItem('nq_install_hint'); return JSON.stringify({ ios: !!ios, iosBtns, iosGuide, chromeIos, braveAnd, and: !!and, andBtns, andGuide, desk, standalone, dismissed, inSettings }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['ios'] and r['iosBtns'] == ['install-how', 'install-dismiss'] and r['iosGuide'] and r['chromeIos'], r
+    assert r['ios'] and r['iosBtns'] == ['install-how', 'install-dismiss'] and r['iosGuide'] and r['chromeIos'] and r['braveAnd'], r
     assert r['and'] and r['andBtns'] == ['install-prompt', 'install-dismiss'] and r['andGuide'], r
     assert r['desk'] and r['standalone'] and r['dismissed'] and r['inSettings'], r
 

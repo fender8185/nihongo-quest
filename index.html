@@ -870,13 +870,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '92';   // keep equal to the number in sw.js CACHE ('nq-v92'); scripts/test.sh checks it
+const APP_VERSION = '93';   // keep equal to the number in sw.js CACHE ('nq-v93'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '92', from: '70', date: '2026-10-28', items: [
-    '在瀏覽器裡開的手機版，首頁會提示「加到主畫面」：點「怎麼做」有分步驟說明（iPhone／Android／電腦各一份），Android Chrome 可以直接按「安裝」；按「知道了」就不再出現。同一份說明放在「設定 › 外觀 › 加到主畫面」。',
+  { v: '93', from: '70', date: '2026-10-28', items: [
+    '在瀏覽器裡開的手機版，首頁會提示「加到主畫面」：點「怎麼做」有分步驟說明（iPhone／Android／電腦各一份），iPhone 有「用 Safari 開啟」和「複製網址」（Brave 等瀏覽器沒有加入主畫面，一定要用 Safari），Android Chrome／Brave 可以直接按「安裝」；按「知道了」就不再出現。同一份說明放在「設定 › 外觀 › 加到主畫面」。',
     '首頁只剩一張卡：最上面「練習／錯題本／單字」三段切換，一次只顯示一種，每次進首頁都在「練習」。練習：進度圓環、開始練習、日期與連續天數，以及「說明」「範圍」「目前單元」三個收合小標（單元的進度條、圖例、看講義／練習本單元都在裡面）。錯題本／單字：就是聽一輪播放器，字卡區在手機上吃掉剩下的高度，「1 / 23・第 1 輪」在卡片右下角；播放中切回「練習」不會停，切換上會有綠點。頁首「今日」拿掉；單元進度的圖例改成「熟練／熟悉／初識」。',
     '聽一輪：按 1／2、隨機、速度不再跳到別的項目（原本首頁重畫時會把播放器重建、重洗）；單字的例句唸完接著唸例句的中文。',
     '聽一輪的膠囊改成圖示：單字／文法（二選一，錯題本模式才有）、隨機（亮起＝隨機）、1／2（日文→中文，或日文→中文→日文）、速度（一、二、三個箭頭＝0.8×、1×、1.3×，只影響聽一輪，會記住）；中文一定會唸，開關拿掉。首頁卡上調整設定不再跳到獨立頁面。',
@@ -8503,11 +8503,17 @@ function installInfo() {
   const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);   // iPadOS reports itself as a Mac
   const platform = ios ? 'ios' : /Android/.test(ua) ? 'android' : /Macintosh/.test(ua) ? 'mac' : 'desktop';
   const touch = navigator.maxTouchPoints > 0 || (window.matchMedia && matchMedia('(pointer: coarse)').matches);
-  return { platform, standalone, touch, safari: /Safari/.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS|Edg\//.test(ua), firefox: /Firefox|FxiOS/.test(ua), canPrompt: Boolean(deferredInstall) };
+  const brave = Boolean(navigator.brave && typeof navigator.brave.isBrave === 'function');   // desktop／Android Brave; the iOS one looks exactly like Safari
+  return { platform, standalone, touch, safari: /Safari/.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS|Edg\//.test(ua) && !brave, firefox: /Firefox|FxiOS/.test(ua), brave, canPrompt: Boolean(deferredInstall) };
 }
+// iOS: only Safari (and Chrome／Edge／Firefox since iOS 16.4) can add a web app to the Home Screen; Brave and most other
+// browsers cannot, and from a web page nothing can install itself. `x-safari-https://` opens the page in Safari (works on
+// iOS 15 and 17+, not 16; undocumented), with the address to copy as the fallback.
+function safariUrl() { return `x-safari-${location.protocol.replace(':', '')}://${location.host}${location.pathname}#/today`; }
+function appUrl() { return `${location.origin}${location.pathname}`; }
 function installSteps(info) {
-  if (info.platform === 'ios') return { title: 'iPhone／iPad', steps: [`在 ${info.safari ? 'Safari' : '瀏覽器'} 點「分享」按鈕（方框加向上箭頭；iPhone 在下方，iPad 在上方）。`, '往下捲，點「加入主畫面」。', '右上角按「新增」。主畫面會多一個「Nihongo」圖示，以後從那裡開。'], note: info.safari ? '' : '分享選單裡沒有「加入主畫面」的話，改用 Safari 開這個網址再做一次。' };
-  if (info.platform === 'android') return { title: 'Android', steps: ['在 Chrome 點右上角的「⋮」。', '點「安裝應用程式」（舊版叫「加到主畫面」）。', '確認後主畫面會多一個「Nihongo」圖示。'], note: info.firefox ? 'Firefox 的選單叫「安裝」或「加到主畫面」。' : '' };
+  if (info.platform === 'ios') return { title: 'iPhone／iPad', steps: ['用 Safari 開這個網址（Brave 和大多數其他瀏覽器沒有「加入主畫面」；Chrome／Edge／Firefox 有）。', '點「分享」按鈕（方框加向上箭頭；iPhone 在下方，iPad 在上方）。', '往下捲，點「加入主畫面」。', '右上角按「新增」。主畫面會多一個「Nihongo」圖示，以後從那裡開。'], note: '', safari: true };
+  if (info.platform === 'android') return { title: 'Android', steps: [`在 ${info.brave ? 'Brave' : 'Chrome'} 點右上角的「⋮」。`, info.brave ? '點「加到主畫面」，再選「安裝」（不是「建立捷徑」）。' : '點「安裝應用程式」（舊版叫「加到主畫面」）。', '確認後主畫面會多一個「Nihongo」圖示。'], note: info.firefox ? 'Firefox 的選單叫「安裝」或「加到主畫面」。' : '' };
   if (info.platform === 'mac') return { title: 'Mac', steps: ['Safari：選單列「檔案」→「加入 Dock」。', 'Chrome／Edge：網址列右端的「安裝」圖示，或「⋮」→「儲存並分享」→「安裝 Nihongo Quest」。'], note: '' };
   return { title: '電腦', steps: ['Chrome／Edge：網址列右端的「安裝」圖示，或「⋮」→「儲存並分享」→「安裝 Nihongo Quest」。'], note: info.firefox ? 'Firefox 不支援安裝網頁 app，加書籤直接用就好。' : '' };
 }
@@ -8518,6 +8524,7 @@ function installGuideHtml(info = installInfo()) {
     <div class="label mt-2">${g.title}</div>
     <ol class="small mt-1">${g.steps.map(x => `<li>${x}</li>`).join('')}</ol>
     ${g.note ? `<p class="hint">${g.note}</p>` : ''}
+    ${g.safari && !info.standalone ? `<div class="row-wrap mt-2"><a class="btn btn-sm btn-primary" href="${esc(safariUrl())}">用 Safari 開啟</a><button type="button" class="btn btn-sm" data-act="copy-url">複製網址</button></div><p class="hint">「用 Safari 開啟」在 iOS 16 沒有作用；那就複製網址，開 Safari 貼上。</p>` : ''}
     <p class="hint">安裝後的 app 和瀏覽器分頁是兩個獨立的儲存空間，進度不會自己過去：先在「設定 › 資料」登入雲端同步，或下載備份再到 app 裡匯入。</p>
     ${info.canPrompt ? '<button type="button" class="btn btn-sm btn-primary mt-2" data-act="install-prompt">安裝</button>' : ''}
   </div>`;
@@ -8531,6 +8538,7 @@ function installBannerHtml() {
 }
 Object.assign(ACTIONS, {
   'install-how': () => openModal('加到主畫面', installGuideHtml(), { width: 520 }),
+  'copy-url': async () => { const url = appUrl(); try { await navigator.clipboard.writeText(url); toast('已複製網址，開 Safari 貼上。'); } catch (e) { prompt('複製這個網址，到 Safari 貼上：', url); } },
   'install-dismiss': () => { try { localStorage.setItem('nq_install_hint', todayStr()); } catch (e) { /* ignore */ } route(); },
   'install-prompt': async () => { const p = deferredInstall; if (!p) return; deferredInstall = null; try { p.prompt(); await p.userChoice; } catch (e) { /* dismissed */ } route(); }
 });
