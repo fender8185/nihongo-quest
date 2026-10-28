@@ -380,6 +380,11 @@ details.mrow .mbody { padding: 4px 0 14px; }
 .fill-ans { color: var(--accent); font-weight: 600; }
 .listen-sentence { font-size: 24px; line-height: 1.9; margin-top: 10px; }
 .listen-ex { text-align: left; }
+/* the item area has a fixed height so the transport and pills never move when a word card gives way to a sentence card */
+.listen #listenCard { height: 290px; display: grid; align-content: center; overflow-y: auto; }
+.listen.compact #listenCard { height: 240px; }
+.listen.compact .flash { padding: 14px 8px 6px; } .listen.compact .flash .word { font-size: 34px; } .listen.compact .flash .meaning { font-size: 19px; }
+.listen.compact .listen-sentence { font-size: 20px; } .listen.compact .lplay { width: 60px; height: 60px; } .listen.compact .lplay svg { width: 28px; height: 28px; }
 .listen-bar { height: 3px; border-radius: 2px; background: var(--bg-sunken); margin: 6px 18px 0; overflow: hidden; }
 .listen-bar span { display: block; height: 100%; background: var(--accent); width: 0; transition: width .25s; }
 .listen-ctl { display: flex; align-items: center; justify-content: center; gap: 28px; margin-top: 16px; }
@@ -836,12 +841,14 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '83';   // keep equal to the number in sw.js CACHE ('nq-v83'); scripts/test.sh checks it
+const APP_VERSION = '84';   // keep equal to the number in sw.js CACHE ('nq-v84'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '83', from: '70', date: '2026-10-28', items: [
+  { v: '84', from: '70', date: '2026-10-28', items: [
+    '離線下載分成「日文音檔」和「中文音檔」兩顆按鈕，一樣收在設定 › 語音的「完全離線使用（進階）」裡。',
+    '首頁的錯題本卡直接是「聽一輪」播放器（同樣的控制列），原本的分類統計和按鈕拿掉；右上「打開錯題本」進完整頁。在首頁和錯題本的播放頁之間切換不會中斷播放。播放器的內容區固定高度，單字卡換成文法卡時按鈕不會跳。',
     '「聽一輪」唸排序題時改唸排好的完整句子（★ 的片段標色），不再把空格挖掉唸；聽力和閱讀的錯題不進聽一輪。',
     '「聽一輪」的控制列重新設計：中間一顆圓形播放鍵、兩側上一個／下一個不加框，像一般音樂播放器；下面一排四顆膠囊（範圍、順序、中文、一次／兩次）點一下輪換。「兩次」是日文→中文→日文再一次。預設只單字、隨機、中文、兩次；日文和中文之間的停頓縮短。多一條進度線顯示在清單裡的位置。',
     '中文也有雲端音檔：單字意思、例句與文法的翻譯、漢字字義用 Google 的台灣華語聲音預先生成（約 6,000 段），「聽一輪」的中文優先用它，沒有的句子才退回裝置內建的中文語音。生成工具同一顆按鈕一起跑，已有的檔案略過。',
@@ -3760,7 +3767,7 @@ function route() {
   const tip = document.getElementById('chartTip');
   if (tip) tip.classList.remove('show');
   if (r.name !== 'practice') { document.body.classList.remove('practicing'); }
-  if (LISTEN && !(r.name === 'mistakes' && r.parts[1] === 'listen')) listenStop(true);   // leaving the player ends it
+  if (LISTEN && !(r.name === 'today' || (r.name === 'mistakes' && r.parts[1] === 'listen'))) listenStop(true);   // leaving the pages that host the player ends it
   if (r.name === 'practice') { renderPractice(); return; }
   if (r.name === 'exam' && r.parts[1] === 'run') { renderExamRunner(); return; }
   lastMainRoute = location.hash || '#/today';
@@ -4093,9 +4100,7 @@ function renderToday(view) {
     : '';
   const paceChip = pace.status === 'behind' ? '<span class="chip chip-warn">稍微落後</span>' : pace.status === 'ahead' ? '<span class="chip chip-ok">進度充裕</span>' : '<span class="chip chip-ok">進度正常</span>';
 
-  const catCount = {};
-  mk.forEach(m => { catCount[m.cat || '綜合'] = (catCount[m.cat || '綜合'] || 0) + (m.count || 1); });
-  const topCats = Object.entries(catCount).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const listenReady = listenInit();   // the notebook card is the 聽一輪 player (paused until tapped; keeps playing if it already was)
 
   const introBanner = !state.introSeen && Object.keys(state.srs).length < 40
     ? `<div class="banner intro-banner"><div class="grow">第一次用？先看「第 0 週」：假名、句子骨架、以及題目上會出現的名詞（い形容詞、五段動詞……）。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button><button type="button" class="btn btn-sm btn-ghost" data-act="intro-dismiss">知道了</button></div></div>`
@@ -4137,17 +4142,16 @@ function renderToday(view) {
       </div>
     </div>
 
-    <div class="grid grid-3">
+    <div class="card listen compact">
+      <div class="card-head"><div class="card-title">錯題本・聽一輪</div><button type="button" class="btn btn-sm btn-ghost" data-act="nav" data-route="#/mistakes">打開錯題本${mk.length ? `（${mk.length}）` : ''}</button></div>
+      ${listenReady ? listenPanelHtml(false) : '<div class="small muted">目前沒有可以聽的錯題。</div>'}
+    </div>
+    <div class="grid grid-2">
       <div class="card">
         <div class="card-head"><div class="card-title">考試倒數</div>${paceChip}</div>
         <div class="stat"><span class="stat-v">${pace.daysLeft} 天</span><span class="stat-l">距離 ${esc(pace.exam.replace(/-/g, '/'))} JLPT</span></div>
         <p class="small dim mt-2 mb-0">${esc(paceText)}</p>
         ${goalHint}
-      </div>
-      <div class="card">
-        <div class="card-head"><div class="card-title">錯題本</div><span class="chip ${mk.length ? 'chip-bad' : ''}">${mk.length} 題</span></div>
-        ${topCats.length ? `<div class="small dim">${topCats.map(([c, n]) => `${esc(c)}（${n}）`).join('、')}</div>` : '<div class="small muted">目前沒有待複習的錯題。</div>'}
-        <div class="row-wrap mt-3">${mk.length ? '<button type="button" class="btn btn-sm" data-act="start-mistakes">練習錯題</button>' : ''}<button type="button" class="btn btn-sm btn-ghost" data-act="nav" data-route="#/mistakes">查看</button></div>
       </div>
       <div class="card">
         <div class="card-head"><div class="card-title">單字</div><span class="chip">${vs.due} 待複習</span></div>
@@ -4159,6 +4163,7 @@ function renderToday(view) {
     </div>
 
 `;
+  listenRenderNow();
 }
 
 // 學習紀錄 (學習分析): the calendar, streak tiles and the recent days
@@ -5081,13 +5086,20 @@ function listenBuild() {
   list = L.order === 'random' ? shuffle(list) : list.slice().sort((a, b) => mistakePriority(a.m, b.m));
   L.items = list; L.idx = 0;
 }
-function startListen(cat = '') {
+// a paused player over the notebook (the Today card and the full page share it); an existing paused one is refreshed
+function listenInit(cat = '') {
   const src = activeMistakes().filter(m => listenable(m) && (!cat || (m.cat || '綜合') === cat));
-  if (!src.length) { toast('錯題本目前是空的。'); return false; }
+  if (LISTEN && LISTEN.playing) return LISTEN.items.length > 0;
+  const keep = LISTEN ? { order: LISTEN.order, scope: LISTEN.scope, zh: LISTEN.zh, twice: LISTEN.twice } : null;
   // defaults: words only, shuffled, Chinese on, 兩次 (Japanese → Chinese → Japanese again); no words in the notebook → everything
-  LISTEN = { all: src.map(listenEntry), items: [], idx: 0, round: 1, playing: false, order: 'random', scope: 'v', zh: true, twice: true, run: 0, wake: null };
+  LISTEN = Object.assign({ all: src.map(listenEntry), items: [], idx: 0, round: 1, playing: false, order: 'random', scope: 'v', zh: true, twice: true, run: 0, wake: null }, keep || {});
   if (!LISTEN.all.some(e => e.kind === 'v')) LISTEN.scope = 'all';
   listenBuild();
+  return LISTEN.items.length > 0;
+}
+function startListen(cat = '') {
+  if (LISTEN && !LISTEN.playing) LISTEN = null;
+  if (!listenInit(cat)) { toast('錯題本目前是空的。'); return false; }
   go('#/mistakes/listen');
   listenPlay();
   return true;
@@ -5107,11 +5119,13 @@ function listenPlay() {
 }
 function listenPause() {
   if (!LISTEN) return;
-  LISTEN.playing = false; LISTEN.run++; stopSpeaking(); listenWake(false); listenRenderNow();
+  if (LISTEN.playing) stopSpeaking();   // only a playing player owns the speech; a paused one must not cut a listening question
+  LISTEN.playing = false; LISTEN.run++; listenWake(false); listenRenderNow();
 }
 function listenStop(silent) {
   if (!LISTEN) return;
-  LISTEN.playing = false; LISTEN.run++; stopSpeaking(); listenWake(false); LISTEN = null;
+  if (LISTEN.playing) stopSpeaking();
+  LISTEN.playing = false; LISTEN.run++; listenWake(false); LISTEN = null;
   if (!silent) go('#/mistakes');
 }
 function listenSeek(delta) {
@@ -5183,12 +5197,11 @@ function listenRenderNow() {
   const b = document.querySelector('[data-act=listen-toggle]'); if (b) b.innerHTML = icon(L.playing ? 'pause' : 'play');
   const bar = document.getElementById('listenBar'); if (bar) bar.style.width = `${L.items.length ? Math.round((Math.min(L.idx, L.items.length - 1) + 1) / L.items.length * 100) : 0}%`;
 }
-function renderListen(view) {
-  if (!LISTEN) { if (!startListen()) { go('#/mistakes'); } return; }
+function listenPanelHtml(full) {
   const L = LISTEN;
   const scopeLabel = { all: '全部', v: '只單字', g: '只文法' }[L.scope] || '全部';
-  view.innerHTML = `<div class="card listen">
-      <div class="row between small muted"><span id="listenCount"></span><button type="button" class="btn btn-sm btn-ghost" data-act="listen-exit">結束</button></div>
+  return `
+      <div class="row between small muted"><span id="listenCount"></span>${full ? '<button type="button" class="btn btn-sm btn-ghost" data-act="listen-exit">結束</button>' : ''}</div>
       <div id="listenCard"></div>
       <div class="listen-bar"><span id="listenBar"></span></div>
       <div class="listen-ctl">
@@ -5202,8 +5215,11 @@ function renderListen(view) {
         <button type="button" class="lopt${L.zh ? ' on' : ''}" data-act="listen-cycle" data-key="zh" title="唸中文意思／翻譯">${L.zh ? '中文' : '中文關'}</button>
         <button type="button" class="lopt${L.twice ? ' on' : ''}" data-act="listen-cycle" data-key="twice" title="一次：日文→中文；兩次：日文→中文→日文">${L.twice ? '兩次' : '一次'}</button>
       </div>
-      <p class="hint mt-3" style="text-align:center">循環唸到你按停；不寫排程、不算題數。播放中螢幕保持亮著，iPhone 鎖屏會停（Safari 的限制）。</p>
-    </div>`;
+      ${full ? '<p class="hint mt-3" style="text-align:center">循環唸到你按停；不寫排程、不算題數。播放中螢幕保持亮著，iPhone 鎖屏會停（Safari 的限制）。</p>' : ''}`;
+}
+function renderListen(view) {
+  if (!LISTEN && !listenInit()) { toast('錯題本目前是空的。'); go('#/mistakes'); return; }
+  view.innerHTML = `<div class="card listen">${listenPanelHtml(true)}</div>`;
   listenRenderNow();
 }
 function listenKey(ev) {
@@ -6236,7 +6252,7 @@ function settingsSpeech() {
     engine = `<div class="hint mt-2">教材的句子已經用 Google Neural2 預先生成放在雲端，播到哪句抓哪句，播過的會留在這個裝置上，離線也能聽；找不到的句子（自訂、AI 生成的題目）改用瀏覽器語音。語速用上面的滑桿調。</div>
       <details class="mt-3"><summary class="small muted" style="cursor:pointer">完全離線使用（進階，通常不需要）</summary>
         <div class="hint mt-2"><b>不特別需要離線請不要按。</b>平常播到哪句抓哪句、播過的就留在裝置上，不會重複下載；這個按鈕會一次抓完全部約 200 MB，只適合長時間沒有網路（長途飛機、出國沒流量）的情況。可以中斷，再按會接著下載，已下載的會略過。</div>
-        <div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-all">下載全部音檔（約 200 MB）</button><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-stop">停止</button></div>
+        <div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-all" data-kind="ja">下載日文音檔（約 200 MB）</button><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-all" data-kind="zh">下載中文音檔（約 50 MB）</button><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-stop">停止</button></div>
         <div id="cloudDlBox" class="small mt-2">${cloudDlHtml()}</div>
       </details>
       <details class="mt-4"><summary class="small muted" style="cursor:pointer">管理者：生成雲端音檔</summary>
@@ -6476,7 +6492,7 @@ Object.assign(ACTIONS, {
     hero.querySelectorAll('.hero-tab').forEach(b => { const on = b.dataset.tab === heroTab; b.classList.toggle('open', on); b.setAttribute('aria-expanded', String(on)); });
     hero.querySelectorAll('.hero-panel').forEach(p => { p.hidden = p.dataset.panel !== heroTab; });
   },
-  'cloud-dl-all': () => cloudDownloadAll(),
+  'cloud-dl-all': (el) => cloudDownloadAll(el.dataset.kind || 'ja'),
   'cloud-dl-stop': () => { if (CLOUD_DL) CLOUD_DL.stop = true; },
   'ai-test': (el) => aiTestConnection(el),
   'ai-models': async (el) => {
@@ -7329,16 +7345,16 @@ let CLOUD_DL = null;
 function cloudDlHtml() {
   const d = CLOUD_DL; if (!d) return '';
   const left = Math.max(0, d.total - d.have - d.done - d.failed);
-  return `<div><b>${esc(d.phase)}</b>${d.total ? `・共 ${d.total} 段，已在裝置上 ${d.have}，這次下載 ${d.done}${d.failed ? `，失敗 ${d.failed}` : ''}，剩 ${left}` : ''}</div>`;
+  return `<div><b>${d.kind === 'zh' ? '中文' : '日文'}：${esc(d.phase)}</b>${d.total ? `・共 ${d.total} 段，已在裝置上 ${d.have}，這次下載 ${d.done}${d.failed ? `，失敗 ${d.failed}` : ''}，剩 ${left}` : ''}</div>`;
 }
 function cloudDlRender() { const box = document.getElementById('cloudDlBox'); if (box) box.innerHTML = cloudDlHtml(); }
-async function cloudDownloadAll() {
+async function cloudDownloadAll(kind = 'ja') {   // 'ja': the Japanese clips (~200 MB); 'zh': the Chinese meanings and translations (~50 MB)
   if (CLOUD_DL && CLOUD_DL.running) return;
   if (!window.caches) { toast('這個瀏覽器不支援離線快取。'); return; }
-  CLOUD_DL = { running: true, stop: false, phase: '整理清單', total: 0, have: 0, done: 0, failed: 0 };
+  CLOUD_DL = { running: true, stop: false, kind, phase: '整理清單', total: 0, have: 0, done: 0, failed: 0 };
   cloudDlRender();
   try {
-    const list = cloudAudioTexts();
+    const list = cloudAudioTexts().filter(x => (x.lang === 'zh') === (kind === 'zh'));
     const paths = [...new Set(await Promise.all(list.map(x => cloudAudioPath(x.text, x.gender, { reading: x.reading || '', lang: x.lang || '' }))))];
     const cache = await caches.open('nq-audio');   // the service worker's clip cache (sw.js AUDIO_CACHE)
     try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) { /* ignore */ }
