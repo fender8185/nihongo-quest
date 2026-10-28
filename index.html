@@ -250,18 +250,21 @@ body.immersive .content { max-width: none; flex: 1 1 0; min-height: 0; display: 
   @supports (height: 1dvh) { body.immersive .main { width: 100dvh; height: 100dvw; transform: translateX(100dvw) rotate(90deg); } }
   body.immersive .content { padding: 8px calc(8px + env(safe-area-inset-bottom, 0px)) 8px calc(8px + env(safe-area-inset-top, 0px)); }
 }
-body.immersive .card.listen.full { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; padding: 10px 16px 12px; }
-body.immersive .listen.full #listenCard { contain: size; flex: 1 1 0; height: auto; min-height: 120px; }
-body.immersive .listen.full .flash { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr auto; gap: 4px 24px; align-items: center; text-align: left; padding: 4px 8px; }
-body.immersive .listen.full .flash:not(:has(.listen-ex)) { grid-template-columns: minmax(0, 1fr); text-align: center; }
-body.immersive .listen.full .flash > .small { grid-column: 1 / -1; grid-row: 1; }
-body.immersive .listen.full .flash .word { grid-column: 1; grid-row: 2; align-self: end; white-space: nowrap; line-height: 1.25; font-size: 56px; }
-body.immersive .listen.full .flash .meaning { grid-column: 1; grid-row: 3; align-self: start; margin-top: 2px; font-size: 26px; }
-body.immersive .listen.full .flash .listen-sentence { grid-column: 1 / -1; grid-row: 2; font-size: 30px; line-height: 1.7; }
-body.immersive .listen.full .flash .listen-sentence + .meaning { grid-column: 1 / -1; }
-body.immersive .listen.full .flash .listen-ex { grid-column: 2; grid-row: 1 / span 3; margin: 0; align-self: center; }
+body.immersive .card.listen.full { position: relative; flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; padding: 10px 16px 10px; }
+body.immersive .listen.full .listen-x { position: absolute; top: 6px; right: 6px; z-index: 2; }
+body.immersive .listen.full .listen-meta { position: absolute; left: 18px; bottom: 26px; font-size: 12px; white-space: nowrap; max-width: 34%; overflow: hidden; text-overflow: ellipsis; }
+body.immersive .listen.full .listen-opts { position: absolute; right: 16px; bottom: 20px; margin: 0; }
+.listen.full .listen-x, .listen.full .listen-meta { }   /* (in the plain full page these sit in flow via the rules below) */
+body:not(.immersive) .listen.full .listen-x { float: right; } body:not(.immersive) .listen.full .listen-meta { display: block; margin-bottom: 6px; }
+body.immersive .listen.full #listenCard { contain: size; flex: 1 1 0; height: auto; min-height: 120px; overflow: hidden; }   /* never scrolls: fitFlash() shrinks the type until everything is inside */
+/* one column, top to bottom: (caption) Japanese, Chinese, example — sized by fitFlash() to fill the box without overflowing */
+body.immersive .listen.full .flash { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center; padding: 2px 8px; }
+body.immersive .listen.full .flash .word { white-space: nowrap; line-height: 1.25; font-size: 56px; max-width: 100%; }
+body.immersive .listen.full .flash .meaning { margin-top: 0; font-size: 26px; }
+body.immersive .listen.full .flash .listen-sentence { font-size: 30px; line-height: 1.6; margin-top: 0; }
+body.immersive .listen.full .flash .listen-ex { margin: 8px 0 0; width: min(100%, 720px); }
 body.immersive .listen.full .example .jp { font-size: 22px; } body.immersive .listen.full .example .zh { font-size: 15px; }
-body.immersive .listen.full .listen-ctl { margin-top: 6px; gap: 36px; } body.immersive .listen.full .listen-opts { margin-top: 8px; } body.immersive .listen.full .hint { display: none; }
+body.immersive .listen.full .listen-ctl { margin-top: 4px; gap: 36px; } body.immersive .listen.full .hint { display: none; } body.immersive .listen.full .listen-bar { margin-top: 4px; }
 body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive .listen.full .lplay svg { width: 26px; height: 26px; }
 .listen-full { margin-left: auto; }
 /* the player: icon and (word mode) the theme select, or a link to the notebook, on one line */
@@ -900,13 +903,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '98';   // keep equal to the number in sw.js CACHE ('nq-v98'); scripts/test.sh checks it
+const APP_VERSION = '99';   // keep equal to the number in sw.js CACHE ('nq-v99'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '98', from: '70', date: '2026-10-28', items: [
-    '聽一輪多了全螢幕播放：首頁播放器那排最右邊的放大圖示。點了畫面直接轉成橫的（手機不用轉、也不管有沒有鎖定旋轉），只剩字卡和播放鍵：單字和中文在左、例句在右，字依螢幕寬度放到最大；✕ 回到首頁同一個分頁、播放不中斷。手機真的轉橫就用真的橫向。用雲端語音時，鎖定畫面和控制中心會顯示現在唸的字，上一個／下一個可以用（實驗性；iPhone 鎖屏仍可能停）。',
+  { v: '99', from: '70', date: '2026-10-28', items: [
+    '聽一輪多了全螢幕播放：首頁播放器那排最右邊的放大圖示。點了畫面直接轉成橫的（手機不用轉、也不管有沒有鎖定旋轉），只剩字卡和播放鍵：日文在上、中文在下、例句最下，字依螢幕放到最大但整張塞得進去、不會捲動；✕ 回到首頁同一個分頁、播放不中斷。手機真的轉橫就用真的橫向。用雲端語音時，鎖定畫面和控制中心會顯示現在唸的字，上一個／下一個可以用（實驗性；iPhone 鎖屏仍可能停）。',
     '首頁錯題本播放頁右上角的「打開錯題本」捷徑拿掉（錯題本在「更多」裡）。',
     '錯題本的聽一輪只唸完整的句子：沒有對應中文的文法題（例如內容理解）、答案沒辦法標進句子裡（沒有藍字）的題目不再播。',
     '裝成 app 後，練習和模擬考的畫面不再頂到 iPhone 的狀態列底下（✕ 和進度條會避開瀏海）。',
@@ -5304,27 +5307,29 @@ function listenRenderNow() {
 function fitFlash() {
   const card = document.getElementById('listenCard'); if (!card || !document.body.classList.contains('immersive')) return;
   const flash = card.querySelector('.flash'); if (!flash) return;
-  const word = flash.querySelector('.word'); const meaning = flash.querySelector('.meaning'); const sent = flash.querySelector('.listen-sentence');
-  const cardH = card.clientHeight;
-  if (word) {
-    word.style.fontSize = '160px';
-    const w = word.clientWidth, sw = word.scrollWidth;
-    let f = sw > 0 ? Math.min(160, 160 * w / sw) : 56;
-    f = Math.min(f, Math.max(32, cardH * 0.5 / 1.25));   // half the box for the word, the rest for the meaning
-    word.style.fontSize = `${Math.max(28, Math.floor(f))}px`;
-    if (meaning) meaning.style.fontSize = `${Math.round(Math.max(20, Math.min(48, f * 0.4)))}px`;
-  } else if (sent) {
-    const maxH = Math.max(80, cardH - (meaning ? meaning.getBoundingClientRect().height + 16 : 0) - (flash.querySelector('.small') ? 28 : 0));
-    let f = 72; sent.style.fontSize = `${f}px`;
-    while (f > 24 && sent.scrollHeight > maxH) { f -= 4; sent.style.fontSize = `${f}px`; }
-    if (meaning) meaning.style.fontSize = `${Math.round(Math.max(18, Math.min(36, f * 0.5)))}px`;
-  }
+  const word = flash.querySelector('.word'); const meaning = flash.querySelector('.meaning'); const sent = flash.querySelector('.listen-sentence'); const ex = flash.querySelector('.listen-ex');
+  const boxH = card.clientHeight; const boxW = flash.clientWidth - 16;
+  const fits = () => flash.scrollHeight <= boxH + 1 && flash.scrollWidth <= flash.clientWidth + 1;
+  const setSizes = (f) => {
+    if (word) word.style.fontSize = `${f}px`;
+    if (sent) sent.style.fontSize = `${f}px`;
+    if (meaning) meaning.style.fontSize = `${Math.round(Math.max(18, Math.min(48, f * (word ? 0.4 : 0.5))))}px`;
+    if (ex) { const e = f < 40 ? 17 : 22; ex.querySelector('.jp').style.fontSize = `${e}px`; const zh = ex.querySelector('.zh'); if (zh) zh.style.fontSize = `${e < 20 ? 13 : 15}px`; }
+  };
+  let f;
+  if (word) {   // one line: as wide as the box allows, but never taller than ~45% of it, and a short word stops at 120px
+    word.style.fontSize = '100px'; const sw = word.scrollWidth || 1;
+    f = Math.min(120, Math.floor(100 * boxW / sw), Math.floor(boxH * 0.45 / 1.25));
+  } else if (sent) f = 72;
+  else return;
+  f = Math.max(24, f); setSizes(f);
+  while (f > 24 && !fits()) { f -= 4; setSizes(f); }   // then down, 4px at a time, until the caption, text, Chinese and example all sit inside
 }
 window.addEventListener('resize', () => { if (document.body.classList.contains('immersive')) fitFlash(); });
 function listenPanelHtml(full) {
   const L = LISTEN;
   return `
-      ${full ? `<div class="row between small muted"><span id="listenCount"></span><span class="grow" style="text-align:center">${L.source.kind === 'theme' ? `單字・${esc(L.source.theme || '')}` : '錯題本'}</span><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="listen-close" aria-label="關閉">${icon('close')}</button></div>` : ''}
+      ${full ? `<button type="button" class="btn btn-sm btn-ghost btn-icon listen-x" data-act="listen-close" aria-label="關閉">${icon('close')}</button><span class="listen-meta small muted"><span id="listenCount"></span>・${L.source.kind === 'theme' ? `單字・${esc(L.source.theme || '')}` : '錯題本'}</span>` : ''}
       <div id="listenCard"></div>
       <div class="listen-bar"><span id="listenBar"></span></div>
       <div class="listen-ctl">

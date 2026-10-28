@@ -1278,7 +1278,7 @@ def test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_
       // opened from the vocab themes page instead: ✕ ends the player and goes back there
       const tbtn = (location.hash = '#/vocab/themes', route(), document.querySelector('.theme-card [data-act=listen-theme-start]')); ACTIONS['listen-theme-start'](tbtn); route(); const fromThemes = document.body.classList.contains('immersive') && !!document.querySelector('[data-act=listen-close]');
       ACTIONS['listen-close'](); route(); const ended = LISTEN === null && location.hash === '#/vocab/themes' && !document.body.classList.contains('immersive');
-      const css = document.querySelector('style').textContent; const landscape = /orientation: portrait\\) \\{\\s*body\\.immersive \\.main \\{ position: fixed/.test(css) && /\\.listen\\.full \\.flash \\{ height: 100%; display: grid; grid-template-columns: minmax\\(0, 1fr\\) minmax\\(0, 1fr\\)/.test(css);
+      const css = document.querySelector('style').textContent; const landscape = /orientation: portrait\\) \\{\\s*body\\.immersive \\.main \\{ position: fixed/.test(css) && /\\.listen\\.full \\.flash \\{ height: 100%; display: flex; flex-direction: column/.test(css);
       localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ full, ms, curTitle: cur ? cur.word + '　' + cur.meaning : null, back, fromThemes, ended, landscape }); })()"""
     out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
@@ -1288,23 +1288,27 @@ def test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_
     bk = r['back']; assert bk == {'hash': '#/today', 'tab': 'theme', 'same': True, 'playing': True, 'idx': 2, 'immersive': False, 'compact': True}, bk
     assert r['fromThemes'] and r['ended'] and r['landscape'], r
 
-def test_fullscreen_player_turns_a_portrait_phone_sideways_and_fills_the_columns(b):
+def test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box(b):
     js = """(() => { localStorage.removeItem('nq_listen_pref'); LISTEN = null; const v = REG.vocab.find(x => x.builtin && vocabExamples(x)[0] && jaPlain(x.w).length <= 4); setListenPref({ source: 'theme', theme: vocabTheme(v) }); location.hash = '#/vocab/listen'; route();
-      LISTEN.idx = LISTEN.items.findIndex(e => e.id === v.key); listenRenderNow(); const main = document.querySelector('.main'); const mr = main.getBoundingClientRect(); const flash = document.querySelector('.card.listen.full .flash'); const cs = getComputedStyle(flash);
-      const word = flash.querySelector('.word'); const wr = word.getBoundingClientRect(); const ex = flash.querySelector('.listen-ex').getBoundingClientRect();
-      const r = { rotated: getComputedStyle(main).transform !== 'none', box: [Math.round(mr.left), Math.round(mr.top), Math.round(mr.width), Math.round(mr.height)], cols: cs.gridTemplateColumns.split(' ').length, display: cs.display,
-        wordPx: parseFloat(word.style.fontSize), fills: word.scrollWidth <= word.clientWidth + 1 && word.scrollWidth >= word.clientWidth * 0.6, meaningPx: parseFloat(flash.querySelector('.meaning').style.fontSize),
-        exRightOfWord: (() => { const a = [wr.left, wr.top, wr.right, wr.bottom], b = [ex.left, ex.top, ex.right, ex.bottom]; return JSON.stringify({ a: a.map(Math.round), b: b.map(Math.round) }); })(), noPageScroll: document.documentElement.scrollHeight <= innerHeight + 1 && document.querySelector('.content').scrollHeight <= document.querySelector('.content').clientHeight + 1, play: !!document.querySelector('.lplay') };
-      // a grammar sentence (no example): one column, the sentence sized to fit its box
-      const g = LISTEN.items.find(e => e.kind === 'g'); let sent = null; if (g) { LISTEN.idx = LISTEN.items.indexOf(g); listenRenderNow(); const sEl = document.querySelector('.listen-sentence'); sent = { px: parseFloat(sEl.style.fontSize), cols: getComputedStyle(document.querySelector('.flash')).gridTemplateColumns.split(' ').length, fits: sEl.scrollHeight <= document.getElementById('listenCard').clientHeight }; }
-      listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify(Object.assign(r, { sent })); })()"""
+      const card = document.getElementById('listenCard'); const measure = () => { const flash = card.querySelector('.flash'); const word = flash.querySelector('.word, .listen-sentence'); const meaning = flash.querySelector('.meaning'); const ex = flash.querySelector('.listen-ex');
+        const box = (el) => ({ top: el.offsetTop, bottom: el.offsetTop + el.offsetHeight, mid: el.offsetLeft + el.offsetWidth / 2 });   // layout coordinates: the page may be turned 90°, so screen rects would lie
+        const wr = box(word), mr = meaning ? box(meaning) : null, er = ex ? box(ex) : null;
+        return { px: parseFloat(word.style.fontSize), inside: flash.scrollHeight <= card.clientHeight + 1 && flash.scrollWidth <= flash.clientWidth + 1, stacked: (!mr || mr.top >= wr.bottom - 2) && (!er || !mr || er.top >= mr.bottom - 2), centred: Math.abs(wr.mid - box(flash).mid) < 6, noScroll: getComputedStyle(card).overflowY === 'hidden', boxH: card.clientHeight }; };
+      const main = document.querySelector('.main'); const mr = main.getBoundingClientRect();
+      LISTEN.idx = LISTEN.items.findIndex(e => e.id === v.key); listenRenderNow(); const short = measure();
+      const longest = LISTEN.items.reduce((a, e) => (e.word || '').length > (a.word || '').length ? e : a, LISTEN.items[0]); LISTEN.idx = LISTEN.items.indexOf(longest); listenRenderNow(); const long = measure();
+      const g = LISTEN.items.find(e => e.kind === 'g'); let sent = null; if (g) { LISTEN.idx = LISTEN.items.indexOf(g); listenRenderNow(); sent = measure(); }
+      const r = { rotated: getComputedStyle(main).transform !== 'none', box: [Math.round(mr.left), Math.round(mr.top), Math.round(mr.width), Math.round(mr.height)], short, long, sent, noPageScroll: document.documentElement.scrollHeight <= innerHeight + 1 && document.querySelector('.content').scrollHeight <= document.querySelector('.content').clientHeight + 1, play: !!document.querySelector('.lplay') };
+      listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify(r); })()"""
     out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['rotated'] and r['box'] == [0, 0, 390, 844], r   # the rotated page still covers exactly the portrait screen
-    assert r['display'] == 'grid' and r['cols'] == 2 and r['wordPx'] >= 60 and r['fills'] and 20 <= r['meaningPx'] <= 48 and r['noPageScroll'] and r['play'], r
+    assert r['rotated'] and r['box'] == [0, 0, 390, 844] and r['noPageScroll'] and r['play'], r   # the rotated page still covers exactly the portrait screen
+    for k in ('short', 'long'):
+        m = r[k]; assert m['inside'] and m['stacked'] and m['centred'] and m['noScroll'] and 24 <= m['px'] <= 120, (k, m)   # Japanese above Chinese above the example, all inside the box
+    assert r['short']['px'] >= 60 and r['long']['px'] >= 40 and r['short']['boxH'] >= 230, r   # big type (the exact size depends on the example's height too); the box keeps most of the 390px
     out2 = b.run([("metrics", (844, 390)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r2 = json.loads(out2[-1])
-    assert not r2['rotated'] and r2['box'] == [0, 0, 844, 390] and r2['cols'] == 2 and r2['wordPx'] >= 60 and r2['fills'] and r2['noPageScroll'], r2   # a phone really held sideways: no CSS turn
+    assert not r2['rotated'] and r2['box'] == [0, 0, 844, 390] and r2['short']['inside'] and r2['long']['inside'] and r2['short']['px'] >= 60 and r2['noPageScroll'], r2   # a phone really held sideways: no CSS turn
 
 # ---- 2026-10-28: the install hint ----
 def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed(b):
@@ -1355,7 +1359,7 @@ if __name__ == "__main__":
              test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
-             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fills_the_columns]
+             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box]
     failed = 0
     try:
         for t in tests:
