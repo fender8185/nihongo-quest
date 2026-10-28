@@ -917,12 +917,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.3';   // keep equal to the version in sw.js CACHE ('nq-v1.0.3'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.4';   // keep equal to the version in sw.js CACHE ('nq-v1.0.4'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.4', date: '2026-10-28', items: [
+    '（施工中）'
+  ] },
   { v: '1.0.3', date: '2026-10-28', items: [
     '聽一輪：iPhone 手動鎖屏後也會一直播下去。句與句之間改成播一段靜音，播放器從頭到尾不停，系統就不會在空檔把它收掉；頁面或鎖定畫面的 ▶ 也會先接上播放器再抓下一句。播放真的被系統擋下時，播放器會停在那個字並顯示 ▶，不再默默往前跳。'
   ] },
@@ -983,6 +986,38 @@ const HAS_KANJI = /[一-鿿々〆ヶ]/;
 const IS_KANA = /^[぀-ゟ゠-ヿー・]+$/;
 function isEnglishOnly(s) { return /[a-zA-Z]{2,}/.test(s || '') && !/[一-鿿぀-ヿ]/.test(s || ''); }
 function jaPlain(s) { return JConj.stripReading(s); }          // 来[こ]ない → 来ない (display/TTS)
+// ---- 活用題輸入模式: comparing what the learner typed or tiled against the conjugated answer ----
+// comparison key: no spaces, katakana → hiragana, a bracketed reading replaces the kanji run before it (来[こ]ない → こない)
+function kanaKey(s) {
+  return JConj.normJa(String(s || '').replace(/[\s　]+/g, '').replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60)));
+}
+// the answer written entirely in kana (行って → いって); kanji with no known reading stay as they are
+function answerKana(ans) {
+  const map = readingMapFrom(ans);
+  return String(ans || '').replace(/[一-鿿々〆ヶ]+(?:\[[ぁ-ゖー]+\])?/g, run => { const k = run.replace(/\[.*$/, ''); const m = run.match(/\[([ぁ-ゖー]+)\]/); return m ? m[1] : (map[k] || k); });
+}
+// 行って and いって are both right; a wrong form is wrong, no partial credit
+function conjMatch(typed, ans) {
+  const t = kanaKey(typed);
+  return Boolean(t) && (t === kanaKey(ans) || t === kanaKey(jaPlain(ans)) || t === kanaKey(answerKana(ans)));
+}
+// tile tokens: a kanji run (with its bracketed reading) is one tile, every kana its own
+function conjTokens(ans) { return String(ans || '').match(/[一-鿿々〆ヶ]+(?:\[[ぁ-ゖー]+\])?|[\s\S]/gu) || []; }
+// the answer's tiles plus 3–4 kana from the wrong forms (so the tiles do not spell the answer out), shuffled
+function conjTiles(ans, wrongs) {
+  const own = conjTokens(ans);
+  const extra = [];
+  (wrongs || []).forEach(w => conjTokens(w).forEach(tok => { if (!own.includes(tok) && !extra.includes(tok) && !/[一-鿿]/.test(tok)) extra.push(tok); }));
+  const pool = shuffle(Object.keys(KANA_ROMAJI).filter(k => k !== 'を' && !own.includes(k) && !extra.includes(k)));
+  while (extra.length < 3 && pool.length) extra.push(pool.pop());
+  return shuffle(own.concat(shuffle(extra).slice(0, 4)));
+}
+// index of the first differing character (by code point), -1 when equal
+function firstDiff(a, b) {
+  const A = [...String(a || '')], B = [...String(b || '')];
+  for (let i = 0; i < Math.max(A.length, B.length); i++) if (A[i] !== B[i]) return i;
+  return -1;
+}
 function jaKana(s) { return String(s || '').replace(/[一-鿿々〆ヶ]+\[([ぁ-ゖー]+)\]/g, '$1'); } // for TTS readings
 // Vocab examples mark the target word with braces: 毎朝パンを{食べます}。
 function exPlain(ex) { return String(ex || '').replace(/[{}]/g, ''); }
