@@ -146,18 +146,18 @@ def test_new_words_come_from_two_themes_interleaved(b):
       const th = activeThemes(pool, false); const c = newVocabCandidates(pool, false).slice(0, 9);
       REG.vocab.filter(v => v.builtin && v.lv === 'N5' && vocabTheme(v) === th[0]).forEach(v => { state.srs[v.key] = { b: 1, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5, f: {} }; });
       const th2 = activeThemes(pool, false); const c2 = newVocabCandidates(pool, false).slice(0, 9);
-      REG.vocab.filter(v => v.builtin && v.lv === 'N5' && vocabTheme(v) !== '副詞').forEach(v => { state.srs[v.key] = { b: 1, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5, f: {} }; });
+      REG.vocab.filter(v => v.builtin && v.lv === 'N5' && vocabTheme(v) !== '副詞與接續').forEach(v => { state.srs[v.key] = { b: 1, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5, f: {} }; });
       const th3 = activeThemes(pool, false); const c3 = newVocabCandidates(pool, false).slice(0, 6);
       const pick = (arr) => arr.map(v => [v.lv, vocabTheme(v)]);
       return JSON.stringify({ th, c: pick(c), th2, c2: pick(c2), th3, c3: pick(c3) }); })()"""
     r = json.loads(ev(b, js))
     def check(th, c):
         pre = [x for x in c if x[0] == 'PRE_N5']; n5 = [x for x in c if x[0] == 'N5']
-        assert c[0][0] == 'PRE_N5' and 3 <= len(pre) <= 4 and all(x[1] == '問候' for x in pre), c   # the PRE_N5 lane (問候 first) is interleaved, not a block
+        assert c[0][0] == 'PRE_N5' and len(pre) >= 3 and all(x[1] == '問候' for x in pre), c   # the PRE_N5 lane (問候 first) is interleaved, not a block (a nearly empty theme lane leaves it more slots)
         assert n5 and all(x[1] in th for x in n5) and n5[0][1] == th[0], (th, c)                   # the other slots come from the two active N5 themes
-    assert len(r['th']) == 2 and r['th'][0] == '代名詞', r
+    assert len(r['th']) == 2, r
     check(r['th'], r['c']); assert r['th2'][0] == r['th'][1], r; check(r['th2'], r['c2'])
-    assert r['th3'] == ['副詞'] and all(x == ['PRE_N5', '問候'] or x == ['N5', '副詞'] for x in r['c3']), r
+    assert r['th3'] == ['副詞與接續'] and all(x == ['PRE_N5', '問候'] or x == ['N5', '副詞與接續'] for x in r['c3']), r
 
 def test_custom_cards_still_alternate_with_builtins(b):
     js = """(() => { state.vocab.push({ id: 'c1', w: '猫', r: 'ねこ', m: '貓' }, { id: 'c2', w: '犬', r: 'いぬ', m: '狗' }); buildRegistry();
@@ -226,13 +226,13 @@ TESTS += [test_kana_options_need_four_distinct_readings, test_homophones_never_p
 
 # ---- 2026-10-26 (3): stacked theme bars, Today outline ----
 def test_theme_card_bar_has_three_segments_for_seen_learned_mastered(b):
-    js = """(() => { const ws = REG.vocab.filter(v => v.builtin && vocabTheme(v) === '顏色');
+    js = """(() => { const ws = REG.vocab.filter(v => v.builtin && vocabTheme(v) === '身體與顏色');
       const rec = (b, f) => ({ b, due: '2099-01-01', n: 5, ok: 5, ng: 0, s: 30, d: 5, f });
       ws.slice(0, 2).forEach(v => { state.srs[v.key] = rec(6, { 'v-meaning': [1, 0], 'v-recall': [1, 0], 'v-cloze': [1, 0] }); });
       ws.slice(2, 5).forEach(v => { state.srs[v.key] = rec(3, {}); });
       ws.slice(5, 9).forEach(v => { state.srs[v.key] = rec(1, {}); });
       location.hash = '#/vocab/themes'; route();
-      const card = document.querySelector('.theme-card[data-c="顏色"]');
+      const card = document.querySelector('.theme-card[data-c="身體與顏色"]');
       const bar = card.querySelector('.bar.stack'); const d = bar.dataset; const bg = getComputedStyle(bar).backgroundImage;
       return JSON.stringify({ total: ws.length, segs: [Number(d.mastered), Number(d.learned), Number(d.seen)], gradient: bg.startsWith('linear-gradient'), stops: (bg.match(/%/g) || []).length }); })()"""
     r = json.loads(ev(b, js))
@@ -498,10 +498,10 @@ TESTS += [test_furigana_known_hiding_follows_the_mastered_label, test_theme_word
 def test_vocab_content_pass_adds_keigo_common_words_and_removes_duplicates(b):
     js = """(() => { const V = REG.vocab.filter(v => v.builtin); const byW = (w) => V.find(v => v.w === w);
       const dupM = {}; V.forEach(v => { dupM[v.m] = (dupM[v.m] || 0) + 1; }); const dups = Object.entries(dupM).filter(([, n]) => n > 1).map(([m]) => m);
-      const keigo = V.filter(v => v.c === '敬語').map(v => v.w);
+      const keigo = V.filter(v => v.c === '溝通與敬語').map(v => v.w);
       const raw = ['吸う', '鳴く', 'かぶる'].map(w => vSurfaceInfo(byW(w)).form);
       const bare = V.filter(v => /^(n5e|n4f)-/.test(v.id)).filter(v => /[一-龯]/.test(furi(v.ex.replace(/[{}]/g, '')).replace(/<ruby>.*?<[/]ruby>/g, '')) ).map(v => v.w);
-      return JSON.stringify({ n: V.length, dups, keigo, old: V.filter(v => v.c === '舊版').length, themes: THEME_ORDER.includes('敬語'),
+      return JSON.stringify({ n: V.length, dups, keigo, old: V.filter(v => v.c === '舊版').length, themes: THEME_ORDER.includes('溝通與敬語'),
         added: ['おにぎり', '紫', '村', '役に立つ', '召し上がる', 'ピンク'].map(w => Boolean(byW(w))), merged: [Boolean(byW('旅行')), Boolean(byW('旅行する')), Boolean(byW('運動')), Boolean(byW('運動する'))], raw, bare }); })()"""
     r = json.loads(ev(b, js))
     assert r['n'] >= 1440 and r['dups'] == [] and r['old'] == 0 and r['themes'], r

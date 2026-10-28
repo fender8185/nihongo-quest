@@ -191,6 +191,28 @@ def test_homophone_kana_never_decoy_each_other(b):
     r = json.loads(ev(b, js))
     assert r == [], r
 
+# ---- 1.0.8: three-level theme lists ----
+def test_every_builtin_word_has_a_theme_of_its_level(b):
+    js = """(() => { const T = DATA.THEMES; const bad = REG.vocab.filter(v => v.builtin && !(T[v.lv] || []).some(t => t.c === vocabTheme(v))).slice(0, 5).map(v => v.id + ':' + v.lv + ':' + vocabTheme(v));
+      return JSON.stringify({ n: [T.PRE_N5.length, T.N5.length, T.N4.length], bad, order0: THEME_ORDER[0], other: REG.vocab.filter(v => v.builtin && vocabTheme(v) === '其他').length,
+        verbsPre: REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5' && /^(v5|v1|vs|vk|i|na|adv)$/.test(v.p) && vocabTheme(v) !== '基本動作與形容').length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['n'] == [11, 17, 17] and r['bad'] == [] and r['order0'] == '問候' and r['other'] == 0 and r['verbsPre'] == 0, r
+
+def test_theme_lane_migrates_old_names(b):
+    js = """(() => { const s = normalizeState(Object.assign(defaultState(), { themeLane: { order: ['休閒', '生活', '飲食', '問候與溝通'], count: { 休閒: 2, 生活: 1 } } }));
+      return JSON.stringify({ order: s.themeLane.order.slice(0, 4), count: s.themeLane.count, dup: new Set(s.themeLane.order).size === s.themeLane.order.length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['order'] == ['興趣與休閒', '居家生活', '飲食', '問候與溝通'] and r['count'] == {'興趣與休閒': 2, '居家生活': 1} and r['dup'], r
+
+def test_same_theme_name_across_levels(b):
+    js = """(() => { state.stage = 'main'; state.srs = {}; state.today.newV = 0; DAILY_CACHE = null; const pool = REG.vocab.filter(v => v.builtin);
+      const th = activeThemes(pool, false); const n5Only = newVocabCandidates(pool, false).filter(v => v.lv === 'N5').slice(0, 6).every(v => th.includes(vocabTheme(v)));
+      const q = buildVocabQueue('c:飲食', 60); const lvs = [...new Set(q.map(x => x.lv))].sort();
+      return JSON.stringify({ n5Only, lvs, th }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['n5Only'] and r['lvs'] == ['N5', 'PRE_N5'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
