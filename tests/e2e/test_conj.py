@@ -28,6 +28,62 @@ def test_conj_tiles_keep_kanji_runs_whole_and_add_wrong_kana(b):
     assert r['t1'] == ['来[こ]', 'な', 'い'] and r['t2'] == ['勉強', 'し', 'て'], r
     assert r['has'] and 3 <= len(r['extra']) <= 4 and r['n'] == 3 + len(r['extra']), r
 
+# ---- Task 2: 活用題輸入格式（磁貼／鍵盤） ----
+CONJ_ITEM = "REG.grammar.find(g => g.t === 'conj' && g.g === '5' && g.f === 'te')"
+def setup(mode):   # 一題て形五段動詞，已答對一次（b = 1），指定作答方式，開一場 items 練習
+    return f"""const g = {CONJ_ITEM}; state.settings.conjInput = '{mode}'; srsAnswer(g.key, true); state.srs[g.key].b = 1;
+      startSession('items', {{ items: [g] }}); const e = currentEntry(); e.q = makeGrammarQuestion(g, {{}}); renderPractice(); const q = e.q;
+      const ans = JConj.conjVerb(g.v, g.g, g.f);"""
+TEARDOWN = "SESSION = null; document.body.classList.remove('practicing');"
+
+def test_learned_conj_item_is_asked_with_tiles_and_tapping_the_answer_is_right(b):
+    js = "(() => { " + setup('auto') + """
+      const out = { fmt: q.fmt, custom: q.custom, mode: q.inputMode, opts: document.querySelectorAll('.opt').length, tiles: document.querySelectorAll('.conj-tile').length, n: q.tiles.length, noBracket: ![...document.querySelectorAll('.conj-tile')].some(t => t.textContent.includes('[')) };
+      for (const tok of conjTokens(ans)) { [...document.querySelectorAll('.conj-tile:not([disabled])')].find(t => t.dataset.tok === tok).click(); }
+      out.done = e.done; out.ok = e.chosen === q.answer; out.gf = state.srs[g.key].gf['g-conj-type']; out.sf = state.statsFmt['g-conj-type'];
+      """ + TEARDOWN + " return JSON.stringify(out); })()"
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['fmt'] == 'g-conj-type' and r['custom'] == 'g-conj-type' and r['mode'] == 'tiles' and r['opts'] == 0 and r['tiles'] == r['n'] and r['noBracket'], r
+    assert r['done'] and r['ok'] and r['gf'] == [1, 0] and r['sf'] == {'ok': 1, 'ng': 0}, r
+
+def test_new_item_or_choice_setting_keeps_four_options(b):
+    js = f"""(() => {{ const g = {CONJ_ITEM}; state.settings.conjInput = 'auto'; const q1 = makeGrammarQuestion(g, {{}});
+      srsAnswer(g.key, true); state.srs[g.key].b = 1; state.settings.conjInput = 'choice'; const q2 = makeGrammarQuestion(g, {{}});
+      state.settings.conjInput = 'tiles'; const q3 = makeGrammarQuestion(g, {{ forceFmt: 'g-conj' }});
+      return JSON.stringify({{ f1: q1.fmt, f2: q2.fmt, f3: q3.fmt, o: q2.options.length }}); }})()"""
+    r = json.loads(ev(b, js))
+    assert r == {'f1': 'g-conj', 'f2': 'g-conj', 'f3': 'g-conj', 'o': 4}, r
+
+def test_typing_mode_accepts_kana_and_marks_the_first_wrong_character(b):
+    js = "(() => { " + setup('type') + """
+      const inp = document.querySelector('input.conj-in'); const out = { mode: q.inputMode, hasInput: Boolean(inp), tiles: document.querySelectorAll('.conj-tile').length };
+      inp.value = '　' + answerKana(ans) + ' '; document.querySelector('[data-act=conj-submit]').click(); out.ok1 = e.done && e.chosen === q.answer;
+      // 第二場：故意打錯（包在區塊裡，避免 const 重複宣告）
+      """ + TEARDOWN + " { " + setup('type') + """
+      const bad = answerKana(ans).slice(0, -1) + 'た'; document.querySelector('input.conj-in').value = bad; document.querySelector('[data-act=conj-submit]').click();
+      out.ok2 = e.chosen === q.answer; out.head = (() => { const el = document.querySelector('.fb-head').cloneNode(true); el.querySelectorAll('rt').forEach(r => r.remove()); return el.textContent.includes(jaPlain(ans)); })(); out.diff = Boolean(document.querySelector('.fb-diff mark')); out.wrong = q.options[1].text === bad; }
+      """ + TEARDOWN + " return JSON.stringify(out); })()"
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['mode'] == 'type' and r['hasInput'] and r['tiles'] == 0 and r['ok1'], r
+    assert not r['ok2'] and r['head'] and r['diff'] and r['wrong'], r
+
+def test_give_up_and_empty_submit(b):
+    js = "(() => { " + setup('type') + """
+      document.querySelector('[data-act=conj-submit]').click(); const stillOpen = !e.done;
+      document.querySelector('[data-act=custom-giveup]').click(); const out = { stillOpen, done: e.done, ok: e.chosen === q.answer, mistakes: state.mistakes.filter(m => m.key === g.key).length };
+      """ + TEARDOWN + " return JSON.stringify(out); })()"
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['stillOpen'] and r['done'] and not r['ok'] and r['mistakes'] == 1, r
+
+def test_identify_variant_still_appears_under_tiles_setting(b):
+    js = f"""(() => {{ const g = {CONJ_ITEM}; state.settings.conjInput = 'tiles'; srsAnswer(g.key, true); state.srs[g.key].b = 3;
+      const r0 = Math.random; Math.random = () => 0; const q = makeGrammarQuestion(g, {{}}); Math.random = r0; return q.fmt; }})()"""
+    assert ev(b, js) == 'g-identify'
+
+def test_settings_page_offers_the_input_mode(b):
+    js = "(() => { openSettings('learn'); const s = document.querySelector('select[data-key=conjInput]'); const out = s ? [...s.options].map(o => o.value) : null; closeModal(); return JSON.stringify(out); })()"
+    assert json.loads(ev(b, js)) == ['auto', 'choice', 'tiles', 'type']
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

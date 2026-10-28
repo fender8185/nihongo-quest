@@ -418,6 +418,9 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .spell-tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .spell-tile { width: 52px; height: 52px; font-size: 24px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); cursor: pointer; }
 .spell-tile:disabled { opacity: .25; cursor: default; }
+.conj-tile { width: auto; min-width: 52px; padding: 0 10px; }
+.conj-in { font-size: 24px; text-align: center; max-width: 320px; margin: 0 auto 10px; display: block; }
+.fb-diff { margin-top: 6px; font-size: 18px; } .fb-diff mark { background: var(--bad-line, rgba(229,72,77,.25)); color: var(--bad); border-radius: 4px; padding: 0 2px; }
 .order-out { min-height: 48px; font-size: 22px; line-height: 2; padding: 6px 0 10px; border-bottom: 2px solid var(--line-2); margin: 0 auto 14px; max-width: 560px; text-align: center; }
 .order-out.ok { border-color: var(--ok); } .order-out.bad { border-color: var(--bad, #e5484d); }
 .order-slot { display: inline-block; min-width: 2.2em; margin: 0 3px; border-bottom: 2px solid var(--line-2); text-align: center; color: var(--fg-3); }
@@ -1052,6 +1055,7 @@ function defaultSettings() {
     furiMode: 'smart',       // smart: no furigana on mastered words | all — furigana:false hides all
     listenPerDay: 3,         // listening items in the daily mix
     newKanjiPerDay: 3,
+    conjInput: 'auto',       // 活用題作答方式: auto (choice until b ≥ 1, then tiles) | choice | tiles | type
     audioOptions: false,     // listening replies only spoken, like the real test
     backupEvery: 7
   };
@@ -2051,6 +2055,12 @@ function zhOverlap(a, b) { const A = zhChars(a); for (const c of zhChars(b)) if 
 const FORM_LABEL = {
   te: 'て形', ta: 'た形', nai: 'ない形', dict: '辭書形', masu: 'ます形', ba: '條件形（ば）', pot: '可能形', vol: '意向形', pass: '受身形', caus: '使役形', imp: '命令形'
 };
+// how a conjugation item is answered: four options while new, tiles (or the keyboard) once it has been seen
+function conjInputMode(rec) {
+  const m = state.settings.conjInput || 'auto';
+  if (m === 'choice' || m === 'tiles' || m === 'type') return m;
+  return rec && rec.b >= 1 ? 'tiles' : 'choice';
+}
 function formFamily(f) {
   if (/^pot/.test(f)) return 'pot';
   if (/^causpass/.test(f)) return 'causpass';
@@ -2707,6 +2717,22 @@ function makeGrammarQuestion(g, ctx = {}) {
         q.answerText = FORM_LABEL[fam];
         return q;
       }
+    }
+    // 輸入模式: the learner spells the form with kana tiles or types it (no options to eliminate)
+    const typedFmt = isV ? 'g-conj-type' : 'g-adj-type';
+    const mode = ctx.forceFmt === typedFmt ? (state.settings.conjInput === 'type' ? 'type' : 'tiles')
+      : (ctx.forceFmt === 'g-conj' || ctx.forceFmt === 'g-adj') ? 'choice' : conjInputMode(rec);
+    if (mode !== 'choice') {
+      q.fmt = typedFmt; q.custom = typedFmt; q.inputMode = mode;
+      q.instr = mode === 'tiles' ? (isV ? '點假名，拼出正確的動詞變化' : '點假名，拼出正確的形容詞變化') : (isV ? '輸入正確的動詞變化' : '輸入正確的形容詞變化');
+      q.stemHtml = `${furi(pre)}${blankChip(base)}${furi(post)}`;
+      q.fillHtml = furi(ans);
+      q.fullJp = pre + ans + post;
+      q.mistakePrompt = `${pre}（${base}→　）${post}`;
+      if (!q.why) q.why = `「${base}」→「${jaPlain(ans)}」`;
+      q.tiles = conjTiles(ans, wrongs);
+      q.options = [{ text: ans, jp: true }, { text: '', jp: true }]; q.answer = 0; q.answerText = ans;
+      return q;
     }
     q.fmt = isV ? 'g-conj' : 'g-adj';
     q.instr = isV ? '選出正確的動詞變化' : '選出正確的形容詞變化';
@@ -3569,6 +3595,23 @@ function previewHtml(e, pct) {
 // option 0 is the correct text, option 1 receives what the learner produced when it was wrong.
 function customInteractionHtml(e, answered) {
   const q = e.q;
+  if (q.custom === 'g-conj-type' || q.custom === 'g-adj-type') {
+    const ans = q.options[0].text;
+    const cls = answered ? (e.chosen === q.answer ? 'ok' : 'bad') : '';
+    if (q.inputMode === 'type') {
+      return `<div class="spell">
+        ${answered ? `<div class="spell-out jp ${cls}">${furi(e.chosen === q.answer ? ans : (e.typed || ''))}</div>` : `<input class="input jp conj-in" lang="ja" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="在這裡輸入" value="${esc(e.typed || '')}" />`}
+        ${answered ? '' : `<div class="row-wrap mt-2" style="justify-content:center"><button type="button" class="btn btn-primary" data-act="conj-submit">確定</button><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">我不會，看答案</button></div>`}
+      </div>`;
+    }
+    const used = e.conj || [];
+    const built = used.map(i => q.tiles[i]).join('');
+    return `<div class="spell">
+      <div class="spell-out jp ${cls}">${furi(built)}<span class="caret"></span></div>
+      <div class="spell-tiles">${q.tiles.map((tok, i) => `<button type="button" class="spell-tile conj-tile jp" data-act="conj-tap" data-i="${i}" data-tok="${esc(tok)}" ${used.includes(i) || answered ? 'disabled' : ''}>${furi(tok)}</button>`).join('')}</div>
+      ${answered ? '' : `<div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="conj-back" ${used.length ? '' : 'disabled'}>退一格</button><span class="small muted">${used.length} / ${conjTokens(ans).length}</span><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">我不會，看答案</button></div>`}
+    </div>`;
+  }
   if (q.custom === 'v-spell') {
     const used = e.spell || [];
     const typed = used.map(i => q.tiles[i]).join('');
@@ -3624,10 +3667,17 @@ function feedbackHtml(e) {
   const mistake = !ok && q.kind !== 'x' && !e.slip ? '<span>已加入錯題本</span>' : '';
   const slip = e.slip ? '<span class="chip">手滑，不算</span>' : (!ok && e.undo ? '<button type="button" class="btn btn-sm btn-ghost" data-act="slip" title="選錯鍵、看錯行：不進錯題本，排程維持原狀">手滑，不算</button>' : '');
   const mNote = e.mistakeDone ? '<span class="chip chip-ok">已移出錯題本</span>' : '';
+  // a spelled or typed conjugation: show what was produced, the first wrong character marked
+  let diff = '';
+  if (!ok && q.custom && q.custom.endsWith('-type') && q.options[1].text && q.options[1].text !== '（看了答案）') {
+    const typed = [...jaPlain(q.options[1].text)]; const i = firstDiff(typed.join(''), jaPlain(right.text));
+    const marked = i < 0 ? esc(typed.join('')) : `${esc(typed.slice(0, i).join(''))}<mark>${esc(typed[i] || '＿')}</mark>${esc(typed.slice(i + 1).join(''))}`;
+    diff = `<div class="fb-diff jp">你的答案：${marked}</div>`;
+  }
   return `
     <div class="feedback ${ok ? 'ok' : 'bad'}">
       <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>' : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
-      ${full}${example}
+      ${diff}${full}${example}
       ${why ? `<div class="fb-why mt-2">${md(why)}</div>` : ''}
       <div class="fb-meta">${q.point ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}${q.kind === 'v' && q.key && ok && cur && srsLevelLabel(cur, q.key) !== '已熟練' ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(q.key)}">這個字我已經會了</button>` : ''}</div>
       <div id="aiExplainBox"></div>
@@ -3659,7 +3709,7 @@ function answerCurrent(i) {
     if (e.srs.isNew) SESSION.stats.newCount++;
   }
   if (q.kind === 'v' && q.fmt && q.fmt.startsWith('v-')) recordFormat(state.srs[q.key], q.fmt, ok);
-  if (q.kind === 'g' && q.item && (q.item.t || 'choice') === 'choice' && q.fmt) recordFormat(state.srs[q.key], q.fmt, ok, 'gf');
+  if (q.kind === 'g' && q.item && ((q.item.t || 'choice') === 'choice' || (q.fmt && q.fmt.endsWith('-type'))) && q.fmt) recordFormat(state.srs[q.key], q.fmt, ok, 'gf');
   // a new word comes back once more in another format; so does a new grammar item answered right (a miss gets the 再練一次 copy instead)
   if (e.srs && e.srs.isNew && (q.kind === 'v' || (q.kind === 'g' && ok && grammarHasFormats(q.item)))) scheduleEncores(e, ok);
   if (q.fmt) {
@@ -3994,8 +4044,23 @@ const ACTIONS = {
     const typed = e.spell.map(k => e.q.tiles[k]).join(''); const want = e.q.options[0].text;
     if ([...typed].length >= [...want].length) finishCustom(e, typed === want, typed); else renderPractice();
   },
+  'conj-tap': (el) => {
+    const e = currentEntry(); if (!e || e.done || !e.q || !(e.q.custom === 'g-conj-type' || e.q.custom === 'g-adj-type')) return;
+    e.conj = e.conj || []; const i = Number(el.dataset.i); if (!(i >= 0 && i < e.q.tiles.length) || e.conj.includes(i)) return;
+    e.conj.push(i);
+    const ans = e.q.options[0].text; const built = e.conj.map(k => e.q.tiles[k]).join('');
+    if (e.conj.length >= conjTokens(ans).length) finishCustom(e, conjMatch(built, ans), jaPlain(built)); else renderPractice();
+  },
+  'conj-back': () => { const e = currentEntry(); if (!e || e.done || !e.conj || !e.conj.length) return; e.conj.pop(); renderPractice(); },
+  'conj-submit': () => {
+    const e = currentEntry(); if (!e || e.done || !e.q || !(e.q.custom === 'g-conj-type' || e.q.custom === 'g-adj-type')) return;
+    const inp = document.querySelector('input.conj-in'); e.typed = inp ? inp.value : (e.typed || '');
+    if (!kanaKey(e.typed)) { toast('先輸入答案'); return; }
+    finishCustom(e, conjMatch(e.typed, e.q.options[0].text), e.typed.trim());
+  },
   'custom-giveup': () => {
     const e = currentEntry(); if (!e || e.done || !e.q || !e.q.custom) return;
+    if (e.q.custom === 'g-conj-type' || e.q.custom === 'g-adj-type') { e.conj = conjTokens(e.q.options[0].text).map(t => e.q.tiles.indexOf(t)); }   // show the right form
     if (e.q.custom === 'v-spell') { e.spell = [...e.q.options[0].text].map(ch => e.q.tiles.indexOf(ch)); }   // show the right spelling
     if (e.q.custom === 'v-match') { e.match = { sel: null, matched: e.q.pairs.map(p => p[0]), wrong: (e.match || {}).wrong || 0 }; }   // reveal every pair
     if (e.q.custom === 'g-order') { e.order = e.q.orderParts.map(p => e.q.tiles.indexOf(p)); }   // show the right order
@@ -4055,6 +4120,7 @@ function handleChange(ev) {
 
 // ---------- keyboard ----------
 function handleKey(ev) {
+  if (ev.key === 'Enter' && ev.target && ev.target.classList && ev.target.classList.contains('conj-in')) { ev.preventDefault(); ACTIONS['conj-submit'](); return; }
   const tag = (ev.target && ev.target.tagName || '').toUpperCase();
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (ev.target && ev.target.isContentEditable)) return;
   if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
@@ -6467,6 +6533,7 @@ function settingsLearn() {
     ${numRow('newKanjiPerDay', '每天新漢字上限', 'N5 漢字都學過一次後，才會開始加入 N4 漢字。', 0, 15, 1, '個')}
     ${numRow('listenPerDay', '每天聽力題', '短對話、即時應答與情境表達；需要能播放語音。', 0, 10, 1, '題')}
     ${selRow('retention', '複習強度', '越高越常複習，記得越牢，但每天的題目也越多。', [['0.85', '輕量（約記住 85%）'], ['0.9', '標準（約記住 90%）'], ['0.95', '加強（約記住 95%）']])}
+    ${selRow('conjInput', '活用題作答方式', '自動：剛學的題選答案，熟了之後改成自己拼出來。鍵盤輸入在 iPhone 請先到「設定 › 一般 › 鍵盤」加入日文鍵盤。', [['auto', '自動（熟了之後改成拼出來）'], ['choice', '一律選擇'], ['tiles', '一律假名磁貼'], ['type', '鍵盤輸入']])}
     ${selRow('order', '出題順序', '', [['mix', '單字與文法交錯'], ['split', '先單字，再文法']])}
     ${boolRow('showZh', '題目下方直接顯示中文', '關閉時可按 T 或點「顯示中文」再看。需要中文才能判斷的題目仍會顯示。')}
     ${selRow('includeImported', '每日練習包含自訂字卡', '句子型的匯入卡片比較難，預設只加入單字型的。', [['words', '只加入單字型'], ['all', '全部加入'], ['off', '不加入']])}
@@ -6841,7 +6908,7 @@ Object.assign(ACTIONS, {
 const FMT_NAME = {
   'v-meaning': '單字・看字選意思', 'v-recall': '單字・中翻日', 'v-cloze': '單字・例句填空', 'v-reading': '單字・漢字讀音', 'v-kanji': '單字・漢字寫法',
   'v-listen': '單字・聽音選意思', 'v-spell': '單字・假名拼字', 'v-match': '單字・配對', 'v-sentence': '自訂句子', 'g-choice': '文法・填空', 'g-meaning': '文法・句意／用法', 'g-order': '文法・排序',
-  'g-correct': '文法・選正確句', 'g-conj': '文法・動詞變化', 'g-adj': '文法・形容詞變化', 'g-identify': '文法・判斷動詞形',
+  'g-correct': '文法・選正確句', 'g-conj': '文法・動詞變化', 'g-adj': '文法・形容詞變化', 'g-identify': '文法・判斷動詞形', 'g-conj-type': '文法・動詞變化（拼寫）', 'g-adj-type': '文法・形容詞變化（拼寫）',
   'k-meaning': '漢字・意思', 'k-shape': '漢字・選字', 'k-read': '漢字・讀音', 'l-dialog': '聽力・對話', 'l-resp': '聽力・即時應答',
   'l-scene': '聽力・情境表達', 'r-passage': '閱讀', 'm-card': '錯題卡'
 };
