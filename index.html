@@ -84,6 +84,9 @@ a { color: var(--accent); }
   .sidebar { display: none; }
   .topbar { display: flex; }
   .content { padding: 16px 16px calc(92px + env(safe-area-inset-bottom)); }
+  .page-head .page-title.dup-title { display: none; }   /* the topbar shows it already */
+  .page-head .page-title.dup-title + .page-sub { margin-top: 0; }
+  .page-head { margin-bottom: 14px; }
   body.practicing .content { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }   /* no tab bar while practising, so no room kept for it */
   body.practicing .content:has(.pr-next) { padding-bottom: 0; }   /* the sticky 下一題 strip carries its own bottom padding: the page ends exactly under the button */
   .bottomnav { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--bg-elev) 94%, transparent); backdrop-filter: blur(10px); border-top: 1px solid var(--line); }
@@ -912,12 +915,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '100';   // keep equal to the number in sw.js CACHE ('nq-v100'); scripts/test.sh checks it
+const APP_VERSION = '101';   // keep equal to the number in sw.js CACHE ('nq-v101'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '100', from: '70', date: '2026-10-28', items: [
+  { v: '101', from: '70', date: '2026-10-28', items: [
+    '手機上各頁最上面不再重複頂欄已經寫的頁名（課程、單字、學習分析、錯題本、模擬考、工具與 AI），只留一行說明；單元名稱、考試分數這類不同的標題照常顯示。',
     '單字播放器多了「初識單詞」主題：自動收錄已學但還沒熟練的字，第一次用時預設就是它；之後選過哪個主題會記住。主題選單改成按鈕，上面有該主題的進度條（已學／熟悉／熟練），點開的清單裡每個主題也都有進度條和字數。',
     '聽一輪多了全螢幕播放：首頁播放器那排最右邊的放大圖示。點了畫面直接轉成橫的（手機不用轉、也不管有沒有鎖定旋轉），只剩字卡和播放鍵：日文在上、中文在下、例句最下，字依螢幕放到最大但整張塞得進去、不會捲動；✕ 回到首頁同一個分頁、播放不中斷。手機真的轉橫就用真的橫向。用雲端語音時，鎖定畫面和控制中心會顯示現在唸的字，上一個／下一個可以用（實驗性；iPhone 鎖屏仍可能停）。',
     '首頁錯題本播放頁右上角的「打開錯題本」捷徑拿掉（錯題本在「更多」裡）。',
@@ -3880,6 +3884,9 @@ function route() {
     else if (r.name === 'tools') renderTools(view, r.params);
     else if (r.name === 'stats') renderStats(view);
     else renderToday(view);
+    // the phone topbar already names the page: a page title that repeats it is hidden there (unit names, scores etc. stay)
+    const top = document.getElementById('topTitle').textContent.trim();
+    view.querySelectorAll('.page-head .page-title').forEach(el => el.classList.toggle('dup-title', el.textContent.trim() === top));
   } catch (e) {
     console.error(e);
     view.innerHTML = `<div class="card"><div class="card-title">這個頁面出錯了</div><p class="muted small">${esc(e.message)}</p><button class="btn" data-act="nav" data-route="#/today">回到首頁</button></div>`;

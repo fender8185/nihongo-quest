@@ -1329,6 +1329,20 @@ def test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until
     assert r['empty0'] != '初識單詞' and r['def'] == '初識單詞' and r['opened']['theme'] == '初識單詞' and r['opened']['n'] >= 2 and r['opened']['label'] == '初識單詞', r
     assert r['remembered'] == r['want'], r   # a picked theme is kept across pages
 
+# ---- 2026-10-28: no page title that repeats the phone topbar ----
+def test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones(b):
+    js = """(() => { const look = (hash) => { location.hash = hash; route(); const t = document.querySelector('.page-head .page-title'); const sub = document.querySelector('.page-head .page-sub'); return { top: document.getElementById('topTitle').textContent, title: t ? t.textContent.trim() : null, shown: t ? getComputedStyle(t).display !== 'none' : null, sub: sub ? getComputedStyle(sub).display !== 'none' : null }; };
+      const r = { course: look('#/course'), vocab: look('#/vocab'), stats: look('#/stats'), exam: look('#/exam'), mistakes: look('#/mistakes'), tools: look('#/tools'), unit: look('#/course/' + DATA.UNITS[0].id), intro: look('#/course/intro') };
+      location.hash = '#/today'; route(); return JSON.stringify(r); })()"""
+    out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    for k in ('course', 'vocab', 'stats', 'exam', 'mistakes', 'tools'):
+        assert r[k]['title'] == r[k]['top'] and r[k]['shown'] is False and r[k]['sub'], (k, r[k])   # same as the topbar: hidden, the subtitle stays
+    assert r['unit']['title'] != r['unit']['top'] and r['unit']['shown'] and r['intro']['shown'], r   # a unit's own name is not a repeat
+    out2 = b.run([("metrics", (1100, 900, False)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=45)   # desktop (no topbar): titles stay
+    r2 = json.loads(out2[-1])
+    assert r2['course']['shown'] and r2['vocab']['shown'] and r2['stats']['shown'], r2
+
 # ---- 2026-10-28: the install hint ----
 def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed(b):
     js = """(() => { localStorage.removeItem('nq_install_hint'); state.introSeen = true; state.lastBackup = todayStr(); saveState(); const view = document.getElementById('view'); const show = () => { location.hash = '#/today'; route(); return view.querySelector('.install-banner'); };
@@ -1378,7 +1392,7 @@ if __name__ == "__main__":
              test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
-             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box]
+             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box]
     failed = 0
     try:
         for t in tests:

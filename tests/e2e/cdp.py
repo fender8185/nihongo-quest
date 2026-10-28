@@ -60,8 +60,9 @@ class Browser:
                         await call("Emulation.setDeviceMetricsOverride", {"width": 1000, "height": 1400, "deviceScaleFactor": 1, "mobile": False})
                         r = await call("Page.captureScreenshot", {"format": "png", "captureBeyondViewport": True})
                         import base64; open(arg, "wb").write(base64.b64decode(r["result"]["data"]))
-                    elif kind == "metrics":   # ('metrics', (width, height)): emulate a phone viewport (mobile mode) from here on
-                        await call("Emulation.setDeviceMetricsOverride", {"width": arg[0], "height": arg[1], "deviceScaleFactor": 2, "mobile": True})
+                    elif kind == "metrics":   # ('metrics', (width, height[, mobile=True])): emulate that viewport from here on (it sticks for the Browser)
+                        mobile = arg[2] if len(arg) > 2 else True
+                        await call("Emulation.setDeviceMetricsOverride", {"width": arg[0], "height": arg[1], "deviceScaleFactor": 2 if mobile else 1, "mobile": mobile})
                     elif kind == "wait":
                         deadline = time.time() + timeout
                         while True:
