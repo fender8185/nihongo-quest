@@ -906,6 +906,8 @@ def test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_rea
 def test_today_notebook_card_is_the_listen_player(b):
     js = """(() => { const t = todayStr(); const v = REG.vocab.find(x => x.builtin); state.mistakes = [{ id: 'tp1', key: v.key, cat: '單字', prompt: '「' + v.m + '」的日文', answer: jaPlain(v.w), count: 2, mastered: false, date: t, last: t }]; saveState();
       LISTEN = null; location.hash = '#/today'; route(); const view = document.getElementById('view'); localStorage.removeItem('nq_listen_pref'); route(); const card = view.querySelector('.card.listen');
+      // the player was first built over an empty notebook (page load), then words arrived: it must open on words, not on the empty-side flip
+      const scopeAfterRefill = (() => { LISTEN = null; const keepM = state.mistakes; state.mistakes = []; listenInit(); state.mistakes = keepM; listenInit(); return LISTEN.scope; })(); route();
       const a = { player: !!card.querySelector('.lplay'), pills: card.querySelectorAll('.lopt').length, link: /打開錯題本/.test(card.textContent) && /錯題本 1/.test(card.querySelector('.seg').textContent), oldBtn: !!view.querySelector('[data-act=start-mistakes]'), compact: card.classList.contains('compact'), paused: LISTEN && !LISTEN.playing, count: (card.querySelector('#listenCount') || {}).textContent, word: /\\S/.test((card.querySelector('#listenCard') || {}).textContent || ''), grid3: !!view.querySelector('.grid-3') };
       ACTIONS['listen-cycle']({ dataset: { key: 'twice' } }); const stays = location.hash === '#/today' && !!document.querySelector('.card.listen.compact') && !document.querySelector('[data-act=listen-exit]') && document.querySelector('[data-key=twice]').dataset.value === '1';
       // switch the card to a word theme: every entry is a word of that theme, no scope pill, the theme select shows
@@ -915,11 +917,11 @@ def test_today_notebook_card_is_the_listen_player(b):
       ACTIONS['listen-source']({ dataset: { source: 'mistakes' } }); const backToNotes = LISTEN.source.kind === 'mistakes';
       location.hash = '#/stats'; route(); const stopped = LISTEN === null;
       state.mistakes = []; saveState(); location.hash = '#/today'; route(); const empty = /目前沒有可以聽的錯題/.test(document.getElementById('view').textContent) && !document.querySelector('.lplay');
-      localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ a, stays, th, switched, backToNotes, stopped, empty }); })()"""
+      localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ a, scopeAfterRefill, stays, th, switched, backToNotes, stopped, empty }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['a'] == {'player': True, 'pills': 4, 'link': True, 'oldBtn': False, 'compact': True, 'paused': True, 'count': '1 / 1・第 1 輪', 'word': True, 'grid3': False}, r['a']
-    assert r['stays'], r   # a pill on the Today card re-renders the card, never the standalone page
+    assert r['stays'] and r['scopeAfterRefill'] == 'v', r   # a pill on the Today card re-renders the card, never the standalone page
     assert r['th'] == {'kind': 'theme', 'all': True, 'select': True, 'scopePill': False, 'link': True, 'label': True} and r['switched'] and r['backToNotes'], r
     assert r['stopped'] and r['empty'], r
 
