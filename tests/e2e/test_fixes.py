@@ -849,27 +849,32 @@ def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in
       speechSynthesis.getVoices = () => [{ name: 'Kyoko', lang: 'ja-JP', voiceURI: 'kyoko', localService: true }, { name: 'Meijia', lang: 'zh-TW', voiceURI: 'mj', localService: true }];
       LISTEN_GAP.short = 30; LISTEN_GAP.long = 30; __tts.log.length = 0;
       ACTIONS['listen-start']({ dataset: { cat: '' } }); route();
+      const defaults = { scope: LISTEN.scope, order: LISTEN.order, zh: LISTEN.zh, twice: LISTEN.twice, kinds: [...new Set(LISTEN.items.map(e => e.kind))] };
+      listenSet('scope', 'all'); listenSet('order', 'count'); __tts.log.length = 0;   // a fixed order for the sequence check below
       const items0 = LISTEN.items.map(e => e.kind); const hash = location.hash; const svgBtns = ['listen-prev', 'listen-toggle', 'listen-next'].every(a => !!document.querySelector(`[data-act=${a}] svg`)) && !/[\\u23EE\\u23ED\\u25B6\\u275A]/.test(document.querySelector('.listen-ctl').textContent);
       const until = (f, ms) => new Promise(res => { const t0 = Date.now(); const tick = () => { if (f() || Date.now() - t0 > ms) res(f()); else setTimeout(tick, 40); }; tick(); });
-      const reached = await until(() => __tts.log.filter(x => x.startsWith('start:')).length >= 9, 20000);   // two words (3 each) and the sentence (3)
-      const log = __tts.log.filter(x => x.startsWith('start:')).map(x => x.slice(6)).slice(0, 9);
+      const reached = await until(() => __tts.log.filter(x => x.startsWith('start:')).length >= 11, 25000);   // two words (4 each with 兩次) and the sentence (3)
+      const log = __tts.log.filter(x => x.startsWith('start:')).map(x => x.slice(6)).slice(0, 11);
       const card = document.getElementById('listenCard').textContent.replace(/\\s+/g, ' ');
       listenPause(); const paused = !LISTEN.playing; const n1 = __tts.log.length; await sleep(300); const quiet = __tts.log.filter(x => x.startsWith('start:')).length === log.length;
       const opts = () => [...document.querySelectorAll('.listen-opts .lopt')].map(b => b.textContent.trim() + (b.classList.contains('on') ? '*' : '')); const o0 = opts();
       ACTIONS['listen-cycle']({ dataset: { key: 'scope' } }); const o1 = opts(); ACTIONS['listen-cycle']({ dataset: { key: 'scope' } }); const scoped = LISTEN.items.map(e => e.kind); const o2 = opts();
       ACTIONS['listen-cycle']({ dataset: { key: 'zh' } }); const zhOff = LISTEN.zh; const o3 = opts(); const oneRow = (() => { const r = [...document.querySelectorAll('.listen-opts .lopt')].map(b => b.getBoundingClientRect().top); return Math.max(...r) - Math.min(...r) < 2; })();
       const transport = !!document.querySelector('.listen-ctl .lplay svg') && document.querySelectorAll('.listen-ctl .lbtn svg').length === 2;
+      ACTIONS['listen-cycle']({ dataset: { key: 'twice' } }); const once = [LISTEN.twice, opts()[3]];
       location.hash = '#/mistakes'; route(); const gone = LISTEN === null;
-      return JSON.stringify({ items0, hash, reached, log, card, paused, quiet, scoped, zhOff, gone, svgBtns, zhCloud, o0, o1, o2, o3, oneRow, transport, vs: __vs, g: __g }); })()"""
+      return JSON.stringify({ defaults, items0, hash, reached, log, card, paused, quiet, scoped, zhOff, gone, svgBtns, zhCloud, o0, o1, o2, o3, once, oneRow, transport, gaps: [LISTEN_GAP.short, LISTEN_GAP.long], vs: __vs, g: __g }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("eval", page), ("eval", FAKE_TTS), ("eval", play)], timeout=90)
     r = json.loads(out[-3]); p = json.loads(out[-1])
     assert r['has'] and r['open'] is False and r['sum'].startswith('分類篩選（') and r['chips'] >= 2 and r['sum2'].startswith('分類：單字') and r['clear'] and r['btn'], r
     assert p['items0'] == ['v', 'v', 'g'] and p['hash'] == '#/mistakes/listen' and p['reached'] and p['svgBtns'], p   # SVG icons, never emoji-prone characters
     (w0, m0, e0), (w1, m1, e1) = p['vs']
-    assert p['log'] == [w0, m0, e0, w1, m1, e1, p['g']['s'], p['g']['zh'], p['g']['s']], p['log']   # word → meaning → example; sentence → translation → sentence
+    assert p['log'] == [w0, m0, w0, e0, w1, m1, w1, e1, p['g']['s'], p['g']['zh'], p['g']['s']], p['log']   # 兩次: word → meaning → word → example; sentence → translation → sentence
+    assert p['defaults'] == {'scope': 'v', 'order': 'random', 'zh': True, 'twice': True, 'kinds': ['v']}, p['defaults']
     assert '文法' in p['card'] and p['paused'] and p['quiet'] and p['scoped'] == ['g'] and p['zhOff'] is False and p['gone'], p
     assert p['zhCloud'], p   # Chinese: the zh/ clip is asked for first; when it cannot play, the device voice reads it
-    assert p['o0'] == ['全部', '錯最多次', '中文*'] and p['o1'] == ['只單字*', '錯最多次', '中文*'] and p['o2'] == ['只文法*', '錯最多次', '中文*'] and p['o3'] == ['只文法*', '錯最多次', '中文關'], p
+    assert p['o0'] == ['全部', '錯最多次', '中文*', '兩次*'] and p['o1'] == ['只單字*', '錯最多次', '中文*', '兩次*'] and p['o2'] == ['只文法*', '錯最多次', '中文*', '兩次*'] and p['o3'] == ['只文法*', '錯最多次', '中文關', '兩次*'], p
+    assert p['once'] == [False, '一次'], p['once']
     assert p['oneRow'] and p['transport'], p
 
 def test_today_offers_the_exam_pace_quotas_when_behind(b):
