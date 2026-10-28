@@ -217,12 +217,17 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .hero h2 { font-size: 20px; }
 .plan-line { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0 14px; color: var(--fg-2); font-size: 14px; }
 .plan-line b { color: var(--fg); font-variant-numeric: tabular-nums; }
-@media (max-width: 600px) { .hero { grid-template-columns: 1fr; } .hero .ring { display: none; } }
+@media (max-width: 600px) {
+  .hero { gap: 12px; align-items: start; }
+  .hero .ring { width: 64px !important; height: 64px !important; margin-top: 2px; }
+  .hero .ring .ring-txt b { font-size: 17px; } .hero .ring .ring-txt .tiny { font-size: 10px; }
+}
 
 /* ---------- heatmap ---------- */
 .heat-row { display: flex; flex-wrap: wrap; gap: 20px 32px; align-items: flex-start; }
 .heat-row > .grow { min-width: 0; }
 .heat-stats { flex: 1 1 240px; align-content: start; }
+@media (max-width: 760px) { .heat-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .heat-wrap { overflow-x: auto; padding-bottom: 4px; max-width: 100%; }
 .heat { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 12px); gap: 3px; width: max-content; }
 .heat i { width: 12px; height: 12px; border-radius: 3px; background: var(--heat-0); display: block; }
@@ -310,10 +315,14 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .fb-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 10px; font-size: 12px; color: var(--fg-3); }
 .pr-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .pr-actions .left, .pr-actions .right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+@media (hover: none) and (pointer: coarse) { .kbd-hint { display: none !important; } }   /* touch screens: no keyboard, no key hints */
+.hero-help summary { font-size: 12px; } .hero-help { margin: 2px 0 6px; }
+.banner.compact { padding: 8px 12px; font-size: 13px; gap: 8px 12px; }
+.pr-next { display: flex; justify-content: flex-end; margin-top: 12px; }
 @media (max-width: 600px) {
-  .pr-next-sticky { position: sticky; bottom: 0; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--bg) 70%, transparent); }
-  .pr-next-sticky .right { width: 100%; }
-  .pr-next-sticky .right .btn-primary { flex: 1; min-height: 48px; font-size: 16px; }
+  /* only the button sticks (the tool row stays in flow above the feedback), on a solid strip so nothing shows through */
+  .pr-next { position: sticky; bottom: 0; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); background: var(--bg); }
+  .pr-next .btn-primary { width: 100%; min-height: 48px; font-size: 16px; }
 }
 .speak-big { display: inline-flex; align-items: center; gap: 10px; margin: 8px auto; padding: 14px 22px; border-radius: 99px; border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--accent); cursor: pointer; font-size: 16px; }
 .speak-big svg { width: 22px; height: 22px; }
@@ -392,6 +401,7 @@ body.furi-smart ruby.known rt { visibility: hidden; }
 tr.lag td { color: var(--warn, #d08a00); font-weight: 600; }
 .gauges { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .gauge { min-width: 0; } .gauge svg { width: 100%; max-width: 260px; height: auto; display: block; margin: 0 auto; }
+@media (max-width: 600px) { .gauges { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .gauge svg { max-width: 170px; } .col-left { display: none; } }
 .gauge .track { fill: none; stroke: var(--heat-0); }
 .gauge path.arc { fill: none; outline: none; } .gauge path.arc:hover, .gauge path.arc:focus { filter: brightness(1.15); }
 .gauge .arc.seen { stroke: var(--gauge-seen); } .gauge .arc.learned { stroke: var(--heat-3); } .gauge .arc.mastered { stroke: var(--heat-4); }
@@ -807,12 +817,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '73';   // keep equal to the number in sw.js CACHE ('nq-v73'); scripts/test.sh checks it
+const APP_VERSION = '74';   // keep equal to the number in sw.js CACHE ('nq-v74'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '73', from: '70', date: '2026-10-28', items: [
+  { v: '74', from: '70', date: '2026-10-28', items: [
+    '手機排版：答完題只有「下一題」固定在底部，工具列和解說不再被蓋住；首頁的進度圓環在手機上也看得到（縮小放在右上）；備份提醒縮成一行；今日練習的說明收成「說明」，點開才看；觸控裝置不再顯示 Enter／Space／1–4 等鍵盤提示；學習分析的兩個儀表並排、連續天數改 2×2、每日練習量建議表少一欄。',
     '「學習紀錄」（熱力圖、連續天數、最近的每日紀錄）從首頁搬到學習分析。每日紀錄改成數據：各種類題數（單字、文法、漢字、聽力、閱讀、模擬考）、新學與升到熟悉的個數、當天正確率、完成的單元；不再列單字名稱和錯題。種類、正確率、完成單元從這版起才有紀錄。',
     '學習分析移除「常錯的題目」。練習中的「常錯」標籤保留。',
     '語音服務新增「雲端音檔」並設為預設：教材的一萬段句子已經用 Google Neural2 生成放在雲端，不用設定任何金鑰；播到哪句抓哪句（單字幾 KB、句子幾十 KB），播過的留在裝置上，離線也能聽；找不到的句子（自訂、AI 生成）退回瀏覽器語音。',
@@ -3366,7 +3377,7 @@ function renderPractice() {
       ${custom || `<div class="opts ${q.wide ? 'wide' : ''}">${opts}</div>`}
       ${answered ? feedbackHtml(e) : ''}
     </div>
-    <div class="pr-actions ${answered ? 'pr-next-sticky' : ''}">
+    <div class="pr-actions">
       <div class="left">
         <button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>
         ${q.kind === 'v' && q.item && q.item.ex && (answered || q.fmt !== 'v-cloze') ? '<button type="button" class="btn btn-sm btn-ghost" data-act="speak-example" title="朗讀例句">例句</button>' : ''}
@@ -3374,10 +3385,9 @@ function renderPractice() {
         ${answered && isAiConfigured() ? '<button type="button" class="btn btn-sm btn-ghost" data-act="ai-explain">AI 解析</button>' : ''}
         ${answered && q.kind !== 'm' ? '<button type="button" class="btn btn-sm btn-ghost" data-act="report-item" title="題目有誤或不自然時，把它移出題庫">這題有問題</button>' : ''}
       </div>
-      <div class="right">
-        ${answered ? `<button type="button" class="btn btn-primary" data-act="next" id="btnNext">${SESSION.idx + 1 < SESSION.entries.length ? '下一題' : '看結果'} <span class="kbd" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button>` : '<span class="tiny muted">按 1–4 作答</span>'}
-      </div>
-    </div>`;
+      ${answered ? '' : '<div class="right"><span class="tiny muted kbd-hint">按 1–4 作答</span></div>'}
+    </div>
+    ${answered ? `<div class="pr-next"><button type="button" class="btn btn-primary" data-act="next" id="btnNext">${SESSION.idx + 1 < SESSION.entries.length ? '下一題' : '看結果'} <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button></div>` : ''}`;
   if (!answered && q.audio && !e.autoPlayed) { e.autoPlayed = true; setTimeout(() => (q.audioScript ? speakScript(q.audio) : speak(q.audio, speakOpts(q, q.audio))), 150); }
   if (!answered && q.audioOptions) prefetchSpeech(q.options.map(o => jaPlain(o.text)));
   if (answered) { const nb = document.getElementById('btnNext'); if (nb) nb.focus({ preventScroll: true }); }
@@ -3621,7 +3631,7 @@ function renderSummary(view) {
 }
 
 // the 開始作答 button under a word preview or a lesson-section card (Enter also dismisses it)
-function previewGoBtn() { return '<button type="button" class="btn btn-primary" data-act="preview-go" id="btnNext">開始作答 <span class="kbd" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button>'; }
+function previewGoBtn() { return '<button type="button" class="btn btn-primary" data-act="preview-go" id="btnNext">開始作答 <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button>'; }
 
 function ringHtml(ratio, inner, size = 96) {
   const r = 42; const c = 2 * Math.PI * r;
@@ -4033,7 +4043,7 @@ function renderToday(view) {
         <button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・${dq.items.length} 題</button>
         ${dq.total > dq.items.length ? `<span class="small muted">做完還有 ${dq.total - dq.items.length} 題，可以再練一組</span>` : ''}
       </div>
-      ${encoreN ? `<div class="small muted mt-2">新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）；答錯的幾題後再練一次。</div>` : ''}`;
+`;
   }
 
   const paceText = pace.daysLeft === 0 ? '考試日期已到或已過，可在設定中更新考試日期。'
@@ -4066,7 +4076,7 @@ function renderToday(view) {
       <div class="hero">
         <div>
           <h2>${plan.remaining === 0 ? '今天完成了' : '今日練習'}</h2>
-          <div class="small muted mt-1">每一題都是今天到期的複習或今天的新內容；答錯的幾題後再練一次，之後第 1、3、7 天各複習一次，三次都對才離開錯題本。答對的越熟出現得越少。</div>
+          <details class="disclose hero-help"><summary class="small muted">說明</summary><div class="small muted mt-1">每一題都是今天到期的複習或今天的新內容；答錯的幾題後再練一次，之後第 1、3、7 天各複習一次，三次都對才離開錯題本。答對的越熟出現得越少。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div></details>
           ${heroBody}
         </div>
         ${ringHtml(prog.done / Math.max(1, prog.total), `<b>${prog.done}</b><div class="tiny muted">/ ${prog.total} 題</div>`, 110)}
@@ -4646,7 +4656,7 @@ function renderVocab(view, tab, params) {
           <button type="button" class="btn" data-act="flash-rate" data-g="hard">模糊<small>2・${nextIntervalText(v.key, 'hard')}</small></button>
           <button type="button" class="btn" data-act="flash-rate" data-g="good">記得<small>3・${nextIntervalText(v.key, 'good')}</small></button>
           <button type="button" class="btn" data-act="flash-rate" data-g="easy">很熟<small>4・${nextIntervalText(v.key, 'easy')}</small></button>
-        </div>` : `<button type="button" class="btn btn-primary btn-block btn-lg" data-act="flash-flip">看答案 <span class="kbd" style="background:transparent;border-color:currentColor;color:inherit">Space</span></button>`}
+        </div>` : `<button type="button" class="btn btn-primary btn-block btn-lg" data-act="flash-flip">看答案 <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Space</span></button>`}
       <div class="row-wrap mt-3" style="justify-content:space-between">
         <div class="row-wrap">
           <button type="button" class="btn btn-sm btn-ghost" data-act="flash-speak" data-mode="word">${icon('speaker')}發音</button>
@@ -4663,7 +4673,7 @@ function renderVocab(view, tab, params) {
     ${vocabTabs('cards')}
     <div class="row-wrap mb-3"><span class="small muted">牌組</span><div class="seg">${DECKS.map(([k, l]) => `<button type="button" aria-pressed="${deck === k}" data-act="flash-deck" data-deck="${k}">${l}</button>`).join('')}</div></div>
     ${card}
-    <p class="hint mt-3">鍵盤：Space 翻面，1–4 評分，R 發音。評分會決定下次出現的時間，測驗和每日練習也共用同一份紀錄。</p>`;
+    <p class="hint mt-3"><span class="kbd-hint">鍵盤：Space 翻面，1–4 評分，R 發音。</span>評分會決定下次出現的時間，測驗和每日練習也共用同一份紀錄。</p>`;
   if (v) renderFlashMedia(v);
 }
 function nextIntervalText(key, grade) {
@@ -4983,8 +4993,8 @@ function renderMistakeLoop(view) {
         ${faces.front}
         ${MLOOP.flipped ? `<div class="divider"></div>${faces.back}${m.note ? `<div class="small muted mt-2">筆記：${esc(m.note)}</div>` : ''}` : ''}
       </div>
-      ${!MLOOP.flipped ? `<button type="button" class="btn btn-primary btn-block btn-lg" data-act="mloop-flip">看答案 <span class="kbd" style="background:transparent;border-color:currentColor;color:inherit">Space</span></button>`
-        : second ? `<button type="button" class="btn btn-primary btn-block btn-lg" data-act="mloop-next">下一張 <span class="kbd" style="background:transparent;border-color:currentColor;color:inherit">Space</span></button>`
+      ${!MLOOP.flipped ? `<button type="button" class="btn btn-primary btn-block btn-lg" data-act="mloop-flip">看答案 <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Space</span></button>`
+        : second ? `<button type="button" class="btn btn-primary btn-block btn-lg" data-act="mloop-next">下一張 <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Space</span></button>`
         : `<div class="rate two">
           <button type="button" class="btn" data-act="mloop-rate" data-g="again">忘了<small>1・這一輪最後再看</small></button>
           <button type="button" class="btn btn-primary" data-act="mloop-rate" data-g="good">記得<small>2</small></button>
@@ -6553,7 +6563,7 @@ function renderStats(view) {
 
 function planAdviceHtml() {
   const a = planAdvice();
-  const rows = a.banks.map(b2 => `<tr${a.lagging[0] === b2 ? ' class="lag"' : ''}><td>${esc(b2.name)}</td><td class="num">${b2.done} / ${b2.total}</td><td class="num">${b2.left}</td><td class="num">${b2.key ? b2.rec : '—'}</td><td class="num">${b2.key ? b2.cur : '—'}</td></tr>`).join('');
+  const rows = a.banks.map(b2 => `<tr${a.lagging[0] === b2 ? ' class="lag"' : ''}><td>${esc(b2.name)}</td><td class="num">${b2.done} / ${b2.total}</td><td class="num col-left">${b2.left}</td><td class="num">${b2.key ? b2.rec : '—'}</td><td class="num">${b2.key ? b2.cur : '—'}</td></tr>`).join('');
   let lead;
   if (a.daysLeft <= 0) lead = '考試日期已經過了。到設定裡改成下一次的日期，這裡會重新計算。';
   else if (a.studyDays <= 0) lead = `距離考試只剩 ${a.daysLeft} 天，不到三週：建議停止新題、只做複習與模擬考。`;
@@ -6564,7 +6574,7 @@ function planAdviceHtml() {
   return `<div class="card" id="planAdvice">
       <div class="card-head"><div><div class="card-title">每日練習量建議</div><div class="card-sub">用「還沒學過的題數 ÷ 可學習天數」算出每天該學的新題，複習量另外加上。</div></div>${btn}</div>
       <p class="small dim">${esc(lead)}</p>
-      <div class="table-wrap"><table class="table"><thead><tr><th>題庫</th><th>已學 / 總數</th><th>還沒學</th><th>建議每天</th><th>目前設定</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="table-wrap"><table class="table"><thead><tr><th>題庫</th><th>已學 / 總數</th><th class="col-left">還沒學</th><th>建議每天</th><th>目前設定</th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="small muted mt-2">套用後的設定：每組 ${a.rec.sessionSize} 題・新單字 ${a.rec.newVocabPerDay}・新文法 ${a.rec.newGrammarPerDay}・新漢字 ${a.rec.newKanjiPerDay}・聽力 ${a.rec.listenPerDay}${a.studyDays > 0 ? '' : '（已無學習天數，新題全部為 0）'}。閱讀題跟著單元進度出，不另外設定。</div>
     </div>`;
 }
@@ -8093,9 +8103,9 @@ function backupDue() {
 }
 function backupBannerHtml() {
   if (!backupDue()) return '';
-  const msg = state.lastBackup ? `距離上次下載備份已經 ${daysBetween(state.lastBackup, todayStr())} 天。` : '你還沒有下載過備份。';
-  return `<div class="banner warn"><div class="grow">${msg}進度只存在這個瀏覽器裡，清除瀏覽資料或換電腦時就會不見，建議下載一份備份檔。</div>
-    <div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="backup-now">下載備份</button><button type="button" class="btn btn-sm btn-ghost" data-act="backup-snooze">一週後再提醒</button></div></div>`;
+  const msg = state.lastBackup ? `上次備份是 ${daysBetween(state.lastBackup, todayStr())} 天前` : '還沒有備份';
+  return `<div class="banner warn compact"><div class="grow">${msg}，進度只在這個瀏覽器裡。</div>
+    <div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="backup-now">下載備份</button><button type="button" class="btn btn-sm btn-ghost" data-act="backup-snooze" title="一週後再提醒">稍後</button></div></div>`;
 }
 
 async function fillSnapshotList() {
