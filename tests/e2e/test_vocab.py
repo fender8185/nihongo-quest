@@ -141,17 +141,23 @@ TESTS = [test_themes_cover_every_builtin_word_once, test_theme_tab_lists_cards_a
 
 # ---- 2026-10-26 (2): two active themes feed the new-word order ----
 def test_new_words_come_from_two_themes_interleaved(b):
+    # since 1.0.6 the PRE_N5 words not yet seen ride a lane of their own beside the two N5 theme lanes (three lanes interleaved)
     js = """(() => { const pool = REG.vocab.filter(v => v.builtin);
-      const th = activeThemes(pool, false); const c = newVocabCandidates(pool, false).slice(0, 8).map(vocabTheme);
+      const th = activeThemes(pool, false); const c = newVocabCandidates(pool, false).slice(0, 9);
       REG.vocab.filter(v => v.builtin && v.lv === 'N5' && vocabTheme(v) === th[0]).forEach(v => { state.srs[v.key] = { b: 1, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5, f: {} }; });
-      const th2 = activeThemes(pool, false); const c2 = newVocabCandidates(pool, false).slice(0, 6).map(vocabTheme);
+      const th2 = activeThemes(pool, false); const c2 = newVocabCandidates(pool, false).slice(0, 9);
       REG.vocab.filter(v => v.builtin && v.lv === 'N5' && vocabTheme(v) !== '副詞').forEach(v => { state.srs[v.key] = { b: 1, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5, f: {} }; });
-      const th3 = activeThemes(pool, false); const c3 = newVocabCandidates(pool, false).slice(0, 4);
-      return JSON.stringify({ th, c, th2, c2, th3, c3: c3.map(vocabTheme), lv3: c3.map(v => v.lv) }); })()"""
+      const th3 = activeThemes(pool, false); const c3 = newVocabCandidates(pool, false).slice(0, 6);
+      const pick = (arr) => arr.map(v => [v.lv, vocabTheme(v)]);
+      return JSON.stringify({ th, c: pick(c), th2, c2: pick(c2), th3, c3: pick(c3) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['th'] == ['問候', '指示'] and r['c'] == ['問候', '指示'] * 4, r
-    assert r['th2'] == ['指示', '代名詞'] and r['c2'] == ['指示', '代名詞'] * 3, r
-    assert r['th3'] == ['副詞'] and r['c3'] == ['副詞'] * 4 and r['lv3'] == ['N5'] * 4, r
+    def check(th, c):
+        pre = [x for x in c if x[0] == 'PRE_N5']; n5 = [x for x in c if x[0] == 'N5']
+        assert c[0][0] == 'PRE_N5' and 3 <= len(pre) <= 4 and all(x[1] == '問候' for x in pre), c   # the PRE_N5 lane (問候 first) is interleaved, not a block
+        assert n5 and all(x[1] in th for x in n5) and n5[0][1] == th[0], (th, c)                   # the other slots come from the two active N5 themes
+    assert len(r['th']) == 2 and r['th'][0] == '代名詞', r
+    check(r['th'], r['c']); assert r['th2'][0] == r['th'][1], r; check(r['th2'], r['c2'])
+    assert r['th3'] == ['副詞'] and all(x == ['PRE_N5', '問候'] or x == ['N5', '副詞'] for x in r['c3']), r
 
 def test_custom_cards_still_alternate_with_builtins(b):
     js = """(() => { state.vocab.push({ id: 'c1', w: '猫', r: 'ねこ', m: '貓' }, { id: 'c2', w: '犬', r: 'いぬ', m: '狗' }); buildRegistry();
@@ -159,8 +165,9 @@ def test_custom_cards_still_alternate_with_builtins(b):
     assert ev(b, js) == '["b","c","b","c"]'
 
 def test_today_names_the_active_themes(b):
-    out = b.run([("nav", URL), ("wait", READY), ("eval", "location.hash = '#/today'; route(); document.querySelector('.plan-topics').textContent")])
-    assert '問候・指示' in out[-1], out[-1]
+    out = b.run([("nav", URL), ("wait", READY), ("eval", "location.hash = '#/today'; route(); JSON.stringify({ t: document.querySelector('.plan-topics').textContent, th: activeThemes(REG.vocab.filter(v => v.builtin), false) })")])
+    r = json.loads(out[-1])
+    assert '問候' in r['t'] and all(th in r['t'] for th in r['th']), r   # the PRE_N5 lane (問候 first) and the two active N5 themes
 
 TESTS += [test_new_words_come_from_two_themes_interleaved, test_custom_cards_still_alternate_with_builtins, test_today_names_the_active_themes]
 

@@ -12,7 +12,7 @@
 <script src="./vendor/supabase.js"></script>
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
-<script src="./data.js?v=11"></script>
+<script src="./data.js?v=12"></script>
 <title>Nihongo Quest N4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -3166,7 +3166,7 @@ function laneOrder() {
 }
 function laneCap() { return THEME_LANE_DAYS * Math.max(1, Number(state.settings.newVocabPerDay) || 0); }
 // the level whose themes hold the lanes: PRE_N5 in 入門; otherwise N5 while it has unseen words, then N4
-function laneLevel(fresh) { return inPreStage() ? 'PRE_N5' : fresh.some(v => v.lv === 'N5') ? 'N5' : 'N4'; }
+function laneLevel(fresh) { return inPreStage() ? 'PRE_N5' : fresh.some(v => v.lv === 'N5') ? 'N5' : 'N4'; }   /* level-literal-ok: picks the theme level, PRE_N5 leftovers ride their own lane */
 function activeThemes(pool, allowN4) {
   const fresh = pool.filter(v => v.builtin && !state.srs[v.key] && (v.lv !== 'N4' || allowN4));
   const lv = laneLevel(fresh);
@@ -3302,7 +3302,7 @@ function extrasPlan(curIdx) {
   const dueR = doneToday(rPool) ? [] : rPool.filter(isDue).sort(byDue).slice(0, 1);
   const newR = !dueR.length && !doneToday(rPool) && (state.today.newR || 0) < 1 ? rPool.filter(x => !state.srs[x.key]).sort(byUnit).slice(0, 1) : [];
   const k4 = n5KanjiLeft() === 0;
-  const dueK = REG.kanji.filter(k => (k.lv === 'N5' || k4) && isDue(k)).sort(byDue);
+  const dueK = REG.kanji.filter(k => (k.lv !== 'N4' || k4) && isDue(k)).sort(byDue);
   const newK = newKanjiCandidates(k4).slice(0, Math.max(0, (s.newKanjiPerDay || 0) - (state.today.newK || 0)));
   const { dueA, newA } = kanaPlan(t);
   return { dueL, newL, dueR, newR, dueK, newK, dueA, newA };
@@ -7125,7 +7125,7 @@ function kanjiDetailHtml(k) {
 
 function buildKanjiQueue(size = 15) {
   const k4 = n5KanjiLeft() === 0;
-  const pool = REG.kanji.filter(k => k.lv === 'N5' || k4);
+  const pool = REG.kanji.filter(k => k.lv !== 'N4' || k4);
   const left = Math.max(0, (state.settings.newKanjiPerDay || 0) - (state.today.newK || 0));
   return scopeQueue(pool, newKanjiCandidates(k4).slice(0, left), size);
 }
@@ -7163,9 +7163,9 @@ function weekPractice(days = 7) {
 // overall progress of a bank in three mastery steps (counts) plus a weighted score: 已學 1・熟悉 2・熟練 3 points out of 3 per item
 function progressTotals(kind) {
   const t = { kind, total: 0, seen: 0, learned: 0, mastered: 0, n5: 0 };   // n5: how many of the items are N5 (a faint mark on the gauge)
-  const n5Units = new Set(DATA.UNITS.filter(u => u.lv === 'N5').map(u => u.id));
+  const n5Units = new Set(DATA.UNITS.filter(u => u.lv === 'N5').map(u => u.id));   /* level-literal-ok: units */
   if (kind === 'v') {
-    REG.vocab.filter(v => v.builtin).forEach(v => { t.total++; if (v.lv === 'N5') t.n5++; const r = state.srs[v.key]; if (!r) return; const l = srsLevelLabel(r, v.key); if (l === '已熟練') t.mastered++; else if (r.b >= SRS_LEARNED) t.learned++; else t.seen++; });
+    REG.vocab.filter(v => v.builtin).forEach(v => { t.total++; if (v.lv !== 'N4') t.n5++; const r = state.srs[v.key]; if (!r) return; const l = srsLevelLabel(r, v.key); if (l === '已熟練') t.mastered++; else if (r.b >= SRS_LEARNED) t.learned++; else t.seen++; });
   } else {
     REG.grammar.forEach(g => { t.total++; if (n5Units.has(g.u)) t.n5++; const r = state.srs[g.key]; if (!r) return; if ((r.ok || 0) >= 3) t.mastered++; else if ((r.ok || 0) >= 1) t.learned++; else t.seen++; });
   }
