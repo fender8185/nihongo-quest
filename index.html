@@ -380,10 +380,16 @@ details.mrow .mbody { padding: 4px 0 14px; }
 .fill-ans { color: var(--accent); font-weight: 600; }
 .listen-sentence { font-size: 24px; line-height: 1.9; margin-top: 10px; }
 .listen-ex { text-align: left; }
-.listen-ctl { display: flex; justify-content: center; gap: 12px; margin-top: 16px; }
-.listen-ctl .btn-big { min-width: 64px; min-height: 56px; } .listen-ctl .btn-big svg { width: 26px; height: 26px; }
-.listen-ctl .btn-primary.btn-big { min-width: 96px; }
-.listen-opts { justify-content: center; }
+.listen-bar { height: 3px; border-radius: 2px; background: var(--bg-sunken); margin: 6px 18px 0; overflow: hidden; }
+.listen-bar span { display: block; height: 100%; background: var(--accent); width: 0; transition: width .25s; }
+.listen-ctl { display: flex; align-items: center; justify-content: center; gap: 28px; margin-top: 16px; }
+.lbtn { background: none; border: 0; color: var(--fg-2); width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; }
+.lbtn svg { width: 28px; height: 28px; } .lbtn:hover { color: var(--fg); } .lbtn:active { background: var(--bg-sunken); }
+.lplay { width: 72px; height: 72px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-fg); display: grid; place-items: center; cursor: pointer; box-shadow: 0 8px 24px rgba(0, 0, 0, .28); }
+.lplay svg { width: 32px; height: 32px; } .lplay:active { transform: scale(.96); }
+.listen-opts { display: flex; justify-content: center; gap: 8px; margin-top: 18px; }
+.lopt { font: inherit; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--line); background: transparent; color: var(--fg-3); cursor: pointer; white-space: nowrap; }
+.lopt svg { width: 14px; height: 14px; } .lopt.on { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
 .rate { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
 .rate.two { grid-template-columns: repeat(2, 1fr); }
 .flash .front-stem { font-size: 24px; line-height: 1.8; }
@@ -830,12 +836,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '80';   // keep equal to the number in sw.js CACHE ('nq-v80'); scripts/test.sh checks it
+const APP_VERSION = '81';   // keep equal to the number in sw.js CACHE ('nq-v81'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '80', from: '70', date: '2026-10-28', items: [
+  { v: '81', from: '70', date: '2026-10-28', items: [
+    '「聽一輪」的控制列重新設計：中間一顆圓形播放鍵、兩側上一個／下一個不加框，像一般音樂播放器；下面一排三顆膠囊（範圍、順序、中文）點一下輪換，亮起表示非預設。多一條進度線顯示在清單裡的位置。',
     '中文也有雲端音檔：單字意思、例句與文法的翻譯、漢字字義用 Google 的台灣華語聲音預先生成（約 6,000 段），「聽一輪」的中文優先用它，沒有的句子才退回裝置內建的中文語音。生成工具同一顆按鈕一起跑，已有的檔案略過。',
     '錯題本新增「聽一輪」：一直循環朗讀待複習的錯題，只要聽就好。單字是「唸單字 → 中文意思 → 例句」，文法是「整句 → 中文 → 整句再一次」；中文用裝置內建的語音。可以切單字／文法、錯最多次／隨機、中文開關，上一個／下一個，Space 暫停。不寫排程、不算題數；播放中保持螢幕亮著（iPhone 鎖屏會停，是 Safari 的限制）。',
     '錯題本的分類標籤收進「分類篩選（N 類）」，預設收起；選了某一類時小標顯示「分類：…」和清除鈕。',
@@ -1923,6 +1930,7 @@ const ICONS = {
   cross: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7 7 17"/></svg>',
   play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>',
   pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4.5" height="14" rx="1"/><rect x="13.5" y="5" width="4.5" height="14" rx="1"/></svg>',
+  shuffle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>',
   prev: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5.5" width="2.5" height="13" rx="0.8"/><path d="M19 5.5v13l-10-6.5z"/></svg>',
   next: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="16.5" y="5.5" width="2.5" height="13" rx="0.8"/><path d="M5 5.5v13l10-6.5z"/></svg>',
   flame: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c4 0 6.5-2.7 6.5-6.3 0-3.6-2.6-5.6-3.8-9.2-.3 2-1.3 3.4-2.6 4.2.2-2.7-1-5.4-3.4-6.7.2 3-1.5 4.6-2.8 6.4A7.2 7.2 0 0 0 5.5 14.7C5.5 18.3 8 21 12 21Z"/></svg>',
@@ -5155,25 +5163,27 @@ function listenRenderNow() {
   const card = document.getElementById('listenCard'); if (card) card.innerHTML = listenCardHtml();
   const n = document.getElementById('listenCount'); if (n) n.textContent = `${Math.min(L.idx + 1, L.items.length)} / ${L.items.length}・第 ${L.round} 輪`;
   const b = document.querySelector('[data-act=listen-toggle]'); if (b) b.innerHTML = icon(L.playing ? 'pause' : 'play');
+  const bar = document.getElementById('listenBar'); if (bar) bar.style.width = `${L.items.length ? Math.round((Math.min(L.idx, L.items.length - 1) + 1) / L.items.length * 100) : 0}%`;
 }
 function renderListen(view) {
   if (!LISTEN) { if (!startListen()) { go('#/mistakes'); } return; }
   const L = LISTEN;
-  const seg = (key, opts) => `<div class="seg">${opts.map(([v, label]) => `<button type="button" aria-pressed="${String(L[key]) === v}" data-act="listen-set" data-key="${key}" data-value="${v}">${label}</button>`).join('')}</div>`;
-  view.innerHTML = `<div class="card">
+  const scopeLabel = { all: '全部', v: '只單字', g: '只文法' }[L.scope] || '全部';
+  view.innerHTML = `<div class="card listen">
       <div class="row between small muted"><span id="listenCount"></span><button type="button" class="btn btn-sm btn-ghost" data-act="listen-exit">結束</button></div>
       <div id="listenCard"></div>
+      <div class="listen-bar"><span id="listenBar"></span></div>
       <div class="listen-ctl">
-        <button type="button" class="btn btn-big" data-act="listen-prev" aria-label="上一個">${icon('prev')}</button>
-        <button type="button" class="btn btn-primary btn-big" data-act="listen-toggle" aria-label="播放／暫停"></button>
-        <button type="button" class="btn btn-big" data-act="listen-next" aria-label="下一個">${icon('next')}</button>
+        <button type="button" class="lbtn" data-act="listen-prev" aria-label="上一個">${icon('prev')}</button>
+        <button type="button" class="lplay" data-act="listen-toggle" aria-label="播放／暫停"></button>
+        <button type="button" class="lbtn" data-act="listen-next" aria-label="下一個">${icon('next')}</button>
       </div>
-      <div class="row-wrap mt-3 listen-opts">
-        ${seg('scope', [['all', '全部'], ['v', '單字'], ['g', '文法']])}
-        ${seg('order', [['count', '錯最多次'], ['random', '隨機']])}
-        ${seg('zh', [['true', '中文開'], ['false', '中文關']])}
+      <div class="listen-opts">
+        <button type="button" class="lopt${L.scope !== 'all' ? ' on' : ''}" data-act="listen-cycle" data-key="scope" title="範圍：全部／只單字／只文法">${esc(scopeLabel)}</button>
+        <button type="button" class="lopt${L.order === 'random' ? ' on' : ''}" data-act="listen-cycle" data-key="order" title="順序：錯最多次優先／隨機">${icon('shuffle')}${L.order === 'random' ? '隨機' : '錯最多次'}</button>
+        <button type="button" class="lopt${L.zh ? ' on' : ''}" data-act="listen-cycle" data-key="zh" title="唸中文意思／翻譯">${L.zh ? '中文' : '中文關'}</button>
       </div>
-      <p class="hint mt-3">一直循環唸到你按停為止；不寫排程、不算題數。播放中會讓螢幕保持亮著；iPhone 鎖屏後聲音會停，是 Safari 的限制。</p>
+      <p class="hint mt-3" style="text-align:center">循環唸到你按停；不寫排程、不算題數。播放中螢幕保持亮著，iPhone 鎖屏會停（Safari 的限制）。</p>
     </div>`;
   listenRenderNow();
 }
@@ -5190,7 +5200,13 @@ Object.assign(ACTIONS, {
   'listen-next': () => listenSeek(1),
   'listen-prev': () => listenSeek(-1),
   'listen-exit': () => listenStop(),
-  'listen-set': (el) => listenSet(el.dataset.key, el.dataset.key === 'zh' ? el.dataset.value === 'true' : el.dataset.value)
+  'listen-set': (el) => listenSet(el.dataset.key, el.dataset.key === 'zh' ? el.dataset.value === 'true' : el.dataset.value),
+  'listen-cycle': (el) => {
+    const k = el.dataset.key; if (!LISTEN) return;
+    if (k === 'scope') listenSet('scope', { all: 'v', v: 'g', g: 'all' }[LISTEN.scope] || 'all');
+    else if (k === 'order') listenSet('order', LISTEN.order === 'random' ? 'count' : 'random');
+    else listenSet('zh', !LISTEN.zh);
+  }
 });
 
 function mloopKey(ev) {

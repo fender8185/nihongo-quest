@@ -855,10 +855,12 @@ def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in
       const log = __tts.log.filter(x => x.startsWith('start:')).map(x => x.slice(6)).slice(0, 9);
       const card = document.getElementById('listenCard').textContent.replace(/\\s+/g, ' ');
       listenPause(); const paused = !LISTEN.playing; const n1 = __tts.log.length; await sleep(300); const quiet = __tts.log.filter(x => x.startsWith('start:')).length === log.length;
-      ACTIONS['listen-set']({ dataset: { key: 'scope', value: 'g' } }); const scoped = LISTEN.items.map(e => e.kind);
-      ACTIONS['listen-set']({ dataset: { key: 'zh', value: 'false' } }); const zhOff = LISTEN.zh;
+      const opts = () => [...document.querySelectorAll('.listen-opts .lopt')].map(b => b.textContent.trim() + (b.classList.contains('on') ? '*' : '')); const o0 = opts();
+      ACTIONS['listen-cycle']({ dataset: { key: 'scope' } }); const o1 = opts(); ACTIONS['listen-cycle']({ dataset: { key: 'scope' } }); const scoped = LISTEN.items.map(e => e.kind); const o2 = opts();
+      ACTIONS['listen-cycle']({ dataset: { key: 'zh' } }); const zhOff = LISTEN.zh; const o3 = opts(); const oneRow = (() => { const r = [...document.querySelectorAll('.listen-opts .lopt')].map(b => b.getBoundingClientRect().top); return Math.max(...r) - Math.min(...r) < 2; })();
+      const transport = !!document.querySelector('.listen-ctl .lplay svg') && document.querySelectorAll('.listen-ctl .lbtn svg').length === 2;
       location.hash = '#/mistakes'; route(); const gone = LISTEN === null;
-      return JSON.stringify({ items0, hash, reached, log, card, paused, quiet, scoped, zhOff, gone, svgBtns, zhCloud, vs: __vs, g: __g }); })()"""
+      return JSON.stringify({ items0, hash, reached, log, card, paused, quiet, scoped, zhOff, gone, svgBtns, zhCloud, o0, o1, o2, o3, oneRow, transport, vs: __vs, g: __g }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("eval", page), ("eval", FAKE_TTS), ("eval", play)], timeout=90)
     r = json.loads(out[-3]); p = json.loads(out[-1])
     assert r['has'] and r['open'] is False and r['sum'].startswith('分類篩選（') and r['chips'] >= 2 and r['sum2'].startswith('分類：單字') and r['clear'] and r['btn'], r
@@ -867,6 +869,8 @@ def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in
     assert p['log'] == [w0, m0, e0, w1, m1, e1, p['g']['s'], p['g']['zh'], p['g']['s']], p['log']   # word → meaning → example; sentence → translation → sentence
     assert '文法' in p['card'] and p['paused'] and p['quiet'] and p['scoped'] == ['g'] and p['zhOff'] is False and p['gone'], p
     assert p['zhCloud'], p   # Chinese: the zh/ clip is asked for first; when it cannot play, the device voice reads it
+    assert p['o0'] == ['全部', '錯最多次', '中文*'] and p['o1'] == ['只單字*', '錯最多次', '中文*'] and p['o2'] == ['只文法*', '錯最多次', '中文*'] and p['o3'] == ['只文法*', '錯最多次', '中文關'], p
+    assert p['oneRow'] and p['transport'], p
 
 def test_today_offers_the_exam_pace_quotas_when_behind(b):
     js = """(() => { state.settings.examDate = addDays(todayStr(), 121); Object.assign(state.settings, { newVocabPerDay: 1, newGrammarPerDay: 1 }); saveState();
