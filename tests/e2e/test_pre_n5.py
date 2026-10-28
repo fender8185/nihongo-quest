@@ -335,6 +335,33 @@ def test_day_one_responses_never_decoy_each_other(b):
     r = json.loads(ev(b, js))
     assert r == [], r
 
+# ---- fixes from the 1.0.9 whole-branch review ----
+def test_vocab_redirect_does_not_trap_the_back_button(b):
+    js = """new Promise(res => { location.hash = '#/today'; route(); setTimeout(() => { location.hash = '#/vocab'; route();
+      setTimeout(() => { const atLevel = location.hash.startsWith('#/vocab/level?lv='); history.back(); setTimeout(() => res(JSON.stringify({ atLevel, after: location.hash })), 400); }, 300); }, 300); })"""
+    r = json.loads(ev(b, js))
+    assert r['atLevel'] and r['after'] == '#/today', r
+
+def test_flash_deck_switch_stays_on_the_cards_page(b):
+    js = """(() => { location.hash = '#/vocab/cards'; route(); document.querySelector('[data-act="flash-deck"][data-deck="N5"]').click(); route();
+      return JSON.stringify({ hash: location.hash, deck: FLASH && FLASH.deck, card: Boolean(document.querySelector('.flash')) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['hash'] == '#/vocab/cards?deck=N5' and r['deck'] == 'N5' and r['card'], r
+
+def test_n4_kanji_fall_back_to_a_theme_of_another_level(b):
+    js = """(() => { location.hash = '#/vocab/level?lv=N4'; route(); const groups = [...document.querySelectorAll('.kanji-box .kanji-group')].map(g => [g.querySelector('.small').textContent, g.querySelectorAll('.kanji-tile').length]);
+      const other = groups.find(g => g[0].startsWith('其他')); const t0 = performance.now(); route(); const ms = performance.now() - t0;
+      return JSON.stringify({ n: groups.length, other: other ? other[1] : 0, total: groups.reduce((a, g) => a + g[1], 0), ms }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['total'] == 238 and r['other'] <= 5 and r['ms'] < 120, r
+
+def test_word_table_from_a_level_card_keeps_the_level(b):
+    js = """(() => { location.hash = '#/vocab/list?lv=N5&c=飲食'; route(); const head = document.querySelector('.page-head');
+      const back = head.querySelector('[data-act="nav"]'); const practice = head.querySelector('[data-act="start-vocab"]');
+      return JSON.stringify({ back: back && back.dataset.route, filter: practice && practice.dataset.filter, rows: document.querySelectorAll('.table tbody tr').length, n5: REG.vocab.filter(v => v.builtin && v.lv === 'N5' && vocabTheme(v) === '飲食').length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['back'] == '#/vocab/level?lv=N5' and r['filter'] == 't:N5:飲食' and r['rows'] == r['n5'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -928,12 +928,16 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.9';   // keep equal to the version in sw.js CACHE ('nq-v1.0.9'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.10';   // keep equal to the version in sw.js CACHE ('nq-v1.0.10'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.10', date: '2026-10-29', items: [
+    '單字頁修正：從別頁進單字頁後按返回不再卡在單字頁；字卡的牌組切換恢復；單字表從等級頁的主題卡進來時，「練習這個主題」和返回鍵都只針對那一級。',
+    'N4 漢字頁：只出現在其他等級單字裡的漢字（兄、朝、青…）歸到那個主題並標明「入門的字／N5 的字」，不再堆在「其他」；N4 等級頁開啟變快。'
+  ] },
   { v: '1.0.9', date: '2026-10-29', items: [
     '單字頁改版：第一層改成入門／N5／N4 三個等級分頁，打開時直接落在你目前的等級；每頁有進度環、「練這個等級」，底下是本級的主題卡（卡上列出該主題會碰到的漢字，點了看說明）和本級漢字依主題分組的方格。原本的「主題」「漢字」分頁併進來，字卡、單字表、匯入照舊。',
     '入門頁多一張五十音表，每個假名依熟練度上色，按每行前面的 ▶ 只練那一行。手機上五十音表和漢字區預設收合，主題卡先看到。',
@@ -4118,8 +4122,8 @@ function route() {
     if (r.name === 'today') renderToday(view);
     else if (r.name === 'course') { if (r.parts[1] === 'intro') renderIntro(view); else if (r.parts[1]) renderUnit(view, r.parts[1], r.params.tab || 'lesson'); else renderCourse(view); }
     else if (r.name === 'vocab') {
-      if (!r.parts[1] || r.parts[1] === 'themes') { location.hash = '#/vocab/level?lv=' + defaultVocabLevel(); return route(); }   // the vocab page opens on the learner's level; the old 主題 tab lives there too
-      if (r.parts[1] === 'kanji') { location.hash = '#/vocab/level?lv=' + (['PRE_N5', 'N5', 'N4'].includes(r.params.lv) ? r.params.lv : defaultVocabLevel()); return route(); }   // the old 漢字 tab: kanji sit on the level pages
+      if (!r.parts[1] || r.parts[1] === 'themes') { location.replace('#/vocab/level?lv=' + defaultVocabLevel()); return route(); }   // replace, so Back leaves the vocab page   // the vocab page opens on the learner's level; the old 主題 tab lives there too
+      if (r.parts[1] === 'kanji') { location.replace('#/vocab/level?lv=' + (['PRE_N5', 'N5', 'N4'].includes(r.params.lv) ? r.params.lv : defaultVocabLevel())); return route(); }   // the old 漢字 tab: kanji sit on the level pages
       if (r.parts[1] === 'listen') renderListen(view); else renderVocab(view, r.parts[1], r.params);
     }
     else if (r.name === 'mistakes') { if (r.parts[1] === 'loop') renderMistakeLoop(view); else if (r.parts[1] === 'listen') renderListen(view); else renderMistakes(view, r.params); }
@@ -4791,7 +4795,7 @@ const INTRO_LESSON = {
     { h: '11. 這個 app 怎麼用', points: [
       '首頁「開始練習」：每天一組，內容是到期的複習加上新內容。新單字會先給預習卡，看完再作答，同一組裡會換不同題型再考兩次。',
       '答對的題目會隔幾天再出現，答錯的隔天就回來（這叫間隔重複，SRS）。不用自己安排複習，照每天的練習做就好。',
-      '單字頁：字卡可以自己評「忘記／模糊／記得／很熟」；「主題」分頁依主題看進度或單獨練一個主題。',
+      '單字頁：先分入門／N5／N4 三個等級，每級列主題（卡上有該主題的漢字）與漢字，可單獨練一個主題；字卡可以自己評「忘記／模糊／記得／很熟」。',
       '課程頁：每單元兩週，有講義和練習；進度條三段顏色代表答對三次以上、答對過、出現過。',
       '設定：每天新單字與新文法的數量、每天負荷上限、語音服務（內建或外部）、振假名顯示方式。一開始用預設值即可。',
       '練習中按鍵：1–4 選答案、Enter 下一題、R 發音、F 切換振假名、T 顯示中文。',
@@ -5038,9 +5042,9 @@ function themeStats(lv) {
   });
 }
 // the theme a kanji belongs to on a level page: the theme whose words (of that level) contain it most often
-function kanjiThemeOf(k, lv) {
+function kanjiThemeOf(k, lv, counts = kanjiCountsByTheme(lv)) {
   let best = null, n = 0;
-  kanjiCountsByTheme(lv).forEach((m, c) => { const x = m.get(k.k) || 0; if (x > n) { n = x; best = c; } });
+  counts.forEach((m, c) => { const x = m.get(k.k) || 0; if (x > n) { n = x; best = c; } });
   return best;
 }
 function vocabThemes() {
@@ -5094,8 +5098,16 @@ function renderVocabLevel(view, lv) {
         <button type="button" class="btn btn-sm" data-act="listen-theme-start" data-theme="${esc(g.c)}">${icon('play')}播放字卡</button>
       </div></div>`).join('');
   // kanji of this level grouped by the theme that uses them most
-  const groups = new Map(); const order = themes.map(t => t.c).concat(['其他']);
-  REG.kanji.filter(k => k.lv === lv).forEach(k => { const c = kanjiThemeOf(k, lv) || '其他'; (groups.get(c) || groups.set(c, []).get(c)).push(k); });
+  // a kanji met only in another level's words (兄 in 入門 人與家人 while the kanji is N4) joins that theme, labelled with the level
+  const counts = kanjiCountsByTheme(lv); const otherCounts = ['PRE_N5', 'N5', 'N4'].filter(l => l !== lv).map(l => [l, kanjiCountsByTheme(l)]);
+  const groups = new Map(); const order = themes.map(t => t.c);
+  REG.kanji.filter(k => k.lv === lv).forEach(k => {
+    let c = kanjiThemeOf(k, lv, counts);
+    if (!c) { for (const [l, m] of otherCounts) { const t = kanjiThemeOf(k, l, m); if (t) { c = `${t}（${lvLabel(l)}的字）`; if (!order.includes(c)) order.push(c); break; } } }
+    if (!c) c = '其他（沒有例字）';
+    (groups.get(c) || groups.set(c, []).get(c)).push(k);
+  });
+  order.push('其他（沒有例字）');
   const kanjiHtml = order.filter(c => groups.has(c)).map(c => `<div class="kanji-group mt-3"><div class="small muted mb-1">${esc(c)}・${groups.get(c).length} 字</div><div class="kanji-grid">${groups.get(c).map(k => `<button type="button" class="kanji-tile jp ${kanjiLevelClass(k)}" data-act="kanji-open" data-k="${esc(k.k)}" title="${esc(k.m)}" aria-label="${esc(k.k)}">${esc(k.k)}</button>`).join('')}</div></div>`).join('');
   const kanaBox = lv === 'PRE_N5' ? `<details class="disclose kana-box card mt-3" ${desktop ? 'open' : ''}><summary>五十音（已認得 ${L.kana.seen}／${L.kana.total}）</summary>
       <div class="small muted mt-2">顏色越深越熟；按每行前面的 ▶ 只練那一行。</div>${kanaHeatGridHtml()}
@@ -5264,7 +5276,7 @@ function renderVocabList(view, params) {
   }).join('');
   view.innerHTML = `
     <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">${theme ? `主題「${esc(theme)}」・${list.length} 個字` : `共 ${REG.vocab.length} 個單字`}</div></div>
-      ${theme ? `<div class="row-wrap"><button type="button" class="btn btn-primary" data-act="start-vocab" data-filter="c:${esc(theme)}">練習這個主題・${vocabSessionCount('c:' + theme)} 題</button><button type="button" class="btn btn-ghost" data-act="nav" data-route="#/vocab/themes">所有主題</button></div>` : ''}</div>
+      ${theme ? (() => { const lvOk = ['PRE_N5', 'N5', 'N4'].includes(lv); const f = lvOk ? `t:${lv}:${theme}` : `c:${theme}`; return `<div class="row-wrap"><button type="button" class="btn btn-primary" data-act="start-vocab" data-filter="${esc(f)}">練習這個主題・${vocabSessionCount(f)} 題</button><button type="button" class="btn btn-ghost" data-act="nav" data-route="#/vocab/level?lv=${lvOk ? lv : defaultVocabLevel()}">回到${lvOk ? lvLabel(lv) : '單字'}</button></div>`; })() : ''}</div>
     ${vocabTabs('list')}
     <div class="row-wrap mb-3">
       <input class="input" style="max-width:320px" placeholder="搜尋日文、假名或中文" value="${esc(params.q || '')}" data-change="vocab-search" id="vocabSearch" />
@@ -5327,7 +5339,7 @@ function renderVocabImport(view) {
 }
 
 Object.assign(ACTIONS, {
-  'flash-deck': (el) => { FLASH = null; go(`#/vocab?deck=${el.dataset.deck}`); },
+  'flash-deck': (el) => { FLASH = null; go(`#/vocab/cards?deck=${el.dataset.deck}`); },
   'flash-flip': () => { if (!FLASH) return; FLASH.flipped = true; route(); const v = flashCurrent(); if (v && state.settings.autoSpeak) speak(v.r || jaPlain(v.w)); },
   'flash-rate': (el) => {
     const v = flashCurrent();
