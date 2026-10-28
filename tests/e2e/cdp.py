@@ -29,7 +29,7 @@ class Browser:
         self.proc.terminate(); self.proc.wait(timeout=10)
         if self._own_profile: shutil.rmtree(self.profile, ignore_errors=True)
     def run(self, steps, timeout=45):   # six files run in parallel; page loads can take a while under that load
-        """steps: list of ('inject', js_before_page_scripts) | ('nav', url) | ('eval', js) | ('wait', js_predicate). Returns list of eval values."""
+        """steps: list of ('inject', js_before_page_scripts) | ('nav', url) | ('eval', js) | ('wait', js_predicate) | ('metrics', (w, h)) | ('shot', path). Returns list of eval values."""
         async def go():
             out = []
             async with websockets.connect(self.ws_url, max_size=None) as ws:
@@ -60,6 +60,8 @@ class Browser:
                         await call("Emulation.setDeviceMetricsOverride", {"width": 1000, "height": 1400, "deviceScaleFactor": 1, "mobile": False})
                         r = await call("Page.captureScreenshot", {"format": "png", "captureBeyondViewport": True})
                         import base64; open(arg, "wb").write(base64.b64decode(r["result"]["data"]))
+                    elif kind == "metrics":   # ('metrics', (width, height)): emulate a phone viewport (mobile mode) from here on
+                        await call("Emulation.setDeviceMetricsOverride", {"width": arg[0], "height": arg[1], "deviceScaleFactor": 2, "mobile": True})
                     elif kind == "wait":
                         deadline = time.time() + timeout
                         while True:

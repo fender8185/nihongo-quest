@@ -816,7 +816,7 @@ def test_unit_legend_chips_exam_subject_rows_and_setting_hints(b):
       return JSON.stringify({ legs, subj, nowrap: /\\.leg \\{[^}]*nowrap/.test(css), hint: /\\.setting-row \\.hint \\{[^}]*11\\.5px/.test(css) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)
     r = json.loads(out[-1])
-    assert len(r['legs']) >= 4 and r['legs'][0].startswith('答對 3 次以上') and r['legs'][3].startswith('共 ') and r['legs'][3].endswith(' 題'), r['legs']
+    assert len(r['legs']) >= 4 and r['legs'][0].startswith('熟練') and r['legs'][3].startswith('共 ') and r['legs'][3].endswith(' 題'), r['legs']
     assert r['subj'] == ['mt-2', 'mt-2', 'mt-2'] and r['nowrap'] and r['hint'], r
 
 def test_hero_help_and_scope_toggles_open_one_at_a_time(b):
@@ -837,11 +837,11 @@ def test_hero_help_and_scope_toggles_open_one_at_a_time(b):
     assert not any(('待複習' in x or '做完還有' in x) for x in r['outside']) and any(x.startswith('開始練習・') for x in r['outside']), r['outside']   # folded: title, toggles, button
 
 def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop(b):
-    seed = """(() => { const t = todayStr(); const vs = REG.vocab.filter(v => v.builtin && v.ex).slice(0, 2); const g = REG.grammar.find(x => (x.t || 'choice') === 'choice' && x.op && x.zh && splitBlank(x.jp));
+    seed = """(() => { const t = todayStr(); const vs = REG.vocab.filter(v => v.builtin && v.ex && v.exZh).slice(0, 2); const g = REG.grammar.find(x => (x.t || 'choice') === 'choice' && x.op && x.zh && splitBlank(x.jp));
       state.mistakes = [];
       vs.forEach((v, i) => state.mistakes.push({ id: 'lv' + i, key: v.key, cat: '單字', prompt: '「' + v.m + '」的日文', answer: jaPlain(v.w), wrong: 'x', why: '', count: 3 - i, streak: 0, mastered: false, date: t, last: t }));
       const bg = splitBlank(g.jp); state.mistakes.push({ id: 'lg', key: g.key, cat: g.pt || '文法', prompt: g.jp, answer: parenReadingToBracket(g.a), wrong: 'x', why: '', count: 1, streak: 0, mastered: false, date: t, last: t });
-      saveState(); window.__vs = vs.map(v => [ttsText(jaPlain(v.w)), v.m, ttsText(exPlain(v.ex))]); window.__g = { s: ttsText(bg.pre + parenReadingToBracket(g.a) + bg.post), zh: g.zh }; return 'ok'; })()"""
+      saveState(); window.__vs = vs.map(v => [ttsText(jaPlain(v.w)), v.m, ttsText(exPlain(v.ex)), v.exZh]); window.__g = { s: ttsText(bg.pre + parenReadingToBracket(g.a) + bg.post), zh: g.zh }; return 'ok'; })()"""
     page = """(() => { location.hash = '#/mistakes'; route(); const v = document.getElementById('view'); const d = v.querySelector('details.cat-filter');
       location.hash = '#/mistakes?c=%E5%96%AE%E5%AD%97'; route(); const d2 = document.querySelector('details.cat-filter');
       return JSON.stringify({ has: !!d, open: d ? d.open : null, sum: d ? d.querySelector('summary').textContent.trim() : '', chips: d ? d.querySelectorAll('.chip').length : 0, sum2: d2 ? d2.querySelector('summary').textContent.trim() : '', clear: !!(d2 && d2.querySelector('summary [data-act=nav]')), btn: !!document.querySelector('[data-act=listen-start]') }); })()"""
@@ -856,8 +856,8 @@ def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in
       listenSet('scope', 'all'); listenSet('order', 'count'); __tts.log.length = 0;   // a fixed order for the sequence check below
       const items0 = LISTEN.items.map(e => e.kind); const hash = location.hash; const svgBtns = ['listen-prev', 'listen-toggle', 'listen-next'].every(a => !!document.querySelector(`[data-act=${a}] svg`)) && !/[\\u23EE\\u23ED\\u25B6\\u275A]/.test(document.querySelector('.listen-ctl').textContent);
       const until = (f, ms) => new Promise(res => { const t0 = Date.now(); const tick = () => { if (f() || Date.now() - t0 > ms) res(f()); else setTimeout(tick, 40); }; tick(); });
-      const reached = await until(() => __tts.log.filter(x => x.startsWith('start:')).length >= 11, 25000);   // two words (4 each with 兩次) and the sentence (3)
-      const log = __tts.log.filter(x => x.startsWith('start:')).map(x => x.slice(6)).slice(0, 11);
+      const reached = await until(() => __tts.log.filter(x => x.startsWith('start:')).length >= 13, 25000);   // two words (5 each with 兩次: word, meaning, word, example, its Chinese) and the sentence (3)
+      const log = __tts.log.filter(x => x.startsWith('start:')).map(x => x.slice(6)).slice(0, 13);
       const card = document.getElementById('listenCard').textContent.replace(/\\s+/g, ' ');
       listenPause(); const paused = !LISTEN.playing; const n1 = __tts.log.length; await sleep(300); const quiet = __tts.log.filter(x => x.startsWith('start:')).length === log.length;
       const opts = () => [...document.querySelectorAll('.listen-opts .lopt')].map(b => b.dataset.key + ':' + b.dataset.value + (b.classList.contains('on') ? '*' : '')); const o0 = opts();
@@ -873,8 +873,8 @@ def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in
     r = json.loads(out[-3]); p = json.loads(out[-1])
     assert r['has'] and r['open'] is False and r['sum'].startswith('分類篩選（') and r['chips'] >= 2 and r['sum2'].startswith('分類：單字') and r['clear'] and r['btn'], r
     assert p['items0'] == ['v', 'v', 'g'] and p['hash'] == '#/mistakes/listen' and p['reached'] and p['svgBtns'], p   # SVG icons, never emoji-prone characters
-    (w0, m0, e0), (w1, m1, e1) = p['vs']
-    assert p['log'] == [w0, m0, w0, e0, w1, m1, w1, e1, p['g']['s'], p['g']['zh'], p['g']['s']], p['log']   # 兩次: word → meaning → word → example; sentence → translation → sentence
+    (w0, m0, e0, z0), (w1, m1, e1, z1) = p['vs']
+    assert p['log'] == [w0, m0, w0, e0, z0, w1, m1, w1, e1, z1, p['g']['s'], p['g']['zh'], p['g']['s']], p['log']   # 兩次: word → meaning → word → example → its Chinese; sentence → translation → sentence
     assert p['defaults'] == {'scope': 'v', 'order': 'random', 'zh': True, 'twice': True, 'kinds': ['v']}, p['defaults']
     assert '文法' in p['card'] and p['paused'] and p['quiet'] and p['scoped'] == ['g'] and p['zhOff'] is True and p['gone'], p
     assert p['zhCloud'], p   # Chinese: the zh/ clip is asked for first; when it cannot play, the device voice reads it
@@ -908,11 +908,11 @@ def test_today_notebook_card_is_the_listen_player(b):
       LISTEN = null; location.hash = '#/today'; route(); const view = document.getElementById('view'); localStorage.removeItem('nq_listen_pref'); route(); const card = view.querySelector('.card.listen');
       // the player was first built over an empty notebook (page load), then words arrived: it must open on words, not on the empty-side flip
       const scopeAfterRefill = (() => { LISTEN = null; const keepM = state.mistakes; state.mistakes = []; listenInit(); state.mistakes = keepM; listenInit(); return LISTEN.scope; })(); route();
-      const a = { player: !!card.querySelector('.lplay'), pills: card.querySelectorAll('.lopt').length, link: /打開錯題本/.test(card.textContent) && /錯題本 1/.test(card.querySelector('.seg').textContent), oldBtn: !!view.querySelector('[data-act=start-mistakes]'), compact: card.classList.contains('compact'), paused: LISTEN && !LISTEN.playing, count: (card.querySelector('#listenCount') || {}).textContent, word: /\\S/.test((card.querySelector('#listenCard') || {}).textContent || ''), grid3: !!view.querySelector('.grid-3') };
+      const a = { player: !!card.querySelector('.lplay'), pills: card.querySelectorAll('.lopt').length, link: !!card.querySelector('.listen-head [data-route="#/mistakes"]') && /錯題本 1/.test(card.querySelector('.seg').textContent), icon: !!card.querySelector('.listen-head .listen-icon svg') && !/聽一輪/.test(card.textContent), oldBtn: !!view.querySelector('[data-act=start-mistakes]'), compact: card.classList.contains('compact'), paused: LISTEN && !LISTEN.playing, count: (card.querySelector('#listenCount') || {}).textContent, word: /\\S/.test((card.querySelector('#listenCard') || {}).textContent || ''), grid3: !!view.querySelector('.grid-3') };
       ACTIONS['listen-cycle']({ dataset: { key: 'twice' } }); const stays = location.hash === '#/today' && !!document.querySelector('.card.listen.compact') && !document.querySelector('[data-act=listen-exit]') && document.querySelector('[data-key=twice]').dataset.value === '1';
       // switch the card to a word theme: every entry is a word of that theme, no scope pill, the theme select shows
       ACTIONS['listen-source']({ dataset: { source: 'theme' } }); const c2 = document.querySelector('.card.listen'); const theme = LISTEN.source.theme; const n = REG.vocab.filter(x => x.builtin && vocabTheme(x) === theme).length;
-      const th = { kind: LISTEN.source.kind, all: LISTEN.all.length === n && n > 0 && LISTEN.all.every(e => e.kind === 'v' && !e.m), select: !!c2.querySelector('select[data-change=listen-theme]'), scopePill: !!c2.querySelector('[data-key=scope]'), link: /單字主題/.test(c2.textContent), label: /單字・/.test(c2.querySelector('#listenCard').textContent) };
+      const th = { kind: LISTEN.source.kind, all: LISTEN.all.length === n && n > 0 && LISTEN.all.every(e => e.kind === 'v' && !e.m), select: !!c2.querySelector('.listen-head select[data-change=listen-theme]'), scopePill: !!c2.querySelector('[data-key=scope]'), link: !c2.querySelector('[data-route="#/vocab/themes"]'), label: !/單字・/.test(c2.querySelector('#listenCard').textContent) };
       const sel = c2.querySelector('select'); const other = [...sel.options].map(o => o.value).find(x => x !== theme); sel.value = other; CHANGE_ACTIONS['listen-theme'](sel); const switched = LISTEN.source.theme === other && JSON.parse(localStorage.getItem('nq_listen_pref')).theme === other;
       ACTIONS['listen-source']({ dataset: { source: 'mistakes' } }); const backToNotes = LISTEN.source.kind === 'mistakes';
       location.hash = '#/stats'; route(); const stopped = LISTEN === null;
@@ -920,7 +920,7 @@ def test_today_notebook_card_is_the_listen_player(b):
       localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ a, scopeAfterRefill, stays, th, switched, backToNotes, stopped, empty }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['a'] == {'player': True, 'pills': 4, 'link': True, 'oldBtn': False, 'compact': True, 'paused': True, 'count': '1 / 1・第 1 輪', 'word': True, 'grid3': False}, r['a']
+    assert r['a'] == {'player': True, 'pills': 4, 'link': True, 'icon': True, 'oldBtn': False, 'compact': True, 'paused': True, 'count': '1 / 1・第 1 輪', 'word': True, 'grid3': False}, r['a']
     assert r['stays'] and r['scopeAfterRefill'] == 'v', r   # a pill on the Today card re-renders the card, never the standalone page
     assert r['th'] == {'kind': 'theme', 'all': True, 'select': True, 'scopePill': False, 'link': True, 'label': True} and r['switched'] and r['backToNotes'], r
     assert r['stopped'] and r['empty'], r
@@ -1195,6 +1195,50 @@ def test_gemini_reports_a_plain_message_when_every_model_is_cooling_down(b):
     out = b.run([("nav", URL), ("wait", READY), ("eval", GEMINI_MOCK), ("eval", js)], timeout=45)
     assert '額度' in out[-1] and '秒' in out[-1], out[-1]
 
+# ---- 2026-10-28: a pill tap keeps the player's place; the example's Chinese is read ----
+def test_listen_pills_keep_the_place_and_the_example_chinese_is_read(b):
+    js = """(() => { LISTEN = null; setListenPref({ source: 'theme', theme: vocabThemes()[0].c }); location.hash = '#/today'; route();
+      LISTEN.idx = 3; const ids = LISTEN.items.map(e => e.id); const paused = { before: LISTEN.idx };
+      ACTIONS['listen-cycle']({ dataset: { key: 'twice' } }); paused.after = LISTEN.idx; paused.same = JSON.stringify(LISTEN.items.map(e => e.id)) === JSON.stringify(ids); paused.twice = LISTEN.twice;
+      route(); paused.afterRoute = LISTEN.idx;   // a plain page re-render keeps the place too
+      const L = LISTEN; listenPlay(); ACTIONS['listen-cycle']({ dataset: { key: 'rate' } }); const playing = { sameObj: LISTEN === L, idx: LISTEN.idx, playing: LISTEN.playing, same: JSON.stringify(LISTEN.items.map(e => e.id)) === JSON.stringify(ids) }; listenPause();
+      const other = vocabThemes()[1].c; const sel = document.querySelector('select[data-change=listen-theme]'); sel.value = other; CHANGE_ACTIONS['listen-theme'](sel); const rebuilt = LISTEN.source.theme === other && LISTEN.idx === 0 && LISTEN.items.every(e => !ids.includes(e.id));
+      // the spoken sequence of a word with an example: word, meaning, word again, example, example's Chinese
+      const calls = []; const s0 = speak, z0 = speakZh; speak = (t) => { calls.push(['ja', String(t)]); return Promise.resolve(); }; speakZh = (t) => { calls.push(['zh', String(t)]); return Promise.resolve(); };
+      const v = REG.vocab.find(x => x.builtin && vocabExamples(x)[0] && vocabExamples(x)[0].exZh); const e = listenEntryVocab(v, null); LISTEN.twice = true;
+      return listenSpeak(e, () => true).then(ok => { speak = s0; speakZh = z0; LISTEN = null; localStorage.removeItem('nq_listen_pref');
+        return JSON.stringify({ paused, playing, rebuilt, ok, seq: calls.map(c => c[0]), exZh: calls[4] && calls[4][1] === e.ex.exZh, ex: calls[3] && calls[3][1] === exPlain(e.ex.ex) }); }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['paused'] == {'before': 3, 'after': 3, 'same': True, 'twice': False, 'afterRoute': 3}, r['paused']
+    assert r['playing'] == {'sameObj': True, 'idx': 3, 'playing': True, 'same': True}, r['playing']
+    assert r['rebuilt'] and r['ok'], r
+    assert r['seq'] == ['ja', 'zh', 'ja', 'ja', 'zh'] and r['exZh'] and r['ex'], r
+
+# ---- 2026-10-28: the today page is one phone screen ----
+def test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest(b):
+    seed = """(() => { const t = todayStr(); state.introSeen = true; state.mistakes = []; state.lastBackup = t;
+      REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 30).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
+      REG.grammar.slice(0, 6).forEach(g => { state.srs[g.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
+      setListenPref({ source: 'theme' }); saveState(); heroTab = null; LISTEN = null; location.hash = '#/today'; route(); return true; })()"""
+    js = """(() => { const view = document.getElementById('view'); const hero = view.querySelector('.hero');
+      const tabs = [...hero.querySelectorAll('.hero-tab')].map(b => b.dataset.tab); const unitTab = hero.querySelector('.hero-tab[data-tab=unit]').textContent;
+      const unitHidden = hero.querySelector('[data-panel=unit]').hidden; const unitPanelHas = { bar: !!hero.querySelector('[data-panel=unit] .bar.stack'), legs: [...hero.querySelectorAll('[data-panel=unit] .legs .leg')].map(x => x.textContent.trim()), lecture: !!hero.querySelector('[data-panel=unit] [data-route^="#/course/"]'), drill: !!hero.querySelector('[data-panel=unit] [data-act=start-unit]') };
+      const fits = { scroll: document.documentElement.scrollHeight, viewScroll: view.scrollHeight, viewH: view.clientHeight, inner: innerHeight, fit: view.classList.contains('fit') && document.body.classList.contains('today') };
+      const listen = view.querySelector('.card.listen.compact'); const cardH = listen.querySelector('#listenCard').getBoundingClientRect().height;
+      const opts = listen.querySelector('.listen-opts').getBoundingClientRect(); const nav = document.querySelector('.bottomnav').getBoundingClientRect();
+      const greeting = /連續 \\d+ 天/.test(hero.textContent) && !view.querySelector('.page-head') && !view.querySelector('.page-title');
+      ACTIONS['hero-tab'](hero.querySelector('.hero-tab[data-tab=unit]')); const opened = !hero.querySelector('[data-panel=unit]').hidden && hero.querySelector('[data-panel=help]').hidden;
+      location.hash = '#/stats'; route(); const off = !view.classList.contains('fit') && !document.body.classList.contains('today');
+      heroTab = null; localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ tabs, unitTab, unitHidden, unitPanelHas, fits, cardH, optsBottom: Math.round(opts.bottom), navTop: Math.round(nav.top), greeting, opened, off }); })()"""
+    out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", seed), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['tabs'] == ['help', 'scope', 'unit'] and r['unitTab'].startswith('目前單元・') and r['unitTab'].endswith('%') and r['unitHidden'], r
+    assert r['unitPanelHas']['bar'] and r['unitPanelHas']['lecture'] and r['unitPanelHas']['drill'] and [l.split(' ')[0] for l in r['unitPanelHas']['legs'][:3]] == ['熟練', '熟悉', '初識'], r['unitPanelHas']
+    assert r['fits']['fit'] and r['fits']['scroll'] <= r['fits']['inner'] and r['fits']['viewScroll'] <= r['fits']['viewH'], r['fits']   # nothing to scroll, on the page or inside the content area
+    assert 150 <= r['cardH'] <= 420 and r['optsBottom'] <= r['navTop'], r   # the item area took the leftover height; the pills sit above the tab bar
+    assert r['greeting'] and r['opened'] and r['off'], r
+
 def test_ai_explanations_are_cached_per_question_and_show_the_model(b):
     js = """(() => { const v = REG.vocab.find(x => x.builtin && meaningOptions(x)); srsAnswer(v.key, true); startSession('items', { items: [v] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice(); answerCurrent(e.q.answer);
       const n0 = __calls.filter(u => /generateContent/.test(u)).length;
@@ -1224,7 +1268,7 @@ if __name__ == "__main__":
              test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
-             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model]
+             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read]
     failed = 0
     try:
         for t in tests:

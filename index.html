@@ -220,10 +220,29 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .hero h2 { font-size: 20px; }
 .plan-line { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0 14px; color: var(--fg-2); font-size: 14px; }
 .plan-line b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.hero-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
 @media (max-width: 600px) {
   .hero { gap: 12px; align-items: start; }
   .hero .ring { width: 64px !important; height: 64px !important; margin-top: 2px; }
   .hero .ring .ring-txt b { font-size: 17px; } .hero .ring .ring-txt .tiny { font-size: 10px; }
+}
+/* the listen card: icon, source switch and (word mode) the theme select on one line */
+.listen-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.listen-icon { display: inline-grid; place-items: center; color: var(--fg-2); flex: none; } .listen-icon svg { width: 22px; height: 22px; }
+.listen-head .select { min-width: 0; flex: 1 1 0; max-width: 280px; padding-top: 7px; padding-bottom: 7px; font-size: 13px; }
+.listen-open { margin-left: auto; padding-left: 6px; padding-right: 6px; } .listen-open svg { width: 18px; height: 18px; }
+/* phones and tablets: the today page is one screen — the listen card takes whatever height the practice card leaves */
+@media (max-width: 900px) {
+  /* a fixed-height shell (min-height alone never lets flex items shrink); the content area scrolls on its own when a banner or a short screen needs it */
+  body.today .app { height: 100svh; } @supports (height: 1dvh) { body.today .app { height: 100dvh; } }
+  body.today .main { min-height: 0; }
+  #view.fit { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+  #view.fit > * { flex: none; }
+  #view.fit > .card.listen.compact { flex: 1 1 auto; display: flex; flex-direction: column; }
+  /* contain: size — the item area's content does not count toward the card's minimum height, so the card shrinks until the
+     area is 150px (then the content area scrolls) and never ends up shorter than its own controls */
+  #view.fit .listen.compact #listenCard { contain: size; flex: 1 1 0; height: auto; min-height: 150px; max-height: 420px; }
+  .listen.compact .listen-ctl { margin-top: 10px; } .listen.compact .listen-opts { margin-top: 12px; }
 }
 
 /* ---------- heatmap ---------- */
@@ -841,12 +860,14 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '87';   // keep equal to the number in sw.js CACHE ('nq-v87'); scripts/test.sh checks it
+const APP_VERSION = '88';   // keep equal to the number in sw.js CACHE ('nq-v88'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '87', from: '70', date: '2026-10-28', items: [
+  { v: '88', from: '70', date: '2026-10-28', items: [
+    '首頁壓成一個畫面（手機）：頁首「今日」拿掉，日期與連續天數併到今日練習的標題旁；「目前單元」收成今日練習卡上的第三個小標（進度條、圖例、看講義／練習本單元都在裡面）；聽一輪的字卡區改成吃掉剩下的高度，標題改成耳機圖示，單字主題的下拉選單併進同一列。單元進度的圖例改成「熟練／熟悉／初識」。',
+    '聽一輪：按 1／2、隨機、速度不再跳到別的項目（原本首頁重畫時會把播放器重建、重洗）；單字的例句唸完接著唸例句的中文。',
     '聽一輪的膠囊改成圖示：單字／文法（二選一，錯題本模式才有）、隨機（亮起＝隨機）、1／2（日文→中文，或日文→中文→日文）、速度（一、二、三個箭頭＝0.8×、1×、1.3×，只影響聽一輪，會記住）；中文一定會唸，開關拿掉。首頁卡上調整設定不再跳到獨立頁面。',
     '首頁的「考試倒數」（天數、單元進度、依考試日期的額度建議）搬到模擬考頁最上面。',
     '首頁的「聽一輪」卡合併了單字卡：切「錯題本」或「單字」，單字模式選一個主題就循環播放那個主題的全部單字（單字→中文→單字→例句）。單字頁的每個主題卡也多了「播放字卡」。上次選的來源和主題會記住。',
@@ -1936,6 +1957,7 @@ const ICONS = {
   more: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>',
   settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.3c.4-1.8 3-1.8 3.4 0a1.7 1.7 0 0 0 2.6 1.1c1.5-.9 3.3.8 2.4 2.4a1.7 1.7 0 0 0 1 2.5c1.8.5 1.8 3 0 3.4a1.7 1.7 0 0 0-1 2.6c.9 1.5-.9 3.3-2.4 2.4a1.7 1.7 0 0 0-2.6 1c-.4 1.8-3 1.8-3.4 0a1.7 1.7 0 0 0-2.6-1c-1.5.9-3.3-.9-2.4-2.4a1.7 1.7 0 0 0-1-2.6c-1.8-.4-1.8-3 0-3.4a1.7 1.7 0 0 0 1-2.5c-.9-1.6.9-3.3 2.4-2.4a1.7 1.7 0 0 0 2.6-1.1Z"/><circle cx="12" cy="12" r="3"/></svg>',
   speaker: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
+  listen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13" width="4.5" height="7" rx="1.6"/><rect x="16.5" y="13" width="4.5" height="7" rx="1.6"/></svg>',
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
   cross: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7 7 17"/></svg>',
@@ -3772,6 +3794,7 @@ function renderNav(active) {
 function route() {
   const r = currentRoute();
   const view = document.getElementById('view');
+  view.classList.toggle('fit', r.name === 'today'); document.body.classList.toggle('today', r.name === 'today');
   const tip = document.getElementById('chartTip');
   if (tip) tip.classList.remove('show');
   if (r.name !== 'practice') { document.body.classList.remove('practicing'); }
@@ -4108,46 +4131,40 @@ function renderToday(view) {
     ${noticesHtml()}
     ${introBanner}
     ${backupBannerHtml()}
-    <div class="page-head">
-      <div><div class="page-title">今日</div><div class="page-sub">${greeting}・連續 ${st.current} 天</div></div>
-    </div>
     <div class="card">
       <div class="hero">
         <div>
-          <h2>${plan.remaining === 0 ? '今天完成了' : '今日練習'}</h2>
+          <div class="hero-title"><h2>${plan.remaining === 0 ? '今天完成了' : '今日練習'}</h2><span class="small muted">${greeting}・連續 ${st.current} 天</span></div>
           <div class="hero-tabs">
             <button type="button" class="hero-tab${heroTab === 'help' ? ' open' : ''}" data-act="hero-tab" data-tab="help" aria-expanded="${heroTab === 'help'}">說明</button>
             ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">今天的範圍</button>` : ''}
+            <button type="button" class="hero-tab${heroTab === 'unit' ? ' open' : ''}" data-act="hero-tab" data-tab="unit" aria-expanded="${heroTab === 'unit'}">目前單元・${esc(cur.short)} ${us.pct}%</button>
           </div>
           <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>每一題都是今天到期的複習或今天的新內容；答錯的幾題後再練一次，之後第 1、3、7 天各複習一次，三次都對才離開錯題本。答對的越熟出現得越少。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
           ${plan.remaining ? `<div class="hero-panel" data-panel="scope" ${heroTab === 'scope' ? '' : 'hidden'}>${scopeHtml}</div>` : ''}
+          <div class="hero-panel" data-panel="unit" ${heroTab === 'unit' ? '' : 'hidden'}>
+            <div class="row between mb-2"><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div><span class="chip">${esc(cur.lv)}</span></div>
+            <div class="row">${unitBarHtml(us, 'grow')}<span class="small num muted">${us.pct}%</span></div>
+            <div class="small muted mt-2 legs">${unitLegendHtml(us)}${us.due ? `<span class="leg">今天要複習 ${us.due} 題</span>` : ''}</div>
+            ${us.pct >= 85 && !us.done ? `<div class="banner mt-3"><div class="grow">這個單元已經很熟了，可以前往下一單元。</div><button type="button" class="btn btn-sm btn-primary" data-act="advance-unit">前往下一單元</button></div>` : ''}
+            <div class="row-wrap mt-3">
+              <button type="button" class="btn btn-sm" data-act="nav" data-route="#/course/${cur.id}">看講義</button>
+              <button type="button" class="btn btn-sm" data-act="start-unit" data-unit="${cur.id}">練習本單元</button>
+            </div>
+          </div>
           ${heroBody}
         </div>
         ${ringHtml(prog.done / Math.max(1, prog.total), `<b>${prog.done}</b><div class="tiny muted">/ ${prog.total} 題</div>`, 110)}
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-head">
-        <div><div class="card-sub">目前單元</div><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div></div>
-        <span class="chip">${esc(cur.lv)}</span>
-      </div>
-      <div class="row">${unitBarHtml(us, 'grow')}<span class="small num muted">${us.pct}%</span></div>
-      <div class="small muted mt-2 legs">${unitLegendHtml(us)}${us.due ? `<span class="leg">今天要複習 ${us.due} 題</span>` : ''}</div>
-      ${us.pct >= 85 && !us.done ? `<div class="banner mt-3"><div class="grow">這個單元已經很熟了，可以前往下一單元。</div><button type="button" class="btn btn-sm btn-primary" data-act="advance-unit">前往下一單元</button></div>` : ''}
-      <div class="row-wrap mt-3">
-        <button type="button" class="btn" data-act="nav" data-route="#/course/${cur.id}">看講義</button>
-        <button type="button" class="btn" data-act="start-unit" data-unit="${cur.id}">練習本單元</button>
-      </div>
-    </div>
-
     <div class="card listen compact">
-      <div class="card-head">
-        <div class="row" style="gap:10px"><div class="card-title">聽一輪</div>
-          <div class="seg"><button type="button" aria-pressed="${isTheme ? 'false' : 'true'}" data-act="listen-source" data-source="mistakes">錯題本${mk.length ? ` ${mk.length}` : ''}</button><button type="button" aria-pressed="${isTheme ? 'true' : 'false'}" data-act="listen-source" data-source="theme">單字</button></div></div>
-        <button type="button" class="btn btn-sm btn-ghost" data-act="nav" data-route="${isTheme ? '#/vocab/themes' : '#/mistakes'}">${isTheme ? '單字主題' : '打開錯題本'}</button>
+      <div class="listen-head">
+        <span class="listen-icon" title="聽一輪" aria-label="聽一輪">${icon('listen')}</span>
+        <div class="seg"><button type="button" aria-pressed="${isTheme ? 'false' : 'true'}" data-act="listen-source" data-source="mistakes">錯題本${mk.length ? ` ${mk.length}` : ''}</button><button type="button" aria-pressed="${isTheme ? 'true' : 'false'}" data-act="listen-source" data-source="theme">單字</button></div>
+        ${isTheme ? `<select class="select grow" data-change="listen-theme" aria-label="單字主題">${vocabThemes().map(g => `<option value="${esc(g.c)}" ${LISTEN && LISTEN.source.theme === g.c ? 'selected' : ''}>${esc(g.c)}（${g.total} 字）</option>`).join('')}</select>`
+          : `<button type="button" class="btn btn-sm btn-ghost listen-open" data-act="nav" data-route="#/mistakes" title="打開錯題本" aria-label="打開錯題本">${icon('next')}</button>`}
       </div>
-      ${isTheme ? `<div class="row-wrap mb-2"><select class="select" data-change="listen-theme" style="max-width:100%">${vocabThemes().map(g => `<option value="${esc(g.c)}" ${LISTEN && LISTEN.source.theme === g.c ? 'selected' : ''}>${esc(g.c)}（${g.total} 字）</option>`).join('')}</select></div>` : ''}
       ${listenReady ? listenPanelHtml(false) : `<div class="small muted">${isTheme ? '這個主題沒有單字。' : '目前沒有可以聽的錯題。'}</div>`}
     </div>
 
@@ -4601,7 +4618,8 @@ function segBarHtml(total, segs, cls = 'mt-2') {
 function stackBarHtml(g) { return segBarHtml(g.total, [['mastered', g.mastered], ['learned', g.learned - g.mastered], ['seen', g.seen - g.learned]]); }
 // grammar units: answered correctly 3+ times / answered correctly / seen but not yet right
 function unitBarHtml(s, cls) { return segBarHtml(s.total, [['mastered', s.ok3], ['learned', s.ok1], ['seen', s.seen0]], cls); }
-function unitLegendHtml(s) { return `<span class="leg"><i class="seg-dot mastered"></i>答對 3 次以上 ${s.ok3}</span><span class="leg"><i class="seg-dot learned"></i>答對過 ${s.ok1}</span><span class="leg"><i class="seg-dot seen"></i>出現過 ${s.seen0}</span><span class="leg">共 ${s.total} 題</span>`; }
+// 熟練 = answered right 3+ times, 熟悉 = answered right at least once, 初識 = seen but never right yet
+function unitLegendHtml(s) { return `<span class="leg"><i class="seg-dot mastered"></i>熟練 ${s.ok3}</span><span class="leg"><i class="seg-dot learned"></i>熟悉 ${s.ok1}</span><span class="leg"><i class="seg-dot seen"></i>初識 ${s.seen0}</span><span class="leg">共 ${s.total} 題</span>`; }
 function vocabSessionCount(filter) { const items = buildVocabQueue(filter, 20); return items.length + encoreEstimate(items); }
 function renderVocabThemes(view) {
   const cards = vocabThemes().map(g => `<div class="card theme-card" data-c="${esc(g.c)}">
@@ -5096,6 +5114,12 @@ function listenSourceEntries(source) {
 // a paused player over a source (the Today card and the full page share it); an existing paused one is refreshed
 function listenInit(source = listenSourceFromPref()) {
   if (LISTEN && LISTEN.playing) return LISTEN.items.length > 0;
+  // the same source with the same entries (a page re-render, a pill tapped): keep the place and the order instead of
+  // rebuilding — a rebuild starts over at a reshuffled first item, which looked like the player skipping ahead
+  if (LISTEN && LISTEN.source.kind === source.kind && (LISTEN.source.theme || '') === (source.theme || '') && (LISTEN.source.cat || '') === (source.cat || '')) {
+    const all = listenSourceEntries(source);
+    if (all.length === LISTEN.all.length && all.every((e, i) => e.id === LISTEN.all[i].id)) return LISTEN.items.length > 0;
+  }
   const keep = LISTEN ? { order: LISTEN.order, scope: LISTEN.scope, zh: LISTEN.zh, twice: LISTEN.twice, rate: LISTEN.rate } : null;
   // defaults: words only, shuffled, Chinese on, 兩次 (Japanese → Chinese → Japanese again); no words in the notebook → everything
   LISTEN = Object.assign({ source, all: listenSourceEntries(source), items: [], idx: 0, round: 1, playing: false, order: 'random', scope: 'v', zh: true, twice: true, rate: LISTEN_RATES.includes(listenPref().rate) ? listenPref().rate : 1, run: 0, wake: null }, keep || {});
@@ -5178,8 +5202,10 @@ async function listenSpeak(e, alive) {
     if (!await step(word, LISTEN_GAP.short)) return false;
     if (LISTEN.zh && e.meaning && !await step(() => speakZh(e.meaning), LISTEN_GAP.short)) return false;
     if (again && e.meaning && !await step(word, LISTEN_GAP.short)) return false;
-    if (e.ex) { if (!await step(() => speak(exPlain(e.ex.ex)), LISTEN_GAP.long)) return false; }
-    else if (!await step(() => Promise.resolve(), LISTEN_GAP.short)) return false;
+    if (e.ex) {   // the example, then its Chinese
+      if (!await step(() => speak(exPlain(e.ex.ex)), e.ex.exZh ? LISTEN_GAP.short : LISTEN_GAP.long)) return false;
+      if (e.ex.exZh && !await step(() => speakZh(e.ex.exZh), LISTEN_GAP.long)) return false;
+    } else if (!await step(() => Promise.resolve(), LISTEN_GAP.short)) return false;
     return true;
   }
   if (!await step(() => speak(e.sentence), LISTEN_GAP.short)) return false;
@@ -5193,7 +5219,7 @@ function listenCardHtml() {
   if (!e) return '<div class="flash"><div class="muted">這個範圍沒有錯題。</div></div>';
   if (e.kind === 'v') {
     return `<div class="flash">
-      <div class="small muted">單字${e.note ? `・${esc(e.note)}` : ''}・${e.m ? `錯 ${e.m.count || 1} 次` : esc(LISTEN.source.theme || '')}</div>
+      ${e.m ? `<div class="small muted">單字${e.note ? `・${esc(e.note)}` : ''}・錯 ${e.m.count || 1} 次</div>` : ''}
       <div class="word jp">${e.wordHtml}</div>
       <div class="meaning">${esc(e.meaning)}</div>
       ${e.ex ? exampleHtml(e.ex.ex, e.ex.exZh, 'mt-3 listen-ex') : ''}
@@ -6789,7 +6815,7 @@ function renderStats(view) {
   const wkTable = `<table class="table"><thead><tr><th>日期</th><th>單字</th><th>文法</th><th>其他</th><th>合計</th></tr></thead><tbody>${wk.map((d, i) => `<tr><td class="num">${i === last ? '今天' : d.date}</td><td class="num">${d.v}</td><td class="num">${d.g}</td><td class="num">${d.q}</td><td class="num">${d.total}</td></tr>`).join('')}</tbody></table>`;
   const progressCard = `<div class="card" id="progressCard">
       <div class="card-head"><div><div class="card-title">總進度</div><div class="card-sub">指針是加權分數：已學 1 分、熟悉 2 分、熟練 3 分，滿分 3 分一題；顏色是三階熟練度。</div></div></div>
-      <div class="gauges">${gaugeHtml(progressTotals('v'), '單字', ['已熟練', '熟悉', '已學'])}${gaugeHtml(progressTotals('g'), '文法', ['答對 3 次以上', '答對過', '出現過'])}</div>
+      <div class="gauges">${gaugeHtml(progressTotals('v'), '單字', ['已熟練', '熟悉', '已學'])}${gaugeHtml(progressTotals('g'), '文法', ['熟練', '熟悉', '初識'])}</div>
     </div>`;
 
   const weak = weakPoints();
