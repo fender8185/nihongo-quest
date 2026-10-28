@@ -103,6 +103,40 @@ def test_new_conj_item_answered_right_comes_back_typed_and_a_typed_miss_requeues
     assert r['first'] == 'g-conj' and r['encore'] == 'g-conj-type', r
     assert r['second'] == 'g-conj-type' and r['requeued'] == 'g-conj-type' and r['rqCustom'] == 'g-conj-type' and r['noFormats'] is False, r
 
+# ---- Task 4: 生成式變化練習（kind c） ----
+def test_drills_exist_per_form_family_and_reach_follows_the_unit(b):
+    js = """(() => { const fams = REG.drills.map(d => d.fam).sort(); const te = REG.drills.find(d => d.fam === 'te');
+      state.currentUnit = 'm3'; const p3 = dailyPlan(); state.currentUnit = 'm18'; const p18 = dailyPlan();
+      return JSON.stringify({ fams, teUnit: te && te.u, teForms: te && te.forms, byKey: Boolean(REG.byKey.get('c:te')), n3: p3.newC.map(d => d.fam), n18: p18.newC.length, cap: state.settings.conjDrillPerDay }); })()"""
+    r = json.loads(ev(b, js))
+    assert set(r['fams']) >= {'te', 'ta', 'nai', 'pot', 'vol', 'pass', 'caus', 'ba'} and 'dict' not in r['fams'], r
+    assert r['teUnit'] == 'm3' and 'te' in r['teForms'] and r['byKey'], r
+    assert set(r['n3']) <= {'te', 'masu', 'nai', 'ta'} and 1 <= len(r['n3']) <= 3 and r['n18'] == 3 and r['cap'] == 3, r
+
+def test_drill_question_is_generated_from_a_learned_verb_and_a_miss_schedules_tomorrow(b):
+    js = """(() => { const d = REG.drills.find(x => x.fam === 'te'); state.currentUnit = 'm18';
+      const fresh = makeQuestion(d, {});   // 還沒學過任何動詞：退回全部動詞，仍要能出題
+      const v = REG.vocab.find(x => x.builtin && x.p === 'v5'); srsAnswer(v.key, true); state.srs[v.key].b = 2;
+      const qs = []; for (let i = 0; i < 20; i++) qs.push(makeQuestion(d, {}));
+      const q = qs[0]; const ok = qs.every(x => x && x.kind === 'c' && x.custom === 'g-conj-type' && x.key === 'c:te' && x.options[0].text && x.tiles.length >= conjTokens(x.options[0].text).length + 3);
+      const verbs = new Set(qs.map(x => x.item && x.stemHtml));
+      startSession('items', { items: [d] }); const e = currentEntry(); renderPractice(); e.q.options[1].text = 'x'; answerCurrent(1);
+      const r = state.srs['c:te']; const m = state.mistakes.find(x => x.key === 'c:te'); const faces = mistakeCardFaces(m);
+      const mq = buildMistakeQueue(5).find(x => x.item && x.item.key === 'c:te'); const mqq = mq && makeQuestion(mq.item, {});
+      const out = { fresh: Boolean(fresh), ok, varied: verbs.size >= 2, due: r.due, tomorrow: todayStr(1), rl: r.rl, mistake: Boolean(m), prompt: m && m.prompt, faces: Boolean(faces && faces.front && faces.back), mqq: Boolean(mqq && mqq.kind === 'c'), label: q.label, newC: state.today.newC, log: logEntry().grammarCount };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['fresh'] and r['ok'] and r['varied'], r
+    assert r['due'] == r['tomorrow'] and r['rl'] == 0 and r['mistake'] and '→' in r['prompt'] and r['faces'] and r['mqq'], r
+    assert r['label'].startswith('變化練習 · て形') and r['newC'] == 1 and r['log'] == 1, r
+
+def test_daily_queue_carries_the_drills_and_the_today_page_counts_them(b):
+    js = """(() => { state.currentUnit = 'm18'; const dq = dailyQueue(60); const c = dq.items.filter(x => x.kind === 'c').length; const plan = dq.plan;   // 60: one session big enough for the whole day list
+      location.hash = '#/today'; route(); const txt = document.querySelector('#view').textContent;
+      return JSON.stringify({ c, newC: plan.newC.length, remaining: plan.remaining >= plan.newC.length, shows: txt.includes('變化') }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['c'] >= 1 and r['c'] <= 3 and r['newC'] == r['c'] and r['remaining'] and r['shows'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

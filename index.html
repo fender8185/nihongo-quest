@@ -1055,6 +1055,7 @@ function defaultSettings() {
     furiMode: 'smart',       // smart: no furigana on mastered words | all — furigana:false hides all
     listenPerDay: 3,         // listening items in the daily mix
     newKanjiPerDay: 3,
+    conjDrillPerDay: 3,      // 變化練習: per-form-family drills a day (due + new), verbs drawn from learned words
     conjInput: 'auto',       // 活用題作答方式: auto (choice until b ≥ 1, then tiles) | choice | tiles | type
     audioOptions: false,     // listening replies only spoken, like the real test
     backupEvery: 7
@@ -1082,7 +1083,7 @@ function defaultState() {
     unitAiNotes: {},
     aiConfig: null,
     ttsConfig: null,
-    today: { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0 },
+    today: { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0, newC: 0 },
     lastBackup: null,
     statsFmt: {},
     recent: [],
@@ -1372,7 +1373,7 @@ DATA.UNITS.forEach((u, i) => { UNIT_INDEX[u.id] = i; });
 function unitById(id) { return DATA.UNITS.find(u => u.id === id) || DATA.UNITS[0]; }
 function unitOrder(id) { return UNIT_INDEX[id] !== undefined ? UNIT_INDEX[id] : 0; }
 
-let REG = { vocab: [], grammar: [], listen: [], read: [], kanji: [], byKey: new Map() };
+let REG = { vocab: [], grammar: [], listen: [], read: [], kanji: [], drills: [], byKey: new Map() };
 function buildRegistry() {
   const hidden = new Set(state.hidden || []);
   const vocab = [];
@@ -1386,8 +1387,18 @@ function buildRegistry() {
   const read = (DATA.READ || []).filter(x => !hidden.has(x.id)).map(x => Object.assign({}, x, { key: 'r:' + x.id, kind: 'r', builtin: true, rkind: x.kind }));
   const kanji = (DATA.KANJI || []).map((x, i) => Object.assign({}, x, { key: 'k:' + x.k, kind: 'k', builtin: true, id: 'k-' + x.k, order: i })).filter(x => !hidden.has(x.id));
   const byKey = new Map();
-  [vocab, grammar, listen, read, kanji].forEach(list => list.forEach(x => byKey.set(x.key, x)));
-  REG = { vocab, grammar, listen, read, kanji, byKey };
+  // 變化練習: one item per conjugation family the course drills (て形, 受身形 …), reached with the unit that first teaches it
+  const fams = new Map();
+  DATA.GRAMMAR.forEach(g => {
+    if (g.t !== 'conj' || !g.f) return;
+    const fam = formFamily(g.f); if (fam === 'dict' || !FORM_LABEL[fam]) return;
+    const d = fams.get(fam) || fams.set(fam, { key: 'c:' + fam, kind: 'c', id: 'c-' + fam, fam, forms: [], u: g.u, builtin: true }).get(fam);
+    if (!d.forms.includes(g.f)) d.forms.push(g.f);
+    if (unitOrder(g.u) < unitOrder(d.u)) d.u = g.u;
+  });
+  const drills = [...fams.values()].sort((a, b) => unitOrder(a.u) - unitOrder(b.u));
+  [vocab, grammar, listen, read, kanji, drills].forEach(list => list.forEach(x => byKey.set(x.key, x)));
+  REG = { vocab, grammar, listen, read, kanji, drills, byKey };
   buildFuriganaIndex();
 }
 
@@ -1424,7 +1435,7 @@ const GRADE = { again: 1, hard: 2, good: 3, easy: 4 };
 // notebook lists exactly the items on the ladder. Listening and reading stay off it (hearing a dialogue again within days
 // tests memory of the answer, not listening).
 const RELEARN_GAPS = [2, 4];
-const RELEARN_KINDS = /^[vgk]:/;
+const RELEARN_KINDS = /^[vgkc]:/;
 function onLadder(key) { const r = state.srs[key]; return Boolean(r) && typeof r.rl === 'number'; }
 function srsGet(key) { return state.srs[key] || null; }
 
@@ -1512,6 +1523,7 @@ function srsAnswer(key, correct, opt = {}) {
     else if (key.startsWith('k:')) state.today.newK = (state.today.newK || 0) + 1;
     else if (key.startsWith('l:')) state.today.newL = (state.today.newL || 0) + 1;
     else if (key.startsWith('r:')) state.today.newR = (state.today.newR || 0) + 1;
+    else if (key.startsWith('c:')) state.today.newC = (state.today.newC || 0) + 1;
   }
   return { rec: r, isNew, before, after: r.b };
 }
@@ -2060,6 +2072,44 @@ function conjInputMode(rec) {
   const m = state.settings.conjInput || 'auto';
   if (m === 'choice' || m === 'tiles' || m === 'type') return m;
   return rec && rec.b >= 1 ? 'tiles' : 'choice';
+}
+const GROUP_LABEL = { '5': '五段動詞', '1': '一段動詞', 's': 'する動詞', 'k': '来る' };
+const VERB_GROUP = { v5: '5', v1: '1', vs: 's', vk: 'k' };
+function formHint(f) { return JConj.conjVerb('食べる', '1', f) || ''; }   // the form shown on a paradigm verb (受身形，像「食べられました」)
+// verbs a drill may ask: learned ones (b ≥ 1); every course verb while fewer than five have been learned
+function drillVerbs() {
+  const all = REG.vocab.filter(v => v.builtin && VERB_GROUP[v.p]);
+  const learned = all.filter(v => state.srs[v.key] && state.srs[v.key].b >= 1);
+  return learned.length >= 5 ? learned : all;
+}
+function makeConjDrillQuestion(item, ctx = {}) {
+  const verbs = drillVerbs();
+  if (!verbs.length || !item.forms || !item.forms.length) return null;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const f = item.forms[Math.floor(Math.random() * item.forms.length)];
+    const v = verbs[Math.floor(Math.random() * verbs.length)];
+    const g = VERB_GROUP[v.p];
+    const ans = JConj.conjVerb(v.w, g, f);
+    if (!ans) continue;
+    const wrongs = JConj.verbDistractors(v.w, g, f, ans);
+    if (wrongs.length < 3) continue;
+    const q = baseQ(item);
+    const fam = item.fam; const hint = f !== fam ? formHint(f) : '';
+    const mode = state.settings.conjInput === 'type' ? 'type' : 'tiles';
+    q.fmt = 'g-conj-type'; q.custom = q.fmt; q.inputMode = mode;
+    q.label = `變化練習 · ${FORM_LABEL[fam]}`;
+    q.instr = `${mode === 'tiles' ? '點假名，拼出' : '輸入'}這個動詞的${FORM_LABEL[fam]}`;
+    q.stemHtml = `<div class="q-stem word jp">${furi(v.w)}</div><div class="small muted mt-1">→ ${esc(FORM_LABEL[fam])}${hint ? `，像「<span class="jp">${esc(hint)}</span>」` : ''}</div>`;
+    q.zhText = v.m || ''; q.cat = '變化練習'; q.point = FORM_LABEL[fam]; q.unit = item.u; q.lv = v.lv;
+    q.fullJp = ans; q.fillHtml = furi(ans);
+    q.mistakePrompt = `${jaPlain(v.w)} → ${FORM_LABEL[fam]}${hint ? `（像 ${hint}）` : ''}`;
+    q.why = `「${jaPlain(v.w)}」是${GROUP_LABEL[g]}，${FORM_LABEL[fam]}是「${jaPlain(ans)}」。`;
+    q.tiles = conjTiles(ans, wrongs);
+    q.options = [{ text: ans, jp: true }, { text: '', jp: true }]; q.answer = 0; q.answerText = ans;
+    q.speakWord = jaPlain(ans);
+    return q;
+  }
+  return null;
 }
 function formFamily(f) {
   if (/^pot/.test(f)) return 'pot';
@@ -2759,6 +2809,7 @@ function makeQuestion(item, ctx) {
     if (item.kind === 'l') return makeListenQuestion(item, ctx);
     if (item.kind === 'r') return makeReadQuestion(item, ctx);
     if (item.kind === 'k') return makeKanjiQuestion(item, ctx);
+    if (item.kind === 'c') return makeConjDrillQuestion(item, ctx);
     return item.kind === 'v' ? makeVocabQuestion(item, ctx) : makeGrammarQuestion(item, ctx);
   } catch (e) {
     console.warn('question build failed', item && item.key, e);
@@ -3204,7 +3255,7 @@ function dailyPlan(size = state.settings.sessionSize) {
   const fullV = Math.max(0, maxV - state.today.newV);
   let wantV = fullV;
   let over = dayTotal(state.dailyLogs[t]) + dueV.length + dueG.length + ex.dueK.length + ex.dueL.length + ex.dueR.length
-    + wantG + wantV + ex.newK.length + ex.newL.length + ex.newR.length - (Number(s.loadCap) || 100);
+    + wantG + wantV + ex.newK.length + ex.newL.length + ex.newR.length + Math.min(Math.max(0, Number(s.conjDrillPerDay) || 0), (REG.drills || []).length) - (Number(s.loadCap) || 100);
   if (over > 0) { const floorV = Math.max(0, Math.min(Math.ceil(maxV / 2), maxV) - state.today.newV); const cut = Math.max(0, Math.min(over, wantV - floorV)); wantV -= cut; over -= cut; }
   const cutK = over > 0 ? Math.min(over, ex.newK.length) : 0; over -= cutK;
   const cutL = over > 0 ? Math.min(over, ex.newL.length) : 0; over -= cutL;
@@ -3216,10 +3267,15 @@ function dailyPlan(size = state.settings.sessionSize) {
     note = `今天的題數超過負荷上限，${parts.join('、')}，新文法照常；複習完成後，之後幾天就會再增加。`;
   }
   const newG = newGrammarCandidates().slice(0, wantG);
+  // 變化練習: due families first, then families not started yet, at most conjDrillPerDay a day; only forms a reached unit teaches
+  const capC = Math.max(0, Number(s.conjDrillPerDay) || 0);
+  const cPool = (REG.drills || []).filter(d => unitOrder(d.u) <= curIdx);
+  const dueC = cPool.filter(d => isDueToday(d, t)).sort(byDue).slice(0, capC);
+  const newC = cPool.filter(d => !state.srs[d.key]).sort((a, b) => unitOrder(a.u) - unitOrder(b.u)).slice(0, Math.max(0, Math.min(capC - dueC.length, capC - (state.today.newC || 0))));
   const newV = newVocabCandidates(vPool, n4Open).slice(0, wantV + Math.max(0, wantG - newG.length));
-  const remaining = dueV.length + dueG.length + newV.length + newG.length + ex.dueK.length + ex.newK.length + ex.dueL.length + ex.newL.length + ex.dueR.length + ex.newR.length;
+  const remaining = dueV.length + dueG.length + newV.length + newG.length + dueC.length + newC.length + ex.dueK.length + ex.newK.length + ex.dueL.length + ex.newL.length + ex.dueR.length + ex.newR.length;
   const relearnN = dueV.concat(dueG).filter(x => onLadder(x.key)).length;   // reviews that are missed items on the ladder (shown as 其中錯題)
-  return Object.assign({ dueV, dueG, newV, newG, note, factor: ad.factor, size, n4Open, remaining, relearnN }, ex);
+  return Object.assign({ dueV, dueG, newV, newG, dueC, newC, note, factor: ad.factor, size, n4Open, remaining, relearnN }, ex);
 }
 
 function interleave(vList, gList, mode) {
@@ -3241,8 +3297,8 @@ function buildDailyQueue(size = state.settings.sessionSize) {
   const plan = dailyPlan(size);
   const byPractice = (a, b) => ((state.srs[a.key].ok || 0) - (state.srs[b.key].ok || 0)) || byDue(a, b);
   const ladderFirst = (list) => list.filter(x => onLadder(x.key)).concat(list.filter(x => !onLadder(x.key)));   // missed items are the weakest: first
-  const reviews = interleave(ladderFirst(plan.dueV.concat(plan.dueK).sort(byDue)), ladderFirst(plan.dueG.slice().sort(byPractice)), 'mixed');
-  const fresh = interleave(plan.newV.concat(plan.newK), plan.newG, 'mixed');
+  const reviews = interleave(ladderFirst(plan.dueV.concat(plan.dueK).sort(byDue)), ladderFirst(plan.dueG.slice().sort(byPractice)).concat(plan.dueC || []), 'mixed');
+  const fresh = interleave(plan.newV.concat(plan.newK), plan.newG.concat(plan.newC || []), 'mixed');
   const day = interleave(reviews, fresh, 'mixed');   // proportional, so each session of the day gets its share of new items
   const L = plan.dueL.concat(plan.newL); const R = plan.dueR.concat(plan.newR).slice(0, 1);
   const total = day.length + L.length + R.length;
@@ -3250,8 +3306,9 @@ function buildDailyQueue(size = state.settings.sessionSize) {
   const take = day.slice(0, Math.max(0, size - Ls.length - R.length));
   const isNew = (x) => !state.srs[x.key];
   // within the session: reviews shuffled, new items after them (a new word gets its preview card first)
-  const vList = ladderFirst(shuffle(take.filter(x => x.kind !== 'g' && !isNew(x)))).concat(take.filter(x => x.kind !== 'g' && isNew(x)));
-  const gList = ladderFirst(shuffle(take.filter(x => x.kind === 'g' && !isNew(x)))).concat(take.filter(x => x.kind === 'g' && isNew(x)));
+  const isG = (x) => x.kind === 'g' || x.kind === 'c';   // 變化練習 sits on the grammar side
+  const vList = ladderFirst(shuffle(take.filter(x => !isG(x) && !isNew(x)))).concat(take.filter(x => !isG(x) && isNew(x)));
+  const gList = ladderFirst(shuffle(take.filter(x => isG(x) && !isNew(x)))).concat(take.filter(x => isG(x) && isNew(x)));
   const items = interleave(vList, gList, state.settings.order);
   // listening spread through the session, the reading passage last
   Ls.forEach((x, i) => items.splice(Math.min(items.length, Math.round((i + 1) * items.length / (Ls.length + 1)) + i), 0, x));
@@ -3706,13 +3763,13 @@ function answerCurrent(i) {
   }
   // the 再練一次 copy is a learning step: it counts as a question done today, nothing else (the first answer set the schedule)
   if (e.requeued) {
-    recordAction(q.kind === 'v' || q.kind === 'k' ? 'v' : q.kind === 'g' ? 'g' : 'q', null, q.kind);
+    recordAction(q.kind === 'v' || q.kind === 'k' ? 'v' : q.kind === 'g' || q.kind === 'c' ? 'g' : 'q', null, q.kind === 'c' ? 'g' : q.kind);
     SESSION.stats[ok ? 'correct' : 'wrong']++;
     SESSION.results.push({ key: q.key, ok, q, chosen: i, requeued: true });
     saveState(); renderPractice(); speakAnswered(q);
     return;
   }
-  if (['v', 'g', 'l', 'r', 'k'].includes(q.kind) && !e.encore) {
+  if (['v', 'g', 'l', 'r', 'k', 'c'].includes(q.kind) && !e.encore) {
     e.srs = srsAnswer(q.key, ok);
     if (e.srs.isNew) SESSION.stats.newCount++;
   }
@@ -3724,8 +3781,8 @@ function answerCurrent(i) {
     const f = state.statsFmt[q.fmt] || (state.statsFmt[q.fmt] = { ok: 0, ng: 0 });
     if (ok) f.ok++; else f.ng++;
   }
-  const topic = q.kind === 'g' ? unitById(q.unit).short : q.kind === 'v' ? `單字「${jaPlain(q.item.w)}」` : q.kind === 'k' ? `漢字「${q.item.k}」` : q.kind === 'l' ? '聽力' : q.kind === 'r' ? '閱讀' : null;
-  recordAction(q.kind === 'v' || q.kind === 'k' ? 'v' : q.kind === 'g' ? 'g' : 'q', topic, q.kind);
+  const topic = q.kind === 'g' ? unitById(q.unit).short : q.kind === 'c' ? '變化練習' : q.kind === 'v' ? `單字「${jaPlain(q.item.w)}」` : q.kind === 'k' ? `漢字「${q.item.k}」` : q.kind === 'l' ? '聽力' : q.kind === 'r' ? '閱讀' : null;
+  recordAction(q.kind === 'v' || q.kind === 'k' ? 'v' : q.kind === 'g' || q.kind === 'c' ? 'g' : 'q', topic, q.kind === 'c' ? 'g' : q.kind);
   recordAccuracy(ok);
   if (ok) {
     SESSION.stats.correct++;
@@ -4210,8 +4267,8 @@ function renderToday(view) {
   const pace = examPace();
   const vs = vocabStats();
   const mk = activeMistakes();
-  const reviewN = plan.dueV.length + plan.dueG.length;
-  const newN = plan.newV.length + plan.newG.length;
+  const reviewN = plan.dueV.length + plan.dueG.length + (plan.dueC || []).length;
+  const newN = plan.newV.length + plan.newG.length + (plan.newC || []).length;
   const exK = plan.dueK.length + plan.newK.length;
   const exL = Math.min(plan.dueL.length + plan.newL.length, state.settings.listenPerDay || 0);
   const exR = Math.min(1, plan.dueR.length + plan.newR.length);
@@ -4238,8 +4295,8 @@ function renderToday(view) {
     // the counts live in the 今天的範圍 panel (scopeHtml below); the card itself shows only the button when everything is folded
     scopeHtml = `${sessionTopicsHtml(dq, plan)}
       <div class="plan-line">
-        <span>待複習 <b>${reviewN}</b>（單字 ${plan.dueV.length}・文法 ${plan.dueG.length}${plan.relearnN ? `・其中錯題 ${plan.relearnN}` : ''}）</span>
-        <span>新內容 <b>${newN}</b>（單字 ${plan.newV.length}・文法 ${plan.newG.length}）</span>
+        <span>待複習 <b>${reviewN}</b>（單字 ${plan.dueV.length}・文法 ${plan.dueG.length}${plan.dueC && plan.dueC.length ? `・變化 ${plan.dueC.length}` : ''}${plan.relearnN ? `・其中錯題 ${plan.relearnN}` : ''}）</span>
+        <span>新內容 <b>${newN}</b>（單字 ${plan.newV.length}・文法 ${plan.newG.length}${plan.newC && plan.newC.length ? `・變化 ${plan.newC.length}` : ''}）</span>
         ${extraN ? `<span>另有 <b>${extraN}</b>（${extraText}）</span>` : ''}
         <span>共 <b>${plan.remaining}</b> 題</span>
       </div>
@@ -6539,6 +6596,7 @@ function settingsLearn() {
     ${numRow('newGrammarPerDay', '每天新文法題上限', '照講義段落順序從目前單元挑；本單元出完會接著下一單元並自動切換。', 0, 30, 1, '題')}
     ${selRow('n4Words', 'N4 單字何時加入', '預設等 N5 單字都學過一次才加入 N4 新字；已有基礎的人可以直接開放。', [['auto', 'N5 學過一次後自動加入'], ['open', '現在就開放']])}
     ${numRow('newKanjiPerDay', '每天新漢字上限', 'N5 漢字都學過一次後，才會開始加入 N4 漢字。', 0, 15, 1, '個')}
+    ${numRow('conjDrillPerDay', '每天變化練習', '以形態為單位排程，動詞從你學過的單字裡隨機抽；只出目前單元以前教過的形態。', 0, 10, 1, '題')}
     ${numRow('listenPerDay', '每天聽力題', '短對話、即時應答與情境表達；需要能播放語音。', 0, 10, 1, '題')}
     ${selRow('retention', '複習強度', '越高越常複習，記得越牢，但每天的題目也越多。', [['0.85', '輕量（約記住 85%）'], ['0.9', '標準（約記住 90%）'], ['0.95', '加強（約記住 95%）']])}
     ${selRow('conjInput', '活用題作答方式', '自動：剛學的題選答案，熟了之後改成自己拼出來。鍵盤輸入在 iPhone 請先到「設定 › 一般 › 鍵盤」加入日文鍵盤。', [['auto', '自動（熟了之後改成拼出來）'], ['choice', '一律選擇'], ['tiles', '一律假名磁貼'], ['type', '鍵盤輸入']])}
@@ -9087,7 +9145,7 @@ const Sync = {
    ========================================================================== */
 function checkDayRollover() {
   if (state.today.date === todayStr()) return;
-  state.today = { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0 };
+  state.today = { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0, newC: 0 };
   saveState();
   if (!SESSION && !EXAM) route();
 }
