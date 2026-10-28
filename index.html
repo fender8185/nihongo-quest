@@ -1062,6 +1062,7 @@ function defaultSettings() {
     furiMode: 'smart',       // smart: no furigana on mastered words | all — furigana:false hides all
     listenPerDay: 3,         // listening items in the daily mix
     newKanjiPerDay: 3,
+    newKanaPerDay: 15,       // 入門: new kana a day (hiragana and katakana together, 五十音 order); only while state.stage === 'pre'
     conjDrillPerDay: 3,      // 變化練習: per-form-family drills a day (due + new), verbs drawn from learned words
     conjInput: 'auto',       // 活用題作答方式: auto (choice until b ≥ 1, then tiles) | choice | tiles | type
     audioOptions: false,     // listening replies only spoken, like the real test
@@ -1140,6 +1141,8 @@ function normalizeState(s) {
   ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
+  if (out.stage !== 'pre' && out.stage !== 'main') out.stage = 'main';   // 入門階段 (1.0.6); accounts from before it are in the main course
+  if (typeof out.kanaKnown !== 'boolean') out.kanaKnown = false;
   if (!out.themeLane || !Array.isArray(out.themeLane.order)) out.themeLane = { order: [], count: {} };
   if (!out.themeLane.count || typeof out.themeLane.count !== 'object') out.themeLane.count = {};
   if (!out.today || out.today.date !== todayStr()) out.today = { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0, newC: 0, newA: 0 };
@@ -1809,7 +1812,7 @@ function buildFuriganaIndex() {
   };
   FURI_PRIO.clear(); FURI_BLOCK.clear(); FURI_SRC.clear();
   // built-in N5 words win over N4 words when keys collide (行って = いって, not おこなって)
-  furiPrio = 4; REG.vocab.filter(v => v.builtin && v.lv === 'N5').forEach(add);
+  furiPrio = 4; REG.vocab.filter(v => v.builtin && v.lv !== 'N4').forEach(add);
   furiPrio = 3; (DATA.FURI || []).forEach(([k, r]) => furiAdd(k, r));
   furiPrio = 2; REG.vocab.filter(v => v.builtin && v.lv !== 'N5').forEach(add);
   // readings for words that appear in sentences but are not quizzed (names, 思う, 名前 …)
@@ -3116,10 +3119,23 @@ function isDueToday(x, t = todayStr()) { const r = state.srs[x.key]; return Bool
 // only after every N5 word has been introduced once. Items further ahead keep their records and come
 // back when the learner gets there.
 // N4 words join the new-word pool once every N5 word has been seen, or earlier when the learner opens them (設定／我已有基礎)
+const LV_RANK = { PRE_N5: 0, N5: 1, N4: 2 };
+function lvRank(x) { return LV_RANK[x.lv] === undefined ? 1 : LV_RANK[x.lv]; }
+function inPreStage() { return state.stage === 'pre'; }
+// 入門: PRE_N5 words start once the 92 清音 have all been seen, or when the learner says they already know kana
+function kanaGateOpen() { return state.kanaKnown === true || REG.kana.filter(x => x.seion).every(x => state.srs[x.key]); }
+function kanaPlan(t = todayStr()) {
+  const dueA = REG.kana.filter(x => isDueToday(x, t)).sort(byDue);
+  const newA = inPreStage() ? REG.kana.filter(x => !state.srs[x.key]).sort((a, b) => a.order - b.order).slice(0, Math.max(0, (Number(state.settings.newKanaPerDay) || 0) - (state.today.newA || 0))) : [];
+  return { dueA, newA };
+}
+function preWordsLeft() { let n = 0; for (const v of REG.vocab) if (v.builtin && v.lv === 'PRE_N5' && !state.srs[v.key]) n++; return n; }
+// 入門 is done when every PRE_N5 word has been seen (and the kana gate is open); nothing to finish while the level has no words
+function preDone() { return REG.vocab.some(v => v.builtin && v.lv === 'PRE_N5') && preWordsLeft() === 0 && kanaGateOpen(); }
 function n4WordsOpen() { return state.settings.n4Words === 'open' || n5WordsLeft() === 0; }
-function n5WordsLeft() {
+function n5WordsLeft() {   // PRE_N5 and N5 words not yet seen: both must be gone before N4 opens by itself
   let n = 0;
-  for (const v of REG.vocab) if (v.builtin && v.lv === 'N5' && !state.srs[v.key]) n++;
+  for (const v of REG.vocab) if (v.builtin && v.lv !== 'N4' && !state.srs[v.key]) n++;
   return n;
 }
 function grammarInReach(g, curIdx = unitOrder(state.currentUnit)) { return unitOrder(g.u) <= curIdx; }
@@ -3128,7 +3144,7 @@ function inDailyReach(it, n4Open = n4WordsOpen()) {
   return !it.builtin || it.lv !== 'N4' || n4Open;
 }
 function vocabEligibleForDaily(v, n4Open) {
-  if (v.builtin) return v.lv !== 'N4' || n4Open;
+  if (v.builtin) return inPreStage() ? v.lv === 'PRE_N5' : (v.lv !== 'N4' || n4Open);
   const mode = state.settings.includeImported;
   if (mode === 'off') return false;
   if (mode === 'words') return isWordLike(v);
@@ -3149,9 +3165,11 @@ function laneOrder() {
   return lane.order;
 }
 function laneCap() { return THEME_LANE_DAYS * Math.max(1, Number(state.settings.newVocabPerDay) || 0); }
+// the level whose themes hold the lanes: PRE_N5 in 入門; otherwise N5 while it has unseen words, then N4
+function laneLevel(fresh) { return inPreStage() ? 'PRE_N5' : fresh.some(v => v.lv === 'N5') ? 'N5' : 'N4'; }
 function activeThemes(pool, allowN4) {
-  const fresh = pool.filter(v => v.builtin && !state.srs[v.key] && (v.lv === 'N5' || allowN4));
-  const lv = fresh.some(v => v.lv === 'N5') ? 'N5' : 'N4';
+  const fresh = pool.filter(v => v.builtin && !state.srs[v.key] && (v.lv !== 'N4' || allowN4));
+  const lv = laneLevel(fresh);
   const open = new Set(fresh.filter(v => v.lv === lv).map(vocabTheme));
   return laneOrder().filter(c => open.has(c)).slice(0, 2);
 }
@@ -3168,13 +3186,16 @@ function noteThemeIntro(key) {
 }
 function newVocabCandidates(pool, allowN4) {
   const th = activeThemes(pool, allowN4);
-  const fresh = pool.filter(v => v.builtin && !state.srs[v.key] && (v.lv === 'N5' || allowN4));
-  const lv = fresh.some(v => v.lv === 'N5') ? 'N5' : 'N4';
-  const inLane = (v) => v.lv === lv && th.includes(vocabTheme(v));
+  const fresh = pool.filter(v => v.builtin && !state.srs[v.key] && (v.lv !== 'N4' || allowN4));
+  const lv = laneLevel(fresh);
   const byId = (a, b) => a.id.localeCompare(b.id);
-  const lanes = th.map(c => fresh.filter(v => inLane(v) && vocabTheme(v) === c).sort(byId));
+  const byTheme = (a, b) => themeRank(vocabTheme(a)) - themeRank(vocabTheme(b)) || byId(a, b);
+  // in the main course the PRE_N5 words not yet seen form a lane of their own beside the two theme lanes (never a block of easy words first)
+  const preLane = lv === 'PRE_N5' ? [] : fresh.filter(v => v.lv === 'PRE_N5').sort(byTheme);
+  const inLane = (v) => (v.lv === lv && th.includes(vocabTheme(v))) || preLane.includes(v);
+  const lanes = (preLane.length ? [preLane] : []).concat(th.map(c => fresh.filter(v => v.lv === lv && vocabTheme(v) === c).sort(byId)));
   const rest = fresh.filter(v => !inLane(v))
-    .sort((a, b) => (a.lv === 'N4') - (b.lv === 'N4') || themeRank(vocabTheme(a)) - themeRank(vocabTheme(b)) || byId(a, b));
+    .sort((a, b) => lvRank(a) - lvRank(b) || byTheme(a, b));
   const built = [];
   for (let i = 0; lanes.some(l => i < l.length); i++) lanes.forEach(l => { if (i < l.length) built.push(l[i]); });
   built.push(...rest);
@@ -3251,9 +3272,9 @@ function adaptiveFactor() {
 
 // Listening, reading and kanji share the session with words and grammar. Listening and reading follow the
 // unit rule; N4 kanji wait until every N5 kanji has been introduced, like the words.
-function n5KanjiLeft() { let n = 0; for (const k of REG.kanji) if (k.lv === 'N5' && !state.srs[k.key]) n++; return n; }
+function n5KanjiLeft() { let n = 0; for (const k of REG.kanji) if (k.lv !== 'N4' && !state.srs[k.key]) n++; return n; }
 function newKanjiCandidates(allowN4) {
-  return REG.kanji.filter(k => !state.srs[k.key] && (k.lv === 'N5' || allowN4)).sort((a, b) => (a.lv === 'N4') - (b.lv === 'N4') || a.order - b.order);
+  return REG.kanji.filter(k => !state.srs[k.key] && (inPreStage() ? k.lv === 'PRE_N5' : (k.lv !== 'N4' || allowN4))).sort((a, b) => lvRank(a) - lvRank(b) || a.order - b.order);
 }
 // Listening is not tied to a unit's grammar: the pool is the whole level (N5 learners: N5; N4 learners: everything),
 // nearest units first (the current one, then earlier ones from the nearest, then later ones). A unit alone has ~12
@@ -3269,7 +3290,7 @@ function extrasPlan(curIdx) {
   const reach = (x) => unitOrder(x.u) <= curIdx;
   const isDue = (x) => isDueToday(x, t);
   const byUnit = (a, b) => unitOrder(a.u) - unitOrder(b.u) || (hashStr(a.id) % 997) - (hashStr(b.id) % 997);
-  const listenOn = s.listening && s.listenPerDay > 0 && speechAvailable();
+  const listenOn = s.listening && s.listenPerDay > 0 && speechAvailable() && !inPreStage();   // 入門 has no listening or reading
   const lPool = listenOn ? listenReachable(curIdx) : [];
   // listening: at most listenPerDay a day counting what was already answered today (due first; the rest of the due
   // ones wait until tomorrow); reading: one a day
@@ -3277,13 +3298,14 @@ function extrasPlan(curIdx) {
   const capL = Math.max(0, (s.listenPerDay || 0) - doneToday(lPool));
   const dueL = lPool.filter(isDue).sort(byDue).slice(0, capL);
   const newL = lPool.filter(x => !state.srs[x.key]).slice(0, Math.max(0, Math.min(s.listenPerDay - (state.today.newL || 0), capL - dueL.length)));
-  const rPool = REG.read.filter(reach);
+  const rPool = inPreStage() ? [] : REG.read.filter(reach);
   const dueR = doneToday(rPool) ? [] : rPool.filter(isDue).sort(byDue).slice(0, 1);
   const newR = !dueR.length && !doneToday(rPool) && (state.today.newR || 0) < 1 ? rPool.filter(x => !state.srs[x.key]).sort(byUnit).slice(0, 1) : [];
   const k4 = n5KanjiLeft() === 0;
   const dueK = REG.kanji.filter(k => (k.lv === 'N5' || k4) && isDue(k)).sort(byDue);
   const newK = newKanjiCandidates(k4).slice(0, Math.max(0, (s.newKanjiPerDay || 0) - (state.today.newK || 0)));
-  return { dueL, newL, dueR, newR, dueK, newK };
+  const { dueA, newA } = kanaPlan(t);
+  return { dueL, newL, dueR, newR, dueK, newK, dueA, newA };
 }
 
 // Summary of what today's session would contain (used by the Today page).
@@ -3298,9 +3320,10 @@ function dailyPlan(size = state.settings.sessionSize) {
   const curIdx = unitOrder(state.currentUnit);
   const vPool = REG.vocab.filter(v => vocabEligibleForDaily(v, n4Open));
   const dueV = vPool.filter(v => isDueToday(v, t)).sort(byDue);
-  const dueG = REG.grammar.filter(g => isDueToday(g, t) && grammarInReach(g, curIdx)).sort(byDue);
-  const maxV = Math.round(s.newVocabPerDay * ad.factor);
-  const maxG = Math.round(s.newGrammarPerDay * ad.factor);
+  const pre = inPreStage();   // 入門: no grammar, listening, reading or drills; new words only once the kana gate is open
+  const dueG = pre ? [] : REG.grammar.filter(g => isDueToday(g, t) && grammarInReach(g, curIdx)).sort(byDue);
+  const maxV = pre && !kanaGateOpen() ? 0 : Math.round(s.newVocabPerDay * ad.factor);
+  const maxG = pre ? 0 : Math.round(s.newGrammarPerDay * ad.factor);
   const ex = extrasPlan(curIdx);
   // 每天負荷上限 (settings.loadCap) is a brake: when today's work (done + due + new) would exceed it, new words shrink
   // first (never below about half their quota), then new kanji stop, then new listening. Due reviews never shrink, and
@@ -3309,26 +3332,28 @@ function dailyPlan(size = state.settings.sessionSize) {
   const fullV = Math.max(0, maxV - state.today.newV);
   let wantV = fullV;
   let over = dayTotal(state.dailyLogs[t]) + dueV.length + dueG.length + ex.dueK.length + ex.dueL.length + ex.dueR.length
-    + wantG + wantV + ex.newK.length + ex.newL.length + ex.newR.length + Math.min(Math.max(0, Number(s.conjDrillPerDay) || 0), (REG.drills || []).length) - (Number(s.loadCap) || 100);
+    + wantG + wantV + ex.newK.length + ex.newL.length + ex.newR.length + ex.dueA.length + ex.newA.length + (pre ? 0 : Math.min(Math.max(0, Number(s.conjDrillPerDay) || 0), (REG.drills || []).length)) - (Number(s.loadCap) || 100);
   if (over > 0) { const floorV = Math.max(0, Math.min(Math.ceil(maxV / 2), maxV) - state.today.newV); const cut = Math.max(0, Math.min(over, wantV - floorV)); wantV -= cut; over -= cut; }
   const cutK = over > 0 ? Math.min(over, ex.newK.length) : 0; over -= cutK;
   const cutL = over > 0 ? Math.min(over, ex.newL.length) : 0; over -= cutL;
+  const cutA = over > 0 ? Math.min(over, ex.newA.length) : 0; over -= cutA;
   if (cutK) ex.newK = ex.newK.slice(0, ex.newK.length - cutK);
   if (cutL) ex.newL = ex.newL.slice(0, ex.newL.length - cutL);
+  if (cutA) ex.newA = ex.newA.slice(0, ex.newA.length - cutA);
   let note = ad.note;
-  if (!note && (wantV < fullV || cutK || cutL)) {
-    const parts = []; if (wantV < fullV) parts.push(`新單字先減為 ${wantV} 個`); if (cutK) parts.push('新漢字先停'); if (cutL) parts.push('新聽力先停');
+  if (!note && (wantV < fullV || cutK || cutL || cutA)) {
+    const parts = []; if (wantV < fullV) parts.push(`新單字先減為 ${wantV} 個`); if (cutK) parts.push('新漢字先停'); if (cutL) parts.push('新聽力先停'); if (cutA) parts.push(`新假名先減為 ${ex.newA.length} 個`);
     note = `今天的題數超過負荷上限，${parts.join('、')}，新文法照常；複習完成後，之後幾天就會再增加。`;
   }
-  const newG = newGrammarCandidates().slice(0, wantG);
+  const newG = pre ? [] : newGrammarCandidates().slice(0, wantG);
   // 變化練習: due families first, then families not started yet, at most conjDrillPerDay a day; only forms a reached unit teaches
-  const cPool = (REG.drills || []).filter(d => unitOrder(d.u) <= curIdx);
+  const cPool = pre ? [] : (REG.drills || []).filter(d => unitOrder(d.u) <= curIdx);
   const doneC = cPool.filter(d => { const r = state.srs[d.key]; return r && r.last === t; }).length;
   const capC = Math.max(0, (Number(s.conjDrillPerDay) || 0) - doneC);
   const dueC = cPool.filter(d => isDueToday(d, t)).sort(byDue).slice(0, capC);
   const newC = cPool.filter(d => !state.srs[d.key]).sort((a, b) => unitOrder(a.u) - unitOrder(b.u)).slice(0, Math.max(0, Math.min(capC - dueC.length, capC - (state.today.newC || 0))));
   const newV = newVocabCandidates(vPool, n4Open).slice(0, wantV + Math.max(0, wantG - newG.length));
-  const remaining = dueV.length + dueG.length + newV.length + newG.length + dueC.length + newC.length + ex.dueK.length + ex.newK.length + ex.dueL.length + ex.newL.length + ex.dueR.length + ex.newR.length;
+  const remaining = dueV.length + dueG.length + newV.length + newG.length + dueC.length + newC.length + ex.dueK.length + ex.newK.length + ex.dueL.length + ex.newL.length + ex.dueR.length + ex.newR.length + ex.dueA.length + ex.newA.length;
   const relearnN = dueV.concat(dueG).filter(x => onLadder(x.key)).length;   // reviews that are missed items on the ladder (shown as 其中錯題)
   return Object.assign({ dueV, dueG, newV, newG, dueC, newC, note, factor: ad.factor, size, n4Open, remaining, relearnN }, ex);
 }
@@ -3352,8 +3377,8 @@ function buildDailyQueue(size = state.settings.sessionSize) {
   const plan = dailyPlan(size);
   const byPractice = (a, b) => ((state.srs[a.key].ok || 0) - (state.srs[b.key].ok || 0)) || byDue(a, b);
   const ladderFirst = (list) => list.filter(x => onLadder(x.key)).concat(list.filter(x => !onLadder(x.key)));   // missed items are the weakest: first
-  const reviews = interleave(ladderFirst(plan.dueV.concat(plan.dueK).sort(byDue)), ladderFirst(plan.dueG.slice().sort(byPractice)).concat(plan.dueC || []), 'mixed');
-  const fresh = interleave(plan.newV.concat(plan.newK), plan.newG.concat(plan.newC || []), 'mixed');
+  const reviews = interleave(ladderFirst(plan.dueV.concat(plan.dueK, plan.dueA || []).sort(byDue)), ladderFirst(plan.dueG.slice().sort(byPractice)).concat(plan.dueC || []), 'mixed');
+  const fresh = interleave((plan.newA || []).concat(plan.newV, plan.newK), plan.newG.concat(plan.newC || []), 'mixed');
   const day = interleave(reviews, fresh, 'mixed');   // proportional, so each session of the day gets its share of new items
   const L = plan.dueL.concat(plan.newL); const R = plan.dueR.concat(plan.newR).slice(0, 1);
   const total = day.length + L.length + R.length;
@@ -3378,7 +3403,7 @@ function extraQueue(size = state.settings.sessionSize) {
   const t = todayStr(); const until = addDays(t, 2);
   const plan = dailyPlan(size);
   const curIdx = unitOrder(state.currentUnit);
-  const pool = REG.vocab.filter(x => vocabEligibleForDaily(x, plan.n4Open)).concat(REG.grammar.filter(x => grammarInReach(x, curIdx)), REG.kanji.filter(k => k.lv === 'N5' || n5KanjiLeft() === 0));
+  const pool = REG.vocab.filter(x => vocabEligibleForDaily(x, plan.n4Open)).concat(inPreStage() ? [] : REG.grammar.filter(x => grammarInReach(x, curIdx)), REG.kanji.filter(k => k.lv !== 'N4' || n5KanjiLeft() === 0), REG.kana);
   const ahead = pool.filter(it => { const r = state.srs[it.key]; return r && r.due > t && r.due <= until && r.last !== t; }).sort(byDue).slice(0, size);
   const used = new Set(ahead.map(x => x.key));
   const cap = Math.min(size - ahead.length, Math.ceil(size / 2));
@@ -4220,6 +4245,9 @@ const ACTIONS = {
   'report-item': () => reportCurrentItem(),
   'dismiss-notice': (el) => { state.notices = state.notices.filter(n => n.id !== el.dataset.id); saveState(); route(); },
   'intro-dismiss': () => { state.introSeen = true; saveState(); route(); },
+  'enter-main': () => { state.stage = 'main'; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null; toast('進入第 1 週'); route(); },
+  'enter-pre': () => { state.stage = 'pre'; saveState(); DAILY_CACHE = null; toast('回到入門'); route(); },
+  'pre-done-later': () => { state.preDoneDismissed = todayStr(); saveState(); route(); },
   glossary: (el) => { const h = glossaryHtml(el.dataset.term); if (h) openModal('這是什麼？', h, { width: 480, noFocus: true }); }
 };
 function handleClick(ev) {
@@ -4332,9 +4360,10 @@ function renderToday(view) {
   const exK = plan.dueK.length + plan.newK.length;
   const exL = Math.min(plan.dueL.length + plan.newL.length, state.settings.listenPerDay || 0);
   const exR = Math.min(1, plan.dueR.length + plan.newR.length);
+  const exA = (plan.dueA || []).length + (plan.newA || []).length;
   const size = state.settings.sessionSize;
-  const extraN = exK + exL + exR;
-  const extraText = [exK && `漢字 ${exK}`, exL && `聽力 ${exL}`, exR && `閱讀 ${exR}`].filter(Boolean).join('・');
+  const extraN = exK + exL + exR + exA;
+  const extraText = [exA && `假名 ${exA}`, exK && `漢字 ${exK}`, exL && `聽力 ${exL}`, exR && `閱讀 ${exR}`].filter(Boolean).join('・');
   const dq = dailyQueue(size);
   const encoreN = encoreEstimate(dq.items);   // new words and multi-format grammar come back once more in the session; shown apart, never counted
   const prog = dayProgress();   // the ring: items answered today / today's items
@@ -4373,11 +4402,16 @@ function renderToday(view) {
   const introBanner = !state.introSeen && Object.keys(state.srs).length < 40
     ? `<div class="banner intro-banner"><div class="grow">第一次用？先看「第 0 週」：假名、句子骨架、以及題目上會出現的名詞（い形容詞、五段動詞……）。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button><button type="button" class="btn btn-sm btn-ghost" data-act="intro-dismiss">知道了</button></div></div>`
     : '';
+  const preDoneCard = inPreStage() && preDone() && state.preDoneDismissed !== t
+    ? `<div class="banner mt-2"><div class="grow">入門單字都看過了。進入第 1 週，開始文法？</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="enter-main">進入第 1 週</button><button type="button" class="btn btn-sm btn-ghost" data-act="pre-done-later">再練一陣子</button></div></div>`
+    : '';
   const practiceHtml = `
+      ${preDoneCard}
       <div class="hero hero-center">
         <div>
           ${plan.remaining === 0 ? '<h2>今天完成了</h2>' : `<div><button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・${dq.items.length} 題</button></div>`}
           <div class="tiny muted hero-date">${greeting}・連續 ${st.current} 天</div>
+          ${inPreStage() ? `<div class="small muted mt-1">入門：假名 ${REG.kana.filter(x => state.srs[x.key]).length}／${REG.kana.length}・單字 ${REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5' && state.srs[v.key]).length}／${REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').length}</div>` : ''}
           <div class="hero-tabs">
             <button type="button" class="hero-tab${heroTab === 'help' ? ' open' : ''}" data-act="hero-tab" data-tab="help" aria-expanded="${heroTab === 'help'}">說明</button>
             ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">範圍</button>` : ''}

@@ -53,6 +53,51 @@ def test_kana_mistake_card_and_undo(b):
     assert r['front'] and r['back'] and r['speak'] == 'か', r
     assert r['undone'] == {'rec': False, 'mistakes': 0, 'btn': True}, r
 
+# until the data pass (Task 5) tags real PRE_N5 words, the tests tag a few in memory so the stage logic can be checked on its own
+TAG_PRE = "if (!REG.vocab.some(v => v.builtin && v.lv === 'PRE_N5')) { REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 40).forEach(v => { v.lv = 'PRE_N5'; }); REG.kanji.filter(k => k.lv === 'N5').slice(0, 5).forEach(k => { k.lv = 'PRE_N5'; }); } "
+PRE_STATE = TAG_PRE + "state.stage = 'pre'; state.kanaKnown = false; state.srs = {}; state.today = { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0, newC: 0, newA: 0 }; DAILY_CACHE = null; true"
+
+def test_pre_stage_plan_has_only_kana_until_the_seion_gate_opens(b):
+    js = """(() => { const p = dailyPlan(); const out = { a: p.newA.map(x => x.ch), g: p.dueG.length + p.newG.length, l: p.dueL.length + p.newL.length, r: p.dueR.length + p.newR.length,
+        c: (p.dueC || []).length + (p.newC || []).length, v: p.newV.length, k: p.newK.map(x => x.lv) };
+      REG.kana.filter(x => x.seion).forEach(x => { state.srs[x.key] = { b: 1, due: addDays(todayStr(), 5), n: 1, ok: 1, ng: 0, s: 2, d: 5, last: addDays(todayStr(), -1) }; }); DAILY_CACHE = null;
+      const p2 = dailyPlan(); out.v2 = p2.newV.map(x => x.lv); out.a2 = p2.newA.map(x => x.ch); out.k2 = [...new Set(p2.newK.map(x => x.lv))];
+      const q = dailyQueue(20).items; out.kinds = [...new Set(q.map(x => x.kind))].sort();
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
+    assert r['a'] == ['あ', 'い', 'う', 'え', 'お', 'ア', 'イ', 'ウ', 'エ', 'オ', 'か', 'き', 'く', 'け', 'こ'], r
+    assert r['g'] == 0 and r['l'] == 0 and r['r'] == 0 and r['c'] == 0 and r['v'] == 0, r
+    assert all(l == 'PRE_N5' for l in r['k']), r
+    assert r['v2'] and all(l == 'PRE_N5' for l in r['v2']) and r['a2'][:2] == ['が', 'ぎ'] and r['k2'] == ['PRE_N5'], r
+    assert set(r['kinds']) <= {'a', 'v', 'k'}, r
+
+def test_main_stage_never_schedules_new_kana_but_reviews_practised_ones(b):
+    js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.srs); state.stage = 'main'; DAILY_CACHE = null;
+      const p = dailyPlan(); const out = { newA: p.newA.length };
+      state.srs['a:あ'] = { b: 1, due: t, n: 1, ok: 1, ng: 0, s: 2, d: 5, last: addDays(t, -2) }; DAILY_CACHE = null;
+      const p2 = dailyPlan(); out.dueA = p2.dueA.map(x => x.ch); out.inQueue = dailyQueue(60).items.some(x => x.key === 'a:あ');
+      state.srs = JSON.parse(keep); saveState(); DAILY_CACHE = null; return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'newA': 0, 'dueA': ['あ'], 'inQueue': True}, r
+
+def test_load_cap_counts_kana(b):
+    js = """(() => { state.settings.loadCap = 10; state.settings.newKanaPerDay = 15; DAILY_CACHE = null; const p = dailyPlan();
+      return JSON.stringify({ a: p.newA.length, note: String(p.note || '') }); })()"""
+    r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
+    assert r['a'] < 15 and '新假名' in r['note'], r
+
+def test_completion_card_needs_words_and_open_gate(b):
+    js = """(() => { const t = todayStr(); const words = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5');
+      const mark = (it) => { state.srs[it.key] = { b: 2, due: addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -1) }; };
+      words.forEach(mark); DAILY_CACHE = null; const out = { wordsOnly: preDone(), n: words.length };
+      REG.kana.filter(x => x.seion).forEach(mark); DAILY_CACHE = null; out.both = preDone();
+      location.hash = '#/today'; route(); out.card = Boolean(document.querySelector('[data-act="enter-main"]'));
+      document.querySelector('[data-act="enter-main"]').click(); out.stage = state.stage; out.unit = state.currentUnit;
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
+    assert r['n'] > 0 and r['wordsOnly'] is False and r['both'] is True and r['card'] is True, r
+    assert r['stage'] == 'main' and r['unit'] == 'm1', r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
