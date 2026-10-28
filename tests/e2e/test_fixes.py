@@ -928,14 +928,14 @@ def test_today_notebook_card_is_the_listen_player(b):
     assert r['stopped'] and r['empty'] and r['onPractice'] and r['backOnPractice'], r
 
 def test_vocab_theme_card_plays_the_theme(b):
-    js = """(() => { location.hash = '#/vocab/themes'; route(); const btn = document.querySelector('.theme-card [data-act=listen-theme-start]'); const theme = btn.dataset.theme;
+    js = """(() => { location.hash = '#/vocab/level?lv=N5'; route(); const btn = document.querySelector('.theme-card [data-act=listen-theme-start]'); const theme = btn.dataset.theme;   // 1.0.9: theme cards sit on the level pages
       ACTIONS['listen-theme-start'](btn); route(); listenPause(); const n = REG.vocab.filter(x => x.builtin && vocabTheme(x) === theme).length;
       const r = { hash: location.hash, kind: LISTEN.source.kind, theme: LISTEN.source.theme === theme, n: LISTEN.all.length === n, page: !!document.querySelector('.card.listen .lplay'), noScope: !document.querySelector('[data-key=scope]'), pref: JSON.parse(localStorage.getItem('nq_listen_pref')) };
       listenStop(); r.back = location.hash; localStorage.removeItem('nq_listen_pref'); return JSON.stringify(r); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['hash'] == '#/vocab/listen' and r['kind'] == 'theme' and r['theme'] and r['n'] and r['page'] and r['noScope'], r
-    assert r['pref']['source'] == 'theme' and r['back'] == '#/vocab/themes', r
+    assert r['pref']['source'] == 'theme' and r['back'] == '#/vocab/level?lv=N5', r
 
 def test_today_offers_the_exam_pace_quotas_when_behind(b):
     js = """(() => { state.settings.examDate = addDays(todayStr(), 121); Object.assign(state.settings, { newVocabPerDay: 1, newGrammarPerDay: 1 }); saveState();
@@ -1277,8 +1277,8 @@ def test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_
       ACTIONS['listen-close'](); route(); const back = { hash: location.hash, tab: todayTab, same: LISTEN === L, playing: LISTEN && LISTEN.playing, idx: LISTEN && LISTEN.idx, immersive: document.body.classList.contains('immersive'), compact: !!view.querySelector('.card.today-card.listen.compact .lplay') };
       listenPause();
       // opened from the vocab themes page instead: ✕ ends the player and goes back there
-      const tbtn = (location.hash = '#/vocab/themes', route(), document.querySelector('.theme-card [data-act=listen-theme-start]')); ACTIONS['listen-theme-start'](tbtn); route(); const fromThemes = document.body.classList.contains('immersive') && !!document.querySelector('[data-act=listen-close]');
-      ACTIONS['listen-close'](); route(); const ended = LISTEN === null && location.hash === '#/vocab/themes' && !document.body.classList.contains('immersive');
+      const tbtn = (location.hash = '#/vocab/level?lv=N5', route(), document.querySelector('.theme-card [data-act=listen-theme-start]')); ACTIONS['listen-theme-start'](tbtn); route(); const fromThemes = document.body.classList.contains('immersive') && !!document.querySelector('[data-act=listen-close]');
+      ACTIONS['listen-close'](); route(); const ended = LISTEN === null && location.hash === '#/vocab/level?lv=N5' && !document.body.classList.contains('immersive');
       const css = document.querySelector('style').textContent; const landscape = /orientation: portrait\\) \\{\\s*body\\.immersive \\.main \\{ position: fixed/.test(css) && /\\.listen\\.full \\.flash \\{ height: 100%; display: flex; flex-direction: column/.test(css);
       localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ full, ms, curTitle: cur ? cur.word + '　' + cur.meaning : null, back, fromThemes, ended, landscape }); })()"""
     out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", js)], timeout=45)

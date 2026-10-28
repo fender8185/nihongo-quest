@@ -157,9 +157,9 @@ def test_pre_stage_keeps_due_reviews_and_extra_practice_has_no_grammar(b):
     assert not r['unitBtn'] and not r['unitTab'], r
 
 def test_kanji_page_has_an_intro_tab_and_still_shows_every_kanji(b):
-    js = """(() => { const count = (lv) => { location.hash = '#/vocab/kanji?lv=' + lv; route(); return document.querySelectorAll('.kanji-tile').length; };
+    js = """(() => { const count = (lv) => { location.hash = '#/vocab/kanji?lv=' + lv; route(); return document.querySelectorAll('.kanji-box .kanji-tile').length; };   // old route → level page (1.0.9)
       const n = { pre: count('PRE_N5'), n5: count('N5'), n4: count('N4') }; n.sum = n.pre + n.n5 + n.n4; n.total = REG.kanji.length;
-      n.tab = Boolean(document.querySelector('[data-route="#/vocab/kanji?lv=PRE_N5"]')); n.text = document.querySelector('.kanji-levels').textContent; return JSON.stringify(n); })()"""
+      n.tab = Boolean(document.querySelector('[data-route="#/vocab/level?lv=PRE_N5"]')); n.text = document.querySelector('.seg.mb-4').textContent; return JSON.stringify(n); })()"""
     r = json.loads(ev(b, js))
     assert r['pre'] == 27 and r['sum'] == r['total'] and r['tab'] and '入門' in r['text'] and 'PRE_N5' not in r['text'], r
 
@@ -309,6 +309,31 @@ def test_kana_heat_grid(b):
     r = json.loads(ev(b, js))
     assert r['n'] == 142 and r['a'] and r['i'] and r['u'], r
     assert r['row'] == ['さ', 'し', 'す', 'せ', 'そ', 'サ', 'シ', 'ス', 'セ', 'ソ'], r
+
+def test_old_vocab_routes_redirect(b):
+    js = """(() => { const go = (h) => { location.hash = h; route(); return [decodeURIComponent(location.hash), document.getElementById('view').textContent.includes('出錯')]; };
+      return JSON.stringify({ themes: go('#/vocab/themes'), kanji: go('#/vocab/kanji?lv=N4'), list: go('#/vocab/list?lv=PRE_N5&c=飲食')[0] }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['themes'][0].startswith('#/vocab/level?lv=') and not r['themes'][1], r
+    assert r['kanji'] == ['#/vocab/level?lv=N4', False] and r['list'] == '#/vocab/list?lv=PRE_N5&c=飲食', r
+
+# ---- fixes from the 1.0.8 whole-branch review ----
+def test_theme_lane_migration_is_idempotent_and_keeps_pre_n5_greetings(b):
+    js = """(() => { state.themeLane = { order: [], count: {} }; const seeded = laneOrder().slice(); state.themeLane.count['問候'] = 3;
+      const s = normalizeState(JSON.parse(JSON.stringify(state))); const again = normalizeState(JSON.parse(JSON.stringify(s)));
+      return JSON.stringify({ first: seeded[0], after: s.themeLane.order[0], same: JSON.stringify(s.themeLane.order) === JSON.stringify(seeded) && JSON.stringify(again.themeLane.order) === JSON.stringify(seeded), count: s.themeLane.count }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['first'] == '問候' and r['after'] == '問候' and r['same'] and r['count'] == {'問候': 3}, r
+
+def test_day_one_responses_never_decoy_each_other(b):
+    js = """(() => { const groups = [['はい', 'ええ', 'そうです', 'そう', 'そうですか'], ['いいえ', 'ちがいます', '違う']]; const bad = [];
+      groups.forEach(g => g.forEach(w => { const v = REG.vocab.find(x => x.builtin && x.w === w); if (!v) return; state.srs[v.key] = { b: 2, due: todayStr(), n: 2, ok: 2, ng: 0, s: 3, d: 5, f: {} };
+        for (let i = 0; i < 60; i++) { ['v-meaning', 'v-recall', 'v-cloze'].forEach(f => { const q = makeVocabQuestion(v, { forceFmt: f }); if (!q) return;
+          q.options.forEach((o, j) => { if (j === q.answer) return; const other = g.filter(x => x !== w).find(x => { const ov = REG.vocab.find(y => y.builtin && y.w === x); return ov && (o.text === ov.m || o.text === ov.w || o.text === ov.r); }); if (other) bad.push(w + '/' + f + '/' + other); }); }); }
+        delete state.srs[v.key]; }));
+      return JSON.stringify([...new Set(bad)]); })()"""
+    r = json.loads(ev(b, js))
+    assert r == [], r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

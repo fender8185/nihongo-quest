@@ -1,5 +1,5 @@
 /* Nihongo Quest service worker: versioned app-shell cache, cache-first for same-origin GETs. */
-const CACHE = 'nq-v1.0.8';
+const CACHE = 'nq-v1.0.9';
 const AUDIO_CACHE = 'nq-audio';   // 雲端音檔 heard so far: kept across releases
 const AUDIO_PATH = '/storage/v1/object/public/JPY_audio/';
 const PRECACHE = [

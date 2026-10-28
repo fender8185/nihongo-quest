@@ -928,12 +928,17 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.8';   // keep equal to the version in sw.js CACHE ('nq-v1.0.8'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.9';   // keep equal to the version in sw.js CACHE ('nq-v1.0.9'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.9', date: '2026-10-29', items: [
+    '單字頁改版：第一層改成入門／N5／N4 三個等級分頁，打開時直接落在你目前的等級；每頁有進度環、「練這個等級」，底下是本級的主題卡（卡上列出該主題會碰到的漢字，點了看說明）和本級漢字依主題分組的方格。原本的「主題」「漢字」分頁併進來，字卡、單字表、匯入照舊。',
+    '入門頁多一張五十音表，每個假名依熟練度上色，按每行前面的 ▶ 只練那一行。手機上五十音表和漢字區預設收合，主題卡先看到。',
+    '修正：入門的「問候」主題不再被主題遷移改名；はい／ええ／そうです、いいえ／ちがいます 這類同義回應不再互當單字題的干擾項；聽力「只念選項」模式的播放鍵改成帶讀音去念（台湾 這類字典外的字之前會念錯）。'
+  ] },
   { v: '1.0.8', date: '2026-10-29', items: [
     '單字主題依等級重劃：入門 11 個、N5 17 個、N4 17 個主題（例如 N5 的「生活」拆成居家生活、學校與工作；「休閒」併入興趣與休閒），每個字都落在自己等級的主題裡；新字仍兩個主題交錯出，原本輪到的主題順序自動換成新名稱。',
     '新字 200 個：入門 120 個（牛丼、味噌汁、うさぎ、はさみ、コンビニ、バス停、はい／いいえ…，例句只用入門字）、N5 80 個（身體與健康、衣物與購物、學校與工作、居家生活、興趣與休閒…）。單字共 1661：入門 423、N5 512、N4 726。',
@@ -975,7 +980,7 @@ const CHANGELOG = [
     '每日練習的規則：每一題不是今天到期的複習就是今天的新內容。每天負荷上限（預設 100）只壓新題，到期複習永遠全出。答錯的隔天起第 1、3、7 天各複習一次，三次都對才離開錯題本；答對的越熟出現得越少。新文法照講義段落順序出，單元文法全部出過就自動推進到下一單元；新單字從兩條主題線交錯供應；變化練習以形態為單位排程，動詞每次隨機換。做完顯示「今天完成了」，可「加練」明後天到期的複習。',
     '練習：單字有看字選意思、中翻日、例句填空、讀音、寫法、聽音選意思、假名拼字、配對；文法有填空、選正確句、句意、真的排序、活用拼寫（熟了之後不給選項）；另有假名（看字選音、聽音選字、平片對照）、漢字、聽力（整個級別抽題）、閱讀（兩者答對後 30／90／180 天才再出）。新字先看預習卡再考；答錯幾題後換一種格式「再練一次」，不寫排程；按「手滑，不算」可撤銷；單字可按「我會了」直接標熟練。手機上作答只有「下一題」固定在底部，畫面避開瀏海、不能縮放。',
     '入門（PRE_N5）：假名辨識與入門單字，學完才進第 1 週；課程：18 個單元（每單元約兩週）的講義，加上「第 0 週：開始之前」的入門（假名、句子骨架、品詞、動詞的形、助詞、數量詞）；可依程度選起點或一鍵「我已有基礎」。文法考點整併成 288 個，每個考點至少 3 題。',
-    '單字：1661 個內建單字（入門 423／N5 512／N4 726，含敬語、名詞＋する合併卡），N5 以上每字兩句例句；依等級各自的主題分組（入門 11、N5 17、N4 17 個主題），每個主題有已學／熟悉／熟練三段進度條，可看字表、翻字卡、練習或播放字卡；N4 單字在 N5 學過一次後開放（設定可提前）。漢字 342 個另有讀音與字義題。自訂字卡可匯入。',
+    '單字：1661 個內建單字（入門 423／N5 512／N4 726，含敬語、名詞＋する合併卡），N5 以上每字兩句例句；單字頁先分入門／N5／N4，每級列主題（卡上有該主題的漢字）與漢字，每個主題有已學／熟悉／熟練三段進度條，可看字表、翻字卡、練習或播放字卡；入門頁有依熟練度上色的五十音表；N4 單字在 N5 學過一次後開放（設定可提前）。漢字 342 個另有讀音與字義題。自訂字卡可匯入。',
     '聽一輪：循環朗讀，不寫排程、不算題數。來源是錯題本（單字→中文→單字→例句→例句中文；文法整句→中文→整句，只唸有中文且答案標得進句子的題）或單字主題（含自動收錄「已學但還沒熟練」的「初識單詞」，上次的選擇會記住）。膠囊：字｜文、隨機、一次／兩次、速度 0.8／1／1.3。放大圖示進全螢幕：直立手機整頁轉成橫的，日文在上、中文在下、例句最下，字依螢幕放到最大；✕ 回首頁播放不斷。雲端語音時鎖定畫面可控制，鎖屏後持續播放（句間播靜音讓播放器不中斷）。',
     '錯題本：答錯的題目自動收進來，可依類別篩選、排序或依文法考點分組直接練；「快速過一輪」翻卡用忘了／記得回寫排程；題目達到「熟悉」就移到已掌握。',
     '模擬考：依 JLPT 三個科目與大題順序出題，同一份不重複，結束換算 180 分制；最上面有考試倒數、單元進度和依考試日期算的新題額度建議（可一鍵套用）。',
@@ -1169,7 +1174,7 @@ function normalizeState(s) {
   if (!out.themeLane || !Array.isArray(out.themeLane.order)) out.themeLane = { order: [], count: {} };
   if (!out.themeLane.count || typeof out.themeLane.count !== 'object') out.themeLane.count = {};
   // 1.0.8: themes were renamed per level; an old lane order keeps its place under the new names
-  const mig = (c) => THEME_MIGRATE[c] || c;
+  const mig = (c) => THEME_ORDER.includes(c) ? c : (THEME_MIGRATE[c] || c);   // a current name (入門 問候) is never an old one
   out.themeLane.order = [...new Set(out.themeLane.order.map(mig))];
   out.themeLane.count = Object.fromEntries(Object.entries(out.themeLane.count).map(([c, n]) => [mig(c), n]));
   if (!out.today || out.today.date !== todayStr()) out.today = { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0, newC: 0, newA: 0 };
@@ -2104,7 +2109,17 @@ function toast(msg, ms = 2600) {
 const BLANK_RE = /（([^（）]*?)）/;
 const GENERIC_ZH = new Set('的地得了是很在一個和與或、，。；：（）()/ 者做去來人可有不也就要會等件種東西'.split(''));
 function zhChars(s) { return new Set([...String(s || '')].filter(c => /[一-鿿]/.test(c) && !GENERIC_ZH.has(c))); }
-function zhOverlap(a, b) { const A = zhChars(a); for (const c of zhChars(b)) if (A.has(c)) return true; return false; }
+// two meanings clash when they share a content character, share a whole comma-separated segment (是 / 嗯、是; 不對 / 不是、不對),
+// or belong to one of the day-one response groups whose glosses are all generic characters (はい・ええ・そうです…)
+const ZH_SEG_SPLIT = /[、；;，,／/（）()]/;
+const ZH_SYNONYMS = [['是', '嗯、是', '是的、沒錯', '那樣；是的', '是嗎、原來如此'], ['不是', '不是、不對', '不同、不對']];
+function zhOverlap(a, b) {
+  const A = zhChars(a); for (const c of zhChars(b)) if (A.has(c)) return true;
+  const segs = (s) => String(s || '').split(ZH_SEG_SPLIT).map(x => x.trim()).filter(Boolean);
+  const sb = new Set(segs(b)); if (segs(a).some(x => sb.has(x))) return true;
+  const ta = String(a || '').trim(), tb = String(b || '').trim();
+  return ZH_SYNONYMS.some(g => g.includes(ta) && g.includes(tb));
+}
 
 const FORM_LABEL = {
   te: 'て形', ta: 'た形', nai: 'ない形', dict: '辭書形', masu: 'ます形', ba: '條件形（ば）', pot: '可能形', vol: '意向形', pass: '受身形', caus: '使役形', imp: '命令形'
@@ -2949,7 +2964,7 @@ function renderSpeechProg() {
 // read in sequence, so no option can be skipped and no option number needs to be spoken.
 function audioOptionHtml(i, cls, o, answerAct, disabled) {
   return `<div class="${cls} opt-audio">
-      <button type="button" class="opt-play" data-act="speak" data-text="${esc(jaPlain(o.text))}" title="播放選項 ${i + 1}">${icon('speaker')}<span>選項 ${i + 1}</span></button>
+      <button type="button" class="opt-play" data-act="speak" data-text="${esc(o.text)}" title="播放選項 ${i + 1}">${icon('speaker')}<span>選項 ${i + 1}</span></button>
       <button type="button" class="opt-pick" data-act="${answerAct}" data-i="${i}" ${disabled ? 'disabled' : ''}><span class="kbd">${i + 1}</span><span>選這個</span></button>
     </div>`;
 }
@@ -3722,7 +3737,7 @@ function renderPractice() {
     </div>
     ${answered ? `<div class="pr-next"><button type="button" class="btn btn-primary" data-act="next" id="btnNext">${SESSION.idx + 1 < SESSION.entries.length ? '下一題' : '看結果'} <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button></div>` : ''}`;
   if (!answered && q.audio && !e.autoPlayed) { e.autoPlayed = true; setTimeout(() => (q.audioScript ? speakScript(q.audio) : speak(q.audio, speakOpts(q, q.audio))), 150); }
-  if (!answered && q.audioOptions) prefetchSpeech(q.options.map(o => jaPlain(o.text)));
+  if (!answered && q.audioOptions) prefetchSpeech(q.options.map(o => o.text));   // the same text the play button sends (bracket readings included, ttsText turns them into kana)
   if (answered) { const nb = document.getElementById('btnNext'); if (nb) nb.focus({ preventScroll: true }); }
 }
 
@@ -4103,7 +4118,8 @@ function route() {
     if (r.name === 'today') renderToday(view);
     else if (r.name === 'course') { if (r.parts[1] === 'intro') renderIntro(view); else if (r.parts[1]) renderUnit(view, r.parts[1], r.params.tab || 'lesson'); else renderCourse(view); }
     else if (r.name === 'vocab') {
-      if (!r.parts[1]) { location.hash = '#/vocab/level?lv=' + defaultVocabLevel(); return route(); }   // the vocab page opens on the learner's level
+      if (!r.parts[1] || r.parts[1] === 'themes') { location.hash = '#/vocab/level?lv=' + defaultVocabLevel(); return route(); }   // the vocab page opens on the learner's level; the old 主題 tab lives there too
+      if (r.parts[1] === 'kanji') { location.hash = '#/vocab/level?lv=' + (['PRE_N5', 'N5', 'N4'].includes(r.params.lv) ? r.params.lv : defaultVocabLevel()); return route(); }   // the old 漢字 tab: kanji sit on the level pages
       if (r.parts[1] === 'listen') renderListen(view); else renderVocab(view, r.parts[1], r.params);
     }
     else if (r.name === 'mistakes') { if (r.parts[1] === 'loop') renderMistakeLoop(view); else if (r.parts[1] === 'listen') renderListen(view); else renderMistakes(view, r.params); }
@@ -5085,7 +5101,7 @@ function renderVocabLevel(view, lv) {
       <div class="small muted mt-2">顏色越深越熟；按每行前面的 ▶ 只練那一行。</div>${kanaHeatGridHtml()}
       <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-act="kana-practice">練全部假名</button></div></details>` : '';
   view.innerHTML = `
-    <div class="page-head"><div><div class="page-title">單字 · ${lvLabel(lv)}</div><div class="page-sub">已學 ${L.seen}／共 ${L.total}・熟悉 ${L.learned}・熟練 ${L.mastered}${L.due ? `・今天到期 ${L.due}` : ''}</div></div>
+    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub"><b>${lvLabel(lv)}</b>・已學 ${L.seen}／共 ${L.total}・熟悉 ${L.learned}・熟練 ${L.mastered}${L.due ? `・今天到期 ${L.due}` : ''}</div></div>
       <div class="row" style="gap:12px">${ring}<button type="button" class="btn btn-primary" data-act="start-vocab" data-filter="${lv}">練這個等級・${vocabSessionCount(lv)} 題</button></div></div>
     ${vocabTabs(lv)}
     ${kanaBox}
@@ -5095,22 +5111,6 @@ function renderVocabLevel(view, lv) {
       ${L.kanji.total ? `<div class="row-wrap mt-3"><button type="button" class="btn btn-sm" data-act="start-kanji-level" data-lv="${lv}">練這一級的漢字</button></div>` : ''}
     </details>`;
 }
-function renderVocabThemes(view) {
-  const cards = vocabThemes().map(g => `<div class="card theme-card" data-c="${esc(g.c)}">
-      <div class="row between"><div class="card-title">${esc(g.c)}</div><span class="tiny muted">${[['PRE_N5', '入門'], ['N5', 'N5'], ['N4', 'N4']].filter(([k]) => g[k]).map(([k, l]) => `${l} ${g[k]}`).join('・')}</span></div>
-      ${stackBarHtml(g)}
-      <div class="small muted mt-2"><i class="seg-dot seen"></i>已學 ${g.seen}　<i class="seg-dot learned"></i>熟悉 ${g.learned}　<i class="seg-dot mastered"></i>熟練 ${g.mastered}　共 ${g.total} 字${g.due ? `・今天到期 ${g.due}` : ''}</div>
-      <div class="row-wrap mt-3">
-        <button type="button" class="btn btn-sm" data-act="nav" data-route="#/vocab/list?c=${encodeURIComponent(g.c)}">字表</button>
-        <button type="button" class="btn btn-sm btn-primary" data-act="start-vocab" data-filter="c:${esc(g.c)}">練習・${vocabSessionCount('c:' + g.c)} 題</button>
-        <button type="button" class="btn btn-sm" data-act="listen-theme-start" data-theme="${esc(g.c)}">${icon('play')}播放字卡</button>
-      </div></div>`).join('');
-  view.innerHTML = `
-    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">依主題分組的內建單字。每個主題都可以單獨看字表或練習。</div></div></div>
-    ${vocabTabs('themes')}
-    <div class="grid grid-3 theme-grid">${cards}</div>`;
-}
-
 function deckPool(deck) {
   if (deck === 'custom') return REG.vocab.filter(v => !v.builtin);
   if (deck === 'PRE_N5' || deck === 'N5' || deck === 'N4') return REG.vocab.filter(v => v.builtin && v.lv === deck);
@@ -5149,8 +5149,6 @@ function vocabTabs(tab) {
 function renderVocab(view, tab, params) {
   if (tab === 'level') return renderVocabLevel(view, ['PRE_N5', 'N5', 'N4'].includes(params.lv) ? params.lv : defaultVocabLevel());
   if (tab === 'list') return renderVocabList(view, params);
-  if (tab === 'themes') return renderVocabThemes(view);
-  if (tab === 'kanji') return renderKanji(view, params);
   if (tab === 'import') return renderVocabImport(view);
   const deck = params.deck || (FLASH && FLASH.deck) || 'all';
   const F = ensureFlash(deck);
@@ -5681,7 +5679,7 @@ function listenPause() {
 function listenStop(silent) {
   if (!LISTEN) return;
   if (LISTEN.playing) { stopSpeaking(); stopSilence(); }
-  const back = LISTEN.source && LISTEN.source.kind === 'theme' ? '#/vocab/themes' : '#/mistakes';
+  const back = LISTEN.source && LISTEN.source.kind === 'theme' ? '#/vocab/level?lv=' + defaultVocabLevel() : '#/mistakes';
   LISTEN.playing = false; LISTEN.run++; speechRateOverride = 0; listenWake(false); LISTEN = null;
   if (!silent) go(back);
 }
@@ -7211,26 +7209,6 @@ function kanjiLevelClass(k) {
 function kanjiCounts(lv) {
   const list = REG.kanji.filter(k => k.lv === lv);
   return { total: list.length, seen: list.filter(k => state.srs[k.key]).length, learned: list.filter(k => (state.srs[k.key] || {}).b >= SRS_LEARNED).length };
-}
-
-function renderKanji(view, params) {
-  const lv = ['PRE_N5', 'N4'].includes(params.lv) ? params.lv : 'N5';
-  const list = REG.kanji.filter(k => k.lv === lv);
-  const t = todayStr();
-  const sP = kanjiCounts('PRE_N5'); const s5 = kanjiCounts('N5'); const s4 = kanjiCounts('N4');
-  const due = REG.kanji.filter(k => { const r = state.srs[k.key]; return r && r.due <= t; }).length;
-  const left5 = n5KanjiLeft();
-  view.innerHTML = `
-    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">漢字：入門 熟悉 ${sP.learned}/${sP.total}・N5 熟悉 ${s5.learned}/${s5.total}・N4 熟悉 ${s4.learned}/${s4.total}・今天待複習 ${due} 個</div></div>
-      <button type="button" class="btn btn-primary" data-act="start-kanji" ${REG.kanji.length ? '' : 'disabled'}>練習漢字</button></div>
-    ${vocabTabs('kanji')}
-    <div class="row-wrap mb-3" style="justify-content:space-between">
-      <div class="seg kanji-levels">${['PRE_N5', 'N5', 'N4'].map(l => `<button type="button" aria-pressed="${lv === l}" data-act="nav" data-route="#/vocab/kanji?lv=${l}">${lvLabel(l)}（${{ PRE_N5: sP, N5: s5, N4: s4 }[l].total}）</button>`).join('')}</div>
-      <div class="legend">未學 <i style="background:var(--bg-elev-2);border:1px solid var(--line-2)"></i><i style="background:var(--heat-1)"></i><i style="background:var(--heat-2)"></i><i style="background:var(--heat-3)"></i><i style="background:var(--heat-4)"></i> 熟練</div>
-    </div>
-    ${lv === 'N4' && left5 ? `<div class="banner">N4 漢字會在入門與 N5 漢字都學過一次後加入每日練習（還剩 ${left5} 個）。現在也可以先點開來看。</div>` : ''}
-    ${list.length ? `<div class="card"><div class="kanji-grid">${list.map(k => `<button type="button" class="kanji-tile jp ${kanjiLevelClass(k)}" data-act="kanji-open" data-k="${esc(k.k)}" title="${esc(k.m)}" aria-label="${esc(k.k)}：${esc(k.m)}">${esc(k.k)}</button>`).join('')}</div></div>` : '<div class="card empty">還沒有這個級數的漢字資料。</div>'}
-    <p class="hint mt-3">每日練習會依序加入新漢字（數量可在「設定 → 學習」調整）。題目以讀音為主：例詞怎麼讀、依讀音選出漢字；意思和中文字面不同的字（例如「駅」是車站）才會考意思。點方格可以看讀音和例詞。</p>`;
 }
 
 function kanjiDetailHtml(k) {
