@@ -1227,17 +1227,19 @@ def test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_fi
       const fits = { scroll: document.documentElement.scrollHeight, viewScroll: view.scrollHeight, viewH: view.clientHeight, inner: innerHeight, fit: view.classList.contains('fit') && document.body.classList.contains('today') };
       const listen = view.querySelector('.card.listen.compact'); const cardH = listen.querySelector('#listenCard').getBoundingClientRect().height;
       const opts = listen.querySelector('.listen-opts').getBoundingClientRect(); const nav = document.querySelector('.bottomnav').getBoundingClientRect();
-      const greeting = /連續 \\d+ 天/.test(hero.textContent) && !view.querySelector('.page-head') && !view.querySelector('.page-title');
+      const greeting = /連續 \\d+ 天/.test(hero.textContent) && !view.querySelector('.page-head') && !view.querySelector('.page-title') && !/今日練習/.test(hero.textContent) && !!hero.querySelector('.hero-title .hero-icon svg') && !!hero.querySelector('.hero-title [data-act=start-daily]') && !hero.querySelector('[data-act=start-daily].btn-lg');
+      const countBox = listen.querySelector('.listen-opts #listenCount.listen-count'); const cr = countBox.getBoundingClientRect(); const lr = listen.getBoundingClientRect(); const pills = [...listen.querySelectorAll('.lopt')].map(x => x.getBoundingClientRect());
+      const countAtBottomRight = !!countBox && /第 \\d+ 輪/.test(countBox.textContent) && Math.abs(cr.right - (lr.right - 18)) <= 2 && cr.bottom <= lr.bottom - 10 && cr.bottom >= lr.bottom - 60 && pills.every(p => p.right <= cr.left);
       ACTIONS['hero-tab'](hero.querySelector('.hero-tab[data-tab=unit]')); const opened = !hero.querySelector('[data-panel=unit]').hidden && hero.querySelector('[data-panel=help]').hidden;
       location.hash = '#/stats'; route(); const off = !view.classList.contains('fit') && !document.body.classList.contains('today');
-      heroTab = null; localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ tabs, unitTab, unitHidden, unitPanelHas, fits, cardH, optsBottom: Math.round(opts.bottom), navTop: Math.round(nav.top), greeting, opened, off }); })()"""
+      heroTab = null; localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ tabs, unitTab, unitHidden, unitPanelHas, fits, cardH, optsBottom: Math.round(opts.bottom), navTop: Math.round(nav.top), greeting, countAtBottomRight, opened, off }); })()"""
     out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", seed), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['tabs'] == ['help', 'scope', 'unit'] and r['unitTab'].startswith('目前單元・') and r['unitTab'].endswith('%') and r['unitHidden'], r
+    assert r['tabs'] == ['help', 'scope', 'unit'] and r['unitTab'].strip() == '目前單元' and r['unitHidden'], r
     assert r['unitPanelHas']['bar'] and r['unitPanelHas']['lecture'] and r['unitPanelHas']['drill'] and [l.split(' ')[0] for l in r['unitPanelHas']['legs'][:3]] == ['熟練', '熟悉', '初識'], r['unitPanelHas']
     assert r['fits']['fit'] and r['fits']['scroll'] <= r['fits']['inner'] and r['fits']['viewScroll'] <= r['fits']['viewH'], r['fits']   # nothing to scroll, on the page or inside the content area
     assert 150 <= r['cardH'] <= 420 and r['optsBottom'] <= r['navTop'], r   # the item area took the leftover height; the pills sit above the tab bar
-    assert r['greeting'] and r['opened'] and r['off'], r
+    assert r['greeting'] and r['countAtBottomRight'] and r['opened'] and r['off'], r
 
 def test_ai_explanations_are_cached_per_question_and_show_the_model(b):
     js = """(() => { const v = REG.vocab.find(x => x.builtin && meaningOptions(x)); srsAnswer(v.key, true); startSession('items', { items: [v] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice(); answerCurrent(e.q.answer);

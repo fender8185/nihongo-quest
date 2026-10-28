@@ -220,7 +220,13 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .hero h2 { font-size: 20px; }
 .plan-line { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0 14px; color: var(--fg-2); font-size: 14px; }
 .plan-line b { color: var(--fg); font-variant-numeric: tabular-nums; }
-.hero-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.hero-title { display: flex; align-items: center; gap: 12px; }
+.hero-icon { display: inline-grid; place-items: center; color: var(--fg-2); flex: none; } .hero-icon svg { width: 24px; height: 24px; }
+.hero-tabs .hero-date { align-self: center; white-space: nowrap; }
+@media (min-width: 601px) { .hero-tabs .hero-date { margin-left: auto; } }   /* one line on wide screens; its own left-aligned line on a phone */
+.listen.compact .listen-opts { position: relative; }
+@media (max-width: 600px) { .listen.compact .listen-opts { padding-right: 84px; } }   /* the pills keep clear of the count at the corner */
+.listen.compact .listen-count { position: absolute; right: 0; bottom: 6px; font-size: 11px; color: var(--fg-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
 @media (max-width: 600px) {
   .hero { gap: 12px; align-items: start; }
   .hero .ring { width: 64px !important; height: 64px !important; margin-top: 2px; }
@@ -338,10 +344,10 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .pr-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .pr-actions .left, .pr-actions .right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 @media (hover: none) and (pointer: coarse) { .kbd-hint { display: none !important; } }   /* touch screens: no keyboard, no key hints */
-.hero-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+.hero-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; } .hero-tabs + .hero-panel { margin-top: 10px; }
 .hero-tab { font: inherit; font-size: 12px; color: var(--fg-3); background: transparent; border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; cursor: pointer; }
 .hero-tab::before { content: "▸ "; } .hero-tab.open { color: var(--fg); border-color: var(--line-2); background: var(--bg-sunken); } .hero-tab.open::before { content: "▾ "; }
-.hero-panel { margin: 0 0 12px; } .hero-panel .plan-topics { margin: 0 0 8px; } .hero-panel .plan-line { margin: 0 0 6px; }
+.hero-panel { margin: 0; } .hero-panel + .plan-note, .hero-tabs + .plan-note { margin-top: 10px; } .hero-panel .plan-topics { margin: 0 0 8px; } .hero-panel .plan-line { margin: 0 0 6px; }
 .banner.compact { padding: 8px 12px; font-size: 13px; gap: 8px 12px; }
 .pr-next { display: flex; justify-content: flex-end; margin-top: 12px; }
 @media (max-width: 600px) {
@@ -860,13 +866,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '88';   // keep equal to the number in sw.js CACHE ('nq-v88'); scripts/test.sh checks it
+const APP_VERSION = '89';   // keep equal to the number in sw.js CACHE ('nq-v89'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '88', from: '70', date: '2026-10-28', items: [
-    '首頁壓成一個畫面（手機）：頁首「今日」拿掉，日期與連續天數併到今日練習的標題旁；「目前單元」收成今日練習卡上的第三個小標（進度條、圖例、看講義／練習本單元都在裡面）；聽一輪的字卡區改成吃掉剩下的高度，標題改成耳機圖示，單字主題的下拉選單併進同一列。單元進度的圖例改成「熟練／熟悉／初識」。',
+  { v: '89', from: '70', date: '2026-10-28', items: [
+    '首頁壓成一個畫面（手機）：頁首「今日」拿掉；今日練習改成鉛筆圖示，「開始練習」鈕縮小放在圖示右邊，日期與連續天數縮成小字；「範圍」「目前單元」和「說明」一樣是收合的小標（單元的進度條、圖例、看講義／練習本單元都在裡面）；聽一輪的字卡區改成吃掉剩下的高度，標題改成耳機圖示，單字主題的下拉選單併進同一列，「1 / 23・第 1 輪」移到卡片右下角。單元進度的圖例改成「熟練／熟悉／初識」。',
     '聽一輪：按 1／2、隨機、速度不再跳到別的項目（原本首頁重畫時會把播放器重建、重洗）；單字的例句唸完接著唸例句的中文。',
     '聽一輪的膠囊改成圖示：單字／文法（二選一，錯題本模式才有）、隨機（亮起＝隨機）、1／2（日文→中文，或日文→中文→日文）、速度（一、二、三個箭頭＝0.8×、1×、1.3×，只影響聽一輪，會記住）；中文一定會唸，開關拿掉。首頁卡上調整設定不再跳到獨立頁面。',
     '首頁的「考試倒數」（天數、單元進度、依考試日期的額度建議）搬到模擬考頁最上面。',
@@ -1958,6 +1964,7 @@ const ICONS = {
   settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.3c.4-1.8 3-1.8 3.4 0a1.7 1.7 0 0 0 2.6 1.1c1.5-.9 3.3.8 2.4 2.4a1.7 1.7 0 0 0 1 2.5c1.8.5 1.8 3 0 3.4a1.7 1.7 0 0 0-1 2.6c.9 1.5-.9 3.3-2.4 2.4a1.7 1.7 0 0 0-2.6 1c-.4 1.8-3 1.8-3.4 0a1.7 1.7 0 0 0-2.6-1c-1.5.9-3.3-.9-2.4-2.4a1.7 1.7 0 0 0-1-2.6c-1.8-.4-1.8-3 0-3.4a1.7 1.7 0 0 0 1-2.5c-.9-1.6.9-3.3 2.4-2.4a1.7 1.7 0 0 0 2.6-1.1Z"/><circle cx="12" cy="12" r="3"/></svg>',
   speaker: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
   listen: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13" width="4.5" height="7" rx="1.6"/><rect x="16.5" y="13" width="4.5" height="7" rx="1.6"/></svg>',
+  practice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17z"/><path d="M13.5 8.5l3 3"/></svg>',
   close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
   cross: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 7l10 10M17 7 7 17"/></svg>',
@@ -4113,12 +4120,7 @@ function renderToday(view) {
         <span>共 <b>${plan.remaining}</b> 題</span>
       </div>
       ${dq.total > dq.items.length ? `<div class="small muted">這一組 ${dq.items.length} 題，做完還有 ${dq.total - dq.items.length} 題，可以再練一組。</div>` : ''}`;
-    heroBody = `
-      ${planNoteHtml(dq, plan)}
-      <div class="row-wrap">
-        <button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・${dq.items.length} 題</button>
-      </div>
-`;
+    heroBody = planNoteHtml(dq, plan);
   }
 
   const listenReady = listenInit();   // the 聽一輪 card: the notebook or a word theme (paused until tapped; keeps playing if it already was)
@@ -4134,11 +4136,15 @@ function renderToday(view) {
     <div class="card">
       <div class="hero">
         <div>
-          <div class="hero-title"><h2>${plan.remaining === 0 ? '今天完成了' : '今日練習'}</h2><span class="small muted">${greeting}・連續 ${st.current} 天</span></div>
+          <div class="hero-title">
+            <span class="hero-icon" title="${plan.remaining === 0 ? '今天完成了' : '今日練習'}" aria-label="${plan.remaining === 0 ? '今天完成了' : '今日練習'}">${icon(plan.remaining === 0 ? 'check' : 'practice')}</span>
+            ${plan.remaining ? `<button type="button" class="btn btn-primary" data-act="start-daily">開始練習・${dq.items.length} 題</button>` : `<h2>今天完成了</h2>`}
+          </div>
           <div class="hero-tabs">
             <button type="button" class="hero-tab${heroTab === 'help' ? ' open' : ''}" data-act="hero-tab" data-tab="help" aria-expanded="${heroTab === 'help'}">說明</button>
-            ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">今天的範圍</button>` : ''}
-            <button type="button" class="hero-tab${heroTab === 'unit' ? ' open' : ''}" data-act="hero-tab" data-tab="unit" aria-expanded="${heroTab === 'unit'}">目前單元・${esc(cur.short)} ${us.pct}%</button>
+            ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">範圍</button>` : ''}
+            <button type="button" class="hero-tab${heroTab === 'unit' ? ' open' : ''}" data-act="hero-tab" data-tab="unit" aria-expanded="${heroTab === 'unit'}">目前單元</button>
+            <span class="tiny muted hero-date">${greeting}・連續 ${st.current} 天</span>
           </div>
           <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>每一題都是今天到期的複習或今天的新內容；答錯的幾題後再練一次，之後第 1、3、7 天各複習一次，三次都對才離開錯題本。答對的越熟出現得越少。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
           ${plan.remaining ? `<div class="hero-panel" data-panel="scope" ${heroTab === 'scope' ? '' : 'hidden'}>${scopeHtml}</div>` : ''}
@@ -5241,7 +5247,7 @@ function listenRenderNow() {
 function listenPanelHtml(full) {
   const L = LISTEN;
   return `
-      <div class="row between small muted"><span id="listenCount"></span>${full ? '<button type="button" class="btn btn-sm btn-ghost" data-act="listen-exit">結束</button>' : ''}</div>
+      ${full ? '<div class="row between small muted"><span id="listenCount"></span><button type="button" class="btn btn-sm btn-ghost" data-act="listen-exit">結束</button></div>' : ''}
       <div id="listenCard"></div>
       <div class="listen-bar"><span id="listenBar"></span></div>
       <div class="listen-ctl">
@@ -5254,6 +5260,7 @@ function listenPanelHtml(full) {
         <button type="button" class="lopt${L.order === 'random' ? ' on' : ''}" data-act="listen-cycle" data-key="order" data-value="${L.order}" title="隨機（亮起）／錯最多次優先" aria-label="隨機">${icon('shuffle')}</button>
         <button type="button" class="lopt${L.twice ? ' on' : ''}" data-act="listen-cycle" data-key="twice" data-value="${L.twice ? '2' : '1'}" title="1：日文→中文；2：日文→中文→日文" aria-label="${L.twice ? '兩次' : '一次'}">${L.twice ? '2' : '1'}</button>
         <button type="button" class="lopt${L.rate !== 1 ? ' on' : ''}" data-act="listen-cycle" data-key="rate" data-value="${L.rate}" title="速度 ${L.rate}×（0.8 → 1 → 1.3）" aria-label="速度 ${L.rate} 倍">${icon('speed' + (Math.max(0, LISTEN_RATES.indexOf(L.rate)) + 1))}</button>
+        ${full ? '' : '<span id="listenCount" class="listen-count"></span>'}
       </div>
       ${full ? '<p class="hint mt-3" style="text-align:center">循環唸到你按停；不寫排程、不算題數。播放中螢幕保持亮著，iPhone 鎖屏會停（Safari 的限制）。</p>' : ''}`;
 }
