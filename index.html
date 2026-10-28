@@ -836,12 +836,13 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '82';   // keep equal to the number in sw.js CACHE ('nq-v82'); scripts/test.sh checks it
+const APP_VERSION = '83';   // keep equal to the number in sw.js CACHE ('nq-v83'); scripts/test.sh checks it
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的，按日期分組寫「現在的樣子」；版本號（APP_VERSION）每次推送都會變，不必一對一。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '82', from: '70', date: '2026-10-28', items: [
+  { v: '83', from: '70', date: '2026-10-28', items: [
+    '「聽一輪」唸排序題時改唸排好的完整句子（★ 的片段標色），不再把空格挖掉唸；聽力和閱讀的錯題不進聽一輪。',
     '「聽一輪」的控制列重新設計：中間一顆圓形播放鍵、兩側上一個／下一個不加框，像一般音樂播放器；下面一排四顆膠囊（範圍、順序、中文、一次／兩次）點一下輪換。「兩次」是日文→中文→日文再一次。預設只單字、隨機、中文、兩次；日文和中文之間的停頓縮短。多一條進度線顯示在清單裡的位置。',
     '中文也有雲端音檔：單字意思、例句與文法的翻譯、漢字字義用 Google 的台灣華語聲音預先生成（約 6,000 段），「聽一輪」的中文優先用它，沒有的句子才退回裝置內建的中文語音。生成工具同一顆按鈕一起跑，已有的檔案略過。',
     '錯題本新增「聽一輪」：一直循環朗讀待複習的錯題，只要聽就好。單字是「唸單字 → 中文意思 → 例句」，文法是「整句 → 中文 → 整句再一次」；中文用裝置內建的語音。可以切單字／文法、錯最多次／隨機、中文開關，上一個／下一個，Space 暫停。不寫排程、不算題數；播放中保持螢幕亮著（iPhone 鎖屏會停，是 Safari 的限制）。',
@@ -5059,10 +5060,21 @@ function listenEntry(m) {
     return ex ? { kind: 'v', id: m.id, m, word: ex[0], wordHtml: furi(ex[0]), reading: ex[1] || '', meaning: ex[2] || it.m || '', ex: null, note: `漢字「${it.k}」` }
       : { kind: 'v', id: m.id, m, word: it.k, wordHtml: esc(it.k), reading: '', meaning: it.m || '', ex: null };
   }
+  if (it && it.kind === 'g' && Array.isArray(it.parts)) {   // 排序題 (practice or the mock exam's ★ form): the full sentence, the ★ piece marked
+    const parts = it.parts.map(parenReadingToBracket);
+    return { kind: 'g', id: m.id, m, sentence: (it.pre || '') + parts.join('') + (it.post || ''),
+      html: `${furi(it.pre || '')}${parts.map((x, i) => i === it.star ? `<span class="fill-ans">${furi(x)}</span>` : furi(x)).join('')}${furi(it.post || '')}`, zh: it.zh || '', pt: it.pt || m.cat || '' };
+  }
   const b = splitBlank(m.prompt || ''); const ans = m.answer || '';
   const sentence = b ? b.pre + ans + b.post : (m.prompt || '');
   const html = b ? `${furi(b.pre)}<span class="fill-ans">${furi(ans)}</span>${furi(b.post)}` : furi(m.prompt || '');
   return { kind: 'g', id: m.id, m, sentence, html, zh: (it && it.zh) || '', pt: (it && it.kind === 'g' && it.pt) || m.cat || '' };
+}
+// listening and reading questions are about the passage, not a sentence to absorb: the player skips them
+function listenable(m) {
+  const it = m.key && REG.byKey.get(m.key);
+  if (it) return it.kind !== 'l' && it.kind !== 'r';
+  return !/^【(聽力|情境|閱讀)】|^排序：/.test(m.prompt || '');   // unlinked (old or hand-made) entries: by their label
 }
 function listenBuild() {
   const L = LISTEN; let list = L.all.filter(e => L.scope === 'all' || e.kind === L.scope);
@@ -5070,7 +5082,7 @@ function listenBuild() {
   L.items = list; L.idx = 0;
 }
 function startListen(cat = '') {
-  const src = activeMistakes().filter(m => !cat || (m.cat || '綜合') === cat);
+  const src = activeMistakes().filter(m => listenable(m) && (!cat || (m.cat || '綜合') === cat));
   if (!src.length) { toast('錯題本目前是空的。'); return false; }
   // defaults: words only, shuffled, Chinese on, 兩次 (Japanese → Chinese → Japanese again); no words in the notebook → everything
   LISTEN = { all: src.map(listenEntry), items: [], idx: 0, round: 1, playing: false, order: 'random', scope: 'v', zh: true, twice: true, run: 0, wake: null };
