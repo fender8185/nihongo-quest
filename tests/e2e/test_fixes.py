@@ -800,14 +800,14 @@ def test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints(b):
       SESSION = null; document.body.classList.remove('practicing');
       location.hash = '#/stats'; route(); const th = [...document.querySelectorAll('th.col-left')].length; const td = [...document.querySelectorAll('td.col-left')].length;
       const css = document.querySelector('style').textContent;
-      return JSON.stringify({ help: !!help, helpText: help ? help.textContent : '', ring: !!ring, banner, before, after, th, td, hover: /hover: none/.test(css) && /kbd-hint/.test(css), ringCss: /\\.hero-center > \\.ring \\{[^}]*order: -1/.test(css) && !/\\.hero \\.ring \\{[^}]*display: none/.test(css) && hero.classList.contains('hero-center') }); })()"""
+      return JSON.stringify({ help: !!help, helpText: help ? help.textContent : '', ring: !!ring, banner, before, after, th, td, hover: /hover: none/.test(css) && /kbd-hint/.test(css), ringCss: /\\.hero-center > \\.ring \\{[^}]*order: -1/.test(css) && !/\\.hero \\.ring \\{[^}]*display: none/.test(css) && hero.classList.contains('hero-center'), safeTop: /body\\.practicing \\.content \\{[^}]*padding-top: calc\\(18px \\+ env\\(safe-area-inset-top/.test(css), noZoom: /maximum-scale=1/.test(document.querySelector('meta[name=viewport]').content) && /user-scalable=no/.test(document.querySelector('meta[name=viewport]').content) && /html \\{ touch-action: manipulation/.test(css) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
     r = json.loads(out[-1])
     assert r['help'] and '換個方式再考一次' in r['helpText'] and r['ring'], r
     assert 'compact' in r['banner'] and '稍後' in r['banner'] and 'backup-now' in r['banner'], r['banner']
     assert r['before'] == {'hint': True, 'next': False}, r['before']
     assert r['after'] == {'nextInStrip': True, 'stickyClass': False, 'tools': True, 'enterHint': True, 'hint': False}, r['after']
-    assert r['th'] == 1 and r['td'] >= 3 and r['hover'] and r['ringCss'], r
+    assert r['th'] == 1 and r['td'] >= 3 and r['hover'] and r['ringCss'] and r['safeTop'] and r['noZoom'], r   # practice hides the topbar, so its content clears the notch itself
 
 def test_unit_legend_chips_exam_subject_rows_and_setting_hints(b):
     js = """(() => { location.hash = '#/today'; route(); const legs = [...document.querySelectorAll('.legs .leg')].map(x => x.textContent.trim());
@@ -862,7 +862,7 @@ def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in
       listenPause(); const paused = !LISTEN.playing; const n1 = __tts.log.length; await sleep(300); const quiet = __tts.log.filter(x => x.startsWith('start:')).length === log.length;
       const opts = () => [...document.querySelectorAll('.listen-opts .lopt')].map(b => b.dataset.key + ':' + b.dataset.value + (b.classList.contains('on') ? '*' : '')); const o0 = opts();
       ACTIONS['listen-cycle']({ dataset: { key: 'scope' } }); const o1 = opts(); const scoped = LISTEN.items.map(e => e.kind); ACTIONS['listen-cycle']({ dataset: { key: 'scope' } }); const o2 = opts();
-      const zhOff = LISTEN.zh; const o3 = [...document.querySelectorAll('.listen-opts .lopt')].every(b => b.querySelector('svg') || /^[12]$/.test(b.textContent.trim())); const oneRow = (() => { const r = [...document.querySelectorAll('.listen-opts .lopt')].map(b => b.getBoundingClientRect().top); return Math.max(...r) - Math.min(...r) < 2; })();
+      const zhOff = LISTEN.zh; const o3 = [...document.querySelectorAll('.listen-opts .lopt')].every(b => b.querySelector('svg') || /^[12]$/.test(b.textContent.trim()) || (b.classList.contains('lopt-scope') && b.textContent.replace(/\\s+/g, '') === '字文' && b.querySelectorAll('span.on').length === 1)); const oneRow = (() => { const r = [...document.querySelectorAll('.listen-opts .lopt')].map(b => b.getBoundingClientRect().top); return Math.max(...r) - Math.min(...r) < 2; })();
       const transport = !!document.querySelector('.listen-ctl .lplay svg') && document.querySelectorAll('.listen-ctl .lbtn svg').length === 2;
       ACTIONS['listen-cycle']({ dataset: { key: 'twice' } }); const once = [LISTEN.twice, opts()[2]];
       const rates = []; for (let i = 0; i < 4; i++) { rates.push([LISTEN.rate, opts()[3], speechRate()]); ACTIONS['listen-cycle']({ dataset: { key: 'rate' } }); } const ratePref = JSON.parse(localStorage.getItem('nq_listen_pref') || '{}').rate; const idleRate = (listenPause(), speechRate()); listenSet('rate', 1);
@@ -1225,10 +1225,12 @@ def test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_fi
     js = """(() => { const view = document.getElementById('view'); const fitsNow = () => ({ scroll: document.documentElement.scrollHeight, viewScroll: view.scrollHeight, viewH: view.clientHeight, inner: innerHeight });
       const cards = view.querySelectorAll('.card').length; const seg = [...view.querySelectorAll('.today-seg button')].map(b => [b.dataset.tab, b.getAttribute('aria-pressed')]);
       const hero = view.querySelector('.hero.hero-center'); const tabs = [...hero.querySelectorAll('.hero-tab')].map(b => b.dataset.tab); const unitTab = hero.querySelector('.hero-tab[data-tab=unit]').textContent;
-      const unitHidden = hero.querySelector('[data-panel=unit]').hidden; const unitPanelHas = { bar: !!hero.querySelector('[data-panel=unit] .bar.stack'), legs: [...hero.querySelectorAll('[data-panel=unit] .legs .leg')].map(x => x.textContent.trim()), lecture: !!hero.querySelector('[data-panel=unit] [data-route^="#/course/"]'), drill: !!hero.querySelector('[data-panel=unit] [data-act=start-unit]') };
+      const unitOpen = !hero.querySelector('[data-panel=unit]').hidden && hero.querySelector('.hero-tab[data-tab=unit]').classList.contains('open') && hero.querySelector('[data-panel=help]').hidden;   // 目前單元 is open on arrival
+      const unitPanelHas = { bar: !!hero.querySelector('[data-panel=unit] .bar.stack'), legs: [...hero.querySelectorAll('[data-panel=unit] .legs .leg')].map(x => x.textContent.trim()), lecture: !!hero.querySelector('[data-panel=unit] [data-route^="#/course/"]'), drill: !!hero.querySelector('[data-panel=unit] [data-act=start-unit]') };
       const ringFirst = hero.querySelector('.ring').getBoundingClientRect().top < hero.querySelector('[data-act=start-daily]').getBoundingClientRect().top;
       const practice = { fit: view.classList.contains('fit') && document.body.classList.contains('today'), ...fitsNow(), ringFirst, noPlayer: !view.querySelector('.lplay') && !view.querySelector('.card.listen'), text: !/今日練習|聽一輪/.test(view.textContent) && /連續 \\d+ 天/.test(hero.textContent) && !view.querySelector('.page-head') };
-      ACTIONS['hero-tab'](hero.querySelector('.hero-tab[data-tab=unit]')); const opened = !hero.querySelector('[data-panel=unit]').hidden && hero.querySelector('[data-panel=help]').hidden; heroTab = null;
+      ACTIONS['hero-tab'](hero.querySelector('.hero-tab[data-tab=help]')); const opened = !hero.querySelector('[data-panel=help]').hidden && hero.querySelector('[data-panel=unit]').hidden;   // one at a time
+      route(); const kept = heroTab === 'help' && !document.querySelector('[data-panel=help]').hidden;   // a re-render inside the page keeps the choice
       // 單字: the same card becomes the player and takes the rest of the screen; the count sits at the card's bottom right, clear of the pills
       ACTIONS['today-tab']({ dataset: { tab: 'theme' } }); const listen = view.querySelector('.card.today-card.listen.compact'); const cardH = listen.querySelector('#listenCard').getBoundingClientRect().height;
       const opts = listen.querySelector('.listen-opts').getBoundingClientRect(); const nav = document.querySelector('.bottomnav').getBoundingClientRect();
@@ -1239,11 +1241,12 @@ def test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_fi
       listenPlay(); ACTIONS['today-tab']({ dataset: { tab: 'practice' } }); const keptPlaying = LISTEN && LISTEN.playing && LISTEN.source.kind === 'theme' && !!view.querySelector('.today-seg [data-tab=theme] .seg-live') && !!view.querySelector('.hero-center');
       ACTIONS['today-tab']({ dataset: { tab: 'mistakes' } }); const switched = !LISTEN || LISTEN.source.kind === 'mistakes'; const emptyNote = /目前沒有可以聽的錯題/.test(view.textContent);
       location.hash = '#/stats'; route(); const off = !view.classList.contains('fit') && !document.body.classList.contains('today') && todayTab === 'practice';
-      heroTab = null; localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ cards, seg, tabs, unitTab, unitHidden, unitPanelHas, practice, opened, player, keptPlaying, switched, emptyNote, off }); })()"""
+      heroTab = null; localStorage.removeItem('nq_listen_pref'); const backToUnit = (() => { location.hash = '#/vocab'; route(); location.hash = '#/today'; route(); return heroTab === 'unit' && !document.querySelector('[data-panel=unit]').hidden; })();
+      heroTab = null; localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ cards, seg, tabs, unitTab, unitOpen, unitPanelHas, practice, opened, kept, backToUnit, player, keptPlaying, switched, emptyNote, off }); })()"""
     out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", seed), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['cards'] == 1 and r['seg'] == [['practice', 'true'], ['mistakes', 'false'], ['theme', 'false']], r
-    assert r['tabs'] == ['help', 'scope', 'unit'] and r['unitTab'].strip() == '目前單元' and r['unitHidden'] and r['opened'], r
+    assert r['tabs'] == ['help', 'scope', 'unit'] and r['unitTab'].strip() == '目前單元' and r['unitOpen'] and r['opened'] and r['kept'] and r['backToUnit'], r
     assert r['unitPanelHas']['bar'] and r['unitPanelHas']['lecture'] and r['unitPanelHas']['drill'] and [l.split(' ')[0] for l in r['unitPanelHas']['legs'][:3]] == ['熟練', '熟悉', '初識'], r['unitPanelHas']
     p = r['practice']; assert p['fit'] and p['scroll'] <= p['inner'] and p['viewScroll'] <= p['viewH'] and p['ringFirst'] and p['noPlayer'] and p['text'], p
     q = r['player']; assert q['cards'] == 1 and q['one'] and q['pressed'] == 'theme' and q['select'] and q['kind'] == 'theme', q
