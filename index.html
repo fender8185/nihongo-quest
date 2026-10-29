@@ -946,7 +946,7 @@ const CHANGELOG = [
   { v: '1.0.15', date: '2026-10-29', items: [
     '五十音表（單字 › 入門）：手機上用「平假名｜片假名」切換，一排五個、下面有羅馬拼音；寬螢幕兩張表並排。點假名就念出來；每排前面的 ▶ 只練那一種假名的那一排。雲端還缺的假名音檔，下次執行「生成雲端音檔」會補齊。',
     '設定精簡：學習區拿掉「目前階段」「複習強度」「目前單元」；語音區拿掉「作答後自動朗讀」「出聽力題」「聽力選項只用聽的」，三個都固定開啟（即時應答與情境表達的選項只能用聽的，跟正式考試一樣）。',
-    '入門自動結束：假名和入門單字都看過、最近正確率到 80% 就自動進第 1 週，首頁當天會說一聲；還不到 80% 時首頁顯示目前的正確率。',
+    '入門自動結束：假名和入門單字都看過、最近正確率到 80% 就自動進第 1 週，不另外通知；還不到 80% 時首頁顯示目前的正確率。',
     '複習強度改成自動：看最近 100 題到期複習的正確率，不到 80% 複習變密（目標記住 93%），超過 92% 間隔拉長（87%），其餘維持 90%。',
     '聽力、閱讀答錯不再隔天出：一週後才再出，同一組練習也不給「再練一次」（隔天再聽只是記得答案）；一樣會收進錯題本。'
   ] },
@@ -1208,7 +1208,7 @@ function normalizeState(s) {
   out.settings.capRaised = true;
   // 1.0.15: no longer settings — the speech switches are always on, 複習強度 follows the review accuracy (autoRetention), 入門 ends by itself
   ['autoSpeak', 'listening', 'audioOptions', 'retention'].forEach(k => { delete out.settings[k]; });
-  delete out.preDoneDismissed;
+  delete out.preDoneDismissed; delete out.preFinished;
   ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt', 'stageTests'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'reviewRecent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
@@ -3258,18 +3258,21 @@ function kanaPlan(t = todayStr()) {
   return { dueA, newA };
 }
 function preWordsLeft() { let n = 0; for (const v of REG.vocab) if (v.builtin && v.lv === 'PRE_N5' && !state.srs[v.key]) n++; return n; }
+function introLeft() { let n = 0; for (const g of REG.grammar) if (g.u === 'm0' && !state.srs[g.key]) n++; return n; }   // 第 0 週 items not seen yet
 // 入門 is done when every PRE_N5 word has been seen (and the kana gate is open); nothing to finish while the level has no words
-// 入門 ends by itself (1.0.15; it was a 進入第 1 週 button): kana gate open, every 入門 word seen and the recent answers at
-// least 80% right. An account with grammar records (sent back to 入門 by the old 回到入門 button) keeps its week.
+// 入門 ends by itself, silently (1.0.15; it was a 進入第 1 週 button): kana gate open, every 入門 word and 第 0 週 item seen,
+// and the recent answers at least 80% right. An account with course grammar (sent back to 入門 by the old 回到入門 button)
+// keeps its week; 第 0 週 records do not count as course grammar.
 const PRE_PASS_ACC = 0.8;
 function finishPreIfReady() {
   if (!inPreStage() || !preDone()) return false;
   const acc = recentAccuracy(); if (acc !== null && acc < PRE_PASS_ACC) return false;
-  state.stage = 'main'; if (!Object.keys(state.srs).some(k => k.startsWith('g:'))) state.currentUnit = 'm1';
-  state.preFinished = todayStr(); DAILY_CACHE = null; saveState();
+  state.stage = 'main'; if (!REG.grammar.some(g => g.u !== 'm0' && state.srs[g.key])) state.currentUnit = 'm1';
+  if (!state.completedUnits.includes('m0')) state.completedUnits.push('m0');
+  DAILY_CACHE = null; saveState();
   return true;
 }
-function preDone() { return REG.vocab.some(v => v.builtin && v.lv === 'PRE_N5') && preWordsLeft() === 0 && kanaGateOpen(); }
+function preDone() { return REG.vocab.some(v => v.builtin && v.lv === 'PRE_N5') && preWordsLeft() === 0 && kanaGateOpen() && introLeft() === 0; }
 function n4WordsOpen() { return n5WordsLeft() === 0; }   // N4 words join once every PRE_N5 and N5 word has been seen
 function n5WordsLeft() {   // PRE_N5 and N5 words not yet seen: both must be gone before N4 opens by itself
   let n = 0;
@@ -3465,11 +3468,11 @@ function dailyPlan(size = state.settings.sessionSize) {
   const n4Open = n4WordsOpen();
   const curIdx = unitOrder(state.currentUnit);
   const vPool = REG.vocab.filter(v => vocabEligibleForDaily(v, n4Open));
-  const pre = inPreStage();   // 入門: no new grammar, listening, reading or drills; new words only once the kana gate is open. Due reviews of every kind stay.
+  const pre = inPreStage();   // 入門: new grammar is 第 0 週 only and new words come once the kana gate is open (the unused grammar quota does not turn into words); no new listening, reading or drills. Due reviews of every kind stay.
   const dueV = (pre ? REG.vocab.filter(v => state.srs[v.key] && vocabEligibleMain(v, n4Open)) : vPool).filter(v => isDueToday(v, t)).sort(byDue);
   const dueG = REG.grammar.filter(g => isDueToday(g, t) && grammarInReach(g, curIdx)).sort(byDue);
   const maxV = pre && !kanaGateOpen() ? 0 : Math.round(newQuota('v') * ad.factor);
-  const maxG = pre ? 0 : Math.round(newQuota('g') * ad.factor);
+  const maxG = pre && !kanaGateOpen() ? 0 : Math.round(newQuota('g') * ad.factor);
   const ex = extrasPlan(curIdx);
   // 每天負荷上限 (settings.loadCap) is a brake: when today's work (done + due + new) would exceed it, new words shrink
   // first (never below about half their quota), then new kanji stop, then new listening. Due reviews never shrink, and
@@ -3491,14 +3494,14 @@ function dailyPlan(size = state.settings.sessionSize) {
     const parts = []; if (wantV < fullV) parts.push(`新單字先減為 ${wantV} 個`); if (cutK) parts.push('新漢字先停'); if (cutL) parts.push('新聽力先停'); if (cutA) parts.push(`新假名先減為 ${ex.newA.length} 個`);
     note = `今天的題數超過負荷上限，${parts.join('、')}，新文法照常；複習完成後，之後幾天就會再增加。`;
   }
-  const newG = pre ? [] : newGrammarCandidates().slice(0, wantG);
+  const newG = (pre ? (kanaGateOpen() ? unitNewOrder('m0') : []) : newGrammarCandidates()).slice(0, wantG);
   // 變化練習: due families first, then families not started yet, at most newQuota('c') a day; only forms a reached unit teaches
   const cPool = (REG.drills || []).filter(d => unitOrder(d.u) <= curIdx);
   const doneC = cPool.filter(d => { const r = state.srs[d.key]; return r && r.last === t; }).length;
   const capC = Math.max(0, newQuota('c') - doneC);
   const dueC = cPool.filter(d => isDueToday(d, t)).sort(byDue).slice(0, capC);
   const newC = pre ? [] : cPool.filter(d => !state.srs[d.key]).sort((a, b) => unitOrder(a.u) - unitOrder(b.u)).slice(0, Math.max(0, Math.min(capC - dueC.length, capC - (state.today.newC || 0))));
-  const newV = newVocabCandidates(vPool, n4Open).slice(0, wantV + Math.max(0, wantG - newG.length));
+  const newV = newVocabCandidates(vPool, n4Open).slice(0, wantV + (pre ? 0 : Math.max(0, wantG - newG.length)));
   const remaining = dueV.length + dueG.length + newV.length + newG.length + dueC.length + newC.length + ex.dueK.length + ex.newK.length + ex.dueL.length + ex.newL.length + ex.dueR.length + ex.newR.length + ex.dueA.length + ex.newA.length;
   const relearnN = dueV.concat(dueG).filter(x => onLadder(x.key)).length;   // reviews that are missed items on the ladder (shown as 其中錯題)
   return Object.assign({ dueV, dueG, newV, newG, dueC, newC, note, factor: ad.factor, size, n4Open, remaining, relearnN }, ex);
@@ -3554,8 +3557,8 @@ function extraQueue(size = state.settings.sessionSize) {
   const ahead = pool.filter(it => { const r = state.srs[it.key]; return r && r.due > t && r.due <= until && r.last !== t; }).sort(byDue).slice(0, size);
   const used = new Set(ahead.map(x => x.key));
   const cap = Math.min(size - ahead.length, Math.ceil(size / 2));
-  // 入門: extra new material is kana (then PRE_N5 words once the gate is open), never grammar
-  const gs = !pre ? newGrammarCandidates().filter(x => !used.has(x.key)).slice(0, Math.ceil(cap / 2)) : [];
+  // 入門: extra new material is kana, then PRE_N5 words and 第 0 週 grammar once the gate is open
+  const gs = (pre ? (kanaGateOpen() ? unitNewOrder('m0') : []) : newGrammarCandidates()).filter(x => !used.has(x.key)).slice(0, Math.ceil(cap / 2));
   const as = pre ? REG.kana.filter(x => !state.srs[x.key] && !used.has(x.key)).sort((a, b) => a.order - b.order).slice(0, Math.ceil(cap / 2)) : [];
   const vs = !(pre && !kanaGateOpen()) ? newVocabCandidates(REG.vocab.filter(x => vocabEligibleForDaily(x, plan.n4Open)), plan.n4Open).filter(x => !used.has(x.key)).slice(0, cap - gs.length - as.length) : [];
   const fresh = interleave(as.concat(vs), gs, 'mixed');
@@ -4604,14 +4607,14 @@ function renderToday(view) {
     : '';
   const preDoneCard = inPreStage() && preDone()
     ? `<div class="banner mt-2"><div class="grow">入門單字都看過了；最近正確率 ${Math.round((recentAccuracy() || 0) * 100)}%，到 ${Math.round(PRE_PASS_ACC * 100)}% 就會自動進入第 1 週。</div></div>`
-    : !inPreStage() && state.preFinished === t ? '<div class="banner mt-2"><div class="grow">入門完成：已自動進入第 1 週，開始學文法。</div></div>' : '';
+    : '';
   const practiceHtml = `
       ${preDoneCard}
       <div class="hero hero-center">
         <div>
           ${plan.remaining === 0 ? '<h2>今天完成了</h2>' : `<div><button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・${dq.items.length} 題</button></div>`}
           <div class="tiny muted hero-date">${greeting}・連續 ${st.current} 天</div>
-          ${inPreStage() ? `<div class="small muted mt-1">入門：假名 ${REG.kana.filter(x => state.srs[x.key]).length}／${REG.kana.length}・單字 ${REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5' && state.srs[v.key]).length}／${REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').length}</div>` : ''}
+          ${inPreStage() ? `<div class="small muted mt-1">入門：假名 ${REG.kana.filter(x => state.srs[x.key]).length}／${REG.kana.length}・單字 ${REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5' && state.srs[v.key]).length}／${REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').length}・句型 ${unitItems('m0').filter(g => state.srs[g.key]).length}／${unitItems('m0').length}</div>` : ''}
           <div class="hero-tabs">
             <button type="button" class="hero-tab${heroTab === 'help' ? ' open' : ''}" data-act="hero-tab" data-tab="help" aria-expanded="${heroTab === 'help'}">說明</button>
             ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">範圍</button>` : ''}

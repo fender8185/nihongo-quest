@@ -61,7 +61,7 @@ def test_pre_stage_plan_has_only_kana_until_the_seion_gate_opens(b):
     js = """(() => { const p = dailyPlan(); const out = { a: p.newA.map(x => x.ch), g: p.dueG.length + p.newG.length, l: p.dueL.length + p.newL.length, r: p.dueR.length + p.newR.length,
         c: (p.dueC || []).length + (p.newC || []).length, v: p.newV.length, k: p.newK.map(x => x.lv) };
       REG.kana.filter(x => x.seion).forEach(x => { state.srs[x.key] = { b: 1, due: addDays(todayStr(), 5), n: 1, ok: 1, ng: 0, s: 2, d: 5, last: addDays(todayStr(), -1) }; }); DAILY_CACHE = null;
-      const p2 = dailyPlan(); out.v2 = p2.newV.map(x => x.lv); out.a2 = p2.newA.map(x => x.ch); out.k2 = [...new Set(p2.newK.map(x => x.lv))];
+      const p2 = dailyPlan(); out.v2 = p2.newV.map(x => x.lv); out.a2 = p2.newA.map(x => x.ch); out.k2 = [...new Set(p2.newK.map(x => x.lv))]; out.g2 = p2.newG.map(x => x.u); out.q = newQuota('g');
       const q = dailyQueue(20).items; out.kinds = [...new Set(q.map(x => x.kind))].sort();
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
@@ -69,7 +69,8 @@ def test_pre_stage_plan_has_only_kana_until_the_seion_gate_opens(b):
     assert r['g'] == 0 and r['l'] == 0 and r['r'] == 0 and r['c'] == 0 and r['v'] == 0, r
     assert all(l == 'PRE_N5' for l in r['k']), r
     assert r['v2'] and all(l == 'PRE_N5' for l in r['v2']) and r['a2'][:2] == ['が', 'ぎ'] and r['k2'] == [], r   # 1.0.12: no 入門 kanji
-    assert set(r['kinds']) <= {'a', 'v', 'k'}, r
+    assert r['g2'] and set(r['g2']) == {'m0'} and len(r['g2']) == min(r['q'], 20), r   # 1.0.16: 第 0 週 grammar once the kana gate is open
+    assert set(r['kinds']) <= {'a', 'v', 'k', 'g'}, r
 
 def test_main_stage_never_schedules_new_kana_but_reviews_practised_ones(b):
     js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.srs); state.stage = 'main'; DAILY_CACHE = null;
@@ -92,16 +93,16 @@ def test_pre_stage_ends_by_itself_once_everything_is_seen_and_accuracy_holds(b):
       const mark = (it) => { state.srs[it.key] = { b: 2, due: addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -1) }; };
       const today = () => { DAILY_CACHE = null; location.hash = '#/today'; route(); return document.getElementById('view').textContent; };
       const out = { n: words.length };
-      words.forEach(mark); state.recent = Array(40).fill(1); today(); out.wordsOnly = state.stage;
+      words.concat(REG.grammar.filter(g => g.u === 'm0')).forEach(mark); state.recent = Array(40).fill(1); today(); out.wordsOnly = state.stage;
       REG.kana.filter(x => x.seion).forEach(mark); state.recent = Array(30).fill(1).concat(Array(10).fill(0));   // 75%
       const low = today(); out.low = { stage: state.stage, says: low.includes('75%') && low.includes('80%'), ask: Boolean(document.querySelector('[data-act="enter-main"], [data-act="pre-done-later"]')) };
       state.recent = Array(34).fill(1).concat(Array(6).fill(0));   // 85%
-      const ok = today(); out.ok = { stage: state.stage, unit: state.currentUnit, says: ok.includes('已自動進入第 1 週') };
+      const ok = today(); out.ok = { stage: state.stage, unit: state.currentUnit, says: ok.includes('入門完成') || ok.includes('已自動進入第 1 週') };   // silent: no notice on the today page
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
     assert r['n'] > 0 and r['wordsOnly'] == 'pre', r
     assert r['low'] == {'stage': 'pre', 'says': True, 'ask': False}, r
-    assert r['ok'] == {'stage': 'main', 'unit': 'm1', 'says': True}, r
+    assert r['ok'] == {'stage': 'main', 'unit': 'm1', 'says': False}, r
 
 FRESH = TAG_PRE + "state.srs = {}; state.startChosen = false; state.stage = 'main'; state.kanaKnown = false; DAILY_CACHE = null; location.hash = '#/today'; true"
 
@@ -196,7 +197,7 @@ def test_sound_format_needs_speech(b):
 def test_pre_stage_end_keeps_the_unit_of_a_learner_with_grammar_records(b):
     # an account sent back to 入門 by the old 回到入門 button keeps its week when 入門 ends; a fresh one starts at week 1
     js = """(() => { const t = todayStr(); const mark = (it) => { state.srs[it.key] = { b: 2, due: addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -1) }; };
-      const finish = () => { REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').forEach(mark); REG.kana.filter(x => x.seion).forEach(mark); state.recent = Array(40).fill(1); DAILY_CACHE = null; location.hash = '#/today'; route(); return [state.stage, state.currentUnit]; };
+      const finish = () => { REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').forEach(mark); REG.kana.filter(x => x.seion).forEach(mark); REG.grammar.filter(g => g.u === 'm0').forEach(mark); state.recent = Array(40).fill(1); DAILY_CACHE = null; location.hash = '#/today'; route(); return [state.stage, state.currentUnit]; };
       state.currentUnit = 'm8'; const g = REG.grammar.find(x => x.u === 'm8'); state.srs[g.key] = { b: 2, due: addDays(t, 3), n: 1, ok: 1, ng: 0, s: 3, d: 5, last: t };
       const kept = finish(); state.stage = 'pre'; state.srs = {}; state.currentUnit = 'm8'; const fresh = finish();
       return JSON.stringify({ kept, fresh }); })()"""
@@ -436,6 +437,26 @@ def test_main_accounts_never_get_week0_items_unless_pending(b):
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
     assert r['cand'] == 0 and r['plan'] == 0 and r['extra'] == 0 and r['unit'] > 0, r
+
+def test_week0_items_follow_lesson_order_with_a_lesson_card_first(b):
+    js = """(() => { REG.kana.filter(x => x.seion).forEach(x => { state.srs[x.key] = { b: 1, due: addDays(todayStr(), 5), n: 1, ok: 1, ng: 0, s: 2, d: 5, last: addDays(todayStr(), -1) }; }); DAILY_CACHE = null;
+      const first = dailyPlan().newG; startSession('unit', { unit: 'm0' }); const e = SESSION.entries.find(x => x.preview);   // the lesson card comes in daily and unit sessions only
+      return JSON.stringify({ secs: first.map(g => g.sec), pts: new Set(first.filter(g => g.sec === 1).map(g => g.pt)).size, card: Boolean(e) && lessonSecKey(e.item) === 'm0:1', link: Boolean(e) && grammarPreviewHtml(e, 0).includes('#/course/m0?tab=lesson') }); })()"""
+    r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
+    assert r['secs'] == sorted(r['secs']) and r['secs'][0] == 1 and r['pts'] == 2 and r['card'] and r['link'], r
+
+def test_pre_account_with_words_done_stays_until_week0_is_seen(b):
+    js = """(() => { const t = todayStr(); const mark = (it) => { state.srs[it.key] = { b: 2, due: addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -1) }; };
+      REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').forEach(mark); REG.kana.filter(x => x.seion).forEach(mark); state.recent = Array(40).fill(1);
+      const today = () => { DAILY_CACHE = null; location.hash = '#/today'; route(); return document.getElementById('view').textContent; };
+      const out = { left: introLeft(), done: preDone() }; const txt = today(); out.stage1 = state.stage; const g1 = dailyPlan().newG; out.newG = g1.length > 0 && g1.every(g => g.u === 'm0'); out.line = txt.includes('句型 0／20');
+      REG.grammar.filter(g => g.u === 'm0').forEach(mark); today(); out.stage2 = state.stage; out.m0Done = state.completedUnits.includes('m0');
+      state.stage = 'pre'; state.srs = {}; REG.kana.filter(x => x.seion).forEach(mark); REG.grammar.filter(g => g.u === 'm0').forEach(mark);
+      state.recent = Array(34).fill(1).concat(Array(6).fill(0)); DAILY_CACHE = null;   // 85%: factor 1, so 8 new words at the default load cap
+      out.newV = dailyPlan().newV.length;   // week 0 all seen: its unused grammar quota must not become 6 extra words
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
+    assert r == {'left': 20, 'done': False, 'stage1': 'pre', 'newG': True, 'line': True, 'stage2': 'main', 'm0Done': True, 'newV': 8}, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
