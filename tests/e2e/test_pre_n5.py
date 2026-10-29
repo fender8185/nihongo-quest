@@ -421,12 +421,12 @@ def test_week0_is_a_pseudo_unit_m0(b):
 
 def test_week0_page_is_a_unit_page(b):
     js = """(() => { const at = (h) => { location.hash = h; route(); const v = document.getElementById('view'); return { start: Boolean(v.querySelector('[data-act="start-unit"][data-unit="m0"]')), setCur: Boolean(v.querySelector('[data-act="set-current"]')),
-        tabs: v.querySelectorAll('.seg [data-route^="#/course/m0"]').length, h3: v.querySelectorAll('.lesson h3').length }; };
+        tabs: v.querySelectorAll('.seg [data-route^="#/course/m0"]').length, h3: v.querySelectorAll('.lesson h3').length, done: Boolean(v.querySelector('[data-act="toggle-done"]')) }; };
       state.introSeen = false; const intro = at('#/course/intro'); const seen = state.introSeen; const lesson = at('#/course/m0?tab=lesson');
       location.hash = '#/course'; route(); const row = document.querySelector('.unit-row[data-route="#/course/intro"]');
       return JSON.stringify({ intro, seen, lesson, rowBar: Boolean(row && row.querySelector('.bar.stack')), rowCur: Boolean(row && row.querySelector('.chip-accent')) }); })()"""
     r = json.loads(ev(b, js))
-    page = {'start': True, 'setCur': False, 'tabs': 2, 'h3': 13}
+    page = {'start': True, 'setCur': False, 'tabs': 2, 'h3': 13, 'done': False}
     assert r == {'intro': page, 'seen': True, 'lesson': page, 'rowBar': True, 'rowCur': False}, r
 
 
@@ -494,6 +494,25 @@ def test_finishing_pre_logs_week0_as_a_completed_unit(b):
       return JSON.stringify({ done, units: (state.dailyLogs[t] || {}).units || [] }); })()"""
     r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
     assert r == {'done': True, 'units': ['基本句型']}, r
+
+# ---- 1.0.16 final-review fixes ----
+def test_pre_load_cap_does_not_count_week0_grammar_that_is_used_up(b):
+    js = """(() => { const t = todayStr(); state.srs = {}; state.settings.loadCap = 100; state.recent = Array(34).fill(1).concat(Array(6).fill(0));   // 85%: factor 1
+      REG.kana.forEach((x, i) => { state.srs[x.key] = { b: 2, due: i < 88 ? t : addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -3) }; });
+      REG.grammar.filter(g => g.u === 'm0').forEach(g => { state.srs[g.key] = { b: 2, due: addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -1) }; });
+      DAILY_CACHE = null; const p = dailyPlan(); return JSON.stringify({ dueA: p.dueA.length, newG: p.newG.length, newV: p.newV.length, cut: String(p.note || '').includes('新單字先減') }); })()"""
+    r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
+    assert r == {'dueA': 88, 'newG': 0, 'newV': 8, 'cut': False}, r   # 88 reviews + 8 words fit under 100; no phantom 第 0 週 grammar
+
+def test_week0_completes_itself_when_its_last_item_is_answered(b):
+    js = """(() => { const t = todayStr(); state.stage = 'main'; state.currentUnit = 'm2'; state.srs = {}; state.completedUnits = []; state.introPending = true; delete state.dailyLogs[t];
+      const G = REG.grammar.filter(g => g.u === 'm0'); G.slice(1).forEach(g => { state.srs[g.key] = { b: 1, due: addDays(t, 2), n: 1, ok: 1, ng: 0, s: 2, d: 5, last: t }; });
+      const out = { before: state.completedUnits.includes('m0') }; srsAnswer(G[0].key, true);
+      Object.assign(out, { done: state.completedUnits.includes('m0'), pending: state.introPending, units: (state.dailyLogs[t] || {}).units || [] });
+      state.srs = {}; state.completedUnits = ['m0']; state.introPending = true; out.respect = newGrammarCandidates()[0].u;   // marked done (e.g. on another device): pending no longer applies
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'before': False, 'done': True, 'pending': False, 'units': ['基本句型'], 'respect': 'm2'}, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

@@ -944,7 +944,7 @@ const CHANGELOG = [
     '第 0 週加 20 題最基本的句型：AはBです／ではありません、〜ですか、こそあど、も、助詞 は・へ・を 的唸法，全部用假名寫，名詞用片假名外來語。入門階段假名門檻過了以後每天出幾題，都出過入門才會結束。',
     '第 0 週改成和其他週一樣的單元頁：講義第 2–4 節改寫成這些句型，有練習按鈕、題目分頁和進度條；課程頁那一列也有進度條。',
     '入門階段測驗改成假名 14＋單字 18＋句型 8 題；通過後的選擇從三題變四題，多一題「第 0 週句型」，選「不記得」就會在第 1 週的新文法之前先學句型。',
-    '學習分析：多一個假名的總進度儀表，「已熟悉」「每日練習量建議」「各題型正確率」都算進假名；第 0 週的句型算在 N5 文法裡，入門結束那天記為完成單元。'
+    '學習分析：多一個假名的總進度儀表，「已熟悉」「每日練習量建議」「各題型正確率」都算進假名；第 0 週的句型算在 N5 文法裡，20 題都出過的那天記為完成單元，第 0 週那一列也會顯示完成。'
   ] },
   { v: '1.0.15', date: '2026-10-29', items: [
     '五十音表（單字 › 入門）：手機上用「平假名｜片假名」切換，一排五個、下面有羅馬拼音；寬螢幕兩張表並排。點假名就念出來；每排前面的 ▶ 只練那一種假名的那一排。雲端還缺的假名音檔，下次執行「生成雲端音檔」會補齊。',
@@ -1623,7 +1623,7 @@ function srsAnswer(key, correct, opt = {}) {
   if ((r.lapse || 0) >= LEECH_LAPSES) r.leech = true;
   if (isNew) {
     if (key.startsWith('v:')) { state.today.newV++; noteThemeIntro(key); }
-    else if (key.startsWith('g:')) { state.today.newG++; autoAdvanceUnit(key); }
+    else if (key.startsWith('g:')) { state.today.newG++; autoAdvanceUnit(key); if (key.startsWith('g:m0-') && introLeft() === 0) completeIntro(); }
     else if (key.startsWith('k:')) state.today.newK = (state.today.newK || 0) + 1;
     else if (key.startsWith('l:')) state.today.newL = (state.today.newL || 0) + 1;
     else if (key.startsWith('r:')) state.today.newR = (state.today.newR || 0) + 1;
@@ -3263,6 +3263,12 @@ function kanaPlan(t = todayStr()) {
 }
 function preWordsLeft() { let n = 0; for (const v of REG.vocab) if (v.builtin && v.lv === 'PRE_N5' && !state.srs[v.key]) n++; return n; }
 function introLeft() { let n = 0; for (const g of REG.grammar) if (g.u === 'm0' && !state.srs[g.key]) n++; return n; }   // 第 0 週 items not seen yet
+// 第 0 週 is done once all its items have been seen (in 入門, from its page, or first in line with introPending): the course row
+// reads 完成, the day logs it, and introPending ends. Its page has no 標記為已完成: completion is automatic or by the 入門 test.
+function completeIntro() {
+  if (state.completedUnits.includes('m0')) return;
+  state.completedUnits.push('m0'); noteUnitDone('m0'); state.introPending = false;
+}
 // 入門 is done when every PRE_N5 word has been seen (and the kana gate is open); nothing to finish while the level has no words
 // 入門 ends by itself, silently (1.0.15; it was a 進入第 1 週 button): kana gate open, every 入門 word and 第 0 週 item seen,
 // and the recent answers at least 80% right. An account with course grammar (sent back to 入門 by the old 回到入門 button)
@@ -3272,8 +3278,7 @@ function finishPreIfReady() {
   if (!inPreStage() || !preDone()) return false;
   const acc = recentAccuracy(); if (acc !== null && acc < PRE_PASS_ACC) return false;
   state.stage = 'main'; if (!REG.grammar.some(g => g.u !== 'm0' && state.srs[g.key])) state.currentUnit = 'm1';
-  if (!state.completedUnits.includes('m0')) state.completedUnits.push('m0');
-  noteUnitDone('m0');   // 學習分析: the day's 完成單元
+  completeIntro();   // already done when its last item was answered; bulk marks get here too
   DAILY_CACHE = null; saveState();
   return true;
 }
@@ -3397,7 +3402,7 @@ function newGrammarCandidates(unitIdOnly) {
   const curIdx = unitOrder(cur);
   const earlier = REG.grammar.filter(g => g.u !== 'm0' && unitOrder(g.u) < curIdx && !state.completedUnits.includes(g.u) && !state.srs[g.key])   // 第 0 週 only brings new items in 入門 (or with introPending)
     .sort((a, b) => unitOrder(a.u) - unitOrder(b.u) || (a.d || 2) - (b.d || 2));
-  const out = (state.introPending ? unitNewOrder('m0') : []).concat(sorted, earlier);   // 不記得 第 0 週 at the 入門 test: its items first
+  const out = (state.introPending && !state.completedUnits.includes('m0') ? unitNewOrder('m0') : []).concat(sorted, earlier);   // 不記得 第 0 週 at the 入門 test: its items first
   // everything up to here has been introduced: continue into the next unit (the unit itself moves when its first new
   // item is answered, see autoAdvanceUnit)
   if (!out.length) { const next = DATA.UNITS[curIdx + 1]; if (next) return unitNewOrder(next.id); }
@@ -3482,7 +3487,8 @@ function dailyPlan(size = state.settings.sessionSize) {
   // 每天負荷上限 (settings.loadCap) is a brake: when today's work (done + due + new) would exceed it, new words shrink
   // first (never below about half their quota), then new kanji stop, then new listening. Due reviews never shrink, and
   // grammar drives the course: its new items come every day (the accuracy-based factor still applies).
-  const wantG = Math.max(0, maxG - state.today.newG);
+  const preG = pre ? (kanaGateOpen() ? unitNewOrder('m0') : []) : null;   // 入門: new grammar is 第 0 週 only
+  const wantG = Math.max(0, Math.min(maxG - state.today.newG, preG ? preG.length : Infinity));   // used-up 第 0 週 grammar must not brake the words
   const fullV = Math.max(0, maxV - state.today.newV);
   let wantV = fullV;
   let over = dayTotal(state.dailyLogs[t]) + dueV.length + dueG.length + ex.dueK.length + ex.dueL.length + ex.dueR.length
@@ -3499,7 +3505,7 @@ function dailyPlan(size = state.settings.sessionSize) {
     const parts = []; if (wantV < fullV) parts.push(`新單字先減為 ${wantV} 個`); if (cutK) parts.push('新漢字先停'); if (cutL) parts.push('新聽力先停'); if (cutA) parts.push(`新假名先減為 ${ex.newA.length} 個`);
     note = `今天的題數超過負荷上限，${parts.join('、')}，新文法照常；複習完成後，之後幾天就會再增加。`;
   }
-  const newG = (pre ? (kanaGateOpen() ? unitNewOrder('m0') : []) : newGrammarCandidates()).slice(0, wantG);
+  const newG = (preG || newGrammarCandidates()).slice(0, wantG);
   // 變化練習: due families first, then families not started yet, at most newQuota('c') a day; only forms a reached unit teaches
   const cPool = (REG.drills || []).filter(d => unitOrder(d.u) <= curIdx);
   const doneC = cPool.filter(d => { const r = state.srs[d.key]; return r && r.last === t; }).length;
@@ -4843,7 +4849,7 @@ function renderStageSummary(view) {
       <div class="page-title mt-2">${title}</div>
       <div class="page-sub">${esc(st ? st.title : '')}・階段測驗・作答 ${s.results.length} 題</div>
       <div class="row-wrap mt-3">${kinds}</div>
-      ${prePick ? '<div class="banner mt-4">通過了。接著三題：平假名、片假名、入門單字各記得多少？選完就進第 1 週。</div>' : r && r.passed ? '<div class="banner mt-4">通過了。可以把這個階段和之前的內容一次標成已學、熟悉或熟練。</div>' : ''}
+      ${prePick ? `<div class="banner mt-4">通過了。接著 ${PRE_MARK_GROUPS.length} 題：${PRE_MARK_GROUPS.map(x => x[1]).join('、')}各記得多少？選完就進第 1 週。</div>` : r && r.passed ? '<div class="banner mt-4">通過了。可以把這個階段和之前的內容一次標成已學、熟悉或熟練。</div>' : ''}
       ${prePick ? preMarkStepHtml(T) : `<div class="row-wrap mt-4">${buttons}</div>`}
     </div>
     ${wrong.length ? `<div class="card"><div class="card-head"><div class="card-title">這次答錯的題目</div><span class="chip">${wrong.length}</span></div><div class="list">${wrongList}</div></div>` : ''}`;
@@ -4888,7 +4894,7 @@ function bulkMarkTargets(stageId, level) {
   stagesUpTo(stageId).forEach(s => stageItems(s.id).forEach(x => { if (seen.has(x.key)) return; seen.add(x.key); if (bulkLevelOf(state.srs[x.key], x.key) < want) out.push(x); }));
   return out;
 }
-// what a bulk mark (標記到這裡為止 or the 入門 three choices) must remember to undo itself
+// what a bulk mark (標記到這裡為止 or the 入門 four choices) must remember to undo itself
 function bulkSnapshot(extra) {
   return Object.assign({ srs: {}, mistakes: JSON.parse(JSON.stringify(state.mistakes)), completedUnits: state.completedUnits.slice(), lessonSeen: (state.lessonSeen || []).slice(),
     currentUnit: state.currentUnit, stage: state.stage, introSeen: state.introSeen, kanaKnown: state.kanaKnown, introPending: state.introPending === true }, extra);
@@ -4963,7 +4969,7 @@ Object.assign(ACTIONS, {
   'bulk-mark-undo': () => { if (bulkUndo()) toast('已復原'); route(); }
 });
 
-// ---- 入門測驗通過後的三題 ----
+// ---- 入門測驗通過後的四題 ----
 /* Passing the 入門 test leads straight into four choices (平假名、片假名、入門單字、第 0 週句型): 不記得 leaves the group alone
    (it is learned as new material later; for 第 0 週 that means introPending: its items come before the current unit's), the
    other three are the bulk-mark levels 已學／熟悉／熟練. Then the learner enters 第 1 週. */
@@ -5054,7 +5060,7 @@ function renderCourse(view) {
         <div class="grow"><div class="unit-title">假名與入門單字</div><div class="unit-desc">平假名、片假名，以及只用假名寫的基本單字。</div></div>
         <div><div class="row between small"><span>${status}</span><span class="muted num">${pct}%</span></div>${segBarHtml(total, [['learned', seen]], 'thin mt-1')}</div>
       </div></div>`;
-      extra = '';   // 1.0.12: the 入門 card carries one button, 階段測驗; passing it leads to the three choices and 第 1 週 (練假名 is on the 單字 page; otherwise 入門 ends by itself, finishPreIfReady)
+      extra = '';   // 1.0.12: the 入門 card carries one button, 階段測驗; passing it leads to the four choices and 第 1 週 (練假名 is on the 單字 page; otherwise 入門 ends by itself, finishPreIfReady)
     } else {
       rows = `<div class="list">${st.units.map(uid => {
         const u = unitById(uid); const s = unitStats(u.id);
@@ -5215,7 +5221,7 @@ function renderUnit(view, uid, tab) {
       <div class="row">${unitBarHtml(s, 'grow')}<span class="small num muted">${s.pct}%</span></div>
       <div class="row between mt-2 small">
         <span class="muted legs">${unitLegendHtml(s)}${legacy ? `<span class="leg">舊版累計作答 ${legacy.seen} 題</span>` : ''}</span>
-        <button type="button" class="btn btn-sm btn-ghost" data-act="toggle-done" data-unit="${uid}">${s.done ? '取消完成標記' : '標記為已完成'}</button>
+        ${intro ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="toggle-done" data-unit="${uid}">${s.done ? '取消完成標記' : '標記為已完成'}</button>`}
       </div>
       ${isAiConfigured() && !intro ? `<div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="ai-unit-items" data-unit="${uid}">${icon('spark')}用 AI 為本單元多出 5 題</button></div>` : ''}
     </div>

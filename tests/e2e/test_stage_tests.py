@@ -209,6 +209,7 @@ PRE_PASS = RESET + """state.stageTests = {}; LAST_BULK_MARK = null; startSession
 def test_pre_pass_asks_four_choices_then_enters_week_1(b):
     js = "(() => { " + PRE_PASS + """ const view = document.getElementById('view'); const out = { passed: state.stageTests.pre[0].passed, mark: Boolean(view.querySelector('[data-act="stage-mark"]')) };
       const step = () => { const t = view.textContent; return { q: (t.match(/第 (\\d)／4 題/) || [])[1], opts: [...view.querySelectorAll('[data-act="pre-mark-pick"]')].map(o => o.dataset.level) }; };
+      out.head = view.textContent.includes('接著 4 題：平假名、片假名、入門單字、第 0 週句型');
       out.s1 = step(); view.querySelector('[data-act="pre-mark-pick"][data-level="known"]').click();
       out.s2 = step(); out.hiraTxt = view.textContent.includes('平假名：掌握'); view.querySelector('[data-act="pre-mark-pick"][data-level="none"]').click();
       out.s3 = step(); view.querySelector('[data-act="pre-mark-pick"][data-level="seen"]').click();
@@ -221,6 +222,7 @@ def test_pre_pass_asks_four_choices_then_enters_week_1(b):
       out.undone = bulkUndo(); out.stageAfterUndo = state.stage; out.srsAfterUndo = Object.keys(state.srs).length; out.pendingAfterUndo = state.introPending;
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
+    assert r['head'], r   # the banner names all four groups
     assert r['passed'] and not r['mark'] and r['s1'] == {'q': '1', 'opts': ['none', 'seen', 'learned', 'known']} and r['s2']['q'] == '2' and r['hiraTxt'] and r['s3']['q'] == '3' and r['s4']['q'] == '4' and r['pending'] is True, r
     assert r['stageBefore'] == 'pre' and r['session'] and r['stage'] == 'main' and r['unit'] == 'm1' and r['kanaKnown'] and r['hash'] == '#/course', r
     assert r['hiraKnown'] and r['kataNone'] and r['wordsSeen'] and r['changed'] == 71 + 59 and r['label'] == '平假名：掌握、片假名：不記得、入門單字：記得、第 0 週句型：不記得', r
