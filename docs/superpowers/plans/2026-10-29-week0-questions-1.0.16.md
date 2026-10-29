@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- 分支 `feat/kana-chart-settings`（1.0.15 之上）。最後一個 task 才把 `APP_VERSION` 改成 `'1.0.16'`、sw.js 的 `CACHE` 改成 `'nq-v1.0.16'`。
+- 分支 `feat/week0-questions`（從 main 的 1.0.15 開出；Pages 推上去後指過來給使用者試）。最後一個 task 才把 `APP_VERSION` 改成 `'1.0.16'`、sw.js 的 `CACHE` 改成 `'nq-v1.0.16'`。
 - data.js 從 Task 1 起就會改，所以 Task 1 同時把 `DATA_VERSION 14` 改成 `15`，三處一起改：data.js 檔頭、index.html 的 `<script src="./data.js?v=15">`、sw.js 的 PRECACHE `'./data.js?v=15'`。
 - data.js 寫回時用 `json.dumps(D, ensure_ascii=False, separators=(',', ':'))`，放回第 3 行 `const DATA = …;`，其他行不動（已驗證這樣寫回會和原檔逐位元組相同）。
 - m0 題目的 id 是 `m0-1` 到 `m0-20`；`u: 'm0'`、`lv: 'N5'`、`sec` 只能是 1、2、3。日文欄位不能有漢字。
