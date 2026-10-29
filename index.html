@@ -1233,6 +1233,8 @@ function normalizeState(s) {
   out.themeLane.order = [...new Set(out.themeLane.order.map(mig))];
   out.themeLane.count = Object.fromEntries(Object.entries(out.themeLane.count).map(([c, n]) => [mig(c), n]));
   if (!out.today || out.today.date !== todayStr()) out.today = { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0, newC: 0, newA: 0 };
+  if ('ans' in out.today && !(Array.isArray(out.today.ans) && out.today.ans.every(k => typeof k === 'string'))) delete out.today.ans;
+  if ('plan' in out.today && !(out.today.plan && typeof out.today.plan === 'object' && out.today.plan.lists && typeof out.today.plan.lists === 'object')) delete out.today.plan;
   Object.values(out.srs).forEach(ensureFsrs);
   Object.entries(out.srs).forEach(([k, r]) => { if (k.startsWith('v:') && (!r.f || typeof r.f !== 'object')) r.f = {}; });   // words answered before per-format tracking
   if (out.aiConfig && out.aiConfig.geminiModel === 'gemini-3.8-flash') out.aiConfig.geminiModel = 'auto';   // the old default name: auto picks a live model
@@ -1729,7 +1731,8 @@ function noteAnswered(key) {
 }
 function answeredToday(key) { return Array.isArray(state.today.ans) && state.today.ans.includes(key); }
 function itemsDoneToday() { return Array.isArray(state.today.ans) ? state.today.ans.length : 0; }
-function dayProgress() { const done = itemsDoneToday(); const left = dailyPlan().remaining; return { done, left, total: done + left }; }
+// the ring: how much of today's list is done (items answered elsewhere today count in 今天做了, not here)
+function dayProgress() { const keys = todayPlanKeys(); const done = keys.filter(answeredToday).length; return { done, left: keys.length - done, total: keys.length }; }
 const LOG_KINDS = [['v', '單字'], ['g', '文法'], ['k', '漢字'], ['a', '假名'], ['l', '聽力'], ['r', '閱讀'], ['x', '模擬考・其他']];
 function recordAction(type, topic, kind) {
   const e = logEntry();
@@ -3494,7 +3497,7 @@ function extrasPlan(curIdx) {
 // New material is sized to fit around the reviews that are due, so the daily load stays under the
 // load cap (settings.loadCap); a small minimum keeps the course moving even when many reviews are waiting.
 const MIN_NEW_PER_DAY = 6;
-function dailyPlan(size = state.settings.sessionSize) {
+function computeDailyPlan(size = state.settings.sessionSize) {
   const t = todayStr();
   const s = state.settings;
   const ad = adaptiveFactor();
@@ -3539,6 +3542,39 @@ function dailyPlan(size = state.settings.sessionSize) {
   const remaining = dueV.length + dueG.length + newV.length + newG.length + dueC.length + newC.length + ex.dueK.length + ex.newK.length + ex.dueL.length + ex.newL.length + ex.dueR.length + ex.newR.length + ex.dueA.length + ex.newA.length;
   const relearnN = dueV.concat(dueG).filter(x => onLadder(x.key)).length;   // reviews that are missed items on the ladder (shown as 其中錯題)
   return Object.assign({ dueV, dueG, newV, newG, dueC, newC, note, factor: ad.factor, size, n4Open, remaining, relearnN }, ex);
+}
+
+// 今天的清單: worked out the first time it is needed each day — again only when the start gets chosen or the stage changes
+// (入門 ↔ 正課) — and kept as keys in state.today.plan. Every later call rebuilds it from those keys minus what was answered
+// today, so the day's total never moves: a bulk mark, 我會了 or 前往下一單元 changes tomorrow's list, not today's (and
+// does not eat today's listening and reading). Items answered before a rebuild stay in it as `kept`.
+const PLAN_LISTS = ['dueV', 'dueG', 'dueC', 'dueK', 'dueL', 'dueR', 'dueA', 'newV', 'newG', 'newC', 'newK', 'newL', 'newR', 'newA'];
+function planListKeys(plan) { return [...new Set(PLAN_LISTS.concat('kept').flatMap(n => plan.lists[n] || []))]; }
+function storeTodayPlan(size) {
+  const old = state.today.plan;
+  const p = computeDailyPlan(size);
+  const lists = {};
+  PLAN_LISTS.forEach(n => { lists[n] = (p[n] || []).map(x => x.key); });
+  const fresh = new Set(PLAN_LISTS.flatMap(n => lists[n]));
+  lists.kept = old && old.lists ? planListKeys(old).filter(k => answeredToday(k) && !fresh.has(k)) : [];
+  state.today.plan = { lists, note: p.note || '', n4Open: p.n4Open, factor: p.factor, stage: state.stage, start: Boolean(state.startChosen) };
+  saveState();
+}
+function dailyPlan(size = state.settings.sessionSize) {
+  const pl = state.today.plan;   // a list made before the start was chosen is redone once it is (it may have been empty)
+  if (!pl || !pl.lists || pl.stage !== state.stage || pl.start !== Boolean(state.startChosen)) storeTodayPlan(size);
+  const p = state.today.plan;
+  const out = { note: p.note, n4Open: p.n4Open, factor: p.factor, size };
+  let remaining = 0;
+  PLAN_LISTS.forEach(n => { out[n] = (p.lists[n] || []).map(k => REG.byKey.get(k)).filter(x => x && !answeredToday(x.key)); remaining += out[n].length; });
+  out.relearnN = out.dueV.concat(out.dueG).filter(x => onLadder(x.key)).length;
+  out.remaining = remaining;
+  return out;
+}
+// every key on today's list, answered or not (an item hidden or deleted since is left out)
+function todayPlanKeys() {
+  dailyPlan();
+  return planListKeys(state.today.plan).filter(k => REG.byKey.has(k));
 }
 
 function interleave(vList, gList, mode) {

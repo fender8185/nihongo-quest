@@ -66,6 +66,70 @@ def test_handmade_mistake_answers_count(b):
     assert r['kind'] == 'm' and r['id'].startswith('mk_t'), r
     assert r['counted'] is True and r['items'] == 1, r
 
+# ---- Task 2: 今天的清單排好後當天不重算 ----
+# an account at week 3 with weeks 1–2 learned (reviews spread over the coming days) and a perfect recent record
+HIST = """const t = todayStr(); let i = 0; state.currentUnit = 'm3';
+  REG.grammar.filter(g => g.u === 'm1' || g.u === 'm2').forEach(g => { state.srs[g.key] = { b: 3, s: 6, d: 5, due: addDays(t, (i++ % 6) - 1), n: 3, ok: 3, ng: 0, st: 3, last: addDays(t, -5), lapse: 0, intro: addDays(t, -20) }; });
+  REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 120).forEach(v => { state.srs[v.key] = { b: 3, s: 6, d: 5, due: addDays(t, (i++ % 6) - 1), n: 3, ok: 3, ng: 0, st: 3, last: addDays(t, -5), lapse: 0, intro: addDays(t, -20) }; });
+  state.recent = Array(40).fill(1); saveState(); DAILY_CACHE = null;"""
+RING = "(() => { const p = dayProgress(); const pl = state.today.plan; return { done: p.done, total: p.total, listen: pl ? pl.lists.dueL.length + pl.lists.newL.length : -1, read: pl ? pl.lists.dueR.length + pl.lists.newR.length : -1 }; })()"
+# the 入門 test of an account past 入門 (1.0.17 marks it by score when it ends)
+PRE_TEST = """(() => { startSession('stage', { stage: 'pre' }); const n = SESSION.entries.length;
+  for (let i = 0; i < n; i++) { const q = currentEntry().q; answerCurrent(i % 5 ? q.answer : (q.answer + 1) % q.options.length); if (i < n - 1) nextQuestion(); }
+  SESSION = null; document.body.classList.remove('practicing'); DAILY_CACHE = null; return n; })()"""
+
+def test_bulk_mark_leaves_the_plan_alone(b):
+    js = "(() => { " + FRESH + " startSession('daily', { size: 12 }); " + PLAY + "; const r1 = " + RING + """;
+      state.stageTests = { p1: [{ date: todayStr(), correct: 36, total: 40, passed: true }] }; bulkMark('p1', 'learned'); DAILY_CACHE = null;
+      return JSON.stringify({ r1, r2: """ + RING + " }); })()"
+    r = json.loads(ev(b, js))
+    assert r['r1']['listen'] >= 0 and r['r1'] == r['r2'], r
+    assert r['r1']['total'] < 60 and r['r1']['done'] > 0, r
+
+def test_old_account_pre_test_leaves_the_plan_alone(b):
+    js = "(() => { " + FRESH + HIST + " startSession('daily', { size: 12 }); " + PLAY + "; const r1 = " + RING + "; const auto = needsPreTest(); " + PRE_TEST + """;
+      return JSON.stringify({ auto, marked: Object.keys(state.srs).filter(k => k.startsWith('a:')).length, r1, r2: """ + RING + " }); })()"
+    r = json.loads(ev(b, js))
+    assert r['auto'] is True and r['marked'] > 100, r   # the 1.0.17 auto marks did happen
+    assert r['r1']['listen'] >= 0 and r['r1'] == r['r2'], r
+
+def test_total_stays_the_same_all_day(b):
+    js = "(() => { " + FRESH + HIST + " const totals = [" + RING + ".total]; for (let s = 0; s < 4; s++) { startSession('daily'); " + PLAY + "; totals.push(" + RING + """.total); }
+      return JSON.stringify({ totals, stored: Boolean(state.today.plan), done: dayProgress().done }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['stored'] and len(set(r['totals'])) == 1 and r['done'] > 40, r
+
+def test_choosing_a_start_rebuilds_the_plan(b):
+    # a list made before the start is chosen may be empty or 正課; choosing 從零開始 redoes it as 入門
+    js = """(() => { state.srs = {}; state.startChosen = false; state.stage = 'main'; state.kanaKnown = false;
+      state.today = { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0, newC: 0, newA: 0 }; saveState(); DAILY_CACHE = null;
+      dailyPlan(); const before = state.today.plan && state.today.plan.start;
+      chooseStart('zero'); dailyPlan(); const p = state.today.plan;
+      return JSON.stringify({ before, start: p.start, stage: p.stage, newA: p.lists.newA.length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['before'] is False and r['start'] is True and r['stage'] == 'pre' and r['newA'] > 0, r
+
+def test_stage_switch_rebuilds_the_plan_and_keeps_answered_items(b):
+    js = """(() => { state.srs = {}; state.startChosen = false; state.today = { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0, newC: 0, newA: 0 }; saveState();
+      chooseStart('zero'); startSession('daily', { size: 10 }); const keys = """ + PLAY + """; const before = dayProgress().done;
+      state.stage = 'main'; state.kanaKnown = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null; dailyPlan(); const p = state.today.plan;
+      return JSON.stringify({ keys, before, after: dayProgress().done, stage: p.stage, kept: p.lists.kept, newG: p.lists.newG.length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['before'] > 0 and r['after'] == r['before'], r
+    assert r['stage'] == 'main' and r['newG'] > 0 and sorted(r['kept']) == sorted(r['keys']), r
+
+def test_items_answered_before_the_plan_count_but_stay_out_of_it(b):
+    js = "(() => { " + FRESH + """ delete state.today.plan; const v = REG.vocab.find(x => x.builtin && x.lv === 'N5' && !state.srs[x.key]);
+      srsAnswer(v.key, true); dailyPlan(); return JSON.stringify({ inPlan: todayPlanKeys().includes(v.key), done: itemsDoneToday(), stored: Boolean(state.today.plan) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['stored'] and r['inPlan'] is False and r['done'] == 1, r
+
+def test_missing_keys_are_skipped(b):
+    js = "(() => { " + FRESH + """ dailyPlan(); const n = todayPlanKeys().length; state.today.plan.lists.dueV.push('v:no-such-word'); DAILY_CACHE = null;
+      const p = dailyPlan(); return JSON.stringify({ n, after: todayPlanKeys().length, has: todayPlanKeys().includes('v:no-such-word'), remaining: p.remaining }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['after'] == r['n'] and r['has'] is False and r['remaining'] == r['n'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

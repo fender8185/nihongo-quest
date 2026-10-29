@@ -296,7 +296,7 @@ def test_daily_queue_has_only_due_or_new(b):
       rec(vs[0], { due: t, last: addDays(t, -2) });
       rec(vs[1], { due: addDays(t, 2), last: addDays(t, -3), b: 0, st: 0 });   // weak but not due → out
       rec(vs[2], { due: t, last: t });                              // answered today in 單字練習 → out
-      saveState(); DAILY_CACHE = null; const q = dailyQueue(20); const keys = q.items.map(x => x.key);
+      delete state.today.plan; saveState(); DAILY_CACHE = null; const q = dailyQueue(20); const keys = q.items.map(x => x.key);
       const bad = q.items.filter(it => { const r = state.srs[it.key]; return r && (r.due > t || r.last === t); }).map(x => x.key);
       const out = { bad, has: [gs[0], gs[1], vs[0]].map(g => keys.includes(g.key)), extra: 'extra' in q, mist: 'mistakeKeys' in q };
       state.srs = JSON.parse(keep); saveState(); DAILY_CACHE = null; return JSON.stringify(out); })()"""
@@ -309,7 +309,7 @@ def test_listening_and_reading_are_capped_per_day(b):
     js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.srs); const s = state.settings.listenPerDay; state.settings.listenPerDay = 3;
       listenReachable().slice(0, 10).forEach(x => { state.srs[x.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -15), intro: addDays(t, -20) }; });
       REG.read.filter(x => unitOrder(x.u) <= unitOrder(state.currentUnit)).slice(0, 3).forEach(x => { state.srs[x.key] = { b: 2, due: t, n: 1, ok: 1, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -4) }; });
-      saveState(); DAILY_CACHE = null; const p = dailyPlan(); const out = { l: p.dueL.length + p.newL.length, r: p.dueR.length + p.newR.length };
+      delete state.today.plan; saveState(); DAILY_CACHE = null; const p = dailyPlan(); const out = { l: p.dueL.length + p.newL.length, r: p.dueR.length + p.newR.length };
       // the day's three listening items and the passage answered (a first session): the cap holds for the rest of the day
       p.dueL.forEach(x => srsAnswer(x.key, true)); p.dueR.forEach(x => srsAnswer(x.key, true)); DAILY_CACHE = null; const p2 = dailyPlan();
       out.l2 = p2.dueL.length + p2.newL.length; out.r2 = p2.dueR.length + p2.newR.length;
@@ -322,7 +322,7 @@ def test_new_items_spread_across_sessions(b):
     # 60 due reviews + the default new quotas, sessionSize 20: every session holds new items and the button counts the rest
     js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.srs); const size = state.settings.sessionSize; state.settings.sessionSize = 20;
       REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 60).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
-      saveState(); DAILY_CACHE = null; const q = dailyQueue(20);
+      delete state.today.plan; saveState(); DAILY_CACHE = null; const q = dailyQueue(20);
       const firstNew = q.items.filter(it => !state.srs[it.key]).length;
       location.hash = '#/today'; route(); const btn = document.querySelector('[data-act=start-daily]').textContent; const rest = (document.querySelector('.hero [data-panel=scope]') || {}).textContent || '';   // the rest-of-day line lives in the 今天的範圍 panel
       state.srs = JSON.parse(keep); state.settings.sessionSize = size; saveState(); DAILY_CACHE = null; return JSON.stringify({ n: q.items.length, total: q.total, firstNew, btn, rest }); })()"""
@@ -337,7 +337,7 @@ def test_done_state_and_extra_session(b):
       Object.keys(state.srs).forEach(k => { if (state.srs[k].due <= t) state.srs[k].last = t; });   // nothing due left
       const ahead = REG.vocab.filter(v => v.builtin && !state.srs[v.key]).slice(0, 3);
       ahead.forEach(v => { state.srs[v.key] = { b: 3, due: addDays(t, 2), n: 3, ok: 3, ng: 0, s: 6, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
-      saveState(); DAILY_CACHE = null;
+      delete state.today.plan; saveState(); DAILY_CACHE = null;
       location.hash = '#/today'; route(); const h2 = document.querySelector('.hero h2').textContent; const btn = document.querySelector('[data-act=start-extra]');
       const q = extraQueue(20); const aheadIn = ahead.filter(v => q.items.some(x => x.key === v.key)).length;
       const bad = q.items.filter(it => { const r = state.srs[it.key]; return r && (r.due <= t || r.last === t || r.due > addDays(t, 2)); }).length;
@@ -579,26 +579,26 @@ def test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them
 
 # ---- 2026-10-27 (v65): ring = done / today's work; 每日目標 → 每天負荷上限; exam-pace quotas on Today; 再練一次 in another format; grammar encore ----
 def test_ring_counts_todays_work_and_fills_when_the_day_is_done(b):
-    js = """(() => { const t = todayStr(); const read = () => { location.hash = '#/today'; route(); const m = /(\\d+)\\s*\\/\\s*(\\d+) 題/.exec(document.querySelector('.hero').textContent.replace(/\\s+/g, ' ')); return m ? [Number(m[1]), Number(m[2])] : null; };
-      const r0 = read(); const expect0 = dailyPlan().remaining; const hero0 = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');
+    # 1.0.19: the ring is today's list, kept all day; items answered in some other practice count in 今天做了, not in the ring
+    js = """(() => { location.hash = '#/today'; route();
+      const p0 = dayProgress(); const expect0 = dailyPlan().remaining; const hero0 = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');
       const num = (re) => { const m = re.exec(hero0); return m ? Number(m[1]) : 0; }; const sum = num(/待複習 (\\d+)/) + num(/新內容 (\\d+)/) + num(/另有 (\\d+)/); const shownTotal = num(/共 (\\d+) 題/);
-      // five words answered today in some other practice (the schedule records them); encores and requeues write nothing, so they never move the ring
-      REG.vocab.filter(v => v.builtin && v.lv === 'N5' && !state.srs[v.key]).slice(-5).forEach(v => { state.srs[v.key] = { b: 1, due: addDays(t, 1), n: 1, ok: 1, ng: 0, s: 1, d: 5, last: t, intro: t, f: {} }; });
-      logEntry(t).vocabCount = 9; saveState(); DAILY_CACHE = null; const r1 = read();
-      Object.assign(state.settings, { listening: false }); Object.assign(state.today, { newV: 99, newG: 99, newK: 99, newL: 99, newC: 99 }); state.today.newR = 1; saveState(); DAILY_CACHE = null; const r2 = read();
-      return JSON.stringify({ r0, expect0, sum, shownTotal, r1, r2, done: /今天完成了/.test(document.querySelector('.hero').textContent) }); })()"""
+      REG.vocab.filter(v => v.builtin && v.lv === 'N5' && !state.srs[v.key] && !todayPlanKeys().includes(v.key)).slice(-5).forEach(v => srsAnswer(v.key, true));
+      const p1 = dayProgress(); const did1 = itemsDoneToday();
+      todayPlanKeys().forEach(k => srsAnswer(k, true)); location.hash = '#/today'; route(); const p2 = dayProgress();
+      return JSON.stringify({ p0: [p0.done, p0.total], expect0, sum, shownTotal, p1: [p1.done, p1.total], did1, p2: [p2.done, p2.total], done: /今天完成了/.test(document.querySelector('.hero').textContent) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['r0'] == [0, r['expect0']] and r['expect0'] > 0 and r['sum'] == r['expect0'] == r['shownTotal'], r   # the breakdown, its 共 N 題 and the ring agree
-    assert r['r1'] == [5, r['expect0'] + 5], r
-    assert r['r2'] == [5, 5] and r['done'], r
+    assert r['p0'] == [0, r['expect0']] and r['expect0'] > 0 and r['sum'] == r['expect0'] == r['shownTotal'], r   # the breakdown, its 共 N 題 and the ring agree
+    assert r['p1'] == [0, r['expect0']] and r['did1'] == 5, r
+    assert r['p2'] == [r['expect0'], r['expect0']] and r['done'], r
 
 def test_load_cap_replaces_the_daily_goal_and_brakes_new_items_in_order(b):
     js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.srs); const s = state.settings;
       const mig = { low: normalizeState({ settings: { dailyGoal: 20 } }).settings, high: normalizeState({ settings: { dailyGoal: 100 } }).settings, fresh: defaultSettings(),
         raised: normalizeState({ settings: { loadCap: 40 } }).settings.loadCap, kept: normalizeState({ settings: { loadCap: 40, capRaised: true } }).settings.loadCap, own: normalizeState({ settings: { loadCap: 60 } }).settings.loadCap };
       REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 30).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
-      const plan = (cap) => { s.loadCap = cap; saveState(); DAILY_CACHE = null; const p = dailyPlan(); return [p.newV.length, p.newG.length, p.newK.length, p.newL.length]; };
+      const plan = (cap) => { s.loadCap = cap; saveState(); DAILY_CACHE = null; const p = computeDailyPlan(); return [p.newV.length, p.newG.length, p.newK.length, p.newL.length]; };
       const wide = plan(200), tight = plan(10);
       state.srs = JSON.parse(keep); s.loadCap = 40; saveState(); DAILY_CACHE = null;
       const txt = settingsLearn().replace(/<[^>]+>/g, ' '); location.hash = '#/today'; route();
@@ -683,7 +683,7 @@ def test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook(b):
 def test_today_counts_relearning_items_among_reviews_and_puts_them_first(b):
     js = """(() => { const t = todayStr(); const words = REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 12);
       words.forEach((v, i) => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: i < 3 ? 1 : 0, s: 3, d: 5, last: addDays(t, -2), intro: addDays(t, -9), f: {} }; if (i < 3) state.srs[v.key].rl = 0; });
-      saveState(); DAILY_CACHE = null; location.hash = '#/today'; route(); const hero = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');
+      delete state.today.plan; saveState(); DAILY_CACHE = null; location.hash = '#/today'; route(); const hero = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');
       const dq = dailyQueue(state.settings.sessionSize); const reviews = dq.items.filter(x => x.kind === 'v' && state.srs[x.key]); const onLadder = reviews.map(x => typeof state.srs[x.key].rl === 'number');
       startSession('daily', {}); route(); let chip = null, steps = 0;
       while (steps++ < 40) { const e = currentEntry(); if (e.preview && !e.previewDone) { dismissPreview(); continue; } if (e.item && e.item.kind === 'v' && typeof state.srs[e.item.key].rl === 'number') { chip = /錯題複習/.test(document.querySelector('.q-label').textContent); break; } answerCurrent(e.q.answer); if (currentEntry() && currentEntry().done) nextQuestion(); }
@@ -1513,7 +1513,7 @@ def test_offline_audio_keeps_the_japanese_clips_of_todays_practice(b):
         v: fresh(items, 'v'), g: fresh(items, 'g'), k: fresh(items, 'k'), l: fresh(items, 'l'), a: items.filter(x => x.kind === 'a').length,
         ex: has('明日は何をしますか。'), laterEx: has('今日は何曜日ですか。'), zh: texts.some(e => e.lang === 'zh') };
       const kc = audioCollector(); kc.item(REG.byKey.get('k:月')); r.kanji = kc.list().filter(e => !e.lang).map(e => e.text).sort();
-      state.settings.loadCap = 50; r.v50 = fresh(audioPrefetchItems(), 'v');
+      state.settings.loadCap = 50; delete state.today.plan; r.v50 = fresh(audioPrefetchItems(), 'v');
       state.stage = 'pre'; state.settings.loadCap = 100; state.srs = {}; DAILY_CACHE = null;
       const pre = audioPrefetchItems(); r.pre = { a: pre.filter(x => x.kind === 'a').length, other: pre.filter(x => x.kind !== 'a').length };
       return JSON.stringify(r); })()"""
