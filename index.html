@@ -2130,7 +2130,8 @@ const FORM_LABEL = {
   te: 'て形', ta: 'た形', nai: 'ない形', dict: '辭書形', masu: 'ます形', ba: '條件形（ば）', pot: '可能形', vol: '意向形', pass: '受身形', caus: '使役形', imp: '命令形'
 };
 // how a conjugation item is answered: four options while new, tiles (or the keyboard) once it has been seen
-function conjInputMode(rec) {
+function conjInputMode(rec, ctx) {
+  if (ctx && ctx.choiceOnly) return 'choice';   // 階段測驗: options only
   const m = state.settings.conjInput || 'auto';
   if (m === 'choice' || m === 'tiles' || m === 'type') return m;
   return rec && rec.b >= 1 ? 'tiles' : 'choice';
@@ -2157,17 +2158,17 @@ function makeConjDrillQuestion(item, ctx = {}) {
     if (wrongs.length < 3) continue;
     const q = baseQ(item);
     const fam = item.fam; const hint = f !== fam ? formHint(f) : '';
-    const mode = state.settings.conjInput === 'type' ? 'type' : 'tiles';
-    q.fmt = 'g-conj-type'; q.custom = q.fmt; q.inputMode = mode;
+    const mode = ctx.choiceOnly ? 'choice' : state.settings.conjInput === 'type' ? 'type' : 'tiles';   // 階段測驗 asks the drill as four options
+    if (mode === 'choice') q.fmt = 'g-conj'; else { q.fmt = 'g-conj-type'; q.custom = q.fmt; q.inputMode = mode; }
     q.label = `變化練習 · ${FORM_LABEL[fam]}`;
-    q.instr = `${mode === 'tiles' ? '點假名，拼出' : '輸入'}這個動詞的${FORM_LABEL[fam]}`;
+    q.instr = mode === 'choice' ? `選出這個動詞的${FORM_LABEL[fam]}` : `${mode === 'tiles' ? '點假名，拼出' : '輸入'}這個動詞的${FORM_LABEL[fam]}`;
     q.stemHtml = `<div class="q-stem word jp">${furi(v.w)}</div><div class="small muted mt-1">→ ${esc(FORM_LABEL[fam])}${hint ? `，像「<span class="jp">${esc(hint)}</span>」` : ''}</div>`;
     q.zhText = v.m || ''; q.cat = '變化練習'; q.point = FORM_LABEL[fam]; q.unit = item.u; q.lv = v.lv;
     q.fullJp = ans; q.fillHtml = furi(ans);
     q.mistakePrompt = `${jaPlain(v.w)} → ${FORM_LABEL[fam]}${hint ? `（像 ${hint}）` : ''}`;
     q.why = `「${jaPlain(v.w)}」是${GROUP_LABEL[g]}，${FORM_LABEL[fam]}是「${jaPlain(ans)}」。`;
-    q.tiles = conjTiles(ans, wrongs);
-    q.options = [{ text: ans, jp: true }, { text: '', jp: true }]; q.answer = 0; q.answerText = ans;
+    if (mode === 'choice') finalizeOptions(q, ans, wrongs.slice(0, 3), true);
+    else { q.tiles = conjTiles(ans, wrongs); q.options = [{ text: ans, jp: true }, { text: '', jp: true }]; q.answer = 0; q.answerText = ans; }
     q.speakWord = jaPlain(ans);
     return q;
   }
@@ -2453,7 +2454,7 @@ function vocabWhy(v) {
 
 function makeVocabQuestion(v0, ctx = {}) {
   const v = pickExample(v0, ctx);
-  const formats = vocabFormats(v);
+  const formats = ctx.choiceOnly ? vocabFormats(v).filter(([f]) => f !== 'v-spell' && f !== 'v-match') : vocabFormats(v);   // 階段測驗: options only
   const avoid = ctx.avoidFmts || ctx.avoidFmt;
   let fmt = Array.isArray(formats[0]) ? weightedPick(formats, avoid) : formats[0];
   const q = baseQ(v);
@@ -2835,7 +2836,7 @@ function makeGrammarQuestion(g, ctx = {}) {
     const avoid = ctx.encore ? [].concat(ctx.avoidFmts || ctx.avoidFmt || []) : [];   // only an encore is steered by the formats used; an ordinary question follows mastery
     const choiceFmt = isV ? 'g-conj' : 'g-adj';
     let mode = ctx.forceFmt === typedFmt ? (state.settings.conjInput === 'type' ? 'type' : 'tiles')
-      : (ctx.forceFmt === 'g-conj' || ctx.forceFmt === 'g-adj') ? 'choice' : conjInputMode(rec);
+      : (ctx.forceFmt === 'g-conj' || ctx.forceFmt === 'g-adj') ? 'choice' : conjInputMode(rec, ctx);
     if (!ctx.forceFmt && avoid.length) {   // 換個方式再考: the format not yet used this session
       if (avoid.includes(choiceFmt) && !avoid.includes(typedFmt)) mode = state.settings.conjInput === 'type' ? 'type' : 'tiles';
       else if (avoid.includes(typedFmt) && !avoid.includes(choiceFmt)) { if ((state.settings.conjInput || 'auto') === 'auto') mode = 'choice'; else return null; }
@@ -2909,6 +2910,10 @@ function makeKanaQuestion(item, ctx = {}) {
 }
 
 function makeQuestion(item, ctx) {
+  if (ctx && ctx.choiceOnly && !ctx._inChoice) {   // 階段測驗: only a question with options; a spelled / ordered / matched format is retried, then given up
+    for (let i = 0; i < 6; i++) { const q = makeQuestion(item, Object.assign({}, ctx, { _inChoice: true })); if (!q) return null; if (!q.custom) return q; }
+    return null;
+  }
   try {
     if (item.kind === 'a') return makeKanaQuestion(item, ctx);
     if (item.kind === 'l') return makeListenQuestion(item, ctx);
@@ -3535,7 +3540,7 @@ function buildMistakeQueue(size = 20) {
 
 // ---------- session lifecycle ----------
 const DRILL_NOTE = '這個範圍今天到期的題目不到五題，這組是加練：補上最不穩的題目先練。';
-const MODE_TITLE = { daily: '今日練習', unit: '單元練習', vocab: '單字練習', mistakes: '錯題練習', ai: 'AI 題目', kanji: '漢字練習', kana: '假名', items: '練習' };
+const MODE_TITLE = { daily: '今日練習', unit: '單元練習', vocab: '單字練習', mistakes: '錯題練習', ai: 'AI 題目', kanji: '漢字練習', kana: '假名', items: '練習', stage: '階段測驗' };
 function startSession(mode, opt = {}) {
   let entries = [];
   let meta = {};
@@ -3567,13 +3572,17 @@ function startSession(mode, opt = {}) {
     entries = (opt.row === undefined ? due.concat(fresh) : REG.kana.filter(rowOk).sort((a, b) => a.order - b.order)).slice(0, size).map(item => ({ item }));
   } else if (mode === 'items') {
     entries = (opt.items || []).map(item => ({ item }));
+  } else if (mode === 'stage') {   // 階段測驗: a fixed paper from the stage's own items, scored only (see answerCurrent)
+    const st = stageById(opt.stage); if (!st) return false;
+    entries = buildStageTest(st.id).map(item => ({ item }));
+    opt = Object.assign({}, opt, { title: `${st.title}・階段測驗` });
   }
   if (!entries.length) {
     toast(mode === 'mistakes' ? '錯題本目前是空的。' : '現在沒有需要練習的題目，明天再來，或到課程頁預習下一單元。');
     return false;
   }
   // a word seen for the first time is shown on a preview card before its question
-  if (mode !== 'mistakes') entries.forEach(e => { if (e.item && e.item.kind === 'v' && !state.srs[e.item.key]) e.preview = true; });
+  if (mode !== 'mistakes' && mode !== 'stage') entries.forEach(e => { if (e.item && e.item.kind === 'v' && !state.srs[e.item.key]) e.preview = true; });
   // the first new question from a lesson section the learner has not been shown yet gets that section's card first (daily and unit practice); each section once
   if (mode === 'daily' || mode === 'unit') {
     const shown = new Set(state.lessonSeen || []);
@@ -3581,7 +3590,8 @@ function startSession(mode, opt = {}) {
   }
   SESSION = {
     mode, title: opt.title || MODE_TITLE[mode] || '練習', entries, idx: 0, meta,
-    stats: { correct: 0, wrong: 0, newCount: 0 }, results: [], startedAt: Date.now(), lastFmt: '', opt
+    stats: { correct: 0, wrong: 0, newCount: 0 }, results: [], startedAt: Date.now(), lastFmt: '', opt,
+    test: mode === 'stage' ? { stage: opt.stage } : null
   };
   prepareEntry(0);
   go('#/practice');
@@ -3594,6 +3604,7 @@ function prepareEntry(i) {
   else if (e.encore) e.q = otherFormatQuestion(e.item) || null;
   else if (e.requeued && e.orig && e.orig.fmt && e.orig.fmt.endsWith('-type')) e.q = makeQuestion(e.item, { forceFmt: e.orig.fmt });   // 再練一次 of a spelled conjugation: spell it again, never back to options
   else if (e.requeued) e.q = otherFormatQuestion(e.item) || requeueQuestion(e.orig, shuffle(e.orig.options));   // 再練一次: another format when the item has one
+  else if (SESSION.test) e.q = makeQuestion(e.item, { choiceOnly: true, avoidFmt: SESSION.lastFmt });
   else e.q = makeQuestion(e.item, { avoidFmt: SESSION.lastFmt });
   if (!e.q) { SESSION.entries.splice(i, 1); if (i < SESSION.entries.length) prepareEntry(i); }
 }
@@ -3876,7 +3887,7 @@ function feedbackHtml(e) {
   const srsInfo = e.srs ? `<span>${srsDots(e.srs.rec.b)}</span><span>${srsLevelLabel(e.srs.rec, q.key)}・${dueLabel(e.srs.rec)}</span>`
     : e.encore && cur ? `<span>${srsDots(cur.b)}</span><span>${srsLevelLabel(cur, q.key)}・這次不影響排程</span>` : '';
   const mistake = !ok && q.kind !== 'x' && !e.slip ? '<span>已加入錯題本</span>' : '';
-  const slip = e.slip ? '<span class="chip">手滑，不算</span>' : (!ok && e.undo ? '<button type="button" class="btn btn-sm btn-ghost" data-act="slip" title="選錯鍵、看錯行：不進錯題本，排程維持原狀">手滑，不算</button>' : '');
+  const slip = e.slip ? '<span class="chip">手滑，不算</span>' : (!ok && e.undo && !SESSION.test ? '<button type="button" class="btn btn-sm btn-ghost" data-act="slip" title="選錯鍵、看錯行：不進錯題本，排程維持原狀">手滑，不算</button>' : '');
   const mNote = e.mistakeDone ? '<span class="chip chip-ok">已移出錯題本</span>' : '';
   // a spelled or typed conjugation: show what was produced, the first wrong character marked
   let diff = '';
@@ -3892,7 +3903,7 @@ function feedbackHtml(e) {
       <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>' : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
       ${diff}${full}${example}
       ${why ? `<div class="fb-why mt-2">${md(why)}</div>` : ''}
-      <div class="fb-meta">${q.point ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}${q.kind === 'v' && q.key && ok && cur && srsLevelLabel(cur, q.key) !== '已熟練' ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(q.key)}">這個字我已經會了</button>` : ''}</div>
+      <div class="fb-meta">${q.point ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}${q.kind === 'v' && q.key && ok && cur && !SESSION.test && srsLevelLabel(cur, q.key) !== '已熟練' ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(q.key)}">這個字我已經會了</button>` : ''}</div>
       <div id="aiExplainBox"></div>
     </div>`;
 }
@@ -3905,6 +3916,13 @@ function answerCurrent(i) {
   e.done = true; e.chosen = i;
   const ok = i === q.answer;
   SESSION.lastFmt = q.fmt;
+  if (SESSION.test) {   // 階段測驗: score only — no SRS, notebook, logs, encores or 再練一次
+    SESSION.stats[ok ? 'correct' : 'wrong']++;
+    SESSION.results.push({ key: q.key, ok, q, chosen: i });
+    if (SESSION.results.length === SESSION.entries.length) finishStageTest();
+    renderPractice(); speakAnswered(q);
+    return;
+  }
   if (!ok && !e.encore && !e.requeued) {   // kept so 「手滑，不算」 can put everything back
     const m0 = state.mistakes.find(x => (q.key && x.key === q.key) || x.prompt === (q.mistakePrompt || q.plainStem || ''));
     e.undo = { srs: q.key && state.srs[q.key] ? JSON.parse(JSON.stringify(state.srs[q.key])) : null, mistake: m0 ? JSON.parse(JSON.stringify(m0)) : null, mistakesLen: state.mistakes.length, today: Object.assign({}, state.today) };
@@ -3975,6 +3993,7 @@ function exitPractice() {
 }
 
 function renderSummary(view) {
+  if (SESSION.test) { renderStageSummary(view); return; }
   const s = SESSION;
   const n = s.results.length;
   const acc = n ? Math.round(s.stats.correct / n * 100) : 0;
@@ -4653,6 +4672,80 @@ function stageOfUnit(uid) { const s = STAGES.find(x => x.units.includes(uid)); r
 function currentStageId() { return inPreStage() ? 'pre' : stageOfUnit(state.currentUnit); }
 function nextUnitAfterStage(id) { const n = STAGES[stageIndex(id) + 1]; return n ? n.units[0] : 'm18'; }
 
+// ---- 階段測驗 ----
+/* 40 questions drawn from the stage's own items (unseen ones included — the test asks "do I know this stage"), options only, untimed,
+   nothing written to the schedule. 80% passes; the result goes to state.stageTests and unlocks 標記到這裡為止. */
+const STAGE_TEST_SIZE = 40;
+const STAGE_TEST_QUOTA = { pre: [['a', 12], ['v', 24], ['k', 4]], p1: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]], p2: [['g', 32], ['c', 8]], p3: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]] };
+function stageTestNeed(total) { return Math.ceil(total * 0.8); }
+function buildStageTest(id) {
+  const st = stageById(id); if (!st) return [];
+  const items = stageItems(id);
+  const pools = {};
+  items.forEach(x => { if (x.kind === 'g' && x.t === 'order') return; (pools[x.kind] = pools[x.kind] || []).push(x); });   // 排序題 has no options
+  const picked = []; const used = new Set();
+  const take = (list, n) => { let k = 0; for (const x of shuffle(list.slice())) { if (k >= n) break; if (used.has(x.key)) continue; used.add(x.key); picked.push(x); k++; } return k; };
+  // grammar spread evenly over the stage's units, the remainder to random units
+  const takeGrammar = (n) => {
+    const byUnit = st.units.map(u => (pools.g || []).filter(g => g.u === u)).filter(l => l.length);
+    if (!byUnit.length) return 0;
+    const each = Math.floor(n / byUnit.length); let got = 0;
+    byUnit.forEach(l => { got += take(l, each); });
+    shuffle(byUnit.slice()).forEach(l => { if (got < n) got += take(l, 1); });
+    if (got < n) got += take(pools.g || [], n - got);
+    return got;
+  };
+  const quota = STAGE_TEST_QUOTA[id] || [];
+  let short = 0;
+  quota.forEach(([kind, n]) => { const got = kind === 'g' ? takeGrammar(n) : take(pools[kind] || [], n); short += n - got; });
+  if (short) quota.forEach(([kind]) => { if (short > 0) short -= kind === 'g' ? takeGrammar(short) : take(pools[kind] || [], short); });   // a thin bank is topped up from the others
+  return shuffle(picked).slice(0, STAGE_TEST_SIZE);
+}
+function finishStageTest() {
+  const T = SESSION && SESSION.test; if (!T || T.result) return;
+  const total = SESSION.entries.length; const correct = SESSION.stats.correct;
+  const passed = correct >= stageTestNeed(total);
+  if (!state.stageTests || typeof state.stageTests !== 'object') state.stageTests = {};
+  state.stageTests[T.stage] = [{ date: todayStr(), correct, total, passed }].concat(state.stageTests[T.stage] || []).slice(0, 10);
+  recordAction('q', null, 'x');   // counts as practice today (模擬考・其他), not as word or grammar questions
+  T.result = { correct, total, passed };
+  saveState();
+}
+function renderStageSummary(view) {
+  const s = SESSION; const T = s.test; const st = stageById(T.stage);
+  const total = s.entries.length; const need = stageTestNeed(total); const r = T.result;
+  const byKind = {}; s.results.forEach(x => { const k = x.q.kind === 'c' ? 'g' : x.q.kind; const b = byKind[k] || (byKind[k] = { ok: 0, n: 0 }); b.n++; if (x.ok) b.ok++; });
+  const kinds = LOG_KINDS.filter(([k]) => byKind[k]).map(([k, name]) => `<span class="chip num">${name} ${byKind[k].ok}／${byKind[k].n}</span>`).join('');
+  const wrong = s.results.filter(x => !x.ok);
+  const wrongList = wrong.map(x => `<div class="list-item"><div class="grow"><div class="jp">${furi(tidyPrompt(x.q.mistakePrompt || ''))}</div><div class="small muted">正確：<span class="jp">${esc(jaPlain(x.q.options[x.q.answer].text))}</span>・你選：<span class="jp">${esc(jaPlain(x.q.options[x.chosen].text))}</span></div></div></div>`).join('');
+  const title = !r ? '未完成，不計紀錄' : r.passed ? `${r.correct}／${r.total}・通過` : `${r.correct}／${r.total}・未通過（需 ${need} 題）`;
+  const buttons = r && r.passed
+    ? `<button type="button" class="btn btn-primary" data-act="stage-mark" data-stage="${T.stage}">標記到這裡為止</button><button type="button" class="btn btn-ghost" data-act="close-summary">回課程頁</button>`
+    : `<button type="button" class="btn btn-primary" data-act="stage-again">再考一次</button><button type="button" class="btn" data-act="stage-practice">去練這個階段</button><button type="button" class="btn btn-ghost" data-act="close-summary">回課程頁</button>`;
+  view.innerHTML = `
+    <div class="pr-top"><button type="button" class="btn btn-ghost btn-icon" data-act="close-summary" aria-label="關閉">${icon('close')}</button><div class="grow"></div></div>
+    <div class="card">
+      <div class="small muted">${total} 題、不計時、不影響排程；答對 ${need} 題算通過。</div>
+      <div class="page-title mt-2">${title}</div>
+      <div class="page-sub">${esc(st ? st.title : '')}・階段測驗・作答 ${s.results.length} 題</div>
+      <div class="row-wrap mt-3">${kinds}</div>
+      ${r && r.passed ? '<div class="banner mt-4">通過了。可以把這個階段和之前的內容一次標成已學、熟悉或熟練。</div>' : ''}
+      <div class="row-wrap mt-4">${buttons}</div>
+    </div>
+    ${wrong.length ? `<div class="card"><div class="card-head"><div class="card-title">這次答錯的題目</div><span class="chip">${wrong.length}</span></div><div class="list">${wrongList}</div></div>` : ''}`;
+}
+Object.assign(ACTIONS, {
+  'stage-test': (el) => startSession('stage', { stage: el.dataset.stage }),
+  'stage-again': () => { const id = SESSION && SESSION.test ? SESSION.test.stage : null; if (!id) return; SESSION = null; startSession('stage', { stage: id }); },
+  'stage-practice': () => {
+    const id = SESSION && SESSION.test ? SESSION.test.stage : null; if (!id) return;
+    SESSION = null; document.body.classList.remove('practicing');
+    if (id === 'pre') { startSession('kana'); return; }
+    const st = stageById(id); const u = st.units.find(x => !state.completedUnits.includes(x)) || st.units[0];
+    startSession('unit', { unit: u, title: `${unitById(u).short}・單元練習` });
+  }
+});
+
 // ---- 72_course.js ----
 /* ==========================================================================
    Course: phases, units, lessons, unit item list
@@ -4661,7 +4754,7 @@ function stagePassed(id) { return ((state.stageTests || {})[id] || []).some(h =>
 // the row under each stage card: 階段測驗, its last result, and 標記到這裡為止 once the stage has been passed
 function stageFootHtml(id, extra = '') {
   const last = ((state.stageTests || {})[id] || [])[0];
-  const res = last ? `<span class="chip ${last.passed ? 'chip-ok' : ''} num">上次 ${last.correct}／${last.total}・${last.passed ? '通過' : '未通過'}</span>` : '';
+  const res = last ? `<span class="chip ${last.passed ? 'chip-ok' : ''} num">上次 ${Number(last.correct) || 0}／${Number(last.total) || 0}・${last.passed ? '通過' : '未通過'}</span>` : '';
   return `<div class="row-wrap mt-3 stage-foot">${extra}<button type="button" class="btn btn-sm" data-act="stage-test" data-stage="${id}">階段測驗</button>${res}${stagePassed(id) ? `<button type="button" class="btn btn-sm" data-act="stage-mark" data-stage="${id}">標記到這裡為止</button>` : ''}</div>`;
 }
 function renderCourse(view) {
