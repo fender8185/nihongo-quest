@@ -1495,6 +1495,93 @@ def test_only_due_reviews_feed_the_review_accuracy_and_a_slip_takes_its_mark_bac
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
     assert r == {'marks': [0], 'capped': 100, 'afterMiss': [0], 'afterSlip': []}, r
 
+# 1.0.18 離線語音: the installed app keeps the audio of what was learned and of the coming week on the device
+STANDALONE = """(() => { const mm = window.matchMedia.bind(window);
+  window.matchMedia = (q) => /display-mode:\\s*standalone/.test(q) ? { matches: true, media: q, onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return false; } } : mm(q); })();"""
+CLIP_FETCH = """(() => { const rf = window.fetch.bind(window); window.__clips = [];
+  window.fetch = (u, o) => /JPY_audio/.test(String(u)) ? (window.__clips.push(String(u)), Promise.resolve(new Response(new Uint8Array([7]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } }))) : rf(u, o); })();"""
+
+def test_offline_audio_keeps_what_was_learned_and_the_next_week_of_new_items(b):
+    js = """(async () => { const t = todayStr(); const rec = (due) => ({ b: 1, due, n: 1, ok: 1, ng: 0, s: 3, d: 5, last: addDays(t, -1), intro: addDays(t, -1) });
+      state.stage = 'main'; state.currentUnit = 'm2'; state.settings.loadCap = 100; state.srs = {}; state.completedUnits = [];
+      state.srs['v:n5a-001'] = rec(addDays(t, 20)); state.srs['g:gd32'] = rec(t); DAILY_CACHE = null;
+      const fresh = (items, kind) => items.filter(x => x.kind === kind && !state.srs[x.key]).length;
+      const items = audioPrefetchItems(); const keys = items.map(x => x.key);
+      const texts = await audioPrefetchTexts(); const has = (text, lang) => texts.some(e => e.text === text && (e.lang || '') === (lang || ''));
+      const r = { met: [keys.indexOf('g:gd32'), keys.indexOf('v:n5a-001')], farG: keys.includes('g:gd_m18_02'),
+        v: fresh(items, 'v'), g: fresh(items, 'g'), k: fresh(items, 'k'), l: fresh(items, 'l'), a: items.filter(x => x.kind === 'a').length,
+        ex: has('今日は何曜日ですか。'), meaning: has('今天', 'zh'), exZh: has('今天星期幾？', 'zh'), lesson: has('昨日はとても暑かったです。') };
+      const kc = audioCollector(); kc.item(REG.byKey.get('k:月')); r.kanji = kc.list().filter(e => !e.lang).map(e => e.text).sort();
+      state.settings.loadCap = 50; r.v50 = fresh(audioPrefetchItems(), 'v');
+      state.stage = 'pre'; state.settings.loadCap = 100; state.srs = {}; DAILY_CACHE = null;
+      const pre = audioPrefetchItems(); r.pre = { m0: pre.filter(x => x.u === 'm0').length, l: fresh(pre, 'l') };
+      return JSON.stringify(r); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
+    r = json.loads(out[-1])
+    assert r['met'] == [0, 1] and not r['farG'], r   # met items lead, soonest due first; an unmet week-18 item stays on the server
+    assert (r['v'], r['g'], r['k'], r['l'], r['a']) == (56, 42, 21, 21, 142) and r['v50'] == 28, r   # 7 days × 8/6/3/3 new a day at 負荷上限 100 (words 7 × 4 at 50), all 142 kana
+    assert r['ex'] and r['meaning'] and r['exZh'] and r['lesson'], r   # a word's Japanese and Chinese clips; the current unit's lesson examples
+    assert r['kanji'] == ['げつようび', 'しがつ', 'まいつき'], r['kanji']   # a reading question picks any example word of the kanji at random: all of them
+    assert r['pre'] == {'m0': 20, 'l': 0}, r['pre']   # 入門: the 20 week-0 sentences, no listening yet
+
+def test_offline_audio_fills_the_cache_skipping_stored_and_missing_clips_and_stops_offline(b):
+    js = """(async () => { await caches.delete('nq-audio'); ttsConfig().engine = 'cloud'; cloudMisses.clear();
+      const sample = ['あ', 'い', 'う', 'え', 'お'].map(text => ({ text, gender: 'f', reading: '' })).concat([{ text: '今天', gender: '', reading: '', lang: 'zh' }]);
+      const keep = audioPrefetchTexts; audioPrefetchTexts = () => sample;
+      const base = cloudAudioBase(); const urls = await Promise.all(sample.map(x => cloudAudioPath(x.text, x.gender, x).then(p => `${base}/${p}`)));
+      const cache = await caches.open('nq-audio'); await cache.put(urls[0], new Response(new Uint8Array([1]), { headers: { 'Content-Type': 'audio/mpeg' } }));
+      const realFetch = window.fetch; const calls = [];
+      window.fetch = (u) => { calls.push(String(u)); return Promise.resolve(String(u) === urls[1] ? new Response('{"error":"not_found"}', { status: 400 }) : new Response(new Uint8Array([9, 9]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })); };
+      await audioPrefetch(); const first = { calls: calls.slice().sort(), stored: (await cache.keys()).map(r => r.url).sort(), status: audioPrefetchHtml() };
+      calls.length = 0; await audioPrefetch(); const second = calls.length;
+      await caches.delete('nq-audio'); cloudMisses.clear(); calls.length = 0;
+      window.fetch = (u) => { calls.push(String(u)); return Promise.reject(new TypeError('Failed to fetch')); };
+      await audioPrefetch(); const offline = calls.length; const offlineStatus = audioPrefetchHtml();
+      calls.length = 0; ttsConfig().engine = 'google_tts'; await audioPrefetch(); const otherEngine = calls.length;
+      ttsConfig().engine = 'cloud'; window.fetch = realFetch; audioPrefetchTexts = keep;
+      return JSON.stringify({ urls, first, second, offline, offlineStatus, otherEngine }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
+    r = json.loads(out[-1]); u = r['urls']
+    assert r['first']['calls'] == sorted(u[1:]), r['first']   # the clip already on the device is not asked for again
+    assert r['first']['stored'] == sorted([u[0]] + u[2:]), r['first']   # what came back is kept; the one missing on the server is not
+    assert r['second'] == 0, r   # stored clips and the known-missing one: nothing left to fetch
+    assert 1 <= r['offline'] <= 4 and r['otherEngine'] == 0, r   # offline: one failed request per worker (four), then it stops; other voice services fetch nothing ahead
+    assert '5 段' in r['first']['status'] and '存好' in r['first']['status'] and '0／6' in r['offlineStatus'], r   # settings › 語音 says whether the device is ready
+
+def test_installed_app_keeps_the_coming_audio_by_itself_and_again_when_back_online(b):
+    again = """(async () => { const first = __clips.length; const n = (await (await caches.open('nq-audio')).keys()).length;
+      await caches.delete('nq-audio'); __clips.length = 0; window.dispatchEvent(new Event('online'));
+      const settle = async () => { const t0 = Date.now(); while ((!__clips.length || AUDIO_PREFETCH.running) && Date.now() - t0 < 20000) await sleep(100); return __clips.length; };
+      const again = await settle();
+      // back in front: within half an hour of the last run nothing is scheduled; after longer the coming week is checked again
+      await caches.delete('nq-audio'); __clips.length = 0; document.dispatchEvent(new Event('visibilitychange')); const soon = AUDIO_PREFETCH.timer !== null;
+      AUDIO_PREFETCH.at = Date.now() - 31 * 60000; document.dispatchEvent(new Event('visibilitychange')); const later = await settle();
+      return JSON.stringify({ first, n, again, soon, later }); })()"""
+    out = b.run([("inject", STANDALONE), ("inject", CLIP_FETCH), ("nav", URL), ("wait", READY),
+        ("wait", "window.__clips.length > 100 && !AUDIO_PREFETCH.running"), ("eval", again)], timeout=90)
+    r = json.loads(out[-1])
+    assert r['first'] > 100 and r['n'] == r['first'] and r['again'] == r['first'], r   # every clip fetched once is kept; back online it all comes again
+    assert not r['soon'] and r['later'] == r['first'], r
+
+def test_a_browser_tab_does_not_download_audio_ahead_by_itself(b):
+    out = b.run([("inject", CLIP_FETCH), ("nav", URL), ("wait", READY),
+        ("eval", "(async () => { window.dispatchEvent(new Event('online')); await sleep(6000); return __clips.length; })()")], timeout=30)
+    assert out[-1] == 0, out[-1]
+
+def test_a_clip_not_on_the_device_while_offline_says_so(b):
+    js = """(async () => { ttsConfig().engine = 'cloud'; await caches.delete('nq-audio'); audioCache.clear(); cloudMisses.clear();
+      const seen = []; const t0 = toast; toast = (m) => seen.push(m); const rf = window.fetch; window.fetch = () => Promise.reject(new TypeError('Failed to fetch'));
+      const sb = speakBrowser; speakBrowser = () => Promise.resolve();
+      Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false }); ttsWarned = false; await speak('いぬ');
+      Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => true }); ttsWarned = false; await speak('ねこ');
+      delete navigator.onLine; toast = t0; window.fetch = rf; speakBrowser = sb;
+      return JSON.stringify(seen); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    seen = json.loads(out[-1])
+    assert len(seen) == 2 and '離線' in seen[0] and '還沒存' in seen[0], seen   # offline: the clip simply is not on this device yet
+    assert '無法使用' in seen[1] and '離線' not in seen[1], seen   # online but unreachable: the service itself is the problem
+
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -1517,7 +1604,9 @@ if __name__ == "__main__":
              test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box,
              test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_hides_kana_drills,
              test_a_missed_listening_or_reading_item_gets_no_retry_copy_in_the_session, test_settings_drop_the_switches_the_app_now_decides, test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off,
-             test_review_strength_follows_the_accuracy_of_recent_due_reviews, test_only_due_reviews_feed_the_review_accuracy_and_a_slip_takes_its_mark_back]
+             test_review_strength_follows_the_accuracy_of_recent_due_reviews, test_only_due_reviews_feed_the_review_accuracy_and_a_slip_takes_its_mark_back,
+             test_offline_audio_keeps_what_was_learned_and_the_next_week_of_new_items, test_offline_audio_fills_the_cache_skipping_stored_and_missing_clips_and_stops_offline,
+             test_installed_app_keeps_the_coming_audio_by_itself_and_again_when_back_online, test_a_browser_tab_does_not_download_audio_ahead_by_itself, test_a_clip_not_on_the_device_while_offline_says_so]
     failed = 0
     try:
         for t in tests:

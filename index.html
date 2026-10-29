@@ -934,12 +934,16 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.17';   // keep equal to the version in sw.js CACHE ('nq-v1.0.17'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.18';   // keep equal to the version in sw.js CACHE ('nq-v1.0.18'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.18', date: '2026-10-29', items: [
+    '離線語音：加到主畫面的 app 有網路時，會在背景把學過的題目、照排程接下來 7 天會出的新題目（日文和中文）和全部假名的語音存到這台裝置，飛航模式也能練習、聽一輪。開 app 幾秒後、網路恢復時、隔一陣子回到 app 時都會補；只抓還沒存的，斷網就停，下次接著抓。設定 › 語音會顯示存好了沒有。',
+    '離線時遇到還沒存到裝置的句子，提示改成「離線中…先用內建語音」。安裝說明原本叫你去不存在的「更多 › 離線下載」，已改正；「完全離線使用」的容量改成實際大小（日文約 220 MB、中文約 120 MB）。漢字的讀音題會隨機唸任一個例詞，現在每個例詞的讀音都算在要準備的音檔裡。'
+  ] },
   { v: '1.0.17', date: '2026-10-29', items: [
     '舊帳號（已經在第 1 週以後、沒考過入門測驗、入門內容還沒都學過）首頁會出現一行「先做一次入門測驗」，不擋每天的練習，考完就消失。',
     '這種帳號考完由系統依各類答對率自動標記，不用再自己選：90% 以上算掌握，70% 以上算熟練，更低的假名與單字算記得（很快排進複習），第 0 週句型則排在下一個新文法之前先學。沒通過也不會退回入門，週次不變。'
@@ -1033,7 +1037,7 @@ const CHANGELOG = [
     '錯題本：答錯的題目自動收進來，可依類別篩選、排序或依文法考點分組直接練；「快速過一輪」翻卡用忘了／記得回寫排程；題目達到「熟悉」就移到已掌握。',
     '模擬考：依 JLPT 三個科目與大題順序出題，同一份不重複，結束換算 180 分制；最上面有考試倒數、單元進度和依考試日期算的新題額度建議（可一鍵套用）。',
     '學習分析：單字、文法與假名的總進度半圓儀表（三段熟練度、N5／N4 分界）、過去 7 天練習量、學習紀錄熱力圖與每日數據（各類題數、新學與升熟悉、正確率、完成單元）、每日練習量建議。',
-    '語音：預設「雲端音檔」，教材的一萬段日文（Google Neural2）與六千段中文（台灣華語）已預先生成，播到哪句抓哪句、聽過的留在裝置；設定 › 語音的進階區可一次下載全部（日文、中文各一顆鈕）。也可改用 Google Cloud TTS、Deepgram、VOICEVOX 或瀏覽器內建語音；朗讀時已知讀音的字會指定讀法。作答後自動朗讀、聽力題、即時應答與情境表達只用聽的選項都固定開啟。',
+    '語音：預設「雲端音檔」，教材約一萬一千段日文（Google Neural2）與六千七百段中文（台灣華語）已預先生成。加到主畫面的 app 有網路時會自動把學過的和接下來 7 天要學的語音存在裝置上，離線也能練（設定 › 語音看得到存好了沒有）；其他句子播到才下載，進階區可一次下載整套（日文、中文各一顆鈕）。也可改用 Google Cloud TTS、Deepgram、VOICEVOX 或瀏覽器內建語音；朗讀時已知讀音的字會指定讀法。作答後自動朗讀、聽力題、即時應答與情境表達只用聽的選項都固定開啟。',
     'AI 解析：Gemini（模型自動輪替、限額自動換、關閉思考步驟）、OpenAI 或本機 Ollama；同一題的解析快取在本機並標示模型。工具與 AI 頁有各服務的 API 申請說明。',
     '同步與資料：Email 驗證碼登入即可多裝置同步，衝突逐筆合併、不丟任何一方的進度；資料存在 IndexedDB，每天第一次開啟自動快照保留 7 天，可匯出／匯入備份，久未備份會提醒。',
     '安裝與介面：可加到主畫面當 app 用（首頁有分步驟說明，iPhone 可一鍵用 Safari 開啟），離線可用。深色／淺色／跟隨系統；振假名全部顯示／熟練的字不標／全部隱藏（F 鍵切換）；鍵盤快速鍵 1–4、Enter、R、T、Esc；版本紀錄在設定 › 外觀。'
@@ -7287,10 +7291,11 @@ function settingsSpeech() {
   const voiceOpts = [['', voices.length ? `自動（${voices[0].name}）` : '自動']].concat(voices.map(v => [v.voiceURI, `${v.name}${v.localService ? '' : '（線上）'}`]));
   let engine = '';
   if (c.engine === 'cloud') {
-    engine = `<div class="hint mt-2">教材的句子已經用 Google Neural2 預先生成放在雲端，播到哪句抓哪句，播過的會留在這個裝置上，離線也能聽；找不到的句子（自訂、AI 生成的題目）改用瀏覽器語音。語速用上面的滑桿調。</div>
+    engine = `<div class="hint mt-2">教材的句子已經用 Google Neural2 預先生成放在雲端。加到主畫面的 app 有網路時，會自動把學過的和接下來 7 天要學的語音存到這台裝置，離線也能練；其他句子播到才下載，播過的也會留著。找不到的句子（自訂、AI 生成的題目）改用瀏覽器語音。語速用上面的滑桿調。</div>
+      <div id="audioPrefetchBox" class="small mt-2">${audioPrefetchHtml()}</div>
       <details class="mt-3"><summary class="small muted" style="cursor:pointer">完全離線使用（進階，通常不需要）</summary>
-        <div class="hint mt-2"><b>不特別需要離線請不要按。</b>平常播到哪句抓哪句、播過的就留在裝置上，不會重複下載；這個按鈕會一次抓完全部約 200 MB，只適合長時間沒有網路（長途飛機、出國沒流量）的情況。可以中斷，再按會接著下載，已下載的會略過。</div>
-        <div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-all" data-kind="ja">下載日文音檔（約 200 MB）</button><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-all" data-kind="zh">下載中文音檔（約 50 MB）</button><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-stop">停止</button></div>
+        <div class="hint mt-2"><b>平常不用按：</b>學過的和接下來 7 天要學的語音會自動存好。這兩個按鈕是把整套課程（包括還沒學到的）一次抓完，日文約 220 MB、中文約 120 MB，只適合長時間沒有網路、又想翻還沒學的內容。可以中斷，再按會接著下載，已下載的會略過。</div>
+        <div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-all" data-kind="ja">下載日文音檔（約 220 MB）</button><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-all" data-kind="zh">下載中文音檔（約 120 MB）</button><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-stop">停止</button></div>
         <div id="cloudDlBox" class="small mt-2">${cloudDlHtml()}</div>
       </details>
       <details class="mt-4"><summary class="small muted" style="cursor:pointer">管理者：生成雲端音檔</summary>
@@ -8363,7 +8368,7 @@ async function speakLine(text, gender, token, opt) {
       }
     } catch (e) {
       console.warn('TTS engine failed, using browser voice', e);
-      if (!ttsWarned) { toast(`${(TTS_ENGINES.find(x => x[0] === cfg.engine) || [, '語音服務'])[1]} 無法使用，暫時改用瀏覽器語音。`, 3600); ttsWarned = true; }
+      if (!ttsWarned) { toast(cfg.engine === 'cloud' && navigator.onLine === false ? '離線中：這句的語音還沒存到這台裝置，先用內建語音。' : `${(TTS_ENGINES.find(x => x[0] === cfg.engine) || [, '語音服務'])[1]} 無法使用，暫時改用瀏覽器語音。`, 3600); ttsWarned = true; }
     }
   }
   if (token !== speechToken) return;
@@ -8400,10 +8405,12 @@ async function speakScript(script) {
   if (token === speechToken) speechProgEnd();
 }
 
-// ---- 雲端音檔 generator (設定 › 語音 › 管理者): every sentence the app can read aloud from built-in data, hashed like the player does ----
-function cloudAudioTexts() {
+// ---- The clips an item can play, named the way the player names them: the generator (設定 › 語音 › 管理者) makes them
+// all, 下載全部 fetches them all and 離線語音 fetches those of the items coming up ----
+function audioCollector() {
   const seen = new Map();
   const add = (raw, gender = '', reading = '') => { const text = ttsText(raw); if (!text) return; const g = gender === 'm' ? 'm' : 'f'; const k = `${g}|${reading}|${text}`; if (!seen.has(k)) seen.set(k, { text, gender: g, reading }); };
+  const addZh = (raw) => { const text = String(raw || '').replace(/\s+/g, ' ').trim(); if (!text) return; const k = `zh||${text}`; if (!seen.has(k)) seen.set(k, { text, gender: '', reading: '', lang: 'zh' }); };
   const addScript = (sc) => scriptParts(sc).forEach(p => add(p.text, p.gender));
   const addQ = (q) => {
     if (!q) return;
@@ -8412,64 +8419,141 @@ function cloudAudioTexts() {
     if (q.audio) addScript(q.audio);
     if (q.kind === 'l' || q.audioOptions) (q.options || []).forEach(o => add(jaPlain(o.text)));   // listening replies are played per option
   };
-  REG.vocab.filter(v => v.builtin).forEach(v => {
-    const w = jaPlain(v.w); const pin = v.r && !HAS_KANJI.test(v.r) && v.r !== w ? v.r : '';
-    add(w, '', pin); add(w); if (v.r) add(v.r);   // the question (reading pinned), the list button, the flashcard reading
-    if (v.ex) add(exPlain(v.ex)); if (v.ex2) add(exPlain(v.ex2));
-  });
-  REG.kana.forEach(x => add(x.ch));   // a tapped kana in the 五十音表 and 聽音選字 play one kana
-  REG.grammar.forEach(g => {
-    const fmts = (g.t || 'choice') === 'choice' && g.op ? grammarFormats(g, (g.op || []).map(parenReadingToBracket), parenReadingToBracket(g.a)) : [];
-    (fmts.length ? fmts.map(f => makeGrammarQuestion(g, { forceFmt: f })) : [makeQuestion(g, {})]).forEach(addQ);
-  });
-  REG.kanji.forEach(k => addQ(makeQuestion(k, {})));
-  REG.listen.forEach(it => addQ(makeQuestion(it, {})));
-  REG.read.forEach(it => addQ(makeQuestion(it, {})));
-  (DATA.EXAM || []).forEach(x => { if (x.speak) add(x.speak); if (x.script) addScript(x.script); if (x.line) addScript(x.line); if (/^S3/.test(String(x.m))) { if (x.q) add(x.q); (x.op || []).forEach(o => add(o)); } });
-  Object.values(DATA.LESSONS || {}).forEach(L => (L.sections || []).forEach(sec => (sec.ex || []).forEach(x => { if (x && x.jp) add(x.jp); })));
-  const addZh = (raw) => { const text = String(raw || '').replace(/\s+/g, ' ').trim(); if (!text) return; const k = `zh||${text}`; if (!seen.has(k)) seen.set(k, { text, gender: '', reading: '', lang: 'zh' }); };
-  REG.vocab.filter(v => v.builtin).forEach(v => { addZh(v.m); addZh(v.exZh); addZh(v.exZh2); });
-  REG.grammar.forEach(g => addZh(g.zh));
-  REG.kanji.forEach(k => { addZh(k.m); (k.ex || []).forEach(x => addZh(x[2])); });
-  cloudMissList().forEach(m => add(m.text, m.gender, m.reading || ''));
-  return [...seen.values()];
+  // one item: its Japanese clips and the Chinese ones 聽一輪 reads (meanings, translations, kanji glosses)
+  const item = (x) => {
+    if (x.kind === 'v') {
+      if (!x.builtin) return;
+      const w = jaPlain(x.w); const pin = x.r && !HAS_KANJI.test(x.r) && x.r !== w ? x.r : '';
+      add(w, '', pin); add(w); if (x.r) add(x.r);   // the question (reading pinned), the list button, the flashcard reading
+      if (x.ex) add(exPlain(x.ex)); if (x.ex2) add(exPlain(x.ex2));
+      addZh(x.m); addZh(x.exZh); addZh(x.exZh2);
+    } else if (x.kind === 'a') add(x.ch);   // a tapped kana in the 五十音表 and 聽音選字 play one kana
+    else if (x.kind === 'g') {
+      const fmts = (x.t || 'choice') === 'choice' && x.op ? grammarFormats(x, (x.op || []).map(parenReadingToBracket), parenReadingToBracket(x.a)) : [];
+      (fmts.length ? fmts.map(f => makeGrammarQuestion(x, { forceFmt: f })) : [makeQuestion(x, {})]).forEach(addQ);
+      addZh(x.zh);
+    } else if (x.kind === 'k') { addQ(makeQuestion(x, {})); (x.ex || []).forEach(e => add(e[1])); addZh(x.m); (x.ex || []).forEach(e => addZh(e[2])); }   // a reading question reads any of the example words
+    else if (x.kind === 'l' || x.kind === 'r') addQ(makeQuestion(x, {}));
+  };
+  const lesson = (uid) => { const L = (DATA.LESSONS || {})[uid]; ((L && L.sections) || []).forEach(sec => (sec.ex || []).forEach(x => { if (x && x.jp) add(x.jp); })); };
+  return { add, addScript, item, lesson, list: () => [...seen.values()] };
+}
+// every sentence the app can read aloud from built-in data
+function cloudAudioTexts() {
+  const c = audioCollector();
+  [REG.vocab, REG.kana, REG.grammar, REG.kanji, REG.listen, REG.read].forEach(list => list.forEach(c.item));
+  (DATA.EXAM || []).forEach(x => { if (x.speak) c.add(x.speak); if (x.script) c.addScript(x.script); if (x.line) c.addScript(x.line); if (/^S3/.test(String(x.m))) { if (x.q) c.add(x.q); (x.op || []).forEach(o => c.add(o)); } });
+  Object.keys(DATA.LESSONS || {}).forEach(c.lesson);
+  cloudMissList().forEach(m => c.add(m.text, m.gender, m.reading || ''));
+  return c.list();
+}
+// the distinct file paths of a clip list, hashed a slice at a time so the page stays responsive
+async function clipPaths(list) {
+  const out = [];
+  for (let i = 0; i < list.length; i += 200) out.push(...await Promise.all(list.slice(i, i + 200).map(x => cloudAudioPath(x.text, x.gender, { reading: x.reading || '', lang: x.lang || '' }))));
+  return [...new Set(out)];
+}
+// Fetch into the service worker's clip cache (sw.js AUDIO_CACHE) the clips of `paths` it lacks, `workers` at a time. `run`
+// counts have/done/missing/failed; `run.stop` ends it early, and a lost network (or a full disk) sets it.
+async function fillAudioCache(paths, run, workers) {
+  const cache = await caches.open('nq-audio');
+  const base = cloudAudioBase();
+  const stored = new Set((await cache.keys()).map(r => r.url));
+  const todo = paths.filter(p => !stored.has(`${base}/${p}`));
+  run.total = paths.length; run.have = paths.length - todo.length;
+  if (run.onProgress) run.onProgress();
+  let i = 0;
+  const worker = async () => {
+    while (i < todo.length && !run.stop) {
+      const p = todo[i++]; const url = `${base}/${p}`;
+      try {
+        const r = await fetch(url);
+        if (r.ok) { await cache.put(url, r); run.done++; }
+        else if (r.status === 400 || r.status === 404) { run.missing++; cloudMisses.add(p); }   // not generated yet: the player goes straight to the device voice
+        else run.failed++;
+      } catch (e) { run.failed++; if (/Failed to fetch|NetworkError|Load failed/i.test(String(e && e.message)) || (e && e.name === 'QuotaExceededError')) run.stop = true; }
+      if (run.onProgress && (run.done + run.missing + run.failed) % 20 === 0) run.onProgress();
+    }
+  };
+  await Promise.all(Array.from({ length: workers }, worker));
 }
 // ---- 下載全部音檔: every clip into the service worker's audio cache, for learners who want the whole course offline ----
 let CLOUD_DL = null;
 function cloudDlHtml() {
   const d = CLOUD_DL; if (!d) return '';
-  const left = Math.max(0, d.total - d.have - d.done - d.failed);
-  return `<div><b>${d.kind === 'zh' ? '中文' : '日文'}：${esc(d.phase)}</b>${d.total ? `・共 ${d.total} 段，已在裝置上 ${d.have}，這次下載 ${d.done}${d.failed ? `，失敗 ${d.failed}` : ''}，剩 ${left}` : ''}</div>`;
+  const bad = d.failed + d.missing; const left = Math.max(0, d.total - d.have - d.done - bad);
+  return `<div><b>${d.kind === 'zh' ? '中文' : '日文'}：${esc(d.phase)}</b>${d.total ? `・共 ${d.total} 段，已在裝置上 ${d.have}，這次下載 ${d.done}${bad ? `，失敗 ${bad}` : ''}，剩 ${left}` : ''}</div>`;
 }
 function cloudDlRender() { const box = document.getElementById('cloudDlBox'); if (box) box.innerHTML = cloudDlHtml(); }
-async function cloudDownloadAll(kind = 'ja') {   // 'ja': the Japanese clips (~200 MB); 'zh': the Chinese meanings and translations (~50 MB)
+async function cloudDownloadAll(kind = 'ja') {   // 'ja': the Japanese clips (~220 MB); 'zh': the Chinese meanings and translations (~120 MB)
   if (CLOUD_DL && CLOUD_DL.running) return;
   if (!window.caches) { toast('這個瀏覽器不支援離線快取。'); return; }
-  CLOUD_DL = { running: true, stop: false, kind, phase: '整理清單', total: 0, have: 0, done: 0, failed: 0 };
+  CLOUD_DL = { running: true, stop: false, kind, phase: '整理清單', total: 0, have: 0, done: 0, failed: 0, missing: 0, onProgress: cloudDlRender };
   cloudDlRender();
   try {
-    const list = cloudAudioTexts().filter(x => (x.lang === 'zh') === (kind === 'zh'));
-    const paths = [...new Set(await Promise.all(list.map(x => cloudAudioPath(x.text, x.gender, { reading: x.reading || '', lang: x.lang || '' }))))];
-    const cache = await caches.open('nq-audio');   // the service worker's clip cache (sw.js AUDIO_CACHE)
+    const paths = await clipPaths(cloudAudioTexts().filter(x => (x.lang === 'zh') === (kind === 'zh')));
     try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) { /* ignore */ }
-    const base = cloudAudioBase(); const todo = [];
-    for (const p of paths) { if (CLOUD_DL.stop) break; if (await cache.match(`${base}/${p}`)) CLOUD_DL.have++; else todo.push(p); }
-    CLOUD_DL.total = paths.length; CLOUD_DL.phase = '下載中'; cloudDlRender();
-    let i = 0;
-    const worker = async () => {
-      while (i < todo.length && !CLOUD_DL.stop) {
-        const p = todo[i++]; const url = `${base}/${p}`;
-        try { const r = await fetch(url); if (!r.ok) throw new Error(String(r.status)); await cache.put(url, r); CLOUD_DL.done++; }
-        catch (e) { CLOUD_DL.failed++; if (/Failed to fetch|NetworkError|Load failed/i.test(String(e && e.message))) CLOUD_DL.stop = true; }   // offline: stop instead of failing every file
-        if ((CLOUD_DL.done + CLOUD_DL.failed) % 20 === 0) cloudDlRender();
-      }
-    };
-    await Promise.all([0, 1, 2, 3, 4, 5].map(worker));
-    CLOUD_DL.phase = CLOUD_DL.stop ? '已停止（再按會接著下載）' : (CLOUD_DL.failed ? '完成（有些句子雲端還沒有）' : '完成，全部音檔都在裝置上了');
+    CLOUD_DL.phase = '下載中';
+    await fillAudioCache(paths, CLOUD_DL, 6);
+    CLOUD_DL.phase = CLOUD_DL.stop ? '已停止（再按會接著下載）' : (CLOUD_DL.failed || CLOUD_DL.missing ? '完成（有些句子雲端還沒有）' : '完成，全部音檔都在裝置上了');
   } catch (e) { CLOUD_DL.phase = `失敗：${(e && e.message) || e}`; }
   CLOUD_DL.running = false;
   cloudDlRender();
 }
+// ---- 離線語音: the installed app keeps on this device the clips of every item already met (soonest due first), of the new
+// items the coming week brings (a week of each kind's daily quota), of all kana and of the current unit's lesson examples,
+// so practice and 聽一輪 work offline. Only what is missing is fetched, four at a time (a clip the CDN has not cached yet
+// takes about half a second). A page in a browser tab does not do this: there clips are fetched as they are played. ----
+const AUDIO_AHEAD_DAYS = 7;
+const AUDIO_PREFETCH = { running: false, again: false, timer: null, at: 0, stop: false, total: 0, have: 0, done: 0, missing: 0, failed: 0, onProgress: () => audioPrefetchRender() };
+function audioPrefetchItems() {
+  const ahead = (kind) => AUDIO_AHEAD_DAYS * newQuota(kind);
+  const fresh = (x) => !state.srs[x.key];
+  const pre = inPreStage(); const curIdx = unitOrder(state.currentUnit); const n4Open = n4WordsOpen();
+  const met = [...REG.byKey.values()].filter(x => state.srs[x.key]).sort(byDue);
+  const nextUnit = DATA.UNITS[curIdx + 1];
+  const grammar = pre ? unitNewOrder('m0') : [...new Set(newGrammarCandidates().concat(nextUnit ? unitNewOrder(nextUnit.id) : []))];   // the next unit's first items once the current one runs out
+  const coming = [].concat(
+    pre ? REG.kana : [],   // 入門 learns kana now; later they are only tapped in the 五十音表
+    newVocabCandidates(REG.vocab.filter(v => vocabEligibleForDaily(v, n4Open)), n4Open).slice(0, ahead('v')),
+    grammar.slice(0, ahead('g')),
+    newKanjiCandidates(n5KanjiLeft() === 0).slice(0, ahead('k')),
+    pre ? [] : listenReachable(curIdx).filter(fresh).slice(0, ahead('l')),   // 入門 has no new listening
+    pre ? [] : REG.kana);
+  return [...new Map(met.concat(coming).filter(x => x.builtin).map(x => [x.key, x])).values()];   // own cards have no clips on the server
+}
+async function audioPrefetchTexts() {
+  const c = audioCollector(); const items = audioPrefetchItems();
+  for (let i = 0; i < items.length; i++) { c.item(items[i]); if (i % 25 === 24) await sleep(0); }   // a slice at a time: building the questions takes a while
+  c.lesson(inPreStage() ? 'm0' : state.currentUnit);
+  return c.list();
+}
+async function audioPrefetch() {
+  const run = AUDIO_PREFETCH;
+  if (run.running) { run.again = true; return; }
+  if (ttsConfig().engine !== 'cloud' || !window.caches) return;
+  Object.assign(run, { running: true, again: false, stop: false, total: 0, have: 0, done: 0, missing: 0, failed: 0 });
+  audioPrefetchRender();
+  try {
+    const paths = (await clipPaths(await audioPrefetchTexts())).filter(p => !cloudMisses.has(p));   // a clip found missing this session is not asked for again
+    await fillAudioCache(paths, run, 4);
+  } catch (e) { console.warn('offline audio prefetch failed', e); }
+  run.running = false; run.at = Date.now();
+  audioPrefetchRender();
+  if (run.again) { run.again = false; audioPrefetchSoon(); }
+}
+function audioPrefetchSoon(ms = 4000) {
+  if (AUDIO_PREFETCH.timer || !installInfo().standalone) return;
+  AUDIO_PREFETCH.timer = setTimeout(() => { AUDIO_PREFETCH.timer = null; audioPrefetch(); }, ms);
+}
+function audioPrefetchHtml() {
+  const r = AUDIO_PREFETCH;
+  if (!r.running && !r.at) return installInfo().standalone ? '' : '加到主畫面當 app 用，才會自動存離線用的語音。';
+  const stored = r.have + r.done; const want = r.total - r.missing;
+  if (r.running) return r.total ? `離線語音：正在存 ${stored}／${want} 段` : '離線語音：整理中…';
+  return stored >= want ? `離線語音：學過的和接下來 ${AUDIO_AHEAD_DAYS} 天要學的 ${stored} 段都存好了` : `離線語音：已存 ${stored}／${want} 段，有網路時會接著存`;
+}
+function audioPrefetchRender() { const box = document.getElementById('audioPrefetchBox'); if (box) box.innerHTML = audioPrefetchHtml(); }
 let CLOUD_GEN = null;
 function cloudGenHtml() {
   const g = CLOUD_GEN; if (!g) return '';
@@ -9540,7 +9624,7 @@ function installSteps(info) {
 function installGuideHtml(info = installInfo()) {
   const g = installSteps(info);
   return `<div class="install-guide">
-    ${info.standalone ? '<p class="small">你現在就是從安裝好的 app 開的。' : '<p class="small">安裝後它就像一般 app：從主畫面開、全螢幕沒有網址列、首頁剛好一頁、離線也能用（雲端音檔要先到「更多 › 離線下載」抓下來）。'}</p>
+    ${info.standalone ? '<p class="small">你現在就是從安裝好的 app 開的。' : '<p class="small">安裝後它就像一般 app：從主畫面開、全螢幕沒有網址列、首頁剛好一頁、離線也能用（學過的和接下來 7 天要學的語音會自動存在裝置上）。'}</p>
     <div class="label mt-2">${g.title}</div>
     <ol class="small mt-1">${g.steps.map(x => `<li>${x}</li>`).join('')}</ol>
     ${g.note ? `<p class="hint">${g.note}</p>` : ''}
@@ -9816,6 +9900,7 @@ const Sync = {
       Object.assign(this.meta, { pendingSync: false, lastSyncedAt: new Date().toISOString(), lastPulledUpdatedAt: data.updated_at, everSynced: true });
       await Store.set('meta', this.meta);
       buildRegistry(); applyTheme(); applyFurigana();
+      audioPrefetchSoon();   // progress made on another device may bring items this one has no audio for
       if (!modalOpen()) route();
       toast(conflict ? '另一台裝置同時更新了進度，已把兩邊的紀錄合併；合併前的本機版本存成快照（設定 › 資料）。' : '已從雲端更新進度', conflict ? 7000 : undefined);
       this.lastError = null; this.setStatus('idle');
@@ -9860,7 +9945,8 @@ async function init() {
     if (mq.addEventListener) mq.addEventListener('change', () => { if (state.settings.theme === 'auto') applyTheme(); });
   }
   setInterval(checkDayRollover, 60000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkDayRollover(); });
+  // a phone keeps the installed app suspended for days: back in front after a while, the coming week has moved on
+  document.addEventListener('visibilitychange', () => { if (document.hidden) return; checkDayRollover(); if (Date.now() - AUDIO_PREFETCH.at > 30 * 60000) audioPrefetchSoon(); });
   // another tab saved newer progress: pick it up unless this tab is in the middle of something
   if (STATE_CHANNEL) STATE_CHANNEL.onmessage = async (e) => {
     if (!e.data || e.data.type !== 'saved' || SESSION || EXAM) return;
@@ -9874,6 +9960,8 @@ async function init() {
   requestPersistence();
   dailySnapshot();
   registerServiceWorker();
+  audioPrefetchSoon();   // 離線語音: a few seconds after opening, and again whenever the network comes back
+  window.addEventListener('online', () => audioPrefetchSoon(1000));
   // cloud sync starts after first paint: restoring an expired session can block on the network for a long time offline
   Sync.init().catch((e) => { console.warn('sync init failed', e); Sync.client = null; Sync.setStatus('off'); });
 }
