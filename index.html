@@ -4629,6 +4629,29 @@ Object.assign(ACTIONS, {
   }
 });
 
+// ---- 階段（四個）與階段項目 ----
+/* 入門 + DATA.PHASES 的三個階段。文法與變化練習照單元歸屬；單字、漢字、聽力、閱讀照等級歸到該等級的最後一個階段
+   (PRE_N5 → 入門, N5 → 第一階段, N4 → 第三階段)；入門另含全部假名。階段測驗與「標記到這裡為止」都以這個劃分為準。 */
+const STAGES = [{ id: 'pre', title: '入門', sub: '假名與入門單字，不算週數，單字都看過就進第 1 週', units: [], lv: 'PRE_N5' }].concat(
+  DATA.PHASES.map((ph, i) => ({ id: 'p' + (i + 1), title: ph.title, sub: ph.span, units: DATA.UNITS.filter(u => u.ph === ph.id).map(u => u.id), lv: ['N5', null, 'N4'][i] || null })));
+function stageById(id) { return STAGES.find(s => s.id === id); }
+function stageIndex(id) { return Math.max(0, STAGES.findIndex(s => s.id === id)); }
+function stagesUpTo(id) { return STAGES.slice(0, stageIndex(id) + 1); }
+function stageItems(id) {
+  const s = stageById(id); if (!s) return [];
+  const inUnits = (x) => s.units.includes(x.u);
+  const out = REG.grammar.filter(inUnits).concat(REG.drills.filter(inUnits));
+  if (s.lv) {
+    REG.vocab.forEach(v => { if (v.builtin && v.lv === s.lv) out.push(v); });
+    [REG.kanji, REG.listen, REG.read].forEach(list => list.forEach(x => { if (x.lv === s.lv) out.push(x); }));
+  }
+  if (id === 'pre') out.push(...REG.kana);
+  return out;
+}
+function stageOfUnit(uid) { const s = STAGES.find(x => x.units.includes(uid)); return s ? s.id : 'p1'; }
+function currentStageId() { return inPreStage() ? 'pre' : stageOfUnit(state.currentUnit); }
+function nextUnitAfterStage(id) { const n = STAGES[stageIndex(id) + 1]; return n ? n.units[0] : 'm18'; }
+
 // ---- 72_course.js ----
 /* ==========================================================================
    Course: phases, units, lessons, unit item list
