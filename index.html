@@ -1545,6 +1545,7 @@ function srsPreview(key, grade) {
 
 // correct: true/false from a quiz, or opt.grade again/hard/good/easy from a flashcard
 function srsAnswer(key, correct, opt = {}) {
+  LAST_BULK_MARK = null;   // practice after a 標記到這裡為止 makes its snapshot stale
   const t = todayStr();
   let r = state.srs[key];
   const isNew = !r;
@@ -2897,7 +2898,7 @@ function makeKanaQuestion(item, ctx = {}) {
     q.fmt = 'a-read'; q.instr = '這個假名怎麼讀？';
     q.stemHtml = `<span class="kanji-big jp">${esc(item.ch)}</span>`; q.stemClass = 'word';
     finalizeOptions(q, item.roma, wrongs, false);
-    q.audio = item.ch;   // spoken once when shown: the first look teaches the sound
+    if (!ctx.choiceOnly) q.audio = item.ch;   // spoken once when shown: the first look teaches the sound (not in a 階段測驗: the sound is the answer)
   } else if (fmt === 'a-sound') {
     q.fmt = 'a-sound'; q.instr = '聽到的是哪一個？';
     q.stemHtml = playButton('再聽一次');
@@ -3891,7 +3892,7 @@ function feedbackHtml(e) {
   const cur = q.key ? state.srs[q.key] : null;
   const srsInfo = e.srs ? `<span>${srsDots(e.srs.rec.b)}</span><span>${srsLevelLabel(e.srs.rec, q.key)}・${dueLabel(e.srs.rec)}</span>`
     : e.encore && cur ? `<span>${srsDots(cur.b)}</span><span>${srsLevelLabel(cur, q.key)}・這次不影響排程</span>` : '';
-  const mistake = !ok && q.kind !== 'x' && !e.slip ? '<span>已加入錯題本</span>' : '';
+  const mistake = !ok && q.kind !== 'x' && !e.slip && !SESSION.test ? '<span>已加入錯題本</span>' : '';
   const slip = e.slip ? '<span class="chip">手滑，不算</span>' : (!ok && e.undo && !SESSION.test ? '<button type="button" class="btn btn-sm btn-ghost" data-act="slip" title="選錯鍵、看錯行：不進錯題本，排程維持原狀">手滑，不算</button>' : '');
   const mNote = e.mistakeDone ? '<span class="chip chip-ok">已移出錯題本</span>' : '';
   // a spelled or typed conjugation: show what was produced, the first wrong character marked
@@ -4757,12 +4758,17 @@ Object.assign(ACTIONS, {
    Only upgrades: an item already at or above the chosen level is left alone. Due dates are spread over a window so the
    reviews do not all land on one day. One undo is kept in memory (LAST_BULK_MARK) until the page reloads. */
 const BULK_LEVELS = {
-  seen: { name: '已學', hint: '看過，很快會排進複習（分散在未來兩週）。', due: [1, 14] },
-  learned: { name: '熟悉', hint: '約一到兩週後開始複習。', due: [5, 14] },
-  known: { name: '熟練', hint: '等同「我會了」：直接算熟練，五到八週後各確認一次；答錯就回到正常排程。會清掉這些項目的錯題。', due: [35, 56] }
+  seen: { name: '已學', hint: '看過，很快會排進複習（從明天起分散，每天最多約一半的負荷上限）。', due: [1, 14], lr: [30, 180] },
+  learned: { name: '熟悉', hint: '約一到兩週後開始複習（分散排，每天最多約一半的負荷上限）。', due: [5, 14], lr: [90, 270] },
+  known: { name: '熟練', hint: '等同「我會了」：直接算熟練，五到八週後各確認一次；答錯就回到正常排程。會清掉這些項目的錯題。', due: [35, 56], lr: [180, 365] }
 };
 let LAST_BULK_MARK = null;
-function spreadDue(i, level) { const [lo, hi] = BULK_LEVELS[level].due; return lo + (i % (hi - lo + 1)); }
+// reviews a day a bulk mark may schedule: half the load cap, so the marked items never fill a day by themselves
+function bulkDailyBudget() { return Math.max(10, Math.round((Number(state.settings.loadCap) || 100) / 2)); }
+// the i-th of n marked items: the level's window, widened when n would put more than the budget on a day (count = n / budget days)
+function spreadDue(i, level, n = 0) { const [lo, hi] = BULK_LEVELS[level].due; const days = Math.max(hi - lo + 1, Math.ceil((n || 0) / bulkDailyBudget())); return lo + (i % days); }
+// 聽力／閱讀 are capped per day and come back on the 30／90／180 ladder, so they get a later, wider window of their own
+function spreadDueLR(j, level, n = 0) { const [lo, hi] = BULK_LEVELS[level].lr; const days = Math.max(hi - lo + 1, Math.ceil((n || 0) / bulkDailyBudget())); return lo + (j % days); }
 function bulkLevelOf(rec, key) {   // the level an item already has, in the same three steps
   if (!rec) return -1;
   if (srsLevelLabel(rec, key) === '已熟練') return 2;
@@ -4780,18 +4786,23 @@ function bulkMark(stageId, level) {
   const t = todayStr();
   const snap = { stageId, level, changed: targets.length, srs: {}, mistakes: JSON.parse(JSON.stringify(state.mistakes)), completedUnits: state.completedUnits.slice(), lessonSeen: (state.lessonSeen || []).slice(),
     currentUnit: state.currentUnit, stage: state.stage, introSeen: state.introSeen, kanaKnown: state.kanaKnown };
-  targets.forEach((x, i) => {
+  const isLR = (x) => x.kind === 'l' || x.kind === 'r';
+  const core = targets.filter(x => !isLR(x)); const lr = targets.filter(isLR);
+  const mark = (x, dueDays) => {
     const key = x.key;
     snap.srs[key] = state.srs[key] ? JSON.parse(JSON.stringify(state.srs[key])) : null;
-    if (level === 'known') { markKnown(key, false, spreadDue(i, 'known')); return; }
+    if (level === 'known') { markKnown(key, false, dueDays); return; }
     let r = state.srs[key];
     if (!r) r = state.srs[key] = { b: 0, due: t, n: 0, ok: 0, ng: 0, st: 0, last: null, lapse: 0, intro: t, f: {} };
     ensureFsrs(r);
     r.s = Math.max(r.s || 0, level === 'seen' ? LEVEL_FROM_S[0] : LEVEL_FROM_S[SRS_LEARNED - 1]);
     r.b = levelFromS(r.s);
     if (!r.lrn) r.lrn = t;
-    r.due = addDays(t, spreadDue(i, level));
-  });
+    r.last = t;   // so the first real review measures elapsed time from today (null would freeze FSRS growth)
+    r.due = addDays(t, dueDays);
+  };
+  core.forEach((x, i) => mark(x, spreadDue(i, level, core.length)));
+  lr.forEach((x, j) => mark(x, spreadDueLR(j, level, lr.length)));
   const units = stagesUpTo(stageId).flatMap(s => s.units);
   units.forEach(u => { if (!state.completedUnits.includes(u)) state.completedUnits.push(u); });
   const lessons = new Set(state.lessonSeen || []);
@@ -5603,7 +5614,7 @@ Object.assign(ACTIONS, {
   'vocab-known-all': () => {
     const keys = vocabListFiltered(currentRoute().params).filter(v => !(state.srs[v.key] && state.srs[v.key].known)).map(v => v.key);
     if (!keys.length) return;
-    const prev = {}; keys.forEach((k, i) => { prev[k] = state.srs[k] ? JSON.parse(JSON.stringify(state.srs[k])) : null; markKnown(k, false, spreadDue(i, 'known')); });
+    const prev = {}; keys.forEach((k, i) => { prev[k] = state.srs[k] ? JSON.parse(JSON.stringify(state.srs[k])) : null; markKnown(k, false, spreadDue(i, 'known', keys.length)); });
     saveState(); LAST_BULK_KNOWN = { keys, prev };
     toast(`已把 ${keys.length} 個字標成我會了，約五到八週後再各確認一次`); route();
   },
@@ -7284,6 +7295,7 @@ function isLegacyBackup(o) { return o && !o.v && (Array.isArray(o.grammarDrills)
 function applyImportedState(next, msg) {
   const keepAi = state.aiConfig; const keepTts = state.ttsConfig; const hadAi = isAiConfigured();
   state = normalizeState(next);
+  LAST_BULK_MARK = null;   // the snapshot belongs to the state that was replaced
   // a backup saved without keys should not wipe the keys already entered here
   if (hadAi && !isAiConfigured()) state.aiConfig = keepAi;
   if (keepTts && !(state.ttsConfig && TTS_SECRET_KEYS.some(k => state.ttsConfig[k]))) state.ttsConfig = Object.assign({}, state.ttsConfig || {}, Object.fromEntries(TTS_SECRET_KEYS.map(k => [k, keepTts[k] || ''])));
@@ -9686,7 +9698,7 @@ async function init() {
     if (!e.data || e.data.type !== 'saved' || SESSION || EXAM) return;
     const s = await Store.get('state');
     if (!s || s.updatedAt === state.updatedAt) return;
-    try { state = normalizeState(s); buildRegistry(); if (!modalOpen()) route(); } catch (err) { /* ignore */ }
+    try { state = normalizeState(s); LAST_BULK_MARK = null; buildRegistry(); if (!modalOpen()) route(); } catch (err) { /* ignore */ }
   };
   window.addEventListener('beforeunload', (e) => { if (EXAM && !EXAM.finished) { e.preventDefault(); e.returnValue = ''; } });
   if (!location.hash || location.hash === '#') history.replaceState(null, '', '#/today');

@@ -85,19 +85,19 @@ def test_stage_test_questions_are_all_choice(b):
 
 def test_stage_test_scores_without_touching_srs(b):
     js = """(() => { const before = JSON.stringify([state.srs, state.mistakes, state.statsFmt]); const log0 = JSON.stringify(logEntry()); state.stageTests = {};
-      startSession('stage', { stage: 'p1' }); const title = SESSION.title; const previews = SESSION.entries.filter(e => e.preview).length; let wrongAt = -1; var slip, known;
+      startSession('stage', { stage: 'p1' }); const title = SESSION.title; const previews = SESSION.entries.filter(e => e.preview).length; let wrongAt = -1; var slip, known, nb;
       for (let i = 0; i < 40; i++) { const e = currentEntry(); const right = i < 33; if (!right && wrongAt < 0) wrongAt = i; answerCurrent(right ? e.q.answer : (e.q.answer + 1) % e.q.options.length);
-        if (i === wrongAt) { slip = document.querySelector('[data-act="slip"]'); known = document.querySelector('[data-act="vocab-known"]'); } nextQuestion(); }
+        if (i === wrongAt) { slip = document.querySelector('[data-act="slip"]'); known = document.querySelector('[data-act="vocab-known"]'); nb = document.getElementById('view').textContent.includes('已加入錯題本'); } nextQuestion(); }
       const same = JSON.stringify([state.srs, state.mistakes, state.statsFmt]) === before; const e1 = logEntry(); const l0 = JSON.parse(log0);
       const h = state.stageTests.p1[0]; const view = document.getElementById('view').textContent;
       return JSON.stringify({ title, previews, same, x: (e1.kX || 0) - (l0.kX || 0), v: (e1.vocabCount || 0) - (l0.vocabCount || 0), g: (e1.grammarCount || 0) - (l0.grammarCount || 0),
         h: { correct: h.correct, total: h.total, passed: h.passed }, len: state.stageTests.p1.length, entries: SESSION.entries.length, slip: Boolean(slip), known: Boolean(known),
-        passText: view.includes('33／40・通過'), markBtn: Boolean(document.querySelector('[data-act="stage-mark"]')), need: stageTestNeed(40) }); })()"""
+        passText: view.includes('33／40・通過'), markBtn: Boolean(document.querySelector('[data-act="stage-mark"]')), need: stageTestNeed(40), nb }); })()"""
     r = json.loads(ev(b, js))
     assert r['title'] == '第一階段：N5 文法・階段測驗' and r['previews'] == 0 and r['same'], r
     assert r['x'] == 1 and r['v'] == 0 and r['g'] == 0 and r['entries'] == 40, r
     assert r['h'] == {'correct': 33, 'total': 40, 'passed': True} and r['len'] == 1 and r['need'] == 32, r
-    assert not r['slip'] and not r['known'] and r['passText'] and r['markBtn'], r
+    assert not r['slip'] and not r['known'] and not r['nb'] and r['passText'] and r['markBtn'], r
 
 def test_stage_test_fail_offers_retry_and_practice(b):
     js = """(() => { state.stageTests = {}; startSession('stage', { stage: 'pre' });
@@ -123,15 +123,16 @@ def test_bulk_mark_levels_and_side_effects(b):
     js = "(() => { " + RESET + """const t = todayStr(); const out = {};
       const n = bulkMarkTargets('p1', 'learned').length; const r1 = bulkMark('p1', 'learned');
       const items = stagesUpTo('p1').flatMap(s => stageItems(s.id)); const recs = items.map(x => state.srs[x.key]);
-      out.learned = { n, changed: r1.changed, allB3: recs.every(r => r && r.b === 3), dueMin: Math.min(...recs.map(r => daysBetween(t, r.due))), dueMax: Math.max(...recs.map(r => daysBetween(t, r.due))),
+      const core = items.filter(x => x.kind !== 'l' && x.kind !== 'r').map(x => state.srs[x.key]); const budget = bulkDailyBudget();
+      out.learned = { n, changed: r1.changed, allB3: recs.every(r => r && r.b === 3), dueMin: Math.min(...core.map(r => daysBetween(t, r.due))), dueMax: Math.max(...core.map(r => daysBetween(t, r.due))), expMax: 5 + Math.max(10, Math.ceil(core.length / budget)) - 1, lastSet: recs.every(r => r.last === t),
         units: state.completedUnits.slice(), cur: state.currentUnit, stage: state.stage, intro: state.introSeen, kana: state.kanaKnown, lessons: state.lessonSeen.filter(k => k.startsWith('m1:')).length > 0,
         n4Open: n4WordsOpen(), banner: (renderCourse(document.getElementById('view')), Boolean(document.querySelector('[data-act="bulk-mark-undo"]'))) };
-      const r2 = bulkMark('p1', 'known'); out.known = { changed: r2.changed, allKnown: items.every(x => state.srs[x.key].known === 1 && srsLevelLabel(state.srs[x.key], x.key) === '已熟練'), dueMin: Math.min(...items.map(x => daysBetween(t, state.srs[x.key].due))) };
+      const r2 = bulkMark('p1', 'known'); out.known = { changed: r2.changed, allKnown: items.every(x => state.srs[x.key].known === 1 && srsLevelLabel(state.srs[x.key], x.key) === '已熟練'), dueMin: Math.min(...items.filter(x => x.kind !== 'l' && x.kind !== 'r').map(x => daysBetween(t, state.srs[x.key].due))) };
       const r3 = bulkMark('p1', 'seen'); out.seenAfterKnown = { changed: r3.changed, stillKnown: items.every(x => state.srs[x.key].known === 1) };
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
     L = r['learned']
-    assert L['n'] > 500 and L['changed'] == L['n'] and L['allB3'] and L['dueMin'] == 5 and L['dueMax'] == 14, L
+    assert L['n'] > 500 and L['changed'] == L['n'] and L['allB3'] and L['dueMin'] == 5 and L['dueMax'] == L['expMax'] and L['lastSet'], L
     assert L['units'] == ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'] and L['cur'] == 'm7' and L['stage'] == 'main' and L['intro'] and L['kana'] and L['lessons'] and L['n4Open'] and L['banner'], L
     assert r['known']['changed'] > 0 and r['known']['allKnown'] and r['known']['dueMin'] == 35, r['known']
     assert r['seenAfterKnown'] == {'changed': 0, 'stillKnown': True}, r
@@ -139,13 +140,13 @@ def test_bulk_mark_levels_and_side_effects(b):
 def test_bulk_mark_never_downgrades_and_spreads_due(b):
     js = "(() => { " + RESET + """const t = todayStr(); const v = stageItems('pre').find(x => x.kind === 'v'); markKnown(v.key, false); state.currentUnit = 'm9';
       const custom = { id: 'u_test', w: 'テスト', r: 'てすと', m: '測試' }; state.vocab.push(custom); buildRegistry();
-      const r = bulkMark('p1', 'seen'); const byDay = {}; const fresh = Object.values(state.srs).filter(x => !x.known); fresh.forEach(x => { const d = daysBetween(t, x.due); byDay[d] = (byDay[d] || 0) + 1; });
-      const n = fresh.length; const maxDay = Math.max(...Object.values(byDay));
-      const out = { changed: r.changed, known: state.srs[v.key].known, cur: state.currentUnit, custom: Boolean(state.srs['v:u_test']), maxDay, cap: Math.ceil(n / 14) + 1, days: Object.keys(byDay).map(Number).sort((a, b) => a - b) };
+      const r = bulkMark('p1', 'seen'); const byDay = {}; const fresh = Object.entries(state.srs).filter(([k, x]) => !x.known && !/^[lr]:/.test(k)).map(([, x]) => x); fresh.forEach(x => { const d = daysBetween(t, x.due); byDay[d] = (byDay[d] || 0) + 1; });
+      const n = fresh.length; const maxDay = Math.max(...Object.values(byDay)); const days = Math.max(14, Math.ceil(n / bulkDailyBudget()));
+      const out = { changed: r.changed, known: state.srs[v.key].known, cur: state.currentUnit, custom: Boolean(state.srs['v:u_test']), maxDay, cap: bulkDailyBudget(), days: Object.keys(byDay).map(Number).sort((a, b) => a - b), expLast: days };
       state.vocab = state.vocab.filter(x => x.id !== 'u_test'); buildRegistry(); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
     assert r['known'] == 1 and r['cur'] == 'm9' and not r['custom'], r
-    assert r['maxDay'] <= r['cap'] and r['days'][0] == 1 and r['days'][-1] == 14, r
+    assert r['maxDay'] <= r['cap'] and r['days'][0] == 1 and r['days'][-1] == r['expLast'], r
 
 def test_bulk_mark_to_p3_finishes_the_course_and_undo_restores(b):
     js = "(() => { " + RESET + "state.stageTests = { p3: [{ date: todayStr(), correct: 40, total: 40, passed: true }] }; const before = " + SNAP + """;
@@ -174,6 +175,32 @@ def test_vocab_known_all_spreads_due(b):
       state.srs = JSON.parse(keep); LAST_BULK_KNOWN = null; saveState(); return JSON.stringify({ n, min: Math.min(...days), max: Math.max(...days), spread: days.size }); })()"""
     r = json.loads(ev(b, js))
     assert r['n'] > 0 and r['min'] >= 35 and r['max'] <= 56 and r['spread'] >= 10, r
+
+# ---- review fixes ----
+def test_stage_test_kana_read_question_does_not_speak_the_answer(b):
+    js = """(() => { const it = REG.byKey.get('a:あ'); const keep = state.srs[it.key]; delete state.srs[it.key];
+      const q = makeQuestion(it, { choiceOnly: true }); const plain = makeQuestion(it, {});
+      if (keep) state.srs[it.key] = keep; return JSON.stringify({ fmt: q.fmt, audio: q.audio || '', plainAudio: plain.audio || '' }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'fmt': 'a-read', 'audio': '', 'plainAudio': 'あ'}, r
+
+def test_bulk_mark_bounds_daily_due_and_spaces_listening_reading(b):
+    js = "(() => { " + RESET + """const t = todayStr(); state.stageTests = { p3: [{ date: t, correct: 40, total: 40, passed: true }] };
+      bulkMark('p3', 'learned'); const byDay = {}; const lr = [];
+      Object.entries(state.srs).forEach(([k, r]) => { const d = daysBetween(t, r.due); if (/^[lr]:/.test(k)) lr.push(d); else byDay[d] = (byDay[d] || 0) + 1; });
+      return JSON.stringify({ maxDay: Math.max(...Object.values(byDay)), budget: bulkDailyBudget(), lrMin: Math.min(...lr), lrMax: Math.max(...lr), lrN: lr.length, firstDay: Math.min(...Object.keys(byDay).map(Number)) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['budget'] == 50 and r['maxDay'] <= r['budget'] and r['firstDay'] == 5, r
+    assert r['lrN'] > 300 and r['lrMin'] >= 90 and r['lrMax'] <= 270, r
+
+def test_first_review_after_bulk_mark_grows_stability_and_clears_undo(b):
+    js = "(() => { " + RESET + """const t = todayStr(); bulkMark('p1', 'learned');
+      const v = stageItems('p1').find(x => x.kind === 'v'); const r0 = JSON.parse(JSON.stringify(state.srs[v.key])); state.srs[v.key].due = t; state.srs[v.key].last = addDays(t, -6);   // six days pass before the review
+      const hadUndo = Boolean(LAST_BULK_MARK); srsAnswer(v.key, true); const r1 = state.srs[v.key];
+      return JSON.stringify({ last0: r0.last, s0: r0.s, s1: r1.s, grew: r1.s > r0.s, dueAfter: daysBetween(t, r1.due), hadUndo, undoLeft: Boolean(LAST_BULK_MARK), undoRet: bulkUndo() }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['last0'] is not None and r['hadUndo'] and r['grew'] and r['dueAfter'] > 5, r
+    assert not r['undoLeft'] and r['undoRet'] is False, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
