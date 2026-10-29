@@ -334,7 +334,7 @@ def test_intro_lesson_renders_with_kana_table_and_marks_itself_seen(b):
       const card = document.querySelector('[data-route="#/course/intro"]');
       return JSON.stringify({ h3, kana, seen: state.introSeen === true, hasAdj: text.includes('い形容詞') && text.includes('な形容詞'), hasVerbs: text.includes('五段') && text.includes('一段'), card: !!card }); })()"""
     r = json.loads(ev(b, js))
-    assert r['h3'] >= 8 and r['kana'] >= 46 and r['seen'] and r['hasAdj'] and r['hasVerbs'] and r['card'], r
+    assert r['h3'] == 13 and r['kana'] >= 46 and r['seen'] and r['hasAdj'] and r['hasVerbs'] and r['card'], r
 
 def test_new_user_banner_points_to_the_intro_until_dismissed(b):
     js = """(() => { state.startChosen = true; location.hash = '#/today'; route(); const before = !!document.querySelector('.intro-banner');   // after the 起點 choice (1.0.6) the 第 0 週 banner shows
