@@ -343,8 +343,8 @@ def test_done_state_and_extra_session(b):
 
 def test_theme_lane_rotates_after_three_days_of_words(b):
     js = """(() => { const keep = JSON.stringify({ srs: state.srs, lane: state.themeLane, q: state.settings.newVocabPerDay }); state.settings.newVocabPerDay = 8; state.themeLane = { order: [], count: {} };
-      // the first themes of THEME_ORDER are small (問候 23, 指示 12 …): mark them introduced so the first lane holds a theme with more than 24 words left
-      REG.vocab.filter(v => v.builtin && ['問候', '指示', '代名詞', '疑問'].includes(vocabTheme(v))).forEach(v => { state.srs[v.key] = { b: 1, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5, last: '2026-01-01', f: {} }; });
+      // the first themes of THEME_ORDER are small (問候與溝通 9, 疑問與指示 16 …): mark them introduced so the first lane holds a theme with more than 24 words left
+      REG.vocab.filter(v => v.builtin && ['問候', '指示與疑問', '基本動作與形容', '問候與溝通', '疑問與指示'].includes(vocabTheme(v))).forEach(v => { state.srs[v.key] = { b: 1, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5, last: '2026-01-01', f: {} }; });
       const pool = REG.vocab.filter(v => v.builtin); const th0 = activeThemes(pool, false);
       const big = th0[0]; const words = newVocabCandidates(pool, false).filter(v => vocabTheme(v) === big);
       words.slice(0, 23).forEach(v => srsAnswer(v.key, true)); const th23 = activeThemes(pool, false); const c23 = state.themeLane.count[big];

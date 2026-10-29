@@ -226,13 +226,13 @@ TESTS += [test_kana_options_need_four_distinct_readings, test_homophones_never_p
 
 # ---- 2026-10-26 (3): stacked theme bars, Today outline ----
 def test_theme_card_bar_has_three_segments_for_seen_learned_mastered(b):
-    js = """(() => { const ws = REG.vocab.filter(v => v.builtin && vocabTheme(v) === '身體與顏色');
+    js = """(() => { const ws = REG.vocab.filter(v => v.builtin && v.lv === 'N5' && vocabTheme(v) === '身體與健康');
       const rec = (b, f) => ({ b, due: '2099-01-01', n: 5, ok: 5, ng: 0, s: 30, d: 5, f });
       ws.slice(0, 2).forEach(v => { state.srs[v.key] = rec(6, { 'v-meaning': [1, 0], 'v-recall': [1, 0], 'v-cloze': [1, 0] }); });
       ws.slice(2, 5).forEach(v => { state.srs[v.key] = rec(3, {}); });
       ws.slice(5, 9).forEach(v => { state.srs[v.key] = rec(1, {}); });
-      location.hash = '#/vocab/level?lv=PRE_N5'; route();
-      const card = document.querySelector('.theme-card[data-c="身體與顏色"]');
+      location.hash = '#/vocab/level?lv=N5'; route();
+      const card = document.querySelector('.theme-card[data-c="身體與健康"]');
       const bar = card.querySelector('.bar.stack'); const d = bar.dataset; const bg = getComputedStyle(bar).backgroundImage;
       return JSON.stringify({ total: ws.length, segs: [Number(d.mastered), Number(d.learned), Number(d.seen)], gradient: bg.startsWith('linear-gradient'), stops: (bg.match(/%/g) || []).length }); })()"""
     r = json.loads(ev(b, js))

@@ -68,7 +68,7 @@ def test_pre_stage_plan_has_only_kana_until_the_seion_gate_opens(b):
     assert r['a'] == ['あ', 'い', 'う', 'え', 'お', 'ア', 'イ', 'ウ', 'エ', 'オ', 'か', 'き', 'く', 'け', 'こ'], r
     assert r['g'] == 0 and r['l'] == 0 and r['r'] == 0 and r['c'] == 0 and r['v'] == 0, r
     assert all(l == 'PRE_N5' for l in r['k']), r
-    assert r['v2'] and all(l == 'PRE_N5' for l in r['v2']) and r['a2'][:2] == ['が', 'ぎ'] and r['k2'] == ['PRE_N5'], r
+    assert r['v2'] and all(l == 'PRE_N5' for l in r['v2']) and r['a2'][:2] == ['が', 'ぎ'] and r['k2'] == [], r   # 1.0.12: no 入門 kanji
     assert set(r['kinds']) <= {'a', 'v', 'k'}, r
 
 def test_main_stage_never_schedules_new_kana_but_reviews_practised_ones(b):
@@ -110,21 +110,22 @@ def test_new_account_banner_sets_the_stage(b):
 
 def test_course_card_and_kana_session(b):
     js = """(() => { state.stage = 'pre'; location.hash = '#/course'; route();
-      const card = document.querySelector('.card.pre-card'); const out = { card: Boolean(card), text: card ? card.textContent : '' };
+      const card = document.querySelector('.card.pre-card'); const out = { card: Boolean(card), text: card ? card.textContent : '', btns: [...card.querySelectorAll('button')].map(b => b.dataset.act) };
+      location.hash = '#/vocab/level?lv=PRE_N5'; route();   // 1.0.12: the 入門 card has one button (階段測驗); 練假名 lives on the 單字 page
       document.querySelector('[data-act="kana-practice"]').click(); out.kinds = [...new Set(SESSION.entries.map(e => e.item && e.item.kind))];
       out.first = SESSION.entries[0].item.ch; return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", FRESH)]))
-    assert r['card'] and '142' in r['text'] and '漢字' in r['text'] and '單字' in r['text'], r   # the 27 PRE_N5 kanji are asserted by the data test
-    assert r['kinds'] == ['a'] and r['first'] == 'あ', r
+    assert r['card'] and '142' in r['text'] and '漢字' not in r['text'] and '單字' in r['text'], r   # 1.0.12: 入門 has no kanji, so the card lists kana and words only
+    assert r['btns'] == ['stage-test'] and r['kinds'] == ['a'] and r['first'] == 'あ', r
 
 def test_i_know_kana_opens_words_without_marking_kana_seen(b):
-    js = """(() => { state.stage = 'pre'; location.hash = '#/course'; route(); document.querySelector('[data-act="kana-known"]').click(); DAILY_CACHE = null;
+    js = """(() => { state.stage = 'pre'; location.hash = '#/course'; route(); ACTIONS['kana-known'](); DAILY_CACHE = null;   // 1.0.12: no button on the card; the start choice 已會假名 sets the same flag
       const p = dailyPlan(); openSettings('learn'); const row = Boolean(document.querySelector('[data-key="newKanaPerDay"]')); closeModal(true);
       return JSON.stringify({ open: kanaGateOpen(), v: p.newV.length, a: p.newA.length, seen: Object.keys(state.srs).filter(k => k.startsWith('a:')).length, row }); })()"""
     r = json.loads(ev(b, js, [("eval", FRESH)]))
     assert r['open'] and r['v'] > 0 and r['a'] > 0 and r['seen'] == 0 and r['row'], r
 
-PRE_KANJI = list('一二三四五六七八九十百千万円日月火水木金土年時分人大小')
+PRE_KANJI = []   # 1.0.12: the 27 入門 kanji (數字、曜日、年時分人大小) went back to N5
 
 def test_pre_n5_words_and_kanji_are_tagged(b):
     js = """(() => { const V = REG.vocab.filter(v => v.builtin); const pre = V.filter(v => v.lv === 'PRE_N5');
@@ -133,9 +134,9 @@ def test_pre_n5_words_and_kanji_are_tagged(b):
         greet: pre.some(v => v.w === 'おはようございます'),
         n4Gate: typeof n5WordsLeft() === 'number' && n5WordsLeft() >= pre.filter(v => !state.srs[v.key]).length }); })()"""
     r = json.loads(ev(b, js))
-    assert 400 <= r['n'] <= 450 and r['lvs'] == ['N4', 'N5', 'PRE_N5'], r   # 303 moved + 120 new
+    assert 55 <= r['n'] <= 65 and r['lvs'] == ['N4', 'N5', 'PRE_N5'], r   # 1.0.12: kana-only basics (問候、こそあど、疑問詞、ある／いる／する…)
     assert 'conj' not in r['pos'] and r['greet'], r
-    assert sorted(r['kanji']) == sorted(PRE_KANJI) and r['n5k'] == 104 - 27, r
+    assert sorted(r['kanji']) == sorted(PRE_KANJI) and r['n5k'] == 104, r
     assert r['n4Gate'], r
 
 def test_no_level_gate_still_says_n5_literally(b):
@@ -161,7 +162,7 @@ def test_kanji_page_has_an_intro_tab_and_still_shows_every_kanji(b):
       const n = { pre: count('PRE_N5'), n5: count('N5'), n4: count('N4') }; n.sum = n.pre + n.n5 + n.n4; n.total = REG.kanji.length;
       n.tab = Boolean(document.querySelector('[data-route="#/vocab/level?lv=PRE_N5"]')); n.text = document.querySelector('.seg.mb-4').textContent; return JSON.stringify(n); })()"""
     r = json.loads(ev(b, js))
-    assert r['pre'] == 27 and r['sum'] == r['total'] and r['tab'] and '入門' in r['text'] and 'PRE_N5' not in r['text'], r
+    assert r['pre'] == 0 and r['sum'] == r['total'] and r['tab'] and '入門' in r['text'] and 'PRE_N5' not in r['text'], r
 
 def test_vocab_decks_cover_every_level(b):
     js = """(() => { const builtin = REG.vocab.filter(v => v.builtin).length; const vs = vocabStats();
@@ -169,8 +170,8 @@ def test_vocab_decks_cover_every_level(b):
       return JSON.stringify({ decks: DECKS.map(d => d[0]), sum: deckPool('PRE_N5').length + deckPool('N5').length + deckPool('N4').length, builtin, rows,
         pre: vs.PRE_N5 && vs.PRE_N5.total, n5: vs.N5.total, n4: vs.N4.total }); })()"""
     r = json.loads(ev(b, js))
-    assert 'PRE_N5' in r['decks'] and r['sum'] == r['builtin'] and r['rows'] >= 100, r
-    assert r['pre'] >= 400 and r['pre'] + r['n5'] + r['n4'] == r['builtin'], r
+    assert 'PRE_N5' in r['decks'] and r['sum'] == r['builtin'] and r['rows'] >= 50, r   # 1.0.12: 59 入門 words
+    assert r['pre'] >= 50 and r['pre'] + r['n5'] + r['n4'] == r['builtin'], r
 
 def test_sound_format_needs_speech(b):
     js = """(() => { const it = REG.byKey.get('a:あ'); state.srs[it.key] = { b: 2, due: todayStr(), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(todayStr(), -3) };
@@ -197,7 +198,7 @@ def test_every_builtin_word_has_a_theme_of_its_level(b):
       return JSON.stringify({ n: [T.PRE_N5.length, T.N5.length, T.N4.length], bad, order0: THEME_ORDER[0], other: REG.vocab.filter(v => v.builtin && vocabTheme(v) === '其他').length,
         verbsPre: REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5' && /^(v5|v1|vs|vk|i|na|adv)$/.test(v.p) && vocabTheme(v) !== '基本動作與形容').length }); })()"""
     r = json.loads(ev(b, js))
-    assert r['n'] == [11, 17, 17] and r['bad'] == [] and r['order0'] == '問候' and r['other'] == 0 and r['verbsPre'] == 0, r
+    assert r['n'] == [3, 17, 17] and r['bad'] == [] and r['order0'] == '問候' and r['other'] == 0 and r['verbsPre'] == 0, r
 
 def test_theme_lane_migrates_old_names(b):
     js = """(() => { const s = normalizeState(Object.assign(defaultState(), { themeLane: { order: ['休閒', '生活', '飲食', '問候與溝通'], count: { 休閒: 2, 生活: 1 } } }));
@@ -211,7 +212,7 @@ def test_same_theme_name_across_levels(b):
       const q = buildVocabQueue('c:飲食', 60); const lvs = [...new Set(q.map(x => x.lv))].sort();
       return JSON.stringify({ n5Only, lvs, th }); })()"""
     r = json.loads(ev(b, js))
-    assert r['n5Only'] and r['lvs'] == ['N5', 'PRE_N5'], r
+    assert r['n5Only'] and r['lvs'] == ['N5'], r   # 1.0.12: 飲食 has no 入門 words any more
 
 def test_check_vocab_script_flags_bad_candidates(b):
     fx = {"words": [
@@ -235,7 +236,7 @@ def test_bank_has_the_new_pre_n5_and_n5_words(b):
       return JSON.stringify({ pre: pre.length, n5: n5.length, p5a: pre.filter(v => v.id.startsWith('p5a-')).length, n5f: n5.filter(v => v.id.startsWith('n5f-')).length,
         ex: V.every(v => v.ex && v.exZh), ex2: n5.filter(v => v.id.startsWith('n5f-')).every(v => v.ex2 && v.exZh2), noEx2: pre.filter(v => v.id.startsWith('p5a-')).every(v => !v.ex2), bad: bad.slice(0, 5) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['p5a'] == 120 and r['n5f'] == 80 and r['pre'] >= 420 and r['n5'] >= 510, r
+    assert r['p5a'] == 7 and r['n5f'] == 80 and r['pre'] >= 55 and r['n5'] >= 870, r   # 1.0.12: 113 of the 120 p5a words moved to N5 (with a second example each)
     assert r['ex'] and r['ex2'] and r['noEx2'] and r['bad'] == [], r
 
 def test_every_builtin_kanji_word_renders_furigana_matching_its_reading(b):
@@ -255,23 +256,23 @@ def test_level_and_theme_stats(b):
       return JSON.stringify({ totals: L.map(x => x.total), sum: L.reduce((a, x) => a + x.total, 0), builtin: REG.vocab.filter(v => v.builtin).length,
         kana: L[0].kana && L[0].kana.total, kanji: L.map(x => x.kanji.total), tn: T.length, names: T.map(t => t.c).slice(0, 3), tsum: T.reduce((a, t) => a + t.total, 0) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['sum'] == r['builtin'] and r['kana'] == 142 and r['kanji'] == [27, 77, 238], r
+    assert r['sum'] == r['builtin'] and r['kana'] == 142 and r['kanji'] == [0, 104, 238], r
     assert r['tn'] == 17 and r['names'] == ['問候與溝通', '疑問與指示', '時間'] and r['tsum'] == r['totals'][1], r
 
 def test_kanji_theme_mapping_is_grounded(b):
     js = """(() => { const bad = []; ['PRE_N5', 'N5', 'N4'].forEach(lv => themeStats(lv).forEach(t => t.kanji.forEach(k => {
         const ok = REG.vocab.some(v => v.builtin && v.lv === lv && vocabTheme(v) === t.c && jaPlain(v.w).includes(k)) && REG.byKey.has('k:' + k); if (!ok) bad.push(lv + ':' + t.c + ':' + k); })));
-      const pre = themeStats('PRE_N5'); const food = pre.find(t => t.c === '飲食');
-      return JSON.stringify({ bad: bad.slice(0, 5), foodKanji: food.kanji, maxLen: Math.max(...pre.map(t => t.kanji.length)), of: kanjiThemeOf(REG.byKey.get('k:日'), 'PRE_N5') }); })()"""
+      const pre = themeStats('PRE_N5');
+      return JSON.stringify({ bad: bad.slice(0, 5), preKanji: pre.reduce((a, t) => a + t.kanji.length, 0), of: kanjiThemeOf(REG.byKey.get('k:日'), 'N5') }); })()"""
     r = json.loads(ev(b, js))
-    assert r['bad'] == [] and r['maxLen'] <= 8 and r['of'] in ('時間曆日', '數字與量詞'), r
+    assert r['bad'] == [] and r['preKanji'] == 0 and r['of'] in ('時間', '數量'), r
 
 def test_level_theme_filter_is_level_scoped(b):
     js = """(() => { state.srs = {}; state.today.newV = 0; DAILY_CACHE = null;
-      const q = buildVocabQueue('t:N5:飲食', 60); const k = buildKanjiQueue(50, 'PRE_N5'); startSession('kana', { row: 1 }); const row = SESSION.entries.map(e => e.item.ch);
+      const q = buildVocabQueue('t:N5:飲食', 60); const k = buildKanjiQueue(50, 'N5'); startSession('kana', { row: 1 }); const row = SESSION.entries.map(e => e.item.ch);
       return JSON.stringify({ lvs: [...new Set(q.map(x => x.lv))], themes: [...new Set(q.map(vocabTheme))], n: q.length, kl: [...new Set(k.map(x => x.lv))], row }); })()"""
     r = json.loads(ev(b, js))
-    assert r['lvs'] == ['N5'] and r['themes'] == ['飲食'] and r['n'] > 0 and r['kl'] == ['PRE_N5'], r
+    assert r['lvs'] == ['N5'] and r['themes'] == ['飲食'] and r['n'] > 0 and r['kl'] == ['N5'], r
     assert r['row'] == ['か', 'き', 'く', 'け', 'こ', 'カ', 'キ', 'ク', 'ケ', 'コ'], r
 
 def test_vocab_opens_on_the_learners_level(b):
@@ -290,11 +291,11 @@ def test_level_page_sections(b):
         tiles: v.querySelectorAll('.kanji-box .kanji-tile').length, groups: v.querySelectorAll('.kanji-box .kanji-group').length, practice: v.querySelector('[data-act="start-vocab"][data-filter="N5"]') !== null,
         themeBtn: Boolean(v.querySelector('[data-act="start-vocab"][data-filter="t:N5:飲食"]')), total: REG.vocab.filter(x => x.builtin && x.lv === 'N5').length, sum }); })()"""
     r = json.loads(ev(b, js))
-    assert r['n'] == 17 and r['lvs'] == ['N5'] and r['ring'] and r['kanjiBox'] and not r['kanaBox'] and r['tiles'] == 77 and r['groups'] >= 5, r
+    assert r['n'] == 17 and r['lvs'] == ['N5'] and r['ring'] and r['kanjiBox'] and not r['kanaBox'] and r['tiles'] == 104 and r['groups'] >= 5, r
     assert r['practice'] and r['themeBtn'] and r['sum'] == r['total'], r
 
 def test_theme_card_kanji_open_detail(b):
-    js = """(() => { location.hash = '#/vocab/level?lv=PRE_N5'; route(); const chip = document.querySelector('.theme-card [data-act="kanji-open"]'); const k = chip && chip.dataset.k; chip.click();
+    js = """(() => { location.hash = '#/vocab/level?lv=N5'; route(); const chip = document.querySelector('.theme-card [data-act="kanji-open"]'); const k = chip && chip.dataset.k; chip.click();
       const title = document.querySelector('.modal-title'); const t = title ? title.textContent : ''; closeModal(true);
       return JSON.stringify({ k, opened: t.includes(k) }); })()"""
     r = json.loads(ev(b, js))

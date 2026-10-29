@@ -12,7 +12,7 @@
 <script src="./vendor/supabase.js"></script>
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
-<script src="./data.js?v=13"></script>
+<script src="./data.js?v=14"></script>
 <title>Nihongo Quest N4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -928,12 +928,17 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.11';   // keep equal to the version in sw.js CACHE ('nq-v1.0.11'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.12';   // keep equal to the version in sw.js CACHE ('nq-v1.0.12'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.12', date: '2026-10-29', items: [
+    '入門單字瘦身：入門只留假名加 59 個純假名的基礎字（問候、はい／いいえ、こそあど與疑問詞、ある／いる／する／いい／おいしい／きれい／とても／ちょっと／たくさん／どうぞ）。其餘 364 個入門字（含漢字的 281 個全部、純假名的 83 個）和 27 個入門漢字改列 N5，主題換成 N5 的主題；已學過的紀錄不變，只是等級換了。',
+    '入門階段測驗改成假名 16 題＋單字 24 題（入門已沒有漢字）；課程頁入門卡不再列漢字；入門主題剩問候、指示與疑問、基本動作與形容三個。',
+    '課程頁的入門卡只剩「階段測驗」一個按鈕。通過後接著三題：平假名、片假名、入門單字各選「不記得／記得／熟練／掌握」（不記得＝不標記、之後照常當新內容學；其餘三個就是已學／熟悉／熟練，到期日分散），選完直接進第 1 週，課程頁可「復原」。練假名在單字頁的入門分頁；進入第 1 週／回到入門在設定。'
+  ] },
   { v: '1.0.11', date: '2026-10-29', items: [
     '課程頁改成四個對等的階段：入門、第一、二、三階段；第 0 週搬進入門卡；整頁只剩一個「目前」。',
     '每個階段有「階段測驗」：40 題選擇題、不計時、不影響排程，答對 32 題算通過；結果記在卡上。',
@@ -989,7 +994,7 @@ const CHANGELOG = [
     '每日練習的規則：每一題不是今天到期的複習就是今天的新內容。每天負荷上限（預設 100）只壓新題，到期複習永遠全出。答錯的隔天起第 1、3、7 天各複習一次，三次都對才離開錯題本；答對的越熟出現得越少。新文法照講義段落順序出，單元文法全部出過就自動推進到下一單元；新單字從兩條主題線交錯供應；變化練習以形態為單位排程，動詞每次隨機換。做完顯示「今天完成了」，可「加練」明後天到期的複習。',
     '練習：單字有看字選意思、中翻日、例句填空、讀音、寫法、聽音選意思、假名拼字、配對；文法有填空、選正確句、句意、真的排序、活用拼寫（熟了之後不給選項）；另有假名（看字選音、聽音選字、平片對照）、漢字、聽力（整個級別抽題）、閱讀（兩者答對後 30／90／180 天才再出）。新字先看預習卡再考；答錯幾題後換一種格式「再練一次」，不寫排程；按「手滑，不算」可撤銷；單字可按「我會了」直接標熟練。手機上作答只有「下一題」固定在底部，畫面避開瀏海、不能縮放。',
     '入門（PRE_N5）：假名辨識與入門單字，學完才進第 1 週；課程：18 個單元（每單元約兩週）的講義，加上「第 0 週：開始之前」的入門（假名、句子骨架、品詞、動詞的形、助詞、數量詞）；可依程度選起點或一鍵「我已有基礎」。文法考點整併成 288 個，每個考點至少 3 題。',
-    '單字：1661 個內建單字（入門 423／N5 512／N4 726，含敬語、名詞＋する合併卡），N5 以上每字兩句例句；單字頁先分入門／N5／N4，每級列主題（卡上有該主題的漢字）與漢字，每個主題有已學／熟悉／熟練三段進度條，可看字表、翻字卡、練習或播放字卡；入門頁有依熟練度上色的五十音表；N4 單字在 N5 學過一次後開放（設定可提前）。漢字 342 個另有讀音與字義題。自訂字卡可匯入。',
+    '單字：1661 個內建單字（入門 59／N5 876／N4 726，含敬語、名詞＋する合併卡），N5 以上每字兩句例句；單字頁先分入門／N5／N4，每級列主題（卡上有該主題的漢字）與漢字，每個主題有已學／熟悉／熟練三段進度條，可看字表、翻字卡、練習或播放字卡；入門頁有依熟練度上色的五十音表；N4 單字在 N5 學過一次後開放（設定可提前）。漢字 342 個另有讀音與字義題。自訂字卡可匯入。',
     '聽一輪：循環朗讀，不寫排程、不算題數。來源是錯題本（單字→中文→單字→例句→例句中文；文法整句→中文→整句，只唸有中文且答案標得進句子的題）或單字主題（含自動收錄「已學但還沒熟練」的「初識單詞」，上次的選擇會記住）。膠囊：字｜文、隨機、一次／兩次、速度 0.8／1／1.3。放大圖示進全螢幕：直立手機整頁轉成橫的，日文在上、中文在下、例句最下，字依螢幕放到最大；✕ 回首頁播放不斷。雲端語音時鎖定畫面可控制，鎖屏後持續播放（句間播靜音讓播放器不中斷）。',
     '錯題本：答錯的題目自動收進來，可依類別篩選、排序或依文法考點分組直接練；「快速過一輪」翻卡用忘了／記得回寫排程；題目達到「熟悉」就移到已掌握。',
     '模擬考：依 JLPT 三個科目與大題順序出題，同一份不重複，結束換算 180 分制；最上面有考試倒數、單元進度和依考試日期算的新題額度建議（可一鍵套用）。',
@@ -4683,7 +4688,7 @@ function nextUnitAfterStage(id) { const n = STAGES[stageIndex(id) + 1]; return n
 /* 40 questions drawn from the stage's own items (unseen ones included — the test asks "do I know this stage"), options only, untimed,
    nothing written to the schedule. 80% passes; the result goes to state.stageTests and unlocks 標記到這裡為止. */
 const STAGE_TEST_SIZE = 40;
-const STAGE_TEST_QUOTA = { pre: [['a', 12], ['v', 24], ['k', 4]], p1: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]], p2: [['g', 32], ['c', 8]], p3: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]] };
+const STAGE_TEST_QUOTA = { pre: [['a', 16], ['v', 24]], p1: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]], p2: [['g', 32], ['c', 8]], p3: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]] };
 function stageTestNeed(total) { return Math.ceil(total * 0.8); }
 function buildStageTest(id) {
   const st = stageById(id); if (!st) return [];
@@ -4726,7 +4731,9 @@ function renderStageSummary(view) {
   const wrong = s.results.filter(x => !x.ok);
   const wrongList = wrong.map(x => `<div class="list-item"><div class="grow"><div class="jp">${furi(tidyPrompt(x.q.mistakePrompt || ''))}</div><div class="small muted">正確：<span class="jp">${esc(jaPlain(x.q.options[x.q.answer].text))}</span>・你選：<span class="jp">${esc(jaPlain(x.q.options[x.chosen].text))}</span></div></div></div>`).join('');
   const title = !r ? '未完成，不計紀錄' : r.passed ? `${r.correct}／${r.total}・通過` : `${r.correct}／${r.total}・未通過（需 ${need} 題）`;
-  const buttons = r && r.passed
+  const prePick = r && r.passed && T.stage === 'pre';   // 入門: three follow-up choices instead of the 標記到這裡為止 dialog
+  const buttons = prePick ? ''
+    : r && r.passed
     ? `<button type="button" class="btn btn-primary" data-act="stage-mark" data-stage="${T.stage}">標記到這裡為止</button><button type="button" class="btn btn-ghost" data-act="close-summary">回課程頁</button>`
     : `<button type="button" class="btn btn-primary" data-act="stage-again">再考一次</button><button type="button" class="btn" data-act="stage-practice">去練這個階段</button><button type="button" class="btn btn-ghost" data-act="close-summary">回課程頁</button>`;
   view.innerHTML = `
@@ -4736,8 +4743,8 @@ function renderStageSummary(view) {
       <div class="page-title mt-2">${title}</div>
       <div class="page-sub">${esc(st ? st.title : '')}・階段測驗・作答 ${s.results.length} 題</div>
       <div class="row-wrap mt-3">${kinds}</div>
-      ${r && r.passed ? '<div class="banner mt-4">通過了。可以把這個階段和之前的內容一次標成已學、熟悉或熟練。</div>' : ''}
-      <div class="row-wrap mt-4">${buttons}</div>
+      ${prePick ? '<div class="banner mt-4">通過了。接著三題：平假名、片假名、入門單字各記得多少？選完就進第 1 週。</div>' : r && r.passed ? '<div class="banner mt-4">通過了。可以把這個階段和之前的內容一次標成已學、熟悉或熟練。</div>' : ''}
+      ${prePick ? preMarkStepHtml(T) : `<div class="row-wrap mt-4">${buttons}</div>`}
     </div>
     ${wrong.length ? `<div class="card"><div class="card-head"><div class="card-title">這次答錯的題目</div><span class="chip">${wrong.length}</span></div><div class="list">${wrongList}</div></div>` : ''}`;
 }
@@ -4781,11 +4788,14 @@ function bulkMarkTargets(stageId, level) {
   stagesUpTo(stageId).forEach(s => stageItems(s.id).forEach(x => { if (seen.has(x.key)) return; seen.add(x.key); if (bulkLevelOf(state.srs[x.key], x.key) < want) out.push(x); }));
   return out;
 }
-function bulkMark(stageId, level) {
-  const targets = bulkMarkTargets(stageId, level);
+// what a bulk mark (標記到這裡為止 or the 入門 three choices) must remember to undo itself
+function bulkSnapshot(extra) {
+  return Object.assign({ srs: {}, mistakes: JSON.parse(JSON.stringify(state.mistakes)), completedUnits: state.completedUnits.slice(), lessonSeen: (state.lessonSeen || []).slice(),
+    currentUnit: state.currentUnit, stage: state.stage, introSeen: state.introSeen, kanaKnown: state.kanaKnown }, extra);
+}
+// mark the targets at a level, due dates spread; the previous records go into snap.srs
+function bulkApply(targets, level, snap) {
   const t = todayStr();
-  const snap = { stageId, level, changed: targets.length, srs: {}, mistakes: JSON.parse(JSON.stringify(state.mistakes)), completedUnits: state.completedUnits.slice(), lessonSeen: (state.lessonSeen || []).slice(),
-    currentUnit: state.currentUnit, stage: state.stage, introSeen: state.introSeen, kanaKnown: state.kanaKnown };
   const isLR = (x) => x.kind === 'l' || x.kind === 'r';
   const core = targets.filter(x => !isLR(x)); const lr = targets.filter(isLR);
   const mark = (x, dueDays) => {
@@ -4803,6 +4813,11 @@ function bulkMark(stageId, level) {
   };
   core.forEach((x, i) => mark(x, spreadDue(i, level, core.length)));
   lr.forEach((x, j) => mark(x, spreadDueLR(j, level, lr.length)));
+}
+function bulkMark(stageId, level) {
+  const targets = bulkMarkTargets(stageId, level);
+  const snap = bulkSnapshot({ stageId, level, changed: targets.length });
+  bulkApply(targets, level, snap);
   const units = stagesUpTo(stageId).flatMap(s => s.units);
   units.forEach(u => { if (!state.completedUnits.includes(u)) state.completedUnits.push(u); });
   const lessons = new Set(state.lessonSeen || []);
@@ -4848,16 +4863,66 @@ Object.assign(ACTIONS, {
   'bulk-mark-undo': () => { if (bulkUndo()) toast('已復原'); route(); }
 });
 
+// ---- 入門測驗通過後的三題 ----
+/* Passing the 入門 test leads straight into three choices (平假名、片假名、入門單字): 不記得 leaves the group alone (it is
+   learned as new material later), the other three are the bulk-mark levels 已學／熟悉／熟練. Then the learner enters 第 1 週. */
+const PRE_MARK_GROUPS = [
+  ['hira', '平假名', () => REG.kana.filter(k => k.script === 'hira')],
+  ['kata', '片假名', () => REG.kana.filter(k => k.script === 'kata')],
+  ['v', '入門單字', () => REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5')]
+];
+const PRE_MARK_LEVELS = [
+  ['none', '不記得', '不標記，之後當新內容照常學'],
+  ['seen', '記得', '算已學，很快排進複習'],
+  ['learned', '熟練', '算熟悉，一兩週後開始複習'],
+  ['known', '掌握', '算熟練，五到八週後各確認一次']
+];
+function preMarkLevelName(lv) { const L = PRE_MARK_LEVELS.find(x => x[0] === lv); return L ? L[1] : '不記得'; }
+function preMarkStepHtml(T) {
+  const step = T.preStep || 0; const [, name, items] = PRE_MARK_GROUPS[step]; const n = items().length;
+  const done = PRE_MARK_GROUPS.slice(0, step).map(([g, nm]) => `<span class="chip">${nm}：${preMarkLevelName((T.preChoice || {})[g])}</span>`).join('');
+  const opts = PRE_MARK_LEVELS.map(([lv, label, hint], i) => `<button type="button" class="opt" data-act="pre-mark-pick" data-level="${lv}"><span class="kbd">${i + 1}</span><span><b>${label}</b><span class="small muted">　${hint}</span></span></button>`).join('');
+  return `<div class="mt-4"><div class="row-wrap">${done}</div>
+    <div class="small muted mt-3">第 ${step + 1}／3 題</div><div class="page-title mt-1">${name}（${n} 個），你記得多少？</div>
+    <div class="opts wide">${opts}</div></div>`;
+}
+function preMarkApply(choices) {
+  const snap = bulkSnapshot({ stageId: 'pre', level: 'learned', changed: 0 });
+  PRE_MARK_GROUPS.forEach(([g, , items]) => {
+    const level = choices[g]; const want = ['seen', 'learned', 'known'].indexOf(level); if (want < 0) return;
+    const targets = items().filter(x => bulkLevelOf(state.srs[x.key], x.key) < want);
+    bulkApply(targets, level, snap); snap.changed += targets.length;
+  });
+  snap.label = PRE_MARK_GROUPS.map(([g, nm]) => `${nm}：${preMarkLevelName(choices[g])}`).join('、');
+  state.introSeen = true; state.kanaKnown = true; state.stage = 'main';
+  const nu = nextUnitAfterStage('pre');
+  if (unitOrder(nu) > unitOrder(state.currentUnit)) state.currentUnit = nu;
+  LAST_BULK_MARK = snap;
+  DAILY_CACHE = null; saveState();
+  return snap.changed;
+}
+Object.assign(ACTIONS, {
+  'pre-mark-pick': (el) => {
+    const T = SESSION && SESSION.test; if (!T || !T.result || !T.result.passed || T.stage !== 'pre') return;
+    const step = T.preStep || 0; T.preChoice = T.preChoice || {}; T.preChoice[PRE_MARK_GROUPS[step][0]] = el.dataset.level; T.preStep = step + 1;
+    if (T.preStep < PRE_MARK_GROUPS.length) { renderStageSummary(document.getElementById('view')); return; }
+    const n = preMarkApply(T.preChoice);
+    SESSION = null; document.body.classList.remove('practicing');
+    toast(n ? `已標記 ${n} 個項目，進入第 1 週` : '進入第 1 週', 4000);
+    go('#/course');
+  }
+});
+
 // ---- 72_course.js ----
 /* ==========================================================================
    Course: phases, units, lessons, unit item list
    ========================================================================== */
 function stagePassed(id) { return ((state.stageTests || {})[id] || []).some(h => h && h.passed); }
 // the row under each stage card: 階段測驗, its last result, and 標記到這裡為止 once the stage has been passed
-function stageFootHtml(id, extra = '') {
+function stageFootHtml(id, extra = '', withMark = true) {
   const last = ((state.stageTests || {})[id] || [])[0];
   const res = last ? `<span class="chip ${last.passed ? 'chip-ok' : ''} num">上次 ${Number(last.correct) || 0}／${Number(last.total) || 0}・${last.passed ? '通過' : '未通過'}</span>` : '';
-  return `<div class="row-wrap mt-3 stage-foot">${extra}<button type="button" class="btn btn-sm" data-act="stage-test" data-stage="${id}">階段測驗</button>${res}${stagePassed(id) ? `<button type="button" class="btn btn-sm" data-act="stage-mark" data-stage="${id}">標記到這裡為止</button>` : ''}</div>`;
+  return `<div class="row-wrap mt-3 stage-foot">${extra}<button type="button" class="btn btn-sm" data-act="stage-test" data-stage="${id}">階段測驗</button>${res}${withMark && stagePassed(id) ? `<button type="button" class="btn btn-sm" data-act="stage-mark" data-stage="${id}">標記到這裡為止</button>` : ''}</div>`;
 }
 function renderCourse(view) {
   const cp = courseProgress();
@@ -4875,10 +4940,8 @@ function renderCourse(view) {
       const words = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5'); const wordsSeen = words.filter(v => state.srs[v.key]).length;
       const kanji = REG.kanji.filter(k => k.lv === 'PRE_N5'); const kanjiSeen = kanji.filter(k => state.srs[k.key]).length;
       const line = (label, seen, total) => `<div class="row between small"><span>${label}</span><span class="muted num">${seen}／${total}</span></div>${segBarHtml(total, [['learned', seen]], 'thin mt-1 mb-2')}`;
-      rows = `<div class="list">${introRow}</div><div class="mt-3">${line('假名', kanaSeen, REG.kana.length)}${line('單字', wordsSeen, words.length)}${line('漢字', kanjiSeen, kanji.length)}</div>`;
-      extra = `<button type="button" class="btn btn-sm" data-act="kana-practice">練假名</button>
-        ${pre && !kanaGateOpen() ? '<button type="button" class="btn btn-sm" data-act="kana-known">我已認得假名</button>' : ''}
-        ${pre ? '<button type="button" class="btn btn-sm btn-primary" data-act="enter-main">進入第 1 週</button>' : '<button type="button" class="btn btn-sm btn-ghost" data-act="enter-pre">回到入門</button>'}`;
+      rows = `<div class="list">${introRow}</div><div class="mt-3">${line('假名', kanaSeen, REG.kana.length)}${line('單字', wordsSeen, words.length)}${kanji.length ? line('漢字', kanjiSeen, kanji.length) : ''}</div>`;
+      extra = '';   // 1.0.12: the 入門 card carries one button, 階段測驗; passing it leads to the three choices and 第 1 週 (練假名 is on the 單字 page, 進入第 1 週／回到入門 in 設定)
     } else {
       rows = `<div class="list">${st.units.map(uid => {
         const u = unitById(uid); const s = unitStats(u.id);
@@ -4893,14 +4956,14 @@ function renderCourse(view) {
     }
     const isCurStage = st.id === 'pre' && pre;
     return `<div class="card ${st.id === 'pre' ? 'pre-card' : ''} ${isCurStage ? 'current' : ''}"><div class="card-head"><div><div class="card-title">${esc(st.title)}${st.id === 'pre' ? ' <span class="chip">PRE_N5</span>' : ''}${isCurStage ? ' <span class="chip chip-accent">目前</span>' : ''}</div><div class="card-sub">${esc(st.sub)}</div></div></div>
-      ${rows}${stageFootHtml(st.id, extra)}</div>`;
+      ${rows}${stageFootHtml(st.id, extra, st.id !== 'pre')}</div>`;
   }).join('');
   view.innerHTML = `
     <div class="page-head">
       <div><div class="page-title">課程</div><div class="page-sub">四個階段：入門與 18 個單元（每單元約兩週）。整體完成度 ${cp.pct}%</div></div>
       <button type="button" class="btn" data-act="open-level">依程度選擇起點</button>
     </div>
-    ${LAST_BULK_MARK ? `<div class="banner"><div class="grow">已把 ${LAST_BULK_MARK.changed} 個項目標成「${BULK_LEVELS[LAST_BULK_MARK.level].name}」。重新整理後就不能復原了。</div><button type="button" class="btn btn-sm" data-act="bulk-mark-undo">復原</button></div>` : ''}
+    ${LAST_BULK_MARK ? `<div class="banner"><div class="grow">已把 ${LAST_BULK_MARK.changed} 個項目標成「${LAST_BULK_MARK.label || BULK_LEVELS[LAST_BULK_MARK.level].name}」。重新整理後就不能復原了。</div><button type="button" class="btn btn-sm" data-act="bulk-mark-undo">復原</button></div>` : ''}
     ${cards}`;
 }
 
