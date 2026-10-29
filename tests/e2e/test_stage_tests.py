@@ -30,6 +30,34 @@ def test_current_stage_follows_stage_and_unit(b):
       [state.stage, state.currentUnit] = keep; return JSON.stringify(out); })()"""
     assert json.loads(ev(b, js)) == ['pre', 'p1', 'p3']
 
+# ---- Task 2: 課程頁四張卡、單一「目前」、stageTests ----
+COURSE = [("nav", URL + "#/course"), ("wait", "document.querySelectorAll('#view .card').length >= 4")]
+
+def test_course_has_one_current_chip_and_week0_in_pre_card(b):
+    js = """(() => { const cards = [...document.querySelectorAll('#view .card')].slice(0, 4);
+      const chips = [...document.querySelectorAll('#view .chip-accent')].filter(c => c.textContent.trim() === '目前');
+      return JSON.stringify({ n: cards.length, titles: cards.map(c => c.querySelector('.card-title').textContent.trim().slice(0, 2)),
+        week0In: cards.map(c => c.textContent.includes('第 0 週')), chips: chips.length, chipIn: chips.map(c => Boolean(c.closest('.unit-row')) ? 'row' : 'head'),
+        tests: document.querySelectorAll('[data-act="stage-test"]').length, marks: document.querySelectorAll('[data-act="stage-mark"]').length }); })()"""
+    r = json.loads(ev(b, js, [("eval", "state.stage = 'main'; state.currentUnit = 'm2'; state.stageTests = {}; saveState(); true")] + COURSE))
+    assert r['n'] == 4 and r['titles'] == ['入門', '第一', '第二', '第三'], r
+    assert r['week0In'] == [True, False, False, False] and r['chips'] == 1 and r['chipIn'] == ['row'], r
+    assert r['tests'] == 4 and r['marks'] == 0, r
+    r = json.loads(ev(b, js, [("eval", "state.stage = 'pre'; saveState(); true")] + COURSE))
+    assert r['chips'] == 1 and r['chipIn'] == ['head'], r
+
+def test_course_shows_last_result_and_mark_button_after_a_pass(b):
+    pre = [("eval", "state.stage = 'main'; state.stageTests = { p1: [{ date: todayStr(), correct: 34, total: 40, passed: true }], p2: [{ date: todayStr(), correct: 10, total: 40, passed: false }] }; saveState(); true")] + COURSE
+    js = """(() => { const foot = [...document.querySelectorAll('.stage-foot')]; return JSON.stringify({ txt: foot.map(f => f.textContent.replace(/\\s+/g, ' ').trim()),
+      marks: foot.map(f => f.querySelectorAll('[data-act="stage-mark"]').length), passed: [stagePassed('p1'), stagePassed('p2'), stagePassed('p3')] }); })()"""
+    r = json.loads(ev(b, js, pre))
+    assert '上次 34／40・通過' in r['txt'][1] and '上次 10／40・未通過' in r['txt'][2], r
+    assert r['marks'] == [0, 1, 0, 0] and r['passed'] == [True, False, False], r
+
+def test_course_page_survives_missing_stage_tests(b):
+    js = "(() => { delete state.stageTests; renderCourse(document.getElementById('view')); return document.querySelectorAll('[data-act=\"stage-test\"]').length; })()"
+    assert ev(b, js) == 4
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
