@@ -518,7 +518,7 @@ body.furi-smart ruby.known rt { visibility: hidden; }
 tr.lag td { color: var(--warn, #d08a00); font-weight: 600; }
 .gauges { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .gauge { min-width: 0; } .gauge svg { width: 100%; max-width: 260px; height: auto; display: block; margin: 0 auto; }
-@media (max-width: 600px) { .gauges { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .gauge svg { max-width: 170px; } .col-left { display: none; } }
+@media (max-width: 600px) { .gauges { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .gauges .gauge:last-child:nth-child(odd) { grid-column: 1 / -1; } .gauge svg { max-width: 170px; } .col-left { display: none; } }
 .gauge .track { fill: none; stroke: var(--heat-0); }
 .gauge path.arc { fill: none; outline: none; } .gauge path.arc:hover, .gauge path.arc:focus { filter: brightness(1.15); }
 .gauge .arc.seen { stroke: var(--gauge-seen); } .gauge .arc.learned { stroke: var(--heat-3); } .gauge .arc.mastered { stroke: var(--heat-4); }
@@ -941,7 +941,10 @@ const APP_VERSION = '1.0.16';   // keep equal to the version in sw.js CACHE ('nq
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
   { v: '1.0.16', date: '2026-10-29', items: [
-    '第 0 週改成和其他週一樣的單元頁：講義第 2–4 節改寫成最基本的句型（AはBです、こそあど與も、助詞的唸法），有練習按鈕和題目分頁；課程頁那一列有進度條。'
+    '第 0 週加 20 題最基本的句型：AはBです／ではありません、〜ですか、こそあど、も、助詞 は・へ・を 的唸法，全部用假名寫，名詞用片假名外來語。入門階段假名門檻過了以後每天出幾題，都出過入門才會結束。',
+    '第 0 週改成和其他週一樣的單元頁：講義第 2–4 節改寫成這些句型，有練習按鈕、題目分頁和進度條；課程頁那一列也有進度條。',
+    '入門階段測驗改成假名 14＋單字 18＋句型 8 題；通過後的選擇從三題變四題，多一題「第 0 週句型」，選「不記得」就會在第 1 週的新文法之前先學句型。',
+    '學習分析：多一個假名的總進度儀表，「已熟悉」「每日練習量建議」「各題型正確率」都算進假名；第 0 週的句型算在 N5 文法裡，入門結束那天記為完成單元。'
   ] },
   { v: '1.0.15', date: '2026-10-29', items: [
     '五十音表（單字 › 入門）：手機上用「平假名｜片假名」切換，一排五個、下面有羅馬拼音；寬螢幕兩張表並排。點假名就念出來；每排前面的 ▶ 只練那一種假名的那一排。雲端還缺的假名音檔，下次執行「生成雲端音檔」會補齊。',
@@ -1020,12 +1023,12 @@ const CHANGELOG = [
     '今日：一張卡，上面「練習／錯題本／單字」三段切換，手機剛好一頁。練習是進度圓環、開始練習、日期與連續天數，和「說明」「範圍」「目前單元」三個收合小標（進首頁時目前單元是展開的）。錯題本／單字就是聽一輪播放器。',
     '每日練習的規則：每一題不是今天到期的複習就是今天的新內容。每天負荷上限（預設 100）只壓新題，到期複習永遠全出。答錯的隔天起第 1、3、7 天各複習一次，三次都對才離開錯題本；答對的越熟出現得越少，間隔還會依最近到期複習的正確率自動調整（不到 80% 縮短、超過 92% 拉長）。新文法照講義段落順序出，單元文法全部出過就自動推進到下一單元；新單字從兩條主題線交錯供應；變化練習以形態為單位排程，動詞每次隨機換。做完顯示「今天完成了」，可「加練」明後天到期的複習。',
     '練習：單字有看字選意思、中翻日、例句填空、讀音、寫法、聽音選意思、假名拼字、配對；文法有填空、選正確句、句意、真的排序、活用拼寫（熟了之後不給選項）；另有假名（看字選音、聽音選字、平片對照）、漢字、聽力（整個級別抽題）、閱讀（兩者答對後 30／90／180 天才再出，答錯一週後再出、不給再練一次）。新字先看預習卡再考；答錯幾題後換一種格式「再練一次」，不寫排程；按「手滑，不算」可撤銷；單字可按「我會了」直接標熟練。手機上作答只有「下一題」固定在底部，畫面避開瀏海、不能縮放。',
-    '入門（PRE_N5）：假名辨識與入門單字，都看過、最近正確率到 80% 就自動進第 1 週；課程：18 個單元（每單元約兩週）的講義，加上「第 0 週：開始之前」的入門（假名、句子骨架、品詞、動詞的形、助詞、數量詞）；可依程度選起點。文法考點整併成 288 個，每個考點至少 3 題。',
+    '入門（PRE_N5）：假名辨識、入門單字和第 0 週的 20 題基本句型（假名門檻過了以後每天幾題），都看過、最近正確率到 80% 就自動進第 1 週；課程：18 個單元（每單元約兩週）的講義，加上「第 0 週：開始之前」（假名、最基本的句型、品詞、動詞的形、助詞、數量詞；第 2–4 節有練習題）；可依程度選起點。文法考點整併成 288 個（第 0 週另有 5 個），每個考點至少 3 題。',
     '單字：1661 個內建單字（入門 59／N5 876／N4 726，含敬語、名詞＋する合併卡），N5 以上每字兩句例句；單字頁先分入門／N5／N4，每級列主題（卡上有該主題的漢字）與漢字，每個主題有已學／熟悉／熟練三段進度條，可看字表、翻字卡、練習或播放字卡；入門頁有依熟練度上色的五十音表（手機上平假名／片假名切換、一排五個，點字發音）；N4 單字在 N5 學過一次後開放。漢字 342 個另有讀音與字義題。自訂字卡可匯入。',
     '聽一輪：循環朗讀，不寫排程、不算題數。來源是錯題本（單字→中文→單字→例句→例句中文；文法整句→中文→整句，只唸有中文且答案標得進句子的題）或單字主題（含自動收錄「已學但還沒熟練」的「初識單詞」，上次的選擇會記住）。膠囊：字｜文、隨機、一次／兩次、速度 0.8／1／1.3。放大圖示進全螢幕：直立手機整頁轉成橫的，日文在上、中文在下、例句最下，字依螢幕放到最大；✕ 回首頁播放不斷。雲端語音時鎖定畫面可控制，鎖屏後持續播放（句間播靜音讓播放器不中斷）。',
     '錯題本：答錯的題目自動收進來，可依類別篩選、排序或依文法考點分組直接練；「快速過一輪」翻卡用忘了／記得回寫排程；題目達到「熟悉」就移到已掌握。',
     '模擬考：依 JLPT 三個科目與大題順序出題，同一份不重複，結束換算 180 分制；最上面有考試倒數、單元進度和依考試日期算的新題額度建議（可一鍵套用）。',
-    '學習分析：單字與文法的總進度半圓儀表（三段熟練度、N5／N4 分界）、過去 7 天練習量、學習紀錄熱力圖與每日數據（各類題數、新學與升熟悉、正確率、完成單元）、每日練習量建議。',
+    '學習分析：單字、文法與假名的總進度半圓儀表（三段熟練度、N5／N4 分界）、過去 7 天練習量、學習紀錄熱力圖與每日數據（各類題數、新學與升熟悉、正確率、完成單元）、每日練習量建議。',
     '語音：預設「雲端音檔」，教材的一萬段日文（Google Neural2）與六千段中文（台灣華語）已預先生成，播到哪句抓哪句、聽過的留在裝置；設定 › 語音的進階區可一次下載全部（日文、中文各一顆鈕）。也可改用 Google Cloud TTS、Deepgram、VOICEVOX 或瀏覽器內建語音；朗讀時已知讀音的字會指定讀法。作答後自動朗讀、聽力題、即時應答與情境表達只用聽的選項都固定開啟。',
     'AI 解析：Gemini（模型自動輪替、限額自動換、關閉思考步驟）、OpenAI 或本機 Ollama；同一題的解析快取在本機並標示模型。工具與 AI 頁有各服務的 API 申請說明。',
     '同步與資料：Email 驗證碼登入即可多裝置同步，衝突逐筆合併、不丟任何一方的進度；資料存在 IndexedDB，每天第一次開啟自動快照保留 7 天，可匯出／匯入備份，久未備份會提醒。',
@@ -3270,6 +3273,7 @@ function finishPreIfReady() {
   const acc = recentAccuracy(); if (acc !== null && acc < PRE_PASS_ACC) return false;
   state.stage = 'main'; if (!REG.grammar.some(g => g.u !== 'm0' && state.srs[g.key])) state.currentUnit = 'm1';
   if (!state.completedUnits.includes('m0')) state.completedUnits.push('m0');
+  noteUnitDone('m0');   // 學習分析: the day's 完成單元
   DAILY_CACHE = null; saveState();
   return true;
 }
@@ -4604,7 +4608,7 @@ function renderToday(view) {
     ? `<div class="banner intro-banner"><div class="grow">第一次用？完全沒學過：從零開始（先認假名）。已經學過一些：測試看看，用入門的階段測驗看你在哪裡。</div><div class="row-wrap">${startButtonsHtml()}<button type="button" class="btn btn-sm btn-ghost" data-act="nav" data-route="#/course/intro">先看第 0 週</button></div></div>`
     : '';
   const introBanner = startBanner ? '' : !state.introSeen && Object.keys(state.srs).length < 40
-    ? `<div class="banner intro-banner"><div class="grow">第一次用？先看「第 0 週」：假名、句子骨架、以及題目上會出現的名詞（い形容詞、五段動詞……）。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button><button type="button" class="btn btn-sm btn-ghost" data-act="intro-dismiss">知道了</button></div></div>`
+    ? `<div class="banner intro-banner"><div class="grow">第一次用？先看「第 0 週」：假名、最基本的句型、以及題目上會出現的名詞（い形容詞、五段動詞……）。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button><button type="button" class="btn btn-sm btn-ghost" data-act="intro-dismiss">知道了</button></div></div>`
     : '';
   const preDoneCard = inPreStage() && preDone()
     ? `<div class="banner mt-2"><div class="grow">入門單字都看過了；最近正確率 ${Math.round((recentAccuracy() || 0) * 100)}%，到 ${Math.round(PRE_PASS_ACC * 100)}% 就會自動進入第 1 週。</div></div>`
@@ -4760,7 +4764,7 @@ Object.assign(ACTIONS, {
 // ---- 階段（四個）與階段項目 ----
 /* 入門 + DATA.PHASES 的三個階段。文法與變化練習照單元歸屬；單字、漢字、聽力、閱讀照等級歸到該等級的最後一個階段
    (PRE_N5 → 入門, N5 → 第一階段, N4 → 第三階段)；入門另含全部假名。階段測驗與「標記到這裡為止」都以這個劃分為準。 */
-const STAGES = [{ id: 'pre', title: '入門', sub: '假名與入門單字，不算週數；都看過、正確率到 80% 就自動進第 1 週', units: ['m0'], lv: 'PRE_N5' }].concat(
+const STAGES = [{ id: 'pre', title: '入門', sub: '假名、入門單字與第 0 週的句型；都看過、正確率到 80% 就自動進第 1 週', units: ['m0'], lv: 'PRE_N5' }].concat(
   DATA.PHASES.map((ph, i) => ({ id: 'p' + (i + 1), title: ph.title, sub: ph.span, units: DATA.UNITS.filter(u => u.ph === ph.id).map(u => u.id), lv: ['N5', null, 'N4'][i] || null })));
 function stageById(id) { return STAGES.find(s => s.id === id); }
 function stageIndex(id) { return Math.max(0, STAGES.findIndex(s => s.id === id)); }
@@ -7598,7 +7602,7 @@ const FMT_NAME = {
   'v-listen': '單字・聽音選意思', 'v-spell': '單字・假名拼字', 'v-match': '單字・配對', 'v-sentence': '自訂句子', 'g-choice': '文法・填空', 'g-meaning': '文法・句意／用法', 'g-order': '文法・排序',
   'g-correct': '文法・選正確句', 'g-conj': '文法・動詞變化', 'g-adj': '文法・形容詞變化', 'g-identify': '文法・判斷動詞形', 'g-conj-type': '文法・動詞變化（拼寫）', 'g-adj-type': '文法・形容詞變化（拼寫）',
   'k-meaning': '漢字・意思', 'k-shape': '漢字・選字', 'k-read': '漢字・讀音', 'l-dialog': '聽力・對話', 'l-resp': '聽力・即時應答',
-  'l-scene': '聽力・情境表達', 'r-passage': '閱讀', 'm-card': '錯題卡'
+  'l-scene': '聽力・情境表達', 'r-passage': '閱讀', 'm-card': '錯題卡', 'a-read': '假名・看字選音', 'a-sound': '假名・聽音選字', 'a-pair': '假名・平片對照'
 };
 const KIND_NAME = { v: '單字', g: '文法', k: '漢字', a: '假名', l: '聽力', r: '閱讀' };
 function lvLabel(lv) { return lv === 'PRE_N5' ? '入門' : lv; }
@@ -7615,9 +7619,9 @@ function weekPractice(days = 7) {
 // overall progress of a bank in three mastery steps (counts) plus a weighted score: 已學 1・熟悉 2・熟練 3 points out of 3 per item
 function progressTotals(kind) {
   const t = { kind, total: 0, seen: 0, learned: 0, mastered: 0, n5: 0 };   // n5: how many of the items are N5 (a faint mark on the gauge)
-  const n5Units = new Set(DATA.UNITS.filter(u => u.lv === 'N5').map(u => u.id));   /* level-literal-ok: units */
-  if (kind === 'v') {
-    REG.vocab.filter(v => v.builtin).forEach(v => { t.total++; if (v.lv !== 'N4') t.n5++; const r = state.srs[v.key]; if (!r) return; const l = srsLevelLabel(r, v.key); if (l === '已熟練') t.mastered++; else if (r.b >= SRS_LEARNED) t.learned++; else t.seen++; });
+  const n5Units = new Set(DATA.UNITS.filter(u => u.lv === 'N5').map(u => u.id).concat('m0'));   /* level-literal-ok: units; 第 0 週 is N5 grammar */
+  if (kind === 'v' || kind === 'a') {   // 假名 (1.0.16): one level, so no N5 / N4 tick
+    (kind === 'a' ? REG.kana : REG.vocab.filter(v => v.builtin)).forEach(v => { t.total++; if (kind === 'v' && v.lv !== 'N4') t.n5++; const r = state.srs[v.key]; if (!r) return; const l = srsLevelLabel(r, v.key); if (l === '已熟練') t.mastered++; else if (r.b >= SRS_LEARNED) t.learned++; else t.seen++; });
   } else {
     REG.grammar.forEach(g => { t.total++; if (n5Units.has(g.u)) t.n5++; const r = state.srs[g.key]; if (!r) return; if ((r.ok || 0) >= 3) t.mastered++; else if ((r.ok || 0) >= 1) t.learned++; else t.seen++; });
   }
@@ -7663,6 +7667,7 @@ function planAdvice() {
   const studyDays = Math.max(0, pace.daysLeft - 21);
   const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
   const banks = [
+    { k: 'a', name: '假名', total: REG.kana.length, left: unseen(REG.kana) },   // shown, not part of the load-cap advice (每天新假名 is its own setting)
     { k: 'v', name: '單字', total: REG.vocab.filter(x => x.builtin).length, left: unseen(REG.vocab.filter(x => x.builtin)), key: 'v', max: 40 },
     { k: 'g', name: '文法', total: REG.grammar.length, left: unseen(REG.grammar), key: 'g', max: 30 },
     { k: 'k', name: '漢字', total: REG.kanji.length, left: unseen(REG.kanji), key: 'k', max: 15 },
@@ -7744,7 +7749,7 @@ function renderStats(view) {
   const wkTable = `<table class="table"><thead><tr><th>日期</th><th>單字</th><th>文法</th><th>其他</th><th>合計</th></tr></thead><tbody>${wk.map((d, i) => `<tr><td class="num">${i === last ? '今天' : d.date}</td><td class="num">${d.v}</td><td class="num">${d.g}</td><td class="num">${d.q}</td><td class="num">${d.total}</td></tr>`).join('')}</tbody></table>`;
   const progressCard = `<div class="card" id="progressCard">
       <div class="card-head"><div><div class="card-title">總進度</div><div class="card-sub">指針是加權分數：已學 1 分、熟悉 2 分、熟練 3 分，滿分 3 分一題；顏色是三階熟練度。</div></div></div>
-      <div class="gauges">${gaugeHtml(progressTotals('v'), '單字', ['已熟練', '熟悉', '已學'])}${gaugeHtml(progressTotals('g'), '文法', ['熟練', '熟悉', '初識'])}</div>
+      <div class="gauges">${gaugeHtml(progressTotals('v'), '單字', ['已熟練', '熟悉', '已學'])}${gaugeHtml(progressTotals('g'), '文法', ['熟練', '熟悉', '初識'])}${gaugeHtml(progressTotals('a'), '假名', ['已熟練', '熟悉', '已學'])}</div>
     </div>`;
 
   const weak = weakPoints();
@@ -7773,13 +7778,13 @@ function renderStats(view) {
       <div class="card-head"><div><div class="card-title">過去 7 天的練習量</div><div class="card-sub">每天作答的題數，依種類堆疊</div></div></div>
       <div class="cols" role="img" aria-label="過去 7 天每天作答的題數">${cols}</div>
       <div class="col-axis">${axis}</div>
-      <div class="small muted mt-2"><i class="seg-dot v"></i>單字・漢字　<i class="seg-dot g"></i>文法　<i class="seg-dot q"></i>聽力・閱讀・模擬考</div>
+      <div class="small muted mt-2"><i class="seg-dot v"></i>單字・漢字・假名　<i class="seg-dot g"></i>文法　<i class="seg-dot q"></i>聽力・閱讀・模擬考</div>
       <details class="disclose mt-3"><summary>明細</summary><div class="table-wrap mt-2">${wkTable}</div></details>
     </div>
     <div class="grid grid-4">
       <div class="card"><div class="stat"><span class="stat-v">${acc === null ? '—' : pctText(acc)}</span><span class="stat-l">最近 60 題正確率</span></div></div>
       <div class="card"><div class="stat"><span class="stat-v">${(total14 / 14).toFixed(1)}</span><span class="stat-l">近 14 天平均每天題數</span></div></div>
-      <div class="card"><div class="stat"><span class="stat-v">${(learned.v || 0) + (learned.g || 0) + (learned.k || 0)}</span><span class="stat-l">已熟悉（單字 ${learned.v || 0}・文法 ${learned.g || 0}・漢字 ${learned.k || 0}）</span></div></div>
+      <div class="card"><div class="stat"><span class="stat-v">${(learned.v || 0) + (learned.g || 0) + (learned.k || 0) + (learned.a || 0)}</span><span class="stat-l">已熟悉（單字 ${learned.v || 0}・文法 ${learned.g || 0}・漢字 ${learned.k || 0}・假名 ${learned.a || 0}）</span></div></div>
       <div class="card"><div class="stat"><span class="stat-v">${pace.left}</span><span class="stat-l">還沒學的文法題</span></div></div>
     </div>
     ${historyCardHtml()}

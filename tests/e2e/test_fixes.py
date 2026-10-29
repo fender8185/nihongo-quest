@@ -532,7 +532,8 @@ def test_stats_shows_the_past_week_of_practice_and_what_was_learned(b):
     assert r['n'] == 7 and r['segs'] == ['q:1', 'g:2', 'v:4'] and r['label'] == '7', r
     assert r['summary'] == '明細' and not r['learned'] and not r['fresh'] and r['legend'] and r['hasLegend'], r
     assert r['order'] == [0, 1, 2], r['order']   # gauges first, then the week chart, then the number tiles
-    g = {x['k']: x for x in r['g']}; assert set(g) == {'v', 'g'}, r['g']
+    g = {x['k']: x for x in r['g']}; assert set(g) == {'v', 'g', 'a'}, r['g']   # 1.0.16: a 假名 gauge too
+    assert g['a']['total'] == 142 and g['a']['tick'] is None, g['a']   # one level: no N5 / N4 mark
     assert g['v']['learned'] == 1 and g['v']['mastered'] == 0 and g['v']['total'] >= 1400 and g['v']['needle'] and g['v']['arcs'] == 1 and 0 <= g['v']['pct'] < 100, g['v']
     assert g['g']['seen'] + g['g']['learned'] + g['g']['mastered'] == 1 and g['g']['total'] >= 1000, g['g']
     assert abs(g['v']['tick'] - r['nonN4'] / g['v']['total']) < 0.002 and g['v']['tickLabels'] == 'N5/N4', g['v']   # a faint mark where N4 begins (入門＋N5 before it)

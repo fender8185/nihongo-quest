@@ -465,6 +465,36 @@ def test_week0_pending_puts_its_items_before_the_current_unit(b):
     r = json.loads(ev(b, js))
     assert r == {'c': ['m0', 'm0', 'm0'], 'after': 'm1', 'norm': True}, r
 
+# ---- 1.0.16: 學習分析 counts the new content (user, 2026-10-29: 「學習分析的資料也要一併統計這些新加入的內容」) ----
+def test_week0_items_count_as_n5_grammar_in_the_stats(b):
+    js = """(() => { const t = progressTotals('g'); const n5 = REG.grammar.filter(g => g.u === 'm0' || DATA.UNITS.some(u => u.id === g.u && u.lv === 'N5')).length; return JSON.stringify({ n5: t.n5, want: n5, total: t.total === REG.grammar.length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['n5'] == r['want'] and r['total'], r
+
+def test_stats_progress_shows_kana_and_counts_it_as_learned(b):
+    js = """(() => { const t = todayStr(); state.srs = {}; ['a:あ', 'a:い', 'a:ア'].forEach((k, i) => { state.srs[k] = { b: i < 2 ? SRS_LEARNED : 1, due: addDays(t, 3), n: 2, ok: 2, ng: 0, s: 5, d: 5, last: t }; });
+      location.hash = '#/stats'; route(); const v = document.getElementById('view'); const g = v.querySelector('#progressCard .gauge[data-kind="a"]');
+      const tile = [...v.querySelectorAll('.stat-l')].find(x => x.textContent.startsWith('已熟悉'));
+      return JSON.stringify({ gauges: [...v.querySelectorAll('#progressCard .gauge')].map(x => x.dataset.kind), total: g && Number(g.dataset.total), met: g && Number(g.dataset.seen) + Number(g.dataset.learned) + Number(g.dataset.mastered),
+        tick: Boolean(g && g.querySelector('.tick')), tile: tile && tile.textContent.includes('假名 2'), tileN: tile && tile.previousElementSibling.textContent }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'gauges': ['v', 'g', 'a'], 'total': 142, 'met': 3, 'tick': False, 'tile': True, 'tileN': '2'}, r
+
+def test_stats_tables_name_kana_rows_and_formats(b):
+    js = """(() => { state.statsFmt = { 'a-read': { ok: 4, ng: 2 }, 'a-sound': { ok: 5, ng: 0 }, 'a-pair': { ok: 3, ng: 3 } }; location.hash = '#/stats'; route(); const v = document.getElementById('view');
+      const rows = [...v.querySelectorAll('#planAdvice tbody tr')].map(r => r.cells[0].textContent); const kana = planAdvice().banks.find(b2 => b2.name === '假名');
+      return JSON.stringify({ kanaRow: rows.includes('假名'), kana: kana ? [kana.total, kana.key || null] : null, fmts: ['假名・看字選音', '假名・聽音選字', '假名・平片對照'].filter(n => v.textContent.includes(n)).length, raw: /a-(read|sound|pair)/.test(v.textContent) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'kanaRow': True, 'kana': [142, None], 'fmts': 3, 'raw': False}, r
+
+def test_finishing_pre_logs_week0_as_a_completed_unit(b):
+    js = """(() => { const t = todayStr(); const mark = (it) => { state.srs[it.key] = { b: 2, due: addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -1) }; };
+      REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').forEach(mark); REG.kana.filter(x => x.seion).forEach(mark); REG.grammar.filter(g => g.u === 'm0').forEach(mark);
+      state.recent = Array(40).fill(1); delete state.dailyLogs[t]; const done = finishPreIfReady();
+      return JSON.stringify({ done, units: (state.dailyLogs[t] || {}).units || [] }); })()"""
+    r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
+    assert r == {'done': True, 'units': ['基本句型']}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
