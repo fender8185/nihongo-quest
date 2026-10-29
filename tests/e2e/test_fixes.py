@@ -242,13 +242,27 @@ def APP_VERSION_IN_SW(r):
 
 # ---- 2026-10-26: grammar, listening, reading and kanji do not come back the same day ----
 def test_every_wrong_answer_waits_until_tomorrow(b):
+    # 1.0.15: except listening and reading — a missed dialogue or passage comes back after a week (the next day it tests memory of the answer)
     js = """(() => { const t = todayStr(); const out = {};
       const pick = { g: REG.grammar[0], l: REG.listen[0], r: REG.read[0], k: REG.kanji[0], v: REG.vocab.find(x => x.builtin) };
       for (const [kind, it] of Object.entries(pick)) out[kind] = daysBetween(t, srsAnswer(it.key, false).rec.due);
       return JSON.stringify(out); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
     r = __import__('json').loads(out[-1])
-    assert r == {'g': 1, 'l': 1, 'r': 1, 'k': 1, 'v': 1}, r
+    assert r == {'g': 1, 'l': 7, 'r': 7, 'k': 1, 'v': 1}, r
+
+def test_a_missed_listening_or_reading_item_gets_no_retry_copy_in_the_session(b):
+    js = """(() => { const out = {};
+      for (const [kind, it] of [['l', REG.listen.find(x => x.t === 'dialog')], ['r', REG.read[0]], ['v', REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x))]]) {
+        const fill = REG.grammar.filter(x => !state.srs[x.key]).slice(0, 8);
+        startSession('items', { items: [it, ...fill] }); const e = currentEntry(); e.previewDone = true; renderPractice();
+        answerCurrent((e.q.answer + 1) % e.q.options.length);
+        out[kind] = { retry: SESSION.entries.filter(x => x.requeued && x.item && x.item.key === it.key).length, notebook: state.mistakes.some(m => m.key === it.key) };
+        SESSION = null; document.body.classList.remove('practicing');
+      }
+      return JSON.stringify(out); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
+    assert r == {'l': {'retry': 0, 'notebook': True}, 'r': {'retry': 0, 'notebook': True}, 'v': {'retry': 1, 'notebook': True}}, r
 
 def test_miss_then_requeue_does_not_return_today(b):
     js = """(() => { const t = todayStr(); const out = {};
@@ -642,7 +656,7 @@ window.__day = (n) => { window.__shift = n; DAILY_CACHE = null; }; true"""
 def test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook(b):
     # a missed word, grammar item or kanji comes back on days 1, 3 and 7; three right answers in a row hand it back to FSRS and
     # clear it from the notebook; a miss on the way restarts the ladder. Listening is not on the ladder (a dialogue heard again
-    # within days tests memory of the answer).
+    # within days tests memory of the answer): a miss waits a week (1.0.15).
     js = """(() => { const t0 = todayStr(); const v = REG.vocab.find(x => x.builtin && x.lv === 'N5'); const g = REG.grammar.find(x => (x.t || 'choice') === 'choice' && x.op); const l = REG.listen[0];
       const seed = (it) => { state.srs[it.key] = { b: 2, due: t0, n: 3, ok: 3, ng: 0, s: 4, d: 5, last: addDays(t0, -4), intro: addDays(t0, -10), f: {} }; }; [v, g, l].forEach(seed);
       const play = (it, ok) => { startSession('items', { items: [it] }); if (currentEntry().preview) dismissPreview(); const q = currentEntry().q; answerCurrent(ok ? q.answer : (q.answer + 1) % q.options.length); SESSION = null; document.body.classList.remove('practicing'); };
@@ -663,7 +677,7 @@ def test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook(b):
     assert r['d3'] == [[7, 2], True], r
     assert r['d7'][0][1] is None and r['d7'][0][0] > 8 and r['d7'][1] is False, r
     assert r['gRestart'] == [[4, 0], True], r
-    assert r['l0'] == [1, None] and r['l1'][1] is None and r['l1'][0] >= 15, r
+    assert r['l0'] == [7, None] and r['l1'][1] is None and r['l1'][0] >= 15, r
 
 def test_today_counts_relearning_items_among_reviews_and_puts_them_first(b):
     js = """(() => { const t = todayStr(); const words = REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 12);
@@ -1123,7 +1137,7 @@ def test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only
     assert r['n5'] == r['n5Items'] and r['n5'] > 60 and r['all'] == r['total'], r
     assert r['first'] and all(u == 'm1' for u in r['first']), r
     assert set(r['near'][:r['c3']]) == {'m3'} and set(r['near'][r['c3']:r['c3'] + r['c2']]) == {'m2'}, r
-    assert r['d1'] >= 14 and r['d2'] >= 45 and r['d3'] == 1, r
+    assert r['d1'] >= 14 and r['d2'] >= 45 and r['d3'] == 7, r   # 1.0.15: a miss waits a week
 
 def test_listening_playback_shows_a_progress_bar_with_the_line_count(b):
     js = """(() => { const it = REG.listen.find(x => x.t === 'dialog'); startSession('items', { items: [it] }); const e = currentEntry(); e.autoPlayed = true; renderPractice();
@@ -1437,6 +1451,49 @@ def test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_h
     assert r['afterSlip'] == {'hasLog': False, 'hasTheme': False, 'encores': 0, 'requeued': 0, 'newCount': 0}, r
     assert r['hiddenOk'] is True, r
 
+# ---- 1.0.15: settings keep what the learner decides; stage, unit, review strength and the speech switches are the app's ----
+def test_settings_drop_the_switches_the_app_now_decides(b):
+    js = """(() => { const tab = (k) => { openSettings(k); const m = document.querySelector('.modal'); const o = { keys: [...m.querySelectorAll('[data-key]')].map(x => x.dataset.key), acts: [...m.querySelectorAll('[data-act]')].map(x => x.dataset.act), text: m.textContent }; closeModal(true); return o; };
+      const L = tab('learn'), S = tab('speech');
+      return JSON.stringify({ learnGone: ['retention', 'enter-main', 'enter-pre'].filter(k => L.keys.includes(k) || L.acts.includes(k)), stageRow: L.text.includes('目前階段'), unitRow: L.text.includes('目前單元'),
+        learnKept: ['loadCap', 'sessionSize', 'newKanaPerDay', 'order', 'showZh', 'includeImported', 'examDate'].filter(k => !L.keys.includes(k)),
+        speechGone: ['autoSpeak', 'listening', 'audioOptions'].filter(k => S.keys.includes(k)), speechKept: ['speechRate', 'engine'].filter(k => !S.keys.includes(k)) }); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
+    assert r == {'learnGone': [], 'stageRow': False, 'unitRow': False, 'learnKept': [], 'speechGone': [], 'speechKept': []}, r
+
+def test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off(b):
+    # 作答後自動朗讀, 出聽力題 and 聽力選項只用聽的 are no longer settings: values an older version saved as off change nothing
+    js = """(() => { Object.assign(state.settings, { autoSpeak: false, listening: false, audioOptions: false }); state.stage = 'main'; DAILY_CACHE = null;
+      const lq = (t) => Boolean(makeListenQuestion(REG.listen.find(x => x.t === t)).audioOptions);
+      const out = { speech: speechAvailable(), listen: dailyPlan().newL.length > 0, resp: lq('resp'), scene: lq('scene'), dialog: lq('dialog') };
+      const said = []; const orig = speak; speak = (x) => { said.push(x); return Promise.resolve(); };
+      const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x)); startSession('items', { items: [v] }); const e = currentEntry(); e.previewDone = true; renderPractice(); answerCurrent(e.q.answer);
+      speak = orig; SESSION = null; document.body.classList.remove('practicing'); out.spoke = said.length > 0;
+      out.dropped = Object.keys(normalizeState(JSON.parse(JSON.stringify(state))).settings).filter(k => ['autoSpeak', 'listening', 'audioOptions', 'retention'].includes(k));
+      return JSON.stringify(out); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
+    assert r == {'speech': True, 'listen': True, 'resp': True, 'scene': True, 'dialog': False, 'spoke': True, 'dropped': []}, r
+
+def test_review_strength_follows_the_accuracy_of_recent_due_reviews(b):
+    # 複習強度 is no longer a setting: of the last 100 due reviews < 80% right → target 93% (sooner), > 92% → 87% (later), else 90%; under 30 reviews → 90%
+    js = """(() => { const iv = (ok, n) => { state.reviewRecent = Array(n).fill(0).map((x, i) => i < ok ? 1 : 0); return Math.round(fsrsInterval(10) * 100) / 100; };
+      const out = { none: iv(0, 0), few: iv(10, 20), high: iv(50, 50), edge92: iv(46, 50), mid: iv(43, 50), edge80: iv(40, 50), low: iv(35, 50) };
+      state.settings.retention = 0.97; out.oldSetting = iv(43, 50); return JSON.stringify(out); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
+    assert r == {'none': 10, 'few': 10, 'high': 13.69, 'edge92': 10, 'mid': 10, 'edge80': 10, 'low': 6.66, 'oldSetting': 10}, r
+
+def test_only_due_reviews_feed_the_review_accuracy_and_a_slip_takes_its_mark_back(b):
+    js = """(() => { const t = todayStr(); state.reviewRecent = []; const [a, b2, c] = REG.vocab.filter(v => v.builtin && meaningOptions(v)).slice(0, 3);
+      const rec = (due, last) => ({ b: 2, due, n: 2, ok: 2, ng: 0, s: 6, d: 5, last, f: {} });
+      delete state.srs[a.key]; state.srs[b2.key] = rec(addDays(t, 5), addDays(t, -2)); state.srs[c.key] = rec(t, addDays(t, -6));
+      srsAnswer(a.key, true); srsAnswer(b2.key, false); srsAnswer(c.key, false); const out = { marks: state.reviewRecent.slice() };
+      for (let i = 0; i < 120; i++) { state.srs[c.key].due = t; srsAnswer(c.key, true); } out.capped = state.reviewRecent.length;
+      state.reviewRecent = []; state.srs[c.key] = rec(t, addDays(t, -6)); startSession('items', { items: [c] }); const e = currentEntry(); e.previewDone = true; renderPractice();
+      answerCurrent((e.q.answer + 1) % e.q.options.length); out.afterMiss = state.reviewRecent.slice(); ACTIONS.slip(); out.afterSlip = state.reviewRecent.slice();
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
+    assert r == {'marks': [0], 'capped': 100, 'afterMiss': [0], 'afterSlip': []}, r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -1457,7 +1514,9 @@ if __name__ == "__main__":
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
              test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box,
-             test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_hides_kana_drills]
+             test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_hides_kana_drills,
+             test_a_missed_listening_or_reading_item_gets_no_retry_copy_in_the_session, test_settings_drop_the_switches_the_app_now_decides, test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off,
+             test_review_strength_follows_the_accuracy_of_recent_due_reviews, test_only_due_reviews_feed_the_review_accuracy_and_a_slip_takes_its_mark_back]
     failed = 0
     try:
         for t in tests:

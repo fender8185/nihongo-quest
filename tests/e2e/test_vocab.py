@@ -124,20 +124,20 @@ def test_wrong_first_answer_keeps_requeue_and_encores_apart_and_requeue_does_not
     assert len(r['pos']) == 3 and not r['adjacent'], r
     assert r['f'] == {r['fmt1']: [0, 1]}, r
 
-def test_preview_card_only_speaks_when_auto_reading_is_on(b):
+def test_preview_card_speaks_the_new_word_even_if_auto_reading_was_saved_off(b):
+    # 1.0.15: 作答後自動朗讀 is always on; a value an older version saved as off is ignored
     js = """(() => { const calls = []; const orig = speak; speak = (t) => calls.push(t);
       const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x));
-      const run = () => { startSession('items', { items: [v] }); renderPractice(); return new Promise(r => setTimeout(r, 300)).then(() => { SESSION = null; document.body.classList.remove('practicing'); }); };
-      state.settings.autoSpeak = false;
-      return run().then(() => { const off = calls.length; state.settings.autoSpeak = true; return run().then(() => { speak = orig; return JSON.stringify({ off, on: calls.length - off }); }); }); })()"""
+      state.settings.autoSpeak = false; startSession('items', { items: [v] }); renderPractice();
+      return new Promise(r => setTimeout(r, 300)).then(() => { SESSION = null; document.body.classList.remove('practicing'); speak = orig; return JSON.stringify({ calls: calls.length }); }); })()"""
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
-    assert r == {'off': 0, 'on': 1}, r
+    assert r == {'calls': 1}, r
 
 TESTS = [test_themes_cover_every_builtin_word_once, test_theme_tab_lists_cards_and_opens_the_word_table, test_themed_practice_uses_only_that_theme,
          test_mastered_needs_three_passed_formats_for_words_only, test_answering_records_the_format_and_flash_ratings_count_as_one, test_unpassed_formats_are_preferred_on_review,
          test_new_word_shows_a_preview_card_before_its_question,
          test_a_new_word_comes_back_once_in_another_format_without_rescheduling, test_no_encore_when_no_other_format_can_be_built, test_words_already_known_get_no_encore,
-         test_wrong_first_answer_keeps_requeue_and_encores_apart_and_requeue_does_not_count_as_a_pass, test_preview_card_only_speaks_when_auto_reading_is_on]
+         test_wrong_first_answer_keeps_requeue_and_encores_apart_and_requeue_does_not_count_as_a_pass, test_preview_card_speaks_the_new_word_even_if_auto_reading_was_saved_off]
 
 # ---- 2026-10-26 (2): two active themes feed the new-word order ----
 def test_new_words_come_from_two_themes_interleaved(b):

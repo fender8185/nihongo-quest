@@ -18,7 +18,7 @@ def test_listening_and_reading_wait_a_month_then_a_season_then_half_a_year(b):
         out[k] = days; });
       state.srs = JSON.parse(keep); saveState(); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'l': [30, 90, 180, 180, 1], 'r': [30, 90, 180, 180, 1]}, r
+    assert r == {'l': [30, 90, 180, 180, 7], 'r': [30, 90, 180, 180, 7]}, r   # 1.0.15: a miss waits a week, not a day
 
 def test_every_n5_listening_and_reading_item_has_furigana_on_every_kanji(b):
     js = """(() => { const bad = []; const bare = (t) => furi(String(t || '')).replace(/<ruby>.*?<\\/ruby>/g, '').match(/[一-鿿々〆ヶ]+/g) || [];

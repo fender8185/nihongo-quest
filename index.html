@@ -335,11 +335,17 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .kana-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 10px 0 14px; max-width: 420px; }
 .kana-cell { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); font: inherit; cursor: pointer; }
 .kana-cell.empty { border-color: transparent; background: transparent; cursor: default; }
-.kana-heat { display: grid; gap: 4px; margin: 8px 0; overflow-x: auto; }
-.kana-heat-row { display: grid; grid-template-columns: 22px repeat(10, minmax(0, 1fr)); gap: 4px; align-items: stretch; }
-.kana-heat .kana-cell { padding: 4px 0; font-size: 16px; min-width: 0; }
-.kana-heat .kana-cell .hira { font-size: 17px; }
-.kana-heat .kana-cell:nth-child(7) { margin-left: 6px; }
+.kana-pair { display: grid; gap: 10px; margin: 8px 0; }
+.kana-pair .kana-script-seg { justify-self: start; }
+.kana-table-title { font-size: 12px; color: var(--fg-3); margin-bottom: 4px; }
+.kana-heat { display: grid; gap: 4px; max-width: 420px; }
+.kana-heat-row { display: grid; grid-template-columns: 26px repeat(5, minmax(0, 1fr)); gap: 4px; align-items: stretch; }
+.kana-heat .kana-cell { padding: 5px 0 3px; min-width: 0; }
+.kana-heat .kana-cell .hira { font-size: 20px; }
+.kana-heat .kana-cell .roma { font-size: 10px; }
+.kana-cell.heat-1 .roma, .kana-cell.heat-2 .roma, .kana-cell.heat-3 .roma, .kana-cell.heat-4 .roma { color: inherit; opacity: .8; }
+@media (max-width: 760px) { .kana-pair[data-show="hira"] .kana-table[data-script="kata"], .kana-pair[data-show="kata"] .kana-table[data-script="hira"], .kana-table-title { display: none; } }
+@media (min-width: 761px) { .kana-pair { grid-template-columns: repeat(2, minmax(0, 420px)); gap: 24px; } .kana-pair .kana-script-seg { display: none; } }
 .kana-cell.heat-1 { background: var(--heat-1); } .kana-cell.heat-2 { background: var(--heat-2); } .kana-cell.heat-3 { background: var(--heat-3); color: #fff; } .kana-cell.heat-4 { background: var(--heat-4); color: #fff; }
 .kana-row-btn { border: 1px solid var(--line); background: var(--bg-elev-2); border-radius: 8px; font-size: 10px; cursor: pointer; color: inherit; }
 .kanji-chip { cursor: pointer; font-size: 15px; padding: 1px 8px; }
@@ -928,12 +934,19 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.14';   // keep equal to the version in sw.js CACHE ('nq-v1.0.14'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.15';   // keep equal to the version in sw.js CACHE ('nq-v1.0.15'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.15', date: '2026-10-29', items: [
+    '五十音表（單字 › 入門）：手機上用「平假名｜片假名」切換，一排五個、下面有羅馬拼音；寬螢幕兩張表並排。點假名就念出來；每排前面的 ▶ 只練那一種假名的那一排。雲端還缺的假名音檔，下次執行「生成雲端音檔」會補齊。',
+    '設定精簡：學習區拿掉「目前階段」「複習強度」「目前單元」；語音區拿掉「作答後自動朗讀」「出聽力題」「聽力選項只用聽的」，三個都固定開啟（即時應答與情境表達的選項只能用聽的，跟正式考試一樣）。',
+    '入門自動結束：假名和入門單字都看過、最近正確率到 80% 就自動進第 1 週，首頁當天會說一聲；還不到 80% 時首頁顯示目前的正確率。',
+    '複習強度改成自動：看最近 100 題到期複習的正確率，不到 80% 複習變密（目標記住 93%），超過 92% 間隔拉長（87%），其餘維持 90%。',
+    '聽力、閱讀答錯不再隔天出：一週後才再出，同一組練習也不給「再練一次」（隔天再聽只是記得答案）；一樣會收進錯題本。'
+  ] },
   { v: '1.0.14', date: '2026-10-29', items: [
     '雲端同步：衝突合併時補齊階段測驗紀錄、單元 AI 筆記與同日新題計數；跨裝置同題錯題自動去重並對齊熟練狀態。',
     '備份快照：依內含日期排序與淘汰，避免衝突／同步前備份誤將一般每日快照擠掉，並顯示清楚的備份標籤。',
@@ -1002,15 +1015,15 @@ const CHANGELOG = [
   ] },
   { v: '1.0.0', date: '2026-10-28', items: [
     '今日：一張卡，上面「練習／錯題本／單字」三段切換，手機剛好一頁。練習是進度圓環、開始練習、日期與連續天數，和「說明」「範圍」「目前單元」三個收合小標（進首頁時目前單元是展開的）。錯題本／單字就是聽一輪播放器。',
-    '每日練習的規則：每一題不是今天到期的複習就是今天的新內容。每天負荷上限（預設 100）只壓新題，到期複習永遠全出。答錯的隔天起第 1、3、7 天各複習一次，三次都對才離開錯題本；答對的越熟出現得越少。新文法照講義段落順序出，單元文法全部出過就自動推進到下一單元；新單字從兩條主題線交錯供應；變化練習以形態為單位排程，動詞每次隨機換。做完顯示「今天完成了」，可「加練」明後天到期的複習。',
-    '練習：單字有看字選意思、中翻日、例句填空、讀音、寫法、聽音選意思、假名拼字、配對；文法有填空、選正確句、句意、真的排序、活用拼寫（熟了之後不給選項）；另有假名（看字選音、聽音選字、平片對照）、漢字、聽力（整個級別抽題）、閱讀（兩者答對後 30／90／180 天才再出）。新字先看預習卡再考；答錯幾題後換一種格式「再練一次」，不寫排程；按「手滑，不算」可撤銷；單字可按「我會了」直接標熟練。手機上作答只有「下一題」固定在底部，畫面避開瀏海、不能縮放。',
-    '入門（PRE_N5）：假名辨識與入門單字，學完才進第 1 週；課程：18 個單元（每單元約兩週）的講義，加上「第 0 週：開始之前」的入門（假名、句子骨架、品詞、動詞的形、助詞、數量詞）；可依程度選起點。文法考點整併成 288 個，每個考點至少 3 題。',
-    '單字：1661 個內建單字（入門 59／N5 876／N4 726，含敬語、名詞＋する合併卡），N5 以上每字兩句例句；單字頁先分入門／N5／N4，每級列主題（卡上有該主題的漢字）與漢字，每個主題有已學／熟悉／熟練三段進度條，可看字表、翻字卡、練習或播放字卡；入門頁有依熟練度上色的五十音表；N4 單字在 N5 學過一次後開放（設定可提前）。漢字 342 個另有讀音與字義題。自訂字卡可匯入。',
+    '每日練習的規則：每一題不是今天到期的複習就是今天的新內容。每天負荷上限（預設 100）只壓新題，到期複習永遠全出。答錯的隔天起第 1、3、7 天各複習一次，三次都對才離開錯題本；答對的越熟出現得越少，間隔還會依最近到期複習的正確率自動調整（不到 80% 縮短、超過 92% 拉長）。新文法照講義段落順序出，單元文法全部出過就自動推進到下一單元；新單字從兩條主題線交錯供應；變化練習以形態為單位排程，動詞每次隨機換。做完顯示「今天完成了」，可「加練」明後天到期的複習。',
+    '練習：單字有看字選意思、中翻日、例句填空、讀音、寫法、聽音選意思、假名拼字、配對；文法有填空、選正確句、句意、真的排序、活用拼寫（熟了之後不給選項）；另有假名（看字選音、聽音選字、平片對照）、漢字、聽力（整個級別抽題）、閱讀（兩者答對後 30／90／180 天才再出，答錯一週後再出、不給再練一次）。新字先看預習卡再考；答錯幾題後換一種格式「再練一次」，不寫排程；按「手滑，不算」可撤銷；單字可按「我會了」直接標熟練。手機上作答只有「下一題」固定在底部，畫面避開瀏海、不能縮放。',
+    '入門（PRE_N5）：假名辨識與入門單字，都看過、最近正確率到 80% 就自動進第 1 週；課程：18 個單元（每單元約兩週）的講義，加上「第 0 週：開始之前」的入門（假名、句子骨架、品詞、動詞的形、助詞、數量詞）；可依程度選起點。文法考點整併成 288 個，每個考點至少 3 題。',
+    '單字：1661 個內建單字（入門 59／N5 876／N4 726，含敬語、名詞＋する合併卡），N5 以上每字兩句例句；單字頁先分入門／N5／N4，每級列主題（卡上有該主題的漢字）與漢字，每個主題有已學／熟悉／熟練三段進度條，可看字表、翻字卡、練習或播放字卡；入門頁有依熟練度上色的五十音表（手機上平假名／片假名切換、一排五個，點字發音）；N4 單字在 N5 學過一次後開放。漢字 342 個另有讀音與字義題。自訂字卡可匯入。',
     '聽一輪：循環朗讀，不寫排程、不算題數。來源是錯題本（單字→中文→單字→例句→例句中文；文法整句→中文→整句，只唸有中文且答案標得進句子的題）或單字主題（含自動收錄「已學但還沒熟練」的「初識單詞」，上次的選擇會記住）。膠囊：字｜文、隨機、一次／兩次、速度 0.8／1／1.3。放大圖示進全螢幕：直立手機整頁轉成橫的，日文在上、中文在下、例句最下，字依螢幕放到最大；✕ 回首頁播放不斷。雲端語音時鎖定畫面可控制，鎖屏後持續播放（句間播靜音讓播放器不中斷）。',
     '錯題本：答錯的題目自動收進來，可依類別篩選、排序或依文法考點分組直接練；「快速過一輪」翻卡用忘了／記得回寫排程；題目達到「熟悉」就移到已掌握。',
     '模擬考：依 JLPT 三個科目與大題順序出題，同一份不重複，結束換算 180 分制；最上面有考試倒數、單元進度和依考試日期算的新題額度建議（可一鍵套用）。',
     '學習分析：單字與文法的總進度半圓儀表（三段熟練度、N5／N4 分界）、過去 7 天練習量、學習紀錄熱力圖與每日數據（各類題數、新學與升熟悉、正確率、完成單元）、每日練習量建議。',
-    '語音：預設「雲端音檔」，教材的一萬段日文（Google Neural2）與六千段中文（台灣華語）已預先生成，播到哪句抓哪句、聽過的留在裝置；設定 › 語音的進階區可一次下載全部（日文、中文各一顆鈕）。也可改用 Google Cloud TTS、Deepgram、VOICEVOX 或瀏覽器內建語音；朗讀時已知讀音的字會指定讀法。',
+    '語音：預設「雲端音檔」，教材的一萬段日文（Google Neural2）與六千段中文（台灣華語）已預先生成，播到哪句抓哪句、聽過的留在裝置；設定 › 語音的進階區可一次下載全部（日文、中文各一顆鈕）。也可改用 Google Cloud TTS、Deepgram、VOICEVOX 或瀏覽器內建語音；朗讀時已知讀音的字會指定讀法。作答後自動朗讀、聽力題、即時應答與情境表達只用聽的選項都固定開啟。',
     'AI 解析：Gemini（模型自動輪替、限額自動換、關閉思考步驟）、OpenAI 或本機 Ollama；同一題的解析快取在本機並標示模型。工具與 AI 頁有各服務的 API 申請說明。',
     '同步與資料：Email 驗證碼登入即可多裝置同步，衝突逐筆合併、不丟任何一方的進度；資料存在 IndexedDB，每天第一次開啟自動快照保留 7 天，可匯出／匯入備份，久未備份會提醒。',
     '安裝與介面：可加到主畫面當 app 用（首頁有分步驟說明，iPhone 可一鍵用 Safari 開啟），離線可用。深色／淺色／跟隨系統；振假名全部顯示／熟練的字不標／全部隱藏（F 鍵切換）；鍵盤快速鍵 1–4、Enter、R、T、Esc；版本紀錄在設定 › 外觀。'
@@ -1099,8 +1112,6 @@ function defaultSettings() {
     order: 'mix',              // mix | split
     showZh: true,
     furigana: true,
-    autoSpeak: true,
-    listening: true,
     speechRate: 1.0,
     includeImported: 'words',  // off | words | all
     theme: 'dark',
@@ -1108,10 +1119,8 @@ function defaultSettings() {
     duolingoScore: 22,
     examInstant: false,
     examFormal: false,
-    retention: 0.9,          // FSRS target recall
     furiMode: 'smart',       // smart: no furigana on mastered words | all — furigana:false hides all
     newKanaPerDay: 15,       // 入門: new kana a day (hiragana and katakana together, 五十音 order); only while state.stage === 'pre'
-    audioOptions: false,     // listening replies only spoken, like the real test
     backupEvery: 7
   };
 }
@@ -1145,6 +1154,7 @@ function defaultState() {
     lastBackup: null,
     statsFmt: {},
     recent: [],
+    reviewRecent: [],          // the last 100 due reviews, 1 right / 0 wrong: sets the FSRS target recall (autoRetention)
     legacy: null,
     notices: []
   };
@@ -1193,8 +1203,11 @@ function normalizeState(s) {
   // v69: the v65 default of 40 became 100 (reviews are never cut, so 40 braked the new items within weeks); raised once, a cap set by hand stays
   if (out.settings.loadCap === 40 && !out.settings.capRaised) out.settings.loadCap = 100;
   out.settings.capRaised = true;
+  // 1.0.15: no longer settings — the speech switches are always on, 複習強度 follows the review accuracy (autoRetention), 入門 ends by itself
+  ['autoSpeak', 'listening', 'audioOptions', 'retention'].forEach(k => { delete out.settings[k]; });
+  delete out.preDoneDismissed;
   ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt', 'stageTests'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
-  ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
+  ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'reviewRecent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
   if (out.stage !== 'pre' && out.stage !== 'main') out.stage = 'main';   // 入門階段 (1.0.6); accounts from before it are in the main course
   if (typeof out.kanaKnown !== 'boolean') out.kanaKnown = false;
@@ -1507,15 +1520,19 @@ const GRADE = { again: 1, hard: 2, good: 3, easy: 4 };
 const RELEARN_GAPS = [2, 4];
 const RELEARN_KINDS = /^[vgkca]:/;
 const LR_GAPS = [30, 90, 180];   // 聽力／閱讀 answered right the 1st, 2nd, 3rd+ time: days until it is asked again
+const LR_MISS_GAP = 7;           // 聽力／閱讀 answered wrong: back after a week, not the next day
 function onLadder(key) { const r = state.srs[key]; return Boolean(r) && typeof r.rl === 'number'; }
 function srsGet(key) { return state.srs[key] || null; }
 
 function fsrsD0(g) { return clamp(FSRS_W[4] - (g - 3) * FSRS_W[5], 1, 10); }
 function fsrsR(elapsed, s) { return Math.pow(1 + FSRS_FACTOR * Math.max(0, elapsed) / Math.max(0.01, s), FSRS_DECAY); }
 function fsrsInterval(s) {
-  const r = clamp(Number(state.settings.retention) || 0.9, 0.8, 0.97);
-  return s / FSRS_FACTOR * (Math.pow(r, 1 / FSRS_DECAY) - 1);
+  return s / FSRS_FACTOR * (Math.pow(autoRetention(), 1 / FSRS_DECAY) - 1);
 }
+// 複習強度 (a setting until 1.0.15) follows how the due reviews have been going: under 80% right of the last 100, reviews
+// come sooner (target recall 93%); over 92%, they wait longer (87%) and leave room for new items; otherwise 90%. Fewer than 30 reviews: 90%.
+function reviewAccuracy() { const r = (state.reviewRecent || []).slice(-100); return r.length < 30 ? null : r.reduce((a, b) => a + b, 0) / r.length; }
+function autoRetention() { const a = reviewAccuracy(); return a === null ? 0.9 : a < 0.8 ? 0.93 : a > 0.92 ? 0.87 : 0.9; }
 function levelFromS(s) { let b = 0; LEVEL_FROM_S.forEach(x => { if (s >= x) b++; }); return b; }
 // records from the earlier fixed-interval schedule (or written by hand) get a stability and difficulty
 function ensureFsrs(r) {
@@ -1571,6 +1588,8 @@ function srsAnswer(key, correct, opt = {}) {
   const before = r.b;
   const g = opt.grade ? (GRADE[opt.grade] || 3) : (correct ? 3 : 1);
   const elapsed = r.last ? daysBetween(r.last, t) : 0;
+  const reviewed = !isNew && r.due <= t;   // a due review (not a first look, not early practice): feeds reviewAccuracy
+  if (reviewed) { if (!Array.isArray(state.reviewRecent)) state.reviewRecent = []; state.reviewRecent.push(g > 1 ? 1 : 0); if (state.reviewRecent.length > 100) state.reviewRecent = state.reviewRecent.slice(-100); }
   if (isNew) delete r.s;
   fsrsNext(r, g, elapsed);
   if (isNew && g === 3 && key.startsWith('v:')) r.s = Math.min(r.s, 1);   // a new word's first check is tomorrow, then FSRS takes over
@@ -1578,9 +1597,10 @@ function srsAnswer(key, correct, opt = {}) {
   if (g > 1) { r.ok++; r.st++; } else { r.ng++; r.st = 0; if (before >= 2) r.lapse = (r.lapse || 0) + 1; delete r.known; }   // a miss ends the 我會了 vouch: back to the normal rules
   r.b = g === 1 ? Math.min(levelFromS(r.s), 1) : levelFromS(r.s);
   if (before < SRS_LEARNED && r.b >= SRS_LEARNED) r.lrn = t;   // the day it became 熟悉 (學習分析 lists the recent ones)
-  // A miss comes back tomorrow, whatever the kind: the same-day look is the session's 再練一次 copy, which does not
-  // touch the schedule (seeing the very same question again within hours only tests memory of the answer).
-  r.due = g === 1 ? addDays(t, 1) : addDays(t, fsrsDays(r.s, key));
+  // A miss comes back tomorrow: the same-day look is the session's 再練一次 copy, which does not touch the schedule (seeing
+  // the very same question again within hours only tests memory of the answer). Listening and reading wait a week and get
+  // no 再練一次: a dialogue or passage heard the next day is remembered, not understood.
+  r.due = g === 1 ? addDays(t, /^[lr]:/.test(key) ? LR_MISS_GAP : 1) : addDays(t, fsrsDays(r.s, key));
   // a dialogue or passage met again within weeks tests memory of the answer, not listening or reading: after a
   // correct answer it waits a month, then a season, then half a year (a miss still brings it back tomorrow)
   if (/^[lr]:/.test(key) && g > 1) r.due = addDays(t, Math.max(daysBetween(t, r.due), LR_GAPS[Math.min(r.ok, LR_GAPS.length) - 1]));
@@ -1599,7 +1619,7 @@ function srsAnswer(key, correct, opt = {}) {
     else if (key.startsWith('c:')) state.today.newC = (state.today.newC || 0) + 1;
     else if (key.startsWith('a:')) state.today.newA = (state.today.newA || 0) + 1;
   }
-  return { rec: r, isNew, before, after: r.b };
+  return { rec: r, isNew, before, after: r.b, reviewed };
 }
 
 function srsDots(b) {
@@ -2434,7 +2454,6 @@ function kanjiOptions(v, surface, reading, zh = {}) {
 }
 
 function speechAvailable() {
-  if (!state.settings.listening) return false;
   const cfg = state.ttsConfig || TTS_DEFAULT;
   const eng = (!cfg.cloudDefault && cfg.engine === 'browser_neural') ? 'cloud' : cfg.engine;
   if (eng && eng !== 'browser_neural') return true;
@@ -3045,7 +3064,7 @@ function makeListenQuestion(it) {
   const others = (it.op || []).filter(o => o !== it.a);
   q.cat = '聽力'; q.lv = it.lv; q.unit = it.u; q.why = it.why || ''; q.wide = true;
   q.point = { dialog: '聽力：對話', resp: '聽力：即時應答', scene: '聽力：情境表達' }[it.t] || '聽力';
-  const audioOnly = Boolean(state.settings.audioOptions) && (it.t === 'resp' || it.t === 'scene');
+  const audioOnly = it.t === 'resp' || it.t === 'scene';   // replies and scene lines are only heard, like the real test
   if (it.t === 'dialog') {
     q.fmt = 'l-dialog';
     q.label = `聽力 · ${it.lv} · 對話`;
@@ -3233,6 +3252,16 @@ function kanaPlan(t = todayStr()) {
 }
 function preWordsLeft() { let n = 0; for (const v of REG.vocab) if (v.builtin && v.lv === 'PRE_N5' && !state.srs[v.key]) n++; return n; }
 // 入門 is done when every PRE_N5 word has been seen (and the kana gate is open); nothing to finish while the level has no words
+// 入門 ends by itself (1.0.15; it was a 進入第 1 週 button): kana gate open, every 入門 word seen and the recent answers at
+// least 80% right. An account with grammar records (sent back to 入門 by the old 回到入門 button) keeps its week.
+const PRE_PASS_ACC = 0.8;
+function finishPreIfReady() {
+  if (!inPreStage() || !preDone()) return false;
+  const acc = recentAccuracy(); if (acc !== null && acc < PRE_PASS_ACC) return false;
+  state.stage = 'main'; if (!Object.keys(state.srs).some(k => k.startsWith('g:'))) state.currentUnit = 'm1';
+  state.preFinished = todayStr(); DAILY_CACHE = null; saveState();
+  return true;
+}
 function preDone() { return REG.vocab.some(v => v.builtin && v.lv === 'PRE_N5') && preWordsLeft() === 0 && kanaGateOpen(); }
 function n4WordsOpen() { return n5WordsLeft() === 0; }   // N4 words join once every PRE_N5 and N5 word has been seen
 function n5WordsLeft() {   // PRE_N5 and N5 words not yet seen: both must be gone before N4 opens by itself
@@ -3397,11 +3426,10 @@ function listenReachable(curIdx = unitOrder(state.currentUnit)) {
 }
 function extrasPlan(curIdx) {
   const t = todayStr();
-  const s = state.settings;
   const reach = (x) => unitOrder(x.u) <= curIdx;
   const isDue = (x) => isDueToday(x, t);
   const byUnit = (a, b) => unitOrder(a.u) - unitOrder(b.u) || (hashStr(a.id) % 997) - (hashStr(b.id) % 997);
-  const listenOn = s.listening && speechAvailable();
+  const listenOn = speechAvailable();
   const lPool = listenOn ? listenReachable(curIdx) : [];
   // listening: at most newQuota('l') a day counting what was already answered today (due first; the rest of the due
   // ones wait until tomorrow); reading: one a day
@@ -3616,7 +3644,7 @@ function startSession(mode, opt = {}) {
     meta = { note: kq.drill ? DRILL_NOTE : '' };
   } else if (mode === 'kana') {   // 假名: due ones first, then the next unseen in 五十音 order
     const t = todayStr(); const size = opt.size || state.settings.sessionSize;
-    const rowOk = (x) => opt.row === undefined || x.row === opt.row;   // one row of the table on purpose
+    const rowOk = (x) => (opt.row === undefined || x.row === opt.row) && (!opt.script || x.script === opt.script);   // one row of one table on purpose
     const due = REG.kana.filter(x => rowOk(x) && isDueToday(x, t)).sort(byDue); const fresh = REG.kana.filter(x => rowOk(x) && !state.srs[x.key]).sort((a, b) => a.order - b.order);
     entries = (opt.row === undefined ? due.concat(fresh) : REG.kana.filter(rowOk).sort((a, b) => a.order - b.order)).slice(0, size).map(item => ({ item }));
   } else if (mode === 'items') {
@@ -3746,7 +3774,7 @@ function renderPractice() {
   const pct = Math.round(sessionCount().before / Math.max(1, sessionCount().total) * 100);
   if (e.preview && !e.previewDone) {
     view.innerHTML = previewHtml(e, pct);
-    if (!e.autoPlayedPreview) { e.autoPlayedPreview = true; if (state.settings.autoSpeak && e.item.kind === 'v') setTimeout(() => speak(q.speakWord || jaPlain(e.item.w), speakOpts(q, q.speakWord)), 150); }
+    if (!e.autoPlayedPreview) { e.autoPlayedPreview = true; if (e.item.kind === 'v') setTimeout(() => speak(q.speakWord || jaPlain(e.item.w), speakOpts(q, q.speakWord)), 150); }
     return;
   }
   const showZh = q.zhText && (state.settings.showZh || q.forceZh || e.zhShown);
@@ -4017,7 +4045,7 @@ function answerCurrent(i) {
   } else {
     SESSION.stats.wrong++;
     addMistake(q, jaPlain(q.options[i].text));
-    if (!e.encore) {
+    if (!e.encore && q.kind !== 'l' && q.kind !== 'r') {   // no 再練一次 for listening and reading (see srsAnswer)
       const at = Math.min(SESSION.entries.length, SESSION.idx + 3 + Math.floor(Math.random() * 3));
       const again = { item: e.item, mistake: e.mistake, requeued: true, orig: q };
       if (!e.item && q) again.q = requeueQuestion(q, shuffle(q.options));   // a notebook card has no other format
@@ -4030,7 +4058,6 @@ function answerCurrent(i) {
   speakAnswered(q);
 }
 function speakAnswered(q) {
-  if (!state.settings.autoSpeak) return;
   const text = q.fmt === 'v-meaning' || q.fmt === 'v-recall' || q.fmt === 'v-listen' || q.fmt === 'v-reading' || q.fmt === 'v-kanji' || (q.fmt && q.fmt.startsWith('a-')) ? q.speakWord : q.fullJp;
   if (text) speak(text, speakOpts(q, text));
 }
@@ -4311,6 +4338,7 @@ const ACTIONS = {
     else if (state.mistakes.length > u.mistakesLen) state.mistakes.shift();
     const f = state.statsFmt[q.fmt]; if (f && f.ng > 0) f.ng--;
     if (state.recent.length) state.recent.pop();
+    if (e.srs && e.srs.reviewed && state.reviewRecent.length) state.reviewRecent.pop();
     if (wasNew) SESSION.stats.newCount = Math.max(0, SESSION.stats.newCount - 1);
     SESSION.stats.wrong = Math.max(0, SESSION.stats.wrong - 1);
     SESSION.entries = SESSION.entries.filter((x, i) => i <= SESSION.idx || !((x.requeued || (wasNew && x.encore)) && x.item === e.item));
@@ -4408,9 +4436,6 @@ const ACTIONS = {
   'start-test': () => { chooseStart('zero'); startSession('stage', { stage: 'pre' }); },
   'kana-known': () => { state.kanaKnown = true; saveState(); DAILY_CACHE = null; toast('入門單字從今天開始'); route(); },
   'kana-practice': () => startSession('kana'),
-  'enter-main': () => { state.stage = 'main'; if (!Object.keys(state.srs).some(k => k.startsWith('g:'))) state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null; toast('進入第 1 週'); route(); },   // a learner who came back to 入門 keeps their unit
-  'enter-pre': () => { state.stage = 'pre'; saveState(); DAILY_CACHE = null; toast('回到入門'); route(); },
-  'pre-done-later': () => { state.preDoneDismissed = todayStr(); saveState(); route(); },
   glossary: (el) => { const h = glossaryHtml(el.dataset.term); if (h) openModal('這是什麼？', h, { width: 480, noFocus: true }); }
 };
 function handleClick(ev) {
@@ -4511,6 +4536,7 @@ let todayTab = 'practice';   // the today card's switch: 'practice' | 'mistakes'
 
 function renderToday(view) {
   const t = todayStr();
+  finishPreIfReady();
   const doneToday = dayTotal(state.dailyLogs[t]);
   const plan = dailyPlan();
   const st = streakStats();
@@ -4569,9 +4595,9 @@ function renderToday(view) {
   const introBanner = startBanner ? '' : !state.introSeen && Object.keys(state.srs).length < 40
     ? `<div class="banner intro-banner"><div class="grow">第一次用？先看「第 0 週」：假名、句子骨架、以及題目上會出現的名詞（い形容詞、五段動詞……）。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button><button type="button" class="btn btn-sm btn-ghost" data-act="intro-dismiss">知道了</button></div></div>`
     : '';
-  const preDoneCard = inPreStage() && preDone() && state.preDoneDismissed !== t
-    ? `<div class="banner mt-2"><div class="grow">入門單字都看過了。進入第 1 週，開始文法？</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="enter-main">進入第 1 週</button><button type="button" class="btn btn-sm btn-ghost" data-act="pre-done-later">再練一陣子</button></div></div>`
-    : '';
+  const preDoneCard = inPreStage() && preDone()
+    ? `<div class="banner mt-2"><div class="grow">入門單字都看過了；最近正確率 ${Math.round((recentAccuracy() || 0) * 100)}%，到 ${Math.round(PRE_PASS_ACC * 100)}% 就會自動進入第 1 週。</div></div>`
+    : !inPreStage() && state.preFinished === t ? '<div class="banner mt-2"><div class="grow">入門完成：已自動進入第 1 週，開始學文法。</div></div>' : '';
   const practiceHtml = `
       ${preDoneCard}
       <div class="hero hero-center">
@@ -4723,7 +4749,7 @@ Object.assign(ACTIONS, {
 // ---- 階段（四個）與階段項目 ----
 /* 入門 + DATA.PHASES 的三個階段。文法與變化練習照單元歸屬；單字、漢字、聽力、閱讀照等級歸到該等級的最後一個階段
    (PRE_N5 → 入門, N5 → 第一階段, N4 → 第三階段)；入門另含全部假名。階段測驗與「標記到這裡為止」都以這個劃分為準。 */
-const STAGES = [{ id: 'pre', title: '入門', sub: '假名與入門單字，不算週數，單字都看過就進第 1 週', units: [], lv: 'PRE_N5' }].concat(
+const STAGES = [{ id: 'pre', title: '入門', sub: '假名與入門單字，不算週數；都看過、正確率到 80% 就自動進第 1 週', units: [], lv: 'PRE_N5' }].concat(
   DATA.PHASES.map((ph, i) => ({ id: 'p' + (i + 1), title: ph.title, sub: ph.span, units: DATA.UNITS.filter(u => u.ph === ph.id).map(u => u.id), lv: ['N5', null, 'N4'][i] || null })));
 function stageById(id) { return STAGES.find(s => s.id === id); }
 function stageIndex(id) { return Math.max(0, STAGES.findIndex(s => s.id === id)); }
@@ -5005,7 +5031,7 @@ function renderCourse(view) {
         <div class="grow"><div class="unit-title">假名與入門單字</div><div class="unit-desc">平假名、片假名，以及只用假名寫的基本單字。</div></div>
         <div><div class="row between small"><span>${status}</span><span class="muted num">${pct}%</span></div>${segBarHtml(total, [['learned', seen]], 'thin mt-1')}</div>
       </div></div>`;
-      extra = '';   // 1.0.12: the 入門 card carries one button, 階段測驗; passing it leads to the three choices and 第 1 週 (練假名 is on the 單字 page, 進入第 1 週／回到入門 in 設定)
+      extra = '';   // 1.0.12: the 入門 card carries one button, 階段測驗; passing it leads to the three choices and 第 1 週 (練假名 is on the 單字 page; otherwise 入門 ends by itself, finishPreIfReady)
     } else {
       rows = `<div class="list">${st.units.map(uid => {
         const u = unitById(uid); const s = unitStats(u.id);
@@ -5430,12 +5456,16 @@ function unitBarHtml(s, cls) { return segBarHtml(s.total, [['mastered', s.ok3], 
 // 熟練 = answered right 3+ times, 熟悉 = answered right at least once, 初識 = seen but never right yet
 function unitLegendHtml(s) { return `<span class="leg"><i class="seg-dot mastered"></i>熟練 ${s.ok3}</span><span class="leg"><i class="seg-dot learned"></i>熟悉 ${s.ok1}</span><span class="leg"><i class="seg-dot seen"></i>初識 ${s.seen0}</span><span class="leg">共 ${s.total} 題</span>`; }
 function vocabSessionCount(filter) { const items = buildVocabQueue(filter, 20); return items.length + encoreEstimate(items); }
-// 五十音 coloured by how well each kana is known; a button per row starts that row
+// 五十音 coloured by how well each kana is known, one table per script: a phone shows one at a time (平假名｜片假名
+// switch, kanaScript), a wide screen both side by side. A tap reads the kana; the ▶ in front of a row practises that row of that script.
+let kanaScript = 'hira';
 function kanaHeatGridHtml() {
   const heat = (ch) => { const r = state.srs['a:' + ch]; return !r ? 0 : r.b <= 1 ? 1 : r.b === 2 ? 2 : r.b <= 4 ? 3 : 4; };
   const rows = KANA_ROWS.concat(DAKUTEN_ROWS);
-  const cell = (ch) => `<span class="kana-cell heat-${heat(ch)}" data-ch="${ch}"><span class="jp hira">${ch}</span></span>`;
-  return `<div class="kana-heat">${rows.map((row, i) => `<div class="kana-heat-row"><button type="button" class="kana-row-btn" data-act="kana-row" data-row="${i}" title="練這一行">▶</button>${row.map(h => h ? cell(h) : '<span class="kana-cell empty"></span>').join('')}${row.map(h => h ? cell(KATA[h]) : '<span class="kana-cell empty"></span>').join('')}</div>`).join('')}</div>`;
+  const cell = (h, ch) => `<button type="button" class="kana-cell heat-${heat(ch)}" data-act="speak" data-text="${ch}" data-ch="${ch}" aria-label="${ch} ${KANA_ROMAJI[h]}"><span class="jp hira">${ch}</span><span class="roma">${KANA_ROMAJI[h]}</span></button>`;
+  const table = (script, title) => `<div class="kana-table" data-script="${script}"><div class="kana-table-title">${title}</div><div class="kana-heat">${rows.map((row, i) => `<div class="kana-heat-row"><button type="button" class="kana-row-btn" data-act="kana-row" data-row="${i}" data-script="${script}" title="練這一行">▶</button>${row.map(h => h ? cell(h, script === 'hira' ? h : KATA[h]) : '<span class="kana-cell empty"></span>').join('')}</div>`).join('')}</div></div>`;
+  const seg = `<div class="seg kana-script-seg">${[['hira', '平假名'], ['kata', '片假名']].map(([k, l]) => `<button type="button" aria-pressed="${kanaScript === k}" data-act="kana-script" data-script="${k}">${l}</button>`).join('')}</div>`;
+  return `<div class="kana-pair" data-show="${kanaScript}">${seg}${table('hira', '平假名')}${table('kata', '片假名')}</div>`;
 }
 function renderVocabLevel(view, lv) {
   const L = levelStats(lv); const themes = themeStats(lv);
@@ -5464,7 +5494,7 @@ function renderVocabLevel(view, lv) {
   order.push('其他（沒有例字）');
   const kanjiHtml = order.filter(c => groups.has(c)).map(c => `<div class="kanji-group mt-3"><div class="small muted mb-1">${esc(c)}・${groups.get(c).length} 字</div><div class="kanji-grid">${groups.get(c).map(k => `<button type="button" class="kanji-tile jp ${kanjiLevelClass(k)}" data-act="kanji-open" data-k="${esc(k.k)}" title="${esc(k.m)}" aria-label="${esc(k.k)}">${esc(k.k)}</button>`).join('')}</div></div>`).join('');
   const kanaBox = lv === 'PRE_N5' ? `<details class="disclose kana-box card mt-3" ${desktop ? 'open' : ''}><summary>五十音（已認得 ${L.kana.seen}／${L.kana.total}）</summary>
-      <div class="small muted mt-2">顏色越深越熟；按每行前面的 ▶ 只練那一行。</div>${kanaHeatGridHtml()}
+      <div class="small muted mt-2">顏色越深越熟；點假名聽發音，按每行前面的 ▶ 只練那一行。</div>${kanaHeatGridHtml()}
       <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-act="kana-practice">練全部假名</button></div></details>` : '';
   view.innerHTML = `
     <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub"><b>${lvLabel(lv)}</b>・已學 ${L.seen}／共 ${L.total}・熟悉 ${L.learned}・熟練 ${L.mastered}${L.due ? `・今天到期 ${L.due}` : ''}</div></div>
@@ -5712,7 +5742,7 @@ function renderVocabImport(view) {
 
 Object.assign(ACTIONS, {
   'flash-deck': (el) => { FLASH = null; go(`#/vocab/cards?deck=${el.dataset.deck}`); },
-  'flash-flip': () => { if (!FLASH) return; FLASH.flipped = true; route(); const v = flashCurrent(); if (v && state.settings.autoSpeak) speak(v.r || jaPlain(v.w)); },
+  'flash-flip': () => { if (!FLASH) return; FLASH.flipped = true; route(); const v = flashCurrent(); if (v) speak(v.r || jaPlain(v.w)); },
   'flash-rate': (el) => {
     const v = flashCurrent();
     if (!v) return;
@@ -6271,7 +6301,7 @@ function mloopKey(ev) {
 Object.assign(ACTIONS, {
   'mloop-start': () => startMistakeLoop(),
   'mloop-again': () => startMistakeLoop(MLOOP ? Object.keys(MLOOP.rated).filter(id => MLOOP.rated[id] === 'again') : []),
-  'mloop-flip': () => { if (!MLOOP || MLOOP.flipped) return; MLOOP.flipped = true; route(); const m = mloopCurrent(); if (m && state.settings.autoSpeak) speak(mloopSpeakText(m)); },
+  'mloop-flip': () => { if (!MLOOP || MLOOP.flipped) return; MLOOP.flipped = true; route(); const m = mloopCurrent(); if (m) speak(mloopSpeakText(m)); },
   'mloop-rate': (el) => mloopRate(el.dataset.g),
   'mloop-next': () => { if (!MLOOP || !MLOOP.flipped) return; mloopAdvance(); }
 });
@@ -7279,21 +7309,15 @@ function textRow(key, label, hint, target, opt = {}) {
 
 function settingsLearn() {
   const s = state.settings;
-  const cur = unitById(state.currentUnit);
   return `
     ${numRow('loadCap', '每天負荷上限', '每天新單字、新文法、新漢字、聽力與變化練習都依這個數字推算，數字越大每天學得越多；當天到期複習加新題超過它時，先減新單字（最少減到一半），再停新漢字、新聽力。到期的複習不會減，所以總量會隨學過的內容增加。考前一天幾百題是正常的，可以拉高。', 10, 300, 5, '題')}
     ${numRow('sessionSize', '每組練習題數', '按「開始練習」時一次出幾題；當天到期與新題會分成幾組出完。', 5, 60, 5, '題')}
     ${numRow('newKanaPerDay', '每天新假名', '平假名與片假名一起，照五十音順序；入門階段才會排新的。', 0, 30, 1, '個')}
-    <div class="setting-row"><div><div class="label">目前階段：${inPreStage() ? '入門（假名與入門單字）' : '正課（第 1 週起）'}</div><div class="hint">入門階段的每天練習只有假名、入門單字與漢字；正課才有文法、聽力、閱讀。</div></div>
-      <button type="button" class="btn btn-sm" data-act="${inPreStage() ? 'enter-main' : 'enter-pre'}">${inPreStage() ? '進入第 1 週' : '回到入門'}</button></div>
-    ${selRow('retention', '複習強度', '越高越常複習，記得越牢，但每天的題目也越多。', [['0.85', '輕量（約記住 85%）'], ['0.9', '標準（約記住 90%）'], ['0.95', '加強（約記住 95%）']])}
     ${selRow('order', '出題順序', '', [['mix', '單字與文法交錯'], ['split', '先單字，再文法']])}
     ${boolRow('showZh', '題目下方直接顯示中文', '關閉時可按 T 或點「顯示中文」再看。需要中文才能判斷的題目仍會顯示。')}
     ${selRow('includeImported', '每日練習包含自訂字卡', '句子型的匯入卡片比較難，預設只加入單字型的。', [['words', '只加入單字型'], ['all', '全部加入'], ['off', '不加入']])}
     <div class="setting-row"><div><div class="label">考試日期</div><div class="hint">用來計算倒數與每單元可用天數。</div></div>
-      <input class="input" type="date" style="width:auto" value="${esc(s.examDate)}" data-change="setting" data-key="examDate" data-type="date" /></div>
-    <div class="setting-row"><div><div class="label">目前單元</div><div class="hint">${esc(cur.weeks)}・${esc(cur.title)}</div></div>
-      <button type="button" class="btn btn-sm" data-act="nav" data-route="#/course">到課程頁更改</button></div>`;
+      <input class="input" type="date" style="width:auto" value="${esc(s.examDate)}" data-change="setting" data-key="examDate" data-type="date" /></div>`;
 }
 
 function settingsSpeech() {
@@ -7336,9 +7360,6 @@ function settingsSpeech() {
       + selRow('kanaReadings', '已知讀音的字改用假名送出', '例如 三本 送成 さんぼん，避免模型唸錯；其餘保留漢字。', [['on', '開'], ['off', '關']], 'tts-cfg');
   }
   return `
-    ${boolRow('autoSpeak', '作答後自動朗讀', '答完題目會念出正確的單字或整句。')}
-    ${boolRow('listening', '出聽力題', '單字練習中加入「聽發音選意思」，每日練習加入聽力題。')}
-    ${boolRow('audioOptions', '聽力選項只用聽的', '即時應答與情境表達的選項不顯示文字；點每個選項的播放鍵聽它的內容，再選答案。')}
     <div class="setting-row"><div><div class="label">語速</div><div class="hint">目前 ${Number(state.settings.speechRate).toFixed(2)} 倍</div></div>
       <input type="range" min="0.6" max="1.2" step="0.05" value="${esc(state.settings.speechRate)}" data-change="setting" data-key="speechRate" data-type="num" data-min="0.6" data-max="1.2" style="width:180px" /></div>
     ${selRow('engine', '語音服務', '', TTS_ENGINES, 'tts-cfg')}
@@ -7638,7 +7659,13 @@ Object.assign(ACTIONS, {
   },
   'start-kanji': () => startSession('kanji'),
   'start-kanji-level': (el) => startSession('kanji', { lv: el.dataset.lv }),
-  'kana-row': (el) => startSession('kana', { row: Number(el.dataset.row) })
+  'kana-row': (el) => startSession('kana', { row: Number(el.dataset.row), script: el.dataset.script }),
+  'kana-script': (el) => {   // switched in place: re-rendering would fold the 五十音 box again on a phone
+    kanaScript = el.dataset.script === 'kata' ? 'kata' : 'hira';
+    const pair = el.closest('.kana-pair'); if (!pair) return;
+    pair.dataset.show = kanaScript;
+    pair.querySelectorAll('[data-act="kana-script"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.script === kanaScript)));
+  }
 });
 
 // ---- 79_stats.js ----
@@ -8428,6 +8455,7 @@ function cloudAudioTexts() {
     add(w, '', pin); add(w); if (v.r) add(v.r);   // the question (reading pinned), the list button, the flashcard reading
     if (v.ex) add(exPlain(v.ex)); if (v.ex2) add(exPlain(v.ex2));
   });
+  REG.kana.forEach(x => add(x.ch));   // a tapped kana in the 五十音表 and 聽音選字 play one kana
   REG.grammar.forEach(g => {
     const fmts = (g.t || 'choice') === 'choice' && g.op ? grammarFormats(g, (g.op || []).map(parenReadingToBracket), parenReadingToBracket(g.a)) : [];
     (fmts.length ? fmts.map(f => makeGrammarQuestion(g, { forceFmt: f })) : [makeQuestion(g, {})]).forEach(addQ);

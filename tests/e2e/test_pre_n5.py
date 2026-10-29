@@ -86,17 +86,22 @@ def test_load_cap_counts_kana(b):
     r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
     assert r['a'] < 15 and '新假名' in r['note'], r
 
-def test_completion_card_needs_words_and_open_gate(b):
+def test_pre_stage_ends_by_itself_once_everything_is_seen_and_accuracy_holds(b):
+    # 1.0.15: no 進入第 1 週／再練一陣子 question — kana gate open + every 入門 word seen + recent accuracy ≥ 80% moves on by itself
     js = """(() => { const t = todayStr(); const words = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5');
       const mark = (it) => { state.srs[it.key] = { b: 2, due: addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -1) }; };
-      words.forEach(mark); DAILY_CACHE = null; const out = { wordsOnly: preDone(), n: words.length };
-      REG.kana.filter(x => x.seion).forEach(mark); DAILY_CACHE = null; out.both = preDone();
-      location.hash = '#/today'; route(); out.card = Boolean(document.querySelector('[data-act="enter-main"]'));
-      document.querySelector('[data-act="enter-main"]').click(); out.stage = state.stage; out.unit = state.currentUnit;
+      const today = () => { DAILY_CACHE = null; location.hash = '#/today'; route(); return document.getElementById('view').textContent; };
+      const out = { n: words.length };
+      words.forEach(mark); state.recent = Array(40).fill(1); today(); out.wordsOnly = state.stage;
+      REG.kana.filter(x => x.seion).forEach(mark); state.recent = Array(30).fill(1).concat(Array(10).fill(0));   // 75%
+      const low = today(); out.low = { stage: state.stage, says: low.includes('75%') && low.includes('80%'), ask: Boolean(document.querySelector('[data-act="enter-main"], [data-act="pre-done-later"]')) };
+      state.recent = Array(34).fill(1).concat(Array(6).fill(0));   // 85%
+      const ok = today(); out.ok = { stage: state.stage, unit: state.currentUnit, says: ok.includes('已自動進入第 1 週') };
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
-    assert r['n'] > 0 and r['wordsOnly'] is False and r['both'] is True and r['card'] is True, r
-    assert r['stage'] == 'main' and r['unit'] == 'm1', r
+    assert r['n'] > 0 and r['wordsOnly'] == 'pre', r
+    assert r['low'] == {'stage': 'pre', 'says': True, 'ask': False}, r
+    assert r['ok'] == {'stage': 'main', 'unit': 'm1', 'says': True}, r
 
 FRESH = TAG_PRE + "state.srs = {}; state.startChosen = false; state.stage = 'main'; state.kanaKnown = false; DAILY_CACHE = null; location.hash = '#/today'; true"
 
@@ -188,11 +193,15 @@ def test_sound_format_needs_speech(b):
     r = json.loads(ev(b, js))
     assert 'a-sound' not in r and r, r
 
-def test_enter_main_keeps_the_unit_of_a_learner_with_grammar_records(b):
-    js = """(() => { const t = todayStr(); state.stage = 'pre'; state.currentUnit = 'm8'; const g = REG.grammar.find(x => x.u === 'm8'); state.srs[g.key] = { b: 2, due: t, n: 1, ok: 1, ng: 0, s: 3, d: 5, last: t };
-      ACTIONS['enter-main'](); const kept = state.currentUnit; state.stage = 'pre'; state.srs = {}; ACTIONS['enter-main'](); return JSON.stringify({ kept, fresh: state.currentUnit }); })()"""
+def test_pre_stage_end_keeps_the_unit_of_a_learner_with_grammar_records(b):
+    # an account sent back to 入門 by the old 回到入門 button keeps its week when 入門 ends; a fresh one starts at week 1
+    js = """(() => { const t = todayStr(); const mark = (it) => { state.srs[it.key] = { b: 2, due: addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -1) }; };
+      const finish = () => { REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').forEach(mark); REG.kana.filter(x => x.seion).forEach(mark); state.recent = Array(40).fill(1); DAILY_CACHE = null; location.hash = '#/today'; route(); return [state.stage, state.currentUnit]; };
+      state.currentUnit = 'm8'; const g = REG.grammar.find(x => x.u === 'm8'); state.srs[g.key] = { b: 2, due: addDays(t, 3), n: 1, ok: 1, ng: 0, s: 3, d: 5, last: t };
+      const kept = finish(); state.stage = 'pre'; state.srs = {}; state.currentUnit = 'm8'; const fresh = finish();
+      return JSON.stringify({ kept, fresh }); })()"""
     r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
-    assert r == {'kept': 'm8', 'fresh': 'm1'}, r
+    assert r == {'kept': ['main', 'm8'], 'fresh': ['main', 'm1']}, r
 
 def test_homophone_kana_never_decoy_each_other(b):
     js = """(() => { const bad = []; ['を', 'ヲ', 'じ', 'ず', 'ぢ', 'づ'].forEach(ch => { const it = REG.byKey.get('a:' + ch); for (let i = 0; i < 150; i++) kanaLookalikes(it).forEach(c => { if (KANA_ROMAJI[c] === it.roma || KANA_ROMAJI[Object.keys(KATA).find(h => KATA[h] === c)] === it.roma) bad.push(ch + c); }); });
@@ -310,14 +319,45 @@ def test_theme_card_kanji_open_detail(b):
     assert r['k'] and r['opened'], r
 
 def test_kana_heat_grid(b):
-    js = """(() => { const t = todayStr(); state.srs = {}; state.srs['a:あ'] = { b: 2, due: t, n: 1, ok: 1, ng: 0, s: 3, d: 5 }; state.srs['a:い'] = { b: 5, due: t, n: 3, ok: 3, ng: 0, s: 40, d: 5 };
-      location.hash = '#/vocab/level?lv=PRE_N5'; route(); const cells = [...document.querySelectorAll('.kana-box .kana-cell:not(.empty)')];
-      const cls = (ch) => (cells.find(c => c.dataset.ch === ch) || {}).className || '';
-      document.querySelector('.kana-box [data-act="kana-row"][data-row="2"]').click(); const row = SESSION.entries.map(e => e.item.ch);
-      return JSON.stringify({ n: cells.length, a: /heat-2/.test(cls('あ')), i: /heat-4/.test(cls('い')), u: /heat-0/.test(cls('う')), row }); })()"""
+    # 1.0.15: one table per script, five kana a row with the romaji under each; a tap reads the kana; ▶ practises that row of that script only
+    js = """(() => { const t = todayStr(); state.srs = {}; state.srs['a:あ'] = { b: 2, due: t, n: 1, ok: 1, ng: 0, s: 3, d: 5 }; state.srs['a:イ'] = { b: 5, due: t, n: 3, ok: 3, ng: 0, s: 40, d: 5 };
+      location.hash = '#/vocab/level?lv=PRE_N5'; route(); const box = document.querySelector('.kana-box');
+      const tables = [...box.querySelectorAll('.kana-table')].map(tb => ({ script: tb.dataset.script, rows: [...tb.querySelectorAll('.kana-heat-row')].map(r => r.querySelectorAll('.kana-cell').length), n: tb.querySelectorAll('.kana-cell:not(.empty)').length }));
+      const cell = (ch) => box.querySelector(`.kana-cell[data-ch="${ch}"]`);
+      const spoken = []; const orig = speak; speak = (x) => { spoken.push(x); return Promise.resolve(); };
+      cell('し').click(); cell('ヲ').click(); speak = orig;
+      const out = { tables, a: /heat-2/.test(cell('あ').className), i: /heat-4/.test(cell('イ').className), u: /heat-0/.test(cell('う').className), shi: cell('し').textContent.includes('shi'), wo: cell('ヲ').textContent.includes('o'), spoken };
+      box.querySelector('.kana-table[data-script="kata"] [data-act="kana-row"][data-row="2"]').click(); out.kataRow = SESSION.entries.map(e => e.item.ch);
+      SESSION = null; document.body.classList.remove('practicing');
+      location.hash = '#/vocab/level?lv=PRE_N5'; route(); document.querySelector('.kana-table[data-script="hira"] [data-act="kana-row"][data-row="2"]').click(); out.hiraRow = SESSION.entries.map(e => e.item.ch);
+      return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['n'] == 142 and r['a'] and r['i'] and r['u'], r
-    assert r['row'] == ['さ', 'し', 'す', 'せ', 'そ', 'サ', 'シ', 'ス', 'セ', 'ソ'], r
+    assert r['tables'] == [{'script': 'hira', 'rows': [5] * 16, 'n': 71}, {'script': 'kata', 'rows': [5] * 16, 'n': 71}], r
+    assert r['a'] and r['i'] and r['u'] and r['shi'] and r['wo'], r
+    assert r['spoken'] == ['し', 'ヲ'], r
+    assert r['kataRow'] == ['サ', 'シ', 'ス', 'セ', 'ソ'] and r['hiraRow'] == ['さ', 'し', 'す', 'せ', 'そ'], r
+
+KANA_SHOWN = "[...box.querySelectorAll('.kana-table')].filter(t => t.offsetParent !== null).map(t => t.dataset.script)"
+
+def test_kana_chart_shows_one_script_on_a_phone_and_both_side_by_side_on_a_wide_screen(b):
+    js = """(() => { location.hash = '#/vocab/level?lv=PRE_N5'; route(); let box = document.querySelector('.kana-box'); box.open = true;
+      const shown = () => SHOWN; const out = { phone: shown(), seg: box.querySelector('[data-act="kana-script"]').offsetParent !== null };
+      box.querySelector('[data-act="kana-script"][data-script="kata"]').click(); out.after = shown(); out.same = box.open && document.querySelector('.kana-box') === box;
+      location.hash = '#/vocab/level?lv=PRE_N5'; route(); box = document.querySelector('.kana-box'); box.open = true; out.kept = shown();
+      return JSON.stringify(out); })()""".replace('SHOWN', KANA_SHOWN)
+    r = json.loads(b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", js)])[-1])
+    assert r == {'phone': ['hira'], 'seg': True, 'after': ['kata'], 'same': True, 'kept': ['kata']}, r
+    wide = """(() => { location.hash = '#/vocab/level?lv=PRE_N5'; route(); const box = document.querySelector('.kana-box'); box.open = true; const t = [...box.querySelectorAll('.kana-table')];
+      return JSON.stringify({ shown: SHOWN, seg: box.querySelector('[data-act="kana-script"]').offsetParent !== null, sideBySide: t.length === 2 && Math.abs(t[0].getBoundingClientRect().top - t[1].getBoundingClientRect().top) < 2 }); })()""".replace('SHOWN', KANA_SHOWN)
+    r2 = json.loads(b.run([("metrics", (1200, 900, False)), ("nav", URL), ("wait", READY), ("eval", wide)])[-1])
+    assert r2 == {'shown': ['hira', 'kata'], 'seg': False, 'sideBySide': True}, r2
+
+def test_cloud_generator_covers_every_kana(b):
+    # a tapped kana (五十音表) or a 聽音選字 question plays that one kana's clip, so the generator must make all 142
+    js = """(() => { const have = new Set(cloudAudioTexts().filter(x => x.gender === 'f' && !x.reading && !x.lang).map(x => x.text));
+      return JSON.stringify({ n: REG.kana.length, miss: REG.kana.filter(x => !have.has(x.ch)).map(x => x.ch) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['n'] == 142 and r['miss'] == [], r
 
 def test_old_vocab_routes_redirect(b):
     js = """(() => { const go = (h) => { location.hash = h; route(); return [decodeURIComponent(location.hash), document.getElementById('view').textContent.includes('出錯')]; };
