@@ -60,7 +60,7 @@ PRE_STATE = TAG_PRE + "state.stage = 'pre'; state.kanaKnown = false; state.srs =
 def test_pre_stage_plan_has_only_kana_until_the_seion_gate_opens(b):
     js = """(() => { const p = dailyPlan(); const out = { a: p.newA.map(x => x.ch), g: p.dueG.length + p.newG.length, l: p.dueL.length + p.newL.length, r: p.dueR.length + p.newR.length,
         c: (p.dueC || []).length + (p.newC || []).length, v: p.newV.length, k: p.newK.map(x => x.lv) };
-      REG.kana.filter(x => x.seion).forEach(x => { state.srs[x.key] = { b: 1, due: addDays(todayStr(), 5), n: 1, ok: 1, ng: 0, s: 2, d: 5, last: addDays(todayStr(), -1) }; }); DAILY_CACHE = null;
+      REG.kana.filter(x => x.seion).forEach(x => { state.srs[x.key] = { b: 1, due: addDays(todayStr(), 5), n: 1, ok: 1, ng: 0, s: 2, d: 5, last: addDays(todayStr(), -1) }; }); delete state.today.plan; DAILY_CACHE = null;
       const p2 = dailyPlan(); out.v2 = p2.newV.map(x => x.lv); out.a2 = p2.newA.map(x => x.ch); out.k2 = [...new Set(p2.newK.map(x => x.lv))]; out.g2 = p2.newG.map(x => x.u); out.q = newQuota('g');
       const q = dailyQueue(20).items; out.kinds = [...new Set(q.map(x => x.kind))].sort();
       return JSON.stringify(out); })()"""
@@ -75,7 +75,7 @@ def test_pre_stage_plan_has_only_kana_until_the_seion_gate_opens(b):
 def test_main_stage_never_schedules_new_kana_but_reviews_practised_ones(b):
     js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.srs); state.stage = 'main'; DAILY_CACHE = null;
       const p = dailyPlan(); const out = { newA: p.newA.length };
-      state.srs['a:あ'] = { b: 1, due: t, n: 1, ok: 1, ng: 0, s: 2, d: 5, last: addDays(t, -2) }; DAILY_CACHE = null;
+      state.srs['a:あ'] = { b: 1, due: t, n: 1, ok: 1, ng: 0, s: 2, d: 5, last: addDays(t, -2) }; delete state.today.plan; DAILY_CACHE = null;
       const p2 = dailyPlan(); out.dueA = p2.dueA.map(x => x.ch); out.inQueue = dailyQueue(60).items.some(x => x.key === 'a:あ');
       state.srs = JSON.parse(keep); saveState(); DAILY_CACHE = null; return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))

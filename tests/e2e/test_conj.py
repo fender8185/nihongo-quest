@@ -107,7 +107,7 @@ def test_new_conj_item_answered_right_comes_back_typed_and_a_typed_miss_requeues
 # ---- Task 4: 生成式變化練習（kind c） ----
 def test_drills_exist_per_form_family_and_reach_follows_the_unit(b):
     js = """(() => { const fams = REG.drills.map(d => d.fam).sort(); const te = REG.drills.find(d => d.fam === 'te');
-      state.currentUnit = 'm3'; const p3 = dailyPlan(); state.currentUnit = 'm18'; const p18 = dailyPlan();
+      state.currentUnit = 'm3'; const p3 = computeDailyPlan(); state.currentUnit = 'm18'; const p18 = computeDailyPlan();
       return JSON.stringify({ fams, teUnit: te && te.u, teForms: te && te.forms, byKey: Boolean(REG.byKey.get('c:te')), n3: p3.newC.map(d => d.fam), n18: p18.newC.length, cap: newQuota('c') }); })()"""
     r = json.loads(ev(b, js))
     assert set(r['fams']) >= {'te', 'ta', 'nai', 'pot', 'vol', 'pass', 'caus', 'ba'} and 'dict' not in r['fams'], r
@@ -132,7 +132,7 @@ def test_drill_question_is_generated_from_a_learned_verb_and_a_miss_schedules_to
     assert r['label'].startswith('變化練習 · て形') and r['newC'] == 1 and r['log'] == 1, r
 
 def test_daily_queue_carries_the_drills_and_the_today_page_counts_them(b):
-    js = """(() => { state.currentUnit = 'm18'; const dq = dailyQueue(60); const c = dq.items.filter(x => x.kind === 'c').length; const plan = dq.plan;   // 60: one session big enough for the whole day list
+    js = """(() => { state.currentUnit = 'm18'; delete state.today.plan; const dq = dailyQueue(60); const c = dq.items.filter(x => x.kind === 'c').length; const plan = dq.plan;   // 60: one session big enough for the whole day list
       location.hash = '#/today'; route(); const txt = document.querySelector('#view').textContent;
       return JSON.stringify({ c, newC: plan.newC.length, remaining: plan.remaining >= plan.newC.length, shows: txt.includes('變化') }); })()"""
     r = json.loads(ev(b, js))
@@ -156,6 +156,7 @@ def test_previous_question_format_does_not_change_the_answer_mode_of_an_ordinary
 def test_drill_cap_counts_what_was_answered_today(b):
     js = """(() => { state.currentUnit = 'm18'; state.settings.conjDrillPerDay = 3; const t = todayStr();
       REG.drills.forEach(d => { srsAnswer(d.key, true); state.srs[d.key].due = t; state.srs[d.key].last = addDays(t, -3); });   // every family due today
+      state.today.ans = []; delete state.today.plan;   // the set-up answers belong to earlier days
       const p1 = dailyPlan(); const first = p1.dueC.length;
       p1.dueC.slice(0, 2).forEach(d => srsAnswer(d.key, true));   // two answered today
       const p2 = dailyPlan();
