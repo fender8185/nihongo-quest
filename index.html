@@ -934,12 +934,16 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.16';   // keep equal to the version in sw.js CACHE ('nq-v1.0.16'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.17';   // keep equal to the version in sw.js CACHE ('nq-v1.0.17'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.17', date: '2026-10-29', items: [
+    '舊帳號（已經在第 1 週以後、沒考過入門測驗、入門內容還沒都學過）首頁會出現一行「先做一次入門測驗」，不擋每天的練習，考完就消失。',
+    '這種帳號考完由系統依各類答對率自動標記，不用再自己選：90% 以上算掌握，70% 以上算熟練，更低的假名與單字算記得（很快排進複習），第 0 週句型則排在下一個新文法之前先學。沒通過也不會退回入門，週次不變。'
+  ] },
   { v: '1.0.16', date: '2026-10-29', items: [
     '第 0 週加 20 題最基本的句型：AはBです／ではありません、〜ですか、こそあど、も、助詞 は・へ・を 的唸法，全部用假名寫，名詞用片假名外來語。入門階段假名門檻過了以後每天出幾題，都出過入門才會結束。',
     '第 0 週改成和其他週一樣的單元頁：講義第 2–4 節改寫成這些句型，有練習按鈕、題目分頁和進度條；課程頁那一列也有進度條。',
@@ -3282,6 +3286,14 @@ function finishPreIfReady() {
   DAILY_CACHE = null; saveState();
   return true;
 }
+// 1.0.17: an account already past 入門 that never took the 入門 test (it predates the kana items and 第 0 週, so 學習分析 shows
+// them as unlearned) is asked once, on the today page, to take it; the result marks each group by its score (preAutoChoices).
+// Not asked: accounts in 入門, ones that saw everything in 入門 (finished it or were bulk-marked), and new ones before the start choice.
+function needsPreTest() {
+  if (inPreStage() || ((state.stageTests || {}).pre || []).length) return false;
+  if (!state.startChosen && !Object.keys(state.srs).length) return false;
+  return REG.kana.some(x => !state.srs[x.key]) || preWordsLeft() > 0 || introLeft() > 0;
+}
 function preDone() { return REG.vocab.some(v => v.builtin && v.lv === 'PRE_N5') && preWordsLeft() === 0 && kanaGateOpen() && introLeft() === 0; }
 function n4WordsOpen() { return n5WordsLeft() === 0; }   // N4 words join once every PRE_N5 and N5 word has been seen
 function n5WordsLeft() {   // PRE_N5 and N5 words not yet seen: both must be gone before N4 opens by itself
@@ -3689,7 +3701,7 @@ function startSession(mode, opt = {}) {
   SESSION = {
     mode, title: opt.title || MODE_TITLE[mode] || '練習', entries, idx: 0, meta,
     stats: { correct: 0, wrong: 0, newCount: 0 }, results: [], startedAt: Date.now(), lastFmt: '', opt,
-    test: mode === 'stage' ? { stage: opt.stage } : null
+    test: mode === 'stage' ? { stage: opt.stage, auto: opt.stage === 'pre' && needsPreTest() } : null   // auto: marked by score when it ends
   };
   prepareEntry(0);
   go('#/practice');
@@ -4621,6 +4633,7 @@ function renderToday(view) {
     : '';
   const practiceHtml = `
       ${preDoneCard}
+      ${needsPreTest() ? '<div class="banner mt-2"><div class="grow">先做一次入門測驗（40 題，約 6 分鐘），系統會依成績標好假名、入門單字和第 0 週句型。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="stage-test" data-stage="pre">開始</button></div></div>' : ''}
       <div class="hero hero-center">
         <div>
           ${plan.remaining === 0 ? '<h2>今天完成了</h2>' : `<div><button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・${dq.items.length} 題</button></div>`}
@@ -4827,7 +4840,21 @@ function finishStageTest() {
   state.stageTests[T.stage] = [{ date: todayStr(), correct, total, passed }].concat(state.stageTests[T.stage] || []).slice(0, 10);
   recordAction('q', null, 'x');   // counts as practice today (模擬考・其他), not as word or grammar questions
   T.result = { correct, total, passed };
+  if (T.auto) { T.autoMarks = preAutoChoices(SESSION.results); preMarkApply(T.autoMarks.choices); }   // pass or not: the account keeps its week
   saveState();
+}
+// 入門 test of an account past 入門: each group's share right decides its mark — 90% or more 掌握 (熟練), 70% or more 熟練 (熟悉),
+// lower: kana and words 記得 (已學, reviewed soon), 第 0 週 不記得 (introPending: its items come before the next new grammar)
+const PRE_AUTO_LEVELS = [[0.9, 'known'], [0.7, 'learned']];
+function preAutoChoices(results) {
+  const of = { hira: (q) => q.kind === 'a' && q.item.script === 'hira', kata: (q) => q.kind === 'a' && q.item.script === 'kata', v: (q) => q.kind === 'v', g: (q) => q.kind === 'g' };
+  const choices = {}; const scores = {};
+  PRE_MARK_GROUPS.forEach(([g]) => {
+    const r = results.filter(x => of[g](x.q)); const ok = r.filter(x => x.ok).length; scores[g] = [ok, r.length];
+    const level = r.length ? (PRE_AUTO_LEVELS.find(([min]) => ok / r.length >= min) || [])[1] : null;
+    choices[g] = level || (g === 'g' ? 'none' : 'seen');
+  });
+  return { choices, scores };
 }
 function renderStageSummary(view) {
   const s = SESSION; const T = s.test; const st = stageById(T.stage);
@@ -4837,8 +4864,10 @@ function renderStageSummary(view) {
   const wrong = s.results.filter(x => !x.ok);
   const wrongList = wrong.map(x => `<div class="list-item"><div class="grow"><div class="jp">${furi(tidyPrompt(x.q.mistakePrompt || ''))}</div><div class="small muted">正確：<span class="jp">${esc(jaPlain(x.q.options[x.q.answer].text))}</span>・你選：<span class="jp">${esc(jaPlain(x.q.options[x.chosen].text))}</span></div></div></div>`).join('');
   const title = !r ? '未完成，不計紀錄' : r.passed ? `${r.correct}／${r.total}・通過` : `${r.correct}／${r.total}・未通過（需 ${need} 題）`;
-  const prePick = r && r.passed && T.stage === 'pre';   // 入門: three follow-up choices instead of the 標記到這裡為止 dialog
+  const prePick = r && r.passed && T.stage === 'pre' && !T.auto;   // 入門: four follow-up choices instead of the 標記到這裡為止 dialog
+  const autoMarks = r && T.autoMarks;   // an account past 入門: marked by score already
   const buttons = prePick ? ''
+    : autoMarks ? '<button type="button" class="btn btn-primary" data-act="close-summary">完成</button>'
     : r && r.passed
     ? `<button type="button" class="btn btn-primary" data-act="stage-mark" data-stage="${T.stage}">標記到這裡為止</button><button type="button" class="btn btn-ghost" data-act="close-summary">回課程頁</button>`
     : `<button type="button" class="btn btn-primary" data-act="stage-again">再考一次</button><button type="button" class="btn" data-act="stage-practice">去練這個階段</button><button type="button" class="btn btn-ghost" data-act="close-summary">回課程頁</button>`;
@@ -4849,6 +4878,7 @@ function renderStageSummary(view) {
       <div class="page-title mt-2">${title}</div>
       <div class="page-sub">${esc(st ? st.title : '')}・階段測驗・作答 ${s.results.length} 題</div>
       <div class="row-wrap mt-3">${kinds}</div>
+      ${autoMarks ? `<div class="banner mt-4">已依成績標記：${PRE_MARK_GROUPS.map(([g, nm]) => `${nm} ${autoMarks.scores[g][0]}／${autoMarks.scores[g][1]}：${preMarkLevelName(autoMarks.choices[g])}`).join('、')}。${autoMarks.choices.g === 'none' ? '第 0 週的句型會排在下一個新文法之前。' : ''}週次不變，照常練習。</div>` : ''}
       ${prePick ? `<div class="banner mt-4">通過了。接著 ${PRE_MARK_GROUPS.length} 題：${PRE_MARK_GROUPS.map(x => x[1]).join('、')}各記得多少？選完就進第 1 週。</div>` : r && r.passed ? '<div class="banner mt-4">通過了。可以把這個階段和之前的內容一次標成已學、熟悉或熟練。</div>' : ''}
       ${prePick ? preMarkStepHtml(T) : `<div class="row-wrap mt-4">${buttons}</div>`}
     </div>

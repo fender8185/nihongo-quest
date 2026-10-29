@@ -250,6 +250,40 @@ def test_pre_pass_marking_week0_learned_completes_it(b):
     r = json.loads(ev(b, js))
     assert r == {'all': True, 'done': True, 'pending': False, 'lessons': 3}, r
 
+# ---- 1.0.17: accounts past 入門 that never took the 入門 test take it once; the result marks each group by its score ----
+OLD = """state.stage = 'main'; state.currentUnit = 'm3'; state.srs = {}; state.stageTests = {}; state.startChosen = true; state.completedUnits = []; state.introPending = false; LAST_BULK_MARK = null;
+  const g3 = REG.grammar.find(x => x.u === 'm3'); state.srs[g3.key] = { b: 2, due: addDays(todayStr(), 3), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: todayStr() }; DAILY_CACHE = null; saveState(); true"""
+
+def test_old_accounts_get_a_must_do_pre_test_line_until_they_take_it(b):
+    js = """(() => { const t = todayStr(); const look = () => { DAILY_CACHE = null; location.hash = '#/today'; route(); const v = document.getElementById('view'); const btn = v.querySelector('.banner [data-act="stage-test"][data-stage="pre"]');
+        return { line: Boolean(btn), others: btn ? [...btn.closest('.banner').querySelectorAll('[data-act]')].map(x => x.dataset.act).filter(a => a !== 'stage-test') : [], practice: Boolean(v.querySelector('[data-act="start-daily"]')) }; };
+      const out = { old: look() };
+      state.stageTests = { pre: [{ date: t, correct: 20, total: 40, passed: false }] }; out.taken = look().line; state.stageTests = {};
+      const mark = (it) => { state.srs[it.key] = { b: 2, due: addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -1) }; };
+      REG.kana.forEach(mark); REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').forEach(mark); REG.grammar.filter(g => g.u === 'm0').forEach(mark); out.finished = look().line;
+      state.srs = {}; state.stage = 'pre'; out.pre = look().line;
+      state.stage = 'main'; state.startChosen = false; out.fresh = look().line;
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("eval", OLD)]))
+    assert r == {'old': {'line': True, 'others': [], 'practice': True}, 'taken': False, 'finished': False, 'pre': False, 'fresh': False}, r
+
+def test_old_account_pre_test_marks_each_group_by_its_score(b):
+    js = """(() => { startSession('stage', { stage: 'pre' }); const n = SESSION.entries.length; let vi = 0;
+      for (let i = 0; i < n; i++) { const q = currentEntry().q; const ok = q.kind === 'a' ? q.item.script === 'hira' : q.kind === 'v' ? (vi++ % 6) !== 5 : false;   // 平假名 all, 片假名 none, words 5 of 6, 句型 none
+        answerCurrent(ok ? q.answer : (q.answer + 1) % q.options.length); if (i < n - 1) nextQuestion(); }
+      const view = document.getElementById('view'); renderStageSummary(view); const txt = view.textContent;
+      const lab = (it) => state.srs[it.key] ? srsLevelLabel(state.srs[it.key], it.key) : '新內容';
+      const hira = REG.kana.filter(k => k.script === 'hira'), kata = REG.kana.filter(k => k.script === 'kata'), words = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5'), m0 = REG.grammar.filter(g => g.u === 'm0');
+      const out = { stage: state.stage, unit: state.currentUnit, passed: state.stageTests.pre[0].passed, hira: [...new Set(hira.map(lab))], kata: kata.every(k => state.srs[k.key] && state.srs[k.key].b >= 1 && state.srs[k.key].b < SRS_LEARNED),
+        words: words.every(v => state.srs[v.key] && state.srs[v.key].b >= SRS_LEARNED && lab(v) !== '已熟練'), m0: m0.filter(g => state.srs[g.key]).length, pending: state.introPending,
+        picker: Boolean(view.querySelector('[data-act="pre-mark-pick"]')), done: Boolean(view.querySelector('[data-act="close-summary"].btn-primary')), says: ['平假名', '片假名', '入門單字', '第 0 週句型'].every(w => txt.includes(w)) };
+      SESSION = null; document.body.classList.remove('practicing'); DAILY_CACHE = null; location.hash = '#/today'; route(); out.lineAfter = Boolean(document.querySelector('.banner [data-act="stage-test"][data-stage="pre"]'));
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("eval", OLD)]))
+    assert r['stage'] == 'main' and r['unit'] == 'm3' and r['passed'] is False, r   # a low score never sends an account back to 入門
+    assert r['hira'] == ['已熟練'] and r['kata'] and r['words'] and r['m0'] == 0 and r['pending'] is True, r   # ≥90% 熟練, <70% 已學, 70–90% 熟悉, 句型 <70% → learn first
+    assert not r['picker'] and r['done'] and r['says'] and not r['lineAfter'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
