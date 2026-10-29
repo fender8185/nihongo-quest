@@ -2,7 +2,8 @@
 """Check candidate grammar items before they go into data.js (DATA.GRAMMAR).
 Usage: python3 scripts/check-grammar.py FILE.json [PORT]
 FILE.json: a JSON array of items in the data.js shape: {id, u, t: choice|meaning|correct, lv, d, pt, sec, jp, op, a, zh, why}.
-Checks, with the app's own code: id unused; unit, section and point exist (pt must be one the unit's section already uses);
+Checks, with the app's own code: id unused; unit, section and point exist (pt must be one the unit's section already uses;
+week 0 (u: 'm0') has five fixed points instead, is kana only, and its katakana nouns must be words of the bank);
 4 distinct options with the answer among them; choice items have exactly one blank the app can split, no ending duplicated
 after the blank, and build as 填空 / 選正確句 / 句意; stems are new (not an existing item's sentence); no banned words;
 kanji without furigana are reported as warnings. Prints one line per problem and a summary; exit code 1 when anything fails."""
@@ -19,12 +20,20 @@ JS = """((cands) => { const bad = [], warn = []; const norm = (s) => String(s ||
   const stems = new Set(REG.grammar.map(g => norm(g.jp || g.a || ''))); const seenIds = new Set(), seenStems = new Set();
   const ptsOf = (u, sec) => new Set(REG.grammar.filter(g => g.builtin && g.u === u && g.sec === sec).map(g => g.pt));
   const bareOf = (t) => (furi(String(t || '')).replace(/<ruby>.*?<[/]ruby>/g, '').match(/[一-龯々]+/g) || []);
+  const WEEK0 = { 'AはBです・ではありません': 1, '〜ですか・はい／いいえ': 1, 'こそあど': 2, 'も（也）': 2, 'は・へ・を 的唸法': 3 };   // 第 0 週: point → lesson section
+  const words = new Set(DATA.VOCAB.map(v => v.w));
   cands.forEach((x, i) => {
     const id = x.id || ('#' + i); const P = (m) => bad.push([id, m]); const W = (m) => warn.push([id, m]);
     if (!x.id) P('missing id'); else if (existing.has(x.id) || seenIds.has(x.id)) P('id already used'); seenIds.add(x.id);
-    const u = DATA.UNITS.find(z => z.id === x.u); if (!u) { P('unknown unit ' + x.u); return; }
+    const week0 = x.u === 'm0';
+    const u = week0 ? unitById('m0') : DATA.UNITS.find(z => z.id === x.u); if (!u) { P('unknown unit ' + x.u); return; }
     const L = DATA.LESSONS[x.u]; if (!Number.isInteger(x.sec) || x.sec < 0 || x.sec >= L.sections.length) P('bad sec ' + x.sec);
-    else if (!ptsOf(x.u, x.sec).has(x.pt)) P('pt not among this section\\'s points: ' + x.pt + ' (have: ' + [...ptsOf(x.u, x.sec)].join('、') + ')');
+    else if (week0 ? WEEK0[x.pt] !== x.sec : !ptsOf(x.u, x.sec).has(x.pt)) P(week0 ? 'week 0 point/section must be one of ' + Object.entries(WEEK0).map(([k, v]) => k + '@' + v).join('、') : 'pt not among this section\\'s points: ' + x.pt + ' (have: ' + [...ptsOf(x.u, x.sec)].join('、') + ')');
+    if (week0) {
+      const ja = [x.t === 'correct' ? '' : x.jp, x.t === 'meaning' ? '' : x.a].concat(x.t === 'meaning' ? [] : (x.op || [])).filter(Boolean).join(' ');
+      if (/[一-龯々]/.test(ja)) P('week 0 is kana only');
+      const loan = [...new Set(ja.match(/[ァ-ヶー]{2,}/g) || [])].filter(w => !words.has(w)); if (loan.length) P('loanword not in the word bank: ' + loan.join(' '));
+    }
     if (!['choice', 'meaning', 'correct'].includes(x.t)) P('type must be choice/meaning/correct');
     if (x.lv !== (/N4/.test(u.lv) ? 'N4' : 'N5')) P('lv should be ' + u.lv);
     if (![1, 2, 3].includes(x.d)) P('d must be 1..3');

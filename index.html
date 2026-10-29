@@ -3387,7 +3387,7 @@ function newGrammarCandidates(unitIdOnly) {
   if (unitIdOnly) return sorted;
   // fill gaps from earlier, unfinished units
   const curIdx = unitOrder(cur);
-  const earlier = REG.grammar.filter(g => unitOrder(g.u) < curIdx && !state.completedUnits.includes(g.u) && !state.srs[g.key])
+  const earlier = REG.grammar.filter(g => g.u !== 'm0' && unitOrder(g.u) < curIdx && !state.completedUnits.includes(g.u) && !state.srs[g.key])   // 第 0 週 only brings new items in 入門 (or with introPending)
     .sort((a, b) => unitOrder(a.u) - unitOrder(b.u) || (a.d || 2) - (b.d || 2));
   const out = sorted.concat(earlier);
   // everything up to here has been introduced: continue into the next unit (the unit itself moves when its first new
@@ -4756,7 +4756,7 @@ Object.assign(ACTIONS, {
 // ---- 階段（四個）與階段項目 ----
 /* 入門 + DATA.PHASES 的三個階段。文法與變化練習照單元歸屬；單字、漢字、聽力、閱讀照等級歸到該等級的最後一個階段
    (PRE_N5 → 入門, N5 → 第一階段, N4 → 第三階段)；入門另含全部假名。階段測驗與「標記到這裡為止」都以這個劃分為準。 */
-const STAGES = [{ id: 'pre', title: '入門', sub: '假名與入門單字，不算週數；都看過、正確率到 80% 就自動進第 1 週', units: [], lv: 'PRE_N5' }].concat(
+const STAGES = [{ id: 'pre', title: '入門', sub: '假名與入門單字，不算週數；都看過、正確率到 80% 就自動進第 1 週', units: ['m0'], lv: 'PRE_N5' }].concat(
   DATA.PHASES.map((ph, i) => ({ id: 'p' + (i + 1), title: ph.title, sub: ph.span, units: DATA.UNITS.filter(u => u.ph === ph.id).map(u => u.id), lv: ['N5', null, 'N4'][i] || null })));
 function stageById(id) { return STAGES.find(s => s.id === id); }
 function stageIndex(id) { return Math.max(0, STAGES.findIndex(s => s.id === id)); }

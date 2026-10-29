@@ -19,7 +19,7 @@ def test_stages_partition_every_item(b):
         p2v: S[2].filter(x => x.kind === 'v').length, n4In: S.map(l => l.filter(x => x.kind === 'v' && x.lv === 'N4').length),
         kana: S[0].filter(x => x.kind === 'a').length, next: STAGES.map(s => nextUnitAfterStage(s.id)), of: [stageOfUnit('m7'), stageOfUnit('m18')] }); })()"""
     r = json.loads(ev(b, js))
-    assert r['ids'] == ['pre', 'p1', 'p2', 'p3'] and r['units'] == [0, 6, 6, 6], r
+    assert r['ids'] == ['pre', 'p1', 'p2', 'p3'] and r['units'] == [1, 6, 6, 6], r   # 1.0.16: 入門 holds 第 0 週 (m0)
     assert r['dup'] == 0 and r['total'] == r['expect'], r
     assert r['p2v'] == 0 and r['n4In'][:3] == [0, 0, 0] and r['n4In'][3] > 0 and r['kana'] == 142, r
     assert r['next'] == ['m1', 'm7', 'm13', 'm18'] and r['of'] == ['p2', 'p3'], r
@@ -133,7 +133,7 @@ def test_bulk_mark_levels_and_side_effects(b):
     r = json.loads(ev(b, js))
     L = r['learned']
     assert L['n'] > 500 and L['changed'] == L['n'] and L['allB3'] and L['dueMin'] == 5 and L['dueMax'] == L['expMax'] and L['lastSet'], L
-    assert L['units'] == ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'] and L['cur'] == 'm7' and L['stage'] == 'main' and L['intro'] and L['kana'] and L['lessons'] and L['n4Open'] and L['banner'], L
+    assert L['units'] == ['m0', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6'] and L['cur'] == 'm7' and L['stage'] == 'main' and L['intro'] and L['kana'] and L['lessons'] and L['n4Open'] and L['banner'], L
     assert r['known']['changed'] > 0 and r['known']['allKnown'] and r['known']['dueMin'] == 35, r['known']
     assert r['seenAfterKnown'] == {'changed': 0, 'stillKnown': True}, r
 
@@ -154,7 +154,7 @@ def test_bulk_mark_to_p3_finishes_the_course_and_undo_restores(b):
       bulkUndo(); const restored = """ + SNAP + """ === before && LAST_BULK_MARK === null;
       return JSON.stringify({ after, restored }); })()"""
     r = json.loads(ev(b, js))
-    assert r['after']['cur'] == 'm18' and r['after']['pct'] == 100 and r['after']['units'] == 18 and r['after']['items'] > 1500, r
+    assert r['after']['cur'] == 'm18' and r['after']['pct'] == 100 and r['after']['units'] == 19 and r['after']['items'] > 1500, r
     assert r['restored'], r
 
 def test_bulk_mark_dialog_requires_a_pass_and_counts_live(b):

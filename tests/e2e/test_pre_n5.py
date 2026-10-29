@@ -429,6 +429,14 @@ def test_week0_page_is_a_unit_page(b):
     assert r == {'intro': page, 'seen': True, 'lesson': page, 'rowBar': True, 'rowCur': False}, r
 
 
+def test_main_accounts_never_get_week0_items_unless_pending(b):
+    js = """(() => { const t = todayStr(); state.stage = 'main'; state.currentUnit = 'm3'; state.srs = {}; const g3 = REG.grammar.find(x => x.u === 'm3'); state.srs[g3.key] = { b: 2, due: addDays(t, 3), n: 1, ok: 1, ng: 0, s: 3, d: 5, last: t }; DAILY_CACHE = null;
+      const out = { cand: newGrammarCandidates().filter(g => g.u === 'm0').length, plan: dailyPlan().newG.filter(g => g.u === 'm0').length, extra: extraQueue(20).items.filter(x => x.u === 'm0').length,
+        unit: buildUnitQueue('m0').filter(x => x.u === 'm0').length };
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['cand'] == 0 and r['plan'] == 0 and r['extra'] == 0 and r['unit'] > 0, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

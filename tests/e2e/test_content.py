@@ -39,6 +39,24 @@ def test_the_n5_bank_has_the_added_listening_and_reading_items(b):
     assert all(l >= 40 and rd >= 18 for l, rd in r['units']), r   # spread over 第 1–12 週
     assert r['ok'] and r['ids'], r
 
+# ---- 1.0.16: 第 0 週 (m0) — 20 kana-only items on five points ----
+WEEK0_PTS = {'AはBです・ではありません': 1, '〜ですか・はい／いいえ': 1, 'こそあど': 2, 'も（也）': 2, 'は・へ・を 的唸法': 3}
+
+def test_week0_items_are_kana_only_and_cover_five_points(b):
+    js = """(() => { const G = REG.grammar.filter(g => g.u === 'm0'); const ja = (g) => (g.t === 'meaning' ? [g.jp] : [g.jp, g.a].concat(g.op)).filter(Boolean).join(' ');   // a meaning item's answer and options are Chinese
+      const words = new Set(REG.vocab.map(v => v.w)); const gen = new Set(cloudAudioTexts().map(x => x.text)); const full = (g) => g.t === 'choice' ? g.jp.replace(/（[^）]*）/, g.a) : g.t === 'correct' ? g.a : g.jp;
+      return JSON.stringify({ n: G.length, pts: G.reduce((m, g) => (m[g.pt] = (m[g.pt] || 0) + 1, m), {}), secs: G.map(g => [g.pt, g.sec]),
+        kanji: G.filter(g => /[一-龯々]/.test(ja(g))).map(g => g.id), kata: [...new Set(G.flatMap(g => ja(g).match(/[ァ-ヶー]{2,}/g) || []))].filter(w => !words.has(w)),
+        dupFull: G.length - new Set(G.map(full)).size, built: G.filter(g => { const q = makeQuestion(g, {}); return q && q.options.length === 4; }).length,
+        fmts: G.filter(g => g.t === 'choice').every(g => ['g-choice', 'g-correct', 'g-meaning'].every(f => makeGrammarQuestion(g, { forceFmt: f }))),
+        inGen: G.filter(g => !gen.has(ttsText(full(g)))).map(g => g.id) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['n'] == 20 and r['pts'] == {k: 4 for k in WEEK0_PTS}, r
+    assert all(sec == WEEK0_PTS[pt] for pt, sec in r['secs']), r
+    assert r['kanji'] == [] and r['kata'] == [] and r['dupFull'] == 0, r
+    assert r['built'] == 20 and r['fmts'] and r['inGen'] == [], r
+
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
