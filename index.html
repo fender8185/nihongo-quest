@@ -1628,6 +1628,7 @@ function srsAnswer(key, correct, opt = {}) {
     else if (typeof r.rl === 'number') { if (r.rl < RELEARN_GAPS.length) { r.due = addDays(t, RELEARN_GAPS[r.rl]); r.rl++; } else delete r.rl; }
   }
   r.last = t;
+  noteAnswered(key);
   if ((r.lapse || 0) >= LEECH_LAPSES) r.leech = true;
   if (isNew) {
     if (key.startsWith('v:')) { state.today.newV++; noteThemeIntro(key); }
@@ -1719,9 +1720,15 @@ function dayStatsText(d, tally) {
   return `${x.total} 題${by ? `（${by}）` : ''}・新學 ${x.fresh}・升到熟悉 ${x.learned}${x.acc !== null ? `・正確率 ${x.acc}%` : ''}${x.units.length ? `・完成單元：${esc(x.units.join('、'))}` : ''}`;
 }
 function dayTotal(e) { return e ? (e.vocabCount || 0) + (e.grammarCount || 0) + (e.quizCount || 0) + (e.bonusCount || 0) : 0; }
-// Items answered today (the schedule records each one once; encores and 再練一次 copies write nothing). Every count on the
-// Today page and the ring are in these items, not in questions pressed: done / (done + remaining) fills exactly when the day is done.
-function itemsDoneToday(t = todayStr()) { let n = 0; for (const k in state.srs) if (state.srs[k].last === t) n++; return n; }
+// Items answered today: each item once, whatever mode it was answered in (encores and 再練一次 copies add nothing, and
+// bulk marks or 我會了 are not answers). A hand-made notebook card counts as 'm:<id>'. 今天做了 and the sidebar show this.
+function noteAnswered(key) {
+  if (!Array.isArray(state.today.ans)) state.today.ans = [];
+  if (!state.today.ans.includes(key)) state.today.ans.push(key);
+  logEntry().items = state.today.ans.length;
+}
+function answeredToday(key) { return Array.isArray(state.today.ans) && state.today.ans.includes(key); }
+function itemsDoneToday() { return Array.isArray(state.today.ans) ? state.today.ans.length : 0; }
 function dayProgress() { const done = itemsDoneToday(); const left = dailyPlan().remaining; return { done, left, total: done + left }; }
 const LOG_KINDS = [['v', '單字'], ['g', '文法'], ['k', '漢字'], ['a', '假名'], ['l', '聽力'], ['r', '閱讀'], ['x', '模擬考・其他']];
 function recordAction(type, topic, kind) {
@@ -4045,6 +4052,7 @@ function answerCurrent(i) {
       mistake: m0 ? JSON.parse(JSON.stringify(m0)) : null,
       mistakesLen: state.mistakes.length,
       today: Object.assign({}, state.today),
+      ans: (state.today.ans || []).slice(),
       logDate: t,
       dailyLog: state.dailyLogs[t] ? JSON.parse(JSON.stringify(state.dailyLogs[t])) : null,
       themeLane: state.themeLane ? JSON.parse(JSON.stringify(state.themeLane)) : null,
@@ -4064,6 +4072,7 @@ function answerCurrent(i) {
     e.srs = srsAnswer(q.key, ok);
     if (e.srs.isNew) SESSION.stats.newCount++;
   }
+  if (q.kind === 'm' && !q.key && q.mistakeId) noteAnswered('m:' + q.mistakeId);
   if (q.kind === 'v' && q.fmt && q.fmt.startsWith('v-')) recordFormat(state.srs[q.key], q.fmt, ok);
   if (q.kind === 'g' && q.item && ((q.item.t || 'choice') === 'choice' || (q.fmt && q.fmt.endsWith('-type'))) && q.fmt) recordFormat(state.srs[q.key], q.fmt, ok, 'gf');
   // a new word comes back once more in another format; so does a new grammar item answered right (a miss gets the 再練一次 copy instead)
@@ -4365,6 +4374,7 @@ const ACTIONS = {
     const wasNew = Boolean(e.srs && e.srs.isNew);
     if (q.key) { if (u.srs) state.srs[q.key] = u.srs; else delete state.srs[q.key]; }
     state.today = u.today;
+    if (u.ans) state.today.ans = u.ans;
     if (u.logDate) {
       if (u.dailyLog) state.dailyLogs[u.logDate] = u.dailyLog;
       else delete state.dailyLogs[u.logDate];
@@ -5874,6 +5884,7 @@ function mloopRate(g) {
       if (!good) { m.count = (m.count || 1) + 1; m.streak = 0; }
     } else if (good) onCorrectForMistake({ mistakeId: m.id });
     else { m.count = (m.count || 1) + 1; m.streak = 0; m.okDays = []; m.last = t; }
+    if (!it) noteAnswered('m:' + m.id);
     if (!wasMastered && m.mastered) MLOOP.stats.left++;
     saveState();
   }

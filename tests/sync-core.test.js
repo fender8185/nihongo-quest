@@ -125,3 +125,9 @@ test('mergeStates merges stageTests, unitAiNotes, same-day today quotas, dedupli
   assert.equal(m.mistakes[0].mastered, true, 'marks mistake mastered when merged srs has no rl');
   assert.equal(C.isEmptyProgress({ stageTests: { pre: [{ date: '2026-05-01', correct: 18, total: 20, passed: true }] } }), false);
 });
+test('mergeStates unions same-day answered keys', () => {
+  const a = { updatedAt: '2026-10-30T01:00:00.000Z', srs: {}, today: { date: '2026-10-30', newV: 1, ans: ['v:a', 'v:b'] } };
+  const b = { updatedAt: '2026-10-30T02:00:00.000Z', srs: {}, today: { date: '2026-10-30', newV: 2, ans: ['v:b', 'g:c'] } };
+  assert.deepEqual(C.mergeStates(a, b).today.ans, ['v:b', 'g:c', 'v:a']);
+  assert.equal(C.mergeStates(a, b).today.newV, 2);
+});

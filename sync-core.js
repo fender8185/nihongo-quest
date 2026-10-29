@@ -112,6 +112,12 @@
         out[k] = Math.max(olderT[k] || 0, newerT[k] || 0);
       }
     });
+    // items answered today on either device: the newer list first, then what only the older one has
+    if (Array.isArray(olderT.ans) || Array.isArray(newerT.ans)) {
+      const ans = (newerT.ans || []).slice();
+      (olderT.ans || []).forEach(k => { if (!ans.includes(k)) ans.push(k); });
+      out.ans = ans;
+    }
     return out;
   }
   function mergeStates(a, b) {
