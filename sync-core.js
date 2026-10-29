@@ -57,6 +57,63 @@
     if (lx !== ly) return lx > ly ? x : y;
     return (x.n || 0) >= (y.n || 0) ? x : y;
   }
+  function mergeMistakes(olderList, newerList, mergedSrs) {
+    const map = new Map();
+    const keyOf = (x) => (x && (x.key || x.prompt || x.id !== undefined)) ? String(x.key || x.prompt || x.id) : JSON.stringify(x);
+    for (const x of (olderList || [])) {
+      const k = keyOf(x);
+      map.set(k, Object.assign({}, x));
+    }
+    for (const x of (newerList || [])) {
+      const k = keyOf(x);
+      const prev = map.get(k);
+      if (!prev) {
+        map.set(k, Object.assign({}, x));
+      } else {
+        const latest = (x.ts || 0) >= (prev.ts || 0) ? x : prev;
+        const merged = Object.assign({}, prev, latest);
+        if (prev.count !== undefined || x.count !== undefined) merged.count = Math.max(prev.count || 1, x.count || 1);
+        if (prev.ts !== undefined || x.ts !== undefined) merged.ts = Math.max(prev.ts || 0, x.ts || 0);
+        map.set(k, merged);
+      }
+    }
+    return [...map.values()].map(m => {
+      const r = m && m.key && mergedSrs && mergedSrs[m.key];
+      if (r && (r.known || (typeof r.rl !== 'number' && (r.b || 0) >= 1))) {
+        return Object.assign({}, m, { mastered: true });
+      }
+      return m;
+    });
+  }
+  function mergeStageTests(olderSt, newerSt) {
+    const out = {};
+    const keys = new Set([...Object.keys(olderSt || {}), ...Object.keys(newerSt || {})]);
+    keys.forEach(k => {
+      const seen = new Set();
+      const merged = [];
+      [...((newerSt && newerSt[k]) || []), ...((olderSt && olderSt[k]) || [])].forEach(item => {
+        if (!item || typeof item !== 'object') return;
+        const sig = `${item.date || ''}|${item.correct}|${item.total}|${item.passed ? 1 : 0}`;
+        if (seen.has(sig)) return;
+        seen.add(sig);
+        merged.push(Object.assign({}, item));
+      });
+      merged.sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+      out[k] = merged.slice(0, 10);
+    });
+    return out;
+  }
+  function mergeToday(olderT, newerT) {
+    if (!olderT || !newerT) return newerT || olderT;
+    if (olderT.date !== newerT.date) return String(newerT.date || '') >= String(olderT.date || '') ? newerT : olderT;
+    const out = Object.assign({}, olderT, newerT);
+    ['newV', 'newG', 'newK', 'newL', 'newR', 'newC', 'newA'].forEach(k => {
+      if (typeof olderT[k] === 'number' || typeof newerT[k] === 'number') {
+        out[k] = Math.max(olderT[k] || 0, newerT[k] || 0);
+      }
+    });
+    return out;
+  }
   function mergeStates(a, b) {
     const [newer, older] = (stampOf(a) >= stampOf(b) ? [a, b] : [b, a]).map(clone);
     const out = Object.assign({}, older, newer);
@@ -76,13 +133,17 @@
       const x = (newer.statsFmt || {})[f] || {}, y = (older.statsFmt || {})[f] || {};
       out.statsFmt[f] = { ok: Math.max(x.ok || 0, y.ok || 0), ng: Math.max(x.ng || 0, y.ng || 0) };
     });
-    ['mistakes', 'vocab', 'customGrammar', 'customExam', 'examHistory'].forEach(f => {
+    out.mistakes = mergeMistakes(older.mistakes, newer.mistakes, out.srs);
+    ['vocab', 'customGrammar', 'customExam', 'examHistory'].forEach(f => {
       const by = new Map();
       (older[f] || []).forEach(x => by.set(x && x.id !== undefined ? x.id : JSON.stringify(x), x));
       (newer[f] || []).forEach(x => by.set(x && x.id !== undefined ? x.id : JSON.stringify(x), x));
       out[f] = [...by.values()];
     });
     ['completedUnits', 'hidden', 'lessonSeen'].forEach(f => { out[f] = [...new Set([...(older[f] || []), ...(newer[f] || [])])]; });
+    if (older.stageTests || newer.stageTests) out.stageTests = mergeStageTests(older.stageTests, newer.stageTests);
+    if (older.unitAiNotes || newer.unitAiNotes) out.unitAiNotes = Object.assign({}, older.unitAiNotes, newer.unitAiNotes);
+    if (older.today || newer.today) out.today = mergeToday(older.today, newer.today);
     out.updatedAt = new Date().toISOString();
     return out;
   }
@@ -97,7 +158,8 @@
   function isEmptyProgress(s) {
     if (!s) return true;
     const n = (x) => (Array.isArray(x) ? x.length : (x && typeof x === 'object') ? Object.keys(x).length : 0);
-    return !(n(s.srs) || n(s.vocab) || n(s.dailyLogs) || n(s.examHistory));
+    const hasStageTests = s.stageTests && typeof s.stageTests === 'object' && Object.values(s.stageTests).some(a => Array.isArray(a) && a.length > 0);
+    return !(n(s.srs) || n(s.vocab) || n(s.dailyLogs) || n(s.examHistory) || hasStageTests);
   }
 
   const SyncCore = { stripSecrets, keepLocalSecrets, sameStamp, pullDecision, mergeStates, buildPushPayload, normalizeEmail, isEmptyProgress };

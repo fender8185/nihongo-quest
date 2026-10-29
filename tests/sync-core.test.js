@@ -97,3 +97,31 @@ test('mergeStates: a record with no `last` loses to one that has it; equal `last
   const m = C.mergeStates(a, b);
   assert.equal(m.srs.k.n, 1); assert.equal(m.srs.j.n, 3);
 });
+test('mergeStates merges stageTests, unitAiNotes, same-day today quotas, deduplicates mistakes by key/prompt, and isEmptyProgress checks stageTests', () => {
+  const a = {
+    updatedAt: '2026-05-01T10:00:00.000Z',
+    srs: { 'v-1': { b: 4, due: '2026-05-10', n: 5, ok: 4, ng: 1, s: 10, d: 5, last: '2026-05-01' } },
+    stageTests: { pre: [{ date: '2026-04-29', correct: 16, total: 20, passed: true }], p1: [{ date: '2026-04-30', correct: 20, total: 30, passed: false }] },
+    unitAiNotes: { m1: '筆記 A', m2: '舊 M2' },
+    today: { date: '2026-05-01', newV: 8, newG: 1, newK: 3, newL: 0, newR: 0, newC: 2, newA: 5 },
+    mistakes: [{ id: 'mk_device_a', key: 'v-1', kind: 'v', prompt: '食べる', chosen: '喝', answer: '吃', exp: '', ts: 100, count: 2, mastered: false }],
+  };
+  const b = {
+    updatedAt: '2026-05-01T12:00:00.000Z',
+    srs: { 'v-1': { b: 5, due: '2026-05-20', n: 6, ok: 5, ng: 1, s: 20, d: 4, last: '2026-05-01' } },
+    stageTests: { pre: [{ date: '2026-05-01', correct: 19, total: 20, passed: true }, { date: '2026-04-29', correct: 16, total: 20, passed: true }] },
+    unitAiNotes: { m2: '新 M2', m3: '筆記 B' },
+    today: { date: '2026-05-01', newV: 3, newG: 2, newK: 1, newL: 1, newR: 0, newC: 0, newA: 2 },
+    mistakes: [{ id: 'mk_device_b', key: 'v-1', kind: 'v', prompt: '食べる', chosen: '走', answer: '吃', exp: '', ts: 200, count: 1, mastered: false }],
+  };
+  const m = C.mergeStates(a, b);
+  assert.equal(m.stageTests.pre.length, 2, 'deduplicates identical stageTest entries');
+  assert.equal(m.stageTests.pre[0].date, '2026-05-01', 'newest stageTest stays first');
+  assert.equal(m.stageTests.p1.length, 1, 'preserves stageTest from older side');
+  assert.deepEqual(m.unitAiNotes, { m1: '筆記 A', m2: '新 M2', m3: '筆記 B' });
+  assert.deepEqual(m.today, { date: '2026-05-01', newV: 8, newG: 2, newK: 3, newL: 1, newR: 0, newC: 2, newA: 5 });
+  assert.equal(m.mistakes.length, 1, 'deduplicates mistakes across devices by key/prompt');
+  assert.equal(m.mistakes[0].count, 2, 'keeps max mistake count');
+  assert.equal(m.mistakes[0].mastered, true, 'marks mistake mastered when merged srs has no rl');
+  assert.equal(C.isEmptyProgress({ stageTests: { pre: [{ date: '2026-05-01', correct: 18, total: 20, passed: true }] } }), false);
+});

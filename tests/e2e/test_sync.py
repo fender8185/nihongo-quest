@@ -205,6 +205,24 @@ def test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge(b):
     ])
     assert out[-1] == '{"local":[true,true],"cloud":[true,true],"pend":false}', out[-1]
 
+def test_snapshots_prune_by_date_and_format_conflict_labels(b):
+    js = """(async () => {
+      for (const k of (await Snapshots.keys()) || []) await Snapshots.del(k);
+      const putAll = ['conflict-2026-01-01', 'pre-cloud-2026-01-02', '2026-04-01', '2026-04-02', '2026-04-03', '2026-04-04', '2026-04-05', '2026-04-06', 'conflict-2026-04-06'];
+      for (const k of putAll) await Snapshots.put(k, '{}');
+      await Snapshots.prune();
+      openSettings('data');
+      await fillSnapshotList();
+      const keys = await Snapshots.keys();
+      const labels = [...document.querySelectorAll('#snapList [data-act=snapshot-restore]')].map(el => el.textContent);
+      return JSON.stringify({ keys, labels });
+    })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert 'conflict-2026-01-01' not in r['keys'] and 'pre-cloud-2026-01-02' not in r['keys'], r
+    assert '2026-04-01' in r['keys'] and 'conflict-2026-04-06' in r['keys'], r
+    assert r['labels'][0] == '2026/04/06（衝突備份）' and r['labels'][1] == '2026/04/06', r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -216,7 +234,8 @@ if __name__ == "__main__":
              test_first_sync_adopting_cloud_snapshots_local_first, test_token_refresh_does_not_mask_error_status,
              test_manual_push_with_null_updated_at_still_sends_a_timestamp,
              test_push_uses_a_conditional_update_once_the_device_has_synced, test_stale_device_does_not_overwrite_progress_made_elsewhere, test_cloud_changed_elsewhere_is_adopted_even_when_its_clock_is_behind,
-             test_row_deleted_elsewhere_is_recreated_without_looping, test_conflict_during_a_session_waits_and_never_overwrites_the_cloud, test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge]
+             test_row_deleted_elsewhere_is_recreated_without_looping, test_conflict_during_a_session_waits_and_never_overwrites_the_cloud, test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge,
+             test_snapshots_prune_by_date_and_format_conflict_labels]
     failed = 0
     try:
         for t in tests:

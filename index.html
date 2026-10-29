@@ -928,12 +928,17 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.13';   // keep equal to the version in sw.js CACHE ('nq-v1.0.13'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.14';   // keep equal to the version in sw.js CACHE ('nq-v1.0.14'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.14', date: '2026-10-29', items: [
+    '雲端同步：衝突合併時補齊階段測驗紀錄、單元 AI 筆記與同日新題計數；跨裝置同題錯題自動去重並對齊熟練狀態。',
+    '備份快照：依內含日期排序與淘汰，避免衝突／同步前備份誤將一般每日快照擠掉，並顯示清楚的備份標籤。',
+    '練習與搜尋：「手滑，不算」完整還原當日紀錄、主題進度與新字追加題；假名與活用題支援「這題有問題」隱藏；單字表搜尋支援即時過濾且不中斷輸入焦點。'
+  ] },
   { v: '1.0.13', date: '2026-10-29', items: [
     '起點只剩兩個：「從零開始」和「測試看看」。測試看看直接進入入門的階段測驗，通過後接三題標記再進第 1 週。',
     '課程頁的入門列和其他週次同一個樣子，假名與入門單字合成一條進度條。',
@@ -1150,10 +1155,13 @@ let storageOk = true;
 
 const saveHooks = [];            // called after every saveState(); Sync registers here
 let pendingWrite = null;         // coalesces several saveState() calls in one tick into one write
+let stateRev = 0;                // monotonic revision counter so same-millisecond saves still invalidate caches
 const STATE_CHANNEL = ('BroadcastChannel' in window) ? new BroadcastChannel('nq-state') : null;
 
 function saveState() {
   state.updatedAt = new Date().toISOString();
+  stateRev++;
+  DAILY_CACHE = null;
   if (!pendingWrite) pendingWrite = Promise.resolve().then(flushState);
   saveHooks.forEach(h => { try { h(); } catch (e) { /* a sync hook must never break saving */ } });
 }
@@ -1174,6 +1182,8 @@ async function flushState() {
 }
 
 function normalizeState(s) {
+  stateRev++;
+  if (typeof DAILY_CACHE !== 'undefined') DAILY_CACHE = null;
   const base = defaultState();
   const out = Object.assign(base, s || {});
   out.settings = Object.assign(defaultSettings(), (s && s.settings) || {});
@@ -1455,8 +1465,8 @@ function buildRegistry() {
     if (!d.forms.includes(g.f)) d.forms.push(g.f);
     if (unitOrder(g.u) < unitOrder(d.u)) d.u = g.u;
   });
-  const drills = [...fams.values()].sort((a, b) => unitOrder(a.u) - unitOrder(b.u));
-  const kana = kanaItems();   // 假名辨識 (kind a): the tables live in this file, not in data.js
+  const drills = [...fams.values()].filter(d => !hidden.has(d.id)).sort((a, b) => unitOrder(a.u) - unitOrder(b.u));
+  const kana = kanaItems().filter(k => !hidden.has(k.id));   // 假名辨識 (kind a): the tables live in this file, not in data.js
   [vocab, grammar, listen, read, kanji, drills, kana].forEach(list => list.forEach(x => byKey.set(x.key, x)));
   REG = { vocab, grammar, listen, read, kanji, drills, kana, byKey };
   buildFuriganaIndex();
@@ -1642,15 +1652,30 @@ function logEntry(d = todayStr()) {
 function noteUnitDone(uid) { const e = logEntry(); const u = unitById(uid); if (!u) return; if (!Array.isArray(e.units)) e.units = []; if (!e.units.includes(u.short)) e.units.push(u.short); }
 // One day's numbers: questions by kind (since v73; older days have 單字／文法／其他), items met for the first time and items that
 // reached 熟悉 (from the schedule, any day), the day's accuracy and the units finished (since v73)
-function dayStats(d) {
+function tallySrsByDay() {
+  const fresh = {}, learned = {};
+  for (const k in state.srs) {
+    const r = state.srs[k];
+    if (r.intro) fresh[r.intro] = (fresh[r.intro] || 0) + 1;
+    if (r.lrn) learned[r.lrn] = (learned[r.lrn] || 0) + 1;
+  }
+  return { fresh, learned };
+}
+function dayStats(d, tally) {
   const e = state.dailyLogs[d] || {};
   const kinds = LOG_KINDS.map(([k, name]) => [name, e['k' + k.toUpperCase()] || 0]).filter(([, n]) => n);
-  let fresh = 0, learned = 0; for (const k in state.srs) { const r = state.srs[k]; if (r.intro === d) fresh++; if (r.lrn === d) learned++; }
+  let fresh = 0, learned = 0;
+  if (tally) {
+    fresh = tally.fresh[d] || 0;
+    learned = tally.learned[d] || 0;
+  } else {
+    for (const k in state.srs) { const r = state.srs[k]; if (r.intro === d) fresh++; if (r.lrn === d) learned++; }
+  }
   const n = (e.ok || 0) + (e.ng || 0);
   return { total: dayTotal(e), kinds, fresh, learned, acc: n ? Math.round((e.ok || 0) / n * 100) : null, units: e.units || [], old: [['單字', e.vocabCount || 0], ['文法', e.grammarCount || 0], ['其他', (e.quizCount || 0) + (e.bonusCount || 0)]].filter(([, x]) => x) };
 }
-function dayStatsText(d) {
-  const x = dayStats(d);
+function dayStatsText(d, tally) {
+  const x = dayStats(d, tally);
   const by = (x.kinds.length ? x.kinds : x.old).map(([name, n]) => `${name} ${n}`).join('・');
   return `${x.total} 題${by ? `（${by}）` : ''}・新學 ${x.fresh}・升到熟悉 ${x.learned}${x.acc !== null ? `・正確率 ${x.acc}%` : ''}${x.units.length ? `・完成單元：${esc(x.units.join('、'))}` : ''}`;
 }
@@ -1829,8 +1854,8 @@ function furiAddStem(surface, reading) {
   furiAdd(s.slice(0, k + 2), kr + oku[0]);
 }
 
+let FURI_BASE = null;
 function buildFuriganaIndex() {
-  FURI.clear(); FURI_MAX = 1;
   const add = (v) => {
     furiSrc = v.key || '';
     const w = jaPlain(v.w || ''); const r = v.r || '';
@@ -1860,13 +1885,23 @@ function buildFuriganaIndex() {
       furiAdd(w, r);
     }
   };
-  FURI_PRIO.clear(); FURI_BLOCK.clear(); FURI_SRC.clear();
-  // built-in N5 words win over N4 words when keys collide (行って = いって, not おこなって)
-  furiPrio = 4; REG.vocab.filter(v => v.builtin && v.lv !== 'N4').forEach(add);
-  furiPrio = 3; (DATA.FURI || []).forEach(([k, r]) => furiAdd(k, r));
-  furiPrio = 2; REG.vocab.filter(v => v.builtin && v.lv !== 'N5').forEach(add);
-  // readings for words that appear in sentences but are not quizzed (names, 思う, 名前 …)
-  furiPrio = 1.5; (DATA.FURI_EXTRA || []).forEach(([w, r, p]) => add({ w, r, p }));
+  const hiddenKey = (state.hidden || []).slice().sort().join(',');
+  if (FURI_BASE && FURI_BASE.key === hiddenKey) {
+    FURI.clear(); FURI_BASE.furi.forEach((v, k) => FURI.set(k, v));
+    FURI_PRIO.clear(); FURI_BASE.prio.forEach((v, k) => FURI_PRIO.set(k, v));
+    FURI_BLOCK.clear(); FURI_BASE.block.forEach(k => FURI_BLOCK.add(k));
+    FURI_SRC.clear(); FURI_BASE.src.forEach((v, k) => FURI_SRC.set(k, v));
+    FURI_MAX = FURI_BASE.max;
+  } else {
+    FURI.clear(); FURI_PRIO.clear(); FURI_BLOCK.clear(); FURI_SRC.clear(); FURI_MAX = 1;
+    // built-in N5 words win over N4 words when keys collide (行って = いって, not おこなって)
+    furiPrio = 4; REG.vocab.filter(v => v.builtin && v.lv !== 'N4').forEach(add);
+    furiPrio = 3; (DATA.FURI || []).forEach(([k, r]) => furiAdd(k, r));
+    furiPrio = 2; REG.vocab.filter(v => v.builtin && v.lv !== 'N5').forEach(add);
+    // readings for words that appear in sentences but are not quizzed (names, 思う, 名前 …)
+    furiPrio = 1.5; (DATA.FURI_EXTRA || []).forEach(([w, r, p]) => add({ w, r, p }));
+    FURI_BASE = { key: hiddenKey, furi: new Map(FURI), prio: new Map(FURI_PRIO), block: new Set(FURI_BLOCK), src: new Map(FURI_SRC), max: FURI_MAX };
+  }
   furiPrio = 1; REG.vocab.filter(v => !v.builtin && isWordLike(v)).forEach(add);
   furiSrc = '';
 }
@@ -2400,8 +2435,9 @@ function kanjiOptions(v, surface, reading, zh = {}) {
 
 function speechAvailable() {
   if (!state.settings.listening) return false;
-  const cfg = state.ttsConfig || {};
-  if (cfg.engine && cfg.engine !== 'browser_neural') return true;
+  const cfg = state.ttsConfig || TTS_DEFAULT;
+  const eng = (!cfg.cloudDefault && cfg.engine === 'browser_neural') ? 'cloud' : cfg.engine;
+  if (eng && eng !== 'browser_neural') return true;
   return typeof window !== 'undefined' && 'speechSynthesis' in window && (window.speechSynthesis.getVoices() || []).some(x => /ja/i.test(x.lang || ''));
 }
 
@@ -3500,7 +3536,7 @@ function extraNote(q) {
 // holds (the plan numbers above it describe the whole day's workload, which can be more than one session).
 let DAILY_CACHE = null;
 function dailyQueue(size = state.settings.sessionSize) {
-  const key = `${todayStr()}|${state.updatedAt}|${size}|${state.currentUnit}|${speechAvailable() ? 1 : 0}`;
+  const key = `${todayStr()}|${state.updatedAt}|${stateRev}|${size}|${state.currentUnit}|${speechAvailable() ? 1 : 0}`;
   if (DAILY_CACHE && DAILY_CACHE.key === key) return DAILY_CACHE.r;
   const r = buildDailyQueue(size);
   r.items = r.items.filter(it => makeQuestion(it, {}));   // an item that cannot become a question would be dropped silently later
@@ -3938,7 +3974,18 @@ function answerCurrent(i) {
   }
   if (!ok && !e.encore && !e.requeued) {   // kept so 「手滑，不算」 can put everything back
     const m0 = state.mistakes.find(x => (q.key && x.key === q.key) || x.prompt === (q.mistakePrompt || q.plainStem || ''));
-    e.undo = { srs: q.key && state.srs[q.key] ? JSON.parse(JSON.stringify(state.srs[q.key])) : null, mistake: m0 ? JSON.parse(JSON.stringify(m0)) : null, mistakesLen: state.mistakes.length, today: Object.assign({}, state.today) };
+    const t = todayStr();
+    e.undo = {
+      srs: q.key && state.srs[q.key] ? JSON.parse(JSON.stringify(state.srs[q.key])) : null,
+      mistake: m0 ? JSON.parse(JSON.stringify(m0)) : null,
+      mistakesLen: state.mistakes.length,
+      today: Object.assign({}, state.today),
+      logDate: t,
+      dailyLog: state.dailyLogs[t] ? JSON.parse(JSON.stringify(state.dailyLogs[t])) : null,
+      themeLane: state.themeLane ? JSON.parse(JSON.stringify(state.themeLane)) : null,
+      currentUnit: state.currentUnit,
+      completedUnits: (state.completedUnits || []).slice(),
+    };
   }
   // the 再練一次 copy is a learning step: it counts as a question done today, nothing else (the first answer set the schedule)
   if (e.requeued) {
@@ -4250,15 +4297,23 @@ const ACTIONS = {
   slip: () => {   // 「手滑，不算」: the answer was a mis-tap, not a gap — schedule, notebook and stats go back to before it
     const e = currentEntry(); if (!e || !e.done || e.slip || !e.undo) return;
     const q = e.q, u = e.undo;
+    const wasNew = Boolean(e.srs && e.srs.isNew);
     if (q.key) { if (u.srs) state.srs[q.key] = u.srs; else delete state.srs[q.key]; }
     state.today = u.today;
+    if (u.logDate) {
+      if (u.dailyLog) state.dailyLogs[u.logDate] = u.dailyLog;
+      else delete state.dailyLogs[u.logDate];
+    }
+    if ('themeLane' in u) state.themeLane = u.themeLane;
+    if ('currentUnit' in u) state.currentUnit = u.currentUnit;
+    if ('completedUnits' in u) state.completedUnits = u.completedUnits;
     if (u.mistake) { const i = state.mistakes.findIndex(x => x.id === u.mistake.id); if (i >= 0) state.mistakes[i] = u.mistake; }
     else if (state.mistakes.length > u.mistakesLen) state.mistakes.shift();
     const f = state.statsFmt[q.fmt]; if (f && f.ng > 0) f.ng--;
     if (state.recent.length) state.recent.pop();
-    if (e.srs && e.srs.isNew) SESSION.stats.newCount = Math.max(0, SESSION.stats.newCount - 1);
+    if (wasNew) SESSION.stats.newCount = Math.max(0, SESSION.stats.newCount - 1);
     SESSION.stats.wrong = Math.max(0, SESSION.stats.wrong - 1);
-    SESSION.entries = SESSION.entries.filter((x, i) => i <= SESSION.idx || !(x.requeued && x.item === e.item));
+    SESSION.entries = SESSION.entries.filter((x, i) => i <= SESSION.idx || !((x.requeued || (wasNew && x.encore)) && x.item === e.item));
     const last = SESSION.results[SESSION.results.length - 1]; if (last && last.q === q) SESSION.results.pop();
     e.slip = true; e.srs = null; e.mistakeDone = false; delete e.undo;
     saveState(); renderPractice(); toast('這題不算，排程維持原狀');
@@ -4632,10 +4687,11 @@ function heatmapHtml() {
 function recentLogsHtml() {
   const days = Object.keys(state.dailyLogs).filter(d => dayTotal(state.dailyLogs[d]) > 0).sort().reverse().slice(0, 14);
   if (!days.length) return '<div class="empty">還沒有紀錄，完成第一組練習後就會出現。</div>';
+  const tally = tallySrsByDay();
   return `<div class="list mt-2">${days.map(d => {
     const e = state.dailyLogs[d];
     return `<div class="list-item"><div class="grow">
-      <div class="row-wrap"><b class="num">${d}</b><span class="small muted">${dayStatsText(d)}</span></div>
+      <div class="row-wrap"><b class="num">${d}</b><span class="small muted">${dayStatsText(d, tally)}</span></div>
     </div><span class="chip num">${dayTotal(e)} 題</span>
     <button type="button" class="btn btn-sm btn-ghost" data-act="del-log" data-date="${d}" title="刪除這天的紀錄">刪除</button></div>`;
   }).join('')}</div>`;
@@ -5553,11 +5609,8 @@ function vocabListFiltered(params) {
   return list;
 }
 let LAST_BULK_KNOWN = null;   // { keys, prev } of the last 整批我會了, so it can be undone exactly
-function renderVocabList(view, params) {
-  const lv = params.lv || 'all';
-  const theme = params.c || '';
+function vocabListResultsHtml(params, list = vocabListFiltered(params)) {
   const t = todayStr();
-  const list = vocabListFiltered(params);
   const notKnown = list.filter(v => !(state.srs[v.key] && state.srs[v.key].known)).length;
   const shown = list.slice(0, 300);
   const rows = shown.map(v => {
@@ -5572,6 +5625,18 @@ function renderVocabList(view, params) {
         <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-remove" data-key="${esc(v.key)}">${v.builtin ? '隱藏' : '刪除'}</button>
       </td></tr>`;
   }).join('');
+  return `<div class="row-wrap mb-3">
+      ${notKnown ? `<button type="button" class="btn btn-sm" data-act="vocab-known-all" data-n="${notKnown}" title="把目前列出的字全部標成已熟練，約六週後再各確認一次；答錯就回到正常排程">這 ${notKnown} 個字我都會了</button>` : ''}
+      ${LAST_BULK_KNOWN ? `<span class="small muted">已把 ${LAST_BULK_KNOWN.keys.length} 個字標成我會了</span><button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known-undo">復原</button>` : ''}
+      <span class="hint">已經會的字可以整批標記，之後只會偶爾確認一次。</span>
+    </div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>單字</th><th>意思</th><th>熟練度</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="empty">沒有符合的單字</td></tr>'}</tbody></table></div>
+    ${list.length > shown.length ? `<p class="hint mt-2">只顯示前 ${shown.length} 筆，請用搜尋縮小範圍。</p>` : ''}`;
+}
+function renderVocabList(view, params) {
+  const lv = params.lv || 'all';
+  const theme = params.c || '';
+  const list = vocabListFiltered(params);
   view.innerHTML = `
     <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">${theme ? `主題「${esc(theme)}」・${list.length} 個字` : `共 ${REG.vocab.length} 個單字`}</div></div>
       ${theme ? (() => { const lvOk = ['PRE_N5', 'N5', 'N4'].includes(lv); const f = lvOk ? `t:${lv}:${theme}` : `c:${theme}`; return `<div class="row-wrap"><button type="button" class="btn btn-primary" data-act="start-vocab" data-filter="${esc(f)}">練習這個主題・${vocabSessionCount(f)} 題</button><button type="button" class="btn btn-ghost" data-act="nav" data-route="#/vocab/level?lv=${lvOk ? lv : defaultVocabLevel()}">回到${lvOk ? lvLabel(lv) : '單字'}</button></div>`; })() : ''}</div>
@@ -5580,13 +5645,22 @@ function renderVocabList(view, params) {
       <input class="input" style="max-width:320px" placeholder="搜尋日文、假名或中文" value="${esc(params.q || '')}" data-change="vocab-search" id="vocabSearch" />
       <div class="seg">${DECKS.filter(([k]) => !theme || k !== 'custom').map(([k, l]) => `<button type="button" aria-pressed="${lv === k}" data-act="vocab-filter" data-lv="${k}">${l}</button>`).join('')}</div>
     </div>
-    <div class="row-wrap mb-3">
-      ${notKnown ? `<button type="button" class="btn btn-sm" data-act="vocab-known-all" data-n="${notKnown}" title="把目前列出的字全部標成已熟練，約六週後再各確認一次；答錯就回到正常排程">這 ${notKnown} 個字我都會了</button>` : ''}
-      ${LAST_BULK_KNOWN ? `<span class="small muted">已把 ${LAST_BULK_KNOWN.keys.length} 個字標成我會了</span><button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known-undo">復原</button>` : ''}
-      <span class="hint">已經會的字可以整批標記，之後只會偶爾確認一次。</span>
-    </div>
-    <div class="table-wrap"><table class="table"><thead><tr><th>單字</th><th>意思</th><th>熟練度</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="empty">沒有符合的單字</td></tr>'}</tbody></table></div>
-    ${list.length > shown.length ? `<p class="hint mt-2">只顯示前 ${shown.length} 筆，請用搜尋縮小範圍。</p>` : ''}`;
+    <div id="vocabListBody">${vocabListResultsHtml(params, list)}</div>`;
+}
+function applyVocabSearch(el) {
+  const { lv = 'all', c } = currentRoute().params;
+  const nextHash = `#/vocab/list?lv=${lv}&q=${encodeURIComponent(el.value)}${c ? `&c=${encodeURIComponent(c)}` : ''}`;
+  const body = document.getElementById('vocabListBody');
+  if (body) {
+    history.replaceState(null, '', nextHash);
+    const params = { lv, q: el.value, c: c || '' };
+    const list = vocabListFiltered(params);
+    const sub = document.querySelector('.page-head .page-sub');
+    if (sub && c) sub.textContent = `主題「${c}」・${list.length} 個字`;
+    body.innerHTML = vocabListResultsHtml(params, list);
+  } else {
+    go(nextHash);
+  }
 }
 
 function renderVocabImport(view) {
@@ -5731,7 +5805,7 @@ Object.assign(ACTIONS, {
   'ai-translate-batch': () => aiTranslateCards(REG.vocab.filter(v => !v.builtin && isEnglishOnly(v.m)).slice(0, 20))
 });
 Object.assign(CHANGE_ACTIONS, {
-  'vocab-search': (el) => { const { lv = 'all', c } = currentRoute().params; go(`#/vocab/list?lv=${lv}&q=${encodeURIComponent(el.value)}${c ? `&c=${encodeURIComponent(c)}` : ''}`); },
+  'vocab-search': (el) => applyVocabSearch(el),
   'anki-file': (el) => { const f = el.files && el.files[0]; if (f) importAnkiFile(f); el.value = ''; }
 });
 
@@ -7775,7 +7849,6 @@ function renderStats(view) {
         <div class="card-head"><div><div class="card-title">各題型正確率</div><div class="card-sub">至少作答 5 次的題型，由低到高</div></div></div>
         ${fmtRows || '<div class="empty">還沒有足夠的資料。</div>'}
       </div>
-    </div>
     </div>`;
   attachChartTips(view);
 }
@@ -8123,7 +8196,12 @@ function engineBlob(text, gender, opt = {}) {
   const key = ck + pin;
   if (audioCache.has(key)) return Promise.resolve(audioCache.get(key));
   if (audioPending.has(key)) return audioPending.get(key);
-  const p = fetchEngineBlob(cfg, text, gender, opt).then(blob => { audioCache.set(key, blob); return blob; }).finally(() => audioPending.delete(key));
+  const p = fetchEngineBlob(cfg, text, gender, opt).then(blob => {
+    if (audioCache.has(key)) audioCache.delete(key);
+    else if (audioCache.size >= 60) audioCache.delete(audioCache.keys().next().value);
+    audioCache.set(key, blob);
+    return blob;
+  }).finally(() => audioPending.delete(key));
   audioPending.set(key, p);
   return p;
 }
@@ -9385,10 +9463,28 @@ const Snapshots = {
   keys() { return this.tx('readonly', st => st.getAllKeys()); },
   del(date) { return this.tx('readwrite', st => st.delete(date)); },
   async prune() {
-    const keys = ((await this.keys()) || []).map(String).sort();
+    const keys = ((await this.keys()) || []).map(String).sort((a, b) => snapshotSortKey(a).localeCompare(snapshotSortKey(b)));
     for (const k of keys.slice(0, Math.max(0, keys.length - this.KEEP))) await this.del(k);
   }
 };
+
+function snapshotSortKey(k) {
+  const s = String(k);
+  const m = s.match(/(\d{4}-\d{2}-\d{2})/);
+  const date = m ? m[1] : '0000-00-00';
+  const rank = s.startsWith('conflict-') ? '2' : s.startsWith('pre-cloud-') ? '1' : '0';
+  return `${date}#${rank}#${s}`;
+}
+
+function snapshotLabel(k) {
+  const s = String(k);
+  const m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return s.replace(/-/g, '/');
+  const d = `${m[1]}/${m[2]}/${m[3]}`;
+  if (s.startsWith('conflict-')) return `${d}（衝突備份）`;
+  if (s.startsWith('pre-cloud-')) return `${d}（同步前備份）`;
+  return d;
+}
 
 async function requestPersistence() {
   try {
@@ -9480,9 +9576,9 @@ Object.assign(ACTIONS, {
 async function fillSnapshotList() {
   const box = document.getElementById('snapList');
   if (!box) return;
-  const keys = ((await Snapshots.keys()) || []).map(String).sort().reverse();
+  const keys = ((await Snapshots.keys()) || []).map(String).sort((a, b) => snapshotSortKey(b).localeCompare(snapshotSortKey(a)));
   box.innerHTML = keys.length
-    ? `<div class="row-wrap">${keys.map(k => `<button type="button" class="btn btn-sm" data-act="snapshot-restore" data-date="${esc(k)}">${esc(k.replace(/-/g, '/'))}</button>`).join('')}</div>`
+    ? `<div class="row-wrap">${keys.map(k => `<button type="button" class="btn btn-sm" data-act="snapshot-restore" data-date="${esc(k)}">${esc(snapshotLabel(k))}</button>`).join('')}</div>`
     : '<span class="small muted">還沒有快照（每天第一次開啟時會自動建立）。</span>';
 }
 
@@ -9491,7 +9587,7 @@ Object.assign(ACTIONS, {
   'backup-snooze': () => { state.backupSnooze = todayStr(); saveState(); route(); },
   'snapshot-restore': async (el) => {
     const d = el.dataset.date;
-    if (!confirm(`還原到 ${d} 開啟時的進度？之後的作答紀錄會被取代。`)) return;
+    if (!confirm(`還原到 ${snapshotLabel(d)} 開啟時的進度？之後的作答紀錄會被取代。`)) return;
     const json = await Snapshots.get(d);
     if (!json) { toast('讀不到這份快照'); return; }
     try { applyImportedState(JSON.parse(json), `已還原 ${d} 的快照`); } catch (e) { toast('快照內容有問題，無法還原'); }
@@ -9704,7 +9800,7 @@ const Sync = {
       if (pick === 'adopt' || pick === 'conflict') {
         // adopting the cloud over real local progress keeps a copy: first sync as pre-cloud-, a conflict as conflict-
         const snap = pick === 'conflict' ? 'conflict-' : (!this.meta.everSynced && !SyncCore.isEmptyProgress(state)) ? 'pre-cloud-' : null;
-        if (snap) { try { await Snapshots.put(snap + todayStr(), JSON.stringify(state)); } catch (e) { /* best effort */ } }
+        if (snap) { try { await Snapshots.put(snap + todayStr(), JSON.stringify(state)); await Snapshots.prune(); } catch (e) { /* best effort */ } }
         if (pick === 'conflict') {
           // both sides changed: merge record by record, adopt the merge with the cloud's stamp as base, then upload it
           await this.applyCloud({ state: SyncCore.mergeStates(state, data.state), updated_at: data.updated_at }, true);
@@ -9762,6 +9858,8 @@ async function init() {
   // first real gesture unlocks the shared audio player (iOS refuses play() on an element that never had one)
   ['pointerdown', 'touchend', 'keydown'].forEach(ev => document.addEventListener(ev, unlockTtsPlayer, { capture: true, passive: true }));
   document.addEventListener('change', handleChange);
+  document.addEventListener('input', (ev) => { if (!ev.isComposing && ev.target && ev.target.id === 'vocabSearch') applyVocabSearch(ev.target); });
+  document.addEventListener('compositionend', (ev) => { if (ev.target && ev.target.id === 'vocabSearch') applyVocabSearch(ev.target); });
   document.addEventListener('keydown', handleKey);
   window.addEventListener('hashchange', route);
   if ('speechSynthesis' in window) {

@@ -1396,6 +1396,47 @@ def test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip(b):
     assert r['wasPlaying'] and r['playing'] is False and r['idx'] == 2 and r['same'] and r['state'] == 'paused', r
     assert r['silence'] == {'calls': 1, 'blob': 'blob:', 'waited': True, 'flagCleared': True}, r['silence']
 
+def test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_hides_kana_drills(b):
+    js = """(() => {
+      const t = todayStr();
+      delete state.dailyLogs[t]; state.themeLane = null;
+      const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x) && recallOptions(x));
+      const fill = REG.grammar.filter(g => !state.srs[g.key]).slice(0, 10);
+      startSession('items', { items: [v, ...fill] });
+      const e = currentEntry(); e.previewDone = true; renderPractice();
+      answerCurrent((e.q.answer + 1) % e.q.options.length);
+      const afterMiss = {
+        hasLog: !!state.dailyLogs[t],
+        hasTheme: !!state.themeLane,
+        encores: SESSION.entries.filter(x => x.encore && x.item === v).length,
+        requeued: SESSION.entries.filter(x => x.requeued && x.item === v).length
+      };
+      ACTIONS.slip();
+      const afterSlip = {
+        hasLog: !!state.dailyLogs[t],
+        hasTheme: !!state.themeLane,
+        encores: SESSION.entries.filter(x => x.encore && x.item === v).length,
+        requeued: SESSION.entries.filter(x => x.requeued && x.item === v).length,
+        newCount: SESSION.stats.newCount
+      };
+      SESSION = null; document.body.classList.remove('practicing');
+      const k0 = REG.kana[0], d0 = REG.drills[0];
+      const origConfirm = window.confirm; window.confirm = () => true;
+      startSession('items', { items: [k0, d0] });
+      answerCurrent(0); reportCurrentItem();
+      answerCurrent(0); reportCurrentItem();
+      window.confirm = origConfirm;
+      SESSION = null; document.body.classList.remove('practicing');
+      const hiddenOk = !REG.kana.some(x => x.id === k0.id) && !REG.drills.some(x => x.id === d0.id);
+      state.hidden = state.hidden.filter(id => id !== k0.id && id !== d0.id); buildRegistry(); saveState();
+      return JSON.stringify({ afterMiss, afterSlip, hiddenOk });
+    })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['afterMiss'] == {'hasLog': True, 'hasTheme': True, 'encores': 1, 'requeued': 1}, r
+    assert r['afterSlip'] == {'hasLog': False, 'hasTheme': False, 'encores': 0, 'requeued': 0, 'newCount': 0}, r
+    assert r['hiddenOk'] is True, r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -1415,7 +1456,8 @@ if __name__ == "__main__":
              test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
-             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box]
+             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box,
+             test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_hides_kana_drills]
     failed = 0
     try:
         for t in tests:

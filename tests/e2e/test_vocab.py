@@ -667,7 +667,22 @@ def test_experienced_shortcut_in_the_level_picker_raises_the_load_cap(b):
     r = json.loads(ev(b, js))
     assert r['box'] and r['rowGone'] and r['unit'] == 'm7' and r['cap'] == 150 and r['zh'] is False and r['v'] == 12, r
 
-TESTS += [test_n4_words_open_once_every_n5_word_has_been_seen, test_bulk_i_know_marks_the_filtered_words_and_can_be_undone, test_preview_card_has_i_know_which_skips_the_word_and_its_encore, test_experienced_shortcut_in_the_level_picker_raises_the_load_cap]
+def test_vocab_search_filters_live_on_input_and_preserves_focus(b):
+    js = """(() => {
+      location.hash = '#/vocab/list?lv=N5'; route();
+      const inp = document.getElementById('vocabSearch');
+      const rows0 = document.querySelectorAll('#vocabListBody tbody tr').length;
+      inp.focus(); inp.value = '食べ'; inp.setSelectionRange(2, 2);
+      inp.dispatchEvent(new InputEvent('input', { bubbles: true, isComposing: false }));
+      const rows1 = document.querySelectorAll('#vocabListBody tbody tr').length;
+      const sameEl = document.activeElement === inp;
+      const caret = inp.selectionStart;
+      return JSON.stringify({ rows0, rows1, sameEl, caret, hash: decodeURIComponent(location.hash) });
+    })()"""
+    r = json.loads(ev(b, js))
+    assert r['rows0'] > r['rows1'] >= 1 and r['sameEl'] is True and r['caret'] == 2 and 'q=食べ' in r['hash'], r
+
+TESTS += [test_n4_words_open_once_every_n5_word_has_been_seen, test_bulk_i_know_marks_the_filtered_words_and_can_be_undone, test_preview_card_has_i_know_which_skips_the_word_and_its_encore, test_experienced_shortcut_in_the_level_picker_raises_the_load_cap, test_vocab_search_filters_live_on_input_and_preserves_focus]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
