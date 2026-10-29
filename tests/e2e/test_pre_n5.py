@@ -101,12 +101,20 @@ def test_completion_card_needs_words_and_open_gate(b):
 FRESH = TAG_PRE + "state.srs = {}; state.startChosen = false; state.stage = 'main'; state.kanaKnown = false; DAILY_CACHE = null; location.hash = '#/today'; true"
 
 def test_new_account_banner_sets_the_stage(b):
-    js = """(() => { route(); const out = { btns: ['start-zero', 'start-kana', 'start-basics'].map(a => Boolean(document.querySelector(`[data-act="${a}"]`))) };
+    js = """(() => { route(); const out = { btns: ['start-zero', 'start-test'].map(a => Boolean(document.querySelector(`[data-act="${a}"]`))) };
       document.querySelector('[data-act="start-zero"]').click(); out.stage = state.stage; out.gone = !document.querySelector('[data-act="start-zero"]');
-      state.startChosen = false; route(); document.querySelector('[data-act="start-basics"]').click(); out.stage2 = state.stage; out.n4 = state.settings.n4Words; out.known = state.kanaKnown;
+      state.startChosen = false; route(); ACTIONS['start-basics'](); out.stage2 = state.stage; out.known = state.kanaKnown;
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", FRESH)]))
-    assert r == {'btns': [True, True, True], 'stage': 'pre', 'gone': True, 'stage2': 'main', 'n4': 'open', 'known': True}, r
+    assert r == {'btns': [True, True], 'stage': 'pre', 'gone': True, 'stage2': 'main', 'known': True}, r
+
+def test_pre_choice_raises_every_item_below_the_chosen_level_including_ones_with_history(b):
+    js = """(() => { const ws = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').slice(0, 6); const t = todayStr();
+      const mk = (bb, s, extra) => Object.assign({ b: bb, due: addDays(t, 2), n: 3, ok: 3, ng: 0, s, d: 5, last: addDays(t, -3), f: {} }, extra || {});
+      state.srs[ws[0].key] = mk(1, 2); state.srs[ws[1].key] = mk(SRS_LEARNED, 12); state.srs[ws[2].key] = mk(SRS_MASTERED, 40); state.srs[ws[3].key] = mk(0, 0.5, { lapse: 2 });
+      preMarkApply({ hira: 'none', kata: 'none', v: 'known' });
+      return JSON.stringify(ws.map(w => srsLevelLabel(state.srs[w.key], w.key))); })()"""
+    assert json.loads(ev(b, js, [("eval", FRESH)])) == ['已熟練'] * 6
 
 def test_course_card_and_kana_session(b):
     js = """(() => { state.stage = 'pre'; location.hash = '#/course'; route();
@@ -115,7 +123,7 @@ def test_course_card_and_kana_session(b):
       document.querySelector('[data-act="kana-practice"]').click(); out.kinds = [...new Set(SESSION.entries.map(e => e.item && e.item.kind))];
       out.first = SESSION.entries[0].item.ch; return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", FRESH)]))
-    assert r['card'] and '142' in r['text'] and '漢字' not in r['text'] and '單字' in r['text'], r   # 1.0.12: 入門 has no kanji, so the card lists kana and words only
+    assert r['card'] and '入門' in r['text'] and '漢字' not in r['text'] and '單字' in r['text'], r   # 1.0.12: 入門 has no kanji, so the card lists kana and words only
     assert r['btns'] == ['stage-test'] and r['kinds'] == ['a'] and r['first'] == 'あ', r
 
 def test_i_know_kana_opens_words_without_marking_kana_seen(b):

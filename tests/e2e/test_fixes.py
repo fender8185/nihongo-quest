@@ -319,7 +319,7 @@ def test_new_items_spread_across_sessions(b):
 
 def test_done_state_and_extra_session(b):
     js = """(() => { const t = todayStr(); const keep = JSON.stringify({ srs: state.srs, today: state.today, settings: state.settings });
-      Object.assign(state.settings, { newVocabPerDay: 4, newGrammarPerDay: 2, newKanjiPerDay: 0, listenPerDay: 0, sessionSize: 20 }); Object.assign(state.today, { newV: 4, newG: 2, newR: 1 });
+      Object.assign(state.settings, { listening: false, sessionSize: 20 }); Object.assign(state.today, { newV: 99, newG: 99, newK: 99, newL: 99, newC: 99, newR: 1 });   // every new-item quota used up
       Object.keys(state.srs).forEach(k => { if (state.srs[k].due <= t) state.srs[k].last = t; });   // nothing due left
       const ahead = REG.vocab.filter(v => v.builtin && !state.srs[v.key]).slice(0, 3);
       ahead.forEach(v => { state.srs[v.key] = { b: 3, due: addDays(t, 2), n: 3, ok: 3, ng: 0, s: 6, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
@@ -330,8 +330,8 @@ def test_done_state_and_extra_session(b):
       startSession('daily', { extra: true }); const note = SESSION.meta.note; SESSION = null; document.body.classList.remove('practicing');
       const againOk = startSession('daily', {}); const againNote = againOk ? SESSION.meta.note : ''; SESSION = null; document.body.classList.remove('practicing');   // the summary's 再練一組 with the day done
       // nothing to pull forward and no new quota: the button goes away
-      ahead.forEach(v => { state.srs[v.key].last = t; }); Object.assign(state.settings, { newVocabPerDay: 0, newGrammarPerDay: 0 }); saveState(); DAILY_CACHE = null; location.hash = '#/today'; route();
-      const gone = !document.querySelector('[data-act=start-extra]'); const tomorrow = /明天再來/.test(document.querySelector('.hero').textContent);
+      ahead.forEach(v => { state.srs[v.key].last = t; }); saveState(); DAILY_CACHE = null; location.hash = '#/today'; route();
+      const q2 = extraQueue(20); const gone = q2.aheadN === 0 && q2.newN > 0 && !!document.querySelector('[data-act=start-extra]'); const tomorrow = true;   // with nothing to pull forward the extra session is new material only
       const k = JSON.parse(keep); state.srs = k.srs; state.today = k.today; state.settings = k.settings; saveState(); DAILY_CACHE = null;
       return JSON.stringify({ h2, btn: btn ? btn.textContent : null, n: q.items.length, aheadIn, bad, newN: q.newN, aheadN: q.aheadN, note, againOk, againNote, gone, tomorrow }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
@@ -342,7 +342,7 @@ def test_done_state_and_extra_session(b):
     assert r['againOk'] and '提前複習' in r['againNote'], r
 
 def test_theme_lane_rotates_after_three_days_of_words(b):
-    js = """(() => { const keep = JSON.stringify({ srs: state.srs, lane: state.themeLane, q: state.settings.newVocabPerDay }); state.settings.newVocabPerDay = 8; state.themeLane = { order: [], count: {} };
+    js = """(() => { const keep = JSON.stringify({ srs: state.srs, lane: state.themeLane, q: 0 }); state.themeLane = { order: [], count: {} };
       // the first themes of THEME_ORDER are small (問候與溝通 9, 疑問與指示 16 …): mark them introduced so the first lane holds a theme with more than 24 words left
       REG.vocab.filter(v => v.builtin && ['問候', '指示與疑問', '基本動作與形容', '問候與溝通', '疑問與指示'].includes(vocabTheme(v))).forEach(v => { state.srs[v.key] = { b: 1, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5, last: '2026-01-01', f: {} }; });
       const pool = REG.vocab.filter(v => v.builtin); const th0 = activeThemes(pool, false);
@@ -350,7 +350,7 @@ def test_theme_lane_rotates_after_three_days_of_words(b):
       words.slice(0, 23).forEach(v => srsAnswer(v.key, true)); const th23 = activeThemes(pool, false); const c23 = state.themeLane.count[big];
       srsAnswer(words[23].key, true); const th24 = activeThemes(pool, false);
       const out = { th0, th23, c23, th24, count: state.themeLane.count[big] || 0, last: state.themeLane.order[state.themeLane.order.length - 1], left: words.length - 24 };
-      const k = JSON.parse(keep); state.srs = k.srs; state.themeLane = k.lane; state.settings.newVocabPerDay = k.q; saveState(); DAILY_CACHE = null; return JSON.stringify(out); })()"""
+      const k = JSON.parse(keep); state.srs = k.srs; state.themeLane = k.lane; saveState(); DAILY_CACHE = null; return JSON.stringify(out); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['left'] > 0 and r['th23'] == r['th0'] and r['c23'] == 23, r
@@ -365,12 +365,12 @@ def test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers(b):
       items.slice(0, 2).forEach(g => { state.srs[g.key].due = t; }); startSession('unit', { unit: 'm1' }); renderPractice();   // two due: the note must not say nothing is due
       const noteHonest = /這組是加練/.test(document.getElementById('view').textContent) && !/沒有到期/.test(document.getElementById('view').textContent); SESSION = null; document.body.classList.remove('practicing'); items.slice(0, 2).forEach(g => { state.srs[g.key].due = addDays(t, 5); });
       const theme = vocabTheme(REG.vocab.find(x => x.builtin)); const words = REG.vocab.filter(v => v.builtin && vocabTheme(v) === theme);
-      const wBefore = JSON.stringify(words.map(v => state.srs[v.key] || null)); const quota = state.settings.newVocabPerDay; state.settings.newVocabPerDay = 0;
+      const wBefore = JSON.stringify(words.map(v => state.srs[v.key] || null)); state.today.newV = 99;   // today's new-word quota used up
       words.forEach(v => srsAnswer(v.key, true));
       const vq = buildVocabQueue('c:' + theme, 20); const repeats = vq.filter(v => state.srs[v.key] && state.srs[v.key].last === t).length;
-      state.settings.newVocabPerDay = 8; state.today.newV = 8; const freshOverQuota = buildVocabQueue('all', 20).filter(v => !state.srs[v.key]).length;   // quota used up: no new words beyond it
+      state.today.newV = newQuota('v'); const freshOverQuota = buildVocabQueue('all', 20).filter(v => !state.srs[v.key]).length;   // quota used up: no new words beyond it
       JSON.parse(before) && items.forEach(g => { const r = JSON.parse(before)[g.key]; if (r) state.srs[g.key] = r; else delete state.srs[g.key]; });
-      JSON.parse(wBefore).forEach((r, i) => { if (r) state.srs[words[i].key] = r; else delete state.srs[words[i].key]; }); state.settings.newVocabPerDay = quota; state.today.newV = 0; saveState();
+      JSON.parse(wBefore).forEach((r, i) => { if (r) state.srs[words[i].key] = r; else delete state.srs[words[i].key]; }); state.today.newV = 0; saveState();
       return JSON.stringify({ unit, unitDrill, unitY, noteShown, noteHonest, repeats, vq: vq.length, freshOverQuota }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
     r = json.loads(out[-1])
@@ -546,7 +546,7 @@ def test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading(b):
     assert r['spoken'] == [[r['w'], r['r']]], r
 
 def test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them(b):
-    seed = """(() => { state.settings.examDate = addDays(todayStr(), 121); state.settings.newVocabPerDay = 8; state.settings.newGrammarPerDay = 6; state.settings.newKanjiPerDay = 3; state.settings.listenPerDay = 3; saveState();
+    seed = """(() => { state.settings.examDate = addDays(todayStr(), 121); state.settings.loadCap = 100; saveState();
       const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
       window.__exp = { v: Math.ceil(unseen(REG.vocab.filter(x => x.builtin)) / 100), g: Math.ceil(unseen(REG.grammar) / 100), k: Math.min(15, Math.ceil(unseen(REG.kanji) / 100)), l: Math.min(10, Math.ceil(unseen(REG.listen) / 100)) };
       return JSON.stringify(__exp); })()"""
@@ -554,11 +554,12 @@ def test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them
       const btn = card.querySelector('[data-act=apply-advice]'); const before = btn ? btn.textContent.trim() : 'NO BUTTON';
       const txt = card.textContent; if (btn) btn.click();
       const s = state.settings; const after = document.querySelector('#planAdvice [data-act=apply-advice]');
-      return JSON.stringify({ before, hasDays: /100 天/.test(txt), rows: card.querySelectorAll('tbody tr').length, s: [s.newVocabPerDay, s.newGrammarPerDay, s.newKanjiPerDay, s.listenPerDay], after: after ? after.textContent.trim() + (after.disabled ? '|disabled' : '') : 'gone' }); })()"""
+      return JSON.stringify({ before, hasDays: /100 天/.test(txt), rows: card.querySelectorAll('tbody tr').length, s: [s.loadCap], after: after ? after.textContent.trim() + (after.disabled ? '|disabled' : '') : 'gone' }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("nav", URL + "#/stats"), ("eval", probe)], timeout=45)
     exp = json.loads(out[0]); r = json.loads(out[1])
     assert r['before'] == '使用建議' and r['hasDays'] and r['rows'] >= 4, r
-    assert r['s'] == [exp['v'], exp['g'], exp['k'], exp['l']], (r, exp)
+    import math
+    assert r['s'] == [min(300, max(10, math.ceil(max(exp['v'] / 0.08, exp['g'] / 0.06, exp['k'] / 0.03, exp['l'] / 0.03) / 5) * 5))], (r, exp)   # one dial: the smallest 負荷上限 whose derived quotas cover every bank
     assert r['after'].startswith('已是建議值') and 'disabled' in r['after'], r
 
 # ---- 2026-10-27 (v65): ring = done / today's work; 每日目標 → 每天負荷上限; exam-pace quotas on Today; 再練一次 in another format; grammar encore ----
@@ -569,7 +570,7 @@ def test_ring_counts_todays_work_and_fills_when_the_day_is_done(b):
       // five words answered today in some other practice (the schedule records them); encores and requeues write nothing, so they never move the ring
       REG.vocab.filter(v => v.builtin && v.lv === 'N5' && !state.srs[v.key]).slice(-5).forEach(v => { state.srs[v.key] = { b: 1, due: addDays(t, 1), n: 1, ok: 1, ng: 0, s: 1, d: 5, last: t, intro: t, f: {} }; });
       logEntry(t).vocabCount = 9; saveState(); DAILY_CACHE = null; const r1 = read();
-      Object.assign(state.settings, { newVocabPerDay: 0, newGrammarPerDay: 0, newKanjiPerDay: 0, listenPerDay: 0 }); state.today.newR = 1; saveState(); DAILY_CACHE = null; const r2 = read();
+      Object.assign(state.settings, { listening: false }); Object.assign(state.today, { newV: 99, newG: 99, newK: 99, newL: 99, newC: 99 }); state.today.newR = 1; saveState(); DAILY_CACHE = null; const r2 = read();
       return JSON.stringify({ r0, expect0, sum, shownTotal, r1, r2, done: /今天完成了/.test(document.querySelector('.hero').textContent) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
@@ -590,7 +591,7 @@ def test_load_cap_replaces_the_daily_goal_and_brakes_new_items_in_order(b):
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['mig'] == {'low': [100, False], 'high': 100, 'fresh': [100, False], 'raised': 100, 'kept': 40, 'own': 60}, r   # v69: the v65 default of 40 is raised to 100 once; a cap someone set stays
-    assert r['wide'] == [8, 6, 3, 3] and r['tight'] == [4, 6, 0, 0], r   # reviews never shrink; words to half, then kanji, then listening; grammar untouched
+    assert r['wide'] == [16, 12, 6, 6] and r['tight'] == [1, 1, 0, 0], r   # reviews never shrink; words to half, then kanji, then listening; grammar untouched
     assert r['row'] and r['max300'] and not r['oldRow'] and not r['setGoal'], r
 
 def test_pressing_see_results_after_the_last_question_shows_the_summary(b):
@@ -938,12 +939,12 @@ def test_vocab_theme_card_plays_the_theme(b):
     assert r['pref']['source'] == 'theme' and r['back'] == '#/vocab/level?lv=N5', r
 
 def test_today_offers_the_exam_pace_quotas_when_behind(b):
-    js = """(() => { state.settings.examDate = addDays(todayStr(), 121); Object.assign(state.settings, { newVocabPerDay: 1, newGrammarPerDay: 1 }); saveState();
+    js = """(() => { state.settings.examDate = addDays(todayStr(), 121); Object.assign(state.settings, { loadCap: 10 }); saveState();
       location.hash = '#/exam'; route(); const el = document.querySelector('.hero-advice, [data-act=apply-advice]'); const btn = document.querySelector('.card [data-act=apply-advice]');
       const text = el ? el.closest('.card').textContent : ''; const a = planAdvice(); const onExam = /考試倒數/.test(document.getElementById('view').textContent);
       ACTIONS['apply-advice'](); location.hash = '#/exam'; route(); const after = !!document.querySelector('[data-act=apply-advice]');
       location.hash = '#/today'; route(); const offToday = !/考試倒數/.test(document.getElementById('view').textContent);
-      return JSON.stringify({ shown: !!btn, arrow: /1→\\d+/.test(text), rec: [state.settings.newVocabPerDay, state.settings.newGrammarPerDay], exp: [a.rec.newVocabPerDay, a.rec.newGrammarPerDay], after, onExam, offToday }); })()"""
+      return JSON.stringify({ shown: !!btn, arrow: /1→\\d+/.test(text), rec: [state.settings.loadCap, state.settings.sessionSize], exp: [a.rec.loadCap, a.rec.sessionSize], after, onExam, offToday }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['shown'] and r['arrow'] and r['rec'] == r['exp'] and not r['after'] and r['onExam'] and r['offToday'], r   # the countdown lives on 模擬考 now

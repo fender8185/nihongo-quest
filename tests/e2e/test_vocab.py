@@ -260,7 +260,7 @@ DUE = "(v) => { state.srs[v.key] = { b: 2, due: addDays(todayStr(), -1), n: 3, o
 def test_new_grammar_is_not_squeezed_out_by_a_review_backlog(b):
     js = """(() => { const due = (v, ok) => { state.srs[v.key] = { b: 2, due: addDays(todayStr(), -1), n: ok, ok, ng: 0, s: 3, d: 5, f: {}, last: addDays(todayStr(), -4) }; };
       REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 40).forEach(v => due(v, 2)); saveState();
-      const plan = dailyPlan(20); return JSON.stringify({ newG: plan.newG.length, limit: state.settings.newGrammarPerDay, dueV: plan.dueV.length }); })()"""
+      const plan = dailyPlan(20); return JSON.stringify({ newG: plan.newG.length, limit: newQuota('g'), dueV: plan.dueV.length }); })()"""
     r = json.loads(ev(b, js))
     assert r['dueV'] == 40 and r['newG'] == r['limit'], r
 
@@ -269,7 +269,7 @@ def test_grammar_slots_take_new_items_first_then_the_least_practised_reviews(b):
       const gs = REG.grammar.filter(g => g.u === 'm1'); gs.slice(0, 10).forEach(g => due(g, 3)); gs.slice(10, 15).forEach(g => due(g, 1)); saveState();
       const q = dailyQueue(20); const G = q.items.filter(it => it.kind === 'g'); const all = dailyQueue(q.total).items.filter(it => it.kind === 'g');
       const fresh = G.filter(it => !state.srs[it.key]).length; const revOk = G.filter(it => state.srs[it.key]).map(it => state.srs[it.key].ok);
-      return JSON.stringify({ fresh, dayFresh: all.filter(it => !state.srs[it.key]).length, revOk, limit: state.settings.newGrammarPerDay }); })()"""
+      return JSON.stringify({ fresh, dayFresh: all.filter(it => !state.srs[it.key]).length, revOk, limit: newQuota('g') }); })()"""
     r = json.loads(ev(b, js))
     assert r['fresh'] >= 2 and r['dayFresh'] == r['limit'], r   # a session holds its share of the day's new grammar; the whole day holds the quota
     assert sum(1 for ok in r['revOk'] if ok == 1) == 5, r   # every least-practised item is in before any well-known one
@@ -279,7 +279,7 @@ TESTS += [test_new_grammar_is_not_squeezed_out_by_a_review_backlog, test_grammar
 # ---- 2026-10-26 (6): the 單字主題 line never vanishes ----
 def test_topics_line_names_custom_cards_or_a_finished_day_instead_of_disappearing(b):
     js = """(() => { const snap = () => { location.hash = '#/today'; route(); const t = document.querySelector('.plan-topics'); return t ? t.textContent.replace(/\\s+/g, ' ').trim() : null; };
-      state.settings.newVocabPerDay = 0;
+      state.today.newV = 99; state.today.newG = 99;   // today's new-word and new-grammar quota already used
       for (let i = 0; i < 6; i++) { state.vocab.push({ id: 'cx' + i, w: '猫' + i, r: 'ねこ', m: '貓' + i }); }
       buildRegistry(); REG.vocab.filter(v => !v.builtin).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(todayStr(), -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, f: {}, last: addDays(todayStr(), -3) }; });
       saveState(); const customOnly = snap();
@@ -626,14 +626,14 @@ def test_meaning_distractors_for_other_items_are_look_alike_sentences(b):
 TESTS += [test_particle_questions_ask_for_the_usage_with_other_points_as_options, test_meaning_distractors_for_other_items_are_look_alike_sentences]
 
 # ---- 2026-10-27: learners with a base — open N4 words early, bulk 我會了, 我會了 on the preview card, one-click fast settings ----
-def test_n4_words_can_be_opened_before_n5_is_finished(b):
-    js = """(() => { const n4 = REG.vocab.find(x => x.builtin && x.lv === 'N4' && !state.srs[x.key]); const was = state.settings.n4Words; state.settings.n4Words = 'auto';
+def test_n4_words_open_once_every_n5_word_has_been_seen(b):
+    js = """(() => { const n4 = REG.vocab.find(x => x.builtin && x.lv === 'N4' && !state.srs[x.key]); const keep = JSON.stringify(state.srs);
       const out = { left: n5WordsLeft(), closed: !n4WordsOpen() && !inDailyReach(n4) && !deckAllowsN4('all') };
-      state.settings.n4Words = 'open'; out.open = n4WordsOpen() && inDailyReach(n4) && deckAllowsN4('all');
-      location.hash = '#/vocab/cards'; route(); out.text = document.getElementById('view').textContent.includes('N4 已開放');   // the note lives on the 字卡 page header
-      state.settings.n4Words = was; saveState(); return JSON.stringify(out); })()"""
+      REG.vocab.filter(x => x.builtin && x.lv !== 'N4' && !state.srs[x.key]).forEach(x => { state.srs[x.key] = { b: 1, due: addDays(todayStr(), 3), n: 1, ok: 1, ng: 0, s: 3, d: 5, f: {}, last: todayStr() }; });
+      out.open = n4WordsOpen() && inDailyReach(n4) && deckAllowsN4('all');
+      state.srs = JSON.parse(keep); saveState(); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['left'] > 0 and r['closed'] and r['open'] and r['text'], r
+    assert r['left'] > 0 and r['closed'] and r['open'], r
 
 def test_bulk_i_know_marks_the_filtered_words_and_can_be_undone(b):
     js = """(() => { const theme = vocabThemes().find(g => g.c && REG.vocab.filter(v => v.builtin && vocabTheme(v) === g.c && !state.srs[v.key]).length >= 3).c;
@@ -658,19 +658,16 @@ def test_preview_card_has_i_know_which_skips_the_word_and_its_encore(b):
     r = json.loads(ev(b, js))
     assert r['btn'] and r['known'] and r['label'] == '已熟練' and r['gone'] and r['len'] == 3 and r['idx'] == 0 and r['next'], r
 
-def test_experienced_shortcut_applies_the_fast_settings_from_settings_and_the_level_picker(b):
+def test_experienced_shortcut_in_the_level_picker_raises_the_load_cap(b):
     js = """(() => { const keep = JSON.stringify(state.settings); const unit = state.currentUnit;
-      Object.assign(state.settings, { newVocabPerDay: 8, newGrammarPerDay: 6, n4Words: 'auto', showZh: true });
-      ACTIONS['apply-experienced'](); const s = state.settings; const out = { v: s.newVocabPerDay, g: s.newGrammarPerDay, n4: s.n4Words, zh: s.showZh };
-      Object.assign(state.settings, { newVocabPerDay: 8, n4Words: 'auto', showZh: true });
-      openModal('x', levelPickerHtml()); out.box = !!document.getElementById('startExperienced'); document.getElementById('startUnit').value = 'm7'; document.getElementById('startExperienced').checked = true;
-      ACTIONS['start-apply'](); out.unit = state.currentUnit; out.v2 = state.settings.newVocabPerDay; out.n42 = state.settings.n4Words;
+      Object.assign(state.settings, { loadCap: 100, showZh: true });
+      openModal('x', levelPickerHtml()); const out = { box: !!document.getElementById('startExperienced'), rowGone: !document.querySelector('[data-act="apply-experienced"]') }; document.getElementById('startUnit').value = 'm7'; document.getElementById('startExperienced').checked = true;
+      ACTIONS['start-apply'](); out.unit = state.currentUnit; out.cap = state.settings.loadCap; out.zh = state.settings.showZh; out.v = newQuota('v');
       Object.assign(state.settings, JSON.parse(keep)); state.currentUnit = unit; saveState(); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['v'] == 20 and r['g'] == 10 and r['n4'] == 'open' and r['zh'] is False, r
-    assert r['box'] and r['unit'] == 'm7' and r['v2'] == 20 and r['n42'] == 'open', r
+    assert r['box'] and r['rowGone'] and r['unit'] == 'm7' and r['cap'] == 150 and r['zh'] is False and r['v'] == 12, r
 
-TESTS += [test_n4_words_can_be_opened_before_n5_is_finished, test_bulk_i_know_marks_the_filtered_words_and_can_be_undone, test_preview_card_has_i_know_which_skips_the_word_and_its_encore, test_experienced_shortcut_applies_the_fast_settings_from_settings_and_the_level_picker]
+TESTS += [test_n4_words_open_once_every_n5_word_has_been_seen, test_bulk_i_know_marks_the_filtered_words_and_can_be_undone, test_preview_card_has_i_know_which_skips_the_word_and_its_encore, test_experienced_shortcut_in_the_level_picker_raises_the_load_cap]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

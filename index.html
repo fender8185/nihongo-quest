@@ -928,12 +928,18 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.12';   // keep equal to the version in sw.js CACHE ('nq-v1.0.12'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.13';   // keep equal to the version in sw.js CACHE ('nq-v1.0.13'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.13', date: '2026-10-29', items: [
+    '起點只剩兩個：「從零開始」和「測試看看」。測試看看直接進入入門的階段測驗，通過後接三題標記再進第 1 週。',
+    '課程頁的入門列和其他週次同一個樣子，假名與入門單字合成一條進度條。',
+    '設定的學習區精簡：每天新單字、新文法、新漢字、聽力、變化練習的上限，N4 單字何時加入，活用題作答方式，「我已有基礎」都拿掉。新題數全部由「每天負荷上限」依比例推算（100 時為單字 8、文法 6、漢字 3、聽力 3、變化練習 3）；N4 單字在 N5 單字都學過一次後加入；活用題固定自動。考試日期建議也改成建議一個負荷上限。',
+    '模擬考頁新增「階段測驗」：四個階段的開始按鈕與所有紀錄（日期、分數、通過與否）。'
+  ] },
   { v: '1.0.12', date: '2026-10-29', items: [
     '入門單字瘦身：入門只留假名加 59 個純假名的基礎字（問候、はい／いいえ、こそあど與疑問詞、ある／いる／する／いい／おいしい／きれい／とても／ちょっと／たくさん／どうぞ）。其餘 364 個入門字（含漢字的 281 個全部、純假名的 83 個）和 27 個入門漢字改列 N5，主題換成 N5 的主題；已學過的紀錄不變，只是等級換了。',
     '入門階段測驗改成假名 16 題＋單字 24 題（入門已沒有漢字）；課程頁入門卡不再列漢字；入門主題剩問候、指示與疑問、基本動作與形容三個。',
@@ -964,7 +970,7 @@ const CHANGELOG = [
     '沒有語音時假名不出「聽音選字」；を／お、じ／ぢ 這類同音假名不互當干擾項；「進入第 1 週」不再重設已有文法紀錄的人的單元。'
   ] },
   { v: '1.0.6', date: '2026-10-29', items: [
-    '新增「入門（PRE_N5）」等級：完全沒學過的人先認假名、再學入門單字，沒有文法；不算週數，單字都看過就按「進入第 1 週」。第一次用時在今日頁選起點：從零開始、已會假名、已有 N5 基礎（課程頁「依程度選擇起點」也有）。',
+    '新增「入門（PRE_N5）」等級：完全沒學過的人先認假名、再學入門單字，沒有文法；不算週數，單字都看過就按「進入第 1 週」。第一次用時在今日頁選起點：從零開始，或「測試看看」直接做入門階段測驗（課程頁「依程度選擇起點」也有）。',
     '假名辨識題：142 個平假名與片假名（清音、濁音、半濁音），看字選音、聽音選字、平片對照三種格式，和單字一樣走到期複習與錯題階梯；設定「每天新假名」預設 15。課程頁的入門卡隨時可以「練假名」。',
     '303 個最基本的 N5 單字（問候、數字、曆日、こそあど、家人、身體、顏色、飲食、日常物品…）與 27 個漢字（數字、曜日、年時分人大小）改列為入門；入門階段每天只排假名、入門單字與漢字。已在正課的人不受影響，剩下沒看過的入門字會和 N5 新字交錯出。'
   ] },
@@ -993,7 +999,7 @@ const CHANGELOG = [
     '今日：一張卡，上面「練習／錯題本／單字」三段切換，手機剛好一頁。練習是進度圓環、開始練習、日期與連續天數，和「說明」「範圍」「目前單元」三個收合小標（進首頁時目前單元是展開的）。錯題本／單字就是聽一輪播放器。',
     '每日練習的規則：每一題不是今天到期的複習就是今天的新內容。每天負荷上限（預設 100）只壓新題，到期複習永遠全出。答錯的隔天起第 1、3、7 天各複習一次，三次都對才離開錯題本；答對的越熟出現得越少。新文法照講義段落順序出，單元文法全部出過就自動推進到下一單元；新單字從兩條主題線交錯供應；變化練習以形態為單位排程，動詞每次隨機換。做完顯示「今天完成了」，可「加練」明後天到期的複習。',
     '練習：單字有看字選意思、中翻日、例句填空、讀音、寫法、聽音選意思、假名拼字、配對；文法有填空、選正確句、句意、真的排序、活用拼寫（熟了之後不給選項）；另有假名（看字選音、聽音選字、平片對照）、漢字、聽力（整個級別抽題）、閱讀（兩者答對後 30／90／180 天才再出）。新字先看預習卡再考；答錯幾題後換一種格式「再練一次」，不寫排程；按「手滑，不算」可撤銷；單字可按「我會了」直接標熟練。手機上作答只有「下一題」固定在底部，畫面避開瀏海、不能縮放。',
-    '入門（PRE_N5）：假名辨識與入門單字，學完才進第 1 週；課程：18 個單元（每單元約兩週）的講義，加上「第 0 週：開始之前」的入門（假名、句子骨架、品詞、動詞的形、助詞、數量詞）；可依程度選起點或一鍵「我已有基礎」。文法考點整併成 288 個，每個考點至少 3 題。',
+    '入門（PRE_N5）：假名辨識與入門單字，學完才進第 1 週；課程：18 個單元（每單元約兩週）的講義，加上「第 0 週：開始之前」的入門（假名、句子骨架、品詞、動詞的形、助詞、數量詞）；可依程度選起點。文法考點整併成 288 個，每個考點至少 3 題。',
     '單字：1661 個內建單字（入門 59／N5 876／N4 726，含敬語、名詞＋する合併卡），N5 以上每字兩句例句；單字頁先分入門／N5／N4，每級列主題（卡上有該主題的漢字）與漢字，每個主題有已學／熟悉／熟練三段進度條，可看字表、翻字卡、練習或播放字卡；入門頁有依熟練度上色的五十音表；N4 單字在 N5 學過一次後開放（設定可提前）。漢字 342 個另有讀音與字義題。自訂字卡可匯入。',
     '聽一輪：循環朗讀，不寫排程、不算題數。來源是錯題本（單字→中文→單字→例句→例句中文；文法整句→中文→整句，只唸有中文且答案標得進句子的題）或單字主題（含自動收錄「已學但還沒熟練」的「初識單詞」，上次的選擇會記住）。膠囊：字｜文、隨機、一次／兩次、速度 0.8／1／1.3。放大圖示進全螢幕：直立手機整頁轉成橫的，日文在上、中文在下、例句最下，字依螢幕放到最大；✕ 回首頁播放不斷。雲端語音時鎖定畫面可控制，鎖屏後持續播放（句間播靜音讓播放器不中斷）。',
     '錯題本：答錯的題目自動收進來，可依類別篩選、排序或依文法考點分組直接練；「快速過一輪」翻卡用忘了／記得回寫排程；題目達到「熟悉」就移到已掌握。',
@@ -1085,8 +1091,6 @@ function defaultSettings() {
   return {
     loadCap: 100,            // 每天負荷上限: when due reviews + new items exceed it, new items shrink (words to half, then kanji, then listening)
     sessionSize: 20,
-    newVocabPerDay: 8,
-    newGrammarPerDay: 6,
     order: 'mix',              // mix | split
     showZh: true,
     furigana: true,
@@ -1094,7 +1098,6 @@ function defaultSettings() {
     listening: true,
     speechRate: 1.0,
     includeImported: 'words',  // off | words | all
-    n4Words: 'auto',           // auto: N4 words join once every N5 word has been seen | open: now (learners with a base)
     theme: 'dark',
     examDate: '2027-07-04',
     duolingoScore: 22,
@@ -1102,15 +1105,14 @@ function defaultSettings() {
     examFormal: false,
     retention: 0.9,          // FSRS target recall
     furiMode: 'smart',       // smart: no furigana on mastered words | all — furigana:false hides all
-    listenPerDay: 3,         // listening items in the daily mix
-    newKanjiPerDay: 3,
     newKanaPerDay: 15,       // 入門: new kana a day (hiragana and katakana together, 五十音 order); only while state.stage === 'pre'
-    conjDrillPerDay: 3,      // 變化練習: per-form-family drills a day (due + new), verbs drawn from learned words
-    conjInput: 'auto',       // 活用題作答方式: auto (choice until b ≥ 1, then tiles) | choice | tiles | type
     audioOptions: false,     // listening replies only spoken, like the real test
     backupEvery: 7
   };
 }
+// 每天新題數不再讓使用者逐項設定：全部由「每天負荷上限」依固定比例推算（上限 100 時為 單字 8・文法 6・漢字 3・聽力 3・變化練習 3）
+const NEW_SHARE = { v: 0.08, g: 0.06, k: 0.03, l: 0.03, c: 0.03 };
+function newQuota(kind) { return Math.max(1, Math.round((Number(state.settings.loadCap) || 100) * NEW_SHARE[kind])); }
 function defaultState() {
   return {
     v: 3,
@@ -2143,7 +2145,7 @@ const FORM_LABEL = {
 // how a conjugation item is answered: four options while new, tiles (or the keyboard) once it has been seen
 function conjInputMode(rec, ctx) {
   if (ctx && ctx.choiceOnly) return 'choice';   // 階段測驗: options only
-  const m = state.settings.conjInput || 'auto';
+  const m = state.settings.conjInput;   // no settings row any more (always auto); the key stays as a hidden override for tests
   if (m === 'choice' || m === 'tiles' || m === 'type') return m;
   return rec && rec.b >= 1 ? 'tiles' : 'choice';
 }
@@ -3196,7 +3198,7 @@ function kanaPlan(t = todayStr()) {
 function preWordsLeft() { let n = 0; for (const v of REG.vocab) if (v.builtin && v.lv === 'PRE_N5' && !state.srs[v.key]) n++; return n; }
 // 入門 is done when every PRE_N5 word has been seen (and the kana gate is open); nothing to finish while the level has no words
 function preDone() { return REG.vocab.some(v => v.builtin && v.lv === 'PRE_N5') && preWordsLeft() === 0 && kanaGateOpen(); }
-function n4WordsOpen() { return state.settings.n4Words === 'open' || n5WordsLeft() === 0; }
+function n4WordsOpen() { return n5WordsLeft() === 0; }   // N4 words join once every PRE_N5 and N5 word has been seen
 function n5WordsLeft() {   // PRE_N5 and N5 words not yet seen: both must be gone before N4 opens by itself
   let n = 0;
   for (const v of REG.vocab) if (v.builtin && v.lv !== 'N4' && !state.srs[v.key]) n++;
@@ -3228,7 +3230,7 @@ function vocabEligibleForDaily(v, n4Open) {
 // that still have unintroduced words of the lowest open level (N5 first; N4 only once allowed).
 function themeRank(c) { const i = THEME_ORDER.indexOf(c); return i < 0 ? THEME_ORDER.length : i; }
 // The lanes follow state.themeLane.order (THEME_ORDER to begin with). A theme holds a lane for at most three days'
-// worth of new words (THEME_LANE_DAYS × newVocabPerDay); then it moves to the back of the order and the next theme
+// worth of new words (THEME_LANE_DAYS × newQuota('v')); then it moves to the back of the order and the next theme
 // with unintroduced words takes the lane, so a big theme (生活 has 148 words) cannot occupy a lane for a month.
 const THEME_LANE_DAYS = 3;
 function laneOrder() {
@@ -3237,7 +3239,7 @@ function laneOrder() {
   THEME_ORDER.forEach(c => { if (!lane.order.includes(c)) lane.order.push(c); });
   return lane.order;
 }
-function laneCap() { return THEME_LANE_DAYS * Math.max(1, Number(state.settings.newVocabPerDay) || 0); }
+function laneCap() { return THEME_LANE_DAYS * newQuota('v'); }
 // the level whose themes hold the lanes: PRE_N5 in 入門; otherwise N5 while it has unseen words, then N4
 function laneLevel(fresh) { return inPreStage() ? 'PRE_N5' : fresh.some(v => v.lv === 'N5') ? 'N5' : 'N4'; }   /* level-literal-ok: picks the theme level, PRE_N5 leftovers ride their own lane */
 function activeThemes(pool, allowN4) {
@@ -3363,20 +3365,20 @@ function extrasPlan(curIdx) {
   const reach = (x) => unitOrder(x.u) <= curIdx;
   const isDue = (x) => isDueToday(x, t);
   const byUnit = (a, b) => unitOrder(a.u) - unitOrder(b.u) || (hashStr(a.id) % 997) - (hashStr(b.id) % 997);
-  const listenOn = s.listening && s.listenPerDay > 0 && speechAvailable();
+  const listenOn = s.listening && speechAvailable();
   const lPool = listenOn ? listenReachable(curIdx) : [];
-  // listening: at most listenPerDay a day counting what was already answered today (due first; the rest of the due
+  // listening: at most newQuota('l') a day counting what was already answered today (due first; the rest of the due
   // ones wait until tomorrow); reading: one a day
   const doneToday = (pool) => pool.filter(x => { const r = state.srs[x.key]; return r && r.last === t; }).length;
-  const capL = Math.max(0, (s.listenPerDay || 0) - doneToday(lPool));
+  const capL = Math.max(0, newQuota('l') - doneToday(lPool));
   const dueL = lPool.filter(isDue).sort(byDue).slice(0, capL);
-  const newL = inPreStage() ? [] : lPool.filter(x => !state.srs[x.key]).slice(0, Math.max(0, Math.min(s.listenPerDay - (state.today.newL || 0), capL - dueL.length)));   // 入門: no new listening
+  const newL = inPreStage() ? [] : lPool.filter(x => !state.srs[x.key]).slice(0, Math.max(0, Math.min(newQuota('l') - (state.today.newL || 0), capL - dueL.length)));   // 入門: no new listening
   const rPool = REG.read.filter(reach);
   const dueR = doneToday(rPool) ? [] : rPool.filter(isDue).sort(byDue).slice(0, 1);
   const newR = !inPreStage() && !dueR.length && !doneToday(rPool) && (state.today.newR || 0) < 1 ? rPool.filter(x => !state.srs[x.key]).sort(byUnit).slice(0, 1) : [];
   const k4 = n5KanjiLeft() === 0;
   const dueK = REG.kanji.filter(k => (k.lv !== 'N4' || k4) && isDue(k)).sort(byDue);
-  const newK = newKanjiCandidates(k4).slice(0, Math.max(0, (s.newKanjiPerDay || 0) - (state.today.newK || 0)));
+  const newK = newKanjiCandidates(k4).slice(0, Math.max(0, newQuota('k') - (state.today.newK || 0)));
   const { dueA, newA } = kanaPlan(t);
   return { dueL, newL, dueR, newR, dueK, newK, dueA, newA };
 }
@@ -3395,8 +3397,8 @@ function dailyPlan(size = state.settings.sessionSize) {
   const pre = inPreStage();   // 入門: no new grammar, listening, reading or drills; new words only once the kana gate is open. Due reviews of every kind stay.
   const dueV = (pre ? REG.vocab.filter(v => state.srs[v.key] && vocabEligibleMain(v, n4Open)) : vPool).filter(v => isDueToday(v, t)).sort(byDue);
   const dueG = REG.grammar.filter(g => isDueToday(g, t) && grammarInReach(g, curIdx)).sort(byDue);
-  const maxV = pre && !kanaGateOpen() ? 0 : Math.round(s.newVocabPerDay * ad.factor);
-  const maxG = pre ? 0 : Math.round(s.newGrammarPerDay * ad.factor);
+  const maxV = pre && !kanaGateOpen() ? 0 : Math.round(newQuota('v') * ad.factor);
+  const maxG = pre ? 0 : Math.round(newQuota('g') * ad.factor);
   const ex = extrasPlan(curIdx);
   // 每天負荷上限 (settings.loadCap) is a brake: when today's work (done + due + new) would exceed it, new words shrink
   // first (never below about half their quota), then new kanji stop, then new listening. Due reviews never shrink, and
@@ -3405,7 +3407,7 @@ function dailyPlan(size = state.settings.sessionSize) {
   const fullV = Math.max(0, maxV - state.today.newV);
   let wantV = fullV;
   let over = dayTotal(state.dailyLogs[t]) + dueV.length + dueG.length + ex.dueK.length + ex.dueL.length + ex.dueR.length
-    + wantG + wantV + ex.newK.length + ex.newL.length + ex.newR.length + ex.dueA.length + ex.newA.length + (pre ? 0 : Math.min(Math.max(0, Number(s.conjDrillPerDay) || 0), (REG.drills || []).length)) - (Number(s.loadCap) || 100);
+    + wantG + wantV + ex.newK.length + ex.newL.length + ex.newR.length + ex.dueA.length + ex.newA.length + (pre ? 0 : Math.min(newQuota('c'), (REG.drills || []).length)) - (Number(s.loadCap) || 100);
   if (over > 0) { const floorV = Math.max(0, Math.min(Math.ceil(maxV / 2), maxV) - state.today.newV); const cut = Math.max(0, Math.min(over, wantV - floorV)); wantV -= cut; over -= cut; }
   const cutK = over > 0 ? Math.min(over, ex.newK.length) : 0; over -= cutK;
   const cutL = over > 0 ? Math.min(over, ex.newL.length) : 0; over -= cutL;
@@ -3419,10 +3421,10 @@ function dailyPlan(size = state.settings.sessionSize) {
     note = `今天的題數超過負荷上限，${parts.join('、')}，新文法照常；複習完成後，之後幾天就會再增加。`;
   }
   const newG = pre ? [] : newGrammarCandidates().slice(0, wantG);
-  // 變化練習: due families first, then families not started yet, at most conjDrillPerDay a day; only forms a reached unit teaches
+  // 變化練習: due families first, then families not started yet, at most newQuota('c') a day; only forms a reached unit teaches
   const cPool = (REG.drills || []).filter(d => unitOrder(d.u) <= curIdx);
   const doneC = cPool.filter(d => { const r = state.srs[d.key]; return r && r.last === t; }).length;
-  const capC = Math.max(0, (Number(s.conjDrillPerDay) || 0) - doneC);
+  const capC = Math.max(0, newQuota('c') - doneC);
   const dueC = cPool.filter(d => isDueToday(d, t)).sort(byDue).slice(0, capC);
   const newC = pre ? [] : cPool.filter(d => !state.srs[d.key]).sort((a, b) => unitOrder(a.u) - unitOrder(b.u)).slice(0, Math.max(0, Math.min(capC - dueC.length, capC - (state.today.newC || 0))));
   const newV = newVocabCandidates(vPool, n4Open).slice(0, wantV + Math.max(0, wantG - newG.length));
@@ -3482,9 +3484,9 @@ function extraQueue(size = state.settings.sessionSize) {
   const used = new Set(ahead.map(x => x.key));
   const cap = Math.min(size - ahead.length, Math.ceil(size / 2));
   // 入門: extra new material is kana (then PRE_N5 words once the gate is open), never grammar
-  const gs = !pre && state.settings.newGrammarPerDay > 0 ? newGrammarCandidates().filter(x => !used.has(x.key)).slice(0, Math.ceil(cap / 2)) : [];
+  const gs = !pre ? newGrammarCandidates().filter(x => !used.has(x.key)).slice(0, Math.ceil(cap / 2)) : [];
   const as = pre ? REG.kana.filter(x => !state.srs[x.key] && !used.has(x.key)).sort((a, b) => a.order - b.order).slice(0, Math.ceil(cap / 2)) : [];
-  const vs = state.settings.newVocabPerDay > 0 && !(pre && !kanaGateOpen()) ? newVocabCandidates(REG.vocab.filter(x => vocabEligibleForDaily(x, plan.n4Open)), plan.n4Open).filter(x => !used.has(x.key)).slice(0, cap - gs.length - as.length) : [];
+  const vs = !(pre && !kanaGateOpen()) ? newVocabCandidates(REG.vocab.filter(x => vocabEligibleForDaily(x, plan.n4Open)), plan.n4Open).filter(x => !used.has(x.key)).slice(0, cap - gs.length - as.length) : [];
   const fresh = interleave(as.concat(vs), gs, 'mixed');
   const items = shuffle(ahead).concat(fresh);
   return { items, plan, aheadN: ahead.length, newN: fresh.length, newCount: fresh.length, reviewCount: ahead.length };
@@ -3527,7 +3529,7 @@ function scopeQueue(pool, fresh, size) {
   return out;
 }
 function buildUnitQueue(unitId, size = 15) {
-  const left = Math.max(0, state.settings.newGrammarPerDay - state.today.newG);
+  const left = Math.max(0, newQuota('g') - state.today.newG);
   return scopeQueue(unitItems(unitId), newGrammarCandidates(unitId).slice(0, left), size);
 }
 function buildVocabQueue(filter = 'all', size = 20) {
@@ -3536,7 +3538,7 @@ function buildVocabQueue(filter = 'all', size = 20) {
   const lt = filter.startsWith('t:') ? filter.slice(2).split(':') : null;   // t:<lv>:<theme> — one level's theme (the level pages)
   const n4Open = Boolean(theme) || Boolean(lt) || filter === 'N4' || n4WordsOpen();
   const pool = REG.vocab.filter(v => lt ? (v.builtin && v.lv === lt[0] && vocabTheme(v) === lt.slice(1).join(':')) : theme ? (v.builtin && vocabTheme(v) === theme) : filter === 'all' ? vocabEligibleForDaily(v, n4Open) : filter === 'custom' ? !v.builtin : (v.builtin && v.lv === filter));
-  const left = Math.max(0, state.settings.newVocabPerDay - state.today.newV);
+  const left = Math.max(0, newQuota('v') - state.today.newV);
   return scopeQueue(pool, newVocabCandidates(pool, n4Open).slice(0, left), size);
 }
 function buildMistakeQueue(size = 20) {
@@ -4348,6 +4350,7 @@ const ACTIONS = {
   'start-zero': () => chooseStart('zero'),
   'start-kana': () => chooseStart('kana'),
   'start-basics': () => chooseStart('basics'),
+  'start-test': () => { chooseStart('zero'); startSession('stage', { stage: 'pre' }); },
   'kana-known': () => { state.kanaKnown = true; saveState(); DAILY_CACHE = null; toast('入門單字從今天開始'); route(); },
   'kana-practice': () => startSession('kana'),
   'enter-main': () => { state.stage = 'main'; if (!Object.keys(state.srs).some(k => k.startsWith('g:'))) state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null; toast('進入第 1 週'); route(); },   // a learner who came back to 入門 keeps their unit
@@ -4464,7 +4467,7 @@ function renderToday(view) {
   const reviewN = plan.dueV.length + plan.dueG.length + (plan.dueC || []).length;
   const newN = plan.newV.length + plan.newG.length + (plan.newC || []).length;
   const exK = plan.dueK.length + plan.newK.length;
-  const exL = Math.min(plan.dueL.length + plan.newL.length, state.settings.listenPerDay || 0);
+  const exL = Math.min(plan.dueL.length + plan.newL.length, newQuota('l'));
   const exR = Math.min(1, plan.dueR.length + plan.newR.length);
   const exA = (plan.dueA || []).length + (plan.newA || []).length;
   const size = state.settings.sessionSize;
@@ -4506,7 +4509,7 @@ function renderToday(view) {
   const segBtn = (tab, label) => `<button type="button" aria-pressed="${todayTab === tab}" data-act="today-tab" data-tab="${tab}">${label}</button>`;
 
   const startBanner = !state.startChosen && Object.keys(state.srs).length === 0
-    ? `<div class="banner intro-banner"><div class="grow">第一次用？完全沒學過：從零開始（先認假名）。會假名了：已會假名。學過 N5：已有 N5 基礎。</div><div class="row-wrap">${startButtonsHtml()}<button type="button" class="btn btn-sm btn-ghost" data-act="nav" data-route="#/course/intro">先看第 0 週</button></div></div>`
+    ? `<div class="banner intro-banner"><div class="grow">第一次用？完全沒學過：從零開始（先認假名）。已經學過一些：測試看看，用入門的階段測驗看你在哪裡。</div><div class="row-wrap">${startButtonsHtml()}<button type="button" class="btn btn-sm btn-ghost" data-act="nav" data-route="#/course/intro">先看第 0 週</button></div></div>`
     : '';
   const introBanner = startBanner ? '' : !state.introSeen && Object.keys(state.srs).length < 40
     ? `<div class="banner intro-banner"><div class="grow">第一次用？先看「第 0 週」：假名、句子骨架、以及題目上會出現的名詞（い形容詞、五段動詞……）。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button><button type="button" class="btn btn-sm btn-ghost" data-act="intro-dismiss">知道了</button></div></div>`
@@ -4939,8 +4942,13 @@ function renderCourse(view) {
       const kanaSeen = REG.kana.filter(x => state.srs[x.key]).length;
       const words = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5'); const wordsSeen = words.filter(v => state.srs[v.key]).length;
       const kanji = REG.kanji.filter(k => k.lv === 'PRE_N5'); const kanjiSeen = kanji.filter(k => state.srs[k.key]).length;
-      const line = (label, seen, total) => `<div class="row between small"><span>${label}</span><span class="muted num">${seen}／${total}</span></div>${segBarHtml(total, [['learned', seen]], 'thin mt-1 mb-2')}`;
-      rows = `<div class="list">${introRow}</div><div class="mt-3">${line('假名', kanaSeen, REG.kana.length)}${line('單字', wordsSeen, words.length)}${kanji.length ? line('漢字', kanjiSeen, kanji.length) : ''}</div>`;
+      const total = REG.kana.length + words.length + kanji.length; const seen = kanaSeen + wordsSeen + kanjiSeen; const pct = total ? Math.floor(seen / total * 100) : 0;
+      const status = seen >= total ? '<span class="chip chip-ok">完成</span>' : pre ? '<span class="chip chip-accent">目前</span>' : seen ? '<span class="chip">進行中</span>' : '';
+      rows = `<div class="list">${introRow}<div class="unit-row ${pre ? 'current' : ''}" data-act="nav" data-route="#/vocab/level?lv=PRE_N5" role="button" tabindex="0">
+        <div class="unit-weeks">入門</div>
+        <div class="grow"><div class="unit-title">假名與入門單字</div><div class="unit-desc">平假名、片假名，以及只用假名寫的基本單字。</div></div>
+        <div><div class="row between small"><span>${status}</span><span class="muted num">${pct}%</span></div>${segBarHtml(total, [['learned', seen]], 'thin mt-1')}</div>
+      </div></div>`;
       extra = '';   // 1.0.12: the 入門 card carries one button, 階段測驗; passing it leads to the three choices and 第 1 週 (練假名 is on the 單字 page, 進入第 1 週／回到入門 in 設定)
     } else {
       rows = `<div class="list">${st.units.map(uid => {
@@ -4955,7 +4963,7 @@ function renderCourse(view) {
       }).join('')}</div>`;
     }
     const isCurStage = st.id === 'pre' && pre;
-    return `<div class="card ${st.id === 'pre' ? 'pre-card' : ''} ${isCurStage ? 'current' : ''}"><div class="card-head"><div><div class="card-title">${esc(st.title)}${st.id === 'pre' ? ' <span class="chip">PRE_N5</span>' : ''}${isCurStage ? ' <span class="chip chip-accent">目前</span>' : ''}</div><div class="card-sub">${esc(st.sub)}</div></div></div>
+    return `<div class="card ${st.id === 'pre' ? 'pre-card' : ''} ${isCurStage ? 'current' : ''}"><div class="card-head"><div><div class="card-title">${esc(st.title)}</div><div class="card-sub">${esc(st.sub)}</div></div></div>
       ${rows}${stageFootHtml(st.id, extra, st.id !== 'pre')}</div>`;
   }).join('');
   view.innerHTML = `
@@ -5088,7 +5096,7 @@ const INTRO_LESSON = {
       '答對的題目會隔幾天再出現，答錯的隔天就回來（這叫間隔重複，SRS）。不用自己安排複習，照每天的練習做就好。',
       '單字頁：先分入門／N5／N4 三個等級，每級列主題（卡上有該主題的漢字）與漢字，可單獨練一個主題；字卡可以自己評「忘記／模糊／記得／很熟」。',
       '課程頁：每單元兩週，有講義和練習；進度條三段顏色代表答對三次以上、答對過、出現過。',
-      '設定：每天新單字與新文法的數量、每天負荷上限、語音服務（內建或外部）、振假名顯示方式。一開始用預設值即可。',
+      '設定：每天負荷上限（每天新題數都由它推算）、語音服務（內建或外部）、振假名顯示方式。一開始用預設值即可。',
       '練習中按鍵：1–4 選答案、Enter 下一題、R 發音、F 切換振假名、T 顯示中文。',
       '讀完這頁，到課程頁從「第 1–2 週」開始，或直接按首頁的「開始練習」。'
     ] }
@@ -5217,7 +5225,7 @@ function levelPickerHtml() {
   const unitOpts = DATA.UNITS.map(u => `<option value="${u.id}" ${u.id === state.currentUnit ? 'selected' : ''}>${esc(u.weeks)}・${esc(u.short)}</option>`).join('');
   return `
     <div class="row-wrap">${startButtonsHtml()}</div>
-    <p class="hint mt-2">完全沒學過：從零開始（先認假名，再學入門單字）。會假名了：已會假名。學過 N5：已有 N5 基礎。</p>
+    <p class="hint mt-2">完全沒學過：從零開始（先認假名，再學入門單字）。學過一些：測試看看，直接做入門的階段測驗，通過後可以用「標記到這裡為止」跳過已會的部分。</p>
     <div class="divider"></div>
     <p class="dim small">選擇要從第幾週開始。預設從第 1 週開始；之後可以隨時在課程頁更改。</p>
     <div class="row-wrap mt-3">
@@ -5225,7 +5233,7 @@ function levelPickerHtml() {
       <button type="button" class="btn btn-primary" data-act="start-apply">設為目前單元</button>
     </div>
     <label class="switch mt-3"><input type="checkbox" id="startMarkPrev" /><span class="track"></span><span class="small">同時把之前的單元標為完成</span></label>
-    <label class="switch mt-2"><input type="checkbox" id="startExperienced" /><span class="track"></span><span class="small">我已有基礎：每天新單字 20、新文法 10，現在就開放 N4 單字，不預設顯示中文</span></label>
+    <label class="switch mt-2"><input type="checkbox" id="startExperienced" /><span class="track"></span><span class="small">我已有基礎：每天負荷上限 150（每天學得多一點），不預設顯示中文</span></label>
     <p class="hint mt-2">已經會的單字可以到「單字 → 單字表」依級別或主題整批標成「我會了」，練習時的新字預習卡上也有「我會了」。</p>
     <details class="disclose mt-4">
       <summary>不確定從哪裡開始？用多鄰國（Duolingo）分數估計</summary>
@@ -5253,9 +5261,9 @@ function chooseStart(kind) {
 }
 function startButtonsHtml(small = true) {
   const c = small ? 'btn btn-sm' : 'btn';
-  return `<button type="button" class="${c} btn-primary" data-act="start-zero">從零開始</button><button type="button" class="${c}" data-act="start-kana">已會假名</button><button type="button" class="${c}" data-act="start-basics">已有 N5 基礎</button>`;
+  return `<button type="button" class="${c} btn-primary" data-act="start-zero">從零開始</button><button type="button" class="${c}" data-act="start-test">測試看看</button>`;
 }
-const EXPERIENCED_SETTINGS = { newVocabPerDay: 20, newGrammarPerDay: 10, newKanjiPerDay: 5, n4Words: 'open', showZh: false };
+const EXPERIENCED_SETTINGS = { loadCap: 150, showZh: false };
 function applyExperienced() { Object.assign(state.settings, EXPERIENCED_SETTINGS); saveState(); }
 // make `unit` the current unit; optionally mark every earlier unit as completed and apply the 我已有基礎 settings
 function applyStartUnit(unit, markPrev, experienced = false) {
@@ -5281,7 +5289,6 @@ Object.assign(ACTIONS, {
     document.getElementById('duoRec').innerHTML = `建議起點：<b>${esc(rec.weeks)}・${esc(rec.title)}</b>`;
   },
   'start-apply': () => applyStartUnit(document.getElementById('startUnit').value, document.getElementById('startMarkPrev').checked, (document.getElementById('startExperienced') || {}).checked),
-  'apply-experienced': () => { applyExperienced(); toast('已套用「我已有基礎」：每天新單字 20、新文法 10、N4 單字開放、不預設顯示中文'); if (modalOpen()) refreshSettings(); else route(); },
   'duo-apply': () => {
     const v = clamp(Number(document.getElementById('duoScore').value) || 22, 1, 160);
     state.settings.duolingoScore = v;
@@ -5426,7 +5433,7 @@ function buildFlashQueue(deck, extraNew = 0) {
   const t = todayStr();
   const pool = deckPool(deck);
   const due = pool.filter(v => { const r = state.srs[v.key]; return r && r.due <= t; }).sort(byDue);
-  const quota = Math.max(0, state.settings.newVocabPerDay - state.today.newV) + extraNew;
+  const quota = Math.max(0, newQuota('v') - state.today.newV) + extraNew;
   const fresh = (deck === 'custom' ? pool.filter(v => !state.srs[v.key]) : newVocabCandidates(pool, deckAllowsN4(deck))).slice(0, quota);
   return due.concat(fresh).map(v => v.key);
 }
@@ -5462,7 +5469,7 @@ function renderVocab(view, tab, params) {
   if (!v) {
     card = `<div class="card center"><div class="flash">
       <div class="page-title">${F.done ? `這一輪完成了（${F.done} 張）` : '目前沒有要翻的字卡'}</div>
-      <p class="dim mt-2">今天到期的字卡都複習完了${state.today.newV >= state.settings.newVocabPerDay ? '，新卡也已達每日上限' : ''}。</p>
+      <p class="dim mt-2">今天到期的字卡都複習完了${state.today.newV >= newQuota('v') ? '，新卡也已達每日上限' : ''}。</p>
       <div class="row-wrap mt-3" style="justify-content:center">
         <button type="button" class="btn" data-act="flash-more">再學 5 張新卡</button>
         <button type="button" class="btn btn-primary" data-act="start-vocab" data-filter="${deck}">用測驗方式複習</button>
@@ -6509,9 +6516,9 @@ function examCountdownHtml() {
   // the exam-date pace reaches the daily practice here: when the current new-item quotas cannot finish the banks in
   // time, the recommended quotas (學習分析「每日練習量建議」) are offered with one tap; nothing changes until tapped
   const adv = planAdvice();
-  const advRows = adv.banks.filter(b2 => b2.key && b2.cur !== b2.rec);
+  const advRows = adv.banks.filter(b2 => b2.key && b2.cur < b2.rec);
   const goalHint = adv.studyDays > 0 && adv.lagging.length && advRows.length
-    ? `<div class="small dim mt-2 hero-advice">照考試日期，建議每天：${advRows.map(b2 => `${esc(b2.name)} ${b2.cur}→${b2.rec}`).join('、')}。</div><div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-act="apply-advice">套用建議</button></div>`
+    ? `<div class="small dim mt-2 hero-advice">照考試日期，建議每天負荷上限調到 ${adv.rec.loadCap}（${advRows.map(b2 => `${esc(b2.name)} ${b2.cur}→${b2.rec}`).join('、')}）。</div><div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-act="apply-advice">套用建議</button></div>`
     : '';
   const paceChip = pace.status === 'behind' ? '<span class="chip chip-warn">稍微落後</span>' : pace.status === 'ahead' ? '<span class="chip chip-ok">進度充裕</span>' : '<span class="chip chip-ok">進度正常</span>';
 
@@ -6567,9 +6574,27 @@ function renderExam(view, sub, params) {
       <div class="card"><div class="stat"><span class="stat-v">${b5 === null ? '—' : b5}</span><span class="stat-l">N5 最高分（合格線 80）</span></div></div>
       <div class="card"><div class="stat"><span class="stat-v">${b4 === null ? '—' : b4}</span><span class="stat-l">N4 最高分（合格線 90）</span></div></div>
     </div>
+    ${stageTestCardHtml()}
     <div class="card">
       <div class="card-head"><div class="card-title">考試紀錄</div>${hist.length ? '<button type="button" class="btn btn-sm btn-ghost btn-danger" data-act="exam-clear">清除紀錄</button>' : ''}</div>
       ${hist.length ? `<div class="list">${rows}</div>` : '<div class="empty">還沒有考試紀錄。</div>'}
+    </div>`;
+}
+// 階段測驗 on the 模擬考 page: a start button per stage and every recorded result, newest first
+function stageTestCardHtml() {
+  const recs = [];
+  STAGES.forEach((st, si) => ((state.stageTests || {})[st.id] || []).forEach((h, hi) => { if (h) recs.push({ st, si, hi, h }); }));
+  recs.sort((a, b) => String(b.h.date || '').localeCompare(String(a.h.date || '')) || a.si - b.si || a.hi - b.hi);
+  const rows = recs.slice(0, 30).map(({ st, h }) => `<div class="list-item">
+      <div class="grow"><div>${esc(st.title)}・階段測驗</div><div class="tiny muted num">${esc(h.date || '')}</div></div>
+      <div class="right nowrap"><b class="num">${Number(h.correct) || 0} / ${Number(h.total) || 0}</b>
+        <div>${h.passed ? '<span class="chip chip-ok">通過</span>' : '<span class="chip">未通過</span>'}</div></div>
+    </div>`).join('');
+  const btns = STAGES.map(st => `<button type="button" class="btn btn-sm" data-act="stage-test" data-stage="${st.id}">${esc(st.title)}</button>`).join('');
+  return `<div class="card" id="stageTests">
+      <div class="card-head"><div><div class="card-title">階段測驗</div><div class="card-sub">40 題選擇題，不計時、不影響排程，答對 80% 算通過。</div></div></div>
+      <div class="row-wrap">${btns}</div>
+      ${rows ? `<div class="list mt-3">${rows}</div>` : '<div class="empty mt-3">還沒有階段測驗紀錄。</div>'}
     </div>`;
 }
 function formatDuration(sec) {
@@ -7182,21 +7207,12 @@ function settingsLearn() {
   const s = state.settings;
   const cur = unitById(state.currentUnit);
   return `
-    <div class="setting-row"><div><div class="label">我已有基礎</div><div class="hint">一鍵套用：每天新單字 20、新文法 10、新漢字 5，現在就開放 N4 單字，題目不預設顯示中文。之後仍可逐項調整。</div></div>
-      <button type="button" class="btn btn-sm" data-act="apply-experienced">套用</button></div>
-    ${numRow('loadCap', '每天負荷上限', '當天到期複習加新題超過這個數時，先減新單字（最少減到額度一半），再停新漢字、新聽力；到期的複習不會減，所以總量會隨學過的內容增加。考前一天幾百題是正常的，可以拉高。', 10, 300, 5, '題')}
+    ${numRow('loadCap', '每天負荷上限', '每天新單字、新文法、新漢字、聽力與變化練習都依這個數字推算，數字越大每天學得越多；當天到期複習加新題超過它時，先減新單字（最少減到一半），再停新漢字、新聽力。到期的複習不會減，所以總量會隨學過的內容增加。考前一天幾百題是正常的，可以拉高。', 10, 300, 5, '題')}
     ${numRow('sessionSize', '每組練習題數', '按「開始練習」時一次出幾題；當天到期與新題會分成幾組出完。', 5, 60, 5, '題')}
-    ${numRow('newVocabPerDay', '每天新單字上限', '其餘時間用來複習到期的單字。', 0, 40, 1, '個')}
-    ${numRow('newGrammarPerDay', '每天新文法題上限', '照講義段落順序從目前單元挑；本單元出完會接著下一單元並自動切換。', 0, 30, 1, '題')}
-    ${selRow('n4Words', 'N4 單字何時加入', '預設等 N5 單字都學過一次才加入 N4 新字；已有基礎的人可以直接開放。', [['auto', 'N5 學過一次後自動加入'], ['open', '現在就開放']])}
-    ${numRow('newKanjiPerDay', '每天新漢字上限', 'N5 漢字都學過一次後，才會開始加入 N4 漢字。', 0, 15, 1, '個')}
     ${numRow('newKanaPerDay', '每天新假名', '平假名與片假名一起，照五十音順序；入門階段才會排新的。', 0, 30, 1, '個')}
     <div class="setting-row"><div><div class="label">目前階段：${inPreStage() ? '入門（假名與入門單字）' : '正課（第 1 週起）'}</div><div class="hint">入門階段的每天練習只有假名、入門單字與漢字；正課才有文法、聽力、閱讀。</div></div>
       <button type="button" class="btn btn-sm" data-act="${inPreStage() ? 'enter-main' : 'enter-pre'}">${inPreStage() ? '進入第 1 週' : '回到入門'}</button></div>
-    ${numRow('conjDrillPerDay', '每天變化練習', '以形態為單位排程，動詞從你學過的單字裡隨機抽；只出目前單元以前教過的形態。', 0, 10, 1, '題')}
-    ${numRow('listenPerDay', '每天聽力題', '短對話、即時應答與情境表達；需要能播放語音。', 0, 10, 1, '題')}
     ${selRow('retention', '複習強度', '越高越常複習，記得越牢，但每天的題目也越多。', [['0.85', '輕量（約記住 85%）'], ['0.9', '標準（約記住 90%）'], ['0.95', '加強（約記住 95%）']])}
-    ${selRow('conjInput', '活用題作答方式', '自動：剛學的題選答案，熟了之後改成自己拼出來。鍵盤輸入在 iPhone 請先到「設定 › 一般 › 鍵盤」加入日文鍵盤。', [['auto', '自動（熟了之後改成拼出來）'], ['choice', '一律選擇'], ['tiles', '一律假名磁貼'], ['type', '鍵盤輸入']])}
     ${selRow('order', '出題順序', '', [['mix', '單字與文法交錯'], ['split', '先單字，再文法']])}
     ${boolRow('showZh', '題目下方直接顯示中文', '關閉時可按 T 或點「顯示中文」再看。需要中文才能判斷的題目仍會顯示。')}
     ${selRow('includeImported', '每日練習包含自訂字卡', '句子型的匯入卡片比較難，預設只加入單字型的。', [['words', '只加入單字型'], ['all', '全部加入'], ['off', '不加入']])}
@@ -7537,7 +7553,7 @@ function buildKanjiQueue(size = 15, lv = null) {
     return scopeQueue(pool, pool.filter(k => !state.srs[k.key]).sort((a, b) => a.order - b.order), size);
   }
   const pool = REG.kanji.filter(k => k.lv !== 'N4' || k4);
-  const left = Math.max(0, (state.settings.newKanjiPerDay || 0) - (state.today.newK || 0));
+  const left = Math.max(0, newQuota('k') - (state.today.newK || 0));
   return scopeQueue(pool, newKanjiCandidates(k4).slice(0, left), size);
 }
 
@@ -7625,25 +7641,26 @@ function planAdvice() {
   const studyDays = Math.max(0, pace.daysLeft - 21);
   const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
   const banks = [
-    { k: 'v', name: '單字', total: REG.vocab.filter(x => x.builtin).length, left: unseen(REG.vocab.filter(x => x.builtin)), key: 'newVocabPerDay', max: 40 },
-    { k: 'g', name: '文法', total: REG.grammar.length, left: unseen(REG.grammar), key: 'newGrammarPerDay', max: 30 },
-    { k: 'k', name: '漢字', total: REG.kanji.length, left: unseen(REG.kanji), key: 'newKanjiPerDay', max: 15 },
-    { k: 'l', name: '聽力', total: REG.listen.length, left: unseen(REG.listen), key: 'listenPerDay', max: 10 },
+    { k: 'v', name: '單字', total: REG.vocab.filter(x => x.builtin).length, left: unseen(REG.vocab.filter(x => x.builtin)), key: 'v', max: 40 },
+    { k: 'g', name: '文法', total: REG.grammar.length, left: unseen(REG.grammar), key: 'g', max: 30 },
+    { k: 'k', name: '漢字', total: REG.kanji.length, left: unseen(REG.kanji), key: 'k', max: 15 },
+    { k: 'l', name: '聽力', total: REG.listen.length, left: unseen(REG.listen), key: 'l', max: 10 },
     { k: 'r', name: '閱讀', total: REG.read.length, left: unseen(REG.read) }
   ];
   banks.forEach(b2 => {
     b2.done = b2.total - b2.left;
     b2.need = studyDays > 0 ? b2.left / studyDays : (b2.left ? Infinity : 0);
-    b2.cur = b2.key ? Number(s[b2.key] || 0) : null;
+    b2.cur = b2.key ? newQuota(b2.key) : null;
     b2.rec = b2.key ? clamp(Math.ceil(studyDays > 0 ? b2.left / studyDays : b2.left), 0, b2.max) : null;
     b2.gap = b2.key ? (b2.cur > 0 ? b2.need / b2.cur : (b2.need > 0 ? Infinity : 0)) : null;   // >1: the current setting cannot finish in time
   });
   const quota = banks.filter(b2 => b2.key);
   const newPerDay = quota.reduce((a, b2) => a + b2.rec, 0);
-  const load = clamp(Math.ceil(newPerDay * 2.5 / 5) * 5, 5, 200);   // new items plus their reviews, roughly
-  const sessionSize = clamp(Math.ceil(Math.min(60, load) / 5) * 5, 5, 60);
-  const rec = { sessionSize }; quota.forEach(b2 => { rec[b2.key] = b2.rec; });
-  const applied = Object.keys(rec).every(k => Number(s[k]) === rec[k]);
+  // 每天負荷上限 is the one dial: the smallest cap whose derived quotas cover every recommended quota
+  const loadCap = clamp(Math.ceil(Math.max(0, ...quota.map(b2 => b2.rec / NEW_SHARE[b2.key])) / 5) * 5, 10, 300);
+  const sessionSize = clamp(Math.ceil(Math.min(60, loadCap) / 5) * 5, 5, 60);
+  const rec = { loadCap, sessionSize };
+  const applied = Number(s.loadCap) === loadCap && Number(s.sessionSize) === sessionSize;
   const lagging = quota.filter(b2 => b2.gap > 1.15).sort((a, b2) => b2.gap - a.gap);
   return { studyDays, daysLeft: pace.daysLeft, banks, rec, applied, lagging, newPerDay };
 }
@@ -7769,7 +7786,7 @@ function planAdviceHtml() {
   let lead;
   if (a.daysLeft <= 0) lead = '考試日期已經過了。到設定裡改成下一次的日期，這裡會重新計算。';
   else if (a.studyDays <= 0) lead = `距離考試只剩 ${a.daysLeft} 天，不到三週：建議停止新題、只做複習與模擬考。`;
-  else if (a.lagging.length) lead = `還有 ${a.studyDays} 天可以學新內容（考前三週留給模擬考）。照目前設定，${a.lagging.map(b2 => b2.name).join('、')}到時候學不完，${a.lagging[0].name}落後最多；建議每天新 ${a.lagging[0].name} 從 ${a.lagging[0].cur} 調到 ${a.lagging[0].rec}。`;
+  else if (a.lagging.length) lead = `還有 ${a.studyDays} 天可以學新內容（考前三週留給模擬考）。照目前設定，${a.lagging.map(b2 => b2.name).join('、')}到時候學不完，${a.lagging[0].name}落後最多；建議把每天負荷上限調到 ${a.rec.loadCap}（${a.lagging[0].name}每天新 ${a.lagging[0].cur} → ${a.lagging[0].rec}）。`;
   else lead = `還有 ${a.studyDays} 天可以學新內容（考前三週留給模擬考）。照目前設定，每一種題庫都來得及學完。`;
   const btn = a.applied ? '<button type="button" class="btn btn-sm" data-act="apply-advice" disabled>已是建議值</button>'
     : `<button type="button" class="btn btn-sm btn-primary" data-act="apply-advice">使用建議</button>`;
@@ -7777,7 +7794,7 @@ function planAdviceHtml() {
       <div class="card-head"><div><div class="card-title">每日練習量建議</div><div class="card-sub">用「還沒學過的題數 ÷ 可學習天數」算出每天該學的新題，複習量另外加上。</div></div>${btn}</div>
       <p class="small dim">${esc(lead)}</p>
       <div class="table-wrap"><table class="table"><thead><tr><th>題庫</th><th>已學 / 總數</th><th class="col-left">還沒學</th><th>建議每天</th><th>目前設定</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <div class="small muted mt-2">套用後的設定：每組 ${a.rec.sessionSize} 題・新單字 ${a.rec.newVocabPerDay}・新文法 ${a.rec.newGrammarPerDay}・新漢字 ${a.rec.newKanjiPerDay}・聽力 ${a.rec.listenPerDay}${a.studyDays > 0 ? '' : '（已無學習天數，新題全部為 0）'}。閱讀題跟著單元進度出，不另外設定。</div>
+      <div class="small muted mt-2">套用後的設定：每天負荷上限 ${a.rec.loadCap}・每組 ${a.rec.sessionSize} 題${a.studyDays > 0 ? '' : '（已無學習天數，新題降到最低）'}。閱讀題跟著單元進度出，不另外設定。</div>
     </div>`;
 }
 

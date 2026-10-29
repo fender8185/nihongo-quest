@@ -44,7 +44,7 @@ def test_course_has_one_current_chip_and_week0_in_pre_card(b):
     assert r['week0In'] == [True, False, False, False] and r['chips'] == 1 and r['chipIn'] == ['row'], r
     assert r['tests'] == 4 and r['marks'] == 0, r
     r = json.loads(ev(b, js, [("eval", "state.stage = 'pre'; saveState(); true")] + COURSE))
-    assert r['chips'] == 1 and r['chipIn'] == ['head'], r
+    assert r['chips'] == 1 and r['chipIn'] == ['row'], r
 
 def test_course_shows_last_result_and_mark_button_after_a_pass(b):
     pre = [("eval", "state.stage = 'main'; state.stageTests = { p1: [{ date: todayStr(), correct: 34, total: 40, passed: true }], p2: [{ date: todayStr(), correct: 10, total: 40, passed: false }] }; saveState(); true")] + COURSE
@@ -230,6 +230,15 @@ def test_pre_card_has_one_button(b):
       return JSON.stringify({ btns: [...card.querySelectorAll('button')].map(b => b.dataset.act), foot: card.querySelector('.stage-foot').textContent.replace(/\\s+/g, ' ').trim() }); })()"""
     r = json.loads(ev(b, js, [("eval", "state.stage = 'pre'; state.stageTests = { pre: [{ date: todayStr(), correct: 36, total: 40, passed: true }] }; saveState(); true")]))
     assert r['btns'] == ['stage-test'] and '上次 36／40・通過' in r['foot'], r   # no 標記到這裡為止 even after a pass: the test itself asks the three choices
+
+def test_exam_page_lists_stage_test_records_and_starts_a_stage_test(b):
+    js = """(() => { state.stageTests = { pre: [{ date: '2026-10-28', correct: 30, total: 40, passed: false }], p1: [{ date: '2026-10-29', correct: 36, total: 40, passed: true }] }; saveState();
+      location.hash = '#/exam'; route(); const c = document.getElementById('stageTests');
+      const out = { btns: c.querySelectorAll('[data-act=stage-test]').length, rows: c.querySelectorAll('.list-item').length, first: c.querySelector('.list-item').textContent.replace(/\\s+/g, ' '), passed: c.querySelectorAll('.chip-ok').length };
+      c.querySelector('[data-act=stage-test][data-stage=pre]').click(); out.mode = SESSION && SESSION.mode; SESSION = null; document.body.classList.remove('practicing'); state.stageTests = {}; saveState();
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['btns'] == 4 and r['rows'] == 2 and '36 / 40' in r['first'] and r['passed'] == 1 and r['mode'] == 'stage', r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

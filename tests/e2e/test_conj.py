@@ -80,9 +80,9 @@ def test_identify_variant_still_appears_under_tiles_setting(b):
       const r0 = Math.random; Math.random = () => 0; const q = makeGrammarQuestion(g, {{}}); Math.random = r0; return q.fmt; }})()"""
     assert ev(b, js) == 'g-identify'
 
-def test_settings_page_offers_the_input_mode(b):
+def test_settings_page_no_longer_offers_the_input_mode(b):
     js = "(() => { openSettings('learn'); const s = document.querySelector('select[data-key=conjInput]'); const out = s ? [...s.options].map(o => o.value) : null; closeModal(); return JSON.stringify(out); })()"
-    assert json.loads(ev(b, js)) == ['auto', 'choice', 'tiles', 'type']
+    assert json.loads(ev(b, js)) is None
 
 # ---- Task 3: 再練一次／換個方式再考沿用輸入版 ----
 def test_new_conj_item_answered_right_comes_back_typed_and_a_typed_miss_requeues_typed(b):
@@ -108,7 +108,7 @@ def test_new_conj_item_answered_right_comes_back_typed_and_a_typed_miss_requeues
 def test_drills_exist_per_form_family_and_reach_follows_the_unit(b):
     js = """(() => { const fams = REG.drills.map(d => d.fam).sort(); const te = REG.drills.find(d => d.fam === 'te');
       state.currentUnit = 'm3'; const p3 = dailyPlan(); state.currentUnit = 'm18'; const p18 = dailyPlan();
-      return JSON.stringify({ fams, teUnit: te && te.u, teForms: te && te.forms, byKey: Boolean(REG.byKey.get('c:te')), n3: p3.newC.map(d => d.fam), n18: p18.newC.length, cap: state.settings.conjDrillPerDay }); })()"""
+      return JSON.stringify({ fams, teUnit: te && te.u, teForms: te && te.forms, byKey: Boolean(REG.byKey.get('c:te')), n3: p3.newC.map(d => d.fam), n18: p18.newC.length, cap: newQuota('c') }); })()"""
     r = json.loads(ev(b, js))
     assert set(r['fams']) >= {'te', 'ta', 'nai', 'pot', 'vol', 'pass', 'caus', 'ba'} and 'dict' not in r['fams'], r
     assert r['teUnit'] == 'm3' and 'te' in r['teForms'] and r['byKey'], r
