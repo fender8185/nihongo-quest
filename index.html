@@ -1586,14 +1586,14 @@ function srsDots(b) {
 // `key` (optional) tells custom cards apart: they have fewer possible formats, so two passed formats are enough
 // 「我會了」: the learner vouches for a word. It counts as 已熟練 at once and comes back for a check in about six weeks;
 // answering it wrong later drops the vouch and the ordinary rules apply again. 取消 puts it at the 熟悉 threshold.
-function markKnown(key, save = true) {
+function markKnown(key, save = true, dueDays) {   // dueDays: a fixed interval (整批 marks spread their checks over weeks)
   const t = todayStr();
   let r = state.srs[key];
   if (!r) r = state.srs[key] = { b: 0, due: t, n: 0, ok: 0, ng: 0, st: 0, last: null, lapse: 0, intro: t, f: {} };
   ensureFsrs(r);
   r.s = Math.max(r.s || 0, 45); r.d = Math.min(r.d || 5, 4); r.b = levelFromS(r.s); r.known = 1;
   if (!r.lrn) r.lrn = t;
-  r.due = addDays(t, fsrsDays(r.s, key)); r.last = t;
+  r.due = addDays(t, Number.isFinite(dueDays) ? dueDays : fsrsDays(r.s, key)); r.last = t;
   state.mistakes.forEach(m => { if (m.key === key && !m.mastered) { m.mastered = true; m.last = t; } });   // 我會了 clears it from the notebook
   if (save) saveState();
   return r;
@@ -4353,7 +4353,8 @@ function handleClick(ev) {
   fn(el, ev);
 }
 const CHANGE_ACTIONS = {
-  'listen-theme': (el) => ACTIONS['listen-theme-pick']({ dataset: { theme: el.value } })
+  'listen-theme': (el) => ACTIONS['listen-theme-pick']({ dataset: { theme: el.value } }),
+  'bulk-level': (el) => { const box = document.getElementById('bulkCount'); const st = el.closest('[data-stage]'); if (box && st) box.textContent = `會影響 ${bulkMarkTargets(st.dataset.stage, el.value).length} 個項目`; }
 };
 function handleChange(ev) {
   const el = ev.target.closest('[data-change]');
@@ -4746,6 +4747,91 @@ Object.assign(ACTIONS, {
   }
 });
 
+// ---- 標記到這裡為止（批次標記） ----
+/* After passing a stage test the learner can mark that stage and every stage before it as 已學 / 熟悉 / 熟練 in one go.
+   Only upgrades: an item already at or above the chosen level is left alone. Due dates are spread over a window so the
+   reviews do not all land on one day. One undo is kept in memory (LAST_BULK_MARK) until the page reloads. */
+const BULK_LEVELS = {
+  seen: { name: '已學', hint: '看過，很快會排進複習（分散在未來兩週）。', due: [1, 14] },
+  learned: { name: '熟悉', hint: '約一到兩週後開始複習。', due: [5, 14] },
+  known: { name: '熟練', hint: '等同「我會了」：直接算熟練，五到八週後各確認一次；答錯就回到正常排程。會清掉這些項目的錯題。', due: [35, 56] }
+};
+let LAST_BULK_MARK = null;
+function spreadDue(i, level) { const [lo, hi] = BULK_LEVELS[level].due; return lo + (i % (hi - lo + 1)); }
+function bulkLevelOf(rec, key) {   // the level an item already has, in the same three steps
+  if (!rec) return -1;
+  if (srsLevelLabel(rec, key) === '已熟練') return 2;
+  if (rec.b >= SRS_LEARNED) return 1;
+  return 0;
+}
+function bulkMarkTargets(stageId, level) {
+  const want = ['seen', 'learned', 'known'].indexOf(level);
+  const out = []; const seen = new Set();
+  stagesUpTo(stageId).forEach(s => stageItems(s.id).forEach(x => { if (seen.has(x.key)) return; seen.add(x.key); if (bulkLevelOf(state.srs[x.key], x.key) < want) out.push(x); }));
+  return out;
+}
+function bulkMark(stageId, level) {
+  const targets = bulkMarkTargets(stageId, level);
+  const t = todayStr();
+  const snap = { stageId, level, changed: targets.length, srs: {}, mistakes: JSON.parse(JSON.stringify(state.mistakes)), completedUnits: state.completedUnits.slice(), lessonSeen: (state.lessonSeen || []).slice(),
+    currentUnit: state.currentUnit, stage: state.stage, introSeen: state.introSeen, kanaKnown: state.kanaKnown };
+  targets.forEach((x, i) => {
+    const key = x.key;
+    snap.srs[key] = state.srs[key] ? JSON.parse(JSON.stringify(state.srs[key])) : null;
+    if (level === 'known') { markKnown(key, false, spreadDue(i, 'known')); return; }
+    let r = state.srs[key];
+    if (!r) r = state.srs[key] = { b: 0, due: t, n: 0, ok: 0, ng: 0, st: 0, last: null, lapse: 0, intro: t, f: {} };
+    ensureFsrs(r);
+    r.s = Math.max(r.s || 0, level === 'seen' ? LEVEL_FROM_S[0] : LEVEL_FROM_S[SRS_LEARNED - 1]);
+    r.b = levelFromS(r.s);
+    if (!r.lrn) r.lrn = t;
+    r.due = addDays(t, spreadDue(i, level));
+  });
+  const units = stagesUpTo(stageId).flatMap(s => s.units);
+  units.forEach(u => { if (!state.completedUnits.includes(u)) state.completedUnits.push(u); });
+  const lessons = new Set(state.lessonSeen || []);
+  REG.grammar.forEach(g => { if (units.includes(g.u)) { const k = lessonSecKey(g); if (k) lessons.add(k); } });
+  state.lessonSeen = [...lessons];
+  state.introSeen = true; state.kanaKnown = true; state.stage = 'main';
+  const nu = nextUnitAfterStage(stageId);
+  if (unitOrder(nu) > unitOrder(state.currentUnit)) state.currentUnit = nu;
+  LAST_BULK_MARK = snap;
+  DAILY_CACHE = null; saveState();
+  return { changed: targets.length };
+}
+function bulkUndo() {
+  const S = LAST_BULK_MARK; if (!S) return false;
+  Object.entries(S.srs).forEach(([k, r]) => { if (r) state.srs[k] = r; else delete state.srs[k]; });
+  state.mistakes = S.mistakes; state.completedUnits = S.completedUnits; state.lessonSeen = S.lessonSeen;
+  state.currentUnit = S.currentUnit; state.stage = S.stage; state.introSeen = S.introSeen; state.kanaKnown = S.kanaKnown;
+  LAST_BULK_MARK = null; DAILY_CACHE = null; saveState();
+  return true;
+}
+function bulkMarkDialog(stageId) {
+  const st = stageById(stageId); if (!st) return;
+  if (!stagePassed(stageId)) { toast('先通過這個階段的測驗'); return; }
+  const names = stagesUpTo(stageId).map(s => s.title.split('：')[0]).join('、');
+  const radios = Object.entries(BULK_LEVELS).map(([k, L]) => `<label class="switch mt-2"><input type="radio" name="bulkLevel" value="${k}" data-change="bulk-level" ${k === 'learned' ? 'checked' : ''} /><span class="track"></span><span class="small"><b>${L.name}</b>　${L.hint}</span></label>`).join('');
+  openModal(`標記到〈${st.title.split('：')[0]}〉為止`, `<div data-stage="${stageId}">
+    <p class="small">會把 ${names} 的全部內容標成你選的等級；已經比這個等級高的項目不動。</p>
+    ${radios}
+    <div class="hint mt-3" id="bulkCount">會影響 ${bulkMarkTargets(stageId, 'learned').length} 個項目</div>
+    <p class="hint mt-2">無法復原（課程頁上只有一次「復原」，重新整理後失效），建議先到設定下載備份。</p>
+    <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="bulk-mark-go" data-stage="${stageId}">確定</button></div></div>`, { width: 520 });
+}
+Object.assign(ACTIONS, {
+  'stage-mark': (el) => bulkMarkDialog(el.dataset.stage),
+  'bulk-mark-go': (el) => {
+    const id = el.dataset.stage; const sel = document.querySelector('input[name="bulkLevel"]:checked'); const level = sel ? sel.value : 'learned';
+    const r = bulkMark(id, level); closeModal(true);
+    if (SESSION) { SESSION = null; document.body.classList.remove('practicing'); }
+    const cur = unitById(state.currentUnit);
+    toast(`已把 ${r.changed} 個項目標成${BULK_LEVELS[level].name}。目前單元：${cur.weeks}・${cur.short}`, 4000);
+    go('#/course');
+  },
+  'bulk-mark-undo': () => { if (bulkUndo()) toast('已復原'); route(); }
+});
+
 // ---- 72_course.js ----
 /* ==========================================================================
    Course: phases, units, lessons, unit item list
@@ -4798,6 +4884,7 @@ function renderCourse(view) {
       <div><div class="page-title">課程</div><div class="page-sub">四個階段：入門與 18 個單元（每單元約兩週）。整體完成度 ${cp.pct}%</div></div>
       <button type="button" class="btn" data-act="open-level">依程度選擇起點</button>
     </div>
+    ${LAST_BULK_MARK ? `<div class="banner"><div class="grow">已把 ${LAST_BULK_MARK.changed} 個項目標成「${BULK_LEVELS[LAST_BULK_MARK.level].name}」。重新整理後就不能復原了。</div><button type="button" class="btn btn-sm" data-act="bulk-mark-undo">復原</button></div>` : ''}
     ${cards}`;
 }
 
@@ -5511,9 +5598,9 @@ Object.assign(ACTIONS, {
   'vocab-known-all': () => {
     const keys = vocabListFiltered(currentRoute().params).filter(v => !(state.srs[v.key] && state.srs[v.key].known)).map(v => v.key);
     if (!keys.length) return;
-    const prev = {}; keys.forEach(k => { prev[k] = state.srs[k] ? JSON.parse(JSON.stringify(state.srs[k])) : null; markKnown(k, false); });
+    const prev = {}; keys.forEach((k, i) => { prev[k] = state.srs[k] ? JSON.parse(JSON.stringify(state.srs[k])) : null; markKnown(k, false, spreadDue(i, 'known')); });
     saveState(); LAST_BULK_KNOWN = { keys, prev };
-    toast(`已把 ${keys.length} 個字標成我會了，約六週後再各確認一次`); route();
+    toast(`已把 ${keys.length} 個字標成我會了，約五到八週後再各確認一次`); route();
   },
   'vocab-known-undo': () => {
     if (!LAST_BULK_KNOWN) return;
