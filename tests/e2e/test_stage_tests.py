@@ -68,7 +68,7 @@ def test_stage_test_builds_on_an_empty_account(b):
     r = json.loads(ev(b, js))
     for sid in ['pre', 'p1', 'p2', 'p3']:
         assert r[sid]['n'] == 40 and r[sid]['uniq'] == 40 and r[sid]['nullQ'] == 0, (sid, r[sid])
-    assert r['pre']['kinds'] == {'a': 16, 'v': 24} and r['p2']['kinds'] == {'g': 40 - r['p2c'], 'c': r['p2c']} and r['p2c'] >= 1, r
+    assert r['pre']['kinds'] == {'a': 14, 'v': 18, 'g': 8} and r['p2']['kinds'] == {'g': 40 - r['p2c'], 'c': r['p2c']} and r['p2c'] >= 1, r
     assert r['p1']['kinds'] == {'g': 20, 'v': 10, 'k': 4, 'l': 3, 'r': 3}, r
 
 def test_stage_test_questions_are_all_choice(b):
@@ -206,24 +206,25 @@ def test_first_review_after_bulk_mark_grows_stability_and_clears_undo(b):
 PRE_PASS = RESET + """state.stageTests = {}; LAST_BULK_MARK = null; startSession('stage', { stage: 'pre' });
       for (let i = 0; i < 40; i++) { const e = currentEntry(); answerCurrent(e.q.answer); nextQuestion(); }"""
 
-def test_pre_pass_asks_three_choices_then_enters_week_1(b):
+def test_pre_pass_asks_four_choices_then_enters_week_1(b):
     js = "(() => { " + PRE_PASS + """ const view = document.getElementById('view'); const out = { passed: state.stageTests.pre[0].passed, mark: Boolean(view.querySelector('[data-act="stage-mark"]')) };
-      const step = () => { const t = view.textContent; return { q: (t.match(/第 (\d)／3 題/) || [])[1], opts: [...view.querySelectorAll('[data-act="pre-mark-pick"]')].map(o => o.dataset.level) }; };
+      const step = () => { const t = view.textContent; return { q: (t.match(/第 (\\d)／4 題/) || [])[1], opts: [...view.querySelectorAll('[data-act="pre-mark-pick"]')].map(o => o.dataset.level) }; };
       out.s1 = step(); view.querySelector('[data-act="pre-mark-pick"][data-level="known"]').click();
       out.s2 = step(); out.hiraTxt = view.textContent.includes('平假名：掌握'); view.querySelector('[data-act="pre-mark-pick"][data-level="none"]').click();
-      out.s3 = step(); out.stageBefore = state.stage; view.querySelector('[data-act="pre-mark-pick"][data-level="seen"]').click();
+      out.s3 = step(); view.querySelector('[data-act="pre-mark-pick"][data-level="seen"]').click();
+      out.s4 = step(); out.stageBefore = state.stage; view.querySelector('[data-act="pre-mark-pick"][data-level="none"]').click(); out.pending = state.introPending;
       const hira = REG.kana.filter(k => k.script === 'hira'), kata = REG.kana.filter(k => k.script === 'kata'), words = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5');
       out.session = SESSION === null; out.stage = state.stage; out.unit = state.currentUnit; out.kanaKnown = state.kanaKnown; out.hash = location.hash;
       out.hiraKnown = hira.every(k => state.srs[k.key] && srsLevelLabel(state.srs[k.key], k.key) === '已熟練'); out.kataNone = kata.every(k => !state.srs[k.key]);
       out.wordsSeen = words.every(v => state.srs[v.key] && state.srs[v.key].b >= 1); out.changed = LAST_BULK_MARK && LAST_BULK_MARK.changed; out.label = LAST_BULK_MARK && LAST_BULK_MARK.label;
       renderCourse(view); out.undoBtn = Boolean(view.querySelector('[data-act="bulk-mark-undo"]')); out.banner = view.textContent.includes('片假名：不記得');
-      out.undone = bulkUndo(); out.stageAfterUndo = state.stage; out.srsAfterUndo = Object.keys(state.srs).length;
+      out.undone = bulkUndo(); out.stageAfterUndo = state.stage; out.srsAfterUndo = Object.keys(state.srs).length; out.pendingAfterUndo = state.introPending;
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['passed'] and not r['mark'] and r['s1'] == {'q': '1', 'opts': ['none', 'seen', 'learned', 'known']} and r['s2']['q'] == '2' and r['hiraTxt'] and r['s3']['q'] == '3', r
+    assert r['passed'] and not r['mark'] and r['s1'] == {'q': '1', 'opts': ['none', 'seen', 'learned', 'known']} and r['s2']['q'] == '2' and r['hiraTxt'] and r['s3']['q'] == '3' and r['s4']['q'] == '4' and r['pending'] is True, r
     assert r['stageBefore'] == 'pre' and r['session'] and r['stage'] == 'main' and r['unit'] == 'm1' and r['kanaKnown'] and r['hash'] == '#/course', r
-    assert r['hiraKnown'] and r['kataNone'] and r['wordsSeen'] and r['changed'] == 71 + 59 and r['label'] == '平假名：掌握、片假名：不記得、入門單字：記得', r
-    assert r['undoBtn'] and r['banner'] and r['undone'] and r['stageAfterUndo'] == 'pre' and r['srsAfterUndo'] == 0, r
+    assert r['hiraKnown'] and r['kataNone'] and r['wordsSeen'] and r['changed'] == 71 + 59 and r['label'] == '平假名：掌握、片假名：不記得、入門單字：記得、第 0 週句型：不記得', r
+    assert r['undoBtn'] and r['banner'] and r['undone'] and r['stageAfterUndo'] == 'pre' and r['srsAfterUndo'] == 0 and r['pendingAfterUndo'] is False, r
 
 def test_pre_card_has_one_button(b):
     js = """(() => { location.hash = '#/course'; route(); const card = document.querySelector('.card.pre-card');
@@ -239,6 +240,13 @@ def test_exam_page_lists_stage_test_records_and_starts_a_stage_test(b):
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
     assert r['btns'] == 4 and r['rows'] == 2 and '36 / 40' in r['first'] and r['passed'] == 1 and r['mode'] == 'stage', r
+
+def test_pre_pass_marking_week0_learned_completes_it(b):
+    js = "(() => { " + PRE_PASS + """ preMarkApply({ hira: 'none', kata: 'none', v: 'none', g: 'learned' }); const G = REG.grammar.filter(g => g.u === 'm0');
+      return JSON.stringify({ all: G.every(g => state.srs[g.key] && state.srs[g.key].b >= SRS_LEARNED), done: state.completedUnits.includes('m0'), pending: state.introPending,
+        lessons: (state.lessonSeen || []).filter(k => k.startsWith('m0:')).length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'all': True, 'done': True, 'pending': False, 'lessons': 3}, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

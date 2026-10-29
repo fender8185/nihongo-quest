@@ -1209,6 +1209,7 @@ function normalizeState(s) {
   // 1.0.15: no longer settings — the speech switches are always on, 複習強度 follows the review accuracy (autoRetention), 入門 ends by itself
   ['autoSpeak', 'listening', 'audioOptions', 'retention'].forEach(k => { delete out.settings[k]; });
   delete out.preDoneDismissed; delete out.preFinished;
+  out.introPending = Boolean(out.introPending);
   ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt', 'stageTests'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'reviewRecent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
@@ -3392,7 +3393,7 @@ function newGrammarCandidates(unitIdOnly) {
   const curIdx = unitOrder(cur);
   const earlier = REG.grammar.filter(g => g.u !== 'm0' && unitOrder(g.u) < curIdx && !state.completedUnits.includes(g.u) && !state.srs[g.key])   // 第 0 週 only brings new items in 入門 (or with introPending)
     .sort((a, b) => unitOrder(a.u) - unitOrder(b.u) || (a.d || 2) - (b.d || 2));
-  const out = sorted.concat(earlier);
+  const out = (state.introPending ? unitNewOrder('m0') : []).concat(sorted, earlier);   // 不記得 第 0 週 at the 入門 test: its items first
   // everything up to here has been introduced: continue into the next unit (the unit itself moves when its first new
   // item is answered, see autoAdvanceUnit)
   if (!out.length) { const next = DATA.UNITS[curIdx + 1]; if (next) return unitNewOrder(next.id); }
@@ -4783,7 +4784,7 @@ function nextUnitAfterStage(id) { const n = STAGES[stageIndex(id) + 1]; return n
 /* 40 questions drawn from the stage's own items (unseen ones included — the test asks "do I know this stage"), options only, untimed,
    nothing written to the schedule. 80% passes; the result goes to state.stageTests and unlocks 標記到這裡為止. */
 const STAGE_TEST_SIZE = 40;
-const STAGE_TEST_QUOTA = { pre: [['a', 16], ['v', 24]], p1: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]], p2: [['g', 32], ['c', 8]], p3: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]] };
+const STAGE_TEST_QUOTA = { pre: [['a', 14], ['v', 18], ['g', 8]], p1: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]], p2: [['g', 32], ['c', 8]], p3: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]] };
 function stageTestNeed(total) { return Math.ceil(total * 0.8); }
 function buildStageTest(id) {
   const st = stageById(id); if (!st) return [];
@@ -4886,7 +4887,7 @@ function bulkMarkTargets(stageId, level) {
 // what a bulk mark (標記到這裡為止 or the 入門 three choices) must remember to undo itself
 function bulkSnapshot(extra) {
   return Object.assign({ srs: {}, mistakes: JSON.parse(JSON.stringify(state.mistakes)), completedUnits: state.completedUnits.slice(), lessonSeen: (state.lessonSeen || []).slice(),
-    currentUnit: state.currentUnit, stage: state.stage, introSeen: state.introSeen, kanaKnown: state.kanaKnown }, extra);
+    currentUnit: state.currentUnit, stage: state.stage, introSeen: state.introSeen, kanaKnown: state.kanaKnown, introPending: state.introPending === true }, extra);
 }
 // mark the targets at a level, due dates spread; the previous records go into snap.srs
 function bulkApply(targets, level, snap) {
@@ -4929,7 +4930,7 @@ function bulkUndo() {
   const S = LAST_BULK_MARK; if (!S) return false;
   Object.entries(S.srs).forEach(([k, r]) => { if (r) state.srs[k] = r; else delete state.srs[k]; });
   state.mistakes = S.mistakes; state.completedUnits = S.completedUnits; state.lessonSeen = S.lessonSeen;
-  state.currentUnit = S.currentUnit; state.stage = S.stage; state.introSeen = S.introSeen; state.kanaKnown = S.kanaKnown;
+  state.currentUnit = S.currentUnit; state.stage = S.stage; state.introSeen = S.introSeen; state.kanaKnown = S.kanaKnown; state.introPending = S.introPending === true;
   LAST_BULK_MARK = null; DAILY_CACHE = null; saveState();
   return true;
 }
@@ -4959,12 +4960,14 @@ Object.assign(ACTIONS, {
 });
 
 // ---- 入門測驗通過後的三題 ----
-/* Passing the 入門 test leads straight into three choices (平假名、片假名、入門單字): 不記得 leaves the group alone (it is
-   learned as new material later), the other three are the bulk-mark levels 已學／熟悉／熟練. Then the learner enters 第 1 週. */
+/* Passing the 入門 test leads straight into four choices (平假名、片假名、入門單字、第 0 週句型): 不記得 leaves the group alone
+   (it is learned as new material later; for 第 0 週 that means introPending: its items come before the current unit's), the
+   other three are the bulk-mark levels 已學／熟悉／熟練. Then the learner enters 第 1 週. */
 const PRE_MARK_GROUPS = [
   ['hira', '平假名', () => REG.kana.filter(k => k.script === 'hira')],
   ['kata', '片假名', () => REG.kana.filter(k => k.script === 'kata')],
-  ['v', '入門單字', () => REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5')]
+  ['v', '入門單字', () => REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5')],
+  ['g', '第 0 週句型', () => unitItems('m0')]
 ];
 const PRE_MARK_LEVELS = [
   ['none', '不記得', '不標記，之後當新內容照常學'],
@@ -4978,7 +4981,7 @@ function preMarkStepHtml(T) {
   const done = PRE_MARK_GROUPS.slice(0, step).map(([g, nm]) => `<span class="chip">${nm}：${preMarkLevelName((T.preChoice || {})[g])}</span>`).join('');
   const opts = PRE_MARK_LEVELS.map(([lv, label, hint], i) => `<button type="button" class="opt" data-act="pre-mark-pick" data-level="${lv}"><span class="kbd">${i + 1}</span><span><b>${label}</b><span class="small muted">　${hint}</span></span></button>`).join('');
   return `<div class="mt-4"><div class="row-wrap">${done}</div>
-    <div class="small muted mt-3">第 ${step + 1}／3 題</div><div class="page-title mt-1">${name}（${n} 個），你記得多少？</div>
+    <div class="small muted mt-3">第 ${step + 1}／${PRE_MARK_GROUPS.length} 題</div><div class="page-title mt-1">${name}（${n} 個），你記得多少？</div>
     <div class="opts wide">${opts}</div></div>`;
 }
 function preMarkApply(choices) {
@@ -4989,6 +4992,11 @@ function preMarkApply(choices) {
     bulkApply(targets, level, snap); snap.changed += targets.length;
   });
   snap.label = PRE_MARK_GROUPS.map(([g, nm]) => `${nm}：${preMarkLevelName(choices[g])}`).join('、');
+  if (choices.g && choices.g !== 'none') {   // 第 0 週 marked: done, and its lesson cards need not come up again
+    if (!state.completedUnits.includes('m0')) state.completedUnits.push('m0');
+    const lessons = new Set(state.lessonSeen || []); unitItems('m0').forEach(g => { const k = lessonSecKey(g); if (k) lessons.add(k); }); state.lessonSeen = [...lessons];
+  }
+  state.introPending = choices.g === 'none';
   state.introSeen = true; state.kanaKnown = true; state.stage = 'main';
   const nu = nextUnitAfterStage('pre');
   if (unitOrder(nu) > unitOrder(state.currentUnit)) state.currentUnit = nu;

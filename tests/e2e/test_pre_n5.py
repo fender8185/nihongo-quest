@@ -458,6 +458,13 @@ def test_pre_account_with_words_done_stays_until_week0_is_seen(b):
     r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
     assert r == {'left': 20, 'done': False, 'stage1': 'pre', 'newG': True, 'line': True, 'stage2': 'main', 'm0Done': True, 'newV': 8}, r
 
+def test_week0_pending_puts_its_items_before_the_current_unit(b):
+    js = """(() => { state.stage = 'main'; state.currentUnit = 'm1'; state.srs = {}; state.introPending = true; const c = newGrammarCandidates().slice(0, 3).map(g => g.u);
+      const norm = normalizeState(Object.assign(JSON.parse(JSON.stringify(state)), { introPending: 'yes' })).introPending;
+      state.introPending = false; return JSON.stringify({ c, after: newGrammarCandidates()[0].u, norm }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'c': ['m0', 'm0', 'm0'], 'after': 'm1', 'norm': True}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
