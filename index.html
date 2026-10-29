@@ -928,12 +928,17 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.10';   // keep equal to the version in sw.js CACHE ('nq-v1.0.10'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.11';   // keep equal to the version in sw.js CACHE ('nq-v1.0.11'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.11', date: '2026-10-29', items: [
+    '課程頁改成四個對等的階段：入門、第一、二、三階段；第 0 週搬進入門卡；整頁只剩一個「目前」。',
+    '每個階段有「階段測驗」：40 題選擇題、不計時、不影響排程，答對 32 題算通過；結果記在卡上。',
+    '通過後可「標記到這裡為止」：把該階段與之前所有內容一次標成已學／熟悉／熟練，到期日分散在幾週內；課程頁可復原一次。「這 N 個字我都會了」的到期日也改成分散。'
+  ] },
   { v: '1.0.10', date: '2026-10-29', items: [
     '單字頁修正：從別頁進單字頁後按返回不再卡在單字頁；字卡的牌組切換恢復；單字表從等級頁的主題卡進來時，「練習這個主題」和返回鍵都只針對那一級。',
     'N4 漢字頁：只出現在其他等級單字裡的漢字（兄、朝、青…）歸到那個主題並標明「入門的字／N5 的字」，不再堆在「其他」；N4 等級頁開啟變快。'
