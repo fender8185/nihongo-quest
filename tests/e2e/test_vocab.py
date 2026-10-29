@@ -243,7 +243,7 @@ def test_today_lists_the_vocab_themes_and_grammar_points_of_the_session(b):
       const box = document.querySelector('.plan-topics'); const text = box ? box.textContent.replace(/\\s+/g, ' ') : '';
       const q = dailyQueue(state.settings.sessionSize);
       const pts = [...new Set(q.items.filter(it => it.kind === 'g').map(it => it.pt).filter(Boolean))];
-      recentAccuracy = () => 0.5; route();
+      recentAccuracy = () => 0.5; delete state.today.plan; route();
       return JSON.stringify({ text, themes: activeThemes(REG.vocab, false).join('・'), pts, outline: !!document.querySelector('.plan-outline'), planLine: document.querySelector('.plan-line').textContent,
         note: (document.querySelector('.plan-note') || {}).textContent || '' }); })()"""
     r = json.loads(ev(b, js))
@@ -260,13 +260,13 @@ DUE = "(v) => { state.srs[v.key] = { b: 2, due: addDays(todayStr(), -1), n: 3, o
 def test_new_grammar_is_not_squeezed_out_by_a_review_backlog(b):
     js = """(() => { const due = (v, ok) => { state.srs[v.key] = { b: 2, due: addDays(todayStr(), -1), n: ok, ok, ng: 0, s: 3, d: 5, f: {}, last: addDays(todayStr(), -4) }; };
       REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 40).forEach(v => due(v, 2)); saveState();
-      const plan = dailyPlan(20); return JSON.stringify({ newG: plan.newG.length, limit: newQuota('g'), dueV: plan.dueV.length }); })()"""
+      const plan = computeDailyPlan(20); return JSON.stringify({ newG: plan.newG.length, limit: newQuota('g'), dueV: plan.dueV.length }); })()"""
     r = json.loads(ev(b, js))
     assert r['dueV'] == 40 and r['newG'] == r['limit'], r
 
 def test_grammar_slots_take_new_items_first_then_the_least_practised_reviews(b):
     js = """(() => { const due = (g, ok) => { state.srs[g.key] = { b: 2, due: addDays(todayStr(), -2 - (ok % 3)), n: ok, ok, ng: 0, s: 3, d: 5, last: addDays(todayStr(), -5) }; };
-      const gs = REG.grammar.filter(g => g.u === 'm1'); gs.slice(0, 10).forEach(g => due(g, 3)); gs.slice(10, 15).forEach(g => due(g, 1)); saveState();
+      const gs = REG.grammar.filter(g => g.u === 'm1'); gs.slice(0, 10).forEach(g => due(g, 3)); gs.slice(10, 15).forEach(g => due(g, 1)); delete state.today.plan; saveState();
       const q = dailyQueue(20); const G = q.items.filter(it => it.kind === 'g'); const all = dailyQueue(q.total).items.filter(it => it.kind === 'g');
       const fresh = G.filter(it => !state.srs[it.key]).length; const revOk = G.filter(it => state.srs[it.key]).map(it => state.srs[it.key].ok);
       return JSON.stringify({ fresh, dayFresh: all.filter(it => !state.srs[it.key]).length, revOk, limit: newQuota('g') }); })()"""
@@ -282,9 +282,9 @@ def test_topics_line_names_custom_cards_or_a_finished_day_instead_of_disappearin
       state.today.newV = 99; state.today.newG = 99;   // today's new-word and new-grammar quota already used
       for (let i = 0; i < 6; i++) { state.vocab.push({ id: 'cx' + i, w: '猫' + i, r: 'ねこ', m: '貓' + i }); }
       buildRegistry(); REG.vocab.filter(v => !v.builtin).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(todayStr(), -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, f: {}, last: addDays(todayStr(), -3) }; });
-      saveState(); const customOnly = snap();
+      delete state.today.plan; saveState(); const customOnly = snap();
       const words = dailyQueue(state.settings.sessionSize).items.filter(it => it.kind === 'v');
-      state.settings.includeImported = 'off'; saveState(); const noWords = snap();
+      state.settings.includeImported = 'off'; delete state.today.plan; saveState(); const noWords = snap();
       const words2 = dailyQueue(state.settings.sessionSize).items.filter(it => it.kind === 'v');
       return JSON.stringify({ customOnly, allCustom: words.length > 0 && words.every(it => !it.builtin), noWords, none: words2.length === 0 }); })()"""
     r = json.loads(ev(b, js))
