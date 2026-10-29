@@ -324,12 +324,12 @@ def test_new_items_spread_across_sessions(b):
       REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 60).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
       delete state.today.plan; saveState(); DAILY_CACHE = null; const q = dailyQueue(20);
       const firstNew = q.items.filter(it => !state.srs[it.key]).length;
-      location.hash = '#/today'; route(); const btn = document.querySelector('[data-act=start-daily]').textContent; const rest = (document.querySelector('.hero [data-panel=scope]') || {}).textContent || '';   // the rest-of-day line lives in the 今天的範圍 panel
+      location.hash = '#/today'; route(); const btn = document.querySelector('[data-act=start-daily]').textContent; const rest = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');   // the rest-of-day line lives in the 今天的範圍 panel
       state.srs = JSON.parse(keep); state.settings.sessionSize = size; saveState(); DAILY_CACHE = null; return JSON.stringify({ n: q.items.length, total: q.total, firstNew, btn, rest }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['n'] == 20 and r['total'] > 60 and 2 <= r['firstNew'] <= 8, r
-    assert int(re.search(r'開始練習・(\d+) 題', r['btn']).group(1)) >= 20 and f"做完還有 {r['total'] - 20} 題" in r['rest'], r   # the button adds the new words' encores
+    assert int(re.search(r'開始練習・這組 (\d+) 題', r['btn']).group(1)) == 20 and f"今天還有 {r['total']} 題" in r['rest'], r   # this set, and what is left of the day
 
 def test_done_state_and_extra_session(b):
     js = """(() => { const t = todayStr(); const keep = JSON.stringify({ srs: state.srs, today: state.today, settings: state.settings });
@@ -619,15 +619,15 @@ def test_pressing_see_results_after_the_last_question_shows_the_summary(b):
       const label = btn ? btn.textContent.trim() : null;
       let err = null; try { nextQuestion(); } catch (e) { err = String(e); }
       const v = document.querySelector('.view.active') || document.body; const title = v.querySelector('.page-title'); const ring = v.querySelector('.ring-txt');
-      const home = itemsDoneToday() + dailyPlan().remaining;
-      const m = ring && /(\\d+)\\s*\\/\\s*(\\d+)/.exec(ring.textContent.replace(/\\s+/g, ' '));
+      const home = ringPct(dayProgress());
+      const m = ring && /^(\\d+)%$/.exec(ring.textContent.replace(/\\s+/g, ''));
       SESSION = null; document.body.classList.remove('practicing');
-      return JSON.stringify({ label, err, title: title ? title.textContent : null, ring: m ? [Number(m[1]), Number(m[2])] : null, home, text: v.textContent.replace(/\\s+/g, ' ').slice(0, 300) }); })()"""
+      return JSON.stringify({ label, err, title: title ? title.textContent : null, ring: m ? Number(m[1]) : null, home, text: v.textContent.replace(/\\s+/g, ' ').slice(0, 300) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['label'] and r['label'].startswith('看結果'), r
     assert r['err'] is None and r['title'] == '完成了', r
-    assert r['ring'] and r['ring'][1] == r['home'] and r['ring'][0] >= 1, r
+    assert r['ring'] and r['ring'] == r['home'], r   # the summary ring is today's list, as a percentage
     assert '目標' not in r['text'], r
 
 def test_practice_counter_counts_the_planned_items_and_shows_extras_apart(b):
@@ -843,7 +843,7 @@ def test_hero_help_and_scope_toggles_open_one_at_a_time(b):
       tab('help'); route(); const s4 = (() => { const h = document.querySelector('.hero'); return { help: !h.querySelector('[data-panel=help]').hidden, scope: !h.querySelector('[data-panel=scope]').hidden }; })();
       const scopeText = document.querySelector('[data-panel=scope]').textContent.replace(/\\s+/g, ' '); const noteOutside = !document.querySelector('.hero-panel .plan-note');
       const outside = [...document.querySelector('.hero').children[0].children].filter(x => !x.classList.contains('hero-panel') && !x.classList.contains('hero-tabs')).map(x => x.textContent.replace(/\\s+/g, ' ').trim());
-      heroTab = null; return JSON.stringify({ s0, s1, s2, s3, s4, scopeText: /單字主題/.test(scopeText) && /待複習 \\d+/.test(scopeText) && /共 \\d+ 題/.test(scopeText) && /做完還有 \\d+ 題/.test(scopeText), noteOutside, outside }); })()"""
+      heroTab = null; return JSON.stringify({ s0, s1, s2, s3, s4, scopeText: /單字主題/.test(scopeText) && /待複習 \\d+/.test(scopeText) && /共 \\d+ 題/.test(scopeText) && !/做完還有/.test(scopeText), noteOutside, outside }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)
     r = json.loads(out[-1])
     assert r['s0'] == {'help': False, 'scope': False, 'open': []}, r['s0']

@@ -3601,8 +3601,10 @@ function buildDailyQueue(size = state.settings.sessionSize) {
   const day = interleave(reviews, fresh, 'mixed');   // proportional, so each session of the day gets its share of new items
   const L = plan.dueL.concat(plan.newL); const R = plan.dueR.concat(plan.newR).slice(0, 1);
   const total = day.length + L.length + R.length;
-  const Ls = L.slice(0, Math.min(L.length, Math.round(size * 0.2)));
-  const take = day.slice(0, Math.max(0, size - Ls.length - R.length));
+  let Ls = L.slice(0, Math.min(L.length, Math.round(size * 0.2)));
+  let take = day.slice(0, Math.max(0, size - Ls.length - R.length));
+  const rest = total - take.length - Ls.length - R.length;
+  if (rest > 0 && (rest <= 5 || rest < size / 4)) { Ls = L; take = day; }   // a small tail joins this set: no one-question second set
   const isNew = (x) => !state.srs[x.key];
   // within the session: reviews shuffled, new items after them (a new word gets its preview card first)
   const isG = (x) => x.kind === 'g' || x.kind === 'c';   // 變化練習 sits on the grammar side
@@ -4180,7 +4182,7 @@ function renderSummary(view) {
           <div class="page-title">${n ? '完成了' : '已結束'}</div>
           <div class="page-sub">${esc(s.title)}・作答 ${n} 題・正確率 ${acc}%</div>
         </div>
-        ${ringHtml(Math.min(1, prog.done / Math.max(1, prog.total)), `<b>${prog.done}</b><span class="tiny muted">/ ${prog.total}</span>`)}
+        ${ringHtml(ringPct(prog) / 100, `<b>${ringPct(prog)}%</b>`)}
       </div>
       <div class="grid grid-4 mt-4">
         <div class="stat"><span class="stat-v">${s.stats.correct}</span><span class="stat-l">答對</span></div>
@@ -4201,6 +4203,8 @@ function renderSummary(view) {
 // the 開始作答 button under a word preview or a lesson-section card (Enter also dismisses it)
 function previewGoBtn() { return '<button type="button" class="btn btn-primary" data-act="preview-go" id="btnNext">開始作答 <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button>'; }
 
+// today's ring shows a percentage, never question counts (the button and 今天做了 carry those)
+function ringPct(prog) { return prog.total ? Math.round(prog.done / prog.total * 100) : 100; }
 function ringHtml(ratio, inner, size = 96) {
   const r = 42; const c = 2 * Math.PI * r;
   return `<div class="ring" style="width:${size}px;height:${size}px"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--bg-sunken)" stroke-width="9"/><circle cx="50" cy="50" r="${r}" fill="none" stroke="${ratio >= 1 ? 'var(--ok)' : 'var(--accent)'}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - clamp(ratio, 0, 1))}"/></svg><div class="ring-txt"><div>${inner}</div></div></div>`;
@@ -4278,7 +4282,7 @@ function renderNav(active) {
   document.getElementById('sideFoot').innerHTML = `
     <div class="panel small">
       <div class="row between"><span class="muted">連續天數</span><b class="num">${st.current} 天</b></div>
-      <div class="row between"><span class="muted">今日</span><b class="num">${dayTotal(state.dailyLogs[todayStr()])} 題</b></div>
+      <div class="row between"><span class="muted">今日</span><b class="num">${itemsDoneToday()} 題</b></div>
       <div class="row between"><span class="muted">雲端</span><span id="sideSync"></span></div>
     </div>
     <button type="button" class="nav-item" data-act="toggle-furi" title="快速鍵 F">${icon('furi')}<span>振假名：${FURI_LABEL[furiState()]}</span></button>
@@ -4621,7 +4625,7 @@ let todayTab = 'practice';   // the today card's switch: 'practice' | 'mistakes'
 function renderToday(view) {
   const t = todayStr();
   finishPreIfReady();
-  const doneToday = dayTotal(state.dailyLogs[t]);
+  const doneToday = itemsDoneToday();
   const plan = dailyPlan();
   const st = streakStats();
   const cur = unitById(state.currentUnit);
@@ -4663,7 +4667,7 @@ function renderToday(view) {
         ${extraN ? `<span>另有 <b>${extraN}</b>（${extraText}）</span>` : ''}
         <span>共 <b>${plan.remaining}</b> 題</span>
       </div>
-      ${dq.total > dq.items.length ? `<div class="small muted">這一組 ${dq.items.length} 題，做完還有 ${dq.total - dq.items.length} 題，可以再練一組。</div>` : ''}`;
+`;
     heroBody = planNoteHtml(dq, plan);
   }
 
@@ -4687,7 +4691,7 @@ function renderToday(view) {
       ${needsPreTest() ? '<div class="banner mt-2"><div class="grow">先做一次入門測驗（40 題，約 6 分鐘），系統會依成績標好假名、入門單字和第 0 週句型。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="stage-test" data-stage="pre">開始</button></div></div>' : ''}
       <div class="hero hero-center">
         <div>
-          ${plan.remaining === 0 ? '<h2>今天完成了</h2>' : `<div><button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・${dq.items.length} 題</button></div>`}
+          ${plan.remaining === 0 ? '<h2>今天完成了</h2>' : `<div><button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・這組 ${dq.items.length} 題</button></div>${plan.remaining > dq.items.length ? `<div class="small muted mt-1">今天還有 ${plan.remaining} 題</div>` : ''}`}
           <div class="tiny muted hero-date">${greeting}・連續 ${st.current} 天</div>
           ${inPreStage() ? `<div class="small muted mt-1">入門：假名 ${REG.kana.filter(x => state.srs[x.key]).length}／${REG.kana.length}・單字 ${REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5' && state.srs[v.key]).length}／${REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').length}・句型 ${unitItems('m0').filter(g => state.srs[g.key]).length}／${unitItems('m0').length}</div>` : ''}
           <div class="hero-tabs">
@@ -4695,7 +4699,7 @@ function renderToday(view) {
             ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">範圍</button>` : ''}
             ${inPreStage() ? '' : `<button type="button" class="hero-tab${heroTab === 'unit' ? ' open' : ''}" data-act="hero-tab" data-tab="unit" aria-expanded="${heroTab === 'unit'}">目前單元</button>`}
           </div>
-          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>每一題都是今天到期的複習或今天的新內容；答錯的幾題後再練一次，之後第 1、3、7 天各複習一次，三次都對才離開錯題本。答對的越熟出現得越少。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
+          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>今天的題目在第一次打開時排好，當天不會變；中途解鎖的新內容明天才排進來。每一題都是今天到期的複習或今天的新內容；答錯的幾題後再練一次，之後第 1、3、7 天各複習一次，三次都對才離開錯題本。答對的越熟出現得越少。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
           ${plan.remaining ? `<div class="hero-panel" data-panel="scope" ${heroTab === 'scope' ? '' : 'hidden'}>${scopeHtml}</div>` : ''}
           <div class="hero-panel" data-panel="unit" ${heroTab === 'unit' && !inPreStage() ? '' : 'hidden'}>
             <div class="row between mb-2"><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div><span class="chip">${esc(cur.lv)}</span></div>
@@ -4709,7 +4713,7 @@ function renderToday(view) {
           </div>
           ${heroBody}
         </div>
-        ${ringHtml(prog.done / Math.max(1, prog.total), `<b>${prog.done}</b><div class="tiny muted">/ ${prog.total} 題</div>`, 110)}
+        ${ringHtml(ringPct(prog) / 100, `<b>${ringPct(prog)}%</b>`, 110)}
       </div>`;
   const playerHtml = `
       <div class="listen-head">

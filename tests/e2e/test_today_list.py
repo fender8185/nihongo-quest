@@ -130,6 +130,37 @@ def test_missing_keys_are_skipped(b):
     r = json.loads(ev(b, js))
     assert r['after'] == r['n'] and r['has'] is False and r['remaining'] == r['n'], r
 
+# ---- Task 3: 今日頁的圓圈、按鈕與數字 ----
+# replaces today's list with the first n unseen built-in N5 words
+ONLY_WORDS = """const onlyWords = (n) => { dailyPlan(); const ws = REG.vocab.filter(v => v.builtin && v.lv === 'N5' && !state.srs[v.key]).slice(0, n).map(v => v.key);
+  PLAN_LISTS.forEach(k => { state.today.plan.lists[k] = []; }); state.today.plan.lists.kept = []; state.today.plan.lists.newV = ws; saveState(); DAILY_CACHE = null; return ws; };"""
+
+def test_ring_shows_a_percentage_only(b):
+    js = "(() => { " + FRESH + """ location.hash = '#/today'; route(); const ring = document.querySelector('.today-card .ring-txt');
+      startSession('daily', { size: 5 }); """ + PLAY + """; location.hash = '#/today'; route(); const ring2 = document.querySelector('.today-card .ring-txt'); const p = dayProgress();
+      return JSON.stringify({ t1: ring.textContent.replace(/\\s+/g, ''), t2: ring2.textContent.replace(/\\s+/g, ''), pct: Math.round(p.done / p.total * 100) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['t1'] == '0%' and r['t2'] == f"{r['pct']}%" and 0 < r['pct'] < 100, r
+
+def test_small_tail_joins_the_set(b):
+    js = "(() => { " + FRESH + ONLY_WORDS + """ onlyWords(21); const n21 = dailyQueue(20).items.length;
+      onlyWords(26); const n26 = dailyQueue(20).items.length; location.hash = '#/today'; route();
+      const btn = document.querySelector('[data-act=start-daily]').textContent.replace(/\\s+/g, ' '); const hero = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');
+      return JSON.stringify({ n21, n26, btn, rest: hero.includes('今天還有 26 題') }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['n21'] == 21 and r['n26'] == 20, r
+    assert '開始練習・這組 20 題' in r['btn'] and r['rest'], r
+
+def test_finished_day_and_sidebar_show_answered_items(b):
+    js = "(() => { " + FRESH + ONLY_WORDS + """ const ws = onlyWords(3); ws.forEach(k => srsAnswer(k, true));
+      srsAnswer(REG.vocab.find(v => v.builtin && v.lv === 'N5' && !state.srs[v.key]).key, true); saveState(); location.hash = '#/today'; route();
+      const hero = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');
+      const side = [...document.querySelectorAll('#sideFoot .row')].find(r => r.textContent.includes('今日')).querySelector('b').textContent.trim();
+      return JSON.stringify({ did: (hero.match(/今天做了 (\\d+) 題/) || [])[1] || null, side, done: /今天完成了/.test(hero) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['done'] and r['did'] == '4', r
+    assert r['side'] == '4 題', r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
