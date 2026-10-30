@@ -1556,12 +1556,13 @@ const RELEARN_GAPS = [2, 4];
 const RELEARN_KINDS = /^[vgkca]:/;
 const LR_GAPS = [30, 90, 180];   // 聽力／閱讀 answered right the 1st, 2nd, 3rd+ time: days until it is asked again
 const LR_MISS_GAP = 7;           // 聽力／閱讀 answered wrong: back after a week, not the next day
-// 1.0.20 tiers: up to three stars follow FSRS due dates (at RETENTION; at most SRS_DAILY_CAP a day, the oldest first);
-// four stars, five stars and the notebook are queues that give a fixed share a day, the longest-waiting first (at least
-// QUEUE_MIN, at most QUEUE_MAX, none when empty). New items a day: NEW_STEPS by the last RECENT_MAX answers, minus one per
-// ten notebook entries.
+// 1.0.20 tiers: up to three stars follow FSRS due dates (at RETENTION; at most SRS_DAILY_CAP a day, the oldest first), and
+// the missed items on the 1/3/7 ladder come on their days on top of that cap (1.0.21; the notebook was a queue of its own
+// before); four and five stars are queues that give a fixed share a day, the longest-waiting first (at least QUEUE_MIN, at
+// most QUEUE_MAX, none when empty). New items a day: NEW_STEPS by the last RECENT_MAX answers, minus one per ten notebook
+// entries.
 const SRS_DAILY_CAP = 50;
-const QUEUE_RATE = { q4: 0.05, q5: 0.03, mk: 0.10 };
+const QUEUE_RATE = { q4: 0.05, q5: 0.03 };
 const QUEUE_MIN = 1;
 const QUEUE_MAX = 30;
 const LISTEN_PER_DAY = 3;
@@ -3594,25 +3595,17 @@ function computeDailyPlan(size = state.settings.sessionSize) {
   const k4 = n5KanjiLeft() === 0;
   const scope = REG.vocab.filter(v => (pre ? state.srs[v.key] && vocabEligibleMain(v, n4Open) : vocabEligibleForDaily(v, n4Open)))
     .concat(REG.grammar.filter(g => grammarInReach(g, curIdx)), REG.kanji.filter(k => k.lv !== 'N4' || k4), REG.kana, cPool);
-  // up to three stars: due by FSRS, the most overdue first, at most SRS_DAILY_CAP a day (the rest come the next days)
-  const due = scope.filter(x => isDueToday(x, t)).sort(byDue).slice(0, SRS_DAILY_CAP);
+  // up to three stars: due by FSRS, the most overdue first, at most SRS_DAILY_CAP a day (the rest come the next days); the
+  // missed items on the 1/3/7 ladder due today all come on top of the cap (inside it they crowd out the other reviews)
+  const dueAll = scope.filter(x => isDueToday(x, t)).sort(byDue);
+  const due = dueAll.filter(x => onLadder(x.key)).concat(dueAll.filter(x => !onLadder(x.key)).slice(0, SRS_DAILY_CAP));
   const ofKind = (kind) => due.filter(x => x.kind === kind);
-  // four stars, five stars and the notebook: queues giving a fixed share a day, the longest-waiting first. Four and five
-  // stars touched today (answered, marked by a stage pass or the 入門 questions, 我會了) wait until tomorrow, as isDueToday
+  // four and five stars: queues giving a fixed share a day, the longest-waiting first. Four and five stars touched today (answered, marked by a stage pass or the 入門 questions, 我會了) wait until tomorrow, as isDueToday
   // does for the due ones, so a list made again the same day (a stage switch) does not draw what was just marked
   const share = (len, rate) => (len ? clamp(Math.round(len * rate), QUEUE_MIN, QUEUE_MAX) : 0);
   const byLast = (a, b) => String(state.srs[a.key].last || '').localeCompare(String(state.srs[b.key].last || ''));
   const queue = (tier) => { const q = scope.filter(x => tierOf(x.key) === tier && !answeredToday(x.key) && state.srs[x.key].last !== t).sort(byLast); return q.slice(0, share(q.length, QUEUE_RATE[tier])); };
   const q4 = queue('q4'); const q5 = queue('q5');
-  // a notebook entry tied to the course comes as that item; a hand-made one (or one whose item is gone) as its card,
-  // listed as 'm:<id>' — only a card that can be made (it needs three other answers for its options). Missed listening and
-  // reading stay in the notebook but are not drawn: they come back on their own dates (LR_MISS_GAP, the 3-a-day listening)
-  const act = activeMistakes();
-  const taken = new Set(due.concat(q4, q5).map(x => x.key));
-  const mk = act.slice().sort((a, b) => String(mistakeLast(a)).localeCompare(String(mistakeLast(b))))
-    .map(m => (m.key && REG.byKey.get(m.key)) || { key: 'm:' + m.id, kind: 'm', mistake: m })
-    .filter(x => { if (tierOf(x.key) === null || taken.has(x.key) || answeredToday(x.key)) return false; taken.add(x.key); return x.kind !== 'm' || Boolean(makeMistakeCard(x.mistake)); })
-    .slice(0, share(act.length, QUEUE_RATE.mk));
   // new items: today's count by how the recent answers went and the notebook, shared by what each bank has left;
   // what was already introduced today (before this list was made) counts against it
   const nc = newCountToday();
@@ -3622,7 +3615,7 @@ function computeDailyPlan(size = state.settings.sessionSize) {
   const newC = pre || (state.today.newC || 0) >= 1 ? [] : cPool.filter(d => !state.srs[d.key]).sort((a, b) => unitOrder(a.u) - unitOrder(b.u)).slice(0, 1);
   const note = nc.n < nc.base || nc.base < NEW_DEFAULT
     ? `${nc.acc !== null ? `最近 100 題正確率 ${Math.round(nc.acc * 100)}%、` : ''}錯題本 ${nc.mistakes} 條，今天新內容 ${nc.n} 題。` : '';
-  const plan = Object.assign({ dueV: ofKind('v'), dueG: ofKind('g'), dueK: ofKind('k'), dueA: ofKind('a'), dueC: ofKind('c'), q4, q5, mk,
+  const plan = Object.assign({ dueV: ofKind('v'), dueG: ofKind('g'), dueK: ofKind('k'), dueA: ofKind('a'), dueC: ofKind('c'), q4, q5,
     newV: fresh.v, newG: fresh.g, newK: fresh.k, newA: fresh.a, newC }, extrasPlan(curIdx));
   plan.remaining = PLAN_LISTS.reduce((sum, n) => sum + plan[n].length, 0);
   plan.relearnN = plan.dueV.concat(plan.dueG).filter(x => onLadder(x.key)).length;   // reviews that are missed items on the ladder (shown as 其中錯題)
@@ -3633,7 +3626,7 @@ function computeDailyPlan(size = state.settings.sessionSize) {
 // (入門 ↔ 正課) — and kept as keys in state.today.plan. Every later call rebuilds it from those keys minus what was answered
 // today, so the day's total never moves: a bulk mark, 我會了 or 前往下一單元 changes tomorrow's list, not today's (and
 // does not eat today's listening and reading). Items answered before a rebuild stay in it as `kept`.
-const PLAN_LISTS = ['dueV', 'dueG', 'dueC', 'dueK', 'dueL', 'dueR', 'dueA', 'q4', 'q5', 'mk', 'newV', 'newG', 'newC', 'newK', 'newL', 'newR', 'newA'];
+const PLAN_LISTS = ['dueV', 'dueG', 'dueC', 'dueK', 'dueL', 'dueR', 'dueA', 'q4', 'q5', 'newV', 'newG', 'newC', 'newK', 'newL', 'newR', 'newA'];
 function planListKeys(plan) { return [...new Set(PLAN_LISTS.concat('kept').flatMap(n => plan.lists[n] || []))]; }
 function makeTodayPlan(size) {
   const old = state.today.plan;
@@ -3659,7 +3652,7 @@ function dailyPlan(size = state.settings.sessionSize) {
   const p = state.today.plan;
   const out = { note: p.note, n4Open: p.n4Open, n: p.n, split: p.split, size };
   let remaining = 0;
-  PLAN_LISTS.forEach(n => { out[n] = (p.lists[n] || []).map(planItem).filter(x => x && !answeredToday(x.key)); remaining += out[n].length; });
+  PLAN_LISTS.forEach(n => { out[n] = (p.lists[n] || []).map(k => REG.byKey.get(k)).filter(x => x && !answeredToday(x.key)); remaining += out[n].length; });
   out.relearnN = out.dueV.concat(out.dueG).filter(x => onLadder(x.key)).length;
   out.remaining = remaining;
   return out;
@@ -3667,17 +3660,11 @@ function dailyPlan(size = state.settings.sessionSize) {
 // what is left of today's new items of one kind for the other ways in (字卡, unit and word practice, the kanji page):
 // the day's share for that kind less what was introduced today
 function todayNewLeft(kind) { return Math.max(0, ((dailyPlan().split || {})[kind] || 0) - (state.today['new' + kind.toUpperCase()] || 0)); }
-// a key on today's list as something to practise: 'm:<id>' is a notebook card while it is still in the notebook
-function planItem(k) {
-  if (!k.startsWith('m:')) return REG.byKey.get(k);
-  const m = state.mistakes.find(x => 'm:' + x.id === k && !x.mastered);
-  return m ? { key: k, kind: 'm', mistake: m } : undefined;
-}
-// every key on today's list, answered or not (an item hidden or deleted since is left out, and so is a notebook card
-// that left the notebook unanswered; one answered today stays done even once it leaves)
+// every key on today's list, answered or not (an item hidden or deleted since is left out, and so is a notebook card a
+// 1.0.20 list held: since 1.0.21 the notebook's own cards are practised on its page)
 function todayPlanKeys() {
   dailyPlan();
-  return planListKeys(state.today.plan).filter(k => (k.startsWith('m:') ? answeredToday(k) || Boolean(planItem(k)) : REG.byKey.has(k)));
+  return planListKeys(state.today.plan).filter(k => REG.byKey.has(k));
 }
 
 function interleave(vList, gList, mode) {
@@ -3700,7 +3687,7 @@ function buildDailyQueue(size = state.settings.sessionSize) {
   const byPractice = (a, b) => ((state.srs[a.key].ok || 0) - (state.srs[b.key].ok || 0)) || byDue(a, b);
   const ladderFirst = (list) => list.filter(x => onLadder(x.key)).concat(list.filter(x => !onLadder(x.key)));   // missed items are the weakest: first
   const isG = (x) => x.kind === 'g' || x.kind === 'c';   // 變化練習 sits on the grammar side
-  const queued = plan.q4.concat(plan.q5, plan.mk);   // four stars, five stars and the notebook join the reviews (notebook cards on the word side)
+  const queued = plan.q4.concat(plan.q5);   // four and five stars join the reviews
   const reviews = interleave(ladderFirst(plan.dueV.concat(plan.dueK, plan.dueA || []).sort(byDue)).concat(queued.filter(x => !isG(x))), ladderFirst(plan.dueG.slice().sort(byPractice)).concat(plan.dueC || [], queued.filter(isG)), 'mixed');
   const fresh = interleave((plan.newA || []).concat(plan.newV, plan.newK), plan.newG.concat(plan.newC || []), 'mixed');
   const day = interleave(reviews, fresh, 'mixed');   // proportional, so each session of the day gets its share of new items
@@ -3710,7 +3697,7 @@ function buildDailyQueue(size = state.settings.sessionSize) {
   let take = day.slice(0, Math.max(0, size - Ls.length - R.length));
   const rest = total - take.length - Ls.length - R.length;
   if (rest > 0 && (rest <= 5 || rest < size / 4)) { Ls = L; take = day; }   // a small tail joins this set: no one-question second set
-  const isNew = (x) => x.kind !== 'm' && !state.srs[x.key];
+  const isNew = (x) => !state.srs[x.key];
   // within the session: reviews shuffled, new items after them (a new word gets its preview card first)
   const vList = ladderFirst(shuffle(take.filter(x => !isG(x) && !isNew(x)))).concat(take.filter(x => !isG(x) && isNew(x)));
   const gList = ladderFirst(shuffle(take.filter(x => isG(x) && !isNew(x)))).concat(take.filter(x => isG(x) && isNew(x)));
@@ -3741,8 +3728,8 @@ function dailyQueue(size = state.settings.sessionSize) {
   const key = `${todayStr()}|${state.updatedAt}|${stateRev}|${size}|${state.currentUnit}|${speechAvailable() ? 1 : 0}`;
   if (DAILY_CACHE && DAILY_CACHE.key === key) return DAILY_CACHE.r;
   const r = buildDailyQueue(size);
-  r.items = r.items.filter(it => (it.kind === 'm' ? makeMistakeCard(it.mistake) : makeQuestion(it, {})));   // an item that cannot become a question would be dropped silently later
-  const isNew = (x) => x.kind !== 'm' && !state.srs[x.key];
+  r.items = r.items.filter(it => makeQuestion(it, {}));   // an item that cannot become a question would be dropped silently later
+  const isNew = (x) => !state.srs[x.key];
   r.newCount = r.items.filter(isNew).length; r.reviewCount = r.items.length - r.newCount;
   DAILY_CACHE = { key, r };
   return r;
@@ -3799,7 +3786,7 @@ function startSession(mode, opt = {}) {
     const size = opt.size || state.settings.sessionSize;
     if (!opt.extra && dailyPlan(size).remaining === 0) opt = Object.assign({}, opt, { extra: true });   // the day is done (e.g. 再練一組 on the summary): offer the 加練 set
     const r = opt.extra ? extraQueue() : dailyQueue(size);
-    entries = r.items.map(item => (item.kind === 'm' ? { mistake: item.mistake } : { item }));
+    entries = r.items.map(item => ({ item }));
     meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: opt.extra ? extraNote(r) : (r.plan.note || '') };
   } else if (mode === 'unit') {
     const uq = buildUnitQueue(opt.unit, opt.size || 15);
@@ -4732,7 +4719,7 @@ function renderToday(view) {
   const pace = examPace();
   const vs = vocabStats();
   const mk = activeMistakes();
-  const reviewN = plan.dueV.length + plan.dueG.length + (plan.dueC || []).length + plan.q4.length + plan.q5.length + plan.mk.length;
+  const reviewN = plan.dueV.length + plan.dueG.length + (plan.dueC || []).length + plan.q4.length + plan.q5.length;
   const newN = plan.newV.length + plan.newG.length + (plan.newC || []).length;
   const exK = plan.dueK.length + plan.newK.length;
   const exL = Math.min(plan.dueL.length + plan.newL.length, LISTEN_PER_DAY);
@@ -4761,7 +4748,7 @@ function renderToday(view) {
     // the counts live in the 今天的範圍 panel (scopeHtml below); the card itself shows only the button when everything is folded
     scopeHtml = `${sessionTopicsHtml(dq, plan)}
       <div class="plan-line">
-        <span>待複習 <b>${reviewN}</b>（單字 ${plan.dueV.length}・文法 ${plan.dueG.length}${plan.dueC && plan.dueC.length ? `・變化 ${plan.dueC.length}` : ''}${[['四顆', plan.q4], ['五顆', plan.q5], ['錯題本', plan.mk]].map(([name, l]) => (l.length ? `・${name} ${l.length}` : '')).join('')}${plan.relearnN ? `・其中錯題 ${plan.relearnN}` : ''}）</span>
+        <span>待複習 <b>${reviewN}</b>（單字 ${plan.dueV.length}・文法 ${plan.dueG.length}${plan.dueC && plan.dueC.length ? `・變化 ${plan.dueC.length}` : ''}${[['四顆', plan.q4], ['五顆', plan.q5]].map(([name, l]) => (l.length ? `・${name} ${l.length}` : '')).join('')}${plan.relearnN ? `・其中錯題 ${plan.relearnN}` : ''}）</span>
         <span>新內容 <b>${newN}</b>（單字 ${plan.newV.length}・文法 ${plan.newG.length}${plan.newC && plan.newC.length ? `・變化 ${plan.newC.length}` : ''}）</span>
         ${extraN ? `<span>另有 <b>${extraN}</b>（${extraText}）</span>` : ''}
         <span>共 <b>${plan.remaining}</b> 題</span>
@@ -4798,7 +4785,7 @@ function renderToday(view) {
             ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">範圍</button>` : ''}
             ${inPreStage() ? '' : `<button type="button" class="hero-tab${heroTab === 'unit' ? ' open' : ''}" data-act="hero-tab" data-tab="unit" aria-expanded="${heroTab === 'unit'}">目前單元</button>`}
           </div>
-          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>今天的題目在第一次打開時排好，當天不會變；中途解鎖的新內容明天才排進來。三顆以下照記憶強度排複習，每天最多 50 題；四顆每天出 5%、五顆每天出 3%、錯題本每天出 10%（各最少 1 題、最多 30 題），都是等最久的先出。新題數看最近 100 題的正確率和錯題本，照還沒學的比例分給單字、文法、漢字。答錯的幾題後再練一次，之後第 1、3、7 天各複習一次，三次都對才離開錯題本。做完還想多學可以按加練，一輪只出新內容，題數等於今天的新題數，不出複習。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
+          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>今天的題目在第一次打開時排好，當天不會變；中途解鎖的新內容明天才排進來。三顆以下照記憶強度排複習，每天最多 50 題；答錯的題目幾題後再練一次，之後第 1、3、7 天各複習一次（不算在 50 題內），三次都對才離開錯題本。四顆每天出 5%、五顆每天出 3%（各最少 1 題、最多 30 題），等最久的先出。新題數看最近 100 題的正確率和錯題本，照還沒學的比例分給單字、文法、漢字。做完還想多學可以按加練，一輪只出新內容，題數等於今天的新題數，不出複習。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
           ${plan.remaining ? `<div class="hero-panel" data-panel="scope" ${heroTab === 'scope' ? '' : 'hidden'}>${scopeHtml}</div>` : ''}
           <div class="hero-panel" data-panel="unit" ${heroTab === 'unit' && !inPreStage() ? '' : 'hidden'}>
             <div class="row between mb-2"><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div><span class="chip">${esc(cur.lv)}</span></div>

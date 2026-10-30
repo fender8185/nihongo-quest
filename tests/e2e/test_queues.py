@@ -110,11 +110,9 @@ def test_queue_draws_follow_the_rates_and_caps(b):
       plant(700, 4); out.q700 = computeDailyPlan().q4.length;
       plant(1, 4); out.q1 = computeDailyPlan().q4.length;
       plant(100, 6); out.q5 = computeDailyPlan().q5.length;
-      state.srs = {}; state.mistakes = Array.from({ length: 25 }, (_, i) => ({ id: 'mk' + i, key: '', cat: '自訂', prompt: 'テスト' + i, answer: '答' + i, wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: addDays(t, -(i + 1)) }));
-      const mk = computeDailyPlan().mk; out.mk = mk.length; out.mkOld = mk.map(x => x.key).join() === ['mk24', 'mk23', 'mk22'].map(id => 'm:' + id).join();
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'q40': 2, 'oldest': True, 'q700': 30, 'q1': 1, 'q5': 3, 'mk': 3, 'mkOld': True}, r
+    assert r == {'q40': 2, 'oldest': True, 'q700': 30, 'q1': 1, 'q5': 3}, r
 
 def test_srs_dues_are_capped_at_fifty_oldest_first(b):
     js = "(() => { " + FRESH + REC + """ state.srs = {}; const ws = words.slice(0, 80);
@@ -123,6 +121,19 @@ def test_srs_dues_are_capped_at_fifty_oldest_first(b):
       return JSON.stringify({ n: due.length, oldest: due.join() === ws.slice(30).map(v => v.key).sort().join() }); })()"""
     r = json.loads(ev(b, js))
     assert r == {'n': 50, 'oldest': True}, r
+
+# 1.0.21: the missed items on the 1/3/7 ladder due today all come, on top of the 50 other reviews (the 50 oldest); a day
+# with many of them still starts with a set of the usual size
+def test_ladder_dues_come_on_top_of_the_fifty(b):
+    js = "(() => { " + FRESH + REC + """ state.srs = {}; const ws = words.slice(0, 80), lad = words.slice(80, 90);
+      ws.forEach((v, i) => { state.srs[v.key] = rec(2, { due: addDays(t, -(i + 1)), last: addDays(t, -(i + 4)) }); });   // due 1…80 days ago
+      lad.forEach(v => { state.srs[v.key] = rec(1, { rl: 1, due: t, last: addDays(t, -2) }); });
+      const p = computeDailyPlan(); const due = [].concat(p.dueV, p.dueG, p.dueK, p.dueA, p.dueC).map(x => x.key);
+      const rest = due.filter(k => !lad.some(v => v.key === k)).sort();
+      delete state.today.plan; DAILY_CACHE = null;
+      return JSON.stringify({ n: due.length, ladder: lad.filter(v => due.includes(v.key)).length, oldest: rest.join() === ws.slice(30).map(v => v.key).sort().join(), session: dailyQueue(20).items.length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'n': 60, 'ladder': 10, 'oldest': True, 'session': 20}, r
 
 def test_new_items_and_drills_follow_the_rule(b):
     js = "(() => { " + FRESH + """ state.recent = Array.from({ length: 100 }, (_, i) => (i < 95 ? 1 : 0)); state.mistakes = [];
@@ -134,22 +145,43 @@ def test_new_items_and_drills_follow_the_rule(b):
 
 # four hand-made notebook cards of one category (a card needs three other answers for its options); mk_t3 waited longest
 HANDMADE = """state.mistakes = ['測試', '學習', '日本', '語言'].map((a, i) => ({ id: 'mk_t' + i, key: '', cat: '自訂', prompt: 'テスト' + i, answer: a, wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: addDays(todayStr(), -(i + 1)) }));"""
-# answers the notebook card of today's daily set; returns what the list and the ring say
-ANSWER_CARD = """delete state.today.plan; DAILY_CACHE = null; dailyPlan(); const mk = state.today.plan.lists.mk.slice(); const before = dayProgress();
-      startSession('daily', { size: 60 }); const i = SESSION.entries.findIndex(e => e.mistake); SESSION.idx = Math.max(0, i); prepareEntry(SESSION.idx);
-      const q = currentEntry().q; answerCurrent(q.answer); const out = { mk, card: i >= 0, kind: q.kind, answered: answeredToday(mk[0]), done: dayProgress().done - before.done };
-      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out);"""
-
-def test_handmade_mistakes_come_as_cards_in_the_daily_set(b):
-    js = "(() => { " + FRESH + HANDMADE + ANSWER_CARD + " })()"
+# 1.0.21: there is no notebook queue any more: no `mk` list, no hand-made cards on today's list, and a notebook item whose
+# ladder day is tomorrow waits for it
+def test_the_daily_list_has_no_notebook_queue(b):
+    js = "(() => { " + FRESH + REC + HANDMADE + """ const w = words[0];
+      state.srs = {}; state.srs[w.key] = rec(1, { rl: 1, due: addDays(t, 1), last: addDays(t, -1) });
+      state.mistakes.push({ id: 'mk_w', key: w.key, cat: '單字', prompt: 'p', answer: 'a', wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: addDays(t, -30) });
+      const p = computeDailyPlan(); delete state.today.plan; DAILY_CACHE = null; dailyPlan(); const keys = Object.values(state.today.plan.lists).flat();
+      return JSON.stringify({ mk: 'mk' in p, lists: PLAN_LISTS.includes('mk'), cards: keys.filter(k => k.startsWith('m:')).length, early: keys.includes(w.key) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['mk'] == ['m:mk_t3'] and r['card'] and r['kind'] == 'm', r
-    assert r['answered'] is True and r['done'] == 1, r
+    assert r == {'mk': False, 'lists': False, 'cards': 0, 'early': False}, r
 
-def test_a_notebook_card_whose_item_is_gone_still_counts(b):
-    js = "(() => { " + FRESH + HANDMADE + " state.mistakes[3].key = 'v:no-such-word'; " + ANSWER_CARD + " })()"
+# a hand-made notebook card answered on the notebook page counts in 今天做了, as it did from the daily list (B13)
+def test_a_handmade_card_answered_in_the_notebook_counts_today(b):
+    js = "(() => { " + FRESH + HANDMADE + """ const before = itemsDoneToday();
+      startSession('mistakes'); const q = currentEntry().q; answerCurrent(q.answer);
+      const out = { answered: answeredToday('m:' + q.mistakeId), more: itemsDoneToday() - before };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['mk'] == ['m:mk_t3'] and r['card'] and r['answered'] is True and r['done'] == 1, r
+    assert r == {'answered': True, 'more': 1}, r
+
+# the day 1.0.21 arrives, today's list may have been made by 1.0.20 with notebook items in it (lists.mk, an answered card
+# kept): it still loads, those are left out, and the ring counts the rest
+def test_a_1_0_20_plan_with_notebook_cards_still_loads(b):
+    js = "(() => { " + FRESH + REC + HANDMADE + """ let error = null; const out = {};
+      try {
+        delete state.today.plan; DAILY_CACHE = null; const p = computeDailyPlan(); const lists = {};
+        PLAN_LISTS.filter(n => n !== 'mk').forEach(n => { lists[n] = (p[n] || []).map(x => x.key); });
+        const listed = new Set(Object.values(lists).flat()); const extra = words.find(v => !listed.has(v.key));
+        lists.mk = ['m:mk_t3', extra.key]; lists.kept = ['m:mk_t3'];
+        state.today.plan = { lists, note: '', n4Open: p.n4Open, n: p.n, split: p.split, stage: state.stage, start: Boolean(state.startChosen), listenOn: speechAvailable() };
+        const d = dailyPlan(); const got = Object.keys(d).filter(n => Array.isArray(d[n])).flatMap(n => d[n].map(x => x.key));
+        out.mkGone = !got.includes(extra.key) && !got.some(k => k.startsWith('m:')); out.withoutMk = listed.size;
+        out.total = dayProgress().total; renderToday(document.getElementById('view'));
+      } catch (e) { error = String(e); }
+      return JSON.stringify(Object.assign(out, { error })); })()"""
+    r = json.loads(ev(b, js))
+    assert r['error'] is None and r['mkGone'] and r['total'] == r['withoutMk'], r
 
 def test_the_plan_keeps_its_queues_all_day(b):
     js = "(() => { " + FRESH + REC + """ state.srs = {}; words.slice(0, 40).forEach((v, i) => { state.srs[v.key] = rec(4, { last: addDays(t, -(i + 1)) }); });
@@ -199,20 +231,11 @@ def test_today_help_describes_the_tiers(b):
     js = "(() => { " + FRESH + """ location.hash = '#/today'; route(); const help = document.querySelector('.hero-panel[data-panel=help]');
       return help ? help.textContent : ''; })()"""
     text = ev(b, js)
-    assert all(s in text for s in ['每天最多 50 題', '四顆每天出 5%', '五顆每天出 3%', '錯題本每天出 10%', '最近 100 題']), text
+    assert all(s in text for s in ['每天最多 50 題', '四顆每天出 5%', '五顆每天出 3%', '不算在 50 題內', '最近 100 題']) and '錯題本每天出' not in text, text
     # 1.0.20: 加練 is a round of new items only, as many as today's new count, no reviews
     assert all(s in text for s in ['加練', '只出新內容', '等於今天的新題數', '不出複習']), text
 
 # ---- 1.0.19 審查修正（Tasks 1–4） ----
-# I1: a missed dialogue or passage stays in the notebook but its queue never draws it (it keeps its own week-later date)
-def test_the_notebook_queue_skips_listening_and_reading(b):
-    js = "(() => { " + FRESH + HANDMADE + """ const t = todayStr();
-      const entry = (id, key, days) => ({ id, key, cat: '聽力', prompt: 'p' + id, answer: 'a', wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: addDays(t, -days) });
-      state.mistakes.push(entry('mk_l', REG.listen[0].key, 31), entry('mk_r', REG.read[0].key, 30));   // waited longest: drawn first if allowed
-      return JSON.stringify(computeDailyPlan().mk.map(x => x.key)); })()"""
-    r = json.loads(ev(b, js))
-    assert r == ['m:mk_t3'], r
-
 # I2 (1.0.20: 加練 gives new items only, no reviews ahead): four and five stars, whatever date they carry, and a three-star-or-below
 # item due tomorrow all stay out of it; they come in their queues and on their dates
 def test_extra_practice_leaves_four_and_five_stars_to_their_queues(b):
@@ -279,18 +302,19 @@ def test_an_early_right_answer_leaves_the_relearn_ladder_alone(b):
     r = json.loads(ev(b, js))
     assert r == {'early': {'rl': 1, 'due': True, 'mastered': False}, 'onDay': {'rl': 2, 'due': True}}, r
 
-# I6: so a ladder item drawn before its day (most notebook-queue draws) says it is extra practice, not a ladder step
+# I6: a ladder item answered before its day (a flashcard, unit practice, the notebook page) says it is extra practice, not
+# a ladder step; since 1.0.21 the daily list never holds one early
 def test_an_early_ladder_item_is_labelled_extra_practice(b):
     js = "(() => { " + FRESH + REC + """ state.srs = {}; const [early, onDay] = words.slice(0, 2);
       state.srs[early.key] = rec(1, { rl: 1, due: addDays(t, 2), last: addDays(t, -1) }); state.srs[onDay.key] = rec(1, { rl: 1, due: t, last: addDays(t, -2) });
       state.mistakes = [early, onDay].map((v, i) => ({ id: 'mk_' + i, key: v.key, cat: '單字', prompt: 'p' + i, answer: 'a', wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: addDays(t, -3) }));
-      delete state.today.plan; DAILY_CACHE = null; const p = dailyPlan();
-      startSession('daily', { size: 60 });
+      delete state.today.plan; DAILY_CACHE = null; const p = dailyPlan(); const inDaily = PLAN_LISTS.some(n => (p[n] || []).some(x => x.key === early.key));
+      startSession('items', { items: [early, onDay] });
       const label = (v) => { const i = SESSION.entries.findIndex(e => e.item && e.item.key === v.key); if (i < 0) return null; SESSION.idx = i; prepareEntry(i); renderPractice(); return document.querySelector('.q-label').textContent; };
-      const out = { inMk: p.mk.map(x => x.key).includes(early.key), early: label(early), onDay: label(onDay) };
+      const out = { inDaily, early: label(early), onDay: label(onDay) };
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['inMk'] and '額外練習' in r['early'] and '錯題複習' not in r['early'] and '錯題複習 2/3' in r['onDay'], r
+    assert not r['inDaily'] and '額外練習' in r['early'] and '錯題複習' not in r['early'] and '錯題複習 2/3' in r['onDay'], r
 
 # I7: an 入門 item graded 模糊 (hard) at five stars stays; only a clear right answer moves it out
 def test_a_fuzzy_flashcard_keeps_a_pre_item(b):
