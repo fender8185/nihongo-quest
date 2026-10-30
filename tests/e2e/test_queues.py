@@ -480,10 +480,21 @@ def test_the_1_0_19_changelog_no_longer_describes_the_mark_dialog(b):
 
 # 1.0.20's entry says what a pass does with the test's misses: they are not set to four stars, grammar and kana never met
 # come up for review from the next day, and the notebook's are left as they are
+# (1.0.21 took the 入門 four questions away, so the item about them and the aside 「入門四題選四顆也一樣」 went, by the same rule)
 def test_the_1_0_20_changelog_says_what_a_pass_does_with_the_tests_misses(b):
     items = json.loads(ev(b, "JSON.stringify(CHANGELOG.find(x => x.v === '1.0.20').items)"))
-    assert len(items) == 3 and '這次答錯的和錯題本裡的題目不動' not in items[1], items
+    assert len(items) == 2 and not any('入門四題' in x for x in items) and '這次答錯的和錯題本裡的題目不動' not in items[1], items
     assert all(s in items[1] for s in ['這次答錯的題目不設四顆', '還沒學過的文法和假名從隔天起排進複習', '錯題本裡的題目不動']), items[1]
+
+# 1.0.21's entry: the three points of the rule-cuts spec §10.2, word for word
+SPEC_ITEMS = [
+    '錯題本不再每天另外抽 10%：答錯的題目照第 1、3、7 天回來，不算在三顆以下每天 50 題裡；手動新增的錯題卡在錯題本頁練。四顆答對不再直接升五顆，照記憶強度算（等了一陣子才答對的大多會升）。複習的目標記憶率固定 90%，不再看複習正確率調整。',
+    '入門測驗通過跟其他階段測驗一樣：入門還不到四顆的題目設成四顆（這次答錯的和錯題本裡的不設），進入第 1 週，結果頁有「復原」，不再問四題。通過階段測驗不再改聽力、閱讀，它們照自己的節奏出。舊帳號的「先做一次入門測驗」提示拿掉了，要考可以到課程頁入門卡按「階段測驗」。',
+    '單字要五顆、而且假名拼字答對過，才算「已熟練」（按「我會了」或測驗設的也一樣；沒有拼字題的字五顆就算）；四顆以上、還沒拼對過的字，練習時會出拼字。文法、假名、漢字五顆就算已熟練，以前批次標記過的也一樣。'
+]
+def test_the_1_0_21_changelog_lists_the_cuts(b):
+    first = json.loads(ev(b, "JSON.stringify(CHANGELOG[0])"))
+    assert first['v'] == '1.0.21' and first['items'] == SPEC_ITEMS, first
 
 # a mark gives a new record the format history `f` only for a word (a word's 假名拼字 counts toward 已熟練, see
 # srsLevelLabel): grammar a pass set to four stars reads 已熟練 once a right answer lifts it to five, and a kanji has no `f`
