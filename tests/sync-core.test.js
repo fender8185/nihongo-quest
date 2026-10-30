@@ -131,3 +131,14 @@ test('mergeStates unions same-day answered keys', () => {
   assert.deepEqual(C.mergeStates(a, b).today.ans, ['v:b', 'g:c', 'v:a']);
   assert.equal(C.mergeStates(a, b).today.newV, 2);
 });
+
+test('mergeStates keeps the older copy\'s answered list items on the merged list', () => {
+  const older = { updatedAt: '2026-10-30T01:00:00.000Z', srs: {}, today: { date: '2026-10-30', ans: ['v:3', 'x:elsewhere'], plan: { lists: { newV: ['v:3', 'v:4'], kept: ['v:9'] } } } };
+  const newer = { updatedAt: '2026-10-30T02:00:00.000Z', srs: {}, today: { date: '2026-10-30', ans: ['v:1'], plan: { lists: { newV: ['v:1', 'v:2'], kept: [] } } } };
+  const plan = C.mergeStates(older, newer).today.plan;
+  assert.deepEqual(plan.lists.newV, ['v:1', 'v:2']);   // the newer list itself
+  assert.deepEqual(plan.lists.kept, ['v:3']);          // answered on the older list; v:4 was not answered, v:9 not today
+  assert.deepEqual(newer.today.plan.lists.kept, []);   // inputs untouched
+  const solo = { updatedAt: '2026-10-30T03:00:00.000Z', srs: {}, today: { date: '2026-10-30', ans: ['v:5'] } };
+  assert.deepEqual(C.mergeStates(older, solo).today.plan.lists, older.today.plan.lists);   // only one copy has a list: kept as it is
+});

@@ -1,5 +1,5 @@
 """Task 8: Sync module — off mode, first-sync-takes-cloud, debounced push w/o secrets, logout race, bad cloud state, deferral."""
-import os, subprocess, sys, time
+import json, os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from cdp import Browser
 
@@ -205,6 +205,26 @@ def test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge(b):
     ])
     assert out[-1] == '{"local":[true,true],"cloud":[true,true],"pend":false}', out[-1]
 
+def test_conflict_merge_redoes_todays_list_from_the_merged_progress(b):
+    # this device made today's list before the pull; the other device learned X last night
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
+        ("eval", """(() => { state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.startChosen = true; state.currentUnit = 'm1';
+          delete state.today.plan; dailyPlan(); const X = state.today.plan.lists.newV[0], Y = state.today.plan.lists.newV[1];
+          srsAnswer(Y, true);
+          const cloud = JSON.parse(JSON.stringify(state)); const y = addDays(todayStr(), -1);
+          cloud.srs[X] = { b: 2, s: 2.5, d: 5, due: addDays(todayStr(), 2), n: 1, ok: 1, ng: 0, last: y, intro: y }; delete cloud.srs[Y];
+          cloud.today = { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0, newC: 0, newA: 0 };
+          cloud.updatedAt = new Date(Date.now() - 60000).toISOString();   // older than this copy: the merge keeps this device's today
+          __fake.setRow({ user_id: 'u1', state: cloud, updated_at: cloud.updatedAt }); saveState(); window.__XY = [X, Y]; return true; })()"""),
+        ("wait", "Sync.status === 'idle' && !!state.srs[__XY[0]] && !Sync.meta.pendingSync"),
+        ("eval", """JSON.stringify({ planned: planListKeys(state.today.plan).includes(__XY[0]), cloudPlanned: planListKeys(__fake.getRow().state.today.plan).includes(__XY[0]),
+          kept: todayPlanKeys().includes(__XY[1]), done: dayProgress().done })"""),
+    ])
+    r = json.loads(out[-1])
+    assert r['planned'] is False and r['cloudPlanned'] is False, r   # learned elsewhere: no longer one of today's new words, here or in the upload
+    assert r['kept'] is True and r['done'] >= 1, r   # what this device answered stays on the list, done
+
 def test_snapshots_prune_by_date_and_format_conflict_labels(b):
     js = """(async () => {
       for (const k of (await Snapshots.keys()) || []) await Snapshots.del(k);
@@ -234,7 +254,7 @@ if __name__ == "__main__":
              test_first_sync_adopting_cloud_snapshots_local_first, test_token_refresh_does_not_mask_error_status,
              test_manual_push_with_null_updated_at_still_sends_a_timestamp,
              test_push_uses_a_conditional_update_once_the_device_has_synced, test_stale_device_does_not_overwrite_progress_made_elsewhere, test_cloud_changed_elsewhere_is_adopted_even_when_its_clock_is_behind,
-             test_row_deleted_elsewhere_is_recreated_without_looping, test_conflict_during_a_session_waits_and_never_overwrites_the_cloud, test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge,
+             test_row_deleted_elsewhere_is_recreated_without_looping, test_conflict_during_a_session_waits_and_never_overwrites_the_cloud, test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge, test_conflict_merge_redoes_todays_list_from_the_merged_progress,
              test_snapshots_prune_by_date_and_format_conflict_labels]
     failed = 0
     try:

@@ -118,6 +118,14 @@
       (olderT.ans || []).forEach(k => { if (!ans.includes(k)) ans.push(k); });
       out.ans = ans;
     }
+    // today's list is the newer copy's; what the older copy answered from its own list joins it as kept, so that
+    // device's ring does not step back when it takes the merge (index.html redoes the list after a conflict)
+    const keysOf = (p) => (p && p.lists && typeof p.lists === 'object') ? Object.values(p.lists).flatMap(l => (Array.isArray(l) ? l : [])) : [];
+    if (out.plan && out.plan.lists && out.plan !== olderT.plan && out.ans) {
+      const have = new Set(keysOf(out.plan));
+      const extra = [...new Set(keysOf(olderT.plan))].filter(k => !have.has(k) && out.ans.includes(k));
+      if (extra.length) out.plan = Object.assign({}, out.plan, { lists: Object.assign({}, out.plan.lists, { kept: (Array.isArray(out.plan.lists.kept) ? out.plan.lists.kept : []).concat(extra) }) });
+    }
     return out;
   }
   function mergeStates(a, b) {

@@ -3556,19 +3556,27 @@ function computeDailyPlan(size = state.settings.sessionSize) {
 // does not eat today's listening and reading). Items answered before a rebuild stay in it as `kept`.
 const PLAN_LISTS = ['dueV', 'dueG', 'dueC', 'dueK', 'dueL', 'dueR', 'dueA', 'newV', 'newG', 'newC', 'newK', 'newL', 'newR', 'newA'];
 function planListKeys(plan) { return [...new Set(PLAN_LISTS.concat('kept').flatMap(n => plan.lists[n] || []))]; }
-function storeTodayPlan(size) {
+function makeTodayPlan(size) {
   const old = state.today.plan;
   const p = computeDailyPlan(size);
   const lists = {};
   PLAN_LISTS.forEach(n => { lists[n] = (p[n] || []).map(x => x.key); });
   const fresh = new Set(PLAN_LISTS.flatMap(n => lists[n]));
   lists.kept = old && old.lists ? planListKeys(old).filter(k => answeredToday(k) && !fresh.has(k)) : [];
-  state.today.plan = { lists, note: p.note || '', n4Open: p.n4Open, factor: p.factor, stage: state.stage, start: Boolean(state.startChosen) };
+  state.today.plan = { lists, note: p.note || '', n4Open: p.n4Open, factor: p.factor, stage: state.stage, start: Boolean(state.startChosen), listenOn: speechAvailable() };
+}
+function storeTodayPlan(size) { makeTodayPlan(size); saveState(); }
+// a browser voice lists its voices only after the first render: listening joins a list made before that, the rest stays
+function addTodayListening(size) {
+  const p = computeDailyPlan(size);
+  const pl = state.today.plan;
+  pl.lists.dueL = p.dueL.map(x => x.key); pl.lists.newL = p.newL.map(x => x.key); pl.listenOn = true;
   saveState();
 }
 function dailyPlan(size = state.settings.sessionSize) {
   const pl = state.today.plan;   // a list made before the start was chosen is redone once it is (it may have been empty)
   if (!pl || !pl.lists || pl.stage !== state.stage || pl.start !== Boolean(state.startChosen)) storeTodayPlan(size);
+  else if (pl.listenOn === false && speechAvailable()) addTodayListening(size);
   const p = state.today.plan;
   const out = { note: p.note, n4Open: p.n4Open, factor: p.factor, size };
   let remaining = 0;
@@ -9943,11 +9951,15 @@ const Sync = {
     try {
       const next = normalizeState(SyncCore.keepLocalSecrets(data.state, state));
       state = next;
+      buildRegistry();
+      // a merge brings progress made elsewhere into a list this device made from its own: redo it (answered items stay);
+      // it goes up with the merge
+      if (conflict && state.today.plan) makeTodayPlan();
       await Store.set('state', state);   // not saveState(): that would echo the pull straight back to the cloud
       this.conflicted = false;
       Object.assign(this.meta, { pendingSync: false, lastSyncedAt: new Date().toISOString(), lastPulledUpdatedAt: data.updated_at, everSynced: true });
       await Store.set('meta', this.meta);
-      buildRegistry(); applyTheme(); applyFurigana();
+      applyTheme(); applyFurigana();
       audioPrefetchSoon();   // progress made on another device changes today's plan
       if (!modalOpen()) route();
       toast(conflict ? '另一台裝置同時更新了進度，已把兩邊的紀錄合併；合併前的本機版本存成快照（設定 › 資料）。' : '已從雲端更新進度', conflict ? 7000 : undefined);

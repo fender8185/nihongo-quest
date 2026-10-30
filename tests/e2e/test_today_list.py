@@ -130,6 +130,19 @@ def test_missing_keys_are_skipped(b):
     r = json.loads(ev(b, js))
     assert r['after'] == r['n'] and r['has'] is False and r['remaining'] == r['n'], r
 
+def test_listening_joins_a_list_made_before_the_voices_loaded(b):
+    # a browser voice: Chrome lists its voices only after the first render, so the day's list was made without listening
+    js = "(() => { " + FRESH + """ state.ttsConfig = Object.assign({}, TTS_DEFAULT, state.ttsConfig, { engine: 'browser_neural', cloudDefault: true });
+      const ss = window.speechSynthesis; ss.getVoices = () => [];
+      delete state.today.plan; dailyPlan(); const p0 = JSON.parse(JSON.stringify(state.today.plan));
+      ss.getVoices = () => [{ lang: 'ja-JP', name: 'Kyoko' }];
+      const p = dailyPlan(); const p1 = state.today.plan; const same = (k) => JSON.stringify(p1.lists[k]) === JSON.stringify(p0.lists[k]);
+      return JSON.stringify({ on0: p0.listenOn, l0: p0.lists.dueL.length + p0.lists.newL.length, on1: p1.listenOn, l1: p.dueL.length + p.newL.length,
+        rest: ['dueV', 'dueG', 'newV', 'newG', 'newK', 'newR', 'kept'].every(same) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['on0'] is False and r['l0'] == 0, r
+    assert r['on1'] is True and r['l1'] > 0 and r['rest'], r   # listening joins; the rest of the day's list stays as it was
+
 # ---- Task 3: 今日頁的圓圈、按鈕與數字 ----
 # replaces today's list with the first n unseen built-in N5 words
 ONLY_WORDS = """const onlyWords = (n) => { dailyPlan(); const ws = REG.vocab.filter(v => v.builtin && v.lv === 'N5' && !state.srs[v.key]).slice(0, n).map(v => v.key);
