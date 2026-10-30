@@ -5105,7 +5105,10 @@ function bulkApply(targets, level, snap, lrLevel = level) {
     snap.srs[key] = state.srs[key] ? JSON.parse(JSON.stringify(state.srs[key])) : null;
     if (lv === 'known') { markKnown(key, false, dueDays); return; }
     let r = state.srs[key];
-    if (!r) r = state.srs[key] = { b: 0, due: t, n: 0, ok: 0, ng: 0, st: 0, last: null, lapse: 0, intro: t, f: {} };
+    if (!r) {   // a word's record starts its format history (only a word's formats count toward 已熟練, see recordFormat)
+      r = state.srs[key] = { b: 0, due: t, n: 0, ok: 0, ng: 0, st: 0, last: null, lapse: 0, intro: t };
+      if (key.startsWith('v:')) r.f = {};
+    }
     ensureFsrs(r);
     r.s = Math.max(r.s || 0, BULK_LEVELS[lv].s);
     r.b = levelFromS(r.s);
@@ -5126,7 +5129,7 @@ function bulkMeetMissed(keys, snap) {
     // grammar and kana only: no new-item list offers them again (units done, no kana in the main course); other kinds stay new
     if (!/^[ga]:/.test(key) || state.srs[key] || noted.has(key)) return;
     snap.srs[key] = null;
-    state.srs[key] = { b: 0, due: addDays(t, 1), n: 1, ok: 0, ng: 1, st: 0, last: t, lapse: 0, intro: t, f: {}, s: FSRS_W[0], d: fsrsD0(1) };
+    state.srs[key] = { b: 0, due: addDays(t, 1), n: 1, ok: 0, ng: 1, st: 0, last: t, lapse: 0, intro: t, s: FSRS_W[0], d: fsrsD0(1) };
   });
 }
 // a passed stage test: the stage and every one before it go to four stars (listening and reading three, back in 90–270

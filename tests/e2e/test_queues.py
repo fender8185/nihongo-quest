@@ -326,10 +326,10 @@ PLAY_TEST = """const playTest = (miss) => { const wrong = []; const n = SESSION.
 # met(k): the record of an item a test missed (null: none), to compare with MET_ONCE
 MET = """const met = (k) => { const r = state.srs[k]; if (!r) return null; const t = todayStr();
     return { b: r.b, n: r.n, ok: r.ok, ng: r.ng, st: r.st, lapse: r.lapse, fsrs: r.s === FSRS_W[0] && r.d === fsrsD0(1), due: daysBetween(t, r.due),
-      today: r.last === t && r.intro === t, rl: 'rl' in r, noted: state.mistakes.some(m => m.key === k && !m.mastered) }; };"""
+      today: r.last === t && r.intro === t, f: 'f' in r, rl: 'rl' in r, noted: state.mistakes.some(m => m.key === k && !m.mastered) }; };"""
 # a grammar or kana miss never met before is met once and missed, as srsAnswer leaves a first wrong answer: back
-# tomorrow, not on the relearning ladder and not in the notebook
-MET_ONCE = {'b': 0, 'n': 1, 'ok': 0, 'ng': 1, 'st': 0, 'lapse': 0, 'fsrs': True, 'due': 1, 'today': True, 'rl': False, 'noted': False}
+# tomorrow, no format history (`f`, a word's), not on the relearning ladder and not in the notebook
+MET_ONCE = {'b': 0, 'n': 1, 'ok': 0, 'ng': 1, 'st': 0, 'lapse': 0, 'fsrs': True, 'due': 1, 'today': True, 'f': False, 'rl': False, 'noted': False}
 
 # a p1 pass marks 入門 and 第一階段 at once: items below four stars get four, listening and reading three (back in 90–270
 # days); of the test's misses never met before, grammar is met once and missed while a word, a kanji, listening and
@@ -504,6 +504,18 @@ def test_the_1_0_19_changelog_no_longer_describes_the_mark_dialog(b):
     items = json.loads(ev(b, "JSON.stringify(CHANGELOG.find(x => x.v === '1.0.19').items)"))
     assert len(items) == 4 and not any('標記到這裡為止' in s for s in items), items
     assert items[2].endswith('不算進三次。「我會了」的字直接排進五顆的複習。'), items[2]
+
+# a mark gives a new record the format history `f` only for a word (only a word's formats count toward 已熟練, see
+# recordFormat): grammar a pass set to four stars reads 已熟練 once a right answer lifts it to five, and a kanji has no `f`
+def test_a_marked_grammar_item_reaches_mastered_and_only_a_word_gets_formats(b):
+    js = "(() => { " + FRESH + """ state.srs = {}; state.mistakes = []; LAST_BULK_MARK = null; const t = todayStr(); const items = stageItems('p1');
+      const [g, v, k] = ['g', 'v', 'k'].map(kind => items.find(x => x.kind === kind));
+      markPassedStage('p1', new Set()); const g4 = [state.srs[g.key].b, 'f' in state.srs[g.key]];
+      state.srs[g.key].due = t; state.srs[g.key].last = addDays(t, -6); srsAnswer(g.key, true);   // its first review, six days on, right
+      return JSON.stringify({ g4, g: [state.srs[g.key].b >= 5, srsLevelLabel(state.srs[g.key], g.key)], v: [state.srs[v.key].b, state.srs[v.key].f], k: 'f' in state.srs[k.key] }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['g4'] == [4, False] and r['g'] == [True, '已熟練'], r
+    assert r['v'] == [4, {}] and r['k'] is False, r
 
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
