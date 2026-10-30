@@ -172,6 +172,21 @@ def test_exam_countdown_projects_the_finish_date(b):
     assert r['perDay'] == 12 and r['finish'] and r['late'] <= 0 and r['hint'], r
     assert r['late2'] > 0 and r['hint2'] and not r['apply'], r
 
+# ---- 1.0.19 (Tasks 1–4 ship with it): the copy follows the new rules ----
+def test_i_know_this_says_five_stars(b):
+    js = "(() => { " + FRESH + """ delete state.today.plan; DAILY_CACHE = null; startSession('daily', { size: 20 });
+      const i = SESSION.entries.findIndex(e => e.preview && e.item && e.item.kind === 'v'); SESSION.idx = i; const key = SESSION.entries[i].item.key;
+      ACTIONS['preview-known'](); const msg = document.getElementById('toast').textContent;
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify({ msg, tier: tierOf(key) }); })()"""
+    r = json.loads(ev(b, js))
+    assert '已標成五顆' in r['msg'] and '六週' not in r['msg'] and r['tier'] == 'q5', r
+
+def test_today_help_describes_the_tiers(b):
+    js = "(() => { " + FRESH + """ location.hash = '#/today'; route(); const help = document.querySelector('.hero-panel[data-panel=help]');
+      return help ? help.textContent : ''; })()"""
+    text = ev(b, js)
+    assert all(s in text for s in ['每天最多 50 題', '四顆每天出 5%', '五顆每天出 3%', '錯題本每天出 10%', '最近 100 題']), text
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

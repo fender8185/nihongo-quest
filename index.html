@@ -942,7 +942,9 @@ const APP_VERSION = '1.0.19';   // keep equal to the version in sw.js CACHE ('nq
 const CHANGELOG = [
   { v: '1.0.19', date: '2026-10-30', items: [
     '今天的題目在第一次打開時排好，當天不會變：測驗後的標記不再讓圓圈亂跳，當天的聽力、閱讀照出。圓圈只畫百分比；按鈕寫這組幾題、今天還剩幾題，零星的尾巴併進同一組。「今天做了」和側欄改算今天作答過的不重複題目。',
-    '模擬考不再改熟練度、不進錯題本、不算正確率和題數；只考試的日子照算連續天數。學習紀錄分開寫「N 題」和「作答 M 次」，模擬考與階段測驗另外寫題數。'
+    '模擬考不再改熟練度、不進錯題本、不算正確率和題數；只考試的日子照算連續天數。學習紀錄分開寫「N 題」和「作答 M 次」，模擬考與階段測驗另外寫題數。',
+    '出題改成分層：三顆以下照記憶強度排複習，每天最多 50 題，等最久的先出；四顆、五顆和錯題本各自排隊，每天分別出 5%、3%、10%（各最少 1 題、最多 30 題）。四顆在哪裡答對都會升到五顆，入門的題目五顆再答對就不再出現；答錯一律回到一般的重練並進錯題本。「我會了」的字直接排進五顆的複習。',
+    '每天的新內容改看最近 100 題的正確率：90% 以上 20 題、80% 以上 15 題、70% 以上 10 題，其他 5 題；錯題本每 10 條少 1 題（最少 3 題、最多 20 題），照單字、文法、漢字還沒學的比例分配。拿掉「每天負荷上限」和「每天新假名」；考試倒數改成照最近的速度預估哪天學完單字、文法、漢字，來不及時建議做完當天的練習後按加練。'
   ] },
   { v: '1.0.18', date: '2026-10-29', items: [
     '離線語音：加到主畫面的 app 有網路時，會在背景先把今天要練的題目（今天到期的複習和今天的新題）的日文語音存到這台裝置，只抓還沒存的，通常一分鐘內就好，不用等；飛航模式也能練今天的題目。播過的句子本來就會留著。開 app 幾秒後、網路恢復時、換日或隔一陣子回到 app 時會補，斷網就停。設定 › 語音會顯示存好了沒有。',
@@ -4049,7 +4051,7 @@ function previewHtml(e, pct) {
       <div class="left">
         <button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>
         <button type="button" class="btn btn-sm btn-ghost" data-act="toggle-furi" title="切換振假名（F）">振假名：${FURI_LABEL[furiState()]}</button>
-        <button type="button" class="btn btn-sm btn-ghost" data-act="preview-known" title="這個字我已經會了：標成已熟練、跳過它的題目，約六週後再確認">我會了</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-act="preview-known" title="這個字我已經會了：標成五顆、跳過它的題目，之後排進五顆的複習">我會了</button>
       </div>
       <div class="right">${previewGoBtn()}</div>
     </div>`;
@@ -4782,7 +4784,7 @@ function renderToday(view) {
             ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">範圍</button>` : ''}
             ${inPreStage() ? '' : `<button type="button" class="hero-tab${heroTab === 'unit' ? ' open' : ''}" data-act="hero-tab" data-tab="unit" aria-expanded="${heroTab === 'unit'}">目前單元</button>`}
           </div>
-          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>今天的題目在第一次打開時排好，當天不會變；中途解鎖的新內容明天才排進來。每一題都是今天到期的複習或今天的新內容；答錯的幾題後再練一次，之後第 1、3、7 天各複習一次，三次都對才離開錯題本。答對的越熟出現得越少。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
+          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>今天的題目在第一次打開時排好，當天不會變；中途解鎖的新內容明天才排進來。三顆以下照記憶強度排複習，每天最多 50 題；四顆每天出 5%、五顆每天出 3%、錯題本每天出 10%（各最少 1 題、最多 30 題），都是等最久的先出。新題數看最近 100 題的正確率和錯題本，照還沒學的比例分給單字、文法、漢字。答錯的幾題後再練一次，之後第 1、3、7 天各複習一次，三次都對才離開錯題本。做完還想多學可以按加練。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
           ${plan.remaining ? `<div class="hero-panel" data-panel="scope" ${heroTab === 'scope' ? '' : 'hidden'}>${scopeHtml}</div>` : ''}
           <div class="hero-panel" data-panel="unit" ${heroTab === 'unit' && !inPreStage() ? '' : 'hidden'}>
             <div class="row between mb-2"><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div><span class="chip">${esc(cur.lv)}</span></div>
@@ -5041,7 +5043,7 @@ Object.assign(ACTIONS, {
 const BULK_LEVELS = {
   seen: { name: '已學', hint: '看過，很快會排進複習（從明天起分散，每天最多約一半的負荷上限）。', due: [1, 14], lr: [30, 180] },
   learned: { name: '熟悉', hint: '約一到兩週後開始複習（分散排，每天最多約一半的負荷上限）。', due: [5, 14], lr: [90, 270] },
-  known: { name: '熟練', hint: '等同「我會了」：直接算熟練，五到八週後各確認一次；答錯就回到正常排程。會清掉這些項目的錯題。', due: [35, 56], lr: [180, 365] }
+  known: { name: '熟練', hint: '等同「我會了」：直接算五顆，之後排進五顆的複習；答錯就回到正常排程。會清掉這些項目的錯題。', due: [35, 56], lr: [180, 365] }
 };
 let LAST_BULK_MARK = null;
 // reviews a day a bulk mark may schedule: half the load cap, so the marked items never fill a day by themselves
@@ -5151,7 +5153,7 @@ const PRE_MARK_LEVELS = [
   ['none', '不記得', '不標記，之後當新內容照常學'],
   ['seen', '記得', '算已學，很快排進複習'],
   ['learned', '熟練', '算熟悉，一兩週後開始複習'],
-  ['known', '掌握', '算熟練，五到八週後各確認一次']
+  ['known', '掌握', '算五顆，之後排進五顆的複習']
 ];
 function preMarkLevelName(lv) { const L = PRE_MARK_LEVELS.find(x => x[0] === lv); return L ? L[1] : '不記得'; }
 function preMarkStepHtml(T) {
@@ -5670,7 +5672,7 @@ function renderVocab(view, tab, params) {
       ${vocabExamples(v).map((e, i) => `<div class="example ${i ? 'mt-2' : 'mt-3'}" style="text-align:left"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="${i ? 'speak' : 'flash-speak'}" data-mode="ex" data-text="${esc(jaPlain(exPlain(e.ex)))}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${furi(exPlain(e.ex))}</div><div class="zh">${esc(e.exZh || '')}</div></div></div>`).join('')}
       <div id="flashAiBox"></div>` : '';
     card = `<div class="card">
-      <div class="row between small muted"><span>${F.idx + 1} / ${F.queue.length}・${r ? srsLevelLabel(r, v.key) : '新卡'}</span><span>${r ? srsDots(r.b) : '<span class="chip chip-accent">新</span>'}${r && srsLevelLabel(r, v.key) === '已熟練' ? '' : ` <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="直接標成熟練，約六週後再確認">我會了</button>`}</span></div>
+      <div class="row between small muted"><span>${F.idx + 1} / ${F.queue.length}・${r ? srsLevelLabel(r, v.key) : '新卡'}</span><span>${r ? srsDots(r.b) : '<span class="chip chip-accent">新</span>'}${r && srsLevelLabel(r, v.key) === '已熟練' ? '' : ` <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="直接標成五顆，之後排進五顆的複習">我會了</button>`}</span></div>
       <div class="flash">
         <div class="word jp">${esc(jaPlain(v.w))}</div>
         ${media}
@@ -5750,12 +5752,12 @@ function vocabListResultsHtml(params, list = vocabListFiltered(params)) {
       <td class="nowrap small">${r ? `${srsDots(r.b)}<div class="tiny muted">${r.due <= t ? '今天' : dueLabel(r).replace('複習', '')}</div>` : '<span class="muted">未學</span>'}</td>
       <td class="nowrap" style="text-align:right">
         <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(jaPlain(v.w))}" data-reading="${esc(v.r && !HAS_KANJI.test(v.r) ? v.r : '')}" aria-label="發音">${icon('speaker')}</button>
-        ${r && r.known ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-unknown" data-key="${esc(v.key)}" title="取消「我會了」，回到正常排程">取消熟練</button>` : (r && srsLevelLabel(r, v.key) === '已熟練' ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="這個字已經會了：直接標成熟練，約六週後再確認">我會了</button>`)}
+        ${r && r.known ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-unknown" data-key="${esc(v.key)}" title="取消「我會了」，回到正常排程">取消熟練</button>` : (r && srsLevelLabel(r, v.key) === '已熟練' ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="這個字已經會了：直接標成五顆，之後排進五顆的複習">我會了</button>`)}
         <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-remove" data-key="${esc(v.key)}">${v.builtin ? '隱藏' : '刪除'}</button>
       </td></tr>`;
   }).join('');
   return `<div class="row-wrap mb-3">
-      ${notKnown ? `<button type="button" class="btn btn-sm" data-act="vocab-known-all" data-n="${notKnown}" title="把目前列出的字全部標成已熟練，約六週後再各確認一次；答錯就回到正常排程">這 ${notKnown} 個字我都會了</button>` : ''}
+      ${notKnown ? `<button type="button" class="btn btn-sm" data-act="vocab-known-all" data-n="${notKnown}" title="把目前列出的字全部標成五顆，之後排進五顆的複習；答錯就回到正常排程">這 ${notKnown} 個字我都會了</button>` : ''}
       ${LAST_BULK_KNOWN ? `<span class="small muted">已把 ${LAST_BULK_KNOWN.keys.length} 個字標成我會了</span><button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known-undo">復原</button>` : ''}
       <span class="hint">已經會的字可以整批標記，之後只會偶爾確認一次。</span>
     </div>
@@ -5875,7 +5877,7 @@ Object.assign(ACTIONS, {
     const v = REG.byKey.get(el.dataset.key); if (!v) return;
     markKnown(v.key);
     if (SESSION && SESSION.entries) SESSION.entries = SESSION.entries.filter((x, i) => i <= SESSION.idx || !(x.encore && x.item && x.item.key === v.key));   // no more encores for it
-    toast(`「${jaPlain(v.w)}」已標成熟練，約六週後再確認一次`);
+    toast(`「${jaPlain(v.w)}」已標成五顆，之後會排進五顆的複習`);
     if (SESSION && document.body.classList.contains('practicing')) renderPractice(); else route();
   },
   'vocab-unknown': (el) => {
@@ -5889,7 +5891,7 @@ Object.assign(ACTIONS, {
     if (!keys.length) return;
     const prev = {}; keys.forEach((k, i) => { prev[k] = state.srs[k] ? JSON.parse(JSON.stringify(state.srs[k])) : null; markKnown(k, false, spreadDue(i, 'known', keys.length)); });
     saveState(); LAST_BULK_KNOWN = { keys, prev };
-    toast(`已把 ${keys.length} 個字標成我會了，約五到八週後再各確認一次`); route();
+    toast(`已把 ${keys.length} 個字標成五顆，之後會排進五顆的複習`); route();
   },
   'vocab-known-undo': () => {
     if (!LAST_BULK_KNOWN) return;
@@ -5901,7 +5903,7 @@ Object.assign(ACTIONS, {
     const e = currentEntry(); if (!e || !e.preview || e.previewDone || !e.item || e.item.kind !== 'v') return;
     const v = e.item; markKnown(v.key);
     SESSION.entries = SESSION.entries.filter((x, i) => i !== SESSION.idx && !(x.item && x.item.key === v.key));
-    toast(`「${jaPlain(v.w)}」已標成熟練，約六週後再確認一次`);
+    toast(`「${jaPlain(v.w)}」已標成五顆，之後會排進五顆的複習`);
     renderPractice(); window.scrollTo({ top: 0 });
   },
   'vocab-remove': (el) => {
