@@ -505,6 +505,13 @@ def test_the_1_0_19_changelog_no_longer_describes_the_mark_dialog(b):
     assert len(items) == 4 and not any('標記到這裡為止' in s for s in items), items
     assert items[2].endswith('不算進三次。「我會了」的字直接排進五顆的複習。'), items[2]
 
+# 1.0.20's entry says what a pass does with the test's misses: they are not set to four stars, grammar and kana never met
+# come up for review from the next day, and the notebook's are left as they are
+def test_the_1_0_20_changelog_says_what_a_pass_does_with_the_tests_misses(b):
+    items = json.loads(ev(b, "JSON.stringify(CHANGELOG.find(x => x.v === '1.0.20').items)"))
+    assert len(items) == 3 and '這次答錯的和錯題本裡的題目不動' not in items[1], items
+    assert all(s in items[1] for s in ['這次答錯的題目不設四顆', '還沒學過的文法和假名從隔天起排進複習', '錯題本裡的題目不動']), items[1]
+
 # a mark gives a new record the format history `f` only for a word (only a word's formats count toward 已熟練, see
 # recordFormat): grammar a pass set to four stars reads 已熟練 once a right answer lifts it to five, and a kanji has no `f`
 def test_a_marked_grammar_item_reaches_mastered_and_only_a_word_gets_formats(b):
