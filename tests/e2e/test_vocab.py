@@ -376,17 +376,17 @@ def test_part_of_speech_chip_opens_the_glossary(b):
 
 TESTS += [test_intro_lesson_renders_with_kana_table_and_marks_itself_seen, test_new_user_banner_points_to_the_intro_until_dismissed, test_part_of_speech_chip_opens_the_glossary]
 
-# ---- 2026-10-26 (10): grammar fill-in items also appear as 選正確句 and 句意 ----
-def test_grammar_choice_item_builds_three_formats_on_demand(b):
+# ---- 2026-10-26 (10): grammar fill-in items also appear as 句意 (1.0.23: no longer as 選正確句) ----
+def test_grammar_choice_item_builds_two_formats_on_demand(b):
     js = """(() => { const g = REG.grammar.find(x => (x.t || 'choice') === 'choice' && x.zh && x.op && x.op.length >= 4 && x.u === 'm1'); srsAnswer(g.key, true);
       const b0 = splitBlank(g.jp); const full = b0.pre + parenReadingToBracket(g.a) + b0.post;
-      const c = makeGrammarQuestion(g, { forceFmt: 'g-correct' }); const m = makeGrammarQuestion(g, { forceFmt: 'g-meaning' }); const o = makeGrammarQuestion(g, { forceFmt: 'g-choice' });
+      const m = makeGrammarQuestion(g, { forceFmt: 'g-meaning' }); const o = makeGrammarQuestion(g, { forceFmt: 'g-choice' });
       const txt = (q) => q.options.map(x => x.text);
-      return JSON.stringify({ cFmt: c.fmt, cAns: txt(c)[c.answer] === full, cAll: txt(c).every(t => t.startsWith(b0.pre) && t.endsWith(b0.post)) && new Set(txt(c)).size === 4,
+      return JSON.stringify({ fmts: grammarFormats(g),
         mFmt: m.fmt, mAns: txt(m)[m.answer] === g.zh || txt(m)[m.answer] === g.pt, mZhHidden: m.zhText === '', mStem: jaPlain(m.fullJp) === jaPlain(full), mDistinct: new Set(txt(m)).size === 4,
         oFmt: o.fmt, oAns: txt(o)[o.answer] === parenReadingToBracket(g.a) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['cFmt'] == 'g-correct' and r['cAns'] and r['cAll'], r
+    assert r['fmts'] == ['g-choice', 'g-meaning'], r
     assert r['mFmt'] == 'g-meaning' and r['mAns'] and r['mZhHidden'] and r['mStem'] and r['mDistinct'], r
     assert r['oFmt'] == 'g-choice' and r['oAns'], r
 
@@ -397,16 +397,16 @@ def test_grammar_formats_rotate_after_the_first_sighting_and_prefer_unpassed(b):
       return JSON.stringify({ fresh, seen }); })()"""
     r = json.loads(ev(b, js))
     assert r['fresh'] == {'g-choice': 150}, r
-    assert set(r['seen']) == {'g-choice', 'g-correct', 'g-meaning'} and r['seen']['g-choice'] < r['seen']['g-correct'] and r['seen']['g-choice'] < r['seen']['g-meaning'], r
+    assert set(r['seen']) == {'g-choice', 'g-meaning'} and r['seen']['g-choice'] < r['seen']['g-meaning'], r
 
 def test_answering_a_grammar_variant_records_gf_but_not_the_word_format_record(b):
     js = """(() => { const g = REG.grammar.find(x => (x.t || 'choice') === 'choice' && x.zh && x.op && x.op.length >= 4 && x.u === 'm1');
-      startSession('items', { items: [g] }); const e = currentEntry(); e.q = makeGrammarQuestion(g, { forceFmt: 'g-correct' }); renderPractice(); answerCurrent(e.q.answer);
+      startSession('items', { items: [g] }); const e = currentEntry(); e.q = makeGrammarQuestion(g, { forceFmt: 'g-meaning' }); renderPractice(); answerCurrent(e.q.answer);
       const r = state.srs[g.key]; const out = { gf: r.gf, f: r.f, label: srsLevelLabel(r) }; SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
-    assert r['gf'] == {'g-correct': [1, 0]} and r.get('f') is None, r
+    assert r['gf'] == {'g-meaning': [1, 0]} and r.get('f') is None, r
 
-TESTS += [test_grammar_choice_item_builds_three_formats_on_demand, test_grammar_formats_rotate_after_the_first_sighting_and_prefer_unpassed, test_answering_a_grammar_variant_records_gf_but_not_the_word_format_record]
+TESTS += [test_grammar_choice_item_builds_two_formats_on_demand, test_grammar_formats_rotate_after_the_first_sighting_and_prefer_unpassed, test_answering_a_grammar_variant_records_gf_but_not_the_word_format_record]
 
 # ---- 2026-10-26 (11): N4 listening and reading pools are deep enough for a two-week unit ----
 def test_every_n4_unit_has_enough_listening_and_reading_and_all_build(b):

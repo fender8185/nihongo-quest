@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Check candidate grammar items before they go into data.js (DATA.GRAMMAR).
 Usage: python3 scripts/check-grammar.py FILE.json [PORT]
-FILE.json: a JSON array of items in the data.js shape: {id, u, t: choice|meaning|correct, lv, d, pt, sec, jp, op, a, zh, why}.
+FILE.json: a JSON array of items in the data.js shape: {id, u, t: choice|meaning, lv, d, pt, sec, jp, op, a, zh, why}.
 Checks, with the app's own code: id unused; unit, section and point exist (pt must be one the unit's section already uses;
 week 0 (u: 'm0') has five fixed points instead, is kana only, and its katakana nouns must be words of the bank);
 4 distinct options with the answer among them; choice items have exactly one blank the app can split, no ending duplicated
-after the blank, and build as 填空 / 選正確句 / 句意; stems are new (not an existing item's sentence); no banned words;
+after the blank, and build as 填空 / 句意 (選正確句 is no longer a type, 1.0.23); stems are new (not an existing item's sentence); no banned words;
 kanji without furigana are reported as warnings. Prints one line per problem and a summary; exit code 1 when anything fails."""
 import json, os, subprocess, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
@@ -30,18 +30,18 @@ JS = """((cands) => { const bad = [], warn = []; const norm = (s) => String(s ||
     const L = DATA.LESSONS[x.u]; if (!Number.isInteger(x.sec) || x.sec < 0 || x.sec >= L.sections.length) P('bad sec ' + x.sec);
     else if (week0 ? WEEK0[x.pt] !== x.sec : !ptsOf(x.u, x.sec).has(x.pt)) P(week0 ? 'week 0 point/section must be one of ' + Object.entries(WEEK0).map(([k, v]) => k + '@' + v).join('、') : 'pt not among this section\\'s points: ' + x.pt + ' (have: ' + [...ptsOf(x.u, x.sec)].join('、') + ')');
     if (week0) {
-      const ja = [x.t === 'correct' ? '' : x.jp, x.t === 'meaning' ? '' : x.a].concat(x.t === 'meaning' ? [] : (x.op || [])).filter(Boolean).join(' ');
+      const ja = [x.jp, x.t === 'meaning' ? '' : x.a].concat(x.t === 'meaning' ? [] : (x.op || [])).filter(Boolean).join(' ');
       if (/[一-龯々]/.test(ja)) P('week 0 is kana only');
       const loan = [...new Set(ja.match(/[ァ-ヶー]{2,}/g) || [])].filter(w => !words.has(w)); if (loan.length) P('loanword not in the word bank: ' + loan.join(' '));
     }
-    if (!['choice', 'meaning', 'correct'].includes(x.t)) P('type must be choice/meaning/correct');
+    if (!['choice', 'meaning'].includes(x.t)) P('type must be choice/meaning');
     if (x.lv !== (/N4/.test(u.lv) ? 'N4' : 'N5')) P('lv should be ' + u.lv);
     if (![1, 2, 3].includes(x.d)) P('d must be 1..3');
     ['zh', 'why', 'pt'].forEach(k => { if (!String(x[k] || '').trim()) P('missing ' + k); else if (BANNED_WORDS.test(x[k])) P('banned word in ' + k); });
     if (/\\*\\*[^*]*$/.test(x.why || '') && ((x.why.match(/\\*\\*/g) || []).length & 1)) P('unbalanced ** in why');
     const op = Array.isArray(x.op) ? x.op.map(s => String(s).trim()) : [];
     if (op.length !== 4 || new Set(op).size !== 4) P('needs 4 distinct options'); if (!op.includes(String(x.a || '').trim())) P('answer not among options');
-    const stem = norm(x.t === 'correct' ? x.a : x.jp); if (stems.has(stem) || seenStems.has(stem)) P('sentence already exists in the bank'); seenStems.add(stem);
+    const stem = norm(x.jp); if (stems.has(stem) || seenStems.has(stem)) P('sentence already exists in the bank'); seenStems.add(stem);
     if (x.t === 'choice') {
       const jp = String(x.jp || ''); if ((jp.match(/（[^（）]*）/g) || []).length !== 1) P('needs exactly one （　） blank');
       const b = splitBlank(jp); if (!b) P('app cannot split the blank: ' + jp);
@@ -52,13 +52,10 @@ JS = """((cands) => { const bad = [], warn = []; const norm = (s) => String(s ||
       }
       const g = Object.assign({ key: 'g:' + id, kind: 'g', builtin: true }, x);
       try { const q = makeGrammarQuestion(g, { forceFmt: 'g-choice' }); if (!q || q.options.length !== 4) P('填空 question did not build'); else if (jaPlain(q.options[q.answer].text || q.options[q.answer]) !== jaPlain(x.a) && String(q.options[q.answer].text || q.options[q.answer]).indexOf(jaPlain(x.a)) < 0) W('answer option text differs: ' + JSON.stringify(q.options[q.answer]).slice(0, 60)); } catch (e) { P('builder error (choice) ' + e.message); }
-      try { const q = makeGrammarQuestion(g, { forceFmt: 'g-correct' }); if (!q || q.options.length !== 4) P('選正確句 variant did not build'); } catch (e) { P('builder error (correct) ' + e.message); }
       try { makeGrammarQuestion(g, { forceFmt: 'g-meaning' }); } catch (e) { P('builder error (meaning) ' + e.message); }
     } else if (x.t === 'meaning') {
       if (!/[぀-ヿ一-鿿]/.test(x.jp || '') || /（[^（）]*）/.test(x.jp || '')) P('meaning item needs a Japanese sentence without a blank');
       if (op.some(o => /[぀-ヿ]/.test(o))) P('meaning options must be Chinese');
-    } else if (x.t === 'correct') {
-      if (op.some(o => !/[぀-ヿ一-鿿]/.test(o))) P('correct-sentence options must be Japanese');
     }
     const texts = [x.jp, x.a].concat(x.t === 'meaning' ? [] : op).filter(Boolean); const bare = new Set(); texts.forEach(t => bareOf(t).forEach(w => bare.add(w)));
     if (bare.size) W('kanji without furigana: ' + [...bare].join(' '));

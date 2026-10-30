@@ -12,7 +12,7 @@
 <script src="./vendor/supabase.js"></script>
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
-<script src="./data.js?v=15"></script>
+<script src="./data.js?v=16"></script>
 <title>Nihongo Quest N4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -939,12 +939,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.22';   // keep equal to the version in sw.js CACHE ('nq-v1.0.22'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.23';   // keep equal to the version in sw.js CACHE ('nq-v1.0.23'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.23', date: '2026-10-31', items: [
+    '拿掉「選正確句」題型（四句幾乎一樣、要先找差在哪）：填空題改成只輪填空和句意；內建的選正確句題從題庫刪掉，它們的學習紀錄和錯題一起清掉，AI 出題也不再出這種題。第 0 週有 5 題原本就只差一格，改成填空題留著。'
+  ] },
   { v: '1.0.22', date: '2026-10-31', items: [
     '單字題用了第二句例句時，解說和錯題本不再把第二句列兩次：題目用的那句在前，另一句在後；以前存進錯題本的這種解說也改好了。',
     '漢字題答完會自動唸例詞（讀音題唸考的那個詞，其他唸第一個例詞），跟按「發音」一樣；以前答完不會唸。',
@@ -1056,7 +1059,7 @@ const CHANGELOG = [
   { v: '1.0.0', date: '2026-10-28', items: [
     '今日：一張卡，上面「練習／錯題本／單字」三段切換，手機剛好一頁。練習是進度圓環、開始練習、日期與連續天數，和「說明」「範圍」「目前單元」三個收合小標（進首頁時目前單元是展開的）。錯題本／單字就是聽一輪播放器。',
     '每日練習的規則：每一題不是今天到期的複習就是今天的新內容。每天負荷上限（預設 100）只壓新題，到期複習永遠全出。答錯的隔天起第 1、3、7 天各複習一次，三次都對才離開錯題本；答對的越熟出現得越少，間隔還會依最近到期複習的正確率自動調整（不到 80% 縮短、超過 92% 拉長）。新文法照講義段落順序出，單元文法全部出過就自動推進到下一單元；新單字從兩條主題線交錯供應；變化練習以形態為單位排程，動詞每次隨機換。做完顯示「今天完成了」，可「加練」明後天到期的複習。',
-    '練習：單字有看字選意思、中翻日、例句填空、讀音、寫法、聽音選意思、假名拼字、配對；文法有填空、選正確句、句意、真的排序、活用拼寫（熟了之後不給選項）；另有假名（看字選音、聽音選字、平片對照）、漢字、聽力（整個級別抽題）、閱讀（兩者答對後 30／90／180 天才再出，答錯一週後再出、不給再練一次）。新字先看預習卡再考；答錯幾題後換一種格式「再練一次」，不寫排程；按「手滑，不算」可撤銷；單字可按「我會了」直接標熟練。手機上作答只有「下一題」固定在底部，畫面避開瀏海、不能縮放。',
+    '練習：單字有看字選意思、中翻日、例句填空、讀音、寫法、聽音選意思、假名拼字、配對；文法有填空、句意、真的排序、活用拼寫（熟了之後不給選項）；另有假名（看字選音、聽音選字、平片對照）、漢字、聽力（整個級別抽題）、閱讀（兩者答對後 30／90／180 天才再出，答錯一週後再出、不給再練一次）。新字先看預習卡再考；答錯幾題後換一種格式「再練一次」，不寫排程；按「手滑，不算」可撤銷；單字可按「我會了」直接標熟練。手機上作答只有「下一題」固定在底部，畫面避開瀏海、不能縮放。',
     '入門（PRE_N5）：假名辨識、入門單字和第 0 週的 20 題基本句型（假名門檻過了以後每天幾題），都看過、最近正確率到 80% 就自動進第 1 週；課程：18 個單元（每單元約兩週）的講義，加上「第 0 週：開始之前」（假名、最基本的句型、品詞、動詞的形、助詞、數量詞；第 2–4 節有練習題）；可依程度選起點。文法考點整併成 288 個（第 0 週另有 5 個），每個考點至少 3 題。',
     '單字：1661 個內建單字（入門 59／N5 876／N4 726，含敬語、名詞＋する合併卡），N5 以上每字兩句例句；單字頁先分入門／N5／N4，每級列主題（卡上有該主題的漢字）與漢字，每個主題有已學／熟悉／熟練三段進度條，可看字表、翻字卡、練習或播放字卡；入門頁有依熟練度上色的五十音表（手機上平假名／片假名切換、一排五個，點字發音）；N4 單字在 N5 學過一次後開放。漢字 342 個另有讀音與字義題。自訂字卡可匯入。',
     '聽一輪：循環朗讀，不寫排程、不算題數。來源是錯題本（單字→中文→單字→例句→例句中文；文法整句→中文→整句，只唸有中文且答案標得進句子的題）或單字主題（含自動收錄「已學但還沒熟練」的「初識單詞」，上次的選擇會記住）。膠囊：字｜文、隨機、一次／兩次、速度 0.8／1／1.3。放大圖示進全螢幕：直立手機整頁轉成橫的，日文在上、中文在下、例句最下，字依螢幕放到最大；✕ 回首頁播放不斷。雲端語音時鎖定畫面可控制，鎖屏後持續播放（句間播靜音讓播放器不中斷）。',
@@ -1276,6 +1279,14 @@ function normalizeState(s) {
     const twice = exampleLine({ ex: v.ex2, exZh: v.exZh2 || '' });
     if (m.why.endsWith(twice + twice)) m.why = m.why.slice(0, -twice.length) + exampleLine({ ex: v.ex, exZh: v.exZh || '' });
   });
+  // 1.0.23: 選正確句 is gone. The built-in items of that type left the bank (DATA.GRAMMAR_REMOVED) and AI ones go too:
+  // their schedule and notebook entries with them
+  const goneIds = new Set((DATA.GRAMMAR_REMOVED || []).concat(out.customGrammar.filter(g => g && g.t === 'correct').map(g => g.id)));
+  if (goneIds.size) {
+    out.customGrammar = out.customGrammar.filter(g => !(g && goneIds.has(g.id)));
+    goneIds.forEach(id => { delete out.srs['g:' + id]; });
+    out.mistakes = out.mistakes.filter(m => !(m && typeof m.key === 'string' && m.key.startsWith('g:') && goneIds.has(m.key.slice(2))));
+  }
   return out;
 }
 
@@ -2838,15 +2849,14 @@ function grammarUsageDistractors(g) {
   }
   return null;
 }
-function grammarFormats(g, opts, ans) {
+function grammarFormats(g) {
   const f = ['g-choice'];
-  if (opts.filter(o => o !== ans).length >= 3) f.push('g-correct');
   if (g.zh && (grammarUsageDistractors(g) || grammarMeaningDistractors(g))) f.push('g-meaning');
   return f;
 }
-function pickGrammarFormat(g, rec, opts, ans, avoid) {
+function pickGrammarFormat(g, rec, avoid) {
   if (!rec) return 'g-choice';
-  const pairs = grammarFormats(g, opts, ans).map(f => [f, (!rec.gf || !rec.gf[f] || rec.gf[f][0] === 0) ? 3 : 1]);
+  const pairs = grammarFormats(g).map(f => [f, (!rec.gf || !rec.gf[f] || rec.gf[f][0] === 0) ? 3 : 1]);
   return weightedPick(pairs, avoid);
 }
 function splitBlank(jp) {
@@ -2880,20 +2890,9 @@ function makeGrammarQuestion(g, ctx = {}) {
     if (!b) return null;
     const opts = (g.op || []).map(parenReadingToBracket);
     const ans = parenReadingToBracket(g.a);
-    // A fill-in item is also asked as 選正確句 (every option filled in) and 句意, so a review is not the same
-    // question with the answer remembered. First sighting is always the plain fill-in.
-    const fmt = ctx.forceFmt || pickGrammarFormat(g, rec, opts, ans, ctx.avoidFmt);
-    if (fmt === 'g-correct') {
-      const fill = (o) => b.pre + o + b.post;
-      q.fmt = 'g-correct';
-      q.instr = '哪一句是正確的？';
-      q.stemHtml = '';
-      q.fullJp = fill(ans);
-      q.mistakePrompt = `正確的句子：${fill(ans)}`;
-      finalizeOptions(q, fill(ans), opts.filter(o => o !== ans).slice(0, 3).map(fill), true);
-      q.wide = true;
-      return q;
-    }
+    // A fill-in item is also asked as 句意, so a review is not the same question with the answer remembered.
+    // First sighting is always the plain fill-in. (選正確句, every option filled in, went in 1.0.23.)
+    const fmt = ctx.forceFmt || pickGrammarFormat(g, rec, ctx.avoidFmt);
     if (fmt === 'g-meaning') {
       const full = b.pre + ans + b.post;
       q.fmt = 'g-meaning';
@@ -2961,16 +2960,6 @@ function makeGrammarQuestion(g, ctx = {}) {
     q.tiles = tiles;
     q.mistakePrompt = `排序：${q.pre}＿＿＿＿${q.post}（${parts.join('・')}）`;
     q.options = [{ text: q.fullJp, jp: true }, { text: '', jp: true }]; q.answer = 0; q.answerText = q.fullJp;
-    q.wide = true;
-    return q;
-  }
-  if (t === 'correct') {
-    q.fmt = 'g-correct';
-    q.instr = '哪一句是正確的？';
-    q.stemHtml = '';
-    q.fullJp = g.a;
-    q.mistakePrompt = `正確的句子：${g.a}`;
-    finalizeOptions(q, g.a, (g.op || []).filter(o => o !== g.a).slice(0, 3), true);
     q.wide = true;
     return q;
   }
@@ -3878,11 +3867,11 @@ function otherFormatQuestion(item) {
   const q = makeQuestion(item, { encore: true, avoidFmts: used, avoidFmt: used });
   return q && q.fmt && !used.includes(q.fmt) ? q : null;
 }
-// a grammar fill-in item that can also be asked as 選正確句 or 句意
+// a grammar fill-in item that can also be asked as 句意
 function grammarHasFormats(g) {
   if (g && g.kind === 'g' && (g.t === 'conj' || g.t === 'adj')) return (state.settings.conjInput || 'auto') !== 'choice';   // four options ↔ spelled
   if (!g || g.kind !== 'g' || (g.t || 'choice') !== 'choice' || !splitBlank(g.jp || '')) return false;
-  return grammarFormats(g, (g.op || []).map(parenReadingToBracket), parenReadingToBracket(g.a)).length >= 2;
+  return grammarFormats(g).length >= 2;
 }
 // A word met for the first time comes back twice more in this session, each time in another format: once a few
 // questions later, once further on. Encores do not touch the SRS schedule; the first answer did that.
@@ -5289,10 +5278,9 @@ function lessonHtmlFrom(L) {
   </div>`;
 }
 
-const TYPE_LABEL = { choice: '填空', meaning: '句意', order: '排序', correct: '選正確句', conj: '動詞變化', adj: '形容詞變化' };
+const TYPE_LABEL = { choice: '填空', meaning: '句意', order: '排序', conj: '動詞變化', adj: '形容詞變化' };
 function itemPreview(g) {
   if (g.t === 'order') return (g.pre || '') + (g.parts || []).join('') + (g.post || '');
-  if (g.t === 'correct') return g.a;
   if (g.t === 'conj') return String(g.jp).replace('{V}', `（${g.v}→　）`);
   if (g.t === 'adj') return String(g.jp).replace('{A}', `（${g.w}→　）`);
   return g.jp;
@@ -7716,7 +7704,7 @@ Object.assign(ACTIONS, {
 const FMT_NAME = {
   'v-meaning': '單字・看字選意思', 'v-recall': '單字・中翻日', 'v-cloze': '單字・例句填空', 'v-reading': '單字・漢字讀音', 'v-kanji': '單字・漢字寫法',
   'v-listen': '單字・聽音選意思', 'v-spell': '單字・假名拼字', 'v-match': '單字・配對', 'v-sentence': '自訂句子', 'g-choice': '文法・填空', 'g-meaning': '文法・句意／用法', 'g-order': '文法・排序',
-  'g-correct': '文法・選正確句', 'g-conj': '文法・動詞變化', 'g-adj': '文法・形容詞變化', 'g-identify': '文法・判斷動詞形', 'g-conj-type': '文法・動詞變化（拼寫）', 'g-adj-type': '文法・形容詞變化（拼寫）',
+  'g-correct': '文法・選正確句', 'g-conj': '文法・動詞變化', 'g-adj': '文法・形容詞變化', 'g-identify': '文法・判斷動詞形', 'g-conj-type': '文法・動詞變化（拼寫）', 'g-adj-type': '文法・形容詞變化（拼寫）',   // g-correct: no longer asked (1.0.23), named for the answers given before
   'k-meaning': '漢字・意思', 'k-shape': '漢字・選字', 'k-read': '漢字・讀音', 'l-dialog': '聽力・對話', 'l-resp': '聽力・即時應答',
   'l-scene': '聽力・情境表達', 'r-passage': '閱讀', 'm-card': '錯題卡', 'a-read': '假名・看字選音', 'a-sound': '假名・聽音選字', 'a-pair': '假名・平片對照'
 };
@@ -8500,7 +8488,7 @@ function audioCollector() {
       addZh(x.m); addZh(x.exZh); addZh(x.exZh2);
     } else if (x.kind === 'a') add(x.ch);   // a tapped kana in the 五十音表 and 聽音選字 play one kana
     else if (x.kind === 'g') {
-      const fmts = (x.t || 'choice') === 'choice' && x.op ? grammarFormats(x, (x.op || []).map(parenReadingToBracket), parenReadingToBracket(x.a)) : [];
+      const fmts = (x.t || 'choice') === 'choice' && x.op ? grammarFormats(x) : [];
       (fmts.length ? fmts.map(f => makeGrammarQuestion(x, { forceFmt: f })) : [makeQuestion(x, {})]).forEach(addQ);
       addZh(x.zh);
     } else if (x.kind === 'k') { addQ(makeQuestion(x, {})); (x.ex || []).forEach(e => add(e[1])); addZh(x.m); (x.ex || []).forEach(e => addZh(e[2])); }   // a reading question reads any of the example words
@@ -8944,7 +8932,8 @@ ${question ? `學生的問題：${question}\n請針對問題回答，` : '請補
 const BANNED_WORDS = /(秒殺|100%|絕對|千萬|魔王|黃金|鐵則|制霸|必背|必考|陷阱|神器|超級)/;
 function validAiGrammar(x, u) {
   if (!x || typeof x !== 'object') return null;
-  const t = ['choice', 'meaning', 'correct', 'order'].includes(x.t) ? x.t : 'choice';
+  if (x.t === 'correct') return null;   // 選正確句 is no longer a question type (1.0.23)
+  const t = ['choice', 'meaning', 'order'].includes(x.t) ? x.t : 'choice';
   const s = (v) => String(v == null ? '' : v).trim();
   const out = { id: uid('ai'), u: u.id, t, lv: /N4/.test(u.lv) ? 'N4' : 'N5', d: 2, pt: s(x.pt).slice(0, 20) || 'AI 題目', zh: s(x.zh), why: s(x.why), src: 'ai' };
   if ([out.zh, out.why, out.pt].some(v => BANNED_WORDS.test(v))) return null;
@@ -8969,16 +8958,16 @@ function validAiGrammar(x, u) {
     if (!/[぀-ヿ一-鿿]/.test(jp) || /（　）/.test(jp)) return null;
     return Object.assign(out, { jp, op, a });
   }
-  return Object.assign(out, { op, a });
+  return null;
 }
 
 async function aiGenerateUnitItems(uid, btn, count = 5) {
   if (needAi()) return;
   const u = unitById(uid);
-  const samples = shuffle(unitItems(uid).filter(g => ['choice', 'meaning', 'correct', 'order'].includes(g.t || 'choice'))).slice(0, 3)
+  const samples = shuffle(unitItems(uid).filter(g => ['choice', 'meaning', 'order'].includes(g.t || 'choice'))).slice(0, 3)
     .map(g => JSON.stringify(Object.fromEntries(Object.entries(g).filter(([k]) => ['t', 'jp', 'op', 'a', 'zh', 'why', 'pt', 'pre', 'parts', 'post', 'star'].includes(k))))).join('\n');
   const existing = unitItems(uid).map(g => jaPlain(itemPreview(g))).slice(0, 60).join('\n');
-  const prompt = `請為下面這個單元出 ${count} 道新的練習題，題型要混合（填空 choice、句意 meaning、選正確句 correct、排序 order），難度和單元相符，不要超出 ${u.lv}。
+  const prompt = `請為下面這個單元出 ${count} 道新的練習題，題型要混合（填空 choice、句意 meaning、排序 order），難度和單元相符，不要超出 ${u.lv}。
 單元：${u.weeks}・${u.title}
 講義重點：
 ${lessonSummary(uid)}
@@ -8987,7 +8976,6 @@ ${lessonSummary(uid)}
 - 每題只能有一個正確答案，其他選項要是學習者常見的錯誤，但不能也算對。
 - choice：jp 是日文句子，只有一個空格「（　）」；op 是 4 個選項；a 是正確選項；zh 是整句的中文翻譯（不要提示答案）。
 - meaning：jp 是日文句子；op 是 4 個中文翻譯；a 是正確的翻譯；zh 留空字串。
-- correct：op 是 4 個日文句子，只有一句文法正確；a 是那一句；zh 是正確句的中文。
 - order：pre 和 post 是句子的前後部分（可為空字串），parts 是依正確順序排列的 4 個片段，star 是 ★ 位置（0～3）；zh 是整句中文。
 - why 用 1～2 句繁體中文說明考點；pt 是 2～8 字的考點名稱。
 - 句子短而自然（30 字內），不要用過難的單字。

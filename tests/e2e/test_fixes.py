@@ -1533,11 +1533,11 @@ def test_offline_audio_keeps_the_japanese_clips_of_todays_practice(b):
     js = """(async () => { const t = todayStr(); const rec = (due) => ({ b: 1, due, n: 1, ok: 1, ng: 0, s: 3, d: 5, last: addDays(t, -1), intro: addDays(t, -1) });
       state.stage = 'main'; state.currentUnit = 'm2'; state.settings.loadCap = 100; state.srs = {}; state.completedUnits = [];
       state.today = { date: t, newV: 0, newG: 0, newK: 0, newL: 0, newR: 0, newC: 0, newA: 0 };
-      state.srs['v:n5a-002'] = rec(t); state.srs['g:m1-18'] = rec(t); state.srs['v:n5a-001'] = rec(addDays(t, 20)); DAILY_CACHE = null;
+      state.srs['v:n5a-002'] = rec(t); state.srs['g:m1-01'] = rec(t); state.srs['v:n5a-001'] = rec(addDays(t, 20)); DAILY_CACHE = null;
       const fresh = (items, kind) => items.filter(x => x.kind === kind && !state.srs[x.key]).length;
       const items = audioPrefetchItems(); const keys = items.map(x => x.key);
       const texts = await audioPrefetchTexts(); const has = (text) => texts.some(e => e.text === text);
-      const r = { due: keys.includes('v:n5a-002') && keys.includes('g:m1-18'), later: keys.includes('v:n5a-001'),
+      const r = { due: keys.includes('v:n5a-002') && keys.includes('g:m1-01'), later: keys.includes('v:n5a-001'),
         v: fresh(items, 'v'), g: fresh(items, 'g'), k: fresh(items, 'k'), l: fresh(items, 'l'), a: items.filter(x => x.kind === 'a').length,
         ex: has('明日は何をしますか。'), laterEx: has('今日は何曜日ですか。'), zh: texts.some(e => e.lang === 'zh') };
       const kc = audioCollector(); kc.item(REG.byKey.get('k:月')); r.kanji = kc.list().filter(e => !e.lang).map(e => e.text).sort();

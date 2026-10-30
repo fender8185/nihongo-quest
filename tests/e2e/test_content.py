@@ -44,17 +44,51 @@ WEEK0_PTS = {'AはBです・ではありません': 1, '〜ですか・はい／
 
 def test_week0_items_are_kana_only_and_cover_five_points(b):
     js = """(() => { const G = REG.grammar.filter(g => g.u === 'm0'); const ja = (g) => (g.t === 'meaning' ? [g.jp] : [g.jp, g.a].concat(g.op)).filter(Boolean).join(' ');   // a meaning item's answer and options are Chinese
-      const words = new Set(REG.vocab.map(v => v.w)); const gen = new Set(cloudAudioTexts().map(x => x.text)); const full = (g) => g.t === 'choice' ? g.jp.replace(/（[^）]*）/, g.a) : g.t === 'correct' ? g.a : g.jp;
+      const words = new Set(REG.vocab.map(v => v.w)); const gen = new Set(cloudAudioTexts().map(x => x.text)); const full = (g) => g.t === 'choice' ? g.jp.replace(/（[^）]*）/, g.a) : g.jp;
       return JSON.stringify({ n: G.length, pts: G.reduce((m, g) => (m[g.pt] = (m[g.pt] || 0) + 1, m), {}), secs: G.map(g => [g.pt, g.sec]),
         kanji: G.filter(g => /[一-龯々]/.test(ja(g))).map(g => g.id), kata: [...new Set(G.flatMap(g => ja(g).match(/[ァ-ヶー]{2,}/g) || []))].filter(w => !words.has(w)),
         dupFull: G.length - new Set(G.map(full)).size, built: G.filter(g => { const q = makeQuestion(g, {}); return q && q.options.length === 4; }).length,
-        fmts: G.filter(g => g.t === 'choice').every(g => ['g-choice', 'g-correct', 'g-meaning'].every(f => makeGrammarQuestion(g, { forceFmt: f }))),
+        fmts: G.filter(g => g.t === 'choice').every(g => ['g-choice', 'g-meaning'].every(f => makeGrammarQuestion(g, { forceFmt: f }))),
         inGen: G.filter(g => !gen.has(ttsText(full(g)))).map(g => g.id) }); })()"""
     r = json.loads(ev(b, js))
     assert r['n'] == 20 and r['pts'] == {k: 4 for k in WEEK0_PTS}, r
     assert all(sec == WEEK0_PTS[pt] for pt, sec in r['secs']), r
     assert r['kanji'] == [] and r['kata'] == [] and r['dupFull'] == 0, r
     assert r['built'] == 20 and r['fmts'] and r['inGen'] == [], r
+
+# ---- 1.0.23: 選正確句 is gone. The written items left the bank; week 0's five, whose options differed in one slot, became
+# fill-ins with the same full sentence; a fill-in item is asked as 填空 or 句意 only; an AI item of that type is not taken ----
+WEEK0_FILLS = {'m0-4': ['それは ノート（　）。', 'ではありません', ['ではありません', 'ではです', 'ありません', 'でわありません'], 'それは ノートではありません。'],
+               'm0-16': ['これ（　） テレビです。', 'も', ['も', 'もは', 'はも', 'を'], 'これも テレビです。'],
+               'm0-17': ['こちら（　） どうぞ。', 'へ', ['へ', 'え', 'わ', 'お'], 'こちらへ どうぞ。'],
+               'm0-18': ['これ（　） ください。', 'を', ['を', 'お', 'わ', 'え'], 'これを ください。'],
+               'm0-19': ['ここ（　） ホテルです。', 'は', ['は', 'わ', 'を', 'お'], 'ここは ホテルです。']}
+
+def test_sentence_choice_is_gone_and_week0_keeps_its_five_as_fill_ins(b):
+    js = """(() => { const G = REG.grammar; const t = todayStr(); const seen = new Set();
+      G.filter(g => (g.t || 'choice') === 'choice').slice(0, 300).forEach(g => { state.srs[g.key] = { b: 3, due: t, n: 3, ok: 3, ng: 0, s: 6, d: 5, last: addDays(t, -6), gf: { 'g-choice': [3, 0] } };
+        for (let i = 0; i < 4; i++) { const q = makeQuestion(g, {}); if (q) seen.add(q.fmt); } delete state.srs[g.key]; });
+      const w0 = Object.fromEntries(Object.keys(__W0__).map(id => { const g = G.find(x => x.id === id); return [id, { t: g.t, rest: [g.jp, g.a, g.op, makeGrammarQuestion(g, { forceFmt: 'g-choice' }).fullJp] }]; }));
+      const ai = validAiGrammar({ t: 'correct', op: ['これは ペンです。', 'これを ペンです。', 'これに ペンです。', 'これで ペンです。'], a: 'これは ペンです。', zh: '這是筆。', why: '主題用「は」。', pt: '主題' }, unitById('m1'));
+      return JSON.stringify({ types: [...new Set(G.map(g => g.t || 'choice'))], data: DATA.GRAMMAR.filter(g => g.t === 'correct').length, seen: [...seen].sort(), w0, ai }); })()""".replace('__W0__', json.dumps(WEEK0_FILLS, ensure_ascii=False))
+    r = json.loads(ev(b, js))
+    assert 'correct' not in r['types'] and r['data'] == 0, r
+    assert r['seen'] == ['g-choice', 'g-meaning'], r
+    assert r['w0'] == {k: {'t': 'choice', 'rest': v} for k, v in WEEK0_FILLS.items()}, r['w0']
+    assert r['ai'] is None, r
+
+# 1.0.23: the records of the removed items go (schedule and notebook), and so do AI items of that type with theirs;
+# week 0's five, now fill-ins, keep theirs, as does everything else
+def test_records_of_removed_sentence_choice_items_are_dropped(b):
+    js = """(() => { const rec = () => ({ b: 2, due: todayStr(), n: 3, ok: 3, ng: 0, s: 3, d: 5, last: todayStr() });
+      const mk = (id, key) => ({ id, key, cat: '文法', prompt: id, answer: 'x', why: '', count: 1 });
+      const s = normalizeState({ srs: { 'g:m1-18': rec(), 'g:m0-17': rec(), 'g:gd1': rec(), 'g:ai_c': rec(), 'g:ai_k': rec() },
+        mistakes: [mk('a', 'g:m1-18'), mk('b', 'g:m0-17'), mk('c', 'g:gd1'), mk('d', 'g:ai_c'), mk('e', 'g:ai_k')],
+        customGrammar: [{ id: 'ai_c', u: 'm1', t: 'correct', lv: 'N5', d: 2, pt: 'x', op: ['あ', 'い', 'う', 'え'], a: 'あ', zh: '', why: '', src: 'ai' },
+          { id: 'ai_k', u: 'm1', t: 'choice', lv: 'N5', d: 2, pt: 'x', jp: 'これ（　）ペンです。', op: ['は', 'を', 'に', 'で'], a: 'は', zh: '', why: '', src: 'ai' }] });
+      return JSON.stringify({ srs: Object.keys(s.srs).sort(), mistakes: s.mistakes.map(m => m.id), custom: s.customGrammar.map(g => g.id) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'srs': ['g:ai_k', 'g:gd1', 'g:m0-17'], 'mistakes': ['b', 'c', 'e'], 'custom': ['ai_k']}, r
 
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
