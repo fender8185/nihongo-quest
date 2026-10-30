@@ -934,12 +934,17 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.19';   // keep equal to the version in sw.js CACHE ('nq-v1.0.19'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.20';   // keep equal to the version in sw.js CACHE ('nq-v1.0.20'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.20', date: '2026-10-30', items: [
+    '加練只給新內容：一輪的題數等於今天的新題數，不再夾複習（複習照各自的日子出）；做完一輪，還有新內容就能再做一輪。',
+    '通過階段測驗時，自動把到那個階段為止、還不到四顆的題目設成四顆，不用再選等級；這次答錯的和錯題本裡的題目不動，結果頁有「復原」。課程頁的「標記到這裡為止」拿掉了；以前通過但沒標記的階段，重考一次就會標記。',
+    '入門測驗通過後的四題（平假名、片假名、入門單字、第 0 週句型）改成選三顆、四顆或五顆，每題照這一類的答對率預先選好（90% 以上五顆、80% 以上四顆，其他三顆）並標上「建議」，按 Enter 或直接點都可以。1.0.17 的舊帳號補考入門測驗也一樣，不再自動標記。'
+  ] },
   { v: '1.0.19', date: '2026-10-30', items: [
     '今天的題目在第一次打開時排好，當天不會變：測驗後的標記不再讓圓圈亂跳，當天的聽力、閱讀照出。圓圈只畫百分比；按鈕寫這組幾題、今天還剩幾題，零星的尾巴併進同一組。「今天做了」和側欄改算今天作答過的不重複題目。',
     '模擬考不再改熟練度、不進錯題本、不算正確率和題數；只考試的日子照算連續天數。學習紀錄分開寫「N 題」和「作答 M 次」，模擬考與階段測驗另外寫題數。',
@@ -4792,7 +4797,7 @@ function renderToday(view) {
             ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">範圍</button>` : ''}
             ${inPreStage() ? '' : `<button type="button" class="hero-tab${heroTab === 'unit' ? ' open' : ''}" data-act="hero-tab" data-tab="unit" aria-expanded="${heroTab === 'unit'}">目前單元</button>`}
           </div>
-          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>今天的題目在第一次打開時排好，當天不會變；中途解鎖的新內容明天才排進來。三顆以下照記憶強度排複習，每天最多 50 題；四顆每天出 5%、五顆每天出 3%、錯題本每天出 10%（各最少 1 題、最多 30 題），都是等最久的先出。新題數看最近 100 題的正確率和錯題本，照還沒學的比例分給單字、文法、漢字。答錯的幾題後再練一次，之後第 1、3、7 天各複習一次，三次都對才離開錯題本。做完還想多學可以按加練。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
+          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>今天的題目在第一次打開時排好，當天不會變；中途解鎖的新內容明天才排進來。三顆以下照記憶強度排複習，每天最多 50 題；四顆每天出 5%、五顆每天出 3%、錯題本每天出 10%（各最少 1 題、最多 30 題），都是等最久的先出。新題數看最近 100 題的正確率和錯題本，照還沒學的比例分給單字、文法、漢字。答錯的幾題後再練一次，之後第 1、3、7 天各複習一次，三次都對才離開錯題本。做完還想多學可以按加練，一輪只出新內容，題數等於今天的新題數，不出複習。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
           ${plan.remaining ? `<div class="hero-panel" data-panel="scope" ${heroTab === 'scope' ? '' : 'hidden'}>${scopeHtml}</div>` : ''}
           <div class="hero-panel" data-panel="unit" ${heroTab === 'unit' && !inPreStage() ? '' : 'hidden'}>
             <div class="row between mb-2"><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div><span class="chip">${esc(cur.lv)}</span></div>

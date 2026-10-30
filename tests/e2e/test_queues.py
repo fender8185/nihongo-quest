@@ -186,6 +186,8 @@ def test_today_help_describes_the_tiers(b):
       return help ? help.textContent : ''; })()"""
     text = ev(b, js)
     assert all(s in text for s in ['每天最多 50 題', '四顆每天出 5%', '五顆每天出 3%', '錯題本每天出 10%', '最近 100 題']), text
+    # 1.0.20: 加練 is a round of new items only, as many as today's new count, no reviews
+    assert all(s in text for s in ['加練', '只出新內容', '等於今天的新題數', '不出複習']), text
 
 # ---- 1.0.19 審查修正（Tasks 1–4） ----
 # I1: a missed dialogue or passage stays in the notebook but its queue never draws it (it keeps its own week-later date)
