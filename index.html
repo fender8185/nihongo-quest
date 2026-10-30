@@ -1534,17 +1534,16 @@ const RETENTION = 0.9;   // reviews come back when FSRS expects 90% recall (1.0.
 const SRS_DAYS = [0, 1, 3, 7, 14, 30, 60, 120];          // level → typical interval (old schedule; used to convert records)
 const LEVEL_FROM_S = [1, 2.5, 5, 10, 21, 45, 90];        // stability needed for levels 1…7
 const SRS_LEARNED = 3;   // level at which an item counts as learned (stability ≥ 5 days)
-const SRS_MASTERED = 5;  // level at which an item counts as mastered (stability ≥ 21 days)
-const MASTER_FORMATS = 3; // a word is mastered only after it has been answered correctly in this many question formats
+const SRS_MASTERED = 5;  // level at which an item counts as mastered (stability ≥ 21 days; a word with a 假名拼字 question also needs it spelled once)
 
 // Per-format history of a word: rec.f = { 'v-cloze': [ok, ng], flash: [ok, ng], … }. Only vocabulary records carry it.
-function recordFormat(rec, fmt, ok, field = 'f') {   // words keep `f` (counts toward 已熟練); grammar keeps `gf` (format rotation only)
+function recordFormat(rec, fmt, ok, field = 'f') {   // words keep `f` (its 'v-spell' counts toward 已熟練); grammar keeps `gf` (format rotation only)
   if (!rec || !fmt) return;
   const bag = rec[field] || (rec[field] = {});
   const x = bag[fmt] || (bag[fmt] = [0, 0]);
   x[ok ? 0 : 1]++;
 }
-function formatsPassed(rec) { return rec && rec.f ? Object.values(rec.f).filter(x => x[0] > 0).length : 0; }
+function spelled(rec) { return Boolean(rec && rec.f && rec.f['v-spell'] && rec.f['v-spell'][0] > 0); }   // its 假名拼字 answered right once
 const LEECH_LAPSES = 4;
 const GRADE = { again: 1, hard: 2, good: 3, easy: 4 };
 // 錯題重學階梯: a missed word, grammar item or kanji comes back after 1 day, then 2 more, then 4 more (days 1, 3, 7); three right
@@ -1646,6 +1645,7 @@ function srsAnswer(key, correct, opt = {}) {
   if (!r) r = state.srs[key] = { b: 0, due: t, n: 0, ok: 0, ng: 0, st: 0, last: null, lapse: 0, intro: t };
   else ensureFsrs(r);
   const before = r.b; const dueBefore = r.due;
+  const masteredBefore = !isNew && srsLevelLabel(r, key) === '已熟練';   // read before the answer: its format is recorded after srsAnswer
   const g = opt.grade ? (GRADE[opt.grade] || 3) : (correct ? 3 : 1);
   const elapsed = r.last ? daysBetween(r.last, t) : 0;
   const reviewed = !isNew && r.due <= t;   // a due review (not a first look, not early practice): only these move the relearning ladder on
@@ -1656,8 +1656,9 @@ function srsAnswer(key, correct, opt = {}) {
   if (g > 1) { r.ok++; r.st++; } else { r.ng++; r.st = 0; if (before >= 2) r.lapse = (r.lapse || 0) + 1; delete r.known; }   // a miss ends the 我會了 vouch: back to the normal rules
   r.b = g === 1 ? Math.min(levelFromS(r.s), 1) : levelFromS(r.s);
   // four stars answered right go up by memory strength like any other item (after a long wait in the queue that usually
-  // makes five); a 入門 item clearly right at five stars (not a flashcard's 模糊) leaves the queues
-  if (g >= 3 && before >= 5 && isPreItem(key)) r.out = 1;
+  // makes five); a 入門 item clearly right (not a flashcard's 模糊) while 已熟練 leaves the queues: five stars, and a word
+  // with a spelling question spelled once before
+  if (g >= 3 && masteredBefore && isPreItem(key)) r.out = 1;
   if (g === 1) delete r.out;
   if (isNew) logEntry().fresh = (logEntry().fresh || 0) + 1;   // first answers a day: the pace the exam countdown uses
   if (before < SRS_LEARNED && r.b >= SRS_LEARNED) r.lrn = t;   // the day it became 熟悉 (學習分析 lists the recent ones)
@@ -1694,9 +1695,9 @@ function srsDots(b) {
   const lit = b <= 0 ? 0 : b <= 2 ? b : b <= 4 ? 3 + (b === 4 ? 1 : 0) : 5;
   return `<span class="dots" aria-label="熟練度 ${lit}/5">${[0, 1, 2, 3, 4].map(i => `<i class="${i < lit ? 'on' : ''}"></i>`).join('')}</span>`;
 }
-// `key` (optional) tells custom cards apart: they have fewer possible formats, so two passed formats are enough
-// 「我會了」: the learner vouches for a word. It counts as 已熟練 at once and comes back for a check in about six weeks;
-// answering it wrong later drops the vouch and the ordinary rules apply again. 取消 puts it at the 熟悉 threshold.
+// 「我會了」: the learner vouches for a word. It goes to five stars at once (已熟練 once its 假名拼字 has been right) and comes
+// back for a check in about six weeks; answering it wrong later drops the vouch and the ordinary rules apply again. 取消
+// puts it at the 熟悉 threshold.
 function markKnown(key, save = true) {
   const t = todayStr();
   let r = state.srs[key];
@@ -1711,15 +1712,17 @@ function markKnown(key, save = true) {
 }
 function unmarkKnown(key) {
   const r = state.srs[key]; if (!r) return null;
-  delete r.known; r.s = Math.min(r.s || 0, LEVEL_FROM_S[SRS_LEARNED - 1]); r.b = levelFromS(r.s);
+  delete r.known; delete r.out; r.s = Math.min(r.s || 0, LEVEL_FROM_S[SRS_LEARNED - 1]); r.b = levelFromS(r.s);   // an 入門 word that left comes back
   r.due = addDays(todayStr(), fsrsDays(r.s, key));
   saveState();
   return r;
 }
-function masterFormatsFor(key) { const it = key && REG.byKey && REG.byKey.get(key); return it && it.kind === 'v' && !it.builtin ? 2 : MASTER_FORMATS; }
+// 已熟練: five stars, and for a word with a 假名拼字 question its spelling right once — however it got to five stars (answers,
+// a stage pass, 我會了). Anything else (a word with no spelling question, a custom card, grammar, kana, kanji…) is 已熟練 at
+// five stars. `key` says which item it is; without one it is not taken for a word.
 function srsLevelLabel(rec, key) {
   if (!rec) return '新內容';
-  if (rec.b >= SRS_MASTERED && (rec.known || !rec.f || formatsPassed(rec) >= masterFormatsFor(key))) return '已熟練';   // known: the learner vouched for it (我會了)
+  if (rec.b >= SRS_MASTERED) { const it = key && REG.byKey && REG.byKey.get(key); return it && it.kind === 'v' && canSpell(it) && !spelled(rec) ? '熟悉' : '已熟練'; }
   if (rec.b >= SRS_LEARNED) return '熟悉';
   if (rec.b >= 1) return '學習中';
   return '待加強';
@@ -2542,6 +2545,8 @@ function speechAvailable() {
   return typeof window !== 'undefined' && 'speechSynthesis' in window && (window.speechSynthesis.getVoices() || []).some(x => /ja/i.test(x.lang || ''));
 }
 
+// a word that has a 假名拼字 question: built in, a reading in kana of 2–8 characters
+function canSpell(v) { return Boolean(v && v.builtin && v.r && !HAS_KANJI.test(v.r) && v.r.length >= 2 && v.r.length <= 8); }
 function vocabFormats(v) {
   const rec = srsGet(v.key);
   const b = rec ? rec.b : -1;
@@ -2555,7 +2560,7 @@ function vocabFormats(v) {
     'v-reading': Boolean(v.r && HAS_KANJI.test(v.w) && v.builtin),
     'v-kanji': Boolean(v.r && HAS_KANJI.test(v.w) && v.builtin && b >= 3),
     'v-listen': Boolean(v.m && speechAvailable()),
-    'v-spell': Boolean(v.builtin && v.r && !HAS_KANJI.test(v.r) && v.r.length >= 2 && v.r.length <= 8),
+    'v-spell': canSpell(v),
     'v-match': Boolean(v.builtin && v.m && matchPairs(v))
   };
   let weights;
@@ -2606,7 +2611,11 @@ function makeVocabQuestion(v0, ctx = {}) {
   const v = pickExample(v0, ctx);
   const formats = ctx.choiceOnly ? vocabFormats(v).filter(([f]) => f !== 'v-spell' && f !== 'v-match') : vocabFormats(v);   // 階段測驗: options only
   const avoid = ctx.avoidFmts || ctx.avoidFmt;
-  let fmt = Array.isArray(formats[0]) ? weightedPick(formats, avoid) : formats[0];
+  // at four stars or more a word not spelled yet is asked as 假名拼字 (已熟練 waits for it), whatever came just before; not
+  // where only options or a set format will do (階段測驗, the mock exam) nor in an encore
+  const rec = srsGet(v.key);
+  const mustSpell = !ctx.choiceOnly && !ctx.forceFmt && !ctx.encore && Boolean(rec) && rec.b >= 4 && canSpell(v) && !spelled(rec);
+  let fmt = mustSpell ? 'v-spell' : Array.isArray(formats[0]) ? weightedPick(formats, avoid) : formats[0];
   const q = baseQ(v);
   q.cat = '單字';
   q.lv = v.lv;
@@ -4134,7 +4143,7 @@ function feedbackHtml(e) {
       <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>' : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
       ${diff}${full}${example}
       ${why ? `<div class="fb-why mt-2">${md(why)}</div>` : ''}
-      <div class="fb-meta">${q.point ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}${q.kind === 'v' && q.key && ok && cur && !SESSION.test && srsLevelLabel(cur, q.key) !== '已熟練' ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(q.key)}">這個字我已經會了</button>` : ''}</div>
+      <div class="fb-meta">${q.point ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}${q.kind === 'v' && q.key && ok && cur && !SESSION.test && !cur.known && srsLevelLabel(cur, q.key) !== '已熟練' ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(q.key)}">這個字我已經會了</button>` : ''}</div>
       <div id="aiExplainBox"></div>
     </div>`;
 }
@@ -4768,7 +4777,7 @@ function renderToday(view) {
             ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">範圍</button>` : ''}
             ${inPreStage() ? '' : `<button type="button" class="hero-tab${heroTab === 'unit' ? ' open' : ''}" data-act="hero-tab" data-tab="unit" aria-expanded="${heroTab === 'unit'}">目前單元</button>`}
           </div>
-          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>今天的題目在第一次打開時排好，當天不會變；中途解鎖的新內容明天才排進來。三顆以下照記憶強度排複習，每天最多 50 題；答錯的題目幾題後再練一次，之後第 1、3、7 天各複習一次（不算在 50 題內），三次都對才離開錯題本。四顆每天出 5%、五顆每天出 3%（各最少 1 題、最多 30 題），等最久的先出。新題數看最近 100 題的正確率和錯題本，照還沒學的比例分給單字、文法、漢字。做完還想多學可以按加練，一輪只出新內容，題數等於今天的新題數，不出複習。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
+          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>今天的題目在第一次打開時排好，當天不會變；中途解鎖的新內容明天才排進來。三顆以下照記憶強度排複習，每天最多 50 題；答錯的題目幾題後再練一次，之後第 1、3、7 天各複習一次（不算在 50 題內），三次都對才離開錯題本。四顆每天出 5%、五顆每天出 3%（各最少 1 題、最多 30 題），等最久的先出。單字五顆、而且假名拼字答對過才算已熟練，四顆以上還沒拼對的，下次會出拼字。新題數看最近 100 題的正確率和錯題本，照還沒學的比例分給單字、文法、漢字。做完還想多學可以按加練，一輪只出新內容，題數等於今天的新題數，不出複習。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
           ${plan.remaining ? `<div class="hero-panel" data-panel="scope" ${heroTab === 'scope' ? '' : 'hidden'}>${scopeHtml}</div>` : ''}
           <div class="hero-panel" data-panel="unit" ${heroTab === 'unit' && !inPreStage() ? '' : 'hidden'}>
             <div class="row between mb-2"><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div><span class="chip">${esc(cur.lv)}</span></div>

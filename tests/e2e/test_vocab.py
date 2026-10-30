@@ -1,5 +1,5 @@
 """2026-10-26: vocabulary themes (主題 tab, themed practice) and multi-format practice (preview card, encores,
-per-format record, 已熟練 needs three formats)."""
+per-format record; since 1.0.21 a word is 已熟練 at five stars once its 假名拼字 has been right)."""
 import json, os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from cdp import Browser
@@ -35,22 +35,45 @@ def test_themed_practice_uses_only_that_theme(b):
     r = json.loads(ev(b, js))
     assert r['n'] > 0 and r['all'] and r['title'] == '主題練習・飲食', r
 
-# ---- Task 3: per-format record, 已熟練 needs three formats ----
-def test_mastered_needs_three_passed_formats_for_words_only(b):
-    js = """(() => { const mk = (f) => Object.assign({ b: 6, due: '2099-01-01', n: 9, ok: 9, ng: 0, s: 60, d: 5 }, f === undefined ? {} : { f });
-      const legacy = normalizeState(Object.assign(JSON.parse(JSON.stringify(state)), { srs: { 'v:x': mk(), 'g:y': mk() } }));
-      return JSON.stringify({ none: srsLevelLabel(mk({})), two: srsLevelLabel(mk({ 'v-meaning': [3, 0], 'v-recall': [1, 2], 'v-cloze': [0, 2] })),
-        three: srsLevelLabel(mk({ 'v-meaning': [3, 0], 'v-recall': [1, 2], 'v-listen': [1, 0] })), grammar: srsLevelLabel(mk()),
-        legacyWord: srsLevelLabel(legacy.srs['v:x']), legacyGrammar: srsLevelLabel(legacy.srs['g:y']) }); })()"""
+# ---- Task 3: per-format record; 1.0.21: 已熟練 is five stars, and for a word with a 假名拼字 question its spelling right ----
+# three other formats are not enough, nor is 我會了; a word with no spelling question (目), grammar, kanji (an old bulk
+# mark's empty `f` included), a custom card, and a record with no key count at five stars
+def test_mastered_means_five_stars_and_a_spelled_reading(b):
+    js = """(() => { const w = __W__; const me = REG.vocab.find(v => v.builtin && v.w === '目'); const g = REG.grammar[0]; const k = REG.kanji[0];
+      state.vocab.push({ id: 'cm_sp', w: '猫', r: 'ねこ', m: '貓' }); buildRegistry(); const c = REG.vocab.find(x => x.id === 'cm_sp');
+      const mk = (f, extra) => Object.assign({ b: 6, due: '2099-01-01', n: 9, ok: 9, ng: 0, s: 60, d: 5 }, f === undefined ? {} : { f }, extra || {});
+      const out = { three: srsLevelLabel(mk({ 'v-meaning': [3, 0], 'v-recall': [1, 2], 'v-listen': [1, 0] }), w.key), spell: srsLevelLabel(mk({ 'v-spell': [1, 0] }), w.key),
+        known: srsLevelLabel(mk({ 'v-meaning': [1, 0] }, { known: 1 }), w.key), me: srsLevelLabel(mk({}), me.key), grammarEmptyF: srsLevelLabel(mk({}), g.key),
+        kanjiEmptyF: srsLevelLabel(mk({}), k.key), custom: srsLevelLabel(mk({ 'v-meaning': [1, 0] }), c.key), noKey: srsLevelLabel(mk({})),
+        gone: typeof formatsPassed === 'undefined' && typeof MASTER_FORMATS === 'undefined' };
+      state.vocab = state.vocab.filter(x => x.id !== 'cm_sp'); buildRegistry(); return JSON.stringify(out); })()""".replace('__W__', SPELL_WORD)
     r = json.loads(ev(b, js))
-    assert r == {'none': '熟悉', 'two': '熟悉', 'three': '已熟練', 'grammar': '已熟練', 'legacyWord': '熟悉', 'legacyGrammar': '已熟練'}, r
+    assert r == {'three': '熟悉', 'spell': '已熟練', 'known': '熟悉', 'me': '已熟練', 'grammarEmptyF': '已熟練', 'kanjiEmptyF': '已熟練', 'custom': '已熟練', 'noKey': '已熟練', 'gone': True}, r
+
+# 1.0.21: a word at four stars or more that has not been spelled yet is asked as 假名拼字 in practice, whatever format came
+# just before, but not where only options or one set format will do (階段測驗, the mock exam); once spelled the formats
+# take turns again; below four stars nothing is forced; a word with no spelling question (目) never gets one
+def test_four_star_words_not_yet_spelled_are_asked_to_spell(b):
+    js = """(() => { const w = __W__; const t = todayStr(); const me = REG.vocab.find(v => v.builtin && v.w === '目');
+      const wk = REG.vocab.find(x => x.builtin && /[一-龯]/.test(x.w) && __SP__ && x.key !== w.key && meaningOptions(x));
+      const set = (v, b, f) => { state.srs[v.key] = { b, s: LEVEL_FROM_S[b - 1], d: 5, due: addDays(t, 3), n: 4, ok: 4, ng: 0, st: 4, last: addDays(t, -10), lapse: 0, intro: addDays(t, -40), f }; };
+      const fmts = (v, ctx, n) => [...new Set(Array.from({ length: n }, () => { const q = makeQuestion(v, Object.assign({}, ctx)); return q && q.fmt; }))];
+      set(w, 4, { 'v-meaning': [2, 0] }); set(wk, 4, { 'v-meaning': [2, 0] }); set(me, 4, { 'v-meaning': [2, 0] });
+      const ch = makeQuestion(w, { choiceOnly: true });
+      const out = { daily: fmts(w, {}, 10), avoid: makeQuestion(w, { avoidFmt: 'v-spell' }).fmt, choice: Boolean(ch && ch.options.length >= 2 && ch.fmt !== 'v-spell'),
+        forced: makeVocabQuestion(wk, { forceFmt: 'v-reading' }).fmt, me: !fmts(me, {}, 30).includes('v-spell') };
+      state.srs[w.key].f['v-spell'] = [1, 0]; out.afterSpell = fmts(w, {}, 30).length > 1;
+      set(w, 3, { 'v-meaning': [2, 0] }); out.three = fmts(w, {}, 30).length > 1;
+      [w, wk, me].forEach(v => { delete state.srs[v.key]; }); return JSON.stringify(out); })()""".replace('__W__', SPELL_WORD).replace('__SP__', 'x.r && !/[一-龯]/.test(x.r) && x.r.length >= 2 && x.r.length <= 8')
+    r = json.loads(ev(b, js))
+    assert r == {'daily': ['v-spell'], 'avoid': 'v-spell', 'choice': True, 'forced': 'v-reading', 'afterSpell': True, 'three': True, 'me': True}, r
 
 def test_answering_records_the_format_and_flash_ratings_count_as_one(b):
     js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x));
       startSession('items', { items: [v] }); const e = currentEntry(); e.previewDone = true; const fmt = e.q.fmt; answerCurrent(e.q.answer);
       const f1 = JSON.parse(JSON.stringify(state.srs[v.key].f)); SESSION = null; document.body.classList.remove('practicing');
       recordFormat(state.srs[v.key], 'flash', true);
-      return JSON.stringify({ fmt, f1, passed: formatsPassed(state.srs[v.key]) }); })()"""
+      return JSON.stringify({ fmt, f1, passed: Object.keys(state.srs[v.key].f).length }); })()"""
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
     assert r['f1'] == {r['fmt']: [1, 0]} and r['passed'] == 2, r
 
@@ -134,7 +157,7 @@ def test_preview_card_speaks_the_new_word_even_if_auto_reading_was_saved_off(b):
     assert r == {'calls': 1}, r
 
 TESTS = [test_themes_cover_every_builtin_word_once, test_theme_tab_lists_cards_and_opens_the_word_table, test_themed_practice_uses_only_that_theme,
-         test_mastered_needs_three_passed_formats_for_words_only, test_answering_records_the_format_and_flash_ratings_count_as_one, test_unpassed_formats_are_preferred_on_review,
+         test_mastered_means_five_stars_and_a_spelled_reading, test_four_star_words_not_yet_spelled_are_asked_to_spell, test_answering_records_the_format_and_flash_ratings_count_as_one, test_unpassed_formats_are_preferred_on_review,
          test_new_word_shows_a_preview_card_before_its_question,
          test_a_new_word_comes_back_once_in_another_format_without_rescheduling, test_no_encore_when_no_other_format_can_be_built, test_words_already_known_get_no_encore,
          test_wrong_first_answer_keeps_requeue_and_encores_apart_and_requeue_does_not_count_as_a_pass, test_preview_card_speaks_the_new_word_even_if_auto_reading_was_saved_off]
@@ -228,7 +251,7 @@ TESTS += [test_kana_options_need_four_distinct_readings, test_homophones_never_p
 def test_theme_card_bar_has_three_segments_for_seen_learned_mastered(b):
     js = """(() => { const ws = REG.vocab.filter(v => v.builtin && v.lv === 'N5' && vocabTheme(v) === '身體與健康');
       const rec = (b, f) => ({ b, due: '2099-01-01', n: 5, ok: 5, ng: 0, s: 30, d: 5, f });
-      ws.slice(0, 2).forEach(v => { state.srs[v.key] = rec(6, { 'v-meaning': [1, 0], 'v-recall': [1, 0], 'v-cloze': [1, 0] }); });
+      ws.slice(0, 2).forEach(v => { state.srs[v.key] = rec(6, { 'v-meaning': [1, 0], 'v-spell': [1, 0] }); });   // 已熟練: five stars, spelled
       ws.slice(2, 5).forEach(v => { state.srs[v.key] = rec(3, {}); });
       ws.slice(5, 9).forEach(v => { state.srs[v.key] = rec(1, {}); });
       location.hash = '#/vocab/level?lv=N5'; route();
@@ -448,23 +471,12 @@ def test_new_formats_join_the_rotation_after_the_first_sighting(b):
 
 TESTS += [test_kana_spelling_question_is_answered_by_tapping_tiles, test_wrong_spelling_shows_the_right_reading_and_backspace_works, test_matching_question_pairs_four_words_with_their_meanings, test_new_formats_join_the_rotation_after_the_first_sighting]
 
-# ---- 2026-10-26 (13): custom cards reach 已熟練 with two formats ----
-def test_custom_cards_are_mastered_with_two_formats_builtins_still_need_three(b):
-    js = """(() => { state.vocab.push({ id: 'cm1', w: '猫', r: 'ねこ', m: '貓' }); buildRegistry();
-      const c = REG.vocab.find(x => x.id === 'cm1'); const v = REG.vocab.find(x => x.builtin);
-      const rec = () => ({ b: 6, due: '2099-01-01', n: 9, ok: 9, ng: 0, s: 60, d: 5, f: { 'v-meaning': [2, 0], flash: [1, 0] } });
-      state.srs[c.key] = rec(); state.srs[v.key] = rec();
-      return JSON.stringify({ custom: srsLevelLabel(state.srs[c.key], c.key), builtin: srsLevelLabel(state.srs[v.key], v.key), noKey: srsLevelLabel(state.srs[v.key]) }); })()"""
-    r = json.loads(ev(b, js))
-    assert r == {'custom': '已熟練', 'builtin': '熟悉', 'noKey': '熟悉'}, r
-
-TESTS += [test_custom_cards_are_mastered_with_two_formats_builtins_still_need_three]
 
 # ---- 2026-10-26 (14): review leftovers — furigana known rule, theme list deck button, encore feedback, session counts ----
 def test_furigana_known_hiding_follows_the_mastered_label(b):
     js = """(() => { const v = REG.vocab.find(x => x.builtin && x.w === '今日'); const rec = (f) => ({ b: 6, due: '2099-01-01', n: 9, ok: 9, ng: 0, s: 60, d: 5, f });
-      state.srs[v.key] = rec({}); const a = /class="known"/.test(furi('今日は'));
-      state.srs[v.key] = rec({ 'v-meaning': [1, 0], 'v-recall': [1, 0], 'v-cloze': [1, 0] }); const c = /class="known"/.test(furi('今日は'));
+      state.srs[v.key] = rec({ 'v-meaning': [1, 0], 'v-recall': [1, 0], 'v-cloze': [1, 0] }); const a = /class="known"/.test(furi('今日は'));   // three formats, not spelled
+      state.srs[v.key] = rec({ 'v-spell': [1, 0] }); const c = /class="known"/.test(furi('今日は'));
       return JSON.stringify({ a, c }); })()"""
     assert ev(b, js) == '{"a":false,"c":true}'
 
@@ -559,29 +571,31 @@ def test_every_builtin_word_has_a_usable_second_example(b):
 
 TESTS += [test_every_builtin_word_has_a_usable_second_example]
 
-# ---- 2026-10-27: 「我會了」 marks a word mastered until it is missed ----
-def test_i_know_this_word_marks_it_mastered_until_it_is_missed(b):
-    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key]); const theme = vocabTheme(v); const before = vocabThemes().find(g => g.c === theme).mastered;
+# ---- 2026-10-27: 「我會了」 sets five stars until the word is missed; 1.0.21: it reads 已熟練 once its 假名拼字 has been right ----
+def test_i_know_gives_five_stars_and_mastery_waits_for_the_spelling(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 2 && x.r.length <= 8); const theme = vocabTheme(v); const before = vocabThemes().find(g => g.c === theme).mastered;
       ACTIONS['vocab-known']({ dataset: { key: v.key } }); const r = state.srs[v.key];
-      const out = { label: srsLevelLabel(r, v.key), due: daysBetween(todayStr(), r.due), mastered: vocabThemes().find(g => g.c === theme).mastered - before, known: r.known };
+      const out = { label: srsLevelLabel(r, v.key), b: r.b, due: daysBetween(todayStr(), r.due), mastered: vocabThemes().find(g => g.c === theme).mastered - before, known: r.known };
+      recordFormat(r, 'v-spell', true); out.afterSpell = srsLevelLabel(r, v.key);
       srsAnswer(v.key, false); out.afterMiss = srsLevelLabel(state.srs[v.key], v.key); out.knownAfterMiss = state.srs[v.key].known || null;
       ACTIONS['vocab-known']({ dataset: { key: v.key } }); ACTIONS['vocab-unknown']({ dataset: { key: v.key } }); out.afterUndo = srsLevelLabel(state.srs[v.key], v.key);
       delete state.srs[v.key]; return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['label'] == '已熟練' and r['due'] >= 30 and r['mastered'] == 1 and r['known'] == 1, r
-    assert r['afterMiss'] != '已熟練' and r['knownAfterMiss'] is None and r['afterUndo'] == '熟悉', r
+    assert r['label'] == '熟悉' and r['b'] >= 5 and r['due'] >= 30 and r['mastered'] == 0 and r['known'] == 1, r
+    assert r['afterSpell'] == '已熟練' and r['afterMiss'] != '已熟練' and r['knownAfterMiss'] is None and r['afterUndo'] == '熟悉', r
 
 def test_i_know_this_word_button_is_on_the_word_list_and_the_practice_feedback(b):
-    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x)); const theme = vocabTheme(v);
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x) && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 2 && x.r.length <= 8); const theme = vocabTheme(v);
       renderVocabList(document.getElementById('view'), { c: theme }); const row = document.querySelector(`[data-act=vocab-known][data-key="${v.key}"]`); const out = { listBtn: !!row };
       startSession('items', { items: [v] }); const e = currentEntry(); e.preview = false; e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice(); answerCurrent(e.q.answer);
       const btn = document.querySelector('.feedback [data-act=vocab-known]'); out.fbBtn = !!btn; if (btn) btn.click();
       out.meta = (document.querySelector('.fb-meta') || {}).textContent || ''; out.encoresLeft = SESSION.entries.filter(x => x.encore && x.item.key === v.key).length; out.label = srsLevelLabel(state.srs[v.key], v.key);
+      renderPractice(); out.fbAfter = Boolean(document.querySelector('.feedback [data-act=vocab-known]'));   // vouched for: not offered again
       SESSION = null; document.body.classList.remove('practicing'); delete state.srs[v.key]; return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
-    assert r['listBtn'] and r['fbBtn'] and r['label'] == '已熟練' and '已熟練' in r['meta'] and r['encoresLeft'] == 0, r
+    assert r['listBtn'] and r['fbBtn'] and r['label'] == '熟悉' and '熟悉' in r['meta'] and r['fbAfter'] is False and r['encoresLeft'] == 0, r
 
-TESTS += [test_i_know_this_word_marks_it_mastered_until_it_is_missed, test_i_know_this_word_button_is_on_the_word_list_and_the_practice_feedback]
+TESTS += [test_i_know_gives_five_stars_and_mastery_waits_for_the_spelling, test_i_know_this_word_button_is_on_the_word_list_and_the_practice_feedback]
 
 # ---- 2026-10-27: matching — a wrong pair flashes red, the feedback explains all four pairs ----
 def test_matching_flashes_a_wrong_pair_and_explains_every_pair_afterwards(b):
@@ -649,14 +663,14 @@ def test_bulk_i_know_marks_the_filtered_words_and_can_be_undone(b):
     assert r['btn'] and r['count'] == r['todo'] and r['known'] == r['total'] and r['undoBtn'] and r['restored'] and r['undoGone'], r
 
 def test_preview_card_has_i_know_which_skips_the_word_and_its_encore(b):
-    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key]); const others = REG.vocab.filter(x => x.builtin && x.key !== v.key).slice(0, 3);
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 2 && x.r.length <= 8); const others = REG.vocab.filter(x => x.builtin && x.key !== v.key).slice(0, 3);
       startSession('items', { items: [v, ...others] }); renderPractice();
       const btn = document.querySelector('.pr-actions [data-act=preview-known]'); const out = { btn: !!btn, len0: SESSION.entries.length };
       ACTIONS['preview-known'](); const r = state.srs[v.key];
       Object.assign(out, { known: r && r.known === 1, label: srsLevelLabel(r, v.key), gone: SESSION.entries.every(x => !x.item || x.item.key !== v.key), len: SESSION.entries.length, idx: SESSION.idx, next: currentEntry() && currentEntry().item.key !== v.key });
       SESSION = null; document.body.classList.remove('practicing'); delete state.srs[v.key]; saveState(); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['btn'] and r['known'] and r['label'] == '已熟練' and r['gone'] and r['len'] == 3 and r['idx'] == 0 and r['next'], r
+    assert r['btn'] and r['known'] and r['label'] == '熟悉' and r['gone'] and r['len'] == 3 and r['idx'] == 0 and r['next'], r   # five stars, 已熟練 once spelled
 
 def test_experienced_shortcut_in_the_level_picker_turns_chinese_off(b):
     js = """(() => { const keep = JSON.stringify(state.settings); const unit = state.currentUnit;

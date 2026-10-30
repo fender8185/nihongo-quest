@@ -49,12 +49,24 @@ def test_pre_items_leave_after_a_five_star_right_answer(b):
     js = "(() => { " + FRESH + REC + """ const a = 'a:あ', w = words[0].key, p = REG.vocab.find(v => v.builtin && v.lv === 'PRE_N5').key;
       state.srs[a] = rec(6); srsAnswer(a, true); const out1 = state.srs[a].out, tier1 = tierOf(a);
       srsAnswer(a, false); const out2 = state.srs[a].out, tier2 = tierOf(a);
-      state.srs[w] = rec(6); srsAnswer(w, true); state.srs[p] = rec(5); srsAnswer(p, true);
+      state.srs[w] = rec(6); srsAnswer(w, true); state.srs[p] = rec(5, { f: { 'v-spell': [1, 0] } }); srsAnswer(p, true);   // spelled: 已熟練
       return JSON.stringify({ out1, tier1, out2: out2 === undefined, tier2, word: state.srs[w].out === undefined, pre: state.srs[p].out, pre4: isPreItem(p), n5: isPreItem(w) }); })()"""
     r = json.loads(ev(b, js))
     assert r['out1'] == 1 and r['tier1'] == 'out', r
     assert r['out2'] is True and r['tier2'] == 'srs', r
     assert r['word'] is True and r['pre'] == 1 and r['pre4'] is True and r['n5'] is False, r
+
+# 1.0.21: an 入門 word with a spelling question leaves for good only once it is 已熟練 (five stars and spelled) and is
+# answered right again; a flashcard's right answer before that keeps it; 取消熟練 brings one that left back (M10)
+def test_a_pre_word_leaves_only_once_mastered(b):
+    js = "(() => { " + FRESH + REC + """ const p = REG.vocab.find(x => x.builtin && x.lv === 'PRE_N5' && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 2 && x.r.length <= 8).key; const o = () => (state.srs[p].out === undefined ? null : state.srs[p].out);
+      state.srs[p] = rec(6, { f: {} }); srsAnswer(p, true, { grade: 'good' }); const flash = o();
+      state.srs[p].last = addDays(t, -30); srsAnswer(p, true); recordFormat(state.srs[p], 'v-spell', true); const stays = o(); const spelled = srsLevelLabel(state.srs[p], p);   // answerCurrent's order: schedule, then format
+      state.srs[p].last = addDays(t, -30); srsAnswer(p, true); const leaves = o();
+      unmarkKnown(p); const unmark = o();
+      return JSON.stringify({ flash, stays, spelled, leaves, unmark }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'flash': None, 'stays': None, 'spelled': '已熟練', 'leaves': 1, 'unmark': None}, r
 
 def test_only_srs_tier_items_are_due(b):
     js = "(() => { " + FRESH + REC + """ const y = addDays(t, -1); const [k4, k2] = words.slice(0, 2);
@@ -231,7 +243,7 @@ def test_today_help_describes_the_tiers(b):
     js = "(() => { " + FRESH + """ location.hash = '#/today'; route(); const help = document.querySelector('.hero-panel[data-panel=help]');
       return help ? help.textContent : ''; })()"""
     text = ev(b, js)
-    assert all(s in text for s in ['每天最多 50 題', '四顆每天出 5%', '五顆每天出 3%', '不算在 50 題內', '最近 100 題']) and '錯題本每天出' not in text, text
+    assert all(s in text for s in ['每天最多 50 題', '四顆每天出 5%', '五顆每天出 3%', '不算在 50 題內', '最近 100 題', '假名拼字答對過']) and '錯題本每天出' not in text, text
     # 1.0.20: 加練 is a round of new items only, as many as today's new count, no reviews
     assert all(s in text for s in ['加練', '只出新內容', '等於今天的新題數', '不出複習']), text
 
@@ -473,8 +485,8 @@ def test_the_1_0_20_changelog_says_what_a_pass_does_with_the_tests_misses(b):
     assert len(items) == 3 and '這次答錯的和錯題本裡的題目不動' not in items[1], items
     assert all(s in items[1] for s in ['這次答錯的題目不設四顆', '還沒學過的文法和假名從隔天起排進複習', '錯題本裡的題目不動']), items[1]
 
-# a mark gives a new record the format history `f` only for a word (only a word's formats count toward 已熟練, see
-# recordFormat): grammar a pass set to four stars reads 已熟練 once a right answer lifts it to five, and a kanji has no `f`
+# a mark gives a new record the format history `f` only for a word (a word's 假名拼字 counts toward 已熟練, see
+# srsLevelLabel): grammar a pass set to four stars reads 已熟練 once a right answer lifts it to five, and a kanji has no `f`
 def test_a_marked_grammar_item_reaches_mastered_and_only_a_word_gets_formats(b):
     js = "(() => { " + FRESH + """ state.srs = {}; state.mistakes = []; LAST_BULK_MARK = null; const t = todayStr(); const items = stageItems('p1');
       const [g, v, k] = ['g', 'v', 'k'].map(kind => items.find(x => x.kind === kind));

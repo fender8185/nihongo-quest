@@ -1331,7 +1331,7 @@ def test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_i
 def test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked(b):
     js = """(() => { localStorage.removeItem('nq_listen_pref'); LISTEN = null; const t = todayStr(); const vs = REG.vocab.filter(v => v.builtin).slice(0, 6);
       const rec = (b, extra) => Object.assign({ b, due: addDays(t, 3), n: b + 1, ok: b, ng: 0, s: 5, d: 5, last: addDays(t, -1), intro: addDays(t, -9), f: {} }, extra || {});
-      state.srs[vs[0].key] = rec(1); state.srs[vs[1].key] = rec(3); state.srs[vs[2].key] = rec(SRS_MASTERED, { known: true });   // 初識 / 熟悉 / 熟練 (vouched)
+      state.srs[vs[0].key] = rec(1); state.srs[vs[1].key] = rec(3); state.srs[vs[2].key] = rec(SRS_MASTERED, { known: true, f: { 'v-spell': [1, 0] } });   // 初識 / 熟悉 / 熟練 (vouched, and spelled)
       vs.slice(3).forEach(v => { delete state.srs[v.key]; }); saveState();
       const words = listenThemeWords('初識單詞').map(v => v.key); const g = listenThemes()[0];
       const empty0 = (() => { const keep = state.srs; state.srs = {}; const d = listenDefaultTheme(); state.srs = keep; return d; })();
