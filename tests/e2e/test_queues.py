@@ -369,8 +369,8 @@ MET = """const met = (k) => { const r = state.srs[k]; if (!r) return null; const
 # tomorrow, no format history (`f`, a word's), not on the relearning ladder and not in the notebook
 MET_ONCE = {'b': 0, 'n': 1, 'ok': 0, 'ng': 1, 'st': 0, 'lapse': 0, 'fsrs': True, 'due': 1, 'today': True, 'f': False, 'rl': False, 'noted': False}
 
-# a p1 pass marks 入門 and 第一階段 at once: items below four stars get four, listening and reading three (back in 90–270
-# days); of the test's misses never met before, grammar is met once and missed while a word, a kanji, listening and
+# a p1 pass marks 入門 and 第一階段 at once: items below four stars get four, listening and reading are left to their own
+# rule; of the test's misses never met before, grammar is met once and missed while a word, a kanji, listening and
 # reading stay new; the notebook is left as it was; today's list stays as it was and the four-star queue draws them from
 # the next day; the result page says where the course is now, and 復原 there puts everything back
 def test_passing_a_stage_marks_four_stars_and_leaves_today_alone(b):
@@ -384,11 +384,11 @@ def test_passing_a_stage_marks_four_stars_and_leaves_today_alone(b):
       const want = { g: 1, v: 1, k: 1, lr: 1 };   // four wrong, none with a record: a grammar item, a word, a kanji, a listening or reading question
       const wrong = playTest(x => { const k = isLR(x) ? 'lr' : x.kind; if (state.srs[x.key] || !want[k]) return false; want[k]--; return true; });
       const view = document.getElementById('view'); const txt = view.textContent; const skip = new Set(wrong.concat(noted.key));
-      const core = items.filter(x => !isLR(x) && !skip.has(x.key)), lr = items.filter(x => isLR(x) && !skip.has(x.key)); const lrDays = lr.map(x => daysBetween(t, state.srs[x.key] ? state.srs[x.key].due : t));
+      const core = items.filter(x => !isLR(x) && !skip.has(x.key)), lr = items.filter(x => isLR(x) && !skip.has(x.key));
       const out = { passed: state.stageTests.p1[0].passed, wrong: wrong.length, four: core.every(x => state.srs[x.key] && state.srs[x.key].b === 4), three: state.srs[three.key].b,
-        lrB: [...new Set(lr.map(x => state.srs[x.key] ? state.srs[x.key].b : 0))], lrMin: Math.min(...lrDays), lrMax: Math.max(...lrDays),
+        lrNone: lr.every(x => !state.srs[x.key]),
         missed: wrong.map(k => [isLR(REG.byKey.get(k)) ? 'lr' : REG.byKey.get(k).kind, met(k)]), noted: JSON.stringify(state.srs[noted.key]) === notedRec, notebook: state.mistakes.length === 1 && !state.mistakes[0].mastered,
-        today: JSON.stringify(dayProgress()) === before, says: txt.includes(`已把第一階段以前、還不到四顆的 ${core.length} 題設成四顆。`),   // listening and reading are not counted: three stars
+        today: JSON.stringify(dayProgress()) === before, says: txt.includes(`已把第一階段以前、還不到四顆的 ${core.length} 題設成四顆。`),   // listening and reading are not marked
         undo: Boolean(view.querySelector('[data-act="bulk-mark-undo"]')), old: txt.includes('標記到這裡為止') || Boolean(view.querySelector('[data-act="stage-mark"]')),
         unit: state.currentUnit, banner: (view.querySelector('.banner') || {}).textContent || '' };
       Object.values(state.srs).forEach(r => { if (r.last === t) r.last = addDays(t, -1); });   // the next day: today's marks were made yesterday
@@ -398,7 +398,7 @@ def test_passing_a_stage_marks_four_stars_and_leaves_today_alone(b):
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
     assert r['passed'] and r['wrong'] == 4, r
-    assert r['four'] and r['three'] == 4 and r['lrB'] == [3] and r['lrMin'] >= 90 and r['lrMax'] <= 270, r
+    assert r['four'] and r['three'] == 4 and r['lrNone'], r
     assert dict(r['missed']) == {'g': MET_ONCE, 'v': None, 'k': None, 'lr': None}, r   # grammar met once and missed (back tomorrow); the others stay new
     assert r['noted'] and r['notebook'], r
     assert r['today'] and r['says'] and r['undo'] and not r['old'], r

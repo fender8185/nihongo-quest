@@ -1697,14 +1697,14 @@ function srsDots(b) {
 // `key` (optional) tells custom cards apart: they have fewer possible formats, so two passed formats are enough
 // 「我會了」: the learner vouches for a word. It counts as 已熟練 at once and comes back for a check in about six weeks;
 // answering it wrong later drops the vouch and the ordinary rules apply again. 取消 puts it at the 熟悉 threshold.
-function markKnown(key, save = true, dueDays) {   // dueDays: a fixed interval (整批 marks spread their checks over weeks)
+function markKnown(key, save = true) {
   const t = todayStr();
   let r = state.srs[key];
   if (!r) r = state.srs[key] = { b: 0, due: t, n: 0, ok: 0, ng: 0, st: 0, last: null, lapse: 0, intro: t, f: {} };
   ensureFsrs(r);
   r.s = Math.max(r.s || 0, 45); r.d = Math.min(r.d || 5, 4); r.b = levelFromS(r.s); r.known = 1;
   if (!r.lrn) r.lrn = t;
-  r.due = addDays(t, Number.isFinite(dueDays) ? dueDays : fsrsDays(r.s, key)); r.last = t;
+  r.due = addDays(t, fsrsDays(r.s, key)); r.last = t;
   state.mistakes.forEach(m => { if (m.key === key && !m.mastered) { m.mastered = true; m.last = t; } });   // 我會了 clears it from the notebook
   if (save) saveState();
   return r;
@@ -5018,70 +5018,47 @@ Object.assign(ACTIONS, {
 // ---- 通過階段測驗的標記（批次標記） ----
 /* Passing a stage test marks that stage and every stage before it in one go (markPassedStage): items below four
    stars become four stars, so they wait in the four-star queue instead of filling the 50 daily reviews for weeks;
-   listening and reading become three stars by their own rule. The test's misses and the items in the notebook are left
-   to their relearning; grammar or kana missed and never met before is met once and missed, so the reviews teach it from
-   the next day (bulkMeetMissed). Only upgrades: an item already at or above the level is left alone. Due dates are spread over a
-   window (a four-star date is only read by an older version). One undo is kept in memory (LAST_BULK_MARK) until the page
-   reloads. */
-// The levels, lowest first: s is the stability written (五顆 goes through markKnown)
-const BULK_LEVELS = {
-  learned: { name: '三顆', s: LEVEL_FROM_S[SRS_LEARNED - 1], due: [5, 14], lr: [90, 270] },
-  four: { name: '四顆', s: LEVEL_FROM_S[3], due: [5, 14], lr: [90, 270] },
-  known: { name: '五顆', due: [35, 56], lr: [180, 365] }
-};
-const BULK_ORDER = ['learned', 'four', 'known'];
+   listening and reading keep their own rule (3 a day, 30／90／180 days) and are not marked. The test's misses and the
+   items in the notebook are left to their relearning; grammar or kana missed and never met before is met once and
+   missed, so the reviews teach it from the next day (bulkMeetMissed). Only upgrades: an item already at four stars or
+   more is left alone. A marked item is due where FSRS puts four stars (about ten days); the four-star queue does not
+   read that date, so it is not spread. One undo is kept in memory (LAST_BULK_MARK) until the page reloads. */
 let LAST_BULK_MARK = null;
-function bulkDailyBudget() { return SRS_DAILY_CAP; }   // a bulk mark spreads its first checks at the daily review cap
-// the i-th of n marked items: the level's window, widened when n would put more than the budget on a day (count = n / budget days)
-function spreadDue(i, level, n = 0) { const [lo, hi] = BULK_LEVELS[level].due; const days = Math.max(hi - lo + 1, Math.ceil((n || 0) / bulkDailyBudget())); return lo + (i % days); }
-// 聽力／閱讀 are capped per day and come back on the 30／90／180 ladder, so they get a later, wider window of their own
-function spreadDueLR(j, level, n = 0) { const [lo, hi] = BULK_LEVELS[level].lr; const days = Math.max(hi - lo + 1, Math.ceil((n || 0) / bulkDailyBudget())); return lo + (j % days); }
-function bulkLevelOf(rec, key) {   // the level an item already has, as an index into BULK_ORDER (-1: no record or below three stars)
-  if (!rec) return -1;
-  if (srsLevelLabel(rec, key) === '已熟練') return 2;
-  if (rec.b >= 4) return 1;
-  if (rec.b >= SRS_LEARNED) return 0;
-  return -1;
-}
-// the items of the stage and every stage before it that are below `level`
-function bulkMarkTargets(stageId, level) {
-  const want = BULK_ORDER.indexOf(level);
-  const out = []; const seen = new Set();
-  stagesUpTo(stageId).forEach(s => stageItems(s.id).forEach(x => { if (seen.has(x.key)) return; seen.add(x.key); if (bulkLevelOf(state.srs[x.key], x.key) < want) out.push(x); }));
-  return out;
-}
-function isLR(x) { return x.kind === 'l' || x.kind === 'r'; }   // listening and reading: outside the tiers, marked by their own rule
-// what a pass marks: items below four stars, listening and reading below three (their own rule), none of those in `skip`
+function isLR(x) { return x.kind === 'l' || x.kind === 'r'; }   // listening and reading: outside the tiers, not marked
+// what a pass marks: the items of the stage and every stage before it that are below four stars (no record, or b < 4),
+// not listening or reading, none in `skip`
 function passMarkTargets(stageId, skip) {
-  return bulkMarkTargets(stageId, 'four').filter(x => !isLR(x)).concat(bulkMarkTargets(stageId, 'learned').filter(isLR)).filter(x => !skip.has(x.key));
+  const out = []; const seen = new Set();
+  stagesUpTo(stageId).forEach(s => stageItems(s.id).forEach(x => {
+    if (seen.has(x.key)) return; seen.add(x.key);
+    const r = state.srs[x.key];
+    if (!isLR(x) && (!r || r.b < 4) && !skip.has(x.key)) out.push(x);
+  }));
+  return out;
 }
 // what a bulk mark (a stage pass) must remember to undo itself
 function bulkSnapshot(extra) {
   return Object.assign({ srs: {}, mistakes: JSON.parse(JSON.stringify(state.mistakes)), completedUnits: state.completedUnits.slice(), lessonSeen: (state.lessonSeen || []).slice(),
     currentUnit: state.currentUnit, stage: state.stage, introSeen: state.introSeen, kanaKnown: state.kanaKnown }, extra);
 }
-// mark the targets at a level (listening and reading at lrLevel), due dates spread; the previous records go into snap.srs
-function bulkApply(targets, level, snap, lrLevel = level) {
+// set the targets to four stars; the previous records go into snap.srs
+function bulkApply(targets, snap) {
   const t = todayStr();
-  const core = targets.filter(x => !isLR(x)); const lr = targets.filter(isLR);
-  const mark = (x, lv, dueDays) => {
+  targets.forEach(x => {
     const key = x.key;
     snap.srs[key] = state.srs[key] ? JSON.parse(JSON.stringify(state.srs[key])) : null;
-    if (lv === 'known') { markKnown(key, false, dueDays); return; }
     let r = state.srs[key];
     if (!r) {   // a word's record starts its format history (only a word's formats count toward 已熟練, see recordFormat)
       r = state.srs[key] = { b: 0, due: t, n: 0, ok: 0, ng: 0, st: 0, last: null, lapse: 0, intro: t };
       if (key.startsWith('v:')) r.f = {};
     }
     ensureFsrs(r);
-    r.s = Math.max(r.s || 0, BULK_LEVELS[lv].s);
+    r.s = Math.max(r.s || 0, LEVEL_FROM_S[3]);
     r.b = levelFromS(r.s);
     if (!r.lrn) r.lrn = t;
     r.last = t;   // so the first real review measures elapsed time from today (null would freeze FSRS growth)
-    r.due = addDays(t, dueDays);
-  };
-  core.forEach((x, i) => mark(x, level, spreadDue(i, level, core.length)));
-  lr.forEach((x, j) => mark(x, lrLevel, spreadDueLR(j, lrLevel, lr.length)));
+    r.due = addDays(t, fsrsDays(r.s, key));
+  });
 }
 // keys a four-star mark left alone (passSkipKeys): one with no record that is not in the notebook was missed in the test
 // and never met. Grammar and kana of that kind are met once and missed: the record srsAnswer writes for a first wrong
@@ -5096,14 +5073,13 @@ function bulkMeetMissed(keys, snap) {
     state.srs[key] = { b: 0, due: addDays(t, 1), n: 1, ok: 0, ng: 1, st: 0, last: t, lapse: 0, intro: t, s: FSRS_W[0], d: fsrsD0(1) };
   });
 }
-// a passed stage test: the stage and every one before it go to four stars (listening and reading three, back in 90–270
-// days), none in `skip` (grammar missed and never met is met once and missed); their units count as done with their
-// lesson cards seen, and the course moves past the stage. Returns how many items were set to four stars (listening and
-// reading not counted).
+// a passed stage test: the stage and every one before it go to four stars, none in `skip` (grammar missed and never met
+// is met once and missed); their units count as done with their lesson cards seen, and the course moves past the stage.
+// Returns how many items were set to four stars.
 function markPassedStage(stageId, skip) {
-  const targets = passMarkTargets(stageId, skip); const four = targets.filter(x => !isLR(x)).length;
-  const snap = bulkSnapshot({ stageId, level: 'four', changed: four });
-  bulkApply(targets, 'four', snap, 'learned');
+  const targets = passMarkTargets(stageId, skip);
+  const snap = bulkSnapshot({ stageId, changed: targets.length });
+  bulkApply(targets, snap);
   bulkMeetMissed(skip, snap);
   const units = stagesUpTo(stageId).flatMap(s => s.units);
   units.forEach(u => { if (!state.completedUnits.includes(u)) state.completedUnits.push(u); });
@@ -5115,7 +5091,7 @@ function markPassedStage(stageId, skip) {
   if (unitOrder(nu) > unitOrder(state.currentUnit)) state.currentUnit = nu;
   LAST_BULK_MARK = snap;
   DAILY_CACHE = null; saveState();
-  return four;
+  return targets.length;
 }
 function bulkUndo() {
   const S = LAST_BULK_MARK; if (!S) return false;
@@ -5185,7 +5161,7 @@ function renderCourse(view) {
       <div><div class="page-title">課程</div><div class="page-sub">四個階段：入門與 18 個單元（每單元約兩週）。整體完成度 ${cp.pct}%</div></div>
       <button type="button" class="btn" data-act="open-level">依程度選擇起點</button>
     </div>
-    ${LAST_BULK_MARK ? `<div class="banner"><div class="grow">已把 ${LAST_BULK_MARK.changed} 個項目標成「${LAST_BULK_MARK.label || BULK_LEVELS[LAST_BULK_MARK.level].name}」。重新整理後就不能復原了。</div><button type="button" class="btn btn-sm" data-act="bulk-mark-undo">復原</button></div>` : ''}
+    ${LAST_BULK_MARK ? `<div class="banner"><div class="grow">已把 ${LAST_BULK_MARK.changed} 個項目標成「四顆」。重新整理後就不能復原了。</div><button type="button" class="btn btn-sm" data-act="bulk-mark-undo">復原</button></div>` : ''}
     ${cards}`;
 }
 
@@ -5820,7 +5796,7 @@ Object.assign(ACTIONS, {
   'vocab-known-all': () => {
     const keys = vocabListFiltered(currentRoute().params).filter(v => !(state.srs[v.key] && state.srs[v.key].known)).map(v => v.key);
     if (!keys.length) return;
-    const prev = {}; keys.forEach((k, i) => { prev[k] = state.srs[k] ? JSON.parse(JSON.stringify(state.srs[k])) : null; markKnown(k, false, spreadDue(i, 'known', keys.length)); });
+    const prev = {}; keys.forEach(k => { prev[k] = state.srs[k] ? JSON.parse(JSON.stringify(state.srs[k])) : null; markKnown(k, false); });
     saveState(); LAST_BULK_KNOWN = { keys, prev };
     toast(`已把 ${keys.length} 個字標成五顆，之後會排進五顆的複習`); route();
   },

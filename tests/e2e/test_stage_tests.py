@@ -126,36 +126,34 @@ PLAY_TEST = """const playTest = (miss) => { const wrong = []; const n = SESSION.
       answerCurrent(bad ? (e.q.answer + 1) % e.q.options.length : e.q.answer); nextQuestion(); }
     return wrong; };"""
 
-# items below four stars become four (listening and reading three), only upgrades; the units, lessons, stage and week move on
+# items below four stars become four, only upgrades, each due where FSRS puts four stars (about ten days, not spread);
+# listening and reading keep their own rule; the units, lessons, stage and week move on
 def test_a_pass_marks_four_stars_with_its_side_effects(b):
     js = "(() => { " + RESET + """const t = todayStr(); const out = {};
       const items = stagesUpTo('p1').flatMap(s => stageItems(s.id)); const v5 = stageItems('p1').find(x => x.kind === 'v'); markKnown(v5.key, false);   // five stars already: left alone
-      const n = passMarkTargets('p1', new Set()).filter(x => !isLR(x)).length; const changed = markPassedStage('p1', new Set());
-      const core = items.filter(x => !isLR(x) && x.key !== v5.key).map(x => state.srs[x.key]), lr = items.filter(isLR).map(x => state.srs[x.key]); const budget = bulkDailyBudget();
-      const days = core.map(r => (r ? daysBetween(t, r.due) : -1));
-      Object.assign(out, { n, changed, core: core.length, four: core.every(r => r && r.b === 4), lr3: lr.length > 0 && lr.every(r => r && r.b === 3), known: [state.srs[v5.key].known, state.srs[v5.key].b],
-        dueMin: Math.min(...days), dueMax: Math.max(...days), expMax: 5 + Math.max(10, Math.ceil(core.length / budget)) - 1, lastSet: core.concat(lr).every(r => r && r.last === t),
+      const n = passMarkTargets('p1', new Set()).length; const changed = markPassedStage('p1', new Set());
+      const core = items.filter(x => !isLR(x) && x.key !== v5.key).map(x => state.srs[x.key]);
+      Object.assign(out, { n, changed, core: core.length, four: core.every(r => r && r.b === 4), lrUntouched: items.filter(isLR).every(x => !state.srs[x.key]), known: [state.srs[v5.key].known, state.srs[v5.key].b],
+        dueOk: core.every(r => r && daysBetween(t, r.due) >= 9 && daysBetween(t, r.due) <= 11), lastSet: core.every(r => r && r.last === t),
         units: state.completedUnits.slice(), cur: state.currentUnit, stage: state.stage, intro: state.introSeen, kana: state.kanaKnown, lessons: state.lessonSeen.filter(k => k.startsWith('m1:')).length > 0, n4Open: n4WordsOpen() });
       renderCourse(document.getElementById('view')); const banner = document.querySelector('#view .banner');
       out.banner = Boolean(document.querySelector('[data-act="bulk-mark-undo"]')) && banner.textContent.includes(`已把 ${changed} 個項目標成「四顆」`);
       out.again = passMarkTargets('p1', new Set()).length;   // nothing left below the levels
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['n'] > 500 and r['changed'] == r['n'] == r['core'] and r['four'] and r['lr3'] and r['known'] == [1, 6], r
-    assert r['dueMin'] == 5 and r['dueMax'] == r['expMax'] and r['lastSet'], r
+    assert r['n'] > 500 and r['changed'] == r['n'] == r['core'] and r['four'] and r['lrUntouched'] and r['dueOk'] and r['known'] == [1, 6], r
+    assert r['lastSet'], r
     assert r['units'] == ['m0', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6'] and r['cur'] == 'm7' and r['stage'] == 'main' and r['intro'] and r['kana'] and r['lessons'] and r['n4Open'] and r['banner'], r
     assert r['again'] == 0, r
 
-def test_a_pass_never_downgrades_and_spreads_due(b):
-    js = "(() => { " + RESET + """const t = todayStr(); const v = stageItems('pre').find(x => x.kind === 'v'); markKnown(v.key, false); state.currentUnit = 'm9';
+def test_a_pass_never_downgrades(b):
+    js = "(() => { " + RESET + """const v = stageItems('pre').find(x => x.kind === 'v'); markKnown(v.key, false); state.currentUnit = 'm9';
       const custom = { id: 'u_test', w: 'テスト', r: 'てすと', m: '測試' }; state.vocab.push(custom); buildRegistry();
-      const changed = markPassedStage('p1', new Set()); const byDay = {}; const fresh = Object.entries(state.srs).filter(([k, x]) => !x.known && !/^[lr]:/.test(k)).map(([, x]) => x); fresh.forEach(x => { const d = daysBetween(t, x.due); byDay[d] = (byDay[d] || 0) + 1; });
-      const n = fresh.length; const maxDay = Math.max(...Object.values(byDay)); const days = Math.max(10, Math.ceil(n / bulkDailyBudget()));
-      const out = { changed, n, known: state.srs[v.key].known, b: state.srs[v.key].b, cur: state.currentUnit, custom: Boolean(state.srs['v:u_test']), maxDay, cap: bulkDailyBudget(), days: Object.keys(byDay).map(Number).sort((a, b) => a - b), expLast: 5 + days - 1 };
+      const changed = markPassedStage('p1', new Set()); const n = Object.entries(state.srs).filter(([k, x]) => !x.known && !/^[lr]:/.test(k)).length;
+      const out = { changed, n, known: state.srs[v.key].known, b: state.srs[v.key].b, cur: state.currentUnit, custom: Boolean(state.srs['v:u_test']) };
       state.vocab = state.vocab.filter(x => x.id !== 'u_test'); buildRegistry(); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
     assert r['known'] == 1 and r['b'] == 6 and r['cur'] == 'm9' and not r['custom'] and r['changed'] == r['n'], r
-    assert r['maxDay'] <= r['cap'] and r['days'][0] == 5 and r['days'][-1] == r['expLast'], r
 
 def test_a_p3_pass_finishes_the_course_and_undo_restores(b):
     js = "(() => { " + RESET + "state.stageTests = { p3: [{ date: todayStr(), correct: 40, total: 40, passed: true }] }; const before = " + SNAP + """;
@@ -181,12 +179,13 @@ def test_only_a_pass_marks_and_it_counts_what_is_left(b):
     assert r['fail'] == {'passed': False, 'same': True, 'undo': False, 'says': False, 'again': True}, r
     assert r['pass']['passed'] and r['pass']['marked'] == r['pass']['left'] and r['pass']['says'], r
 
-def test_vocab_known_all_spreads_due(b):
+# 這 N 個字我都會了: five stars each, due where FSRS puts them (not spread: five stars wait in their queue)
+def test_vocab_known_all_sets_five_stars(b):
     js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.srs); state.srs = {}; location.hash = '#/vocab/list?lv=PRE_N5'; route();
-      ACTIONS['vocab-known-all'](); const days = new Set(Object.values(state.srs).map(r => daysBetween(t, r.due))); const n = Object.keys(state.srs).length;
-      state.srs = JSON.parse(keep); LAST_BULK_KNOWN = null; saveState(); return JSON.stringify({ n, min: Math.min(...days), max: Math.max(...days), spread: days.size }); })()"""
+      ACTIONS['vocab-known-all'](); const recs = Object.values(state.srs); const days = recs.map(r => daysBetween(t, r.due));
+      state.srs = JSON.parse(keep); LAST_BULK_KNOWN = null; saveState(); return JSON.stringify({ n: recs.length, b: [...new Set(recs.map(r => r.b))], min: Math.min(...days), max: Math.max(...days) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['n'] > 0 and r['min'] >= 35 and r['max'] <= 56 and r['spread'] >= 10, r
+    assert r['n'] > 0 and r['b'] == [6] and 43 <= r['min'] and r['max'] <= 47, r   # fsrsDays(45): 45 days ± 5%
 
 # ---- review fixes ----
 def test_stage_test_kana_read_question_does_not_speak_the_answer(b):
@@ -196,14 +195,15 @@ def test_stage_test_kana_read_question_does_not_speak_the_answer(b):
     r = json.loads(ev(b, js))
     assert r == {'fmt': 'a-read', 'audio': '', 'plainAudio': 'あ'}, r
 
-def test_a_pass_bounds_daily_due_and_spaces_listening_reading(b):
+# listening and reading keep their own rule (3 a day, 30／90／180 days): a pass neither targets them nor changes a record
+def test_a_pass_leaves_listening_and_reading_alone(b):
     js = "(() => { " + RESET + """const t = todayStr(); state.stageTests = { p3: [{ date: t, correct: 40, total: 40, passed: true }] };
-      markPassedStage('p3', new Set()); const byDay = {}; const lr = []; const lrB = new Set();
-      Object.entries(state.srs).forEach(([k, r]) => { const d = daysBetween(t, r.due); if (/^[lr]:/.test(k)) { lr.push(d); lrB.add(r.b); } else byDay[d] = (byDay[d] || 0) + 1; });
-      return JSON.stringify({ maxDay: Math.max(...Object.values(byDay)), budget: bulkDailyBudget(), lrMin: Math.min(...lr), lrMax: Math.max(...lr), lrN: lr.length, lrB: [...lrB], firstDay: Math.min(...Object.keys(byDay).map(Number)) }); })()"""
+      const l = REG.listen[0], rd = REG.read[0]; state.srs[l.key] = { b: 2, s: 4, d: 5, due: addDays(t, 5), n: 2, ok: 2, ng: 0, st: 2, last: addDays(t, -20), lapse: 0, intro: addDays(t, -40) };
+      const before = JSON.stringify(state.srs[l.key]); const targets = passMarkTargets('p3', new Set()).filter(isLR).length; markPassedStage('p3', new Set());
+      return JSON.stringify({ listen: JSON.stringify(state.srs[l.key]) === before, readNew: !state.srs[rd.key], targets,
+        gone: typeof spreadDue === 'undefined' && typeof bulkDailyBudget === 'undefined' }); })()"""
     r = json.loads(ev(b, js))
-    assert r['budget'] == 50 and r['maxDay'] <= r['budget'] and r['firstDay'] == 5, r
-    assert r['lrN'] > 300 and r['lrMin'] >= 90 and r['lrMax'] <= 270 and r['lrB'] == [3], r   # listening and reading: three stars, their own rule
+    assert r == {'listen': True, 'readNew': True, 'targets': 0, 'gone': True}, r
 
 # a marked word's first real review grows its stability (six days on, memory strength alone takes it to five stars); practice drops the undo
 def test_first_review_after_a_pass_grows_stability_and_clears_undo(b):
