@@ -1574,7 +1574,8 @@ function tierOf(key) {
   if (/^[lr]:/.test(key)) return null;
   const r = state.srs[key];
   if (!r) return 'new';
-  if (r.out) return 'out';
+  // an 入門 item that left for good: only while 已熟練 (1.0.20 let a word leave before its spelling; it comes back to spell)
+  if (r.out && srsLevelLabel(r, key) === '已熟練') return 'out';
   if (typeof r.rl === 'number' || r.b <= 3) return 'srs';
   return r.b === 4 ? 'q4' : 'q5';
 }
@@ -5588,7 +5589,7 @@ function renderVocab(view, tab, params) {
       ${vocabExamples(v).map((e, i) => `<div class="example ${i ? 'mt-2' : 'mt-3'}" style="text-align:left"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="${i ? 'speak' : 'flash-speak'}" data-mode="ex" data-text="${esc(jaPlain(exPlain(e.ex)))}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${furi(exPlain(e.ex))}</div><div class="zh">${esc(e.exZh || '')}</div></div></div>`).join('')}
       <div id="flashAiBox"></div>` : '';
     card = `<div class="card">
-      <div class="row between small muted"><span>${F.idx + 1} / ${F.queue.length}・${r ? srsLevelLabel(r, v.key) : '新卡'}</span><span>${r ? srsDots(r.b) : '<span class="chip chip-accent">新</span>'}${r && srsLevelLabel(r, v.key) === '已熟練' ? '' : ` <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="直接標成五顆，之後排進五顆的複習">我會了</button>`}</span></div>
+      <div class="row between small muted"><span>${F.idx + 1} / ${F.queue.length}・${r ? srsLevelLabel(r, v.key) : '新卡'}</span><span>${r ? srsDots(r.b) : '<span class="chip chip-accent">新</span>'}${r && (r.known || srsLevelLabel(r, v.key) === '已熟練') ? '' : ` <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="直接標成五顆，之後排進五顆的複習">我會了</button>`}</span></div>
       <div class="flash">
         <div class="word jp">${esc(jaPlain(v.w))}</div>
         ${media}

@@ -20,7 +20,7 @@ REC = """const t = todayStr(); const rec = (b, extra) => Object.assign({ b, s: L
 def test_tier_follows_stars_ladder_and_out(b):
     js = "(() => { " + FRESH + REC + """ const k = words.slice(0, 7).map(v => v.key);
       state.srs[k[0]] = rec(2); state.srs[k[1]] = rec(3); state.srs[k[2]] = rec(4); state.srs[k[3]] = rec(6);
-      state.srs[k[4]] = rec(4, { rl: 0 }); state.srs[k[5]] = rec(6, { out: 1 }); delete state.srs[k[6]];
+      state.srs[k[4]] = rec(4, { rl: 0 }); state.srs[k[5]] = rec(6, { out: 1, f: { 'v-spell': [1, 0] } }); delete state.srs[k[6]];   // out: left while 已熟練
       return JSON.stringify([...k.map(tierOf), tierOf(REG.listen[0].key), tierOf(REG.read[0].key)]); })()"""
     r = json.loads(ev(b, js))
     assert r == ['srs', 'srs', 'q4', 'q5', 'srs', 'out', 'new', None, None], r
@@ -67,6 +67,19 @@ def test_a_pre_word_leaves_only_once_mastered(b):
       return JSON.stringify({ flash, stays, spelled, leaves, unmark }); })()"""
     r = json.loads(ev(b, js))
     assert r == {'flash': None, 'stays': None, 'spelled': '已熟練', 'leaves': 1, 'unmark': None}, r
+
+# final review: 1.0.20 let an 入門 word leave (`out`) at five stars whether or not it had been spelled; under 1.0.21 such a
+# word is not 已熟練, so it does not stay out: it waits in the five-star queue, is asked to spell, and is out once spelled
+def test_a_pre_word_marked_out_before_its_spelling_comes_back_to_spell(b):
+    js = "(() => { " + FRESH + REC + """ const p = REG.vocab.find(x => x.builtin && x.lv === 'PRE_N5' && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 2 && x.r.length <= 8).key;
+      state.srs = {}; state.srs[p] = rec(6, { out: 1, f: {} });
+      const out = { tier: tierOf(p), label: dueLabel(state.srs[p], p) };
+      delete state.today.plan; DAILY_CACHE = null; out.queued = computeDailyPlan().q5.some(x => x.key === p);
+      out.fmt = makeQuestion(REG.byKey.get(p), {}).fmt;
+      state.srs[p].f['v-spell'] = [1, 0]; out.spelledTier = tierOf(p);
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'tier': 'q5', 'label': '五顆・排隊中', 'queued': True, 'fmt': 'v-spell', 'spelledTier': 'out'}, r
 
 def test_only_srs_tier_items_are_due(b):
     js = "(() => { " + FRESH + REC + """ const y = addDays(t, -1); const [k4, k2] = words.slice(0, 2);
@@ -275,7 +288,7 @@ def test_exam_pace_counts_days_without_new_items(b):
 def test_four_and_five_stars_are_not_counted_or_dealt_as_due(b):
     js = "(() => { " + FRESH + REC + """ const y = addDays(t, -1); const [w4, w5, w2] = words.slice(0, 3);
       state.srs[w4.key] = rec(4, { due: y }); state.srs[w5.key] = rec(6, { due: y }); state.srs[w2.key] = rec(2, { due: y });
-      const p = REG.vocab.find(v => v.builtin && v.lv === 'PRE_N5'); state.srs[p.key] = rec(6, { due: y, out: 1 });
+      const p = REG.vocab.find(v => v.builtin && v.lv === 'PRE_N5'); state.srs[p.key] = rec(6, { due: y, out: 1, f: { 'v-spell': [1, 0] } });   // left while 已熟練
       const gs = unitItems('m1'); state.srs[gs[0].key] = rec(4, { due: y }); state.srs[gs[1].key] = rec(2, { due: y });
       const sum = (arr) => arr.reduce((a, g) => a + g.due, 0); const deck = buildFlashQueue('N5');
       return JSON.stringify({ vocab: vocabStats().due, level: levelStats('N5').due, themes: sum(themeStats('N5')), allThemes: sum(vocabThemes()), unit: unitStats('m1').due,
@@ -288,7 +301,7 @@ def test_four_and_five_stars_are_not_counted_or_dealt_as_due(b):
 def test_queue_items_are_labelled_as_queued(b):
     js = "(() => { " + FRESH + REC + """ state.srs = {}; words.slice(0, 40).forEach((v, i) => { state.srs[v.key] = rec(4, { last: addDays(t, -(i + 1)) }); });
       const [w5, w2] = words.slice(40, 42); state.srs[w5.key] = rec(6); state.srs[w2.key] = rec(2);
-      const p = REG.vocab.find(v => v.builtin && v.lv === 'PRE_N5'); state.srs[p.key] = rec(6, { out: 1 });
+      const p = REG.vocab.find(v => v.builtin && v.lv === 'PRE_N5'); state.srs[p.key] = rec(6, { out: 1, f: { 'v-spell': [1, 0] } });   // left while 已熟練
       const text = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d.textContent; };
       const list = text(vocabListResultsHtml({}, [words[0], w5, w2, p]));
       delete state.today.plan; DAILY_CACHE = null; const k = dailyPlan().q4[0].key;

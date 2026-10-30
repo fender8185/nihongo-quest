@@ -595,7 +595,19 @@ def test_i_know_this_word_button_is_on_the_word_list_and_the_practice_feedback(b
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
     assert r['listBtn'] and r['fbBtn'] and r['label'] == '熟悉' and '熟悉' in r['meta'] and r['fbAfter'] is False and r['encoresLeft'] == 0, r
 
-TESTS += [test_i_know_gives_five_stars_and_mastery_waits_for_the_spelling, test_i_know_this_word_button_is_on_the_word_list_and_the_practice_feedback]
+# final review: on the flashcard page too, a word vouched for with 我會了 is not offered 我會了 again (it reads 熟悉 until spelled)
+def test_flashcard_i_know_is_not_offered_again_once_vouched(b):
+    js = """(() => { const t = todayStr(); const w = REG.vocab.find(x => x.builtin && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 2 && x.r.length <= 8 && meaningOptions(x));
+      state.srs[w.key] = { b: 2, s: 3, d: 5, due: t, n: 2, ok: 2, ng: 0, st: 2, last: addDays(t, -3), lapse: 0, intro: addDays(t, -9), f: {} };
+      FLASH = { deck: 'all', queue: [w.key], idx: 0, flipped: false, extraNew: 0, date: t, done: 0 };
+      location.hash = '#/vocab/cards'; route(); const btn = () => document.querySelector(`#view [data-act="vocab-known"][data-key="${w.key}"]`);
+      const out = { before: Boolean(btn()) }; btn().click();
+      Object.assign(out, { after: Boolean(btn()), known: state.srs[w.key].known, label: srsLevelLabel(state.srs[w.key], w.key) });
+      delete state.srs[w.key]; FLASH = null; return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'before': True, 'after': False, 'known': 1, 'label': '熟悉'}, r
+
+TESTS += [test_i_know_gives_five_stars_and_mastery_waits_for_the_spelling, test_i_know_this_word_button_is_on_the_word_list_and_the_practice_feedback, test_flashcard_i_know_is_not_offered_again_once_vouched]
 
 # ---- 2026-10-27: matching — a wrong pair flashes red, the feedback explains all four pairs ----
 def test_matching_flashes_a_wrong_pair_and_explains_every_pair_afterwards(b):
