@@ -406,39 +406,8 @@ def test_passing_a_stage_marks_four_stars_and_leaves_today_alone(b):
     assert r['q4'] == 30, r
     assert r['restored'] and r['undone'] and r['missedGone'], r
 
-# the 入門 test: a pass (and any result of an account past 入門, 1.0.17's case) leads to four questions of 三顆／四顆／五顆,
-# each pre-selected (建議) by its group's score; nothing is marked before they are answered; Enter takes the suggestion
-def test_pre_test_asks_three_to_five_stars_with_a_suggestion(b):
-    js = "(() => { " + PLAY_TEST + """ const groups = { hira: REG.kana.filter(k => k.script === 'hira'), kata: REG.kana.filter(k => k.script === 'kata'), v: REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5'), g: unitItems('m0') };
-      const stars = () => Object.fromEntries(Object.entries(groups).map(([g, l]) => [g, [...new Set(l.map(x => (state.srs[x.key] ? state.srs[x.key].b : 0)))]]));
-      const step = () => { const v = document.getElementById('view'); const os = [...v.querySelectorAll('[data-act="pre-mark-pick"]')];
-        return { q: (v.textContent.match(/第 (\\d)／4 題/) || [])[1] || null, opts: os.map(o => (o.querySelector('b') || {}).textContent), tip: os.filter(o => o.textContent.includes('建議')).map(o => o.dataset.level) }; };
-      const run = (old, pick) => {
-        state.srs = {}; state.mistakes = []; state.stageTests = {}; state.completedUnits = []; state.lessonSeen = []; state.introPending = false; state.startChosen = true; LAST_BULK_MARK = null;
-        if (old) { state.stage = 'main'; state.currentUnit = 'm3'; state.kanaKnown = true; state.introSeen = true; const g3 = REG.grammar.find(x => x.u === 'm3'); state.srs[g3.key] = { b: 2, due: addDays(todayStr(), 3), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: todayStr() }; }   // 1.0.17: past 入門, never took its test
-        else { state.stage = 'pre'; state.currentUnit = 'm1'; state.kanaKnown = false; state.introSeen = false; }
-        saveState(); DAILY_CACHE = null; const auto = needsPreTest(); const n0 = Object.keys(state.srs).length;
-        startSession('stage', { stage: 'pre' }); playTest(() => false);
-        const out = { auto, passed: SESSION.test.result.passed, marked: Object.keys(state.srs).length - n0, s1: step() };
-        pick();
-        return Object.assign(out, { stars: stars(), stage: state.stage, unit: state.currentUnit, session: SESSION === null, recorded: ((state.stageTests || {}).pre || []).length }); };
-      const click = (lv) => { const el = document.querySelector(`[data-act="pre-mark-pick"][data-level="${lv}"]`); if (el) el.click(); };
-      const enter = () => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-      const fresh = run(false, () => ['5', '4', '3', '4'].forEach(click));
-      const old = run(true, () => { for (let i = 0; i < 4; i++) enter(); });
-      return JSON.stringify({ fresh, old }); })()"""
-    r = json.loads(ev(b, js))
-    for k in ('fresh', 'old'):
-        x = r[k]
-        assert x['passed'] and x['marked'] == 0 and x['s1'] == {'q': '1', 'opts': ['三顆', '四顆', '五顆'], 'tip': ['5']} and x['recorded'] == 1, (k, x)
-    assert r['fresh']['auto'] is False and r['old']['auto'] is True, r
-    assert r['fresh']['stars'] == {'hira': [6], 'kata': [4], 'v': [3], 'g': [4]}, r['fresh']   # 五顆 = 我會了 (b 6), 四顆, 三顆
-    assert r['fresh']['stage'] == 'main' and r['fresh']['unit'] == 'm1' and r['fresh']['session'], r['fresh']
-    assert r['old']['stars'] == {'hira': [6], 'kata': [6], 'v': [6], 'g': [6]}, r['old']   # all right: every suggestion is 五顆
-    assert r['old']['stage'] == 'main' and r['old']['unit'] == 'm3' and r['old']['session'], r['old']   # an account past 入門 keeps its week
-
-# a learner still in 入門 with today's list made: the 入門 test's 四顆／五顆 answers, or a p1 pass, move it to the main course
-# and the list is made again the same day (a stage switch); its four- and five-star queues take nothing marked today
+# a learner still in 入門 with today's list made: a pass of the 入門 test or of p1 moves it to the main course and the list
+# is made again the same day (a stage switch); its four- and five-star queues take nothing marked today
 def test_items_marked_today_stay_out_of_a_list_rebuilt_the_same_day(b):
     js = "(() => { " + PLAY_TEST + """ const t = todayStr();
       const start = () => { state.srs = {}; state.mistakes = []; state.stageTests = {}; state.completedUnits = []; state.lessonSeen = []; state.stage = 'pre'; state.startChosen = true;
@@ -446,69 +415,24 @@ def test_items_marked_today_stay_out_of_a_list_rebuilt_the_same_day(b):
       const look = () => { DAILY_CACHE = null; dailyPlan(); const pl = state.today.plan; const recs = Object.values(state.srs).filter(r => r.last === t);
         return { stage: pl.stage, drawn: pl.lists.q4.concat(pl.lists.q5).filter(k => state.srs[k] && state.srs[k].last === t), four: recs.filter(r => r.b === 4).length, five: recs.filter(r => r.b >= 5).length }; };
       const out = { pre0: start() };
-      startSession('stage', { stage: 'pre' }); playTest(() => false);
-      ['5', '5', '4', '4'].forEach(v => { const el = document.querySelector(`[data-act="pre-mark-pick"][data-level="${v}"]`); if (el) el.click(); });
+      startSession('stage', { stage: 'pre' }); playTest(() => false); SESSION = null; document.body.classList.remove('practicing');
       out.pre = look();
       out.p10 = start(); startSession('stage', { stage: 'p1' }); playTest(() => false); SESSION = null; document.body.classList.remove('practicing');
       out.p1 = look();
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
     assert r['pre0'] == 'pre' and r['p10'] == 'pre', r   # each list was first made in 入門
-    assert r['pre']['stage'] == 'main' and r['pre']['four'] > 0 and r['pre']['five'] > 0 and r['pre']['drawn'] == [], r['pre']
+    assert r['pre']['stage'] == 'main' and r['pre']['four'] > 0 and r['pre']['drawn'] == [], r['pre']
     assert r['p1']['stage'] == 'main' and r['p1']['four'] > 0 and r['p1']['drawn'] == [], r['p1']
-
-# a fresh learner in 入門 who just passed the 入門 test (all right), on the first of the four questions
-PRE_PASSED = """state.srs = {}; state.mistakes = []; state.stageTests = {}; state.completedUnits = []; state.lessonSeen = []; state.stage = 'pre'; state.startChosen = true;
-      state.kanaKnown = false; state.introSeen = false; state.currentUnit = 'm1'; LAST_BULK_MARK = null; saveState(); DAILY_CACHE = null;"""
-
-# review fix: on the four questions, Enter on a focused button (an answer, 關閉) is that button's own click, and a held key
-# (Enter carried over from the last question, a digit) picks nothing; a plain Enter still takes the suggestion
-def test_enter_on_a_focused_button_or_a_held_key_does_not_take_the_suggestion(b):
-    js = "(() => { " + PLAY_TEST + PRE_PASSED + """ startSession('stage', { stage: 'pre' }); playTest(() => false); const T = SESSION.test;
-      const key = (el, init) => el.dispatchEvent(new KeyboardEvent('keydown', Object.assign({ bubbles: true, cancelable: true }, init)));
-      const now = () => [T.preStep || 0, JSON.stringify(T.preChoice || {})];
-      const three = document.querySelector('[data-act="pre-mark-pick"][data-level="3"]'); three.focus(); const focused = document.activeElement === three;
-      key(three, { key: 'Enter' }); const answer = now();
-      const close = document.querySelector('[data-act="close-summary"]'); close.focus(); key(close, { key: 'Enter' }); const closeBtn = now();
-      key(document.body, { key: 'Enter', repeat: true }); const held = now();
-      key(document.body, { key: '2', repeat: true }); const heldDigit = now();
-      key(document.body, { key: 'Enter' }); const plain = now();
-      return JSON.stringify({ focused, answer, closeBtn, held, heldDigit, plain, marked: Object.keys(state.srs).length }); })()"""
-    r = json.loads(ev(b, js))
-    assert r['focused'] and r['answer'] == [0, '{}'] and r['closeBtn'] == [0, '{}'], r   # no suggestion written over a focused button
-    assert r['held'] == [0, '{}'] and r['heldDigit'] == [0, '{}'], r
-    assert r['plain'] == [1, '{"hira":"5"}'] and r['marked'] == 0, r
-
-# review fix: 四顆 in the four questions is the stage pass's four stars (spec §8.2 → §8.1): an item missed in this 入門 test
-# is not set to four (one never met is met once and missed, which 復原 takes away), and the notebook's items are left as
-# they are (one on the ladder, one with no record yet); the rest of the group gets four stars
-def test_pre_four_stars_meet_the_tests_misses_once_and_leave_the_notebook_alone(b):
-    js = "(() => { " + PLAY_TEST + MET + PRE_PASSED + """ const t = todayStr(); const hira = REG.kana.filter(k => k.script === 'hira');
-      const [, noted, bare] = hira; state.srs[noted.key] = { b: 1, s: 1, d: 5, due: addDays(t, 1), n: 2, ok: 1, ng: 1, st: 0, last: addDays(t, -1), lapse: 1, intro: addDays(t, -3), rl: 0 };
-      const entry = (id, k) => ({ id, key: k, cat: '假名', prompt: 'p' + id, answer: 'a', wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: addDays(t, -1) });
-      state.mistakes = [entry('mk_k', noted.key), entry('mk_b', bare.key)];   // bare: in the notebook with no record (a mock-exam miss before 1.0.19)
-      saveState(); const notedRec = JSON.stringify(state.srs[noted.key]);
-      startSession('stage', { stage: 'pre' }); let missed = null;
-      playTest(x => { if (missed || x.kind !== 'a' || x.script !== 'hira' || x.key === noted.key || x.key === bare.key) return false; missed = x.key; return true; });   // one hiragana answered wrong
-      ['4', '3', '3', '3'].forEach(v => document.querySelector(`[data-act="pre-mark-pick"][data-level="${v}"]`).click());
-      const rest = hira.filter(k => ![noted.key, bare.key, missed].includes(k.key));
-      const out = { missed: Boolean(missed), missedRec: missed ? met(missed) : 'none', noted: JSON.stringify(state.srs[noted.key]) === notedRec, bare: !state.srs[bare.key],
-        notebook: state.mistakes.length === 2 && state.mistakes.every(m => !m.mastered), rest: [...new Set(rest.map(k => (state.srs[k.key] ? state.srs[k.key].b : 0)))], n: rest.length };
-      out.undone = bulkUndo() && !state.srs[missed] && JSON.stringify(state.srs[noted.key]) === notedRec;   // 復原: the miss is new again
-      return JSON.stringify(out); })()"""
-    r = json.loads(ev(b, js))
-    assert r['missed'] and r['missedRec'] == MET_ONCE and r['undone'], r   # missed in the test, never met: met once and missed
-    assert r['noted'] and r['bare'] and r['notebook'], r   # the notebook's: untouched (the one on the ladder keeps its step), still in the notebook
-    assert r['rest'] == [4] and r['n'] == 68, r
 
 # ---- 1.0.20 最終審查修正 ----
 # grammar or kana a test missed that was never met is met once and missed, so the next day's reviews bring it (today's
-# list does not). No new-item list would: after a p1 pass its units count as done, and after 四顆 in the 入門 four
-# questions the main course has no kana bank and 第 0 週 is done. A missed word never met stays new: it is still a
+# list does not). No new-item list would: after a p1 pass its units count as done, and after a 入門 pass the main course
+# has no kana bank and 第 0 週 is done. A missed word never met stays new: it is still a
 # new-word candidate, taught later with its preview card
 def test_a_tests_unseen_grammar_and_kana_misses_come_back_the_next_day(b):
     js = "(() => { " + PLAY_TEST + """ const t = todayStr();
-      const start = (stage) => { state.srs = {}; state.mistakes = []; state.stageTests = {}; state.completedUnits = []; state.lessonSeen = []; state.introPending = false; state.startChosen = true;
+      const start = (stage) => { state.srs = {}; state.mistakes = []; state.stageTests = {}; state.completedUnits = []; state.lessonSeen = []; state.startChosen = true;
         state.stage = stage; state.kanaKnown = stage !== 'pre'; state.introSeen = stage !== 'pre'; state.currentUnit = 'm1'; LAST_BULK_MARK = null; saveState(); delete state.today.plan; DAILY_CACHE = null; };
       const listed = () => { const p = dailyPlan(); return new Set(PLAN_LISTS.flatMap(n => p[n].map(x => x.key))); };
       const look = (keys) => { const today = listed();
@@ -523,10 +447,9 @@ def test_a_tests_unseen_grammar_and_kana_misses_come_back_the_next_day(b):
       const out = { word: [Boolean(word), Boolean(state.srs[word]), fresh.some(x => x.key === word)] };
       out.p1 = Object.assign({ passed: state.stageTests.p1[0].passed, unit: state.currentUnit }, look(p1));
       SESSION = null; document.body.classList.remove('practicing');
-      // a learner in 入門 passes its test missing a hiragana and a week-0 item, and answers 四顆 for 平假名 and 第 0 週句型
+      // a learner in 入門 passes its test missing a hiragana and a week-0 item
       start('pre'); startSession('stage', { stage: 'pre' }); let a = 1, w = 1;
       const pre = playTest(x => (x.kind === 'a' && x.script === 'hira' && a-- > 0) || (x.kind === 'g' && w-- > 0));
-      ['4', '3', '3', '4'].forEach(v => document.querySelector(`[data-act="pre-mark-pick"][data-level="${v}"]`).click());
       out.pre = Object.assign({ stage: state.stage, kinds: pre.map(k => k.split(':')[0]).sort() }, look(pre));
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))

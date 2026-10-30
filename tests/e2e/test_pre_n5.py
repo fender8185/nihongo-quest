@@ -115,13 +115,14 @@ def test_new_account_banner_sets_the_stage(b):
     r = json.loads(ev(b, js, [("eval", FRESH)]))
     assert r == {'btns': [True, True], 'stage': 'pre', 'gone': True, 'stage2': 'main', 'known': True}, r
 
-def test_pre_choice_raises_every_item_below_the_chosen_level_including_ones_with_history(b):
+# a 入門 pass raises every item below four stars to four, ones with history too; one already at five stars is left alone
+def test_a_pre_pass_raises_every_item_below_four_stars_including_ones_with_history(b):
     js = """(() => { const ws = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').slice(0, 6); const t = todayStr();
       const mk = (bb, s, extra) => Object.assign({ b: bb, due: addDays(t, 2), n: 3, ok: 3, ng: 0, s, d: 5, last: addDays(t, -3), f: {} }, extra || {});
       state.srs[ws[0].key] = mk(1, 2); state.srs[ws[1].key] = mk(SRS_LEARNED, 12); state.srs[ws[2].key] = mk(SRS_MASTERED, 40); state.srs[ws[3].key] = mk(0, 0.5, { lapse: 2 });
-      preMarkApply({ v: '5' });
-      return JSON.stringify(ws.map(w => srsLevelLabel(state.srs[w.key], w.key))); })()"""
-    assert json.loads(ev(b, js, [("eval", FRESH)])) == ['已熟練'] * 6
+      markPassedStage('pre', new Set());
+      return JSON.stringify(ws.map(w => state.srs[w.key].b)); })()"""
+    assert json.loads(ev(b, js, [("eval", FRESH)])) == [4, 4, 5, 4, 4, 4]
 
 def test_course_card_and_kana_session(b):
     js = """(() => { state.stage = 'pre'; location.hash = '#/course'; route();
@@ -459,12 +460,13 @@ def test_pre_account_with_words_done_stays_until_week0_is_seen(b):
     r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
     assert r == {'left': 20, 'done': False, 'stage1': 'pre', 'newG': True, 'line': True, 'stage2': 'main', 'm0Done': True, 'newV': 8}, r
 
-def test_week0_pending_puts_its_items_before_the_current_unit(b):
-    js = """(() => { state.stage = 'main'; state.currentUnit = 'm1'; state.srs = {}; state.introPending = true; const c = newGrammarCandidates().slice(0, 3).map(g => g.u);
-      const norm = normalizeState(Object.assign(JSON.parse(JSON.stringify(state)), { introPending: 'yes' })).introPending;
-      state.introPending = false; return JSON.stringify({ c, after: newGrammarCandidates()[0].u, norm }); })()"""
+# 1.0.21: introPending (written by 1.0.16's 不記得 answer) is no longer read: an old value puts nothing first, and 第 0 週's
+# page still practises its items
+def test_intro_pending_is_ignored(b):
+    js = """(() => { state.stage = 'main'; state.currentUnit = 'm1'; state.srs = {}; state.completedUnits = []; state.introPending = true;
+      const out = { first: newGrammarCandidates()[0].u, m0Unit: buildUnitQueue('m0').length > 0 }; delete state.introPending; return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'c': ['m0', 'm0', 'm0'], 'after': 'm1', 'norm': True}, r
+    assert r == {'first': 'm1', 'm0Unit': True}, r
 
 # ---- 1.0.16: 學習分析 counts the new content (user, 2026-10-29: 「學習分析的資料也要一併統計這些新加入的內容」) ----
 def test_week0_items_count_as_n5_grammar_in_the_stats(b):
@@ -506,14 +508,13 @@ def test_pre_week0_grammar_used_up_gives_its_slots_to_words(b):
     assert r == {'dueA': 50, 'newG': 0, 'newV': 15}, r   # 1.0.20: at most 50 reviews a day; no phantom 第 0 週 grammar — its slots go to the words
 
 def test_week0_completes_itself_when_its_last_item_is_answered(b):
-    js = """(() => { const t = todayStr(); state.stage = 'main'; state.currentUnit = 'm2'; state.srs = {}; state.completedUnits = []; state.introPending = true; delete state.dailyLogs[t];
+    js = """(() => { const t = todayStr(); state.stage = 'main'; state.currentUnit = 'm2'; state.srs = {}; state.completedUnits = []; delete state.dailyLogs[t];
       const G = REG.grammar.filter(g => g.u === 'm0'); G.slice(1).forEach(g => { state.srs[g.key] = { b: 1, due: addDays(t, 2), n: 1, ok: 1, ng: 0, s: 2, d: 5, last: t }; });
       const out = { before: state.completedUnits.includes('m0') }; srsAnswer(G[0].key, true);
-      Object.assign(out, { done: state.completedUnits.includes('m0'), pending: state.introPending, units: (state.dailyLogs[t] || {}).units || [] });
-      state.srs = {}; state.completedUnits = ['m0']; state.introPending = true; out.respect = newGrammarCandidates()[0].u;   // marked done (e.g. on another device): pending no longer applies
+      Object.assign(out, { done: state.completedUnits.includes('m0'), units: (state.dailyLogs[t] || {}).units || [] });
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'before': False, 'done': True, 'pending': False, 'units': ['基本句型'], 'respect': 'm2'}, r
+    assert r == {'before': False, 'done': True, 'units': ['基本句型']}, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

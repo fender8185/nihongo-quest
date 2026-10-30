@@ -73,10 +73,9 @@ HIST = """const t = todayStr(); let i = 0; state.currentUnit = 'm3';
   REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 120).forEach(v => { state.srs[v.key] = { b: 3, s: 6, d: 5, due: addDays(t, (i++ % 6) - 1), n: 3, ok: 3, ng: 0, st: 3, last: addDays(t, -5), lapse: 0, intro: addDays(t, -20) }; });
   state.recent = Array(40).fill(1); saveState(); DAILY_CACHE = null;"""
 RING = "(() => { const p = dayProgress(); const pl = state.today.plan; return { done: p.done, total: p.total, listen: pl ? pl.lists.dueL.length + pl.lists.newL.length : -1, read: pl ? pl.lists.dueR.length + pl.lists.newR.length : -1 }; })()"
-# the 入門 test of an account past 入門, then its four questions answered with the suggestions (Enter)
+# the 入門 test of an account past 入門, four answers in five right: a pass, which marks 入門's items at four stars
 PRE_TEST = """(() => { startSession('stage', { stage: 'pre' }); const n = SESSION.entries.length;
   for (let i = 0; i < n; i++) { const q = currentEntry().q; answerCurrent(i % 5 ? q.answer : (q.answer + 1) % q.options.length); nextQuestion(); }
-  for (let i = 0; i < 4; i++) document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
   SESSION = null; document.body.classList.remove('practicing'); DAILY_CACHE = null; return n; })()"""
 
 def test_bulk_mark_leaves_the_plan_alone(b):
@@ -87,11 +86,11 @@ def test_bulk_mark_leaves_the_plan_alone(b):
     assert r['r1']['listen'] >= 0 and r['r1'] == r['r2'], r
     assert r['r1']['total'] < 60 and r['r1']['done'] > 0, r
 
-def test_old_account_pre_test_leaves_the_plan_alone(b):
-    js = "(() => { " + FRESH + HIST + " startSession('daily', { size: 12 }); " + PLAY + "; const r1 = " + RING + "; const auto = needsPreTest(); " + PRE_TEST + """;
-      return JSON.stringify({ auto, marked: Object.keys(state.srs).filter(k => k.startsWith('a:')).length, r1, r2: """ + RING + " }); })()"
+def test_a_pre_test_pass_leaves_the_plan_alone(b):
+    js = "(() => { " + FRESH + HIST + " startSession('daily', { size: 12 }); " + PLAY + "; const r1 = " + RING + "; " + PRE_TEST + """;
+      return JSON.stringify({ marked: Object.keys(state.srs).filter(k => k.startsWith('a:')).length, r1, r2: """ + RING + " }); })()"
     r = json.loads(ev(b, js))
-    assert r['auto'] is True and r['marked'] > 100, r   # the four questions' marks did happen
+    assert r['marked'] > 100, r   # the pass did mark 入門's kana
     assert r['r1']['listen'] >= 0 and r['r1'] == r['r2'], r
 
 def test_total_stays_the_same_all_day(b):

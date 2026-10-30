@@ -1233,7 +1233,6 @@ function normalizeState(s) {
   // 1.0.15: no longer settings — the speech switches are always on, 複習強度 is fixed (RETENTION, since 1.0.21), 入門 ends by itself
   ['autoSpeak', 'listening', 'audioOptions', 'retention'].forEach(k => { delete out.settings[k]; });
   delete out.preDoneDismissed; delete out.preFinished;
-  out.introPending = Boolean(out.introPending);
   ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt', 'stageTests'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
@@ -1640,7 +1639,7 @@ function srsPreview(key, grade) {
 
 // correct: true/false from a quiz, or opt.grade again/hard/good/easy from a flashcard
 function srsAnswer(key, correct, opt = {}) {
-  LAST_BULK_MARK = null;   // practice after a bulk mark (a stage pass, the 入門 four questions) makes its snapshot stale
+  LAST_BULK_MARK = null;   // practice after a bulk mark (a stage pass) makes its snapshot stale
   const t = todayStr();
   let r = state.srs[key];
   const isNew = !r;
@@ -3335,11 +3334,11 @@ function inPreStage() { return state.stage === 'pre'; }
 function kanaGateOpen() { return state.kanaKnown === true || REG.kana.filter(x => x.seion).every(x => state.srs[x.key]); }
 function preWordsLeft() { let n = 0; for (const v of REG.vocab) if (v.builtin && v.lv === 'PRE_N5' && !state.srs[v.key]) n++; return n; }
 function introLeft() { let n = 0; for (const g of REG.grammar) if (g.u === 'm0' && !state.srs[g.key]) n++; return n; }   // 第 0 週 items not seen yet
-// 第 0 週 is done once all its items have been seen (in 入門, from its page, or first in line with introPending): the course row
-// reads 完成, the day logs it, and introPending ends. Its page has no 標記為已完成: completion is automatic or by the 入門 test.
+// 第 0 週 is done once all its items have been seen (in 入門 or from its page): the course row reads 完成 and the day logs it.
+// Its page has no 標記為已完成: completion is automatic or by the 入門 test.
 function completeIntro() {
   if (state.completedUnits.includes('m0')) return;
-  state.completedUnits.push('m0'); noteUnitDone('m0'); state.introPending = false;
+  state.completedUnits.push('m0'); noteUnitDone('m0');
 }
 // 入門 is done when every PRE_N5 word has been seen (and the kana gate is open); nothing to finish while the level has no words
 // 入門 ends by itself, silently (1.0.15; it was a 進入第 1 週 button): kana gate open, every 入門 word and 第 0 週 item seen,
@@ -3353,16 +3352,6 @@ function finishPreIfReady() {
   completeIntro();   // already done when its last item was answered; bulk marks get here too
   DAILY_CACHE = null; saveState();
   return true;
-}
-// 1.0.17: an account already past 入門 that never took the 入門 test (it predates the kana items and 第 0 週, so 學習分析 shows
-// them as unlearned) is asked once, on the today page, to take it; pass or fail, the four questions follow, each pre-selected
-// by the group's score (1.0.17 marked by score without asking; since 1.0.20 the learner confirms). Its attempt is recorded
-// only when they are answered, so it is asked again until then.
-// Not asked: accounts in 入門, ones that saw everything in 入門 (finished it or were bulk-marked), and new ones before the start choice.
-function needsPreTest() {
-  if (inPreStage() || ((state.stageTests || {}).pre || []).length) return false;
-  if (!state.startChosen && !Object.keys(state.srs).length) return false;
-  return REG.kana.some(x => !state.srs[x.key]) || preWordsLeft() > 0 || introLeft() > 0;
 }
 function preDone() { return REG.vocab.some(v => v.builtin && v.lv === 'PRE_N5') && preWordsLeft() === 0 && kanaGateOpen() && introLeft() === 0; }
 function n4WordsOpen() { return n5WordsLeft() === 0; }   // N4 words join once every PRE_N5 and N5 word has been seen
@@ -3482,9 +3471,9 @@ function newGrammarCandidates(unitIdOnly) {
   if (unitIdOnly) return sorted;
   // fill gaps from earlier, unfinished units
   const curIdx = unitOrder(cur);
-  const earlier = REG.grammar.filter(g => g.u !== 'm0' && unitOrder(g.u) < curIdx && !state.completedUnits.includes(g.u) && !state.srs[g.key])   // 第 0 週 only brings new items in 入門 (or with introPending)
+  const earlier = REG.grammar.filter(g => g.u !== 'm0' && unitOrder(g.u) < curIdx && !state.completedUnits.includes(g.u) && !state.srs[g.key])   // 第 0 週 only brings new items in 入門 (and from its own page)
     .sort((a, b) => unitOrder(a.u) - unitOrder(b.u) || (a.d || 2) - (b.d || 2));
-  const out = (state.introPending && !state.completedUnits.includes('m0') ? unitNewOrder('m0') : []).concat(sorted, earlier);   // 不記得 第 0 週 at the 入門 test: its items first
+  const out = sorted.concat(earlier);
   // everything up to here has been introduced: continue into the next unit (the unit itself moves when its first new
   // item is answered, see autoAdvanceUnit)
   if (!out.length) { const next = DATA.UNITS[curIdx + 1]; if (next) return unitNewOrder(next.id); }
@@ -3829,7 +3818,7 @@ function startSession(mode, opt = {}) {
   SESSION = {
     mode, title: opt.title || MODE_TITLE[mode] || '練習', entries, idx: 0, meta,
     stats: { correct: 0, wrong: 0, newCount: 0 }, results: [], startedAt: Date.now(), lastFmt: '', opt,
-    test: mode === 'stage' ? { stage: opt.stage, auto: opt.stage === 'pre' && needsPreTest() } : null   // auto: the four questions pass or fail, recorded once they are answered
+    test: mode === 'stage' ? { stage: opt.stage } : null
   };
   prepareEntry(0);
   go('#/practice');
@@ -4647,11 +4636,6 @@ function handleKey(ev) {
       else if (k === 'Escape') { ev.preventDefault(); exitPractice(); }
       return;
     }
-    if (!e && !ev.repeat && preMarkOpen(SESSION.test)) {   // the 入門 test's four questions; a held key picks nothing
-      if (k === 'Enter' && ev.target && ev.target.closest && ev.target.closest('button')) return;   // Enter on a focused button (an answer, 關閉): that button's own click
-      const pick = preMarkKey(SESSION.test, k);
-      if (pick) { ev.preventDefault(); ACTIONS['pre-mark-pick']({ dataset: { level: pick } }); return; }
-    }
     if (['1', '2', '3', '4'].includes(k)) { ev.preventDefault(); if (e && !e.done && e.q && e.q.custom === 'g-order') ACTIONS['order-tap']({ dataset: { i: String(Number(k) - 1) } }); else if (e && !e.done && !(e.q && e.q.custom)) answerCurrent(Number(k) - 1); return; }
     if (k === 'Enter' || k === ' ') { if (e && e.done) { ev.preventDefault(); nextQuestion(); } else if (!e) { ev.preventDefault(); } return; }
     if (k === 'r' || k === 'R') { ev.preventDefault(); ACTIONS.replay(); return; }
@@ -4774,7 +4758,6 @@ function renderToday(view) {
     : '';
   const practiceHtml = `
       ${preDoneCard}
-      ${needsPreTest() ? '<div class="banner mt-2"><div class="grow">先做一次入門測驗（40 題，約 6 分鐘），做完依成績建議假名、入門單字和第 0 週句型各設幾顆。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="stage-test" data-stage="pre">開始</button></div></div>' : ''}
       <div class="hero hero-center">
         <div>
           ${plan.remaining === 0 ? '<h2>今天完成了</h2>' : `<div><button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・這組 ${dq.items.length} 題</button></div>${plan.remaining > dq.items.length ? `<div class="small muted mt-1">今天還有 ${plan.remaining} 題</div>` : ''}`}
@@ -4946,9 +4929,8 @@ function nextUnitAfterStage(id) { const n = STAGES[stageIndex(id) + 1]; return n
 
 // ---- 階段測驗 ----
 /* 40 questions drawn from the stage's own items (unseen ones included — the test asks "do I know this stage"), options only, untimed,
-   and answering writes nothing to the schedule. 80% passes; the result goes to state.stageTests (for T.auto, once the four
-   questions are answered). A pass of p1–p3 marks the stage and those before it (markPassedStage); the 入門 test leads into
-   its four questions. */
+   and answering writes nothing to the schedule. 80% passes; the result goes to state.stageTests. A pass marks the stage and
+   those before it (markPassedStage), 入門 as well as p1–p3. */
 const STAGE_TEST_SIZE = 40;
 const STAGE_TEST_QUOTA = { pre: [['a', 14], ['v', 18], ['g', 8]], p1: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]], p2: [['g', 32], ['c', 8]], p3: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]] };
 function stageTestNeed(total) { return Math.ceil(total * 0.8); }
@@ -4980,12 +4962,9 @@ function finishStageTest() {
   const total = SESSION.entries.length; const correct = SESSION.stats.correct;
   const passed = correct >= stageTestNeed(total);
   T.result = { date: todayStr(), correct, total, passed };
-  // an account past 入門 that never took it (T.auto) has the attempt recorded once it answers the four questions
-  // ('pre-mark-pick'): one that leaves before then (關閉, a reload) is still asked on the today page
-  if (!T.auto) recordStageTest(T);
+  recordStageTest(T);
   { const e = logEntry(); e.ex = (e.ex || 0) + SESSION.results.length; }   // a test day keeps the streak; tests are not questions done
-  if (T.stage === 'pre') T.preScores = preScores(SESSION.results);   // the four questions are pre-selected by these
-  else if (passed) T.marked = markPassedStage(T.stage, passSkipKeys(SESSION.results));   // p1–p3: marked at once
+  if (passed) T.marked = markPassedStage(T.stage, passSkipKeys(SESSION.results));   // marked at once
   saveState();
 }
 // the test's line in state.stageTests (T.result), newest first, ten kept
@@ -4993,8 +4972,8 @@ function recordStageTest(T) {
   if (!state.stageTests || typeof state.stageTests !== 'object') state.stageTests = {};
   state.stageTests[T.stage] = [Object.assign({}, T.result)].concat(state.stageTests[T.stage] || []).slice(0, 10);
 }
-// what four stars from a test leave alone: the items it missed and the ones in the notebook, so their relearning goes on
-// (a p1–p3 pass, and 四顆 in the 入門 four questions); grammar or kana missed and never met is recorded as met once and missed (bulkMeetMissed)
+// what four stars from a test leave alone: the items it missed and the ones in the notebook, so their relearning goes on;
+// grammar or kana missed and never met is recorded as met once and missed (bulkMeetMissed)
 function passSkipKeys(results) { return new Set(results.filter(x => !x.ok).map(x => x.key).concat(notebookKeys())); }
 function renderStageSummary(view) {
   const s = SESSION; const T = s.test; const st = stageById(T.stage);
@@ -5004,15 +4983,14 @@ function renderStageSummary(view) {
   const wrong = s.results.filter(x => !x.ok);
   const wrongList = wrong.map(x => `<div class="list-item"><div class="grow"><div class="jp">${furi(tidyPrompt(x.q.mistakePrompt || ''))}</div><div class="small muted">正確：<span class="jp">${esc(jaPlain(x.q.options[x.q.answer].text))}</span>・你選：<span class="jp">${esc(jaPlain(x.q.options[x.chosen].text))}</span></div></div></div>`).join('');
   const title = !r ? '未完成，不計紀錄' : r.passed ? `${r.correct}／${r.total}・通過` : `${r.correct}／${r.total}・未通過（需 ${need} 題）`;
-  const prePick = preMarkOpen(T);   // 入門: the four questions
-  const buttons = prePick ? ''
-    : r && r.passed ? '<button type="button" class="btn btn-primary" data-act="close-summary">完成</button>'
+  const buttons = r && r.passed ? '<button type="button" class="btn btn-primary" data-act="close-summary">完成</button>'
     : `<button type="button" class="btn btn-primary" data-act="stage-again">再考一次</button><button type="button" class="btn" data-act="stage-practice">去練這個階段</button><button type="button" class="btn btn-ghost" data-act="close-summary">回課程頁</button>`;
-  // p1–p3 passed: what was marked and where the course is now (the pass moved it on), with 復原 while the mark can still be undone
+  // passed: what was marked and where the course is now (the pass moved it on), with 復原 while the mark can still be undone
   const cu = unitById(state.currentUnit);
-  const marked = !r || !r.passed || prePick ? ''
+  const range = T.stage === 'pre' ? '入門' : `${esc(st ? st.title.split('：')[0] : '')}以前、`;   // 入門 has no stage before it
+  const marked = !r || !r.passed ? ''
     : T.undone ? '<div class="banner mt-4">通過了。已復原，題目的星星照舊。</div>'
-    : `<div class="banner mt-4"><div class="grow">通過了。已把${esc(st ? st.title.split('：')[0] : '')}以前、還不到四顆的 ${T.marked} 題設成四顆。目前單元：${esc(cu.weeks)}・${esc(cu.short)}</div>${LAST_BULK_MARK ? '<button type="button" class="btn btn-sm" data-act="bulk-mark-undo">復原</button>' : ''}</div>`;
+    : `<div class="banner mt-4"><div class="grow">通過了。已把${range}還不到四顆的 ${T.marked} 題設成四顆。目前單元：${esc(cu.weeks)}・${esc(cu.short)}</div>${LAST_BULK_MARK ? '<button type="button" class="btn btn-sm" data-act="bulk-mark-undo">復原</button>' : ''}</div>`;
   view.innerHTML = `
     <div class="pr-top"><button type="button" class="btn btn-ghost btn-icon" data-act="close-summary" aria-label="關閉">${icon('close')}</button><div class="grow"></div></div>
     <div class="card">
@@ -5020,8 +4998,8 @@ function renderStageSummary(view) {
       <div class="page-title mt-2">${title}</div>
       <div class="page-sub">${esc(st ? st.title : '')}・階段測驗・作答 ${s.results.length} 題</div>
       <div class="row-wrap mt-3">${kinds}</div>
-      ${prePick ? `<div class="banner mt-4">${r.passed ? '通過了。' : ''}接著 ${PRE_MARK_GROUPS.length} 題：${PRE_MARK_GROUPS.map(x => x[1]).join('、')}各記得多少？依這次的成績標了「建議」，${inPreStage() ? '選完就進第 1 週' : '選完照常練習，週次不變'}。</div>` : marked}
-      ${prePick ? preMarkStepHtml(T) : `<div class="row-wrap mt-4">${buttons}</div>`}
+      ${marked}
+      <div class="row-wrap mt-4">${buttons}</div>
     </div>
     ${wrong.length ? `<div class="card"><div class="card-head"><div class="card-title">這次答錯的題目</div><span class="chip">${wrong.length}</span></div><div class="list">${wrongList}</div></div>` : ''}`;
 }
@@ -5038,13 +5016,13 @@ Object.assign(ACTIONS, {
 });
 
 // ---- 通過階段測驗的標記（批次標記） ----
-/* Passing a stage test (p1–p3) marks that stage and every stage before it in one go (markPassedStage): items below four
+/* Passing a stage test marks that stage and every stage before it in one go (markPassedStage): items below four
    stars become four stars, so they wait in the four-star queue instead of filling the 50 daily reviews for weeks;
    listening and reading become three stars by their own rule. The test's misses and the items in the notebook are left
    to their relearning; grammar or kana missed and never met before is met once and missed, so the reviews teach it from
    the next day (bulkMeetMissed). Only upgrades: an item already at or above the level is left alone. Due dates are spread over a
    window (a four-star date is only read by an older version). One undo is kept in memory (LAST_BULK_MARK) until the page
-   reloads; the 入門 four questions use the same levels and undo. */
+   reloads. */
 // The levels, lowest first: s is the stability written (五顆 goes through markKnown)
 const BULK_LEVELS = {
   learned: { name: '三顆', s: LEVEL_FROM_S[SRS_LEARNED - 1], due: [5, 14], lr: [90, 270] },
@@ -5077,10 +5055,10 @@ function isLR(x) { return x.kind === 'l' || x.kind === 'r'; }   // listening and
 function passMarkTargets(stageId, skip) {
   return bulkMarkTargets(stageId, 'four').filter(x => !isLR(x)).concat(bulkMarkTargets(stageId, 'learned').filter(isLR)).filter(x => !skip.has(x.key));
 }
-// what a bulk mark (a stage pass or the 入門 four questions) must remember to undo itself
+// what a bulk mark (a stage pass) must remember to undo itself
 function bulkSnapshot(extra) {
   return Object.assign({ srs: {}, mistakes: JSON.parse(JSON.stringify(state.mistakes)), completedUnits: state.completedUnits.slice(), lessonSeen: (state.lessonSeen || []).slice(),
-    currentUnit: state.currentUnit, stage: state.stage, introSeen: state.introSeen, kanaKnown: state.kanaKnown, introPending: state.introPending === true }, extra);
+    currentUnit: state.currentUnit, stage: state.stage, introSeen: state.introSeen, kanaKnown: state.kanaKnown }, extra);
 }
 // mark the targets at a level (listening and reading at lrLevel), due dates spread; the previous records go into snap.srs
 function bulkApply(targets, level, snap, lrLevel = level) {
@@ -5143,95 +5121,13 @@ function bulkUndo() {
   const S = LAST_BULK_MARK; if (!S) return false;
   Object.entries(S.srs).forEach(([k, r]) => { if (r) state.srs[k] = r; else delete state.srs[k]; });
   state.mistakes = S.mistakes; state.completedUnits = S.completedUnits; state.lessonSeen = S.lessonSeen;
-  state.currentUnit = S.currentUnit; state.stage = S.stage; state.introSeen = S.introSeen; state.kanaKnown = S.kanaKnown; state.introPending = S.introPending === true;
+  state.currentUnit = S.currentUnit; state.stage = S.stage; state.introSeen = S.introSeen; state.kanaKnown = S.kanaKnown;
   LAST_BULK_MARK = null; DAILY_CACHE = null; saveState();
   return true;
 }
 Object.assign(ACTIONS, {
   // 復原 on the course page, or on the result page of the test that marked (which then says so)
   'bulk-mark-undo': () => { if (bulkUndo()) { toast('已復原'); if (SESSION && SESSION.test) SESSION.test.undone = true; } route(); }
-});
-
-// ---- 入門測驗之後的四題 ----
-/* The 入門 test leads straight into four questions (平假名、片假名、入門單字、第 0 週句型), each answered 三顆／四顆／五顆:
-   the bulk-mark levels `learned` (s = 5), `four` (as a stage pass) and `known` (as 我會了). Each is pre-selected by the
-   group's share right in the test (preSuggest; Enter takes it). They follow a pass; an account past 入門 that never took
-   the test (1.0.17's case, T.auto) gets them pass or fail, and its attempt is recorded once they are answered. Then a
-   learner in 入門 enters 第 1 週; one already in the main course keeps its week. */
-const PRE_MARK_GROUPS = [
-  ['hira', '平假名', () => REG.kana.filter(k => k.script === 'hira')],
-  ['kata', '片假名', () => REG.kana.filter(k => k.script === 'kata')],
-  ['v', '入門單字', () => REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5')],
-  ['g', '第 0 週句型', () => unitItems('m0')]
-];
-// the answers: the value picked (its stars), the level written, a hint
-const PRE_MARK_LEVELS = [
-  ['3', 'learned', '一兩週後開始照記憶強度複習'],
-  ['4', 'four', '排進四顆的複習，每天出 5%'],
-  ['5', 'known', '等同「我會了」，排進五顆的複習，每天出 3%']
-];
-function preMarkLevel(v) { const L = PRE_MARK_LEVELS.find(x => x[0] === String(v)); return L ? L[1] : null; }
-function preMarkLevelName(v) { const lv = preMarkLevel(v); return lv ? BULK_LEVELS[lv].name : ''; }
-// each group's answers in the 入門 test: [right, asked]
-function preScores(results) {
-  const of = { hira: (q) => q.kind === 'a' && q.item.script === 'hira', kata: (q) => q.kind === 'a' && q.item.script === 'kata', v: (q) => q.kind === 'v', g: (q) => q.kind === 'g' };
-  const out = {};
-  PRE_MARK_GROUPS.forEach(([g]) => { const r = results.filter(x => of[g](x.q)); out[g] = [r.filter(x => x.ok).length, r.length]; });
-  return out;
-}
-// the stars suggested for a group's score: 90% right or more 五顆, 80% or more 四顆, otherwise 三顆
-function preSuggest([ok, n]) { const p = n ? ok / n : 0; return p >= 0.9 ? 5 : p >= 0.8 ? 4 : 3; }
-// the four questions follow an 入門 pass, and any 入門 result of an account past 入門 (1.0.17 marked those pass or fail)
-function preMarkOpen(T) { return Boolean(T && T.result && T.stage === 'pre' && (T.result.passed || T.auto)); }
-function preMarkScore(T) { return (T.preScores || {})[PRE_MARK_GROUPS[T.preStep || 0][0]] || [0, 0]; }   // the current question's group
-// a key on the four questions: Enter takes the suggestion, 1–3 an answer
-function preMarkKey(T, k) {
-  if (k === 'Enter') return String(preSuggest(preMarkScore(T)));
-  const L = PRE_MARK_LEVELS[Number(k) - 1]; return L ? L[0] : null;
-}
-function preMarkStepHtml(T) {
-  const step = T.preStep || 0; const [, name, items] = PRE_MARK_GROUPS[step]; const n = items().length;
-  const [ok, asked] = preMarkScore(T); const tip = String(preSuggest([ok, asked]));
-  const done = PRE_MARK_GROUPS.slice(0, step).map(([g, nm]) => `<span class="chip">${nm}：${preMarkLevelName((T.preChoice || {})[g])}</span>`).join('');
-  const opts = PRE_MARK_LEVELS.map(([v, lv, hint], i) => `<button type="button" class="opt" data-act="pre-mark-pick" data-level="${v}"><span class="kbd">${i + 1}</span><span><b>${BULK_LEVELS[lv].name}</b>${v === tip ? ' <span class="chip chip-accent">建議</span>' : ''}<span class="small muted">　${hint}</span></span></button>`).join('');
-  return `<div class="mt-4"><div class="row-wrap">${done}</div>
-    <div class="small muted mt-3">第 ${step + 1}／${PRE_MARK_GROUPS.length} 題${asked ? `・這次答對 ${ok}／${asked}` : ''}</div><div class="page-title mt-1">${name}（${n} 個），你記得多少？</div>
-    <div class="opts wide">${opts}</div></div>`;
-}
-// choices: group → '3'|'4'|'5'; a group left out is not marked. introPending (only 1.0.17 set it) is left as it is.
-function preMarkApply(choices, skip = new Set()) {   // skip: passSkipKeys of the test, left alone by 四顆 as by a stage pass
-  const snap = bulkSnapshot({ stageId: 'pre', level: 'learned', changed: 0 });
-  PRE_MARK_GROUPS.forEach(([g, , items]) => {
-    const level = preMarkLevel(choices[g]); if (!level) return;
-    const want = BULK_ORDER.indexOf(level); const four = level === 'four';
-    const targets = items().filter(x => bulkLevelOf(state.srs[x.key], x.key) < want && !(four && skip.has(x.key)));
-    bulkApply(targets, level, snap); snap.changed += targets.length;
-    if (four) bulkMeetMissed(items().map(x => x.key).filter(k => skip.has(k)), snap);   // the group's kana or week-0 grammar missed and never met: met once and missed
-  });
-  snap.label = PRE_MARK_GROUPS.filter(([g]) => preMarkLevel(choices[g])).map(([g, nm]) => `${nm}：${preMarkLevelName(choices[g])}`).join('、');
-  if (preMarkLevel(choices.g)) {   // 第 0 週 marked: done, and its lesson cards need not come up again
-    if (!state.completedUnits.includes('m0')) state.completedUnits.push('m0');
-    const lessons = new Set(state.lessonSeen || []); unitItems('m0').forEach(g => { const k = lessonSecKey(g); if (k) lessons.add(k); }); state.lessonSeen = [...lessons];
-  }
-  state.introSeen = true; state.kanaKnown = true; state.stage = 'main';
-  const nu = nextUnitAfterStage('pre');
-  if (unitOrder(nu) > unitOrder(state.currentUnit)) state.currentUnit = nu;
-  LAST_BULK_MARK = snap;
-  DAILY_CACHE = null; saveState();
-  return snap.changed;
-}
-Object.assign(ACTIONS, {
-  'pre-mark-pick': (el) => {
-    const T = SESSION && SESSION.test; if (!preMarkOpen(T)) return;
-    const step = T.preStep || 0; T.preChoice = T.preChoice || {}; T.preChoice[PRE_MARK_GROUPS[step][0]] = el.dataset.level; T.preStep = step + 1;
-    if (T.preStep < PRE_MARK_GROUPS.length) { renderStageSummary(document.getElementById('view')); return; }
-    const pre = inPreStage();   // before preMarkApply moves the learner to the main course: only 入門 enters 第 1 週
-    if (T.auto) recordStageTest(T);   // answered: an account past 入門 has taken the test now (finishStageTest left it out)
-    const n = preMarkApply(T.preChoice, passSkipKeys(SESSION.results));
-    SESSION = null; document.body.classList.remove('practicing');
-    toast(!pre ? `已標記 ${n} 個項目，週次不變` : n ? `已標記 ${n} 個項目，進入第 1 週` : '進入第 1 週', 4000);
-    go('#/course');
-  }
 });
 
 // ---- 72_course.js ----
