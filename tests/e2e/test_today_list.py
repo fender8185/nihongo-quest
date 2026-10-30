@@ -110,8 +110,9 @@ def test_choosing_a_start_rebuilds_the_plan(b):
     assert r['before'] is False and r['start'] is True and r['stage'] == 'pre' and r['newA'] > 0, r
 
 def test_stage_switch_rebuilds_the_plan_and_keeps_answered_items(b):
+    # five of the day's new kana answered: the rest of today's new count is left for the main course's list (1.0.20)
     js = """(() => { state.srs = {}; state.startChosen = false; state.today = { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0, newC: 0, newA: 0 }; saveState();
-      chooseStart('zero'); startSession('daily', { size: 10 }); const keys = """ + PLAY + """; const before = dayProgress().done;
+      chooseStart('zero'); startSession('daily', { size: 5 }); const keys = """ + PLAY + """; const before = dayProgress().done;
       state.stage = 'main'; state.kanaKnown = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null; dailyPlan(); const p = state.today.plan;
       return JSON.stringify({ keys, before, after: dayProgress().done, stage: p.stage, kept: p.lists.kept, newG: p.lists.newG.length }); })()"""
     r = json.loads(ev(b, js))

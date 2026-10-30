@@ -3318,11 +3318,6 @@ function lvRank(x) { return LV_RANK[x.lv] === undefined ? 1 : LV_RANK[x.lv]; }
 function inPreStage() { return state.stage === 'pre'; }
 // 入門: PRE_N5 words start once the 92 清音 have all been seen, or when the learner says they already know kana
 function kanaGateOpen() { return state.kanaKnown === true || REG.kana.filter(x => x.seion).every(x => state.srs[x.key]); }
-function kanaPlan(t = todayStr()) {
-  const dueA = REG.kana.filter(x => isDueToday(x, t)).sort(byDue);
-  const newA = inPreStage() ? REG.kana.filter(x => !state.srs[x.key]).sort((a, b) => a.order - b.order).slice(0, Math.max(0, (Number(state.settings.newKanaPerDay) || 0) - (state.today.newA || 0))) : [];
-  return { dueA, newA };
-}
 function preWordsLeft() { let n = 0; for (const v of REG.vocab) if (v.builtin && v.lv === 'PRE_N5' && !state.srs[v.key]) n++; return n; }
 function introLeft() { let n = 0; for (const g of REG.grammar) if (g.u === 'm0' && !state.srs[g.key]) n++; return n; }   // 第 0 週 items not seen yet
 // 第 0 週 is done once all its items have been seen (in 入門, from its page, or first in line with introPending): the course row
@@ -3491,14 +3486,6 @@ function autoAdvanceUnit(key) {
   state.currentUnit = g.u;
   DAILY_CACHE = null;
 }
-function adaptiveFactor() {
-  const acc = recentAccuracy();
-  if (acc === null) return { factor: 1, note: '' };
-  if (acc < 0.6) return { factor: 0.5, note: `最近的正確率是 ${Math.round(acc * 100)}%，今天先少加一些新內容，把學過的穩住。`, acc };
-  if (acc < 0.75) return { factor: 0.75, note: '', acc };
-  if (acc > 0.92) return { factor: 1.25, note: '', acc };
-  return { factor: 1, note: '', acc };
-}
 
 // Listening, reading and kanji share the session with words and grammar. Listening and reading follow the
 // unit rule; N4 kanji wait until every N5 kanji has been introduced, like the words.
@@ -3521,20 +3508,16 @@ function extrasPlan(curIdx) {
   const byUnit = (a, b) => unitOrder(a.u) - unitOrder(b.u) || (hashStr(a.id) % 997) - (hashStr(b.id) % 997);
   const listenOn = speechAvailable();
   const lPool = listenOn ? listenReachable(curIdx) : [];
-  // listening: at most newQuota('l') a day counting what was already answered today (due first; the rest of the due
+  // listening: at most LISTEN_PER_DAY a day counting what was already answered today (due first; the rest of the due
   // ones wait until tomorrow); reading: one a day
   const doneToday = (pool) => pool.filter(x => { const r = state.srs[x.key]; return r && r.last === t; }).length;
-  const capL = Math.max(0, newQuota('l') - doneToday(lPool));
+  const capL = Math.max(0, LISTEN_PER_DAY - doneToday(lPool));
   const dueL = lPool.filter(isDue).sort(byDue).slice(0, capL);
-  const newL = inPreStage() ? [] : lPool.filter(x => !state.srs[x.key]).slice(0, Math.max(0, Math.min(newQuota('l') - (state.today.newL || 0), capL - dueL.length)));   // 入門: no new listening
+  const newL = inPreStage() ? [] : lPool.filter(x => !state.srs[x.key]).slice(0, Math.max(0, Math.min(LISTEN_PER_DAY - (state.today.newL || 0), capL - dueL.length)));   // 入門: no new listening
   const rPool = REG.read.filter(reach);
   const dueR = doneToday(rPool) ? [] : rPool.filter(isDue).sort(byDue).slice(0, 1);
   const newR = !inPreStage() && !dueR.length && !doneToday(rPool) && (state.today.newR || 0) < 1 ? rPool.filter(x => !state.srs[x.key]).sort(byUnit).slice(0, 1) : [];
-  const k4 = n5KanjiLeft() === 0;
-  const dueK = REG.kanji.filter(k => (k.lv !== 'N4' || k4) && isDue(k)).sort(byDue);
-  const newK = newKanjiCandidates(k4).slice(0, Math.max(0, newQuota('k') - (state.today.newK || 0)));
-  const { dueA, newA } = kanaPlan(t);
-  return { dueL, newL, dueR, newR, dueK, newK, dueA, newA };
+  return { dueL, newL, dueR, newR };
 }
 
 // Summary of what today's session would contain (used by the Today page).
@@ -3590,56 +3573,52 @@ function splitNew(n, skip = new Set()) {
 }
 function computeDailyPlan(size = state.settings.sessionSize) {
   const t = todayStr();
-  const s = state.settings;
-  const ad = adaptiveFactor();
   const n4Open = n4WordsOpen();
   const curIdx = unitOrder(state.currentUnit);
-  const vPool = REG.vocab.filter(v => vocabEligibleForDaily(v, n4Open));
-  const pre = inPreStage();   // 入門: new grammar is 第 0 週 only and new words come once the kana gate is open (the unused grammar quota does not turn into words); no new listening, reading or drills. Due reviews of every kind stay.
-  const dueV = (pre ? REG.vocab.filter(v => state.srs[v.key] && vocabEligibleMain(v, n4Open)) : vPool).filter(v => isDueToday(v, t)).sort(byDue);
-  const dueG = REG.grammar.filter(g => isDueToday(g, t) && grammarInReach(g, curIdx)).sort(byDue);
-  const maxV = pre && !kanaGateOpen() ? 0 : Math.round(newQuota('v') * ad.factor);
-  const maxG = pre && !kanaGateOpen() ? 0 : Math.round(newQuota('g') * ad.factor);
-  const ex = extrasPlan(curIdx);
-  // 每天負荷上限 (settings.loadCap) is a brake: when today's work (done + due + new) would exceed it, new words shrink
-  // first (never below about half their quota), then new kanji stop, then new listening. Due reviews never shrink, and
-  // grammar drives the course: its new items come every day (the accuracy-based factor still applies).
-  const preG = pre ? (kanaGateOpen() ? unitNewOrder('m0') : []) : null;   // 入門: new grammar is 第 0 週 only
-  const wantG = Math.max(0, Math.min(maxG - state.today.newG, preG ? preG.length : Infinity));   // used-up 第 0 週 grammar must not brake the words
-  const fullV = Math.max(0, maxV - state.today.newV);
-  let wantV = fullV;
-  let over = dayTotal(state.dailyLogs[t]) + dueV.length + dueG.length + ex.dueK.length + ex.dueL.length + ex.dueR.length
-    + wantG + wantV + ex.newK.length + ex.newL.length + ex.newR.length + ex.dueA.length + ex.newA.length + (pre ? 0 : Math.min(newQuota('c'), (REG.drills || []).length)) - (Number(s.loadCap) || 100);
-  if (over > 0) { const floorV = Math.max(0, Math.min(Math.ceil(maxV / 2), maxV) - state.today.newV); const cut = Math.max(0, Math.min(over, wantV - floorV)); wantV -= cut; over -= cut; }
-  const cutK = over > 0 ? Math.min(over, ex.newK.length) : 0; over -= cutK;
-  const cutL = over > 0 ? Math.min(over, ex.newL.length) : 0; over -= cutL;
-  const cutA = over > 0 ? Math.min(over, ex.newA.length) : 0; over -= cutA;
-  if (cutK) ex.newK = ex.newK.slice(0, ex.newK.length - cutK);
-  if (cutL) ex.newL = ex.newL.slice(0, ex.newL.length - cutL);
-  if (cutA) ex.newA = ex.newA.slice(0, ex.newA.length - cutA);
-  let note = ad.note;
-  if (!note && (wantV < fullV || cutK || cutL || cutA)) {
-    const parts = []; if (wantV < fullV) parts.push(`新單字先減為 ${wantV} 個`); if (cutK) parts.push('新漢字先停'); if (cutL) parts.push('新聽力先停'); if (cutA) parts.push(`新假名先減為 ${ex.newA.length} 個`);
-    note = `今天的題數超過負荷上限，${parts.join('、')}，新文法照常；複習完成後，之後幾天就會再增加。`;
-  }
-  const newG = (preG || newGrammarCandidates()).slice(0, wantG);
-  // 變化練習: due families first, then families not started yet, at most newQuota('c') a day; only forms a reached unit teaches
+  const pre = inPreStage();   // 入門: new items come from splitNew's 入門 banks; no new listening, reading or drills. Reviews of every kind stay.
+  // what reviews reach: words by level (入門: any word already learned), grammar of reached units, N4 kanji once every
+  // N5 one has been met, every kana, drills of reached units
   const cPool = (REG.drills || []).filter(d => unitOrder(d.u) <= curIdx);
-  const doneC = cPool.filter(d => { const r = state.srs[d.key]; return r && r.last === t; }).length;
-  const capC = Math.max(0, newQuota('c') - doneC);
-  const dueC = cPool.filter(d => isDueToday(d, t)).sort(byDue).slice(0, capC);
-  const newC = pre ? [] : cPool.filter(d => !state.srs[d.key]).sort((a, b) => unitOrder(a.u) - unitOrder(b.u)).slice(0, Math.max(0, Math.min(capC - dueC.length, capC - (state.today.newC || 0))));
-  const newV = newVocabCandidates(vPool, n4Open).slice(0, wantV + (pre ? 0 : Math.max(0, wantG - newG.length)));
-  const remaining = dueV.length + dueG.length + newV.length + newG.length + dueC.length + newC.length + ex.dueK.length + ex.newK.length + ex.dueL.length + ex.newL.length + ex.dueR.length + ex.newR.length + ex.dueA.length + ex.newA.length;
-  const relearnN = dueV.concat(dueG).filter(x => onLadder(x.key)).length;   // reviews that are missed items on the ladder (shown as 其中錯題)
-  return Object.assign({ dueV, dueG, newV, newG, dueC, newC, note, factor: ad.factor, size, n4Open, remaining, relearnN }, ex);
+  const k4 = n5KanjiLeft() === 0;
+  const scope = REG.vocab.filter(v => (pre ? state.srs[v.key] && vocabEligibleMain(v, n4Open) : vocabEligibleForDaily(v, n4Open)))
+    .concat(REG.grammar.filter(g => grammarInReach(g, curIdx)), REG.kanji.filter(k => k.lv !== 'N4' || k4), REG.kana, cPool);
+  // up to three stars: due by FSRS, the most overdue first, at most SRS_DAILY_CAP a day (the rest come the next days)
+  const due = scope.filter(x => isDueToday(x, t)).sort(byDue).slice(0, SRS_DAILY_CAP);
+  const ofKind = (kind) => due.filter(x => x.kind === kind);
+  // four stars, five stars and the notebook: queues giving a fixed share a day, the longest-waiting first
+  const share = (len, rate) => (len ? clamp(Math.round(len * rate), QUEUE_MIN, QUEUE_MAX) : 0);
+  const byLast = (a, b) => String(state.srs[a.key].last || '').localeCompare(String(state.srs[b.key].last || ''));
+  const queue = (tier) => { const q = scope.filter(x => tierOf(x.key) === tier && !answeredToday(x.key)).sort(byLast); return q.slice(0, share(q.length, QUEUE_RATE[tier])); };
+  const q4 = queue('q4'); const q5 = queue('q5');
+  // a notebook entry tied to the course comes as that item; a hand-made one (or one whose item is gone) as its card,
+  // listed as 'm:<id>' — only a card that can be made (it needs three other answers for its options)
+  const act = activeMistakes();
+  const taken = new Set(due.concat(q4, q5).map(x => x.key));
+  const mk = act.slice().sort((a, b) => String(mistakeLast(a)).localeCompare(String(mistakeLast(b))))
+    .map(m => (m.key && REG.byKey.get(m.key)) || { key: 'm:' + m.id, kind: 'm', mistake: m })
+    .filter(x => { if (taken.has(x.key) || answeredToday(x.key)) return false; taken.add(x.key); return x.kind !== 'm' || Boolean(makeMistakeCard(x.mistake)); })
+    .slice(0, share(act.length, QUEUE_RATE.mk));
+  // new items: today's count by how the recent answers went and the notebook, shared by what each bank has left;
+  // what was already introduced today (before this list was made) counts against it
+  const nc = newCountToday();
+  const sofar = (state.today.newV || 0) + (state.today.newG || 0) + (state.today.newK || 0) + (state.today.newA || 0);
+  const fresh = splitNew(Math.max(0, nc.n - sofar));
+  // 變化練習: one family not started yet a day, from the reached units, outside the new-item count
+  const newC = pre || (state.today.newC || 0) >= 1 ? [] : cPool.filter(d => !state.srs[d.key]).sort((a, b) => unitOrder(a.u) - unitOrder(b.u)).slice(0, 1);
+  const note = nc.n < nc.base || nc.base < NEW_DEFAULT
+    ? `${nc.acc !== null ? `最近 100 題正確率 ${Math.round(nc.acc * 100)}%、` : ''}錯題本 ${nc.mistakes} 條，今天新內容 ${nc.n} 題。` : '';
+  const plan = Object.assign({ dueV: ofKind('v'), dueG: ofKind('g'), dueK: ofKind('k'), dueA: ofKind('a'), dueC: ofKind('c'), q4, q5, mk,
+    newV: fresh.v, newG: fresh.g, newK: fresh.k, newA: fresh.a, newC }, extrasPlan(curIdx));
+  plan.remaining = PLAN_LISTS.reduce((sum, n) => sum + plan[n].length, 0);
+  plan.relearnN = plan.dueV.concat(plan.dueG).filter(x => onLadder(x.key)).length;   // reviews that are missed items on the ladder (shown as 其中錯題)
+  return Object.assign(plan, { note, size, n4Open, n: nc.n, split: { a: fresh.a.length, v: fresh.v.length, g: fresh.g.length, k: fresh.k.length } });
 }
 
 // 今天的清單: worked out the first time it is needed each day — again only when the start gets chosen or the stage changes
 // (入門 ↔ 正課) — and kept as keys in state.today.plan. Every later call rebuilds it from those keys minus what was answered
 // today, so the day's total never moves: a bulk mark, 我會了 or 前往下一單元 changes tomorrow's list, not today's (and
 // does not eat today's listening and reading). Items answered before a rebuild stay in it as `kept`.
-const PLAN_LISTS = ['dueV', 'dueG', 'dueC', 'dueK', 'dueL', 'dueR', 'dueA', 'newV', 'newG', 'newC', 'newK', 'newL', 'newR', 'newA'];
+const PLAN_LISTS = ['dueV', 'dueG', 'dueC', 'dueK', 'dueL', 'dueR', 'dueA', 'q4', 'q5', 'mk', 'newV', 'newG', 'newC', 'newK', 'newL', 'newR', 'newA'];
 function planListKeys(plan) { return [...new Set(PLAN_LISTS.concat('kept').flatMap(n => plan.lists[n] || []))]; }
 function makeTodayPlan(size) {
   const old = state.today.plan;
@@ -3648,7 +3627,7 @@ function makeTodayPlan(size) {
   PLAN_LISTS.forEach(n => { lists[n] = (p[n] || []).map(x => x.key); });
   const fresh = new Set(PLAN_LISTS.flatMap(n => lists[n]));
   lists.kept = old && old.lists ? planListKeys(old).filter(k => answeredToday(k) && !fresh.has(k)) : [];
-  state.today.plan = { lists, note: p.note || '', n4Open: p.n4Open, factor: p.factor, stage: state.stage, start: Boolean(state.startChosen), listenOn: speechAvailable() };
+  state.today.plan = { lists, note: p.note || '', n4Open: p.n4Open, n: p.n, split: p.split, stage: state.stage, start: Boolean(state.startChosen), listenOn: speechAvailable() };
 }
 function storeTodayPlan(size) { makeTodayPlan(size); saveState(); }
 // a browser voice lists its voices only after the first render: listening joins a list made before that, the rest stays
@@ -3663,17 +3642,24 @@ function dailyPlan(size = state.settings.sessionSize) {
   if (!pl || !pl.lists || pl.stage !== state.stage || pl.start !== Boolean(state.startChosen)) storeTodayPlan(size);
   else if (pl.listenOn === false && speechAvailable()) addTodayListening(size);
   const p = state.today.plan;
-  const out = { note: p.note, n4Open: p.n4Open, factor: p.factor, size };
+  const out = { note: p.note, n4Open: p.n4Open, n: p.n, split: p.split, size };
   let remaining = 0;
-  PLAN_LISTS.forEach(n => { out[n] = (p.lists[n] || []).map(k => REG.byKey.get(k)).filter(x => x && !answeredToday(x.key)); remaining += out[n].length; });
+  PLAN_LISTS.forEach(n => { out[n] = (p.lists[n] || []).map(planItem).filter(x => x && !answeredToday(x.key)); remaining += out[n].length; });
   out.relearnN = out.dueV.concat(out.dueG).filter(x => onLadder(x.key)).length;
   out.remaining = remaining;
   return out;
 }
-// every key on today's list, answered or not (an item hidden or deleted since is left out)
+// a key on today's list as something to practise: 'm:<id>' is a notebook card while it is still in the notebook
+function planItem(k) {
+  if (!k.startsWith('m:')) return REG.byKey.get(k);
+  const m = state.mistakes.find(x => 'm:' + x.id === k && !x.mastered);
+  return m ? { key: k, kind: 'm', mistake: m } : undefined;
+}
+// every key on today's list, answered or not (an item hidden or deleted since is left out, and so is a notebook card
+// that left the notebook unanswered; one answered today stays done even once it leaves)
 function todayPlanKeys() {
   dailyPlan();
-  return planListKeys(state.today.plan).filter(k => REG.byKey.has(k));
+  return planListKeys(state.today.plan).filter(k => (k.startsWith('m:') ? answeredToday(k) || Boolean(planItem(k)) : REG.byKey.has(k)));
 }
 
 function interleave(vList, gList, mode) {
@@ -3695,7 +3681,9 @@ function buildDailyQueue(size = state.settings.sessionSize) {
   const plan = dailyPlan(size);
   const byPractice = (a, b) => ((state.srs[a.key].ok || 0) - (state.srs[b.key].ok || 0)) || byDue(a, b);
   const ladderFirst = (list) => list.filter(x => onLadder(x.key)).concat(list.filter(x => !onLadder(x.key)));   // missed items are the weakest: first
-  const reviews = interleave(ladderFirst(plan.dueV.concat(plan.dueK, plan.dueA || []).sort(byDue)), ladderFirst(plan.dueG.slice().sort(byPractice)).concat(plan.dueC || []), 'mixed');
+  const isG = (x) => x.kind === 'g' || x.kind === 'c';   // 變化練習 sits on the grammar side
+  const queued = plan.q4.concat(plan.q5, plan.mk);   // four stars, five stars and the notebook join the reviews (notebook cards on the word side)
+  const reviews = interleave(ladderFirst(plan.dueV.concat(plan.dueK, plan.dueA || []).sort(byDue)).concat(queued.filter(x => !isG(x))), ladderFirst(plan.dueG.slice().sort(byPractice)).concat(plan.dueC || [], queued.filter(isG)), 'mixed');
   const fresh = interleave((plan.newA || []).concat(plan.newV, plan.newK), plan.newG.concat(plan.newC || []), 'mixed');
   const day = interleave(reviews, fresh, 'mixed');   // proportional, so each session of the day gets its share of new items
   const L = plan.dueL.concat(plan.newL); const R = plan.dueR.concat(plan.newR).slice(0, 1);
@@ -3704,9 +3692,8 @@ function buildDailyQueue(size = state.settings.sessionSize) {
   let take = day.slice(0, Math.max(0, size - Ls.length - R.length));
   const rest = total - take.length - Ls.length - R.length;
   if (rest > 0 && (rest <= 5 || rest < size / 4)) { Ls = L; take = day; }   // a small tail joins this set: no one-question second set
-  const isNew = (x) => !state.srs[x.key];
+  const isNew = (x) => x.kind !== 'm' && !state.srs[x.key];
   // within the session: reviews shuffled, new items after them (a new word gets its preview card first)
-  const isG = (x) => x.kind === 'g' || x.kind === 'c';   // 變化練習 sits on the grammar side
   const vList = ladderFirst(shuffle(take.filter(x => !isG(x) && !isNew(x)))).concat(take.filter(x => !isG(x) && isNew(x)));
   const gList = ladderFirst(shuffle(take.filter(x => isG(x) && !isNew(x)))).concat(take.filter(x => isG(x) && isNew(x)));
   const items = interleave(vList, gList, state.settings.order);
@@ -3748,8 +3735,8 @@ function dailyQueue(size = state.settings.sessionSize) {
   const key = `${todayStr()}|${state.updatedAt}|${stateRev}|${size}|${state.currentUnit}|${speechAvailable() ? 1 : 0}`;
   if (DAILY_CACHE && DAILY_CACHE.key === key) return DAILY_CACHE.r;
   const r = buildDailyQueue(size);
-  r.items = r.items.filter(it => makeQuestion(it, {}));   // an item that cannot become a question would be dropped silently later
-  const isNew = (x) => !state.srs[x.key];
+  r.items = r.items.filter(it => (it.kind === 'm' ? makeMistakeCard(it.mistake) : makeQuestion(it, {})));   // an item that cannot become a question would be dropped silently later
+  const isNew = (x) => x.kind !== 'm' && !state.srs[x.key];
   r.newCount = r.items.filter(isNew).length; r.reviewCount = r.items.length - r.newCount;
   DAILY_CACHE = { key, r };
   return r;
@@ -3806,7 +3793,7 @@ function startSession(mode, opt = {}) {
     const size = opt.size || state.settings.sessionSize;
     if (!opt.extra && dailyPlan(size).remaining === 0) opt = Object.assign({}, opt, { extra: true });   // the day is done (e.g. 再練一組 on the summary): offer the 加練 set
     const r = opt.extra ? extraQueue(size) : dailyQueue(size);
-    entries = r.items.map(item => ({ item }));
+    entries = r.items.map(item => (item.kind === 'm' ? { mistake: item.mistake } : { item }));
     meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: opt.extra ? extraNote(r) : (r.plan.note || '') };
   } else if (mode === 'unit') {
     const uq = buildUnitQueue(opt.unit, opt.size || 15);
@@ -4209,7 +4196,7 @@ function answerCurrent(i) {
     e.srs = srsAnswer(q.key, ok);
     if (e.srs.isNew) SESSION.stats.newCount++;
   }
-  if (q.kind === 'm' && !q.key && q.mistakeId) noteAnswered('m:' + q.mistakeId);
+  if (q.kind === 'm' && q.mistakeId) noteAnswered('m:' + q.mistakeId);   // a notebook card is answered as its notebook entry (srsAnswer never sees it)
   if (q.kind === 'v' && q.fmt && q.fmt.startsWith('v-')) recordFormat(state.srs[q.key], q.fmt, ok);
   if (q.kind === 'g' && q.item && ((q.item.t || 'choice') === 'choice' || (q.fmt && q.fmt.endsWith('-type'))) && q.fmt) recordFormat(state.srs[q.key], q.fmt, ok, 'gf');
   // a new word comes back once more in another format; so does a new grammar item answered right (a miss gets the 再練一次 copy instead)
@@ -4732,10 +4719,10 @@ function renderToday(view) {
   const pace = examPace();
   const vs = vocabStats();
   const mk = activeMistakes();
-  const reviewN = plan.dueV.length + plan.dueG.length + (plan.dueC || []).length;
+  const reviewN = plan.dueV.length + plan.dueG.length + (plan.dueC || []).length + plan.q4.length + plan.q5.length + plan.mk.length;
   const newN = plan.newV.length + plan.newG.length + (plan.newC || []).length;
   const exK = plan.dueK.length + plan.newK.length;
-  const exL = Math.min(plan.dueL.length + plan.newL.length, newQuota('l'));
+  const exL = Math.min(plan.dueL.length + plan.newL.length, LISTEN_PER_DAY);
   const exR = Math.min(1, plan.dueR.length + plan.newR.length);
   const exA = (plan.dueA || []).length + (plan.newA || []).length;
   const size = state.settings.sessionSize;
@@ -4761,7 +4748,7 @@ function renderToday(view) {
     // the counts live in the 今天的範圍 panel (scopeHtml below); the card itself shows only the button when everything is folded
     scopeHtml = `${sessionTopicsHtml(dq, plan)}
       <div class="plan-line">
-        <span>待複習 <b>${reviewN}</b>（單字 ${plan.dueV.length}・文法 ${plan.dueG.length}${plan.dueC && plan.dueC.length ? `・變化 ${plan.dueC.length}` : ''}${plan.relearnN ? `・其中錯題 ${plan.relearnN}` : ''}）</span>
+        <span>待複習 <b>${reviewN}</b>（單字 ${plan.dueV.length}・文法 ${plan.dueG.length}${plan.dueC && plan.dueC.length ? `・變化 ${plan.dueC.length}` : ''}${[['四顆', plan.q4], ['五顆', plan.q5], ['錯題本', plan.mk]].map(([name, l]) => (l.length ? `・${name} ${l.length}` : '')).join('')}${plan.relearnN ? `・其中錯題 ${plan.relearnN}` : ''}）</span>
         <span>新內容 <b>${newN}</b>（單字 ${plan.newV.length}・文法 ${plan.newG.length}${plan.newC && plan.newC.length ? `・變化 ${plan.newC.length}` : ''}）</span>
         ${extraN ? `<span>另有 <b>${extraN}</b>（${extraText}）</span>` : ''}
         <span>共 <b>${plan.remaining}</b> 題</span>
@@ -8659,7 +8646,7 @@ async function cloudDownloadAll(kind = 'ja') {   // 'ja': the Japanese clips (~2
 const AUDIO_PREFETCH = { running: false, again: false, timer: null, at: 0, stop: false, broken: false, total: 0, have: 0, done: 0, missing: 0, failed: 0, onProgress: () => audioPrefetchRender() };
 function audioPrefetchItems() {
   const p = dailyPlan();
-  const today = [].concat(p.dueV, p.dueG, p.dueK, p.dueL, p.dueA || [], p.newV, p.newG, p.newK, p.newL, p.newA || []);   // drills and reading passages have no clips
+  const today = PLAN_LISTS.filter(n => !/^(due|new)[CR]$/.test(n)).flatMap(n => p[n] || []);   // drills and reading passages have no clips
   return [...new Map(today.filter(x => x.builtin).map(x => [x.key, x])).values()];   // own cards have no clips on the server
 }
 async function audioPrefetchTexts() {

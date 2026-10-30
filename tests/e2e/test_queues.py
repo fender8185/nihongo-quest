@@ -87,6 +87,65 @@ def test_recent_keeps_the_last_hundred_answers(b):
     r = ev(b, js)
     assert r == 100, r
 
+# ---- Task 3: 今天的清單照分層排 ----
+def test_queue_draws_follow_the_rates_and_caps(b):
+    js = "(() => { " + FRESH + REC + """ const ws = words.slice(0, 700);
+      const plant = (n, b0) => { state.srs = {}; ws.slice(0, n).forEach((v, i) => { state.srs[v.key] = rec(b0, { last: addDays(t, -(i + 1)) }); }); };   // later ones have waited longer
+      const out = {};
+      plant(40, 4); const q40 = computeDailyPlan().q4; out.q40 = q40.length; out.oldest = q40.map(x => x.key).join() === ws.slice(38, 40).reverse().map(v => v.key).join();
+      plant(700, 4); out.q700 = computeDailyPlan().q4.length;
+      plant(1, 4); out.q1 = computeDailyPlan().q4.length;
+      plant(100, 6); out.q5 = computeDailyPlan().q5.length;
+      state.srs = {}; state.mistakes = Array.from({ length: 25 }, (_, i) => ({ id: 'mk' + i, key: '', cat: '自訂', prompt: 'テスト' + i, answer: '答' + i, wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: addDays(t, -(i + 1)) }));
+      const mk = computeDailyPlan().mk; out.mk = mk.length; out.mkOld = mk.map(x => x.key).join() === ['mk24', 'mk23', 'mk22'].map(id => 'm:' + id).join();
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'q40': 2, 'oldest': True, 'q700': 30, 'q1': 1, 'q5': 3, 'mk': 3, 'mkOld': True}, r
+
+def test_srs_dues_are_capped_at_fifty_oldest_first(b):
+    js = "(() => { " + FRESH + REC + """ state.srs = {}; const ws = words.slice(0, 80);
+      ws.forEach((v, i) => { state.srs[v.key] = rec(2, { due: addDays(t, -(i + 1)), last: addDays(t, -(i + 4)) }); });   // due 1…80 days ago
+      const p = computeDailyPlan(); const due = [].concat(p.dueV, p.dueG, p.dueK, p.dueA, p.dueC).map(x => x.key).sort();
+      return JSON.stringify({ n: due.length, oldest: due.join() === ws.slice(30).map(v => v.key).sort().join() }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'n': 50, 'oldest': True}, r
+
+def test_new_items_and_drills_follow_the_rule(b):
+    js = "(() => { " + FRESH + """ state.recent = Array.from({ length: 100 }, (_, i) => (i < 95 ? 1 : 0)); state.mistakes = [];
+      const p = computeDailyPlan(); const fresh = p.newV.length + p.newG.length + p.newK.length + p.newA.length;
+      state.currentUnit = 'm18'; const p18 = computeDailyPlan();
+      return JSON.stringify({ fresh, n: p.n, split: p.split, drills: p18.newC.length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['fresh'] == 20 and r['n'] == 20 and sum(r['split'].values()) == 20 and r['drills'] == 1, r
+
+# four hand-made notebook cards of one category (a card needs three other answers for its options); mk_t3 waited longest
+HANDMADE = """state.mistakes = ['測試', '學習', '日本', '語言'].map((a, i) => ({ id: 'mk_t' + i, key: '', cat: '自訂', prompt: 'テスト' + i, answer: a, wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: addDays(todayStr(), -(i + 1)) }));"""
+# answers the notebook card of today's daily set; returns what the list and the ring say
+ANSWER_CARD = """delete state.today.plan; DAILY_CACHE = null; dailyPlan(); const mk = state.today.plan.lists.mk.slice(); const before = dayProgress();
+      startSession('daily', { size: 60 }); const i = SESSION.entries.findIndex(e => e.mistake); SESSION.idx = Math.max(0, i); prepareEntry(SESSION.idx);
+      const q = currentEntry().q; answerCurrent(q.answer); const out = { mk, card: i >= 0, kind: q.kind, answered: answeredToday(mk[0]), done: dayProgress().done - before.done };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out);"""
+
+def test_handmade_mistakes_come_as_cards_in_the_daily_set(b):
+    js = "(() => { " + FRESH + HANDMADE + ANSWER_CARD + " })()"
+    r = json.loads(ev(b, js))
+    assert r['mk'] == ['m:mk_t3'] and r['card'] and r['kind'] == 'm', r
+    assert r['answered'] is True and r['done'] == 1, r
+
+def test_a_notebook_card_whose_item_is_gone_still_counts(b):
+    js = "(() => { " + FRESH + HANDMADE + " state.mistakes[3].key = 'v:no-such-word'; " + ANSWER_CARD + " })()"
+    r = json.loads(ev(b, js))
+    assert r['mk'] == ['m:mk_t3'] and r['card'] and r['answered'] is True and r['done'] == 1, r
+
+def test_the_plan_keeps_its_queues_all_day(b):
+    js = "(() => { " + FRESH + REC + """ state.srs = {}; words.slice(0, 40).forEach((v, i) => { state.srs[v.key] = rec(4, { last: addDays(t, -(i + 1)) }); });
+      delete state.today.plan; DAILY_CACHE = null; const p = dailyPlan(); const before = dayProgress(); const k = p.q4[0].key;
+      srsAnswer(k, true); const after = dayProgress();
+      return JSON.stringify({ q4: p.q4.length, b: state.srs[k].b, total: after.total === before.total, done: after.done - before.done, n: state.today.plan.n, split: state.today.plan.split }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['q4'] == 2 and r['b'] >= 5 and r['total'] and r['done'] == 1, r
+    assert isinstance(r['n'], int) and r['n'] >= 3 and sorted(r['split']) == ['a', 'g', 'k', 'v'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

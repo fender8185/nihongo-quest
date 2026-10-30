@@ -61,7 +61,7 @@ def test_pre_stage_plan_has_only_kana_until_the_seion_gate_opens(b):
     js = """(() => { const p = dailyPlan(); const out = { a: p.newA.map(x => x.ch), g: p.dueG.length + p.newG.length, l: p.dueL.length + p.newL.length, r: p.dueR.length + p.newR.length,
         c: (p.dueC || []).length + (p.newC || []).length, v: p.newV.length, k: p.newK.map(x => x.lv) };
       REG.kana.filter(x => x.seion).forEach(x => { state.srs[x.key] = { b: 1, due: addDays(todayStr(), 5), n: 1, ok: 1, ng: 0, s: 2, d: 5, last: addDays(todayStr(), -1) }; }); delete state.today.plan; DAILY_CACHE = null;
-      const p2 = dailyPlan(); out.v2 = p2.newV.map(x => x.lv); out.a2 = p2.newA.map(x => x.ch); out.k2 = [...new Set(p2.newK.map(x => x.lv))]; out.g2 = p2.newG.map(x => x.u); out.q = newQuota('g');
+      const p2 = dailyPlan(); out.v2 = p2.newV.map(x => x.lv); out.a2 = p2.newA.map(x => x.ch); out.k2 = [...new Set(p2.newK.map(x => x.lv))]; out.g2 = p2.newG.map(x => x.u); out.split = p2.split;
       const q = dailyQueue(20).items; out.kinds = [...new Set(q.map(x => x.kind))].sort();
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
@@ -69,7 +69,7 @@ def test_pre_stage_plan_has_only_kana_until_the_seion_gate_opens(b):
     assert r['g'] == 0 and r['l'] == 0 and r['r'] == 0 and r['c'] == 0 and r['v'] == 0, r
     assert all(l == 'PRE_N5' for l in r['k']), r
     assert r['v2'] and all(l == 'PRE_N5' for l in r['v2']) and r['a2'][:2] == ['が', 'ぎ'] and r['k2'] == [], r   # 1.0.12: no 入門 kanji
-    assert r['g2'] and set(r['g2']) == {'m0'} and len(r['g2']) == min(r['q'], 20), r   # 1.0.16: 第 0 週 grammar once the kana gate is open
+    assert r['g2'] and set(r['g2']) == {'m0'} and (len(r['a2']), len(r['v2']), len(r['g2'])) == (r['split']['a'], r['split']['v'], r['split']['g']), r   # 1.0.16: 第 0 週 grammar once the kana gate is open; 1.0.20: the day's new items shared by what is left
     assert set(r['kinds']) <= {'a', 'v', 'k', 'g'}, r
 
 def test_main_stage_never_schedules_new_kana_but_reviews_practised_ones(b):
@@ -81,11 +81,12 @@ def test_main_stage_never_schedules_new_kana_but_reviews_practised_ones(b):
     r = json.loads(ev(b, js))
     assert r == {'newA': 0, 'dueA': ['あ'], 'inQueue': True}, r
 
-def test_load_cap_counts_kana(b):
-    js = """(() => { state.settings.loadCap = 10; state.settings.newKanaPerDay = 15; DAILY_CACHE = null; const p = dailyPlan();
+def test_new_kana_follow_the_days_new_count_not_the_old_settings(b):
+    js = """(() => { state.settings.loadCap = 10; state.settings.newKanaPerDay = 15; state.mistakes = []; state.recent = Array.from({ length: 100 }, (_, i) => (i < 60 ? 1 : 0));   // 60%: 5 new items
+      DAILY_CACHE = null; delete state.today.plan; const p = dailyPlan();
       return JSON.stringify({ a: p.newA.length, note: String(p.note || '') }); })()"""
     r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
-    assert r['a'] < 15 and '新假名' in r['note'], r
+    assert r['a'] == 5 and '今天新內容 5 題' in r['note'], r   # 1.0.20: the day's new count decides; 負荷上限 and 每天新假名 no longer do
 
 def test_pre_stage_ends_by_itself_once_everything_is_seen_and_accuracy_holds(b):
     # 1.0.15: no 進入第 1 週／再練一陣子 question — kana gate open + every 入門 word seen + recent accuracy ≥ 80% moves on by itself
@@ -496,13 +497,13 @@ def test_finishing_pre_logs_week0_as_a_completed_unit(b):
     assert r == {'done': True, 'units': ['基本句型']}, r
 
 # ---- 1.0.16 final-review fixes ----
-def test_pre_load_cap_does_not_count_week0_grammar_that_is_used_up(b):
+def test_pre_week0_grammar_used_up_gives_its_slots_to_words(b):
     js = """(() => { const t = todayStr(); state.srs = {}; state.settings.loadCap = 100; state.recent = Array(34).fill(1).concat(Array(6).fill(0));   // 85%: factor 1
       REG.kana.forEach((x, i) => { state.srs[x.key] = { b: 2, due: i < 88 ? t : addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -3) }; });
       REG.grammar.filter(g => g.u === 'm0').forEach(g => { state.srs[g.key] = { b: 2, due: addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -1) }; });
-      DAILY_CACHE = null; const p = dailyPlan(); return JSON.stringify({ dueA: p.dueA.length, newG: p.newG.length, newV: p.newV.length, cut: String(p.note || '').includes('新單字先減') }); })()"""
+      DAILY_CACHE = null; delete state.today.plan; const p = dailyPlan(); return JSON.stringify({ dueA: p.dueA.length, newG: p.newG.length, newV: p.newV.length }); })()"""
     r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
-    assert r == {'dueA': 88, 'newG': 0, 'newV': 8, 'cut': False}, r   # 88 reviews + 8 words fit under 100; no phantom 第 0 週 grammar
+    assert r == {'dueA': 50, 'newG': 0, 'newV': 15}, r   # 1.0.20: at most 50 reviews a day; no phantom 第 0 週 grammar — its slots go to the words
 
 def test_week0_completes_itself_when_its_last_item_is_answered(b):
     js = """(() => { const t = todayStr(); state.stage = 'main'; state.currentUnit = 'm2'; state.srs = {}; state.completedUnits = []; state.introPending = true; delete state.dailyLogs[t];

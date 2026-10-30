@@ -108,11 +108,11 @@ def test_new_conj_item_answered_right_comes_back_typed_and_a_typed_miss_requeues
 def test_drills_exist_per_form_family_and_reach_follows_the_unit(b):
     js = """(() => { const fams = REG.drills.map(d => d.fam).sort(); const te = REG.drills.find(d => d.fam === 'te');
       state.currentUnit = 'm3'; const p3 = computeDailyPlan(); state.currentUnit = 'm18'; const p18 = computeDailyPlan();
-      return JSON.stringify({ fams, teUnit: te && te.u, teForms: te && te.forms, byKey: Boolean(REG.byKey.get('c:te')), n3: p3.newC.map(d => d.fam), n18: p18.newC.length, cap: newQuota('c') }); })()"""
+      return JSON.stringify({ fams, teUnit: te && te.u, teForms: te && te.forms, byKey: Boolean(REG.byKey.get('c:te')), n3: p3.newC.map(d => d.fam), n18: p18.newC.length }); })()"""
     r = json.loads(ev(b, js))
     assert set(r['fams']) >= {'te', 'ta', 'nai', 'pot', 'vol', 'pass', 'caus', 'ba'} and 'dict' not in r['fams'], r
     assert r['teUnit'] == 'm3' and 'te' in r['teForms'] and r['byKey'], r
-    assert set(r['n3']) <= {'te', 'masu', 'nai', 'ta'} and 1 <= len(r['n3']) <= 3 and r['n18'] == 3 and r['cap'] == 3, r
+    assert set(r['n3']) <= {'te', 'masu', 'nai', 'ta'} and len(r['n3']) == 1 and r['n18'] == 1, r   # 1.0.20: one new drill family a day
 
 def test_drill_question_is_generated_from_a_learned_verb_and_a_miss_schedules_tomorrow(b):
     js = """(() => { const d = REG.drills.find(x => x.fam === 'te'); state.currentUnit = 'm18';
@@ -153,16 +153,16 @@ def test_previous_question_format_does_not_change_the_answer_mode_of_an_ordinary
     assert r['newAfterChoice'] == 'g-conj' and r['learnedAfterTyped'] == 'g-conj-type', r
     assert r['tilesAfterTyped'] == 'g-conj-type' and r['typeAfterTyped'] == 'g-conj-type' and r['encoreStill'] is None, r
 
-def test_drill_cap_counts_what_was_answered_today(b):
+def test_due_drills_join_the_day_and_answered_ones_drop_out(b):
     js = """(() => { state.currentUnit = 'm18'; state.settings.conjDrillPerDay = 3; const t = todayStr();
       REG.drills.forEach(d => { srsAnswer(d.key, true); state.srs[d.key].due = t; state.srs[d.key].last = addDays(t, -3); });   // every family due today
       state.today.ans = []; delete state.today.plan;   // the set-up answers belong to earlier days
       const p1 = dailyPlan(); const first = p1.dueC.length;
       p1.dueC.slice(0, 2).forEach(d => srsAnswer(d.key, true));   // two answered today
       const p2 = dailyPlan();
-      return JSON.stringify({ first, second: p2.dueC.length, newC: p2.newC.length }); })()"""
+      return JSON.stringify({ all: REG.drills.length, first, second: p2.dueC.length, newC: p2.newC.length }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'first': 3, 'second': 1, 'newC': 0}, r
+    assert r['first'] == r['all'] and r['second'] == r['all'] - 2 and r['newC'] == 0, r   # 1.0.20: due drills are reviews like any other (within the day's 50)
 
 def test_enter_during_ime_composition_does_not_submit(b):
     js = "(() => { " + setup('type') + """
