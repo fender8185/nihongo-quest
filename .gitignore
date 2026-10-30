@@ -4,3 +4,4 @@ Anki/
 node_modules/
 .superpowers/
 __pycache__/
+.venv/

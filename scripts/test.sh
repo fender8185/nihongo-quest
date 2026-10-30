@@ -10,7 +10,7 @@ node -e "const D=JSON.parse(require('fs').readFileSync('data.js','utf8').split('
 # the data file version must agree in index.html (<script src>), sw.js (PRECACHE) and data.js (header)
 dv="$(grep -o 'data.js?v=[0-9]*' index.html | tr -d -c 0-9)"
 [ "$dv" = "$(grep -o 'data.js?v=[0-9]*' sw.js | tr -d -c 0-9)" ] && [ "$dv" = "$(grep -o 'DATA_VERSION [0-9]*' data.js | tr -d -c 0-9)" ] || { echo "data.js version differs between index.html, sw.js and data.js"; exit 1; }
-node tests/sync-core.test.js | grep -E "^# (pass|fail)"
+node --test-reporter=tap tests/sync-core.test.js | grep -E "^# (pass|fail)"   # tap: Node 23+ prints "ℹ pass" by default
 # a release must carry a new version: app files changed against origin/main ⇒ APP_VERSION differs; data.js changed ⇒ data version differs
 if git rev-parse --verify -q origin/main >/dev/null 2>&1; then
   if ! git diff --quiet origin/main -- index.html sw.js sync-core.js; then
@@ -21,13 +21,17 @@ if git rev-parse --verify -q origin/main >/dev/null 2>&1; then
   fi
 fi
 # e2e files run in parallel (each starts its own http.server port and headless Chrome); results are printed per file
+# with the project venv when there is one (/usr/bin/python3 -m venv .venv && .venv/bin/pip install websockets): -I keeps the user site out,
+# and Homebrew Python 3.15 on this Mac spends 35 s resolving 127.0.0.1 each time http.server starts
+py=python3; [ -x .venv/bin/python3 ] && py=.venv/bin/python3
+e2e=(tests/e2e/test_storage.py tests/e2e/test_pwa.py tests/e2e/test_sync.py tests/e2e/test_sync_ui.py tests/e2e/test_fixes.py tests/e2e/test_vocab.py tests/e2e/test_conj.py tests/e2e/test_content.py tests/e2e/test_pre_n5.py tests/e2e/test_stage_tests.py tests/e2e/test_today_list.py)
 tmp="$(mktemp -d)"; pids=()
-for t in tests/e2e/test_storage.py tests/e2e/test_pwa.py tests/e2e/test_sync.py tests/e2e/test_sync_ui.py tests/e2e/test_fixes.py tests/e2e/test_vocab.py tests/e2e/test_conj.py tests/e2e/test_content.py tests/e2e/test_pre_n5.py tests/e2e/test_stage_tests.py; do
-  ( set +e; python3 -I "$t" > "$tmp/$(basename "$t").log" 2>&1; echo $? > "$tmp/$(basename "$t").rc" ) & pids+=($!)   # set +e: a failing file must still record its exit code
+for t in "${e2e[@]}"; do
+  ( set +e; "$py" -I "$t" > "$tmp/$(basename "$t").log" 2>&1; echo $? > "$tmp/$(basename "$t").rc" ) & pids+=($!)   # set +e: a failing file must still record its exit code
 done
 wait "${pids[@]}"
 fail=0
-for t in tests/e2e/test_storage.py tests/e2e/test_pwa.py tests/e2e/test_sync.py tests/e2e/test_sync_ui.py tests/e2e/test_fixes.py tests/e2e/test_vocab.py tests/e2e/test_conj.py tests/e2e/test_content.py tests/e2e/test_pre_n5.py tests/e2e/test_stage_tests.py; do
+for t in "${e2e[@]}"; do
   n="$(basename "$t")"; rc="$(cat "$tmp/$n.rc" 2>/dev/null || echo 1)"; echo "$n: $(tail -1 "$tmp/$n.log")"
   if [ "$rc" != "0" ]; then fail=1; grep -E "^(FAIL|not ok)" "$tmp/$n.log" | head -5; fi
 done
