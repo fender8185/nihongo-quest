@@ -1546,7 +1546,35 @@ const RELEARN_GAPS = [2, 4];
 const RELEARN_KINDS = /^[vgkca]:/;
 const LR_GAPS = [30, 90, 180];   // 聽力／閱讀 answered right the 1st, 2nd, 3rd+ time: days until it is asked again
 const LR_MISS_GAP = 7;           // 聽力／閱讀 answered wrong: back after a week, not the next day
+// 1.0.20 tiers: up to three stars follow FSRS due dates (at most SRS_DAILY_CAP a day, the oldest first); four stars, five
+// stars and the notebook are queues that give a fixed share a day, the longest-waiting first (at least QUEUE_MIN, at most
+// QUEUE_MAX, none when empty). New items a day: NEW_STEPS by the last RECENT_MAX answers, minus one per ten notebook entries.
+const SRS_DAILY_CAP = 50;
+const QUEUE_RATE = { q4: 0.05, q5: 0.03, mk: 0.10 };
+const QUEUE_MIN = 1;
+const QUEUE_MAX = 30;
+const LISTEN_PER_DAY = 3;
+const NEW_STEPS = [[0.9, 20], [0.8, 15], [0.7, 10], [0, 5]];
+const NEW_DEFAULT = 15;
+const NEW_MIN = 3;
+const NEW_MAX = 20;
+const RECENT_MAX = 100;
 function onLadder(key) { const r = state.srs[key]; return Boolean(r) && typeof r.rl === 'number'; }
+// which tier an item is in, read from its stars (listening and reading keep their own dates: null)
+function tierOf(key) {
+  if (/^[lr]:/.test(key)) return null;
+  const r = state.srs[key];
+  if (!r) return 'new';
+  if (r.out) return 'out';
+  if (typeof r.rl === 'number' || r.b <= 3) return 'srs';
+  return r.b === 4 ? 'q4' : 'q5';
+}
+// 入門 items (kana, PRE_N5 built-in words, week-0 grammar) leave for good after a right answer at five stars
+function isPreItem(key) {
+  if (key.startsWith('a:')) return true;
+  const x = REG.byKey.get(key);
+  return Boolean(x) && ((x.kind === 'v' && x.builtin && x.lv === 'PRE_N5') || (x.kind === 'g' && x.u === 'm0'));
+}
 function srsGet(key) { return state.srs[key] || null; }
 
 function fsrsD0(g) { return clamp(FSRS_W[4] - (g - 3) * FSRS_W[5], 1, 10); }
@@ -1621,6 +1649,11 @@ function srsAnswer(key, correct, opt = {}) {
   r.n++;
   if (g > 1) { r.ok++; r.st++; } else { r.ng++; r.st = 0; if (before >= 2) r.lapse = (r.lapse || 0) + 1; delete r.known; }   // a miss ends the 我會了 vouch: back to the normal rules
   r.b = g === 1 ? Math.min(levelFromS(r.s), 1) : levelFromS(r.s);
+  // four stars answered right go up to five wherever they are answered; a 入門 item right at five stars leaves the queues
+  if (g > 1 && before === 4) { r.s = Math.max(r.s, LEVEL_FROM_S[4]); r.b = levelFromS(r.s); }
+  if (g > 1 && before >= 5 && isPreItem(key)) r.out = 1;
+  if (g === 1) delete r.out;
+  if (isNew) logEntry().fresh = (logEntry().fresh || 0) + 1;   // first answers a day: the pace the exam countdown uses
   if (before < SRS_LEARNED && r.b >= SRS_LEARNED) r.lrn = t;   // the day it became 熟悉 (學習分析 lists the recent ones)
   // A miss comes back tomorrow: the same-day look is the session's 再練一次 copy, which does not touch the schedule (seeing
   // the very same question again within hours only tests memory of the answer). Listening and reading wait a week and get
@@ -3270,7 +3303,12 @@ function byDue(a, b) {
   return (ra.due < rb.due ? -1 : ra.due > rb.due ? 1 : 0) || (ra.b - rb.b);
 }
 // due today and not yet answered today: an item answered anywhere in the app (any practice mode) is done for the day
-function isDueToday(x, t = todayStr()) { const r = state.srs[x.key]; return Boolean(r && r.due <= t && r.last !== t); }
+// only up to three stars go by due dates (four and five stars come from their queues); listening and reading always do
+function isDueToday(x, t = todayStr()) {
+  const tier = tierOf(x.key);
+  if (tier !== null && tier !== 'srs') return false;
+  const r = state.srs[x.key]; return Boolean(r && r.due <= t && r.last !== t);
+}
 // What the daily mix may contain: grammar from the current unit and the units before it, and N4 words
 // only after every N5 word has been introduced once. Items further ahead keep their records and come
 // back when the learner gets there.
