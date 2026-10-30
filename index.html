@@ -3590,10 +3590,12 @@ function computeDailyPlan(size = state.settings.sessionSize) {
   // up to three stars: due by FSRS, the most overdue first, at most SRS_DAILY_CAP a day (the rest come the next days)
   const due = scope.filter(x => isDueToday(x, t)).sort(byDue).slice(0, SRS_DAILY_CAP);
   const ofKind = (kind) => due.filter(x => x.kind === kind);
-  // four stars, five stars and the notebook: queues giving a fixed share a day, the longest-waiting first
+  // four stars, five stars and the notebook: queues giving a fixed share a day, the longest-waiting first. Four and five
+  // stars touched today (answered, marked by a stage pass or the 入門 questions, 我會了) wait until tomorrow, as isDueToday
+  // does for the due ones, so a list made again the same day (a stage switch) does not draw what was just marked
   const share = (len, rate) => (len ? clamp(Math.round(len * rate), QUEUE_MIN, QUEUE_MAX) : 0);
   const byLast = (a, b) => String(state.srs[a.key].last || '').localeCompare(String(state.srs[b.key].last || ''));
-  const queue = (tier) => { const q = scope.filter(x => tierOf(x.key) === tier && !answeredToday(x.key)).sort(byLast); return q.slice(0, share(q.length, QUEUE_RATE[tier])); };
+  const queue = (tier) => { const q = scope.filter(x => tierOf(x.key) === tier && !answeredToday(x.key) && state.srs[x.key].last !== t).sort(byLast); return q.slice(0, share(q.length, QUEUE_RATE[tier])); };
   const q4 = queue('q4'); const q5 = queue('q5');
   // a notebook entry tied to the course comes as that item; a hand-made one (or one whose item is gone) as its card,
   // listed as 'm:<id>' — only a card that can be made (it needs three other answers for its options). Missed listening and

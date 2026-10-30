@@ -342,7 +342,8 @@ def test_passing_a_stage_marks_four_stars_and_leaves_today_alone(b):
         missedLeft: wrong.every(k => !state.srs[k]), noted: JSON.stringify(state.srs[noted.key]) === notedRec, notebook: state.mistakes.length === 1 && !state.mistakes[0].mastered,
         today: JSON.stringify(dayProgress()) === before, says: txt.includes(`已把第一階段以前、還不到四顆的 ${core.length} 題設成四顆。`),   // listening and reading are not counted: three stars
         undo: Boolean(view.querySelector('[data-act="bulk-mark-undo"]')), old: txt.includes('標記到這裡為止') || Boolean(view.querySelector('[data-act="stage-mark"]')) };
-      delete state.today.plan; state.today.date = addDays(t, -1); checkDayRollover(); DAILY_CACHE = null; out.q4 = dailyPlan().q4.length;   // the next day
+      Object.values(state.srs).forEach(r => { if (r.last === t) r.last = addDays(t, -1); });   // the next day: today's marks were made yesterday
+      delete state.today.plan; state.today.date = addDays(t, -1); checkDayRollover(); DAILY_CACHE = null; out.q4 = dailyPlan().q4.length;
       const ub = view.querySelector('[data-act="bulk-mark-undo"]'); if (ub) ub.click();
       out.restored = """ + SNAP + """ === snap0; out.undone = document.getElementById('view').textContent.includes('已復原');
       return JSON.stringify(out); })()"""
@@ -384,6 +385,26 @@ def test_pre_test_asks_three_to_five_stars_with_a_suggestion(b):
     assert r['fresh']['stage'] == 'main' and r['fresh']['unit'] == 'm1' and r['fresh']['session'], r['fresh']
     assert r['old']['stars'] == {'hira': [6], 'kata': [6], 'v': [6], 'g': [6]}, r['old']   # all right: every suggestion is 五顆
     assert r['old']['stage'] == 'main' and r['old']['unit'] == 'm3' and r['old']['session'], r['old']   # an account past 入門 keeps its week
+
+# a learner still in 入門 with today's list made: the 入門 test's 四顆／五顆 answers, or a p1 pass, move it to the main course
+# and the list is made again the same day (a stage switch); its four- and five-star queues take nothing marked today
+def test_items_marked_today_stay_out_of_a_list_rebuilt_the_same_day(b):
+    js = "(() => { " + PLAY_TEST + """ const t = todayStr();
+      const start = () => { state.srs = {}; state.mistakes = []; state.stageTests = {}; state.completedUnits = []; state.lessonSeen = []; state.stage = 'pre'; state.startChosen = true;
+        state.kanaKnown = false; state.introSeen = false; state.currentUnit = 'm1'; LAST_BULK_MARK = null; saveState(); delete state.today.plan; DAILY_CACHE = null; dailyPlan(); return state.today.plan.stage; };
+      const look = () => { DAILY_CACHE = null; dailyPlan(); const pl = state.today.plan; const recs = Object.values(state.srs).filter(r => r.last === t);
+        return { stage: pl.stage, drawn: pl.lists.q4.concat(pl.lists.q5).filter(k => state.srs[k] && state.srs[k].last === t), four: recs.filter(r => r.b === 4).length, five: recs.filter(r => r.b >= 5).length }; };
+      const out = { pre0: start() };
+      startSession('stage', { stage: 'pre' }); playTest(() => false);
+      ['5', '5', '4', '4'].forEach(v => { const el = document.querySelector(`[data-act="pre-mark-pick"][data-level="${v}"]`); if (el) el.click(); });
+      out.pre = look();
+      out.p10 = start(); startSession('stage', { stage: 'p1' }); playTest(() => false); SESSION = null; document.body.classList.remove('practicing');
+      out.p1 = look();
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['pre0'] == 'pre' and r['p10'] == 'pre', r   # each list was first made in 入門
+    assert r['pre']['stage'] == 'main' and r['pre']['four'] > 0 and r['pre']['five'] > 0 and r['pre']['drawn'] == [], r['pre']
+    assert r['p1']['stage'] == 'main' and r['p1']['four'] > 0 and r['p1']['drawn'] == [], r['p1']
 
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
