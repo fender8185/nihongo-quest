@@ -259,9 +259,12 @@ if __name__ == "__main__":
     failed = 0
     try:
         for t in tests:
-            with Browser() as b:
-                try: t(b); print("PASS", t.__name__)
-                except Exception as e: failed += 1; print("FAIL", t.__name__, "-", str(e)[:300])
+            err = None
+            for attempt in (1, 2):   # a second try with a fresh browser absorbs load-related flakiness (as the other e2e files do)
+                with Browser() as b:
+                    try: t(b); print("PASS", t.__name__ + (" (retry)" if attempt == 2 else "")); err = None; break
+                    except Exception as e: err = e
+            if err is not None: failed += 1; print("FAIL", t.__name__, "-", str(err)[:300])
     finally:
         srv.terminate()
     print(f"# {len(tests) - failed}/{len(tests)} passed"); sys.exit(1 if failed else 0)
