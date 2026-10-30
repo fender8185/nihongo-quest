@@ -159,14 +159,14 @@ def test_bulk_mark_to_p3_finishes_the_course_and_undo_restores(b):
 
 def test_bulk_mark_dialog_requires_a_pass_and_counts_live(b):
     js = "(() => { " + RESET + """bulkMarkDialog('p2'); const noModal = !document.querySelector('#modalBody');
-      bulkMark('pre', 'learned'); LAST_BULK_MARK = null;   // 入門 already 熟悉, so 熟悉 and 熟練 count differently
+      bulkMark('pre', 'four'); LAST_BULK_MARK = null;   // 入門 already 熟悉 (four stars since 1.0.19), so 熟悉 and 熟練 count differently
       bulkMarkDialog('p1'); const body = document.getElementById('modalBody'); const radios = [...body.querySelectorAll('input[name="bulkLevel"]')];
       const checked = radios.find(x => x.checked).value; const c1 = body.querySelector('#bulkCount').textContent;
       radios.find(x => x.value === 'known').checked = true; CHANGE_ACTIONS['bulk-level'](radios.find(x => x.value === 'known'));
       const c2 = body.querySelector('#bulkCount').textContent; const txt = body.textContent; closeModal();
       return JSON.stringify({ noModal, n: radios.length, checked, c1, c2, title: txt.includes('入門、第一階段'), go: Boolean(body.querySelector('[data-act="bulk-mark-go"]')) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['noModal'] and r['n'] == 3 and r['checked'] == 'learned' and r['title'] and r['go'], r
+    assert r['noModal'] and r['n'] == 3 and r['checked'] == 'four' and r['title'] and r['go'], r
     assert r['c1'] != r['c2'] and '個項目' in r['c1'], r
 
 def test_vocab_known_all_spreads_due(b):

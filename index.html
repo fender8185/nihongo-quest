@@ -943,7 +943,7 @@ const CHANGELOG = [
   { v: '1.0.19', date: '2026-10-30', items: [
     '今天的題目在第一次打開時排好，當天不會變：測驗後的標記不再讓圓圈亂跳，當天的聽力、閱讀照出。圓圈只畫百分比；按鈕寫這組幾題、今天還剩幾題，零星的尾巴併進同一組。「今天做了」和側欄改算今天作答過的不重複題目。',
     '模擬考不再改熟練度、不進錯題本、不算正確率和題數；只考試的日子照算連續天數。學習紀錄分開寫「N 題」和「作答 M 次」，模擬考與階段測驗另外寫題數。',
-    '出題改成分層：三顆以下照記憶強度排複習，每天最多 50 題，等最久的先出；四顆、五顆和錯題本各自排隊，每天分別出 5%、3%、10%（各最少 1 題、最多 30 題）。四顆在哪裡答對都會升到五顆，入門的題目五顆再答對就不再出現；答錯一律回到一般的重練並進錯題本。「我會了」的字直接排進五顆的複習。',
+    '出題改成分層：三顆以下照記憶強度排複習，每天最多 50 題，等最久的先出；四顆、五顆和錯題本各自排隊，每天分別出 5%、3%、10%（各最少 1 題、最多 30 題）。四顆在哪裡答對都會升到五顆，入門的題目五顆再答對就不再出現；答錯一律回到一般的重練並進錯題本。錯題還沒到第 1、3、7 天的複習日就先答對，算額外練習，不算進三次。「我會了」的字直接排進五顆的複習；「標記到這裡為止」選「熟悉」直接算四顆，錯題本裡的題目不動。',
     '每天的新內容改看最近 100 題的正確率：90% 以上 20 題、80% 以上 15 題、70% 以上 10 題，其他 5 題；錯題本每 10 條少 1 題（最少 3 題、最多 20 題），照單字、文法、漢字還沒學的比例分配。拿掉「每天負荷上限」和「每天新假名」；考試倒數改成照最近的速度預估哪天學完單字、文法、漢字，來不及時建議做完當天的練習後按加練。'
   ] },
   { v: '1.0.18', date: '2026-10-29', items: [
@@ -1638,7 +1638,7 @@ function srsAnswer(key, correct, opt = {}) {
   const isNew = !r;
   if (!r) r = state.srs[key] = { b: 0, due: t, n: 0, ok: 0, ng: 0, st: 0, last: null, lapse: 0, intro: t };
   else ensureFsrs(r);
-  const before = r.b;
+  const before = r.b; const dueBefore = r.due;
   const g = opt.grade ? (GRADE[opt.grade] || 3) : (correct ? 3 : 1);
   const elapsed = r.last ? daysBetween(r.last, t) : 0;
   const reviewed = !isNew && r.due <= t;   // a due review (not a first look, not early practice): feeds reviewAccuracy
@@ -1649,9 +1649,10 @@ function srsAnswer(key, correct, opt = {}) {
   r.n++;
   if (g > 1) { r.ok++; r.st++; } else { r.ng++; r.st = 0; if (before >= 2) r.lapse = (r.lapse || 0) + 1; delete r.known; }   // a miss ends the 我會了 vouch: back to the normal rules
   r.b = g === 1 ? Math.min(levelFromS(r.s), 1) : levelFromS(r.s);
-  // four stars answered right go up to five wherever they are answered; a 入門 item right at five stars leaves the queues
+  // four stars answered right go up to five wherever they are answered; a 入門 item clearly right at five stars (not a
+  // flashcard's 模糊) leaves the queues
   if (g > 1 && before === 4) { r.s = Math.max(r.s, LEVEL_FROM_S[4]); r.b = levelFromS(r.s); }
-  if (g > 1 && before >= 5 && isPreItem(key)) r.out = 1;
+  if (g >= 3 && before >= 5 && isPreItem(key)) r.out = 1;
   if (g === 1) delete r.out;
   if (isNew) logEntry().fresh = (logEntry().fresh || 0) + 1;   // first answers a day: the pace the exam countdown uses
   if (before < SRS_LEARNED && r.b >= SRS_LEARNED) r.lrn = t;   // the day it became 熟悉 (學習分析 lists the recent ones)
@@ -1662,8 +1663,11 @@ function srsAnswer(key, correct, opt = {}) {
   // a dialogue or passage met again within weeks tests memory of the answer, not listening or reading: after a
   // correct answer it waits a month, then a season, then half a year (a miss still brings it back tomorrow)
   if (/^[lr]:/.test(key) && g > 1) r.due = addDays(t, Math.max(daysBetween(t, r.due), LR_GAPS[Math.min(r.ok, LR_GAPS.length) - 1]));
+  // the ladder moves on a right answer on (or after) its day; a right answer before it (the notebook queue, a flashcard,
+  // unit practice) is extra practice: the step and its day stay
   if (RELEARN_KINDS.test(key)) {
     if (g === 1) r.rl = 0;
+    else if (typeof r.rl === 'number' && !reviewed) r.due = dueBefore;
     else if (typeof r.rl === 'number') { if (r.rl < RELEARN_GAPS.length) { r.due = addDays(t, RELEARN_GAPS[r.rl]); r.rl++; } else delete r.rl; }
   }
   r.last = t;
@@ -1715,8 +1719,12 @@ function srsLevelLabel(rec, key) {
   if (rec.b >= 1) return '學習中';
   return '待加強';
 }
-function dueLabel(rec) {
+// when an item comes back: four and five stars wait in their queues (their date is not used), an 入門 item that left never does
+function dueLabel(rec, key) {
   if (!rec) return '';
+  const tier = tierOf(key);
+  if (tier === 'q4' || tier === 'q5') return `${tier === 'q4' ? '四' : '五'}顆・排隊中`;
+  if (tier === 'out') return '不再出現';
   const d = daysBetween(todayStr(), rec.due);
   if (d <= 0) return '今天複習';
   if (d === 1) return '明天複習';
@@ -1852,7 +1860,7 @@ function unitStats(uid) {
   items.forEach(it => {
     const r = state.srs[it.key];
     if (r) {
-      seen++; score += Math.min(r.b, SRS_LEARNED); if (r.b >= SRS_LEARNED) learned++; if (r.due <= t) due++;
+      seen++; score += Math.min(r.b, SRS_LEARNED); if (r.b >= SRS_LEARNED) learned++; if (isDueToday(it, t)) due++;
       if ((r.ok || 0) >= 3) ok3++; else if ((r.ok || 0) >= 1) ok1++; else seen0++;
     }
   });
@@ -1867,7 +1875,7 @@ function vocabStats() {
     const bucket = !v.builtin ? out.custom : (out[v.lv] || out.N5);
     bucket.total++;
     const r = state.srs[v.key];
-    if (r) { out.seen++; if (r.b >= SRS_LEARNED) bucket.learned++; if (r.due <= t && (v.lv !== 'N4' || !v.builtin || n4Open)) out.due++; }
+    if (r) { out.seen++; if (r.b >= SRS_LEARNED) bucket.learned++; if (isDueToday(v, t) && (v.lv !== 'N4' || !v.builtin || n4Open)) out.due++; }
   });
   return out;
 }
@@ -3587,12 +3595,13 @@ function computeDailyPlan(size = state.settings.sessionSize) {
   const queue = (tier) => { const q = scope.filter(x => tierOf(x.key) === tier && !answeredToday(x.key)).sort(byLast); return q.slice(0, share(q.length, QUEUE_RATE[tier])); };
   const q4 = queue('q4'); const q5 = queue('q5');
   // a notebook entry tied to the course comes as that item; a hand-made one (or one whose item is gone) as its card,
-  // listed as 'm:<id>' — only a card that can be made (it needs three other answers for its options)
+  // listed as 'm:<id>' — only a card that can be made (it needs three other answers for its options). Missed listening and
+  // reading stay in the notebook but are not drawn: they come back on their own dates (LR_MISS_GAP, the 3-a-day listening)
   const act = activeMistakes();
   const taken = new Set(due.concat(q4, q5).map(x => x.key));
   const mk = act.slice().sort((a, b) => String(mistakeLast(a)).localeCompare(String(mistakeLast(b))))
     .map(m => (m.key && REG.byKey.get(m.key)) || { key: 'm:' + m.id, kind: 'm', mistake: m })
-    .filter(x => { if (taken.has(x.key) || answeredToday(x.key)) return false; taken.add(x.key); return x.kind !== 'm' || Boolean(makeMistakeCard(x.mistake)); })
+    .filter(x => { if (tierOf(x.key) === null || taken.has(x.key) || answeredToday(x.key)) return false; taken.add(x.key); return x.kind !== 'm' || Boolean(makeMistakeCard(x.mistake)); })
     .slice(0, share(act.length, QUEUE_RATE.mk));
   // new items: today's count by how the recent answers went and the notebook, shared by what each bank has left;
   // what was already introduced today (before this list was made) counts against it
@@ -3703,15 +3712,16 @@ function buildDailyQueue(size = state.settings.sessionSize) {
 }
 
 // what an extra session holds once the day's plan is done (shown on the Today page and at the start of practice)
-// 加練, once the day's work is done: reviews due tomorrow or the day after (not answered today), then new items beyond
-// the quota (grammar and words in halves, a track whose quota is 0 stays closed, at most half the session)
+// 加練, once the day's work is done: reviews of three stars or below due tomorrow or the day after (not answered today;
+// four and five stars come from their queues, whatever date they carry), then new items beyond the quota (grammar and
+// words in halves, a track whose quota is 0 stays closed, at most half the session)
 function extraQueue(size = state.settings.sessionSize) {
   const t = todayStr(); const until = addDays(t, 2);
   const plan = dailyPlan(size);
   const curIdx = unitOrder(state.currentUnit);
   const pre = inPreStage();
   const pool = REG.vocab.filter(x => (pre ? vocabEligibleMain : vocabEligibleForDaily)(x, plan.n4Open)).concat(REG.grammar.filter(x => grammarInReach(x, curIdx)), REG.kanji.filter(k => k.lv !== 'N4' || n5KanjiLeft() === 0), REG.kana);
-  const ahead = pool.filter(it => { const r = state.srs[it.key]; return r && r.due > t && r.due <= until && r.last !== t; }).sort(byDue).slice(0, size);
+  const ahead = pool.filter(it => { const r = state.srs[it.key]; return r && tierOf(it.key) === 'srs' && r.due > t && r.due <= until && r.last !== t; }).sort(byDue).slice(0, size);
   const used = new Set(ahead.map(x => x.key));
   const cap = Math.min(size - ahead.length, Math.ceil(size / 2));
   // 入門: extra new material is kana, then PRE_N5 words and 第 0 週 grammar once the gate is open
@@ -3965,6 +3975,10 @@ function renderPractice() {
     return `<button type="button" class="${cls}" data-act="answer" data-i="${i}" ${answered ? 'disabled' : ''}><span class="kbd">${i + 1}</span><span class="${optClass(o)}">${text}</span>${zh ? `<span class="opt-zh">${esc(zh)}</span>` : ''}</button>`;
   }).join('');
   const rec = q.key ? srsGet(q.key) : null;
+  // a missed item on its 1/3/7 ladder: on (or after) its day this is a step; before it (most notebook-queue draws) extra practice
+  const ladder = !rec || typeof rec.rl !== 'number' || e.requeued || e.encore || (e.srs && e.srs.isNew) ? ''
+    : (e.srs ? !e.srs.reviewed : rec.due > todayStr()) ? '<span class="chip chip-warn" title="還沒到這題的複習日：答對不算進第 1、3、7 天，到了那天照常複習">錯題・額外練習</span>'
+    : `<span class="chip chip-warn" title="答錯過的題：第 1、3、7 天各複習一次，三次都對才離開錯題本">錯題複習 ${rec.rl + 1}/3</span>`;
   let stem = q.stemHtml;
   if (answered && q.fillHtml) stem = stem.replace(/<span class="blank" data-blank>[\s\S]*?<!--\/blank-->/, `<span class="blank filled">${q.fillHtml}</span>`);
   const custom = q.custom ? customInteractionHtml(e, answered) : '';
@@ -3976,7 +3990,7 @@ function renderPractice() {
     </div>
     ${SESSION.idx === 0 && !answered && SESSION.meta && SESSION.meta.note ? `<div class="plan-note">${esc(SESSION.meta.note)}</div>` : ''}
     <div class="q-card">
-      <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip chip-warn">再練一次</span>' : ''}${e.encore ? '<span class="chip chip-warn">換個方式再考</span>' : ''}${rec && typeof rec.rl === 'number' && !e.requeued && !e.encore && !(e.srs && e.srs.isNew) ? `<span class="chip chip-warn" title="答錯過的題：第 1、3、7 天各複習一次，三次都對才離開錯題本">錯題複習 ${rec.rl + 1}/3</span>` : ''}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
+      <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip chip-warn">再練一次</span>' : ''}${e.encore ? '<span class="chip chip-warn">換個方式再考</span>' : ''}${ladder}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
       <div class="q-instr">${esc(q.instr || '')}</div>
       ${q.passageHtml ? `<div class="panel jp mb-3 passage">${q.passageHtml}</div>` : ''}
       ${stem ? `<div class="q-stem jp ${q.stemClass || ''}">${stem}</div>` : ''}
@@ -4128,7 +4142,7 @@ function feedbackHtml(e) {
   const example = q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-cloze' ? exampleHtml(q.item.ex, q.item.exZh, 'mt-2') : '';
   const why = example ? String(q.why || '').replace(/\n- 例：[^\n]*/g, '') : q.why;
   const cur = q.key ? state.srs[q.key] : null;
-  const srsInfo = e.srs ? `<span>${srsDots(e.srs.rec.b)}</span><span>${srsLevelLabel(e.srs.rec, q.key)}・${dueLabel(e.srs.rec)}</span>`
+  const srsInfo = e.srs ? `<span>${srsDots(e.srs.rec.b)}</span><span>${srsLevelLabel(e.srs.rec, q.key)}・${dueLabel(e.srs.rec, q.key)}</span>`
     : e.encore && cur ? `<span>${srsDots(cur.b)}</span><span>${srsLevelLabel(cur, q.key)}・這次不影響排程</span>` : '';
   const mistake = !ok && q.kind !== 'x' && !e.slip && !SESSION.test ? '<span>已加入錯題本</span>' : '';
   const slip = e.slip ? '<span class="chip">手滑，不算</span>' : (!ok && e.undo && !SESSION.test ? '<button type="button" class="btn btn-sm btn-ghost" data-act="slip" title="選錯鍵、看錯行：不進錯題本，排程維持原狀">手滑，不算</button>' : '');
@@ -5040,28 +5054,35 @@ Object.assign(ACTIONS, {
 /* After passing a stage test the learner can mark that stage and every stage before it as 已學 / 熟悉 / 熟練 in one go.
    Only upgrades: an item already at or above the chosen level is left alone. Due dates are spread over a window so the
    reviews do not all land on one day. One undo is kept in memory (LAST_BULK_MARK) until the page reloads. */
+// The levels, lowest first: s is the stability written (熟練 goes through markKnown). The dialog offers 已學, 熟悉 and 熟練;
+// its 熟悉 is four stars since 1.0.19, so a big mark waits in the four-star queue instead of filling the 50 daily reviews
+// for weeks, and it leaves items in the notebook to their relearning ladder. Three stars (`learned`) is the 入門 picker's 熟練.
 const BULK_LEVELS = {
-  seen: { name: '已學', hint: '看過，很快會排進複習（從明天起分散，每天最多約一半的負荷上限）。', due: [1, 14], lr: [30, 180] },
-  learned: { name: '熟悉', hint: '約一到兩週後開始複習（分散排，每天最多約一半的負荷上限）。', due: [5, 14], lr: [90, 270] },
+  seen: { name: '已學', hint: '看過，很快會排進複習（從明天起分散，每天最多 50 題）。', s: LEVEL_FROM_S[0], due: [1, 14], lr: [30, 180] },
+  learned: { name: '三顆', s: LEVEL_FROM_S[SRS_LEARNED - 1], due: [5, 14], lr: [90, 270] },
+  four: { name: '熟悉', hint: '直接算四顆，排進四顆的複習（每天出 5%，最多 30 題），不佔每天 50 題的到期複習。錯題本裡的題目不動。', s: LEVEL_FROM_S[3], due: [5, 14], lr: [90, 270], skipNotebook: true },
   known: { name: '熟練', hint: '等同「我會了」：直接算五顆，之後排進五顆的複習；答錯就回到正常排程。會清掉這些項目的錯題。', due: [35, 56], lr: [180, 365] }
 };
+const BULK_ORDER = ['seen', 'learned', 'four', 'known'];
+const BULK_DIALOG_LEVELS = ['seen', 'four', 'known'];
 let LAST_BULK_MARK = null;
-// reviews a day a bulk mark may schedule: half the load cap, so the marked items never fill a day by themselves
 function bulkDailyBudget() { return SRS_DAILY_CAP; }   // a bulk mark spreads its first checks at the daily review cap
 // the i-th of n marked items: the level's window, widened when n would put more than the budget on a day (count = n / budget days)
 function spreadDue(i, level, n = 0) { const [lo, hi] = BULK_LEVELS[level].due; const days = Math.max(hi - lo + 1, Math.ceil((n || 0) / bulkDailyBudget())); return lo + (i % days); }
 // 聽力／閱讀 are capped per day and come back on the 30／90／180 ladder, so they get a later, wider window of their own
 function spreadDueLR(j, level, n = 0) { const [lo, hi] = BULK_LEVELS[level].lr; const days = Math.max(hi - lo + 1, Math.ceil((n || 0) / bulkDailyBudget())); return lo + (j % days); }
-function bulkLevelOf(rec, key) {   // the level an item already has, in the same three steps
+function bulkLevelOf(rec, key) {   // the level an item already has, as an index into BULK_ORDER
   if (!rec) return -1;
-  if (srsLevelLabel(rec, key) === '已熟練') return 2;
+  if (srsLevelLabel(rec, key) === '已熟練') return 3;
+  if (rec.b >= 4) return 2;
   if (rec.b >= SRS_LEARNED) return 1;
   return 0;
 }
 function bulkMarkTargets(stageId, level) {
-  const want = ['seen', 'learned', 'known'].indexOf(level);
+  const want = BULK_ORDER.indexOf(level);
+  const skip = new Set(BULK_LEVELS[level].skipNotebook ? activeMistakes().map(m => m.key).filter(Boolean) : []);
   const out = []; const seen = new Set();
-  stagesUpTo(stageId).forEach(s => stageItems(s.id).forEach(x => { if (seen.has(x.key)) return; seen.add(x.key); if (bulkLevelOf(state.srs[x.key], x.key) < want) out.push(x); }));
+  stagesUpTo(stageId).forEach(s => stageItems(s.id).forEach(x => { if (seen.has(x.key)) return; seen.add(x.key); if (bulkLevelOf(state.srs[x.key], x.key) < want && !skip.has(x.key)) out.push(x); }));
   return out;
 }
 // what a bulk mark (標記到這裡為止 or the 入門 four choices) must remember to undo itself
@@ -5081,7 +5102,7 @@ function bulkApply(targets, level, snap) {
     let r = state.srs[key];
     if (!r) r = state.srs[key] = { b: 0, due: t, n: 0, ok: 0, ng: 0, st: 0, last: null, lapse: 0, intro: t, f: {} };
     ensureFsrs(r);
-    r.s = Math.max(r.s || 0, level === 'seen' ? LEVEL_FROM_S[0] : LEVEL_FROM_S[SRS_LEARNED - 1]);
+    r.s = Math.max(r.s || 0, BULK_LEVELS[level].s);
     r.b = levelFromS(r.s);
     if (!r.lrn) r.lrn = t;
     r.last = t;   // so the first real review measures elapsed time from today (null would freeze FSRS growth)
@@ -5118,18 +5139,18 @@ function bulkMarkDialog(stageId) {
   const st = stageById(stageId); if (!st) return;
   if (!stagePassed(stageId)) { toast('先通過這個階段的測驗'); return; }
   const names = stagesUpTo(stageId).map(s => s.title.split('：')[0]).join('、');
-  const radios = Object.entries(BULK_LEVELS).map(([k, L]) => `<label class="switch mt-2"><input type="radio" name="bulkLevel" value="${k}" data-change="bulk-level" ${k === 'learned' ? 'checked' : ''} /><span class="track"></span><span class="small"><b>${L.name}</b>　${L.hint}</span></label>`).join('');
+  const radios = BULK_DIALOG_LEVELS.map(k => `<label class="switch mt-2"><input type="radio" name="bulkLevel" value="${k}" data-change="bulk-level" ${k === 'four' ? 'checked' : ''} /><span class="track"></span><span class="small"><b>${BULK_LEVELS[k].name}</b>　${BULK_LEVELS[k].hint}</span></label>`).join('');
   openModal(`標記到〈${st.title.split('：')[0]}〉為止`, `<div data-stage="${stageId}">
     <p class="small">會把 ${names} 的全部內容標成你選的等級；已經比這個等級高的項目不動。</p>
     ${radios}
-    <div class="hint mt-3" id="bulkCount">會影響 ${bulkMarkTargets(stageId, 'learned').length} 個項目</div>
+    <div class="hint mt-3" id="bulkCount">會影響 ${bulkMarkTargets(stageId, 'four').length} 個項目</div>
     <p class="hint mt-2">無法復原（課程頁上只有一次「復原」，重新整理後失效），建議先到設定下載備份。</p>
     <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="bulk-mark-go" data-stage="${stageId}">確定</button></div></div>`, { width: 520 });
 }
 Object.assign(ACTIONS, {
   'stage-mark': (el) => bulkMarkDialog(el.dataset.stage),
   'bulk-mark-go': (el) => {
-    const id = el.dataset.stage; const sel = document.querySelector('input[name="bulkLevel"]:checked'); const level = sel ? sel.value : 'learned';
+    const id = el.dataset.stage; const sel = document.querySelector('input[name="bulkLevel"]:checked'); const level = sel ? sel.value : 'four';
     const r = bulkMark(id, level); closeModal(true);
     if (SESSION) { SESSION = null; document.body.classList.remove('practicing'); }
     const cur = unitById(state.currentUnit);
@@ -5167,7 +5188,7 @@ function preMarkStepHtml(T) {
 function preMarkApply(choices) {
   const snap = bulkSnapshot({ stageId: 'pre', level: 'learned', changed: 0 });
   PRE_MARK_GROUPS.forEach(([g, , items]) => {
-    const level = choices[g]; const want = ['seen', 'learned', 'known'].indexOf(level); if (want < 0) return;
+    const level = choices[g]; const want = BULK_ORDER.indexOf(level); if (want < 0) return;
     const targets = items().filter(x => bulkLevelOf(state.srs[x.key], x.key) < want);
     bulkApply(targets, level, snap); snap.changed += targets.length;
   });
@@ -5360,13 +5381,12 @@ function renderUnit(view, uid, tab) {
   const aiNote = state.unitAiNotes && state.unitAiNotes[uid];
   let body = '';
   if (tab === 'items') {
-    const t = todayStr();
     const rows = items.map(g => {
       const r = state.srs[g.key];
       return `<div class="list-item">
         <span class="chip">${TYPE_LABEL[g.t || 'choice'] || '題目'}</span>
         <div class="grow"><div class="jp">${furi(itemPreview(g))}</div><div class="tiny muted">${esc(g.pt || '')}${g.src === 'ai' ? '・AI' : ''}</div></div>
-        <div class="right small muted nowrap">${r ? `${srsDots(r.b)} <span>${r.due <= t ? '今天' : dueLabel(r).replace('複習', '')}</span>` : '未學'}</div>
+        <div class="right small muted nowrap">${r ? `${srsDots(r.b)} <span>${dueLabel(r, g.key).replace('複習', '')}</span>` : '未學'}</div>
       </div>`;
     }).join('');
     body = `<div class="card"><div class="card-head"><div class="card-title">本單元題目（${items.length}）</div><span class="small muted">熟練度 ●●●○○ 以上算熟悉</span></div><div class="list">${rows || '<div class="empty">沒有題目</div>'}</div></div>`;
@@ -5416,7 +5436,7 @@ function levelPickerHtml() {
       <button type="button" class="btn btn-primary" data-act="start-apply">設為目前單元</button>
     </div>
     <label class="switch mt-3"><input type="checkbox" id="startMarkPrev" /><span class="track"></span><span class="small">同時把之前的單元標為完成</span></label>
-    <label class="switch mt-2"><input type="checkbox" id="startExperienced" /><span class="track"></span><span class="small">我已有基礎：每天負荷上限 150（每天學得多一點），不預設顯示中文</span></label>
+    <label class="switch mt-2"><input type="checkbox" id="startExperienced" /><span class="track"></span><span class="small">我已有基礎：不預設顯示中文</span></label>
     <p class="hint mt-2">已經會的單字可以到「單字 → 單字表」依級別或主題整批標成「我會了」，練習時的新字預習卡上也有「我會了」。</p>
     <details class="disclose mt-4">
       <summary>不確定從哪裡開始？用多鄰國（Duolingo）分數估計</summary>
@@ -5499,7 +5519,7 @@ function vocabTheme(v) { return v.builtin ? v.c : '其他'; }   // every built-i
 function levelStats(lv) {
   const t = todayStr();
   const out = { lv, total: 0, seen: 0, learned: 0, mastered: 0, due: 0, kanji: { total: 0, seen: 0, learned: 0 } };
-  REG.vocab.filter(v => v.builtin && v.lv === lv).forEach(v => { out.total++; const r = state.srs[v.key]; if (!r) return; out.seen++; if (r.b >= SRS_LEARNED) out.learned++; if (srsLevelLabel(r, v.key) === '已熟練') out.mastered++; if (r.due <= t) out.due++; });
+  REG.vocab.filter(v => v.builtin && v.lv === lv).forEach(v => { out.total++; const r = state.srs[v.key]; if (!r) return; out.seen++; if (r.b >= SRS_LEARNED) out.learned++; if (srsLevelLabel(r, v.key) === '已熟練') out.mastered++; if (isDueToday(v, t)) out.due++; });
   REG.kanji.filter(k => k.lv === lv).forEach(k => { out.kanji.total++; const r = state.srs[k.key]; if (!r) return; out.kanji.seen++; if (r.b >= SRS_LEARNED) out.kanji.learned++; });
   if (lv === 'PRE_N5') { out.kana = { total: REG.kana.length, seen: 0, learned: 0 }; REG.kana.forEach(k => { const r = state.srs[k.key]; if (!r) return; out.kana.seen++; if (r.b >= SRS_LEARNED) out.kana.learned++; }); }
   return out;
@@ -5517,7 +5537,7 @@ function themeStats(lv) {
   const t = todayStr(); const counts = kanjiCountsByTheme(lv);
   return ((DATA.THEMES || {})[lv] || []).map(th => {
     const g = { c: th.c, desc: th.desc || '', total: 0, seen: 0, learned: 0, mastered: 0, due: 0, kanji: [] };
-    REG.vocab.filter(v => v.builtin && v.lv === lv && vocabTheme(v) === th.c).forEach(v => { g.total++; const r = state.srs[v.key]; if (!r) return; g.seen++; if (r.b >= SRS_LEARNED) g.learned++; if (srsLevelLabel(r, v.key) === '已熟練') g.mastered++; if (r.due <= t) g.due++; });
+    REG.vocab.filter(v => v.builtin && v.lv === lv && vocabTheme(v) === th.c).forEach(v => { g.total++; const r = state.srs[v.key]; if (!r) return; g.seen++; if (r.b >= SRS_LEARNED) g.learned++; if (srsLevelLabel(r, v.key) === '已熟練') g.mastered++; if (isDueToday(v, t)) g.due++; });
     g.kanji = [...(counts.get(th.c) || new Map()).entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 8).map(([k]) => k);
     return g;
   });
@@ -5536,7 +5556,7 @@ function vocabThemes() {
     const g = by.get(c) || by.set(c, { c, total: 0, seen: 0, learned: 0, mastered: 0, due: 0, PRE_N5: 0, N5: 0, N4: 0 }).get(c);
     g.total++; g[v.lv in g ? v.lv : 'N5']++;
     const r = state.srs[v.key];
-    if (r) { g.seen++; if (r.b >= SRS_LEARNED) g.learned++; if (srsLevelLabel(r, v.key) === '已熟練') g.mastered++; if (r.due <= t) g.due++; }
+    if (r) { g.seen++; if (r.b >= SRS_LEARNED) g.learned++; if (srsLevelLabel(r, v.key) === '已熟練') g.mastered++; if (isDueToday(v, t)) g.due++; }
   });
   const rank = (c) => { const i = THEME_ORDER.indexOf(c); return i < 0 ? THEME_ORDER.length : i; };
   return [...by.values()].sort((a, b) => rank(a.c) - rank(b.c) || a.c.localeCompare(b.c, 'zh-Hant'));
@@ -5619,7 +5639,7 @@ function deckAllowsN4(deck) { return deck === 'N4' || n4WordsOpen(); }
 function buildFlashQueue(deck, extraNew = 0) {
   const t = todayStr();
   const pool = deckPool(deck);
-  const due = pool.filter(v => { const r = state.srs[v.key]; return r && r.due <= t; }).sort(byDue);
+  const due = pool.filter(v => isDueToday(v, t)).sort(byDue);   // three stars or below (four and five come from their queues)
   const quota = todayNewLeft('v') + extraNew;
   const fresh = (deck === 'custom' ? pool.filter(v => !state.srs[v.key]) : newVocabCandidates(pool, deckAllowsN4(deck))).slice(0, quota);
   return due.concat(fresh).map(v => v.key);
@@ -5741,7 +5761,6 @@ function vocabListFiltered(params) {
 }
 let LAST_BULK_KNOWN = null;   // { keys, prev } of the last 整批我會了, so it can be undone exactly
 function vocabListResultsHtml(params, list = vocabListFiltered(params)) {
-  const t = todayStr();
   const notKnown = list.filter(v => !(state.srs[v.key] && state.srs[v.key].known)).length;
   const shown = list.slice(0, 300);
   const rows = shown.map(v => {
@@ -5749,7 +5768,7 @@ function vocabListResultsHtml(params, list = vocabListFiltered(params)) {
     return `<tr>
       <td><div class="jp" style="font-size:16px">${esc(jaPlain(v.w))}</div><div class="tiny muted jp">${esc(v.r && v.r !== v.w ? v.r : '')}</div></td>
       <td><div>${esc(v.m)}</div><div class="tiny muted">${esc(v.builtin ? `${v.lv}・${posLabel(v.p)}` : (v.posLabel || '自訂'))}</div></td>
-      <td class="nowrap small">${r ? `${srsDots(r.b)}<div class="tiny muted">${r.due <= t ? '今天' : dueLabel(r).replace('複習', '')}</div>` : '<span class="muted">未學</span>'}</td>
+      <td class="nowrap small">${r ? `${srsDots(r.b)}<div class="tiny muted">${dueLabel(r, v.key).replace('複習', '')}</div>` : '<span class="muted">未學</span>'}</td>
       <td class="nowrap" style="text-align:right">
         <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(jaPlain(v.w))}" data-reading="${esc(v.r && !HAS_KANJI.test(v.r) ? v.r : '')}" aria-label="發音">${icon('speaker')}</button>
         ${r && r.known ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-unknown" data-key="${esc(v.key)}" title="取消「我會了」，回到正常排程">取消熟練</button>` : (r && srsLevelLabel(r, v.key) === '已熟練' ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="這個字已經會了：直接標成五顆，之後排進五顆的複習">我會了</button>`)}
@@ -7727,7 +7746,7 @@ function kanjiDetailHtml(k) {
       <div class="grow">
         <div style="font-size:18px"><b>${esc(k.m)}</b></div>
         <div class="row-wrap mt-2">${kanjiReadingsHtml(k)}</div>
-        <div class="small muted mt-2">${k.lv}・${r ? `${srsLevelLabel(r)}・${dueLabel(r)}` : '還沒學'}</div>
+        <div class="small muted mt-2">${k.lv}・${r ? `${srsLevelLabel(r)}・${dueLabel(r, k.key)}` : '還沒學'}</div>
       </div>
     </div>
     <div class="list mt-3">${(k.ex || []).map(([w, rd, m]) => `<div class="list-item"><span class="jp" style="font-size:18px">${rubyHtml(w, rd)}</span><span class="small muted grow">${esc(m)}</span><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(rd)}" aria-label="發音">${icon('speaker')}</button></div>`).join('')}</div>
@@ -7830,17 +7849,21 @@ function gaugeHtml(t, title, labels) {
 // Daily quotas that would finish every bank before the mock-exam weeks: unseen items ÷ study days, per kind.
 // Reviews need room on top of the new items (about one and a half times), which is what the load cap covers.
 // 考試倒數 (1.0.20): new items a day lately (dailyLogs.fresh — first answers, so bulk marks do not count — averaged over
-// the last 14 days that have it; none yet: today's count), when the words, grammar and kanji left would be done at that
-// pace, and how far that is from three weeks before the exam (late > 0: after it)
+// the last 14 days from the first that has it, a later day without it (idle, reviews only) counting 0; none yet: today's
+// count), when the words, grammar and kanji left would be done at that pace, and how far that is from three weeks before
+// the exam (late > 0: after it)
 function courseLeft() {
   const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
   return unseen(REG.vocab.filter(v => v.builtin)) + unseen(REG.grammar.filter(g => g.u !== 'm0')) + unseen(REG.kanji);
 }
 function paceAdvice() {
   const t = todayStr();
-  const seen = [];
-  for (let i = 1; i <= 14; i++) { const e = state.dailyLogs[addDays(t, -i)]; if (e && typeof e.fresh === 'number') seen.push(e.fresh); }
-  const perDay = seen.length ? seen.reduce((a, b) => a + b, 0) / seen.length : (dailyPlan().n || NEW_DEFAULT);
+  let days = 0; let sum = 0;
+  for (let i = 14; i >= 1; i--) {
+    const e = state.dailyLogs[addDays(t, -i)]; const has = Boolean(e) && typeof e.fresh === 'number';
+    if (has || days) { days++; sum += has ? e.fresh : 0; }
+  }
+  const perDay = days ? sum / days : (dailyPlan().n || NEW_DEFAULT);
   const left = courseLeft();
   const finish = perDay > 0 ? addDays(t, Math.ceil(left / perDay)) : null;
   const target = addDays(examPace().exam, -21);

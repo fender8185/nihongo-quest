@@ -187,7 +187,128 @@ def test_today_help_describes_the_tiers(b):
     text = ev(b, js)
     assert all(s in text for s in ['每天最多 50 題', '四顆每天出 5%', '五顆每天出 3%', '錯題本每天出 10%', '最近 100 題']), text
 
-TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
+# ---- 1.0.19 審查修正（Tasks 1–4） ----
+# I1: a missed dialogue or passage stays in the notebook but its queue never draws it (it keeps its own week-later date)
+def test_the_notebook_queue_skips_listening_and_reading(b):
+    js = "(() => { " + FRESH + HANDMADE + """ const t = todayStr();
+      const entry = (id, key, days) => ({ id, key, cat: '聽力', prompt: 'p' + id, answer: 'a', wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: addDays(t, -days) });
+      state.mistakes.push(entry('mk_l', REG.listen[0].key, 31), entry('mk_r', REG.read[0].key, 30));   // waited longest: drawn first if allowed
+      return JSON.stringify(computeDailyPlan().mk.map(x => x.key)); })()"""
+    r = json.loads(ev(b, js))
+    assert r == ['m:mk_t3'], r
+
+# I2: 加練's reviews ahead are three stars or below due in the next two days, not queue items by an old date
+def test_extra_practice_leaves_four_and_five_stars_to_their_queues(b):
+    js = "(() => { " + FRESH + REC + """ const ws = words.slice(0, 41);
+      ws.slice(0, 30).forEach(v => { state.srs[v.key] = rec(4, { due: addDays(t, 1) }); });
+      ws.slice(30, 40).forEach(v => { state.srs[v.key] = rec(6, { due: addDays(t, 2) }); });
+      state.srs[ws[40].key] = rec(2, { due: addDays(t, 1) });
+      const q = extraQueue(20); return JSON.stringify({ ahead: q.items.slice(0, q.aheadN).map(x => x.key), want: ws[40].key, newN: q.newN }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['ahead'] == [r['want']] and r['newN'] > 0, r
+
+# I3: from the first day that has `fresh`, a later day without new items (idle, or reviews only) counts as 0
+def test_exam_pace_counts_days_without_new_items(b):
+    js = "(() => { " + FRESH + """ const t = todayStr(); state.dailyLogs = {};
+      for (let i = 8; i <= 14; i++) state.dailyLogs[addDays(t, -i)] = { vocabCount: 25 };   // before fresh was tallied: left out
+      [7, 5, 3, 1].forEach(i => { state.dailyLogs[addDays(t, -i)] = { vocabCount: 20, fresh: 12 }; });
+      state.dailyLogs[addDays(t, -6)] = { vocabCount: 30 };   // reviews only
+      return paceAdvice().perDay; })()"""
+    r = ev(b, js)
+    assert abs(r - 48 / 7) < 1e-9, r
+
+# I4: the 單字 and 單元 pages and the flashcards follow the tiers: a queue item (or an 入門 item that left) with a past date is not due
+def test_four_and_five_stars_are_not_counted_or_dealt_as_due(b):
+    js = "(() => { " + FRESH + REC + """ const y = addDays(t, -1); const [w4, w5, w2] = words.slice(0, 3);
+      state.srs[w4.key] = rec(4, { due: y }); state.srs[w5.key] = rec(6, { due: y }); state.srs[w2.key] = rec(2, { due: y });
+      const p = REG.vocab.find(v => v.builtin && v.lv === 'PRE_N5'); state.srs[p.key] = rec(6, { due: y, out: 1 });
+      const gs = unitItems('m1'); state.srs[gs[0].key] = rec(4, { due: y }); state.srs[gs[1].key] = rec(2, { due: y });
+      const sum = (arr) => arr.reduce((a, g) => a + g.due, 0); const deck = buildFlashQueue('N5');
+      return JSON.stringify({ vocab: vocabStats().due, level: levelStats('N5').due, themes: sum(themeStats('N5')), allThemes: sum(vocabThemes()), unit: unitStats('m1').due,
+        deck: [w4, w5, w2].map(v => deck.includes(v.key)) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'vocab': 1, 'level': 1, 'themes': 1, 'allThemes': 1, 'unit': 1, 'deck': [False, False, True]}, r
+
+# I4: four and five stars say which queue they wait in instead of a date, an 入門 item that left says it will not come
+# back — in lists and in the answer feedback
+def test_queue_items_are_labelled_as_queued(b):
+    js = "(() => { " + FRESH + REC + """ state.srs = {}; words.slice(0, 40).forEach((v, i) => { state.srs[v.key] = rec(4, { last: addDays(t, -(i + 1)) }); });
+      const [w5, w2] = words.slice(40, 42); state.srs[w5.key] = rec(6); state.srs[w2.key] = rec(2);
+      const p = REG.vocab.find(v => v.builtin && v.lv === 'PRE_N5'); state.srs[p.key] = rec(6, { out: 1 });
+      const text = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d.textContent; };
+      const list = text(vocabListResultsHtml({}, [words[0], w5, w2, p]));
+      delete state.today.plan; DAILY_CACHE = null; const k = dailyPlan().q4[0].key;
+      startSession('daily', { size: 60 }); const i = SESSION.entries.findIndex(e => e.item && e.item.key === k); SESSION.idx = i; prepareEntry(i);
+      answerCurrent(currentEntry().q.answer); const fb = text(feedbackHtml(currentEntry()));
+      SESSION = null; document.body.classList.remove('practicing');
+      return JSON.stringify({ list, fb, i }); })()"""
+    r = json.loads(ev(b, js))
+    assert '四顆・排隊中' in r['list'] and '五顆・排隊中' in r['list'] and '不再出現' in r['list'] and r['list'].count('3 天後') == 1, r['list']
+    assert r['i'] >= 0 and '五顆・排隊中' in r['fb'] and '天後複習' not in r['fb'], r
+
+# I5 (the user's call, 2026-10-30): 標記到這裡為止's 熟悉 writes four stars, so the marked items wait in the four-star queue
+# instead of taking the 50 daily reviews for weeks; items in the notebook are left alone (as the 1.0.20 stage pass will).
+# The 入門 picker's 熟練 still writes three stars.
+def test_marking_familiar_sets_four_stars(b):
+    js = "(() => { " + FRESH + REC + """ state.srs = {}; state.mistakes = []; state.stageTests = { p1: [{ date: t, correct: 33, total: 40, passed: true }] };
+      const items = stagesUpTo('p1').flatMap(s => stageItems(s.id)); const core = items.filter(x => x.kind !== 'l' && x.kind !== 'r');
+      const [three, missed] = core; state.srs[three.key] = rec(3); state.srs[missed.key] = rec(1, { rl: 0, due: addDays(t, 1) });
+      state.mistakes = [{ id: 'mk_x', key: missed.key, cat: '單字', prompt: 'p', answer: 'a', wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: t }];
+      bulkMarkDialog('p1'); const dlg = document.getElementById('modalBody').textContent;
+      const label = document.querySelector('input[name="bulkLevel"]:checked').closest('label').textContent;
+      ACTIONS['bulk-mark-go'](document.querySelector('[data-act="bulk-mark-go"]'));
+      const tiers = {}; core.forEach(x => { const k = tierOf(x.key); tiers[k] = (tiers[k] || 0) + 1; });
+      const q4 = computeDailyPlan().q4.length;
+      const kana = REG.kana.find(k => k.script === 'hira'); delete state.srs[kana.key]; preMarkApply({ hira: 'learned', kata: 'none', v: 'none', g: 'none' });
+      return JSON.stringify({ label, cap: dlg.includes('負荷上限'), three: state.srs[three.key].b, missed: state.srs[missed.key].b, rl: state.srs[missed.key].rl, tiers, n: core.length, q4, kana: state.srs[kana.key].b }); })()"""
+    r = json.loads(ev(b, js))
+    assert '熟悉' in r['label'] and '四顆' in r['label'] and not r['cap'], r
+    assert r['three'] == 4 and r['missed'] == 1 and r['rl'] == 0, r
+    assert r['tiers'] == {'q4': r['n'] - 1, 'srs': 1} and r['q4'] == 30, r
+    assert r['kana'] == 3, r
+
+# I6 (the user's call, 2026-10-30): a ladder item answered right before its day — drawn by the notebook queue, a flashcard,
+# unit practice — is extra practice: the 1/3/7 days and the notebook entry stay; on its day it moves up as before
+def test_an_early_right_answer_leaves_the_relearn_ladder_alone(b):
+    js = "(() => { " + FRESH + REC + """ const k = words[0].key; const due = addDays(t, 2);
+      state.srs[k] = rec(1, { rl: 1, due, last: addDays(t, -1) });
+      state.mistakes = [{ id: 'mk_w', key: k, cat: '單字', prompt: 'p', answer: 'a', wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: addDays(t, -2) }];
+      srsAnswer(k, true); onCorrectForMistake({ key: k });
+      const early = { rl: state.srs[k].rl, due: state.srs[k].due === due, mastered: state.mistakes[0].mastered };
+      state.srs[k] = rec(1, { rl: 1, due: t, last: addDays(t, -2) }); srsAnswer(k, true);
+      const onDay = { rl: state.srs[k].rl, due: state.srs[k].due === addDays(t, RELEARN_GAPS[1]) };
+      return JSON.stringify({ early, onDay }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'early': {'rl': 1, 'due': True, 'mastered': False}, 'onDay': {'rl': 2, 'due': True}}, r
+
+# I6: so a ladder item drawn before its day (most notebook-queue draws) says it is extra practice, not a ladder step
+def test_an_early_ladder_item_is_labelled_extra_practice(b):
+    js = "(() => { " + FRESH + REC + """ state.srs = {}; const [early, onDay] = words.slice(0, 2);
+      state.srs[early.key] = rec(1, { rl: 1, due: addDays(t, 2), last: addDays(t, -1) }); state.srs[onDay.key] = rec(1, { rl: 1, due: t, last: addDays(t, -2) });
+      state.mistakes = [early, onDay].map((v, i) => ({ id: 'mk_' + i, key: v.key, cat: '單字', prompt: 'p' + i, answer: 'a', wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: addDays(t, -3) }));
+      delete state.today.plan; DAILY_CACHE = null; const p = dailyPlan();
+      startSession('daily', { size: 60 });
+      const label = (v) => { const i = SESSION.entries.findIndex(e => e.item && e.item.key === v.key); if (i < 0) return null; SESSION.idx = i; prepareEntry(i); renderPractice(); return document.querySelector('.q-label').textContent; };
+      const out = { inMk: p.mk.map(x => x.key).includes(early.key), early: label(early), onDay: label(onDay) };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['inMk'] and '額外練習' in r['early'] and '錯題複習' not in r['early'] and '錯題複習 2/3' in r['onDay'], r
+
+# I7: an 入門 item graded 模糊 (hard) at five stars stays; only a clear right answer moves it out
+def test_a_fuzzy_flashcard_keeps_a_pre_item(b):
+    js = "(() => { " + FRESH + REC + """ const a = 'a:あ';
+      state.srs[a] = rec(6); srsAnswer(a, true, { grade: 'hard' }); const hard = state.srs[a].out === undefined;
+      state.srs[a] = rec(6); srsAnswer(a, true, { grade: 'good' }); const good = state.srs[a].out;
+      return JSON.stringify({ hard, good }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'hard': True, 'good': 1}, r
+
+# copy: the level picker no longer promises a load cap (我已有基礎 only hides the Chinese now)
+def test_the_level_picker_does_not_mention_the_load_cap(b):
+    r = ev(b, "levelPickerHtml()")
+    assert '負荷上限' not in r and '我已有基礎' in r, r
+
+TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
