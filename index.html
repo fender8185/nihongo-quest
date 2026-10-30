@@ -1789,11 +1789,11 @@ function recordAction(type, topic, kind) {
 function recordAccuracy(correct) {
   const e = logEntry(); if (correct) e.ok = (e.ok || 0) + 1; else e.ng = (e.ng || 0) + 1;   // the day's accuracy (since v73)
   state.recent.push(correct ? 1 : 0);
-  if (state.recent.length > 60) state.recent = state.recent.slice(-60);
+  if (state.recent.length > RECENT_MAX) state.recent = state.recent.slice(-RECENT_MAX);
 }
-function recentAccuracy(n = 40) {
+function recentAccuracy(n = 40, min = 12) {   // null below `min` answers
   const r = state.recent.slice(-n);
-  if (r.length < 12) return null;
+  if (r.length < min) return null;
   return r.reduce((a, b) => a + b, 0) / r.length;
 }
 function streakStats() {
@@ -3541,6 +3541,53 @@ function extrasPlan(curIdx) {
 // New material is sized to fit around the reviews that are due, so the daily load stays under the
 // load cap (settings.loadCap); a small minimum keeps the course moving even when many reviews are waiting.
 const MIN_NEW_PER_DAY = 6;
+// How many new items today: by how the last RECENT_MAX answers went (fewer than 30: NEW_DEFAULT), minus one for every ten
+// entries still in the notebook — what the learner can digest comes before the exam date.
+function newCountToday() {
+  const acc = recentAccuracy(RECENT_MAX, 30);
+  const base = acc === null ? NEW_DEFAULT : NEW_STEPS.find(([min]) => acc >= min)[1];
+  const mistakes = activeMistakes().length;
+  return { n: clamp(base - Math.floor(mistakes / 10), NEW_MIN, NEW_MAX), base, acc, mistakes };
+}
+// Shares n new items between the banks by how much of each is still unseen (largest remainder, so they add up to n),
+// taking each bank's own candidates in order and leaving out `skip`. A bank short of candidates (N4 kanji before the N5
+// ones are done; words and grammar before the 入門 kana gate opens) passes its slots on, the heaviest bank first.
+// Main course: built-in words, course grammar, kanji. 入門: kana, PRE_N5 words, week-0 grammar, PRE_N5 kanji.
+function splitNew(n, skip = new Set()) {
+  const unseen = (x) => !state.srs[x.key];
+  const n4Open = n4WordsOpen();
+  const words = () => newVocabCandidates(REG.vocab.filter(v => vocabEligibleForDaily(v, n4Open)), n4Open);
+  let banks;
+  if (inPreStage()) {
+    const gate = kanaGateOpen();
+    banks = {
+      a: [REG.kana.filter(unseen).length, REG.kana.filter(unseen).sort((x, y) => x.order - y.order)],
+      v: [REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5' && unseen(v)).length, gate ? words() : []],
+      g: [introLeft(), gate ? unitNewOrder('m0') : []],
+      k: [REG.kanji.filter(k => k.lv === 'PRE_N5' && unseen(k)).length, gate ? newKanjiCandidates(false) : []]
+    };
+  } else {
+    banks = {
+      v: [REG.vocab.filter(v => v.builtin && unseen(v)).length, words()],
+      g: [REG.grammar.filter(g => g.u !== 'm0' && unseen(g)).length, newGrammarCandidates()],
+      k: [REG.kanji.filter(unseen).length, newKanjiCandidates(n5KanjiLeft() === 0)]
+    };
+  }
+  const out = { a: [], v: [], g: [], k: [] };
+  const kinds = Object.keys(banks);
+  const total = kinds.reduce((sum, k) => sum + banks[k][0], 0);
+  if (n <= 0 || !total) return out;
+  const cand = {}; kinds.forEach(k => { cand[k] = banks[k][1].filter(x => !skip.has(x.key)); });
+  const raw = {}; const take = {};
+  kinds.forEach(k => { raw[k] = n * banks[k][0] / total; take[k] = Math.floor(raw[k]); });
+  let left = n - kinds.reduce((sum, k) => sum + take[k], 0);
+  [...kinds].sort((x, y) => (raw[y] - take[y]) - (raw[x] - take[x])).forEach(k => { if (left > 0) { take[k]++; left--; } });
+  let spare = 0;
+  kinds.forEach(k => { const short = Math.max(0, take[k] - cand[k].length); take[k] -= short; spare += short; });
+  [...kinds].sort((x, y) => banks[y][0] - banks[x][0]).forEach(k => { const add = Math.min(spare, cand[k].length - take[k]); take[k] += add; spare -= add; });
+  kinds.forEach(k => { out[k] = cand[k].slice(0, take[k]); });
+  return out;
+}
 function computeDailyPlan(size = state.settings.sessionSize) {
   const t = todayStr();
   const s = state.settings;

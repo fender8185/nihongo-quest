@@ -57,6 +57,36 @@ def test_first_answers_are_tallied_as_fresh(b):
     r = json.loads(ev(b, js))
     assert r == {'fresh': 2, 'after': 2}, r
 
+# ---- Task 2: 新題數與分配 ----
+def test_new_count_follows_recent_accuracy_and_the_notebook(b):
+    js = "(() => { " + FRESH + """ const set = (right, total, mk) => { state.recent = Array.from({ length: total }, (_, i) => (i < right ? 1 : 0));
+        state.mistakes = Array.from({ length: mk }, (_, i) => ({ id: 'mk' + i, prompt: 'p' + i, answer: 'a', ts: i })); return newCountToday(); };
+      return JSON.stringify([set(95, 100, 0), set(85, 100, 34), set(60, 100, 200), set(20, 20, 0)].map(x => x.n)); })()"""
+    r = json.loads(ev(b, js))
+    assert r == [20, 12, 3, 15], r
+
+def largest_remainder(n, weights):
+    total = sum(weights.values()); raw = {k: n * w / total for k, w in weights.items()}
+    out = {k: int(v) for k, v in raw.items()}
+    for k in sorted(raw, key=lambda k: raw[k] - out[k], reverse=True)[:n - sum(out.values())]: out[k] += 1
+    return out
+
+def test_split_follows_unseen_shares_and_passes_on_blocked_slots(b):
+    js = "(() => { " + FRESH + """ const unseen = (x) => !state.srs[x.key];
+      const w = { v: REG.vocab.filter(v => v.builtin && unseen(v)).length, g: REG.grammar.filter(g => g.u !== 'm0' && unseen(g)).length, k: REG.kanji.filter(unseen).length };
+      const main = splitNew(15); const count = (s) => ({ a: s.a.length, v: s.v.length, g: s.g.length, k: s.k.length });
+      state.stage = 'pre'; state.kanaKnown = false; const pre = splitNew(15);
+      return JSON.stringify({ w, main: count(main), pre: count(pre), kana: pre.a.every(x => x.kind === 'a') }); })()"""
+    r = json.loads(ev(b, js))
+    want = largest_remainder(15, r['w'])
+    assert r['main'] == {'a': 0, 'v': want['v'], 'g': want['g'], 'k': want['k']} and sum(r['main'].values()) == 15, (r, want)
+    assert r['pre'] == {'a': 15, 'v': 0, 'g': 0, 'k': 0} and r['kana'], r   # the kana gate is closed: every slot goes to kana
+
+def test_recent_keeps_the_last_hundred_answers(b):
+    js = "(() => { " + FRESH + " state.recent = []; for (let i = 0; i < 120; i++) recordAccuracy(i % 2 === 0); return state.recent.length; })()"
+    r = ev(b, js)
+    assert r == 100, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
