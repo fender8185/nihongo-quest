@@ -298,23 +298,72 @@ def test_old_account_pre_test_asks_the_four_questions_by_its_score(b):
       const view = document.getElementById('view'); const txt = view.textContent;
       const lab = (it) => state.srs[it.key] ? srsLevelLabel(state.srs[it.key], it.key) : '新內容'; const bs = (l) => [...new Set(l.map(x => (state.srs[x.key] ? state.srs[x.key].b : 0)))];
       const hira = REG.kana.filter(k => k.script === 'hira'), kata = REG.kana.filter(k => k.script === 'kata'), words = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5'), m0 = REG.grammar.filter(g => g.u === 'm0');
-      const out = { passed: state.stageTests.pre[0].passed, marked: Object.keys(state.srs).length - n0, picker: Boolean(view.querySelector('[data-act="pre-mark-pick"]')),
+      const out = { passed: SESSION.test.result.passed, recorded: ((state.stageTests || {}).pre || []).length, marked: Object.keys(state.srs).length - n0, picker: Boolean(view.querySelector('[data-act="pre-mark-pick"]')),
         says: ['平假名', '片假名', '入門單字', '第 0 週句型'].every(w => txt.includes(w)) && txt.includes('週次不變'), tips: [] };
       const missed = new Set(SESSION.results.filter(x => !x.ok).map(x => x.key)); const wordsMissed = words.filter(v => missed.has(v.key));
       for (let i = 0; i < 4; i++) { const tip = [...document.querySelectorAll('[data-act="pre-mark-pick"]')].find(o => o.textContent.includes('建議')); out.tips.push(tip ? tip.dataset.level : null);
         document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); }
       Object.assign(out, { stage: state.stage, unit: state.currentUnit, session: SESSION === null, hira: [...new Set(hira.map(lab))], kata: bs(kata), words: bs(words.filter(v => !missed.has(v.key))),
-        wordsMissed: wordsMissed.map(v => met(v.key)), m0: bs(m0), pending: state.introPending });
+        wordsMissed: wordsMissed.map(v => met(v.key)), m0: bs(m0), pending: state.introPending, recordedAfter: ((state.stageTests || {}).pre || []).length });
       document.body.classList.remove('practicing'); DAILY_CACHE = null; location.hash = '#/today'; route(); out.lineAfter = Boolean(document.querySelector('.banner [data-act="stage-test"][data-stage="pre"]'));
       out.undone = bulkUndo() && wordsMissed.every(v => !state.srs[v.key]);   // 復原 takes the missed words' records away with the marks
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", OLD)]))
     assert r['passed'] is False and r['marked'] == 0 and r['picker'] and r['says'], r   # failed, nothing marked by itself: the four questions all the same
+    assert r['recorded'] == 0 and r['recordedAfter'] == 1, r   # the attempt counts once the four questions are answered
     assert r['tips'] == ['5', '3', '4', '3'], r
     assert r['session'] and r['stage'] == 'main' and r['unit'] == 'm3', r   # a low score never sends an account back to 入門
     assert r['hira'] == ['已熟練'] and r['kata'] == [3] and r['words'] == [4] and r['m0'] == [3] and r['pending'] is False and not r['lineAfter'], r
     # 四顆 is the stage pass's: the words missed in this test, never met, are met once and missed (三顆 marks its misses, as 熟悉 did)
     assert len(r['wordsMissed']) == 3 and all(x == MET_ONCE for x in r['wordsMissed']) and r['undone'], r
+
+# final review: an old account's 入門 attempt is recorded only once its four questions are answered. One that fails and
+# leaves first (關閉, Escape, a reload, iOS dropping the app) still has the today line, and the test started from it asks
+# the four questions again (T.auto); answering them records the attempt and the line goes
+def test_an_old_account_that_leaves_before_the_four_questions_is_asked_again(b):
+    js = """(() => { const look = () => { DAILY_CACHE = null; location.hash = '#/today'; route(); return document.querySelector('.banner [data-act="stage-test"][data-stage="pre"]'); };
+      const fail = () => { const n = SESSION.entries.length; for (let i = 0; i < n; i++) { const q = currentEntry().q; answerCurrent((q.answer + 1) % q.options.length); nextQuestion(); } };
+      const tests = () => ((state.stageTests || {}).pre || []).length; const ex0 = logEntry().ex || 0;
+      look().click(); const out = { auto1: SESSION.test.auto }; fail();
+      Object.assign(out, { passed: SESSION.test.result.passed, picker: Boolean(document.querySelector('[data-act="pre-mark-pick"]')), recorded: tests(), ex: (logEntry().ex || 0) - ex0 });
+      document.querySelector('[data-act="close-summary"]').click();   // closed with the four questions unanswered
+      const line = look(); out.line = Boolean(line);
+      if (line) line.click(); else startSession('stage', { stage: 'pre' });
+      out.auto2 = SESSION.test.auto; fail();
+      for (let i = 0; i < 4; i++) document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      const rec = ((state.stageTests || {}).pre || [])[0] || {};
+      Object.assign(out, { answered: SESSION === null, lineAfter: Boolean(look()), recorded2: tests(), rec: [rec.date === todayStr(), rec.correct, rec.total, rec.passed], kana: REG.kana.filter(k => state.srs[k.key]).length });
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("eval", OLD)]))
+    assert r['auto1'] is True and r['passed'] is False and r['picker'] and r['recorded'] == 0 and r['ex'] == 40, r   # failed: the four questions; not recorded yet, the day's test count kept
+    assert r['line'] and r['auto2'] is True, r   # left unanswered: the line is back, and the test from it asks the four questions again
+    assert r['answered'] and not r['lineAfter'] and r['recorded2'] == 1 and r['rec'] == [True, 0, 40, False] and r['kana'] == 142, r   # answered (三顆, the suggestion for 0%)
+    # a reload instead of 關閉: the same, nothing recorded the attempt
+    fail = """(() => { window.__before = true; startSession('stage', { stage: 'pre' }); const auto = SESSION.test.auto; const n = SESSION.entries.length;
+      for (let i = 0; i < n; i++) { const q = currentEntry().q; answerCurrent((q.answer + 1) % q.options.length); nextQuestion(); }
+      return auto && Boolean(document.querySelector('[data-act="pre-mark-pick"]')); })()"""
+    line = """(() => { DAILY_CACHE = null; location.hash = '#/today'; route();
+      return JSON.stringify({ reloaded: window.__before === undefined, line: Boolean(document.querySelector('.banner [data-act="stage-test"][data-stage="pre"]')), recorded: ((state.stageTests || {}).pre || []).length }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", OLD), ("eval", fail), ("eval", "new Promise(r => setTimeout(() => r(true), 300))"), ("nav", URL), ("wait", READY), ("eval", line)])
+    assert out[1] is True and json.loads(out[-1]) == {'reloaded': True, 'line': True, 'recorded': 0}, out
+
+# 「選完就進第 1 週」 and 「進入第 1 週」 are said only to a learner still in 入門: an account in the main course keeps its week
+# when it answers the four questions, whether or not it is T.auto (here one that took the 入門 test before)
+def test_the_four_questions_promise_week_1_only_in_pre(b):
+    js = "(() => { " + PLAY_TEST + """ const run = (stage) => {
+        state.srs = {}; state.mistakes = []; state.completedUnits = []; state.lessonSeen = []; state.introPending = false; state.startChosen = true; LAST_BULK_MARK = null;
+        state.stage = stage; state.currentUnit = stage === 'pre' ? 'm1' : 'm5'; state.kanaKnown = stage !== 'pre'; state.introSeen = stage !== 'pre';
+        state.stageTests = { pre: [{ date: addDays(todayStr(), -3), correct: 20, total: 40, passed: false }] }; saveState(); DAILY_CACHE = null;   // took the 入門 test before: not T.auto
+        startSession('stage', { stage: 'pre' }); const auto = SESSION.test.auto; playTest(() => false);
+        const banner = (document.querySelector('#view .banner') || {}).textContent || '';
+        for (let i = 0; i < 4; i++) document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        return { auto, banner, toast: document.getElementById('toast').textContent, stage: state.stage, unit: state.currentUnit }; };
+      return JSON.stringify({ main: run('main'), pre: run('pre') }); })()"""
+    r = json.loads(ev(b, js))
+    m, p = r['main'], r['pre']
+    assert m['auto'] is False and '第 1 週' not in m['banner'] and '選完照常練習，週次不變' in m['banner'], m
+    assert '第 1 週' not in m['toast'] and '週次不變' in m['toast'] and m['stage'] == 'main' and m['unit'] == 'm5', m
+    assert '選完就進第 1 週' in p['banner'] and '進入第 1 週' in p['toast'] and p['stage'] == 'main' and p['unit'] == 'm1', p
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

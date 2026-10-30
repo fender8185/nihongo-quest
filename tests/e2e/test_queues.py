@@ -380,9 +380,9 @@ def test_pre_test_asks_three_to_five_stars_with_a_suggestion(b):
         else { state.stage = 'pre'; state.currentUnit = 'm1'; state.kanaKnown = false; state.introSeen = false; }
         saveState(); DAILY_CACHE = null; const auto = needsPreTest(); const n0 = Object.keys(state.srs).length;
         startSession('stage', { stage: 'pre' }); playTest(() => false);
-        const out = { auto, passed: state.stageTests.pre[0].passed, marked: Object.keys(state.srs).length - n0, s1: step() };
+        const out = { auto, passed: SESSION.test.result.passed, marked: Object.keys(state.srs).length - n0, s1: step() };
         pick();
-        return Object.assign(out, { stars: stars(), stage: state.stage, unit: state.currentUnit, session: SESSION === null }); };
+        return Object.assign(out, { stars: stars(), stage: state.stage, unit: state.currentUnit, session: SESSION === null, recorded: ((state.stageTests || {}).pre || []).length }); };
       const click = (lv) => { const el = document.querySelector(`[data-act="pre-mark-pick"][data-level="${lv}"]`); if (el) el.click(); };
       const enter = () => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
       const fresh = run(false, () => ['5', '4', '3', '4'].forEach(click));
@@ -391,7 +391,7 @@ def test_pre_test_asks_three_to_five_stars_with_a_suggestion(b):
     r = json.loads(ev(b, js))
     for k in ('fresh', 'old'):
         x = r[k]
-        assert x['passed'] and x['marked'] == 0 and x['s1'] == {'q': '1', 'opts': ['三顆', '四顆', '五顆'], 'tip': ['5']}, (k, x)
+        assert x['passed'] and x['marked'] == 0 and x['s1'] == {'q': '1', 'opts': ['三顆', '四顆', '五顆'], 'tip': ['5']} and x['recorded'] == 1, (k, x)
     assert r['fresh']['auto'] is False and r['old']['auto'] is True, r
     assert r['fresh']['stars'] == {'hira': [6], 'kata': [4], 'v': [3], 'g': [4]}, r['fresh']   # 五顆 = 我會了 (b 6), 四顆, 三顆
     assert r['fresh']['stage'] == 'main' and r['fresh']['unit'] == 'm1' and r['fresh']['session'], r['fresh']

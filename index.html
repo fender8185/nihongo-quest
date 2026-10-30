@@ -3355,7 +3355,8 @@ function finishPreIfReady() {
 }
 // 1.0.17: an account already past 入門 that never took the 入門 test (it predates the kana items and 第 0 週, so 學習分析 shows
 // them as unlearned) is asked once, on the today page, to take it; pass or fail, the four questions follow, each pre-selected
-// by the group's score (1.0.17 marked by score without asking; since 1.0.20 the learner confirms).
+// by the group's score (1.0.17 marked by score without asking; since 1.0.20 the learner confirms). Its attempt is recorded
+// only when they are answered, so it is asked again until then.
 // Not asked: accounts in 入門, ones that saw everything in 入門 (finished it or were bulk-marked), and new ones before the start choice.
 function needsPreTest() {
   if (inPreStage() || ((state.stageTests || {}).pre || []).length) return false;
@@ -3841,7 +3842,7 @@ function startSession(mode, opt = {}) {
   SESSION = {
     mode, title: opt.title || MODE_TITLE[mode] || '練習', entries, idx: 0, meta,
     stats: { correct: 0, wrong: 0, newCount: 0 }, results: [], startedAt: Date.now(), lastFmt: '', opt,
-    test: mode === 'stage' ? { stage: opt.stage, auto: opt.stage === 'pre' && needsPreTest() } : null   // auto: marked by score when it ends
+    test: mode === 'stage' ? { stage: opt.stage, auto: opt.stage === 'pre' && needsPreTest() } : null   // auto: the four questions pass or fail, recorded once they are answered
   };
   prepareEntry(0);
   go('#/practice');
@@ -4959,8 +4960,9 @@ function nextUnitAfterStage(id) { const n = STAGES[stageIndex(id) + 1]; return n
 
 // ---- 階段測驗 ----
 /* 40 questions drawn from the stage's own items (unseen ones included — the test asks "do I know this stage"), options only, untimed,
-   and answering writes nothing to the schedule. 80% passes; the result goes to state.stageTests. A pass of p1–p3 marks the stage
-   and those before it (markPassedStage); the 入門 test leads into its four questions. */
+   and answering writes nothing to the schedule. 80% passes; the result goes to state.stageTests (for T.auto, once the four
+   questions are answered). A pass of p1–p3 marks the stage and those before it (markPassedStage); the 入門 test leads into
+   its four questions. */
 const STAGE_TEST_SIZE = 40;
 const STAGE_TEST_QUOTA = { pre: [['a', 14], ['v', 18], ['g', 8]], p1: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]], p2: [['g', 32], ['c', 8]], p3: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]] };
 function stageTestNeed(total) { return Math.ceil(total * 0.8); }
@@ -4991,13 +4993,19 @@ function finishStageTest() {
   const T = SESSION && SESSION.test; if (!T || T.result) return;
   const total = SESSION.entries.length; const correct = SESSION.stats.correct;
   const passed = correct >= stageTestNeed(total);
-  if (!state.stageTests || typeof state.stageTests !== 'object') state.stageTests = {};
-  state.stageTests[T.stage] = [{ date: todayStr(), correct, total, passed }].concat(state.stageTests[T.stage] || []).slice(0, 10);
+  T.result = { date: todayStr(), correct, total, passed };
+  // an account past 入門 that never took it (T.auto) has the attempt recorded once it answers the four questions
+  // ('pre-mark-pick'): one that leaves before then (關閉, a reload) is still asked on the today page
+  if (!T.auto) recordStageTest(T);
   { const e = logEntry(); e.ex = (e.ex || 0) + SESSION.results.length; }   // a test day keeps the streak; tests are not questions done
-  T.result = { correct, total, passed };
   if (T.stage === 'pre') T.preScores = preScores(SESSION.results);   // the four questions are pre-selected by these
   else if (passed) T.marked = markPassedStage(T.stage, passSkipKeys(SESSION.results));   // p1–p3: marked at once
   saveState();
+}
+// the test's line in state.stageTests (T.result), newest first, ten kept
+function recordStageTest(T) {
+  if (!state.stageTests || typeof state.stageTests !== 'object') state.stageTests = {};
+  state.stageTests[T.stage] = [Object.assign({}, T.result)].concat(state.stageTests[T.stage] || []).slice(0, 10);
 }
 // what four stars from a test leave alone: the items it missed and the ones in the notebook, so their relearning goes on
 // (a p1–p3 pass, and 四顆 in the 入門 four questions); a miss never met before is recorded as met once and missed (bulkMeetMissed)
@@ -5025,7 +5033,7 @@ function renderStageSummary(view) {
       <div class="page-title mt-2">${title}</div>
       <div class="page-sub">${esc(st ? st.title : '')}・階段測驗・作答 ${s.results.length} 題</div>
       <div class="row-wrap mt-3">${kinds}</div>
-      ${prePick ? `<div class="banner mt-4">${r.passed ? '通過了。' : ''}接著 ${PRE_MARK_GROUPS.length} 題：${PRE_MARK_GROUPS.map(x => x[1]).join('、')}各記得多少？依這次的成績標了「建議」，${T.auto ? '選完照常練習，週次不變' : '選完就進第 1 週'}。</div>` : marked}
+      ${prePick ? `<div class="banner mt-4">${r.passed ? '通過了。' : ''}接著 ${PRE_MARK_GROUPS.length} 題：${PRE_MARK_GROUPS.map(x => x[1]).join('、')}各記得多少？依這次的成績標了「建議」，${inPreStage() ? '選完就進第 1 週' : '選完照常練習，週次不變'}。</div>` : marked}
       ${prePick ? preMarkStepHtml(T) : `<div class="row-wrap mt-4">${buttons}</div>`}
     </div>
     ${wrong.length ? `<div class="card"><div class="card-head"><div class="card-title">這次答錯的題目</div><span class="chip">${wrong.length}</span></div><div class="list">${wrongList}</div></div>` : ''}`;
@@ -5157,7 +5165,8 @@ Object.assign(ACTIONS, {
 /* The 入門 test leads straight into four questions (平假名、片假名、入門單字、第 0 週句型), each answered 三顆／四顆／五顆:
    the bulk-mark levels `learned` (s = 5), `four` (as a stage pass) and `known` (as 我會了). Each is pre-selected by the
    group's share right in the test (preSuggest; Enter takes it). They follow a pass; an account past 入門 that never took
-   the test (1.0.17's case, T.auto) gets them pass or fail and keeps its week. Then the learner enters 第 1 週. */
+   the test (1.0.17's case, T.auto) gets them pass or fail, and its attempt is recorded once they are answered. Then a
+   learner in 入門 enters 第 1 週; one already in the main course keeps its week. */
 const PRE_MARK_GROUPS = [
   ['hira', '平假名', () => REG.kana.filter(k => k.script === 'hira')],
   ['kata', '片假名', () => REG.kana.filter(k => k.script === 'kata')],
@@ -5225,9 +5234,11 @@ Object.assign(ACTIONS, {
     const T = SESSION && SESSION.test; if (!preMarkOpen(T)) return;
     const step = T.preStep || 0; T.preChoice = T.preChoice || {}; T.preChoice[PRE_MARK_GROUPS[step][0]] = el.dataset.level; T.preStep = step + 1;
     if (T.preStep < PRE_MARK_GROUPS.length) { renderStageSummary(document.getElementById('view')); return; }
+    const pre = inPreStage();   // before preMarkApply moves the learner to the main course: only 入門 enters 第 1 週
+    if (T.auto) recordStageTest(T);   // answered: an account past 入門 has taken the test now (finishStageTest left it out)
     const n = preMarkApply(T.preChoice, passSkipKeys(SESSION.results));
     SESSION = null; document.body.classList.remove('practicing');
-    toast(T.auto ? `已標記 ${n} 個項目，週次不變` : n ? `已標記 ${n} 個項目，進入第 1 週` : '進入第 1 週', 4000);
+    toast(!pre ? `已標記 ${n} 個項目，週次不變` : n ? `已標記 ${n} 個項目，進入第 1 週` : '進入第 1 週', 4000);
     go('#/course');
   }
 });
