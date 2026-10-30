@@ -19,10 +19,13 @@ class Browser:
         self.proc = subprocess.Popen([CHROME, "--headless=new", "--disable-gpu", "--no-first-run",
             f"--user-data-dir={self.profile}", f"--remote-debugging-port={self.port}", "about:blank"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        for _ in range(100):
+        tabs = None
+        for _ in range(300):   # up to 30 s: a loaded machine can be slow to bring Chrome up
             try:
                 tabs = json.load(urllib.request.urlopen(f"http://127.0.0.1:{self.port}/json")); break
             except Exception: time.sleep(0.1)
+        if tabs is None:   # never leave a Chrome behind
+            self.__exit__(); raise RuntimeError(f"headless Chrome did not open its debugging port {self.port} within 30 s")
         self.ws_url = [t for t in tabs if t["type"] == "page"][0]["webSocketDebuggerUrl"]
         return self
     def __exit__(self, *a):

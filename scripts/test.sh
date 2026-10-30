@@ -20,13 +20,14 @@ if git rev-parse --verify -q origin/main >/dev/null 2>&1; then
     [ "$(git show origin/main:data.js 2>/dev/null | grep -o 'DATA_VERSION [0-9]*')" != "$(grep -o 'DATA_VERSION [0-9]*' data.js)" ] || { echo "data.js changed since origin/main but its DATA_VERSION is unchanged"; exit 1; }
   fi
 fi
-# e2e files run in parallel (each starts its own http.server port and headless Chrome); results are printed per file
+# e2e files run in parallel, six at a time (each starts its own http.server port and headless Chrome); results are printed per file
 # with the project venv when there is one (/usr/bin/python3 -m venv .venv && .venv/bin/pip install websockets): -I keeps the user site out,
 # and Homebrew Python 3.15 on this Mac spends 35 s resolving 127.0.0.1 each time http.server starts
 py=python3; [ -x .venv/bin/python3 ] && py=.venv/bin/python3
 e2e=(tests/e2e/test_storage.py tests/e2e/test_pwa.py tests/e2e/test_sync.py tests/e2e/test_sync_ui.py tests/e2e/test_fixes.py tests/e2e/test_vocab.py tests/e2e/test_conj.py tests/e2e/test_content.py tests/e2e/test_pre_n5.py tests/e2e/test_stage_tests.py tests/e2e/test_today_list.py tests/e2e/test_queues.py)
 tmp="$(mktemp -d)"; pids=()
 for t in "${e2e[@]}"; do
+  while [ "$(jobs -rp | wc -l)" -ge 6 ]; do sleep 0.2; done   # at most six at once: twelve headless Chromes pushed the load past 30 and pages timed out
   ( set +e; "$py" -I "$t" > "$tmp/$(basename "$t").log" 2>&1; echo $? > "$tmp/$(basename "$t").rc" ) & pids+=($!)   # set +e: a failing file must still record its exit code
 done
 wait "${pids[@]}"
