@@ -5022,10 +5022,11 @@ function renderStageSummary(view) {
   const buttons = prePick ? ''
     : r && r.passed ? '<button type="button" class="btn btn-primary" data-act="close-summary">完成</button>'
     : `<button type="button" class="btn btn-primary" data-act="stage-again">再考一次</button><button type="button" class="btn" data-act="stage-practice">去練這個階段</button><button type="button" class="btn btn-ghost" data-act="close-summary">回課程頁</button>`;
-  // p1–p3 passed: what was marked, with 復原 while the mark can still be undone
+  // p1–p3 passed: what was marked and where the course is now (the pass moved it on), with 復原 while the mark can still be undone
+  const cu = unitById(state.currentUnit);
   const marked = !r || !r.passed || prePick ? ''
     : T.undone ? '<div class="banner mt-4">通過了。已復原，題目的星星照舊。</div>'
-    : `<div class="banner mt-4"><div class="grow">通過了。已把${esc(st ? st.title.split('：')[0] : '')}以前、還不到四顆的 ${T.marked} 題設成四顆。</div>${LAST_BULK_MARK ? '<button type="button" class="btn btn-sm" data-act="bulk-mark-undo">復原</button>' : ''}</div>`;
+    : `<div class="banner mt-4"><div class="grow">通過了。已把${esc(st ? st.title.split('：')[0] : '')}以前、還不到四顆的 ${T.marked} 題設成四顆。目前單元：${esc(cu.weeks)}・${esc(cu.short)}</div>${LAST_BULK_MARK ? '<button type="button" class="btn btn-sm" data-act="bulk-mark-undo">復原</button>' : ''}</div>`;
   view.innerHTML = `
     <div class="pr-top"><button type="button" class="btn btn-ghost btn-icon" data-act="close-summary" aria-label="關閉">${icon('close')}</button><div class="grow"></div></div>
     <div class="card">

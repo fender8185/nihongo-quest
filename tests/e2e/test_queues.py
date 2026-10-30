@@ -351,7 +351,8 @@ def test_passing_a_stage_marks_four_stars_and_leaves_today_alone(b):
         lrB: [...new Set(lr.map(x => state.srs[x.key] ? state.srs[x.key].b : 0))], lrMin: Math.min(...lrDays), lrMax: Math.max(...lrDays),
         missed: wrong.map(k => [isLR(REG.byKey.get(k)) ? 'lr' : 'core', met(k)]), noted: JSON.stringify(state.srs[noted.key]) === notedRec, notebook: state.mistakes.length === 1 && !state.mistakes[0].mastered,
         today: JSON.stringify(dayProgress()) === before, says: txt.includes(`已把第一階段以前、還不到四顆的 ${core.length} 題設成四顆。`),   // listening and reading are not counted: three stars
-        undo: Boolean(view.querySelector('[data-act="bulk-mark-undo"]')), old: txt.includes('標記到這裡為止') || Boolean(view.querySelector('[data-act="stage-mark"]')) };
+        undo: Boolean(view.querySelector('[data-act="bulk-mark-undo"]')), old: txt.includes('標記到這裡為止') || Boolean(view.querySelector('[data-act="stage-mark"]')),
+        unit: state.currentUnit, banner: (view.querySelector('.banner') || {}).textContent || '' };
       Object.values(state.srs).forEach(r => { if (r.last === t) r.last = addDays(t, -1); });   // the next day: today's marks were made yesterday
       delete state.today.plan; state.today.date = addDays(t, -1); checkDayRollover(); DAILY_CACHE = null; out.q4 = dailyPlan().q4.length;
       const ub = view.querySelector('[data-act="bulk-mark-undo"]'); if (ub) ub.click();
@@ -364,6 +365,7 @@ def test_passing_a_stage_marks_four_stars_and_leaves_today_alone(b):
     assert all(rec == dict(MET_ONCE, due=7 if kind == 'lr' else 1) for kind, rec in r['missed']), r   # met once and missed: back tomorrow, listening or reading in a week
     assert r['noted'] and r['notebook'], r
     assert r['today'] and r['says'] and r['undo'] and not r['old'], r
+    assert r['unit'] == 'm7' and '設成四顆。目前單元：第 13–14 週・可能形' in r['banner'], r   # the pass moved the course on: the page says where to
     assert r['q4'] == 30, r
     assert r['restored'] and r['undone'] and r['missedGone'], r
 
