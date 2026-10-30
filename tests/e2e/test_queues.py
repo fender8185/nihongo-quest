@@ -493,6 +493,13 @@ def test_a_tests_unseen_misses_come_back_the_next_day(b):
     assert r['pre']['stage'] == 'main' and r['pre']['kinds'] == ['a', 'g'] and r['pre']['n'] == 2, r
     assert r['pre']['recs'] == 2 and r['pre']['today'] == [] and r['pre']['next'] == 2, r
 
+# 1.0.20 took 標記到這裡為止 away, so 1.0.19's entry no longer says what it did (the rule above CHANGELOG: a change that
+# overturns an earlier entry edits that entry); the sentence before it now ends the item
+def test_the_1_0_19_changelog_no_longer_describes_the_mark_dialog(b):
+    items = json.loads(ev(b, "JSON.stringify(CHANGELOG.find(x => x.v === '1.0.19').items)"))
+    assert len(items) == 4 and not any('標記到這裡為止' in s for s in items), items
+    assert items[2].endswith('不算進三次。「我會了」的字直接排進五顆的複習。'), items[2]
+
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
