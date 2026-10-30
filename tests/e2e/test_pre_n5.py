@@ -1,7 +1,7 @@
 """2026-10-29: PRE_N5 入門等級——假名辨識（kind a）、入門階段（state.stage）、起點選擇、PRE_N5 單字與漢字。"""
 import json, os, re, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
-from cdp import Browser
+from cdp import Browser, free_port
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PORT = 8792
 URL = f"http://127.0.0.1:{PORT}/"
@@ -138,7 +138,7 @@ def test_i_know_kana_opens_words_without_marking_kana_seen(b):
       const p = dailyPlan(); openSettings('learn'); const row = Boolean(document.querySelector('[data-key="newKanaPerDay"]')); closeModal(true);
       return JSON.stringify({ open: kanaGateOpen(), v: p.newV.length, a: p.newA.length, seen: Object.keys(state.srs).filter(k => k.startsWith('a:')).length, row }); })()"""
     r = json.loads(ev(b, js, [("eval", FRESH)]))
-    assert r['open'] and r['v'] > 0 and r['a'] > 0 and r['seen'] == 0 and r['row'], r
+    assert r['open'] and r['v'] > 0 and r['a'] > 0 and r['seen'] == 0 and not r['row'], r   # 1.0.20: 每天新假名 is no longer a setting
 
 PRE_KANJI = []   # 1.0.12: the 27 入門 kanji (數字、曜日、年時分人大小) went back to N5
 
@@ -243,7 +243,7 @@ def test_check_vocab_script_flags_bad_candidates(b):
     ]}
     path = os.path.join(ROOT, '.superpowers', 'check-vocab-fixture.json'); os.makedirs(os.path.dirname(path), exist_ok=True)
     json.dump(fx, open(path, 'w'), ensure_ascii=False)
-    out = subprocess.run([sys.executable, '-I', os.path.join(ROOT, 'scripts', 'check-vocab.py'), path, '8790'], capture_output=True, text=True)
+    out = subprocess.run([sys.executable, '-I', os.path.join(ROOT, 'scripts', 'check-vocab.py'), path, str(free_port())], capture_output=True, text=True)   # its own server on a free port: 8790 belongs to test_stage_tests.py
     assert out.returncode == 1, out.stdout + out.stderr
     for msg in ['already in the bank', 'unknown theme', 'pre-example-vocab', 'same as the first example']:
         assert msg in out.stdout, (msg, out.stdout)
@@ -483,10 +483,10 @@ def test_stats_progress_shows_kana_and_counts_it_as_learned(b):
 
 def test_stats_tables_name_kana_rows_and_formats(b):
     js = """(() => { state.statsFmt = { 'a-read': { ok: 4, ng: 2 }, 'a-sound': { ok: 5, ng: 0 }, 'a-pair': { ok: 3, ng: 3 } }; location.hash = '#/stats'; route(); const v = document.getElementById('view');
-      const rows = [...v.querySelectorAll('#planAdvice tbody tr')].map(r => r.cells[0].textContent); const kana = planAdvice().banks.find(b2 => b2.name === '假名');
-      return JSON.stringify({ kanaRow: rows.includes('假名'), kana: kana ? [kana.total, kana.key || null] : null, fmts: ['假名・看字選音', '假名・聽音選字', '假名・平片對照'].filter(n => v.textContent.includes(n)).length, raw: /a-(read|sound|pair)/.test(v.textContent) }); })()"""
+      const rows = [...v.querySelectorAll('#planAdvice tbody tr')].map(r => r.cells[0].textContent); const kanaTr = [...v.querySelectorAll('#planAdvice tbody tr')].find(r => r.cells[0].textContent === '假名');
+      return JSON.stringify({ kanaRow: rows.includes('假名'), kana: kanaTr ? kanaTr.cells[1].textContent : null, fmts: ['假名・看字選音', '假名・聽音選字', '假名・平片對照'].filter(n => v.textContent.includes(n)).length, raw: /a-(read|sound|pair)/.test(v.textContent) }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'kanaRow': True, 'kana': [142, None], 'fmts': 3, 'raw': False}, r
+    assert r == {'kanaRow': True, 'kana': '0 / 142', 'fmts': 3, 'raw': False}, r
 
 def test_finishing_pre_logs_week0_as_a_completed_unit(b):
     js = """(() => { const t = todayStr(); const mark = (it) => { state.srs[it.key] = { b: 2, due: addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -1) }; };
