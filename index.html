@@ -934,12 +934,17 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.20';   // keep equal to the version in sw.js CACHE ('nq-v1.0.20'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.21';   // keep equal to the version in sw.js CACHE ('nq-v1.0.21'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.21', date: '2026-10-30', items: [
+    '錯題本不再每天另外抽 10%：答錯的題目照第 1、3、7 天回來，不算在三顆以下每天 50 題裡；手動新增的錯題卡在錯題本頁練。四顆答對不再直接升五顆，照記憶強度算（等了一陣子才答對的大多會升）。複習的目標記憶率固定 90%，不再看複習正確率調整。',
+    '入門測驗通過跟其他階段測驗一樣：入門還不到四顆的題目設成四顆（這次答錯的和錯題本裡的不設），進入第 1 週，結果頁有「復原」，不再問四題。通過階段測驗不再改聽力、閱讀，它們照自己的節奏出。舊帳號的「先做一次入門測驗」提示拿掉了，要考可以到課程頁入門卡按「階段測驗」。',
+    '單字要五顆、而且假名拼字答對過，才算「已熟練」（按「我會了」或測驗設的也一樣；沒有拼字題的字五顆就算）；四顆以上、還沒拼對過的字，練習時會出拼字。文法、假名、漢字五顆就算已熟練，以前批次標記過的也一樣。'
+  ] },
   { v: '1.0.20', date: '2026-10-30', items: [
     '加練只給新內容：一輪的題數等於今天的新題數，不再夾複習（複習照各自的日子出）；做完一輪，還有新內容就能再做一輪。',
     '通過階段測驗時，自動把到那個階段為止、還不到四顆的題目設成四顆，不用再選等級；這次答錯的題目不設四顆（入門四題選四顆也一樣），其中還沒學過的文法和假名從隔天起排進複習，錯題本裡的題目不動，結果頁有「復原」。課程頁的「標記到這裡為止」拿掉了；以前通過但沒標記的階段，重考一次就會標記。',
@@ -1177,7 +1182,6 @@ function defaultState() {
     lastBackup: null,
     statsFmt: {},
     recent: [],
-    reviewRecent: [],          // the last 100 due reviews, 1 right / 0 wrong: sets the FSRS target recall (autoRetention)
     legacy: null,
     notices: []
   };
@@ -1226,12 +1230,12 @@ function normalizeState(s) {
   // v69: the v65 default of 40 became 100 (reviews are never cut, so 40 braked the new items within weeks); raised once, a cap set by hand stays
   if (out.settings.loadCap === 40 && !out.settings.capRaised) out.settings.loadCap = 100;
   out.settings.capRaised = true;
-  // 1.0.15: no longer settings — the speech switches are always on, 複習強度 follows the review accuracy (autoRetention), 入門 ends by itself
+  // 1.0.15: no longer settings — the speech switches are always on, 複習強度 is fixed (RETENTION, since 1.0.21), 入門 ends by itself
   ['autoSpeak', 'listening', 'audioOptions', 'retention'].forEach(k => { delete out.settings[k]; });
   delete out.preDoneDismissed; delete out.preFinished;
   out.introPending = Boolean(out.introPending);
   ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt', 'stageTests'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
-  ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'reviewRecent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
+  ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
   if (out.stage !== 'pre' && out.stage !== 'main') out.stage = 'main';   // 入門階段 (1.0.6); accounts from before it are in the main course
   if (typeof out.kanaKnown !== 'boolean') out.kanaKnown = false;
@@ -1527,6 +1531,7 @@ function isWordLike(v) {
 const FSRS_W = [0.4872, 1.4003, 3.7145, 13.8206, 5.1618, 1.2298, 0.8975, 0.031, 1.6474, 0.1367, 1.0461, 2.1072, 0.0793, 0.3246, 1.587, 0.2272, 2.8755];
 const FSRS_DECAY = -0.5;
 const FSRS_FACTOR = 19 / 81;
+const RETENTION = 0.9;   // reviews come back when FSRS expects 90% recall (1.0.15–1.0.20 moved it between 87% and 93% by the review accuracy)
 const SRS_DAYS = [0, 1, 3, 7, 14, 30, 60, 120];          // level → typical interval (old schedule; used to convert records)
 const LEVEL_FROM_S = [1, 2.5, 5, 10, 21, 45, 90];        // stability needed for levels 1…7
 const SRS_LEARNED = 3;   // level at which an item counts as learned (stability ≥ 5 days)
@@ -1551,9 +1556,10 @@ const RELEARN_GAPS = [2, 4];
 const RELEARN_KINDS = /^[vgkca]:/;
 const LR_GAPS = [30, 90, 180];   // 聽力／閱讀 answered right the 1st, 2nd, 3rd+ time: days until it is asked again
 const LR_MISS_GAP = 7;           // 聽力／閱讀 answered wrong: back after a week, not the next day
-// 1.0.20 tiers: up to three stars follow FSRS due dates (at most SRS_DAILY_CAP a day, the oldest first); four stars, five
-// stars and the notebook are queues that give a fixed share a day, the longest-waiting first (at least QUEUE_MIN, at most
-// QUEUE_MAX, none when empty). New items a day: NEW_STEPS by the last RECENT_MAX answers, minus one per ten notebook entries.
+// 1.0.20 tiers: up to three stars follow FSRS due dates (at RETENTION; at most SRS_DAILY_CAP a day, the oldest first);
+// four stars, five stars and the notebook are queues that give a fixed share a day, the longest-waiting first (at least
+// QUEUE_MIN, at most QUEUE_MAX, none when empty). New items a day: NEW_STEPS by the last RECENT_MAX answers, minus one per
+// ten notebook entries.
 const SRS_DAILY_CAP = 50;
 const QUEUE_RATE = { q4: 0.05, q5: 0.03, mk: 0.10 };
 const QUEUE_MIN = 1;
@@ -1585,12 +1591,8 @@ function srsGet(key) { return state.srs[key] || null; }
 function fsrsD0(g) { return clamp(FSRS_W[4] - (g - 3) * FSRS_W[5], 1, 10); }
 function fsrsR(elapsed, s) { return Math.pow(1 + FSRS_FACTOR * Math.max(0, elapsed) / Math.max(0.01, s), FSRS_DECAY); }
 function fsrsInterval(s) {
-  return s / FSRS_FACTOR * (Math.pow(autoRetention(), 1 / FSRS_DECAY) - 1);
+  return s / FSRS_FACTOR * (Math.pow(RETENTION, 1 / FSRS_DECAY) - 1);
 }
-// 複習強度 (a setting until 1.0.15) follows how the due reviews have been going: under 80% right of the last 100, reviews
-// come sooner (target recall 93%); over 92%, they wait longer (87%) and leave room for new items; otherwise 90%. Fewer than 30 reviews: 90%.
-function reviewAccuracy() { const r = (state.reviewRecent || []).slice(-100); return r.length < 30 ? null : r.reduce((a, b) => a + b, 0) / r.length; }
-function autoRetention() { const a = reviewAccuracy(); return a === null ? 0.9 : a < 0.8 ? 0.93 : a > 0.92 ? 0.87 : 0.9; }
 function levelFromS(s) { let b = 0; LEVEL_FROM_S.forEach(x => { if (s >= x) b++; }); return b; }
 // records from the earlier fixed-interval schedule (or written by hand) get a stability and difficulty
 function ensureFsrs(r) {
@@ -1646,17 +1648,15 @@ function srsAnswer(key, correct, opt = {}) {
   const before = r.b; const dueBefore = r.due;
   const g = opt.grade ? (GRADE[opt.grade] || 3) : (correct ? 3 : 1);
   const elapsed = r.last ? daysBetween(r.last, t) : 0;
-  const reviewed = !isNew && r.due <= t;   // a due review (not a first look, not early practice): feeds reviewAccuracy
-  if (reviewed) { if (!Array.isArray(state.reviewRecent)) state.reviewRecent = []; state.reviewRecent.push(g > 1 ? 1 : 0); if (state.reviewRecent.length > 100) state.reviewRecent = state.reviewRecent.slice(-100); }
+  const reviewed = !isNew && r.due <= t;   // a due review (not a first look, not early practice): only these move the relearning ladder on
   if (isNew) delete r.s;
   fsrsNext(r, g, elapsed);
   if (isNew && g === 3 && key.startsWith('v:')) r.s = Math.min(r.s, 1);   // a new word's first check is tomorrow, then FSRS takes over
   r.n++;
   if (g > 1) { r.ok++; r.st++; } else { r.ng++; r.st = 0; if (before >= 2) r.lapse = (r.lapse || 0) + 1; delete r.known; }   // a miss ends the 我會了 vouch: back to the normal rules
   r.b = g === 1 ? Math.min(levelFromS(r.s), 1) : levelFromS(r.s);
-  // four stars answered right go up to five wherever they are answered; a 入門 item clearly right at five stars (not a
-  // flashcard's 模糊) leaves the queues
-  if (g > 1 && before === 4) { r.s = Math.max(r.s, LEVEL_FROM_S[4]); r.b = levelFromS(r.s); }
+  // four stars answered right go up by memory strength like any other item (after a long wait in the queue that usually
+  // makes five); a 入門 item clearly right at five stars (not a flashcard's 模糊) leaves the queues
   if (g >= 3 && before >= 5 && isPreItem(key)) r.out = 1;
   if (g === 1) delete r.out;
   if (isNew) logEntry().fresh = (logEntry().fresh || 0) + 1;   // first answers a day: the pace the exam countdown uses
@@ -4522,7 +4522,6 @@ const ACTIONS = {
     else if (state.mistakes.length > u.mistakesLen) state.mistakes.shift();
     const f = state.statsFmt[q.fmt]; if (f && f.ng > 0) f.ng--;
     if (state.recent.length) state.recent.pop();
-    if (e.srs && e.srs.reviewed && state.reviewRecent.length) state.reviewRecent.pop();
     if (wasNew) SESSION.stats.newCount = Math.max(0, SESSION.stats.newCount - 1);
     SESSION.stats.wrong = Math.max(0, SESSION.stats.wrong - 1);
     SESSION.entries = SESSION.entries.filter((x, i) => i <= SESSION.idx || !((x.requeued || (wasNew && x.encore)) && x.item === e.item));

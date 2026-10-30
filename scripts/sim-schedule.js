@@ -26,9 +26,9 @@ const LEARNERS = [
 ];
 
 // what is lifted from index.html (clamp and hashStr are fsrsDays' helpers)
-const CONSTANTS = ['FSRS_W', 'FSRS_DECAY', 'FSRS_FACTOR', 'LEVEL_FROM_S', 'RELEARN_GAPS', 'SRS_DAILY_CAP', 'QUEUE_RATE', 'QUEUE_MIN', 'QUEUE_MAX',
+const CONSTANTS = ['FSRS_W', 'FSRS_DECAY', 'FSRS_FACTOR', 'RETENTION', 'LEVEL_FROM_S', 'RELEARN_GAPS', 'SRS_DAILY_CAP', 'QUEUE_RATE', 'QUEUE_MIN', 'QUEUE_MAX',
   'NEW_STEPS', 'NEW_DEFAULT', 'NEW_MIN', 'NEW_MAX', 'RECENT_MAX'];
-const FUNCTIONS = ['clamp', 'hashStr', 'levelFromS', 'fsrsD0', 'fsrsR', 'fsrsInterval', 'reviewAccuracy', 'autoRetention', 'fsrsNext', 'fsrsDays'];
+const FUNCTIONS = ['clamp', 'hashStr', 'levelFromS', 'fsrsD0', 'fsrsR', 'fsrsInterval', 'fsrsNext', 'fsrsDays'];
 
 // a top-level declaration of index.html: a const ends at its `;`, a one-line function on its own line, a block function at
 // the first bare `}`
@@ -41,7 +41,7 @@ function grab(lines, name) {
   while (end < lines.length && !stop.test(lines[end])) end++;
   return end < lines.length ? lines.slice(at, end + 1).join('\n') : null;
 }
-// returns bind(state): the lifted code, with `state` as the object it reads (autoRetention reads state.reviewRecent)
+// returns bind(): the lifted code (nothing in it reads the app's state)
 function lift(file) {
   const lines = fs.readFileSync(file, 'utf8').split('\n');
   const names = CONSTANTS.concat(FUNCTIONS);
@@ -49,8 +49,8 @@ function lift(file) {
   const missing = names.filter((n, i) => code[i] === null);
   if (missing.length) { console.error(`sim-schedule: 在 ${file} 找不到 ${missing.join('、')}`); process.exit(1); }
   const body = code.join('\n') + `\nreturn { ${names.join(', ')} };`;
-  try { new Function('state', body); } catch (e) { console.error(`sim-schedule: 從 ${file} 抓到的程式不能執行：${e.message}`); process.exit(1); }
-  return (state) => new Function('state', body)(state);
+  try { new Function(body); } catch (e) { console.error(`sim-schedule: 從 ${file} 抓到的程式不能執行：${e.message}`); process.exit(1); }
+  return () => new Function(body)();
 }
 
 function mulberry32(a) {
@@ -58,9 +58,8 @@ function mulberry32(a) {
 }
 
 function simulate(bind, L) {
-  const state = { reviewRecent: [] };   // the last 100 due reviews, 1 = right: it sets how far apart FSRS puts the reviews
   const { clamp, levelFromS, fsrsR, fsrsNext, fsrsDays, LEVEL_FROM_S, RELEARN_GAPS, SRS_DAILY_CAP, QUEUE_RATE, QUEUE_MIN, QUEUE_MAX,
-    NEW_STEPS, NEW_DEFAULT, NEW_MIN, NEW_MAX, RECENT_MAX } = bind(state);
+    NEW_STEPS, NEW_DEFAULT, NEW_MIN, NEW_MAX, RECENT_MAX } = bind();
   const rnd = mulberry32(SEED);
   // the registry's order (words, grammar, kanji, kana, drills): a sort keeps it for ties, as in the app. A bank hands out
   // its items in order; `met` of them have been seen.
@@ -106,8 +105,7 @@ function simulate(bind, L) {
     const before = r.b; const dueBefore = r.due;
     const g = correct ? 3 : 1;
     const elapsed = r.last === null ? 0 : t - r.last;
-    const reviewed = !isNew && r.due <= t;   // a due review (not a first look, not early practice): it feeds the review accuracy
-    if (reviewed) { state.reviewRecent.push(g > 1 ? 1 : 0); if (state.reviewRecent.length > 100) state.reviewRecent = state.reviewRecent.slice(-100); }
+    const reviewed = !isNew && r.due <= t;   // a due review (not a first look, not early practice): only these move the ladder on
     fsrsNext(r, g, elapsed);
     if (isNew && g === 3 && it.kind === 'v') r.s = Math.min(r.s, 1);   // a new word's first check is tomorrow
     r.b = g === 1 ? Math.min(levelFromS(r.s), 1) : levelFromS(r.s);

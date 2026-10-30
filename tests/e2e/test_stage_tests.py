@@ -203,7 +203,7 @@ def test_a_pass_bounds_daily_due_and_spaces_listening_reading(b):
     assert r['budget'] == 50 and r['maxDay'] <= r['budget'] and r['firstDay'] == 5, r
     assert r['lrN'] > 300 and r['lrMin'] >= 90 and r['lrMax'] <= 270 and r['lrB'] == [3], r   # listening and reading: three stars, their own rule
 
-# a marked word's first real review grows its stability and, at four stars, lifts it to five; practice drops the undo
+# a marked word's first real review grows its stability (six days on, memory strength alone takes it to five stars); practice drops the undo
 def test_first_review_after_a_pass_grows_stability_and_clears_undo(b):
     js = "(() => { " + RESET + """const t = todayStr(); markPassedStage('p1', new Set());
       const v = stageItems('p1').find(x => x.kind === 'v'); const r0 = JSON.parse(JSON.stringify(state.srs[v.key])); state.srs[v.key].due = t; state.srs[v.key].last = addDays(t, -6);   // six days pass before the review

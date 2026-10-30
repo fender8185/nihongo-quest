@@ -1475,26 +1475,6 @@ def test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off(b):
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
     assert r == {'speech': True, 'listen': True, 'resp': True, 'scene': True, 'dialog': False, 'spoke': True, 'dropped': []}, r
 
-def test_review_strength_follows_the_accuracy_of_recent_due_reviews(b):
-    # 複習強度 is no longer a setting: of the last 100 due reviews < 80% right → target 93% (sooner), > 92% → 87% (later), else 90%; under 30 reviews → 90%
-    js = """(() => { const iv = (ok, n) => { state.reviewRecent = Array(n).fill(0).map((x, i) => i < ok ? 1 : 0); return Math.round(fsrsInterval(10) * 100) / 100; };
-      const out = { none: iv(0, 0), few: iv(10, 20), high: iv(50, 50), edge92: iv(46, 50), mid: iv(43, 50), edge80: iv(40, 50), low: iv(35, 50) };
-      state.settings.retention = 0.97; out.oldSetting = iv(43, 50); return JSON.stringify(out); })()"""
-    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
-    assert r == {'none': 10, 'few': 10, 'high': 13.69, 'edge92': 10, 'mid': 10, 'edge80': 10, 'low': 6.66, 'oldSetting': 10}, r
-
-def test_only_due_reviews_feed_the_review_accuracy_and_a_slip_takes_its_mark_back(b):
-    js = """(() => { const t = todayStr(); state.reviewRecent = []; const [a, b2, c] = REG.vocab.filter(v => v.builtin && meaningOptions(v)).slice(0, 3);
-      const rec = (due, last) => ({ b: 2, due, n: 2, ok: 2, ng: 0, s: 6, d: 5, last, f: {} });
-      delete state.srs[a.key]; state.srs[b2.key] = rec(addDays(t, 5), addDays(t, -2)); state.srs[c.key] = rec(t, addDays(t, -6));
-      srsAnswer(a.key, true); srsAnswer(b2.key, false); srsAnswer(c.key, false); const out = { marks: state.reviewRecent.slice() };
-      for (let i = 0; i < 120; i++) { state.srs[c.key].due = t; srsAnswer(c.key, true); } out.capped = state.reviewRecent.length;
-      state.reviewRecent = []; state.srs[c.key] = rec(t, addDays(t, -6)); startSession('items', { items: [c] }); const e = currentEntry(); e.previewDone = true; renderPractice();
-      answerCurrent((e.q.answer + 1) % e.q.options.length); out.afterMiss = state.reviewRecent.slice(); ACTIONS.slip(); out.afterSlip = state.reviewRecent.slice();
-      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
-    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
-    assert r == {'marks': [0], 'capped': 100, 'afterMiss': [0], 'afterSlip': []}, r
-
 # 1.0.18 離線語音: the installed app keeps the audio of today's practice on the device
 STANDALONE = """(() => { const mm = window.matchMedia.bind(window);
   window.matchMedia = (q) => /display-mode:\\s*standalone/.test(q) ? { matches: true, media: q, onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return false; } } : mm(q); })();"""
@@ -1621,7 +1601,6 @@ if __name__ == "__main__":
              test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box,
              test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_hides_kana_drills,
              test_a_missed_listening_or_reading_item_gets_no_retry_copy_in_the_session, test_settings_drop_the_switches_the_app_now_decides, test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off,
-             test_review_strength_follows_the_accuracy_of_recent_due_reviews, test_only_due_reviews_feed_the_review_accuracy_and_a_slip_takes_its_mark_back,
              test_offline_audio_keeps_the_japanese_clips_of_todays_practice, test_offline_audio_fills_the_cache_skipping_stored_and_missing_clips_and_stops_offline,
              test_installed_app_keeps_the_coming_audio_by_itself_and_again_when_back_online, test_a_browser_tab_does_not_download_audio_ahead_by_itself, test_a_clip_not_on_the_device_while_offline_says_so]
     failed = 0

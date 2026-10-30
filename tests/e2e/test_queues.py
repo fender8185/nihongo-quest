@@ -25,11 +25,25 @@ def test_tier_follows_stars_ladder_and_out(b):
     r = json.loads(ev(b, js))
     assert r == ['srs', 'srs', 'q4', 'q5', 'srs', 'out', 'new', None, None], r
 
-def test_four_star_right_anywhere_becomes_five(b):
-    js = "(() => { " + FRESH + REC + """ const k = words[0].key; state.srs[k] = rec(4); srsAnswer(k, true);
-      return JSON.stringify({ b: state.srs[k].b, tier: tierOf(k) }); })()"""
+# 1.0.21: four stars answered right go by memory strength, not straight to five: one that waited about twenty days in its
+# queue reaches five, one answered the day it was marked stays at four, and so does a hard one (high difficulty)
+def test_four_stars_go_up_by_memory_strength(b):
+    js = "(() => { " + FRESH + REC + """ const [w, s, h] = words.slice(0, 3).map(v => v.key);
+      state.srs[w] = rec(4, { last: addDays(t, -20) }); state.srs[s] = rec(4, { last: t }); state.srs[h] = rec(4, { d: 10, last: addDays(t, -20) });
+      [w, s, h].forEach(k => srsAnswer(k, true));
+      return JSON.stringify({ waited: state.srs[w].b >= 5, sameDay: state.srs[s].b, hard: state.srs[h].b }); })()"""
     r = json.loads(ev(b, js))
-    assert r['b'] >= 5 and r['tier'] == 'q5', r
+    assert r == {'waited': True, 'sameDay': 4, 'hard': 4}, r
+
+# 1.0.21: the reviews' target recall is fixed at 90% (it followed the accuracy of the last 100 due reviews before), so
+# nothing records those reviews any more
+def test_retention_is_fixed_at_ninety(b):
+    js = "(() => { " + FRESH + REC + """ const iv = () => Math.round(fsrsInterval(10));
+      state.reviewRecent = Array(50).fill(0); const low = iv(); state.reviewRecent = Array(50).fill(1); const high = iv();
+      delete state.reviewRecent; const k = words[0].key; state.srs[k] = rec(2, { due: t, last: addDays(t, -6) }); srsAnswer(k, true);
+      return JSON.stringify({ low, high, written: 'reviewRecent' in state, gone: typeof autoRetention === 'undefined' }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'low': 10, 'high': 10, 'written': False, 'gone': True}, r
 
 def test_pre_items_leave_after_a_five_star_right_answer(b):
     js = "(() => { " + FRESH + REC + """ const a = 'a:あ', w = words[0].key, p = REG.vocab.find(v => v.builtin && v.lv === 'PRE_N5').key;
