@@ -3712,30 +3712,17 @@ function buildDailyQueue(size = state.settings.sessionSize) {
 }
 
 // what an extra session holds once the day's plan is done (shown on the Today page and at the start of practice)
-// 加練, once the day's work is done: reviews of three stars or below due tomorrow or the day after (not answered today;
-// four and five stars come from their queues, whatever date they carry), then new items beyond the quota (grammar and
-// words in halves, a track whose quota is 0 stays closed, at most half the session)
-function extraQueue(size = state.settings.sessionSize) {
-  const t = todayStr(); const until = addDays(t, 2);
-  const plan = dailyPlan(size);
-  const curIdx = unitOrder(state.currentUnit);
-  const pre = inPreStage();
-  const pool = REG.vocab.filter(x => (pre ? vocabEligibleMain : vocabEligibleForDaily)(x, plan.n4Open)).concat(REG.grammar.filter(x => grammarInReach(x, curIdx)), REG.kanji.filter(k => k.lv !== 'N4' || n5KanjiLeft() === 0), REG.kana);
-  const ahead = pool.filter(it => { const r = state.srs[it.key]; return r && tierOf(it.key) === 'srs' && r.due > t && r.due <= until && r.last !== t; }).sort(byDue).slice(0, size);
-  const used = new Set(ahead.map(x => x.key));
-  const cap = Math.min(size - ahead.length, Math.ceil(size / 2));
-  // 入門: extra new material is kana, then PRE_N5 words and 第 0 週 grammar once the gate is open
-  const gs = (pre ? (kanaGateOpen() ? unitNewOrder('m0') : []) : newGrammarCandidates()).filter(x => !used.has(x.key)).slice(0, Math.ceil(cap / 2));
-  const as = pre ? REG.kana.filter(x => !state.srs[x.key] && !used.has(x.key)).sort((a, b) => a.order - b.order).slice(0, Math.ceil(cap / 2)) : [];
-  const vs = !(pre && !kanaGateOpen()) ? newVocabCandidates(REG.vocab.filter(x => vocabEligibleForDaily(x, plan.n4Open)), plan.n4Open).filter(x => !used.has(x.key)).slice(0, cap - gs.length - as.length) : [];
-  const fresh = interleave(as.concat(vs), gs, 'mixed');
-  const items = shuffle(ahead).concat(fresh);
-  return { items, plan, aheadN: ahead.length, newN: fresh.length, newCount: fresh.length, reviewCount: ahead.length };
+// 加練: a round of new items only, as many as the day's new count (plan.n), shared between the banks like the day's own
+// (splitNew) but leaving out today's list and what was answered today. No reviews: those come on their own dates. The next
+// round is the next batch; the button goes when nothing new is left.
+function extraQueue() {
+  const p = dailyPlan();
+  const s = splitNew(p.n || NEW_DEFAULT, new Set(todayPlanKeys().concat(state.today.ans || [])));
+  const items = interleave(s.a.concat(s.v, s.k), s.g, 'mixed');
+  return { items, plan: p, aheadN: 0, newN: items.length, newCount: items.length, reviewCount: 0 };
 }
 function extraNote(q) {
-  if (!q || !(q.newN || q.aheadN)) return '';
-  const parts = []; if (q.aheadN) parts.push(`${q.aheadN} 題提前複習（明後天到期）`); if (q.newN) parts.push(`${q.newN} 題額外的新內容`);
-  return `今天的進度已完成，這組是 ${parts.join('與 ')}；今天答過的題目不再出現。`;
+  return q && q.newN ? `今天的進度已完成，這組是 ${q.newN} 題額外的新內容` : '';
 }
 // The Today page and 「開始練習」 share one built queue, so the button says exactly how many questions the session
 // holds (the plan numbers above it describe the whole day's workload, which can be more than one session).
@@ -3801,7 +3788,7 @@ function startSession(mode, opt = {}) {
   if (mode === 'daily') {
     const size = opt.size || state.settings.sessionSize;
     if (!opt.extra && dailyPlan(size).remaining === 0) opt = Object.assign({}, opt, { extra: true });   // the day is done (e.g. 再練一組 on the summary): offer the 加練 set
-    const r = opt.extra ? extraQueue(size) : dailyQueue(size);
+    const r = opt.extra ? extraQueue() : dailyQueue(size);
     entries = r.items.map(item => (item.kind === 'm' ? { mistake: item.mistake } : { item }));
     meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: opt.extra ? extraNote(r) : (r.plan.note || '') };
   } else if (mode === 'unit') {
@@ -4749,7 +4736,7 @@ function renderToday(view) {
 
   let heroBody; let scopeHtml = '';
   if (plan.remaining === 0) {
-    const xq = extraQueue(size); const xn = xq.items.length;
+    const xq = extraQueue(); const xn = xq.items.length;
     heroBody = `<p class="dim">今天做了 ${doneToday} 題。${xn ? '' : '明天再來，或到課程頁預習下一單元。'}</p>
       <div class="row-wrap">
         ${xn ? `<button type="button" class="btn btn-primary" data-act="start-extra">加練・${xn} 題</button>` : ''}

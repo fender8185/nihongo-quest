@@ -335,25 +335,32 @@ def test_done_state_and_extra_session(b):
     js = """(() => { const t = todayStr(); const keep = JSON.stringify({ srs: state.srs, today: state.today, settings: state.settings });
       Object.assign(state.settings, { listening: false, sessionSize: 20 }); Object.assign(state.today, { newV: 99, newG: 99, newK: 99, newL: 99, newC: 99, newR: 1 });   // every new-item quota used up
       Object.keys(state.srs).forEach(k => { if (state.srs[k].due <= t) state.srs[k].last = t; });   // nothing due left
-      const ahead = REG.vocab.filter(v => v.builtin && !state.srs[v.key]).slice(0, 3);
-      ahead.forEach(v => { state.srs[v.key] = { b: 3, due: addDays(t, 2), n: 3, ok: 3, ng: 0, s: 6, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
+      const soon = REG.vocab.filter(v => v.builtin && !state.srs[v.key]).slice(0, 3);   // reviews due in two days: 加練 gives new items only, so they stay out
+      const rec = () => ({ b: 3, due: addDays(t, 2), n: 3, ok: 3, ng: 0, s: 6, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} });
+      soon.forEach(v => { state.srs[v.key] = rec(); });
       delete state.today.plan; saveState(); DAILY_CACHE = null;
       location.hash = '#/today'; route(); const h2 = document.querySelector('.hero h2').textContent; const btn = document.querySelector('[data-act=start-extra]');
-      const q = extraQueue(20); const aheadIn = ahead.filter(v => q.items.some(x => x.key === v.key)).length;
-      const bad = q.items.filter(it => { const r = state.srs[it.key]; return r && (r.due <= t || r.last === t || r.due > addDays(t, 2)); }).length;
+      const n = dailyPlan().n; const q = extraQueue(); const round = q.items.map(x => x.key);
+      const soonIn = soon.filter(v => round.includes(v.key)).length; const seen = q.items.filter(x => state.srs[x.key]).length;
       startSession('daily', { extra: true }); const note = SESSION.meta.note; SESSION = null; document.body.classList.remove('practicing');
       const againOk = startSession('daily', {}); const againNote = againOk ? SESSION.meta.note : ''; SESSION = null; document.body.classList.remove('practicing');   // the summary's 再練一組 with the day done
-      // nothing to pull forward and no new quota: the button goes away
-      ahead.forEach(v => { state.srs[v.key].last = t; }); saveState(); DAILY_CACHE = null; location.hash = '#/today'; route();
-      const q2 = extraQueue(20); const gone = q2.aheadN === 0 && q2.newN > 0 && !!document.querySelector('[data-act=start-extra]'); const tomorrow = true;   // with nothing to pull forward the extra session is new material only
+      // that round answered: the button comes back with the next batch of new items
+      round.forEach(k => srsAnswer(k, true)); saveState(); DAILY_CACHE = null; location.hash = '#/today'; route();
+      const q2 = extraQueue(); const btn2 = document.querySelector('[data-act=start-extra]');
+      const next = { n: q2.items.length, repeats: q2.items.filter(x => round.includes(x.key)).length, btn: btn2 ? btn2.textContent : null };
+      // nothing new left in any bank: the button goes away
+      REG.vocab.concat(REG.grammar, REG.kanji, REG.kana).forEach(x => { if (!state.srs[x.key]) state.srs[x.key] = rec(); });
+      saveState(); DAILY_CACHE = null; location.hash = '#/today'; route();
+      const gone = extraQueue().items.length === 0 && !document.querySelector('[data-act=start-extra]');
       const k = JSON.parse(keep); state.srs = k.srs; state.today = k.today; state.settings = k.settings; saveState(); DAILY_CACHE = null;
-      return JSON.stringify({ h2, btn: btn ? btn.textContent : null, n: q.items.length, aheadIn, bad, newN: q.newN, aheadN: q.aheadN, note, againOk, againNote, gone, tomorrow }); })()"""
+      return JSON.stringify({ h2, btn: btn ? btn.textContent : null, n, len: q.items.length, soonIn, seen, newN: q.newN, aheadN: q.aheadN, reviewCount: q.reviewCount, note, againOk, againNote, next, gone }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
     r = json.loads(out[-1])
-    assert r['h2'] == '今天完成了' and r['btn'] and r['btn'].startswith('加練・') and r['n'] > 0, r
-    assert r['aheadIn'] == 3 and r['aheadN'] == 3 and r['bad'] == 0 and 0 < r['newN'] <= 10, r
-    assert '3 題提前複習' in r['note'] and '額外的新內容' in r['note'] and r['gone'] and r['tomorrow'], r
-    assert r['againOk'] and '提前複習' in r['againNote'], r
+    note = f"今天的進度已完成，這組是 {r['n']} 題額外的新內容"
+    assert r['h2'] == '今天完成了' and r['btn'] == f"加練・{r['n']} 題", r
+    assert r['len'] == r['n'] and r['newN'] == r['n'] and r['seen'] == 0 and r['soonIn'] == 0 and r['aheadN'] == 0 and r['reviewCount'] == 0, r   # new items only, as many as the day's new count
+    assert r['note'] == note and r['againOk'] and r['againNote'] == note, r   # 再練一組 with the day done offers the same set
+    assert r['next'] == {'n': r['n'], 'repeats': 0, 'btn': f"加練・{r['n']} 題"} and r['gone'], r
 
 def test_theme_lane_rotates_after_three_days_of_words(b):
     js = """(() => { const keep = JSON.stringify({ srs: state.srs, lane: state.themeLane, q: 0 }); state.themeLane = { order: [], count: {} };

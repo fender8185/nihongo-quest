@@ -197,15 +197,18 @@ def test_the_notebook_queue_skips_listening_and_reading(b):
     r = json.loads(ev(b, js))
     assert r == ['m:mk_t3'], r
 
-# I2: 加練's reviews ahead are three stars or below due in the next two days, not queue items by an old date
+# I2 (1.0.20: 加練 gives new items only, no reviews ahead): four and five stars, whatever date they carry, and a three-star-or-below
+# item due tomorrow all stay out of it; they come in their queues and on their dates
 def test_extra_practice_leaves_four_and_five_stars_to_their_queues(b):
     js = "(() => { " + FRESH + REC + """ const ws = words.slice(0, 41);
       ws.slice(0, 30).forEach(v => { state.srs[v.key] = rec(4, { due: addDays(t, 1) }); });
       ws.slice(30, 40).forEach(v => { state.srs[v.key] = rec(6, { due: addDays(t, 2) }); });
       state.srs[ws[40].key] = rec(2, { due: addDays(t, 1) });
-      const q = extraQueue(20); return JSON.stringify({ ahead: q.items.slice(0, q.aheadN).map(x => x.key), want: ws[40].key, newN: q.newN }); })()"""
+      const q = extraQueue(); const keys = q.items.map(x => x.key);
+      return JSON.stringify({ held: ws.map(v => v.key).filter(k => keys.includes(k)), seen: q.items.filter(x => state.srs[x.key]).length, newN: q.newN, n: dailyPlan().n, aheadN: q.aheadN, reviewCount: q.reviewCount }); })()"""
     r = json.loads(ev(b, js))
-    assert r['ahead'] == [r['want']] and r['newN'] > 0, r
+    assert r['held'] == [] and r['seen'] == 0 and r['aheadN'] == 0 and r['reviewCount'] == 0, r
+    assert r['newN'] == r['n'], r
 
 # I3: from the first day that has `fresh`, a later day without new items (idle, or reviews only) counts as 0
 def test_exam_pace_counts_days_without_new_items(b):
@@ -307,6 +310,30 @@ def test_a_fuzzy_flashcard_keeps_a_pre_item(b):
 def test_the_level_picker_does_not_mention_the_load_cap(b):
     r = ev(b, "levelPickerHtml()")
     assert '負荷上限' not in r and '我已有基礎' in r, r
+
+# ---- Task 5: 加練只給新題 ----
+# a round of 加練 is today's new-item count of items nobody has seen, none from today's list and no reviews; once a round is
+# answered the next one is a new batch of the same size
+def test_extra_round_is_new_items_only(b):
+    js = "(() => { " + FRESH + """ delete state.today.plan; DAILY_CACHE = null; const n = dailyPlan().n; const listed = todayPlanKeys();
+      const early = extraQueue().items.map(x => x.key);   // asked for before the list is done: the list's own new items are still left out
+      listed.forEach(k => srsAnswer(k, true));   // today's whole list answered
+      DAILY_CACHE = null; const left = dailyPlan().remaining;
+      const q = extraQueue(); const round = q.items.map(x => x.key);
+      const out = { n, listed: listed.length, left, early: early.length, earlyInList: early.filter(k => listed.includes(k)).length,
+        len: round.length, unseen: q.items.every(x => !state.srs[x.key]), inList: round.filter(k => listed.includes(k)).length,
+        kinds: [...new Set(q.items.map(x => x.kind))].sort(), counts: [q.newN, q.newCount, q.reviewCount, q.aheadN], note: extraNote(q) };
+      round.forEach(k => srsAnswer(k, true));   // that round answered
+      DAILY_CACHE = null; const next = extraQueue().items;
+      Object.assign(out, { len2: next.length, unseen2: next.every(x => !state.srs[x.key]), repeats: next.filter(x => round.includes(x.key) || listed.includes(x.key)).length });
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['early'] == r['n'] and r['earlyInList'] == 0, r
+    assert r['left'] == 0 and r['listed'] > 0, r
+    assert r['len'] == r['n'] and r['unseen'] and r['inList'] == 0, r
+    assert r['counts'] == [r['n'], r['n'], 0, 0] and r['note'] == f"今天的進度已完成，這組是 {r['n']} 題額外的新內容", r
+    assert len(r['kinds']) >= 2, r   # shared between the banks by what each has left, not one kind only
+    assert r['len2'] == r['n'] and r['unseen2'] and r['repeats'] == 0, r
 
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
