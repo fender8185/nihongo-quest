@@ -38,7 +38,7 @@ def test_answered_today_counts_each_item_once(b):
 def test_marks_are_not_answers(b):
     js = "(() => { " + FRESH + " startSession('daily', { size: 12 }); " + PLAY + """;
       const before = (state.today.ans || []).length;
-      state.stageTests = { p1: [{ date: todayStr(), correct: 36, total: 40, passed: true }] }; bulkMark('p1', 'learned');
+      markPassedStage('p1', new Set());
       return JSON.stringify({ before, after: (state.today.ans || []).length, items: state.dailyLogs[todayStr()].items }); })()"""
     r = json.loads(ev(b, js))
     assert r['before'] > 0 and r['after'] == r['before'] and r['items'] == r['before'], r
@@ -73,14 +73,15 @@ HIST = """const t = todayStr(); let i = 0; state.currentUnit = 'm3';
   REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 120).forEach(v => { state.srs[v.key] = { b: 3, s: 6, d: 5, due: addDays(t, (i++ % 6) - 1), n: 3, ok: 3, ng: 0, st: 3, last: addDays(t, -5), lapse: 0, intro: addDays(t, -20) }; });
   state.recent = Array(40).fill(1); saveState(); DAILY_CACHE = null;"""
 RING = "(() => { const p = dayProgress(); const pl = state.today.plan; return { done: p.done, total: p.total, listen: pl ? pl.lists.dueL.length + pl.lists.newL.length : -1, read: pl ? pl.lists.dueR.length + pl.lists.newR.length : -1 }; })()"
-# the 入門 test of an account past 入門 (1.0.17 marks it by score when it ends)
+# the 入門 test of an account past 入門, then its four questions answered with the suggestions (Enter)
 PRE_TEST = """(() => { startSession('stage', { stage: 'pre' }); const n = SESSION.entries.length;
-  for (let i = 0; i < n; i++) { const q = currentEntry().q; answerCurrent(i % 5 ? q.answer : (q.answer + 1) % q.options.length); if (i < n - 1) nextQuestion(); }
+  for (let i = 0; i < n; i++) { const q = currentEntry().q; answerCurrent(i % 5 ? q.answer : (q.answer + 1) % q.options.length); nextQuestion(); }
+  for (let i = 0; i < 4; i++) document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
   SESSION = null; document.body.classList.remove('practicing'); DAILY_CACHE = null; return n; })()"""
 
 def test_bulk_mark_leaves_the_plan_alone(b):
     js = "(() => { " + FRESH + " startSession('daily', { size: 12 }); " + PLAY + "; const r1 = " + RING + """;
-      state.stageTests = { p1: [{ date: todayStr(), correct: 36, total: 40, passed: true }] }; bulkMark('p1', 'learned'); DAILY_CACHE = null;
+      markPassedStage('p1', new Set()); DAILY_CACHE = null;
       return JSON.stringify({ r1, r2: """ + RING + " }); })()"
     r = json.loads(ev(b, js))
     assert r['r1']['listen'] >= 0 and r['r1'] == r['r2'], r
@@ -90,7 +91,7 @@ def test_old_account_pre_test_leaves_the_plan_alone(b):
     js = "(() => { " + FRESH + HIST + " startSession('daily', { size: 12 }); " + PLAY + "; const r1 = " + RING + "; const auto = needsPreTest(); " + PRE_TEST + """;
       return JSON.stringify({ auto, marked: Object.keys(state.srs).filter(k => k.startsWith('a:')).length, r1, r2: """ + RING + " }); })()"
     r = json.loads(ev(b, js))
-    assert r['auto'] is True and r['marked'] > 100, r   # the 1.0.17 auto marks did happen
+    assert r['auto'] is True and r['marked'] > 100, r   # the four questions' marks did happen
     assert r['r1']['listen'] >= 0 and r['r1'] == r['r2'], r
 
 def test_total_stays_the_same_all_day(b):

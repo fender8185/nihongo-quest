@@ -119,7 +119,7 @@ def test_pre_choice_raises_every_item_below_the_chosen_level_including_ones_with
     js = """(() => { const ws = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').slice(0, 6); const t = todayStr();
       const mk = (bb, s, extra) => Object.assign({ b: bb, due: addDays(t, 2), n: 3, ok: 3, ng: 0, s, d: 5, last: addDays(t, -3), f: {} }, extra || {});
       state.srs[ws[0].key] = mk(1, 2); state.srs[ws[1].key] = mk(SRS_LEARNED, 12); state.srs[ws[2].key] = mk(SRS_MASTERED, 40); state.srs[ws[3].key] = mk(0, 0.5, { lapse: 2 });
-      preMarkApply({ hira: 'none', kata: 'none', v: 'known' });
+      preMarkApply({ v: '5' });
       return JSON.stringify(ws.map(w => srsLevelLabel(state.srs[w.key], w.key))); })()"""
     assert json.loads(ev(b, js, [("eval", FRESH)])) == ['已熟練'] * 6
 

@@ -52,7 +52,7 @@ def test_only_srs_tier_items_are_due(b):
 def test_first_answers_are_tallied_as_fresh(b):
     js = "(() => { " + FRESH + REC + """ delete state.dailyLogs[t]; const [x, y] = words.slice(0, 2).map(v => v.key); delete state.srs[x]; delete state.srs[y];
       srsAnswer(x, true); srsAnswer(y, false); srsAnswer(x, true); const fresh = state.dailyLogs[t].fresh;
-      state.stageTests = { p1: [{ date: t, correct: 33, total: 40, passed: true }] }; bulkMark('p1', 'learned');
+      markPassedStage('p1', new Set());
       return JSON.stringify({ fresh, after: state.dailyLogs[t].fresh }); })()"""
     r = json.loads(ev(b, js))
     assert r == {'fresh': 2, 'after': 2}, r
@@ -249,27 +249,6 @@ def test_queue_items_are_labelled_as_queued(b):
     assert '四顆・排隊中' in r['list'] and '五顆・排隊中' in r['list'] and '不再出現' in r['list'] and r['list'].count('3 天後') == 1, r['list']
     assert r['i'] >= 0 and '五顆・排隊中' in r['fb'] and '天後複習' not in r['fb'], r
 
-# I5 (the user's call, 2026-10-30): 標記到這裡為止's 熟悉 writes four stars, so the marked items wait in the four-star queue
-# instead of taking the 50 daily reviews for weeks; items in the notebook are left alone (as the 1.0.20 stage pass will).
-# The 入門 picker's 熟練 still writes three stars.
-def test_marking_familiar_sets_four_stars(b):
-    js = "(() => { " + FRESH + REC + """ state.srs = {}; state.mistakes = []; state.stageTests = { p1: [{ date: t, correct: 33, total: 40, passed: true }] };
-      const items = stagesUpTo('p1').flatMap(s => stageItems(s.id)); const core = items.filter(x => x.kind !== 'l' && x.kind !== 'r');
-      const [three, missed] = core; state.srs[three.key] = rec(3); state.srs[missed.key] = rec(1, { rl: 0, due: addDays(t, 1) });
-      state.mistakes = [{ id: 'mk_x', key: missed.key, cat: '單字', prompt: 'p', answer: 'a', wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: t }];
-      bulkMarkDialog('p1'); const dlg = document.getElementById('modalBody').textContent;
-      const label = document.querySelector('input[name="bulkLevel"]:checked').closest('label').textContent;
-      ACTIONS['bulk-mark-go'](document.querySelector('[data-act="bulk-mark-go"]'));
-      const tiers = {}; core.forEach(x => { const k = tierOf(x.key); tiers[k] = (tiers[k] || 0) + 1; });
-      const q4 = computeDailyPlan().q4.length;
-      const kana = REG.kana.find(k => k.script === 'hira'); delete state.srs[kana.key]; preMarkApply({ hira: 'learned', kata: 'none', v: 'none', g: 'none' });
-      return JSON.stringify({ label, cap: dlg.includes('負荷上限'), three: state.srs[three.key].b, missed: state.srs[missed.key].b, rl: state.srs[missed.key].rl, tiers, n: core.length, q4, kana: state.srs[kana.key].b }); })()"""
-    r = json.loads(ev(b, js))
-    assert '熟悉' in r['label'] and '四顆' in r['label'] and not r['cap'], r
-    assert r['three'] == 4 and r['missed'] == 1 and r['rl'] == 0, r
-    assert r['tiers'] == {'q4': r['n'] - 1, 'srs': 1} and r['q4'] == 30, r
-    assert r['kana'] == 3, r
-
 # I6 (the user's call, 2026-10-30): a ladder item answered right before its day — drawn by the notebook queue, a flashcard,
 # unit practice — is extra practice: the 1/3/7 days and the notebook entry stay; on its day it moves up as before
 def test_an_early_right_answer_leaves_the_relearn_ladder_alone(b):
@@ -334,6 +313,77 @@ def test_extra_round_is_new_items_only(b):
     assert r['counts'] == [r['n'], r['n'], 0, 0] and r['note'] == f"今天的進度已完成，這組是 {r['n']} 題額外的新內容", r
     assert len(r['kinds']) >= 2, r   # shared between the banks by what each has left, not one kind only
     assert r['len2'] == r['n'] and r['unseen2'] and r['repeats'] == 0, r
+
+# ---- Task 6: 通過測驗自動設四顆、入門三到五顆 ----
+SNAP = "JSON.stringify([state.srs, state.mistakes, state.completedUnits, state.lessonSeen, state.currentUnit, state.stage, state.introSeen, state.kanaKnown])"
+# playTest(miss): answers the open stage test to its end, wrong where miss(item) says so; returns the keys answered wrong
+PLAY_TEST = """const playTest = (miss) => { const wrong = []; const n = SESSION.entries.length;
+    for (let i = 0; i < n; i++) { const e = currentEntry(); const bad = miss(e.item); if (bad) wrong.push(e.item.key);
+      answerCurrent(bad ? (e.q.answer + 1) % e.q.options.length : e.q.answer); nextQuestion(); }
+    return wrong; };"""
+
+# a p1 pass marks 入門 and 第一階段 at once: items below four stars get four, listening and reading three (back in 90–270
+# days); the test's misses and the notebook are left as they were; today's list stays as it was and the four-star queue
+# draws them from the next day; 復原 on the result page puts everything back
+def test_passing_a_stage_marks_four_stars_and_leaves_today_alone(b):
+    js = "(() => { " + FRESH + REC + PLAY_TEST + """ state.srs = {}; state.mistakes = []; state.stageTests = {}; LAST_BULK_MARK = null;
+      const isLR = (x) => x.kind === 'l' || x.kind === 'r'; const items = stagesUpTo('p1').flatMap(s => stageItems(s.id));
+      const [three, noted] = words; state.srs[three.key] = rec(3); state.srs[noted.key] = rec(1, { rl: 0, due: addDays(t, 1) });
+      state.mistakes = [{ id: 'mk_x', key: noted.key, cat: '單字', prompt: 'p', answer: 'a', wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: t }];
+      saveState(); delete state.today.plan; DAILY_CACHE = null; dailyPlan(); const before = JSON.stringify(dayProgress()); const snap0 = """ + SNAP + """;
+      const notedRec = JSON.stringify(state.srs[noted.key]);
+      startSession('stage', { stage: 'p1' });
+      const want = { lr: 1, core: 2 };   // three wrong: a listening or reading question and two others, none with a record
+      const wrong = playTest(x => { const k = isLR(x) ? 'lr' : 'core'; if (state.srs[x.key] || !want[k]) return false; want[k]--; return true; });
+      const view = document.getElementById('view'); const txt = view.textContent; const skip = new Set(wrong.concat(noted.key));
+      const core = items.filter(x => !isLR(x) && !skip.has(x.key)), lr = items.filter(x => isLR(x) && !skip.has(x.key)); const lrDays = lr.map(x => daysBetween(t, state.srs[x.key] ? state.srs[x.key].due : t));
+      const out = { passed: state.stageTests.p1[0].passed, wrong: wrong.length, four: core.every(x => state.srs[x.key] && state.srs[x.key].b === 4), three: state.srs[three.key].b,
+        lrB: [...new Set(lr.map(x => state.srs[x.key] ? state.srs[x.key].b : 0))], lrMin: Math.min(...lrDays), lrMax: Math.max(...lrDays),
+        missedLeft: wrong.every(k => !state.srs[k]), noted: JSON.stringify(state.srs[noted.key]) === notedRec, notebook: state.mistakes.length === 1 && !state.mistakes[0].mastered,
+        today: JSON.stringify(dayProgress()) === before, says: txt.includes(`已把第一階段以前、還不到四顆的 ${core.length} 題設成四顆。`),   // listening and reading are not counted: three stars
+        undo: Boolean(view.querySelector('[data-act="bulk-mark-undo"]')), old: txt.includes('標記到這裡為止') || Boolean(view.querySelector('[data-act="stage-mark"]')) };
+      delete state.today.plan; state.today.date = addDays(t, -1); checkDayRollover(); DAILY_CACHE = null; out.q4 = dailyPlan().q4.length;   // the next day
+      const ub = view.querySelector('[data-act="bulk-mark-undo"]'); if (ub) ub.click();
+      out.restored = """ + SNAP + """ === snap0; out.undone = document.getElementById('view').textContent.includes('已復原');
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['passed'] and r['wrong'] == 3, r
+    assert r['four'] and r['three'] == 4 and r['lrB'] == [3] and r['lrMin'] >= 90 and r['lrMax'] <= 270, r
+    assert r['missedLeft'] and r['noted'] and r['notebook'], r
+    assert r['today'] and r['says'] and r['undo'] and not r['old'], r
+    assert r['q4'] == 30, r
+    assert r['restored'] and r['undone'], r
+
+# the 入門 test: a pass (and any result of an account past 入門, 1.0.17's case) leads to four questions of 三顆／四顆／五顆,
+# each pre-selected (建議) by its group's score; nothing is marked before they are answered; Enter takes the suggestion
+def test_pre_test_asks_three_to_five_stars_with_a_suggestion(b):
+    js = "(() => { " + PLAY_TEST + """ const groups = { hira: REG.kana.filter(k => k.script === 'hira'), kata: REG.kana.filter(k => k.script === 'kata'), v: REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5'), g: unitItems('m0') };
+      const stars = () => Object.fromEntries(Object.entries(groups).map(([g, l]) => [g, [...new Set(l.map(x => (state.srs[x.key] ? state.srs[x.key].b : 0)))]]));
+      const step = () => { const v = document.getElementById('view'); const os = [...v.querySelectorAll('[data-act="pre-mark-pick"]')];
+        return { q: (v.textContent.match(/第 (\\d)／4 題/) || [])[1] || null, opts: os.map(o => (o.querySelector('b') || {}).textContent), tip: os.filter(o => o.textContent.includes('建議')).map(o => o.dataset.level) }; };
+      const run = (old, pick) => {
+        state.srs = {}; state.mistakes = []; state.stageTests = {}; state.completedUnits = []; state.lessonSeen = []; state.introPending = false; state.startChosen = true; LAST_BULK_MARK = null;
+        if (old) { state.stage = 'main'; state.currentUnit = 'm3'; state.kanaKnown = true; state.introSeen = true; const g3 = REG.grammar.find(x => x.u === 'm3'); state.srs[g3.key] = { b: 2, due: addDays(todayStr(), 3), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: todayStr() }; }   // 1.0.17: past 入門, never took its test
+        else { state.stage = 'pre'; state.currentUnit = 'm1'; state.kanaKnown = false; state.introSeen = false; }
+        saveState(); DAILY_CACHE = null; const auto = needsPreTest(); const n0 = Object.keys(state.srs).length;
+        startSession('stage', { stage: 'pre' }); playTest(() => false);
+        const out = { auto, passed: state.stageTests.pre[0].passed, marked: Object.keys(state.srs).length - n0, s1: step() };
+        pick();
+        return Object.assign(out, { stars: stars(), stage: state.stage, unit: state.currentUnit, session: SESSION === null }); };
+      const click = (lv) => { const el = document.querySelector(`[data-act="pre-mark-pick"][data-level="${lv}"]`); if (el) el.click(); };
+      const enter = () => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      const fresh = run(false, () => ['5', '4', '3', '4'].forEach(click));
+      const old = run(true, () => { for (let i = 0; i < 4; i++) enter(); });
+      return JSON.stringify({ fresh, old }); })()"""
+    r = json.loads(ev(b, js))
+    for k in ('fresh', 'old'):
+        x = r[k]
+        assert x['passed'] and x['marked'] == 0 and x['s1'] == {'q': '1', 'opts': ['三顆', '四顆', '五顆'], 'tip': ['5']}, (k, x)
+    assert r['fresh']['auto'] is False and r['old']['auto'] is True, r
+    assert r['fresh']['stars'] == {'hira': [6], 'kata': [4], 'v': [3], 'g': [4]}, r['fresh']   # 五顆 = 我會了 (b 6), 四顆, 三顆
+    assert r['fresh']['stage'] == 'main' and r['fresh']['unit'] == 'm1' and r['fresh']['session'], r['fresh']
+    assert r['old']['stars'] == {'hira': [6], 'kata': [6], 'v': [6], 'g': [6]}, r['old']   # all right: every suggestion is 五顆
+    assert r['old']['stage'] == 'main' and r['old']['unit'] == 'm3' and r['old']['session'], r['old']   # an account past 入門 keeps its week
 
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
