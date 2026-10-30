@@ -1,8 +1,12 @@
 #!/usr/bin/env node
-/* Scheduling simulator for the 1.0.20 queues (spec §10). Usage: node scripts/sim-schedule.js [index.html]
-   Three learners (strong, middling, weak) study the whole course for 300 days and do everything each day's list holds.
-   One line each: new items a day, the day everything had been met, questions a day, the notebook, and how much they would
-   remember on the exam morning. Rerun it after changing the 5% / 3% / 10% / 50 / new-count numbers. Not part of test.sh.
+/* Scheduling simulator for the tiers (1.0.20 spec §10; the 1.0.21 rules, rule-cuts spec §11).
+   Usage: node scripts/sim-schedule.js [index.html] [--bulk N]
+   Three learners (strong, middling, weak) study the whole course for 300 days and do everything each day's list holds:
+   three stars and under by FSRS (at most SRS_DAILY_CAP a day) with the missed items on the 1/3/7 ladder on top, four and
+   five stars as queues. --bulk N marks N items four stars on day 0 first, as a passed stage test does.
+   One line each: new items a day, the day everything had been met, questions a day (overall, and for days 1–30, 31–100,
+   101–200, 201–300), the notebook, and how much they would remember on the exam morning. Rerun it, with and without
+   --bulk 2000, after changing the 5% / 3% / 50 / new-count numbers. Not part of test.sh.
    The FSRS functions and the constants are lifted out of index.html by name, not copied, so they follow the app. The rest
    mirrors the app by hand: srsAnswer, tierOf, computeDailyPlan, newCountToday and splitNew. Not modelled: listening and
    reading (outside the queues), hand-made notebook entries, the 再練一次 and encore repeats, 入門 (kana, PRE_N5 words and
@@ -57,7 +61,7 @@ function mulberry32(a) {
   return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 }
 
-function simulate(bind, L) {
+function simulate(bind, L, bulk) {
   const { clamp, levelFromS, fsrsR, fsrsNext, fsrsDays, LEVEL_FROM_S, RELEARN_GAPS, SRS_DAILY_CAP, QUEUE_RATE, QUEUE_MIN, QUEUE_MAX,
     NEW_STEPS, NEW_DEFAULT, NEW_MIN, NEW_MAX, RECENT_MAX } = bind();
   const rnd = mulberry32(SEED);
@@ -69,6 +73,16 @@ function simulate(bind, L) {
   }
   const items = [].concat(...Object.values(bank).map(b => b.list));
   const left = (kind) => bank[kind].list.length - bank[kind].met;
+  // --bulk: day 0's stage pass sets the first items of each bank (shared by bank size) to four stars, as bulkApply writes a
+  // new record (difficulty 4); the four-star queue does not read the date
+  if (bulk) {
+    const total = Object.values(BANKS).reduce((a, b) => a + b, 0);
+    for (const kind of Object.keys(BANKS)) {
+      const n = Math.min(BANKS[kind], Math.round(bulk * BANKS[kind] / total));
+      bank[kind].list.slice(0, n).forEach(it => { it.r = { s: LEVEL_FROM_S[3], d: 4, b: levelFromS(LEVEL_FROM_S[3]), last: 0, due: fsrsDays(LEVEL_FROM_S[3], it.key) }; });
+      bank[kind].met = n;
+    }
+  }
   const recent = [];   // state.recent: the last RECENT_MAX answers, 1 = right
 
   // tierOf: three stars and under, or on the 1/3/7 ladder, follow FSRS dates; four and five stars are queues
@@ -102,14 +116,13 @@ function simulate(bind, L) {
   function srsAnswer(it, correct, t) {
     const isNew = !it.r;
     const r = it.r || (it.r = { b: 0, due: t, last: null });
-    const before = r.b; const dueBefore = r.due;
+    const dueBefore = r.due;
     const g = correct ? 3 : 1;
     const elapsed = r.last === null ? 0 : t - r.last;
     const reviewed = !isNew && r.due <= t;   // a due review (not a first look, not early practice): only these move the ladder on
     fsrsNext(r, g, elapsed);
     if (isNew && g === 3 && it.kind === 'v') r.s = Math.min(r.s, 1);   // a new word's first check is tomorrow
     r.b = g === 1 ? Math.min(levelFromS(r.s), 1) : levelFromS(r.s);
-    if (g > 1 && before === 4) { r.s = Math.max(r.s, LEVEL_FROM_S[4]); r.b = levelFromS(r.s); }   // four stars right: five
     r.due = t + (g === 1 ? 1 : fsrsDays(r.s, it.key));
     // the 1/3/7 ladder: a miss starts it over; a right answer on or after its day moves it on, an earlier one is extra practice
     if (g === 1) r.rl = 0;
@@ -120,20 +133,20 @@ function simulate(bind, L) {
 
   const stat = { questions: [], fresh: [], book: [], finished: 0 };
   for (let t = 1; t <= DAYS; t++) {
-    // computeDailyPlan: three stars and under that are due (at most SRS_DAILY_CAP, the most overdue first); four stars, five
-    // stars and the notebook give a share each, the longest-waiting first, the notebook leaving out what is already listed
+    // computeDailyPlan: three stars and under that are due — the missed items on the 1/3/7 ladder all, the others at most
+    // SRS_DAILY_CAP, the most overdue first; four and five stars give a share each, the longest-waiting first
     const met = items.filter(it => it.r);
-    const due = met.filter(it => tierOf(it.r) === 'srs' && it.r.due <= t && it.r.last !== t).sort(byDue).slice(0, SRS_DAILY_CAP);
+    const onLadder = (it) => typeof it.r.rl === 'number';   // the notebook holds exactly the items on the ladder
+    const dueAll = met.filter(it => tierOf(it.r) === 'srs' && it.r.due <= t && it.r.last !== t).sort(byDue);
+    const due = dueAll.filter(onLadder).concat(dueAll.filter(it => !onLadder(it)).slice(0, SRS_DAILY_CAP));
     const queue = (tier) => { const q = met.filter(it => tierOf(it.r) === tier && it.r.last !== t).sort(byLast); return q.slice(0, share(q.length, QUEUE_RATE[tier])); };
     const q4 = queue('q4'); const q5 = queue('q5');
-    const book = met.filter(it => typeof it.r.rl === 'number');   // the notebook holds exactly the items on the ladder
-    const taken = new Set(due.concat(q4, q5));
-    const mk = book.sort(byLast).filter(it => !taken.has(it)).slice(0, share(book.length, QUEUE_RATE.mk));
+    const book = met.filter(onLadder);
     const fresh = splitNew(newCountToday(book.length));
     const drill = bank.c.list.slice(bank.c.met, bank.c.met + 1);
 
     // the day's work: the reviews, then the new items
-    const today = due.concat(q4, q5, mk, fresh, drill);
+    const today = due.concat(q4, q5, fresh, drill);
     for (const it of today) {
       const right = rnd() < (it.r ? Math.pow(fsrsR(t - it.r.last, it.r.s), L.exp) : L.first);
       srsAnswer(it, right, t);
@@ -147,15 +160,21 @@ function simulate(bind, L) {
   const known = items.filter(it => it.r);
   const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
   const recall = mean(known.map(it => Math.pow(fsrsR(DAYS + 1 - it.r.last, it.r.s), L.exp)));
+  const windows = [[1, 30], [31, 100], [101, 200], [201, 300]].map(([a, b]) => Math.round(mean(stat.questions.slice(a - 1, b))));
   return { newPerDay: mean(stat.fresh.slice(0, stat.finished || DAYS)), finished: stat.finished, known: known.length,
-    questions: mean(stat.questions), mostQuestions: Math.max(...stat.questions), book: mean(stat.book), recall };
+    questions: mean(stat.questions), mostQuestions: Math.max(...stat.questions), windows, book: mean(stat.book), recall };
 }
 
-const file = path.resolve(process.argv[2] || path.join(__dirname, '..', 'index.html'));
+const args = process.argv.slice(2);
+const at = args.indexOf('--bulk');
+const bulk = at < 0 ? 0 : Number(args[at + 1]);
+if (at >= 0 && !(Number.isInteger(bulk) && bulk > 0)) { console.error('sim-schedule: --bulk 後面要接正整數，例如 --bulk 2000'); process.exit(1); }
+const file = path.resolve(args.filter((x, i) => at < 0 || (i !== at && i !== at + 1))[0] || path.join(__dirname, '..', 'index.html'));
 if (!fs.existsSync(file)) { console.error(`sim-schedule: 找不到 ${file}`); process.exit(1); }
 const bind = lift(file);
+if (bulk) console.log(`第 0 天先把 ${bulk} 題標成四顆（像通過階段測驗），之後照常學：`);
 for (const L of LEARNERS) {
-  const s = simulate(bind, L);
+  const s = simulate(bind, L, bulk);
   const done = s.finished ? `第 ${s.finished} 天學完` : `${DAYS} 天內沒學完（學了 ${s.known} 題）`;
-  console.log(`${L.name}（記得 R^${L.exp}・首答 ${Math.round(L.first * 100)}%）：新題每天 ${s.newPerDay.toFixed(1)} 題・${done}・每天平均 ${Math.round(s.questions)} 題、最多 ${s.mostQuestions} 題・錯題本平均 ${Math.round(s.book)} 條・考試日平均記得 ${(s.recall * 100).toFixed(1)}%`);
+  console.log(`${L.name}（記得 R^${L.exp}・首答 ${Math.round(L.first * 100)}%）：新題每天 ${s.newPerDay.toFixed(1)} 題・${done}・每天平均 ${Math.round(s.questions)} 題（第 1–30／31–100／101–200／201–300 天 ${s.windows.join('／')}）、最多 ${s.mostQuestions} 題・錯題本平均 ${Math.round(s.book)} 條・考試日平均記得 ${(s.recall * 100).toFixed(1)}%`);
 }
