@@ -327,14 +327,14 @@ PLAY_TEST = """const playTest = (miss) => { const wrong = []; const n = SESSION.
 MET = """const met = (k) => { const r = state.srs[k]; if (!r) return null; const t = todayStr();
     return { b: r.b, n: r.n, ok: r.ok, ng: r.ng, st: r.st, lapse: r.lapse, fsrs: r.s === FSRS_W[0] && r.d === fsrsD0(1), due: daysBetween(t, r.due),
       today: r.last === t && r.intro === t, rl: 'rl' in r, noted: state.mistakes.some(m => m.key === k && !m.mastered) }; };"""
-# a miss never met before is met once and missed, as srsAnswer leaves a first wrong answer: back tomorrow (listening and
-# reading in a week), not on the relearning ladder and not in the notebook
+# a grammar or kana miss never met before is met once and missed, as srsAnswer leaves a first wrong answer: back
+# tomorrow, not on the relearning ladder and not in the notebook
 MET_ONCE = {'b': 0, 'n': 1, 'ok': 0, 'ng': 1, 'st': 0, 'lapse': 0, 'fsrs': True, 'due': 1, 'today': True, 'rl': False, 'noted': False}
 
 # a p1 pass marks 入門 and 第一階段 at once: items below four stars get four, listening and reading three (back in 90–270
-# days); the test's misses never met before are met once and missed, and the notebook is left as it was; today's list
-# stays as it was and the four-star queue draws them from the next day; the result page says where the course is now,
-# and 復原 there puts everything back
+# days); of the test's misses never met before, grammar is met once and missed while a word, a kanji, listening and
+# reading stay new; the notebook is left as it was; today's list stays as it was and the four-star queue draws them from
+# the next day; the result page says where the course is now, and 復原 there puts everything back
 def test_passing_a_stage_marks_four_stars_and_leaves_today_alone(b):
     js = "(() => { " + FRESH + REC + PLAY_TEST + MET + """ state.srs = {}; state.mistakes = []; state.stageTests = {}; LAST_BULK_MARK = null;
       const isLR = (x) => x.kind === 'l' || x.kind === 'r'; const items = stagesUpTo('p1').flatMap(s => stageItems(s.id));
@@ -343,13 +343,13 @@ def test_passing_a_stage_marks_four_stars_and_leaves_today_alone(b):
       saveState(); delete state.today.plan; DAILY_CACHE = null; dailyPlan(); const before = JSON.stringify(dayProgress()); const snap0 = """ + SNAP + """;
       const notedRec = JSON.stringify(state.srs[noted.key]);
       startSession('stage', { stage: 'p1' });
-      const want = { lr: 1, core: 2 };   // three wrong: a listening or reading question and two others, none with a record
-      const wrong = playTest(x => { const k = isLR(x) ? 'lr' : 'core'; if (state.srs[x.key] || !want[k]) return false; want[k]--; return true; });
+      const want = { g: 1, v: 1, k: 1, lr: 1 };   // four wrong, none with a record: a grammar item, a word, a kanji, a listening or reading question
+      const wrong = playTest(x => { const k = isLR(x) ? 'lr' : x.kind; if (state.srs[x.key] || !want[k]) return false; want[k]--; return true; });
       const view = document.getElementById('view'); const txt = view.textContent; const skip = new Set(wrong.concat(noted.key));
       const core = items.filter(x => !isLR(x) && !skip.has(x.key)), lr = items.filter(x => isLR(x) && !skip.has(x.key)); const lrDays = lr.map(x => daysBetween(t, state.srs[x.key] ? state.srs[x.key].due : t));
       const out = { passed: state.stageTests.p1[0].passed, wrong: wrong.length, four: core.every(x => state.srs[x.key] && state.srs[x.key].b === 4), three: state.srs[three.key].b,
         lrB: [...new Set(lr.map(x => state.srs[x.key] ? state.srs[x.key].b : 0))], lrMin: Math.min(...lrDays), lrMax: Math.max(...lrDays),
-        missed: wrong.map(k => [isLR(REG.byKey.get(k)) ? 'lr' : 'core', met(k)]), noted: JSON.stringify(state.srs[noted.key]) === notedRec, notebook: state.mistakes.length === 1 && !state.mistakes[0].mastered,
+        missed: wrong.map(k => [isLR(REG.byKey.get(k)) ? 'lr' : REG.byKey.get(k).kind, met(k)]), noted: JSON.stringify(state.srs[noted.key]) === notedRec, notebook: state.mistakes.length === 1 && !state.mistakes[0].mastered,
         today: JSON.stringify(dayProgress()) === before, says: txt.includes(`已把第一階段以前、還不到四顆的 ${core.length} 題設成四顆。`),   // listening and reading are not counted: three stars
         undo: Boolean(view.querySelector('[data-act="bulk-mark-undo"]')), old: txt.includes('標記到這裡為止') || Boolean(view.querySelector('[data-act="stage-mark"]')),
         unit: state.currentUnit, banner: (view.querySelector('.banner') || {}).textContent || '' };
@@ -359,10 +359,9 @@ def test_passing_a_stage_marks_four_stars_and_leaves_today_alone(b):
       out.restored = """ + SNAP + """ === snap0; out.undone = document.getElementById('view').textContent.includes('已復原'); out.missedGone = wrong.every(k => !state.srs[k]);
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['passed'] and r['wrong'] == 3, r
+    assert r['passed'] and r['wrong'] == 4, r
     assert r['four'] and r['three'] == 4 and r['lrB'] == [3] and r['lrMin'] >= 90 and r['lrMax'] <= 270, r
-    assert sorted(kind for kind, _ in r['missed']) == ['core', 'core', 'lr'], r
-    assert all(rec == dict(MET_ONCE, due=7 if kind == 'lr' else 1) for kind, rec in r['missed']), r   # met once and missed: back tomorrow, listening or reading in a week
+    assert dict(r['missed']) == {'g': MET_ONCE, 'v': None, 'k': None, 'lr': None}, r   # grammar met once and missed (back tomorrow); the others stay new
     assert r['noted'] and r['notebook'], r
     assert r['today'] and r['says'] and r['undo'] and not r['old'], r
     assert r['unit'] == 'm7' and '設成四顆。目前單元：第 13–14 週・可能形' in r['banner'], r   # the pass moved the course on: the page says where to
@@ -465,10 +464,11 @@ def test_pre_four_stars_meet_the_tests_misses_once_and_leave_the_notebook_alone(
     assert r['rest'] == [4] and r['n'] == 68, r
 
 # ---- 1.0.20 最終審查修正 ----
-# an item a test missed that was never met is met once and missed, so the next day's reviews bring it (today's list does
-# not). Nothing else would: after a p1 pass its units count as done, so no new-item list takes their grammar; after 四顆
-# in the 入門 four questions the main course brings no new kana, nor week-0 items once 第 0 週 is done
-def test_a_tests_unseen_misses_come_back_the_next_day(b):
+# grammar or kana a test missed that was never met is met once and missed, so the next day's reviews bring it (today's
+# list does not). No new-item list would: after a p1 pass its units count as done, and after 四顆 in the 入門 four
+# questions the main course has no kana bank and 第 0 週 is done. A missed word never met stays new: it is still a
+# new-word candidate, taught later with its preview card
+def test_a_tests_unseen_grammar_and_kana_misses_come_back_the_next_day(b):
     js = "(() => { " + PLAY_TEST + """ const t = todayStr();
       const start = (stage) => { state.srs = {}; state.mistakes = []; state.stageTests = {}; state.completedUnits = []; state.lessonSeen = []; state.introPending = false; state.startChosen = true;
         state.stage = stage; state.kanaKnown = stage !== 'pre'; state.introSeen = stage !== 'pre'; state.currentUnit = 'm1'; LAST_BULK_MARK = null; saveState(); delete state.today.plan; DAILY_CACHE = null; };
@@ -477,9 +477,13 @@ def test_a_tests_unseen_misses_come_back_the_next_day(b):
         Object.values(state.srs).forEach(r => { if (r.last === t) { r.last = addDays(t, -1); r.due = addDays(r.due, -1); } });   // the next day: today's marks were made yesterday
         delete state.today.plan; state.today.date = addDays(t, -1); checkDayRollover(); DAILY_CACHE = null; const next = listed();
         return { n: keys.length, recs: keys.filter(k => state.srs[k]).length, today: keys.filter(k => today.has(k)), next: keys.filter(k => next.has(k)).length }; };
-      // a main-course account at week 1 passes p1, missing three grammar items it never met
-      start('main'); startSession('stage', { stage: 'p1' }); let g = 3;
-      const p1 = playTest(x => x.kind === 'g' && g-- > 0); const out = { p1: Object.assign({ passed: state.stageTests.p1[0].passed, unit: state.currentUnit }, look(p1)) };
+      // a main-course account at week 1 passes p1, missing three grammar items and a word it never met
+      start('main'); startSession('stage', { stage: 'p1' }); let g = 3, v = 1;
+      const missed = playTest(x => (x.kind === 'g' && g-- > 0) || (x.kind === 'v' && v-- > 0));
+      const p1 = missed.filter(k => k.startsWith('g:')), word = missed.find(k => k.startsWith('v:'));
+      const fresh = newVocabCandidates(REG.vocab.filter(x => vocabEligibleForDaily(x, n4WordsOpen())), n4WordsOpen());
+      const out = { word: [Boolean(word), Boolean(state.srs[word]), fresh.some(x => x.key === word)] };
+      out.p1 = Object.assign({ passed: state.stageTests.p1[0].passed, unit: state.currentUnit }, look(p1));
       SESSION = null; document.body.classList.remove('practicing');
       // a learner in 入門 passes its test missing a hiragana and a week-0 item, and answers 四顆 for 平假名 and 第 0 週句型
       start('pre'); startSession('stage', { stage: 'pre' }); let a = 1, w = 1;
@@ -488,6 +492,7 @@ def test_a_tests_unseen_misses_come_back_the_next_day(b):
       out.pre = Object.assign({ stage: state.stage, kinds: pre.map(k => k.split(':')[0]).sort() }, look(pre));
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
+    assert r['word'] == [True, False, True], r   # the missed word stays new: no record, still a new-word candidate
     assert r['p1']['passed'] and r['p1']['unit'] == 'm7' and r['p1']['n'] == 3, r
     assert r['p1']['recs'] == 3 and r['p1']['today'] == [] and r['p1']['next'] == 3, r
     assert r['pre']['stage'] == 'main' and r['pre']['kinds'] == ['a', 'g'] and r['pre']['n'] == 2, r
