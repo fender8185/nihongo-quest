@@ -1853,6 +1853,7 @@ function onCorrectForMistake(q) {
   return m;
 }
 function activeMistakes() { return state.mistakes.filter(m => !m.mastered); }
+function notebookKeys() { return activeMistakes().map(m => m.key).filter(Boolean); }   // the course items in the notebook (a hand-made card has no key)
 function mistakeLast(m) { return m.last || m.date || ''; }
 // most-missed first, then the ones not practised for longest
 function mistakePriority(a, b) { return (b.count || 1) - (a.count || 1) || mistakeLast(a).localeCompare(mistakeLast(b)); }
@@ -4999,8 +5000,8 @@ function finishStageTest() {
   saveState();
 }
 // what four stars from a test leave alone: the items it missed and the ones in the notebook, so their relearning goes on
-// (a p1–p3 pass, and 四顆 in the 入門 four questions)
-function passSkipKeys(results) { return new Set(results.filter(x => !x.ok).map(x => x.key).concat(activeMistakes().map(m => m.key).filter(Boolean))); }
+// (a p1–p3 pass, and 四顆 in the 入門 four questions); a miss never met before is recorded as met once and missed (bulkMeetMissed)
+function passSkipKeys(results) { return new Set(results.filter(x => !x.ok).map(x => x.key).concat(notebookKeys())); }
 function renderStageSummary(view) {
   const s = SESSION; const T = s.test; const st = stageById(T.stage);
   const total = s.entries.length; const need = stageTestNeed(total); const r = T.result;
@@ -5045,7 +5046,8 @@ Object.assign(ACTIONS, {
 /* Passing a stage test (p1–p3) marks that stage and every stage before it in one go (markPassedStage): items below four
    stars become four stars, so they wait in the four-star queue instead of filling the 50 daily reviews for weeks;
    listening and reading become three stars by their own rule. The test's misses and the items in the notebook are left
-   to their relearning. Only upgrades: an item already at or above the level is left alone. Due dates are spread over a
+   to their relearning; a miss never met before is met once and missed, so the reviews teach it from the next day
+   (bulkMeetMissed). Only upgrades: an item already at or above the level is left alone. Due dates are spread over a
    window (a four-star date is only read by an older version). One undo is kept in memory (LAST_BULK_MARK) until the page
    reloads; the 入門 four questions use the same levels and undo. */
 // The levels, lowest first: s is the stability written (五顆 goes through markKnown)
@@ -5105,13 +5107,27 @@ function bulkApply(targets, level, snap, lrLevel = level) {
   core.forEach((x, i) => mark(x, level, spreadDue(i, level, core.length)));
   lr.forEach((x, j) => mark(x, lrLevel, spreadDueLR(j, lrLevel, lr.length)));
 }
+// keys a four-star mark left alone (passSkipKeys): one with no record that is not in the notebook was missed in the test
+// and never met. Left new, some kinds would never come (grammar of units now counted as done; kana and 第 0 週 in the main
+// course), so each is met once and missed: the record srsAnswer writes for a first wrong answer (back tomorrow, listening
+// and reading in a week), without the relearning ladder, the notebook or an answer's counts. snap.srs keeps null for it,
+// so 復原 takes it away.
+function bulkMeetMissed(keys, snap) {
+  const t = todayStr(); const noted = new Set(notebookKeys());
+  keys.forEach(key => {
+    if (state.srs[key] || noted.has(key)) return;
+    snap.srs[key] = null;
+    state.srs[key] = { b: 0, due: addDays(t, /^[lr]:/.test(key) ? LR_MISS_GAP : 1), n: 1, ok: 0, ng: 1, st: 0, last: t, lapse: 0, intro: t, f: {}, s: FSRS_W[0], d: fsrsD0(1) };
+  });
+}
 // a passed stage test: the stage and every one before it go to four stars (listening and reading three, back in 90–270
-// days), none in `skip`; their units count as done with their lesson cards seen, and the course moves past the stage.
-// Returns how many items were set to four stars (listening and reading not counted).
+// days), none in `skip` (a miss never met is met once and missed); their units count as done with their lesson cards
+// seen, and the course moves past the stage. Returns how many items were set to four stars (listening and reading not counted).
 function markPassedStage(stageId, skip) {
   const targets = passMarkTargets(stageId, skip); const four = targets.filter(x => !isLR(x)).length;
   const snap = bulkSnapshot({ stageId, level: 'four', changed: four });
   bulkApply(targets, 'four', snap, 'learned');
+  bulkMeetMissed(skip, snap);
   const units = stagesUpTo(stageId).flatMap(s => s.units);
   units.forEach(u => { if (!state.completedUnits.includes(u)) state.completedUnits.push(u); });
   const lessons = new Set(state.lessonSeen || []);
@@ -5187,9 +5203,10 @@ function preMarkApply(choices, skip = new Set()) {   // skip: passSkipKeys of th
   const snap = bulkSnapshot({ stageId: 'pre', level: 'learned', changed: 0 });
   PRE_MARK_GROUPS.forEach(([g, , items]) => {
     const level = preMarkLevel(choices[g]); if (!level) return;
-    const want = BULK_ORDER.indexOf(level);
-    const targets = items().filter(x => bulkLevelOf(state.srs[x.key], x.key) < want && !(level === 'four' && skip.has(x.key)));
+    const want = BULK_ORDER.indexOf(level); const four = level === 'four';
+    const targets = items().filter(x => bulkLevelOf(state.srs[x.key], x.key) < want && !(four && skip.has(x.key)));
     bulkApply(targets, level, snap); snap.changed += targets.length;
+    if (four) bulkMeetMissed(items().map(x => x.key).filter(k => skip.has(k)), snap);   // the group's misses never met: met once and missed
   });
   snap.label = PRE_MARK_GROUPS.filter(([g]) => preMarkLevel(choices[g])).map(([g, nm]) => `${nm}：${preMarkLevelName(choices[g])}`).join('、');
   if (preMarkLevel(choices.g)) {   // 第 0 週 marked: done, and its lesson cards need not come up again

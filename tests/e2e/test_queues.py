@@ -323,12 +323,20 @@ PLAY_TEST = """const playTest = (miss) => { const wrong = []; const n = SESSION.
     for (let i = 0; i < n; i++) { const e = currentEntry(); const bad = miss(e.item); if (bad) wrong.push(e.item.key);
       answerCurrent(bad ? (e.q.answer + 1) % e.q.options.length : e.q.answer); nextQuestion(); }
     return wrong; };"""
+# met(k): the record of an item a test missed (null: none), to compare with MET_ONCE
+MET = """const met = (k) => { const r = state.srs[k]; if (!r) return null; const t = todayStr();
+    return { b: r.b, n: r.n, ok: r.ok, ng: r.ng, st: r.st, lapse: r.lapse, fsrs: r.s === FSRS_W[0] && r.d === fsrsD0(1), due: daysBetween(t, r.due),
+      today: r.last === t && r.intro === t, rl: 'rl' in r, noted: state.mistakes.some(m => m.key === k && !m.mastered) }; };"""
+# a miss never met before is met once and missed, as srsAnswer leaves a first wrong answer: back tomorrow (listening and
+# reading in a week), not on the relearning ladder and not in the notebook
+MET_ONCE = {'b': 0, 'n': 1, 'ok': 0, 'ng': 1, 'st': 0, 'lapse': 0, 'fsrs': True, 'due': 1, 'today': True, 'rl': False, 'noted': False}
 
 # a p1 pass marks 入門 and 第一階段 at once: items below four stars get four, listening and reading three (back in 90–270
-# days); the test's misses and the notebook are left as they were; today's list stays as it was and the four-star queue
-# draws them from the next day; 復原 on the result page puts everything back
+# days); the test's misses never met before are met once and missed, and the notebook is left as it was; today's list
+# stays as it was and the four-star queue draws them from the next day; the result page says where the course is now,
+# and 復原 there puts everything back
 def test_passing_a_stage_marks_four_stars_and_leaves_today_alone(b):
-    js = "(() => { " + FRESH + REC + PLAY_TEST + """ state.srs = {}; state.mistakes = []; state.stageTests = {}; LAST_BULK_MARK = null;
+    js = "(() => { " + FRESH + REC + PLAY_TEST + MET + """ state.srs = {}; state.mistakes = []; state.stageTests = {}; LAST_BULK_MARK = null;
       const isLR = (x) => x.kind === 'l' || x.kind === 'r'; const items = stagesUpTo('p1').flatMap(s => stageItems(s.id));
       const [three, noted] = words; state.srs[three.key] = rec(3); state.srs[noted.key] = rec(1, { rl: 0, due: addDays(t, 1) });
       state.mistakes = [{ id: 'mk_x', key: noted.key, cat: '單字', prompt: 'p', answer: 'a', wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: t }];
@@ -341,21 +349,23 @@ def test_passing_a_stage_marks_four_stars_and_leaves_today_alone(b):
       const core = items.filter(x => !isLR(x) && !skip.has(x.key)), lr = items.filter(x => isLR(x) && !skip.has(x.key)); const lrDays = lr.map(x => daysBetween(t, state.srs[x.key] ? state.srs[x.key].due : t));
       const out = { passed: state.stageTests.p1[0].passed, wrong: wrong.length, four: core.every(x => state.srs[x.key] && state.srs[x.key].b === 4), three: state.srs[three.key].b,
         lrB: [...new Set(lr.map(x => state.srs[x.key] ? state.srs[x.key].b : 0))], lrMin: Math.min(...lrDays), lrMax: Math.max(...lrDays),
-        missedLeft: wrong.every(k => !state.srs[k]), noted: JSON.stringify(state.srs[noted.key]) === notedRec, notebook: state.mistakes.length === 1 && !state.mistakes[0].mastered,
+        missed: wrong.map(k => [isLR(REG.byKey.get(k)) ? 'lr' : 'core', met(k)]), noted: JSON.stringify(state.srs[noted.key]) === notedRec, notebook: state.mistakes.length === 1 && !state.mistakes[0].mastered,
         today: JSON.stringify(dayProgress()) === before, says: txt.includes(`已把第一階段以前、還不到四顆的 ${core.length} 題設成四顆。`),   // listening and reading are not counted: three stars
         undo: Boolean(view.querySelector('[data-act="bulk-mark-undo"]')), old: txt.includes('標記到這裡為止') || Boolean(view.querySelector('[data-act="stage-mark"]')) };
       Object.values(state.srs).forEach(r => { if (r.last === t) r.last = addDays(t, -1); });   // the next day: today's marks were made yesterday
       delete state.today.plan; state.today.date = addDays(t, -1); checkDayRollover(); DAILY_CACHE = null; out.q4 = dailyPlan().q4.length;
       const ub = view.querySelector('[data-act="bulk-mark-undo"]'); if (ub) ub.click();
-      out.restored = """ + SNAP + """ === snap0; out.undone = document.getElementById('view').textContent.includes('已復原');
+      out.restored = """ + SNAP + """ === snap0; out.undone = document.getElementById('view').textContent.includes('已復原'); out.missedGone = wrong.every(k => !state.srs[k]);
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
     assert r['passed'] and r['wrong'] == 3, r
     assert r['four'] and r['three'] == 4 and r['lrB'] == [3] and r['lrMin'] >= 90 and r['lrMax'] <= 270, r
-    assert r['missedLeft'] and r['noted'] and r['notebook'], r
+    assert sorted(kind for kind, _ in r['missed']) == ['core', 'core', 'lr'], r
+    assert all(rec == dict(MET_ONCE, due=7 if kind == 'lr' else 1) for kind, rec in r['missed']), r   # met once and missed: back tomorrow, listening or reading in a week
+    assert r['noted'] and r['notebook'], r
     assert r['today'] and r['says'] and r['undo'] and not r['old'], r
     assert r['q4'] == 30, r
-    assert r['restored'] and r['undone'], r
+    assert r['restored'] and r['undone'] and r['missedGone'], r
 
 # the 入門 test: a pass (and any result of an account past 入門, 1.0.17's case) leads to four questions of 三顆／四顆／五顆,
 # each pre-selected (建議) by its group's score; nothing is marked before they are answered; Enter takes the suggestion
@@ -431,22 +441,55 @@ def test_enter_on_a_focused_button_or_a_held_key_does_not_take_the_suggestion(b)
     assert r['plain'] == [1, '{"hira":"5"}'] and r['marked'] == 0, r
 
 # review fix: 四顆 in the four questions is the stage pass's four stars (spec §8.2 → §8.1): an item missed in this 入門 test
-# and one in the notebook keep their records; the rest of the group gets four stars
-def test_pre_four_stars_leave_the_tests_misses_and_the_notebook_alone(b):
-    js = "(() => { " + PLAY_TEST + PRE_PASSED + """ const t = todayStr(); const hira = REG.kana.filter(k => k.script === 'hira');
-      const noted = hira[1]; state.srs[noted.key] = { b: 1, s: 1, d: 5, due: addDays(t, 1), n: 2, ok: 1, ng: 1, st: 0, last: addDays(t, -1), lapse: 1, intro: addDays(t, -3), rl: 0 };
-      state.mistakes = [{ id: 'mk_k', key: noted.key, cat: '假名', prompt: 'p', answer: 'a', wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: addDays(t, -1) }];
+# is not set to four (one never met is met once and missed, which 復原 takes away), and the notebook's items are left as
+# they are (one on the ladder, one with no record yet); the rest of the group gets four stars
+def test_pre_four_stars_meet_the_tests_misses_once_and_leave_the_notebook_alone(b):
+    js = "(() => { " + PLAY_TEST + MET + PRE_PASSED + """ const t = todayStr(); const hira = REG.kana.filter(k => k.script === 'hira');
+      const [, noted, bare] = hira; state.srs[noted.key] = { b: 1, s: 1, d: 5, due: addDays(t, 1), n: 2, ok: 1, ng: 1, st: 0, last: addDays(t, -1), lapse: 1, intro: addDays(t, -3), rl: 0 };
+      const entry = (id, k) => ({ id, key: k, cat: '假名', prompt: 'p' + id, answer: 'a', wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: addDays(t, -1) });
+      state.mistakes = [entry('mk_k', noted.key), entry('mk_b', bare.key)];   // bare: in the notebook with no record (a mock-exam miss before 1.0.19)
       saveState(); const notedRec = JSON.stringify(state.srs[noted.key]);
       startSession('stage', { stage: 'pre' }); let missed = null;
-      playTest(x => { if (missed || x.kind !== 'a' || x.script !== 'hira' || x.key === noted.key) return false; missed = x.key; return true; });   // one hiragana answered wrong
+      playTest(x => { if (missed || x.kind !== 'a' || x.script !== 'hira' || x.key === noted.key || x.key === bare.key) return false; missed = x.key; return true; });   // one hiragana answered wrong
       ['4', '3', '3', '3'].forEach(v => document.querySelector(`[data-act="pre-mark-pick"][data-level="${v}"]`).click());
-      const rest = hira.filter(k => k.key !== noted.key && k.key !== missed);
-      return JSON.stringify({ missed: Boolean(missed), missedRec: missed ? state.srs[missed] || null : 'none', noted: JSON.stringify(state.srs[noted.key]) === notedRec,
-        notebook: !state.mistakes[0].mastered, rest: [...new Set(rest.map(k => (state.srs[k.key] ? state.srs[k.key].b : 0)))], n: rest.length }); })()"""
+      const rest = hira.filter(k => ![noted.key, bare.key, missed].includes(k.key));
+      const out = { missed: Boolean(missed), missedRec: missed ? met(missed) : 'none', noted: JSON.stringify(state.srs[noted.key]) === notedRec, bare: !state.srs[bare.key],
+        notebook: state.mistakes.length === 2 && state.mistakes.every(m => !m.mastered), rest: [...new Set(rest.map(k => (state.srs[k.key] ? state.srs[k.key].b : 0)))], n: rest.length };
+      out.undone = bulkUndo() && !state.srs[missed] && JSON.stringify(state.srs[noted.key]) === notedRec;   // 復原: the miss is new again
+      return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['missed'] and r['missedRec'] is None, r   # missed in the test: still new
-    assert r['noted'] and r['notebook'], r   # on the relearning ladder: untouched, still in the notebook
-    assert r['rest'] == [4] and r['n'] == 69, r
+    assert r['missed'] and r['missedRec'] == MET_ONCE and r['undone'], r   # missed in the test, never met: met once and missed
+    assert r['noted'] and r['bare'] and r['notebook'], r   # the notebook's: untouched (the one on the ladder keeps its step), still in the notebook
+    assert r['rest'] == [4] and r['n'] == 68, r
+
+# ---- 1.0.20 最終審查修正 ----
+# an item a test missed that was never met is met once and missed, so the next day's reviews bring it (today's list does
+# not). Nothing else would: after a p1 pass its units count as done, so no new-item list takes their grammar; after 四顆
+# in the 入門 four questions the main course brings no new kana, nor week-0 items once 第 0 週 is done
+def test_a_tests_unseen_misses_come_back_the_next_day(b):
+    js = "(() => { " + PLAY_TEST + """ const t = todayStr();
+      const start = (stage) => { state.srs = {}; state.mistakes = []; state.stageTests = {}; state.completedUnits = []; state.lessonSeen = []; state.introPending = false; state.startChosen = true;
+        state.stage = stage; state.kanaKnown = stage !== 'pre'; state.introSeen = stage !== 'pre'; state.currentUnit = 'm1'; LAST_BULK_MARK = null; saveState(); delete state.today.plan; DAILY_CACHE = null; };
+      const listed = () => { const p = dailyPlan(); return new Set(PLAN_LISTS.flatMap(n => p[n].map(x => x.key))); };
+      const look = (keys) => { const today = listed();
+        Object.values(state.srs).forEach(r => { if (r.last === t) { r.last = addDays(t, -1); r.due = addDays(r.due, -1); } });   // the next day: today's marks were made yesterday
+        delete state.today.plan; state.today.date = addDays(t, -1); checkDayRollover(); DAILY_CACHE = null; const next = listed();
+        return { n: keys.length, recs: keys.filter(k => state.srs[k]).length, today: keys.filter(k => today.has(k)), next: keys.filter(k => next.has(k)).length }; };
+      // a main-course account at week 1 passes p1, missing three grammar items it never met
+      start('main'); startSession('stage', { stage: 'p1' }); let g = 3;
+      const p1 = playTest(x => x.kind === 'g' && g-- > 0); const out = { p1: Object.assign({ passed: state.stageTests.p1[0].passed, unit: state.currentUnit }, look(p1)) };
+      SESSION = null; document.body.classList.remove('practicing');
+      // a learner in 入門 passes its test missing a hiragana and a week-0 item, and answers 四顆 for 平假名 and 第 0 週句型
+      start('pre'); startSession('stage', { stage: 'pre' }); let a = 1, w = 1;
+      const pre = playTest(x => (x.kind === 'a' && x.script === 'hira' && a-- > 0) || (x.kind === 'g' && w-- > 0));
+      ['4', '3', '3', '4'].forEach(v => document.querySelector(`[data-act="pre-mark-pick"][data-level="${v}"]`).click());
+      out.pre = Object.assign({ stage: state.stage, kinds: pre.map(k => k.split(':')[0]).sort() }, look(pre));
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['p1']['passed'] and r['p1']['unit'] == 'm7' and r['p1']['n'] == 3, r
+    assert r['p1']['recs'] == 3 and r['p1']['today'] == [] and r['p1']['next'] == 3, r
+    assert r['pre']['stage'] == 'main' and r['pre']['kinds'] == ['a', 'g'] and r['pre']['n'] == 2, r
+    assert r['pre']['recs'] == 2 and r['pre']['today'] == [] and r['pre']['next'] == 2, r
 
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

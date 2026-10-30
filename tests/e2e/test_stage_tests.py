@@ -123,6 +123,13 @@ RESET = "state.srs = {}; state.mistakes = []; state.completedUnits = []; state.l
 # playTest(miss): answers the open stage test to its end, wrong where miss(item) says so
 PLAY_TEST = """const playTest = (miss) => { const n = SESSION.entries.length;
     for (let i = 0; i < n; i++) { const e = currentEntry(); answerCurrent(miss(e.item) ? (e.q.answer + 1) % e.q.options.length : e.q.answer); nextQuestion(); } };"""
+# met(k): the record of an item a test missed (null: none), to compare with MET_ONCE
+MET = """const met = (k) => { const r = state.srs[k]; if (!r) return null; const t = todayStr();
+    return { b: r.b, n: r.n, ok: r.ok, ng: r.ng, st: r.st, lapse: r.lapse, fsrs: r.s === FSRS_W[0] && r.d === fsrsD0(1), due: daysBetween(t, r.due),
+      today: r.last === t && r.intro === t, rl: 'rl' in r, noted: state.mistakes.some(m => m.key === k && !m.mastered) }; };"""
+# a miss never met before is met once and missed, as srsAnswer leaves a first wrong answer: back tomorrow, not on the
+# relearning ladder and not in the notebook
+MET_ONCE = {'b': 0, 'n': 1, 'ok': 0, 'ng': 1, 'st': 0, 'lapse': 0, 'fsrs': True, 'due': 1, 'today': True, 'rl': False, 'noted': False}
 
 # items below four stars become four (listening and reading three), only upgrades; the units, lessons, stage and week move on
 def test_a_pass_marks_four_stars_with_its_side_effects(b):
@@ -285,7 +292,7 @@ def test_old_accounts_get_a_must_do_pre_test_line_until_they_take_it(b):
 # a failing old account is not sent back to 入門 and nothing is marked by itself: it answers the four questions, each
 # pre-selected by its group's score (≥ 90% 五顆, ≥ 80% 四顆, otherwise 三顆); Enter takes the suggestion
 def test_old_account_pre_test_asks_the_four_questions_by_its_score(b):
-    js = """(() => { const n0 = Object.keys(state.srs).length; startSession('stage', { stage: 'pre' }); const n = SESSION.entries.length; let vi = 0;
+    js = "(() => { " + MET + """ const n0 = Object.keys(state.srs).length; startSession('stage', { stage: 'pre' }); const n = SESSION.entries.length; let vi = 0;
       for (let i = 0; i < n; i++) { const q = currentEntry().q; const ok = q.kind === 'a' ? q.item.script === 'hira' : q.kind === 'v' ? (vi++ % 6) !== 5 : false;   // 平假名 all, 片假名 none, words 5 of 6, 句型 none
         answerCurrent(ok ? q.answer : (q.answer + 1) % q.options.length); nextQuestion(); }
       const view = document.getElementById('view'); const txt = view.textContent;
@@ -297,15 +304,17 @@ def test_old_account_pre_test_asks_the_four_questions_by_its_score(b):
       for (let i = 0; i < 4; i++) { const tip = [...document.querySelectorAll('[data-act="pre-mark-pick"]')].find(o => o.textContent.includes('建議')); out.tips.push(tip ? tip.dataset.level : null);
         document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); }
       Object.assign(out, { stage: state.stage, unit: state.currentUnit, session: SESSION === null, hira: [...new Set(hira.map(lab))], kata: bs(kata), words: bs(words.filter(v => !missed.has(v.key))),
-        wordsMissed: [wordsMissed.length, bs(wordsMissed)], m0: bs(m0), pending: state.introPending });
+        wordsMissed: wordsMissed.map(v => met(v.key)), m0: bs(m0), pending: state.introPending });
       document.body.classList.remove('practicing'); DAILY_CACHE = null; location.hash = '#/today'; route(); out.lineAfter = Boolean(document.querySelector('.banner [data-act="stage-test"][data-stage="pre"]'));
+      out.undone = bulkUndo() && wordsMissed.every(v => !state.srs[v.key]);   // 復原 takes the missed words' records away with the marks
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", OLD)]))
     assert r['passed'] is False and r['marked'] == 0 and r['picker'] and r['says'], r   # failed, nothing marked by itself: the four questions all the same
     assert r['tips'] == ['5', '3', '4', '3'], r
     assert r['session'] and r['stage'] == 'main' and r['unit'] == 'm3', r   # a low score never sends an account back to 入門
     assert r['hira'] == ['已熟練'] and r['kata'] == [3] and r['words'] == [4] and r['m0'] == [3] and r['pending'] is False and not r['lineAfter'], r
-    assert r['wordsMissed'] == [3, [0]], r   # 四顆 is the stage pass's: the words missed in this test stay new (三顆 marks its misses, as 熟悉 did)
+    # 四顆 is the stage pass's: the words missed in this test, never met, are met once and missed (三顆 marks its misses, as 熟悉 did)
+    assert len(r['wordsMissed']) == 3 and all(x == MET_ONCE for x in r['wordsMissed']) and r['undone'], r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
