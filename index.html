@@ -1714,14 +1714,16 @@ function dayStats(d, tally) {
     for (const k in state.srs) { const r = state.srs[k]; if (r.intro === d) fresh++; if (r.lrn === d) learned++; }
   }
   const n = (e.ok || 0) + (e.ng || 0);
-  return { total: dayTotal(e), kinds, fresh, learned, acc: n ? Math.round((e.ok || 0) / n * 100) : null, units: e.units || [], old: [['單字', e.vocabCount || 0], ['文法', e.grammarCount || 0], ['其他', (e.quizCount || 0) + (e.bonusCount || 0)]].filter(([, x]) => x) };
+  return { total: dayTotal(e), items: e.items, ex: e.ex || 0, kinds, fresh, learned, acc: n ? Math.round((e.ok || 0) / n * 100) : null, units: e.units || [], old: [['單字', e.vocabCount || 0], ['文法', e.grammarCount || 0], ['其他', (e.quizCount || 0) + (e.bonusCount || 0)]].filter(([, x]) => x) };
 }
 function dayStatsText(d, tally) {
   const x = dayStats(d, tally);
   const by = (x.kinds.length ? x.kinds : x.old).map(([name, n]) => `${name} ${n}`).join('・');
-  return `${x.total} 題${by ? `（${by}）` : ''}・新學 ${x.fresh}・升到熟悉 ${x.learned}${x.acc !== null ? `・正確率 ${x.acc}%` : ''}${x.units.length ? `・完成單元：${esc(x.units.join('、'))}` : ''}`;
+  const head = [typeof x.items === 'number' ? `${x.items} 題` : '', x.total ? `作答 ${x.total} 次${by ? `（${by}）` : ''}` : ''].filter(Boolean).join('・');
+  return `${head ? `${head}・` : ''}新學 ${x.fresh}・升到熟悉 ${x.learned}${x.acc !== null ? `・正確率 ${x.acc}%` : ''}${x.units.length ? `・完成單元：${esc(x.units.join('、'))}` : ''}${x.ex ? `・模擬考與測驗 ${x.ex} 題` : ''}`;
 }
 function dayTotal(e) { return e ? (e.vocabCount || 0) + (e.grammarCount || 0) + (e.quizCount || 0) + (e.bonusCount || 0) : 0; }
+function dayActive(e) { return Boolean(e) && (dayTotal(e) > 0 || (e.items || 0) > 0 || (e.ex || 0) > 0); }
 // Items answered today: each item once, whatever mode it was answered in (encores and 再練一次 copies add nothing, and
 // bulk marks or 我會了 are not answers). A hand-made notebook card counts as 'm:<id>'. 今天做了 and the sidebar show this.
 function noteAnswered(key) {
@@ -1733,7 +1735,7 @@ function answeredToday(key) { return Array.isArray(state.today.ans) && state.tod
 function itemsDoneToday() { return Array.isArray(state.today.ans) ? state.today.ans.length : 0; }
 // the ring: how much of today's list is done (items answered elsewhere today count in 今天做了, not here)
 function dayProgress() { const keys = todayPlanKeys(); const done = keys.filter(answeredToday).length; return { done, left: keys.length - done, total: keys.length }; }
-const LOG_KINDS = [['v', '單字'], ['g', '文法'], ['k', '漢字'], ['a', '假名'], ['l', '聽力'], ['r', '閱讀'], ['x', '模擬考・其他']];
+const LOG_KINDS = [['v', '單字'], ['g', '文法'], ['k', '漢字'], ['a', '假名'], ['l', '聽力'], ['r', '閱讀'], ['x', '其他']];   // mock exams and stage tests are not presses since 1.0.19 (they count in dailyLogs.ex)
 function recordAction(type, topic, kind) {
   const e = logEntry();
   if (type === 'v') e.vocabCount = (e.vocabCount || 0) + 1;
@@ -1758,7 +1760,7 @@ function recentAccuracy(n = 40) {
   return r.reduce((a, b) => a + b, 0) / r.length;
 }
 function streakStats() {
-  const active = new Set(Object.keys(state.dailyLogs).filter(d => dayTotal(state.dailyLogs[d]) > 0));
+  const active = new Set(Object.keys(state.dailyLogs).filter(d => dayActive(state.dailyLogs[d])));
   let cur = 0;
   let off = active.has(todayStr()) ? 0 : -1;
   while (active.has(todayStr(off))) { cur++; off--; }
@@ -4770,7 +4772,7 @@ function heatmapWeeks() {
   const t = todayStr();
   const monday = (ds) => { const d = parseDate(ds); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return d; };
   let first = state.createdAt && state.createdAt < t ? state.createdAt : t;
-  for (const ds of Object.keys(state.dailyLogs)) if (dayTotal(state.dailyLogs[ds]) > 0 && ds < first) first = ds;
+  for (const ds of Object.keys(state.dailyLogs)) if (dayActive(state.dailyLogs[ds]) && ds < first) first = ds;
   const span = Math.round((monday(t) - monday(first)) / 864e5 / 7) + 1;
   return clamp(span, 4, 26);
 }
@@ -4793,28 +4795,28 @@ function heatmapHtml() {
       const day = new Date(start); day.setDate(day.getDate() + w * 7 + d);
       const ds = dateStr(day);
       if (day > today) { cells.push('<i class="future"></i>'); continue; }
-      const n = dayTotal(state.dailyLogs[ds]);
+      const e = state.dailyLogs[ds]; const n = dayTotal(e) || (e && (e.items || e.ex)) || 0;   // a test-only day still shows
       cells.push(`<i class="l${heatLevel(n)}${ds === todayStr() ? ' today' : ''}" data-act="heat-day" data-date="${ds}" title="${ds}：${n} 題"></i>`);
     }
   }
   return `<div class="heat-wrap"><div class="heat-months">${months.map(m => `<span>${m}</span>`).join('')}</div><div class="heat">${cells.join('')}</div></div>`;
 }
 function recentLogsHtml() {
-  const days = Object.keys(state.dailyLogs).filter(d => dayTotal(state.dailyLogs[d]) > 0).sort().reverse().slice(0, 14);
+  const days = Object.keys(state.dailyLogs).filter(d => dayActive(state.dailyLogs[d])).sort().reverse().slice(0, 14);
   if (!days.length) return '<div class="empty">還沒有紀錄，完成第一組練習後就會出現。</div>';
   const tally = tallySrsByDay();
   return `<div class="list mt-2">${days.map(d => {
     const e = state.dailyLogs[d];
     return `<div class="list-item"><div class="grow">
       <div class="row-wrap"><b class="num">${d}</b><span class="small muted">${dayStatsText(d, tally)}</span></div>
-    </div><span class="chip num">${dayTotal(e)} 題</span>
+    </div><span class="chip num">${typeof e.items === 'number' ? `${e.items} 題` : dayTotal(e) ? `作答 ${dayTotal(e)} 次` : `測驗 ${e.ex || 0} 題`}</span>
     <button type="button" class="btn btn-sm btn-ghost" data-act="del-log" data-date="${d}" title="刪除這天的紀錄">刪除</button></div>`;
   }).join('')}</div>`;
 }
 
 Object.assign(ACTIONS, {
   'heat-day': (el) => {
-    const d = el.dataset.date; const e = state.dailyLogs[d]; const n = dayTotal(e);
+    const d = el.dataset.date; const e = state.dailyLogs[d]; const n = dayActive(e);
     const box = document.getElementById('heatInfo');
     if (!box) return;
     box.innerHTML = n ? `<b class="num">${d}</b>：${dayStatsText(d)}` : `<b class="num">${d}</b>：沒有練習。`;
@@ -4893,7 +4895,7 @@ function finishStageTest() {
   const passed = correct >= stageTestNeed(total);
   if (!state.stageTests || typeof state.stageTests !== 'object') state.stageTests = {};
   state.stageTests[T.stage] = [{ date: todayStr(), correct, total, passed }].concat(state.stageTests[T.stage] || []).slice(0, 10);
-  recordAction('q', null, 'x');   // counts as practice today (模擬考・其他), not as word or grammar questions
+  { const e = logEntry(); e.ex = (e.ex || 0) + SESSION.results.length; }   // a test day keeps the streak; tests are not questions done
   T.result = { correct, total, passed };
   if (T.auto) { T.autoMarks = preAutoChoices(SESSION.results); preMarkApply(T.autoMarks.choices); }   // pass or not: the account keeps its week
   saveState();
@@ -6863,17 +6865,14 @@ function examAnswer(i) {
   if (EXAM.instant) { EXAM.locked[EXAM.idx] = true; recordExamAnswer(EXAM.paper[EXAM.idx], i); }
   renderExamRunner();
 }
+// The mock exam is its own thing: it writes only its question history and the day's test tally (ex), never the schedule,
+// the notebook, the recent accuracy or the day's question counts (a paper also asks about units not reached yet).
 function recordExamAnswer(q, i) {
   const ok = i === q.answer;
   const h = state.questionHistory[q.examId] || { count: 0, correctCount: 0 };
   h.count++; if (ok) h.correctCount++; h.lastResult = ok ? 'correct' : 'wrong'; h.lastDate = todayStr();
   state.questionHistory[q.examId] = h;
-  recordAction('q', null, 'x');
-  recordAccuracy(ok);
-  // the exam may ask about later units; it only starts tracking items the course has already reached
-  const src = q.srcKey && REG.byKey.get(q.srcKey);
-  if (src && (state.srs[q.srcKey] || inDailyReach(src))) srsAnswer(q.srcKey, ok);
-  if (!ok && i >= 0) addMistake(Object.assign({}, q, { key: q.srcKey || '', cat: q.mondaiTitle.replace(/^問題\d+　/, ''), mistakePrompt: q.mistakePrompt || examPlain(q) || q.mondaiTitle, answerText: jaPlain(q.options[q.answer].text) }), jaPlain(q.options[i].text));
+  if (typeof i === 'number' && i >= 0) { const e = logEntry(); e.ex = (e.ex || 0) + 1; }
   saveState();
 }
 function examKey(ev) {
@@ -6956,7 +6955,7 @@ function renderExamResult(view) {
       <div class="row-wrap mt-3 small"><span class="muted">参考情報</span><span>文字・語彙 <b>${s.refVocab}</b></span><span>文法 <b>${s.refGrammar}</b></span><span class="muted">A：答對 67% 以上・B：34–66%・C：未滿 34%</span></div>
       <div class="small muted mt-2">答對 ${s.correct} / ${s.n} 題</div>
     </div>
-    <p class="hint">分數依答對比例換算，正式考試會依難度調整，這裡只能當作參考。答錯的題目已加入錯題本。</p>
+    <p class="hint">分數依答對比例換算，正式考試會依難度調整，這裡只能當作參考。</p>
     <div class="card"><div class="card-head"><div class="card-title">各大題表現</div></div><div class="table-wrap"><table class="table"><tbody>${rows}</tbody></table></div></div>
     <div class="card"><div class="card-head"><div class="card-title">逐題檢討</div></div><div class="list">${review}</div></div>
     <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="exam-again">再考一次</button><button type="button" class="btn" data-act="start-mistakes">練習錯題</button><button type="button" class="btn btn-ghost" data-act="nav" data-route="#/exam">回到模擬考</button></div>`;

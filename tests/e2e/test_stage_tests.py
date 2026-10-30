@@ -90,12 +90,12 @@ def test_stage_test_scores_without_touching_srs(b):
         if (i === wrongAt) { slip = document.querySelector('[data-act="slip"]'); known = document.querySelector('[data-act="vocab-known"]'); nb = document.getElementById('view').textContent.includes('已加入錯題本'); } nextQuestion(); }
       const same = JSON.stringify([state.srs, state.mistakes, state.statsFmt]) === before; const e1 = logEntry(); const l0 = JSON.parse(log0);
       const h = state.stageTests.p1[0]; const view = document.getElementById('view').textContent;
-      return JSON.stringify({ title, previews, same, x: (e1.kX || 0) - (l0.kX || 0), v: (e1.vocabCount || 0) - (l0.vocabCount || 0), g: (e1.grammarCount || 0) - (l0.grammarCount || 0),
+      return JSON.stringify({ title, previews, same, x: (e1.kX || 0) - (l0.kX || 0), ex: (e1.ex || 0) - (l0.ex || 0), v: (e1.vocabCount || 0) - (l0.vocabCount || 0), g: (e1.grammarCount || 0) - (l0.grammarCount || 0),
         h: { correct: h.correct, total: h.total, passed: h.passed }, len: state.stageTests.p1.length, entries: SESSION.entries.length, slip: Boolean(slip), known: Boolean(known),
         passText: view.includes('33／40・通過'), markBtn: Boolean(document.querySelector('[data-act="stage-mark"]')), need: stageTestNeed(40), nb }); })()"""
     r = json.loads(ev(b, js))
     assert r['title'] == '第一階段：N5 文法・階段測驗' and r['previews'] == 0 and r['same'], r
-    assert r['x'] == 1 and r['v'] == 0 and r['g'] == 0 and r['entries'] == 40, r
+    assert r['x'] == 0 and r['ex'] == 40 and r['v'] == 0 and r['g'] == 0 and r['entries'] == 40, r   # since 1.0.19 a test is logged as its question count (ex), not as a press
     assert r['h'] == {'correct': 33, 'total': 40, 'passed': True} and r['len'] == 1 and r['need'] == 32, r
     assert not r['slip'] and not r['known'] and not r['nb'] and r['passText'] and r['markBtn'], r
 

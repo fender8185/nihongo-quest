@@ -798,12 +798,12 @@ def test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_g
     out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("nav", URL + "#/stats"), ("eval", probe), ("eval", today), ("eval", record)], timeout=60)
     r = json.loads(out[-3]); r2 = json.loads(out[-2]); r3 = json.loads(out[-1])
     assert r['hist'] and r['tiles'] >= 0 and r['idx'] == r['tiles'] + 1, r   # right after the number tiles
-    assert r['info'].endswith('6 題（單字 3・文法 2・聽力 1）・新學 1・升到熟悉 1・正確率 83%・完成單元：格助詞'), r['info']
-    assert '4 題（單字 4）・新學 0・升到熟悉 0' in r['recent'] and '犬' not in r['recent'] and '錯：' not in r['recent'], r['recent']
+    assert r['info'].endswith('：作答 6 次（單字 3・文法 2・聽力 1）・新學 1・升到熟悉 1・正確率 83%・完成單元：格助詞'), r['info']   # a day from before 1.0.19 has no item count: only presses
+    assert '作答 4 次（單字 4）・新學 0・升到熟悉 0' in r['recent'] and '犬' not in r['recent'] and '錯：' not in r['recent'], r['recent']
     assert not r['leech'] and not r['leechBtn'], r
     assert not r2['card'] and not r2['heat'], r2
     assert r3['kK'] == 1 and r3['kL'] == 1 and r3['kX'] == 1 and r3['ok'] == 1 and r3['ng'] == 1 and r3['units'] == [r3['before']], r3
-    assert r3['text'].startswith('3 題（漢字 1・聽力 1・模擬考・其他 1）') and '正確率 50%' in r3['text'] and r3['before'] in r3['text'], r3['text']
+    assert r3['text'].startswith('作答 3 次（漢字 1・聽力 1・其他 1）') and '正確率 50%' in r3['text'] and r3['before'] in r3['text'], r3['text']
 
 def test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints(b):
     js = """(() => { location.hash = '#/today'; route(); const hero = document.querySelector('.hero');
