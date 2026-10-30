@@ -293,9 +293,11 @@ def test_old_account_pre_test_asks_the_four_questions_by_its_score(b):
       const hira = REG.kana.filter(k => k.script === 'hira'), kata = REG.kana.filter(k => k.script === 'kata'), words = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5'), m0 = REG.grammar.filter(g => g.u === 'm0');
       const out = { passed: state.stageTests.pre[0].passed, marked: Object.keys(state.srs).length - n0, picker: Boolean(view.querySelector('[data-act="pre-mark-pick"]')),
         says: ['平假名', '片假名', '入門單字', '第 0 週句型'].every(w => txt.includes(w)) && txt.includes('週次不變'), tips: [] };
+      const missed = new Set(SESSION.results.filter(x => !x.ok).map(x => x.key)); const wordsMissed = words.filter(v => missed.has(v.key));
       for (let i = 0; i < 4; i++) { const tip = [...document.querySelectorAll('[data-act="pre-mark-pick"]')].find(o => o.textContent.includes('建議')); out.tips.push(tip ? tip.dataset.level : null);
         document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); }
-      Object.assign(out, { stage: state.stage, unit: state.currentUnit, session: SESSION === null, hira: [...new Set(hira.map(lab))], kata: bs(kata), words: bs(words), m0: bs(m0), pending: state.introPending });
+      Object.assign(out, { stage: state.stage, unit: state.currentUnit, session: SESSION === null, hira: [...new Set(hira.map(lab))], kata: bs(kata), words: bs(words.filter(v => !missed.has(v.key))),
+        wordsMissed: [wordsMissed.length, bs(wordsMissed)], m0: bs(m0), pending: state.introPending });
       document.body.classList.remove('practicing'); DAILY_CACHE = null; location.hash = '#/today'; route(); out.lineAfter = Boolean(document.querySelector('.banner [data-act="stage-test"][data-stage="pre"]'));
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", OLD)]))
@@ -303,6 +305,7 @@ def test_old_account_pre_test_asks_the_four_questions_by_its_score(b):
     assert r['tips'] == ['5', '3', '4', '3'], r
     assert r['session'] and r['stage'] == 'main' and r['unit'] == 'm3', r   # a low score never sends an account back to 入門
     assert r['hira'] == ['已熟練'] and r['kata'] == [3] and r['words'] == [4] and r['m0'] == [3] and r['pending'] is False and not r['lineAfter'], r
+    assert r['wordsMissed'] == [3, [0]], r   # 四顆 is the stage pass's: the words missed in this test stay new (三顆 marks its misses, as 熟悉 did)
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

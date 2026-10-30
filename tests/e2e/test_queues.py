@@ -406,6 +406,46 @@ def test_items_marked_today_stay_out_of_a_list_rebuilt_the_same_day(b):
     assert r['pre']['stage'] == 'main' and r['pre']['four'] > 0 and r['pre']['five'] > 0 and r['pre']['drawn'] == [], r['pre']
     assert r['p1']['stage'] == 'main' and r['p1']['four'] > 0 and r['p1']['drawn'] == [], r['p1']
 
+# a fresh learner in 入門 who just passed the 入門 test (all right), on the first of the four questions
+PRE_PASSED = """state.srs = {}; state.mistakes = []; state.stageTests = {}; state.completedUnits = []; state.lessonSeen = []; state.stage = 'pre'; state.startChosen = true;
+      state.kanaKnown = false; state.introSeen = false; state.currentUnit = 'm1'; LAST_BULK_MARK = null; saveState(); DAILY_CACHE = null;"""
+
+# review fix: on the four questions, Enter on a focused button (an answer, 關閉) is that button's own click, and a held key
+# (Enter carried over from the last question, a digit) picks nothing; a plain Enter still takes the suggestion
+def test_enter_on_a_focused_button_or_a_held_key_does_not_take_the_suggestion(b):
+    js = "(() => { " + PLAY_TEST + PRE_PASSED + """ startSession('stage', { stage: 'pre' }); playTest(() => false); const T = SESSION.test;
+      const key = (el, init) => el.dispatchEvent(new KeyboardEvent('keydown', Object.assign({ bubbles: true, cancelable: true }, init)));
+      const now = () => [T.preStep || 0, JSON.stringify(T.preChoice || {})];
+      const three = document.querySelector('[data-act="pre-mark-pick"][data-level="3"]'); three.focus(); const focused = document.activeElement === three;
+      key(three, { key: 'Enter' }); const answer = now();
+      const close = document.querySelector('[data-act="close-summary"]'); close.focus(); key(close, { key: 'Enter' }); const closeBtn = now();
+      key(document.body, { key: 'Enter', repeat: true }); const held = now();
+      key(document.body, { key: '2', repeat: true }); const heldDigit = now();
+      key(document.body, { key: 'Enter' }); const plain = now();
+      return JSON.stringify({ focused, answer, closeBtn, held, heldDigit, plain, marked: Object.keys(state.srs).length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['focused'] and r['answer'] == [0, '{}'] and r['closeBtn'] == [0, '{}'], r   # no suggestion written over a focused button
+    assert r['held'] == [0, '{}'] and r['heldDigit'] == [0, '{}'], r
+    assert r['plain'] == [1, '{"hira":"5"}'] and r['marked'] == 0, r
+
+# review fix: 四顆 in the four questions is the stage pass's four stars (spec §8.2 → §8.1): an item missed in this 入門 test
+# and one in the notebook keep their records; the rest of the group gets four stars
+def test_pre_four_stars_leave_the_tests_misses_and_the_notebook_alone(b):
+    js = "(() => { " + PLAY_TEST + PRE_PASSED + """ const t = todayStr(); const hira = REG.kana.filter(k => k.script === 'hira');
+      const noted = hira[1]; state.srs[noted.key] = { b: 1, s: 1, d: 5, due: addDays(t, 1), n: 2, ok: 1, ng: 1, st: 0, last: addDays(t, -1), lapse: 1, intro: addDays(t, -3), rl: 0 };
+      state.mistakes = [{ id: 'mk_k', key: noted.key, cat: '假名', prompt: 'p', answer: 'a', wrong: '', why: '', count: 1, streak: 0, mastered: false, note: '', date: addDays(t, -1) }];
+      saveState(); const notedRec = JSON.stringify(state.srs[noted.key]);
+      startSession('stage', { stage: 'pre' }); let missed = null;
+      playTest(x => { if (missed || x.kind !== 'a' || x.script !== 'hira' || x.key === noted.key) return false; missed = x.key; return true; });   // one hiragana answered wrong
+      ['4', '3', '3', '3'].forEach(v => document.querySelector(`[data-act="pre-mark-pick"][data-level="${v}"]`).click());
+      const rest = hira.filter(k => k.key !== noted.key && k.key !== missed);
+      return JSON.stringify({ missed: Boolean(missed), missedRec: missed ? state.srs[missed] || null : 'none', noted: JSON.stringify(state.srs[noted.key]) === notedRec,
+        notebook: !state.mistakes[0].mastered, rest: [...new Set(rest.map(k => (state.srs[k.key] ? state.srs[k.key].b : 0)))], n: rest.length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['missed'] and r['missedRec'] is None, r   # missed in the test: still new
+    assert r['noted'] and r['notebook'], r   # on the relearning ladder: untouched, still in the notebook
+    assert r['rest'] == [4] and r['n'] == 69, r
+
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

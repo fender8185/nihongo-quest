@@ -4654,8 +4654,11 @@ function handleKey(ev) {
       else if (k === 'Escape') { ev.preventDefault(); exitPractice(); }
       return;
     }
-    const pick = !e && preMarkOpen(SESSION.test) ? preMarkKey(SESSION.test, k) : null;   // the 入門 test's four questions
-    if (pick) { ev.preventDefault(); ACTIONS['pre-mark-pick']({ dataset: { level: pick } }); return; }
+    if (!e && !ev.repeat && preMarkOpen(SESSION.test)) {   // the 入門 test's four questions; a held key picks nothing
+      if (k === 'Enter' && ev.target && ev.target.closest && ev.target.closest('button')) return;   // Enter on a focused button (an answer, 關閉): that button's own click
+      const pick = preMarkKey(SESSION.test, k);
+      if (pick) { ev.preventDefault(); ACTIONS['pre-mark-pick']({ dataset: { level: pick } }); return; }
+    }
     if (['1', '2', '3', '4'].includes(k)) { ev.preventDefault(); if (e && !e.done && e.q && e.q.custom === 'g-order') ACTIONS['order-tap']({ dataset: { i: String(Number(k) - 1) } }); else if (e && !e.done && !(e.q && e.q.custom)) answerCurrent(Number(k) - 1); return; }
     if (k === 'Enter' || k === ' ') { if (e && e.done) { ev.preventDefault(); nextQuestion(); } else if (!e) { ev.preventDefault(); } return; }
     if (k === 'r' || k === 'R') { ev.preventDefault(); ACTIONS.replay(); return; }
@@ -4987,12 +4990,12 @@ function finishStageTest() {
   { const e = logEntry(); e.ex = (e.ex || 0) + SESSION.results.length; }   // a test day keeps the streak; tests are not questions done
   T.result = { correct, total, passed };
   if (T.stage === 'pre') T.preScores = preScores(SESSION.results);   // the four questions are pre-selected by these
-  else if (passed) {   // p1–p3: marked at once, except what this test missed and what is in the notebook (their relearning goes on)
-    const skip = new Set(SESSION.results.filter(x => !x.ok).map(x => x.key).concat(activeMistakes().map(m => m.key).filter(Boolean)));
-    T.marked = markPassedStage(T.stage, skip);
-  }
+  else if (passed) T.marked = markPassedStage(T.stage, passSkipKeys(SESSION.results));   // p1–p3: marked at once
   saveState();
 }
+// what four stars from a test leave alone: the items it missed and the ones in the notebook, so their relearning goes on
+// (a p1–p3 pass, and 四顆 in the 入門 four questions)
+function passSkipKeys(results) { return new Set(results.filter(x => !x.ok).map(x => x.key).concat(activeMistakes().map(m => m.key).filter(Boolean))); }
 function renderStageSummary(view) {
   const s = SESSION; const T = s.test; const st = stageById(T.stage);
   const total = s.entries.length; const need = stageTestNeed(total); const r = T.result;
@@ -5175,12 +5178,12 @@ function preMarkStepHtml(T) {
     <div class="opts wide">${opts}</div></div>`;
 }
 // choices: group → '3'|'4'|'5'; a group left out is not marked. introPending (only 1.0.17 set it) is left as it is.
-function preMarkApply(choices) {
+function preMarkApply(choices, skip = new Set()) {   // skip: passSkipKeys of the test, left alone by 四顆 as by a stage pass
   const snap = bulkSnapshot({ stageId: 'pre', level: 'learned', changed: 0 });
   PRE_MARK_GROUPS.forEach(([g, , items]) => {
     const level = preMarkLevel(choices[g]); if (!level) return;
     const want = BULK_ORDER.indexOf(level);
-    const targets = items().filter(x => bulkLevelOf(state.srs[x.key], x.key) < want);
+    const targets = items().filter(x => bulkLevelOf(state.srs[x.key], x.key) < want && !(level === 'four' && skip.has(x.key)));
     bulkApply(targets, level, snap); snap.changed += targets.length;
   });
   snap.label = PRE_MARK_GROUPS.filter(([g]) => preMarkLevel(choices[g])).map(([g, nm]) => `${nm}：${preMarkLevelName(choices[g])}`).join('、');
@@ -5200,7 +5203,7 @@ Object.assign(ACTIONS, {
     const T = SESSION && SESSION.test; if (!preMarkOpen(T)) return;
     const step = T.preStep || 0; T.preChoice = T.preChoice || {}; T.preChoice[PRE_MARK_GROUPS[step][0]] = el.dataset.level; T.preStep = step + 1;
     if (T.preStep < PRE_MARK_GROUPS.length) { renderStageSummary(document.getElementById('view')); return; }
-    const n = preMarkApply(T.preChoice);
+    const n = preMarkApply(T.preChoice, passSkipKeys(SESSION.results));
     SESSION = null; document.body.classList.remove('practicing');
     toast(T.auto ? `已標記 ${n} 個項目，週次不變` : n ? `已標記 ${n} 個項目，進入第 1 週` : '進入第 1 週', 4000);
     go('#/course');
