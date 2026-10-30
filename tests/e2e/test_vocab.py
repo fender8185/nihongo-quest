@@ -436,18 +436,22 @@ def test_kana_spelling_question_is_answered_by_tapping_tiles(b):
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
     assert r['fmt'] == 'v-spell' and r['opts'] == 0 and r['covers'] and r['extra'] and r['ans'] and r['done'] and r['ok'] and r['f'] == [1, 0], r
 
-def test_wrong_spelling_shows_the_right_reading_and_backspace_works(b):
+# 1.0.22: no 退一格 button; a placed kana is tapped on the line above to send it back
+def test_wrong_spelling_shows_the_right_reading_and_a_placed_kana_taps_back(b):
     js = """(() => { const v = __W__; srsAnswer(v.key, true);
       startSession('items', { items: [v] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-spell' }); renderPractice();
       const wrong = e.q.tiles.findIndex(t => t !== v.r[0]); document.querySelector(`.spell-tile[data-i="${wrong}"]`).click();
-      const typed1 = document.querySelector('.spell-out').textContent; document.querySelector('[data-act=spell-back]').click(); const typed2 = document.querySelector('.spell-out').textContent;
+      const typed1 = document.querySelector('.spell-out').textContent; const noBack = !document.querySelector('[data-act=spell-back]') && !document.getElementById('view').textContent.includes('退一格');
+      document.querySelector('.spell-out [data-act=spell-untap]').click(); const typed2 = document.querySelector('.spell-out').textContent;
+      const freed = !document.querySelector(`.spell-tile[data-i="${wrong}"]`).disabled;
       // now spell it wrong on purpose: first tile wrong, then fill up to length
       document.querySelector(`.spell-tile[data-i="${wrong}"]`).click();
       while (!e.done) { const t = document.querySelector('.spell-tile:not([disabled])'); if (!t) break; t.click(); }
-      const head = document.querySelector('.fb-head').textContent; const out = { typed1, typed2, done: e.done, ok: e.chosen === e.q.answer, showsRight: head.includes(v.r) };
+      const head = document.querySelector('.fb-head').textContent; const out = { typed1, typed2, noBack, freed, done: e.done, ok: e.chosen === e.q.answer, showsRight: head.includes(v.r), piecesAfter: document.querySelectorAll('.spell-out [data-act]').length };
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__W__', SPELL_WORD)
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
-    assert len(r['typed1']) == 1 and r['typed2'] == '' and r['done'] and not r['ok'] and r['showsRight'], r
+    assert len(r['typed1']) == 1 and r['typed2'] == '' and r['noBack'] and r['freed'] and r['done'] and not r['ok'] and r['showsRight'], r
+    assert r['piecesAfter'] == 0, r   # answered: the line is plain text
 
 def test_matching_question_pairs_four_words_with_their_meanings(b):
     js = """(() => { const v = __W__; srsAnswer(v.key, true);
@@ -469,7 +473,7 @@ def test_new_formats_join_the_rotation_after_the_first_sighting(b):
     r = json.loads(ev(b, js))
     assert 'v-spell' not in r['fresh'] and 'v-match' not in r['fresh'] and 'v-spell' in r['seen'] and 'v-match' in r['seen'], r
 
-TESTS += [test_kana_spelling_question_is_answered_by_tapping_tiles, test_wrong_spelling_shows_the_right_reading_and_backspace_works, test_matching_question_pairs_four_words_with_their_meanings, test_new_formats_join_the_rotation_after_the_first_sighting]
+TESTS += [test_kana_spelling_question_is_answered_by_tapping_tiles, test_wrong_spelling_shows_the_right_reading_and_a_placed_kana_taps_back, test_matching_question_pairs_four_words_with_their_meanings, test_new_formats_join_the_rotation_after_the_first_sighting]
 
 
 # ---- 2026-10-26 (14): review leftovers — furigana known rule, theme list deck button, encore feedback, session counts ----
@@ -570,6 +574,23 @@ def test_every_builtin_word_has_a_usable_second_example(b):
     assert r['nbad'] == 0, r
 
 TESTS += [test_every_builtin_word_has_a_usable_second_example]
+
+# 1.0.22: a question on a word's second example still carries the first: its explanation (and so the notebook entry it
+# writes) lists the question's example and then the other one, not the second example twice (配對 too); a notebook entry
+# saved that way before is mended when the state loads, and nothing else is touched
+def test_a_question_on_the_second_example_lists_both_and_old_notebook_entries_are_mended(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && x.ex2 && x.exZh && x.exZh2 && usableExamples(x).length === 2 && matchPairs(x));
+      const line = (ex, zh) => '\\n- 例：' + jaPlain(exPlain(ex)) + '（' + zh + '）'; const first = line(v.ex, v.exZh), second = line(v.ex2, v.exZh2);
+      const q1 = makeVocabQuestion(v, { forceFmt: 'v-cloze', exIndex: 1 }), q0 = makeVocabQuestion(v, { forceFmt: 'v-cloze', exIndex: 0 }), m1 = makeVocabQuestion(v, { forceFmt: 'v-match', exIndex: 1 });
+      const old = vocabWhy(v).replace(first + second, second + second);   // what 1.0.21 wrote for a question on the second example
+      const s = normalizeState({ mistakes: [{ id: 'mk_a', key: v.key, cat: '單字', prompt: 'a', answer: 'b', why: old, count: 1 }, { id: 'mk_b', key: 'g:x', cat: '文法', prompt: 'c', answer: 'd', why: 'x' + second + second, count: 1 }] });
+      return JSON.stringify({ why1: q1.why.endsWith(second + first), why0: q0.why.endsWith(first + second), match1: m1.why.endsWith(second + first), itemEx: q1.item.ex === v.ex2 && q1.item.ex2 === v.ex,
+        fullJp: q1.fullJp === exPlain(v.ex2), mended: s.mistakes[0].why === vocabWhy(v).replace(first + second, second + first), grammarKept: s.mistakes[1].why === 'x' + second + second,
+        twice: normalizeState(s).mistakes[0].why === s.mistakes[0].why }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'why1': True, 'why0': True, 'match1': True, 'itemEx': True, 'fullJp': True, 'mended': True, 'grammarKept': True, 'twice': True}, r
+
+TESTS += [test_a_question_on_the_second_example_lists_both_and_old_notebook_entries_are_mended]
 
 # ---- 2026-10-27: 「我會了」 sets five stars until the word is missed; 1.0.21: it reads 已熟練 once its 假名拼字 has been right ----
 def test_i_know_gives_five_stars_and_mastery_waits_for_the_spelling(b):

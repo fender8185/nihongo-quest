@@ -429,6 +429,8 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .spell { text-align: center; }
 .spell-out { min-height: 48px; font-size: 30px; letter-spacing: 2px; padding: 6px 0 10px; border-bottom: 2px solid var(--line-2); margin: 0 auto 14px; max-width: 420px; }
 .spell-out.ok { border-color: var(--ok); } .spell-out.bad { border-color: var(--bad, #e5484d); }
+.spell-piece { font: inherit; letter-spacing: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; border-radius: 6px; cursor: pointer; }   /* a placed piece: tap to take it back */
+.spell-piece:hover { background: var(--bg-hover); }
 .spell-tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .spell-tile { width: 52px; height: 52px; font-size: 24px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); cursor: pointer; }
 .spell-tile:disabled { opacity: .25; cursor: default; }
@@ -439,6 +441,9 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .order-out.ok { border-color: var(--ok); } .order-out.bad { border-color: var(--bad, #e5484d); }
 .order-slot { display: inline-block; min-width: 2.2em; margin: 0 3px; border-bottom: 2px solid var(--line-2); text-align: center; color: var(--fg-3); }
 .order-slot.filled { color: var(--fg); border-color: var(--accent); }
+button.order-slot { font: inherit; background: none; border-width: 0 0 2px; border-style: solid; border-radius: 0; padding: 0; cursor: pointer; }
+button.order-slot:hover { background: var(--bg-hover); }
+.order-slot.wrong { color: var(--bad); border-color: var(--bad); }
 .order-tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .order-tile { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 20px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); cursor: pointer; }
 .order-tile:disabled { opacity: .25; cursor: default; }
@@ -934,12 +939,18 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.21';   // keep equal to the version in sw.js CACHE ('nq-v1.0.21'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.22';   // keep equal to the version in sw.js CACHE ('nq-v1.0.22'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.22', date: '2026-10-31', items: [
+    '單字題用了第二句例句時，解說和錯題本不再把第二句列兩次：題目用的那句在前，另一句在後；以前存進錯題本的這種解說也改好了。',
+    '漢字題答完會自動唸例詞（讀音題唸考的那個詞，其他唸第一個例詞），跟按「發音」一樣；以前答完不會唸。',
+    '同一題的選項字體一樣大：有一個選項比較長時，四個一起縮小，不再只縮那一個。',
+    '排序、假名拼字、活用拼寫拿掉「退一格」，點上面已經放好的字就能拿掉，後面的往前補；排序答錯時，放錯位置的部分標成紅字。'
+  ] },
   { v: '1.0.21', date: '2026-10-30', items: [
     '錯題本不再每天另外抽 10%：答錯的題目照第 1、3、7 天回來，不算在三顆以下每天 50 題裡；手動新增的錯題卡在錯題本頁練。四顆答對不再直接升五顆，照記憶強度算（等了一陣子才答對的大多會升）。複習的目標記憶率固定 90%，不再看複習正確率調整。',
     '入門測驗通過跟其他階段測驗一樣：入門還不到四顆的題目設成四顆（這次答錯的和錯題本裡的不設），進入第 1 週，結果頁有「復原」，不再問四題。通過階段測驗不再改聽力、閱讀，它們照自己的節奏出。舊帳號的「先做一次入門測驗」提示拿掉了，要考可以到課程頁入門卡按「階段測驗」。',
@@ -1255,6 +1266,15 @@ function normalizeState(s) {
     const b = out.srs['v:' + to];
     if (!b || (a.n || 0) > (b.n || 0)) out.srs['v:' + to] = a;
     delete out.srs['v:' + from];
+  });
+  // 1.0.22: a word asked with its second example saved that example twice in the notebook's explanation (see withExample);
+  // the second line becomes the word's other example
+  const wordsById = out.mistakes.some(m => m && typeof m.why === 'string' && String(m.key || '').startsWith('v:')) ? new Map(DATA.VOCAB.map(v => [v.id, v])) : null;
+  if (wordsById) out.mistakes.forEach(m => {
+    const v = m && typeof m.why === 'string' && String(m.key || '').startsWith('v:') && wordsById.get(m.key.slice(2));
+    if (!v || !v.ex2) return;
+    const twice = exampleLine({ ex: v.ex2, exZh: v.exZh2 || '' });
+    if (m.why.endsWith(twice + twice)) m.why = m.why.slice(0, -twice.length) + exampleLine({ ex: v.ex, exZh: v.exZh || '' });
   });
   return out;
 }
@@ -2364,10 +2384,13 @@ function vSurfaceInfo(v) {
 // A word may carry a second example (ex2 / exZh2). Questions take one of them so the sentence is not what gets memorised;
 // cards and previews show both.
 function vocabExamples(v) { const out = []; if (v.ex) out.push({ ex: v.ex, exZh: v.exZh || '' }); if (v.ex2) out.push({ ex: v.ex2, exZh: v.exZh2 || '' }); return out; }
+// the copy a question uses: the chosen example as ex, the other one as ex2, so the explanation still lists both
+// (the question's first) instead of the second one twice
 function withExample(v, i) {
   const exs = vocabExamples(v); const e = exs[i];
   if (!e || exs.length < 2) return v;
-  return Object.assign({}, v, { ex: e.ex, exZh: e.exZh, exIndex: i });
+  const other = exs[1 - i];
+  return Object.assign({}, v, { ex: e.ex, exZh: e.exZh, ex2: other.ex, exZh2: other.exZh, exIndex: i });
 }
 // indices of the examples whose bracketed form the builders understand (so 例句填空 / 漢字 questions work); all when none do
 function usableExamples(v) {
@@ -2601,10 +2624,10 @@ function exampleHtml(jp, zh, cls = '') {
   const plain = jaPlain(exPlain(jp));
   return `<div class="example ${cls}"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(plain)}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${furi(exPlain(jp))}</div>${zh ? `<div class="zh">${esc(zh)}</div>` : ''}</div></div>`;
 }
+function exampleLine(e) { return `\n- 例：${jaPlain(exPlain(e.ex))}${e.exZh ? `（${e.exZh}）` : ''}`; }   // one example in an explanation's text
 function vocabWhy(v) {
   const head = `**${jaPlain(v.w)}**${v.r && v.r !== v.w ? `（${v.r}）` : ''}：${v.m}`;
-  const ex = vocabExamples(v).map(e => `\n- 例：${jaPlain(exPlain(e.ex))}${e.exZh ? `（${e.exZh}）` : ''}`).join('');
-  return head + ex;
+  return head + vocabExamples(v).map(exampleLine).join('');
 }
 
 function makeVocabQuestion(v0, ctx = {}) {
@@ -2722,7 +2745,7 @@ function makeVocabQuestion(v0, ctx = {}) {
       q.stemHtml = '';
       q.pairs = pairs; q.words = shuffle(pairs.map(x => x[0])); q.meanings = shuffle(pairs.map(x => x[1]));
       q.mistakePrompt = `配對：${jaPlain(v.w)}`;
-      q.why = pairs.map(([w, mm, r]) => `**${w}**${r && r !== w ? `（${r}）` : ''}：${mm}`).join('\n\n') + vocabExamples(v).map(x => `\n- 例：${jaPlain(exPlain(x.ex))}${x.exZh ? `（${x.exZh}）` : ''}`).join('');   // all four pairs, then the target's examples
+      q.why = pairs.map(([w, mm, r]) => `**${w}**${r && r !== w ? `（${r}）` : ''}：${mm}`).join('\n\n') + vocabExamples(v).map(exampleLine).join('');   // all four pairs, then the target's examples
       q.options = [{ text: v.m }, { text: '' }]; q.answer = 0; q.answerText = v.m;
       return true;
     }
@@ -3941,10 +3964,11 @@ function renderPractice() {
   if (q.subHtml) subParts.push(q.subHtml);
   if (q.zhText) subParts.push(showZh ? `<span>${esc(q.zhText)}</span>` : '<button type="button" class="toggle-zh" data-act="show-zh">顯示中文（T）</button>');
   const answered = e.done;
+  const longOpts = q.options.some(o => jaPlain(o.text).length > 14);   // one long option makes all four smaller, so their sizes match
   const opts = q.options.map((o, i) => {
     let cls = 'opt';
     if (!o.jp) cls += ' zh';
-    if (jaPlain(o.text).length > 14) cls += ' long';
+    if (longOpts) cls += ' long';
     if (answered) {
       if (i === q.answer) cls += ' correct';
       else if (i === e.chosen) cls += ' wrong';
@@ -4055,6 +4079,8 @@ function previewHtml(e, pct) {
 
 // 假名拼字 / 配對 are answered by tapping, not by picking one of four options. They still end in answerCurrent():
 // option 0 is the correct text, option 1 receives what the learner produced when it was wrong.
+// A piece already placed (假名拼字, 活用拼寫, 排序) is tapped on the line above to send it back to the tiles.
+function placedPiece(act, k, html, cls = 'spell-piece') { return `<button type="button" class="${cls}" data-act="${act}" data-k="${k}" title="點一下拿掉">${html}</button>`; }
 function customInteractionHtml(e, answered) {
   const q = e.q;
   if (q.custom === 'g-conj-type' || q.custom === 'g-adj-type') {
@@ -4069,27 +4095,31 @@ function customInteractionHtml(e, answered) {
     const used = e.conj || [];
     const built = used.map(i => q.tiles[i]).join('');
     return `<div class="spell">
-      <div class="spell-out jp ${cls}">${furi(built)}<span class="caret"></span></div>
+      <div class="spell-out jp ${cls}">${answered ? furi(built) : used.map((i, k) => placedPiece('conj-untap', k, furi(q.tiles[i]))).join('')}<span class="caret"></span></div>
       <div class="spell-tiles">${q.tiles.map((tok, i) => `<button type="button" class="spell-tile conj-tile jp" data-act="conj-tap" data-i="${i}" data-tok="${esc(tok)}" ${used.includes(i) || answered ? 'disabled' : ''}>${furi(tok)}</button>`).join('')}</div>
-      ${answered ? '' : `<div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="conj-back" ${used.length ? '' : 'disabled'}>退一格</button><span class="small muted">${used.length} / ${conjTokens(ans).length}</span><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">我不會，看答案</button></div>`}
+      ${answered ? '' : `<div class="row-wrap mt-2"><span class="small muted">${used.length} / ${conjTokens(ans).length}</span><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">我不會，看答案</button></div>`}
     </div>`;
   }
   if (q.custom === 'v-spell') {
     const used = e.spell || [];
     const typed = used.map(i => q.tiles[i]).join('');
     return `<div class="spell">
-      <div class="spell-out jp ${answered ? (e.chosen === q.answer ? 'ok' : 'bad') : ''}">${esc(typed)}<span class="caret"></span></div>
+      <div class="spell-out jp ${answered ? (e.chosen === q.answer ? 'ok' : 'bad') : ''}">${answered ? esc(typed) : used.map((i, k) => placedPiece('spell-untap', k, esc(q.tiles[i]))).join('')}<span class="caret"></span></div>
       <div class="spell-tiles">${q.tiles.map((ch, i) => `<button type="button" class="spell-tile jp" data-act="spell-tap" data-i="${i}" data-ch="${esc(ch)}" ${used.includes(i) || answered ? 'disabled' : ''}>${esc(ch)}</button>`).join('')}</div>
-      ${answered ? '' : `<div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="spell-back" ${used.length ? '' : 'disabled'}>退一格</button><span class="small muted">${typed.length} / ${[...q.options[0].text].length}</span><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">我不會，看答案</button></div>`}
+      ${answered ? '' : `<div class="row-wrap mt-2"><span class="small muted">${typed.length} / ${[...q.options[0].text].length}</span><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">我不會，看答案</button></div>`}
     </div>`;
   }
   if (q.custom === 'g-order') {
     const used = e.order || [];
-    const built = `${furi(q.pre)}${q.orderParts.map((_, i) => used[i] !== undefined ? `<span class="order-slot filled">${furi(q.tiles[used[i]])}</span>` : '<span class="order-slot">＿</span>').join('')}${furi(q.post)}`;
+    // answered wrong: a piece standing where another one belongs is red
+    const slot = (i) => used[i] === undefined ? '<span class="order-slot">＿</span>'
+      : !answered ? placedPiece('order-untap', i, furi(q.tiles[used[i]]), 'order-slot filled')
+      : `<span class="order-slot filled${e.chosen !== q.answer && q.tiles[used[i]] !== q.orderParts[i] ? ' wrong' : ''}">${furi(q.tiles[used[i]])}</span>`;
+    const built = `${furi(q.pre)}${q.orderParts.map((_, i) => slot(i)).join('')}${furi(q.post)}`;
     return `<div class="order">
       <div class="order-out jp ${answered ? (e.chosen === q.answer ? 'ok' : 'bad') : ''}">${built}</div>
       <div class="order-tiles">${q.tiles.map((p, i) => `<button type="button" class="order-tile jp" data-act="order-tap" data-i="${i}" ${used.includes(i) || answered ? 'disabled' : ''}><span class="kbd">${i + 1}</span>${furi(p)}</button>`).join('')}</div>
-      ${answered ? '' : `<div class="row between mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="order-back" ${used.length ? '' : 'disabled'}>退一格</button><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">看答案</button></div>`}
+      ${answered ? '' : `<div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">看答案</button></div>`}
     </div>`;
   }
   if (q.custom === 'v-match') {
@@ -4223,7 +4253,8 @@ function answerCurrent(i) {
   speakAnswered(q);
 }
 function speakAnswered(q) {
-  const text = q.fmt === 'v-meaning' || q.fmt === 'v-recall' || q.fmt === 'v-listen' || q.fmt === 'v-reading' || q.fmt === 'v-kanji' || (q.fmt && q.fmt.startsWith('a-')) ? q.speakWord : q.fullJp;
+  // a kanji question has no sentence: it reads its example word (the reading asked, or the first example's), as 發音 does
+  const text = q.fmt === 'v-meaning' || q.fmt === 'v-recall' || q.fmt === 'v-listen' || q.fmt === 'v-reading' || q.fmt === 'v-kanji' || (q.fmt && (q.fmt.startsWith('a-') || q.fmt.startsWith('k-'))) ? q.speakWord : q.fullJp;
   if (text) speak(text, speakOpts(q, text));
 }
 function nextQuestion() {
@@ -4551,7 +4582,7 @@ const ACTIONS = {
     const ans = e.q.options[0].text; const built = e.conj.map(k => e.q.tiles[k]).join('');
     if (e.conj.length >= conjTokens(ans).length) finishCustom(e, conjMatch(built, ans), jaPlain(built)); else renderPractice();
   },
-  'conj-back': () => { const e = currentEntry(); if (!e || e.done || !e.conj || !e.conj.length) return; e.conj.pop(); renderPractice(); },
+  'conj-untap': (el) => { const e = currentEntry(); const k = Number(el.dataset.k); if (!e || e.done || !e.conj || !(k >= 0 && k < e.conj.length)) return; e.conj.splice(k, 1); renderPractice(); },
   'conj-submit': () => {
     const e = currentEntry(); if (!e || e.done || !e.q || !(e.q.custom === 'g-conj-type' || e.q.custom === 'g-adj-type')) return;
     const inp = document.querySelector('input.conj-in'); e.typed = inp ? inp.value : (e.typed || '');
@@ -4574,8 +4605,9 @@ const ACTIONS = {
     const built = e.order.map(k => e.q.tiles[k]).join('');
     finishCustom(e, built === e.q.orderParts.join(''), e.q.pre + built + e.q.post);
   },
-  'order-back': () => { const e = currentEntry(); if (!e || e.done || !e.order || !e.order.length) return; e.order.pop(); renderPractice(); },
-  'spell-back': () => { const e = currentEntry(); if (!e || e.done || !e.spell || !e.spell.length) return; e.spell.pop(); renderPractice(); },
+  // a placed piece tapped on the line goes back to the tiles; the ones after it move up
+  'order-untap': (el) => { const e = currentEntry(); const k = Number(el.dataset.k); if (!e || e.done || !e.order || !(k >= 0 && k < e.order.length)) return; e.order.splice(k, 1); renderPractice(); },
+  'spell-untap': (el) => { const e = currentEntry(); const k = Number(el.dataset.k); if (!e || e.done || !e.spell || !(k >= 0 && k < e.spell.length)) return; e.spell.splice(k, 1); renderPractice(); },
   'match-word': (el) => {
     const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'v-match') return;
     e.match = e.match || { sel: null, matched: [], wrong: 0 };

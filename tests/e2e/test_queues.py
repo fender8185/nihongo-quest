@@ -506,8 +506,8 @@ SPEC_ITEMS = [
     '單字要五顆、而且假名拼字答對過，才算「已熟練」（按「我會了」或測驗設的也一樣；沒有拼字題的字五顆就算）；四顆以上、還沒拼對過的字，練習時會出拼字。文法、假名、漢字五顆就算已熟練，以前批次標記過的也一樣。'
 ]
 def test_the_1_0_21_changelog_lists_the_cuts(b):
-    first = json.loads(ev(b, "JSON.stringify(CHANGELOG[0])"))
-    assert first['v'] == '1.0.21' and first['items'] == SPEC_ITEMS, first
+    entry = json.loads(ev(b, "JSON.stringify(CHANGELOG.find(x => x.v === '1.0.21'))"))   # 1.0.22 came after it
+    assert entry['items'] == SPEC_ITEMS, entry
 
 # a mark gives a new record the format history `f` only for a word (a word's 假名拼字 counts toward 已熟練, see
 # srsLevelLabel): grammar a pass set to four stars reads 已熟練 once a right answer lifts it to five, and a kanji has no `f`

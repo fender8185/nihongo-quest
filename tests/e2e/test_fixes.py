@@ -1161,15 +1161,63 @@ def test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay
       a.parts.forEach(p => tap(e, p)); out.okDone = e.done === true && e.chosen === 0; out.fullShown = !!document.querySelector('.order-out.ok') && !!document.querySelector('.fb-full');
       nextQuestion(); e = currentEntry(); renderPractice(); const wrong = bItem.parts.slice().reverse(); wrong.forEach(p => tap(e, p));
       out.wrongDone = e.done === true && e.chosen === 1; out.produced = e.q.options[1].text; out.wrongText = (bItem.pre || '') + wrong.join('') + (bItem.post || '');
-      nextQuestion(); e = currentEntry(); renderPractice(); tap(e, c.parts[2]); ACTIONS['order-back'](); out.backEmpty = !(e.order || []).length; ACTIONS['custom-giveup'](); out.gaveUp = e.done === true && e.chosen === 1 && e.order.map(i => e.q.tiles[i]).join('') === c.parts.join('');
+      nextQuestion(); e = currentEntry(); renderPractice(); c.parts.slice(0, 3).forEach(p => tap(e, p));
+      document.querySelectorAll('.order-out [data-act=order-untap]')[1].click();   // 1.0.22: the second placed piece is tapped on the line, no 退一格
+      out.untapped = e.order.map(i => e.q.tiles[i]).join('|') === [c.parts[0], c.parts[2]].join('|') && document.querySelectorAll('.order-out .order-slot.filled').length === 2
+        && !document.querySelector(`.order-tile[data-i="${e.q.tiles.indexOf(c.parts[1])}"]`).disabled && !document.getElementById('view').textContent.includes('退一格');
+      ACTIONS['custom-giveup'](); out.gaveUp = e.done === true && e.chosen === 1 && e.order.map(i => e.q.tiles[i]).join('') === c.parts.join('');
       const exam = makeGrammarQuestion(a, { forceFmt: 'g-choice' }); out.exam = { fmt: exam.fmt, custom: exam.custom || null, opts: exam.options.length, star: exam.options[exam.answer].text === a.parts[a.star] };
       SESSION = null; document.body.classList.remove('practicing'); [a, bItem, c].forEach(g => delete state.srs[g.key]); saveState(); return JSON.stringify(out); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
     r = json.loads(out[-1])
     assert r['custom'] == 'g-order' and r['tiles'] == 4 and r['noOpts'] and r['shuffled'], r
     assert r['okDone'] and r['fullShown'] and r['wrongDone'] and r['produced'] == r['wrongText'], r
-    assert r['backEmpty'] and r['gaveUp'], r
+    assert r['untapped'] and r['gaveUp'], r
     assert r['exam'] == {'fmt': 'g-order', 'custom': None, 'opts': 4, 'star': True}, r
+
+# 1.0.22: an order answered wrong marks in red each piece standing where another one belongs (here the first two swapped);
+# a right answer and 看答案 mark none
+def test_a_wrong_order_marks_the_misplaced_pieces_red(b):
+    js = """(() => { const [a, c, d] = REG.grammar.filter(g => g.t === 'order' && new Set(g.parts).size === g.parts.length).slice(0, 3);
+      const tap = (e, text) => ACTIONS['order-tap']({ dataset: { i: String(e.q.tiles.indexOf(text)) } });
+      const reds = () => [...document.querySelectorAll('.order-out .order-slot')].map(el => el.classList.contains('wrong'));
+      startSession('items', { items: [a, c, d] }); let e = currentEntry(); renderPractice();
+      const swapped = [a.parts[1], a.parts[0]].concat(a.parts.slice(2)); swapped.forEach(p => tap(e, p));
+      const out = { n: a.parts.length, wrong: e.done && e.chosen === 1, reds: reds(), color: getComputedStyle(document.querySelector('.order-out .order-slot.wrong')).color, bad: getComputedStyle(document.body).getPropertyValue('--bad').trim(),
+        untappable: document.querySelectorAll('.order-out [data-act]').length === 0 };
+      nextQuestion(); e = currentEntry(); renderPractice(); ACTIONS['custom-giveup'](); out.gaveUpReds = reds();
+      nextQuestion(); e = currentEntry(); renderPractice(); d.parts.forEach(p => tap(e, p)); out.right = e.done && e.chosen === 0; out.rightReds = reds();
+      const probe = document.createElement('span'); probe.style.color = out.bad; document.body.appendChild(probe); out.badRgb = getComputedStyle(probe).color; probe.remove();
+      SESSION = null; document.body.classList.remove('practicing'); [a, c, d].forEach(g => delete state.srs[g.key]); saveState(); return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
+    r = json.loads(out[-1])
+    assert r['wrong'] and r['reds'] == [True, True] + [False] * (r['n'] - 2) and r['untappable'], r
+    assert r['color'] == r['badRgb'], r
+    assert not any(r['gaveUpReds']) and r['right'] and not any(r['rightReds']), r
+
+# 1.0.22: a kanji question has no sentence, so nothing was read once it was answered; it reads its example word now
+# (the reading asked, or the first example's), the same text 發音 plays
+def test_a_kanji_question_reads_its_example_word_once_answered(b):
+    js = """(() => { const k = REG.kanji.find(x => !meaningShowsKanji(x) && (x.ex || []).filter(([w, r]) => w && r && r.length >= 2 && w !== r).length >= 2);
+      const t = todayStr(); state.srs[k.key] = { b: 3, due: t, n: 3, ok: 3, ng: 0, s: 6, d: 5, last: addDays(t, -6), f: {} };
+      const byFmt = {}; for (let i = 0; i < 120 && Object.keys(byFmt).length < 3; i++) { const q = makeKanjiQuestion(k); if (q && !byFmt[q.fmt]) byFmt[q.fmt] = q; }
+      const said = []; const orig = speak; speak = (text) => { said.push(text); return Promise.resolve(); };
+      const out = {};
+      Object.entries(byFmt).forEach(([f, q]) => { said.length = 0; startSession('items', { items: [k] }); const e = currentEntry(); e.previewDone = true; e.q = q; renderPractice();
+        answerCurrent(q.answer); out[f] = { said: said.slice(), word: q.speakWord }; SESSION = null; state.srs[k.key] = { b: 3, due: t, n: 3, ok: 3, ng: 0, s: 6, d: 5, last: addDays(t, -6), f: {} }; });
+      speak = orig; document.body.classList.remove('practicing'); delete state.srs[k.key]; return JSON.stringify(out); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
+    assert set(r) == {'k-meaning', 'k-read', 'k-shape'}, r
+    assert all(x['word'] and x['said'] == [x['word']] for x in r.values()), r
+
+# 1.0.22: one option longer than 14 characters made only itself smaller; now all four share its size
+def test_options_of_one_question_share_one_font_size(b):
+    js = """(() => { const g = REG.grammar.find(x => (x.t || 'choice') === 'choice'); startSession('items', { items: [g] }); const e = currentEntry(); e.previewDone = true;
+      const sizes = (texts) => { e.q = Object.assign({}, e.q, { options: texts.map(text => ({ text, jp: true })), answer: 0 }); delete e.q._rmap; renderPractice(); return [...document.querySelectorAll('.opt')].map(el => getComputedStyle(el).fontSize); };
+      const mixed = sizes(['きのうはとてもさむかったですね。ほんとうに', 'さむい', 'あつい', 'すずしい']), short = sizes(['さむい', 'あつい', 'すずしい', 'あたたかい']);
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify({ mixed, short }); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
+    assert len(set(r['mixed'])) == 1 and len(set(r['short'])) == 1 and r['mixed'][0] != r['short'][0], r
 
 def test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue(b):
     js = """(() => { const v = REG.vocab.find(x => x.builtin && meaningOptions(x)); srsAnswer(v.key, true); state.srs[v.key].last = addDays(todayStr(), -3); state.srs[v.key].due = todayStr();
@@ -1597,7 +1645,7 @@ if __name__ == "__main__":
              test_stats_projects_the_finish_date_from_the_recent_pace,
              test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
-             test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
+             test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_wrong_order_marks_the_misplaced_pieces_red, test_a_kanji_question_reads_its_example_word_once_answered, test_options_of_one_question_share_one_font_size, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
              test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box,
              test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_hides_kana_drills,
              test_a_missed_listening_or_reading_item_gets_no_retry_copy_in_the_session, test_settings_drop_the_switches_the_app_now_decides, test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off,
