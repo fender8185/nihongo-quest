@@ -1125,7 +1125,7 @@ function markTarget(ex, w) {
 // ---------- default state ----------
 function defaultSettings() {
   return {
-    loadCap: 100,            // 每天負荷上限: when due reviews + new items exceed it, new items shrink (words to half, then kanji, then listening)
+    loadCap: 100,            // 每天負荷上限 until 1.0.20; nothing reads it now (old copies keep theirs)
     sessionSize: 20,
     order: 'mix',              // mix | split
     showZh: true,
@@ -1138,13 +1138,11 @@ function defaultSettings() {
     examInstant: false,
     examFormal: false,
     furiMode: 'smart',       // smart: no furigana on mastered words | all — furigana:false hides all
-    newKanaPerDay: 15,       // 入門: new kana a day (hiragana and katakana together, 五十音 order); only while state.stage === 'pre'
+    newKanaPerDay: 15,       // 每天新假名 until 1.0.20; nothing reads it now (入門's new kana come from the day's new count)
     backupEvery: 7
   };
 }
 // 每天新題數不再讓使用者逐項設定：全部由「每天負荷上限」依固定比例推算（上限 100 時為 單字 8・文法 6・漢字 3・聽力 3・變化練習 3）
-const NEW_SHARE = { v: 0.08, g: 0.06, k: 0.03, l: 0.03, c: 0.03 };
-function newQuota(kind) { return Math.max(1, Math.round((Number(state.settings.loadCap) || 100) * NEW_SHARE[kind])); }
 function defaultState() {
   return {
     v: 3,
@@ -3380,7 +3378,7 @@ function vocabEligibleForDaily(v, n4Open) {
 // that still have unintroduced words of the lowest open level (N5 first; N4 only once allowed).
 function themeRank(c) { const i = THEME_ORDER.indexOf(c); return i < 0 ? THEME_ORDER.length : i; }
 // The lanes follow state.themeLane.order (THEME_ORDER to begin with). A theme holds a lane for at most three days'
-// worth of new words (THEME_LANE_DAYS × newQuota('v')); then it moves to the back of the order and the next theme
+// worth of new words (THEME_LANE_DAYS × 8); then it moves to the back of the order and the next theme
 // with unintroduced words takes the lane, so a big theme (生活 has 148 words) cannot occupy a lane for a month.
 const THEME_LANE_DAYS = 3;
 function laneOrder() {
@@ -3389,7 +3387,7 @@ function laneOrder() {
   THEME_ORDER.forEach(c => { if (!lane.order.includes(c)) lane.order.push(c); });
   return lane.order;
 }
-function laneCap() { return THEME_LANE_DAYS * newQuota('v'); }
+function laneCap() { return THEME_LANE_DAYS * 8; }
 // the level whose themes hold the lanes: PRE_N5 in 入門; otherwise N5 while it has unseen words, then N4
 function laneLevel(fresh) { return inPreStage() ? 'PRE_N5' : fresh.some(v => v.lv === 'N5') ? 'N5' : 'N4'; }   /* level-literal-ok: picks the theme level, PRE_N5 leftovers ride their own lane */
 function activeThemes(pool, allowN4) {
@@ -3520,10 +3518,6 @@ function extrasPlan(curIdx) {
   return { dueL, newL, dueR, newR };
 }
 
-// Summary of what today's session would contain (used by the Today page).
-// New material is sized to fit around the reviews that are due, so the daily load stays under the
-// load cap (settings.loadCap); a small minimum keeps the course moving even when many reviews are waiting.
-const MIN_NEW_PER_DAY = 6;
 // How many new items today: by how the last RECENT_MAX answers went (fewer than 30: NEW_DEFAULT), minus one for every ten
 // entries still in the notebook — what the learner can digest comes before the exam date.
 function newCountToday() {
@@ -3649,6 +3643,9 @@ function dailyPlan(size = state.settings.sessionSize) {
   out.remaining = remaining;
   return out;
 }
+// what is left of today's new items of one kind for the other ways in (字卡, unit and word practice, the kanji page):
+// the day's share for that kind less what was introduced today
+function todayNewLeft(kind) { return Math.max(0, ((dailyPlan().split || {})[kind] || 0) - (state.today['new' + kind.toUpperCase()] || 0)); }
 // a key on today's list as something to practise: 'm:<id>' is a notebook card while it is still in the notebook
 function planItem(k) {
   if (!k.startsWith('m:')) return REG.byKey.get(k);
@@ -3761,7 +3758,7 @@ function scopeQueue(pool, fresh, size) {
   return out;
 }
 function buildUnitQueue(unitId, size = 15) {
-  const left = Math.max(0, newQuota('g') - state.today.newG);
+  const left = todayNewLeft('g');
   return scopeQueue(unitItems(unitId), newGrammarCandidates(unitId).slice(0, left), size);
 }
 function buildVocabQueue(filter = 'all', size = 20) {
@@ -3770,7 +3767,7 @@ function buildVocabQueue(filter = 'all', size = 20) {
   const lt = filter.startsWith('t:') ? filter.slice(2).split(':') : null;   // t:<lv>:<theme> — one level's theme (the level pages)
   const n4Open = Boolean(theme) || Boolean(lt) || filter === 'N4' || n4WordsOpen();
   const pool = REG.vocab.filter(v => lt ? (v.builtin && v.lv === lt[0] && vocabTheme(v) === lt.slice(1).join(':')) : theme ? (v.builtin && vocabTheme(v) === theme) : filter === 'all' ? vocabEligibleForDaily(v, n4Open) : filter === 'custom' ? !v.builtin : (v.builtin && v.lv === filter));
-  const left = Math.max(0, newQuota('v') - state.today.newV);
+  const left = todayNewLeft('v');
   return scopeQueue(pool, newVocabCandidates(pool, n4Open).slice(0, left), size);
 }
 function buildMistakeQueue(size = 20) {
@@ -5048,7 +5045,7 @@ const BULK_LEVELS = {
 };
 let LAST_BULK_MARK = null;
 // reviews a day a bulk mark may schedule: half the load cap, so the marked items never fill a day by themselves
-function bulkDailyBudget() { return Math.max(10, Math.round((Number(state.settings.loadCap) || 100) / 2)); }
+function bulkDailyBudget() { return SRS_DAILY_CAP; }   // a bulk mark spreads its first checks at the daily review cap
 // the i-th of n marked items: the level's window, widened when n would put more than the budget on a day (count = n / budget days)
 function spreadDue(i, level, n = 0) { const [lo, hi] = BULK_LEVELS[level].due; const days = Math.max(hi - lo + 1, Math.ceil((n || 0) / bulkDailyBudget())); return lo + (i % days); }
 // 聽力／閱讀 are capped per day and come back on the 30／90／180 ladder, so they get a later, wider window of their own
@@ -5432,7 +5429,7 @@ function levelPickerHtml() {
       </div>
     </details>`;
 }
-// 「我已有基礎」: faster new-item quotas, N4 words open now, no Chinese shown by default. Every value stays adjustable in 設定.
+// 「我已有基礎」: no Chinese shown by default (it stays adjustable in 設定); new items follow the recent answers, as for everyone
 // 起點三選一: 從零開始 (入門: kana first) / 已會假名 (main course, kana never scheduled as new) / 已有 N5 基礎 (plus the 我已有基礎 settings)
 function chooseStart(kind) {
   state.stage = kind === 'zero' ? 'pre' : 'main';
@@ -5447,7 +5444,7 @@ function startButtonsHtml(small = true) {
   const c = small ? 'btn btn-sm' : 'btn';
   return `<button type="button" class="${c} btn-primary" data-act="start-zero">從零開始</button><button type="button" class="${c}" data-act="start-test">測試看看</button>`;
 }
-const EXPERIENCED_SETTINGS = { loadCap: 150, showZh: false };
+const EXPERIENCED_SETTINGS = { showZh: false };
 function applyExperienced() { Object.assign(state.settings, EXPERIENCED_SETTINGS); saveState(); }
 // make `unit` the current unit; optionally mark every earlier unit as completed and apply the 我已有基礎 settings
 function applyStartUnit(unit, markPrev, experienced = false) {
@@ -5621,7 +5618,7 @@ function buildFlashQueue(deck, extraNew = 0) {
   const t = todayStr();
   const pool = deckPool(deck);
   const due = pool.filter(v => { const r = state.srs[v.key]; return r && r.due <= t; }).sort(byDue);
-  const quota = Math.max(0, newQuota('v') - state.today.newV) + extraNew;
+  const quota = todayNewLeft('v') + extraNew;
   const fresh = (deck === 'custom' ? pool.filter(v => !state.srs[v.key]) : newVocabCandidates(pool, deckAllowsN4(deck))).slice(0, quota);
   return due.concat(fresh).map(v => v.key);
 }
@@ -5657,7 +5654,7 @@ function renderVocab(view, tab, params) {
   if (!v) {
     card = `<div class="card center"><div class="flash">
       <div class="page-title">${F.done ? `這一輪完成了（${F.done} 張）` : '目前沒有要翻的字卡'}</div>
-      <p class="dim mt-2">今天到期的字卡都複習完了${state.today.newV >= newQuota('v') ? '，新卡也已達每日上限' : ''}。</p>
+      <p class="dim mt-2">今天到期的字卡都複習完了${todayNewLeft('v') === 0 ? '，今天的新單字也都學了' : ''}。</p>
       <div class="row-wrap mt-3" style="justify-content:center">
         <button type="button" class="btn" data-act="flash-more">再學 5 張新卡</button>
         <button type="button" class="btn btn-primary" data-act="start-vocab" data-filter="${deck}">用測驗方式複習</button>
@@ -6714,19 +6711,14 @@ function assemblePaper(level, size, subjects) {
 }
 
 // ---------- exam page ----------
-// 考試倒數 (模擬考 page): days left, the unit pace, and the exam-date advice on the daily quotas (one tap to apply)
+// 考試倒數 (模擬考 page): days left, the unit pace, and when the course would be learned at the recent pace
 function examCountdownHtml() {
   const pace = examPace();
   const paceText = pace.daysLeft === 0 ? '考試日期已到或已過，可在設定中更新考試日期。'
-    : pace.status === 'behind' ? `剩下 ${pace.remainingUnits} 個單元，每個單元平均只有約 ${pace.perUnit} 天，建議加快一點或提高每日題數。`
+    : pace.status === 'behind' ? `剩下 ${pace.remainingUnits} 個單元，每個單元平均只有約 ${pace.perUnit} 天，建議加快一點（做完當天的練習後可以按加練）。`
     : `剩下 ${pace.remainingUnits} 個單元，每個單元可用約 ${pace.perUnit} 天，並保留最後三週做模擬考。`;
-  // the exam-date pace reaches the daily practice here: when the current new-item quotas cannot finish the banks in
-  // time, the recommended quotas (學習分析「每日練習量建議」) are offered with one tap; nothing changes until tapped
-  const adv = planAdvice();
-  const advRows = adv.banks.filter(b2 => b2.key && b2.cur < b2.rec);
-  const goalHint = adv.studyDays > 0 && adv.lagging.length && advRows.length
-    ? `<div class="small dim mt-2 hero-advice">照考試日期，建議每天負荷上限調到 ${adv.rec.loadCap}（${advRows.map(b2 => `${esc(b2.name)} ${b2.cur}→${b2.rec}`).join('、')}）。</div><div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-act="apply-advice">套用建議</button></div>`
-    : '';
+  // when the words, grammar and kanji left would be done at the recent pace (the same line as 學習分析「學完的預估」)
+  const goalHint = pace.daysLeft > 0 ? `<div class="small dim mt-2 hero-advice">${esc(finishText())}</div>` : '';
   const paceChip = pace.status === 'behind' ? '<span class="chip chip-warn">稍微落後</span>' : pace.status === 'ahead' ? '<span class="chip chip-ok">進度充裕</span>' : '<span class="chip chip-ok">進度正常</span>';
 
   return `<div class="card">
@@ -7410,9 +7402,7 @@ function textRow(key, label, hint, target, opt = {}) {
 function settingsLearn() {
   const s = state.settings;
   return `
-    ${numRow('loadCap', '每天負荷上限', '每天新單字、新文法、新漢字、聽力與變化練習都依這個數字推算，數字越大每天學得越多；當天到期複習加新題超過它時，先減新單字（最少減到一半），再停新漢字、新聽力。到期的複習不會減，所以總量會隨學過的內容增加。考前一天幾百題是正常的，可以拉高。', 10, 300, 5, '題')}
     ${numRow('sessionSize', '每組練習題數', '按「開始練習」時一次出幾題；當天到期與新題會分成幾組出完。', 5, 60, 5, '題')}
-    ${numRow('newKanaPerDay', '每天新假名', '平假名與片假名一起，照五十音順序；入門階段才會排新的。', 0, 30, 1, '個')}
     ${selRow('order', '出題順序', '', [['mix', '單字與文法交錯'], ['split', '先單字，再文法']])}
     ${boolRow('showZh', '題目下方直接顯示中文', '關閉時可按 T 或點「顯示中文」再看。需要中文才能判斷的題目仍會顯示。')}
     ${selRow('includeImported', '每日練習包含自訂字卡', '句子型的匯入卡片比較難，預設只加入單字型的。', [['words', '只加入單字型'], ['all', '全部加入'], ['off', '不加入']])}
@@ -7749,7 +7739,7 @@ function buildKanjiQueue(size = 15, lv = null) {
     return scopeQueue(pool, pool.filter(k => !state.srs[k.key]).sort((a, b) => a.order - b.order), size);
   }
   const pool = REG.kanji.filter(k => k.lv !== 'N4' || k4);
-  const left = Math.max(0, newQuota('k') - (state.today.newK || 0));
+  const left = todayNewLeft('k');
   return scopeQueue(pool, newKanjiCandidates(k4).slice(0, left), size);
 }
 
@@ -7837,35 +7827,35 @@ function gaugeHtml(t, title, labels) {
 }
 // Daily quotas that would finish every bank before the mock-exam weeks: unseen items ÷ study days, per kind.
 // Reviews need room on top of the new items (about one and a half times), which is what the load cap covers.
-function planAdvice() {
-  const s = state.settings;
-  const pace = examPace();
-  const studyDays = Math.max(0, pace.daysLeft - 21);
+// 考試倒數 (1.0.20): new items a day lately (dailyLogs.fresh — first answers, so bulk marks do not count — averaged over
+// the last 14 days that have it; none yet: today's count), when the words, grammar and kanji left would be done at that
+// pace, and how far that is from three weeks before the exam (late > 0: after it)
+function courseLeft() {
   const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
-  const banks = [
-    { k: 'a', name: '假名', total: REG.kana.length, left: unseen(REG.kana) },   // shown, not part of the load-cap advice (每天新假名 is its own setting)
-    { k: 'v', name: '單字', total: REG.vocab.filter(x => x.builtin).length, left: unseen(REG.vocab.filter(x => x.builtin)), key: 'v', max: 40 },
-    { k: 'g', name: '文法', total: REG.grammar.length, left: unseen(REG.grammar), key: 'g', max: 30 },
-    { k: 'k', name: '漢字', total: REG.kanji.length, left: unseen(REG.kanji), key: 'k', max: 15 },
-    { k: 'l', name: '聽力', total: REG.listen.length, left: unseen(REG.listen), key: 'l', max: 10 },
-    { k: 'r', name: '閱讀', total: REG.read.length, left: unseen(REG.read) }
-  ];
-  banks.forEach(b2 => {
-    b2.done = b2.total - b2.left;
-    b2.need = studyDays > 0 ? b2.left / studyDays : (b2.left ? Infinity : 0);
-    b2.cur = b2.key ? newQuota(b2.key) : null;
-    b2.rec = b2.key ? clamp(Math.ceil(studyDays > 0 ? b2.left / studyDays : b2.left), 0, b2.max) : null;
-    b2.gap = b2.key ? (b2.cur > 0 ? b2.need / b2.cur : (b2.need > 0 ? Infinity : 0)) : null;   // >1: the current setting cannot finish in time
-  });
-  const quota = banks.filter(b2 => b2.key);
-  const newPerDay = quota.reduce((a, b2) => a + b2.rec, 0);
-  // 每天負荷上限 is the one dial: the smallest cap whose derived quotas cover every recommended quota
-  const loadCap = clamp(Math.ceil(Math.max(0, ...quota.map(b2 => b2.rec / NEW_SHARE[b2.key])) / 5) * 5, 10, 300);
-  const sessionSize = clamp(Math.ceil(Math.min(60, loadCap) / 5) * 5, 5, 60);
-  const rec = { loadCap, sessionSize };
-  const applied = Number(s.loadCap) === loadCap && Number(s.sessionSize) === sessionSize;
-  const lagging = quota.filter(b2 => b2.gap > 1.15).sort((a, b2) => b2.gap - a.gap);
-  return { studyDays, daysLeft: pace.daysLeft, banks, rec, applied, lagging, newPerDay };
+  return unseen(REG.vocab.filter(v => v.builtin)) + unseen(REG.grammar.filter(g => g.u !== 'm0')) + unseen(REG.kanji);
+}
+function paceAdvice() {
+  const t = todayStr();
+  const seen = [];
+  for (let i = 1; i <= 14; i++) { const e = state.dailyLogs[addDays(t, -i)]; if (e && typeof e.fresh === 'number') seen.push(e.fresh); }
+  const perDay = seen.length ? seen.reduce((a, b) => a + b, 0) / seen.length : (dailyPlan().n || NEW_DEFAULT);
+  const left = courseLeft();
+  const finish = perDay > 0 ? addDays(t, Math.ceil(left / perDay)) : null;
+  const target = addDays(examPace().exam, -21);
+  return { perDay, left, finish, target, late: finish ? daysBetween(target, finish) : null };
+}
+function finishText() {
+  const a = paceAdvice(); const pace = examPace(); const t = todayStr();
+  if (pace.daysLeft <= 0) return '考試日期已經過了。到設定裡改成下一次的日期，這裡會重新計算。';
+  if (!a.left) return '單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。';
+  if (daysBetween(t, a.target) <= 0) return `距離考試只剩 ${pace.daysLeft} 天，不到三週：建議只做每天的練習與模擬考。`;
+  const per = Math.round(a.perDay);
+  let text = `照最近每天約 ${per} 題新內容的速度，預計 ${a.finish} 學完單字、文法、漢字（考前三週是 ${a.target}）。`;
+  if (a.late > 0) {
+    const need = Math.ceil(a.left / daysBetween(t, a.target));
+    text += `要趕上，每天約需 ${need} 題新內容（比現在多 ${Math.max(1, need - per)} 題），可以做完當天的練習後按加練。`;
+  }
+  return text;
 }
 function grammarPace() {
   const t = todayStr();
@@ -7983,20 +7973,13 @@ function renderStats(view) {
 }
 
 function planAdviceHtml() {
-  const a = planAdvice();
-  const rows = a.banks.map(b2 => `<tr${a.lagging[0] === b2 ? ' class="lag"' : ''}><td>${esc(b2.name)}</td><td class="num">${b2.done} / ${b2.total}</td><td class="num col-left">${b2.left}</td><td class="num">${b2.key ? b2.rec : '—'}</td><td class="num">${b2.key ? b2.cur : '—'}</td></tr>`).join('');
-  let lead;
-  if (a.daysLeft <= 0) lead = '考試日期已經過了。到設定裡改成下一次的日期，這裡會重新計算。';
-  else if (a.studyDays <= 0) lead = `距離考試只剩 ${a.daysLeft} 天，不到三週：建議停止新題、只做複習與模擬考。`;
-  else if (a.lagging.length) lead = `還有 ${a.studyDays} 天可以學新內容（考前三週留給模擬考）。照目前設定，${a.lagging.map(b2 => b2.name).join('、')}到時候學不完，${a.lagging[0].name}落後最多；建議把每天負荷上限調到 ${a.rec.loadCap}（${a.lagging[0].name}每天新 ${a.lagging[0].cur} → ${a.lagging[0].rec}）。`;
-  else lead = `還有 ${a.studyDays} 天可以學新內容（考前三週留給模擬考）。照目前設定，每一種題庫都來得及學完。`;
-  const btn = a.applied ? '<button type="button" class="btn btn-sm" data-act="apply-advice" disabled>已是建議值</button>'
-    : `<button type="button" class="btn btn-sm btn-primary" data-act="apply-advice">使用建議</button>`;
+  const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
+  const banks = [['假名', REG.kana], ['單字', REG.vocab.filter(x => x.builtin)], ['文法', REG.grammar], ['漢字', REG.kanji], ['聽力', REG.listen], ['閱讀', REG.read]];
+  const rows = banks.map(([name, arr]) => `<tr><td>${name}</td><td class="num">${arr.length - unseen(arr)} / ${arr.length}</td><td class="num col-left">${unseen(arr)}</td></tr>`).join('');
   return `<div class="card" id="planAdvice">
-      <div class="card-head"><div><div class="card-title">每日練習量建議</div><div class="card-sub">用「還沒學過的題數 ÷ 可學習天數」算出每天該學的新題，複習量另外加上。</div></div>${btn}</div>
-      <p class="small dim">${esc(lead)}</p>
-      <div class="table-wrap"><table class="table"><thead><tr><th>題庫</th><th>已學 / 總數</th><th class="col-left">還沒學</th><th>建議每天</th><th>目前設定</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <div class="small muted mt-2">套用後的設定：每天負荷上限 ${a.rec.loadCap}・每組 ${a.rec.sessionSize} 題${a.studyDays > 0 ? '' : '（已無學習天數，新題降到最低）'}。閱讀題跟著單元進度出，不另外設定。</div>
+      <div class="card-head"><div><div class="card-title">學完的預估</div><div class="card-sub">每天的新內容由最近的正確率和錯題本決定；照最近 14 天的速度推算。</div></div></div>
+      <p class="small dim">${esc(finishText())}</p>
+      <div class="table-wrap"><table class="table"><thead><tr><th>題庫</th><th>已學 / 總數</th><th class="col-left">還沒學</th></tr></thead><tbody>${rows}</tbody></table></div>
     </div>`;
 }
 
@@ -8054,7 +8037,6 @@ function attachChartTips(root) {
 }
 
 Object.assign(ACTIONS, {
-  'apply-advice': () => { const a = planAdvice(); Object.assign(state.settings, a.rec); saveState(); toast('已套用建議的每日練習量'); route(); },
   'stats-drill': (el) => {
     const items = REG.grammar.filter(g => g.pt === el.dataset.pt);
     if (!items.length) return;

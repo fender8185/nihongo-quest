@@ -146,6 +146,32 @@ def test_the_plan_keeps_its_queues_all_day(b):
     assert r['q4'] == 2 and r['b'] >= 5 and r['total'] and r['done'] == 1, r
     assert isinstance(r['n'], int) and r['n'] >= 3 and sorted(r['split']) == ['a', 'g', 'k', 'v'], r
 
+# ---- Task 4: 拿掉負荷上限 ----
+def test_settings_have_no_load_cap_or_kana_per_day(b):
+    js = """(() => { const html = settingsLearn(); return JSON.stringify({ cap: /每天負荷上限|data-key="loadCap"/.test(html), kana: /每天新假名|data-key="newKanaPerDay"/.test(html) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'cap': False, 'kana': False}, r
+
+def test_quota_users_follow_todays_split(b):
+    js = "(() => { " + FRESH + """ delete state.today.plan; DAILY_CACHE = null; const sp = dailyPlan().split;
+      const fresh = buildFlashQueue('N5').filter(k => !state.srs[k]).length;
+      return JSON.stringify({ sp, left: ['v', 'g', 'k', 'a'].map(k => todayNewLeft(k)), fresh }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['left'] == [r['sp']['v'], r['sp']['g'], r['sp']['k'], r['sp']['a']] and r['fresh'] == r['sp']['v'], r
+
+def test_exam_countdown_projects_the_finish_date(b):
+    js = "(() => { " + FRESH + """ const t = todayStr(); for (let i = 1; i <= 10; i++) state.dailyLogs[addDays(t, -i)] = { vocabCount: 20, fresh: 12 };
+      state.settings.examDate = addDays(t, 400); saveState();
+      const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
+      const left = unseen(REG.vocab.filter(v => v.builtin)) + unseen(REG.grammar.filter(g => g.u !== 'm0')) + unseen(REG.kanji);
+      const a = paceAdvice(); const want = addDays(t, Math.ceil(left / 12));
+      location.hash = '#/exam'; route(); const hint = (document.querySelector('.hero-advice') || {}).textContent || '';
+      state.settings.examDate = addDays(t, 100); saveState(); const a2 = paceAdvice(); route(); const hint2 = (document.querySelector('.hero-advice') || {}).textContent || '';
+      return JSON.stringify({ perDay: a.perDay, finish: a.finish === want, late: a.late, hint: hint.includes('預計') && hint.includes(want), late2: a2.late, hint2: hint2.includes('加練'), apply: !!document.querySelector('[data-act=apply-advice]') }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['perDay'] == 12 and r['finish'] and r['late'] <= 0 and r['hint'], r
+    assert r['late2'] > 0 and r['hint2'] and not r['apply'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

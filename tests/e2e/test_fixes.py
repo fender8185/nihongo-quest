@@ -382,7 +382,7 @@ def test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers(b):
       const wBefore = JSON.stringify(words.map(v => state.srs[v.key] || null)); state.today.newV = 99;   // today's new-word quota used up
       words.forEach(v => srsAnswer(v.key, true));
       const vq = buildVocabQueue('c:' + theme, 20); const repeats = vq.filter(v => state.srs[v.key] && state.srs[v.key].last === t).length;
-      state.today.newV = newQuota('v'); const freshOverQuota = buildVocabQueue('all', 20).filter(v => !state.srs[v.key]).length;   // quota used up: no new words beyond it
+      state.today.newV = dailyPlan().split.v; const freshOverQuota = buildVocabQueue('all', 20).filter(v => !state.srs[v.key]).length;   // quota used up: no new words beyond it
       JSON.parse(before) && items.forEach(g => { const r = JSON.parse(before)[g.key]; if (r) state.srs[g.key] = r; else delete state.srs[g.key]; });
       JSON.parse(wBefore).forEach((r, i) => { if (r) state.srs[words[i].key] = r; else delete state.srs[words[i].key]; }); state.today.newV = 0; saveState();
       return JSON.stringify({ unit, unitDrill, unitY, noteShown, noteHonest, repeats, vq: vq.length, freshOverQuota }); })()"""
@@ -560,22 +560,15 @@ def test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading(b):
     r = json.loads(out[-1])
     assert r['spoken'] == [[r['w'], r['r']]], r
 
-def test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them(b):
-    seed = """(() => { state.settings.examDate = addDays(todayStr(), 121); state.settings.loadCap = 100; saveState();
+def test_stats_projects_the_finish_date_from_the_recent_pace(b):
+    seed = """(() => { const t = todayStr(); state.settings.examDate = addDays(t, 121); for (let i = 1; i <= 5; i++) state.dailyLogs[addDays(t, -i)] = { vocabCount: 20, fresh: 10 }; saveState();
       const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
-      window.__exp = { v: Math.ceil(unseen(REG.vocab.filter(x => x.builtin)) / 100), g: Math.ceil(unseen(REG.grammar) / 100), k: Math.min(15, Math.ceil(unseen(REG.kanji) / 100)), l: Math.min(10, Math.ceil(unseen(REG.listen) / 100)) };
-      return JSON.stringify(__exp); })()"""
+      return addDays(t, Math.ceil((unseen(REG.vocab.filter(x => x.builtin)) + unseen(REG.grammar.filter(g => g.u !== 'm0')) + unseen(REG.kanji)) / 10)); })()"""
     probe = """(() => { const card = document.getElementById('planAdvice'); if (!card) return 'NO CARD';
-      const btn = card.querySelector('[data-act=apply-advice]'); const before = btn ? btn.textContent.trim() : 'NO BUTTON';
-      const txt = card.textContent; if (btn) btn.click();
-      const s = state.settings; const after = document.querySelector('#planAdvice [data-act=apply-advice]');
-      return JSON.stringify({ before, hasDays: /100 天/.test(txt), rows: card.querySelectorAll('tbody tr').length, s: [s.loadCap], after: after ? after.textContent.trim() + (after.disabled ? '|disabled' : '') : 'gone' }); })()"""
+      const txt = card.textContent; return JSON.stringify({ per: txt.includes('每天約 10 題'), finish: txt, button: !!card.querySelector('button'), rows: card.querySelectorAll('tbody tr').length }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("nav", URL + "#/stats"), ("eval", probe)], timeout=45)
-    exp = json.loads(out[0]); r = json.loads(out[1])
-    assert r['before'] == '使用建議' and r['hasDays'] and r['rows'] >= 4, r
-    import math
-    assert r['s'] == [min(300, max(10, math.ceil(max(exp['v'] / 0.08, exp['g'] / 0.06, exp['k'] / 0.03, exp['l'] / 0.03) / 5) * 5))], (r, exp)   # one dial: the smallest 負荷上限 whose derived quotas cover every bank
-    assert r['after'].startswith('已是建議值') and 'disabled' in r['after'], r
+    want = out[0]; r = json.loads(out[1])
+    assert r['per'] and ('預計 ' + want) in r['finish'] and '加練' in r['finish'] and not r['button'] and r['rows'] == 6, (r, want)   # 1.0.20: the pace of the last days, no quota to apply
 
 # ---- 2026-10-27 (v65): ring = done / today's work; 每日目標 → 每天負荷上限; exam-pace quotas on Today; 再練一次 in another format; grammar encore ----
 def test_ring_counts_todays_work_and_fills_when_the_day_is_done(b):
@@ -607,7 +600,7 @@ def test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan(b):
     r = json.loads(out[-1])
     assert r['mig'] == {'low': [100, False], 'high': 100, 'fresh': [100, False], 'raised': 100, 'kept': 40, 'own': 60}, r   # v69: the v65 default of 40 is raised to 100 once; a cap someone set stays
     assert r['wide'] == r['tight'] and sum(r['wide'][:3]) == 15 and r['wide'][3:] == [3, 30], r   # 1.0.20: the cap no longer shapes the plan — the day's 15 new items, 3 listening, every due review
-    assert r['row'] and r['max300'] and not r['oldRow'] and not r['setGoal'], r
+    assert not r['row'] and not r['max300'] and not r['oldRow'] and not r['setGoal'], r   # 1.0.20: the cap is no longer a setting
 
 def test_pressing_see_results_after_the_last_question_shows_the_summary(b):
     # v65 took the daily goal out of the summary but left the ring reading it: the last 看結果 threw and the screen froze
@@ -953,16 +946,16 @@ def test_vocab_theme_card_plays_the_theme(b):
     assert r['hash'] == '#/vocab/listen' and r['kind'] == 'theme' and r['theme'] and r['n'] and r['page'] and r['noScope'], r
     assert r['pref']['source'] == 'theme' and r['back'] == '#/vocab/level?lv=N5', r
 
-def test_today_offers_the_exam_pace_quotas_when_behind(b):
-    js = """(() => { state.settings.examDate = addDays(todayStr(), 121); Object.assign(state.settings, { loadCap: 10 }); saveState();
-      location.hash = '#/exam'; route(); const el = document.querySelector('.hero-advice, [data-act=apply-advice]'); const btn = document.querySelector('.card [data-act=apply-advice]');
-      const text = el ? el.closest('.card').textContent : ''; const a = planAdvice(); const onExam = /考試倒數/.test(document.getElementById('view').textContent);
-      ACTIONS['apply-advice'](); location.hash = '#/exam'; route(); const after = !!document.querySelector('[data-act=apply-advice]');
+def test_exam_page_projects_the_finish_date_and_suggests_extra_practice_when_late(b):
+    # 1.0.20: no quota advice to apply; the countdown says when the course would be learned at the recent pace
+    js = """(() => { state.settings.examDate = addDays(todayStr(), 121); saveState();
+      location.hash = '#/exam'; route(); const el = document.querySelector('.hero-advice'); const text = el ? el.textContent : '';
+      const onExam = /考試倒數/.test(document.getElementById('view').textContent); const apply = !!document.querySelector('[data-act=apply-advice]'); const a = paceAdvice();
       location.hash = '#/today'; route(); const offToday = !/考試倒數/.test(document.getElementById('view').textContent);
-      return JSON.stringify({ shown: !!btn, arrow: /1→\\d+/.test(text), rec: [state.settings.loadCap, state.settings.sessionSize], exp: [a.rec.loadCap, a.rec.sessionSize], after, onExam, offToday }); })()"""
+      return JSON.stringify({ late: a.late > 0, finish: text.includes('預計 ' + a.finish), extra: text.includes('加練'), apply, onExam, offToday }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['shown'] and r['arrow'] and r['rec'] == r['exp'] and not r['after'] and r['onExam'] and r['offToday'], r   # the countdown lives on 模擬考 now
+    assert r == {'late': True, 'finish': True, 'extra': True, 'apply': False, 'onExam': True, 'offToday': True}, r   # the countdown lives on 模擬考
 
 def test_requeue_uses_another_format_when_the_item_has_one(b):
     js = """(() => { const out = {};
@@ -1456,8 +1449,8 @@ def test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_h
 def test_settings_drop_the_switches_the_app_now_decides(b):
     js = """(() => { const tab = (k) => { openSettings(k); const m = document.querySelector('.modal'); const o = { keys: [...m.querySelectorAll('[data-key]')].map(x => x.dataset.key), acts: [...m.querySelectorAll('[data-act]')].map(x => x.dataset.act), text: m.textContent }; closeModal(true); return o; };
       const L = tab('learn'), S = tab('speech');
-      return JSON.stringify({ learnGone: ['retention', 'enter-main', 'enter-pre'].filter(k => L.keys.includes(k) || L.acts.includes(k)), stageRow: L.text.includes('目前階段'), unitRow: L.text.includes('目前單元'),
-        learnKept: ['loadCap', 'sessionSize', 'newKanaPerDay', 'order', 'showZh', 'includeImported', 'examDate'].filter(k => !L.keys.includes(k)),
+      return JSON.stringify({ learnGone: ['retention', 'enter-main', 'enter-pre', 'loadCap', 'newKanaPerDay'].filter(k => L.keys.includes(k) || L.acts.includes(k)), stageRow: L.text.includes('目前階段'), unitRow: L.text.includes('目前單元'),
+        learnKept: ['sessionSize', 'order', 'showZh', 'includeImported', 'examDate'].filter(k => !L.keys.includes(k)),
         speechGone: ['autoSpeak', 'listening', 'audioOptions'].filter(k => S.keys.includes(k)), speechKept: ['speechRate', 'engine'].filter(k => !S.keys.includes(k)) }); })()"""
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
     assert r == {'learnGone': [], 'stageRow': False, 'unitRow': False, 'learnKept': [], 'speechGone': [], 'speechKept': []}, r
@@ -1607,14 +1600,14 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_hero_help_and_scope_toggles_open_one_at_a_time, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_today_offers_the_exam_pace_quotas_when_behind, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_hero_help_and_scope_toggles_open_one_at_a_time, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_exam_page_projects_the_finish_date_and_suggests_extra_practice_when_late, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
              test_single_words_are_sent_as_kanji_with_the_reading_pinned, test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong, test_tts_connection_check_reports_the_real_error_and_success,
              test_tools_page_has_an_expandable_api_guide_for_every_provider,
              test_stats_shows_the_past_week_of_practice_and_what_was_learned, test_reaching_the_learned_level_records_the_date, test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading,
-             test_stats_recommends_daily_quotas_from_the_remaining_banks_and_applies_them,
+             test_stats_projects_the_finish_date_from_the_recent_pace,
              test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,

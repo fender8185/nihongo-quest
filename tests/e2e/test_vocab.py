@@ -260,16 +260,16 @@ DUE = "(v) => { state.srs[v.key] = { b: 2, due: addDays(todayStr(), -1), n: 3, o
 def test_new_grammar_is_not_squeezed_out_by_a_review_backlog(b):
     js = """(() => { const due = (v, ok) => { state.srs[v.key] = { b: 2, due: addDays(todayStr(), -1), n: ok, ok, ng: 0, s: 3, d: 5, f: {}, last: addDays(todayStr(), -4) }; };
       REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 40).forEach(v => due(v, 2)); saveState();
-      const plan = computeDailyPlan(20); return JSON.stringify({ newG: plan.newG.length, limit: newQuota('g'), dueV: plan.dueV.length }); })()"""
+      const plan = computeDailyPlan(20); return JSON.stringify({ newG: plan.newG.length, limit: plan.split.g, dueV: plan.dueV.length }); })()"""
     r = json.loads(ev(b, js))
-    assert r['dueV'] == 40 and r['newG'] == r['limit'], r
+    assert r['dueV'] == 40 and r['newG'] == r['limit'] and r['limit'] > 0, r   # 1.0.20: the backlog never shrinks the day's share of new grammar
 
 def test_grammar_slots_take_new_items_first_then_the_least_practised_reviews(b):
     js = """(() => { const due = (g, ok) => { state.srs[g.key] = { b: 2, due: addDays(todayStr(), -2 - (ok % 3)), n: ok, ok, ng: 0, s: 3, d: 5, last: addDays(todayStr(), -5) }; };
       const gs = REG.grammar.filter(g => g.u === 'm1'); gs.slice(0, 10).forEach(g => due(g, 3)); gs.slice(10, 15).forEach(g => due(g, 1)); delete state.today.plan; saveState();
       const q = dailyQueue(20); const G = q.items.filter(it => it.kind === 'g'); const all = dailyQueue(q.total).items.filter(it => it.kind === 'g');
       const fresh = G.filter(it => !state.srs[it.key]).length; const revOk = G.filter(it => state.srs[it.key]).map(it => state.srs[it.key].ok);
-      return JSON.stringify({ fresh, dayFresh: all.filter(it => !state.srs[it.key]).length, revOk, limit: newQuota('g') }); })()"""
+      return JSON.stringify({ fresh, dayFresh: all.filter(it => !state.srs[it.key]).length, revOk, limit: dailyPlan().split.g }); })()"""
     r = json.loads(ev(b, js))
     assert r['fresh'] >= 2 and r['dayFresh'] == r['limit'], r   # a session holds its share of the day's new grammar; the whole day holds the quota
     assert sum(1 for ok in r['revOk'] if ok == 1) == 5, r   # every least-practised item is in before any well-known one
@@ -658,14 +658,14 @@ def test_preview_card_has_i_know_which_skips_the_word_and_its_encore(b):
     r = json.loads(ev(b, js))
     assert r['btn'] and r['known'] and r['label'] == '已熟練' and r['gone'] and r['len'] == 3 and r['idx'] == 0 and r['next'], r
 
-def test_experienced_shortcut_in_the_level_picker_raises_the_load_cap(b):
+def test_experienced_shortcut_in_the_level_picker_turns_chinese_off(b):
     js = """(() => { const keep = JSON.stringify(state.settings); const unit = state.currentUnit;
       Object.assign(state.settings, { loadCap: 100, showZh: true });
       openModal('x', levelPickerHtml()); const out = { box: !!document.getElementById('startExperienced'), rowGone: !document.querySelector('[data-act="apply-experienced"]') }; document.getElementById('startUnit').value = 'm7'; document.getElementById('startExperienced').checked = true;
-      ACTIONS['start-apply'](); out.unit = state.currentUnit; out.cap = state.settings.loadCap; out.zh = state.settings.showZh; out.v = newQuota('v');
+      ACTIONS['start-apply'](); out.unit = state.currentUnit; out.cap = state.settings.loadCap; out.zh = state.settings.showZh;
       Object.assign(state.settings, JSON.parse(keep)); state.currentUnit = unit; saveState(); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['box'] and r['rowGone'] and r['unit'] == 'm7' and r['cap'] == 150 and r['zh'] is False and r['v'] == 12, r
+    assert r['box'] and r['rowGone'] and r['unit'] == 'm7' and r['cap'] == 100 and r['zh'] is False, r   # 1.0.20: no load cap to raise; new items follow the recent answers
 
 def test_vocab_search_filters_live_on_input_and_preserves_focus(b):
     js = """(() => {
@@ -682,7 +682,7 @@ def test_vocab_search_filters_live_on_input_and_preserves_focus(b):
     r = json.loads(ev(b, js))
     assert r['rows0'] > r['rows1'] >= 1 and r['sameEl'] is True and r['caret'] == 2 and 'q=食べ' in r['hash'], r
 
-TESTS += [test_n4_words_open_once_every_n5_word_has_been_seen, test_bulk_i_know_marks_the_filtered_words_and_can_be_undone, test_preview_card_has_i_know_which_skips_the_word_and_its_encore, test_experienced_shortcut_in_the_level_picker_raises_the_load_cap, test_vocab_search_filters_live_on_input_and_preserves_focus]
+TESTS += [test_n4_words_open_once_every_n5_word_has_been_seen, test_bulk_i_know_marks_the_filtered_words_and_can_be_undone, test_preview_card_has_i_know_which_skips_the_word_and_its_encore, test_experienced_shortcut_in_the_level_picker_turns_chinese_off, test_vocab_search_filters_live_on_input_and_preserves_focus]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
