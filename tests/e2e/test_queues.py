@@ -574,6 +574,31 @@ def test_lock_units_marked_complete_with_unseen_items_do_not_block_the_level(b):
       """ + END + " return JSON.stringify(out); })()"
     r = json.loads(ev(b, js)); assert r['cur'] == 'N4' and r['left']['units'] == [] and r['left']['v'] == 0, r
 
+# ---- 1.0.32 複習看紀錄 (spec §4.6): anything learned comes back on schedule whatever its level or unit ----
+def test_reviews_follow_the_record_for_grammar_kanji_and_drills_ahead_of_the_level(b):
+    js = "(() => { " + LOCK + """ const due = () => Object.assign(rec(), { due: t, last: addDays(t, -3) });
+      const g = REG.grammar.find(x => x.u === 'm9'); const k = REG.kanji.find(x => x.lv === 'N4'); const d = REG.drills.find(x => unitLevel(x.u) === 'N4');   // a drill family first taught in an N4 unit
+      [g, k, d].forEach(x => { state.srs[x.key] = due(); }); DAILY_CACHE = null; const p = computeDailyPlan();
+      const out = { cur: curLevel(), g: p.dueG.some(x => x.key === g.key), k: p.dueK.some(x => x.key === k.key), d: p.dueC.some(x => x.key === d.key) };
+      """ + END + " return JSON.stringify(out); })()"
+    r = json.loads(ev(b, js)); assert r == {'cur': 'N5', 'g': True, 'k': True, 'd': True}, r
+
+def test_moving_the_current_unit_back_keeps_later_units_in_review(b):
+    js = "(() => { " + LOCK + """ const due = () => Object.assign(rec(), { due: t, last: addDays(t, -3) });
+      const later = REG.grammar.filter(x => x.u === 'm4' || x.u === 'm5').slice(0, 4); later.forEach(x => { state.srs[x.key] = due(); });
+      state.currentUnit = 'm3'; DAILY_CACHE = null; const p = computeDailyPlan();
+      const out = later.filter(x => p.dueG.some(y => y.key === x.key)).length;
+      """ + END + " return JSON.stringify(out); })()"
+    r = json.loads(ev(b, js)); assert r == 4, r
+
+def test_vocab_page_due_count_and_the_mixed_flash_deck_include_learned_n4_words(b):
+    js = "(() => { " + LOCK + """ const n4 = REG.vocab.find(v => v.builtin && v.lv === 'N4'); state.srs[n4.key] = Object.assign(rec(), { due: t, last: addDays(t, -3) });
+      DAILY_CACHE = null; const all = buildFlashQueue('all'); const deck4 = buildFlashQueue('N4');
+      const out = { cur: curLevel(), stat: vocabStats().due, flashDue: all.includes(n4.key), allNew4: all.filter(k => k !== n4.key && REG.byKey.get(k).lv === 'N4').length,
+        deck4New: deck4.filter(k => k !== n4.key && REG.byKey.get(k).lv === 'N4').length > 0 };
+      """ + END + " return JSON.stringify(out); })()"
+    r = json.loads(ev(b, js)); assert r == {'cur': 'N5', 'stat': 1, 'flashDue': True, 'allNew4': 0, 'deck4New': True}, r
+
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
