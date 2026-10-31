@@ -109,6 +109,21 @@ def test_settings_credit_the_jlpt_level_lists(b):
     js = "JSON.stringify({ html: settingsLook().includes('單字、漢字、文法點的 JLPT 等級參考 Jonathan Waller 的 JLPT Resources（tanos.co.uk，CC BY）。') })"
     r = json.loads(ev(b, js)); assert r['html'], r
 
+# ---- 1.0.31 review: near-synonyms share a character, so neither is offered as the other's wrong answer ----
+def test_near_synonym_greetings_never_offer_each_other(b):
+    js = """(() => { const m = (w) => DATA.VOCAB.find(v => v.w === w).m;
+      return JSON.stringify([zhOverlap(m('ええと'), m('さあ')), zhOverlap(m('ごめんください'), m('失礼します'))]); })()"""
+    r = json.loads(ev(b, js)); assert r == [True, True], r
+
+# ---- 1.0.31 review: the reading keys of DATA.FURI belong to no word, so mastering a word hides only its own readings ----
+def test_mastering_a_word_hides_only_its_own_readings(b):
+    js = """(() => { const t = todayStr(); const v = REG.vocab.find(x => x.id === 'n5g-038');   // 縦, the last N5 word added to the index
+      state.srs[v.key] = { b: SRS_MASTERED, known: true, due: addDays(t, 60), n: 9, ok: 9, ng: 0, s: 60, d: 3, last: addDays(t, -1), intro: addDays(t, -90), f: { 'v-spell': [1, 0] } };
+      const own = [...FURI_SRC].filter(([k, s]) => s === v.key).map(([k]) => k);
+      const out = { own: knownCls('縦'), japan: knownCls('日本'), keys: own.length, hasJapan: own.includes('日本') };
+      delete state.srs[v.key]; return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js)); assert r['own'] == 'known' and r['japan'] == '' and not r['hasJapan'] and r['keys'] <= 2, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

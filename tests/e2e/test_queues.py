@@ -521,6 +521,17 @@ def test_a_marked_grammar_item_reaches_mastered_and_only_a_word_gets_formats(b):
     assert r['g4'] == [4, False] and r['g'] == [True, '已熟練'], r
     assert r['v'] == [4, {}] and r['k'] is False, r
 
+# ---- 1.0.31 review: a learned word stays in the reviews whatever its level (spec §4.6, moved up from 1.0.32) ----
+def test_word_reviews_follow_the_record_even_while_n4_words_are_closed(b):
+    js = """(() => { const t = todayStr(); state.srs = {}; state.stage = 'main';
+      const rec = (extra) => Object.assign({ b: 2, due: addDays(t, 30), n: 3, ok: 3, ng: 0, s: 20, d: 5, last: addDays(t, -5), intro: addDays(t, -60), f: {} }, extra || {});
+      REG.vocab.filter(v => v.builtin && v.lv !== 'N4' && !/^n5g-/.test(v.id)).forEach(v => { state.srs[v.key] = rec(); });   // every N5 word but the 1.0.31 ones
+      const n4 = REG.vocab.find(v => v.builtin && v.lv === 'N4'); state.srs[n4.key] = rec({ due: t, last: addDays(t, -3) });
+      DAILY_CACHE = null; const p = computeDailyPlan();
+      const out = { open: n4WordsOpen(), due: p.dueV.some(x => x.key === n4.key), newN4: p.newV.some(x => x.lv === 'N4') };
+      state.srs = {}; saveState(); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js)); assert r == {'open': False, 'due': True, 'newN4': False}, r
+
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

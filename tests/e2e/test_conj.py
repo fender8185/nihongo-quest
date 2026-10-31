@@ -195,6 +195,11 @@ def test_first_wrong_character_is_found_against_the_kana_answer_when_kana_was_ty
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
     assert not r['ok'] and r['marked'] == r['expected'], r
 
+# ---- 1.0.31 review: suffixes and giving verbs make odd drill forms (がれる, くれさせる, くださられる) ----
+def test_drills_leave_out_suffixes_and_giving_verbs(b):
+    js = "JSON.stringify(drillVerbs().filter(v => ['がる', 'くれる', 'くださる', 'おいでになる'].includes(jaPlain(v.w))).map(v => v.w))"
+    r = json.loads(ev(b, js)); assert r == [], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

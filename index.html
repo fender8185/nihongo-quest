@@ -969,15 +969,17 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.31';   // keep equal to the version in sw.js CACHE ('nq-v1.0.30'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.31';   // keep equal to the version in sw.js CACHE ('nq-v1.0.31'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
   { v: '1.0.31', date: '2026-11-01', items: [
-    '補上 98 個 N5、N4 的基礎字（N5 38 個、N4 60 個），每個字兩句例句：あっち、こっち、たばこ、灰皿、ペット、メニュー、お元気で、お邪魔します、思う、楽しむ、気をつける、かしこまりました、最も、格好……。學過 N5 的人，今天起新單字會先出這些字。',
-    '有幾句舊例句的讀音順便更正：別れる（原本標成 べつれる）、方（かた）、付く、降り出す。',
+    '補上 98 個 N5、N4 的基礎字（N5 38 個、N4 60 個），每個字兩句例句：あっち、こっち、たばこ、灰皿、ペット、メニュー、お元気で、お邪魔します、思う、楽しむ、気をつける、かしこまりました、最も、格好……。N5 單字已經都學過的人，新單字會先出這 38 個 N5 字，學完再接著出 N4 的新字。',
+    '學過的單字一律照排程複習，不會因為還有沒學過的 N5 字就暫停 N4 單字的複習。',
+    '修正：練熟某一個字時，日本、東京、生活等 80 多個字的振假名也跟著隱藏。幾句舊句子補上讀音：方（かた）、降り出す。',
+    '變化練習不再出 がる、くれる、くださる、おいでになる（這幾個字的變化形很不自然）。',
     '設定 › 外觀最下面標出單字、漢字、文法點等級的參考來源（Jonathan Waller 的 JLPT Resources，CC BY）。'
   ] },
   { v: '1.0.30', date: '2026-10-31', items: [
@@ -2103,7 +2105,7 @@ function buildFuriganaIndex() {
     FURI.clear(); FURI_PRIO.clear(); FURI_BLOCK.clear(); FURI_SRC.clear(); FURI_MAX = 1;
     // built-in N5 words win over N4 words when keys collide (行って = いって, not おこなって)
     furiPrio = 4; REG.vocab.filter(v => v.builtin && v.lv !== 'N4').forEach(add);
-    furiPrio = 3; (DATA.FURI || []).forEach(([k, r]) => furiAdd(k, r));
+    furiPrio = 3; furiSrc = ''; (DATA.FURI || []).forEach(([k, r]) => furiAdd(k, r));   // these readings belong to no word: mastering the last word added above must not hide them
     furiPrio = 2; REG.vocab.filter(v => v.builtin && v.lv !== 'N5').forEach(add);
     // readings for words that appear in sentences but are not quizzed (names, 思う, 名前 …)
     furiPrio = 1.5; (DATA.FURI_EXTRA || []).forEach(([w, r, p]) => add({ w, r, p }));
@@ -2395,8 +2397,10 @@ const GROUP_LABEL = { '5': '五段動詞', '1': '一段動詞', 's': 'する動�
 const VERB_GROUP = { v5: '5', v1: '1', vs: 's', vk: 'k' };
 function formHint(f) { return JConj.conjVerb('食べる', '1', f) || ''; }   // the form shown on a paradigm verb (受身形，像「食べられました」)
 // verbs a drill may ask: learned ones (b ≥ 1); every course verb while fewer than five have been learned
+// suffixes and giving verbs make odd drill forms (がれる, くれさせる, くださられる)
+const DRILL_SKIP = new Set(['がる', 'くれる', 'くださる', 'おいでになる']);
 function drillVerbs() {
-  const all = REG.vocab.filter(v => v.builtin && VERB_GROUP[v.p]);
+  const all = REG.vocab.filter(v => v.builtin && VERB_GROUP[v.p] && !DRILL_SKIP.has(jaPlain(v.w)));
   const learned = all.filter(v => state.srs[v.key] && state.srs[v.key].b >= 1);
   return learned.length >= 5 ? learned : all;
 }
@@ -3675,11 +3679,13 @@ function computeDailyPlan(size = SESSION_SIZE) {
   const n4Open = n4WordsOpen();
   const curIdx = unitOrder(state.currentUnit);
   const pre = inPreStage();   // 入門: new items come from splitNew's 入門 banks; no new listening, reading or drills. Reviews of every kind stay.
-  // what reviews reach: words by level (入門: any word already learned), grammar of reached units, N4 kanji once every
+  // what reviews reach: every built-in word already learned (below), grammar of reached units, N4 kanji once every
   // N5 one has been met, every kana, drills of reached units
   const cPool = (REG.drills || []).filter(d => unitOrder(d.u) <= curIdx);
   const k4 = n5KanjiLeft() === 0;
-  const scope = REG.vocab.filter(v => (pre ? state.srs[v.key] && vocabEligibleMain(v, n4Open) : vocabEligibleForDaily(v, n4Open)))
+  // a built-in word with a record comes back on schedule whatever its level (spec §4.6: new items follow the level, reviews the
+  // record), so N5 words added later do not hold back an N4 learner's word reviews; imported cards follow their setting
+  const scope = REG.vocab.filter(v => v.builtin ? Boolean(state.srs[v.key]) : (!pre || state.srs[v.key]) && vocabEligibleMain(v, n4Open))
     .concat(REG.grammar.filter(g => grammarInReach(g, curIdx)), REG.kanji.filter(k => k.lv !== 'N4' || k4), REG.kana, cPool);
   // up to three stars: due by FSRS, the most overdue first, at most SRS_DAILY_CAP a day (the rest come the next days); the
   // missed items on the 1/3/7 ladder due today all come on top of the cap (inside it they crowd out the other reviews)
