@@ -298,7 +298,9 @@ def test_level_theme_filter_is_level_scoped(b):
 def test_vocab_opens_on_the_learners_level(b):
     js = """(() => { const go = () => { location.hash = '#/vocab'; route(); return decodeURIComponent(location.hash); };
       state.stage = 'pre'; const a = go(); state.stage = 'main'; state.srs = {}; state.settings.n4Words = 'auto'; DAILY_CACHE = null; const b2 = go();
-      REG.vocab.filter(v => v.builtin && v.lv !== 'N4').forEach(v => { state.srs[v.key] = { b: 2, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5 }; }); DAILY_CACHE = null; const c = go();
+      const met = (x) => { state.srs[x.key] = { b: 2, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5 }; };   // 1.0.32: N4 once N5's words, kanji and units are all done
+      REG.vocab.filter(v => v.builtin && v.lv !== 'N4').forEach(met); REG.kanji.filter(k => k.lv !== 'N4').forEach(met); state.completedUnits = DATA.UNITS.filter(u => u.lv === 'N5').map(u => u.id);
+      DAILY_CACHE = null; const c = go(); state.completedUnits = [];
       const tabs = [...document.querySelectorAll('.seg.mb-4 button')].map(x => x.textContent.trim()); return JSON.stringify({ a, b: b2, c, tabs }); })()"""
     r = json.loads(ev(b, js))
     assert r['a'] == '#/vocab/level?lv=PRE_N5' and r['b'] == '#/vocab/level?lv=N5' and r['c'] == '#/vocab/level?lv=N4', r

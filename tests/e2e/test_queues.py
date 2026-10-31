@@ -112,7 +112,7 @@ def largest_remainder(n, weights):
 
 def test_split_follows_unseen_shares_and_passes_on_blocked_slots(b):
     js = "(() => { " + FRESH + """ const unseen = (x) => !state.srs[x.key];
-      const w = { v: REG.vocab.filter(v => v.builtin && unseen(v)).length, g: REG.grammar.filter(g => g.u !== 'm0' && unseen(g)).length, k: REG.kanji.filter(unseen).length };
+      const L = levelLeft(curLevel()); const w = { v: L.v, g: L.g, k: L.k };   // 1.0.32: shares follow what the current level has left (was the whole course)
       const main = splitNew(15); const count = (s) => ({ a: s.a.length, v: s.v.length, g: s.g.length, k: s.k.length });
       state.stage = 'pre'; state.kanaKnown = false; const pre = splitNew(15);
       return JSON.stringify({ w, main: count(main), pre: count(pre), kana: pre.a.every(x => x.kind === 'a') }); })()"""
@@ -468,7 +468,7 @@ def test_a_tests_unseen_grammar_and_kana_misses_come_back_the_next_day(b):
       start('main'); startSession('stage', { stage: 'p1' }); let g = 3, v = 1;
       const missed = playTest(x => (x.kind === 'g' && g-- > 0) || (x.kind === 'v' && v-- > 0));
       const p1 = missed.filter(k => k.startsWith('g:')), word = missed.find(k => k.startsWith('v:'));
-      const fresh = newVocabCandidates(REG.vocab.filter(x => vocabEligibleForDaily(x, n4WordsOpen())), n4WordsOpen());
+      const fresh = newVocabCandidates(REG.vocab.filter(x => vocabEligibleForDaily(x)), false);
       const out = { word: [Boolean(word), Boolean(state.srs[word]), fresh.some(x => x.key === word)] };
       out.p1 = Object.assign({ passed: state.stageTests.p1[0].passed, unit: state.currentUnit }, look(p1));
       SESSION = null; document.body.classList.remove('practicing');
@@ -531,6 +531,48 @@ def test_word_reviews_follow_the_record_even_while_n4_words_are_closed(b):
       const out = { open: n4WordsOpen(), due: p.dueV.some(x => x.key === n4.key), newN4: p.newV.some(x => x.lv === 'N4') };
       state.srs = {}; saveState(); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js)); assert r == {'open': False, 'due': True, 'newN4': False}, r
+
+# ---- 1.0.32: 每一級封死 (spec §4.2): new items come from the lowest level that still has something unseen ----
+LOCK = """const t = todayStr(); state.srs = {}; state.stage = 'main'; state.completedUnits = []; state.currentUnit = 'm1';
+  const rec = () => ({ b: 2, due: addDays(t, 30), n: 3, ok: 3, ng: 0, s: 20, d: 5, last: addDays(t, -5), intro: addDays(t, -60), f: {} });
+  const seeWords = (lvs, skip = 0) => REG.vocab.filter(v => v.builtin && lvs.includes(v.lv)).slice(skip).forEach(v => { state.srs[v.key] = rec(); });
+  const seeKanji = (lvs) => REG.kanji.filter(k => lvs.includes(k.lv)).forEach(k => { state.srs[k.key] = rec(); });
+  const seeUnits = (ids) => REG.grammar.filter(g => ids.includes(g.u)).forEach(g => { state.srs[g.key] = rec(); });
+  const n5u = DATA.UNITS.filter(u => u.lv === 'N5').map(u => u.id);
+  const uLv = (g) => unitById(g.u).lv; DAILY_CACHE = null;"""
+END = "state.srs = {}; state.completedUnits = []; state.currentUnit = 'm1'; saveState();"
+
+def test_lock_in_n5_offers_no_n4_words_kanji_or_grammar(b):
+    js = "(() => { " + LOCK + """ const s = splitNew(30);
+      const out = { v4: s.v.filter(x => x.lv === 'N4').length, k4: s.k.filter(x => x.lv === 'N4').length, g4: s.g.filter(x => uLv(x) === 'N4').length, cur: curLevel() };
+      """ + END + " return JSON.stringify(out); })()"
+    r = json.loads(ev(b, js)); assert r == {'v4': 0, 'k4': 0, 'g4': 0, 'cur': 'N5'}, r
+
+def test_lock_n5_grammar_done_words_left_pauses_grammar_and_gives_words_the_slots(b):
+    js = "(() => { " + LOCK + """ seeWords(['PRE_N5', 'N5'], 50); seeKanji(['PRE_N5', 'N5']); seeUnits(n5u); state.completedUnits = n5u.slice(); state.currentUnit = 'm6';
+      const s = splitNew(15); const out = { g: s.g.length, v: s.v.length, v4: s.v.filter(x => x.lv === 'N4').length, pause: grammarPause() };
+      """ + END + " return JSON.stringify(out); })()"
+    r = json.loads(ev(b, js)); assert r == {'g': 0, 'v': 15, 'v4': 0, 'pause': {'L': 'N5', 'v': 50, 'k': 0, 'next': 7}}, r
+
+def test_lock_learner_already_in_m9_with_n5_words_left_gets_no_n4_grammar(b):
+    js = "(() => { " + LOCK + """ seeWords(['PRE_N5', 'N5'], 38); seeKanji(['PRE_N5', 'N5']); const done = n5u.concat(['m7', 'm8']); seeUnits(done);
+      state.completedUnits = done.slice(); state.currentUnit = 'm9';
+      const out = { gN4: newGrammarCandidates().filter(x => uLv(x) === 'N4').length, sN4: splitNew(15).g.filter(x => uLv(x) === 'N4').length, cur: curLevel(), pause: Boolean(grammarPause()) };
+      """ + END + " return JSON.stringify(out); })()"
+    r = json.loads(ev(b, js)); assert r == {'gN4': 0, 'sN4': 0, 'cur': 'N5', 'pause': True}, r
+
+def test_lock_next_level_opens_with_all_three_kinds_the_day_the_level_is_done(b):
+    js = "(() => { " + LOCK + """ seeWords(['PRE_N5', 'N5']); seeKanji(['PRE_N5', 'N5']); seeUnits(n5u); state.completedUnits = n5u.slice(); state.currentUnit = 'm6';
+      const s = splitNew(15); const out = { cur: curLevel(), v: s.v.length > 0 && s.v.every(x => x.lv === 'N4'), g: s.g.length > 0 && s.g.every(x => uLv(x) === 'N4'),
+        k: s.k.length > 0 && s.k.every(x => x.lv === 'N4'), pause: grammarPause() };
+      """ + END + " return JSON.stringify(out); })()"
+    r = json.loads(ev(b, js)); assert r == {'cur': 'N4', 'v': True, 'g': True, 'k': True, 'pause': None}, r
+
+def test_lock_units_marked_complete_with_unseen_items_do_not_block_the_level(b):
+    js = "(() => { " + LOCK + """ seeWords(['PRE_N5', 'N5']); seeKanji(['PRE_N5', 'N5']); state.completedUnits = n5u.slice(); state.currentUnit = 'm7';   // 從 m7 開始: m1–m6 marked complete, never seen
+      const out = { cur: curLevel(), left: levelLeft('N5') };
+      """ + END + " return JSON.stringify(out); })()"
+    r = json.loads(ev(b, js)); assert r['cur'] == 'N4' and r['left']['units'] == [] and r['left']['v'] == 0, r
 
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

@@ -3455,17 +3455,37 @@ function finishPreIfReady() {
   return true;
 }
 function preDone() { return REG.vocab.some(v => v.builtin && v.lv === 'PRE_N5') && preWordsLeft() === 0 && kanaGateOpen() && introLeft() === 0; }
-function n4WordsOpen() { return n5WordsLeft() === 0; }   // N4 words join once every PRE_N5 and N5 word has been seen
+// 每一級封死 (1.0.32, spec §4.2): new words, kanji and grammar come from one course level at a time, the lowest one with
+// something still unseen; reviews follow the record (computeDailyPlan's scope). In the main course 入門 words count as N5.
+const COURSE_LEVELS = ['N5', 'N4'];
+function courseLevel(lv) { return lv === 'PRE_N5' ? 'N5' : lv; }
+function unitLevel(uid) { return courseLevel(unitById(uid).lv); }
+// a unit is done once it is marked complete (從這個單元開始 marks the earlier ones too) or every item in it has been seen
+function unitDone(uid) { return state.completedUnits.includes(uid) || !REG.grammar.some(g => g.u === uid && !state.srs[g.key]); }
+// what a level still has unseen: built-in words, kanji, and the grammar items of its units that are not done (第 0 週 aside)
+function levelLeft(L) {
+  const unseen = (x) => !state.srs[x.key];
+  const units = DATA.UNITS.filter(u => courseLevel(u.lv) === L && !unitDone(u.id)).map(u => u.id);
+  return { v: REG.vocab.filter(v => v.builtin && courseLevel(v.lv) === L && unseen(v)).length, k: REG.kanji.filter(k => courseLevel(k.lv) === L && unseen(k)).length,
+    g: REG.grammar.filter(g => units.includes(g.u) && unseen(g)).length, units };
+}
+function curLevel() { return COURSE_LEVELS.find(L => { const x = levelLeft(L); return x.v || x.k || x.units.length; }) || COURSE_LEVELS[COURSE_LEVELS.length - 1]; }
+// new grammar waits while the current level's units are all done but its words or kanji are not: what is left, and the
+// number of the next level's first unit (the today and course pages say so)
+function grammarPause() {
+  if (inPreStage()) return null;
+  const L = curLevel(); const x = levelLeft(L);
+  if (x.units.length || (!x.v && !x.k)) return null;
+  const next = DATA.UNITS.find(u => COURSE_LEVELS.indexOf(courseLevel(u.lv)) > COURSE_LEVELS.indexOf(L));
+  return next ? { L, v: x.v, k: x.k, next: Number(next.id.slice(1)) } : null;
+}
+function n4WordsOpen() { return COURSE_LEVELS.indexOf(curLevel()) >= COURSE_LEVELS.indexOf('N4'); }   /* level-literal-ok: renamed in the 1.0.33 generalization */
 function n5WordsLeft() {   // PRE_N5 and N5 words not yet seen: both must be gone before N4 opens by itself
   let n = 0;
   for (const v of REG.vocab) if (v.builtin && v.lv !== 'N4' && !state.srs[v.key]) n++;
   return n;
 }
 function grammarInReach(g, curIdx = unitOrder(state.currentUnit)) { return unitOrder(g.u) <= curIdx; }
-function inDailyReach(it, n4Open = n4WordsOpen()) {
-  if (it.kind === 'g') return grammarInReach(it);
-  return !it.builtin || it.lv !== 'N4' || n4Open;
-}
 // the main-course rule (also what 入門 uses for due reviews: a learner who went back to 入門 keeps every review)
 function vocabEligibleMain(v, n4Open) {
   if (v.builtin) return v.lv !== 'N4' || n4Open;
@@ -3474,9 +3494,9 @@ function vocabEligibleMain(v, n4Open) {
   if (mode === 'words') return isWordLike(v);
   return true;
 }
-// new words: 入門 only PRE_N5; main course by level
-function vocabEligibleForDaily(v, n4Open) {
-  if (v.builtin) return inPreStage() ? v.lv === 'PRE_N5' : (v.lv !== 'N4' || n4Open);
+// new words: 入門 only PRE_N5; main course only the current level
+function vocabEligibleForDaily(v, cur = curLevel()) {
+  if (v.builtin) return inPreStage() ? v.lv === 'PRE_N5' : courseLevel(v.lv) === cur;
   const mode = state.settings.includeImported;
   if (mode === 'off') return false;
   if (mode === 'words') return isWordLike(v);
@@ -3499,8 +3519,10 @@ function laneOrder() {
 function laneCap() { return THEME_LANE_DAYS * 8; }
 // the level whose themes hold the lanes: PRE_N5 in 入門; otherwise N5 while it has unseen words, then N4
 function laneLevel(fresh) { return inPreStage() ? 'PRE_N5' : fresh.some(v => v.lv === 'N5') ? 'N5' : 'N4'; }   /* level-literal-ok: picks the theme level, PRE_N5 leftovers ride their own lane */
-function activeThemes(pool, allowN4) {
-  const fresh = pool.filter(v => v.builtin && !state.srs[v.key] && (v.lv !== 'N4' || allowN4));
+// anyLevel: a page the learner chose (a level tab, a theme) offers its own words; otherwise only the current level's
+function freshWords(pool, anyLevel) { const cur = anyLevel || inPreStage() ? null : curLevel(); return pool.filter(v => v.builtin && !state.srs[v.key] && (!cur || courseLevel(v.lv) === cur)); }
+function activeThemes(pool, anyLevel) {
+  const fresh = freshWords(pool, anyLevel);
   const lv = laneLevel(fresh);
   const open = new Set(fresh.filter(v => v.lv === lv).map(vocabTheme));
   return laneOrder().filter(c => open.has(c)).slice(0, 2);
@@ -3516,9 +3538,9 @@ function noteThemeIntro(key) {
   order.push(c);
   DAILY_CACHE = null;
 }
-function newVocabCandidates(pool, allowN4) {
-  const th = activeThemes(pool, allowN4);
-  const fresh = pool.filter(v => v.builtin && !state.srs[v.key] && (v.lv !== 'N4' || allowN4));
+function newVocabCandidates(pool, anyLevel) {
+  const th = activeThemes(pool, anyLevel);
+  const fresh = freshWords(pool, anyLevel);
   const lv = laneLevel(fresh);
   const byId = (a, b) => a.id.localeCompare(b.id);
   const byTheme = (a, b) => themeRank(vocabTheme(a)) - themeRank(vocabTheme(b)) || byId(a, b);
@@ -3574,10 +3596,11 @@ function newGrammarCandidates(unitIdOnly) {
   const curIdx = unitOrder(cur);
   const earlier = REG.grammar.filter(g => g.u !== 'm0' && unitOrder(g.u) < curIdx && !state.completedUnits.includes(g.u) && !state.srs[g.key])   // 第 0 週 only brings new items in 入門 (and from its own page)
     .sort((a, b) => unitOrder(a.u) - unitOrder(b.u) || (a.d || 2) - (b.d || 2));
-  const out = sorted.concat(earlier);
-  // everything up to here has been introduced: continue into the next unit (the unit itself moves when its first new
-  // item is answered, see autoAdvanceUnit)
-  if (!out.length) { const next = DATA.UNITS[curIdx + 1]; if (next) return unitNewOrder(next.id); }
+  // 每一級封死: only units of the current level, so a learner whose unit is already past it gets none until it is done
+  const L = curLevel(); const out = sorted.concat(earlier).filter(g => unitLevel(g.u) === L);
+  // everything up to here has been introduced: continue into the next unit of the same level (the unit itself moves when
+  // its first new item is answered, see autoAdvanceUnit)
+  if (!out.length) { const next = DATA.UNITS[curIdx + 1]; if (next && unitLevel(next.id) === L) return unitNewOrder(next.id); }
   return out;
 }
 // The course moves on by itself: when the current unit's grammar has all been introduced and the learner answers a new
@@ -3597,8 +3620,9 @@ function autoAdvanceUnit(key) {
 // Listening, reading and kanji share the session with words and grammar. Listening and reading follow the
 // unit rule; N4 kanji wait until every N5 kanji has been introduced, like the words.
 function n5KanjiLeft() { let n = 0; for (const k of REG.kanji) if (k.lv !== 'N4' && !state.srs[k.key]) n++; return n; }
-function newKanjiCandidates(allowN4) {
-  return REG.kanji.filter(k => !state.srs[k.key] && (inPreStage() ? k.lv === 'PRE_N5' : (k.lv !== 'N4' || allowN4))).sort((a, b) => lvRank(a) - lvRank(b) || a.order - b.order);
+function newKanjiCandidates(anyLevel = false) {   // 入門: PRE_N5 kanji; main course: the current level's (anyLevel: all)
+  const cur = anyLevel || inPreStage() ? null : curLevel();
+  return REG.kanji.filter(k => !state.srs[k.key] && (inPreStage() ? k.lv === 'PRE_N5' : !cur || courseLevel(k.lv) === cur)).sort((a, b) => lvRank(a) - lvRank(b) || a.order - b.order);
 }
 // Listening is not tied to a unit's grammar: the pool is the whole level (N5 learners: N5; N4 learners: everything),
 // nearest units first (the current one, then earlier ones from the nearest, then later ones). A unit alone has ~12
@@ -3641,8 +3665,7 @@ function newCountToday() {
 // Main course: built-in words, course grammar, kanji. 入門: kana, PRE_N5 words, week-0 grammar, PRE_N5 kanji.
 function splitNew(n, skip = new Set()) {
   const unseen = (x) => !state.srs[x.key];
-  const n4Open = n4WordsOpen();
-  const words = () => newVocabCandidates(REG.vocab.filter(v => vocabEligibleForDaily(v, n4Open)), n4Open);
+  const words = () => newVocabCandidates(REG.vocab.filter(v => vocabEligibleForDaily(v)), false);
   let banks;
   if (inPreStage()) {
     const gate = kanaGateOpen();
@@ -3653,10 +3676,11 @@ function splitNew(n, skip = new Set()) {
       k: [REG.kanji.filter(k => k.lv === 'PRE_N5' && unseen(k)).length, gate ? newKanjiCandidates(false) : []]
     };
   } else {
+    const left = levelLeft(curLevel());   // 每一級封死: shares follow what the current level has left
     banks = {
-      v: [REG.vocab.filter(v => v.builtin && unseen(v)).length, words()],
-      g: [REG.grammar.filter(g => g.u !== 'm0' && unseen(g)).length, newGrammarCandidates()],
-      k: [REG.kanji.filter(unseen).length, newKanjiCandidates(n5KanjiLeft() === 0)]
+      v: [left.v, words()],
+      g: [left.g, newGrammarCandidates()],
+      k: [left.k, newKanjiCandidates()]
     };
   }
   const out = { a: [], v: [], g: [], k: [] };
@@ -3849,13 +3873,13 @@ function buildUnitQueue(unitId, size = 15) {
   return scopeQueue(unitItems(unitId), newGrammarCandidates(unitId).slice(0, left), size);
 }
 function buildVocabQueue(filter = 'all', size = 20) {
-  // choosing the N4 list or a theme on purpose opens N4 words right away
+  // choosing a level list or a theme on purpose opens its words right away; 全部 follows the daily rule (the current level)
   const theme = filter.startsWith('c:') ? filter.slice(2) : null;
   const lt = filter.startsWith('t:') ? filter.slice(2).split(':') : null;   // t:<lv>:<theme> — one level's theme (the level pages)
-  const n4Open = Boolean(theme) || Boolean(lt) || filter === 'N4' || n4WordsOpen();
-  const pool = REG.vocab.filter(v => lt ? (v.builtin && v.lv === lt[0] && vocabTheme(v) === lt.slice(1).join(':')) : theme ? (v.builtin && vocabTheme(v) === theme) : filter === 'all' ? vocabEligibleForDaily(v, n4Open) : filter === 'custom' ? !v.builtin : (v.builtin && v.lv === filter));
+  const anyLevel = filter !== 'all';
+  const pool = REG.vocab.filter(v => lt ? (v.builtin && v.lv === lt[0] && vocabTheme(v) === lt.slice(1).join(':')) : theme ? (v.builtin && vocabTheme(v) === theme) : filter === 'all' ? vocabEligibleForDaily(v) : filter === 'custom' ? !v.builtin : (v.builtin && v.lv === filter));
   const left = todayNewLeft('v');
-  return scopeQueue(pool, newVocabCandidates(pool, n4Open).slice(0, left), size);
+  return scopeQueue(pool, newVocabCandidates(pool, anyLevel).slice(0, left), size);
 }
 function buildMistakeQueue(size = 20) {
   const list = [];
@@ -5707,7 +5731,7 @@ function ensureFlash(deck) {
 // which level the vocab page opens on: 入門 while in that stage, then N5, then N4 once N5 is all seen and open
 function defaultVocabLevel() {
   if (inPreStage()) return 'PRE_N5';
-  return n4WordsOpen() && !REG.vocab.some(v => v.builtin && v.lv === 'N5' && !state.srs[v.key]) ? 'N4' : 'N5';   /* level-literal-ok: N5 itself finished */
+  return curLevel();   // the level new items come from (每一級封死)
 }
 function vocabTabs(tab) {
   return `<div class="seg mb-4">

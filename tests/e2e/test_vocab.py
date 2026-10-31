@@ -794,14 +794,17 @@ def test_meaning_distractors_for_other_items_are_look_alike_sentences(b):
 TESTS += [test_particle_questions_ask_for_the_usage_with_other_points_as_options, test_meaning_distractors_for_other_items_are_look_alike_sentences]
 
 # ---- 2026-10-27: learners with a base — open N4 words early, bulk 我會了, 我會了 on the preview card, one-click fast settings ----
-def test_n4_words_open_once_every_n5_word_has_been_seen(b):
-    js = """(() => { const n4 = REG.vocab.find(x => x.builtin && x.lv === 'N4' && !state.srs[x.key]); const keep = JSON.stringify(state.srs);
-      const out = { left: n5WordsLeft(), closed: !n4WordsOpen() && !inDailyReach(n4) && !deckAllowsN4('all') };
-      REG.vocab.filter(x => x.builtin && x.lv !== 'N4' && !state.srs[x.key]).forEach(x => { state.srs[x.key] = { b: 1, due: addDays(todayStr(), 3), n: 1, ok: 1, ng: 0, s: 3, d: 5, f: {}, last: todayStr() }; });
-      out.open = n4WordsOpen() && inDailyReach(n4) && deckAllowsN4('all');
-      state.srs = JSON.parse(keep); saveState(); return JSON.stringify(out); })()"""
+# 1.0.32 每一級封死: N4 opens once N5's words, kanji and units are all done (seeing every N5 word is no longer enough)
+def test_n4_words_open_once_n5_words_kanji_and_units_are_done(b):
+    js = """(() => { const keep = JSON.stringify(state.srs); const units = state.completedUnits.slice(); state.stage = 'main';
+      const met = (x) => { state.srs[x.key] = { b: 1, due: addDays(todayStr(), 3), n: 1, ok: 1, ng: 0, s: 3, d: 5, f: {}, last: todayStr() }; };
+      const open = () => n4WordsOpen() && deckAllowsN4('all') && curLevel() === 'N4';
+      const out = { left: n5WordsLeft(), closed: !open() };
+      REG.vocab.filter(x => x.builtin && x.lv !== 'N4').forEach(met); out.wordsOnly = open();
+      REG.kanji.filter(k => k.lv !== 'N4').forEach(met); state.completedUnits = DATA.UNITS.filter(u => u.lv === 'N5').map(u => u.id); out.open = open();
+      state.srs = JSON.parse(keep); state.completedUnits = units; saveState(); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['left'] > 0 and r['closed'] and r['open'], r
+    assert r['left'] > 0 and r['closed'] and r['wordsOnly'] is False and r['open'], r
 
 def test_bulk_i_know_marks_the_filtered_words_and_can_be_undone(b):
     js = """(() => { const theme = vocabThemes().find(g => g.c && REG.vocab.filter(v => v.builtin && vocabTheme(v) === g.c && !state.srs[v.key]).length >= 3).c;
@@ -850,7 +853,7 @@ def test_vocab_search_filters_live_on_input_and_preserves_focus(b):
     r = json.loads(ev(b, js))
     assert r['rows0'] > r['rows1'] >= 1 and r['sameEl'] is True and r['caret'] == 2 and 'q=食べ' in r['hash'], r
 
-TESTS += [test_n4_words_open_once_every_n5_word_has_been_seen, test_bulk_i_know_marks_the_filtered_words_and_can_be_undone, test_preview_card_has_i_know_which_skips_the_word_and_its_encore, test_experienced_shortcut_in_the_level_picker_turns_chinese_off, test_vocab_search_filters_live_on_input_and_preserves_focus]
+TESTS += [test_n4_words_open_once_n5_words_kanji_and_units_are_done, test_bulk_i_know_marks_the_filtered_words_and_can_be_undone, test_preview_card_has_i_know_which_skips_the_word_and_its_encore, test_experienced_shortcut_in_the_level_picker_turns_chinese_off, test_vocab_search_filters_live_on_input_and_preserves_focus]
 
 # ---- 1.0.27: no 字表 button; a theme card opens its word table wherever its own buttons are not ----
 MAIN = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
