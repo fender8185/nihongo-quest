@@ -969,12 +969,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.28';   // keep equal to the version in sw.js CACHE ('nq-v1.0.28'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.29';   // keep equal to the version in sw.js CACHE ('nq-v1.0.29'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.29', date: '2026-10-31', items: [
+    '雲端音檔改從新的伺服器下載（audio.nihongoquest.app）。新伺服器沒有的音檔，或連不上的時候，會自動改從原本的伺服器下載。已經存在這台裝置上的音檔照樣能用，不用重新下載，「下載全部」也會把它們算成已經在裝置上。'
+  ] },
   { v: '1.0.28', date: '2026-10-31', items: [
     '播放字卡加進漢字卡：單字主題（含「初識單詞」）輪播時，這些單字用到的漢字（漢字表裡有的）每個一張，跟單字一起播。卡上是漢字、意思、音讀和訓讀，再加一個例字；聲音先唸例字，再唸漢字的中文意思，選「2」時最後再唸一次例字。點漢字會先暫停，再打開漢字說明。',
     '單字主題的播放器關掉「隨機」時照主題的順序播，每張漢字卡接在第一個用到它的單字後面。修正：之前關掉隨機會出錯，播放停住，按鈕也不會變。'
@@ -8264,10 +8267,25 @@ function ttsConfig() {
 /* ---- 雲端音檔: every built-in sentence synthesized once (Google Neural2) and kept in a public Supabase bucket ----
    The file name is a hash of exactly what Google is sent (SSML with the readings pinned, voice gender), so the generator
    (設定 › 語音 › 管理者) and the player agree by construction. A missing file (custom cards, AI items) falls back to the
-   browser voice and is noted locally so the next generator run covers it. */
-const CLOUD_AUDIO = { bucket: 'JPY_audio', set: 'v1' };
-const cloudMisses = new Set();   // paths that were not on the server this session: straight to the browser voice next time
-function cloudAudioBase() { return `${((window.NQ_CONFIG || {}).supabaseUrl || '').replace(/\/$/, '')}/storage/v1/object/public/${CLOUD_AUDIO.bucket}/${CLOUD_AUDIO.set}`; }
+   browser voice and is noted locally so the next generator run covers it.
+   Since 1.0.29 a clip is fetched from a copy of the bucket on Cloudflare R2 (audio.nihongoquest.app) first. The generator
+   still uploads to Supabase only, so a clip made since the copy is found there; and a device that cached clips before
+   1.0.29 holds them under the Supabase address (sw.js looks there too). */
+const CLOUD_AUDIO = { bucket: 'JPY_audio', set: 'v1', host: 'https://audio.nihongoquest.app' };
+const cloudMisses = new Set();   // paths that were on neither server this session: straight to the browser voice next time
+// the addresses a clip is fetched from, in order: R2, then Supabase
+function cloudAudioBases() { return [`${CLOUD_AUDIO.host}/${CLOUD_AUDIO.set}`, `${((window.NQ_CONFIG || {}).supabaseUrl || '').replace(/\/$/, '')}/storage/v1/object/public/${CLOUD_AUDIO.bucket}/${CLOUD_AUDIO.set}`]; }
+// A clip from the first address that has it: a failed request or a missing file moves on to the next. Resolves with the
+// response and its URL (the last answer when neither has the clip); rejects when the last address could not be reached.
+async function fetchCloudClip(path) {
+  let last = null;
+  for (const base of cloudAudioBases()) {
+    const url = `${base}/${path}`;
+    try { last = { resp: await fetch(url), url }; if (last.resp.ok) return last; } catch (e) { last = { error: e }; }
+  }
+  if (last.error) throw last.error;
+  return last;
+}
 function cloudAudioSsml(text, opt = {}) { return opt.reading ? `<speak><sub alias="${esc(opt.reading)}">${esc(text)}</sub></speak>` : ssmlReadings(text); }
 const CLOUD_ZH_VOICE = { languageCode: 'cmn-TW', name: 'cmn-TW-Wavenet-A' };   // meanings and translations (opt.lang === 'zh'): one Taiwanese Mandarin voice
 async function cloudAudioPath(text, gender, opt = {}) {
@@ -8529,7 +8547,7 @@ async function fetchEngineBlob(cfg, text, gender, opt = {}) {
   if (cfg.engine === 'cloud') {
     const path = await cloudAudioPath(text, gender, opt);
     if (cloudMisses.has(path)) return null;
-    const resp = await fetch(`${cloudAudioBase()}/${path}`);
+    const { resp } = await fetchCloudClip(path);
     if (!resp.ok) { cloudMisses.add(path); noteCloudMiss(text, gender, opt); return null; }   // not generated: the browser voice reads it
     return resp.blob();
   }
@@ -8763,21 +8781,24 @@ async function clipPaths(list) {
 // counts have/done/missing/failed; `run.stop` ends it early, and a lost network (or a full disk) sets it.
 async function fillAudioCache(paths, run, workers) {
   const cache = await caches.open('nq-audio');
-  const base = cloudAudioBase();
-  // one lookup per clip: Chrome refuses cache.keys() once the cache holds about 17,500 clips (both 下載全部 buttons)
+  const bases = cloudAudioBases();
+  // one lookup per clip and address: Chrome refuses cache.keys() once the cache holds about 17,500 clips (both 下載全部
+  // buttons); a clip is filed under the address it came from, the Supabase one for every clip cached before 1.0.29, and
+  // found by the address alone (R2 answers "Vary: Origin")
+  const stored = async (p) => { for (const base of bases) if (await cache.match(`${base}/${p}`, { ignoreVary: true })) return true; return false; };
   const todo = []; let have = 0;
   for (let j = 0; j < paths.length && !run.stop; j += 50) {
     const chunk = paths.slice(j, j + 50);
-    (await Promise.all(chunk.map(p => cache.match(`${base}/${p}`)))).forEach((hit, k) => { if (hit) have++; else todo.push(chunk[k]); });
+    (await Promise.all(chunk.map(stored))).forEach((hit, k) => { if (hit) have++; else todo.push(chunk[k]); });
   }
   run.total = paths.length; run.have = have;
   if (run.onProgress) run.onProgress();
   let i = 0;
   const worker = async () => {
     while (i < todo.length && !run.stop) {
-      const p = todo[i++]; const url = `${base}/${p}`;
+      const p = todo[i++];
       try {
-        const r = await fetch(url);
+        const { resp: r, url } = await fetchCloudClip(p);
         if (r.ok) { await cache.put(url, r); run.done++; }
         else if (r.status === 400 || r.status === 404) { run.missing++; cloudMisses.add(p); }   // not generated yet: the player goes straight to the device voice
         else run.failed++;

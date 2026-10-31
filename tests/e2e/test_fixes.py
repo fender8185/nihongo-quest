@@ -706,12 +706,44 @@ def test_today_counts_relearning_items_among_reviews_and_puts_them_first(b):
 def test_cloud_audio_path_is_stable_and_pins_readings(b):
     js = """(async () => { const a = await cloudAudioPath('三本ください', ''); const a2 = await cloudAudioPath('三本ください', 'f'); const m = await cloudAudioPath('三本ください', 'm');
       const r1 = await cloudAudioPath('日本', '', { reading: 'にほん' }); const r2 = await cloudAudioPath('日本', '', { reading: 'にっぽん' }); const plain = await cloudAudioPath('日本', '');
-      return JSON.stringify({ a, same: a === a2, m, r1, r2, plain, base: cloudAudioBase() }); })()"""
+      return JSON.stringify({ a, same: a === a2, m, r1, r2, plain }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)
     r = json.loads(out[-1])
     assert re.fullmatch(r"f/[0-9a-f]{32}\.mp3", r['a']) and r['same'] and re.fullmatch(r"m/[0-9a-f]{32}\.mp3", r['m']) and r['m'][2:] != r['a'][2:], r
     assert r['r1'] == r['plain'] and r['r2'] != r['plain'], r   # the dictionary already pins 日本→にほん (same file); another reading is another file
-    assert r['base'].endswith('/storage/v1/object/public/JPY_audio/v1'), r
+
+# 1.0.29: a clip is fetched from R2 first, then from the Supabase bucket R2 was copied from. Clip names checked by hand:
+# the first 16 bytes of sha256('v1|zh|今天') (明天, 昨天), the same file on both servers.
+R2 = "https://audio.nihongoquest.app/v1/"
+SB = "https://pwudaariihdshiwqbkfx.supabase.co/storage/v1/object/public/JPY_audio/v1/"
+ZH_TODAY, ZH_TOMORROW, ZH_YESTERDAY = "zh/2f675441de1c871023cf3077c80c4c4e.mp3", "zh/c50a1e415e9ce6a074132a627f8d6f72.mp3", "zh/cc5355db4eb58f0839a7d48a8f6039cc.mp3"
+CLIP_OK = "Promise.resolve(new Response(new Uint8Array(%s), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } }))"
+
+def test_cloud_clips_are_fetched_from_the_r2_address(b):
+    js = """(async () => { ttsConfig().engine = 'cloud'; audioCache.clear(); cloudMisses.clear(); const calls = []; const rf = window.fetch;
+      window.fetch = (u) => { calls.push(String(u)); return %s; };
+      const blob = await engineBlob('今天', '', { lang: 'zh' }); window.fetch = rf; ttsConfig().engine = 'browser_neural';
+      return JSON.stringify({ calls, size: blob ? blob.size : null }); })()""" % (CLIP_OK % '[1]')
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)[-1])
+    assert r == {'calls': [R2 + ZH_TODAY], 'size': 1}, r
+
+def test_a_clip_r2_lacks_or_cannot_serve_comes_from_supabase_and_is_no_miss(b):
+    js = """(async () => { ttsConfig().engine = 'cloud'; localStorage.removeItem('nq_audio_miss'); const rf = window.fetch; const out = {};
+      for (const r2 of ['missing', 'unreachable']) {
+        audioCache.clear(); cloudMisses.clear(); const calls = [];
+        window.fetch = (u) => { u = String(u); calls.push(u);
+          if (u.startsWith('https://audio.nihongoquest.app/')) return r2 === 'missing' ? Promise.resolve(new Response('', { status: 404 })) : Promise.reject(new TypeError('Failed to fetch'));
+          return %s; };
+        const blob = await engineBlob('今天', '', { lang: 'zh' });
+        out[r2] = { calls, size: blob ? blob.size : null, missed: cloudMisses.size };
+      }
+      window.fetch = rf; ttsConfig().engine = 'browser_neural'; out.noted = JSON.parse(localStorage.getItem('nq_audio_miss') || '[]');
+      return JSON.stringify(out); })()""" % (CLIP_OK % '[2, 2]')
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)[-1])
+    both = [R2 + ZH_TODAY, SB + ZH_TODAY]
+    assert r['missing'] == {'calls': both, 'size': 2, 'missed': 0}, r   # made by the generator after the copy to R2: only Supabase has it
+    assert r['unreachable'] == {'calls': both, 'size': 2, 'missed': 0}, r   # R2 down or blocked: Supabase serves it
+    assert r['noted'] == [], r   # nothing for the generator to make
 
 def test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss(b):
     js = """(async () => { ttsConfig().engine = 'cloud'; localStorage.removeItem('nq_audio_miss'); const calls = [];
@@ -724,7 +756,8 @@ def test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss(b):
       return JSON.stringify({ calls, log, miss, blobSize: blob ? blob.size : null }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", js)], timeout=40)
     r = json.loads(out[-1])
-    assert len(r['calls']) == 1 and '/storage/v1/object/public/JPY_audio/v1/f/' in r['calls'][0], r
+    name = r['calls'][0][len(R2):]
+    assert re.fullmatch(r"f/[0-9a-f]{32}\.mp3", name) and r['calls'] == [R2 + name, SB + name], r   # missing at both addresses; the second time no request
     assert [x for x in r['log'] if x == 'start:こんにちは'] and r['miss'] == [{'text': 'こんにちは', 'gender': '', 'reading': ''}], r
     assert r['blobSize'] == 3, r
 
@@ -769,7 +802,7 @@ def test_cloud_audio_is_the_default_engine_with_an_admin_generator_section(b):
 
 def test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there(b):
     js = """(async () => { const all = cloudAudioTexts(); const sample = all.slice(0, 5); cloudAudioTexts = () => sample;
-      const base = cloudAudioBase(); await caches.delete('nq-audio'); const realFetch = window.fetch; let calls = 0;
+      const base = 'https://audio.nihongoquest.app/v1'; await caches.delete('nq-audio'); const realFetch = window.fetch; let calls = 0;
       window.fetch = (u) => { calls++; return Promise.resolve(new Response(new Blob([new Uint8Array([9, 9])], { type: 'audio/mpeg' }), { status: 200 })); };
       await cloudDownloadAll(); const first = Object.assign({}, CLOUD_DL); const c1 = calls;
       const cache = await caches.open('nq-audio'); const keys = (await cache.keys()).map(r => r.url); const paths = await Promise.all(sample.map(x => cloudAudioPath(x.text, x.gender, x.reading ? { reading: x.reading } : {})));
@@ -784,6 +817,44 @@ def test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there
     assert r['keysOk'] and r['nKeys'] == r['uniq'], r
     assert r['second']['have'] == r['uniq'] and r['second']['done'] == 0 and r['c2'] == 0 and r['btn'], r   # already there: no request
     assert r['zh'] == ['zh', 3, 3, 3], r['zh']   # the Chinese pack fetches only the zh clips
+
+def test_download_all_counts_clips_cached_under_the_supabase_address_and_adds_no_copy(b):
+    # before 1.0.29 every clip was cached under its Supabase address
+    js = """(async () => { await caches.delete('nq-audio'); cloudMisses.clear(); const keep = cloudAudioTexts;
+      cloudAudioTexts = () => ['今天', '明天', '昨天'].map(text => ({ text, gender: '', reading: '', lang: 'zh' }));
+      const cache = await caches.open('nq-audio'); await cache.put('%s', new Response(new Uint8Array([1]), { headers: { 'Content-Type': 'audio/mpeg' } }));
+      const rf = window.fetch; const calls = []; window.fetch = (u) => { calls.push(String(u)); return %s; };
+      await cloudDownloadAll('zh'); const run = Object.assign({}, CLOUD_DL); window.fetch = rf; cloudAudioTexts = keep;
+      const keys = (await cache.keys()).map(r => r.url).sort(); await caches.delete('nq-audio');
+      return JSON.stringify({ have: run.have, done: run.done, calls: calls.sort(), keys }); })()""" % (SB + ZH_TODAY, CLIP_OK % '[9, 9]')
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)[-1])
+    assert (r['have'], r['done']) == (1, 2), r
+    assert r['calls'] == sorted([R2 + ZH_TOMORROW, R2 + ZH_YESTERDAY]), r   # the clip already on the device is not fetched again
+    assert r['keys'] == sorted([SB + ZH_TODAY, R2 + ZH_TOMORROW, R2 + ZH_YESTERDAY]), r   # nor stored a second time
+
+def test_download_all_finds_a_stored_clip_by_its_address_whatever_it_varies_on(b):
+    # R2 answers "Vary: Origin"; a made-up header stands in for Origin, which a page cannot set
+    js = """(async () => { await caches.delete('nq-audio'); cloudMisses.clear(); const keep = cloudAudioTexts;
+      cloudAudioTexts = () => [{ text: '今天', gender: '', reading: '', lang: 'zh' }];
+      const cache = await caches.open('nq-audio'); await cache.put(new Request('%s', { headers: { 'X-Probe': '1' } }), new Response(new Uint8Array([1]), { headers: { 'Content-Type': 'audio/mpeg', 'Vary': 'X-Probe' } }));
+      const rf = window.fetch; const calls = []; window.fetch = (u) => { calls.push(String(u)); return %s; };
+      await cloudDownloadAll('zh'); const run = Object.assign({}, CLOUD_DL); window.fetch = rf; cloudAudioTexts = keep; await caches.delete('nq-audio');
+      return JSON.stringify({ have: run.have, calls }); })()""" % (R2 + ZH_TODAY, CLIP_OK % '[9, 9]')
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)[-1])
+    assert r == {'have': 1, 'calls': []}, r
+
+def test_download_all_takes_from_supabase_what_r2_lacks(b):
+    js = """(async () => { await caches.delete('nq-audio'); cloudMisses.clear(); const keep = cloudAudioTexts;
+      cloudAudioTexts = () => ['今天', '明天'].map(text => ({ text, gender: '', reading: '', lang: 'zh' }));
+      const rf = window.fetch; const calls = [];
+      window.fetch = (u) => { u = String(u); calls.push(u); return u === '%s' ? Promise.resolve(new Response('', { status: 404 })) : %s; };
+      await cloudDownloadAll('zh'); const run = Object.assign({}, CLOUD_DL); window.fetch = rf; cloudAudioTexts = keep;
+      const cache = await caches.open('nq-audio'); const keys = (await cache.keys()).map(r => r.url).sort(); await caches.delete('nq-audio');
+      return JSON.stringify({ done: run.done, missing: run.missing, calls: calls.sort(), keys }); })()""" % (R2 + ZH_TOMORROW, CLIP_OK % '[9, 9]')
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)[-1])
+    assert (r['done'], r['missing']) == (2, 0), r
+    assert r['calls'] == sorted([R2 + ZH_TODAY, R2 + ZH_TOMORROW, SB + ZH_TOMORROW]), r
+    assert r['keys'] == sorted([R2 + ZH_TODAY, SB + ZH_TOMORROW]), r   # each clip filed under the address it came from
 
 def test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone(b):
     seed = """(() => { const t = todayStr(); const y = addDays(t, -1); const old = addDays(t, -3);
@@ -870,7 +941,7 @@ def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in
       location.hash = '#/mistakes?c=%E5%96%AE%E5%AD%97'; route(); const d2 = document.querySelector('details.cat-filter');
       return JSON.stringify({ has: !!d, open: d ? d.open : null, sum: d ? d.querySelector('summary').textContent.trim() : '', chips: d ? d.querySelectorAll('.chip').length : 0, sum2: d2 ? d2.querySelector('summary').textContent.trim() : '', clear: !!(d2 && d2.querySelector('summary [data-act=nav]')), btn: !!document.querySelector('[data-act=listen-start]') }); })()"""
     play = """(async () => { speechSynthesis.getVoices = () => [{ name: 'Kyoko', lang: 'ja-JP', voiceURI: 'kyoko', localService: true }, { name: 'Meijia', lang: 'zh-TW', voiceURI: 'mj', localService: true }];
-      const zhCalls = []; const realFetch = window.fetch; window.fetch = (u, o) => { u = String(u); if (u.includes('/JPY_audio/v1/zh/')) { zhCalls.push(u); return Promise.resolve(new Response(new Blob([new Uint8Array([1])], { type: 'audio/mpeg' }), { status: 200 })); } return Promise.resolve(new Response('', { status: 404 })); };
+      const zhCalls = []; const realFetch = window.fetch; window.fetch = (u, o) => { u = String(u); if (u.includes('/v1/zh/')) { zhCalls.push(u); return Promise.resolve(new Response(new Blob([new Uint8Array([1])], { type: 'audio/mpeg' }), { status: 200 })); } return Promise.resolve(new Response('', { status: 404 })); };
       ttsConfig().engine = 'cloud'; const zhPath = await cloudAudioPath('今天', '', { lang: 'zh' }); await speakZh('今天'); window.fetch = realFetch; ttsConfig().engine = 'browser_neural';
       const zhCloud = zhCalls.length === 1 && zhCalls[0].endsWith('/' + zhPath) && __tts.log.some(x => x === 'start:今天');
       speechSynthesis.getVoices = () => [{ name: 'Kyoko', lang: 'ja-JP', voiceURI: 'kyoko', localService: true }, { name: 'Meijia', lang: 'zh-TW', voiceURI: 'mj', localService: true }];
@@ -1575,7 +1646,7 @@ def test_sets_hold_twenty_mixed_even_when_an_old_copy_saved_another_size_or_orde
 STANDALONE = """(() => { const mm = window.matchMedia.bind(window);
   window.matchMedia = (q) => /display-mode:\\s*standalone/.test(q) ? { matches: true, media: q, onchange: null, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return false; } } : mm(q); })();"""
 CLIP_FETCH = """(() => { const rf = window.fetch.bind(window); window.__clips = [];
-  window.fetch = (u, o) => /JPY_audio/.test(String(u)) ? (window.__clips.push(String(u)), Promise.resolve(new Response(new Uint8Array([7]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } }))) : rf(u, o); })();"""
+  window.fetch = (u, o) => /JPY_audio|audio\\.nihongoquest\\.app/.test(String(u)) ? (window.__clips.push(String(u)), Promise.resolve(new Response(new Uint8Array([7]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } }))) : rf(u, o); })();"""
 
 def test_offline_audio_keeps_the_japanese_clips_of_todays_practice(b):
     js = """(async () => { const t = todayStr(); const rec = (due) => ({ b: 1, due, n: 1, ok: 1, ng: 0, s: 3, d: 5, last: addDays(t, -1), intro: addDays(t, -1) });
@@ -1605,10 +1676,10 @@ def test_offline_audio_fills_the_cache_skipping_stored_and_missing_clips_and_sto
     js = """(async () => { await caches.delete('nq-audio'); ttsConfig().engine = 'cloud'; cloudMisses.clear();
       const sample = ['あ', 'い', 'う', 'え', 'お'].map(text => ({ text, gender: 'f', reading: '' })).concat([{ text: '今天', gender: '', reading: '', lang: 'zh' }]);
       const keep = audioPrefetchTexts; audioPrefetchTexts = () => sample;
-      const base = cloudAudioBase(); const urls = await Promise.all(sample.map(x => cloudAudioPath(x.text, x.gender, x).then(p => `${base}/${p}`)));
+      const base = 'https://audio.nihongoquest.app/v1'; const urls = await Promise.all(sample.map(x => cloudAudioPath(x.text, x.gender, x).then(p => `${base}/${p}`)));
       const cache = await caches.open('nq-audio'); await cache.put(urls[0], new Response(new Uint8Array([1]), { headers: { 'Content-Type': 'audio/mpeg' } }));
-      const realFetch = window.fetch; const calls = [];
-      window.fetch = (u) => { calls.push(String(u)); return Promise.resolve(String(u) === urls[1] ? new Response('{"error":"not_found"}', { status: 400 }) : new Response(new Uint8Array([9, 9]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })); };
+      const realFetch = window.fetch; const calls = []; const gone = urls[1].slice(base.length);   // missing at both addresses
+      window.fetch = (u) => { calls.push(String(u)); return Promise.resolve(String(u).endsWith(gone) ? new Response('{"error":"not_found"}', { status: 400 }) : new Response(new Uint8Array([9, 9]), { status: 200, headers: { 'Content-Type': 'audio/mpeg' } })); };
       // Chrome refuses cache.keys() on a cache of ~17,500 clips (both 下載全部 buttons): the run must not need it
       const keysReal = Cache.prototype.keys; Cache.prototype.keys = function () { return Promise.reject(new DOMException('Operation too large', 'AbortError')); };
       await audioPrefetch(); const status = audioPrefetchHtml();
@@ -1627,10 +1698,10 @@ def test_offline_audio_fills_the_cache_skipping_stored_and_missing_clips_and_sto
       return JSON.stringify({ urls, first, second, offline, offlineStatus, otherEngine, whileOffline, brokenStatus }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
     r = json.loads(out[-1]); u = r['urls']
-    assert r['first']['calls'] == sorted(u[1:]), r['first']   # the clip already on the device is not asked for again
+    assert r['first']['calls'] == sorted(u[1:] + [SB + u[1][len(R2):]]), r['first']   # the clip already on the device is not asked for again; the missing one is asked at both addresses
     assert r['first']['stored'] == sorted([u[0]] + u[2:]), r['first']   # what came back is kept; the one missing on the server is not
     assert r['second'] == 0, r   # stored clips and the known-missing one: nothing left to fetch
-    assert 1 <= r['offline'] <= 6 and r['otherEngine'] == 0 and r['whileOffline'] == 0, r   # a lost network: one failed request per worker (six) out of 12, then it stops; offline or another voice service: nothing
+    assert 2 <= r['offline'] <= 12 and r['otherEngine'] == 0 and r['whileOffline'] == 0, r   # a lost network: each of the six workers fails at both addresses (12 clips would be 24 requests), then it stops; offline or another voice service: nothing
     assert '5 段' in r['first']['status'] and '存好' in r['first']['status'] and '0／12' in r['offlineStatus'], r   # settings › 語音 says whether the device is ready
     assert '存好' not in r['brokenStatus'] and '再試' in r['brokenStatus'], r
 
@@ -1683,7 +1754,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_hero_help_and_scope_toggles_open_one_at_a_time, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_exam_page_projects_the_finish_date_and_suggests_extra_practice_when_late, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_clips_are_fetched_from_the_r2_address, test_a_clip_r2_lacks_or_cannot_serve_comes_from_supabase_and_is_no_miss, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss,test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_download_all_counts_clips_cached_under_the_supabase_address_and_adds_no_copy, test_download_all_finds_a_stored_clip_by_its_address_whatever_it_varies_on, test_download_all_takes_from_supabase_what_r2_lacks,test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_hero_help_and_scope_toggles_open_one_at_a_time, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_exam_page_projects_the_finish_date_and_suggests_extra_practice_when_late, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,

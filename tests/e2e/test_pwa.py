@@ -42,10 +42,35 @@ def test_data_lives_in_its_own_versioned_file_and_is_precached(b):
     assert r['data'] and r['tag'] and r['tag'].startswith('./data.js?v=') and r['inline'], r
     assert any(u.endswith(r['tag'][1:]) for u in r['urls']), r
 
+def test_a_clip_cached_under_the_supabase_address_answers_for_its_r2_address(b):
+    # 1.0.29 fetches clips from R2; a device keeps what it cached before under the Supabase address. No server has this
+    # clip name, so only the cached copy can answer.
+    name = "v1/zh/" + "0" * 32 + ".mp3"
+    js = """(async () => { const cache = await caches.open('nq-audio');
+      await cache.put('https://pwudaariihdshiwqbkfx.supabase.co/storage/v1/object/public/JPY_audio/%s', new Response(new Uint8Array([5, 5, 5]), { headers: { 'Content-Type': 'audio/mpeg' } }));
+      try { const r = await fetch('https://audio.nihongoquest.app/%s'); return JSON.stringify({ status: r.status, body: [...new Uint8Array(await r.arrayBuffer())] }); }
+      catch (e) { return JSON.stringify({ error: String(e) }); } })()""" % (name, name)
+    out = b.run([("nav", URL), ("wait", READY), ("wait", "!!navigator.serviceWorker.controller"), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert r == {'status': 200, 'body': [5, 5, 5]}, r
+
+def test_a_cached_clip_is_found_by_its_address_whatever_it_varies_on(b):
+    # R2 answers "Vary: Origin", and browsers differ in the headers a stored request and a later one carry; a clip never
+    # changes, so its address alone must find it. A made-up header stands in for Origin, which a page cannot set.
+    name = "v1/zh/" + "1" * 32 + ".mp3"
+    js = """(async () => { const url = 'https://audio.nihongoquest.app/%s'; const cache = await caches.open('nq-audio');
+      await cache.put(new Request(url, { headers: { 'X-Probe': '1' } }), new Response(new Uint8Array([6]), { headers: { 'Content-Type': 'audio/mpeg', 'Vary': 'X-Probe' } }));
+      try { const r = await fetch(url); return JSON.stringify({ status: r.status, body: [...new Uint8Array(await r.arrayBuffer())] }); }
+      catch (e) { return JSON.stringify({ error: String(e) }); } })()""" % name
+    out = b.run([("nav", URL), ("wait", READY), ("wait", "!!navigator.serviceWorker.controller"), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert r == {'status': 200, 'body': [6]}, r
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
-    tests = [test_first_visit_does_not_reload_itself, test_app_renders_while_auth_session_restore_hangs, test_app_renders_and_sync_is_off_when_client_creation_throws, test_data_lives_in_its_own_versioned_file_and_is_precached]
+    tests = [test_first_visit_does_not_reload_itself, test_app_renders_while_auth_session_restore_hangs, test_app_renders_and_sync_is_off_when_client_creation_throws, test_data_lives_in_its_own_versioned_file_and_is_precached,
+             test_a_clip_cached_under_the_supabase_address_answers_for_its_r2_address, test_a_cached_clip_is_found_by_its_address_whatever_it_varies_on]
     failed = 0
     try:
         for t in tests:
