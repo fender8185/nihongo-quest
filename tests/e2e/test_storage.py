@@ -41,6 +41,21 @@ def test_localstorage_only_data_migrates_into_indexeddb(b):
     assert out[4] and out[4]["settings"]["loadCap"] == 42, "IDB copy missing after migration"
     assert out[5] == 42, "localStorage copy must be kept as a safety net"
 
+# cdp.py: one Chrome per test file, each Browser() a fresh browser context in it — no Chrome start-up per test, and a test
+# still finds nothing another one left behind (storage, IndexedDB, service workers, caches)
+def test_browsers_in_one_file_share_one_chrome():
+    with Browser() as a, Browser() as c:
+        assert a.port == c.port and a.ws_url != c.ws_url, (a.port, c.port, a.ws_url, c.ws_url)
+
+def test_a_browser_starts_with_nothing_from_the_one_before():
+    with Browser() as a:
+        a.run([("nav", URL), ("wait", "typeof state === 'object' && !!state.updatedAt"), ("wait", "!!navigator.serviceWorker.controller"),
+               ("eval", "localStorage.setItem('leak', '1'); true")])
+    with Browser() as c:   # an SVG of the same origin: the app does not load, so it cannot register anything itself
+        left = c.run([("nav", URL + "icons/icon.svg"), ("eval", """Promise.all([navigator.serviceWorker.getRegistrations().then(r => r.length),
+          indexedDB.databases().then(d => d.length), localStorage.length, caches.keys().then(k => k.length)])""")])[0]
+    assert left == [0, 0, 0, 0], left
+
 if __name__ == "__main__":
     srv = serve()
     try:
@@ -48,5 +63,7 @@ if __name__ == "__main__":
             before = test_fresh_load_writes_state_to_indexeddb(b); print("PASS fresh_load_writes_state_to_indexeddb")
             test_save_state_bumps_updated_at(b, before); print("PASS save_state_bumps_updated_at")
             test_localstorage_only_data_migrates_into_indexeddb(b); print("PASS localstorage_only_data_migrates_into_indexeddb")
+        test_a_browser_starts_with_nothing_from_the_one_before(); print("PASS a_browser_starts_with_nothing_from_the_one_before")
+        test_browsers_in_one_file_share_one_chrome(); print("PASS browsers_in_one_file_share_one_chrome")
     finally:
         srv.terminate()

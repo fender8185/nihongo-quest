@@ -1,37 +1,90 @@
-"""Tiny Chrome DevTools Protocol driver for e2e checks (headless Chrome, no extra deps beyond `websockets`)."""
-import asyncio, json, shutil, socket, subprocess, tempfile, time, urllib.request
+"""Tiny Chrome DevTools Protocol driver for e2e checks (headless Chrome, no extra deps beyond `websockets`).
+
+One headless Chrome per test process: the first Browser() starts it and it stops when the process exits. Every Browser() is a
+fresh browser context in it (its own localStorage, IndexedDB, service workers and caches, like an incognito window), closed on
+exit, so a test file pays one Chrome start-up instead of one per test (about 350 a full run) and its tests still share nothing.
+Browser(profile=dir) keeps a Chrome of its own on that profile, for a test that needs data kept across Browsers."""
+import asyncio, atexit, json, shutil, socket, subprocess, tempfile, time, urllib.request
 import websockets
+from websockets.sync.client import connect as ws_connect
 
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-PORT = 9333  # default; each Browser picks a free port so test files can run in parallel
+PORT = 9333  # default; each Chrome picks a free port so test files can run in parallel
 
 def free_port():
     with socket.socket() as sk:
         sk.bind(('127.0.0.1', 0)); return sk.getsockname()[1]
 
-class Browser:
+class _Chrome:
+    """A headless Chrome on its own profile and debugging port."""
     def __init__(self, profile=None):
         self.profile = profile or tempfile.mkdtemp(prefix="nq-e2e-")
         self._own_profile = profile is None
-        self.proc = None
         self.port = free_port()
-    def __enter__(self):
         self.proc = subprocess.Popen([CHROME, "--headless=new", "--disable-gpu", "--no-first-run",
             f"--user-data-dir={self.profile}", f"--remote-debugging-port={self.port}", "about:blank"],
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        tabs = None
+        self.tabs = None
         for _ in range(300):   # up to 30 s: a loaded machine can be slow to bring Chrome up
             try:
-                tabs = json.load(urllib.request.urlopen(f"http://127.0.0.1:{self.port}/json")); break
+                self.tabs = json.load(urllib.request.urlopen(f"http://127.0.0.1:{self.port}/json")); break
             except Exception: time.sleep(0.1)
-        if tabs is None:   # never leave a Chrome behind
-            self.__exit__(); raise RuntimeError(f"headless Chrome did not open its debugging port {self.port} within 30 s")
-        self.ws_url = [t for t in tabs if t["type"] == "page"][0]["webSocketDebuggerUrl"]
+        if self.tabs is None:   # never leave a Chrome behind
+            self.stop(); raise RuntimeError(f"headless Chrome did not open its debugging port {self.port} within 30 s")
+        self.browser_ws = json.load(urllib.request.urlopen(f"http://127.0.0.1:{self.port}/json/version"))["webSocketDebuggerUrl"]
+    def alive(self):
+        return self.proc.poll() is None
+    def call(self, method, params=None):   # one browser-level command
+        with ws_connect(self.browser_ws, max_size=None, open_timeout=30) as ws:
+            ws.send(json.dumps({"id": 1, "method": method, "params": params or {}}))
+            while True:
+                r = json.loads(ws.recv(timeout=30))
+                if r.get("id") == 1:
+                    if "error" in r: raise RuntimeError(f"{method}: {r['error']}")
+                    return r["result"]
+    def stop(self):
+        if self.proc.poll() is None:
+            self.proc.terminate()
+            try: self.proc.wait(timeout=10)
+            except subprocess.TimeoutExpired: self.proc.kill(); self.proc.wait()
+        if self._own_profile: shutil.rmtree(self.profile, ignore_errors=True)
+
+_shared = None   # this process's Chrome
+def _shared_chrome():
+    global _shared
+    if _shared is None or not _shared.alive():   # first use, or it died: start one
+        if _shared is not None: _shared.stop()
+        _shared = _Chrome()
+    return _shared
+atexit.register(lambda: _shared is not None and _shared.stop())
+
+class Browser:
+    def __init__(self, profile=None):
+        self.profile = profile
+        self.proc = None
+        self._ctx = None
+    def __enter__(self):
+        if self.profile:   # data kept on that profile: a Chrome of its own
+            self._chrome = _Chrome(self.profile)
+            self.ws_url = [t for t in self._chrome.tabs if t["type"] == "page"][0]["webSocketDebuggerUrl"]
+        else:
+            for attempt in (1, 2):   # a Chrome that stopped answering is replaced once
+                self._chrome = _shared_chrome()
+                try:
+                    self._ctx = self._chrome.call("Target.createBrowserContext")["browserContextId"]
+                    page = self._chrome.call("Target.createTarget", {"url": "about:blank", "browserContextId": self._ctx})["targetId"]
+                    break
+                except Exception:
+                    self._chrome.stop()
+                    if attempt == 2: raise
+            self.ws_url = f"ws://127.0.0.1:{self._chrome.port}/devtools/page/{page}"
+        self.port, self.proc = self._chrome.port, self._chrome.proc
         return self
     def __exit__(self, *a):
-        self.proc.terminate(); self.proc.wait(timeout=10)
-        if self._own_profile: shutil.rmtree(self.profile, ignore_errors=True)
-    def run(self, steps, timeout=45):   # six files run in parallel; page loads can take a while under that load
+        if self._ctx is None: self._chrome.stop(); return
+        try: self._chrome.call("Target.disposeBrowserContext", {"browserContextId": self._ctx})
+        except Exception: self._chrome.stop()   # a Chrome that cannot close a context is not reused
+    def run(self, steps, timeout=45):   # three files run in parallel; page loads can take a while under that load
         """steps: list of ('inject', js_before_page_scripts) | ('nav', url) | ('eval', js) | ('wait', js_predicate) | ('metrics', (w, h)) | ('shot', path). Returns list of eval values."""
         async def go():
             out = []
