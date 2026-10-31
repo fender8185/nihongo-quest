@@ -969,7 +969,7 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.29';   // keep equal to the version in sw.js CACHE ('nq-v1.0.29'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.30';   // keep equal to the version in sw.js CACHE ('nq-v1.0.30'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
@@ -8285,6 +8285,32 @@ async function fetchCloudClip(path) {
   }
   if (last.error) throw last.error;
   return last;
+}
+// a value in a signed S3 URL: RFC 3986, so ! ' ( ) * are escaped too
+function rfc3986(s) { return encodeURIComponent(s).replace(/[!'()*]/g, c => `%${c.charCodeAt(0).toString(16).toUpperCase()}`); }
+// AWS Signature Version 4 for one request to R2's S3 API (the generator signs in the browser, with WebCrypto). Returns
+// `headers` plus x-amz-date and Authorization; it signs host, every header given and x-amz-date. The payload hash is the
+// x-amz-content-sha256 header when given (R2: UNSIGNED-PAYLOAD), else the hash of an empty body. Region, service and time
+// are parameters so AWS's test suite can check it.
+async function sigV4(method, url, headers, creds, opt = {}) {
+  const { region = 'auto', service = 's3', now = new Date() } = opt;
+  const u = new URL(url); const enc = new TextEncoder();
+  const hex = (buf) => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  const sha = async (s) => hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
+  const hmac = async (key, s) => crypto.subtle.sign('HMAC', await crypto.subtle.importKey('raw', typeof key === 'string' ? enc.encode(key) : key, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']), enc.encode(s));
+  const amzDate = now.toISOString().replace(/[-:]|\.\d{3}/g, ''); const day = amzDate.slice(0, 8);
+  const out = Object.assign({}, headers, { 'x-amz-date': amzDate });
+  const signed = { host: u.host }; Object.keys(out).forEach(k => { signed[k.toLowerCase()] = String(out[k]).trim(); });
+  const names = Object.keys(signed).sort();
+  // the query as sent, decoded and sorted (not URLSearchParams: it reads a literal + as a space)
+  const query = u.search.slice(1).split('&').filter(Boolean).map(p => { const i = p.indexOf('='); return i < 0 ? [decodeURIComponent(p), ''] : [decodeURIComponent(p.slice(0, i)), decodeURIComponent(p.slice(i + 1))]; })
+    .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)).map(([k, v]) => `${rfc3986(k)}=${rfc3986(v)}`).join('&');
+  const canonical = [method, u.pathname, query, names.map(n => `${n}:${signed[n]}\n`).join(''), names.join(';'), signed['x-amz-content-sha256'] || await sha('')].join('\n');
+  const scope = `${day}/${region}/${service}/aws4_request`;
+  let key = `AWS4${creds.secret}`;
+  for (const part of [day, region, service, 'aws4_request']) key = await hmac(key, part);
+  const signature = hex(await hmac(key, ['AWS4-HMAC-SHA256', amzDate, scope, await sha(canonical)].join('\n')));
+  return Object.assign(out, { Authorization: `AWS4-HMAC-SHA256 Credential=${creds.keyId}/${scope}, SignedHeaders=${names.join(';')}, Signature=${signature}` });
 }
 function cloudAudioSsml(text, opt = {}) { return opt.reading ? `<speak><sub alias="${esc(opt.reading)}">${esc(text)}</sub></speak>` : ssmlReadings(text); }
 const CLOUD_ZH_VOICE = { languageCode: 'cmn-TW', name: 'cmn-TW-Wavenet-A' };   // meanings and translations (opt.lang === 'zh'): one Taiwanese Mandarin voice
