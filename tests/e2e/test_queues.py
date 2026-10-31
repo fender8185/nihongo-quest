@@ -468,7 +468,7 @@ def test_a_tests_unseen_grammar_and_kana_misses_come_back_the_next_day(b):
       start('main'); startSession('stage', { stage: 'p1' }); let g = 3, v = 1;
       const missed = playTest(x => (x.kind === 'g' && g-- > 0) || (x.kind === 'v' && v-- > 0));
       const p1 = missed.filter(k => k.startsWith('g:')), word = missed.find(k => k.startsWith('v:'));
-      const fresh = newVocabCandidates(REG.vocab.filter(x => vocabEligibleForDaily(x)), false);
+      const cur = curLevel(); const fresh = newVocabCandidates(REG.vocab.filter(x => vocabEligibleForDaily(x, cur)), false);
       const out = { word: [Boolean(word), Boolean(state.srs[word]), fresh.some(x => x.key === word)] };
       out.p1 = Object.assign({ passed: state.stageTests.p1[0].passed, unit: state.currentUnit }, look(p1));
       SESSION = null; document.body.classList.remove('practicing');
@@ -552,7 +552,7 @@ def test_lock_n5_grammar_done_words_left_pauses_grammar_and_gives_words_the_slot
     js = "(() => { " + LOCK + """ seeWords(['PRE_N5', 'N5'], 50); seeKanji(['PRE_N5', 'N5']); seeUnits(n5u); state.completedUnits = n5u.slice(); state.currentUnit = 'm6';
       const s = splitNew(15); const out = { g: s.g.length, v: s.v.length, v4: s.v.filter(x => x.lv === 'N4').length, pause: grammarPause() };
       """ + END + " return JSON.stringify(out); })()"
-    r = json.loads(ev(b, js)); assert r == {'g': 0, 'v': 15, 'v4': 0, 'pause': {'L': 'N5', 'v': 50, 'k': 0, 'next': 7}}, r
+    r = json.loads(ev(b, js)); assert r == {'g': 0, 'v': 15, 'v4': 0, 'pause': {'L': 'N5', 'v': 50, 'k': 0, 'unit': 'm7'}}, r
 
 def test_lock_learner_already_in_m9_with_n5_words_left_gets_no_n4_grammar(b):
     js = "(() => { " + LOCK + """ seeWords(['PRE_N5', 'N5'], 38); seeKanji(['PRE_N5', 'N5']); const done = n5u.concat(['m7', 'm8']); seeUnits(done);
@@ -598,6 +598,40 @@ def test_vocab_page_due_count_and_the_mixed_flash_deck_include_learned_n4_words(
         deck4New: deck4.filter(k => k !== n4.key && REG.byKey.get(k).lv === 'N4').length > 0 };
       """ + END + " return JSON.stringify(out); })()"
     r = json.loads(ev(b, js)); assert r == {'cur': 'N5', 'stat': 1, 'flashDue': True, 'allNew4': 0, 'deck4New': True}, r
+
+# ---- 1.0.32 review ----
+def test_lock_asks_for_the_level_a_few_times_per_plan_not_once_per_word(b):
+    js = "(() => { " + LOCK + """ let n = 0; const orig = curLevel; curLevel = function () { n++; return orig(); };
+      splitNew(15); const a = n; n = 0; buildVocabQueue('all'); const c = n; curLevel = orig;
+      """ + END + " return JSON.stringify([a, c]); })()"
+    r = json.loads(ev(b, js)); assert r[0] <= 10 and r[1] <= 10, r   # was 1,764 calls a plan: a default parameter ran it per word
+
+def test_lock_unit_moved_back_or_next_unit_done_early_never_strands_the_learner(b):
+    js = "(() => { " + LOCK + """ seeWords(['PRE_N5', 'N5']); seeKanji(['PRE_N5', 'N5']); const units = (a, z) => DATA.UNITS.slice(a - 1, z).map(u => u.id);
+      seeUnits(units(1, 5)); state.completedUnits = units(1, 5); REG.grammar.filter(g => g.u === 'm6').slice(0, 30).forEach(g => { state.srs[g.key] = rec(); });
+      state.currentUnit = 'm3'; const back = [...new Set(newGrammarCandidates().map(g => g.u))];   // moved back to m3: m4, m5 done, m6 half done
+      state.srs = {}; state.completedUnits = units(1, 2); seeWords(['PRE_N5', 'N5']); seeKanji(['PRE_N5', 'N5']); seeUnits(units(1, 4)); state.currentUnit = 'm3';
+      const early = [...new Set(newGrammarCandidates().map(g => g.u))];   // m4 practised before m3 was finished
+      autoAdvanceUnit(REG.grammar.find(g => g.u === 'm5').key); const moved = [state.currentUnit, ['m3', 'm4'].every(u => state.completedUnits.includes(u))];
+      state.srs = {}; seeWords(['PRE_N5', 'N5']); seeKanji(['PRE_N5', 'N5']); seeUnits(n5u); state.completedUnits = n5u.slice(); state.currentUnit = 'm4';
+      const n4 = [...new Set(newGrammarCandidates().map(g => g.u))];   // back at m4 after N5 is done: N4 grammar from m7
+      """ + END + " return JSON.stringify({ back, early, moved, n4 }); })()"
+    r = json.loads(ev(b, js)); assert r == {'back': ['m6'], 'early': ['m5'], 'moved': ['m5', True], 'n4': ['m7']}, r
+
+def test_unit_practice_still_offers_a_few_new_items_while_grammar_is_paused(b):
+    js = "(() => { " + LOCK + """ seeWords(['PRE_N5', 'N5'], 50); seeKanji(['PRE_N5', 'N5']); seeUnits(n5u); state.completedUnits = n5u.slice(); state.currentUnit = 'm6';
+      DAILY_CACHE = null; delete state.today.plan; const fresh = (u) => buildUnitQueue(u).filter(k => !state.srs[k]).length;
+      const out = { paused: Boolean(grammarPause()), m7: fresh('m7') };
+      """ + END + " return JSON.stringify(out); })()"
+    r = json.loads(ev(b, js)); assert r['paused'] and 1 <= r['m7'] <= 5, r
+
+def test_pause_note_names_the_unit_the_learner_will_resume(b):
+    js = "(() => { " + LOCK + """ seeWords(['PRE_N5', 'N5'], 38); seeKanji(['PRE_N5', 'N5']); const done = DATA.UNITS.slice(0, 8).map(u => u.id); seeUnits(done);
+      state.completedUnits = done.slice(); state.currentUnit = 'm9'; const at9 = grammarPauseText(grammarPause());
+      state.currentUnit = 'm6'; state.completedUnits = n5u.slice(); state.srs = {}; seeWords(['PRE_N5', 'N5'], 38); seeKanji(['PRE_N5', 'N5']); seeUnits(n5u); const at6 = grammarPauseText(grammarPause());
+      const u = (id) => unitById(id).weeks + '・' + unitById(id).short;
+      """ + END + " return JSON.stringify({ at9: at9 === `新文法先停：N5 單字還剩 38 個，學完就進${u('m9')}。`, at6: at6 === `新文法先停：N5 單字還剩 38 個，學完就進${u('m7')}。`, t: [at9, at6] }); })()"
+    r = json.loads(ev(b, js)); assert r['at9'] and r['at6'], r
 
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

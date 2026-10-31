@@ -223,7 +223,7 @@ def test_today_and_course_pages_say_why_new_grammar_paused(b):
       REG.vocab.filter(v => v.builtin && v.lv !== 'N4').slice(38).forEach(v => { state.srs[v.key] = rec(); });
       REG.kanji.filter(k => k.lv !== 'N4').forEach(k => { state.srs[k.key] = rec(); });
       state.completedUnits = DATA.UNITS.filter(u => u.lv === 'N5').map(u => u.id); state.currentUnit = 'm6'; DAILY_CACHE = null; delete state.today.plan;
-      const want = '新文法先停：N5 單字還剩 38 個，學完就進第 7 單元。';
+      const want = `新文法先停：N5 單字還剩 38 個，學完就進${unitById('m7').weeks}・${unitById('m7').short}。`;
       const note = computeDailyPlan().note; location.hash = '#/course'; route(); const course = document.getElementById('view').textContent.includes(want);
       location.hash = '#/vocab/cards'; route(); const head = document.querySelector('.page-sub').textContent;   // the 字卡 tab's head
       const o = JSON.parse(keep); state.srs = o.srs; state.completedUnits = o.u; state.currentUnit = o.c; state.stage = o.st; DAILY_CACHE = null; saveState();

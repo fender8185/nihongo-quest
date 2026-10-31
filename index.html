@@ -977,10 +977,11 @@ const APP_VERSION = '1.0.32';   // keep equal to the version in sw.js CACHE ('nq
 const CHANGELOG = [
   { v: '1.0.32', date: '2026-11-01', items: [
     '新題一次一級：入門＋N5 的單字、漢字、文法都學過一次，N4 才開始。新帳號在 N5 期間每天大約單字 10、文法 4、漢字 1 題（原本 8／6／1）；學完 N5 的隔天，N4 的單字、文法、漢字一起開始。',
-    'N5 的文法學完、單字或漢字還沒學完時，新文法先停，名額給單字和漢字；今日頁和課程頁會寫出還差多少，例如「新文法先停：N5 單字還剩 38 個，學完就進第 7 單元。」。已經進到 N4 單元、N5 單字還沒學完的人也一樣。',
+    'N5 的文法學完、單字或漢字還沒學完時，新文法先停，名額給單字和漢字；今日頁和課程頁會寫出還差多少，例如「新文法先停：N5 單字還剩 38 個，學完就進第 13–14 週・可能形。」。已經進到 N4 單元、N5 單字還沒學完的人也一樣，學完會接著自己的單元。',
     '複習一律看紀錄：自己在單字頁、課程頁提前學的題目，或把目前單元往回調以後後面單元的文法，都照排程複習，不會停下來等。',
     '課程進度改成一級接一級算：先算 N5 剩下的題數要幾天，N4 再接著算。',
-    '手動的路照舊：單字頁的等級分頁和主題、課程頁的單元、階段測驗，都可以直接練。'
+    '手動的路照舊：單字頁的等級分頁和主題、課程頁的單元、階段測驗，都可以直接練；新文法停下來時，課程頁練單元每次還是會給 5 個新題。',
+    '修正：把目前單元往回調、或提前練完下一個單元以後，新文法會接到下一個還沒學完的單元，不會停住。'
   ] },
   { v: '1.0.31', date: '2026-11-01', items: [
     '補上 98 個 N5、N4 的基礎字（N5 38 個、N4 60 個），每個字兩句例句：あっち、こっち、たばこ、灰皿、ペット、メニュー、お元気で、お邪魔します、思う、楽しむ、気をつける、かしこまりました、最も、格好……。N5 單字已經都學過的人，新單字會先出這 38 個 N5 字，學完再接著出 N4 的新字。',
@@ -3482,12 +3483,14 @@ function grammarPause() {
   if (inPreStage()) return null;
   const L = curLevel(); const x = levelLeft(L);
   if (x.units.length || (!x.v && !x.k)) return null;
-  const next = DATA.UNITS.find(u => COURSE_LEVELS.indexOf(courseLevel(u.lv)) > COURSE_LEVELS.indexOf(L));
-  return next ? { L, v: x.v, k: x.k, next: Number(next.id.slice(1)) } : null;
+  const above = (u) => COURSE_LEVELS.indexOf(unitLevel(u.id)) > COURSE_LEVELS.indexOf(L);
+  const own = DATA.UNITS.find(u => u.id === state.currentUnit && above(u));   // already in the next level's units: they resume there
+  const next = own || DATA.UNITS.find(above);
+  return next ? { L, v: x.v, k: x.k, unit: next.id } : null;
 }
 function grammarPauseText(gp) {
   const parts = [gp.v ? `單字還剩 ${gp.v} 個` : '', gp.k ? `漢字還剩 ${gp.k} 個` : ''].filter(Boolean).join('、');
-  return `新文法先停：${gp.L} ${parts}，學完就進第 ${gp.next} 單元。`;
+  const u = unitById(gp.unit); return `新文法先停：${gp.L} ${parts}，學完就進${u.weeks}・${u.short}。`;
 }
 function levelLeftText(L) { const x = levelLeft(L); return [x.v ? `單字 ${x.v}` : '', x.k ? `漢字 ${x.k}` : '', x.g ? `文法 ${x.g} 題` : ''].filter(Boolean).join('、'); }
 function n4WordsOpen() { return COURSE_LEVELS.indexOf(curLevel()) >= COURSE_LEVELS.indexOf('N4'); }   /* level-literal-ok: renamed in the 1.0.33 generalization */
@@ -3506,7 +3509,7 @@ function vocabEligibleMain(v, n4Open) {
   return true;
 }
 // new words: 入門 only PRE_N5; main course only the current level
-function vocabEligibleForDaily(v, cur = curLevel()) {
+function vocabEligibleForDaily(v, cur) {   // cur: curLevel(), asked once by the caller (it scans every bank)
   if (v.builtin) return inPreStage() ? v.lv === 'PRE_N5' : courseLevel(v.lv) === cur;
   const mode = state.settings.includeImported;
   if (mode === 'off') return false;
@@ -3609,9 +3612,13 @@ function newGrammarCandidates(unitIdOnly) {
     .sort((a, b) => unitOrder(a.u) - unitOrder(b.u) || (a.d || 2) - (b.d || 2));
   // 每一級封死: only units of the current level, so a learner whose unit is already past it gets none until it is done
   const L = curLevel(); const out = sorted.concat(earlier).filter(g => unitLevel(g.u) === L);
-  // everything up to here has been introduced: continue into the next unit of the same level (the unit itself moves when
-  // its first new item is answered, see autoAdvanceUnit)
-  if (!out.length) { const next = DATA.UNITS[curIdx + 1]; if (next && unitLevel(next.id) === L) return unitNewOrder(next.id); }
+  // everything up to here has been introduced: continue into the next unit of the same level that still has new items, past
+  // units already finished (the unit moved back, or the next one practised early); the unit itself moves when its first
+  // new item is answered, see autoAdvanceUnit
+  if (!out.length) {
+    const next = DATA.UNITS.find(u => unitOrder(u.id) > curIdx && unitLevel(u.id) === L && REG.grammar.some(g => g.u === u.id && !state.srs[g.key]));
+    if (next) return unitNewOrder(next.id);
+  }
   return out;
 }
 // The course moves on by itself: when the current unit's grammar has all been introduced and the learner answers a new
@@ -3619,11 +3626,11 @@ function newGrammarCandidates(unitIdOnly) {
 // unit keep coming back on their own schedule. 完成單元 on the course page still works for jumping ahead.
 function autoAdvanceUnit(key) {
   const g = REG.byKey && REG.byKey.get(key); if (!g || g.kind !== 'g') return;
-  const i = unitOrder(state.currentUnit);
-  if (unitOrder(g.u) !== i + 1) return;
+  const i = unitOrder(state.currentUnit); const j = unitOrder(g.u);
+  if (j <= i) return;
   if (REG.grammar.some(x => x.u === state.currentUnit && !state.srs[x.key])) return;
-  if (!state.completedUnits.includes(state.currentUnit)) state.completedUnits.push(state.currentUnit);
-  noteUnitDone(state.currentUnit);
+  const between = DATA.UNITS.slice(i + 1, j).map(u => u.id); if (between.some(u => !unitDone(u))) return;   // only over finished units
+  [state.currentUnit].concat(between).forEach(u => { if (!state.completedUnits.includes(u)) { state.completedUnits.push(u); noteUnitDone(u); } });
   state.currentUnit = g.u;
   DAILY_CACHE = null;
 }
@@ -3675,7 +3682,7 @@ function newCountToday() {
 // Main course: built-in words, course grammar, kanji. 入門: kana, PRE_N5 words, week-0 grammar, PRE_N5 kanji.
 function splitNew(n, skip = new Set()) {
   const unseen = (x) => !state.srs[x.key];
-  const words = () => newVocabCandidates(REG.vocab.filter(v => vocabEligibleForDaily(v)), false);
+  const cur = curLevel(); const words = () => newVocabCandidates(REG.vocab.filter(v => vocabEligibleForDaily(v, cur)), false);
   let banks;
   if (inPreStage()) {
     const gate = kanaGateOpen();
@@ -3686,7 +3693,7 @@ function splitNew(n, skip = new Set()) {
       k: [REG.kanji.filter(k => k.lv === 'PRE_N5' && unseen(k)).length, gate ? newKanjiCandidates(false) : []]
     };
   } else {
-    const left = levelLeft(curLevel());   // 每一級封死: shares follow what the current level has left
+    const left = levelLeft(cur);   // 每一級封死: shares follow what the current level has left
     banks = {
       v: [left.v, words()],
       g: [left.g, newGrammarCandidates()],
@@ -3878,16 +3885,17 @@ function scopeQueue(pool, fresh, size) {
   }
   return out;
 }
+const PAUSED_UNIT_NEW = 5;   // new items a unit's own practice still offers while 每一級封死 holds its grammar back
 function buildUnitQueue(unitId, size = 15) {
-  const left = todayNewLeft('g');
+  const left = todayNewLeft('g') || (grammarPause() || unitLevel(unitId) !== curLevel() ? PAUSED_UNIT_NEW : 0);
   return scopeQueue(unitItems(unitId), newGrammarCandidates(unitId).slice(0, left), size);
 }
 function buildVocabQueue(filter = 'all', size = 20) {
   // choosing a level list or a theme on purpose opens its words right away; 全部 follows the daily rule (the current level)
   const theme = filter.startsWith('c:') ? filter.slice(2) : null;
   const lt = filter.startsWith('t:') ? filter.slice(2).split(':') : null;   // t:<lv>:<theme> — one level's theme (the level pages)
-  const anyLevel = filter !== 'all';
-  const pool = REG.vocab.filter(v => lt ? (v.builtin && v.lv === lt[0] && vocabTheme(v) === lt.slice(1).join(':')) : theme ? (v.builtin && vocabTheme(v) === theme) : filter === 'all' ? vocabEligibleForDaily(v) : filter === 'custom' ? !v.builtin : (v.builtin && v.lv === filter));
+  const anyLevel = filter !== 'all'; const cur = anyLevel ? null : curLevel();
+  const pool = REG.vocab.filter(v => lt ? (v.builtin && v.lv === lt[0] && vocabTheme(v) === lt.slice(1).join(':')) : theme ? (v.builtin && vocabTheme(v) === theme) : filter === 'all' ? vocabEligibleForDaily(v, cur) : filter === 'custom' ? !v.builtin : (v.builtin && v.lv === filter));
   const left = todayNewLeft('v');
   return scopeQueue(pool, newVocabCandidates(pool, anyLevel).slice(0, left), size);
 }
