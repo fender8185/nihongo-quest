@@ -200,3 +200,21 @@ test('outline 14: gap words use their level\'s themes and every gap candidate is
   const t = okSet(); t.gaps.N5.words = []; has(t, 'N5 gap word missing: 朝寝');
 });
 test('outline: a grammar point needs a meaning of at most 20 characters', () => { const s = okSet(); s.outlines.N3.units[0].points[0].m = ''; has(s, 'N3 point without meaning: 〜g0'); });
+
+// ---- review page (Task 9) ----
+test('review page: the four tabs, a word with its reading, a unit title, a dropped word\'s reason, the estimate', () => {
+  const s = okSet(); s.outlines.N3.dropped.push({ w: '旧字', r: 'きゅうじ', why: '過時，改用新字' });
+  const html = require('../scripts/curriculum/render-review.js').renderReview({ outlines: s.outlines, gaps: s.gaps, cands: s.cands });
+  const text = html.replace(/<[^>]+>/g, '');
+  for (const tab of ['N5／N4 缺口', 'N3', 'N2', 'N1']) assert.ok(text.includes(tab), tab);
+  assert.ok(text.includes('甲乙（ご0）'));
+  assert.ok(text.includes('一：〜g0'));
+  assert.ok(text.includes('過時，改用新字'));
+  assert.ok(text.includes('朝寝（あさね）') && text.includes('睡懶覺'));
+  assert.ok(text.includes('約 25 天'));   // (300 words + 2 kanji + 12 points × 6) ÷ 15 = 24.9, rounded up
+});
+test('review page: text from the outline is escaped', () => {
+  const s = okSet(); s.outlines.N3.themes[0].desc = '<b>x</b>';
+  const html = require('../scripts/curriculum/render-review.js').renderReview({ outlines: s.outlines, gaps: s.gaps, cands: s.cands });
+  assert.ok(html.includes('&lt;b&gt;x&lt;/b&gt;') && !html.includes('<b>x</b>'));
+});
