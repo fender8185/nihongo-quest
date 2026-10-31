@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* Scheduling simulator for the tiers (1.0.20 spec §10; the 1.0.21 rules, rule-cuts spec §11).
    Usage: node scripts/sim-schedule.js [index.html] [--bulk N]
+          node scripts/sim-schedule.js --levels [N]   每一級封死 (1.0.32): the day-by-day split of N new items (default 15) by level
    Three learners (strong, middling, weak) study the whole course for 300 days and do everything each day's list holds:
    three stars and under by FSRS (at most SRS_DAILY_CAP a day) with the missed items on the 1/3/7 ladder on top, four and
    five stars as queues. --bulk N marks N items four stars on day 0 first, as a passed stage test does.
@@ -165,7 +166,38 @@ function simulate(bind, L, bulk) {
     questions: mean(stat.questions), mostQuestions: Math.max(...stat.questions), windows, book: mean(stat.book), recall };
 }
 
+// --levels (1.0.32, spec §4.3 and §10): a new account with N new items a day under 每一級封死. The banks are counted per level
+// from data.js (入門 words count as N5; grammar is the course units' items, 第 0 週 aside): each day the lowest level with
+// something left shares its new items by what each bank has left (largest remainder, like splitNew), passes a short bank's
+// slots to the others, and does not borrow from the next level, so a level's last day may come up short.
+function levelPlan(perDay) {
+  const lines = fs.readFileSync(path.join(__dirname, '..', 'data.js'), 'utf8').split('\n');
+  const D = JSON.parse(lines[2].replace(/^const DATA = /, '').replace(/;\s*$/, ''));
+  const lv = (x) => (x === 'PRE_N5' ? 'N5' : x); const unitLv = Object.fromEntries(D.UNITS.map(u => [u.id, lv(u.lv)]));
+  const levels = ['N5', 'N4'].map(L => ({ L, left: { v: D.VOCAB.filter(v => lv(v.lv) === L).length, g: D.GRAMMAR.filter(g => unitLv[g.u] === L).length, k: D.KANJI.filter(k => lv(k.lv) === L).length } }));
+  const total = levels.map(x => x.left.v + x.left.g + x.left.k);
+  const first = {}; const per = {}; let day = 0;
+  for (const lev of levels) {
+    while (lev.left.v + lev.left.g + lev.left.k > 0) {
+      day++; const kinds = ['v', 'g', 'k']; const sum = kinds.reduce((a, k) => a + lev.left[k], 0);
+      const raw = {}; const take = {}; kinds.forEach(k => { raw[k] = perDay * lev.left[k] / sum; take[k] = Math.floor(raw[k]); });
+      let spare = perDay - kinds.reduce((a, k) => a + take[k], 0);
+      [...kinds].sort((x, y) => (raw[y] - take[y]) - (raw[x] - take[x])).forEach(k => { if (spare > 0) { take[k]++; spare--; } });
+      kinds.forEach(k => { const short = Math.max(0, take[k] - lev.left[k]); take[k] -= short; spare += short; });
+      [...kinds].sort((x, y) => lev.left[y] - lev.left[x]).forEach(k => { const add = Math.min(spare, lev.left[k] - take[k]); take[k] += add; spare -= add; });
+      kinds.forEach(k => { if (take[k] && !first[lev.L + k]) first[lev.L + k] = day; lev.left[k] -= take[k]; });
+      (per[lev.L] = per[lev.L] || []).push(take);
+    }
+    first[lev.L + 'done'] = day;
+  }
+  const avg = (L) => { const d = per[L].slice(0, -1); const m = (k) => (d.reduce((a, t) => a + t[k], 0) / d.length).toFixed(1); return `${m('v')}／${m('g')}／${m('k')}`; };
+  console.log(`每天 ${perDay} 個新題、每一級封死（題庫：入門＋N5 ${total[0]} 題、N4 ${total[1]} 題，從 data.js 算）：`);
+  console.log(`入門＋N5 期間每天 單字／文法／漢字 ${avg('N5')}・第 ${first.N5done} 天全部學過一次`);
+  console.log(`之後（N4）每天 ${avg('N4')}・N4 單字第 ${first.N4v} 天開始・N4 文法第 ${first.N4g} 天・N4 漢字第 ${first.N4k} 天・整個課程第 ${first.N4done} 天學過一次`);
+}
+
 const args = process.argv.slice(2);
+if (args[0] === '--levels') { levelPlan(Number(args[1]) || 15); process.exit(0); }
 const at = args.indexOf('--bulk');
 const bulk = at < 0 ? 0 : Number(args[at + 1]);
 if (at >= 0 && !(Number.isInteger(bulk) && bulk > 0)) { console.error('sim-schedule: --bulk 後面要接正整數，例如 --bulk 2000'); process.exit(1); }
