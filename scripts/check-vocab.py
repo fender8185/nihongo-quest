@@ -55,7 +55,7 @@ JS = r"""((c) => { const problems = [], warnings = [];
         if (outside.length) p('pre-example-vocab: ' + which + ' uses non-PRE_N5 words: ' + outside.join(' '));
       }
       if (v.lv === 'N5') {   // an N5 learner has not met N4 words yet
-        const n4 = [...new Set(rubies(ex.replace(/[{}]/g, '')).filter(k => k.split('|')[0] !== plain && bankLv.has(k) && [...bankLv.get(k)].every(l => l === 'N4')).map(k => k.split('|')[0]))];
+        const n4 = [...new Set(rubies(ex.replace(/[{}]/g, '')).filter(k => !plain.includes(k.split('|')[0]) && bankLv.has(k) && [...bankLv.get(k)].every(l => l === 'N4')).map(k => k.split('|')[0]))];
         if (n4.length) warn('n4-word-in-n5-example: ' + which + ' uses ' + n4.join(' '));
       }
     };

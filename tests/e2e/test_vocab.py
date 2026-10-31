@@ -897,7 +897,8 @@ TESTS += [test_a_word_card_in_the_player_lists_its_kanji, test_tapping_a_kanji_i
 # ---- 1.0.28: 播放字卡: a theme's rotation has a card for each kanji its words use (in the kanji table, once each); without
 # shuffle it plays in the theme's order, each kanji card right after the first word that uses it ----
 THEME_SEQ = ['お願いします', '失礼します', '【失】', '【礼】', '話', '【話】', 'どうも', 'お疲れ様でした', 'よろしくお願いします',
-             'おめでとうございます', 'お大事に', '【大】', '【事】', 'お元気ですか', '【元】', '【気】']   # 問候與溝通 as data.js lists it; 願 疲 様 are not in the kanji table
+             'おめでとうございます', 'お大事に', '【大】', '【事】', 'お元気ですか', '【元】', '【気】',
+             'さあ', 'ええと', 'オーケー', 'お元気で', 'お邪魔します', 'こちらこそ', 'ごめんください', 'サンキュー', 'バイバイ']   # 問候與溝通 as data.js lists it (1.0.31 added the last nine); 願 疲 様 邪 魔 are not in the kanji table
 LABELS = "const labels = () => LISTEN.items.map(e => e.kind === 'k' ? '【' + e.k.k + '】' : e.word);"
 
 def test_a_theme_plays_a_card_for_each_kanji_its_words_use(b):
