@@ -205,6 +205,12 @@ def test_stats_and_exam_pages_fit_a_phone(b):   # Review Focus 4
                  ("eval", "location.hash = '#/exam'; route(); document.documentElement.scrollWidth")])
     assert out[-2] <= 390 and out[-1] <= 390, out
 
+# ---- 1.0.26's changelog names what changed ----
+def test_the_1_0_26_changelog_says_what_changed(b):
+    items = json.loads(ev(b, "JSON.stringify((CHANGELOG.find(x => x.v === '1.0.26') || {}).items || [])"))
+    text = ''.join(items)
+    assert all(s in text for s in ['總進度', '入門', 'N5', 'N4', '過去 7 天', '最近 100 題', '課程進度', '加練', '考試']), items
+
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
