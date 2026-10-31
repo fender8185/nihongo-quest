@@ -746,8 +746,9 @@ def test_a_clip_r2_lacks_or_cannot_serve_comes_from_supabase_and_is_no_miss(b):
     assert r['unreachable'] == {'calls': both, 'size': 2, 'missed': 0}, r   # R2 down or blocked: Supabase serves it
     assert r['noted'] == [], r   # nothing for the generator to make
 
-# AWS's SigV4 test suite (get-vanilla, get-vanilla-query-order-key-case) and two R2 requests whose signatures come from
-# an independent Python signer that reproduces those two suite cases
+# AWS's SigV4 test suite (get-vanilla, get-vanilla-query-order-key-case), the S3 documentation's examples ("Signature
+# Calculations for the Authorization Header: Transferring Payload in a Single Chunk": GET Object, Get Bucket (List
+# Objects)), and two R2 requests whose signatures come from an independent Python signer that reproduces the suite cases
 SUITE_KEY = "{ keyId: 'AKIDEXAMPLE', secret: 'wJalrXUtnFEMI/K7MDENG+bPxRfiCYEXAMPLEKEY' }"
 R2_TEST = "https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com/nihongo-audio"
 
@@ -756,10 +757,17 @@ def test_sigv4_signs_like_the_aws_test_suite_and_signs_r2_requests(b):
       const u = { 'x-amz-content-sha256': 'UNSIGNED-PAYLOAD' }; const enc = encodeURIComponent;
       const a = await sigV4('GET', 'https://example.amazonaws.com/', {}, key, suite);
       const q = await sigV4('GET', 'https://example.amazonaws.com/?Param2=value2&Param1=value1', {}, key, suite);
+      const s3 = { keyId: 'AKIAIOSFODNN7EXAMPLE', secret: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY' }; const docs = { region: 'us-east-1', service: 's3', now: new Date('2013-05-24T00:00:00Z') };
+      const empty = { 'x-amz-content-sha256': 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' };
+      const obj = await sigV4('GET', 'https://examplebucket.s3.amazonaws.com/test.txt', Object.assign({ Range: 'bytes=0-9' }, empty), s3, docs);
+      const bucket = await sigV4('GET', 'https://examplebucket.s3.amazonaws.com/?max-keys=2&prefix=J', empty, s3, docs);
       const put = await sigV4('PUT', '%s/v1/zh/2f675441de1c871023cf3077c80c4c4e.mp3', u, key, { now });
       const list = await sigV4('GET', '%s?list-type=2&prefix=' + enc('v1/zh/') + '&max-keys=1000&continuation-token=' + enc('1A/b+c='), u, key, { now });
-      return JSON.stringify({ a, q: q.Authorization, put, list: list.Authorization }); })()""" % (SUITE_KEY, R2_TEST, R2_TEST)
+      return JSON.stringify({ a, q: q.Authorization, obj: obj.Authorization, bucket: bucket.Authorization, put, list: list.Authorization }); })()""" % (SUITE_KEY, R2_TEST, R2_TEST)
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)[-1])
+    s3doc = 'AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20130524/us-east-1/s3/aws4_request, SignedHeaders='
+    assert r['obj'] == s3doc + 'host;range;x-amz-content-sha256;x-amz-date, Signature=f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41', r   # header names signed in lower case
+    assert r['bucket'] == s3doc + 'host;x-amz-content-sha256;x-amz-date, Signature=34b48302e7b5fa45bde8084f4b7868a86f0a534bc59db6670ed5711ef69dc6f7', r
     suite = 'AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/us-east-1/service/aws4_request, SignedHeaders=host;x-amz-date, Signature='
     r2 = 'AWS4-HMAC-SHA256 Credential=AKIDEXAMPLE/20150830/auto/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature='
     assert r['a'] == {'x-amz-date': '20150830T123600Z', 'Authorization': suite + '5fa00fa31553b73ebf1942676e86291e8372ff2a2260956d9b8aae1d763fbf31'}, r

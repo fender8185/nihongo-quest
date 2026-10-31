@@ -8269,13 +8269,14 @@ function ttsConfig() {
   return state.ttsConfig;
 }
 
-/* ---- 雲端音檔: every built-in sentence synthesized once (Google Neural2) and kept in a public Supabase bucket ----
+/* ---- 雲端音檔: every built-in sentence synthesized once (Google Neural2) and kept in a public R2 bucket ----
    The file name is a hash of exactly what Google is sent (SSML with the readings pinned, voice gender), so the generator
    (設定 › 語音 › 管理者) and the player agree by construction. A missing file (custom cards, AI items) falls back to the
    browser voice and is noted locally so the next generator run covers it.
-   Since 1.0.29 a clip is fetched from a copy of the bucket on Cloudflare R2 (audio.nihongoquest.app) first. The generator
-   still uploads to Supabase only, so a clip made since the copy is found there; and a device that cached clips before
-   1.0.29 holds them under the Supabase address (sw.js looks there too). */
+   The clips started in Supabase's JPY_audio and were copied to Cloudflare R2 (nihongo-audio, served as
+   audio.nihongoquest.app). Since 1.0.29 a clip is fetched from R2 first and from Supabase when R2 fails; since 1.0.30 the
+   generator uploads to R2 only, so Supabase keeps just the clips made before 1.0.30, as a fallback and backup. A device
+   that cached clips before 1.0.29 holds them under the Supabase address (sw.js looks there too). */
 const CLOUD_AUDIO = { bucket: 'JPY_audio', set: 'v1', host: 'https://audio.nihongoquest.app',
   r2: 'https://397ec29bf37f161821985070bb3f5bb5.r2.cloudflarestorage.com/nihongo-audio' };   // r2: the bucket's S3 address, where the generator uploads (1.0.30)
 const cloudMisses = new Set();   // paths that were on neither server this session: straight to the browser voice next time
