@@ -247,3 +247,10 @@ test('review page: the homographs left out of the outline are listed', () => {
   const text = require('../scripts/curriculum/render-review.js').renderReview({ outlines: s.outlines, gaps: s.gaps, cands: s.cands }).replace(/<[^>]+>/g, '');
   assert.ok(text.includes('同形異讀') && text.includes('ごれい'));
 });
+test('review page: notes for the user come first, each with its question', () => {
+  const s = okSet();
+  const html = require('../scripts/curriculum/render-review.js').renderReview({ outlines: s.outlines, gaps: s.gaps, cands: s.cands, notes: [{ q: '舊寫法要不要改成現代寫法？', body: 'N2 改了、N1 沒改。' }] });
+  const text = html.replace(/<[^>]+>/g, '');
+  assert.ok(text.includes('要你決定的事') && text.includes('舊寫法要不要改成現代寫法？') && text.includes('N2 改了、N1 沒改。'));
+  assert.ok(text.indexOf('要你決定的事') < text.indexOf('N5／N4 缺口'));   // before the tabs
+});

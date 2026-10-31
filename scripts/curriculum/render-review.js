@@ -50,7 +50,8 @@ function gapsView(gaps, homo = []) {
   }).join('') + homoTable(homo.filter(h => h.L === 'N5' || h.L === 'N4'));
 }
 
-function renderReview({ outlines = {}, gaps = null, cands = {} }) {
+// notes: the open questions for the user, shown above the tabs ([{ q, body }], from curriculum/review-notes.json)
+function renderReview({ outlines = {}, gaps = null, cands = {}, notes = [] }) {
   const count = (L) => { const o = outlines[L]; return o ? `${fmt(o.themes.reduce((s, t) => s + t.words.length, 0))} 字` : '還沒整理'; };
   const tabs = [['gaps', 'N5／N4 缺口', gaps ? `${(gaps.N5 || { words: [] }).words.length + (gaps.N4 || { words: [] }).words.length} 字` : '還沒整理']]
     .concat(LEVEL_VIEWS.map(([id, L]) => [id, L, count(L)]));
@@ -134,6 +135,10 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px 
 table { border-collapse: collapse; width: 100%; font-size: 14px; }
 th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { color: var(--fg-3); font-weight: 500; font-size: 12.5px; }
+.notes { background: var(--bg-elev); border: 1px solid var(--accent-line); border-radius: 12px; padding: 14px 18px; display: grid; gap: 8px; }
+.notes ol { margin: 0; padding-left: 1.3em; display: grid; gap: 8px; }
+.notes .q { font-weight: 700; }
+.notes .nb { color: var(--fg-2); font-size: 14px; }
 footer { color: var(--fg-3); font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 12px; }
 @media (max-width: 520px) { .points li { grid-template-columns: 1fr; } .src { display: none; } }
 </style>
@@ -143,6 +148,7 @@ footer { color: var(--fg-3); font-size: 12.5px; border-top: 1px solid var(--line
     <p class="sub">Nihongo Quest・草稿・新的字：N3 ${fmt(cand('N3'))}、N2 ${fmt(cand('N2'))}、N1 ${fmt(cand('N1'))}（扣掉 app 已有和更低一級已有的）</p>
     <p class="lead">每一級的單字（分主題、附中文意思）、漢字（教學順序）、文法點（分單元與階段），還有 N5、N4 還缺的字。看到要改的地方，直接在這一頁留言：寫出是哪一級、哪個主題或單元、要怎麼改。</p>
   </header>
+  ${notes.length ? `<section class="notes" aria-label="要你決定的事"><h2>要你決定的事</h2><ol>${notes.map(n => `<li><p class="q">${esc(n.q)}</p><p class="nb">${esc(n.body)}</p></li>`).join('')}</ol></section>` : ''}
   <div class="bar">
     <div class="tabs" role="tablist">${tabs.map(([id, name, n]) => `<button type="button" role="tab" id="t-${id}" aria-controls="v-${id}" aria-selected="false" data-tab="${id}">${esc(name)}<small>${esc(n)}</small></button>`).join('')}</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center"><input id="q" type="search" placeholder="在這一頁找字：寫法、讀音或中文" aria-label="在這一頁找字" autocomplete="off"><span class="hits" id="hits"></span></div>
@@ -186,7 +192,7 @@ if (require.main === module) {
   const { loadSources, loadData, buildCandidates } = require('./build-candidates.js');
   const outlines = {}; LEVEL_VIEWS.forEach(([id, L]) => { const o = read(`${id}.json`); if (o) outlines[L] = o; });
   const cands = buildCandidates(loadSources(path.join(root, 'curriculum', 'sources')), loadData(root));
-  fs.writeFileSync(out, renderReview({ outlines, gaps: read('gaps-n5n4.json'), cands }));
+  fs.writeFileSync(out, renderReview({ outlines, gaps: read('gaps-n5n4.json'), cands, notes: read('review-notes.json') || [] }));
   console.log(`wrote ${out}`);
 }
 
