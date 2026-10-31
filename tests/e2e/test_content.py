@@ -91,6 +91,24 @@ def test_records_of_removed_sentence_choice_items_are_dropped(b):
     assert r == {'srs': ['g:ai_k', 'g:gd1', 'g:m0-17'], 'mistakes': ['b', 'c', 'e'], 'custom': ['ai_k']}, r
 
 
+# ---- 1.0.31: the N5／N4 gap words of the curriculum outline (curriculum/gaps-n5n4.json, less the 16 sharing a spelling) ----
+def test_bank_has_the_gap_words_from_the_curriculum_outline(b):
+    js = """(() => { const G = DATA.VOCAB.filter(v => /^n[54]g-\\d{3}$/.test(v.id)); const T = (lv) => (DATA.THEMES[lv] || []).map(t => t.c);
+      const count = new Map(); DATA.VOCAB.forEach(v => count.set(jaPlain(v.w), (count.get(jaPlain(v.w)) || 0) + 1));
+      const reg = (v) => REG.byKey.get('v:' + v.id);
+      const badMeaning = G.filter(v => (meaningOptions(reg(v)) || []).some(m => m !== v.m && zhOverlap(m, v.m))).map(v => v.w);
+      const badRecall = G.filter(v => (recallOptions(reg(v)) || []).some(w => { const x = REG.vocab.find(y => y.builtin && y.w === w); return x && x.r === v.r; })).map(v => v.w);
+      return JSON.stringify({ n5: G.filter(v => v.lv === 'N5').length, n4: G.filter(v => v.lv === 'N4').length,
+        fields: G.filter(v => !(v.w && v.r && v.m && v.p && v.ex && v.exZh && v.ex2 && v.exZh2)).map(v => v.id),
+        themes: G.filter(v => !T(v.lv).includes(v.c)).map(v => v.id), sameSpelling: G.filter(v => count.get(jaPlain(v.w)) > 1).map(v => v.w),
+        badMeaning, badRecall }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'n5': 38, 'n4': 60, 'fields': [], 'themes': [], 'sameSpelling': [], 'badMeaning': [], 'badRecall': []}, r
+
+def test_settings_credit_the_jlpt_level_lists(b):
+    js = "JSON.stringify({ html: settingsLook().includes('單字、漢字、文法點的 JLPT 等級參考 Jonathan Waller 的 JLPT Resources（tanos.co.uk，CC BY）。') })"
+    r = json.loads(ev(b, js)); assert r['html'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
