@@ -235,13 +235,13 @@ def test_exam_countdown_projects_the_finish_date(b):
       state.settings.examDate = addDays(t, 400); saveState();
       const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
       const left = unseen(REG.vocab.filter(v => v.builtin)) + unseen(REG.grammar.filter(g => g.u !== 'm0')) + unseen(REG.kanji);
-      const a = paceAdvice(); const want = addDays(t, Math.ceil(left / 12));
+      const a = coursePace(); const want = addDays(t, Math.ceil(left / 12));
       location.hash = '#/exam'; route(); const hint = (document.querySelector('.hero-advice') || {}).textContent || '';
-      state.settings.examDate = addDays(t, 100); saveState(); const a2 = paceAdvice(); route(); const hint2 = (document.querySelector('.hero-advice') || {}).textContent || '';
-      return JSON.stringify({ perDay: a.perDay, finish: a.finish === want, late: a.late, hint: hint.includes('預計') && hint.includes(want), late2: a2.late, hint2: hint2.includes('加練'), apply: !!document.querySelector('[data-act=apply-advice]') }); })()"""
+      state.settings.examDate = addDays(t, 100); saveState(); const a2 = coursePace(); route(); const hint2 = (document.querySelector('.hero-advice') || {}).textContent || '';
+      return JSON.stringify({ perDay: a.perDay, finish: a.finish.N4 === want, late: a.state, hint: hint.includes('預計') && hint.includes(want.replace(/-/g, '/')), late2: a2.state, hint2: hint2.includes('加練'), apply: !!document.querySelector('[data-act=apply-advice]') }); })()"""
     r = json.loads(ev(b, js))
-    assert r['perDay'] == 12 and r['finish'] and r['late'] <= 0 and r['hint'], r
-    assert r['late2'] > 0 and r['hint2'] and not r['apply'], r
+    assert r['perDay'] == 12 and r['finish'] and r['late'] == 'ok' and r['hint'], r
+    assert r['late2'] == 'late' and r['hint2'] and not r['apply'], r
 
 # ---- 1.0.19 (Tasks 1–4 ship with it): the copy follows the new rules ----
 def test_i_know_this_says_five_stars(b):

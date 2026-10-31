@@ -579,10 +579,10 @@ def test_stats_projects_the_finish_date_from_the_recent_pace(b):
     seed = """(() => { const t = todayStr(); state.settings.examDate = addDays(t, 121); for (let i = 1; i <= 5; i++) state.dailyLogs[addDays(t, -i)] = { vocabCount: 20, fresh: 10 }; saveState();
       const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
       return addDays(t, Math.ceil((unseen(REG.vocab.filter(x => x.builtin)) + unseen(REG.grammar.filter(g => g.u !== 'm0')) + unseen(REG.kanji)) / 10)); })()"""
-    probe = """(() => { const card = document.getElementById('planAdvice'); if (!card) return 'NO CARD';
-      const txt = card.textContent; return JSON.stringify({ per: txt.includes('每天約 10 題'), finish: txt, button: !!card.querySelector('button'), rows: card.querySelectorAll('tbody tr').length }); })()"""
+    probe = """(() => { const card = document.getElementById('courseCard'); if (!card) return 'NO CARD';   // 1.0.26: 學完的預估 is part of 課程進度
+      const txt = card.textContent; return JSON.stringify({ per: txt.includes('每天約 10 題'), finish: txt, button: !!card.querySelector('[data-act=apply-advice]'), rows: card.querySelectorAll('details.course-banks tbody tr').length }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("nav", URL + "#/stats"), ("eval", probe)], timeout=45)
-    want = out[0]; r = json.loads(out[1])
+    want = out[0].replace('-', '/'); r = json.loads(out[1])
     assert r['per'] and ('預計 ' + want) in r['finish'] and '加練' in r['finish'] and not r['button'] and r['rows'] == 6, (r, want)   # 1.0.20: the pace of the last days, no quota to apply
 
 # ---- 2026-10-27 (v65): ring = done / today's work; 每日目標 → 每天負荷上限; exam-pace quotas on Today; 再練一次 in another format; grammar encore ----
@@ -965,9 +965,9 @@ def test_exam_page_projects_the_finish_date_and_suggests_extra_practice_when_lat
     # 1.0.20: no quota advice to apply; the countdown says when the course would be learned at the recent pace
     js = """(() => { state.settings.examDate = addDays(todayStr(), 121); saveState();
       location.hash = '#/exam'; route(); const el = document.querySelector('.hero-advice'); const text = el ? el.textContent : '';
-      const onExam = /考試倒數/.test(document.getElementById('view').textContent); const apply = !!document.querySelector('[data-act=apply-advice]'); const a = paceAdvice();
+      const onExam = /考試倒數/.test(document.getElementById('view').textContent); const apply = !!document.querySelector('[data-act=apply-advice]'); const a = coursePace();
       location.hash = '#/today'; route(); const offToday = !/考試倒數/.test(document.getElementById('view').textContent);
-      return JSON.stringify({ late: a.late > 0, finish: text.includes('預計 ' + a.finish), extra: text.includes('加練'), apply, onExam, offToday }); })()"""
+      return JSON.stringify({ late: a.state === 'late', finish: text.includes('預計 ' + a.finish.N4.replace(/-/g, '/')), extra: text.includes('加練'), apply, onExam, offToday }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r == {'late': True, 'finish': True, 'extra': True, 'apply': False, 'onExam': True, 'offToday': True}, r   # the countdown lives on 模擬考

@@ -525,6 +525,15 @@ body.furi-smart ruby.known rt { visibility: hidden; }
 .week-dot { fill: var(--heat-4); outline: none; } .week-dot.today { fill: var(--accent); } .week-dot:hover, .week-dot:focus { filter: brightness(1.2); }
 .week-axis { display: flex; justify-content: space-between; margin-top: 2px; font-size: 11px; color: var(--fg-3); } .week-axis .today { color: var(--accent); font-weight: 600; }
 .week-share { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 12px; } .week-share-l, .week-empty { margin-top: 6px; }
+.course-sub .btn { margin-left: 2px; vertical-align: baseline; } .course-text { margin-top: 8px; }
+.course-line { width: 100%; max-width: 560px; height: auto; display: block; margin: 10px auto 4px; overflow: visible; }   /* wider than that, its labels outgrow the card's text */
+.course-line .axis { stroke: var(--line-2); stroke-width: 4; stroke-linecap: round; } .course-line .start { fill: var(--fg-2); }
+.course-line .mark { stroke: var(--fg-2); stroke-width: 1.5; } .course-line .mark.deadline { stroke-dasharray: 3 3; }
+.course-line text { font-size: 11px; fill: var(--fg-3); } .course-line text.lvl { font-size: 12px; font-weight: 600; fill: var(--fg-2); }
+.course-dot.other, .course-line text.other { fill: var(--ok); } .course-dot.target, .course-line text.target { fill: var(--accent); } .course-dot.late, .course-line text.late { fill: var(--warn); }
+.course-row { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--line); } .course-row .strong { font-weight: 600; }
+.course-lv { font-weight: 700; } .course-lv.other, .course-row span.other { color: var(--ok); } .course-lv.target, .course-row span.target { color: var(--accent); } .course-lv.late, .course-row span.late { color: var(--warn); }
+.course-advice { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--bg-sunken); color: var(--fg-2); font-size: 13px; line-height: 1.6; }
 tr.lag td { color: var(--warn, #d08a00); font-weight: 600; }
 .gauges { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .gauge { min-width: 0; } .gauge svg { width: 100%; max-width: 260px; height: auto; display: block; margin: 0 auto; }
@@ -949,7 +958,8 @@ const CHANGELOG = [
   { v: '1.0.26', date: '2026-10-31', items: [
     '學習分析的總進度可以切換四種範圍：總進度（單字、文法、聽力＋閱讀、漢字）、入門（假名、入門單字、入門文法）、N5、N4，每個題目只算在它的級別裡。聽力和閱讀答過算初識、答對 1 次算熟悉、答對 2 次算熟練（答對後要隔 30 天才會再出）。',
     '過去 7 天的練習量改成三個數字（7 天合計、每天平均、比前 7 天多或少）加一條趨勢線和各類占比，點每天的點可以看那天的明細。正確率改看最近 100 題，跟今日頁決定新題數用的一樣。',
-    '設定 › 學習的「考試」可以選要考 N5 還是 N4（預設 N4），旁邊一樣是考試日期。'
+    '設定 › 學習的「考試」可以選要考 N5 還是 N4（預設 N4），旁邊一樣是考試日期。',
+    '「學完的預估」和「課程進度預估」合成一張「課程進度」：照最近 14 天每天學幾題新內容，推估 N5、N4 各在哪天全部學過一次（每天的新題照單字、文法、漢字各剩多少分配，所以看最慢的那個），跟考前三週比早還是晚；太慢時會說每天要幾題、大約多久按一次加練。模擬考頁的考試倒數也照你選的級別推估，不再用「每個單元幾天」來算。'
   ] },
   { v: '1.0.25', date: '2026-10-31', items: [
     '設定拿掉「每組練習題數」和「出題順序」：今日練習和假名練習固定一組 20 題，單字與文法一律交錯出。一組做太久注意力會往下掉，分成小組也不會少學，當天的題目一樣多；以前設定過的題數和順序不再有作用。'
@@ -6715,21 +6725,14 @@ function assemblePaper(level, size, subjects) {
 }
 
 // ---------- exam page ----------
-// 考試倒數 (模擬考 page): days left, the unit pace, and when the course would be learned at the recent pace
+// 考試倒數 (模擬考 page): days left and the 課程進度 line for the target level (1.0.26: the per-unit pace went, it could
+// disagree with the projection)
 function examCountdownHtml() {
-  const pace = examPace();
-  const paceText = pace.daysLeft === 0 ? '考試日期已到或已過，可在設定中更新考試日期。'
-    : pace.status === 'behind' ? `剩下 ${pace.remainingUnits} 個單元，每個單元平均只有約 ${pace.perUnit} 天，建議加快一點（做完當天的練習後可以按加練）。`
-    : `剩下 ${pace.remainingUnits} 個單元，每個單元可用約 ${pace.perUnit} 天，並保留最後三週做模擬考。`;
-  // when the words, grammar and kanji left would be done at the recent pace (the same line as 學習分析「學完的預估」)
-  const goalHint = pace.daysLeft > 0 ? `<div class="small dim mt-2 hero-advice">${esc(finishText())}</div>` : '';
-  const paceChip = pace.status === 'behind' ? '<span class="chip chip-warn">稍微落後</span>' : pace.status === 'ahead' ? '<span class="chip chip-ok">進度充裕</span>' : '<span class="chip chip-ok">進度正常</span>';
-
+  const p = coursePace();
   return `<div class="card">
-      <div class="card-head"><div class="card-title">考試倒數</div>${paceChip}</div>
-      <div class="stat"><span class="stat-v">${pace.daysLeft} 天</span><span class="stat-l">距離 ${esc(pace.exam.replace(/-/g, '/'))} JLPT</span></div>
-      <p class="small dim mt-2 mb-0">${esc(paceText)}</p>
-      ${goalHint}
+      <div class="card-head"><div class="card-title">考試倒數</div>${courseChip(p)}</div>
+      <div class="stat"><span class="stat-v">${p.daysLeft} 天</span><span class="stat-l">距離 ${esc(p.exam.replace(/-/g, '/'))} JLPT ${p.level}</span></div>
+      <div class="small dim mt-2 hero-advice">${esc(courseText(p))}</div>
     </div>`;
 }
 function renderExam(view, sub, params) {
@@ -7330,6 +7333,7 @@ function renderTools(view, params = {}) {
 
 Object.assign(ACTIONS, {
   'settings-ai': () => openSettings('ai'),
+  'settings-learn': () => openSettings('learn'),
   'analyze-offline': () => {
     const t = document.getElementById('anaText').value.trim();
     TOOLS_STATE.sentence = t;
@@ -7882,55 +7886,6 @@ function gaugeHtml(t, title, labels) {
       <text class="hero" x="${C}" y="${C + 32}" text-anchor="middle">${t.pct}%</text><text class="hero-l" x="${C}" y="${C + 44}" text-anchor="middle">總進度</text>
     </svg>${legend}</div>`;
 }
-// Daily quotas that would finish every bank before the mock-exam weeks: unseen items ÷ study days, per kind.
-// Reviews need room on top of the new items (about one and a half times), which is what the load cap covers.
-// 考試倒數 (1.0.20): new items a day lately (dailyLogs.fresh — first answers, so bulk marks do not count — averaged over
-// the last 14 days from the first that has it, a later day without it (idle, reviews only) counting 0; none yet: today's
-// count), when the words, grammar and kanji left would be done at that pace, and how far that is from three weeks before
-// the exam (late > 0: after it)
-function courseLeft() {
-  const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
-  return unseen(REG.vocab.filter(v => v.builtin)) + unseen(REG.grammar.filter(g => g.u !== 'm0')) + unseen(REG.kanji);
-}
-function paceAdvice() {
-  const t = todayStr();
-  let days = 0; let sum = 0;
-  for (let i = 14; i >= 1; i--) {
-    const e = state.dailyLogs[addDays(t, -i)]; const has = Boolean(e) && typeof e.fresh === 'number';
-    if (has || days) { days++; sum += has ? e.fresh : 0; }
-  }
-  const perDay = days ? sum / days : (dailyPlan().n || NEW_DEFAULT);
-  const left = courseLeft();
-  const finish = perDay > 0 ? addDays(t, Math.ceil(left / perDay)) : null;
-  const target = addDays(examPace().exam, -21);
-  return { perDay, left, finish, target, late: finish ? daysBetween(target, finish) : null };
-}
-function finishText() {
-  const a = paceAdvice(); const pace = examPace(); const t = todayStr();
-  if (pace.daysLeft <= 0) return '考試日期已經過了。到設定裡改成下一次的日期，這裡會重新計算。';
-  if (!a.left) return '單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。';
-  if (daysBetween(t, a.target) <= 0) return `距離考試只剩 ${pace.daysLeft} 天，不到三週：建議只做每天的練習與模擬考。`;
-  const per = Math.round(a.perDay);
-  let text = `照最近每天約 ${per} 題新內容的速度，預計 ${a.finish} 學完單字、文法、漢字（考前三週是 ${a.target}）。`;
-  if (a.late > 0) {
-    const need = Math.ceil(a.left / daysBetween(t, a.target));
-    text += `要趕上，每天約需 ${need} 題新內容（比現在多 ${Math.max(1, need - per)} 題），可以做完當天的練習後按加練。`;
-  }
-  return text;
-}
-function grammarPace() {
-  const t = todayStr();
-  const intro = Object.entries(state.srs).filter(([k]) => k.startsWith('g:')).map(([, r]) => r.intro || r.last).filter(Boolean).sort();
-  const left = REG.grammar.filter(g => !state.srs[g.key]).length;
-  if (!intro.length) return { left, rate: 0 };
-  const span = clamp(daysBetween(intro[0], t) + 1, 3, 14);
-  const recent = intro.filter(d => daysBetween(d, t) < span).length;
-  const rate = recent / span;
-  const pace = examPace();
-  const finish = rate > 0 ? addDays(t, Math.ceil(left / rate)) : null;
-  const target = addDays(pace.exam, -21);
-  return { left, rate, finish, target, late: finish ? daysBetween(target, finish) : null };
-}
 // 課程進度 (1.0.26): when the 入門+N5 part and the whole course (N4) would each be learned once, at the recent pace of new
 // items (dailyLogs.fresh over the last 14 days from the first that has it; none, or none new lately: today's new count,
 // `fallback`). New items are split between the banks by what each has left and every bank gives its N5 part first, so the
@@ -8023,7 +7978,6 @@ function renderStats(view) {
   for (let d = 0; d < 14; d++) total14 += dayTotal(state.dailyLogs[addDays(t, -d)]);
   const learned = {};
   Object.entries(state.srs).forEach(([k, r]) => { if (r.b >= SRS_LEARNED) learned[k[0]] = (learned[k[0]] || 0) + 1; });
-  const pace = grammarPace();
   const gauges = statsScope === 'pre' ? [['a', '假名'], ['v', '入門單字'], ['g', '入門文法']] : [['v', '單字'], ['g', '文法'], ['lr', '聽力＋閱讀'], ['k', '漢字']];
   const progressCard = `<div class="card" id="progressCard">
       <div class="card-head"><div><div class="card-title">總進度</div><div class="card-sub">指針是加權分數：已學 1 分、熟悉 2 分、熟練 3 分，滿分 3 分一題；顏色是三階熟練度。</div></div></div>
@@ -8046,10 +8000,6 @@ function renderStats(view) {
     </div>`).join('');
 
 
-  const paceText = !pace.rate ? '開始練習幾天後，這裡會依你的速度推算。'
-    : pace.late > 0 ? `照最近每天約 ${pace.rate.toFixed(1)} 個新文法題的速度，會在 ${pace.finish.replace(/-/g, '/')} 學完，比預定（考前三週）晚 ${pace.late} 天。`
-      : `照最近每天約 ${pace.rate.toFixed(1)} 個新文法題的速度，會在 ${pace.finish.replace(/-/g, '/')} 學完，能在考前三週完成。`;
-
   view.innerHTML = `
     <div class="page-head"><div><div class="page-title">學習分析</div><div class="page-sub">依你的作答紀錄整理。數字會隨練習更新。</div></div></div>
     ${progressCard}
@@ -8058,14 +8008,10 @@ function renderStats(view) {
       <div class="card"><div class="stat"><span class="stat-v">${acc === null ? '—' : pctText(acc)}</span><span class="stat-l">最近 ${RECENT_MAX} 題正確率</span></div></div>
       <div class="card"><div class="stat"><span class="stat-v">${(total14 / 14).toFixed(1)}</span><span class="stat-l">近 14 天平均每天題數</span></div></div>
       <div class="card"><div class="stat"><span class="stat-v">${(learned.v || 0) + (learned.g || 0) + (learned.k || 0) + (learned.a || 0)}</span><span class="stat-l">已熟悉（單字 ${learned.v || 0}・文法 ${learned.g || 0}・漢字 ${learned.k || 0}・假名 ${learned.a || 0}）</span></div></div>
-      <div class="card"><div class="stat"><span class="stat-v">${pace.left}</span><span class="stat-l">還沒學的文法題</span></div></div>
+      <div class="card"><div class="stat"><span class="stat-v">${REG.grammar.filter(g => !state.srs[g.key]).length}</span><span class="stat-l">還沒學的文法題</span></div></div>
     </div>
     ${historyCardHtml()}
-    <div class="card">
-      <div class="card-head"><div class="card-title">課程進度預估</div>${pace.late > 0 ? '<span class="chip chip-warn">稍慢</span>' : pace.rate ? '<span class="chip chip-ok">趕得上</span>' : ''}</div>
-      <p class="small dim mb-0">${esc(paceText)}</p>
-    </div>
-    ${planAdviceHtml()}
+    ${courseCardHtml()}
     <div class="grid grid-2">
       <div class="card">
         <div class="card-head"><div><div class="card-title">最弱的文法考點</div><div class="card-sub">至少作答 4 次、正確率低於 90%</div></div></div>
@@ -8079,14 +8025,55 @@ function renderStats(view) {
   attachChartTips(view);
 }
 
-function planAdviceHtml() {
+// the 課程進度 state as a chip, on 學習分析 and the exam countdown
+function courseChip(p) {
+  return p.state === 'ok' ? '<span class="chip chip-ok">趕得上</span>' : p.state === 'late' ? '<span class="chip chip-warn">稍慢</span>' : p.state === 'done' ? '<span class="chip chip-ok">學完了</span>' : '';
+}
+// 課程進度 (1.0.26, 學完的預估 merged in): the target, a timeline from today to the exam with the days N5 and N4 would be
+// learned once, a line for each level, what to do when it is late, and how much of each bank was learned. The timeline runs
+// to the exam or the last of the dates, at most twice as far as the exam: a date beyond sits at the end with an arrow.
+function courseCardHtml() {
+  const p = coursePace(); const t = todayStr(); const sl = (d) => d.replace(/-/g, '/');
+  const speed = p.fallback ? `最近 14 天沒有學新內容，照每天排到的 ${Math.round(p.perDay)} 題新內容推算` : `照最近 14 天每天約 ${Math.round(p.perDay)} 題新內容推算`;
+  const ahead = p.state === 'ok' || p.state === 'late' || p.state === 'done';
+  const sub = ahead ? `目標 ${p.level}・考試 ${sl(p.exam)}（${sl(p.deadline).slice(5)} 前學完，留三週做模擬考）・${speed}` : `目標 ${p.level}・考試 ${sl(p.exam)}`;
+  const tone = (L) => (L !== p.level ? 'other' : p.state === 'late' ? 'late' : 'target');
+  let line = ''; let rows = '';
+  if (ahead) {
+    const lv = ['N5', 'N4'].filter(L => p.left[L] > 0);   // a level learned already has no dot
+    const examD = daysBetween(t, p.exam);
+    const max = Math.max(1, Math.min(Math.max(examD, ...lv.map(L => p.days[L])), examD * 2));
+    const X = (d) => 8 + 384 * Math.min(d, max) / max;
+    const anchor = (x) => (x > 345 ? 'end' : x < 40 ? 'start' : 'middle');
+    const dots = lv.map(L => `<circle class="course-dot ${tone(L)}" data-level="${L}" cx="${X(p.days[L]).toFixed(1)}" cy="28" r="5"></circle>`).join('');
+    const near = lv.filter(L => p.days[L] <= max); const far = lv.filter(L => p.days[L] > max);
+    const label = (x, text, cls) => `<text class="lvl ${cls}" x="${x.toFixed(1)}" y="14" text-anchor="${anchor(x)}">${text}</text>`;
+    const tag = (L) => `${L} ${sl(p.finish[L]).slice(5)}`;
+    let labels = near.length === 2 && X(p.days.N4) - X(p.days.N5) < 64   // two dates close together share a label
+      ? label((X(p.days.N5) + X(p.days.N4)) / 2, `${tag('N5')}・${tag('N4')}`, '') : near.map(L => label(X(p.days[L]), tag(L), tone(L))).join('');
+    if (far.length) labels += label(392, `${far.join('、')} →`, far.includes(p.level) ? tone(p.level) : 'other');
+    const mark = (d, text, y, cls) => { const x = X(d); return `<line class="mark ${cls}" x1="${x.toFixed(1)}" y1="20" x2="${x.toFixed(1)}" y2="36"></line><text x="${x.toFixed(1)}" y="${y}" text-anchor="${x > 300 ? 'end' : 'middle'}">${text}</text>`; };
+    line = `<svg class="course-line" viewBox="0 0 400 76" role="img" aria-label="從今天到考試的時間軸">
+        <line class="axis" x1="8" y1="28" x2="392" y2="28"></line><circle class="start" cx="8" cy="28" r="4"></circle><text x="4" y="52">今天</text>
+        ${mark(daysBetween(t, p.deadline), `${sl(p.deadline).slice(5)} 期限`, 52, 'deadline')}${mark(examD, `${sl(p.exam).slice(5)} 考試`, 68, 'exam')}${dots}${labels}</svg>`;
+    rows = ['N5', 'N4'].map(L => {
+      const target = L === p.level;
+      if (!p.left[L]) return `<div class="course-row" data-level="${L}"><span class="course-lv ${tone(L)}">${L}</span><div>都學過一次了</div></div>`;
+      const diff = daysBetween(p.finish[L], p.deadline);
+      const note = !target ? '' : p.state === 'done' ? '・目標' : diff > 0 ? `・目標，比期限早 ${diff} 天` : diff < 0 ? `・目標，比期限晚 ${-diff} 天` : '・目標，正好是期限';
+      return `<div class="course-row" data-level="${L}"><span class="course-lv ${tone(L)}">${L}</span><div><div${target ? ' class="strong"' : ''}>預計 ${sl(p.finish[L])} 學過一次</div><div class="tiny muted">還有 ${p.left[L]} 題${note ? `<span class="${tone(L)}">${note}</span>` : ''}</div></div></div>`;
+    }).join('');
+  }
+  const text = p.state === 'ok' || p.state === 'late' ? '' : `<p class="course-text small dim mb-0">${esc(courseText(p))}</p>`;
+  const advice = p.state === 'late' ? `<div class="course-advice">${esc(courseAdvice(p))}</div>` : '';
   const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
   const banks = [['假名', REG.kana], ['單字', REG.vocab.filter(x => x.builtin)], ['文法', REG.grammar], ['漢字', REG.kanji], ['聽力', REG.listen], ['閱讀', REG.read]];
-  const rows = banks.map(([name, arr]) => `<tr><td>${name}</td><td class="num">${arr.length - unseen(arr)} / ${arr.length}</td><td class="num col-left">${unseen(arr)}</td></tr>`).join('');
-  return `<div class="card" id="planAdvice">
-      <div class="card-head"><div><div class="card-title">學完的預估</div><div class="card-sub">每天的新內容由最近的正確率和錯題本決定；照最近 14 天的速度推算。</div></div></div>
-      <p class="small dim">${esc(finishText())}</p>
-      <div class="table-wrap"><table class="table"><thead><tr><th>題庫</th><th>已學 / 總數</th><th class="col-left">還沒學</th></tr></thead><tbody>${rows}</tbody></table></div>
+  const bankRows = banks.map(([name, arr]) => `<tr><td>${name}</td><td class="num">${arr.length - unseen(arr)} / ${arr.length}</td><td class="num col-left">${unseen(arr)}</td></tr>`).join('');
+  return `<div class="card" id="courseCard">
+      <div class="card-head"><div class="card-title">課程進度</div>${courseChip(p)}</div>
+      <div class="course-sub small muted">${esc(sub)} <button type="button" class="btn btn-sm btn-ghost" data-act="settings-learn">更改目標</button></div>
+      ${text}${line}${rows}${advice}
+      <details class="disclose mt-3 course-banks"><summary>各題庫明細</summary><div class="table-wrap mt-2"><table class="table"><thead><tr><th>題庫</th><th>已學 / 總數</th><th class="col-left">還沒學</th></tr></thead><tbody>${bankRows}</tbody></table></div></details>
     </div>`;
 }
 
@@ -9317,7 +9304,7 @@ async function aiStudyAdvice(btn) {
   activeMistakes().forEach(m => { cats[m.cat || '綜合'] = (cats[m.cat || '綜合'] || 0) + 1; });
   const acc = recentAccuracy();
   const prompt = `根據學生的學習數據，給 3 點具體建議（共 200 字內，Markdown 條列，每點先寫結論）：
-- 距離 JLPT（${pace.exam}）還有 ${pace.daysLeft} 天，剩 ${pace.remainingUnits} 個單元，每單元平均可用 ${pace.perUnit} 天。
+- 距離 JLPT ${state.settings.examLevel}（${pace.exam}）還有 ${pace.daysLeft} 天，剩 ${pace.remainingUnits} 個單元，每單元平均可用 ${pace.perUnit} 天。
 - 目前單元：${cur.weeks}・${cur.title}，完成度 ${us.pct}%（熟悉 ${us.learned}/${us.total} 題）。
 - 最近 7 天：${days || '沒有紀錄'}；連續 ${st.current} 天。
 - 最近正確率：${acc === null ? '資料不足' : Math.round(acc * 100) + '%'}。

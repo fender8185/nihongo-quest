@@ -153,6 +153,58 @@ def test_course_pace_in_the_intro_stage_adds_what_is_left_of_it(b):
       return JSON.stringify([introLeft(), coursePace().days]); })()"""
     assert json.loads(ev(b, js)) == [0, {'N5': 5, 'N4': 5}]
 
+# ---- 課程進度 card (學完的預估 merged in), the exam countdown and the AI advice follow the target level ----
+def test_course_card_shows_both_levels_and_the_target(b):
+    js = "(() => { " + FRESH + PACE + """ pace(10); exam(51); only(w5.concat(w4)); saveState(); location.hash = '#/stats'; route(); const c = document.getElementById('courseCard');
+      const row = (lv) => c.querySelector(`.course-row[data-level=${lv}]`).textContent.replace(/\\s+/g, ' ');
+      return JSON.stringify({ chip: c.querySelector('.card-head .chip').textContent, sub: c.querySelector('.course-sub').textContent, n5: row('N5'), n4: row('N4'), want: [sl(3), sl(9)],
+        dots: [...c.querySelectorAll('.course-dot')].map(x => x.dataset.level), advice: !!c.querySelector('.course-advice'), old: !!document.getElementById('planAdvice') }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['chip'] == '趕得上' and '目標 N4' in r['sub'] and '照最近 14 天每天約 10 題新內容推算' in r['sub'], r
+    assert f"預計 {r['want'][0]} 學過一次" in r['n5'] and '還有 30 題' in r['n5'] and f"預計 {r['want'][1]} 學過一次" in r['n4'] and '還有 90 題' in r['n4'] and '目標，比期限早 21 天' in r['n4'], r
+    assert r['dots'] == ['N5', 'N4'] and not r['advice'] and not r['old'], r
+
+def test_course_card_gives_extra_practice_advice_when_late(b):
+    js = "(() => { " + FRESH + PACE + """ pace(10); exam(26); only(w5.concat(w4, g5)); saveState(); location.hash = '#/stats'; route(); const c = document.getElementById('courseCard');
+      return JSON.stringify({ chip: c.querySelector('.card-head .chip').textContent, advice: c.querySelector('.course-advice').textContent, late: c.querySelector('.course-dot[data-level=N4]').classList.contains('late'),
+        note: c.querySelector('.course-row[data-level=N4]').textContent.includes('目標，比期限晚 6 天') }); })()"""
+    assert json.loads(ev(b, js)) == {'chip': '稍慢', 'advice': '要趕上，每天約需 22 題新內容（現在約 10 題）：每天做完當天的練習後按 1 次加練就趕得上。', 'late': True, 'note': True}
+
+def test_change_target_opens_the_learning_settings_and_details_list_every_bank(b):
+    js = "(() => { " + FRESH + """ location.hash = '#/stats'; route(); const c = document.getElementById('courseCard');
+      const rows = [...c.querySelectorAll('details.course-banks tbody tr')].map(r => [r.cells[0].textContent, r.cells[1].textContent]);
+      c.querySelector('[data-act=settings-learn]').click(); const open = !!document.querySelector('.modal select[data-key=examLevel]'); closeModal(true);
+      return JSON.stringify({ names: rows.map(r => r[0]), kana: rows[0][1], open }); })()"""
+    assert json.loads(ev(b, js)) == {'names': ['假名', '單字', '文法', '漢字', '聽力', '閱讀'], 'kana': '0 / 142', 'open': True}
+
+def test_exam_countdown_follows_the_target_level(b):
+    js = "(() => { " + FRESH + PACE + """ pace(10); exam(26); only(w5.concat(w4, g5)); state.settings.examLevel = 'N5'; saveState(); location.hash = '#/exam'; route(); const v = document.getElementById('view');
+      return JSON.stringify({ level: v.textContent.includes(`距離 ${sl(26)} JLPT N5`), same: document.querySelector('.hero-advice').textContent === courseText(coursePace()), units: /每個單元/.test(v.textContent),
+        chip: [...v.querySelectorAll('.card')].find(x => /考試倒數/.test(x.textContent)).querySelector('.chip').textContent }); })()"""
+    assert json.loads(ev(b, js)) == {'level': True, 'same': True, 'units': False, 'chip': '稍慢'}
+
+def test_ai_advice_names_the_target_level(b):
+    js = "(async () => { " + FRESH + """ state.settings.examLevel = 'N5'; let prompt = ''; isAiConfigured = () => true; callAi = async (p) => { prompt = p; return '- 好'; };
+      await aiStudyAdvice(document.createElement('button')); return /距離 JLPT N5（/.test(prompt); })()"""
+    assert ev(b, js) is True
+
+def test_a_brand_new_account_renders_the_stats(b):   # Review Focus 1: a fresh profile, nothing set up
+    js = """(() => { location.hash = '#/stats'; route(); const c = document.getElementById('courseCard');
+      return JSON.stringify({ bad: /null|NaN|undefined/.test(c.textContent), empty: (document.querySelector('#weekCard .week-empty') || {}).textContent }); })()"""
+    assert json.loads(ev(b, js)) == {'bad': False, 'empty': '這 7 天還沒有練習'}
+
+def test_a_far_finish_is_pinned_to_the_end_of_the_timeline(b):   # Review Focus 3
+    js = "(() => { " + FRESH + PACE + """ pace(1); exam(100); saveState(); location.hash = '#/stats'; route(); const d = document.querySelector('#courseCard .course-dot[data-level=N4]');
+      const label = [...document.querySelectorAll('#courseCard .course-line text')].map(x => x.textContent).find(x => x.includes('N4'));
+      return JSON.stringify({ cx: Number(d.getAttribute('cx')), label, row: document.querySelector('#courseCard .course-row[data-level=N4]').textContent.includes(sl(coursePace().days.N4)) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['cx'] >= 390 and r['label'] == 'N5、N4 →' and r['row'], r   # both are years away: one label at the end
+
+def test_stats_and_exam_pages_fit_a_phone(b):   # Review Focus 4
+    out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", FRESH + " location.hash = '#/stats'; route(); document.documentElement.scrollWidth"),
+                 ("eval", "location.hash = '#/exam'; route(); document.documentElement.scrollWidth")])
+    assert out[-2] <= 390 and out[-1] <= 390, out
+
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

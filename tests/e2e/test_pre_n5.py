@@ -485,7 +485,7 @@ def test_stats_progress_shows_kana_and_counts_it_as_learned(b):
 
 def test_stats_tables_name_kana_rows_and_formats(b):
     js = """(() => { state.statsFmt = { 'a-read': { ok: 4, ng: 2 }, 'a-sound': { ok: 5, ng: 0 }, 'a-pair': { ok: 3, ng: 3 } }; location.hash = '#/stats'; route(); const v = document.getElementById('view');
-      const rows = [...v.querySelectorAll('#planAdvice tbody tr')].map(r => r.cells[0].textContent); const kanaTr = [...v.querySelectorAll('#planAdvice tbody tr')].find(r => r.cells[0].textContent === '假名');
+      const rows = [...v.querySelectorAll('#courseCard details.course-banks tbody tr')].map(r => r.cells[0].textContent); const kanaTr = [...v.querySelectorAll('#courseCard details.course-banks tbody tr')].find(r => r.cells[0].textContent === '假名');
       return JSON.stringify({ kanaRow: rows.includes('假名'), kana: kanaTr ? kanaTr.cells[1].textContent : null, fmts: ['假名・看字選音', '假名・聽音選字', '假名・平片對照'].filter(n => v.textContent.includes(n)).length, raw: /a-(read|sound|pair)/.test(v.textContent) }); })()"""
     r = json.loads(ev(b, js))
     assert r == {'kanaRow': True, 'kana': '0 / 142', 'fmts': 3, 'raw': False}, r
