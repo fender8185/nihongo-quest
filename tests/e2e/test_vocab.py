@@ -264,7 +264,7 @@ def test_theme_card_bar_has_three_segments_for_seen_learned_mastered(b):
 def test_today_lists_the_vocab_themes_and_grammar_points_of_the_session(b):
     js = """(() => { location.hash = '#/today'; route();
       const box = document.querySelector('.plan-topics'); const text = box ? box.textContent.replace(/\\s+/g, ' ') : '';
-      const q = dailyQueue(state.settings.sessionSize);
+      const q = dailyQueue();
       const pts = [...new Set(q.items.filter(it => it.kind === 'g').map(it => it.pt).filter(Boolean))];
       recentAccuracy = () => 0.5; delete state.today.plan; route();
       return JSON.stringify({ text, themes: activeThemes(REG.vocab, false).join('・'), pts, outline: !!document.querySelector('.plan-outline'), planLine: document.querySelector('.plan-line').textContent,
@@ -306,9 +306,9 @@ def test_topics_line_names_custom_cards_or_a_finished_day_instead_of_disappearin
       for (let i = 0; i < 6; i++) { state.vocab.push({ id: 'cx' + i, w: '猫' + i, r: 'ねこ', m: '貓' + i }); }
       buildRegistry(); REG.vocab.filter(v => !v.builtin).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(todayStr(), -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, f: {}, last: addDays(todayStr(), -3) }; });
       delete state.today.plan; saveState(); const customOnly = snap();
-      const words = dailyQueue(state.settings.sessionSize).items.filter(it => it.kind === 'v');
+      const words = dailyQueue().items.filter(it => it.kind === 'v');
       state.settings.includeImported = 'off'; delete state.today.plan; saveState(); const noWords = snap();
-      const words2 = dailyQueue(state.settings.sessionSize).items.filter(it => it.kind === 'v');
+      const words2 = dailyQueue().items.filter(it => it.kind === 'v');
       return JSON.stringify({ customOnly, allCustom: words.length > 0 && words.every(it => !it.builtin), noWords, none: words2.length === 0 }); })()"""
     r = json.loads(ev(b, js))
     assert r['allCustom'] and r['customOnly'] and '單字主題' in r['customOnly'] and '自訂字卡' in r['customOnly'], r

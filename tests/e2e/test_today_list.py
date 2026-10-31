@@ -11,7 +11,7 @@ def ev(b, js, pre=()):
     return b.run([("nav", URL), ("wait", READY)] + list(pre) + [("eval", js)])[-1]
 
 # a main-course account at week 1 with nothing learned yet
-FRESH = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.startChosen = true; state.currentUnit = 'm1'; state.settings.sessionSize = 20; saveState(); DAILY_CACHE = null;"
+FRESH = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
 # plays the current session to the end, one in three wrong (preview cards dismissed); returns the distinct keys answered
 PLAY = """(() => { let guard = 0, k = 0;
   while (SESSION && SESSION.idx < SESSION.entries.length && guard++ < 500) {

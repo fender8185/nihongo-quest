@@ -216,14 +216,14 @@ def test_formal_exam_listening_options_play_on_click(b):
 
 # ---- 2026-10-25 (5): the 今日練習 button count is the real session size; version history in settings ----
 def test_today_button_count_matches_the_session(b):
-    js = """(() => { const out = []; for (const size of [20, 15, 25, 30]) { state.settings.sessionSize = size; saveState(); route();
+    js = """(() => { route();
       const btn = document.querySelector('[data-act=start-daily]'); const shown = Number((btn.textContent.match(/(\\d+) 題/) || [])[1]);
       const note = (document.querySelector('.hero').textContent.match(/換個方式再考一次（約 (\\d+) 題/) || [])[1];
       startSession('daily'); const enc = encoreEstimate(SESSION.entries.map(e => e.item)); const actual = SESSION.entries.length; SESSION = null; document.body.classList.remove('practicing'); location.hash = '#/today';
-      out.push([shown, actual, Number(note), enc]); } return JSON.stringify(out); })()"""
+      return JSON.stringify([shown, actual, Number(note), enc]); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
-    rows = __import__('json').loads(out[-1])
-    assert all(a == b_ and a > 0 and n == enc for a, b_, n, enc in rows), rows   # the button is the items of this session; encores are a note, not part of the count
+    shown, actual, note, enc = __import__('json').loads(out[-1])
+    assert shown == actual and shown > 0 and note == enc, (shown, actual, note, enc)   # the button is the items of this session; encores are a note, not part of the count
 
 def test_settings_show_the_version_and_its_history(b):
     out = b.run([("nav", URL), ("wait", READY),
@@ -319,13 +319,13 @@ def test_listening_and_reading_are_capped_per_day(b):
     assert r == {'l': 3, 'r': 1, 'l2': 0, 'r2': 0}, r
 
 def test_new_items_spread_across_sessions(b):
-    # 60 due reviews + the default new quotas, sessionSize 20: every session holds new items and the button counts the rest
-    js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.srs); const size = state.settings.sessionSize; state.settings.sessionSize = 20;
+    # 60 due reviews + the default new quotas, 20 a set: every session holds new items and the button counts the rest
+    js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.srs);
       REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 60).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
-      delete state.today.plan; saveState(); DAILY_CACHE = null; const q = dailyQueue(20);
+      delete state.today.plan; saveState(); DAILY_CACHE = null; const q = dailyQueue();
       const firstNew = q.items.filter(it => !state.srs[it.key]).length;
       location.hash = '#/today'; route(); const btn = document.querySelector('[data-act=start-daily]').textContent; const rest = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');   // the rest-of-day line lives in the 今天的範圍 panel
-      state.srs = JSON.parse(keep); state.settings.sessionSize = size; saveState(); DAILY_CACHE = null; return JSON.stringify({ n: q.items.length, total: q.total, firstNew, btn, rest }); })()"""
+      state.srs = JSON.parse(keep); saveState(); DAILY_CACHE = null; return JSON.stringify({ n: q.items.length, total: q.total, firstNew, btn, rest }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['n'] == 20 and r['total'] > 60 and 2 <= r['firstNew'] <= 8, r
@@ -333,7 +333,7 @@ def test_new_items_spread_across_sessions(b):
 
 def test_done_state_and_extra_session(b):
     js = """(() => { const t = todayStr(); const keep = JSON.stringify({ srs: state.srs, today: state.today, settings: state.settings });
-      Object.assign(state.settings, { listening: false, sessionSize: 20 }); Object.assign(state.today, { newV: 99, newG: 99, newK: 99, newL: 99, newC: 99, newR: 1 });   // every new-item quota used up
+      Object.assign(state.settings, { listening: false }); Object.assign(state.today, { newV: 99, newG: 99, newK: 99, newL: 99, newC: 99, newR: 1 });   // every new-item quota used up
       Object.keys(state.srs).forEach(k => { if (state.srs[k].due <= t) state.srs[k].last = t; });   // nothing due left
       const soon = REG.vocab.filter(v => v.builtin && !state.srs[v.key]).slice(0, 3);   // reviews due in two days: 加練 gives new items only, so they stay out
       const rec = () => ({ b: 3, due: addDays(t, 2), n: 3, ok: 3, ng: 0, s: 6, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} });
@@ -419,7 +419,8 @@ def test_heatmap_starts_at_the_week_the_learner_began(b):
 
 # ---- 2026-10-26: settings modal usable on mobile browsers whose toolbar eats the top of the viewport ----
 def test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close(b):
-    js = """(() => { openSettings('learn');
+    # the 外觀 tab: taller than the window (its 版本紀錄 only grows); 學習 fits without scrolling since 1.0.25
+    js = """(() => { openSettings('look');
       const modal = document.querySelector('.modal'), head = document.querySelector('.modal-head'), body = document.getElementById('modalBody'), back = document.querySelector('.modal-back');
       const cs = (el) => getComputedStyle(el);
       const before = head.getBoundingClientRect().top;
@@ -692,7 +693,7 @@ def test_today_counts_relearning_items_among_reviews_and_puts_them_first(b):
     js = """(() => { const t = todayStr(); const words = REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 12);
       words.forEach((v, i) => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: i < 3 ? 1 : 0, s: 3, d: 5, last: addDays(t, -2), intro: addDays(t, -9), f: {} }; if (i < 3) state.srs[v.key].rl = 0; });
       delete state.today.plan; saveState(); DAILY_CACHE = null; location.hash = '#/today'; route(); const hero = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');
-      const dq = dailyQueue(state.settings.sessionSize); const reviews = dq.items.filter(x => x.kind === 'v' && state.srs[x.key]); const onLadder = reviews.map(x => typeof state.srs[x.key].rl === 'number');
+      const dq = dailyQueue(); const reviews = dq.items.filter(x => x.kind === 'v' && state.srs[x.key]); const onLadder = reviews.map(x => typeof state.srs[x.key].rl === 'number');
       startSession('daily', {}); route(); let chip = null, steps = 0;
       while (steps++ < 40) { const e = currentEntry(); if (e.preview && !e.previewDone) { dismissPreview(); continue; } if (e.item && e.item.kind === 'v' && typeof state.srs[e.item.key].rl === 'number') { chip = /錯題複習/.test(document.querySelector('.q-label').textContent); break; } answerCurrent(e.q.answer); if (currentEntry() && currentEntry().done) nextQuestion(); }
       SESSION = null; document.body.classList.remove('practicing');
@@ -1536,8 +1537,8 @@ def test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_h
 def test_settings_drop_the_switches_the_app_now_decides(b):
     js = """(() => { const tab = (k) => { openSettings(k); const m = document.querySelector('.modal'); const o = { keys: [...m.querySelectorAll('[data-key]')].map(x => x.dataset.key), acts: [...m.querySelectorAll('[data-act]')].map(x => x.dataset.act), text: m.textContent }; closeModal(true); return o; };
       const L = tab('learn'), S = tab('speech');
-      return JSON.stringify({ learnGone: ['retention', 'enter-main', 'enter-pre', 'loadCap', 'newKanaPerDay'].filter(k => L.keys.includes(k) || L.acts.includes(k)), stageRow: L.text.includes('目前階段'), unitRow: L.text.includes('目前單元'),
-        learnKept: ['sessionSize', 'order', 'showZh', 'includeImported', 'examDate'].filter(k => !L.keys.includes(k)),
+      return JSON.stringify({ learnGone: ['retention', 'enter-main', 'enter-pre', 'loadCap', 'newKanaPerDay', 'sessionSize', 'order'].filter(k => L.keys.includes(k) || L.acts.includes(k)), stageRow: L.text.includes('目前階段'), unitRow: L.text.includes('目前單元'),
+        learnKept: ['showZh', 'includeImported', 'examDate'].filter(k => !L.keys.includes(k)),
         speechGone: ['autoSpeak', 'listening', 'audioOptions'].filter(k => S.keys.includes(k)), speechKept: ['speechRate', 'engine'].filter(k => !S.keys.includes(k)) }); })()"""
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
     assert r == {'learnGone': [], 'stageRow': False, 'unitRow': False, 'learnKept': [], 'speechGone': [], 'speechKept': []}, r
@@ -1554,6 +1555,22 @@ def test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off(b):
       return JSON.stringify(out); })()"""
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
     assert r == {'speech': True, 'listen': True, 'resp': True, 'scene': True, 'dialog': False, 'spoke': True, 'dropped': []}, r
+
+# ---- 1.0.25: 每組練習題數 and 出題順序 are the app's too ----
+def test_sets_hold_twenty_mixed_even_when_an_old_copy_saved_another_size_or_order(b):
+    # an older version saved 40 a set, words first: today's set, its button and a kana set still hold 20, words and grammar mixed
+    js = """(() => { const t = todayStr(); Object.assign(state.settings, { sessionSize: 40, order: 'split' });
+      Object.assign(state, { stage: 'main', kanaKnown: true, introSeen: true, startChosen: true, currentUnit: 'm1' });
+      const rec = () => ({ b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} });
+      REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 40).concat(REG.grammar.filter(g => grammarInReach(g, unitOrder('m1'))).slice(0, 20)).forEach(x => { state.srs[x.key] = rec(); });
+      delete state.today.plan; saveState(); DAILY_CACHE = null;
+      const side = dailyQueue().items.map(x => x.kind === 'g' || x.kind === 'c' ? 'g' : x.kind === 'l' || x.kind === 'r' ? '' : 'v');
+      location.hash = '#/today'; route(); const btn = document.querySelector('[data-act=start-daily]').textContent;
+      startSession('kana'); const kana = SESSION.entries.length; SESSION = null; document.body.classList.remove('practicing'); location.hash = '#/today';
+      const dropped = Object.keys(normalizeState(JSON.parse(JSON.stringify(state))).settings).filter(k => ['sessionSize', 'order'].includes(k));
+      return JSON.stringify({ n: side.length, mixed: side.includes('g') && side.indexOf('g') < side.lastIndexOf('v'), btn: Number((btn.match(/這組 (\\d+) 題/) || [])[1]), kana, dropped }); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)[-1])
+    assert r == {'n': 20, 'mixed': True, 'btn': 20, 'kana': 20, 'dropped': []}, r
 
 # 1.0.18 離線語音: the installed app keeps the audio of today's practice on the device
 STANDALONE = """(() => { const mm = window.matchMedia.bind(window);
@@ -1680,7 +1697,7 @@ if __name__ == "__main__":
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_wrong_order_marks_the_misplaced_pieces_red, test_a_retry_copy_of_an_order_item_grades_the_right_order_as_right, test_a_kanji_question_reads_its_example_word_once_answered, test_options_of_one_question_share_one_font_size, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
              test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box,
              test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_hides_kana_drills,
-             test_a_missed_listening_or_reading_item_gets_no_retry_copy_in_the_session, test_settings_drop_the_switches_the_app_now_decides, test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off,
+             test_a_missed_listening_or_reading_item_gets_no_retry_copy_in_the_session, test_settings_drop_the_switches_the_app_now_decides, test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off, test_sets_hold_twenty_mixed_even_when_an_old_copy_saved_another_size_or_order,
              test_offline_audio_keeps_the_japanese_clips_of_todays_practice, test_offline_audio_fills_the_cache_skipping_stored_and_missing_clips_and_stops_offline,
              test_installed_app_keeps_the_coming_audio_by_itself_and_again_when_back_online, test_a_browser_tab_does_not_download_audio_ahead_by_itself, test_a_clip_not_on_the_device_while_offline_says_so]
     failed = 0

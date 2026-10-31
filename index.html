@@ -939,12 +939,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.24';   // keep equal to the version in sw.js CACHE ('nq-v1.0.24'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.25';   // keep equal to the version in sw.js CACHE ('nq-v1.0.25'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.25', date: '2026-10-31', items: [
+    '設定拿掉「每組練習題數」和「出題順序」：今日練習和假名練習固定一組 20 題，單字與文法一律交錯出。一組做太久注意力會往下掉，分成小組也不會少學，當天的題目一樣多；以前設定過的題數和順序不再有作用。'
+  ] },
   { v: '1.0.24', date: '2026-10-31', items: [
     '配對題改成六組，左邊只顯示假名（看漢字就猜得到意思），同一題不會有讀音一樣的字；另外五個字只從學過的同詞性單字挑，學得還不夠就先不出配對。配完不唸也不列例句，配對題也沒有「例句」「發音」按鈕（每個字點下去就會唸）。',
     '配對題配錯的字才進錯題本：選了一個字、點到錯的意思，那個字就照答錯算（掉星、這輪稍後再練一次、第 1、3、7 天回來）；沒配錯的字不動，這題的主角沒配錯就算答對。按「我不會，看答案」時，還沒配好的字都算答錯；「手滑，不算」會一次還原。新字的第二次出現和「再練一次」只問那一個字，不再出配對。',
@@ -1156,8 +1159,6 @@ function markTarget(ex, w) {
 function defaultSettings() {
   return {
     loadCap: 100,            // 每天負荷上限 until 1.0.20; nothing reads it now (old copies keep theirs)
-    sessionSize: 20,
-    order: 'mix',              // mix | split
     showZh: true,
     furigana: true,
     speechRate: 1.0,
@@ -1250,6 +1251,8 @@ function normalizeState(s) {
   out.settings.capRaised = true;
   // 1.0.15: no longer settings — the speech switches are always on, 複習強度 is fixed (RETENTION, since 1.0.21), 入門 ends by itself
   ['autoSpeak', 'listening', 'audioOptions', 'retention'].forEach(k => { delete out.settings[k]; });
+  // 1.0.25: neither are 每組練習題數 (SESSION_SIZE) and 出題順序 (words and grammar always mixed)
+  ['sessionSize', 'order'].forEach(k => { delete out.settings[k]; });
   delete out.preDoneDismissed; delete out.preFinished;
   ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt', 'stageTests'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
@@ -1363,7 +1366,7 @@ function migrateLegacy(old) {
   const s = state;
   const notes = [];
   const st = s.settings;
-  if (typeof old.dailyGoal === 'number') { st.loadCap = Math.max(40, old.dailyGoal); st.sessionSize = clamp(old.dailyGoal, 10, 40); }
+  if (typeof old.dailyGoal === 'number') st.loadCap = Math.max(40, old.dailyGoal);
   if (typeof old.speechRate === 'number') st.speechRate = old.speechRate;
   if (typeof old.duolingoScore === 'number') st.duolingoScore = old.duolingoScore;
   st.furigana = old.showFurigana !== false;
@@ -1604,6 +1607,7 @@ const NEW_DEFAULT = 15;
 const NEW_MIN = 3;
 const NEW_MAX = 20;
 const RECENT_MAX = 100;
+const SESSION_SIZE = 20;         // questions in a set of 今日練習 and 假名 (a setting until 1.0.24)
 function onLadder(key) { const r = state.srs[key]; return Boolean(r) && typeof r.rl === 'number'; }
 // which tier an item is in, read from its stars (listening and reading keep their own dates: null)
 function tierOf(key) {
@@ -3604,7 +3608,7 @@ function splitNew(n, skip = new Set()) {
   kinds.forEach(k => { out[k] = cand[k].slice(0, take[k]); });
   return out;
 }
-function computeDailyPlan(size = state.settings.sessionSize) {
+function computeDailyPlan(size = SESSION_SIZE) {
   const t = todayStr();
   const n4Open = n4WordsOpen();
   const curIdx = unitOrder(state.currentUnit);
@@ -3665,7 +3669,7 @@ function addTodayListening(size) {
   pl.lists.dueL = p.dueL.map(x => x.key); pl.lists.newL = p.newL.map(x => x.key); pl.listenOn = true;
   saveState();
 }
-function dailyPlan(size = state.settings.sessionSize) {
+function dailyPlan(size = SESSION_SIZE) {
   const pl = state.today.plan;   // a list made before the start was chosen is redone once it is (it may have been empty)
   if (!pl || !pl.lists || pl.stage !== state.stage || pl.start !== Boolean(state.startChosen)) storeTodayPlan(size);
   else if (pl.listenOn === false && speechAvailable()) addTodayListening(size);
@@ -3687,8 +3691,7 @@ function todayPlanKeys() {
   return planListKeys(state.today.plan).filter(k => REG.byKey.has(k));
 }
 
-function interleave(vList, gList, mode) {
-  if (mode === 'split') return vList.concat(gList);
+function interleave(vList, gList) {
   const out = [];
   let i = 0; let j = 0;
   const ratio = vList.length / Math.max(1, vList.length + gList.length);
@@ -3702,15 +3705,15 @@ function interleave(vList, gList, mode) {
 // One session of today's work: the day list is every due review (most overdue first; grammar answered right the fewest
 // times first) with the day's new items spread through it; a session takes the first `size`. Nothing else joins —
 // an item is here because it is due today or because it is new today.
-function buildDailyQueue(size = state.settings.sessionSize) {
+function buildDailyQueue(size = SESSION_SIZE) {
   const plan = dailyPlan(size);
   const byPractice = (a, b) => ((state.srs[a.key].ok || 0) - (state.srs[b.key].ok || 0)) || byDue(a, b);
   const ladderFirst = (list) => list.filter(x => onLadder(x.key)).concat(list.filter(x => !onLadder(x.key)));   // missed items are the weakest: first
   const isG = (x) => x.kind === 'g' || x.kind === 'c';   // 變化練習 sits on the grammar side
   const queued = plan.q4.concat(plan.q5);   // four and five stars join the reviews
-  const reviews = interleave(ladderFirst(plan.dueV.concat(plan.dueK, plan.dueA || []).sort(byDue)).concat(queued.filter(x => !isG(x))), ladderFirst(plan.dueG.slice().sort(byPractice)).concat(plan.dueC || [], queued.filter(isG)), 'mixed');
-  const fresh = interleave((plan.newA || []).concat(plan.newV, plan.newK), plan.newG.concat(plan.newC || []), 'mixed');
-  const day = interleave(reviews, fresh, 'mixed');   // proportional, so each session of the day gets its share of new items
+  const reviews = interleave(ladderFirst(plan.dueV.concat(plan.dueK, plan.dueA || []).sort(byDue)).concat(queued.filter(x => !isG(x))), ladderFirst(plan.dueG.slice().sort(byPractice)).concat(plan.dueC || [], queued.filter(isG)));
+  const fresh = interleave((plan.newA || []).concat(plan.newV, plan.newK), plan.newG.concat(plan.newC || []));
+  const day = interleave(reviews, fresh);   // proportional, so each session of the day gets its share of new items
   const L = plan.dueL.concat(plan.newL); const R = plan.dueR.concat(plan.newR).slice(0, 1);
   const total = day.length + L.length + R.length;
   let Ls = L.slice(0, Math.min(L.length, Math.round(size * 0.2)));
@@ -3721,7 +3724,7 @@ function buildDailyQueue(size = state.settings.sessionSize) {
   // within the session: reviews shuffled, new items after them (a new word gets its preview card first)
   const vList = ladderFirst(shuffle(take.filter(x => !isG(x) && !isNew(x)))).concat(take.filter(x => !isG(x) && isNew(x)));
   const gList = ladderFirst(shuffle(take.filter(x => isG(x) && !isNew(x)))).concat(take.filter(x => isG(x) && isNew(x)));
-  const items = interleave(vList, gList, state.settings.order);
+  const items = interleave(vList, gList);
   // listening spread through the session, the reading passage last
   Ls.forEach((x, i) => items.splice(Math.min(items.length, Math.round((i + 1) * items.length / (Ls.length + 1)) + i), 0, x));
   items.push(...R);
@@ -3735,7 +3738,7 @@ function buildDailyQueue(size = state.settings.sessionSize) {
 function extraQueue() {
   const p = dailyPlan();
   const s = splitNew(p.n || NEW_DEFAULT, new Set(todayPlanKeys().concat(state.today.ans || [])));
-  const items = interleave(s.a.concat(s.v, s.k), s.g, 'mixed');
+  const items = interleave(s.a.concat(s.v, s.k), s.g);
   return { items, plan: p, aheadN: 0, newN: items.length, newCount: items.length, reviewCount: 0 };
 }
 function extraNote(q) {
@@ -3744,7 +3747,7 @@ function extraNote(q) {
 // The Today page and 「開始練習」 share one built queue, so the button says exactly how many questions the session
 // holds (the plan numbers above it describe the whole day's workload, which can be more than one session).
 let DAILY_CACHE = null;
-function dailyQueue(size = state.settings.sessionSize) {
+function dailyQueue(size = SESSION_SIZE) {
   const key = `${todayStr()}|${state.updatedAt}|${stateRev}|${size}|${state.currentUnit}|${speechAvailable() ? 1 : 0}`;
   if (DAILY_CACHE && DAILY_CACHE.key === key) return DAILY_CACHE.r;
   const r = buildDailyQueue(size);
@@ -3803,7 +3806,7 @@ function startSession(mode, opt = {}) {
   let entries = [];
   let meta = {};
   if (mode === 'daily') {
-    const size = opt.size || state.settings.sessionSize;
+    const size = opt.size || SESSION_SIZE;
     if (!opt.extra && dailyPlan(size).remaining === 0) opt = Object.assign({}, opt, { extra: true });   // the day is done (e.g. 再練一組 on the summary): offer the 加練 set
     const r = opt.extra ? extraQueue() : dailyQueue(size);
     entries = r.items.map(item => ({ item }));
@@ -3824,7 +3827,7 @@ function startSession(mode, opt = {}) {
     entries = kq.map(item => ({ item }));
     meta = { note: kq.drill ? DRILL_NOTE : '' };
   } else if (mode === 'kana') {   // 假名: due ones first, then the next unseen in 五十音 order
-    const t = todayStr(); const size = opt.size || state.settings.sessionSize;
+    const t = todayStr(); const size = opt.size || SESSION_SIZE;
     const rowOk = (x) => (opt.row === undefined || x.row === opt.row) && (!opt.script || x.script === opt.script);   // one row of one table on purpose
     const due = REG.kana.filter(x => rowOk(x) && isDueToday(x, t)).sort(byDue); const fresh = REG.kana.filter(x => rowOk(x) && !state.srs[x.key]).sort((a, b) => a.order - b.order);
     entries = (opt.row === undefined ? due.concat(fresh) : REG.kana.filter(rowOk).sort((a, b) => a.order - b.order)).slice(0, size).map(item => ({ item }));
@@ -4794,7 +4797,7 @@ function renderToday(view) {
   const exL = Math.min(plan.dueL.length + plan.newL.length, LISTEN_PER_DAY);
   const exR = Math.min(1, plan.dueR.length + plan.newR.length);
   const exA = (plan.dueA || []).length + (plan.newA || []).length;
-  const size = state.settings.sessionSize;
+  const size = SESSION_SIZE;
   const extraN = exK + exL + exR + exA;
   const extraText = [exA && `假名 ${exA}`, exK && `漢字 ${exK}`, exL && `聽力 ${exL}`, exR && `閱讀 ${exR}`].filter(Boolean).join('・');
   const dq = dailyQueue(size);
@@ -7374,10 +7377,6 @@ function settingsHtml() {
   return tabs + body;
 }
 
-function numRow(key, label, hint, min, max, step = 1, unit = '') {
-  return `<div class="setting-row"><div><div class="label">${label}</div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>
-    <div class="row"><input class="input num" type="number" style="width:96px" min="${min}" max="${max}" step="${step}" value="${esc(state.settings[key])}" data-change="setting" data-key="${key}" data-type="num" data-min="${min}" data-max="${max}" />${unit ? `<span class="small muted">${unit}</span>` : ''}</div></div>`;
-}
 function boolRow(key, label, hint) {
   return `<div class="setting-row"><div><div class="label">${label}</div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>
     <label class="switch"><input type="checkbox" ${state.settings[key] ? 'checked' : ''} data-change="setting" data-key="${key}" data-type="bool" /><span class="track"></span></label></div>`;
@@ -7395,8 +7394,6 @@ function textRow(key, label, hint, target, opt = {}) {
 function settingsLearn() {
   const s = state.settings;
   return `
-    ${numRow('sessionSize', '每組練習題數', '按「開始練習」時一次出幾題；當天到期與新題會分成幾組出完。', 5, 60, 5, '題')}
-    ${selRow('order', '出題順序', '', [['mix', '單字與文法交錯'], ['split', '先單字，再文法']])}
     ${boolRow('showZh', '題目下方直接顯示中文', '關閉時可按 T 或點「顯示中文」再看。需要中文才能判斷的題目仍會顯示。')}
     ${selRow('includeImported', '每日練習包含自訂字卡', '句子型的匯入卡片比較難，預設只加入單字型的。', [['words', '只加入單字型'], ['all', '全部加入'], ['off', '不加入']])}
     <div class="setting-row"><div><div class="label">考試日期</div><div class="hint">用來計算倒數與每單元可用天數。</div></div>

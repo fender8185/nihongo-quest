@@ -11,7 +11,7 @@ def ev(b, js, pre=()):
     return b.run([("nav", URL), ("wait", READY)] + list(pre) + [("eval", js)])[-1]
 
 # a main-course account at week 1 with nothing learned yet
-FRESH = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.startChosen = true; state.currentUnit = 'm1'; state.settings.sessionSize = 20; saveState(); DAILY_CACHE = null;"
+FRESH = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
 # rec(b, extra): a record at level b, last answered ten days ago, due in three days
 REC = """const t = todayStr(); const rec = (b, extra) => Object.assign({ b, s: LEVEL_FROM_S[b - 1] || 0.5, d: 5, due: addDays(t, 3), n: 3, ok: 3, ng: 0, st: 3, last: addDays(t, -10), lapse: 0, intro: addDays(t, -30) }, extra || {});
   const words = REG.vocab.filter(v => v.builtin && v.lv === 'N5');"""
