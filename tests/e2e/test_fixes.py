@@ -1,6 +1,7 @@
 """2026-10-25 fixes: listening reads every option, requeued listening audio follows the shuffled options,
 distractor meanings after answering a vocab question, the 更多 menu icons stay small, 8-digit login code."""
 import json, os, re, subprocess, sys, time
+from urllib.parse import parse_qs, urlsplit
 sys.path.insert(0, os.path.dirname(__file__))
 from cdp import Browser
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -765,6 +766,52 @@ def test_sigv4_signs_like_the_aws_test_suite_and_signs_r2_requests(b):
     assert r['q'] == suite + 'b97d918cfa904a5beff61c982a1b6f458b799221646efd99d3219ec94cdf2500', r   # the query is sorted before signing
     assert r['put'] == {'x-amz-content-sha256': 'UNSIGNED-PAYLOAD', 'x-amz-date': '20150830T123600Z', 'Authorization': r2 + 'f54e5b95acf48a06eae7e900e8e7977e1869720a00a7c3c90a9515bed26d523a'}, r
     assert r['list'] == r2 + 'a878935e1a50a61f75053083ba0134b2522946dcc53ac06d2af986d228a87369', r   # a continuation token with / + =
+
+# a ListObjectsV2 page as R2 sends it; `next` is the continuation token when more pages follow
+R2_LIST_XML = """const xml = (keys, next) => '<?xml version="1.0" encoding="UTF-8"?><ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/"><Name>nihongo-audio</Name>'
+  + keys.map(k => '<Contents><Key>' + k + '</Key><Size>8256</Size></Contents>').join('') + '<IsTruncated>' + (next ? 'true' : 'false') + '</IsTruncated>'
+  + (next ? '<NextContinuationToken>' + next + '</NextContinuationToken>' : '') + '<KeyCount>' + keys.length + '</KeyCount><MaxKeys>1000</MaxKeys></ListBucketResult>';"""
+R2_DOWN = "連不到 R2：檢查網路、R2 金鑰（要 Object Read & Write）和 bucket 的 CORS 設定"
+
+def test_r2_listing_follows_pages_and_an_upload_carries_the_signed_headers(b):
+    js = """(async () => { CLOUD_AUDIO.r2 = '%s'; const key = { keyId: 'AKIDTEST', secret: 'S3CRET' }; %s
+      const calls = []; const rf = window.fetch;
+      window.fetch = (u, o) => { u = String(u); o = o || {}; calls.push({ u, method: o.method || 'GET', headers: Object.fromEntries(new Headers(o.headers || {})) });
+        if (o.method === 'PUT') return Promise.resolve(new Response('', { status: 200 }));
+        const q = new URL(u).searchParams; const pre = q.get('prefix'); const tok = q.get('continuation-token');
+        const page = pre === 'v1/f/' ? (tok === 'tok/1+=' ? xml(['v1/f/bbb.mp3']) : tok ? xml([]) : xml(['v1/f/aaa.mp3'], 'tok/1+=')) : pre === 'v1/zh/' ? xml(['v1/zh/ccc.mp3']) : xml([]);
+        return Promise.resolve(new Response(page, { status: 200, headers: { 'Content-Type': 'application/xml' } })); };
+      const have = [...await r2ListExisting(key)].sort();
+      await r2Put('zh/ddd.mp3', new Blob([new Uint8Array([1, 2])], { type: 'audio/mpeg' }), key); window.fetch = rf;
+      return JSON.stringify({ have, lists: calls.filter(c => c.method === 'GET').map(c => c.u), put: calls.find(c => c.method === 'PUT') }); })()""" % (R2_TEST, R2_LIST_XML)
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)[-1])
+    assert r['have'] == ['f/aaa.mp3', 'f/bbb.mp3', 'zh/ccc.mp3'], r
+    qs = [parse_qs(urlsplit(u).query) for u in r['lists']]
+    assert [(q['prefix'][0], q.get('continuation-token', [None])[0]) for q in qs] == [('v1/f/', None), ('v1/f/', 'tok/1+='), ('v1/m/', None), ('v1/zh/', None)], r['lists']
+    assert all(u.startswith(R2_TEST + '?') and q['list-type'] == ['2'] and q['max-keys'] == ['1000'] for u, q in zip(r['lists'], qs)), r['lists']
+    assert 'continuation-token=tok%2F1%2B%3D' in r['lists'][1], r['lists']   # a + left as is would reach R2 as a space
+    p = r['put']; h = p['headers']
+    assert p['u'] == R2_TEST + '/v1/zh/ddd.mp3' and p['method'] == 'PUT', p
+    assert (h['content-type'], h['cache-control'], h['x-amz-content-sha256']) == ('audio/mpeg', 'public, max-age=31536000, immutable', 'UNSIGNED-PAYLOAD'), h
+    assert re.fullmatch(r"\d{8}T\d{6}Z", h['x-amz-date']), h
+    assert re.fullmatch(r"AWS4-HMAC-SHA256 Credential=AKIDTEST/\d{8}/auto/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=[0-9a-f]{64}", h['authorization']), h
+
+def test_r2_errors_name_their_code_and_an_unreachable_bucket_says_so(b):
+    # R2's S3 endpoint sends its errors without CORS headers, so in a browser a refused request mostly arrives as a
+    # rejected fetch; an error that is readable names R2's code
+    js = """(async () => { CLOUD_AUDIO.r2 = '%s'; const key = { keyId: 'AKIDTEST', secret: 'S3CRET' }; const rf = window.fetch; const out = {};
+      const grab = async (f) => { try { await f(); return 'no error'; } catch (e) { return e.message; } };
+      const blob = new Blob([new Uint8Array([1])], { type: 'audio/mpeg' });
+      const err = '<?xml version="1.0" encoding="UTF-8"?><Error><Code>SignatureDoesNotMatch</Code><Message>The request signature we calculated does not match the signature you provided.</Message></Error>';
+      window.fetch = () => Promise.resolve(new Response(err, { status: 403, headers: { 'Content-Type': 'application/xml' } }));
+      out.list = await grab(() => r2ListExisting(key)); out.put = await grab(() => r2Put('f/x.mp3', blob, key));
+      window.fetch = () => Promise.resolve(new Response('', { status: 403 })); out.bare = await grab(() => r2Put('f/x.mp3', blob, key));
+      window.fetch = () => Promise.reject(new TypeError('Failed to fetch'));
+      out.listDown = await grab(() => r2ListExisting(key)); out.putDown = await grab(() => r2Put('f/x.mp3', blob, key));
+      window.fetch = rf; return JSON.stringify(out); })()""" % R2_TEST
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)[-1])
+    assert r == {'list': '列出 R2 的檔案失敗 HTTP 403：SignatureDoesNotMatch', 'put': '上傳 HTTP 403：SignatureDoesNotMatch', 'bare': '上傳 HTTP 403',
+                 'listDown': R2_DOWN, 'putDown': R2_DOWN}, r
 
 def test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss(b):
     js = """(async () => { ttsConfig().engine = 'cloud'; localStorage.removeItem('nq_audio_miss'); const calls = [];
@@ -1775,7 +1822,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_clips_are_fetched_from_the_r2_address, test_a_clip_r2_lacks_or_cannot_serve_comes_from_supabase_and_is_no_miss, test_sigv4_signs_like_the_aws_test_suite_and_signs_r2_requests, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss,test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_download_all_counts_clips_cached_under_the_supabase_address_and_adds_no_copy, test_download_all_finds_a_stored_clip_by_its_address_whatever_it_varies_on, test_download_all_takes_from_supabase_what_r2_lacks,test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_hero_help_and_scope_toggles_open_one_at_a_time, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_exam_page_projects_the_finish_date_and_suggests_extra_practice_when_late, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_clips_are_fetched_from_the_r2_address, test_a_clip_r2_lacks_or_cannot_serve_comes_from_supabase_and_is_no_miss, test_sigv4_signs_like_the_aws_test_suite_and_signs_r2_requests, test_r2_listing_follows_pages_and_an_upload_carries_the_signed_headers, test_r2_errors_name_their_code_and_an_unreachable_bucket_says_so, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss,test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_download_all_counts_clips_cached_under_the_supabase_address_and_adds_no_copy, test_download_all_finds_a_stored_clip_by_its_address_whatever_it_varies_on, test_download_all_takes_from_supabase_what_r2_lacks,test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_hero_help_and_scope_toggles_open_one_at_a_time, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_exam_page_projects_the_finish_date_and_suggests_extra_practice_when_late, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,

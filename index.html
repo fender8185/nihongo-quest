@@ -8271,7 +8271,8 @@ function ttsConfig() {
    Since 1.0.29 a clip is fetched from a copy of the bucket on Cloudflare R2 (audio.nihongoquest.app) first. The generator
    still uploads to Supabase only, so a clip made since the copy is found there; and a device that cached clips before
    1.0.29 holds them under the Supabase address (sw.js looks there too). */
-const CLOUD_AUDIO = { bucket: 'JPY_audio', set: 'v1', host: 'https://audio.nihongoquest.app' };
+const CLOUD_AUDIO = { bucket: 'JPY_audio', set: 'v1', host: 'https://audio.nihongoquest.app',
+  r2: 'https://397ec29bf37f161821985070bb3f5bb5.r2.cloudflarestorage.com/nihongo-audio' };   // r2: the bucket's S3 address, where the generator uploads (1.0.30)
 const cloudMisses = new Set();   // paths that were on neither server this session: straight to the browser voice next time
 // the addresses a clip is fetched from, in order: R2, then Supabase
 function cloudAudioBases() { return [`${CLOUD_AUDIO.host}/${CLOUD_AUDIO.set}`, `${((window.NQ_CONFIG || {}).supabaseUrl || '').replace(/\/$/, '')}/storage/v1/object/public/${CLOUD_AUDIO.bucket}/${CLOUD_AUDIO.set}`]; }
@@ -8311,6 +8312,38 @@ async function sigV4(method, url, headers, creds, opt = {}) {
   for (const part of [day, region, service, 'aws4_request']) key = await hmac(key, part);
   const signature = hex(await hmac(key, ['AWS4-HMAC-SHA256', amzDate, scope, await sha(canonical)].join('\n')));
   return Object.assign(out, { Authorization: `AWS4-HMAC-SHA256 Credential=${creds.keyId}/${scope}, SignedHeaders=${names.join(';')}, Signature=${signature}` });
+}
+// R2's S3 address sends its errors without CORS headers, so in a browser a refused request (wrong key, missing
+// permission, clock off) is a rejected fetch just like a lost network or a bucket without the CORS rule
+const R2_DOWN = '連不到 R2：檢查網路、R2 金鑰（要 Object Read & Write）和 bucket 的 CORS 設定';
+// R2's error code from an error it let us read (SignatureDoesNotMatch, AccessDenied, RequestTimeTooSkewed …)
+async function r2ErrorDetail(resp) {
+  try { const code = new DOMParser().parseFromString(await resp.text(), 'application/xml').getElementsByTagName('Code')[0]; return code && code.textContent ? `：${code.textContent}` : ''; } catch (e) { return ''; }
+}
+// one signed request to the bucket
+async function r2Fetch(method, url, creds, init = {}) {
+  const headers = Object.assign(await sigV4(method, url, { 'x-amz-content-sha256': 'UNSIGNED-PAYLOAD' }, creds), init.headers);
+  try { return await fetch(url, Object.assign({}, init, { method, headers })); } catch (e) { throw new Error(R2_DOWN); }
+}
+// the clip paths (f|m|zh/<hash>.mp3) already in the R2 bucket: ListObjectsV2, 1000 keys a page
+async function r2ListExisting(creds) {
+  const have = new Set();
+  for (const g of ['f', 'm', 'zh']) {
+    let token = '';
+    do {
+      const r = await r2Fetch('GET', `${CLOUD_AUDIO.r2}?list-type=2&max-keys=1000&prefix=${rfc3986(`${CLOUD_AUDIO.set}/${g}/`)}${token ? `&continuation-token=${rfc3986(token)}` : ''}`, creds);
+      if (!r.ok) throw new Error(`列出 R2 的檔案失敗 HTTP ${r.status}${await r2ErrorDetail(r)}`);
+      const doc = new DOMParser().parseFromString(await r.text(), 'application/xml'); const tag = (n) => (doc.getElementsByTagName(n)[0] || {}).textContent || '';
+      [...doc.getElementsByTagName('Key')].forEach(k => have.add(k.textContent.slice(CLOUD_AUDIO.set.length + 1)));
+      token = tag('IsTruncated') === 'true' ? tag('NextContinuationToken') : '';
+    } while (token);
+  }
+  return have;
+}
+// one clip into the R2 bucket, stored like the copied ones (audio/mpeg, cached a year)
+async function r2Put(path, blob, creds) {
+  const r = await r2Fetch('PUT', `${CLOUD_AUDIO.r2}/${CLOUD_AUDIO.set}/${path}`, creds, { headers: { 'Content-Type': 'audio/mpeg', 'Cache-Control': 'public, max-age=31536000, immutable' }, body: blob });
+  if (!r.ok) throw new Error(`上傳 HTTP ${r.status}${await r2ErrorDetail(r)}`);
 }
 function cloudAudioSsml(text, opt = {}) { return opt.reading ? `<speak><sub alias="${esc(opt.reading)}">${esc(text)}</sub></speak>` : ssmlReadings(text); }
 const CLOUD_ZH_VOICE = { languageCode: 'cmn-TW', name: 'cmn-TW-Wavenet-A' };   // meanings and translations (opt.lang === 'zh'): one Taiwanese Mandarin voice
