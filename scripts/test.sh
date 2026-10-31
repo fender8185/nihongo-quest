@@ -11,6 +11,7 @@ node -e "const D=JSON.parse(require('fs').readFileSync('data.js','utf8').split('
 dv="$(grep -o 'data.js?v=[0-9]*' index.html | tr -d -c 0-9)"
 [ "$dv" = "$(grep -o 'data.js?v=[0-9]*' sw.js | tr -d -c 0-9)" ] && [ "$dv" = "$(grep -o 'DATA_VERSION [0-9]*' data.js | tr -d -c 0-9)" ] || { echo "data.js version differs between index.html, sw.js and data.js"; exit 1; }
 node --test-reporter=tap tests/sync-core.test.js | grep -E "^# (pass|fail)"   # tap: Node 23+ prints "ℹ pass" by default
+node --test-reporter=tap tests/curriculum.test.js | grep -E "^# (pass|fail)"   # the N3–N1 curriculum outline: sources, candidates, checker
 # a release must carry a new version: app files changed against origin/main ⇒ APP_VERSION differs; data.js changed ⇒ data version differs
 if git rev-parse --verify -q origin/main >/dev/null 2>&1; then
   if ! git diff --quiet origin/main -- index.html sw.js sync-core.js; then
