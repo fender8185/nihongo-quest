@@ -34,7 +34,7 @@
 **先查 app 有沒有**
 - 比對程式只認得寫法、送り仮名和する的差別，抓不到其他形式。N5／N4 那次就漏了一緒／一緒に、大きな／大きい、すぐに／すぐ、皆／みんな、舟／船、込む／混む、下りる／降りる。
 - 留下一個字之前，先用讀音或寫法查 app：
-  `node -e 'const D=new Function(require("fs").readFileSync("data.js","utf8")+";return DATA;")();const q=process.argv[1];D.VOCAB.filter(v=>v.r===q||v.w===q||v.w.includes(q)).forEach(v=>console.log(v.id,v.w,v.r,v.m,v.lv))' <讀音或寫法>`
+  `node -e 'const D=new Function(require("fs").readFileSync("data.js","utf8")+";return DATA;")();const q=process.argv[1];D.VOCAB.filter(v=>v.r.includes(q)||v.w.includes(q)).forEach(v=>console.log(v.id,v.w,v.r,v.m,v.lv))' <讀音或寫法>`
 
 **篩掉（`dropped`，每個都要寫 `why`）**
 - `variant` 是同一個字、只是寫法不同 → 篩掉，`why` 寫「app 已有：<id>（<app 的寫法>）」。是不同的字 → 照新字分主題。
