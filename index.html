@@ -522,7 +522,7 @@ body.furi-smart ruby.known rt { visibility: hidden; }
 .week-stat-l { font-size: 11px; color: var(--fg-3); }
 .week-line { width: 100%; height: auto; display: block; margin-top: 12px; overflow: visible; }
 .week-line polyline { fill: none; stroke: var(--heat-4); stroke-width: 2; stroke-linejoin: round; } .week-line .week-area { fill: var(--heat-4); opacity: .14; }
-.week-dot { fill: var(--heat-4); outline: none; } .week-dot.today { fill: var(--accent); } .week-dot:hover, .week-dot:focus { filter: brightness(1.2); }
+.week-dot { fill: var(--heat-4); outline: none; stroke: transparent; stroke-width: 14px; pointer-events: all; }   /* the stroke is the tap area */ .week-dot.today { fill: var(--accent); } .week-dot:hover, .week-dot:focus { filter: brightness(1.2); }
 .week-axis { display: flex; justify-content: space-between; margin-top: 2px; font-size: 11px; color: var(--fg-3); } .week-axis .today { color: var(--accent); font-weight: 600; }
 .week-share { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 12px; } .week-share-l, .week-empty { margin-top: 6px; }
 .course-sub .btn { margin-left: 2px; vertical-align: baseline; } .course-text { margin-top: 8px; }
@@ -959,7 +959,7 @@ const CHANGELOG = [
     '學習分析的總進度可以切換四種範圍：總進度（單字、文法、聽力＋閱讀、漢字）、入門（假名、入門單字、入門文法）、N5、N4；入門、N5、N4 各只算自己那一級的題目。聽力和閱讀答過算初識、答對 1 次算熟悉、答對 2 次算熟練（答對後要隔 30 天才會再出）。',
     '過去 7 天的練習量改成三個數字（7 天合計、每天平均、比前 7 天多或少）加一條趨勢線和各類占比，點每天的點可以看那天的明細。正確率改看最近 100 題，跟今日頁決定新題數用的一樣。',
     '設定 › 學習的「考試」可以選要考 N5 還是 N4（預設 N4），旁邊一樣是考試日期。',
-    '「學完的預估」和「課程進度預估」合成一張「課程進度」：照最近 14 天每天學幾題新內容，推估 N5、N4 各在哪天全部學過一次（每天的新題照單字、文法、漢字各剩多少分配，所以看最慢的那個），跟考前三週比早還是晚；太慢時會說每天要幾題、大約多久按一次加練。模擬考頁的考試倒數也照你選的級別推估，不再用「每個單元幾天」來算。'
+    '「學完的預估」和「課程進度預估」合成一張「課程進度」：照最近 14 天每天學幾題新內容（聽力、閱讀不算），推估 N5、N4 各在哪天全部學過一次（每天的新題照單字、文法、漢字各剩多少分配，所以看最慢的那個），跟考前三週比早還是晚；太慢時會說每天要幾題、大約多久按一次加練。模擬考頁的考試倒數也照你選的級別推估，不再用「每個單元幾天」來算。'
   ] },
   { v: '1.0.25', date: '2026-10-31', items: [
     '設定拿掉「每組練習題數」和「出題順序」：今日練習和假名練習固定一組 20 題，單字與文法一律交錯出。一組做太久注意力會往下掉，分成小組也不會少學，當天的題目一樣多；以前設定過的題數和順序不再有作用。'
@@ -1718,7 +1718,9 @@ function srsAnswer(key, correct, opt = {}) {
   // with a spelling question spelled once before
   if (g >= 3 && masteredBefore && isPreItem(key)) r.out = 1;
   if (g === 1) delete r.out;
-  if (isNew) logEntry().fresh = (logEntry().fresh || 0) + 1;   // first answers a day: the pace the exam countdown uses
+  // first answers a day of course items (words, grammar, kanji, kana): the pace 課程進度 uses. Listening, reading and drills
+  // come on their own, outside the day's new count (1.0.26; before it they were tallied too)
+  if (isNew && /^[vgka]:/.test(key)) logEntry().fresh = (logEntry().fresh || 0) + 1;
   if (before < SRS_LEARNED && r.b >= SRS_LEARNED) r.lrn = t;   // the day it became 熟悉 (學習分析 lists the recent ones)
   // A miss comes back tomorrow: the same-day look is the session's 再練一次 copy, which does not touch the schedule (seeing
   // the very same question again within hours only tests memory of the answer). Listening and reading wait a week and get
@@ -7924,7 +7926,8 @@ function coursePace() {
   else {
     p.state = 'late'; p.late = p.days[level] - toDeadline;
     p.need = Math.ceil(work[level] / toDeadline); p.gap = p.need - perDay;
-    p.plan = p.gap <= round ? { every: Math.max(1, Math.floor(round / p.gap)) } : { times: Math.ceil(p.gap / round) };
+    const every = Math.max(1, Math.floor(round / p.gap));
+    p.plan = p.gap > round ? { times: Math.ceil(p.gap / round) } : every >= toDeadline ? { once: true } : { every };   // once: one round before the deadline covers it
     if (p.plan.times >= 3) p.plan.heavy = true;
   }
   return p;
@@ -7932,10 +7935,12 @@ function coursePace() {
 // what it takes when late: new items a day, as 加練 rounds (every few days, or a few a day; three or more a day is too much)
 function courseAdvice(p) {
   if (p.state !== 'late') return '';
-  const head = `要趕上，每天約需 ${p.need} 題新內容（現在約 ${Math.round(p.perDay)} 題）`;
-  const { every, times, heavy } = p.plan;
+  const now = Math.round(p.perDay) >= p.need ? p.perDay.toFixed(1) : Math.round(p.perDay);   // 「需 10 題（現在約 10 題）」 would read as on time
+  const head = `要趕上，每天約需 ${p.need} 題新內容（現在約 ${now} 題）`;
+  const { every, times, heavy, once } = p.plan;
   if (heavy) return `${head}，等於每天加練 ${times} 次，太吃力了：可以考慮${p.level === 'N4' ? '先考 N5，或' : ''}把考試日期往後延（JLPT 每年 7 月、12 月各一次）。`;
   if (times) return `${head}：每天做完當天的練習後按 ${times} 次加練就趕得上。`;
+  if (once) return `${head}：${p.deadline.replace(/-/g, '/')} 前找一天，做完當天的練習後按 1 次加練就趕得上。`;
   return `${head}：${every === 1 ? '每天' : `大約每 ${every} 天，`}做完當天的練習後按 1 次加練就趕得上。`;
 }
 // the 課程進度 line, shared by 學習分析 and the exam countdown
@@ -8044,18 +8049,28 @@ function courseCardHtml() {
     const examD = daysBetween(t, p.exam);
     const max = Math.max(1, Math.min(Math.max(examD, ...lv.map(L => p.days[L])), examD * 2));
     const X = (d) => 8 + 384 * Math.min(d, max) / max;
-    const anchor = (x) => (x > 345 ? 'end' : x < 40 ? 'start' : 'middle');
     const dots = lv.map(L => `<circle class="course-dot ${tone(L)}" data-level="${L}" cx="${X(p.days[L]).toFixed(1)}" cy="28" r="5"></circle>`).join('');
-    const near = lv.filter(L => p.days[L] <= max); const far = lv.filter(L => p.days[L] > max);
-    const label = (x, text, cls) => `<text class="lvl ${cls}" x="${x.toFixed(1)}" y="14" text-anchor="${anchor(x)}">${text}</text>`;
+    // labels: about 1em a CJK character (and 、・→), 0.6em the rest; each centred on its point but kept inside the box. Two dates
+    // that would touch share one label; a mark's label that would touch 「今天」 or the other mark's drops a row, or they share one
+    const width = (str, size) => [...str].reduce((w, ch) => w + (ch.charCodeAt(0) >= 0x2000 ? size : size * 0.6), 0);
+    const place = (x, text, size) => { const w = width(text, size); const c = clamp(x, 2 + w / 2, 398 - w / 2); return { c, a: c - w / 2, b: c + w / 2, text }; };
+    const touch = (m, n) => m.a < n.b + 6 && n.a < m.b + 6;
     const tag = (L) => `${L} ${sl(p.finish[L]).slice(5)}`;
-    let labels = near.length === 2 && X(p.days.N4) - X(p.days.N5) < 64   // two dates close together share a label
-      ? label((X(p.days.N5) + X(p.days.N4)) / 2, `${tag('N5')}・${tag('N4')}`, '') : near.map(L => label(X(p.days[L]), tag(L), tone(L))).join('');
-    if (far.length) labels += label(392, `${far.join('、')} →`, far.includes(p.level) ? tone(p.level) : 'other');
-    const mark = (d, text, y, cls) => { const x = X(d); return `<line class="mark ${cls}" x1="${x.toFixed(1)}" y1="20" x2="${x.toFixed(1)}" y2="36"></line><text x="${x.toFixed(1)}" y="${y}" text-anchor="${x > 300 ? 'end' : 'middle'}">${text}</text>`; };
+    const near = lv.filter(L => p.days[L] <= max); const far = lv.filter(L => p.days[L] > max);
+    const top = near.map(L => ({ x: X(p.days[L]), text: tag(L), cls: tone(L) }));
+    if (far.length) top.push({ x: 392, text: `${far.join('、')} →`, cls: far.includes(p.level) ? tone(p.level) : 'other' });
+    if (top.length === 2 && touch(place(top[0].x, top[0].text, 12), place(top[1].x, top[1].text, 12))) top.splice(0, 2, { x: (top[0].x + top[1].x) / 2, text: `${top[0].text}・${top[1].text}`, cls: '' });
+    const labels = top.map(l => `<text class="lvl ${l.cls}" x="${place(l.x, l.text, 12).c.toFixed(1)}" y="14" text-anchor="middle">${l.text}</text>`).join('');
+    const today = { a: 4, b: 4 + width('今天', 11) };
+    const dl = place(X(daysBetween(t, p.deadline)), `${sl(p.deadline).slice(5)} 期限`, 11), ex = place(X(examD), `${sl(p.exam).slice(5)} 考試`, 11);
+    const dlRow = touch(dl, today) ? 68 : 52;
+    const exRow = dlRow === 68 && touch(ex, dl) ? (touch(ex, today) ? 0 : 52) : 68;   // 0: no room of its own, it joins the deadline's
+    const txt = (q, y) => `<text x="${q.c.toFixed(1)}" y="${y}" text-anchor="middle">${q.text}</text>`;
+    const below = exRow ? txt(dl, dlRow) + txt(ex, exRow) : txt(place((dl.c + ex.c) / 2, `${dl.text}・${ex.text}`, 11), dlRow);
+    const mark = (d, cls) => { const x = X(d).toFixed(1); return `<line class="mark ${cls}" x1="${x}" y1="20" x2="${x}" y2="36"></line>`; };
     line = `<svg class="course-line" viewBox="0 0 400 76" role="img" aria-label="從今天到考試的時間軸">
         <line class="axis" x1="8" y1="28" x2="392" y2="28"></line><circle class="start" cx="8" cy="28" r="4"></circle><text x="4" y="52">今天</text>
-        ${mark(daysBetween(t, p.deadline), `${sl(p.deadline).slice(5)} 期限`, 52, 'deadline')}${mark(examD, `${sl(p.exam).slice(5)} 考試`, 68, 'exam')}${dots}${labels}</svg>`;
+        ${mark(daysBetween(t, p.deadline), 'deadline')}${mark(examD, 'exam')}${dots}${labels}${below}</svg>`;
     rows = ['N5', 'N4'].map(L => {
       const target = L === p.level;
       if (!p.left[L]) return `<div class="course-row" data-level="${L}"><span class="course-lv ${tone(L)}">${L}</span><div>都學過一次了</div></div>`;
@@ -8904,7 +8919,7 @@ function aiLabel() {
 function aiSystemPrompt() {
   const u = unitById(state.currentUnit);
   return [
-    '你是指導台灣學習者的日語老師，學生的目標是通過 JLPT N4。',
+    `你是指導台灣學習者的日語老師，學生的目標是通過 JLPT ${state.settings.examLevel === 'N5' ? 'N5' : 'N4'}。`,
     `學生目前在學「${u.weeks}・${u.title}」（${u.lv}）。`,
     '用繁體中文（台灣用語）回答，直接說重點，不寒暄、不用表情符號、不用誇張的形容。',
     '日文例句要自然，程度不要超過 N4；需要標讀音時寫成「漢字（よみ）」。',

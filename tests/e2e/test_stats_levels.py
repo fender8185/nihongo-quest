@@ -106,7 +106,7 @@ def test_picking_n5_saves_it(b):
 # seen(list): learned once; only(list): everything but these learned; pace(n): n new items a day for 14 days
 PACE = """const seen = (list) => { const d = todayStr(); list.forEach(x => { state.srs[x.key] = { b: 2, due: addDays(d, 5), n: 1, ok: 1, ng: 0, s: 3, d: 5, last: addDays(d, -1), intro: addDays(d, -1) }; }); };
   const only = (keep) => { const k = new Set(keep.map(x => x.key)); seen(REG.vocab.filter(v => v.builtin && !k.has(v.key)).concat(REG.grammar.filter(g => !k.has(g.key)), REG.kanji.filter(x => !k.has(x.key)))); };
-  const pace = (n) => { for (let i = 1; i <= 14; i++) state.dailyLogs[addDays(todayStr(), -i)] = { vocabCount: n, fresh: n }; };
+  const pace = (n) => { for (let i = 1; i <= 14; i++) state.dailyLogs[addDays(todayStr(), -i)] = { vocabCount: Math.round(n), fresh: n }; };   // answers are whole; a fractional pace is an average
   const w5 = REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 30), w4 = REG.vocab.filter(v => v.builtin && v.lv === 'N4').slice(0, 60);
   const g5 = REG.grammar.filter(g => DATA.UNITS.some(u => u.id === g.u && u.lv === 'N5')).slice(0, 20);
   const T = todayStr(); const sl = (n) => addDays(T, n).replace(/-/g, '/'); const exam = (n) => { state.settings.examDate = addDays(T, n); };"""
@@ -204,6 +204,43 @@ def test_stats_and_exam_pages_fit_a_phone(b):   # Review Focus 4
     out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", FRESH + " location.hash = '#/stats'; route(); document.documentElement.scrollWidth"),
                  ("eval", "location.hash = '#/exam'; route(); document.documentElement.scrollWidth")])
     assert out[-2] <= 390 and out[-1] <= 390, out
+
+# ---- final review fixes ----
+def test_only_course_items_count_toward_the_pace(b):   # listening, reading and drills come on their own, outside the new count
+    js = "(() => { " + FRESH + """ const t = todayStr(); delete state.dailyLogs[t]; const pick = (list) => (list || []).find(x => !state.srs[x.key]);
+      const items = [pick(REG.vocab.filter(v => v.builtin)), pick(REG.grammar.filter(g => g.u !== 'm0')), pick(REG.kanji), pick(REG.kana), pick(REG.listen), pick(REG.read), pick(REG.drills)];
+      items.forEach(x => srsAnswer(x.key, true)); return JSON.stringify([items.map(x => x.kind), state.dailyLogs[t].fresh]); })()"""
+    assert json.loads(ev(b, js)) == [['v', 'g', 'k', 'a', 'l', 'r', 'c'], 4]
+
+def test_timeline_labels_never_overlap(b):   # a sweep of paces and exam dates: every label inside the box, none touching another
+    js = "(() => { " + FRESH + PACE + """ const bad = [];
+      const boxes = () => [...document.querySelectorAll('#courseCard .course-line text')].map(x => { const r = x.getBBox(); return [x.textContent, r.x, r.x + r.width, r.y, r.y + r.height]; });
+      const hit = (a, c) => a[1] < c[2] && c[1] < a[2] && a[3] < c[4] && c[3] < a[4];
+      for (const setup of [() => {}, () => only(w5.concat(w4, g5))]) for (const n of [1, 3, 6, 9.6, 12, 20, 40]) for (const d of [22, 24, 27, 40, 100, 200, 400]) {
+        state.srs = {}; setup(); pace(n); exam(d); location.hash = '#/stats'; route(); const bx = boxes();
+        bx.forEach((a, i) => { if (a[1] < 0 || a[2] > 400) bad.push([n, d, 'out', a[0]]); bx.slice(i + 1).forEach(c => { if (hit(a, c)) bad.push([n, d, a[0], c[0]]); }); });
+      }
+      return JSON.stringify(bad.slice(0, 8)); })()"""
+    assert json.loads(ev(b, js)) == []
+
+def test_course_advice_never_contradicts_itself(b):   # no 「需 10 題（現在約 10 題）」, no interval longer than the days left
+    js = "(() => { " + FRESH + PACE + """ only(w5.concat(w4, g5)); const run = (n, d) => { pace(n); exam(d); const p = coursePace(); return [p.plan, courseAdvice(p)]; };
+      return JSON.stringify({ once: run(10, 31), frac: run(9.6, 32), d10: sl(10), d11: sl(11) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['once'] == [{'once': True}, f"要趕上，每天約需 11 題新內容（現在約 10 題）：{r['d10']} 前找一天，做完當天的練習後按 1 次加練就趕得上。"], r
+    assert r['frac'] == [{'once': True}, f"要趕上，每天約需 10 題新內容（現在約 9.6 題）：{r['d11']} 前找一天，做完當天的練習後按 1 次加練就趕得上。"], r
+
+def test_week_dots_are_easy_to_tap(b):   # a phone needs more than a 6px dot: 8px off its centre still hits it
+    js = "(() => { " + FRESH + WEEK + """ saveState(); location.hash = '#/stats'; route(); const c = document.getElementById('weekCard'); c.scrollIntoView();
+      return JSON.stringify([...c.querySelectorAll('.week-dot')].map((d, i) => { const r = d.getBoundingClientRect(); const x = r.x + r.width / 2 + (i < 3 ? 8 : -8), y = r.y + r.height / 2;
+        return document.elementFromPoint(x, y) === d; })); })()"""
+    out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", js)])
+    assert json.loads(out[-1]) == [True] * 7, out[-1]
+
+def test_ai_system_prompt_names_the_target_level(b):   # it said N4 for everyone
+    js = """(() => { state.settings.examLevel = 'N5'; const a = aiSystemPrompt(); state.settings.examLevel = 'N4'; const c = aiSystemPrompt();
+      return JSON.stringify([a.includes('學生的目標是通過 JLPT N5。'), c.includes('學生的目標是通過 JLPT N4。')]); })()"""
+    assert json.loads(ev(b, js)) == [True, True]
 
 # ---- 1.0.26's changelog names what changed ----
 def test_the_1_0_26_changelog_says_what_changed(b):
