@@ -51,8 +51,11 @@ function buildCandidates(sources, DATA) {
     if (!sources.wallerGrammar[num(L)]) continue;
     // one entry per key and level, in list order (Waller's first, then OpenJLPT's), with every source that lists it
     const points = new Map();
-    const add = (src, p) => { const key = grammarKey(p.pattern); if (!key) return;
-      const e = points.get(key) || points.set(key, { p: p.pattern, key, src: [], ids: {} }).get(key);
+    // the same key from the same source with another id is another point (OpenJLPT 〜上（に） and 〜上): it stays apart as key#id
+    const add = (src, p) => { const key0 = grammarKey(p.pattern); if (!key0) return;
+      let e = points.get(key0);
+      if (e && e.src.includes(src) && e.ids[src] !== p.id) { const key = `${key0}#${p.id}`; e = points.get(key) || points.set(key, { p: p.pattern, key, src: [], ids: {} }).get(key); }
+      else if (!e) e = points.set(key0, { p: p.pattern, key: key0, src: [], ids: {} }).get(key0);
       if (!e.src.includes(src)) e.src.push(src); e.ids[src] = e.ids[src] || p.id; };
     sources.wallerGrammar[num(L)].forEach(p => add('waller', p));
     (sources.openGrammar[num(L)] || []).forEach(p => add('openjlpt', p));
@@ -129,6 +132,7 @@ if (require.main === module) {
   for (const L of LV) fs.writeFileSync(path.join(dir, `${L.toLowerCase()}.json`), toJson(cands[L]));
   fs.writeFileSync(path.join(dir, 'REPORT.md'), reportMarkdown(cands, DATA));
   fs.writeFileSync(path.join(dir, 'app-grammar.md'), appGrammarMarkdown(DATA));
+  for (const L of ['N3', 'N2', 'N1']) cands[L].grammar.filter(x => x.key.includes('#')).forEach(x => console.log(`${L} grammar: ${x.p} shares its key with another point of the same list, kept apart as ${x.key}`));
   console.log(LV.map(L => `${L}: ${cands[L].words.filter(x => x.status === 'new').length} new words, ${cands[L].kanji.filter(x => x.status === 'new').length} new kanji` + (cands[L].grammar ? `, ${cands[L].grammar.filter(x => x.status === 'new').length} grammar points` : '')).join('\n'));
 }
 

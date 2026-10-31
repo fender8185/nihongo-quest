@@ -278,3 +278,20 @@ test('review page: only homographs not yet in the outline are listed', () => {
   const list = text.slice(text.lastIndexOf('同形異讀（還沒放進大綱）'));
   assert.ok(text.includes('同形異讀（還沒放進大綱）') && list.includes('ごろく') && !list.includes('ごれい'));
 });
+
+// ---- final review fixes ----
+test('candidates: two different points of one source with the same key stay two entries (〜上（に） and 〜上)', () => {
+  const C = B().buildCandidates(fakeSources({ openGrammar: { 3: [], 2: [{ id: 'ue-ni', pattern: '〜上（に）', level: 'N2' }, { id: 'jou', pattern: '〜上', level: 'N2' }], 1: [] } }), emptyData());
+  assert.deepEqual(C.N2.grammar.map(x => [x.p, x.key, x.status]), [['〜上（に）', '上', 'new'], ['〜上', '上#jou', 'new']]);
+});
+test('homograph: a reading the app already teaches, or a gap word added at that level, counts as placed', () => {
+  const s = withHomo(); s.DATA.VOCAB.push({ id: 'v2', w: '語5', r: 'ごれい', lv: 'N4' }); assert.deepEqual(problemsOf(s), []);
+  const t = okSet(); t.cands.N5.words.push({ w: '朝寝', r: 'ちょうしん', status: 'dup', dupOf: 'N5' });
+  t.gaps.N5.added = [{ w: '朝寝', r: 'ちょうしん', m: '另一讀', c: '時間', why: '另一個讀音' }]; assert.deepEqual(problemsOf(t), []);
+});
+test('review page: a homograph the app or a lower level already keeps is not listed as missing', () => {
+  const s = withHomo(); s.cands.N3.words.push({ w: '語6', r: 'ごろく', status: 'dup', dupOf: 'N3' }); s.DATA.VOCAB.push({ id: 'v2', w: '語5', r: 'ごれい', lv: 'N4' });
+  const text = require('../scripts/curriculum/render-review.js').renderReview({ outlines: s.outlines, gaps: s.gaps, cands: s.cands, DATA: s.DATA }).replace(/<[^>]+>/g, ' ');
+  const list = text.slice(text.lastIndexOf('同形異讀（還沒放進大綱）'));
+  assert.ok(list.includes('ごろく') && !list.includes('ごれい'));
+});

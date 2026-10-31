@@ -24,9 +24,15 @@ function checkOutline({ outlines = {}, gaps = null, cands, DATA }) {
   const claim = (w, r, L) => { const k = wr(w, r); if (owner.has(k) && owner.get(k) !== L) P(`word in two levels: ${k}`); else owner.set(k, L); };
   const wanted = (L) => cands[L].words.filter(x => x.status === 'new' || x.status === 'variant').map(x => x.w);
   const homo = homographs(cands);
+  // words kept per level (themes, added, gap words), and the app's own: another reading kept by the app or a lower level is placed
+  const kept = { N5: [], N4: [], N3: [], N2: [], N1: [] };
+  if (gaps) ['N5', 'N4'].forEach(L => { const g = gaps[L] || {}; kept[L] = (g.words || []).concat(g.added || []).map(x => wr(x.w, x.r)); });
+  LEVELS.forEach(L => { const o = outlines[L]; if (o) kept[L] = o.themes.flatMap(t => t.words.map(([w, r]) => wr(w, r))).concat((o.added || []).map(x => wr(x.w, x.r))); });
+  const keptUpTo = (L) => { const order = ['N5', 'N4', 'N3', 'N2', 'N1']; const out = new Set(DATA.VOCAB.map(v => wr(v.w, v.r)));
+    order.slice(0, order.indexOf(L) + 1).forEach(x => kept[x].forEach(p => out.add(p))); return out; };
   // every candidate spelling and every other reading of one (a homograph) sits in a theme or is dropped, each word once
   const placed = (L, want, listed, extra = new Set(), noun = 'word') => {
-    const spellings = new Set(listed.map(x => x.w)); const pairs = new Set(listed.map(x => wr(x.w, x.r)));
+    const spellings = new Set(listed.map(x => x.w)); const pairs = new Set(listed.map(x => wr(x.w, x.r)).concat([...keptUpTo(L)]));
     const others = homo.filter(h => h.L === L); const otherPairs = new Set(others.map(h => wr(h.w, h.r)));
     want.forEach(w => { if (!spellings.has(w)) P(`${L} ${noun} missing: ${w}`); });
     others.forEach(h => { if (!pairs.has(wr(h.w, h.r))) P(`${L} ${noun === 'word' ? 'homograph' : 'gap homograph'} missing: ${wr(h.w, h.r)}`); });

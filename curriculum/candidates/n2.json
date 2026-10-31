@@ -2390,6 +2390,7 @@
   {"p":"〜まい","key":"まい","src":["openjlpt"],"ids":{"openjlpt":"mai"},"status":"dup","dupOf":"N3"},
   {"p":"〜（よ）うではないか","key":"うではないか","src":["openjlpt"],"ids":{"openjlpt":"you-de-wa-nai-ka"},"status":"new"},
   {"p":"〜もかまわず","key":"もかまわず","src":["openjlpt"],"ids":{"openjlpt":"mo-kamawazu"},"status":"new"},
+  {"p":"〜上","key":"上#jou","src":["openjlpt"],"ids":{"openjlpt":"jou"},"status":"new"},
   {"p":"〜おそれがある","key":"おそれがある","src":["openjlpt"],"ids":{"openjlpt":"osore-ga-aru"},"status":"new"},
   {"p":"〜だけあって / 〜だけに","key":"だけあって/だけに","src":["openjlpt"],"ids":{"openjlpt":"dake-atte-dake-ni"},"status":"new"},
   {"p":"〜だけのことはある","key":"だけのことはある","src":["openjlpt"],"ids":{"openjlpt":"dake-no-koto-wa-aru"},"status":"new"},

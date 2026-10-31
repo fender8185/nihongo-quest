@@ -16,7 +16,7 @@ const table = (head, rows) => rows.length ? `<div class="tablebox"><table><thead
 const homoTable = (list, entries) => { const has = new Set(entries.map(x => `${x.w}|${x.r}`)); const left = list.filter(h => !has.has(`${h.w}|${h.r}`));
   return `<h2>同形異讀（還沒放進大綱）</h2><p class="note">同一個寫法的其他讀音也是要收的字（例如 金 きん）。下面是還沒放進主題、也還沒篩掉的。</p>${table(['字', '這一筆的讀音', '已收的讀音'], left.map(h => [h.w, h.r, `${h.firstL} ${h.firstR}`]))}`; };
 
-function levelView(o, homo = []) {
+function levelView(o, homo = [], kept = []) {
   const words = o.themes.reduce((s, t) => s + t.words.length, 0);
   const points = o.units.reduce((s, u) => s + u.points.length, 0);
   const days = Math.ceil((words + o.kanji.length + points * 6) / 15);
@@ -35,10 +35,10 @@ function levelView(o, homo = []) {
   <ol class="kanji" lang="ja">${o.kanji.map(k => `<li>${esc(k)}</li>`).join('')}</ol>
   <h2>篩掉的字</h2>${table(['字', '讀音', '原因'], (o.dropped || []).map(x => [x.w, x.r, x.why]))}
   <h2>補的字</h2>${table(['字', '讀音', '意思', '主題', '原因'], (o.added || []).map(x => [x.w, x.r, x.m, x.c, x.why]))}
-  ${homoTable(homo, o.themes.flatMap(t => t.words.map(([w, r]) => ({ w, r }))).concat(o.dropped || []))}`;
+  ${homoTable(homo, kept)}`;
 }
 
-function gapsView(gaps, homo = []) {
+function gapsView(gaps, homo = [], kept = []) {
   if (!gaps) return '<p class="none">還沒整理。</p>';
   return ['N5', 'N4'].map(L => {
     const g = gaps[L] || { words: [], dropped: [] };
@@ -49,17 +49,22 @@ function gapsView(gaps, homo = []) {
     <div class="themes">${[...byTheme].map(([c, list]) => `<details class="theme" open><summary><span class="tname">${esc(c)}</span><span class="tcount">${list.length} 字</span></summary><ul class="words">${list.map(x => word(x.w, x.r, x.m)).join('')}</ul></details>`).join('')}</div>
     <h3>篩掉的字</h3>${table(['字', '讀音', '原因'], g.dropped.map(x => [x.w, x.r, x.why]))}
     <h3>補的字</h3>${table(['字', '讀音', '意思', '主題', '原因'], added.map(x => [x.w, x.r, x.m, x.c, x.why]))}`;
-  }).join('') + homoTable(homo.filter(h => h.L === 'N5' || h.L === 'N4'), ['N5', 'N4'].flatMap(L => { const g = gaps[L] || {}; return (g.words || []).concat(g.dropped || [], g.added || []); }));
+  }).join('') + homoTable(homo.filter(h => h.L === 'N5' || h.L === 'N4'), kept);
 }
 
 // notes: the open questions for the user, shown above the tabs ([{ q, body }], from curriculum/review-notes.json)
-function renderReview({ outlines = {}, gaps = null, cands = {}, notes = [] }) {
+function renderReview({ outlines = {}, gaps = null, cands = {}, notes = [], DATA = null }) {
+  // words kept by the app and up to each level: another reading kept there is not "still to place"
+  const order = ['N5', 'N4', 'N3', 'N2', 'N1']; const keptAt = { N5: [], N4: [], N3: [], N2: [], N1: [] };
+  if (gaps) ['N5', 'N4'].forEach(L => { const g = gaps[L] || {}; keptAt[L] = (g.words || []).concat(g.added || [], g.dropped || []); });
+  LEVEL_VIEWS.forEach(([, L]) => { const o = outlines[L]; if (o) keptAt[L] = o.themes.flatMap(t => t.words.map(([w, r]) => ({ w, r }))).concat(o.added || [], o.dropped || []); });
+  const upTo = (L) => ((DATA && DATA.VOCAB) || []).concat(...order.slice(0, order.indexOf(L) + 1).map(x => keptAt[x]));
   const count = (L) => { const o = outlines[L]; return o ? `${fmt(o.themes.reduce((s, t) => s + t.words.length, 0))} 字` : '還沒整理'; };
   const tabs = [['gaps', 'N5／N4 缺口', gaps ? `${(gaps.N5 || { words: [] }).words.length + (gaps.N4 || { words: [] }).words.length} 字` : '還沒整理']]
     .concat(LEVEL_VIEWS.map(([id, L]) => [id, L, count(L)]));
   const homo = homographs(cands);
-  const views = [`<section class="view" id="v-gaps" data-view="gaps" aria-label="N5／N4 缺口">${gapsView(gaps, homo)}</section>`]
-    .concat(LEVEL_VIEWS.map(([id, L]) => `<section class="view" id="v-${id}" data-view="${id}" aria-label="${L}">${outlines[L] ? levelView(outlines[L], homo.filter(h => h.L === L)) : `<p class="none">${L} 還沒整理。</p>`}</section>`));
+  const views = [`<section class="view" id="v-gaps" data-view="gaps" aria-label="N5／N4 缺口">${gapsView(gaps, homo, upTo('N4'))}</section>`]
+    .concat(LEVEL_VIEWS.map(([id, L]) => `<section class="view" id="v-${id}" data-view="${id}" aria-label="${L}">${outlines[L] ? levelView(outlines[L], homo.filter(h => h.L === L), upTo(L)) : `<p class="none">${L} 還沒整理。</p>`}</section>`));
   const cand = (L) => cands[L] ? cands[L].words.filter(x => x.status === 'new').length : 0;
   return `<title>N3–N1 課程大綱</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -194,7 +199,7 @@ if (require.main === module) {
   const { loadSources, loadData, buildCandidates } = require('./build-candidates.js');
   const outlines = {}; LEVEL_VIEWS.forEach(([id, L]) => { const o = read(`${id}.json`); if (o) outlines[L] = o; });
   const cands = buildCandidates(loadSources(path.join(root, 'curriculum', 'sources')), loadData(root));
-  fs.writeFileSync(out, renderReview({ outlines, gaps: read('gaps-n5n4.json'), cands, notes: read('review-notes.json') || [] }));
+  fs.writeFileSync(out, renderReview({ outlines, gaps: read('gaps-n5n4.json'), cands, notes: read('review-notes.json') || [], DATA: loadData(root) }));
   console.log(`wrote ${out}`);
 }
 

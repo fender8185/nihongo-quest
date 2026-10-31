@@ -4740,6 +4740,7 @@
   {"p":"～ところを","key":"ところを","src":["waller"],"ids":{"waller":"314"},"status":"new"},
   {"p":"～にそくして","key":"にそくして","src":["waller"],"ids":{"waller":"315"},"status":"new"},
   {"p":"～とはいえ","key":"とはいえ","src":["waller","openjlpt"],"ids":{"waller":"316","openjlpt":"to-wa-ie"},"status":"new"},
+  {"p":"～が早いか","key":"が早いか#317","src":["waller"],"ids":{"waller":"317"},"status":"new"},
   {"p":"～ものを","key":"ものを","src":["waller","openjlpt"],"ids":{"waller":"318","openjlpt":"mono-o"},"status":"new"},
   {"p":"～ようが","key":"ようが","src":["waller"],"ids":{"waller":"319"},"status":"new"},
   {"p":"～いかん","key":"いかん","src":["waller"],"ids":{"waller":"320"},"status":"new"},
