@@ -948,7 +948,8 @@ const APP_VERSION = '1.0.26';   // keep equal to the version in sw.js CACHE ('nq
 const CHANGELOG = [
   { v: '1.0.26', date: '2026-10-31', items: [
     '學習分析的總進度可以切換四種範圍：總進度（單字、文法、聽力＋閱讀、漢字）、入門（假名、入門單字、入門文法）、N5、N4，每個題目只算在它的級別裡。聽力和閱讀答過算初識、答對 1 次算熟悉、答對 2 次算熟練（答對後要隔 30 天才會再出）。',
-    '過去 7 天的練習量改成三個數字（7 天合計、每天平均、比前 7 天多或少）加一條趨勢線和各類占比，點每天的點可以看那天的明細。正確率改看最近 100 題，跟今日頁決定新題數用的一樣。'
+    '過去 7 天的練習量改成三個數字（7 天合計、每天平均、比前 7 天多或少）加一條趨勢線和各類占比，點每天的點可以看那天的明細。正確率改看最近 100 題，跟今日頁決定新題數用的一樣。',
+    '設定 › 學習的「考試」可以選要考 N5 還是 N4（預設 N4），旁邊一樣是考試日期。'
   ] },
   { v: '1.0.25', date: '2026-10-31', items: [
     '設定拿掉「每組練習題數」和「出題順序」：今日練習和假名練習固定一組 20 題，單字與文法一律交錯出。一組做太久注意力會往下掉，分成小組也不會少學，當天的題目一樣多；以前設定過的題數和順序不再有作用。'
@@ -1170,6 +1171,7 @@ function defaultSettings() {
     includeImported: 'words',  // off | words | all
     theme: 'dark',
     examDate: '2027-07-04',
+    examLevel: 'N4',         // the JLPT level the exam date is for: 學習分析 and the exam countdown project against it (1.0.26)
     duolingoScore: 22,
     examInstant: false,
     examFormal: false,
@@ -1258,6 +1260,7 @@ function normalizeState(s) {
   ['autoSpeak', 'listening', 'audioOptions', 'retention'].forEach(k => { delete out.settings[k]; });
   // 1.0.25: neither are 每組練習題數 (SESSION_SIZE) and 出題順序 (words and grammar always mixed)
   ['sessionSize', 'order'].forEach(k => { delete out.settings[k]; });
+  if (!['N5', 'N4'].includes(out.settings.examLevel)) out.settings.examLevel = 'N4';
   delete out.preDoneDismissed; delete out.preFinished;
   ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt', 'stageTests'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
@@ -7401,8 +7404,9 @@ function settingsLearn() {
   return `
     ${boolRow('showZh', '題目下方直接顯示中文', '關閉時可按 T 或點「顯示中文」再看。需要中文才能判斷的題目仍會顯示。')}
     ${selRow('includeImported', '每日練習包含自訂字卡', '句子型的匯入卡片比較難，預設只加入單字型的。', [['words', '只加入單字型'], ['all', '全部加入'], ['off', '不加入']])}
-    <div class="setting-row"><div><div class="label">考試日期</div><div class="hint">用來計算倒數與每單元可用天數。</div></div>
-      <input class="input" type="date" style="width:auto" value="${esc(s.examDate)}" data-change="setting" data-key="examDate" data-type="date" /></div>`;
+    <div class="setting-row"><div><div class="label">考試</div><div class="hint">學習分析和模擬考頁會照這個級別和日期推估進度。</div></div>
+      <div class="row"><select class="select" style="width:auto" data-change="setting" data-key="examLevel">${['N5', 'N4'].map(v => `<option value="${v}" ${s.examLevel === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
+      <input class="input" type="date" style="width:auto" value="${esc(s.examDate)}" data-change="setting" data-key="examDate" data-type="date" /></div></div>`;
 }
 
 function settingsSpeech() {

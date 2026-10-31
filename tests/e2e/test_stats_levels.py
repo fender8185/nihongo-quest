@@ -86,6 +86,22 @@ def test_accuracy_tile_reads_the_last_hundred_answers(b):
       const l = [...document.querySelectorAll('.stat-l')].find(x => /正確率/.test(x.textContent)); return JSON.stringify([l.textContent, l.previousElementSibling.textContent]); })()"""
     assert json.loads(ev(b, js)) == ['最近 100 題正確率', '60%']
 
+# ---- 設定 › 學習 › 考試: N5 or N4 and the date ----
+def test_exam_row_has_the_level_and_the_date(b):
+    js = """(() => { openSettings('learn'); const m = document.querySelector('.modal'); const sel = m.querySelector('select[data-key=examLevel]');
+      const row = sel && sel.closest('.setting-row'); const out = { opts: sel ? [...sel.options].map(o => o.value) : null, value: sel && sel.value, date: !!(row && row.querySelector('input[data-key=examDate]')),
+        label: row && row.querySelector('.label').textContent, hint: row && row.querySelector('.hint').textContent }; closeModal(true); return JSON.stringify(out); })()"""
+    assert json.loads(ev(b, js)) == {'opts': ['N5', 'N4'], 'value': 'N4', 'date': True, 'label': '考試', 'hint': '學習分析和模擬考頁會照這個級別和日期推估進度。'}
+
+def test_exam_level_is_n4_unless_n5_was_saved(b):
+    js = """JSON.stringify([defaultSettings().examLevel, ...[{ examLevel: 'N3' }, { examLevel: 'N5' }, {}].map(s => normalizeState({ settings: s }).settings.examLevel)])"""
+    assert json.loads(ev(b, js)) == ['N4', 'N4', 'N5', 'N4']
+
+def test_picking_n5_saves_it(b):
+    js = """(() => { openSettings('learn'); const sel = document.querySelector('select[data-key=examLevel]'); sel.value = 'N5'; sel.dispatchEvent(new Event('change', { bubbles: true }));
+      closeModal(true); return state.settings.examLevel; })()"""
+    assert ev(b, js) == 'N5'
+
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
