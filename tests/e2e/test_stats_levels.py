@@ -131,11 +131,11 @@ PACE = """const seen = (list) => { const d = todayStr(); list.forEach(x => { sta
   const g5 = REG.grammar.filter(g => DATA.UNITS.some(u => u.id === g.u && u.lv === 'N5')).slice(0, 20);
   const T = todayStr(); const sl = (n) => addDays(T, n).replace(/-/g, '/'); const exam = (n) => { state.settings.examDate = addDays(T, n); };"""
 
-def test_course_pace_finds_the_slowest_bank(b):
+def test_course_pace_counts_each_levels_leftovers(b):   # 1.0.32: level after level (was: the slowest bank)
     js = "(() => { " + FRESH + PACE + """ pace(10); exam(51); const out = [];
       only(w5); out.push(coursePace().days); state.srs = {}; only(w5.concat(w4)); out.push(coursePace().days); state.srs = {}; only(w5.concat(w4, g5)); out.push(coursePace().days);
       return JSON.stringify(out); })()"""
-    assert json.loads(ev(b, js)) == [{'N5': 3, 'N4': 3}, {'N5': 3, 'N4': 9}, {'N5': 11, 'N4': 11}]
+    assert json.loads(ev(b, js)) == [{'N5': 3, 'N4': 3}, {'N5': 3, 'N4': 9}, {'N5': 5, 'N4': 11}]   # 30 N5 words + 20 N5 grammar = 5 days, then + 60 N4 words
 
 def test_course_text_when_on_time_and_when_late(b):
     js = "(() => { " + FRESH + PACE + """ pace(10); only(w5.concat(w4, g5)); const out = {}; const run = (n, lv) => { exam(n); state.settings.examLevel = lv; const p = coursePace(); return [p.state, p.need || null, p.plan || null, courseText(p)]; };
@@ -148,7 +148,7 @@ def test_course_text_when_on_time_and_when_late(b):
     assert o['every'][1:3] == [13, {'every': 5}] and o['every'][3].endswith('要趕上，每天約需 13 題新內容（現在約 10 題）：大約每 5 天，做完當天的練習後按 1 次加練就趕得上。'), o['every']
     assert o['twice'][1:3] == [37, {'times': 2}] and o['twice'][3].endswith('要趕上，每天約需 37 題新內容（現在約 10 題）：每天做完當天的練習後按 2 次加練就趕得上。'), o['twice']
     assert o['heavy'][1:3] == [110, {'times': 7, 'heavy': True}] and o['heavy'][3].endswith('要趕上，每天約需 110 題新內容（現在約 10 題），等於每天加練 7 次，太吃力了：可以考慮先考 N5，或把考試日期往後延（JLPT 每年 7 月、12 月各一次）。'), o['heavy']
-    assert '學完 N5 的' in o['heavy5'][3] and o['heavy5'][3].endswith('等於每天加練 7 次，太吃力了：可以考慮把考試日期往後延（JLPT 每年 7 月、12 月各一次）。'), o['heavy5']
+    assert '學完 N5 的' in o['heavy5'][3] and o['heavy5'][3].endswith('等於每天加練 3 次，太吃力了：可以考慮把考試日期往後延（JLPT 每年 7 月、12 月各一次）。')   # 1.0.32: N5 is 50 items, not the slowest bank's 110, o['heavy5']
 
 def test_course_text_for_a_passed_or_close_exam_and_a_finished_level(b):   # Review Focus 2: 21 days is close, 22 is not
     js = "(() => { " + FRESH + PACE + """ pace(10); const out = {}; const run = (n, lv) => { exam(n); state.settings.examLevel = lv; const p = coursePace(); return [p.state, courseText(p)]; };
@@ -201,7 +201,7 @@ def test_exam_countdown_follows_the_target_level(b):
     js = "(() => { " + FRESH + PACE + """ pace(10); exam(26); only(w5.concat(w4, g5)); state.settings.examLevel = 'N5'; saveState(); location.hash = '#/exam'; route(); const v = document.getElementById('view');
       return JSON.stringify({ level: v.textContent.includes(`距離 ${sl(26)} JLPT N5`), same: document.querySelector('.hero-advice').textContent === courseText(coursePace()), units: /每個單元/.test(v.textContent),
         chip: [...v.querySelectorAll('.card')].find(x => /考試倒數/.test(x.textContent)).querySelector('.chip').textContent }); })()"""
-    assert json.loads(ev(b, js)) == {'level': True, 'same': True, 'units': False, 'chip': '稍慢'}
+    assert json.loads(ev(b, js)) == {'level': True, 'same': True, 'units': False, 'chip': '趕得上'}   # 1.0.32: N5's 50 items take 5 days, the three weeks before the exam leave 5
 
 def test_ai_advice_names_the_target_level(b):
     js = "(async () => { " + FRESH + """ state.settings.examLevel = 'N5'; let prompt = ''; isAiConfigured = () => true; callAi = async (p) => { prompt = p; return '- 好'; };
@@ -267,6 +267,11 @@ def test_the_1_0_26_changelog_says_what_changed(b):
     items = json.loads(ev(b, "JSON.stringify((CHANGELOG.find(x => x.v === '1.0.26') || {}).items || [])"))
     text = ''.join(items)
     assert all(s in text for s in ['總進度', '入門', 'N5', 'N4', '過去 7 天', '最近 100 題', '課程進度', '加練', '考試']), items
+
+# ---- 1.0.32: the course pace adds the levels one after another (each level's leftovers ÷ new items a day) ----
+def test_course_pace_adds_the_levels_one_after_another(b):
+    js = "(() => { const p = coursePace(); return JSON.stringify({ n5: p.days.N5 === Math.ceil(p.left.N5 / p.perDay), n4: p.days.N4 === Math.ceil(p.left.N4 / p.perDay) }); })()"
+    r = json.loads(ev(b, js)); assert r == {'n5': True, 'n4': True}, r
 
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

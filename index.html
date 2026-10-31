@@ -3478,6 +3478,11 @@ function grammarPause() {
   const next = DATA.UNITS.find(u => COURSE_LEVELS.indexOf(courseLevel(u.lv)) > COURSE_LEVELS.indexOf(L));
   return next ? { L, v: x.v, k: x.k, next: Number(next.id.slice(1)) } : null;
 }
+function grammarPauseText(gp) {
+  const parts = [gp.v ? `單字還剩 ${gp.v} 個` : '', gp.k ? `漢字還剩 ${gp.k} 個` : ''].filter(Boolean).join('、');
+  return `新文法先停：${gp.L} ${parts}，學完就進第 ${gp.next} 單元。`;
+}
+function levelLeftText(L) { const x = levelLeft(L); return [x.v ? `單字 ${x.v}` : '', x.k ? `漢字 ${x.k}` : '', x.g ? `文法 ${x.g} 題` : ''].filter(Boolean).join('、'); }
 function n4WordsOpen() { return COURSE_LEVELS.indexOf(curLevel()) >= COURSE_LEVELS.indexOf('N4'); }   /* level-literal-ok: renamed in the 1.0.33 generalization */
 function n5WordsLeft() {   // PRE_N5 and N5 words not yet seen: both must be gone before N4 opens by itself
   let n = 0;
@@ -3732,7 +3737,8 @@ function computeDailyPlan(size = SESSION_SIZE) {
     newV: fresh.v, newG: fresh.g, newK: fresh.k, newA: fresh.a, newC }, extrasPlan(curIdx));
   plan.remaining = PLAN_LISTS.reduce((sum, n) => sum + plan[n].length, 0);
   plan.relearnN = plan.dueV.concat(plan.dueG).filter(x => onLadder(x.key)).length;   // reviews that are missed items on the ladder (shown as 其中錯題)
-  return Object.assign(plan, { note, size, n4Open, n: nc.n, split: { a: fresh.a.length, v: fresh.v.length, g: fresh.g.length, k: fresh.k.length } });
+  const gp = grammarPause();
+  return Object.assign(plan, { note: [note, gp ? grammarPauseText(gp) : ''].filter(Boolean).join(' '), size, n4Open, n: nc.n, split: { a: fresh.a.length, v: fresh.v.length, g: fresh.g.length, k: fresh.k.length } });
 }
 
 // 今天的清單: worked out the first time it is needed each day — again only when the start gets chosen or the stage changes
@@ -5349,6 +5355,7 @@ function renderCourse(view) {
       <div><div class="page-title">課程</div><div class="page-sub">四個階段：入門與 18 個單元（每單元約兩週）。整體完成度 ${cp.pct}%</div></div>
       <button type="button" class="btn" data-act="open-level">依程度選擇起點</button>
     </div>
+    ${(() => { const gp = grammarPause(); return gp ? `<div class="plan-note">${esc(grammarPauseText(gp))}</div>` : ''; })()}
     ${LAST_BULK_MARK ? `<div class="banner"><div class="grow">已把 ${LAST_BULK_MARK.changed} 個項目標成「四顆」。重新整理後就不能復原了。</div><button type="button" class="btn btn-sm" data-act="bulk-mark-undo">復原</button></div>` : ''}
     ${cards}`;
   view.querySelectorAll('details.stage-card').forEach(d => d.addEventListener('toggle', () => { courseOpen[d.dataset.stage] = d.open; }));
@@ -5790,7 +5797,7 @@ function renderVocab(view, tab, params) {
     </div>`;
   }
   view.innerHTML = `
-    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">今天待複習 ${vs.due} 張・入門 熟悉 ${vs.PRE_N5.learned}/${vs.PRE_N5.total}・N5 熟悉 ${vs.N5.learned}/${vs.N5.total}・${vs.n5Left && !n4WordsOpen() ? `N4：N5 單字都學過一次後開始（還剩 ${vs.n5Left} 個）` : `N4 ${vs.n5Left ? '已開放・' : ''}熟悉 ${vs.N4.learned}/${vs.N4.total}`}${vs.custom.total ? `・自訂字卡 ${vs.custom.learned}/${vs.custom.total}` : ''}</div></div>
+    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">今天待複習 ${vs.due} 張・入門 熟悉 ${vs.PRE_N5.learned}/${vs.PRE_N5.total}・N5 熟悉 ${vs.N5.learned}/${vs.N5.total}・${!n4WordsOpen() ? `N4：N5 的單字、漢字、文法都學過一次後開始（還剩${levelLeftText('N5')}）` : `N4 熟悉 ${vs.N4.learned}/${vs.N4.total}`}${vs.custom.total ? `・自訂字卡 ${vs.custom.learned}/${vs.custom.total}` : ''}</div></div>
       <button type="button" class="btn" data-act="start-vocab" data-filter="${deck}">單字測驗・${vocabSessionCount(deck)} 題</button></div>
     ${vocabTabs('cards')}
     <div class="row-wrap mb-3"><span class="small muted">牌組</span><div class="seg">${DECKS.map(([k, l]) => `<button type="button" aria-pressed="${deck === k}" data-act="flash-deck" data-deck="${k}">${l}</button>`).join('')}</div></div>
@@ -8007,8 +8014,8 @@ function gaugeHtml(t, title) {
 }
 // 課程進度 (1.0.26): when the 入門+N5 part and the whole course (N4) would each be learned once, at the recent pace of new
 // items (dailyLogs.fresh over the last 14 days from the first that has it; none, or none new lately: today's new count,
-// `fallback`). New items are split between the banks by what each has left and every bank gives its N5 part first, so the
-// banks shrink in proportion: a bank's N5 part is done ΣU·N/U of the way, the course's when its slowest bank's is.
+// `fallback`). 每一級封死 (1.0.32): new items come one level at a time, so 入門+N5 is learned once after its own leftovers and
+// the whole course after N5's plus N4's.
 // While in 入門 its kana, words and 第 0 週 come first. state: passed | close (under three weeks) | done (the target level
 // all learned) | ok | late (with what a day it takes and how many 加練 rounds that is)
 function coursePace() {
@@ -8030,8 +8037,7 @@ function coursePace() {
   const U = { v: words.length, g: grammar.length, k: kanji.length };
   const N = { v: words.filter(v => itemLevel(v) !== 'N4').length, g: grammar.filter(g => itemLevel(g) === 'N5').length, k: kanji.filter(k => itemLevel(k) !== 'N4').length };
   const sumU = U.v + U.g + U.k;
-  const w5 = Math.max(0, ...['v', 'g', 'k'].filter(i => U[i] > 0).map(i => sumU * N[i] / U[i]));
-  const work = { N5: pre + w5, N4: pre + sumU };
+  const work = { N5: pre + N.v + N.g + N.k, N4: pre + sumU };
   const level = state.settings.examLevel === 'N5' ? 'N5' : 'N4';
   const ep = examPace(); const deadline = addDays(ep.exam, -21); const toDeadline = daysBetween(t, deadline);
   const p = { perDay, fallback, round, level, exam: ep.exam, daysLeft: ep.daysLeft, deadline, left: { N5: pre + N.v + N.g + N.k, N4: pre + sumU }, days: {}, finish: {} };

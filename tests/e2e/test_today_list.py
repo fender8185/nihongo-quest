@@ -216,6 +216,20 @@ def test_history_labels_items_and_presses(b):
     assert new['chip'] == '9 題' and new['text'].startswith('9 題・作答 15 次'), rows
     assert exOnly['chip'] == '測驗 20 題' and '模擬考與測驗 20 題' in exOnly['text'], rows
 
+# ---- 1.0.32 每一級封死: when new grammar waits for the level's words and kanji, the today and course pages say so ----
+def test_today_and_course_pages_say_why_new_grammar_paused(b):
+    js = """(() => { const t = todayStr(); const keep = JSON.stringify({ srs: state.srs, u: state.completedUnits, c: state.currentUnit, st: state.stage });
+      state.srs = {}; state.stage = 'main'; const rec = () => ({ b: 2, due: addDays(t, 30), n: 3, ok: 3, ng: 0, s: 20, d: 5, last: addDays(t, -5), intro: addDays(t, -60), f: {} });
+      REG.vocab.filter(v => v.builtin && v.lv !== 'N4').slice(38).forEach(v => { state.srs[v.key] = rec(); });
+      REG.kanji.filter(k => k.lv !== 'N4').forEach(k => { state.srs[k.key] = rec(); });
+      state.completedUnits = DATA.UNITS.filter(u => u.lv === 'N5').map(u => u.id); state.currentUnit = 'm6'; DAILY_CACHE = null; delete state.today.plan;
+      const want = '新文法先停：N5 單字還剩 38 個，學完就進第 7 單元。';
+      const note = computeDailyPlan().note; location.hash = '#/course'; route(); const course = document.getElementById('view').textContent.includes(want);
+      location.hash = '#/vocab/cards'; route(); const head = document.querySelector('.page-sub').textContent;   // the 字卡 tab's head
+      const o = JSON.parse(keep); state.srs = o.srs; state.completedUnits = o.u; state.currentUnit = o.c; state.stage = o.st; DAILY_CACHE = null; saveState();
+      return JSON.stringify({ note: note.includes(want), course, head: head.includes('N4：N5 的單字、漢字、文法都學過一次後開始（還剩單字 38）') }); })()"""
+    r = json.loads(ev(b, js)); assert r == {'note': True, 'course': True, 'head': True}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
