@@ -475,19 +475,27 @@ def test_single_words_are_sent_as_kanji_with_the_reading_pinned(b):
     assert r['deepgram'] == r['w'], r
     assert r['speakWord'] == r['w'] and r['speakReading'] == r['r'] and r['replay'] == [r['w'], r['r']], r
 
+# 1.0.24: 配對 takes its other five words from the learned ones; this gives every built-in word of v's part of speech a record
+LEARN_KIND = "((v) => { const t = todayStr(); REG.vocab.filter(x => x.builtin && x.p === v.p && x.key !== v.key && !state.srs[x.key]).forEach(x => { state.srs[x.key] = { b: 2, due: addDays(t, 5), n: 2, ok: 2, ng: 0, st: 2, s: 3, d: 5, last: t, lapse: 0 }; }); })"
+
+# 1.0.24: giving up a matching question answers wrong every word not paired yet; one paired before stays out of the notebook
 def test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong(b):
-    js = """(() => { const v = REG.vocab.find(x => x.builtin && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 3 && x.r.length <= 6 && meaningOptions(x) && recallOptions(x)); srsAnswer(v.key, true);
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 3 && x.r.length <= 6 && meaningOptions(x) && recallOptions(x)); srsAnswer(v.key, true); __L__(v);
       startSession('items', { items: [v, v] }); let e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-spell' }); renderPractice();
       document.querySelector('[data-act=custom-giveup]').click();
       const out = { spellDone: e.done, spellWrong: e.chosen !== e.q.answer, spellShows: document.querySelector('.fb-head').textContent.includes(v.r), f: state.srs[v.key].f['v-spell'] };
       nextQuestion(); e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-match' }); renderPractice();
+      const [pw, pm] = e.q.pairs[1]; document.querySelector(`.match-word[data-w="${pw}"]`).click(); document.querySelector(`.match-meaning[data-m="${pm}"]`).click();
       document.querySelector('[data-act=custom-giveup]').click();
+      const keyOf = (w) => REG.vocab.find(x => x.builtin && x.p === v.p && jaPlain(x.w) === w).key; const inBook = (w) => state.mistakes.some(m => m.key === keyOf(w) && !m.mastered);
       out.matchDone = e.done; out.matchWrong = e.chosen !== e.q.answer; out.revealed = document.querySelectorAll('.match-word.matched').length;
-      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+      out.unpaired = e.q.pairs.filter((p, k) => k !== 1).map(p => inBook(p[0]) && state.srs[keyOf(p[0])].rl === 0); out.paired = inBook(pw);
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__L__', LEARN_KIND)
     out = b.run([("nav", URL), ("wait", READY), ("eval", "location.hash = '#/today'; true"), ("eval", js)])
     r = __import__('json').loads(out[-1])
     assert r['spellDone'] and r['spellWrong'] and r['spellShows'] and r['f'] == [0, 1], r
-    assert r['matchDone'] and r['matchWrong'] and r['revealed'] == 4, r
+    assert r['matchDone'] and r['matchWrong'] and r['revealed'] == 6, r
+    assert r['unpaired'] == [True] * 5 and r['paired'] is False, r
 
 # ---- 2026-10-26: 語音 › 測試連線 shows the provider's real error and a hint ----
 def test_tts_connection_check_reports_the_real_error_and_success(b):
@@ -557,12 +565,12 @@ def test_reaching_the_learned_level_records_the_date(b):
     assert all(x[1] is None for x in r['out'][:r['crossed']]) and r['out'][r['crossed']][1] == r['today'], r
 
 def test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading(b):
-    js = """(() => { const v = REG.vocab.find(x => x.builtin && /[一-龯]/.test(x.w) && x.r && matchPairs(x)); srsAnswer(v.key, true);
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && /[一-龯]/.test(x.w) && x.r); srsAnswer(v.key, true); __L__(v);
       startSession('items', { items: [v] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-match' }); renderPractice();
       window.__spoken = []; window.speak = (t, o) => { __spoken.push([t, o && o.reading]); return Promise.resolve(); };
       const w = document.querySelector(`.match-word[data-w="${jaPlain(v.w)}"]`); w.click();
       const again = document.querySelector(`.match-word[data-w="${jaPlain(v.w)}"]`); again.click();   // deselect: no second utterance
-      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify({ spoken: __spoken, w: jaPlain(v.w), r: v.r }); })()"""
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify({ spoken: __spoken, w: jaPlain(v.w), r: v.r }); })()""".replace('__L__', LEARN_KIND)
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['spoken'] == [[r['w'], r['r']]], r
@@ -1195,6 +1203,30 @@ def test_a_wrong_order_marks_the_misplaced_pieces_red(b):
     assert r['color'] == r['badRgb'], r
     assert not any(r['gaveUpReds']) and r['right'] and not any(r['rightReds']), r
 
+# 1.0.24: an order item has no other format, so its 再練一次 copy reused the question with the two options shuffled; a tapped
+# question answers option 0 when right, so half the copies graded the right order wrong and a wrong order right (Math.random
+# is pinned to the shuffle that put the sentence second)
+def test_a_retry_copy_of_an_order_item_grades_the_right_order_as_right(b):
+    js = """(() => { const g = REG.grammar.find(x => x.t === 'order' && new Set(x.parts).size === x.parts.length);
+      const tap = (e, text) => ACTIONS['order-tap']({ dataset: { i: String(e.q.tiles.indexOf(text)) } });
+      const out = {};
+      for (const second of ['right', 'wrong']) {
+        startSession('items', { items: [g] }); let e = currentEntry(); renderPractice();
+        g.parts.slice().reverse().forEach(p => tap(e, p));   // the first answer is wrong: a 再練一次 copy is queued
+        const orig = e.q; const rnd = Math.random; Math.random = () => 0.1;
+        try { nextQuestion(); } finally { Math.random = rnd; }
+        e = currentEntry(); renderPractice();
+        (second === 'right' ? g.parts : g.parts.slice().reverse()).forEach(p => tap(e, p));
+        out[second] = { requeued: !!e.requeued, custom: e.q.custom, marked: e.chosen === e.q.answer ? 'right' : 'wrong', okBox: !!document.querySelector('.feedback.ok'),
+          answerIsSentence: e.q.options[e.q.answer].text === e.q.fullJp, origKept: orig.options[0].text === orig.fullJp };
+        SESSION = null; document.body.classList.remove('practicing'); delete state.srs[g.key]; state.mistakes = state.mistakes.filter(m => m.key !== g.key);
+      }
+      saveState(); return JSON.stringify(out); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
+    r = json.loads(out[-1])
+    assert r['right'] == {'requeued': True, 'custom': 'g-order', 'marked': 'right', 'okBox': True, 'answerIsSentence': True, 'origKept': True}, r
+    assert r['wrong'] == {'requeued': True, 'custom': 'g-order', 'marked': 'wrong', 'okBox': False, 'answerIsSentence': True, 'origKept': True}, r
+
 # 1.0.22: a kanji question has no sentence, so nothing was read once it was answered; it reads its example word now
 # (the reading asked, or the first example's), the same text 發音 plays
 def test_a_kanji_question_reads_its_example_word_once_answered(b):
@@ -1645,7 +1677,7 @@ if __name__ == "__main__":
              test_stats_projects_the_finish_date_from_the_recent_pace,
              test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
-             test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_wrong_order_marks_the_misplaced_pieces_red, test_a_kanji_question_reads_its_example_word_once_answered, test_options_of_one_question_share_one_font_size, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
+             test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_wrong_order_marks_the_misplaced_pieces_red, test_a_retry_copy_of_an_order_item_grades_the_right_order_as_right, test_a_kanji_question_reads_its_example_word_once_answered, test_options_of_one_question_share_one_font_size, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
              test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box,
              test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_hides_kana_drills,
              test_a_missed_listening_or_reading_item_gets_no_retry_copy_in_the_session, test_settings_drop_the_switches_the_app_now_decides, test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off,

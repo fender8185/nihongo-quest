@@ -453,27 +453,148 @@ def test_wrong_spelling_shows_the_right_reading_and_a_placed_kana_taps_back(b):
     assert len(r['typed1']) == 1 and r['typed2'] == '' and r['noBack'] and r['freed'] and r['done'] and not r['ok'] and r['showsRight'], r
     assert r['piecesAfter'] == 0, r   # answered: the line is plain text
 
-def test_matching_question_pairs_four_words_with_their_meanings(b):
-    js = """(() => { const v = __W__; srsAnswer(v.key, true);
+# 1.0.24: 配對 takes its other five words from the learned ones; this gives every built-in word of v's part of speech a record
+LEARN_KIND = "((v) => { const t = todayStr(); REG.vocab.filter(x => x.builtin && x.p === v.p && x.key !== v.key && !state.srs[x.key]).forEach(x => { state.srs[x.key] = { b: 2, due: addDays(t, 5), n: 2, ok: 2, ng: 0, st: 2, s: 3, d: 5, last: t, lapse: 0 }; }); })"
+# 花 and five nature nouns, all with different meanings and readings; 鼻 also reads はな and 食べる is a verb
+MATCH_SET = """const id = (i) => REG.byKey.get('v:' + i); const t = todayStr();
+      const rec = () => ({ b: 3, due: addDays(t, 5), n: 3, ok: 3, ng: 0, st: 3, s: 8, d: 5, last: addDays(t, -2), lapse: 0, f: {} });
+      const T = id('n5a-150'), P = ['n5a-153', 'n5a-154', 'n5a-147', 'n5a-156', 'n5a-140'].map(id), homo = id('n5a-127'), verb = id('n5c-067');"""
+
+def test_matching_question_pairs_six_words_with_their_meanings(b):
+    js = """(() => { const v = __W__; srsAnswer(v.key, true); __L__(v);
       startSession('items', { items: [v] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-match' }); renderPractice();
       const q = e.q; const out = { fmt: q.fmt, pairs: q.pairs.length, hasTarget: q.pairs.some(p => p[0] === jaPlain(v.w) && p[1] === v.m), words: document.querySelectorAll('.match-word').length, meanings: document.querySelectorAll('.match-meaning').length, opts: document.querySelectorAll('.opt').length };
-      // one wrong tap first, then match everything
-      const w0 = document.querySelector('.match-word'); w0.click(); const wrongM = [...document.querySelectorAll('.match-meaning')].find(m => m.dataset.m !== q.pairs.find(p => p[0] === w0.dataset.w)[1]); wrongM.click();
+      // a wrong tap on the word itself first, then match everything
+      const w0 = document.querySelector(`.match-word[data-w="${jaPlain(v.w)}"]`); w0.click(); const wrongM = [...document.querySelectorAll('.match-meaning')].find(m => m.dataset.m !== v.m); wrongM.click();
       out.afterWrong = document.querySelectorAll('.match-word.matched').length;
       for (const [w, m] of q.pairs) { document.querySelector(`.match-word[data-w="${w}"]`).click(); document.querySelector(`.match-meaning[data-m="${m}"]`).click(); }
       out.matched = document.querySelectorAll('.match-word.matched').length; out.done = e.done; out.ok = e.chosen === q.answer; out.f = state.srs[v.key].f['v-match'];
-      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__W__', SPELL_WORD)
+      out.book = state.mistakes.some(m => m.key === v.key && !m.mastered);
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__W__', SPELL_WORD).replace('__L__', LEARN_KIND)
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
-    assert r['fmt'] == 'v-match' and r['pairs'] == 4 and r['hasTarget'] and r['words'] == 4 and r['meanings'] == 4 and r['opts'] == 0, r
-    assert r['afterWrong'] == 0 and r['matched'] == 4 and r['done'] and not r['ok'] and r['f'] == [0, 1], r
+    assert r['fmt'] == 'v-match' and r['pairs'] == 6 and r['hasTarget'] and r['words'] == 6 and r['meanings'] == 6 and r['opts'] == 0, r
+    assert r['afterWrong'] == 0 and r['matched'] == 6 and r['done'] and not r['ok'] and r['f'] == [0, 1] and r['book'], r
 
 def test_new_formats_join_the_rotation_after_the_first_sighting(b):
-    js = """(() => { const v = __W__; const fresh = vocabFormats(v).map(x => x[0]); srsAnswer(v.key, true); const seen = vocabFormats(v).map(x => x[0]);
-      return JSON.stringify({ fresh, seen }); })()""".replace('__W__', SPELL_WORD)
+    js = """(() => { const v = __W__; __L__(v); const fresh = vocabFormats(v).map(x => x[0]); srsAnswer(v.key, true); const seen = vocabFormats(v).map(x => x[0]);
+      return JSON.stringify({ fresh, seen }); })()""".replace('__W__', SPELL_WORD).replace('__L__', LEARN_KIND)
     r = json.loads(ev(b, js))
     assert 'v-spell' not in r['fresh'] and 'v-match' not in r['fresh'] and 'v-spell' in r['seen'] and 'v-match' in r['seen'], r
 
-TESTS += [test_kana_spelling_question_is_answered_by_tapping_tiles, test_wrong_spelling_shows_the_right_reading_and_a_placed_kana_taps_back, test_matching_question_pairs_four_words_with_their_meanings, test_new_formats_join_the_rotation_after_the_first_sighting]
+# 1.0.24: six pairs, the word and five learned words of its part of speech, no two read alike (the left column shows kana
+# only); with four such words learned the question is not asked
+def test_matching_takes_five_learned_words_of_its_kind_and_shows_their_kana(b):
+    js = """(() => { __S__
+      [T, ...P.slice(0, 4), homo, verb].forEach(x => { state.srs[x.key] = rec(); });
+      const has = () => vocabFormats(T).map(x => x[0]).includes('v-match');
+      const out = { four: matchPairs(T) === null, fourOffered: has() };
+      state.srs[P[4].key] = rec();
+      out.sets = [...new Set(Array.from({ length: 12 }, () => (matchPairs(T) || []).map(p => p[0]).sort().join('')))]; out.offered = has();
+      startSession('items', { items: [T] }); const e = currentEntry(); e.q = makeVocabQuestion(T, { forceFmt: 'v-match' }); renderPractice();
+      const texts = (sel) => [...document.querySelectorAll(sel)].map(el => el.textContent.trim()).sort().join('');
+      out.left = texts('.match-word'); out.right = texts('.match-meaning');
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__S__', MATCH_SET)
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['four'] and not r['fourOffered'] and r['offered'], r
+    assert r['sets'] == [''.join(sorted('花犬猫山魚雨'))], r
+    assert r['left'] == ''.join(sorted(['はな', 'いぬ', 'ねこ', 'やま', 'さかな', 'あめ'])) and r['right'] == ''.join(sorted('花狗貓山魚雨')), r
+
+# 1.0.24: a word paired wrong is answered wrong on its own (fewer stars, the 1/3/7 ladder, the notebook, 再練一次); the word
+# whose meaning it took is untouched and the target, paired right, counts as right. The session list names that word,
+# 重練答錯的題目 asks it, and 手滑 puts every record back
+def test_matching_puts_only_the_word_paired_wrong_in_the_notebook(b):
+    js = """(() => { __S__
+      [T, ...P].forEach(x => { state.srs[x.key] = rec(); }); saveState();
+      const snap = (x) => JSON.stringify(state.srs[x.key]); const before = [T, ...P].map(snap); const mist = state.mistakes.length;
+      const inBook = (x) => state.mistakes.some(m => m.key === x.key && !m.mastered);
+      const play = () => { startSession('items', { items: [T] }); const e = currentEntry(); e.q = makeVocabQuestion(T, { forceFmt: 'v-match' }); renderPractice();
+        const word = (w) => document.querySelector(`.match-word[data-w="${w}"]`), meaning = (m) => document.querySelector(`.match-meaning[data-m="${m}"]`);
+        word('犬').click(); meaning('貓').click();   // 犬 given 猫's meaning
+        for (const [w, m] of e.q.pairs) { word(w).click(); meaning(m).click(); }
+        return e; };
+      let e = play(); const dog = state.srs[P[0].key], fl = state.srs[T.key], entry = state.mistakes.find(m => m.key === P[0].key) || {};
+      const out = { done: e.done, wrong: e.chosen !== e.q.answer && SESSION.stats.wrong === 1,
+        dog: { rl: dog.rl, book: inBook(P[0]), answer: entry.answer, chose: entry.wrong, retry: SESSION.entries.some(x => x.requeued && x.item === P[0]) }, dogStars: dog.b,
+        untouched: [1, 2, 3, 4].map(k => snap(P[k]) === before[k + 1]),
+        target: { ok: fl.ok, rl: 'rl' in fl, book: inBook(T), retry: SESSION.entries.some(x => x.requeued && x.item === T) },
+        head: document.querySelector('.fb-head').textContent };
+      ACTIONS.slip();
+      out.slip = { records: [T, ...P].map(snap).every((s, k) => s === before[k]), book: state.mistakes.length === mist, retry: SESSION.entries.filter(x => x.requeued).length };
+      play(); SESSION.idx = SESSION.entries.length; renderPractice();
+      out.summary = [...document.querySelectorAll('#view .list-item')].map(el => el.textContent);
+      ACTIONS['retry-wrong'](); out.retryItems = SESSION.entries.map(x => x.item.w);
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__S__', MATCH_SET)
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['done'] and r['wrong'], r
+    assert r['dog'] == {'rl': 0, 'book': True, 'answer': '狗', 'chose': '貓', 'retry': True} and r['dogStars'] <= 1, r
+    assert r['untouched'] == [True] * 4 and r['target'] == {'ok': 4, 'rl': False, 'book': False, 'retry': False}, r
+    assert 'いぬ' in r['head'] and '正確答案' not in r['head'], r
+    assert r['slip'] == {'records': True, 'book': True, 'retry': 0}, r
+    assert len(r['summary']) == 1 and all(s in r['summary'][0] for s in ('犬', '狗', '貓')) and '花' not in r['summary'][0], r
+    assert r['retryItems'] == ['犬'], r
+
+# 1.0.24: a matching question has no sentence of its own: nothing is read once the last pair is made (each word is read as
+# it is tapped), no example is shown or listed, and there is no 例句 or 發音 button; the explanation gives every reading
+def test_matching_reads_and_shows_no_example_sentence(b):
+    js = """(() => { __S__
+      [T, ...P].forEach(x => { state.srs[x.key] = rec(); });
+      startSession('items', { items: [T] }); const e = currentEntry(); e.q = makeVocabQuestion(T, { forceFmt: 'v-match' }); renderPractice();
+      const buttons = () => ({ example: !!document.querySelector('[data-act=speak-example]'), replay: !!document.querySelector('.pr-actions [data-act=replay]') });
+      const before = buttons();
+      window.__spoken = []; window.speak = (t, o) => { __spoken.push(t); return Promise.resolve(); };
+      for (const [w, m] of e.q.pairs) { document.querySelector(`.match-word[data-w="${w}"]`).click(); document.querySelector(`.match-meaning[data-m="${m}"]`).click(); }
+      const why = (document.querySelector('.fb-why') || {}).textContent || '';
+      const out = { done: e.done, ok: e.chosen === e.q.answer, spoken: __spoken.slice().sort(), before, after: buttons(), block: !!document.querySelector('.feedback .example'),
+        listed: e.q.why.includes('例：'), readings: ['はな', 'いぬ', 'ねこ', 'やま', 'さかな', 'あめ'].every(x => why.includes(x)) };
+      ACTIONS.replay(); out.afterReplay = __spoken.length;
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__S__', MATCH_SET)
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['done'] and r['ok'] and r['spoken'] == sorted('花犬猫山魚雨'), r   # the six words as they were tapped, then nothing
+    assert r['before'] == {'example': False, 'replay': False} and r['after'] == {'example': False, 'replay': False} and not r['block'], r
+    assert not r['listed'] and r['readings'] and r['afterReplay'] == 6, r
+
+# 1.0.24 review: 犬 missed on its own, then paired wrong in 花's 配對 together with 猫. 重練答錯的題目 asks each word once;
+# 手滑 on the 配對 puts both records and notebook entries back as they were after 犬's own miss and keeps that miss's 再練一次
+def test_matching_slip_keeps_an_earlier_retry_and_retry_asks_each_word_once(b):
+    js = """(() => { __S__
+      const snap = (x) => JSON.stringify(state.srs[x.key]); const book = (x) => JSON.stringify(state.mistakes.find(m => m.key === x.key) || null);
+      const copies = (x) => SESSION.entries.filter(y => y.requeued && y.item && y.item.key === x.key).length;
+      const word = (w) => document.querySelector(`.match-word[data-w="${w}"]`), meaning = (m) => document.querySelector(`.match-meaning[data-m="${m}"]`);
+      const play = () => {
+        [T, ...P].forEach(x => { state.srs[x.key] = rec(); }); state.mistakes = [];
+        startSession('items', { items: [P[0], T] }); let e = currentEntry(); e.q = makeVocabQuestion(P[0], { forceFmt: 'v-meaning' }); renderPractice();
+        answerCurrent((e.q.answer + 1) % e.q.options.length);
+        const mid = { dog: snap(P[0]), dogBook: book(P[0]), cat: snap(P[1]), n: state.mistakes.length };
+        nextQuestion(); e = currentEntry(); e.q = makeVocabQuestion(T, { forceFmt: 'v-match' }); renderPractice();
+        word('犬').click(); meaning('貓').click(); word('猫').click(); meaning('狗').click();
+        for (const [w, m] of e.q.pairs) { word(w).click(); meaning(m).click(); }
+        return mid; };
+      let mid = play();
+      const out = { dogCopies: copies(P[0]), catCopies: copies(P[1]), book: state.mistakes.length };
+      SESSION.idx = SESSION.entries.length; renderPractice(); ACTIONS['retry-wrong'](); out.retry = SESSION.entries.map(x => x.item.w).sort().join('');
+      mid = play(); ACTIONS.slip();
+      out.slip = { dogCopies: copies(P[0]), catCopies: copies(P[1]), dog: snap(P[0]) === mid.dog, dogBook: book(P[0]) === mid.dogBook, cat: snap(P[1]) === mid.cat, book: state.mistakes.length === mid.n };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__S__', MATCH_SET)
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r['dogCopies'] == 2 and r['catCopies'] == 1 and r['book'] == 2 and r['retry'] == ''.join(sorted('犬猫')), r
+    assert r['slip'] == {'dogCopies': 1, 'catCopies': 0, 'dog': True, 'dogBook': True, 'cat': True, 'book': True}, r
+
+# 1.0.24 review: an encore or 再練一次 asks the one word again, so it is never a 配對 (five other words would ride along);
+# a 配對 answered wrong without a single tap (as some test helpers do) counts the word asked as wrong
+def test_matching_is_never_an_encore_and_an_untapped_wrong_answer_misses_the_word(b):
+    js = """(() => { __S__
+      [T, ...P].forEach(x => { state.srs[x.key] = rec(); });
+      const out = { offered: vocabFormats(T).some(x => x[0] === 'v-match'), encore: Array.from({ length: 60 }, () => (makeVocabQuestion(T, { encore: true }) || {}).fmt).includes('v-match') };
+      startSession('items', { items: [T] }); const e = currentEntry(); e.q = makeVocabQuestion(T, { forceFmt: 'v-match' }); renderPractice();
+      answerCurrent(1);
+      out.untapped = { rl: state.srs[T.key].rl, book: state.mistakes.some(m => m.key === T.key && !m.mastered), retry: SESSION.entries.some(x => x.requeued && x.item === e.item) };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__S__', MATCH_SET)
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r == {'offered': True, 'encore': False, 'untapped': {'rl': 0, 'book': True, 'retry': True}}, r
+
+TESTS += [test_kana_spelling_question_is_answered_by_tapping_tiles, test_wrong_spelling_shows_the_right_reading_and_a_placed_kana_taps_back, test_matching_question_pairs_six_words_with_their_meanings, test_new_formats_join_the_rotation_after_the_first_sighting,
+          test_matching_takes_five_learned_words_of_its_kind_and_shows_their_kana, test_matching_puts_only_the_word_paired_wrong_in_the_notebook, test_matching_reads_and_shows_no_example_sentence,
+          test_matching_slip_keeps_an_earlier_retry_and_retry_asks_each_word_once, test_matching_is_never_an_encore_and_an_untapped_wrong_answer_misses_the_word]
 
 
 # ---- 2026-10-26 (14): review leftovers — furigana known rule, theme list deck button, encore feedback, session counts ----
@@ -576,19 +697,19 @@ def test_every_builtin_word_has_a_usable_second_example(b):
 TESTS += [test_every_builtin_word_has_a_usable_second_example]
 
 # 1.0.22: a question on a word's second example still carries the first: its explanation (and so the notebook entry it
-# writes) lists the question's example and then the other one, not the second example twice (配對 too); a notebook entry
-# saved that way before is mended when the state loads, and nothing else is touched
+# writes) lists the question's example and then the other one, not the second example twice (1.0.24: 配對 lists none); a
+# notebook entry saved that way before is mended when the state loads, and nothing else is touched
 def test_a_question_on_the_second_example_lists_both_and_old_notebook_entries_are_mended(b):
-    js = """(() => { const v = REG.vocab.find(x => x.builtin && x.ex2 && x.exZh && x.exZh2 && usableExamples(x).length === 2 && matchPairs(x));
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && x.ex2 && x.exZh && x.exZh2 && usableExamples(x).length === 2); __L__(v);
       const line = (ex, zh) => '\\n- 例：' + jaPlain(exPlain(ex)) + '（' + zh + '）'; const first = line(v.ex, v.exZh), second = line(v.ex2, v.exZh2);
       const q1 = makeVocabQuestion(v, { forceFmt: 'v-cloze', exIndex: 1 }), q0 = makeVocabQuestion(v, { forceFmt: 'v-cloze', exIndex: 0 }), m1 = makeVocabQuestion(v, { forceFmt: 'v-match', exIndex: 1 });
       const old = vocabWhy(v).replace(first + second, second + second);   // what 1.0.21 wrote for a question on the second example
       const s = normalizeState({ mistakes: [{ id: 'mk_a', key: v.key, cat: '單字', prompt: 'a', answer: 'b', why: old, count: 1 }, { id: 'mk_b', key: 'g:x', cat: '文法', prompt: 'c', answer: 'd', why: 'x' + second + second, count: 1 }] });
-      return JSON.stringify({ why1: q1.why.endsWith(second + first), why0: q0.why.endsWith(first + second), match1: m1.why.endsWith(second + first), itemEx: q1.item.ex === v.ex2 && q1.item.ex2 === v.ex,
+      return JSON.stringify({ why1: q1.why.endsWith(second + first), why0: q0.why.endsWith(first + second), matchNone: m1.fmt === 'v-match' && !m1.why.includes('例：'), itemEx: q1.item.ex === v.ex2 && q1.item.ex2 === v.ex,
         fullJp: q1.fullJp === exPlain(v.ex2), mended: s.mistakes[0].why === vocabWhy(v).replace(first + second, second + first), grammarKept: s.mistakes[1].why === 'x' + second + second,
-        twice: normalizeState(s).mistakes[0].why === s.mistakes[0].why }); })()"""
+        twice: normalizeState(s).mistakes[0].why === s.mistakes[0].why }); })()""".replace('__L__', LEARN_KIND)
     r = json.loads(ev(b, js))
-    assert r == {'why1': True, 'why0': True, 'match1': True, 'itemEx': True, 'fullJp': True, 'mended': True, 'grammarKept': True, 'twice': True}, r
+    assert r == {'why1': True, 'why0': True, 'matchNone': True, 'itemEx': True, 'fullJp': True, 'mended': True, 'grammarKept': True, 'twice': True}, r
 
 TESTS += [test_a_question_on_the_second_example_lists_both_and_old_notebook_entries_are_mended]
 
@@ -630,9 +751,9 @@ def test_flashcard_i_know_is_not_offered_again_once_vouched(b):
 
 TESTS += [test_i_know_gives_five_stars_and_mastery_waits_for_the_spelling, test_i_know_this_word_button_is_on_the_word_list_and_the_practice_feedback, test_flashcard_i_know_is_not_offered_again_once_vouched]
 
-# ---- 2026-10-27: matching — a wrong pair flashes red, the feedback explains all four pairs ----
+# ---- 2026-10-27: matching — a wrong pair flashes red, the feedback explains every pair ----
 def test_matching_flashes_a_wrong_pair_and_explains_every_pair_afterwards(b):
-    js = """(() => { const v = __W__; srsAnswer(v.key, true);
+    js = """(() => { const v = __W__; srsAnswer(v.key, true); __L__(v);
       startSession('items', { items: [v] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-match' }); renderPractice(); const q = e.q;
       const w0 = document.querySelector('.match-word'); const w = w0.dataset.w; w0.click();
       const wrongM = [...document.querySelectorAll('.match-meaning')].find(m => m.dataset.m !== q.pairs.find(p => p[0] === w)[1]); const wm = wrongM.dataset.m; wrongM.click();
@@ -640,7 +761,7 @@ def test_matching_flashes_a_wrong_pair_and_explains_every_pair_afterwards(b):
       for (const [pw, pm] of q.pairs) { document.querySelector(`.match-word[data-w="${pw}"]`).click(); document.querySelector(`.match-meaning[data-m="${pm}"]`).click(); }
       const fb = (document.querySelector('.feedback') || {}).textContent || '';
       out.allWords = q.pairs.every(p => fb.includes(p[0]) && fb.includes(p[1])); out.done = e.done;
-      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__W__', SPELL_WORD)
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__W__', SPELL_WORD).replace('__L__', LEARN_KIND)
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
     assert r['flashW'] and r['flashM'] and r['flashOthers'] == 2, r
     assert r['done'] and r['allWords'], r

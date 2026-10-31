@@ -939,12 +939,17 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.23';   // keep equal to the version in sw.js CACHE ('nq-v1.0.23'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.24';   // keep equal to the version in sw.js CACHE ('nq-v1.0.24'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.24', date: '2026-10-31', items: [
+    '配對題改成六組，左邊只顯示假名（看漢字就猜得到意思），同一題不會有讀音一樣的字；另外五個字只從學過的同詞性單字挑，學得還不夠就先不出配對。配完不唸也不列例句，配對題也沒有「例句」「發音」按鈕（每個字點下去就會唸）。',
+    '配對題配錯的字才進錯題本：選了一個字、點到錯的意思，那個字就照答錯算（掉星、這輪稍後再練一次、第 1、3、7 天回來）；沒配錯的字不動，這題的主角沒配錯就算答對。按「我不會，看答案」時，還沒配好的字都算答錯；「手滑，不算」會一次還原。新字的第二次出現和「再練一次」只問那一個字，不再出配對。',
+    '修正排序題的「再練一次」有時把排對的判成錯、排錯的判成對（判成對時還把排錯的句子當成正確答案）。再練一次本來就不改排程，星星和錯題本沒受影響；現在再練一次的排序題會重新洗字塊。'
+  ] },
   { v: '1.0.23', date: '2026-10-31', items: [
     '拿掉「選正確句」題型（四句幾乎一樣、要先找差在哪）：填空題改成只輪填空和句意；內建的選正確句題從題庫刪掉，它們的學習紀錄和錯題一起清掉，AI 出題也不再出這種題。第 0 週有 5 題原本就只差一格，改成填空題留著。'
   ] },
@@ -2466,13 +2471,16 @@ function kanaOfInflected(word, info) {
   if (kind === 'i') return word.p === 'i' ? JConj.conjAdj(word.r, 'i', f) || null : null;
   return null;
 }
-// 配對: the word and three peers of the same part of speech (same theme preferred), distinct words and meanings
+// 配對: the word and five learned words of the same part of speech (same theme preferred), distinct words, meanings and
+// readings: the left column shows only the reading (with the kanji a Chinese reader would know the meaning at a glance),
+// so 花／鼻 (both はな) never meet, and every word paired wrong is answered wrong on its own
+const MATCH_PAIRS = 6;
 function matchPairs(v) {
-  const pool = vocabPeers(v).filter(x => x.p === v.p && x.m !== v.m && !zhOverlap(x.m, v.m) && jaPlain(x.w) !== jaPlain(v.w));
+  const pool = vocabPeers(v).filter(x => state.srs[x.key] && x.p === v.p && x.m !== v.m && !zhOverlap(x.m, v.m) && jaPlain(x.w) !== jaPlain(v.w));
   const scored = pool.map(x => ({ x, s: (x.c === v.c ? 2 : 0) + (x.lv === v.lv ? 1 : 0) + Math.random() * 2 })).sort((a, b) => b.s - a.s);
-  const out = [[jaPlain(v.w), v.m, v.r]]; const ws = new Set([jaPlain(v.w)]); const ms = new Set([v.m]);   // [word, meaning, reading]
-  for (const { x } of scored) { const w = jaPlain(x.w); if (ws.has(w) || ms.has(x.m) || [...ms].some(m => zhOverlap(m, x.m))) continue; ws.add(w); ms.add(x.m); out.push([w, x.m, x.r]); if (out.length === 4) break; }
-  return out.length === 4 ? out : null;
+  const out = [[jaPlain(v.w), v.m, v.r, v.key]]; const ws = new Set([jaPlain(v.w)]); const ms = new Set([v.m]); const rs = new Set([kanaKey(v.r)]);   // [word, meaning, reading, key]
+  for (const { x } of scored) { const w = jaPlain(x.w); if (ws.has(w) || rs.has(kanaKey(x.r)) || ms.has(x.m) || [...ms].some(m => zhOverlap(m, x.m))) continue; ws.add(w); ms.add(x.m); rs.add(kanaKey(x.r)); out.push([w, x.m, x.r, x.key]); if (out.length === MATCH_PAIRS) break; }
+  return out.length === MATCH_PAIRS ? out : null;
 }
 // 假名拼字: the reading's characters plus three kana that are not in it
 function spellTiles(reading) {
@@ -2643,7 +2651,8 @@ function vocabWhy(v) {
 
 function makeVocabQuestion(v0, ctx = {}) {
   const v = pickExample(v0, ctx);
-  const formats = ctx.choiceOnly ? vocabFormats(v).filter(([f]) => f !== 'v-spell' && f !== 'v-match') : vocabFormats(v);   // 階段測驗: options only
+  // 階段測驗: options only. An encore or 再練一次 asks this one word again, so not 配對: five other words would ride along
+  const formats = ctx.choiceOnly ? vocabFormats(v).filter(([f]) => f !== 'v-spell' && f !== 'v-match') : ctx.encore ? vocabFormats(v).filter(([f]) => f !== 'v-match') : vocabFormats(v);
   const avoid = ctx.avoidFmts || ctx.avoidFmt;
   // at four stars or more a word not spelled yet is asked as 假名拼字 (已熟練 waits for it), whatever came just before; not
   // where only options or a set format will do (階段測驗, the mock exam) nor in an encore
@@ -2752,11 +2761,12 @@ function makeVocabQuestion(v0, ctx = {}) {
       const pairs = matchPairs(v);
       if (!pairs) return false;
       q.fmt = f; q.custom = f; q.label = `單字 · ${lvTag} · 配對`;
-      q.instr = '先點單字，再點它的意思，把四組都配好';
+      q.instr = '先點單字，再點它的意思，把六組都配好';
       q.stemHtml = '';
       q.pairs = pairs; q.words = shuffle(pairs.map(x => x[0])); q.meanings = shuffle(pairs.map(x => x[1]));
       q.mistakePrompt = `配對：${jaPlain(v.w)}`;
-      q.why = pairs.map(([w, mm, r]) => `**${w}**${r && r !== w ? `（${r}）` : ''}：${mm}`).join('\n\n') + vocabExamples(v).map(exampleLine).join('');   // all four pairs, then the target's examples
+      q.why = pairs.map(([w, mm, r]) => `**${w}**${r && r !== w ? `（${r}）` : ''}：${mm}`).join('\n\n');   // every pair; no example: the sentence would be one word's of six
+      q.fullJp = ''; q.fullZh = '';
       q.options = [{ text: v.m }, { text: '' }]; q.answer = 0; q.answerText = v.m;
       return true;
     }
@@ -3851,7 +3861,9 @@ function prepareEntry(i) {
   if (e.mistake) e.q = makeMistakeCard(e.mistake);
   else if (e.encore) e.q = otherFormatQuestion(e.item) || null;
   else if (e.requeued && e.orig && e.orig.fmt && e.orig.fmt.endsWith('-type')) e.q = makeQuestion(e.item, { forceFmt: e.orig.fmt });   // 再練一次 of a spelled conjugation: spell it again, never back to options
-  else if (e.requeued) e.q = otherFormatQuestion(e.item) || requeueQuestion(e.orig, shuffle(e.orig.options));   // 再練一次: another format when the item has one
+  // 再練一次: another format when the item has one. A tapped question (排序 has no other format) is built again: shuffling its two
+  // options would swap right and wrong, since a tapped answer is always option 0 when right
+  else if (e.requeued) e.q = otherFormatQuestion(e.item) || (e.orig.custom ? makeQuestion(e.item, { forceFmt: e.orig.fmt }) : requeueQuestion(e.orig, shuffle(e.orig.options)));
   else if (SESSION.test) e.q = makeQuestion(e.item, { choiceOnly: true, avoidFmt: SESSION.lastFmt });
   else e.q = makeQuestion(e.item, { avoidFmt: SESSION.lastFmt });
   if (!e.q) { SESSION.entries.splice(i, 1); if (i < SESSION.entries.length) prepareEntry(i); }
@@ -3996,8 +4008,8 @@ function renderPractice() {
     </div>
     <div class="pr-actions">
       <div class="left">
-        <button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>
-        ${q.kind === 'v' && q.item && q.item.ex && (answered || q.fmt !== 'v-cloze') ? '<button type="button" class="btn btn-sm btn-ghost" data-act="speak-example" title="朗讀例句">例句</button>' : ''}
+        ${q.custom === 'v-match' ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>`}
+        ${q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-match' && (answered || q.fmt !== 'v-cloze') ? '<button type="button" class="btn btn-sm btn-ghost" data-act="speak-example" title="朗讀例句">例句</button>' : ''}
         <button type="button" class="btn btn-sm btn-ghost" data-act="toggle-furi" title="切換振假名（F）">振假名：${FURI_LABEL[furiState()]}</button>
         ${answered && isAiConfigured() ? '<button type="button" class="btn btn-sm btn-ghost" data-act="ai-explain">AI 解析</button>' : ''}
         ${answered && q.kind !== 'm' ? '<button type="button" class="btn btn-sm btn-ghost" data-act="report-item" title="題目有誤或不自然時，把它移出題庫">這題有問題</button>' : ''}
@@ -4114,10 +4126,11 @@ function customInteractionHtml(e, answered) {
   if (q.custom === 'v-match') {
     const m = e.match || { sel: null, matched: [], wrong: 0 };
     const pairOf = (w) => q.pairs.find(p => p[0] === w);
+    const kana = (w) => (pairOf(w) || [])[2] || w;   // the left column shows the reading only
     return `<div class="match">
-      <div class="match-col">${q.words.map(w => `<button type="button" class="match-word jp ${m.matched.includes(w) ? 'matched' : ''} ${m.sel === w ? 'selected' : ''} ${m.flash && m.flash.w === w ? 'wrong-flash' : ''}" data-act="match-word" data-w="${esc(w)}" ${m.matched.includes(w) || answered ? 'disabled' : ''}>${esc(w)}</button>`).join('')}</div>
+      <div class="match-col">${q.words.map(w => `<button type="button" class="match-word jp ${m.matched.includes(w) ? 'matched' : ''} ${m.sel === w ? 'selected' : ''} ${m.flash && m.flash.w === w ? 'wrong-flash' : ''}" data-act="match-word" data-w="${esc(w)}" ${m.matched.includes(w) || answered ? 'disabled' : ''}>${esc(kana(w))}</button>`).join('')}</div>
       <div class="match-col">${q.meanings.map(mm => { const done = q.pairs.some(p => p[1] === mm && m.matched.includes(p[0])); return `<button type="button" class="match-meaning ${done ? 'matched' : ''} ${m.flash && m.flash.m === mm ? 'wrong-flash' : ''}" data-act="match-meaning" data-m="${esc(mm)}" ${done || answered ? 'disabled' : ''}>${esc(mm)}</button>`; }).join('')}</div>
-      ${answered ? '' : `<div class="row between small muted" style="grid-column:1/-1"><span>${m.wrong ? `錯了 ${m.wrong} 次` : m.sel ? `已選「${esc(m.sel)}」，點它的意思` : '點一個單字'}</span><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">我不會，看答案</button></div>`}
+      ${answered ? '' : `<div class="row between small muted" style="grid-column:1/-1"><span>${m.wrong ? `錯了 ${m.wrong} 次` : m.sel ? `已選「${esc(kana(m.sel))}」，點它的意思` : '點一個單字'}</span><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">我不會，看答案</button></div>`}
     </div>`;
   }
   return '';
@@ -4126,6 +4139,14 @@ function finishCustom(e, ok, produced) {
   const q = e.q;
   if (!ok) q.options[1].text = produced;
   answerCurrent(ok ? 0 : 1);
+}
+// 配對: the words paired wrong (or left unpaired by 看答案), each written up as a question of its own: its notebook entry,
+// its line in the session list and its 再練一次
+function matchMisses(e) {
+  return ((e.match && e.match.missed) || []).map(([w, chose]) => {
+    const [, m, r, key] = e.q.pairs.find(p => p[0] === w) || []; const item = REG.byKey.get(key);
+    return item && { key, item, kind: 'v', cat: '單字', label: r && r !== w ? `${r}（${w}）` : w, mistakePrompt: `配對：${w}`, answerText: m, why: vocabWhy(item), options: [{ text: m }, { text: chose }], answer: 0 };
+  }).filter(Boolean);
 }
 
 function srsBadge(key) {
@@ -4139,13 +4160,14 @@ function feedbackHtml(e) {
   const ok = e.chosen === q.answer;
   const right = q.options[q.answer];
   const full = q.fullJp && (q.fmt.startsWith('g-') || q.fmt === 'v-cloze' || q.fmt === 'm-card') ? `<div class="fb-full jp">${furi(q.fullJp)} <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak-full" title="朗讀">${icon('speaker')}</button></div>${q.zhText ? `<div class="small muted">${esc(q.zhText)}</div>` : ''}` : '';
-  // other vocabulary formats: the word's example sentence, with its own play button (so it is not buried in the note text)
-  const example = q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-cloze' ? exampleHtml(q.item.ex, q.item.exZh, 'mt-2') : '';
+  // other vocabulary formats: the word's example sentence, with its own play button (so it is not buried in the note text);
+  // 配對 has none: the sentence would be one word's of six
+  const example = q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-cloze' && q.fmt !== 'v-match' ? exampleHtml(q.item.ex, q.item.exZh, 'mt-2') : '';
   const why = example ? String(q.why || '').replace(/\n- 例：[^\n]*/g, '') : q.why;
   const cur = q.key ? state.srs[q.key] : null;
   const srsInfo = e.srs ? `<span>${srsDots(e.srs.rec.b)}</span><span>${srsLevelLabel(e.srs.rec, q.key)}・${dueLabel(e.srs.rec, q.key)}</span>`
     : e.encore && cur ? `<span>${srsDots(cur.b)}</span><span>${srsLevelLabel(cur, q.key)}・這次不影響排程</span>` : '';
-  const mistake = !ok && q.kind !== 'x' && !e.slip && !SESSION.test ? '<span>已加入錯題本</span>' : '';
+  const mistake = !ok && q.kind !== 'x' && !e.slip && !SESSION.test && !(e.requeued && q.custom === 'v-match') ? '<span>已加入錯題本</span>' : '';   // a 再練一次 配對 writes nothing
   const slip = e.slip ? '<span class="chip">手滑，不算</span>' : (!ok && e.undo && !SESSION.test ? '<button type="button" class="btn btn-sm btn-ghost" data-act="slip" title="選錯鍵、看錯行：不進錯題本，排程維持原狀">手滑，不算</button>' : '');
   const mNote = e.mistakeDone ? '<span class="chip chip-ok">已移出錯題本</span>' : '';
   // a spelled or typed conjugation: show what was produced, the first wrong character marked
@@ -4159,7 +4181,9 @@ function feedbackHtml(e) {
   }
   return `
     <div class="feedback ${ok ? 'ok' : 'bad'}">
-      <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>' : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
+      <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>'
+        : e.missed && e.missed.length ? icon('cross') + `<span>配錯了：<span class="jp">${esc(e.missed.map(x => x.label).join('、'))}</span></span>`   // 配對: the words paired wrong
+        : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
       ${diff}${full}${example}
       ${why ? `<div class="fb-why mt-2">${md(why)}</div>` : ''}
       <div class="fb-meta">${q.point ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}${q.kind === 'v' && q.key && ok && cur && !SESSION.test && !cur.known && srsLevelLabel(cur, q.key) !== '已熟練' ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(q.key)}">這個字我已經會了</button>` : ''}</div>
@@ -4174,6 +4198,12 @@ function answerCurrent(i) {
   if (i < 0 || i >= q.options.length) return;
   e.done = true; e.chosen = i;
   const ok = i === q.answer;
+  // 配對: every word paired wrong is answered wrong on its own; the word asked counts as right unless it is one of them
+  if (q.custom === 'v-match') e.missed = matchMisses(e);
+  const perWord = Boolean(e.missed && e.missed.length);   // a wrong answer with no pair recorded (no taps) stays on the word asked
+  const self = perWord ? e.missed.find(x => x.key === q.key) : null;
+  const itemOk = perWord ? !self : ok;
+  const others = perWord ? e.missed.filter(x => x.key !== q.key) : [];
   SESSION.lastFmt = q.fmt;
   if (SESSION.test) {   // 階段測驗: score only — no SRS, notebook, logs, encores or 再練一次
     SESSION.stats[ok ? 'correct' : 'wrong']++;
@@ -4183,11 +4213,13 @@ function answerCurrent(i) {
     return;
   }
   if (!ok && !e.encore && !e.requeued) {   // kept so 「手滑，不算」 can put everything back
+    const copy = (o) => o ? JSON.parse(JSON.stringify(o)) : null;
     const m0 = state.mistakes.find(x => (q.key && x.key === q.key) || x.prompt === (q.mistakePrompt || q.plainStem || ''));
     const t = todayStr();
     e.undo = {
       srs: q.key && state.srs[q.key] ? JSON.parse(JSON.stringify(state.srs[q.key])) : null,
       mistake: m0 ? JSON.parse(JSON.stringify(m0)) : null,
+      others: others.map(x => ({ key: x.key, item: x.item, srs: copy(state.srs[x.key]), mistake: copy(state.mistakes.find(m => m.key === x.key || m.prompt === x.mistakePrompt)) })),
       mistakesLen: state.mistakes.length,
       today: Object.assign({}, state.today),
       ans: (state.today.ans || []).slice(),
@@ -4202,19 +4234,19 @@ function answerCurrent(i) {
   if (e.requeued) {
     recordAction(q.kind === 'v' || q.kind === 'k' || q.kind === 'a' ? 'v' : q.kind === 'g' || q.kind === 'c' ? 'g' : 'q', null, q.kind === 'c' ? 'g' : q.kind);
     SESSION.stats[ok ? 'correct' : 'wrong']++;
-    SESSION.results.push({ key: q.key, ok, q, chosen: i, requeued: true });
+    SESSION.results.push({ key: q.key, ok, q, chosen: i, requeued: true, missed: e.missed });
     saveState(); renderPractice(); speakAnswered(q);
     return;
   }
   if (['v', 'g', 'l', 'r', 'k', 'c', 'a'].includes(q.kind) && !e.encore) {
-    e.srs = srsAnswer(q.key, ok);
+    e.srs = srsAnswer(q.key, itemOk);
     if (e.srs.isNew) SESSION.stats.newCount++;
   }
   if (q.kind === 'm' && q.mistakeId) noteAnswered('m:' + q.mistakeId);   // a notebook card is answered as its notebook entry (srsAnswer never sees it)
-  if (q.kind === 'v' && q.fmt && q.fmt.startsWith('v-')) recordFormat(state.srs[q.key], q.fmt, ok);
+  if (q.kind === 'v' && q.fmt && q.fmt.startsWith('v-')) recordFormat(state.srs[q.key], q.fmt, itemOk);
   if (q.kind === 'g' && q.item && ((q.item.t || 'choice') === 'choice' || (q.fmt && q.fmt.endsWith('-type'))) && q.fmt) recordFormat(state.srs[q.key], q.fmt, ok, 'gf');
   // a new word comes back once more in another format; so does a new grammar item answered right (a miss gets the 再練一次 copy instead)
-  if (e.srs && e.srs.isNew && (q.kind === 'v' || (q.kind === 'g' && ok && grammarHasFormats(q.item)))) scheduleEncores(e, ok);
+  if (e.srs && e.srs.isNew && (q.kind === 'v' || (q.kind === 'g' && ok && grammarHasFormats(q.item)))) scheduleEncores(e, itemOk);
   if (q.fmt) {
     const f = state.statsFmt[q.fmt] || (state.statsFmt[q.fmt] = { ok: 0, ng: 0 });
     if (ok) f.ok++; else f.ng++;
@@ -4222,24 +4254,34 @@ function answerCurrent(i) {
   const topic = q.kind === 'g' ? unitById(q.unit).short : q.kind === 'c' ? '變化練習' : q.kind === 'v' ? `單字「${jaPlain(q.item.w)}」` : q.kind === 'k' ? `漢字「${q.item.k}」` : q.kind === 'a' ? `假名「${q.item.ch}」` : q.kind === 'l' ? '聽力' : q.kind === 'r' ? '閱讀' : null;
   recordAction(q.kind === 'v' || q.kind === 'k' || q.kind === 'a' ? 'v' : q.kind === 'g' || q.kind === 'c' ? 'g' : 'q', topic, q.kind === 'c' ? 'g' : q.kind);
   recordAccuracy(ok);
-  if (ok) {
-    SESSION.stats.correct++;
+  SESSION.stats[ok ? 'correct' : 'wrong']++;
+  const retries = [];   // the 再練一次 copies this answer queues: 手滑 takes back exactly these
+  if (itemOk) {
     const m = onCorrectForMistake(q);
     if (m && m.mastered) e.mistakeDone = true;
   } else {
-    SESSION.stats.wrong++;
-    addMistake(q, jaPlain(q.options[i].text));
-    if (!e.encore && q.kind !== 'l' && q.kind !== 'r') {   // no 再練一次 for listening and reading (see srsAnswer)
-      const at = Math.min(SESSION.entries.length, SESSION.idx + 3 + Math.floor(Math.random() * 3));
-      const again = { item: e.item, mistake: e.mistake, requeued: true, orig: q };
-      if (!e.item && q) again.q = requeueQuestion(q, shuffle(q.options));   // a notebook card has no other format
-      SESSION.entries.splice(at, 0, again);
-    }
+    if (self) addMistake(self, self.options[1].text); else addMistake(q, jaPlain(q.options[i].text));
+    if (!e.encore && q.kind !== 'l' && q.kind !== 'r') retries.push(queueRetry(e.item, e.mistake, q));   // no 再練一次 for listening and reading (see srsAnswer)
   }
-  SESSION.results.push({ key: q.key, ok, q, chosen: i });
+  others.forEach(x => {   // 配對: another word paired wrong, answered wrong as if it had been asked (an encore leaves schedules alone)
+    if (!e.encore) srsAnswer(x.key, false);
+    recordFormat(state.srs[x.key], q.fmt, false);
+    addMistake(x, x.options[1].text);
+    if (!e.encore) retries.push(queueRetry(x.item, null, q));
+  });
+  if (e.undo) e.undo.retries = retries;
+  SESSION.results.push({ key: q.key, ok, q, chosen: i, missed: e.missed });
   saveState();
   renderPractice();
   speakAnswered(q);
+}
+// 再練一次: the item comes back 3–5 questions later, in another format when it has one (see prepareEntry)
+function queueRetry(item, mistake, orig) {
+  const at = Math.min(SESSION.entries.length, SESSION.idx + 3 + Math.floor(Math.random() * 3));
+  const again = { item, mistake, requeued: true, orig };
+  if (!item && orig) again.q = requeueQuestion(orig, shuffle(orig.options));   // a notebook card has no other format
+  SESSION.entries.splice(at, 0, again);
+  return again;
 }
 function speakAnswered(q) {
   // a kanji question has no sentence: it reads its example word (the reading asked, or the first example's), as 發音 does
@@ -4271,7 +4313,8 @@ function renderSummary(view) {
   const n = s.results.length;
   const acc = n ? Math.round(s.stats.correct / n * 100) : 0;
   const wrongKeys = new Map();
-  s.results.filter(r => !r.ok).forEach(r => { if (!wrongKeys.has(r.q.mistakePrompt)) wrongKeys.set(r.q.mistakePrompt, r); });
+  s.results.filter(r => !r.ok).flatMap(r => r.missed && r.missed.length ? r.missed.map(x => ({ q: x, chosen: 1 })) : [r])   // 配對: one line per word paired wrong
+    .forEach(r => { if (!wrongKeys.has(r.q.mistakePrompt)) wrongKeys.set(r.q.mistakePrompt, r); });
   const prog = dayProgress();   // same ring as 今日: items answered today / today's items
   const dayDone = prog.left === 0;
   const wrongList = [...wrongKeys.values()].map(r => `<div class="list-item"><div class="grow"><div class="jp">${furi(tidyPrompt(r.q.mistakePrompt || ''))}</div><div class="small muted">正確：<span class="jp">${esc(jaPlain(r.q.options[r.q.answer].text))}</span>・你選：<span class="jp">${esc(jaPlain(r.q.options[r.chosen].text))}</span></div></div></div>`).join('');
@@ -4523,13 +4566,16 @@ const ACTIONS = {
     if ('themeLane' in u) state.themeLane = u.themeLane;
     if ('currentUnit' in u) state.currentUnit = u.currentUnit;
     if ('completedUnits' in u) state.completedUnits = u.completedUnits;
-    if (u.mistake) { const i = state.mistakes.findIndex(x => x.id === u.mistake.id); if (i >= 0) state.mistakes[i] = u.mistake; }
-    else if (state.mistakes.length > u.mistakesLen) state.mistakes.shift();
+    const others = u.others || [];   // 配對: the other words paired wrong
+    others.forEach(o => { if (o.srs) state.srs[o.key] = o.srs; else delete state.srs[o.key]; });
+    state.mistakes.splice(0, Math.max(0, state.mistakes.length - u.mistakesLen));   // the entries this answer added (addMistake puts them first)
+    [u.mistake].concat(others.map(o => o.mistake)).forEach(m => { const i = m ? state.mistakes.findIndex(x => x.id === m.id) : -1; if (i >= 0) state.mistakes[i] = m; });
     const f = state.statsFmt[q.fmt]; if (f && f.ng > 0) f.ng--;
     if (state.recent.length) state.recent.pop();
     if (wasNew) SESSION.stats.newCount = Math.max(0, SESSION.stats.newCount - 1);
     SESSION.stats.wrong = Math.max(0, SESSION.stats.wrong - 1);
-    SESSION.entries = SESSION.entries.filter((x, i) => i <= SESSION.idx || !((x.requeued || (wasNew && x.encore)) && x.item === e.item));
+    const retries = u.retries || [];   // only this answer's copies: a word paired wrong may still have one from its own earlier miss
+    SESSION.entries = SESSION.entries.filter((x, i) => i <= SESSION.idx || !(retries.includes(x) || (wasNew && x.encore && x.item === e.item)));
     const last = SESSION.results[SESSION.results.length - 1]; if (last && last.q === q) SESSION.results.pop();
     e.slip = true; e.srs = null; e.mistakeDone = false; delete e.undo;
     saveState(); renderPractice(); toast('這題不算，排程維持原狀');
@@ -4539,7 +4585,8 @@ const ACTIONS = {
   again: () => { const s = SESSION; SESSION = null; startSession(s.mode, s.opt || {}); },
   'retry-wrong': () => {
     const items = [];
-    SESSION.results.filter(r => !r.ok).forEach(r => { if (r.q.item && !items.includes(r.q.item)) items.push(r.q.item); });
+    // 配對: the words paired wrong; one entry per word (a question's item is a copy carrying the example it used)
+    SESSION.results.filter(r => !r.ok).flatMap(r => r.missed && r.missed.length ? r.missed.map(x => x.item) : [r.q.item]).forEach(it => { if (it && !items.some(x => x.key === it.key)) items.push(it); });
     SESSION = null;
     if (!items.length) { go(lastMainRoute); return; }
     startSession('items', { items: shuffle(items), title: '重練答錯的題目' });
@@ -4549,6 +4596,7 @@ const ACTIONS = {
     const e = currentEntry();
     if (!e || !e.q) return;
     const q = e.q;
+    if (q.custom === 'v-match') return;   // 配對 has no 發音: each word is read as it is tapped
     // before answering a grammar question the full sentence would give the answer away
     const text = q.audio || (e.done ? (q.fullJp || q.speakWord) : (q.fmt && q.fmt.startsWith('g-') ? '' : q.speakWord)) || '';
     if (!text) { toast('作答後可以聽整句。'); return; }
@@ -4582,7 +4630,11 @@ const ACTIONS = {
     const e = currentEntry(); if (!e || e.done || !e.q || !e.q.custom) return;
     if (e.q.custom === 'g-conj-type' || e.q.custom === 'g-adj-type') { e.conj = conjTokens(e.q.options[0].text).map(t => e.q.tiles.indexOf(t)); }   // show the right form
     if (e.q.custom === 'v-spell') { e.spell = [...e.q.options[0].text].map(ch => e.q.tiles.indexOf(ch)); }   // show the right spelling
-    if (e.q.custom === 'v-match') { e.match = { sel: null, matched: e.q.pairs.map(p => p[0]), wrong: (e.match || {}).wrong || 0 }; }   // reveal every pair
+    if (e.q.custom === 'v-match') {   // reveal every pair; the words not paired yet count as paired wrong
+      const m = e.match || { matched: [], wrong: 0, missed: [] }; const missed = (m.missed || []).slice();
+      e.q.pairs.forEach(([w]) => { if (!m.matched.includes(w) && !missed.some(x => x[0] === w)) missed.push([w, '（看了答案）']); });
+      e.match = { sel: null, matched: e.q.pairs.map(p => p[0]), wrong: m.wrong || 0, missed };
+    }
     if (e.q.custom === 'g-order') { e.order = e.q.orderParts.map(p => e.q.tiles.indexOf(p)); }   // show the right order
     finishCustom(e, false, '（看了答案）');
   },
@@ -4599,18 +4651,21 @@ const ACTIONS = {
   'spell-untap': (el) => { const e = currentEntry(); const k = Number(el.dataset.k); if (!e || e.done || !e.spell || !(k >= 0 && k < e.spell.length)) return; e.spell.splice(k, 1); renderPractice(); },
   'match-word': (el) => {
     const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'v-match') return;
-    e.match = e.match || { sel: null, matched: [], wrong: 0 };
+    e.match = e.match || { sel: null, matched: [], wrong: 0, missed: [] };
     e.match.sel = e.match.sel === el.dataset.w ? null : el.dataset.w;
     if (e.match.sel) { const p = e.q.pairs.find(x => x[0] === e.match.sel); speak(e.match.sel, p && p[2] && p[2] !== e.match.sel ? { reading: p[2] } : undefined); }   // hear the word as you pick it
     renderPractice();
   },
   'match-meaning': (el) => {
     const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'v-match') return;
-    const m = e.match = e.match || { sel: null, matched: [], wrong: 0 };
+    const m = e.match = e.match || { sel: null, matched: [], wrong: 0, missed: [] };
     if (!m.sel) return;
     const pair = e.q.pairs.find(p => p[0] === m.sel);
     if (pair && pair[1] === el.dataset.m) { m.matched.push(m.sel); delete m.flash; }
-    else { m.wrong++; m.flash = { w: m.sel, m: el.dataset.m, at: Date.now() }; setTimeout(() => { if (m.flash && Date.now() - m.flash.at >= 550) delete m.flash; }, 600); }   // flash the wrong pair red
+    else {   // flash the wrong pair red; the word picked (not the one whose meaning was tapped) is the one paired wrong
+      m.wrong++; m.flash = { w: m.sel, m: el.dataset.m, at: Date.now() }; setTimeout(() => { if (m.flash && Date.now() - m.flash.at >= 550) delete m.flash; }, 600);
+      if (!m.missed.some(x => x[0] === m.sel)) m.missed.push([m.sel, el.dataset.m]);
+    }
     m.sel = null;
     if (m.matched.length === e.q.pairs.length) finishCustom(e, m.wrong === 0, `配對時錯了 ${m.wrong} 次`); else renderPractice();
   },
