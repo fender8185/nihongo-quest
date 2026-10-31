@@ -65,6 +65,18 @@ function buildCandidates(sources, DATA) {
   return out;
 }
 
+// rows left out as dups that carry another reading than the first row of that spelling (金 きん after 金 かね): the outline
+// keeps one reading per spelling, so these are listed for a person to pick from
+function homographs(cands) {
+  const first = new Map(); const out = [];
+  for (const L of LV) for (const x of (cands[L] || { words: [] }).words) {
+    const key = x.w.replace(/する$/, '');
+    if (x.status === 'dup') { const f = first.get(key); if (f && f.r && x.r && f.r !== x.r) out.push({ L, w: x.w, r: x.r, firstL: f.L, firstR: f.r }); }
+    else if (!first.has(key)) first.set(key, { L, r: x.r });
+  }
+  return out;
+}
+
 function reportMarkdown(cands, DATA) {
   const c = (arr, st) => arr.filter(x => x.status === st).length;
   const out = ['# 課程大綱候選清單報表', '', '由 `node scripts/curriculum/build-candidates.js` 產生；來源見 `curriculum/sources/SOURCES.md`。', '',
@@ -81,6 +93,8 @@ function reportMarkdown(cands, DATA) {
   DATA.VOCAB.forEach(v => { for (const ch of v.w) if (/[一-鿿]/.test(ch) && !table.has(ch)) used.add(ch); });
   const by = {}; used.forEach(ch => { const l = levelOf[ch] || '清單外'; by[l] = (by[l] || 0) + 1; });
   out.push('## app 的字用到、漢字表沒有的漢字', '', `共 ${used.size} 個：` + ['N5', 'N4', 'N3', 'N2', 'N1', '清單外'].filter(l => by[l]).map(l => `${l} ${by[l]}`).join('、'), '');
+  const homo = homographs(cands);
+  out.push('## 同形異讀：只收第一個讀音', '', `共 ${homo.length} 筆。有些只是清單的別讀或解析雜訊，有些是不同的字（例如 金 きん），審查時挑要收的。`, '', ...LV.filter(L => homo.some(h => h.L === L)).map(L => `**${L}**：` + homo.filter(h => h.L === L).map(h => `${h.w}（${h.r}；已收 ${h.firstL} ${h.firstR}）`).join('、')), '');
   out.push('## 文法點', '', '| 級 | Waller | OpenJLPT | 兩邊都有 | 只有 Waller | 只有 OpenJLPT | 更低一級已經有 |', '|---|---|---|---|---|---|---|');
   for (const L of ['N3', 'N2', 'N1']) {
     const g = cands[L].grammar; const has = (s) => g.filter(x => x.src.includes(s)).length;
@@ -118,4 +132,4 @@ if (require.main === module) {
   console.log(LV.map(L => `${L}: ${cands[L].words.filter(x => x.status === 'new').length} new words, ${cands[L].kanji.filter(x => x.status === 'new').length} new kanji` + (cands[L].grammar ? `, ${cands[L].grammar.filter(x => x.status === 'new').length} grammar points` : '')).join('\n'));
 }
 
-module.exports = { loadSources, loadData, buildCandidates, reportMarkdown, appGrammarMarkdown };
+module.exports = { loadSources, loadData, buildCandidates, homographs, reportMarkdown, appGrammarMarkdown };

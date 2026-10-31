@@ -2,6 +2,7 @@
 // level — units by phase, themes with their words, kanji in teaching order, dropped and added words (plan Task 9).
 // usage: node scripts/curriculum/render-review.js <out.html>
 const fs = require('fs'); const path = require('path');
+const { homographs } = require('./build-candidates.js');
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n) => Number(n).toLocaleString('en-US');
@@ -11,7 +12,9 @@ const LEVEL_VIEWS = [['n3', 'N3'], ['n2', 'N2'], ['n1', 'N1']];
 const word = (w, r, m) => `<li><span class="w" lang="ja">${esc(w)}</span>${r && r !== w ? `<span class="r" lang="ja">（${esc(r)}）</span>` : ''}${m ? `<span class="m">${esc(m)}</span>` : ''}</li>`;
 const table = (head, rows) => rows.length ? `<div class="tablebox"><table><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map((c, i) => `<td${i < 2 ? ' lang="ja"' : ''}>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : '<p class="none">沒有。</p>';
 
-function levelView(o) {
+const homoTable = (list) => `<h2>同形異讀（沒收進大綱）</h2><p class="note">同一個寫法只收第一個讀音。下面這些有的是清單的別讀，有的是不同的字（例如 金 きん），要收哪個請留言。</p>${table(['字', '這一筆的讀音', '已收的讀音'], list.map(h => [h.w, h.r, `${h.firstL} ${h.firstR}`]))}`;
+
+function levelView(o, homo = []) {
   const words = o.themes.reduce((s, t) => s + t.words.length, 0);
   const points = o.units.reduce((s, u) => s + u.points.length, 0);
   const days = Math.ceil((words + o.kanji.length + points * 6) / 15);
@@ -29,10 +32,11 @@ function levelView(o) {
   <h2>漢字（教學順序）</h2>
   <ol class="kanji" lang="ja">${o.kanji.map(k => `<li>${esc(k)}</li>`).join('')}</ol>
   <h2>篩掉的字</h2>${table(['字', '讀音', '原因'], (o.dropped || []).map(x => [x.w, x.r, x.why]))}
-  <h2>補的字</h2>${table(['字', '讀音', '意思', '主題', '原因'], (o.added || []).map(x => [x.w, x.r, x.m, x.c, x.why]))}`;
+  <h2>補的字</h2>${table(['字', '讀音', '意思', '主題', '原因'], (o.added || []).map(x => [x.w, x.r, x.m, x.c, x.why]))}
+  ${homoTable(homo)}`;
 }
 
-function gapsView(gaps) {
+function gapsView(gaps, homo = []) {
   if (!gaps) return '<p class="none">還沒整理。</p>';
   return ['N5', 'N4'].map(L => {
     const g = gaps[L] || { words: [], dropped: [] };
@@ -43,15 +47,16 @@ function gapsView(gaps) {
     <div class="themes">${[...byTheme].map(([c, list]) => `<details class="theme" open><summary><span class="tname">${esc(c)}</span><span class="tcount">${list.length} 字</span></summary><ul class="words">${list.map(x => word(x.w, x.r, x.m)).join('')}</ul></details>`).join('')}</div>
     <h3>篩掉的字</h3>${table(['字', '讀音', '原因'], g.dropped.map(x => [x.w, x.r, x.why]))}
     <h3>補的字</h3>${table(['字', '讀音', '意思', '主題', '原因'], added.map(x => [x.w, x.r, x.m, x.c, x.why]))}`;
-  }).join('');
+  }).join('') + homoTable(homo.filter(h => h.L === 'N5' || h.L === 'N4'));
 }
 
 function renderReview({ outlines = {}, gaps = null, cands = {} }) {
   const count = (L) => { const o = outlines[L]; return o ? `${fmt(o.themes.reduce((s, t) => s + t.words.length, 0))} 字` : '還沒整理'; };
   const tabs = [['gaps', 'N5／N4 缺口', gaps ? `${(gaps.N5 || { words: [] }).words.length + (gaps.N4 || { words: [] }).words.length} 字` : '還沒整理']]
     .concat(LEVEL_VIEWS.map(([id, L]) => [id, L, count(L)]));
-  const views = [`<section class="view" id="v-gaps" data-view="gaps" aria-label="N5／N4 缺口">${gapsView(gaps)}</section>`]
-    .concat(LEVEL_VIEWS.map(([id, L]) => `<section class="view" id="v-${id}" data-view="${id}" aria-label="${L}">${outlines[L] ? levelView(outlines[L]) : `<p class="none">${L} 還沒整理。</p>`}</section>`));
+  const homo = homographs(cands);
+  const views = [`<section class="view" id="v-gaps" data-view="gaps" aria-label="N5／N4 缺口">${gapsView(gaps, homo)}</section>`]
+    .concat(LEVEL_VIEWS.map(([id, L]) => `<section class="view" id="v-${id}" data-view="${id}" aria-label="${L}">${outlines[L] ? levelView(outlines[L], homo.filter(h => h.L === L)) : `<p class="none">${L} 還沒整理。</p>`}</section>`));
   const cand = (L) => cands[L] ? cands[L].words.filter(x => x.status === 'new').length : 0;
   return `<title>N3–N1 課程大綱</title>
 <meta name="claude:viewport-fit-sides" content="cover">

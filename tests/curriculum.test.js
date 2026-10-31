@@ -232,3 +232,14 @@ test('review page: gap tab lists added words, marked as added', () => {
   const s = gapAdd(); const text = require('../scripts/curriculum/render-review.js').renderReview({ outlines: s.outlines, gaps: s.gaps, cands: s.cands }).replace(/<[^>]+>/g, '');
   assert.ok(text.includes('楽しむ（たのしむ）') && text.includes('取代清單拼錯的楽む'));
 });
+
+// ---- same spelling, another reading (left out of the outline; listed for the user) ----
+test('homographs: a later row with the same spelling and another reading is listed with the first one', () => {
+  const C = B().buildCandidates(fakeSources({ vocab: { 5: [['上', 'うえ']], 4: [], 3: [['上', 'かみ'], ['上', 'うえ'], ['柄', 'え'], ['柄', 'がら']], 2: [], 1: [] } }), emptyData());
+  assert.deepEqual(B().homographs(C), [{ L: 'N3', w: '上', r: 'かみ', firstL: 'N5', firstR: 'うえ' }, { L: 'N3', w: '柄', r: 'がら', firstL: 'N3', firstR: 'え' }]);
+});
+test('review page: the homographs left out of the outline are listed', () => {
+  const s = okSet(); s.cands.N3.words.push({ w: '語5', r: 'ごれい', status: 'dup', dupOf: 'N3' });
+  const text = require('../scripts/curriculum/render-review.js').renderReview({ outlines: s.outlines, gaps: s.gaps, cands: s.cands }).replace(/<[^>]+>/g, '');
+  assert.ok(text.includes('同形異讀') && text.includes('ごれい'));
+});
