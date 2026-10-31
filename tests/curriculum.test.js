@@ -114,3 +114,89 @@ test('app grammar: every course unit with its lesson headings', () => {
   const md = B().appGrammarMarkdown(B().loadData(ROOT));
   assert.match(md, /^## m7 /m); assert.match(md, /可能形的變法/); assert.match(md, /^## m18 /m);
 });
+
+// ---- outline checker (Task 4) ----
+const CK = () => require('../scripts/curriculum/check-outline.js');
+const clone = (x) => JSON.parse(JSON.stringify(x));
+// a minimal outline that passes: N3 has 300 new words (15 themes × 20), kanji 乙 and 甲 (甲 used more, so it comes first),
+// 12 grammar keys in two units of six; N5 and N4 have one gap candidate each
+function okSet() {
+  const words = Array.from({ length: 300 }, (_, i) => ({ w: `語${i}`, r: `ご${i}`, status: 'new' }));
+  words[0].w = '甲乙'; words[1].w = '甲';
+  const keys = Array.from({ length: 12 }, (_, i) => `g${i}`);
+  const cands = {
+    N5: { level: 'N5', words: [{ w: '朝寝', r: 'あさね', status: 'new' }], kanji: [] },
+    N4: { level: 'N4', words: [{ w: '夜更', r: 'よふけ', status: 'variant', app: { id: 'v9', lv: 'N4', w: '夜更け', r: 'よふけ' } }], kanji: [] },
+    N3: { level: 'N3', words, kanji: [{ k: '乙', status: 'new' }, { k: '甲', status: 'new' }, { k: '丙', status: 'in-app', appLv: 'N4' }],
+      grammar: keys.map(k => ({ p: `〜${k}`, key: k, src: ['waller'], status: 'new' })).concat([{ p: '〜old', key: 'old', src: ['waller'], status: 'dup', dupOf: 'N4' }]) },
+    N2: { level: 'N2', words: [{ w: '乙種', r: 'おつしゅ', status: 'new' }], kanji: [], grammar: [] },
+    N1: { level: 'N1', words: [], kanji: [], grammar: [] }
+  };
+  const DATA = { VOCAB: [{ id: 'v1', w: '既存', r: 'きそん', lv: 'N4' }], KANJI: [{ k: '丙', lv: 'N4' }],
+    THEMES: { N5: [{ c: '時間' }], N4: [{ c: '居家生活' }] }, UNITS: Array.from({ length: 18 }, (_, i) => ({ id: `m${i + 1}` })) };
+  const point = (k) => ({ p: `〜${k}`, m: '意思', keys: [k], src: ['waller'] });
+  const N3 = { level: 'N3',
+    themes: Array.from({ length: 15 }, (_, t) => ({ c: `主題${t}`, desc: '說明', words: words.slice(t * 20, t * 20 + 20).map(x => [x.w, x.r, '意思']) })),
+    added: [], dropped: [], kanji: ['甲', '乙'],
+    phases: [{ title: '第四階段：N3 文法', units: ['m19'] }, { title: '第五階段：N3 進階與總複習', units: ['m20'] }],
+    units: [{ id: 'm19', short: '一', title: '一：〜g0', points: keys.slice(0, 6).map(point) }, { id: 'm20', short: '二', title: '二：〜g6', points: keys.slice(6).map(point) }],
+    covered: [], moved: [] };
+  const gaps = { N5: { words: [{ w: '朝寝', r: 'あさね', m: '睡懶覺', c: '時間' }], dropped: [] }, N4: { words: [], dropped: [{ w: '夜更', r: 'よふけ', why: 'app 已有：v9' }] } };
+  return { outlines: { N3 }, gaps, cands, DATA };
+}
+const problemsOf = (set) => CK().checkOutline(set).problems;
+const has = (set, prefix) => assert.ok(problemsOf(set).some(p => p.startsWith(prefix)), `no "${prefix}" in ${JSON.stringify(problemsOf(set).slice(0, 5))}`);
+
+test('outline: the minimal outline has no problems and a summary per level', () => {
+  const r = CK().checkOutline(okSet());
+  assert.deepEqual(r.problems, []);
+  assert.deepEqual(r.summary.N3, { themes: 15, words: 300, dropped: 0, added: 0, kanji: 2, units: 2, points: 12, covered: 0, moved: 0 });
+});
+test('outline: kanjiOrder puts the kanji used most first, ties in list order', () => {
+  assert.deepEqual(CK().kanjiOrder([['甲乙', 'x', 'm'], ['甲', 'x', 'm'], ['丁', 'x', 'm']], ['乙', '丁', '甲']), ['甲', '乙', '丁']);
+});
+test('outline 1: a candidate word in no theme and not dropped', () => { const s = okSet(); s.outlines.N3.themes[0].words.splice(5, 1); has(s, 'N3 word missing: 語5'); });
+test('outline 2: a word placed twice', () => { const s = okSet(); s.outlines.N3.themes[1].words.push(['語5', 'ご5', '意思']); has(s, 'N3 word twice: 語5'); });
+test('outline 3: a word that is neither a candidate nor added', () => { const s = okSet(); s.outlines.N3.themes[0].words.push(['外来', 'がいらい', '外來']); has(s, 'N3 word not a candidate: 外来'); });
+test('outline 4: one word in two levels', () => {
+  const s = okSet(); s.outlines.N2 = { level: 'N2', themes: [{ c: '甲', desc: '說明', words: [['語7', 'ご7', '意思'], ['乙種', 'おつしゅ', '乙種']] }], added: [{ w: '語7', r: 'ご7', m: '意思', c: '甲', why: '測試' }], dropped: [], kanji: [], phases: [], units: [], covered: [], moved: [] };
+  has(s, 'word in two levels: 語7');
+});
+test('outline 5: an added word the app already has', () => {
+  const s = okSet(); s.outlines.N3.added.push({ w: '既存', r: 'きそん', m: '既有', c: '主題0', why: '測試' }); s.outlines.N3.themes[0].words.push(['既存', 'きそん', '既有']);
+  has(s, 'word already in app: 既存');
+});
+test('outline 6: theme count and theme size', () => {
+  const s = okSet(); s.outlines.N3.themes[1].words.push(...s.outlines.N3.themes.pop().words); has(s, 'N3 themes: 14 (need 15–20)');
+  const t = okSet(); t.outlines.N3.themes[1].words.push(...t.outlines.N3.themes[0].words.splice(0, 5)); has(t, 'N3 theme too small: 主題0');
+});
+test('outline 7: a word without a meaning, or one longer than 12 characters', () => {
+  const s = okSet(); s.outlines.N3.themes[0].words[3][2] = ''; has(s, 'N3 word without meaning: 語3');
+  const t = okSet(); t.outlines.N3.themes[0].words[4][2] = '一二三四五六七八九十一二三'; has(t, 'N3 word without meaning: 語4');
+});
+test('outline 8: the kanji are exactly the new ones, in kanjiOrder', () => {
+  const s = okSet(); s.outlines.N3.kanji = ['甲']; has(s, 'N3 kanji set differs');
+  const t = okSet(); t.outlines.N3.kanji = ['乙', '甲']; has(t, 'N3 kanji order differs');
+});
+test('outline 9: unit ids run on from m19', () => { const s = okSet(); s.outlines.N3.units[0].id = 'm21'; s.outlines.N3.phases[0].units = ['m21']; has(s, 'unit ids not consecutive at m21'); });
+test('outline 10: six to ten points a unit', () => { const s = okSet(); s.outlines.N3.units[1].points.push(...s.outlines.N3.units[0].points.splice(0, 1)); has(s, 'N3 unit m19 has 5 points (need 6–10)'); });
+test('outline 11: every new grammar key placed once; a moved key lands in its level', () => {
+  const s = okSet(); s.outlines.N3.units[1].points.pop(); has(s, 'N3 grammar missing: g11');
+  const t = okSet(); t.outlines.N3.units[1].points.pop(); t.outlines.N3.moved.push({ p: '〜g11', keys: ['g11'], to: 'N2', why: '測試' });
+  t.outlines.N2 = { level: 'N2', themes: [], added: [], dropped: [], kanji: [], phases: [], units: [], covered: [], moved: [] };
+  has(t, 'N3 moved key not in N2: g11');
+  assert.ok(!problemsOf(t).some(p => p.startsWith('N3 grammar missing: g11')));
+});
+test('outline 12: covered points name a course unit m1–m18', () => {
+  const s = okSet(); s.outlines.N3.units[1].points.pop(); s.outlines.N3.covered.push({ p: '〜g11', keys: ['g11'], by: 'm99', why: '測試' });
+  has(s, 'N3 covered by unknown unit: m99');
+});
+test('outline 13: phases cover the units in order, two a level', () => {
+  const s = okSet(); s.outlines.N3.phases = [{ title: '全部', units: ['m19', 'm20'] }]; has(s, 'N3 phases: ');
+  const t = okSet(); t.outlines.N3.phases[1].units = []; has(t, 'N3 phases: ');
+});
+test('outline 14: gap words use their level\'s themes and every gap candidate is placed', () => {
+  const s = okSet(); s.gaps.N5.words[0].c = '不存在'; has(s, 'N5 gap theme unknown: 不存在');
+  const t = okSet(); t.gaps.N5.words = []; has(t, 'N5 gap word missing: 朝寝');
+});
+test('outline: a grammar point needs a meaning of at most 20 characters', () => { const s = okSet(); s.outlines.N3.units[0].points[0].m = ''; has(s, 'N3 point without meaning: 〜g0'); });
