@@ -6,6 +6,7 @@ Each word must: have every field; lv in PRE_N5/N5/N4 and c in DATA.THEMES[lv]; a
 matches the app's furigana of w; not already be in the bank or repeated in the file; an example with exactly one {marker}
 in a form the app recognises, ending with 。, every kanji with furigana; ex2 (when present) distinct from ex.
 PRE_N5 words: the example may only use PRE_N5 words (pre-example-vocab) and must not carry ex2.
+N5 words: a WARN names any word in the examples that the bank teaches only at N4 (n4-word-in-n5-example).
 Prints BAD/WARN lines and a summary; exit code 1 when anything is BAD."""
 import json, os, subprocess, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
@@ -20,6 +21,10 @@ JS = r"""((c) => { const problems = [], warnings = [];
   const KANJI = /[一-鿿々〆ヶ]+/g;
   const bank = new Map(); REG.vocab.filter(v => v.builtin).forEach(v => bank.set(jaPlain(v.w), v.id));
   const preWords = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5');
+  const hira = (s) => String(s || '').replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+  // levels per spelling+reading: the 楽 of 楽しい（たの） is not the N4 word 楽（らく）
+  const bankLv = new Map(); REG.vocab.filter(v => v.builtin).forEach(v => { const k = jaPlain(v.w) + '|' + hira(v.r); if (!bankLv.has(k)) bankLv.set(k, new Set()); bankLv.get(k).add(v.lv); });
+  const rubies = (t) => { const out = []; const re = /<ruby>([^<]+)<rt>([^<]*)<\/rt><\/ruby>/g; let m; const h = furi(String(t || '')); while ((m = re.exec(h))) out.push(m[1] + '|' + hira(m[2])); return out; };
   const bare = (t) => (furi(String(t || '')).replace(/<ruby>.*?<\/ruby>/g, '').match(KANJI) || []);
   const bases = (t) => { const out = []; const re = /<ruby>([^<]+)<rt>/g; let m; const h = furi(String(t || '')); while ((m = re.exec(h))) out.push(m[1]); return out; };
   const seen = new Set();
@@ -48,6 +53,10 @@ JS = r"""((c) => { const problems = [], warnings = [];
       if (v.lv === 'PRE_N5') {
         const outside = [...new Set(bases(ex.replace(/[{}]/g, '')).filter(k => k !== plain && !plain.includes(k) && !preWords.some(x => jaPlain(x.w) === k || jaPlain(x.w).includes(k))))];
         if (outside.length) p('pre-example-vocab: ' + which + ' uses non-PRE_N5 words: ' + outside.join(' '));
+      }
+      if (v.lv === 'N5') {   // an N5 learner has not met N4 words yet
+        const n4 = [...new Set(rubies(ex.replace(/[{}]/g, '')).filter(k => k.split('|')[0] !== plain && bankLv.has(k) && [...bankLv.get(k)].every(l => l === 'N4')).map(k => k.split('|')[0]))];
+        if (n4.length) warn('n4-word-in-n5-example: ' + which + ' uses ' + n4.join(' '));
       }
     };
     checkEx(String(v.ex || ''), 'ex');
