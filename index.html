@@ -516,10 +516,15 @@ body.furi-smart ruby.known rt { visibility: hidden; }
 .chart-tip { position: fixed; z-index: 80; pointer-events: none; background: var(--bg-elev); border: 1px solid var(--line-2); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--fg-2); box-shadow: var(--shadow); opacity: 0; transition: opacity .1s; }
 .chart-tip b { color: var(--fg); font-size: 14px; display: block; }
 .chart-tip.show { opacity: 1; }
-.cols { display: flex; align-items: flex-end; gap: 10px; height: 150px; padding-top: 22px; border-bottom: 1px solid var(--line); }
-.cols .col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; outline: none; }
-.cols .col .colbar { width: min(24px, 70%); background: var(--accent); border-radius: 4px 4px 0 0; min-height: 2px; }
-.cols .col .colbar.stack { display: flex; flex-direction: column; background: transparent; overflow: hidden; }
+.week-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.week-stat { min-width: 0; padding: 8px 10px; border-radius: 10px; background: var(--bg-sunken); border: 1px solid var(--line); }
+.week-stat-v { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; } .week-stat-v.up { color: var(--ok); }
+.week-stat-l { font-size: 11px; color: var(--fg-3); }
+.week-line { width: 100%; height: auto; display: block; margin-top: 12px; overflow: visible; }
+.week-line polyline { fill: none; stroke: var(--heat-4); stroke-width: 2; stroke-linejoin: round; } .week-line .week-area { fill: var(--heat-4); opacity: .14; }
+.week-dot { fill: var(--heat-4); outline: none; } .week-dot.today { fill: var(--accent); } .week-dot:hover, .week-dot:focus { filter: brightness(1.2); }
+.week-axis { display: flex; justify-content: space-between; margin-top: 2px; font-size: 11px; color: var(--fg-3); } .week-axis .today { color: var(--accent); font-weight: 600; }
+.week-share { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 12px; } .week-share-l, .week-empty { margin-top: 6px; }
 tr.lag td { color: var(--warn, #d08a00); font-weight: 600; }
 .gauges { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .gauge { min-width: 0; } .gauge svg { width: 100%; max-width: 260px; height: auto; display: block; margin: 0 auto; }
@@ -532,10 +537,6 @@ tr.lag td { color: var(--warn, #d08a00); font-weight: 600; }
 .gauge .hero { fill: var(--fg); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; } .gauge .hero-l { fill: var(--fg-3); font-size: 11px; }
 .gauge .glegend { text-align: center; } .gauge .glegend span { white-space: nowrap; display: inline-block; margin: 0 5px; } .seg-dot.gseen { background: var(--gauge-seen); }
 .cseg { flex-basis: 0; min-height: 0; } .cseg.v, .seg-dot.v { background: var(--heat-4); } .cseg.g, .seg-dot.g { background: var(--heat-3); } .cseg.q, .seg-dot.q { background: var(--heat-2); }
-.cols .col:hover .colbar, .cols .col:focus .colbar { filter: brightness(1.15); }
-.cols .col .collabel { position: absolute; top: -20px; font-size: 12px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
-.col-axis { display: flex; gap: 10px; margin-top: 6px; }
-.col-axis span { flex: 1; text-align: center; font-size: 11px; color: var(--fg-3); }
 .barrow { display: grid; grid-template-columns: minmax(90px, 32%) 1fr auto; gap: 10px; align-items: center; padding: 6px 0; }
 .barrow .track { height: 10px; border-radius: 0 4px 4px 0; background: var(--bg-sunken); overflow: hidden; outline: none; }
 .barrow .fill { height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; }
@@ -946,7 +947,8 @@ const APP_VERSION = '1.0.26';   // keep equal to the version in sw.js CACHE ('nq
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
   { v: '1.0.26', date: '2026-10-31', items: [
-    '學習分析的總進度可以切換四種範圍：總進度（單字、文法、聽力＋閱讀、漢字）、入門（假名、入門單字、入門文法）、N5、N4，每個題目只算在它的級別裡。聽力和閱讀答過算初識、答對 1 次算熟悉、答對 2 次算熟練（答對後要隔 30 天才會再出）。'
+    '學習分析的總進度可以切換四種範圍：總進度（單字、文法、聽力＋閱讀、漢字）、入門（假名、入門單字、入門文法）、N5、N4，每個題目只算在它的級別裡。聽力和閱讀答過算初識、答對 1 次算熟悉、答對 2 次算熟練（答對後要隔 30 天才會再出）。',
+    '過去 7 天的練習量改成三個數字（7 天合計、每天平均、比前 7 天多或少）加一條趨勢線和各類占比，點每天的點可以看那天的明細。正確率改看最近 100 題，跟今日頁決定新題數用的一樣。'
   ] },
   { v: '1.0.25', date: '2026-10-31', items: [
     '設定拿掉「每組練習題數」和「出題順序」：今日練習和假名練習固定一組 20 題，單字與文法一律交錯出。一組做太久注意力會往下掉，分成小組也不會少學，當天的題目一樣多；以前設定過的題數和順序不再有作用。'
@@ -7775,6 +7777,41 @@ function weekPractice(days = 7) {
     return { date, v, g, q, total: v + g + q };
   });
 }
+// 過去 7 天 (1.0.26): the week's total, its daily average and the change from the week before (null when that week has
+// nothing), with the kinds added up
+function weekSummary() {
+  const days = weekPractice(7);
+  const total = days.reduce((a, d) => a + d.total, 0);
+  const prev = weekPractice(14).slice(0, 7).reduce((a, d) => a + d.total, 0);
+  const share = { v: 0, g: 0, q: 0 };
+  days.forEach(d => { share.v += d.v; share.g += d.g; share.q += d.q; });
+  return { days, total, avg: Math.round(total / 7), change: prev ? Math.round((total - prev) / prev * 100) : null, share };
+}
+// three numbers, a trend line with one dot a day (a day off on the floor, today in the accent) and the share of each kind
+function weekCardHtml(s) {
+  const last = s.days.length - 1;
+  const max = Math.max(1, ...s.days.map(d => d.total));
+  const x = (i) => (i * 280 / last).toFixed(1), y = (n) => (55 - n / max * 50).toFixed(1);
+  const pts = s.days.map((d, i) => `${x(i)},${y(d.total)}`).join(' ');
+  const wd = (d) => '日一二三四五六'[parseDate(d.date).getDay()];
+  const day = (d, i) => (i === last ? '今天' : `${d.date.slice(5).replace('-', '/')}（${wd(d)}）`);
+  const dots = s.days.map((d, i) => `<circle class="week-dot${i === last ? ' today' : ''}" cx="${x(i)}" cy="${y(d.total)}" r="${i === last ? 4.5 : 3}" tabindex="0" data-tip-title="${esc(day(d, i))}：${d.total ? `${d.total} 題` : '沒有練習'}" data-tip-body="${d.total ? `單字 ${d.v}・文法 ${d.g}・其他 ${d.q}` : ''}"></circle>`).join('');
+  const change = s.change === null ? '—' : s.change > 0 ? `+${s.change}%` : s.change < 0 ? `−${-s.change}%` : '0%';
+  const stat = (v, l, up) => `<div class="week-stat"><div class="week-stat-v${up ? ' up' : ''}">${v}</div><div class="week-stat-l">${l}</div></div>`;
+  const pct = (n) => Math.round(n / s.total * 100);
+  const share = s.total ? `<div class="week-share">${['v', 'g', 'q'].map(k => `<div class="cseg ${k}" style="flex-grow:${s.share[k]}"></div>`).join('')}</div>
+      <div class="week-share-l small muted"><i class="seg-dot v"></i>單字 ${pct(s.share.v)}%・<i class="seg-dot g"></i>文法 ${pct(s.share.g)}%・<i class="seg-dot q"></i>其他 ${pct(s.share.q)}%</div>`
+    : '<div class="week-empty small muted">這 7 天還沒有練習</div>';
+  const table = `<table class="table"><thead><tr><th>日期</th><th>單字</th><th>文法</th><th>其他</th><th>合計</th></tr></thead><tbody>${s.days.map((d, i) => `<tr><td class="num">${i === last ? '今天' : d.date}</td><td class="num">${d.v}</td><td class="num">${d.g}</td><td class="num">${d.q}</td><td class="num">${d.total}</td></tr>`).join('')}</tbody></table>`;
+  return `<div class="card" id="weekCard">
+      <div class="card-head"><div><div class="card-title">過去 7 天的練習量</div><div class="card-sub">單字包含漢字、假名；其他是聽力、閱讀、模擬考</div></div></div>
+      <div class="week-stats">${stat(s.total, '7 天合計（題）')}${stat(s.avg, '每天平均（題）')}${stat(change, '比前 7 天', s.change > 0)}</div>
+      <svg class="week-line" viewBox="-6 -4 292 68" role="img" aria-label="過去 7 天每天作答的題數"><polygon class="week-area" points="${pts} 280,60 0,60"></polygon><polyline points="${pts}"></polyline>${dots}</svg>
+      <div class="week-axis">${s.days.map((d, i) => `<span${i === last ? ' class="today"' : ''}>${i === last ? '今天' : wd(d)}</span>`).join('')}</div>
+      ${share}
+      <details class="disclose mt-3"><summary>明細</summary><div class="table-wrap mt-2">${table}</div></details>
+    </div>`;
+}
 // an item's level for the 學習分析 scopes (1.0.26): 入門 is kana, PRE_N5 words and 第 0 週 grammar; grammar of no course unit
 // (an AI item of an unknown unit) has none and counts only in 總進度
 const UNIT_LV = new Map();
@@ -7912,27 +7949,13 @@ function itemLabel(it) {
 const pctText = (x) => `${Math.round(x * 100)}%`;
 
 function renderStats(view) {
-  const acc = recentAccuracy(60);
+  const acc = recentAccuracy(RECENT_MAX);
   const t = todayStr();
   let total14 = 0;
   for (let d = 0; d < 14; d++) total14 += dayTotal(state.dailyLogs[addDays(t, -d)]);
   const learned = {};
   Object.entries(state.srs).forEach(([k, r]) => { if (r.b >= SRS_LEARNED) learned[k[0]] = (learned[k[0]] || 0) + 1; });
   const pace = grammarPace();
-  const wk = weekPractice(7);
-  const maxW = Math.max(1, ...wk.map(d => d.total));
-  const peak = wk.reduce((a, d, i) => (d.total > wk[a].total ? i : a), 0);
-  const weeks = '日一二三四五六';
-  const last = wk.length - 1;
-  const cols = wk.map((d, i) => {
-    const h = Math.round(d.total / maxW * 100);
-    const tip = d.total ? `單字 ${d.v}・文法 ${d.g}・其他 ${d.q}` : '沒有練習';
-    const label = (i === last || i === peak) && d.total ? `<span class="collabel">${d.total}</span>` : '';
-    const segs = [['q', d.q], ['g', d.g], ['v', d.v]].map(([k, n]) => `<div class="cseg ${k}" style="flex-grow:${n}"></div>`).join('');
-    return `<div class="col" tabindex="0" data-tip-title="${esc(i === last ? '今天' : d.date.slice(5).replace('-', '/'))}：${d.total} 題" data-tip-body="${esc(tip)}">${label}<div class="colbar stack" style="height:${Math.max(h, d.total ? 3 : 0)}%">${segs}</div></div>`;
-  }).join('');
-  const axis = wk.map((d, i) => `<span>${i === last ? '今天' : `${d.date.slice(5).replace('-', '/')}（${weeks[parseDate(d.date).getDay()]}）`}</span>`).join('');
-  const wkTable = `<table class="table"><thead><tr><th>日期</th><th>單字</th><th>文法</th><th>其他</th><th>合計</th></tr></thead><tbody>${wk.map((d, i) => `<tr><td class="num">${i === last ? '今天' : d.date}</td><td class="num">${d.v}</td><td class="num">${d.g}</td><td class="num">${d.q}</td><td class="num">${d.total}</td></tr>`).join('')}</tbody></table>`;
   const gauges = statsScope === 'pre' ? [['a', '假名'], ['v', '入門單字'], ['g', '入門文法']] : [['v', '單字'], ['g', '文法'], ['lr', '聽力＋閱讀'], ['k', '漢字']];
   const progressCard = `<div class="card" id="progressCard">
       <div class="card-head"><div><div class="card-title">總進度</div><div class="card-sub">指針是加權分數：已學 1 分、熟悉 2 分、熟練 3 分，滿分 3 分一題；顏色是三階熟練度。</div></div></div>
@@ -7962,15 +7985,9 @@ function renderStats(view) {
   view.innerHTML = `
     <div class="page-head"><div><div class="page-title">學習分析</div><div class="page-sub">依你的作答紀錄整理。數字會隨練習更新。</div></div></div>
     ${progressCard}
-    <div class="card">
-      <div class="card-head"><div><div class="card-title">過去 7 天的練習量</div><div class="card-sub">每天作答的題數，依種類堆疊</div></div></div>
-      <div class="cols" role="img" aria-label="過去 7 天每天作答的題數">${cols}</div>
-      <div class="col-axis">${axis}</div>
-      <div class="small muted mt-2"><i class="seg-dot v"></i>單字・漢字・假名　<i class="seg-dot g"></i>文法　<i class="seg-dot q"></i>聽力・閱讀・模擬考</div>
-      <details class="disclose mt-3"><summary>明細</summary><div class="table-wrap mt-2">${wkTable}</div></details>
-    </div>
+    ${weekCardHtml(weekSummary())}
     <div class="grid grid-4">
-      <div class="card"><div class="stat"><span class="stat-v">${acc === null ? '—' : pctText(acc)}</span><span class="stat-l">最近 60 題正確率</span></div></div>
+      <div class="card"><div class="stat"><span class="stat-v">${acc === null ? '—' : pctText(acc)}</span><span class="stat-l">最近 ${RECENT_MAX} 題正確率</span></div></div>
       <div class="card"><div class="stat"><span class="stat-v">${(total14 / 14).toFixed(1)}</span><span class="stat-l">近 14 天平均每天題數</span></div></div>
       <div class="card"><div class="stat"><span class="stat-v">${(learned.v || 0) + (learned.g || 0) + (learned.k || 0) + (learned.a || 0)}</span><span class="stat-l">已熟悉（單字 ${learned.v || 0}・文法 ${learned.g || 0}・漢字 ${learned.k || 0}・假名 ${learned.a || 0}）</span></div></div>
       <div class="card"><div class="stat"><span class="stat-v">${pace.left}</span><span class="stat-l">還沒學的文法題</span></div></div>

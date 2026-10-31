@@ -51,6 +51,41 @@ def test_ai_made_grammar_counts_in_its_units_level(b):   # Review Focus 5
       return JSON.stringify(['all', 'n5', 'n4', 'pre'].map((s, i) => n(s) - before[i])); })()"""
     assert json.loads(ev(b, js)) == [2, 1, 0, 0]
 
+# ---- 過去 7 天: 合計、平均、比前 7 天＋趨勢線＋占比; 最近 100 題正確率 ----
+WEEK = """const t = todayStr(); state.dailyLogs = {};
+  const put = (i, v, g, q) => { const d = addDays(t, -i); state.dailyLogs[d] = { date: d, vocabCount: v, grammarCount: g, quizCount: q, bonusCount: 0, minutes: 0, topics: [] }; };
+  const V = [10, 0, 20, 5, 30, 15, 8], G = [4, 0, 6, 2, 10, 5, 2], Q = [1, 0, 2, 0, 3, 1, 1];   // six days ago … today
+  V.forEach((v, i) => put(6 - i, v, G[i], Q[i]));"""
+PREV = lambda mul: "[20, 10, 15, 15, 10, 20, 10].forEach((v, i) => put(13 - i, v * %s, 0, 0));" % mul   # the week before: 100 × mul
+
+def test_week_card_sums_seven_days_and_compares_with_the_week_before(b):
+    js = "(() => { " + FRESH + WEEK + PREV('1') + """ saveState(); location.hash = '#/stats'; route(); const c = document.getElementById('weekCard');
+      const dots = [...c.querySelectorAll('.week-dot')]; const md = (i) => { const d = addDays(t, -i); return d.slice(5).replace('-', '/') + '（' + '日一二三四五六'[parseDate(d).getDay()] + '）'; };
+      return JSON.stringify({ s: weekSummary(), stats: [...c.querySelectorAll('.week-stat-v')].map(x => x.textContent.trim()), up: c.querySelectorAll('.week-stat-v')[2].classList.contains('up'),
+        share: c.querySelector('.week-share-l').textContent, n: dots.length, today: dots[6].classList.contains('today'),
+        peak: [dots[4].dataset.tipTitle, dots[4].dataset.tipBody], rest: dots[1].dataset.tipTitle, wantPeak: md(2) + '：43 題', wantRest: md(5) + '：沒有練習', last: dots[6].dataset.tipTitle,
+        rows: c.querySelectorAll('details tbody tr').length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['s']['total'] == 125 and r['s']['avg'] == 18 and r['s']['change'] == 25 and r['s']['share'] == {'v': 88, 'g': 29, 'q': 8}, r['s']
+    assert r['stats'] == ['125', '18', '+25%'] and r['up'] and r['share'] == '單字 70%・文法 23%・其他 6%', r
+    assert r['n'] == 7 and r['today'] and r['peak'] == [r['wantPeak'], '單字 30・文法 10・其他 3'] and r['rest'] == r['wantRest'] and r['last'] == '今天：11 題' and r['rows'] == 7, r
+
+def test_week_card_shows_a_dash_without_the_week_before_and_a_plain_drop(b):
+    js = "(() => { " + FRESH + WEEK + """ saveState(); location.hash = '#/stats'; route(); const change = () => document.querySelectorAll('#weekCard .week-stat-v')[2];
+      const dash = change().textContent.trim(); """ + PREV('2.5') + """ saveState(); route();   // the week before: 250, so 125 is half of it
+      return JSON.stringify({ dash, drop: change().textContent.trim(), up: change().classList.contains('up') }); })()"""
+    assert json.loads(ev(b, js)) == {'dash': '—', 'drop': '−50%', 'up': False}
+
+def test_week_card_without_practice_says_so(b):
+    js = "(() => { " + FRESH + """ state.dailyLogs = {}; saveState(); location.hash = '#/stats'; route(); const c = document.getElementById('weekCard');
+      return JSON.stringify({ stats: [...c.querySelectorAll('.week-stat-v')].map(x => x.textContent.trim()), empty: (c.querySelector('.week-empty') || {}).textContent, bar: !!c.querySelector('.week-share') }); })()"""
+    assert json.loads(ev(b, js)) == {'stats': ['0', '0', '—'], 'empty': '這 7 天還沒有練習', 'bar': False}
+
+def test_accuracy_tile_reads_the_last_hundred_answers(b):
+    js = "(() => { " + FRESH + """ state.recent = Array(40).fill(0).concat(Array(60).fill(1)); saveState(); location.hash = '#/stats'; route();
+      const l = [...document.querySelectorAll('.stat-l')].find(x => /正確率/.test(x.textContent)); return JSON.stringify([l.textContent, l.previousElementSibling.textContent]); })()"""
+    assert json.loads(ev(b, js)) == ['最近 100 題正確率', '60%']
+
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
