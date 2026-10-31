@@ -8244,12 +8244,14 @@ function courseCardHtml() {
   const tone = (L) => (L !== p.level ? 'other' : p.state === 'late' ? 'late' : 'target');
   let line = ''; let rows = '';
   if (ahead) {
-    const lv = courseLevels().filter(L => p.left[L] > 0);   // a level learned already has no dot
+    // the levels up to the target, or up to the one being learned when that is past it (1.0.33: N3 after an N4 target)
+    const cl = courseLevels(); const shown = cl.slice(0, Math.max(cl.indexOf(p.level), cl.indexOf(curLevel())) + 1);
+    const lv = shown.filter(L => p.left[L] > 0);   // a level learned already has no dot
     const examD = daysBetween(t, p.exam);
     const max = Math.max(1, Math.min(Math.max(examD, ...lv.map(L => p.days[L])), examD * 2));
     const X = (d) => 8 + 384 * Math.min(d, max) / max;
     const dots = lv.map(L => `<circle class="course-dot ${tone(L)}" data-level="${L}" cx="${X(p.days[L]).toFixed(1)}" cy="28" r="5"></circle>`).join('');
-    // labels: about 1em a CJK character (and 、・→), 0.6em the rest; each centred on its point but kept inside the box. Two dates
+    // labels: about 1em a CJK character (and 、・→), 0.6em the rest; each centred on its point but kept inside the box. Dates
     // that would touch share one label; a mark's label that would touch 「今天」 or the other mark's drops a row, or they share one
     const width = (str, size) => [...str].reduce((w, ch) => w + (ch.charCodeAt(0) >= 0x2000 ? size : size * 0.6), 0);
     const place = (x, text, size) => { const w = width(text, size); const c = clamp(x, 2 + w / 2, 398 - w / 2); return { c, a: c - w / 2, b: c + w / 2, text }; };
@@ -8258,7 +8260,10 @@ function courseCardHtml() {
     const near = lv.filter(L => p.days[L] <= max); const far = lv.filter(L => p.days[L] > max);
     const top = near.map(L => ({ x: X(p.days[L]), text: tag(L), cls: tone(L) }));
     if (far.length) top.push({ x: 392, text: `${far.join('、')} →`, cls: far.includes(p.level) ? tone(p.level) : 'other' });
-    if (top.length === 2 && touch(place(top[0].x, top[0].text, 12), place(top[1].x, top[1].text, 12))) top.splice(0, 2, { x: (top[0].x + top[1].x) / 2, text: `${top[0].text}・${top[1].text}`, cls: '' });
+    for (let i = 0; i + 1 < top.length;) {   // neighbours that would touch share one label, again until none touch (three levels)
+      if (!touch(place(top[i].x, top[i].text, 12), place(top[i + 1].x, top[i + 1].text, 12))) { i++; continue; }
+      top.splice(i, 2, { x: (top[i].x + top[i + 1].x) / 2, text: `${top[i].text}・${top[i + 1].text}`, cls: '' }); i = Math.max(0, i - 1);
+    }
     const labels = top.map(l => `<text class="lvl ${l.cls}" x="${place(l.x, l.text, 12).c.toFixed(1)}" y="14" text-anchor="middle">${l.text}</text>`).join('');
     const today = { a: 4, b: 4 + width('今天', 11) };
     const dl = place(X(daysBetween(t, p.deadline)), `${sl(p.deadline).slice(5)} 期限`, 11), ex = place(X(examD), `${sl(p.exam).slice(5)} 考試`, 11);
@@ -8270,7 +8275,7 @@ function courseCardHtml() {
     line = `<svg class="course-line" viewBox="0 0 400 76" role="img" aria-label="從今天到考試的時間軸">
         <line class="axis" x1="8" y1="28" x2="392" y2="28"></line><circle class="start" cx="8" cy="28" r="4"></circle><text x="4" y="52">今天</text>
         ${mark(daysBetween(t, p.deadline), 'deadline')}${mark(examD, 'exam')}${dots}${labels}${below}</svg>`;
-    rows = courseLevels().map((L, i, cl) => {
+    rows = shown.map((L) => {
       const target = L === p.level;
       if (!p.left[L]) return `<div class="course-row" data-level="${L}"><span class="course-lv ${tone(L)}">${L}</span><div>都學過一次了</div></div>`;
       const diff = daysBetween(p.finish[L], p.deadline);

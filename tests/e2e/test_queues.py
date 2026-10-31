@@ -235,7 +235,8 @@ def test_exam_countdown_projects_the_finish_date(b):
     js = "(() => { " + FRESH + """ const t = todayStr(); for (let i = 1; i <= 10; i++) state.dailyLogs[addDays(t, -i)] = { vocabCount: 20, fresh: 12 };
       state.settings.examDate = addDays(t, 400); saveState();
       const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
-      const left = unseen(REG.vocab.filter(v => v.builtin)) + unseen(REG.grammar.filter(g => g.u !== 'm0')) + unseen(REG.kanji);
+      const upTo4 = (lv) => ['PRE_N5', 'N5', 'N4'].includes(lv);   // the target is N4: N3 comes after it (1.0.33)
+      const left = unseen(REG.vocab.filter(v => v.builtin && upTo4(v.lv))) + unseen(REG.grammar.filter(g => g.u !== 'm0' && upTo4(unitLevel(g.u)))) + unseen(REG.kanji.filter(k => upTo4(k.lv)));
       const a = coursePace(); const want = addDays(t, Math.ceil(left / 12));
       location.hash = '#/exam'; route(); const hint = (document.querySelector('.hero-advice') || {}).textContent || '';
       state.settings.examDate = addDays(t, 100); saveState(); const a2 = coursePace(); route(); const hint2 = (document.querySelector('.hero-advice') || {}).textContent || '';

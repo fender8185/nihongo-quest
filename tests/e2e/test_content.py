@@ -95,7 +95,7 @@ def test_records_of_removed_sentence_choice_items_are_dropped(b):
 # ---- 1.0.31: the N5／N4 gap words of the curriculum outline (curriculum/gaps-n5n4.json, less the 16 sharing a spelling) ----
 def test_bank_has_the_gap_words_from_the_curriculum_outline(b):
     js = """(() => { const G = DATA.VOCAB.filter(v => /^n[54]g-\\d{3}$/.test(v.id) && Number(v.id.slice(4)) <= (v.id[1] === '5' ? 38 : 60));   /* the 98 of 1.0.31 */ const T = (lv) => (DATA.THEMES[lv] || []).map(t => t.c);
-      const count = new Map(); DATA.VOCAB.forEach(v => count.set(jaPlain(v.w), (count.get(jaPlain(v.w)) || 0) + 1));
+      const count = new Map(); DATA.VOCAB.filter(v => v.lv !== 'N3').forEach(v => count.set(jaPlain(v.w), (count.get(jaPlain(v.w)) || 0) + 1));   /* 1.0.33: an N3 word may share one (都 みやこ), a homograph */
       const reg = (v) => REG.byKey.get('v:' + v.id);
       const badMeaning = G.filter(v => (meaningOptions(reg(v)) || []).some(m => m !== v.m && zhOverlap(m, v.m))).map(v => v.w);
       const badRecall = G.filter(v => (recallOptions(reg(v)) || []).some(w => { const x = REG.vocab.find(y => y.builtin && y.w === w); return x && x.r === v.r; })).map(v => v.w);

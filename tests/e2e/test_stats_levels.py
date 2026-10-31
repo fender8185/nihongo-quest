@@ -18,15 +18,16 @@ def test_each_scope_shows_its_banks_and_totals(b):
     js = "(() => { " + FRESH + """ location.hash = '#/stats'; route();
       const pick = (s) => { document.querySelector(`[data-act=stats-scope][data-scope=${s}]`).click();
         return [...document.querySelectorAll('#progressCard .gauge')].map(g => [g.dataset.kind, +g.dataset.total, !!g.querySelector('.tick'), g.querySelector('.hero-l').textContent]); };   // 1.0.27: the bank's name sits under the %
-      const n5u = new Set(DATA.UNITS.filter(u => u.lv === 'N5').map(u => u.id)), n4u = new Set(DATA.UNITS.filter(u => u.lv === 'N4').map(u => u.id));
+      const unitsOf = (L) => new Set(DATA.UNITS.filter(u => u.lv === L).map(u => u.id)); const n5u = unitsOf('N5'), n4u = unitsOf('N4'), n3u = unitsOf('N3');
       const V = REG.vocab.filter(v => v.builtin), LR = REG.listen.concat(REG.read), G = REG.grammar;
       const want = {
         all: [['v', V.length, true, '單字'], ['g', G.length, true, '文法'], ['lr', LR.length, true, '聽力＋閱讀'], ['k', REG.kanji.length, true, '漢字']],
         pre: [['a', REG.kana.length, false, '假名'], ['v', V.filter(v => v.lv === 'PRE_N5').length, false, '入門單字'], ['g', G.filter(g => g.u === 'm0').length, false, '入門文法']],
         n5: [['v', V.filter(v => v.lv === 'N5').length, false, '單字'], ['g', G.filter(g => n5u.has(g.u)).length, false, '文法'], ['lr', LR.filter(x => x.lv === 'N5').length, false, '聽力＋閱讀'], ['k', REG.kanji.filter(k => k.lv === 'N5').length, false, '漢字']],
-        n4: [['v', V.filter(v => v.lv === 'N4').length, false, '單字'], ['g', G.filter(g => n4u.has(g.u)).length, false, '文法'], ['lr', LR.filter(x => x.lv === 'N4').length, false, '聽力＋閱讀'], ['k', REG.kanji.filter(k => k.lv === 'N4').length, false, '漢字']] };
-      const got = {}; ['pre', 'n5', 'n4', 'all'].forEach(s => { got[s] = pick(s); });
-      const part = (i, j) => want.n5[i][1] + want.n4[i][1] + (j === null ? 0 : want.pre[j][1]) === want.all[i][1];   // every item is in one level view
+        n4: [['v', V.filter(v => v.lv === 'N4').length, false, '單字'], ['g', G.filter(g => n4u.has(g.u)).length, false, '文法'], ['lr', LR.filter(x => x.lv === 'N4').length, false, '聽力＋閱讀'], ['k', REG.kanji.filter(k => k.lv === 'N4').length, false, '漢字']],
+        n3: [['v', V.filter(v => v.lv === 'N3').length, false, '單字'], ['g', G.filter(g => n3u.has(g.u)).length, false, '文法'], ['lr', LR.filter(x => x.lv === 'N3').length, false, '聽力＋閱讀'], ['k', REG.kanji.filter(k => k.lv === 'N3').length, false, '漢字']] };
+      const got = {}; ['pre', 'n5', 'n4', 'n3', 'all'].forEach(s => { got[s] = pick(s); });
+      const part = (i, j) => want.n5[i][1] + want.n4[i][1] + want.n3[i][1] + (j === null ? 0 : want.pre[j][1]) === want.all[i][1];   // every item is in one level view
       return JSON.stringify({ got, want, part: [part(0, 1), part(1, 2), part(2, null), part(3, null)] }); })()"""
     r = json.loads(ev(b, js))
     assert r['got'] == r['want'], r
@@ -111,11 +112,11 @@ def test_exam_row_has_the_level_and_the_date(b):
     js = """(() => { openSettings('learn'); const m = document.querySelector('.modal'); const sel = m.querySelector('select[data-key=examLevel]');
       const row = sel && sel.closest('.setting-row'); const out = { opts: sel ? [...sel.options].map(o => o.value) : null, value: sel && sel.value, date: !!(row && row.querySelector('input[data-key=examDate]')),
         label: row && row.querySelector('.label').textContent, hint: row && row.querySelector('.hint').textContent }; closeModal(true); return JSON.stringify(out); })()"""
-    assert json.loads(ev(b, js)) == {'opts': ['N5', 'N4'], 'value': 'N4', 'date': True, 'label': '考試', 'hint': '學習分析和模擬考頁會照這個級別和日期推估進度。'}
+    assert json.loads(ev(b, js)) == {'opts': ['N5', 'N4', 'N3'], 'value': 'N4', 'date': True, 'label': '考試', 'hint': '學習分析和模擬考頁會照這個級別和日期推估進度。'}
 
-def test_exam_level_is_n4_unless_n5_was_saved(b):
+def test_exam_level_is_n4_unless_another_level_was_saved(b):
     js = """JSON.stringify([defaultSettings().examLevel, ...[{ examLevel: 'N3' }, { examLevel: 'N5' }, {}].map(s => normalizeState({ settings: s }).settings.examLevel)])"""
-    assert json.loads(ev(b, js)) == ['N4', 'N4', 'N5', 'N4']
+    assert json.loads(ev(b, js)) == ['N4', 'N3', 'N5', 'N4']   # 1.0.33: N3 is a course level
 
 def test_picking_n5_saves_it(b):
     js = """(() => { openSettings('learn'); const sel = document.querySelector('select[data-key=examLevel]'); sel.value = 'N5'; sel.dispatchEvent(new Event('change', { bubbles: true }));
@@ -135,7 +136,7 @@ def test_course_pace_counts_each_levels_leftovers(b):   # 1.0.32: level after le
     js = "(() => { " + FRESH + PACE + """ pace(10); exam(51); const out = [];
       only(w5); out.push(coursePace().days); state.srs = {}; only(w5.concat(w4)); out.push(coursePace().days); state.srs = {}; only(w5.concat(w4, g5)); out.push(coursePace().days);
       return JSON.stringify(out); })()"""
-    assert json.loads(ev(b, js)) == [{'N5': 3, 'N4': 3}, {'N5': 3, 'N4': 9}, {'N5': 5, 'N4': 11}]   # 30 N5 words + 20 N5 grammar = 5 days, then + 60 N4 words
+    assert json.loads(ev(b, js)) == [{'N5': 3, 'N4': 3, 'N3': 3}, {'N5': 3, 'N4': 9, 'N3': 9}, {'N5': 5, 'N4': 11, 'N3': 11}]   # 30 N5 words + 20 N5 grammar = 5 days, then + 60 N4 words (N3: all seen here)
 
 def test_course_text_when_on_time_and_when_late(b):
     js = "(() => { " + FRESH + PACE + """ pace(10); only(w5.concat(w4, g5)); const out = {}; const run = (n, lv) => { exam(n); state.settings.examLevel = lv; const p = coursePace(); return [p.state, p.need || null, p.plan || null, courseText(p)]; };
@@ -153,13 +154,14 @@ def test_course_text_when_on_time_and_when_late(b):
 def test_course_text_for_a_passed_or_close_exam_and_a_finished_level(b):   # Review Focus 2: 21 days is close, 22 is not
     js = "(() => { " + FRESH + PACE + """ pace(10); const out = {}; const run = (n, lv) => { exam(n); state.settings.examLevel = lv; const p = coursePace(); return [p.state, courseText(p)]; };
       only(w5.concat(w4, g5)); out.passed = run(-1, 'N4'); out.close = run(21, 'N4'); out.notClose = run(22, 'N4')[0];
-      state.srs = {}; only(w4); out.done5 = run(51, 'N5'); state.srs = {}; only([]); out.done4 = run(51, 'N4');
+      state.srs = {}; only(w4); out.done5 = run(51, 'N5'); state.srs = {}; only([]); out.done4 = run(51, 'N4'); out.done3 = run(51, 'N3');
       return JSON.stringify({ out, n4: sl(6) }); })()"""
     r = json.loads(ev(b, js)); o = r['out']
     assert o['passed'] == ['passed', '考試日期已經過了。到設定裡改成下一次的日期，這裡會重新計算。'], o
     assert o['close'] == ['close', '距離考試只剩 21 天，不到三週：建議只做每天的練習與模擬考。'] and o['notClose'] == 'late', o
     assert o['done5'] == ['done', f'N5 的單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。照現在的速度，預計 {r["n4"]} 學完 N4。'], o
-    assert o['done4'] == ['done', '單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。'], o
+    assert o['done4'] == ['done', 'N4 的單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。'], o   # 1.0.33: N3 comes after it, nothing of it left here
+    assert o['done3'] == ['done', '單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。'], o   # the last level
 
 def test_course_pace_falls_back_to_the_days_count_without_new_items(b):
     js = "(() => { " + FRESH + PACE + """ for (let i = 1; i <= 14; i++) state.dailyLogs[addDays(T, -i)] = { vocabCount: 5, fresh: 0 }; exam(400);
@@ -171,9 +173,18 @@ def test_course_pace_in_the_intro_stage_adds_what_is_left_of_it(b):
     js = "(() => { " + FRESH + PACE + """ state.stage = 'pre'; pace(10); exam(400); only(w5);
       seen(REG.kana.slice(20)); seen(REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5')); seen(REG.grammar.filter(g => g.u === 'm0'));   // 20 kana left
       return JSON.stringify([introLeft(), coursePace().days]); })()"""
-    assert json.loads(ev(b, js)) == [0, {'N5': 5, 'N4': 5}]
+    assert json.loads(ev(b, js)) == [0, {'N5': 5, 'N4': 5, 'N3': 5}]
 
 # ---- 課程進度 card (學完的預估 merged in), the exam countdown and the AI advice follow the target level ----
+def test_course_card_goes_on_to_the_level_being_learned_past_the_target(b):   # 1.0.33: N3 shows once N5 and N4 are done (target N4)
+    js = "(() => { " + FRESH + PACE + """ pace(10); exam(200); state.settings.examLevel = 'N4';
+      const before = [...(location.hash = '#/stats', route(), document.querySelectorAll('#courseCard .course-row'))].map(r => r.dataset.level);
+      only(REG.vocab.filter(v => v.builtin && v.lv === 'N3').concat(REG.kanji.filter(k => k.lv === 'N3'))); state.completedUnits = DATA.UNITS.filter(u => u.lv !== 'N3').map(u => u.id);
+      route(); const card = document.getElementById('courseCard');
+      const out = { before, cur: curLevel(), rows: [...card.querySelectorAll('.course-row')].map(r => r.dataset.level), dots: [...card.querySelectorAll('.course-dot')].map(d => d.dataset.level) };
+      state.srs = {}; state.completedUnits = []; return JSON.stringify(out); })()"""
+    assert json.loads(ev(b, js)) == {'before': ['N5', 'N4'], 'cur': 'N3', 'rows': ['N5', 'N4', 'N3'], 'dots': ['N3']}
+
 def test_course_card_shows_both_levels_and_the_target(b):
     js = "(() => { " + FRESH + PACE + """ pace(10); exam(51); only(w5.concat(w4)); saveState(); location.hash = '#/stats'; route(); const c = document.getElementById('courseCard');
       const row = (lv) => c.querySelector(`.course-row[data-level=${lv}]`).textContent.replace(/\\s+/g, ' ');
@@ -236,11 +247,11 @@ def test_timeline_labels_never_overlap(b):   # a sweep of paces and exam dates: 
     js = "(() => { " + FRESH + PACE + """ const bad = [];
       const boxes = () => [...document.querySelectorAll('#courseCard .course-line text')].map(x => { const r = x.getBBox(); return [x.textContent, r.x, r.x + r.width, r.y, r.y + r.height]; });
       const hit = (a, c) => a[1] < c[2] && c[1] < a[2] && a[3] < c[4] && c[3] < a[4];
-      for (const setup of [() => {}, () => only(w5.concat(w4, g5))]) for (const n of [1, 3, 6, 9.6, 12, 20, 40]) for (const d of [22, 24, 27, 40, 100, 200, 400]) {
-        state.srs = {}; setup(); pace(n); exam(d); location.hash = '#/stats'; route(); const bx = boxes();
-        bx.forEach((a, i) => { if (a[1] < 0 || a[2] > 400) bad.push([n, d, 'out', a[0]]); bx.slice(i + 1).forEach(c => { if (hit(a, c)) bad.push([n, d, a[0], c[0]]); }); });
+      for (const lv of ['N4', 'N3']) for (const setup of [() => {}, () => only(w5.concat(w4, g5))]) for (const n of [1, 3, 6, 9.6, 12, 20, 40]) for (const d of [22, 24, 27, 40, 100, 200, 400]) {
+        state.srs = {}; state.settings.examLevel = lv; setup(); pace(n); exam(d); location.hash = '#/stats'; route(); const bx = boxes();   // 1.0.33: an N3 target puts three levels on the line
+        bx.forEach((a, i) => { if (a[1] < 0 || a[2] > 400) bad.push([lv, n, d, 'out', a[0]]); bx.slice(i + 1).forEach(c => { if (hit(a, c)) bad.push([lv, n, d, a[0], c[0]]); }); });
       }
-      return JSON.stringify(bad.slice(0, 8)); })()"""
+      state.settings.examLevel = 'N4'; return JSON.stringify(bad.slice(0, 8)); })()"""
     assert json.loads(ev(b, js)) == []
 
 def test_course_advice_never_contradicts_itself(b):   # no 「需 10 題（現在約 10 題）」, no interval longer than the days left
@@ -273,9 +284,9 @@ def test_course_pace_adds_the_levels_one_after_another(b):
     js = """(() => { state.stage = 'main'; const p = coursePace(); const un = (x) => !state.srs[x.key]; const lv5 = (lv) => lv === 'PRE_N5' || lv === 'N5';
       const units = (f) => DATA.UNITS.filter(u => f(u.lv) && !state.completedUnits.includes(u.id)).map(u => u.id);
       const count = (f) => REG.vocab.filter(v => v.builtin && f(v.lv) && un(v)).length + REG.kanji.filter(k => f(k.lv) && un(k)).length + REG.grammar.filter(g => units(f).includes(g.u) && un(g)).length;
-      const n5 = count(lv5), all = count(() => true);   // counted from the bank here, not from coursePace's own levelLeft
-      return JSON.stringify({ n5: p.days.N5 === Math.ceil(n5 / p.perDay), n4: p.days.N4 === Math.ceil(all / p.perDay), order: p.days.N4 > p.days.N5 }); })()"""
-    r = json.loads(ev(b, js)); assert r == {'n5': True, 'n4': True, 'order': True}, r
+      const n5 = count(lv5), n4 = count((lv) => lv5(lv) || lv === 'N4'), all = count(() => true);   // counted from the bank here, not from coursePace's own levelLeft
+      return JSON.stringify({ n5: p.days.N5 === Math.ceil(n5 / p.perDay), n4: p.days.N4 === Math.ceil(n4 / p.perDay), n3: p.days.N3 === Math.ceil(all / p.perDay), order: p.days.N3 > p.days.N4 && p.days.N4 > p.days.N5 }); })()"""
+    r = json.loads(ev(b, js)); assert r == {'n5': True, 'n4': True, 'n3': True, 'order': True}, r
 
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

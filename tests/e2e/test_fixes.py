@@ -541,7 +541,7 @@ def test_stats_shows_the_past_week_of_practice_and_what_was_learned(b):
       const d = card.querySelector('details'); const txt = d ? d.textContent : '';
       const cards = [...v.querySelectorAll(':scope > .card, :scope > .grid')]; const order = [cards.indexOf(document.getElementById('progressCard')), cards.indexOf(card), cards.findIndex(c => c.classList.contains('grid-4'))];
       const g = [...document.querySelectorAll('#progressCard .gauge')].map(x => ({ k: x.dataset.kind, total: +x.dataset.total, seen: +x.dataset.seen, learned: +x.dataset.learned, mastered: +x.dataset.mastered, pct: +x.dataset.pct, needle: !!x.querySelector('.needle'), arcs: x.querySelectorAll('path.arc').length, tick: x.querySelector('.tick') ? +x.querySelector('.tick').dataset.f : null, tickLabels: [...x.querySelectorAll('.tick-l')].map(t => t.textContent).join('/') }));
-      return JSON.stringify({ card: true, nonN4: REG.vocab.filter(x => x.builtin && x.lv !== 'N4').length, future: /未來 7 天/.test(v.textContent), n: dots.length, tip: dots[5] && dots[5].dataset.tipBody, summary: d && d.querySelector('summary').textContent,
+      return JSON.stringify({ card: true, below4: REG.vocab.filter(x => x.builtin && ['PRE_N5', 'N5'].includes(x.lv)).length, gLevels: courseLevels().filter(L => REG.grammar.some(x => unitLevel(x.u) === L)).join('/'), future: /未來 7 天/.test(v.textContent), n: dots.length, tip: dots[5] && dots[5].dataset.tipBody, summary: d && d.querySelector('summary').textContent,
         learned: txt.includes(__lab[0]), fresh: txt.includes(__lab[1]), legend: /單字.*文法/.test(card.textContent), g, order, hasLegend: /已熟練|熟練/.test(document.getElementById('progressCard').textContent) && /熟悉/.test(document.getElementById('progressCard').textContent) && /已學/.test(document.getElementById('progressCard').textContent) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("nav", URL + "#/stats"), ("eval", probe)], timeout=45)
     r = json.loads(out[-1])
@@ -552,8 +552,8 @@ def test_stats_shows_the_past_week_of_practice_and_what_was_learned(b):
     g = {x['k']: x for x in r['g']}; assert set(g) == {'v', 'g', 'lr', 'k'}, r['g']   # 1.0.26: 總進度 has 聽力＋閱讀 and 漢字; 假名 moved to the 入門 scope
     assert g['v']['learned'] == 1 and g['v']['mastered'] == 0 and g['v']['total'] >= 1400 and g['v']['needle'] and g['v']['arcs'] == 1 and 0 <= g['v']['pct'] < 100, g['v']
     assert g['g']['seen'] + g['g']['learned'] + g['g']['mastered'] == 1 and g['g']['total'] >= 1000, g['g']
-    assert abs(g['v']['tick'] - r['nonN4'] / g['v']['total']) < 0.002 and g['v']['tickLabels'] == 'N5/N4', g['v']   # a faint mark where N4 begins (入門＋N5 before it)
-    assert 0.2 < g['g']['tick'] < 0.6 and g['g']['tickLabels'] == 'N5/N4', g['g']
+    assert abs(g['v']['tick'] - r['below4'] / g['v']['total']) < 0.002 and g['v']['tickLabels'] == 'N5/N4/N3', g['v']   # a faint mark where each level begins (入門＋N5 before the first; N3 since 1.0.33)
+    assert 0.2 < g['g']['tick'] < 0.6 and g['g']['tickLabels'] == r['gLevels'], (g['g'], r['gLevels'])   # the levels that have grammar
 
 def test_reaching_the_learned_level_records_the_date(b):
     js = """(() => { const v = REG.vocab.find(x => x.builtin); const k = v.key; delete state.srs[k]; const out = [];
@@ -579,7 +579,8 @@ def test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading(b):
 def test_stats_projects_the_finish_date_from_the_recent_pace(b):
     seed = """(() => { const t = todayStr(); state.settings.examDate = addDays(t, 121); for (let i = 1; i <= 5; i++) state.dailyLogs[addDays(t, -i)] = { vocabCount: 20, fresh: 10 }; saveState();
       const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
-      return addDays(t, Math.ceil((unseen(REG.vocab.filter(x => x.builtin)) + unseen(REG.grammar.filter(g => g.u !== 'm0')) + unseen(REG.kanji)) / 10)); })()"""
+      const upTo4 = (lv) => ['PRE_N5', 'N5', 'N4'].includes(lv);   // the target is N4; the card shows the levels up to it (1.0.33)
+      return addDays(t, Math.ceil((unseen(REG.vocab.filter(x => x.builtin && upTo4(x.lv))) + unseen(REG.grammar.filter(g => g.u !== 'm0' && upTo4(unitLevel(g.u)))) + unseen(REG.kanji.filter(k => upTo4(k.lv)))) / 10)); })()"""
     probe = """(() => { const card = document.getElementById('courseCard'); if (!card) return 'NO CARD';   // 1.0.26: 學完的預估 is part of 課程進度
       const txt = card.textContent; return JSON.stringify({ per: txt.includes('每天約 10 題'), finish: txt, button: !!card.querySelector('[data-act=apply-advice]'), rows: card.querySelectorAll('details.course-banks tbody tr').length }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("nav", URL + "#/stats"), ("eval", probe)], timeout=45)
