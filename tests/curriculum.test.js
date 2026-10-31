@@ -62,3 +62,55 @@ test('grammarKey: tildes, spaces and bracketed notes do not matter', () => {
   assert.equal(M().grammarKey('～からなる(成る)'), 'からなる');
   assert.equal(M().grammarKey('N+ばかり'), 'ばかり');
 });
+
+// ---- candidates (Task 3) ----
+const B = () => require('../scripts/curriculum/build-candidates.js');
+const LEVELS = ['N5', 'N4', 'N3', 'N2', 'N1'];
+let REAL = null;
+const real = () => REAL || (REAL = B().buildCandidates(B().loadSources(SRC), B().loadData(ROOT)));
+const count = (C, L, kind, st) => C[L][kind].filter(x => x.status === st).length;
+const emptyData = () => ({ VOCAB: [], KANJI: [], GRAMMAR: [], UNITS: [], LESSONS: {} });
+const fakeSources = (over) => Object.assign({ vocab: { 5: [], 4: [], 3: [], 2: [], 1: [] }, kanji: { 5: [], 4: [], 3: [], 2: [], 1: [] },
+  wallerGrammar: { 3: [], 2: [], 1: [] }, openGrammar: { 3: [], 2: [], 1: [] } }, over);
+
+test('candidates: new kanji per level leave out the app\'s kanji table', () => {
+  const C = real();
+  assert.deepEqual([count(C, 'N3', 'kanji', 'new'), count(C, 'N2', 'kanji', 'new'), count(C, 'N1', 'kanji', 'new')], [295, 350, 1227]);
+  assert.equal(count(C, 'N3', 'kanji', 'in-app'), 72);
+});
+test('candidates: every Waller row is kept, and the new-word counts are in the measured range', () => {
+  const C = real(); const ROWS = { N5: 700, N4: 649, N3: 1835, N2: 1846, N1: 3475 };
+  for (const L of LEVELS) assert.equal(C[L].words.length, ROWS[L], L);
+  const n3 = count(C, 'N3', 'words', 'new'), n2 = count(C, 'N2', 'words', 'new'), n1 = count(C, 'N1', 'words', 'new');
+  assert.ok(n3 >= 1350 && n3 <= 1500, `N3 ${n3}`); assert.ok(n2 >= 1600 && n2 <= 1750, `N2 ${n2}`); assert.ok(n1 >= 3000 && n1 <= 3200, `N1 ${n1}`);
+});
+test('candidates: a spelling is new in one level only', () => {
+  const all = LEVELS.flatMap(L => real()[L].words.filter(x => x.status === 'new').map(x => x.w));
+  assert.equal(new Set(all).size, all.length);
+});
+test('candidates: a word listed again higher up, or twice in one level, is a dup of the first', () => {
+  const C = B().buildCandidates(fakeSources({ vocab: { 5: [], 4: [['重箱', 'じゅうばこ']], 3: [['重箱', 'じゅうばこ'], ['重複', 'ちょうふく'], ['重複', 'ちょうふく']], 2: [], 1: [] } }), emptyData());
+  assert.deepEqual(C.N3.words.map(x => [x.w, x.status, x.dupOf]), [['重箱', 'dup', 'N4'], ['重複', 'new', undefined], ['重複', 'dup', 'N3']]);
+});
+test('candidates: the same grammar point from both lists is one entry; one-sided points stay with their source', () => {
+  const C = B().buildCandidates(fakeSources({ wallerGrammar: { 3: [{ id: '1', pattern: '～ば～ほど' }, { id: '2', pattern: '～とたん' }], 2: [], 1: [] },
+    openGrammar: { 3: [{ id: 'ba-hodo', pattern: '〜ば〜ほど', level: 'N3' }, { id: 'ppoi', pattern: '〜っぽい', level: 'N3' }], 2: [], 1: [] } }), emptyData());
+  assert.deepEqual(C.N3.grammar.map(x => [x.key, x.src, x.status]), [['ばほど', ['waller', 'openjlpt'], 'new'], ['とたん', ['waller'], 'new'], ['っぽい', ['openjlpt'], 'new']]);
+  assert.equal(C.N5.grammar, undefined);
+});
+test('candidates: a grammar point listed at two levels belongs to the lower one', () => {
+  const C = B().buildCandidates(fakeSources({ wallerGrammar: { 3: [], 2: [{ id: '9', pattern: '～にかけて' }], 1: [] },
+    openGrammar: { 3: [{ id: 'nikakete', pattern: '〜にかけて', level: 'N3' }], 2: [], 1: [] } }), emptyData());
+  assert.deepEqual(C.N3.grammar.map(x => [x.key, x.status]), [['にかけて', 'new']]);
+  assert.deepEqual(C.N2.grammar.map(x => [x.key, x.status, x.dupOf]), [['にかけて', 'dup', 'N3']]);
+});
+test('report: per-level table, variants with their app word, the kanji the app\'s words use outside its table', () => {
+  const md = B().reportMarkdown(real(), B().loadData(ROOT));
+  assert.match(md, /\| N3 \| 1835 \|/);
+  assert.match(md, /待確認/);
+  assert.match(md, /漢字表沒有/);
+});
+test('app grammar: every course unit with its lesson headings', () => {
+  const md = B().appGrammarMarkdown(B().loadData(ROOT));
+  assert.match(md, /^## m7 /m); assert.match(md, /可能形的變法/); assert.match(md, /^## m18 /m);
+});
