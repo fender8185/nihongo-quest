@@ -159,6 +159,29 @@ def test_same_spelling_words_show_their_own_reading_in_their_examples(b):
       return JSON.stringify({ shi: /<rt>し(がつ)?<\\/rt>/.test(shi) && !shi.includes('<rt>つき</rt>'), ichi: ichi.includes('<rt>いちにち</rt>'), wata: wata.includes('<rt>わたくし</rt>'), nip: nip.includes('<rt>にっぽん</rt>') }); })()"""
     r = json.loads(ev(b, js)); assert r == {'shi': True, 'ichi': True, 'wata': True, 'nip': True}, r
 
+# ---- 1.0.33 review of part one ----
+def test_hiding_a_card_does_not_change_how_sentences_read(b):
+    js = """(() => { const keep = (state.hidden || []).slice(); const ids = ['n5c-001', 'n5b-137', 'n5b-146'];   // 行く いく, 私 わたし, 何 なに
+      state.hidden = keep.concat(ids); buildRegistry();
+      const out = [furi('昨日、学校へ行きました。'), furi('私は学生です。'), furi('何を食べますか。')];
+      state.hidden = keep; buildRegistry(); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert '<rt>い</rt>' in r[0] and '<rt>わたし</rt>' in r[1] and '<rt>なに</rt>' in r[2], r
+
+def test_same_spelling_cards_keep_their_reading_in_cloze_recall_notebook_and_drills(b):
+    js = """(() => { const get = (w, r) => REG.vocab.find(v => v.builtin && v.w === w && v.r === r);
+      const ichi = get('一日', 'いちにち'), wata = get('私', 'わたくし');
+      const cz = makeVocabQuestion(ichi, { forceFmt: 'v-cloze' }); const rc = makeVocabQuestion(wata, { forceFmt: 'v-recall' });
+      const ans = (q) => optionHtml(q, q.options[q.answer]);
+      return JSON.stringify({ fill: cz && cz.fillHtml.includes('いちにち'), clozeOpt: cz && ans(cz).includes('いちにち'), recallOpt: rc && ans(rc).includes('わたくし'),
+        prompt: furi(makeVocabQuestion(wata, { forceFmt: 'v-meaning' }).mistakePrompt).includes('<rt>わたくし</rt>'),
+        drill: drillVerbs().filter(v => (v.w === '行く' && v.r === 'ゆく') || (v.w === '開く' && v.r === 'ひらく')).length }); })()"""
+    r = json.loads(ev(b, js)); assert r == {'fill': True, 'clozeOpt': True, 'recallOpt': True, 'prompt': True, 'drill': 0}, r
+
+def test_every_conjugation_choice_has_a_label(b):
+    js = "JSON.stringify(Object.values(CONJ_POOL).flat().filter(f => !FORM_LABEL[f]))"
+    r = json.loads(ev(b, js)); assert r == [], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -1629,8 +1629,12 @@ function buildRegistry() {
   const kana = kanaItems().filter(k => !hidden.has(k.id));   // 假名辨識 (kind a): the tables live in this file, not in data.js
   [vocab, grammar, listen, read, kanji, drills, kana].forEach(list => list.forEach(x => byKey.set(x.key, x)));
   REG = { vocab, grammar, listen, read, kanji, drills, kana, byKey };
-  const spell = new Map(); vocab.filter(v => v.builtin).forEach(v => { const k = jaPlain(v.w); spell.set(k, (spell.get(k) || []).concat([v.r])); });
+  BUILTIN_ALL = DATA.VOCAB.map(v => Object.assign({ key: 'v:' + v.id, kind: 'v', builtin: true }, v));   // hidden ones too
+  const spell = new Map(); BUILTIN_ALL.forEach(v => { const k = jaPlain(v.w); spell.set(k, (spell.get(k) || []).concat([v.r])); });
   HOMOGRAPHS = new Map([...spell].filter(([, rs]) => new Set(rs).size > 1));   // spelling → the readings built-in words give it (四: よん, し)
+  const rank = (v) => [/^(n[54]g|n[321][a-z])-/.test(v.id) ? 1 : 0, ALL_LEVELS.indexOf(courseLevel(v.lv)), v.id];
+  const before = (a, b) => { const x = rank(a), y = rank(b); return x[0] - y[0] || x[1] - y[1] || (x[2] < y[2] ? -1 : 1); };
+  FIRST_OF = new Map(); BUILTIN_ALL.forEach(v => { const k = jaPlain(v.w); if (HOMOGRAPHS.has(k) && (!FIRST_OF.has(k) || before(v, FIRST_OF.get(k)) < 0)) FIRST_OF.set(k, v); });
   buildFuriganaIndex();
 }
 
@@ -2015,12 +2019,16 @@ function courseProgress() {
 }
 // How much new material per day the exam date asks for, and the practice load that implies
 // (a new item costs about four reviews in its first month).
+// the level wording AI prompts use: up to the learner's exam target (N5～N4 for an N4 target, N5～N3 for N3)
+function aiLevelRange() { const cl = courseLevels(); const t = cl.includes(state.settings.examLevel) ? state.settings.examLevel : DEFAULT_LEVEL; return t === cl[0] ? t : `${cl[0]}～${t}`; }
+function aiLevelTop() { return courseLevels().includes(state.settings.examLevel) ? state.settings.examLevel : DEFAULT_LEVEL; }
 function examPace() {
   const t = todayStr();
   const exam = state.settings.examDate || '2027-07-04';
   const daysLeft = Math.max(0, daysBetween(t, exam));
   const cur = unitOrder(state.currentUnit);
-  const remainingUnits = DATA.UNITS.length - cur;
+  const lastUnit = DATA.UNITS.reduce((i, u, j) => (ALL_LEVELS.indexOf(courseLevel(u.lv)) <= ALL_LEVELS.indexOf(aiLevelTop()) ? j : i), DATA.UNITS.length - 1);
+  const remainingUnits = Math.max(0, lastUnit + 1 - cur);   // units up to the exam target's level
   const studyDays = Math.max(0, daysLeft - 21);           // keep three weeks for mock exams
   const perUnit = remainingUnits > 0 ? studyDays / remainingUnits : 0;
   let status = 'ok';
@@ -2124,16 +2132,13 @@ function buildFuriganaIndex() {
     const cl = courseLevels();
     // 同形異讀: the first built-in word of a spelling keeps its place; the later readings (四 し after 四 よん) go in last, below
     // everything else, so they never take an old sentence's reading (their own examples show them, exampleHtml)
-    // "first" means the app's own word before any the curriculum outline added (n5g/n4g, n3a… batches), then the lower id
-    const rank = (v) => (/^(n[54]g|n[321][a-z])-/.test(v.id) ? '1' : '0') + v.id;
-    const first = new Map(); REG.vocab.filter(v => v.builtin).forEach(v => { const k = jaPlain(v.w); if (!first.has(k) || rank(v) < rank(first.get(k))) first.set(k, v); });
-    const later = (v) => homographReadings(v).length > 0 && first.get(jaPlain(v.w)) !== v;
-    furiPrio = 4; REG.vocab.filter(v => v.builtin && !later(v) && courseLevel(v.lv) === cl[0]).forEach(add);
+    const later = laterReading;   // "first" of a spelling: the app's own word, then the lower level, then the lower id (buildRegistry)
+    furiPrio = 4; BUILTIN_ALL.filter(v => !later(v) && courseLevel(v.lv) === cl[0]).forEach(add);
     furiPrio = 3; furiSrc = ''; (DATA.FURI || []).forEach(([k, r]) => furiAdd(k, r));   // these readings belong to no word: mastering the last word added above must not hide them
-    cl.slice(1).forEach((L, i) => { furiPrio = 2 - i * 0.1; REG.vocab.filter(v => v.builtin && !later(v) && v.lv === L).forEach(add); });   // N4 2, N3 1.9 … (spec §4.5)
+    cl.slice(1).forEach((L, i) => { furiPrio = 2 - i * 0.1; BUILTIN_ALL.filter(v => !later(v) && v.lv === L).forEach(add); });   // N4 2, N3 1.9 … (spec §4.5)
     // readings for words that appear in sentences but are not quizzed (names, 思う, 名前 …)
     furiPrio = 1.5; (DATA.FURI_EXTRA || []).forEach(([w, r, p]) => add({ w, r, p }));
-    furiPrio = 1.4; REG.vocab.filter(v => v.builtin && later(v)).forEach(add);
+    furiPrio = 1.4; BUILTIN_ALL.filter(later).forEach(add);
     FURI_BASE = { key: hiddenKey, furi: new Map(FURI), prio: new Map(FURI_PRIO), block: new Set(FURI_BLOCK), src: new Map(FURI_SRC), max: FURI_MAX };
   }
   furiPrio = 1; REG.vocab.filter(v => !v.builtin && isWordLike(v)).forEach(add);
@@ -2409,7 +2414,7 @@ function zhOverlap(a, b) {
 }
 
 const FORM_LABEL = {
-  te: 'て形', ta: 'た形', nai: 'ない形', dict: '辭書形', masu: 'ます形', ba: '條件形（ば）', pot: '可能形', vol: '意向形', pass: '受身形', caus: '使役形', imp: '命令形'
+  te: 'て形', ta: 'た形', nai: 'ない形', dict: '辭書形', masu: 'ます形', ba: '條件形（ば）', pot: '可能形', vol: '意向形', pass: '受身形', caus: '使役形', imp: '命令形', causpass: '使役受身形'
 };
 // how a conjugation item is answered: four options while new, tiles (or the keyboard) once it has been seen
 function conjInputMode(rec, ctx) {
@@ -2425,7 +2430,7 @@ function formHint(f) { return JConj.conjVerb('食べる', '1', f) || ''; }   // 
 // suffixes and giving verbs make odd drill forms (がれる, くれさせる, くださられる)
 const DRILL_SKIP = new Set(['がる', 'くれる', 'くださる', 'おいでになる']);
 function drillVerbs() {
-  const all = REG.vocab.filter(v => v.builtin && VERB_GROUP[v.p] && !DRILL_SKIP.has(jaPlain(v.w)));
+  const all = REG.vocab.filter(v => v.builtin && VERB_GROUP[v.p] && !DRILL_SKIP.has(jaPlain(v.w)) && !laterReading(v));   // 行く（ゆく） conjugates like 行く（いく）
   const learned = all.filter(v => state.srs[v.key] && state.srs[v.key].b >= 1);
   return learned.length >= 5 ? learned : all;
 }
@@ -2736,8 +2741,13 @@ function posLabel(p, fallback) {
 // One example block everywhere: play button, sentence with furigana, Chinese.
 // 同形異讀 (1.0.33, spec §5.5): a built-in word that shares its spelling with another one (四 よん／四 し) shows its own
 // reading on its card and in its own examples; the furigana index can only hold one of them
-let HOMOGRAPHS = new Map();
+let HOMOGRAPHS = new Map(); let FIRST_OF = new Map(); let BUILTIN_ALL = [];
+// a later reading of a shared spelling (四 し after the app's 四 よん): it goes into the furigana index last, and drills skip it
+function laterReading(v) { const f = v && v.builtin ? FIRST_OF.get(jaPlain(v.w)) : null; return Boolean(f && f.id !== v.id); }
 function homographReadings(v) { const rs = (v && v.builtin && HOMOGRAPHS.get(jaPlain(v.w))) || []; return [...new Set(rs.filter(r => r !== v.r))]; }
+// the card's own reading on its kanji: 行く・ゆく → { 行: 'ゆ' }, and the bracket form furi() honours (行[ゆ]く)
+function ownReadingMap(v) { const s = jaPlain(v.w); const m = /^([一-鿿々〆ヶ]+)([ぁ-ゖー]*)$/.exec(s); if (!m || (m[2] && !String(v.r).endsWith(m[2]))) return null; return { [m[1]]: v.r.slice(0, v.r.length - m[2].length) }; }
+function ownBracket(v) { const mp = ownReadingMap(v); if (!mp) return jaPlain(v.w); const k = Object.keys(mp)[0]; return `${k}[${mp[k]}]${jaPlain(v.w).slice(k.length)}`; }
 function wordHtml(v) { return homographReadings(v).length && HAS_KANJI.test(v.w) ? rubyHtml(jaPlain(v.w), v.r) : furi(v.w); }
 // an example's Japanese with furigana; a homograph's own examples read the marked word the card's way. The marked word is
 // left to the index when a compound starting with it already reads that way (四月 しがつ after {四}), and a conjugated
@@ -2748,6 +2758,8 @@ function exampleJpHtml(jp, own) {
   const after = exPlain(jp.slice(m.index + m[0].length)); const mark = jaPlain(m[1]); const kana = kanaKey(own.r);
   const run = (after.match(/^[一-鿿々]+/) || [''])[0];
   for (let n = Math.min(run.length, FURI_MAX); n > 0; n--) { const r = FURI.get(mark + run.slice(0, n)); if (r && kanaKey(r).startsWith(kana)) return furi(exPlain(jp)); }
+  const lead = (exPlain(jp.slice(0, m.index)).match(/[一-鿿々]+$/) || [''])[0];   // and one that ends with it (午{後} → 午後 ごご)
+  for (let n = Math.min(lead.length, FURI_MAX); n > 0; n--) { const r = FURI.get(lead.slice(-n) + mark); if (r && kanaKey(r).endsWith(kana)) return furi(exPlain(jp)); }
   let ruby = null;
   if (mark === jaPlain(own.w)) ruby = rubyHtml(mark, own.r);
   else { const info = vSurfaceInfo(Object.assign({}, own, { ex: jp })); const rd = info && info.form !== 'raw' ? readingOfSurface(own, info) : ''; if (rd && info.surface === mark) ruby = rubyHtml(mark, rd); }
@@ -2778,11 +2790,12 @@ function makeVocabQuestion(v0, ctx = {}) {
   q.cat = '單字';
   q.lv = v.lv;
   q.why = vocabWhy(v);
-  q.fullJp = v.ex ? exPlain(v.ex) : v.w;
+  q.fullJp = v.ex ? exPlain(v.ex) : v.w; q.exMarked = v.ex || '';
+  if (homographReadings(v).length) { const mp = ownReadingMap(v); if (mp) q.ownRmap = mp; }
   q.fullZh = v.exZh || '';
   q.speakWord = jaPlain(v.w);
   q.speakReading = v.r && !HAS_KANJI.test(v.r) && v.r !== jaPlain(v.w) ? v.r : '';
-  q.mistakePrompt = `${jaPlain(v.w)}${v.r && v.r !== v.w ? `（${v.r}）` : ''}`;
+  q.mistakePrompt = homographReadings(v).length && ownReadingMap(v) ? ownBracket(v) : `${jaPlain(v.w)}${v.r && v.r !== v.w ? `（${v.r}）` : ''}`;   // 私[わたくし]: furi() shows the card's reading
   const lvTag = v.builtin ? v.lv : '自訂';
   const tryBuild = (f) => {
     const info = vSurfaceInfo(v);
@@ -2796,7 +2809,7 @@ function makeVocabQuestion(v0, ctx = {}) {
       q.instr = '選出填入空格的單字';
       q.stemHtml = `${furi(info.pre)}${blankChip('')}${furi(info.post)}`;
       q.zhText = v.exZh; q.forceZh = true;
-      q.fillHtml = furi(info.surface);
+      q.fillHtml = homographReadings(v).length ? rubyHtml(info.surface, readingOfSurface(v, info)) : furi(info.surface);
       q.mistakePrompt = `${info.pre}（　）${info.post}（${v.exZh}）`;
       finalizeOptions(q, info.surface, opts, true);
       return true;
@@ -3579,7 +3592,7 @@ function laneOrder() {
 }
 function laneCap() { return THEME_LANE_DAYS * 8; }
 // the level whose themes hold the lanes: PRE_N5 in 入門; otherwise N5 while it has unseen words, then N4
-function laneLevel(fresh) { return inPreStage() ? 'PRE_N5' : fresh.some(v => v.lv === 'N5') ? 'N5' : 'N4'; }   /* level-literal-ok: picks the theme level, PRE_N5 leftovers ride their own lane */
+function laneLevel(fresh) { if (inPreStage()) return 'PRE_N5'; const have = new Set(fresh.map(v => v.lv)); return courseLevels().find(L => have.has(L)) || courseLevels()[0]; }   // PRE_N5 leftovers ride their own lane
 // anyLevel: a page the learner chose (a level tab, a theme) offers its own words; otherwise only the current level's
 function freshWords(pool, anyLevel) { const cur = anyLevel || inPreStage() ? null : curLevel(); return pool.filter(v => v.builtin && !state.srs[v.key] && (!cur || courseLevel(v.lv) === cur)); }
 function activeThemes(pool, anyLevel) {
@@ -4070,13 +4083,13 @@ function optionHtml(q, o) {
   if (!o.jp) return esc(o.text);
   if (q.kanaOptions && q.optKana && q.optKana[o.text]) return esc(q.optKana[o.text]);
   if (q.noFuriOptions) return esc(jaPlain(o.text));
-  if (q.fmt === 'v-recall' || q.fmt === 'v-reading') return furi(o.text);
+  if (q.fmt === 'v-recall' || q.fmt === 'v-reading') return q.ownRmap && q.item && o.text === jaPlain(q.item.w) ? furi(ownBracket(q.item)) : furi(o.text);   // a homograph card's answer reads its own way
   if (/\[[ぁ-ゖー]+\]/.test(o.text)) return furi(o.text);
   if (!q._rmap) {
     // one reading map for all options, so no option stands out by having (or lacking) furigana;
     // the answer and the full sentence win over readings guessed from the distractors
     const add = (text) => { const m = readingMapFrom(text || ''); Object.keys(m).forEach(k => { if (!(k in q._rmap)) q._rmap[k] = m[k]; }); };
-    q._rmap = {};
+    q._rmap = Object.assign({}, q.ownRmap || {});   // a homograph card's own reading first
     add(q.options[q.answer].text);
     add(q.fullJp);
     if (q.item && q.item.v) add(q.item.v);
@@ -4318,7 +4331,7 @@ function feedbackHtml(e) {
   const q = e.q;
   const ok = e.chosen === q.answer;
   const right = q.options[q.answer];
-  const full = q.fullJp && (q.fmt.startsWith('g-') || q.fmt === 'v-cloze' || q.fmt === 'm-card') ? `<div class="fb-full jp">${furi(q.fullJp)} <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak-full" title="朗讀">${icon('speaker')}</button></div>${q.zhText ? `<div class="small muted">${esc(q.zhText)}</div>` : ''}` : '';
+  const full = q.fullJp && (q.fmt.startsWith('g-') || q.fmt === 'v-cloze' || q.fmt === 'm-card') ? `<div class="fb-full jp">${q.kind === 'v' && q.exMarked && q.item && homographReadings(q.item).length ? exampleJpHtml(q.exMarked, q.item) : furi(q.fullJp)} <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak-full" title="朗讀">${icon('speaker')}</button></div>${q.zhText ? `<div class="small muted">${esc(q.zhText)}</div>` : ''}` : '';
   // other vocabulary formats: the word's example sentence, with its own play button (so it is not buried in the note text);
   // 配對 has none: the sentence would be one word's of six
   const example = q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-cloze' && q.fmt !== 'v-match' ? exampleHtml(q.item.ex, q.item.exZh, 'mt-2', q.item) : '';
@@ -6934,7 +6947,7 @@ function renderExam(view, sub, params) {
         <div>${h.total180 === undefined ? '' : h.passedOfficial ? '<span class="chip chip-ok">達合格線</span>' : '<span class="chip">未達</span>'}</div></div>
       ${Array.isArray(h.questionLogs) && h.questionLogs.length ? `<button type="button" class="btn btn-sm btn-ghost" data-act="exam-review" data-i="${i}">回顧</button>` : ''}
     </div>`).join('');
-  const lvDefault = examLevels().includes(unitLevel(state.currentUnit)) ? unitLevel(state.currentUnit) : examLevels()[0];
+  const lvDefault = examLevels().filter(L => ALL_LEVELS.indexOf(L) <= ALL_LEVELS.indexOf(unitLevel(state.currentUnit))).pop() || examLevels()[0];
   view.innerHTML = `
     <div class="page-head"><div><div class="page-title">模擬考</div><div class="page-sub">依照 JLPT 的三個科目與大題順序出題，同一份考卷不會重複題目。</div></div></div>
     ${examCountdownHtml()}
@@ -9167,7 +9180,7 @@ function aiSystemPrompt() {
     `你是指導台灣學習者的日語老師，學生的目標是通過 JLPT ${courseLevels().includes(state.settings.examLevel) ? state.settings.examLevel : DEFAULT_LEVEL}。`,
     `學生目前在學「${u.weeks}・${u.title}」（${u.lv}）。`,
     '用繁體中文（台灣用語）回答，直接說重點，不寒暄、不用表情符號、不用誇張的形容。',
-    '日文例句要自然，程度不要超過 N4；需要標讀音時寫成「漢字（よみ）」。',
+    `日文例句要自然，程度不要超過 ${aiLevelTop()}；需要標讀音時寫成「漢字（よみ）」。`,
     '設計填空題時，括號「（　）」後面不可殘留會和選項重複的語尾（例如選項是「静かです」，括號後就不能再有「です」）。'
   ].join('\n');
 }
@@ -9419,7 +9432,7 @@ async function aiGenerateDeck(topic, btn) {
   if (needAi()) return;
   const t = String(topic || '').trim() || '日常生活';
   const existing = REG.vocab.filter(v => !v.builtin).slice(0, 80).map(v => jaPlain(v.w)).join('、');
-  const prompt = `請依主題「${t}」產生 8 張 N5～N4 程度的日語單字卡，避開這些字：${existing || '（無）'}。
+  const prompt = `請依主題「${t}」產生 8 張 ${aiLevelRange()} 程度的日語單字卡，避開這些字：${existing || '（無）'}。
 每張卡是一個 JSON 物件：
 w（單字的一般寫法）、r（平假名讀音）、m（繁體中文意思，12 字內）、p（詞性代碼：n 名詞、v5 五段、v1 一段、vs する動詞、i い形容詞、na な形容詞、adv 副詞、exp 慣用語）、lv（${courseLevels().map(l => `"${l}"`).join(' 或 ')}）、ex（20 字內的自然例句，把單字本身用 [ ] 包起來，例如「毎朝パンを[食べます]。」）、exZh（例句中文）。
 只輸出 JSON 陣列。`;
@@ -9475,7 +9488,7 @@ async function aiEnrichCard(v) {
   const box = document.getElementById('flashAiBox');
   const btn = $('[data-act="flash-ai"]');
   const prompt = `單字：${jaPlain(v.w)}${v.r ? `（${v.r}）` : ''}，意思：${v.m}。
-請提供：1. 兩個 N5～N4 程度的自然例句（日文＋中文）；2. 常見的搭配或助詞；3. 一個簡短的記憶方法。全部 150 字內，用 Markdown 條列。`;
+請提供：1. 兩個 ${aiLevelRange()} 程度的自然例句（日文＋中文）；2. 常見的搭配或助詞；3. 一個簡短的記憶方法。全部 150 字內，用 Markdown 條列。`;
   await withBusy(btn, 'AI 整理中', async () => {
     const out = await callAi(prompt);
     if (box && box.isConnected) box.innerHTML = `<div class="panel mt-3" style="text-align:left">${md(out)}</div>`;
@@ -9543,7 +9556,7 @@ async function aiAnalyzeSentence(text, btn) {
 1. **翻譯**：自然的中文翻譯。
 2. **結構**：把句子切成幾個部分，說明每部分的作用（助詞、動詞變化、句型）。
 3. **單字**：重要單字的讀音和意思。
-4. **文法重點**：出現的 N5～N4 文法，各附一個簡短例句。
+4. **文法重點**：出現的 ${aiLevelRange()} 文法，各附一個簡短例句。
 全部 350 字內。`;
   await withBusy(btn, 'AI 分析中', async () => {
     const out = await callAi(prompt);
@@ -9568,7 +9581,7 @@ async function aiStudyAdvice(btn) {
 - 目前單元：${cur.weeks}・${cur.title}，完成度 ${us.pct}%（熟悉 ${us.learned}/${us.total} 題）。
 - 最近 7 天：${days || '沒有紀錄'}；連續 ${st.current} 天。
 - 最近正確率：${acc === null ? '資料不足' : Math.round(acc * 100) + '%'}。
-- 單字：入門 熟悉 ${vs.PRE_N5.learned}/${vs.PRE_N5.total}、N5 熟悉 ${vs.N5.learned}/${vs.N5.total}、N4 熟悉 ${vs.N4.learned}/${vs.N4.total}，今天待複習 ${vs.due} 張。
+- 單字：${levels().map(L => `${lvLabel(L)} 熟悉 ${vs[L].learned}/${vs[L].total}`).join('、')}，今天待複習 ${vs.due} 張。
 - 錯題本：${Object.entries(cats).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([c, n]) => `${c} ${n} 題`).join('、') || '沒有待複習的錯題'}。`;
   await withBusy(btn, 'AI 分析中', async () => {
     const out = await callAi(prompt);

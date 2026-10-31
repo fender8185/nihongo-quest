@@ -23,7 +23,8 @@ def fake_site():
     D['VOCAB'] += [
         {'id': 'n3a-001', 'w': '検討', 'r': 'けんとう', 'm': '研究、考慮', 'p': 'vs', 'lv': 'N3', 'c': th, 'ex': '計画をもう一度{検討}します。', 'exZh': '再研究一次計畫。', 'ex2': 'その案は今{検討}中です。', 'exZh2': '那個方案正在研究中。'},
         {'id': 'n3a-002', 'w': '判断', 'r': 'はんだん', 'm': '判斷', 'p': 'vs', 'lv': 'N3', 'c': th, 'ex': '自分で{判断}してください。', 'exZh': '請自己判斷。', 'ex2': '正しい{判断}でした。', 'exZh2': '那是正確的判斷。'},
-        {'id': 'n3a-003', 'w': '想像', 'r': 'そうぞう', 'm': '想像', 'p': 'vs', 'lv': 'N3', 'c': th, 'ex': '未来を{想像}します。', 'exZh': '想像未來。', 'ex2': '{想像}よりおいしいです。', 'exZh2': '比想像的好吃。'}]
+        {'id': 'n3a-003', 'w': '想像', 'r': 'そうぞう', 'm': '想像', 'p': 'vs', 'lv': 'N3', 'c': '抽象與狀況', 'ex': '未来を{想像}します。', 'exZh': '想像未來。', 'ex2': '{想像}よりおいしいです。', 'exZh2': '比想像的好吃。'},
+        {'id': 'n3a-004', 'w': '都', 'r': 'みやこ', 'm': '首都、都城', 'p': 'n', 'lv': 'N3', 'c': '抽象與狀況', 'ex': '京都は昔の{都}です。', 'exZh': '京都是以前的首都。', 'ex2': '花の{都}パリ。', 'exZh2': '花都巴黎。'}]
     D['KANJI'] += [
         {'k': '討', 'lv': 'N3', 'm': '討論、研究', 'on': ['トウ'], 'kun': ['う'], 'ex': [['検討', 'けんとう', '研究、考慮']], 'look': ['計']},
         {'k': '判', 'lv': 'N3', 'm': '判斷', 'on': ['ハン', 'バン'], 'kun': [], 'ex': [['判断', 'はんだん', '判斷']], 'look': ['半']}]
@@ -32,7 +33,7 @@ def fake_site():
     D['LESSONS']['m19'] = {'formula': '〜らしい｜〜みたい', 'overview': '推測與傳聞。', 'sections': [{'h': '推測', 'rule': '普通形＋らしい', 'points': ['雨が降るらしい。']}]}
     g = next(x for x in D['GRAMMAR'] if x['u'] == 'm18' and x['t'] == 'choice')
     D['GRAMMAR'] += [dict(g, id='m19-01', u='m19', lv='N3', sec=0), dict(g, id='m19-02', u='m19', lv='N3', sec=0)]
-    D['THEMES']['N3'] = [{'c': th, 'desc': '思考、判斷與推測'}]
+    D['THEMES']['N3'] = [{'c': th, 'desc': '思考、判斷與推測'}, {'c': '抽象與狀況', 'desc': '抽象的事物與狀況'}]
     lines[2] = 'const DATA = ' + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';'
     open(os.path.join(tmp, 'data.js'), 'w', encoding='utf-8').write('\n'.join(lines))
     return tmp
@@ -51,12 +52,12 @@ def test_the_level_lists_and_stages_include_n3(b):
 
 def test_vocab_page_has_an_n3_tab_and_the_stats_an_n3_scope(b):
     js = """(() => { location.hash = '#/vocab/level?lv=N3'; route(); const tabs = [...document.querySelectorAll('.seg.mb-4 button')].map(x => x.textContent.trim());
-      const words = document.getElementById('view').textContent.includes('検討') || REG.vocab.filter(v => v.lv === 'N3').length === 3;
+      const words = document.querySelectorAll('.theme-card[data-lv="N3"]').length === 2;   /* the N3 page shows its two themes */
       location.hash = '#/stats'; route(); const scope = Boolean(document.querySelector('[data-act=stats-scope][data-scope=n3]'));
       const n3 = progressTotals('v', 'n3').total; const marks = progressTotals('v').marks.map(m => m[0]);
       return JSON.stringify({ tabs: tabs.slice(0, 4), words, scope, n3, marks }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'tabs': ['入門', 'N5', 'N4', 'N3'], 'words': True, 'scope': True, 'n3': 3, 'marks': ['N5', 'N4']}, r
+    assert r == {'tabs': ['入門', 'N5', 'N4', 'N3'], 'words': True, 'scope': True, 'n3': 4, 'marks': ['N5', 'N4']}, r
 
 def test_n3_opens_once_n4_is_done_and_new_items_come_only_from_it(b):
     js = "(() => { " + SEEN + """ const before = curLevel(); seeBelowN3(); const s = splitNew(15);
@@ -64,13 +65,19 @@ def test_n3_opens_once_n4_is_done_and_new_items_come_only_from_it(b):
       const out = { before, cur: curLevel(), n: all.length, n3: all.every(x => lvOf(x) === 'N3'), kinds: [s.v.length > 0, s.g.length > 0, s.k.length > 0] };
       state.srs = {}; state.completedUnits = []; state.currentUnit = 'm1'; saveState(); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'before': 'N5', 'cur': 'N3', 'n': 7, 'n3': True, 'kinds': [True, True, True]}, r   # 3 words + 2 items + 2 kanji is all N3 has
+    assert r == {'before': 'N5', 'cur': 'N3', 'n': 8, 'n3': True, 'kinds': [True, True, True]}, r   # 4 words + 2 items + 2 kanji is all N3 has
 
 def test_n3_words_read_after_n4_ones_and_the_pace_has_an_n3_date(b):
     js = """(() => { const p = coursePace(); return JSON.stringify({ prio: FURI_PRIO.get('検討'), n3: typeof p.days.N3 === 'number' && p.days.N3 >= p.days.N4,
       target: courseLevels().includes('N3'), keep: state.settings.examLevel }); })()"""
     r = json.loads(ev(b, js))
     assert r == {'prio': 1.9, 'n3': True, 'target': True, 'keep': 'N4'}, r
+
+def test_n3_new_words_come_in_two_theme_lanes_and_a_shared_spelling_keeps_the_lower_levels_reading(b):
+    js = "(() => { " + SEEN + """ seeBelowN3(); const th = activeThemes(REG.vocab.filter(v => vocabEligibleForDaily(v, curLevel())), false);
+      const out = { th, toh: furi('都の図書館') }; state.srs = {}; state.completedUnits = []; state.currentUnit = 'm1'; saveState(); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert sorted(r['th']) == ['思考與判斷', '抽象與狀況'] and '<rt>と</rt>' in r['toh'], r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
