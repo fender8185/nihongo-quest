@@ -22,8 +22,13 @@ function loadSources(dir) {
   return out;
 }
 function loadData(repoDir) { return new Function(fs.readFileSync(path.join(repoDir, 'data.js'), 'utf8') + ';return DATA;')(); }
+// The outline is a plan against the app as it was before the outline's own words went in: the gap batches (n5g, n4g, 1.0.31)
+// and the level batches (n3a…, later n2a…, n1a…) keep counting as outline words, not as words the app already had
+const OUTLINE_BATCH = /^(n[54]g|n[321][a-z])-\d{3}$/;
+function preOutline(DATA) { return Object.assign({}, DATA, { VOCAB: DATA.VOCAB.filter(v => !OUTLINE_BATCH.test(v.id)) }); }
 
 function buildCandidates(sources, DATA) {
+  DATA = preOutline(DATA);
   const index = buildAppIndex(DATA.VOCAB.map(v => ({ id: v.id, w: v.w, r: v.r, lv: v.lv })));
   const appWord = new Map(DATA.VOCAB.map(v => [v.id, v]));
   const appKanji = new Map(DATA.KANJI.map(k => [k.k, k.lv]));
@@ -136,4 +141,4 @@ if (require.main === module) {
   console.log(LV.map(L => `${L}: ${cands[L].words.filter(x => x.status === 'new').length} new words, ${cands[L].kanji.filter(x => x.status === 'new').length} new kanji` + (cands[L].grammar ? `, ${cands[L].grammar.filter(x => x.status === 'new').length} grammar points` : '')).join('\n'));
 }
 
-module.exports = { loadSources, loadData, buildCandidates, homographs, reportMarkdown, appGrammarMarkdown };
+module.exports = { loadSources, loadData, preOutline, buildCandidates, homographs, reportMarkdown, appGrammarMarkdown };

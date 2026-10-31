@@ -2,7 +2,7 @@
 // level — units by phase, themes with their words, kanji in teaching order, dropped and added words (plan Task 9).
 // usage: node scripts/curriculum/render-review.js <out.html>
 const fs = require('fs'); const path = require('path');
-const { homographs } = require('./build-candidates.js');
+const { homographs, preOutline } = require('./build-candidates.js');
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = (n) => Number(n).toLocaleString('en-US');
@@ -54,6 +54,7 @@ function gapsView(gaps, homo = [], kept = []) {
 
 // notes: the open questions for the user, shown above the tabs ([{ q, body }], from curriculum/review-notes.json)
 function renderReview({ outlines = {}, gaps = null, cands = {}, notes = [], DATA = null }) {
+  if (DATA) DATA = preOutline(DATA);   // the outline's own words in the app are still outline words
   // words kept by the app and up to each level: another reading kept there is not "still to place"
   const order = ['N5', 'N4', 'N3', 'N2', 'N1']; const keptAt = { N5: [], N4: [], N3: [], N2: [], N1: [] };
   if (gaps) ['N5', 'N4'].forEach(L => { const g = gaps[L] || {}; keptAt[L] = (g.words || []).concat(g.added || [], g.dropped || []); });

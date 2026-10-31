@@ -3,7 +3,7 @@
 // usage: node scripts/curriculum/check-outline.js   — prints a summary per level and every problem; exit 1 when there are problems
 const fs = require('fs'); const path = require('path');
 const { buildAppIndex, matchWord, cleanReading } = require('./match.js');
-const { loadSources, loadData, buildCandidates, homographs } = require('./build-candidates.js');
+const { loadSources, loadData, preOutline, buildCandidates, homographs } = require('./build-candidates.js');
 
 const LEVELS = ['N3', 'N2', 'N1'];
 const len = (s) => [...String(s || '')].length;
@@ -16,6 +16,7 @@ function kanjiOrder(words, kanji) {
 }
 
 function checkOutline({ outlines = {}, gaps = null, cands, DATA }) {
+  DATA = preOutline(DATA);
   const problems = []; const P = (s) => problems.push(s);
   const index = buildAppIndex(DATA.VOCAB.map(v => ({ id: v.id, w: v.w, r: v.r, lv: v.lv })));
   // a word is a spelling with a reading: another reading of a spelling is a word of its own (user, 2026-10-31: 同形異讀都收)

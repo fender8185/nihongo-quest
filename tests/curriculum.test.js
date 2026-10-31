@@ -310,3 +310,10 @@ test('outline: citing an app word that reads the same (katakana or hiragana) is 
   const s = withHomo(); s.DATA.VOCAB.push({ id: 'n4a-001', w: '語5', r: 'ゴレイ', lv: 'N4' });
   s.outlines.N3.dropped.push({ w: '語5', r: 'ごれい', why: 'app 已有：n4a-001（語5）' }); assert.deepEqual(problemsOf(s), []);
 });
+
+// ---- 1.0.31: words the outline itself put into the app keep counting as outline words ----
+test('outline: words the outline put into the app (n5g／n4g, then n3a… batches) still count as outline words', () => {
+  const s = okSet(); s.gaps.N5.added = [{ w: '楽しい', r: 'たのしい', m: '開心', c: '時間', why: '測試' }]; s.DATA.VOCAB.push({ id: 'n5g-001', w: '楽しい', r: 'たのしい', lv: 'N5' });
+  assert.deepEqual(problemsOf(s), []);
+  assert.deepEqual(B().preOutline({ VOCAB: [{ id: 'n5a-001' }, { id: 'n5g-001' }, { id: 'n3a-010' }, { id: 'p5a-002' }] }).VOCAB.map(v => v.id), ['n5a-001', 'p5a-002']);
+});
