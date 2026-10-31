@@ -148,7 +148,7 @@ def test_course_text_when_on_time_and_when_late(b):
     assert o['every'][1:3] == [13, {'every': 5}] and o['every'][3].endswith('要趕上，每天約需 13 題新內容（現在約 10 題）：大約每 5 天，做完當天的練習後按 1 次加練就趕得上。'), o['every']
     assert o['twice'][1:3] == [37, {'times': 2}] and o['twice'][3].endswith('要趕上，每天約需 37 題新內容（現在約 10 題）：每天做完當天的練習後按 2 次加練就趕得上。'), o['twice']
     assert o['heavy'][1:3] == [110, {'times': 7, 'heavy': True}] and o['heavy'][3].endswith('要趕上，每天約需 110 題新內容（現在約 10 題），等於每天加練 7 次，太吃力了：可以考慮先考 N5，或把考試日期往後延（JLPT 每年 7 月、12 月各一次）。'), o['heavy']
-    assert '學完 N5 的' in o['heavy5'][3] and o['heavy5'][3].endswith('等於每天加練 3 次，太吃力了：可以考慮把考試日期往後延（JLPT 每年 7 月、12 月各一次）。')   # 1.0.32: N5 is 50 items, not the slowest bank's 110, o['heavy5']
+    assert '學完 N5 的' in o['heavy5'][3] and o['heavy5'][3].endswith('等於每天加練 3 次，太吃力了：可以考慮把考試日期往後延（JLPT 每年 7 月、12 月各一次）。'), o['heavy5']   # 1.0.32: N5 is 50 items, not the slowest bank's 110, o['heavy5']
 
 def test_course_text_for_a_passed_or_close_exam_and_a_finished_level(b):   # Review Focus 2: 21 days is close, 22 is not
     js = "(() => { " + FRESH + PACE + """ pace(10); const out = {}; const run = (n, lv) => { exam(n); state.settings.examLevel = lv; const p = coursePace(); return [p.state, courseText(p)]; };
@@ -270,8 +270,12 @@ def test_the_1_0_26_changelog_says_what_changed(b):
 
 # ---- 1.0.32: the course pace adds the levels one after another (each level's leftovers ÷ new items a day) ----
 def test_course_pace_adds_the_levels_one_after_another(b):
-    js = "(() => { const p = coursePace(); return JSON.stringify({ n5: p.days.N5 === Math.ceil(p.left.N5 / p.perDay), n4: p.days.N4 === Math.ceil(p.left.N4 / p.perDay) }); })()"
-    r = json.loads(ev(b, js)); assert r == {'n5': True, 'n4': True}, r
+    js = """(() => { state.stage = 'main'; const p = coursePace(); const un = (x) => !state.srs[x.key]; const lv5 = (lv) => lv === 'PRE_N5' || lv === 'N5';
+      const units = (f) => DATA.UNITS.filter(u => f(u.lv) && !state.completedUnits.includes(u.id)).map(u => u.id);
+      const count = (f) => REG.vocab.filter(v => v.builtin && f(v.lv) && un(v)).length + REG.kanji.filter(k => f(k.lv) && un(k)).length + REG.grammar.filter(g => units(f).includes(g.u) && un(g)).length;
+      const n5 = count(lv5), all = count(() => true);   // counted from the bank here, not from coursePace's own levelLeft
+      return JSON.stringify({ n5: p.days.N5 === Math.ceil(n5 / p.perDay), n4: p.days.N4 === Math.ceil(all / p.perDay), order: p.days.N4 > p.days.N5 }); })()"""
+    r = json.loads(ev(b, js)); assert r == {'n5': True, 'n4': True, 'order': True}, r
 
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

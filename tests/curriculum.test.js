@@ -317,3 +317,7 @@ test('outline: words the outline put into the app (n5g／n4g, then n3a… batche
   assert.deepEqual(problemsOf(s), []);
   assert.deepEqual(B().preOutline({ VOCAB: [{ id: 'n5a-001' }, { id: 'n5g-001' }, { id: 'n3a-010' }, { id: 'p5a-002' }] }).VOCAB.map(v => v.id), ['n5a-001', 'p5a-002']);
 });
+test('outline: N3 kanji and units m19 on, once in data.js, still count as the outline\'s', () => {
+  const D = B().preOutline({ VOCAB: [], KANJI: [{ k: '兄', lv: 'N4' }, { k: '討', lv: 'N3' }], UNITS: [{ id: 'm18', lv: 'N4' }, { id: 'm19', lv: 'N3' }], GRAMMAR: [{ id: 'a', u: 'm18' }, { id: 'b', u: 'm19' }] });
+  assert.deepEqual([D.KANJI.map(k => k.k), D.UNITS.map(u => u.id), D.GRAMMAR.map(g => g.id)], [['兄'], ['m18'], ['a']]);
+});

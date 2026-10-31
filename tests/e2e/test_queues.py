@@ -119,6 +119,7 @@ def test_split_follows_unseen_shares_and_passes_on_blocked_slots(b):
     r = json.loads(ev(b, js))
     want = largest_remainder(15, r['w'])
     assert r['main'] == {'a': 0, 'v': want['v'], 'g': want['g'], 'k': want['k']} and sum(r['main'].values()) == 15, (r, want)
+    assert r['main'] == {'a': 0, 'v': 10, 'g': 4, 'k': 1}, r   # a new account in 入門+N5 (spec §4.3), independent of levelLeft
     assert r['pre'] == {'a': 15, 'v': 0, 'g': 0, 'k': 0} and r['kana'], r   # the kana gate is closed: every slot goes to kana
 
 def test_recent_keeps_the_last_hundred_answers(b):

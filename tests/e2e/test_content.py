@@ -124,6 +124,24 @@ def test_mastering_a_word_hides_only_its_own_readings(b):
       delete state.srs[v.key]; return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js)); assert r['own'] == 'known' and r['japan'] == '' and not r['hasJapan'] and r['keys'] <= 2, r
 
+# ---- 1.0.33 §5.5: a word sharing its spelling with another built-in word reads its own way ----
+def test_a_same_spelling_word_reads_its_own_way(b):
+    js = """(() => { DATA.VOCAB.push({ id: 'n5g-901', w: '四', r: 'し', m: '四（音讀）', p: 'n', lv: 'N5', c: '數量', ex: '{四}季の中で、春が一番好きです。', exZh: '四季裡最喜歡春天。', ex2: 'この{四}つの中から選んでください。', exZh2: '請從這四個裡面選。' });
+      buildRegistry(); const v = REG.byKey.get('v:n5g-901'); const yon = REG.vocab.find(x => x.builtin && x.w === '四' && x.r === 'よん');
+      const out = { ex: exampleHtml(v.ex, v.exZh, '', v).includes('<ruby>四<rt>し</rt></ruby>'), front: wordHtml(v).includes('<rt>し</rt>'), other: homographReadings(v),
+        yon: homographReadings(yon), plain: homographReadings(REG.vocab.find(x => x.builtin && x.w === '学校')) };
+      DATA.VOCAB.pop(); buildRegistry(); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js)); assert r == {'ex': True, 'front': True, 'other': ['よん'], 'yon': ['し'], 'plain': []}, r
+
+def test_listen_meaning_has_no_same_reading_wrong_answer(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && x.w === '締める'); const sh = REG.vocab.find(x => x.builtin && x.w === '閉める');
+      let bad = 0; for (let i = 0; i < 200; i++) { const o = meaningOptions(v, true) || []; if (o.includes(sh.m)) bad++; } return JSON.stringify({ bad, both: Boolean(v && sh) }); })()"""
+    r = json.loads(ev(b, js)); assert r == {'bad': 0, 'both': True}, r
+
+def test_tomaru_forms_read_tomaru_and_yamu_forms_yamu(b):
+    js = "JSON.stringify([furi('電車が止まりました。'), furi('雨が止みました。'), furi('車が止まらない。')])"
+    r = json.loads(ev(b, js)); assert '<rt>と</rt>' in r[0] and '<rt>や</rt>' in r[1] and '<rt>と</rt>' in r[2], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

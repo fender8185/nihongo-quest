@@ -1627,6 +1627,8 @@ function buildRegistry() {
   const kana = kanaItems().filter(k => !hidden.has(k.id));   // 假名辨識 (kind a): the tables live in this file, not in data.js
   [vocab, grammar, listen, read, kanji, drills, kana].forEach(list => list.forEach(x => byKey.set(x.key, x)));
   REG = { vocab, grammar, listen, read, kanji, drills, kana, byKey };
+  const spell = new Map(); vocab.filter(v => v.builtin).forEach(v => { const k = jaPlain(v.w); spell.set(k, (spell.get(k) || []).concat([v.r])); });
+  HOMOGRAPHS = new Map([...spell].filter(([, rs]) => new Set(rs).size > 1));   // spelling → the readings built-in words give it (四: よん, し)
   buildFuriganaIndex();
 }
 
@@ -2061,7 +2063,7 @@ function furiAdd(key, reading) {
   if (key.length > FURI_MAX) FURI_MAX = key.length;
 }
 // add the "kanji + first okurigana" stem of an inflected form, e.g. 書い→かい, 食べ→たべ
-function furiAddStem(surface, reading) {
+function furiAddStem(surface, reading, long = true) {   // long: also the two-okurigana key (everyday forms only)
   if (!surface || !reading) return;
   const s = jaPlain(surface); const r = reading;
   let k = -1;
@@ -2072,6 +2074,8 @@ function furiAddStem(surface, reading) {
   if (!r.endsWith(oku)) return;
   const kr = r.slice(0, r.length - oku.length);
   furiAdd(s.slice(0, k + 2), kr + oku[0]);
+  // also kanji + two okurigana: 止まり／止まら (止まる) are then longer than 止ま, which 止まない (止む) also writes (1.0.33)
+  if (long && oku.length >= 2) furiAdd(s.slice(0, k + 3), kr + oku.slice(0, 2));
 }
 
 let FURI_BASE = null;
@@ -2088,9 +2092,9 @@ function buildFuriganaIndex() {
         if (sf && rf) furiAddStem(sf, jaKana(rf));
       });
       const tier = furiPrio; furiPrio = tier - 0.5;
-      ['ba', 'pot', 'vol', 'pass', 'caus', 'imp'].forEach(f => {
+      ['ba', 'pot', 'vol', 'pass', 'caus', 'imp'].forEach(f => {   // no long keys: 止める as 止む's potential must not beat 止める（とめる）
         const sf = JConj.conjVerb(w, g, f); const rf = JConj.conjVerb(r, g, f);
-        if (sf && rf) furiAddStem(sf, jaKana(rf));
+        if (sf && rf) furiAddStem(sf, jaKana(rf), false);
       });
       furiPrio = tier;
       furiAdd(w, r);
@@ -2520,11 +2524,11 @@ function vocabPeers(v) {
   return REG.vocab.filter(x => x.key !== v.key && x.w && x.m && x.builtin);
 }
 
-function meaningOptions(v) {
+function meaningOptions(v, notSameReading = false) {   // notSameReading: a listening question, where a homophone's meaning would also be right
   const isEn = isEnglishOnly(v.m);
   const peers = (v.builtin ? vocabPeers(v) : REG.vocab.filter(x => x.key !== v.key && x.m)).filter(x => isEnglishOnly(x.m) === isEn);
   const scored = peers
-    .filter(x => x.m !== v.m && !zhOverlap(x.m, v.m) && jaPlain(x.w) !== jaPlain(v.w))
+    .filter(x => x.m !== v.m && !zhOverlap(x.m, v.m) && jaPlain(x.w) !== jaPlain(v.w) && !(notSameReading && x.r && kanaKey(x.r) === kanaKey(v.r)))
     .map(x => ({ x, s: (x.p === v.p ? 3 : 0) + (x.c === v.c ? 1.5 : 0) + (x.lv === v.lv ? 1 : 0) + Math.random() * 2.5 }))
     .sort((a, b) => b.s - a.s);
   const out = [];
@@ -2721,9 +2725,16 @@ function posLabel(p, fallback) {
   return ({ n: '名詞', v5: '五段動詞', v1: '一段動詞', vs: 'する動詞', vk: '來る', i: 'い形容詞', na: 'な形容詞', adv: '副詞', conj: '接續詞', pron: '代名詞', q: '疑問詞', cnt: '數量詞', exp: '招呼語' })[p] || fallback || '單字';
 }
 // One example block everywhere: play button, sentence with furigana, Chinese.
-function exampleHtml(jp, zh, cls = '') {
+// 同形異讀 (1.0.33, spec §5.5): a built-in word that shares its spelling with another one (四 よん／四 し) shows its own
+// reading on its card and in its own examples; the furigana index can only hold one of them
+let HOMOGRAPHS = new Map();
+function homographReadings(v) { const rs = (v && v.builtin && HOMOGRAPHS.get(jaPlain(v.w))) || []; return [...new Set(rs.filter(r => r !== v.r))]; }
+function wordHtml(v) { return homographReadings(v).length && HAS_KANJI.test(v.w) ? rubyHtml(jaPlain(v.w), v.r) : furi(v.w); }
+function exampleHtml(jp, zh, cls = '', own = null) {
   const plain = jaPlain(exPlain(jp));
-  return `<div class="example ${cls}"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(plain)}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${furi(exPlain(jp))}</div>${zh ? `<div class="zh">${esc(zh)}</div>` : ''}</div></div>`;
+  const m = own && homographReadings(own).length ? /\{([^}]*)\}/.exec(String(jp || '')) : null;
+  const ownHtml = m && jaPlain(m[1]) === jaPlain(own.w) ? furi(exPlain(jp.slice(0, m.index))) + rubyHtml(jaPlain(own.w), own.r) + furi(exPlain(jp.slice(m.index + m[0].length))) : null;
+  return `<div class="example ${cls}"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(plain)}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${ownHtml || furi(exPlain(jp))}</div>${zh ? `<div class="zh">${esc(zh)}</div>` : ''}</div></div>`;
 }
 function exampleLine(e) { return `\n- 例：${jaPlain(exPlain(e.ex))}${e.exZh ? `（${e.exZh}）` : ''}`; }   // one example in an explanation's text
 function vocabWhy(v) {
@@ -2790,8 +2801,8 @@ function makeVocabQuestion(v0, ctx = {}) {
       const kanjiPart = surface.slice(0, surface.length - oku.length);
       if ([...kanjiPart].some(c => !KANJI_RE.test(c))) return false;
       const kr = reading.slice(0, reading.length - oku.length);
-      const vars = readingOptions(kr);
-      if (!vars) return false;
+      const others = homographReadings(v); const vars = (readingOptions(kr) || []).filter(x => !others.includes(x + oku));
+      if (vars.length < 3) return false;
       q.fmt = f; q.label = `單字 · ${lvTag} · 漢字讀音`;
       q.instr = '畫線的字怎麼讀？';
       q.stemHtml = info && info.form !== 'raw' && v.ex
@@ -2818,13 +2829,13 @@ function makeVocabQuestion(v0, ctx = {}) {
       return true;
     }
     if (f === 'v-listen') {
-      const opts = meaningOptions(v);
+      const opts = meaningOptions(v, true);
       if (!opts) return false;
       q.fmt = f; q.label = `單字 · ${lvTag} · 聽力`;
       q.instr = '聽到的單字是什麼意思？';
       q.stemHtml = `<div class="center"><button type="button" class="speak-big" data-act="replay">${icon('speaker')}<span>再聽一次</span></button></div>`;
       q.audio = q.speakWord;
-      q.revealHtml = `<div class="q-stem word jp">${furi(v.w)}</div>`;
+      q.revealHtml = `<div class="q-stem word jp">${wordHtml(v)}</div>`;
       finalizeOptions(q, v.m, opts, false);
       return true;
     }
@@ -3441,10 +3452,8 @@ function isDueToday(x, t = todayStr()) {
   if (tier !== null && tier !== 'srs') return false;
   const r = state.srs[x.key]; return Boolean(r && r.due <= t && r.last !== t);
 }
-// What the daily mix may contain: grammar from the current unit and the units before it, and N4 words
-// only after every N5 word has been introduced once. Items further ahead keep their records and come
-// back when the learner gets there.
-// N4 words join the new-word pool once every N5 word has been seen, or earlier when the learner opens them (設定／我已有基礎)
+// What the daily mix may contain: new items of the current level only (每一級封死, 1.0.32: curLevel below); reviews of
+// everything already learned, whatever its level or unit (computeDailyPlan's scope).
 // 等級清單 (1.0.33, spec §4.1): 入門 plus the levels the data has, lowest first. Everything that compares or lists levels reads
 // levels() / courseLevels(), so N3 (then N2, N1) data is recognised everywhere; buildRegistry refreshes the cache.
 const ALL_LEVELS = ['PRE_N5', 'N5', 'N4', 'N3', 'N2', 'N1'];
@@ -3652,7 +3661,7 @@ function autoAdvanceUnit(key) {
 }
 
 // Listening, reading and kanji share the session with words and grammar. Listening and reading follow the
-// unit rule; N4 kanji wait until every N5 kanji has been introduced, like the words.
+// unit; new kanji come from the current level, like the words.
 function newKanjiCandidates(anyLevel = false) {   // 入門: PRE_N5 kanji; main course: the current level's (anyLevel: all)
   const cur = anyLevel || inPreStage() ? null : curLevel();
   return REG.kanji.filter(k => !state.srs[k.key] && (inPreStage() ? k.lv === 'PRE_N5' : !cur || courseLevel(k.lv) === cur)).sort((a, b) => lvRank(a) - lvRank(b) || a.order - b.order);
@@ -4193,7 +4202,7 @@ function previewHtml(e, pct) {
         ${reading ? `<div class="reading jp">${esc(reading)}</div>` : ''}
         <div class="meaning">${esc(v.m)}</div>
         ${v.p ? `<div class="mt-1">${posChip(v.p, v.posLabel)}</div>` : ''}
-        ${vocabExamples(v).map(e => exampleHtml(e.ex, e.exZh)).join('')}
+        ${vocabExamples(v).map(e => exampleHtml(e.ex, e.exZh, '', v)).join('')}
       </div>
     </div>
     <div class="pr-actions pr-next-sticky">
@@ -4290,7 +4299,7 @@ function feedbackHtml(e) {
   const full = q.fullJp && (q.fmt.startsWith('g-') || q.fmt === 'v-cloze' || q.fmt === 'm-card') ? `<div class="fb-full jp">${furi(q.fullJp)} <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak-full" title="朗讀">${icon('speaker')}</button></div>${q.zhText ? `<div class="small muted">${esc(q.zhText)}</div>` : ''}` : '';
   // other vocabulary formats: the word's example sentence, with its own play button (so it is not buried in the note text);
   // 配對 has none: the sentence would be one word's of six
-  const example = q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-cloze' && q.fmt !== 'v-match' ? exampleHtml(q.item.ex, q.item.exZh, 'mt-2') : '';
+  const example = q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-cloze' && q.fmt !== 'v-match' ? exampleHtml(q.item.ex, q.item.exZh, 'mt-2', q.item) : '';
   const why = example ? String(q.why || '').replace(/\n- 例：[^\n]*/g, '') : q.why;
   const cur = q.key ? state.srs[q.key] : null;
   const srsInfo = e.srs ? `<span>${srsDots(e.srs.rec.b)}</span><span>${srsLevelLabel(e.srs.rec, q.key)}・${dueLabel(e.srs.rec, q.key)}</span>`
@@ -5553,7 +5562,7 @@ function levelPickerHtml() {
     </div>
     <label class="switch mt-3"><input type="checkbox" id="startMarkPrev" /><span class="track"></span><span class="small">同時把之前的單元標為完成</span></label>
     <label class="switch mt-2"><input type="checkbox" id="startExperienced" /><span class="track"></span><span class="small">我已有基礎：不預設顯示中文</span></label>
-    <p class="hint mt-2">已經會的單字可以到「單字 → 單字表」依級別或主題整批標成「我會了」，練習時的新字預習卡上也有「我會了」。</p>
+    <p class="hint mt-2">已經會的單字可以到「單字 → 單字表」依級別或主題整批標成「我會了」，練習時的新字預習卡上也有「我會了」。從 N4 的單元開始的話，新文法要等 N5 的單字、漢字都學過一次才會出；N5 已經會的人可以到課程頁考第一階段測驗，通過就一次跳過。</p>
     <details class="disclose mt-4">
       <summary>不確定從哪裡開始？用多鄰國（Duolingo）分數估計</summary>
       <p class="dim small mt-2">輸入多鄰國日語分數，系統會建議一個起點單元。這只是參考。</p>
@@ -6097,9 +6106,9 @@ function mistakeCardFaces(m) {
   if (it && it.kind === 'v') {
     const ex = vocabExamples(it)[0];
     return {
-      front: `<div class="word jp">${furi(it.w)}</div>`,
+      front: `<div class="word jp">${wordHtml(it)}</div>`,
       back: `${it.r && it.r !== jaPlain(it.w) ? `<div class="reading jp">${esc(it.r)}</div>` : ''}<div class="meaning">${esc(it.m)}</div>
-        ${ex ? exampleHtml(ex.ex, ex.exZh, 'mt-3 listen-ex') : ''}
+        ${ex ? exampleHtml(ex.ex, ex.exZh, 'mt-3 listen-ex', it) : ''}
         ${vocabWhy(it) ? `<div class="small mt-2" style="text-align:left">${md(vocabWhy(it))}</div>` : ''}`
     };
   }

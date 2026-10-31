@@ -25,7 +25,13 @@ function loadData(repoDir) { return new Function(fs.readFileSync(path.join(repoD
 // The outline is a plan against the app as it was before the outline's own words went in: the gap batches (n5g, n4g, 1.0.31)
 // and the level batches (n3a…, later n2a…, n1a…) keep counting as outline words, not as words the app already had
 const OUTLINE_BATCH = /^(n[54]g|n[321][a-z])-\d{3}$/;
-function preOutline(DATA) { return Object.assign({}, DATA, { VOCAB: DATA.VOCAB.filter(v => !OUTLINE_BATCH.test(v.id)) }); }
+// likewise the outline's kanji (N3 and up) and its units from m19 on, with their grammar
+const OUTLINE_LV = new Set(['N3', 'N2', 'N1']);
+function preOutline(DATA) {
+  const units = new Set((DATA.UNITS || []).filter(u => OUTLINE_LV.has(u.lv)).map(u => u.id));
+  const keep = (key, ok) => (DATA[key] ? { [key]: DATA[key].filter(ok) } : {});
+  return Object.assign({}, DATA, keep('VOCAB', v => !OUTLINE_BATCH.test(v.id)), keep('KANJI', k => !OUTLINE_LV.has(k.lv)), keep('UNITS', u => !units.has(u.id)), keep('GRAMMAR', g => !units.has(g.u)));
+}
 
 function buildCandidates(sources, DATA) {
   DATA = preOutline(DATA);

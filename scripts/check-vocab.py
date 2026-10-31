@@ -2,7 +2,7 @@
 """Check candidate built-in words before they go into data.js.
 Usage: python3 -I scripts/check-vocab.py FILE.json [PORT]
 FILE.json: {"words": [ {w, r, m, p, lv, c, ex, exZh, ex2?, exZh2?}, … ]}  (no ids: the merge assigns them)
-Each word must: have every field; lv in PRE_N5/N5/N4 and c in DATA.THEMES[lv]; a known part of speech; a kana-only reading that
+Each word must: have every field; lv a level the app has (PRE_N5, N5, N4, N3 …) and c in DATA.THEMES[lv]; a known part of speech; a kana-only reading that
 matches the app's furigana of w; not already be in the bank or repeated in the file; an example with exactly one {marker}
 in a form the app recognises, ending with 。, every kanji with furigana; ex2 (when present) distinct from ex.
 PRE_N5 words: the example may only use PRE_N5 words (pre-example-vocab) and must not carry ex2.
@@ -19,9 +19,11 @@ time.sleep(0.8)
 JS = r"""((c) => { const problems = [], warnings = [];
   const POS = ['n', 'v5', 'v1', 'vs', 'vk', 'i', 'na', 'adv', 'conj', 'pron', 'q', 'cnt', 'exp'];
   const KANJI = /[一-鿿々〆ヶ]+/g;
-  const bank = new Map(); REG.vocab.filter(v => v.builtin).forEach(v => bank.set(jaPlain(v.w), v.id));
-  const preWords = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5');
   const hira = (s) => String(s || '').replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+  // a word is its spelling with its reading (同形異讀, 1.0.33): 四（し） is not the bank's 四（よん）
+  const wr = (v) => jaPlain(v.w || '') + '|' + hira(v.r);
+  const bank = new Map(); REG.vocab.filter(v => v.builtin).forEach(v => bank.set(wr(v), v.id));
+  const preWords = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5');
   // levels per spelling+reading: the 楽 of 楽しい（たの） is not the N4 word 楽（らく）
   const bankLv = new Map(); REG.vocab.filter(v => v.builtin).forEach(v => { const k = jaPlain(v.w) + '|' + hira(v.r); if (!bankLv.has(k)) bankLv.set(k, new Set()); bankLv.get(k).add(v.lv); });
   const rubies = (t) => { const out = []; const re = /<ruby>([^<]+)<rt>([^<]*)<\/rt><\/ruby>/g; let m; const h = furi(String(t || '')); while ((m = re.exec(h))) out.push(m[1] + '|' + hira(m[2])); return out; };
@@ -31,16 +33,17 @@ JS = r"""((c) => { const problems = [], warnings = [];
   (c.words || []).forEach((v, i) => {
     const label = 'word#' + i + ' ' + (v.w || '?'); const p = (m) => problems.push([label, m]); const warn = (m) => warnings.push([label, m]);
     ['w', 'r', 'm', 'p', 'lv', 'c', 'ex', 'exZh'].forEach(f => { if (!String(v[f] || '').trim()) p('missing ' + f); });
-    if (!['PRE_N5', 'N5', 'N4'].includes(v.lv)) p('lv must be PRE_N5, N5 or N4');
+    if (!levels().includes(v.lv) && !['N3', 'N2', 'N1'].includes(v.lv)) p('lv must be one of the levels: ' + v.lv);
     else if (!((DATA.THEMES || {})[v.lv] || []).some(t => t.c === v.c)) p('unknown theme for ' + v.lv + ': ' + v.c);
     if (!POS.includes(v.p)) p('unknown part of speech ' + v.p);
     if (!/^[ぁ-ゖァ-ヶー]+$/.test(v.r || '')) p('reading must be kana: ' + v.r);
     const plain = jaPlain(v.w || '');
-    if (bank.has(plain)) p('already in the bank as ' + bank.get(plain)); else if (seen.has(plain)) p('repeated in this file'); seen.add(plain);
+    if (bank.has(wr(v))) p('already in the bank as ' + bank.get(wr(v))); else if (seen.has(wr(v))) p('repeated in this file'); seen.add(wr(v));
     if (/[一-鿿]/.test(plain)) {
       const b = bare(v.w); if (b.length) warn('reading unverified: the app does not know this kanji word yet (it will once merged)');   // a new word adds itself to the furigana index
       else { const map = readingMapFrom(v.w); const read = plain.replace(/[一-鿿々〆ヶ]+/g, k => map[k] || k).replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
-        if (read !== (v.r || '').replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60))) p('reading-mismatch: app reads ' + read + ', candidate says ' + v.r); }
+        // a warning, not a problem: the app may know these kanji from another word (別 べつ for 別れる) or the other reading of a homograph
+        if (read !== (v.r || '').replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60))) warn('reading-mismatch: app reads ' + read + ', candidate says ' + v.r + ' (check by hand)'); }
     }
     const checkEx = (ex, which) => {
       const marks = (ex.match(/\{[^}]*\}/g) || []);
