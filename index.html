@@ -2135,9 +2135,12 @@ function buildFuriganaIndex() {
     const later = laterReading;   // "first" of a spelling: the app's own word, then the lower level, then the lower id (buildRegistry)
     furiPrio = 4; BUILTIN_ALL.filter(v => !later(v) && courseLevel(v.lv) === cl[0]).forEach(add);
     furiPrio = 3; furiSrc = ''; (DATA.FURI || []).forEach(([k, r]) => furiAdd(k, r));   // these readings belong to no word: mastering the last word added above must not hide them
-    cl.slice(1).forEach((L, i) => { furiPrio = 2 - i * 0.1; BUILTIN_ALL.filter(v => !later(v) && v.lv === L).forEach(add); });   // N4 2, N3 1.9 … (spec §4.5)
+    // one-kanji words from N3 up (土 つち, 来 らい) only fill gaps: as N3 words at 1.9 they would take 土 in （土）, 来 in 来ます
+    const oneKanji = (v) => /^[一-鿿々]$/.test(jaPlain(v.w)) && cl.indexOf(v.lv) >= 2;
+    cl.slice(1).forEach((L, i) => { furiPrio = 2 - i * 0.1; BUILTIN_ALL.filter(v => !later(v) && !oneKanji(v) && v.lv === L).forEach(add); });   // N4 2, N3 1.9 … (spec §4.5)
     // readings for words that appear in sentences but are not quizzed (names, 思う, 名前 …)
     furiPrio = 1.5; (DATA.FURI_EXTRA || []).forEach(([w, r, p]) => add({ w, r, p }));
+    furiPrio = 1.45; BUILTIN_ALL.filter(v => !later(v) && oneKanji(v)).forEach(add);
     furiPrio = 1.4; BUILTIN_ALL.filter(later).forEach(add);
     FURI_BASE = { key: hiddenKey, furi: new Map(FURI), prio: new Map(FURI_PRIO), block: new Set(FURI_BLOCK), src: new Map(FURI_SRC), max: FURI_MAX };
   }

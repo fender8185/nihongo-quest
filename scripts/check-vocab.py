@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Check candidate built-in words before they go into data.js.
-Usage: python3 -I scripts/check-vocab.py FILE.json [PORT]
+Usage: python3 -I scripts/check-vocab.py FILE.json [PORT] [--with LIST.json]
+--with LIST.json: {"words": [{w, r, p?}, …]} joins the furigana index before the check (as N3 words, the way a merge would add
+them), so examples may use other words of the same batch that are not merged yet (1.0.33).
 FILE.json: {"words": [ {w, r, m, p, lv, c, ex, exZh, ex2?, exZh2?}, … ]}  (no ids: the merge assigns them)
 Each word must: have every field; lv a level the app has (PRE_N5, N5, N4, N3 …) and c in DATA.THEMES[lv]; a known part of speech; a kana-only reading that
 matches the app's furigana of w; not already be in the bank or repeated in the file; an example with exactly one {marker}
@@ -12,17 +14,25 @@ import json, os, subprocess, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, "tests", "e2e"))
 from cdp import Browser
-path = sys.argv[1]; port = int(sys.argv[2]) if len(sys.argv) > 2 else 8812
+args = sys.argv[1:]; wi = args.index('--with') if '--with' in args else -1
+withWords = json.load(open(args[wi + 1]))['words'] if wi >= 0 else []
+if wi >= 0: del args[wi:wi + 2]
+path = args[0]; port = int(args[1]) if len(args) > 1 else 8812
 cands = json.load(open(path))
 srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(0.8)
-JS = r"""((c) => { const problems = [], warnings = [];
+JS = r"""((c, withWords) => { const problems = [], warnings = [];
   const POS = ['n', 'v5', 'v1', 'vs', 'vk', 'i', 'na', 'adv', 'conj', 'pron', 'q', 'cnt', 'exp'];
   const KANJI = /[一-鿿々〆ヶ]+/g;
   const hira = (s) => String(s || '').replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
   // a word is its spelling with its reading (同形異讀, 1.0.33): 四（し） is not the bank's 四（よん）
   const wr = (v) => jaPlain(v.w || '') + '|' + hira(v.r);
   const bank = new Map(); REG.vocab.filter(v => v.builtin).forEach(v => bank.set(wr(v), v.id));
+  if (withWords.length) {   // the batch's other words join the furigana index (taken after the bank, so they are not "already in the bank")
+    const lv = (DATA.THEMES && DATA.THEMES.N3) ? 'N3' : 'N4';
+    withWords.forEach((x, i) => DATA.VOCAB.push({ id: 'with-' + i, w: x.w, r: x.r, p: x.p || 'n', lv: x.lv || lv, m: x.m || '', c: '' }));
+    FURI_BASE = null; buildRegistry();
+  }
   const preWords = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5');
   // levels per spelling+reading: the 楽 of 楽しい（たの） is not the N4 word 楽（らく）
   const bankLv = new Map(); REG.vocab.filter(v => v.builtin).forEach(v => { const k = jaPlain(v.w) + '|' + hira(v.r); if (!bankLv.has(k)) bankLv.set(k, new Set()); bankLv.get(k).add(v.lv); });
@@ -68,7 +78,7 @@ JS = r"""((c) => { const problems = [], warnings = [];
       else { checkEx(String(v.ex2 || ''), 'ex2'); if (!String(v.exZh2 || '').trim()) p('missing exZh2'); if (String(v.ex2).replace(/[{}]/g, '') === String(v.ex).replace(/[{}]/g, '')) p('ex2 is the same as the first example'); }
     } else if (v.lv !== 'PRE_N5') warn('no ex2 (N5/N4 words usually have two examples)');
   });
-  return JSON.stringify({ problems, warnings, n: (c.words || []).length }); })(%s)""" % json.dumps(cands, ensure_ascii=False)
+  return JSON.stringify({ problems, warnings, n: (c.words || []).length }); })(%s, %s)""" % (json.dumps(cands, ensure_ascii=False), json.dumps(withWords, ensure_ascii=False))
 try:
     with Browser() as b:
         r = json.loads(b.run([("nav", f"http://127.0.0.1:{port}/"), ("wait", "typeof REG === 'object' && REG.vocab && REG.vocab.length > 0 && typeof vSurfaceInfo === 'function'"), ("eval", JS)], timeout=240)[-1])
