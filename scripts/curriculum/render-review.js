@@ -12,7 +12,9 @@ const LEVEL_VIEWS = [['n3', 'N3'], ['n2', 'N2'], ['n1', 'N1']];
 const word = (w, r, m) => `<li><span class="w" lang="ja">${esc(w)}</span>${r && r !== w ? `<span class="r" lang="ja">（${esc(r)}）</span>` : ''}${m ? `<span class="m">${esc(m)}</span>` : ''}</li>`;
 const table = (head, rows) => rows.length ? `<div class="tablebox"><table><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map((c, i) => `<td${i < 2 ? ' lang="ja"' : ''}>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : '<p class="none">沒有。</p>';
 
-const homoTable = (list) => `<h2>同形異讀（沒收進大綱）</h2><p class="note">同一個寫法只收第一個讀音。下面這些有的是清單的別讀，有的是不同的字（例如 金 きん），要收哪個請留言。</p>${table(['字', '這一筆的讀音', '已收的讀音'], list.map(h => [h.w, h.r, `${h.firstL} ${h.firstR}`]))}`;
+// other readings of a spelling are words of their own; the ones the outline has not placed yet (in a theme or dropped) are listed
+const homoTable = (list, entries) => { const has = new Set(entries.map(x => `${x.w}|${x.r}`)); const left = list.filter(h => !has.has(`${h.w}|${h.r}`));
+  return `<h2>同形異讀（還沒放進大綱）</h2><p class="note">同一個寫法的其他讀音也是要收的字（例如 金 きん）。下面是還沒放進主題、也還沒篩掉的。</p>${table(['字', '這一筆的讀音', '已收的讀音'], left.map(h => [h.w, h.r, `${h.firstL} ${h.firstR}`]))}`; };
 
 function levelView(o, homo = []) {
   const words = o.themes.reduce((s, t) => s + t.words.length, 0);
@@ -33,7 +35,7 @@ function levelView(o, homo = []) {
   <ol class="kanji" lang="ja">${o.kanji.map(k => `<li>${esc(k)}</li>`).join('')}</ol>
   <h2>篩掉的字</h2>${table(['字', '讀音', '原因'], (o.dropped || []).map(x => [x.w, x.r, x.why]))}
   <h2>補的字</h2>${table(['字', '讀音', '意思', '主題', '原因'], (o.added || []).map(x => [x.w, x.r, x.m, x.c, x.why]))}
-  ${homoTable(homo)}`;
+  ${homoTable(homo, o.themes.flatMap(t => t.words.map(([w, r]) => ({ w, r }))).concat(o.dropped || []))}`;
 }
 
 function gapsView(gaps, homo = []) {
@@ -47,7 +49,7 @@ function gapsView(gaps, homo = []) {
     <div class="themes">${[...byTheme].map(([c, list]) => `<details class="theme" open><summary><span class="tname">${esc(c)}</span><span class="tcount">${list.length} 字</span></summary><ul class="words">${list.map(x => word(x.w, x.r, x.m)).join('')}</ul></details>`).join('')}</div>
     <h3>篩掉的字</h3>${table(['字', '讀音', '原因'], g.dropped.map(x => [x.w, x.r, x.why]))}
     <h3>補的字</h3>${table(['字', '讀音', '意思', '主題', '原因'], added.map(x => [x.w, x.r, x.m, x.c, x.why]))}`;
-  }).join('') + homoTable(homo.filter(h => h.L === 'N5' || h.L === 'N4'));
+  }).join('') + homoTable(homo.filter(h => h.L === 'N5' || h.L === 'N4'), ['N5', 'N4'].flatMap(L => { const g = gaps[L] || {}; return (g.words || []).concat(g.dropped || [], g.added || []); }));
 }
 
 // notes: the open questions for the user, shown above the tabs ([{ q, body }], from curriculum/review-notes.json)

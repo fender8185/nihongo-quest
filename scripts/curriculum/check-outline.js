@@ -3,7 +3,7 @@
 // usage: node scripts/curriculum/check-outline.js   — prints a summary per level and every problem; exit 1 when there are problems
 const fs = require('fs'); const path = require('path');
 const { buildAppIndex, matchWord } = require('./match.js');
-const { loadSources, loadData, buildCandidates } = require('./build-candidates.js');
+const { loadSources, loadData, buildCandidates, homographs } = require('./build-candidates.js');
 
 const LEVELS = ['N3', 'N2', 'N1'];
 const len = (s) => [...String(s || '')].length;
@@ -18,26 +18,33 @@ function kanjiOrder(words, kanji) {
 function checkOutline({ outlines = {}, gaps = null, cands, DATA }) {
   const problems = []; const P = (s) => problems.push(s);
   const index = buildAppIndex(DATA.VOCAB.map(v => ({ id: v.id, w: v.w, r: v.r, lv: v.lv })));
+  // a word is a spelling with a reading: another reading of a spelling is a word of its own (user, 2026-10-31: 同形異讀都收)
+  const wr = (w, r) => `${w}（${r}）`;
   const owner = new Map();   // word → the level that holds it
-  const claim = (w, L) => { if (owner.has(w) && owner.get(w) !== L) P(`word in two levels: ${w}`); else owner.set(w, L); };
+  const claim = (w, r, L) => { const k = wr(w, r); if (owner.has(k) && owner.get(k) !== L) P(`word in two levels: ${k}`); else owner.set(k, L); };
   const wanted = (L) => cands[L].words.filter(x => x.status === 'new' || x.status === 'variant').map(x => x.w);
+  const homo = homographs(cands);
+  // every candidate spelling and every other reading of one (a homograph) sits in a theme or is dropped, each word once
   const placed = (L, want, listed, extra = new Set(), noun = 'word') => {
-    const n = tally(listed);
-    want.forEach(w => { if (!n.has(w)) P(`${L} ${noun} missing: ${w}`); });
-    n.forEach((k, w) => { if (k > 1) P(`${L} ${noun} twice: ${w}`); if (!want.includes(w) && !extra.has(w)) P(`${L} ${noun} not a candidate: ${w}`); });
+    const spellings = new Set(listed.map(x => x.w)); const pairs = new Set(listed.map(x => wr(x.w, x.r)));
+    const others = homo.filter(h => h.L === L); const otherPairs = new Set(others.map(h => wr(h.w, h.r)));
+    want.forEach(w => { if (!spellings.has(w)) P(`${L} ${noun} missing: ${w}`); });
+    others.forEach(h => { if (!pairs.has(wr(h.w, h.r))) P(`${L} ${noun === 'word' ? 'homograph' : 'gap homograph'} missing: ${wr(h.w, h.r)}`); });
+    tally(listed.map(x => wr(x.w, x.r))).forEach((k, p) => { if (k > 1) P(`${L} ${noun} twice: ${p}`); });
+    new Set(listed.filter(x => !want.includes(x.w) && !extra.has(x.w) && !otherPairs.has(wr(x.w, x.r))).map(x => x.w)).forEach(w => P(`${L} ${noun} not a candidate: ${w}`));
   };
   const meaning = (L, w, m) => { if (!m || len(m) > 12) P(`${L} word without meaning: ${w}`); };
 
   if (gaps) for (const L of ['N5', 'N4']) {
     const g = gaps[L] || { words: [], dropped: [] };
     const themes = new Set(((DATA.THEMES || {})[L] || []).map(t => t.c));
-    placed(L, wanted(L), g.words.map(x => x.w).concat(g.dropped.map(x => x.w)), new Set(), 'gap word');
+    placed(L, wanted(L), g.words.concat(g.dropped), new Set(), 'gap word');
     // gap words go to a theme of their own level
-    g.words.forEach(x => { if (!themes.has(x.c)) P(`${L} gap theme unknown: ${x.c}`); meaning(L, x.w, x.m); claim(x.w, L); });
+    g.words.forEach(x => { if (!themes.has(x.c)) P(`${L} gap theme unknown: ${x.c}`); meaning(L, x.w, x.m); claim(x.w, x.r, L); });
     g.dropped.forEach(x => { if (!x.why) P(`${L} dropped without reason: ${x.w}`); });
     // a word the list misspells or garbles comes back corrected as an added word, with its own theme
     (g.added || []).forEach(x => {
-      if (!themes.has(x.c)) P(`${L} gap theme unknown: ${x.c}`); meaning(L, x.w, x.m); claim(x.w, L);
+      if (!themes.has(x.c)) P(`${L} gap theme unknown: ${x.c}`); meaning(L, x.w, x.m); claim(x.w, x.r, L);
       if (matchWord(index, x.w, x.r).status === 'in-app') P(`word already in app: ${x.w}`);
       if (!x.why) P(`${L} added without reason: ${x.w}`);
     });
@@ -50,8 +57,8 @@ function checkOutline({ outlines = {}, gaps = null, cands, DATA }) {
     const c = cands[L];
     const words = o.themes.flatMap(t => t.words.map(([w, r, m]) => ({ w, r, m, c: t.c })));
     const added = new Map((o.added || []).map(x => [x.w, x]));
-    placed(L, wanted(L), words.map(x => x.w).concat((o.dropped || []).map(x => x.w)), new Set(added.keys()));
-    words.forEach(x => { meaning(L, x.w, x.m); claim(x.w, L); });
+    placed(L, wanted(L), words.concat(o.dropped || []), new Set(added.keys()));
+    words.forEach(x => { meaning(L, x.w, x.m); claim(x.w, x.r, L); });
     added.forEach(x => {
       if (matchWord(index, x.w, x.r).status === 'in-app') P(`word already in app: ${x.w}`);
       if (!words.some(y => y.w === x.w)) P(`${L} added word not in a theme: ${x.w}`);

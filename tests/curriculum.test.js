@@ -254,3 +254,27 @@ test('review page: notes for the user come first, each with its question', () =>
   assert.ok(text.includes('要你決定的事') && text.includes('舊寫法要不要改成現代寫法？') && text.includes('N2 改了、N1 沒改。'));
   assert.ok(text.indexOf('要你決定的事') < text.indexOf('N5／N4 缺口'));   // before the tabs
 });
+
+// ---- homographs are words too (user, 2026-10-31: 同形異讀都收) ----
+const withHomo = () => { const s = okSet(); s.cands.N3.words.push({ w: '語5', r: 'ごれい', status: 'dup', dupOf: 'N3' }); return s; };
+test('homograph: another reading of a spelling sits in a theme as its own word', () => {
+  const s = withHomo(); s.outlines.N3.themes[2].words.push(['語5', 'ごれい', '另一個意思']); assert.deepEqual(problemsOf(s), []);
+});
+test('homograph: one that is neither placed nor dropped is reported', () => has(withHomo(), 'N3 homograph missing: 語5（ごれい）'));
+test('homograph: dropping it with its reading and a reason is fine', () => {
+  const s = withHomo(); s.outlines.N3.dropped.push({ w: '語5', r: 'ごれい', why: '清單資料錯誤' }); assert.deepEqual(problemsOf(s), []);
+});
+test('homograph: the same spelling and reading twice is still a duplicate', () => {
+  const s = withHomo(); s.outlines.N3.themes[2].words.push(['語5', 'ごれい', '意思'], ['語5', 'ごれい', '意思']); has(s, 'N3 word twice: 語5（ごれい）');
+});
+test('homograph: gap files place theirs too', () => {
+  const s = okSet(); s.cands.N5.words.push({ w: '朝寝', r: 'ちょうしん', status: 'dup', dupOf: 'N5' }); has(s, 'N5 gap homograph missing: 朝寝（ちょうしん）');
+  s.gaps.N5.words.push({ w: '朝寝', r: 'ちょうしん', m: '另一讀', c: '時間' }); assert.deepEqual(problemsOf(s), []);
+});
+test('review page: only homographs not yet in the outline are listed', () => {
+  const s = withHomo(); s.cands.N3.words.push({ w: '語6', r: 'ごろく', status: 'dup', dupOf: 'N3' });
+  s.outlines.N3.themes[2].words.push(['語5', 'ごれい', '另一個意思']);
+  const text = require('../scripts/curriculum/render-review.js').renderReview({ outlines: s.outlines, gaps: s.gaps, cands: s.cands }).replace(/<[^>]+>/g, ' ');
+  const list = text.slice(text.lastIndexOf('同形異讀（還沒放進大綱）'));
+  assert.ok(text.includes('同形異讀（還沒放進大綱）') && list.includes('ごろく') && !list.includes('ごれい'));
+});
