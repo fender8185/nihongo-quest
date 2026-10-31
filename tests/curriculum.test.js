@@ -39,8 +39,12 @@ test('match: a noun matches the app\'s する verb (結婚 / 結婚する)', () 
 test('match: same spelling with another reading (上手 うわて / じょうず) is a variant', () => assert.equal(M().matchWord(fakeApp(), '上手', 'うわて').status, 'variant'));
 test('match: a leading 御 matches ご (御飯 / ご飯)', () => assert.equal(M().matchWord(fakeApp(), '御飯', 'ごはん').status, 'in-app'));
 test('match: an optional お prefix (お・金持ち おかねもち / 金持ち)', () => assert.equal(M().matchWord(fakeApp(), 'お・金持ち', 'おかねもち').status, 'in-app'));
-test('match: a kana word equal to an app reading (わかる / 分かる)', () => assert.equal(M().matchWord(fakeApp(), 'わかる', 'わかる').status, 'in-app'));
-test('match: a kanji word the app writes in kana (煙草 / たばこ)', () => assert.equal(M().matchWord(fakeApp(), '煙草', 'たばこ').status, 'in-app'));
+test('match: a kana word equal to an app reading (わかる / 分かる) needs a person: it may be another word', () => assert.equal(M().matchWord(fakeApp(), 'わかる', 'わかる').status, 'variant'));
+test('match: a kanji word the app writes in kana (煙草 / たばこ) needs a person: it may be another word', () => assert.equal(M().matchWord(fakeApp(), '煙草', 'たばこ').status, 'variant'));
+test('match: a homophone of an app kana word is not taken for it (底 そこ / そこ, 灰 はい / はい)', () => {
+  const ix = M().buildAppIndex([{ id: 'x', w: 'そこ', r: 'そこ', lv: 'N5' }, { id: 'y', w: 'はい', r: 'はい', lv: 'N5' }]);
+  assert.notEqual(M().matchWord(ix, '底', 'そこ').status, 'in-app'); assert.notEqual(M().matchWord(ix, '灰', 'はい').status, 'in-app');
+});
 test('match: a word the app lacks has no match, and its app id is reported when it has one', () => {
   assert.equal(M().matchWord(fakeApp(), 'おいでになる', 'おいでになる').status, null);
   assert.deepEqual(M().matchWord(fakeApp(), '結婚', 'けっこん').app, { id: 'b', lv: 'N4' });

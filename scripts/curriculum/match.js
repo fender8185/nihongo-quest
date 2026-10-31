@@ -44,7 +44,8 @@ function buildAppIndex(vocab) {
   return { byForm, byReading };
 }
 
-// in-app: the app has this word; variant: maybe the same word in another spelling or reading (a person decides); null: new
+// in-app: the app has this word; variant: maybe the same word in another spelling or reading (a person decides); null: new.
+// A match by reading alone is only a variant: 底 そこ is not the app's そこ (there), 灰 はい is not はい (yes).
 function matchWord(index, word, reading) {
   const pairs = forms(word, reading).map(([s, r]) => [noSuru(s), noSuru(r || (isKana(s) ? s : ''))]);
   const hit = (status, e) => ({ status, app: { id: e.id, lv: e.lv } });
@@ -58,11 +59,11 @@ function matchWord(index, word, reading) {
   }
   for (const [s] of pairs) {   // 3. a kana word that is an app word's reading
     const e = isKana(s) && (index.byReading.get(s) || [])[0];
-    if (e) return hit('in-app', e);
+    if (e) return hit('variant', e);
   }
   for (const [, r] of pairs) {   // 4. the same reading, written in kana in the app
     const e = (index.byReading.get(r) || []).find(x => x.kana);
-    if (e) return hit('in-app', e);
+    if (e) return hit('variant', e);
   }
   for (const [s, r] of pairs) {   // 5. the same reading and first character: okurigana spelled differently
     const e = (index.byReading.get(r) || []).find(x => x.w[0] === s[0]);
