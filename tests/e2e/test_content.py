@@ -201,6 +201,31 @@ def test_kanji_table_has_the_n3_kanji_in_the_outline_order(b):
     r = json.loads(ev(b, js))
     assert r['order'] == ORDER_N3 and r['bad'] == [] and r['table'] == len(ORDER_N3), {k: (v if k != 'order' else v[:20]) for k, v in r.items()}
 
+# ---- 1.0.33 part three: check-grammar.py reads a squad's unit file (its unit, lesson and items) for a unit of the outline ----
+def test_check_grammar_script_checks_a_new_unit_file(b):
+    from cdp import free_port
+    ok = dict(u='m19', lv='N3', d=1, zh='一定是。', why='用 **〜に違いない**。')
+    items = [
+        dict(ok, id='m19-01', t='choice', pt='〜に違いない', sec=0, jp='あの店はいつも人が並んでいるから、おいしい（　）。', op=['に違いない', 'はずがない', 'ようがない', 'わけがない'], a='に違いない'),
+        dict(ok, id='m19-02', t='order', pt='〜に違いない', sec=0, pre='電気が消えているから、', parts=['田中さんは', 'もう', '帰った', 'に違いない'], post='。', star=2),
+        dict(ok, id='m19-03', t='conj', pt='〜そうにない／〜そうもない', sec=1, jp='仕事が多くて、今日は早く{V}そうにない。', v='帰る', g='5', f='stem', a='帰り'),   # (降り would be bare: 降る or 降りる)
+        dict(ok, id='m19-04', t='choice', pt='〜に違いないです', sec=0, jp='あの人は先生（　）。', op=['に違いない', 'はずがない', 'ようがない', 'わけがない'], a='に違いない'),
+        dict(ok, id='m19-05', t='order', pt='〜に違いない', sec=0, pre='', parts=['田中さんは', 'もう', '帰った', 'に違いない'], post='。', star=4),
+        dict(ok, id='m19-06', t='conj', pt='〜そうにない／〜そうもない', sec=1, jp='雨は{V}そうにない。', v='降る', g='5', f='stem', a='降ら'),
+        dict(ok, id='m19-07', t='choice', pt='〜に違いない', sec=0, jp='彼は鬱になる（　）。', op=['に違いない', 'はずがない', 'ようがない', 'わけがない'], a='に違いない'),
+        dict(ok, id='m19-08', t='choice', pt='〜そうにない／〜そうもない', sec=0, jp='この雨はやみ（　）。', op=['そうにない', 'そうだ', 'ようだ', 'らしい'], a='そうにない')]
+    sec = lambda h: {'h': h, 'rule': '普通形＋に違いない', 'points': ['一定是。'], 'ex': [{'jp': '雨が降るに違いない。', 'zh': '一定會下雨。'}, {'jp': '山田さんは来ないに違いない。', 'zh': '山田一定不會來。'}]}
+    fx = {'unit': {'id': 'm19', 'desc': '推測和傳聞。'}, 'lesson': {'formula': '〜に違いない', 'overview': '推測。', 'sections': [sec('推測'), sec('看起來不會')]}, 'items': items}
+    path = os.path.join(ROOT, '.superpowers', 'check-grammar-fixture.json'); os.makedirs(os.path.dirname(path), exist_ok=True)
+    json.dump(fx, open(path, 'w', encoding='utf-8'), ensure_ascii=False)
+    out = subprocess.run([sys.executable, '-I', os.path.join(ROOT, 'scripts', 'check-grammar.py'), path, str(free_port())], capture_output=True, text=True)
+    fails = [l for l in out.stdout.splitlines() if l.startswith('FAIL')]
+    assert out.returncode == 1, out.stdout + out.stderr
+    for id_, msg in [('m19-04', 'pt not among the outline points'), ('m19-05', 'star must be 0–3'), ('m19-06', 'conjugates to 降り'),
+                     ('m19-07', 'kanji without furigana'), ('m19-08', 'one point, one section'), ('m19', 'choice items for 〜気がする'), ('m19', 'meaning items'), ('m19', 'sections')]:
+        assert any(l.startswith(f'FAIL {id_} ') and msg in l for l in fails), (id_, msg, fails)
+    assert not [l for l in fails if l.split()[1] in ('m19-01', 'm19-02', 'm19-03')], fails
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

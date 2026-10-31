@@ -5188,7 +5188,7 @@ function stageItems(id) {
 }
 function stageOfUnit(uid) { const s = STAGES.find(x => x.units.includes(uid)); return s ? s.id : 'p1'; }
 function currentStageId() { return inPreStage() ? 'pre' : stageOfUnit(state.currentUnit); }
-function nextUnitAfterStage(id) { const n = STAGES[stageIndex(id) + 1]; return n ? n.units[0] : 'm18'; }
+function nextUnitAfterStage(id) { const n = STAGES[stageIndex(id) + 1]; return n ? n.units[0] : DATA.UNITS[DATA.UNITS.length - 1].id; }   // after the last stage: the last unit
 
 // ---- 階段測驗 ----
 /* 40 questions drawn from the stage's own items (unseen ones included — the test asks "do I know this stage"), options only, untimed,

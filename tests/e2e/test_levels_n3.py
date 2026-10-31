@@ -86,6 +86,10 @@ def test_n3_new_words_come_in_two_theme_lanes_and_a_shared_spelling_keeps_the_lo
     r = json.loads(ev(b, js))
     assert sorted(r['th']) == ['思考與判斷', '抽象與狀況'] and '<rt>と</rt>' in r['toh'], r
 
+def test_after_the_last_stage_the_course_stays_on_the_last_unit(b):   # was 'm18' written out
+    js = "JSON.stringify([STAGES.length, nextUnitAfterStage(STAGES[STAGES.length - 1].id), DATA.UNITS[DATA.UNITS.length - 1].id])"
+    r = json.loads(ev(b, js)); assert r == [5, 'm19', 'm19'], r   # 入門, three phases and the fake fourth
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     site = fake_site()
