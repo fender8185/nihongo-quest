@@ -164,7 +164,7 @@ def test_a_pass_marks_four_stars_with_its_side_effects(b):
       const core = items.filter(x => !isLR(x) && x.key !== v5.key).map(x => state.srs[x.key]);
       Object.assign(out, { n, changed, core: core.length, four: core.every(r => r && r.b === 4), lrUntouched: items.filter(isLR).every(x => !state.srs[x.key]), known: [state.srs[v5.key].known, state.srs[v5.key].b],
         dueOk: core.every(r => r && daysBetween(t, r.due) >= 9 && daysBetween(t, r.due) <= 11), lastSet: core.every(r => r && r.last === t),
-        units: state.completedUnits.slice(), cur: state.currentUnit, stage: state.stage, intro: state.introSeen, kana: state.kanaKnown, lessons: state.lessonSeen.filter(k => k.startsWith('m1:')).length > 0, n4Open: n4WordsOpen() });
+        units: state.completedUnits.slice(), cur: state.currentUnit, stage: state.stage, intro: state.introSeen, kana: state.kanaKnown, lessons: state.lessonSeen.filter(k => k.startsWith('m1:')).length > 0, n4Open: pastFirstLevel() });
       renderCourse(document.getElementById('view')); const banner = document.querySelector('#view .banner');
       out.banner = Boolean(document.querySelector('[data-act="bulk-mark-undo"]')) && banner.textContent.includes(`已把 ${changed} 個項目標成「四顆」`);
       out.again = passMarkTargets('p1', new Set()).length;   // nothing left below the levels

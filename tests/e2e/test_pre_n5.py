@@ -155,10 +155,15 @@ def test_pre_n5_words_and_kanji_are_tagged(b):
     assert sorted(r['kanji']) == sorted(PRE_KANJI) and r['n5k'] == 104, r
     assert r['n4Gate'], r
 
-def test_no_level_gate_still_says_n5_literally(b):
-    src = open(os.path.join(ROOT, 'index.html'), encoding='utf-8').read()
-    hits = [l.strip()[:120] for l in src.split('\n') if re.search(r"\.lv === 'N5'", l) and 'level-literal-ok' not in l and not re.search(r"listen|LISTEN|read\b|READ|lPool|rPool", l)]
-    assert hits == [], hits[:6]
+def test_no_level_literals_outside_the_level_list(b):
+    # 1.0.33 (spec §4.1, §10): every place that compares or lists levels reads levels() / courseLevels(), so N3 (then N2, N1)
+    # data is recognised everywhere; only the list itself and lines marked level-literal-ok may name a level
+    src = open(os.path.join(ROOT, 'index.html'), encoding='utf-8').read().split('\n')
+    a = next(i for i, l in enumerate(src) if l.startswith('const CHANGELOG')); z = next(i for i in range(a, len(src)) if src[i].startswith('];'))
+    pat = re.compile(r"[!=]==\s*'N[1-5]'|'(?:PRE_)?N[1-5]',\s*'N[1-5]'|/N[1-5]/\.test|[?:]\s*'N[1-5]'(?![\w-])|\|\|\s*'N[1-5]'")
+    hits = [f'{i + 1}: {l.strip()[:110]}' for i, l in enumerate(src) if not (a <= i <= z) and not l.lstrip().startswith('//')
+            and 'level-literal-ok' not in l and not re.match(r'\s*const (ALL_LEVELS|LEVELS|COURSE_LEVELS)\b', l) and pat.search(l)]
+    assert hits == [], hits
 
 # ---- fixes from the 1.0.6 whole-branch review ----
 def test_pre_stage_keeps_due_reviews_and_extra_practice_has_no_grammar(b):
@@ -183,7 +188,7 @@ def test_kanji_page_has_an_intro_tab_and_still_shows_every_kanji(b):
 def test_vocab_decks_cover_every_level(b):
     js = """(() => { const builtin = REG.vocab.filter(v => v.builtin).length; const vs = vocabStats();
       location.hash = '#/vocab/list?lv=PRE_N5'; route(); const rows = document.querySelectorAll('.table tbody tr').length;
-      return JSON.stringify({ decks: DECKS.map(d => d[0]), sum: deckPool('PRE_N5').length + deckPool('N5').length + deckPool('N4').length, builtin, rows,
+      return JSON.stringify({ decks: decks().map(d => d[0]), sum: deckPool('PRE_N5').length + deckPool('N5').length + deckPool('N4').length, builtin, rows,
         pre: vs.PRE_N5 && vs.PRE_N5.total, n5: vs.N5.total, n4: vs.N4.total }); })()"""
     r = json.loads(ev(b, js))
     assert 'PRE_N5' in r['decks'] and r['sum'] == r['builtin'] and r['rows'] >= 50, r   # 1.0.12: 59 入門 words
@@ -215,7 +220,7 @@ def test_homophone_kana_never_decoy_each_other(b):
 # ---- 1.0.8: three-level theme lists ----
 def test_every_builtin_word_has_a_theme_of_its_level(b):
     js = """(() => { const T = DATA.THEMES; const bad = REG.vocab.filter(v => v.builtin && !(T[v.lv] || []).some(t => t.c === vocabTheme(v))).slice(0, 5).map(v => v.id + ':' + v.lv + ':' + vocabTheme(v));
-      return JSON.stringify({ n: [T.PRE_N5.length, T.N5.length, T.N4.length], bad, order0: THEME_ORDER[0], other: REG.vocab.filter(v => v.builtin && vocabTheme(v) === '其他').length,
+      return JSON.stringify({ n: [T.PRE_N5.length, T.N5.length, T.N4.length], bad, order0: themeOrder()[0], other: REG.vocab.filter(v => v.builtin && vocabTheme(v) === '其他').length,
         verbsPre: REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5' && /^(v5|v1|vs|vk|i|na|adv)$/.test(v.p) && vocabTheme(v) !== '基本動作與形容').length }); })()"""
     r = json.loads(ev(b, js))
     assert r['n'] == [3, 17, 17] and r['bad'] == [] and r['order0'] == '問候' and r['other'] == 0 and r['verbsPre'] == 0, r
@@ -472,7 +477,7 @@ def test_intro_pending_is_ignored(b):
 
 # ---- 1.0.16: 學習分析 counts the new content (user, 2026-10-29: 「學習分析的資料也要一併統計這些新加入的內容」) ----
 def test_week0_items_count_as_n5_grammar_in_the_stats(b):
-    js = """(() => { const t = progressTotals('g'); const n5 = REG.grammar.filter(g => g.u === 'm0' || DATA.UNITS.some(u => u.id === g.u && u.lv === 'N5')).length; return JSON.stringify({ n5: t.n5, want: n5, total: t.total === REG.grammar.length }); })()"""
+    js = """(() => { const t = progressTotals('g'); const n5 = REG.grammar.filter(g => g.u === 'm0' || DATA.UNITS.some(u => u.id === g.u && u.lv === 'N5')).length; return JSON.stringify({ n5: (t.marks.find(m => m[0] === 'N5') || [])[1], want: n5, total: t.total === REG.grammar.length }); })()   // 1.0.33: one mark per level boundary"""
     r = json.loads(ev(b, js))
     assert r['n5'] == r['want'] and r['total'], r
 

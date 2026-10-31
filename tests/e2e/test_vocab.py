@@ -639,7 +639,7 @@ def test_vocab_content_pass_adds_keigo_common_words_and_removes_duplicates(b):
       const keigo = V.filter(v => v.c === '溝通與敬語').map(v => v.w);
       const raw = ['吸う', '鳴く', 'かぶる'].map(w => vSurfaceInfo(byW(w)).form);
       const bare = V.filter(v => /^(n5e|n4f)-/.test(v.id)).filter(v => /[一-龯]/.test(furi(v.ex.replace(/[{}]/g, '')).replace(/<ruby>.*?<[/]ruby>/g, '')) ).map(v => v.w);
-      return JSON.stringify({ n: V.length, dups, keigo, old: V.filter(v => v.c === '舊版').length, themes: THEME_ORDER.includes('溝通與敬語'),
+      return JSON.stringify({ n: V.length, dups, keigo, old: V.filter(v => v.c === '舊版').length, themes: themeOrder().includes('溝通與敬語'),
         added: ['おにぎり', '紫', '村', '役に立つ', '召し上がる', 'ピンク'].map(w => Boolean(byW(w))), merged: [Boolean(byW('旅行')), Boolean(byW('旅行する')), Boolean(byW('運動')), Boolean(byW('運動する'))], raw, bare }); })()"""
     r = json.loads(ev(b, js))
     assert r['n'] >= 1440 and r['dups'] == [] and r['old'] == 0 and r['themes'], r
@@ -798,7 +798,7 @@ TESTS += [test_particle_questions_ask_for_the_usage_with_other_points_as_options
 def test_n4_words_open_once_n5_words_kanji_and_units_are_done(b):
     js = """(() => { const keep = JSON.stringify(state.srs); const units = state.completedUnits.slice(); state.stage = 'main';
       const met = (x) => { state.srs[x.key] = { b: 1, due: addDays(todayStr(), 3), n: 1, ok: 1, ng: 0, s: 3, d: 5, f: {}, last: todayStr() }; };
-      const open = () => n4WordsOpen() && deckAllowsN4('all') && curLevel() === 'N4';
+      const open = () => pastFirstLevel() && curLevel() === 'N4';
       const out = { left: n5WordsLeft(), closed: !open() };
       REG.vocab.filter(x => x.builtin && x.lv !== 'N4').forEach(met); out.wordsOnly = open();
       REG.kanji.filter(k => k.lv !== 'N4').forEach(met); state.completedUnits = DATA.UNITS.filter(u => u.lv === 'N5').map(u => u.id); out.open = open();

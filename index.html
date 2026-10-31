@@ -969,12 +969,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.32';   // keep equal to the version in sw.js CACHE ('nq-v1.0.32'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.33';   // keep equal to the version in sw.js CACHE ('nq-v1.0.33'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.33', date: '2026-11-01', items: [
+    '程式改成不限 N5、N4 兩級：等級從資料推出，為 N3 做準備。'
+  ] },
   { v: '1.0.32', date: '2026-11-01', items: [
     '新題一次一級：入門＋N5 的單字、漢字、文法都學過一次，N4 才開始。新帳號在 N5 期間每天大約單字 10、文法 4、漢字 1 題（原本 8／6／1）；學完 N5 的隔天，N4 的單字、文法、漢字一起開始。',
     'N5 的文法學完、單字或漢字還沒學完時，新文法先停，名額給單字和漢字；今日頁和課程頁會寫出還差多少，例如「新文法先停：N5 單字還剩 38 個，學完就進第 13–14 週・可能形。」。已經進到 N4 單元、N5 單字還沒學完的人也一樣，學完會接著自己的單元。',
@@ -1233,7 +1236,7 @@ function defaultSettings() {
     includeImported: 'words',  // off | words | all
     theme: 'dark',
     examDate: '2027-07-04',
-    examLevel: 'N4',         // the JLPT level the exam date is for: 學習分析 and the exam countdown project against it (1.0.26)
+    examLevel: 'N4',         /* level-literal-ok: default */ // the JLPT level the exam date is for: 學習分析 and the exam countdown project against it (1.0.26)
     duolingoScore: 22,
     examInstant: false,
     examFormal: false,
@@ -1322,7 +1325,7 @@ function normalizeState(s) {
   ['autoSpeak', 'listening', 'audioOptions', 'retention'].forEach(k => { delete out.settings[k]; });
   // 1.0.25: neither are 每組練習題數 (SESSION_SIZE) and 出題順序 (words and grammar always mixed)
   ['sessionSize', 'order'].forEach(k => { delete out.settings[k]; });
-  if (!['N5', 'N4'].includes(out.settings.examLevel)) out.settings.examLevel = 'N4';
+  if (!courseLevels().includes(out.settings.examLevel)) out.settings.examLevel = DEFAULT_LEVEL;
   delete out.preDoneDismissed; delete out.preFinished;
   ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt', 'stageTests'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
@@ -1332,7 +1335,7 @@ function normalizeState(s) {
   if (!out.themeLane || !Array.isArray(out.themeLane.order)) out.themeLane = { order: [], count: {} };
   if (!out.themeLane.count || typeof out.themeLane.count !== 'object') out.themeLane.count = {};
   // 1.0.8: themes were renamed per level; an old lane order keeps its place under the new names
-  const mig = (c) => THEME_ORDER.includes(c) ? c : (THEME_MIGRATE[c] || c);   // a current name (入門 問候) is never an old one
+  const mig = (c) => themeOrder().includes(c) ? c : (THEME_MIGRATE[c] || c);   // a current name (入門 問候) is never an old one
   out.themeLane.order = [...new Set(out.themeLane.order.map(mig))];
   out.themeLane.count = Object.fromEntries(Object.entries(out.themeLane.count).map(([c, n]) => [mig(c), n]));
   if (!out.today || out.today.date !== todayStr()) out.today = { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0, newC: 0, newA: 0 };
@@ -1470,7 +1473,7 @@ function migrateLegacy(old) {
     }
     const card = {
       id: v.id || uid('cust'), w: String(v.kanji).trim(), r: (v.kana && v.kana !== v.kanji) ? v.kana : '',
-      m: v.meaning || '', p: legacyPosCode(v.pos, v.kanji), lv: ['N5', 'N4'].includes(v.level) ? v.level : 'CUSTOM',
+      m: v.meaning || '', p: legacyPosCode(v.pos, v.kanji), lv: courseLevels().includes(v.level) ? v.level : 'CUSTOM',
       ex: v.exJp && v.exJp !== v.kanji ? markTarget(v.exJp, String(v.kanji).trim()) : '', exZh: v.exZh || '', posLabel: v.pos || '',
       src: String(v.id || '').startsWith('apkg_') ? 'anki' : (String(v.id || '').startsWith('ai') ? 'ai' : 'user'),
       audioWord: v.audioWord || '', audioEx: v.audioEx || '', imageFile: v.imageFile || '', videoFile: v.videoFile || ''
@@ -1503,7 +1506,7 @@ function migrateLegacy(old) {
     if (String(d.id).startsWith('ai_') && d.promptJp && Array.isArray(d.options) && d.options.includes(d.answer)) {
       const item = {
         id: d.id, u: DATA.UNITS.some(x => x.id === d.milestoneId) ? d.milestoneId : guessUnitFromCategory(d.category, d.level),
-        t: 'choice', lv: d.level === 'N5' ? 'N5' : 'N4', d: 2, pt: d.category || 'AI 題目', jp: d.promptJp, op: d.options.slice(0, 4),
+        t: 'choice', lv: courseLevels().includes(d.level) ? d.level : DEFAULT_LEVEL, d: 2, pt: d.category || 'AI 題目', jp: d.promptJp, op: d.options.slice(0, 4),
         a: d.answer, zh: String(d.promptZh || '').replace(/^\[[^\]]*\]\s*/, '').replace(/^【[^】]*】/, ''),
         why: String(d.explanation || '').replace(/^\[[^\]]*\]\s*/, ''), src: 'ai'
       };
@@ -1542,7 +1545,7 @@ function migrateLegacy(old) {
   s.questionHistory = old.questionHistory || {};
   (old.assessmentQuestions || []).forEach(q => {
     if (!q || !String(q.id || '').startsWith('ai_') || !q.question || !Array.isArray(q.options) || !q.options.includes(q.answer)) return;
-    const lv = (q.level === 'n4' || (Array.isArray(q.mode) && q.mode.includes('n4') && !q.mode.includes('n5'))) ? 'N4' : 'N5';
+    const lv = (q.level === 'n4' || (Array.isArray(q.mode) && q.mode.includes('n4') && !q.mode.includes('n5'))) ? 'N4' : 'N5';   /* level-literal-ok: the old app's own two levels */
     s.customExam.push({ id: q.id, lv, m: String(q.mondaiCode || 'S2-M1').replace(/^N[45]-/, ''), q: q.question, passage: q.passage || '', op: q.options.slice(0, 4), a: q.answer, why: q.explanation || '', speak: q.speak || '', isListening: Boolean(q.isListening), src: 'ai' });
   });
 
@@ -1570,8 +1573,8 @@ function guessUnitFromCategory(cat, level) {
   const c = String(cat || '');
   if (/助詞/.test(c)) return 'm1';
   if (/形容詞/.test(c)) return 'm2';
-  if (/動詞/.test(c)) return level === 'N4' ? 'm7' : 'm3';
-  if (/N5/.test(c)) return 'm6';
+  if (/動詞/.test(c)) return level === 'N4' ? 'm7' : 'm3';   /* level-literal-ok: old categories */
+  if (/N5/.test(c)) return 'm6';   /* level-literal-ok: old categories */
   return 'm10';
 }
 
@@ -1598,6 +1601,7 @@ function unitOrder(id) { return id === 'm0' ? -1 : UNIT_INDEX[id] !== undefined 
 
 let REG = { vocab: [], grammar: [], listen: [], read: [], kanji: [], drills: [], kana: [], byKey: new Map() };
 function buildRegistry() {
+  refreshLevels();
   const hidden = new Set(state.hidden || []);
   const vocab = [];
   DATA.VOCAB.forEach(v => { if (!hidden.has(v.id)) vocab.push(Object.assign({ key: 'v:' + v.id, kind: 'v', builtin: true }, v)); });
@@ -1990,9 +1994,9 @@ function unitStats(uid) {
 }
 function vocabStats() {
   const t = todayStr();
-  const out = { PRE_N5: { total: 0, learned: 0 }, N5: { total: 0, learned: 0 }, N4: { total: 0, learned: 0 }, custom: { total: 0, learned: 0 }, due: 0, seen: 0, n5Left: n5WordsLeft() };
+  const out = { custom: { total: 0, learned: 0 }, due: 0, seen: 0 }; levels().forEach(L => { out[L] = { total: 0, learned: 0 }; });
   REG.vocab.forEach(v => {
-    const bucket = !v.builtin ? out.custom : (out[v.lv] || out.N5);
+    const bucket = !v.builtin ? out.custom : (out[v.lv] || out[courseLevels()[0]]);
     bucket.total++;
     const r = state.srs[v.key];
     if (r) { out.seen++; if (r.b >= SRS_LEARNED) bucket.learned++; if (isDueToday(v, t)) out.due++; }   // reviews follow the record (1.0.32)
@@ -2111,9 +2115,10 @@ function buildFuriganaIndex() {
   } else {
     FURI.clear(); FURI_PRIO.clear(); FURI_BLOCK.clear(); FURI_SRC.clear(); FURI_MAX = 1;
     // built-in N5 words win over N4 words when keys collide (行って = いって, not おこなって)
-    furiPrio = 4; REG.vocab.filter(v => v.builtin && v.lv !== 'N4').forEach(add);
+    const cl = courseLevels();
+    furiPrio = 4; REG.vocab.filter(v => v.builtin && courseLevel(v.lv) === cl[0]).forEach(add);
     furiPrio = 3; furiSrc = ''; (DATA.FURI || []).forEach(([k, r]) => furiAdd(k, r));   // these readings belong to no word: mastering the last word added above must not hide them
-    furiPrio = 2; REG.vocab.filter(v => v.builtin && v.lv !== 'N5').forEach(add);
+    cl.slice(1).forEach((L, i) => { furiPrio = 2 - i * 0.1; REG.vocab.filter(v => v.builtin && v.lv === L).forEach(add); });   // N4 2, N3 1.9 … (spec §4.5)
     // readings for words that appear in sentences but are not quizzed (names, 思う, 名前 …)
     furiPrio = 1.5; (DATA.FURI_EXTRA || []).forEach(([w, r, p]) => add({ w, r, p }));
     FURI_BASE = { key: hiddenKey, furi: new Map(FURI), prio: new Map(FURI_PRIO), block: new Set(FURI_BLOCK), src: new Map(FURI_SRC), max: FURI_MAX };
@@ -2961,6 +2966,11 @@ function blankChip(hint) {
 }
 function unitTag(g) { const u = unitById(g.u); return `${u.weeks}・${u.short}`; }
 
+// the forms a level's conjugation items choose their wrong options from (a level without its own list takes the one below)
+const CONJ_POOL = {   /* level-literal-ok: data */
+  N5: ['te', 'ta', 'nai', 'dict', 'masu'], N4: ['pot', 'pass', 'caus', 'vol', 'ba', 'te', 'nai', 'imp'], N3: ['pot', 'pass', 'caus', 'causpass', 'vol', 'ba', 'te', 'imp']
+};
+function conjPoolFor(lv) { const i = ALL_LEVELS.indexOf(courseLevel(lv || '')); for (let j = i; j > 0; j--) if (CONJ_POOL[ALL_LEVELS[j]]) return CONJ_POOL[ALL_LEVELS[j]]; return CONJ_POOL[courseLevels()[0]]; }
 function makeGrammarQuestion(g, ctx = {}) {
   const q = baseQ(g);
   q.cat = g.pt || '文法';
@@ -3075,7 +3085,7 @@ function makeGrammarQuestion(g, ctx = {}) {
     const surfaceDup = isV && ['pot', 'pass'].includes(fam) && JConj.normJa(JConj.conjVerb(g.v, g.g, 'pass') || '') === JConj.normJa(JConj.conjVerb(g.v, g.g, 'pot') || '');
     const identifiable = !['tara', 'tari', 'naide', 'nakereba', 'nakutemo', 'nakute', 'kinshi', 'causpass', 'causpassmashita', 'stem'].includes(g.f);
     if (isV && rec && rec.b >= 2 && FORM_LABEL[fam] && identifiable && !surfaceDup && !ctx.encore && !ctx.forceFmt && Math.random() < 0.3) {   // not for an encore (that is the spelled version) nor a forced format
-      const pool = g.lv === 'N4' ? ['pot', 'pass', 'caus', 'vol', 'ba', 'te', 'nai', 'imp'] : ['te', 'ta', 'nai', 'dict', 'masu'];
+      const pool = conjPoolFor(g.lv);
       const others = shuffle(pool.filter(f => f !== fam)).slice(0, 3);
       if (others.length === 3) {
         q.fmt = 'g-identify';
@@ -3435,8 +3445,15 @@ function isDueToday(x, t = todayStr()) {
 // only after every N5 word has been introduced once. Items further ahead keep their records and come
 // back when the learner gets there.
 // N4 words join the new-word pool once every N5 word has been seen, or earlier when the learner opens them (設定／我已有基礎)
-const LV_RANK = { PRE_N5: 0, N5: 1, N4: 2 };
-function lvRank(x) { return LV_RANK[x.lv] === undefined ? 1 : LV_RANK[x.lv]; }
+// 等級清單 (1.0.33, spec §4.1): 入門 plus the levels the data has, lowest first. Everything that compares or lists levels reads
+// levels() / courseLevels(), so N3 (then N2, N1) data is recognised everywhere; buildRegistry refreshes the cache.
+const ALL_LEVELS = ['PRE_N5', 'N5', 'N4', 'N3', 'N2', 'N1'];
+const DEFAULT_LEVEL = 'N4';   /* level-literal-ok: the exam target, AI items and unknown data fall back to it */
+let LEVELS_NOW = null; let THEME_ORDER_NOW = null;
+function levels() { return LEVELS_NOW || (LEVELS_NOW = ALL_LEVELS.filter(L => L === 'PRE_N5' || DATA.VOCAB.some(v => v.lv === L) || DATA.UNITS.some(u => u.lv === L))); }
+function courseLevels() { return levels().filter(L => L !== 'PRE_N5'); }
+function refreshLevels() { LEVELS_NOW = null; THEME_ORDER_NOW = null; UNIT_LV.clear(); }
+function lvRank(x) { const i = ALL_LEVELS.indexOf(x.lv); return i < 0 ? 1 : i; }
 function inPreStage() { return state.stage === 'pre'; }
 // 入門: PRE_N5 words start once the 92 清音 have all been seen, or when the learner says they already know kana
 function kanaGateOpen() { return state.kanaKnown === true || REG.kana.filter(x => x.seion).every(x => state.srs[x.key]); }
@@ -3464,8 +3481,7 @@ function finishPreIfReady() {
 function preDone() { return REG.vocab.some(v => v.builtin && v.lv === 'PRE_N5') && preWordsLeft() === 0 && kanaGateOpen() && introLeft() === 0; }
 // 每一級封死 (1.0.32, spec §4.2): new words, kanji and grammar come from one course level at a time, the lowest one with
 // something still unseen; reviews follow the record (computeDailyPlan's scope). In the main course 入門 words count as N5.
-const COURSE_LEVELS = ['N5', 'N4'];
-function courseLevel(lv) { return lv === 'PRE_N5' ? 'N5' : lv; }
+function courseLevel(lv) { return lv === 'PRE_N5' ? courseLevels()[0] : lv; }
 function unitLevel(uid) { return courseLevel(unitById(uid).lv); }
 // a unit is done once it is marked complete (從這個單元開始 marks the earlier ones too) or every item in it has been seen
 function unitDone(uid) { return state.completedUnits.includes(uid) || !REG.grammar.some(g => g.u === uid && !state.srs[g.key]); }
@@ -3476,14 +3492,14 @@ function levelLeft(L) {
   return { v: REG.vocab.filter(v => v.builtin && courseLevel(v.lv) === L && unseen(v)).length, k: REG.kanji.filter(k => courseLevel(k.lv) === L && unseen(k)).length,
     g: REG.grammar.filter(g => units.includes(g.u) && unseen(g)).length, units };
 }
-function curLevel() { return COURSE_LEVELS.find(L => { const x = levelLeft(L); return x.v || x.k || x.units.length; }) || COURSE_LEVELS[COURSE_LEVELS.length - 1]; }
+function curLevel() { const cl = courseLevels(); return cl.find(L => { const x = levelLeft(L); return x.v || x.k || x.units.length; }) || cl[cl.length - 1]; }
 // new grammar waits while the current level's units are all done but its words or kanji are not: what is left, and the
 // number of the next level's first unit (the today and course pages say so)
 function grammarPause() {
   if (inPreStage()) return null;
   const L = curLevel(); const x = levelLeft(L);
   if (x.units.length || (!x.v && !x.k)) return null;
-  const above = (u) => COURSE_LEVELS.indexOf(unitLevel(u.id)) > COURSE_LEVELS.indexOf(L);
+  const cl = courseLevels(); const above = (u) => cl.indexOf(unitLevel(u.id)) > cl.indexOf(L);
   const own = DATA.UNITS.find(u => u.id === state.currentUnit && above(u));   // already in the next level's units: they resume there
   const next = own || DATA.UNITS.find(above);
   return next ? { L, v: x.v, k: x.k, unit: next.id } : null;
@@ -3493,16 +3509,16 @@ function grammarPauseText(gp) {
   const u = unitById(gp.unit); return `新文法先停：${gp.L} ${parts}，學完就進${u.weeks}・${u.short}。`;
 }
 function levelLeftText(L) { const x = levelLeft(L); return [x.v ? `單字 ${x.v}` : '', x.k ? `漢字 ${x.k}` : '', x.g ? `文法 ${x.g} 題` : ''].filter(Boolean).join('、'); }
-function n4WordsOpen() { return COURSE_LEVELS.indexOf(curLevel()) >= COURSE_LEVELS.indexOf('N4'); }   /* level-literal-ok: renamed in the 1.0.33 generalization */
-function n5WordsLeft() {   // PRE_N5 and N5 words not yet seen: both must be gone before N4 opens by itself
+function pastFirstLevel() { return curLevel() !== courseLevels()[0]; }   // the first course level (入門+N5) is done
+function n5WordsLeft() {   // 入門 and N5 (the first course level) words not yet seen
   let n = 0;
-  for (const v of REG.vocab) if (v.builtin && v.lv !== 'N4' && !state.srs[v.key]) n++;
+  for (const v of REG.vocab) if (v.builtin && courseLevel(v.lv) === courseLevels()[0] && !state.srs[v.key]) n++;
   return n;
 }
 function grammarInReach(g, curIdx = unitOrder(state.currentUnit)) { return unitOrder(g.u) <= curIdx; }
 // the main-course rule (also what 入門 uses for due reviews: a learner who went back to 入門 keeps every review)
-function vocabEligibleMain(v, n4Open) {
-  if (v.builtin) return v.lv !== 'N4' || n4Open;
+function vocabEligibleMain(v) {
+  if (v.builtin) return true;   // built-in words: reviews by record, new ones by level (vocabEligibleForDaily)
   const mode = state.settings.includeImported;
   if (mode === 'off') return false;
   if (mode === 'words') return isWordLike(v);
@@ -3517,17 +3533,17 @@ function vocabEligibleForDaily(v, cur) {   // cur: curLevel(), asked once by the
   return true;
 }
 // New words are introduced theme by theme, two themes at a time (interleaved, so a day's new words come in two
-// related groups rather than one long list of look-alikes). The pair is the first two themes, in THEME_ORDER,
+// related groups rather than one long list of look-alikes). The pair is the first two themes, in themeOrder(),
 // that still have unintroduced words of the lowest open level (N5 first; N4 only once allowed).
-function themeRank(c) { const i = THEME_ORDER.indexOf(c); return i < 0 ? THEME_ORDER.length : i; }
-// The lanes follow state.themeLane.order (THEME_ORDER to begin with). A theme holds a lane for at most three days'
+function themeRank(c) { const i = themeOrder().indexOf(c); return i < 0 ? themeOrder().length : i; }
+// The lanes follow state.themeLane.order (themeOrder() to begin with). A theme holds a lane for at most three days'
 // worth of new words (THEME_LANE_DAYS × 8); then it moves to the back of the order and the next theme
 // with unintroduced words takes the lane, so a big theme (生活 has 148 words) cannot occupy a lane for a month.
 const THEME_LANE_DAYS = 3;
 function laneOrder() {
   const lane = state.themeLane && Array.isArray(state.themeLane.order) ? state.themeLane : (state.themeLane = { order: [], count: {} });
   if (!lane.count || typeof lane.count !== 'object') lane.count = {};
-  THEME_ORDER.forEach(c => { if (!lane.order.includes(c)) lane.order.push(c); });
+  themeOrder().forEach(c => { if (!lane.order.includes(c)) lane.order.push(c); });
   return lane.order;
 }
 function laneCap() { return THEME_LANE_DAYS * 8; }
@@ -3645,9 +3661,9 @@ function newKanjiCandidates(anyLevel = false) {   // 入門: PRE_N5 kanji; main 
 // nearest units first (the current one, then earlier ones from the nearest, then later ones). A unit alone has ~12
 // items, which came back every few days.
 function listenReachable(curIdx = unitOrder(state.currentUnit)) {
-  const n4 = /N4/.test(unitById(state.currentUnit).lv);
+  const top = ALL_LEVELS.indexOf(unitLevel(state.currentUnit));
   const key = (x) => { const d = unitOrder(x.u) - curIdx; return (d > 0 ? 1000 + d : -d) * 1000 + (hashStr(x.id) % 997); };
-  return REG.listen.filter(x => n4 || x.lv === 'N5').sort((a, b) => key(a) - key(b));
+  return REG.listen.filter(x => ALL_LEVELS.indexOf(courseLevel(x.lv)) <= top).sort((a, b) => key(a) - key(b));
 }
 function extrasPlan(curIdx) {
   const t = todayStr();
@@ -3717,7 +3733,6 @@ function splitNew(n, skip = new Set()) {
 }
 function computeDailyPlan(size = SESSION_SIZE) {
   const t = todayStr();
-  const n4Open = n4WordsOpen();
   const curIdx = unitOrder(state.currentUnit);
   const pre = inPreStage();   // 入門: new items come from splitNew's 入門 banks; no new listening, reading or drills. Reviews of every kind stay.
   // what reviews reach (spec §4.6, 1.0.32: new items follow the level, reviews the record): every built-in word, grammar
@@ -3725,7 +3740,7 @@ function computeDailyPlan(size = SESSION_SIZE) {
   // cards follow their setting; every kana. New drills still come from the reached units only (cPool).
   const cPool = (REG.drills || []).filter(d => unitOrder(d.u) <= curIdx);
   const has = (x) => Boolean(state.srs[x.key]);
-  const scope = REG.vocab.filter(v => v.builtin ? has(v) : (!pre || has(v)) && vocabEligibleMain(v, n4Open))
+  const scope = REG.vocab.filter(v => v.builtin ? has(v) : (!pre || has(v)) && vocabEligibleMain(v))
     .concat(REG.grammar.filter(has), REG.kanji.filter(has), REG.kana, (REG.drills || []).filter(has));
   // up to three stars: due by FSRS, the most overdue first, at most SRS_DAILY_CAP a day (the rest come the next days); the
   // missed items on the 1/3/7 ladder due today all come on top of the cap (inside it they crowd out the other reviews)
@@ -3752,7 +3767,7 @@ function computeDailyPlan(size = SESSION_SIZE) {
   plan.remaining = PLAN_LISTS.reduce((sum, n) => sum + plan[n].length, 0);
   plan.relearnN = plan.dueV.concat(plan.dueG).filter(x => onLadder(x.key)).length;   // reviews that are missed items on the ladder (shown as 其中錯題)
   const gp = grammarPause();
-  return Object.assign(plan, { note: [note, gp ? grammarPauseText(gp) : ''].filter(Boolean).join(' '), size, n4Open, n: nc.n, split: { a: fresh.a.length, v: fresh.v.length, g: fresh.g.length, k: fresh.k.length } });
+  return Object.assign(plan, { note: [note, gp ? grammarPauseText(gp) : ''].filter(Boolean).join(' '), size, n: nc.n, split: { a: fresh.a.length, v: fresh.v.length, g: fresh.g.length, k: fresh.k.length } });
 }
 
 // 今天的清單: worked out the first time it is needed each day — again only when the start gets chosen or the stage changes
@@ -3768,7 +3783,7 @@ function makeTodayPlan(size) {
   PLAN_LISTS.forEach(n => { lists[n] = (p[n] || []).map(x => x.key); });
   const fresh = new Set(PLAN_LISTS.flatMap(n => lists[n]));
   lists.kept = old && old.lists ? planListKeys(old).filter(k => answeredToday(k) && !fresh.has(k)) : [];
-  state.today.plan = { lists, note: p.note || '', n4Open: p.n4Open, n: p.n, split: p.split, stage: state.stage, start: Boolean(state.startChosen), listenOn: speechAvailable() };
+  state.today.plan = { lists, note: p.note || '', n: p.n, split: p.split, stage: state.stage, start: Boolean(state.startChosen), listenOn: speechAvailable() };
 }
 function storeTodayPlan(size) { makeTodayPlan(size); saveState(); }
 // a browser voice lists its voices only after the first render: listening joins a list made before that, the rest stays
@@ -3783,7 +3798,7 @@ function dailyPlan(size = SESSION_SIZE) {
   if (!pl || !pl.lists || pl.stage !== state.stage || pl.start !== Boolean(state.startChosen)) storeTodayPlan(size);
   else if (pl.listenOn === false && speechAvailable()) addTodayListening(size);
   const p = state.today.plan;
-  const out = { note: p.note, n4Open: p.n4Open, n: p.n, split: p.split, size };
+  const out = { note: p.note, n: p.n, split: p.split, size };
   let remaining = 0;
   PLAN_LISTS.forEach(n => { out[n] = (p.lists[n] || []).map(k => REG.byKey.get(k)).filter(x => x && !answeredToday(x.key)); remaining += out[n].length; });
   out.relearnN = out.dueV.concat(out.dueG).filter(x => onLadder(x.key)).length;
@@ -4574,7 +4589,7 @@ function route() {
     else if (r.name === 'course') { if (r.parts[1]) renderUnit(view, r.parts[1] === 'intro' ? 'm0' : r.parts[1], r.params.tab || 'lesson'); else renderCourse(view); }
     else if (r.name === 'vocab') {
       if (!r.parts[1] || r.parts[1] === 'themes') { location.replace('#/vocab/level?lv=' + defaultVocabLevel()); return route(); }   // replace, so Back leaves the vocab page   // the vocab page opens on the learner's level; the old 主題 tab lives there too
-      if (r.parts[1] === 'kanji') { location.replace('#/vocab/level?lv=' + (['PRE_N5', 'N5', 'N4'].includes(r.params.lv) ? r.params.lv : defaultVocabLevel())); return route(); }   // the old 漢字 tab: kanji sit on the level pages
+      if (r.parts[1] === 'kanji') { location.replace('#/vocab/level?lv=' + (levels().includes(r.params.lv) ? r.params.lv : defaultVocabLevel())); return route(); }   // the old 漢字 tab: kanji sit on the level pages
       if (r.parts[1] === 'listen') renderListen(view); else renderVocab(view, r.parts[1], r.params);
     }
     else if (r.name === 'mistakes') { if (r.parts[1] === 'loop') renderMistakeLoop(view); else if (r.parts[1] === 'listen') renderListen(view); else renderMistakes(view, r.params); }
@@ -5605,11 +5620,11 @@ Object.assign(ACTIONS, {
    Vocabulary: SRS flashcards, word list, import page
    ========================================================================== */
 let FLASH = null;   // { deck, queue: [key], idx, flipped, extraNew }
-const DECKS = [['all', '全部'], ['PRE_N5', '入門'], ['N5', 'N5'], ['N4', 'N4'], ['custom', '自訂／匯入']];
+function decks() { return [['all', '全部']].concat(levels().map(L => [L, lvLabel(L)]), [['custom', '自訂／匯入']]); }
 
 // ---- themes: the built-in words carry a theme (`c`); custom cards have none and stay in their own deck ----
 // theme order = each level's list in DATA.THEMES (PRE_N5, N5, N4); a name shared by two levels ranks where it first appears
-const THEME_ORDER = [...new Set([].concat(...['PRE_N5', 'N5', 'N4'].map(l => ((DATA.THEMES || {})[l] || []).map(t => t.c))))];
+function themeOrder() { return THEME_ORDER_NOW || (THEME_ORDER_NOW = [...new Set([].concat(...levels().map(l => ((DATA.THEMES || {})[l] || []).map(t => t.c))))]); }
 // old theme names (before 1.0.8) → the N5 name, or the N4 name for N4-only themes; normalizeState migrates state.themeLane with it
 const THEME_MIGRATE = {"問候": "問候與溝通", "溝通": "問候與溝通", "指示": "疑問與指示", "代名詞": "疑問與指示", "疑問": "疑問與指示", "人物": "人物與家庭", "家庭": "人物與家庭", "身體": "身體與健康", "健康": "身體與健康", "衣物": "衣物與購物", "購物": "衣物與購物", "生活": "居家生活", "學校": "學校與工作", "工作": "學校與工作", "交通": "交通與移動", "移動": "交通與移動", "地點": "地點與位置", "位置": "地點與位置", "自然": "自然與天氣", "天氣": "自然與天氣", "興趣": "興趣與休閒", "休閒": "興趣與休閒", "形容": "形容與狀態", "狀態": "形容與狀態", "顏色": "形容與狀態", "副詞": "副詞與接續", "接續": "副詞與接續", "社會": "社會與人際", "人際": "社會與人際", "敬語": "溝通與敬語", "情感": "情感與心情", "心情": "情感與心情", "思考": "思考與抽象", "抽象": "思考與抽象", "旅行": "交通旅行與移動"};
 function vocabTheme(v) { return v.builtin ? v.c : '其他'; }   // every built-in word carries a theme of its level (data test); custom cards have none
@@ -5652,11 +5667,11 @@ function vocabThemes() {
   REG.vocab.filter(v => v.builtin).forEach(v => {
     const c = vocabTheme(v);
     const g = by.get(c) || by.set(c, { c, total: 0, seen: 0, learned: 0, mastered: 0, due: 0, PRE_N5: 0, N5: 0, N4: 0 }).get(c);
-    g.total++; g[v.lv in g ? v.lv : 'N5']++;
+    g.total++; g[v.lv in g ? v.lv : courseLevels()[0]]++;
     const r = state.srs[v.key];
     if (r) { g.seen++; if (r.b >= SRS_LEARNED) g.learned++; if (srsLevelLabel(r, v.key) === '已熟練') g.mastered++; if (isDueToday(v, t)) g.due++; }
   });
-  const rank = (c) => { const i = THEME_ORDER.indexOf(c); return i < 0 ? THEME_ORDER.length : i; };
+  const rank = (c) => { const i = themeOrder().indexOf(c); return i < 0 ? themeOrder().length : i; };
   return [...by.values()].sort((a, b) => rank(a.c) - rank(b.c) || a.c.localeCompare(b.c, 'zh-Hant'));
 }
 // three stacked segments: mastered, learned (not yet mastered), seen (not yet learned)
@@ -5702,7 +5717,7 @@ function renderVocabLevel(view, lv) {
       </div></div>`; }).join('');
   // kanji of this level grouped by the theme that uses them most
   // a kanji met only in another level's words (兄 in 入門 人與家人 while the kanji is N4) joins that theme, labelled with the level
-  const counts = kanjiCountsByTheme(lv); const otherCounts = ['PRE_N5', 'N5', 'N4'].filter(l => l !== lv).map(l => [l, kanjiCountsByTheme(l)]);
+  const counts = kanjiCountsByTheme(lv); const otherCounts = levels().filter(l => l !== lv).map(l => [l, kanjiCountsByTheme(l)]);
   const groups = new Map(); const order = themes.map(t => t.c);
   REG.kanji.filter(k => k.lv === lv).forEach(k => {
     let c = kanjiThemeOf(k, lv, counts);
@@ -5728,17 +5743,16 @@ function renderVocabLevel(view, lv) {
 }
 function deckPool(deck) {
   if (deck === 'custom') return REG.vocab.filter(v => !v.builtin);
-  if (deck === 'PRE_N5' || deck === 'N5' || deck === 'N4') return REG.vocab.filter(v => v.builtin && v.lv === deck);
+  if (levels().includes(deck)) return REG.vocab.filter(v => v.builtin && v.lv === deck);
   // the mixed deck follows the daily rule: reviews of every learned word, new words of the current level only (buildFlashQueue)
   return REG.vocab.filter(v => (v.builtin || state.settings.includeImported !== 'off'));
 }
-function deckAllowsN4(deck) { return deck === 'N4' || n4WordsOpen(); }
 function buildFlashQueue(deck, extraNew = 0) {
   const t = todayStr();
   const pool = deckPool(deck);
   const due = pool.filter(v => isDueToday(v, t)).sort(byDue);   // three stars or below (four and five come from their queues)
   const quota = todayNewLeft('v') + extraNew;
-  const fresh = (deck === 'custom' ? pool.filter(v => !state.srs[v.key]) : newVocabCandidates(pool, deckAllowsN4(deck))).slice(0, quota);
+  const fresh = (deck === 'custom' ? pool.filter(v => !state.srs[v.key]) : newVocabCandidates(pool, deck !== 'all')).slice(0, quota);
   return due.concat(fresh).map(v => v.key);
 }
 function ensureFlash(deck) {
@@ -5753,7 +5767,7 @@ function defaultVocabLevel() {
 }
 function vocabTabs(tab) {
   return `<div class="seg mb-4">
-    ${['PRE_N5', 'N5', 'N4'].map(l => `<button type="button" aria-pressed="${tab === l}" data-act="nav" data-route="#/vocab/level?lv=${l}">${lvLabel(l)}</button>`).join('')}
+    ${levels().map(l => `<button type="button" aria-pressed="${tab === l}" data-act="nav" data-route="#/vocab/level?lv=${l}">${lvLabel(l)}</button>`).join('')}
     <button type="button" aria-pressed="${tab === 'cards'}" data-act="nav" data-route="#/vocab/cards">字卡</button>
     <button type="button" aria-pressed="${tab === 'list'}" data-act="nav" data-route="#/vocab/list">單字表</button>
     <button type="button" aria-pressed="${tab === 'import'}" data-act="nav" data-route="#/vocab/import">匯入與新增</button>
@@ -5761,7 +5775,7 @@ function vocabTabs(tab) {
 }
 
 function renderVocab(view, tab, params) {
-  if (tab === 'level') return renderVocabLevel(view, ['PRE_N5', 'N5', 'N4'].includes(params.lv) ? params.lv : defaultVocabLevel());
+  if (tab === 'level') return renderVocabLevel(view, levels().includes(params.lv) ? params.lv : defaultVocabLevel());
   if (tab === 'list') return renderVocabList(view, params);
   if (tab === 'import') return renderVocabImport(view);
   const deck = params.deck || (FLASH && FLASH.deck) || 'all';
@@ -5812,10 +5826,10 @@ function renderVocab(view, tab, params) {
     </div>`;
   }
   view.innerHTML = `
-    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">今天待複習 ${vs.due} 張・入門 熟悉 ${vs.PRE_N5.learned}/${vs.PRE_N5.total}・N5 熟悉 ${vs.N5.learned}/${vs.N5.total}・${!n4WordsOpen() ? `N4：N5 的單字、漢字、文法都學過一次後開始（還剩${levelLeftText('N5')}）` : `N4 熟悉 ${vs.N4.learned}/${vs.N4.total}`}${vs.custom.total ? `・自訂字卡 ${vs.custom.learned}/${vs.custom.total}` : ''}</div></div>
+    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">今天待複習 ${vs.due} 張・${(() => { const cur = curLevel(); const cl = courseLevels(); return levels().map(L => { const c = courseLevel(L); return cl.indexOf(c) <= cl.indexOf(cur) || L === 'PRE_N5' ? `${lvLabel(L)} 熟悉 ${vs[L].learned}/${vs[L].total}` : c === cl[cl.indexOf(cur) + 1] ? `${L}：${cur} 的單字、漢字、文法都學過一次後開始（還剩${levelLeftText(cur)}）` : ''; }).filter(Boolean).join('・'); })()}${vs.custom.total ? `・自訂字卡 ${vs.custom.learned}/${vs.custom.total}` : ''}</div></div>
       <button type="button" class="btn" data-act="start-vocab" data-filter="${deck}">單字測驗・${vocabSessionCount(deck)} 題</button></div>
     ${vocabTabs('cards')}
-    <div class="row-wrap mb-3"><span class="small muted">牌組</span><div class="seg">${DECKS.map(([k, l]) => `<button type="button" aria-pressed="${deck === k}" data-act="flash-deck" data-deck="${k}">${l}</button>`).join('')}</div></div>
+    <div class="row-wrap mb-3"><span class="small muted">牌組</span><div class="seg">${decks().map(([k, l]) => `<button type="button" aria-pressed="${deck === k}" data-act="flash-deck" data-deck="${k}">${l}</button>`).join('')}</div></div>
     ${card}
     <p class="hint mt-3"><span class="kbd-hint">鍵盤：Space 翻面，1–4 評分，R 發音。</span>評分會決定下次出現的時間，測驗和每日練習也共用同一份紀錄。</p>`;
   if (v) renderFlashMedia(v);
@@ -5886,11 +5900,11 @@ function renderVocabList(view, params) {
   const list = vocabListFiltered(params);
   view.innerHTML = `
     <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">${theme ? `主題「${esc(theme)}」・${list.length} 個字` : `共 ${REG.vocab.length} 個單字`}</div></div>
-      ${theme ? (() => { const lvOk = ['PRE_N5', 'N5', 'N4'].includes(lv); const f = lvOk ? `t:${lv}:${theme}` : `c:${theme}`; return `<div class="row-wrap"><button type="button" class="btn btn-primary" data-act="start-vocab" data-filter="${esc(f)}">練習這個主題・${vocabSessionCount(f)} 題</button><button type="button" class="btn btn-ghost" data-act="nav" data-route="#/vocab/level?lv=${lvOk ? lv : defaultVocabLevel()}">回到${lvOk ? lvLabel(lv) : '單字'}</button></div>`; })() : ''}</div>
+      ${theme ? (() => { const lvOk = levels().includes(lv); const f = lvOk ? `t:${lv}:${theme}` : `c:${theme}`; return `<div class="row-wrap"><button type="button" class="btn btn-primary" data-act="start-vocab" data-filter="${esc(f)}">練習這個主題・${vocabSessionCount(f)} 題</button><button type="button" class="btn btn-ghost" data-act="nav" data-route="#/vocab/level?lv=${lvOk ? lv : defaultVocabLevel()}">回到${lvOk ? lvLabel(lv) : '單字'}</button></div>`; })() : ''}</div>
     ${vocabTabs('list')}
     <div class="row-wrap mb-3">
       <input class="input" style="max-width:320px" placeholder="搜尋日文、假名或中文" value="${esc(params.q || '')}" data-change="vocab-search" id="vocabSearch" />
-      <div class="seg">${DECKS.filter(([k]) => !theme || k !== 'custom').map(([k, l]) => `<button type="button" aria-pressed="${lv === k}" data-act="vocab-filter" data-lv="${k}">${l}</button>`).join('')}</div>
+      <div class="seg">${decks().filter(([k]) => !theme || k !== 'custom').map(([k, l]) => `<button type="button" aria-pressed="${lv === k}" data-act="vocab-filter" data-lv="${k}">${l}</button>`).join('')}</div>
     </div>
     <div id="vocabListBody">${vocabListResultsHtml(params, list)}</div>`;
 }
@@ -5981,7 +5995,7 @@ Object.assign(ACTIONS, {
   'flash-more': () => {
     if (!FLASH) return;
     FLASH.extraNew += 5;
-    const fresh = (FLASH.deck === 'custom' ? deckPool('custom').filter(v => !state.srs[v.key]) : newVocabCandidates(deckPool(FLASH.deck), deckAllowsN4(FLASH.deck))).slice(0, 5).map(v => v.key);
+    const fresh = (FLASH.deck === 'custom' ? deckPool('custom').filter(v => !state.srs[v.key]) : newVocabCandidates(deckPool(FLASH.deck), FLASH.deck !== 'all')).slice(0, 5).map(v => v.key);
     if (!fresh.length) { toast('這個牌組的新卡都學過了'); return; }
     FLASH.queue = FLASH.queue.slice(0, FLASH.idx).concat(fresh); FLASH.flipped = false; route();
   },
@@ -6717,6 +6731,7 @@ const MONDAI = {
   'S3-M4': { t: '問題4　即時応答', d: '聽一句話，選出最合適的回應。' }
 };
 // questions per mondai for each paper size (passage mondai count passages)
+function examLevels() { return courseLevels().filter(L => EXAM_PLAN[L]); }   // the levels with a mock exam (spec §7)
 const EXAM_PLAN = {
   N5: { time: { S1: 20, S2: 40, S3: 30 }, pass: 80,
     mondai: { 'S1-M1': [2, 4, 7], 'S1-M2': [1, 3, 5], 'S1-M3': [2, 3, 6], 'S1-M4': [1, 2, 3], 'S2-M1': [2, 5, 9], 'S2-M2': [1, 2, 4], 'S2-M3': [0, 1, 1], 'S2-M4': [1, 1, 2], 'S2-M5': [0, 1, 1], 'S2-M6': [0, 1, 1], 'S3-M1': [1, 3, 6], 'S3-M2': [1, 3, 6], 'S3-M3': [1, 2, 4], 'S3-M4': [1, 3, 6] } },
@@ -6876,7 +6891,6 @@ function renderExam(view, sub, params) {
   if (sub === 'result' && EXAM && EXAM.finished) { renderExamResult(view); return; }
   const hist = state.examHistory || [];
   const best = (lv) => { const r = hist.filter(h => h.level === lv && h.total180 !== undefined); return r.length ? Math.max(...r.map(h => h.total180)) : null; };
-  const b5 = best('N5'); const b4 = best('N4');
   const rows = hist.slice(0, 30).map((h, i) => `<div class="list-item">
       <div class="grow">
         <div>${esc(h.examTitle || '')}${h.isAiMock ? ' <span class="chip">AI</span>' : ''}</div>
@@ -6886,13 +6900,13 @@ function renderExam(view, sub, params) {
         <div>${h.total180 === undefined ? '' : h.passedOfficial ? '<span class="chip chip-ok">達合格線</span>' : '<span class="chip">未達</span>'}</div></div>
       ${Array.isArray(h.questionLogs) && h.questionLogs.length ? `<button type="button" class="btn btn-sm btn-ghost" data-act="exam-review" data-i="${i}">回顧</button>` : ''}
     </div>`).join('');
-  const lvDefault = unitOrder(state.currentUnit) >= 6 ? 'N4' : 'N5';
+  const lvDefault = examLevels().includes(unitLevel(state.currentUnit)) ? unitLevel(state.currentUnit) : examLevels()[0];
   view.innerHTML = `
     <div class="page-head"><div><div class="page-title">模擬考</div><div class="page-sub">依照 JLPT 的三個科目與大題順序出題，同一份考卷不會重複題目。</div></div></div>
     ${examCountdownHtml()}
     <div class="card">
       <div class="grid grid-3">
-        <div class="field"><label>級數</label><select class="select" id="exLevel">${['N5', 'N4'].map(l => `<option ${l === lvDefault ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+        <div class="field"><label>級數</label><select class="select" id="exLevel">${examLevels().map(l => `<option ${l === lvDefault ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
         <div class="field"><label>份量</label><select class="select" id="exSize"><option value="mini">迷你（約 15 題・15 分鐘）</option><option value="std" selected>標準（約 40 題）</option><option value="full">完整（依大題比例，題庫不足時少出）</option></select></div>
         <div class="field"><label>出題方式</label><select class="select" id="exStrategy"><option value="unseen">優先出沒考過的題目</option><option value="random">隨機</option><option value="wrong">優先出上次答錯的題目</option></select></div>
       </div>
@@ -6914,8 +6928,7 @@ function renderExam(view, sub, params) {
     </div>
     <div class="grid grid-3">
       <div class="card"><div class="stat"><span class="stat-v">${hist.length}</span><span class="stat-l">考試次數</span></div></div>
-      <div class="card"><div class="stat"><span class="stat-v">${b5 === null ? '—' : b5}</span><span class="stat-l">N5 最高分（合格線 80）</span></div></div>
-      <div class="card"><div class="stat"><span class="stat-v">${b4 === null ? '—' : b4}</span><span class="stat-l">N4 最高分（合格線 90）</span></div></div>
+      ${examLevels().map(L => { const b = best(L); return `<div class="card"><div class="stat"><span class="stat-v">${b === null ? '—' : b}</span><span class="stat-l">${L} 最高分（合格線 ${EXAM_PLAN[L].pass}）</span></div></div>`; }).join('')}
     </div>
     ${stageTestCardHtml()}
     <div class="card">
@@ -6947,7 +6960,7 @@ function formatDuration(sec) {
 }
 
 function startExam(opt = {}) {
-  const level = opt.level || (document.getElementById('exLevel') || {}).value || 'N5';
+  const level = opt.level || (document.getElementById('exLevel') || {}).value || examLevels()[0];
   const size = opt.size || (document.getElementById('exSize') || {}).value || 'std';
   const subjects = opt.subjects || $$('.exSubj').filter(x => x.checked).map(x => x.value);
   const instantEl = document.getElementById('exInstant');
@@ -7196,7 +7209,7 @@ function examReviewHtml(h) {
 
 Object.assign(ACTIONS, {
   'exam-start': () => startExam(),
-  'exam-ai': (el) => aiGenerateExamItems((document.getElementById('exLevel') || {}).value || 'N5', el),
+  'exam-ai': (el) => aiGenerateExamItems((document.getElementById('exLevel') || {}).value || examLevels()[0], el),
   'exam-answer': (el) => examAnswer(Number(el.dataset.i)),
   'exam-next': () => { if (EXAM && EXAM.idx < EXAM.paper.length - 1 && examIdxAllowed(EXAM.idx + 1)) { EXAM.idx++; stopSpeaking(); renderExamRunner(); window.scrollTo({ top: 0 }); } },
   'exam-prev': () => { if (EXAM && EXAM.idx > 0 && examIdxAllowed(EXAM.idx - 1)) { EXAM.idx--; stopSpeaking(); renderExamRunner(); window.scrollTo({ top: 0 }); } },
@@ -7546,7 +7559,7 @@ function settingsLearn() {
     ${boolRow('showZh', '題目下方直接顯示中文', '關閉時可按 T 或點「顯示中文」再看。需要中文才能判斷的題目仍會顯示。')}
     ${selRow('includeImported', '每日練習包含自訂字卡', '句子型的匯入卡片比較難，預設只加入單字型的。', [['words', '只加入單字型'], ['all', '全部加入'], ['off', '不加入']])}
     <div class="setting-row"><div><div class="label">考試</div><div class="hint">學習分析和模擬考頁會照這個級別和日期推估進度。</div></div>
-      <div class="row"><select class="select" style="width:auto" data-change="setting" data-key="examLevel">${['N5', 'N4'].map(v => `<option value="${v}" ${s.examLevel === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
+      <div class="row"><select class="select" style="width:auto" data-change="setting" data-key="examLevel">${courseLevels().map(v => `<option value="${v}" ${s.examLevel === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
       <input class="input" type="date" style="width:auto" value="${esc(s.examDate)}" data-change="setting" data-key="examDate" data-type="date" /></div></div>`;
 }
 
@@ -7963,33 +7976,35 @@ function weekCardHtml(s) {
 const UNIT_LV = new Map();
 function itemLevel(it) {
   if (it.kind === 'a') return 'PRE_N5';
-  if (it.kind !== 'g') return it.lv || 'N5';
+  if (it.kind !== 'g') return it.lv || courseLevels()[0];
   if (it.u === 'm0') return 'PRE_N5';
   if (!UNIT_LV.size) DATA.UNITS.forEach(u => UNIT_LV.set(u.id, u.lv));
   return UNIT_LV.get(it.u) || null;
 }
-const SCOPE_LV = { pre: 'PRE_N5', n5: 'N5', n4: 'N4' };
-const STATS_SCOPES = [['all', '總進度'], ['pre', '入門'], ['n5', 'N5'], ['n4', 'N4']];
+const scopeId = (L) => (L === 'PRE_N5' ? 'pre' : L.toLowerCase());   // 學習分析's scope ids: pre, n5, n4, n3 …
+function statsScopes() { return [['all', '總進度']].concat(levels().map(L => [scopeId(L), lvLabel(L)])); }
 let statsScope = 'all';   // the 總進度 card's scope: kept while the app is open, 總進度 again after a reload
 // overall progress of a bank in three mastery steps (counts) plus a weighted score: 已學 1・熟悉 2・熟練 3 points out of 3 per item.
-// kind: v 單字, g 文法, lr 聽力＋閱讀, k 漢字, a 假名; scope: all or one level (SCOPE_LV). Grammar steps by right answers (3 熟練),
+// kind: v 單字, g 文法, lr 聽力＋閱讀, k 漢字, a 假名; scope: all or one level (scopeId). Grammar steps by right answers (3 熟練),
 // listening and reading too (2 熟練: a right answer waits a month before the next), the rest by stars.
 function progressTotals(kind, scope = 'all') {
-  const t = { kind, total: 0, seen: 0, learned: 0, mastered: 0, n5: 0 };   // n5: how many come before N4 (a faint mark on the gauge; 總進度 only, none for kana)
+  const t = { kind, total: 0, seen: 0, learned: 0, mastered: 0, marks: [] };   // marks: [level, items up to it, next level], faint ticks on the gauge (總進度 only, none for kana)
+  const per = {};
   const pool = { v: REG.vocab.filter(v => v.builtin), g: REG.grammar, lr: REG.listen.concat(REG.read), k: REG.kanji, a: REG.kana }[kind];
-  const lv = SCOPE_LV[scope];
+  const lv = levels().find(L => scopeId(L) === scope);
   const top = kind === 'g' ? 3 : kind === 'lr' ? 2 : 0;
   pool.forEach(x => {
     const xl = itemLevel(x);
     if (lv && xl !== lv) return;
     t.total++;
-    if (!lv && kind !== 'a' && xl && xl !== 'N4') t.n5++;
+    if (!lv && kind !== 'a' && xl) per[courseLevel(xl)] = (per[courseLevel(xl)] || 0) + 1;
     const r = state.srs[x.key]; if (!r) return;
     const ok = r.ok || 0;
     if (top ? ok >= top : srsLevelLabel(r, x.key) === '已熟練') t.mastered++;
     else if (top ? ok >= 1 : r.b >= SRS_LEARNED) t.learned++;
     else t.seen++;
   });
+  if (!lv && kind !== 'a') { const cl = courseLevels(); let acc = 0; cl.slice(0, -1).forEach((L, i) => { acc += per[L] || 0; t.marks.push([L, acc, cl[i + 1]]); }); }
   t.pct = t.total ? Math.round((t.seen + t.learned * 2 + t.mastered * 3) / (t.total * 3) * 100) : 0;
   return t;
 }
@@ -8011,12 +8026,11 @@ function gaugeHtml(t, title) {
     if (a1 - a0 < gap) a1 = Math.min(1, a0 + gap);   // a tiny count still shows as a sliver
     paths.push(`<path class="arc ${cls}" d="${arc(a0, a1)}" stroke-width="${W}" tabindex="0" data-tip-title="${esc(label)}：${n}" data-tip-body="占 ${Math.round(n / t.total * 100)}%"></path>`);
   });
-  // faint tick where the N5 items end, with N5 / N4 labels on either side just outside the ring
-  const tf = t.total && t.n5 > 0 && t.n5 < t.total ? t.n5 / t.total : null;
-  const tick = tf === null ? '' : (() => { const a = Math.PI * (1 - tf); const rr = (r2) => [C + r2 * Math.cos(a), C - r2 * Math.sin(a)];
+  // faint ticks where each level's items end, with the level names on either side just outside the ring
+  const lab = (ang, txt) => `<text class="tick-l" x="${(C + (R + W / 2 + 9) * Math.cos(ang)).toFixed(1)}" y="${(C - (R + W / 2 + 9) * Math.sin(ang) + 3).toFixed(1)}" text-anchor="middle">${txt}</text>`;
+  const tick = (t.marks || []).filter(([, n]) => t.total && n > 0 && n < t.total).map(([L, n, next], i) => { const tf = n / t.total; const a = Math.PI * (1 - tf); const rr = (r2) => [C + r2 * Math.cos(a), C - r2 * Math.sin(a)];
     const [x0, y0] = rr(R - W / 2 - 3), [x1, y1] = rr(R + W / 2 + 3); const off = 0.09; const al = Math.PI * (1 - tf + off), ar = Math.PI * (1 - tf - off);
-    const lab = (ang, txt) => `<text class="tick-l" x="${(C + (R + W / 2 + 9) * Math.cos(ang)).toFixed(1)}" y="${(C - (R + W / 2 + 9) * Math.sin(ang) + 3).toFixed(1)}" text-anchor="middle">${txt}</text>`;
-    return `<line class="tick" data-f="${tf.toFixed(4)}" x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}"></line>${lab(al, 'N5')}${lab(ar, 'N4')}`; })();
+    return `<line class="tick" data-f="${tf.toFixed(4)}" x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}"></line>${i === 0 ? lab(al, L) : ''}${lab(ar, next)}`; }).join('');
   const [nx, ny] = (() => { const a = Math.PI * (1 - t.pct / 100); return [C + (R - W / 2 - 4) * Math.cos(a), C - (R - W / 2 - 4) * Math.sin(a)]; })();   // ends just inside the ring
   const left = t.total - t.seen - t.learned - t.mastered;
   const trackTip = left > 0 ? ` tabindex="0" data-tip-title="未學：${left}" data-tip-body="共 ${t.total}"` : '';
@@ -8045,18 +8059,14 @@ function coursePace() {
   const perDay = fallback ? round : sum / days;
   const unseen = (x) => !state.srs[x.key];
   const inPre = inPreStage();
-  const words = REG.vocab.filter(v => v.builtin && unseen(v) && !(inPre && itemLevel(v) === 'PRE_N5'));
-  const grammar = REG.grammar.filter(g => g.u !== 'm0' && unseen(g));
-  const kanji = REG.kanji.filter(unseen);
-  const pre = inPre ? REG.kana.filter(unseen).length + REG.vocab.filter(v => v.builtin && unseen(v) && itemLevel(v) === 'PRE_N5').length + introLeft() : 0;
-  const U = { v: words.length, g: grammar.length, k: kanji.length };
-  const N = { v: words.filter(v => itemLevel(v) !== 'N4').length, g: grammar.filter(g => itemLevel(g) === 'N5').length, k: kanji.filter(k => itemLevel(k) !== 'N4').length };
-  const sumU = U.v + U.g + U.k;
-  const work = { N5: pre + N.v + N.g + N.k, N4: pre + sumU };
-  const level = state.settings.examLevel === 'N5' ? 'N5' : 'N4';
+  const pre = inPre ? REG.kana.filter(unseen).length + preWordsLeft() + introLeft() : 0;
+  // each level's leftovers as 每一級封死 offers them (levelLeft: units marked complete are done), added up level after level
+  const cl = courseLevels(); const work = {}; let acc = pre;
+  cl.forEach((L, i) => { const x = levelLeft(L); acc += x.v + x.g + x.k - (inPre && i === 0 ? preWordsLeft() : 0); work[L] = acc; });
+  const level = cl.includes(state.settings.examLevel) ? state.settings.examLevel : cl[cl.length - 1];
   const ep = examPace(); const deadline = addDays(ep.exam, -21); const toDeadline = daysBetween(t, deadline);
-  const p = { perDay, fallback, round, level, exam: ep.exam, daysLeft: ep.daysLeft, deadline, left: { N5: pre + N.v + N.g + N.k, N4: pre + sumU }, days: {}, finish: {} };
-  ['N5', 'N4'].forEach(L => { p.days[L] = Math.ceil(work[L] / perDay); p.finish[L] = addDays(t, p.days[L]); });
+  const p = { perDay, fallback, round, level, exam: ep.exam, daysLeft: ep.daysLeft, deadline, left: Object.assign({}, work), days: {}, finish: {} };
+  cl.forEach(L => { p.days[L] = Math.ceil(work[L] / perDay); p.finish[L] = addDays(t, p.days[L]); });
   if (ep.daysLeft <= 0) p.state = 'passed';
   else if (toDeadline <= 0) p.state = 'close';
   else if (!work[level]) p.state = 'done';
@@ -8076,7 +8086,7 @@ function courseAdvice(p) {
   const now = Math.round(p.perDay) >= p.need ? p.perDay.toFixed(1) : Math.round(p.perDay);   // 「需 10 題（現在約 10 題）」 would read as on time
   const head = `要趕上，每天約需 ${p.need} 題新內容（現在約 ${now} 題）`;
   const { every, times, heavy, once } = p.plan;
-  if (heavy) return `${head}，等於每天加練 ${times} 次，太吃力了：可以考慮${p.level === 'N4' ? '先考 N5，或' : ''}把考試日期往後延（JLPT 每年 7 月、12 月各一次）。`;
+  if (heavy) return `${head}，等於每天加練 ${times} 次，太吃力了：可以考慮${courseLevels().indexOf(p.level) > 0 ? `先考 ${courseLevels()[courseLevels().indexOf(p.level) - 1]}，或` : ''}把考試日期往後延（JLPT 每年 7 月、12 月各一次）。`;
   if (times) return `${head}：每天做完當天的練習後按 ${times} 次加練就趕得上。`;
   if (once) return `${head}：${p.deadline.replace(/-/g, '/')} 前找一天，做完當天的練習後按 1 次加練就趕得上。`;
   return `${head}：${every === 1 ? '每天' : `大約每 ${every} 天，`}做完當天的練習後按 1 次加練就趕得上。`;
@@ -8086,8 +8096,9 @@ function courseText(p) {
   const sl = (d) => d.replace(/-/g, '/');
   if (p.state === 'passed') return '考試日期已經過了。到設定裡改成下一次的日期，這裡會重新計算。';
   if (p.state === 'close') return `距離考試只剩 ${p.daysLeft} 天，不到三週：建議只做每天的練習與模擬考。`;
-  if (p.state === 'done') return p.level === 'N4' ? '單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。'
-    : `N5 的單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。${p.left.N4 ? `照現在的速度，預計 ${sl(p.finish.N4)} 學完 N4。` : ''}`;
+  const nxt = courseLevels()[courseLevels().indexOf(p.level) + 1];   // the level after the target, if any
+  if (p.state === 'done') return !nxt ? '單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。'
+    : `${p.level} 的單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。${p.left[nxt] > p.left[p.level] ? `照現在的速度，預計 ${sl(p.finish[nxt])} 學完 ${nxt}。` : ''}`;
   const speed = p.fallback ? `最近 14 天沒有學新內容，照每天排到的 ${Math.round(p.perDay)} 題新內容推算，` : `照最近每天約 ${Math.round(p.perDay)} 題新內容的速度，`;
   const diff = daysBetween(p.finish[p.level], p.deadline);
   const when = diff > 0 ? `比 ${sl(p.deadline)}（考前三週）早 ${diff} 天` : diff < 0 ? `比 ${sl(p.deadline)}（考前三週）晚 ${-diff} 天` : `正好是 ${sl(p.deadline)}（考前三週）`;
@@ -8124,7 +8135,7 @@ function renderStats(view) {
   const gauges = statsScope === 'pre' ? [['a', '假名'], ['v', '入門單字'], ['g', '入門文法']] : [['v', '單字'], ['g', '文法'], ['lr', '聽力＋閱讀'], ['k', '漢字']];
   const progressCard = `<div class="card" id="progressCard">
       <div class="card-head"><div><div class="card-title">總進度</div><div class="card-sub legs mt-1">${GAUGE_STEPS.map(([, dot, name]) => `<span class="leg"><i class="seg-dot ${dot}"></i>${name}</span>`).join('')}</div></div></div>
-      <div class="seg mb-3" role="group" aria-label="總進度的範圍">${STATS_SCOPES.map(([k, l]) => `<button type="button" aria-pressed="${statsScope === k}" data-act="stats-scope" data-scope="${k}">${l}</button>`).join('')}</div>
+      <div class="seg mb-3" role="group" aria-label="總進度的範圍">${statsScopes().map(([k, l]) => `<button type="button" aria-pressed="${statsScope === k}" data-act="stats-scope" data-scope="${k}">${l}</button>`).join('')}</div>
       <div class="gauges">${gauges.map(([k, title]) => gaugeHtml(progressTotals(k, statsScope), title)).join('')}</div>
     </div>`;
 
@@ -8183,7 +8194,7 @@ function courseCardHtml() {
   const tone = (L) => (L !== p.level ? 'other' : p.state === 'late' ? 'late' : 'target');
   let line = ''; let rows = '';
   if (ahead) {
-    const lv = ['N5', 'N4'].filter(L => p.left[L] > 0);   // a level learned already has no dot
+    const lv = courseLevels().filter(L => p.left[L] > 0);   // a level learned already has no dot
     const examD = daysBetween(t, p.exam);
     const max = Math.max(1, Math.min(Math.max(examD, ...lv.map(L => p.days[L])), examD * 2));
     const X = (d) => 8 + 384 * Math.min(d, max) / max;
@@ -8209,7 +8220,7 @@ function courseCardHtml() {
     line = `<svg class="course-line" viewBox="0 0 400 76" role="img" aria-label="從今天到考試的時間軸">
         <line class="axis" x1="8" y1="28" x2="392" y2="28"></line><circle class="start" cx="8" cy="28" r="4"></circle><text x="4" y="52">今天</text>
         ${mark(daysBetween(t, p.deadline), 'deadline')}${mark(examD, 'exam')}${dots}${labels}${below}</svg>`;
-    rows = ['N5', 'N4'].map(L => {
+    rows = courseLevels().map((L, i, cl) => {
       const target = L === p.level;
       if (!p.left[L]) return `<div class="course-row" data-level="${L}"><span class="course-lv ${tone(L)}">${L}</span><div>都學過一次了</div></div>`;
       const diff = daysBetween(p.finish[L], p.deadline);
@@ -9119,7 +9130,7 @@ function aiLabel() {
 function aiSystemPrompt() {
   const u = unitById(state.currentUnit);
   return [
-    `你是指導台灣學習者的日語老師，學生的目標是通過 JLPT ${state.settings.examLevel === 'N5' ? 'N5' : 'N4'}。`,
+    `你是指導台灣學習者的日語老師，學生的目標是通過 JLPT ${courseLevels().includes(state.settings.examLevel) ? state.settings.examLevel : DEFAULT_LEVEL}。`,
     `學生目前在學「${u.weeks}・${u.title}」（${u.lv}）。`,
     '用繁體中文（台灣用語）回答，直接說重點，不寒暄、不用表情符號、不用誇張的形容。',
     '日文例句要自然，程度不要超過 N4；需要標讀音時寫成「漢字（よみ）」。',
@@ -9303,7 +9314,7 @@ function validAiGrammar(x, u) {
   if (x.t === 'correct') return null;   // 選正確句 is no longer a question type (1.0.23)
   const t = ['choice', 'meaning', 'order'].includes(x.t) ? x.t : 'choice';
   const s = (v) => String(v == null ? '' : v).trim();
-  const out = { id: uid('ai'), u: u.id, t, lv: /N4/.test(u.lv) ? 'N4' : 'N5', d: 2, pt: s(x.pt).slice(0, 20) || 'AI 題目', zh: s(x.zh), why: s(x.why), src: 'ai' };
+  const out = { id: uid('ai'), u: u.id, t, lv: courseLevel(u.lv), d: 2, pt: s(x.pt).slice(0, 20) || 'AI 題目', zh: s(x.zh), why: s(x.why), src: 'ai' };
   if ([out.zh, out.why, out.pt].some(v => BANNED_WORDS.test(v))) return null;
   if (t === 'order') {
     const parts = Array.isArray(x.parts) ? x.parts.map(s).filter(Boolean) : [];
@@ -9376,7 +9387,7 @@ async function aiGenerateDeck(topic, btn) {
   const existing = REG.vocab.filter(v => !v.builtin).slice(0, 80).map(v => jaPlain(v.w)).join('、');
   const prompt = `請依主題「${t}」產生 8 張 N5～N4 程度的日語單字卡，避開這些字：${existing || '（無）'}。
 每張卡是一個 JSON 物件：
-w（單字的一般寫法）、r（平假名讀音）、m（繁體中文意思，12 字內）、p（詞性代碼：n 名詞、v5 五段、v1 一段、vs する動詞、i い形容詞、na な形容詞、adv 副詞、exp 慣用語）、lv（"N5" 或 "N4"）、ex（20 字內的自然例句，把單字本身用 [ ] 包起來，例如「毎朝パンを[食べます]。」）、exZh（例句中文）。
+w（單字的一般寫法）、r（平假名讀音）、m（繁體中文意思，12 字內）、p（詞性代碼：n 名詞、v5 五段、v1 一段、vs する動詞、i い形容詞、na な形容詞、adv 副詞、exp 慣用語）、lv（${courseLevels().map(l => `"${l}"`).join(' 或 ')}）、ex（20 字內的自然例句，把單字本身用 [ ] 包起來，例如「毎朝パンを[食べます]。」）、exZh（例句中文）。
 只輸出 JSON 陣列。`;
   await withBusy(btn, 'AI 產生中', async () => {
     const arr = parseAiJson(await callAi(prompt, { json: true }));

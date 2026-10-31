@@ -528,7 +528,7 @@ def test_word_reviews_follow_the_record_even_while_n4_words_are_closed(b):
       REG.vocab.filter(v => v.builtin && v.lv !== 'N4' && !/^n5g-/.test(v.id)).forEach(v => { state.srs[v.key] = rec(); });   // every N5 word but the 1.0.31 ones
       const n4 = REG.vocab.find(v => v.builtin && v.lv === 'N4'); state.srs[n4.key] = rec({ due: t, last: addDays(t, -3) });
       DAILY_CACHE = null; const p = computeDailyPlan();
-      const out = { open: n4WordsOpen(), due: p.dueV.some(x => x.key === n4.key), newN4: p.newV.some(x => x.lv === 'N4') };
+      const out = { open: pastFirstLevel(), due: p.dueV.some(x => x.key === n4.key), newN4: p.newV.some(x => x.lv === 'N4') };
       state.srs = {}; saveState(); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js)); assert r == {'open': False, 'due': True, 'newN4': False}, r
 
