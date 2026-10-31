@@ -280,7 +280,7 @@ def test_exam_pace_counts_days_without_new_items(b):
       for (let i = 8; i <= 14; i++) state.dailyLogs[addDays(t, -i)] = { vocabCount: 25 };   // before fresh was tallied: left out
       [7, 5, 3, 1].forEach(i => { state.dailyLogs[addDays(t, -i)] = { vocabCount: 20, fresh: 12 }; });
       state.dailyLogs[addDays(t, -6)] = { vocabCount: 30 };   // reviews only
-      return paceAdvice().perDay; })()"""
+      return coursePace().perDay; })()"""
     r = ev(b, js)
     assert abs(r - 48 / 7) < 1e-9, r
 

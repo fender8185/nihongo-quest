@@ -102,6 +102,57 @@ def test_picking_n5_saves_it(b):
       closeModal(true); return state.settings.examLevel; })()"""
     assert ev(b, js) == 'N5'
 
+# ---- coursePace: when N5 and N4 would be learned once, per bank (spec §5.2), and what to do when it is late ----
+# seen(list): learned once; only(list): everything but these learned; pace(n): n new items a day for 14 days
+PACE = """const seen = (list) => { const d = todayStr(); list.forEach(x => { state.srs[x.key] = { b: 2, due: addDays(d, 5), n: 1, ok: 1, ng: 0, s: 3, d: 5, last: addDays(d, -1), intro: addDays(d, -1) }; }); };
+  const only = (keep) => { const k = new Set(keep.map(x => x.key)); seen(REG.vocab.filter(v => v.builtin && !k.has(v.key)).concat(REG.grammar.filter(g => !k.has(g.key)), REG.kanji.filter(x => !k.has(x.key)))); };
+  const pace = (n) => { for (let i = 1; i <= 14; i++) state.dailyLogs[addDays(todayStr(), -i)] = { vocabCount: n, fresh: n }; };
+  const w5 = REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 30), w4 = REG.vocab.filter(v => v.builtin && v.lv === 'N4').slice(0, 60);
+  const g5 = REG.grammar.filter(g => DATA.UNITS.some(u => u.id === g.u && u.lv === 'N5')).slice(0, 20);
+  const T = todayStr(); const sl = (n) => addDays(T, n).replace(/-/g, '/'); const exam = (n) => { state.settings.examDate = addDays(T, n); };"""
+
+def test_course_pace_finds_the_slowest_bank(b):
+    js = "(() => { " + FRESH + PACE + """ pace(10); exam(51); const out = [];
+      only(w5); out.push(coursePace().days); state.srs = {}; only(w5.concat(w4)); out.push(coursePace().days); state.srs = {}; only(w5.concat(w4, g5)); out.push(coursePace().days);
+      return JSON.stringify(out); })()"""
+    assert json.loads(ev(b, js)) == [{'N5': 3, 'N4': 3}, {'N5': 3, 'N4': 9}, {'N5': 11, 'N4': 11}]
+
+def test_course_text_when_on_time_and_when_late(b):
+    js = "(() => { " + FRESH + PACE + """ pace(10); only(w5.concat(w4, g5)); const out = {}; const run = (n, lv) => { exam(n); state.settings.examLevel = lv; const p = coursePace(); return [p.state, p.need || null, p.plan || null, courseText(p)]; };
+      out.ok = run(51, 'N4'); out.daily = run(26, 'N4'); out.every = run(30, 'N4'); out.twice = run(24, 'N4'); out.heavy = run(22, 'N4'); out.heavy5 = run(22, 'N5');
+      return JSON.stringify({ out, round: dailyPlan().n, f: sl(11), d: [sl(30), sl(5)] }); })()"""
+    r = json.loads(ev(b, js)); o = r['out']; f = r['f']
+    assert r['round'] == 15, r
+    assert o['ok'][0] == 'ok' and o['ok'][3] == f'照最近每天約 10 題新內容的速度，預計 {f} 學完 N4 的單字、文法、漢字，比 {r["d"][0]}（考前三週）早 19 天。', o['ok']
+    assert o['daily'][:3] == ['late', 22, {'every': 1}] and o['daily'][3] == f'照最近每天約 10 題新內容的速度，預計 {f} 學完 N4 的單字、文法、漢字，比 {r["d"][1]}（考前三週）晚 6 天。要趕上，每天約需 22 題新內容（現在約 10 題）：每天做完當天的練習後按 1 次加練就趕得上。', o['daily']
+    assert o['every'][1:3] == [13, {'every': 5}] and o['every'][3].endswith('要趕上，每天約需 13 題新內容（現在約 10 題）：大約每 5 天，做完當天的練習後按 1 次加練就趕得上。'), o['every']
+    assert o['twice'][1:3] == [37, {'times': 2}] and o['twice'][3].endswith('要趕上，每天約需 37 題新內容（現在約 10 題）：每天做完當天的練習後按 2 次加練就趕得上。'), o['twice']
+    assert o['heavy'][1:3] == [110, {'times': 7, 'heavy': True}] and o['heavy'][3].endswith('要趕上，每天約需 110 題新內容（現在約 10 題），等於每天加練 7 次，太吃力了：可以考慮先考 N5，或把考試日期往後延（JLPT 每年 7 月、12 月各一次）。'), o['heavy']
+    assert '學完 N5 的' in o['heavy5'][3] and o['heavy5'][3].endswith('等於每天加練 7 次，太吃力了：可以考慮把考試日期往後延（JLPT 每年 7 月、12 月各一次）。'), o['heavy5']
+
+def test_course_text_for_a_passed_or_close_exam_and_a_finished_level(b):   # Review Focus 2: 21 days is close, 22 is not
+    js = "(() => { " + FRESH + PACE + """ pace(10); const out = {}; const run = (n, lv) => { exam(n); state.settings.examLevel = lv; const p = coursePace(); return [p.state, courseText(p)]; };
+      only(w5.concat(w4, g5)); out.passed = run(-1, 'N4'); out.close = run(21, 'N4'); out.notClose = run(22, 'N4')[0];
+      state.srs = {}; only(w4); out.done5 = run(51, 'N5'); state.srs = {}; only([]); out.done4 = run(51, 'N4');
+      return JSON.stringify({ out, n4: sl(6) }); })()"""
+    r = json.loads(ev(b, js)); o = r['out']
+    assert o['passed'] == ['passed', '考試日期已經過了。到設定裡改成下一次的日期，這裡會重新計算。'], o
+    assert o['close'] == ['close', '距離考試只剩 21 天，不到三週：建議只做每天的練習與模擬考。'] and o['notClose'] == 'late', o
+    assert o['done5'] == ['done', f'N5 的單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。照現在的速度，預計 {r["n4"]} 學完 N4。'], o
+    assert o['done4'] == ['done', '單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。'], o
+
+def test_course_pace_falls_back_to_the_days_count_without_new_items(b):
+    js = "(() => { " + FRESH + PACE + """ for (let i = 1; i <= 14; i++) state.dailyLogs[addDays(T, -i)] = { vocabCount: 5, fresh: 0 }; exam(400);
+      const p = coursePace(); return JSON.stringify([p.fallback, p.perDay, courseText(p)]); })()"""
+    fb, per, text = json.loads(ev(b, js))
+    assert fb is True and per == 15 and text.startswith('最近 14 天沒有學新內容，照每天排到的 15 題新內容推算，預計 ') and not any(s in text for s in ['null', 'NaN', 'undefined']), text
+
+def test_course_pace_in_the_intro_stage_adds_what_is_left_of_it(b):
+    js = "(() => { " + FRESH + PACE + """ state.stage = 'pre'; pace(10); exam(400); only(w5);
+      seen(REG.kana.slice(20)); seen(REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5')); seen(REG.grammar.filter(g => g.u === 'm0'));   // 20 kana left
+      return JSON.stringify([introLeft(), coursePace().days]); })()"""
+    assert json.loads(ev(b, js)) == [0, {'N5': 5, 'N4': 5}]
+
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
