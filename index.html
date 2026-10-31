@@ -13,7 +13,7 @@
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
 <script src="./data.js?v=16"></script>
-<title>Nihongo Quest N4</title>
+<title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -325,6 +325,14 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .unit-title { font-weight: 500; }
 .unit-desc { font-size: 13px; color: var(--fg-3); }
 @media (max-width: 640px) { .unit-row { grid-template-columns: minmax(0, 1fr); gap: 6px; } }
+/* the stage cards fold (1.0.27): the head is the summary, ▸ turns when open, 完成 or the stage's % sits on the right */
+.stage-card > summary { cursor: pointer; list-style: none; }
+.stage-card > summary::-webkit-details-marker { display: none; }
+.stage-card > summary .card-title::before { content: "▸"; display: inline-block; width: 1em; line-height: 1; text-align: center; color: var(--fg-3); transition: transform .15s; }   /* a box as tall as the glyph, so it turns in place */
+.stage-card[open] > summary .card-title::before { transform: rotate(90deg); }
+.stage-card > summary .card-sub { padding-left: 1em; }
+.stage-card:not([open]) > summary { margin-bottom: 0; }
+.stage-state { flex: none; font-size: 13px; }
 .lesson h3 { font-size: 16px; margin: 18px 0 6px; }
 .lesson .rule { display: inline-block; font-size: 13px; color: var(--fg-2); background: var(--bg-sunken); border: 1px solid var(--line); padding: 4px 10px; border-radius: 8px; margin: 2px 0 8px; }
 .lesson ul { margin: 6px 0 10px; padding-left: 20px; }
@@ -349,6 +357,8 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .kana-cell.heat-1 { background: var(--heat-1); } .kana-cell.heat-2 { background: var(--heat-2); } .kana-cell.heat-3 { background: var(--heat-3); color: #fff; } .kana-cell.heat-4 { background: var(--heat-4); color: #fff; }
 .kana-row-btn { border: 1px solid var(--line); background: var(--bg-elev-2); border-radius: 8px; font-size: 10px; cursor: pointer; color: inherit; }
 .kanji-chip { cursor: pointer; font-size: 15px; padding: 1px 8px; }
+.theme-card { cursor: pointer; } .theme-card:hover { border-color: var(--line-2); background: var(--bg-hover); }   /* the card opens its word table (1.0.27) */
+.theme-link { display: block; color: inherit; text-decoration: none; }
 .kana-cell .hira { font-size: 22px; line-height: 1.2; }
 .kana-cell .kata { font-size: 13px; color: var(--fg-2); }
 .kana-cell .roma { font-size: 11px; color: var(--fg-3); }
@@ -477,9 +487,14 @@ details.mrow .mbody { padding: 4px 0 14px; }
 .fill-ans { color: var(--accent); font-weight: 600; }
 .listen-sentence { font-size: 24px; line-height: 1.9; margin-top: 10px; }
 .listen-ex { text-align: left; }
-/* the item area has a fixed height so the transport and pills never move when a word card gives way to a sentence card */
+.listen-kanji { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; margin-top: 8px; }
+.listen-kanji .kanji-chip { display: inline-flex; align-items: baseline; gap: 5px; font-size: 16px; line-height: 1.4; padding: 1px 9px; }
+.listen-kanji .lk-m { font-size: 12px; color: var(--fg-3); }
+body.immersive .listen.full .flash .listen-kanji { margin-top: 4px; }   /* fitFlash shrinks the word for every pixel the row takes */
+/* the item area has a fixed height so the transport and pills never move when a word card gives way to a sentence card
+   (the compact one 260px since 1.0.27: a word card with its kanji row is about 250px) */
 .listen #listenCard { height: 290px; display: grid; align-content: center; overflow-y: auto; }
-.listen.compact #listenCard { height: 240px; }
+.listen.compact #listenCard { height: 260px; }
 .listen.compact .flash { padding: 14px 8px 6px; } .listen.compact .flash .word { font-size: 34px; } .listen.compact .flash .meaning { font-size: 19px; }
 .listen.compact .listen-sentence { font-size: 20px; } .listen.compact .lplay { width: 60px; height: 60px; } .listen.compact .lplay svg { width: 28px; height: 28px; }
 .listen-bar { height: 3px; border-radius: 2px; background: var(--bg-sunken); margin: 6px 18px 0; overflow: hidden; }
@@ -543,8 +558,8 @@ tr.lag td { color: var(--warn, #d08a00); font-weight: 600; }
 .gauge .arc.seen { stroke: var(--gauge-seen); } .gauge .arc.learned { stroke: var(--heat-3); } .gauge .arc.mastered { stroke: var(--heat-4); }
 .gauge .tick { stroke: var(--fg-3); stroke-width: 1; opacity: .55; } .gauge .tick-l { fill: var(--fg-3); font-size: 8px; opacity: .8; }
 .gauge .needle { stroke: var(--fg); stroke-width: 2.5; stroke-linecap: round; } .gauge .pivot { fill: var(--fg); }
-.gauge .hero { fill: var(--fg); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; } .gauge .hero-l { fill: var(--fg-3); font-size: 11px; }
-.gauge .glegend { text-align: center; } .gauge .glegend span { white-space: nowrap; display: inline-block; margin: 0 5px; } .seg-dot.gseen { background: var(--gauge-seen); }
+.gauge .hero { fill: var(--fg); font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; } .gauge .hero-l { fill: var(--fg-2); font-size: 15px; font-weight: 600; }
+.gauge path.track { outline: none; } .seg-dot.gseen { background: var(--gauge-seen); }
 .cseg { flex-basis: 0; min-height: 0; } .cseg.v, .seg-dot.v { background: var(--heat-4); } .cseg.g, .seg-dot.g { background: var(--heat-3); } .cseg.q, .seg-dot.q { background: var(--heat-2); }
 .barrow { display: grid; grid-template-columns: minmax(90px, 32%) 1fr auto; gap: 10px; align-items: center; padding: 6px 0; }
 .barrow .track { height: 10px; border-radius: 0 4px 4px 0; background: var(--bg-sunken); overflow: hidden; outline: none; }
@@ -604,7 +619,7 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
   <aside class="sidebar" aria-label="主選單">
     <div class="brand">
       <div class="brand-mark">日</div>
-      <div><div class="brand-name">Nihongo Quest</div><div class="brand-sub">JLPT N4 學習計畫</div></div>
+      <div><div class="brand-name">Nihongo Quest</div><div class="brand-sub">JLPT 學習計劃</div></div>
     </div>
     <nav class="nav" id="sideNav"></nav>
     <div class="sidebar-foot" id="sideFoot"></div>
@@ -949,12 +964,19 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.26';   // keep equal to the version in sw.js CACHE ('nq-v1.0.26'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.27';   // keep equal to the version in sw.js CACHE ('nq-v1.0.27'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.27', date: '2026-10-31', items: [
+    '側欄的副標改成「JLPT 學習計劃」，分頁標題和安裝後的 app 名稱改成「Nihongo Quest」（考試可以選 N5 或 N4，不再寫 N4）。',
+    '課程頁的四個階段可以收合：點標題列展開或收起，預設只展開目前所在的階段，手動開關的會記到關掉 app 為止。標題列右邊是這個階段的完成度（各列的平均），整個階段都完成時寫「完成」。',
+    '單字頁的主題卡拿掉「字表」按鈕：點卡片上按鈕以外的地方就進到這個主題的字表；漢字、練習、播放字卡照舊。',
+    '播放字卡的每張單字卡在意思下面列出這個字用到的漢字和意思（漢字表裡有的才列），點漢字會先暫停播放，再打開漢字說明。',
+    '學習分析的總進度：標題下面改成顏色說明（已熟練、熟悉、已學），每個儀表的 % 下面直接寫單字、文法、聽力＋閱讀、漢字，儀表上方的標題和下面那排數字拿掉。數字還在：點彩色的弧看那一階的數量，點灰色的部分看還沒學的數量和總數。'
+  ] },
   { v: '1.0.26', date: '2026-10-31', items: [
     '學習分析的總進度可以切換四種範圍：總進度（單字、文法、聽力＋閱讀、漢字）、入門（假名、入門單字、入門文法）、N5、N4；入門、N5、N4 各只算自己那一級的題目。聽力和閱讀答過算初識、答對 1 次算熟悉、答對 2 次算熟練（答對後要隔 30 天才會再出）。',
     '過去 7 天的練習量改成三個數字（7 天合計、每天平均、比前 7 天多或少）加一條趨勢線和各類占比，點每天的點可以看那天的明細。正確率改看最近 100 題，跟今日頁決定新題數用的一樣。',
@@ -5224,10 +5246,17 @@ function stageFootHtml(id, extra = '') {
   const res = last ? `<span class="chip ${last.passed ? 'chip-ok' : ''} num">上次 ${Number(last.correct) || 0}／${Number(last.total) || 0}・${last.passed ? '通過' : '未通過'}</span>` : '';
   return `<div class="row-wrap mt-3 stage-foot">${extra}<button type="button" class="btn btn-sm" data-act="stage-test" data-stage="${id}">階段測驗</button>${res}</div>`;
 }
+// a stage card's head, read when it is folded: 完成 when every row is, else the mean of the rows' % (rows: [{ done, pct }])
+function stageStateHtml(rows) {
+  if (rows.every(r => r.done)) return '<span class="chip chip-ok">完成</span>';
+  return `<span class="muted num">${Math.round(rows.reduce((a, r) => a + r.pct, 0) / rows.length)}%</span>`;
+}
+const courseOpen = {};   // stage id → open, for the cards opened or closed by hand: kept while the app is open, only the current stage open again after a reload
 function renderCourse(view) {
   const cp = courseProgress();
   const cur = state.currentUnit;
   const pre = inPreStage();
+  const curStage = currentStageId();
   const is = unitStats('m0');
   const introRow = `<div class="unit-row" data-act="nav" data-route="#/course/intro" role="button" tabindex="0">
         <div class="unit-weeks">${esc(INTRO_UNIT.weeks)}</div>
@@ -5235,7 +5264,7 @@ function renderCourse(view) {
         <div><div class="row between small"><span>${is.done ? '<span class="chip chip-ok">完成</span>' : is.seen ? '<span class="chip">進行中</span>' : ''}</span><span class="muted num">${is.done ? 100 : is.pct}%</span></div>${unitBarHtml(is, 'thin mt-1')}</div>
       </div>`;
   const cards = STAGES.map(st => {
-    let rows; let extra = '';
+    let rows; let extra = ''; let parts;   // parts: each row's { done, pct } for the head
     if (st.id === 'pre') {
       const kanaSeen = REG.kana.filter(x => state.srs[x.key]).length;
       const words = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5'); const wordsSeen = words.filter(v => state.srs[v.key]).length;
@@ -5248,9 +5277,12 @@ function renderCourse(view) {
         <div><div class="row between small"><span>${status}</span><span class="muted num">${pct}%</span></div>${segBarHtml(total, [['learned', seen]], 'thin mt-1')}</div>
       </div></div>`;
       extra = '';   // 1.0.12: the 入門 card carries one button, 階段測驗; passing it leads to the four choices and 第 1 週 (練假名 is on the 單字 page; otherwise 入門 ends by itself, finishPreIfReady)
+      parts = [{ done: is.done, pct: is.done ? 100 : is.pct }, { done: seen >= total, pct }];
     } else {
+      parts = [];
       rows = `<div class="list">${st.units.map(uid => {
         const u = unitById(uid); const s = unitStats(u.id);
+        parts.push({ done: s.done, pct: s.done ? 100 : s.pct });
         const isCur = !pre && u.id === cur;   // 「目前」 appears once on the page: here in the main course, on the 入門 card before it
         const status = s.done ? '<span class="chip chip-ok">完成</span>' : isCur ? '<span class="chip chip-accent">目前</span>' : s.seen ? '<span class="chip">進行中</span>' : '';
         return `<div class="unit-row ${isCur ? 'current' : ''}" data-act="nav" data-route="#/course/${u.id}" role="button" tabindex="0">
@@ -5261,8 +5293,9 @@ function renderCourse(view) {
       }).join('')}</div>`;
     }
     const isCurStage = st.id === 'pre' && pre;
-    return `<div class="card ${st.id === 'pre' ? 'pre-card' : ''} ${isCurStage ? 'current' : ''}"><div class="card-head"><div><div class="card-title">${esc(st.title)}</div><div class="card-sub">${esc(st.sub)}</div></div></div>
-      ${rows}${stageFootHtml(st.id, extra)}</div>`;
+    const open = st.id in courseOpen ? courseOpen[st.id] : st.id === curStage;
+    return `<details class="card stage-card ${st.id === 'pre' ? 'pre-card' : ''} ${isCurStage ? 'current' : ''}" data-stage="${st.id}" ${open ? 'open' : ''}><summary class="card-head"><div><div class="card-title">${esc(st.title)}</div><div class="card-sub">${esc(st.sub)}</div></div><span class="stage-state">${stageStateHtml(parts)}</span></summary>
+      ${rows}${stageFootHtml(st.id, extra)}</details>`;
   }).join('');
   view.innerHTML = `
     <div class="page-head">
@@ -5271,6 +5304,7 @@ function renderCourse(view) {
     </div>
     ${LAST_BULK_MARK ? `<div class="banner"><div class="grow">已把 ${LAST_BULK_MARK.changed} 個項目標成「四顆」。重新整理後就不能復原了。</div><button type="button" class="btn btn-sm" data-act="bulk-mark-undo">復原</button></div>` : ''}
     ${cards}`;
+  view.querySelectorAll('details.stage-card').forEach(d => d.addEventListener('toggle', () => { courseOpen[d.dataset.stage] = d.open; }));
 }
 
 
@@ -5587,16 +5621,16 @@ function renderVocabLevel(view, lv) {
   const L = levelStats(lv); const themes = themeStats(lv);
   const desktop = window.matchMedia('(min-width: 761px)').matches;
   const ring = ringHtml(L.total ? L.learned / L.total : 0, `<div class="num" style="font-size:18px">${L.total ? Math.round(L.learned / L.total * 100) : 0}%</div>`, 84);
-  const cards = themes.map(g => `<div class="card theme-card" data-c="${esc(g.c)}" data-lv="${lv}">
-      <div class="row between"><div><div class="card-title">${esc(g.c)}</div>${g.desc ? `<div class="tiny muted">${esc(g.desc)}</div>` : ''}</div><span class="tiny muted">${g.total} 字</span></div>
+  // 1.0.27: the card itself opens the theme's word table (its title is the link for the keyboard); the kanji and buttons keep their own action
+  const cards = themes.map(g => { const list = `#/vocab/list?lv=${lv}&c=${encodeURIComponent(g.c)}`; return `<div class="card theme-card" data-c="${esc(g.c)}" data-lv="${lv}" data-act="nav" data-route="${list}">
+      <div class="row between"><div><a class="card-title theme-link" href="${list}" data-act="nav" data-route="${list}">${esc(g.c)}</a>${g.desc ? `<div class="tiny muted">${esc(g.desc)}</div>` : ''}</div><span class="tiny muted nowrap">${g.total} 字 ›</span></div>
       ${stackBarHtml(g)}
       <div class="small muted mt-2"><i class="seg-dot seen"></i>已學 ${g.seen}　<i class="seg-dot learned"></i>熟悉 ${g.learned}　<i class="seg-dot mastered"></i>熟練 ${g.mastered}${g.due ? `・今天到期 ${g.due}` : ''}</div>
       ${g.kanji.length ? `<div class="small mt-2 row-wrap" style="gap:4px;align-items:center"><span class="muted">漢字</span>${g.kanji.map(k => `<button type="button" class="chip jp kanji-chip" data-act="kanji-open" data-k="${esc(k)}">${esc(k)}</button>`).join('')}</div>` : ''}
       <div class="row-wrap mt-3">
-        <button type="button" class="btn btn-sm" data-act="nav" data-route="#/vocab/list?lv=${lv}&c=${encodeURIComponent(g.c)}">字表</button>
         <button type="button" class="btn btn-sm btn-primary" data-act="start-vocab" data-filter="t:${lv}:${esc(g.c)}">練習・${vocabSessionCount(`t:${lv}:${g.c}`)} 題</button>
         <button type="button" class="btn btn-sm" data-act="listen-theme-start" data-theme="${esc(g.c)}">${icon('play')}播放字卡</button>
-      </div></div>`).join('');
+      </div></div>`; }).join('');
   // kanji of this level grouped by the theme that uses them most
   // a kanji met only in another level's words (兄 in 入門 人與家人 while the kanji is N4) joins that theme, labelled with the level
   const counts = kanjiCountsByTheme(lv); const otherCounts = ['PRE_N5', 'N5', 'N4'].filter(l => l !== lv).map(l => [l, kanjiCountsByTheme(l)]);
@@ -6075,8 +6109,10 @@ let LISTEN = null;   // { all, items, idx, round, playing, order: 'count'|'rando
 const LISTEN_GAP = { short: 350, long: 900 };
 function listenEntryVocab(it, m) {
   const w = jaPlain(it.w); const pin = it.r && !HAS_KANJI.test(it.r) && it.r !== w ? it.r : '';
-  return { kind: 'v', id: m ? m.id : it.key, m: m || null, word: w, wordHtml: furi(it.w), reading: pin, meaning: it.m || '', ex: vocabExamples(it)[0] || null };
+  return { kind: 'v', id: m ? m.id : it.key, m: m || null, word: w, wordHtml: furi(it.w), reading: pin, meaning: it.m || '', ex: vocabExamples(it)[0] || null, kanji: wordKanji(w) };
 }
+// the kanji a word is written with, in order and once each, as far as the kanji table has them (the player's card lists them, 1.0.27)
+function wordKanji(w) { return [...new Set([...w].filter(ch => KANJI_RE.test(ch)))].map(ch => REG.byKey.get('k:' + ch)).filter(Boolean); }
 function listenEntry(m) {
   const it = m.key && REG.byKey.get(m.key);
   if (it && it.kind === 'v') return listenEntryVocab(it, m);
@@ -6280,6 +6316,7 @@ function listenCardHtml() {
       ${e.m ? `<div class="small muted">單字${e.note ? `・${esc(e.note)}` : ''}・錯 ${e.m.count || 1} 次</div>` : ''}
       <div class="word jp">${e.wordHtml}</div>
       <div class="meaning">${esc(e.meaning)}</div>
+      ${e.kanji && e.kanji.length ? `<div class="listen-kanji">${e.kanji.map(k => `<button type="button" class="chip kanji-chip" data-act="listen-kanji" data-k="${esc(k.k)}"><span class="jp">${esc(k.k)}</span>${k.m && k.m !== k.k ? `<span class="lk-m">${esc(k.m)}</span>` : ''}</button>`).join('')}</div>` : ''}
       ${e.ex ? exampleHtml(e.ex.ex, e.ex.exZh, 'mt-3 listen-ex') : ''}
     </div>`;
   }
@@ -6380,6 +6417,7 @@ function listenKey(ev) {
 }
 Object.assign(ACTIONS, {
   'listen-start': (el) => startListen({ kind: 'mistakes', cat: el.dataset.cat || '' }),
+  'listen-kanji': (el) => { listenPause(); ACTIONS['kanji-open'](el); },   // the kanji's sheet has its own play buttons: the player waits
   'listen-theme-start': (el) => startListen({ kind: 'theme', theme: el.dataset.theme || listenDefaultTheme() }),
   'today-tab': (el) => {
     const tab = ['practice', 'mistakes', 'theme'].includes(el.dataset.tab) ? el.dataset.tab : 'practice';
@@ -7857,13 +7895,16 @@ function progressTotals(kind, scope = 'all') {
   t.pct = t.total ? Math.round((t.seen + t.learned * 2 + t.mastered * 3) / (t.total * 3) * 100) : 0;
   return t;
 }
-// half-circle gauge: three arcs (dark = mastered on the left, lighter steps to the right) over a track, needle at the weighted score
-function gaugeHtml(t, title, labels) {
+// the three steps of every bank, named once in the 總進度 card's head (1.0.27): [arc class, legend dot class, name]
+const GAUGE_STEPS = [['mastered', 'mastered', '已熟練'], ['learned', 'learned', '熟悉'], ['seen', 'gseen', '已學']];
+// half-circle gauge: three arcs (dark = mastered on the left, lighter steps to the right) over a track, needle at the weighted score,
+// the bank's name under the %. The counts are in the marks' tips (未學 on the track's), not written out (1.0.27)
+function gaugeHtml(t, title) {
   const R = 80, C = 100, W = 20;
   const pt = (f) => { const a = Math.PI * (1 - f); return [C + R * Math.cos(a), C - R * Math.sin(a)]; };
   const arc = (f0, f1) => { const [x0, y0] = pt(f0); const [x1, y1] = pt(f1); return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${R} ${R} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`; };
   const gap = 2 / (Math.PI * R);   // a 2px surface gap between segments
-  const segs = [['mastered', t.mastered, labels[0]], ['learned', t.learned, labels[1]], ['seen', t.seen, labels[2]]];
+  const segs = GAUGE_STEPS.map(([cls, , label]) => [cls, t[cls], label]);   // an arc's class names its count in t
   let f = 0; const paths = [];
   segs.forEach(([cls, n, label]) => {
     if (!n || !t.total) return;
@@ -7879,14 +7920,14 @@ function gaugeHtml(t, title, labels) {
     const lab = (ang, txt) => `<text class="tick-l" x="${(C + (R + W / 2 + 9) * Math.cos(ang)).toFixed(1)}" y="${(C - (R + W / 2 + 9) * Math.sin(ang) + 3).toFixed(1)}" text-anchor="middle">${txt}</text>`;
     return `<line class="tick" data-f="${tf.toFixed(4)}" x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}"></line>${lab(al, 'N5')}${lab(ar, 'N4')}`; })();
   const [nx, ny] = (() => { const a = Math.PI * (1 - t.pct / 100); return [C + (R - W / 2 - 4) * Math.cos(a), C - (R - W / 2 - 4) * Math.sin(a)]; })();   // ends just inside the ring
-  const legend = `<div class="glegend small muted mt-1"><span><i class="seg-dot mastered"></i>${esc(labels[0])} ${t.mastered}</span> <span><i class="seg-dot learned"></i>${esc(labels[1])} ${t.learned}</span> <span><i class="seg-dot gseen"></i>${esc(labels[2])} ${t.seen}</span> <span>未學 ${t.total - t.seen - t.learned - t.mastered}</span> <span>共 ${t.total}</span></div>`;
+  const left = t.total - t.seen - t.learned - t.mastered;
+  const trackTip = left > 0 ? ` tabindex="0" data-tip-title="未學：${left}" data-tip-body="共 ${t.total}"` : '';
   return `<div class="gauge" data-kind="${t.kind}" data-total="${t.total}" data-seen="${t.seen}" data-learned="${t.learned}" data-mastered="${t.mastered}" data-pct="${t.pct}">
-    <div class="small" style="text-align:center"><strong>${esc(title)}</strong></div>
-    <svg viewBox="-6 0 212 146" role="img" aria-label="${esc(title)}總進度 ${t.pct}%：${esc(labels[0])} ${t.mastered}、${esc(labels[1])} ${t.learned}、${esc(labels[2])} ${t.seen}，共 ${t.total}">
-      <path class="track" d="${arc(0, 1)}" stroke-width="${W}"></path>${paths.join('')}${tick}
+    <svg viewBox="-6 0 212 152" role="img" aria-label="${esc(title)}總進度 ${t.pct}%：${segs.map(([, n, label]) => `${label} ${n}`).join('、')}，共 ${t.total}">
+      <path class="track" d="${arc(0, 1)}" stroke-width="${W}"${trackTip}></path>${paths.join('')}${tick}
       <line class="needle" x1="${C}" y1="${C}" x2="${nx.toFixed(2)}" y2="${ny.toFixed(2)}"></line><circle class="pivot" cx="${C}" cy="${C}" r="4"></circle>
-      <text class="hero" x="${C}" y="${C + 32}" text-anchor="middle">${t.pct}%</text><text class="hero-l" x="${C}" y="${C + 44}" text-anchor="middle">總進度</text>
-    </svg>${legend}</div>`;
+      <text class="hero" x="${C}" y="${C + 32}" text-anchor="middle">${t.pct}%</text><text class="hero-l" x="${C}" y="${C + 48}" text-anchor="middle">${esc(title)}</text>
+    </svg></div>`;
 }
 // 課程進度 (1.0.26): when the 入門+N5 part and the whole course (N4) would each be learned once, at the recent pace of new
 // items (dailyLogs.fresh over the last 14 days from the first that has it; none, or none new lately: today's new count,
@@ -7985,9 +8026,9 @@ function renderStats(view) {
   Object.entries(state.srs).forEach(([k, r]) => { if (r.b >= SRS_LEARNED) learned[k[0]] = (learned[k[0]] || 0) + 1; });
   const gauges = statsScope === 'pre' ? [['a', '假名'], ['v', '入門單字'], ['g', '入門文法']] : [['v', '單字'], ['g', '文法'], ['lr', '聽力＋閱讀'], ['k', '漢字']];
   const progressCard = `<div class="card" id="progressCard">
-      <div class="card-head"><div><div class="card-title">總進度</div><div class="card-sub">指針是加權分數：已學 1 分、熟悉 2 分、熟練 3 分，滿分 3 分一題；顏色是三階熟練度。</div></div></div>
+      <div class="card-head"><div><div class="card-title">總進度</div><div class="card-sub legs mt-1">${GAUGE_STEPS.map(([, dot, name]) => `<span class="leg"><i class="seg-dot ${dot}"></i>${name}</span>`).join('')}</div></div></div>
       <div class="seg mb-3" role="group" aria-label="總進度的範圍">${STATS_SCOPES.map(([k, l]) => `<button type="button" aria-pressed="${statsScope === k}" data-act="stats-scope" data-scope="${k}">${l}</button>`).join('')}</div>
-      <div class="gauges">${gauges.map(([k, title]) => gaugeHtml(progressTotals(k, statsScope), title, k === 'g' || k === 'lr' ? ['熟練', '熟悉', '初識'] : ['已熟練', '熟悉', '已學'])).join('')}</div>
+      <div class="gauges">${gauges.map(([k, title]) => gaugeHtml(progressTotals(k, statsScope), title)).join('')}</div>
     </div>`;
 
   const weak = weakPoints();

@@ -852,6 +852,48 @@ def test_vocab_search_filters_live_on_input_and_preserves_focus(b):
 
 TESTS += [test_n4_words_open_once_every_n5_word_has_been_seen, test_bulk_i_know_marks_the_filtered_words_and_can_be_undone, test_preview_card_has_i_know_which_skips_the_word_and_its_encore, test_experienced_shortcut_in_the_level_picker_turns_chinese_off, test_vocab_search_filters_live_on_input_and_preserves_focus]
 
+# ---- 1.0.27: no 字表 button; a theme card opens its word table wherever its own buttons are not ----
+MAIN = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
+
+def test_a_theme_card_opens_its_word_table_except_on_its_buttons(b):
+    js = "(() => { " + MAIN + """ const card = () => { location.hash = '#/vocab/level?lv=N5'; route(); return document.querySelector('.theme-card[data-c="飲食"]'); };
+      const out = {};
+      card().querySelector('.bar.stack').click(); out.bar = decodeURIComponent(location.hash);
+      card().querySelector('.card-title').click(); out.title = decodeURIComponent(location.hash);
+      const chip = card().querySelector('[data-act=kanji-open]'); const k = chip.dataset.k; chip.click();
+      out.chip = { hash: location.hash, modal: document.getElementById('modalRoot').textContent.includes('漢字「' + k + '」') }; closeModal(true);
+      card().querySelector('[data-act=start-vocab]').click(); out.practice = { hash: decodeURIComponent(location.hash), mode: SESSION && SESSION.mode };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['bar'] == '#/vocab/list?lv=N5&c=飲食' and r['title'] == '#/vocab/list?lv=N5&c=飲食', r
+    assert r['chip'] == {'hash': '#/vocab/level?lv=N5', 'modal': True}, r
+    assert r['practice']['mode'] == 'vocab' and r['practice']['hash'] != '#/vocab/list?lv=N5&c=飲食', r
+
+TESTS += [test_a_theme_card_opens_its_word_table_except_on_its_buttons]
+
+# ---- 1.0.27: 播放字卡: a word's card lists the kanji it is written with (once each, only those in the kanji table) and their meanings ----
+HUSH = "speak = () => new Promise(() => {}); speakZh = () => new Promise(() => {});"   # speech that never ends: a playing player stays on its item
+PLAY = """const play = (w) => { const v = REG.vocab.find(x => x.builtin && jaPlain(x.w) === w);
+  startListen({ kind: 'theme', theme: vocabTheme(v) }); route(); listenPause(); LISTEN.idx = LISTEN.items.findIndex(e => e.word === w); listenRenderNow(); };"""
+
+def test_a_word_card_in_the_player_lists_its_kanji(b):
+    js = "(() => { " + MAIN + HUSH + PLAY + """ const kanji = (w) => { play(w); return [...document.querySelectorAll('#listenCard [data-k]')].map(c => [c.dataset.k, c.textContent.replace(c.dataset.k, '').trim()]); };
+      const out = { tenki: kanji('天気'), densha: kanji('電車'), tomodachi: kanji('友達'), nichiyoubi: kanji('日曜日'), kore: kanji('これ') };
+      listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'tenki': [['天', '天、天空'], ['気', '氣、精神、心情']], 'densha': [['電', ''], ['車', '']],   # a meaning that is the kanji itself is left out
+                 'tomodachi': [['友', '朋友']], 'nichiyoubi': [['日', '日、太陽、日子'], ['曜', '星期（曜日）']], 'kore': []}, r   # 達 is not in the kanji table
+
+def test_tapping_a_kanji_in_the_player_pauses_it_and_opens_the_kanji(b):
+    js = "(() => { " + MAIN + HUSH + PLAY + """ play('天気'); listenPlay(); const playing = LISTEN.playing;
+      document.querySelector('#listenCard [data-k="気"]').click();
+      const out = { playing, after: LISTEN.playing, word: listenCurrent().word, modal: document.getElementById('modalRoot').textContent.includes('漢字「気」') };
+      closeModal(true); listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'playing': True, 'after': False, 'word': '天気', 'modal': True}, r
+
+TESTS += [test_a_word_card_in_the_player_lists_its_kanji, test_tapping_a_kanji_in_the_player_pauses_it_and_opens_the_kanji]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)

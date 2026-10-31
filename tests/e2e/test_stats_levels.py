@@ -17,7 +17,7 @@ FRESH = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; s
 def test_each_scope_shows_its_banks_and_totals(b):
     js = "(() => { " + FRESH + """ location.hash = '#/stats'; route();
       const pick = (s) => { document.querySelector(`[data-act=stats-scope][data-scope=${s}]`).click();
-        return [...document.querySelectorAll('#progressCard .gauge')].map(g => [g.dataset.kind, +g.dataset.total, !!g.querySelector('.tick'), g.querySelector('strong').textContent]); };
+        return [...document.querySelectorAll('#progressCard .gauge')].map(g => [g.dataset.kind, +g.dataset.total, !!g.querySelector('.tick'), g.querySelector('.hero-l').textContent]); };   // 1.0.27: the bank's name sits under the %
       const n5u = new Set(DATA.UNITS.filter(u => u.lv === 'N5').map(u => u.id)), n4u = new Set(DATA.UNITS.filter(u => u.lv === 'N4').map(u => u.id));
       const V = REG.vocab.filter(v => v.builtin), LR = REG.listen.concat(REG.read), G = REG.grammar;
       const want = {
@@ -31,6 +31,26 @@ def test_each_scope_shows_its_banks_and_totals(b):
     r = json.loads(ev(b, js))
     assert r['got'] == r['want'], r
     assert r['part'] == [True, True, True, True], r['part']
+
+# 1.0.27: the three colours are explained once, in the card's head, and the gauges' tips use the same names; the grey part tells what is left
+G6 = """state.srs = {}; const t = todayStr(); const rec = (ok) => ({ b: 1, due: t, n: Math.max(1, ok), ok, ng: 0, s: 1, d: 5, last: t, intro: t });
+  REG.grammar.slice(0, 6).forEach((g, i) => { state.srs[g.key] = rec([3, 1, 1, 0, 0, 0][i]); });"""   # 文法: 1 已熟練, 2 熟悉, 3 已學
+
+def test_the_card_head_explains_the_gauge_colours(b):
+    js = "(() => { " + FRESH + G6 + """ location.hash = '#/stats'; route(); const card = document.getElementById('progressCard');
+      const legend = [...card.querySelector('.card-head').querySelectorAll('.seg-dot')].map(d => [d.parentElement.textContent.trim(), getComputedStyle(d).backgroundColor]);
+      const arcs = {}; card.querySelectorAll('.gauge[data-kind="g"] path.arc').forEach(p => { arcs[p.classList[1]] = getComputedStyle(p).stroke; });
+      return JSON.stringify({ legend, arcs }); })()"""
+    r = json.loads(ev(b, js))
+    assert [l for l, c in r['legend']] == ['已熟練', '熟悉', '已學'], r
+    assert [c for l, c in r['legend']] == [r['arcs']['mastered'], r['arcs']['learned'], r['arcs']['seen']], r
+
+def test_gauge_tips_use_the_legend_names_and_the_grey_part_tells_what_is_left(b):
+    js = "(() => { " + FRESH + G6 + """ location.hash = '#/stats'; route(); const g = document.querySelector('#progressCard .gauge[data-kind="g"]'); const tr = g.querySelector('.track');
+      return JSON.stringify({ arcs: [...g.querySelectorAll('path.arc')].map(p => p.dataset.tipTitle), track: [tr.dataset.tipTitle, tr.dataset.tipBody], total: REG.grammar.length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['arcs'] == ['已熟練：1', '熟悉：2', '已學：3'], r
+    assert r['track'] == ['未學：%d' % (r['total'] - 6), '共 %d' % r['total']], r
 
 def test_the_scope_is_kept_while_the_app_is_open(b):
     js = "(() => { " + FRESH + """ location.hash = '#/stats'; route(); document.querySelector('[data-act=stats-scope][data-scope=n5]').click();

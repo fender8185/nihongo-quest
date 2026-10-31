@@ -59,6 +59,35 @@ def test_course_page_survives_missing_stage_tests(b):
     js = "(() => { delete state.stageTests; renderCourse(document.getElementById('view')); return document.querySelectorAll('[data-act=\"stage-test\"]').length; })()"
     assert ev(b, js) == 4
 
+# ---- 1.0.27: the four stage cards fold; only the current stage is open by default ----
+SHOWN = "[...document.querySelectorAll('#view .card')].slice(0, 4).map(c => c.querySelector('.unit-row').checkVisibility())"   # which cards show their rows (a folded card keeps its rows' boxes, so not getClientRects)
+
+def test_course_opens_only_the_current_stage(b):
+    js = """(() => { const shown = () => { location.hash = '#/course'; route(); return """ + SHOWN + """; }; const out = {};
+      state.stage = 'main'; state.currentUnit = 'm8'; out.p2 = shown();
+      state.currentUnit = 'm13'; out.p3 = shown();
+      state.stage = 'pre'; out.pre = shown();
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'p2': [False, False, True, False], 'p3': [False, False, False, True], 'pre': [True, False, False, False]}, r
+
+def test_course_keeps_opened_and_closed_stages_until_a_reload(b):
+    pre = [("eval", "state.stage = 'main'; state.currentUnit = 'm2'; saveState(); true")] + COURSE
+    js = """(() => { const cards = [...document.querySelectorAll('#view .card')].slice(0, 4);
+      cards[3].querySelector('.card-title').click(); cards[1].querySelector('.card-title').click();   // open 第三階段, close 第一階段 (the current one)
+      return new Promise(r => setTimeout(r, 50)).then(() => { location.hash = '#/today'; route(); location.hash = '#/course'; route(); return JSON.stringify(""" + SHOWN + """); }); })()"""
+    assert json.loads(ev(b, js, pre)) == [False, False, False, True]
+    js = "(() => { location.hash = '#/course'; route(); return JSON.stringify(" + SHOWN + "); })()"
+    assert json.loads(ev(b, js)) == [False, True, False, False]   # a reload: the default again
+
+# a folded card still tells how far its stage is: 完成 when every row is done, else the mean of its rows' %
+def test_a_stage_head_shows_done_or_its_percent(b):
+    pre = [("eval", """state.stage = 'main'; state.currentUnit = 'm1'; state.srs = {}; state.completedUnits = []; markPassedStage('p1', new Set()); LAST_BULK_MARK = null;
+      unitItems('m13').forEach(it => { state.srs[it.key] = { b: 3, due: addDays(todayStr(), 9), n: 3, ok: 3, ng: 0, s: 9, d: 5, last: todayStr(), intro: todayStr() }; });
+      saveState(); true""")] + COURSE
+    js = "JSON.stringify([...document.querySelectorAll('#view .card')].slice(0, 4).map(c => c.querySelector('.stage-state').textContent.trim()))"
+    assert json.loads(ev(b, js, pre)) == ['完成', '完成', '0%', '17%']   # 第三階段: m13 at 100%, five units at 0% → 16.7
+
 # ---- Task 3: 階段測驗 ----
 def test_stage_test_builds_on_an_empty_account(b):
     js = """(() => { const keep = JSON.stringify(state.srs); state.srs = {}; const out = {};
