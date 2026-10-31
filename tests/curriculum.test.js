@@ -295,3 +295,18 @@ test('review page: a homograph the app or a lower level already keeps is not lis
   const list = text.slice(text.lastIndexOf('同形異讀（還沒放進大綱）'));
   assert.ok(list.includes('ごろく') && !list.includes('ごれい'));
 });
+
+// ---- a word is its spelling with its reading (rule 6), for list rows and for the app's words too ----
+test('outline: placing a candidate\'s spelling under another reading leaves the candidate missing', () => {
+  const s = withHomo(); s.outlines.N3.themes[0].words[5] = ['語5', 'ごれい', '意思']; has(s, 'N3 word missing: 語5（ご5）');
+  const t = okSet(); t.cands.N5.words.push({ w: '朝寝', r: 'ちょうね', status: 'new' }); has(t, 'N5 gap word missing: 朝寝（ちょうね）');
+});
+test('outline: a word dropped as the app\'s may not cite an app word of that spelling that reads otherwise', () => {
+  const s = withHomo(); s.DATA.VOCAB.push({ id: 'n4a-001', w: '語5', r: 'ご5', lv: 'N4' });
+  s.outlines.N3.dropped.push({ w: '語5', r: 'ごれい', why: 'app 已有：n4a-001（語5）' });
+  assert.deepEqual(problemsOf(s), ['N3 word dropped as in app, but n4a-001 reads ご5: 語5（ごれい）']);
+});
+test('outline: citing an app word that reads the same (katakana or hiragana) is fine', () => {
+  const s = withHomo(); s.DATA.VOCAB.push({ id: 'n4a-001', w: '語5', r: 'ゴレイ', lv: 'N4' });
+  s.outlines.N3.dropped.push({ w: '語5', r: 'ごれい', why: 'app 已有：n4a-001（語5）' }); assert.deepEqual(problemsOf(s), []);
+});

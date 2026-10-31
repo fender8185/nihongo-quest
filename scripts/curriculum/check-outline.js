@@ -2,7 +2,7 @@
 // (docs/superpowers/plans/2026-10-31-curriculum-outline.md, Task 4; the file format is in the plan's Global Constraints).
 // usage: node scripts/curriculum/check-outline.js   — prints a summary per level and every problem; exit 1 when there are problems
 const fs = require('fs'); const path = require('path');
-const { buildAppIndex, matchWord } = require('./match.js');
+const { buildAppIndex, matchWord, cleanReading } = require('./match.js');
 const { loadSources, loadData, buildCandidates, homographs } = require('./build-candidates.js');
 
 const LEVELS = ['N3', 'N2', 'N1'];
@@ -22,7 +22,7 @@ function checkOutline({ outlines = {}, gaps = null, cands, DATA }) {
   const wr = (w, r) => `${w}（${r}）`;
   const owner = new Map();   // word → the level that holds it
   const claim = (w, r, L) => { const k = wr(w, r); if (owner.has(k) && owner.get(k) !== L) P(`word in two levels: ${k}`); else owner.set(k, L); };
-  const wanted = (L) => cands[L].words.filter(x => x.status === 'new' || x.status === 'variant').map(x => x.w);
+  const wanted = (L) => cands[L].words.filter(x => x.status === 'new' || x.status === 'variant');
   const homo = homographs(cands);
   // words kept per level (themes, added, gap words), and the app's own: another reading kept by the app or a lower level is placed
   const kept = { N5: [], N4: [], N3: [], N2: [], N1: [] };
@@ -32,14 +32,23 @@ function checkOutline({ outlines = {}, gaps = null, cands, DATA }) {
     order.slice(0, order.indexOf(L) + 1).forEach(x => kept[x].forEach(p => out.add(p))); return out; };
   // every candidate spelling and every other reading of one (a homograph) sits in a theme or is dropped, each word once
   const placed = (L, want, listed, extra = new Set(), noun = 'word') => {
-    const spellings = new Set(listed.map(x => x.w)); const pairs = new Set(listed.map(x => wr(x.w, x.r)).concat([...keptUpTo(L)]));
+    const wantW = new Set(want.map(x => x.w)); const pairs = new Set(listed.map(x => wr(x.w, x.r)).concat([...keptUpTo(L)]));
     const others = homo.filter(h => h.L === L); const otherPairs = new Set(others.map(h => wr(h.w, h.r)));
-    want.forEach(w => { if (!spellings.has(w)) P(`${L} ${noun} missing: ${w}`); });
+    want.forEach(x => { if (!pairs.has(wr(x.w, x.r))) P(`${L} ${noun} missing: ${wr(x.w, x.r)}`); });
     others.forEach(h => { if (!pairs.has(wr(h.w, h.r))) P(`${L} ${noun === 'word' ? 'homograph' : 'gap homograph'} missing: ${wr(h.w, h.r)}`); });
     tally(listed.map(x => wr(x.w, x.r))).forEach((k, p) => { if (k > 1) P(`${L} ${noun} twice: ${p}`); });
-    new Set(listed.filter(x => !want.includes(x.w) && !extra.has(x.w) && !otherPairs.has(wr(x.w, x.r))).map(x => x.w)).forEach(w => P(`${L} ${noun} not a candidate: ${w}`));
+    new Set(listed.filter(x => !wantW.has(x.w) && !extra.has(x.w) && !otherPairs.has(wr(x.w, x.r))).map(x => x.w)).forEach(w => P(`${L} ${noun} not a candidate: ${w}`));
   };
   const meaning = (L, w, m) => { if (!m || len(m) > 12) P(`${L} word without meaning: ${w}`); };
+  // a row dropped as the app's cites app words by id; one of the same spelling that reads otherwise is another word (rule 6)
+  const byId = new Map(DATA.VOCAB.map(v => [v.id, v]));
+  const hira = (r) => cleanReading(r).replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60)).replace(/する$/, '');
+  const dropped = (L, x, noun) => {
+    if (!x.why) return P(`${L} dropped without reason: ${x.w}`);
+    if (x.why.includes('app 已有')) (x.why.match(/[A-Za-z0-9]+-[A-Za-z0-9]+/g) || []).map(id => byId.get(id)).filter(Boolean).forEach(v => {
+      if (v.w.replace(/する$/, '') === x.w.replace(/する$/, '') && hira(v.r) !== hira(x.r)) P(`${L} ${noun} dropped as in app, but ${v.id} reads ${v.r}: ${wr(x.w, x.r)}`);
+    });
+  };
 
   if (gaps) for (const L of ['N5', 'N4']) {
     const g = gaps[L] || { words: [], dropped: [] };
@@ -47,7 +56,7 @@ function checkOutline({ outlines = {}, gaps = null, cands, DATA }) {
     placed(L, wanted(L), g.words.concat(g.dropped), new Set(), 'gap word');
     // gap words go to a theme of their own level
     g.words.forEach(x => { if (!themes.has(x.c)) P(`${L} gap theme unknown: ${x.c}`); meaning(L, x.w, x.m); claim(x.w, x.r, L); });
-    g.dropped.forEach(x => { if (!x.why) P(`${L} dropped without reason: ${x.w}`); });
+    g.dropped.forEach(x => dropped(L, x, 'gap word'));
     // a word the list misspells or garbles comes back corrected as an added word, with its own theme
     (g.added || []).forEach(x => {
       if (!themes.has(x.c)) P(`${L} gap theme unknown: ${x.c}`); meaning(L, x.w, x.m); claim(x.w, x.r, L);
@@ -70,7 +79,7 @@ function checkOutline({ outlines = {}, gaps = null, cands, DATA }) {
       if (!words.some(y => y.w === x.w)) P(`${L} added word not in a theme: ${x.w}`);
       if (!x.why) P(`${L} added without reason: ${x.w}`);
     });
-    (o.dropped || []).forEach(x => { if (!x.why) P(`${L} dropped without reason: ${x.w}`); });
+    (o.dropped || []).forEach(x => dropped(L, x, 'word'));
     if (o.themes.length < 15 || o.themes.length > 20) P(`${L} themes: ${o.themes.length} (need 15–20)`);
     o.themes.forEach(t => { if (t.words.length < 20) P(`${L} theme too small: ${t.c}`); if (!t.c || !t.desc) P(`${L} theme without name or desc: ${t.c || '?'}`); });
 
