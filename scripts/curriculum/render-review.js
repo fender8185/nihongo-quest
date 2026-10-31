@@ -36,11 +36,13 @@ function gapsView(gaps) {
   if (!gaps) return '<p class="none">還沒整理。</p>';
   return ['N5', 'N4'].map(L => {
     const g = gaps[L] || { words: [], dropped: [] };
-    const byTheme = new Map(); g.words.forEach(x => { if (!byTheme.has(x.c)) byTheme.set(x.c, []); byTheme.get(x.c).push(x); });
-    return `<h2>${L}（新增 ${g.words.length}、篩掉 ${g.dropped.length}）</h2>
+    const added = g.added || [];
+    const byTheme = new Map(); g.words.concat(added).forEach(x => { if (!byTheme.has(x.c)) byTheme.set(x.c, []); byTheme.get(x.c).push(x); });
+    return `<h2>${L}（新增 ${g.words.length + added.length}、篩掉 ${g.dropped.length}）</h2>
     <p class="note">分進 app 現有的 ${L} 主題，之後跟 ${L} 的內容一起出。</p>
     <div class="themes">${[...byTheme].map(([c, list]) => `<details class="theme" open><summary><span class="tname">${esc(c)}</span><span class="tcount">${list.length} 字</span></summary><ul class="words">${list.map(x => word(x.w, x.r, x.m)).join('')}</ul></details>`).join('')}</div>
-    <h3>篩掉的字</h3>${table(['字', '讀音', '原因'], g.dropped.map(x => [x.w, x.r, x.why]))}`;
+    <h3>篩掉的字</h3>${table(['字', '讀音', '原因'], g.dropped.map(x => [x.w, x.r, x.why]))}
+    <h3>補的字</h3>${table(['字', '讀音', '意思', '主題', '原因'], added.map(x => [x.w, x.r, x.m, x.c, x.why]))}`;
   }).join('');
 }
 

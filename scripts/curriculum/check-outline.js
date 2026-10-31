@@ -35,6 +35,12 @@ function checkOutline({ outlines = {}, gaps = null, cands, DATA }) {
     // gap words go to a theme of their own level
     g.words.forEach(x => { if (!themes.has(x.c)) P(`${L} gap theme unknown: ${x.c}`); meaning(L, x.w, x.m); claim(x.w, L); });
     g.dropped.forEach(x => { if (!x.why) P(`${L} dropped without reason: ${x.w}`); });
+    // a word the list misspells or garbles comes back corrected as an added word, with its own theme
+    (g.added || []).forEach(x => {
+      if (!themes.has(x.c)) P(`${L} gap theme unknown: ${x.c}`); meaning(L, x.w, x.m); claim(x.w, L);
+      if (matchWord(index, x.w, x.r).status === 'in-app') P(`word already in app: ${x.w}`);
+      if (!x.why) P(`${L} added without reason: ${x.w}`);
+    });
   }
 
   const summary = {}; const units = new Set(DATA.UNITS.map(u => u.id));

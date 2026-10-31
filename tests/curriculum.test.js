@@ -218,3 +218,17 @@ test('review page: text from the outline is escaped', () => {
   const html = require('../scripts/curriculum/render-review.js').renderReview({ outlines: s.outlines, gaps: s.gaps, cands: s.cands });
   assert.ok(html.includes('&lt;b&gt;x&lt;/b&gt;') && !html.includes('<b>x</b>'));
 });
+
+// ---- gap words may add a corrected word (Task 5: the list misspells 楽しむ as 楽む) ----
+const gapAdd = () => { const s = okSet(); s.cands.N4.words.push({ w: '楽む', r: 'たのしむ', status: 'new' });
+  s.gaps.N4.dropped.push({ w: '楽む', r: 'たのしむ', why: '清單拼錯，應為楽しむ' });
+  s.gaps.N4.added = [{ w: '楽しむ', r: 'たのしむ', m: '享受、以…為樂', c: '居家生活', why: '取代清單拼錯的楽む' }]; return s; };
+test('gaps: an added word with theme, meaning and reason passes', () => assert.deepEqual(problemsOf(gapAdd()), []));
+test('gaps: an added word must not be in the app and needs a reason', () => {
+  const s = gapAdd(); s.gaps.N4.added.push({ w: '既存', r: 'きそん', m: '既有', c: '居家生活', why: '測試' }); has(s, 'word already in app: 既存');
+  const t = gapAdd(); t.gaps.N4.added[0].why = ''; has(t, 'N4 added without reason: 楽しむ');
+});
+test('review page: gap tab lists added words, marked as added', () => {
+  const s = gapAdd(); const text = require('../scripts/curriculum/render-review.js').renderReview({ outlines: s.outlines, gaps: s.gaps, cands: s.cands }).replace(/<[^>]+>/g, '');
+  assert.ok(text.includes('楽しむ（たのしむ）') && text.includes('取代清單拼錯的楽む'));
+});
