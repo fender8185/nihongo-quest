@@ -160,7 +160,7 @@ def test_no_level_literals_outside_the_level_list(b):
     # data is recognised everywhere; only the list itself and lines marked level-literal-ok may name a level
     src = open(os.path.join(ROOT, 'index.html'), encoding='utf-8').read().split('\n')
     a = next(i for i, l in enumerate(src) if l.startswith('const CHANGELOG')); z = next(i for i in range(a, len(src)) if src[i].startswith('];'))
-    pat = re.compile(r"[!=]==\s*'N[1-5]'|'(?:PRE_)?N[1-5]',\s*'N[1-5]'|/N[1-5]/\.test|[?:]\s*'N[1-5]'(?![\w-])|\|\|\s*'N[1-5]'")
+    pat = re.compile(r"'N[1-5]',\s*null|[!=]==\s*'N[1-5]'|'(?:PRE_)?N[1-5]',\s*'N[1-5]'|/N[1-5]/\.test|[?:]\s*'N[1-5]'(?![\w-])|\|\|\s*'N[1-5]'")
     hits = [f'{i + 1}: {l.strip()[:110]}' for i, l in enumerate(src) if not (a <= i <= z) and not l.lstrip().startswith('//')
             and 'level-literal-ok' not in l and not re.match(r'\s*const (ALL_LEVELS|LEVELS|COURSE_LEVELS)\b', l) and pat.search(l)]
     assert hits == [], hits

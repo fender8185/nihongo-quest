@@ -1,0 +1,97 @@
+"""1.0.33 (spec §4.1, §10): with N3 data in data.js every page knows the new level. The app is served from a temporary
+folder whose data.js is the real one plus a small fake N3 level (three words, two kanji, a unit m19 with two grammar
+items in a fourth phase, a theme), so everything computed while the page loads sees N3 the way the real batches will."""
+import json, os, shutil, subprocess, sys, tempfile, time
+sys.path.insert(0, os.path.dirname(__file__))
+from cdp import Browser
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+PORT = 8803
+URL = f"http://127.0.0.1:{PORT}/"
+READY = "typeof state === 'object' && !!state.updatedAt && typeof speakScript === 'function'"
+
+def ev(b, js, pre=()):
+    return b.run([("nav", URL), ("wait", READY)] + list(pre) + [("eval", js)])[-1]
+
+def fake_site():
+    tmp = tempfile.mkdtemp(prefix='nq-n3-')
+    for name in os.listdir(ROOT):
+        if name in ('data.js', '.git', '.venv', 'node_modules'): continue
+        os.symlink(os.path.join(ROOT, name), os.path.join(tmp, name))
+    lines = open(os.path.join(ROOT, 'data.js'), encoding='utf-8').read().split('\n')
+    D = json.loads(lines[2][len('const DATA = '):-1])
+    th = '思考與判斷'
+    D['VOCAB'] += [
+        {'id': 'n3a-001', 'w': '検討', 'r': 'けんとう', 'm': '研究、考慮', 'p': 'vs', 'lv': 'N3', 'c': th, 'ex': '計画をもう一度{検討}します。', 'exZh': '再研究一次計畫。', 'ex2': 'その案は今{検討}中です。', 'exZh2': '那個方案正在研究中。'},
+        {'id': 'n3a-002', 'w': '判断', 'r': 'はんだん', 'm': '判斷', 'p': 'vs', 'lv': 'N3', 'c': th, 'ex': '自分で{判断}してください。', 'exZh': '請自己判斷。', 'ex2': '正しい{判断}でした。', 'exZh2': '那是正確的判斷。'},
+        {'id': 'n3a-003', 'w': '想像', 'r': 'そうぞう', 'm': '想像', 'p': 'vs', 'lv': 'N3', 'c': th, 'ex': '未来を{想像}します。', 'exZh': '想像未來。', 'ex2': '{想像}よりおいしいです。', 'exZh2': '比想像的好吃。'}]
+    D['KANJI'] += [
+        {'k': '討', 'lv': 'N3', 'm': '討論、研究', 'on': ['トウ'], 'kun': ['う'], 'ex': [['検討', 'けんとう', '研究、考慮']], 'look': ['計']},
+        {'k': '判', 'lv': 'N3', 'm': '判斷', 'on': ['ハン', 'バン'], 'kun': [], 'ex': [['判断', 'はんだん', '判斷']], 'look': ['半']}]
+    D['PHASES'].append({'id': 4, 'title': '第四階段：N3 文法', 'span': '第 10–12 個月'})
+    D['UNITS'].append({'id': 'm19', 'ph': 4, 'weeks': '第 37–38 週', 'lv': 'N3', 'short': '推測', 'title': '推測與傳聞', 'desc': '「らしい」「みたい」。'})
+    D['LESSONS']['m19'] = {'formula': '〜らしい｜〜みたい', 'overview': '推測與傳聞。', 'sections': [{'h': '推測', 'rule': '普通形＋らしい', 'points': ['雨が降るらしい。']}]}
+    g = next(x for x in D['GRAMMAR'] if x['u'] == 'm18' and x['t'] == 'choice')
+    D['GRAMMAR'] += [dict(g, id='m19-01', u='m19', lv='N3', sec=0), dict(g, id='m19-02', u='m19', lv='N3', sec=0)]
+    D['THEMES']['N3'] = [{'c': th, 'desc': '思考、判斷與推測'}]
+    lines[2] = 'const DATA = ' + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';'
+    open(os.path.join(tmp, 'data.js'), 'w', encoding='utf-8').write('\n'.join(lines))
+    return tmp
+
+SEEN = """const t = todayStr(); const rec = () => ({ b: 2, due: addDays(t, 30), n: 3, ok: 3, ng: 0, s: 20, d: 5, last: addDays(t, -5), intro: addDays(t, -60), f: {} });
+  const below = (lv) => ['PRE_N5', 'N5', 'N4'].includes(lv); state.stage = 'main';
+  const seeBelowN3 = () => { REG.vocab.filter(v => v.builtin && below(v.lv)).forEach(v => { state.srs[v.key] = rec(); }); REG.kanji.filter(k => below(k.lv)).forEach(k => { state.srs[k.key] = rec(); });
+    state.completedUnits = DATA.UNITS.filter(u => below(u.lv)).map(u => u.id); state.currentUnit = 'm18'; DAILY_CACHE = null; };"""
+
+def test_the_level_lists_and_stages_include_n3(b):
+    js = """(() => JSON.stringify({ levels: levels(), course: courseLevels(), stage: STAGES[STAGES.length - 1].lv, themes: themeOrder().includes('思考與判斷'),
+      decks: decks().map(d => d[0]), scopes: statsScopes().map(s => s[0]), lv: unitLevel('m19') }))()"""
+    r = json.loads(ev(b, js))
+    assert r == {'levels': ['PRE_N5', 'N5', 'N4', 'N3'], 'course': ['N5', 'N4', 'N3'], 'stage': 'N3', 'themes': True,
+                 'decks': ['all', 'PRE_N5', 'N5', 'N4', 'N3', 'custom'], 'scopes': ['all', 'pre', 'n5', 'n4', 'n3'], 'lv': 'N3'}, r
+
+def test_vocab_page_has_an_n3_tab_and_the_stats_an_n3_scope(b):
+    js = """(() => { location.hash = '#/vocab/level?lv=N3'; route(); const tabs = [...document.querySelectorAll('.seg.mb-4 button')].map(x => x.textContent.trim());
+      const words = document.getElementById('view').textContent.includes('検討') || REG.vocab.filter(v => v.lv === 'N3').length === 3;
+      location.hash = '#/stats'; route(); const scope = Boolean(document.querySelector('[data-act=stats-scope][data-scope=n3]'));
+      const n3 = progressTotals('v', 'n3').total; const marks = progressTotals('v').marks.map(m => m[0]);
+      return JSON.stringify({ tabs: tabs.slice(0, 4), words, scope, n3, marks }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'tabs': ['入門', 'N5', 'N4', 'N3'], 'words': True, 'scope': True, 'n3': 3, 'marks': ['N5', 'N4']}, r
+
+def test_n3_opens_once_n4_is_done_and_new_items_come_only_from_it(b):
+    js = "(() => { " + SEEN + """ const before = curLevel(); seeBelowN3(); const s = splitNew(15);
+      const all = s.v.concat(s.g, s.k); const lvOf = (x) => x.kind === 'g' ? unitLevel(x.u) : x.lv;
+      const out = { before, cur: curLevel(), n: all.length, n3: all.every(x => lvOf(x) === 'N3'), kinds: [s.v.length > 0, s.g.length > 0, s.k.length > 0] };
+      state.srs = {}; state.completedUnits = []; state.currentUnit = 'm1'; saveState(); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'before': 'N5', 'cur': 'N3', 'n': 7, 'n3': True, 'kinds': [True, True, True]}, r   # 3 words + 2 items + 2 kanji is all N3 has
+
+def test_n3_words_read_after_n4_ones_and_the_pace_has_an_n3_date(b):
+    js = """(() => { const p = coursePace(); return JSON.stringify({ prio: FURI_PRIO.get('検討'), n3: typeof p.days.N3 === 'number' && p.days.N3 >= p.days.N4,
+      target: courseLevels().includes('N3'), keep: state.settings.examLevel }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'prio': 1.9, 'n3': True, 'target': True, 'keep': 'N4'}, r
+
+TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
+if __name__ == "__main__":
+    site = fake_site()
+    srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=site, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    time.sleep(0.8)
+    only = sys.argv[1:]
+    failed = 0
+    try:
+        for t in TESTS:
+            if only and t.__name__ not in only: continue
+            err = None
+            for attempt in (1, 2):
+                with Browser() as b:
+                    try:
+                        t(b); print("ok  ", t.__name__ + (" (retry)" if attempt == 2 else "")); err = None; break
+                    except Exception as e:
+                        err = e
+            if err is not None:
+                failed += 1; print("FAIL", t.__name__, "-", str(err)[:400])
+    finally:
+        srv.terminate(); shutil.rmtree(site, ignore_errors=True)
+    print("ALL PASS" if not failed else f"{failed} FAILED")
+    sys.exit(1 if failed else 0)
