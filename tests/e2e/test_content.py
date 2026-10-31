@@ -5,6 +5,7 @@ from cdp import Browser
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PORT = 8793
 URL = f"http://127.0.0.1:{PORT}/"
+ORDER_N3 = '現実表要期平記能支解情定加判利論感確常優適幸対関経数面組信直演位流過状収害想然種命様達単苦王覚調化務取報活共得告在求格職断石神助限商伝景望観識候満師速完類頼許等居欠刻恐暮戦性制続指点原資際反認参件任次増示式容必置疑局球役費由備宅配労追末察横値突積他客存殺責捕給婦寄余宿抜罪婚絶老更抱犯願越痛列迷悲吸誤煙眠政選和受権済勝係投果争談放与供構難違警訪念例退守福非深申財呼程路科処否登易座破除迎愛富未舞亡返険途精静倒曲払勤遅雑招困息絵欲笑束夢閉折到盗陽貧怖頂髪才偶偉米治側官打規育葉形落負渡若港良敗号降危辞因馬彼込妻船努散喜浮押庭徒賛戻互似探逃遊君緒草酒掛寝御忘雪吹娘慣窓昔怒泳祖杯疲皆箱忙靴恥猫幾'   # curriculum/n3.json kanji, by how often the N3 words use them
 READY = "typeof state === 'object' && !!state.updatedAt && typeof speakScript === 'function'"
 
 def ev(b, js, pre=()):
@@ -181,6 +182,24 @@ def test_same_spelling_cards_keep_their_reading_in_cloze_recall_notebook_and_dri
 def test_every_conjugation_choice_has_a_label(b):
     js = "JSON.stringify(Object.values(CONJ_POOL).flat().filter(f => !FORM_LABEL[f]))"
     r = json.loads(ev(b, js)); assert r == [], r
+
+# ---- 1.0.33: the N3 words of the curriculum outline ----
+def test_bank_has_the_n3_words(b):
+    js = """(() => { const N = DATA.VOCAB.filter(v => /^n3[a-z]-\\d{3}$/.test(v.id)); const th = new Set((DATA.THEMES.N3 || []).map(t => t.c));
+      const seen = new Set(); const dup = N.filter(v => { const k = v.w + '|' + v.r; const d = seen.has(k); seen.add(k); return d; }).map(v => v.w);
+      return JSON.stringify({ n: N.length, lv: N.every(v => v.lv === 'N3'), ex: N.filter(v => !(v.p && v.ex && v.exZh && v.ex2 && v.exZh2)).map(v => v.id),
+        themes: N.filter(v => !th.has(v.c)).map(v => v.id), dup, level: courseLevels().includes('N3'),
+        /* on its own card every kanji of an example has furigana (a homograph's mark reads the card's way, the rest the index's) */
+        bare: REG.vocab.filter(v => v.builtin && /^n3[a-z]-/.test(v.id)).flatMap(v => [v.ex, v.ex2].map(e => exampleJpHtml(e, v).replace(/<ruby[^>]*>.*?<\\/ruby>/g, '').match(/[一-鿿々〆ヶ]+/g)).filter(Boolean).map(k => v.w + ':' + k.join(''))) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'n': 1432, 'lv': True, 'ex': [], 'themes': [], 'dup': [], 'level': True, 'bare': []}, r
+
+def test_kanji_table_has_the_n3_kanji_in_the_outline_order(b):
+    js = """(() => { const K = DATA.KANJI.filter(k => k.lv === 'N3'); const reads = new Map(); DATA.VOCAB.forEach(v => reads.set(v.w, (reads.get(v.w) || []).concat([v.r])));
+      const bad = K.filter(k => !k.m || !(k.on.length || k.kun.length) || k.ex.length < 2 || k.ex.some(([w, r]) => !w.includes(k.k) || (reads.has(w) && !reads.get(w).includes(r)))).map(k => k.k);
+      return JSON.stringify({ order: K.map(k => k.k).join(''), bad, table: REG.kanji.filter(k => k.lv === 'N3').length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['order'] == ORDER_N3 and r['bad'] == [] and r['table'] == len(ORDER_N3), {k: (v if k != 'order' else v[:20]) for k, v in r.items()}
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

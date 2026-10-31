@@ -656,7 +656,8 @@ def test_kanji_table_covers_the_frequent_kanji_of_the_vocabulary(b):
       return JSON.stringify({ n: K.length, missing, bad, notInTable: [...used].filter(c => !has(c)).length }); })()"""
     r = json.loads(ev(b, js))
     assert r['n'] >= 340 and r['missing'] == [] and r['bad'] == [], r
-    assert r['notInTable'] < 530, r   # 1.0.8 added 200 words (牛丼、味噌汁…); kanji outside the table still get furigana from the word itself
+    assert r['notInTable'] < 700, r   # 1.0.8 added 200 words (牛丼、味噌汁…); kanji outside the table still get furigana from the word itself
+    # (1.0.33: the N3 words bring kanji of N2 and above, 661 in all; they join the table with their own levels)
 
 def test_records_of_merged_builtin_words_move_to_the_kept_entry(b):
     js = """(() => { const rec = (n) => ({ b: 2, due: todayStr(), n, ok: n, ng: 0, s: 3, d: 5, last: todayStr(), f: {} });
@@ -689,7 +690,7 @@ def test_every_builtin_word_has_a_usable_second_example(b):
       V.forEach(v => { if (!v.ex2 || !v.exZh2) { bad.push(v.w + ':missing'); return; }
         const info = vSurfaceInfo(withExample(v, 1)); if (!info || info.form === 'raw') bad.push(v.w + ':form');
         if (v.ex2.replace(/[{}]/g, '') === v.ex.replace(/[{}]/g, '')) bad.push(v.w + ':same');
-        if (/[一-龯]/.test(furi(v.ex2.replace(/[{}]/g, '')).replace(/<ruby>.*?<[/]ruby>/g, ''))) bad.push(v.w + ':furi'); });
+        if (/[一-龯]/.test(exampleJpHtml(v.ex2, v).replace(/<ruby[^>]*>.*?<[/]ruby>/g, ''))) bad.push(v.w + ':furi'); });   // as its card shows it (a homograph's mark reads the card's way)
       return JSON.stringify({ n: V.length, bad: bad.slice(0, 20), nbad: bad.length }); })()"""
     r = json.loads(ev(b, js))
     assert r['nbad'] == 0, r
@@ -885,7 +886,7 @@ def test_a_word_card_in_the_player_lists_its_kanji(b):
       listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
     assert r == {'tenki': [['天', '天、天空'], ['気', '氣、精神、心情']], 'densha': [['電', ''], ['車', '']],   # a meaning that is the kanji itself is left out
-                 'tomodachi': [['友', '朋友']], 'nichiyoubi': [['日', '日、太陽、日子'], ['曜', '星期（曜日）']], 'kore': []}, r   # 達 is not in the kanji table
+                 'tomodachi': [['友', '朋友'], ['達', '到達、～們']], 'nichiyoubi': [['日', '日、太陽、日子'], ['曜', '星期（曜日）']], 'kore': []}, r   # 達 joined the kanji table with N3 (1.0.33)
 
 def test_tapping_a_kanji_in_the_player_pauses_it_and_opens_the_kanji(b):
     js = "(() => { " + MAIN + HUSH + PLAY + """ play('天気'); listenPlay(); const playing = LISTEN.playing;
@@ -899,9 +900,9 @@ TESTS += [test_a_word_card_in_the_player_lists_its_kanji, test_tapping_a_kanji_i
 
 # ---- 1.0.28: 播放字卡: a theme's rotation has a card for each kanji its words use (in the kanji table, once each); without
 # shuffle it plays in the theme's order, each kanji card right after the first word that uses it ----
-THEME_SEQ = ['お願いします', '失礼します', '【失】', '【礼】', '話', '【話】', 'どうも', 'お疲れ様でした', 'よろしくお願いします',
+THEME_SEQ = ['お願いします', '【願】', '失礼します', '【失】', '【礼】', '話', '【話】', 'どうも', 'お疲れ様でした', '【疲】', '【様】', 'よろしくお願いします',
              'おめでとうございます', 'お大事に', '【大】', '【事】', 'お元気ですか', '【元】', '【気】',
-             'さあ', 'ええと', 'オーケー', 'お元気で', 'お邪魔します', 'こちらこそ', 'ごめんください', 'サンキュー', 'バイバイ']   # 問候與溝通 as data.js lists it (1.0.31 added the last nine); 願 疲 様 邪 魔 are not in the kanji table
+             'さあ', 'ええと', 'オーケー', 'お元気で', 'お邪魔します', 'こちらこそ', 'ごめんください', 'サンキュー', 'バイバイ']   # 問候與溝通 as data.js lists it (1.0.31 added the last nine); 邪 魔 are not in the kanji table (願 疲 様 joined it with N3, 1.0.33)
 LABELS = "const labels = () => LISTEN.items.map(e => e.kind === 'k' ? '【' + e.k.k + '】' : e.word);"
 
 def test_a_theme_plays_a_card_for_each_kanji_its_words_use(b):
@@ -981,7 +982,7 @@ def test_a_kanji_card_fills_the_full_screen_player_and_stays_inside_it(b):
     for size in ((390, 844), (844, 390)):
         r = json.loads(b.run([("metrics", size), ("nav", URL), ("wait", READY), ("eval", js)], timeout=45)[-1])
         bad = [x for x in r if not (x['rows'] == 4 and x['inside'] and x['stacked'] and x['centred'] and x['px'] >= 60)]
-        assert len(r) == 29 and not bad, (size, len(r), bad[:3])   # 自然與天氣 uses 29 kanji of the table
+        assert len(r) == 35 and not bad, (size, len(r), bad[:3])   # 自然與天氣 uses 35 kanji of the table (29 before the N3 kanji joined it)
 
 # the lock screen names a kanji card by the kanji and its meaning; the clips fetched ahead are the ones the card reads
 def test_a_kanji_card_names_itself_on_the_lock_screen_and_its_clips_are_fetched_ahead(b):

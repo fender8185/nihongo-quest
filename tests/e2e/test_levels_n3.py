@@ -19,6 +19,13 @@ def fake_site():
         os.symlink(os.path.join(ROOT, name), os.path.join(tmp, name))
     lines = open(os.path.join(ROOT, 'data.js'), encoding='utf-8').read().split('\n')
     D = json.loads(lines[2][len('const DATA = '):-1])
+    # the fake level stands in for any real N3 content (1.0.33 merges it batch by batch), so the counts below are the fake's
+    n3_units = {u['id'] for u in D['UNITS'] if u['lv'] == 'N3'}
+    for k, v in D.items():
+        if isinstance(v, list): D[k] = [x for x in v if not (isinstance(x, dict) and (x.get('lv') == 'N3' or x.get('u') in n3_units))]
+    for u in n3_units: D['LESSONS'].pop(u, None)
+    D['PHASES'] = [p for p in D['PHASES'] if any(u['ph'] == p['id'] for u in D['UNITS'])]
+    D['THEMES'].pop('N3', None)
     th = '思考與判斷'
     D['VOCAB'] += [
         {'id': 'n3a-001', 'w': '検討', 'r': 'けんとう', 'm': '研究、考慮', 'p': 'vs', 'lv': 'N3', 'c': th, 'ex': '計画をもう一度{検討}します。', 'exZh': '再研究一次計畫。', 'ex2': 'その案は今{検討}中です。', 'exZh2': '那個方案正在研究中。'},
