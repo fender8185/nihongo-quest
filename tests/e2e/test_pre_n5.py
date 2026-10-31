@@ -266,7 +266,7 @@ def test_bank_has_the_new_pre_n5_and_n5_words(b):
 
 def test_every_builtin_kanji_word_renders_furigana_matching_its_reading(b):
     js = """(() => { const hira = (s) => s.replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60)); const bare = [], mismatch = [];
-      REG.vocab.filter(v => v.builtin && /[一-鿿]/.test(jaPlain(v.w))).forEach(v => { const plain = jaPlain(v.w); const h = furi(plain);
+      REG.vocab.filter(v => v.builtin && /[一-鿿]/.test(jaPlain(v.w)) && !homographReadings(v).length).forEach(v => { const plain = jaPlain(v.w); const h = furi(plain);   // 1.0.33: a spelling two words share reads one way in the index; each card shows its own (test_content)
         const b = h.replace(/<ruby>.*?<\\/ruby>/g, '').match(/[一-鿿々〆ヶ]+/g); if (b) { bare.push(v.id + ':' + v.w); return; }
         const read = hira(h.replace(/<ruby>[^<]+<rt>([^<]+)<\\/rt><\\/ruby>/g, '$1').replace(/<[^>]+>/g, ''));
         if (read !== hira(v.r)) mismatch.push(v.id + ':' + v.w + ':' + read + '≠' + v.r); });

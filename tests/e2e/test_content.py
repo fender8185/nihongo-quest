@@ -93,7 +93,7 @@ def test_records_of_removed_sentence_choice_items_are_dropped(b):
 
 # ---- 1.0.31: the N5／N4 gap words of the curriculum outline (curriculum/gaps-n5n4.json, less the 16 sharing a spelling) ----
 def test_bank_has_the_gap_words_from_the_curriculum_outline(b):
-    js = """(() => { const G = DATA.VOCAB.filter(v => /^n[54]g-\\d{3}$/.test(v.id)); const T = (lv) => (DATA.THEMES[lv] || []).map(t => t.c);
+    js = """(() => { const G = DATA.VOCAB.filter(v => /^n[54]g-\\d{3}$/.test(v.id) && Number(v.id.slice(4)) <= (v.id[1] === '5' ? 38 : 60));   /* the 98 of 1.0.31 */ const T = (lv) => (DATA.THEMES[lv] || []).map(t => t.c);
       const count = new Map(); DATA.VOCAB.forEach(v => count.set(jaPlain(v.w), (count.get(jaPlain(v.w)) || 0) + 1));
       const reg = (v) => REG.byKey.get('v:' + v.id);
       const badMeaning = G.filter(v => (meaningOptions(reg(v)) || []).some(m => m !== v.m && zhOverlap(m, v.m))).map(v => v.w);
@@ -141,6 +141,23 @@ def test_listen_meaning_has_no_same_reading_wrong_answer(b):
 def test_tomaru_forms_read_tomaru_and_yamu_forms_yamu(b):
     js = "JSON.stringify([furi('電車が止まりました。'), furi('雨が止みました。'), furi('車が止まらない。')])"
     r = json.loads(ev(b, js)); assert '<rt>と</rt>' in r[0] and '<rt>や</rt>' in r[1] and '<rt>と</rt>' in r[2], r
+
+# ---- 1.0.33: the gap file's 16 same-spelling words; old sentences keep their readings ----
+def test_bank_has_the_16_same_spelling_gap_words(b):
+    js = """(() => { const G = DATA.VOCAB.filter(v => /^n5g-0(39|4\\d|5[01])$|^n4g-06[123]$/.test(v.id));
+      const out = { n: G.length, ex: G.every(v => v.ex && v.exZh && v.ex2 && v.exZh2), homo: G.filter(v => !homographReadings(REG.byKey.get('v:' + v.id)).length).map(v => v.w),
+        old: [furi('日本へ行きます。'), furi('何を食べますか。'), furi('明日は雨です。'), furi('私は学生です。')] };
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['n'] == 16 and r['ex'] and r['homo'] == [], r
+    assert '<rt>にほん</rt>' in r['old'][0] and '<rt>なに</rt>' in r['old'][1] and '<rt>あした</rt>' in r['old'][2] and '<rt>わたし</rt>' in r['old'][3], r['old']
+
+def test_same_spelling_words_show_their_own_reading_in_their_examples(b):
+    js = """(() => { const get = (w, r) => REG.vocab.find(v => v.builtin && v.w === w && v.r === r);
+      const rt = (v) => vocabExamples(v).map(e => exampleJpHtml(e.ex, v)).join(' ');
+      const shi = rt(get('四', 'し')), ichi = rt(get('一日', 'いちにち')), wata = rt(get('私', 'わたくし')), nip = rt(get('日本', 'にっぽん'));
+      return JSON.stringify({ shi: /<rt>し(がつ)?<\\/rt>/.test(shi) && !shi.includes('<rt>つき</rt>'), ichi: ichi.includes('<rt>いちにち</rt>'), wata: wata.includes('<rt>わたくし</rt>'), nip: nip.includes('<rt>にっぽん</rt>') }); })()"""
+    r = json.loads(ev(b, js)); assert r == {'shi': True, 'ichi': True, 'wata': True, 'nip': True}, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
