@@ -830,30 +830,61 @@ def test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss(b):
     assert r['blobSize'] == 3, r
 
 def test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing(b):
-    js = """(async () => { const all = cloudAudioTexts(); const w = REG.vocab.find(v => v.builtin); const male = all.find(x => x.gender === 'm');
+    js = """(async () => { CLOUD_AUDIO.r2 = '%s'; %s
+      const all = cloudAudioTexts(); const w = REG.vocab.find(v => v.builtin); const male = all.find(x => x.gender === 'm');
       const hasWord = all.some(x => x.text === jaPlain(w.w)); const hasEx = all.some(x => x.text === ttsText(exPlain(w.ex))); const pinned = all.filter(x => x.reading).length;
       const zhN = all.filter(x => x.lang === 'zh').length; const zh0 = all.find(x => x.lang === 'zh');
       const sample = all.slice(0, 6).concat([zh0]); cloudAudioTexts = () => sample;
-      const paths = await Promise.all(sample.map(x => cloudAudioPath(x.text, x.gender, { reading: x.reading || '', lang: x.lang || '' }))); const uniq = [...new Set(paths)]; const firstTodo = uniq.filter(p => p !== paths[0])[0];
+      const paths = await Promise.all(sample.map(x => cloudAudioPath(x.text, x.gender, { reading: x.reading || '', lang: x.lang || '' }))); const uniq = [...new Set(paths)];
+      const fp = uniq.filter(p => p.startsWith('f/'));
       const calls = []; const realFetch = window.fetch;
-      window.fetch = (u, o) => { u = String(u); calls.push({ u, method: (o && o.method) || 'GET', headers: (o && o.headers) || {}, body: o && typeof o.body === 'string' ? o.body : null, blob: o && o.body && o.body.size || 0 });
-        if (u.includes('/storage/v1/object/list/')) { const pre = JSON.parse(o.body).prefix; return Promise.resolve(new Response(JSON.stringify(pre.endsWith('/f') ? [{ name: paths[0].slice(2) }] : []), { status: 200 })); }   // the first file already exists
+      window.fetch = (u, o) => { u = String(u); o = o || {}; calls.push({ u, method: o.method || 'GET', headers: Object.fromEntries(new Headers(o.headers || {})), body: typeof o.body === 'string' ? o.body : null, blob: o.body && o.body.size || 0 });
+        if (u.startsWith(CLOUD_AUDIO.r2 + '?')) { const q = new URL(u).searchParams; const tok = q.get('continuation-token');   // two clips already on R2, one on each page of v1/f/
+          return Promise.resolve(new Response(q.get('prefix') !== 'v1/f/' ? xml([]) : tok === 't/1+' ? xml(['v1/' + fp[1]]) : tok ? xml([]) : xml(['v1/' + fp[0]], 't/1+'), { status: 200 })); }
         if (u.includes('texttospeech.googleapis.com')) return Promise.resolve(new Response(JSON.stringify({ audioContent: btoa('abc') }), { status: 200 }));
-        if (u.includes('/storage/v1/object/JPY_audio/')) return Promise.resolve(new Response('{}', { status: 200 }));
+        if (o.method === 'PUT' && u.startsWith(CLOUD_AUDIO.r2 + '/')) return Promise.resolve(new Response('', { status: 200 }));
         return Promise.resolve(new Response('', { status: 404 })); };
-      await cloudGenStart('GKEY', 'SKEY'); window.fetch = realFetch;
-      const g = Object.assign({}, CLOUD_GEN); const ups = calls.filter(c => c.u.includes('/storage/v1/object/JPY_audio/')); const goog = calls.filter(c => c.u.includes('texttospeech'));
-      const leaked = JSON.stringify(state).includes('SKEY') || JSON.stringify(localStorage).includes('SKEY');
-      return JSON.stringify({ n: all.length, hasWord, hasEx, male: male ? male.text.slice(0, 8) : null, pinned, g, upN: ups.length, upUrl: ups[0] && ups[0].u, upAuth: ups[0] && ups[0].headers.Authorization, upType: ups[0] && ups[0].headers['Content-Type'], upBlob: ups[0] && ups[0].blob,
-        googN: goog.length, googBody: goog[0] && JSON.parse(goog[0].body), zhN, zhPath: paths[paths.length - 1], zhBody: (goog.map(c => JSON.parse(c.body)).find(b2 => b2.input && b2.input.text) || null), expectUrl: ((window.NQ_CONFIG || {}).supabaseUrl) + '/storage/v1/object/JPY_audio/v1/' + firstTodo, uniq: uniq.length, leaked, keyKept: ttsConfig().googleKey }); })()"""
+      await cloudGenStart('GKEY', { keyId: 'AKIDTEST', secret: 'S3CRET' }); window.fetch = realFetch;
+      const g = Object.assign({}, CLOUD_GEN); const ups = calls.filter(c => c.method === 'PUT'); const goog = calls.filter(c => c.u.includes('texttospeech'));
+      const leaked = ['S3CRET', 'AKIDTEST'].some(k => JSON.stringify(state).includes(k) || JSON.stringify(localStorage).includes(k));
+      return JSON.stringify({ n: all.length, hasWord, hasEx, male: male ? male.text.slice(0, 8) : null, pinned, g, fp: fp.slice(0, 2), ups: ups.map(c => c.u), up0: ups[0] && { headers: ups[0].headers, blob: ups[0].blob },
+        googN: goog.length, googBody: goog[0] && JSON.parse(goog[0].body), zhN, zhPath: paths[paths.length - 1], zhBody: (goog.map(c => JSON.parse(c.body)).find(b2 => b2.input && b2.input.text) || null),
+        uniq: uniq.length, supabase: calls.filter(c => c.u.includes('supabase.co')).length, leaked, keyKept: ttsConfig().googleKey }); })()""" % (R2_TEST, R2_LIST_XML)
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=120)
-    r = json.loads(out[-1])
-    assert r['n'] > 8000 and r['hasWord'] and r['hasEx'] and r['male'] and r['pinned'] > 500, r
-    assert r['g']['phase'] == '完成' and r['g']['total'] == r['uniq'] and r['g']['skipped'] == 1 and r['g']['done'] == r['uniq'] - 1 and r['g']['failed'] == 0, r
-    assert r['upN'] == r['uniq'] - 1 and r['googN'] == r['uniq'] - 1 and r['upUrl'] == r['expectUrl'] and r['upAuth'] == 'Bearer SKEY' and r['upType'] == 'audio/mpeg' and r['upBlob'] == 3, r
+    r = json.loads(out[-1]); g = r['g']
+    assert r['n'] > 8000 and r['hasWord'] and r['hasEx'] and r['male'] and r['pinned'] > 500 and len(r['fp']) == 2, r
+    assert (g['phase'], g['total'], g['skipped'], g['done'], g['failed']) == ('完成', r['uniq'], 2, r['uniq'] - 2, 0), r   # the clip on the second listing page counts too
+    assert len(r['ups']) == r['uniq'] - 2 and r['googN'] == r['uniq'] - 2, r
+    assert all(u.startswith(R2_TEST + '/v1/') for u in r['ups']) and not any(u.endswith('/' + p) for u in r['ups'] for p in r['fp']), r
+    h = r['up0']['headers']
+    assert (h['content-type'], h['cache-control'], h['x-amz-content-sha256'], r['up0']['blob']) == ('audio/mpeg', 'public, max-age=31536000, immutable', 'UNSIGNED-PAYLOAD', 3), r
+    assert re.fullmatch(r"AWS4-HMAC-SHA256 Credential=AKIDTEST/\d{8}/auto/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=[0-9a-f]{64}", h['authorization']), h
+    assert r['supabase'] == 0, r   # nothing goes to Supabase any more
     assert r['googBody']['audioConfig']['speakingRate'] == 1 and r['googBody']['input']['ssml'].startswith('<speak>'), r
     assert r['zhN'] > 5000 and r['zhPath'].startswith('zh/') and r['zhBody'] and r['zhBody']['voice']['languageCode'] == 'cmn-TW' and r['zhBody']['input']['text'], r   # Chinese: plain text, Taiwanese Mandarin voice
     assert not r['leaked'] and r['keyKept'] != 'GKEY', r   # the keys live only in the run
+
+def test_cloud_generator_stops_when_r2_refuses_or_cannot_be_reached(b):
+    js = """(async () => { CLOUD_AUDIO.r2 = '%s'; %s
+      const sample = cloudAudioTexts().slice(0, 8); cloudAudioTexts = () => sample; const rf = window.fetch; const out = {};
+      const google = (u) => u.includes('texttospeech.googleapis.com') ? Promise.resolve(new Response(JSON.stringify({ audioContent: btoa('abc') }), { status: 200 })) : null;
+      const run = async (name, list, put) => { const calls = []; CLOUD_GEN = null;
+        window.fetch = (u, o) => { u = String(u); o = o || {}; calls.push({ u, method: o.method || 'GET' }); return google(u) || (o.method === 'PUT' ? put() : list()); };
+        await cloudGenStart('GKEY', { keyId: 'AKIDTEST', secret: 'S3CRET' });
+        out[name] = { phase: CLOUD_GEN.phase, done: CLOUD_GEN.done, err: CLOUD_GEN.errors[0] || '', puts: calls.filter(c => c.method === 'PUT').length, google: calls.filter(c => c.u.includes('texttospeech')).length }; };
+      const denied = '<?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>';
+      const empty = () => Promise.resolve(new Response(xml([]), { status: 200 }));
+      await run('listRefused', () => Promise.resolve(new Response(denied, { status: 403 })), empty);
+      await run('putRefused', empty, () => Promise.resolve(new Response(denied, { status: 403 })));
+      await run('putRejected', empty, () => Promise.reject(new TypeError('Failed to fetch')));
+      await run('listDown', () => Promise.reject(new TypeError('Failed to fetch')), empty);
+      window.fetch = rf; return JSON.stringify(out); })()""" % (R2_TEST, R2_LIST_XML)
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
+    assert r['listRefused'] == {'phase': '失敗：列出 R2 的檔案失敗 HTTP 403：AccessDenied', 'done': 0, 'err': '', 'puts': 0, 'google': 0}, r
+    for k in ('putRefused', 'putRejected'):   # a refused key or a lost network stops the run instead of failing every clip
+        assert r[k]['phase'] == '已停止（再按開始會接著跑）' and r[k]['done'] == 0 and 1 <= r[k]['puts'] <= 4, r
+    assert '上傳 HTTP 403：AccessDenied' in r['putRefused']['err'] and R2_DOWN in r['putRejected']['err'], r
+    assert r['listDown']['phase'] == '失敗：' + R2_DOWN and r['listDown']['google'] == 0, r
 
 def test_cloud_audio_is_the_default_engine_with_an_admin_generator_section(b):
     js = """(async () => { const fresh = (() => { const keep = state.ttsConfig; state.ttsConfig = null; const e = ttsConfig().engine; state.ttsConfig = keep; return e; })();
@@ -861,12 +892,19 @@ def test_cloud_audio_is_the_default_engine_with_an_admin_generator_section(b):
       const stays = (() => { const keep = state.ttsConfig; state.ttsConfig = { engine: 'google_tts', googleKey: 'K' }; const e = ttsConfig().engine; state.ttsConfig = keep; return e; })();
       const chosen = (() => { const keep = state.ttsConfig; state.ttsConfig = { engine: 'browser_neural', cloudDefault: true }; const e = ttsConfig().engine; state.ttsConfig = keep; return e; })();
       ttsConfig().engine = 'cloud'; const html = settingsSpeech(); const sw = await (await fetch('./sw.js')).text();
-      return JSON.stringify({ fresh, moved, stays, chosen, admin: /管理者：生成雲端音檔/.test(html), inputs: /id="cloudGoogleKey"/.test(html) && /id="cloudSecretKey"/.test(html) && /data-act="cloud-gen-start"/.test(html),
+      // keys pasted from a password manager often carry spaces or a line break
+      const box = document.createElement('div'); box.innerHTML = html; document.body.appendChild(box); const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+      set('cloudGoogleKey', ' GK '); set('cloudR2KeyId', ' AKID\\n'); set('cloudR2Secret', ' SEC ');
+      const seen = []; const toasts = []; const keepGen = cloudGenStart; const keepToast = toast; cloudGenStart = (g, r2) => { seen.push([g, r2]); }; toast = (m) => { toasts.push(m); };
+      ACTIONS['cloud-gen-start'](); set('cloudR2Secret', ''); ACTIONS['cloud-gen-start'](); cloudGenStart = keepGen; toast = keepToast; box.remove();
+      return JSON.stringify({ fresh, moved, stays, chosen, admin: /管理者：生成雲端音檔/.test(html), seen, toasts, r2: /Cloudflare R2/.test(html) && !/Supabase/.test(html.slice(html.indexOf('管理者：生成雲端音檔'))),
+        inputs: /id="cloudGoogleKey"/.test(html) && /id="cloudR2KeyId"/.test(html) && /id="cloudR2Secret"/.test(html) && !/cloudSecretKey/.test(html) && /data-act="cloud-gen-start"/.test(html),
         option: /<option value="cloud"/.test(html), available: speechAvailable(), swAudio: /nq-audio/.test(sw) && /JPY_audio/.test(sw) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)
     r = json.loads(out[-1])
     assert r['fresh'] == 'cloud' and r['moved'] == 'cloud' and r['stays'] == 'google_tts' and r['chosen'] == 'browser_neural', r
-    assert r['admin'] and r['inputs'] and r['option'] and r['available'] and r['swAudio'], r
+    assert r['admin'] and r['inputs'] and r['r2'] and r['option'] and r['available'] and r['swAudio'], r
+    assert r['seen'] == [['GK', {'keyId': 'AKID', 'secret': 'SEC'}]] and r['toasts'] == ['三個欄位都要填。'], r   # trimmed; a missing field starts nothing
 
 def test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there(b):
     js = """(async () => { const all = cloudAudioTexts(); const sample = all.slice(0, 5); cloudAudioTexts = () => sample;
@@ -1822,7 +1860,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_clips_are_fetched_from_the_r2_address, test_a_clip_r2_lacks_or_cannot_serve_comes_from_supabase_and_is_no_miss, test_sigv4_signs_like_the_aws_test_suite_and_signs_r2_requests, test_r2_listing_follows_pages_and_an_upload_carries_the_signed_headers, test_r2_errors_name_their_code_and_an_unreachable_bucket_says_so, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss,test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_download_all_counts_clips_cached_under_the_supabase_address_and_adds_no_copy, test_download_all_finds_a_stored_clip_by_its_address_whatever_it_varies_on, test_download_all_takes_from_supabase_what_r2_lacks,test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_hero_help_and_scope_toggles_open_one_at_a_time, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_exam_page_projects_the_finish_date_and_suggests_extra_practice_when_late, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_clips_are_fetched_from_the_r2_address, test_a_clip_r2_lacks_or_cannot_serve_comes_from_supabase_and_is_no_miss, test_sigv4_signs_like_the_aws_test_suite_and_signs_r2_requests, test_r2_listing_follows_pages_and_an_upload_carries_the_signed_headers, test_r2_errors_name_their_code_and_an_unreachable_bucket_says_so, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss,test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_generator_stops_when_r2_refuses_or_cannot_be_reached, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_download_all_counts_clips_cached_under_the_supabase_address_and_adds_no_copy, test_download_all_finds_a_stored_clip_by_its_address_whatever_it_varies_on, test_download_all_takes_from_supabase_what_r2_lacks,test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_hero_help_and_scope_toggles_open_one_at_a_time, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_exam_page_projects_the_finish_date_and_suggests_extra_practice_when_late, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,

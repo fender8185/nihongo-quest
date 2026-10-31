@@ -975,6 +975,9 @@ const APP_VERSION = '1.0.30';   // keep equal to the version in sw.js CACHE ('nq
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.30', date: '2026-10-31', items: [
+    '管理者的「生成雲端音檔」改成上傳到新的伺服器（Cloudflare R2），金鑰改成 R2 的，不再需要 Supabase 的 Secret key。R2 金鑰不對或權限不夠時，畫面會顯示「連不到 R2」。'
+  ] },
   { v: '1.0.29', date: '2026-10-31', items: [
     '雲端音檔改從新的伺服器下載（audio.nihongoquest.app）。新伺服器沒有的音檔，或連不上的時候，會自動改從原本的伺服器下載。已經存在這台裝置上的音檔照樣能用，不用重新下載，「下載全部」也會把它們算成已經在裝置上。'
   ] },
@@ -7508,9 +7511,10 @@ function settingsSpeech() {
         <div id="cloudDlBox" class="small mt-2">${cloudDlHtml()}</div>
       </details>
       <details class="mt-4"><summary class="small muted" style="cursor:pointer">管理者：生成雲端音檔</summary>
-        <div class="hint mt-2">把全部教材句子生成一次並上傳到 Supabase 的 ${CLOUD_AUDIO.bucket}；日文用上面選的 Neural2 聲音，中文（單字意思、例句與文法的翻譯、漢字字義）用 Google 的台灣華語聲音，給「聽一輪」用。兩把金鑰只在這一次執行中使用：不儲存、不同步、關掉頁面就消失；跑完請到 Supabase 後台刪掉 Secret key。已存在的檔案會略過，可以中斷再續跑。</div>
+        <div class="hint mt-2">把全部教材句子生成一次並上傳到 Cloudflare R2 的 nihongo-audio；日文用上面選的 Neural2 聲音，中文（單字意思、例句與文法的翻譯、漢字字義）用 Google 的台灣華語聲音，給「聽一輪」用。三把金鑰只在這一次執行中使用：不儲存、不同步、關掉頁面就消失；R2 金鑰只能讀寫這一個 bucket。已存在的檔案會略過，可以中斷再續跑。</div>
         <div class="field mt-3"><label>Google Cloud API Key</label><input class="input" type="password" autocomplete="off" id="cloudGoogleKey" value="${esc(c.googleKey || '')}" /></div>
-        <div class="field mt-3"><label>Supabase Secret key（service role）</label><input class="input" type="password" autocomplete="off" id="cloudSecretKey" /></div>
+        <div class="field mt-3"><label>R2 Access Key ID</label><input class="input" type="text" autocomplete="off" id="cloudR2KeyId" /></div>
+        <div class="field mt-3"><label>R2 Secret Access Key</label><input class="input" type="password" autocomplete="off" id="cloudR2Secret" /></div>
         <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="cloud-gen-start">開始生成</button><button type="button" class="btn" data-act="cloud-gen-stop">停止</button></div>
         <div id="cloudGenBox" class="small mt-2">${cloudGenHtml()}</div>
       </details>`;
@@ -7735,9 +7739,10 @@ Object.assign(ACTIONS, {
     } finally { const b2 = document.querySelector('[data-act=tts-check]') || el; b2.disabled = false; b2.innerHTML = old; }
   },
   'cloud-gen-start': () => {
-    const gk = ((document.getElementById('cloudGoogleKey') || {}).value || '').trim(); const sk = ((document.getElementById('cloudSecretKey') || {}).value || '').trim();
-    if (!gk || !sk) { toast('兩把金鑰都要填。'); return; }
-    cloudGenStart(gk, sk);
+    const val = (id) => ((document.getElementById(id) || {}).value || '').trim();   // pasted keys often carry spaces or a line break
+    const gk = val('cloudGoogleKey'); const r2 = { keyId: val('cloudR2KeyId'), secret: val('cloudR2Secret') };
+    if (!gk || !r2.keyId || !r2.secret) { toast('三個欄位都要填。'); return; }
+    cloudGenStart(gk, r2);
   },
   'cloud-gen-stop': () => { if (CLOUD_GEN) CLOUD_GEN.stop = true; },
   'hero-tab': (el) => {
@@ -8941,33 +8946,19 @@ function cloudGenHtml() {
     ${g.errors.length ? `<div class="bad mt-1">${g.errors.map(esc).join('<br>')}</div>` : ''}`;
 }
 function cloudGenRender() { const box = document.getElementById('cloudGenBox'); if (box) box.innerHTML = cloudGenHtml(); }
-async function cloudListExisting(base, secret) {
-  const have = new Set();
-  for (const g of ['f', 'm', 'zh']) {
-    for (let offset = 0; ; offset += 1000) {
-      const r = await fetch(`${base}/storage/v1/object/list/${CLOUD_AUDIO.bucket}`, { method: 'POST', headers: { Authorization: `Bearer ${secret}`, apikey: secret, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prefix: `${CLOUD_AUDIO.set}/${g}`, limit: 1000, offset, sortBy: { column: 'name', order: 'asc' } }) });
-      if (!r.ok) throw new Error(`列出雲端檔案失敗 HTTP ${r.status}${await errorDetail(r)}`);
-      const rows = await r.json();
-      (rows || []).forEach(x => { if (x && x.name) have.add(`${g}/${x.name}`); });
-      if (!rows || rows.length < 1000) break;
-    }
-  }
-  return have;
-}
-// Runs in the browser: the Google key (site-restricted, as set up) and the Supabase secret key are used for this run only —
-// never stored, never synced, gone when the page closes. Existing files are skipped, so a stopped run can continue.
-async function cloudGenStart(googleKey, secret) {
+// Runs in the browser: the Google key (site-restricted, as set up) and the R2 key pair (this bucket only, r2 = { keyId,
+// secret }) are used for this run only — never stored, never synced, gone when the page closes. Clips go to R2 only
+// (1.0.30); Supabase keeps the older ones as a backup. Existing files are skipped, so a stopped run can continue.
+async function cloudGenStart(googleKey, r2) {
   if (CLOUD_GEN && CLOUD_GEN.running) return;
-  const base = ((window.NQ_CONFIG || {}).supabaseUrl || '').replace(/\/$/, '');
   CLOUD_GEN = { running: true, stop: false, phase: '整理句子', total: 0, done: 0, skipped: 0, failed: 0, errors: [] };
   cloudGenRender();
   try {
     const list = cloudAudioTexts();
     const paths = await Promise.all(list.map(x => cloudAudioPath(x.text, x.gender, { reading: x.reading || '', lang: x.lang || '' })));
     const files = new Map(); list.forEach((x, i) => { if (!files.has(paths[i])) files.set(paths[i], x); });   // a pinned reading the dictionary already knows is the same file
-    CLOUD_GEN.phase = '查雲端已有的檔案'; cloudGenRender();
-    const have = await cloudListExisting(base, secret);
+    CLOUD_GEN.phase = '查 R2 已有的檔案'; cloudGenRender();
+    const have = await r2ListExisting(r2);
     const todo = [...files].filter(([path]) => !have.has(path)).map(([path, x]) => ({ x, path }));
     CLOUD_GEN.total = files.size; CLOUD_GEN.skipped = files.size - todo.length; CLOUD_GEN.phase = '生成並上傳'; cloudGenRender();
     const cfg = Object.assign({}, ttsConfig(), { engine: 'google_tts', googleKey });
@@ -8977,14 +8968,12 @@ async function cloudGenStart(googleKey, secret) {
         const t = todo[i++];
         try {
           const blob = await fetchEngineBlob(cfg, t.x.text, t.x.gender, { rate: 1, reading: t.x.reading || '', lang: t.x.lang || '' });
-          const r = await fetch(`${base}/storage/v1/object/${CLOUD_AUDIO.bucket}/${CLOUD_AUDIO.set}/${t.path}`, { method: 'POST',
-            headers: { Authorization: `Bearer ${secret}`, apikey: secret, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'max-age=31536000', 'x-upsert': 'true' }, body: blob });
-          if (!r.ok) throw new Error(`上傳 HTTP ${r.status}${await errorDetail(r)}`);
+          await r2Put(t.path, blob, r2);
           CLOUD_GEN.done++;
         } catch (e) {
           CLOUD_GEN.failed++; const msg = (e && e.message) || String(e);
           if (CLOUD_GEN.errors.length < 12) CLOUD_GEN.errors.push(`${t.x.text.slice(0, 24)}：${msg}${ttsErrorHint(msg) ? `（${ttsErrorHint(msg)}）` : ''}`);
-          if (/HTTP 40[13]|API key not valid|Unauthorized/i.test(msg)) CLOUD_GEN.stop = true;   // a bad key fails every file: stop instead of looping
+          if (/HTTP 40[13]|連不到 R2|API key not valid|Unauthorized/i.test(msg)) CLOUD_GEN.stop = true;   // a bad key (or R2 out of reach) fails every file: stop instead of looping
         }
         if ((CLOUD_GEN.done + CLOUD_GEN.failed) % 5 === 0) cloudGenRender();
       }
