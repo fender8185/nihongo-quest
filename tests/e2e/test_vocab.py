@@ -894,6 +894,109 @@ def test_tapping_a_kanji_in_the_player_pauses_it_and_opens_the_kanji(b):
 
 TESTS += [test_a_word_card_in_the_player_lists_its_kanji, test_tapping_a_kanji_in_the_player_pauses_it_and_opens_the_kanji]
 
+# ---- 1.0.28: 播放字卡: a theme's rotation has a card for each kanji its words use (in the kanji table, once each); without
+# shuffle it plays in the theme's order, each kanji card right after the first word that uses it ----
+THEME_SEQ = ['お願いします', '失礼します', '【失】', '【礼】', '話', '【話】', 'どうも', 'お疲れ様でした', 'よろしくお願いします',
+             'おめでとうございます', 'お大事に', '【大】', '【事】', 'お元気ですか', '【元】', '【気】']   # 問候與溝通 as data.js lists it; 願 疲 様 are not in the kanji table
+LABELS = "const labels = () => LISTEN.items.map(e => e.kind === 'k' ? '【' + e.k.k + '】' : e.word);"
+
+def test_a_theme_plays_a_card_for_each_kanji_its_words_use(b):
+    js = "(() => { " + MAIN + HUSH + LABELS + """ startListen({ kind: 'theme', theme: '問候與溝通' }); route(); listenPause(); const shuffled = labels();
+      const v = REG.vocab.find(x => x.builtin && jaPlain(x.w) === 'お元気ですか'); state.mistakes = [{ id: 'mk1', key: v.key, cat: '單字', prompt: '「' + v.m + '」的日文', answer: jaPlain(v.w), count: 1, mastered: false, date: todayStr(), last: todayStr() }]; saveState();
+      startListen({ kind: 'mistakes', cat: '' }); route(); listenPause(); const notebook = labels();
+      listenStop(true); state.mistakes = []; saveState(); localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ shuffled, notebook }); })()"""
+    r = json.loads(ev(b, js))
+    assert sorted(r['shuffled']) == sorted(THEME_SEQ), r   # 隨機 (the default): the kanji cards are shuffled in with the words
+    assert r['notebook'] == ['お元気ですか'], r   # the notebook player gets no kanji cards
+
+def test_without_shuffle_a_theme_plays_in_its_order_each_kanji_after_its_first_word(b):
+    js = "(() => { " + MAIN + HUSH + LABELS + """ startListen({ kind: 'theme', theme: '問候與溝通' }); route();
+      let error = null; try { ACTIONS['listen-cycle']({ dataset: { key: 'order' } }); } catch (e) { error = e.message; }   // before 1.0.28 this threw: it sorted a theme's words by their mistake count
+      const out = { error, order: LISTEN.order, seq: labels(), playing: LISTEN.playing, pillOn: document.querySelector('[data-act=listen-cycle][data-key=order]').classList.contains('on') };
+      listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'error': None, 'order': 'count', 'seq': THEME_SEQ, 'playing': True, 'pillOn': False}, r
+
+def test_the_review_theme_gets_cards_for_the_kanji_of_its_words(b):
+    js = "(() => { " + MAIN + HUSH + LABELS + """ const t = todayStr(); state.srs = {};
+      const met = (w, extra) => { const v = REG.vocab.find(x => x.builtin && jaPlain(x.w) === w); state.srs[v.key] = Object.assign({ b: 1, due: addDays(t, 3), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -1), intro: addDays(t, -9), f: {} }, extra || {}); };
+      met('天気'); met('雨'); met('山', { b: SRS_MASTERED, known: true, f: { 'v-spell': [1, 0] } }); saveState();
+      startListen({ kind: 'theme', theme: '初識單詞' }); route(); let error = null; try { ACTIONS['listen-cycle']({ dataset: { key: 'order' } }); } catch (e) { error = e.message; }
+      const seq = labels(); listenStop(true); state.srs = {}; saveState(); localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ error, seq }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'error': None, 'seq': ['天気', '【天】', '【気】', '雨', '【雨】']}, r   # 山 is mastered: neither the word nor its kanji
+
+def test_a_kanji_card_shows_the_kanji_its_meaning_readings_and_first_example(b):
+    js = "(() => { " + MAIN + HUSH + """ startListen({ kind: 'theme', theme: '自然與天氣' }); route(); listenPause();
+      const t = (el) => el ? el.textContent.replace(/\\s+/g, ' ').trim() : null;
+      const card = (k) => { LISTEN.idx = LISTEN.items.findIndex(e => e.kind === 'k' && e.k.k === k); listenRenderNow(); const f = document.querySelector('#listenCard .flash');
+        return { caption: t(f.querySelector('.small')), kanji: t(f.querySelector('.word')), meaning: t(f.querySelector('.meaning')), readings: [...f.querySelectorAll('.listen-reads .chip')].map(t), ex: t(f.querySelector('.listen-kex')) }; };
+      const out = { ten: card('天'), hi: card('日') }; listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['ten'] == {'caption': '漢字', 'kanji': '天', 'meaning': '天、天空', 'readings': ['音 テン'], 'ex': '天気 てんき 天氣'}, r   # the kanji table gives 天 no 訓
+    assert r['hi'] == {'caption': '漢字', 'kanji': '日', 'meaning': '日、太陽、日子', 'readings': ['音 ニチ・ジツ', '訓 ひ・か'], 'ex': '日曜日 にちようび 星期日'}, r
+
+def test_a_kanji_card_reads_its_example_and_then_the_kanjis_meaning(b):
+    js = "(() => { " + MAIN + HUSH + """ startListen({ kind: 'theme', theme: '自然與天氣' }); route(); listenPause(); const e = LISTEN.all.find(x => x.kind === 'k' && x.k.k === '天');
+      if (!e) { listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ card: false }); }
+      const calls = []; speak = (t, o) => { calls.push(['ja', String(t), (o && o.reading) || '']); return Promise.resolve(); }; speakZh = (t) => { calls.push(['zh', String(t)]); return Promise.resolve(); };
+      const run = (twice) => { calls.length = 0; LISTEN.twice = twice; return listenSpeak(e, () => true).then(ok => [ok, calls.slice()]); };
+      return run(true).then(two => run(false).then(one => { listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ two, one }); })); })()"""
+    r = json.loads(ev(b, js))
+    assert r.get('two') == [True, [['ja', 'てんき', ''], ['zh', '天、天空'], ['ja', 'てんき', '']]], r   # the example in kana (the clip the kanji sheet plays), the kanji's meaning, the example again
+    assert r['one'] == [True, [['ja', 'てんき', ''], ['zh', '天、天空']]], r   # 「1」: once
+
+def test_tapping_the_kanji_on_a_kanji_card_pauses_the_player_and_opens_the_kanji(b):
+    js = "(() => { " + MAIN + HUSH + """ startListen({ kind: 'theme', theme: '自然與天氣' }); route(); listenPause(); LISTEN.idx = LISTEN.items.findIndex(e => e.kind === 'k' && e.k.k === '天'); listenRenderNow();
+      listenPlay(); const playing = LISTEN.playing; const btn = document.querySelector('#listenCard .word [data-k="天"]'); if (btn) btn.click();
+      const out = { btn: !!btn, playing, after: LISTEN.playing, modal: document.getElementById('modalRoot').textContent.includes('漢字「天」') };
+      closeModal(true); listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'btn': True, 'playing': True, 'after': False, 'modal': True}, r
+
+# every kanji card fits the Today card's player box (260px on a computer) without scrolling, on a computer and on a phone
+def test_every_kanji_card_fits_the_today_player_without_scrolling(b):
+    js = "(() => { " + MAIN + HUSH + """ setListenPref({ source: 'theme', theme: '自然與天氣' }); LISTEN = null; location.hash = '#/today'; route(); ACTIONS['today-tab']({ dataset: { tab: 'theme' } });
+      const card = document.getElementById('listenCard'); const seen = new Set(); const over = [];
+      vocabThemes().forEach(g => listenSourceEntries({ kind: 'theme', theme: g.c }).forEach(e => { if (e.kind !== 'k' || seen.has(e.id)) return; seen.add(e.id);
+        LISTEN.items = [e]; LISTEN.idx = 0; listenRenderNow(); if (card.scrollHeight > card.clientHeight + 1) over.push(e.k.k); }));
+      LISTEN = null; localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ n: seen.size, over, h: card.clientHeight }); })()"""
+    for size in ((1280, 800, False), (390, 844)):
+        r = json.loads(b.run([("metrics", size), ("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
+        assert r['n'] > 300 and r['over'] == [], (size, r)
+
+# 沉浸播放: the kanji is drawn large, and the kanji, its meaning, readings and example stay stacked, centred and inside the box
+def test_a_kanji_card_fills_the_full_screen_player_and_stays_inside_it(b):
+    js = "(() => { " + MAIN + HUSH + """ LISTEN = null; setListenPref({ source: 'theme', theme: '自然與天氣' }); location.hash = '#/vocab/listen'; route(); listenPause();
+      const card = document.getElementById('listenCard'); const box = (el) => ({ top: el.offsetTop, bottom: el.offsetTop + el.offsetHeight, mid: el.offsetLeft + el.offsetWidth / 2 });   // layout coordinates: the page may be turned 90°
+      const out = []; LISTEN.items.forEach((e, i) => { if (e.kind !== 'k') return; LISTEN.idx = i; listenRenderNow(); const f = card.querySelector('.flash');
+        const rows = ['.word', '.meaning', '.listen-reads', '.listen-kex'].map(s => f.querySelector(s)).filter(Boolean).map(box);
+        out.push({ k: e.k.k, rows: rows.length, px: parseFloat(f.querySelector('.word').style.fontSize), inside: f.scrollHeight <= card.clientHeight + 1 && f.scrollWidth <= f.clientWidth + 1,
+          stacked: rows.every((r, j) => !j || r.top >= rows[j - 1].bottom - 2), centred: rows.every(r => Math.abs(r.mid - box(f).mid) < 6) }); });
+      listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify(out); })()"""
+    for size in ((390, 844), (844, 390)):
+        r = json.loads(b.run([("metrics", size), ("nav", URL), ("wait", READY), ("eval", js)], timeout=45)[-1])
+        bad = [x for x in r if not (x['rows'] == 4 and x['inside'] and x['stacked'] and x['centred'] and x['px'] >= 60)]
+        assert len(r) == 29 and not bad, (size, len(r), bad[:3])   # 自然與天氣 uses 29 kanji of the table
+
+# the lock screen names a kanji card by the kanji and its meaning; the clips fetched ahead are the ones the card reads
+def test_a_kanji_card_names_itself_on_the_lock_screen_and_its_clips_are_fetched_ahead(b):
+    js = "(() => { " + MAIN + HUSH + """ state.ttsConfig = Object.assign(state.ttsConfig || {}, { engine: 'cloud' }); startListen({ kind: 'theme', theme: '自然與天氣' }); route(); listenPause();
+      const e = LISTEN.all.find(x => x.kind === 'k' && x.k.k === '天'); if (!e) { listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ card: false }); }
+      LISTEN.idx = LISTEN.items.indexOf(e); listenRenderNow(); const ms = navigator.mediaSession ? navigator.mediaSession.metadata && navigator.mediaSession.metadata.title : 'none';
+      const fetched = []; engineBlob = (t, g, o) => { fetched.push([t, (o && o.lang) || '']); return Promise.resolve(null); }; listenPrefetch(e);
+      listenStop(true); localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ ms, fetched }); })()"""
+    r = json.loads(ev(b, js))
+    assert r.get('ms') in ('天　天、天空', 'none'), r   # (no media session in this browser: nothing to check)
+    assert r['fetched'] == [['てんき', ''], ['天、天空', 'zh']], r
+
+TESTS += [test_a_kanji_card_names_itself_on_the_lock_screen_and_its_clips_are_fetched_ahead]
+
+TESTS += [test_a_theme_plays_a_card_for_each_kanji_its_words_use, test_without_shuffle_a_theme_plays_in_its_order_each_kanji_after_its_first_word,
+          test_the_review_theme_gets_cards_for_the_kanji_of_its_words, test_a_kanji_card_shows_the_kanji_its_meaning_readings_and_first_example,
+          test_a_kanji_card_reads_its_example_and_then_the_kanjis_meaning, test_tapping_the_kanji_on_a_kanji_card_pauses_the_player_and_opens_the_kanji,
+          test_every_kanji_card_fits_the_today_player_without_scrolling, test_a_kanji_card_fills_the_full_screen_player_and_stays_inside_it]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)

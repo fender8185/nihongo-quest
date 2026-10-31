@@ -487,10 +487,15 @@ details.mrow .mbody { padding: 4px 0 14px; }
 .fill-ans { color: var(--accent); font-weight: 600; }
 .listen-sentence { font-size: 24px; line-height: 1.9; margin-top: 10px; }
 .listen-ex { text-align: left; }
-.listen-kanji { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; margin-top: 8px; }
+.listen-kanji, .listen-reads { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; margin-top: 8px; }
 .listen-kanji .kanji-chip { display: inline-flex; align-items: baseline; gap: 5px; font-size: 16px; line-height: 1.4; padding: 1px 9px; }
 .listen-kanji .lk-m { font-size: 12px; color: var(--fg-3); }
-body.immersive .listen.full .flash .listen-kanji { margin-top: 4px; }   /* fitFlash shrinks the word for every pixel the row takes */
+/* a kanji card (1.0.28): the kanji is the card's word and a button to its sheet; one example word on a line under the readings */
+.listen-k { border: 0; background: none; padding: 0; cursor: pointer; }
+.listen-reads .chip { font-size: 15px; padding: 1px 10px; }   /* as large as the word cards' kanji chips */
+.listen-kex { margin-top: 8px; font-size: 17px; } .listen-kex .lk-r, .listen-kex .lk-m { margin-left: .4em; color: var(--fg-3); }
+body.immersive .listen.full .flash .listen-kanji, body.immersive .listen.full .flash .listen-reads { margin-top: 4px; }   /* fitFlash shrinks the word for every pixel the row takes */
+body.immersive .listen.full .flash .listen-reads .chip { font-size: 18px; } body.immersive .listen.full .flash .listen-kex { margin-top: 4px; font-size: 22px; }
 /* the item area has a fixed height so the transport and pills never move when a word card gives way to a sentence card
    (the compact one 260px since 1.0.27: a word card with its kanji row is about 250px) */
 .listen #listenCard { height: 290px; display: grid; align-content: center; overflow-y: auto; }
@@ -964,12 +969,16 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.27';   // keep equal to the version in sw.js CACHE ('nq-v1.0.27'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.28';   // keep equal to the version in sw.js CACHE ('nq-v1.0.28'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.28', date: '2026-10-31', items: [
+    '播放字卡加進漢字卡：單字主題（含「初識單詞」）輪播時，這些單字用到的漢字（漢字表裡有的）每個一張，跟單字一起播。卡上是漢字、意思、音讀和訓讀，再加一個例字；聲音先唸例字，再唸漢字的中文意思，選「2」時最後再唸一次例字。點漢字會先暫停，再打開漢字說明。',
+    '單字主題的播放器關掉「隨機」時照主題的順序播，每張漢字卡接在第一個用到它的單字後面。修正：之前關掉隨機會出錯，播放停住，按鈕也不會變。'
+  ] },
   { v: '1.0.27', date: '2026-10-31', items: [
     '側欄的副標改成「JLPT 學習計劃」，分頁標題和安裝後的 app 名稱改成「Nihongo Quest」（考試可以選 N5 或 N4，不再寫 N4）。',
     '課程頁的四個階段可以收合：點標題列展開或收起，預設只展開目前所在的階段，手動開關的會記到關掉 app 為止。標題列右邊是這個階段的完成度（各列的平均），整個階段都完成時寫「完成」。',
@@ -6141,11 +6150,12 @@ function listenable(m) {
   return !/^【(聽力|情境|閱讀)】|^排序：/.test(m.prompt || '');   // unlinked (old or hand-made) entries: by their label
 }
 function listenBuild() {
-  const L = LISTEN; let list = L.all.filter(e => L.scope === 'all' || e.kind === L.scope);
-  list = L.order === 'random' ? shuffle(list) : list.slice().sort((a, b) => mistakePriority(a.m, b.m));
-  L.items = list; L.idx = 0;
+  // a theme plays all its cards (no 字｜文) and, not shuffled, in its own order: its words have no mistake count to sort by
+  const L = LISTEN; const theme = L.source.kind === 'theme'; const list = theme ? L.all : L.all.filter(e => L.scope === 'all' || e.kind === L.scope);
+  L.items = L.order === 'random' ? shuffle(list) : theme ? list.slice() : list.slice().sort((a, b) => mistakePriority(a.m, b.m));
+  L.idx = 0;
 }
-// what the player reads: the notebook ({ kind: 'mistakes', cat }) or every word of a theme ({ kind: 'theme', theme });
+// what the player reads: the notebook ({ kind: 'mistakes', cat }) or every word of a theme and its kanji ({ kind: 'theme', theme });
 // the last choice is kept on the device so the Today card opens on it
 const LISTEN_RATES = [0.8, 1, 1.3];
 function listenPref() { try { return Object.assign({ source: 'mistakes', theme: '', rate: 1 }, JSON.parse(localStorage.getItem('nq_listen_pref') || '{}')); } catch (e) { return { source: 'mistakes', theme: '', rate: 1 }; } }
@@ -6182,8 +6192,17 @@ function themePickerModal() {
   openModal('單字主題', `<div class="theme-list">${rows}</div>`, { width: 560 });
 }
 function listenSourceFromPref() { const p = listenPref(); return p.source === 'theme' ? { kind: 'theme', theme: listenDefaultTheme() } : { kind: 'mistakes', cat: '' }; }
+// a theme's words in their order, each followed by a card for every kanji (of the kanji table) it is the first of them to use (1.0.28)
+function listenThemeEntries(theme) {
+  const out = []; const seen = new Set();
+  listenThemeWords(theme).forEach(v => {
+    const e = listenEntryVocab(v, null); out.push(e);
+    e.kanji.forEach(k => { if (!seen.has(k.k)) { seen.add(k.k); out.push({ kind: 'k', id: k.key, m: null, k }); } });
+  });
+  return out;
+}
 function listenSourceEntries(source) {
-  if (source.kind === 'theme') return listenThemeWords(source.theme).map(v => listenEntryVocab(v, null));
+  if (source.kind === 'theme') return listenThemeEntries(source.theme);
   return activeMistakes().filter(m => listenable(m) && (!source.cat || (m.cat || '綜合') === source.cat)).map(listenEntry).filter(listenPlayable);
 }
 // a paused player over a source (the Today card and the full page share it); an existing paused one is refreshed
@@ -6222,6 +6241,7 @@ function listenPrefetch(e) {
   const ja = (text, opt) => { const t = ttsText(text); if (t) engineBlob(t, '', opt).catch(() => {}); };
   const zh = (text) => { if (text && LISTEN && LISTEN.zh) engineBlob(String(text), '', { lang: 'zh' }).catch(() => {}); };
   if (e.kind === 'v') { ja(e.word, e.reading ? { reading: e.reading } : undefined); zh(e.meaning); if (e.ex) { ja(exPlain(e.ex.ex)); zh(e.ex.exZh); } }
+  else if (e.kind === 'k') { const ex = (e.k.ex || [])[0]; if (ex) ja(ex[1]); zh(e.k.m); }
   else { ja(e.sentence); zh(e.zh); }
 }
 async function listenWake(on) {
@@ -6302,6 +6322,14 @@ async function listenSpeak(e, alive) {
     } else if (!await step(() => Promise.resolve(), LISTEN_GAP.short)) return false;
     return true;
   }
+  if (e.kind === 'k') {   // a kanji card: its example word in kana (the clip the kanji sheet plays), the kanji's meaning, the example again
+    const ex = (e.k.ex || [])[0]; const word = () => (ex ? speak(ex[1]) : Promise.resolve());
+    if (!await step(word, LISTEN_GAP.short)) return false;
+    if (LISTEN.zh && !await step(() => speakZh(e.k.m), LISTEN_GAP.short)) return false;
+    if (again && ex && !await step(word, LISTEN_GAP.short)) return false;
+    if (!await step(() => Promise.resolve(), LISTEN_GAP.short)) return false;
+    return true;
+  }
   if (!await step(() => speak(e.sentence), LISTEN_GAP.short)) return false;
   if (LISTEN.zh && e.zh && !await step(() => speakZh(e.zh), LISTEN_GAP.short)) return false;
   if (again && e.zh && !await step(() => speak(e.sentence), LISTEN_GAP.short)) return false;
@@ -6318,6 +6346,16 @@ function listenCardHtml() {
       <div class="meaning">${esc(e.meaning)}</div>
       ${e.kanji && e.kanji.length ? `<div class="listen-kanji">${e.kanji.map(k => `<button type="button" class="chip kanji-chip" data-act="listen-kanji" data-k="${esc(k.k)}"><span class="jp">${esc(k.k)}</span>${k.m && k.m !== k.k ? `<span class="lk-m">${esc(k.m)}</span>` : ''}</button>`).join('')}</div>` : ''}
       ${e.ex ? exampleHtml(e.ex.ex, e.ex.exZh, 'mt-3 listen-ex') : ''}
+    </div>`;
+  }
+  if (e.kind === 'k') {   // a kanji card (1.0.28): the kanji (a tap opens its sheet), its meaning, its readings, the kanji table's first example word
+    const k = e.k; const ex = (k.ex || [])[0]; const reads = kanjiReadingsHtml(k);
+    return `<div class="flash">
+      <div class="small muted">漢字</div>
+      <div class="word jp"><button type="button" class="listen-k" data-act="listen-kanji" data-k="${esc(k.k)}">${esc(k.k)}</button></div>
+      <div class="meaning">${esc(k.m)}</div>
+      ${reads ? `<div class="listen-reads">${reads}</div>` : ''}
+      ${ex ? `<div class="listen-kex"><span class="jp">${esc(ex[0])}</span> <span class="jp lk-r">${esc(ex[1])}</span> <span class="lk-m">${esc(ex[2] || '')}</span></div>` : ''}
     </div>`;
   }
   return `<div class="flash">
@@ -6372,7 +6410,7 @@ function listenPanelHtml(full) {
       </div>
       <div class="listen-opts">
         ${L.source.kind === 'theme' ? '' : `<button type="button" class="lopt lopt-scope" data-act="listen-cycle" data-key="scope" data-value="${L.scope === 'g' ? 'g' : 'v'}" title="單字／文法（亮的是現在聽的，點一下切換）" aria-label="${L.scope === 'g' ? '現在聽文法，點一下改單字' : '現在聽單字，點一下改文法'}"><span class="${L.scope === 'g' ? '' : 'on'}">字</span><span class="${L.scope === 'g' ? 'on' : ''}">文</span></button>`}
-        <button type="button" class="lopt${L.order === 'random' ? ' on' : ''}" data-act="listen-cycle" data-key="order" data-value="${L.order}" title="隨機（亮起）／錯最多次優先" aria-label="隨機">${icon('shuffle')}</button>
+        <button type="button" class="lopt${L.order === 'random' ? ' on' : ''}" data-act="listen-cycle" data-key="order" data-value="${L.order}" title="隨機（亮起）／${L.source.kind === 'theme' ? '照主題順序' : '錯最多次優先'}" aria-label="隨機">${icon('shuffle')}</button>
         <button type="button" class="lopt${L.twice ? ' on' : ''}" data-act="listen-cycle" data-key="twice" data-value="${L.twice ? '2' : '1'}" title="1：日文→中文；2：日文→中文→日文" aria-label="${L.twice ? '兩次' : '一次'}">${L.twice ? '2' : '1'}</button>
         <button type="button" class="lopt${L.rate !== 1 ? ' on' : ''}" data-act="listen-cycle" data-key="rate" data-value="${L.rate}" title="速度 ${L.rate}×（0.8 → 1 → 1.3）" aria-label="速度 ${L.rate} 倍">${icon('speed' + (Math.max(0, LISTEN_RATES.indexOf(L.rate)) + 1))}</button>
         ${full ? '' : '<span id="listenCount" class="listen-count"></span>'}
@@ -6400,7 +6438,7 @@ function mediaSessionUpdate() {
   const L = LISTEN; const e = listenCurrent();
   try {
     if (!L || !e) { ms.metadata = null; ms.playbackState = 'none'; return; }
-    ms.metadata = new MediaMetadata({ title: e.kind === 'v' ? `${e.word}　${e.meaning}` : e.sentence, artist: L.source.kind === 'theme' ? `單字・${L.source.theme}` : '錯題本', album: 'Nihongo Quest 聽一輪', artwork: [{ src: './icons/icon-512.png', sizes: '512x512', type: 'image/png' }] });
+    ms.metadata = new MediaMetadata({ title: e.kind === 'v' ? `${e.word}　${e.meaning}` : e.kind === 'k' ? `${e.k.k}　${e.k.m}` : e.sentence, artist: L.source.kind === 'theme' ? `單字・${L.source.theme}` : '錯題本', album: 'Nihongo Quest 聽一輪', artwork: [{ src: './icons/icon-512.png', sizes: '512x512', type: 'image/png' }] });
     ms.playbackState = L.playing ? 'playing' : 'paused';
     if (!mediaSessionUpdate.bound) {
       mediaSessionUpdate.bound = true;
