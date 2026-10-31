@@ -548,8 +548,7 @@ def test_stats_shows_the_past_week_of_practice_and_what_was_learned(b):
     assert r['n'] == 7 and r['segs'] == ['q:1', 'g:2', 'v:4'] and r['label'] == '7', r
     assert r['summary'] == '明細' and not r['learned'] and not r['fresh'] and r['legend'] and r['hasLegend'], r
     assert r['order'] == [0, 1, 2], r['order']   # gauges first, then the week chart, then the number tiles
-    g = {x['k']: x for x in r['g']}; assert set(g) == {'v', 'g', 'a'}, r['g']   # 1.0.16: a 假名 gauge too
-    assert g['a']['total'] == 142 and g['a']['tick'] is None, g['a']   # one level: no N5 / N4 mark
+    g = {x['k']: x for x in r['g']}; assert set(g) == {'v', 'g', 'lr', 'k'}, r['g']   # 1.0.26: 總進度 has 聽力＋閱讀 and 漢字; 假名 moved to the 入門 scope
     assert g['v']['learned'] == 1 and g['v']['mastered'] == 0 and g['v']['total'] >= 1400 and g['v']['needle'] and g['v']['arcs'] == 1 and 0 <= g['v']['pct'] < 100, g['v']
     assert g['g']['seen'] + g['g']['learned'] + g['g']['mastered'] == 1 and g['g']['total'] >= 1000, g['g']
     assert abs(g['v']['tick'] - r['nonN4'] / g['v']['total']) < 0.002 and g['v']['tickLabels'] == 'N5/N4', g['v']   # a faint mark where N4 begins (入門＋N5 before it)
@@ -1700,9 +1699,11 @@ if __name__ == "__main__":
              test_a_missed_listening_or_reading_item_gets_no_retry_copy_in_the_session, test_settings_drop_the_switches_the_app_now_decides, test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off, test_sets_hold_twenty_mixed_even_when_an_old_copy_saved_another_size_or_order,
              test_offline_audio_keeps_the_japanese_clips_of_todays_practice, test_offline_audio_fills_the_cache_skipping_stored_and_missing_clips_and_stops_offline,
              test_installed_app_keeps_the_coming_audio_by_itself_and_again_when_back_online, test_a_browser_tab_does_not_download_audio_ahead_by_itself, test_a_clip_not_on_the_device_while_offline_says_so]
+    only = sys.argv[1:]
     failed = 0
     try:
         for t in tests:
+            if only and t.__name__ not in only: continue
             err = None
             for attempt in (1, 2):   # a second try with a fresh browser absorbs load-related flakiness
                 with Browser() as b:

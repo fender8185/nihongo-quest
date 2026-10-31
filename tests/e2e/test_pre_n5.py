@@ -476,12 +476,12 @@ def test_week0_items_count_as_n5_grammar_in_the_stats(b):
 
 def test_stats_progress_shows_kana_and_counts_it_as_learned(b):
     js = """(() => { const t = todayStr(); state.srs = {}; ['a:あ', 'a:い', 'a:ア'].forEach((k, i) => { state.srs[k] = { b: i < 2 ? SRS_LEARNED : 1, due: addDays(t, 3), n: 2, ok: 2, ng: 0, s: 5, d: 5, last: t }; });
-      location.hash = '#/stats'; route(); const v = document.getElementById('view'); const g = v.querySelector('#progressCard .gauge[data-kind="a"]');
+      location.hash = '#/stats'; route(); document.querySelector('[data-act=stats-scope][data-scope=pre]').click(); const v = document.getElementById('view'); const g = v.querySelector('#progressCard .gauge[data-kind="a"]');   // 1.0.26: kana is on the 入門 scope
       const tile = [...v.querySelectorAll('.stat-l')].find(x => x.textContent.startsWith('已熟悉'));
       return JSON.stringify({ gauges: [...v.querySelectorAll('#progressCard .gauge')].map(x => x.dataset.kind), total: g && Number(g.dataset.total), met: g && Number(g.dataset.seen) + Number(g.dataset.learned) + Number(g.dataset.mastered),
         tick: Boolean(g && g.querySelector('.tick')), tile: tile && tile.textContent.includes('假名 2'), tileN: tile && tile.previousElementSibling.textContent }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'gauges': ['v', 'g', 'a'], 'total': 142, 'met': 3, 'tick': False, 'tile': True, 'tileN': '2'}, r
+    assert r == {'gauges': ['a', 'v', 'g'], 'total': 142, 'met': 3, 'tick': False, 'tile': True, 'tileN': '2'}, r
 
 def test_stats_tables_name_kana_rows_and_formats(b):
     js = """(() => { state.statsFmt = { 'a-read': { ok: 4, ng: 2 }, 'a-sound': { ok: 5, ng: 0 }, 'a-pair': { ok: 3, ng: 3 } }; location.hash = '#/stats'; route(); const v = document.getElementById('view');

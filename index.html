@@ -939,12 +939,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.25';   // keep equal to the version in sw.js CACHE ('nq-v1.0.25'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.26';   // keep equal to the version in sw.js CACHE ('nq-v1.0.26'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.26', date: '2026-10-31', items: [
+    '學習分析的總進度可以切換四種範圍：總進度（單字、文法、聽力＋閱讀、漢字）、入門（假名、入門單字、入門文法）、N5、N4，每個題目只算在它的級別裡。聽力和閱讀答過算初識、答對 1 次算熟悉、答對 2 次算熟練（答對後要隔 30 天才會再出）。'
+  ] },
   { v: '1.0.25', date: '2026-10-31', items: [
     '設定拿掉「每組練習題數」和「出題順序」：今日練習和假名練習固定一組 20 題，單字與文法一律交錯出。一組做太久注意力會往下掉，分成小組也不會少學，當天的題目一樣多；以前設定過的題數和順序不再有作用。'
   ] },
@@ -7772,15 +7775,38 @@ function weekPractice(days = 7) {
     return { date, v, g, q, total: v + g + q };
   });
 }
-// overall progress of a bank in three mastery steps (counts) plus a weighted score: 已學 1・熟悉 2・熟練 3 points out of 3 per item
-function progressTotals(kind) {
-  const t = { kind, total: 0, seen: 0, learned: 0, mastered: 0, n5: 0 };   // n5: how many of the items are N5 (a faint mark on the gauge)
-  const n5Units = new Set(DATA.UNITS.filter(u => u.lv === 'N5').map(u => u.id).concat('m0'));   /* level-literal-ok: units; 第 0 週 is N5 grammar */
-  if (kind === 'v' || kind === 'a') {   // 假名 (1.0.16): one level, so no N5 / N4 tick
-    (kind === 'a' ? REG.kana : REG.vocab.filter(v => v.builtin)).forEach(v => { t.total++; if (kind === 'v' && v.lv !== 'N4') t.n5++; const r = state.srs[v.key]; if (!r) return; const l = srsLevelLabel(r, v.key); if (l === '已熟練') t.mastered++; else if (r.b >= SRS_LEARNED) t.learned++; else t.seen++; });
-  } else {
-    REG.grammar.forEach(g => { t.total++; if (n5Units.has(g.u)) t.n5++; const r = state.srs[g.key]; if (!r) return; if ((r.ok || 0) >= 3) t.mastered++; else if ((r.ok || 0) >= 1) t.learned++; else t.seen++; });
-  }
+// an item's level for the 學習分析 scopes (1.0.26): 入門 is kana, PRE_N5 words and 第 0 週 grammar; grammar of no course unit
+// (an AI item of an unknown unit) has none and counts only in 總進度
+const UNIT_LV = new Map();
+function itemLevel(it) {
+  if (it.kind === 'a') return 'PRE_N5';
+  if (it.kind !== 'g') return it.lv || 'N5';
+  if (it.u === 'm0') return 'PRE_N5';
+  if (!UNIT_LV.size) DATA.UNITS.forEach(u => UNIT_LV.set(u.id, u.lv));
+  return UNIT_LV.get(it.u) || null;
+}
+const SCOPE_LV = { pre: 'PRE_N5', n5: 'N5', n4: 'N4' };
+const STATS_SCOPES = [['all', '總進度'], ['pre', '入門'], ['n5', 'N5'], ['n4', 'N4']];
+let statsScope = 'all';   // the 總進度 card's scope: kept while the app is open, 總進度 again after a reload
+// overall progress of a bank in three mastery steps (counts) plus a weighted score: 已學 1・熟悉 2・熟練 3 points out of 3 per item.
+// kind: v 單字, g 文法, lr 聽力＋閱讀, k 漢字, a 假名; scope: all or one level (SCOPE_LV). Grammar steps by right answers (3 熟練),
+// listening and reading too (2 熟練: a right answer waits a month before the next), the rest by stars.
+function progressTotals(kind, scope = 'all') {
+  const t = { kind, total: 0, seen: 0, learned: 0, mastered: 0, n5: 0 };   // n5: how many come before N4 (a faint mark on the gauge; 總進度 only, none for kana)
+  const pool = { v: REG.vocab.filter(v => v.builtin), g: REG.grammar, lr: REG.listen.concat(REG.read), k: REG.kanji, a: REG.kana }[kind];
+  const lv = SCOPE_LV[scope];
+  const top = kind === 'g' ? 3 : kind === 'lr' ? 2 : 0;
+  pool.forEach(x => {
+    const xl = itemLevel(x);
+    if (lv && xl !== lv) return;
+    t.total++;
+    if (!lv && kind !== 'a' && xl && xl !== 'N4') t.n5++;
+    const r = state.srs[x.key]; if (!r) return;
+    const ok = r.ok || 0;
+    if (top ? ok >= top : srsLevelLabel(r, x.key) === '已熟練') t.mastered++;
+    else if (top ? ok >= 1 : r.b >= SRS_LEARNED) t.learned++;
+    else t.seen++;
+  });
   t.pct = t.total ? Math.round((t.seen + t.learned * 2 + t.mastered * 3) / (t.total * 3) * 100) : 0;
   return t;
 }
@@ -7907,9 +7933,11 @@ function renderStats(view) {
   }).join('');
   const axis = wk.map((d, i) => `<span>${i === last ? '今天' : `${d.date.slice(5).replace('-', '/')}（${weeks[parseDate(d.date).getDay()]}）`}</span>`).join('');
   const wkTable = `<table class="table"><thead><tr><th>日期</th><th>單字</th><th>文法</th><th>其他</th><th>合計</th></tr></thead><tbody>${wk.map((d, i) => `<tr><td class="num">${i === last ? '今天' : d.date}</td><td class="num">${d.v}</td><td class="num">${d.g}</td><td class="num">${d.q}</td><td class="num">${d.total}</td></tr>`).join('')}</tbody></table>`;
+  const gauges = statsScope === 'pre' ? [['a', '假名'], ['v', '入門單字'], ['g', '入門文法']] : [['v', '單字'], ['g', '文法'], ['lr', '聽力＋閱讀'], ['k', '漢字']];
   const progressCard = `<div class="card" id="progressCard">
       <div class="card-head"><div><div class="card-title">總進度</div><div class="card-sub">指針是加權分數：已學 1 分、熟悉 2 分、熟練 3 分，滿分 3 分一題；顏色是三階熟練度。</div></div></div>
-      <div class="gauges">${gaugeHtml(progressTotals('v'), '單字', ['已熟練', '熟悉', '已學'])}${gaugeHtml(progressTotals('g'), '文法', ['熟練', '熟悉', '初識'])}${gaugeHtml(progressTotals('a'), '假名', ['已熟練', '熟悉', '已學'])}</div>
+      <div class="seg mb-3" role="group" aria-label="總進度的範圍">${STATS_SCOPES.map(([k, l]) => `<button type="button" aria-pressed="${statsScope === k}" data-act="stats-scope" data-scope="${k}">${l}</button>`).join('')}</div>
+      <div class="gauges">${gauges.map(([k, title]) => gaugeHtml(progressTotals(k, statsScope), title, k === 'g' || k === 'lr' ? ['熟練', '熟悉', '初識'] : ['已熟練', '熟悉', '已學'])).join('')}</div>
     </div>`;
 
   const weak = weakPoints();
@@ -8031,6 +8059,7 @@ function attachChartTips(root) {
 }
 
 Object.assign(ACTIONS, {
+  'stats-scope': (el) => { statsScope = el.dataset.scope; route(); },
   'stats-drill': (el) => {
     const items = REG.grammar.filter(g => g.pt === el.dataset.pt);
     if (!items.length) return;
