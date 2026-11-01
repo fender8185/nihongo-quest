@@ -969,12 +969,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.32';   // keep equal to the version in sw.js CACHE ('nq-v1.0.32'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.32.1';   // keep equal to the version in sw.js CACHE ('nq-v1.0.32.1'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.32.1', date: '2026-11-01', items: [
+    '修正：漢字卡片例詞發音按鈕改接漢字單字本體與鎖定讀音，雲端音檔收集器與離線下載清單補齊全數漢字例詞。'
+  ] },
   { v: '1.0.32', date: '2026-11-01', items: [
     '新題一次一級：入門＋N5 的單字、漢字、文法都學過一次，N4 才開始。新帳號在 N5 期間每天大約單字 10、文法 4、漢字 1 題（原本 8／6／1）；學完 N5 的隔天，N4 的單字、文法、漢字一起開始。',
     'N5 的文法學完、單字或漢字還沒學完時，新文法先停，名額給單字和漢字；今日頁和課程頁會寫出還差多少，例如「新文法先停：N5 單字還剩 38 個，學完就進第 13–14 週・可能形。」。已經進到 N4 單元、N5 單字還沒學完的人也一樣，學完會接著自己的單元。',
@@ -5867,7 +5870,7 @@ function vocabListResultsHtml(params, list = vocabListFiltered(params)) {
       <td><div>${esc(v.m)}</div><div class="tiny muted">${esc(v.builtin ? `${v.lv}・${posLabel(v.p)}` : (v.posLabel || '自訂'))}</div></td>
       <td class="nowrap small">${r ? `${srsDots(r.b)}<div class="tiny muted">${dueLabel(r, v.key).replace('複習', '')}</div>` : '<span class="muted">未學</span>'}</td>
       <td class="nowrap" style="text-align:right">
-        <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(jaPlain(v.w))}" data-reading="${esc(v.r && !HAS_KANJI.test(v.r) ? v.r : '')}" aria-label="發音">${icon('speaker')}</button>
+        <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(jaPlain(v.w))}" data-reading="${esc(v.r && !HAS_KANJI.test(v.r) && v.r !== jaPlain(v.w) ? v.r : '')}" aria-label="發音">${icon('speaker')}</button>
         ${r && r.known ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-unknown" data-key="${esc(v.key)}" title="取消「我會了」，回到正常排程">取消熟練</button>` : (r && srsLevelLabel(r, v.key) === '已熟練' ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="這個字已經會了：直接標成五顆，之後排進五顆的複習">我會了</button>`)}
         <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-remove" data-key="${esc(v.key)}">${v.builtin ? '隱藏' : '刪除'}</button>
       </td></tr>`;
@@ -7871,7 +7874,7 @@ function kanjiDetailHtml(k) {
         <div class="small muted mt-2">${k.lv}・${r ? `${srsLevelLabel(r)}・${dueLabel(r, k.key)}` : '還沒學'}</div>
       </div>
     </div>
-    <div class="list mt-3">${(k.ex || []).map(([w, rd, m]) => `<div class="list-item"><span class="jp" style="font-size:18px">${rubyHtml(w, rd)}</span><span class="small muted grow">${esc(m)}</span><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(rd)}" aria-label="發音">${icon('speaker')}</button></div>`).join('')}</div>
+    <div class="list mt-3">${(k.ex || []).map(([w, rd, m]) => `<div class="list-item"><span class="jp" style="font-size:18px">${rubyHtml(w, rd)}</span><span class="small muted grow">${esc(m)}</span><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(jaPlain(w))}" data-reading="${esc(rd && !HAS_KANJI.test(rd) && rd !== jaPlain(w) ? rd : '')}" aria-label="發音">${icon('speaker')}</button></div>`).join('')}</div>
     ${looks.length ? `<div class="small muted mt-3">容易混淆的字</div><div class="row-wrap mt-1">${looks.map(x => `<button type="button" class="btn btn-sm" data-act="kanji-open" data-k="${esc(x.k)}"><span class="jp" style="font-size:18px">${esc(x.k)}</span><span class="small muted">${esc(x.m)}</span></button>`).join('')}</div>` : ''}`;
 }
 
@@ -8661,9 +8664,18 @@ async function fetchEngineBlob(cfg, text, gender, opt = {}) {
   const spoken = opt.reading || cfg.kanaReadings === 'off' ? text : kanaReadings(text);
   const ssml = cloudAudioSsml(text, opt);
   if (cfg.engine === 'cloud') {
-    const path = await cloudAudioPath(text, gender, opt);
+    let path = await cloudAudioPath(text, gender, opt);
     if (cloudMisses.has(path)) return null;
-    const { resp } = await fetchCloudClip(path);
+    let { resp } = await fetchCloudClip(path);
+    if (!resp.ok && opt.reading && opt.reading !== text) {
+      const fallbackPath = await cloudAudioPath(opt.reading, gender);
+      if (!cloudMisses.has(fallbackPath)) {
+        try {
+          const fb = await fetchCloudClip(fallbackPath);
+          if (fb && fb.resp && fb.resp.ok) { resp = fb.resp; path = fallbackPath; }
+        } catch (e) { /* ignore */ }
+      }
+    }
     if (!resp.ok) { cloudMisses.add(path); noteCloudMiss(text, gender, opt); return null; }   // not generated: the browser voice reads it
     return resp.blob();
   }
@@ -8872,7 +8884,16 @@ function audioCollector() {
       const fmts = (x.t || 'choice') === 'choice' && x.op ? grammarFormats(x) : [];
       (fmts.length ? fmts.map(f => makeGrammarQuestion(x, { forceFmt: f })) : [makeQuestion(x, {})]).forEach(addQ);
       addZh(x.zh);
-    } else if (x.kind === 'k') { addQ(makeQuestion(x, {})); (x.ex || []).forEach(e => add(e[1])); addZh(x.m); (x.ex || []).forEach(e => addZh(e[2])); }   // a reading question reads any of the example words
+    } else if (x.kind === 'k') {
+      addQ(makeQuestion(x, {}));
+      (x.ex || []).forEach(e => {
+        const w = jaPlain(e[0]); const rd = e[1];
+        const pin = rd && !HAS_KANJI.test(rd) && rd !== w ? rd : '';
+        add(w, '', pin); add(w); if (rd) add(rd);
+      });
+      addZh(x.m);
+      (x.ex || []).forEach(e => addZh(e[2]));
+    }   // a reading question reads any of the example words
     else if (x.kind === 'l' || x.kind === 'r') addQ(makeQuestion(x, {}));
   };
   const lesson = (uid) => { const L = (DATA.LESSONS || {})[uid]; ((L && L.sections) || []).forEach(sec => (sec.ex || []).forEach(x => { if (x && x.jp) add(x.jp); })); };
