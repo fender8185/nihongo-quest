@@ -969,12 +969,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.32.2';   // keep equal to the version in sw.js CACHE ('nq-v1.0.32.2'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.32.3';   // keep equal to the version in sw.js CACHE ('nq-v1.0.32.3'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.32.3', date: '2026-11-01', items: [
+    '修正：語音 SSML 生成規則，數字後方之萬／萬元（如 100 萬元）在語音中保持連續數字純文字，避免數詞標籤切斷導致 Google 數字正規化模組崩潰產出靜音。'
+  ] },
   { v: '1.0.32.2', date: '2026-11-01', items: [
     '修正：語音 SSML 生成規則，複合詞（如一か月）與量詞（如 100 萬元）保留完整詞彙，避免 Google 語音模型中斷產生靜音空檔；播放器增加小於 2500 bytes 靜音檔案自動攔截並改用內建語音發音。'
   ] },
@@ -8446,10 +8449,17 @@ function readingSegments(text) {
   const out = [];
   for (let i = 0; i < raw.length; i++) {
     const cur = raw[i];
-    if (typeof cur === 'object' && i + 2 < raw.length && typeof raw[i + 1] === 'string' && typeof raw[i + 2] === 'object') {
-      const combined = cur.k + raw[i + 1] + raw[i + 2].k;
-      const dictR = FURI.get(combined);
-      if (dictR) { out.push({ k: combined, r: dictR }); i += 2; continue; }
+    if (typeof cur === 'object') {
+      if (i + 2 < raw.length && typeof raw[i + 1] === 'string' && typeof raw[i + 2] === 'object') {
+        const combined = cur.k + raw[i + 1] + raw[i + 2].k;
+        const dictR = FURI.get(combined);
+        if (dictR) { out.push({ k: combined, r: dictR }); i += 2; continue; }
+      }
+      const prev = out[out.length - 1];
+      if (typeof prev === 'string' && /[0-9]$/.test(prev) && (cur.k === '万円' || cur.k === '万')) {
+        out[out.length - 1] = prev + cur.k;
+        continue;
+      }
     }
     out.push(cur);
   }
