@@ -969,12 +969,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.32.1';   // keep equal to the version in sw.js CACHE ('nq-v1.0.32.1'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.32.2';   // keep equal to the version in sw.js CACHE ('nq-v1.0.32.2'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.32.2', date: '2026-11-01', items: [
+    '修正：語音 SSML 生成規則，複合詞（如一か月）與量詞（如 100 萬元）保留完整詞彙，避免 Google 語音模型中斷產生靜音空檔；播放器增加小於 2500 bytes 靜音檔案自動攔截並改用內建語音發音。'
+  ] },
   { v: '1.0.32.1', date: '2026-11-01', items: [
     '修正：漢字卡片例詞發音按鈕改接漢字單字本體與鎖定讀音，雲端音檔收集器與離線下載清單補齊全數漢字例詞。'
   ] },
@@ -2150,7 +2153,7 @@ function rubyHtml(word, reading, cls) {
 // irregular ones (1人, 2人, dates) are left bare.
 const COUNTER_READ = {
   '時半': 'じはん', '時間': 'じかん', '時': 'じ', '円': 'えん', '年間': 'ねんかん', '年': 'ねん', '回目': 'かいめ', '回': 'かい', '枚': 'まい', '歳': 'さい', '月': 'がつ',
-  '週間': 'しゅうかん', '個': 'こ', '冊': 'さつ', '台': 'だい', '度': 'ど', '番線': 'ばんせん', '番目': 'ばんめ', '番': 'ばん', '号': 'ごう', '倍': 'ばい', '万': 'まん', '点': 'てん',
+  '週間': 'しゅうかん', '個': 'こ', '冊': 'さつ', '台': 'だい', '度': 'ど', '番線': 'ばんせん', '番目': 'ばんめ', '番': 'ばん', '号': 'ごう', '倍': 'ばい', '万円': 'まんえん', '万': 'まん', '点': 'てん',
   '分間': (d) => (/[134680]$/.test(d) ? 'ぷんかん' : 'ふんかん'),
   '分': (d) => (/[134680]$/.test(d) ? 'ぷん' : 'ふん'),
   '本': (d) => (/[1680]$/.test(d) ? 'ぽん' : /3$/.test(d) ? 'ぼん' : 'ほん'),
@@ -8438,8 +8441,18 @@ const UNESC = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': 
 function unesc(s) { return String(s || '').replace(/&(amp|lt|gt|quot|#39);/g, (m) => UNESC[m]); }
 function readingSegments(text) {
   const html = furi(text);
-  const out = []; const re = /<ruby[^>]*>([^<]+)<rt>([^<]+)<\/rt><\/ruby>|<[^>]+>|([^<]+)/g; let m;
-  while ((m = re.exec(html))) { if (m[1] !== undefined) out.push({ k: unesc(m[1]), r: unesc(m[2]) }); else if (m[3]) out.push(unesc(m[3])); }
+  const raw = []; const re = /<ruby[^>]*>([^<]+)<rt>([^<]+)<\/rt><\/ruby>|<[^>]+>|([^<]+)/g; let m;
+  while ((m = re.exec(html))) { if (m[1] !== undefined) raw.push({ k: unesc(m[1]), r: unesc(m[2]) }); else if (m[3]) raw.push(unesc(m[3])); }
+  const out = [];
+  for (let i = 0; i < raw.length; i++) {
+    const cur = raw[i];
+    if (typeof cur === 'object' && i + 2 < raw.length && typeof raw[i + 1] === 'string' && typeof raw[i + 2] === 'object') {
+      const combined = cur.k + raw[i + 1] + raw[i + 2].k;
+      const dictR = FURI.get(combined);
+      if (dictR) { out.push({ k: combined, r: dictR }); i += 2; continue; }
+    }
+    out.push(cur);
+  }
   return out;
 }
 function kanaReadings(text) { return readingSegments(text).map(x => typeof x === 'string' ? x : x.r).join(''); }
@@ -8677,7 +8690,9 @@ async function fetchEngineBlob(cfg, text, gender, opt = {}) {
       }
     }
     if (!resp.ok) { cloudMisses.add(path); noteCloudMiss(text, gender, opt); return null; }   // not generated: the browser voice reads it
-    return resp.blob();
+    const blob = await resp.blob();
+    if (blob.size <= 2500) { cloudMisses.add(path); noteCloudMiss(text, gender, opt); return null; }
+    return blob;
   }
   if (cfg.engine === 'google_tts') {
     const key = (cfg.googleKey || '').trim();
@@ -8936,8 +8951,9 @@ async function fillAudioCache(paths, run, workers) {
       const p = todo[i++];
       try {
         const { resp: r, url } = await fetchCloudClip(p);
-        if (r.ok) { await cache.put(url, r); run.done++; }
-        else if (r.status === 400 || r.status === 404) { run.missing++; cloudMisses.add(p); }   // not generated yet: the player goes straight to the device voice
+        const cl = parseInt((r.headers && r.headers.get('content-length')) || '0', 10);
+        if (r.ok && cl > 2500) { await cache.put(url, r); run.done++; }
+        else if (r.status === 400 || r.status === 404 || (r.ok && cl <= 2500)) { run.missing++; cloudMisses.add(p); }   // not generated yet: the player goes straight to the device voice
         else run.failed++;
       } catch (e) { run.failed++; if (e && (e.name === 'TypeError' || e.name === 'QuotaExceededError')) run.stop = true; }   // a rejected fetch is a TypeError in every browser
       if (run.onProgress && (run.done + run.missing + run.failed) % 20 === 0) run.onProgress();
@@ -9041,6 +9057,7 @@ async function cloudGenStart(googleKey, r2) {
         const t = todo[i++];
         try {
           const blob = await fetchEngineBlob(cfg, t.x.text, t.x.gender, { rate: 1, reading: t.x.reading || '', lang: t.x.lang || '' });
+          if (!blob || blob.size <= 2500) throw new Error('語音生成內容為空或靜音');
           await r2Put(t.path, blob, r2);
           CLOUD_GEN.done++;
         } catch (e) {
