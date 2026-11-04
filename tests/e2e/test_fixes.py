@@ -1773,7 +1773,7 @@ def test_offline_audio_keeps_the_japanese_clips_of_todays_practice(b):
       const texts = await audioPrefetchTexts(); const has = (text) => texts.some(e => e.text === text);
       const r = { due: keys.includes('v:n5a-002') && keys.includes('g:m1-01'), later: keys.includes('v:n5a-001'),
         v: fresh(items, 'v'), g: fresh(items, 'g'), k: fresh(items, 'k'), l: fresh(items, 'l'), a: items.filter(x => x.kind === 'a').length,
-        ex: has('明日は何をしますか。'), laterEx: has('今日は何曜日ですか。'), zh: texts.some(e => e.lang === 'zh') };
+        ex: has('あしたは何をしますか。'), laterEx: has('きょうは何曜日ですか。'),   /* 明日 and 今日 are homographs: their examples are spoken as the card reads them (1.0.33) */ zh: texts.some(e => e.lang === 'zh') };
       const kc = audioCollector(); kc.item(REG.byKey.get('k:月')); r.kanji = kc.list().filter(e => !e.lang).map(e => e.text).sort();
       r.split = dailyPlan().split; state.settings.loadCap = 50; delete state.today.plan; r.v50 = fresh(audioPrefetchItems(), 'v');
       state.stage = 'pre'; state.settings.loadCap = 100; state.srs = {}; DAILY_CACHE = null;
