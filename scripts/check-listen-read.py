@@ -4,7 +4,7 @@ Usage: python3 scripts/check-listen-read.py FILE.json [PORT]
 FILE.json: {"listen": [ {t, lv, u, script|line|scene, q?, op, a, zh?, why}, … ], "read": [ {lv, u, kind, passage, q, op, a, zh, why}, … ]}
 (no ids: the merge assigns them). Each item must: have the fields its type needs; be of its unit's level (a unit of a curriculum
 outline counts before it is merged); keep the answer among distinct options (dialog/read 4, resp/scene 3); get furigana on every
-kanji (so only words the app knows); use no word above its level (1.0.33: a warning for N5/N4, a problem from N3 up); not repeat a
+kanji (so only words the app knows); use no word above its level (1.0.33: a warning for N5/N4, a problem from N3 up; a surname before さん is not one, 1.0.34); not repeat a
 text already in the bank or elsewhere in the file. N3 kinds: a listening dialog may be kind 'gist' (概要理解) or 'point' (ポイント理解), a reading 'long'
 (長文, 500+ characters) or 'info' (情報検索).
 Prints one line per problem and a summary; exit code 1 when anything is wrong (warnings alone keep 0)."""
@@ -26,7 +26,9 @@ JS = r"""((c, OUTLINE) => { const problems = [], warnings = [];
   const unitLv = (u) => { const x = DATA.UNITS.find(z => z.id === u); return x ? courseLevel(x.lv) : (OUTLINE[u] || null); };
   const KANJI = /[一-鿿々〆ヶ]+/g;
   const bare = (text) => (furi(String(text || '')).replace(/<ruby>.*?<\/ruby>/g, '').match(KANJI) || []);
-  const bases = (text) => { const out = []; const re = /<ruby>([^<]+)<rt>/g; let m; const h = furi(String(text || '')); while ((m = re.exec(h))) out.push(m[1]); return out; };
+  // the ruby bases (the words the furigana found); one right before さん／くん／様／先生 is a surname (林さん), not the word 林 (1.0.34)
+  const NAME_AFTER = /^(?:さん|くん|君|ちゃん|さま|様|先生|氏)/;
+  const bases = (text) => { const out = []; const re = /<ruby[^>]*>([^<]+)<rt>[^<]*<\/rt><\/ruby>/g; let m; const h = furi(String(text || '')); while ((m = re.exec(h))) { if (!NAME_AFTER.test(h.slice(re.lastIndex, re.lastIndex + 60).replace(/<[^>]+>/g, ''))) out.push(m[1]); } return out; };
   const seen = new Map();
   (DATA.LISTEN || []).forEach(x => seen.set(jaPlain(x.script || x.line || x.scene || ''), x.id));
   (DATA.READ || []).forEach(x => seen.set(jaPlain(x.passage || ''), x.id));

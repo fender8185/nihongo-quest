@@ -295,6 +295,25 @@ def test_check_listen_read_script_follows_the_items_level(b):
     assert has('listen#4 ', 'gist is a dialog'), lines
     assert has('read#0 ', 'long passage'), lines
 
+# 1.0.34: a word before さん／くん／様／先生 is a surname (林さん はやし), not the word 林 (N4) an N5 text may not use; the word itself still counts
+def test_checkers_take_a_word_before_san_as_a_name(b):
+    from cdp import free_port
+    run = lambda script, name, fx: subprocess.run([sys.executable, '-I', os.path.join(ROOT, 'scripts', script), _fixture(name, fx), str(free_port())], capture_output=True, text=True).stdout.splitlines()
+    dlg = lambda line: {'t': 'dialog', 'lv': 'N5', 'u': 'm2', 'script': '男：' + line + '\n女：そうですね。', 'q': '男の人は何をしますか。', 'op': ['駅まで歩く', '家に帰る', '本を読む', '電話をする'], 'a': '駅まで歩く', 'zh': '男：……', 'why': '男生說要走路。'}
+    lr = run('check-listen-read.py', 'names-listen-read', {'listen': [dlg('林さんは毎朝、駅まで歩きます。'), dlg('毎朝、林の中を歩きます。')], 'read': []})
+    ctx = lambda id_, jp: {'id': id_, 'lv': 'N5', 'm': 'S1-M3', 'jp': jp, 'op': ['部屋', '時計', '電話', '駅'], 'a': '部屋', 'why': '房間很大。'}
+    ex = run('check-exam.py', 'names-exam', [ctx('cm_n5_t1', '林さんの（　）は広いです。'), ctx('cm_n5_t2', '林の中の（　）は広いです。')])
+    word = {'w': '時計', 'r': 'とけい', 'm': '鐘錶', 'p': 'n', 'lv': 'N5', 'c': '居家生活', 'ex': '林さんの{時計}です。', 'exZh': '林先生的鐘。', 'ex2': '林の中に{時計}があります。', 'exZh2': '樹林裡有鐘。'}
+    vo = run('check-vocab.py', 'names-vocab', {'words': [word]})
+    said = lambda lines, label: [l for l in lines if label in l and '林' in l]
+    assert said(lr, 'listen#0 ') == [] and said(lr, 'listen#1 ') != [], lr
+    assert said(ex, 'cm_n5_t1 ') == [] and said(ex, 'cm_n5_t2 ') != [], ex
+    assert not [l for l in vo if 'ex uses 林' in l] and [l for l in vo if 'ex2 uses 林' in l], vo
+
+def _fixture(name, data):
+    path = os.path.join(ROOT, '.superpowers', f'check-{name}-fixture.json'); os.makedirs(os.path.dirname(path), exist_ok=True)
+    json.dump(data, open(path, 'w', encoding='utf-8'), ensure_ascii=False); return path
+
 def test_n3_listening_and_reading_items(b):   # 1.0.33 part four (spec §5.1): N3 listening 150–250 and reading 80–120, each on an N3 unit
     js = """(() => { const units = DATA.UNITS.filter(u => u.lv === 'N3').map(u => u.id); const L = DATA.LISTEN.filter(x => x.lv === 'N3'), R = DATA.READ.filter(x => x.lv === 'N3');
       const bare = (t) => (furi(String(t || '')).replace(/<ruby[^>]*>.*?<\\/ruby>/g, '').match(/[一-鿿々]+/g) || []);

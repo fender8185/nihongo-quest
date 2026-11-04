@@ -5,7 +5,7 @@ FILE.json: a JSON array of items {id, lv, m, …, why}. Each item's 大題 m mus
 written by hand: context (jp with one （　）, 4 op, a), paraphrase (jp with the part to restate between two ＿＿, 4 op, a),
 usage (word, 4 op sentences, a), textgrammar (passage with blanks （１）…, qs [{op, a}] one a blank) or passage (passage, qs
 [{q, op, a}]); listening task/gist (script, q, 4 op), scene (scene, 3 op) or resp (line, 3 op), refused where that level's 大題 takes
-its practice items instead (N3's: check-listen-read.py). No word above the item's level (a problem from N3 up, a warning below).
+its practice items instead (N3's: check-listen-read.py). No word above the item's level (a problem from N3 up, a warning below; a surname before さん is not one).
 Checks, with the app's own code: id new and unique; the unit builds (examUnit) with 4 distinct options and the answer among them;
 every kanji has furigana; why is there and has no banned words. Prints one line per problem; exit code 1 when anything fails."""
 import json, os, subprocess, sys, time
@@ -19,7 +19,9 @@ time.sleep(0.8)
 JS = r"""((cands) => { const bad = [], warn = []; const seen = new Set(); const have = new Set(DATA.EXAM.map(x => x.id));
   const idx = (L) => ALL_LEVELS.indexOf(L); const LV = new Map();   // a word's lowest level, as check-listen-read.py
   REG.vocab.filter(v => v.builtin).forEach(v => { const L = courseLevel(v.lv); [v.w, jaPlain(v.w)].forEach(w => { if (!LV.has(w) || idx(L) < idx(LV.get(w))) LV.set(w, L); }); });
-  const bases = (t) => { const out = []; const re = /<ruby[^>]*>([^<]+)<rt>/g; let m; const h = furi(String(t || '')); while ((m = re.exec(h))) out.push(m[1]); return out; };
+  // a ruby base right before さん／くん／様／先生 is a surname (林さん), not the word 林 (1.0.34, as check-listen-read.py)
+  const NAME_AFTER = /^(?:さん|くん|君|ちゃん|さま|様|先生|氏)/;
+  const bases = (t) => { const out = []; const re = /<ruby[^>]*>([^<]+)<rt>[^<]*<\/rt><\/ruby>/g; let m; const h = furi(String(t || '')); while ((m = re.exec(h))) { if (!NAME_AFTER.test(h.slice(re.lastIndex, re.lastIndex + 60).replace(/<[^>]+>/g, ''))) out.push(m[1]); } return out; };
   const bare = (t) => (furi(String(t || '')).replace(/<ruby[^>]*>.*?<\/ruby>/g, '').match(/[一-鿿々〆ヶ]+/g) || []);
   const FW = '１２３４５６７８９';
   cands.forEach((x, i) => {
