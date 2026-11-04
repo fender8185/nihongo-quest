@@ -216,6 +216,25 @@ def test_houses_are_counted_ken_and_gen(b):   # 軒 (N3) after a number: 2軒 �
     js = "JSON.stringify(['2軒', '3軒', '5軒'].map(t => furi(t).replace(/<ruby[^>]*>.*?<rt>(.*?)<\\/rt><\\/ruby>/g, '$1')))"
     assert json.loads(ev(b, js)) == ['2けん', '3げん', '5けん']
 
+# 1.0.34: a day after a number read ひ (the word 日); now にち, or the whole date's own word (3日 みっか) over the number and 日
+def test_days_after_a_number_read_nichi_or_the_whole_date(b):
+    texts = ['12日', '10月3日', '毎月1日', '1日に3回', '3日間', '12日間', '20日', '14日', '24日', '3日目', '3日前', '１０日']
+    js = "JSON.stringify(%s.map(t => furi(t).replace(/<ruby[^>]*>(.*?)<rt>(.*?)<\\/rt><\\/ruby>/g, '[$1:$2]')).concat([kanaReadings('10月3日'), ssmlReadings('10月3日')]))" % json.dumps(texts, ensure_ascii=False)
+    r = json.loads(ev(b, js))
+    assert r == ['12[日:にち]', '10[月:がつ][3日:みっか]', '[毎月:まいつき][1日:ついたち]', '[1日:いちにち]に3[回:かい]', '[3日間:みっかかん]', '12[日間:にちかん]',
+        '[20日:はつか]', '[14日:じゅうよっか]', '[24日:にじゅうよっか]', '[3日目:みっかめ]', '[3日:みっか][前:まえ]', '[１０日:とおか]',
+        '10がつみっか', '<speak>10<sub alias="がつ">月</sub><sub alias="みっか">3日</sub></speak>'], r
+
+# a bracketed date (15日[じゅうごにち]) was spoken じゅうご + じゅうごにち, its reading sitting on 日 alone; （日）（月） after a date read ひ, つき
+def test_dates_in_texts_are_spoken_once_and_weekday_marks_read_as_weekdays(b):
+    js = """(() => { const WD = { 月: 'げつ', 火: 'か', 水: 'すい', 木: 'もく', 金: 'きん', 土: 'ど', 日: 'にち' }; const twice = [], wrong = [];
+      REG.listen.concat(REG.read, DATA.EXAM).forEach(x => [x.script, x.passage, x.q, x.line, x.jp].concat(x.op || []).filter(t => typeof t === 'string').forEach(t => {
+        if (/[0-9０-９]日[間目]?\\[/.test(t)) twice.push(x.id);
+        const h = furi(t).replace(/<ruby[^>]*>(.*?)<rt>(.*?)<\\/rt><\\/ruby>/g, '[$1:$2]');
+        (h.match(/（(\\[[月火水木金土日]:[ぁ-ゖ]+\\]|[月火水木金土日])）/g) || []).forEach(m => { const k = m[1] === '[' ? m[2] : m[1]; if (m !== '（[' + k + ':' + WD[k] + ']）') wrong.push(x.id + m); }); }));
+      return JSON.stringify({ twice: [...new Set(twice)], wrong }); })()"""
+    r = json.loads(ev(b, js)); assert r == {'twice': [], 'wrong': []}, r
+
 def test_every_n3_example_shows_its_word_with_the_cards_reading(b):
     js = "(() => { " + HIRA + """ const bad = [];
       REG.vocab.filter(v => v.builtin && v.lv === 'N3').forEach(v => [v.ex, v.ex2].forEach(e => {
