@@ -980,7 +980,8 @@ const CHANGELOG = [
     '修正：N3 閱讀裡標了讀音的日期（15日、7日）朗讀時數字會念兩次；日期後面的（日）（月）改念 にち、げつ。',
     '讀音修正：名詞後面接助詞時不再被當成動詞的變化：空から 的 空 唸 そら（原本照 空かない 標 あ）、この曲が 的 曲 唸 きょく、机の上が 的 上 唸 うえ。',
     '舊的 N4 聽力、閱讀和模擬考題裡沒有振假名的漢字都補上了（午前中、携帯、洗濯物、助かります、山口さん……，約 60 題），單字例句和文法題裡同樣的字也一起有了；3年生 唸 さんねんせい（原本標成 なま），1部 唸 いちぶ。',
-    '還沒學到的級別不會出現在題目旁邊：錯的選項（選字、漢字寫法、中翻日、例句填空、配對）只從已經學到的級別出，提前學的字照它自己的級別；主題播放的漢字卡也只到學到的級別（學 N5 時只有 N5 的漢字卡）。單字卡上列的漢字照舊。'
+    '還沒學到的級別不會出現在題目旁邊：錯的選項（選字、漢字寫法、中翻日、例句填空、配對）只從已經學到的級別出，提前學的字照它自己的級別；主題播放的漢字卡也只到學到的級別（學 N5 時只有 N5 的漢字卡）。單字卡上列的漢字照舊。',
+    '拿掉自訂字卡：單字頁的「匯入與新增」（Anki、文字檔、手動新增、AI 產生字卡）、字卡和單字表的「自訂／匯入」牌組、設定裡的「每日練習包含自訂字卡」、自訂句子題型都刪掉；已經有的自訂和匯入字卡，連同它們的學習紀錄、錯題和 Anki 的音檔圖片，更新後一起清掉。AI 出的文法題和模擬考題照舊。'
   ] },
   { v: '1.0.33', date: '2026-11-04', items: [
     'N3 全部上線。N4 的單字、文法、漢字都學過一次之後，N3 才開始（跟 N5 到 N4 一樣，一次一級）：',
@@ -990,7 +991,6 @@ const CHANGELOG = [
     '模擬考可以選 N3：試卷照官方的大題和題數，時間 30／70／40 分；計分是言語知識（文字・語彙・文法）、読解、聴解三科各 60 分，總分 95 及格、每科至少 19 分。',
     '考試目標可以選 N3。課程進度卡顯示到考試目標那一級；已經學到超過目標時，顯示到正在學的那一級。',
     '同一個寫法有兩個讀音的字（今日 こんにち、空 から、行く ゆく……），例句的朗讀照字卡顯示的讀音念（原本照另一個讀音念）。例句裡標好的讀音，朗讀時也照著念。',
-    'N3 漢字加進漢字表以後，N5、N4 的主題播放也會出現它們的漢字卡（例如 お願いします 的「願」）。',
     '讀音修正：何ですか（なん）、この辺り、真っ赤、嫌う、交通方式的 何で（なに）、他の人、料理の数、時間表的 土・日 和星期、3軒（げん）。',
     '補上 16 個跟原本的字寫法一樣、讀音不同的字：四（し）、七（しち）、九（く）、何（なん）、私（わたくし）、日本（にっぽん）、明日（あす）、開く（ひらく）……。這些字的字卡和例句照自己的讀音標振假名。',
     '讀音修正：止まる 的「止まりました」「止まって」不再標成 や，車を止める 標 と，降りる、細かい 補上正確的讀音。'
@@ -1121,7 +1121,7 @@ const CHANGELOG = [
     'N4 漢字頁：只出現在其他等級單字裡的漢字（兄、朝、青…）歸到那個主題並標明「入門的字／N5 的字」，不再堆在「其他」；N4 等級頁開啟變快。'
   ] },
   { v: '1.0.9', date: '2026-10-29', items: [
-    '單字頁改版：第一層改成入門／N5／N4 三個等級分頁，打開時直接落在你目前的等級；每頁有進度環、「練這個等級」，底下是本級的主題卡（卡上列出該主題會碰到的漢字，點了看說明）和本級漢字依主題分組的方格。原本的「主題」「漢字」分頁併進來，字卡、單字表、匯入照舊。',
+    '單字頁改版：第一層改成入門／N5／N4 三個等級分頁，打開時直接落在你目前的等級；每頁有進度環、「練這個等級」，底下是本級的主題卡（卡上列出該主題會碰到的漢字，點了看說明）和本級漢字依主題分組的方格。原本的「主題」「漢字」分頁併進來，字卡、單字表照舊。',
     '入門頁多一張五十音表，每個假名依熟練度上色，按每行前面的 ▶ 只練那一行。手機上五十音表和漢字區預設收合，主題卡先看到。',
     '修正：入門的「問候」主題不再被主題遷移改名；はい／ええ／そうです、いいえ／ちがいます 這類同義回應不再互當單字題的干擾項；聽力「只念選項」模式的播放鍵改成帶讀音去念（台湾 這類字典外的字之前會念錯）。'
   ] },
@@ -1166,7 +1166,7 @@ const CHANGELOG = [
     '每日練習的規則：每一題不是今天到期的複習就是今天的新內容。每天負荷上限（預設 100）只壓新題，到期複習永遠全出。答錯的隔天起第 1、3、7 天各複習一次，三次都對才離開錯題本；答對的越熟出現得越少，間隔還會依最近到期複習的正確率自動調整（不到 80% 縮短、超過 92% 拉長）。新文法照講義段落順序出，單元文法全部出過就自動推進到下一單元；新單字從兩條主題線交錯供應；變化練習以形態為單位排程，動詞每次隨機換。做完顯示「今天完成了」，可「加練」明後天到期的複習。',
     '練習：單字有看字選意思、中翻日、例句填空、讀音、寫法、聽音選意思、假名拼字、配對；文法有填空、句意、真的排序、活用拼寫（熟了之後不給選項）；另有假名（看字選音、聽音選字、平片對照）、漢字、聽力（整個級別抽題）、閱讀（兩者答對後 30／90／180 天才再出，答錯一週後再出、不給再練一次）。新字先看預習卡再考；答錯幾題後換一種格式「再練一次」，不寫排程；按「手滑，不算」可撤銷；單字可按「我會了」直接標熟練。手機上作答只有「下一題」固定在底部，畫面避開瀏海、不能縮放。',
     '入門（PRE_N5）：假名辨識、入門單字和第 0 週的 20 題基本句型（假名門檻過了以後每天幾題），都看過、最近正確率到 80% 就自動進第 1 週；課程：18 個單元（每單元約兩週）的講義，加上「第 0 週：開始之前」（假名、最基本的句型、品詞、動詞的形、助詞、數量詞；第 2–4 節有練習題）；可依程度選起點。文法考點整併成 288 個（第 0 週另有 5 個），每個考點至少 3 題。',
-    '單字：1759 個內建單字（入門 59／N5 914／N4 786，含敬語、名詞＋する合併卡），N5 以上每字兩句例句；單字頁先分入門／N5／N4，每級列主題（卡上有該主題的漢字）與漢字，每個主題有已學／熟悉／熟練三段進度條，可看字表、翻字卡、練習或播放字卡；入門頁有依熟練度上色的五十音表（手機上平假名／片假名切換、一排五個，點字發音）；N4 單字在 N5 學過一次後開放。漢字 342 個另有讀音與字義題。自訂字卡可匯入。',
+    '單字：1759 個內建單字（入門 59／N5 914／N4 786，含敬語、名詞＋する合併卡），N5 以上每字兩句例句；單字頁先分入門／N5／N4，每級列主題（卡上有該主題的漢字）與漢字，每個主題有已學／熟悉／熟練三段進度條，可看字表、翻字卡、練習或播放字卡；入門頁有依熟練度上色的五十音表（手機上平假名／片假名切換、一排五個，點字發音）；N4 單字在 N5 學過一次後開放。漢字 342 個另有讀音與字義題。',
     '聽一輪：循環朗讀，不寫排程、不算題數。來源是錯題本（單字→中文→單字→例句→例句中文；文法整句→中文→整句，只唸有中文且答案標得進句子的題）或單字主題（含自動收錄「已學但還沒熟練」的「初識單詞」，上次的選擇會記住）。膠囊：字｜文、隨機、一次／兩次、速度 0.8／1／1.3。放大圖示進全螢幕：直立手機整頁轉成橫的，日文在上、中文在下、例句最下，字依螢幕放到最大；✕ 回首頁播放不斷。雲端語音時鎖定畫面可控制，鎖屏後持續播放（句間播靜音讓播放器不中斷）。',
     '錯題本：答錯的題目自動收進來，可依類別篩選、排序或依文法考點分組直接練；「快速過一輪」翻卡用忘了／記得回寫排程；題目達到「熟悉」就移到已掌握。',
     '模擬考：依 JLPT 三個科目與大題順序出題，同一份不重複，結束換算 180 分制；最上面有考試倒數、單元進度和依考試日期算的新題額度建議（可一鍵套用）。',
@@ -1207,8 +1207,6 @@ function uid(prefix) { return `${prefix}_${Date.now().toString(36)}_${Math.rando
 function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
 const HAS_KANJI = /[一-鿿々〆ヶ]/;
-const IS_KANA = /^[぀-ゟ゠-ヿー・]+$/;
-function isEnglishOnly(s) { return /[a-zA-Z]{2,}/.test(s || '') && !/[一-鿿぀-ヿ]/.test(s || ''); }
 function jaPlain(s) { return JConj.stripReading(s); }          // 来[こ]ない → 来ない (display/TTS)
 // ---- 活用題輸入模式: comparing what the learner typed or tiled against the conjugated answer ----
 // comparison key: no spaces, katakana → hiragana, a bracketed reading replaces the kanji run before it (来[こ]ない → こない)
@@ -1245,13 +1243,6 @@ function firstDiff(a, b) {
 function jaKana(s) { return String(s || '').replace(/[一-鿿々〆ヶ]+\[([ぁ-ゖー]+)\]/g, '$1'); } // for TTS readings
 // Vocab examples mark the target word with braces: 毎朝パンを{食べます}。
 function exPlain(ex) { return String(ex || '').replace(/[{}]/g, ''); }
-function markTarget(ex, w) {
-  ex = String(ex || '').trim();
-  if (!ex || !w || /\{[^}]+\}/.test(ex)) return ex;
-  const i = ex.indexOf(w);
-  return i < 0 ? ex : ex.slice(0, i) + '{' + w + '}' + ex.slice(i + w.length);
-}
-
 // ---------- default state ----------
 function defaultSettings() {
   return {
@@ -1259,7 +1250,6 @@ function defaultSettings() {
     showZh: true,
     furigana: true,
     speechRate: 1.0,
-    includeImported: 'words',  // off | words | all
     theme: 'dark',
     examDate: '2027-07-04',
     examLevel: 'N4',         /* level-literal-ok: default */ // the JLPT level the exam date is for: 學習分析 and the exam countdown project against it (1.0.26)
@@ -1281,7 +1271,6 @@ function defaultState() {
     currentUnit: 'm1',
     completedUnits: [],
     srs: {},
-    vocab: [],              // user / imported cards (built-in list lives in DATA.VOCAB)
     customGrammar: [],      // AI-generated or user-added grammar items
     customExam: [],
     hidden: [],             // ids of hidden built-in items
@@ -1329,7 +1318,7 @@ async function flushState() {
   }
   if (ok) storageOk = true;
   else {
-    if (storageOk) toast('瀏覽器儲存空間已滿，進度可能沒有存到。請到「設定 → 資料」下載備份，或清掉不用的匯入字卡。', 6000);
+    if (storageOk) toast('瀏覽器儲存空間已滿，進度可能沒有存到。請到「設定 → 資料」下載備份。', 6000);
     storageOk = false;
   }
   if (ok && STATE_CHANNEL) { try { STATE_CHANNEL.postMessage({ type: 'saved', updatedAt: snapshot.updatedAt }); } catch (e) { /* ignore */ } }
@@ -1351,10 +1340,11 @@ function normalizeState(s) {
   ['autoSpeak', 'listening', 'audioOptions', 'retention'].forEach(k => { delete out.settings[k]; });
   // 1.0.25: neither are 每組練習題數 (SESSION_SIZE) and 出題順序 (words and grammar always mixed)
   ['sessionSize', 'order'].forEach(k => { delete out.settings[k]; });
+  delete out.settings.includeImported;   // 1.0.34: 每日練習包含自訂字卡 went with the custom cards
   if (!courseLevels().includes(out.settings.examLevel)) out.settings.examLevel = DEFAULT_LEVEL;
   delete out.preDoneDismissed; delete out.preFinished;
   ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt', 'stageTests'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
-  ['vocab', 'customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
+  ['customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
   if (out.stage !== 'pre' && out.stage !== 'main') out.stage = 'main';   // 入門階段 (1.0.6); accounts from before it are in the main course
   if (typeof out.kanaKnown !== 'boolean') out.kanaKnown = false;
@@ -1394,6 +1384,13 @@ function normalizeState(s) {
     goneIds.forEach(id => { delete out.srs['g:' + id]; });
     out.mistakes = out.mistakes.filter(m => !(m && typeof m.key === 'string' && m.key.startsWith('g:') && goneIds.has(m.key.slice(2))));
   }
+  // 1.0.34: custom and imported cards (自訂字卡, the Anki and text import, AI 產生字卡) are gone, and so are their schedule and
+  // notebook entries: a word record of no built-in word (a merged one waits for its merge above). An entry written by hand stays.
+  delete out.vocab;
+  const words = new Set(DATA.VOCAB.map(v => 'v:' + v.id).concat(Object.keys(DATA.VOCAB_MERGED || {}).map(id => 'v:' + id)));
+  const gone = (k) => typeof k === 'string' && k.startsWith('v:') && !words.has(k);
+  Object.keys(out.srs).forEach(k => { if (gone(k)) delete out.srs[k]; });
+  out.mistakes = out.mistakes.filter(m => !(m && gone(m.key)));
   return out;
 }
 
@@ -1434,17 +1431,6 @@ const SEED_MISTAKES = { m_init_1: 2, m_init_2: 3, m_init_3: 1 };
 // the old version also pre-filled the first day with 2 vocab + 1 grammar under this note
 const SEED_FIRST_DAY = '啟動 9 個月 N4 本地端學習系統！目標每天點亮熱力圖！';
 
-function legacyPosCode(pos, w) {
-  const p = String(pos || '');
-  if (/サ變|サ変/.test(p) || /する$/.test(w || '')) return 'vs';
-  if (/一段/.test(p)) return 'v1';
-  if (/五段/.test(p)) return 'v5';
-  if (/い形容詞/.test(p)) return 'i';
-  if (/な形容詞/.test(p)) return 'na';
-  if (/副詞/.test(p)) return 'adv';
-  if (/名詞/.test(p)) return 'n';
-  return '';
-}
 function boxFromStats(correct, wrong) {
   correct = correct || 0; wrong = wrong || 0;
   if (correct <= 0 && wrong <= 0) return -1;
@@ -1486,29 +1472,14 @@ function migrateLegacy(old) {
   });
   if (removedDemo) notes.push(`移除了舊版首次開啟時自動產生的 ${removedDemo} 天示範打卡紀錄。`);
 
-  // vocab: built-in cards → SRS of the new list; custom / imported cards are kept
+  // vocab: built-in cards → SRS of the new list (the old version's own and imported cards are not kept since 1.0.34)
   const builtinIds = new Set(Object.keys(DATA.LEGACY_VOCAB_MAP || {}));
-  let keptCards = 0;
   (old.vocab || []).forEach(v => {
-    if (!v || !v.kanji) return;
+    if (!v || !v.kanji || !(builtinIds.has(v.id) || /^v\d+$/.test(v.id || ''))) return;
     const mastery = v.mastery || 0;
-    if (builtinIds.has(v.id) || /^v\d+$/.test(v.id || '')) {
-      const nid = DATA.LEGACY_VOCAB_MAP[v.id] || (DATA.VOCAB.find(x => x.w === v.kanji) || {}).id;
-      if (nid && mastery > 0) seedSrs('v:' + nid, clamp(mastery, 1, 4), mastery, mastery, 0);
-      return;
-    }
-    const card = {
-      id: v.id || uid('cust'), w: String(v.kanji).trim(), r: (v.kana && v.kana !== v.kanji) ? v.kana : '',
-      m: v.meaning || '', p: legacyPosCode(v.pos, v.kanji), lv: courseLevels().includes(v.level) ? v.level : 'CUSTOM',
-      ex: v.exJp && v.exJp !== v.kanji ? markTarget(v.exJp, String(v.kanji).trim()) : '', exZh: v.exZh || '', posLabel: v.pos || '',
-      src: String(v.id || '').startsWith('apkg_') ? 'anki' : (String(v.id || '').startsWith('ai') ? 'ai' : 'user'),
-      audioWord: v.audioWord || '', audioEx: v.audioEx || '', imageFile: v.imageFile || '', videoFile: v.videoFile || ''
-    };
-    s.vocab.push(card);
-    keptCards++;
-    if (mastery > 0) seedSrs('v:' + card.id, clamp(mastery, 1, 4), mastery, mastery, 0);
+    const nid = DATA.LEGACY_VOCAB_MAP[v.id] || (DATA.VOCAB.find(x => x.w === v.kanji) || {}).id;
+    if (nid && mastery > 0) seedSrs('v:' + nid, clamp(mastery, 1, 4), mastery, mastery, 0);
   });
-  if (keptCards) notes.push(`保留了 ${keptCards} 張你匯入或自建的字卡。`);
 
   // grammar drills
   const builtinG = new Set(DATA.GRAMMAR.map(g => g.id));
@@ -1631,7 +1602,6 @@ function buildRegistry() {
   const hidden = new Set(state.hidden || []);
   const vocab = [];
   DATA.VOCAB.forEach(v => { if (!hidden.has(v.id)) vocab.push(Object.assign({ key: 'v:' + v.id, kind: 'v', builtin: true }, v)); });
-  (state.vocab || []).forEach(v => { if (v && v.w) vocab.push(Object.assign({ key: 'v:' + v.id, kind: 'v', builtin: false }, v)); });
   const grammar = [];
   DATA.GRAMMAR.forEach(g => { if (!hidden.has(g.id)) grammar.push(Object.assign({ key: 'g:' + g.id, kind: 'g', builtin: true }, g)); });
   (state.customGrammar || []).forEach(g => { if (g && g.id) grammar.push(Object.assign({ key: 'g:' + g.id, kind: 'g', builtin: false }, g)); });
@@ -1660,12 +1630,6 @@ function buildRegistry() {
   const before = (a, b) => { const x = rank(a), y = rank(b); return x[0] - y[0] || x[1] - y[1] || (x[2] < y[2] ? -1 : 1); };
   FIRST_OF = new Map(); BUILTIN_ALL.forEach(v => { const k = jaPlain(v.w); if (HOMOGRAPHS.has(k) && (!FIRST_OF.has(k) || before(v, FIRST_OF.get(k)) < 0)) FIRST_OF.set(k, v); });
   buildFuriganaIndex();
-}
-
-// A custom card is "word-like" when it is short enough to be quizzed as vocabulary
-function isWordLike(v) {
-  const w = jaPlain(v.w || '');
-  return w.length > 0 && w.length <= 10 && !/[。！？!?、，]/.test(w) && (v.m || '').length <= 40;
 }
 
 // ---------- SRS: FSRS-4.5 ----------
@@ -1729,7 +1693,7 @@ function tierOf(key) {
 function isPreItem(key) {
   if (key.startsWith('a:')) return true;
   const x = REG.byKey.get(key);
-  return Boolean(x) && ((x.kind === 'v' && x.builtin && x.lv === 'PRE_N5') || (x.kind === 'g' && x.u === 'm0'));
+  return Boolean(x) && ((x.kind === 'v' && x.lv === 'PRE_N5') || (x.kind === 'g' && x.u === 'm0'));
 }
 function srsGet(key) { return state.srs[key] || null; }
 
@@ -2026,9 +1990,9 @@ function unitStats(uid) {
 }
 function vocabStats() {
   const t = todayStr();
-  const out = { custom: { total: 0, learned: 0 }, due: 0, seen: 0 }; levels().forEach(L => { out[L] = { total: 0, learned: 0 }; });
+  const out = { due: 0, seen: 0 }; levels().forEach(L => { out[L] = { total: 0, learned: 0 }; });
   REG.vocab.forEach(v => {
-    const bucket = !v.builtin ? out.custom : (out[v.lv] || out[courseLevels()[0]]);
+    const bucket = out[v.lv] || out[courseLevels()[0]];
     bucket.total++;
     const r = state.srs[v.key];
     if (r) { out.seen++; if (r.b >= SRS_LEARNED) bucket.learned++; if (isDueToday(v, t)) out.due++; }   // reviews follow the record (1.0.32)
@@ -2189,7 +2153,6 @@ function buildFuriganaIndex() {
     FURI_BASE = { key: hiddenKey, furi: new Map(FURI), prio: new Map(FURI_PRIO), block: new Set(FURI_BLOCK), src: new Map(FURI_SRC), max: FURI_MAX,
       next: new Map([...FURI_NEXT].map(([k, byR]) => [k, new Map([...byR].map(([r, set]) => [r, new Set(set)]))])) };
   }
-  furiPrio = 1; REG.vocab.filter(v => !v.builtin && isWordLike(v)).forEach(add);
   furiSrc = '';
 }
 // a word the learner has mastered gets class "known"; its reading is hidden in the "smart" furigana mode
@@ -2489,7 +2452,7 @@ function formHint(f) { return JConj.conjVerb('食べる', '1', f) || ''; }   // 
 // suffixes and giving verbs make odd drill forms (がれる, くれさせる, くださられる)
 const DRILL_SKIP = new Set(['がる', 'くれる', 'くださる', 'おいでになる']);
 function drillVerbs() {
-  const all = REG.vocab.filter(v => v.builtin && VERB_GROUP[v.p] && !DRILL_SKIP.has(jaPlain(v.w)) && !laterReading(v));   // 行く（ゆく） conjugates like 行く（いく）
+  const all = REG.vocab.filter(v => VERB_GROUP[v.p] && !DRILL_SKIP.has(jaPlain(v.w)) && !laterReading(v));   // 行く（ゆく） conjugates like 行く（いく）
   const learned = all.filter(v => state.srs[v.key] && state.srs[v.key].b >= 1);
   return learned.length >= 5 ? learned : all;
 }
@@ -2595,12 +2558,11 @@ function readingOfSurface(v, info) {
 }
 function vocabPeers(v) {
   const top = shownTop(v.lv);
-  return REG.vocab.filter(x => x.key !== v.key && x.w && x.m && x.builtin && levelUpTo(x.lv, top));
+  return REG.vocab.filter(x => x.key !== v.key && x.w && x.m && levelUpTo(x.lv, top));
 }
 
 function meaningOptions(v, notSameReading = false) {   // notSameReading: a listening question, where a homophone's meaning would also be right
-  const isEn = isEnglishOnly(v.m);
-  const peers = (v.builtin ? vocabPeers(v) : REG.vocab.filter(x => x.key !== v.key && x.m)).filter(x => isEnglishOnly(x.m) === isEn);
+  const peers = vocabPeers(v);
   const scored = peers
     .filter(x => x.m !== v.m && !zhOverlap(x.m, v.m) && jaPlain(x.w) !== jaPlain(v.w) && !(notSameReading && x.r && kanaKey(x.r) === kanaKey(v.r)))
     .map(x => ({ x, s: (x.p === v.p ? 3 : 0) + (x.c === v.c ? 1.5 : 0) + (x.lv === v.lv ? 1 : 0) + Math.random() * 2.5 }))
@@ -2748,23 +2710,21 @@ function speechAvailable() {
   return typeof window !== 'undefined' && 'speechSynthesis' in window && (window.speechSynthesis.getVoices() || []).some(x => /ja/i.test(x.lang || ''));
 }
 
-// a word that has a 假名拼字 question: built in, a reading in kana of 2–8 characters
-function canSpell(v) { return Boolean(v && v.builtin && v.r && !HAS_KANJI.test(v.r) && v.r.length >= 2 && v.r.length <= 8); }
+// a word that has a 假名拼字 question: a reading in kana of 2–8 characters
+function canSpell(v) { return Boolean(v && v.r && !HAS_KANJI.test(v.r) && v.r.length >= 2 && v.r.length <= 8); }
 function vocabFormats(v) {
   const rec = srsGet(v.key);
   const b = rec ? rec.b : -1;
-  const wordLike = v.builtin || isWordLike(v);
-  if (!wordLike) return ['v-sentence'];
   const info = vSurfaceInfo(v);
   const can = {
     'v-meaning': Boolean(v.m),
-    'v-recall': Boolean(v.m) && v.builtin,
+    'v-recall': Boolean(v.m),
     'v-cloze': Boolean(v.exZh && usableExamples(v).some(i => { const inf = vSurfaceInfo(withExample(v, i)); return inf && inf.form !== 'raw'; })),
-    'v-reading': Boolean(v.r && HAS_KANJI.test(v.w) && v.builtin),
-    'v-kanji': Boolean(v.r && HAS_KANJI.test(v.w) && v.builtin && b >= 3),
+    'v-reading': Boolean(v.r && HAS_KANJI.test(v.w)),
+    'v-kanji': Boolean(v.r && HAS_KANJI.test(v.w) && b >= 3),
     'v-listen': Boolean(v.m && speechAvailable()),
     'v-spell': canSpell(v),
-    'v-match': Boolean(v.builtin && v.m && matchPairs(v))
+    'v-match': Boolean(v.m && matchPairs(v))
   };
   let weights;
   if (b < 0) weights = { 'v-meaning': 1 };
@@ -2868,7 +2828,7 @@ function makeVocabQuestion(v0, ctx = {}) {
   q.speakWord = jaPlain(v.w);
   q.speakReading = v.r && !HAS_KANJI.test(v.r) && v.r !== jaPlain(v.w) ? v.r : '';
   q.mistakePrompt = homographReadings(v).length && ownReadingMap(v) ? ownBracket(v) : `${jaPlain(v.w)}${v.r && v.r !== v.w ? `（${v.r}）` : ''}`;   // 私[わたくし]: furi() shows the card's reading
-  const lvTag = v.builtin ? v.lv : '自訂';
+  const lvTag = v.lv;
   const tryBuild = (f) => {
     const info = vSurfaceInfo(v);
     const zh = {}; q.optZh = zh;   // option text -> Chinese meaning of that distractor word
@@ -2893,7 +2853,7 @@ function makeVocabQuestion(v0, ctx = {}) {
       q.fmt = f; q.label = `單字 · ${lvTag} · 中翻日`;
       q.instr = '日文怎麼說？';
       q.stemHtml = esc(v.m); q.stemClass = 'zhstem';
-      q.subHtml = posChip(v.p, v.posLabel);
+      q.subHtml = posChip(v.p);
       q.mistakePrompt = `「${v.m}」的日文`;
       finalizeOptions(q, v.w, opts, true);
       return true;
@@ -2951,7 +2911,7 @@ function makeVocabQuestion(v0, ctx = {}) {
       q.fmt = f; q.custom = f; q.label = `單字 · ${lvTag} · 假名拼字`;
       q.instr = '點假名，拼出這個字的讀音';
       q.stemHtml = esc(v.m); q.stemClass = 'zhstem';
-      q.subHtml = posChip(v.p, v.posLabel);
+      q.subHtml = posChip(v.p);
       q.tiles = spellTiles(v.r);
       q.mistakePrompt = `「${v.m}」的讀音`;
       q.options = [{ text: v.r, jp: true }, { text: '', jp: true }]; q.answer = 0; q.answerText = v.r;
@@ -2970,16 +2930,6 @@ function makeVocabQuestion(v0, ctx = {}) {
       q.options = [{ text: v.m }, { text: '' }]; q.answer = 0; q.answerText = v.m;
       return true;
     }
-    if (f === 'v-sentence') {
-      const opts = REG.vocab.filter(x => !x.builtin && x.key !== v.key && x.m && x.m !== v.m && isEnglishOnly(x.m) === isEnglishOnly(v.m));
-      if (opts.length < 3) return false;
-      q.fmt = f; q.label = '自訂字卡 · 句子';
-      q.instr = '這句的意思是？';
-      q.stemHtml = furi(v.w);
-      q.wide = true;
-      finalizeOptions(q, v.m, shuffle(opts).slice(0, 3).map(x => x.m), false);
-      return true;
-    }
     // v-meaning (default)
     const opts = meaningOptions(v);
     if (!opts) return false;
@@ -2987,7 +2937,7 @@ function makeVocabQuestion(v0, ctx = {}) {
     q.instr = '這個字的意思是？';
     q.stemHtml = v.r && HAS_KANJI.test(v.w) && !/\[/.test(v.w) ? rubyHtml(jaPlain(v.w), v.r) : furi(v.w);
     q.stemClass = jaPlain(v.w).length > 8 ? '' : 'word';
-    if (v.p) q.subHtml = posChip(v.p, v.posLabel);
+    if (v.p) q.subHtml = posChip(v.p);
     finalizeOptions(q, v.m, opts, false);
     q.wide = q.options.some(o => o.text.length > 14);
     return true;
@@ -3011,7 +2961,7 @@ function makeVocabQuestion(v0, ctx = {}) {
     return null;
   }
   if (!tryBuild(fmt)) {
-    const order = ['v-meaning', 'v-recall', 'v-cloze', 'v-sentence'];
+    const order = ['v-meaning', 'v-recall', 'v-cloze'];
     let ok = false;
     for (const f of order) { if (f !== fmt && tryBuild(f)) { ok = true; break; } }
     if (!ok) return null;
@@ -3573,7 +3523,7 @@ function lvRank(x) { const i = ALL_LEVELS.indexOf(x.lv); return i < 0 ? 1 : i; }
 function inPreStage() { return state.stage === 'pre'; }
 // 入門: PRE_N5 words start once the 92 清音 have all been seen, or when the learner says they already know kana
 function kanaGateOpen() { return state.kanaKnown === true || REG.kana.filter(x => x.seion).every(x => state.srs[x.key]); }
-function preWordsLeft() { let n = 0; for (const v of REG.vocab) if (v.builtin && v.lv === 'PRE_N5' && !state.srs[v.key]) n++; return n; }
+function preWordsLeft() { let n = 0; for (const v of REG.vocab) if (v.lv === 'PRE_N5' && !state.srs[v.key]) n++; return n; }
 function introLeft() { let n = 0; for (const g of REG.grammar) if (g.u === 'm0' && !state.srs[g.key]) n++; return n; }   // 第 0 週 items not seen yet
 // 第 0 週 is done once all its items have been seen (in 入門 or from its page): the course row reads 完成 and the day logs it.
 // Its page has no 標記為已完成: completion is automatic or by the 入門 test.
@@ -3594,7 +3544,7 @@ function finishPreIfReady() {
   DAILY_CACHE = null; saveState();
   return true;
 }
-function preDone() { return REG.vocab.some(v => v.builtin && v.lv === 'PRE_N5') && preWordsLeft() === 0 && kanaGateOpen() && introLeft() === 0; }
+function preDone() { return REG.vocab.some(v => v.lv === 'PRE_N5') && preWordsLeft() === 0 && kanaGateOpen() && introLeft() === 0; }
 // 每一級封死 (1.0.32, spec §4.2): new words, kanji and grammar come from one course level at a time, the lowest one with
 // something still unseen; reviews follow the record (computeDailyPlan's scope). In the main course 入門 words count as N5.
 function courseLevel(lv) { return lv === 'PRE_N5' ? courseLevels()[0] : lv; }
@@ -3605,7 +3555,7 @@ function unitDone(uid) { return state.completedUnits.includes(uid) || !REG.gramm
 function levelLeft(L) {
   const unseen = (x) => !state.srs[x.key];
   const units = DATA.UNITS.filter(u => courseLevel(u.lv) === L && !unitDone(u.id)).map(u => u.id);
-  return { v: REG.vocab.filter(v => v.builtin && courseLevel(v.lv) === L && unseen(v)).length, k: REG.kanji.filter(k => courseLevel(k.lv) === L && unseen(k)).length,
+  return { v: REG.vocab.filter(v => courseLevel(v.lv) === L && unseen(v)).length, k: REG.kanji.filter(k => courseLevel(k.lv) === L && unseen(k)).length,
     g: REG.grammar.filter(g => units.includes(g.u) && unseen(g)).length, units };
 }
 function curLevel() { const cl = courseLevels(); return cl.find(L => { const x = levelLeft(L); return x.v || x.k || x.units.length; }) || cl[cl.length - 1]; }
@@ -3632,25 +3582,13 @@ function levelLeftText(L) { const x = levelLeft(L); return [x.v ? `單字 ${x.v}
 function pastFirstLevel() { return curLevel() !== courseLevels()[0]; }   // the first course level (入門+N5) is done
 function n5WordsLeft() {   // 入門 and N5 (the first course level) words not yet seen
   let n = 0;
-  for (const v of REG.vocab) if (v.builtin && courseLevel(v.lv) === courseLevels()[0] && !state.srs[v.key]) n++;
+  for (const v of REG.vocab) if (courseLevel(v.lv) === courseLevels()[0] && !state.srs[v.key]) n++;
   return n;
 }
 function grammarInReach(g, curIdx = unitOrder(state.currentUnit)) { return unitOrder(g.u) <= curIdx; }
-// the main-course rule (also what 入門 uses for due reviews: a learner who went back to 入門 keeps every review)
-function vocabEligibleMain(v) {
-  if (v.builtin) return true;   // built-in words: reviews by record, new ones by level (vocabEligibleForDaily)
-  const mode = state.settings.includeImported;
-  if (mode === 'off') return false;
-  if (mode === 'words') return isWordLike(v);
-  return true;
-}
 // new words: 入門 only PRE_N5; main course only the current level
 function vocabEligibleForDaily(v, cur) {   // cur: curLevel(), asked once by the caller (it scans every bank)
-  if (v.builtin) return inPreStage() ? v.lv === 'PRE_N5' : courseLevel(v.lv) === cur;
-  const mode = state.settings.includeImported;
-  if (mode === 'off') return false;
-  if (mode === 'words') return isWordLike(v);
-  return true;
+  return inPreStage() ? v.lv === 'PRE_N5' : courseLevel(v.lv) === cur;
 }
 // New words are introduced theme by theme, two themes at a time (interleaved, so a day's new words come in two
 // related groups rather than one long list of look-alikes). The pair is the first two themes, in themeOrder(),
@@ -3670,7 +3608,7 @@ function laneCap() { return THEME_LANE_DAYS * 8; }
 // the level whose themes hold the lanes: PRE_N5 in 入門; otherwise N5 while it has unseen words, then N4
 function laneLevel(fresh) { if (inPreStage()) return 'PRE_N5'; const have = new Set(fresh.map(v => v.lv)); return courseLevels().find(L => have.has(L)) || courseLevels()[0]; }   // PRE_N5 leftovers ride their own lane
 // anyLevel: a page the learner chose (a level tab, a theme) offers its own words; otherwise only the current level's
-function freshWords(pool, anyLevel) { const cur = anyLevel || inPreStage() ? null : curLevel(); return pool.filter(v => v.builtin && !state.srs[v.key] && (!cur || courseLevel(v.lv) === cur)); }
+function freshWords(pool, anyLevel) { const cur = anyLevel || inPreStage() ? null : curLevel(); return pool.filter(v => !state.srs[v.key] && (!cur || courseLevel(v.lv) === cur)); }
 function activeThemes(pool, anyLevel) {
   const fresh = freshWords(pool, anyLevel);
   const lv = laneLevel(fresh);
@@ -3679,7 +3617,7 @@ function activeThemes(pool, anyLevel) {
 }
 // a new built-in word was introduced: count it against its theme's lane and rotate the lane when the cap is reached
 function noteThemeIntro(key) {
-  const v = REG.byKey && REG.byKey.get(key); if (!v || v.kind !== 'v' || !v.builtin) return;
+  const v = REG.byKey && REG.byKey.get(key); if (!v || v.kind !== 'v') return;
   const c = vocabTheme(v); const order = laneOrder(); const lane = state.themeLane;
   lane.count[c] = (lane.count[c] || 0) + 1;
   if (lane.count[c] < laneCap()) return;
@@ -3703,14 +3641,7 @@ function newVocabCandidates(pool, anyLevel) {
   const built = [];
   for (let i = 0; lanes.some(l => i < l.length); i++) lanes.forEach(l => { if (i < l.length) built.push(l[i]); });
   built.push(...rest);
-  const custom = pool.filter(v => !v.builtin && !state.srs[v.key]);
-  const out = [];
-  let i = 0; let j = 0;
-  while (i < built.length || j < custom.length) {
-    if (j < custom.length && (out.length % 2 === 1 || i >= built.length)) out.push(custom[j++]);
-    else if (i < built.length) out.push(built[i++]);
-  }
-  return out;
+  return built;
 }
 // one item from each group in turn, so consecutive items differ in `keyOf` (grammar point, question type …)
 function roundRobinBy(items, keyOf) {
@@ -3824,7 +3755,7 @@ function splitNew(n, skip = new Set()) {
     const gate = kanaGateOpen();
     banks = {
       a: [REG.kana.filter(unseen).length, REG.kana.filter(unseen).sort((x, y) => x.order - y.order)],
-      v: [REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5' && unseen(v)).length, gate ? words() : []],
+      v: [REG.vocab.filter(v => v.lv === 'PRE_N5' && unseen(v)).length, gate ? words() : []],
       g: [introLeft(), gate ? unitNewOrder('m0') : []],
       k: [REG.kanji.filter(k => k.lv === 'PRE_N5' && unseen(k)).length, gate ? newKanjiCandidates(false) : []]
     };
@@ -3856,11 +3787,11 @@ function computeDailyPlan(size = SESSION_SIZE) {
   const curIdx = unitOrder(state.currentUnit);
   const pre = inPreStage();   // 入門: new items come from splitNew's 入門 banks; no new listening, reading or drills. Reviews of every kind stay.
   // what reviews reach (spec §4.6, 1.0.32: new items follow the level, reviews the record): every built-in word, grammar
-  // item, kanji and drill already learned, whatever its level or unit (learned ahead, or the unit moved back); imported
-  // cards follow their setting; every kana. New drills still come from the reached units only (cPool).
+  // item, kanji and drill already learned, whatever its level or unit (learned ahead, or the unit moved back); every kana.
+  // New drills still come from the reached units only (cPool).
   const cPool = (REG.drills || []).filter(d => unitOrder(d.u) <= curIdx);
   const has = (x) => Boolean(state.srs[x.key]);
-  const scope = REG.vocab.filter(v => v.builtin ? has(v) : (!pre || has(v)) && vocabEligibleMain(v))
+  const scope = REG.vocab.filter(has)
     .concat(REG.grammar.filter(has), REG.kanji.filter(has), REG.kana, (REG.drills || []).filter(has));
   // up to three stars: due by FSRS, the most overdue first, at most SRS_DAILY_CAP a day (the rest come the next days); the
   // missed items on the 1/3/7 ladder due today all come on top of the cap (inside it they crowd out the other reviews)
@@ -4030,7 +3961,7 @@ function buildVocabQueue(filter = 'all', size = 20) {
   const theme = filter.startsWith('c:') ? filter.slice(2) : null;
   const lt = filter.startsWith('t:') ? filter.slice(2).split(':') : null;   // t:<lv>:<theme> — one level's theme (the level pages)
   const anyLevel = filter !== 'all'; const cur = anyLevel ? null : curLevel();
-  const pool = REG.vocab.filter(v => lt ? (v.builtin && v.lv === lt[0] && vocabTheme(v) === lt.slice(1).join(':')) : theme ? (v.builtin && vocabTheme(v) === theme) : filter === 'all' ? vocabEligibleForDaily(v, cur) : filter === 'custom' ? !v.builtin : (v.builtin && v.lv === filter));
+  const pool = REG.vocab.filter(v => lt ? (v.lv === lt[0] && vocabTheme(v) === lt.slice(1).join(':')) : theme ? vocabTheme(v) === theme : filter === 'all' ? vocabEligibleForDaily(v, cur) : v.lv === filter);
   const left = todayNewLeft('v');
   return scopeQueue(pool, newVocabCandidates(pool, anyLevel).slice(0, left), size);
 }
@@ -4143,7 +4074,7 @@ function scheduleEncores(e, ok) {
   SESSION.entries.splice(at(8 + shift, 11 + shift), 0, { item: e.item, encore: true });
 }
 // How many encore questions a queue will add once its new items are answered (one per new built-in word or multi-format grammar item).
-function encoreEstimate(items) { return items.filter(it => !state.srs[it.key] && ((it.kind === 'v' && it.builtin) || (it.kind === 'g' && grammarHasFormats(it)))).length; }
+function encoreEstimate(items) { return items.filter(it => !state.srs[it.key] && (it.kind === 'v' || (it.kind === 'g' && grammarHasFormats(it)))).length; }
 
 // Consistent furigana for options: readings come from the correct answer so that a wrong
 // conjugation is not given away by missing furigana.
@@ -4306,13 +4237,13 @@ function previewHtml(e, pct) {
       ${prCountHtml()}
     </div>
     <div class="q-card">
-      <div class="q-label"><span>新單字${v.builtin ? ` · ${esc(v.lv)} · ${esc(vocabTheme(v))}` : ''}</span><span class="chip chip-accent">新</span></div>
+      <div class="q-label"><span>新單字 · ${esc(v.lv)} · ${esc(vocabTheme(v))}</span><span class="chip chip-accent">新</span></div>
       <div class="q-instr">先看一遍，接著會用幾種方式考這個字。</div>
       <div class="preview">
         <div class="word jp">${esc(jaPlain(v.w))}</div>
         ${reading ? `<div class="reading jp">${esc(reading)}</div>` : ''}
         <div class="meaning">${esc(v.m)}</div>
-        ${v.p ? `<div class="mt-1">${posChip(v.p, v.posLabel)}</div>` : ''}
+        ${v.p ? `<div class="mt-1">${posChip(v.p)}</div>` : ''}
         ${vocabExamples(v).map(e => exampleHtml(e.ex, e.exZh, '', v)).join('')}
       </div>
     </div>
@@ -4602,7 +4533,7 @@ function ringHtml(ratio, inner, size = 96) {
   return `<div class="ring" style="width:${size}px;height:${size}px"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--bg-sunken)" stroke-width="9"/><circle cx="50" cy="50" r="${r}" fill="none" stroke="${ratio >= 1 ? 'var(--ok)' : 'var(--accent)'}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - clamp(ratio, 0, 1))}"/></svg><div class="ring-txt"><div>${inner}</div></div></div>`;
 }
 
-// report a bad item: hide it from rotation (built-in) or delete it (custom)
+// report a bad item: hide it from rotation (built-in) or delete it (an AI question)
 function reportCurrentItem() {
   const e = currentEntry();
   if (!e || !e.q || !e.q.item) return;
@@ -4610,7 +4541,6 @@ function reportCurrentItem() {
   if (!confirm('把這題移出題庫？之後不會再出現（可以在設定 → 資料中還原）。')) return;
   if (it.builtin) { if (!state.hidden.includes(it.id)) state.hidden.push(it.id); }
   else if (it.kind === 'g') state.customGrammar = state.customGrammar.filter(g => g.id !== it.id);
-  else state.vocab = state.vocab.filter(v => v.id !== it.id);
   delete state.srs[it.key];
   state.mistakes = state.mistakes.filter(m => m.key !== it.key);
   saveState();
@@ -5001,13 +4931,11 @@ function noticesHtml() {
 // The topics the 開始練習 session touches: vocabulary themes (the active pair when new words are in, otherwise the
 // themes most of the review words belong to) and the grammar points of its grammar questions, new ones first.
 function sessionTopicsHtml(q, plan) {
-  const allWords = q.items.filter(it => it.kind === 'v');
-  const words = allWords.filter(it => it.builtin);
+  const words = q.items.filter(it => it.kind === 'v');
   const present = new Set(words.map(vocabTheme));
   const all = [...present].sort((a, b) => themeRank(a) - themeRank(b));
   const themes = all.slice(0, 3); if (all.length > 3) themes.push(`等 ${all.length} 個`);
-  if (allWords.length > words.length) themes.push('自訂字卡');
-  // the line is always there: custom cards have no theme, and a finished day just says so
+  // the line is always there: a finished day just says so
   const vocabText = themes.length ? themes.join('・') : '今天的單字已完成';
   const gItems = q.items.filter(it => it.kind === 'g');
   const pts = [];
@@ -5095,7 +5023,7 @@ function renderToday(view) {
         <div>
           ${plan.remaining === 0 ? '<h2>今天完成了</h2>' : `<div><button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・這組 ${dq.items.length} 題</button></div>${plan.remaining > dq.items.length ? `<div class="small muted mt-1">今天還有 ${plan.remaining} 題</div>` : ''}`}
           <div class="tiny muted hero-date">${greeting}・連續 ${st.current} 天</div>
-          ${inPreStage() ? `<div class="small muted mt-1">入門：假名 ${REG.kana.filter(x => state.srs[x.key]).length}／${REG.kana.length}・單字 ${REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5' && state.srs[v.key]).length}／${REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').length}・句型 ${unitItems('m0').filter(g => state.srs[g.key]).length}／${unitItems('m0').length}</div>` : ''}
+          ${inPreStage() ? `<div class="small muted mt-1">入門：假名 ${REG.kana.filter(x => state.srs[x.key]).length}／${REG.kana.length}・單字 ${REG.vocab.filter(v => v.lv === 'PRE_N5' && state.srs[v.key]).length}／${REG.vocab.filter(v => v.lv === 'PRE_N5').length}・句型 ${unitItems('m0').filter(g => state.srs[g.key]).length}／${unitItems('m0').length}</div>` : ''}
           <div class="hero-tabs">
             <button type="button" class="hero-tab${heroTab === 'help' ? ' open' : ''}" data-act="hero-tab" data-tab="help" aria-expanded="${heroTab === 'help'}">說明</button>
             ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">範圍</button>` : ''}
@@ -5253,7 +5181,7 @@ function stageItems(id) {
   const inUnits = (x) => s.units.includes(x.u);
   const out = REG.grammar.filter(inUnits).concat(REG.drills.filter(inUnits));
   if (s.lv) {
-    REG.vocab.forEach(v => { if (v.builtin && v.lv === s.lv) out.push(v); });
+    REG.vocab.forEach(v => { if (v.lv === s.lv) out.push(v); });
     [REG.kanji, REG.listen, REG.read].forEach(list => list.forEach(x => { if (x.lv === s.lv) out.push(x); }));
   }
   if (id === 'pre') out.push(...REG.kana);
@@ -5477,7 +5405,7 @@ function renderCourse(view) {
     let rows; let extra = ''; let parts;   // parts: each row's { done, pct } for the head
     if (st.id === 'pre') {
       const kanaSeen = REG.kana.filter(x => state.srs[x.key]).length;
-      const words = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5'); const wordsSeen = words.filter(v => state.srs[v.key]).length;
+      const words = REG.vocab.filter(v => v.lv === 'PRE_N5'); const wordsSeen = words.filter(v => state.srs[v.key]).length;
       const kanji = REG.kanji.filter(k => k.lv === 'PRE_N5'); const kanjiSeen = kanji.filter(k => state.srs[k.key]).length;
       const total = REG.kana.length + words.length + kanji.length; const seen = kanaSeen + wordsSeen + kanjiSeen; const pct = total ? Math.floor(seen / total * 100) : 0;
       const status = seen >= total ? '<span class="chip chip-ok">完成</span>' : pre ? '<span class="chip chip-accent">目前</span>' : seen ? '<span class="chip">進行中</span>' : '';
@@ -5744,22 +5672,22 @@ Object.assign(ACTIONS, {
 
 // ---- 73_vocab.js ----
 /* ==========================================================================
-   Vocabulary: SRS flashcards, word list, import page
+   Vocabulary: SRS flashcards, word list
    ========================================================================== */
 let FLASH = null;   // { deck, queue: [key], idx, flipped, extraNew }
-function decks() { return [['all', '全部']].concat(levels().map(L => [L, lvLabel(L)]), [['custom', '自訂／匯入']]); }
+function decks() { return [['all', '全部']].concat(levels().map(L => [L, lvLabel(L)])); }
 
-// ---- themes: the built-in words carry a theme (`c`); custom cards have none and stay in their own deck ----
+// ---- themes: every word carries a theme (`c`) ----
 // theme order = each level's list in DATA.THEMES (PRE_N5, N5, N4); a name shared by two levels ranks where it first appears
 function themeOrder() { return THEME_ORDER_NOW || (THEME_ORDER_NOW = [...new Set([].concat(...levels().map(l => ((DATA.THEMES || {})[l] || []).map(t => t.c))))]); }
 // old theme names (before 1.0.8) → the N5 name, or the N4 name for N4-only themes; normalizeState migrates state.themeLane with it
 const THEME_MIGRATE = {"問候": "問候與溝通", "溝通": "問候與溝通", "指示": "疑問與指示", "代名詞": "疑問與指示", "疑問": "疑問與指示", "人物": "人物與家庭", "家庭": "人物與家庭", "身體": "身體與健康", "健康": "身體與健康", "衣物": "衣物與購物", "購物": "衣物與購物", "生活": "居家生活", "學校": "學校與工作", "工作": "學校與工作", "交通": "交通與移動", "移動": "交通與移動", "地點": "地點與位置", "位置": "地點與位置", "自然": "自然與天氣", "天氣": "自然與天氣", "興趣": "興趣與休閒", "休閒": "興趣與休閒", "形容": "形容與狀態", "狀態": "形容與狀態", "顏色": "形容與狀態", "副詞": "副詞與接續", "接續": "副詞與接續", "社會": "社會與人際", "人際": "社會與人際", "敬語": "溝通與敬語", "情感": "情感與心情", "心情": "情感與心情", "思考": "思考與抽象", "抽象": "思考與抽象", "旅行": "交通旅行與移動"};
-function vocabTheme(v) { return v.builtin ? v.c : '其他'; }   // every built-in word carries a theme of its level (data test); custom cards have none
+function vocabTheme(v) { return v.c; }   // every word carries a theme of its level (data test)
 // ---- 單字頁 (1.0.9): one level at a time → its themes → the kanji met in them ----
 function levelStats(lv) {
   const t = todayStr();
   const out = { lv, total: 0, seen: 0, learned: 0, mastered: 0, due: 0, kanji: { total: 0, seen: 0, learned: 0 } };
-  REG.vocab.filter(v => v.builtin && v.lv === lv).forEach(v => { out.total++; const r = state.srs[v.key]; if (!r) return; out.seen++; if (r.b >= SRS_LEARNED) out.learned++; if (srsLevelLabel(r, v.key) === '已熟練') out.mastered++; if (isDueToday(v, t)) out.due++; });
+  REG.vocab.filter(v => v.lv === lv).forEach(v => { out.total++; const r = state.srs[v.key]; if (!r) return; out.seen++; if (r.b >= SRS_LEARNED) out.learned++; if (srsLevelLabel(r, v.key) === '已熟練') out.mastered++; if (isDueToday(v, t)) out.due++; });
   REG.kanji.filter(k => k.lv === lv).forEach(k => { out.kanji.total++; const r = state.srs[k.key]; if (!r) return; out.kanji.seen++; if (r.b >= SRS_LEARNED) out.kanji.learned++; });
   if (lv === 'PRE_N5') { out.kana = { total: REG.kana.length, seen: 0, learned: 0 }; REG.kana.forEach(k => { const r = state.srs[k.key]; if (!r) return; out.kana.seen++; if (r.b >= SRS_LEARNED) out.kana.learned++; }); }
   return out;
@@ -5767,7 +5695,7 @@ function levelStats(lv) {
 // kanji counted per (level, theme) from the built-in words that contain them
 function kanjiCountsByTheme(lv) {
   const by = new Map();   // theme → Map(kanji → count)
-  REG.vocab.filter(v => v.builtin && v.lv === lv).forEach(v => {
+  REG.vocab.filter(v => v.lv === lv).forEach(v => {
     const c = vocabTheme(v); const m = by.get(c) || by.set(c, new Map()).get(c);
     new Set([...jaPlain(v.w)].filter(ch => KANJI_RE.test(ch) && REG.byKey.has('k:' + ch))).forEach(ch => m.set(ch, (m.get(ch) || 0) + 1));
   });
@@ -5777,7 +5705,7 @@ function themeStats(lv) {
   const t = todayStr(); const counts = kanjiCountsByTheme(lv);
   return ((DATA.THEMES || {})[lv] || []).map(th => {
     const g = { c: th.c, desc: th.desc || '', total: 0, seen: 0, learned: 0, mastered: 0, due: 0, kanji: [] };
-    REG.vocab.filter(v => v.builtin && v.lv === lv && vocabTheme(v) === th.c).forEach(v => { g.total++; const r = state.srs[v.key]; if (!r) return; g.seen++; if (r.b >= SRS_LEARNED) g.learned++; if (srsLevelLabel(r, v.key) === '已熟練') g.mastered++; if (isDueToday(v, t)) g.due++; });
+    REG.vocab.filter(v => v.lv === lv && vocabTheme(v) === th.c).forEach(v => { g.total++; const r = state.srs[v.key]; if (!r) return; g.seen++; if (r.b >= SRS_LEARNED) g.learned++; if (srsLevelLabel(r, v.key) === '已熟練') g.mastered++; if (isDueToday(v, t)) g.due++; });
     g.kanji = [...(counts.get(th.c) || new Map()).entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 8).map(([k]) => k);
     return g;
   });
@@ -5791,7 +5719,7 @@ function kanjiThemeOf(k, lv, counts = kanjiCountsByTheme(lv)) {
 function vocabThemes() {
   const t = todayStr();
   const by = new Map();
-  REG.vocab.filter(v => v.builtin).forEach(v => {
+  REG.vocab.forEach(v => {
     const c = vocabTheme(v);
     const g = by.get(c) || by.set(c, { c, total: 0, seen: 0, learned: 0, mastered: 0, due: 0, PRE_N5: 0, N5: 0, N4: 0 }).get(c);
     g.total++; g[v.lv in g ? v.lv : courseLevels()[0]]++;
@@ -5869,17 +5797,16 @@ function renderVocabLevel(view, lv) {
     </details>`;
 }
 function deckPool(deck) {
-  if (deck === 'custom') return REG.vocab.filter(v => !v.builtin);
-  if (levels().includes(deck)) return REG.vocab.filter(v => v.builtin && v.lv === deck);
+  if (levels().includes(deck)) return REG.vocab.filter(v => v.lv === deck);
   // the mixed deck follows the daily rule: reviews of every learned word, new words of the current level only (buildFlashQueue)
-  return REG.vocab.filter(v => (v.builtin || state.settings.includeImported !== 'off'));
+  return REG.vocab;
 }
 function buildFlashQueue(deck, extraNew = 0) {
   const t = todayStr();
   const pool = deckPool(deck);
   const due = pool.filter(v => isDueToday(v, t)).sort(byDue);   // three stars or below (four and five come from their queues)
   const quota = todayNewLeft('v') + extraNew;
-  const fresh = (deck === 'custom' ? pool.filter(v => !state.srs[v.key]) : newVocabCandidates(pool, deck !== 'all')).slice(0, quota);
+  const fresh = newVocabCandidates(pool, deck !== 'all').slice(0, quota);
   return due.concat(fresh).map(v => v.key);
 }
 function ensureFlash(deck) {
@@ -5897,14 +5824,12 @@ function vocabTabs(tab) {
     ${levels().map(l => `<button type="button" aria-pressed="${tab === l}" data-act="nav" data-route="#/vocab/level?lv=${l}">${lvLabel(l)}</button>`).join('')}
     <button type="button" aria-pressed="${tab === 'cards'}" data-act="nav" data-route="#/vocab/cards">字卡</button>
     <button type="button" aria-pressed="${tab === 'list'}" data-act="nav" data-route="#/vocab/list">單字表</button>
-    <button type="button" aria-pressed="${tab === 'import'}" data-act="nav" data-route="#/vocab/import">匯入與新增</button>
   </div>`;
 }
 
 function renderVocab(view, tab, params) {
   if (tab === 'level') return renderVocabLevel(view, levels().includes(params.lv) ? params.lv : defaultVocabLevel());
   if (tab === 'list') return renderVocabList(view, params);
-  if (tab === 'import') return renderVocabImport(view);
   const deck = params.deck || (FLASH && FLASH.deck) || 'all';
   const F = ensureFlash(deck);
   const vs = vocabStats();
@@ -5921,19 +5846,17 @@ function renderVocab(view, tab, params) {
       </div></div></div>`;
   } else {
     const r = state.srs[v.key];
-    const media = `<div id="flashMedia"></div>`;
     const back = F.flipped ? `
       <div class="divider"></div>
       ${v.r && v.r !== v.w ? `<div class="reading jp">${esc(v.r)}</div>` : ''}
       <div class="meaning">${esc(v.m)}</div>
-      ${v.p ? `<div class="mt-1">${posChip(v.p, v.posLabel)}</div>` : ''}
+      ${v.p ? `<div class="mt-1">${posChip(v.p)}</div>` : ''}
       ${vocabExamples(v).map((e, i) => `<div class="example ${i ? 'mt-2' : 'mt-3'}" style="text-align:left"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="${i ? 'speak' : 'flash-speak'}" data-mode="ex" data-text="${esc(exampleSpeech(e.ex, v))}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${exampleJpHtml(e.ex, v)}</div><div class="zh">${esc(e.exZh || '')}</div></div></div>`).join('')}
       <div id="flashAiBox"></div>` : '';
     card = `<div class="card">
       <div class="row between small muted"><span>${F.idx + 1} / ${F.queue.length}・${r ? srsLevelLabel(r, v.key) : '新卡'}</span><span>${r ? srsDots(r.b) : '<span class="chip chip-accent">新</span>'}${r && (r.known || srsLevelLabel(r, v.key) === '已熟練') ? '' : ` <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="直接標成五顆，之後排進五顆的複習">我會了</button>`}</span></div>
       <div class="flash">
         <div class="word jp">${esc(jaPlain(v.w))}</div>
-        ${media}
         ${back}
       </div>
       ${F.flipped ? `<div class="rate">
@@ -5946,33 +5869,22 @@ function renderVocab(view, tab, params) {
         <div class="row-wrap">
           <button type="button" class="btn btn-sm btn-ghost" data-act="flash-speak" data-mode="word">${icon('speaker')}發音</button>
           ${F.flipped && isAiConfigured() ? '<button type="button" class="btn btn-sm btn-ghost" data-act="flash-ai">AI 補充例句</button>' : ''}
-          ${F.flipped && isEnglishOnly(v.m) && isAiConfigured() ? '<button type="button" class="btn btn-sm btn-ghost" data-act="flash-translate">翻成中文</button>' : ''}
         </div>
         <button type="button" class="btn btn-sm btn-ghost" data-act="flash-skip">略過</button>
       </div>
     </div>`;
   }
   view.innerHTML = `
-    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">今天待複習 ${vs.due} 張・${(() => { const cur = curLevel(); const cl = courseLevels(); return levels().map(L => { const c = courseLevel(L); return cl.indexOf(c) <= cl.indexOf(cur) || L === 'PRE_N5' ? `${lvLabel(L)} 熟悉 ${vs[L].learned}/${vs[L].total}` : c === cl[cl.indexOf(cur) + 1] ? `${L}：${cur} 的單字、漢字、文法都學過一次後開始（還剩${levelLeftText(cur)}）` : ''; }).filter(Boolean).join('・'); })()}${vs.custom.total ? `・自訂字卡 ${vs.custom.learned}/${vs.custom.total}` : ''}</div></div>
+    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">今天待複習 ${vs.due} 張・${(() => { const cur = curLevel(); const cl = courseLevels(); return levels().map(L => { const c = courseLevel(L); return cl.indexOf(c) <= cl.indexOf(cur) || L === 'PRE_N5' ? `${lvLabel(L)} 熟悉 ${vs[L].learned}/${vs[L].total}` : c === cl[cl.indexOf(cur) + 1] ? `${L}：${cur} 的單字、漢字、文法都學過一次後開始（還剩${levelLeftText(cur)}）` : ''; }).filter(Boolean).join('・'); })()}</div></div>
       <button type="button" class="btn" data-act="start-vocab" data-filter="${deck}">單字測驗・${vocabSessionCount(deck)} 題</button></div>
     ${vocabTabs('cards')}
     <div class="row-wrap mb-3"><span class="small muted">牌組</span><div class="seg">${decks().map(([k, l]) => `<button type="button" aria-pressed="${deck === k}" data-act="flash-deck" data-deck="${k}">${l}</button>`).join('')}</div></div>
     ${card}
     <p class="hint mt-3"><span class="kbd-hint">鍵盤：Space 翻面，1–4 評分，R 發音。</span>評分會決定下次出現的時間，測驗和每日練習也共用同一份紀錄。</p>`;
-  if (v) renderFlashMedia(v);
 }
 function nextIntervalText(key, grade) {
   const d = srsPreview(key, grade);
   return d <= 1 ? '明天' : d < 60 ? `${d} 天後` : `${Math.round(d / 30)} 個月後`;
-}
-async function renderFlashMedia(v) {
-  const box = document.getElementById('flashMedia');
-  if (!box || (!v.imageFile && !v.videoFile)) return;
-  const url = async (f) => (/^(https?:|data:)/.test(f) ? f : await AnkiMedia.url(f));
-  let html = '';
-  if (v.imageFile) { const u = await url(v.imageFile); if (u) html += `<img src="${esc(u)}" alt="" style="max-height:200px;max-width:100%;border-radius:10px;margin-top:10px">`; }
-  if (v.videoFile) { const u = await url(v.videoFile); if (u) html += `<video src="${esc(u)}" controls playsinline style="max-height:220px;max-width:100%;border-radius:10px;margin-top:10px"></video>`; }
-  box.innerHTML = html;
 }
 function flashKey(ev) {
   const k = ev.key;
@@ -5991,9 +5903,8 @@ function vocabListFiltered(params) {
   const lv = params.lv || 'all';
   const theme = params.c || '';
   let list = REG.vocab;
-  if (theme) list = list.filter(v => v.builtin && vocabTheme(v) === theme);
-  if (lv === 'custom') list = list.filter(v => !v.builtin);
-  else if (lv !== 'all') list = list.filter(v => v.builtin && v.lv === lv);
+  if (theme) list = list.filter(v => vocabTheme(v) === theme);
+  if (lv !== 'all') list = list.filter(v => v.lv === lv);
   if (q) list = list.filter(v => [v.w, v.r, v.m].some(x => String(x || '').toLowerCase().includes(q)));
   return list;
 }
@@ -6005,12 +5916,12 @@ function vocabListResultsHtml(params, list = vocabListFiltered(params)) {
     const r = state.srs[v.key];
     return `<tr>
       <td><div class="jp" style="font-size:16px">${esc(jaPlain(v.w))}</div><div class="tiny muted jp">${esc(v.r && v.r !== v.w ? v.r : '')}</div></td>
-      <td><div>${esc(v.m)}</div><div class="tiny muted">${esc(v.builtin ? `${v.lv}・${posLabel(v.p)}` : (v.posLabel || '自訂'))}</div></td>
+      <td><div>${esc(v.m)}</div><div class="tiny muted">${esc(`${v.lv}・${posLabel(v.p)}`)}</div></td>
       <td class="nowrap small">${r ? `${srsDots(r.b)}<div class="tiny muted">${dueLabel(r, v.key).replace('複習', '')}</div>` : '<span class="muted">未學</span>'}</td>
       <td class="nowrap" style="text-align:right">
         <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(jaPlain(v.w))}" data-reading="${esc(v.r && !HAS_KANJI.test(v.r) && v.r !== jaPlain(v.w) ? v.r : '')}" aria-label="發音">${icon('speaker')}</button>
         ${r && r.known ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-unknown" data-key="${esc(v.key)}" title="取消「我會了」，回到正常排程">取消熟練</button>` : (r && srsLevelLabel(r, v.key) === '已熟練' ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="這個字已經會了：直接標成五顆，之後排進五顆的複習">我會了</button>`)}
-        <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-remove" data-key="${esc(v.key)}">${v.builtin ? '隱藏' : '刪除'}</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-remove" data-key="${esc(v.key)}">隱藏</button>
       </td></tr>`;
   }).join('');
   return `<div class="row-wrap mb-3">
@@ -6031,7 +5942,7 @@ function renderVocabList(view, params) {
     ${vocabTabs('list')}
     <div class="row-wrap mb-3">
       <input class="input" style="max-width:320px" placeholder="搜尋日文、假名或中文" value="${esc(params.q || '')}" data-change="vocab-search" id="vocabSearch" />
-      <div class="seg">${decks().filter(([k]) => !theme || k !== 'custom').map(([k, l]) => `<button type="button" aria-pressed="${lv === k}" data-act="vocab-filter" data-lv="${k}">${l}</button>`).join('')}</div>
+      <div class="seg">${decks().map(([k, l]) => `<button type="button" aria-pressed="${lv === k}" data-act="vocab-filter" data-lv="${k}">${l}</button>`).join('')}</div>
     </div>
     <div id="vocabListBody">${vocabListResultsHtml(params, list)}</div>`;
 }
@@ -6049,53 +5960,6 @@ function applyVocabSearch(el) {
   } else {
     go(nextHash);
   }
-}
-
-function renderVocabImport(view) {
-  const custom = REG.vocab.filter(v => !v.builtin);
-  const en = custom.filter(v => isEnglishOnly(v.m)).length;
-  view.innerHTML = `
-    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub">自訂與匯入的字卡：${custom.length} 張</div></div></div>
-    ${vocabTabs('import')}
-    <div class="card">
-      <div class="card-head"><div class="card-title">匯入 Anki 牌組</div></div>
-      <p class="small dim">支援 .apkg / .colpkg（含音檔、圖片），以及 .txt / .csv / .tsv 匯出檔。匯入前可以先確認欄位對應。需要網路來載入解壓縮元件。</p>
-      <div class="row-wrap mt-3">
-        <label class="btn btn-primary">選擇檔案<input type="file" id="ankiFile" accept=".apkg,.colpkg,.zip,.txt,.tsv,.csv,.json" class="hidden" data-change="anki-file" /></label>
-        <span class="small muted" id="ankiStatus"></span>
-      </div>
-      <details class="disclose mt-3"><summary>或直接貼上文字（每行一張：日文 Tab 讀音 Tab 中文 Tab 例句）</summary>
-        <textarea class="input jp mt-2" id="ankiPaste" rows="4" placeholder="約束	やくそく	約定	友達と約束があります。"></textarea>
-        <div class="row-wrap mt-2"><button type="button" class="btn" data-act="anki-paste">預覽並匯入</button></div>
-      </details>
-      <div id="ankiMapper" class="mt-3"></div>
-    </div>
-    <div class="card">
-      <div class="card-head"><div class="card-title">手動新增</div></div>
-      <div class="grid grid-3">
-        <div class="field"><label>日文</label><input class="input jp" id="addW" placeholder="届ける" /></div>
-        <div class="field"><label>讀音</label><input class="input jp" id="addR" placeholder="とどける" /></div>
-        <div class="field"><label>中文意思</label><input class="input" id="addM" placeholder="送到、交給" /></div>
-      </div>
-      <div class="grid grid-2 mt-3">
-        <div class="field"><label>例句（可留空）</label><input class="input jp" id="addEx" placeholder="荷物を届けました。" /></div>
-        <div class="field"><label>例句中文</label><input class="input" id="addExZh" placeholder="把包裹送到了。" /></div>
-      </div>
-      <div class="row-wrap mt-3"><button type="button" class="btn" data-act="vocab-add">新增</button></div>
-    </div>
-    ${isAiConfigured() ? `<div class="card">
-      <div class="card-head"><div class="card-title">用 AI 依主題產生字卡</div></div>
-      <div class="row-wrap"><input class="input grow" id="aiDeckTopic" placeholder="例如：便利商店、搭電車、N4 常用副詞" /><button type="button" class="btn" data-act="ai-deck">產生 8 張</button></div>
-    </div>` : ''}
-    ${custom.length ? `<div class="card">
-      <div class="card-head"><div class="card-title">管理自訂字卡</div></div>
-      <div class="setting-row"><div><div class="label">每日練習是否包含自訂字卡</div><div class="hint">句子型的字卡（例如動畫台詞）比較難，預設只加入單字型的卡片。</div></div>
-        <select class="select" style="width:auto" data-change="setting" data-key="includeImported">
-          ${[['words', '只加入單字型'], ['all', '全部加入'], ['off', '不加入']].map(([k, l]) => `<option value="${k}" ${state.settings.includeImported === k ? 'selected' : ''}>${l}</option>`).join('')}
-        </select></div>
-      ${en ? `<div class="setting-row"><div><div class="label">${en} 張字卡只有英文解釋</div><div class="hint">可以請 AI 補上繁體中文。</div></div><button type="button" class="btn btn-sm" data-act="ai-translate-batch" ${isAiConfigured() ? '' : 'disabled'}>批次翻成中文</button></div>` : ''}
-      <div class="setting-row"><div><div class="label">清除所有自訂與匯入字卡</div><div class="hint">內建單字、學習紀錄與錯題本不受影響。</div></div><button type="button" class="btn btn-sm btn-danger" data-act="vocab-clear-custom">清除 ${custom.length} 張</button></div>
-    </div>` : ''}`;
 }
 
 Object.assign(ACTIONS, {
@@ -6122,13 +5986,12 @@ Object.assign(ACTIONS, {
   'flash-more': () => {
     if (!FLASH) return;
     FLASH.extraNew += 5;
-    const fresh = (FLASH.deck === 'custom' ? deckPool('custom').filter(v => !state.srs[v.key]) : newVocabCandidates(deckPool(FLASH.deck), FLASH.deck !== 'all')).slice(0, 5).map(v => v.key);
+    const fresh = newVocabCandidates(deckPool(FLASH.deck), FLASH.deck !== 'all').slice(0, 5).map(v => v.key);
     if (!fresh.length) { toast('這個牌組的新卡都學過了'); return; }
     FLASH.queue = FLASH.queue.slice(0, FLASH.idx).concat(fresh); FLASH.flipped = false; route();
   },
   'flash-speak': (el) => { const v = flashCurrent(); if (!v) return; playVocabAudio(v, el.dataset.mode === 'ex' ? 'ex' : 'word'); },
   'flash-ai': () => aiEnrichCard(flashCurrent()),
-  'flash-translate': () => aiTranslateCards([flashCurrent()]),
   'vocab-filter': (el) => { const q = (document.getElementById('vocabSearch') || {}).value || ''; const c = currentRoute().params.c; go(`#/vocab/list?lv=${el.dataset.lv}&q=${encodeURIComponent(q)}${c ? `&c=${encodeURIComponent(c)}` : ''}`); },
   'vocab-known': (el) => {
     const v = REG.byKey.get(el.dataset.key); if (!v) return;
@@ -6166,35 +6029,12 @@ Object.assign(ACTIONS, {
   'vocab-remove': (el) => {
     const v = REG.byKey.get(el.dataset.key);
     if (!v) return;
-    if (v.builtin) { if (!state.hidden.includes(v.id)) state.hidden.push(v.id); toast(`已隱藏「${jaPlain(v.w)}」`); }
-    else { if (!confirm(`刪除字卡「${jaPlain(v.w)}」？`)) return; state.vocab = state.vocab.filter(x => x.id !== v.id); delete state.srs[v.key]; }
+    if (!state.hidden.includes(v.id)) state.hidden.push(v.id); toast(`已隱藏「${jaPlain(v.w)}」`);
     saveState(); buildRegistry(); route();
-  },
-  'vocab-add': () => {
-    const w = document.getElementById('addW').value.trim();
-    const r = document.getElementById('addR').value.trim();
-    const m = document.getElementById('addM').value.trim();
-    const ex = document.getElementById('addEx').value.trim();
-    const exZh = document.getElementById('addExZh').value.trim();
-    if (!w || !m) { toast('請至少填寫日文與中文意思'); return; }
-    state.vocab.unshift({ id: uid('cust'), w, r: IS_KANA.test(r) ? r : '', m, p: '', lv: 'CUSTOM', ex: markTarget(ex, w), exZh, src: 'user', posLabel: '自建' });
-    saveState(); buildRegistry(); toast(`已新增「${w}」`); route();
-  },
-  'vocab-clear-custom': async () => {
-    const n = state.vocab.length;
-    if (!confirm(`確定要清除 ${n} 張自訂與匯入的字卡？這個動作無法復原（建議先到設定下載備份）。`)) return;
-    state.vocab.forEach(v => { delete state.srs['v:' + v.id]; });
-    state.vocab = [];
-    await AnkiMedia.clear();
-    saveState(); buildRegistry(); FLASH = null; toast(`已清除 ${n} 張字卡`); route();
-  },
-  'anki-paste': () => importAnkiText(document.getElementById('ankiPaste').value),
-  'ai-deck': (el) => aiGenerateDeck((document.getElementById('aiDeckTopic') || {}).value || '', el),
-  'ai-translate-batch': () => aiTranslateCards(REG.vocab.filter(v => !v.builtin && isEnglishOnly(v.m)).slice(0, 20))
+  }
 });
 Object.assign(CHANGE_ACTIONS, {
-  'vocab-search': (el) => applyVocabSearch(el),
-  'anki-file': (el) => { const f = el.files && el.files[0]; if (f) importAnkiFile(f); el.value = ''; }
+  'vocab-search': (el) => applyVocabSearch(el)
 });
 
 // ---- 74_mistakes.js ----
@@ -6363,8 +6203,8 @@ function setListenPref(patch) { try { localStorage.setItem('nq_listen_pref', JSO
 // 初識單詞: a virtual theme for the player — every built-in word already met but not yet 熟練 (the ones worth hearing again)
 const REVIEW_THEME = '初識單詞';
 function listenThemeWords(theme) {
-  if (theme === REVIEW_THEME) return REG.vocab.filter(v => v.builtin && state.srs[v.key] && srsLevelLabel(state.srs[v.key], v.key) !== '已熟練');
-  return REG.vocab.filter(v => v.builtin && vocabTheme(v) === theme);
+  if (theme === REVIEW_THEME) return REG.vocab.filter(v => state.srs[v.key] && srsLevelLabel(state.srs[v.key], v.key) !== '已熟練');
+  return REG.vocab.filter(v => vocabTheme(v) === theme);
 }
 // the picker's rows: 初識單詞 first (seen / 熟悉 split, nothing 熟練 by definition), then the real themes with their bars
 function listenThemes() {
@@ -6986,7 +6826,7 @@ function derivedUnits(level, m, need, usedKeys) {
   let pool = []; const md = mondai(level, m) || {}; const k = md.k;
   if (md.read) pool = REG.read.filter(x => x.lv === level && md.read.includes(x.rkind));
   else if (md.listen) pool = REG.listen.filter(x => x.lv === level && listenKind(x) === (md.listen === true ? k : md.listen));
-  else if (k === 'reading' || k === 'kanji') pool = REG.vocab.filter(v => v.builtin && v.lv === level && HAS_KANJI.test(v.w));
+  else if (k === 'reading' || k === 'kanji') pool = REG.vocab.filter(v => v.lv === level && HAS_KANJI.test(v.w));
   else if (k === 'grammar') pool = REG.grammar.filter(g => g.lv === level && ['choice', 'conj', 'adj'].includes(g.t || 'choice'));
   else if (k === 'order') pool = REG.grammar.filter(g => g.lv === level && g.t === 'order');
   const ranked = rankBySeen(shuffle(pool), it => ['d:' + it.key + ':' + m, 'd:' + it.key + ':' + m + '#0']);   // a passage records its question
@@ -7497,7 +7337,7 @@ function offlineAnalysis(text) {
   if (!s) return '';
   const words = [];
   const seen = new Set();
-  REG.vocab.filter(v => v.builtin).forEach(v => {
+  REG.vocab.forEach(v => {
     const w = jaPlain(v.w);
     if (w.length < 2 && !HAS_KANJI.test(w)) return;
     let hit = s.includes(w);
@@ -7723,7 +7563,6 @@ function settingsLearn() {
   const s = state.settings;
   return `
     ${boolRow('showZh', '題目下方直接顯示中文', '關閉時可按 T 或點「顯示中文」再看。需要中文才能判斷的題目仍會顯示。')}
-    ${selRow('includeImported', '每日練習包含自訂字卡', '句子型的匯入卡片比較難，預設只加入單字型的。', [['words', '只加入單字型'], ['all', '全部加入'], ['off', '不加入']])}
     <div class="setting-row"><div><div class="label">考試</div><div class="hint">學習分析和模擬考頁會照這個級別和日期推估進度。</div></div>
       <div class="row"><select class="select" style="width:auto" data-change="setting" data-key="examLevel">${courseLevels().map(v => `<option value="${v}" ${s.examLevel === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
       <input class="input" type="date" style="width:auto" value="${esc(s.examDate)}" data-change="setting" data-key="examDate" data-type="date" /></div></div>`;
@@ -7735,7 +7574,7 @@ function settingsSpeech() {
   const voiceOpts = [['', voices.length ? `自動（${voices[0].name}）` : '自動']].concat(voices.map(v => [v.voiceURI, `${v.name}${v.localService ? '' : '（線上）'}`]));
   let engine = '';
   if (c.engine === 'cloud') {
-    engine = `<div class="hint mt-2">教材的句子已經用 Google Neural2 預先生成放在雲端，播過的會留在這台裝置上。加到主畫面的 app 有網路時，還會先把今天要練的題目語音存好，離線也能練今天的題目。找不到的句子（自訂、AI 生成的題目）改用瀏覽器語音。語速用上面的滑桿調。</div>
+    engine = `<div class="hint mt-2">教材的句子已經用 Google Neural2 預先生成放在雲端，播過的會留在這台裝置上。加到主畫面的 app 有網路時，還會先把今天要練的題目語音存好，離線也能練今天的題目。找不到的句子（AI 生成的題目）改用瀏覽器語音。語速用上面的滑桿調。</div>
       <div id="audioPrefetchBox" class="small mt-2">${audioPrefetchHtml()}</div>
       <details class="mt-3"><summary class="small muted" style="cursor:pointer">完全離線使用（進階，通常不需要）</summary>
         <div class="hint mt-2"><b>平常不用按：</b>今天要練的語音會自動先存好，播過的句子也會留著。這兩個按鈕是把整套課程一次抓完，日文約 220 MB、中文約 120 MB，只適合長時間沒有網路的情況。可以中斷，再按會接著下載，已下載的會略過。</div>
@@ -7796,7 +7635,7 @@ function settingsAi() {
       + textRow('ollamaModel', '模型', '', 'ai-cfg', { ph: 'qwen2.5:7b' });
   }
   return `
-    <p class="small dim mt-0">AI 用在：題目解析、單元補充、出新題、產生字卡、翻譯匯入的英文字卡、句子分析與學習建議。沒有設定時，這些按鈕會停用，其他功能照常使用。</p>
+    <p class="small dim mt-0">AI 用在：題目解析、單元補充、出新題、字卡的補充例句、句子分析與學習建議。沒有設定時，這些按鈕會停用，其他功能照常使用。</p>
     ${selRow('provider', 'AI 服務', '', [['gemini', 'Google Gemini'], ['openai', 'OpenAI 或相容服務'], ['ollama', 'Ollama（本機）']], 'ai-cfg')}
     ${fields}
     <div class="row-wrap mt-4"><button type="button" class="btn" data-act="ai-test" ${isAiConfigured() ? '' : 'disabled'}>測試連線</button>${isAiConfigured() ? `<span class="small muted">目前使用 ${esc(aiLabel())}</span>` : ''}</div>`;
@@ -7819,7 +7658,7 @@ function settingsData() {
           <div class="row-wrap"><input type="email" id="syncEmail" placeholder="you@example.com" autocomplete="email" inputmode="email" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-login">寄送登入信</button></div></div>`;
   return `
     ${syncBlock}
-    <div class="setting-row"><div><div class="label">下載備份</div><div class="hint">包含進度、錯題本、字卡與考試紀錄（不含 Anki 音檔與圖片）。目前資料約 ${Math.max(1, Math.round(size / 1024))} KB。</div></div>
+    <div class="setting-row"><div><div class="label">下載備份</div><div class="hint">包含進度、錯題本與考試紀錄。目前資料約 ${Math.max(1, Math.round(size / 1024))} KB。</div></div>
       <div class="row-wrap"><label class="switch"><input type="checkbox" id="bkKeys" /><span class="track"></span><span class="small">包含 API Key</span></label><button type="button" class="btn btn-sm btn-primary" data-act="backup-export">下載</button></div></div>
     <div class="setting-row"><div><div class="label">自動快照</div><div class="hint">每天第一次開啟時自動保存一份，保留最近 7 天。匯入或重設弄錯時，可以回到某一天的狀態。</div><div id="snapList" class="mt-2 small muted">讀取中…</div></div></div>
     <div class="setting-row"><div><div class="label">從備份還原</div><div class="hint">可以選這個版本的備份，也可以選舊版（Gemini 版）匯出的 JSON，會自動轉換。</div></div>
@@ -7830,7 +7669,7 @@ function settingsData() {
       <button type="button" class="btn btn-sm" data-act="restore-hidden">全部還原</button></div>` : ''}
     ${state.customGrammar.length || state.customExam.length ? `<div class="setting-row"><div><div class="label">AI／自訂題目</div><div class="hint">文法題 ${state.customGrammar.length} 道、模擬考題 ${state.customExam.length} 道。</div></div>
       <button type="button" class="btn btn-sm btn-ghost btn-danger" data-act="clear-custom-items">清除</button></div>` : ''}
-    <div class="setting-row"><div><div class="label">重設所有進度</div><div class="hint">清除熟練度、錯題本、紀錄與自訂字卡。AI 與語音設定會保留。建議先下載備份。</div></div>
+    <div class="setting-row"><div><div class="label">重設所有進度</div><div class="hint">清除熟練度、錯題本與紀錄。AI 與語音設定會保留。建議先下載備份。</div></div>
       <button type="button" class="btn btn-sm btn-danger" data-act="reset-all">重設</button></div>
     <p class="hint mt-3">資料存在這個瀏覽器的本機儲存空間（IndexedDB）。登入雲端同步後會自動在裝置間同步；沒登入時可用「下載備份」與「從備份還原」搬移。</p>`;
 }
@@ -7931,7 +7770,6 @@ Object.assign(CHANGE_ACTIONS, {
     saveState();
     if (k === 'theme') applyTheme();
     if (k === 'furigana') applyFurigana();
-    if (k === 'includeImported') FLASH = null;
     if (k === 'speechRate') { const hint = el.closest('.setting-row').querySelector('.hint'); if (hint) hint.textContent = `目前 ${Number(v).toFixed(2)} 倍`; }
     if (modalOpen()) settingsDirty = true; else route();
   },
@@ -7962,7 +7800,7 @@ Object.assign(ACTIONS, {
     const old = el.innerHTML; el.disabled = true; el.innerHTML = '<span class="spinner"></span> 測試中';
     try {
       audioCache.clear(); cloudMisses.clear();
-      const cloud = ttsConfig().engine === 'cloud'; const sample = cloud ? jaPlain((REG.vocab.find(v => v.builtin) || { w: 'テスト' }).w) : 'テスト';
+      const cloud = ttsConfig().engine === 'cloud'; const sample = cloud ? jaPlain((REG.vocab[0] || { w: 'テスト' }).w) : 'テスト';
       const blob = await engineBlob(sample, '');
       if (!blob) throw new Error(cloud ? `雲端連得上，但沒有「${sample}」的音檔：還沒生成，或 bucket 名稱不對。` : '沒有回應');
       show('<span class="ok">連線成功，可以使用。</span>');
@@ -8015,11 +7853,11 @@ Object.assign(ACTIONS, {
   },
   'reset-all': () => {
     if (!confirm('確定要重設所有進度？這個動作無法復原。')) return;
-    if (!confirm('再確認一次：熟練度、錯題本、學習紀錄、自訂字卡都會被清除。')) return;
+    if (!confirm('再確認一次：熟練度、錯題本、學習紀錄都會被清除。')) return;
     const keep = { aiConfig: state.aiConfig, ttsConfig: state.ttsConfig, theme: state.settings.theme };
     state = defaultState();
     state.aiConfig = keep.aiConfig; state.ttsConfig = keep.ttsConfig; state.settings.theme = keep.theme;
-    saveState(); buildRegistry(); AnkiMedia.clear();
+    saveState(); buildRegistry();
     SESSION = null; FLASH = null; EXAM = null;
     closeModal(); toast('已重設'); go('#/today');
   }
@@ -8086,7 +7924,7 @@ Object.assign(ACTIONS, {
 const FMT_NAME = {
   'v-meaning': '單字・看字選意思', 'v-recall': '單字・中翻日', 'v-cloze': '單字・例句填空', 'v-reading': '單字・漢字讀音', 'v-kanji': '單字・漢字寫法',
   'v-listen': '單字・聽音選意思', 'v-spell': '單字・假名拼字', 'v-match': '單字・配對', 'v-sentence': '自訂句子', 'g-choice': '文法・填空', 'g-meaning': '文法・句意／用法', 'g-order': '文法・排序',
-  'g-correct': '文法・選正確句', 'g-conj': '文法・動詞變化', 'g-adj': '文法・形容詞變化', 'g-identify': '文法・判斷動詞形', 'g-conj-type': '文法・動詞變化（拼寫）', 'g-adj-type': '文法・形容詞變化（拼寫）',   // g-correct: no longer asked (1.0.23), named for the answers given before
+  'g-correct': '文法・選正確句', 'g-conj': '文法・動詞變化', 'g-adj': '文法・形容詞變化', 'g-identify': '文法・判斷動詞形', 'g-conj-type': '文法・動詞變化（拼寫）', 'g-adj-type': '文法・形容詞變化（拼寫）',   // g-correct (1.0.23), v-sentence (custom cards, 1.0.34): no longer asked, named for the answers given before
   'k-meaning': '漢字・意思', 'k-shape': '漢字・選字', 'k-read': '漢字・讀音', 'l-dialog': '聽力・對話', 'l-resp': '聽力・即時應答',
   'l-scene': '聽力・情境表達', 'r-passage': '閱讀', 'm-card': '錯題卡', 'a-read': '假名・看字選音', 'a-sound': '假名・聽音選字', 'a-pair': '假名・平片對照'
 };
@@ -8156,7 +7994,7 @@ let statsScope = 'all';   // the 總進度 card's scope: kept while the app is o
 function progressTotals(kind, scope = 'all') {
   const t = { kind, total: 0, seen: 0, learned: 0, mastered: 0, marks: [] };   // marks: [level, items up to it, next level], faint ticks on the gauge (總進度 only, none for kana)
   const per = {};
-  const pool = { v: REG.vocab.filter(v => v.builtin), g: REG.grammar, lr: REG.listen.concat(REG.read), k: REG.kanji, a: REG.kana }[kind];
+  const pool = { v: REG.vocab, g: REG.grammar, lr: REG.listen.concat(REG.read), k: REG.kanji, a: REG.kana }[kind];
   const lv = levels().find(L => scopeId(L) === scope);
   const top = kind === 'g' ? 3 : kind === 'lr' ? 2 : 0;
   pool.forEach(x => {
@@ -8402,7 +8240,7 @@ function courseCardHtml() {
   const text = p.state === 'ok' || p.state === 'late' ? '' : `<p class="course-text small dim mb-0">${esc(courseText(p))}</p>`;
   const advice = p.state === 'late' ? `<div class="course-advice">${esc(courseAdvice(p))}</div>` : '';
   const unseen = (arr) => arr.filter(x => !state.srs[x.key]).length;
-  const banks = [['假名', REG.kana], ['單字', REG.vocab.filter(x => x.builtin)], ['文法', REG.grammar], ['漢字', REG.kanji], ['聽力', REG.listen], ['閱讀', REG.read]];
+  const banks = [['假名', REG.kana], ['單字', REG.vocab], ['文法', REG.grammar], ['漢字', REG.kanji], ['聽力', REG.listen], ['閱讀', REG.read]];
   const bankRows = banks.map(([name, arr]) => `<tr><td>${name}</td><td class="num">${arr.length - unseen(arr)} / ${arr.length}</td><td class="num col-left">${unseen(arr)}</td></tr>`).join('');
   return `<div class="card" id="courseCard">
       <div class="card-head"><div class="card-title">課程進度</div>${courseChip(p)}</div>
@@ -8476,7 +8314,7 @@ Object.assign(ACTIONS, {
 
 // ---- 80_tts.js ----
 /* ==========================================================================
-   Speech: browser voices, Deepgram Aura-2, VOICEVOX, OpenAI TTS, Anki audio
+   Speech: browser voices, Deepgram Aura-2, VOICEVOX, OpenAI TTS
    ========================================================================== */
 let ttsCheckHtml = '';   // result of the last 設定 › 語音 › 測試連線
 const TTS_SECRET_KEYS = ['deepgramKey', 'openaiKey', 'googleKey'];   // never leave the device: stripped from backups, kept on import
@@ -9072,7 +8910,6 @@ function audioCollector() {
   // one item: its Japanese clips and the Chinese ones 聽一輪 reads (meanings, translations, kanji glosses)
   const item = (x) => {
     if (x.kind === 'v') {
-      if (!x.builtin) return;
       const w = jaPlain(x.w); const pin = x.r && !HAS_KANJI.test(x.r) && x.r !== w ? x.r : '';
       add(w, '', pin); add(w); if (x.r) add(x.r);   // the question (reading pinned), the list button, the flashcard reading
       if (x.ex) add(exampleSpeech(x.ex, x)); if (x.ex2) add(exampleSpeech(x.ex2, x));   // as the example buttons speak them
@@ -9175,7 +9012,7 @@ const AUDIO_PREFETCH = { running: false, again: false, timer: null, at: 0, stop:
 function audioPrefetchItems() {
   const p = dailyPlan();
   const today = PLAN_LISTS.filter(n => !/^(due|new)[CR]$/.test(n)).flatMap(n => p[n] || []);   // drills and reading passages have no clips
-  return [...new Map(today.filter(x => x.builtin).map(x => [x.key, x])).values()];   // own cards have no clips on the server
+  return [...new Map(today.filter(x => x.builtin).map(x => [x.key, x])).values()];   // AI questions have no clips on the server
 }
 async function audioPrefetchTexts() {
   const c = audioCollector(); let t0 = performance.now();
@@ -9259,22 +9096,11 @@ async function cloudGenStart(googleKey, r2) {
   cloudGenRender();
 }
 
-// Anki cards keep their own recordings; everything else is synthesized
-async function playVocabAudio(v, mode = 'word') {
-  if (!v) return;
-  const file = mode === 'ex' ? (v.audioEx || '') : (v.audioWord || '');
-  const text = mode === 'ex' ? (v.ex ? exampleSpeech(v.ex, v) : exPlain(v.w || '')) : jaPlain(v.w);
+// a flashcard's word (its reading pinned) or its first example
+function playVocabAudio(v, mode = 'word') {
+  if (!v || (mode === 'ex' && !v.ex)) return;
   const reading = mode === 'word' && v.r && !HAS_KANJI.test(v.r) && v.r !== jaPlain(v.w) ? v.r : '';
-  if (file) {
-    const url = await AnkiMedia.url(file);
-    if (url) {
-      stopSpeaking();
-      const ok = await playUrl(url, speechToken, speechRate());
-      if (ok) return;
-    }
-  }
-  if (mode === 'ex' && !v.ex) return;
-  speak(text, reading ? { reading } : undefined);
+  speak(mode === 'ex' ? exampleSpeech(v.ex, v) : jaPlain(v.w), reading ? { reading } : undefined);
 }
 
 function testVoice() {
@@ -9590,62 +9416,6 @@ ${samples}
 }
 
 // ---------- vocabulary ----------
-const POS_CODES = new Set(['n', 'v5', 'v1', 'vs', 'vk', 'i', 'na', 'adv', 'conj', 'pron', 'q', 'cnt', 'exp']);
-async function aiGenerateDeck(topic, btn) {
-  if (needAi()) return;
-  const t = String(topic || '').trim() || '日常生活';
-  const existing = REG.vocab.filter(v => !v.builtin).slice(0, 80).map(v => jaPlain(v.w)).join('、');
-  const prompt = `請依主題「${t}」產生 8 張 ${aiLevelRange()} 程度的日語單字卡，避開這些字：${existing || '（無）'}。
-每張卡是一個 JSON 物件：
-w（單字的一般寫法）、r（平假名讀音）、m（繁體中文意思，12 字內）、p（詞性代碼：n 名詞、v5 五段、v1 一段、vs する動詞、i い形容詞、na な形容詞、adv 副詞、exp 慣用語）、lv（${courseLevels().map(l => `"${l}"`).join(' 或 ')}）、ex（20 字內的自然例句，把單字本身用 [ ] 包起來，例如「毎朝パンを[食べます]。」）、exZh（例句中文）。
-只輸出 JSON 陣列。`;
-  await withBusy(btn, 'AI 產生中', async () => {
-    const arr = parseAiJson(await callAi(prompt, { json: true }));
-    if (!Array.isArray(arr)) throw new Error('AI 回傳的格式無法解析');
-    const have = new Set(REG.vocab.map(v => jaPlain(v.w)));
-    let added = 0;
-    arr.forEach(x => {
-      const w = String(x.w || '').trim(); const m = String(x.m || '').trim();
-      if (!w || !m || have.has(w)) return;
-      const raw = String(x.ex || '').trim();
-      const br = /\[([^\]]+)\]/.exec(raw);
-      const ex = br ? raw.slice(0, br.index) + '{' + br[1] + '}' + raw.slice(br.index + br[0].length) : markTarget(raw, w);
-      state.vocab.unshift({ id: uid('ai'), w, r: IS_KANA.test(String(x.r || '')) ? String(x.r) : '', m: m.slice(0, 30), p: POS_CODES.has(x.p) ? x.p : '', lv: 'CUSTOM', ex, exZh: String(x.exZh || ''), src: 'ai', posLabel: `AI・${t}`.slice(0, 16) });
-      have.add(w); added++;
-    });
-    saveState(); buildRegistry();
-    toast(added ? `已新增 ${added} 張字卡` : '沒有新增字卡（可能都和現有字卡重複）');
-    route();
-  });
-}
-
-async function aiTranslateCards(cards) {
-  cards = (cards || []).filter(Boolean);
-  if (!cards.length || needAi()) return;
-  const list = cards.slice(0, 25).map((v, i) => ({ i, w: jaPlain(v.w), m: v.m, ex: jaPlain(exPlain(v.ex)) }));
-  const prompt = `把下面日語字卡的英文解釋翻成繁體中文（台灣用語，每個 12 字內，保留原本的意思範圍）。如果有例句，也一併翻譯例句。
-${JSON.stringify(list)}
-只輸出 JSON 陣列，每個元素是 {"i": 編號, "m": "中文意思", "exZh": "例句中文（沒有例句就留空）"}。`;
-  await withBusy(null, '', async () => {
-    toast('AI 翻譯中…', 6000);
-    const arr = parseAiJson(await callAi(prompt, { json: true, temperature: 0.2 }));
-    if (!Array.isArray(arr)) throw new Error('AI 回傳的格式無法解析');
-    let n = 0;
-    arr.forEach(x => {
-      const v = cards[Number(x.i)];
-      const card = v && state.vocab.find(c => c.id === v.id);
-      if (!card || !x.m) return;
-      if (!card.mEn) card.mEn = card.m;
-      card.m = String(x.m).slice(0, 30);
-      if (x.exZh && !card.exZh) card.exZh = String(x.exZh);
-      n++;
-    });
-    saveState(); buildRegistry();
-    toast(`已翻譯 ${n} 張字卡`);
-    route();
-  });
-}
-
 async function aiEnrichCard(v) {
   if (!v || needAi()) return;
   const box = document.getElementById('flashAiBox');
@@ -9762,388 +9532,6 @@ async function aiTestConnection(btn) {
   });
 }
 
-// ---- 82_anki.js ----
-/* ==========================================================================
-   Anki import: .apkg / .colpkg (JSZip + sql.js + fzstd), text exports, media store
-   ========================================================================== */
-const AnkiMedia = {
-  DB: 'nihongo_anki_media_db_v1', STORE: 'media_blobs', dbp: null, urls: new Map(),
-  open() {
-    if (this.dbp) return this.dbp;
-    this.dbp = new Promise(resolve => {
-      try {
-        if (!('indexedDB' in window)) { resolve(null); return; }
-        const req = indexedDB.open(this.DB, 1);
-        req.onupgradeneeded = (ev) => { const db = ev.target.result; if (!db.objectStoreNames.contains(this.STORE)) db.createObjectStore(this.STORE); };
-        req.onsuccess = (ev) => resolve(ev.target.result);
-        req.onerror = () => resolve(null);
-      } catch (e) { resolve(null); }
-    });
-    return this.dbp;
-  },
-  async putBatch(entries) {
-    const db = await this.open();
-    if (!db || !entries.length) return 0;
-    return new Promise(resolve => {
-      try {
-        const tx = db.transaction(this.STORE, 'readwrite');
-        const st = tx.objectStore(this.STORE);
-        entries.forEach(({ name, blob }) => { if (name && blob) st.put(blob, name); });
-        tx.oncomplete = () => resolve(entries.length);
-        tx.onerror = () => resolve(0);
-      } catch (e) { resolve(0); }
-    });
-  },
-  async url(name) {
-    if (!name) return null;
-    const raw = String(name).trim();
-    const cands = [raw];
-    try { const d = decodeURIComponent(raw); if (!cands.includes(d)) cands.push(d); } catch (e) { /* ignore */ }
-    const base = raw.split('/').pop();
-    if (base && !cands.includes(base)) cands.push(base);
-    for (const k of cands) if (this.urls.has(k)) return this.urls.get(k);
-    const db = await this.open();
-    if (!db) return null;
-    for (const k of cands) {
-      const blob = await new Promise(resolve => {
-        try {
-          const req = db.transaction(this.STORE, 'readonly').objectStore(this.STORE).get(k);
-          req.onsuccess = () => resolve(req.result instanceof Blob ? req.result : null);
-          req.onerror = () => resolve(null);
-        } catch (e) { resolve(null); }
-      });
-      if (blob) { const u = URL.createObjectURL(blob); this.urls.set(raw, u); this.urls.set(k, u); return u; }
-    }
-    return null;
-  },
-  async clear() {
-    this.urls.forEach(u => { try { URL.revokeObjectURL(u); } catch (e) { /* ignore */ } });
-    this.urls.clear();
-    const db = await this.open();
-    if (!db) return;
-    await new Promise(resolve => {
-      try { const tx = db.transaction(this.STORE, 'readwrite'); tx.objectStore(this.STORE).clear(); tx.oncomplete = resolve; tx.onerror = resolve; } catch (e) { resolve(); }
-    });
-  }
-};
-
-// ---------- library loading (only when an .apkg is imported) ----------
-const LIBS = {
-  jszip: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
-  sqljs: 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js',
-  sqlwasm: 'https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/',
-  fzstd: 'https://cdn.jsdelivr.net/npm/fzstd@0.1.1/umd/index.js'
-};
-const scriptLoads = {};
-function loadScript(src) {
-  if (!scriptLoads[src]) {
-    scriptLoads[src] = new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = src; s.async = true;
-      s.onload = () => resolve();
-      s.onerror = () => { delete scriptLoads[src]; reject(new Error('無法載入解壓縮元件，請確認網路連線。')); };
-      document.head.appendChild(s);
-    });
-  }
-  return scriptLoads[src];
-}
-
-// ---------- field parsing ----------
-function hasJa(s) { return /[぀-ヿ一-鿿]/.test(String(s || '')); }
-function hasKana(s) { return /[぀-ヿ]/.test(String(s || '')); }
-function looksLikeId(str) {
-  const s = String(str || '').trim();
-  if (!s) return true;
-  if (/^(?:#|no\.?|ep\.?|ch\.?|lesson|part|unit|vol\.?|card)?\s*\d+([.\-_:/]\d+)*[a-z]?$/i.test(s)) return true;
-  return /^[\x21-\x7E]{5,18}$/.test(s) && !hasJa(s) && /[^a-zA-Z]/.test(s);
-}
-function parseField(raw, keepReading = false) {
-  const out = { text: '', sounds: [], images: [], videos: [], reading: '' };
-  if (raw === null || raw === undefined) return out;
-  let s = String(raw).trim();
-  s = s.replace(/\[sound:([^\]]+)\]/gi, (_, f) => { const n = f.trim(); if (n) (/\.(mp4|webm|mov|ogv)$/i.test(n) ? out.videos : out.sounds).push(n); return ' '; });
-  s = s.replace(/<img[^>]*src=(?:["']([^"']+)["']|([^\s>]+))[^>]*>/gi, (_, a, b) => { const n = (a || b || '').trim(); if (n) (/\.(mp4|webm|mov|ogv|m4v)$/i.test(n) ? out.videos : out.images).push(n); return ' '; });
-  s = s.replace(/<(?:video|source|audio)[^>]*src=(?:["']([^"']+)["']|([^\s>]+))[^>]*>/gi, (tag, a, b) => { const n = (a || b || '').trim(); if (n) ((/^<audio/i.test(tag) || /\.(mp3|ogg|oga|opus|wav|m4a|aac|flac)$/i.test(n)) ? out.sounds : out.videos).push(n); return ' '; });
-  const readings = [];
-  s = s.replace(/<ruby[^>]*>(.*?)<\/ruby>/gi, (_, inner) => {
-    (inner.match(/<rt[^>]*>(.*?)<\/rt>/gi) || []).forEach(rt => readings.push(rt.replace(/<[^>]+>/g, '').trim()));
-    return keepReading ? inner.replace(/<rb[^>]*>.*?<\/rb>/gi, '').replace(/<[^>]+>/g, '') : inner.replace(/<rt[^>]*>.*?<\/rt>/gi, '').replace(/<rp[^>]*>.*?<\/rp>/gi, '').replace(/<[^>]+>/g, '');
-  });
-  s = s.replace(/\s?([一-鿿々]+)\[([぀-ヿ]+)\]/g, (_, k, r) => { readings.push(r); return keepReading ? r : k; });
-  if (readings.length) out.reading = readings.join('');
-  s = s.replace(/<br\s*\/?>/gi, ' ').replace(/<\/(?:div|p|li|tr)>/gi, ' ')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '').replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/gi, ' ').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;/gi, "'").replace(/&amp;/gi, '&')
-    .replace(/\s+/g, ' ').trim().replace(/^["']|["']$/g, '').trim();
-  out.text = s;
-  return out;
-}
-
-function guessMapping(names, rows) {
-  const n = names.length;
-  const g = { w: 0, r: -1, m: Math.min(1, n - 1), ex: -1, exZh: -1, pos: -1 };
-  if (!n) return g;
-  const sample = rows.slice(0, 25);
-  const stats = names.map((rawName, c) => {
-    const name = String(rawName || '').toLowerCase();
-    let nonEmpty = 0; let ids = 0; let ja = 0; let pureKana = 0; let furi = 0; let en = 0;
-    sample.forEach(r => {
-      const cell = r[c] || '';
-      if (/<ruby|\[[぀-ヿ]+\]/.test(cell)) furi++;
-      const t = parseField(cell).text;
-      if (!t) return;
-      nonEmpty++;
-      if (looksLikeId(t) || /^(Basic|Cloze|Japanese|Core\s*\d+)/i.test(t)) { ids++; return; }
-      if (hasJa(t)) { ja++; if (/^[぀-ヿ\s〜・、。！？「」『』（）()-]+$/.test(t)) pureKana++; } else if (/[a-zA-Z]{2,}/.test(t)) en++;
-    });
-    return { c, name, nonEmpty, ja, pureKana, furi, en, skip: nonEmpty === 0 || ids >= nonEmpty * 0.5 };
-  });
-  const jaCols = stats.filter(s => !s.skip && s.ja > 0);
-  const named = jaCols.find(s => /(expression|vocab|kanji|word|front|japanese|表|単語|見出し|日文|漢字|日本語)/i.test(s.name) && !/(reading|kana|furigana|audio|sound|読み|仮名|かな|meaning|english|trans)/i.test(s.name));
-  const sentence = jaCols.find(s => /(sentence|example|quote|line|sub|例文|例句|セリフ|台詞)/i.test(s.name) && !/(reading|kana|furigana|audio|sound|meaning|english|trans|訳)/i.test(s.name));
-  g.w = (named || sentence || jaCols.find(s => s.ja > s.pureKana) || jaCols[0] || stats.find(s => !s.skip) || { c: 0 }).c;
-  const rest = jaCols.filter(s => s.c !== g.w);
-  const reading = rest.find(s => /(reading|kana|hiragana|furigana|pronunciation|読み|仮名|かな|ふりがな|發音|讀音)/i.test(s.name)) || rest.find(s => s.pureKana >= s.nonEmpty * 0.5 || s.furi >= s.nonEmpty * 0.4);
-  g.r = reading ? reading.c : -1;
-  const others = stats.filter(s => !s.skip && s.c !== g.w && s.c !== g.r);
-  const meaning = others.find(s => /(meaning|english|glossary|translation|definition|back|explain|意味|中文|解釋|翻譯|訳|英語)/i.test(s.name) && !/(audio|sound|image|pic|video|pos|tag)/i.test(s.name)) || others.find(s => s.en > 0) || others.find(s => s.ja < s.nonEmpty) || others[0];
-  if (meaning) g.m = meaning.c;
-  const exJa = jaCols.filter(s => s.c !== g.w && s.c !== g.r && s.c !== g.m);
-  if (exJa.length) g.ex = (exJa.find(s => /(sentence|example|context|例文|例句)/i.test(s.name)) || exJa[0]).c;
-  const note = others.find(s => s.c !== g.m && s.c !== g.ex && /(sentence.*(meaning|trans|english|chinese|zh)|exzh|例文訳|例句中譯|例句中文|例句翻譯)/i.test(s.name));
-  if (note) g.exZh = note.c;
-  const pos = stats.find(s => /(pos|part of speech|品詞|詞性)/i.test(s.name));
-  if (pos) g.pos = pos.c;
-  return g;
-}
-
-function cardFromRow(row, map, idx) {
-  const col = (i, keep) => (i >= 0 && i < row.length ? parseField(row[i], keep) : parseField(''));
-  let pw = col(map.w); const pr = col(map.r, true); let pm = col(map.m); const pex = col(map.ex); const pexz = col(map.exZh); const ppos = col(map.pos);
-  const all = row.map(c => parseField(c));
-  const sounds = []; const images = []; const videos = [];
-  all.forEach(p => { p.sounds.forEach(x => { if (!sounds.includes(x)) sounds.push(x); }); p.images.forEach(x => { if (!images.includes(x)) images.push(x); }); p.videos.forEach(x => { if (!videos.includes(x)) videos.push(x); }); });
-  if (!pw.text || looksLikeId(pw.text) || (!hasJa(pw.text) && all.some(p => hasJa(p.text)))) {
-    const k = all.findIndex((p, i) => i !== map.m && p.text && !looksLikeId(p.text) && hasJa(p.text));
-    if (k >= 0) pw = all[k];
-  }
-  if (!pm.text || looksLikeId(pm.text) || pm.text === pw.text) {
-    const k = all.findIndex(p => p.text && p.text !== pw.text && p.text !== pr.text && !looksLikeId(p.text) && (!hasKana(p.text) || /[a-zA-Z]{2,}/.test(p.text)));
-    if (k >= 0) pm = all[k];
-  }
-  const w = pw.text || pr.text;
-  const wKana = map.w >= 0 && map.w < row.length ? parseField(row[map.w], true).text : '';
-  const rCand = pr.text || (pw.reading && IS_KANA.test(wKana.replace(/\s/g, '')) ? wKana : '');
-  const r = rCand && rCand !== w && IS_KANA.test(rCand.replace(/\s/g, '')) ? rCand.replace(/\s/g, '') : '';
-  const m = pm.text;
-  const ex = pex.text && pex.text !== w ? markTarget(pex.text, w) : '';
-  return {
-    id: `apkg_${Date.now().toString(36)}_${idx}_${Math.random().toString(36).slice(2, 5)}`,
-    w, r, m: m.slice(0, 120), p: '', lv: 'CUSTOM', ex, exZh: pexz.text && pexz.text !== m ? pexz.text : '',
-    posLabel: (ppos.text || (sounds.length || images.length || videos.length ? 'Anki・影音' : 'Anki')).slice(0, 16), src: 'anki',
-    audioWord: pw.sounds[0] || sounds[0] || '', audioEx: pex.sounds[0] || (sounds.length > 1 ? sounds[1] : ''), imageFile: images[0] || '', videoFile: videos[0] || ''
-  };
-}
-
-// ---------- staged import + mapper UI ----------
-let STAGED = null;
-const MAP_FIELDS = [['w', '日文（必填）', false], ['r', '讀音', true], ['m', '意思（必填）', false], ['ex', '例句', true], ['exZh', '例句中文', true], ['pos', '詞性', true]];
-function ankiStatus(html) { const el = document.getElementById('ankiStatus'); if (el) el.innerHTML = html; }
-
-function showMapper(title, names, rows, summary) {
-  STAGED = { title, names, rows, summary, map: guessMapping(names, rows) };
-  renderMapper();
-}
-function renderMapper() {
-  const box = document.getElementById('ankiMapper');
-  if (!box || !STAGED) return;
-  const { names, rows, map } = STAGED;
-  const first = rows[0] || [];
-  const optLabel = (i) => {
-    const p = parseField(first[i]);
-    const sample = p.text ? p.text.slice(0, 18) : (p.sounds[0] ? `音檔 ${p.sounds[0]}` : (p.images[0] ? `圖片 ${p.images[0]}` : ''));
-    return `欄 ${i + 1}：${names[i] || ''}${sample ? `（${sample}）` : ''}`;
-  };
-  const selects = MAP_FIELDS.map(([k, label, optional]) => `<div class="field"><label>${label}</label><select class="select" data-change="anki-map" data-k="${k}">
-      ${optional ? `<option value="-1" ${map[k] < 0 ? 'selected' : ''}>不使用</option>` : ''}
-      ${names.map((_, i) => `<option value="${i}" ${map[k] === i ? 'selected' : ''}>${esc(optLabel(i))}</option>`).join('')}
-    </select></div>`).join('');
-  const preview = rows.slice(0, 3).map((r, i) => cardFromRow(r, map, i)).map(c => `<div class="list-item"><div class="grow">
-      <div><b class="jp">${esc(c.w || '（空白）')}</b>${c.r ? ` <span class="small muted jp">${esc(c.r)}</span>` : ''}　${esc(c.m || '（沒有意思）')}</div>
-      ${c.ex ? `<div class="small muted jp">${esc(exPlain(c.ex))}${c.exZh ? `（${esc(c.exZh)}）` : ''}</div>` : ''}
-      ${c.audioWord || c.imageFile || c.videoFile ? `<div class="tiny muted">${[c.audioWord && '有音檔', c.imageFile && '有圖片', c.videoFile && '有影片'].filter(Boolean).join('・')}</div>` : ''}
-    </div></div>`).join('');
-  const hasCustom = state.vocab.length > 0;
-  box.innerHTML = `<div class="panel">
-    <div class="row between"><b>${esc(STAGED.title)}</b><span class="small muted">${rows.length} 筆</span></div>
-    ${STAGED.summary ? `<div class="small muted mt-1">${esc(STAGED.summary)}</div>` : ''}
-    <div class="grid grid-3 mt-3">${selects}</div>
-    <div class="small muted mt-3">預覽前 3 張</div>
-    <div class="list mt-1">${preview}</div>
-    <div class="row-wrap mt-3">
-      ${hasCustom ? `<label class="switch"><input type="checkbox" id="ankiReplace" ${STAGED.replace ? 'checked' : ''} data-change="anki-replace" /><span class="track"></span><span class="small">匯入前先移除之前匯入的 ${state.vocab.length} 張字卡</span></label>` : ''}
-    </div>
-    <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="anki-confirm">確認匯入</button><button type="button" class="btn btn-ghost" data-act="anki-cancel">取消</button></div>
-  </div>`;
-}
-function commitImport() {
-  if (!STAGED) return;
-  const replace = Boolean(STAGED.replace);
-  const have = new Set((replace ? [] : state.vocab).map(v => jaPlain(v.w)));
-  const cards = [];
-  STAGED.rows.forEach((r, i) => {
-    const c = cardFromRow(r, STAGED.map, i);
-    if (!c.w || !c.m || looksLikeId(c.w) || have.has(c.w)) return;
-    have.add(c.w);
-    cards.push(c);
-  });
-  if (!cards.length) { toast('沒有可以匯入的字卡，請檢查欄位對應。'); return; }
-  if (replace) { state.vocab.forEach(v => { delete state.srs['v:' + v.id]; }); state.vocab = []; }
-  state.vocab = cards.concat(state.vocab);
-  STAGED = null;
-  saveState(); buildRegistry(); FLASH = null;
-  const words = cards.filter(isWordLike).length;
-  toast(`已匯入 ${cards.length} 張字卡${cards.length - words ? `（其中 ${cards.length - words} 張是句子，預設不加入每日練習）` : ''}`, 4200);
-  route();
-}
-
-// ---------- text / CSV / JSON ----------
-function splitCsvLine(line, sep) {
-  if (sep !== ',' || !line.includes('"')) return line.split(sep);
-  const out = []; let cur = ''; let q = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (q) { if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; } else if (ch === '"') q = false; else cur += ch; }
-    else if (ch === '"') q = true;
-    else if (ch === sep) { out.push(cur); cur = ''; }
-    else cur += ch;
-  }
-  out.push(cur);
-  return out;
-}
-function textToRows(raw) {
-  const lines = String(raw || '').replace(/^﻿/, '').split(/\r?\n/);
-  let sep = null; let header = [];
-  const rows = [];
-  lines.forEach(line => {
-    const l = line.trim();
-    if (!l) return;
-    if (l.startsWith('#')) {
-      const low = l.toLowerCase();
-      if (low.startsWith('#separator:')) { const v = low.split(':')[1].trim(); sep = v === 'tab' ? '\t' : v === 'comma' ? ',' : v === 'semicolon' ? ';' : v === 'pipe' ? '|' : (v || null); }
-      else if (low.startsWith('#columns:')) { const c = l.slice(9).trim(); header = c.includes('\t') ? c.split('\t') : c.split(/[,;]/); }
-      return;
-    }
-    const s = sep || (l.includes('\t') ? '\t' : (l.includes(';') ? ';' : ','));
-    const parts = splitCsvLine(l, s);
-    if (parts.length >= 2) rows.push(parts);
-  });
-  const n = rows.reduce((a, r) => Math.max(a, r.length), 0);
-  return { names: Array.from({ length: n }, (_, i) => (header[i] || '').trim() || `第 ${i + 1} 欄`), rows };
-}
-function importAnkiText(raw, title = '貼上的文字') {
-  const t = String(raw || '').trim();
-  if (!t) { toast('請先貼上字卡內容'); return; }
-  if (t.startsWith('[')) {
-    try {
-      const arr = JSON.parse(t);
-      if (Array.isArray(arr) && arr.length) {
-        const names = ['日文', '讀音', '意思', '例句', '例句中文', '詞性'];
-        const rows = arr.map(x => [x.w || x.kanji || '', x.r || x.kana || '', x.m || x.meaning || '', x.ex || x.exJp || '', x.exZh || '', x.pos || '']);
-        showMapper(`${title}（JSON）`, names, rows, '');
-        STAGED.map = { w: 0, r: 1, m: 2, ex: 3, exZh: 4, pos: 5 };
-        renderMapper();
-        return;
-      }
-    } catch (e) { /* not JSON, fall through */ }
-  }
-  const { names, rows } = textToRows(t);
-  if (!rows.length) { toast('看不出欄位，請確認每行至少有「日文」和「意思」，用 Tab 或逗號分隔。'); return; }
-  showMapper(title, names, rows, '');
-}
-
-async function importAnkiFile(file) {
-  const name = file.name || '';
-  if (/\.(txt|tsv|csv|json)$/i.test(name)) {
-    const text = await file.text();
-    importAnkiText(text, name);
-    return;
-  }
-  ankiStatus(`<span class="spinner"></span> 正在讀取 ${esc(name)}…`);
-  try {
-    await loadScript(LIBS.jszip);
-    await loadScript(LIBS.sqljs);
-    const zip = await window.JSZip.loadAsync(file);
-    const files = Object.keys(zip.files);
-    const isZstd = (b) => b.length >= 4 && b[0] === 0x28 && b[1] === 0xB5 && b[2] === 0x2F && b[3] === 0xFD;
-    const unzstd = async (b) => { if (!isZstd(b)) return b; await loadScript(LIBS.fzstd); return window.fzstd.decompress(b); };
-    const dbName = ['collection.anki21b', 'collection.anki21', 'collection.anki2'].find(n => zip.file(n)) || files.find(n => /\.anki2(1b?)?$/i.test(n));
-    if (!dbName) throw new Error('檔案裡找不到 Anki 資料庫（collection.anki2）。');
-    const dbBytes = await unzstd(await zip.file(dbName).async('uint8array'));
-    const SQL = await window.initSqlJs({ locateFile: f => LIBS.sqlwasm + f });
-    const db = new SQL.Database(dbBytes);
-    const fieldsByModel = {};
-    try {
-      const r = db.exec('SELECT models FROM col LIMIT 1');
-      const js = r.length && r[0].values.length ? r[0].values[0][0] : '';
-      if (js && js !== '{}') Object.entries(JSON.parse(js)).forEach(([mid, m]) => { if (m && Array.isArray(m.flds)) fieldsByModel[String(mid)] = m.flds.map(f => f.name || '欄位'); });
-    } catch (e) { /* newer schema */ }
-    if (!Object.keys(fieldsByModel).length) {
-      try {
-        const r = db.exec('SELECT CAST(ntid AS TEXT), ord, name FROM fields ORDER BY ntid, ord');
-        if (r.length) r[0].values.forEach(([nt, ord, n]) => { (fieldsByModel[nt] = fieldsByModel[nt] || [])[ord] = String(n || `欄位 ${ord + 1}`); });
-      } catch (e) { /* ignore */ }
-    }
-    const notes = db.exec('SELECT CAST(mid AS TEXT), flds FROM notes');
-    db.close();
-    if (!notes.length || !notes[0].values.length) throw new Error('這個牌組裡沒有筆記。');
-    // keep the most common note type so the columns line up
-    const count = {};
-    notes[0].values.forEach(([mid]) => { count[mid] = (count[mid] || 0) + 1; });
-    const mainMid = Object.entries(count).sort((a, b) => b[1] - a[1])[0][0];
-    const rows = notes[0].values.filter(([mid]) => mid === mainMid).map(([, f]) => String(f || '').split('\x1f'));
-    const width = rows.reduce((a, r) => Math.max(a, r.length), 0);
-    const names = Array.from({ length: width }, (_, i) => (fieldsByModel[mainMid] || [])[i] || `欄位 ${i + 1}`);
-
-    // media: numbered zip entries + a JSON (or zstd) name map
-    let media = {};
-    if (zip.file('media')) {
-      try {
-        const raw = await unzstd(await zip.file('media').async('uint8array'));
-        const s = new TextDecoder('utf-8').decode(raw);
-        if (s.trim().startsWith('{')) media = JSON.parse(s);
-      } catch (e) { console.warn('media map', e); }
-    }
-    const MIME = { mp3: 'audio/mpeg', ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/ogg', wav: 'audio/wav', m4a: 'audio/mp4', aac: 'audio/aac', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', avif: 'image/avif', svg: 'image/svg+xml', mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime' };
-    const keys = Object.keys(media);
-    let saved = 0; let batch = [];
-    for (const k of keys) {
-      const entry = zip.file(k);
-      const realName = media[k];
-      if (!entry || !realName) continue;
-      const bytes = await unzstd(await entry.async('uint8array'));
-      const ext = (realName.split('.').pop() || '').toLowerCase();
-      batch.push({ name: realName, blob: new Blob([bytes], { type: MIME[ext] || 'application/octet-stream' }) });
-      if (batch.length >= 150) { saved += await AnkiMedia.putBatch(batch); batch = []; ankiStatus(`<span class="spinner"></span> 儲存媒體檔 ${saved} / ${keys.length}…`); }
-    }
-    if (batch.length) saved += await AnkiMedia.putBatch(batch);
-    ankiStatus(`讀取完成：${rows.length} 筆筆記${saved ? `、${saved} 個媒體檔` : ''}。請確認下方的欄位對應。`);
-    showMapper(name, names, rows, Object.keys(count).length > 1 ? `牌組有 ${Object.keys(count).length} 種筆記類型，只匯入數量最多的一種（${rows.length} 筆）。` : '');
-  } catch (e) {
-    console.error(e);
-    ankiStatus(`<span style="color:var(--bad)">匯入失敗：${esc(e.message || String(e))}</span>`);
-  }
-}
-
-Object.assign(ACTIONS, {
-  'anki-confirm': () => commitImport(),
-  'anki-cancel': () => { STAGED = null; const b = document.getElementById('ankiMapper'); if (b) b.innerHTML = ''; ankiStatus(''); }
-});
-Object.assign(CHANGE_ACTIONS, {
-  'anki-map': (el) => { if (!STAGED) return; STAGED.map[el.dataset.k] = Number(el.value); renderMapper(); },
-  'anki-replace': (el) => { if (STAGED) STAGED.replace = el.checked; }
-});
-
 // ---- 83_safety.js ----
 /* ==========================================================================
    Data safety: persistent storage, backup reminders, daily snapshots (IndexedDB)
@@ -10214,7 +9602,7 @@ async function dailySnapshot() {
   try {
     const t = todayStr();
     if (state.lastSnapshot === t) return;
-    if (!Object.keys(state.srs).length && !state.vocab.length) return;
+    if (!Object.keys(state.srs).length) return;
     const ok = await Snapshots.put(t, JSON.stringify(state));
     if (!ok) return;
     state.lastSnapshot = t;
@@ -10607,6 +9995,7 @@ async function init() {
   route();
   requestPersistence();
   dailySnapshot();
+  try { indexedDB.deleteDatabase('nihongo_anki_media_db_v1'); } catch (e) { /* none */ }   // 1.0.34: the sounds and pictures of imported Anki cards, gone with them
   registerServiceWorker();
   audioPrefetchSoon();   // 離線語音: a few seconds after opening, and again whenever the network comes back
   window.addEventListener('online', () => audioPrefetchSoon(1000));

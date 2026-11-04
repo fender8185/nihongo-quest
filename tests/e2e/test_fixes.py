@@ -1755,8 +1755,8 @@ def test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_h
 def test_settings_drop_the_switches_the_app_now_decides(b):
     js = """(() => { const tab = (k) => { openSettings(k); const m = document.querySelector('.modal'); const o = { keys: [...m.querySelectorAll('[data-key]')].map(x => x.dataset.key), acts: [...m.querySelectorAll('[data-act]')].map(x => x.dataset.act), text: m.textContent }; closeModal(true); return o; };
       const L = tab('learn'), S = tab('speech');
-      return JSON.stringify({ learnGone: ['retention', 'enter-main', 'enter-pre', 'loadCap', 'newKanaPerDay', 'sessionSize', 'order'].filter(k => L.keys.includes(k) || L.acts.includes(k)), stageRow: L.text.includes('目前階段'), unitRow: L.text.includes('目前單元'),
-        learnKept: ['showZh', 'includeImported', 'examDate'].filter(k => !L.keys.includes(k)),
+      return JSON.stringify({ learnGone: ['retention', 'enter-main', 'enter-pre', 'loadCap', 'newKanaPerDay', 'sessionSize', 'order', 'includeImported'].filter(k => L.keys.includes(k) || L.acts.includes(k)), stageRow: L.text.includes('目前階段'), unitRow: L.text.includes('目前單元'),
+        learnKept: ['showZh', 'examDate'].filter(k => !L.keys.includes(k)),
         speechGone: ['autoSpeak', 'listening', 'audioOptions'].filter(k => S.keys.includes(k)), speechKept: ['speechRate', 'engine'].filter(k => !S.keys.includes(k)) }); })()"""
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
     assert r == {'learnGone': [], 'stageRow': False, 'unitRow': False, 'learnKept': [], 'speechGone': [], 'speechKept': []}, r

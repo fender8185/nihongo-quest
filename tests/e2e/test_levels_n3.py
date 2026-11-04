@@ -55,7 +55,7 @@ def test_the_level_lists_and_stages_include_n3(b):
       decks: decks().map(d => d[0]), scopes: statsScopes().map(s => s[0]), lv: unitLevel('m19') }))()"""
     r = json.loads(ev(b, js))
     assert r == {'levels': ['PRE_N5', 'N5', 'N4', 'N3'], 'course': ['N5', 'N4', 'N3'], 'stage': 'N3', 'themes': True,
-                 'decks': ['all', 'PRE_N5', 'N5', 'N4', 'N3', 'custom'], 'scopes': ['all', 'pre', 'n5', 'n4', 'n3'], 'lv': 'N3'}, r
+                 'decks': ['all', 'PRE_N5', 'N5', 'N4', 'N3'], 'scopes': ['all', 'pre', 'n5', 'n4', 'n3'], 'lv': 'N3'}, r
 
 def test_vocab_page_has_an_n3_tab_and_the_stats_an_n3_scope(b):
     js = """(() => { location.hash = '#/vocab/level?lv=N3'; route(); const tabs = [...document.querySelectorAll('.seg.mb-4 button')].map(x => x.textContent.trim());

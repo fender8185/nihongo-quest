@@ -309,7 +309,7 @@ def test_vocab_opens_on_the_learners_level(b):
       const tabs = [...document.querySelectorAll('.seg.mb-4 button')].map(x => x.textContent.trim()); return JSON.stringify({ a, b: b2, c, tabs }); })()"""
     r = json.loads(ev(b, js))
     assert r['a'] == '#/vocab/level?lv=PRE_N5' and r['b'] == '#/vocab/level?lv=N5' and r['c'] == '#/vocab/level?lv=N4', r
-    assert r['tabs'] == ['入門', 'N5', 'N4', 'N3', '字卡', '單字表', '匯入與新增'], r
+    assert r['tabs'] == ['入門', 'N5', 'N4', 'N3', '字卡', '單字表'], r   # 匯入與新增 went with the custom cards (1.0.34)
 
 def test_level_page_sections(b):
     js = """(() => { location.hash = '#/vocab/level?lv=N5'; route(); const v = document.getElementById('view');

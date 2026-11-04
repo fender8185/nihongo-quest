@@ -98,6 +98,40 @@ def test_records_of_removed_sentence_choice_items_are_dropped(b):
     assert r == {'srs': ['g:ai_k', 'g:gd1', 'g:m0-17'], 'mistakes': ['b', 'c', 'e'], 'custom': ['ai_k']}, r
 
 
+# ---- 1.0.34: custom and imported cards are gone (自訂字卡, the Anki / text import, AI 產生字卡); so are their records ----
+def test_custom_cards_and_their_records_are_dropped(b):
+    js = """(() => { const rec = () => ({ b: 2, due: todayStr(), n: 3, ok: 3, ng: 0, s: 3, d: 5, last: todayStr() });
+      const mk = (id, key) => ({ id, key, cat: '單字', prompt: id, answer: 'x', why: '', count: 1 });
+      const s = normalizeState({ vocab: [{ id: 'cust_1', w: '猫', m: '貓', lv: 'CUSTOM' }, { id: 'apkg_x', w: '犬', m: '狗', lv: 'CUSTOM' }],
+        srs: { 'v:cust_1': rec(), 'v:apkg_x': rec(), 'v:n5a-001': rec(), 'g:m1-01': rec() }, settings: { includeImported: 'all' },
+        mistakes: [mk('a', 'v:cust_1'), mk('b', 'v:n5a-001'), mk('c', ''), mk('d', 'v:apkg_x')] });
+      return JSON.stringify({ vocab: 'vocab' in s, srs: Object.keys(s.srs).sort(), mistakes: s.mistakes.map(m => m.id), setting: 'includeImported' in s.settings }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'vocab': False, 'srs': ['g:m1-01', 'v:n5a-001'], 'mistakes': ['b', 'c'], 'setting': False}, r   # c: a notebook entry added by hand stays
+
+def test_no_page_offers_custom_cards_any_more(b):
+    js = """(() => { const text = () => document.getElementById('view').textContent;   /* the page, not the script's own text */
+      const open = (h) => { location.hash = h; route(); };
+      open('#/vocab/cards'); const cards = { shown: Boolean(document.querySelector('[data-act="flash-deck"]')), importTab: text().includes('匯入與新增'), deck: text().includes('自訂／匯入') };
+      open('#/vocab/import'); const imp = { file: Boolean(document.getElementById('ankiFile')), flash: Boolean(document.querySelector('[data-act="flash-deck"]')) };
+      openSettings('learn'); const learn = document.querySelector('.modal').textContent.includes('自訂字卡'); closeModal();
+      return JSON.stringify({ cards, imp, learn, decks: decks().map(d => d[0]) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'cards': {'shown': True, 'importTab': False, 'deck': False}, 'imp': {'file': False, 'flash': True}, 'learn': False, 'decks': ['all', 'PRE_N5', 'N5', 'N4', 'N3']}, r
+
+def test_the_media_of_imported_anki_cards_is_deleted(b):   # their sounds and pictures lived in an IndexedDB store of their own
+    make = "new Promise(res => { const r = indexedDB.open('nihongo_anki_media_db_v1', 1); r.onupgradeneeded = (e) => e.target.result.createObjectStore('media_blobs'); r.onsuccess = (e) => { e.target.result.close(); res(true); }; r.onerror = () => res(false); })"
+    names = "indexedDB.databases().then(l => JSON.stringify(l.map(d => d.name).filter(n => n.includes('anki'))))"
+    out = b.run([("nav", URL), ("wait", READY), ("eval", make), ("eval", names), ("nav", URL), ("wait", READY), ("eval", "new Promise(r => setTimeout(r, 500))"), ("eval", names)])
+    assert out[0] is True and json.loads(out[1]) == ['nihongo_anki_media_db_v1'] and json.loads(out[-1]) == [], out
+
+def test_the_v1_migration_keeps_no_custom_cards(b):
+    js = """(() => { const keep = state; const s = migrateLegacy({ vocab: [{ id: 'u1', kanji: '猫', kana: 'ねこ', meaning: '貓', mastery: 2 }], dailyLogs: {}, mistakes: [] }); state = keep;
+      return JSON.stringify({ vocab: (s.vocab || []).length, srs: Object.keys(s.srs).filter(k => k.startsWith('v:u1')).length, notes: JSON.stringify(s.notices || []).includes('字卡') }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'vocab': 0, 'srs': 0, 'notes': False}, r
+
+
 # ---- 1.0.31: the N5／N4 gap words of the curriculum outline (curriculum/gaps-n5n4.json, less the 16 sharing a spelling) ----
 def test_bank_has_the_gap_words_from_the_curriculum_outline(b):
     js = """(() => { const G = DATA.VOCAB.filter(v => /^n[54]g-\\d{3}$/.test(v.id) && Number(v.id.slice(4)) <= (v.id[1] === '5' ? 38 : 60));   /* the 98 of 1.0.31 */ const T = (lv) => (DATA.THEMES[lv] || []).map(t => t.c);

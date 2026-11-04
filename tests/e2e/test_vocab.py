@@ -37,18 +37,17 @@ def test_themed_practice_uses_only_that_theme(b):
 
 # ---- Task 3: per-format record; 1.0.21: 已熟練 is five stars, and for a word with a 假名拼字 question its spelling right ----
 # three other formats are not enough, nor is 我會了; a word with no spelling question (目), grammar, kanji (an old bulk
-# mark's empty `f` included), a custom card, and a record with no key count at five stars
+# mark's empty `f` included) and a record with no key count at five stars
 def test_mastered_means_five_stars_and_a_spelled_reading(b):
     js = """(() => { const w = __W__; const me = REG.vocab.find(v => v.builtin && v.w === '目'); const g = REG.grammar[0]; const k = REG.kanji[0];
-      state.vocab.push({ id: 'cm_sp', w: '猫', r: 'ねこ', m: '貓' }); buildRegistry(); const c = REG.vocab.find(x => x.id === 'cm_sp');
       const mk = (f, extra) => Object.assign({ b: 6, due: '2099-01-01', n: 9, ok: 9, ng: 0, s: 60, d: 5 }, f === undefined ? {} : { f }, extra || {});
       const out = { three: srsLevelLabel(mk({ 'v-meaning': [3, 0], 'v-recall': [1, 2], 'v-listen': [1, 0] }), w.key), spell: srsLevelLabel(mk({ 'v-spell': [1, 0] }), w.key),
         known: srsLevelLabel(mk({ 'v-meaning': [1, 0] }, { known: 1 }), w.key), me: srsLevelLabel(mk({}), me.key), grammarEmptyF: srsLevelLabel(mk({}), g.key),
-        kanjiEmptyF: srsLevelLabel(mk({}), k.key), custom: srsLevelLabel(mk({ 'v-meaning': [1, 0] }), c.key), noKey: srsLevelLabel(mk({})),
+        kanjiEmptyF: srsLevelLabel(mk({}), k.key), noKey: srsLevelLabel(mk({})),
         gone: typeof formatsPassed === 'undefined' && typeof MASTER_FORMATS === 'undefined' };
-      state.vocab = state.vocab.filter(x => x.id !== 'cm_sp'); buildRegistry(); return JSON.stringify(out); })()""".replace('__W__', SPELL_WORD)
+      return JSON.stringify(out); })()""".replace('__W__', SPELL_WORD)
     r = json.loads(ev(b, js))
-    assert r == {'three': '熟悉', 'spell': '已熟練', 'known': '熟悉', 'me': '已熟練', 'grammarEmptyF': '已熟練', 'kanjiEmptyF': '已熟練', 'custom': '已熟練', 'noKey': '已熟練', 'gone': True}, r
+    assert r == {'three': '熟悉', 'spell': '已熟練', 'known': '熟悉', 'me': '已熟練', 'grammarEmptyF': '已熟練', 'kanjiEmptyF': '已熟練', 'noKey': '已熟練', 'gone': True}, r
 
 # 1.0.21: a word at four stars or more that has not been spelled yet is asked as 假名拼字 in practice, whatever format came
 # just before, but not where only options or one set format will do (階段測驗, the mock exam); once spelled the formats
@@ -182,17 +181,12 @@ def test_new_words_come_from_two_themes_interleaved(b):
     check(r['th'], r['c']); assert r['th2'][0] == r['th'][1], r; check(r['th2'], r['c2'])
     assert r['th3'] == ['副詞與接續'] and all(x == ['PRE_N5', '問候'] or x == ['N5', '副詞與接續'] for x in r['c3']), r
 
-def test_custom_cards_still_alternate_with_builtins(b):
-    js = """(() => { state.vocab.push({ id: 'c1', w: '猫', r: 'ねこ', m: '貓' }, { id: 'c2', w: '犬', r: 'いぬ', m: '狗' }); buildRegistry();
-      const c = newVocabCandidates(REG.vocab, false).slice(0, 4).map(v => v.builtin ? 'b' : 'c'); return JSON.stringify(c); })()"""
-    assert ev(b, js) == '["b","c","b","c"]'
-
 def test_today_names_the_active_themes(b):
     out = b.run([("nav", URL), ("wait", READY), ("eval", "location.hash = '#/today'; route(); JSON.stringify({ t: document.querySelector('.plan-topics').textContent, th: activeThemes(REG.vocab.filter(v => v.builtin), false) })")])
     r = json.loads(out[-1])
     assert '問候' in r['t'] and all(th in r['t'] for th in r['th']), r   # the PRE_N5 lane (問候 first) and the two active N5 themes
 
-TESTS += [test_new_words_come_from_two_themes_interleaved, test_custom_cards_still_alternate_with_builtins, test_today_names_the_active_themes]
+TESTS += [test_new_words_come_from_two_themes_interleaved, test_today_names_the_active_themes]
 
 # ---- 2026-10-26 (2): kana options ----
 def test_kana_options_replace_kanji_uniformly(b):
@@ -300,21 +294,15 @@ def test_grammar_slots_take_new_items_first_then_the_least_practised_reviews(b):
 TESTS += [test_new_grammar_is_not_squeezed_out_by_a_review_backlog, test_grammar_slots_take_new_items_first_then_the_least_practised_reviews]
 
 # ---- 2026-10-26 (6): the 單字主題 line never vanishes ----
-def test_topics_line_names_custom_cards_or_a_finished_day_instead_of_disappearing(b):
+def test_topics_line_names_a_finished_day_instead_of_disappearing(b):
     js = """(() => { const snap = () => { location.hash = '#/today'; route(); const t = document.querySelector('.plan-topics'); return t ? t.textContent.replace(/\\s+/g, ' ').trim() : null; };
-      state.today.newV = 99; state.today.newG = 99;   // today's new-word and new-grammar quota already used
-      for (let i = 0; i < 6; i++) { state.vocab.push({ id: 'cx' + i, w: '猫' + i, r: 'ねこ', m: '貓' + i }); }
-      buildRegistry(); REG.vocab.filter(v => !v.builtin).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(todayStr(), -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, f: {}, last: addDays(todayStr(), -3) }; });
-      delete state.today.plan; saveState(); const customOnly = snap();
-      const words = dailyQueue().items.filter(it => it.kind === 'v');
-      state.settings.includeImported = 'off'; delete state.today.plan; saveState(); const noWords = snap();
-      const words2 = dailyQueue().items.filter(it => it.kind === 'v');
-      return JSON.stringify({ customOnly, allCustom: words.length > 0 && words.every(it => !it.builtin), noWords, none: words2.length === 0 }); })()"""
+      state.today.newV = 99; state.today.newG = 99;   // today's new-word and new-grammar quota already used, no word due
+      delete state.today.plan; saveState(); const noWords = snap();
+      return JSON.stringify({ noWords, none: dailyQueue().items.filter(it => it.kind === 'v').length === 0 }); })()"""
     r = json.loads(ev(b, js))
-    assert r['allCustom'] and r['customOnly'] and '單字主題' in r['customOnly'] and '自訂字卡' in r['customOnly'], r
     assert r['none'] and r['noWords'] and '單字主題今天的單字已完成' in r['noWords'] and '明天' not in r['noWords'], r
 
-TESTS += [test_topics_line_names_custom_cards_or_a_finished_day_instead_of_disappearing]
+TESTS += [test_topics_line_names_a_finished_day_instead_of_disappearing]
 
 # ---- 2026-10-26 (7): every example sentence has a play button ----
 def test_example_sentences_have_play_buttons_on_preview_feedback_and_footer(b):
@@ -605,11 +593,6 @@ def test_furigana_known_hiding_follows_the_mastered_label(b):
       return JSON.stringify({ a, c }); })()"""
     assert ev(b, js) == '{"a":false,"c":true}'
 
-def test_theme_word_table_hides_the_custom_deck_button(b):
-    js = """(() => { location.hash = '#/vocab/list?c=飲食'; route(); const inTheme = !!document.querySelector('.seg [data-lv=custom]');
-      location.hash = '#/vocab/list'; route(); const plain = !!document.querySelector('.seg [data-lv=custom]'); return JSON.stringify({ inTheme, plain }); })()"""
-    assert ev(b, js) == '{"inTheme":false,"plain":true}'
-
 def test_encore_feedback_shows_the_level_and_says_it_does_not_reschedule(b):
     js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.exZh && /[一-龯]/.test(x.w) && meaningOptions(x) && recallOptions(x));
       const fill = REG.grammar.filter(g => !state.srs[g.key]).slice(0, 12); startSession('items', { items: [v, ...fill] });
@@ -630,7 +613,7 @@ def test_vocab_practice_buttons_show_the_question_count(b):
     r = json.loads(ev(b, js))
     assert r['card'] == f"練習・{r['cardWant']} 題" and r['level'] == f"練這個等級・{r['levelWant']} 題" and r['head'] == f"單字測驗・{r['headWant']} 題" and r['detail'] == f"練習這個主題・{r['detailWant']} 題", r
 
-TESTS += [test_furigana_known_hiding_follows_the_mastered_label, test_theme_word_table_hides_the_custom_deck_button, test_encore_feedback_shows_the_level_and_says_it_does_not_reschedule, test_vocab_practice_buttons_show_the_question_count]
+TESTS += [test_furigana_known_hiding_follows_the_mastered_label, test_encore_feedback_shows_the_level_and_says_it_does_not_reschedule, test_vocab_practice_buttons_show_the_question_count]
 
 # ---- 2026-10-27: content pass (DATA_VERSION 3) ----
 def test_vocab_content_pass_adds_keigo_common_words_and_removes_duplicates(b):
@@ -899,10 +882,15 @@ def test_tapping_a_kanji_in_the_player_pauses_it_and_opens_the_kanji(b):
 TESTS += [test_a_word_card_in_the_player_lists_its_kanji, test_tapping_a_kanji_in_the_player_pauses_it_and_opens_the_kanji]
 
 # ---- 1.0.28: 播放字卡: a theme's rotation has a card for each kanji its words use (in the kanji table, once each); without
-# shuffle it plays in the theme's order, each kanji card right after the first word that uses it ----
-THEME_SEQ = ['お願いします', '【願】', '失礼します', '【失】', '【礼】', '話', '【話】', 'どうも', 'お疲れ様でした', '【疲】', '【様】', 'よろしくお願いします',
-             'おめでとうございます', 'お大事に', '【大】', '【事】', 'お元気ですか', '【元】', '【気】',
-             'さあ', 'ええと', 'オーケー', 'お元気で', 'お邪魔します', 'こちらこそ', 'ごめんください', 'サンキュー', 'バイバイ']   # 問候與溝通 as data.js lists it (1.0.31 added the last nine); 邪 魔 are not in the kanji table (願 疲 様 joined it with N3, 1.0.33)
+# shuffle it plays in the theme's order, each kanji card right after the first word that uses it. 1.0.34: only the kanji of the
+# levels the learner has reached; a new learner is at N5, so 問候與溝通 gets 話 大 気 (not 願 疲 様 of N3, nor 失 礼 事 元 of N4) ----
+THEME_SEQ = ['お願いします', '失礼します', '話', '【話】', 'どうも', 'お疲れ様でした', 'よろしくお願いします',
+             'おめでとうございます', 'お大事に', '【大】', 'お元気ですか', '【気】',
+             'さあ', 'ええと', 'オーケー', 'お元気で', 'お邪魔します', 'こちらこそ', 'ごめんください', 'サンキュー', 'バイバイ']   # 問候與溝通 as data.js lists it (1.0.31 added the last nine)
+# a learner past N5 and N4 (everything there seen), so every kanji card can come up
+AT_N3 = ("REG.vocab.filter(v => v.lv !== 'N3').forEach(v => { state.srs[v.key] = { b: 3, due: '2099-01-01', n: 3, ok: 3, ng: 0, s: 20, d: 5, last: todayStr(), f: {} }; });"
+         " REG.kanji.filter(k => k.lv !== 'N3').forEach(k => { state.srs[k.key] = { b: 3, due: '2099-01-01', n: 3, ok: 3, ng: 0, s: 20, d: 5, last: todayStr() }; });"
+         " state.completedUnits = DATA.UNITS.filter(u => u.lv !== 'N3').map(u => u.id); DAILY_CACHE = null;")
 LABELS = "const labels = () => LISTEN.items.map(e => e.kind === 'k' ? '【' + e.k.k + '】' : e.word);"
 
 def test_a_theme_plays_a_card_for_each_kanji_its_words_use(b):
@@ -961,7 +949,7 @@ def test_tapping_the_kanji_on_a_kanji_card_pauses_the_player_and_opens_the_kanji
 
 # every kanji card fits the Today card's player box (260px on a computer) without scrolling, on a computer and on a phone
 def test_every_kanji_card_fits_the_today_player_without_scrolling(b):
-    js = "(() => { " + MAIN + HUSH + """ setListenPref({ source: 'theme', theme: '自然與天氣' }); LISTEN = null; location.hash = '#/today'; route(); ACTIONS['today-tab']({ dataset: { tab: 'theme' } });
+    js = "(() => { " + MAIN + HUSH + AT_N3 + """ setListenPref({ source: 'theme', theme: '自然與天氣' }); LISTEN = null; location.hash = '#/today'; route(); ACTIONS['today-tab']({ dataset: { tab: 'theme' } });
       const card = document.getElementById('listenCard'); const seen = new Set(); const over = [];
       vocabThemes().forEach(g => listenSourceEntries({ kind: 'theme', theme: g.c }).forEach(e => { if (e.kind !== 'k' || seen.has(e.id)) return; seen.add(e.id);
         LISTEN.items = [e]; LISTEN.idx = 0; listenRenderNow(); if (card.scrollHeight > card.clientHeight + 1) over.push(e.k.k); }));
@@ -972,7 +960,7 @@ def test_every_kanji_card_fits_the_today_player_without_scrolling(b):
 
 # 沉浸播放: the kanji is drawn large, and the kanji, its meaning, readings and example stay stacked, centred and inside the box
 def test_a_kanji_card_fills_the_full_screen_player_and_stays_inside_it(b):
-    js = "(() => { " + MAIN + HUSH + """ LISTEN = null; setListenPref({ source: 'theme', theme: '自然與天氣' }); location.hash = '#/vocab/listen'; route(); listenPause();
+    js = "(() => { " + MAIN + HUSH + AT_N3 + """ LISTEN = null; setListenPref({ source: 'theme', theme: '自然與天氣' }); location.hash = '#/vocab/listen'; route(); listenPause();
       const card = document.getElementById('listenCard'); const box = (el) => ({ top: el.offsetTop, bottom: el.offsetTop + el.offsetHeight, mid: el.offsetLeft + el.offsetWidth / 2 });   // layout coordinates: the page may be turned 90°
       const out = []; LISTEN.items.forEach((e, i) => { if (e.kind !== 'k') return; LISTEN.idx = i; listenRenderNow(); const f = card.querySelector('.flash');
         const rows = ['.word', '.meaning', '.listen-reads', '.listen-kex'].map(s => f.querySelector(s)).filter(Boolean).map(box);
@@ -982,7 +970,7 @@ def test_a_kanji_card_fills_the_full_screen_player_and_stays_inside_it(b):
     for size in ((390, 844), (844, 390)):
         r = json.loads(b.run([("metrics", size), ("nav", URL), ("wait", READY), ("eval", js)], timeout=45)[-1])
         bad = [x for x in r if not (x['rows'] == 4 and x['inside'] and x['stacked'] and x['centred'] and x['px'] >= 60)]
-        assert len(r) == 35 and not bad, (size, len(r), bad[:3])   # 自然與天氣 uses 35 kanji of the table (29 before the N3 kanji joined it)
+        assert len(r) == 35 and not bad, (size, len(r), bad[:3])   # 自然與天氣 uses 35 kanji of the table (29 before the N3 kanji joined it), all reached at N3
 
 # the lock screen names a kanji card by the kanji and its meaning; the clips fetched ahead are the ones the card reads
 def test_a_kanji_card_names_itself_on_the_lock_screen_and_its_clips_are_fetched_ahead(b):

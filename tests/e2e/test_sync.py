@@ -115,21 +115,21 @@ def test_pull_runs_after_exam_is_finished_but_still_on_result_screen(b):
 
 def test_first_sync_keeps_real_local_progress_over_empty_cloud(b):
     out = boot(b, [
-        ("eval", "state.vocab.push({ id: 'v1', jp: '猫', zh: '貓' }); saveState(); true"),
+        ("eval", "state.srs['v:n5a-001'] = { b: 1, due: todayStr(), n: 1, ok: 1, ng: 0, last: todayStr() }; saveState(); true"),
         ("eval", "__fake.setRow({ user_id: 'u1', state: { v: 3, updatedAt: '2000-01-01T00:00:00.000Z' }, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('a@b.c'); true"),
         ("wait", "Sync.status === 'idle' && Sync.meta.everSynced"),
-        ("eval", "JSON.stringify({ local: state.vocab.length, cloud: (__fake.getRow().state.vocab || []).length })"),
+        ("eval", "JSON.stringify({ local: Object.keys(state.srs).length, cloud: Object.keys(__fake.getRow().state.srs || {}).length })"),
     ])
     assert out[-1] == '{"local":1,"cloud":1}', out[-1]
 
 def test_first_sync_adopting_cloud_snapshots_local_first(b):
     out = boot(b, [
-        ("eval", "state.vocab.push({ id: 'v1', jp: '猫', zh: '貓' }); saveState(); true"),
-        ("eval", "__fake.setRow({ user_id: 'u1', state: { v: 3, updatedAt: '2000-01-01T00:00:00.000Z', vocab: [{ id: 'c1', jp: '犬', zh: '狗' }] }, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('a@b.c'); true"),
+        ("eval", "state.srs['v:n5a-001'] = { b: 1, due: todayStr(), n: 1, ok: 1, ng: 0, last: todayStr() }; saveState(); true"),
+        ("eval", "__fake.setRow({ user_id: 'u1', state: { v: 3, updatedAt: '2000-01-01T00:00:00.000Z', srs: { 'v:n5a-002': { b: 1, due: '2000-01-02', n: 1, ok: 1, ng: 0, last: '2000-01-01' } } }, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('a@b.c'); true"),
         ("wait", "Sync.status === 'idle' && Sync.meta.everSynced"),
-        ("eval", "Snapshots.get('pre-cloud-' + todayStr()).then(j => JSON.stringify({ now: state.vocab[0].id, snap: j ? JSON.parse(j).vocab[0].id : null }))"),
+        ("eval", "Snapshots.get('pre-cloud-' + todayStr()).then(j => JSON.stringify({ now: Object.keys(state.srs), snap: j ? Object.keys(JSON.parse(j).srs) : null }))"),
     ])
-    assert out[-1] == '{"now":"c1","snap":"v1"}', out[-1]
+    assert out[-1] == '{"now":["v:n5a-002"],"snap":["v:n5a-001"]}', out[-1]
 
 def test_token_refresh_does_not_mask_error_status(b):
     out = boot(b, [

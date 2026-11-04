@@ -27,13 +27,13 @@ def test_save_state_bumps_updated_at(b, before):
     assert v["updatedAt"] > before, (v["updatedAt"], before)
 
 def test_localstorage_only_data_migrates_into_indexeddb(b):
-    seed = {"v": 3, "settings": {"loadCap": 42}, "vocab": [{"id": "x1", "jp": "猫", "zh": "貓"}], "srs": {}}
+    seed = {"v": 3, "settings": {"loadCap": 42}, "hidden": ["x1"], "srs": {}}
     out = b.run([
         ("nav", URL), ("wait", "typeof state === 'object'"),
         ("eval", "new Promise(res => { const r = indexedDB.deleteDatabase('nihongo_quest_db'); r.onsuccess = r.onerror = r.onblocked = () => res(true); })"),
         ("eval", f"localStorage.setItem('nihongo_quest_n4_v3', {json.dumps(json.dumps(seed))}); true"),
         ("nav", URL), ("wait", "typeof state === 'object' && !!state.updatedAt"),
-        ("eval", "state.settings.loadCap"), ("eval", "state.vocab.length"),
+        ("eval", "state.settings.loadCap"), ("eval", "state.hidden.length"),
         ("eval", idb_get("state")),
         ("eval", "JSON.parse(localStorage.getItem('nihongo_quest_n4_v3')).settings.loadCap"),
     ])

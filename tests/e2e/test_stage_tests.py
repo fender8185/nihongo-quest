@@ -178,12 +178,11 @@ def test_a_pass_marks_four_stars_with_its_side_effects(b):
 
 def test_a_pass_never_downgrades(b):
     js = "(() => { " + RESET + """const v = stageItems('pre').find(x => x.kind === 'v'); markKnown(v.key, false); state.currentUnit = 'm9';
-      const custom = { id: 'u_test', w: 'テスト', r: 'てすと', m: '測試' }; state.vocab.push(custom); buildRegistry();
       const changed = markPassedStage('p1', new Set()); const n = Object.entries(state.srs).filter(([k, x]) => !x.known && !/^[lr]:/.test(k)).length;
-      const out = { changed, n, known: state.srs[v.key].known, b: state.srs[v.key].b, cur: state.currentUnit, custom: Boolean(state.srs['v:u_test']) };
-      state.vocab = state.vocab.filter(x => x.id !== 'u_test'); buildRegistry(); return JSON.stringify(out); })()"""
+      const out = { changed, n, known: state.srs[v.key].known, b: state.srs[v.key].b, cur: state.currentUnit };
+      return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['known'] == 1 and r['b'] == 6 and r['cur'] == 'm9' and not r['custom'] and r['changed'] == r['n'], r
+    assert r['known'] == 1 and r['b'] == 6 and r['cur'] == 'm9' and r['changed'] == r['n'], r
 
 def test_a_p3_pass_moves_on_to_n3_a_p5_pass_finishes_the_course_and_undo_restores(b):   # 1.0.33: N3's phases 4 and 5 follow N4
     js = "(() => { " + RESET + "state.stageTests = { p3: [{ date: todayStr(), correct: 40, total: 40, passed: true }] }; const before = " + SNAP + """;

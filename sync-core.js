@@ -148,7 +148,7 @@
       out.statsFmt[f] = { ok: Math.max(x.ok || 0, y.ok || 0), ng: Math.max(x.ng || 0, y.ng || 0) };
     });
     out.mistakes = mergeMistakes(older.mistakes, newer.mistakes, out.srs);
-    ['vocab', 'customGrammar', 'customExam', 'examHistory'].forEach(f => {
+    ['customGrammar', 'customExam', 'examHistory'].forEach(f => {
       const by = new Map();
       (older[f] || []).forEach(x => by.set(x && x.id !== undefined ? x.id : JSON.stringify(x), x));
       (newer[f] || []).forEach(x => by.set(x && x.id !== undefined ? x.id : JSON.stringify(x), x));
@@ -173,7 +173,7 @@
     if (!s) return true;
     const n = (x) => (Array.isArray(x) ? x.length : (x && typeof x === 'object') ? Object.keys(x).length : 0);
     const hasStageTests = s.stageTests && typeof s.stageTests === 'object' && Object.values(s.stageTests).some(a => Array.isArray(a) && a.length > 0);
-    return !(n(s.srs) || n(s.vocab) || n(s.dailyLogs) || n(s.examHistory) || hasStageTests);
+    return !(n(s.srs) || n(s.dailyLogs) || n(s.examHistory) || hasStageTests);
   }
 
   const SyncCore = { stripSecrets, keepLocalSecrets, sameStamp, pullDecision, mergeStates, buildPushPayload, normalizeEmail, isEmptyProgress };
