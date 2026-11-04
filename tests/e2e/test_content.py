@@ -339,6 +339,12 @@ def test_n3_mock_exam_has_enough_items(b):   # 1.0.33 part five: every N3 paper 
     r = json.loads(ev(b, js))
     assert r['mini'] == [] and r['std'] == [] and r['full'] == [] and r['ids'] and r['n'] >= 50 and r['bare'] == [], r
 
+def test_n3_formal_mode_plays_only_the_scene_and_reply_options(b):   # N3's 発話表現 and 即時応答 are 問題4・5 (final review)
+    js = """(() => { startExam({ level: 'N3', size: 'std', subjects: ['S3'], formal: true });
+      const kinds = [...new Set(EXAM.paper.map(q => q.mk + ':' + Boolean(q.audioOptions)))].sort();
+      if (typeof examTimer !== 'undefined') clearInterval(examTimer); EXAM = null; document.body.classList.remove('practicing'); return JSON.stringify(kinds); })()"""
+    assert json.loads(ev(b, js)) == ['gist:false', 'resp:true', 'scene:true', 'task:false']
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

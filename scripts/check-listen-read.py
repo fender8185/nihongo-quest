@@ -5,7 +5,7 @@ FILE.json: {"listen": [ {t, lv, u, script|line|scene, q?, op, a, zh?, why}, … 
 (no ids: the merge assigns them). Each item must: have the fields its type needs; be of its unit's level (a unit of a curriculum
 outline counts before it is merged); keep the answer among distinct options (dialog/read 4, resp/scene 3); get furigana on every
 kanji (so only words the app knows); use no word above its level (1.0.33: a warning for N5/N4, a problem from N3 up); not repeat a
-text already in the bank or elsewhere in the file. N3 kinds: a listening dialog may be kind 'gist' (概要理解), a reading 'long'
+text already in the bank or elsewhere in the file. N3 kinds: a listening dialog may be kind 'gist' (概要理解) or 'point' (ポイント理解), a reading 'long'
 (長文, 500+ characters) or 'info' (情報検索).
 Prints one line per problem and a summary; exit code 1 when anything is wrong (warnings alone keep 0)."""
 import glob, json, os, subprocess, sys, time
@@ -52,7 +52,7 @@ JS = r"""((c, OUTLINE) => { const problems = [], warnings = [];
     else if (it.t === 'resp') check(label, it, [['line', it.line], ['zh', it.zh]], 3);
     else if (it.t === 'scene') { check(label, it, [['scene', it.scene]], 3); if (/[ぁ-ゖァ-ヶ]/.test(it.scene || '')) problems.push([label, 'scene must be Chinese']); }
     else problems.push([label, 'unknown t ' + it.t]);
-    if (it.kind !== undefined && !(it.kind === 'gist' && it.t === 'dialog')) problems.push([label, it.kind === 'gist' ? 'kind gist is a dialog (t: dialog)' : 'unknown kind ' + it.kind]);
+    if (it.kind !== undefined && !(['gist', 'point'].includes(it.kind) && it.t === 'dialog')) problems.push([label, ['gist', 'point'].includes(it.kind) ? 'kind ' + it.kind + ' is a dialog (t: dialog)' : 'unknown kind ' + it.kind]);
     if (it.t === 'dialog' && !/^(男|女)：/m.test(it.script || '')) problems.push([label, 'script lines must start with 男： or 女：']);
     if (it.q && !/か。$/.test(it.q)) problems.push([label, 'q should end with か。']);
   });

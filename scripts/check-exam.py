@@ -4,7 +4,8 @@ Usage: python3 scripts/check-exam.py FILE.json [PORT]
 FILE.json: a JSON array of items {id, lv, m, …, why}. Each item's 大題 m must be one of its level's paper (MONDAI_LV) and of a kind
 written by hand: context (jp with one （　）, 4 op, a), paraphrase (jp with the part to restate between two ＿＿, 4 op, a),
 usage (word, 4 op sentences, a), textgrammar (passage with blanks （１）…, qs [{op, a}] one a blank) or passage (passage, qs
-[{q, op, a}]). Listening comes from the practice items (check-listen-read.py), so a curated listening item is refused.
+[{q, op, a}]); listening task/gist (script, q, 4 op), scene (scene, 3 op) or resp (line, 3 op), refused where that level's 大題 takes
+its practice items instead (N3's: check-listen-read.py). No word above the item's level (a problem from N3 up, a warning below).
 Checks, with the app's own code: id new and unique; the unit builds (examUnit) with 4 distinct options and the answer among them;
 every kanji has furigana; why is there and has no banned words. Prints one line per problem; exit code 1 when anything fails."""
 import json, os, subprocess, sys, time
@@ -15,7 +16,10 @@ path = sys.argv[1]; port = int(sys.argv[2]) if len(sys.argv) > 2 else 8813
 cands = json.load(open(path, encoding='utf-8'))
 srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(0.8)
-JS = r"""((cands) => { const bad = []; const seen = new Set(); const have = new Set(DATA.EXAM.map(x => x.id));
+JS = r"""((cands) => { const bad = [], warn = []; const seen = new Set(); const have = new Set(DATA.EXAM.map(x => x.id));
+  const idx = (L) => ALL_LEVELS.indexOf(L); const LV = new Map();   // a word's lowest level, as check-listen-read.py
+  REG.vocab.filter(v => v.builtin).forEach(v => { const L = courseLevel(v.lv); [v.w, jaPlain(v.w)].forEach(w => { if (!LV.has(w) || idx(L) < idx(LV.get(w))) LV.set(w, L); }); });
+  const bases = (t) => { const out = []; const re = /<ruby[^>]*>([^<]+)<rt>/g; let m; const h = furi(String(t || '')); while ((m = re.exec(h))) out.push(m[1]); return out; };
   const bare = (t) => (furi(String(t || '')).replace(/<ruby[^>]*>.*?<\/ruby>/g, '').match(/[一-鿿々〆ヶ]+/g) || []);
   const FW = '１２３４５６７８９';
   cands.forEach((x, i) => {
@@ -24,16 +28,20 @@ JS = r"""((cands) => { const bad = []; const seen = new Set(); const have = new 
     if (!examLevels().includes(x.lv)) { P('lv must be one of ' + examLevels().join('/')); return; }
     const md = mondai(x.lv, x.m); if (!md) { P('no 大題 ' + x.m + ' in the ' + x.lv + ' paper'); return; }
     const k = md.k;
-    if (['task', 'gist', 'scene', 'resp'].includes(k)) { P('curated listening: ' + x.lv + ' 聴解 comes from the practice items'); return; }
+    if (['task', 'gist', 'scene', 'resp'].includes(k) && md.listen) { P('curated listening: ' + x.lv + ' 聴解 comes from the practice items'); return; }
     if (['reading', 'kanji', 'grammar', 'order'].includes(k)) { P(x.m + ' is made from the word and grammar banks'); return; }
     if (!String(x.why || '').trim()) P('missing why'); else if (BANNED_WORDS.test(x.why)) P('banned word in why');
     const ja = [];
     if (k === 'context') { if ((String(x.jp || '').match(/（　）/g) || []).length !== 1) P('context needs exactly one （　） blank'); ja.push(x.jp); }
     if (k === 'paraphrase') { if ((String(x.jp || '').match(/＿＿/g) || []).length !== 2) P('paraphrase marks the part to restate with two ＿＿'); ja.push(String(x.jp || '').replace(/＿＿/g, '')); }
     if (k === 'usage') { if (!String(x.word || '').trim()) P('usage needs the word'); else if ((x.op || []).filter(o => String(o).includes(jaPlain(x.word).slice(0, 1))).length < 4) P('every usage option should use the word: ' + x.word); ja.push(x.word); }
-    if (k === 'context' || k === 'paraphrase' || k === 'usage') {
-      const op = x.op || []; if (op.length !== 4 || new Set(op).size !== 4 || !op.includes(x.a)) P('needs 4 distinct options with the answer among them'); ja.push(...op);
+    if (['context', 'paraphrase', 'usage', 'task', 'gist', 'scene', 'resp'].includes(k)) {
+      const n = ['scene', 'resp'].includes(k) ? 3 : 4; const op = x.op || [];
+      if (op.length !== n || new Set(op).size !== n || !op.includes(x.a)) P('needs ' + n + ' distinct options with the answer among them'); ja.push(...op);
     }
+    if (k === 'task' || k === 'gist') { if (!String(x.script || '').trim() || !String(x.q || '').trim()) P('listening needs script and q'); ja.push(x.script, x.q); }
+    if (k === 'scene' && !String(x.scene || '').trim()) P('scene needs the situation (Chinese)');
+    if (k === 'resp') { if (!String(x.line || '').trim()) P('resp needs the line'); ja.push(x.line); }
     if (k === 'textgrammar' || k === 'passage') {
       if (!String(x.passage || '').trim() || !Array.isArray(x.qs) || !x.qs.length) { P('needs a passage and qs'); return; }
       x.qs.forEach((q, j) => { const op = q.op || []; if (op.length !== 4 || new Set(op).size !== 4 || !op.includes(q.a)) P('q' + (j + 1) + ' needs 4 distinct options with the answer among them');
@@ -43,15 +51,19 @@ JS = r"""((cands) => { const bad = []; const seen = new Set(); const have = new 
       ja.push(x.passage);
     }
     let u = null; try { u = examUnit(x, k); } catch (e) { P('builder error ' + e.message); }
-    if (!u || !u.qs.length || u.qs.some(q => !q.options || q.options.length !== 4)) P('the exam unit did not build');
+    if (!u || !u.qs.length || u.qs.some(q => !q.options || q.options.length !== (['scene', 'resp'].includes(k) ? 3 : 4))) P('the exam unit did not build');
+    const low = [...LV].filter(([, L]) => idx(L) <= idx(x.lv)).map(([w]) => w);
+    const above = [...new Set(ja.filter(Boolean).flatMap(bases).filter(w => LV.has(w) && idx(LV.get(w)) > idx(x.lv) && !low.some(y => y.includes(w))))];
+    if (above.length) (idx(x.lv) >= idx('N3') ? bad : warn).push([id, 'word above ' + x.lv + ': ' + above.join(' ')]);
     const b = new Set(); ja.filter(Boolean).forEach(t => bare(t).forEach(w => b.add(w))); if (b.size) P('kanji without furigana: ' + [...b].join(' '));
   });
-  return JSON.stringify({ bad, n: cands.length }); })(%s)""" % json.dumps(cands, ensure_ascii=False)
+  return JSON.stringify({ bad, warn, n: cands.length }); })(%s)""" % json.dumps(cands, ensure_ascii=False)
 try:
     with Browser() as b:
         r = json.loads(b.run([("nav", f"http://127.0.0.1:{port}/"), ("wait", "typeof REG === 'object' && typeof examUnit === 'function'"), ("eval", JS)], timeout=240)[-1])
 finally:
     srv.terminate()
+for id_, msg in r["warn"]: print("warn", id_, msg)
 for id_, msg in r["bad"]: print("FAIL", id_, msg)
-print(f"{r['n']} items, {len(r['bad'])} problems")
+print(f"{r['n']} items, {len(r['bad'])} problems, {len(r['warn'])} warnings")
 sys.exit(1 if r["bad"] else 0)
