@@ -979,7 +979,8 @@ const CHANGELOG = [
     '讀音修正：數字後面的「日」不再標成 ひ。一般的日子標 にち（12日）；有自己唸法的日子整段標在數字和日上（3日 みっか、20日 はつか、14日 じゅうよっか），1日 在月份後面是 ついたち、其他是 いちにち；3日間、3日目 也一樣。朗讀也照這個念。',
     '修正：N3 閱讀裡標了讀音的日期（15日、7日）朗讀時數字會念兩次；日期後面的（日）（月）改念 にち、げつ。',
     '讀音修正：名詞後面接助詞時不再被當成動詞的變化：空から 的 空 唸 そら（原本照 空かない 標 あ）、この曲が 的 曲 唸 きょく、机の上が 的 上 唸 うえ。',
-    '舊的 N4 聽力、閱讀和模擬考題裡沒有振假名的漢字都補上了（午前中、携帯、洗濯物、助かります、山口さん……，約 60 題），單字例句和文法題裡同樣的字也一起有了；3年生 唸 さんねんせい（原本標成 なま），1部 唸 いちぶ。'
+    '舊的 N4 聽力、閱讀和模擬考題裡沒有振假名的漢字都補上了（午前中、携帯、洗濯物、助かります、山口さん……，約 60 題），單字例句和文法題裡同樣的字也一起有了；3年生 唸 さんねんせい（原本標成 なま），1部 唸 いちぶ。',
+    '還沒學到的級別不會出現在題目旁邊：錯的選項（選字、漢字寫法、中翻日、例句填空、配對）只從已經學到的級別出，提前學的字照它自己的級別；主題播放的漢字卡也只到學到的級別（學 N5 時只有 N5 的漢字卡）。單字卡上列的漢字照舊。'
   ] },
   { v: '1.0.33', date: '2026-11-04', items: [
     'N3 全部上線。N4 的單字、文法、漢字都學過一次之後，N3 才開始（跟 N5 到 N4 一樣，一次一級）：',
@@ -2593,7 +2594,8 @@ function readingOfSurface(v, info) {
   return null;
 }
 function vocabPeers(v) {
-  return REG.vocab.filter(x => x.key !== v.key && x.w && x.m && x.builtin);
+  const top = shownTop(v.lv);
+  return REG.vocab.filter(x => x.key !== v.key && x.w && x.m && x.builtin && levelUpTo(x.lv, top));
 }
 
 function meaningOptions(v, notSameReading = false) {   // notSameReading: a listening question, where a homophone's meaning would also be right
@@ -2723,17 +2725,18 @@ const KANJI_LOOKALIKE = [
 const LOOKALIKE_OF = {};
 KANJI_LOOKALIKE.forEach(g => g.forEach(k => { LOOKALIKE_OF[k] = (LOOKALIKE_OF[k] || []).concat(g.filter(x => x !== k)); }));
 function kanjiOptions(v, surface, reading, zh = {}) {
-  const out = [];
+  const out = []; const top = shownTop(v.lv);
   // homophones from the word list (熱い/暑い, 会う/合う …)
   REG.vocab.forEach(x => {
-    if (out.length >= 2 || x.key === v.key || x.r !== v.r || !HAS_KANJI.test(x.w) || x.w === v.w) return;
+    if (out.length >= 2 || x.key === v.key || x.r !== v.r || !HAS_KANJI.test(x.w) || x.w === v.w || !levelUpTo(x.lv, top)) return;
     const f = (vGroup(x) && vGroup(v) && vGroup(x) === vGroup(v)) ? inflectLike(x, vSurfaceInfo(v)) : (surface === v.w ? x.w : null);
     if (f && JConj.normJa(f) !== JConj.normJa(surface)) { out.push(f); zh[f] = x.m; }
   });
-  // look-alike substitution
+  // look-alike substitution (a kanji of the table above the level is left out; the decoys outside the table stay)
   const chars = [...surface];
   const tries = [];
-  chars.forEach((c, i) => { (LOOKALIKE_OF[c] || []).forEach(alt => tries.push(chars.slice(0, i).concat(alt, chars.slice(i + 1)).join(''))); });
+  const shown = (alt) => { const k = REG.byKey.get('k:' + alt); return !k || levelUpTo(k.lv, top); };
+  chars.forEach((c, i) => { (LOOKALIKE_OF[c] || []).filter(shown).forEach(alt => tries.push(chars.slice(0, i).concat(alt, chars.slice(i + 1)).join(''))); });
   shuffle(tries).forEach(t => { if (out.length < 3 && !out.includes(t) && t !== surface) out.push(t); });
   return out.length >= 3 ? out.slice(0, 3) : null;
 }
@@ -3463,7 +3466,7 @@ function kanjiWhy(k, withReadings = true) {
   if (ex) lines.push(`- 例：${ex}`);
   return lines.join('\n');
 }
-function kanjiPeers(k) { return REG.kanji.filter(x => x.key !== k.key); }
+function kanjiPeers(k) { const top = shownTop(k.lv); return REG.kanji.filter(x => x.key !== k.key && levelUpTo(x.lv, top)); }
 
 function makeKanjiQuestion(k, ctx = {}) {
   const rec = srsGet(k.key);
@@ -3499,9 +3502,9 @@ function makeKanjiQuestion(k, ctx = {}) {
     }
     if (f === 'k-shape') {
       // which kanji is read like this: the decoys share none of its readings, look-alikes first
-      const mine = kanjiReadSet(k);
+      const mine = kanjiReadSet(k); const top = shownTop(k.lv);
       const cands = [];
-      const push = (x) => { if (x && x.key !== k.key && !cands.includes(x.k) && ![...kanjiReadSet(x)].some(r => mine.has(r))) cands.push(x.k); };
+      const push = (x) => { if (x && x.key !== k.key && levelUpTo(x.lv, top) && !cands.includes(x.k) && ![...kanjiReadSet(x)].some(r => mine.has(r))) cands.push(x.k); };
       shuffle([...new Set((k.look || []).concat(LOOKALIKE_OF[k.k] || []))]).forEach(c => { if (cands.length < 2) push(REG.byKey.get('k:' + c)); });
       const peers = shuffle(kanjiPeers(k).filter(x => x.lv === k.lv));
       peers.filter(x => state.srs[x.key]).concat(peers).forEach(x => { if (cands.length < 3) push(x); });
@@ -3606,6 +3609,10 @@ function levelLeft(L) {
     g: REG.grammar.filter(g => units.includes(g.u) && unseen(g)).length, units };
 }
 function curLevel() { const cl = courseLevels(); return cl.find(L => { const x = levelLeft(L); return x.v || x.k || x.units.length; }) || cl[cl.length - 1]; }
+// what sits beside an item (its wrong options, theme playback's kanji cards) comes from levels up to the learner's, or up to the item's
+// own when that is higher: an N5 learner meets no N3 kanji there, an N3 word studied ahead keeps N3 options (1.0.34)
+function shownTop(lv, cur) { const cl = courseLevels(); return cl[Math.max(cl.indexOf(cur || curLevel()), cl.indexOf(courseLevel(lv)))]; }
+function levelUpTo(lv, top) { const cl = courseLevels(); return cl.indexOf(courseLevel(lv)) <= cl.indexOf(top); }
 // new grammar waits while the current level's units are all done but its words or kanji are not: what is left, and the
 // number of the next level's first unit (the today and course pages say so)
 function grammarPause() {
@@ -6385,12 +6392,14 @@ function themePickerModal() {
   openModal('單字主題', `<div class="theme-list">${rows}</div>`, { width: 560 });
 }
 function listenSourceFromPref() { const p = listenPref(); return p.source === 'theme' ? { kind: 'theme', theme: listenDefaultTheme() } : { kind: 'mistakes', cat: '' }; }
-// a theme's words in their order, each followed by a card for every kanji (of the kanji table) it is the first of them to use (1.0.28)
+// a theme's words in their order, each followed by a card for every kanji (of the kanji table) it is the first of them to use (1.0.28),
+// of the levels the learner has reached, whatever the word's own (1.0.34: at N5 no 願 card for お願いします, no N3 kanji card for the
+// N3 words of 居家生活; the word card still lists them)
 function listenThemeEntries(theme) {
-  const out = []; const seen = new Set();
+  const out = []; const seen = new Set(); const cur = curLevel();
   listenThemeWords(theme).forEach(v => {
     const e = listenEntryVocab(v, null); out.push(e);
-    e.kanji.forEach(k => { if (!seen.has(k.k)) { seen.add(k.k); out.push({ kind: 'k', id: k.key, m: null, k }); } });
+    e.kanji.forEach(k => { if (!seen.has(k.k) && levelUpTo(k.lv, cur)) { seen.add(k.k); out.push({ kind: 'k', id: k.key, m: null, k }); } });
   });
   return out;
 }

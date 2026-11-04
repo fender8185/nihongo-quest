@@ -250,6 +250,31 @@ def test_a_noun_before_a_particle_is_not_read_as_a_verb_form(b):
     assert r == ['[空:そら]から', '[空:あ]かない', '[空:あ]かず', 'この[曲:きょく]が[好:す]き', '[角:かど]を[曲:ま]がれば', '[急:いそ]がずに', '[熱:ねつ]かどうか', '[熱:あつ]かった',
                  '[机:つくえ]の[上:うえ]が', '[上:あ]がる', '[分:わ]からない'], r
 
+# 1.0.34: what sits beside the answer stays within the learner's level (wrong options: or the item's own when that is higher), and so do
+# theme playback's kanji cards, even for the N3 words of a theme shared with N5 (居家生活); the word card's kanji chips stay
+def test_options_and_kanji_cards_stay_within_the_learners_level(b):
+    js = """(() => { const t = todayStr(); const rec = () => ({ b: 3, due: addDays(t, 30), n: 3, ok: 3, ng: 0, s: 20, d: 5, last: addDays(t, -5), intro: addDays(t, -60), f: {} });
+      const cl = courseLevels(); const up = (lv, top) => cl.indexOf(courseLevel(lv)) <= cl.indexOf(top);
+      const word = (w) => REG.vocab.find(v => v.builtin && jaPlain(v.w) === w); const kan = (c) => REG.byKey.get('k:' + c);
+      const theme = vocabTheme(word('お願いします'));
+      const look = () => { const es = listenThemeEntries(theme); const shapes = [];
+        for (let i = 0; i < 40; i++) { const q = makeQuestion(kan('間'), {}); if (q && q.fmt === 'k-shape') shapes.push(...q.options.map(o => o.text)); }
+        return { cards: es.concat(listenThemeEntries('居家生活')).filter(e => e.kind === 'k').map(e => e.k.lv), chip: es.find(e => e.kind === 'v' && e.word === 'お願いします').kanji.some(k => k.k === '願'),
+          n5peers: [...new Set(vocabPeers(word('雪')).map(x => courseLevel(x.lv)))].sort(), n3peers: vocabPeers(REG.vocab.find(v => v.builtin && v.lv === 'N3')).some(x => x.lv === 'N3'),
+          kpeers: [...new Set(kanjiPeers(kan('間')).map(x => x.lv))].sort(), homophone: (kanjiOptions(word('昨日'), '昨日', 'きのう') || []).includes('機能'),
+          shape: [...new Set(shapes.filter(c => kan(c)).map(c => kan(c).lv))].sort(), shapes: shapes.length > 0 }; };
+      state.srs[kan('間').key] = rec();
+      const n5 = look();
+      REG.vocab.filter(v => v.builtin && ['PRE_N5', 'N5', 'N4'].includes(v.lv)).forEach(v => { state.srs[v.key] = rec(); }); REG.kanji.filter(k => k.lv !== 'N3').forEach(k => { state.srs[k.key] = rec(); });
+      state.stage = 'main'; state.completedUnits = DATA.UNITS.filter(u => u.lv !== 'N3').map(u => u.id); state.currentUnit = 'm19'; DAILY_CACHE = null;
+      const n3 = look(); n3.cur = curLevel();
+      return JSON.stringify({ n5, n3 }); })()"""
+    r = json.loads(ev(b, js)); n5, n3 = r['n5'], r['n3']
+    assert all(lv == 'N5' for lv in n5['cards']) and n5['chip'], n5            # no 願 card (N3) for an N5 learner, but お願いします keeps its 願 chip
+    assert n5['n5peers'] == ['N5'] and n5['n3peers'] and n5['kpeers'] == ['N5'], n5   # an N3 word studied ahead keeps N3 options
+    assert not n5['homophone'] and n5['shapes'] and n5['shape'] == ['N5'], n5          # 昨日's 漢字寫法 without 機能 (N3); 間's 選字 without 閉 (N3)
+    assert n3['cur'] == 'N3' and 'N3' in n3['cards'] and n3['homophone'] and 'N3' in n3['kpeers'], n3
+
 def test_every_n3_example_shows_its_word_with_the_cards_reading(b):
     js = "(() => { " + HIRA + """ const bad = [];
       REG.vocab.filter(v => v.builtin && v.lv === 'N3').forEach(v => [v.ex, v.ex2].forEach(e => {
