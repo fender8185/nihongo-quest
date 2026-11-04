@@ -970,15 +970,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.35';   // keep equal to the version in sw.js CACHE ('nq-v1.0.35'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.36';   // keep equal to the version in sw.js CACHE ('nq-v1.0.36'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
-  { v: '1.0.35', date: '2026-11-04', items: [
+  { v: '1.0.36', from: '1.0.35', date: '2026-11-04', items: [
     '介面變簡單：說明文字縮短或收起來，黃底的提示改成一行灰色小字。',
-    '今天做完後只留一顆「多學 N 題」，錯題本變成一行小連結；作答後的振假名、手滑不算、這題有問題、這個字我已經會了收進「⋯」。',
+    '今天做完後只留一顆「多學 N 題」；作答後的振假名、手滑不算、這題有問題、這個字我已經會了收進「⋯」。',
     '單字的主題卡只留名稱、進度、練習和播放（漢字在下面的漢字區）；工具與 AI 的 AI 出題、學習建議和金鑰說明收進「進階」。',
     '修正：入門的新單字上方顯示成「PRE_N5」，改成「入門」。',
     '課程資料檔換了存放格式，內容沒有變；這次更新會重新下載一次課程資料。'
@@ -5004,7 +5004,6 @@ function renderToday(view) {
   const extraN = exK + exL + exR + exA;
   const extraText = [exA && `假名 ${exA}`, exK && `漢字 ${exK}`, exL && `聽力 ${exL}`, exR && `閱讀 ${exR}`].filter(Boolean).join('・');
   const dq = dailyQueue(size);
-  const encoreN = encoreEstimate(dq.items);   // new words and multi-format grammar come back once more in the session; shown apart, never counted
   const prog = dayProgress();   // the ring: items answered today / today's items
   const d = parseDate(t);
   const greeting = `${d.getMonth() + 1} 月 ${d.getDate()} 日（${weekdayZh(t)}）`;
@@ -5013,8 +5012,7 @@ function renderToday(view) {
   if (plan.remaining === 0) {
     const xq = extraQueue(); const xn = xq.items.length;
     heroBody = `<p class="dim">今天做了 ${doneToday} 題。${xn ? '' : '明天再來，或到課程頁預習下一單元。'}</p>
-      ${xn ? `<div><button type="button" class="btn btn-primary" data-act="start-extra">多學 ${xn} 題</button></div>` : ''}
-      ${mk.length ? `<div class="small mt-2"><a href="#/mistakes" data-act="nav" data-route="#/mistakes">錯題本 ${mk.length} 題</a></div>` : ''}`;
+      ${xn ? `<div><button type="button" class="btn btn-primary" data-act="start-extra">多學 ${xn} 題</button></div>` : ''}`;
   } else {
     // the counts live in the 今天的範圍 panel (scopeHtml below); the card itself shows only the button when everything is folded
     scopeHtml = `${sessionTopicsHtml(dq, plan)}
@@ -5055,7 +5053,7 @@ function renderToday(view) {
             ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">範圍</button>` : ''}
             ${inPreStage() ? '' : `<button type="button" class="hero-tab${heroTab === 'unit' ? ' open' : ''}" data-act="hero-tab" data-tab="unit" aria-expanded="${heroTab === 'unit'}">目前單元</button>`}
           </div>
-          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>每天第一次打開時排好今天的題目：要複習的舊題，加上一些新內容。答錯的題目過幾題會再出一次，之後隔 1、3、7 天再複習，都答對才離開錯題本。做完還想多學，可以按「多學」。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
+          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>每天練一點就好。這裡用的是 SRS（間隔重複）的改良版：在你快忘記的時候再考一次，記得會更久。答對越多，每天的新題目就會越多；想學快一點，做完後按「多學」就好。</div>
           ${plan.remaining ? `<div class="hero-panel" data-panel="scope" ${heroTab === 'scope' ? '' : 'hidden'}>${scopeHtml}</div>` : ''}
           <div class="hero-panel" data-panel="unit" ${heroTab === 'unit' && !inPreStage() ? '' : 'hidden'}>
             <div class="row between mb-2"><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div><span class="chip">${esc(cur.lv)}</span></div>

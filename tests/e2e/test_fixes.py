@@ -219,12 +219,12 @@ def test_formal_exam_listening_options_play_on_click(b):
 def test_today_button_count_matches_the_session(b):
     js = """(() => { route();
       const btn = document.querySelector('[data-act=start-daily]'); const shown = Number((btn.textContent.match(/(\\d+) 題/) || [])[1]);
-      const note = (document.querySelector('.hero').textContent.match(/換個方式再考一次（約 (\\d+) 題/) || [])[1];
+      const note = /換個方式再考/.test(document.querySelector('.hero').textContent);   // 1.0.36: the help panel no longer counts the encores
       startSession('daily'); const enc = encoreEstimate(SESSION.entries.map(e => e.item)); const actual = SESSION.entries.length; SESSION = null; document.body.classList.remove('practicing'); location.hash = '#/today';
-      return JSON.stringify([shown, actual, Number(note), enc]); })()"""
+      return JSON.stringify([shown, actual, note, enc]); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
     shown, actual, note, enc = __import__('json').loads(out[-1])
-    assert shown == actual and shown > 0 and note == enc, (shown, actual, note, enc)   # the button is the items of this session; encores are a note, not part of the count
+    assert shown == actual and shown > 0 and note is False, (shown, actual, note, enc)   # the button is the items of this session; encores are not part of the count
 
 def test_settings_show_the_version_and_its_history(b):
     out = b.run([("nav", URL), ("wait", READY),
@@ -1045,7 +1045,7 @@ def test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints(b):
       return JSON.stringify({ help: !!help, helpText: help ? help.textContent : '', ring: !!ring, banner, before, after, th, td, hover: /hover: none/.test(css) && /kbd-hint/.test(css), ringCss: /\\.hero-center > \\.ring \\{[^}]*order: -1/.test(css) && !/\\.hero \\.ring \\{[^}]*display: none/.test(css) && hero.classList.contains('hero-center'), safeTop: /body\\.practicing \\.content \\{[^}]*padding-top: calc\\(18px \\+ env\\(safe-area-inset-top/.test(css), noZoom: /maximum-scale=1/.test(document.querySelector('meta[name=viewport]').content) && /user-scalable=no/.test(document.querySelector('meta[name=viewport]').content) && /html \\{ touch-action: manipulation; overscroll-behavior: none/.test(css), noTail: /body\\.practicing \\.content \\{ padding-bottom: calc\\(12px \\+ env\\(safe-area-inset-bottom/.test(css) && /body\\.practicing \\.content:has\\(\\.pr-next\\) \\{ padding-bottom: 0/.test(css) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
     r = json.loads(out[-1])
-    assert r['help'] and '換個方式再考一次' in r['helpText'] and r['ring'], r
+    assert r['help'] and 'SRS' in r['helpText'] and r['ring'], r   # 1.0.36: the help panel is a few plain sentences
     assert 'compact' in r['banner'] and '稍後' in r['banner'] and 'backup-now' in r['banner'], r['banner']
     assert r['before'] == {'hint': True, 'next': False}, r['before']
     assert r['after'] == {'nextInStrip': True, 'stickyClass': False, 'tools': True, 'enterHint': True, 'hint': False}, r['after']

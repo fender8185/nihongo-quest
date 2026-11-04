@@ -258,7 +258,7 @@ def test_today_help_describes_the_tiers(b):
     js = "(() => { " + FRESH + """ location.hash = '#/today'; route(); const help = document.querySelector('.hero-panel[data-panel=help]');
       return help ? help.textContent : ''; })()"""
     text = ev(b, js)
-    assert all(s in text for s in ['要複習的舊題', '新內容', '1、3、7 天', '錯題本', '多學']) and '每天最多 50 題' not in text, text   # 1.0.35: plain words, no tier numbers
+    assert all(s in text for s in ['SRS', '答對越多', '新題目', '多學']) and '每天最多 50 題' not in text, text   # 1.0.36: a few relaxed sentences, no tier numbers
 
 # ---- 1.0.19 審查修正（Tasks 1–4） ----
 # I2 (1.0.20: 加練 gives new items only, no reviews ahead): four and five stars, whatever date they carry, and a three-star-or-below
