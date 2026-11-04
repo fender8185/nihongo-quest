@@ -106,6 +106,36 @@ def test_each_level_has_its_own_mondai_table_and_curated_items_build_by_kind(b):
     assert r['titles'] == ['問題6　内容理解（長文）', '問題7　情報検索', '問題3　概要理解', '問題4　発話表現', '問題5　即時応答'], r
     assert r['scene'] and r['resp'] and r['info'], r
 
+def test_n3_is_scored_in_three_parts_of_sixty_and_n4_as_before(b):   # spec §7: 95 to pass, each part at least 19
+    js = """(() => { const keep = EXAM; const q = (sec, mk) => ({ sec, mk, answer: 0, m: 'x', mondaiTitle: 'x' });
+      const run = (level, spec) => { const paper = [], answers = []; spec.forEach(([sec, mk, n, right]) => { for (let i = 0; i < n; i++) { paper.push(q(sec, mk)); answers.push(i < right ? 0 : 1); } });
+        EXAM = { level, paper, answers }; const s = scoreExam(); return [s.parts.map(p => p.k + ':' + p.pts + (p.est ? '*' : '')).join(' '), s.total, s.passed]; };
+      const n3 = [['S1', 'reading', 10, 10], ['S2', 'grammar', 5, 5], ['S2', 'passage', 5, 1], ['S3', 'task', 10, 10]];
+      const out = { lowRead: run('N3', n3), pass: run('N3', n3.map(x => x[1] === 'passage' ? [x[0], x[1], 5, 2] : x)), listenOnly: run('N3', [['S3', 'task', 10, 5]]),
+        n4: run('N4', [['S1', 'reading', 10, 7], ['S2', 'grammar', 10, 3], ['S3', 'task', 10, 4]]),
+        plan: Object.keys(EXAM_PLAN.N3.mondai).join() === Object.keys(MONDAI_LV.N3).join(), full: Object.values(EXAM_PLAN.N3.mondai).map(x => x[2]).join(), time: EXAM_PLAN.N3.time };
+      EXAM = keep; return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['lowRead'] == ['lang:60 read:12 li:60', 132, False], r   # 132 is enough, but 読解 12 is under 19
+    assert r['pass'] == ['lang:60 read:24 li:60', 144, True], r
+    assert r['listenOnly'] == ['lang:30* read:30* li:30', 90, False], r   # a 聴解-only paper: the other parts at its share
+    assert r['n4'] == ['lr:60 li:24', 84, False], r   # N4 as before: 10/20 of 言語知識・読解 → 60 of 120, 聴解 4/10 → 24 of 60
+    assert r['plan'] and r['full'] == '8,6,11,5,5,13,5,1,4,2,1,1,6,6,3,4,9' and r['time'] == {'S1': 30, 'S2': 70, 'S3': 40}, r   # passages for 読解
+
+def test_an_n3_paper_takes_listening_and_reading_from_the_n3_banks_by_kind(b):   # 1.0.33: the practice items fill those 大題
+    js = """(() => { const dlg = (kind, i) => Object.assign({ id: 'l3-t' + i, t: 'dialog', lv: 'N3', u: 'm19', script: '男：明日、会議があります。' + i + '\\n女：そうですか。', q: '男の人は何をしますか。', op: ['会議に出る', '家に帰る', '本を読む', '電話をする'], a: '会議に出る', zh: 'x', why: 'x' }, kind ? { kind } : {});
+      const L = [dlg('', 1), dlg('', 2), dlg('gist', 3), { id: 'l3-t4', t: 'scene', lv: 'N3', u: 'm19', scene: '想借筆。', op: ['ペンを貸してもらえますか。', 'ペンを貸しましょうか。', 'ペンをもらいました。'], a: 'ペンを貸してもらえますか。', why: 'x' },
+        { id: 'l3-t5', t: 'resp', lv: 'N3', u: 'm19', line: '手伝ってもらえる？', op: ['うん、いいよ。', 'うん、もらうよ。', 'どういたしまして。'], a: 'うん、いいよ。', zh: 'x', why: 'x' }];
+      const rd = (kind, i) => ({ id: 'rd-t' + i, lv: 'N3', u: 'm19', kind, passage: '私は毎朝、駅まで歩きます。' + i, q: 'この人は毎朝、何をしますか。', op: ['駅まで歩く', '駅まで走る', 'バスに乗る', '電車に乗る'], a: '駅まで歩く', zh: 'x', why: 'x' });
+      DATA.LISTEN.push(...L); DATA.READ.push(rd('memo', 1), rd('essay', 2), rd('long', 3), rd('info', 4)); buildRegistry();
+      const { paper, shortage } = assemblePaper('N3', 'full', ['S2', 'S3']); const got = {}; paper.forEach(q => { got[q.m] = (got[q.m] || []).concat([q.mk]); });
+      const ok = paper.every(q => q.options && q.options.length >= 3 && (q.sec !== 'S3' || q.audio || q.mk === 'scene'));
+      DATA.LISTEN.splice(-5, 5); DATA.READ.splice(-4, 4); buildRegistry();
+      return JSON.stringify({ got: Object.fromEntries(['S2-M4', 'S2-M5', 'S2-M6', 'S2-M7', 'S3-M1', 'S3-M3', 'S3-M4', 'S3-M5'].map(m => [m, got[m] || []])), ok, short: shortage.length > 0 }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['got'] == {'S2-M4': ['passage'], 'S2-M5': ['passage'], 'S2-M6': ['passage'], 'S2-M7': ['passage'], 'S3-M1': ['task', 'task'], 'S3-M3': ['gist'],
+                        'S3-M4': ['scene'], 'S3-M5': ['resp']} and r['ok'] and r['short'], r   # a short bank shows as a shortage, never a wrong kind
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     site = fake_site()

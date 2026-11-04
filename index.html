@@ -1612,7 +1612,7 @@ function buildRegistry() {
   DATA.GRAMMAR.forEach(g => { if (!hidden.has(g.id)) grammar.push(Object.assign({ key: 'g:' + g.id, kind: 'g', builtin: true }, g)); });
   (state.customGrammar || []).forEach(g => { if (g && g.id) grammar.push(Object.assign({ key: 'g:' + g.id, kind: 'g', builtin: false }, g)); });
   // the app's own fields come last: a reading passage's "kind" (memo, email …) is kept as rkind
-  const listen = (DATA.LISTEN || []).filter(x => !hidden.has(x.id)).map(x => Object.assign({}, x, { key: 'l:' + x.id, kind: 'l', builtin: true }));
+  const listen = (DATA.LISTEN || []).filter(x => !hidden.has(x.id)).map(x => Object.assign({}, x, { key: 'l:' + x.id, kind: 'l', builtin: true, lkind: x.kind }));   // lkind: 'gist' for 概要理解 (1.0.33)
   const read = (DATA.READ || []).filter(x => !hidden.has(x.id)).map(x => Object.assign({}, x, { key: 'r:' + x.id, kind: 'r', builtin: true, rkind: x.kind }));
   const kanji = (DATA.KANJI || []).map((x, i) => Object.assign({}, x, { key: 'k:' + x.k, kind: 'k', builtin: true, id: 'k-' + x.k, order: i })).filter(x => !hidden.has(x.id));
   const byKey = new Map();
@@ -6801,12 +6801,15 @@ const MONDAI_N5N4 = {
 const MONDAI_LV = (() => { const M = MONDAI_N5N4; return {
   N5: M, N4: M,
   N3: { 'S1-M1': M['S1-M1'], 'S1-M2': M['S1-M2'], 'S1-M3': M['S1-M3'], 'S1-M4': M['S1-M4'], 'S1-M5': M['S1-M5'],
-    'S2-M1': M['S2-M1'], 'S2-M2': M['S2-M2'], 'S2-M3': M['S2-M3'], 'S2-M4': M['S2-M4'], 'S2-M5': M['S2-M5'],
-    'S2-M6': { t: '問題6　内容理解（長文）', d: '閱讀長篇文章後回答問題。', k: 'passage' },
-    'S2-M7': { t: '問題7　情報検索', d: '從資料中找出答案。', k: 'passage' },
-    'S3-M1': M['S3-M1'], 'S3-M2': M['S3-M2'],
-    'S3-M3': { t: '問題3　概要理解', d: '聽一段話，選出說話的人主要想說什麼。', k: 'gist' },
-    'S3-M4': Object.assign({}, M['S3-M3'], { t: '問題4　発話表現' }), 'S3-M5': Object.assign({}, M['S3-M4'], { t: '問題5　即時応答' }) } }; })();
+    'S2-M1': M['S2-M1'], 'S2-M2': M['S2-M2'], 'S2-M3': M['S2-M3'],
+    // N3's 読解 and 聴解 also take the level's practice items when the curated ones run short (read: those kinds; listen: by type)
+    'S2-M4': Object.assign({}, M['S2-M4'], { read: ['memo', 'email', 'notice', 'message', 'diary', 'schedule'] }),
+    'S2-M5': Object.assign({}, M['S2-M5'], { read: ['essay', 'article'] }),
+    'S2-M6': { t: '問題6　内容理解（長文）', d: '閱讀長篇文章後回答問題。', k: 'passage', read: ['long'] },
+    'S2-M7': { t: '問題7　情報検索', d: '從資料中找出答案。', k: 'passage', read: ['info'] },
+    'S3-M1': Object.assign({}, M['S3-M1'], { listen: true }), 'S3-M2': Object.assign({}, M['S3-M2'], { listen: true }),
+    'S3-M3': { t: '問題3　概要理解', d: '聽一段話，選出說話的人主要想說什麼。', k: 'gist', listen: true },
+    'S3-M4': Object.assign({}, M['S3-M3'], { t: '問題4　発話表現', listen: true }), 'S3-M5': Object.assign({}, M['S3-M4'], { t: '問題5　即時応答', listen: true }) } }; })();
 function mondai(level, m) { return (MONDAI_LV[level] || MONDAI_N5N4)[m] || null; }
 // questions per mondai for each paper size (passage mondai count passages)
 function examLevels() { return courseLevels().filter(L => EXAM_PLAN[L]); }   // the levels with a mock exam (spec §7)
@@ -6814,8 +6817,18 @@ const EXAM_PLAN = {
   N5: { time: { S1: 20, S2: 40, S3: 30 }, pass: 80,
     mondai: { 'S1-M1': [2, 4, 7], 'S1-M2': [1, 3, 5], 'S1-M3': [2, 3, 6], 'S1-M4': [1, 2, 3], 'S2-M1': [2, 5, 9], 'S2-M2': [1, 2, 4], 'S2-M3': [0, 1, 1], 'S2-M4': [1, 1, 2], 'S2-M5': [0, 1, 1], 'S2-M6': [0, 1, 1], 'S3-M1': [1, 3, 6], 'S3-M2': [1, 3, 6], 'S3-M3': [1, 2, 4], 'S3-M4': [1, 3, 6] } },
   N4: { time: { S1: 25, S2: 55, S3: 35 }, pass: 90,
-    mondai: { 'S1-M1': [2, 4, 7], 'S1-M2': [1, 3, 5], 'S1-M3': [2, 4, 8], 'S1-M4': [1, 2, 4], 'S1-M5': [1, 2, 4], 'S2-M1': [3, 6, 13], 'S2-M2': [1, 2, 4], 'S2-M3': [0, 1, 1], 'S2-M4': [1, 2, 3], 'S2-M5': [0, 1, 1], 'S2-M6': [0, 1, 2], 'S3-M1': [1, 3, 6], 'S3-M2': [1, 3, 6], 'S3-M3': [1, 2, 4], 'S3-M4': [1, 3, 8] } }
+    mondai: { 'S1-M1': [2, 4, 7], 'S1-M2': [1, 3, 5], 'S1-M3': [2, 4, 8], 'S1-M4': [1, 2, 4], 'S1-M5': [1, 2, 4], 'S2-M1': [3, 6, 13], 'S2-M2': [1, 2, 4], 'S2-M3': [0, 1, 1], 'S2-M4': [1, 2, 3], 'S2-M5': [0, 1, 1], 'S2-M6': [0, 1, 2], 'S3-M1': [1, 3, 6], 'S3-M2': [1, 3, 6], 'S3-M3': [1, 2, 4], 'S3-M4': [1, 3, 8] } },
+  // N3 (1.0.33): the full paper as JLPT's 問題の構成 (unchanged in 2020); 読解 counts passages: 短文 4×1, 中文 2×3, 長文 1×4, 情報検索 1×2
+  N3: { time: { S1: 30, S2: 70, S3: 40 }, pass: 95, three: true,
+    mondai: { 'S1-M1': [2, 4, 8], 'S1-M2': [2, 3, 6], 'S1-M3': [3, 6, 11], 'S1-M4': [1, 3, 5], 'S1-M5': [1, 3, 5], 'S2-M1': [3, 7, 13], 'S2-M2': [1, 3, 5], 'S2-M3': [0, 1, 1], 'S2-M4': [1, 2, 4], 'S2-M5': [0, 1, 2], 'S2-M6': [0, 1, 1], 'S2-M7': [0, 1, 1], 'S3-M1': [1, 3, 6], 'S3-M2': [1, 3, 6], 'S3-M3': [1, 2, 3], 'S3-M4': [1, 2, 4], 'S3-M5': [2, 4, 9] } }
 };
+// 得点区分 (spec §7): N5/N4 score 言語知識・読解 0–120 and 聴解 0–60 (at least 38 and 19); from N3 up three parts of 0–60 each,
+// 言語知識（文字・語彙・文法）, 読解 and 聴解, each at least 19 (N2 and N1 only differ in the pass mark)
+function scoreParts(level) {
+  return EXAM_PLAN[level] && EXAM_PLAN[level].three ? [['lang', 60, 19, '言語知識（文字・語彙・文法）'], ['read', 60, 19, '読解'], ['li', 60, 19, '聴解']]
+    : [['lr', 120, 38, '言語知識（文字・語彙・文法）・読解'], ['li', 60, 19, '聴解']];
+}
+function partOf(q, three) { return q.sec === 'S3' ? 'li' : !three ? 'lr' : q.sec === 'S1' || ['grammar', 'order', 'textgrammar'].includes(q.mk) ? 'lang' : 'read'; }
 const SIZE_INDEX = { mini: 0, std: 1, full: 2 };
 let EXAM = null;
 
@@ -6835,62 +6848,63 @@ function underlineMarked(s) {
 }
 function curatedUnits(level) {
   const items = DATA.EXAM.concat(state.customExam || []).filter(x => x.lv === level && !state.hidden.includes(x.id));
-  const units = [];
-  items.forEach(x => {
-    const m = x.m; const k = (mondai(level, m) || {}).k;
-    const why = x.why || '';
-    if (x.legacy || (!x.qs && x.q && !x.script && !x.line && !x.scene)) {
-      if (!Array.isArray(x.op) || !x.op.includes(x.a)) return;
-      const q = exQ({ examId: x.id, m, stemHtml: furi(x.q || x.jp || '', { plain: k === 'reading' }), why, passageHtml: x.passage ? furi(x.passage).replace(/\n/g, '<br>') : '', fullJp: x.speak || '' });
-      if (String(m).startsWith('S3')) { q.audio = x.speak || x.q; q.script = x.speak || ''; }
-      exOptions(q, x.a, x.op.filter(o => o !== x.a), true);
-      q.wide = q.options.some(o => o.text.length > 12);
-      units.push({ m, ids: [x.id], qs: [q] });
-      return;
-    }
-    if (k === 'context' || k === 'grammar') {
-      const b = splitBlank(x.jp || '');
-      if (!b || !x.op.includes(x.a)) return;
-      const q = exQ({ examId: x.id, m, stemHtml: `${furi(b.pre)}${blankChip('')}${furi(b.post)}`, fillHtml: furi(x.a), fullJp: b.pre + x.a + b.post, why });
-      exOptions(q, x.a, x.op.filter(o => o !== x.a), true);
-      units.push({ m, ids: [x.id], qs: [q] });
-    } else if (k === 'paraphrase') {
-      const q = exQ({ examId: x.id, m, stemHtml: underlineMarked(x.jp), fullJp: String(x.jp).replace(/＿＿/g, ''), why, wide: true });
-      exOptions(q, x.a, x.op.filter(o => o !== x.a), true);
-      q.wide = true;
-      units.push({ m, ids: [x.id], qs: [q] });
-    } else if (k === 'usage') {
-      const q = exQ({ examId: x.id, m, stemHtml: furi(x.word), stemClass: 'word', why, wide: true });
-      exOptions(q, x.a, x.op.filter(o => o !== x.a), true);
-      q.wide = true;
-      units.push({ m, ids: [x.id], qs: [q] });
-    } else if (k === 'textgrammar' || k === 'passage') {
-      if (!x.passage || !Array.isArray(x.qs)) return;
-      const qs = x.qs.map((qq, j) => {
-        const q = exQ({ examId: `${x.id}#${j}`, m, passageHtml: furi(x.passage).replace(/\n/g, '<br>'), stemHtml: k === 'textgrammar' ? `（${'１２３４５'[j]}）に入るものは？` : furi(qq.q || ''), why: j === x.qs.length - 1 ? why : '', group: x.id });
-        exOptions(q, qq.a, (qq.op || []).filter(o => o !== qq.a), true);
-        q.wide = q.options.some(o => o.text.length > 10);
-        return q;
-      });
-      units.push({ m, ids: [x.id], qs });
-    } else if (k === 'task' || k === 'gist') {
-      const q = exQ({ examId: x.id, m, stemHtml: furi(x.q || ''), audio: x.script, script: x.script, why });
-      exOptions(q, x.a, x.op.filter(o => o !== x.a), true);
+  return items.map(x => examUnit(x, (mondai(level, x.m) || {}).k)).filter(Boolean);
+}
+// one exam item as a unit of the paper, its questions built by the 大題's kind: a curated or AI-made item, or a practice listening or
+// reading item asked in the paper (bankUnit)
+function examUnit(x, k) {
+  const m = x.m;
+  const why = x.why || '';
+  if (x.legacy || (!x.qs && x.q && !x.script && !x.line && !x.scene)) {
+    if (!Array.isArray(x.op) || !x.op.includes(x.a)) return null;
+    const q = exQ({ examId: x.id, m, stemHtml: furi(x.q || x.jp || '', { plain: k === 'reading' }), why, passageHtml: x.passage ? furi(x.passage).replace(/\n/g, '<br>') : '', fullJp: x.speak || '' });
+    if (String(m).startsWith('S3')) { q.audio = x.speak || x.q; q.script = x.speak || ''; }
+    exOptions(q, x.a, x.op.filter(o => o !== x.a), true);
+    q.wide = q.options.some(o => o.text.length > 12);
+    return { m, ids: [x.id], qs: [q] };
+  }
+  if (k === 'context' || k === 'grammar') {
+    const b = splitBlank(x.jp || '');
+    if (!b || !x.op.includes(x.a)) return null;
+    const q = exQ({ examId: x.id, m, stemHtml: `${furi(b.pre)}${blankChip('')}${furi(b.post)}`, fillHtml: furi(x.a), fullJp: b.pre + x.a + b.post, why });
+    exOptions(q, x.a, x.op.filter(o => o !== x.a), true);
+    return { m, ids: [x.id], qs: [q] };
+  } else if (k === 'paraphrase') {
+    const q = exQ({ examId: x.id, m, stemHtml: underlineMarked(x.jp), fullJp: String(x.jp).replace(/＿＿/g, ''), why, wide: true });
+    exOptions(q, x.a, x.op.filter(o => o !== x.a), true);
+    q.wide = true;
+    return { m, ids: [x.id], qs: [q] };
+  } else if (k === 'usage') {
+    const q = exQ({ examId: x.id, m, stemHtml: furi(x.word), stemClass: 'word', why, wide: true });
+    exOptions(q, x.a, x.op.filter(o => o !== x.a), true);
+    q.wide = true;
+    return { m, ids: [x.id], qs: [q] };
+  } else if (k === 'textgrammar' || k === 'passage') {
+    if (!x.passage || !Array.isArray(x.qs)) return null;
+    const qs = x.qs.map((qq, j) => {
+      const q = exQ({ examId: `${x.id}#${j}`, m, passageHtml: furi(x.passage).replace(/\n/g, '<br>'), stemHtml: k === 'textgrammar' ? `（${'１２３４５'[j]}）に入るものは？` : furi(qq.q || ''), why: j === x.qs.length - 1 ? why : '', group: x.id });
+      exOptions(q, qq.a, (qq.op || []).filter(o => o !== qq.a), true);
       q.wide = q.options.some(o => o.text.length > 10);
-      units.push({ m, ids: [x.id], qs: [q] });
-    } else if (k === 'scene') {
-      const q = exQ({ examId: x.id, m, stemHtml: `<div class="small dim" style="font-size:15px">${esc(x.scene || '')}</div><div class="mt-2">${furi(x.q || '何と言いますか。')}</div>`, why, audio: '' });
-      exOptions(q, x.a, x.op.filter(o => o !== x.a), true);
-      q.wide = true;
-      units.push({ m, ids: [x.id], qs: [q] });
-    } else if (k === 'resp') {
-      const q = exQ({ examId: x.id, m, stemHtml: '<div class="small muted">聽對方說的話，選出回應。</div>', audio: x.line, script: x.line, why });
-      exOptions(q, x.a, x.op.filter(o => o !== x.a), true);
-      q.wide = true;
-      units.push({ m, ids: [x.id], qs: [q] });
-    }
-  });
-  return units;
+      return q;
+    });
+    return { m, ids: [x.id], qs };
+  } else if (k === 'task' || k === 'gist') {
+    const q = exQ({ examId: x.id, m, stemHtml: furi(x.q || ''), audio: x.script, script: x.script, why });
+    exOptions(q, x.a, x.op.filter(o => o !== x.a), true);
+    q.wide = q.options.some(o => o.text.length > 10);
+    return { m, ids: [x.id], qs: [q] };
+  } else if (k === 'scene') {
+    const q = exQ({ examId: x.id, m, stemHtml: `<div class="small dim" style="font-size:15px">${esc(x.scene || '')}</div><div class="mt-2">${furi(x.q || '何と言いますか。')}</div>`, why, audio: '' });
+    exOptions(q, x.a, x.op.filter(o => o !== x.a), true);
+    q.wide = true;
+    return { m, ids: [x.id], qs: [q] };
+  } else if (k === 'resp') {
+    const q = exQ({ examId: x.id, m, stemHtml: '<div class="small muted">聽對方說的話，選出回應。</div>', audio: x.line, script: x.line, why });
+    exOptions(q, x.a, x.op.filter(o => o !== x.a), true);
+    q.wide = true;
+    return { m, ids: [x.id], qs: [q] };
+  }
+  return null;
 }
 function derivedQuestion(item, m, k) {
   let q = null;
@@ -6906,8 +6920,10 @@ function derivedQuestion(item, m, k) {
 }
 function derivedUnits(level, m, need, usedKeys) {
   if (need <= 0) return [];
-  let pool = []; const k = (mondai(level, m) || {}).k;
-  if (k === 'reading' || k === 'kanji') pool = REG.vocab.filter(v => v.builtin && v.lv === level && HAS_KANJI.test(v.w));
+  let pool = []; const md = mondai(level, m) || {}; const k = md.k;
+  if (md.read) pool = REG.read.filter(x => x.lv === level && md.read.includes(x.rkind));
+  else if (md.listen) pool = REG.listen.filter(x => x.lv === level && listenKind(x) === k);
+  else if (k === 'reading' || k === 'kanji') pool = REG.vocab.filter(v => v.builtin && v.lv === level && HAS_KANJI.test(v.w));
   else if (k === 'grammar') pool = REG.grammar.filter(g => g.lv === level && ['choice', 'conj', 'adj'].includes(g.t || 'choice'));
   else if (k === 'order') pool = REG.grammar.filter(g => g.lv === level && g.t === 'order');
   const ranked = rankBySeen(shuffle(pool), it => 'd:' + it.key + ':' + m);
@@ -6915,12 +6931,20 @@ function derivedUnits(level, m, need, usedKeys) {
   for (const it of ranked) {
     if (out.length >= need) break;
     if (usedKeys.has(it.key)) continue;
-    const q = derivedQuestion(it, m, k);
-    if (!q) continue;
+    const q = md.read || md.listen ? null : derivedQuestion(it, m, k);
+    const u = md.read || md.listen ? bankUnit(it, m, k) : q && { m, ids: [q.examId], qs: [q] };
+    if (!u) continue;
     usedKeys.add(it.key);
-    out.push({ m, ids: [q.examId], qs: [q] });
+    out.push(u);
   }
   return out;
+}
+// a practice listening item's kind in the paper; a practice listening or reading item asked as a unit of it
+function listenKind(x) { return x.t === 'dialog' ? (x.lkind === 'gist' ? 'gist' : 'task') : x.t; }
+function bankUnit(it, m, k) {
+  const id = 'd:' + it.key + ':' + m;
+  return examUnit(it.passage ? { id, m, passage: it.passage, qs: [{ q: it.q, op: it.op, a: it.a }], why: it.why }
+    : { id, m, script: it.script, scene: it.scene, line: it.line, q: it.q, op: it.op, a: it.a, why: it.why }, k);
 }
 function rankBySeen(list, idOf) {
   const strat = (EXAM && EXAM.strategy) || examStrategy();
@@ -7198,18 +7222,18 @@ function examKey(ev) {
 }
 
 function scoreExam() {
-  const P = EXAM.paper;
-  const lr = P.filter(q => q.sec !== 'S3'); const li = P.filter(q => q.sec === 'S3');
+  const P = EXAM.paper; const plan = EXAM_PLAN[EXAM.level]; const parts = scoreParts(EXAM.level);
   const correct = (arr) => arr.filter(q => EXAM.answers[P.indexOf(q)] === q.answer).length;
+  const lr = P.filter(q => q.sec !== 'S3'); const li = P.filter(q => q.sec === 'S3');
   const lrC = correct(lr); const liC = correct(li);
-  let lr120 = lr.length ? Math.round(lrC / lr.length * 120) : null;
-  let li60 = li.length ? Math.round(liC / li.length * 60) : null;
-  // a single-subject paper is extrapolated so the total stays comparable
-  if (lr120 === null && li60 !== null) lr120 = li60 * 2;
-  if (li60 === null && lr120 !== null) li60 = Math.round(lr120 / 2);
-  const total = (lr120 || 0) + (li60 || 0);
-  const pass = EXAM_PLAN[EXAM.level].pass;
-  const passed = total >= pass && lr120 >= 38 && li60 >= 19;
+  const raw = {}; parts.forEach(([k, max]) => { const arr = P.filter(q => partOf(q, plan.three) === k); raw[k] = arr.length ? Math.round(correct(arr) / arr.length * max) : null; });
+  // a paper without some part (only 聴解, say) gives it the share the others got, so the total stays comparable
+  const have = parts.filter(([k]) => raw[k] !== null); const rate = have.length ? have.reduce((a, [k, max]) => a + raw[k] / max, 0) / have.length : 0;
+  const scored = parts.map(([k, max, min, name]) => ({ k, max, min, name, est: raw[k] === null, pts: raw[k] === null ? Math.round(rate * max) : raw[k] }));
+  const pts = Object.fromEntries(scored.map(x => [x.k, x.pts]));
+  const total = scored.reduce((a, x) => a + x.pts, 0);
+  const pass = plan.pass;
+  const passed = total >= pass && scored.every(x => x.pts >= x.min);
   const byM = {};
   P.forEach((q, i) => { const k = q.m; byM[k] = byM[k] || { n: 0, c: 0, t: q.mondaiTitle }; byM[k].n++; if (EXAM.answers[i] === q.answer) byM[k].c++; });
   // 参考情報 on the official report: A ≥ 67%, B ≥ 34%, C below
@@ -7217,7 +7241,8 @@ function scoreExam() {
   const grade = (r) => (r === null ? '—' : r >= 0.67 ? 'A' : r >= 0.34 ? 'B' : 'C');
   const refVocab = grade(share(q => q.sec === 'S1'));
   const refGrammar = grade(share(q => ['grammar', 'order', 'textgrammar'].includes(q.mk)));
-  return { lrC, lrN: lr.length, liC, liN: li.length, lr120, li60, total, pass, passed, byM, correct: lrC + liC, n: P.length, lrOnly: !li.length, liOnly: !lr.length, refVocab, refGrammar };
+  return { lrC, lrN: lr.length, liC, liN: li.length, lr120: plan.three ? null : pts.lr, li60: pts.li, lang60: plan.three ? pts.lang : null, read60: plan.three ? pts.read : null,
+    parts: scored, total, pass, passed, byM, correct: lrC + liC, n: P.length, lrOnly: !li.length, liOnly: !lr.length, refVocab, refGrammar };
 }
 function finishExam() {
   clearInterval(examTimer);
@@ -7229,7 +7254,7 @@ function finishExam() {
   const now = new Date();
   state.examHistory.unshift({
     id: uid('ex'), dateStr: `${todayStr()} ${pad2(now.getHours())}:${pad2(now.getMinutes())}`, examTitle: EXAM.title, level: EXAM.level, isAiMock: EXAM.isAi,
-    scorePct: Math.round(s.correct / Math.max(1, s.n) * 100), total180: s.total, lrScore120: s.lr120, listenScore60: s.li60, passedOfficial: s.passed,
+    scorePct: Math.round(s.correct / Math.max(1, s.n) * 100), total180: s.total, lrScore120: s.lr120, listenScore60: s.li60, langScore60: s.lang60 === null ? undefined : s.lang60, readScore60: s.read60 === null ? undefined : s.read60, passedOfficial: s.passed,
     correctCount: s.correct, totalCount: s.n, durationSec: EXAM.duration, refVocab: s.refVocab, refGrammar: s.refGrammar, formal: Boolean(EXAM.formal),
     questionLogs: EXAM.paper.map((q, i) => ({ mondaiTitle: q.mondaiTitle, question: examPlain(q).slice(0, 200), passage: q.passageHtml ? htmlToPlain(q.passageHtml.replace(/<br>/g, '\n')).slice(0, 600) : '', script: q.script || '', answer: jaPlain(q.options[q.answer].text), userAnswer: EXAM.answers[i] >= 0 ? jaPlain(q.options[EXAM.answers[i]].text) : '未作答', explanation: q.why || '' }))
   });
@@ -7259,8 +7284,7 @@ function renderExamResult(view) {
       <div class="table-wrap"><table class="table">
         <thead><tr><th>得点区分別得点</th><th style="text-align:right">得點</th><th style="text-align:right">基準點</th></tr></thead>
         <tbody>
-          <tr><td>言語知識（文字・語彙・文法）・読解${s.liOnly ? '（推估）' : ''}</td><td class="num" style="text-align:right">${s.lr120 === null ? '—' : s.lr120} / 120</td><td class="num muted" style="text-align:right">38</td></tr>
-          <tr><td>聴解${s.lrOnly ? '（推估）' : ''}</td><td class="num" style="text-align:right">${s.li60 === null ? '—' : s.li60} / 60</td><td class="num muted" style="text-align:right">19</td></tr>
+          ${s.parts.map(x => `<tr><td>${x.name}${x.est ? '（推估）' : ''}</td><td class="num" style="text-align:right">${x.pts} / ${x.max}</td><td class="num muted" style="text-align:right">${x.min}</td></tr>`).join('')}
           <tr><td><b>総合得点</b></td><td class="num" style="text-align:right"><b>${s.total} / 180</b></td><td class="num muted" style="text-align:right">${s.pass}</td></tr>
         </tbody>
       </table></div>
