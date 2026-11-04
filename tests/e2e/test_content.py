@@ -298,7 +298,11 @@ def test_options_and_kanji_cards_stay_within_the_learners_level(b):
         return { cards: es.concat(listenThemeEntries('居家生活')).filter(e => e.kind === 'k').map(e => e.k.lv), chip: es.find(e => e.kind === 'v' && e.word === 'お願いします').kanji.some(k => k.k === '願'),
           n5peers: [...new Set(vocabPeers(word('雪')).map(x => courseLevel(x.lv)))].sort(), n3peers: vocabPeers(REG.vocab.find(v => v.builtin && v.lv === 'N3')).some(x => x.lv === 'N3'),
           kpeers: [...new Set(kanjiPeers(kan('間')).map(x => x.lv))].sort(), homophone: (kanjiOptions(word('昨日'), '昨日', 'きのう') || []).includes('機能'),
-          shape: [...new Set(shapes.filter(c => kan(c)).map(c => kan(c).lv))].sort(), shapes: shapes.length > 0 }; };
+          shape: [...new Set(shapes.filter(c => kan(c)).map(c => kan(c).lv))].sort(), shapes: shapes.length > 0, decoys: decoys(cur()) }; };
+      /* 漢字寫法's made-up spellings (今日 → 今旧): the kanji put in comes from the table, up to the learner's level */
+      const cur = () => curLevel();
+      const decoys = (top) => { const bad = []; REG.vocab.filter(v => v.lv === 'N5' && HAS_KANJI.test(v.w)).forEach(v => { const zh = {}; (kanjiOptions(v, jaPlain(v.w), v.r, zh) || []).forEach(o => {
+        if (o in zh) return;   /* a real word (締めて of 締める): its level is the word's */ [...o].filter(c => KANJI_RE.test(c) && !jaPlain(v.w).includes(c)).forEach(c => { if (!kan(c) || !up(kan(c).lv, top)) bad.push(jaPlain(v.w) + '→' + o); }); }); }); return bad.slice(0, 5); };
       state.srs[kan('間').key] = rec();
       const n5 = look();
       REG.vocab.filter(v => v.builtin && ['PRE_N5', 'N5', 'N4'].includes(v.lv)).forEach(v => { state.srs[v.key] = rec(); }); REG.kanji.filter(k => k.lv !== 'N3').forEach(k => { state.srs[k.key] = rec(); });
@@ -308,8 +312,8 @@ def test_options_and_kanji_cards_stay_within_the_learners_level(b):
     r = json.loads(ev(b, js)); n5, n3 = r['n5'], r['n3']
     assert all(lv == 'N5' for lv in n5['cards']) and n5['chip'], n5            # no 願 card (N3) for an N5 learner, but お願いします keeps its 願 chip
     assert n5['n5peers'] == ['N5'] and n5['n3peers'] and n5['kpeers'] == ['N5'], n5   # an N3 word studied ahead keeps N3 options
-    assert not n5['homophone'] and n5['shapes'] and n5['shape'] == ['N5'], n5          # 昨日's 漢字寫法 without 機能 (N3); 間's 選字 without 閉 (N3)
-    assert n3['cur'] == 'N3' and 'N3' in n3['cards'] and n3['homophone'] and 'N3' in n3['kpeers'], n3
+    assert not n5['homophone'] and n5['shapes'] and n5['shape'] == ['N5'] and n5['decoys'] == [], n5   # 昨日's 漢字寫法 without 機能 (N3), 今日 without 今旧 (no level); 間's 選字 without 閉 (N3)
+    assert n3['cur'] == 'N3' and 'N3' in n3['cards'] and n3['homophone'] and 'N3' in n3['kpeers'] and n3['decoys'] == [], n3
 
 def test_every_n3_example_shows_its_word_with_the_cards_reading(b):
     js = "(() => { " + HIRA + """ const bad = [];

@@ -2695,10 +2695,10 @@ function kanjiOptions(v, surface, reading, zh = {}) {
     const f = (vGroup(x) && vGroup(v) && vGroup(x) === vGroup(v)) ? inflectLike(x, vSurfaceInfo(v)) : (surface === v.w ? x.w : null);
     if (f && JConj.normJa(f) !== JConj.normJa(surface)) { out.push(f); zh[f] = x.m; }
   });
-  // look-alike substitution (a kanji of the table above the level is left out; the decoys outside the table stay)
+  // look-alike substitution, with kanji of the table up to the level (旧 of 今旧 belongs to no level the learner reaches)
   const chars = [...surface];
   const tries = [];
-  const shown = (alt) => { const k = REG.byKey.get('k:' + alt); return !k || levelUpTo(k.lv, top); };
+  const shown = (alt) => { const k = REG.byKey.get('k:' + alt); return Boolean(k) && levelUpTo(k.lv, top); };
   chars.forEach((c, i) => { (LOOKALIKE_OF[c] || []).filter(shown).forEach(alt => tries.push(chars.slice(0, i).concat(alt, chars.slice(i + 1)).join(''))); });
   shuffle(tries).forEach(t => { if (out.length < 3 && !out.includes(t) && t !== surface) out.push(t); });
   return out.length >= 3 ? out.slice(0, 3) : null;
