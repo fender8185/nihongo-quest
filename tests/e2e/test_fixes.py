@@ -1359,7 +1359,7 @@ def test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only
       Object.assign(state.srs[l.key], { last: addDays(t, -20), due: t }); srsAnswer(l.key, true); const d2 = daysBetween(t, state.srs[l.key].due);
       srsAnswer(l.key, false); const d3 = daysBetween(t, state.srs[l.key].due);
       if (prev) state.srs[l.key] = prev; else delete state.srs[l.key]; state.currentUnit = unit; saveState();
-      return JSON.stringify({ n5, total: REG.listen.length, n5Items: REG.listen.filter(x => x.lv === 'N5').length, first, near, c3, c2, all, d1, d2, d3 }); })()"""
+      return JSON.stringify({ n5, total: REG.listen.filter(x => x.lv === 'N5' || x.lv === 'N4').length, n5Items: REG.listen.filter(x => x.lv === 'N5').length, first, near, c3, c2, all, d1, d2, d3 }); })()"""   # in N4 the N3 items wait (1.0.33)
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['n5'] == r['n5Items'] and r['n5'] > 60 and r['all'] == r['total'], r
