@@ -90,6 +90,22 @@ def test_after_the_last_stage_the_course_stays_on_the_last_unit(b):   # was 'm18
     js = "JSON.stringify([STAGES.length, nextUnitAfterStage(STAGES[STAGES.length - 1].id), DATA.UNITS[DATA.UNITS.length - 1].id])"
     r = json.loads(ev(b, js)); assert r == [5, 'm19', 'm19'], r   # 入門, three phases and the fake fourth
 
+def test_each_level_has_its_own_mondai_table_and_curated_items_build_by_kind(b):   # spec §7: N3's 大題 numbers differ from N4's
+    js = """(() => { const kinds = (L) => Object.entries(MONDAI_LV[L]).map(([m, x]) => m + ':' + x.k);
+      DATA.EXAM.push({ id: 'cm_n3_x1', lv: 'N3', m: 'S3-M4', scene: '在店裡想試穿衣服。', q: '何と言いますか。', op: ['これ、着てみてもいいですか。', 'これ、着てもらえますか。', 'これ、着せてください。'], a: 'これ、着てみてもいいですか。', why: 'x' },
+        { id: 'cm_n3_x2', lv: 'N3', m: 'S3-M5', line: '明日、手伝ってもらえる？', op: ['うん、いいよ。', 'うん、手伝ってもらう。', 'どういたしまして。'], a: 'うん、いいよ。', why: 'x' },
+        { id: 'cm_n3_x3', lv: 'N3', m: 'S2-M7', passage: '市民プール\\n月曜日は休み。', qs: [{ q: '休みは何曜日ですか。', op: ['月曜日', '火曜日', '水曜日', '木曜日'], a: '月曜日' }], why: 'x' });
+      const U = curatedUnits('N3'); const by = (id) => U.find(u => u.ids[0] === id) || { qs: [{}] };
+      const out = { n4: kinds('N4'), n3: kinds('N3'), titles: ['S2-M6', 'S2-M7', 'S3-M3', 'S3-M4', 'S3-M5'].map(m => MONDAI_LV.N3[m].t),
+        scene: String(by('cm_n3_x1').qs[0].stemHtml).includes('試穿'), resp: by('cm_n3_x2').qs[0].audio === '明日、手伝ってもらえる？', info: !!by('cm_n3_x3').qs[0].passageHtml };
+      DATA.EXAM.splice(-3, 3); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    base = ['S1-M1:reading', 'S1-M2:kanji', 'S1-M3:context', 'S1-M4:paraphrase', 'S1-M5:usage', 'S2-M1:grammar', 'S2-M2:order', 'S2-M3:textgrammar', 'S2-M4:passage', 'S2-M5:passage']
+    assert r['n4'] == base + ['S2-M6:passage', 'S3-M1:task', 'S3-M2:task', 'S3-M3:scene', 'S3-M4:resp'], r['n4']
+    assert r['n3'] == base + ['S2-M6:passage', 'S2-M7:passage', 'S3-M1:task', 'S3-M2:task', 'S3-M3:gist', 'S3-M4:scene', 'S3-M5:resp'], r['n3']
+    assert r['titles'] == ['問題6　内容理解（長文）', '問題7　情報検索', '問題3　概要理解', '問題4　発話表現', '問題5　即時応答'], r
+    assert r['scene'] and r['resp'] and r['info'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     site = fake_site()
