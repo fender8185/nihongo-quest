@@ -977,7 +977,8 @@ const APP_VERSION = '1.0.34';   // keep equal to the version in sw.js CACHE ('nq
 const CHANGELOG = [
   { v: '1.0.34', date: '2026-11-04', items: [
     '讀音修正：數字後面的「日」不再標成 ひ。一般的日子標 にち（12日）；有自己唸法的日子整段標在數字和日上（3日 みっか、20日 はつか、14日 じゅうよっか），1日 在月份後面是 ついたち、其他是 いちにち；3日間、3日目 也一樣。朗讀也照這個念。',
-    '修正：N3 閱讀裡標了讀音的日期（15日、7日）朗讀時數字會念兩次；日期後面的（日）（月）改念 にち、げつ。'
+    '修正：N3 閱讀裡標了讀音的日期（15日、7日）朗讀時數字會念兩次；日期後面的（日）（月）改念 にち、げつ。',
+    '讀音修正：名詞後面接助詞時不再被當成動詞的變化：空から 的 空 唸 そら（原本照 空かない 標 あ）、この曲が 的 曲 唸 きょく、机の上が 的 上 唸 うえ。'
   ] },
   { v: '1.0.33', date: '2026-11-04', items: [
     'N3 全部上線。N4 的單字、文法、漢字都學過一次之後，N3 才開始（跟 N5 到 N4 一樣，一次一級）：',
@@ -2105,8 +2106,24 @@ function furiAddStem(surface, reading, long = true) {   // long: also the two-ok
   if (!r.endsWith(oku)) return;
   const kr = r.slice(0, r.length - oku.length);
   furiAdd(s.slice(0, k + 2), kr + oku[0]);
+  furiNoteNext(s.slice(0, k + 2), kr + oku[0], oku[1]);
   // also kanji + two okurigana: 止まり／止まら (止まる) are then longer than 止ま, which 止まない (止む) also writes (1.0.33)
   if (long && oku.length >= 2) furiAdd(s.slice(0, k + 3), kr + oku.slice(0, 2));
+}
+// A key of a kanji and one kana that is also a particle (空か of 空かない, 曲が of 曲がる) notes the kana its word's forms go on with
+// ('*': a form ends there, 茹で of 茹で卵): 空から and この曲が are the noun 空, 曲 and a particle (formGoesOn, 1.0.34)
+const PARTICLE_KANA = new Set([...'がのにをでとへはもやか']);
+const FURI_NEXT = new Map();   // key → its reading → the kana that follow it
+function furiNoteNext(key, reading, next) {
+  if (!PARTICLE_KANA.has(key[key.length - 1])) return;
+  const byR = FURI_NEXT.get(key) || FURI_NEXT.set(key, new Map()).get(key);
+  (byR.get(reading) || byR.set(reading, new Set()).get(reading)).add(next || '*');
+}
+function formGoesOn(key, reading, next) {
+  const set = FURI_NEXT.has(key) && FURI_NEXT.get(key).get(reading);
+  if (!set || set.has('*')) return true;
+  const alone = FURI.get(key.slice(0, -1));   // the kanji alone: a word read another way (空 そら), or nothing to fall back on
+  return !alone || reading.startsWith(alone) || set.has(next);
 }
 
 let FURI_BASE = null;
@@ -2128,6 +2145,9 @@ function buildFuriganaIndex() {
         if (sf && rf) furiAddStem(sf, jaKana(rf), false);
       });
       furiPrio = tier;
+      // the negative stem also goes on with ず, ぬ, ん (空かずに, 急がぬ); noted only, no keys
+      const a = jaPlain(JConj.conjVerb(w, g, 'nai') || '').replace(/ない$/, ''); const ra = jaKana(JConj.conjVerb(r, g, 'nai') || '').replace(/ない$/, '');
+      if (a.length >= 2 && KANJI_RE.test(a[a.length - 2]) && !KANJI_RE.test(a[a.length - 1])) ['ず', 'ぬ', 'ん'].forEach(c => furiNoteNext(a, ra, c));
       furiAdd(w, r);
       if (g === 's' && w.endsWith('する')) furiAdd(w.slice(0, -2), r.slice(0, -2));
     } else if (v.p === 'i') {
@@ -2146,9 +2166,10 @@ function buildFuriganaIndex() {
     FURI_PRIO.clear(); FURI_BASE.prio.forEach((v, k) => FURI_PRIO.set(k, v));
     FURI_BLOCK.clear(); FURI_BASE.block.forEach(k => FURI_BLOCK.add(k));
     FURI_SRC.clear(); FURI_BASE.src.forEach((v, k) => FURI_SRC.set(k, v));
+    FURI_NEXT.clear(); FURI_BASE.next.forEach((byR, k) => FURI_NEXT.set(k, new Map([...byR].map(([r, set]) => [r, new Set(set)]))));
     FURI_MAX = FURI_BASE.max;
   } else {
-    FURI.clear(); FURI_PRIO.clear(); FURI_BLOCK.clear(); FURI_SRC.clear(); FURI_MAX = 1;
+    FURI.clear(); FURI_PRIO.clear(); FURI_BLOCK.clear(); FURI_SRC.clear(); FURI_NEXT.clear(); FURI_MAX = 1;
     // built-in N5 words win over N4 words when keys collide (行って = いって, not おこなって)
     const cl = courseLevels();
     // 同形異讀: the first built-in word of a spelling keeps its place; the later readings (四 し after 四 よん) go in last, below
@@ -2163,7 +2184,8 @@ function buildFuriganaIndex() {
     furiPrio = 1.5; (DATA.FURI_EXTRA || []).forEach(([w, r, p]) => add({ w, r, p }));
     furiPrio = 1.45; BUILTIN_ALL.filter(v => !later(v) && oneKanji(v)).forEach(add);
     furiPrio = 1.4; BUILTIN_ALL.filter(later).forEach(add);
-    FURI_BASE = { key: hiddenKey, furi: new Map(FURI), prio: new Map(FURI_PRIO), block: new Set(FURI_BLOCK), src: new Map(FURI_SRC), max: FURI_MAX };
+    FURI_BASE = { key: hiddenKey, furi: new Map(FURI), prio: new Map(FURI_PRIO), block: new Set(FURI_BLOCK), src: new Map(FURI_SRC), max: FURI_MAX,
+      next: new Map([...FURI_NEXT].map(([k, byR]) => [k, new Map([...byR].map(([r, set]) => [r, new Set(set)]))])) };
   }
   furiPrio = 1; REG.vocab.filter(v => !v.builtin && isWordLike(v)).forEach(add);
   furiSrc = '';
@@ -2255,6 +2277,7 @@ function furi(text, opt = {}) {
         if (!r) continue;
         // a key ending in kanji must end exactly where the kanji run ends
         if (isK(k[k.length - 1]) && isK(s[i + L])) continue;
+        if (!formGoesOn(k, r, s[i + L])) continue;   // 空から: the noun 空 and から, not 空か of 空かない
         out += rubyHtml(k, r, knownCls(k)); i += L; done = true; break;
       }
       if (!done) {

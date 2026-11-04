@@ -235,6 +235,15 @@ def test_dates_in_texts_are_spoken_once_and_weekday_marks_read_as_weekdays(b):
       return JSON.stringify({ twice: [...new Set(twice)], wrong }); })()"""
     r = json.loads(ev(b, js)); assert r == {'twice': [], 'wrong': []}, r
 
+# 1.0.34: a kanji and the first kana of an inflected form (空か of 空かない, 曲が of 曲がる) is read as that word only where the form
+# can go on; a noun and a particle (空から, この曲が, 机の上が) read the noun
+def test_a_noun_before_a_particle_is_not_read_as_a_verb_form(b):
+    texts = ['空から', '空かない', '空かず', 'この曲が好き', '角を曲がれば', '急がずに', '熱かどうか', '熱かった', '机の上が', '上がる', '分からない']
+    js = "JSON.stringify(%s.map(t => furi(t).replace(/<ruby[^>]*>(.*?)<rt>(.*?)<\\/rt><\\/ruby>/g, '[$1:$2]')))" % json.dumps(texts, ensure_ascii=False)
+    r = json.loads(ev(b, js))
+    assert r == ['[空:そら]から', '[空:あ]かない', '[空:あ]かず', 'この[曲:きょく]が[好:す]き', '[角:かど]を[曲:ま]がれば', '[急:いそ]がずに', '[熱:ねつ]かどうか', '[熱:あつ]かった',
+                 '[机:つくえ]の[上:うえ]が', '[上:あ]がる', '[分:わ]からない'], r
+
 def test_every_n3_example_shows_its_word_with_the_cards_reading(b):
     js = "(() => { " + HIRA + """ const bad = [];
       REG.vocab.filter(v => v.builtin && v.lv === 'N3').forEach(v => [v.ex, v.ex2].forEach(e => {
