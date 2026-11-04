@@ -21,10 +21,16 @@ def test_listening_and_reading_wait_a_month_then_a_season_then_half_a_year(b):
     r = json.loads(ev(b, js))
     assert r == {'l': [30, 90, 180, 180, 7], 'r': [30, 90, 180, 180, 7]}, r   # 1.0.15: a miss waits a week, not a day
 
-def test_every_n5_listening_and_reading_item_has_furigana_on_every_kanji(b):
-    js = """(() => { const bad = []; const bare = (t) => furi(String(t || '')).replace(/<ruby>.*?<\\/ruby>/g, '').match(/[一-鿿々〆ヶ]+/g) || [];
-      REG.listen.filter(x => x.lv === 'N5').forEach(x => { const b = bare([x.script, x.q, x.line].concat(x.op).filter(Boolean).join('\\n')); if (b.length) bad.push(x.id + ':' + b.join(' ')); });
-      REG.read.filter(x => x.lv === 'N5').forEach(x => { const b = bare([x.passage, x.q].concat(x.op).join('\\n')); if (b.length) bad.push(x.id + ':' + b.join(' ')); });
+# every level (1.0.34: about 70 old N4 and mock-exam items had bare kanji, 午前中, 携帯 …); Chinese fields (zh, scene, an exam's Chinese
+# instruction) are not read: a Japanese text has kana, an option may be kanji alone (日時)
+def test_every_listening_reading_and_exam_text_has_furigana_on_every_kanji(b):
+    js = """(() => { const KANA = /[ぁ-ゖァ-ヺ]/, ZH = /[，。？！：；「」]|[們這個說]/; const bad = [];
+      const bare = (t) => furi(String(t)).replace(/<ruby[^>]*>.*?<\\/ruby>/g, '').match(/[一-鿿々〆ヶ]+/g) || [];
+      const check = (id, texts, opts) => { const b = texts.filter(t => typeof t === 'string' && KANA.test(t)).concat(opts.filter(t => typeof t === 'string' && !ZH.test(t))).flatMap(bare); if (b.length) bad.push(id + ':' + [...new Set(b)].join(' ')); };
+      REG.listen.forEach(x => check(x.id, [x.script, x.q, x.line], x.op || []));
+      REG.read.forEach(x => check(x.id, [x.passage, x.q], x.op || []));
+      const quoted = (q) => typeof q === 'string' ? q.replace(/」[^ぁ-ゖァ-ヺ」]*$/, '」') : q;   /* 「デパートで（あたらしい）…」括號內正確的漢字寫法是？: the Chinese after the quote */
+      DATA.EXAM.forEach(x => check(x.id, [x.passage, x.script, quoted(x.q), x.jp, x.line].concat((x.qs || []).map(q => q.q)), [x.a, x.word].concat(x.op || [], x.parts || [], ...(x.qs || []).map(q => q.op || []))));
       return JSON.stringify(bad); })()"""
     r = json.loads(ev(b, js))
     assert r == [], r
@@ -218,11 +224,11 @@ def test_houses_are_counted_ken_and_gen(b):   # 軒 (N3) after a number: 2軒 �
 
 # 1.0.34: a day after a number read ひ (the word 日); now にち, or the whole date's own word (3日 みっか) over the number and 日
 def test_days_after_a_number_read_nichi_or_the_whole_date(b):
-    texts = ['12日', '10月3日', '毎月1日', '1日に3回', '3日間', '12日間', '20日', '14日', '24日', '3日目', '3日前', '１０日']
+    texts = ['12日', '10月3日', '毎月1日', '1日に3回', '3日間', '12日間', '20日', '14日', '24日', '3日目', '3日前', '１０日', '3年生', '1部']
     js = "JSON.stringify(%s.map(t => furi(t).replace(/<ruby[^>]*>(.*?)<rt>(.*?)<\\/rt><\\/ruby>/g, '[$1:$2]')).concat([kanaReadings('10月3日'), ssmlReadings('10月3日')]))" % json.dumps(texts, ensure_ascii=False)
     r = json.loads(ev(b, js))
     assert r == ['12[日:にち]', '10[月:がつ][3日:みっか]', '[毎月:まいつき][1日:ついたち]', '[1日:いちにち]に3[回:かい]', '[3日間:みっかかん]', '12[日間:にちかん]',
-        '[20日:はつか]', '[14日:じゅうよっか]', '[24日:にじゅうよっか]', '[3日目:みっかめ]', '[3日:みっか][前:まえ]', '[１０日:とおか]',
+        '[20日:はつか]', '[14日:じゅうよっか]', '[24日:にじゅうよっか]', '[3日目:みっかめ]', '[3日:みっか][前:まえ]', '[１０日:とおか]', '3[年生:ねんせい]', '1[部:ぶ]',
         '10がつみっか', '<speak>10<sub alias="がつ">月</sub><sub alias="みっか">3日</sub></speak>'], r
 
 # a bracketed date (15日[じゅうごにち]) was spoken じゅうご + じゅうごにち, its reading sitting on 日 alone; （日）（月） after a date read ひ, つき
