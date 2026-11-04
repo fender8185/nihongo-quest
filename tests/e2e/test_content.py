@@ -226,6 +226,45 @@ def test_check_grammar_script_checks_a_new_unit_file(b):
         assert any(l.startswith(f'FAIL {id_} ') and msg in l for l in fails), (id_, msg, fails)
     assert not [l for l in fails if l.split()[1] in ('m19-01', 'm19-02', 'm19-03')], fails
 
+def test_n3_units_lessons_and_items_follow_the_outline(b):   # 1.0.33 part three (spec §4.4): m19–m33 in phases 4 and 5, as curriculum/n3.json has them
+    o = json.load(open(os.path.join(ROOT, 'curriculum', 'n3.json'), encoding='utf-8'))
+    outline = {'phases': o['phases'], 'units': [{'id': u['id'], 'points': [p['p'] for p in u['points']]} for u in o['units']]}
+    js = """((o) => { const U = DATA.UNITS.filter(u => u.lv === 'N3'); const G = DATA.GRAMMAR.filter(g => U.some(u => u.id === g.u)); const bad = [];
+      o.units.forEach(ou => { const u = U.find(x => x.id === ou.id); if (!u) { bad.push(ou.id + ': no unit'); return; }
+        const L = DATA.LESSONS[u.id]; if (!L || !(L.sections || []).length) bad.push(u.id + ': no lesson');
+        const mine = G.filter(g => g.u === u.id);
+        ou.points.forEach(p => { if (mine.filter(g => g.t === 'choice' && g.pt === p).length < 3) bad.push(u.id + ': few choice items for ' + p); });
+        ['meaning', 'order'].forEach(t => { if (mine.filter(g => g.t === t).length < 5) bad.push(u.id + ': few ' + t); });
+        mine.forEach(g => { if (!ou.points.includes(g.pt)) bad.push(g.id + ': pt'); if (!L || !L.sections[g.sec]) bad.push(g.id + ': sec'); if (g.lv !== 'N3') bad.push(g.id + ': lv'); }); });
+      return JSON.stringify({ units: U.map(u => u.id), ph: U.map(u => u.ph), phases: DATA.PHASES.filter(p => U.some(u => u.ph === p.id)).map(p => p.id),
+        dupIds: G.length - new Set(G.map(g => g.id)).size, n: G.length, bad: bad.slice(0, 10), stage: STAGES[STAGES.length - 1].lv }); })(%s)""" % json.dumps(outline, ensure_ascii=False)
+    r = json.loads(ev(b, js))
+    ph = [4 + i for i, p in enumerate(o['phases']) for _ in p['units']]
+    assert r['units'] == [u['id'] for u in o['units']] and r['ph'] == ph and r['phases'] == [4, 5], r
+    assert r['dupIds'] == 0 and r['bad'] == [] and r['n'] >= 700 and r['stage'] == 'N3', r
+
+# ---- 1.0.33 part four: check-listen-read.py follows the item's level (spec §5.4: no word above it), knows N3's kinds and the
+# outline's units ----
+def test_check_listen_read_script_follows_the_items_level(b):
+    from cdp import free_port
+    dlg = lambda lv, u, line: {'t': 'dialog', 'lv': lv, 'u': u, 'script': '男：' + line + '\n女：そうですね。', 'q': '男の人は何をしますか。', 'op': ['会議に出る', '家に帰る', '本を読む', '電話をする'], 'a': '会議に出る', 'zh': '男：……', 'why': '男生說要開會。'}
+    long = '私は毎朝、駅まで歩きます。' * 8
+    fx = {'listen': [dlg('N3', 'm19', '明日の会議で、その計画をもう一度検討します。'), dlg('N4', 'm7', 'その計画をもう一度検討します。'), dlg('N3', 'm7', '明日は会議に出ます。'),
+                     dict(dlg('N3', 'm20', '明日、会議があります。'), kind='gist'),
+                     {'t': 'resp', 'kind': 'gist', 'lv': 'N3', 'u': 'm21', 'line': '明日、会議に出ますか。', 'op': ['はい、出ます。', 'いいえ、出ます。', 'はい、出ません。'], 'a': 'はい、出ます。', 'zh': '明天要開會嗎？', 'why': '回答要一致。'}],
+          'read': [{'lv': 'N3', 'u': 'm22', 'kind': 'long', 'passage': long, 'q': 'この人は毎朝、何をしますか。', 'op': ['駅まで歩く', '駅まで走る', 'バスに乗る', '電車に乗る'], 'a': '駅まで歩く', 'zh': '我每天早上走路到車站。', 'why': '文章說走路到車站。'},
+                   {'lv': 'N3', 'u': 'm22', 'kind': 'info', 'passage': '市民プールのご案内\n月曜日は休みです。\n一回300円です。', 'q': '月曜日はどうなりますか。', 'op': ['休み', '300円', '無料', '夜だけ'], 'a': '休み', 'zh': '市民游泳池的說明。', 'why': '月曜日是休館日。'}]}
+    path = os.path.join(ROOT, '.superpowers', 'check-listen-read-fixture.json'); os.makedirs(os.path.dirname(path), exist_ok=True)
+    json.dump(fx, open(path, 'w', encoding='utf-8'), ensure_ascii=False)
+    out = subprocess.run([sys.executable, '-I', os.path.join(ROOT, 'scripts', 'check-listen-read.py'), path, str(free_port())], capture_output=True, text=True)
+    lines = out.stdout.splitlines(); has = lambda label, msg: any(label in l and msg in l for l in lines)
+    assert out.returncode == 1, out.stdout + out.stderr
+    assert not [l for l in lines if 'listen#0 ' in l or 'listen#3 ' in l or 'read#1 ' in l], lines   # an N3 item may use N3 words; gist dialogs and info texts are N3 kinds
+    assert has('listen#1 ', 'above N4: 検討'), lines   # an N4 item may not (a warning, as for N5)
+    assert has('listen#2 ', 'unit m7 is N4'), lines
+    assert has('listen#4 ', 'gist is a dialog'), lines
+    assert has('read#0 ', 'long passage'), lines
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
