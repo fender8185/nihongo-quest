@@ -357,11 +357,10 @@ def test_done_state_and_extra_session(b):
       return JSON.stringify({ h2, btn: btn ? btn.textContent : null, n, len: q.items.length, soonIn, seen, newN: q.newN, aheadN: q.aheadN, reviewCount: q.reviewCount, note, againOk, againNote, next, gone }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
     r = json.loads(out[-1])
-    note = f"今天的進度已完成，這組是 {r['n']} 題額外的新內容"
-    assert r['h2'] == '今天完成了' and r['btn'] == f"加練・{r['n']} 題", r
+    assert r['h2'] == '今天完成了' and r['btn'] == f"多學 {r['n']} 題", r   # 1.0.35: the heading and the button say it all, no note
     assert r['len'] == r['n'] and r['newN'] == r['n'] and r['seen'] == 0 and r['soonIn'] == 0 and r['aheadN'] == 0 and r['reviewCount'] == 0, r   # new items only, as many as the day's new count
-    assert r['note'] == note and r['againOk'] and r['againNote'] == note, r   # 再練一組 with the day done offers the same set
-    assert r['next'] == {'n': r['n'], 'repeats': 0, 'btn': f"加練・{r['n']} 題"} and r['gone'], r
+    assert r['note'] == '' and r['againOk'] and r['againNote'] == '', r   # 再練一組 with the day done offers the same set, no note on its first card
+    assert r['next'] == {'n': r['n'], 'repeats': 0, 'btn': f"多學 {r['n']} 題"} and r['gone'], r
 
 def test_theme_lane_rotates_after_three_days_of_words(b):
     js = """(() => { const keep = JSON.stringify({ srs: state.srs, lane: state.themeLane, q: 0 }); state.themeLane = { order: [], count: {} };
@@ -383,9 +382,9 @@ def test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers(b):
       items.forEach(g => srsAnswer(g.key, true));   // every m1 item answered today
       const u0 = buildUnitQueue('m1', 15); const unit = u0.length; const unitDrill = Boolean(u0.drill);
       items.forEach(g => { state.srs[g.key].last = addDays(t, -1); }); const u1 = buildUnitQueue('m1', 15); const unitY = u1.length >= 5 && u1.drill === true;   // yesterday: nothing due, so a labelled drill of the shakiest
-      startSession('unit', { unit: 'm1' }); renderPractice(); const noteShown = /這組是加練/.test(document.getElementById('view').textContent); SESSION = null; document.body.classList.remove('practicing');
+      startSession('unit', { unit: 'm1' }); renderPractice(); const noteShown = /先練最不熟的/.test(document.getElementById('view').textContent); SESSION = null; document.body.classList.remove('practicing');
       items.slice(0, 2).forEach(g => { state.srs[g.key].due = t; }); startSession('unit', { unit: 'm1' }); renderPractice();   // two due: the note must not say nothing is due
-      const noteHonest = /這組是加練/.test(document.getElementById('view').textContent) && !/沒有到期/.test(document.getElementById('view').textContent); SESSION = null; document.body.classList.remove('practicing'); items.slice(0, 2).forEach(g => { state.srs[g.key].due = addDays(t, 5); });
+      const noteHonest = /先練最不熟的/.test(document.getElementById('view').textContent) && !/沒有到期/.test(document.getElementById('view').textContent); SESSION = null; document.body.classList.remove('practicing'); items.slice(0, 2).forEach(g => { state.srs[g.key].due = addDays(t, 5); });
       const theme = vocabTheme(REG.vocab.find(x => x.builtin)); const words = REG.vocab.filter(v => v.builtin && vocabTheme(v) === theme);
       const wBefore = JSON.stringify(words.map(v => state.srs[v.key] || null)); state.today.newV = 99;   // today's new-word quota used up
       words.forEach(v => srsAnswer(v.key, true));
@@ -585,7 +584,7 @@ def test_stats_projects_the_finish_date_from_the_recent_pace(b):
       const txt = card.textContent; return JSON.stringify({ per: txt.includes('每天約 10 題'), finish: txt, button: !!card.querySelector('[data-act=apply-advice]'), rows: card.querySelectorAll('details.course-banks tbody tr').length }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("nav", URL + "#/stats"), ("eval", probe)], timeout=45)
     want = out[0].replace('-', '/'); r = json.loads(out[1])
-    assert r['per'] and ('預計 ' + want) in r['finish'] and '加練' in r['finish'] and not r['button'] and r['rows'] == 6, (r, want)   # 1.0.20: the pace of the last days, no quota to apply
+    assert ('預計 ' + want) in r['finish'] and '多學' in r['finish'] and not r['button'] and r['rows'] == 6, (r, want)   # 1.0.20: the pace of the last days, no quota to apply (1.0.35: the pace itself is not spelled out)
 
 # ---- 2026-10-27 (v65): ring = done / today's work; 每日目標 → 每天負荷上限; exam-pace quotas on Today; 再練一次 in another format; grammar encore ----
 def test_ring_counts_todays_work_and_fills_when_the_day_is_done(b):
@@ -1059,7 +1058,7 @@ def test_unit_legend_chips_exam_subject_rows_and_setting_hints(b):
       return JSON.stringify({ legs, subj, nowrap: /\\.leg \\{[^}]*nowrap/.test(css), hint: /\\.setting-row \\.hint \\{[^}]*11\\.5px/.test(css) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)
     r = json.loads(out[-1])
-    assert len(r['legs']) >= 4 and r['legs'][0].startswith('熟練') and r['legs'][3].startswith('共 ') and r['legs'][3].endswith(' 題'), r['legs']
+    assert r['legs'][0].startswith('已學 ') and r['legs'][0].endswith(' 題'), r['legs']   # 1.0.35: the 今日 card shows one count; the unit page keeps 熟練／熟悉／初識
     assert r['subj'] == ['mt-2', 'mt-2', 'mt-2'] and r['nowrap'] and r['hint'], r
 
 def test_hero_help_and_scope_toggles_open_one_at_a_time(b):
@@ -1180,8 +1179,8 @@ def test_vocab_theme_card_plays_the_theme(b):
     assert r['hash'] == '#/vocab/listen' and r['kind'] == 'theme' and r['theme'] and r['n'] and r['page'] and r['noScope'], r
     assert r['pref']['source'] == 'theme' and r['back'] == '#/vocab/level?lv=N5', r
 
-def test_exam_page_projects_the_finish_date_and_suggests_extra_practice_when_late(b):
-    # 1.0.20: no quota advice to apply; the countdown says when the course would be learned at the recent pace
+def test_exam_countdown_leaves_the_projection_to_the_stats_page(b):
+    # 1.0.35: the countdown shows the days and the 稍慢 chip; when the course would be learned, and the advice, are on 學習分析
     js = """(() => { state.settings.examDate = addDays(todayStr(), 121); saveState();
       location.hash = '#/exam'; route(); const el = document.querySelector('.hero-advice'); const text = el ? el.textContent : '';
       const onExam = /考試倒數/.test(document.getElementById('view').textContent); const apply = !!document.querySelector('[data-act=apply-advice]'); const a = coursePace();
@@ -1189,7 +1188,7 @@ def test_exam_page_projects_the_finish_date_and_suggests_extra_practice_when_lat
       return JSON.stringify({ late: a.state === 'late', finish: text.includes('預計 ' + a.finish.N4.replace(/-/g, '/')), extra: text.includes('加練'), apply, onExam, offToday }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r == {'late': True, 'finish': True, 'extra': True, 'apply': False, 'onExam': True, 'offToday': True}, r   # the countdown lives on 模擬考
+    assert r == {'late': True, 'finish': False, 'extra': False, 'apply': False, 'onExam': True, 'offToday': True}, r   # the countdown lives on 模擬考
 
 def test_requeue_uses_another_format_when_the_item_has_one(b):
     js = """(() => { const out = {};
@@ -1476,9 +1475,9 @@ def test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue(b):
       const fill = REG.grammar.filter(g => state.srs[g.key]).concat(REG.grammar).slice(0, 6).map(g => { srsAnswer(g.key, true); return g; });
       startSession('items', { items: [v, ...fill] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice();
       answerCurrent((e.q.answer + 1) % e.q.options.length);
-      const out = { btn: !!document.querySelector('.feedback [data-act=slip]'), added: state.mistakes.length - mist, requeued: SESSION.entries.filter(x => x.requeued).length };
+      const out = { btn: !!document.querySelector('.more-items [data-act=slip]'), added: state.mistakes.length - mist, requeued: SESSION.entries.filter(x => x.requeued).length };
       ACTIONS.slip(); out.restored = JSON.stringify(state.srs[v.key]) === before; out.mistBack = state.mistakes.length === mist; out.requeueGone = SESSION.entries.filter(x => x.requeued).length === 0;
-      out.recent = state.recent.length === rec0; out.ng = (state.statsFmt['v-meaning'] || { ng: 0 }).ng === ng0; out.chip = /手滑/.test((document.querySelector('.fb-meta') || {}).textContent || ''); out.btnGone = !document.querySelector('.feedback [data-act=slip]');
+      out.recent = state.recent.length === rec0; out.ng = (state.statsFmt['v-meaning'] || { ng: 0 }).ng === ng0; out.chip = /手滑/.test((document.querySelector('.fb-meta') || {}).textContent || ''); out.btnGone = !document.querySelector('.more-items [data-act=slip]');
       out.wrongStat = SESSION.stats.wrong; SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
@@ -1564,7 +1563,7 @@ def test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_fi
     r = json.loads(out[-1])
     assert r['cards'] == 1 and r['seg'] == [['practice', 'true'], ['mistakes', 'false'], ['theme', 'false']], r
     assert r['tabs'] == ['help', 'scope', 'unit'] and r['unitTab'].strip() == '目前單元' and r['unitOpen'] and r['opened'] and r['kept'] and r['backToUnit'], r
-    assert r['unitPanelHas']['bar'] and r['unitPanelHas']['lecture'] and r['unitPanelHas']['drill'] and [l.split(' ')[0] for l in r['unitPanelHas']['legs'][:3]] == ['熟練', '熟悉', '初識'], r['unitPanelHas']
+    assert r['unitPanelHas']['bar'] and r['unitPanelHas']['lecture'] and r['unitPanelHas']['drill'] and r['unitPanelHas']['legs'][0].startswith('已學 '), r['unitPanelHas']
     p = r['practice']; assert p['fit'] and p['scroll'] <= p['inner'] and p['viewScroll'] <= p['viewH'] and p['ringFirst'] and p['noPlayer'] and p['text'], p
     q = r['player']; assert q['cards'] == 1 and q['one'] and q['pressed'] == 'theme' and q['select'] and q['kind'] == 'theme' and q['flush'], q   # the head row is flush with the switch on both sides
     assert q['scroll'] <= q['inner'] and q['viewScroll'] <= q['viewH'] and 150 <= q['cardH'] <= 420 and q['optsBottom'] <= q['navTop'] and q['countAtBottomRight'], q
@@ -1654,7 +1653,7 @@ def test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones(b):
     out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     for k in ('course', 'vocab', 'stats', 'exam', 'mistakes', 'tools'):
-        assert r[k]['title'] == r[k]['top'] and r[k]['shown'] is False and r[k]['sub'], (k, r[k])   # same as the topbar: hidden, the subtitle stays
+        assert r[k]['title'] == r[k]['top'] and r[k]['shown'] is False and (r[k]['sub'] or k == 'stats'), (k, r[k])   # same as the topbar: hidden, the subtitle stays (學習分析 has none since 1.0.35)
     assert r['unit']['title'] != r['unit']['top'] and r['unit']['shown'] and r['intro']['shown'], r   # a unit's own name is not a repeat
     assert r['today']['title'] == '今日' and r['today']['shown'] is False and r['today']['sub'] is False, r['today']   # the today head is hidden whole on a phone (the card has the date)
     assert r['week0'] == {'row': True, 'firstPhase': True, 'noCard': True}, r['week0']
@@ -1667,14 +1666,14 @@ def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_aw
     js = """(() => { localStorage.removeItem('nq_install_hint'); state.introSeen = true; state.lastBackup = todayStr(); saveState(); const view = document.getElementById('view'); const show = () => { location.hash = '#/today'; route(); return view.querySelector('.install-banner'); };
       INSTALL_FORCE = { platform: 'ios', safari: true }; const ios = show(); const iosBtns = ios ? [...ios.querySelectorAll('[data-act]')].map(b => b.dataset.act) : null;
       ACTIONS['install-how'](); const modal = document.querySelector('.modal'); const guide = modal ? modal.textContent : ''; closeModal(true);
-      const iosGuide = /加入主畫面/.test(guide) && /分享/.test(guide) && /獨立的儲存空間/.test(guide) && !/⋮/.test(guide) && /Brave/.test(guide);
+      const iosGuide = /加入主畫面/.test(guide) && /分享/.test(guide) && /進度是分開的/.test(guide) && !/⋮/.test(guide) && /Brave/.test(guide);
       const iosHtml = installGuideHtml(); const chromeIos = /href="x-safari-https?:\\/\\/[^"]+#\\/today"/.test(iosHtml) && /data-act="copy-url"/.test(iosHtml) && /用 Safari 開啟/.test(iosHtml);
       INSTALL_FORCE = { platform: 'android', brave: true }; const braveAnd = /Brave 點右上角/.test(installGuideHtml()) && /加到主畫面」，再選「安裝」/.test(installGuideHtml()) && !/x-safari/.test(installGuideHtml());
       INSTALL_FORCE = { platform: 'android', canPrompt: true }; const and = show(); const andBtns = and ? [...and.querySelectorAll('[data-act]')].map(b => b.dataset.act) : null; const andGuide = /安裝應用程式/.test(installGuideHtml()) && /data-act="install-prompt"/.test(installGuideHtml());
       INSTALL_FORCE = { platform: 'desktop', firefox: true, touch: false }; const desk = !show() && /Firefox 不支援/.test(installGuideHtml());
       INSTALL_FORCE = { platform: 'ios', standalone: true }; const standalone = !show() && /安裝好的 app/.test(installGuideHtml());
       INSTALL_FORCE = { platform: 'ios' }; show(); ACTIONS['install-dismiss'](); const dismissed = !view.querySelector('.install-banner') && !!localStorage.getItem('nq_install_hint');
-      openSettings('look'); const inSettings = /加到主畫面（安裝成 app）/.test(document.querySelector('.modal').textContent) && /加入主畫面/.test(document.querySelector('.modal').textContent); closeModal(true);
+      openSettings('look'); const inSettings = /怎麼安裝成 app？/.test(document.querySelector('.modal').textContent) && /加入主畫面/.test(document.querySelector('.modal').textContent); closeModal(true);
       INSTALL_FORCE = null; localStorage.removeItem('nq_install_hint'); return JSON.stringify({ ios: !!ios, iosBtns, iosGuide, chromeIos, braveAnd, and: !!and, andBtns, andGuide, desk, standalone, dismissed, inSettings }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
@@ -1903,7 +1902,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_clips_are_fetched_from_the_r2_address, test_a_clip_r2_lacks_or_cannot_serve_comes_from_supabase_and_is_no_miss, test_sigv4_signs_like_the_aws_test_suite_and_signs_r2_requests, test_r2_listing_follows_pages_and_an_upload_carries_the_signed_headers, test_r2_errors_name_their_code_and_an_unreachable_bucket_says_so, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_a_silent_cloud_clip_counts_as_missing_and_the_download_skips_it, test_a_pinned_word_without_its_clip_plays_the_clip_of_its_reading, test_numbers_before_man_are_left_to_the_voice_and_buttons_speak_what_the_generator_makes, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_generator_stops_when_r2_refuses_or_cannot_be_reached, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_download_all_counts_clips_cached_under_the_supabase_address_and_adds_no_copy, test_download_all_finds_a_stored_clip_by_its_address_whatever_it_varies_on, test_download_all_takes_from_supabase_what_r2_lacks,test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_hero_help_and_scope_toggles_open_one_at_a_time, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_exam_page_projects_the_finish_date_and_suggests_extra_practice_when_late, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_clips_are_fetched_from_the_r2_address, test_a_clip_r2_lacks_or_cannot_serve_comes_from_supabase_and_is_no_miss, test_sigv4_signs_like_the_aws_test_suite_and_signs_r2_requests, test_r2_listing_follows_pages_and_an_upload_carries_the_signed_headers, test_r2_errors_name_their_code_and_an_unreachable_bucket_says_so, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_a_silent_cloud_clip_counts_as_missing_and_the_download_skips_it, test_a_pinned_word_without_its_clip_plays_the_clip_of_its_reading, test_numbers_before_man_are_left_to_the_voice_and_buttons_speak_what_the_generator_makes, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_generator_stops_when_r2_refuses_or_cannot_be_reached, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_download_all_counts_clips_cached_under_the_supabase_address_and_adds_no_copy, test_download_all_finds_a_stored_clip_by_its_address_whatever_it_varies_on, test_download_all_takes_from_supabase_what_r2_lacks,test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_hero_help_and_scope_toggles_open_one_at_a_time, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_exam_countdown_leaves_the_projection_to_the_stats_page, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,

@@ -110,7 +110,7 @@ def test_a_new_word_comes_back_once_in_another_format_without_rescheduling(b):
       while (!(currentEntry().encore && currentEntry().item.key === v.key) && guard++ < 40) { if (!currentEntry().done) answerCurrent(currentEntry().q.answer); nextQuestion(); }   // v65: new grammar gets encores too, skip those
       const q2 = currentEntry().q; answerCurrent(q2.answer);
       const out = { grew: SESSION.entries.length - n0, enc: enc.length, positions, fmt1, fmt2: q2.fmt, n: state.srs[v.key].n, fmts: Object.keys(state.srs[v.key].f).length,
-        chip: document.querySelector('.q-label .chip-warn') ? document.querySelector('.q-label .chip-warn').textContent : '' };
+        chip: [...document.querySelectorAll('.q-label .chip')].map(x => x.textContent).find(t => t === '換個方式再考') || '' };
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
     assert r['grew'] >= 1 and r['enc'] == 1 and r['fmt2'] != r['fmt1'] and r['n'] == 1 and r['fmts'] == 2 and r['chip'] == '換個方式再考', r
@@ -266,7 +266,7 @@ def test_today_lists_the_vocab_themes_and_grammar_points_of_the_session(b):
     r = json.loads(ev(b, js))
     assert r['themes'] and r['themes'] in r['text'] and '單字主題' in r['text'], r
     assert r['pts'] and '文法' in r['text'] and sum(1 for p in r['pts'] if p in r['text']) >= min(3, len(r['pts'])), r
-    assert not r['outline'] and '今天的主題' not in r['planLine'] and '正確率' in r['note'], r
+    assert not r['outline'] and '今天的主題' not in r['planLine'] and '最近錯得比較多' in r['note'], r
 
 TESTS += [test_theme_card_bar_has_three_segments_for_seen_learned_mastered, test_today_lists_the_vocab_themes_and_grammar_points_of_the_session]
 
@@ -598,7 +598,7 @@ def test_encore_feedback_shows_the_level_and_says_it_does_not_reschedule(b):
       const fill = REG.grammar.filter(g => !state.srs[g.key]).slice(0, 12); startSession('items', { items: [v, ...fill] });
       const e = currentEntry(); e.previewDone = true; answerCurrent(e.q.answer);
       let guard = 0; while (!currentEntry().encore && guard++ < 30) { if (!currentEntry().done) answerCurrent(currentEntry().q.answer); nextQuestion(); }
-      answerCurrent(currentEntry().q.answer); const meta = document.querySelector('.fb-meta').textContent;
+      answerCurrent(currentEntry().q.answer); const fm = document.querySelector('.fb-meta'); const meta = fm.textContent + [...fm.querySelectorAll('[title]')].map(x => x.title).join(' ');   // 1.0.35: the level is the dots' tooltip
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify({ meta }); })()"""
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
     assert '不影響排程' in r['meta'] and ('學習中' in r['meta'] or '待加強' in r['meta'] or '熟悉' in r['meta']), r
@@ -611,7 +611,7 @@ def test_vocab_practice_buttons_show_the_question_count(b):
       location.hash = '#/vocab/list?c=飲食'; route(); const detail = document.querySelector('.page-head [data-act=start-vocab]').textContent;
       return JSON.stringify({ card, cardWant: want('t:N5:飲食'), level, levelWant: want('N5'), head, headWant: want('all'), detail, detailWant: want('c:飲食') }); })()"""
     r = json.loads(ev(b, js))
-    assert r['card'] == f"練習・{r['cardWant']} 題" and r['level'] == f"練這個等級・{r['levelWant']} 題" and r['head'] == f"單字測驗・{r['headWant']} 題" and r['detail'] == f"練習這個主題・{r['detailWant']} 題", r
+    assert r['card'] == '練習' and r['level'] == f"練這個等級・{r['levelWant']} 題" and r['head'] == f"單字測驗・{r['headWant']} 題" and r['detail'] == f"練習這個主題・{r['detailWant']} 題", r
 
 TESTS += [test_furigana_known_hiding_follows_the_mastered_label, test_encore_feedback_shows_the_level_and_says_it_does_not_reschedule, test_vocab_practice_buttons_show_the_question_count]
 
@@ -714,9 +714,9 @@ def test_i_know_this_word_button_is_on_the_word_list_and_the_practice_feedback(b
     js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x) && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 2 && x.r.length <= 8); const theme = vocabTheme(v);
       renderVocabList(document.getElementById('view'), { c: theme }); const row = document.querySelector(`[data-act=vocab-known][data-key="${v.key}"]`); const out = { listBtn: !!row };
       startSession('items', { items: [v] }); const e = currentEntry(); e.preview = false; e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice(); answerCurrent(e.q.answer);
-      const btn = document.querySelector('.feedback [data-act=vocab-known]'); out.fbBtn = !!btn; if (btn) btn.click();
-      out.meta = (document.querySelector('.fb-meta') || {}).textContent || ''; out.encoresLeft = SESSION.entries.filter(x => x.encore && x.item.key === v.key).length; out.label = srsLevelLabel(state.srs[v.key], v.key);
-      renderPractice(); out.fbAfter = Boolean(document.querySelector('.feedback [data-act=vocab-known]'));   // vouched for: not offered again
+      const btn = document.querySelector('.more-items [data-act=vocab-known]'); out.fbBtn = !!btn; if (btn) btn.click();
+      const fm = document.querySelector('.fb-meta'); out.meta = fm ? fm.textContent + [...fm.querySelectorAll('[title]')].map(x => x.title).join(' ') : ''; out.encoresLeft = SESSION.entries.filter(x => x.encore && x.item.key === v.key).length; out.label = srsLevelLabel(state.srs[v.key], v.key);
+      renderPractice(); out.fbAfter = Boolean(document.querySelector('.more-items [data-act=vocab-known]'));   // vouched for: not offered again
       SESSION = null; document.body.classList.remove('practicing'); delete state.srs[v.key]; return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
     assert r['listBtn'] and r['fbBtn'] and r['label'] == '熟悉' and '熟悉' in r['meta'] and r['fbAfter'] is False and r['encoresLeft'] == 0, r
@@ -847,13 +847,10 @@ def test_a_theme_card_opens_its_word_table_except_on_its_buttons(b):
       const out = {};
       card().querySelector('.bar.stack').click(); out.bar = decodeURIComponent(location.hash);
       card().querySelector('.card-title').click(); out.title = decodeURIComponent(location.hash);
-      const chip = card().querySelector('[data-act=kanji-open]'); const k = chip.dataset.k; chip.click();
-      out.chip = { hash: location.hash, modal: document.getElementById('modalRoot').textContent.includes('漢字「' + k + '」') }; closeModal(true);
       card().querySelector('[data-act=start-vocab]').click(); out.practice = { hash: decodeURIComponent(location.hash), mode: SESSION && SESSION.mode };
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
     assert r['bar'] == '#/vocab/list?lv=N5&c=飲食' and r['title'] == '#/vocab/list?lv=N5&c=飲食', r
-    assert r['chip'] == {'hash': '#/vocab/level?lv=N5', 'modal': True}, r
     assert r['practice']['mode'] == 'vocab' and r['practice']['hash'] != '#/vocab/list?lv=N5&c=飲食', r
 
 TESTS += [test_a_theme_card_opens_its_word_table_except_on_its_buttons]

@@ -22,7 +22,7 @@ const SEED = 20261030;
 // what the app's registry holds in the kinds that take part in the queues, counted from data.js (1.0.33: with N3, 6,079 items;
 // the kana tables are 142). The banks share each day's new items by what each has left, like splitNew.
 const BANKS = (() => {
-  const D = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data.js'), 'utf8').split('\n')[2].replace(/^const DATA = /, '').replace(/;\s*$/, ''));
+  const D = require('./data-file').load();
   return { v: D.VOCAB.filter(v => !v.hide).length, g: D.GRAMMAR.length, k: D.KANJI.length, a: 142 };   // 單字, 文法, 漢字, 假名
 })();
 const DRILLS = 8;                                      // 變化練習: one new family a day, outside the day's new count
@@ -174,8 +174,7 @@ function simulate(bind, L, bulk) {
 // something left shares its new items by what each bank has left (largest remainder, like splitNew), passes a short bank's
 // slots to the others, and does not borrow from the next level, so a level's last day may come up short.
 function levelPlan(perDay) {
-  const lines = fs.readFileSync(path.join(__dirname, '..', 'data.js'), 'utf8').split('\n');
-  const D = JSON.parse(lines[2].replace(/^const DATA = /, '').replace(/;\s*$/, ''));
+  const D = require('./data-file').load();
   const lv = (x) => (x === 'PRE_N5' ? 'N5' : x); const unitLv = Object.fromEntries(D.UNITS.map(u => [u.id, lv(u.lv)]));
   const levels = ['N5', 'N4', 'N3', 'N2', 'N1'].filter(L => D.VOCAB.some(v => lv(v.lv) === L))   // the levels data.js has, in course order
     .map(L => ({ L, left: { v: D.VOCAB.filter(v => lv(v.lv) === L).length, g: D.GRAMMAR.filter(g => unitLv[g.u] === L).length, k: D.KANJI.filter(k => lv(k.lv) === L).length } }));

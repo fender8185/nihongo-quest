@@ -242,8 +242,8 @@ def test_exam_countdown_projects_the_finish_date(b):
       state.settings.examDate = addDays(t, 100); saveState(); const a2 = coursePace(); route(); const hint2 = (document.querySelector('.hero-advice') || {}).textContent || '';
       return JSON.stringify({ perDay: a.perDay, finish: a.finish.N4 === want, late: a.state, hint: hint.includes('預計') && hint.includes(want.replace(/-/g, '/')), late2: a2.state, hint2: hint2.includes('加練'), apply: !!document.querySelector('[data-act=apply-advice]') }); })()"""
     r = json.loads(ev(b, js))
-    assert r['perDay'] == 12 and r['finish'] and r['late'] == 'ok' and r['hint'], r
-    assert r['late2'] == 'late' and r['hint2'] and not r['apply'], r
+    assert r['perDay'] == 12 and r['finish'] and r['late'] == 'ok' and not r['hint'], r   # 1.0.35: the countdown shows the days; the projection is on 學習分析
+    assert r['late2'] == 'late' and not r['hint2'] and not r['apply'], r
 
 # ---- 1.0.19 (Tasks 1–4 ship with it): the copy follows the new rules ----
 def test_i_know_this_says_five_stars(b):
@@ -258,9 +258,7 @@ def test_today_help_describes_the_tiers(b):
     js = "(() => { " + FRESH + """ location.hash = '#/today'; route(); const help = document.querySelector('.hero-panel[data-panel=help]');
       return help ? help.textContent : ''; })()"""
     text = ev(b, js)
-    assert all(s in text for s in ['每天最多 50 題', '四顆每天出 5%', '五顆每天出 3%', '不算在 50 題內', '最近 100 題', '假名拼字答對過']) and '錯題本每天出' not in text, text
-    # 1.0.20: 加練 is a round of new items only, as many as today's new count, no reviews
-    assert all(s in text for s in ['加練', '只出新內容', '等於今天的新題數', '不出複習']), text
+    assert all(s in text for s in ['要複習的舊題', '新內容', '1、3、7 天', '錯題本', '多學']) and '每天最多 50 題' not in text, text   # 1.0.35: plain words, no tier numbers
 
 # ---- 1.0.19 審查修正（Tasks 1–4） ----
 # I2 (1.0.20: 加練 gives new items only, no reviews ahead): four and five stars, whatever date they carry, and a three-star-or-below
@@ -308,7 +306,7 @@ def test_queue_items_are_labelled_as_queued(b):
       const list = text(vocabListResultsHtml({}, [words[0], w5, w2, p]));
       delete state.today.plan; DAILY_CACHE = null; const k = dailyPlan().q4[0].key;
       startSession('daily', { size: 60 }); const i = SESSION.entries.findIndex(e => e.item && e.item.key === k); SESSION.idx = i; prepareEntry(i);
-      answerCurrent(currentEntry().q.answer); const fb = text(feedbackHtml(currentEntry()));
+      answerCurrent(currentEntry().q.answer); const fbHtml = feedbackHtml(currentEntry()); const fb = text(fbHtml) + ' ' + [...fbHtml.matchAll(/title="([^"]*)"/g)].map(m => m[1]).join(' ');   // 1.0.35: the level is the dots' tooltip
       SESSION = null; document.body.classList.remove('practicing');
       return JSON.stringify({ list, fb, i }); })()"""
     r = json.loads(ev(b, js))
@@ -341,7 +339,7 @@ def test_an_early_ladder_item_is_labelled_extra_practice(b):
       const out = { inDaily, early: label(early), onDay: label(onDay) };
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert not r['inDaily'] and '額外練習' in r['early'] and '錯題複習' not in r['early'] and '錯題複習 2/3' in r['onDay'], r
+    assert not r['inDaily'] and r['early'].endswith('錯題') and '錯題複習' not in r['early'] and '錯題複習 2/3' in r['onDay'], r
 
 # I7: an 入門 item graded 模糊 (hard) at five stars stays; only a clear right answer moves it out
 def test_a_fuzzy_flashcard_keeps_a_pre_item(b):
@@ -368,7 +366,7 @@ def test_extra_round_is_new_items_only(b):
       const q = extraQueue(); const round = q.items.map(x => x.key);
       const out = { n, listed: listed.length, left, early: early.length, earlyInList: early.filter(k => listed.includes(k)).length,
         len: round.length, unseen: q.items.every(x => !state.srs[x.key]), inList: round.filter(k => listed.includes(k)).length,
-        kinds: [...new Set(q.items.map(x => x.kind))].sort(), counts: [q.newN, q.newCount, q.reviewCount, q.aheadN], note: extraNote(q) };
+        kinds: [...new Set(q.items.map(x => x.kind))].sort(), counts: [q.newN, q.newCount, q.reviewCount, q.aheadN] };
       round.forEach(k => srsAnswer(k, true));   // that round answered
       DAILY_CACHE = null; const next = extraQueue().items;
       Object.assign(out, { len2: next.length, unseen2: next.every(x => !state.srs[x.key]), repeats: next.filter(x => round.includes(x.key) || listed.includes(x.key)).length });
@@ -377,7 +375,7 @@ def test_extra_round_is_new_items_only(b):
     assert r['early'] == r['n'] and r['earlyInList'] == 0, r
     assert r['left'] == 0 and r['listed'] > 0, r
     assert r['len'] == r['n'] and r['unseen'] and r['inList'] == 0, r
-    assert r['counts'] == [r['n'], r['n'], 0, 0] and r['note'] == f"今天的進度已完成，這組是 {r['n']} 題額外的新內容", r
+    assert r['counts'] == [r['n'], r['n'], 0, 0], r
     assert len(r['kinds']) >= 2, r   # shared between the banks by what each has left, not one kind only
     assert r['len2'] == r['n'] and r['unseen2'] and r['repeats'] == 0, r
 
@@ -632,7 +630,7 @@ def test_pause_note_names_the_unit_the_learner_will_resume(b):
       state.completedUnits = done.slice(); state.currentUnit = 'm9'; const at9 = grammarPauseText(grammarPause());
       state.currentUnit = 'm6'; state.completedUnits = n5u.slice(); state.srs = {}; seeWords(['PRE_N5', 'N5'], 38); seeKanji(['PRE_N5', 'N5']); seeUnits(n5u); const at6 = grammarPauseText(grammarPause());
       const u = (id) => unitById(id).weeks + '・' + unitById(id).short;
-      """ + END + " return JSON.stringify({ at9: at9 === `新文法先停：N5 單字還剩 38 個，學完就進${u('m9')}。`, at6: at6 === `新文法先停：N5 單字還剩 38 個，學完就進${u('m7')}。`, t: [at9, at6] }); })()"
+      """ + END + " return JSON.stringify({ at9: at9 === `先把 N5 的單字（還剩 38 個）學完，再開始${u('m9')}。`, at6: at6 === `先把 N5 的單字（還剩 38 個）學完，再開始${u('m7')}。`, t: [at9, at6] }); })()"
     r = json.loads(ev(b, js)); assert r['at9'] and r['at6'], r
 
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]

@@ -86,7 +86,7 @@ def test_new_kana_follow_the_days_new_count_not_the_old_settings(b):
       DAILY_CACHE = null; delete state.today.plan; const p = dailyPlan();
       return JSON.stringify({ a: p.newA.length, note: String(p.note || '') }); })()"""
     r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
-    assert r['a'] == 5 and '今天新內容 5 題' in r['note'], r   # 1.0.20: the day's new count decides; 負荷上限 and 每天新假名 no longer do
+    assert r['a'] == 5 and '今天新內容少一點（5 題）' in r['note'], r   # 1.0.20: the day's new count decides; 負荷上限 and 每天新假名 no longer do
 
 def test_pre_stage_ends_by_itself_once_everything_is_seen_and_accuracy_holds(b):
     # 1.0.15: no 進入第 1 週／再練一陣子 question — kana gate open + every 入門 word seen + recent accuracy ≥ 80% moves on by itself
@@ -322,7 +322,7 @@ def test_level_page_sections(b):
     assert r['practice'] and r['themeBtn'] and r['sum'] == r['total'], r
 
 def test_theme_card_kanji_open_detail(b):
-    js = """(() => { location.hash = '#/vocab/level?lv=N5'; route(); const chip = document.querySelector('.theme-card [data-act="kanji-open"]'); const k = chip && chip.dataset.k; chip.click();
+    js = """(() => { location.hash = '#/vocab/level?lv=N5'; route(); const chip = document.querySelector('.kanji-box [data-act="kanji-open"]'); const k = chip && chip.dataset.k; chip.click();
       const title = document.querySelector('.modal-title'); const t = title ? title.textContent : ''; closeModal(true);
       return JSON.stringify({ k, opened: t.includes(k) }); })()"""
     r = json.loads(ev(b, js))

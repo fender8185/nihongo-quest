@@ -17,8 +17,8 @@ def fake_site():
     for name in os.listdir(ROOT):
         if name in ('data.js', '.git', '.venv', 'node_modules'): continue
         os.symlink(os.path.join(ROOT, name), os.path.join(tmp, name))
-    lines = open(os.path.join(ROOT, 'data.js'), encoding='utf-8').read().split('\n')
-    D = json.loads(lines[2][len('const DATA = '):-1])
+    src = open(os.path.join(ROOT, 'data.js'), encoding='utf-8').read(); at = src.index('const DATA = ')
+    D = json.loads(src[at + len('const DATA = '):].rstrip().rstrip(';'))
     # the fake level stands in for any real N3 content (1.0.33 merges it batch by batch), so the counts below are the fake's
     n3_units = {u['id'] for u in D['UNITS'] if u['lv'] == 'N3'}
     for k, v in D.items():
@@ -41,8 +41,7 @@ def fake_site():
     g = next(x for x in D['GRAMMAR'] if x['u'] == 'm18' and x['t'] == 'choice')
     D['GRAMMAR'] += [dict(g, id='m19-01', u='m19', lv='N3', sec=0), dict(g, id='m19-02', u='m19', lv='N3', sec=0)]
     D['THEMES']['N3'] = [{'c': th, 'desc': '思考、判斷與推測'}, {'c': '抽象與狀況', 'desc': '抽象的事物與狀況'}]
-    lines[2] = 'const DATA = ' + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';'
-    open(os.path.join(tmp, 'data.js'), 'w', encoding='utf-8').write('\n'.join(lines))
+    open(os.path.join(tmp, 'data.js'), 'w', encoding='utf-8').write(src[:at] + 'const DATA = ' + json.dumps(D, ensure_ascii=False, separators=(',', ':')) + ';\n')
     return tmp
 
 SEEN = """const t = todayStr(); const rec = () => ({ b: 2, due: addDays(t, 30), n: 3, ok: 3, ng: 0, s: 20, d: 5, last: addDays(t, -5), intro: addDays(t, -60), f: {} });

@@ -12,7 +12,7 @@
 <script src="./vendor/supabase.js"></script>
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
-<script src="./data.js?v=19"></script>
+<script src="./data.js?v=20"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -196,7 +196,7 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.35; }
 .legs { display: flex; flex-wrap: wrap; gap: 4px 12px; } .leg { white-space: nowrap; }   /* a legend item never breaks between its name and number */
 .plan-topics { display: flex; flex-direction: column; gap: 4px; margin: -6px 0 14px; color: var(--fg-2); font-size: 14px; line-height: 1.6; }
 .plan-topics b { color: var(--fg-3); font-weight: 500; font-size: 12px; margin-right: 8px; }
-.plan-note { background: var(--warn-soft); border-radius: 8px; padding: 6px 10px; font-size: 13px; margin: 0 0 14px; }
+.plan-note { color: var(--fg-3); font-size: 13px; margin: 0 0 14px; }   /* 1.0.35: a quiet line next to what it is about, not a yellow box */
 .dots { display: inline-flex; gap: 3px; vertical-align: middle; }
 .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line-2); display: inline-block; }
 .dots i.on { background: var(--ok); }
@@ -417,6 +417,7 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .fb-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 10px; font-size: 12px; color: var(--fg-3); }
 .pr-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .pr-actions .left, .pr-actions .right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.pr-actions .more-items { flex-basis: 100%; display: flex; gap: 6px; flex-wrap: wrap; } .pr-actions .more-items[hidden] { display: none; }   /* ⋯ opens a row below, no floating menu (1.0.35) */
 @media (hover: none) and (pointer: coarse) { .kbd-hint { display: none !important; } }   /* touch screens: no keyboard, no key hints */
 .hero-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; } .hero-tabs + .hero-panel { margin-top: 10px; }
 .hero-tab { font: inherit; font-size: 12px; color: var(--fg-3); background: transparent; border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; cursor: pointer; }
@@ -969,12 +970,19 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.34';   // keep equal to the version in sw.js CACHE ('nq-v1.0.34'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.35';   // keep equal to the version in sw.js CACHE ('nq-v1.0.35'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.35', date: '2026-11-04', items: [
+    '介面變簡單：說明文字縮短或收起來，黃底的提示改成一行灰色小字。',
+    '今天做完後只留一顆「多學 N 題」，錯題本變成一行小連結；作答後的振假名、手滑不算、這題有問題、這個字我已經會了收進「⋯」。',
+    '單字的主題卡只留名稱、進度、練習和播放（漢字在下面的漢字區）；工具與 AI 的 AI 出題、學習建議和金鑰說明收進「進階」。',
+    '修正：入門的新單字上方顯示成「PRE_N5」，改成「入門」。',
+    '課程資料檔換了存放格式，內容沒有變；這次更新會重新下載一次課程資料。'
+  ] },
   { v: '1.0.34', date: '2026-11-04', items: [
     '讀音修正：數字後面的「日」不再標成 ひ。一般的日子標 にち（12日）；有自己唸法的日子整段標在數字和日上（3日 みっか、20日 はつか、14日 じゅうよっか），1日 在月份後面是 ついたち、其他是 いちにち；3日間、3日目 也一樣。朗讀也照這個念。',
     '修正：N3 閱讀裡標了讀音的日期（15日、7日）朗讀時數字會念兩次；日期後面的（日）（月）改念 にち、げつ。',
@@ -3592,8 +3600,8 @@ function grammarPause() {
   return next ? { L, v: x.v, k: x.k, unit: next.id } : null;
 }
 function grammarPauseText(gp) {
-  const parts = [gp.v ? `單字還剩 ${gp.v} 個` : '', gp.k ? `漢字還剩 ${gp.k} 個` : ''].filter(Boolean).join('、');
-  const u = unitById(gp.unit); return `新文法先停：${gp.L} ${parts}，學完就進${u.weeks}・${u.short}。`;
+  const parts = [gp.v ? `單字（還剩 ${gp.v} 個）` : '', gp.k ? `漢字（還剩 ${gp.k} 個）` : ''].filter(Boolean).join('和');
+  const u = unitById(gp.unit); return `先把 ${gp.L} 的${parts}學完，再開始${u.weeks}・${u.short}。`;
 }
 function levelLeftText(L) { const x = levelLeft(L); return [x.v ? `單字 ${x.v}` : '', x.k ? `漢字 ${x.k}` : '', x.g ? `文法 ${x.g} 題` : ''].filter(Boolean).join('、'); }
 function pastFirstLevel() { return curLevel() !== courseLevels()[0]; }   // the first course level (入門+N5) is done
@@ -3829,7 +3837,7 @@ function computeDailyPlan(size = SESSION_SIZE) {
   // 變化練習: one family not started yet a day, from the reached units, outside the new-item count
   const newC = pre || (state.today.newC || 0) >= 1 ? [] : cPool.filter(d => !state.srs[d.key]).sort((a, b) => unitOrder(a.u) - unitOrder(b.u)).slice(0, 1);
   const note = nc.n < nc.base || nc.base < NEW_DEFAULT
-    ? `${nc.acc !== null ? `最近 100 題正確率 ${Math.round(nc.acc * 100)}%、` : ''}錯題本 ${nc.mistakes} 條，今天新內容 ${nc.n} 題。` : '';
+    ? `${[nc.base < NEW_DEFAULT && '最近錯得比較多', nc.n < nc.base && '錯題本比較滿'].filter(Boolean).join('、')}，今天新內容少一點（${nc.n} 題）。` : '';
   const plan = Object.assign({ dueV: ofKind('v'), dueG: ofKind('g'), dueK: ofKind('k'), dueA: ofKind('a'), dueC: ofKind('c'), q4, q5,
     newV: fresh.v, newG: fresh.g, newK: fresh.k, newA: fresh.a, newC }, extrasPlan(curIdx));
   plan.remaining = PLAN_LISTS.reduce((sum, n) => sum + plan[n].length, 0);
@@ -3933,9 +3941,6 @@ function extraQueue() {
   const items = interleave(s.a.concat(s.v, s.k), s.g);
   return { items, plan: p, aheadN: 0, newN: items.length, newCount: items.length, reviewCount: 0 };
 }
-function extraNote(q) {
-  return q && q.newN ? `今天的進度已完成，這組是 ${q.newN} 題額外的新內容` : '';
-}
 // The Today page and 「開始練習」 share one built queue, so the button says exactly how many questions the session
 // holds (the plan numbers above it describe the whole day's workload, which can be more than one session).
 let DAILY_CACHE = null;
@@ -3993,7 +3998,7 @@ function buildMistakeQueue(size = 20) {
 }
 
 // ---------- session lifecycle ----------
-const DRILL_NOTE = '這個範圍今天到期的題目不到五題，這組是加練：補上最不穩的題目先練。';
+const DRILL_NOTE = '這個範圍今天沒有幾題要複習，這組先練最不熟的。';
 const MODE_TITLE = { daily: '今日練習', unit: '單元練習', vocab: '單字練習', mistakes: '錯題練習', ai: 'AI 題目', kanji: '漢字練習', kana: '假名', items: '練習', stage: '階段測驗' };
 function startSession(mode, opt = {}) {
   let entries = [];
@@ -4003,7 +4008,7 @@ function startSession(mode, opt = {}) {
     if (!opt.extra && dailyPlan(size).remaining === 0) opt = Object.assign({}, opt, { extra: true });   // the day is done (e.g. 再練一組 on the summary): offer the 加練 set
     const r = opt.extra ? extraQueue() : dailyQueue(size);
     entries = r.items.map(item => ({ item }));
-    meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: opt.extra ? extraNote(r) : (r.plan.note || '') };
+    meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: '' };   // the day's note sits on the 今日 card; the session repeats only the drill note
   } else if (mode === 'unit') {
     const uq = buildUnitQueue(opt.unit, opt.size || 15);
     entries = uq.map(item => ({ item }));
@@ -4180,8 +4185,8 @@ function renderPractice() {
   const rec = q.key ? srsGet(q.key) : null;
   // a missed item on its 1/3/7 ladder: on (or after) its day this is a step; before it (most notebook-queue draws) extra practice
   const ladder = !rec || typeof rec.rl !== 'number' || e.requeued || e.encore || (e.srs && e.srs.isNew) ? ''
-    : (e.srs ? !e.srs.reviewed : rec.due > todayStr()) ? '<span class="chip chip-warn" title="還沒到這題的複習日：答對不算進第 1、3、7 天，到了那天照常複習">錯題・額外練習</span>'
-    : `<span class="chip chip-warn" title="答錯過的題：第 1、3、7 天各複習一次，三次都對才離開錯題本">錯題複習 ${rec.rl + 1}/3</span>`;
+    : (e.srs ? !e.srs.reviewed : rec.due > todayStr()) ? '<span class="chip" title="還沒到這題的複習日：答對不算進第 1、3、7 天，到了那天照常複習">錯題</span>'
+    : `<span class="chip" title="答錯過的題：第 1、3、7 天各複習一次，三次都對才離開錯題本">錯題複習 ${rec.rl + 1}/3</span>`;
   let stem = q.stemHtml;
   if (answered && q.fillHtml) stem = stem.replace(/<span class="blank" data-blank>[\s\S]*?<!--\/blank-->/, `<span class="blank filled">${q.fillHtml}</span>`);
   const custom = q.custom ? customInteractionHtml(e, answered) : '';
@@ -4193,7 +4198,7 @@ function renderPractice() {
     </div>
     ${SESSION.idx === 0 && !answered && SESSION.meta && SESSION.meta.note ? `<div class="plan-note">${esc(SESSION.meta.note)}</div>` : ''}
     <div class="q-card">
-      <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip chip-warn">再練一次</span>' : ''}${e.encore ? '<span class="chip chip-warn">換個方式再考</span>' : ''}${ladder}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
+      <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip">再練一次</span>' : ''}${e.encore ? '<span class="chip">換個方式再考</span>' : ''}${ladder}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
       <div class="q-instr">${esc(q.instr || '')}</div>
       ${q.passageHtml ? `<div class="panel jp mb-3 passage">${q.passageHtml}</div>` : ''}
       ${stem ? `<div class="q-stem jp ${q.stemClass || ''}">${stem}</div>` : ''}
@@ -4206,11 +4211,10 @@ function renderPractice() {
       <div class="left">
         ${q.custom === 'v-match' ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>`}
         ${q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-match' && (answered || q.fmt !== 'v-cloze') ? '<button type="button" class="btn btn-sm btn-ghost" data-act="speak-example" title="朗讀例句">例句</button>' : ''}
-        <button type="button" class="btn btn-sm btn-ghost" data-act="toggle-furi" title="切換振假名（F）">振假名：${FURI_LABEL[furiState()]}</button>
-        ${answered && isAiConfigured() ? '<button type="button" class="btn btn-sm btn-ghost" data-act="ai-explain">AI 解析</button>' : ''}
-        ${answered && q.kind !== 'm' ? '<button type="button" class="btn btn-sm btn-ghost" data-act="report-item" title="題目有誤或不自然時，把它移出題庫">這題有問題</button>' : ''}
+        <button type="button" class="btn btn-sm btn-ghost" data-act="more-toggle" aria-expanded="false" title="更多" aria-label="更多">⋯</button>
       </div>
       ${answered ? '' : '<div class="right"><span class="tiny muted kbd-hint">按 1–4 作答</span></div>'}
+      <div class="more-items" hidden>${moreItemsHtml(e, answered)}</div>
     </div>
     ${answered ? `<div class="pr-next"><button type="button" class="btn btn-primary" data-act="next" id="btnNext">${SESSION.idx + 1 < SESSION.entries.length ? '下一題' : '看結果'} <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button></div>` : ''}`;
   if (!answered && q.audio && !e.autoPlayed) { e.autoPlayed = true; setTimeout(() => (q.audioScript ? speakScript(q.audio) : speak(q.audio, speakOpts(q, q.audio))), 150); }
@@ -4254,7 +4258,7 @@ function previewHtml(e, pct) {
       ${prCountHtml()}
     </div>
     <div class="q-card">
-      <div class="q-label"><span>新單字 · ${esc(v.lv)} · ${esc(vocabTheme(v))}</span><span class="chip chip-accent">新</span></div>
+      <div class="q-label"><span>新單字 · ${esc(lvLabel(v.lv))} · ${esc(vocabTheme(v))}</span><span class="chip chip-accent">新</span></div>
       <div class="q-instr">先看一遍，接著會用幾種方式考這個字。</div>
       <div class="preview">
         <div class="word jp">${esc(jaPlain(v.w))}</div>
@@ -4351,6 +4355,15 @@ function srsBadge(key) {
   return `<span class="row" style="gap:6px">${srsDots(r.b)}</span>`;
 }
 
+// the ⋯ row under a question: 振假名, and once answered 手滑，不算 (a miss), 這個字我已經會了 (a word answered right), AI 解析, 這題有問題
+function moreItemsHtml(e, answered) {
+  const q = e.q; const ok = e.chosen === q.answer; const cur = q.key ? state.srs[q.key] : null;
+  return `<button type="button" class="btn btn-sm btn-ghost" data-act="toggle-furi" title="切換振假名（F）">振假名：${FURI_LABEL[furiState()]}</button>
+    ${answered && !ok && !e.slip && e.undo && !SESSION.test ? '<button type="button" class="btn btn-sm btn-ghost" data-act="slip" title="選錯鍵、看錯行：不進錯題本，排程維持原狀">手滑，不算</button>' : ''}
+    ${answered && q.kind === 'v' && q.key && ok && cur && !SESSION.test && !cur.known && srsLevelLabel(cur, q.key) !== '已熟練' ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(q.key)}">這個字我已經會了</button>` : ''}
+    ${answered && isAiConfigured() ? '<button type="button" class="btn btn-sm btn-ghost" data-act="ai-explain">AI 解析</button>' : ''}
+    ${answered && q.kind !== 'm' ? '<button type="button" class="btn btn-sm btn-ghost" data-act="report-item" title="題目有誤或不自然時，把它移出題庫">這題有問題</button>' : ''}`;
+}
 function feedbackHtml(e) {
   const q = e.q;
   const ok = e.chosen === q.answer;
@@ -4361,10 +4374,10 @@ function feedbackHtml(e) {
   const example = q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-cloze' && q.fmt !== 'v-match' ? exampleHtml(q.item.ex, q.item.exZh, 'mt-2', q.item) : '';
   const why = example ? String(q.why || '').replace(/\n- 例：[^\n]*/g, '') : q.why;
   const cur = q.key ? state.srs[q.key] : null;
-  const srsInfo = e.srs ? `<span>${srsDots(e.srs.rec.b)}</span><span>${srsLevelLabel(e.srs.rec, q.key)}・${dueLabel(e.srs.rec, q.key)}</span>`
-    : e.encore && cur ? `<span>${srsDots(cur.b)}</span><span>${srsLevelLabel(cur, q.key)}・這次不影響排程</span>` : '';
+  const srsInfo = e.srs ? `<span title="${esc(srsLevelLabel(e.srs.rec, q.key) + '・' + dueLabel(e.srs.rec, q.key))}">${srsDots(e.srs.rec.b)}</span>`
+    : e.encore && cur ? `<span title="${esc(srsLevelLabel(cur, q.key) + '・這次不影響排程')}">${srsDots(cur.b)}</span>` : '';   // the level and next date as a tooltip (1.0.35)
   const mistake = !ok && q.kind !== 'x' && !e.slip && !SESSION.test && !(e.requeued && q.custom === 'v-match') ? '<span>已加入錯題本</span>' : '';   // a 再練一次 配對 writes nothing
-  const slip = e.slip ? '<span class="chip">手滑，不算</span>' : (!ok && e.undo && !SESSION.test ? '<button type="button" class="btn btn-sm btn-ghost" data-act="slip" title="選錯鍵、看錯行：不進錯題本，排程維持原狀">手滑，不算</button>' : '');
+  const slip = e.slip ? '<span class="chip">手滑，不算</span>' : '';   // the button itself is under ⋯ (moreItemsHtml)
   const mNote = e.mistakeDone ? '<span class="chip chip-ok">已移出錯題本</span>' : '';
   // a spelled or typed conjugation: show what was produced, the first wrong character marked
   let diff = '';
@@ -4382,7 +4395,7 @@ function feedbackHtml(e) {
         : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
       ${diff}${full}${example}
       ${why ? `<div class="fb-why mt-2">${md(why)}</div>` : ''}
-      <div class="fb-meta">${q.point ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}${q.kind === 'v' && q.key && ok && cur && !SESSION.test && !cur.known && srsLevelLabel(cur, q.key) !== '已熟練' ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(q.key)}">這個字我已經會了</button>` : ''}</div>
+      <div class="fb-meta">${q.point && q.kind === 'g' ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}</div>
       <div id="aiExplainBox"></div>
     </div>`;
 }
@@ -4963,7 +4976,7 @@ function sessionTopicsHtml(q, plan) {
       ${shown.length ? `<span><b>文法</b>${esc(shown.join('・'))}</span>` : ''}
     </div>`;
 }
-function planNoteHtml(q, plan) { const noteText = [extraNote(q), plan.note].filter(Boolean).join(' '); return noteText ? `<div class="plan-note">${esc(noteText)}</div>` : ''; }
+function planNoteHtml(plan) { return plan.note ? `<div class="plan-note">${esc(plan.note)}</div>` : ''; }
 // 說明 / 今天的範圍 under the 今日練習 title: two toggles, at most one open (kept while the app is open)
 // iOS ignores user-scalable=no inside Safari; the gesture events still stop a pinch from zooming the page
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
@@ -5000,12 +5013,8 @@ function renderToday(view) {
   if (plan.remaining === 0) {
     const xq = extraQueue(); const xn = xq.items.length;
     heroBody = `<p class="dim">今天做了 ${doneToday} 題。${xn ? '' : '明天再來，或到課程頁預習下一單元。'}</p>
-      <div class="row-wrap">
-        ${xn ? `<button type="button" class="btn btn-primary" data-act="start-extra">加練・${xn} 題</button>` : ''}
-        ${mk.length ? `<button type="button" class="btn" data-act="nav" data-route="#/mistakes">錯題本（${mk.length}）</button>` : ''}
-        ${inPreStage() ? '' : `<button type="button" class="btn btn-ghost" data-act="start-unit" data-unit="${cur.id}">練習目前單元</button>`}
-      </div>
-      ${xn ? `<div class="plan-note">${esc(extraNote(xq))}</div>` : ''}`;
+      ${xn ? `<div><button type="button" class="btn btn-primary" data-act="start-extra">多學 ${xn} 題</button></div>` : ''}
+      ${mk.length ? `<div class="small mt-2"><a href="#/mistakes" data-act="nav" data-route="#/mistakes">錯題本 ${mk.length} 題</a></div>` : ''}`;
   } else {
     // the counts live in the 今天的範圍 panel (scopeHtml below); the card itself shows only the button when everything is folded
     scopeHtml = `${sessionTopicsHtml(dq, plan)}
@@ -5016,7 +5025,7 @@ function renderToday(view) {
         <span>共 <b>${plan.remaining}</b> 題</span>
       </div>
 `;
-    heroBody = planNoteHtml(dq, plan);
+    heroBody = planNoteHtml(plan);
   }
 
   // the card's switch: 練習 (default) or the player over the notebook / a word theme; a playing player keeps going behind 練習
@@ -5026,10 +5035,10 @@ function renderToday(view) {
   const segBtn = (tab, label) => `<button type="button" aria-pressed="${todayTab === tab}" data-act="today-tab" data-tab="${tab}">${label}</button>`;
 
   const startBanner = !state.startChosen && Object.keys(state.srs).length === 0
-    ? `<div class="banner intro-banner"><div class="grow">第一次用？完全沒學過：從零開始（先認假名）。已經學過一些：測試看看，用入門的階段測驗看你在哪裡。</div><div class="row-wrap">${startButtonsHtml()}<button type="button" class="btn btn-sm btn-ghost" data-act="nav" data-route="#/course/intro">先看第 0 週</button></div></div>`
+    ? `<div class="banner intro-banner"><div class="grow"><div class="strong">要從哪裡開始？</div><div class="row-wrap mt-2">${startButtonsHtml()}</div><div class="small muted mt-2">我是新手：從假名開始。我學過一些：做個小測驗，找到你的起點。</div></div></div>`
     : '';
   const introBanner = startBanner ? '' : !state.introSeen && Object.keys(state.srs).length < 40
-    ? `<div class="banner intro-banner"><div class="grow">第一次用？先看「第 0 週」：假名、最基本的句型、以及題目上會出現的名詞（い形容詞、五段動詞……）。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button><button type="button" class="btn btn-sm btn-ghost" data-act="intro-dismiss">知道了</button></div></div>`
+    ? `<div class="banner intro-banner"><div class="grow">先看「第 0 週」：假名和最基本的句型。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button><button type="button" class="btn btn-sm btn-ghost" data-act="intro-dismiss">知道了</button></div></div>`
     : '';
   const preDoneCard = inPreStage() && preDone()
     ? `<div class="banner mt-2"><div class="grow">入門單字都看過了；最近正確率 ${Math.round((recentAccuracy() || 0) * 100)}%，到 ${Math.round(PRE_PASS_ACC * 100)}% 就會自動進入第 1 週。</div></div>`
@@ -5046,12 +5055,12 @@ function renderToday(view) {
             ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">範圍</button>` : ''}
             ${inPreStage() ? '' : `<button type="button" class="hero-tab${heroTab === 'unit' ? ' open' : ''}" data-act="hero-tab" data-tab="unit" aria-expanded="${heroTab === 'unit'}">目前單元</button>`}
           </div>
-          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>今天的題目在第一次打開時排好，當天不會變；中途解鎖的新內容明天才排進來。三顆以下照記憶強度排複習，每天最多 50 題；答錯的題目幾題後再練一次，之後第 1、3、7 天各複習一次（不算在 50 題內），三次都對才離開錯題本。四顆每天出 5%、五顆每天出 3%（各最少 1 題、最多 30 題），等最久的先出。單字五顆、而且假名拼字答對過才算已熟練，四顆以上還沒拼對的，下次會出拼字。新題數看最近 100 題的正確率和錯題本，照還沒學的比例分給單字、文法、漢字。做完還想多學可以按加練，一輪只出新內容，題數等於今天的新題數，不出複習。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
+          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>每天第一次打開時排好今天的題目：要複習的舊題，加上一些新內容。答錯的題目過幾題會再出一次，之後隔 1、3、7 天再複習，都答對才離開錯題本。做完還想多學，可以按「多學」。${encoreN ? `新內容會換個方式再考一次（約 ${encoreN} 題，不算在題數內）。` : ''}</div>
           ${plan.remaining ? `<div class="hero-panel" data-panel="scope" ${heroTab === 'scope' ? '' : 'hidden'}>${scopeHtml}</div>` : ''}
           <div class="hero-panel" data-panel="unit" ${heroTab === 'unit' && !inPreStage() ? '' : 'hidden'}>
             <div class="row between mb-2"><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div><span class="chip">${esc(cur.lv)}</span></div>
             <div class="row">${unitBarHtml(us, 'grow')}<span class="small num muted">${us.pct}%</span></div>
-            <div class="small muted mt-2 legs">${unitLegendHtml(us)}${us.due ? `<span class="leg">今天要複習 ${us.due} 題</span>` : ''}</div>
+            <div class="small muted mt-2 legs"><span class="leg">已學 ${us.ok3 + us.ok1 + us.seen0}／${us.total} 題</span>${us.due ? `<span class="leg">今天要複習 ${us.due} 題</span>` : ''}</div>
             ${us.pct >= 85 && !us.done ? `<div class="banner mt-3"><div class="grow">這個單元已經很熟了，可以前往下一單元。</div><button type="button" class="btn btn-sm btn-primary" data-act="advance-unit">前往下一單元</button></div>` : ''}
             <div class="row-wrap mt-3">
               <button type="button" class="btn btn-sm" data-act="nav" data-route="#/course/${cur.id}">看講義</button>
@@ -5185,7 +5194,7 @@ Object.assign(ACTIONS, {
 // ---- 階段（四個）與階段項目 ----
 /* 入門 + DATA.PHASES 的各個階段。文法與變化練習照單元歸屬；單字、漢字、聽力、閱讀照等級歸到該等級的最後一個階段
    (PRE_N5 → 入門, N5 → 第一階段, N4 → 第三階段, N3 → 第五階段)；入門另含全部假名。階段測驗與通過時的標記都以這個劃分為準。 */
-const STAGES = [{ id: 'pre', title: '入門', sub: '假名、入門單字與第 0 週的句型；都看過、正確率到 80% 就自動進第 1 週', units: ['m0'], lv: 'PRE_N5' }].concat(
+const STAGES = [{ id: 'pre', title: '入門', sub: '假名、入門單字和第 0 週的句型', units: ['m0'], lv: 'PRE_N5' }].concat(
   DATA.PHASES.map((ph, i) => ({ id: 'p' + (i + 1), title: ph.title, sub: ph.span, units: DATA.UNITS.filter(u => u.ph === ph.id).map(u => u.id), lv: phaseEndLevel(i) })));
 // the level a phase finishes (its units' level when the next phase moves on to another level; a middle phase has none)
 function phaseEndLevel(i) { const lvOf = (ph) => { const us = ph ? DATA.UNITS.filter(u => u.ph === ph.id) : []; return us.length ? courseLevel(us[us.length - 1].lv) : null; };
@@ -5454,7 +5463,7 @@ function renderCourse(view) {
   }).join('');
   view.innerHTML = `
     <div class="page-head">
-      <div><div class="page-title">課程</div><div class="page-sub">${STAGES.length} 個階段：入門與 ${DATA.UNITS.length} 個單元（每單元一到兩週）。整體完成度 ${cp.pct}%</div></div>
+      <div><div class="page-title">課程</div><div class="page-sub">整體完成度 ${cp.pct}%</div></div>
       <button type="button" class="btn" data-act="open-level">依程度選擇起點</button>
     </div>
     ${(() => { const gp = grammarPause(); return gp ? `<div class="plan-note">${esc(grammarPauseText(gp))}</div>` : ''; })()}
@@ -5613,7 +5622,7 @@ function levelPickerHtml() {
   const unitOpts = DATA.UNITS.map(u => `<option value="${u.id}" ${u.id === state.currentUnit ? 'selected' : ''}>${esc(u.weeks)}・${esc(u.short)}</option>`).join('');
   return `
     <div class="row-wrap">${startButtonsHtml()}</div>
-    <p class="hint mt-2">完全沒學過：從零開始（先認假名，再學入門單字）。學過一些：測試看看，直接做入門的階段測驗，通過後選假名、入門單字和句型各幾顆；之後在課程頁做各階段的測驗，通過就把到那裡為止、還不到四顆的題目設成四顆，跳過已會的部分。</p>
+    <p class="hint mt-2">沒學過就從假名開始；學過一些可以先做測驗，通過的部分之後會少出。</p>
     <div class="divider"></div>
     <p class="dim small">選擇要從第幾週開始。預設從第 1 週開始；之後可以隨時在課程頁更改。</p>
     <div class="row-wrap mt-3">
@@ -5649,7 +5658,7 @@ function chooseStart(kind) {
 }
 function startButtonsHtml(small = true) {
   const c = small ? 'btn btn-sm' : 'btn';
-  return `<button type="button" class="${c} btn-primary" data-act="start-zero">從零開始</button><button type="button" class="${c}" data-act="start-test">測試看看</button>`;
+  return `<button type="button" class="${c} btn-primary" data-act="start-zero">我是新手</button><button type="button" class="${c}" data-act="start-test">我學過一些</button>`;
 }
 const EXPERIENCED_SETTINGS = { showZh: false };
 function applyExperienced() { Object.assign(state.settings, EXPERIENCED_SETTINGS); saveState(); }
@@ -5779,14 +5788,11 @@ function renderVocabLevel(view, lv) {
   const ring = ringHtml(L.total ? L.learned / L.total : 0, `<div class="num" style="font-size:18px">${L.total ? Math.round(L.learned / L.total * 100) : 0}%</div>`, 84);
   // 1.0.27: the card itself opens the theme's word table (its title is the link for the keyboard); the kanji and buttons keep their own action
   const cards = themes.map(g => { const list = `#/vocab/list?lv=${lv}&c=${encodeURIComponent(g.c)}`; return `<div class="card theme-card" data-c="${esc(g.c)}" data-lv="${lv}" data-act="nav" data-route="${list}">
-      <div class="row between"><div><a class="card-title theme-link" href="${list}" data-act="nav" data-route="${list}">${esc(g.c)}</a>${g.desc ? `<div class="tiny muted">${esc(g.desc)}</div>` : ''}</div><span class="tiny muted nowrap">${g.total} 字 ›</span></div>
+      <div class="row between"><a class="card-title theme-link" href="${list}" data-act="nav" data-route="${list}">${esc(g.c)}</a><span class="tiny muted nowrap">${g.total} 字 ›</span></div>
       ${stackBarHtml(g)}
-      <div class="small muted mt-2"><i class="seg-dot seen"></i>已學 ${g.seen}　<i class="seg-dot learned"></i>熟悉 ${g.learned}　<i class="seg-dot mastered"></i>熟練 ${g.mastered}${g.due ? `・今天到期 ${g.due}` : ''}</div>
-      ${g.kanji.length ? `<div class="small mt-2 row-wrap" style="gap:4px;align-items:center"><span class="muted">漢字</span>${g.kanji.map(k => `<button type="button" class="chip jp kanji-chip" data-act="kanji-open" data-k="${esc(k)}">${esc(k)}</button>`).join('')}</div>` : ''}
-      <div class="row-wrap mt-3">
-        <button type="button" class="btn btn-sm btn-primary" data-act="start-vocab" data-filter="t:${lv}:${esc(g.c)}">練習・${vocabSessionCount(`t:${lv}:${g.c}`)} 題</button>
-        <button type="button" class="btn btn-sm" data-act="listen-theme-start" data-theme="${esc(g.c)}">${icon('play')}播放字卡</button>
-      </div></div>`; }).join('');
+      <div class="row between mt-2"><span class="small muted">已學 ${g.seen}／${g.total}${g.due ? `・今天到期 ${g.due}` : ''}</span>
+        <span class="row" style="gap:6px"><button type="button" class="btn btn-sm btn-primary" data-act="start-vocab" data-filter="t:${lv}:${esc(g.c)}">練習</button>
+        <button type="button" class="btn btn-sm btn-icon" data-act="listen-theme-start" data-theme="${esc(g.c)}" title="播放字卡" aria-label="播放字卡">${icon('play')}</button></span></div></div>`; }).join('');
   // kanji of this level grouped by the theme that uses them most
   // a kanji met only in another level's words (兄 in 入門 人與家人 while the kanji is N4) joins that theme, labelled with the level
   const counts = kanjiCountsByTheme(lv); const otherCounts = levels().filter(l => l !== lv).map(l => [l, kanjiCountsByTheme(l)]);
@@ -5803,7 +5809,7 @@ function renderVocabLevel(view, lv) {
       <div class="small muted mt-2">顏色越深越熟；點假名聽發音，按每行前面的 ▶ 只練那一行。</div>${kanaHeatGridHtml()}
       <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-act="kana-practice">練全部假名</button></div></details>` : '';
   view.innerHTML = `
-    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub"><b>${lvLabel(lv)}</b>・已學 ${L.seen}／共 ${L.total}・熟悉 ${L.learned}・熟練 ${L.mastered}${L.due ? `・今天到期 ${L.due}` : ''}</div></div>
+    <div class="page-head"><div><div class="page-title">單字</div><div class="page-sub"><b>${lvLabel(lv)}</b>・已學 ${L.seen}／${L.total}${L.due ? `・今天到期 ${L.due}` : ''}</div></div>
       <div class="row" style="gap:12px">${ring}<button type="button" class="btn btn-primary" data-act="start-vocab" data-filter="${lv}">練這個等級・${vocabSessionCount(lv)} 題</button></div></div>
     ${vocabTabs(lv)}
     ${kanaBox}
@@ -5933,7 +5939,7 @@ function vocabListResultsHtml(params, list = vocabListFiltered(params)) {
     const r = state.srs[v.key];
     return `<tr>
       <td><div class="jp" style="font-size:16px">${esc(jaPlain(v.w))}</div><div class="tiny muted jp">${esc(v.r && v.r !== v.w ? v.r : '')}</div></td>
-      <td><div>${esc(v.m)}</div><div class="tiny muted">${esc(`${v.lv}・${posLabel(v.p)}`)}</div></td>
+      <td><div>${esc(v.m)}</div><div class="tiny muted">${esc(`${lvLabel(v.lv)}・${posLabel(v.p)}`)}</div></td>
       <td class="nowrap small">${r ? `${srsDots(r.b)}<div class="tiny muted">${dueLabel(r, v.key).replace('複習', '')}</div>` : '<span class="muted">未學</span>'}</td>
       <td class="nowrap" style="text-align:right">
         <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(jaPlain(v.w))}" data-reading="${esc(v.r && !HAS_KANJI.test(v.r) && v.r !== jaPlain(v.w) ? v.r : '')}" aria-label="發音">${icon('speaker')}</button>
@@ -6907,7 +6913,7 @@ function examCountdownHtml() {
   return `<div class="card">
       <div class="card-head"><div class="card-title">考試倒數</div>${courseChip(p)}</div>
       <div class="stat"><span class="stat-v">${p.daysLeft} 天</span><span class="stat-l">距離 ${esc(p.exam.replace(/-/g, '/'))} JLPT ${p.level}</span></div>
-      <div class="small dim mt-2 hero-advice">${esc(courseText(p))}</div>
+      ${p.state === 'passed' || p.state === 'close' ? `<div class="small dim mt-2 hero-advice">${esc(courseText(p))}</div>` : ''}
     </div>`;
 }
 function renderExam(view, sub, params) {
@@ -6925,12 +6931,12 @@ function renderExam(view, sub, params) {
     </div>`).join('');
   const lvDefault = examLevels().filter(L => ALL_LEVELS.indexOf(L) <= ALL_LEVELS.indexOf(unitLevel(state.currentUnit))).pop() || examLevels()[0];
   view.innerHTML = `
-    <div class="page-head"><div><div class="page-title">模擬考</div><div class="page-sub">依照 JLPT 的三個科目與大題順序出題，同一份考卷不會重複題目。</div></div></div>
+    <div class="page-head"><div><div class="page-title">模擬考</div><div class="page-sub">照 JLPT 的科目和題型出題。</div></div></div>
     ${examCountdownHtml()}
     <div class="card">
       <div class="grid grid-3">
         <div class="field"><label>級數</label><select class="select" id="exLevel">${examLevels().map(l => `<option ${l === lvDefault ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
-        <div class="field"><label>份量</label><select class="select" id="exSize"><option value="mini">迷你（約四分之一的題數）</option><option value="std" selected>標準（約一半的題數）</option><option value="full">完整（依大題比例，題庫不足時少出）</option></select></div>
+        <div class="field"><label>份量</label><select class="select" id="exSize"><option value="mini">迷你</option><option value="std" selected>標準</option><option value="full">完整</option></select></div>
         <div class="field"><label>出題方式</label><select class="select" id="exStrategy"><option value="unseen">優先出沒考過的題目</option><option value="random">隨機</option><option value="wrong">優先出上次答錯的題目</option></select></div>
       </div>
       <div class="mt-3">
@@ -6938,16 +6944,16 @@ function renderExam(view, sub, params) {
         ${['S1', 'S2', 'S3'].map(s => `<div class="mt-2"><label class="switch"><input type="checkbox" class="exSubj" value="${s}" checked /><span class="track"></span><span class="small">${EXAM_SECTIONS[s]}</span></label></div>`).join('')}
       </div>
       <div class="row-wrap mt-3">
-        <label class="switch"><input type="checkbox" id="exFormal" ${state.settings.examFormal ? 'checked' : ''} /><span class="track"></span><span class="small">正式模式：各科目分開計時、結束的科目不能回頭、聽解只播一次、発話表現和即時応答的選項只用聽的</span></label>
+        <label class="switch"><input type="checkbox" id="exFormal" ${state.settings.examFormal ? 'checked' : ''} /><span class="track"></span><span class="small" title="各科目分開計時、結束的科目不能回頭、聽解只播一次、発話表現和即時応答的選項只用聽的">正式模式（像真的考試，分科計時）</span></label>
       </div>
       <div class="row-wrap mt-2">
-        <label class="switch"><input type="checkbox" id="exInstant" ${state.settings.examInstant ? 'checked' : ''} /><span class="track"></span><span class="small">每題作答後立即顯示解答（正式模式不適用；關閉時交卷後一起看）</span></label>
+        <label class="switch"><input type="checkbox" id="exInstant" ${state.settings.examInstant ? 'checked' : ''} /><span class="track"></span><span class="small">每題答完就看解答</span></label>
       </div>
       <div class="row-wrap mt-4">
         <button type="button" class="btn btn-primary" data-act="exam-start">開始考試</button>
         ${isAiConfigured() ? '<button type="button" class="btn" data-act="exam-ai">先請 AI 出 8 道新題再開始</button>' : ''}
       </div>
-      <p class="hint mt-3">聽解題用語音朗讀，請先在設定確認語音可以播放。換算分數是依答對比例估計，只能當作參考。</p>
+      <p class="hint mt-3">分數是估計的，僅供參考。</p>
     </div>
     <div class="grid grid-3">
       <div class="card"><div class="stat"><span class="stat-v">${hist.length}</span><span class="stat-l">考試次數</span></div></div>
@@ -6971,7 +6977,7 @@ function stageTestCardHtml() {
     </div>`).join('');
   const btns = STAGES.map(st => `<button type="button" class="btn btn-sm" data-act="stage-test" data-stage="${st.id}">${esc(st.title)}</button>`).join('');
   return `<div class="card" id="stageTests">
-      <div class="card-head"><div><div class="card-title">階段測驗</div><div class="card-sub">40 題選擇題，不計時、作答不影響排程，答對 80% 算通過。每個階段通過時，會把到那裡為止、還不到四顆的題目設成四顆。</div></div></div>
+      <div class="card-head"><div><div class="card-title">階段測驗</div><div class="card-sub">40 題，答對 8 成就通過；通過的部分之後會少出。</div></div></div>
       <div class="row-wrap">${btns}</div>
       ${rows ? `<div class="list mt-3">${rows}</div>` : '<div class="empty mt-3">還沒有階段測驗紀錄。</div>'}
     </div>`;
@@ -7446,7 +7452,7 @@ function apiGuidesHtml(openId) {
       ${g.tips.length ? `<ul class="mt-2">${g.tips.map(t => `<li>${fill(t)}</li>`).join('')}</ul>` : ''}
     </div></details>`;
   return `<div class="card" id="apiGuides">
-    <div class="card-head"><div><div class="card-title">API 申請說明</div><div class="card-sub">語音與 AI 服務要自己申請金鑰。金鑰只存在這個瀏覽器裡，不會同步、也不會進備份；換裝置要再貼一次。</div></div></div>
+    <div class="card-head"><div><div class="card-title">API 申請說明</div><div class="card-sub">金鑰要自己申請，只存在這個瀏覽器裡（不會同步）。</div></div></div>
     ${API_GUIDES.map(one).join('')}
   </div>`;
 }
@@ -7459,7 +7465,7 @@ function renderTools(view, params = {}) {
   const ai = isAiConfigured();
   const unitOpts = DATA.UNITS.map(u => `<option value="${u.id}" ${(TOOLS_STATE.genUnit || state.currentUnit) === u.id ? 'selected' : ''}>${esc(u.weeks)}・${esc(u.short)}</option>`).join('');
   view.innerHTML = `
-    <div class="page-head"><div><div class="page-title">工具與 AI</div><div class="page-sub">${ai ? `AI：${esc(aiLabel())}` : 'AI 尚未設定，下面的離線工具仍然可以使用。'}</div></div>
+    <div class="page-head"><div><div class="page-title">工具與 AI</div><div class="page-sub">${ai ? `AI：${esc(aiLabel())}` : ''}</div></div>
       <button type="button" class="btn" data-act="settings-ai">${ai ? 'AI 設定' : '設定 AI'}</button></div>
     <div class="card">
       <div class="card-head"><div class="card-title">句子分析</div></div>
@@ -7482,10 +7488,11 @@ function renderTools(view, params = {}) {
       </div>
       <div id="conjOut" class="mt-3">${conjTableHtml(TOOLS_STATE.conjWord, TOOLS_STATE.conjKind)}</div>
     </div>
-    <div class="grid grid-2">
+    <details class="disclose mt-3 tools-more" ${params.guide ? 'open' : ''}><summary>進階：AI 出題、學習建議、API 金鑰</summary>
+    <div class="grid grid-2 mt-3">
       <div class="card">
         <div class="card-head"><div class="card-title">用 AI 為單元出題</div></div>
-        <p class="small dim">新題目會經過格式檢查（四個選項、答案唯一、空格正確）後加入單元題庫，之後在每日練習中出現。</p>
+        <p class="small dim">出的題目會加進單元，之後在每日練習出現。</p>
         <div class="row-wrap mt-2">
           <select class="select" id="genUnit" style="width:auto" data-change="gen-unit">${unitOpts}</select>
           <select class="select" id="genCount" style="width:auto"><option value="5">5 題</option><option value="8">8 題</option></select>
@@ -7495,12 +7502,13 @@ function renderTools(view, params = {}) {
       </div>
       <div class="card">
         <div class="card-head"><div class="card-title">AI 學習建議</div></div>
-        <p class="small dim">依照你的進度、最近的正確率和錯題分布，給三點具體建議。</p>
+        <p class="small dim">看你的進度和錯題，給三點建議。</p>
         <div class="row-wrap mt-2"><button type="button" class="btn" data-act="study-advice" ${ai ? '' : 'disabled'}>${icon('spark')}產生建議</button></div>
         <div id="adviceOut"></div>
       </div>
     </div>
-    ${apiGuidesHtml(params.guide)}`;
+    ${apiGuidesHtml(params.guide)}
+    </details>`;
   if (params.guide) { const d = view.querySelector(`details[data-guide="${params.guide}"]`); if (d) d.scrollIntoView({ block: 'start' }); }
 }
 
@@ -7608,7 +7616,7 @@ function settingsSpeech() {
       </details>`;
   } else if (c.engine === 'browser_neural') {
     engine = voices.length ? selRow('browserVoiceURI', '瀏覽器語音', 'Edge 的 Nanami／Keita（Natural）或 Chrome 的 Google 日本語 聽起來最自然。', voiceOpts, 'tts-cfg')
-      : '<div class="banner warn mt-3">這個瀏覽器沒有日語語音。聽力題會自動停用；可以改用 Edge、Chrome，或在下面選擇其他語音服務。</div>';
+      : '<div class="banner warn mt-3">這個瀏覽器沒有日語語音，聽力題先停用。可以換 Chrome／Edge，或在下面選別的語音服務。</div>';
   } else if (c.engine === 'google_tts') {
     engine = textRow('googleKey', 'Google Cloud API Key', `在 Google Cloud 啟用 Text-to-Speech API 後建立金鑰，建議限制只能用這個 API。每月前 100 萬字元免費。Key 只存在這個瀏覽器裡。${guideLink('google_tts')}`, 'tts-cfg', { secret: true })
       + selRow('googleVoice', '主要聲音', '', GOOGLE_VOICES, 'tts-cfg') + selRow('googleVoiceM', '對話中的男聲', '', GOOGLE_VOICES, 'tts-cfg')
@@ -7697,10 +7705,10 @@ function changelogItems(list) {
 function settingsLook() {
   return `
     ${selRow('theme', '主題', '', [['dark', '深色'], ['light', '淺色'], ['auto', '跟隨系統']])}
-    ${selRow('furiState', '振假名', '也可以隨時按 F 或側邊欄的按鈕切換。「熟練的字不標」會拿掉你已經熟練（約 3 週以上記得住）的單字讀音。', [['all', '全部顯示'], ['smart', '熟練的字不標'], ['off', '全部隱藏']])}
-    <div class="setting-row"><div><div class="label">鍵盤快速鍵</div><div class="hint">練習：1–4 作答、Enter 下一題、R 發音、T 顯示中文、F 振假名、Esc 結束。字卡：Space 翻面、1–4 評分。</div></div></div>
-    <details class="disclose mt-3" ${installInfo().standalone ? '' : 'open'}>
-      <summary>加到主畫面（安裝成 app）</summary>
+    ${selRow('furiState', '振假名', '「熟練的字不標」：已經記熟的字不標讀音。', [['all', '全部顯示'], ['smart', '熟練的字不標'], ['off', '全部隱藏']])}
+    <div class="setting-row kbd-hint"><div><div class="label">鍵盤快速鍵</div><div class="hint">練習：1–4 作答、Enter 下一題、R 發音、T 顯示中文、F 振假名、Esc 結束。字卡：Space 翻面、1–4 評分。</div></div></div>
+    <details class="disclose mt-3">
+      <summary>怎麼安裝成 app？</summary>
       ${installGuideHtml()}
     </details>
     <p class="hint mt-3">版本 ${APP_VERSION}</p>
@@ -7833,6 +7841,7 @@ Object.assign(ACTIONS, {
     cloudGenStart(gk, r2);
   },
   'cloud-gen-stop': () => { if (CLOUD_GEN) CLOUD_GEN.stop = true; },
+  'more-toggle': (el) => { const box = el.closest('.pr-actions').querySelector('.more-items'); box.hidden = !box.hidden; el.setAttribute('aria-expanded', String(!box.hidden)); },
   'hero-tab': (el) => {
     heroTab = heroTab === el.dataset.tab ? null : el.dataset.tab;
     const hero = el.closest('.hero'); if (!hero) return;
@@ -7984,7 +7993,7 @@ function weekCardHtml(s) {
     : '<div class="week-empty small muted">這 7 天還沒有練習</div>';
   const table = `<table class="table"><thead><tr><th>日期</th><th>單字</th><th>文法</th><th>其他</th><th>合計</th></tr></thead><tbody>${s.days.map((d, i) => `<tr><td class="num">${i === last ? '今天' : d.date}</td><td class="num">${d.v}</td><td class="num">${d.g}</td><td class="num">${d.q}</td><td class="num">${d.total}</td></tr>`).join('')}</tbody></table>`;
   return `<div class="card" id="weekCard">
-      <div class="card-head"><div><div class="card-title">過去 7 天的練習量</div><div class="card-sub">單字包含漢字、假名；其他是聽力、閱讀、模擬考</div></div></div>
+      <div class="card-head"><div><div class="card-title">過去 7 天的練習量</div></div></div>
       <div class="week-stats">${stat(s.total, '7 天合計（題）')}${stat(s.avg, '每天平均（題）')}${stat(change, '比前 7 天', s.change > 0)}</div>
       <svg class="week-line" viewBox="-6 -4 292 68" role="img" aria-label="過去 7 天每天作答的題數"><polygon class="week-area" points="${pts} 280,60 0,60"></polygon><polyline points="${pts}"></polyline>${dots}</svg>
       <div class="week-axis">${s.days.map((d, i) => `<span${i === last ? ' class="today"' : ''}>${i === last ? '今天' : wd(d)}</span>`).join('')}</div>
@@ -8104,26 +8113,22 @@ function coursePace() {
 // what it takes when late: new items a day, as 加練 rounds (every few days, or a few a day; three or more a day is too much)
 function courseAdvice(p) {
   if (p.state !== 'late') return '';
-  const now = Math.round(p.perDay) >= p.need ? p.perDay.toFixed(1) : Math.round(p.perDay);   // 「需 10 題（現在約 10 題）」 would read as on time
-  const head = `要趕上，每天約需 ${p.need} 題新內容（現在約 ${now} 題）`;
   const { every, times, heavy, once } = p.plan;
-  if (heavy) return `${head}，等於每天加練 ${times} 次，太吃力了：可以考慮${courseLevels().indexOf(p.level) > 0 ? `先考 ${courseLevels()[courseLevels().indexOf(p.level) - 1]}，或` : ''}把考試日期往後延（JLPT 每年 7 月、12 月各一次）。`;
-  if (times) return `${head}：每天做完當天的練習後按 ${times} 次加練就趕得上。`;
-  if (once) return `${head}：${p.deadline.replace(/-/g, '/')} 前找一天，做完當天的練習後按 1 次加練就趕得上。`;
-  return `${head}：${every === 1 ? '每天' : `大約每 ${every} 天，`}做完當天的練習後按 1 次加練就趕得上。`;
+  if (heavy) return `要每天多學 ${times} 組才趕得上，太吃力了：可以${courseLevels().indexOf(p.level) > 0 ? `先考 ${courseLevels()[courseLevels().indexOf(p.level) - 1]}，或` : ''}把考試延到下一次（JLPT 每年 7 月、12 月）。`;
+  if (times) return `每天做完練習再多學 ${times} 組就趕得上。`;
+  if (once) return `${p.deadline.replace(/-/g, '/')} 前找一天多學一組就趕得上。`;
+  return `${every === 1 ? '每天' : `大約每 ${every} 天`}多學一組就趕得上。`;
 }
 // the 課程進度 line, shared by 學習分析 and the exam countdown
 function courseText(p) {
   const sl = (d) => d.replace(/-/g, '/');
-  if (p.state === 'passed') return '考試日期已經過了。到設定裡改成下一次的日期，這裡會重新計算。';
-  if (p.state === 'close') return `距離考試只剩 ${p.daysLeft} 天，不到三週：建議只做每天的練習與模擬考。`;
+  if (p.state === 'passed') return '考試日期過了，到設定改成下一次的日期。';
+  if (p.state === 'close') return `離考試只剩 ${p.daysLeft} 天：每天的練習加上模擬考就好。`;
   const nxt = courseLevels()[courseLevels().indexOf(p.level) + 1];   // the level after the target, if any
-  if (p.state === 'done') return !nxt ? '單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。'
-    : `${p.level} 的單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。${p.left[nxt] > p.left[p.level] ? `照現在的速度，預計 ${sl(p.finish[nxt])} 學完 ${nxt}。` : ''}`;
-  const speed = p.fallback ? `最近 14 天沒有學新內容，照每天排到的 ${Math.round(p.perDay)} 題新內容推算，` : `照最近每天約 ${Math.round(p.perDay)} 題新內容的速度，`;
+  if (p.state === 'done') return `${p.level} 都學過一次了，接下來照複習走，考前三週做模擬考。${nxt && p.left[nxt] > p.left[p.level] ? `照現在的速度，${sl(p.finish[nxt])} 學完 ${nxt}。` : ''}`;
   const diff = daysBetween(p.finish[p.level], p.deadline);
-  const when = diff > 0 ? `比 ${sl(p.deadline)}（考前三週）早 ${diff} 天` : diff < 0 ? `比 ${sl(p.deadline)}（考前三週）晚 ${-diff} 天` : `正好是 ${sl(p.deadline)}（考前三週）`;
-  return `${speed}預計 ${sl(p.finish[p.level])} 學完 ${p.level} 的單字、文法、漢字，${when}。${courseAdvice(p)}`;
+  const when = diff > 0 ? `比期限（考前三週）早 ${diff} 天` : diff < 0 ? `比期限（考前三週）晚 ${-diff} 天` : '剛好在期限（考前三週）';
+  return `照現在每天的份量，${sl(p.finish[p.level])} 學完 ${p.level}，${when}。${courseAdvice(p)}`;
 }
 function weakPoints(limit = 8) {
   const agg = {};
@@ -8176,7 +8181,7 @@ function renderStats(view) {
 
 
   view.innerHTML = `
-    <div class="page-head"><div><div class="page-title">學習分析</div><div class="page-sub">依你的作答紀錄整理。數字會隨練習更新。</div></div></div>
+    <div class="page-head"><div><div class="page-title">學習分析</div></div></div>
     ${progressCard}
     ${weekCardHtml(weekSummary())}
     <div class="grid grid-4">
@@ -8189,11 +8194,11 @@ function renderStats(view) {
     ${courseCardHtml()}
     <div class="grid grid-2">
       <div class="card">
-        <div class="card-head"><div><div class="card-title">最弱的文法考點</div><div class="card-sub">至少作答 4 次、正確率低於 90%</div></div></div>
+        <div class="card-head"><div><div class="card-title">最弱的文法考點</div></div></div>
         ${weakRows || '<div class="empty">還沒有足夠的資料。</div>'}
       </div>
       <div class="card">
-        <div class="card-head"><div><div class="card-title">各題型正確率</div><div class="card-sub">至少作答 5 次的題型，由低到高</div></div></div>
+        <div class="card-head"><div><div class="card-title">各題型正確率</div></div></div>
         ${fmtRows || '<div class="empty">還沒有足夠的資料。</div>'}
       </div>
     </div>`;
@@ -8209,9 +8214,8 @@ function courseChip(p) {
 // to the exam or the last of the dates, at most twice as far as the exam: a date beyond sits at the end with an arrow.
 function courseCardHtml() {
   const p = coursePace(); const t = todayStr(); const sl = (d) => d.replace(/-/g, '/');
-  const speed = p.fallback ? `最近 14 天沒有學新內容，照每天排到的 ${Math.round(p.perDay)} 題新內容推算` : `照最近 14 天每天約 ${Math.round(p.perDay)} 題新內容推算`;
   const ahead = p.state === 'ok' || p.state === 'late' || p.state === 'done';
-  const sub = ahead ? `目標 ${p.level}・考試 ${sl(p.exam)}（${sl(p.deadline).slice(5)} 前學完，留三週做模擬考）・${speed}` : `目標 ${p.level}・考試 ${sl(p.exam)}`;
+  const sub = `目標 ${p.level}・考試 ${sl(p.exam)}`;
   const tone = (L) => (L !== p.level ? 'other' : p.state === 'late' ? 'late' : 'target');
   let line = ''; let rows = '';
   if (ahead) {
@@ -9672,12 +9676,12 @@ function installSteps(info) {
 function installGuideHtml(info = installInfo()) {
   const g = installSteps(info);
   return `<div class="install-guide">
-    ${info.standalone ? '<p class="small">你現在就是從安裝好的 app 開的。' : '<p class="small">安裝後它就像一般 app：從主畫面開、全螢幕沒有網址列、首頁剛好一頁、離線也能用（今天要練的語音會自動先存好，播過的句子也會留著）。'}</p>
+    ${info.standalone ? '<p class="small">你現在就是從安裝好的 app 開的。' : '<p class="small">安裝後就像一般 app：從主畫面打開、全螢幕、離線也能練。'}</p>
     <div class="label mt-2">${g.title}</div>
     <ol class="small mt-1">${g.steps.map(x => `<li>${x}</li>`).join('')}</ol>
     ${g.note ? `<p class="hint">${g.note}</p>` : ''}
     ${g.safari && !info.standalone ? `<div class="row-wrap mt-2"><a class="btn btn-sm btn-primary" href="${esc(safariUrl())}">用 Safari 開啟</a><button type="button" class="btn btn-sm" data-act="copy-url">複製網址</button></div><p class="hint">「用 Safari 開啟」在 iOS 16 沒有作用；那就複製網址，開 Safari 貼上。</p>` : ''}
-    <p class="hint">安裝後的 app 和瀏覽器分頁是兩個獨立的儲存空間，進度不會自己過去：先在「設定 › 資料」登入雲端同步，或下載備份再到 app 裡匯入。</p>
+    <p class="hint">app 和瀏覽器的進度是分開的：先在「設定 › 資料」登入同步，進度就會跟過去。</p>
     ${info.canPrompt ? '<button type="button" class="btn btn-sm btn-primary mt-2" data-act="install-prompt">安裝</button>' : ''}
   </div>`;
 }

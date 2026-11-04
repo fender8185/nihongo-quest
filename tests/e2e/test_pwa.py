@@ -36,7 +36,7 @@ def test_data_lives_in_its_own_versioned_file_and_is_precached(b):
     js = """navigator.serviceWorker.ready.then(() => caches.keys()).then(ks => caches.open(ks.find(k => k.startsWith('nq-v'))).then(c => c.keys()))
       .then(reqs => { const tagEl = document.querySelector('script[src*="data.js"]'); const tag = tagEl ? tagEl.getAttribute('src') : null;
         return JSON.stringify({ urls: reqs.map(r => { const u = new URL(r.url); return u.pathname + u.search; }), data: typeof DATA === 'object' && Array.isArray(DATA.VOCAB), tag,
-          inline: !document.documentElement.outerHTML.includes('const DATA = {"PHASES"') }); })"""
+          inline: !document.documentElement.outerHTML.includes('const DATA = {') }); })"""
     out = b.run([("nav", URL), ("wait", READY), ("wait", "!!navigator.serviceWorker.controller"), ("eval", js)])
     r = __import__('json').loads(out[-1])
     assert r['data'] and r['tag'] and r['tag'].startswith('./data.js?v=') and r['inline'], r

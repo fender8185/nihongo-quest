@@ -144,12 +144,12 @@ def test_course_text_when_on_time_and_when_late(b):
       return JSON.stringify({ out, round: dailyPlan().n, f: sl(11), d: [sl(30), sl(5)] }); })()"""
     r = json.loads(ev(b, js)); o = r['out']; f = r['f']
     assert r['round'] == 15, r
-    assert o['ok'][0] == 'ok' and o['ok'][3] == f'照最近每天約 10 題新內容的速度，預計 {f} 學完 N4 的單字、文法、漢字，比 {r["d"][0]}（考前三週）早 19 天。', o['ok']
-    assert o['daily'][:3] == ['late', 22, {'every': 1}] and o['daily'][3] == f'照最近每天約 10 題新內容的速度，預計 {f} 學完 N4 的單字、文法、漢字，比 {r["d"][1]}（考前三週）晚 6 天。要趕上，每天約需 22 題新內容（現在約 10 題）：每天做完當天的練習後按 1 次加練就趕得上。', o['daily']
-    assert o['every'][1:3] == [13, {'every': 5}] and o['every'][3].endswith('要趕上，每天約需 13 題新內容（現在約 10 題）：大約每 5 天，做完當天的練習後按 1 次加練就趕得上。'), o['every']
-    assert o['twice'][1:3] == [37, {'times': 2}] and o['twice'][3].endswith('要趕上，每天約需 37 題新內容（現在約 10 題）：每天做完當天的練習後按 2 次加練就趕得上。'), o['twice']
-    assert o['heavy'][1:3] == [110, {'times': 7, 'heavy': True}] and o['heavy'][3].endswith('要趕上，每天約需 110 題新內容（現在約 10 題），等於每天加練 7 次，太吃力了：可以考慮先考 N5，或把考試日期往後延（JLPT 每年 7 月、12 月各一次）。'), o['heavy']
-    assert '學完 N5 的' in o['heavy5'][3] and o['heavy5'][3].endswith('等於每天加練 3 次，太吃力了：可以考慮把考試日期往後延（JLPT 每年 7 月、12 月各一次）。'), o['heavy5']   # 1.0.32: N5 is 50 items, not the slowest bank's 110, o['heavy5']
+    assert o['ok'][0] == 'ok' and o['ok'][3] == f'照現在每天的份量，{f} 學完 N4，比期限（考前三週）早 19 天。', o['ok']
+    assert o['daily'][:3] == ['late', 22, {'every': 1}] and o['daily'][3] == f'照現在每天的份量，{f} 學完 N4，比期限（考前三週）晚 6 天。每天多學一組就趕得上。', o['daily']
+    assert o['every'][1:3] == [13, {'every': 5}] and o['every'][3].endswith('大約每 5 天多學一組就趕得上。'), o['every']
+    assert o['twice'][1:3] == [37, {'times': 2}] and o['twice'][3].endswith('每天做完練習再多學 2 組就趕得上。'), o['twice']
+    assert o['heavy'][1:3] == [110, {'times': 7, 'heavy': True}] and o['heavy'][3].endswith('要每天多學 7 組才趕得上，太吃力了：可以先考 N5，或把考試延到下一次（JLPT 每年 7 月、12 月）。'), o['heavy']
+    assert '學完 N5，' in o['heavy5'][3] and o['heavy5'][3].endswith('要每天多學 3 組才趕得上，太吃力了：可以把考試延到下一次（JLPT 每年 7 月、12 月）。'), o['heavy5']   # 1.0.32: N5 is 50 items, not the slowest bank's 110, o['heavy5']
 
 def test_course_text_for_a_passed_or_close_exam_and_a_finished_level(b):   # Review Focus 2: 21 days is close, 22 is not
     js = "(() => { " + FRESH + PACE + """ pace(10); const out = {}; const run = (n, lv) => { exam(n); state.settings.examLevel = lv; const p = coursePace(); return [p.state, courseText(p)]; };
@@ -157,17 +157,17 @@ def test_course_text_for_a_passed_or_close_exam_and_a_finished_level(b):   # Rev
       state.srs = {}; only(w4); out.done5 = run(51, 'N5'); state.srs = {}; only([]); out.done4 = run(51, 'N4'); out.done3 = run(51, 'N3');
       return JSON.stringify({ out, n4: sl(6) }); })()"""
     r = json.loads(ev(b, js)); o = r['out']
-    assert o['passed'] == ['passed', '考試日期已經過了。到設定裡改成下一次的日期，這裡會重新計算。'], o
-    assert o['close'] == ['close', '距離考試只剩 21 天，不到三週：建議只做每天的練習與模擬考。'] and o['notClose'] == 'late', o
-    assert o['done5'] == ['done', f'N5 的單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。照現在的速度，預計 {r["n4"]} 學完 N4。'], o
-    assert o['done4'] == ['done', 'N4 的單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。'], o   # 1.0.33: N3 comes after it, nothing of it left here
-    assert o['done3'] == ['done', '單字、文法、漢字都學過一次了：接下來照複習排程走，考前三週做模擬考。'], o   # the last level
+    assert o['passed'] == ['passed', '考試日期過了，到設定改成下一次的日期。'], o
+    assert o['close'] == ['close', '離考試只剩 21 天：每天的練習加上模擬考就好。'] and o['notClose'] == 'late', o
+    assert o['done5'] == ['done', f'N5 都學過一次了，接下來照複習走，考前三週做模擬考。照現在的速度，{r["n4"]} 學完 N4。'], o
+    assert o['done4'] == ['done', 'N4 都學過一次了，接下來照複習走，考前三週做模擬考。'], o   # 1.0.33: N3 comes after it, nothing of it left here
+    assert o['done3'] == ['done', 'N3 都學過一次了，接下來照複習走，考前三週做模擬考。'], o   # the last level
 
 def test_course_pace_falls_back_to_the_days_count_without_new_items(b):
     js = "(() => { " + FRESH + PACE + """ for (let i = 1; i <= 14; i++) state.dailyLogs[addDays(T, -i)] = { vocabCount: 5, fresh: 0 }; exam(400);
       const p = coursePace(); return JSON.stringify([p.fallback, p.perDay, courseText(p)]); })()"""
     fb, per, text = json.loads(ev(b, js))
-    assert fb is True and per == 15 and text.startswith('最近 14 天沒有學新內容，照每天排到的 15 題新內容推算，預計 ') and not any(s in text for s in ['null', 'NaN', 'undefined']), text
+    assert fb is True and per == 15 and text.startswith('照現在每天的份量，') and not any(s in text for s in ['null', 'NaN', 'undefined']), text
 
 def test_course_pace_in_the_intro_stage_adds_what_is_left_of_it(b):
     js = "(() => { " + FRESH + PACE + """ state.stage = 'pre'; pace(10); exam(400); only(w5);
@@ -191,7 +191,7 @@ def test_course_card_shows_both_levels_and_the_target(b):
       return JSON.stringify({ chip: c.querySelector('.card-head .chip').textContent, sub: c.querySelector('.course-sub').textContent, n5: row('N5'), n4: row('N4'), want: [sl(3), sl(9)],
         dots: [...c.querySelectorAll('.course-dot')].map(x => x.dataset.level), advice: !!c.querySelector('.course-advice'), old: !!document.getElementById('planAdvice') }); })()"""
     r = json.loads(ev(b, js))
-    assert r['chip'] == '趕得上' and '目標 N4' in r['sub'] and '照最近 14 天每天約 10 題新內容推算' in r['sub'], r
+    assert r['chip'] == '趕得上' and '目標 N4' in r['sub'] and '推算' not in r['sub'], r
     assert f"預計 {r['want'][0]} 學過一次" in r['n5'] and '還有 30 題' in r['n5'] and f"預計 {r['want'][1]} 學過一次" in r['n4'] and '還有 90 題' in r['n4'] and '目標，比期限早 21 天' in r['n4'], r
     assert r['dots'] == ['N5', 'N4'] and not r['advice'] and not r['old'], r
 
@@ -199,7 +199,7 @@ def test_course_card_gives_extra_practice_advice_when_late(b):
     js = "(() => { " + FRESH + PACE + """ pace(10); exam(26); only(w5.concat(w4, g5)); saveState(); location.hash = '#/stats'; route(); const c = document.getElementById('courseCard');
       return JSON.stringify({ chip: c.querySelector('.card-head .chip').textContent, advice: c.querySelector('.course-advice').textContent, late: c.querySelector('.course-dot[data-level=N4]').classList.contains('late'),
         note: c.querySelector('.course-row[data-level=N4]').textContent.includes('目標，比期限晚 6 天') }); })()"""
-    assert json.loads(ev(b, js)) == {'chip': '稍慢', 'advice': '要趕上，每天約需 22 題新內容（現在約 10 題）：每天做完當天的練習後按 1 次加練就趕得上。', 'late': True, 'note': True}
+    assert json.loads(ev(b, js)) == {'chip': '稍慢', 'advice': '每天多學一組就趕得上。', 'late': True, 'note': True}
 
 def test_change_target_opens_the_learning_settings_and_details_list_every_bank(b):
     js = "(() => { " + FRESH + """ location.hash = '#/stats'; route(); const c = document.getElementById('courseCard');
@@ -210,7 +210,7 @@ def test_change_target_opens_the_learning_settings_and_details_list_every_bank(b
 
 def test_exam_countdown_follows_the_target_level(b):
     js = "(() => { " + FRESH + PACE + """ pace(10); exam(26); only(w5.concat(w4, g5)); state.settings.examLevel = 'N5'; saveState(); location.hash = '#/exam'; route(); const v = document.getElementById('view');
-      return JSON.stringify({ level: v.textContent.includes(`距離 ${sl(26)} JLPT N5`), same: document.querySelector('.hero-advice').textContent === courseText(coursePace()), units: /每個單元/.test(v.textContent),
+      return JSON.stringify({ level: v.textContent.includes(`距離 ${sl(26)} JLPT N5`), same: !document.querySelector('.hero-advice'), units: /每個單元/.test(v.textContent),
         chip: [...v.querySelectorAll('.card')].find(x => /考試倒數/.test(x.textContent)).querySelector('.chip').textContent }); })()"""
     assert json.loads(ev(b, js)) == {'level': True, 'same': True, 'units': False, 'chip': '趕得上'}   # 1.0.32: N5's 50 items take 5 days, the three weeks before the exam leave 5
 
@@ -258,8 +258,8 @@ def test_course_advice_never_contradicts_itself(b):   # no 「需 10 題（現�
     js = "(() => { " + FRESH + PACE + """ only(w5.concat(w4, g5)); const run = (n, d) => { pace(n); exam(d); const p = coursePace(); return [p.plan, courseAdvice(p)]; };
       return JSON.stringify({ once: run(10, 31), frac: run(9.6, 32), d10: sl(10), d11: sl(11) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['once'] == [{'once': True}, f"要趕上，每天約需 11 題新內容（現在約 10 題）：{r['d10']} 前找一天，做完當天的練習後按 1 次加練就趕得上。"], r
-    assert r['frac'] == [{'once': True}, f"要趕上，每天約需 10 題新內容（現在約 9.6 題）：{r['d11']} 前找一天，做完當天的練習後按 1 次加練就趕得上。"], r
+    assert r['once'] == [{'once': True}, f"{r['d10']} 前找一天多學一組就趕得上。"], r
+    assert r['frac'] == [{'once': True}, f"{r['d11']} 前找一天多學一組就趕得上。"], r
 
 def test_week_dots_are_easy_to_tap(b):   # a phone needs more than a 6px dot: 8px off its centre still hits it
     js = "(() => { " + FRESH + WEEK + """ saveState(); location.hash = '#/stats'; route(); const c = document.getElementById('weekCard'); c.scrollIntoView();
