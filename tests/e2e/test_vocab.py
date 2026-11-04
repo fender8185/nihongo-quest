@@ -319,7 +319,7 @@ TESTS += [test_topics_line_names_custom_cards_or_a_finished_day_instead_of_disap
 # ---- 2026-10-26 (7): every example sentence has a play button ----
 def test_example_sentences_have_play_buttons_on_preview_feedback_and_footer(b):
     js = """(() => { const calls = []; const orig = speak; speak = (t) => calls.push(t);
-      const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.ex && meaningOptions(x)); const ex = exPlain(v.ex); const exs = vocabExamples(v).map(x => exPlain(x.ex));   // a question uses either example
+      const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.ex && meaningOptions(x)); const ex = exampleSpeech(v.ex, v); const exs = vocabExamples(v).map(x => exampleSpeech(x.ex, v));   // a question uses either example (1.0.33: spoken as the card reads it)
       startSession('items', { items: [v] }); renderPractice();
       const pv = document.querySelector('.preview .example [data-act=speak]');
       const out = { preview: pv ? pv.dataset.text === ex : false };
@@ -707,7 +707,7 @@ def test_a_question_on_the_second_example_lists_both_and_old_notebook_entries_ar
       const old = vocabWhy(v).replace(first + second, second + second);   // what 1.0.21 wrote for a question on the second example
       const s = normalizeState({ mistakes: [{ id: 'mk_a', key: v.key, cat: '單字', prompt: 'a', answer: 'b', why: old, count: 1 }, { id: 'mk_b', key: 'g:x', cat: '文法', prompt: 'c', answer: 'd', why: 'x' + second + second, count: 1 }] });
       return JSON.stringify({ why1: q1.why.endsWith(second + first), why0: q0.why.endsWith(first + second), matchNone: m1.fmt === 'v-match' && !m1.why.includes('例：'), itemEx: q1.item.ex === v.ex2 && q1.item.ex2 === v.ex,
-        fullJp: q1.fullJp === exPlain(v.ex2), mended: s.mistakes[0].why === vocabWhy(v).replace(first + second, second + first), grammarKept: s.mistakes[1].why === 'x' + second + second,
+        fullJp: q1.fullJp === exampleSpeech(v.ex2, v), mended: s.mistakes[0].why === vocabWhy(v).replace(first + second, second + first), grammarKept: s.mistakes[1].why === 'x' + second + second,
         twice: normalizeState(s).mistakes[0].why === s.mistakes[0].why }); })()""".replace('__L__', LEARN_KIND)
     r = json.loads(ev(b, js))
     assert r == {'why1': True, 'why0': True, 'matchNone': True, 'itemEx': True, 'fullJp': True, 'mended': True, 'grammarKept': True, 'twice': True}, r

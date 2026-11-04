@@ -2180,6 +2180,7 @@ const COUNTER_READ = {
   '杯': (d) => (/[1680]$/.test(d) ? 'ぱい' : /3$/.test(d) ? 'ばい' : 'はい'),
   '匹': (d) => (/[1680]$/.test(d) ? 'ぴき' : /3$/.test(d) ? 'びき' : 'ひき'),
   '階': (d) => (/(^|[^0-9])3$/.test(d) ? 'がい' : 'かい'),
+  '軒': (d) => (/3$/.test(d) ? 'げん' : 'けん'),   // houses: 3軒 さんげん (N3; alone 軒 is のき)
   '人': (d) => (/^[12]$/.test(d) ? null : 'にん'),
   '千': (d) => (/^3$/.test(d) ? 'ぜん' : 'せん'),
   '百': (d) => (/^3$/.test(d) ? 'びゃく' : /^[68]$/.test(d) ? 'ぴゃく' : 'ひゃく')
@@ -2752,26 +2753,37 @@ function homographReadings(v) { const rs = (v && v.builtin && HOMOGRAPHS.get(jaP
 function ownReadingMap(v) { const s = jaPlain(v.w); const m = /^([一-鿿々〆ヶ]+)([ぁ-ゖー]*)$/.exec(s); if (!m || (m[2] && !String(v.r).endsWith(m[2]))) return null; return { [m[1]]: v.r.slice(0, v.r.length - m[2].length) }; }
 function ownBracket(v) { const mp = ownReadingMap(v); if (!mp) return jaPlain(v.w); const k = Object.keys(mp)[0]; return `${k}[${mp[k]}]${jaPlain(v.w).slice(k.length)}`; }
 function wordHtml(v) { return homographReadings(v).length && HAS_KANJI.test(v.w) ? rubyHtml(jaPlain(v.w), v.r) : furi(v.w); }
-// an example's Japanese with furigana; a homograph's own examples read the marked word the card's way. The marked word is
-// left to the index when a compound starting with it already reads that way (四月 しがつ after {四}), and a conjugated
+// a homograph's marked word in one of its own examples, read the card's way: { at, len, mark, rd }. Null when the index already
+// reads it so in a compound starting or ending with it (四月 しがつ after {四}, 午{後} → 午後 ごご) or no reading fits; a conjugated
 // mark (行きます) takes the reading of its surface (1.0.33 review of the 16 gap words)
-function exampleJpHtml(jp, own) {
-  const m = own && homographReadings(own).length ? /\{([^}]*)\}/.exec(String(jp || '')) : null;
-  if (!m) return furi(exPlain(jp));
-  const after = exPlain(jp.slice(m.index + m[0].length)); const mark = jaPlain(m[1]); const kana = kanaKey(own.r);
+function ownMark(jp, own) {
+  const s = String(jp || ''); const m = own && homographReadings(own).length ? /\{([^}]*)\}/.exec(s) : null;
+  if (!m) return null;
+  const after = exPlain(s.slice(m.index + m[0].length)); const mark = jaPlain(m[1]); const kana = kanaKey(own.r);
   const run = (after.match(/^[一-鿿々]+/) || [''])[0];
-  for (let n = Math.min(run.length, FURI_MAX); n > 0; n--) { const r = FURI.get(mark + run.slice(0, n)); if (r && kanaKey(r).startsWith(kana)) return furi(exPlain(jp)); }
-  const lead = (exPlain(jp.slice(0, m.index)).match(/[一-鿿々]+$/) || [''])[0];   // and one that ends with it (午{後} → 午後 ごご)
-  for (let n = Math.min(lead.length, FURI_MAX); n > 0; n--) { const r = FURI.get(lead.slice(-n) + mark); if (r && kanaKey(r).endsWith(kana)) return furi(exPlain(jp)); }
-  let ruby = null;
-  if (mark === jaPlain(own.w)) ruby = rubyHtml(mark, own.r);
-  else { const info = vSurfaceInfo(Object.assign({}, own, { ex: jp })); const rd = info && info.form !== 'raw' ? readingOfSurface(own, info) : ''; if (rd && info.surface === mark) ruby = rubyHtml(mark, rd); }
-  return ruby ? furi(exPlain(jp.slice(0, m.index))) + ruby + furi(after) : furi(exPlain(jp));
+  for (let n = Math.min(run.length, FURI_MAX); n > 0; n--) { const r = FURI.get(mark + run.slice(0, n)); if (r && kanaKey(r).startsWith(kana)) return null; }
+  const lead = (exPlain(s.slice(0, m.index)).match(/[一-鿿々]+$/) || [''])[0];
+  for (let n = Math.min(lead.length, FURI_MAX); n > 0; n--) { const r = FURI.get(lead.slice(-n) + mark); if (r && kanaKey(r).endsWith(kana)) return null; }
+  let rd = '';
+  if (mark === jaPlain(own.w)) rd = own.r;
+  else { const info = vSurfaceInfo(Object.assign({}, own, { ex: s })); const r = info && info.form !== 'raw' ? readingOfSurface(own, info) : ''; if (r && info.surface === mark) rd = r; }
+  return rd ? { at: m.index, len: m[0].length, mark, rd } : null;
+}
+// an example's Japanese with furigana; a homograph's own examples read the marked word the card's way
+function exampleJpHtml(jp, own) {
+  const k = ownMark(jp, own);
+  return k ? furi(exPlain(jp.slice(0, k.at))) + rubyHtml(k.mark, k.rd) + furi(exPlain(jp.slice(k.at + k.len))) : furi(exPlain(jp));
+}
+// what TTS reads for an example (and the audio generator collects): its bracket readings kept, which ttsText turns into kana, and a
+// homograph's mark spoken the way its card shows it, written out in kana (1.0.33 review: 今日 こんにち was spoken きょう, the index's
+// first reading; a bracket would swallow the kanji before the mark too: 今年十[とお])
+function exampleSpeech(jp, own) {
+  const k = ownMark(jp, own);
+  return k ? exPlain(jp.slice(0, k.at)) + k.rd + exPlain(jp.slice(k.at + k.len)) : exPlain(jp);
 }
 function exampleHtml(jp, zh, cls = '', own = null) {
-  const plain = jaPlain(exPlain(jp));
   const ownHtml = own ? exampleJpHtml(jp, own) : null;
-  return `<div class="example ${cls}"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(plain)}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${ownHtml || furi(exPlain(jp))}</div>${zh ? `<div class="zh">${esc(zh)}</div>` : ''}</div></div>`;
+  return `<div class="example ${cls}"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(exampleSpeech(jp, own))}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${ownHtml || furi(exPlain(jp))}</div>${zh ? `<div class="zh">${esc(zh)}</div>` : ''}</div></div>`;
 }
 function exampleLine(e) { return `\n- 例：${jaPlain(exPlain(e.ex))}${e.exZh ? `（${e.exZh}）` : ''}`; }   // one example in an explanation's text
 function vocabWhy(v) {
@@ -2793,7 +2805,7 @@ function makeVocabQuestion(v0, ctx = {}) {
   q.cat = '單字';
   q.lv = v.lv;
   q.why = vocabWhy(v);
-  q.fullJp = v.ex ? exPlain(v.ex) : v.w; q.exMarked = v.ex || '';
+  q.fullJp = v.ex ? exampleSpeech(v.ex, v) : v.w; q.exMarked = v.ex || '';   // spoken as is; a homograph's sentence is shown from exMarked
   if (homographReadings(v).length) { const mp = ownReadingMap(v); if (mp) q.ownRmap = mp; }
   q.fullZh = v.exZh || '';
   q.speakWord = jaPlain(v.w);
@@ -4779,7 +4791,7 @@ const ACTIONS = {
     if (q.audioScript && text === q.audio) speakScript(text); else speak(text);
   },
   'speak-full': () => { const e = currentEntry(); if (e && e.q) speak(e.q.fullJp); },
-  'speak-example': () => { const e = currentEntry(); const it = e && ((e.q && e.q.item) || e.item); if (it && it.ex) speak(jaPlain(exPlain(it.ex))); },   // the example the question used
+  'speak-example': () => { const e = currentEntry(); const it = e && ((e.q && e.q.item) || e.item); if (it && it.ex) speak(exampleSpeech(it.ex, it)); },   // the example the question used
   'spell-tap': (el) => {
     const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'v-spell') return;
     e.spell = e.spell || []; const i = Number(el.dataset.i); if (e.spell.includes(i)) return;
@@ -5850,7 +5862,7 @@ function renderVocab(view, tab, params) {
       ${v.r && v.r !== v.w ? `<div class="reading jp">${esc(v.r)}</div>` : ''}
       <div class="meaning">${esc(v.m)}</div>
       ${v.p ? `<div class="mt-1">${posChip(v.p, v.posLabel)}</div>` : ''}
-      ${vocabExamples(v).map((e, i) => `<div class="example ${i ? 'mt-2' : 'mt-3'}" style="text-align:left"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="${i ? 'speak' : 'flash-speak'}" data-mode="ex" data-text="${esc(jaPlain(exPlain(e.ex)))}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${exampleJpHtml(e.ex, v)}</div><div class="zh">${esc(e.exZh || '')}</div></div></div>`).join('')}
+      ${vocabExamples(v).map((e, i) => `<div class="example ${i ? 'mt-2' : 'mt-3'}" style="text-align:left"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="${i ? 'speak' : 'flash-speak'}" data-mode="ex" data-text="${esc(exampleSpeech(e.ex, v))}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${exampleJpHtml(e.ex, v)}</div><div class="zh">${esc(e.exZh || '')}</div></div></div>`).join('')}
       <div id="flashAiBox"></div>` : '';
     card = `<div class="card">
       <div class="row between small muted"><span>${F.idx + 1} / ${F.queue.length}・${r ? srsLevelLabel(r, v.key) : '新卡'}</span><span>${r ? srsDots(r.b) : '<span class="chip chip-accent">新</span>'}${r && (r.known || srsLevelLabel(r, v.key) === '已熟練') ? '' : ` <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="直接標成五顆，之後排進五顆的複習">我會了</button>`}</span></div>
@@ -8931,7 +8943,7 @@ function audioCollector() {
       if (!x.builtin) return;
       const w = jaPlain(x.w); const pin = x.r && !HAS_KANJI.test(x.r) && x.r !== w ? x.r : '';
       add(w, '', pin); add(w); if (x.r) add(x.r);   // the question (reading pinned), the list button, the flashcard reading
-      if (x.ex) add(exPlain(x.ex)); if (x.ex2) add(exPlain(x.ex2));
+      if (x.ex) add(exampleSpeech(x.ex, x)); if (x.ex2) add(exampleSpeech(x.ex2, x));   // as the example buttons speak them
       addZh(x.m); addZh(x.exZh); addZh(x.exZh2);
     } else if (x.kind === 'a') add(x.ch);   // a tapped kana in the 五十音表 and 聽音選字 play one kana
     else if (x.kind === 'g') {
@@ -9108,7 +9120,7 @@ async function cloudGenStart(googleKey, r2) {
 async function playVocabAudio(v, mode = 'word') {
   if (!v) return;
   const file = mode === 'ex' ? (v.audioEx || '') : (v.audioWord || '');
-  const text = mode === 'ex' ? exPlain(v.ex || v.w || '') : jaPlain(v.w);
+  const text = mode === 'ex' ? (v.ex ? exampleSpeech(v.ex, v) : exPlain(v.w || '')) : jaPlain(v.w);
   const reading = mode === 'word' && v.r && !HAS_KANJI.test(v.r) && v.r !== jaPlain(v.w) ? v.r : '';
   if (file) {
     const url = await AnkiMedia.url(file);

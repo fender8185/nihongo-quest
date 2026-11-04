@@ -201,6 +201,36 @@ def test_kanji_table_has_the_n3_kanji_in_the_outline_order(b):
     r = json.loads(ev(b, js))
     assert r['order'] == ORDER_N3 and r['bad'] == [] and r['table'] == len(ORDER_N3), {k: (v if k != 'order' else v[:20]) for k, v in r.items()}
 
+# 1.0.33 review of part two: an example is spoken the way its card shows it (a homograph's mark too: 今日 こんにち was spoken きょう,
+# the index's first reading), and an N3 card shows its marked word with its own reading (注 ちゅう showed そそ: 注が of 注ぐ)
+HIRA = "const hira = (s) => String(s || '').replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60)).replace(/\\s+/g, '');"
+def test_a_homograph_cards_examples_are_spoken_the_way_the_card_shows_them(b):
+    js = "(() => { " + HIRA + """ const shown = (html) => hira(html.replace(/<ruby[^>]*>.*?<rt>(.*?)<\\/rt><\\/ruby>/g, '$1').replace(/<[^>]+>/g, ''));
+      const bad = []; let n = 0;
+      REG.vocab.filter(v => v.builtin && homographReadings(v).length).forEach(v => [v.ex, v.ex2].filter(Boolean).forEach(e => { n++;
+        const said = hira(kanaReadings(ttsText(exampleSpeech(e, v)))); if (said !== shown(exampleJpHtml(e, v))) bad.push(v.id + ':' + said); }));
+      return JSON.stringify({ n, bad: bad.slice(0, 8), nbad: bad.length }); })()"""
+    r = json.loads(ev(b, js)); assert r['n'] > 150 and r['nbad'] == 0, r
+
+def test_houses_are_counted_ken_and_gen(b):   # 軒 (N3) after a number: 2軒 にけん, 3軒 さんげん — not the eaves (のき)
+    js = "JSON.stringify(['2軒', '3軒', '5軒'].map(t => furi(t).replace(/<ruby[^>]*>.*?<rt>(.*?)<\\/rt><\\/ruby>/g, '$1')))"
+    assert json.loads(ev(b, js)) == ['2けん', '3げん', '5けん']
+
+def test_every_n3_example_shows_its_word_with_the_cards_reading(b):
+    js = "(() => { " + HIRA + """ const bad = [];
+      REG.vocab.filter(v => v.builtin && v.lv === 'N3').forEach(v => [v.ex, v.ex2].forEach(e => {
+        const m = /\\{([^}]*)\\}/.exec(e); const mark = jaPlain(m[1]); const a = jaPlain(exPlain(e.slice(0, m.index))).length, z = a + mark.length;
+        const info = mark === jaPlain(v.w) ? null : vSurfaceInfo(Object.assign({}, v, { ex: e }));
+        if (info && info.form === 'raw') return;   /* an unrecognised form has no reading to compare (the bank test rules those out) */
+        const want = hira(info ? readingOfSurface(v, info) : v.r);
+        let pos = 0, read = '', ok = null; const TOK = /<ruby[^>]*>(.*?)<rt>(.*?)<\\/rt><\\/ruby>|<[^>]+>|([^<]+)/g; let t; const html = exampleJpHtml(e, v);
+        while ((t = TOK.exec(html))) { const base = t[1] !== undefined ? t[1] : t[3]; if (base === undefined) continue; const s0 = pos, s1 = pos + base.length; pos = s1; if (s1 <= a || s0 >= z) continue;
+          if (t[1] !== undefined && (s0 < a || s1 > z)) { ok = (s0 === a && hira(t[2]).startsWith(want)) || (s1 === z && hira(t[2]).endsWith(want)); }   /* a compound with the word in it */
+          else read += t[1] !== undefined ? t[2] : base.slice(Math.max(0, a - s0), Math.min(base.length, z - s0)); }
+        if (ok === false || (ok === null && hira(read) !== want)) bad.push(v.id + ' ' + v.w + ':' + read + '≠' + want); }));
+      return JSON.stringify(bad.slice(0, 10)); })()"""
+    r = json.loads(ev(b, js)); assert r == [], r
+
 # ---- 1.0.33 part three: check-grammar.py reads a squad's unit file (its unit, lesson and items) for a unit of the outline ----
 def test_check_grammar_script_checks_a_new_unit_file(b):
     from cdp import free_port
