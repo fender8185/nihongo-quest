@@ -2084,7 +2084,13 @@ const FURI_NEXT = new Map();   // key → its reading → the kana that follow i
 function furiNoteNext(key, reading, next) {
   if (!PARTICLE_KANA.has(key[key.length - 1])) return;
   const byR = FURI_NEXT.get(key) || FURI_NEXT.set(key, new Map()).get(key);
-  (byR.get(reading) || byR.set(reading, new Set()).get(reading)).add(next || '*');
+  const set = byR.get(reading) || byR.set(reading, new Set()).get(reading);
+  set.add(next || '*');
+  if ('るられりろ'.includes(next || '-')) set.add('ん');   // a る verb also goes on 〜んない (分かんない, 上がんない)
+}
+// a stem ending in a kanji and one kana (空か, 熱か) also goes on with these, in forms the conjugation tables do not make
+function furiNoteStem(stem, reading, kana) {
+  if (stem.length >= 2 && KANJI_RE.test(stem[stem.length - 2]) && !KANJI_RE.test(stem[stem.length - 1])) [...kana].forEach(c => furiNoteNext(stem, reading, c));
 }
 function formGoesOn(key, reading, next) {
   const set = FURI_NEXT.has(key) && FURI_NEXT.get(key).get(reading);
@@ -2112,9 +2118,8 @@ function buildFuriganaIndex() {
         if (sf && rf) furiAddStem(sf, jaKana(rf), false);
       });
       furiPrio = tier;
-      // the negative stem also goes on with ず, ぬ, ん (空かずに, 急がぬ); noted only, no keys
-      const a = jaPlain(JConj.conjVerb(w, g, 'nai') || '').replace(/ない$/, ''); const ra = jaKana(JConj.conjVerb(r, g, 'nai') || '').replace(/ない$/, '');
-      if (a.length >= 2 && KANJI_RE.test(a[a.length - 2]) && !KANJI_RE.test(a[a.length - 1])) ['ず', 'ぬ', 'ん'].forEach(c => furiNoteNext(a, ra, c));
+      // the negative stem also goes on with ず, ぬ, ん and the old conditional ば (空かずに, 急がぬ, 急がば回れ); noted only, no keys
+      furiNoteStem(jaPlain(JConj.conjVerb(w, g, 'nai') || '').replace(/ない$/, ''), jaKana(JConj.conjVerb(r, g, 'nai') || '').replace(/ない$/, ''), 'ずぬんば');
       furiAdd(w, r);
       if (g === 's' && w.endsWith('する')) furiAdd(w.slice(0, -2), r.slice(0, -2));
     } else if (v.p === 'i') {
@@ -2122,10 +2127,12 @@ function buildFuriganaIndex() {
         const sf = JConj.conjAdj(w, 'i', f); const rf = JConj.conjAdj(r, 'i', f);
         if (sf && rf) furiAddStem(sf, rf);
       });
+      furiNoteStem(jaPlain(JConj.conjAdj(w, 'i', 'katta') || '').replace(/った$/, ''), (JConj.conjAdj(r, 'i', 'katta') || '').replace(/った$/, ''), 'ろ');   // 熱かろう
       furiAdd(w, r);
     } else {
       furiAdd(w, r);
     }
+    furiNoteNext(w, r);   // a word spelled like a form (確か, the stem of 確かめる too) goes on with anything
   };
   const hiddenKey = (state.hidden || []).slice().sort().join(',');
   if (FURI_BASE && FURI_BASE.key === hiddenKey) {
@@ -2188,7 +2195,7 @@ function dayReading(d, before, tail) {
 // Readings for counters written after a number (7時, 30分, 3本 …). Some change with the last digit; a rule gets the digits and
 // the text before them, and { whole } reads the number and the counter as one word (3日 みっか). 1人, 2人 are left bare.
 const COUNTER_READ = {
-  '日間': (d, b) => dayReading(d, b, 'かん'), '日目': (d, b) => dayReading(d, b, 'め'), '日': (d, b) => dayReading(d, b, ''),
+  '日間': (d, b) => dayReading(d, b, 'かん'), '日目': (d, b) => dayReading(d, b, 'め'), '日分': (d, b) => dayReading(d, b, 'ぶん'), '日': (d, b) => dayReading(d, b, ''),
   '時半': 'じはん', '時間': 'じかん', '時': 'じ', '円': 'えん', '年間': 'ねんかん', '年生': 'ねんせい', '年': 'ねん', '回目': 'かいめ', '回': 'かい', '枚': 'まい', '歳': 'さい', '月': 'がつ', '部屋': 'へや', '部': 'ぶ',
   '週間': 'しゅうかん', '個': 'こ', '冊': 'さつ', '台': 'だい', '度': 'ど', '番線': 'ばんせん', '番目': 'ばんめ', '番': 'ばん', '号': 'ごう', '倍': 'ばい', '万円': 'まんえん', '万': 'まん', '点': 'てん',
   '分間': (d) => (/[134680]$/.test(d) ? 'ぷんかん' : 'ふんかん'),
@@ -2203,13 +2210,22 @@ const COUNTER_READ = {
   '百': (d) => (/^3$/.test(d) ? 'びゃく' : /^[68]$/.test(d) ? 'ぴゃく' : 'ひゃく')
 };
 const COUNTER_KEYS = Object.keys(COUNTER_READ).sort((a, b) => b.length - a.length);
+// a dictionary word starting at p: one written with okurigana (生まれ), or one of two kanji or more (日本語)
+function wordAt(s, p, withKana) {
+  for (let L = Math.min(FURI_MAX, s.length - p); L >= 2; L--) { const k = s.substr(p, L); if ((withKana ? /[ぁ-ゖ]/ : /^[一-鿿々〆ヶ]+$/).test(k) && FURI.has(k)) return true; }
+  return false;
+}
 function counterRuby(s, i, j) {
   // digits right before position i (ASCII or full-width, commas allowed)
   let k = i; while (k > 0 && /[0-9０-９,，]/.test(s[k - 1])) k--;
   const digits = s.slice(k, i).replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/[,，]/g, '');
   const run = s.slice(i, j);
-  const key = COUNTER_KEYS.find(c => run.startsWith(c));
+  let key = COUNTER_KEYS.find(c => run.startsWith(c));
   if (!key) return null;
+  // the counter leaves alone a word that starts in it: 生まれ of 1990年生まれ (年 only), and 日, 部 give way to a word of two kanji
+  // or more (N5日本語, 1部分, 2部長); 3年生です, 1部コピー stay counters (1.0.34)
+  if (key === '年生' && wordAt(s, i + 1, true)) key = '年';
+  if ((key === '日' || key === '部') && wordAt(s, i, false)) return null;
   const rule = COUNTER_READ[key];
   const r = typeof rule === 'function' ? rule(digits, s.slice(0, k)) : rule;
   if (r && r.whole) return { len: key.length, lead: s.slice(k, i), html: rubyHtml(s.slice(k, i) + key, r.whole) };   // lead: the digits, already written out
@@ -2303,7 +2319,7 @@ function segmentRun(run, after) {
     for (let L = Math.min(FURI_MAX, n - a + tail.length); L > n - a; L--) {
       const k = run.slice(a) + tail.slice(0, L - (n - a));
       const r = FURI.get(k);
-      if (r) return { segs: best[a].concat([[k, r]]), extra: L - (n - a) };
+      if (r && formGoesOn(k, r, String(after || '')[L - (n - a)])) return { segs: best[a].concat([[k, r]]), extra: L - (n - a) };
     }
   }
   return null;

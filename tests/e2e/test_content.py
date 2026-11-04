@@ -267,6 +267,14 @@ def test_days_after_a_number_read_nichi_or_the_whole_date(b):
         '[20日:はつか]', '[14日:じゅうよっか]', '[24日:にじゅうよっか]', '[3日目:みっかめ]', '[3日:みっか][前:まえ]', '[１０日:とおか]', '3[年生:ねんせい]', '1[部:ぶ]',
         '10がつみっか', '<speak>10<sub alias="がつ">月</sub><sub alias="みっか">3日</sub></speak>'], r
 
+# 1.0.34 review: a counter after a number does not swallow the start of the next word (1990年生まれ read ねんせい + まれ, N5日本語 いつか + 本語)
+def test_a_counter_does_not_split_the_word_after_the_number(b):
+    texts = ['1990年生まれ', '3年生きた', '3年生です', '1部分', '2部長', 'N5日本語', '3日分', '1日分', '1部', '3人前', '100円高い', '3日前']
+    js = "JSON.stringify(%s.map(t => furi(t).replace(/<ruby[^>]*>(.*?)<rt>(.*?)<\\/rt><\\/ruby>/g, '[$1:$2]')))" % json.dumps(texts, ensure_ascii=False)
+    r = json.loads(ev(b, js))
+    assert r == ['1990[年:ねん][生:う]まれ', '3[年:ねん][生:い]きた', '3[年生:ねんせい]です', '1[部分:ぶぶん]', '2[部長:ぶちょう]', 'N5[日本語:にほんご]', '[3日分:みっかぶん]', '[1日分:いちにちぶん]',
+                 '1[部:ぶ]', '3[人:にん][前:まえ]', '100[円:えん][高:たか]い', '[3日:みっか][前:まえ]'], r
+
 # a bracketed date (15日[じゅうごにち]) was spoken じゅうご + じゅうごにち, its reading sitting on 日 alone; （日）（月） after a date read ひ, つき
 def test_dates_in_texts_are_spoken_once_and_weekday_marks_read_as_weekdays(b):
     js = """(() => { const WD = { 月: 'げつ', 火: 'か', 水: 'すい', 木: 'もく', 金: 'きん', 土: 'ど', 日: 'にち' }; const twice = [], wrong = [];
@@ -280,11 +288,16 @@ def test_dates_in_texts_are_spoken_once_and_weekday_marks_read_as_weekdays(b):
 # 1.0.34: a kanji and the first kana of an inflected form (空か of 空かない, 曲が of 曲がる) is read as that word only where the form
 # can go on; a noun and a particle (空から, この曲が, 机の上が) read the noun
 def test_a_noun_before_a_particle_is_not_read_as_a_verb_form(b):
-    texts = ['空から', '空かない', '空かず', 'この曲が好き', '角を曲がれば', '急がずに', '熱かどうか', '熱かった', '机の上が', '上がる', '分からない']
+    texts = ['空から', '空かない', '空かず', 'この曲が好き', '角を曲がれば', '急がずに', '熱かどうか', '熱かった', '机の上が', '上がる', '分からない',
+             'よく分かんない', '上がんない', '急がば回れ', '熱かろう']   # the review's forms: 〜んない, 〜ば, 〜かろう go on too
     js = "JSON.stringify(%s.map(t => furi(t).replace(/<ruby[^>]*>(.*?)<rt>(.*?)<\\/rt><\\/ruby>/g, '[$1:$2]')))" % json.dumps(texts, ensure_ascii=False)
     r = json.loads(ev(b, js))
     assert r == ['[空:そら]から', '[空:あ]かない', '[空:あ]かず', 'この[曲:きょく]が[好:す]き', '[角:かど]を[曲:ま]がれば', '[急:いそ]がずに', '[熱:ねつ]かどうか', '[熱:あつ]かった',
-                 '[机:つくえ]の[上:うえ]が', '[上:あ]がる', '[分:わ]からない'], r
+                 '[机:つくえ]の[上:うえ]が', '[上:あ]がる', '[分:わ]からない', 'よく[分:わ]かんない', '[上:あ]がんない', '[急:いそ]がば[回:まわ]れ', '[熱:あつ]かろう'], r
+    # a word spelled like a form (確か, also 確かめる's) reads as the word even when its kanji alone gets a reading; a long run checks too
+    js2 = """(() => { FURI.set('確', 'かく'); const t = furi('確かに'); FURI.delete('確'); return JSON.stringify([t, furi('一番上がいい')].map(h => h.replace(/<ruby[^>]*>(.*?)<rt>(.*?)<\\/rt><\\/ruby>/g, '[$1:$2]'))); })()"""
+    r2 = json.loads(ev(b, js2))
+    assert r2[0] == '[確:たし]かに' and '[上:あ]' not in r2[1], r2
 
 # 1.0.34: what sits beside the answer stays within the learner's level (wrong options: or the item's own when that is higher), and so do
 # theme playback's kanji cards, even for the N3 words of a theme shared with N5 (居家生活); the word card's kanji chips stay
@@ -399,13 +412,14 @@ def test_checkers_take_a_word_before_san_as_a_name(b):
     from cdp import free_port
     run = lambda script, name, fx: subprocess.run([sys.executable, '-I', os.path.join(ROOT, 'scripts', script), _fixture(name, fx), str(free_port())], capture_output=True, text=True).stdout.splitlines()
     dlg = lambda line: {'t': 'dialog', 'lv': 'N5', 'u': 'm2', 'script': '男：' + line + '\n女：そうですね。', 'q': '男の人は何をしますか。', 'op': ['駅まで歩く', '家に帰る', '本を読む', '電話をする'], 'a': '駅まで歩く', 'zh': '男：……', 'why': '男生說要走路。'}
-    lr = run('check-listen-read.py', 'names-listen-read', {'listen': [dlg('林さんは毎朝、駅まで歩きます。'), dlg('毎朝、林の中を歩きます。')], 'read': []})
+    lr = run('check-listen-read.py', 'names-listen-read', {'listen': [dlg('林さんは毎朝、駅まで歩きます。'), dlg('毎朝、林の中を歩きます。'), dlg('店員さんは毎朝、駅まで歩きます。')], 'read': []})
     ctx = lambda id_, jp: {'id': id_, 'lv': 'N5', 'm': 'S1-M3', 'jp': jp, 'op': ['部屋', '時計', '電話', '駅'], 'a': '部屋', 'why': '房間很大。'}
     ex = run('check-exam.py', 'names-exam', [ctx('cm_n5_t1', '林さんの（　）は広いです。'), ctx('cm_n5_t2', '林の中の（　）は広いです。')])
     word = {'w': '時計', 'r': 'とけい', 'm': '鐘錶', 'p': 'n', 'lv': 'N5', 'c': '居家生活', 'ex': '林さんの{時計}です。', 'exZh': '林先生的鐘。', 'ex2': '林の中に{時計}があります。', 'exZh2': '樹林裡有鐘。'}
     vo = run('check-vocab.py', 'names-vocab', {'words': [word]})
     said = lambda lines, label: [l for l in lines if label in l and '林' in l]
     assert said(lr, 'listen#0 ') == [] and said(lr, 'listen#1 ') != [], lr
+    assert [l for l in lr if 'listen#2 ' in l and '店員' in l], lr   # 店員さん is still the word 店員 (N4): only a name the app lists counts
     assert said(ex, 'cm_n5_t1 ') == [] and said(ex, 'cm_n5_t2 ') != [], ex
     assert not [l for l in vo if 'ex uses 林' in l] and [l for l in vo if 'ex2 uses 林' in l], vo
 

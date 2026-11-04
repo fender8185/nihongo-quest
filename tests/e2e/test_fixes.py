@@ -487,11 +487,11 @@ def test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong(b):
       document.querySelector('[data-act=custom-giveup]').click();
       const out = { spellDone: e.done, spellWrong: e.chosen !== e.q.answer, spellShows: document.querySelector('.fb-head').textContent.includes(v.r), f: state.srs[v.key].f['v-spell'] };
       nextQuestion(); e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-match' }); renderPractice();
-      const [pw, pm] = e.q.pairs[1]; document.querySelector(`.match-word[data-w="${pw}"]`).click(); document.querySelector(`.match-meaning[data-m="${pm}"]`).click();
+      const [pw, pm, , pk] = e.q.pairs[1]; document.querySelector(`.match-word[data-w="${pw}"]`).click(); document.querySelector(`.match-meaning[data-m="${pm}"]`).click();
       document.querySelector('[data-act=custom-giveup]').click();
-      const keyOf = (w) => REG.vocab.find(x => x.builtin && x.p === v.p && jaPlain(x.w) === w).key; const inBook = (w) => state.mistakes.some(m => m.key === keyOf(w) && !m.mastered);
+      const inBook = (key) => state.mistakes.some(m => m.key === key && !m.mastered);   /* by each pair's own key: 明日, 上 … share a spelling with another word */
       out.matchDone = e.done; out.matchWrong = e.chosen !== e.q.answer; out.revealed = document.querySelectorAll('.match-word.matched').length;
-      out.unpaired = e.q.pairs.filter((p, k) => k !== 1).map(p => inBook(p[0]) && state.srs[keyOf(p[0])].rl === 0); out.paired = inBook(pw);
+      out.unpaired = e.q.pairs.filter((p, k) => k !== 1).map(p => inBook(p[3]) && state.srs[p[3]].rl === 0); out.paired = inBook(pk);
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__L__', LEARN_KIND)
     out = b.run([("nav", URL), ("wait", READY), ("eval", "location.hash = '#/today'; true"), ("eval", js)])
     r = __import__('json').loads(out[-1])

@@ -8,8 +8,8 @@ Each word must: have every field; lv a level the app has (PRE_N5, N5, N4, N3 …
 matches the app's furigana of w; not already be in the bank or repeated in the file; an example with exactly one {marker}
 in a form the app recognises, ending with 。, every kanji with furigana; ex2 (when present) distinct from ex.
 PRE_N5 words: the example may only use PRE_N5 words (pre-example-vocab) and must not carry ex2.
-N5 words: a WARN names any word in the examples that the bank teaches only at N4 (n4-word-in-n5-example). A surname before
-さん／くん／様／先生 (林さん) is a name, not a word, for both rules.
+N5 words: a WARN names any word in the examples that the bank teaches only at N4 (n4-word-in-n5-example). A name the app lists
+(DATA.FURI_EXTRA) before さん／くん／様／先生 (林さん) is a name, not a word, for both rules.
 Prints BAD/WARN lines and a summary; exit code 1 when anything is BAD."""
 import json, os, subprocess, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
@@ -37,9 +37,9 @@ JS = r"""((c, withWords) => { const problems = [], warnings = [];
   const preWords = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5');
   // levels per spelling+reading: the 楽 of 楽しい（たの） is not the N4 word 楽（らく）
   const bankLv = new Map(); REG.vocab.filter(v => v.builtin).forEach(v => { const k = jaPlain(v.w) + '|' + hira(v.r); if (!bankLv.has(k)) bankLv.set(k, new Set()); bankLv.get(k).add(v.lv); });
-  // the words the furigana found (base|reading); one right before さん／くん／様／先生 is a surname (林さん), not the word 林 (1.0.34)
-  const NAME_AFTER = /^(?:さん|くん|君|ちゃん|さま|様|先生|氏)/;
-  const rubies = (t) => { const out = []; const re = /<ruby[^>]*>([^<]+)<rt>([^<]*)<\/rt><\/ruby>/g; let m; const h = furi(String(t || '')); while ((m = re.exec(h))) { if (!NAME_AFTER.test(h.slice(re.lastIndex, re.lastIndex + 60).replace(/<[^>]+>/g, ''))) out.push(m[1] + '|' + hira(m[2])); } return out; };
+  // the words the furigana found (base|reading); a name the app lists right before さん／くん／様／先生 is a surname (林さん), not the word 林 (1.0.34)
+  const NAME_AFTER = /^(?:さん|くん|君|ちゃん|さま|様|先生|氏)/; const NAMES = new Set((DATA.FURI_EXTRA || []).map(x => x[0]));   // the names the app lists (林, 森, 田中 …); 店員さん is still 店員
+  const rubies = (t) => { const out = []; const re = /<ruby[^>]*>([^<]+)<rt>([^<]*)<\/rt><\/ruby>/g; let m; const h = furi(String(t || '')); while ((m = re.exec(h))) { if (!(NAMES.has(m[1]) && NAME_AFTER.test(h.slice(re.lastIndex, re.lastIndex + 60).replace(/<[^>]+>/g, '')))) out.push(m[1] + '|' + hira(m[2])); } return out; };
   const bare = (t) => (furi(String(t || '')).replace(/<ruby>.*?<\/ruby>/g, '').match(KANJI) || []);
   const bases = (t) => rubies(t).map(x => x.split('|')[0]);
   const seen = new Set();
