@@ -970,12 +970,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.36';   // keep equal to the version in sw.js CACHE ('nq-v1.0.36'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.37';   // keep equal to the version in sw.js CACHE ('nq-v1.0.37'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.37', date: '2026-11-04', items: [
+    '雲端音檔生成：Google 給了沒有聲音的音檔時，改用沒指定讀音的版本再試，還不行就用全假名；用了哪一種會列在結果下面。'
+  ] },
   { v: '1.0.36', from: '1.0.35', date: '2026-11-04', items: [
     '介面變簡單：說明文字縮短或收起來，黃底的提示改成一行灰色小字。',
     '今天做完後只留一顆「多學 N 題」；作答後的振假名、手滑不算、這題有問題、這個字我已經會了收進「⋯」。',
@@ -8738,7 +8741,7 @@ async function fetchEngineBlob(cfg, text, gender, opt = {}) {
     const key = (cfg.googleKey || '').trim();
     if (!key) throw new Error('沒有 Google Cloud API Key');
     const name = gender === 'm' ? cfg.googleVoiceM : cfg.googleVoice;
-    const req = opt.lang === 'zh' ? { input: { text: String(text) }, voice: CLOUD_ZH_VOICE } : { input: { ssml }, voice: { languageCode: 'ja-JP', name } };
+    const req = opt.lang === 'zh' ? { input: { text: String(text) }, voice: CLOUD_ZH_VOICE } : { input: opt.plain ? { text: opt.plain } : { ssml }, voice: { languageCode: 'ja-JP', name } };   // plain: the generator's retry of a silent clip
     const resp = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(key)}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(Object.assign(req, { audioConfig: { audioEncoding: 'MP3', speakingRate: rate } }))
@@ -9071,7 +9074,25 @@ function cloudGenHtml() {
   const g = CLOUD_GEN; if (!g) return '';
   const n = g.done + g.failed; const left = Math.max(0, g.total - g.skipped - n);
   return `<div><b>${esc(g.phase)}</b>${g.total ? `・共 ${g.total} 段，已有 ${g.skipped}，這次上傳 ${g.done}，失敗 ${g.failed}，剩 ${left}` : ''}</div>
+    ${g.notes.length ? `<div class="hint mt-1">${g.notes.map(esc).join('<br>')}</div>` : ''}
     ${g.errors.length ? `<div class="bad mt-1">${g.errors.map(esc).join('<br>')}</div>` : ''}`;
+}
+// Google's voice now and then gives a near-silent clip for one exact SSML (m31-44 「…思いきり遊んだ。」, every run since 1.0.33),
+// while the other sentences with the same pieces speak. Before giving up the sentence goes once as plain text (Google's own
+// readings) and once as kana; a pinned word goes as its reading only, since its kanji could be read another way. The clip keeps
+// the SSML's file name, so players find it.
+async function cloudGenBlob(cfg, x) {
+  const opt = { rate: 1, reading: x.reading || '', lang: x.lang || '' };
+  const silent = (blob) => !blob || blob.size <= 2500;
+  let blob = await fetchEngineBlob(cfg, x.text, x.gender, opt);
+  if (!silent(blob) || opt.lang === 'zh') return { blob };
+  const kana = kanaReadings(x.text);
+  const tries = x.reading ? [[x.reading, '全假名']] : [[x.text, '沒指定讀音']].concat(kana !== x.text ? [[kana, '全假名']] : []);
+  for (const [plain, label] of tries) {
+    blob = await fetchEngineBlob(cfg, x.text, x.gender, Object.assign({}, opt, { plain }));
+    if (!silent(blob)) return { blob, note: `${x.text.slice(0, 24)}：Google 指定讀音時沒有聲音，改用${label}的版本` };
+  }
+  return { blob: null };
 }
 function cloudGenRender() { const box = document.getElementById('cloudGenBox'); if (box) box.innerHTML = cloudGenHtml(); }
 // Runs in the browser: the Google key (site-restricted, as set up) and the R2 key pair (this bucket only, r2 = { keyId,
@@ -9079,7 +9100,7 @@ function cloudGenRender() { const box = document.getElementById('cloudGenBox'); 
 // (1.0.30); Supabase keeps the older ones as a backup. Existing files are skipped, so a stopped run can continue.
 async function cloudGenStart(googleKey, r2) {
   if (CLOUD_GEN && CLOUD_GEN.running) return;
-  CLOUD_GEN = { running: true, stop: false, phase: '整理句子', total: 0, done: 0, skipped: 0, failed: 0, errors: [] };
+  CLOUD_GEN = { running: true, stop: false, phase: '整理句子', total: 0, done: 0, skipped: 0, failed: 0, errors: [], notes: [] };
   cloudGenRender();
   try {
     const list = cloudAudioTexts();
@@ -9095,10 +9116,10 @@ async function cloudGenStart(googleKey, r2) {
       while (i < todo.length && !CLOUD_GEN.stop) {
         const t = todo[i++];
         try {
-          const blob = await fetchEngineBlob(cfg, t.x.text, t.x.gender, { rate: 1, reading: t.x.reading || '', lang: t.x.lang || '' });
-          if (!blob || blob.size <= 2500) throw new Error('語音生成內容為空或靜音');
+          const { blob, note } = await cloudGenBlob(cfg, t.x);
+          if (!blob) throw new Error('語音生成內容為空或靜音');
           await r2Put(t.path, blob, r2);
-          CLOUD_GEN.done++;
+          CLOUD_GEN.done++; if (note) CLOUD_GEN.notes.push(note);
         } catch (e) {
           CLOUD_GEN.failed++; const msg = (e && e.message) || String(e);
           if (CLOUD_GEN.errors.length < 12) CLOUD_GEN.errors.push(`${t.x.text.slice(0, 24)}：${msg}${ttsErrorHint(msg) ? `（${ttsErrorHint(msg)}）` : ''}`);
