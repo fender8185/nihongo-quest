@@ -102,12 +102,14 @@ def test_records_of_removed_sentence_choice_items_are_dropped(b):
 def test_custom_cards_and_their_records_are_dropped(b):
     js = """(() => { const rec = () => ({ b: 2, due: todayStr(), n: 3, ok: 3, ng: 0, s: 3, d: 5, last: todayStr() });
       const mk = (id, key) => ({ id, key, cat: '單字', prompt: id, answer: 'x', why: '', count: 1 });
-      const s = normalizeState({ vocab: [{ id: 'cust_1', w: '猫', m: '貓', lv: 'CUSTOM' }, { id: 'apkg_x', w: '犬', m: '狗', lv: 'CUSTOM' }],
-        srs: { 'v:cust_1': rec(), 'v:apkg_x': rec(), 'v:n5a-001': rec(), 'g:m1-01': rec() }, settings: { includeImported: 'all' },
-        mistakes: [mk('a', 'v:cust_1'), mk('b', 'v:n5a-001'), mk('c', ''), mk('d', 'v:apkg_x')] });
+      const s = normalizeState({ vocab: [{ id: 'cust_1', w: '猫', m: '貓', lv: 'CUSTOM' }, { id: 'apkg_x', w: '犬', m: '狗', lv: 'CUSTOM' }, { id: 'u7', w: '鳥', m: '鳥', lv: 'CUSTOM' }],
+        srs: { 'v:cust_1': rec(), 'v:apkg_x': rec(), 'v:u7': rec(), 'v:ai_k2': rec(), 'v:n5a-001': rec(), 'v:n2a-001': rec(), 'g:m1-01': rec() }, settings: { includeImported: 'all' },
+        mistakes: [mk('a', 'v:cust_1'), mk('b', 'v:n5a-001'), mk('c', ''), mk('d', 'v:apkg_x'), mk('e', 'v:n2a-001')] });
       return JSON.stringify({ vocab: 'vocab' in s, srs: Object.keys(s.srs).sort(), mistakes: s.mistakes.map(m => m.id), setting: 'includeImported' in s.settings }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'vocab': False, 'srs': ['g:m1-01', 'v:n5a-001'], 'mistakes': ['b', 'c'], 'setting': False}, r   # c: a notebook entry added by hand stays
+    # u7: a card the old version made (its id is in the card list); ai_k2: a record whose card list is already gone (an id the app
+    # gave custom cards). n2a-001: a word of a later release this build does not know (another device synced it) stays, with its entry
+    assert r == {'vocab': False, 'srs': ['g:m1-01', 'v:n2a-001', 'v:n5a-001'], 'mistakes': ['b', 'c', 'e'], 'setting': False}, r   # c: a notebook entry added by hand stays
 
 def test_no_page_offers_custom_cards_any_more(b):
     js = """(() => { const text = () => document.getElementById('view').textContent;   /* the page, not the script's own text */

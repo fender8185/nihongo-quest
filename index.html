@@ -1385,10 +1385,11 @@ function normalizeState(s) {
     out.mistakes = out.mistakes.filter(m => !(m && typeof m.key === 'string' && m.key.startsWith('g:') && goneIds.has(m.key.slice(2))));
   }
   // 1.0.34: custom and imported cards (自訂字卡, the Anki and text import, AI 產生字卡) are gone, and so are their schedule and
-  // notebook entries: a word record of no built-in word (a merged one waits for its merge above). An entry written by hand stays.
+  // notebook entries: the cards in the list, and the ids the app gave such cards (cust_ 自建, ai_ AI, apkg_ Anki). Only those: a word
+  // this copy does not know may be a later release's, synced from another device. An entry written by hand stays.
+  const cards = new Set((Array.isArray(out.vocab) ? out.vocab : []).map(v => v && 'v:' + v.id));
   delete out.vocab;
-  const words = new Set(DATA.VOCAB.map(v => 'v:' + v.id).concat(Object.keys(DATA.VOCAB_MERGED || {}).map(id => 'v:' + id)));
-  const gone = (k) => typeof k === 'string' && k.startsWith('v:') && !words.has(k);
+  const gone = (k) => typeof k === 'string' && (cards.has(k) || /^v:(cust|ai|apkg)_/.test(k));
   Object.keys(out.srs).forEach(k => { if (gone(k)) delete out.srs[k]; });
   out.mistakes = out.mistakes.filter(m => !(m && gone(m.key)));
   return out;

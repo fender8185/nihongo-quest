@@ -243,6 +243,21 @@ def test_snapshots_prune_by_date_and_format_conflict_labels(b):
     assert '2026-04-01' in r['keys'] and 'conflict-2026-04-06' in r['keys'], r
     assert r['labels'][0] == '2026/04/06（衝突備份）' and r['labels'][1] == '2026/04/06', r
 
+# 1.0.34 review: a device still on the old copy (every device on its first launch after a release) merges a cloud that holds a
+# record of a word it does not know (a later release's, from another device): the record and its notebook entry stay
+def test_a_word_this_copy_does_not_know_survives_a_conflict_merge(b):
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
+        ("eval", """(() => { const cloud = JSON.parse(JSON.stringify(state)); const t = todayStr();
+          cloud.srs['v:n2a-001'] = { b: 2, due: addDays(t, 3), n: 3, ok: 3, ng: 0, s: 3, d: 5, last: t };
+          cloud.mistakes = (cloud.mistakes || []).concat([{ id: 'mk_future', key: 'v:n2a-001', cat: '單字', prompt: '未來的字', answer: 'x', count: 1 }]);
+          cloud.updatedAt = '2099-01-01T00:00:00.000Z'; __fake.setRow({ user_id: 'u1', state: cloud, updated_at: cloud.updatedAt });
+          state.settings.loadCap = 77; saveState(); return true; })()"""),
+        ("wait", "Sync.status === 'idle' && !Sync.meta.pendingSync && __fake.getRow().updated_at !== '2099-01-01T00:00:00.000Z'"),
+        ("eval", "JSON.stringify({ cloud: Boolean(__fake.getRow().state.srs['v:n2a-001']), note: (__fake.getRow().state.mistakes || []).some(m => m.id === 'mk_future'), local: Boolean(state.srs['v:n2a-001']) })"),
+    ])
+    assert out[-1] == '{"cloud":true,"note":true,"local":true}', out[-1]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
@@ -251,7 +266,7 @@ if __name__ == "__main__":
              test_unreadable_or_bare_cloud_state_does_not_break_app, test_pull_is_deferred_while_practicing,
              test_switching_account_resets_device_binding_and_adopts_new_cloud,
              test_pull_runs_after_exam_is_finished_but_still_on_result_screen, test_first_sync_keeps_real_local_progress_over_empty_cloud,
-             test_first_sync_adopting_cloud_snapshots_local_first, test_token_refresh_does_not_mask_error_status,
+             test_first_sync_adopting_cloud_snapshots_local_first, test_token_refresh_does_not_mask_error_status, test_a_word_this_copy_does_not_know_survives_a_conflict_merge,
              test_manual_push_with_null_updated_at_still_sends_a_timestamp,
              test_push_uses_a_conditional_update_once_the_device_has_synced, test_stale_device_does_not_overwrite_progress_made_elsewhere, test_cloud_changed_elsewhere_is_adopted_even_when_its_clock_is_behind,
              test_row_deleted_elsewhere_is_recreated_without_looping, test_conflict_during_a_session_waits_and_never_overwrites_the_cloud, test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge, test_conflict_merge_redoes_todays_list_from_the_merged_progress,
