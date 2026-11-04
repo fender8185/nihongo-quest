@@ -97,7 +97,7 @@ def test_stage_test_builds_on_an_empty_account(b):
         out[s.id] = { n: items.length, uniq: new Set(items.map(x => x.key)).size, kinds: items.reduce((m, x) => (m[x.kind] = (m[x.kind] || 0) + 1, m), {}), nullQ: qs.filter(q => !q).length }; });
       state.srs = JSON.parse(keep); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    for sid in ['pre', 'p1', 'p2', 'p3']:
+    for sid in ['pre', 'p1', 'p2', 'p3', 'p4', 'p5']:   # 1.0.33: N3's two phases too
         assert r[sid]['n'] == 40 and r[sid]['uniq'] == 40 and r[sid]['nullQ'] == 0, (sid, r[sid])
     assert r['pre']['kinds'] == {'a': 14, 'v': 18, 'g': 8} and r['p2']['kinds'] == {'g': 40 - r['p2c'], 'c': r['p2c']} and r['p2c'] >= 1, r
     assert r['p1']['kinds'] == {'g': 20, 'v': 10, 'k': 4, 'l': 3, 'r': 3}, r

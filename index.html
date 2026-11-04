@@ -5207,7 +5207,11 @@ function nextUnitAfterStage(id) { const n = STAGES[stageIndex(id) + 1]; return n
    and answering writes nothing to the schedule. 80% passes; the result goes to state.stageTests. A pass marks the stage and
    those before it (markPassedStage), 入門 as well as p1–p3. */
 const STAGE_TEST_SIZE = 40;
-const STAGE_TEST_QUOTA = { pre: [['a', 14], ['v', 18], ['g', 8]], p1: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]], p2: [['g', 32], ['c', 8]], p3: [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]] };
+// 入門 has its own mix; a stage that ends a level tests its words, kanji, listening and reading with the grammar, one in the middle
+// of a level its grammar and the conjugation drills (1.0.33: N3's p4 and p5 follow p2 and p3; a thin bank is topped up from the others)
+const STAGE_TEST_QUOTA = { pre: [['a', 14], ['v', 18], ['g', 8]] };
+const STAGE_QUOTA_END = [['g', 20], ['v', 10], ['k', 4], ['l', 3], ['r', 3]], STAGE_QUOTA_MID = [['g', 32], ['c', 8]];
+function stageTestQuota(id) { const st = stageById(id); return STAGE_TEST_QUOTA[id] || (st && st.lv ? STAGE_QUOTA_END : STAGE_QUOTA_MID); }
 function stageTestNeed(total) { return Math.ceil(total * 0.8); }
 function buildStageTest(id) {
   const st = stageById(id); if (!st) return [];
@@ -5226,7 +5230,7 @@ function buildStageTest(id) {
     if (got < n) got += take(pools.g || [], n - got);
     return got;
   };
-  const quota = STAGE_TEST_QUOTA[id] || [];
+  const quota = stageTestQuota(id);
   let short = 0;
   quota.forEach(([kind, n]) => { const got = kind === 'g' ? takeGrammar(n) : take(pools[kind] || [], n); short += n - got; });
   if (short) quota.forEach(([kind]) => { if (short > 0) short -= kind === 'g' ? takeGrammar(short) : take(pools[kind] || [], short); });   // a thin bank is topped up from the others
