@@ -330,6 +330,15 @@ def test_check_exam_script_checks_curated_items_by_kind(b):
         assert any(l.startswith(f'FAIL {id_} ') and msg in l for l in fails), (id_, msg, fails)
     assert not [l for l in fails if l.split()[1] in ('cm_n3_t2', 'cm_n3_t3')], fails
 
+def test_n3_mock_exam_has_enough_items(b):   # 1.0.33 part five: every N3 paper fills each 大題; the curated items read
+    js = """(() => { const out = {}; ['mini', 'std', 'full'].forEach(size => { const r = assemblePaper('N3', size, ['S1', 'S2', 'S3']); out[size] = r.shortage; });
+      const C = DATA.EXAM.filter(x => x.lv === 'N3'); const bare = (t) => (furi(String(t || '')).replace(/<ruby[^>]*>.*?<\\/ruby>/g, '').match(/[一-鿿々]+/g) || []);
+      const ja = (x) => [x.jp && x.jp.replace(/＿＿/g, ''), x.word, x.passage].concat(x.op || [], ...(x.qs || []).map(q => [q.q].concat(q.op))).filter(Boolean);
+      out.ids = C.every(x => /^cm_n3_s[12]m[1-7]_\\d{2}$/.test(x.id)); out.n = C.length; out.bare = C.filter(x => ja(x).some(t => bare(t).length)).map(x => x.id);
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['mini'] == [] and r['std'] == [] and r['full'] == [] and r['ids'] and r['n'] >= 50 and r['bare'] == [], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
