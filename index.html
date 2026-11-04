@@ -1594,7 +1594,7 @@ function recommendUnit(score) {
 // ---------- item registry ----------
 const UNIT_INDEX = {};
 DATA.UNITS.forEach((u, i) => { UNIT_INDEX[u.id] = i; });
-// 第 0 週 is a pseudo-unit: its lesson is DATA.LESSONS.m0 and its grammar items say u: 'm0', but it is not one of the 18
+// 第 0 週 is a pseudo-unit: its lesson is DATA.LESSONS.m0 and its grammar items say u: 'm0', but it is not one of the
 // DATA.UNITS (course progress, the start picker and the stages by phase never see it). unitOrder puts it before m1; it is
 // only ever compared, never used as an index, and state.currentUnit is never m0.
 const INTRO_UNIT = { id: 'm0', ph: 0, weeks: '第 0 週', lv: 'PRE_N5', short: '基本句型', title: '開始之前：假名、基本句型、品詞名稱', desc: '入門用的講解；第 2–4 節的句型每天會出幾題。' };
@@ -5177,8 +5177,8 @@ Object.assign(ACTIONS, {
 });
 
 // ---- 階段（四個）與階段項目 ----
-/* 入門 + DATA.PHASES 的三個階段。文法與變化練習照單元歸屬；單字、漢字、聽力、閱讀照等級歸到該等級的最後一個階段
-   (PRE_N5 → 入門, N5 → 第一階段, N4 → 第三階段)；入門另含全部假名。階段測驗與通過時的標記都以這個劃分為準。 */
+/* 入門 + DATA.PHASES 的各個階段。文法與變化練習照單元歸屬；單字、漢字、聽力、閱讀照等級歸到該等級的最後一個階段
+   (PRE_N5 → 入門, N5 → 第一階段, N4 → 第三階段, N3 → 第五階段)；入門另含全部假名。階段測驗與通過時的標記都以這個劃分為準。 */
 const STAGES = [{ id: 'pre', title: '入門', sub: '假名、入門單字與第 0 週的句型；都看過、正確率到 80% 就自動進第 1 週', units: ['m0'], lv: 'PRE_N5' }].concat(
   DATA.PHASES.map((ph, i) => ({ id: 'p' + (i + 1), title: ph.title, sub: ph.span, units: DATA.UNITS.filter(u => u.ph === ph.id).map(u => u.id), lv: phaseEndLevel(i) })));
 // the level a phase finishes (its units' level when the next phase moves on to another level; a middle phase has none)
@@ -5205,7 +5205,7 @@ function nextUnitAfterStage(id) { const n = STAGES[stageIndex(id) + 1]; return n
 // ---- 階段測驗 ----
 /* 40 questions drawn from the stage's own items (unseen ones included — the test asks "do I know this stage"), options only, untimed,
    and answering writes nothing to the schedule. 80% passes; the result goes to state.stageTests. A pass marks the stage and
-   those before it (markPassedStage), 入門 as well as p1–p3. */
+   those before it (markPassedStage), 入門 as well as every phase. */
 const STAGE_TEST_SIZE = 40;
 // 入門 has its own mix; a stage that ends a level tests its words, kanji, listening and reading with the grammar, one in the middle
 // of a level its grammar and the conjugation drills (1.0.33: N3's p4 and p5 follow p2 and p3; a thin bank is topped up from the others)
@@ -5448,7 +5448,7 @@ function renderCourse(view) {
   }).join('');
   view.innerHTML = `
     <div class="page-head">
-      <div><div class="page-title">課程</div><div class="page-sub">四個階段：入門與 18 個單元（每單元約兩週）。整體完成度 ${cp.pct}%</div></div>
+      <div><div class="page-title">課程</div><div class="page-sub">${STAGES.length} 個階段：入門與 ${DATA.UNITS.length} 個單元（每單元一到兩週）。整體完成度 ${cp.pct}%</div></div>
       <button type="button" class="btn" data-act="open-level">依程度選擇起點</button>
     </div>
     ${(() => { const gp = grammarPause(); return gp ? `<div class="plan-note">${esc(grammarPauseText(gp))}</div>` : ''; })()}
@@ -5607,7 +5607,7 @@ function levelPickerHtml() {
   const unitOpts = DATA.UNITS.map(u => `<option value="${u.id}" ${u.id === state.currentUnit ? 'selected' : ''}>${esc(u.weeks)}・${esc(u.short)}</option>`).join('');
   return `
     <div class="row-wrap">${startButtonsHtml()}</div>
-    <p class="hint mt-2">完全沒學過：從零開始（先認假名，再學入門單字）。學過一些：測試看看，直接做入門的階段測驗，通過後選假名、入門單字和句型各幾顆；之後在課程頁做第一到第三階段的測驗，通過就把到那裡為止、還不到四顆的題目設成四顆，跳過已會的部分。</p>
+    <p class="hint mt-2">完全沒學過：從零開始（先認假名，再學入門單字）。學過一些：測試看看，直接做入門的階段測驗，通過後選假名、入門單字和句型各幾顆；之後在課程頁做各階段的測驗，通過就把到那裡為止、還不到四顆的題目設成四顆，跳過已會的部分。</p>
     <div class="divider"></div>
     <p class="dim small">選擇要從第幾週開始。預設從第 1 週開始；之後可以隨時在課程頁更改。</p>
     <div class="row-wrap mt-3">
@@ -7051,7 +7051,7 @@ function stageTestCardHtml() {
     </div>`).join('');
   const btns = STAGES.map(st => `<button type="button" class="btn btn-sm" data-act="stage-test" data-stage="${st.id}">${esc(st.title)}</button>`).join('');
   return `<div class="card" id="stageTests">
-      <div class="card-head"><div><div class="card-title">階段測驗</div><div class="card-sub">40 題選擇題，不計時、作答不影響排程，答對 80% 算通過。第一到第三階段通過時，會把到那裡為止、還不到四顆的題目設成四顆。</div></div></div>
+      <div class="card-head"><div><div class="card-title">階段測驗</div><div class="card-sub">40 題選擇題，不計時、作答不影響排程，答對 80% 算通過。每個階段通過時，會把到那裡為止、還不到四顆的題目設成四顆。</div></div></div>
       <div class="row-wrap">${btns}</div>
       ${rows ? `<div class="list mt-3">${rows}</div>` : '<div class="empty mt-3">還沒有階段測驗紀錄。</div>'}
     </div>`;

@@ -19,7 +19,7 @@ const path = require('path');
 
 const DAYS = 300;            // days of practice; the exam is the morning after the last one
 const SEED = 20261030;
-// what the app's registry holds in the kinds that take part in the queues, counted from data.js (1.0.33: with N3, 6,346 items;
+// what the app's registry holds in the kinds that take part in the queues, counted from data.js (1.0.33: with N3, 6,079 items;
 // the kana tables are 142). The banks share each day's new items by what each has left, like splitNew.
 const BANKS = (() => {
   const D = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data.js'), 'utf8').split('\n')[2].replace(/^const DATA = /, '').replace(/;\s*$/, ''));

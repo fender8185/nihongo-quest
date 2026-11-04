@@ -329,6 +329,13 @@ def test_no_pre_test_line_on_the_today_page(b):
     r = json.loads(ev(b, js, [("eval", OLD)]))
     assert r == {'line': False, 'gone': True}, r
 
+def test_course_page_counts_its_stages_and_units_and_opens_an_n3_stage(b):   # 1.0.33 review: it said 四個階段 and 18 個單元
+    js = """(() => { const sub = document.querySelector('.page-sub').textContent;
+      const open = [...document.querySelectorAll('#view .card')].slice(0, 6).map(c => c.querySelector('.unit-row') && c.querySelector('.unit-row').checkVisibility());
+      return JSON.stringify({ sub: sub.slice(0, sub.indexOf('。')), open }); })()"""
+    r = json.loads(ev(b, js, [("eval", "state.stage = 'main'; state.currentUnit = 'm20'; state.stageTests = {}; saveState(); true")] + COURSE))
+    assert r['sub'] == '6 個階段：入門與 33 個單元（每單元一到兩週）' and r['open'] == [False, False, False, False, True, False], r   # m20 is in phase 4
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
