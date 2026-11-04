@@ -307,6 +307,29 @@ def test_n3_listening_and_reading_items(b):   # 1.0.33 part four (spec §5.1): N
     r = json.loads(ev(b, js))
     assert r['nL'] >= 150 and r['nR'] >= 80 and r['units'] and r['few'] == [] and r['gist'] >= 20 and r['long'] >= 500 and r['info'] >= 10 and r['ids'] and r['bare'] == [], r
 
+# ---- 1.0.33 part five: check-exam.py checks curated mock-exam items by their 大題's kind ----
+def test_check_exam_script_checks_curated_items_by_kind(b):
+    from cdp import free_port
+    w = 'x'
+    items = [
+        {'id': 'cm_n3_t1', 'lv': 'N3', 'm': 'S1-M3', 'jp': '会議の（　）を決めました。', 'op': ['日時', '時間', '時代', '時計'], 'a': '日時', 'why': w},
+        {'id': 'cm_n3_t2', 'lv': 'N3', 'm': 'S1-M4', 'jp': 'この部屋は＿＿せまい＿＿です。', 'op': ['この部屋は広くないです。', 'この部屋は広いです。', 'この部屋は明るいです。', 'この部屋は暗いです。'], 'a': 'この部屋は広くないです。', 'why': w},
+        {'id': 'cm_n3_t3', 'lv': 'N3', 'm': 'S2-M3', 'passage': '私は毎朝（１）。そして（２）。', 'qs': [{'op': ['歩きます', '歩きました', '歩いて', '歩こう'], 'a': '歩きます'}, {'op': ['休みます', '休みました', '休んで', '休もう'], 'a': '休みます'}], 'why': w},
+        {'id': 'cm_n3_t4', 'lv': 'N3', 'm': 'S1-M3', 'jp': '会議の日時を決めました。', 'op': ['日時', '時間', '時代', '時計'], 'a': '日時', 'why': w},
+        {'id': 'cm_n3_t5', 'lv': 'N3', 'm': 'S1-M4', 'jp': 'この部屋はせまいです。', 'op': ['この部屋は広くないです。', 'この部屋は広いです。', 'この部屋は明るいです。', 'この部屋は暗いです。'], 'a': 'この部屋は広くないです。', 'why': w},
+        {'id': 'cm_n3_t6', 'lv': 'N3', 'm': 'S2-M3', 'passage': '私は毎朝（１）。', 'qs': [{'op': ['歩きます', '歩きました', '歩いて', '歩こう'], 'a': '歩きます'}, {'op': ['休みます', '休みました', '休んで', '休もう'], 'a': '休みます'}], 'why': w},
+        {'id': 'cm_n3_t7', 'lv': 'N3', 'm': 'S1-M3', 'jp': '彼は鬱の（　）です。', 'op': ['日時', '時間', '時代', '時計'], 'a': '時間', 'why': w},
+        {'id': 'cm_n3_t1', 'lv': 'N3', 'm': 'S1-M3', 'jp': '旅行の（　）を決めました。', 'op': ['日時', '時間', '時代', '時計'], 'a': '日時', 'why': w},
+        {'id': 'cm_n3_t9', 'lv': 'N3', 'm': 'S3-M1', 'script': '男：明日です。\n女：はい。', 'q': '何がありますか。', 'op': ['会議', '旅行', '試験', '休み'], 'a': '会議', 'why': w}]
+    path = os.path.join(ROOT, '.superpowers', 'check-exam-fixture.json'); os.makedirs(os.path.dirname(path), exist_ok=True)
+    json.dump(items, open(path, 'w', encoding='utf-8'), ensure_ascii=False)
+    out = subprocess.run([sys.executable, '-I', os.path.join(ROOT, 'scripts', 'check-exam.py'), path, str(free_port())], capture_output=True, text=True)
+    fails = [l for l in out.stdout.splitlines() if l.startswith('FAIL')]
+    assert out.returncode == 1, out.stdout + out.stderr
+    for id_, msg in [('cm_n3_t4', 'one （　） blank'), ('cm_n3_t5', 'two ＿＿'), ('cm_n3_t6', 'blanks'), ('cm_n3_t7', 'kanji without furigana'), ('cm_n3_t1', 'id used twice'), ('cm_n3_t9', 'curated listening')]:
+        assert any(l.startswith(f'FAIL {id_} ') and msg in l for l in fails), (id_, msg, fails)
+    assert not [l for l in fails if l.split()[1] in ('cm_n3_t2', 'cm_n3_t3')], fails
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
