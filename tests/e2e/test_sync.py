@@ -20,7 +20,10 @@ window.__fake = (function () {
       async verifyOtp({ email, token, type }) { calls.push(['verify', email, token, type]); return { error: null }; }
     },
     from() { return {
-      select() { return { eq() { return { async maybeSingle() { return { data: row ? { state: row.state, updated_at: row.updated_at } : null, error: null }; } }; } }; },
+      // only the columns asked for (1.0.38: a pull asks for updated_at first and downloads the state only when it moved)
+      select(cols) { calls.push(['select', cols]); return { eq() { return { async maybeSingle() {
+        if (!row) return { data: null, error: null };
+        const d = {}; String(cols).split(',').map(c => c.trim()).forEach(c => { d[c] = row[c]; }); return { data: d, error: null }; } }; } }; },
       async upsert(p) { calls.push(['upsert', p]); row = p; return { error: null }; },
       // conditional write: UPDATE ... WHERE user_id = ? AND updated_at = ? RETURNING updated_at (same instant, any spelling)
       update(p) { return { eq(k1, v1) { return { eq(k2, v2) { return { async select() {
@@ -152,7 +155,7 @@ def test_push_uses_a_conditional_update_once_the_device_has_synced(b):
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
         ("eval", "state.settings.loadCap = 66; saveState(); true"),
         ("wait", "__fake.getRow() && __fake.getRow().state.settings.loadCap === 66"),
-        ("eval", "JSON.stringify(__fake.calls.filter(c => c[0] !== 'otp').map(c => c[0]))"),
+        ("eval", "JSON.stringify(__fake.calls.filter(c => c[0] !== 'otp' && c[0] !== 'select').map(c => c[0]))"),
     ])
     assert out[-1] == '["upsert","update"]', out[-1]
 
@@ -193,8 +196,36 @@ def test_conflict_during_a_session_waits_and_never_overwrites_the_cloud(b):
         ("wait", "Sync.status === 'idle' && state.settings.loadCap === 123"),
         ("eval", "Snapshots.get('conflict-' + todayStr()).then(j => JSON.stringify({ snap: j ? JSON.parse(j).settings.loadCap : null, cloud: __fake.getRow().state.settings.loadCap }))"),
     ])
-    assert out[-3] == '{"local":7,"cloud":123,"st":"pending","net":1}', out[-3]
+    assert out[-3] == '{"local":7,"cloud":123,"st":"pending","net":0}', out[-3]   # 1.0.38: nothing goes up during a set
     assert out[-1] == '{"snap":7,"cloud":123}', out[-1]
+
+# 1.0.38: a return to the app asks only for the cloud's stamp; the progress (up to ~1 MB at the end of N3) comes down when it moved
+def test_a_pull_downloads_the_progress_only_when_the_cloud_changed(b):
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle' && Sync.meta.everSynced"),
+        ("eval", "__fake.calls.length = 0; Sync.pull().then(() => JSON.stringify({ sel: __fake.calls.filter(c => c[0] === 'select').map(c => c[1]), st: Sync.status }))"),
+        ("eval", f"__fake.calls.length = 0; __fake.setRow({{ user_id: 'u1', state: {OTHER}, updated_at: '2099-01-01T00:00:00.000Z' }}); Sync.pull().then(() => JSON.stringify({{ sel: __fake.calls.filter(c => c[0] === 'select').map(c => c[1]), goal: state.settings.loadCap, st: Sync.status }}))"),
+    ])
+    assert out[-2] == '{"sel":["updated_at"],"st":"idle"}', out[-2]
+    assert out[-1] == '{"sel":["updated_at","state, updated_at"],"goal":123,"st":"idle"}', out[-1]
+
+# 1.0.38: answers during a practice set or exam go up once, when it ends (or when the app goes to the background), not 2 s after each
+def test_a_practice_set_goes_up_once_at_its_end_or_when_the_app_is_hidden(b):
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle' && Sync.meta.everSynced"),
+        ("eval", "__fake.calls.length = 0; SESSION = { fake: true }; state.settings.loadCap = 11; saveState(); state.settings.loadCap = 12; saveState(); true"),
+        sleep_js(2600),
+        ("eval", "JSON.stringify({ sent: __fake.calls.filter(c => c[0] !== 'select').length, st: Sync.status, pend: Sync.meta.pendingSync })"),
+        ("eval", "SESSION = null; Sync.flushDeferred(); true"),
+        ("wait", "Sync.status === 'idle' && __fake.getRow().state.settings.loadCap === 12"),
+        ("eval", "JSON.stringify(__fake.calls.map(c => c[0] === 'select' ? c[1] : c[0]))"),
+        ("eval", "__fake.calls.length = 0; SESSION = { fake: true }; state.settings.loadCap = 13; saveState(); Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')); true"),
+        ("wait", "__fake.getRow().state.settings.loadCap === 13"),
+        ("eval", "delete document.hidden; SESSION = null; JSON.stringify(__fake.calls.map(c => c[0]))"),
+    ])
+    assert out[-5] == '{"sent":0,"st":"pending","pend":true}', out[-5]
+    assert out[-3] == '["updated_at","update"]', out[-3]   # the set's end: a stamp check, then one upload
+    assert out[-1] == '["update"]', out[-1]
 
 def test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge(b):
     out = boot(b, [
@@ -269,7 +300,7 @@ if __name__ == "__main__":
              test_first_sync_adopting_cloud_snapshots_local_first, test_token_refresh_does_not_mask_error_status, test_a_word_this_copy_does_not_know_survives_a_conflict_merge,
              test_manual_push_with_null_updated_at_still_sends_a_timestamp,
              test_push_uses_a_conditional_update_once_the_device_has_synced, test_stale_device_does_not_overwrite_progress_made_elsewhere, test_cloud_changed_elsewhere_is_adopted_even_when_its_clock_is_behind,
-             test_row_deleted_elsewhere_is_recreated_without_looping, test_conflict_during_a_session_waits_and_never_overwrites_the_cloud, test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge, test_conflict_merge_redoes_todays_list_from_the_merged_progress,
+             test_row_deleted_elsewhere_is_recreated_without_looping, test_conflict_during_a_session_waits_and_never_overwrites_the_cloud, test_a_pull_downloads_the_progress_only_when_the_cloud_changed, test_a_practice_set_goes_up_once_at_its_end_or_when_the_app_is_hidden, test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge, test_conflict_merge_redoes_todays_list_from_the_merged_progress,
              test_snapshots_prune_by_date_and_format_conflict_labels]
     failed = 0
     try:

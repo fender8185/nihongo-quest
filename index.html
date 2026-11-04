@@ -12,7 +12,7 @@
 <script src="./vendor/supabase.js"></script>
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
-<script src="./data.js?v=20"></script>
+<script src="./data.js?v=21"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -970,12 +970,16 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.37';   // keep equal to the version in sw.js CACHE ('nq-v1.0.37'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.38';   // keep equal to the version in sw.js CACHE ('nq-v1.0.38'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.38', date: '2026-11-04', items: [
+    '文法：N5、N4 有 21 個考點只有一兩題，補了 23 題，現在每個考點至少 3 題；第 6 單元有兩題移到第 1、2 單元講同一件事的考點。',
+    '雲端同步：練習或模擬考進行中不再每答一題就上傳，做完一組（或切到背景）才上傳一次；回到 app 時先確認雲端有沒有變，有變才下載。'
+  ] },
   { v: '1.0.37', date: '2026-11-04', items: [
     '雲端音檔生成：Google 給了沒有聲音的音檔時，改用沒指定讀音的版本再試，還不行就用全假名；用了哪一種會列在結果下面。'
   ] },
@@ -9883,11 +9887,14 @@ const Sync = {
     toast('已刪除雲端資料，本機進度仍保留');
   },
 
+  // The whole progress goes up each time (~230 KB mid-course, ~1 MB at the end of N3), so a practice set or exam sends it once
+  // at its end (flushDeferred) instead of 2 s after every answer; the app going to the background sends it at once. (1.0.38)
   schedulePush() {
     if (!this.session || !this.client) return;
     this.meta.pendingSync = true; Store.set('meta', this.meta);
     this.setStatus('pending');
-    if (this.timer) clearTimeout(this.timer);
+    if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+    if (this.busy()) { this.deferred = true; return; }
     this.timer = setTimeout(() => { this.timer = null; this.push(); }, 2000);
   },
 
@@ -9939,8 +9946,11 @@ const Sync = {
     let next = null;
     this.setStatus('syncing');
     try {
-      const { data, error } = await this.client.from('progress').select('state, updated_at').eq('user_id', session.user.id).maybeSingle();
-      if (error) throw error;
+      // a synced device asks for the cloud's stamp first and downloads the progress only when another device moved it (1.0.38);
+      // a first sync looks at the cloud's progress itself (empty or not)
+      const row = async (cols) => { const { data: d, error } = await this.client.from('progress').select(cols).eq('user_id', session.user.id).maybeSingle(); if (error) throw error; return d; };
+      let data = this.meta.everSynced ? await row('updated_at') : null;
+      if (!this.meta.everSynced || (data && !SyncCore.sameStamp(data.updated_at, this.meta.lastPulledUpdatedAt))) data = await row('state, updated_at');
       const pick = SyncCore.pullDecision(this.meta, state, data);
       if (pick === 'adopt' || pick === 'conflict') {
         // adopting the cloud over real local progress keeps a copy: first sync as pre-cloud-, a conflict as conflict-
