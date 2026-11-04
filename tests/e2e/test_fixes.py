@@ -125,7 +125,7 @@ def test_week_picker_sets_the_current_unit(b):
         ("eval", "document.getElementById('startUnit').value = 'm5'; document.querySelector('[data-act=start-apply]').click(); JSON.stringify({ cur: state.currentUnit, done: state.completedUnits })"),
         ("eval", "ACTIONS['open-level'](); document.getElementById('startUnit').value = 'm3'; document.getElementById('startMarkPrev').checked = true; document.querySelector('[data-act=start-apply]').click(); JSON.stringify({ cur: state.currentUnit, done: state.completedUnits })"),
     ])
-    assert out[-3] == '{"sel":true,"n":18,"cur":"m1","duo":true}', out[-3]
+    assert out[-3] == '{"sel":true,"n":33,"cur":"m1","duo":true}', out[-3]   # 1.0.33: m1–m33 (N3's m19–m33)
     assert out[-2] == '{"cur":"m5","done":[]}', out[-2]
     assert out[-1] == '{"cur":"m3","done":["m1","m2"]}', out[-1]
 

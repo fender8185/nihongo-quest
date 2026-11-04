@@ -426,7 +426,7 @@ def test_week0_is_a_pseudo_unit_m0(b):
     js = """(() => JSON.stringify({ weeks: unitById('m0').weeks, order: unitOrder('m0'), m1: unitOrder('m1'), units: DATA.UNITS.length, total: courseProgress().total,
       secs: DATA.LESSONS.m0.sections.length, kana: DATA.LESSONS.m0.sections[0].kana === true, unknown: unitById('zz').id }))()"""
     r = json.loads(ev(b, js))
-    assert r == {'weeks': '第 0 週', 'order': -1, 'm1': 0, 'units': 18, 'total': 18, 'secs': 13, 'kana': True, 'unknown': 'm1'}, r
+    assert r == {'weeks': '第 0 週', 'order': -1, 'm1': 0, 'units': 33, 'total': 33, 'secs': 13, 'kana': True, 'unknown': 'm1'}, r   # 1.0.33: N3's m19–m33
 
 def test_week0_page_is_a_unit_page(b):
     js = """(() => { const at = (h) => { location.hash = h; route(); const v = document.getElementById('view'); return { start: Boolean(v.querySelector('[data-act="start-unit"][data-unit="m0"]')), setCur: Boolean(v.querySelector('[data-act="set-current"]')),
