@@ -16,13 +16,14 @@ def test_stages_partition_every_item(b):
       const all = new Set(keys.flat()); const dup = keys.flat().length - all.size;
       const expect = REG.kana.length + REG.vocab.filter(v => v.builtin).length + REG.grammar.length + REG.kanji.length + REG.listen.length + REG.read.length + REG.drills.length;
       return JSON.stringify({ ids: STAGES.map(s => s.id), units: STAGES.map(s => s.units.length), dup, total: all.size, expect,
-        p2v: S[2].filter(x => x.kind === 'v').length, n4In: S.map(l => l.filter(x => x.kind === 'v' && x.lv === 'N4').length),
-        kana: S[0].filter(x => x.kind === 'a').length, next: STAGES.map(s => nextUnitAfterStage(s.id)), of: [stageOfUnit('m7'), stageOfUnit('m18')] }); })()"""
+        p2v: S[2].filter(x => x.kind === 'v').length, n4In: S.map(l => l.filter(x => x.kind === 'v' && x.lv === 'N4').length), n3In: S.map(l => l.filter(x => x.kind === 'v' && x.lv === 'N3').length),
+        kana: S[0].filter(x => x.kind === 'a').length, next: STAGES.map(s => nextUnitAfterStage(s.id)), of: [stageOfUnit('m7'), stageOfUnit('m18'), stageOfUnit('m19'), stageOfUnit('m33')] }); })()"""
     r = json.loads(ev(b, js))
-    assert r['ids'] == ['pre', 'p1', 'p2', 'p3'] and r['units'] == [1, 6, 6, 6], r   # 1.0.16: 入門 holds 第 0 週 (m0)
+    assert r['ids'] == ['pre', 'p1', 'p2', 'p3', 'p4', 'p5'] and r['units'] == [1, 6, 6, 6, 8, 7], r   # 1.0.16: 入門 holds 第 0 週 (m0); 1.0.33: N3's m19–m26, m27–m33
     assert r['dup'] == 0 and r['total'] == r['expect'], r
-    assert r['p2v'] == 0 and r['n4In'][:3] == [0, 0, 0] and r['n4In'][3] > 0 and r['kana'] == 142, r
-    assert r['next'] == ['m1', 'm7', 'm13', 'm18'] and r['of'] == ['p2', 'p3'], r
+    assert r['p2v'] == 0 and r['n4In'][:3] == [0, 0, 0] and r['n4In'][3] > 0 and r['n4In'][4:] == [0, 0] and r['kana'] == 142, r
+    assert r['n3In'][:5] == [0, 0, 0, 0, 0] and r['n3In'][5] == 1432, r   # a level's words sit in the stage that ends it
+    assert r['next'] == ['m1', 'm7', 'm13', 'm19', 'm27', 'm33'] and r['of'] == ['p2', 'p3', 'p4', 'p5'], r   # after the last stage: the last unit
 
 def test_current_stage_follows_stage_and_unit(b):
     js = """(() => { const keep = [state.stage, state.currentUnit]; const out = [];
@@ -42,7 +43,7 @@ def test_course_has_one_current_chip_and_week0_in_pre_card(b):
     r = json.loads(ev(b, js, [("eval", "state.stage = 'main'; state.currentUnit = 'm2'; state.stageTests = {}; saveState(); true")] + COURSE))
     assert r['n'] == 4 and r['titles'] == ['入門', '第一', '第二', '第三'], r
     assert r['week0In'] == [True, False, False, False] and r['chips'] == 1 and r['chipIn'] == ['row'], r
-    assert r['tests'] == 4 and r['marks'] == 0, r
+    assert r['tests'] == 6 and r['marks'] == 0, r   # one test a stage (N3's phases 4 and 5 since 1.0.33)
     r = json.loads(ev(b, js, [("eval", "state.stage = 'pre'; saveState(); true")] + COURSE))
     assert r['chips'] == 1 and r['chipIn'] == ['row'], r
 
@@ -53,11 +54,11 @@ def test_course_shows_last_result_and_no_mark_button(b):
       btns: foot.map(f => [...f.querySelectorAll('button')].map(x => x.dataset.act)) }); })()"""
     r = json.loads(ev(b, js, pre))
     assert '上次 34／40・通過' in r['txt'][1] and '上次 10／40・未通過' in r['txt'][2], r
-    assert r['btns'] == [['stage-test']] * 4 and not any('標記到這裡為止' in t for t in r['txt']), r
+    assert r['btns'] == [['stage-test']] * 6 and not any('標記到這裡為止' in t for t in r['txt']), r
 
 def test_course_page_survives_missing_stage_tests(b):
     js = "(() => { delete state.stageTests; renderCourse(document.getElementById('view')); return document.querySelectorAll('[data-act=\"stage-test\"]').length; })()"
-    assert ev(b, js) == 4
+    assert ev(b, js) == 6
 
 # ---- 1.0.27: the four stage cards fold; only the current stage is open by default ----
 SHOWN = "[...document.querySelectorAll('#view .card')].slice(0, 4).map(c => c.querySelector('.unit-row').checkVisibility())"   # which cards show their rows (a folded card keeps its rows' boxes, so not getClientRects)
@@ -184,13 +185,16 @@ def test_a_pass_never_downgrades(b):
     r = json.loads(ev(b, js))
     assert r['known'] == 1 and r['b'] == 6 and r['cur'] == 'm9' and not r['custom'] and r['changed'] == r['n'], r
 
-def test_a_p3_pass_finishes_the_course_and_undo_restores(b):
+def test_a_p3_pass_moves_on_to_n3_a_p5_pass_finishes_the_course_and_undo_restores(b):   # 1.0.33: N3's phases 4 and 5 follow N4
     js = "(() => { " + RESET + "state.stageTests = { p3: [{ date: todayStr(), correct: 40, total: 40, passed: true }] }; const before = " + SNAP + """;
-      markPassedStage('p3', new Set()); const after = { cur: state.currentUnit, pct: courseProgress().pct, units: state.completedUnits.length, items: Object.keys(state.srs).length };
+      markPassedStage('p3', new Set()); const p3 = { cur: state.currentUnit, pct: courseProgress().pct, units: state.completedUnits.length, items: Object.keys(state.srs).length };
       bulkUndo(); const restored = """ + SNAP + """ === before && LAST_BULK_MARK === null;
-      return JSON.stringify({ after, restored }); })()"""
+      state.stageTests = { p5: [{ date: todayStr(), correct: 40, total: 40, passed: true }] }; markPassedStage('p5', new Set());
+      const p5 = { cur: state.currentUnit, pct: courseProgress().pct, units: state.completedUnits.length }; bulkUndo();
+      return JSON.stringify({ p3, p5, restored, all: DATA.UNITS.length + 1 }); })()"""   # + m0, 入門's week 0, which DATA.UNITS leaves out
     r = json.loads(ev(b, js))
-    assert r['after']['cur'] == 'm18' and r['after']['pct'] == 100 and r['after']['units'] == 19 and r['after']['items'] > 1500, r
+    assert r['p3']['cur'] == 'm19' and r['p3']['pct'] < 100 and r['p3']['units'] == 19 and r['p3']['items'] > 1500, r   # N5 and N4 done: N3 comes next
+    assert r['p5'] == {'cur': 'm33', 'pct': 100, 'units': r['all']}, r   # the last stage finishes the course
     assert r['restored'], r
 
 # a failed test marks nothing; a pass marks, and its count leaves out what is already at four stars (here 入門, marked first)
@@ -313,7 +317,7 @@ def test_exam_page_lists_stage_test_records_and_starts_a_stage_test(b):
       c.querySelector('[data-act=stage-test][data-stage=pre]').click(); out.mode = SESSION && SESSION.mode; SESSION = null; document.body.classList.remove('practicing'); state.stageTests = {}; saveState();
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['btns'] == 4 and r['rows'] == 2 and '36 / 40' in r['first'] and r['passed'] == 1 and r['mode'] == 'stage', r
+    assert r['btns'] == 6 and r['rows'] == 2 and '36 / 40' in r['first'] and r['passed'] == 1 and r['mode'] == 'stage', r
 
 # ---- 1.0.17's today line for accounts past 入門 that never took its test: gone in 1.0.21 ----
 OLD = """state.stage = 'main'; state.currentUnit = 'm3'; state.srs = {}; state.stageTests = {}; state.startChosen = true; state.completedUnits = []; LAST_BULK_MARK = null;
