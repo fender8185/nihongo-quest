@@ -19,9 +19,12 @@ const path = require('path');
 
 const DAYS = 300;            // days of practice; the exam is the morning after the last one
 const SEED = 20261030;
-// 3550 items: what the app's registry holds in the kinds that take part in the queues (counts of data.js 15 and the kana
-// tables; update them when the course grows). The banks share each day's new items by what each has left, like splitNew.
-const BANKS = { v: 1661, g: 1397, k: 342, a: 142 };   // 單字, 文法, 漢字, 假名
+// what the app's registry holds in the kinds that take part in the queues, counted from data.js (1.0.33: with N3, 6,346 items;
+// the kana tables are 142). The banks share each day's new items by what each has left, like splitNew.
+const BANKS = (() => {
+  const D = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data.js'), 'utf8').split('\n')[2].replace(/^const DATA = /, '').replace(/;\s*$/, ''));
+  return { v: D.VOCAB.filter(v => !v.hide).length, g: D.GRAMMAR.length, k: D.KANJI.length, a: 142 };   // 單字, 文法, 漢字, 假名
+})();
 const DRILLS = 8;                                      // 變化練習: one new family a day, outside the day's new count
 // actual recall = R^exp, R being the app's own forecast for the item; first: the chance a first answer is right
 const LEARNERS = [
@@ -174,7 +177,8 @@ function levelPlan(perDay) {
   const lines = fs.readFileSync(path.join(__dirname, '..', 'data.js'), 'utf8').split('\n');
   const D = JSON.parse(lines[2].replace(/^const DATA = /, '').replace(/;\s*$/, ''));
   const lv = (x) => (x === 'PRE_N5' ? 'N5' : x); const unitLv = Object.fromEntries(D.UNITS.map(u => [u.id, lv(u.lv)]));
-  const levels = ['N5', 'N4'].map(L => ({ L, left: { v: D.VOCAB.filter(v => lv(v.lv) === L).length, g: D.GRAMMAR.filter(g => unitLv[g.u] === L).length, k: D.KANJI.filter(k => lv(k.lv) === L).length } }));
+  const levels = ['N5', 'N4', 'N3', 'N2', 'N1'].filter(L => D.VOCAB.some(v => lv(v.lv) === L))   // the levels data.js has, in course order
+    .map(L => ({ L, left: { v: D.VOCAB.filter(v => lv(v.lv) === L).length, g: D.GRAMMAR.filter(g => unitLv[g.u] === L).length, k: D.KANJI.filter(k => lv(k.lv) === L).length } }));
   const total = levels.map(x => x.left.v + x.left.g + x.left.k);
   const first = {}; const per = {}; let day = 0;
   for (const lev of levels) {
@@ -191,9 +195,9 @@ function levelPlan(perDay) {
     first[lev.L + 'done'] = day;
   }
   const avg = (L) => { const d = per[L].slice(0, -1); const m = (k) => (d.reduce((a, t) => a + t[k], 0) / d.length).toFixed(1); return `${m('v')}／${m('g')}／${m('k')}`; };
-  console.log(`每天 ${perDay} 個新題、每一級封死（題庫：入門＋N5 ${total[0]} 題、N4 ${total[1]} 題，從 data.js 算）：`);
-  console.log(`入門＋N5 期間每天 單字／文法／漢字 ${avg('N5')}・第 ${first.N5done} 天全部學過一次`);
-  console.log(`之後（N4）每天 ${avg('N4')}・N4 單字第 ${first.N4v} 天開始・N4 文法第 ${first.N4g} 天・N4 漢字第 ${first.N4k} 天・整個課程第 ${first.N4done} 天學過一次`);
+  console.log(`每天 ${perDay} 個新題、每一級封死（題庫：${levels.map((x, i) => `${i ? '' : '入門＋'}${x.L} ${total[i]} 題`).join('、')}，從 data.js 算）：`);
+  levels.forEach((x, i) => console.log(i === 0 ? `入門＋${x.L} 期間每天 單字／文法／漢字 ${avg(x.L)}・第 ${first[x.L + 'done']} 天全部學過一次`
+    : `之後（${x.L}）每天 ${avg(x.L)}・${x.L} 單字第 ${first[x.L + 'v']} 天開始・文法第 ${first[x.L + 'g']} 天・漢字第 ${first[x.L + 'k']} 天・第 ${first[x.L + 'done']} 天學過一次${i === levels.length - 1 ? '（整個課程）' : ''}`));
 }
 
 const args = process.argv.slice(2);
