@@ -64,14 +64,17 @@ def test_sentence_pieces_drag_between_the_fixed_words(b):
       startSession('items', { items: [g] }); route(); const e = currentEntry(); renderPractice();
       const tiles = e.q.tiles; const LINE = () => (e.order || []).map(i => tiles[i]).join('|');
       const free = (p) => document.querySelector(`.order-tile[data-i="${tiles.indexOf(p)}"]`); const piece = (k) => document.querySelector(`.order-out [data-k="${k}"]`);
+      const plain = { badges: document.querySelectorAll('.order-tile .kbd').length, hint: !!document.querySelector('.pr-actions .kbd-hint') };   // 1.0.51: no 1–4 on the tiles
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: '1', bubbles: true })); plain.keyed = (e.order || []).length;
       free(g.parts[0]).click(); free(g.parts[2]).click();
       drag(free(g.parts[1]), at(piece(1), .1)); const between = LINE();
       free(g.parts[3]).click(); const ok = !document.querySelector('.tile-ok').disabled; ACTIONS['tiles-submit']();
-      const out = { parts: g.parts.join('|'), between, ok, right: e.done && e.chosen === e.q.answer };
+      const out = { parts: g.parts.join('|'), between, ok, right: e.done && e.chosen === e.q.answer, plain };
       SESSION = null; document.body.classList.remove('practicing'); delete state.srs[g.key]; saveState(); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
     p = r['parts'].split('|')
     assert r['between'] == '|'.join(p[:3]) and r['ok'] and r['right'], r
+    assert r['plain'] == {'badges': 0, 'hint': False, 'keyed': 0}, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

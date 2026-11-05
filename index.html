@@ -484,7 +484,7 @@ button.order-slot { font: inherit; background: none; border-width: 0 0 2px; bord
 button.order-slot:hover { background: var(--bg-hover); }
 .order-slot.wrong { color: var(--bad); border-color: var(--bad); }
 .order-tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-.order-tile { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 20px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); cursor: pointer; }
+.order-tile { padding: 10px 14px; font-size: 20px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); cursor: pointer; }
 .order-tile:disabled { opacity: .25; cursor: default; }
 /* 1.0.44: tiles and placed pieces can be dragged (a copy follows the finger, a gap opens where it would go) */
 .q-card [data-ti] { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -1031,12 +1031,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.50';   // keep equal to the version in sw.js CACHE ('nq-v1.0.50'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.51';   // keep equal to the version in sw.js CACHE ('nq-v1.0.51'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.51', date: '2026-11-05', items: [
+    '排序題的字塊前面不再標 1、2、3、4，數字鍵也不再放字塊（用點的或拖的，Enter 送出、Backspace 拿回最後一塊照舊）；拼字、活用、排序、配對題下方不再顯示「按 1–4 作答」。帶漢字的字塊（例如「公園を」）字不再被拆開。'
+  ] },
   { v: '1.0.50', date: '2026-11-05', items: [
     '作答有聲音了：答對響兩個往上的短音，連對越多音越高一點；剛升到「熟悉」或「已熟練」時響三個音；答錯是一聲比較小的低音。單字或句子的發音等音效響完才唸。設定 › 學習可以關掉「答題音效」。階段測驗和模擬考不響。',
     '連續答對 3 題起，「答對了」旁邊會出現「連對 N」；答錯就重新算，「手滑，不算」會把連對數還回去。',
@@ -4318,7 +4321,7 @@ function renderPractice() {
         ${q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-match' && (answered || q.fmt !== 'v-cloze') ? '<button type="button" class="btn btn-sm btn-ghost" data-act="speak-example" title="朗讀例句">例句</button>' : ''}
         <button type="button" class="btn btn-sm btn-ghost" data-act="more-toggle" aria-expanded="false" title="更多" aria-label="更多">⋯</button>
       </div>
-      ${answered ? '' : '<div class="right"><span class="tiny muted kbd-hint">按 1–4 作答</span></div>'}
+      ${answered || q.custom ? '' : '<div class="right"><span class="tiny muted kbd-hint">按 1–4 作答</span></div>'}
       <div class="more-items" hidden>${moreItemsHtml(e, answered)}</div>
     </div>`;
   const next = answered ? `<div class="pr-next"><button type="button" class="btn btn-primary" data-act="next" id="btnNext">${SESSION.idx + 1 < SESSION.entries.length ? '下一題' : '看結果'} <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button></div>` : '';
@@ -4587,7 +4590,7 @@ function customInteractionHtml(e, answered) {
     const built = `${furi(q.pre)}${q.orderParts.map((_, i) => slot(i)).join('')}${furi(q.post)}`;
     return `<div class="order">
       <div class="order-out jp ${answered ? (e.chosen === q.answer ? 'ok' : 'bad') : ''}">${built}</div>
-      <div class="order-tiles">${q.tiles.map((p, i) => `<button type="button" class="order-tile jp" data-act="order-tap" data-i="${i}" ${used.includes(i) || answered ? 'disabled' : `data-ti="${i}"`}><span class="kbd">${i + 1}</span>${furi(p)}</button>`).join('')}</div>
+      <div class="order-tiles">${q.tiles.map((p, i) => `<button type="button" class="order-tile jp" data-act="order-tap" data-i="${i}" ${used.includes(i) || answered ? 'disabled' : `data-ti="${i}"`}>${furi(p)}</button>`).join('')}</div>
       ${answered ? '' : tileRowHtml(e, '看答案')}
     </div>`;
   }
@@ -5238,7 +5241,7 @@ function handleKey(ev) {
       else if (k === 'Escape') { ev.preventDefault(); exitPractice(); }
       return;
     }
-    if (['1', '2', '3', '4'].includes(k)) { ev.preventDefault(); if (e && !e.done && e.q && e.q.custom === 'g-order') ACTIONS['order-tap']({ dataset: { i: String(Number(k) - 1) } }); else if (e && !e.done && !(e.q && e.q.custom)) answerCurrent(Number(k) - 1); return; }
+    if (['1', '2', '3', '4'].includes(k)) { ev.preventDefault(); if (e && !e.done && !(e.q && e.q.custom)) answerCurrent(Number(k) - 1); return; }
     if (k === 'Enter' || k === ' ') { if (e && e.done) { ev.preventDefault(); nextQuestion(); } else if (!e) { ev.preventDefault(); } else if (k === 'Enter' && tileModel(e)) { ev.preventDefault(); tileSubmit(); } return; }
     if (k === 'Backspace' && tileModel(e)) { ev.preventDefault(); const line = e[tileModel(e).key] || []; if (line.length) tileMove(() => tileTake(line.length - 1)); return; }   // a tile question: the last piece back
     if (k === 'r' || k === 'R') { ev.preventDefault(); ACTIONS.replay(); return; }
