@@ -89,7 +89,7 @@ a { color: var(--accent); }
   .page-head .page-title.dup-title + .page-sub { margin-top: 0; }
   .page-head { margin-bottom: 14px; }
   body.practicing .content { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }   /* no tab bar while practising, so no room kept for it */
-  body.practicing .content:has(.pr-next) { padding-bottom: 0; }   /* the sticky 下一題 strip carries its own bottom padding: the page ends exactly under the button */
+  body.practicing .content:has(> .pr-next) { padding-bottom: 0; }   /* the sticky 下一題 strip carries its own bottom padding: the page ends exactly under the button (not the one in a phone's result panel) */
   .bottomnav { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--bg-elev) 94%, transparent); backdrop-filter: blur(10px); border-top: 1px solid var(--line); }
   .bottomnav button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; border: 0; background: transparent; color: var(--fg-3); font-size: 11px; cursor: pointer; border-radius: 8px; }
   .bottomnav button svg { width: 22px; height: 22px; }
@@ -438,7 +438,21 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
   body.practicing .content > .q-card { flex: 1 0 auto; display: flex; flex-direction: column; }
   .q-card > :is(.opts, .spell, .order, .match) { margin-top: auto; }
   .q-card > .opts { padding-top: 18px; }
+  /* 1.0.43: the result rises from the bottom in a panel (renderPractice draws it on a phone only) while the options stay put:
+     the page keeps its tool row as an inert ghost of the same height, and room under the page (--sheet-h, kept by sheetFit)
+     lets everything scroll up above the panel. It shows after the answer's pop or shake, and only on that draw. */
+  body.practicing .content:has(> .fb-sheet) { margin-bottom: var(--sheet-h, 0px); }
+  .pr-ghost { visibility: hidden; }
+  .fb-sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; max-height: 70vh; max-height: 70dvh; display: flex; flex-direction: column; background: linear-gradient(var(--ok-soft), var(--ok-soft)), var(--bg-elev); border-top: 2px solid var(--ok-line); border-radius: 18px 18px 0 0; box-shadow: 0 -12px 30px -14px rgba(0,0,0,.55); }
+  .fb-sheet.bad { background: linear-gradient(var(--bad-soft), var(--bad-soft)), var(--bg-elev); border-top-color: var(--bad-line); }
+  .fb-sheet-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 16px 0; }
+  .fb-sheet .feedback { margin: 0; padding: 0; border: 0; background: none; }
+  .fb-sheet .pr-actions { margin-top: 8px; }
+  .fb-sheet .pr-next { position: static; margin: 0; padding: 8px 16px calc(10px + env(safe-area-inset-bottom)); background: none; }
+  .fb-sheet.rise { animation: sheetUp .25s ease-out .3s backwards; }
+  @keyframes sheetUp { from { transform: translateY(100%); } }
 }
+.fb-chosen { font-size: 14px; color: var(--fg-2); margin: -2px 0 6px; }
 .speak-big { display: inline-flex; align-items: center; gap: 10px; margin: 8px auto; padding: 14px 22px; border-radius: 99px; border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--accent); cursor: pointer; font-size: 16px; }
 .speak-big svg { width: 22px; height: 22px; }
 .speech-prog { max-width: 320px; margin: 2px auto 0; }
@@ -1000,12 +1014,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.42';   // keep equal to the version in sw.js CACHE ('nq-v1.0.42'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.43';   // keep equal to the version in sw.js CACHE ('nq-v1.0.43'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.43', date: '2026-11-05', items: [
+    '手機作答：答完後選項原地不動，結果改從底部升起的面板顯示（答對綠、答錯紅）：正確答案、你選的是什麼、聽力原文、例句和解說，「下一題」在面板最下面。解說長的話在面板裡捲動，往下滑也能把被蓋住的選項拉上來看。電腦版不變。'
+  ] },
   { v: '1.0.42', date: '2026-11-05', items: [
     '手機作答畫面：選項（拼字、排序、配對的字塊也是）貼到螢幕下方、「發音／例句／⋯」在最底下，大拇指比較好按；題目留在上面。模擬考也一樣。',
     '答完往下滑看解說時，最上面的 ✕ 和進度條固定不動。'
@@ -4244,6 +4261,18 @@ function renderPractice() {
   if (answered && q.fillHtml) stem = stem.replace(/<span class="blank" data-blank>[\s\S]*?<!--\/blank-->/, `<span class="blank filled">${q.fillHtml}</span>`);
   const custom = q.custom ? customInteractionHtml(e, answered) : '';
   const just = answered && e.justAnswered ? (e.chosen === q.answer ? ' just-ok' : ' just-bad') : ''; e.justAnswered = false;   // 1.0.41: only the draw right after the answer
+  const sheet = answered && phoneLayout();   // 1.0.43: a phone shows the result in a panel from the bottom
+  const tools = `
+    <div class="pr-actions">
+      <div class="left">
+        ${q.custom === 'v-match' ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>`}
+        ${q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-match' && (answered || q.fmt !== 'v-cloze') ? '<button type="button" class="btn btn-sm btn-ghost" data-act="speak-example" title="朗讀例句">例句</button>' : ''}
+        <button type="button" class="btn btn-sm btn-ghost" data-act="more-toggle" aria-expanded="false" title="更多" aria-label="更多">⋯</button>
+      </div>
+      ${answered ? '' : '<div class="right"><span class="tiny muted kbd-hint">按 1–4 作答</span></div>'}
+      <div class="more-items" hidden>${moreItemsHtml(e, answered)}</div>
+    </div>`;
+  const next = answered ? `<div class="pr-next"><button type="button" class="btn btn-primary" data-act="next" id="btnNext">${SESSION.idx + 1 < SESSION.entries.length ? '下一題' : '看結果'} <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button></div>` : '';
   view.innerHTML = `
     <div class="pr-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
@@ -4256,24 +4285,38 @@ function renderPractice() {
       <div class="q-instr">${esc(q.instr || '')}</div>
       ${q.passageHtml ? `<div class="panel jp mb-3 passage">${q.passageHtml}</div>` : ''}
       ${stem ? `<div class="q-stem jp ${q.stemClass || ''}">${stem}</div>` : ''}
-      ${answered && q.revealHtml ? q.revealHtml : ''}
+      ${answered && q.revealHtml && !sheet ? q.revealHtml : ''}
       ${subParts.length ? `<div class="q-sub">${subParts.join(' ')}</div>` : ''}
       ${custom || `<div class="opts ${q.wide ? 'wide' : ''}">${opts}</div>`}
-      ${answered ? feedbackHtml(e) : ''}
+      ${answered && !sheet ? feedbackHtml(e) : ''}
     </div>
-    <div class="pr-actions">
-      <div class="left">
-        ${q.custom === 'v-match' ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>`}
-        ${q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-match' && (answered || q.fmt !== 'v-cloze') ? '<button type="button" class="btn btn-sm btn-ghost" data-act="speak-example" title="朗讀例句">例句</button>' : ''}
-        <button type="button" class="btn btn-sm btn-ghost" data-act="more-toggle" aria-expanded="false" title="更多" aria-label="更多">⋯</button>
-      </div>
-      ${answered ? '' : '<div class="right"><span class="tiny muted kbd-hint">按 1–4 作答</span></div>'}
-      <div class="more-items" hidden>${moreItemsHtml(e, answered)}</div>
-    </div>
-    ${answered ? `<div class="pr-next"><button type="button" class="btn btn-primary" data-act="next" id="btnNext">${SESSION.idx + 1 < SESSION.entries.length ? '下一題' : '看結果'} <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button></div>` : ''}`;
+    ${sheet ? `${tools.replace('<div class="pr-actions">', '<div class="pr-actions pr-ghost" aria-hidden="true" inert>')}
+    <div class="fb-sheet ${e.chosen === q.answer ? 'ok' : 'bad'}${just ? ' rise' : ''}" role="region" aria-label="作答結果">
+      <div class="fb-sheet-body">${feedbackHtml(e, true)}${tools}</div>
+      ${next}
+    </div>` : tools + next}`;
+  sheetFit(view);
+  // a tap-to-answer block (拼字, 排序, 配對) loses its bottom row once answered: on a phone it keeps the height it had, so the tiles stay put under the panel
+  const block = view.querySelector('.q-card > :is(.spell, .order, .match)');
+  if (block && !answered) e.blockH = block.offsetHeight;
+  else if (block && sheet && e.blockH) block.style.minHeight = e.blockH + 'px';
   if (!answered && q.audio && !e.autoPlayed) { e.autoPlayed = true; setTimeout(() => (q.audioScript ? speakScript(q.audio) : speak(q.audio, speakOpts(q, q.audio))), 150); }
   if (!answered && q.audioOptions) prefetchSpeech(q.options.map(o => o.text));   // the same text the play button sends (bracket readings included, ttsText turns them into kana)
   if (answered) { const nb = document.getElementById('btnNext'); if (nb) nb.focus({ preventScroll: true }); }
+}
+
+// 1.0.43: a phone (the CSS breakpoint) shows an answer's result in a panel from the bottom; crossing the line draws the card again
+const PHONE_MQ = window.matchMedia ? window.matchMedia('(max-width: 600px)') : null;
+function phoneLayout() { return Boolean(PHONE_MQ && PHONE_MQ.matches); }
+if (PHONE_MQ && PHONE_MQ.addEventListener) PHONE_MQ.addEventListener('change', () => { if (SESSION && currentRoute().name === 'practice') renderPractice(); });
+// room under the page as tall as the panel, so what it covers can still be scrolled up above it (it grows with ⋯ or AI 解析)
+const SHEET_RO = window.ResizeObserver ? new ResizeObserver(([en]) => { if (en) document.getElementById('view').style.setProperty('--sheet-h', en.target.offsetHeight + 'px'); }) : null;
+function sheetFit(view) {
+  const sh = view.querySelector('.fb-sheet');
+  if (SHEET_RO) SHEET_RO.disconnect();
+  if (!sh) { view.style.removeProperty('--sheet-h'); return; }
+  view.style.setProperty('--sheet-h', sh.offsetHeight + 'px');
+  if (SHEET_RO) SHEET_RO.observe(sh);
 }
 
 // New word: show it before asking. Enter/Space (or the button) goes on to the question.
@@ -4424,10 +4467,15 @@ function moreItemsHtml(e, answered) {
     ${answered && isAiConfigured() ? '<button type="button" class="btn btn-sm btn-ghost" data-act="ai-explain">AI 解析</button>' : ''}
     ${answered && q.kind !== 'm' ? '<button type="button" class="btn btn-sm btn-ghost" data-act="report-item" title="題目有誤或不自然時，把它移出題庫">這題有問題</button>' : ''}`;
 }
-function feedbackHtml(e) {
+function feedbackHtml(e, sheet = false) {
   const q = e.q;
   const ok = e.chosen === q.answer;
   const right = q.options[q.answer];
+  // in a phone's result panel the options are under it: say which one was picked, and what it means where that is known; what a
+  // listening item reveals (the transcript, the word heard) comes under the verdict there, not inside the card (1.0.43)
+  const picked = sheet && !ok && !q.custom ? q.options[e.chosen] : null;
+  const pickedZh = picked && q.optZh ? q.optZh[picked.text] || '' : '';
+  const chosen = picked ? `<div class="fb-chosen">你選的：<span class="${optClass(picked)}">${optionHtml(q, picked)}</span>${pickedZh ? `（${esc(pickedZh)}）` : ''}</div>` : '';
   const full = q.fullJp && (q.fmt.startsWith('g-') || q.fmt === 'v-cloze' || q.fmt === 'm-card') ? `<div class="fb-full jp">${q.kind === 'v' && q.exMarked && q.item && homographReadings(q.item).length ? exampleJpHtml(q.exMarked, q.item) : furi(q.fullJp)} <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak-full" title="朗讀">${icon('speaker')}</button></div>${q.zhText ? `<div class="small muted">${esc(q.zhText)}</div>` : ''}` : '';
   // other vocabulary formats: the word's example sentence, with its own play button (so it is not buried in the note text);
   // 配對 has none: the sentence would be one word's of six
@@ -4453,7 +4501,7 @@ function feedbackHtml(e) {
       <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>'
         : e.missed && e.missed.length ? icon('cross') + `<span>配錯了：<span class="jp">${esc(e.missed.map(x => x.label).join('、'))}</span></span>`   // 配對: the words paired wrong
         : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
-      ${diff}${full}${example}
+      ${chosen}${sheet && q.revealHtml ? q.revealHtml : ''}${diff}${full}${example}
       ${why ? `<div class="fb-why mt-2">${md(why)}</div>` : ''}
       <div class="fb-meta">${q.point && q.kind === 'g' ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}</div>
       <div id="aiExplainBox"></div>

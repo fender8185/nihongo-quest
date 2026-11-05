@@ -1,4 +1,4 @@
-"""2026-11-05 (1.0.42): 手機作答畫面——選項貼在螢幕下方、上方的 ✕ 和進度條往下滑也固定；電腦版不變。"""
+"""2026-11-05 (1.0.42–1.0.43): 手機作答畫面——選項貼在螢幕下方、上方的 ✕ 和進度條往下滑也固定、作答結果從底部升起的面板（選項不動）；電腦版不變。"""
 import json, os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from cdp import Browser
@@ -34,6 +34,38 @@ def test_phone_options_sit_low_and_the_top_strip_stays(b):
     assert a['scrolled'] > 0 and a['top'] == 0 and a['under'], r   # scrolled, and the strip still on top of what scrolls under it
     assert a['width'] == a['vw'], r   # it spans the side gutters
 
+def test_phone_result_rises_in_a_panel_and_the_options_stay(b):
+    js = "(async () => { " + FRESH + VOCAB_Q + """
+      const tops = () => [...document.querySelectorAll('.q-card .opt')].map(o => Math.round(o.getBoundingClientRect().top)).join(',');
+      const before = tops(); const q = currentEntry().q; const pick = (q.answer + 1) % 4;
+      answerCurrent(pick);
+      const sh = document.querySelector('.fb-sheet'), card = document.querySelector('.q-card');
+      const ghost = document.querySelector('.pr-actions.pr-ghost');
+      const out = { same: tops() === before, cls: sh.className, head: !!sh.querySelector('.fb-head'), chosen: (sh.querySelector('.fb-chosen') || {}).textContent || '',
+        pickText: jaPlain(q.options[pick].text), next: !!sh.querySelector('.pr-next > #btnNext'), tools: !!sh.querySelector('.pr-actions:not(.pr-ghost) [data-act=more-toggle]'),
+        ghostInert: !!ghost && ghost.inert, inCard: !!card.querySelector('.feedback'), tall: sh.getBoundingClientRect().height / innerHeight,
+        room: document.getElementById('view').style.getPropertyValue('--sheet-h') === sh.offsetHeight + 'px', names: sh.getAnimations().map(a => a.animationName) };
+      renderPractice(); const again = { cls: document.querySelector('.fb-sheet').className, same: tops() === before };   // 顯示中文, a sync: drawn again
+      const all = SESSION.entries; all.forEach((x, i) => prepareEntry(i)); const li = all.findIndex((x, i) => i !== SESSION.idx && x.q && x.q.kind === 'l' && !x.done);
+      let listen = null;
+      if (li >= 0) { SESSION.idx = li; renderPractice(); answerCurrent(all[li].q.answer); const s2 = document.querySelector('.fb-sheet');
+        listen = { inSheet: /原文/.test(s2.textContent), inCard: /原文/.test(document.querySelector('.q-card').textContent), headFirst: s2.querySelector('.feedback').firstElementChild.classList.contains('fb-head') }; }
+      return JSON.stringify({ out, again, listen }); })()"""
+    r = json.loads(ev(b, js, [("metrics", (375, 667))]))
+    o = r['out']
+    assert o['same'] and o['cls'] == 'fb-sheet bad rise' and o['names'] == ['sheetUp'], r   # the options stay put; the panel rises once
+    assert o['head'] and o['chosen'].startswith('你選的：' + o['pickText']) and o['next'] and o['tools'] and o['ghostInert'] and not o['inCard'], r
+    assert 0 < o['tall'] <= 0.701 and o['room'], r   # at most 70% of the screen; the page can scroll what it covers up above it
+    assert r['again'] == {'cls': 'fb-sheet bad', 'same': True}, r
+    assert r['listen'] == {'inSheet': True, 'inCard': False, 'headFirst': True}, r   # the transcript sits under the verdict, in the panel (week 1's set has a listening item)
+
+def test_turning_a_phone_wide_draws_the_answer_the_desktop_way(b):
+    js = "(async () => { " + FRESH + VOCAB_Q + """ answerCurrent(currentEntry().q.answer); window.__sheet = !!document.querySelector('.fb-sheet'); return 1; })()"""
+    probe = """JSON.stringify({ sheet: __sheet, after: !!document.querySelector('.fb-sheet'), inCard: !!document.querySelector('.q-card .feedback'), next: !!document.querySelector('#view > .pr-next > #btnNext') })"""
+    out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", js), ("metrics", (1000, 800, False)), ("wait", "!document.querySelector('.fb-sheet')"), ("eval", probe)])
+    r = json.loads(out[-1])
+    assert r == {'sheet': True, 'after': False, 'inCard': True, 'next': True}, r
+
 def test_desktop_layout_is_unchanged(b):
     js = "(async () => { " + FRESH + VOCAB_Q + """
       const top = getComputedStyle(document.querySelector('.pr-top')), view = getComputedStyle(document.getElementById('view')), opts = getComputedStyle(document.querySelector('.q-card .opts'));
@@ -41,6 +73,10 @@ def test_desktop_layout_is_unchanged(b):
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("metrics", (1200, 900, False))]))
     assert r == {'pos': 'static', 'display': 'block', 'card': 'block', 'mt': '18px'}, r
+    js2 = "(async () => { " + FRESH + VOCAB_Q + """ answerCurrent(currentEntry().q.answer);
+      return JSON.stringify({ sheet: !!document.querySelector('.fb-sheet'), inCard: !!document.querySelector('.q-card .feedback'), ghost: !!document.querySelector('.pr-ghost') }); })()"""
+    r2 = json.loads(ev(b, js2, [("metrics", (1200, 900, False))]))
+    assert r2 == {'sheet': False, 'inCard': True, 'ghost': False}, r2   # the result stays under the options
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
