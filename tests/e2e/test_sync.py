@@ -125,14 +125,15 @@ def test_first_sync_keeps_real_local_progress_over_empty_cloud(b):
     ])
     assert out[-1] == '{"local":1,"cloud":1}', out[-1]
 
-def test_first_sync_adopting_cloud_snapshots_local_first(b):
+# 1.0.47: no pre-cloud snapshot any more; a first sync takes a cloud that has progress as it is
+def test_first_sync_adopts_a_cloud_with_progress_over_local(b):
     out = boot(b, [
         ("eval", "state.srs['v:n5a-001'] = { b: 1, due: todayStr(), n: 1, ok: 1, ng: 0, last: todayStr() }; saveState(); true"),
         ("eval", "__fake.setRow({ user_id: 'u1', state: { v: 3, updatedAt: '2000-01-01T00:00:00.000Z', srs: { 'v:n5a-002': { b: 1, due: '2000-01-02', n: 1, ok: 1, ng: 0, last: '2000-01-01' } } }, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('a@b.c'); true"),
         ("wait", "Sync.status === 'idle' && Sync.meta.everSynced"),
-        ("eval", "Snapshots.get('pre-cloud-' + todayStr()).then(j => JSON.stringify({ now: Object.keys(state.srs), snap: j ? Object.keys(JSON.parse(j).srs) : null }))"),
+        ("eval", "JSON.stringify({ now: Object.keys(state.srs), cloud: Object.keys(__fake.getRow().state.srs) })"),
     ])
-    assert out[-1] == '{"now":["v:n5a-002"],"snap":["v:n5a-001"]}', out[-1]
+    assert out[-1] == '{"now":["v:n5a-002"],"cloud":["v:n5a-002"]}', out[-1]
 
 def test_token_refresh_does_not_mask_error_status(b):
     out = boot(b, [
@@ -164,9 +165,9 @@ def test_stale_device_does_not_overwrite_progress_made_elsewhere(b):
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
         ("eval", f"__fake.setRow({{ user_id: 'u1', state: {OTHER}, updated_at: '2099-01-01T00:00:00.000Z' }}); state.settings.loadCap = 5; saveState(); true"),
         ("wait", "Sync.status === 'idle' && state.settings.loadCap === 123"),
-        ("eval", "Snapshots.get('conflict-' + todayStr()).then(j => JSON.stringify({ cloud: __fake.getRow().state.settings.loadCap, local: state.settings.loadCap, snap: j ? JSON.parse(j).settings.loadCap : null, pend: Sync.meta.pendingSync, miss: __fake.calls.filter(c => c[0] === 'update-miss').length }))"),
+        ("eval", "JSON.stringify({ cloud: __fake.getRow().state.settings.loadCap, local: state.settings.loadCap, pend: Sync.meta.pendingSync, miss: __fake.calls.filter(c => c[0] === 'update-miss').length })"),
     ])
-    assert out[-1] == '{"cloud":123,"local":123,"snap":5,"pend":false,"miss":1}', out[-1]
+    assert out[-1] == '{"cloud":123,"local":123,"pend":false,"miss":1}', out[-1]
 
 def test_cloud_changed_elsewhere_is_adopted_even_when_its_clock_is_behind(b):
     out = boot(b, [
@@ -194,10 +195,10 @@ def test_conflict_during_a_session_waits_and_never_overwrites_the_cloud(b):
         ("eval", "JSON.stringify({ local: state.settings.loadCap, cloud: __fake.getRow().state.settings.loadCap, st: Sync.status, net: __fake.calls.filter(c => c[0] === 'update-miss').length })"),
         ("eval", "SESSION = null; Sync.flushDeferred(); true"),
         ("wait", "Sync.status === 'idle' && state.settings.loadCap === 123"),
-        ("eval", "Snapshots.get('conflict-' + todayStr()).then(j => JSON.stringify({ snap: j ? JSON.parse(j).settings.loadCap : null, cloud: __fake.getRow().state.settings.loadCap }))"),
+        ("eval", "JSON.stringify({ cloud: __fake.getRow().state.settings.loadCap })"),
     ])
     assert out[-3] == '{"local":7,"cloud":123,"st":"pending","net":0}', out[-3]   # 1.0.38: nothing goes up during a set
-    assert out[-1] == '{"snap":7,"cloud":123}', out[-1]
+    assert out[-1] == '{"cloud":123}', out[-1]
 
 # 1.0.38: a return to the app asks only for the cloud's stamp; the progress (up to ~1 MB at the end of N3) comes down when it moved
 def test_a_pull_downloads_the_progress_only_when_the_cloud_changed(b):
@@ -256,23 +257,20 @@ def test_conflict_merge_redoes_todays_list_from_the_merged_progress(b):
     assert r['planned'] is False and r['cloudPlanned'] is False, r   # learned elsewhere: no longer one of today's new words, here or in the upload
     assert r['kept'] is True and r['done'] >= 1, r   # what this device answered stays on the list, done
 
-def test_snapshots_prune_by_date_and_format_conflict_labels(b):
-    js = """(async () => {
-      for (const k of (await Snapshots.keys()) || []) await Snapshots.del(k);
-      const putAll = ['conflict-2026-01-01', 'pre-cloud-2026-01-02', '2026-04-01', '2026-04-02', '2026-04-03', '2026-04-04', '2026-04-05', '2026-04-06', 'conflict-2026-04-06'];
-      for (const k of putAll) await Snapshots.put(k, '{}');
-      await Snapshots.prune();
-      openSettings('data');
-      await fillSnapshotList();
-      const keys = await Snapshots.keys();
-      const labels = [...document.querySelectorAll('#snapList [data-act=snapshot-restore]')].map(el => el.textContent);
-      return JSON.stringify({ keys, labels });
+# 1.0.47: snapshots are gone; the database an earlier copy left behind is deleted on the next launch
+def test_old_snapshots_are_deleted_and_no_new_ones_are_taken(b):
+    seed = """new Promise(res => { const r = indexedDB.open('nihongo_quest_snapshots', 1);
+      r.onupgradeneeded = (e) => e.target.result.createObjectStore('snaps');
+      r.onsuccess = (e) => { const db = e.target.result; const t = db.transaction('snaps', 'readwrite'); t.objectStore('snaps').put('{}', '2026-11-04'); t.oncomplete = () => { db.close(); res(true); }; }; })"""
+    check = """(async () => {
+      let dbs = [];
+      for (let i = 0; i < 20; i++) { dbs = (await indexedDB.databases()).map(d => d.name); if (!dbs.includes('nihongo_quest_snapshots')) break; await new Promise(r => setTimeout(r, 100)); }
+      openSettings('data'); const list = !!document.getElementById('snapList'); const body = document.querySelector('.modal').textContent; closeModal(true);
+      return JSON.stringify({ db: dbs.includes('nihongo_quest_snapshots'), list, word: body.includes('快照'), gone: [typeof Snapshots, typeof dailySnapshot], field: 'lastSnapshot' in normalizeState({ lastSnapshot: '2026-11-04' }) });
     })()"""
-    out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
+    out = b.run([("nav", URL), ("wait", READY), ("eval", seed), ("nav", URL), ("wait", READY), ("eval", check)])
     r = __import__('json').loads(out[-1])
-    assert 'conflict-2026-01-01' not in r['keys'] and 'pre-cloud-2026-01-02' not in r['keys'], r
-    assert '2026-04-01' in r['keys'] and 'conflict-2026-04-06' in r['keys'], r
-    assert r['labels'][0] == '2026/04/06（衝突備份）' and r['labels'][1] == '2026/04/06', r
+    assert r == {'db': False, 'list': False, 'word': False, 'gone': ['undefined', 'undefined'], 'field': False}, r
 
 # 1.0.34 review: a device still on the old copy (every device on its first launch after a release) merges a cloud that holds a
 # record of a word it does not know (a later release's, from another device): the record and its notebook entry stay
@@ -297,11 +295,11 @@ if __name__ == "__main__":
              test_unreadable_or_bare_cloud_state_does_not_break_app, test_pull_is_deferred_while_practicing,
              test_switching_account_resets_device_binding_and_adopts_new_cloud,
              test_pull_runs_after_exam_is_finished_but_still_on_result_screen, test_first_sync_keeps_real_local_progress_over_empty_cloud,
-             test_first_sync_adopting_cloud_snapshots_local_first, test_token_refresh_does_not_mask_error_status, test_a_word_this_copy_does_not_know_survives_a_conflict_merge,
+             test_first_sync_adopts_a_cloud_with_progress_over_local, test_token_refresh_does_not_mask_error_status, test_a_word_this_copy_does_not_know_survives_a_conflict_merge,
              test_manual_push_with_null_updated_at_still_sends_a_timestamp,
              test_push_uses_a_conditional_update_once_the_device_has_synced, test_stale_device_does_not_overwrite_progress_made_elsewhere, test_cloud_changed_elsewhere_is_adopted_even_when_its_clock_is_behind,
              test_row_deleted_elsewhere_is_recreated_without_looping, test_conflict_during_a_session_waits_and_never_overwrites_the_cloud, test_a_pull_downloads_the_progress_only_when_the_cloud_changed, test_a_practice_set_goes_up_once_at_its_end_or_when_the_app_is_hidden, test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge, test_conflict_merge_redoes_todays_list_from_the_merged_progress,
-             test_snapshots_prune_by_date_and_format_conflict_labels]
+             test_old_snapshots_are_deleted_and_no_new_ones_are_taken]
     failed = 0
     try:
         for t in tests:

@@ -1027,12 +1027,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.46';   // keep equal to the version in sw.js CACHE ('nq-v1.0.46'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.47';   // keep equal to the version in sw.js CACHE ('nq-v1.0.47'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.47', date: '2026-11-05', items: [
+    '拿掉自動快照（每日、同步前、衝突時三種）和設定 › 資料裡的快照清單，已存的快照也從裝置上清掉：進度靠雲端同步。兩台裝置同時改過時照舊逐筆合併；第一次在新裝置登入、雲端已有進度時以雲端為準，這台原本的進度不再另存一份。'
+  ] },
   { v: '1.0.46', date: '2026-11-05', items: [
     '手機選單字的題目答對時，結果面板也列出其他選項和它們的意思（文法題答對時不列，選項沒有意思可附）。'
   ] },
@@ -1444,6 +1447,7 @@ function normalizeState(s) {
   delete out.settings.includeImported;   // 1.0.34: 每日練習包含自訂字卡 went with the custom cards
   if (!courseLevels().includes(out.settings.examLevel)) out.settings.examLevel = DEFAULT_LEVEL;
   delete out.preDoneDismissed; delete out.preFinished;
+  delete out.lastSnapshot;   // 1.0.47: the daily snapshots are gone
   ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt', 'stageTests'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   ['customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
@@ -7800,12 +7804,10 @@ let settingsDirty = false;
 function openSettings(tab) {
   settingsTab = SETTINGS_TABS.some(t => t[0] === tab) ? tab : (settingsTab || 'learn');
   openModal('設定', settingsHtml(), { width: 680, noFocus: true });
-  if (settingsTab === 'data') fillSnapshotList();
 }
 function refreshSettings() {
   const b = document.getElementById('modalBody');
   if (b) b.innerHTML = settingsHtml();
-  if (settingsTab === 'data') fillSnapshotList();
 }
 function settingsHtml() {
   const tabs = `<div class="seg mb-4" role="tablist">${SETTINGS_TABS.map(([k, l]) => `<button type="button" aria-pressed="${settingsTab === k}" data-act="settings-tab" data-tab="${k}">${l}</button>`).join('')}</div>`;
@@ -7879,11 +7881,10 @@ function settingsData() {
       : Sync.pendingEmail
         ? `<div class="setting-row"><div><div class="label">輸入驗證碼</div><div class="hint">登入信已寄到 <b>${esc(Sync.pendingEmail)}</b>。把信裡的 8 位數驗證碼輸入這裡（在 iPhone 主畫面 app 裡請用這個方式）；用電腦瀏覽器的話也可以直接點信裡的連結。</div></div>
           <div class="row-wrap"><input type="text" id="syncCode" placeholder="12345678" inputmode="numeric" autocomplete="one-time-code" maxlength="8" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-verify">登入</button><button type="button" class="btn btn-sm btn-ghost" data-act="sync-cancel-code">換一個 email</button></div></div>`
-        : `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">每個人的資料各自獨立。AI 設定（含 API 金鑰與位址）只留在這台裝置，不會上傳。第一次在新裝置登入時，會以雲端的進度為準（這台若已有進度會先存一份快照）。</div></div>
+        : `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">每個人的資料各自獨立。AI 設定（含 API 金鑰與位址）只留在這台裝置，不會上傳。第一次在新裝置登入時，若雲端已有進度，會以雲端為準，這台原本的進度不會保留。</div></div>
           <div class="row-wrap"><input type="email" id="syncEmail" placeholder="you@example.com" autocomplete="email" inputmode="email" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-login">寄送登入信</button></div></div>`;
   return `
     ${syncBlock}
-    <div class="setting-row"><div><div class="label">自動快照</div><div class="hint">每天第一次開啟時自動保存一份，保留最近 7 天。重設或同步弄錯時，可以回到某一天的狀態。</div><div id="snapList" class="mt-2 small muted">讀取中…</div></div></div>
     ${legacyExists ? `<div class="setting-row"><div><div class="label">重新匯入舊版進度</div><div class="hint">這個瀏覽器裡還有舊版的資料（舊版本身不受影響）。重新匯入會取代目前的進度。</div></div>
       <button type="button" class="btn btn-sm" data-act="legacy-reimport">重新匯入</button></div>` : ''}
     ${hiddenN ? `<div class="setting-row"><div><div class="label">已隱藏 ${hiddenN} 個題目或單字</div><div class="hint">練習時按「這題有問題」或在單字表按「隱藏」的項目。</div></div>
@@ -7924,7 +7925,7 @@ function settingsLook() {
     </details>`;
 }
 
-// ---------- restore (a snapshot, or the old version's data) ----------
+// ---------- restore (the old version's data) ----------
 function applyImportedState(next, msg) {
   const keepAi = state.aiConfig; const keepTts = state.ttsConfig; const hadAi = isAiConfigured();
   state = normalizeState(next);
@@ -9715,81 +9716,12 @@ async function aiTestConnection(btn) {
 
 // ---- 83_safety.js ----
 /* ==========================================================================
-   Data safety: persistent storage, daily snapshots (IndexedDB)
+   Data safety: persistent storage
    ========================================================================== */
-const Snapshots = {
-  DB: 'nihongo_quest_snapshots', STORE: 'snaps', KEEP: 7, dbp: null,
-  open() {
-    if (this.dbp) return this.dbp;
-    this.dbp = new Promise(resolve => {
-      try {
-        if (!('indexedDB' in window)) { resolve(null); return; }
-        const req = indexedDB.open(this.DB, 1);
-        req.onupgradeneeded = (ev) => { const db = ev.target.result; if (!db.objectStoreNames.contains(this.STORE)) db.createObjectStore(this.STORE); };
-        req.onsuccess = (ev) => resolve(ev.target.result);
-        req.onerror = () => resolve(null);
-      } catch (e) { resolve(null); }
-    });
-    return this.dbp;
-  },
-  async tx(mode, fn) {
-    const db = await this.open();
-    if (!db) return null;
-    return new Promise(resolve => {
-      try {
-        const t = db.transaction(this.STORE, mode);
-        const out = fn(t.objectStore(this.STORE));
-        t.oncomplete = () => resolve(out && 'result' in out ? out.result : true);
-        t.onerror = () => resolve(null);
-      } catch (e) { resolve(null); }
-    });
-  },
-  put(date, json) { return this.tx('readwrite', st => st.put(json, date)); },
-  get(date) { return this.tx('readonly', st => st.get(date)); },
-  keys() { return this.tx('readonly', st => st.getAllKeys()); },
-  del(date) { return this.tx('readwrite', st => st.delete(date)); },
-  async prune() {
-    const keys = ((await this.keys()) || []).map(String).sort((a, b) => snapshotSortKey(a).localeCompare(snapshotSortKey(b)));
-    for (const k of keys.slice(0, Math.max(0, keys.length - this.KEEP))) await this.del(k);
-  }
-};
-
-function snapshotSortKey(k) {
-  const s = String(k);
-  const m = s.match(/(\d{4}-\d{2}-\d{2})/);
-  const date = m ? m[1] : '0000-00-00';
-  const rank = s.startsWith('conflict-') ? '2' : s.startsWith('pre-cloud-') ? '1' : '0';
-  return `${date}#${rank}#${s}`;
-}
-
-function snapshotLabel(k) {
-  const s = String(k);
-  const m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) return s.replace(/-/g, '/');
-  const d = `${m[1]}/${m[2]}/${m[3]}`;
-  if (s.startsWith('conflict-')) return `${d}（衝突備份）`;
-  if (s.startsWith('pre-cloud-')) return `${d}（同步前備份）`;
-  return d;
-}
-
 async function requestPersistence() {
   try {
     if (navigator.storage && navigator.storage.persist && !(await navigator.storage.persisted())) await navigator.storage.persist();
   } catch (e) { /* not available for this page */ }
-}
-
-// one snapshot per day, taken when the app opens, so a bad import or reset can be undone
-async function dailySnapshot() {
-  try {
-    const t = todayStr();
-    if (state.lastSnapshot === t) return;
-    if (!Object.keys(state.srs).length) return;
-    const ok = await Snapshots.put(t, JSON.stringify(state));
-    if (!ok) return;
-    state.lastSnapshot = t;
-    saveState();
-    await Snapshots.prune();
-  } catch (e) { /* ignore */ }
 }
 
 // ---------- moved: the site left GitHub Pages for nihongoquest.app in 1.0.39 ----------
@@ -9856,25 +9788,6 @@ Object.assign(ACTIONS, {
   'copy-url': async () => { const url = appUrl(); try { await navigator.clipboard.writeText(url); toast('已複製網址，開 Safari 貼上。'); } catch (e) { prompt('複製這個網址，到 Safari 貼上：', url); } },
   'install-dismiss': () => { try { localStorage.setItem('nq_install_hint', todayStr()); } catch (e) { /* ignore */ } route(); },
   'install-prompt': async () => { const p = deferredInstall; if (!p) return; deferredInstall = null; try { p.prompt(); await p.userChoice; } catch (e) { /* dismissed */ } route(); }
-});
-
-async function fillSnapshotList() {
-  const box = document.getElementById('snapList');
-  if (!box) return;
-  const keys = ((await Snapshots.keys()) || []).map(String).sort((a, b) => snapshotSortKey(b).localeCompare(snapshotSortKey(a)));
-  box.innerHTML = keys.length
-    ? `<div class="row-wrap">${keys.map(k => `<button type="button" class="btn btn-sm" data-act="snapshot-restore" data-date="${esc(k)}">${esc(snapshotLabel(k))}</button>`).join('')}</div>`
-    : '<span class="small muted">還沒有快照（每天第一次開啟時會自動建立）。</span>';
-}
-
-Object.assign(ACTIONS, {
-  'snapshot-restore': async (el) => {
-    const d = el.dataset.date;
-    if (!confirm(`還原到 ${snapshotLabel(d)} 開啟時的進度？之後的作答紀錄會被取代。`)) return;
-    const json = await Snapshots.get(d);
-    if (!json) { toast('讀不到這份快照'); return; }
-    try { applyImportedState(JSON.parse(json), `已還原 ${d} 的快照`); } catch (e) { toast('快照內容有問題，無法還原'); }
-  }
 });
 
 // ---- 84_store.js ----
@@ -10035,8 +9948,8 @@ const Sync = {
   busy() { return Boolean(SESSION || (EXAM && !EXAM.finished)); },   // never swap state under a running practice or exam (a finished exam only shows its result)
 
   // Upload is conditional: once this device has synced, the row is only replaced when its updated_at is still the
-  // one we last pulled or pushed. Otherwise another device wrote in between and pull() decides (it keeps the
-  // cloud copy and snapshots ours). `final` stops a pull→push→pull loop if the condition keeps failing.
+  // one we last pulled or pushed. Otherwise another device wrote in between and pull() decides (it merges the
+  // two copies). `final` stops a pull→push→pull loop if the condition keeps failing.
   async push(final) {
     const session = this.session; // re-read: a logout during the debounce must cancel the upload
     if (!session || !this.client) return;
@@ -10086,10 +9999,8 @@ const Sync = {
       let data = this.meta.everSynced ? await row('updated_at') : null;
       if (!this.meta.everSynced || (data && !SyncCore.sameStamp(data.updated_at, this.meta.lastPulledUpdatedAt))) data = await row('state, updated_at');
       const pick = SyncCore.pullDecision(this.meta, state, data);
+      // a first sync adopts a cloud that has progress over whatever this device had: no copy is kept (1.0.47)
       if (pick === 'adopt' || pick === 'conflict') {
-        // adopting the cloud over real local progress keeps a copy: first sync as pre-cloud-, a conflict as conflict-
-        const snap = pick === 'conflict' ? 'conflict-' : (!this.meta.everSynced && !SyncCore.isEmptyProgress(state)) ? 'pre-cloud-' : null;
-        if (snap) { try { await Snapshots.put(snap + todayStr(), JSON.stringify(state)); await Snapshots.prune(); } catch (e) { /* best effort */ } }
         if (pick === 'conflict') {
           // both sides changed: merge record by record, adopt the merge with the cloud's stamp as base, then upload it
           await this.applyCloud({ state: SyncCore.mergeStates(state, data.state), updated_at: data.updated_at }, true);
@@ -10121,7 +10032,7 @@ const Sync = {
       applyTheme(); applyFurigana();
       audioPrefetchSoon();   // progress made on another device changes today's plan
       if (!modalOpen()) route();
-      toast(conflict ? '另一台裝置同時更新了進度，已把兩邊的紀錄合併；合併前的本機版本存成快照（設定 › 資料）。' : '已從雲端更新進度', conflict ? 7000 : undefined);
+      toast(conflict ? '另一台裝置同時更新了進度，已把兩邊的紀錄合併。' : '已從雲端更新進度', conflict ? 7000 : undefined);
       this.lastError = null; this.setStatus('idle');
     } catch (e) {
       this.lastError = '雲端資料無法讀取，已保留本機進度'; this.setStatus('error'); toast(this.lastError, 5000);
@@ -10187,8 +10098,8 @@ async function init() {
   if (!location.hash || location.hash === '#') history.replaceState(null, '', '#/today');
   route();
   requestPersistence();
-  dailySnapshot();
   try { indexedDB.deleteDatabase('nihongo_anki_media_db_v1'); } catch (e) { /* none */ }   // 1.0.34: the sounds and pictures of imported Anki cards, gone with them
+  try { indexedDB.deleteDatabase('nihongo_quest_snapshots'); } catch (e) { /* none */ }   // 1.0.47: the snapshots, gone; progress lives in the cloud
   registerServiceWorker();
   audioPrefetchSoon();   // 離線語音: a few seconds after opening, and again whenever the network comes back
   window.addEventListener('online', () => audioPrefetchSoon(1000));

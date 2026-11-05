@@ -33,8 +33,8 @@
   //   push     – nothing in the cloud, or it is still the version this device last saw and local changes wait
   //   idle     – cloud unchanged and nothing to upload
   //   adopt    – another device moved the cloud and this one has no unsynced changes (or never synced)
-  //   conflict – another device moved the cloud AND this device has unsynced changes; the caller keeps the
-  //              cloud and snapshots the local copy. Device clocks play no part in this.
+  //   conflict – another device moved the cloud AND this device has unsynced changes; the caller merges the
+  //              two record by record (mergeStates). Device clocks play no part in this.
   function pullDecision(meta, local, cloud) {
     meta = meta || {};
     if (!cloud) return 'push';

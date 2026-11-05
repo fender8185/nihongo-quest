@@ -1912,7 +1912,7 @@ def test_the_old_address_says_the_site_moved_and_data_settings_have_no_backup_fi
     assert not r['here'] and r['on'] and not r['off'], r   # only on fender8185.github.io (forced here), never on the new address
     assert 'nihongoquest.app' in r['text'] and '同一個 Email 登入' in r['text'] and '主畫面' in r['text'] and '金鑰' in r['text'], r['text']
     assert r['href'] == 'https://nihongoquest.app/#/today' and r['target'] == '_blank', r
-    assert r['data'] == {'dl': False, 'restore': False, 'file': False, 'snaps': True}, r['data']   # the daily snapshots stay
+    assert r['data'] == {'dl': False, 'restore': False, 'file': False, 'snaps': False}, r['data']   # the snapshots went too (1.0.47)
     assert URL.rstrip('/') + '/*' in r['hint'] and 'github.io' not in r['hint'], r['hint']
     assert r['gone'] == ['undefined'] * 3, r['gone']
 
