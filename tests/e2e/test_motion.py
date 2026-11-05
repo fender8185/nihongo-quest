@@ -1,4 +1,5 @@
-"""2026-11-05 (1.0.41): 進度動畫只在打開頁面時播一次、答對彈一下／答錯晃一下、練習進度條滑過去、結算圓環從這組開始前轉上去、數字往上跳。"""
+"""2026-11-05 (1.0.41): 進度動畫只在打開頁面時播一次、答對彈一下／答錯晃一下、練習進度條滑過去、結算圓環從這組開始前轉上去、數字往上跳。
+1.0.50: 連對 N、答題音效（發音等音效響完）、答對時新亮的點跳一下和「升到熟悉」。"""
 import json, os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from cdp import Browser
@@ -113,6 +114,77 @@ def test_back_after_a_minute_plays_the_page_again(b):
       return JSON.stringify({ before, short, long }); })()"""
     r = json.loads(ev(b, js))
     assert r == {'before': False, 'short': False, 'long': True}, r
+
+# the current card ready to answer: previews passed, its question built
+READY_Q = "const ready = () => { while (currentEntry().preview && !currentEntry().previewDone) dismissPreview(); if (!currentEntry().q) prepareEntry(SESSION.idx); return currentEntry(); };"
+
+def test_a_run_shows_from_three_and_a_slip_gives_it_back(b):
+    js = "(async () => { " + FRESH + READY_Q + """ startSession('daily', { size: 20 });
+      const sounds = []; playSfx = (kind, step) => { sounds.push([kind, step]); return 0; };
+      const chip = () => { const c = document.querySelector('.fb-head .combo'); return c ? c.textContent : null; };
+      const log = []; let slip = null;
+      for (let k = 0; k < 7 && SESSION.idx < SESSION.entries.length; k++) {
+        const e = ready(); const wrong = k === 4;
+        answerCurrent(wrong ? (e.q.answer + 1) % e.q.options.length : e.q.answer);
+        log.push({ ok: !wrong, combo: SESSION.combo, chip: chip() });
+        if (wrong && e.undo) { ACTIONS.slip(); slip = { combo: SESSION.combo, chip: chip() }; }
+        nextQuestion();
+      }
+      SESSION = null; document.body.classList.remove('practicing');
+      return JSON.stringify({ log, slip, sounds }); })()"""
+    r = json.loads(ev(b, js))
+    log = r['log']
+    assert [x['combo'] for x in log[:5]] == [1, 2, 3, 4, 0], r
+    assert [x['chip'] for x in log[:5]] == [None, None, '連對 3', '連對 4', None], r
+    assert r['slip'] == {'combo': 4, 'chip': None}, r   # the miss did not count: the run goes on from 4
+    assert log[5]['combo'] == 5 and log[5]['chip'] == '連對 5', r
+    assert r['sounds'][:6] == [['ok', 0], ['ok', 1], ['ok', 2], ['ok', 3], ['bad', -1], ['ok', 4]], r
+
+def test_the_reading_waits_for_the_sound_and_the_switch_turns_it_off(b):
+    js = "(async () => { " + FRESH + READY_Q + """ startSession('daily', { size: 20 });
+      const spoken = []; speak = (text) => { spoken.push(text); };
+      const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+      // a card whose answer is read out (a word or a sentence), answered right
+      const next = () => { for (let g = 0; g < 30; g++) { const e = ready(); if (e.q.speakWord && e.q.fullJp && !e.q.audio) return e; answerCurrent(e.q.answer); nextQuestion(); } return null; };
+      // what this card reads after the answer; earlier cards' auto-play timers are left to run out first
+      const mine = async (e) => { await sleep(300); spoken.length = 0; const want = [e.q.speakWord, e.q.fullJp]; return () => spoken.filter(x => want.includes(x)).length; };
+      const defaults = defaultSettings().sfx; const row = settingsLearn().includes('data-key="sfx"');
+      let e = next(); let n = await mine(e); answerCurrent(e.q.answer);
+      const on = { now: n() }; await sleep(700); on.later = n();
+      nextQuestion(); e = next(); n = await mine(e); answerCurrent(e.q.answer); nextQuestion(); await sleep(700);
+      const gone = n();   // 下一題 before the sound ended: the old card's reading never comes
+      e = next(); state.settings.sfx = false; n = await mine(e); answerCurrent(e.q.answer);
+      const off = { now: n(), ms: playSfx('ok') };
+      SESSION = null; document.body.classList.remove('practicing');
+      return JSON.stringify({ defaults, row, on, gone, off }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['defaults'] is True and r['row'], r
+    assert r['on'] == {'now': 0, 'later': 1}, r
+    assert r['gone'] == 0, r
+    assert r['off'] == {'now': 1, 'ms': 0}, r
+
+def test_the_dots_an_answer_lit_pop_and_a_new_level_says_so(b):
+    js = "(async () => { " + FRESH + NAMES + READY_Q + """ startSession('daily', { size: 12 });
+      playSfx = () => 0; const t = todayStr();
+      let e = ready(); const key = e.q.key;
+      state.srs[key] = { b: 2, due: t, n: 3, ok: 3, ng: 0, st: 3, s: 4.6, d: 5, last: addDays(t, -6), intro: addDays(t, -20) };
+      answerCurrent(e.q.answer);
+      const meta = document.querySelector('.fb-meta');
+      const up = { lv: e.lvUp, label: srsLevelLabel(state.srs[key], key), chip: (meta.querySelector('.lv-up') || {}).textContent || null,
+        lit: meta.querySelectorAll('.dots i.on').length, ups: meta.querySelectorAll('.dots i.up').length, dotNames: names('.fb-meta .dots i.up'), chipNames: names('.fb-meta .lv-up') };
+      renderPractice(); const redraw = names('.fb-meta');
+      nextQuestion(); e = ready(); const k2 = e.q.key;
+      state.srs[k2] = { b: 3, due: t, n: 4, ok: 4, ng: 0, st: 4, s: 6, d: 5, last: addDays(t, -6), intro: addDays(t, -20) };
+      answerCurrent((e.q.answer + 1) % e.q.options.length);
+      const miss = { lv: e.lvUp || null, ups: document.querySelectorAll('.fb-meta .dots i.up').length, chip: Boolean(document.querySelector('.lv-up')) };
+      SESSION = null; document.body.classList.remove('practicing');
+      return JSON.stringify({ up, redraw, miss }); })()"""
+    r = json.loads(ev(b, js))
+    u = r['up']
+    assert u['lv'] == '熟悉' == u['label'] and u['chip'] == '升到熟悉', r   # stability past 5 days: 熟悉
+    assert u['ups'] == u['lit'] - 2 >= 1 and set(u['dotNames']) == {'dotUp'} and u['chipNames'] == ['iconPop'], r
+    assert r['redraw'] == [], r   # drawn again (顯示中文, ⋯, a sync): still
+    assert r['miss'] == {'lv': None, 'ups': 0, 'chip': False}, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

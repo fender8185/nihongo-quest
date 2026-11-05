@@ -1470,6 +1470,7 @@ def test_a_kanji_question_reads_its_example_word_once_answered(b):
     js = """(() => { const k = REG.kanji.find(x => !meaningShowsKanji(x) && (x.ex || []).filter(([w, r]) => w && r && r.length >= 2 && w !== r).length >= 2);
       const t = todayStr(); state.srs[k.key] = { b: 3, due: t, n: 3, ok: 3, ng: 0, s: 6, d: 5, last: addDays(t, -6), f: {} };
       const byFmt = {}; for (let i = 0; i < 120 && Object.keys(byFmt).length < 3; i++) { const q = makeKanjiQuestion(k); if (q && !byFmt[q.fmt]) byFmt[q.fmt] = q; }
+      state.settings.sfx = false;   // read at once: with the answer sound on it waits for the notes (test_motion)
       const said = []; const orig = speak; speak = (text) => { said.push(text); return Promise.resolve(); };
       const out = {};
       Object.entries(byFmt).forEach(([f, q]) => { said.length = 0; startSession('items', { items: [k] }); const e = currentEntry(); e.previewDone = true; e.q = q; renderPractice();
@@ -1789,6 +1790,7 @@ def test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off(b):
     js = """(() => { Object.assign(state.settings, { autoSpeak: false, listening: false, audioOptions: false }); state.stage = 'main'; DAILY_CACHE = null;
       const lq = (t) => Boolean(makeListenQuestion(REG.listen.find(x => x.t === t)).audioOptions);
       const out = { speech: speechAvailable(), listen: dailyPlan().newL.length > 0, resp: lq('resp'), scene: lq('scene'), dialog: lq('dialog') };
+      state.settings.sfx = false;   // read at once (see above)
       const said = []; const orig = speak; speak = (x) => { said.push(x); return Promise.resolve(); };
       const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x)); startSession('items', { items: [v] }); const e = currentEntry(); e.previewDone = true; renderPractice(); answerCurrent(e.q.answer);
       speak = orig; SESSION = null; document.body.classList.remove('practicing'); out.spoke = said.length > 0;

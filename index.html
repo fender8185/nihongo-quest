@@ -533,6 +533,12 @@ details.mrow .mbody { padding: 4px 0 14px; }
 .q-card.just-ok :is(.opt.correct, .spell-out.ok, .order-out.ok) { animation: pop .3s ease-out; }
 .q-card.just-ok .fb-head svg { animation: iconPop .3s cubic-bezier(.3, 1.6, .6, 1); }
 .q-card.just-bad :is(.opt.wrong, .spell-out.bad, .order-out.bad) { animation: shake .3s ease; }
+/* 1.0.50: the run chip by 答對了, the dots this answer lit and the 升到熟悉 chip; on a phone they wait for the panel to rise */
+@keyframes dotUp { 0% { transform: scale(.2); } 55% { transform: scale(1.8); box-shadow: 0 0 0 3px var(--ok-soft); } }
+.q-card.just-ok :is(.combo, .lv-up) { animation: iconPop .35s cubic-bezier(.3, 1.6, .6, 1); }
+.q-card.just-ok .dots i.up { animation: dotUp .5s ease-out .1s backwards; }
+.fb-sheet.rise :is(.combo, .lv-up) { animation: iconPop .35s cubic-bezier(.3, 1.6, .6, 1) .5s backwards; }
+.fb-sheet.rise .dots i.up { animation: dotUp .5s ease-out .6s backwards; }
 .preview { text-align: center; padding: 20px 10px 8px; }
 .preview .word { font-size: 44px; font-weight: 600; line-height: 1.5; }
 .preview .reading { font-size: 18px; color: var(--fg-3); }
@@ -1025,12 +1031,17 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.49';   // keep equal to the version in sw.js CACHE ('nq-v1.0.49'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.50';   // keep equal to the version in sw.js CACHE ('nq-v1.0.50'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.50', date: '2026-11-05', items: [
+    '作答有聲音了：答對響兩個往上的短音，連對越多音越高一點；剛升到「熟悉」或「已熟練」時響三個音；答錯是一聲比較小的低音。單字或句子的發音等音效響完才唸。設定 › 學習可以關掉「答題音效」。階段測驗和模擬考不響。',
+    '連續答對 3 題起，「答對了」旁邊會出現「連對 N」；答錯就重新算，「手滑，不算」會把連對數還回去。',
+    '答對後這題多亮的那顆點會跳一下；剛升到「熟悉」或「已熟練」時旁邊出現「升到熟悉」「升到已熟練」。'
+  ] },
   { v: '1.0.49', date: '2026-11-05', items: [
     'AI 改用網站自己的 Gemini：登入後就能用題目解析、單元補充、出題、補充例句、句子分析和學習建議，不必再自己申請、填 API Key。每人每天 50 次，AI 回答下方會寫今天是第幾次。',
     '設定裡的 AI 分頁、工具與 AI 頁的 API 申請說明一起拿掉；這台裝置存過的 AI 金鑰和模型設定也會清掉。'
@@ -1361,6 +1372,7 @@ function defaultSettings() {
     showZh: true,
     furigana: true,
     speechRate: 1.0,
+    sfx: true,               // 答題音效 (1.0.50)
     theme: 'dark',
     examDate: '2027-07-04',
     examLevel: 'N4',         /* level-literal-ok: default */ // the JLPT level the exam date is for: 學習分析 and the exam countdown project against it (1.0.26)
@@ -1913,9 +1925,11 @@ function srsAnswer(key, correct, opt = {}) {
   return { rec: r, isNew, before, after: r.b, reviewed };
 }
 
-function srsDots(b) {
+// from: the level before an answer; the dots it lit are marked .up and pop on the draw right after it (1.0.50)
+function srsDots(b, from = null) {
   const lit = b <= 0 ? 0 : b <= 2 ? b : b <= 4 ? 3 + (b === 4 ? 1 : 0) : 5;
-  return `<span class="dots" aria-label="熟練度 ${lit}/5">${[0, 1, 2, 3, 4].map(i => `<i class="${i < lit ? 'on' : ''}"></i>`).join('')}</span>`;
+  const was = from === null ? lit : Math.max(0, Math.min(5, from));
+  return `<span class="dots" aria-label="熟練度 ${lit}/5">${[0, 1, 2, 3, 4].map(i => `<i class="${i < lit ? (i >= was ? 'on up' : 'on') : ''}"></i>`).join('')}</span>`;
 }
 // 「我會了」: the learner vouches for a word. It goes to five stars at once (已熟練 once its 假名拼字 has been right) and comes
 // back for a check in about six weeks; answering it wrong later drops the vouch and the ordinary rules apply again. 取消
@@ -4642,7 +4656,7 @@ function feedbackHtml(e, sheet = false) {
   const example = q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-cloze' && q.fmt !== 'v-match' ? exampleHtml(q.item.ex, q.item.exZh, 'mt-2', q.item) : '';
   const why = example ? String(q.why || '').replace(/\n- 例：[^\n]*/g, '') : q.why;
   const cur = q.key ? state.srs[q.key] : null;
-  const srsInfo = e.srs ? `<span title="${esc(srsLevelLabel(e.srs.rec, q.key) + '・' + dueLabel(e.srs.rec, q.key))}">${srsDots(e.srs.rec.b)}</span>`
+  const srsInfo = e.srs ? `<span title="${esc(srsLevelLabel(e.srs.rec, q.key) + '・' + dueLabel(e.srs.rec, q.key))}">${srsDots(e.srs.rec.b, e.srs.before)}</span>${e.lvUp ? `<span class="chip chip-accent lv-up">升到${e.lvUp}</span>` : ''}`
     : e.encore && cur ? `<span title="${esc(srsLevelLabel(cur, q.key) + '・這次不影響排程')}">${srsDots(cur.b)}</span>` : '';   // the level and next date as a tooltip (1.0.35)
   const mistake = !ok && q.kind !== 'x' && !e.slip && !SESSION.test && !(e.requeued && q.custom === 'v-match') ? '<span>已加入錯題本</span>' : '';   // a 再練一次 配對 writes nothing
   const slip = e.slip ? '<span class="chip">手滑，不算</span>' : '';   // the button itself is under ⋯ (moreItemsHtml)
@@ -4658,7 +4672,7 @@ function feedbackHtml(e, sheet = false) {
   }
   return `
     <div class="feedback ${ok ? 'ok' : 'bad'}">
-      <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>'
+      <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>' + (e.combo >= 3 ? `<span class="chip chip-accent combo">連對 ${e.combo}</span>` : '')
         : e.missed && e.missed.length ? icon('cross') + `<span>配錯了：<span class="jp">${esc(e.missed.map(x => x.label).join('、'))}</span></span>`   // 配對: the words paired wrong
         : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
       ${chosen}${sheet && q.revealHtml ? q.revealHtml : ''}${diff}${full}${example}
@@ -4712,9 +4726,11 @@ function answerCurrent(i) {
     recordAction(q.kind === 'v' || q.kind === 'k' || q.kind === 'a' ? 'v' : q.kind === 'g' || q.kind === 'c' ? 'g' : 'q', null, q.kind === 'c' ? 'g' : q.kind);
     SESSION.stats[ok ? 'correct' : 'wrong']++;
     SESSION.results.push({ key: q.key, ok, q, chosen: i, requeued: true, missed: e.missed });
-    saveState(); renderPractice(); speakAnswered(q);
+    const wait = cheer(e, ok);
+    saveState(); renderPractice(); speakAnswered(q, wait);
     return;
   }
+  const lvBefore = q.key && state.srs[q.key] ? srsLevelLabel(state.srs[q.key], q.key) : null;
   if (['v', 'g', 'l', 'r', 'k', 'c', 'a'].includes(q.kind) && !e.encore) {
     e.srs = srsAnswer(q.key, itemOk);
     if (e.srs.isNew) SESSION.stats.newCount++;
@@ -4722,6 +4738,9 @@ function answerCurrent(i) {
   if (q.kind === 'm' && q.mistakeId) noteAnswered('m:' + q.mistakeId);   // a notebook card is answered as its notebook entry (srsAnswer never sees it)
   if (q.kind === 'v' && q.fmt && q.fmt.startsWith('v-')) recordFormat(state.srs[q.key], q.fmt, itemOk);
   if (q.kind === 'g' && q.item && ((q.item.t || 'choice') === 'choice' || (q.fmt && q.fmt.endsWith('-type'))) && q.fmt) recordFormat(state.srs[q.key], q.fmt, ok, 'gf');
+  // just became 熟悉 or 已熟練 (a word's spelling, recorded above, can be the step to 已熟練): a chip by the dots (1.0.50)
+  const lvAfter = e.srs && itemOk ? srsLevelLabel(e.srs.rec, q.key) : null;
+  if ((lvAfter === '熟悉' || lvAfter === '已熟練') && lvAfter !== lvBefore && lvBefore !== '已熟練') e.lvUp = lvAfter;
   // a new word comes back once more in another format; so does a new grammar item answered right (a miss gets the 再練一次 copy instead)
   if (e.srs && e.srs.isNew && (q.kind === 'v' || (q.kind === 'g' && ok && grammarHasFormats(q.item)))) scheduleEncores(e, itemOk);
   if (q.fmt) {
@@ -4748,9 +4767,17 @@ function answerCurrent(i) {
   });
   if (e.undo) e.undo.retries = retries;
   SESSION.results.push({ key: q.key, ok, q, chosen: i, missed: e.missed });
+  const wait = cheer(e, ok);
   saveState();
   renderPractice();
-  speakAnswered(q);
+  speakAnswered(q, wait);
+}
+// 1.0.50: the run of right answers (shown from three on, a miss ends it quietly) and the answer's sound; returns how long the
+// sound lasts, so the word or sentence read after it does not play over it. Not in a 階段測驗.
+function cheer(e, ok) {
+  e.comboBefore = SESSION.combo || 0;   // 「手滑，不算」 gives it back
+  SESSION.combo = e.combo = ok ? e.comboBefore + 1 : 0;
+  return playSfx(!ok ? 'bad' : e.lvUp ? 'up' : 'ok', e.combo - 1);
 }
 // 再練一次: the item comes back 3–5 questions later, in another format when it has one (see prepareEntry)
 function queueRetry(item, mistake, orig) {
@@ -4760,10 +4787,13 @@ function queueRetry(item, mistake, orig) {
   SESSION.entries.splice(at, 0, again);
   return again;
 }
-function speakAnswered(q) {
+function speakAnswered(q, wait = 0) {
   // a kanji question has no sentence: it reads its example word (the reading asked, or the first example's), as 發音 does
   const text = q.fmt === 'v-meaning' || q.fmt === 'v-recall' || q.fmt === 'v-listen' || q.fmt === 'v-reading' || q.fmt === 'v-kanji' || (q.fmt && (q.fmt.startsWith('a-') || q.fmt.startsWith('k-'))) ? q.speakWord : q.fullJp;
-  if (text) speak(text, speakOpts(q, text));
+  if (!text) return;
+  if (!wait) { speak(text, speakOpts(q, text)); return; }
+  const e = currentEntry();
+  setTimeout(() => { if (SESSION && currentEntry() === e) speak(text, speakOpts(q, text)); }, wait);   // not once 下一題 or 結束 was pressed
 }
 function nextQuestion() {
   const e = currentEntry();
@@ -5081,6 +5111,7 @@ const ACTIONS = {
     const retries = u.retries || [];   // only this answer's copies: a word paired wrong may still have one from its own earlier miss
     SESSION.entries = SESSION.entries.filter((x, i) => i <= SESSION.idx || !(retries.includes(x) || (wasNew && x.encore && x.item === e.item)));
     const last = SESSION.results[SESSION.results.length - 1]; if (last && last.q === q) SESSION.results.pop();
+    SESSION.combo = e.combo = e.comboBefore || 0;
     e.slip = true; e.srs = null; e.mistakeDone = false; delete e.undo;
     saveState(); renderPractice(); toast('這題不算，排程維持原狀');
   },
@@ -7784,6 +7815,7 @@ function settingsLearn() {
     <div class="setting-row"><div><div class="label">考試</div><div class="hint">學習分析和模擬考頁會照這個級別和日期推估進度。</div></div>
       <div class="row"><select class="select" style="width:auto" data-change="setting" data-key="examLevel">${courseLevels().map(v => `<option value="${v}" ${s.examLevel === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
       <input class="input" type="date" style="width:auto" value="${esc(s.examDate)}" data-change="setting" data-key="examDate" data-type="date" /></div></div>
+    ${boolRow('sfx', '答題音效', '答對、答錯時響一聲。iPhone 開靜音時不會響，單字發音照常。')}
     <div class="setting-row"><div><div class="label">語速</div><div class="hint">目前 ${Number(s.speechRate).toFixed(2)} 倍</div></div>
       <div class="row"><input type="range" min="0.6" max="1.2" step="0.05" value="${esc(s.speechRate)}" data-change="setting" data-key="speechRate" data-type="num" data-min="0.6" data-max="1.2" style="width:160px" /><button type="button" class="btn btn-sm" data-act="tts-test">${icon('speaker')}試聽</button></div></div>
     <div id="audioPrefetchBox" class="small mt-2">${audioPrefetchHtml()}</div>
@@ -8658,6 +8690,35 @@ function unlockTtsPlayer() {
     const p = a.play();
     if (p && p.catch) p.catch(() => { ttsPlayerUnlocked = false; });
   } catch (e) { ttsPlayerUnlocked = false; }
+}
+
+// 1.0.50: the answer's sound, synthesized (no clip to fetch, so it plays offline too). Right: two notes up, a semitone higher
+// for each answer of a run (up to five); three when the item reaches 熟悉 or 已熟練. Wrong: one quieter note sliding down.
+// Triangle waves: a phone speaker drops most of a pure low tone. Returns its length in ms, 0 when nothing played.
+let sfxCtx = null;
+function playSfx(kind, step = 0) {
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!state.settings.sfx || !AC) return 0;
+  try {
+    if (!sfxCtx) sfxCtx = new AC();
+    if (sfxCtx.state !== 'running') sfxCtx.resume().catch(() => {});   // iOS also leaves it 'interrupted' after a call
+    const t0 = sfxCtx.currentTime + 0.02, k = Math.pow(2, clamp(step, 0, 5) / 12);
+    const notes = kind === 'bad' ? [[311, 0, 0.22, 0.09, 233]]   // [Hz, start s, length s, volume, slide to Hz]
+      : (kind === 'up' ? [659, 831, 988] : [659, 988]).map((f, i, all) => [f * k, i * 0.075, i === all.length - 1 ? 0.28 : 0.12, 0.12]);
+    notes.forEach(([f, at, len, vol, to]) => {
+      const o = sfxCtx.createOscillator(), g = sfxCtx.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(f, t0 + at);
+      if (to) o.frequency.exponentialRampToValueAtTime(to, t0 + at + len);
+      g.gain.setValueAtTime(0.0001, t0 + at);
+      g.gain.exponentialRampToValueAtTime(vol, t0 + at + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + len);
+      o.connect(g); g.connect(sfxCtx.destination);
+      o.start(t0 + at); o.stop(t0 + at + len + 0.02);
+    });
+    const [, at, len] = notes[notes.length - 1];
+    return Math.round((at + len) * 1000) + 40;
+  } catch (e) { return 0; }
 }
 
 function stopSpeaking() {
