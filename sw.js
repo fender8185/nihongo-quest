@@ -1,14 +1,15 @@
 /* Nihongo Quest service worker: versioned app-shell cache, cache-first for same-origin GETs. */
-const CACHE = 'nq-v1.0.38';
+const CACHE = 'nq-v1.0.39';
 const AUDIO_CACHE = 'nq-audio';   // 雲端音檔 heard so far: kept across releases
 // A clip's two addresses: R2, where the app fetches it since 1.0.29, and the Supabase bucket R2 is a copy of, which the
 // app falls back to and which every clip cached before 1.0.29 is filed under
 const AUDIO_HOST = 'https://audio.nihongoquest.app/';
 const AUDIO_PATH = '/storage/v1/object/public/JPY_audio/';
 const AUDIO_SUPABASE = 'https://pwudaariihdshiwqbkfx.supabase.co' + AUDIO_PATH;
+// The page is cached as './' only: Cloudflare answers /index.html with a redirect, and a redirected response cannot
+// answer a navigation
 const PRECACHE = [
   './',
-  './index.html',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -68,7 +69,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE).then((cache) => cache.put(req, copy));
         }
         return res;
-      }).catch(() => (req.mode === 'navigate' ? caches.match('./index.html') : undefined));
+      }).catch(() => (req.mode === 'navigate' ? caches.match('./') : undefined));
     })
   );
 });

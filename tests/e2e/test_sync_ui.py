@@ -1,4 +1,4 @@
-"""Task 9: sync status chip, settings login panel, backup banner suppression, clickable update toast."""
+"""Task 9: sync status chip, settings login panel, clickable update toast."""
 import os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from cdp import Browser
@@ -42,18 +42,6 @@ def test_logged_in_chip_and_panel(b):
     assert out[-2] == '{"email":true,"now":true,"out":true,"del":true,"login":false}', out[-2]
     assert out[-1] == '{"txt":"同步中","cls":"sync-chip is-pending"}', out[-1]
 
-def test_backup_banner_suppressed_when_recently_synced(b):
-    seed = "[0,-1,-2].forEach(o => { state.dailyLogs[todayStr(o)] = { quizCount: 1 }; }); state.lastBackup = null; state.backupSnooze = null; backupDue()"
-    out = boot(b, [
-        ("eval", seed),
-        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
-        ("eval", "backupDue()"),
-        ("eval", "Sync.signOut().then(() => backupDue())"),
-    ])
-    assert out[-3] is True, "banner should be due before login"
-    assert out[-2] is False, "banner must be suppressed after a recent sync"
-    assert out[-1] is True, "banner rule returns to normal after logout"
-
 def test_toast_is_clickable_while_shown(b):
     out = b.run([("nav", URL), ("wait", READY),
         ("eval", "toast('x'); getComputedStyle(document.getElementById('toast')).pointerEvents")])
@@ -63,7 +51,7 @@ if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
     tests = [test_chip_shows_logged_out_and_opens_data_tab, test_login_button_sends_normalized_email, test_eight_digit_code_from_the_email_logs_in, test_logged_in_chip_and_panel,
-             test_backup_banner_suppressed_when_recently_synced, test_toast_is_clickable_while_shown]
+             test_toast_is_clickable_while_shown]
     failed = 0
     try:
         for t in tests:

@@ -42,6 +42,13 @@ def test_data_lives_in_its_own_versioned_file_and_is_precached(b):
     assert r['data'] and r['tag'] and r['tag'].startswith('./data.js?v=') and r['inline'], r
     assert any(u.endswith(r['tag'][1:]) for u in r['urls']), r
 
+def test_the_page_is_precached_as_the_folder_only(b):
+    # 1.0.39: Cloudflare answers /index.html with a redirect, and a redirected response cannot answer a navigation offline
+    js = """navigator.serviceWorker.ready.then(() => caches.keys()).then(ks => caches.open(ks.find(k => k.startsWith('nq-v'))).then(c => c.keys()))
+      .then(reqs => JSON.stringify(reqs.map(r => new URL(r.url).pathname).filter(p => p === '/' || p.endsWith('.html'))))"""
+    out = b.run([("nav", URL), ("wait", READY), ("wait", "!!navigator.serviceWorker.controller"), ("eval", js)])
+    assert out[-1] == '["/"]', out[-1]
+
 def test_a_clip_cached_under_the_supabase_address_answers_for_its_r2_address(b):
     # 1.0.29 fetches clips from R2; a device keeps what it cached before under the Supabase address. No server has this
     # clip name, so only the cached copy can answer.
@@ -69,7 +76,7 @@ def test_a_cached_clip_is_found_by_its_address_whatever_it_varies_on(b):
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
-    tests = [test_first_visit_does_not_reload_itself, test_app_renders_while_auth_session_restore_hangs, test_app_renders_and_sync_is_off_when_client_creation_throws, test_data_lives_in_its_own_versioned_file_and_is_precached,
+    tests = [test_first_visit_does_not_reload_itself, test_app_renders_while_auth_session_restore_hangs, test_app_renders_and_sync_is_off_when_client_creation_throws, test_data_lives_in_its_own_versioned_file_and_is_precached, test_the_page_is_precached_as_the_folder_only,
              test_a_clip_cached_under_the_supabase_address_answers_for_its_r2_address, test_a_cached_clip_is_found_by_its_address_whatever_it_varies_on]
     failed = 0
     try:

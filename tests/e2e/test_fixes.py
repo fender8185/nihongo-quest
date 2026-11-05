@@ -1067,7 +1067,7 @@ def test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_g
 def test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints(b):
     js = """(() => { location.hash = '#/today'; route(); const hero = document.querySelector('.hero');
       const help = hero.querySelector('.hero-panel[data-panel=help]'); const ring = hero.querySelector('.ring');
-      state.lastBackup = null; state.backupSnoozeUntil = null; [1, 2, 3].forEach(i => { state.dailyLogs[addDays(todayStr(), -i)] = { vocabCount: 5 }; }); const banner = backupBannerHtml();   // the reminder waits for three days of use
+      [1, 2, 3].forEach(i => { state.dailyLogs[addDays(todayStr(), -i)] = { vocabCount: 5 }; });
       startSession('daily', {}); route(); let n = 0; while (n++ < 20) { const e = currentEntry(); if (e.preview && !e.previewDone) { dismissPreview(); continue; } if (e.q && !e.q.custom) break; nextQuestion(); }
       const before = { hint: !!document.querySelector('.pr-actions .kbd-hint'), next: !!document.querySelector('.pr-next') };
       answerCurrent(currentEntry().q.answer);
@@ -1075,11 +1075,10 @@ def test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints(b):
       SESSION = null; document.body.classList.remove('practicing');
       location.hash = '#/stats'; route(); const th = [...document.querySelectorAll('th.col-left')].length; const td = [...document.querySelectorAll('td.col-left')].length;
       const css = document.querySelector('style').textContent;
-      return JSON.stringify({ help: !!help, helpText: help ? help.textContent : '', ring: !!ring, banner, before, after, th, td, hover: /hover: none/.test(css) && /kbd-hint/.test(css), ringCss: /\\.hero-center > \\.ring \\{[^}]*order: -1/.test(css) && !/\\.hero \\.ring \\{[^}]*display: none/.test(css) && hero.classList.contains('hero-center'), safeTop: /body\\.practicing \\.content \\{[^}]*padding-top: calc\\(18px \\+ env\\(safe-area-inset-top/.test(css), noZoom: /maximum-scale=1/.test(document.querySelector('meta[name=viewport]').content) && /user-scalable=no/.test(document.querySelector('meta[name=viewport]').content) && /html \\{ touch-action: manipulation; overscroll-behavior: none/.test(css), noTail: /body\\.practicing \\.content \\{ padding-bottom: calc\\(12px \\+ env\\(safe-area-inset-bottom/.test(css) && /body\\.practicing \\.content:has\\(\\.pr-next\\) \\{ padding-bottom: 0/.test(css) }); })()"""
+      return JSON.stringify({ help: !!help, helpText: help ? help.textContent : '', ring: !!ring, before, after, th, td, hover: /hover: none/.test(css) && /kbd-hint/.test(css), ringCss: /\\.hero-center > \\.ring \\{[^}]*order: -1/.test(css) && !/\\.hero \\.ring \\{[^}]*display: none/.test(css) && hero.classList.contains('hero-center'), safeTop: /body\\.practicing \\.content \\{[^}]*padding-top: calc\\(18px \\+ env\\(safe-area-inset-top/.test(css), noZoom: /maximum-scale=1/.test(document.querySelector('meta[name=viewport]').content) && /user-scalable=no/.test(document.querySelector('meta[name=viewport]').content) && /html \\{ touch-action: manipulation; overscroll-behavior: none/.test(css), noTail: /body\\.practicing \\.content \\{ padding-bottom: calc\\(12px \\+ env\\(safe-area-inset-bottom/.test(css) && /body\\.practicing \\.content:has\\(\\.pr-next\\) \\{ padding-bottom: 0/.test(css) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
     r = json.loads(out[-1])
     assert r['help'] and 'SRS' in r['helpText'] and r['ring'], r   # 1.0.36: the help panel is a few plain sentences
-    assert 'compact' in r['banner'] and '稍後' in r['banner'] and 'backup-now' in r['banner'], r['banner']
     assert r['before'] == {'hint': True, 'next': False}, r['before']
     assert r['after'] == {'nextInStrip': True, 'stickyClass': False, 'tools': True, 'enterHint': True, 'hint': False}, r['after']
     assert r['th'] == 1 and r['td'] >= 3 and r['hover'] and r['ringCss'] and r['safeTop'] and r['noZoom'] and r['noTail'], r   # practice hides the topbar, so its content clears the notch itself
@@ -1566,7 +1565,7 @@ def test_listen_pills_keep_the_place_and_the_example_chinese_is_read(b):
 
 # ---- 2026-10-28: the today page is one card on one phone screen: 練習／錯題本／單字 switch, practice by default ----
 def test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest(b):
-    seed = """(() => { const t = todayStr(); state.introSeen = true; state.mistakes = []; state.lastBackup = t;
+    seed = """(() => { const t = todayStr(); state.introSeen = true; state.mistakes = [];
       REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 30).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
       REG.grammar.slice(0, 6).forEach(g => { state.srs[g.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
       localStorage.removeItem('nq_listen_pref'); saveState(); heroTab = null; LISTEN = null; location.hash = '#/vocab'; route(); location.hash = '#/today'; route(); return true; })()"""
@@ -1696,7 +1695,7 @@ def test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones(b):
 
 # ---- 2026-10-28: the install hint ----
 def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed(b):
-    js = """(() => { localStorage.removeItem('nq_install_hint'); state.introSeen = true; state.lastBackup = todayStr(); saveState(); const view = document.getElementById('view'); const show = () => { location.hash = '#/today'; route(); return view.querySelector('.install-banner'); };
+    js = """(() => { localStorage.removeItem('nq_install_hint'); state.introSeen = true; saveState(); const view = document.getElementById('view'); const show = () => { location.hash = '#/today'; route(); return view.querySelector('.install-banner'); };
       INSTALL_FORCE = { platform: 'ios', safari: true }; const ios = show(); const iosBtns = ios ? [...ios.querySelectorAll('[data-act]')].map(b => b.dataset.act) : null;
       ACTIONS['install-how'](); const modal = document.querySelector('.modal'); const guide = modal ? modal.textContent : ''; closeModal(true);
       const iosGuide = /加入主畫面/.test(guide) && /分享/.test(guide) && /進度是分開的/.test(guide) && !/⋮/.test(guide) && /Brave/.test(guide);
@@ -1913,6 +1912,23 @@ def test_a_browser_tab_does_not_download_audio_ahead_by_itself(b):
         ("eval", "(async () => { window.dispatchEvent(new Event('online')); await sleep(6000); return __clips.length; })()")], timeout=30)
     assert out[-1] == 0, out[-1]
 
+# ---- 2026-11-05 (1.0.39): the site moved to nihongoquest.app; manual backups are gone ----
+def test_the_old_address_says_the_site_moved_and_data_settings_have_no_backup_file(b):
+    js = """(() => { state.introSeen = true; saveState(); const card = () => { location.hash = '#/today'; route(); return document.querySelector('#view .moved-banner'); };
+      const here = !!card(); OLD_SITE_FORCE = true; const el = card(); const a = el && el.querySelector('a.btn'); OLD_SITE_FORCE = false; const off = !!card(); OLD_SITE_FORCE = null;
+      openSettings('data'); const body = document.querySelector('.modal').textContent;
+      const data = { dl: body.includes('下載備份'), restore: body.includes('從備份還原'), file: !!document.querySelector('.modal input[type=file]'), snaps: !!document.getElementById('snapList') }; closeModal(true);
+      return JSON.stringify({ here, on: !!el, text: el ? el.textContent : '', href: a ? a.getAttribute('href') : '', target: a ? a.target : '', off, data,
+        hint: ttsErrorHint('Requests from referer http://x/ are blocked. API_KEY_HTTP_REFERRER_BLOCKED'), gone: [typeof backupBannerHtml, typeof exportBackup, typeof importBackupFile] }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
+    r = json.loads(out[-1])
+    assert not r['here'] and r['on'] and not r['off'], r   # only on fender8185.github.io (forced here), never on the new address
+    assert 'nihongoquest.app' in r['text'] and '同一個 Email 登入' in r['text'] and '主畫面' in r['text'] and '金鑰' in r['text'], r['text']
+    assert r['href'] == 'https://nihongoquest.app/#/today' and r['target'] == '_blank', r
+    assert r['data'] == {'dl': False, 'restore': False, 'file': False, 'snaps': True}, r['data']   # the daily snapshots stay
+    assert URL.rstrip('/') + '/*' in r['hint'] and 'github.io' not in r['hint'], r['hint']
+    assert r['gone'] == ['undefined'] * 3, r['gone']
+
 def test_a_clip_not_on_the_device_while_offline_says_so(b):
     js = """(async () => { ttsConfig().engine = 'cloud'; await caches.delete('nq-audio'); audioCache.clear(); cloudMisses.clear();
       const seen = []; const t0 = toast; toast = (m) => seen.push(m); const rf = window.fetch; window.fetch = () => Promise.reject(new TypeError('Failed to fetch'));
@@ -1950,7 +1966,8 @@ if __name__ == "__main__":
              test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_hides_kana_drills,
              test_a_missed_listening_or_reading_item_gets_no_retry_copy_in_the_session, test_settings_drop_the_switches_the_app_now_decides, test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off, test_sets_hold_twenty_mixed_even_when_an_old_copy_saved_another_size_or_order,
              test_offline_audio_keeps_the_japanese_clips_of_todays_practice, test_offline_audio_fills_the_cache_skipping_stored_and_missing_clips_and_stops_offline,
-             test_installed_app_keeps_the_coming_audio_by_itself_and_again_when_back_online, test_a_browser_tab_does_not_download_audio_ahead_by_itself, test_a_clip_not_on_the_device_while_offline_says_so]
+             test_installed_app_keeps_the_coming_audio_by_itself_and_again_when_back_online, test_a_browser_tab_does_not_download_audio_ahead_by_itself, test_the_old_address_says_the_site_moved_and_data_settings_have_no_backup_file,
+             test_a_clip_not_on_the_device_while_offline_says_so]
     only = sys.argv[1:]
     failed = 0
     try:

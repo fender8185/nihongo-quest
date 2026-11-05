@@ -970,12 +970,17 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.38';   // keep equal to the version in sw.js CACHE ('nq-v1.0.38'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.39';   // keep equal to the version in sw.js CACHE ('nq-v1.0.39'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.39', date: '2026-11-05', items: [
+    '網站搬到 nihongoquest.app。舊網址的今日頁會提醒搬家：在新網址用同一個 Email 登入雲端同步，進度就會接上；加到主畫面的要重新加一次，AI 和語音的金鑰也要重新貼。',
+    '拿掉「下載備份」「從備份還原」和沒備份的提醒：進度靠雲端同步，每天的自動快照照舊。',
+    '修正：Google 金鑰的「網站」限制不符時，提示改成寫出目前的網址；離線開啟改用存好的首頁。'
+  ] },
   { v: '1.0.38', date: '2026-11-04', items: [
     '文法：N5、N4 有 21 個考點只有一兩題，補了 23 題，現在每個考點至少 3 題；第 6 單元有兩題移到第 1、2 單元講同一件事的考點。',
     '雲端同步：練習或模擬考進行中不再每答一題就上傳，做完一組（或切到背景）才上傳一次；回到 app 時先確認雲端有沒有變，有變才下載。'
@@ -1273,7 +1278,6 @@ function defaultSettings() {
     examFormal: false,
     furiMode: 'smart',       // smart: no furigana on mastered words | all — furigana:false hides all
     newKanaPerDay: 15,       // 每天新假名 until 1.0.20; nothing reads it now (入門's new kana come from the day's new count)
-    backupEvery: 7
   };
 }
 // 每天新題數不再讓使用者逐項設定：全部由「每天負荷上限」依固定比例推算（上限 100 時為 單字 8・文法 6・漢字 3・聽力 3・變化練習 3）
@@ -1300,7 +1304,6 @@ function defaultState() {
     aiConfig: null,
     ttsConfig: null,
     today: { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0, newC: 0, newA: 0 },
-    lastBackup: null,
     statsFmt: {},
     recent: [],
     legacy: null,
@@ -1333,7 +1336,7 @@ async function flushState() {
   }
   if (ok) storageOk = true;
   else {
-    if (storageOk) toast('瀏覽器儲存空間已滿，進度可能沒有存到。請到「設定 → 資料」下載備份。', 6000);
+    if (storageOk) toast('瀏覽器儲存空間已滿，進度可能沒有存到。有登入雲端同步的話，進度會存在雲端。', 6000);
     storageOk = false;
   }
   if (ok && STATE_CHANNEL) { try { STATE_CHANNEL.postMessage({ type: 'saved', updatedAt: snapshot.updatedAt }); } catch (e) { /* ignore */ } }
@@ -5087,7 +5090,7 @@ function renderToday(view) {
   view.innerHTML = `
     ${noticesHtml()}
     ${startBanner}${introBanner}
-    ${backupBannerHtml()}
+    ${movedBannerHtml()}
     ${installBannerHtml()}
     <div class="page-head today-head"><div><div class="page-title">今日</div><div class="page-sub">${greeting}・連續 ${st.current} 天</div></div></div>
     <div class="card today-card${todayTab === 'practice' ? '' : ' listen compact'}">
@@ -7674,7 +7677,6 @@ function settingsAi() {
 function settingsData() {
   let legacyExists = false;
   try { legacyExists = Boolean(localStorage.getItem(LEGACY_KEY)); } catch (e) { /* ignore */ }
-  const size = new Blob([JSON.stringify(state)]).size;
   const hiddenN = state.hidden.length;
   const syncBlock = !Sync.client
     ? `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">這個版本尚未設定雲端同步。</div></div></div>`
@@ -7688,20 +7690,16 @@ function settingsData() {
           <div class="row-wrap"><input type="email" id="syncEmail" placeholder="you@example.com" autocomplete="email" inputmode="email" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-login">寄送登入信</button></div></div>`;
   return `
     ${syncBlock}
-    <div class="setting-row"><div><div class="label">下載備份</div><div class="hint">包含進度、錯題本與考試紀錄。目前資料約 ${Math.max(1, Math.round(size / 1024))} KB。</div></div>
-      <div class="row-wrap"><label class="switch"><input type="checkbox" id="bkKeys" /><span class="track"></span><span class="small">包含 API Key</span></label><button type="button" class="btn btn-sm btn-primary" data-act="backup-export">下載</button></div></div>
-    <div class="setting-row"><div><div class="label">自動快照</div><div class="hint">每天第一次開啟時自動保存一份，保留最近 7 天。匯入或重設弄錯時，可以回到某一天的狀態。</div><div id="snapList" class="mt-2 small muted">讀取中…</div></div></div>
-    <div class="setting-row"><div><div class="label">從備份還原</div><div class="hint">可以選這個版本的備份，也可以選舊版（Gemini 版）匯出的 JSON，會自動轉換。</div></div>
-      <label class="btn btn-sm">選擇檔案<input type="file" accept=".json,application/json" class="hidden" data-change="backup-import" /></label></div>
+    <div class="setting-row"><div><div class="label">自動快照</div><div class="hint">每天第一次開啟時自動保存一份，保留最近 7 天。重設或同步弄錯時，可以回到某一天的狀態。</div><div id="snapList" class="mt-2 small muted">讀取中…</div></div></div>
     ${legacyExists ? `<div class="setting-row"><div><div class="label">重新匯入舊版進度</div><div class="hint">這個瀏覽器裡還有舊版的資料（舊版本身不受影響）。重新匯入會取代目前的進度。</div></div>
       <button type="button" class="btn btn-sm" data-act="legacy-reimport">重新匯入</button></div>` : ''}
     ${hiddenN ? `<div class="setting-row"><div><div class="label">已隱藏 ${hiddenN} 個題目或單字</div><div class="hint">練習時按「這題有問題」或在單字表按「隱藏」的項目。</div></div>
       <button type="button" class="btn btn-sm" data-act="restore-hidden">全部還原</button></div>` : ''}
     ${state.customGrammar.length || state.customExam.length ? `<div class="setting-row"><div><div class="label">AI／自訂題目</div><div class="hint">文法題 ${state.customGrammar.length} 道、模擬考題 ${state.customExam.length} 道。</div></div>
       <button type="button" class="btn btn-sm btn-ghost btn-danger" data-act="clear-custom-items">清除</button></div>` : ''}
-    <div class="setting-row"><div><div class="label">重設所有進度</div><div class="hint">清除熟練度、錯題本與紀錄。AI 與語音設定會保留。建議先下載備份。</div></div>
+    <div class="setting-row"><div><div class="label">重設所有進度</div><div class="hint">清除熟練度、錯題本與紀錄。AI 與語音設定會保留。</div></div>
       <button type="button" class="btn btn-sm btn-danger" data-act="reset-all">重設</button></div>
-    <p class="hint mt-3">資料存在這個瀏覽器的本機儲存空間（IndexedDB）。登入雲端同步後會自動在裝置間同步；沒登入時可用「下載備份」與「從備份還原」搬移。</p>`;
+    <p class="hint mt-3">資料存在這個瀏覽器的本機儲存空間（IndexedDB）。登入雲端同步後會自動在裝置間同步。</p>`;
 }
 
 function changelogItems(list) {
@@ -7725,56 +7723,18 @@ function settingsLook() {
     </details>`;
 }
 
-// ---------- backup ----------
-function downloadFile(name, text, type = 'application/json') {
-  const blob = new Blob([text], { type });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = name;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-}
-function exportBackup(withKeys) {
-  state.lastBackup = todayStr();
-  saveState();
-  const copy = deepClone(state);
-  if (!withKeys) {
-    if (copy.aiConfig) ['geminiKey', 'openaiKey'].forEach(k => { if (copy.aiConfig[k]) copy.aiConfig[k] = ''; });
-    if (copy.ttsConfig) TTS_SECRET_KEYS.forEach(k => { if (copy.ttsConfig[k]) copy.ttsConfig[k] = ''; });
-  }
-  const payload = { app: 'nihongo-quest', v: 3, exportedAt: new Date().toISOString(), state: copy };
-  downloadFile(`nihongo-quest-backup-${todayStr()}.json`, JSON.stringify(payload));
-  toast('已下載備份');
-}
-function isLegacyBackup(o) { return o && !o.v && (Array.isArray(o.grammarDrills) || Array.isArray(o.vocab) || o.dailyLogs || Array.isArray(o.mistakes)); }
+// ---------- restore (a snapshot, or the old version's data) ----------
 function applyImportedState(next, msg) {
   const keepAi = state.aiConfig; const keepTts = state.ttsConfig; const hadAi = isAiConfigured();
   state = normalizeState(next);
   LAST_BULK_MARK = null;   // the snapshot belongs to the state that was replaced
-  // a backup saved without keys should not wipe the keys already entered here
+  // restored data without keys (the old version's) should not wipe the keys already entered here
   if (hadAi && !isAiConfigured()) state.aiConfig = keepAi;
   if (keepTts && !(state.ttsConfig && TTS_SECRET_KEYS.some(k => state.ttsConfig[k]))) state.ttsConfig = Object.assign({}, state.ttsConfig || {}, Object.fromEntries(TTS_SECRET_KEYS.map(k => [k, keepTts[k] || ''])));
   saveState(); buildRegistry(); applyTheme(); applyFurigana();
   SESSION = null; FLASH = null; EXAM = null;
   closeModal(); toast(msg, 4000); go('#/today');
 }
-async function importBackupFile(file) {
-  let obj;
-  try { obj = JSON.parse(await file.text()); } catch (e) { toast('這不是有效的 JSON 檔案'); return; }
-  if (obj && obj.app === 'nihongo-quest' && obj.state) {
-    if (!confirm('還原這份備份？目前的進度會被取代。')) return;
-    applyImportedState(obj.state, '已從備份還原');
-  } else if (obj && obj.v === 3 && obj.srs) {
-    if (!confirm('還原這份備份？目前的進度會被取代。')) return;
-    applyImportedState(obj, '已從備份還原');
-  } else if (isLegacyBackup(obj)) {
-    if (!confirm('這是舊版的備份，要轉換並匯入嗎？目前的進度會被取代。')) return;
-    applyImportedState(migrateLegacy(obj), '已轉換並匯入舊版備份');
-  } else {
-    toast('看不出這是哪一種備份檔');
-  }
-}
-
 // ---------- change handlers ----------
 Object.assign(CHANGE_ACTIONS, {
   setting: (el) => {
@@ -7817,7 +7777,6 @@ Object.assign(CHANGE_ACTIONS, {
     if (['provider', 'geminiKey', 'openaiKey'].includes(el.dataset.key)) refreshSettings();
     settingsDirty = true;
   },
-  'backup-import': (el) => { const f = el.files && el.files[0]; if (f) importBackupFile(f); el.value = ''; }
 });
 
 Object.assign(ACTIONS, {
@@ -7867,7 +7826,6 @@ Object.assign(ACTIONS, {
     });
   },
   'ai-pick-model': (el) => { aiConfig().geminiModel = el.dataset.model; saveState(); refreshSettings(); toast(`模型：${el.dataset.model}`); },
-  'backup-export': () => exportBackup((document.getElementById('bkKeys') || {}).checked),
   'legacy-reimport': () => {
     let raw = null;
     try { raw = localStorage.getItem(LEGACY_KEY); } catch (e) { /* ignore */ }
@@ -8343,7 +8301,7 @@ Object.assign(ACTIONS, {
    Speech: browser voices, Deepgram Aura-2, VOICEVOX, OpenAI TTS
    ========================================================================== */
 let ttsCheckHtml = '';   // result of the last 設定 › 語音 › 測試連線
-const TTS_SECRET_KEYS = ['deepgramKey', 'openaiKey', 'googleKey'];   // never leave the device: stripped from backups, kept on import
+const TTS_SECRET_KEYS = ['deepgramKey', 'openaiKey', 'googleKey'];   // never leave the device: kept when older data is restored
 const TTS_DEFAULT = {
   engine: 'cloud', browserVoiceURI: '',
   deepgramKey: '', deepgramVoice: 'aura-2-izanami-ja', deepgramVoiceM: 'aura-2-fujin-ja',
@@ -8711,7 +8669,7 @@ function ttsErrorHint(msg) {
   const m = String(msg || '');
   if (/not been used|is disabled|SERVICE_DISABLED/i.test(m)) return '這個專案尚未啟用 Cloud Text-to-Speech API：到 Google Cloud 的「API 和服務 › 程式庫」搜尋並啟用，再等一兩分鐘。';
   if (/API key not valid|API_KEY_INVALID|invalid api key|Unauthorized|401/i.test(m)) return '金鑰無效：確認貼上的是完整的金鑰、前後沒有空白，而且是同一個專案建立的。';
-  if (/referer|referrer|HTTP referrers/i.test(m)) return '金鑰的「網站」限制不符：限制要寫成 https://fender8185.github.io/*，改完要等幾分鐘生效。';
+  if (/referer|referrer|HTTP referrers/i.test(m)) return `金鑰的「網站」限制不符：限制要寫成 ${location.origin}/*，改完要等幾分鐘生效。`;
   if (/billing|BILLING/i.test(m)) return '專案還沒連結帳單帳戶：到 Google Cloud 的「帳單」把這個專案連結上去（免費額度內不會扣款）。';
   if (/PERMISSION_DENIED|403/i.test(m)) return '被拒絕：通常是 API 未啟用、金鑰的 API 限制沒勾 Text-to-Speech、或帳單未連結。';
   if (/429|quota|RESOURCE_EXHAUSTED/i.test(m)) return '超過配額或請求太頻繁，稍後再試。';
@@ -9578,7 +9536,7 @@ async function aiTestConnection(btn) {
 
 // ---- 83_safety.js ----
 /* ==========================================================================
-   Data safety: persistent storage, backup reminders, daily snapshots (IndexedDB)
+   Data safety: persistent storage, daily snapshots (IndexedDB)
    ========================================================================== */
 const Snapshots = {
   DB: 'nihongo_quest_snapshots', STORE: 'snaps', KEEP: 7, dbp: null,
@@ -9655,17 +9613,16 @@ async function dailySnapshot() {
   } catch (e) { /* ignore */ }
 }
 
-function backupDue() {
-  if (streakStats().days < 3) return false;
-  if (Sync.status !== 'off' && Sync.meta && Sync.meta.lastSyncedAt && daysBetween(Sync.meta.lastSyncedAt.slice(0, 10), todayStr()) < 7) return false;
-  const last = [state.lastBackup, state.backupSnooze].filter(Boolean).sort().pop();
-  return !last || daysBetween(last, todayStr()) >= (state.settings.backupEvery || 7);
-}
-function backupBannerHtml() {
-  if (!backupDue()) return '';
-  const msg = state.lastBackup ? `上次備份是 ${daysBetween(state.lastBackup, todayStr())} 天前` : '還沒有備份';
-  return `<div class="banner warn compact"><div class="grow">${msg}，進度只在這個瀏覽器裡。</div>
-    <div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="backup-now">下載備份</button><button type="button" class="btn btn-sm btn-ghost" data-act="backup-snooze" title="一週後再提醒">稍後</button></div></div>`;
+// ---------- moved: the site left GitHub Pages for nihongoquest.app in 1.0.39 ----------
+// Each address keeps its own data, so the old one says where to go; progress follows through the cloud login
+const OLD_SITE_HOST = 'fender8185.github.io';
+const NEW_SITE_URL = 'https://nihongoquest.app/';
+let OLD_SITE_FORCE = null;   // tests: true／false instead of looking at the address
+function onOldSite() { return OLD_SITE_FORCE !== null ? OLD_SITE_FORCE : location.host === OLD_SITE_HOST; }
+function movedBannerHtml() {
+  if (!onOldSite()) return '';
+  return `<div class="banner warn moved-banner"><div class="grow"><b>網站搬家了：新網址是 nihongoquest.app</b><br>在新網址用同一個 Email 登入雲端同步，進度就會接上；還沒登入過的，先在這裡登入一次（設定 › 資料）。加到主畫面的，新網址要重新加一次；AI 和語音的金鑰也要重新貼。</div>
+    <div class="row-wrap"><a class="btn btn-sm btn-primary" href="${NEW_SITE_URL}#/today" target="_blank" rel="noopener">打開新網址</a></div></div>`;
 }
 
 // ---------- install (add to home screen) ----------
@@ -9732,8 +9689,6 @@ async function fillSnapshotList() {
 }
 
 Object.assign(ACTIONS, {
-  'backup-now': () => { exportBackup(false); route(); },
-  'backup-snooze': () => { state.backupSnooze = todayStr(); saveState(); route(); },
   'snapshot-restore': async (el) => {
     const d = el.dataset.date;
     if (!confirm(`還原到 ${snapshotLabel(d)} 開啟時的進度？之後的作答紀錄會被取代。`)) return;
