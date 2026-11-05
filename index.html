@@ -1027,12 +1027,15 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.47';   // keep equal to the version in sw.js CACHE ('nq-v1.0.47'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.48';   // keep equal to the version in sw.js CACHE ('nq-v1.0.48'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.48', date: '2026-11-05', items: [
+    '設定 › 資料的「重設所有進度」收進最下面灰色的摺疊區（和管理者那區一樣），要先點開才看得到按鈕，不容易誤按。'
+  ] },
   { v: '1.0.47', date: '2026-11-05', items: [
     '拿掉自動快照（每日、同步前、衝突時三種）和設定 › 資料裡的快照清單，已存的快照也從裝置上清掉：進度靠雲端同步。兩台裝置同時改過時照舊逐筆合併；第一次在新裝置登入、雲端已有進度時以雲端為準，這台原本的進度不再另存一份。'
   ] },
@@ -7883,6 +7886,7 @@ function settingsData() {
           <div class="row-wrap"><input type="text" id="syncCode" placeholder="12345678" inputmode="numeric" autocomplete="one-time-code" maxlength="8" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-verify">登入</button><button type="button" class="btn btn-sm btn-ghost" data-act="sync-cancel-code">換一個 email</button></div></div>`
         : `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">每個人的資料各自獨立。AI 設定（含 API 金鑰與位址）只留在這台裝置，不會上傳。第一次在新裝置登入時，若雲端已有進度，會以雲端為準，這台原本的進度不會保留。</div></div>
           <div class="row-wrap"><input type="email" id="syncEmail" placeholder="you@example.com" autocomplete="email" inputmode="email" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-login">寄送登入信</button></div></div>`;
+  // 重設所有進度 folds away, grey like the admin block under it, so it is hard to hit by accident (1.0.48)
   return `
     ${syncBlock}
     ${legacyExists ? `<div class="setting-row"><div><div class="label">重新匯入舊版進度</div><div class="hint">這個瀏覽器裡還有舊版的資料（舊版本身不受影響）。重新匯入會取代目前的進度。</div></div>
@@ -7891,10 +7895,12 @@ function settingsData() {
       <button type="button" class="btn btn-sm" data-act="restore-hidden">全部還原</button></div>` : ''}
     ${state.customGrammar.length || state.customExam.length ? `<div class="setting-row"><div><div class="label">AI／自訂題目</div><div class="hint">文法題 ${state.customGrammar.length} 道、模擬考題 ${state.customExam.length} 道。</div></div>
       <button type="button" class="btn btn-sm btn-ghost btn-danger" data-act="clear-custom-items">清除</button></div>` : ''}
-    <div class="setting-row"><div><div class="label">重設所有進度</div><div class="hint">清除熟練度、錯題本與紀錄。AI 設定會保留。</div></div>
-      <button type="button" class="btn btn-sm btn-danger" data-act="reset-all">重設</button></div>
     <p class="hint mt-3">資料存在這個瀏覽器的本機儲存空間（IndexedDB）。登入雲端同步後會自動在裝置間同步。</p>
-    <details class="mt-4"><summary class="small muted" style="cursor:pointer">管理者：生成雲端音檔</summary>
+    <details class="mt-4"><summary class="small muted" style="cursor:pointer">重設所有進度</summary>
+      <div class="hint mt-2">清除熟練度、錯題本與紀錄；有登入的話，雲端上的進度也會一起清掉，無法復原。AI 設定會保留。</div>
+      <div class="row-wrap mt-3"><button type="button" class="btn btn-sm btn-danger" data-act="reset-all">重設所有進度</button></div>
+    </details>
+    <details class="mt-2"><summary class="small muted" style="cursor:pointer">管理者：生成雲端音檔</summary>
       <div class="hint mt-2">把全部教材句子生成一次並上傳到 Cloudflare R2 的 nihongo-audio；日文用 Google 的 Neural2 聲音，中文（單字意思、例句與文法的翻譯、漢字字義）用 Google 的台灣華語聲音，給「聽一輪」用。三把金鑰只在這一次執行中使用：不儲存、不同步、關掉頁面就消失；R2 金鑰只能讀寫這一個 bucket。已存在的檔案會略過，可以中斷再續跑。</div>
       <div class="field mt-3"><label>Google Cloud API Key</label><input class="input" type="password" autocomplete="off" id="cloudGoogleKey" value="${esc(ttsConfig().googleKey || '')}" /></div>
       <div class="field mt-3"><label>R2 Access Key ID</label><input class="input" type="text" autocomplete="off" id="cloudR2KeyId" /></div>
