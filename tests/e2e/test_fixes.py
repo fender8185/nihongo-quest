@@ -497,22 +497,22 @@ def test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong(b):
     assert r['matchDone'] and r['matchWrong'] and r['revealed'] == 6, r
     assert r['unpaired'] == [True] * 5 and r['paired'] is False, r
 
-def test_tools_page_has_an_expandable_api_guide_for_every_provider(b):
-    # the 工具與 AI page ends with a collapsed guide per service; ?guide=<id> opens that one; settings link to it
-    probe = """(() => { const card = document.getElementById('apiGuides'); if (!card) return 'NO CARD';
-      const ids = [...card.querySelectorAll('details[data-guide]')].map(d => d.dataset.guide + (d.open ? '*' : ''));
-      const links = card.querySelectorAll('a[target=_blank]').length;
-      const noopener = [...card.querySelectorAll('a[target=_blank]')].every(a => /noopener/.test(a.rel));
-      return JSON.stringify({ ids, links, noopener, title: card.querySelector('.card-title').textContent }); })()"""
-    link = """(() => { aiConfig().provider = 'gemini'; saveState(); openSettings('ai');
-      const a = document.querySelector('#modalBody [data-act=nav][data-route="#/tools?guide=gemini"]'); closeModal(); return a ? a.textContent : 'NO LINK'; })()"""
-    out = b.run([("nav", URL + "#/tools"), ("wait", READY), ("eval", probe), ("nav", URL + "#/tools?guide=openai"), ("eval", probe), ("eval", link)], timeout=45)
-    first = json.loads(out[0]); opened = json.loads(out[1])
-    assert first['title'] == 'API 申請說明', first
-    assert first['ids'] == ['gemini', 'openai', 'ollama'], first['ids']   # 1.0.40: no speech service of one's own, so no speech guides
-    assert first['links'] >= 4 and first['noopener'], first
-    assert 'openai*' in opened['ids'] and 'gemini*' not in opened['ids'], opened['ids']
-    assert '申請' in out[2], out[2]
+def test_ai_needs_a_login_and_settings_have_no_ai_tab(b):
+    # 1.0.49: AI runs on the site's own key, so there is nothing to set up; logged out, the AI buttons send the learner to log in
+    js = """(() => { const tabs = () => [...document.querySelectorAll('#modalBody [data-act=settings-tab]')].map(x => x.dataset.tab);
+      openSettings('ai'); const t = tabs(); closeModal(true);
+      location.hash = '#/tools'; route(); const head = document.querySelector('.page-head'); const anaBtn = document.querySelector('[data-act=analyze-ai]');
+      const tools = { login: !!head.querySelector('[data-act=sync-open]'), sub: head.querySelector('.page-sub').textContent, anaOff: anaBtn.disabled, guides: !!document.getElementById('apiGuides') };
+      const ready0 = aiReady(); const asked = needAi(); const tab = document.querySelector('#modalBody [data-act=settings-tab][aria-pressed=true]').dataset.tab; closeModal(true);
+      const keep = Sync.session; Sync.session = { user: { id: 'u1' } }; const ready1 = aiReady(); Sync.session = keep;
+      const old = normalizeState(Object.assign(defaultState(), { aiConfig: { provider: 'gemini', geminiKey: 'K' } }));
+      return JSON.stringify({ t, tools, ready0, asked, tab, ready1, oldKey: 'aiConfig' in old, fresh: 'aiConfig' in defaultState() }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
+    r = json.loads(out[-1])
+    assert r['t'] == ['learn', 'data', 'look'], r
+    assert r['tools'] == {'login': True, 'sub': '登入後就能用 AI', 'anaOff': True, 'guides': False}, r
+    assert r['ready0'] is False and r['asked'] is True and r['tab'] == 'data' and r['ready1'] is True, r
+    assert r['oldKey'] is False and r['fresh'] is False, r
 
 def test_stats_shows_the_past_week_of_practice_and_what_was_learned(b):
     seed = """(() => { const t = todayStr(); const y = addDays(t, -1);
@@ -1503,32 +1503,37 @@ def test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue(b):
     assert r['btn'] and r['added'] == 1 and r['requeued'] == 1, r
     assert r['restored'] and r['mistBack'] and r['requeueGone'] and r['recent'] and r['ng'] and r['chip'] and r['btnGone'] and r['wrongStat'] == 0, r
 
-# ---- 2026-10-27: Gemini — transient errors rotate models without changing the preference, cooldowns, auto mode, caching ----
-GEMINI_MOCK = """(() => { window.__calls = []; window.__fail = { 'gemini-z-flash': 429 }; window.__retryMsg = 'Quota exceeded for quota metric ... Please retry in 12.5s.';
-  window.fetch = async (url, init) => { url = String(url); __calls.push(url.replace(/[?].*$/, ''));
-    if (/[/]models[?]/.test(url)) return { ok: true, status: 200, json: async () => ({ models: ['gemini-z-flash', 'gemini-b-flash', 'gemini-c-pro'].map(n => ({ name: 'models/' + n, supportedGenerationMethods: ['generateContent'] })) }) };
-    const m = (url.match(/models[/]([^:]+):generateContent/) || [])[1]; const st = __fail[m] || (['gemini-z-flash', 'gemini-b-flash', 'gemini-c-pro'].includes(m) ? 0 : 404);
-    if (st) return { ok: false, status: st, text: async () => JSON.stringify({ error: { code: st, message: st === 429 ? __retryMsg : 'The model is overloaded.' } }) };
-    return { ok: true, status: 200, json: async () => ({ candidates: [{ content: { parts: [{ text: 'answer from ' + m }] } }] }) }; };
-  aiConfig().provider = 'gemini'; aiConfig().geminiKey = 'K'; aiConfig().geminiModel = 'auto'; saveState(); GEMINI_COOL.clear(); try { localStorage.removeItem('nq_gemini_models'); localStorage.removeItem('nq_ai_cache'); } catch (e) {} return 'mocked'; })()"""
+# ---- 1.0.49: AI asks the site's own Supabase function (swift-api), which holds the Gemini key and picks the model ----
+AI_MOCK = """(() => { window.__calls = []; window.__reply = null; aiReady = () => true;
+  Sync.client = Sync.client || {};
+  Object.defineProperty(Sync.client, 'functions', { configurable: true, value: { invoke: async (name, opt) => { __calls.push({ name, opt });
+    if (__reply) return __reply();
+    return { data: { text: 'answer from the site', model: 'gemini-3.5-flash-lite', mine: __calls.length + 2, cap: 50 }, error: null }; } } });
+  try { localStorage.removeItem('nq_ai_cache'); } catch (e) {} return 'mocked'; })()"""
 
-def test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown(b):
-    js = """callAi('hi').then(out1 => { const callsA = __calls.filter(u => /gemini-z-flash/.test(u)).length; return callAi('hi again').then(out2 => JSON.stringify({ out1, out2, callsA, callsA2: __calls.filter(u => /gemini-z-flash/.test(u)).length, cool: GEMINI_COOL.has('gemini-z-flash'), secs: Math.round((GEMINI_COOL.get('gemini-z-flash') - Date.now()) / 1000), last: AI_LAST.model, pref: aiConfig().geminiModel })); })"""
-    out = b.run([("nav", URL), ("wait", READY), ("eval", GEMINI_MOCK), ("eval", js)], timeout=45)
+def test_ai_asks_the_site_function_and_keeps_todays_count(b):
+    js = """callAi('hi', { json: true, temperature: 0 }).then(out => { const c = __calls[0];
+      return JSON.stringify({ out, name: c.name, region: c.opt.region, prompt: c.opt.body.prompt, sys: /JLPT/.test(c.opt.body.system), json: c.opt.body.json, temp: c.opt.body.temperature, last: AI_LAST,
+        caption: aiCaption(AI_LAST.model, false), cached: aiCaption(AI_LAST.model, true) }); })"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", AI_MOCK), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['out1'] == 'answer from gemini-b-flash' and r['out2'] == 'answer from gemini-b-flash' and r['last'] == 'gemini-b-flash', r
-    assert r['callsA'] == 1 and r['callsA2'] == 1 and r['cool'] and 10 <= r['secs'] <= 13 and r['pref'] == 'auto', r
+    assert r['out'] == 'answer from the site' and r['name'] == 'swift-api' and r['region'] == 'ap-south-1', r
+    assert r['prompt'] == 'hi' and r['sys'] and r['json'] is True and r['temp'] == 0, r
+    assert r['last'] == {'model': 'gemini-3.5-flash-lite', 'mine': 3, 'cap': 50}, r
+    assert '今天第 3／50 次' in r['caption'] and '今天' not in r['cached'] and '已儲存' in r['cached'], r
 
-def test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference(b):
-    js = """(() => { aiConfig().geminiModel = 'gemini-z-flash'; saveState(); return callAi('hi').then(out => JSON.stringify({ out, pref: aiConfig().geminiModel, last: AI_LAST.model })); })()"""
-    out = b.run([("nav", URL), ("wait", READY), ("eval", GEMINI_MOCK), ("eval", js)], timeout=45)
+def test_ai_shows_the_functions_own_message_when_it_refuses(b):
+    js = """(() => { const fail = (body, status) => { __reply = () => ({ data: null, error: Object.assign(new Error('x'), { name: 'FunctionsHttpError',
+        context: new Response(body, { status, headers: { 'Content-Type': 'application/json' } }) }) }); };
+      const msg = () => callAi('hi').then(() => 'no error', e => e.message); const out = {};
+      fail(JSON.stringify({ error: '今天的 AI 次數（50 次）用完了，台灣時間 16 點後恢復', cap: true }), 429);
+      return msg().then(m => { out.cap = m; fail(JSON.stringify({ code: 'UNAUTHORIZED', message: 'Invalid JWT' }), 401);
+        return msg(); }).then(m => { out.jwt = m; __reply = () => ({ data: null, error: Object.assign(new Error('Failed to send a request to the Edge Function'), { name: 'FunctionsFetchError', context: {} }) });
+        return msg(); }).then(m => { out.net = m; aiReady = () => false; return msg(); }).then(m => { out.off = m; out.calls = __calls.length; return JSON.stringify(out); }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", AI_MOCK), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['out'] == 'answer from gemini-b-flash' and r['pref'] == 'gemini-z-flash' and r['last'] == 'gemini-b-flash', r
-
-def test_gemini_reports_a_plain_message_when_every_model_is_cooling_down(b):
-    js = """(() => { __fail['gemini-b-flash'] = 429; __fail['gemini-c-pro'] = 429; return callAi('hi').then(() => 'no error', e => e.message); })()"""
-    out = b.run([("nav", URL), ("wait", READY), ("eval", GEMINI_MOCK), ("eval", js)], timeout=45)
-    assert '額度' in out[-1] and '秒' in out[-1], out[-1]
+    assert r['cap'] == '今天的 AI 次數（50 次）用完了，台灣時間 16 點後恢復', r
+    assert '重新登入' in r['jwt'] and '連不到 AI' in r['net'] and '登入後才能用 AI' in r['off'] and r['calls'] == 3, r
 
 # ---- 2026-10-28: a pill tap keeps the player's place; the example's Chinese is read ----
 def test_listen_pills_keep_the_place_and_the_example_chinese_is_read(b):
@@ -1702,13 +1707,13 @@ def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_aw
 
 def test_ai_explanations_are_cached_per_question_and_show_the_model(b):
     js = """(() => { const v = REG.vocab.find(x => x.builtin && meaningOptions(x)); srsAnswer(v.key, true); startSession('items', { items: [v] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice(); answerCurrent(e.q.answer);
-      const n0 = __calls.filter(u => /generateContent/.test(u)).length;
-      return aiExplainCurrent().then(() => { const n1 = __calls.filter(u => /generateContent/.test(u)).length; const html1 = document.getElementById('aiExplainBox').innerHTML; renderPractice();
-        return aiExplainCurrent().then(() => { const n2 = __calls.filter(u => /generateContent/.test(u)).length; const txt = document.getElementById('aiExplainBox').textContent; SESSION = null; document.body.classList.remove('practicing');
-          return JSON.stringify({ first: n1 - n0, second: n2 - n1, hasModel: /gemini-b-flash/.test(txt), hasAnswer: /answer from/.test(txt), html1: html1.length > 0 }); }); }); })()"""
-    out = b.run([("nav", URL), ("wait", READY), ("eval", GEMINI_MOCK), ("eval", js)], timeout=45)
+      const n0 = __calls.length;
+      return aiExplainCurrent().then(() => { const n1 = __calls.length; const html1 = document.getElementById('aiExplainBox').innerHTML; renderPractice();
+        return aiExplainCurrent().then(() => { const n2 = __calls.length; const txt = document.getElementById('aiExplainBox').textContent; SESSION = null; document.body.classList.remove('practicing');
+          return JSON.stringify({ first: n1 - n0, second: n2 - n1, hasModel: /gemini-3.5-flash-lite/.test(txt), hasAnswer: /answer from/.test(txt), count: /今天第 3／50 次/.test(html1), saved: /已儲存/.test(txt) }); }); }); })()"""
+    out = b.run([("nav", URL), ("wait", READY), ("eval", AI_MOCK), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['first'] >= 1 and r['second'] == 0 and r['hasModel'] and r['hasAnswer'] and r['html1'], r
+    assert r['first'] == 1 and r['second'] == 0 and r['hasModel'] and r['hasAnswer'] and r['count'] and r['saved'], r
 
 # ---- 2026-10-28: 聽一輪 keeps the shared player busy between lines (iOS lock screen) and pauses on a refused clip ----
 def test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip(b):
@@ -1953,13 +1958,13 @@ if __name__ == "__main__":
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
              test_single_words_are_sent_as_kanji_with_the_reading_pinned, test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong,
-             test_tools_page_has_an_expandable_api_guide_for_every_provider,
+             test_ai_needs_a_login_and_settings_have_no_ai_tab,
              test_stats_shows_the_past_week_of_practice_and_what_was_learned, test_reaching_the_learned_level_records_the_date, test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading,
              test_stats_projects_the_finish_date_from_the_recent_pace,
              test_mistake_loop_grades_once_per_day, test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_after_two_days, test_mistakes_page_is_a_compact_list_with_sort_filter_and_grammar_point_groups,
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_wrong_order_marks_the_misplaced_pieces_red, test_a_retry_copy_of_an_order_item_grades_the_right_order_as_right, test_a_kanji_question_reads_its_example_word_once_answered, test_options_of_one_question_share_one_font_size, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
-             test_gemini_auto_mode_skips_a_rate_limited_model_and_remembers_the_cooldown, test_gemini_manual_model_falls_back_for_one_call_without_changing_the_preference, test_gemini_reports_a_plain_message_when_every_model_is_cooling_down, test_ai_explanations_are_cached_per_question_and_show_the_model, test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box,
+             test_ai_asks_the_site_function_and_keeps_todays_count, test_ai_shows_the_functions_own_message_when_it_refuses, test_ai_explanations_are_cached_per_question_and_show_the_model, test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box,
              test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_hides_kana_drills,
              test_a_missed_listening_or_reading_item_gets_no_retry_copy_in_the_session, test_settings_drop_the_switches_the_app_now_decides, test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off, test_sets_hold_twenty_mixed_even_when_an_old_copy_saved_another_size_or_order,
              test_offline_audio_keeps_the_japanese_clips_of_todays_practice, test_offline_audio_fills_the_cache_skipping_stored_and_missing_clips_and_stops_offline,

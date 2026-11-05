@@ -40,7 +40,7 @@ window.__fake = (function () {
 
 def boot(b, extra=()):
     return b.run([("nav", URL), ("wait", READY), ("eval", FAKE),
-                  ("eval", "state.aiConfig = { provider: 'gemini', geminiKey: 'LOCALKEY' }; saveState(); true"),
+                  ("eval", "state.ttsConfig = { engine: 'cloud', googleKey: 'LOCALKEY' }; saveState(); true"),
                   ("eval", "new Promise(r => setTimeout(r, 50)).then(() => Sync.init({ client: __fake.client })).then(() => Sync.status)")] + list(extra))
 
 def sleep_js(ms): return ("eval", f"new Promise(r => setTimeout(r, {ms}))")
@@ -51,9 +51,9 @@ def test_without_config_sync_is_off(b):
 
 def test_first_sync_on_fresh_device_takes_cloud_even_if_local_newer(b):
     out = boot(b, [
-        ("eval", "__fake.setRow({ user_id: 'u1', state: { v: 3, updatedAt: '2000-01-01T00:00:00.000Z', settings: { loadCap: 55 }, aiConfig: { provider: 'gemini', geminiKey: '' } }, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('a@b.c'); true"),
+        ("eval", "__fake.setRow({ user_id: 'u1', state: { v: 3, updatedAt: '2000-01-01T00:00:00.000Z', settings: { loadCap: 55 }, ttsConfig: { engine: 'cloud', googleKey: '' } }, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('a@b.c'); true"),
         ("wait", "Sync.status === 'idle'"),
-        ("eval", "JSON.stringify({ goal: state.settings.loadCap, key: state.aiConfig.geminiKey, ever: Sync.meta.everSynced })"),
+        ("eval", "JSON.stringify({ goal: state.settings.loadCap, key: state.ttsConfig.googleKey, ever: Sync.meta.everSynced })"),
     ])
     assert out[-1] == '{"goal":55,"key":"LOCALKEY","ever":true}', out[-1]
 
@@ -62,10 +62,10 @@ def test_save_pushes_after_debounce_without_secrets(b):
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
         ("eval", "state.settings.loadCap = 66; saveState(); Sync.status"),
         ("wait", "__fake.getRow() && __fake.getRow().state.settings.loadCap === 66"),
-        ("eval", "JSON.stringify({ ai: __fake.getRow().state.aiConfig, tts: __fake.getRow().state.ttsConfig, uid: __fake.getRow().user_id, up: __fake.getRow().updated_at === state.updatedAt, st: Sync.status })"),
+        ("eval", "JSON.stringify({ ai: 'aiConfig' in __fake.getRow().state, tts: __fake.getRow().state.ttsConfig, uid: __fake.getRow().user_id, up: __fake.getRow().updated_at === state.updatedAt, st: Sync.status })"),
     ])
     assert out[-2] == "pending", out[-2]
-    assert out[-1] == '{"ai":null,"tts":null,"uid":"u1","up":true,"st":"idle"}', out[-1]
+    assert out[-1] == '{"ai":false,"tts":null,"uid":"u1","up":true,"st":"idle"}', out[-1]
 
 def test_logout_during_debounce_cancels_push(b):
     out = boot(b, [
@@ -81,7 +81,7 @@ def test_unreadable_or_bare_cloud_state_does_not_break_app(b):
     out = boot(b, [
         ("eval", "__fake.setRow({ user_id: 'u1', state: { v: 3, updatedAt: '2099-01-01T00:00:00.000Z' }, updated_at: '2099-01-01T00:00:00.000Z' }); __fake.login('a@b.c'); true"),
         ("wait", "Sync.status === 'idle' || Sync.status === 'error'"),
-        ("eval", "JSON.stringify({ st: Sync.status, srs: JSON.stringify(state.srs), key: state.aiConfig.geminiKey, nav: document.querySelectorAll('#sideNav .nav-item').length })"),
+        ("eval", "JSON.stringify({ st: Sync.status, srs: JSON.stringify(state.srs), key: state.ttsConfig.googleKey, nav: document.querySelectorAll('#sideNav .nav-item').length })"),
     ])
     assert out[-1] == '{"st":"idle","srs":"{}","key":"LOCALKEY","nav":7}', out[-1]
 
@@ -103,7 +103,7 @@ def test_switching_account_resets_device_binding_and_adopts_new_cloud(b):
         ("eval", "Sync.signOut().then(() => JSON.stringify({ st: Sync.status, pend: Sync.meta.pendingSync }))"),
         ("eval", "__fake.setRow({ user_id: 'u2', state: { v: 3, updatedAt: '2000-01-01T00:00:00.000Z', settings: { loadCap: 77 } }, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('b@c.d', 'u2'); true"),
         ("wait", "Sync.status === 'idle' && Sync.meta.userId === 'u2'"),
-        ("eval", "JSON.stringify({ goal: state.settings.loadCap, uid: Sync.meta.userId, ever: Sync.meta.everSynced, key: state.aiConfig.geminiKey })"),
+        ("eval", "JSON.stringify({ goal: state.settings.loadCap, uid: Sync.meta.userId, ever: Sync.meta.everSynced, key: state.ttsConfig.googleKey })"),
     ])
     assert out[-4] == '{"uid":"u1","ever":true}', out[-4]
     assert out[-3] == '{"st":"off","pend":false}', out[-3]

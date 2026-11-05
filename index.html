@@ -673,8 +673,6 @@ details.disclose > summary { cursor: pointer; list-style: none; color: var(--fg-
 details.disclose > summary::-webkit-details-marker { display: none; }
 details.disclose > summary::before { content: "▸"; display: inline-block; width: 1em; color: var(--fg-3); transition: transform .15s; }
 details.disclose[open] > summary::before { transform: rotate(90deg); }
-.api-guide > summary { font-weight: 600; color: var(--fg); padding: 6px 0; }
-.api-steps { padding-left: 1.3em; } .api-steps li { margin: 6px 0; } .api-steps li > div { margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -1027,12 +1025,16 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.48';   // keep equal to the version in sw.js CACHE ('nq-v1.0.48'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.49';   // keep equal to the version in sw.js CACHE ('nq-v1.0.49'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.49', date: '2026-11-05', items: [
+    'AI 改用網站自己的 Gemini：登入後就能用題目解析、單元補充、出題、補充例句、句子分析和學習建議，不必再自己申請、填 API Key。每人每天 50 次，AI 回答下方會寫今天是第幾次。',
+    '設定裡的 AI 分頁、工具與 AI 頁的 API 申請說明一起拿掉；這台裝置存過的 AI 金鑰和模型設定也會清掉。'
+  ] },
   { v: '1.0.48', date: '2026-11-05', items: [
     '設定 › 資料的「重設所有進度」收進最下面灰色的摺疊區（和管理者那區一樣），要先點開才看得到按鈕，不容易誤按。'
   ] },
@@ -1390,7 +1392,6 @@ function defaultState() {
     stageTests: {},         // 階段測驗紀錄: { pre|p1|p2|p3: [{ date, correct, total, passed }] } newest first, 10 kept
     questionHistory: {},
     unitAiNotes: {},
-    aiConfig: null,
     ttsConfig: null,
     today: { date: todayStr(), newV: 0, newG: 0, newK: 0, newL: 0, newR: 0, newC: 0, newA: 0 },
     statsFmt: {},
@@ -1467,7 +1468,7 @@ function normalizeState(s) {
   if ('plan' in out.today && !(out.today.plan && typeof out.today.plan === 'object' && out.today.plan.lists && typeof out.today.plan.lists === 'object')) delete out.today.plan;
   Object.values(out.srs).forEach(ensureFsrs);
   Object.entries(out.srs).forEach(([k, r]) => { if (k.startsWith('v:') && (!r.f || typeof r.f !== 'object')) r.f = {}; });   // words answered before per-format tracking
-  if (out.aiConfig && out.aiConfig.geminiModel === 'gemini-3.8-flash') out.aiConfig.geminiModel = 'auto';   // the old default name: auto picks a live model
+  delete out.aiConfig;   // 1.0.49: AI runs on the site's own key; the keys learners entered are dropped
   if (out.ttsConfig && typeof out.ttsConfig === 'object' && out.ttsConfig.engine !== 'cloud') out.ttsConfig.engine = 'cloud';   // 1.0.40: no speech service of one's own any more; whatever was chosen plays the cloud clips
   // built-in words merged into another entry (名詞 + 名詞する → one card): the record follows; when both exist the one answered more stays
   Object.entries(DATA.VOCAB_MERGED || {}).forEach(([from, to]) => {
@@ -1656,7 +1657,6 @@ function migrateLegacy(old) {
     s.customExam.push({ id: q.id, lv, m: String(q.mondaiCode || 'S2-M1').replace(/^N[1-5]-/, ''), q: q.question, passage: q.passage || '', op: q.options.slice(0, 4), a: q.answer, why: q.explanation || '', speak: q.speak || '', isListening: Boolean(q.isListening), src: 'ai' });
   });
 
-  s.aiConfig = old.aiConfig || null;
   s.ttsConfig = old.ttsConfig || null;
   s.unitAiNotes = old.unitAiSupplements || {};
   s.completedUnits = (old.completedMilestones || []).filter(id => DATA.UNITS.some(u => u.id === id));
@@ -4615,7 +4615,7 @@ function moreItemsHtml(e, answered) {
   return `<button type="button" class="btn btn-sm btn-ghost" data-act="toggle-furi" title="切換振假名（F）">振假名：${FURI_LABEL[furiState()]}</button>
     ${answered && !ok && !e.slip && e.undo && !SESSION.test ? '<button type="button" class="btn btn-sm btn-ghost" data-act="slip" title="選錯鍵、看錯行：不進錯題本，排程維持原狀">手滑，不算</button>' : ''}
     ${answered && q.kind === 'v' && q.key && ok && cur && !SESSION.test && !cur.known && srsLevelLabel(cur, q.key) !== '已熟練' ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(q.key)}">這個字我已經會了</button>` : ''}
-    ${answered && isAiConfigured() ? '<button type="button" class="btn btn-sm btn-ghost" data-act="ai-explain">AI 解析</button>' : ''}
+    ${answered && aiReady() ? '<button type="button" class="btn btn-sm btn-ghost" data-act="ai-explain">AI 解析</button>' : ''}
     ${answered && q.kind !== 'm' ? '<button type="button" class="btn btn-sm btn-ghost" data-act="report-item" title="題目有誤或不自然時，把它移出題庫">這題有問題</button>' : ''}`;
 }
 // what a wrong option is, shown beside it after answering: a word's Chinese meaning, or the word a Chinese meaning belongs to
@@ -4969,7 +4969,7 @@ function route() {
     }
     else if (r.name === 'mistakes') { if (r.parts[1] === 'loop') renderMistakeLoop(view); else if (r.parts[1] === 'listen') renderListen(view); else renderMistakes(view, r.params); }
     else if (r.name === 'exam') renderExam(view, r.parts[1] || '', r.params);
-    else if (r.name === 'tools') renderTools(view, r.params);
+    else if (r.name === 'tools') renderTools(view);
     else if (r.name === 'stats') renderStats(view);
     else renderToday(view);
     if (opened) playAnims(view);
@@ -5866,7 +5866,7 @@ function renderUnit(view, uid, tab) {
       <div class="card">
         <div class="card-head"><div class="card-title">AI 補充說明</div>${aiNote ? '<button type="button" class="btn btn-sm btn-ghost" data-act="ai-note-clear" data-unit="' + uid + '">清除</button>' : ''}</div>
         <div class="row-wrap"><input class="input grow" id="aiNoteQ" placeholder="想多了解什麼？例如：為什麼乗る用「に」？（可留空）" /><button type="button" class="btn" data-act="ai-note" data-unit="${uid}">請 AI 補充</button></div>
-        <div id="aiNoteBox" class="mt-3">${aiNote ? md(aiNote) : (isAiConfigured() ? '' : '<div class="hint">需要先在「設定 → AI」填入 API Key。</div>')}</div>
+        <div id="aiNoteBox" class="mt-3">${aiNote ? md(aiNote) : (aiReady() ? '' : '<div class="hint">登入後可以請 AI 補充重點（設定 › 資料 › 雲端同步）。</div>')}</div>
       </div>`;
   }
   view.innerHTML = `
@@ -5884,7 +5884,7 @@ function renderUnit(view, uid, tab) {
         <span class="muted legs">${unitLegendHtml(s)}${legacy ? `<span class="leg">舊版累計作答 ${legacy.seen} 題</span>` : ''}</span>
         ${intro ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="toggle-done" data-unit="${uid}">${s.done ? '取消完成標記' : '標記為已完成'}</button>`}
       </div>
-      ${isAiConfigured() && !intro ? `<div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="ai-unit-items" data-unit="${uid}">${icon('spark')}用 AI 為本單元多出 5 題</button></div>` : ''}
+      ${aiReady() && !intro ? `<div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="ai-unit-items" data-unit="${uid}">${icon('spark')}用 AI 為本單元多出 5 題</button></div>` : ''}
     </div>
     <div class="seg mb-3 mt-4" role="tablist">
       <button type="button" aria-pressed="${tab !== 'items'}" data-act="nav" data-route="#/course/${uid}">講義</button>
@@ -6168,7 +6168,7 @@ function renderVocab(view, tab, params) {
       <div class="row-wrap mt-3" style="justify-content:space-between">
         <div class="row-wrap">
           <button type="button" class="btn btn-sm btn-ghost" data-act="flash-speak" data-mode="word">${icon('speaker')}發音</button>
-          ${F.flipped && isAiConfigured() ? '<button type="button" class="btn btn-sm btn-ghost" data-act="flash-ai">AI 補充例句</button>' : ''}
+          ${F.flipped && aiReady() ? '<button type="button" class="btn btn-sm btn-ghost" data-act="flash-ai">AI 補充例句</button>' : ''}
         </div>
         <button type="button" class="btn btn-sm btn-ghost" data-act="flash-skip">略過</button>
       </div>
@@ -6874,7 +6874,7 @@ function renderMistakes(view, params = {}) {
         ${m.why ? `<div class="small mt-2">${md(m.why)}</div>` : ''}
         <div class="row-wrap mt-2">
           <input class="input grow" placeholder="自己的筆記或口訣" value="${esc(m.note || '')}" data-change="mistake-note" data-id="${esc(m.id)}" style="min-width:180px" />
-          ${isAiConfigured() ? `<button type="button" class="btn btn-sm" data-act="mistake-ai" data-id="${esc(m.id)}">AI 解析</button>` : ''}
+          ${aiReady() ? `<button type="button" class="btn btn-sm" data-act="mistake-ai" data-id="${esc(m.id)}">AI 解析</button>` : ''}
           <button type="button" class="btn btn-sm btn-ghost" data-act="mistake-toggle" data-id="${esc(m.id)}">${m.mastered ? '移回待複習' : '標為已掌握'}</button>
           <button type="button" class="btn btn-sm btn-ghost btn-danger" data-act="mistake-del" data-id="${esc(m.id)}">刪除</button>
         </div>
@@ -7228,7 +7228,7 @@ function renderExam(view, sub, params) {
       </div>
       <div class="row-wrap mt-4">
         <button type="button" class="btn btn-primary" data-act="exam-start">開始考試</button>
-        ${isAiConfigured() ? '<button type="button" class="btn" data-act="exam-ai">先請 AI 出 8 道新題再開始</button>' : ''}
+        ${aiReady() ? '<button type="button" class="btn" data-act="exam-ai">先請 AI 出 8 道新題再開始</button>' : ''}
       </div>
       <p class="hint mt-3">分數是估計的，僅供參考。</p>
     </div>
@@ -7659,70 +7659,23 @@ function offlineAnalysis(text) {
       ${words.length ? `<div class="small muted mt-3">單字</div><div class="list">${words.slice(0, 12).map(v => `<div class="list-item"><span class="jp">${esc(jaPlain(v.w))}</span><span class="small muted jp">${esc(v.r && v.r !== v.w ? v.r : '')}</span><span class="small grow">${esc(v.m)}</span><span class="tiny muted">${esc(posLabel(v.p))}</span></div>`).join('')}</div>` : ''}
       ${pats.length ? `<div class="small muted mt-3">句型</div><ul class="small">${pats.map(([, n, d]) => `<li><b class="jp">${esc(n)}</b>：${esc(d)}</li>`).join('')}</ul>` : ''}
       ${parts.length ? `<div class="small muted mt-3">助詞提示</div><ul class="small">${parts.map(([, d]) => `<li>${esc(d)}</li>`).join('')}</ul>` : ''}
-      <div class="hint mt-2">這是離線的簡易分析（只比對單字表與常見句型）。設定 AI 後可以得到完整的翻譯與結構說明。</div>
+      <div class="hint mt-2">這是離線的簡易分析（只比對單字表與常見句型）。登入後可以用 AI 得到完整的翻譯與結構說明。</div>
     </div>`;
 }
 
-// ---- API 申請說明：工具與 AI 頁底部的可展開指南；設定頁的金鑰欄位以 #/tools?guide=<id> 連到對應的一則 ----
-const API_GUIDES = [
-  { id: 'gemini', name: 'Google Gemini（AI Studio）', use: 'AI 服務「Google Gemini」：題目解析、出題、產生字卡、句子分析、學習建議。',
-    cost: 'AI Studio 的金鑰有免費方案（每分鐘與每日次數有上限），一般學習用量足夠。',
-    steps: [
-      ['開啟 Google AI Studio', '用 Google 帳號登入後到「Get API key」。', 'https://aistudio.google.com/apikey'],
-      ['建立金鑰', '按「建立 API 金鑰」，選一個既有專案或讓它新建一個，複製金鑰。'],
-      ['貼進 app', '設定 › AI › AI 服務選「Google Gemini」，貼上金鑰，按「測試連線」；「列出可用模型」會顯示這把金鑰能用的模型。']
-    ],
-    tips: [] },
-  { id: 'openai', name: 'OpenAI', use: 'AI 服務「OpenAI 或相容服務」。',
-    cost: '預付制，需要先儲值（最低 5 美元）。gpt-4o-mini 很便宜。ChatGPT Plus 訂閱和 API 是分開計費的。',
-    steps: [
-      ['註冊並儲值', '登入 OpenAI Platform，到 Billing 加值。', 'https://platform.openai.com/settings/organization/billing/overview'],
-      ['建立金鑰', 'API keys ›「Create new secret key」。金鑰以 sk- 開頭，只會顯示一次，請立刻複製。', 'https://platform.openai.com/api-keys'],
-      ['貼進 app', '設定 › AI › 選「OpenAI 或相容服務」貼上。']
-    ],
-    tips: ['OpenRouter、LM Studio 等相容服務：把「API 位址」改成該服務的網址，金鑰用它們發的。'] },
-  { id: 'ollama', name: 'Ollama（本機 AI、免費）', use: 'AI 服務「Ollama（本機）」，不需要金鑰。',
-    cost: '免費。模型在自己的電腦上跑，7B 模型大約需要 8 GB 記憶體。',
-    steps: [
-      ['下載安裝', '到官方網站下載並安裝。', 'https://ollama.com/download'],
-      ['下載模型', '在終端機執行 <code>ollama pull qwen2.5:7b</code>（或其他支援中日文的模型）。'],
-      ['允許瀏覽器連線', '設定環境變數 <code>OLLAMA_ORIGINS=${origin}</code> 後重新啟動 Ollama，否則瀏覽器的請求會被拒絕。'],
-      ['貼進 app', '設定 › AI › 選「Ollama（本機）」，位址用預設值，模型填剛才下載的名稱。']
-    ],
-    tips: [] }
-];
-function apiGuidesHtml(openId) {
-  const origin = location.origin;
-  const fill = (t) => t.replace(/\$\{origin\}/g, esc(origin));
-  const one = (g) => `<details class="disclose api-guide mt-2" data-guide="${g.id}" ${g.id === openId ? 'open' : ''}><summary>${esc(g.name)}</summary>
-    <div class="mt-2 small">
-      <div><span class="dim">用在：</span>${esc(g.use)}</div>
-      <div class="mt-1"><span class="dim">費用：</span>${esc(g.cost)}</div>
-      <ol class="mt-2 api-steps">${g.steps.map(([h, body, url]) => `<li><strong>${esc(h)}</strong>${url ? ` <a href="${esc(url)}" target="_blank" rel="noopener noreferrer">開啟 ↗</a>` : ''}<div class="dim">${fill(body)}</div></li>`).join('')}</ol>
-      ${g.tips.length ? `<ul class="mt-2">${g.tips.map(t => `<li>${fill(t)}</li>`).join('')}</ul>` : ''}
-    </div></details>`;
-  return `<div class="card" id="apiGuides">
-    <div class="card-head"><div><div class="card-title">API 申請說明</div><div class="card-sub">金鑰要自己申請，只存在這個瀏覽器裡（不會同步）。</div></div></div>
-    ${API_GUIDES.map(one).join('')}
-  </div>`;
-}
-function guideLink(id) {
-  return `<a href="#" data-act="nav" data-route="#/tools?guide=${id}">申請方式</a>`;
-}
-
 let TOOLS_STATE = { conjWord: '書く', conjKind: 'auto', sentence: '', genUnit: '' };
-function renderTools(view, params = {}) {
-  const ai = isAiConfigured();
+function renderTools(view) {
+  const ai = aiReady();
   const unitOpts = DATA.UNITS.map(u => `<option value="${u.id}" ${(TOOLS_STATE.genUnit || state.currentUnit) === u.id ? 'selected' : ''}>${esc(u.weeks)}・${esc(u.short)}</option>`).join('');
   view.innerHTML = `
-    <div class="page-head"><div><div class="page-title">工具與 AI</div><div class="page-sub">${ai ? `AI：${esc(aiLabel())}` : ''}</div></div>
-      <button type="button" class="btn" data-act="settings-ai">${ai ? 'AI 設定' : '設定 AI'}</button></div>
+    <div class="page-head"><div><div class="page-title">工具與 AI</div><div class="page-sub">${ai ? '' : '登入後就能用 AI'}</div></div>
+      ${ai ? '' : '<button type="button" class="btn" data-act="sync-open">登入</button>'}</div>
     <div class="card">
       <div class="card-head"><div class="card-title">句子分析</div></div>
       <textarea class="input jp" id="anaText" rows="2" placeholder="貼上想看懂的日文句子，例如：雨が降ったら、試合は中止になるかもしれません。">${esc(TOOLS_STATE.sentence)}</textarea>
       <div class="row-wrap mt-3">
         <button type="button" class="btn" data-act="analyze-offline">離線分析</button>
-        <button type="button" class="btn ${ai ? 'btn-primary' : ''}" data-act="analyze-ai" ${ai ? '' : 'disabled title="需要先設定 AI"'}>${icon('spark')}AI 詳細分析</button>
+        <button type="button" class="btn ${ai ? 'btn-primary' : ''}" data-act="analyze-ai" ${ai ? '' : 'disabled title="登入後才能用 AI"'}>${icon('spark')}AI 詳細分析</button>
         <button type="button" class="btn btn-ghost btn-icon" data-act="analyze-speak" aria-label="朗讀">${icon('speaker')}</button>
       </div>
       <div id="analyzeOut"></div>
@@ -7738,7 +7691,7 @@ function renderTools(view, params = {}) {
       </div>
       <div id="conjOut" class="mt-3">${conjTableHtml(TOOLS_STATE.conjWord, TOOLS_STATE.conjKind)}</div>
     </div>
-    <details class="disclose mt-3 tools-more" ${params.guide ? 'open' : ''}><summary>進階：AI 出題、學習建議、API 金鑰</summary>
+    <details class="disclose mt-3 tools-more"><summary>進階：AI 出題、學習建議</summary>
     <div class="grid grid-2 mt-3">
       <div class="card">
         <div class="card-head"><div class="card-title">用 AI 為單元出題</div></div>
@@ -7757,13 +7710,10 @@ function renderTools(view, params = {}) {
         <div id="adviceOut"></div>
       </div>
     </div>
-    ${apiGuidesHtml(params.guide)}
     </details>`;
-  if (params.guide) { const d = view.querySelector(`details[data-guide="${params.guide}"]`); if (d) d.scrollIntoView({ block: 'start' }); }
 }
 
 Object.assign(ACTIONS, {
-  'settings-ai': () => openSettings('ai'),
   'settings-learn': () => openSettings('learn'),
   'analyze-offline': () => {
     const t = document.getElementById('anaText').value.trim();
@@ -7798,9 +7748,9 @@ Object.assign(CHANGE_ACTIONS, {
 
 // ---- 77_settings.js ----
 /* ==========================================================================
-   Settings (modal): learning (with speech rate and offline audio), AI, data, appearance
+   Settings (modal): learning (with speech rate and offline audio), data, appearance
    ========================================================================== */
-const SETTINGS_TABS = [['learn', '學習'], ['ai', 'AI'], ['data', '資料'], ['look', '外觀']];
+const SETTINGS_TABS = [['learn', '學習'], ['data', '資料'], ['look', '外觀']];
 let settingsTab = 'learn';
 let settingsDirty = false;
 
@@ -7814,7 +7764,7 @@ function refreshSettings() {
 }
 function settingsHtml() {
   const tabs = `<div class="seg mb-4" role="tablist">${SETTINGS_TABS.map(([k, l]) => `<button type="button" aria-pressed="${settingsTab === k}" data-act="settings-tab" data-tab="${k}">${l}</button>`).join('')}</div>`;
-  const body = { learn: settingsLearn, ai: settingsAi, data: settingsData, look: settingsLook }[settingsTab]();
+  const body = { learn: settingsLearn, data: settingsData, look: settingsLook }[settingsTab]();
   return tabs + body;
 }
 
@@ -7822,16 +7772,11 @@ function boolRow(key, label, hint) {
   return `<div class="setting-row"><div><div class="label">${label}</div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>
     <label class="switch"><input type="checkbox" ${state.settings[key] ? 'checked' : ''} data-change="setting" data-key="${key}" data-type="bool" /><span class="track"></span></label></div>`;
 }
-function selRow(key, label, hint, options, target = 'setting') {
-  const cur = target === 'setting' ? (key === 'furiState' ? furiState() : state.settings[key]) : aiConfig()[key];
+function selRow(key, label, hint, options) {
+  const cur = key === 'furiState' ? furiState() : state.settings[key];
   return `<div class="setting-row"><div><div class="label">${label}</div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>
-    <select class="select" style="width:auto;max-width:260px" data-change="${target}" data-key="${key}">${options.map(([v, l]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
+    <select class="select" style="width:auto;max-width:260px" data-change="setting" data-key="${key}">${options.map(([v, l]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
 }
-function textRow(key, label, hint, target, opt = {}) {
-  const cur = aiConfig()[key];
-  return `<div class="field mt-3"><label>${label}</label><input class="input" ${opt.secret ? 'type="password" autocomplete="off"' : ''} value="${esc(cur || '')}" placeholder="${esc(opt.ph || '')}" data-change="${target}" data-key="${key}" />${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
-}
-
 function settingsLearn() {
   const s = state.settings;
   return `
@@ -7847,29 +7792,6 @@ function settingsLearn() {
       <div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-all" data-kind="ja">下載日文音檔（約 220 MB）</button><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-all" data-kind="zh">下載中文音檔（約 120 MB）</button><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-stop">停止</button></div>
       <div id="cloudDlBox" class="small mt-2">${cloudDlHtml()}</div>
     </details>`;
-}
-
-function settingsAi() {
-  const c = aiConfig();
-  let fields = '';
-  if (c.provider === 'gemini') {
-    fields = textRow('geminiKey', 'Gemini API Key', `可在 Google AI Studio 免費申請。Key 只存在這個瀏覽器裡。${guideLink('gemini')}`, 'ai-cfg', { secret: true })
-      + (() => { let list = []; try { const cc = JSON.parse(localStorage.getItem('nq_gemini_models2') || 'null'); if (cc && cc.list) list = cc.list; } catch (e) { /* ignore */ }
-        const cur = c.geminiModel || 'auto'; const opts = [['auto', '自動（優先 flash，額度用完時換下一個）']].concat(list.map(n => [n, n])); if (cur !== 'auto' && !list.includes(cur)) opts.push([cur, cur]);
-        return `<div class="field mt-3"><label>模型</label><div class="row-wrap"><select class="select" style="max-width:300px" data-change="ai-cfg" data-key="geminiModel">${opts.map(([v, l]) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select><button type="button" class="btn btn-sm" data-act="ai-models">列出可用模型</button></div><div id="aiModelList" class="mt-2"></div><div class="hint">免費額度是按模型分開算的：被限額或過載的模型會暫時跳過，自動改用下一個，不會改動這裡的選擇。</div></div>`; })();
-  } else if (c.provider === 'openai') {
-    fields = textRow('openaiUrl', 'API 位址', '也可以填 OpenAI 相容的服務（例如 OpenRouter、LM Studio）。', 'ai-cfg', { ph: 'https://api.openai.com/v1' })
-      + textRow('openaiKey', 'API Key', `只存在這個瀏覽器裡。${guideLink('openai')}`, 'ai-cfg', { secret: true })
-      + textRow('openaiModel', '模型', '', 'ai-cfg', { ph: 'gpt-4o-mini' });
-  } else {
-    fields = textRow('ollamaUrl', 'Ollama 位址', `需要在電腦上執行 ollama serve，並設定 OLLAMA_ORIGINS 允許瀏覽器連線。${guideLink('ollama')}`, 'ai-cfg', { ph: 'http://localhost:11434' })
-      + textRow('ollamaModel', '模型', '', 'ai-cfg', { ph: 'qwen2.5:7b' });
-  }
-  return `
-    <p class="small dim mt-0">AI 用在：題目解析、單元補充、出新題、字卡的補充例句、句子分析與學習建議。沒有設定時，這些按鈕會停用，其他功能照常使用。</p>
-    ${selRow('provider', 'AI 服務', '', [['gemini', 'Google Gemini'], ['openai', 'OpenAI 或相容服務'], ['ollama', 'Ollama（本機）']], 'ai-cfg')}
-    ${fields}
-    <div class="row-wrap mt-4"><button type="button" class="btn" data-act="ai-test" ${isAiConfigured() ? '' : 'disabled'}>測試連線</button>${isAiConfigured() ? `<span class="small muted">目前使用 ${esc(aiLabel())}</span>` : ''}</div>`;
 }
 
 function settingsData() {
@@ -7933,11 +7855,10 @@ function settingsLook() {
 
 // ---------- restore (the old version's data) ----------
 function applyImportedState(next, msg) {
-  const keepAi = state.aiConfig; const keepTts = state.ttsConfig; const hadAi = isAiConfigured();
+  const keepTts = state.ttsConfig;
   state = normalizeState(next);
   LAST_BULK_MARK = null;   // the snapshot belongs to the state that was replaced
   // restored data without keys (the old version's) should not wipe the keys already entered here
-  if (hadAi && !isAiConfigured()) state.aiConfig = keepAi;
   if (keepTts && !(state.ttsConfig && TTS_SECRET_KEYS.some(k => state.ttsConfig[k]))) state.ttsConfig = Object.assign({}, state.ttsConfig || {}, Object.fromEntries(TTS_SECRET_KEYS.map(k => [k, keepTts[k] || ''])));
   saveState(); buildRegistry(); applyTheme(); applyFurigana();
   SESSION = null; FLASH = null; EXAM = null;
@@ -7971,12 +7892,6 @@ Object.assign(CHANGE_ACTIONS, {
     if (k === 'speechRate') { const hint = el.closest('.setting-row').querySelector('.hint'); if (hint) hint.textContent = `目前 ${Number(v).toFixed(2)} 倍`; }
     if (modalOpen()) settingsDirty = true; else route();
   },
-  'ai-cfg': (el) => {
-    aiConfig()[el.dataset.key] = el.value.trim();
-    saveState();
-    if (['provider', 'geminiKey', 'openaiKey'].includes(el.dataset.key)) refreshSettings();
-    settingsDirty = true;
-  },
 });
 
 Object.assign(ACTIONS, {
@@ -7999,18 +7914,6 @@ Object.assign(ACTIONS, {
   },
   'cloud-dl-all': (el) => cloudDownloadAll(el.dataset.kind || 'ja'),
   'cloud-dl-stop': () => { if (CLOUD_DL) CLOUD_DL.stop = true; },
-  'ai-test': (el) => aiTestConnection(el),
-  'ai-models': async (el) => {
-    const key = (aiConfig().geminiKey || '').trim();
-    if (!key) { toast('請先填入 Gemini API Key'); return; }
-    await withBusy(el, '查詢中', async () => {
-      const list = await geminiModels(key);
-      const box = document.getElementById('aiModelList');
-      if (!box) return;
-      box.innerHTML = list.length ? `<div class="row-wrap">${list.slice(0, 12).map(m => `<button type="button" class="chip" style="cursor:pointer" data-act="ai-pick-model" data-model="${esc(m)}">${esc(m)}</button>`).join('')}</div>` : '<span class="small muted">查不到模型，請確認 API Key。</span>';
-    });
-  },
-  'ai-pick-model': (el) => { aiConfig().geminiModel = el.dataset.model; saveState(); refreshSettings(); toast(`模型：${el.dataset.model}`); },
   'legacy-reimport': () => {
     let raw = null;
     try { raw = localStorage.getItem(LEGACY_KEY); } catch (e) { /* ignore */ }
@@ -8028,9 +7931,9 @@ Object.assign(ACTIONS, {
   'reset-all': () => {
     if (!confirm('確定要重設所有進度？這個動作無法復原。')) return;
     if (!confirm('再確認一次：熟練度、錯題本、學習紀錄都會被清除。')) return;
-    const keep = { aiConfig: state.aiConfig, ttsConfig: state.ttsConfig, theme: state.settings.theme };
+    const keep = { ttsConfig: state.ttsConfig, theme: state.settings.theme };
     state = defaultState();
-    state.aiConfig = keep.aiConfig; state.ttsConfig = keep.ttsConfig; state.settings.theme = keep.theme;
+    state.ttsConfig = keep.ttsConfig; state.settings.theme = keep.theme;
     saveState(); buildRegistry();
     SESSION = null; FLASH = null; EXAM = null;
     closeModal(); toast('已重設'); go('#/today');
@@ -8922,7 +8825,7 @@ async function fetchEngineBlob(cfg, text, gender, opt = {}) {
     return s.blob();
   }
   if (cfg.engine === 'openai_tts') {
-    const key = (cfg.openaiKey || (state.aiConfig && state.aiConfig.openaiKey) || '').trim();
+    const key = (cfg.openaiKey || '').trim();
     if (!key) throw new Error('沒有 OpenAI API Key');
     const voice = gender === 'm' ? cfg.openaiVoiceM : cfg.openaiVoice;
     const resp = await fetch('https://api.openai.com/v1/audio/speech', {
@@ -9298,58 +9201,21 @@ function testVoice() {
 
 // ---- 81_ai.js ----
 /* ==========================================================================
-   AI: provider calls (Gemini / OpenAI-compatible / Ollama) and every AI feature
+   AI: every AI feature, answered through the site's own Gemini key
    ========================================================================== */
-const AI_DEFAULT = {
-  provider: 'gemini', geminiKey: '', geminiModel: 'auto',
-  ollamaUrl: 'http://localhost:11434', ollamaModel: 'qwen2.5:7b',
-  openaiUrl: 'https://api.openai.com/v1', openaiKey: '', openaiModel: 'gpt-4o-mini'
-};
-const GEMINI_FALLBACK = ['gemini-flash-latest', 'gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'];   // only when the account's list cannot be fetched
-const AI_LAST = { model: '' };   // which model answered the last call (shown under AI output)
-const GEMINI_TIMEOUT_MS = 20000;   // a model that stays silent this long is treated like an overloaded one and the next is tried
-// Free-tier quotas are per model: a rate-limited or overloaded model is skipped for a while and the next one is tried,
-// without touching the model the learner picked. Cooldowns survive a reload.
-const GEMINI_COOL = new Map();
-(() => { try { Object.entries(JSON.parse(localStorage.getItem('nq_gemini_cool') || '{}')).forEach(([m, t]) => { if (t > Date.now()) GEMINI_COOL.set(m, t); }); } catch (e) { /* ignore */ } })();
-function coolModel(m, ms) { GEMINI_COOL.set(m, Date.now() + ms); try { localStorage.setItem('nq_gemini_cool', JSON.stringify(Object.fromEntries(GEMINI_COOL))); } catch (e) { /* ignore */ } }
-function geminiRetryMs(raw) {
-  const t = String(raw || '');
-  if (/per[ _]?day|daily|PerDay/i.test(t)) { const d = new Date(); d.setHours(24, 5, 0, 0); return d - Date.now(); }   // daily quota: tomorrow
-  const m = /retry[^0-9]{0,16}([0-9.]+)\s*s/i.exec(t);
-  return m ? Math.ceil(parseFloat(m[1]) * 1000) : 60000;
-}
-async function geminiModelsCached(key) {
-  const sig = hashStr(key);
-  try { const c = JSON.parse(localStorage.getItem('nq_gemini_models2') || 'null'); if (c && c.date === todayStr() && c.key === sig && c.list.length) return c.list; } catch (e) { /* ignore */ }
-  const list = await geminiModels(key);
-  if (list.length) try { localStorage.setItem('nq_gemini_models2', JSON.stringify({ date: todayStr(), key: sig, list })); } catch (e) { /* ignore */ }
-  return list;
-}
+// The key stays on Supabase (Edge Function swift-api, source supabase/functions/ai): learners only need to be logged in.
+// The function picks the model (3.5 Flash Lite, then 3.1 once the day's share is used) and caps each learner's questions a day.
+const AI_FN = 'swift-api';
+const AI_REGION = 'ap-south-1';   // the database's region; a nearer one might be Hong Kong, which Gemini refuses
+const AI_TIMEOUT_MS = 60000;
+const AI_LAST = { model: '', mine: 0, cap: 0 };   // which model answered the last call and the learner's count today (shown under AI output)
+try { ['nq_gemini_cool', 'nq_gemini_models', 'nq_gemini_models2'].forEach(k => localStorage.removeItem(k)); } catch (e) { /* ignore */ }   // left by the own-key AI before 1.0.49
 // small on-device cache for AI answers (explanations are asked for the same question again and again)
 function aiCacheGet(k) { try { return JSON.parse(localStorage.getItem('nq_ai_cache') || '[]').find(x => x.k === k) || null; } catch (e) { return null; } }
 function aiCacheSet(k, text, model) { try { const a = JSON.parse(localStorage.getItem('nq_ai_cache') || '[]').filter(x => x.k !== k); a.unshift({ k, text, model, t: Date.now() }); localStorage.setItem('nq_ai_cache', JSON.stringify(a.slice(0, 300))); } catch (e) { /* ignore */ } }
-function aiCaption(model, cached) { return model ? `<div class="tiny muted mt-1">由 ${esc(model)} 產生${cached ? '・已儲存，不再重問' : ''}</div>` : ''; }
+function aiCaption(model, cached) { return model ? `<div class="tiny muted mt-1">由 ${esc(model)} 產生${cached ? '・已儲存，不再重問' : AI_LAST.cap ? `・今天第 ${AI_LAST.mine}／${AI_LAST.cap} 次` : ''}</div>` : ''; }
 
-function aiConfig() {
-  if (!state.aiConfig || typeof state.aiConfig !== 'object') state.aiConfig = {};
-  Object.keys(AI_DEFAULT).forEach(k => { if (state.aiConfig[k] === undefined || state.aiConfig[k] === null) state.aiConfig[k] = AI_DEFAULT[k]; });
-  return state.aiConfig;
-}
-function isAiConfigured() {
-  const c = state.aiConfig;
-  if (!c) return false;
-  if (c.provider === 'gemini') return Boolean(c.geminiKey && c.geminiKey.trim());
-  if (c.provider === 'ollama') return Boolean(c.ollamaUrl && c.ollamaModel);
-  if (c.provider === 'openai') return Boolean(c.openaiKey && c.openaiKey.trim());
-  return false;
-}
-function aiLabel() {
-  const c = aiConfig();
-  if (c.provider === 'gemini') return `Gemini（${c.geminiModel === 'auto' || !c.geminiModel ? (AI_LAST.model ? `自動・${AI_LAST.model}` : '自動') : c.geminiModel}）`;
-  if (c.provider === 'ollama') return `Ollama（${c.ollamaModel}）`;
-  return `OpenAI 相容（${c.openaiModel}）`;
-}
+function aiReady() { return Boolean(Sync.client && Sync.session); }
 
 function aiSystemPrompt() {
   const u = unitById(state.currentUnit);
@@ -9362,93 +9228,23 @@ function aiSystemPrompt() {
   ].join('\n');
 }
 
-const slowName = (n) => /preview|exp|thinking/i.test(n) ? 1 : 0;
-async function geminiModels(key) {
-  try {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`);
-    if (!r.ok) return [];
-    const d = await r.json();
-    return (d.models || [])
-      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
-      .map(m => String(m.name || '').replace(/^models\//, ''))
-      .filter(n => /^gemini-/.test(n) && !/(tts|embedding|image|imagen|live|vision|audio|robotics|computer-use|research)/i.test(n))
-      .sort((a, b) => (slowName(a) - slowName(b)) || (/flash/.test(b) - /flash/.test(a)) || (/lite/.test(a) - /lite/.test(b)) || b.localeCompare(a));   // stable flash first; preview / exp / thinking variants (slower, tighter quotas) last
-  } catch (e) { return []; }
-}
-
 async function callAi(prompt, opt = {}) {
-  const c = aiConfig();
-  const system = opt.system || aiSystemPrompt();
-  if (!isAiConfigured()) throw new Error('尚未設定 AI。請到「設定 → AI」填入 API Key。');
-  if (c.provider === 'gemini') {
-    const key = c.geminiKey.trim();
-    const genCfg = Object.assign({ temperature: opt.temperature ?? 0.7 }, opt.json ? { responseMimeType: 'application/json' } : {});
-    // thinking off: a quiz explanation does not need deliberation, and default thinking makes flash models take 10 s or more
-    const mkBody = (think) => ({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: think ? genCfg : Object.assign({ thinkingConfig: { thinkingBudget: 0 } }, genCfg) });
-    const tryModel = async (model, think = false) => {
-      const ac = new AbortController(); const timer = setTimeout(() => ac.abort(), GEMINI_TIMEOUT_MS);
-      let r;
-      try { r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(mkBody(think)), signal: ac.signal }); }
-      catch (err) { if (ac.signal.aborted) { const e = new Error(`Gemini 回應逾時（${Math.round(GEMINI_TIMEOUT_MS / 1000)} 秒沒有回應）`); e.timeout = true; throw e; } throw err; }
-      finally { clearTimeout(timer); }
-      if (!r.ok) {
-        const t = await r.text();
-        if (r.status === 400 && !think && /thinking/i.test(t)) return tryModel(model, true);   // this model cannot switch thinking off: ask again without the setting
-        const e = new Error(`Gemini 回應錯誤（${r.status}）${t.slice(0, 160)}`); e.status = r.status; e.raw = t; throw e;
-      }
-      const d = await r.json();
-      const text = (((d.candidates || [])[0] || {}).content || {}).parts;
-      const out = (text || []).map(p => p.text || '').join('');
-      if (!out) throw new Error('Gemini 沒有回傳內容');
-      return out;
-    };
-    const pref = String(c.geminiModel || 'auto').replace(/^models\//, '');
-    const order = pref !== 'auto' ? [pref] : [];
-    (await geminiModelsCached(key)).concat(GEMINI_FALLBACK).forEach(n => { if (!order.includes(n)) order.push(n); });
-    const now = Date.now();
-    const ready = order.filter(m => !(GEMINI_COOL.get(m) > now));
-    if (!ready.length) {
-      const soonest = Math.min(...order.map(m => GEMINI_COOL.get(m) || now));
-      throw new Error(`Gemini 的免費額度暫時用完：約 ${Math.max(1, Math.ceil((soonest - now) / 1000))} 秒後再試。`);
+  if (!aiReady()) throw new Error('登入後才能用 AI（設定 › 資料 › 雲端同步）。');
+  const body = { prompt, system: opt.system || aiSystemPrompt(), json: Boolean(opt.json) };
+  if (opt.temperature !== undefined) body.temperature = opt.temperature;
+  let timer;
+  const late = new Promise((_, no) => { timer = setTimeout(() => no(new Error(`AI 沒有回應（${AI_TIMEOUT_MS / 1000} 秒），請稍後再試。`)), AI_TIMEOUT_MS); });
+  try {
+    const { data, error } = await Promise.race([Sync.client.functions.invoke(AI_FN, { body, region: AI_REGION }), late]);
+    if (error) {
+      let msg = '';
+      try { msg = (await error.context.json()).error || ''; } catch (e) { /* not the function's own answer */ }
+      if (!msg && error.context && error.context.status === 401) msg = '登入狀態失效，請重新登入後再試。';
+      throw new Error(msg || (error.name === 'FunctionsFetchError' ? '連不到 AI，請確認網路後再試。' : 'AI 請求失敗，請稍後再試。'));
     }
-    let lastErr = null; let quotaHit = false;
-    for (const m of ready.slice(0, 6)) {
-      try {
-        let out;
-        try { out = await tryModel(m); }
-        catch (e1) { if (![500, 503].includes(e1.status)) throw e1; await new Promise(r => setTimeout(r, 1500)); out = await tryModel(m); }   // overloaded: one quick retry (a timeout is not retried: it would cost another wait)
-        AI_LAST.model = m;
-        if (pref !== 'auto' && m !== pref) toast(`${pref} 暫時無法使用，這次改用 ${m}`);
-        return out;
-      } catch (e) {
-        lastErr = e;
-        if (e.status === 429) { quotaHit = true; coolModel(m, geminiRetryMs(e.raw)); }
-        else if ([500, 503].includes(e.status) || e.timeout) coolModel(m, 30000);   // overloaded or silent: skip it for a while
-        else if ([400, 404].includes(e.status)) coolModel(m, 24 * 3600 * 1000);   // retired or misspelled model
-        else throw e;   // 401/403: the key itself
-      }
-    }
-    if (quotaHit) throw new Error(`Gemini 的免費額度暫時用完（${ready.length} 個模型都在限額中）：約 ${Math.max(1, Math.ceil((Math.min(...ready.map(m => GEMINI_COOL.get(m) || now)) - now) / 1000))} 秒後再試。`);
-    throw lastErr || new Error('Gemini 沒有可用的模型');
-  }
-  if (c.provider === 'ollama') {
-    const base = String(c.ollamaUrl).replace(/\/+$/, '');
-    const r = await fetch(`${/^https?:/.test(base) ? base : 'http://' + base}/api/generate`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: c.ollamaModel, system, prompt, stream: false, format: opt.json ? 'json' : undefined })
-    });
-    if (!r.ok) throw new Error(`Ollama 連線失敗（${r.status}），請確認 ollama serve 正在執行，並允許瀏覽器連線（OLLAMA_ORIGINS）。`);
-    const d = await r.json();
-    return d.response || '';
-  }
-  const base = String(c.openaiUrl || AI_DEFAULT.openaiUrl).replace(/\/+$/, '');
-  const r = await fetch(`${/^https?:/.test(base) ? base : 'https://' + base}/chat/completions`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${c.openaiKey.trim()}` },
-    body: JSON.stringify(Object.assign({ model: c.openaiModel, messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }] }, opt.json ? { response_format: { type: 'json_object' } } : {}))
-  });
-  if (!r.ok) throw new Error(`API 回應錯誤（${r.status}）`);
-  const d = await r.json();
-  return (((d.choices || [])[0] || {}).message || {}).content || '';
+    Object.assign(AI_LAST, { model: data.model || '', mine: data.mine || 0, cap: data.cap || 0 });
+    return String(data.text || '');
+  } finally { clearTimeout(timer); }
 }
 
 function parseAiJson(raw) {
@@ -9468,14 +9264,14 @@ async function withBusy(btn, label, fn) {
   if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> ${esc(label || 'AI 思考中')}`; }
   try { return await fn(); } catch (e) {
     console.warn(e);
-    toast(e.message && e.message.length < 140 ? e.message : 'AI 請求失敗，請稍後再試或檢查設定。', 4800);
+    toast(e.message && e.message.length < 140 ? e.message : 'AI 請求失敗，請稍後再試。', 4800);
     return null;
   } finally { if (btn && btn.isConnected) { btn.disabled = false; btn.innerHTML = old; } }
 }
 function needAi() {
-  if (isAiConfigured()) return false;
-  toast('需要先在「設定 → AI」填入 API Key');
-  openSettings('ai');
+  if (aiReady()) return false;
+  toast('登入後才能用 AI');
+  openSettings('data');
   return true;
 }
 
@@ -9710,13 +9506,6 @@ async function aiStudyAdvice(btn) {
     const out = await callAi(prompt);
     const box = document.getElementById('adviceOut');
     if (box) box.innerHTML = `<div class="panel mt-3">${md(out)}</div>`;
-  });
-}
-
-async function aiTestConnection(btn) {
-  await withBusy(btn, '測試中', async () => {
-    const out = await callAi('請只回覆「連線成功」四個字。', { temperature: 0 });
-    toast(`AI 回覆：${String(out).trim().slice(0, 40)}`, 4000);
   });
 }
 

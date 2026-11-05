@@ -215,7 +215,7 @@ def test_exam_countdown_follows_the_target_level(b):
     assert json.loads(ev(b, js)) == {'level': True, 'same': True, 'units': False, 'chip': '趕得上'}   # 1.0.32: N5's 50 items take 5 days, the three weeks before the exam leave 5
 
 def test_ai_advice_names_the_target_level(b):
-    js = "(async () => { " + FRESH + """ state.settings.examLevel = 'N5'; let prompt = ''; isAiConfigured = () => true; callAi = async (p) => { prompt = p; return '- 好'; };
+    js = "(async () => { " + FRESH + """ state.settings.examLevel = 'N5'; let prompt = ''; aiReady = () => true; callAi = async (p) => { prompt = p; return '- 好'; };
       await aiStudyAdvice(document.createElement('button')); return /距離 JLPT N5（/.test(prompt); })()"""
     assert ev(b, js) is True
 
