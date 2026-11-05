@@ -1403,8 +1403,8 @@ def test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay
       const tap = (e, text) => ACTIONS['order-tap']({ dataset: { i: String(e.q.tiles.indexOf(text)) } });
       startSession('items', { items: [a, bItem, c] }); let e = currentEntry(); renderPractice();
       const out = { custom: e.q.custom, tiles: document.querySelectorAll('.order-tiles .order-tile').length, noOpts: document.querySelectorAll('button.opt').length === 0, shuffled: e.q.tiles.join('') !== a.parts.join('') };
-      a.parts.forEach(p => tap(e, p)); out.okDone = e.done === true && e.chosen === 0; out.fullShown = !!document.querySelector('.order-out.ok') && !!document.querySelector('.fb-full');
-      nextQuestion(); e = currentEntry(); renderPractice(); const wrong = bItem.parts.slice().reverse(); wrong.forEach(p => tap(e, p));
+      a.parts.forEach(p => tap(e, p)); out.waits = !e.done; ACTIONS['tiles-submit'](); out.okDone = e.done === true && e.chosen === 0; out.fullShown = !!document.querySelector('.order-out.ok') && !!document.querySelector('.fb-full');
+      nextQuestion(); e = currentEntry(); renderPractice(); const wrong = bItem.parts.slice().reverse(); wrong.forEach(p => tap(e, p)); ACTIONS['tiles-submit']();
       out.wrongDone = e.done === true && e.chosen === 1; out.produced = e.q.options[1].text; out.wrongText = (bItem.pre || '') + wrong.join('') + (bItem.post || '');
       nextQuestion(); e = currentEntry(); renderPractice(); c.parts.slice(0, 3).forEach(p => tap(e, p));
       document.querySelectorAll('.order-out [data-act=order-untap]')[1].click();   // 1.0.22: the second placed piece is tapped on the line, no 退一格
@@ -1416,7 +1416,7 @@ def test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
     r = json.loads(out[-1])
     assert r['custom'] == 'g-order' and r['tiles'] == 4 and r['noOpts'] and r['shuffled'], r
-    assert r['okDone'] and r['fullShown'] and r['wrongDone'] and r['produced'] == r['wrongText'], r
+    assert r['waits'] and r['okDone'] and r['fullShown'] and r['wrongDone'] and r['produced'] == r['wrongText'], r
     assert r['untapped'] and r['gaveUp'], r
     assert r['exam'] == {'fmt': 'g-order', 'custom': None, 'opts': 4, 'star': True}, r
 
@@ -1427,11 +1427,11 @@ def test_a_wrong_order_marks_the_misplaced_pieces_red(b):
       const tap = (e, text) => ACTIONS['order-tap']({ dataset: { i: String(e.q.tiles.indexOf(text)) } });
       const reds = () => [...document.querySelectorAll('.order-out .order-slot')].map(el => el.classList.contains('wrong'));
       startSession('items', { items: [a, c, d] }); let e = currentEntry(); renderPractice();
-      const swapped = [a.parts[1], a.parts[0]].concat(a.parts.slice(2)); swapped.forEach(p => tap(e, p));
+      const swapped = [a.parts[1], a.parts[0]].concat(a.parts.slice(2)); swapped.forEach(p => tap(e, p)); ACTIONS['tiles-submit']();
       const out = { n: a.parts.length, wrong: e.done && e.chosen === 1, reds: reds(), color: getComputedStyle(document.querySelector('.order-out .order-slot.wrong')).color, bad: getComputedStyle(document.body).getPropertyValue('--bad').trim(),
         untappable: document.querySelectorAll('.order-out [data-act]').length === 0 };
       nextQuestion(); e = currentEntry(); renderPractice(); ACTIONS['custom-giveup'](); out.gaveUpReds = reds();
-      nextQuestion(); e = currentEntry(); renderPractice(); d.parts.forEach(p => tap(e, p)); out.right = e.done && e.chosen === 0; out.rightReds = reds();
+      nextQuestion(); e = currentEntry(); renderPractice(); d.parts.forEach(p => tap(e, p)); ACTIONS['tiles-submit'](); out.right = e.done && e.chosen === 0; out.rightReds = reds();
       const probe = document.createElement('span'); probe.style.color = out.bad; document.body.appendChild(probe); out.badRgb = getComputedStyle(probe).color; probe.remove();
       SESSION = null; document.body.classList.remove('practicing'); [a, c, d].forEach(g => delete state.srs[g.key]); saveState(); return JSON.stringify(out); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
@@ -1449,11 +1449,11 @@ def test_a_retry_copy_of_an_order_item_grades_the_right_order_as_right(b):
       const out = {};
       for (const second of ['right', 'wrong']) {
         startSession('items', { items: [g] }); let e = currentEntry(); renderPractice();
-        g.parts.slice().reverse().forEach(p => tap(e, p));   // the first answer is wrong: a 再練一次 copy is queued
+        g.parts.slice().reverse().forEach(p => tap(e, p)); ACTIONS['tiles-submit']();   // the first answer is wrong: a 再練一次 copy is queued
         const orig = e.q; const rnd = Math.random; Math.random = () => 0.1;
         try { nextQuestion(); } finally { Math.random = rnd; }
         e = currentEntry(); renderPractice();
-        (second === 'right' ? g.parts : g.parts.slice().reverse()).forEach(p => tap(e, p));
+        (second === 'right' ? g.parts : g.parts.slice().reverse()).forEach(p => tap(e, p)); ACTIONS['tiles-submit']();
         out[second] = { requeued: !!e.requeued, custom: e.q.custom, marked: e.chosen === e.q.answer ? 'right' : 'wrong', okBox: !!document.querySelector('.feedback.ok'),
           answerIsSentence: e.q.options[e.q.answer].text === e.q.fullJp, origKept: orig.options[0].text === orig.fullJp };
         SESSION = null; document.body.classList.remove('practicing'); delete state.srs[g.key]; state.mistakes = state.mistakes.filter(m => m.key !== g.key);

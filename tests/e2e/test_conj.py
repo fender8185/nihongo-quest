@@ -40,11 +40,12 @@ def test_learned_conj_item_is_asked_with_tiles_and_tapping_the_answer_is_right(b
     js = "(() => { " + setup('auto') + """
       const out = { fmt: q.fmt, custom: q.custom, mode: q.inputMode, opts: document.querySelectorAll('.opt').length, tiles: document.querySelectorAll('.conj-tile').length, n: q.tiles.length, noBracket: ![...document.querySelectorAll('.conj-tile')].some(t => t.textContent.includes('[')) };
       for (const tok of conjTokens(ans)) { [...document.querySelectorAll('.conj-tile:not([disabled])')].find(t => t.dataset.tok === tok).click(); }
+      out.waits = !e.done; document.querySelector('[data-act=tiles-submit]').click();   // 1.0.44: a full line waits for 確定
       out.done = e.done; out.ok = e.chosen === q.answer; out.gf = state.srs[g.key].gf['g-conj-type']; out.sf = state.statsFmt['g-conj-type'];
       """ + TEARDOWN + " return JSON.stringify(out); })()"
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
     assert r['fmt'] == 'g-conj-type' and r['custom'] == 'g-conj-type' and r['mode'] == 'tiles' and r['opts'] == 0 and r['tiles'] == r['n'] and r['noBracket'], r
-    assert r['done'] and r['ok'] and r['gf'] == [1, 0] and r['sf'] == {'ok': 1, 'ng': 0}, r
+    assert r['waits'] and r['done'] and r['ok'] and r['gf'] == [1, 0] and r['sf'] == {'ok': 1, 'ng': 0}, r
 
 # 1.0.22: no 退一格 button; a placed piece is tapped on the line above to send it back to the tiles
 def test_a_placed_conj_piece_taps_back_to_the_tiles(b):
@@ -53,7 +54,7 @@ def test_a_placed_conj_piece_taps_back_to_the_tiles(b):
       tile(toks[0]).click(); const placed = document.querySelectorAll('.spell-out [data-act=conj-untap]').length;
       document.querySelector('.spell-out [data-act=conj-untap]').click();
       const out = { n: toks.length, placed, after: (e.conj || []).length, freed: document.querySelectorAll('.conj-tile:not([disabled])').length === q.tiles.length, noBack: !document.getElementById('view').textContent.includes('退一格') };
-      for (const tok of toks) tile(tok).click(); out.done = e.done; out.ok = e.chosen === q.answer;
+      for (const tok of toks) tile(tok).click(); document.querySelector('[data-act=tiles-submit]').click(); out.done = e.done; out.ok = e.chosen === q.answer;
       """ + TEARDOWN + " return JSON.stringify(out); })()"
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
     assert r['placed'] == 1 and r['after'] == 0 and r['freed'] and r['noBack'] and r['done'] and r['ok'], r

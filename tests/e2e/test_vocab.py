@@ -419,10 +419,11 @@ def test_kana_spelling_question_is_answered_by_tapping_tiles(b):
       const q = e.q; const tiles = [...document.querySelectorAll('.spell-tile')];
       const out = { fmt: q.fmt, custom: q.custom, opts: document.querySelectorAll('.opt').length, tiles: tiles.length, covers: [...v.r].every(ch => q.tiles.filter(t => t === ch).length >= [...v.r].filter(c => c === ch).length), extra: q.tiles.length > v.r.length, ans: q.options[q.answer].text === v.r };
       for (const ch of v.r) { const t = [...document.querySelectorAll('.spell-tile:not([disabled])')].find(el => el.dataset.ch === ch); t.click(); }
+      out.waits = !e.done; document.querySelector('[data-act=tiles-submit]').click();   // 1.0.44: a full line waits for 確定
       out.done = e.done; out.ok = e.chosen === q.answer; out.f = state.srs[v.key].f['v-spell'];
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__W__', SPELL_WORD)
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
-    assert r['fmt'] == 'v-spell' and r['opts'] == 0 and r['covers'] and r['extra'] and r['ans'] and r['done'] and r['ok'] and r['f'] == [1, 0], r
+    assert r['fmt'] == 'v-spell' and r['opts'] == 0 and r['covers'] and r['extra'] and r['ans'] and r['waits'] and r['done'] and r['ok'] and r['f'] == [1, 0], r
 
 # 1.0.22: no 退一格 button; a placed kana is tapped on the line above to send it back
 def test_wrong_spelling_shows_the_right_reading_and_a_placed_kana_taps_back(b):
@@ -434,7 +435,8 @@ def test_wrong_spelling_shows_the_right_reading_and_a_placed_kana_taps_back(b):
       const freed = !document.querySelector(`.spell-tile[data-i="${wrong}"]`).disabled;
       // now spell it wrong on purpose: first tile wrong, then fill up to length
       document.querySelector(`.spell-tile[data-i="${wrong}"]`).click();
-      while (!e.done) { const t = document.querySelector('.spell-tile:not([disabled])'); if (!t) break; t.click(); }
+      while (tileModel(e).count(e.spell) < tileModel(e).need) { const t = document.querySelector('.spell-tile:not([disabled])'); if (!t) break; t.click(); }
+      document.querySelector('[data-act=tiles-submit]').click();
       const head = document.querySelector('.fb-head').textContent; const out = { typed1, typed2, noBack, freed, done: e.done, ok: e.chosen === e.q.answer, showsRight: head.includes(v.r), piecesAfter: document.querySelectorAll('.spell-out [data-act]').length };
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()""".replace('__W__', SPELL_WORD)
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))

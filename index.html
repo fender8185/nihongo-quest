@@ -481,6 +481,14 @@ button.order-slot:hover { background: var(--bg-hover); }
 .order-tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .order-tile { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; font-size: 20px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); cursor: pointer; }
 .order-tile:disabled { opacity: .25; cursor: default; }
+/* 1.0.44: tiles and placed pieces can be dragged (a copy follows the finger, a gap opens where it would go) */
+.q-card [data-ti] { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.tile-drag { position: fixed; z-index: 90; margin: 0; pointer-events: none; transform: scale(1.08); box-shadow: 0 10px 24px -6px rgba(0,0,0,.45); background: var(--bg-elev-2); border: 1px solid var(--accent-line); border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; }
+.tile-lifted { opacity: .25; }
+.tile-away { position: absolute !important; visibility: hidden; }
+.tile-gap { display: inline-block; width: 1.1em; height: 1em; margin: 0 2px; vertical-align: middle; border-radius: 6px; background: var(--accent-soft); }
+.order-out .tile-gap { width: 3em; }
+.tile-row .tile-ok { margin-left: auto; }
 .match { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
 .match-col { display: flex; flex-direction: column; gap: 8px; }
 .match-word, .match-meaning { padding: 12px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); font: inherit; font-size: 16px; cursor: pointer; text-align: center; }
@@ -1014,12 +1022,16 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.43';   // keep equal to the version in sw.js CACHE ('nq-v1.0.43'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.44';   // keep equal to the version in sw.js CACHE ('nq-v1.0.44'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.44', date: '2026-11-05', items: [
+    '假名拼字、活用、排序的字塊可以拖：按住拿起來，拖到答案列的任何位置插進去（其他字會讓出位置），答案列裡的字也能拖來換順序，拖回下面就拿掉。點一下照樣可以用，字會飛過去。',
+    '放滿之後不再自動送出，改按「確定」（電腦按 Enter），送出前可以慢慢調；Backspace 拿掉最後一個。'
+  ] },
   { v: '1.0.43', date: '2026-11-05', items: [
     '手機作答：答完後選項原地不動，結果改從底部升起的面板顯示（答對綠、答錯紅）：正確答案、你選的是什麼、聽力原文、例句和解說，「下一題」在面板最下面。解說長的話在面板裡捲動，往下滑也能把被蓋住的選項拉上來看。電腦版不變。'
   ] },
@@ -4384,7 +4396,123 @@ function previewHtml(e, pct) {
 // 假名拼字 / 配對 are answered by tapping, not by picking one of four options. They still end in answerCurrent():
 // option 0 is the correct text, option 1 receives what the learner produced when it was wrong.
 // A piece already placed (假名拼字, 活用拼寫, 排序) is tapped on the line above to send it back to the tiles.
-function placedPiece(act, k, html, cls = 'spell-piece') { return `<button type="button" class="${cls}" data-act="${act}" data-k="${k}" title="點一下拿掉">${html}</button>`; }
+function placedPiece(act, k, html, cls = 'spell-piece', ti = '') { return `<button type="button" class="${cls}" data-act="${act}" data-k="${k}" data-ti="${ti}" title="點一下拿掉，或拖到別的位置">${html}</button>`; }
+// 1.0.44: the tile questions (假名拼字, 活用 by tiles, 排序) share one model: a line of tile indices (e.spell / e.conj / e.order),
+// filled by tapping or dragging, at most `need` long (kana spelling counts characters), sent with 確定
+function tileModel(e) {
+  const q = e && e.q; if (!q || e.done) return null;
+  const tiles = (line) => line.length;
+  if (q.custom === 'v-spell') return { key: 'spell', need: [...q.options[0].text].length, count: (line) => [...line.map(i => q.tiles[i]).join('')].length };
+  if ((q.custom === 'g-conj-type' || q.custom === 'g-adj-type') && q.inputMode !== 'type') return { key: 'conj', need: conjTokens(q.options[0].text).length, count: tiles };
+  if (q.custom === 'g-order') return { key: 'order', need: q.orderParts.length, count: tiles };
+  return null;
+}
+// tile i onto the line at `at` (the end when left out), or moved there when it is on the line already; a full line takes no new one
+function tilePut(i, at) {
+  const e = currentEntry(); const m = tileModel(e); if (!m || !(i >= 0 && i < e.q.tiles.length)) return false;
+  const line = e[m.key] = e[m.key] || [];
+  const was = line.indexOf(i);
+  if (was >= 0) line.splice(was, 1); else if (m.count(line.concat(i)) > m.need) return false;
+  line.splice(at == null ? line.length : Math.max(0, Math.min(at, line.length)), 0, i);
+  return was < 0 || was !== at;
+}
+// the k-th piece on the line back to the tiles; the ones after it move up
+function tileTake(k) {
+  const e = currentEntry(); const m = tileModel(e); const line = m && e[m.key];
+  if (!line || !(k >= 0 && k < line.length)) return false;
+  line.splice(k, 1); return true;
+}
+function tileSubmit() {
+  const e = currentEntry(); const m = tileModel(e); if (!m) return;
+  const line = e[m.key] || []; if (m.count(line) !== m.need) return;
+  const q = e.q; const built = line.map(k => q.tiles[k]).join(''); const ans = q.options[0].text;
+  if (m.key === 'spell') finishCustom(e, built === ans, built);
+  else if (m.key === 'conj') finishCustom(e, conjMatch(built, ans), jaPlain(built));
+  else finishCustom(e, built === q.orderParts.join(''), q.pre + built + q.post);
+}
+// draw the card again after a tile moved, every tile gliding from where it was to where it is now (a dropped one from where it
+// was let go: `from` = { ti, rect }); a tap that changes nothing draws nothing
+function tileMove(change, from) {
+  const before = new Map([...document.querySelectorAll('.q-card [data-ti]')].map(el => [el.dataset.ti, el.getBoundingClientRect()]));
+  if (from) before.set(from.ti, from.rect);
+  if (!change() && !from) return;
+  renderPractice();
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  document.querySelectorAll('.q-card [data-ti]').forEach(el => {
+    const a = before.get(el.dataset.ti); if (!a) return;
+    const b = el.getBoundingClientRect();
+    const dx = (a.left + a.width / 2) - (b.left + b.width / 2), dy = (a.top + a.height / 2) - (b.top + b.height / 2);
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+    el.style.position = 'relative'; el.style.zIndex = '3';   // over the other tiles on its way
+    el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.2, .8, .3, 1)' })
+      .finished.then(() => { el.style.position = ''; el.style.zIndex = ''; }, () => {});
+  });
+}
+// dragging: a press on a free tile or a placed piece that moves 6px lifts a copy that follows the finger. Over the line a gap opens
+// where it would go (worked out from where the pieces stood when it was lifted, so the gap does not chase the finger); let go there
+// and it goes in, anywhere else and it goes back to the tiles. A press that hardly moves stays a tap, done by the click.
+let DRAG = null;
+function dragDown(ev) {
+  if (DRAG || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+  const el = ev.target.closest && ev.target.closest('.q-card [data-ti]'); if (!el || el.disabled || !tileModel(currentEntry())) return;
+  DRAG = { el, ti: el.dataset.ti, fromLine: Boolean(el.closest('.spell-out, .order-out')), x: ev.clientX, y: ev.clientY, id: ev.pointerId, live: false, at: null };
+}
+function dragMove(ev) {
+  const d = DRAG; if (!d || ev.pointerId !== d.id) return;
+  if (!d.live) {
+    if (Math.hypot(ev.clientX - d.x, ev.clientY - d.y) < 6) return;
+    document.querySelectorAll('.q-card [data-ti]').forEach(p => p.getAnimations().forEach(a => a.finish()));   // a tile still gliding from a tap: measured where it lands
+    const r = d.el.getBoundingClientRect();
+    const ghost = d.el.cloneNode(true); ghost.removeAttribute('data-ti'); ghost.removeAttribute('data-act'); ghost.classList.add('tile-drag');
+    const cs = getComputedStyle(d.el);   // a piece on the line takes its type from the line, which the copy leaves behind
+    Object.assign(ghost.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, fontSize: cs.fontSize, fontFamily: cs.fontFamily, fontWeight: cs.fontWeight, letterSpacing: cs.letterSpacing, color: cs.color });
+    document.body.appendChild(ghost);
+    Object.assign(d, { ghost, live: true, dx: d.x - r.left, dy: d.y - r.top });
+    try { d.el.setPointerCapture(ev.pointerId); } catch (err) { /* the press may be gone */ }
+    d.el.classList.add(d.fromLine ? 'tile-away' : 'tile-lifted');   // a piece off the line leaves no hole (kept in the page: a touch stays with its element)
+    d.line = document.querySelector('.q-card .spell-out, .q-card .order-out');
+    d.snap = d.line ? [...d.line.querySelectorAll('[data-ti]')].filter(p => p !== d.el).map(p => ({ el: p, r: p.getBoundingClientRect() })) : [];
+  }
+  ev.preventDefault();
+  d.ghost.style.left = `${ev.clientX - d.dx}px`; d.ghost.style.top = `${ev.clientY - d.dy}px`;
+  dragMark(ev.clientX, ev.clientY);
+}
+function dragMark(x, y) {
+  const d = DRAG; const e = currentEntry(); const m = tileModel(e); let at = null;
+  const r = d.line && d.line.getBoundingClientRect();
+  const over = r && x >= r.left - 24 && x <= r.right + 24 && y >= r.top - 40 && y <= r.bottom + 10;   // below, it stops short of the tiles (14px down)
+  if (over && m && (d.fromLine || m.count((e[m.key] || []).concat(Number(d.ti))) <= m.need)) {
+    at = d.snap.length;
+    for (let k = 0; k < d.snap.length; k++) { const s = d.snap[k].r; if (y < s.top || (y <= s.bottom && x < s.left + s.width / 2)) { at = k; break; } }
+  }
+  if (at === d.at) return;
+  d.at = at;
+  if (d.gap) d.gap.remove(); d.gap = null;
+  if (at === null) return;
+  const gap = document.createElement('span'); gap.className = 'tile-gap';
+  if (at < d.snap.length) d.snap[at].el.before(gap);
+  else { const free = d.line.querySelector('.caret, .order-slot:not(.filled)'); if (free) free.before(gap); else if (d.snap.length) d.snap[d.snap.length - 1].el.after(gap); else d.line.prepend(gap); }
+  d.gap = gap;
+}
+function dragUp(ev, cancelled) {
+  const d = DRAG; if (!d || ev.pointerId !== d.id) return;
+  DRAG = null;
+  if (!d.live) return;   // a tap: the click does it
+  // the click a mouse drag may leave behind lands on the tile drawn over below, gone from the page, so it does nothing
+  const rect = d.ghost.getBoundingClientRect(); d.ghost.remove();
+  const i = Number(d.ti); const e = currentEntry(); const m = tileModel(e);
+  tileMove(() => {
+    if (cancelled || !m) return false;
+    if (d.at !== null) return tilePut(i, d.at);
+    const k = (e[m.key] || []).indexOf(i); return k >= 0 && tileTake(k);   // let go off the line: back to the tiles
+  }, { ti: d.ti, rect });
+}
+
+// 1.0.44: the row under a tile question: how far it is, 我不會 and 確定 (lit once the line is full; nothing is sent by itself any more)
+function tileRowHtml(e, giveUp = '我不會，看答案') {
+  const m = tileModel(e); const n = m ? m.count(e[m.key] || []) : 0;
+  return `<div class="row-wrap mt-2 tile-row"><span class="small muted">${n} / ${m ? m.need : 0}</span><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">${giveUp}</button><button type="button" class="btn btn-sm btn-primary tile-ok" data-act="tiles-submit" ${m && n === m.need ? '' : 'disabled'}>確定</button></div>`;
+}
 function customInteractionHtml(e, answered) {
   const q = e.q;
   if (q.custom === 'g-conj-type' || q.custom === 'g-adj-type') {
@@ -4399,31 +4527,31 @@ function customInteractionHtml(e, answered) {
     const used = e.conj || [];
     const built = used.map(i => q.tiles[i]).join('');
     return `<div class="spell">
-      <div class="spell-out jp ${cls}">${answered ? furi(built) : used.map((i, k) => placedPiece('conj-untap', k, furi(q.tiles[i]))).join('')}<span class="caret"></span></div>
-      <div class="spell-tiles">${q.tiles.map((tok, i) => `<button type="button" class="spell-tile conj-tile jp" data-act="conj-tap" data-i="${i}" data-tok="${esc(tok)}" ${used.includes(i) || answered ? 'disabled' : ''}>${furi(tok)}</button>`).join('')}</div>
-      ${answered ? '' : `<div class="row-wrap mt-2"><span class="small muted">${used.length} / ${conjTokens(ans).length}</span><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">我不會，看答案</button></div>`}
+      <div class="spell-out jp ${cls}">${answered ? furi(built) : used.map((i, k) => placedPiece('conj-untap', k, furi(q.tiles[i]), 'spell-piece', i)).join('')}<span class="caret"></span></div>
+      <div class="spell-tiles">${q.tiles.map((tok, i) => `<button type="button" class="spell-tile conj-tile jp" data-act="conj-tap" data-i="${i}" data-tok="${esc(tok)}" ${used.includes(i) || answered ? 'disabled' : `data-ti="${i}"`}>${furi(tok)}</button>`).join('')}</div>
+      ${answered ? '' : tileRowHtml(e)}
     </div>`;
   }
   if (q.custom === 'v-spell') {
     const used = e.spell || [];
     const typed = used.map(i => q.tiles[i]).join('');
     return `<div class="spell">
-      <div class="spell-out jp ${answered ? (e.chosen === q.answer ? 'ok' : 'bad') : ''}">${answered ? esc(typed) : used.map((i, k) => placedPiece('spell-untap', k, esc(q.tiles[i]))).join('')}<span class="caret"></span></div>
-      <div class="spell-tiles">${q.tiles.map((ch, i) => `<button type="button" class="spell-tile jp" data-act="spell-tap" data-i="${i}" data-ch="${esc(ch)}" ${used.includes(i) || answered ? 'disabled' : ''}>${esc(ch)}</button>`).join('')}</div>
-      ${answered ? '' : `<div class="row-wrap mt-2"><span class="small muted">${typed.length} / ${[...q.options[0].text].length}</span><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">我不會，看答案</button></div>`}
+      <div class="spell-out jp ${answered ? (e.chosen === q.answer ? 'ok' : 'bad') : ''}">${answered ? esc(typed) : used.map((i, k) => placedPiece('spell-untap', k, esc(q.tiles[i]), 'spell-piece', i)).join('')}<span class="caret"></span></div>
+      <div class="spell-tiles">${q.tiles.map((ch, i) => `<button type="button" class="spell-tile jp" data-act="spell-tap" data-i="${i}" data-ch="${esc(ch)}" ${used.includes(i) || answered ? 'disabled' : `data-ti="${i}"`}>${esc(ch)}</button>`).join('')}</div>
+      ${answered ? '' : tileRowHtml(e)}
     </div>`;
   }
   if (q.custom === 'g-order') {
     const used = e.order || [];
     // answered wrong: a piece standing where another one belongs is red
     const slot = (i) => used[i] === undefined ? '<span class="order-slot">＿</span>'
-      : !answered ? placedPiece('order-untap', i, furi(q.tiles[used[i]]), 'order-slot filled')
+      : !answered ? placedPiece('order-untap', i, furi(q.tiles[used[i]]), 'order-slot filled', used[i])
       : `<span class="order-slot filled${e.chosen !== q.answer && q.tiles[used[i]] !== q.orderParts[i] ? ' wrong' : ''}">${furi(q.tiles[used[i]])}</span>`;
     const built = `${furi(q.pre)}${q.orderParts.map((_, i) => slot(i)).join('')}${furi(q.post)}`;
     return `<div class="order">
       <div class="order-out jp ${answered ? (e.chosen === q.answer ? 'ok' : 'bad') : ''}">${built}</div>
-      <div class="order-tiles">${q.tiles.map((p, i) => `<button type="button" class="order-tile jp" data-act="order-tap" data-i="${i}" ${used.includes(i) || answered ? 'disabled' : ''}><span class="kbd">${i + 1}</span>${furi(p)}</button>`).join('')}</div>
-      ${answered ? '' : `<div class="row mt-2" style="justify-content:flex-end"><button type="button" class="btn btn-sm btn-ghost" data-act="custom-giveup">看答案</button></div>`}
+      <div class="order-tiles">${q.tiles.map((p, i) => `<button type="button" class="order-tile jp" data-act="order-tap" data-i="${i}" ${used.includes(i) || answered ? 'disabled' : `data-ti="${i}"`}><span class="kbd">${i + 1}</span>${furi(p)}</button>`).join('')}</div>
+      ${answered ? '' : tileRowHtml(e, '看答案')}
     </div>`;
   }
   if (q.custom === 'v-match') {
@@ -4949,21 +5077,10 @@ const ACTIONS = {
   },
   'speak-full': () => { const e = currentEntry(); if (e && e.q) speak(e.q.fullJp); },
   'speak-example': () => { const e = currentEntry(); const it = e && ((e.q && e.q.item) || e.item); if (it && it.ex) speak(exampleSpeech(it.ex, it)); },   // the example the question used
-  'spell-tap': (el) => {
-    const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'v-spell') return;
-    e.spell = e.spell || []; const i = Number(el.dataset.i); if (e.spell.includes(i)) return;
-    e.spell.push(i);
-    const typed = e.spell.map(k => e.q.tiles[k]).join(''); const want = e.q.options[0].text;
-    if ([...typed].length >= [...want].length) finishCustom(e, typed === want, typed); else renderPractice();
-  },
-  'conj-tap': (el) => {
-    const e = currentEntry(); if (!e || e.done || !e.q || !(e.q.custom === 'g-conj-type' || e.q.custom === 'g-adj-type')) return;
-    e.conj = e.conj || []; const i = Number(el.dataset.i); if (!(i >= 0 && i < e.q.tiles.length) || e.conj.includes(i)) return;
-    e.conj.push(i);
-    const ans = e.q.options[0].text; const built = e.conj.map(k => e.q.tiles[k]).join('');
-    if (e.conj.length >= conjTokens(ans).length) finishCustom(e, conjMatch(built, ans), jaPlain(built)); else renderPractice();
-  },
-  'conj-untap': (el) => { const e = currentEntry(); const k = Number(el.dataset.k); if (!e || e.done || !e.conj || !(k >= 0 && k < e.conj.length)) return; e.conj.splice(k, 1); renderPractice(); },
+  'spell-tap': (el) => tileMove(() => tilePut(Number(el.dataset.i))),
+  'conj-tap': (el) => tileMove(() => tilePut(Number(el.dataset.i))),
+  'conj-untap': (el) => tileMove(() => tileTake(Number(el.dataset.k))),
+  'tiles-submit': () => tileSubmit(),
   'conj-submit': () => {
     const e = currentEntry(); if (!e || e.done || !e.q || !(e.q.custom === 'g-conj-type' || e.q.custom === 'g-adj-type')) return;
     const inp = document.querySelector('input.conj-in'); e.typed = inp ? inp.value : (e.typed || '');
@@ -4982,17 +5099,10 @@ const ACTIONS = {
     if (e.q.custom === 'g-order') { e.order = e.q.orderParts.map(p => e.q.tiles.indexOf(p)); }   // show the right order
     finishCustom(e, false, '（看了答案）');
   },
-  'order-tap': (el) => {
-    const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'g-order') return;
-    e.order = e.order || []; const i = Number(el.dataset.i); if (!(i >= 0 && i < e.q.tiles.length) || e.order.includes(i)) return;
-    e.order.push(i);
-    if (e.order.length < e.q.orderParts.length) { renderPractice(); return; }
-    const built = e.order.map(k => e.q.tiles[k]).join('');
-    finishCustom(e, built === e.q.orderParts.join(''), e.q.pre + built + e.q.post);
-  },
+  'order-tap': (el) => tileMove(() => tilePut(Number(el.dataset.i))),
   // a placed piece tapped on the line goes back to the tiles; the ones after it move up
-  'order-untap': (el) => { const e = currentEntry(); const k = Number(el.dataset.k); if (!e || e.done || !e.order || !(k >= 0 && k < e.order.length)) return; e.order.splice(k, 1); renderPractice(); },
-  'spell-untap': (el) => { const e = currentEntry(); const k = Number(el.dataset.k); if (!e || e.done || !e.spell || !(k >= 0 && k < e.spell.length)) return; e.spell.splice(k, 1); renderPractice(); },
+  'order-untap': (el) => tileMove(() => tileTake(Number(el.dataset.k))),
+  'spell-untap': (el) => tileMove(() => tileTake(Number(el.dataset.k))),
   'match-word': (el) => {
     const e = currentEntry(); if (!e || e.done || !e.q || e.q.custom !== 'v-match') return;
     e.match = e.match || { sel: null, matched: [], wrong: 0, missed: [] };
@@ -5066,7 +5176,8 @@ function handleKey(ev) {
       return;
     }
     if (['1', '2', '3', '4'].includes(k)) { ev.preventDefault(); if (e && !e.done && e.q && e.q.custom === 'g-order') ACTIONS['order-tap']({ dataset: { i: String(Number(k) - 1) } }); else if (e && !e.done && !(e.q && e.q.custom)) answerCurrent(Number(k) - 1); return; }
-    if (k === 'Enter' || k === ' ') { if (e && e.done) { ev.preventDefault(); nextQuestion(); } else if (!e) { ev.preventDefault(); } return; }
+    if (k === 'Enter' || k === ' ') { if (e && e.done) { ev.preventDefault(); nextQuestion(); } else if (!e) { ev.preventDefault(); } else if (k === 'Enter' && tileModel(e)) { ev.preventDefault(); tileSubmit(); } return; }
+    if (k === 'Backspace' && tileModel(e)) { ev.preventDefault(); const line = e[tileModel(e).key] || []; if (line.length) tileMove(() => tileTake(line.length - 1)); return; }   // a tile question: the last piece back
     if (k === 'r' || k === 'R') { ev.preventDefault(); ACTIONS.replay(); return; }
     if (k === 'f' || k === 'F') { ev.preventDefault(); toggleFurigana(); return; }
     if (k === 't' || k === 'T') { ev.preventDefault(); ACTIONS['show-zh'](); return; }
@@ -10014,6 +10125,10 @@ async function init() {
   applyTheme();
   applyFurigana();
   document.addEventListener('click', handleClick);
+  document.addEventListener('pointerdown', dragDown);
+  document.addEventListener('pointermove', dragMove, { passive: false });
+  document.addEventListener('pointerup', (ev) => dragUp(ev, false));
+  document.addEventListener('pointercancel', (ev) => dragUp(ev, true));
   // first real gesture unlocks the shared audio player (iOS refuses play() on an element that never had one)
   ['pointerdown', 'touchend', 'keydown'].forEach(ev => document.addEventListener(ev, unlockTtsPlayer, { capture: true, passive: true }));
   document.addEventListener('change', handleChange);
