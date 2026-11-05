@@ -970,12 +970,16 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.39';   // keep equal to the version in sw.js CACHE ('nq-v1.0.39'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.40';   // keep equal to the version in sw.js CACHE ('nq-v1.0.40'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.40', date: '2026-11-05', items: [
+    '設定拿掉「語音」分頁：語速（旁邊有試聽）和「完全離線使用」搬到「學習」，管理者的「生成雲端音檔」搬到「資料」最底下。',
+    '不再接自己的語音服務：之前選了 Google、Deepgram、VOICEVOX、OpenAI 或瀏覽器語音的，一律改用雲端音檔；工具與 AI 頁的 API 申請說明只留 AI 的。'
+  ] },
   { v: '1.0.39', date: '2026-11-05', items: [
     '網站搬到 nihongoquest.app。舊網址的今日頁會提醒搬家：在新網址用同一個 Email 登入雲端同步，進度就會接上；加到主畫面的要重新加一次，AI 和語音的金鑰也要重新貼。',
     '拿掉「下載備份」「從備份還原」和沒備份的提醒：進度靠雲端同步，每天的自動快照照舊。',
@@ -1378,6 +1382,7 @@ function normalizeState(s) {
   Object.values(out.srs).forEach(ensureFsrs);
   Object.entries(out.srs).forEach(([k, r]) => { if (k.startsWith('v:') && (!r.f || typeof r.f !== 'object')) r.f = {}; });   // words answered before per-format tracking
   if (out.aiConfig && out.aiConfig.geminiModel === 'gemini-3.8-flash') out.aiConfig.geminiModel = 'auto';   // the old default name: auto picks a live model
+  if (out.ttsConfig && typeof out.ttsConfig === 'object' && out.ttsConfig.engine !== 'cloud') out.ttsConfig.engine = 'cloud';   // 1.0.40: no speech service of one's own any more; whatever was chosen plays the cloud clips
   // built-in words merged into another entry (名詞 + 名詞する → one card): the record follows; when both exist the one answered more stays
   Object.entries(DATA.VOCAB_MERGED || {}).forEach(([from, to]) => {
     const a = out.srs['v:' + from]; if (!a) return;
@@ -2739,8 +2744,7 @@ function kanjiOptions(v, surface, reading, zh = {}) {
 }
 
 function speechAvailable() {
-  const cfg = state.ttsConfig || TTS_DEFAULT;
-  const eng = (!cfg.cloudDefault && cfg.engine === 'browser_neural') ? 'cloud' : cfg.engine;
+  const eng = (state.ttsConfig || TTS_DEFAULT).engine;
   if (eng && eng !== 'browser_neural') return true;
   return typeof window !== 'undefined' && 'speechSynthesis' in window && (window.speechSynthesis.getVoices() || []).some(x => /ja/i.test(x.lang || ''));
 }
@@ -7396,17 +7400,6 @@ function offlineAnalysis(text) {
 
 // ---- API 申請說明：工具與 AI 頁底部的可展開指南；設定頁的金鑰欄位以 #/tools?guide=<id> 連到對應的一則 ----
 const API_GUIDES = [
-  { id: 'google_tts', name: 'Google Cloud Text-to-Speech（Neural2 語音）', use: '語音服務「Google Cloud TTS（Neural2）」。',
-    cost: '每月前 100 萬字元免費（本 app 一天約數千字元），之後每百萬字元 16 美元。必須先綁信用卡並連結帳單，免費額度內不會扣款。',
-    steps: [
-      ['建立專案', '登入 Google Cloud Console 後新增一個專案，名稱隨意，位置選「無機構」。接下來每一步都要確認頁面右上角顯示的是同一個專案。', 'https://console.cloud.google.com/projectcreate'],
-      ['啟用 Cloud Text-to-Speech API', '開啟 API 頁面按「啟用」。', 'https://console.cloud.google.com/apis/library/texttospeech.googleapis.com'],
-      ['連結帳單帳戶', '把這個專案連到你的帳單帳戶；沒有連結時 API 會直接拒絕請求。', 'https://console.cloud.google.com/billing/linkedaccount'],
-      ['建立 API 金鑰', '「API 和服務」›「憑證」›「建立憑證」›「API 金鑰」。金鑰以 AIza 開頭。', 'https://console.cloud.google.com/apis/credentials'],
-      ['限制金鑰', '點金鑰名稱進入編輯：應用程式限制選「網站」並新增 <code>${origin}/*</code>；API 限制選「限制金鑰」只勾 Cloud Text-to-Speech API。儲存後等兩三分鐘才會生效。'],
-      ['貼進 app', '設定 › 語音 › 語音服務選「Google Cloud TTS」，貼上金鑰，按「測試連線」。']
-    ],
-    tips: ['「Gemini Enterprise Agent Platform」或 AI Studio 頁面產生的金鑰不能用在這裡，會回 401「API keys are not supported by this API」；要在「API 和服務 › 憑證」建立的一般金鑰。', '401／403 時先檢查：API 是否已啟用、帳單是否已連結、網站限制有沒有包含目前的網址。'] },
   { id: 'gemini', name: 'Google Gemini（AI Studio）', use: 'AI 服務「Google Gemini」：題目解析、出題、產生字卡、句子分析、學習建議。',
     cost: 'AI Studio 的金鑰有免費方案（每分鐘與每日次數有上限），一般學習用量足夠。',
     steps: [
@@ -7414,31 +7407,15 @@ const API_GUIDES = [
       ['建立金鑰', '按「建立 API 金鑰」，選一個既有專案或讓它新建一個，複製金鑰。'],
       ['貼進 app', '設定 › AI › AI 服務選「Google Gemini」，貼上金鑰，按「測試連線」；「列出可用模型」會顯示這把金鑰能用的模型。']
     ],
-    tips: ['AI Studio 的金鑰只能用在 Gemini，不能拿來當語音服務的金鑰；Cloud 的 Text-to-Speech 金鑰也不能用在這裡。'] },
-  { id: 'openai', name: 'OpenAI（AI 與 TTS 共用）', use: 'AI 服務「OpenAI 或相容服務」與語音服務「OpenAI TTS」，同一把金鑰兩邊都能用。',
-    cost: '預付制，需要先儲值（最低 5 美元）。AI 用 gpt-4o-mini 很便宜；語音 tts-1-hd 每百萬字元 30 美元。ChatGPT Plus 訂閱和 API 是分開計費的。',
+    tips: [] },
+  { id: 'openai', name: 'OpenAI', use: 'AI 服務「OpenAI 或相容服務」。',
+    cost: '預付制，需要先儲值（最低 5 美元）。gpt-4o-mini 很便宜。ChatGPT Plus 訂閱和 API 是分開計費的。',
     steps: [
       ['註冊並儲值', '登入 OpenAI Platform，到 Billing 加值。', 'https://platform.openai.com/settings/organization/billing/overview'],
       ['建立金鑰', 'API keys ›「Create new secret key」。金鑰以 sk- 開頭，只會顯示一次，請立刻複製。', 'https://platform.openai.com/api-keys'],
-      ['貼進 app', '設定 › AI › 選「OpenAI 或相容服務」貼上。語音若也選 OpenAI TTS，金鑰欄留空會沿用 AI 的金鑰。']
+      ['貼進 app', '設定 › AI › 選「OpenAI 或相容服務」貼上。']
     ],
     tips: ['OpenRouter、LM Studio 等相容服務：把「API 位址」改成該服務的網址，金鑰用它們發的。'] },
-  { id: 'deepgram', name: 'Deepgram Aura-2', use: '語音服務「Deepgram Aura-2」。',
-    cost: '註冊即有試用額度，不必先綁卡；之後 Aura-2 每千字元約 0.03 美元。',
-    steps: [
-      ['註冊 Deepgram Console', '用 Email 或 Google 帳號註冊。', 'https://console.deepgram.com/signup'],
-      ['建立金鑰', '左側「API Keys」›「Create a New API Key」，權限選 Member 即可。金鑰只顯示一次。', 'https://console.deepgram.com/'],
-      ['貼進 app', '設定 › 語音 › 語音服務選「Deepgram Aura-2」，貼上金鑰，按「測試連線」。']
-    ],
-    tips: [] },
-  { id: 'voicevox', name: 'VOICEVOX（本機、免費）', use: '語音服務「VOICEVOX（本機）」，不需要金鑰。',
-    cost: '免費。只在開著 VOICEVOX 的那台電腦上可用，手機用不了。',
-    steps: [
-      ['下載安裝', '到官方網站下載 Windows／Mac／Linux 版本。', 'https://voicevox.hiroshiba.jp/'],
-      ['開啟程式', '啟動 VOICEVOX 後，它的引擎會在 http://localhost:50021 等待連線；程式要一直開著。'],
-      ['貼進 app', '設定 › 語音 › 語音服務選「VOICEVOX」，位址用預設值，選想要的聲音。']
-    ],
-    tips: ['若瀏覽器擋下連線，請改用 Chrome 或 Edge；Brave 可能要在盾牌設定允許本機連線。'] },
   { id: 'ollama', name: 'Ollama（本機 AI、免費）', use: 'AI 服務「Ollama（本機）」，不需要金鑰。',
     cost: '免費。模型在自己的電腦上跑，7B 模型大約需要 8 GB 記憶體。',
     steps: [
@@ -7556,9 +7533,9 @@ Object.assign(CHANGE_ACTIONS, {
 
 // ---- 77_settings.js ----
 /* ==========================================================================
-   Settings (modal): learning, speech, AI, data, appearance
+   Settings (modal): learning (with speech rate and offline audio), AI, data, appearance
    ========================================================================== */
-const SETTINGS_TABS = [['learn', '學習'], ['speech', '語音'], ['ai', 'AI'], ['data', '資料'], ['look', '外觀']];
+const SETTINGS_TABS = [['learn', '學習'], ['ai', 'AI'], ['data', '資料'], ['look', '外觀']];
 let settingsTab = 'learn';
 let settingsDirty = false;
 
@@ -7574,7 +7551,7 @@ function refreshSettings() {
 }
 function settingsHtml() {
   const tabs = `<div class="seg mb-4" role="tablist">${SETTINGS_TABS.map(([k, l]) => `<button type="button" aria-pressed="${settingsTab === k}" data-act="settings-tab" data-tab="${k}">${l}</button>`).join('')}</div>`;
-  const body = { learn: settingsLearn, speech: settingsSpeech, ai: settingsAi, data: settingsData, look: settingsLook }[settingsTab]();
+  const body = { learn: settingsLearn, ai: settingsAi, data: settingsData, look: settingsLook }[settingsTab]();
   return tabs + body;
 }
 
@@ -7583,12 +7560,12 @@ function boolRow(key, label, hint) {
     <label class="switch"><input type="checkbox" ${state.settings[key] ? 'checked' : ''} data-change="setting" data-key="${key}" data-type="bool" /><span class="track"></span></label></div>`;
 }
 function selRow(key, label, hint, options, target = 'setting') {
-  const cur = target === 'setting' ? (key === 'furiState' ? furiState() : state.settings[key]) : (target === 'tts-cfg' ? ttsConfig()[key] : aiConfig()[key]);
+  const cur = target === 'setting' ? (key === 'furiState' ? furiState() : state.settings[key]) : aiConfig()[key];
   return `<div class="setting-row"><div><div class="label">${label}</div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>
     <select class="select" style="width:auto;max-width:260px" data-change="${target}" data-key="${key}">${options.map(([v, l]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
 }
 function textRow(key, label, hint, target, opt = {}) {
-  const cur = target === 'tts-cfg' ? ttsConfig()[key] : aiConfig()[key];
+  const cur = aiConfig()[key];
   return `<div class="field mt-3"><label>${label}</label><input class="input" ${opt.secret ? 'type="password" autocomplete="off"' : ''} value="${esc(cur || '')}" placeholder="${esc(opt.ph || '')}" data-change="${target}" data-key="${key}" />${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
 }
 
@@ -7598,57 +7575,15 @@ function settingsLearn() {
     ${boolRow('showZh', '題目下方直接顯示中文', '關閉時可按 T 或點「顯示中文」再看。需要中文才能判斷的題目仍會顯示。')}
     <div class="setting-row"><div><div class="label">考試</div><div class="hint">學習分析和模擬考頁會照這個級別和日期推估進度。</div></div>
       <div class="row"><select class="select" style="width:auto" data-change="setting" data-key="examLevel">${courseLevels().map(v => `<option value="${v}" ${s.examLevel === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
-      <input class="input" type="date" style="width:auto" value="${esc(s.examDate)}" data-change="setting" data-key="examDate" data-type="date" /></div></div>`;
-}
-
-function settingsSpeech() {
-  const c = ttsConfig();
-  const voices = jaVoices();
-  const voiceOpts = [['', voices.length ? `自動（${voices[0].name}）` : '自動']].concat(voices.map(v => [v.voiceURI, `${v.name}${v.localService ? '' : '（線上）'}`]));
-  let engine = '';
-  if (c.engine === 'cloud') {
-    engine = `<div class="hint mt-2">教材的句子已經用 Google Neural2 預先生成放在雲端，播過的會留在這台裝置上。加到主畫面的 app 有網路時，還會先把今天要練的題目語音存好，離線也能練今天的題目。找不到的句子（AI 生成的題目）改用瀏覽器語音。語速用上面的滑桿調。</div>
-      <div id="audioPrefetchBox" class="small mt-2">${audioPrefetchHtml()}</div>
-      <details class="mt-3"><summary class="small muted" style="cursor:pointer">完全離線使用（進階，通常不需要）</summary>
-        <div class="hint mt-2"><b>平常不用按：</b>今天要練的語音會自動先存好，播過的句子也會留著。這兩個按鈕是把整套課程一次抓完，日文約 220 MB、中文約 120 MB，只適合長時間沒有網路的情況。可以中斷，再按會接著下載，已下載的會略過。</div>
-        <div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-all" data-kind="ja">下載日文音檔（約 220 MB）</button><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-all" data-kind="zh">下載中文音檔（約 120 MB）</button><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-stop">停止</button></div>
-        <div id="cloudDlBox" class="small mt-2">${cloudDlHtml()}</div>
-      </details>
-      <details class="mt-4"><summary class="small muted" style="cursor:pointer">管理者：生成雲端音檔</summary>
-        <div class="hint mt-2">把全部教材句子生成一次並上傳到 Cloudflare R2 的 nihongo-audio；日文用上面選的 Neural2 聲音，中文（單字意思、例句與文法的翻譯、漢字字義）用 Google 的台灣華語聲音，給「聽一輪」用。三把金鑰只在這一次執行中使用：不儲存、不同步、關掉頁面就消失；R2 金鑰只能讀寫這一個 bucket。已存在的檔案會略過，可以中斷再續跑。</div>
-        <div class="field mt-3"><label>Google Cloud API Key</label><input class="input" type="password" autocomplete="off" id="cloudGoogleKey" value="${esc(c.googleKey || '')}" /></div>
-        <div class="field mt-3"><label>R2 Access Key ID</label><input class="input" type="text" autocomplete="off" id="cloudR2KeyId" /></div>
-        <div class="field mt-3"><label>R2 Secret Access Key</label><input class="input" type="password" autocomplete="off" id="cloudR2Secret" /></div>
-        <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="cloud-gen-start">開始生成</button><button type="button" class="btn" data-act="cloud-gen-stop">停止</button></div>
-        <div id="cloudGenBox" class="small mt-2">${cloudGenHtml()}</div>
-      </details>`;
-  } else if (c.engine === 'browser_neural') {
-    engine = voices.length ? selRow('browserVoiceURI', '瀏覽器語音', 'Edge 的 Nanami／Keita（Natural）或 Chrome 的 Google 日本語 聽起來最自然。', voiceOpts, 'tts-cfg')
-      : '<div class="banner warn mt-3">這個瀏覽器沒有日語語音，聽力題先停用。可以換 Chrome／Edge，或在下面選別的語音服務。</div>';
-  } else if (c.engine === 'google_tts') {
-    engine = textRow('googleKey', 'Google Cloud API Key', `在 Google Cloud 啟用 Text-to-Speech API 後建立金鑰，建議限制只能用這個 API。每月前 100 萬字元免費。Key 只存在這個瀏覽器裡。${guideLink('google_tts')}`, 'tts-cfg', { secret: true })
-      + selRow('googleVoice', '主要聲音', '', GOOGLE_VOICES, 'tts-cfg') + selRow('googleVoiceM', '對話中的男聲', '', GOOGLE_VOICES, 'tts-cfg')
-      + '<div class="hint mt-2">已知讀音的字會以 SSML 指定讀法（例如 三本→さんぼん），漢字保留給模型判斷語調。</div>';
-  } else if (c.engine === 'deepgram') {
-    engine = textRow('deepgramKey', 'Deepgram API Key', `只存在這個瀏覽器裡。${guideLink('deepgram')}`, 'tts-cfg', { secret: true })
-      + selRow('deepgramVoice', '主要聲音', '', DEEPGRAM_VOICES, 'tts-cfg') + selRow('deepgramVoiceM', '對話中的男聲', '', DEEPGRAM_VOICES, 'tts-cfg')
-      + selRow('kanaReadings', '已知讀音的字改用假名送出', '例如 三本 送成 さんぼん，避免模型唸錯；其餘保留漢字。', [['on', '開'], ['off', '關']], 'tts-cfg');
-  } else if (c.engine === 'voicevox') {
-    engine = textRow('voicevoxUrl', 'VOICEVOX 位址', `需要在電腦上執行 VOICEVOX（預設 http://localhost:50021）。${guideLink('voicevox')}`, 'tts-cfg', { ph: 'http://localhost:50021' })
-      + selRow('voicevoxSpeaker', '主要聲音', '', VOICEVOX_SPEAKERS, 'tts-cfg') + selRow('voicevoxSpeakerM', '對話中的男聲', '', VOICEVOX_SPEAKERS, 'tts-cfg');
-  } else if (c.engine === 'openai_tts') {
-    engine = textRow('openaiKey', 'OpenAI API Key', `留空時會使用 AI 設定中的 OpenAI Key。${guideLink('openai')}`, 'tts-cfg', { secret: true })
-      + selRow('openaiModel', '模型', '', [['tts-1-hd', 'tts-1-hd（音質較好）'], ['tts-1', 'tts-1（較快）']], 'tts-cfg')
-      + selRow('openaiVoice', '主要聲音', '', OPENAI_VOICES, 'tts-cfg') + selRow('openaiVoiceM', '對話中的男聲', '', OPENAI_VOICES, 'tts-cfg')
-      + selRow('kanaReadings', '已知讀音的字改用假名送出', '例如 三本 送成 さんぼん，避免模型唸錯；其餘保留漢字。', [['on', '開'], ['off', '關']], 'tts-cfg');
-  }
-  return `
-    <div class="setting-row"><div><div class="label">語速</div><div class="hint">目前 ${Number(state.settings.speechRate).toFixed(2)} 倍</div></div>
-      <input type="range" min="0.6" max="1.2" step="0.05" value="${esc(state.settings.speechRate)}" data-change="setting" data-key="speechRate" data-type="num" data-min="0.6" data-max="1.2" style="width:180px" /></div>
-    ${selRow('engine', '語音服務', '', TTS_ENGINES, 'tts-cfg')}
-    ${engine}
-    <div class="row-wrap mt-4"><button type="button" class="btn" data-act="tts-test">${icon('speaker')}試聽對話</button>${c.engine && c.engine !== 'browser_neural' ? '<button type="button" class="btn" data-act="tts-check">測試連線</button>' : ''}</div>
-    <div id="ttsCheckBox" class="small mt-2">${ttsCheckHtml}</div>`;
+      <input class="input" type="date" style="width:auto" value="${esc(s.examDate)}" data-change="setting" data-key="examDate" data-type="date" /></div></div>
+    <div class="setting-row"><div><div class="label">語速</div><div class="hint">目前 ${Number(s.speechRate).toFixed(2)} 倍</div></div>
+      <div class="row"><input type="range" min="0.6" max="1.2" step="0.05" value="${esc(s.speechRate)}" data-change="setting" data-key="speechRate" data-type="num" data-min="0.6" data-max="1.2" style="width:160px" /><button type="button" class="btn btn-sm" data-act="tts-test">${icon('speaker')}試聽</button></div></div>
+    <div id="audioPrefetchBox" class="small mt-2">${audioPrefetchHtml()}</div>
+    <details class="mt-3"><summary class="small muted" style="cursor:pointer">完全離線使用（進階，通常不需要）</summary>
+      <div class="hint mt-2"><b>平常不用按：</b>今天要練的語音會自動先存好，播過的句子也會留著。這兩個按鈕是把整套課程一次抓完，日文約 220 MB、中文約 120 MB，只適合長時間沒有網路的情況。可以中斷，再按會接著下載，已下載的會略過。</div>
+      <div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-all" data-kind="ja">下載日文音檔（約 220 MB）</button><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-all" data-kind="zh">下載中文音檔（約 120 MB）</button><button type="button" class="btn btn-sm btn-ghost" data-act="cloud-dl-stop">停止</button></div>
+      <div id="cloudDlBox" class="small mt-2">${cloudDlHtml()}</div>
+    </details>`;
 }
 
 function settingsAi() {
@@ -7686,7 +7621,7 @@ function settingsData() {
       : Sync.pendingEmail
         ? `<div class="setting-row"><div><div class="label">輸入驗證碼</div><div class="hint">登入信已寄到 <b>${esc(Sync.pendingEmail)}</b>。把信裡的 8 位數驗證碼輸入這裡（在 iPhone 主畫面 app 裡請用這個方式）；用電腦瀏覽器的話也可以直接點信裡的連結。</div></div>
           <div class="row-wrap"><input type="text" id="syncCode" placeholder="12345678" inputmode="numeric" autocomplete="one-time-code" maxlength="8" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-verify">登入</button><button type="button" class="btn btn-sm btn-ghost" data-act="sync-cancel-code">換一個 email</button></div></div>`
-        : `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">每個人的資料各自獨立。AI 與語音設定（含 API 金鑰與位址）只留在這台裝置，不會上傳。第一次在新裝置登入時，會以雲端的進度為準（這台若已有進度會先存一份快照）。</div></div>
+        : `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">每個人的資料各自獨立。AI 設定（含 API 金鑰與位址）只留在這台裝置，不會上傳。第一次在新裝置登入時，會以雲端的進度為準（這台若已有進度會先存一份快照）。</div></div>
           <div class="row-wrap"><input type="email" id="syncEmail" placeholder="you@example.com" autocomplete="email" inputmode="email" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-login">寄送登入信</button></div></div>`;
   return `
     ${syncBlock}
@@ -7697,9 +7632,17 @@ function settingsData() {
       <button type="button" class="btn btn-sm" data-act="restore-hidden">全部還原</button></div>` : ''}
     ${state.customGrammar.length || state.customExam.length ? `<div class="setting-row"><div><div class="label">AI／自訂題目</div><div class="hint">文法題 ${state.customGrammar.length} 道、模擬考題 ${state.customExam.length} 道。</div></div>
       <button type="button" class="btn btn-sm btn-ghost btn-danger" data-act="clear-custom-items">清除</button></div>` : ''}
-    <div class="setting-row"><div><div class="label">重設所有進度</div><div class="hint">清除熟練度、錯題本與紀錄。AI 與語音設定會保留。</div></div>
+    <div class="setting-row"><div><div class="label">重設所有進度</div><div class="hint">清除熟練度、錯題本與紀錄。AI 設定會保留。</div></div>
       <button type="button" class="btn btn-sm btn-danger" data-act="reset-all">重設</button></div>
-    <p class="hint mt-3">資料存在這個瀏覽器的本機儲存空間（IndexedDB）。登入雲端同步後會自動在裝置間同步。</p>`;
+    <p class="hint mt-3">資料存在這個瀏覽器的本機儲存空間（IndexedDB）。登入雲端同步後會自動在裝置間同步。</p>
+    <details class="mt-4"><summary class="small muted" style="cursor:pointer">管理者：生成雲端音檔</summary>
+      <div class="hint mt-2">把全部教材句子生成一次並上傳到 Cloudflare R2 的 nihongo-audio；日文用 Google 的 Neural2 聲音，中文（單字意思、例句與文法的翻譯、漢字字義）用 Google 的台灣華語聲音，給「聽一輪」用。三把金鑰只在這一次執行中使用：不儲存、不同步、關掉頁面就消失；R2 金鑰只能讀寫這一個 bucket。已存在的檔案會略過，可以中斷再續跑。</div>
+      <div class="field mt-3"><label>Google Cloud API Key</label><input class="input" type="password" autocomplete="off" id="cloudGoogleKey" value="${esc(ttsConfig().googleKey || '')}" /></div>
+      <div class="field mt-3"><label>R2 Access Key ID</label><input class="input" type="text" autocomplete="off" id="cloudR2KeyId" /></div>
+      <div class="field mt-3"><label>R2 Secret Access Key</label><input class="input" type="password" autocomplete="off" id="cloudR2Secret" /></div>
+      <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="cloud-gen-start">開始生成</button><button type="button" class="btn" data-act="cloud-gen-stop">停止</button></div>
+      <div id="cloudGenBox" class="small mt-2">${cloudGenHtml()}</div>
+    </details>`;
 }
 
 function changelogItems(list) {
@@ -7763,14 +7706,6 @@ Object.assign(CHANGE_ACTIONS, {
     if (k === 'speechRate') { const hint = el.closest('.setting-row').querySelector('.hint'); if (hint) hint.textContent = `目前 ${Number(v).toFixed(2)} 倍`; }
     if (modalOpen()) settingsDirty = true; else route();
   },
-  'tts-cfg': (el) => {
-    ttsConfig()[el.dataset.key] = el.value.trim();
-    if (el.dataset.key === 'engine' || /Key$|Url$/.test(el.dataset.key)) ttsCheckHtml = '';   // the last check no longer applies
-    ttsWarned = false;
-    saveState();
-    if (el.dataset.key === 'engine') refreshSettings();
-    settingsDirty = true;
-  },
   'ai-cfg': (el) => {
     aiConfig()[el.dataset.key] = el.value.trim();
     saveState();
@@ -7782,22 +7717,6 @@ Object.assign(CHANGE_ACTIONS, {
 Object.assign(ACTIONS, {
   'settings-tab': (el) => { settingsTab = el.dataset.tab; refreshSettings(); },
   'tts-test': () => testVoice(),
-  'tts-check': async (el) => {
-    // look the result box up when writing: the speech tab may have been re-rendered meanwhile (voices loading)
-    const show = (html) => { ttsCheckHtml = html; const box = document.getElementById('ttsCheckBox'); if (box) box.innerHTML = html; };   // kept so a re-render (voices loading) does not wipe it
-    show('');   // a new check starts from a blank box
-    const old = el.innerHTML; el.disabled = true; el.innerHTML = '<span class="spinner"></span> 測試中';
-    try {
-      audioCache.clear(); cloudMisses.clear();
-      const cloud = ttsConfig().engine === 'cloud'; const sample = cloud ? jaPlain((REG.vocab[0] || { w: 'テスト' }).w) : 'テスト';
-      const blob = await engineBlob(sample, '');
-      if (!blob) throw new Error(cloud ? `雲端連得上，但沒有「${sample}」的音檔：還沒生成，或 bucket 名稱不對。` : '沒有回應');
-      show('<span class="ok">連線成功，可以使用。</span>');
-    } catch (e) {
-      const msg = (e && e.message) || String(e); const hint = ttsErrorHint(msg);
-      show(`<div class="bad">${esc(msg)}</div>${hint ? `<div class="mt-1">${esc(hint)}</div>` : ''}`);
-    } finally { const b2 = document.querySelector('[data-act=tts-check]') || el; b2.disabled = false; b2.innerHTML = old; }
-  },
   'cloud-gen-start': () => {
     const val = (id) => ((document.getElementById(id) || {}).value || '').trim();   // pasted keys often carry spaces or a line break
     const gk = val('cloudGoogleKey'); const r2 = { keyId: val('cloudR2KeyId'), secret: val('cloudR2Secret') };
@@ -8300,7 +8219,6 @@ Object.assign(ACTIONS, {
 /* ==========================================================================
    Speech: browser voices, Deepgram Aura-2, VOICEVOX, OpenAI TTS
    ========================================================================== */
-let ttsCheckHtml = '';   // result of the last 設定 › 語音 › 測試連線
 const TTS_SECRET_KEYS = ['deepgramKey', 'openaiKey', 'googleKey'];   // never leave the device: kept when older data is restored
 const TTS_DEFAULT = {
   engine: 'cloud', browserVoiceURI: '',
@@ -8319,14 +8237,12 @@ const OPENAI_VOICES = [['nova', 'Nova（女聲）'], ['shimmer', 'Shimmer（女�
 function ttsConfig() {
   if (!state.ttsConfig || typeof state.ttsConfig !== 'object') state.ttsConfig = {};
   Object.keys(TTS_DEFAULT).forEach(k => { if (state.ttsConfig[k] === undefined) state.ttsConfig[k] = TTS_DEFAULT[k]; });
-  // v70: the pre-generated cloud audio became the default; a browser-voice setting from before is moved once (a chosen engine stays)
-  if (!state.ttsConfig.cloudDefault) { if (state.ttsConfig.engine === 'browser_neural') state.ttsConfig.engine = 'cloud'; state.ttsConfig.cloudDefault = true; }
   return state.ttsConfig;
 }
 
 /* ---- 雲端音檔: every built-in sentence synthesized once (Google Neural2) and kept in a public R2 bucket ----
    The file name is a hash of exactly what Google is sent (SSML with the readings pinned, voice gender), so the generator
-   (設定 › 語音 › 管理者) and the player agree by construction. A missing file (custom cards, AI items) falls back to the
+   (設定 › 資料 › 管理者) and the player agree by construction. A missing file (custom cards, AI items) falls back to the
    browser voice and is noted locally so the next generator run covers it.
    The clips started in Supabase's JPY_audio and were copied to Cloudflare R2 (nihongo-audio, served as
    audio.nihongoquest.app). Since 1.0.29 a clip is fetched from R2 first and from Supabase when R2 fails; since 1.0.30 the
@@ -8877,7 +8793,7 @@ async function speakScript(script) {
   if (token === speechToken) speechProgEnd();
 }
 
-// ---- The clips an item can play, named the way the player names them: the generator (設定 › 語音 › 管理者) makes them
+// ---- The clips an item can play, named the way the player names them: the generator (設定 › 資料 › 管理者) makes them
 // all, 下載全部 fetches them all and 離線語音 fetches those of the items coming up ----
 function audioCollector() {
   const seen = new Map();
@@ -9621,7 +9537,7 @@ let OLD_SITE_FORCE = null;   // tests: true／false instead of looking at the ad
 function onOldSite() { return OLD_SITE_FORCE !== null ? OLD_SITE_FORCE : location.host === OLD_SITE_HOST; }
 function movedBannerHtml() {
   if (!onOldSite()) return '';
-  return `<div class="banner warn moved-banner"><div class="grow"><b>網站搬家了：新網址是 nihongoquest.app</b><br>在新網址用同一個 Email 登入雲端同步，進度就會接上；還沒登入過的，先在這裡登入一次（設定 › 資料）。加到主畫面的，新網址要重新加一次；AI 和語音的金鑰也要重新貼。</div>
+  return `<div class="banner warn moved-banner"><div class="grow"><b>網站搬家了：新網址是 nihongoquest.app</b><br>在新網址用同一個 Email 登入雲端同步，進度就會接上；還沒登入過的，先在這裡登入一次（設定 › 資料）。加到主畫面的，新網址要重新加一次；AI 的金鑰也要重新貼。</div>
     <div class="row-wrap"><a class="btn btn-sm btn-primary" href="${NEW_SITE_URL}#/today" target="_blank" rel="noopener">打開新網址</a></div></div>`;
 }
 
@@ -9979,7 +9895,7 @@ async function init() {
   document.addEventListener('keydown', handleKey);
   window.addEventListener('hashchange', route);
   if ('speechSynthesis' in window) {
-    window.speechSynthesis.onvoiceschanged = () => { if (modalOpen() && settingsTab === 'speech') refreshSettings(); else if (!modalOpen() && currentRoute().name === 'today' && !SESSION) route(); };
+    window.speechSynthesis.onvoiceschanged = () => { if (!modalOpen() && currentRoute().name === 'today' && !SESSION) route(); };
   }
   if (window.matchMedia) {
     const mq = window.matchMedia('(prefers-color-scheme: light)');

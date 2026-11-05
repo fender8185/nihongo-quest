@@ -133,7 +133,7 @@ def test_missing_keys_are_skipped(b):
 
 def test_listening_joins_a_list_made_before_the_voices_loaded(b):
     # a browser voice: Chrome lists its voices only after the first render, so the day's list was made without listening
-    js = "(() => { " + FRESH + """ state.ttsConfig = Object.assign({}, TTS_DEFAULT, state.ttsConfig, { engine: 'browser_neural', cloudDefault: true });
+    js = "(() => { " + FRESH + """ state.ttsConfig = Object.assign({}, TTS_DEFAULT, state.ttsConfig, { engine: 'browser_neural' });
       const ss = window.speechSynthesis; ss.getVoices = () => [];
       delete state.today.plan; dailyPlan(); const p0 = JSON.parse(JSON.stringify(state.today.plan));
       ss.getVoices = () => [{ lang: 'ja-JP', name: 'Kyoko' }];

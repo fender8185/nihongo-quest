@@ -441,16 +441,15 @@ FAKE_FETCH = """window.__calls = []; window.fetch = async (url, opt) => { __call
 
 def test_google_tts_engine_sends_ssml_with_known_readings(b):
     js = """(() => { const c = ttsConfig(); c.engine = 'google_tts'; c.googleKey = 'K'; saveState();
-      return engineBlob('机の上に本があります。', '').then(blob => engineBlob('はい。', 'm').then(() => {
-        openSettings('speech'); const ui = { key: !!document.querySelector('[data-key=googleKey]'), voice: !!document.querySelector('[data-key=googleVoice]') }; closeModal();
-        return JSON.stringify({ blob: blob instanceof Blob && blob.size > 0, url: __calls[0].url, body: __calls[0].body, male: __calls[1].body.voice.name, ui, avail: speechAvailable() }); })); })()"""
+      return engineBlob('机の上に本があります。', '').then(blob => engineBlob('はい。', 'm').then(() =>
+        JSON.stringify({ blob: blob instanceof Blob && blob.size > 0, url: __calls[0].url, body: __calls[0].body, male: __calls[1].body.voice.name, avail: speechAvailable() }))); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE_FETCH), ("eval", js)])
     r = __import__('json').loads(out[-1])
     assert r['blob'] and r['url'].startswith('https://texttospeech.googleapis.com/v1/text:synthesize?key=K'), r
     body = r['body']
     assert body['voice'] == {'languageCode': 'ja-JP', 'name': 'ja-JP-Neural2-B'} and body['audioConfig']['audioEncoding'] == 'MP3', r
     assert body['input']['ssml'].startswith('<speak>') and '<sub alias="つくえ">机</sub>' in body['input']['ssml'] and '<sub alias="ほん">本</sub>' in body['input']['ssml'], r
-    assert r['male'] == 'ja-JP-Neural2-C' and r['ui'] == {'key': True, 'voice': True} and r['avail'], r
+    assert r['male'] == 'ja-JP-Neural2-C' and r['avail'], r
 
 def test_deepgram_gets_kana_for_known_readings_unless_turned_off(b):
     js = """(() => { const c = ttsConfig(); c.engine = 'deepgram'; c.deepgramKey = 'D'; saveState();
@@ -498,19 +497,6 @@ def test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong(b):
     assert r['matchDone'] and r['matchWrong'] and r['revealed'] == 6, r
     assert r['unpaired'] == [True] * 5 and r['paired'] is False, r
 
-# ---- 2026-10-26: 語音 › 測試連線 shows the provider's real error and a hint ----
-def test_tts_connection_check_reports_the_real_error_and_success(b):
-    fail = """window.fetch = async () => ({ ok: false, status: 403, json: async () => ({ error: { message: 'Cloud Text-to-Speech API has not been used in project 123 before or it is disabled.' } }), text: async () => '' }); true"""
-    okf = """window.fetch = async () => ({ ok: true, status: 200, json: async () => ({ audioContent: btoa('a'.repeat(3000)) }), blob: async () => new Blob(['abc']) }); true"""
-    # click 測試連線 and poll the result box ourselves (independent of the harness's wait timing under parallel load)
-    run = """(() => { const c = ttsConfig(); c.engine = 'google_tts'; c.googleKey = 'K'; saveState(); openSettings('speech');
-      const btn = document.querySelector('[data-act=tts-check]'); if (!btn) return 'NO BUTTON'; btn.click();
-      return new Promise(res => { const t0 = Date.now(); (function poll() { const box = document.getElementById('ttsCheckBox'); const t = box ? box.textContent : '';
-        if (t.length > 0 || Date.now() - t0 > 15000) { closeModal(); res(t); } else setTimeout(poll, 50); })(); }); })()"""
-    out = b.run([("nav", URL), ("wait", READY), ("eval", fail), ("eval", run), ("eval", okf), ("eval", run)], timeout=45)
-    assert 'has not been used' in out[-3] and '尚未啟用' in out[-3], out[-3]
-    assert '連線成功' in out[-1], out[-1]
-
 def test_tools_page_has_an_expandable_api_guide_for_every_provider(b):
     # the 工具與 AI page ends with a collapsed guide per service; ?guide=<id> opens that one; settings link to it
     probe = """(() => { const card = document.getElementById('apiGuides'); if (!card) return 'NO CARD';
@@ -518,14 +504,14 @@ def test_tools_page_has_an_expandable_api_guide_for_every_provider(b):
       const links = card.querySelectorAll('a[target=_blank]').length;
       const noopener = [...card.querySelectorAll('a[target=_blank]')].every(a => /noopener/.test(a.rel));
       return JSON.stringify({ ids, links, noopener, title: card.querySelector('.card-title').textContent }); })()"""
-    link = """(() => { const c = ttsConfig(); c.engine = 'google_tts'; saveState(); openSettings('speech');
-      const a = document.querySelector('#modalBody [data-act=nav][data-route="#/tools?guide=google_tts"]'); closeModal(); return a ? a.textContent : 'NO LINK'; })()"""
-    out = b.run([("nav", URL + "#/tools"), ("wait", READY), ("eval", probe), ("nav", URL + "#/tools?guide=deepgram"), ("eval", probe), ("eval", link)], timeout=45)
+    link = """(() => { aiConfig().provider = 'gemini'; saveState(); openSettings('ai');
+      const a = document.querySelector('#modalBody [data-act=nav][data-route="#/tools?guide=gemini"]'); closeModal(); return a ? a.textContent : 'NO LINK'; })()"""
+    out = b.run([("nav", URL + "#/tools"), ("wait", READY), ("eval", probe), ("nav", URL + "#/tools?guide=openai"), ("eval", probe), ("eval", link)], timeout=45)
     first = json.loads(out[0]); opened = json.loads(out[1])
     assert first['title'] == 'API 申請說明', first
-    assert first['ids'] == ['google_tts', 'gemini', 'openai', 'deepgram', 'voicevox', 'ollama'], first['ids']
-    assert first['links'] >= 8 and first['noopener'], first
-    assert 'deepgram*' in opened['ids'] and 'google_tts*' not in opened['ids'], opened['ids']
+    assert first['ids'] == ['gemini', 'openai', 'ollama'], first['ids']   # 1.0.40: no speech service of one's own, so no speech guides
+    assert first['links'] >= 4 and first['noopener'], first
+    assert 'openai*' in opened['ids'] and 'gemini*' not in opened['ids'], opened['ids']
     assert '申請' in out[2], out[2]
 
 def test_stats_shows_the_past_week_of_practice_and_what_was_learned(b):
@@ -960,24 +946,25 @@ def test_cloud_generator_retries_a_silent_clip_as_plain_text_then_kana(b):
     w = o['word']   # a pinned reading has no plain-text try: the kanji could be read another way
     assert [c.get('text') for c in w['calls'][1:2]] == [r['word']['reading']] and len(w['calls']) == 3 and w['done'] == 1, w
 
-def test_cloud_audio_is_the_default_engine_with_an_admin_generator_section(b):
+def test_cloud_audio_is_the_only_engine_with_an_admin_generator_at_the_bottom_of_data(b):
     js = """(async () => { const fresh = (() => { const keep = state.ttsConfig; state.ttsConfig = null; const e = ttsConfig().engine; state.ttsConfig = keep; return e; })();
-      const moved = (() => { const keep = state.ttsConfig; state.ttsConfig = { engine: 'browser_neural' }; const e = ttsConfig().engine; state.ttsConfig = keep; return e; })();
-      const stays = (() => { const keep = state.ttsConfig; state.ttsConfig = { engine: 'google_tts', googleKey: 'K' }; const e = ttsConfig().engine; state.ttsConfig = keep; return e; })();
-      const chosen = (() => { const keep = state.ttsConfig; state.ttsConfig = { engine: 'browser_neural', cloudDefault: true }; const e = ttsConfig().engine; state.ttsConfig = keep; return e; })();
-      ttsConfig().engine = 'cloud'; const html = settingsSpeech(); const sw = await (await fetch('./sw.js')).text();
+      // 1.0.40: a speech service chosen before (any of them) plays the cloud clips; the rest of the saved config stays
+      const loaded = (cfg) => normalizeState(Object.assign(JSON.parse(JSON.stringify(state)), { ttsConfig: cfg })).ttsConfig;
+      const moved = ['browser_neural', 'google_tts', 'deepgram', 'voicevox', 'openai_tts'].map(engine => loaded({ engine, cloudDefault: true }).engine);
+      const kept = loaded({ engine: 'google_tts', googleKey: 'K' }).googleKey;
+      const html = settingsData(); const learn = settingsLearn(); const sw = await (await fetch('./sw.js')).text();
       // keys pasted from a password manager often carry spaces or a line break
       const box = document.createElement('div'); box.innerHTML = html; document.body.appendChild(box); const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
       set('cloudGoogleKey', ' GK '); set('cloudR2KeyId', ' AKID\\n'); set('cloudR2Secret', ' SEC ');
       const seen = []; const toasts = []; const keepGen = cloudGenStart; const keepToast = toast; cloudGenStart = (g, r2) => { seen.push([g, r2]); }; toast = (m) => { toasts.push(m); };
       ACTIONS['cloud-gen-start'](); set('cloudR2Secret', ''); ACTIONS['cloud-gen-start'](); cloudGenStart = keepGen; toast = keepToast; box.remove();
-      return JSON.stringify({ fresh, moved, stays, chosen, admin: /管理者：生成雲端音檔/.test(html), seen, toasts, r2: /Cloudflare R2/.test(html) && !/Supabase/.test(html.slice(html.indexOf('管理者：生成雲端音檔'))),
+      return JSON.stringify({ fresh, moved, kept, admin: /管理者：生成雲端音檔/.test(html) && html.trim().endsWith('</details>') && !/管理者/.test(learn), seen, toasts, r2: /Cloudflare R2/.test(html) && !/Supabase/.test(html.slice(html.indexOf('管理者：生成雲端音檔'))),
         inputs: /id="cloudGoogleKey"/.test(html) && /id="cloudR2KeyId"/.test(html) && /id="cloudR2Secret"/.test(html) && !/cloudSecretKey/.test(html) && /data-act="cloud-gen-start"/.test(html),
-        option: /<option value="cloud"/.test(html), available: speechAvailable(), swAudio: /nq-audio/.test(sw) && /JPY_audio/.test(sw) }); })()"""
+        available: speechAvailable(), swAudio: /nq-audio/.test(sw) && /JPY_audio/.test(sw) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)
     r = json.loads(out[-1])
-    assert r['fresh'] == 'cloud' and r['moved'] == 'cloud' and r['stays'] == 'google_tts' and r['chosen'] == 'browser_neural', r
-    assert r['admin'] and r['inputs'] and r['r2'] and r['option'] and r['available'] and r['swAudio'], r
+    assert r['fresh'] == 'cloud' and r['moved'] == ['cloud'] * 5 and r['kept'] == 'K', r
+    assert r['admin'] and r['inputs'] and r['r2'] and r['available'] and r['swAudio'], r
     assert r['seen'] == [['GK', {'keyId': 'AKID', 'secret': 'SEC'}]] and r['toasts'] == ['三個欄位都要填。'], r   # trimmed; a missing field starts nothing
 
 def test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there(b):
@@ -989,7 +976,7 @@ def test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there
       await cloudDownloadAll(); const second = Object.assign({}, CLOUD_DL); const c2 = calls - c1;
       const zhSample = all.filter(x => x.lang === 'zh').slice(0, 3); cloudAudioTexts = () => sample.concat(zhSample); calls = 0; await caches.delete('nq-audio');
       await cloudDownloadAll('zh'); const zh = Object.assign({}, CLOUD_DL); const zhCalls = calls;
-      window.fetch = realFetch; await caches.delete('nq-audio'); ttsConfig().engine = 'cloud'; const html = settingsSpeech();
+      window.fetch = realFetch; await caches.delete('nq-audio'); const html = settingsLearn();
       return JSON.stringify({ first, second, c1, c2, keysOk: [...new Set(paths)].every(p => keys.includes(`${base}/${p}`)), nKeys: keys.length, uniq: new Set(paths).size, btn: /data-act="cloud-dl-all" data-kind="ja"/.test(html) && /data-act="cloud-dl-all" data-kind="zh"/.test(html), zh: [zh.kind, zh.total, zh.done, zhCalls] }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=90)
     r = json.loads(out[-1])
@@ -1785,12 +1772,12 @@ def test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_h
 # ---- 1.0.15: settings keep what the learner decides; stage, unit, review strength and the speech switches are the app's ----
 def test_settings_drop_the_switches_the_app_now_decides(b):
     js = """(() => { const tab = (k) => { openSettings(k); const m = document.querySelector('.modal'); const o = { keys: [...m.querySelectorAll('[data-key]')].map(x => x.dataset.key), acts: [...m.querySelectorAll('[data-act]')].map(x => x.dataset.act), text: m.textContent }; closeModal(true); return o; };
-      const L = tab('learn'), S = tab('speech');
+      const L = tab('learn');
       return JSON.stringify({ learnGone: ['retention', 'enter-main', 'enter-pre', 'loadCap', 'newKanaPerDay', 'sessionSize', 'order', 'includeImported'].filter(k => L.keys.includes(k) || L.acts.includes(k)), stageRow: L.text.includes('目前階段'), unitRow: L.text.includes('目前單元'),
         learnKept: ['showZh', 'examDate'].filter(k => !L.keys.includes(k)),
-        speechGone: ['autoSpeak', 'listening', 'audioOptions'].filter(k => S.keys.includes(k)), speechKept: ['speechRate', 'engine'].filter(k => !S.keys.includes(k)) }); })()"""
+        speechGone: ['autoSpeak', 'listening', 'audioOptions', 'engine'].filter(k => L.keys.includes(k)), speechKept: ['speechRate'].filter(k => !L.keys.includes(k)), speechTab: SETTINGS_TABS.some(t => t[0] === 'speech') }); })()"""
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
-    assert r == {'learnGone': [], 'stageRow': False, 'unitRow': False, 'learnKept': [], 'speechGone': [], 'speechKept': []}, r
+    assert r == {'learnGone': [], 'stageRow': False, 'unitRow': False, 'learnKept': [], 'speechGone': [], 'speechKept': [], 'speechTab': False}, r
 
 def test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off(b):
     # 作答後自動朗讀, 出聽力題 and 聽力選項只用聽的 are no longer settings: values an older version saved as off change nothing
@@ -1882,7 +1869,7 @@ def test_offline_audio_fills_the_cache_skipping_stored_and_missing_clips_and_sto
     assert r['first']['stored'] == sorted([u[0]] + u[2:]), r['first']   # what came back is kept; the one missing on the server is not
     assert r['second'] == 0, r   # stored clips and the known-missing one: nothing left to fetch
     assert 2 <= r['offline'] <= 12 and r['otherEngine'] == 0 and r['whileOffline'] == 0, r   # a lost network: each of the six workers fails at both addresses (12 clips would be 24 requests), then it stops; offline or another voice service: nothing
-    assert '5 段' in r['first']['status'] and '存好' in r['first']['status'] and '0／12' in r['offlineStatus'], r   # settings › 語音 says whether the device is ready
+    assert '5 段' in r['first']['status'] and '存好' in r['first']['status'] and '0／12' in r['offlineStatus'], r   # settings › 學習 says whether the device is ready
     assert '存好' not in r['brokenStatus'] and '再試' in r['brokenStatus'], r
 
 def test_installed_app_keeps_the_coming_audio_by_itself_and_again_when_back_online(b):
@@ -1951,11 +1938,11 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_clips_are_fetched_from_the_r2_address, test_a_clip_r2_lacks_or_cannot_serve_comes_from_supabase_and_is_no_miss, test_sigv4_signs_like_the_aws_test_suite_and_signs_r2_requests, test_r2_listing_follows_pages_and_an_upload_carries_the_signed_headers, test_r2_errors_name_their_code_and_an_unreachable_bucket_says_so, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_a_silent_cloud_clip_counts_as_missing_and_the_download_skips_it, test_a_pinned_word_without_its_clip_plays_the_clip_of_its_reading, test_numbers_before_man_are_left_to_the_voice_and_buttons_speak_what_the_generator_makes, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_generator_stops_when_r2_refuses_or_cannot_be_reached, test_cloud_generator_retries_a_silent_clip_as_plain_text_then_kana, test_cloud_audio_is_the_default_engine_with_an_admin_generator_section, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_download_all_counts_clips_cached_under_the_supabase_address_and_adds_no_copy, test_download_all_finds_a_stored_clip_by_its_address_whatever_it_varies_on, test_download_all_takes_from_supabase_what_r2_lacks,test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_hero_help_and_scope_toggles_open_one_at_a_time, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_exam_countdown_leaves_the_projection_to_the_stats_page, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_clips_are_fetched_from_the_r2_address, test_a_clip_r2_lacks_or_cannot_serve_comes_from_supabase_and_is_no_miss, test_sigv4_signs_like_the_aws_test_suite_and_signs_r2_requests, test_r2_listing_follows_pages_and_an_upload_carries_the_signed_headers, test_r2_errors_name_their_code_and_an_unreachable_bucket_says_so, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_a_silent_cloud_clip_counts_as_missing_and_the_download_skips_it, test_a_pinned_word_without_its_clip_plays_the_clip_of_its_reading, test_numbers_before_man_are_left_to_the_voice_and_buttons_speak_what_the_generator_makes, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_generator_stops_when_r2_refuses_or_cannot_be_reached, test_cloud_generator_retries_a_silent_clip_as_plain_text_then_kana, test_cloud_audio_is_the_only_engine_with_an_admin_generator_at_the_bottom_of_data, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_download_all_counts_clips_cached_under_the_supabase_address_and_adds_no_copy, test_download_all_finds_a_stored_clip_by_its_address_whatever_it_varies_on, test_download_all_takes_from_supabase_what_r2_lacks,test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_hero_help_and_scope_toggles_open_one_at_a_time, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_exam_countdown_leaves_the_projection_to_the_stats_page, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
-             test_single_words_are_sent_as_kanji_with_the_reading_pinned, test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong, test_tts_connection_check_reports_the_real_error_and_success,
+             test_single_words_are_sent_as_kanji_with_the_reading_pinned, test_spelling_and_matching_offer_a_give_up_button_that_counts_as_wrong,
              test_tools_page_has_an_expandable_api_guide_for_every_provider,
              test_stats_shows_the_past_week_of_practice_and_what_was_learned, test_reaching_the_learned_level_records_the_date, test_tapping_a_word_in_the_matching_question_speaks_it_with_its_reading,
              test_stats_projects_the_finish_date_from_the_recent_pace,
