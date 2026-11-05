@@ -476,6 +476,27 @@ details.mrow .mbody { padding: 4px 0 14px; }
 .match-word.matched, .match-meaning.matched { border-color: var(--ok); color: var(--ok); opacity: .7; cursor: default; }
 @keyframes wrongFlash { 0%, 100% { border-color: var(--line); box-shadow: none; } 15%, 70% { border-color: var(--bad); box-shadow: 0 0 0 3px var(--bad-line); } }
 .match-word.wrong-flash, .match-meaning.wrong-flash { animation: wrongFlash .55s ease; }
+/* 1.0.41: a progress ring, bar or gauge carrying data-anim plays once when its page opens (playAnims); an answer pops or shakes
+   on the draw right after it (just-ok / just-bad); the practice bar slides from the last card's spot. Each starts from a var and
+   ends on the element's own value, so with motion reduced (the rule at the top) everything simply shows where it ends. */
+@keyframes ringIn { from { stroke-dashoffset: var(--from); } }
+.ring.anim .arc { animation: ringIn .6s ease-out; }
+@keyframes uncover { from { transform: scaleX(1); } }
+.bar.stack[data-anim] { position: relative; }
+.bar.stack[data-anim]::after { content: ''; position: absolute; inset: 0; background: var(--bg-sunken); transform-origin: right; transform: scaleX(0); }
+.bar.stack.anim::after { animation: uncover .6s ease-out; }
+@keyframes sweepIn { from { stroke-dasharray: 0 1; } to { stroke-dasharray: 1 0; } }   /* dashes only while it plays: at rest the mask is whole */
+@keyframes needleIn { from { transform: rotate(var(--a)); } }
+.gauge .needle { transform-origin: 100px 100px; }
+.gauge.anim .sweep { animation: sweepIn var(--t) ease-out; } .gauge.anim .needle { animation: needleIn var(--t) ease-out; }
+@keyframes barSlide { from { width: var(--from); } }
+.bar > span.slide { animation: barSlide .3s ease-out; }
+@keyframes pop { 40% { transform: scale(1.04); } }
+@keyframes iconPop { from { transform: scale(.3); opacity: 0; } }
+@keyframes shake { 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+.q-card.just-ok :is(.opt.correct, .spell-out.ok, .order-out.ok) { animation: pop .3s ease-out; }
+.q-card.just-ok .fb-head svg { animation: iconPop .3s cubic-bezier(.3, 1.6, .6, 1); }
+.q-card.just-bad :is(.opt.wrong, .spell-out.bad, .order-out.bad) { animation: shake .3s ease; }
 .preview { text-align: center; padding: 20px 10px 8px; }
 .preview .word { font-size: 44px; font-weight: 600; line-height: 1.5; }
 .preview .reading { font-size: 18px; color: var(--fg-3); }
@@ -970,12 +991,16 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.40';   // keep equal to the version in sw.js CACHE ('nq-v1.0.40'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.41';   // keep equal to the version in sw.js CACHE ('nq-v1.0.41'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.41', date: '2026-11-05', items: [
+    '畫面多了一點動態：打開今日時，圓環和「目前單元」的進度條會長上去；學習分析的總進度儀表會從左邊掃過去，指針轉到位置。同一頁重畫（同步、改設定）不會重播，手機開了「減少動態效果」就完全不動。',
+    '作答時，答對的選項會彈一下、答錯的會晃一下，上方的進度條每題滑過去；做完一組，結算的圓環從這組開始前的進度轉上去，答對、答錯、新學、分鐘從 0 跳上去。'
+  ] },
   { v: '1.0.40', date: '2026-11-05', items: [
     '設定拿掉「語音」分頁：語速（旁邊有試聽）和「完全離線使用」搬到「學習」，管理者的「生成雲端音檔」搬到「資料」最底下。',
     '不再接自己的語音服務：之前選了 Google、Deepgram、VOICEVOX、OpenAI 或瀏覽器語音的，一律改用雲端音檔；工具與 AI 頁的 API 申請說明只留 AI 的。'
@@ -4064,6 +4089,7 @@ function startSession(mode, opt = {}) {
   SESSION = {
     mode, title: opt.title || MODE_TITLE[mode] || '練習', entries, idx: 0, meta,
     stats: { correct: 0, wrong: 0, newCount: 0 }, results: [], startedAt: Date.now(), lastFmt: '', opt,
+    ringFrom: ringPct(dayProgress()),   // today's ring before this set: the summary's ring fills on from here (1.0.41)
     test: mode === 'stage' ? { stage: opt.stage } : null
   };
   prepareEntry(0);
@@ -4204,14 +4230,15 @@ function renderPractice() {
   let stem = q.stemHtml;
   if (answered && q.fillHtml) stem = stem.replace(/<span class="blank" data-blank>[\s\S]*?<!--\/blank-->/, `<span class="blank filled">${q.fillHtml}</span>`);
   const custom = q.custom ? customInteractionHtml(e, answered) : '';
+  const just = answered && e.justAnswered ? (e.chosen === q.answer ? ' just-ok' : ' just-bad') : ''; e.justAnswered = false;   // 1.0.41: only the draw right after the answer
   view.innerHTML = `
     <div class="pr-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
-      <div class="bar"><span style="width:${pct}%"></span></div>
+      ${prBarHtml(pct)}
       ${prCountHtml()}
     </div>
     ${SESSION.idx === 0 && !answered && SESSION.meta && SESSION.meta.note ? `<div class="plan-note">${esc(SESSION.meta.note)}</div>` : ''}
-    <div class="q-card">
+    <div class="q-card${just}">
       <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip">再練一次</span>' : ''}${e.encore ? '<span class="chip">換個方式再考</span>' : ''}${ladder}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
       <div class="q-instr">${esc(q.instr || '')}</div>
       ${q.passageHtml ? `<div class="panel jp mb-3 passage">${q.passageHtml}</div>` : ''}
@@ -4257,6 +4284,12 @@ function sessionCount() {
   const cur = es[SESSION.idx]; const curPlanned = cur ? planned(cur) : false;
   return { before, n: before + (curPlanned ? 1 : 0), total: es.filter(planned).length, extra: extra + (cur && !curPlanned ? 1 : 0) };
 }
+// the bar on top of a practice card slides from where the last card left it (1.0.41); the same card drawn again keeps still
+function prBarHtml(pct) {
+  const from = SESSION.barPct; SESSION.barPct = pct;
+  const slide = from != null && from !== pct;
+  return `<div class="bar"><span${slide ? ' class="slide"' : ''} style="${slide ? `--from:${from}%;` : ''}width:${pct}%"></span></div>`;
+}
 function prCountHtml() {
   const c = sessionCount();
   return `<div class="pr-count">${c.n} / ${c.total}${c.extra ? ` <span class="tiny muted">加考 ${c.extra}</span>` : ''}</div>`;
@@ -4268,7 +4301,7 @@ function previewHtml(e, pct) {
   return `
     <div class="pr-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
-      <div class="bar"><span style="width:${pct}%"></span></div>
+      ${prBarHtml(pct)}
       ${prCountHtml()}
     </div>
     <div class="q-card">
@@ -4419,7 +4452,7 @@ function answerCurrent(i) {
   if (!e || e.done) return;
   const q = e.q;
   if (i < 0 || i >= q.options.length) return;
-  e.done = true; e.chosen = i;
+  e.done = true; e.chosen = i; e.justAnswered = true;
   const ok = i === q.answer;
   // 配對: every word paired wrong is answered wrong on its own; the word asked counts as right unless it is one of them
   if (q.custom === 'v-match') e.missed = matchMisses(e);
@@ -4540,6 +4573,7 @@ function renderSummary(view) {
     .forEach(r => { if (!wrongKeys.has(r.q.mistakePrompt)) wrongKeys.set(r.q.mistakePrompt, r); });
   const prog = dayProgress();   // same ring as 今日: items answered today / today's items
   const dayDone = prog.left === 0;
+  const first = !s.summaryShown; s.summaryShown = true;   // 1.0.41: the ring and the numbers play once, not when a sync draws it again
   const wrongList = [...wrongKeys.values()].map(r => `<div class="list-item"><div class="grow"><div class="jp">${furi(tidyPrompt(r.q.mistakePrompt || ''))}</div><div class="small muted">正確：<span class="jp">${esc(jaPlain(r.q.options[r.q.answer].text))}</span>・你選：<span class="jp">${esc(jaPlain(r.q.options[r.chosen].text))}</span></div></div></div>`).join('');
   view.innerHTML = `
     <div class="pr-top"><button type="button" class="btn btn-ghost btn-icon" data-act="close-summary" aria-label="關閉">${icon('close')}</button><div class="grow"></div></div>
@@ -4549,7 +4583,7 @@ function renderSummary(view) {
           <div class="page-title">${n ? '完成了' : '已結束'}</div>
           <div class="page-sub">${esc(s.title)}・作答 ${n} 題・正確率 ${acc}%</div>
         </div>
-        ${ringHtml(ringPct(prog) / 100, `<b>${ringPct(prog)}%</b>`)}
+        ${ringHtml(ringPct(prog) / 100, `<b>${ringPct(prog)}%</b>`, 96, s.ringFrom == null ? null : s.ringFrom / 100)}
       </div>
       <div class="grid grid-4 mt-4">
         <div class="stat"><span class="stat-v">${s.stats.correct}</span><span class="stat-l">答對</span></div>
@@ -4565,6 +4599,19 @@ function renderSummary(view) {
       </div>
     </div>
     ${wrongKeys.size ? `<div class="card"><div class="card-head"><div class="card-title">這次答錯的題目</div><span class="chip">${wrongKeys.size}</span></div><div class="list">${wrongList}</div></div>` : ''}`;
+  if (first) { playAnims(view); countUp(view); }
+}
+// the summary's numbers count up from 0 (1.0.41); not with motion reduced, which the CSS rule at the top cannot reach for text
+function countUp(root) {
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const els = [...root.querySelectorAll('.stat-v')].map(el => [el, Number(el.textContent)]);
+  const t0 = performance.now();
+  const step = (t) => {
+    const k = Math.min(1, (t - t0) / 500), ease = 1 - (1 - k) ** 3;
+    els.forEach(([el, n]) => { el.textContent = Math.round(n * ease); });
+    if (k < 1) requestAnimationFrame(step);
+  };
+  step(t0);
 }
 
 // the 開始作答 button under a word preview or a lesson-section card (Enter also dismisses it)
@@ -4572,9 +4619,11 @@ function previewGoBtn() { return '<button type="button" class="btn btn-primary" 
 
 // today's ring shows a percentage, never question counts (the button and 今天做了 carry those)
 function ringPct(prog) { return prog.total ? Math.round(prog.done / prog.total * 100) : 100; }
-function ringHtml(ratio, inner, size = 96) {
+// from: the ratio it fills from when played (playAnims); none, it never moves
+function ringHtml(ratio, inner, size = 96, from = null) {
   const r = 42; const c = 2 * Math.PI * r;
-  return `<div class="ring" style="width:${size}px;height:${size}px"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--bg-sunken)" stroke-width="9"/><circle cx="50" cy="50" r="${r}" fill="none" stroke="${ratio >= 1 ? 'var(--ok)' : 'var(--accent)'}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - clamp(ratio, 0, 1))}"/></svg><div class="ring-txt"><div>${inner}</div></div></div>`;
+  const anim = from === null ? '' : ` data-anim`, fromVar = from === null ? '' : `--from:${c * (1 - clamp(from, 0, 1))};`;
+  return `<div class="ring"${anim} style="${fromVar}width:${size}px;height:${size}px"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--bg-sunken)" stroke-width="9"/><circle class="arc" cx="50" cy="50" r="${r}" fill="none" stroke="${ratio >= 1 ? 'var(--ok)' : 'var(--accent)'}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - clamp(ratio, 0, 1))}"/></svg><div class="ring-txt"><div>${inner}</div></div></div>`;
 }
 
 // report a bad item: hide it from rotation (built-in) or delete it (an AI question)
@@ -4625,6 +4674,16 @@ function renderSyncChip() {
   ['sideSync', 'syncChip'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = html; });
 }
 
+// 1.0.41: a page's progress (rings, bars and gauges marked data-anim) plays when the page is opened: the app started, another page
+// left for it, back in front after a minute away, a stats scope picked. Drawing the same page again (a sync, a setting) keeps it still.
+let animRoute = '', animForce = false;
+function playAnims(root) {
+  const els = [...root.querySelectorAll('[data-anim]')];
+  els.forEach(el => el.classList.remove('anim'));
+  if (els.length) void root.offsetWidth;   // replaying one that already played needs a style flush in between
+  els.forEach(el => el.classList.add('anim'));
+}
+
 function go(hash) {
   if (location.hash === hash) route();
   else location.hash = hash;
@@ -4665,6 +4724,7 @@ function renderNav(active) {
 function route() {
   const r = currentRoute();
   const view = document.getElementById('view');
+  const opened = r.name !== animRoute || animForce; animRoute = r.name; animForce = false;
   view.classList.toggle('fit', r.name === 'today'); document.body.classList.toggle('today', r.name === 'today');
   if (r.name !== 'today') { todayTab = 'practice'; heroTab = 'unit'; }
   document.body.classList.toggle('immersive', (r.name === 'mistakes' || r.name === 'vocab') && r.parts[1] === 'listen');
@@ -4691,6 +4751,7 @@ function route() {
     else if (r.name === 'tools') renderTools(view, r.params);
     else if (r.name === 'stats') renderStats(view);
     else renderToday(view);
+    if (opened) playAnims(view);
     // the phone topbar already names the page: a page title that repeats it is hidden there (unit names, scores etc. stay)
     const top = document.getElementById('topTitle').textContent.trim();
     view.querySelectorAll('.page-head .page-title').forEach(el => el.classList.toggle('dup-title', el.textContent.trim() === top));
@@ -5071,7 +5132,7 @@ function renderToday(view) {
           ${plan.remaining ? `<div class="hero-panel" data-panel="scope" ${heroTab === 'scope' ? '' : 'hidden'}>${scopeHtml}</div>` : ''}
           <div class="hero-panel" data-panel="unit" ${heroTab === 'unit' && !inPreStage() ? '' : 'hidden'}>
             <div class="row between mb-2"><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div><span class="chip">${esc(cur.lv)}</span></div>
-            <div class="row">${unitBarHtml(us, 'grow')}<span class="small num muted">${us.pct}%</span></div>
+            <div class="row">${unitBarHtml(us, 'grow', true)}<span class="small num muted">${us.pct}%</span></div>
             <div class="small muted mt-2 legs"><span class="leg">已學 ${us.ok3 + us.ok1 + us.seen0}／${us.total} 題</span>${us.due ? `<span class="leg">今天要複習 ${us.due} 題</span>` : ''}</div>
             ${us.pct >= 85 && !us.done ? `<div class="banner mt-3"><div class="grow">這個單元已經很熟了，可以前往下一單元。</div><button type="button" class="btn btn-sm btn-primary" data-act="advance-unit">前往下一單元</button></div>` : ''}
             <div class="row-wrap mt-3">
@@ -5081,7 +5142,7 @@ function renderToday(view) {
           </div>
           ${heroBody}
         </div>
-        ${ringHtml(ringPct(prog) / 100, `<b>${ringPct(prog)}%</b>`, 110)}
+        ${ringHtml(ringPct(prog) / 100, `<b>${ringPct(prog)}%</b>`, 110, 0)}
       </div>`;
   const playerHtml = `
       <div class="listen-head">
@@ -5771,15 +5832,15 @@ function vocabThemes() {
 // Three-segment bar painted as one gradient (no child layout to go wrong on any browser): segs = [[name, count]]
 // left to right, brightest first. Names mastered / learned / seen map to heat-4 / heat-3 / heat-2.
 const SEG_COLOR = { mastered: 'var(--heat-4)', learned: 'var(--heat-3)', seen: 'var(--heat-2)' };
-function segBarHtml(total, segs, cls = 'mt-2') {
+function segBarHtml(total, segs, cls = 'mt-2', anim = false) {
   let acc = 0; const stops = [];
   const attrs = segs.map(([name, n]) => { const from = acc; acc += n; stops.push(`${SEG_COLOR[name]} ${(from / Math.max(1, total) * 100).toFixed(1)}% ${(acc / Math.max(1, total) * 100).toFixed(1)}%`); return `data-${name}="${n}"`; }).join(' ');
   stops.push(`transparent ${(acc / Math.max(1, total) * 100).toFixed(1)}% 100%`);
-  return `<div class="bar stack ${cls}" data-total="${total}" ${attrs} style="background-image:linear-gradient(to right, ${stops.join(', ')})"></div>`;
+  return `<div class="bar stack ${cls}" data-total="${total}" ${attrs}${anim ? ' data-anim' : ''} style="background-image:linear-gradient(to right, ${stops.join(', ')})"></div>`;
 }
 function stackBarHtml(g) { return segBarHtml(g.total, [['mastered', g.mastered], ['learned', g.learned - g.mastered], ['seen', g.seen - g.learned]]); }
 // grammar units: answered correctly 3+ times / answered correctly / seen but not yet right
-function unitBarHtml(s, cls) { return segBarHtml(s.total, [['mastered', s.ok3], ['learned', s.ok1], ['seen', s.seen0]], cls); }
+function unitBarHtml(s, cls, anim) { return segBarHtml(s.total, [['mastered', s.ok3], ['learned', s.ok1], ['seen', s.seen0]], cls, anim); }
 // 熟練 = answered right 3+ times, 熟悉 = answered right at least once, 初識 = seen but never right yet
 function unitLegendHtml(s) { return `<span class="leg"><i class="seg-dot mastered"></i>熟練 ${s.ok3}</span><span class="leg"><i class="seg-dot learned"></i>熟悉 ${s.ok1}</span><span class="leg"><i class="seg-dot seen"></i>初識 ${s.seen0}</span><span class="leg">共 ${s.total} 題</span>`; }
 function vocabSessionCount(filter) { const items = buildVocabQueue(filter, 20); return items.length + encoreEstimate(items); }
@@ -7730,6 +7791,7 @@ Object.assign(ACTIONS, {
     const hero = el.closest('.hero'); if (!hero) return;
     hero.querySelectorAll('.hero-tab').forEach(b => { const on = b.dataset.tab === heroTab; b.classList.toggle('open', on); b.setAttribute('aria-expanded', String(on)); });
     hero.querySelectorAll('.hero-panel').forEach(p => { p.hidden = p.dataset.panel !== heroTab; });
+    const unit = heroTab === 'unit' && hero.querySelector('[data-panel="unit"]'); if (unit) playAnims(unit);   // the unit bar fills again (not the ring)
   },
   'cloud-dl-all': (el) => cloudDownloadAll(el.dataset.kind || 'ja'),
   'cloud-dl-stop': () => { if (CLOUD_DL) CLOUD_DL.stop = true; },
@@ -7930,12 +7992,13 @@ function gaugeHtml(t, title) {
   const arc = (f0, f1) => { const [x0, y0] = pt(f0); const [x1, y1] = pt(f1); return `M ${x0.toFixed(2)} ${y0.toFixed(2)} A ${R} ${R} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`; };
   const gap = 2 / (Math.PI * R);   // a 2px surface gap between segments
   const segs = GAUGE_STEPS.map(([cls, , label]) => [cls, t[cls], label]);   // an arc's class names its count in t
-  let f = 0; const paths = [];
+  let f = 0, end = 0; const paths = [];
   segs.forEach(([cls, n, label]) => {
     if (!n || !t.total) return;
     const f0 = f, f1 = f + n / t.total; f = f1;
     const a0 = f0 > 0 ? f0 + gap / 2 : f0; let a1 = f1 < 1 ? f1 - gap / 2 : f1;
     if (a1 - a0 < gap) a1 = Math.min(1, a0 + gap);   // a tiny count still shows as a sliver
+    end = Math.max(end, a1);
     paths.push(`<path class="arc ${cls}" d="${arc(a0, a1)}" stroke-width="${W}" tabindex="0" data-tip-title="${esc(label)}：${n}" data-tip-body="占 ${Math.round(n / t.total * 100)}%"></path>`);
   });
   // faint ticks where each level's items end, with the level names on either side just outside the ring
@@ -7946,9 +8009,12 @@ function gaugeHtml(t, title) {
   const [nx, ny] = (() => { const a = Math.PI * (1 - t.pct / 100); return [C + (R - W / 2 - 4) * Math.cos(a), C - (R - W / 2 - 4) * Math.sin(a)]; })();   // ends just inside the ring
   const left = t.total - t.seen - t.learned - t.mastered;
   const trackTip = left > 0 ? ` tabindex="0" data-tip-title="未學：${left}" data-tip-body="共 ${t.total}"` : '';
-  return `<div class="gauge" data-kind="${t.kind}" data-total="${t.total}" data-seen="${t.seen}" data-learned="${t.learned}" data-mastered="${t.mastered}" data-pct="${t.pct}">
+  // played (playAnims), a mask sweeps the arcs in from the left while the needle turns to its spot (1.0.41)
+  const mid = `gm-${t.kind}`;
+  const arcs = end ? `<mask id="${mid}" maskUnits="userSpaceOnUse" x="-6" y="0" width="212" height="152"><path class="sweep" d="${arc(0, Math.min(1, end + 0.01))}" stroke="#fff" stroke-width="${W + 4}" fill="none" pathLength="1"></path></mask><g mask="url(#${mid})">${paths.join('')}</g>` : '';
+  return `<div class="gauge" data-anim style="--t:${(0.3 + 0.5 * end).toFixed(2)}s;--a:${(-1.8 * t.pct).toFixed(1)}deg" data-kind="${t.kind}" data-total="${t.total}" data-seen="${t.seen}" data-learned="${t.learned}" data-mastered="${t.mastered}" data-pct="${t.pct}">
     <svg viewBox="-6 0 212 152" role="img" aria-label="${esc(title)}總進度 ${t.pct}%：${segs.map(([, n, label]) => `${label} ${n}`).join('、')}，共 ${t.total}">
-      <path class="track" d="${arc(0, 1)}" stroke-width="${W}"${trackTip}></path>${paths.join('')}${tick}
+      <path class="track" d="${arc(0, 1)}" stroke-width="${W}"${trackTip}></path>${arcs}${tick}
       <line class="needle" x1="${C}" y1="${C}" x2="${nx.toFixed(2)}" y2="${ny.toFixed(2)}"></line><circle class="pivot" cx="${C}" cy="${C}" r="4"></circle>
       <text class="hero" x="${C}" y="${C + 32}" text-anchor="middle">${t.pct}%</text><text class="hero-l" x="${C}" y="${C + 48}" text-anchor="middle">${esc(title)}</text>
     </svg></div>`;
@@ -8164,7 +8230,7 @@ function grammarPreviewHtml(e, pct) {
   return `
     <div class="pr-top">
       <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
-      <div class="bar"><span style="width:${pct}%"></span></div>
+      ${prBarHtml(pct)}
       ${prCountHtml()}
     </div>
     <div class="q-card">
@@ -8207,7 +8273,7 @@ function attachChartTips(root) {
 }
 
 Object.assign(ACTIONS, {
-  'stats-scope': (el) => { statsScope = el.dataset.scope; route(); },
+  'stats-scope': (el) => { statsScope = el.dataset.scope; animForce = true; route(); },
   'stats-drill': (el) => {
     const items = REG.grammar.filter(g => g.pt === el.dataset.pt);
     if (!items.length) return;
@@ -9903,7 +9969,12 @@ async function init() {
   }
   setInterval(checkDayRollover, 60000);
   // a phone keeps the installed app suspended: back in front after a while, catch up on what an offline run missed
-  document.addEventListener('visibilitychange', () => { if (document.hidden) return; checkDayRollover(); if (Date.now() - AUDIO_PREFETCH.at > 30 * 60000) audioPrefetchSoon(); });
+  let hiddenAt = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { hiddenAt = Date.now(); return; }
+    checkDayRollover(); if (Date.now() - AUDIO_PREFETCH.at > 30 * 60000) audioPrefetchSoon();
+    if (hiddenAt && Date.now() - hiddenAt > 60000) playAnims(document.getElementById('view'));   // back after a minute away counts as opening the page
+  });
   // another tab saved newer progress: pick it up unless this tab is in the middle of something
   if (STATE_CHANNEL) STATE_CHANNEL.onmessage = async (e) => {
     if (!e.data || e.data.type !== 'saved' || SESSION || EXAM) return;
