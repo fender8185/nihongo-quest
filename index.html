@@ -452,7 +452,12 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
   .fb-sheet.rise { animation: sheetUp .25s ease-out .3s backwards; }
   @keyframes sheetUp { from { transform: translateY(100%); } }
 }
-.fb-chosen { font-size: 14px; color: var(--fg-2); margin: -2px 0 6px; }
+.fb-opts { display: grid; gap: 2px; margin: 0 0 8px; font-size: 15px; }
+.fb-opt { display: flex; align-items: baseline; gap: 6px; color: var(--fg-2); }
+.fb-opt .fb-mark { flex: none; width: 1.1em; text-align: center; color: var(--fg-3); }
+.fb-opt.ok { color: var(--fg); } .fb-opt.ok .fb-mark { color: var(--ok); } .fb-opt.bad .fb-mark { color: var(--bad); }
+.fb-opt-zh { color: var(--fg-3); font-size: 13px; }
+.fb-you { margin-left: auto; flex: none; padding-left: 8px; font-size: 12px; color: var(--bad); }
 .speak-big { display: inline-flex; align-items: center; gap: 10px; margin: 8px auto; padding: 14px 22px; border-radius: 99px; border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--accent); cursor: pointer; font-size: 16px; }
 .speak-big svg { width: 22px; height: 22px; }
 .speech-prog { max-width: 320px; margin: 2px auto 0; }
@@ -1022,12 +1027,16 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.44';   // keep equal to the version in sw.js CACHE ('nq-v1.0.44'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.45';   // keep equal to the version in sw.js CACHE ('nq-v1.0.45'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.45', date: '2026-11-05', items: [
+    '手機答錯時，結果面板列出所有選項：✓ 正確的、✗ 你選的，其他的接在後面，錯的選項附上它的意思（被面板蓋住的選項不用再往上滑看）。',
+    '單字意思題答錯時，每個錯的中文選項會寫出它是哪個日文單字（例如「歡迎光臨（いらっしゃいませ）」）；電腦版標在選項旁邊。'
+  ] },
   { v: '1.0.44', date: '2026-11-05', items: [
     '假名拼字、活用、排序的字塊可以拖：按住拿起來，拖到答案列的任何位置插進去（其他字會讓出位置），答案列裡的字也能拖來換順序，拖回下面就拿掉。點一下照樣可以用，字會飛過去。',
     '放滿之後不再自動送出，改按「確定」（電腦按 Enter），送出前可以慢慢調；Backspace 拿掉最後一個。'
@@ -2668,7 +2677,9 @@ function vocabPeers(v) {
   return REG.vocab.filter(x => x.key !== v.key && x.w && x.m && levelUpTo(x.lv, top));
 }
 
-function meaningOptions(v, notSameReading = false) {   // notSameReading: a listening question, where a homophone's meaning would also be right
+// notSameReading: a listening question, where a homophone's meaning would also be right; `ja` (optional) collects the word each
+// distractor meaning belongs to, shown after answering (1.0.45)
+function meaningOptions(v, notSameReading = false, ja = null) {
   const peers = vocabPeers(v);
   const scored = peers
     .filter(x => x.m !== v.m && !zhOverlap(x.m, v.m) && jaPlain(x.w) !== jaPlain(v.w) && !(notSameReading && x.r && kanaKey(x.r) === kanaKey(v.r)))
@@ -2677,7 +2688,7 @@ function meaningOptions(v, notSameReading = false) {   // notSameReading: a list
   const out = [];
   for (const { x } of scored) {
     if (out.some(o => o === x.m || zhOverlap(o, x.m))) continue;
-    out.push(x.m);
+    out.push(x.m); if (ja) ja[x.m] = jaPlain(x.w);
     if (out.length === 3) break;
   }
   return out.length === 3 ? out : null;
@@ -2938,6 +2949,7 @@ function makeVocabQuestion(v0, ctx = {}) {
   const tryBuild = (f) => {
     const info = vSurfaceInfo(v);
     const zh = {}; q.optZh = zh;   // option text -> Chinese meaning of that distractor word
+    const ja = {}; q.optJa = ja;   // option text (a Chinese meaning) -> the word it belongs to (1.0.45)
     const kana = {}; q.optKana = kana;   // option text -> its reading (for kana-only options)
     if (f === 'v-cloze') {
       const opts = info && clozeOptions(v, info, zh, kana);
@@ -3002,7 +3014,7 @@ function makeVocabQuestion(v0, ctx = {}) {
       return true;
     }
     if (f === 'v-listen') {
-      const opts = meaningOptions(v, true);
+      const opts = meaningOptions(v, true, ja);
       if (!opts) return false;
       q.fmt = f; q.label = `單字 · ${lvTag} · 聽力`;
       q.instr = '聽到的單字是什麼意思？';
@@ -3037,7 +3049,7 @@ function makeVocabQuestion(v0, ctx = {}) {
       return true;
     }
     // v-meaning (default)
-    const opts = meaningOptions(v);
+    const opts = meaningOptions(v, false, ja);
     if (!opts) return false;
     q.fmt = 'v-meaning'; q.label = `單字 · ${lvTag} · 意思`;
     q.instr = '這個字的意思是？';
@@ -4248,6 +4260,7 @@ function renderPractice() {
   if (q.subHtml) subParts.push(q.subHtml);
   if (q.zhText) subParts.push(showZh ? `<span>${esc(q.zhText)}</span>` : '<button type="button" class="toggle-zh" data-act="show-zh">顯示中文（T）</button>');
   const answered = e.done;
+  const sheet = answered && phoneLayout();   // 1.0.43: a phone shows the result in a panel from the bottom
   const longOpts = q.options.some(o => jaPlain(o.text).length > 14);   // one long option makes all four smaller, so their sizes match
   const opts = q.options.map((o, i) => {
     let cls = 'opt';
@@ -4260,9 +4273,10 @@ function renderPractice() {
     }
     if (q.audioOptions && !answered) return audioOptionHtml(i, cls, o, 'answer', false);
     const text = optionHtml(q, o);
-    // after answering, each wrong word shows what it actually means
-    const zh = answered && i !== q.answer && q.optZh ? q.optZh[o.text] || '' : '';
-    return `<button type="button" class="${cls}" data-act="answer" data-i="${i}" ${answered ? 'disabled' : ''}><span class="kbd">${i + 1}</span><span class="${optClass(o)}">${text}</span>${zh ? `<span class="opt-zh">${esc(zh)}</span>` : ''}</button>`;
+    // after answering, each wrong word shows what it actually means, and each wrong meaning the word it belongs to (1.0.45);
+    // a phone's panel lists them instead, so the options keep their size under it
+    const [zh, ja] = answered && !sheet && i !== q.answer ? optAside(q, o) : ['', false];
+    return `<button type="button" class="${cls}" data-act="answer" data-i="${i}" ${answered ? 'disabled' : ''}><span class="kbd">${i + 1}</span><span class="${optClass(o)}">${text}</span>${zh ? `<span class="opt-zh${ja ? ' jp' : ''}">${esc(zh)}</span>` : ''}</button>`;
   }).join('');
   const rec = q.key ? srsGet(q.key) : null;
   // a missed item on its 1/3/7 ladder: on (or after) its day this is a step; before it (most notebook-queue draws) extra practice
@@ -4273,7 +4287,6 @@ function renderPractice() {
   if (answered && q.fillHtml) stem = stem.replace(/<span class="blank" data-blank>[\s\S]*?<!--\/blank-->/, `<span class="blank filled">${q.fillHtml}</span>`);
   const custom = q.custom ? customInteractionHtml(e, answered) : '';
   const just = answered && e.justAnswered ? (e.chosen === q.answer ? ' just-ok' : ' just-bad') : ''; e.justAnswered = false;   // 1.0.41: only the draw right after the answer
-  const sheet = answered && phoneLayout();   // 1.0.43: a phone shows the result in a panel from the bottom
   const tools = `
     <div class="pr-actions">
       <div class="left">
@@ -4595,15 +4608,22 @@ function moreItemsHtml(e, answered) {
     ${answered && isAiConfigured() ? '<button type="button" class="btn btn-sm btn-ghost" data-act="ai-explain">AI 解析</button>' : ''}
     ${answered && q.kind !== 'm' ? '<button type="button" class="btn btn-sm btn-ghost" data-act="report-item" title="題目有誤或不自然時，把它移出題庫">這題有問題</button>' : ''}`;
 }
+// what a wrong option is, shown beside it after answering: a word's Chinese meaning, or the word a Chinese meaning belongs to
+// ([text, true] for the latter, set in Japanese type)
+function optAside(q, o) {
+  const zh = q.optZh && q.optZh[o.text]; if (zh) return [zh, false];
+  const ja = q.optJa && q.optJa[o.text]; return ja ? [ja, true] : ['', false];
+}
 function feedbackHtml(e, sheet = false) {
   const q = e.q;
   const ok = e.chosen === q.answer;
   const right = q.options[q.answer];
-  // in a phone's result panel the options are under it: say which one was picked, and what it means where that is known; what a
-  // listening item reveals (the transcript, the word heard) comes under the verdict there, not inside the card (1.0.43)
-  const picked = sheet && !ok && !q.custom ? q.options[e.chosen] : null;
-  const pickedZh = picked && q.optZh ? q.optZh[picked.text] || '' : '';
-  const chosen = picked ? `<div class="fb-chosen">你選的：<span class="${optClass(picked)}">${optionHtml(q, picked)}</span>${pickedZh ? `（${esc(pickedZh)}）` : ''}</div>` : '';
+  // in a phone's result panel the options are under it: a miss lists them there, the right one, the one picked, then the rest,
+  // each wrong word with what it means where that is known (1.0.45); what a listening item reveals (the transcript, the word
+  // heard) comes under the verdict there, not inside the card (1.0.43)
+  const order = q.options.map((o, i) => i).sort((a, b) => (b === q.answer) - (a === q.answer) || (b === e.chosen) - (a === e.chosen));
+  const chosen = sheet && !ok && !q.custom ? `<div class="fb-opts">${order.map(i => { const o = q.options[i]; const [zh, ja] = i !== q.answer ? optAside(q, o) : ['', false];
+    return `<div class="fb-opt${i === q.answer ? ' ok' : i === e.chosen ? ' bad' : ''}"><span class="fb-mark">${i === q.answer ? '✓' : i === e.chosen ? '✗' : '・'}</span><span class="${optClass(o)}">${optionHtml(q, o)}</span>${zh ? `<span class="fb-opt-zh${ja ? ' jp' : ''}">（${esc(zh)}）</span>` : ''}${i === e.chosen ? '<span class="fb-you">你選的</span>' : ''}</div>`; }).join('')}</div>` : '';
   const full = q.fullJp && (q.fmt.startsWith('g-') || q.fmt === 'v-cloze' || q.fmt === 'm-card') ? `<div class="fb-full jp">${q.kind === 'v' && q.exMarked && q.item && homographReadings(q.item).length ? exampleJpHtml(q.exMarked, q.item) : furi(q.fullJp)} <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak-full" title="朗讀">${icon('speaker')}</button></div>${q.zhText ? `<div class="small muted">${esc(q.zhText)}</div>` : ''}` : '';
   // other vocabulary formats: the word's example sentence, with its own play button (so it is not buried in the note text);
   // 配對 has none: the sentence would be one word's of six

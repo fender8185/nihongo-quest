@@ -41,7 +41,8 @@ def test_phone_result_rises_in_a_panel_and_the_options_stay(b):
       answerCurrent(pick);
       const sh = document.querySelector('.fb-sheet'), card = document.querySelector('.q-card');
       const ghost = document.querySelector('.pr-actions.pr-ghost');
-      const out = { same: tops() === before, cls: sh.className, head: !!sh.querySelector('.fb-head'), chosen: (sh.querySelector('.fb-chosen') || {}).textContent || '',
+      const out = { same: tops() === before, cls: sh.className, head: !!sh.querySelector('.fb-head'), rows: [...sh.querySelectorAll('.fb-opts .fb-opt')].map(r => [r.className.replace('fb-opt', '').trim(), jaPlain(r.querySelector('.fb-mark + span').textContent), !!r.querySelector('.fb-you')]),
+        right: jaPlain(q.options[q.answer].text),
         pickText: jaPlain(q.options[pick].text), next: !!sh.querySelector('.pr-next > #btnNext'), tools: !!sh.querySelector('.pr-actions:not(.pr-ghost) [data-act=more-toggle]'),
         ghostInert: !!ghost && ghost.inert, inCard: !!card.querySelector('.feedback'), tall: sh.getBoundingClientRect().height / innerHeight,
         room: document.getElementById('view').style.getPropertyValue('--sheet-h') === sh.offsetHeight + 'px', names: sh.getAnimations().map(a => a.animationName) };
@@ -54,10 +55,26 @@ def test_phone_result_rises_in_a_panel_and_the_options_stay(b):
     r = json.loads(ev(b, js, [("metrics", (375, 667))]))
     o = r['out']
     assert o['same'] and o['cls'] == 'fb-sheet bad rise' and o['names'] == ['sheetUp'], r   # the options stay put; the panel rises once
-    assert o['head'] and o['chosen'].startswith('你選的：' + o['pickText']) and o['next'] and o['tools'] and o['ghostInert'] and not o['inCard'], r
+    assert o['head'] and o['next'] and o['tools'] and o['ghostInert'] and not o['inCard'], r
+    assert len(o['rows']) == 4 and o['rows'][0] == ['ok', o['right'], False] and o['rows'][1] == ['bad', o['pickText'], True] and all(x[0] == '' and not x[2] for x in o['rows'][2:]), r   # 1.0.45: a miss lists the options: right, picked, the rest
     assert 0 < o['tall'] <= 0.701 and o['room'], r   # at most 70% of the screen; the page can scroll what it covers up above it
     assert r['again'] == {'cls': 'fb-sheet bad', 'same': True}, r
     assert r['listen'] == {'inSheet': True, 'inCard': False, 'headFirst': True}, r   # the transcript sits under the verdict, in the panel (week 1's set has a listening item)
+
+def test_a_missed_meaning_names_the_word_each_wrong_meaning_belongs_to(b):
+    js = "(async () => { " + FRESH + VOCAB_Q + """ const e = currentEntry(); e.q = makeVocabQuestion(e.item, { forceFmt: 'v-meaning' }); renderPractice();
+      const q = e.q; const pick = (q.answer + 1) % 4; answerCurrent(pick);
+      const row = document.querySelector('.fb-opts .fb-opt.bad'); const words = REG.vocab.filter(v => v.m === q.options[pick].text).map(v => jaPlain(v.w));
+      const out = { fmt: q.fmt, aside: row && row.querySelector('.fb-opt-zh') ? row.querySelector('.fb-opt-zh').textContent : '', jp: !!(row && row.querySelector('.fb-opt-zh.jp')), words };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("metrics", (390, 844))]))
+    assert r['fmt'] == 'v-meaning' and r['jp'] and any(r['aside'] == f'（{w}）' for w in r['words']), r   # 1.0.45: 歡迎光臨（いらっしゃいませ）
+    js2 = "(async () => { " + FRESH + VOCAB_Q + """ const e = currentEntry(); e.q = makeVocabQuestion(e.item, { forceFmt: 'v-meaning' }); renderPractice();
+      const q = e.q; const pick = (q.answer + 1) % 4; answerCurrent(pick); const el = document.querySelector('.opt.wrong .opt-zh');
+      const out = { aside: el ? el.textContent : '', word: q.optJa[q.options[pick].text] || null, right: !!document.querySelector('.opt.correct .opt-zh') };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    r2 = json.loads(ev(b, js2, [("metrics", (1200, 900, False))]))
+    assert r2['word'] and r2['aside'] == r2['word'] and not r2['right'], r2   # on a wide screen the option itself says it
 
 def test_turning_a_phone_wide_draws_the_answer_the_desktop_way(b):
     js = "(async () => { " + FRESH + VOCAB_Q + """ answerCurrent(currentEntry().q.answer); window.__sheet = !!document.querySelector('.fb-sheet'); return 1; })()"""
