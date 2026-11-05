@@ -429,6 +429,15 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
   /* only the button sticks (the tool row stays in flow above the feedback), on a solid strip so nothing shows through */
   .pr-next { position: sticky; bottom: 0; padding: 8px 0 calc(8px + env(safe-area-inset-bottom)); background: var(--bg); }
   .pr-next .btn-primary { width: 100%; min-height: 48px; font-size: 16px; }
+  /* 1.0.42: ✕ and the progress bar stay on top while a long answer scrolls (the page's top padding moves into the strip) */
+  body.practicing .content { padding-top: 0; }
+  body.practicing .pr-top { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: calc(18px + env(safe-area-inset-top, 0px)) 16px 10px; margin: 0 -16px 6px; }   /* across the side gutters too, so the card's shadow does not show beside it */
+  /* the card fills the screen and the options (or tiles) sit at its foot, the tool row under it, where a thumb reaches;
+     a card taller than the screen just scrolls. Flex items keep their margins apart: none of the card's blocks has a margin next to another's. */
+  body.practicing .content:has(> .q-card) { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+  body.practicing .content > .q-card { flex: 1 0 auto; display: flex; flex-direction: column; }
+  .q-card > :is(.opts, .spell, .order, .match) { margin-top: auto; }
+  .q-card > .opts { padding-top: 18px; }
 }
 .speak-big { display: inline-flex; align-items: center; gap: 10px; margin: 8px auto; padding: 14px 22px; border-radius: 99px; border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--accent); cursor: pointer; font-size: 16px; }
 .speak-big svg { width: 22px; height: 22px; }
@@ -991,12 +1000,16 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.41';   // keep equal to the version in sw.js CACHE ('nq-v1.0.41'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.0.42';   // keep equal to the version in sw.js CACHE ('nq-v1.0.42'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.0.42', date: '2026-11-05', items: [
+    '手機作答畫面：選項（拼字、排序、配對的字塊也是）貼到螢幕下方、「發音／例句／⋯」在最底下，大拇指比較好按；題目留在上面。模擬考也一樣。',
+    '答完往下滑看解說時，最上面的 ✕ 和進度條固定不動。'
+  ] },
   { v: '1.0.41', date: '2026-11-05', items: [
     '畫面多了一點動態：打開今日時，圓環和「目前單元」的進度條會長上去；學習分析的總進度儀表會從左邊掃過去，指針轉到位置。同一頁重畫（同步、改設定）不會重播，手機開了「減少動態效果」就完全不動。',
     '作答時，答對的選項會彈一下、答錯的會晃一下，上方的進度條每題滑過去；做完一組，結算的圓環從這組開始前的進度轉上去，答對、答錯、新學、分鐘從 0 跳上去。'
