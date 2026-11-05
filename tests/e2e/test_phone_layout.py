@@ -76,6 +76,19 @@ def test_a_missed_meaning_names_the_word_each_wrong_meaning_belongs_to(b):
     r2 = json.loads(ev(b, js2, [("metrics", (1200, 900, False))]))
     assert r2['word'] and r2['aside'] == r2['word'] and not r2['right'], r2   # on a wide screen the option itself says it
 
+def test_a_right_word_answer_still_lists_what_the_other_words_mean(b):
+    js = "(async () => { " + FRESH + VOCAB_Q + """ const e = currentEntry(); const out = {};
+      for (const fmt of ['v-meaning', 'v-recall']) { e.done = false; e.q = makeVocabQuestion(e.item, { forceFmt: fmt }); renderPractice(); answerCurrent(e.q.answer);
+        out[fmt] = [...document.querySelectorAll('.fb-sheet .fb-opt')].map(r => [r.className.replace('fb-opt', '').trim(), !!r.querySelector('.fb-opt-zh'), !!r.querySelector('.fb-you')]); }
+      const all = SESSION.entries; all.forEach((x, i) => prepareEntry(i)); const gi = all.findIndex(x => x.q && x.q.kind === 'g' && !x.q.custom && !x.done);
+      SESSION.idx = gi; renderPractice(); answerCurrent(all[gi].q.answer); out.grammar = document.querySelectorAll('.fb-sheet .fb-opt').length;
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("metrics", (390, 844))]))
+    for fmt in ('v-meaning', 'v-recall'):
+        rows = r[fmt]
+        assert len(rows) == 4 and rows[0] == ['ok', False, False] and all(x == ['', True, False] for x in rows[1:]), r   # 1.0.46: right, then the others with their meanings
+    assert r['grammar'] == 0, r   # particles have nothing to show: a right answer lists none
+
 def test_turning_a_phone_wide_draws_the_answer_the_desktop_way(b):
     js = "(async () => { " + FRESH + VOCAB_Q + """ answerCurrent(currentEntry().q.answer); window.__sheet = !!document.querySelector('.fb-sheet'); return 1; })()"""
     probe = """JSON.stringify({ sheet: __sheet, after: !!document.querySelector('.fb-sheet'), inCard: !!document.querySelector('.q-card .feedback'), next: !!document.querySelector('#view > .pr-next > #btnNext') })"""
