@@ -219,19 +219,19 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table tr:last-child td { border-bottom: 0; }
 .empty { text-align: center; color: var(--fg-3); padding: 28px 12px; font-size: 14px; }
 
-/* ---------- 主頁 (test build): a small crystal ball in a night sky ----------
-   --f (0–1, on .orb-stage) is how much of today's list is done (the ring it replaces). The ball's energy, its sparks and glow,
-   and how much of the sky has come out all follow it: stars one by one, a nebula from 25%, motes rising from the ball from 50%,
-   the aurora and shooting stars from 75%, a constellation at 100%. The scene keeps the dark palette in either theme; with
-   motion reduced (the rule at the top) it is a still picture. */
-.orb-stage { --accent: #8b9cff; --fg-3: #80838f; color-scheme: dark; position: relative; z-index: 0; display: grid; place-items: center; min-height: calc(100vh - 100px); }
-.orb-stage::before { content: ''; position: absolute; left: 50%; top: calc(50% - 10px); width: 360px; height: 360px; margin: -180px 0 0 -180px; border-radius: 50%; pointer-events: none;
-  background: radial-gradient(closest-side, rgba(139, 156, 255, .34), rgba(139, 156, 255, .1) 45%, transparent); opacity: calc(.25 + .75 * var(--f)); transition: opacity 1.5s; }   /* the ball's light on the sky */
+/* ---------- 主頁 (test build): a night scene; the crystal ball in the tab bar ----------
+   --f (0–1) is how much of today's list is done (the ring it replaces). On 主頁 (.orb-stage) the sky comes out with it — stars one
+   by one, a nebula from 25%, fireflies over the grass from 50%, the aurora and shooting stars from 75%, a constellation at 100% —
+   and the house's windows warm up. The ball (.nav-orb: the middle of the phone tab bar, the top of the sidebar) shows it on every
+   page: a tap goes to 主頁, a hold dives into 今日練習. Both keep the dark palette in either theme; with motion reduced (the rule
+   at the top) everything stands still. */
+.orb-stage { --accent: #8b9cff; color-scheme: dark; position: relative; z-index: 0; min-height: calc(100vh - 100px); }
 .sky { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; background: radial-gradient(130% 70% at 50% 100%, #17143f, #0a0a22 45%, #05060f); }
 @media (min-width: 901px) { .sky { left: 236px; } }   /* beside the sidebar */
+.sky .moon { position: absolute; left: 13%; top: 9%; width: 30px; height: 30px; border-radius: 50%; box-shadow: inset 9px -3px 0 0 #f3efe0; filter: drop-shadow(0 0 8px rgba(255, 246, 220, .45)); transform: rotate(-20deg); }
 .sky .nebula { position: absolute; border-radius: 50%; opacity: calc(clamp(0, (var(--f) - .25) / .35, 1) * .6); transition: opacity 1.5s; }   /* still: big moving layers cost a phone too much memory */
 .sky .n1 { width: 130vw; height: 70vh; left: -45vw; top: -12vh; background: radial-gradient(closest-side, rgba(124, 92, 255, .45), rgba(124, 92, 255, .12) 55%, transparent); }
-.sky .n2 { width: 120vw; height: 60vh; right: -50vw; top: 38vh; background: radial-gradient(closest-side, rgba(64, 140, 255, .38), rgba(64, 140, 255, .1) 55%, transparent); }
+.sky .n2 { width: 120vw; height: 60vh; right: -50vw; top: 30vh; background: radial-gradient(closest-side, rgba(64, 140, 255, .38), rgba(64, 140, 255, .1) 55%, transparent); }
 .sky .aurora { position: absolute; left: -25%; right: -25%; top: -6%; height: 44%; opacity: calc(clamp(0, (var(--f) - .75) / .2, 1) * .8); transition: opacity 1.5s;
   -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 2px, rgba(0, 0, 0, .8) 2px 5px, #000 5px 9px, rgba(0, 0, 0, .86) 9px 13px); mask-image: repeating-linear-gradient(90deg, #000 0 2px, rgba(0, 0, 0, .8) 2px 5px, #000 5px 9px, rgba(0, 0, 0, .86) 9px 13px); }   /* faint, uneven vertical rays */
 .sky .aurora i { position: absolute; inset: 0; transform-origin: 50% 0; animation: aurora 16s ease-in-out infinite alternate;
@@ -250,52 +250,79 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .sky .meteors { position: absolute; inset: 0; opacity: clamp(0, (var(--f) - .75) * 8, 1); transition: opacity 1.5s; }
 .sky .meteor { position: absolute; width: 120px; height: 1.5px; border-radius: 1px; background: linear-gradient(90deg, transparent, #fff); opacity: 0; transform-origin: 0 50%; animation: meteor var(--d) linear var(--w) infinite; }
 @keyframes meteor { 0% { transform: rotate(28deg) translateX(0); opacity: 0; } 1% { opacity: 1; } 6% { transform: rotate(28deg) translateX(320px); opacity: 0; } 100% { transform: rotate(28deg) translateX(320px); opacity: 0; } }
-.motes { position: absolute; left: 50%; top: calc(50% - 10px); width: 0; height: 0; pointer-events: none; opacity: clamp(0, (var(--f) - .5) / .25, 1); transition: opacity 1.5s; }
-.motes i { position: absolute; width: var(--s); height: var(--s); border-radius: 50%; background: #d5dbff; box-shadow: 0 0 6px 1px rgba(139, 156, 255, .9); opacity: 0; animation: mote var(--d) ease-out var(--w) infinite; }
-@keyframes mote { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(var(--dx), calc(var(--rise) * -1)); opacity: 0; } }
-/* the page opens: the sky comes out with the energy (each star at its share of the way up) */
+/* the land and the house: one still drawing (1 unit = 1px, its middle shown) and the house standing on it, the ground 220px up —
+   room in front for what will be placed there */
+.sky .land { position: absolute; left: 0; bottom: 0; width: 100%; height: 370px; }
+.sky .land .far { fill: #121436; } .sky .land .near { fill: #090a1e; } .sky .land .ridge { fill: none; stroke: rgba(150, 165, 255, .18); stroke-width: 1.2; }
+.sky .land .tree, .sky .land .post { fill: #0b0c22; } .sky .land .rail { fill: none; stroke: #0b0c22; stroke-width: 2.4; } .sky .land .lane { fill: rgba(150, 160, 230, .07); }
+.sky .house { position: absolute; left: 50%; bottom: 218px; width: 140px; height: 130px; margin-left: -70px; transform: scale(1.15); transform-origin: 50% 100%; }
+.sky .house svg { position: absolute; inset: 0; overflow: visible; }
+.sky .house .wall { fill: #0c0d25; } .sky .house .roof { fill: #11133a; } .sky .house .rim { fill: none; stroke: rgba(170, 182, 255, .35); stroke-width: 1.4; stroke-linejoin: round; }
+.sky .house .pane { fill: #ffcf7a; opacity: calc(.28 + .72 * var(--f)); transition: opacity 1.5s; } .sky .house .mull { stroke: #0c0d25; stroke-width: 2; }
+.sky .house .door { fill: #15173c; } .sky .house .knob { fill: #ffcf7a; }
+.sky .house .win { position: absolute; border-radius: 50%; opacity: calc(.12 + .88 * var(--f)); transition: opacity 1.5s; }   /* the light round each window, warmer as the list fills */
+.sky .house .win::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 196, 110, .55), rgba(255, 196, 110, .14) 55%, transparent); animation: flicker 3.2s ease-in-out infinite alternate; }
+.sky .house .w1 { left: 13px; top: 61px; width: 60px; height: 60px; } .sky .house .w2 { left: 67px; top: 61px; width: 60px; height: 60px; } .sky .house .w3 { left: 53px; top: 35px; width: 34px; height: 34px; }
+.sky .house .w2::after { animation-duration: 4.1s; animation-delay: -1.3s; } .sky .house .w3::after { animation-duration: 2.7s; animation-delay: -.6s; }
+@keyframes flicker { 0% { opacity: .78; } 45% { opacity: 1; } 60% { opacity: .86; } 100% { opacity: .96; } }
+.sky .house .spill { position: absolute; left: -40px; right: -40px; bottom: -18px; height: 40px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 190, 100, .22), transparent); opacity: var(--f); transition: opacity 1.5s; }
+.sky .house .smoke { position: absolute; left: 91px; top: 18px; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(closest-side, rgba(196, 202, 236, .5), transparent); opacity: 0; animation: smoke 6s ease-out infinite; }
+.sky .house .smoke + .smoke { animation-delay: -2s; } .sky .house .smoke + .smoke + .smoke { animation-delay: -4s; }
+@keyframes smoke { 0% { transform: translate(0, 0) scale(.6); opacity: 0; } 15% { opacity: .75; } 100% { transform: translate(16px, -64px) scale(2.8); opacity: 0; } }
+.sky .flies { position: absolute; left: 0; right: 0; bottom: 130px; height: 190px; opacity: clamp(0, (var(--f) - .5) / .25, 1); transition: opacity 1.5s; }
+.sky .flies i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #e9ff9c; box-shadow: 0 0 6px 2px rgba(214, 255, 120, .55); animation: fly var(--d) ease-in-out var(--w) infinite alternate, blink 2.4s ease-in-out var(--w) infinite alternate; }
+@keyframes fly { from { transform: translate(0, 0); } 50% { transform: translate(var(--dx), var(--dy)); } to { transform: translate(calc(var(--dx) * -.6), calc(var(--dy) * .5)); } }
+@keyframes blink { from { opacity: .15; } to { opacity: 1; } }
+/* the page opens: the sky comes out with the energy (each star at its share of the way), then the rest */
 @keyframes skyFade { from { opacity: 0; } }
 .orb-stage.anim .st.on { animation: skyFade 1s ease-out var(--in) backwards; }
-.orb-stage.anim :is(.nebula, .motes) { animation: skyFade 1.2s ease-out .3s backwards; }
-.orb-stage.anim :is(.aurora, .meteors) { animation: skyFade 1.4s ease-out .7s backwards; }
+.orb-stage.anim .nebula { animation: skyFade 1.2s ease-out .3s backwards; }
+.orb-stage.anim :is(.pane, .win, .spill) { animation: skyFade 1.2s ease-out .4s backwards; }
+.orb-stage.anim :is(.aurora, .meteors, .flies) { animation: skyFade 1.4s ease-out .7s backwards; }
 .orb-stage.anim .dipper { animation: skyFade 1.5s ease-out 1.2s backwards; }
-/* the ball: a quarter of the first test build's width (the user's pick), its strokes and waves drawn heavier to read at that size */
-.orb { --e1: color-mix(in srgb, var(--accent) 62%, #fff); --e3: color-mix(in srgb, var(--accent) 55%, #3b0764); --glass: color-mix(in srgb, var(--accent) 14%, #0e1030); --glass-2: #05060f; --stand: #2c3166; --stand-2: #0b0c22;
-  display: block; box-sizing: content-box; width: min(21vw, 13svh, 90px); aspect-ratio: 240 / 280; padding: 14px; margin: -14px; border: 0; border-radius: 40%; background: none; cursor: pointer; transition: transform .2s ease; }   /* the padding: a bigger target than the ball */
-.orb:active { transform: scale(.97); }
-.orb svg { display: block; width: 100%; height: 100%; overflow: visible; }
+/* the ball: glass, the energy (two waves, light drifting inside, sparks), a halo, and the ring a hold fills */
+.nav-orb { --accent: #8b9cff; --fg-3: #80838f; --e1: color-mix(in srgb, var(--accent) 62%, #fff); --e3: color-mix(in srgb, var(--accent) 55%, #3b0764); --glass: color-mix(in srgb, var(--accent) 14%, #0e1030); --glass-2: #05060f;
+  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; }   /* a hold must not select, open a menu or scroll */
+.orb { display: block; overflow: visible; transition: transform .25s, filter .25s; }
 .orb .g0 { stop-color: var(--glass); } .orb .g1 { stop-color: var(--glass-2); }
 .orb .e1 { stop-color: var(--e1); } .orb .e2 { stop-color: var(--accent); } .orb .e3 { stop-color: var(--e3); }
-.orb .t0 { stop-color: var(--stand-2); } .orb .t1 { stop-color: var(--stand); }
 .orb .w0 { stop-color: #fff; stop-opacity: .45; } .orb .w1 { stop-color: #fff; stop-opacity: 0; }   /* the light inside, the shine on the glass */
 .orb .h0 { stop-color: var(--accent); stop-opacity: 0; } .orb .h1 { stop-color: var(--accent); stop-opacity: .5; }
-.orb .d0 { stop-color: #000; stop-opacity: .5; } .orb .d1 { stop-color: #000; stop-opacity: 0; }
 .orb .back { fill: var(--accent); opacity: .45; } .orb .surf { fill: none; stroke: #fff; stroke-opacity: .6; stroke-width: 2.4; }
-.orb .rim { fill: none; stroke: color-mix(in srgb, var(--accent) 45%, var(--fg-3)); stroke-opacity: .6; stroke-width: 3; } .orb-stage.full .rim { stroke: var(--e1); stroke-opacity: .9; }
+.orb .rim { fill: none; stroke: color-mix(in srgb, var(--accent) 45%, var(--fg-3)); stroke-opacity: .7; stroke-width: 3; }
 .orb .glint { fill: #fff; opacity: .7; } .orb .gleam { fill: none; stroke: #fff; stroke-opacity: .16; stroke-width: 6; stroke-linecap: round; }
-.orb .seam { stroke: var(--e1); stroke-width: 3; stroke-linecap: round; opacity: calc(.15 + .75 * var(--f)); transition: opacity 1s; }
-.orb .glow { opacity: calc(.3 + .7 * var(--f)); transition: opacity 1s; }
+.orb .glow { opacity: calc(.3 + .5 * var(--f)); transition: opacity 1s; } .nav-orb.here .orb .glow { opacity: 1; }   /* on 主頁 the ball is lit */
 .orb .lv { transform: translateY(calc(6px + 217px * (1 - var(--f)))); transition: transform 1s cubic-bezier(.3, .7, .2, 1); }   /* the surface: y 223 under the glass (empty) up to y 6 over it (full) */
 .orb .sparks { --rise: max(0px, 184px - 217px * (1 - var(--f))); opacity: clamp(0, (var(--f) - .12) * 12, 1); }   /* they climb from y 196 to just under the surface */
-@keyframes orbFill { from { transform: translateY(223px); } }   /* the page opens: the energy rises from empty */
+.orb .hold { fill: none; stroke: var(--e1); stroke-width: 10; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; opacity: 0; transform: rotate(-90deg); transform-origin: 120px 112px; transition: stroke-dashoffset .2s, opacity .2s; }
 @keyframes orbWave { to { transform: translateX(-80px); } }   /* one wavelength, so the loop is seamless */
 @keyframes orbDrift { from { transform: translate(-16px, 3px) scale(.9); opacity: .45; } to { transform: translate(20px, -5px) scale(1.12); opacity: 1; } }
 @keyframes orbSpark { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: .9; } 80% { opacity: .5; } 100% { transform: translateY(calc(var(--rise) * -1)); opacity: 0; } }
 @keyframes orbGlow { 50% { transform: scale(1.05); opacity: .7; } }
-.orb-stage.anim .lv { animation: orbFill 1.4s cubic-bezier(.25, .8, .25, 1) backwards; }
 .orb .wave { animation: orbWave 4.5s linear infinite; } .orb .wave.back { animation-duration: 7s; animation-direction: reverse; }
 .orb .blob { transform-box: fill-box; transform-origin: center; animation: orbDrift 9s ease-in-out infinite alternate; }
 .orb .blob.b2 { animation-duration: 12s; animation-delay: -4s; } .orb .blob.b3 { animation-duration: 10s; animation-delay: -7s; } .orb .blob.b4 { animation-duration: 13s; animation-delay: -2s; }
 .orb .spark { fill: #fff; opacity: 0; animation: orbSpark var(--d) ease-in var(--w) infinite; }
-.orb .halo { transform-box: fill-box; transform-origin: center; animation: orbGlow 5s ease-in-out infinite; } .orb-stage.full .halo { animation-duration: 2.6s; }
-/* the dive (orbStart): the energy surges and the ball brightens, then its light spreads over the screen and fades into the questions */
-.orb.surge { transform: scale(1.06); transition: transform .4s cubic-bezier(.3, 0, .2, 1); }
-.orb.surge svg { filter: brightness(1.45) saturate(1.15); transition: filter .4s; }
-.orb.surge .glow { opacity: 1; } .orb.surge .halo { animation: none; transform: scale(1.25); transition: transform .4s; }
-.orb-veil { position: fixed; z-index: 90; border-radius: 50%; pointer-events: none; transform: scale(.04); opacity: 0; transition: transform .36s cubic-bezier(.5, 0, .8, .4), opacity .1s;
+.orb .halo { transform-box: fill-box; transform-origin: center; animation: orbGlow 5s ease-in-out infinite; }
+/* a hold: the ring fills round the ball while the energy rises and the ball swells; let go early and it all falls back (a tap) */
+.nav-orb.charging .orb { transform: scale(1.12); filter: brightness(1.3); transition: transform .48s ease-in, filter .48s; }
+.nav-orb.charging .orb .hold { stroke-dashoffset: 0; opacity: 1; transition: stroke-dashoffset .48s linear, opacity .1s; }
+.nav-orb.charging .orb .lv { transform: translateY(-12px); transition: transform .48s cubic-bezier(.5, 0, .7, .4); }
+.nav-orb.charging .orb .glow { opacity: 1; }
+@keyframes orbNudge { 30% { transform: translateY(-4px) scale(1.08); } 60% { transform: translateY(0) scale(.97); } }
+.nav-orb.nudge .orb { animation: orbNudge .5s ease-out; }   /* a tap on 主頁: the ball bobs and the hint says to hold it */
+/* the dive (orbStart): the ball flares, then its light spreads over the screen and fades into the questions */
+.nav-orb.surge .orb { transform: scale(1.18); filter: brightness(1.5) saturate(1.15); }
+.nav-orb.surge .orb .glow { opacity: 1; } .nav-orb.surge .orb .halo { animation: none; transform: scale(1.3); transition: transform .3s; }
+.orb-veil { position: fixed; z-index: 90; border-radius: 50%; pointer-events: none; transform: scale(.04); opacity: 0; transition: transform .34s cubic-bezier(.5, 0, .8, .4), opacity .1s;
   background: radial-gradient(closest-side, #fff, color-mix(in srgb, var(--accent) 50%, #fff) 15%, var(--accent) 40%, color-mix(in srgb, var(--accent) 70%, var(--bg)) 62%, transparent); }   /* sized so the opaque 62% reaches the farthest corner */
 .orb-veil.cover { transform: scale(1); opacity: 1; }
 .orb-veil.out { opacity: 0; transition: opacity .35s ease-out; }
+.orb-hint { position: fixed; z-index: 40; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); padding: 7px 12px; border-radius: 10px; border: 1px solid rgba(160, 172, 255, .25); background: rgba(20, 22, 52, .94); color: #dfe3ff; font-size: 13px; white-space: nowrap; box-shadow: 0 6px 20px rgba(0, 0, 0, .4);
+  transform: translate(-50%, 6px); opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
+.orb-hint::after { content: ''; position: absolute; left: 50%; bottom: -6px; margin-left: -6px; border: 6px solid transparent; border-bottom: 0; border-top-color: rgba(20, 22, 52, .94); }
+.orb-hint.show { opacity: 1; transform: translate(-50%, 0); }
+.nav-item.nav-orb .orb { width: 26px; height: 26px; margin: -4px 0 -4px -4px; opacity: 1; }   /* the sidebar's 主頁 row */
 /* ---------- 聽一輪 (the 🎧 tab): 錯題本｜單字 over the player ---------- */
 .listen-seg { display: flex; margin-bottom: 12px; }
 .listen-seg button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
@@ -359,7 +386,9 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
   body.today .content { padding-top: calc(16px + env(safe-area-inset-top, 0px)); }
   body.today .bottomnav { background: rgba(7, 8, 24, .38); border-top-color: rgba(170, 182, 255, .12); }   /* the tab bar is dark glass on the sky, whatever the theme */
   body.today .bottomnav button { color: rgba(200, 208, 255, .55); }
-  body.today .bottomnav button[aria-current="page"] { color: #c7ceff; } body.today .bottomnav button[aria-current="page"] svg { filter: drop-shadow(0 0 6px rgba(139, 156, 255, .9)); }
+  body.today .bottomnav button[aria-current="page"] { color: #c7ceff; } body.today .bottomnav button:not(.nav-orb)[aria-current="page"] svg { filter: drop-shadow(0 0 6px rgba(139, 156, 255, .9)); }
+  .bottomnav .nav-orb { position: relative; }
+  .bottomnav .nav-orb .orb { position: absolute; left: 50%; top: -24px; width: 66px; height: 66px; margin-left: -33px; }   /* the glass (59px) stands about 15px above the bar */
   /* contain: size — the item area's content does not count toward the card's minimum height, so the card shrinks until the
      area is 150px (then the content area scrolls) and never ends up shorter than its own controls */
   #view.fit .listen.compact #listenCard { contain: size; flex: 1 1 0; height: auto; min-height: 150px; max-height: 420px; }
@@ -5015,10 +5044,17 @@ function currentRoute() {
 
 function renderNav(active) {
   const mistakeCount = activeMistakes().length;
-  document.getElementById('sideNav').innerHTML = NAV.map(n => `
+  const pct = storedDayPct();
+  // 主頁 is the crystal ball (test build): the sidebar's first row, the middle of the phone tab bar. Both stay put across redraws, so
+  // their motion and a hold in progress carry on; only the rows round them are redrawn.
+  const side = document.getElementById('sideNav');
+  let sideOrb = side.querySelector('.nav-orb');
+  if (!sideOrb) { side.innerHTML = `<button type="button" class="nav-item nav-orb">${orbSvg('so')}<span>主頁</span></button>`; sideOrb = side.firstElementChild; }
+  side.querySelectorAll(':scope > :not(.nav-orb)').forEach(el => el.remove());
+  sideOrb.insertAdjacentHTML('afterend', NAV.slice(1).map(n => `
     <button type="button" class="nav-item" data-act="nav" data-route="${n.route}" ${n.id === active ? 'aria-current="page"' : ''}>
       ${icon(n.icon)}<span>${n.label}</span>${n.id === 'mistakes' && mistakeCount ? `<span class="count">${mistakeCount}</span>` : ''}
-    </button>`).join('');
+    </button>`).join(''));
   const st = streakStats();
   document.getElementById('sideFoot').innerHTML = `
     <div class="panel small">
@@ -5028,9 +5064,15 @@ function renderNav(active) {
     </div>
     <button type="button" class="nav-item" data-act="toggle-furi" title="快速鍵 F">${icon('furi')}<span>振假名：${FURI_LABEL[furiState()]}</span></button>
     <button type="button" class="nav-item" data-act="settings">${icon('settings')}<span>設定</span></button>`;
-  const mobile = NAV.slice(0, 4).concat({ id: 'more', label: '更多', icon: 'more' });   // the rest sit under 更多
-  document.getElementById('bottomNav').innerHTML = mobile.map(n => `
-    <button type="button" data-act="${n.id === 'more' ? 'more-menu' : 'nav'}" data-route="${n.route || ''}" ${n.id === active || (n.id === 'more' && NAV.slice(4).some(x => x.id === active)) ? 'aria-current="page"' : ''}>${icon(n.icon)}<span>${n.label}</span></button>`).join('');
+  const bar = document.getElementById('bottomNav');
+  let barOrb = bar.querySelector('.nav-orb');
+  if (!barOrb) { bar.innerHTML = `<button type="button" class="nav-orb">${orbSvg('bo')}</button>`; barOrb = bar.firstElementChild; }
+  bar.querySelectorAll(':scope > :not(.nav-orb)').forEach(el => el.remove());
+  const tab = (n) => `<button type="button" data-act="${n.id === 'more' ? 'more-menu' : 'nav'}" data-route="${n.route || ''}" ${n.id === active || (n.id === 'more' && NAV.slice(4).some(x => x.id === active)) ? 'aria-current="page"' : ''}>${icon(n.icon)}<span>${n.label}</span></button>`;
+  const mobile = NAV.slice(1, 4).concat({ id: 'more', label: '更多', icon: 'more' });   // 課程・單字｜the ball｜聽一輪・更多; the rest sit under 更多
+  barOrb.insertAdjacentHTML('beforebegin', mobile.slice(0, 2).map(tab).join(''));
+  barOrb.insertAdjacentHTML('afterend', mobile.slice(2).map(tab).join(''));
+  [sideOrb, barOrb].forEach(b => navOrbLevel(b, pct, active === 'today'));
   const navItem = NAV.find(n => n.id === active);
   document.getElementById('topTitle').textContent = navItem ? navItem.label : 'Nihongo Quest';
   renderSyncChip();
@@ -5038,6 +5080,7 @@ function renderNav(active) {
 }
 
 function route() {
+  orbHintHide();
   const r = currentRoute();
   const view = document.getElementById('view');
   const opened = r.name !== animRoute || animForce; animRoute = r.name; animForce = false;
@@ -5148,7 +5191,6 @@ const ACTIONS = {
   'close-modal': () => closeModal(),
   'modal-back': (el, ev) => { if (ev.target === el) closeModal(); },
   'toggle-furi': () => toggleFurigana(),
-  'start-daily': (el) => orbStart(el),
   'start-unit': (el) => startSession('unit', { unit: el.dataset.unit, title: `${unitById(el.dataset.unit).short}・單元練習` }),
   'start-vocab': (el) => startSession('vocab', { filter: el.dataset.filter || 'all' }),
   'start-mistakes': () => startSession('mistakes'),
@@ -5339,23 +5381,22 @@ function noticesHtml() {
 // iOS ignores user-scalable=no inside Safari; the gesture events still stop a pinch from zooming the page
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
 
-// 主頁 (test build): a small crystal ball in a night sky. The ball's energy is how much of today's list is done (dayProgress,
-// the ring it replaces): empty when the day starts, full when the list is done; the sky comes out with it. A tap dives into
-// 今日練習 (多學 once the day is done).
+// 主頁 (test build): a night scene — the land and a house under a sky that comes out as today's list fills (dayProgress, the ring
+// it replaces). The crystal ball lives in the tab bar (renderNav): a tap comes here, a hold dives into 今日練習.
 function renderToday(view) {
   finishPreIfReady();
   const pct = ringPct(dayProgress());
+  document.querySelectorAll('.nav-orb').forEach(b => navOrbLevel(b, pct, true));   // today's list may only now exist
   const stage = view.querySelector('.orb-stage');
-  if (stage) { orbLevel(stage, pct); return; }   // a redraw (a sync, a setting): the level glides, new stars fade in, the motion carries on
+  if (stage) { orbLevel(stage, pct); return; }   // a redraw (a sync, a setting): new stars fade in, the motion carries on
   view.innerHTML = homeHtml(pct);
+  orbHintSoon();
 }
-function orbLabel(pct) { return pct >= 100 ? '今天完成了，點一下多學一些' : `開始今日練習（今天完成 ${pct}%）`; }
 function orbLevel(stage, pct) {
   const f = pct / 100;
   stage.style.setProperty('--f', f);
   stage.classList.toggle('full', pct >= 100);
   stage.querySelectorAll('.st').forEach(el => el.classList.toggle('on', Number(el.dataset.t) <= f));
-  const orb = stage.querySelector('.orb'); if (orb) orb.setAttribute('aria-label', orbLabel(pct));
 }
 // the sky's layout, the same every day (a fixed seed): each star carries the share of the list that lights it — six faint ones
 // from the start, the rest by 80%, the seven of the constellation at 100%
@@ -5365,66 +5406,150 @@ const SKY = (() => {
   const r2 = (x) => Math.round(x * 100) / 100;
   const stars = Array.from({ length: 72 }, (_, i) => ({ x: r2(rnd() * 100), y: r2(rnd() * 100), s: r2(rnd() < 0.12 ? 2.2 + rnd() * 0.6 : 1 + rnd() * 1.1), t: i < 6 ? 0 : r2(0.8 * (i - 5) / 66), d: r2(2 + rnd() * 3.5), w: r2(rnd() * 5) }));
   [[60, 15], [66, 13], [72, 16], [77, 21], [75, 28], [83, 30], [85, 23]].forEach(([x, y], i) => stars.push({ x, y, s: 2.6, t: 1, d: 3, w: i * 0.4, dip: true }));
-  const motes = Array.from({ length: 14 }, () => ({ x: Math.round(rnd() * 130 - 65), y: Math.round(rnd() * 40 - 5), s: r2(2 + rnd() * 2), rise: Math.round(140 + rnd() * 150), dx: Math.round(rnd() * 50 - 25), d: r2(6 + rnd() * 5), w: r2(rnd() * 10) }));
-  return { stars, motes };
+  const flies = Array.from({ length: 12 }, () => ({ x: r2(4 + rnd() * 92), y: Math.round(rnd() * 160), dx: Math.round(rnd() * 60 - 30), dy: Math.round(rnd() * 30 - 15), d: r2(5 + rnd() * 5), w: r2(rnd() * 6) }));
+  return { stars, flies };
 })();
 function homeHtml(pct) {
   const f = pct / 100;
   const star = (s) => `<i class="st${s.dip ? ' dip' : ''}${s.t <= f ? ' on' : ''}" data-t="${s.t}" style="left:${s.x}%;top:${s.y}%;--s:${s.s}px;--d:${s.d}s;--w:-${s.w}s;--in:${f ? Math.round(s.t / f * 120) / 100 : 0}s"></i>`;
   const dip = SKY.stars.filter(s => s.dip).map(s => `${s.x} ${s.y}`);
+  const ground = 'M0 170 C150 152 300 142 450 147 C520 149 560 150 600 150 C640 150 690 149 760 146 C900 141 1050 151 1200 162';
   return `<div class="orb-stage${pct >= 100 ? ' full' : ''}" data-anim style="--f:${f}">
     <div class="sky" aria-hidden="true">
+      <i class="moon"></i>
       <i class="nebula n1"></i><i class="nebula n2"></i>
       <div class="aurora"><i></i><i></i></div>
       <svg class="dipper" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M${dip.join(' L')} L${dip[3]}"/></svg>
       ${SKY.stars.map(star).join('')}
       <div class="meteors"><i class="meteor" style="left:6%;top:10%;--d:9s;--w:-3s"></i><i class="meteor" style="left:36%;top:3%;--d:13s;--w:-9s"></i></div>
+      <svg class="land" viewBox="0 0 1200 370" preserveAspectRatio="xMidYMax slice">
+        <path class="far" d="M0 118 C110 96 210 98 320 114 S520 90 640 104 S860 124 990 98 S1140 94 1200 106 V370 H0 Z"/>
+        <path class="near" d="${ground} V370 H0 Z"/><path class="ridge" d="${ground}"/>
+        <path class="lane" d="M590 150 C588 210 562 290 540 370 H606 C612 292 612 210 610 150 Z"/>
+        <g class="tree"><rect x="465" y="104" width="8" height="46"/><circle cx="469" cy="96" r="22"/><circle cx="452" cy="110" r="15"/><circle cx="487" cy="108" r="16"/></g>
+        ${[700, 722, 744, 766].map(x => `<rect class="post" x="${x}" y="131" width="4" height="19" rx="1"/>`).join('')}<path class="rail" d="M698 138 H772 M698 145 H772"/>
+      </svg>
+      <div class="house">
+        <i class="spill"></i>
+        <svg viewBox="0 0 140 130">
+          <rect class="wall" x="92" y="30" width="12" height="30"/><rect class="roof" x="89" y="27" width="18" height="5" rx="1"/>
+          <rect class="wall" x="22" y="66" width="96" height="64"/>
+          <path class="roof" d="M10 72 L70 20 L130 72 Z"/><path class="rim" d="M10 72 L70 20 L130 72 M89 27 H107"/>
+          <circle class="pane" cx="70" cy="52" r="6"/><path class="mull" d="M70 46 V58 M64 52 H76"/>
+          <rect class="pane" x="34" y="82" width="18" height="18" rx="2"/><rect class="pane" x="88" y="82" width="18" height="18" rx="2"/>
+          <path class="mull" d="M43 82 V100 M34 91 H52 M97 82 V100 M88 91 H106"/>
+          <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/>
+        </svg>
+        <i class="win w1"></i><i class="win w2"></i><i class="win w3"></i>
+        <i class="smoke"></i><i class="smoke"></i><i class="smoke"></i>
+      </div>
+      <div class="flies">${SKY.flies.map(q => `<i style="left:${q.x}%;top:${q.y}px;--dx:${q.dx}px;--dy:${q.dy}px;--d:${q.d}s;--w:-${q.w}s"></i>`).join('')}</div>
     </div>
-    <div class="motes" aria-hidden="true">${SKY.motes.map(m => `<i style="left:${m.x}px;top:${m.y}px;--s:${m.s}px;--rise:${m.rise}px;--dx:${m.dx}px;--d:${m.d}s;--w:-${m.w}s"></i>`).join('')}</div>
-    ${orbHtml(pct)}
   </div>`;
 }
+// the crystal ball, the sphere alone: glass, two waves of energy at the level --f, light drifting inside, sparks, a halo and the ring
+// a hold fills. Ids carry a prefix: the tab bar and the sidebar each have one.
 const ORB_SPARKS = [[92, 3, 4.2, 0], [104, 2.2, 3.4, 1.3], [118, 3.6, 5, 2.6], [128, 2.4, 3.8, 0.6], [140, 3.2, 4.6, 3.1], [150, 2.2, 3.6, 1.9], [112, 2.6, 4.4, 3.8]];   // x, radius, seconds to climb, head start
-function orbHtml(pct) {
+function orbSvg(id) {
   const wave = 'M0 0 Q20 -16 40 0 T80 0 T120 0 T160 0 T200 0 T240 0 T280 0 T320 0';   // four wavelengths: one scrolls out while the glass shows the rest
-  return `<button type="button" class="orb" data-act="start-daily" aria-label="${orbLabel(pct)}">
-    <svg viewBox="0 0 240 280" aria-hidden="true">
+  return `<svg class="orb" viewBox="8 0 224 224" aria-hidden="true">
       <defs>
-        <radialGradient id="orbGlass" cx=".4" cy=".36" r=".7"><stop offset="0" class="g0"/><stop offset="1" class="g1"/></radialGradient>
-        <linearGradient id="orbEnergy" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="150"><stop offset="0" class="e1"/><stop offset=".3" class="e2"/><stop offset="1" class="e3"/></linearGradient>
-        <linearGradient id="orbStand"><stop offset="0" class="t0"/><stop offset=".45" class="t1"/><stop offset="1" class="t0"/></linearGradient>
-        <radialGradient id="orbLight"><stop offset="0" class="w0"/><stop offset="1" class="w1"/></radialGradient>
-        <radialGradient id="orbHalo"><stop offset=".7" class="h0"/><stop offset=".84" class="h1"/><stop offset="1" class="h0"/></radialGradient>
-        <radialGradient id="orbShade"><stop offset="0" class="d0"/><stop offset="1" class="d1"/></radialGradient>
-        <clipPath id="orbGlassClip"><circle cx="120" cy="112" r="98"/></clipPath>
-        <clipPath id="orbUnder"><rect x="0" y="8" width="320" height="230"/></clipPath>
+        <radialGradient id="${id}G" cx=".4" cy=".36" r=".7"><stop offset="0" class="g0"/><stop offset="1" class="g1"/></radialGradient>
+        <linearGradient id="${id}E" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="150"><stop offset="0" class="e1"/><stop offset=".3" class="e2"/><stop offset="1" class="e3"/></linearGradient>
+        <radialGradient id="${id}L"><stop offset="0" class="w0"/><stop offset="1" class="w1"/></radialGradient>
+        <radialGradient id="${id}H"><stop offset=".7" class="h0"/><stop offset=".84" class="h1"/><stop offset="1" class="h0"/></radialGradient>
+        <clipPath id="${id}C"><circle cx="120" cy="112" r="98"/></clipPath>
+        <clipPath id="${id}U"><rect x="0" y="8" width="320" height="230"/></clipPath>
       </defs>
-      <ellipse cx="120" cy="266" rx="88" ry="8" fill="url(#orbShade)"/>
-      <g class="glow"><circle class="halo" cx="120" cy="112" r="126" fill="url(#orbHalo)"/></g>
-      <path d="M94 196 C98 222 84 236 64 248 H176 C156 236 142 222 146 196 Z" fill="url(#orbStand)"/>
-      <rect x="50" y="246" width="140" height="16" rx="8" fill="url(#orbStand)"/>
-      <path class="seam" d="M64 247.5 H176"/>
-      <circle cx="120" cy="112" r="100" fill="url(#orbGlass)"/>
-      <g clip-path="url(#orbGlassClip)">
+      <g class="glow"><circle class="halo" cx="120" cy="112" r="126" fill="url(#${id}H)"/></g>
+      <circle cx="120" cy="112" r="100" fill="url(#${id}G)"/>
+      <g clip-path="url(#${id}C)">
         <g class="lv">
           <g transform="translate(0 -7)"><path class="wave back" d="${wave} V232 H0 Z"/></g>
-          <g class="wave"><path d="${wave} V232 H0 Z" fill="url(#orbEnergy)"/><path class="surf" d="${wave}"/></g>
-          <g clip-path="url(#orbUnder)">
-            <ellipse class="blob" cx="72" cy="38" rx="46" ry="20" fill="url(#orbLight)"/><ellipse class="blob b2" cx="166" cy="78" rx="40" ry="18" fill="url(#orbLight)"/>
-            <ellipse class="blob b3" cx="104" cy="122" rx="54" ry="22" fill="url(#orbLight)"/><ellipse class="blob b4" cx="150" cy="172" rx="48" ry="20" fill="url(#orbLight)"/>
+          <g class="wave"><path d="${wave} V232 H0 Z" fill="url(#${id}E)"/><path class="surf" d="${wave}"/></g>
+          <g clip-path="url(#${id}U)">
+            <ellipse class="blob" cx="72" cy="38" rx="46" ry="20" fill="url(#${id}L)"/><ellipse class="blob b2" cx="166" cy="78" rx="40" ry="18" fill="url(#${id}L)"/>
+            <ellipse class="blob b3" cx="104" cy="122" rx="54" ry="22" fill="url(#${id}L)"/><ellipse class="blob b4" cx="150" cy="172" rx="48" ry="20" fill="url(#${id}L)"/>
           </g>
         </g>
         <g class="sparks">${ORB_SPARKS.map(([x, r, d, w]) => `<circle class="spark" cx="${x}" cy="196" r="${r}" style="--d:${d}s;--w:-${w}s"/>`).join('')}</g>
       </g>
-      <ellipse cx="84" cy="60" rx="42" ry="24" transform="rotate(-38 84 60)" fill="url(#orbLight)" opacity=".7"/>
+      <ellipse cx="84" cy="60" rx="42" ry="24" transform="rotate(-38 84 60)" fill="url(#${id}L)" opacity=".7"/>
       <circle class="glint" cx="70" cy="52" r="5"/>
       <path class="gleam" d="M184 140 A76 76 0 0 1 150 196"/>
       <circle class="rim" cx="120" cy="112" r="99"/>
-    </svg>
-  </button>`;
+      <circle class="hold" cx="120" cy="112" r="114" pathLength="1"/>
+    </svg>`;
 }
-// the dive: the energy surges and the ball brightens, its light spreads from the centre of the glass over the screen, and the
-// questions come up as it fades. A brand-new learner picks a start first; nothing to do, or motion reduced: straight in.
+function orbLabel(pct) { return `主頁（今天完成 ${pct}%）・按住開始今日練習`; }
+// the tab bar's reading of today's progress, from the list as stored: drawing the bar must never make or remake the list (dailyPlan
+// does that when 主頁 or a set asks, then 主頁 sets the balls). No list yet today: nothing of it done. A list 主頁 is about to
+// remake (the stage or the start changed): null, the ball keeps what it shows.
+function storedDayPct() {
+  const pl = state.today.plan;
+  if (!pl || !pl.lists) return 0;
+  if (pl.stage !== state.stage || pl.start !== Boolean(state.startChosen)) return null;
+  const keys = planListKeys(pl).filter(k => REG.byKey.has(k));
+  return ringPct({ done: keys.filter(answeredToday).length, total: keys.length });
+}
+// the level, the label and "you are here" (pct null: the level stays); a change waits a moment, so after a set
+// the bar is back on screen and the rise shows
+function navOrbLevel(btn, pct, here) {
+  btn.classList.toggle('here', here);
+  if (here) btn.setAttribute('aria-current', 'page'); else btn.removeAttribute('aria-current');
+  if (pct === null) { if (!btn.getAttribute('aria-label')) btn.setAttribute('aria-label', orbLabel(0)); return; }
+  btn.setAttribute('aria-label', orbLabel(pct));
+  const f = String(pct / 100), was = btn.style.getPropertyValue('--f');
+  if (was === '') btn.style.setProperty('--f', f);
+  else if (was !== f) setTimeout(() => btn.style.setProperty('--f', f), 80);
+}
+// a tap goes to 主頁 (on 主頁 the ball bobs and the hint says to hold it); a hold — the ring fills round the ball in ORB_HOLD ms —
+// dives into 今日練習. Both are taken from the pointer (or Enter／Space held on the focused ball), never from the click.
+const ORB_HOLD = 600;
+let orbHold = null;
+function orbDown(ev) {
+  const btn = ev.target && ev.target.closest && ev.target.closest('.nav-orb');
+  if (!btn || orbBusy || orbHold || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+  orbHold = { btn, show: setTimeout(() => btn.classList.add('charging'), 120), done: setTimeout(() => orbHeld(btn), ORB_HOLD) };
+  orbBuzz(8);
+}
+function orbUp(ev, cancel) {
+  const h = orbHold; if (!h) return;
+  orbHold = null; clearTimeout(h.show); clearTimeout(h.done);
+  h.btn.classList.remove('charging');
+  const r = h.btn.getBoundingClientRect(), pad = 24;   // a finger that slid well off the ball before letting go: no tap
+  const off = typeof ev.clientX === 'number' && (ev.clientX < r.left - pad || ev.clientX > r.right + pad || ev.clientY < r.top - pad - 30 || ev.clientY > r.bottom + pad);
+  if (cancel || off) return;
+  if (currentRoute().name === 'today') { orbHint(); h.btn.classList.remove('nudge'); void h.btn.offsetWidth; h.btn.classList.add('nudge'); }
+  else go('#/today');
+}
+function orbHeld(btn) {
+  orbHold = null; btn.classList.remove('charging');
+  try { localStorage.setItem('nq_orb_hold', '1'); } catch (e) { /* ignore */ }
+  orbHintHide(); orbBuzz(20);
+  orbStart(btn);
+}
+function orbKey(ev) {
+  const btn = ev.target && ev.target.closest && ev.target.closest('.nav-orb');
+  if (!btn || (ev.key !== 'Enter' && ev.key !== ' ')) return;
+  ev.preventDefault(); ev.stopPropagation();   // no click: the press is the tap or the hold
+  if (ev.type === 'keydown') { if (!ev.repeat) orbDown({ target: btn }); } else orbUp({}, false);
+}
+function orbBuzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* no vibration (iPhone) */ } }
+function orbHint() {
+  const nav = document.getElementById('bottomNav'); if (!nav || getComputedStyle(nav).display === 'none') return;   // phones only: it points at the tab bar
+  let el = document.getElementById('orbHint');
+  if (!el) { el = document.createElement('div'); el.id = 'orbHint'; el.className = 'orb-hint'; el.setAttribute('role', 'status'); el.textContent = '按住水晶球，開始今日練習'; document.body.appendChild(el); }
+  clearTimeout(orbHint.t); requestAnimationFrame(() => el.classList.add('show'));
+  orbHint.t = setTimeout(() => el.classList.remove('show'), 3200);
+}
+function orbHintHide() { const el = document.getElementById('orbHint'); if (el) el.classList.remove('show'); }
+function orbHintSoon() {   // until the first hold, 主頁 says how to start
+  let held = false; try { held = localStorage.getItem('nq_orb_hold') === '1'; } catch (e) { /* show it */ }
+  if (!held) setTimeout(() => { if (currentRoute().name === 'today' && !modalOpen() && !SESSION) orbHint(); }, 1200);
+}
+// the dive: the ball flares, its light spreads from the centre of the glass over the screen, and the questions come up as it fades.
+// A brand-new learner picks a start first; nothing to do, or motion reduced: straight in.
 let orbBusy = false;
 function orbStart(btn) {
   if (orbBusy) return;
@@ -5433,20 +5558,19 @@ function orbStart(btn) {
     return;
   }
   const n = (dailyPlan().remaining === 0 ? extraQueue() : dailyQueue()).items.length;
-  const lv = btn && btn.querySelector('.lv');
+  const svg = btn && btn.querySelector('.orb'), lv = svg && svg.querySelector('.lv');
   if (!n || !lv || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { startSession('daily'); return; }
   orbBusy = true;
-  const stage = btn.closest('.orb-stage'); if (stage) stage.classList.remove('anim');   // a tap while the page still opens: the rise gives way to the surge
-  lv.style.transition = 'transform .4s cubic-bezier(.5, 0, .7, .4)'; lv.style.transform = 'translateY(-12px)';
+  lv.style.transition = 'transform .3s cubic-bezier(.5, 0, .7, .4)'; lv.style.transform = 'translateY(-12px)';
   btn.classList.add('surge');
-  const r = btn.querySelector('svg').getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height * 112 / 280;
+  const r = svg.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2;
   const d = 2 * Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)) / 0.62;   // its opaque part reaches the farthest corner
   const veil = document.createElement('div'); veil.className = 'orb-veil';
   veil.style.cssText = `left:${x - d / 2}px;top:${y - d / 2}px;width:${d}px;height:${d}px`;
   document.body.appendChild(veil);
-  setTimeout(() => veil.classList.add('cover'), 220);
-  setTimeout(() => { startSession('daily'); veil.classList.add('out'); }, 590);
-  setTimeout(() => { veil.remove(); orbBusy = false; }, 900);
+  setTimeout(() => veil.classList.add('cover'), 60);
+  setTimeout(() => { startSession('daily'); veil.classList.add('out'); }, 420);
+  setTimeout(() => { veil.remove(); orbBusy = false; lv.style.transition = ''; lv.style.transform = ''; btn.classList.remove('surge'); }, 800);   // the ball stays in the bar: back to its level, unseen behind the questions
 }
 
 // 學習紀錄 (學習分析): the calendar, streak tiles and the recent days
@@ -9985,6 +10109,11 @@ async function init() {
   document.addEventListener('input', (ev) => { if (!ev.isComposing && ev.target && ev.target.id === 'vocabSearch') applyVocabSearch(ev.target); });
   document.addEventListener('compositionend', (ev) => { if (ev.target && ev.target.id === 'vocabSearch') applyVocabSearch(ev.target); });
   document.addEventListener('keydown', handleKey);
+  document.addEventListener('pointerdown', orbDown);   // the crystal ball in the tab bar: tap or hold
+  document.addEventListener('pointerup', (ev) => orbUp(ev, false));
+  document.addEventListener('pointercancel', (ev) => orbUp(ev, true));
+  document.addEventListener('contextmenu', (ev) => { if (ev.target.closest && ev.target.closest('.nav-orb')) ev.preventDefault(); });   // a long press opens no menu
+  document.addEventListener('keydown', orbKey, true); document.addEventListener('keyup', orbKey, true);
   window.addEventListener('hashchange', route);
   if ('speechSynthesis' in window) {
     window.speechSynthesis.onvoiceschanged = () => { if (!modalOpen() && currentRoute().name === 'today' && !SESSION) route(); };
