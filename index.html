@@ -32,7 +32,7 @@
   --shadow: 0 1px 2px rgba(0,0,0,.35), 0 10px 24px -14px rgba(0,0,0,.6);
   --ruby: #a9a7c8;
   --shelf: #2b2a44; --wood: #5a4535; --wood-edge: #46362a; --label: #e6dcc4; --label-ink: #2f2a22; --label-ink-2: #5b5144; --gold: #c9a64f;
-  --cover-keep: 76%; --cover-shade: #1c1e38;
+  --cover-keep: 76%; --cover-shade: #1c1e38; --note: #45412f; --paper: #d9d2c0;
   color-scheme: dark;
 }
 [data-theme="light"] {
@@ -47,7 +47,7 @@
   --shadow: 0 1px 2px rgba(90,70,40,.07), 0 10px 24px -16px rgba(90,70,40,.32);
   --ruby: #7a6d57;
   --shelf: #ece1cc; --wood: #c99a63; --wood-edge: #a87843; --label: #f6efdf; --label-ink: #3a3328; --label-ink-2: #6b604d; --gold: #ecc66a;
-  --cover-keep: 100%; --cover-shade: #1c1e38;
+  --cover-keep: 100%; --cover-shade: #1c1e38; --note: #fdf2c8; --paper: #fffdf6;
   color-scheme: light;
 }
 * { box-sizing: border-box; }
@@ -201,6 +201,22 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.35; }
 .plan-line { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 12px; color: var(--fg-2); font-size: 14px; }
 .plan-line b { color: var(--fg); font-variant-numeric: tabular-nums; }
 .day-card .plan-note { margin-bottom: 10px; }
+/* 學習分析 as 書房's cork board (test build): a strip of cork with its pinned papers on top, a pin in every card, 今天 a note */
+.cork-strip { position: relative; display: flex; align-items: center; gap: 16px; height: 80px; margin: 0 0 22px; padding: 0 18px; border: 6px solid color-mix(in srgb, #9a6c42 var(--cover-keep), var(--cover-shade)); border-radius: 10px;
+  background: radial-gradient(rgba(90, 55, 25, .3) 1px, transparent 1.7px) 0 0 / 7px 7px, radial-gradient(rgba(255, 236, 200, .28) 1px, transparent 1.7px) 3px 4px / 9px 9px, color-mix(in srgb, #c99a6b var(--cover-keep), var(--cover-shade)); }
+@media (max-width: 900px) { .cork-strip { margin: -16px -16px 20px; border-width: 0 0 6px; border-radius: 0; } }
+.cork-strip .pinned { position: relative; flex: none; display: grid; place-items: center; border-radius: 2px; box-shadow: 0 3px 6px rgba(60, 35, 15, .3); }
+.cork-strip .pinned::before, #view:has(> .cork-strip) > .card::before { content: ''; position: absolute; top: -5px; left: 50%; width: 11px; height: 11px; margin-left: -5.5px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, .7) 0 1.5px, transparent 2.5px), var(--pin, #d9534f); box-shadow: 0 2px 3px rgba(0, 0, 0, .35); z-index: 1; }
+.cork-strip .chart { width: 66px; height: 50px; background: #fffaf2; transform: rotate(-3deg); --pin: #4f7fd1; }
+.cork-strip .chart svg { width: 54px; height: 38px; }
+.cork-strip .sticky { width: 50px; height: 46px; background: #f6d96b; transform: rotate(4deg); --pin: #e0b04a; }
+.cork-strip .sticky i { display: block; width: 32px; height: 2px; margin: 5px 0; background: rgba(90, 70, 20, .35); }
+.cork-strip .photo { width: 44px; height: 52px; background: #f3c2b2; transform: rotate(-2deg); }
+.cork-strip .photo i { width: 22px; height: 22px; border-radius: 50%; background: #e2683f; }
+[data-theme="dark"] .cork-strip .pinned { filter: brightness(.8); }
+#view:has(> .cork-strip) > .card { position: relative; }
+#view:has(> .cork-strip) > .card:nth-of-type(3n) { --pin: #4f7fd1; } #view:has(> .cork-strip) > .card:nth-of-type(3n + 1) { --pin: #e0b04a; }
+.day-card { background: var(--note); border-color: transparent; }   /* 今天: a note pinned on the board */
 .day-help summary { display: inline-block; font-size: 12px; color: var(--fg-3); border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; cursor: pointer; list-style: none; }
 .day-help summary::-webkit-details-marker { display: none; } .day-help summary::before { content: "▸ "; } .day-help[open] summary::before { content: "▾ "; }
 .day-help p { margin: 10px 0 0; line-height: 1.7; }
@@ -500,6 +516,16 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .top-home { display: inline-flex; align-items: center; padding: 4px 11px 4px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--bg-elev); color: var(--fg-2); font-size: 13px; cursor: pointer; }
 /* ---------- 聽一輪 (the 🎧 tab): 錯題本｜單字 over the player ---------- */
 .listen-seg { display: flex; margin-bottom: 12px; }
+/* 書房's headphones on their stand over the player (test build); the notes rise while it plays */
+.listen-top { align-items: center; }
+@media (max-width: 900px) { .listen-top { justify-content: center; margin-bottom: 8px; } }
+.listen-stand { position: relative; flex: none; width: 64px; height: 60px; }
+.listen-stand svg { display: block; width: 64px; height: 60px; overflow: visible; }
+.listen-stand :is(.base, .pole) { fill: color-mix(in srgb, var(--fg) 45%, var(--bg)); }
+.listen-stand .band { stroke: #5a6cf0; } .listen-stand .cup { fill: #4a58d6; } .listen-stand .pad { fill: #333d9c; }
+.listen-stand .notes i { position: absolute; left: 50%; top: 8px; font-style: normal; font-size: 14px; font-weight: 700; line-height: 1; color: var(--accent); opacity: 0; pointer-events: none; }
+.listen-stand.playing .notes i { animation: tune 3.3s ease-in-out var(--w) infinite; }
+@media (prefers-reduced-motion: reduce) { .listen-stand.playing .notes i { animation: none; } }
 .listen-seg button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
 .listen-seg .n { font-size: 11px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
 .install-guide ol { padding-left: 20px; margin: 4px 0 0; } .install-guide li { margin-bottom: 4px; } .install-guide p { margin: 6px 0 0; }
@@ -658,6 +684,15 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .kana-row-btn { border: 1px solid var(--line); background: var(--bg-elev-2); border-radius: 8px; font-size: 10px; cursor: pointer; color: inherit; }
 .kanji-chip { cursor: pointer; font-size: 15px; padding: 1px 8px; }
 .theme-card { cursor: pointer; } .theme-card:hover { border-color: var(--line-2); background: var(--bg-hover); }   /* the card opens its word table (1.0.27) */
+/* 單字 as 書房's card box (test build): the themes are index cards (a coloured tab at the top left, the red rule under the
+   heading), the levels its dividers */
+.theme-grid { row-gap: 22px; }
+.index-card { position: relative; margin-top: 10px; overflow: visible; }
+.index-card::before { content: ''; position: absolute; left: 16px; top: -11px; width: 46px; height: 11px; border-radius: 5px 5px 0 0; background: color-mix(in srgb, var(--tab) var(--cover-keep), var(--cover-shade)); }
+.index-card > .row:first-child { padding-bottom: 8px; margin-bottom: 10px; border-bottom: 1.5px solid color-mix(in srgb, #d9786a 55%, transparent); }
+.seg.dividers { display: flex; gap: 4px; padding: 0 6px; border: 0; border-bottom: 1.5px solid var(--line-2); border-radius: 0; background: none; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.seg.dividers button { flex: none; margin-bottom: -1.5px; padding: 7px 11px 6px; border: 1.5px solid var(--line-2); border-bottom: 0; border-radius: 9px 9px 0 0; background: var(--bg-sunken); color: var(--fg-2); box-shadow: none; }
+.seg.dividers button[aria-pressed="true"] { padding-bottom: 7.5px; background: var(--bg-elev); color: var(--fg); font-weight: 700; }
 .theme-link { display: block; color: inherit; text-decoration: none; }
 .kana-cell .hira { font-size: 22px; line-height: 1.2; }
 .kana-cell .kata { font-size: 13px; color: var(--fg-2); }
@@ -805,6 +840,28 @@ details.mrow > summary::-webkit-details-marker { display: none; }
 details.mrow > summary .mprompt { flex: 1 1 240px; font-size: 16px; line-height: 1.8; min-width: 0; }
 details.mrow .mbody { padding: 4px 0 14px; }
 .mgroup .mlist { padding: 0; }
+/* 錯題本 as 書房's red notebook (test build): its cover on top, the list on ruled paper with a red margin line */
+.notebook-cover { position: relative; display: flex; align-items: center; height: 76px; margin: 0 0 18px; padding: 0 18px 0 48px; border-radius: 10px 14px 14px 10px; background: color-mix(in srgb, #b8463a var(--cover-keep), var(--cover-shade)); box-shadow: inset 12px 0 0 rgba(0, 0, 0, .14), 0 8px 18px -12px rgba(80, 30, 20, .6); }
+@media (max-width: 900px) { .notebook-cover { margin: -16px -16px 16px; border-radius: 0; } }
+.notebook-cover .stitch { position: absolute; left: 24px; top: 10px; bottom: 10px; border-left: 2px dashed rgba(255, 236, 210, .5); }
+.nb-label { display: flex; flex-direction: column; gap: 1px; padding: 7px 16px; border-radius: 6px; background: var(--label); color: var(--label-ink); }
+.nb-label b { font-size: 16px; } .nb-label span { font-size: 12.5px; color: var(--label-ink-2); }
+.card.ruled { position: relative; padding-left: 32px; }
+.card.ruled::before { content: ''; position: absolute; left: 19px; top: 0; bottom: 0; width: 1.5px; background: color-mix(in srgb, #d9786a 60%, transparent); }
+.card.ruled details.mrow { border-bottom-color: color-mix(in srgb, #7f9cc8 38%, transparent); }
+/* 模擬考's countdown with 書房's 日めくり hanging beside it (test build): hung on a nail by a string, its page in paper colours */
+.exam-cal-card { display: flex; align-items: flex-start; gap: 18px; }
+.exam-cal-card > .grow { min-width: 0; }
+.day-cal { position: relative; flex: none; width: 104px; padding-top: 16px; }
+.day-cal::before { content: ''; position: absolute; top: 0; left: 50%; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: #8a6a4a; }   /* the nail */
+.day-cal::after { content: ''; position: absolute; top: 4px; left: 28%; right: 28%; height: 14px; border: 1.5px solid #8a6a4a; border-bottom: 0; border-radius: 50% 50% 0 0; }   /* the string */
+.day-cal .sheet { overflow: hidden; border-radius: 3px; background: var(--paper); color: #3a3328; text-align: center; box-shadow: 0 1px 0 rgba(0, 0, 0, .06), 0 6px 14px -8px rgba(60, 40, 20, .55); }
+.day-cal .mon { padding: 3px 0; background: color-mix(in srgb, #b84a35 var(--cover-keep), var(--cover-shade)); color: #fff; font-size: 13px; font-weight: 700; }
+.day-cal .date { margin-top: 2px; font-size: 40px; font-weight: 800; line-height: 1.1; }
+.day-cal .wd { font-size: 12px; font-weight: 700; }
+.day-cal .sat { color: #345fb0; } .day-cal .sun { color: #a83d2a; }   /* dark enough to read on the paper by night too */
+.day-cal .stamp { width: fit-content; margin: 5px auto 0; padding: 0 6px; border: 1.5px solid #a83d2a; border-radius: 4px; color: #a83d2a; font-family: "Hiragino Mincho ProN", "Noto Serif JP", "Noto Serif CJK JP", serif; font-size: 11.5px; font-weight: 700; transform: rotate(-5deg); opacity: .9; }
+.day-cal .left { margin: 6px 8px 0; padding: 4px 0 6px; border-top: 1px solid rgba(0, 0, 0, .08); color: #a83d2a; font-size: 11.5px; font-weight: 700; }
 .match-word.matched, .match-meaning.matched { border-color: var(--ok); color: var(--ok); opacity: .7; cursor: default; }
 @keyframes wrongFlash { 0%, 100% { border-color: var(--line); box-shadow: none; } 15%, 70% { border-color: var(--bad); box-shadow: 0 0 0 3px var(--bad-line); } }
 .match-word.wrong-flash, .match-meaning.wrong-flash { animation: wrongFlash .55s ease; }
@@ -5716,6 +5773,7 @@ function yardHtml(pct) {
 const BOOK_COLORS = ['#e3907f', '#c8553f', '#79a46c', '#4f805c', '#5f88b2', '#3e5f8e', '#8b6aa8', '#6b4d8a', '#c79a3a', '#9b7424'];
 const BOOK_LABELS = ['入門', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
 const bookColor = (i) => BOOK_COLORS[i % BOOK_COLORS.length];
+const jMonth = (m) => (m < 10 ? '一二三四五六七八九十'[m] : m === 10 ? '十一' : '十二') + '月';   // 日めくり's month (m: 0 for January), in 書房 and on 模擬考
 // the books on the shelf: one for every stage begun or passed (n), and the stage being studied (cur)
 function shelfBooks() {
   const cur = stageIndex(currentStageId());
@@ -5864,7 +5922,6 @@ const ROOM = (() => {
   // the calendar (模擬考) on the right wall past the chest of drawers, a Japanese day-by-day one (日めくり): the month in kanji,
   // the day — blue on a Saturday, red on a Sunday — with its weekday, and the days left to the exam
   const CAL = { x0: 9.95, x1: 11.35, z0: 4.5, z1: 6.65 };
-  const JMONTH = (m) => (m < 10 ? '一二三四五六七八九十'[m] : m === 10 ? '十一' : '十二') + '月';   // m: 0 for January
   // the page of the day (also the one that drops away when the calendar is tapped): the month, the date, the weekday, the streak
   // as a red stamp (none before a first day), the days to the exam
   function calendarSheet(d, left) {
@@ -5873,7 +5930,7 @@ const ROOM = (() => {
     return `${box(C.paper, x0, 0, z0, x1, 0.07, z1, { t: false })}
       <g transform="${onY(0.072)}">
         <rect x="${x0}" y="${-z1}" width="${q2(x1 - x0)}" height=".44" ${F(C.red, 'y', [xm, 0.07, z1])}/>
-        <text x="${xm}" y="${q2(-z1 + 0.32)}" font-size=".26" font-weight="700" text-anchor="middle" fill="#fff">${JMONTH(d.getMonth())}</text>
+        <text x="${xm}" y="${q2(-z1 + 0.32)}" font-size=".26" font-weight="700" text-anchor="middle" fill="#fff">${jMonth(d.getMonth())}</text>
         <text x="${xm}" y="${q2(-z1 + 1.08)}" font-size=".66" font-weight="800" text-anchor="middle" ${F(dc, 'y', [xm, 0.07, zm])}>${d.getDate()}</text>
         <text x="${xm}" y="${q2(-z1 + 1.33)}" font-size=".2" font-weight="700" text-anchor="middle" ${F(dc, 'y', [xm, 0.07, zm])}>${'日月火水木金土'[wd]}曜日</text>
         ${n ? `<g class="cal-stamp" opacity=".9" transform="rotate(-5 ${xm} ${sv})"><rect x="${q2(xm - sw / 2)}" y="${q2(sv - 0.13)}" width="${sw}" height=".26" rx=".05" fill="none" stroke-width=".03" ${FS(C.red, 'y', at)}/>
@@ -6624,6 +6681,14 @@ function sessionTopicsHtml(q) {
     </div>`;
 }
 function planNoteHtml(plan) { return plan.note ? `<div class="plan-note">${esc(plan.note)}</div>` : ''; }
+// 學習分析's head (test build): a strip of 書房's cork board with the papers pinned on it there (a chart, a sticky note, a photo)
+function corkStripHtml() {
+  return `<div class="cork-strip" aria-hidden="true">
+    <span class="pinned chart"><svg viewBox="0 0 54 38"><path d="M6 34V20M17 34V12M28 34V24M39 34V8" stroke="#4a5fcf" stroke-width="6"/><path d="M3 22L17 10L30 18L50 4" stroke="#d9534f" stroke-width="2" fill="none"/></svg></span>
+    <span class="pinned sticky"><i></i><i></i><i></i></span>
+    <span class="pinned photo"><i></i></span>
+  </div>`;
+}
 // 學習分析's first card (test build; it was the 今日 card's date line and its 說明 and 範圍 folds): the date and the streak, what is
 // left of today's list — the next set's themes and grammar points, then the counts — the day's note, and 說明 (folded)
 function todayCardHtml() {
@@ -7391,8 +7456,9 @@ function renderVocabLevel(view, lv) {
   const L = levelStats(lv); const themes = themeStats(lv);
   const desktop = window.matchMedia('(min-width: 761px)').matches;
   const ring = ringHtml(L.total ? L.learned / L.total : 0, `<div class="num" style="font-size:18px">${L.total ? Math.round(L.learned / L.total * 100) : 0}%</div>`, 84);
-  // 1.0.27: the card itself opens the theme's word table (its title is the link for the keyboard); the kanji and buttons keep their own action
-  const cards = themes.map(g => { const list = `#/vocab/list?lv=${lv}&c=${encodeURIComponent(g.c)}`; return `<div class="card theme-card" data-c="${esc(g.c)}" data-lv="${lv}" data-act="nav" data-route="${list}">
+  // 1.0.27: the card itself opens the theme's word table (its title is the link for the keyboard); the kanji and buttons keep their own action.
+  // Test build: each is an index card from 書房's card box, its coloured tab at the top left.
+  const cards = themes.map((g, i) => { const list = `#/vocab/list?lv=${lv}&c=${encodeURIComponent(g.c)}`; return `<div class="card theme-card index-card" style="--tab:${CARD_TABS[i % CARD_TABS.length]}" data-c="${esc(g.c)}" data-lv="${lv}" data-act="nav" data-route="${list}">
       <div class="row between"><a class="card-title theme-link" href="${list}" data-act="nav" data-route="${list}">${esc(g.c)}</a><span class="tiny muted nowrap">${g.total} 字 ›</span></div>
       ${stackBarHtml(g)}
       <div class="row between mt-2"><span class="small muted">已學 ${g.seen}／${g.total}${g.due ? `・今天到期 ${g.due}` : ''}</span>
@@ -7447,8 +7513,9 @@ function defaultVocabLevel() {
   if (inPreStage()) return 'PRE_N5';
   return curLevel();   // the level new items come from (每一級封死)
 }
-function vocabTabs(tab) {
-  return `<div class="seg mb-4">
+const CARD_TABS = ['#e3907f', '#79a46c', '#5f88b2', '#e0b04a', '#8b6aa8'];   // the index cards' tabs in 書房's card box
+function vocabTabs(tab) {   // test build: the card box's dividers
+  return `<div class="seg mb-4 dividers">
     ${levels().map(l => `<button type="button" aria-pressed="${tab === l}" data-act="nav" data-route="#/vocab/level?lv=${l}">${lvLabel(l)}</button>`).join('')}
     <button type="button" aria-pressed="${tab === 'cards'}" data-act="nav" data-route="#/vocab/cards">字卡</button>
     <button type="button" aria-pressed="${tab === 'list'}" data-act="nav" data-route="#/vocab/list">單字表</button>
@@ -8039,6 +8106,7 @@ function listenRenderNow() {
   const card = document.getElementById('listenCard'); if (card) card.innerHTML = listenCardHtml();
   const n = document.getElementById('listenCount'); if (n) n.textContent = `${Math.min(L.idx + 1, L.items.length)} / ${L.items.length}・第 ${L.round} 輪`;
   const b = document.querySelector('[data-act=listen-toggle]'); if (b) b.innerHTML = icon(L.playing ? 'pause' : 'play');
+  const stand = document.querySelector('#view .listen-stand'); if (stand) stand.classList.toggle('playing', L.playing);   // 聽一輪's notes rise while it plays
   const bar = document.getElementById('listenBar'); if (bar) bar.style.width = `${L.items.length ? Math.round((Math.min(L.idx, L.items.length - 1) + 1) / L.items.length * 100) : 0}%`;
   mediaSessionUpdate();
   fitFlash();
@@ -8094,13 +8162,23 @@ function renderListen(view) {
 }
 // 聽一輪 (the 🎧 tab, test build): the player the 今日 card used to carry, over the notebook or a word theme; the switch opens
 // on the last choice (kept on the device)
+// 聽一輪 opens under 書房's headphones on their stand (test build); music notes rise from them while the player plays
+function listenStandHtml() {
+  return `<div class="listen-stand${LISTEN && LISTEN.playing ? ' playing' : ''}" aria-hidden="true">
+    <svg viewBox="0 0 80 74"><ellipse class="base" cx="40" cy="70" rx="20" ry="3.5"/><rect class="pole" x="38" y="22" width="4" height="48" rx="1"/>
+      <path class="band" d="M17 44a23 23 0 0 1 46 0" fill="none" stroke-width="6" stroke-linecap="round"/>
+      <rect class="cup" x="9" y="38" width="15" height="24" rx="6"/><rect class="cup" x="56" y="38" width="15" height="24" rx="6"/>
+      <rect class="pad" x="20" y="41" width="5" height="18" rx="2"/><rect class="pad" x="55" y="41" width="5" height="18" rx="2"/></svg>
+    <div class="notes"><i style="--w:0s;--dx:-14px">♪</i><i style="--w:-1.1s;--dx:12px">♫</i><i style="--w:-2.2s;--dx:-4px">♪</i></div>
+  </div>`;
+}
 function renderListenTab(view) {
   const isTheme = listenPref().source === 'theme';
   const mk = activeMistakes();
   const ready = listenInit(isTheme ? { kind: 'theme', theme: listenDefaultTheme() } : { kind: 'mistakes', cat: '' });
   const segBtn = (kind, label) => `<button type="button" aria-pressed="${isTheme === (kind === 'theme')}" data-act="listen-source" data-source="${kind}">${label}</button>`;
   view.innerHTML = `
-    <div class="page-head"><div><div class="page-title">聽一輪</div></div></div>
+    <div class="page-head listen-top"><div><div class="page-title">聽一輪</div></div>${listenStandHtml()}</div>
     <div class="card listen compact listen-card">
       <div class="seg listen-seg">${segBtn('mistakes', `錯題本${mk.length ? ` <span class="n">${mk.length}</span>` : ''}`)}${segBtn('theme', '單字')}</div>
       <div class="listen-head">
@@ -8185,6 +8263,11 @@ Object.assign(ACTIONS, {
   'mloop-next': () => { if (!MLOOP || !MLOOP.flipped) return; mloopAdvance(); }
 });
 
+// 錯題本 is the red notebook in 書房's drawer (test build): its cover on top, the label counting what is in it; the list is on
+// ruled paper with a red margin line
+function notebookCoverHtml(active, mastered) {
+  return `<div class="notebook-cover" aria-hidden="true"><i class="stitch"></i><div class="nb-label"><b>錯題本</b><span>待複習 ${active}・已掌握 ${mastered}</span></div></div>`;
+}
 function renderMistakes(view, params = {}) {
   const filter = ['active', 'mastered', 'all'].includes(params.f) ? params.f : 'active';
   const sort = ['count', 'recent', 'stale'].includes(params.s) ? params.s : 'count';
@@ -8236,13 +8319,14 @@ function renderMistakes(view, params = {}) {
       const g = groups.get(name) || groups.set(name, { name, pt: it && it.kind === 'g' ? it.pt : '', items: [] }).get(name);
       g.items.push(m);
     });
-    body = [...groups.values()].sort((a, b) => b.items.length - a.items.length).map(g => `<div class="card mgroup">
+    body = [...groups.values()].sort((a, b) => b.items.length - a.items.length).map(g => `<div class="card mgroup ruled">
         <div class="row between"><div><b>${esc(g.name)}</b> <span class="small muted">${g.items.length} 題</span></div>${g.pt ? `<button type="button" class="btn btn-sm" data-act="stats-drill" data-pt="${esc(g.pt)}">練這個考點</button>` : ''}</div>
         <div class="mlist mt-2">${g.items.map(row).join('')}</div></div>`).join('');
   } else {
-    body = `<div class="card mlist">${list.slice(0, 300).map(row).join('')}</div>`;
+    body = `<div class="card mlist ruled">${list.slice(0, 300).map(row).join('')}</div>`;
   }
   view.innerHTML = `
+    ${notebookCoverHtml(active.length, all.length - active.length)}
     <div class="page-head">
       <div><div class="page-title">錯題本</div><div class="page-sub">答錯的題目會自動收進來；用字卡快速過一輪，忘了／記得直接回寫複習排程。題目達到「熟悉」就移到「已掌握」。</div></div>
       <div class="row-wrap">
@@ -8530,12 +8614,19 @@ function assemblePaper(level, size, subjects) {
 // ---------- exam page ----------
 // 考試倒數 (模擬考 page): days left and the 課程進度 line for the target level (1.0.26: the per-unit pace went, it could
 // disagree with the projection)
+// Test build: beside it hangs 書房's 日めくり — the month, the date, the weekday, the streak's red stamp, the days to the exam
 function examCountdownHtml() {
-  const p = coursePace();
-  return `<div class="card">
-      <div class="card-head"><div class="card-title">考試倒數</div>${courseChip(p)}</div>
-      <div class="stat"><span class="stat-v">${p.daysLeft} 天</span><span class="stat-l">距離 ${esc(p.exam.replace(/-/g, '/'))} JLPT ${p.level}</span></div>
-      ${p.state === 'passed' || p.state === 'close' ? `<div class="small dim mt-2 hero-advice">${esc(courseText(p))}</div>` : ''}
+  const p = coursePace(), d = parseDate(todayStr()), wd = d.getDay(), n = streakStats().current;
+  return `<div class="card exam-cal-card">
+      <div class="day-cal" aria-hidden="true"><div class="sheet">
+        <div class="mon">${jMonth(d.getMonth())}</div><div class="date${wd === 6 ? ' sat' : wd === 0 ? ' sun' : ''}">${d.getDate()}</div><div class="wd${wd === 6 ? ' sat' : wd === 0 ? ' sun' : ''}">${'日月火水木金土'[wd]}曜日</div>
+        ${n ? `<div class="stamp">${n}日連続</div>` : ''}<div class="left">${p.daysLeft > 0 ? `試験まで${p.daysLeft}日` : '試験の日'}</div>
+      </div></div>
+      <div class="grow">
+        <div class="card-head"><div class="card-title">考試倒數</div>${courseChip(p)}</div>
+        <div class="stat"><span class="stat-v">${p.daysLeft} 天</span><span class="stat-l">距離 ${esc(p.exam.replace(/-/g, '/'))} JLPT ${p.level}</span></div>
+        ${p.state === 'passed' || p.state === 'close' ? `<div class="small dim mt-2 hero-advice">${esc(courseText(p))}</div>` : ''}
+      </div>
     </div>`;
 }
 function renderExam(view, sub, params) {
@@ -9581,6 +9672,7 @@ function renderStats(view) {
 
 
   view.innerHTML = `
+    ${corkStripHtml()}
     <div class="page-head"><div><div class="page-title">學習分析</div></div></div>
     ${todayCardHtml()}
     ${progressCard}
