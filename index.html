@@ -215,7 +215,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .empty { text-align: center; color: var(--fg-3); padding: 28px 12px; font-size: 14px; }
 
 /* ---------- 書房 and the yard (test build): the app lives in a house ----------
-   The app opens in 書房, a room where every feature is a thing to tap (STUDY_THINGS) and the door leads out to the yard; in the
+   The app opens in 書房, a room where every feature is a thing to tap (ROOM) and the door leads out to the yard; in the
    yard, a tap on the house goes back in. Both follow the clock: --day (0 night, 1 day) and --warm (the sunrise／sunset glow) come
    from the phone's clock (sceneTick, on body); dawn 5–7 and dusk 17–19 blend the two. --f (0–1) is how much of today's list is
    done (the ring it replaces): in the yard the sky comes out with it — by night stars one by one, a nebula from 25%, fireflies
@@ -319,120 +319,73 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .yard.anim :is(.pane, .win, .spill, .flowers, .butterflies) { animation: skyFade 1.2s ease-out .4s backwards; }
 .yard.anim :is(.aurora, .meteors, .flies, .birds) { animation: skyFade 1.4s ease-out .7s backwards; }
 .yard.anim :is(.dipper, .rainbow) { animation: skyFade 1.5s ease-out 1.2s backwards; }
-/* 書房: an isometric room (studyArt) — x along the right wall, y along the left wall, z up, the back corner at 0, 10 × 10 with walls
-   11 high — drawn in units of ISO per room unit, viewBox -420 -470 840 900. It stands in the middle of the screen; a phone sees
-   two thirds of its width (the room is 150% of the screen wide), so the far ends of the walls run off the sides. Its things'
-   buttons, name tags and moving parts sit on it by percentage of the drawing. */
-.study { --wl: color-mix(in srgb, #e0956f calc(var(--warm) * 26%), color-mix(in srgb, #efe3cf calc(var(--day) * 100%), #222448)); --wr: color-mix(in srgb, #e0956f calc(var(--warm) * 26%), color-mix(in srgb, #e3d3ba calc(var(--day) * 100%), #1c1e3f)); --fl: color-mix(in srgb, #e0956f calc(var(--warm) * 26%), color-mix(in srgb, #c9a27b calc(var(--day) * 100%), #1a1b36));
-  position: relative; container-type: size; height: 100vh; height: 100dvh; display: flex; align-items: center; justify-content: center; overflow: hidden;
-  background: linear-gradient(color-mix(in srgb, #e0956f calc(var(--warm) * 26%), color-mix(in srgb, #efe6d6 calc(var(--day) * 100%), #14162f)), color-mix(in srgb, #e0956f calc(var(--warm) * 26%), color-mix(in srgb, #e1d3bd calc(var(--day) * 100%), #0b0c1f))); }
-.room { position: relative; flex: none; width: min(150cqw, 93.3cqh); aspect-ratio: 840 / 900; }
+/* 書房: an isometric room (ROOM), drawn much bigger than the screen — x along the right wall, y along the left wall, z up, the
+   back corner at 0. A phone sees one of three stops along it (the bookcase, the desk, the chest of drawers) and a swipe slides the
+   camera from one to the next; a wide screen sees the whole room. Every colour in the drawing is worked out per face: its daylight
+   colour, mixed by --day with two night versions (the lamps dim, and bright when today's list is done) mixed by --f. Moving parts
+   are HTML overlays so the big drawing never repaints. */
+.study { position: relative; height: 100vh; height: 100dvh; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; background: color-mix(in srgb, #e9dfcf calc(var(--day) * 100%), #171831); }
+.room-wrap { position: absolute; inset: 0; }   /* walking in and out zooms this, round the middle of the screen */
+.room { position: absolute; left: 0; top: 0; }   /* sized and slid by the camera (ROOM.place) */
+.room.glide { transition: transform .45s cubic-bezier(.2, .8, .25, 1); }
 .room > * { position: absolute; }
-.room .art { inset: 0; width: 100%; height: 100%; overflow: visible; }
-.room .art * { transition: fill 3s, stroke 3s; }
-.room .wall-l { fill: var(--wl); } .room .wall-r { fill: var(--wr); } .room .floor { fill: var(--fl); }
-.room .plank { fill: none; stroke: color-mix(in srgb, rgba(110, 70, 40, .22) calc(var(--day) * 100%), rgba(0, 0, 0, .3)); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.room .rug2 { fill: none; stroke: color-mix(in srgb, #e7b3a3 calc(var(--day) * 100%), #3d3470); stroke-width: 2; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
-.room .wbar { fill: none; stroke: color-mix(in srgb, #fbf6ee calc(var(--day) * 100%), #2c2f59); stroke-width: 4; vector-effect: non-scaling-stroke; }
-.room .c-tick, .room .hp-band, .room .hook, .room .lamp-arm { fill: none; stroke-linecap: round; vector-effect: non-scaling-stroke; }
-.room .c-tick { stroke: color-mix(in srgb, #8a5a3c calc(var(--lit) * 100%), #8e95d8); stroke-width: 2; } .room .hook { stroke: color-mix(in srgb, #8a6a4a calc(var(--day) * 100%), #4a4f88); stroke-width: 3; }
-.room .hp-band { stroke: color-mix(in srgb, #3d4a7a calc(var(--day) * 100%), #7d89d8); stroke-width: 5; } .room .lamp-arm { stroke: color-mix(in srgb, #3a4256 calc(var(--day) * 100%), #565c98); stroke-width: 3; stroke-linejoin: round; }
-.room .cal-m { fill: #fff; font-weight: 700; } .room .cal-d { fill: color-mix(in srgb, #3a2a20 calc(var(--lit) * 100%), #e6e8ff); font-weight: 700; } .room .cal-n { fill: color-mix(in srgb, #b0453f calc(var(--lit) * 100%), #ff9aa8); font-weight: 700; }
-.room .shelf.top { fill: color-mix(in srgb, #a06d48 calc(var(--day) * 100%), #34386a); }
-.room .shelf.front { fill: color-mix(in srgb, #8a5a3c calc(var(--day) * 100%), #2b2e5a); }
-.room .shelf.side { fill: color-mix(in srgb, #774c31 calc(var(--day) * 100%), #232650); }
-.room .desk.top { fill: color-mix(in srgb, #b07c52 calc(var(--day) * 100%), #3a3e76); }
-.room .desk.front { fill: color-mix(in srgb, #976640 calc(var(--day) * 100%), #2d3062); }
-.room .desk.side { fill: color-mix(in srgb, #85593a calc(var(--day) * 100%), #262955); }
-.room .ped.top { fill: color-mix(in srgb, #a87650 calc(var(--day) * 100%), #363a70); }
-.room .ped.front { fill: color-mix(in srgb, #946440 calc(var(--day) * 100%), #2a2d5c); }
-.room .ped.side { fill: color-mix(in srgb, #82573a calc(var(--day) * 100%), #242750); }
-.room .drawer.top { fill: color-mix(in srgb, #5c3d27 calc(var(--day) * 100%), #1b1d3c); }
-.room .drawer.front { fill: color-mix(in srgb, #a06d48 calc(var(--day) * 100%), #323668); }
-.room .drawer.side { fill: color-mix(in srgb, #8a5a3c calc(var(--day) * 100%), #2a2d5a); }
-.room .dleg.top { fill: color-mix(in srgb, #946440 calc(var(--day) * 100%), #2a2d5c); }
-.room .dleg.front { fill: color-mix(in srgb, #85593a calc(var(--day) * 100%), #262955); }
-.room .dleg.side { fill: color-mix(in srgb, #6f4a30 calc(var(--day) * 100%), #1f2148); }
-.room .lap.top { fill: color-mix(in srgb, #d4d7e0 calc(var(--day) * 100%), #4d5290); }
-.room .lap.front { fill: color-mix(in srgb, #b9bdc9 calc(var(--day) * 100%), #3e4378); }
-.room .lap.side { fill: color-mix(in srgb, #a6aab8 calc(var(--day) * 100%), #353a6c); }
-.room .cbox.top { fill: color-mix(in srgb, #ecc675 calc(var(--day) * 100%), #56578a); }
-.room .cbox.front { fill: color-mix(in srgb, #d9ae5a calc(var(--day) * 100%), #4a4a78); }
-.room .cbox.side { fill: color-mix(in srgb, #c49a48 calc(var(--day) * 100%), #40406c); }
-.room .icard.top { fill: color-mix(in srgb, #fffdf8 calc(var(--day) * 100%), #d6daff); }
-.room .icard.front { fill: color-mix(in srgb, #efe9dc calc(var(--day) * 100%), #b9beef); }
-.room .icard.side { fill: color-mix(in srgb, #e2dccd calc(var(--day) * 100%), #a8addf); }
-.room .pot.top { fill: color-mix(in srgb, #d98060 calc(var(--day) * 100%), #6a4458); }
-.room .pot.front { fill: color-mix(in srgb, #c8734f calc(var(--day) * 100%), #5a3a4a); }
-.room .pot.side { fill: color-mix(in srgb, #b0613f calc(var(--day) * 100%), #4a3040); }
-.room .lampm.top { fill: color-mix(in srgb, #4a5268 calc(var(--day) * 100%), #565c98); }
-.room .lampm.front { fill: color-mix(in srgb, #3a4256 calc(var(--day) * 100%), #4a5088); }
-.room .lampm.side { fill: color-mix(in srgb, #30374a calc(var(--day) * 100%), #40457a); }
-.room .cap { fill: color-mix(in srgb, #f8f1e4 calc(var(--day) * 100%), #2c2f5c); }
-.room .cut { fill: color-mix(in srgb, #d8c6a8 calc(var(--day) * 100%), #181a36); }
-.room .base { fill: color-mix(in srgb, #d6bf9c calc(var(--day) * 100%), #15172e); }
-.room .slab-l { fill: color-mix(in srgb, #a9825d calc(var(--day) * 100%), #121329); }
-.room .slab-r { fill: color-mix(in srgb, #977352 calc(var(--day) * 100%), #0f1024); }
-.room .beam { fill: color-mix(in srgb, rgba(255, 246, 210, .38) calc(var(--day) * 100%), rgba(170, 190, 255, .1)); }
-.room .rug { fill: color-mix(in srgb, #c46f61 calc(var(--day) * 100%), #2a2350); }
-.room .mat { fill: color-mix(in srgb, #8a6a4a calc(var(--day) * 100%), #2a2340); }
-.room .wframe { fill: color-mix(in srgb, #fbf6ee calc(var(--day) * 100%), #2c2f59); }
-.room .curtain { fill: color-mix(in srgb, #86a9c9 calc(var(--day) * 100%), #2f3b6b); }
-.room .rod { fill: color-mix(in srgb, #8a6a4a calc(var(--day) * 100%), #3a3d70); }
-.room .d-frame { fill: color-mix(in srgb, #b0835a calc(var(--day) * 100%), #34376a); }
-.room .d-panel { fill: color-mix(in srgb, #9b6b45 calc(var(--day) * 100%), #2a2d5c); }
-.room .d-inset { fill: color-mix(in srgb, #8a5c39 calc(var(--day) * 100%), #24275a); }
-.room .d-knob { fill: #e6c36a; }
-.room .c-rim { fill: color-mix(in srgb, #8a5a3c calc(var(--day) * 100%), #3b3f78); }
-.room .c-face { fill: color-mix(in srgb, #fffaf0 calc(var(--lit) * 100%), #2b2e58); }
-.room .cal { fill: color-mix(in srgb, #fffdf8 calc(var(--lit) * 100%), #2b2e58); }
-.room .cal-top { fill: color-mix(in srgb, #d9534f calc(var(--day) * 100%), #8e3b4f); }
-.room .cal-ring { fill: color-mix(in srgb, #6b5040 calc(var(--day) * 100%), #9aa0e0); }
-.room .hp { fill: color-mix(in srgb, #3d4a7a calc(var(--day) * 100%), #7d89d8); }
-.room .sh-in { fill: color-mix(in srgb, #5e3f29 calc(var(--day) * 100%), #1c1e40); }
-.room .sh-b { fill: color-mix(in srgb, #8a5a3c calc(var(--day) * 100%), #2b2e5a); }
-.room .b1 { fill: color-mix(in srgb, #c0504d calc(var(--day) * 100%), #5a3550); }
-.room .b2 { fill: color-mix(in srgb, #4f81bd calc(var(--day) * 100%), #34477a); }
-.room .b3 { fill: color-mix(in srgb, #9bbb59 calc(var(--day) * 100%), #3d5a4a); }
-.room .b4 { fill: color-mix(in srgb, #8064a2 calc(var(--day) * 100%), #4a3d7a); }
-.room .b5 { fill: color-mix(in srgb, #e0a84a calc(var(--day) * 100%), #6a5a40); }
-.room .knob { fill: color-mix(in srgb, #e0c070 calc(var(--day) * 100%), #8e95d8); }
-.room .redbk { fill: color-mix(in srgb, #d0453f calc(var(--day) * 100%), #b03a4c); }
-.room .bezel { fill: color-mix(in srgb, #3a3f50 calc(var(--day) * 100%), #2a2d50); }
-.room .screen { fill: color-mix(in srgb, #8fb8ea calc(var(--day) * 100%), #7b8eff); }
-.room .lbar { fill: color-mix(in srgb, #ffffff calc(var(--day) * 100%), #e6e8ff); }
-.room .nb-cover { fill: color-mix(in srgb, #3d6fb0 calc(var(--day) * 100%), #3a4a8a); }
-.room .nb-page { fill: color-mix(in srgb, #fffdf8 calc(var(--day) * 100%), #eceeff); }
-.room .shade { fill: color-mix(in srgb, #e8b84a calc(var(--day) * 100%), #f0c050); }
-.room .bulb { fill: #fff3c4; }
-.room .leaf { fill: color-mix(in srgb, #4f9a52 calc(var(--day) * 100%), #2e5a52); }
-/* the window: the sky at this hour (a moon and stars by night, clouds going by in the day), seen on the slant of the left wall */
-.room .w-sky { overflow: hidden; transform-origin: 0 0; transform: matrix(1, -.5, 0, 1, 0, 0); background: linear-gradient(#090a22, #1d1a4a); }
-.w-sky > * { position: absolute; transition: opacity 3s; }
-.w-sky .wt-day { inset: 0; background: linear-gradient(#4a97de, #b5dcf4); opacity: var(--day); }
+.room .art { left: 0; top: 0; width: 100%; height: 100%; overflow: visible; }
+.room .hl { fill: none; stroke: color-mix(in srgb, rgba(255, 255, 255, .6) calc(var(--day) * 100%), rgba(255, 214, 170, .14)); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }   /* the lit edges */
+.room .ln { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.room .day-only { opacity: var(--day); } .room .night-only { opacity: calc(1 - var(--day)); } .room .wp { opacity: calc(.18 + .82 * var(--day)); }   /* wp: the wallpaper's stripes, faint by night */
+/* the window: the sky at this hour behind the glass, on the slant of the right wall */
+.w-sky { overflow: hidden; transform-origin: 0 0; transform: matrix(1, .5, 0, 1, 0, 0); background: linear-gradient(#0b0c26, #232056); }
+.w-sky > *, .w-sky :is(.w-moon, .w-star, .w-cloud) { position: absolute; }
+.w-sky .wt-day { inset: 0; background: linear-gradient(#5aa3e6, #bfe2f6); opacity: var(--day); }
 .w-sky .wt-warm { inset: 0; background: linear-gradient(to top, #ffb36b, #ff8a7a 35%, rgba(150, 96, 200, .45) 70%, transparent); opacity: var(--warm); }
 .w-sky .w-night { inset: 0; opacity: calc(1 - var(--day)); } .w-sky .w-day { inset: 0; opacity: var(--day); }
-.w-sky .w-moon { position: absolute; left: 52%; top: 12%; width: 22%; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 4px -2px 0 0 #f3efe0; transform: rotate(-20deg); filter: drop-shadow(0 0 4px rgba(255, 246, 220, .5)); }
-.w-sky .w-star { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; animation: twinkle var(--d) ease-in-out var(--w) infinite alternate; }
-.w-sky .w-cloud { position: absolute; left: 0; width: 50%; height: 11%; border-radius: 10px; background: rgba(255, 255, 255, .92); animation: wcloud var(--d) linear var(--w) infinite; }
-@keyframes wcloud { from { transform: translateX(-110%); } to { transform: translateX(210%); } }
-.w-sky .w-hills { left: -10%; right: -10%; bottom: -6%; height: 26%; border-radius: 50% 50% 0 0; background: color-mix(in srgb, #86c17a calc(var(--day) * 100%), #12143a); }
+.w-sky .w-moon { left: 58%; top: 14%; width: 20%; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 5px -2px 0 0 #f6f1e0; transform: rotate(-20deg); filter: drop-shadow(0 0 5px rgba(255, 246, 220, .55)); }
+.w-sky .w-star { width: 2px; height: 2px; border-radius: 50%; background: #fff; animation: twinkle var(--d) ease-in-out var(--w) infinite alternate; }
+.w-sky .w-cloud { left: 0; width: 46%; height: 10%; border-radius: 99px; background: rgba(255, 255, 255, .95); animation: wcloud var(--d) linear var(--w) infinite; }
+.w-sky .w-cloud::before { content: ''; position: absolute; left: 22%; top: -70%; width: 42%; height: 150%; border-radius: 50%; background: inherit; }
+@keyframes wcloud { from { transform: translateX(-120%); } to { transform: translateX(230%); } }
+.w-sky .w-hills { left: -10%; right: -10%; bottom: -8%; height: 30%; border-radius: 50% 50% 0 0; background: color-mix(in srgb, #8cc47e calc(var(--day) * 100%), #141640); }
+.w-sky .w-hills2 { left: 30%; right: -30%; bottom: -12%; height: 34%; border-radius: 50% 50% 0 0; background: color-mix(in srgb, #74b06a calc(var(--day) * 100%), #10122f); }
 /* the clock tells the time (sceneTick's --hh／--mm; the second hand runs on its own from the second the room was drawn) */
 .room .clock-hands { transform-origin: 0 0; transform: matrix(1, -.5, 0, 1, 0, 0); }
-.clock-hands i { position: absolute; left: 50%; bottom: 50%; border-radius: 2px; transform-origin: 50% 100%; background: color-mix(in srgb, #3a2a20 calc(var(--lit) * 100%), #d4d8ff); transition: background-color .4s; }
-.clock-hands .hh { width: 3px; height: 26%; margin-left: -1.5px; transform: rotate(var(--hh)); }
-.clock-hands .mm { width: 2px; height: 36%; margin-left: -1px; transform: rotate(var(--mm)); }
+.clock-hands i { position: absolute; left: 50%; bottom: 50%; border-radius: 2px; transform-origin: 50% 100%; background: color-mix(in srgb, #3a2a20 calc(var(--lit) * 100%), #d8dcff); transition: background-color .4s; }
+.clock-hands .hh { width: 2.5px; height: 26%; margin-left: -1.25px; transform: rotate(var(--hh)); }
+.clock-hands .mm { width: 1.6px; height: 36%; margin-left: -.8px; transform: rotate(var(--mm)); }
 .clock-hands .ss { width: 1px; height: 38%; margin-left: -.5px; background: #e0524b; animation: tick 60s steps(60) var(--ssd) infinite; }
 @keyframes tick { to { transform: rotate(360deg); } }
-/* the desk lamp warms the room as today's list fills (most of it by night); the notebook glows while questions wait */
-.room .lamp-glow { border-radius: 50%; pointer-events: none; opacity: calc((.15 + .85 * var(--f)) * (1 - .7 * var(--day))); transition: opacity 1.5s; }
-.room .lamp-glow::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 204, 128, .55), rgba(255, 190, 110, .2) 50%, transparent); animation: breathe 6s ease-in-out infinite alternate; }
-@keyframes breathe { from { opacity: .85; } to { opacity: 1; } }
-.room .note-glow { border-radius: 50%; pointer-events: none; transition: opacity 1s, transform .4s ease-in; }
-.room .note-glow::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 244, 200, .75), rgba(255, 236, 170, .28) 55%, transparent); animation: notePulse 2.6s ease-in-out infinite alternate; }
-@keyframes notePulse { from { opacity: .55; transform: scale(.94); } to { opacity: 1; transform: scale(1.06); } }
-.study.full .note-glow { opacity: .35; }   /* the day's list done: a quiet glow (a tap still gives 多學) */
+/* lights: the desk lamp warms the room as today's list fills (most of it by night), the lamp on the chest of drawers glows by
+   night; the string of bulbs lights up bulb by bulb as the list fills (by night) */
+.room .glow { border-radius: 50%; pointer-events: none; }
+.room .lamp-glow { opacity: calc((.18 + .82 * var(--f)) * (1 - .75 * var(--day))); background: radial-gradient(closest-side, rgba(255, 214, 150, .62), rgba(255, 196, 120, .22) 45%, transparent); transition: opacity 1.5s; }
+.room .lamp-glow.lamp2 { opacity: calc(.5 * (1 - .8 * var(--day))); }
+.room .bulb { width: 5px; height: 6px; margin: -1px 0 0 -2.5px; border-radius: 45% 45% 50% 50%; background: color-mix(in srgb, rgba(255, 252, 240, .9) calc(var(--day) * 100%), rgba(120, 110, 150, .9)); }
+.room .bulb.on { background: color-mix(in srgb, rgba(255, 252, 240, .95) calc(var(--day) * 100%), #ffe0a0); box-shadow: 0 0 calc((1 - var(--day)) * 9px) calc((1 - var(--day)) * 2px) rgba(255, 200, 110, .75); }
+.room .bulb:nth-child(3n + 1).on { box-shadow: 0 0 calc((1 - var(--day)) * 9px) calc((1 - var(--day)) * 2px) rgba(255, 150, 140, .7); }
+.room .bulb:nth-child(3n + 2).on { box-shadow: 0 0 calc((1 - var(--day)) * 9px) calc((1 - var(--day)) * 2px) rgba(160, 220, 255, .7); }
+/* the notebook glows while questions wait; notes rise from the headphones; steam from the tea */
+.room .note-glow { pointer-events: none; transition: opacity 1s, transform .4s ease-in; }
+.room .note-glow::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 246, 205, .8), rgba(255, 236, 170, .3) 55%, transparent); animation: notePulse 2.6s ease-in-out infinite alternate; }
+@keyframes notePulse { from { opacity: .5; transform: scale(.94); } to { opacity: 1; transform: scale(1.06); } }
+.study.full .note-glow { opacity: .3; }   /* the day's list done: a quiet glow (a tap still gives 多學) */
 .study.diving .note-glow { opacity: 1; transform: scale(1.7); }
+.room .tune { pointer-events: none; }
+.room .tune i { position: absolute; left: 50%; bottom: 0; font-style: normal; font-size: 15px; font-weight: 700; line-height: 1; opacity: 0; color: color-mix(in srgb, #5a6cf0 calc(var(--day) * 100%), #c9d0ff); text-shadow: 0 1px 0 rgba(255, 255, 255, .6); animation: tune 3.6s ease-out var(--w) infinite; }
+@keyframes tune { 0% { transform: translate(0, 34px) rotate(-8deg); opacity: 0; } 18% { opacity: 1; } 100% { transform: translate(var(--dx), -10px) rotate(10deg); opacity: 0; } }
+.room .steam { pointer-events: none; }
+.room .steam i { position: absolute; left: 30%; bottom: 0; width: 8px; height: 8px; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, rgba(255, 255, 255, .95) calc(var(--day) * 100%), rgba(230, 232, 255, .6)), transparent); opacity: 0; animation: steam 3.4s ease-out var(--w) infinite; }
+@keyframes steam { 0% { transform: translate(0, 0) scale(.6); opacity: 0; } 30% { opacity: .85; } 100% { transform: translate(4px, -20px) scale(1.7); opacity: 0; } }
+.room .warm-wash { inset: 0; pointer-events: none; background: linear-gradient(160deg, rgba(255, 170, 110, .22), rgba(255, 130, 90, .1)); opacity: var(--warm); }   /* dawn and dusk */
+/* the stops: where you are in the room and the way to the next place; a hint until the first move */
+.room-stops { position: absolute; z-index: 3; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; align-items: center; padding: 3px; border-radius: 99px;
+  background: color-mix(in srgb, rgba(255, 255, 255, .72) calc(var(--lit) * 100%), rgba(16, 18, 44, .62)); box-shadow: 0 2px 10px rgba(0, 0, 0, .12); color: color-mix(in srgb, #3a3350 calc(var(--lit) * 100%), #e2e5ff); }
+.room-stops button { height: 38px; display: grid; place-items: center; border: 0; padding: 0; background: none; border-radius: 99px; cursor: pointer; color: inherit; }
+.room-stops .arr { width: 38px; } .room-stops .arr svg { width: 18px; height: 18px; } .room-stops .arr:disabled { opacity: .28; cursor: default; }
+.room-stops .dot { width: 22px; } .room-stops .dot i { width: 7px; height: 7px; border-radius: 99px; background: currentColor; opacity: .32; transition: width .25s, opacity .25s; }
+.room-stops .dot[aria-current="true"] i { width: 18px; opacity: .85; }
+.room-stops button:focus-visible { outline: 2px solid currentColor; outline-offset: -3px; }
+.room-hint { position: absolute; z-index: 3; left: 50%; bottom: calc(62px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); padding: 6px 12px; border-radius: 99px; font-size: 12px; white-space: nowrap; color: #fff; background: rgba(20, 22, 44, .8); pointer-events: none; opacity: 0; transition: opacity .3s; }
+.room-hint.on { opacity: 1; }
+.study.wide :is(.room-stops, .room-hint) { display: none; }
 .study-gear { position: absolute; z-index: 2; top: calc(10px + env(safe-area-inset-top, 0px)); right: 12px; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 12px; cursor: pointer;
   color: color-mix(in srgb, #3a3350 calc(var(--lit) * 100%), #dfe3ff); background: color-mix(in srgb, rgba(255, 255, 255, .55) calc(var(--lit) * 100%), rgba(20, 22, 52, .55)); transition: color .4s, background-color .4s; }
 .study-gear svg { width: 22px; height: 22px; }
@@ -443,14 +396,17 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .tag { position: absolute; left: var(--tx, 50%); top: var(--ty, 100%); transform: translate(-50%, -50%); padding: 2px 8px; border-radius: 99px; font-size: 11px; line-height: 1.5; white-space: nowrap; letter-spacing: .02em; font-size: 10.5px; transition: transform .12s, color .4s, background-color .4s;
   color: color-mix(in srgb, #2a3352 calc(var(--lit) * 100%), #e8eaff); background: color-mix(in srgb, rgba(255, 255, 255, .84) calc(var(--lit) * 100%), rgba(14, 16, 40, .74)); box-shadow: 0 1px 4px rgba(0, 0, 0, .18); }
 .thing:active .tag { transform: translate(-50%, -50%) scale(.94); }
-.thing.primary .tag { padding: 4px 13px; font-size: 13px; font-weight: 700; color: #fff; background: #5a6cf0; box-shadow: 0 3px 12px rgba(70, 90, 230, .45); }   /* 今日練習: the one that matters */
+.thing.primary .tag { display: inline-flex; align-items: center; gap: 5px; padding: 6px 13px 6px 10px; font-size: 14px; font-weight: 700; color: #fff; background: #5a6cf0; box-shadow: 0 4px 14px rgba(70, 90, 230, .42), inset 0 1px 0 rgba(255, 255, 255, .25); }   /* 今日練習 and 聽一輪: the two that matter */
+.thing.primary .tag svg { width: 16px; height: 16px; }
 .thing.minor .tag { opacity: .7; }
+.thing.away .tag { opacity: 0; transition: opacity .2s; }   /* a thing at another stop: its art peeks in at the edge, its tag waits */
+.study:not(.wide) .thing:not(.away) { z-index: 1; }   /* where tap areas overlap, the stop you are at wins over one peeking in */
 .sky .house .enter { position: absolute; left: 4px; right: 4px; top: 14px; bottom: 0; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; }
 .sky .house .enter .tag { top: calc(100% + 13px); }
 /* walking in and out: the yard zooms into the door, the room shrinks away; 書房 eases in when it opens */
 @keyframes roomIn { from { opacity: 0; transform: scale(1.05); } }
-.study.anim .room { animation: roomIn .4s ease-out backwards; }
-.study.leaving .room { transform: scale(.94); opacity: 0; transition: transform .32s ease-in, opacity .32s ease-in; }
+.study.anim .room-wrap { animation: roomIn .4s ease-out backwards; }
+.study.leaving .room-wrap { transform: scale(.94); opacity: 0; transition: transform .32s ease-in, opacity .32s ease-in; }
 .yard.entering .sky { transform: scale(2.6); opacity: 0; transform-origin: 50% calc(100% - 232px); transition: transform .42s ease-in, opacity .42s ease-in; }
 /* the dive (diveInto): the notebook's light spreads over the screen and fades into the questions */
 .dive-veil { position: fixed; z-index: 90; border-radius: 50%; pointer-events: none; transform: scale(.04); opacity: 0; transition: transform .34s cubic-bezier(.5, 0, .8, .4), opacity .1s;
@@ -5270,7 +5226,7 @@ function themeColor() {
   const b = document.body.classList;
   if (!b.contains('scene')) { meta.setAttribute('content', document.documentElement.getAttribute('data-theme') === 'light' ? '#f5f6f8' : '#0e0f13'); return; }
   const c = sceneClock();
-  meta.setAttribute('content', b.contains('outside') ? mixHex(mixHex('#05060f', '#3d8cdb', c.day), '#e8875f', c.warm * 0.5) : mixHex('#1d1f3e', '#efe3cf', c.day));
+  meta.setAttribute('content', b.contains('outside') ? mixHex(mixHex('#05060f', '#3d8cdb', c.day), '#e8875f', c.warm * 0.5) : mixHex('#3a3c63', '#f2e8d8', c.day));
 }
 function mixHex(a, b, t) { const ch = (h, i) => parseInt(h.slice(i, i + 2), 16); return '#' + [1, 3, 5].map(i => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * t).toString(16).padStart(2, '0')).join(''); }
 // 主頁's clock (test build): the phone's own time and time zone, UTC+8 only when no zone can be read. --day is the daylight (0 by
@@ -5532,8 +5488,9 @@ function renderToday(view) {
   sceneTick();
   const pct = ringPct(dayProgress());
   const st = view.querySelector('.study');
-  if (st && st.dataset.date === todayStr()) { studyLevel(st, pct); return; }   // a redraw (a sync, a setting): the tags change, the motion carries on
-  view.innerHTML = studyHtml(pct);
+  if (st && st.dataset.date === todayStr()) { ROOM.level(st, pct); return; }   // a redraw (a sync, a setting): the tags change, the motion carries on
+  view.innerHTML = ROOM.html(pct);
+  ROOM.mount(view.querySelector('.study'));
 }
 function renderOutside(view) {
   sceneTick();
@@ -5610,154 +5567,580 @@ function yardHtml(pct) {
     </div>
   </div>`;
 }
-// 書房 (test build): an isometric room. Room units: x along the right wall, y along the left wall, z up, the back corner at 0; the
-// room is 10 × 10 with walls 11 high. isoP turns a room point into the drawing's units (ISO per room unit; viewBox STUDY_VB).
-// Flat things are drawn in the plane they lie on: onRight(y) a face looking along +y (u = x, v = -z), onLeft the left wall
-// (u = -y, v = -z), onLevel(z) a level surface (u = x, v = y).
-const ISO = 40, STUDY_VB = [-420, -470, 840, 900];
-const isoP = (x, y, z = 0) => [(x - y) * ISO, (x + y) * ISO / 2 - z * ISO];
-const isoPath = (pts) => `M${pts.map(([a, b]) => `${+a.toFixed(1)} ${+b.toFixed(1)}`).join(' L')} Z`;
-const isoPoly = (cls, pts) => `<path class="${cls}" d="${isoPath(pts)}"/>`;
-// a box from (x0, y0, z0) to (x1, y1, z1): the three faces the camera sees
-function isoBox(cls, x0, y0, z0, x1, y1, z1) {
-  return isoPoly(`${cls} top`, [isoP(x0, y0, z1), isoP(x1, y0, z1), isoP(x1, y1, z1), isoP(x0, y1, z1)])
-    + isoPoly(`${cls} front`, [isoP(x0, y1, z0), isoP(x1, y1, z0), isoP(x1, y1, z1), isoP(x0, y1, z1)])
-    + isoPoly(`${cls} side`, [isoP(x1, y0, z0), isoP(x1, y1, z0), isoP(x1, y1, z1), isoP(x1, y0, z1)]);
-}
-const onRight = (y = 0) => { const [tx, ty] = isoP(0, y); return `matrix(${ISO} ${ISO / 2} 0 ${ISO} ${tx} ${ty})`; };
-const onLeft = `matrix(${ISO} ${-ISO / 2} 0 ${ISO} 0 0)`;
-const onLevel = (z) => `matrix(${ISO} ${ISO / 2} ${-ISO} ${ISO / 2} 0 ${-z * ISO})`;
-const vbPct = (sx, sy) => `left:${((sx - STUDY_VB[0]) / STUDY_VB[2] * 100).toFixed(2)}%;top:${((sy - STUDY_VB[1]) / STUDY_VB[3] * 100).toFixed(2)}%`;
-const vbSize = (w, h) => `width:${(w / STUDY_VB[2] * 100).toFixed(2)}%;height:${(h / STUDY_VB[3] * 100).toFixed(2)}%`;
-// the things: box is the button and tag the name tag's centre, in drawing units; later ones lie over earlier ones
-const STUDY_THINGS = [
-  { id: 'door', act: 'leave-house', label: '出門', box: [-276, -142, 96, 282], tag: [-228, 156], minor: true },
-  { id: 'shelf', route: '#/course', label: '課程', box: [-46, -262, 154, 344], tag: [6, -24] },
-  { id: 'cards', route: '#/vocab', label: '單字', box: [-14, -340, 92, 74], tag: [32, -352] },
-  { id: 'phones', route: '#/listen', label: '聽一輪', box: [104, -232, 66, 98], tag: [138, -246] },
-  { id: 'calendar', route: '#/exam', label: '模擬考', box: [172, -248, 72, 124], tag: [208, -110] },
-  { id: 'laptop', route: '#/stats', label: '學習分析', box: [88, -88, 82, 78], tag: [128, -100] },
-  { id: 'drawer', route: '#/mistakes', box: [22, 2, 74, 156], tag: [52, 132] },
-  { id: 'notebook', act: 'study-practice', box: [104, -14, 126, 70], tag: [182, 92], primary: true }
-];
-function studyTag(id, pct, mk) {
-  if (id === 'notebook') return pct >= 100 ? '今日完成・多學' : `今日練習 ${pct}%`;
-  if (id === 'drawer') return `錯題本${mk ? ` ${mk}` : ''}`;
-  return STUDY_THINGS.find(t => t.id === id).label;
-}
-function studyLevel(st, pct) {
-  st.style.setProperty('--f', pct / 100);
-  st.classList.toggle('full', pct >= 100);
-  const mk = activeMistakes().length;
-  st.querySelectorAll('[data-thing="notebook"], [data-thing="drawer"]').forEach(b => { const t = studyTag(b.dataset.thing, pct, mk); b.querySelector('.tag').textContent = t; b.setAttribute('aria-label', t); });
-}
-// the bookcase's spines (room units on its front face), the same every time
-const SHELF_BOOKS = (() => {
-  const out = [];
-  [[1.75, 0], [3.55, 2], [5.35, 4], [7.05, 1]].forEach(([top, i]) => {
-    for (let x = 0.5; ;) {
-      const w = [0.16, 0.21, 0.13, 0.18, 0.24][i % 5], h = [1.25, 1.45, 1.1, 1.35, 1.0][(i * 3) % 5];
-      if (x + w > 2.42) break;
-      out.push(`<rect class="b${i % 5 + 1}" x="${x.toFixed(2)}" y="${(-top + 0.12).toFixed(2)}" width="${w}" height="${h}" transform="translate(0 ${-h})" rx="0.02"/>`);
-      x += w + (i % 3 === 0 ? 0.05 : 0.02); i++;
-    }
-  });
-  return out.join('');
-})();
-// the drawing itself; d is today's date (the calendar), left the days to the exam
-function studyArt(d, left) {
-  const lwall = [isoP(0, 0, 0), isoP(0, 10, 0), isoP(0, 10, 11), isoP(0, 0, 11)], hole = [isoP(0, 1.4, 4.6), isoP(0, 3.8, 4.6), isoP(0, 3.8, 8.4), isoP(0, 1.4, 8.4)];
-  const planks = Array.from({ length: 9 }, (_, i) => `M0 ${i + 1} H10`).join(' ');
-  return `<svg class="art" viewBox="${STUDY_VB.join(' ')}" aria-hidden="true">
-      <path class="wall-l" fill-rule="evenodd" d="${isoPath(lwall)} ${isoPath(hole)}"/>
-      ${isoPoly('wall-r', [isoP(0, 0, 0), isoP(10, 0, 0), isoP(10, 0, 11), isoP(0, 0, 11)])}
-      ${isoPoly('base', [isoP(0, 0, 0), isoP(0, 10, 0), isoP(0, 10, 0.32), isoP(0, 0, 0.32)])}${isoPoly('base', [isoP(0, 0, 0), isoP(10, 0, 0), isoP(10, 0, 0.32), isoP(0, 0, 0.32)])}
-      ${isoPoly('cap', [isoP(0, 0, 11), isoP(0, 10, 11), isoP(-0.35, 10, 11), isoP(-0.35, -0.35, 11)])}${isoPoly('cap', [isoP(0, 0, 11), isoP(10, 0, 11), isoP(10, -0.35, 11), isoP(-0.35, -0.35, 11)])}
-      ${isoPoly('cut', [isoP(-0.35, 10, 0), isoP(0, 10, 0), isoP(0, 10, 11), isoP(-0.35, 10, 11)])}${isoPoly('cut', [isoP(10, -0.35, 0), isoP(10, 0, 0), isoP(10, 0, 11), isoP(10, -0.35, 11)])}
-      <g transform="${onLeft}">
-        <rect class="rod" x="-4.7" y="-9.05" width="4.2" height="0.13" rx="0.06"/>
-        <path class="wframe" fill-rule="evenodd" d="M-3.95 -8.55 H-1.25 V-4.45 H-3.95 Z M-3.8 -8.4 V-4.6 H-1.4 V-8.4 Z"/><path class="wbar" d="M-2.6 -8.4 V-4.6 M-3.8 -6.5 H-1.4"/>
-        <rect class="wframe" x="-4.1" y="-4.6" width="3" height="0.24" rx="0.05"/>
-        <path class="curtain" d="M-4.45 -8.95 H-3.75 C-3.9 -7.6 -3.8 -6 -4.05 -4.2 H-4.6 C-4.4 -6 -4.5 -7.6 -4.45 -8.95 Z"/><path class="curtain" d="M-0.75 -8.95 H-1.45 C-1.3 -7.6 -1.4 -6 -1.15 -4.2 H-0.6 C-0.8 -6 -0.7 -7.6 -0.75 -8.95 Z"/>
-        <rect class="d-frame" x="-6.75" y="-5.75" width="2.1" height="5.75" rx="0.04"/><rect class="d-panel" x="-6.6" y="-5.6" width="1.8" height="5.6"/>
-        <rect class="d-inset" x="-6.45" y="-5.4" width="1.5" height="2.3" rx="0.05"/><rect class="d-inset" x="-6.45" y="-2.9" width="1.5" height="2.6" rx="0.05"/><circle class="d-knob" cx="-4.98" cy="-2.75" r="0.09"/>
-        <circle class="c-rim" cx="-5.7" cy="-7.6" r="0.72"/><circle class="c-face" cx="-5.7" cy="-7.6" r="0.6"/><path class="c-tick" d="M-5.7 -8.15 V-8.02 M-5.7 -7.18 V-7.05 M-6.25 -7.6 H-6.12 M-5.28 -7.6 H-5.15"/>
-      </g>
-      <g transform="${onRight(0)}">
-        <rect class="cal" x="4.4" y="-8.2" width="1.4" height="2" rx="0.08"/><rect class="cal-top" x="4.4" y="-8.2" width="1.4" height="0.48" rx="0.08"/>
-        <circle class="cal-ring" cx="4.72" cy="-8.2" r="0.07"/><circle class="cal-ring" cx="5.48" cy="-8.2" r="0.07"/>
-        <text class="cal-m" x="5.1" y="-7.86" font-size="0.3" text-anchor="middle">${d.getMonth() + 1}月</text><text class="cal-d" x="5.1" y="-6.86" font-size="0.82" text-anchor="middle">${d.getDate()}</text>
-        <text class="cal-n" x="5.1" y="-6.4" font-size="0.24" text-anchor="middle">距考 ${left} 天</text>
-        <path class="hook" d="M3.5 -7.05 V-6.8"/><path class="hp-band" d="M3.13 -5.95 C3.13 -6.95 3.87 -6.95 3.87 -5.95"/>
-        <rect class="hp" x="3.0" y="-6.12" width="0.27" height="0.64" rx="0.12"/><rect class="hp" x="3.73" y="-6.12" width="0.27" height="0.64" rx="0.12"/>
-      </g>
-      ${isoPoly('floor', [isoP(0, 0), isoP(10, 0), isoP(10, 10), isoP(0, 10)])}
-      <g transform="${onLevel(0)}">
-        <path class="plank" d="${planks}"/>
-        <path class="beam" d="M0.05 1.6 L2.7 2.4 L2.7 4.9 L0.05 4.1 Z"/>
-        <ellipse class="rug" cx="6.3" cy="6.1" rx="2.5" ry="1.85"/><ellipse class="rug2" cx="6.3" cy="6.1" rx="2.1" ry="1.5"/>
-        <rect class="mat" x="0.08" y="4.75" width="0.85" height="1.9" rx="0.12"/>
-      </g>
-      ${isoPoly('slab-l', [isoP(-0.35, 10, 0), isoP(10, 10, 0), isoP(10, 10, -0.5), isoP(-0.35, 10, -0.5)])}${isoPoly('slab-r', [isoP(10, -0.35, 0), isoP(10, 10, 0), isoP(10, 10, -0.5), isoP(10, -0.35, -0.5)])}
-      ${isoBox('shelf', 0.3, 0, 0, 2.6, 1.3, 7.2)}
-      <g transform="${onRight(1.3)}">
-        <rect class="sh-in" x="0.45" y="-7.05" width="1.99" height="6.9"/>${SHELF_BOOKS}
-        <rect class="sh-b" x="0.45" y="-1.83" width="1.99" height="0.1"/><rect class="sh-b" x="0.45" y="-3.63" width="1.99" height="0.1"/><rect class="sh-b" x="0.45" y="-5.43" width="1.99" height="0.1"/>
-      </g>
-      ${isoBox('cbox', 0.9, 0.25, 7.2, 2.0, 1.1, 7.72)}${isoBox('icard', 1.05, 0.5, 7.72, 1.45, 0.56, 8.18)}${isoBox('icard', 1.5, 0.62, 7.72, 1.86, 0.68, 8.08)}
-      ${isoBox('pot', 0.45, 2.15, 0, 1.05, 2.75, 0.62)}
-      ${(() => { const [px, py] = isoP(0.75, 2.45, 0.62); return `<path class="leaf" d="M${px} ${py} c-14 -16 -20 -34 -10 -46 c8 14 12 30 10 46 Z M${px} ${py} c8 -20 18 -32 30 -34 c-4 14 -16 26 -30 34 Z M${px} ${py} c-2 -24 2 -42 8 -54 c4 20 0 40 -8 54 Z"/>`; })()}
-      ${isoBox('ped', 3.3, 0.1, 0, 4.8, 2.6, 2.75)}
-      <g transform="${onRight(2.6)}">
-        <rect class="knob" x="3.9" y="-1.5" width="0.32" height="0.07" rx="0.03"/><rect class="knob" x="3.9" y="-0.6" width="0.32" height="0.07" rx="0.03"/>
-        <path class="d-inset" d="M3.38 -1.83 H4.72 V-1.8 H3.38 Z M3.38 -0.95 H4.72 V-0.92 H3.38 Z"/>
-      </g>
-      ${isoBox('dleg', 7.25, 0.05, 0, 7.5, 0.3, 2.75)}${isoBox('dleg', 7.25, 2.35, 0, 7.5, 2.6, 2.75)}
-      ${isoBox('desk', 3.2, 0, 2.75, 7.6, 2.7, 3.0)}
-      ${isoBox('drawer', 3.42, 2.6, 1.95, 4.68, 3.05, 2.62)}
-      <g transform="${onLevel(2.63)}"><rect class="redbk" x="3.62" y="2.66" width="0.82" height="0.32" rx="0.03"/></g>
-      <g transform="${onRight(3.05)}"><rect class="knob" x="3.9" y="-2.4" width="0.32" height="0.07" rx="0.03"/></g>
-      <g transform="${onRight(0.42)}">
-        <rect class="bezel" x="3.4" y="-3.92" width="1" height="0.86" rx="0.05"/><rect class="screen" x="3.47" y="-3.85" width="0.86" height="0.72" rx="0.03"/>
-        ${[[3.58, 0.3], [3.76, 0.46], [3.94, 0.36], [4.12, 0.56]].map(([x, h]) => `<rect class="lbar" x="${x}" y="${(-3.2 - h).toFixed(2)}" width="0.11" height="${h}"/>`).join('')}
-      </g>
-      ${isoBox('lap', 3.4, 0.42, 3.0, 4.4, 1.2, 3.06)}
-      <g transform="${onLevel(3.0)}">
-        <rect class="nb-cover" x="4.72" y="0.78" width="1.76" height="1.36" rx="0.06"/>
-        <rect class="nb-page" x="4.8" y="0.86" width="0.8" height="1.2" rx="0.03"/><rect class="nb-page" x="5.68" y="0.86" width="0.72" height="1.2" rx="0.03"/>
-        <path class="plank" d="M4.9 1.1 H5.5 M4.9 1.3 H5.5 M4.9 1.5 H5.5 M4.9 1.7 H5.4 M5.78 1.1 H6.3 M5.78 1.3 H6.3 M5.78 1.5 H6.2"/>
-      </g>
-      ${isoBox('lampm', 6.55, 0.3, 3.0, 6.95, 0.7, 3.08)}
-      <path class="lamp-arm" d="M${isoP(6.75, 0.5, 3.08).join(' ')} L${isoP(6.8, 0.45, 4.4).join(' ')} L${isoP(6.3, 0.8, 4.75).join(' ')}"/>
-      ${isoPoly('shade', [isoP(6.0, 0.8, 4.98), isoP(6.55, 0.75, 4.98), isoP(6.65, 1.0, 4.5), isoP(5.9, 1.05, 4.5)])}
-      <circle class="bulb" cx="${isoP(6.25, 0.95, 4.45)[0]}" cy="${isoP(6.25, 0.95, 4.45)[1]}" r="5"/>
-    </svg>`;
-}
-function studyHtml(pct) {
-  const f = pct / 100, mk = activeMistakes().length, d = parseDate(todayStr()), left = examPace().daysLeft;
-  const thing = (t) => {
-    const [x, y, w, h] = t.box, [tx, ty] = t.tag, label = studyTag(t.id, pct, mk);
-    const pos = `${vbPct(x, y)};${vbSize(w, h)};--tx:${((tx - x) / w * 100).toFixed(1)}%;--ty:${((ty - y) / h * 100).toFixed(1)}%`;
-    return `<button type="button" class="thing${t.primary ? ' primary' : t.minor ? ' minor' : ''}" data-thing="${t.id}" ${t.route ? `data-act="nav" data-route="${t.route}"` : `data-act="${t.act}"`} style="${pos}" aria-label="${label}"><span class="tag">${label}</span></button>`;
+// 書房 (test build): an isometric room drawn much bigger than the screen, with the things you tap; on a phone the camera stops at
+// three places along it (the bookcase, the desk, the chest of drawers) and a swipe slides between them. ROOM.html draws it,
+// ROOM.mount sets the camera and the swipes once it is on the page, ROOM.level follows today's progress in place.
+const ROOM = (() => {
+  const S = 40, RW = 16, RD = 16, RH = 19, WAIN = 3.2;
+  const P = (x, y, z = 0) => [(x - y) * S, (x + y) * S / 2 - z * S];
+  const r1 = (v) => Math.round(v * 10) / 10;
+  const pt = (x, y, z = 0) => P(x, y, z).map(r1).join(' ');
+  const poly = (a) => 'M' + a.map((p) => pt(p[0], p[1], p[2])).join(' L') + ' Z';
+  const line = (a) => 'M' + a.map((p) => pt(p[0], p[1], p[2])).join(' L');
+  // flat details drawn in a plane: u, v are the plane's own axes (v points down)
+  const onX = (x0) => `matrix(${S} ${-S / 2} 0 ${S} ${x0 * S} ${x0 * S / 2})`;   // a face looking along +x (the left wall): u = -y, v = -z
+  const onY = (y0) => `matrix(${S} ${S / 2} 0 ${S} ${-y0 * S} ${y0 * S / 2})`;   // a face looking along +y (the right wall): u = x, v = -z
+  const onZ = (z0) => `matrix(${S} ${S / 2} ${-S} ${S / 2} 0 ${-z0 * S})`;        // a level surface: u = x, v = y
+  const VB = [-RD * S, -RH * S, (RW + RD) * S, (RH + (RW + RD) / 2) * S + 30];
+  // the three stops a phone sees, and the whole room for a wide screen: [x0, y0, x1, y1] in the room's screen units (P / S)
+  const VIEWS = [
+    { id: 'shelf', label: '書櫃那邊', r: [-5.75, -10.6, 1.15, 3.3] },
+    { id: 'desk', label: '書桌', r: [-0.95, -9.6, 5.85, 5.6] },
+    { id: 'chest', label: '櫃子那邊', r: [5.35, -7.2, 12.15, 6.9] }
+  ];
+  const ALL = [-5.75, -10.6, 12.15, 6.9];
+  const vbPct = (sx, sy) => `left:${((sx - VB[0]) / VB[2] * 100).toFixed(3)}%;top:${((sy - VB[1]) / VB[3] * 100).toFixed(3)}%`;
+  const vbSize = (w, h) => `width:${(w / VB[2] * 100).toFixed(3)}%;height:${(h / VB[3] * 100).toFixed(3)}%`;
+
+  // ===== light: every colour below is its daylight colour; by night it is lit by the moon plus the desk lamp and the lamp on the
+  // chest of drawers, worked out per face from where the face is and which way it looks, once dim (nothing done today) and once bright
+  // (today's list done) — CSS mixes them by --day and --f =====
+  const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const hex = (c) => '#' + c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+  const FACE = { t: [0, 0, 1, 1], y: [0, 1, 0, 0.9], x: [1, 0, 0, 0.79], L: [1, 0, 0, 0.94], R: [0, 1, 0, 1] };   // the normal and its share of daylight
+  const MOON = [0.25, 0.27, 0.48];
+  const LIGHTS = [
+    { p: [2.6, 0.98, 4.66], c: [1, 0.8, 0.52], r: 7.0, lo: 0.32, hi: 1.3 },   // the desk lamp, over the notebook
+    { p: [9.1, 0.45, 4.05], c: [1, 0.72, 0.5], r: 4.6, lo: 0.45, hi: 0.85 }   // the little lamp on the chest of drawers
+  ];
+  function tone(h, face, at) {
+    const [nx, ny, nz, k] = FACE[face], b = rgb(h), amb = MOON.map((v) => v * (0.72 + 0.28 * k));
+    const lit = (lvl) => {
+      const s = [0, 0, 0];
+      for (const L of LIGHTS) {
+        const dx = L.p[0] - at[0], dy = L.p[1] - at[1], dz = L.p[2] - at[2], d = Math.hypot(dx, dy, dz) || 1;
+        const w = (Math.max(0, (nx * dx + ny * dy + nz * dz) / d) * 0.7 + 0.3) * Math.max(0, 1 - d / L.r) ** 2 * L[lvl];
+        for (let i = 0; i < 3; i++) s[i] += L.c[i] * w;
+      }
+      return s;
+    };
+    const lo = lit('lo'), hi = lit('hi');
+    return `color-mix(in srgb,${hex(b.map((v) => v * k))} calc(var(--day)*100%),color-mix(in srgb,${hex(b.map((v, i) => v * (amb[i] + hi[i])))} calc(var(--f)*100%),${hex(b.map((v, i) => v * (amb[i] + lo[i])))}))`;
+  }
+  const F = (h, face, at) => `style="fill:${tone(h, face, at)}"`;
+  const FS = (h, face, at) => `style="stroke:${tone(h, face, at)}"`;
+  const C = {
+    wall: '#f3e9d9', wain: '#aebfa2', batten: '#bdcdb1', rail: '#f7f2e8', skirt: '#f2ece1',
+    floor: '#d2a97c', oak: '#c99a6c', oakTop: '#d8ad7f', oakDk: '#b08159', walnut: '#8f6444', shelfIn: '#6e4a31',
+    cream: '#f8f2e7', paper: '#fdfaf3', line: '#b9c4e6', ink: '#3b3653',
+    mustard: '#e0b252', accent: '#5a68d8', accentDk: '#4552b8',
+    red: '#d05a4b', steel: '#5b6279', leaf: '#5f9a5b', leafDk: '#4a7f47', pot: '#d98463'
   };
-  const [wx, wy] = isoP(0, 3.8, 8.4), [cx, cy] = isoP(0, 6.42, 8.32), [lx, ly] = isoP(6.25, 0.95, 4.45), [nx, ny] = isoP(5.6, 1.45, 3.0);
-  return `<div class="study${pct >= 100 ? ' full' : ''}" data-anim data-date="${todayStr()}" style="--f:${f}">
-    <div class="room">
-      <div class="w-sky" aria-hidden="true" style="${vbPct(wx, wy)};${vbSize(2.4 * ISO, 3.8 * ISO)}">
-        <i class="wt-day"></i><i class="wt-warm"></i>
-        <div class="w-night"><i class="w-moon"></i>${[[12, 20, 2.6, 0.4], [30, 44, 3.4, 1.6], [78, 52, 2.2, 0.9], [44, 14, 3, 2.2], [88, 22, 2.8, 1.2], [20, 64, 3.6, 0.2]].map(([x, y, dd, w]) => `<i class="w-star" style="left:${x}%;top:${y}%;--d:${dd}s;--w:-${w}s"></i>`).join('')}</div>
-        <div class="w-day"><i class="w-cloud" style="top:16%;--d:38s;--w:-6s"></i><i class="w-cloud" style="top:40%;--d:54s;--w:-31s;width:36%"></i></div>
-        <i class="w-hills"></i>
-      </div>
-      ${studyArt(d, left)}
-      <i class="lamp-glow" aria-hidden="true" style="${vbPct(lx - 210, ly - 160)};${vbSize(420, 320)}"></i>
-      <i class="note-glow" aria-hidden="true" style="${vbPct(nx - 120, ny - 66)};${vbSize(240, 132)}"></i>
-      <div class="clock-hands" aria-hidden="true" style="${vbPct(cx, cy)};${vbSize(1.44 * ISO, 1.44 * ISO)};--ssd:-${new Date().getSeconds()}s"><i class="hh"></i><i class="mm"></i><i class="ss"></i></div>
-      ${STUDY_THINGS.map(thing).join('')}
-    </div>
-    <button type="button" class="study-gear" data-act="settings" aria-label="設定" title="設定">${icon('settings')}</button>
-  </div>`;
-}
+
+  // ===== building blocks =====
+  function box(h, x0, y0, z0, x1, y1, z1, o = {}) {   // the three faces a box shows (top, the +y face, the +x face) and its lit edges
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2, mz = (z0 + z1) / 2;
+    let s = '';
+    if (o.t !== false) s += `<path ${F(o.t || h, 't', [mx, my, z1])} d="${poly([[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]])}"/>`;
+    if (o.y !== false) s += `<path ${F(o.y || h, 'y', [mx, y1, mz])} d="${poly([[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]])}"/>`;
+    if (o.x !== false) s += `<path ${F(o.x || h, 'x', [x1, my, mz])} d="${poly([[x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1]])}"/>`;
+    if (o.hl !== false) s += `<path class="hl" d="${line([[x0, y1, z1], [x1, y1, z1], [x1, y0, z1]])}${o.hlv ? ' ' + line([[x1, y1, z1], [x1, y1, z0]]) : ''}"/>`;
+    return s;
+  }
+  const qX = (h, x, y0, y1, z0, z1, f = 'x') => `<path ${F(h, f, [x, (y0 + y1) / 2, (z0 + z1) / 2])} d="${poly([[x, y0, z0], [x, y1, z0], [x, y1, z1], [x, y0, z1]])}"/>`;
+  const qY = (h, y, x0, x1, z0, z1, f = 'y') => `<path ${F(h, f, [(x0 + x1) / 2, y, (z0 + z1) / 2])} d="${poly([[x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1]])}"/>`;
+  const qZ = (h, z, x0, x1, y0, y1) => `<path ${F(h, 't', [(x0 + x1) / 2, (y0 + y1) / 2, z])} d="${poly([[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]])}"/>`;
+  const shadow = (x0, y0, x1, y1, o = 1, z = 0.004) => `<g transform="${onZ(z)}"><rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" rx="${(Math.min(x1 - x0, y1 - y0) * 0.35).toFixed(2)}" fill="url(#cs)" opacity="${o}"/></g>`;
+  // a billboard: drawn upright facing the camera (for round things), its own units = drawing units, origin at a room point
+  const bb = (x, y, z, inner) => `<g transform="translate(${pt(x, y, z)})">${inner}</g>`;
+
+  const DEFS = `<defs>
+    <linearGradient id="aoUp" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#2b1c12" stop-opacity=".22"/><stop offset="1" stop-color="#2b1c12" stop-opacity="0"/></linearGradient>
+    <linearGradient id="aoDn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b1c12" stop-opacity=".2"/><stop offset="1" stop-color="#2b1c12" stop-opacity="0"/></linearGradient>
+    <linearGradient id="aoLR" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2b1c12" stop-opacity=".16"/><stop offset="1" stop-color="#2b1c12" stop-opacity="0"/></linearGradient>
+    <linearGradient id="aoRL" x1="1" y1="0" x2="0" y2="0"><stop offset="0" stop-color="#2b1c12" stop-opacity=".16"/><stop offset="1" stop-color="#2b1c12" stop-opacity="0"/></linearGradient>
+    <radialGradient id="cs"><stop offset="0" stop-color="#2b1c12" stop-opacity=".34"/><stop offset=".6" stop-color="#2b1c12" stop-opacity=".16"/><stop offset="1" stop-color="#2b1c12" stop-opacity="0"/></radialGradient>
+    <radialGradient id="pool"><stop offset="0" stop-color="#ffe0a6" stop-opacity=".7"/><stop offset=".45" stop-color="#ffcb84" stop-opacity=".28"/><stop offset="1" stop-color="#ffc47a" stop-opacity="0"/></radialGradient>
+    <radialGradient id="halo"><stop offset="0" style="stop-color:color-mix(in srgb,#fffdf2 calc(var(--day)*100%),#ffd9a0)" stop-opacity=".75"/><stop offset=".55" style="stop-color:color-mix(in srgb,#fff6dc calc(var(--day)*100%),#ffc98a)" stop-opacity=".3"/><stop offset="1" stop-color="#fff6dc" stop-opacity="0"/></radialGradient>
+    <linearGradient id="fold" x1="0" y1="0" x2="1" y2="0" spreadMethod="repeat" gradientTransform="scale(.25 1)"><stop offset="0" stop-color="#fff" stop-opacity=".22"/><stop offset=".5" stop-color="#000" stop-opacity=".1"/><stop offset="1" stop-color="#fff" stop-opacity=".22"/></linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".42" stop-color="#fff" stop-opacity="0"/><stop offset=".43" stop-color="#fff" stop-opacity=".28"/><stop offset=".52" stop-color="#fff" stop-opacity=".28"/><stop offset=".53" stop-color="#fff" stop-opacity="0"/><stop offset=".6" stop-color="#fff" stop-opacity="0"/><stop offset=".61" stop-color="#fff" stop-opacity=".18"/><stop offset=".64" stop-color="#fff" stop-opacity=".18"/><stop offset=".65" stop-color="#fff" stop-opacity="0"/></linearGradient>
+    <pattern id="stripes" width=".6" height="1" patternUnits="userSpaceOnUse"><rect width=".05" height="1" fill="#fff" fill-opacity=".34"/><rect x=".3" width=".02" height="1" fill="#8a6a4a" fill-opacity=".05"/></pattern>
+    <pattern id="cork" width=".3" height=".3" patternUnits="userSpaceOnUse"><circle cx=".05" cy=".07" r=".018" fill="#5a3a1c" fill-opacity=".28"/><circle cx=".2" cy=".19" r=".014" fill="#5a3a1c" fill-opacity=".22"/><circle cx=".13" cy=".26" r=".02" fill="#fff" fill-opacity=".2"/><circle cx=".26" cy=".05" r=".012" fill="#fff" fill-opacity=".18"/></pattern>
+  </defs>`;
+
+  // ===== the room =====
+  const WIN = { x0: 2.15, x1: 4.95, z0: 4.7, z1: 8.5 };
+  function shellArt() {
+    const { x0, x1, z0, z1 } = WIN;
+    let s = '';
+    s += `<path ${F(C.wall, 'L', [0, 3, 7])} d="${poly([[0, 0, 0], [0, RD, 0], [0, RD, RH], [0, 0, RH]])}"/>`;
+    s += `<path fill-rule="evenodd" ${F(C.wall, 'R', [3, 0, 7])} d="${poly([[0, 0, 0], [RW, 0, 0], [RW, 0, RH], [0, 0, RH]])} ${poly([[x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [x0, 0, z1]])}"/>`;
+    s += `<g transform="${onY(0)}" class="wp"><path fill="url(#stripes)" fill-rule="evenodd" d="M0 ${-RH} H${RW} V${-WAIN} H0 Z M${x0} ${-z1} H${x1} V${-z0} H${x0} Z"/></g>`;
+    s += `<g transform="${onX(0)}" class="wp"><rect x="${-RD}" y="${-RH}" width="${RD}" height="${RH - WAIN}" fill="url(#stripes)"/></g>`;
+    // wainscot: panels, battens, the rail on top and the skirting
+    s += qX(C.wain, 0, 0, RD, 0, WAIN, 'L') + qY(C.wain, 0, 0, RW, 0, WAIN, 'R');
+    for (let i = 0.7; i < RW; i += 0.72) s += qY(C.batten, 0.01, i, i + 0.07, 0.3, WAIN, 'R');
+    for (let i = 0.7; i < RD; i += 0.72) s += qX(C.batten, 0.01, i, i + 0.07, 0.3, WAIN, 'L');
+    s += box(C.rail, 0, 0, WAIN, RW, 0.1, WAIN + 0.14, { x: false }) + box(C.rail, 0, 0.1, WAIN, 0.1, RD, WAIN + 0.14, { y: false });
+    s += box(C.skirt, 0, 0, 0, RW, 0.06, 0.32, { x: false }) + box(C.skirt, 0, 0.06, 0, 0.06, RD, 0.32, { y: false });
+    return s;
+  }
+  function windowArt() {
+    const { x0, x1, z0, z1 } = WIN, d = 0.34, xm = (x0 + x1) / 2;
+    let s = '';
+    // the opening's depth: its left side and its bottom
+    s += qX(C.wall, x0, -d, 0, z0, z1, 'x') + qZ(C.wall, z0, x0, x1, -d, 0);
+    // the sashes in the glass plane, the glare on the glass by day
+    s += `<g transform="${onY(-d + 0.05)}">
+      <rect x="${x0}" y="${-z1}" width="${x1 - x0}" height="${z1 - z0}" fill="url(#glass)" class="day-only"/>
+      <path ${F(C.cream, 'y', [xm, -d, 6.6])} fill-rule="evenodd" d="M${x0} ${-z1} H${x1} V${-z0} H${x0} Z M${x0 + 0.13} ${-z1 + 0.13} V${-z0 - 0.13} H${xm - 0.04} V${-z1 + 0.13} Z M${xm + 0.04} ${-z1 + 0.13} V${-z0 - 0.13} H${x1 - 0.13} V${-z1 + 0.13} Z"/>
+      <rect x="${x0 + 0.13}" y="${-6.63}" width="${x1 - x0 - 0.26}" height=".07" ${F(C.cream, 'y', [xm, -d, 6.6])}/>
+    </g>`;
+    // the casing round the opening, and the sill
+    s += `<g transform="${onY(0.012)}"><path ${F(C.cream, 'y', [xm, 0, 6.6])} fill-rule="evenodd" d="M${x0 - 0.16} ${-z1 - 0.16} H${x1 + 0.16} V${-z0} H${x0 - 0.16} Z M${x0} ${-z1} H${x1} V${-z0} H${x0} Z"/></g>`;
+    s += box(C.cream, x0 - 0.3, 0, z0 - 0.16, x1 + 0.3, 0.42, z0, { hlv: true });
+    // a little plant and a cactus on the sill
+    s += bb(2.65, 0.22, z0, `<path ${F(C.pot, 'y', [2.65, 0.3, z0])} d="M-7 -1 L-5.5 -11 H5.5 L7 -1 Z"/><path d="M-6 -11 H6" class="hl"/><g ${F(C.leaf, 't', [2.65, 0.2, z0 + 0.6])}><path d="M0 -11 C-9 -16 -12 -26 -8 -31 C-3 -24 -1 -17 0 -11 Z"/><path d="M0 -11 C7 -18 13 -22 17 -21 C13 -14 7 -12 0 -11 Z"/><path d="M0 -11 C0 -22 3 -30 6 -34 C8 -26 5 -17 0 -11 Z"/></g>`);
+    s += bb(4.45, 0.2, z0, `<path ${F('#e8d9c4', 'y', [4.45, 0.3, z0])} d="M-6 0 L-5 -8 H5 L6 0 Z"/><rect x="-3.2" y="-21" width="6.4" height="14" rx="3.2" ${F('#7fae79', 'y', [4.45, 0.2, z0 + 0.4])}/><rect x="2" y="-16" width="5" height="3.2" rx="1.6" ${F('#7fae79', 'y', [4.45, 0.2, z0 + 0.4])}/><rect x="5" y="-19" width="2.6" height="5" rx="1.3" ${F('#7fae79', 'y', [4.45, 0.2, z0 + 0.4])}/>`);
+    // curtains on a rod, folds drawn as a soft repeating shade
+    const rod = 9.05;
+    s += `<path class="ln" ${FS(C.walnut, 'y', [3.5, 0.2, rod])} stroke-width="3.2" d="${line([[1.3, 0.2, rod], [5.8, 0.2, rod]])}"/>`;
+    s += bb(1.3, 0.2, rod, `<circle r="4" ${F(C.walnut, 't', [1.3, 0.2, rod])}/>`) + bb(5.8, 0.2, rod, `<circle r="4" ${F(C.walnut, 't', [5.8, 0.2, rod])}/>`);
+    const curtain = (a, b, flip) => {
+      const c = flip ? b : a, o = flip ? a : b;   // c: the side by the wall end, o: the side by the glass
+      return `<g transform="${onY(0.16)}"><path ${F('#a9bfd3', 'y', [(a + b) / 2, 0.2, 6.6])} d="M${a} ${-rod + 0.05} H${b} C${o + (flip ? 0.05 : -0.05)} ${-7.2} ${o + (flip ? -0.18 : 0.18)} ${-5.6} ${o + (flip ? -0.05 : 0.05)} ${-4.15} Q${(a + b) / 2} ${-4.0} ${c} ${-4.12} C${c} ${-5.6} ${c} ${-7.4} ${a === c ? a : b} ${-rod + 0.05} Z"/>
+        <path fill="url(#fold)" d="M${a} ${-rod + 0.05} H${b} C${o + (flip ? 0.05 : -0.05)} ${-7.2} ${o + (flip ? -0.18 : 0.18)} ${-5.6} ${o + (flip ? -0.05 : 0.05)} ${-4.15} Q${(a + b) / 2} ${-4.0} ${c} ${-4.12} C${c} ${-5.6} ${c} ${-7.4} ${a === c ? a : b} ${-rod + 0.05} Z"/></g>`;
+    };
+    s += curtain(1.45, 2.45, false) + curtain(4.65, 5.65, true);
+    return s;
+  }
+  // the calendar (模擬考) on the right wall past the chest of drawers: today, and the days to the exam
+  const CAL = { x0: 10.05, x1: 11.15, z0: 4.85, z1: 6.6 };
+  function calendarArt(d, left) {
+    const { x0, x1, z0, z1 } = CAL, xm = (x0 + x1) / 2, zm = (z0 + z1) / 2;
+    return `<path class="ln" ${FS(C.walnut, 'y', [xm, 0, z1])} stroke-width="1.2" d="${line([[xm - 0.28, 0.03, z1 - 0.02], [xm, 0.03, z1 + 0.3], [xm + 0.28, 0.03, z1 - 0.02]])}"/>
+      ${box(C.paper, x0, 0, z0, x1, 0.07, z1, { t: false })}
+      <g transform="${onY(0.072)}">
+        <rect x="${x0}" y="${-z1}" width="${x1 - x0}" height=".42" ${F(C.red, 'y', [xm, 0.07, z1])}/>
+        <text x="${xm}" y="${-z1 + 0.31}" font-size=".26" font-weight="700" text-anchor="middle" fill="#fff">${d.getMonth() + 1}月</text>
+        <text x="${xm}" y="${-z1 + 1.18}" font-size=".72" font-weight="800" text-anchor="middle" ${F(C.ink, 'y', [xm, 0.07, zm])}>${d.getDate()}</text>
+        <text x="${xm}" y="${-z0 - 0.2}" font-size=".17" font-weight="700" text-anchor="middle" ${F(C.red, 'y', [xm, 0.07, z0 + 0.1])}>距考 ${left} 天</text>
+        <path d="M${x0 + 0.12} ${-z0 - 0.06} H${x1 - 0.12}" stroke="#000" stroke-opacity=".08" stroke-width=".02"/>
+      </g>`;
+  }
+  // the clock on the left wall above the bookcase (its hands are an overlay)
+  const CLK = { y: 1.6, z: 9.9, r: 0.62 };
+  function printArt() {
+    const y0 = 2.95, y1 = 4.35, z0 = 7.3, z1 = 8.55, ym = (y0 + y1) / 2, zm = (z0 + z1) / 2;
+    return `<g transform="${onX(0.05)}"><rect x="${-y1 + 0.06}" y="${-z1 + 0.08}" width="${y1 - y0}" height="${z1 - z0}" fill="#2b1c12" fill-opacity=".14"/></g>
+      <g transform="${onX(0.08)}"><rect x="${-y1}" y="${-z1}" width="${y1 - y0}" height="${z1 - z0}" ${F(C.walnut, 'L', [0.1, ym, zm])}/>
+      <rect x="${-y1 + 0.1}" y="${-z1 + 0.1}" width="${y1 - y0 - 0.2}" height="${z1 - z0 - 0.2}" ${F('#f4ead8', 'L', [0.1, ym, zm])}/>
+      <circle cx="${-ym + 0.33}" cy="${-z1 + 0.42}" r=".15" ${F('#e0614f', 'L', [0.1, ym, zm])}/>
+      <path d="M${-y1 + 0.1} ${-z0 - 0.1} L${-ym - 0.05} ${-z1 + 0.5} L${-ym + 0.05} ${-z1 + 0.5} L${-y0 - 0.1} ${-z0 - 0.1} Z" ${F('#6f8fb8', 'L', [0.1, ym, zm])}/>
+      <path d="M${-ym - 0.05} ${-z1 + 0.5} L${-ym - 0.26} ${-z1 + 0.78} Q${-ym - 0.12} ${-z1 + 0.72} ${-ym - 0.04} ${-z1 + 0.8} Q${-ym + 0.06} ${-z1 + 0.7} ${-ym + 0.12} ${-z1 + 0.78} Q${-ym + 0.2} ${-z1 + 0.72} ${-ym + 0.26} ${-z1 + 0.78} L${-ym + 0.05} ${-z1 + 0.5} Z" fill="#fff"/>
+      <path d="M${-y1 + 0.1} ${-z0 - 0.26} Q${-ym} ${-z0 - 0.42} ${-y0 - 0.1} ${-z0 - 0.24} V${-z0 - 0.1} H${-y1 + 0.1} Z" ${F('#9fbf93', 'L', [0.1, ym, zm])}/></g>`;
+  }
+  function clockArt() {
+    const { y, z, r } = CLK;
+    let ticks = '';
+    for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6, l = i % 3 ? 0.08 : 0.15; ticks += `M${(-y + Math.sin(a) * (r - 0.12)).toFixed(3)} ${(-z - Math.cos(a) * (r - 0.12)).toFixed(3)} L${(-y + Math.sin(a) * (r - 0.12 - l)).toFixed(3)} ${(-z - Math.cos(a) * (r - 0.12 - l)).toFixed(3)} `; }
+    return `<g transform="${onX(0.06)}"><circle cx="${-y + 0.05}" cy="${-z + 0.07}" r="${r + 0.02}" fill="#2b1c12" fill-opacity=".14"/></g>
+      <g transform="${onX(0.1)}"><circle cx="${-y}" cy="${-z}" r="${r}" ${F(C.walnut, 'L', [0.1, y, z])}/><circle cx="${-y}" cy="${-z}" r="${r - 0.08}" ${F(C.paper, 'L', [0.1, y, z])}/>
+      <path class="ln" stroke-width="1.1" ${FS(C.ink, 'L', [0.1, y, z])} d="${ticks}"/></g>`;
+  }
+  // the door (出門), on the left wall past the bookcase; a mat and slippers in front of it
+  const DOOR = { y0: 3.6, y1: 5.4, z1: 6.5 };
+  function doorArt() {
+    const { y0, y1, z1 } = DOOR, ym = (y0 + y1) / 2;
+    let s = '';
+    s += `<g transform="${onX(0.012)}"><path ${F(C.cream, 'L', [0, ym, 3])} fill-rule="evenodd" d="M${-y1 - 0.18} 0 V${-z1 - 0.18} H${-y0 + 0.18} V0 Z M${-y1} 0 V${-z1} H${-y0} V0 Z"/></g>`;
+    s += qX(C.oak, 0.02, y0, y1, 0, z1, 'L');
+    s += `<g transform="${onX(0.025)}">
+      <rect x="${-y1 + 0.22}" y="${-z1 + 0.3}" width="${y1 - y0 - 0.44}" height="2.5" rx=".06" ${F(C.oakDk, 'L', [0, ym, 5])}/>
+      <rect x="${-y1 + 0.22}" y="${-3.3}" width="${y1 - y0 - 0.44}" height="2.9" rx=".06" ${F(C.oakDk, 'L', [0, ym, 2])}/>
+      <rect x="${-y1 + 0.3}" y="${-z1 + 0.38}" width="${y1 - y0 - 0.6}" height="2.34" rx=".05" ${F(C.oak, 'L', [0, ym, 5])}/>
+      <rect x="${-y1 + 0.3}" y="${-3.22}" width="${y1 - y0 - 0.6}" height="2.74" rx=".05" ${F(C.oak, 'L', [0, ym, 2])}/>
+      <circle cx="${-y0 - 0.22}" cy="-3.3" r=".1" fill="#e9c46a"/><circle cx="${-y0 - 0.24}" cy="-3.33" r=".035" fill="#fff8d8"/></g>`;
+    s += shadow(0.05, y0 - 0.1, 1.3, y1 + 0.1, 0.4);
+    s += box('#9c7c63', 0.15, y0 + 0.1, 0, 1.25, y1 - 0.1, 0.05, {});
+    s += `<g transform="${onZ(0.052)}"><rect x=".27" y="${y0 + 0.22}" width=".86" height="${y1 - y0 - 0.44}" rx=".04" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width=".04" stroke-dasharray=".08 .06"/></g>`;
+    const slip = (x, y) => `<g transform="${onZ(0.06)}"><rect x="${x}" y="${y}" width=".62" height=".26" rx=".13" ${F('#e8a9a0', 't', [x, y, 0.1])}/><rect x="${x}" y="${y + 0.02}" width=".3" height=".22" rx=".1" ${F('#f6d6cf', 't', [x, y, 0.1])}/></g>`;
+    s += slip(0.35, ym - 0.42) + slip(0.42, ym + 0.08);
+    return s;
+  }
+  // the floor: oak planks and the shadows along the walls
+  function floorArt() {
+    let s = `<path ${F(C.floor, 't', [4, 4, 0])} d="${poly([[0, 0], [RW, 0], [RW, RD], [0, RD]])}"/>`;
+    let planks = '', seams = '';
+    for (let i = 0, y = 0; y < RD; y += 0.62, i++) {
+      if (i % 2) planks += `<rect x="0" y="${y.toFixed(2)}" width="${RW}" height=".62" fill="#fff" fill-opacity=".05"/>`;
+      if (i % 3 === 1) planks += `<rect x="0" y="${y.toFixed(2)}" width="${RW}" height=".62" fill="#5a3518" fill-opacity=".045"/>`;
+      seams += `M0 ${y.toFixed(2)} H${RW} `;
+      for (let x = (i * 1.37) % 2.6 + 0.4; x < RW; x += 2.6) seams += `M${x.toFixed(2)} ${y.toFixed(2)} v.62 `;
+    }
+    s += `<g transform="${onZ(0)}">${planks}<path d="${seams}" fill="none" stroke="#6b4426" stroke-opacity=".2" stroke-width=".018"/></g>`;
+    // walls meet floor: soft shadows both ways
+    s += `<g transform="${onZ(0.002)}"><rect x="0" y="0" width="${RW}" height=".9" fill="url(#aoDn)"/><rect x="0" y="0" width=".9" height="${RD}" fill="url(#aoLR)"/></g>`;
+    return s;
+  }
+  function wallShadeArt() {
+    return `<g transform="${onY(0)}"><rect x="0" y="-1.4" width="${RW}" height="1.4" fill="url(#aoUp)"/><rect x="0" y="${-RH}" width=".8" height="${RH}" fill="url(#aoLR)"/></g>
+      <g transform="${onX(0)}"><rect x="${-RD}" y="-1.4" width="${RD}" height="1.4" fill="url(#aoUp)"/><rect x="-.8" y="${-RH}" width=".8" height="${RH}" fill="url(#aoRL)"/></g>`;
+  }
+  // string lights along the top of both walls, sagging between hooks; the bulbs themselves are an overlay that lights bulb by bulb
+  // with today's progress (by night)
+  const WIRE = [{ n: 7, at: (t) => [0.3 + t * 12.4, 0.08] }, { n: 3, at: (t) => [0.08, 0.3 + t * 5.7] }], WZ = 11.05, SAG = 0.32;
+  const BULBS = (() => {
+    const out = [];
+    WIRE.forEach((w) => { const m = w.n * 4; for (let i = 0; i < m; i++) { const t = (i + 0.5) / m; out.push([...w.at(t), WZ - SAG * Math.sin(Math.PI * ((t * w.n) % 1))]); } });
+    return out.map((p, i) => ({ p, t: Math.round(((i * 11) % out.length) / out.length * 100) / 100 }));
+  })();
+  function lightsWire() {
+    return `<path class="ln" stroke="#3a2a22" stroke-opacity=".55" stroke-width="1" d="${WIRE.map((w) => line(Array.from({ length: w.n * 12 + 1 }, (_, i) => { const t = i / (w.n * 12); return [...w.at(t), WZ - SAG * Math.sin(Math.PI * ((t * w.n) % 1 || (i ? 1 : 0)))]; }))).join(' ')}"/>`;
+  }
+  // ===== furniture =====
+  // the bookcase (課程) against the left wall: shelves of books, a daruma, a plant; the card box (單字) on top
+  const BC = { x1: 1.3, y0: 0.35, y1: 2.85, z1: 7.3, levels: [0.34, 1.78, 3.22, 4.66, 6.1, 7.1] };
+  const BOOKS = ['#b65d50', '#d8a748', '#5e7f9c', '#86a17a', '#e7dbc6', '#8b6e94', '#40516d', '#c98f6d', '#a9b9ca', '#70594a', '#d3c1a1', '#9d4f4a'];
+  function bookcaseArt() {
+    const { x1, y0, y1, z1, levels } = BC, t = 0.12;
+    let s = shadow(-0.1, y0 - 0.15, x1 + 0.35, y1 + 0.35, 0.9);
+    // inside each opening: the back, the right-hand side, the shelf; then the books
+    for (let k = 0; k < levels.length - 1; k++) {
+      const za = levels[k] + 0.09, zb = levels[k + 1] - (k === levels.length - 2 ? 0 : 0);
+      s += qX(C.shelfIn, 0.1, y0 + t, y1 - t, za, zb, 'x');
+      s += qY(C.shelfIn, y0 + t, 0.1, x1, za, zb, 'y');
+      s += qZ(C.oakTop, za, 0.1, x1, y0 + t, y1 - t);
+      s += shelfRow(k, za, zb - za, y0 + t + 0.04, y1 - t - 0.04);
+    }
+    // the frame: the side we see, the top, the front with its openings
+    s += qY(C.oak, y1, 0, x1, 0, z1, 'y') + qZ(C.oakTop, z1, 0, x1, y0, y1);
+    let holes = '';
+    for (let k = 0; k < levels.length - 1; k++) holes += ' ' + poly([[x1, y0 + t, levels[k] + 0.09], [x1, y1 - t, levels[k] + 0.09], [x1, y1 - t, levels[k + 1]], [x1, y0 + t, levels[k + 1]]]);
+    s += `<path fill-rule="evenodd" ${F(C.oak, 'x', [x1, (y0 + y1) / 2, 3.6])} d="${poly([[x1, y0, 0], [x1, y1, 0], [x1, y1, z1], [x1, y0, z1]])}${holes}"/>`;
+    s += `<path class="hl" d="${line([[0, y1, z1], [x1, y1, z1], [x1, y0, z1]])} ${line([[x1, y1, z1], [x1, y1, 0]])}"/>`;
+    levels.slice(1, -1).forEach((z) => { s += `<path class="hl" d="${line([[x1, y0 + t, z + 0.09], [x1, y1 - t, z + 0.09]])}"/>`; });
+    s += cardBoxArt();
+    return s;
+  }
+  function shelfRow(k, z0, h, ya, yb) {
+    let s = '', y = ya, i = k * 5 + 1;
+    const deco = { 1: 'daruma', 3: 'plant' }[k];
+    const stop = yb;
+    if (deco) y = ya + 0.8;
+    if (k === 2) {   // a stack lying flat, then books
+      [[0.18, '#e7dbc6'], [0.14, '#5e7f9c'], [0.17, '#b65d50']].reduce((zz, [th, c]) => { s += box(c, 0.25, ya + 0.02, zz, 1.15, ya + 0.72, zz + th, { t: zz + th > zz + 0.16 ? '#efe6d2' : '#efe6d2' }); return zz + th; }, z0);
+      y = ya + 0.85;
+    }
+    while (y < stop) {
+      const w = [0.15, 0.2, 0.13, 0.17, 0.23, 0.16][i % 6], hh = Math.min(h - 0.1, [1.02, 1.18, 0.9, 1.1, 0.84, 1.14][(i * 5) % 6]);
+      if (y + w > stop) break;
+      const c = BOOKS[(i * 7) % BOOKS.length];
+      s += box(c, 0.22 + (i % 3) * 0.03, y, z0, 1.16, y + w, z0 + hh, { t: '#ece3d0' });
+      s += `<path class="ln" stroke="#fff" stroke-opacity=".35" stroke-width="1" d="${line([[1.161, y + 0.02, z0 + hh - 0.16], [1.161, y + w - 0.02, z0 + hh - 0.16]])} ${line([[1.161, y + 0.02, z0 + 0.14], [1.161, y + w - 0.02, z0 + 0.14]])}"/>`;
+      y += w + 0.012; i++;
+    }
+    if (deco === 'daruma') s += bb(0.66, ya + 0.38, z0, `<ellipse cy="-12" rx="11" ry="12.5" ${F(C.red, 'y', [0.7, yb - 0.4, z0 + 0.3])}/><ellipse cx="-2" cy="-14" rx="6.5" ry="5.5" ${F('#fbe9d5', 'y', [0.7, yb - 0.4, z0 + 0.3])}/><circle cx="-4.2" cy="-14.5" r="1.3" fill="#2a2030"/><circle cx="0.4" cy="-14.5" r="1.3" fill="#2a2030"/><path d="M-8 -21 Q-2 -25 5 -21" class="hl"/><path d="M-6 -4 Q0 -1 6 -4" fill="none" stroke="#f3c64f" stroke-width="1.4"/>`);
+    if (deco === 'plant') s += bb(0.66, ya + 0.38, z0, `<path ${F('#e9dccb', 'y', [0.7, yb - 0.4, z0])} d="M-8 0 L-7 -10 H7 L8 0 Z"/><g ${F(C.leaf, 'y', [0.7, yb - 0.4, z0 + 0.5])}><path d="M0 -10 C-12 -10 -18 -18 -18 -24 C-10 -22 -4 -17 0 -10 Z"/><path d="M0 -10 C10 -12 17 -20 16 -27 C8 -24 2 -18 0 -10 Z"/><path d="M0 -10 C-3 -20 -1 -30 3 -36 C6 -27 4 -18 0 -10 Z"/></g><g ${F(C.leafDk, 'y', [0.7, yb - 0.4, z0 + 0.5])}><path d="M0 -10 C-6 -14 -11 -14 -14 -12 C-9 -9 -5 -9 0 -10 Z"/></g>`);
+    return s;
+  }
+  function cardBoxArt() {
+    const z = BC.z1;
+    let s = shadow(0.12, 0.7, 1.25, 2.45, 0.6, z + 0.002);
+    s += box(C.oakDk, 0.2, 0.78, z, 1.12, 2.38, z + 0.5, { t: false });
+    s += qZ(C.shelfIn, z + 0.5, 0.2, 1.12, 0.78, 2.38);
+    for (let i = 0; i < 7; i++) {   // index cards standing in the box, two with tabs
+      const y = 0.92 + i * 0.2, top = z + 0.78 + [0, 0.06, 0.02, 0.09, 0.03, 0.07, 0][i], col = i % 2 ? '#f6f1e6' : C.paper;
+      s += box(col, 0.3, y, z + 0.1, 1.02, y + 0.04, top, { x: false, hl: false });
+      s += `<path class="ln" stroke="#8a6a4a" stroke-opacity=".35" stroke-width=".8" d="${line([[0.3, y + 0.04, top], [1.02, y + 0.04, top]])}"/>`;
+      if (i === 1 || i === 4) s += qY(i === 1 ? '#f2a65a' : '#7fb2d9', y + 0.04, i === 1 ? 0.4 : 0.7, i === 1 ? 0.62 : 0.92, top, top + 0.17, 'y');
+    }
+    s += qY(C.oak, 2.38, 0.2, 1.12, z, z + 0.42, 'y') + `<path class="hl" d="${line([[0.2, 2.38, z + 0.42], [1.12, 2.38, z + 0.42]])}"/>`;
+    s += `<g transform="${onY(2.381)}"><rect x=".5" y="${-z - 0.33}" width=".32" height=".2" rx=".02" ${F(C.paper, 'y', [0.6, 2.38, z + 0.2])}/><text x=".66" y="${-z - 0.17}" font-size=".15" font-weight="700" text-anchor="middle" fill="#6e4a31">あ</text></g>`;
+    return s;
+  }
+  // ===== furniture in the middle stop =====
+  // the desk under the window: nothing on it to tap but the notebook (今日練習) and the headphones (聽一輪); the lamp leans over
+  // the notebook, with a pencil cup, a small plant and a mug around them
+  const DESK = { x0: 1.4, x1: 5.6, y1: 2.4, z0: 2.85, z1: 3.05 };
+  const NB = { x0: 2.3, x1: 3.94, y0: 1.0, y1: 2.24 };   // the notebook, open on the desk
+  const HP = { x: 5.02, y: 0.78, top: 5.22, k: 1.3 };      // the headphone stand: where it stands, how tall, how big the headphones are
+  const MUG = [5.12, 1.98];
+  function deskArt() {
+    const { x0, x1, y1, z0, z1 } = DESK, g = 0.17;
+    let s = shadow(x0 - 0.15, -0.1, x1 + 0.3, y1 + 0.45, 0.85);
+    // legs and aprons, back to front, then the top
+    s += box(C.oakDk, x0 + 0.1, 0.06, 0, x0 + 0.1 + g, 0.06 + g, z0, { hl: false }) + box(C.oakDk, x1 - 0.1 - g, 0.06, 0, x1 - 0.1, 0.06 + g, z0, { hl: false });
+    s += box(C.oak, x0 + 0.1 + g, 0.08, z0 - 0.34, x1 - 0.1 - g, 0.15, z0, { t: false, hl: false });
+    s += box(C.oakDk, x1 - 0.12 - g, 0.06 + g, z0 - 0.34, x1 - 0.12, y1 - 0.1 - g, z0, { t: false, y: false, hl: false });
+    s += box(C.oakDk, x0 + 0.1, y1 - 0.1 - g, 0, x0 + 0.1 + g, y1 - 0.1, z0, { hlv: true }) + box(C.oakDk, x1 - 0.1 - g, y1 - 0.1 - g, 0, x1 - 0.1, y1 - 0.1, z0, { hlv: true });
+    s += box(C.oak, x0 + 0.1 + g, y1 - 0.2, z0 - 0.34, x1 - 0.1 - g, y1 - 0.12, z0, { t: false });
+    s += box(C.oakTop, x0, 0, z0, x1, y1, z1, { y: C.oak, x: C.oakDk, hlv: true });
+    // the lamp: a weighted base at the back left, an elbow arm, the shade over the notebook
+    s += bb(1.86, 0.5, z1, `<ellipse cy="1" rx="11" ry="4.8" ${F('#474d63', 't', [1.86, 0.55, 3.1])}/><ellipse cy="-1" rx="11" ry="4.8" ${F(C.steel, 't', [1.86, 0.5, 3.1])}/><path d="M-9 -2.5 Q0 -6 9 -2.5" class="hl"/>`);
+    s += `<path class="ln" stroke-width="3" ${FS(C.steel, 'y', [1.8, 0.5, 4])} d="M${pt(1.86, 0.5, z1 + 0.04)} L${pt(1.7, 0.4, 4.72)} L${pt(2.5, 0.9, 5.0)}"/>`;
+    s += bb(1.7, 0.4, 4.72, `<circle r="2.8" ${F('#6b7390', 'y', [1.7, 0.45, 4.7])}/>`);
+    s += bb(2.52, 0.92, 5.0, `<g transform="rotate(-6)"><rect x="-4.5" y="-6" width="9" height="5" rx="1.5" ${F('#4a5068', 'y', [2.5, 0.95, 5])}/><path ${F(C.mustard, 'y', [2.5, 0.95, 4.85])} d="M-5 -2 L5 -2 L14 15 L-14 15 Z"/><path d="M-5 -2 L-14 15" class="hl"/><ellipse cy="15" rx="14" ry="4.2" fill="#fff4d2"/><circle cy="14" r="4" fill="#fffbea"/></g>`);
+    // the pencil cup, a small plant at the front corner
+    s += bb(2.3, 0.45, z1, `<rect x="-6" y="-15" width="12" height="15" rx="2" ${F('#7d97b8', 'y', [2.3, 0.5, 3.3])}/><ellipse cy="-15" rx="6" ry="2.4" fill="#2b2f3f" fill-opacity=".5"/><path class="ln" stroke-width="2" stroke="#e8b04a" d="M-2 -15 L-4 -26"/><path class="ln" stroke-width="2" stroke="#d05a4b" d="M1 -15 L2 -28"/><path class="ln" stroke-width="2" stroke="#5a68d8" d="M3 -15 L6 -24"/><path d="M-6 -12 V-2" class="hl"/>`);
+    s += bb(1.8, 1.95, z1, `<ellipse rx="9" ry="3.6" fill="#2b1c12" fill-opacity=".14"/><path ${F(C.pot, 'y', [1.8, 2, 3.2])} d="M-7.5 -1 L-6 -12 H6 L7.5 -1 Z"/><path d="M-6.5 -12 H6.5" class="hl"/><g ${F(C.leaf, 'y', [1.8, 2, 3.6])}><path d="M0 -12 C-9 -15 -13 -24 -10 -30 C-4 -25 -1 -18 0 -12 Z"/><path d="M0 -12 C7 -18 13 -21 17 -19 C13 -13 7 -12 0 -12 Z"/><path d="M0 -12 C0 -22 3 -30 7 -34 C9 -25 5 -17 0 -12 Z"/></g><g ${F(C.leafDk, 'y', [1.8, 2, 3.6])}><path d="M0 -12 C-5 -14 -9 -13 -12 -10 C-7 -9 -4 -10 0 -12 Z"/></g>`);
+    // the notebook, open, a pencil and a ribbon
+    const { x0: nx0, x1: nx1, y0: ny0, y1: ny1 } = NB, nm = (nx0 + nx1) / 2, zb = z1;
+    s += shadow(nx0 - 0.06, ny0 - 0.02, nx1 + 0.14, ny1 + 0.16, 0.55, zb + 0.002);
+    s += box(C.accent, nx0, ny0, zb, nx1, ny1, zb + 0.05, { t: C.accent, y: C.accentDk, x: C.accentDk });
+    s += `<g transform="${onZ(zb + 0.051)}">
+      <path ${F(C.paper, 't', [nm - 0.35, 1.6, zb])} d="M${nx0 + 0.07} ${ny0 + 0.06} Q${nm - 0.35} ${ny0 + 0.02} ${nm - 0.02} ${ny0 + 0.1} V${ny1 - 0.06} Q${nm - 0.35} ${ny1 - 0.1} ${nx0 + 0.07} ${ny1 - 0.06} Z"/>
+      <path ${F(C.paper, 't', [nm + 0.35, 1.6, zb])} d="M${nx1 - 0.07} ${ny0 + 0.06} Q${nm + 0.35} ${ny0 + 0.02} ${nm + 0.02} ${ny0 + 0.1} V${ny1 - 0.06} Q${nm + 0.35} ${ny1 - 0.1} ${nx1 - 0.07} ${ny1 - 0.06} Z"/>
+      <path d="M${nm} ${ny0 + 0.1} V${ny1 - 0.06}" stroke="#2b1c12" stroke-opacity=".18" stroke-width=".04"/>
+      <path d="${[0.3, 0.46, 0.62, 0.78, 0.94, 1.1].map((v) => `M${(nx0 + 0.18).toFixed(2)} ${(ny0 + v).toFixed(2)} H${(nm - 0.12).toFixed(2)} M${(nm + 0.12).toFixed(2)} ${(ny0 + v).toFixed(2)} H${(nx1 - 0.18).toFixed(2)}`).join(' ')}" stroke="${C.line}" stroke-width=".022"/>
+      <path d="M${nx0 + 0.2} ${ny0 + 0.26} h.32 M${nx0 + 0.2} ${ny0 + 0.42} h.52 M${nm + 0.14} ${ny0 + 0.26} h.4" stroke="#3b3653" stroke-opacity=".55" stroke-width=".035" stroke-linecap="round"/>
+      <path d="M${nm + 0.25} ${ny1 - 0.06} v.34 l.06 -.07 l.06 .07 v-.34" fill="#e2574c"/>
+    </g>`;
+    s += `<path class="ln" stroke-width="3.2" stroke="#f2c14e" d="M${pt(nm + 0.2, ny1 - 0.28, zb + 0.08)} L${pt(nx1 - 0.15, ny0 + 0.32, zb + 0.08)}"/><path class="ln" stroke-width="3.2" stroke="#f6d9b0" d="M${pt(nm + 0.12, ny1 - 0.22, zb + 0.08)} L${pt(nm + 0.2, ny1 - 0.28, zb + 0.08)}"/><path class="ln" stroke-width="3.2" stroke="#e98a8a" d="M${pt(nx1 - 0.15, ny0 + 0.32, zb + 0.08)} L${pt(nx1 - 0.08, ny0 + 0.27, zb + 0.08)}"/>`;
+    // the mug
+    s += bb(MUG[0], MUG[1], zb, `<ellipse cy="0" rx="9" ry="3.6" fill="#2b1c12" fill-opacity=".14"/><path ${F('#f3efe6', 'y', [MUG[0], MUG[1] + 0.1, 3.3])} d="M-7.5 -16 V-2 Q-7.5 1 0 1 Q7.5 1 7.5 -2 V-16 Z"/><path d="M7.5 -12 q6 0 6 4.5 q0 4.5 -6 4.5" fill="none" stroke-width="2.2" ${FS('#e5dfd3', 'x', [MUG[0], MUG[1], 3.3])}/><ellipse cy="-16" rx="7.5" ry="2.8" fill="#9a6a3a"/><ellipse cy="-16" rx="7.5" ry="2.8" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width=".8"/><path d="M-7.5 -12 V-3" class="hl"/><path d="M-3 -8 h6" stroke="#5a68d8" stroke-width="1.6" stroke-linecap="round" stroke-opacity=".7"/>`);
+    // the headphones, hanging on their stand, a soft light behind them
+    const { x: hx, y: hy, top, k } = HP;
+    s += bb(hx, hy, top, `<ellipse cy="40" rx="66" ry="58" fill="url(#halo)"/>`);
+    s += shadow(hx - 0.42, hy - 0.42, hx + 0.5, hy + 0.5, 0.6, zb + 0.002);
+    s += box('#3a3f55', hx - 0.28, hy - 0.28, zb, hx + 0.28, hy + 0.28, zb + 0.08, { t: '#4a5068' });
+    s += `<path class="ln" stroke-width="3.2" ${FS('#3a3f55', 'y', [hx, hy, 4])} d="M${pt(hx, hy, zb + 0.08)} L${pt(hx, hy, top - 0.22)}"/>`;
+    s += bb(hx, hy, top, `<g transform="scale(${k})">
+      <path d="M-10 9 Q0 4 10 9" fill="none" stroke-width="3.4" stroke-linecap="round" ${FS('#3a3f55', 'y', [hx, hy, top])}/>
+      <path d="M-25 40 C-25 -2 25 -2 25 40" fill="none" stroke-width="7" stroke-linecap="round" ${FS(C.accent, 'y', [hx, hy + 0.2, 4.6])}/>
+      <path d="M-18 24 C-13 9 13 9 18 24" fill="none" stroke-width="4.5" stroke-linecap="round" ${FS('#ece5d8', 'y', [hx, hy + 0.2, 4.6])}/>
+      <path d="M-23 27 C-20 13 -10 7.5 0 7.5" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1.4" stroke-linecap="round"/>
+      <rect x="-27.5" y="33" width="5" height="9" rx="1.5" ${F('#8d96b8', 'y', [hx, hy, 4.2])}/><rect x="22.5" y="33" width="5" height="9" rx="1.5" ${F('#8d96b8', 'x', [hx, hy, 4.2])}/>
+      <rect x="-33" y="40" width="15" height="22" rx="7" ${F(C.accent, 'y', [hx - 0.3, hy + 0.3, 3.8])}/><rect x="-20" y="42.5" width="6" height="17" rx="3" ${F('#2f3552', 'x', [hx, hy, 3.8])}/>
+      <rect x="18" y="40" width="15" height="22" rx="7" ${F(C.accentDk, 'x', [hx + 0.3, hy, 3.8])}/><rect x="14" y="42.5" width="6" height="17" rx="3" ${F('#2f3552', 'y', [hx, hy, 3.8])}/>
+      <path d="M-29.5 45 V56" class="hl"/><circle cx="-25.5" cy="51" r="2.4" fill="#fff" fill-opacity=".35"/></g>`);
+    return s;
+  }
+  // a round rug on the floor
+  function rugArt(cx, cy, r, body, ring) {
+    return `<g transform="${onZ(0.015)}"><circle cx="${cx}" cy="${cy}" r="${r + 0.08}" fill="#2b1c12" fill-opacity=".1"/><circle cx="${cx}" cy="${cy}" r="${r}" ${F(body, 't', [cx, cy, 0])}/>
+      <circle cx="${cx}" cy="${cy}" r="${r - 0.22}" fill="none" stroke-width=".14" ${FS(ring, 't', [cx, cy, 0])}/><circle cx="${cx}" cy="${cy}" r="${r - 0.48}" fill="none" stroke-width=".04" ${FS(ring, 't', [cx, cy, 0])}/>
+      <circle cx="${cx}" cy="${cy}" r="${(r * 0.38).toFixed(2)}" fill="none" stroke-width=".07" stroke-dasharray=".14 .1" ${FS(ring, 't', [cx, cy, 0])}/></g>`;
+  }
+
+  // ===== the right-hand stop: the chest of drawers (錯題本 in its open top drawer), the cork board (學習分析), the calendar =====
+  const DR = { x0: 7.25, x1: 9.65, y1: 1.7, h: 3.3 };
+  function chestArt() {
+    const { x0, x1, y1, h } = DR, xm = (x0 + x1) / 2;
+    let s = shadow(x0 - 0.12, -0.1, x1 + 0.3, y1 + 0.85, 0.85);
+    s += box(C.oakDk, x0 + 0.1, 0.06, 0, x1 - 0.1, y1 - 0.06, 0.22, { hl: false });
+    s += box(C.oak, x0, 0, 0.22, x1, y1, h, { t: C.oakTop, x: C.oakDk, hlv: true });
+    const knob = (x, z, y = y1) => bb(x, y + 0.02, z, `<circle r="3.2" ${F('#e6c36a', 'y', [x, y, z])}/><circle cx="-1" cy="-1" r="1.1" fill="#fff8d8" fill-opacity=".8"/>`);
+    [[0.36, 1.34], [1.44, 2.42]].forEach(([a, b]) => {
+      s += qY(C.oakTop, y1 + 0.004, x0 + 0.12, x1 - 0.12, a, b, 'y') + `<path class="hl" d="${line([[x0 + 0.12, y1 + 0.005, b], [x1 - 0.12, y1 + 0.005, b]])}"/>`;
+      s += knob(xm - 0.55, (a + b) / 2) + knob(xm + 0.55, (a + b) / 2);
+    });
+    // the top drawer, pulled out: the dark slot behind it, its inside, the two red notebooks, its side and front
+    const dy1 = y1 + 0.62, dz0 = 2.52, dz1 = 3.14, dx0 = x0 + 0.12, dx1 = x1 - 0.12;
+    s += qY(C.shelfIn, y1 + 0.004, dx0, dx1, dz0, dz1, 'y');
+    s += qZ(C.shelfIn, dz0 + 0.05, dx0 + 0.06, dx1 - 0.06, y1 - 0.5, dy1 - 0.07);
+    s += qX(C.oakDk, dx0 + 0.06, y1 - 0.5, dy1 - 0.07, dz0 + 0.05, dz1, 'x');
+    s += box(C.red, dx0 + 0.25, y1 - 0.42, dz0 + 0.05, dx0 + 1.05, dy1 - 0.12, dz0 + 0.18, { t: '#d86a5a', y: '#b84a3e', x: '#a8443a' });
+    s += box('#c94c40', dx0 + 1.15, y1 - 0.3, dz0 + 0.05, dx0 + 1.95, dy1 - 0.12, dz0 + 0.14, { t: '#d65f52', y: '#b0443a', x: '#9e3e35' });
+    s += `<g transform="${onZ(dz0 + 0.181)}"><rect x="${dx0 + 0.42}" y="${y1 - 0.1}" width=".46" height=".18" rx=".02" fill="#fff" fill-opacity=".88"/><path d="M${dx0 + 0.5} ${y1 + 0.18} h.3" stroke="#fff" stroke-opacity=".5" stroke-width=".03"/></g>`;
+    s += `<g transform="${onZ(dz0 + 0.141)}"><rect x="${dx0 + 1.32}" y="${y1 + 0.02}" width=".46" height=".18" rx=".02" fill="#fff" fill-opacity=".8"/></g>`;
+    s += box(C.oak, dx1 - 0.06, y1 - 0.5, dz0, dx1, dy1, dz1, { y: false });
+    s += box(C.oakTop, dx0, dy1 - 0.07, dz0, dx1, dy1, dz1, { hlv: true });
+    s += knob(xm - 0.55, (dz0 + dz1) / 2, dy1) + knob(xm + 0.55, (dz0 + dz1) / 2, dy1);
+    // on top: a photo, a little mushroom lamp, a small plant
+    s += bb(7.85, 0.45, h, `<path ${F(C.walnut, 'y', [7.85, 0.5, 3.7])} d="M-11 0 L-9 -22 H9 L11 0 Z"/><path ${F('#cfe0e8', 'y', [7.85, 0.5, 3.7])} d="M-7.5 -3 L-6.3 -19 H6.3 L7.5 -3 Z"/><path d="M-7.2 -7 Q-2 -14 2 -9 Q5 -6 7.3 -9 L7.5 -3 H-7.5 Z" fill="#8fbf86"/><circle cx="3" cy="-14.5" r="2.2" fill="#fff6c8"/>`);
+    s += bb(9.1, 0.45, h, `<ellipse rx="8" ry="3.2" fill="#2b1c12" fill-opacity=".14"/><rect x="-2" y="-14" width="4" height="14" ${F('#efe6d6', 'y', [9.1, 0.5, 3.6])}/><path ${F('#f2d9b8', 'y', [9.1, 0.5, 4.1])} d="M-13 -13 C-13 -28 13 -28 13 -13 Q0 -10 -13 -13 Z"/><path d="M-11 -17 C-9 -24 -3 -26 2 -26" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.2"/><ellipse cy="-13" rx="12" ry="2.6" fill="#fff6dc" fill-opacity=".9"/>`);
+    s += bb(8.55, 1.05, h, `<ellipse rx="8" ry="3.2" fill="#2b1c12" fill-opacity=".14"/><path ${F('#e9dccb', 'y', [8.55, 1.1, 3.5])} d="M-6.5 -1 L-5.5 -10 H5.5 L6.5 -1 Z"/><g ${F(C.leaf, 'y', [8.55, 1.05, 3.9])}><circle cx="-4" cy="-14" r="4.5"/><circle cx="3" cy="-16" r="5"/><circle cx="0" cy="-21" r="4.2"/><circle cx="5.5" cy="-11.5" r="3.4"/></g>`);
+    return s;
+  }
+  // the cork board above it: a pinned chart and two notes
+  const BD = { x0: 7.35, x1: 9.55, z0: 4.45, z1: 6.55 };
+  function boardArt() {
+    const { x0, x1, z0, z1 } = BD, xm = (x0 + x1) / 2, zm = (z0 + z1) / 2;
+    const pin = (x, z, c) => `<circle cx="${x}" cy="${-z}" r=".06" fill="${c}"/><circle cx="${x - 0.02}" cy="${-z - 0.02}" r=".02" fill="#fff" fill-opacity=".8"/>`;
+    return `<g transform="${onY(0.03)}"><rect x="${x0 + 0.06}" y="${-z1 + 0.08}" width="${x1 - x0}" height="${z1 - z0}" fill="#2b1c12" fill-opacity=".13"/></g>
+      ${box(C.walnut, x0, 0, z0, x1, 0.07, z1, { t: false })}
+      <g transform="${onY(0.071)}">
+        <rect x="${x0 + 0.1}" y="${-z1 + 0.1}" width="${x1 - x0 - 0.2}" height="${z1 - z0 - 0.2}" ${F('#cfa679', 'y', [xm, 0.07, zm])}/>
+        <rect x="${x0 + 0.1}" y="${-z1 + 0.1}" width="${x1 - x0 - 0.2}" height="${z1 - z0 - 0.2}" fill="url(#cork)"/>
+        <g transform="rotate(-3 ${x0 + 0.62} ${-zm})">
+          <rect x="${x0 + 0.22}" y="${-z1 + 0.3}" width="1.0" height="1.45" ${F(C.paper, 'y', [xm, 0.07, zm])}/>
+          <path d="M${x0 + 0.34} ${-z1 + 0.48} h.5" stroke="#3b3653" stroke-opacity=".5" stroke-width=".05" stroke-linecap="round"/>
+          ${[[0.36, 0.34], [0.54, 0.52], [0.72, 0.46], [0.9, 0.72]].map(([dx, hh]) => `<rect x="${(x0 + dx).toFixed(2)}" y="${(-z0 - 0.42 - hh).toFixed(2)}" width=".12" height="${hh}" ${F(C.accent, 'y', [xm, 0.07, zm])}/>`).join('')}
+          <path d="M${x0 + 0.3} ${-z0 - 0.4} h.82" stroke="#3b3653" stroke-opacity=".35" stroke-width=".02"/>
+          <path d="M${x0 + 0.36} ${-z0 - 1.0} L${x0 + 0.6} ${-z0 - 1.12} L${x0 + 0.78} ${-z0 - 1.06} L${x0 + 1.02} ${-z0 - 1.32}" fill="none" stroke="#e2574c" stroke-width=".035" stroke-linejoin="round"/>
+          ${pin(x0 + 0.72, z1 - 0.38, '#e2574c')}
+        </g>
+        <g transform="rotate(4 ${x1 - 0.55} ${-z1 + 0.62})"><rect x="${x1 - 0.86}" y="${-z1 + 0.28}" width=".64" height=".64" ${F('#f6dd73', 'y', [xm, 0.07, zm])}/>
+          <path d="M${x1 - 0.76} ${-z1 + 0.5} h.42 M${x1 - 0.76} ${-z1 + 0.64} h.34 M${x1 - 0.76} ${-z1 + 0.78} h.4" stroke="#6b5a2a" stroke-opacity=".5" stroke-width=".035" stroke-linecap="round"/>${pin(x1 - 0.54, z1 - 0.34, '#5a68d8')}</g>
+        <g transform="rotate(-5 ${x1 - 0.55} ${-z0 - 0.6})"><rect x="${x1 - 0.84}" y="${-z0 - 0.92}" width=".6" height=".6" ${F('#f4b8b0', 'y', [xm, 0.07, zm])}/>
+          <path d="M${x1 - 0.54} ${-z0 - 0.4} c-.13 0 -.2 -.1 -.2 -.2 c0 -.12 .1 -.16 .12 -.28 c.06 .06 .08 .1 .08 .16 c.05 -.04 .07 -.1 .07 -.16 c.08 .08 .13 .17 .13 .28 c0 .1 -.08 .2 -.2 .2 Z" fill="#e8743a"/>${pin(x1 - 0.54, z0 + 0.88, '#4f9a52')}</g>
+      </g>`;
+  }
+  // a tall plant in the corner past the calendar
+  function plantArt(x, y) {
+    let leaves = '';
+    [[-40, -62, -14], [34, -70, 12], [-14, -92, -4], [16, -96, 6], [-48, -30, -24], [46, -36, 22], [2, -66, 0]].forEach(([lx, ly, rot], i) => {
+      leaves += `<g transform="translate(${lx} ${ly}) rotate(${rot})"><path ${F(i % 2 ? C.leafDk : C.leaf, 'y', [x, y + 0.2, 2.6])} d="M0 16 C-16 12 -20 -6 -12 -16 C-6 -22 6 -22 12 -16 C20 -6 16 12 0 16 Z"/><path d="M0 14 V-16" stroke="#2f5a32" stroke-opacity=".45" stroke-width="1.2"/><path d="M-12 -4 l6 2 M12 -4 l-6 2 M-13 6 l7 1 M13 6 l-7 1" stroke="#fff" stroke-opacity=".28" stroke-width="1.6"/></g>`;
+    });
+    const stems = [[-40, -62], [34, -70], [-14, -92], [16, -96], [-48, -30], [46, -36], [2, -66]].map(([lx, ly]) => `M0 -40 Q${lx * 0.3} ${ly * 0.6} ${lx} ${ly + 14}`).join(' ');
+    return shadow(x - 0.6, y - 0.6, x + 0.75, y + 0.75, 0.7) + box('#ece4d6', x - 0.42, y - 0.42, 0, x + 0.42, y + 0.42, 1.05, { t: '#5a3d28', hlv: true })
+      + bb(x, y, 1.05, `<path d="${stems}" fill="none" stroke="#3f7a42" stroke-width="2.2" stroke-linecap="round"/>${leaves}`);
+  }
+
+  function studyArt(d, left) {
+    return `<svg class="art" viewBox="${VB.join(' ')}" aria-hidden="true">${DEFS}
+      ${shellArt()}${doorArt()}${wallShadeArt()}${windowArt()}${calendarArt(d, left)}${clockArt()}${printArt()}${boardArt()}${lightsWire()}
+      ${floorArt()}
+      ${rugArt(5.25, 3.7, 1.75, '#e9dcc6', '#c98f6d')}${rugArt(9.2, 3.55, 1.25, '#dfe6d6', '#93ad8c')}
+      ${bookcaseArt()}
+      ${deskArt()}
+      <g transform="${onZ(DESK.z1 + 0.003)}" class="night-only"><ellipse cx="3.3" cy="1.5" rx="1.7" ry="1.25" fill="url(#pool)" style="opacity:calc(.35 + .65 * var(--f))"/></g>
+      ${chestArt()}
+      ${plantArt(11.95, 1.0)}
+    </svg>`;
+  }
+
+  // ===== the things you can tap; view: the stop each belongs to, route or act: where it leads =====
+  // pts: the room points the button covers (its box is their bounding box on screen, plus pad), or one point and a box around it
+  // on screen (sb); tag: where the name tag sits
+  const THINGS = [
+    { id: 'door', view: 0, act: 'leave-house', label: '出門', minor: true, pts: [[0, DOOR.y0, 0], [0, DOOR.y1, 0], [0, DOOR.y1, DOOR.z1], [0, DOOR.y0, DOOR.z1]], tag: [0.25, DOOR.y0 + 0.45, 3.3] },
+    { id: 'shelf', view: 0, route: '#/course', label: '課程', pts: [[0, 0.35, 0], [1.3, 0.35, 0], [1.3, 2.85, 0], [1.3, 2.85, 7.3], [0, 2.85, 7.3]], tag: [1.3, 1.6, 3.95] },
+    { id: 'cards', view: 0, route: '#/vocab', label: '單字', pts: [[0.2, 0.78, 7.3], [1.12, 0.78, 7.3], [1.12, 2.38, 7.3], [0.2, 2.38, 7.3], [0.3, 0.92, 8.3], [1.02, 2.2, 8.3]], tag: [0.7, 1.6, 8.72], pad: 6 },
+    { id: 'notebook', view: 1, act: 'study-practice', label: '今日練習', icon: 'practice', primary: true, pts: [[NB.x0, NB.y0, DESK.z1], [NB.x1, NB.y0, DESK.z1], [NB.x1, NB.y1, DESK.z1], [NB.x0, NB.y1, DESK.z1]], tag: [(NB.x0 + NB.x1) / 2 + 2.4 - (NB.y0 + NB.y1) / 2, DESK.y1, 2.62], pad: 14 },
+    { id: 'phones', view: 1, route: '#/listen', label: '聽一輪', icon: 'listen', primary: true, pts: [[HP.x, HP.y, HP.top]], sb: [-48, -8, 48, 92], tag: [DESK.x1, HP.y + 0.62, 2.55] },
+    { id: 'drawer', view: 2, route: '#/mistakes', label: '錯題本', pts: [[DR.x0, DR.y1, 0.2], [DR.x1, DR.y1, 3.3], [DR.x0 + 0.12, DR.y1 + 0.62, 2.52], [DR.x1 - 0.12, DR.y1 + 0.62, 3.14], [DR.x0, 0, 3.3], [DR.x1, 0, 3.3]], tag: [8.45, DR.y1 + 0.62, 1.75], pad: 6 },
+    { id: 'board', view: 2, route: '#/stats', label: '學習分析', pts: [[BD.x0, 0, BD.z0], [BD.x1, 0, BD.z1]], tag: [(BD.x0 + BD.x1) / 2, 0, BD.z1 + 0.32], pad: 6 },
+    { id: 'calendar', view: 2, route: '#/exam', label: '模擬考', pts: [[CAL.x0, 0, CAL.z0], [CAL.x1, 0, CAL.z1]], tag: [(CAL.x0 + CAL.x1) / 2, 0, CAL.z0 - 0.32], pad: 6 }
+  ];
+
+  // the things' name tags: today's practice shows the day's progress, the drawer how many are in the notebook
+  function tagOf(id, pct, mk) {
+    if (id === 'notebook') return pct >= 100 ? '今日完成・多學' : `今日練習 ${pct}%`;
+    if (id === 'drawer') return `錯題本${mk ? ` ${mk}` : ''}`;
+    return THINGS.find((t) => t.id === id).label;
+  }
+  const chev = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
+  function html(pct) {
+    const f = pct / 100, mk = activeMistakes().length, d = parseDate(todayStr()), left = examPace().daysLeft;
+    const thing = (t) => {
+      const a = P(...t.pts[0]), sp = t.sb ? [[a[0] + t.sb[0], a[1] + t.sb[1]], [a[0] + t.sb[2], a[1] + t.sb[3]]] : t.pts.map((p) => P(...p)), pad = t.pad || 4;
+      const x0 = Math.min(...sp.map((p) => p[0])) - pad, x1 = Math.max(...sp.map((p) => p[0])) + pad, y0 = Math.min(...sp.map((p) => p[1])) - pad, y1 = Math.max(...sp.map((p) => p[1])) + pad;
+      const [tx, ty] = P(...t.tag), label = tagOf(t.id, pct, mk);
+      return `<button type="button" class="thing${t.primary ? ' primary' : t.minor ? ' minor' : ''}" data-thing="${t.id}" data-view="${t.view}" ${t.route ? `data-act="nav" data-route="${t.route}"` : `data-act="${t.act}"`} style="${vbPct(x0, y0)};${vbSize(x1 - x0, y1 - y0)};--tx:${((tx - x0) / (x1 - x0) * 100).toFixed(1)}%;--ty:${((ty - y0) / (y1 - y0) * 100).toFixed(1)}%" aria-label="${label}"><span class="tag">${t.icon ? icon(t.icon) : ''}<span>${label}</span></span></button>`;
+    };
+    const [wx, wy] = P(WIN.x0, -0.34, WIN.z1), [cx, cy] = P(0.1, CLK.y + CLK.r, CLK.z + CLK.r), [lx, ly] = P(...LIGHTS[0].p), [l2x, l2y] = P(...LIGHTS[1].p);
+    const [nx, ny] = P((NB.x0 + NB.x1) / 2, (NB.y0 + NB.y1) / 2, DESK.z1), [hx, hy] = P(HP.x, HP.y, HP.top), [mx, my] = P(MUG[0], MUG[1], DESK.z1);
+    return `<div class="study${pct >= 100 ? ' full' : ''}" data-anim data-date="${todayStr()}" style="--f:${f}">
+      <div class="room-wrap"><div class="room">
+        <div class="w-sky" aria-hidden="true" style="${vbPct(wx, wy)};${vbSize((WIN.x1 - WIN.x0) * S, (WIN.z1 - WIN.z0) * S)}">
+          <i class="wt-day"></i><i class="wt-warm"></i>
+          <div class="w-night"><i class="w-moon"></i>${[[12, 20, 2.6, 0.4], [30, 44, 3.4, 1.6], [78, 52, 2.2, 0.9], [44, 14, 3, 2.2], [88, 22, 2.8, 1.2], [20, 64, 3.6, 0.2]].map(([x, y, dd, w]) => `<i class="w-star" style="left:${x}%;top:${y}%;--d:${dd}s;--w:-${w}s"></i>`).join('')}</div>
+          <div class="w-day"><i class="w-cloud" style="top:18%;--d:40s;--w:-8s"></i><i class="w-cloud" style="top:42%;--d:56s;--w:-31s;width:34%"></i></div>
+          <i class="w-hills"></i><i class="w-hills2"></i>
+        </div>
+        ${studyArt(d, left)}
+        <i class="glow lamp-glow" aria-hidden="true" style="${vbPct(lx - 150, ly - 110)};${vbSize(300, 220)}"></i>
+        <i class="glow lamp-glow lamp2" aria-hidden="true" style="${vbPct(l2x - 110, l2y - 80)};${vbSize(220, 160)}"></i>
+        <i class="note-glow" aria-hidden="true" style="${vbPct(nx - 100, ny - 54)};${vbSize(200, 108)}"></i>
+        <div class="clock-hands" aria-hidden="true" style="${vbPct(cx, cy)};${vbSize(2 * CLK.r * S, 2 * CLK.r * S)};--ssd:-${new Date().getSeconds()}s"><i class="hh"></i><i class="mm"></i><i class="ss"></i></div>
+        ${BULBS.map((b) => { const [x, y] = P(...b.p); return `<i class="bulb${b.t <= f ? ' on' : ''}" data-t="${b.t}" aria-hidden="true" style="${vbPct(x, y)}"></i>`; }).join('')}
+        <div class="tune" aria-hidden="true" style="${vbPct(hx - 20, hy - 66)};${vbSize(40, 60)}"><i style="--w:0s;--dx:-14px">♪</i><i style="--w:-1.2s;--dx:12px">♫</i><i style="--w:-2.4s;--dx:-4px">♪</i></div>
+        <div class="steam" aria-hidden="true" style="${vbPct(mx - 8, my - 40)};${vbSize(16, 24)}"><i style="--w:0s"></i><i style="--w:-1.1s;left:50%"></i><i style="--w:-2.3s;left:20%"></i></div>
+        ${THINGS.map(thing).join('')}
+        <i class="warm-wash" aria-hidden="true"></i>
+      </div></div>
+      <button type="button" class="study-gear" data-act="settings" aria-label="設定" title="設定">${icon('settings')}</button>
+      <nav class="room-stops" aria-label="房間裡的位置">
+        <button type="button" class="arr" data-go="-1" aria-label="往左看">${chev('M15 6l-6 6 6 6')}</button>
+        ${VIEWS.map((v, i) => `<button type="button" class="dot" data-stop="${i}" aria-label="${v.label}"><i></i></button>`).join('')}
+        <button type="button" class="arr" data-go="1" aria-label="往右看">${chev('M9 6l6 6-6 6')}</button>
+      </nav>
+      <div class="room-hint">左右滑動，看看房間其他地方</div>
+    </div>`;
+  }
+  // a redraw on the same day (a sync, a setting): the tags, the bulbs and the lamps follow, the motion carries on
+  function level(st, pct) {
+    st.style.setProperty('--f', pct / 100);
+    st.classList.toggle('full', pct >= 100);
+    const mk = activeMistakes().length;
+    st.querySelectorAll('[data-thing="notebook"], [data-thing="drawer"]').forEach((b) => { const t = tagOf(b.dataset.thing, pct, mk); b.querySelector('.tag span:last-child').textContent = t; b.setAttribute('aria-label', t); });
+    st.querySelectorAll('.bulb').forEach((e) => e.classList.toggle('on', Number(e.dataset.t) <= pct / 100));
+  }
+
+  // the camera: one stop fills a phone screen and a swipe slides along the room to the next; a wide screen sees the whole room
+  const cam = { W: 0, H: 0, k: 1, wide: false };
+  let stop = 1;   // the desk when the app opens; kept while it runs, so a page opened at the bookcase comes back to the bookcase
+  function measure(st) {
+    cam.W = st.clientWidth; cam.H = st.clientHeight; cam.wide = cam.W >= 700;
+    if (!cam.W || !cam.H) return;
+    cam.k = Math.min(...(cam.wide ? [ALL] : VIEWS.map((v) => v.r)).map((q) => Math.min(cam.W / ((q[2] - q[0]) * S), cam.H / ((q[3] - q[1]) * S))));
+    const room = st.querySelector('.room');
+    room.style.width = `${(VB[2] * cam.k).toFixed(1)}px`; room.style.height = `${(VB[3] * cam.k).toFixed(1)}px`;
+    st.classList.toggle('wide', cam.wide);
+  }
+  function place(st, p) {   // stop p (fractional while a finger drags it) in the middle of the screen
+    const mid = (q) => [(q[0] + q[2]) / 2 * S, (q[1] + q[3]) / 2 * S];
+    let c;
+    if (cam.wide) c = mid(ALL);
+    else { const i = Math.max(0, Math.min(VIEWS.length - 2, Math.floor(p))), t = p - i, a = mid(VIEWS[i].r), b = mid(VIEWS[i + 1].r); c = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
+    st.querySelector('.room').style.transform = `translate3d(${(cam.W / 2 - (c[0] - VB[0]) * cam.k).toFixed(1)}px,${(cam.H / 2 - (c[1] - VB[1]) * cam.k).toFixed(1)}px,0)`;
+  }
+  function goStop(st, i, glide = true) {
+    stop = Math.max(0, Math.min(VIEWS.length - 1, i));
+    st.querySelector('.room').classList.toggle('glide', glide);
+    place(st, stop);
+    st.querySelectorAll('.room-stops .dot').forEach((d) => d.setAttribute('aria-current', String(Number(d.dataset.stop) === stop)));
+    st.querySelector('.room-stops [data-go="-1"]').disabled = stop === 0;
+    st.querySelector('.room-stops [data-go="1"]').disabled = stop === VIEWS.length - 1;
+    st.querySelectorAll('.thing').forEach((t) => t.classList.toggle('away', !cam.wide && Number(t.dataset.view) !== stop));
+  }
+  function moved(st) {   // the first move ends the hint for good
+    st.querySelector('.room-hint').classList.remove('on');
+    try { localStorage.setItem('nq_room_moved', '1'); } catch (e) { /* ignore */ }
+  }
+  // after the room is in the page: the camera at the last stop, swipes, taps on a thing at another stop (they go there first)
+  function mount(st) {
+    measure(st); goStop(st, stop, false);
+    const ro = new ResizeObserver(() => { if (!st.isConnected) { ro.disconnect(); return; } measure(st); goStop(st, stop, false); });
+    ro.observe(st);
+    let drag = null, swallow = false, at = stop;
+    st.addEventListener('pointerdown', (e) => {
+      swallow = false;
+      if (cam.wide || (e.pointerType === 'mouse' && e.button !== 0) || e.target.closest('.room-stops, .study-gear')) return;
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, p0: stop, on: false, hist: [[performance.now(), e.clientX]] };
+    });
+    st.addEventListener('pointermove', (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+      if (!drag.on) {
+        if (Math.abs(dx) < 10 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+        drag.on = true; st.setPointerCapture(e.pointerId); st.querySelector('.room').classList.remove('glide'); moved(st);
+      }
+      const n = VIEWS.length - 1;
+      let p = drag.p0 - dx / cam.W;
+      if (p < 0) p *= 0.3; else if (p > n) p = n + (p - n) * 0.3;   // a little give past either end
+      at = p; place(st, p);
+      drag.hist.push([performance.now(), e.clientX]); if (drag.hist.length > 6) drag.hist.shift();
+    });
+    const end = (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      const d = drag; drag = null;
+      if (!d.on) return;
+      swallow = true;   // the click that follows a drag is not a tap
+      const [t0, x0] = d.hist[0], [t1, x1] = d.hist[d.hist.length - 1], v = (x1 - x0) / Math.max(1, t1 - t0);   // px per ms
+      goStop(st, Math.abs(v) > 0.3 ? d.p0 + (v < 0 ? 1 : -1) : Math.round(at));
+    };
+    st.addEventListener('pointerup', end); st.addEventListener('pointercancel', end);
+    st.addEventListener('click', (e) => {   // capture: before the app's own click handling
+      if (swallow) { swallow = false; e.stopPropagation(); e.preventDefault(); return; }
+      const b = e.target.closest('.room-stops [data-go], .room-stops [data-stop]');
+      if (b) { goStop(st, b.dataset.stop !== undefined ? Number(b.dataset.stop) : stop + Number(b.dataset.go)); moved(st); return; }
+      const t = e.target.closest('.thing');
+      if (t && !cam.wide && Number(t.dataset.view) !== stop) { e.stopPropagation(); e.preventDefault(); goStop(st, Number(t.dataset.view)); moved(st); }
+    }, true);
+    let seen = false; try { seen = Boolean(localStorage.getItem('nq_room_moved')); } catch (e) { /* no storage: show it */ }
+    if (!cam.wide && !seen) { const h = st.querySelector('.room-hint'); setTimeout(() => { if (st.isConnected) h.classList.add('on'); }, 600); setTimeout(() => h.classList.remove('on'), 5200); }
+  }
+  // ← → move between the stops on 書房 (not while typing or with a dialog open)
+  document.addEventListener('keydown', (e) => {
+    const st = document.querySelector('#view .study');
+    if (!st || cam.wide || modalOpen() || (e.target && e.target.closest && e.target.closest('input, textarea, select'))) return;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { goStop(st, stop + (e.key === 'ArrowLeft' ? -1 : 1)); moved(st); }
+  });
+  return { html, level, mount };
+})();
 // walking in or out of the house: a short zoom, then the other scene (straight there with motion reduced)
 function sceneGo(hash, cls) {
   const box = document.querySelector('#view .yard, #view .study');
