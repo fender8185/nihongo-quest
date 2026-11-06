@@ -142,3 +142,24 @@ test('mergeStates keeps the older copy\'s answered list items on the merged list
   const solo = { updatedAt: '2026-10-30T03:00:00.000Z', srs: {}, today: { date: '2026-10-30', ans: ['v:5'] } };
   assert.deepEqual(C.mergeStates(older, solo).today.plan.lists, older.today.plan.lists);   // only one copy has a list: kept as it is
 });
+
+test('mergeStates adds up 言靈 per device, gives a day bonus once and charges a purchase once', () => {
+  const a = { updatedAt: '2026-11-07T01:00:00.000Z', srs: {}, koto: { sets: { phone: 3, pc: 1 }, days: ['2026-11-06'], gift: 0 }, owned: { clock: { paid: 1, on: '2026-11-06' } } };
+  const b = { updatedAt: '2026-11-07T02:00:00.000Z', srs: {}, koto: { sets: { phone: 2, pc: 4 }, days: ['2026-11-06', '2026-11-07'], gift: 100 }, owned: { clock: { paid: 1, on: '2026-11-07' }, cactus: { paid: 6, on: '2026-11-07' } } };
+  const m = C.mergeStates(a, b);
+  assert.deepEqual(m.koto.sets, { phone: 3, pc: 4 });   // each device only ever adds to its own count
+  assert.deepEqual(m.koto.days.slice().sort(), ['2026-11-06', '2026-11-07']);
+  assert.equal(m.koto.gift, 100);
+  assert.deepEqual(Object.keys(m.owned).sort(), ['cactus', 'clock']);
+  assert.equal(m.owned.clock.paid, 1);
+  assert.deepEqual(a.koto.sets, { phone: 3, pc: 1 }, 'inputs untouched');
+});
+test('mergeStates keeps 言靈 and purchases that only one copy has', () => {
+  const a = { updatedAt: '2026-11-07T01:00:00.000Z', srs: {}, koto: { sets: { phone: 2 }, days: [] }, owned: { fan: { paid: 8, on: '2026-11-07' } } };
+  const b = { updatedAt: '2026-11-07T02:00:00.000Z', srs: {} };
+  const m = C.mergeStates(a, b);
+  assert.deepEqual(m.koto.sets, { phone: 2 });
+  assert.deepEqual(m.owned, { fan: { paid: 8, on: '2026-11-07' } });
+  const n = C.mergeStates({ updatedAt: '2026-11-07T01:00:00.000Z', srs: {} }, { updatedAt: '2026-11-07T02:00:00.000Z', srs: {} });
+  assert.equal(n.koto, undefined); assert.equal(n.owned, undefined);   // neither copy had any: nothing invented
+});

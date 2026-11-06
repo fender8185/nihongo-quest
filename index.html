@@ -1032,6 +1032,16 @@ details.disclose > summary { cursor: pointer; list-style: none; color: var(--fg-
 details.disclose > summary::-webkit-details-marker { display: none; }
 details.disclose > summary::before { content: "▸"; display: inline-block; width: 1em; color: var(--fg-3); transition: transform .15s; }
 details.disclose[open] > summary::before { transform: rotate(90deg); }
+/* 言靈 (test build): the glowing あ, the line on the summary */
+.koto-i { width: 1.3em; height: 1.3em; flex: none; vertical-align: -.28em; }
+.koto-gain { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 9px; margin-top: 14px; padding: 9px 14px; border-radius: 12px; font-size: 14px; background: color-mix(in srgb, var(--gold) 16%, transparent); border: 1px solid color-mix(in srgb, var(--gold) 42%, transparent); }
+.koto-gain .koto-i { width: 24px; height: 24px; }
+.koto-gain b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.koto-gain .sep { width: 1px; height: 18px; background: color-mix(in srgb, var(--gold) 50%, transparent); }
+.koto-gain .tot { margin-left: auto; font-size: 13px; opacity: .75; font-variant-numeric: tabular-nums; }
+.koto-gain.pop { animation: kotoIn .5s cubic-bezier(.3, 1.4, .5, 1) .35s backwards; } .koto-gain.pop .koto-i { animation: kotoSpin .7s ease-out .45s backwards; }
+@keyframes kotoIn { from { opacity: 0; transform: translateY(6px) scale(.96); } }
+@keyframes kotoSpin { from { transform: scale(.4) rotate(-40deg); opacity: 0; } 60% { transform: scale(1.18) rotate(6deg); opacity: 1; } }
 </style>
 </head>
 <body>
@@ -1772,7 +1782,11 @@ function defaultState() {
     statsFmt: {},
     recent: [],
     legacy: null,
-    notices: []
+    notices: [],
+    koto: { sets: {}, days: [], gift: 0 },   // 言靈 (test build): sets finished per device, days that gave the day's bonus, the test site's gift
+    owned: {},              // things bought at 古道具屋: { id: { paid, on } }
+    placed: {},             // where owned things stand in 書房: { id: { w: 'F', x, y, r } | { w: 'L'|'R', u, v } }; not here = in the storage box
+    wear: {}                // what the hero wears, by part: { head, face, neck, back, body }
   };
 }
 
@@ -1829,6 +1843,10 @@ function normalizeState(s) {
   delete out.lastSnapshot;   // 1.0.47: the daily snapshots are gone
   ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt', 'stageTests'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   ['customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
+  // test build: 言靈 and the things from 古道具屋 (ids this build does not know are kept: a later one may sell them)
+  const kt = out.koto && typeof out.koto === 'object' && !Array.isArray(out.koto) ? out.koto : {};
+  out.koto = { sets: kt.sets && typeof kt.sets === 'object' && !Array.isArray(kt.sets) ? kt.sets : {}, days: Array.isArray(kt.days) ? kt.days : [], gift: Number(kt.gift) || 0 };
+  ['owned', 'placed', 'wear'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
   if (out.stage !== 'pre' && out.stage !== 'main') out.stage = 'main';   // 入門階段 (1.0.6); accounts from before it are in the main course
   if (typeof out.kanaKnown !== 'boolean') out.kanaKnown = false;
@@ -2422,6 +2440,32 @@ function streakStats() {
   let total = 0;
   sorted.forEach(d => { total += dayTotal(state.dailyLogs[d]); });
   return { current: cur, best, days: active.size, total, doneToday: active.has(todayStr()) };
+}
+
+// ---------- 言靈 (test build): what studying earns, spent at 古道具屋 up the hill ----------
+// A set of 今日練習 played to its end (多學 sets too) gives 1; the day's list done gives 10, once a day. Each device counts its
+// own sets (sync keeps the larger count per device), the bonus days are a list (once however many devices finish the day), and
+// a purchase keeps what was paid (sync-core mergeKoto), so nothing is counted twice or lost when two devices meet.
+const KOTO_DAY = 10;
+function kotoDevice() { return (typeof Sync !== 'undefined' && Sync.meta && Sync.meta.deviceId) || 'local'; }
+function kotoBalance() {
+  const k = state.koto, got = Object.values(k.sets).reduce((a, n) => a + (Number(n) || 0), 0) + KOTO_DAY * k.days.length + (Number(k.gift) || 0);
+  return got - Object.values(state.owned).reduce((a, o) => a + ((o && Number(o.paid)) || 0), 0);
+}
+// the set that just ended, once (renderSummary keeps it on the session): +1 for a 今日練習 set played to its end, +10 when the
+// day's list is done for the first time today (whatever practice finished it, as the notebook's percentage counts)
+function earnKoto(s) {
+  const t = todayStr(), prog = dayProgress();
+  const set = s.mode === 'daily' && !s.quit && s.results.length > 0 ? 1 : 0;
+  const day = prog.total > 0 && prog.left === 0 && itemsDoneToday() > 0 && !state.koto.days.includes(t) ? KOTO_DAY : 0;
+  if (set) { const d = kotoDevice(); state.koto.sets[d] = (Number(state.koto.sets[d]) || 0) + 1; }
+  if (day) state.koto.days.push(t);
+  if (set || day) saveState();
+  return { set, day };
+}
+// a glowing あ: the mark of 言靈 (circles, no gradient, so a copy in a hidden place never breaks the others)
+function kotoIcon(cls = '') {
+  return `<svg class="koto-i${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11.6" fill="#f6c45a" fill-opacity=".3"/><circle cx="12" cy="12" r="9.5" fill="#ffd978"/><circle cx="12" cy="12" r="7.7" fill="#fff6d8"/><circle cx="12" cy="12" r="8.6" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width=".7"/><text x="12" y="16.1" text-anchor="middle" font-size="11.5" font-weight="700" fill="#4b3f8f" font-family="'Hiragino Maru Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', sans-serif">あ</text></svg>`;
 }
 
 // ---------- mistakes ----------
@@ -5175,7 +5219,7 @@ function nextQuestion() {
 function exitPractice() {
   stopSpeaking();
   const answered = SESSION ? SESSION.results.length : 0;
-  if (SESSION && answered > 0 && SESSION.idx < SESSION.entries.length) { SESSION.idx = SESSION.entries.length; renderPractice(); return; }
+  if (SESSION && answered > 0 && SESSION.idx < SESSION.entries.length) { SESSION.quit = true; SESSION.idx = SESSION.entries.length; renderPractice(); return; }   // 結束 early: no 言靈 for the set
   SESSION = null;
   document.body.classList.remove('practicing');
   go(lastMainRoute || '#/today');
@@ -5194,6 +5238,7 @@ function renderSummary(view) {
   const prog = dayProgress();   // same ring as 今日: items answered today / today's items
   const dayDone = prog.left === 0;
   const first = !s.summaryShown; s.summaryShown = true;   // 1.0.41: the ring and the numbers play once, not when a sync draws it again
+  const gain = s.koto || (s.koto = earnKoto(s));   // test build: 言靈 for this set, worked out once
   const wrongList = [...wrongKeys.values()].map(r => `<div class="list-item"><div class="grow"><div class="jp">${furi(tidyPrompt(r.q.mistakePrompt || ''))}</div><div class="small muted">正確：<span class="jp">${esc(jaPlain(r.q.options[r.q.answer].text))}</span>・你選：<span class="jp">${esc(jaPlain(r.q.options[r.chosen].text))}</span></div></div></div>`).join('');
   view.innerHTML = `
     <div class="pr-top"><button type="button" class="btn btn-ghost btn-icon" data-act="close-summary" aria-label="關閉">${icon('close')}</button><div class="grow"></div></div>
@@ -5211,6 +5256,7 @@ function renderSummary(view) {
         <div class="stat"><span class="stat-v">${s.stats.newCount}</span><span class="stat-l">新學</span></div>
         <div class="stat"><span class="stat-v">${Math.max(1, Math.round((Date.now() - s.startedAt) / 60000))}</span><span class="stat-l">分鐘</span></div>
       </div>
+      ${gain.set || gain.day ? `<div class="koto-gain${first ? ' pop' : ''}">${kotoIcon()}<span>言靈</span>${gain.set ? '<b>+1</b><span>做完一組</span>' : ''}${gain.set && gain.day ? '<i class="sep"></i>' : ''}${gain.day ? `<b>+${gain.day}</b><span>今日完成</span>` : ''}<span class="tot">共 ${kotoBalance()}</span></div>` : ''}
       ${dayDone ? '<div class="banner mt-4">今天的進度完成了。答對的題目會在幾天後再出現，答錯的明天再複習。</div>' : `<div class="hint mt-4">今天還有 ${prog.left} 題。</div>`}
       <div class="row-wrap mt-4">
         <button type="button" class="btn btn-primary" data-act="again">再練一組</button>
@@ -11069,6 +11115,12 @@ function letters() {
   const info = installInfo();
   if (!info.standalone && info.touch && !storedFlag('nq_install_hint')) out.push({ id: 'install', title: '加到主畫面', body: '加到主畫面會更好用：全螢幕、打開就是書房、離線也能練。',
     acts: info.canPrompt ? '<button type="button" class="btn btn-sm btn-primary" data-act="install-prompt">安裝</button>' : '<button type="button" class="btn btn-sm btn-primary" data-act="install-how">怎麼做</button>' });
+  if (!storedFlag('nq_letter_shop')) out.push({ id: 'shop', title: '山上的古道具屋開張了', body: `門外左邊那座山上開了一間古道具屋，老闆福爺不收錢，只收「言靈」。<ul>
+      <li>言靈是日本人說的「話語裡住著的力量」，你學的每個字都在累積它</li>
+      <li>今日練習每做完一組 +1，當天的清單全部做完再 +10</li>
+      <li>書房的掛鐘先被福爺收走了，1 言靈就能買回來</li>
+      <li>買來的東西可以在書房按右上角的「擺設」自己擺；衣服帽子點主角就能換</li></ul>`,
+    acts: '<button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/shop">去古道具屋</button>' });
   (state.notices || []).forEach(x => out.push({ id: 'notice:' + x.id, title: '通知', body: x.lines.map(esc).join('<br>') }));
   return out;
 }
@@ -11106,7 +11158,7 @@ Object.assign(ACTIONS, {
   },
   'letter-done': (el) => {
     const id = el.dataset.id;
-    if (id === 'room' || id === 'install') { try { localStorage.setItem(id === 'room' ? 'nq_letter_room' : 'nq_install_hint', todayStr()); } catch (e) { /* ignore */ } }
+    if (id === 'room' || id === 'install' || id === 'shop') { try { localStorage.setItem({ room: 'nq_letter_room', install: 'nq_install_hint', shop: 'nq_letter_shop' }[id], todayStr()); } catch (e) { /* ignore */ } }
     else if (id === 'intro') { state.introSeen = true; saveState(); }
     else if (id.startsWith('notice:')) { state.notices = (state.notices || []).filter(x => x.id !== id.slice(7)); saveState(); }
     if (mailCount()) document.getElementById('modalBody').innerHTML = lettersHtml(); else closeModal();

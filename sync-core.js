@@ -50,7 +50,8 @@
   //   statsFmt      per format: the larger ok / ng
   //   lists by id   (mistakes, custom cards, custom grammar/exam, exam history): union, the later copy's version
   //   id sets       (completedUnits, hidden, lessonSeen): union
-  //   everything else (settings, currentUnit, today, …): from the copy saved later
+  //   言靈          (koto): sets per device the larger, bonus days a union; owned (things bought): a union by id
+  //   everything else (settings, currentUnit, today, placed, wear, …): from the copy saved later
   function stampOf(s) { return (s && typeof s.updatedAt === 'string') ? s.updatedAt : ''; }
   function pickRec(x, y) {
     const lx = x.last || '', ly = y.last || '';
@@ -128,6 +129,13 @@
     }
     return out;
   }
+  // 言靈 (1.2): sets finished per device (only that device ever adds to its count, so the larger is right), the days that gave
+  // the day's bonus (a union: once a day however many devices finished it), the test site's gift (the larger)
+  function mergeKoto(olderK, newerK) {
+    const o = olderK || {}, n = newerK || {}, sets = {};
+    new Set([...Object.keys(o.sets || {}), ...Object.keys(n.sets || {})]).forEach(d => { sets[d] = Math.max((o.sets || {})[d] || 0, (n.sets || {})[d] || 0); });
+    return { sets, days: [...new Set([...(o.days || []), ...(n.days || [])])], gift: Math.max(o.gift || 0, n.gift || 0) };
+  }
   function mergeStates(a, b) {
     const [newer, older] = (stampOf(a) >= stampOf(b) ? [a, b] : [b, a]).map(clone);
     const out = Object.assign({}, older, newer);
@@ -158,6 +166,8 @@
     if (older.stageTests || newer.stageTests) out.stageTests = mergeStageTests(older.stageTests, newer.stageTests);
     if (older.unitAiNotes || newer.unitAiNotes) out.unitAiNotes = Object.assign({}, older.unitAiNotes, newer.unitAiNotes);
     if (older.today || newer.today) out.today = mergeToday(older.today, newer.today);
+    if (older.koto || newer.koto) out.koto = mergeKoto(older.koto, newer.koto);
+    if (older.owned || newer.owned) out.owned = Object.assign({}, older.owned, newer.owned);   // each thing bought once, paid once
     out.updatedAt = new Date().toISOString();
     return out;
   }
