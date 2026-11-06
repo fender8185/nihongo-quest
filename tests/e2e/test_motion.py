@@ -26,20 +26,18 @@ FINISH = """{ let guard = 0, k = 0;
   } }"""
 
 def test_today_plays_when_opened_not_when_drawn_again(b):
+    # 書房 eases in when it opens; a sync or a setting draws it again in place (the same room, nothing replays). 課程's 目前 card
+    # (the 今日 card's 目前單元 until the test build) fills its bar when the page opens, not when it is drawn again
     js = "(async () => { " + FRESH + NAMES + """ location.hash = '#/stats'; route(); location.hash = '#/today'; route();
-      const look = () => { const ring = document.querySelector('.today-card .ring');
-        return { ring: ring.classList.contains('anim'), ringNames: names('.today-card .ring .arc'), from: +ring.style.getPropertyValue('--from'),
-          bar: document.querySelector('[data-panel="unit"] .bar.stack').classList.contains('anim'), barNames: names('[data-panel="unit"] .bar.stack') }; };
-      const opened = look();
-      route(); const again = look();   // a sync or a setting draws the same page again
-      const tab = document.querySelector('.hero-tab[data-tab="unit"]'); ACTIONS['hero-tab'](tab); ACTIONS['hero-tab'](tab); const unitTab = look();
-      return JSON.stringify({ opened, again, unitTab, c: 2 * Math.PI * 42 }); })()"""
+      const st = document.querySelector('#view .study'); const opened = { anim: st.classList.contains('anim'), names: st.querySelector('.room-wrap').getAnimations().map(a => a.animationName) };   // its own way in (the steam, the clouds… keep going)
+      route(); const again = { same: document.querySelector('#view .study') === st };   // a sync or a setting draws the same page again
+      const bar = () => document.querySelector('.now-card .bar.stack');
+      location.hash = '#/course'; route(); const course = { bar: bar().classList.contains('anim'), names: names('.now-card .bar.stack') };
+      route(); const courseAgain = { bar: bar().classList.contains('anim'), names: names('.now-card .bar.stack') };
+      return JSON.stringify({ opened, again, course, courseAgain }); })()"""
     r = json.loads(ev(b, js))
-    o = r['opened']
-    assert o['ring'] and o['ringNames'] == ['ringIn'] and abs(o['from'] - r['c']) < 0.01, r   # from 0%
-    assert o['bar'] and o['barNames'] == ['uncover'], r
-    assert r['again'] == {'ring': False, 'ringNames': [], 'from': o['from'], 'bar': False, 'barNames': []}, r
-    assert not r['unitTab']['ring'] and r['unitTab']['bar'] and r['unitTab']['barNames'] == ['uncover'], r   # opening 目前單元 fills its bar again, the ring keeps still
+    assert r['opened'] == {'anim': True, 'names': ['roomIn']} and r['again'] == {'same': True}, r
+    assert r['course'] == {'bar': True, 'names': ['uncover']} and r['courseAgain'] == {'bar': False, 'names': []}, r
 
 def test_stats_gauges_play_when_opened_and_on_a_new_scope(b):
     js = "(async () => { " + FRESH + NAMES + """ const v = REG.vocab.find(x => x.builtin && x.lv === 'N5'); const t = todayStr();
@@ -101,13 +99,13 @@ def test_the_summary_ring_fills_from_where_the_set_began(b):
     assert not r['again']['anim'] and r['again']['stats'] == r['counted'], r   # drawn again: still, the real numbers at once
 
 def test_back_after_a_minute_plays_the_page_again(b):
-    js = "(async () => { " + FRESH + """ location.hash = '#/stats'; route(); location.hash = '#/today'; route(); route();
-      const ring = () => document.querySelector('.today-card .ring').classList.contains('anim');
+    js = "(async () => { " + FRESH + """ location.hash = '#/stats'; route(); location.hash = '#/today'; route();
+      const room = () => document.querySelector('#view .study'); const ring = () => room().classList.contains('anim');   // 書房's way in (test build)
       const flip = (hidden, ms = 0) => {
         Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden });
         Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => hidden ? 'hidden' : 'visible' });
         const now = Date.now; Date.now = () => now() + ms; document.dispatchEvent(new Event('visibilitychange')); Date.now = now; };
-      const before = ring();
+      room().classList.remove('anim'); const before = ring();   // played when it opened
       flip(true); flip(false, 10000); const short = ring();
       flip(true); flip(false, 61000); const long = ring();
       delete document.hidden; delete document.visibilityState;

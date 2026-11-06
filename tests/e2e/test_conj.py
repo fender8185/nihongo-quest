@@ -146,7 +146,7 @@ def test_drill_question_is_generated_from_a_learned_verb_and_a_miss_schedules_to
 
 def test_daily_queue_carries_the_drills_and_the_today_page_counts_them(b):
     js = """(() => { state.currentUnit = 'm18'; delete state.today.plan; const dq = dailyQueue(60); const c = dq.items.filter(x => x.kind === 'c').length; const plan = dq.plan;   // 60: one session big enough for the whole day list
-      location.hash = '#/today'; route(); const txt = document.querySelector('#view').textContent;
+      location.hash = '#/stats'; route(); const txt = document.querySelector('#view .day-card').textContent;   // 學習分析's 今天 card (test build; it was the 今日 card)
       return JSON.stringify({ c, newC: plan.newC.length, remaining: plan.remaining >= plan.newC.length, shows: txt.includes('變化') }); })()"""
     r = json.loads(ev(b, js))
     assert r['c'] >= 1 and r['c'] <= 3 and r['newC'] == r['c'] and r['remaining'] and r['shows'], r

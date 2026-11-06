@@ -149,28 +149,31 @@ def test_listening_joins_a_list_made_before_the_voices_loaded(b):
 ONLY_WORDS = """const onlyWords = (n) => { dailyPlan(); const ws = REG.vocab.filter(v => v.builtin && v.lv === 'N5' && !state.srs[v.key]).slice(0, n).map(v => v.key);
   PLAN_LISTS.forEach(k => { state.today.plan.lists[k] = []; }); state.today.plan.lists.kept = []; state.today.plan.lists.newV = ws; saveState(); DAILY_CACHE = null; return ws; };"""
 
+# test build: today's progress is the name tag of 書房's notebook (it was the 今日 card's ring), the counts are 學習分析's 今天 card
+NOTEBOOK_TAG = "const notebookTag = () => document.querySelector('#view [data-thing=notebook] .tag').textContent.replace(/\\s+/g, '');"
+
 def test_ring_shows_a_percentage_only(b):
-    js = "(() => { " + FRESH + """ location.hash = '#/today'; route(); const ring = document.querySelector('.today-card .ring-txt');
-      startSession('daily', { size: 5 }); """ + PLAY + """; location.hash = '#/today'; route(); const ring2 = document.querySelector('.today-card .ring-txt'); const p = dayProgress();
-      return JSON.stringify({ t1: ring.textContent.replace(/\\s+/g, ''), t2: ring2.textContent.replace(/\\s+/g, ''), pct: Math.round(p.done / p.total * 100) }); })()"""
+    js = "(() => { " + FRESH + NOTEBOOK_TAG + """ location.hash = '#/today'; route(); const t1 = notebookTag();
+      startSession('daily', { size: 5 }); """ + PLAY + """; location.hash = '#/today'; route(); const t2 = notebookTag(); const p = dayProgress();
+      return JSON.stringify({ t1, t2, pct: Math.round(p.done / p.total * 100) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['t1'] == '0%' and r['t2'] == f"{r['pct']}%" and 0 < r['pct'] < 100, r
+    assert r['t1'] == '今日練習0%' and r['t2'] == f"今日練習{r['pct']}%" and 0 < r['pct'] < 100, r
 
 def test_small_tail_joins_the_set(b):
     js = "(() => { " + FRESH + ONLY_WORDS + """ onlyWords(21); const n21 = dailyQueue(20).items.length;
-      onlyWords(26); const n26 = dailyQueue(20).items.length; location.hash = '#/today'; route();
-      const btn = document.querySelector('[data-act=start-daily]').textContent.replace(/\\s+/g, ' '); const hero = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');
-      return JSON.stringify({ n21, n26, btn, rest: hero.includes('今天還有 26 題') }); })()"""
+      onlyWords(26); const n26 = dailyQueue(20).items.length; location.hash = '#/stats'; route();
+      const card = document.querySelector('.day-card').textContent.replace(/\\s+/g, ' ');
+      return JSON.stringify({ n21, n26, rest: card.includes('共 26 題') }); })()"""
     r = json.loads(ev(b, js))
     assert r['n21'] == 21 and r['n26'] == 20, r
-    assert '開始練習・這組 20 題' in r['btn'] and r['rest'], r
+    assert r['rest'], r   # the day's 26 on 學習分析's 今天 card; a set holds 20
 
 def test_finished_day_and_sidebar_show_answered_items(b):
-    js = "(() => { " + FRESH + ONLY_WORDS + """ const ws = onlyWords(3); ws.forEach(k => srsAnswer(k, true));
-      srsAnswer(REG.vocab.find(v => v.builtin && v.lv === 'N5' && !state.srs[v.key]).key, true); saveState(); location.hash = '#/today'; route();
-      const hero = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');
+    js = "(() => { " + FRESH + ONLY_WORDS + NOTEBOOK_TAG + """ const ws = onlyWords(3); ws.forEach(k => srsAnswer(k, true));
+      srsAnswer(REG.vocab.find(v => v.builtin && v.lv === 'N5' && !state.srs[v.key]).key, true); saveState(); location.hash = '#/today'; route(); const tag = notebookTag();
+      location.hash = '#/stats'; route(); const card = document.querySelector('.day-card').textContent.replace(/\\s+/g, ' ');
       const side = [...document.querySelectorAll('#sideFoot .row')].find(r => r.textContent.includes('今日')).querySelector('b').textContent.trim();
-      return JSON.stringify({ did: (hero.match(/今天做了 (\\d+) 題/) || [])[1] || null, side, done: /今天完成了/.test(hero) }); })()"""
+      return JSON.stringify({ did: (card.match(/今天的題目做完了，共 (\\d+) 題/) || [])[1] || null, side, done: /^今日完成/.test(tag) }); })()"""
     r = json.loads(ev(b, js))
     assert r['done'] and r['did'] == '4', r
     assert r['side'] == '4 題', r
