@@ -219,15 +219,28 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table tr:last-child td { border-bottom: 0; }
 .empty { text-align: center; color: var(--fg-3); padding: 28px 12px; font-size: 14px; }
 
-/* ---------- 主頁 (test build): a night scene; the crystal ball in the tab bar ----------
-   --f (0–1) is how much of today's list is done (the ring it replaces). On 主頁 (.orb-stage) the sky comes out with it — stars one
-   by one, a nebula from 25%, fireflies over the grass from 50%, the aurora and shooting stars from 75%, a constellation at 100% —
-   and the house's windows warm up. The ball (.nav-orb: the middle of the phone tab bar, the top of the sidebar) shows it on every
-   page: a tap goes to 主頁, a hold dives into 今日練習. Both keep the dark palette in either theme; with motion reduced (the rule
-   at the top) everything stands still. */
-.orb-stage { --accent: #8b9cff; color-scheme: dark; position: relative; z-index: 0; min-height: calc(100vh - 100px); }
+/* ---------- 主頁 (test build): a scene that follows the clock; the crystal ball in the tab bar ----------
+   Three numbers drive it. --f (0–1, on .orb-stage) is how much of today's list is done (the ring it replaces). --day (0 night, 1 day)
+   and --warm (the sunrise／sunset glow) come from the phone's clock (sceneTick, on body); dawn 5–7 and dusk 17–19 blend the two.
+   By night the sky comes out with --f — stars one by one, a nebula from 25%, fireflies from 50%, the aurora and shooting stars
+   from 75%, a constellation at 100% — and the windows warm up. By day the grey sky turns blue with --f, the sun brightens from
+   25%, flowers and butterflies come at 50%, birds at 75%, a rainbow at 100%. The ball (.nav-orb) shows --f on every page: a tap
+   goes to 主頁, a hold dives into 今日練習. Either theme; with motion reduced (the rule at the top) everything stands still. */
+:root { --day: 0; --warm: 0; --sx: 50%; --sy: 20%; }
+.orb-stage { position: relative; z-index: 0; min-height: calc(100vh - 100px); }
 .sky { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; background: radial-gradient(130% 70% at 50% 100%, #17143f, #0a0a22 45%, #05060f); }
 @media (min-width: 901px) { .sky { left: 236px; } }   /* beside the sidebar */
+.sky .tint { position: absolute; inset: 0; transition: opacity 3s; }
+.sky .t-grey { background: linear-gradient(#93a3b3, #c6d0d8 60%, #e2e7eb); opacity: var(--day); }   /* a grey day at 0% … */
+.sky .t-blue { background: linear-gradient(#3d8cdb, #8bc5ef 58%, #e0f2fb); opacity: calc(var(--day) * (.15 + .85 * var(--f))); }   /* … bluer as the list fills */
+.sky .t-warm { background: linear-gradient(to top, #ffb36b, #ff8a7a 20%, rgba(150, 96, 200, .5) 46%, transparent 76%); opacity: var(--warm); }   /* sunrise, sunset */
+.sky .sun { position: absolute; left: var(--sx); top: var(--sy); width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; opacity: var(--day); transition: opacity 3s;
+  background: radial-gradient(circle, #fffdf0 52%, color-mix(in srgb, #ffb04a calc(var(--warm) * 100%), #fff2b3) 56%, transparent 72%); }
+.sky .sun::before { content: ''; position: absolute; inset: -46px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 238, 170, .7), rgba(255, 222, 140, .22) 50%, transparent); opacity: calc(.3 + .7 * clamp(0, (var(--f) - .2) / .3, 1)); transition: opacity 1.5s; }   /* brighter from 25% */
+.sky .night { position: absolute; inset: 0; opacity: calc(1 - var(--day)); transition: opacity 3s; }
+.sky .dayset { position: absolute; inset: 0; opacity: var(--day); transition: opacity 3s; }
+body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flowers, .butterflies) { display: none; }   /* the hidden half stops moving */
+/* by night */
 .sky .moon { position: absolute; left: 13%; top: 9%; width: 30px; height: 30px; border-radius: 50%; box-shadow: inset 9px -3px 0 0 #f3efe0; filter: drop-shadow(0 0 8px rgba(255, 246, 220, .45)); transform: rotate(-20deg); }
 .sky .nebula { position: absolute; border-radius: 50%; opacity: calc(clamp(0, (var(--f) - .25) / .35, 1) * .6); transition: opacity 1.5s; }   /* still: big moving layers cost a phone too much memory */
 .sky .n1 { width: 130vw; height: 70vh; left: -45vw; top: -12vh; background: radial-gradient(closest-side, rgba(124, 92, 255, .45), rgba(124, 92, 255, .12) 55%, transparent); }
@@ -250,36 +263,65 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .sky .meteors { position: absolute; inset: 0; opacity: clamp(0, (var(--f) - .75) * 8, 1); transition: opacity 1.5s; }
 .sky .meteor { position: absolute; width: 120px; height: 1.5px; border-radius: 1px; background: linear-gradient(90deg, transparent, #fff); opacity: 0; transform-origin: 0 50%; animation: meteor var(--d) linear var(--w) infinite; }
 @keyframes meteor { 0% { transform: rotate(28deg) translateX(0); opacity: 0; } 1% { opacity: 1; } 6% { transform: rotate(28deg) translateX(320px); opacity: 0; } 100% { transform: rotate(28deg) translateX(320px); opacity: 0; } }
+/* by day: clouds always (greyer at 0%, peach at dawn and dusk), birds from 75%, a rainbow at 100% */
+.sky .rainbow { position: absolute; left: 50%; bottom: 120px; width: 130vmin; height: 130vmin; margin-left: -65vmin; border-radius: 50%; transform: translateY(50%); opacity: 0; transition: opacity 3s;
+  background: radial-gradient(closest-side, transparent 80%, rgba(255, 96, 96, .5) 81%, rgba(255, 168, 72, .5) 83%, rgba(255, 228, 92, .5) 85%, rgba(112, 208, 120, .5) 87%, rgba(88, 158, 238, .5) 89%, rgba(150, 110, 228, .5) 91%, transparent 92.5%); }
+.orb-stage.full .rainbow { opacity: .8; }
+.sky .cloud { position: absolute; left: 0; width: 92px; height: 26px; border-radius: 20px; animation: cloud var(--d) linear var(--w) infinite;
+  background: color-mix(in srgb, #ffd2b4 calc(var(--warm) * 100%), color-mix(in srgb, #fff calc((.55 + .45 * var(--f)) * 100%), #c5ced6)); }
+.sky .cloud::before, .sky .cloud::after { content: ''; position: absolute; border-radius: 50%; background: inherit; }
+.sky .cloud::before { width: 42px; height: 42px; left: 14px; top: -20px; } .sky .cloud::after { width: 32px; height: 32px; left: 44px; top: -13px; }
+@keyframes cloud { from { transform: translateX(-130px) scale(var(--k)); } to { transform: translateX(calc(100vw + 30px)) scale(var(--k)); } }
+.sky .birds { position: absolute; left: 0; right: 0; top: 16%; height: 50px; opacity: clamp(0, (var(--f) - .75) / .15, 1); transition: opacity 2s; }
+.sky .flock { position: absolute; left: 0; top: 0; width: 70px; height: 40px; animation: flock 24s linear infinite; }
+@keyframes flock { from { transform: translateX(-90px); } to { transform: translateX(calc(100vw + 20px)); } }
+.sky .flock i { position: absolute; width: 15px; height: 8px; }
+.sky .flock i::before, .sky .flock i::after { content: ''; position: absolute; top: 3px; width: 8px; height: 2px; border-radius: 2px; background: #2c3954; animation: flap .45s ease-in-out infinite alternate; }
+.sky .flock i::before { left: 0; transform-origin: 100% 50%; } .sky .flock i::after { left: 7px; transform-origin: 0 50%; animation-name: flap2; }
+@keyframes flap { from { transform: rotate(28deg); } to { transform: rotate(-18deg); } } @keyframes flap2 { from { transform: rotate(-28deg); } to { transform: rotate(18deg); } }
 /* the land and the house: one still drawing (1 unit = 1px, its middle shown) and the house standing on it, the ground 220px up —
-   room in front for what will be placed there */
+   room in front for what will be placed there. Their colours run from night to day with --day; by day the grass greens with --f */
 .sky .land { position: absolute; left: 0; bottom: 0; width: 100%; height: 370px; }
-.sky .land .far { fill: #121436; } .sky .land .near { fill: #090a1e; } .sky .land .ridge { fill: none; stroke: rgba(150, 165, 255, .18); stroke-width: 1.2; }
-.sky .land .tree, .sky .land .post { fill: #0b0c22; } .sky .land .rail { fill: none; stroke: #0b0c22; stroke-width: 2.4; } .sky .land .lane { fill: rgba(150, 160, 230, .07); }
+.sky .land :is(.far, .near, .trunk, .crown, .post, .lane) { transition: fill 3s; } .sky .land :is(.ridge, .rail) { transition: stroke 3s; }
+.sky .land .far { fill: color-mix(in srgb, color-mix(in srgb, #8fc486 calc(var(--f) * 100%), #a6b3a2) calc(var(--day) * 100%), #121436); } .sky .land .near { fill: color-mix(in srgb, color-mix(in srgb, #5a9e4d calc(var(--f) * 100%), #7f9179) calc(var(--day) * 100%), #090a1e); } .sky .land .ridge { fill: none; stroke: color-mix(in srgb, rgba(255, 255, 255, .4) calc(var(--day) * 100%), rgba(150, 165, 255, .18)); stroke-width: 1.2; }
+.sky .land .trunk { fill: color-mix(in srgb, #6b4a2f calc(var(--day) * 100%), #0b0c22); } .sky .land .crown { fill: color-mix(in srgb, color-mix(in srgb, #3f8a46 calc(var(--f) * 100%), #6f8669) calc(var(--day) * 100%), #0b0c22); } .sky .land .post { fill: color-mix(in srgb, #c9a679 calc(var(--day) * 100%), #0b0c22); } .sky .land .rail { fill: none; stroke: color-mix(in srgb, #c9a679 calc(var(--day) * 100%), #0b0c22); stroke-width: 2.4; }
+.sky .land .lane { fill: color-mix(in srgb, rgba(232, 214, 168, .95) calc(var(--day) * 100%), rgba(150, 160, 230, .07)); }
 .sky .house { position: absolute; left: 50%; bottom: 218px; width: 140px; height: 130px; margin-left: -70px; transform: scale(1.15); transform-origin: 50% 100%; }
 .sky .house svg { position: absolute; inset: 0; overflow: visible; }
-.sky .house .wall { fill: #0c0d25; } .sky .house .roof { fill: #11133a; } .sky .house .rim { fill: none; stroke: rgba(170, 182, 255, .35); stroke-width: 1.4; stroke-linejoin: round; }
-.sky .house .pane { fill: #ffcf7a; opacity: calc(.28 + .72 * var(--f)); transition: opacity 1.5s; } .sky .house .mull { stroke: #0c0d25; stroke-width: 2; }
-.sky .house .door { fill: #15173c; } .sky .house .knob { fill: #ffcf7a; }
-.sky .house .win { position: absolute; border-radius: 50%; opacity: calc(.12 + .88 * var(--f)); transition: opacity 1.5s; }   /* the light round each window, warmer as the list fills */
+.sky .house :is(.wall, .chim, .roof, .pane, .door) { transition: fill 3s, opacity 1.5s; } .sky .house :is(.rim, .mull) { transition: stroke 3s; }
+.sky .house .wall { fill: color-mix(in srgb, #f1e3c6 calc(var(--day) * 100%), #0c0d25); } .sky .house .chim { fill: color-mix(in srgb, #9a5640 calc(var(--day) * 100%), #0c0d25); } .sky .house .roof { fill: color-mix(in srgb, #b4543c calc(var(--day) * 100%), #11133a); } .sky .house .rim { fill: none; stroke: color-mix(in srgb, rgba(255, 255, 255, .45) calc(var(--day) * 100%), rgba(170, 182, 255, .35)); stroke-width: 1.4; stroke-linejoin: round; }
+.sky .house .pane { fill: color-mix(in srgb, #cfe9f8 calc(var(--day) * 100%), #ffcf7a); opacity: calc((.28 + .72 * var(--f)) * (1 - var(--day)) + var(--day)); } .sky .house .mull { stroke: color-mix(in srgb, #ffffff calc(var(--day) * 100%), #0c0d25); stroke-width: 2; }   /* lit by night, the sky in them by day */
+.sky .house .door { fill: color-mix(in srgb, #7a4b2e calc(var(--day) * 100%), #15173c); } .sky .house .knob { fill: #ffcf7a; }
+.sky .house .win { position: absolute; border-radius: 50%; opacity: calc((.12 + .88 * var(--f)) * (1 - var(--day))); transition: opacity 1.5s; }   /* the light round each window, warmer as the list fills */
 .sky .house .win::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 196, 110, .55), rgba(255, 196, 110, .14) 55%, transparent); animation: flicker 3.2s ease-in-out infinite alternate; }
 .sky .house .w1 { left: 13px; top: 61px; width: 60px; height: 60px; } .sky .house .w2 { left: 67px; top: 61px; width: 60px; height: 60px; } .sky .house .w3 { left: 53px; top: 35px; width: 34px; height: 34px; }
 .sky .house .w2::after { animation-duration: 4.1s; animation-delay: -1.3s; } .sky .house .w3::after { animation-duration: 2.7s; animation-delay: -.6s; }
 @keyframes flicker { 0% { opacity: .78; } 45% { opacity: 1; } 60% { opacity: .86; } 100% { opacity: .96; } }
-.sky .house .spill { position: absolute; left: -40px; right: -40px; bottom: -18px; height: 40px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 190, 100, .22), transparent); opacity: var(--f); transition: opacity 1.5s; }
-.sky .house .smoke { position: absolute; left: 91px; top: 18px; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(closest-side, rgba(196, 202, 236, .5), transparent); opacity: 0; animation: smoke 6s ease-out infinite; }
+.sky .house .spill { position: absolute; left: -40px; right: -40px; bottom: -18px; height: 40px; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 190, 100, .22), transparent); opacity: calc(var(--f) * (1 - var(--day))); transition: opacity 1.5s; }
+.sky .house .smoke { position: absolute; left: 91px; top: 18px; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, rgba(255, 255, 255, .8) calc(var(--day) * 100%), rgba(196, 202, 236, .5)), transparent); opacity: 0; animation: smoke 6s ease-out infinite; }
 .sky .house .smoke + .smoke { animation-delay: -2s; } .sky .house .smoke + .smoke + .smoke { animation-delay: -4s; }
 @keyframes smoke { 0% { transform: translate(0, 0) scale(.6); opacity: 0; } 15% { opacity: .75; } 100% { transform: translate(16px, -64px) scale(2.8); opacity: 0; } }
-.sky .flies { position: absolute; left: 0; right: 0; bottom: 130px; height: 190px; opacity: clamp(0, (var(--f) - .5) / .25, 1); transition: opacity 1.5s; }
+.sky .flies { position: absolute; left: 0; right: 0; bottom: 130px; height: 190px; opacity: calc(clamp(0, (var(--f) - .5) / .25, 1) * (1 - var(--day))); transition: opacity 1.5s; }
 .sky .flies i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: #e9ff9c; box-shadow: 0 0 6px 2px rgba(214, 255, 120, .55); animation: fly var(--d) ease-in-out var(--w) infinite alternate, blink 2.4s ease-in-out var(--w) infinite alternate; }
 @keyframes fly { from { transform: translate(0, 0); } 50% { transform: translate(var(--dx), var(--dy)); } to { transform: translate(calc(var(--dx) * -.6), calc(var(--dy) * .5)); } }
 @keyframes blink { from { opacity: .15; } to { opacity: 1; } }
+.sky .flowers { position: absolute; left: 0; right: 0; bottom: 0; height: 240px; opacity: calc(var(--day) * clamp(0, (var(--f) - .5) / .15, 1)); transition: opacity 2s; }
+.sky .fl { position: absolute; width: 2px; height: 13px; border-radius: 1px; background: #3d7f3f; transform-origin: 50% 100%; animation: sway var(--d) ease-in-out var(--w) infinite alternate; }
+.sky .fl::after { content: ''; position: absolute; left: -4px; top: -8px; width: 10px; height: 10px; border-radius: 50%; background: radial-gradient(circle, #ffe27a 0 26%, var(--c) 30%); }
+@keyframes sway { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
+.sky .butterflies { position: absolute; left: 0; right: 0; bottom: 140px; height: 120px; opacity: calc(var(--day) * clamp(0, (var(--f) - .5) / .15, 1)); transition: opacity 2s; }
+.sky .bf { position: absolute; width: 12px; height: 10px; animation: flutter var(--d) ease-in-out var(--w) infinite alternate; }
+.sky .bf::before, .sky .bf::after { content: ''; position: absolute; top: 0; width: 6px; height: 9px; border-radius: 60% 60% 50% 50%; background: var(--c); animation: wing .22s ease-in-out infinite alternate; }
+.sky .bf::before { left: 0; transform-origin: 100% 50%; } .sky .bf::after { right: 0; transform-origin: 0 50%; }
+@keyframes wing { from { transform: scaleX(1); } to { transform: scaleX(.25); } }
+@keyframes flutter { 0% { transform: translate(0, 0); } 25% { transform: translate(var(--dx), calc(var(--dy) * -1)); } 50% { transform: translate(calc(var(--dx) * 1.6), var(--dy)); } 75% { transform: translate(calc(var(--dx) * .6), calc(var(--dy) * -1.4)); } 100% { transform: translate(calc(var(--dx) * -.4), 0); } }
 /* the page opens: the sky comes out with the energy (each star at its share of the way), then the rest */
 @keyframes skyFade { from { opacity: 0; } }
 .orb-stage.anim .st.on { animation: skyFade 1s ease-out var(--in) backwards; }
-.orb-stage.anim .nebula { animation: skyFade 1.2s ease-out .3s backwards; }
-.orb-stage.anim :is(.pane, .win, .spill) { animation: skyFade 1.2s ease-out .4s backwards; }
-.orb-stage.anim :is(.aurora, .meteors, .flies) { animation: skyFade 1.4s ease-out .7s backwards; }
-.orb-stage.anim .dipper { animation: skyFade 1.5s ease-out 1.2s backwards; }
+.orb-stage.anim :is(.nebula, .clouds) { animation: skyFade 1.2s ease-out .3s backwards; }
+.orb-stage.anim :is(.pane, .win, .spill, .flowers, .butterflies) { animation: skyFade 1.2s ease-out .4s backwards; }
+.orb-stage.anim :is(.aurora, .meteors, .flies, .birds) { animation: skyFade 1.4s ease-out .7s backwards; }
+.orb-stage.anim :is(.dipper, .rainbow) { animation: skyFade 1.5s ease-out 1.2s backwards; }
 /* the ball: glass, the energy (two waves, light drifting inside, sparks), a halo, and the ring a hold fills */
 .nav-orb { --accent: #8b9cff; --fg-3: #80838f; --e1: color-mix(in srgb, var(--accent) 62%, #fff); --e3: color-mix(in srgb, var(--accent) 55%, #3b0764); --glass: color-mix(in srgb, var(--accent) 14%, #0e1030); --glass-2: #05060f;
   -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; }   /* a hold must not select, open a menu or scroll */
@@ -384,9 +426,9 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
   #view.fit > .orb-stage { flex: 1 1 auto; min-height: 0; }
   body.today .topbar { display: none; }   /* 主頁 (test build): the ball and the tab bar, nothing else */
   body.today .content { padding-top: calc(16px + env(safe-area-inset-top, 0px)); }
-  body.today .bottomnav { background: rgba(7, 8, 24, .38); border-top-color: rgba(170, 182, 255, .12); }   /* the tab bar is dark glass on the sky, whatever the theme */
-  body.today .bottomnav button { color: rgba(200, 208, 255, .55); }
-  body.today .bottomnav button[aria-current="page"] { color: #c7ceff; } body.today .bottomnav button:not(.nav-orb)[aria-current="page"] svg { filter: drop-shadow(0 0 6px rgba(139, 156, 255, .9)); }
+  body.today .bottomnav { background: linear-gradient(to top, color-mix(in srgb, rgba(255, 255, 255, .7) calc(clamp(0, (var(--day) - .45) * 10, 1) * 100%), rgba(5, 6, 18, .7)), transparent) border-box; border-top-color: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }   /* no bar: the buttons stand on the scene, a fade from the bottom keeps them readable (border-box: else the fade repeats into the top border as a bright line) */
+  body.today .bottomnav button:not(.nav-orb) { color: color-mix(in srgb, #1d2b5e calc(clamp(0, (var(--day) - .45) * 10, 1) * 100%), #e2e6ff); text-shadow: 0 0 6px color-mix(in srgb, #fff calc(clamp(0, (var(--day) - .45) * 10, 1) * 100%), rgba(139, 156, 255, .9)); }
+  body.today .bottomnav button:not(.nav-orb) svg { stroke-width: 2; filter: drop-shadow(0 0 2.5px color-mix(in srgb, #fff calc(clamp(0, (var(--day) - .45) * 10, 1) * 100%), rgba(139, 156, 255, .95))); }   /* glowing lines by night, a white rim by day: they switch at half daylight, so dawn and dusk never leave them a grey that reads on neither */
   .bottomnav .nav-orb { position: relative; }
   .bottomnav .nav-orb .orb { position: absolute; left: 50%; top: -24px; width: 66px; height: 66px; margin-left: -33px; }   /* the glass (59px) stands about 15px above the bar */
   /* contain: size — the item area's content does not count toward the card's minimum height, so the card shrinks until the
@@ -5150,11 +5192,38 @@ function applyTheme() {
   document.documentElement.setAttribute('data-theme', resolved);
   themeColor();
 }
-// the browser bar's colour: the page background, or 主頁's night sky (test build) whatever the theme
+// the browser bar's colour: the page background, or 主頁's sky at this hour (test build) whatever the theme
 function themeColor() {
-  const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', document.body.classList.contains('today') ? '#05060f' : document.documentElement.getAttribute('data-theme') === 'light' ? '#f5f6f8' : '#0e0f13');
+  const meta = document.querySelector('meta[name="theme-color"]'); if (!meta) return;
+  if (!document.body.classList.contains('today')) { meta.setAttribute('content', document.documentElement.getAttribute('data-theme') === 'light' ? '#f5f6f8' : '#0e0f13'); return; }
+  const c = sceneClock();
+  meta.setAttribute('content', mixHex(mixHex('#05060f', '#3d8cdb', c.day), '#e8875f', c.warm * 0.5));
 }
+function mixHex(a, b, t) { const ch = (h, i) => parseInt(h.slice(i, i + 2), 16); return '#' + [1, 3, 5].map(i => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * t).toString(16).padStart(2, '0')).join(''); }
+// 主頁's clock (test build): the phone's own time and time zone, UTC+8 only when no zone can be read. --day is the daylight (0 by
+// night, 1 by day; dawn 5–7 and dusk 17–19 ease between), --warm the sunrise／sunset glow (strongest at 6 and 18), --sx/--sy the
+// sun on its arc (up at 5:12, down at 18:48, behind the hills at either end). Set on body: the scene and 主頁's tab bar both read it.
+function sceneHour() {
+  const d = new Date();
+  let zone = ''; try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { /* no zone */ }
+  return zone ? d.getHours() + d.getMinutes() / 60 : (d.getUTCHours() + 8) % 24 + d.getUTCMinutes() / 60;
+}
+function sceneClock(h = sceneHour()) {
+  const ease = (t) => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
+  const day = h < 5 || h >= 19 ? 0 : h < 7 ? ease((h - 5) / 2) : h < 17 ? 1 : ease((19 - h) / 2);
+  const warm = ease(1 - Math.min(Math.abs(h - 6), Math.abs(h - 18)));
+  const p = Math.min(1, Math.max(0, (h - 5.2) / 13.6));
+  return { day, warm, sx: 8 + 84 * p, sy: 72 - 60 * Math.sin(Math.PI * p) };
+}
+function sceneTick() {
+  const c = sceneClock(), b = document.body;
+  b.style.setProperty('--day', c.day.toFixed(3)); b.style.setProperty('--warm', c.warm.toFixed(3));
+  b.style.setProperty('--sx', `${c.sx.toFixed(1)}%`); b.style.setProperty('--sy', `${c.sy.toFixed(1)}%`);
+  b.classList.toggle('scene-day', c.day > 0.999); b.classList.toggle('scene-night', c.day < 0.001);
+  themeColor();
+}
+setInterval(() => { if (document.body.classList.contains('today')) sceneTick(); }, 60000);   // the scene moves with the clock while 主頁 is open
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && document.body.classList.contains('today')) sceneTick(); });
 // furigana: all → smart (no readings on mastered words) → off
 const FURI_LABEL = { all: '顯示', smart: '熟練的字不標', off: '隱藏' };
 function furiState() { return !state.settings.furigana ? 'off' : (state.settings.furiMode === 'smart' ? 'smart' : 'all'); }
@@ -5381,10 +5450,11 @@ function noticesHtml() {
 // iOS ignores user-scalable=no inside Safari; the gesture events still stop a pinch from zooming the page
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
 
-// 主頁 (test build): a night scene — the land and a house under a sky that comes out as today's list fills (dayProgress, the ring
-// it replaces). The crystal ball lives in the tab bar (renderNav): a tap comes here, a hold dives into 今日練習.
+// 主頁 (test build): the land and a house under a sky that follows the clock (sceneTick) and comes out as today's list fills
+// (dayProgress, the ring it replaces). The crystal ball lives in the tab bar (renderNav): a tap comes here, a hold dives into 今日練習.
 function renderToday(view) {
   finishPreIfReady();
+  sceneTick();
   const pct = ringPct(dayProgress());
   document.querySelectorAll('.nav-orb').forEach(b => navOrbLevel(b, pct, true));   // today's list may only now exist
   const stage = view.querySelector('.orb-stage');
@@ -5407,7 +5477,8 @@ const SKY = (() => {
   const stars = Array.from({ length: 72 }, (_, i) => ({ x: r2(rnd() * 100), y: r2(rnd() * 100), s: r2(rnd() < 0.12 ? 2.2 + rnd() * 0.6 : 1 + rnd() * 1.1), t: i < 6 ? 0 : r2(0.8 * (i - 5) / 66), d: r2(2 + rnd() * 3.5), w: r2(rnd() * 5) }));
   [[60, 15], [66, 13], [72, 16], [77, 21], [75, 28], [83, 30], [85, 23]].forEach(([x, y], i) => stars.push({ x, y, s: 2.6, t: 1, d: 3, w: i * 0.4, dip: true }));
   const flies = Array.from({ length: 12 }, () => ({ x: r2(4 + rnd() * 92), y: Math.round(rnd() * 160), dx: Math.round(rnd() * 60 - 30), dy: Math.round(rnd() * 30 - 15), d: r2(5 + rnd() * 5), w: r2(rnd() * 6) }));
-  return { stars, flies };
+  const flowers = Array.from({ length: 16 }, () => ({ x: r2(3 + rnd() * 94), y: Math.round(150 + rnd() * 56), c: ['#ff9ec4', '#ffffff', '#ffd166', '#c9a7ff', '#ff8a8a'][Math.floor(rnd() * 5)], d: r2(2.5 + rnd() * 2), w: r2(rnd() * 3) }));
+  return { stars, flies, flowers };
 })();
 function homeHtml(pct) {
   const f = pct / 100;
@@ -5416,23 +5487,33 @@ function homeHtml(pct) {
   const ground = 'M0 170 C150 152 300 142 450 147 C520 149 560 150 600 150 C640 150 690 149 760 146 C900 141 1050 151 1200 162';
   return `<div class="orb-stage${pct >= 100 ? ' full' : ''}" data-anim style="--f:${f}">
     <div class="sky" aria-hidden="true">
-      <i class="moon"></i>
-      <i class="nebula n1"></i><i class="nebula n2"></i>
-      <div class="aurora"><i></i><i></i></div>
-      <svg class="dipper" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M${dip.join(' L')} L${dip[3]}"/></svg>
-      ${SKY.stars.map(star).join('')}
-      <div class="meteors"><i class="meteor" style="left:6%;top:10%;--d:9s;--w:-3s"></i><i class="meteor" style="left:36%;top:3%;--d:13s;--w:-9s"></i></div>
+      <i class="tint t-grey"></i><i class="tint t-blue"></i><i class="tint t-warm"></i>
+      <i class="sun"></i>
+      <div class="night">
+        <i class="moon"></i>
+        <i class="nebula n1"></i><i class="nebula n2"></i>
+        <div class="aurora"><i></i><i></i></div>
+        <svg class="dipper" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M${dip.join(' L')} L${dip[3]}"/></svg>
+        ${SKY.stars.map(star).join('')}
+        <div class="meteors"><i class="meteor" style="left:6%;top:10%;--d:9s;--w:-3s"></i><i class="meteor" style="left:36%;top:3%;--d:13s;--w:-9s"></i></div>
+      </div>
+      <div class="dayset">
+        <i class="rainbow"></i>
+        <div class="clouds">${[[10, 1, 110, 20], [24, 0.7, 140, 80], [5, 0.85, 125, 55], [34, 0.6, 160, 120]].map(([y, k, d, w]) => `<i class="cloud" style="top:${y}%;--k:${k};--d:${d}s;--w:-${w}s"></i>`).join('')}</div>
+        <div class="birds"><div class="flock">${[[52, 14], [38, 6], [38, 22], [24, 0], [24, 28]].map(([x, y]) => `<i style="left:${x}px;top:${y}px"></i>`).join('')}</div></div>
+      </div>
       <svg class="land" viewBox="0 0 1200 370" preserveAspectRatio="xMidYMax slice">
         <path class="far" d="M0 118 C110 96 210 98 320 114 S520 90 640 104 S860 124 990 98 S1140 94 1200 106 V370 H0 Z"/>
         <path class="near" d="${ground} V370 H0 Z"/><path class="ridge" d="${ground}"/>
         <path class="lane" d="M590 150 C588 210 562 290 540 370 H606 C612 292 612 210 610 150 Z"/>
-        <g class="tree"><rect x="465" y="104" width="8" height="46"/><circle cx="469" cy="96" r="22"/><circle cx="452" cy="110" r="15"/><circle cx="487" cy="108" r="16"/></g>
+        <rect class="trunk" x="465" y="104" width="8" height="46"/><g class="crown"><circle cx="469" cy="96" r="22"/><circle cx="452" cy="110" r="15"/><circle cx="487" cy="108" r="16"/></g>
         ${[700, 722, 744, 766].map(x => `<rect class="post" x="${x}" y="131" width="4" height="19" rx="1"/>`).join('')}<path class="rail" d="M698 138 H772 M698 145 H772"/>
       </svg>
+      <div class="flowers">${SKY.flowers.map(q => `<i class="fl" style="left:${q.x}%;bottom:${q.y}px;--c:${q.c};--d:${q.d}s;--w:-${q.w}s"></i>`).join('')}</div>
       <div class="house">
         <i class="spill"></i>
         <svg viewBox="0 0 140 130">
-          <rect class="wall" x="92" y="30" width="12" height="30"/><rect class="roof" x="89" y="27" width="18" height="5" rx="1"/>
+          <rect class="chim" x="92" y="30" width="12" height="30"/><rect class="roof" x="89" y="27" width="18" height="5" rx="1"/>
           <rect class="wall" x="22" y="66" width="96" height="64"/>
           <path class="roof" d="M10 72 L70 20 L130 72 Z"/><path class="rim" d="M10 72 L70 20 L130 72 M89 27 H107"/>
           <circle class="pane" cx="70" cy="52" r="6"/><path class="mull" d="M70 46 V58 M64 52 H76"/>
@@ -5444,6 +5525,7 @@ function homeHtml(pct) {
         <i class="smoke"></i><i class="smoke"></i><i class="smoke"></i>
       </div>
       <div class="flies">${SKY.flies.map(q => `<i style="left:${q.x}%;top:${q.y}px;--dx:${q.dx}px;--dy:${q.dy}px;--d:${q.d}s;--w:-${q.w}s"></i>`).join('')}</div>
+      <div class="butterflies"><i class="bf" style="left:28%;top:40px;--dx:40px;--dy:18px;--d:7s;--w:-2s;--c:#ffb3d1"></i><i class="bf" style="left:66%;top:66px;--dx:-36px;--dy:14px;--d:8.5s;--w:-5s;--c:#ffe08a"></i></div>
     </div>
   </div>`;
 }
