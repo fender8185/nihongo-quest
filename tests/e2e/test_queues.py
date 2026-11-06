@@ -255,7 +255,7 @@ def test_i_know_this_says_five_stars(b):
     assert '已標成五顆' in r['msg'] and '六週' not in r['msg'] and r['tier'] == 'q5', r
 
 def test_today_help_describes_the_tiers(b):
-    js = "(() => { " + FRESH + """ location.hash = '#/today'; route(); const help = document.querySelector('.hero-panel[data-panel=help]');
+    js = "(() => { " + FRESH + """ location.hash = '#/stats'; route(); const help = document.querySelector('.day-card .day-help p');   /* 學習分析's 今天 card (test build) */
       return help ? help.textContent : ''; })()"""
     text = ev(b, js)
     assert all(s in text for s in ['SRS', '答對越多', '新題目', '多學']) and '每天最多 50 題' not in text, text   # 1.0.36: a few relaxed sentences, no tier numbers

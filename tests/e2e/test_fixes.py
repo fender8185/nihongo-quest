@@ -78,12 +78,6 @@ def test_wrong_vocab_options_show_their_chinese_after_answering(b):
     assert r['peerM'] and r['wrongZh'] == r['peerM'], r
     assert r['allWrongHaveZh'], r
 
-def test_more_menu_icons_are_small(b):
-    out = b.run([("nav", URL), ("wait", READY),
-        ("eval", "ACTIONS['more-menu'](); JSON.stringify([...document.querySelectorAll('.modal .list-item svg')].map(s => getComputedStyle(s).width))")])
-    sizes = __import__('json').loads(out[-1])
-    assert len(sizes) >= 3 and all(s == '18px' for s in sizes), sizes
-
 def test_login_code_is_eight_digits(b):
     from test_sync import FAKE
     out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE),
@@ -217,14 +211,15 @@ def test_formal_exam_listening_options_play_on_click(b):
 
 # ---- 2026-10-25 (5): the 今日練習 button count is the real session size; version history in settings ----
 def test_today_button_count_matches_the_session(b):
-    js = """(() => { route();
-      const btn = document.querySelector('[data-act=start-daily]'); const shown = Number((btn.textContent.match(/(\\d+) 題/) || [])[1]);
-      const note = /換個方式再考/.test(document.querySelector('.hero').textContent);   // 1.0.36: the help panel no longer counts the encores
-      startSession('daily'); const enc = encoreEstimate(SESSION.entries.map(e => e.item)); const actual = SESSION.entries.length; SESSION = null; document.body.classList.remove('practicing'); location.hash = '#/today';
-      return JSON.stringify([shown, actual, note, enc]); })()"""
+    # test build: 書房's notebook carries no count; it starts the very set dailyQueue built (encores are not part of it), and
+    # 學習分析's 今天 card says nothing of encores either
+    js = """(() => { route(); const keys = dailyQueue().items.map(x => x.key);
+      location.hash = '#/stats'; route(); const note = /換個方式再考/.test(document.querySelector('.day-card').textContent);   // 1.0.36: the help no longer counts the encores
+      startSession('daily'); const enc = encoreEstimate(SESSION.entries.map(e => e.item)); const actual = SESSION.entries.map(e => e.item.key); SESSION = null; document.body.classList.remove('practicing'); location.hash = '#/today';
+      return JSON.stringify([keys.length, actual.length, JSON.stringify(actual) === JSON.stringify(keys), note, enc]); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
-    shown, actual, note, enc = __import__('json').loads(out[-1])
-    assert shown == actual and shown > 0 and note is False, (shown, actual, note, enc)   # the button is the items of this session; encores are not part of the count
+    shown, actual, same, note, enc = __import__('json').loads(out[-1])
+    assert shown == actual and shown > 0 and same and note is False, (shown, actual, same, note, enc)
 
 def test_settings_show_the_version_and_its_history(b):
     out = b.run([("nav", URL), ("wait", READY),
@@ -325,12 +320,12 @@ def test_new_items_spread_across_sessions(b):
       REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 60).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
       delete state.today.plan; saveState(); DAILY_CACHE = null; const q = dailyQueue();
       const firstNew = q.items.filter(it => !state.srs[it.key]).length;
-      location.hash = '#/today'; route(); const btn = document.querySelector('[data-act=start-daily]').textContent; const rest = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');   // the rest-of-day line lives in the 今天的範圍 panel
-      state.srs = JSON.parse(keep); saveState(); DAILY_CACHE = null; return JSON.stringify({ n: q.items.length, total: q.total, firstNew, btn, rest }); })()"""
+      location.hash = '#/stats'; route(); const rest = document.querySelector('.day-card').textContent.replace(/\\s+/g, ' ');   // the day's count: 學習分析's 今天 card (test build)
+      state.srs = JSON.parse(keep); saveState(); DAILY_CACHE = null; return JSON.stringify({ n: q.items.length, total: q.total, firstNew, rest }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['n'] == 20 and r['total'] > 60 and 2 <= r['firstNew'] <= 8, r
-    assert int(re.search(r'開始練習・這組 (\d+) 題', r['btn']).group(1)) == 20 and f"今天還有 {r['total']} 題" in r['rest'], r   # this set, and what is left of the day
+    assert f"共 {r['total']} 題" in r['rest'], r   # what is left of the day (a set holds 20: n above)
 
 def test_done_state_and_extra_session(b):
     js = """(() => { const t = todayStr(); const keep = JSON.stringify({ srs: state.srs, today: state.today, settings: state.settings });
@@ -340,27 +335,27 @@ def test_done_state_and_extra_session(b):
       const rec = () => ({ b: 3, due: addDays(t, 2), n: 3, ok: 3, ng: 0, s: 6, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} });
       soon.forEach(v => { state.srs[v.key] = rec(); });
       delete state.today.plan; saveState(); DAILY_CACHE = null;
-      location.hash = '#/today'; route(); const h2 = document.querySelector('.hero h2').textContent; const btn = document.querySelector('[data-act=start-extra]');
+      location.hash = '#/today'; route(); const tag = () => document.querySelector('#view [data-thing=notebook] .tag').textContent.trim(); const h2 = tag();   // 書房's notebook (test build)
       const n = dailyPlan().n; const q = extraQueue(); const round = q.items.map(x => x.key);
       const soonIn = soon.filter(v => round.includes(v.key)).length; const seen = q.items.filter(x => state.srs[x.key]).length;
       startSession('daily', { extra: true }); const note = SESSION.meta.note; SESSION = null; document.body.classList.remove('practicing');
       const againOk = startSession('daily', {}); const againNote = againOk ? SESSION.meta.note : ''; SESSION = null; document.body.classList.remove('practicing');   // the summary's 再練一組 with the day done
       // that round answered: the button comes back with the next batch of new items
       round.forEach(k => srsAnswer(k, true)); saveState(); DAILY_CACHE = null; location.hash = '#/today'; route();
-      const q2 = extraQueue(); const btn2 = document.querySelector('[data-act=start-extra]');
-      const next = { n: q2.items.length, repeats: q2.items.filter(x => round.includes(x.key)).length, btn: btn2 ? btn2.textContent : null };
+      const q2 = extraQueue();
+      const next = { n: q2.items.length, repeats: q2.items.filter(x => round.includes(x.key)).length, tag: tag() };
       // nothing new left in any bank: the button goes away
       REG.vocab.concat(REG.grammar, REG.kanji, REG.kana).forEach(x => { if (!state.srs[x.key]) state.srs[x.key] = rec(); });
       saveState(); DAILY_CACHE = null; location.hash = '#/today'; route();
-      const gone = extraQueue().items.length === 0 && !document.querySelector('[data-act=start-extra]');
+      const gone = extraQueue().items.length === 0 && tag() === '今日完成';
       const k = JSON.parse(keep); state.srs = k.srs; state.today = k.today; state.settings = k.settings; saveState(); DAILY_CACHE = null;
-      return JSON.stringify({ h2, btn: btn ? btn.textContent : null, n, len: q.items.length, soonIn, seen, newN: q.newN, aheadN: q.aheadN, reviewCount: q.reviewCount, note, againOk, againNote, next, gone }); })()"""
+      return JSON.stringify({ h2, n, len: q.items.length, soonIn, seen, newN: q.newN, aheadN: q.aheadN, reviewCount: q.reviewCount, note, againOk, againNote, next, gone }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
     r = json.loads(out[-1])
-    assert r['h2'] == '今天完成了' and r['btn'] == f"多學 {r['n']} 題", r   # 1.0.35: the heading and the button say it all, no note
+    assert r['h2'] == '今日完成・多學', r   # the day done, more to learn
     assert r['len'] == r['n'] and r['newN'] == r['n'] and r['seen'] == 0 and r['soonIn'] == 0 and r['aheadN'] == 0 and r['reviewCount'] == 0, r   # new items only, as many as the day's new count
     assert r['note'] == '' and r['againOk'] and r['againNote'] == '', r   # 再練一組 with the day done offers the same set, no note on its first card
-    assert r['next'] == {'n': r['n'], 'repeats': 0, 'btn': f"多學 {r['n']} 題"} and r['gone'], r
+    assert r['next'] == {'n': r['n'], 'repeats': 0, 'tag': '今日完成・多學'} and r['gone'], r
 
 def test_theme_lane_rotates_after_three_days_of_words(b):
     js = """(() => { const keep = JSON.stringify({ srs: state.srs, lane: state.themeLane, q: 0 }); state.themeLane = { order: [], count: {} };
@@ -501,7 +496,7 @@ def test_ai_needs_a_login_and_settings_have_no_ai_tab(b):
     # 1.0.49: AI runs on the site's own key, so there is nothing to set up; logged out, the AI buttons send the learner to log in
     js = """(() => { const tabs = () => [...document.querySelectorAll('#modalBody [data-act=settings-tab]')].map(x => x.dataset.tab);
       openSettings('ai'); const t = tabs(); closeModal(true);
-      location.hash = '#/tools'; route(); const head = document.querySelector('.page-head'); const anaBtn = document.querySelector('[data-act=analyze-ai]');
+      location.hash = '#/tools'; route(); const head = document.querySelector('#toolsPart .page-head');   /* test build: 工具與 AI sits at the bottom of 學習分析 */ const anaBtn = document.querySelector('[data-act=analyze-ai]');
       const tools = { login: !!head.querySelector('[data-act=sync-open]'), sub: head.querySelector('.page-sub').textContent, anaOff: anaBtn.disabled, guides: !!document.getElementById('apiGuides') };
       const ready0 = aiReady(); const asked = needAi(); const tab = document.querySelector('#modalBody [data-act=settings-tab][aria-pressed=true]').dataset.tab; closeModal(true);
       const keep = Sync.session; Sync.session = { user: { id: 'u1' } }; const ready1 = aiReady(); Sync.session = keep;
@@ -524,7 +519,7 @@ def test_stats_shows_the_past_week_of_practice_and_what_was_learned(b):
     probe = """(() => { const v = document.getElementById('view'); const card = [...v.querySelectorAll('.card')].find(c => /過去 7 天/.test(c.textContent)); if (!card) return JSON.stringify({ card: false, future: /未來 7 天/.test(v.textContent) });
       const dots = [...card.querySelectorAll('.week-dot')];   // 1.0.26: a trend line, one dot a day
       const d = card.querySelector('details'); const txt = d ? d.textContent : '';
-      const cards = [...v.querySelectorAll(':scope > .card, :scope > .grid')]; const order = [cards.indexOf(document.getElementById('progressCard')), cards.indexOf(card), cards.findIndex(c => c.classList.contains('grid-4'))];
+      const cards = [...v.querySelectorAll(':scope > .card, :scope > .grid')].filter(c => !c.classList.contains('day-card')); const order = [cards.indexOf(document.getElementById('progressCard')), cards.indexOf(card), cards.findIndex(c => c.classList.contains('grid-4'))];
       const g = [...document.querySelectorAll('#progressCard .gauge')].map(x => ({ k: x.dataset.kind, total: +x.dataset.total, seen: +x.dataset.seen, learned: +x.dataset.learned, mastered: +x.dataset.mastered, pct: +x.dataset.pct, needle: !!x.querySelector('.needle'), arcs: x.querySelectorAll('path.arc').length, tick: x.querySelector('.tick') ? +x.querySelector('.tick').dataset.f : null, tickLabels: [...x.querySelectorAll('.tick-l')].map(t => t.textContent).join('/') }));
       return JSON.stringify({ card: true, below4: REG.vocab.filter(x => x.builtin && ['PRE_N5', 'N5'].includes(x.lv)).length, gLevels: courseLevels().filter(L => REG.grammar.some(x => unitLevel(x.u) === L)).join('/'), future: /未來 7 天/.test(v.textContent), n: dots.length, tip: dots[5] && dots[5].dataset.tipBody, summary: d && d.querySelector('summary').textContent,
         learned: txt.includes(__lab[0]), fresh: txt.includes(__lab[1]), legend: /單字.*文法/.test(card.textContent), g, order, hasLegend: /已熟練|熟練/.test(document.getElementById('progressCard').textContent) && /熟悉/.test(document.getElementById('progressCard').textContent) && /已學/.test(document.getElementById('progressCard').textContent) }); })()"""
@@ -533,7 +528,7 @@ def test_stats_shows_the_past_week_of_practice_and_what_was_learned(b):
     assert r['card'] and not r['future'], r
     assert r['n'] == 7 and r['tip'] == '單字 4・文法 2・其他 1', r   # yesterday
     assert r['summary'] == '明細' and not r['learned'] and not r['fresh'] and r['legend'] and r['hasLegend'], r
-    assert r['order'] == [0, 1, 2], r['order']   # gauges first, then the week chart, then the number tiles
+    assert r['order'] == [0, 1, 2], r['order']   # under the 今天 card (test build): gauges first, then the week chart, then the number tiles
     g = {x['k']: x for x in r['g']}; assert set(g) == {'v', 'g', 'lr', 'k'}, r['g']   # 1.0.26: 總進度 has 聽力＋閱讀 and 漢字; 假名 moved to the 入門 scope
     assert g['v']['learned'] == 1 and g['v']['mastered'] == 0 and g['v']['total'] >= 1400 and g['v']['needle'] and g['v']['arcs'] == 1 and 0 <= g['v']['pct'] < 100, g['v']
     assert g['g']['seen'] + g['g']['learned'] + g['g']['mastered'] == 1 and g['g']['total'] >= 1000, g['g']
@@ -575,13 +570,13 @@ def test_stats_projects_the_finish_date_from_the_recent_pace(b):
 # ---- 2026-10-27 (v65): ring = done / today's work; 每日目標 → 每天負荷上限; exam-pace quotas on Today; 再練一次 in another format; grammar encore ----
 def test_ring_counts_todays_work_and_fills_when_the_day_is_done(b):
     # 1.0.19: the ring is today's list, kept all day; items answered in some other practice count in 今天做了, not in the ring
-    js = """(() => { location.hash = '#/today'; route();
-      const p0 = dayProgress(); const expect0 = dailyPlan().remaining; const hero0 = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');
+    js = """(() => { location.hash = '#/stats'; route();   /* the counts: 學習分析's 今天 card; the ring: 書房's notebook (test build) */
+      const p0 = dayProgress(); const expect0 = dailyPlan().remaining; const hero0 = document.querySelector('.day-card').textContent.replace(/\\s+/g, ' ');
       const num = (re) => { const m = re.exec(hero0); return m ? Number(m[1]) : 0; }; const sum = num(/待複習 (\\d+)/) + num(/新內容 (\\d+)/) + num(/另有 (\\d+)/); const shownTotal = num(/共 (\\d+) 題/);
       REG.vocab.filter(v => v.builtin && v.lv === 'N5' && !state.srs[v.key] && !todayPlanKeys().includes(v.key)).slice(-5).forEach(v => srsAnswer(v.key, true));
       const p1 = dayProgress(); const did1 = itemsDoneToday();
       todayPlanKeys().forEach(k => srsAnswer(k, true)); location.hash = '#/today'; route(); const p2 = dayProgress();
-      return JSON.stringify({ p0: [p0.done, p0.total], expect0, sum, shownTotal, p1: [p1.done, p1.total], did1, p2: [p2.done, p2.total], done: /今天完成了/.test(document.querySelector('.hero').textContent) }); })()"""
+      return JSON.stringify({ p0: [p0.done, p0.total], expect0, sum, shownTotal, p1: [p1.done, p1.total], did1, p2: [p2.done, p2.total], done: /^今日完成/.test(document.querySelector('#view [data-thing=notebook] .tag').textContent.trim()) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['p0'] == [0, r['expect0']] and r['expect0'] > 0 and r['sum'] == r['expect0'] == r['shownTotal'], r   # the breakdown, its 共 N 題 and the ring agree
@@ -678,7 +673,7 @@ def test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook(b):
 def test_today_counts_relearning_items_among_reviews_and_puts_them_first(b):
     js = """(() => { const t = todayStr(); const words = REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 12);
       words.forEach((v, i) => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: i < 3 ? 1 : 0, s: 3, d: 5, last: addDays(t, -2), intro: addDays(t, -9), f: {} }; if (i < 3) state.srs[v.key].rl = 0; });
-      delete state.today.plan; saveState(); DAILY_CACHE = null; location.hash = '#/today'; route(); const hero = document.querySelector('.hero').textContent.replace(/\\s+/g, ' ');
+      delete state.today.plan; saveState(); DAILY_CACHE = null; location.hash = '#/stats'; route(); const hero = document.querySelector('.day-card').textContent.replace(/\\s+/g, ' ');
       const dq = dailyQueue(); const reviews = dq.items.filter(x => x.kind === 'v' && state.srs[x.key]); const onLadder = reviews.map(x => typeof state.srs[x.key].rl === 'number');
       startSession('daily', {}); route(); let chip = null, steps = 0;
       while (steps++ < 40) { const e = currentEntry(); if (e.preview && !e.previewDone) { dismissPreview(); continue; } if (e.item && e.item.kind === 'v' && typeof state.srs[e.item.key].rl === 'number') { chip = /錯題複習/.test(document.querySelector('.q-label').textContent); break; } answerCurrent(e.q.answer); if (currentEntry() && currentEntry().done) nextQuestion(); }
@@ -1052,8 +1047,8 @@ def test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_g
     assert r3['text'].startswith('作答 3 次（漢字 1・聽力 1・其他 1）') and '正確率 50%' in r3['text'] and r3['before'] in r3['text'], r3['text']
 
 def test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints(b):
-    js = """(() => { location.hash = '#/today'; route(); const hero = document.querySelector('.hero');
-      const help = hero.querySelector('.hero-panel[data-panel=help]'); const ring = hero.querySelector('.ring');
+    js = """(() => { location.hash = '#/stats'; route(); const help = document.querySelector('.day-card .day-help p');   /* test build: 說明 on 學習分析's 今天 card */
+      location.hash = '#/today'; route(); const ring = document.querySelector('#view [data-thing=notebook] .tag');   /* today's progress on 書房's notebook */
       [1, 2, 3].forEach(i => { state.dailyLogs[addDays(todayStr(), -i)] = { vocabCount: 5 }; });
       startSession('daily', {}); route(); let n = 0; while (n++ < 20) { const e = currentEntry(); if (e.preview && !e.previewDone) { dismissPreview(); continue; } if (e.q && !e.q.custom) break; nextQuestion(); }
       const before = { hint: !!document.querySelector('.pr-actions .kbd-hint'), next: !!document.querySelector('.pr-next') };
@@ -1062,40 +1057,32 @@ def test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints(b):
       SESSION = null; document.body.classList.remove('practicing');
       location.hash = '#/stats'; route(); const th = [...document.querySelectorAll('th.col-left')].length; const td = [...document.querySelectorAll('td.col-left')].length;
       const css = document.querySelector('style').textContent;
-      return JSON.stringify({ help: !!help, helpText: help ? help.textContent : '', ring: !!ring, before, after, th, td, hover: /hover: none/.test(css) && /kbd-hint/.test(css), ringCss: /\\.hero-center > \\.ring \\{[^}]*order: -1/.test(css) && !/\\.hero \\.ring \\{[^}]*display: none/.test(css) && hero.classList.contains('hero-center'), safeTop: /body\\.practicing \\.content \\{[^}]*padding-top: calc\\(18px \\+ env\\(safe-area-inset-top/.test(css), noZoom: /maximum-scale=1/.test(document.querySelector('meta[name=viewport]').content) && /user-scalable=no/.test(document.querySelector('meta[name=viewport]').content) && /html \\{ touch-action: manipulation; overscroll-behavior: none/.test(css), noTail: /body\\.practicing \\.content \\{ padding-bottom: calc\\(12px \\+ env\\(safe-area-inset-bottom/.test(css) && /body\\.practicing \\.content:has\\(> \\.pr-next\\) \\{ padding-bottom: 0/.test(css) }); })()"""
+      return JSON.stringify({ help: !!help, helpText: help ? help.textContent : '', ring: !!ring, before, after, th, td, hover: /hover: none/.test(css) && /kbd-hint/.test(css), safeTop: /body\\.practicing \\.content \\{[^}]*padding-top: calc\\(18px \\+ env\\(safe-area-inset-top/.test(css), noZoom: /maximum-scale=1/.test(document.querySelector('meta[name=viewport]').content) && /user-scalable=no/.test(document.querySelector('meta[name=viewport]').content) && /html \\{ touch-action: manipulation; overscroll-behavior: none/.test(css), noTail: /body\\.practicing \\.content \\{ padding-bottom: calc\\(12px \\+ env\\(safe-area-inset-bottom/.test(css) && /body\\.practicing \\.content:has\\(> \\.pr-next\\) \\{ padding-bottom: 0/.test(css) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
     r = json.loads(out[-1])
     assert r['help'] and 'SRS' in r['helpText'] and r['ring'], r   # 1.0.36: the help panel is a few plain sentences
     assert r['before'] == {'hint': True, 'next': False}, r['before']
     assert r['after'] == {'nextInStrip': True, 'stickyClass': False, 'tools': True, 'enterHint': True, 'hint': False}, r['after']
-    assert r['th'] == 1 and r['td'] >= 3 and r['hover'] and r['ringCss'] and r['safeTop'] and r['noZoom'] and r['noTail'], r   # practice hides the topbar, so its content clears the notch itself
+    assert r['th'] == 1 and r['td'] >= 3 and r['hover'] and r['safeTop'] and r['noZoom'] and r['noTail'], r   # practice hides the topbar, so its content clears the notch itself
 
 def test_unit_legend_chips_exam_subject_rows_and_setting_hints(b):
-    js = """(() => { location.hash = '#/today'; route(); const legs = [...document.querySelectorAll('.legs .leg')].map(x => x.textContent.trim());
+    js = """(() => { location.hash = '#/course'; route(); const legs = [...document.querySelectorAll('.now-card .legs .leg')].map(x => x.textContent.trim());   /* 課程's 目前 card (test build) */
       location.hash = '#/exam'; route(); const subj = [...document.querySelectorAll('.exSubj')].map(x => x.closest('div').className);
       const css = document.querySelector('style').textContent;
       return JSON.stringify({ legs, subj, nowrap: /\\.leg \\{[^}]*nowrap/.test(css), hint: /\\.setting-row \\.hint \\{[^}]*11\\.5px/.test(css) }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)
     r = json.loads(out[-1])
-    assert r['legs'][0].startswith('已學 ') and r['legs'][0].endswith(' 題'), r['legs']   # 1.0.35: the 今日 card shows one count; the unit page keeps 熟練／熟悉／初識
+    assert r['legs'][0].startswith('已學 ') and r['legs'][0].endswith(' 題'), r['legs']   # 1.0.35: the 目前 card shows one count; the unit page keeps 熟練／熟悉／初識
     assert r['subj'] == ['mt-2', 'mt-2', 'mt-2'] and r['nowrap'] and r['hint'], r
 
-def test_hero_help_and_scope_toggles_open_one_at_a_time(b):
-    js = """(() => { heroTab = null; location.hash = '#/today'; route(); const hero = document.querySelector('.hero');
-      const st = () => ({ help: !hero.querySelector('[data-panel=help]').hidden, scope: !hero.querySelector('[data-panel=scope]').hidden, open: [...hero.querySelectorAll('.hero-tab.open')].map(b => b.dataset.tab) });
-      const tab = (k) => ACTIONS['hero-tab'](hero.querySelector(`.hero-tab[data-tab=${k}]`));
-      const s0 = st(); tab('help'); const s1 = st(); tab('scope'); const s2 = st(); tab('scope'); const s3 = st();
-      tab('help'); route(); const s4 = (() => { const h = document.querySelector('.hero'); return { help: !h.querySelector('[data-panel=help]').hidden, scope: !h.querySelector('[data-panel=scope]').hidden }; })();
-      const scopeText = document.querySelector('[data-panel=scope]').textContent.replace(/\\s+/g, ' '); const noteOutside = !document.querySelector('.hero-panel .plan-note');
-      const outside = [...document.querySelector('.hero').children[0].children].filter(x => !x.classList.contains('hero-panel') && !x.classList.contains('hero-tabs')).map(x => x.textContent.replace(/\\s+/g, ' ').trim());
-      heroTab = null; return JSON.stringify({ s0, s1, s2, s3, s4, scopeText: /單字主題/.test(scopeText) && /待複習 \\d+/.test(scopeText) && /共 \\d+ 題/.test(scopeText) && !/做完還有/.test(scopeText), noteOutside, outside }); })()"""
-    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)
-    r = json.loads(out[-1])
-    assert r['s0'] == {'help': False, 'scope': False, 'open': []}, r['s0']
-    assert r['s1'] == {'help': True, 'scope': False, 'open': ['help']} and r['s2'] == {'help': False, 'scope': True, 'open': ['scope']}, r
-    assert r['s3'] == {'help': False, 'scope': False, 'open': []} and r['s4'] == {'help': True, 'scope': False}, r   # the choice survives a re-render
-    assert r['scopeText'] and r['noteOutside'], r
-    assert not any(('待複習' in x or '做完還有' in x) for x in r['outside']) and any(x.startswith('開始練習・') for x in r['outside']), r['outside']   # folded: title, toggles, button
+def test_stats_today_card_shows_the_scope_and_folds_the_help(b):
+    # test build: 學習分析 opens with a 今天 card — the date and the streak, today's scope in full (no toggle), 說明 folded until opened
+    js = """(() => { location.hash = '#/stats'; route(); const card = document.querySelector('#view .day-card'); const help = card.querySelector('.day-help');
+      const s0 = help.open; help.querySelector('summary').click(); const s1 = help.open; const text = card.textContent.replace(/\\s+/g, ' ');
+      return JSON.stringify({ first: document.querySelector('#view .card') === card, s0, s1, date: /\\d+ 月 \\d+ 日（.）・連續 \\d+ 天/.test(text),
+        scope: /單字主題/.test(text) && /待複習 \\d+/.test(text) && /共 \\d+ 題/.test(text) && !/做完還有/.test(text), help: /SRS/.test(help.textContent) }); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)[-1])
+    assert r == {'first': True, 's0': False, 's1': True, 'date': True, 'scope': True, 'help': True}, r
 
 def test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop(b):
     seed = """(() => { const t = todayStr(); const vs = REG.vocab.filter(v => v.builtin && v.ex && v.exZh).slice(0, 2); const g = REG.grammar.find(x => (x.t || 'choice') === 'choice' && x.op && x.zh && splitBlank(x.jp));
@@ -1165,28 +1152,29 @@ def test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_rea
     assert r['sentences'] == [r['want'], r['want']] and r['marked'] and r['noBlank'] and r['zh'], r
 
 def test_today_notebook_card_is_the_listen_player(b):
+    # test build: the player lives on 聽一輪 (#/listen, 書房's headphones), over 錯題本 or a word theme
     js = """(() => { const t = todayStr(); const v = REG.vocab.find(x => x.builtin); state.mistakes = [{ id: 'tp1', key: v.key, cat: '單字', prompt: '「' + v.m + '」的日文', answer: jaPlain(v.w), count: 2, mastered: false, date: t, last: t }]; saveState();
-      LISTEN = null; location.hash = '#/today'; route(); const view = document.getElementById('view'); localStorage.removeItem('nq_listen_pref'); const onPractice = !view.querySelector('.card.listen') && !!view.querySelector('.today-seg [data-tab=practice][aria-pressed=true]') && !!view.querySelector('.hero-center');
-      ACTIONS['today-tab']({ dataset: { tab: 'mistakes' } }); const card = view.querySelector('.card.listen');
+      LISTEN = null; localStorage.removeItem('nq_listen_pref'); location.hash = '#/listen'; route(); const view = document.getElementById('view');
       // the player was first built over an empty notebook (page load), then words arrived: it must open on words, not on the empty-side flip
       const scopeAfterRefill = (() => { LISTEN = null; const keepM = state.mistakes; state.mistakes = []; listenInit(); state.mistakes = keepM; listenInit(); return LISTEN.scope; })(); route();
-      const a = { player: !!card.querySelector('.lplay'), pills: card.querySelectorAll('.lopt').length, link: !card.querySelector('.listen-head [data-route="#/mistakes"]') && /錯題本 1/.test(card.querySelector('.seg').textContent), icon: !!card.querySelector('.listen-head .listen-icon svg') && !/聽一輪/.test(card.textContent), oldBtn: !!view.querySelector('[data-act=start-mistakes]'), compact: card.classList.contains('compact'), paused: LISTEN && !LISTEN.playing, count: (card.querySelector('#listenCount') || {}).textContent, word: /\\S/.test((card.querySelector('#listenCard') || {}).textContent || ''), grid3: !!view.querySelector('.grid-3') };
-      ACTIONS['listen-cycle']({ dataset: { key: 'twice' } }); const stays = location.hash === '#/today' && !!document.querySelector('.card.listen.compact') && !document.querySelector('[data-act=listen-exit]') && document.querySelector('[data-key=twice]').dataset.value === '1';
-      // switch the card to a word theme: every word of that theme (and since 1.0.28 a card for each kanji they use), no scope pill, the theme select shows
+      const card = view.querySelector('.card.listen');
+      const a = { player: !!card.querySelector('.lplay'), pills: card.querySelectorAll('.lopt').length, seg: [...card.querySelectorAll('.listen-seg [data-act=listen-source]')].map(x => [x.dataset.source, x.getAttribute('aria-pressed')]), n: /錯題本 1/.test(card.querySelector('.listen-seg').textContent), paused: LISTEN && !LISTEN.playing, count: (card.querySelector('#listenCount') || {}).textContent, word: /\\S/.test((card.querySelector('#listenCard') || {}).textContent || '') };
+      ACTIONS['listen-cycle']({ dataset: { key: 'twice' } }); const stays = location.hash === '#/listen' && !!document.querySelector('.card.listen.compact') && !document.querySelector('[data-act=listen-exit]') && document.querySelector('[data-key=twice]').dataset.value === '1';
+      // a word theme: every word of that theme (and since 1.0.28 a card for each kanji they use), no scope pill, the theme select shows
       ACTIONS['listen-source']({ dataset: { source: 'theme' } }); const c2 = document.querySelector('.card.listen'); const theme = LISTEN.source.theme; const n = listenThemeWords(theme).length;
-      const th = { kind: LISTEN.source.kind, all: LISTEN.all.filter(e => e.kind === 'v').length === n && n > 0 && LISTEN.all.every(e => (e.kind === 'v' || e.kind === 'k') && !e.m), select: !!c2.querySelector('.listen-head [data-act=theme-pick] .bar.stack') && c2.querySelector('.listen-head .tp-name').textContent === theme, scopePill: !!c2.querySelector('[data-key=scope]'), link: !c2.querySelector('[data-route="#/vocab/themes"]'), label: !/單字・/.test(c2.querySelector('#listenCard').textContent) };
+      const th = { kind: LISTEN.source.kind, all: LISTEN.all.filter(e => e.kind === 'v').length === n && n > 0 && LISTEN.all.every(e => (e.kind === 'v' || e.kind === 'k') && !e.m), select: !!c2.querySelector('.listen-head [data-act=theme-pick] .bar.stack') && c2.querySelector('.listen-head .tp-name').textContent === theme, scopePill: !!c2.querySelector('[data-key=scope]'), label: !/單字・/.test(c2.querySelector('#listenCard').textContent) };
       ACTIONS['theme-pick'](); const rows = [...document.querySelectorAll('.modal .theme-row')]; const pickerOk = rows.length === listenThemes().length && rows[0].dataset.theme === '初識單詞' && rows.every(r => r.querySelector('.bar.stack')) && document.querySelector('.modal .theme-row.on').dataset.theme === theme;
       const other = vocabThemes().map(g => g.c).find(x => x !== theme); ACTIONS['listen-theme-pick']({ dataset: { theme: other } }); const switched = LISTEN.source.theme === other && JSON.parse(localStorage.getItem('nq_listen_pref')).theme === other && !document.querySelector('.modal') && document.querySelector('.listen-head .tp-name').textContent === other;
       ACTIONS['listen-source']({ dataset: { source: 'mistakes' } }); const backToNotes = LISTEN.source.kind === 'mistakes';
       location.hash = '#/stats'; route(); const stopped = LISTEN === null;
-      state.mistakes = []; saveState(); location.hash = '#/today'; route(); const backOnPractice = todayTab === 'practice' && !document.querySelector('.card.listen'); ACTIONS['today-tab']({ dataset: { tab: 'mistakes' } }); const empty = /目前沒有可以聽的錯題/.test(document.getElementById('view').textContent) && !document.querySelector('.lplay');
-      localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ a, onPractice, backOnPractice, scopeAfterRefill, stays, th, pickerOk, switched, backToNotes, stopped, empty }); })()"""
+      state.mistakes = []; saveState(); location.hash = '#/listen'; route(); const empty = /目前沒有可以聽的錯題/.test(document.getElementById('view').textContent) && !document.querySelector('.lplay');
+      localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ a, scopeAfterRefill, stays, th, pickerOk, switched, backToNotes, stopped, empty }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['a'] == {'player': True, 'pills': 4, 'link': True, 'icon': True, 'oldBtn': False, 'compact': True, 'paused': True, 'count': '1 / 1・第 1 輪', 'word': True, 'grid3': False}, r['a']
-    assert r['stays'] and r['scopeAfterRefill'] == 'v', r   # a pill on the Today card re-renders the card, never the standalone page
-    assert r['th'] == {'kind': 'theme', 'all': True, 'select': True, 'scopePill': False, 'link': True, 'label': True} and r['pickerOk'] and r['switched'] and r['backToNotes'], r
-    assert r['stopped'] and r['empty'] and r['onPractice'] and r['backOnPractice'], r
+    assert r['a'] == {'player': True, 'pills': 4, 'seg': [['mistakes', 'true'], ['theme', 'false']], 'n': True, 'paused': True, 'count': '1 / 1・第 1 輪', 'word': True}, r['a']
+    assert r['stays'] and r['scopeAfterRefill'] == 'v', r   # a pill re-renders the card in place
+    assert r['th'] == {'kind': 'theme', 'all': True, 'select': True, 'scopePill': False, 'label': True} and r['pickerOk'] and r['switched'] and r['backToNotes'], r
+    assert r['stopped'] and r['empty'], r
 
 def test_vocab_theme_card_plays_the_theme(b):
     js = """(() => { location.hash = '#/vocab/level?lv=N5'; route(); const btn = document.querySelector('.theme-card [data-act=listen-theme-start]'); const theme = btn.dataset.theme;   // 1.0.9: theme cards sit on the level pages
@@ -1538,7 +1526,7 @@ def test_ai_shows_the_functions_own_message_when_it_refuses(b):
 
 # ---- 2026-10-28: a pill tap keeps the player's place; the example's Chinese is read ----
 def test_listen_pills_keep_the_place_and_the_example_chinese_is_read(b):
-    js = """(() => { LISTEN = null; setListenPref({ source: 'theme', theme: vocabThemes()[0].c }); location.hash = '#/today'; route(); ACTIONS['today-tab']({ dataset: { tab: 'theme' } });
+    js = """(() => { LISTEN = null; setListenPref({ source: 'theme', theme: vocabThemes()[0].c }); location.hash = '#/listen'; route();   /* 聽一輪 (test build) */
       LISTEN.idx = 3; const ids = LISTEN.items.map(e => e.id); const paused = { before: LISTEN.idx };
       ACTIONS['listen-cycle']({ dataset: { key: 'twice' } }); paused.after = LISTEN.idx; paused.same = JSON.stringify(LISTEN.items.map(e => e.id)) === JSON.stringify(ids); paused.twice = LISTEN.twice;
       route(); paused.afterRoute = LISTEN.idx;   // a plain page re-render keeps the place too
@@ -1558,43 +1546,20 @@ def test_listen_pills_keep_the_place_and_the_example_chinese_is_read(b):
 
 # ---- 2026-10-28: the today page is one card on one phone screen: 練習／錯題本／單字 switch, practice by default ----
 def test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest(b):
+    # test build: 書房 is one screen on a phone (no top bar, nothing to scroll); 聽一輪 is one screen too, its player taking the rest
     seed = """(() => { const t = todayStr(); state.introSeen = true; state.mistakes = [];
       REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 30).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
-      REG.grammar.slice(0, 6).forEach(g => { state.srs[g.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
-      localStorage.removeItem('nq_listen_pref'); saveState(); heroTab = null; LISTEN = null; location.hash = '#/vocab'; route(); location.hash = '#/today'; route(); return true; })()"""
-    js = """(() => { const view = document.getElementById('view'); const fitsNow = () => ({ scroll: document.documentElement.scrollHeight, viewScroll: view.scrollHeight, viewH: view.clientHeight, inner: innerHeight });
-      const cards = view.querySelectorAll('.card').length; const seg = [...view.querySelectorAll('.today-seg button')].map(b => [b.dataset.tab, b.getAttribute('aria-pressed')]);
-      const hero = view.querySelector('.hero.hero-center'); const tabs = [...hero.querySelectorAll('.hero-tab')].map(b => b.dataset.tab); const unitTab = hero.querySelector('.hero-tab[data-tab=unit]').textContent;
-      const unitOpen = !hero.querySelector('[data-panel=unit]').hidden && hero.querySelector('.hero-tab[data-tab=unit]').classList.contains('open') && hero.querySelector('[data-panel=help]').hidden;   // 目前單元 is open on arrival
-      const unitPanelHas = { bar: !!hero.querySelector('[data-panel=unit] .bar.stack'), legs: [...hero.querySelectorAll('[data-panel=unit] .legs .leg')].map(x => x.textContent.trim()), lecture: !!hero.querySelector('[data-panel=unit] [data-route^="#/course/"]'), drill: !!hero.querySelector('[data-panel=unit] [data-act=start-unit]') };
-      const ringFirst = hero.querySelector('.ring').getBoundingClientRect().top < hero.querySelector('[data-act=start-daily]').getBoundingClientRect().top;
-      const practice = { fit: view.classList.contains('fit') && document.body.classList.contains('today'), ...fitsNow(), ringFirst, noPlayer: !view.querySelector('.lplay') && !view.querySelector('.card.listen'), text: !/今日練習|聽一輪/.test(view.textContent) && /連續 \\d+ 天/.test(hero.textContent) && getComputedStyle(view.querySelector('.page-head.today-head')).display === 'none' };
-      ACTIONS['hero-tab'](hero.querySelector('.hero-tab[data-tab=help]')); const opened = !hero.querySelector('[data-panel=help]').hidden && hero.querySelector('[data-panel=unit]').hidden;   // one at a time
-      route(); const kept = heroTab === 'help' && !document.querySelector('[data-panel=help]').hidden;   // a re-render inside the page keeps the choice
-      // 單字: the same card becomes the player and takes the rest of the screen; the count sits at the card's bottom right, clear of the pills
-      ACTIONS['today-tab']({ dataset: { tab: 'theme' } }); const listen = view.querySelector('.card.today-card.listen.compact'); const cardH = listen.querySelector('#listenCard').getBoundingClientRect().height;
-      const opts = listen.querySelector('.listen-opts').getBoundingClientRect(); const nav = document.querySelector('.bottomnav').getBoundingClientRect();
-      const countBox = listen.querySelector('.listen-opts #listenCount.listen-count'); const cr = countBox.getBoundingClientRect(); const lr = listen.getBoundingClientRect(); const pills = [...listen.querySelectorAll('.lopt')].map(x => x.getBoundingClientRect());
-      const countAtBottomRight = /第 \\d+ 輪/.test(countBox.textContent) && Math.abs(cr.right - (lr.right - 18)) <= 2 && cr.bottom <= lr.bottom - 10 && cr.bottom >= lr.bottom - 60 && pills.every(p => p.right <= cr.left);
-      const flush = Math.abs(listen.querySelector('.listen-head .listen-full').getBoundingClientRect().right - listen.querySelector('.today-seg').getBoundingClientRect().right) <= 1 && listen.querySelector('.listen-head .theme-pick').getBoundingClientRect().right < listen.querySelector('.listen-head .listen-full').getBoundingClientRect().left && Math.abs(listen.querySelector('.listen-icon').getBoundingClientRect().left - listen.querySelector('.today-seg').getBoundingClientRect().left) <= 1;
-      const player = { ...fitsNow(), flush, cards: view.querySelectorAll('.card').length, one: view.querySelectorAll('.today-seg').length === 1 && !view.querySelector('.hero'), pressed: view.querySelector('.today-seg [aria-pressed=true]').dataset.tab, select: !!listen.querySelector('.listen-head [data-act=theme-pick] .bar.stack'), cardH, optsBottom: Math.round(opts.bottom), navTop: Math.round(nav.top), countAtBottomRight, kind: LISTEN.source.kind };
-      // playing on, back to 練習: the player keeps going and the 單字 switch shows a dot; 錯題本 (another source) stops it
-      listenPlay(); ACTIONS['today-tab']({ dataset: { tab: 'practice' } }); const keptPlaying = LISTEN && LISTEN.playing && LISTEN.source.kind === 'theme' && !!view.querySelector('.today-seg [data-tab=theme] .seg-live') && !!view.querySelector('.hero-center');
-      ACTIONS['today-tab']({ dataset: { tab: 'mistakes' } }); const switched = !LISTEN || LISTEN.source.kind === 'mistakes'; const emptyNote = /目前沒有可以聽的錯題/.test(view.textContent);
-      location.hash = '#/stats'; route(); const off = !view.classList.contains('fit') && !document.body.classList.contains('today') && todayTab === 'practice';
-      heroTab = null; localStorage.removeItem('nq_listen_pref'); const backToUnit = (() => { location.hash = '#/vocab'; route(); location.hash = '#/today'; route(); return heroTab === 'unit' && !document.querySelector('[data-panel=unit]').hidden; })();
-      heroTab = null; localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ cards, seg, tabs, unitTab, unitOpen, unitPanelHas, practice, opened, kept, backToUnit, player, keptPlaying, switched, emptyNote, off }); })()"""
+      localStorage.removeItem('nq_listen_pref'); saveState(); LISTEN = null; location.hash = '#/vocab'; route(); location.hash = '#/today'; route(); return true; })()"""
+    js = """(() => { const view = document.getElementById('view'); const fits = () => ({ scroll: document.documentElement.scrollHeight, viewScroll: view.scrollHeight, viewH: view.clientHeight, inner: innerHeight });
+      const room = { fit: view.classList.contains('fit') && document.body.classList.contains('today'), study: !!view.querySelector('.study'), top: getComputedStyle(document.querySelector('.topbar')).display, ...fits() };
+      setListenPref({ source: 'theme', theme: vocabThemes()[0].c }); LISTEN = null; location.hash = '#/listen'; route();
+      const player = { fit: view.classList.contains('fit'), cardH: view.querySelector('.card.listen #listenCard').getBoundingClientRect().height, kind: LISTEN.source.kind, ...fits() };
+      LISTEN = null; localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ room, player }); })()"""
     out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", seed), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['cards'] == 1 and r['seg'] == [['practice', 'true'], ['mistakes', 'false'], ['theme', 'false']], r
-    assert r['tabs'] == ['help', 'scope', 'unit'] and r['unitTab'].strip() == '目前單元' and r['unitOpen'] and r['opened'] and r['kept'] and r['backToUnit'], r
-    assert r['unitPanelHas']['bar'] and r['unitPanelHas']['lecture'] and r['unitPanelHas']['drill'] and r['unitPanelHas']['legs'][0].startswith('已學 '), r['unitPanelHas']
-    p = r['practice']; assert p['fit'] and p['scroll'] <= p['inner'] and p['viewScroll'] <= p['viewH'] and p['ringFirst'] and p['noPlayer'] and p['text'], p
-    q = r['player']; assert q['cards'] == 1 and q['one'] and q['pressed'] == 'theme' and q['select'] and q['kind'] == 'theme' and q['flush'], q   # the head row is flush with the switch on both sides
-    assert q['scroll'] <= q['inner'] and q['viewScroll'] <= q['viewH'] and 150 <= q['cardH'] <= 420 and q['optsBottom'] <= q['navTop'] and q['countAtBottomRight'], q
-    assert r['keptPlaying'] and r['switched'] and r['emptyNote'] and r['off'], r
+    p = r['room']; assert p['fit'] and p['study'] and p['top'] == 'none' and p['scroll'] <= p['inner'] and p['viewScroll'] <= p['viewH'], p
+    q = r['player']; assert q['fit'] and q['kind'] == 'theme' and q['cardH'] >= 150 and q['scroll'] <= q['inner'] and q['viewScroll'] <= q['viewH'], q
 
-# ---- 2026-10-28: the notebook player skips grammar it cannot read as a marked sentence with Chinese ----
 def test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer(b):
     js = """(() => { const t = todayStr(); const g = REG.grammar.find(x => (x.t || 'choice') === 'choice' && x.op && x.zh && splitBlank(x.jp)); const gNoZh = REG.grammar.find(x => (x.t || 'choice') === 'choice' && x.op && !x.zh && splitBlank(x.jp)); const v = REG.vocab.find(x => x.builtin);
       const bg = splitBlank(g.jp); const blank = bg.pre + '（　）' + bg.post; const row = (id, key, prompt, answer, cat) => ({ id, key, cat, prompt, answer, wrong: 'x', why: '', count: 1, streak: 0, mastered: false, date: t, last: t });
@@ -1609,11 +1574,11 @@ def test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answe
 
 # ---- 2026-10-28: 沉浸播放 — the full-page player from the Today card ----
 def test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab(b):
-    js = """(() => { localStorage.removeItem('nq_listen_pref'); LISTEN = null; location.hash = '#/vocab'; route(); location.hash = '#/today'; route(); ACTIONS['today-tab']({ dataset: { tab: 'theme' } });
+    js = """(() => { localStorage.removeItem('nq_listen_pref'); LISTEN = null; location.hash = '#/vocab'; route(); setListenPref({ source: 'theme' }); location.hash = '#/listen'; route();   /* 聽一輪 (test build) */
       const view = document.getElementById('view'); const btn = view.querySelector('.listen-head [data-act=listen-full]'); const L = LISTEN; LISTEN.idx = 2; listenPlay();
-      ACTIONS['listen-full'](btn); route(); const full = { hash: location.hash, same: LISTEN === L, playing: LISTEN.playing, idx: LISTEN.idx, immersive: document.body.classList.contains('immersive'), card: !!view.querySelector('.card.listen.full .lplay'), close: !!view.querySelector('[data-act=listen-close]'), exitBtn: !!view.querySelector('[data-act=listen-exit]'), head: /單字・/.test(view.querySelector('.card.listen.full').textContent), topbarHidden: getComputedStyle(document.querySelector('.topbar')).display === 'none', navHidden: getComputedStyle(document.querySelector('.bottomnav')).display === 'none', wordPx: parseFloat(getComputedStyle(view.querySelector('.flash .word')).fontSize), wordFills: view.querySelector('.flash .word').scrollWidth <= view.querySelector('.flash .word').clientWidth + 1 };
+      ACTIONS['listen-full'](btn); route(); const full = { hash: location.hash, same: LISTEN === L, playing: LISTEN.playing, idx: LISTEN.idx, immersive: document.body.classList.contains('immersive'), card: !!view.querySelector('.card.listen.full .lplay'), close: !!view.querySelector('[data-act=listen-close]'), exitBtn: !!view.querySelector('[data-act=listen-exit]'), head: /單字・/.test(view.querySelector('.card.listen.full').textContent), topbarHidden: getComputedStyle(document.querySelector('.topbar')).display === 'none', wordPx: parseFloat(getComputedStyle(view.querySelector('.flash .word')).fontSize), wordFills: view.querySelector('.flash .word').scrollWidth <= view.querySelector('.flash .word').clientWidth + 1 };
       const ms = navigator.mediaSession ? { title: navigator.mediaSession.metadata && navigator.mediaSession.metadata.title, state: navigator.mediaSession.playbackState } : null; const cur = listenCurrent();
-      ACTIONS['listen-close'](); route(); const back = { hash: location.hash, tab: todayTab, same: LISTEN === L, playing: LISTEN && LISTEN.playing, idx: LISTEN && LISTEN.idx, immersive: document.body.classList.contains('immersive'), compact: !!view.querySelector('.card.today-card.listen.compact .lplay') };
+      ACTIONS['listen-close'](); route(); const back = { hash: location.hash, same: LISTEN === L, playing: LISTEN && LISTEN.playing, idx: LISTEN && LISTEN.idx, immersive: document.body.classList.contains('immersive'), compact: !!view.querySelector('.card.listen.compact .lplay') };
       listenPause();
       // opened from the vocab themes page instead: ✕ ends the player and goes back there
       const tbtn = (location.hash = '#/vocab/level?lv=N5', route(), document.querySelector('.theme-card [data-act=listen-theme-start]')); ACTIONS['listen-theme-start'](tbtn); route(); const fromThemes = document.body.classList.contains('immersive') && !!document.querySelector('[data-act=listen-close]');
@@ -1623,9 +1588,9 @@ def test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_
     out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     f = r['full']; assert f['hash'] == '#/vocab/listen' and f['same'] and f['playing'] and f['idx'] == 2 and f['immersive'] and f['card'] and f['close'] and not f['exitBtn'] and f['head'], f
-    assert f['topbarHidden'] and f['navHidden'] and f['wordPx'] >= 28 and f['wordFills'], f   # sized to its column, never overflowing it
+    assert f['topbarHidden'] and f['wordPx'] >= 28 and f['wordFills'], f   # sized to its column, never overflowing it
     if r['ms'] is not None: assert r['ms']['title'] == r['curTitle'] and r['ms']['state'] == 'playing', r
-    bk = r['back']; assert bk == {'hash': '#/today', 'tab': 'theme', 'same': True, 'playing': True, 'idx': 2, 'immersive': False, 'compact': True}, bk
+    bk = r['back']; assert bk == {'hash': '#/listen', 'same': True, 'playing': True, 'idx': 2, 'immersive': False, 'compact': True}, bk
     assert r['fromThemes'] and r['ended'] and r['landscape'], r
 
 def test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box(b):
@@ -1658,8 +1623,8 @@ def test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until
       vs.slice(3).forEach(v => { delete state.srs[v.key]; }); saveState();
       const words = listenThemeWords('初識單詞').map(v => v.key); const g = listenThemes()[0];
       const empty0 = (() => { const keep = state.srs; state.srs = {}; const d = listenDefaultTheme(); state.srs = keep; return d; })();
-      const def = listenDefaultTheme(); location.hash = '#/today'; route(); ACTIONS['today-tab']({ dataset: { tab: 'theme' } }); const opened = { theme: LISTEN.source.theme, n: LISTEN.all.length, label: document.querySelector('.listen-head .tp-name').textContent };
-      ACTIONS['listen-theme-pick']({ dataset: { theme: vocabThemes()[2].c } }); LISTEN = null; location.hash = '#/vocab'; route(); location.hash = '#/today'; route(); ACTIONS['today-tab']({ dataset: { tab: 'theme' } }); const remembered = LISTEN.source.theme;
+      const def = listenDefaultTheme(); location.hash = '#/listen'; route(); ACTIONS['listen-source']({ dataset: { source: 'theme' } }); const opened = { theme: LISTEN.source.theme, n: LISTEN.all.length, label: document.querySelector('.listen-head .tp-name').textContent };
+      ACTIONS['listen-theme-pick']({ dataset: { theme: vocabThemes()[2].c } }); LISTEN = null; location.hash = '#/vocab'; route(); location.hash = '#/listen'; route(); const remembered = LISTEN.source.theme;
       localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ has0: words.includes(vs[0].key), has1: words.includes(vs[1].key), has2: words.includes(vs[2].key), hasNew: words.includes(vs[3].key), g: { c: g.c, total: g.total, learned: g.learned, mastered: g.mastered, virtual: !!g.virtual }, empty0, def, opened, remembered, want: vocabThemes()[2].c }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
@@ -1680,15 +1645,16 @@ def test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones(b):
     for k in ('course', 'vocab', 'stats', 'exam', 'mistakes', 'tools'):
         assert r[k]['title'] == r[k]['top'] and r[k]['shown'] is False and (r[k]['sub'] or k == 'stats'), (k, r[k])   # same as the topbar: hidden, the subtitle stays (學習分析 has none since 1.0.35)
     assert r['unit']['title'] != r['unit']['top'] and r['unit']['shown'] and r['intro']['shown'], r   # a unit's own name is not a repeat
-    assert r['today']['title'] == '今日' and r['today']['shown'] is False and r['today']['sub'] is False, r['today']   # the today head is hidden whole on a phone (the card has the date)
+    assert r['today'] == {'top': '書房', 'title': None, 'shown': None, 'sub': None}, r['today']   # test build: 書房 is the room, no page head
     assert r['week0'] == {'row': True, 'firstPhase': True, 'noCard': True}, r['week0']
     out2 = b.run([("metrics", (1100, 900, False)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=45)   # desktop (no topbar): titles stay
     r2 = json.loads(out2[-1])
-    assert r2['course']['shown'] and r2['vocab']['shown'] and r2['stats']['shown'] and r2['today']['shown'] and r2['today']['sub'], r2   # desktop: every main page, 今日 included, has its title
+    assert r2['course']['shown'] and r2['vocab']['shown'] and r2['stats']['shown'] and r2['today']['title'] is None, r2   # desktop: every main page has its title; 書房 is the room
 
 # ---- 2026-10-28: the install hint ----
 def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed(b):
-    js = """(() => { localStorage.removeItem('nq_install_hint'); state.introSeen = true; saveState(); const view = document.getElementById('view'); const show = () => { location.hash = '#/today'; route(); return view.querySelector('.install-banner'); };
+    # test build: the hint is a letter in the mailbox by the house (its 知道了 puts it away for good)
+    js = """(() => { localStorage.removeItem('nq_install_hint'); state.introSeen = true; saveState(); const show = () => { location.hash = '#/outside'; route(); openLetters(); return document.querySelector('.modal .letter[data-letter=install]'); };
       INSTALL_FORCE = { platform: 'ios', safari: true }; const ios = show(); const iosBtns = ios ? [...ios.querySelectorAll('[data-act]')].map(b => b.dataset.act) : null;
       ACTIONS['install-how'](); const modal = document.querySelector('.modal'); const guide = modal ? modal.textContent : ''; closeModal(true);
       const iosGuide = /加入主畫面/.test(guide) && /分享/.test(guide) && /進度是分開的/.test(guide) && !/⋮/.test(guide) && /Brave/.test(guide);
@@ -1697,13 +1663,13 @@ def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_aw
       INSTALL_FORCE = { platform: 'android', canPrompt: true }; const and = show(); const andBtns = and ? [...and.querySelectorAll('[data-act]')].map(b => b.dataset.act) : null; const andGuide = /安裝應用程式/.test(installGuideHtml()) && /data-act="install-prompt"/.test(installGuideHtml());
       INSTALL_FORCE = { platform: 'desktop', firefox: true, touch: false }; const desk = !show() && /Firefox 不支援/.test(installGuideHtml());
       INSTALL_FORCE = { platform: 'ios', standalone: true }; const standalone = !show() && /安裝好的 app/.test(installGuideHtml());
-      INSTALL_FORCE = { platform: 'ios' }; show(); ACTIONS['install-dismiss'](); const dismissed = !view.querySelector('.install-banner') && !!localStorage.getItem('nq_install_hint');
+      INSTALL_FORCE = { platform: 'ios' }; show().querySelector('[data-act=letter-done]').click(); const dismissed = !document.querySelector('.modal .letter[data-letter=install]') && !letters().some(l => l.id === 'install') && !!localStorage.getItem('nq_install_hint');
       openSettings('look'); const inSettings = /怎麼安裝成 app？/.test(document.querySelector('.modal').textContent) && /加入主畫面/.test(document.querySelector('.modal').textContent); closeModal(true);
       INSTALL_FORCE = null; localStorage.removeItem('nq_install_hint'); return JSON.stringify({ ios: !!ios, iosBtns, iosGuide, chromeIos, braveAnd, and: !!and, andBtns, andGuide, desk, standalone, dismissed, inSettings }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
-    assert r['ios'] and r['iosBtns'] == ['install-how', 'install-dismiss'] and r['iosGuide'] and r['chromeIos'] and r['braveAnd'], r
-    assert r['and'] and r['andBtns'] == ['install-prompt', 'install-dismiss'] and r['andGuide'], r
+    assert r['ios'] and r['iosBtns'] == ['install-how', 'letter-done'] and r['iosGuide'] and r['chromeIos'] and r['braveAnd'], r
+    assert r['and'] and r['andBtns'] == ['install-prompt', 'letter-done'] and r['andGuide'], r
     assert r['desk'] and r['standalone'] and r['dismissed'] and r['inSettings'], r
 
 def test_ai_explanations_are_cached_per_question_and_show_the_model(b):
@@ -1808,12 +1774,12 @@ def test_sets_hold_twenty_mixed_even_when_an_old_copy_saved_another_size_or_orde
       REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 40).concat(REG.grammar.filter(g => grammarInReach(g, unitOrder('m1'))).slice(0, 20)).forEach(x => { state.srs[x.key] = rec(); });
       delete state.today.plan; saveState(); DAILY_CACHE = null;
       const side = dailyQueue().items.map(x => x.kind === 'g' || x.kind === 'c' ? 'g' : x.kind === 'l' || x.kind === 'r' ? '' : 'v');
-      location.hash = '#/today'; route(); const btn = document.querySelector('[data-act=start-daily]').textContent;
+      startSession('daily'); const set = SESSION.entries.length; SESSION = null; document.body.classList.remove('practicing');   // what 書房's notebook starts (test build: no count on it)
       startSession('kana'); const kana = SESSION.entries.length; SESSION = null; document.body.classList.remove('practicing'); location.hash = '#/today';
       const dropped = Object.keys(normalizeState(JSON.parse(JSON.stringify(state))).settings).filter(k => ['sessionSize', 'order'].includes(k));
-      return JSON.stringify({ n: side.length, mixed: side.includes('g') && side.indexOf('g') < side.lastIndexOf('v'), btn: Number((btn.match(/這組 (\\d+) 題/) || [])[1]), kana, dropped }); })()"""
+      return JSON.stringify({ n: side.length, mixed: side.includes('g') && side.indexOf('g') < side.lastIndexOf('v'), set, kana, dropped }); })()"""
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)[-1])
-    assert r == {'n': 20, 'mixed': True, 'btn': 20, 'kana': 20, 'dropped': []}, r
+    assert r == {'n': 20, 'mixed': True, 'set': 20, 'kana': 20, 'dropped': []}, r
 
 # 1.0.18 離線語音: the installed app keeps the audio of today's practice on the device
 STANDALONE = """(() => { const mm = window.matchMedia.bind(window);
@@ -1908,7 +1874,8 @@ def test_a_browser_tab_does_not_download_audio_ahead_by_itself(b):
 
 # ---- 2026-11-05 (1.0.39): the site moved to nihongoquest.app; manual backups are gone ----
 def test_the_old_address_says_the_site_moved_and_data_settings_have_no_backup_file(b):
-    js = """(() => { state.introSeen = true; saveState(); const card = () => { location.hash = '#/today'; route(); return document.querySelector('#view .moved-banner'); };
+    # test build: the move is a letter in the mailbox by the house, one that cannot be put away
+    js = """(() => { state.introSeen = true; saveState(); const card = () => { location.hash = '#/outside'; route(); openLetters(); return document.querySelector('.modal .letter[data-letter=moved]'); };
       const here = !!card(); OLD_SITE_FORCE = true; const el = card(); const a = el && el.querySelector('a.btn'); OLD_SITE_FORCE = false; const off = !!card(); OLD_SITE_FORCE = null;
       openSettings('data'); const body = document.querySelector('.modal').textContent;
       const data = { dl: body.includes('下載備份'), restore: body.includes('從備份還原'), file: !!document.querySelector('.modal input[type=file]'), snaps: !!document.getElementById('snapList') }; closeModal(true);
@@ -1917,7 +1884,7 @@ def test_the_old_address_says_the_site_moved_and_data_settings_have_no_backup_fi
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)])
     r = json.loads(out[-1])
     assert not r['here'] and r['on'] and not r['off'], r   # only on fender8185.github.io (forced here), never on the new address
-    assert 'nihongoquest.app' in r['text'] and '同一個 Email 登入' in r['text'] and '主畫面' in r['text'] and '金鑰' in r['text'], r['text']
+    assert 'nihongoquest.app' in r['text'] and '同一個 Email 登入' in r['text'] and '主畫面' in r['text'] and '金鑰' not in r['text'] and '知道了' not in r['text'], r['text']   # keys are the site's since 1.0.49
     assert r['href'] == 'https://nihongoquest.app/#/today' and r['target'] == '_blank', r
     assert r['data'] == {'dl': False, 'restore': False, 'file': False, 'snaps': False}, r['data']   # the snapshots went too (1.0.47)
     assert URL.rstrip('/') + '/*' in r['hint'] and 'github.io' not in r['hint'], r['hint']
@@ -1946,16 +1913,78 @@ def test_a_clip_not_on_the_device_while_offline_says_so(b):
     assert len(seen) == 2 and '離線' in seen[0] and '還沒存' in seen[0], seen   # offline: the clip simply is not on this device yet
     assert '無法使用' in seen[1] and '離線' not in seen[1], seen   # online but unreachable: the service itself is the problem
 
+# ---- test build: 書房 ready for main ----
+LEARNER = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
+
+# 主題: 跟著時間 lights the pages as the scenes are lit (light from half daylight), 永夜／永晝 hold everything at midnight／noon;
+# older saves read dark／auto as 跟著時間 and light as 永晝. The colours change between pages, never in the middle of questions.
+def test_theme_follows_the_clock_or_holds_night_or_day(b):
+    js = """(() => { const m = {}; for (const v of ['dark', 'auto', 'light', 'clock', 'night', 'day', undefined]) { state.settings.theme = v; m[String(v)] = themeMode(); }
+      const look = (v) => { state.settings.theme = v; applyTheme(); return [document.documentElement.dataset.theme, lightHour(7.5)]; };
+      const night = look('night'), day = look('day'), clock = look('clock'), expect = sceneClock(sceneHour()).day >= 0.5 ? 'light' : 'dark';
+      state.settings.theme = 'night'; openSettings('look'); const sel = document.querySelector('select[data-key=theme]'); const opts = [...sel.options].map(o => [o.value, o.textContent]); const shown = sel.value; closeModal(true);
+      state.settings.theme = 'day'; location.hash = '#/stats'; route(); const page = document.documentElement.dataset.theme;
+      startSession('daily'); location.hash = '#/practice'; route(); state.settings.theme = 'night'; route(); const mid = document.documentElement.dataset.theme;
+      SESSION = null; document.body.classList.remove('practicing'); location.hash = '#/stats'; route(); const after = document.documentElement.dataset.theme;
+      return JSON.stringify({ m, night, day, clock, expect, opts, shown, page, mid, after, fresh: defaultState().settings.theme }); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)[-1])
+    assert r['m'] == {'dark': 'clock', 'auto': 'clock', 'light': 'day', 'clock': 'clock', 'night': 'night', 'day': 'day', 'undefined': 'clock'}, r['m']
+    assert r['night'] == ['dark', 0] and r['day'] == ['light', 12] and r['clock'] == [r['expect'], 7.5] and r['fresh'] == 'clock', r
+    assert r['opts'] == [['clock', '跟著時間'], ['night', '永夜'], ['day', '永晝']] and r['shown'] == 'night', r
+    assert r['page'] == 'light' and r['mid'] == 'light' and r['after'] == 'dark', r   # 永夜 chosen mid-set: the questions keep their colours, the next page follows
+
+# 信箱: the letters sit in the mailbox by the house; inside, the door's tag counts them and its stop dot glows, and a letter this
+# device has not been told about brings the hint once (not for a brand-new learner, who picks a start first); the hint walks out
+def test_mailbox_letters_show_on_the_door_and_the_hint_comes_once(b):
+    js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1');
+      const wait = (ms) => new Promise(r => setTimeout(r, ms)); const enter = async () => { location.hash = '#/stats'; route(); location.hash = '#/today'; route(); await wait(1200); };
+      const door = () => { const d = document.querySelector('#view [data-thing=door]'); return [d.querySelector('.tag').textContent.trim(), d.classList.contains('mail'), document.querySelector('.room-stops .dot[data-stop="0"]').classList.contains('mail')]; };
+      await enter(); const first = { ids: letters().map(l => l.id), door: door(), hint: document.querySelector('.mail-hint').classList.contains('on'), seen: mailSeen() };
+      await enter(); const second = document.querySelector('.mail-hint').classList.contains('on');
+      localStorage.removeItem('nq_mail_seen'); await enter(); document.querySelector('.mail-hint').click(); await wait(1500);
+      const out = { hash: location.hash, flag: document.querySelector('#view .mailbox').classList.contains('has'), tag: document.querySelector('#view .mailbox .tag').textContent };
+      openLetters(); document.querySelector('.letter[data-letter=room] [data-act=letter-done]').click();
+      const after = { left: mailCount(), modal: modalOpen(), flag: document.querySelector('#view .mailbox').classList.contains('has'), stored: !!localStorage.getItem('nq_letter_room') };
+      await enter(); const quiet = door();
+      state.startChosen = false; state.srs = {}; localStorage.clear(); saveState(); await enter(); const newbie = { hint: document.querySelector('.mail-hint').classList.contains('on'), door: door() };
+      return JSON.stringify({ first, second, out, after, quiet, newbie }); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
+    assert r['first'] == {'ids': ['room'], 'door': ['出門・1 封信', True, True], 'hint': True, 'seen': ['room']}, r['first']
+    assert r['second'] is False and r['out'] == {'hash': '#/outside', 'flag': True, 'tag': '信箱・1 封信'}, r
+    assert r['after'] == {'left': 0, 'modal': False, 'flag': False, 'stored': True} and r['quiet'] == ['出門', False, False], r
+    assert r['newbie'] == {'hint': False, 'door': ['出門・1 封信', True, True]}, r['newbie']
+
+# the day's note (fewer new items today, a level to finish first) is over the first screen of the day's first set — a question or
+# a new item's preview — and 學習分析's 今天 card keeps it all day; a later set has no note
+def test_the_days_note_sits_over_the_first_screen_of_the_days_first_set(b):
+    js = """(() => { """ + LEARNER + """ dailyPlan(); state.today.plan.note = '最近錯得比較多，今天新內容少一點（3 題）。';
+      startSession('daily'); location.hash = '#/practice'; route(); const first = { meta: SESSION.meta.note, shown: (document.querySelector('#view .plan-note') || {}).textContent || null, preview: !!(currentEntry().preview && !currentEntry().previewDone) };
+      SESSION = null; document.body.classList.remove('practicing'); location.hash = '#/stats'; route(); const card = (document.querySelector('.day-card .plan-note') || {}).textContent || null;
+      state.today.ans = ['x']; startSession('daily'); const later = SESSION.meta.note; SESSION = null; document.body.classList.remove('practicing'); state.today.ans = [];
+      return JSON.stringify({ first, card, later }); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)[-1])
+    note = '最近錯得比較多，今天新內容少一點（3 題）。'
+    assert r['first']['meta'] == note and r['first']['shown'] == note and r['card'] == note and r['later'] == '', r
+
+# 書房's 日めくり stamps the streak in red (none before a first day); 課程 opens with the 目前 card
+def test_the_calendar_stamps_the_streak_and_the_course_opens_on_the_current_unit(b):
+    js = """(() => { """ + LEARNER + """ const stamp = () => { location.hash = '#/stats'; route(); location.hash = '#/today'; route(); return [...document.querySelectorAll('#view .cal-stamp text')].map(t => t.textContent); };
+      const none = stamp(); for (let i = 1; i <= 3; i++) logEntry(todayStr(-i)).vocabCount = 5; saveState(); const three = stamp();
+      location.hash = '#/course'; route(); const now = document.querySelector('#view .card'); const nowCard = now.classList.contains('now-card') && /目前單元/.test(now.textContent) && !!now.querySelector('[data-act=start-unit]');
+      return JSON.stringify({ none, three, nowCard }); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)[-1])
+    assert r['none'] == [] and r['three'] and set(r['three']) == {'3日連続'} and r['nowCard'], r   # the stamp is on the page and on its drop-away copy
+
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
-    tests = [test_dropped_option_is_spoken_again, test_slow_option_does_not_get_the_next_one_queued_on_top, test_wrong_vocab_options_show_their_chinese_after_answering, test_more_menu_icons_are_small, test_login_code_is_eight_digits,
+    tests = [test_dropped_option_is_spoken_again, test_slow_option_does_not_get_the_next_one_queued_on_top, test_wrong_vocab_options_show_their_chinese_after_answering, test_login_code_is_eight_digits,
              test_fresh_profile_starts_at_week_one, test_week_picker_sets_the_current_unit, test_deepgram_lines_are_prefetched_and_all_play_through_one_player,
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_clips_are_fetched_from_the_r2_address, test_a_clip_r2_lacks_or_cannot_serve_comes_from_supabase_and_is_no_miss, test_sigv4_signs_like_the_aws_test_suite_and_signs_r2_requests, test_r2_listing_follows_pages_and_an_upload_carries_the_signed_headers, test_r2_errors_name_their_code_and_an_unreachable_bucket_says_so, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_a_silent_cloud_clip_counts_as_missing_and_the_download_skips_it, test_a_pinned_word_without_its_clip_plays_the_clip_of_its_reading, test_numbers_before_man_are_left_to_the_voice_and_buttons_speak_what_the_generator_makes, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_generator_stops_when_r2_refuses_or_cannot_be_reached, test_cloud_generator_retries_a_silent_clip_as_plain_text_then_kana, test_cloud_audio_is_the_only_engine_with_an_admin_generator_at_the_bottom_of_data, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_download_all_counts_clips_cached_under_the_supabase_address_and_adds_no_copy, test_download_all_finds_a_stored_clip_by_its_address_whatever_it_varies_on, test_download_all_takes_from_supabase_what_r2_lacks,test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_hero_help_and_scope_toggles_open_one_at_a_time, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_exam_countdown_leaves_the_projection_to_the_stats_page, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_clips_are_fetched_from_the_r2_address, test_a_clip_r2_lacks_or_cannot_serve_comes_from_supabase_and_is_no_miss, test_sigv4_signs_like_the_aws_test_suite_and_signs_r2_requests, test_r2_listing_follows_pages_and_an_upload_carries_the_signed_headers, test_r2_errors_name_their_code_and_an_unreachable_bucket_says_so, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_a_silent_cloud_clip_counts_as_missing_and_the_download_skips_it, test_a_pinned_word_without_its_clip_plays_the_clip_of_its_reading, test_numbers_before_man_are_left_to_the_voice_and_buttons_speak_what_the_generator_makes, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_generator_stops_when_r2_refuses_or_cannot_be_reached, test_cloud_generator_retries_a_silent_clip_as_plain_text_then_kana, test_cloud_audio_is_the_only_engine_with_an_admin_generator_at_the_bottom_of_data, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_download_all_counts_clips_cached_under_the_supabase_address_and_adds_no_copy, test_download_all_finds_a_stored_clip_by_its_address_whatever_it_varies_on, test_download_all_takes_from_supabase_what_r2_lacks,test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_stats_today_card_shows_the_scope_and_folds_the_help, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_exam_countdown_leaves_the_projection_to_the_stats_page, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began, test_reset_all_is_folded_away_at_the_bottom_of_data,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
@@ -1971,7 +2000,9 @@ if __name__ == "__main__":
              test_a_missed_listening_or_reading_item_gets_no_retry_copy_in_the_session, test_settings_drop_the_switches_the_app_now_decides, test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off, test_sets_hold_twenty_mixed_even_when_an_old_copy_saved_another_size_or_order,
              test_offline_audio_keeps_the_japanese_clips_of_todays_practice, test_offline_audio_fills_the_cache_skipping_stored_and_missing_clips_and_stops_offline,
              test_installed_app_keeps_the_coming_audio_by_itself_and_again_when_back_online, test_a_browser_tab_does_not_download_audio_ahead_by_itself, test_the_old_address_says_the_site_moved_and_data_settings_have_no_backup_file,
-             test_a_clip_not_on_the_device_while_offline_says_so]
+             test_a_clip_not_on_the_device_while_offline_says_so,
+             test_theme_follows_the_clock_or_holds_night_or_day, test_mailbox_letters_show_on_the_door_and_the_hint_comes_once, test_the_days_note_sits_over_the_first_screen_of_the_days_first_set,
+             test_the_calendar_stamps_the_streak_and_the_course_opens_on_the_current_unit]
     only = sys.argv[1:]
     failed = 0
     try:

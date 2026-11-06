@@ -182,7 +182,7 @@ def test_new_words_come_from_two_themes_interleaved(b):
     assert r['th3'] == ['副詞與接續'] and all(x == ['PRE_N5', '問候'] or x == ['N5', '副詞與接續'] for x in r['c3']), r
 
 def test_today_names_the_active_themes(b):
-    out = b.run([("nav", URL), ("wait", READY), ("eval", "location.hash = '#/today'; route(); JSON.stringify({ t: document.querySelector('.plan-topics').textContent, th: activeThemes(REG.vocab.filter(v => v.builtin), false) })")])
+    out = b.run([("nav", URL), ("wait", READY), ("eval", "location.hash = '#/stats'; route(); JSON.stringify({ t: document.querySelector('.day-card .plan-topics').textContent, th: activeThemes(REG.vocab.filter(v => v.builtin), false) })")])   # 學習分析's 今天 card (test build)
     r = json.loads(out[-1])
     assert '問候' in r['t'] and all(th in r['t'] for th in r['th']), r   # the PRE_N5 lane (問候 first) and the two active N5 themes
 
@@ -256,7 +256,7 @@ def test_theme_card_bar_has_three_segments_for_seen_learned_mastered(b):
     assert r['segs'] == [2, 3, 4] and r['gradient'] and r['stops'] >= 6, r
 
 def test_today_lists_the_vocab_themes_and_grammar_points_of_the_session(b):
-    js = """(() => { location.hash = '#/today'; route();
+    js = """(() => { location.hash = '#/stats'; route();   /* 學習分析's 今天 card (test build) */
       const box = document.querySelector('.plan-topics'); const text = box ? box.textContent.replace(/\\s+/g, ' ') : '';
       const q = dailyQueue();
       const pts = [...new Set(q.items.filter(it => it.kind === 'g').map(it => it.pt).filter(Boolean))];
@@ -295,7 +295,7 @@ TESTS += [test_new_grammar_is_not_squeezed_out_by_a_review_backlog, test_grammar
 
 # ---- 2026-10-26 (6): the 單字主題 line never vanishes ----
 def test_topics_line_names_a_finished_day_instead_of_disappearing(b):
-    js = """(() => { const snap = () => { location.hash = '#/today'; route(); const t = document.querySelector('.plan-topics'); return t ? t.textContent.replace(/\\s+/g, ' ').trim() : null; };
+    js = """(() => { const snap = () => { location.hash = '#/stats'; route(); const t = document.querySelector('.day-card .plan-topics'); return t ? t.textContent.replace(/\\s+/g, ' ').trim() : null; };
       state.today.newV = 99; state.today.newG = 99;   // today's new-word and new-grammar quota already used, no word due
       delete state.today.plan; saveState(); const noWords = snap();
       return JSON.stringify({ noWords, none: dailyQueue().items.filter(it => it.kind === 'v').length === 0 }); })()"""
@@ -330,7 +330,7 @@ def test_grammar_progress_bars_show_ok3_ok1_and_seen_segments(b):
       const read = (el) => el ? [Number(el.dataset.mastered), Number(el.dataset.learned), Number(el.dataset.seen)] : null;
       location.hash = '#/course'; route(); const course = read(document.querySelector('.unit-row[data-route="#/course/m1"] .bar.stack'));
       location.hash = '#/course/m1'; route(); const unit = read(document.querySelector('.bar.stack')); const legend = document.body.textContent.includes('熟練 4');
-      location.hash = '#/today'; route(); const today = read(document.querySelector('.bar.stack'));
+      location.hash = '#/course'; route(); const today = read(document.querySelector('.now-card .bar.stack'));   // 課程's 目前 card (it was the 今日 card's 目前單元)
       const st = unitStats('m1'); return JSON.stringify({ course, unit, today, legend, stats: [st.ok3, st.ok1, st.seen0] }); })()"""
     r = json.loads(ev(b, js))
     assert r['stats'] == [4, 3, 2] and r['course'] == [4, 3, 2] and r['unit'] == [4, 3, 2] and r['today'] == [4, 3, 2] and r['legend'], r
@@ -348,10 +348,12 @@ def test_intro_lesson_renders_with_kana_table_and_marks_itself_seen(b):
     assert r['h3'] == 13 and r['kana'] >= 46 and r['seen'] and r['hasAdj'] and r['hasVerbs'] and r['card'], r
 
 def test_new_user_banner_points_to_the_intro_until_dismissed(b):
-    js = """(() => { state.startChosen = true; location.hash = '#/today'; route(); const before = !!document.querySelector('.intro-banner');   // after the 起點 choice (1.0.6) the 第 0 週 banner shows
-      document.querySelector('.intro-banner [data-act=intro-dismiss]').click(); const after = !!document.querySelector('.intro-banner');
-      return JSON.stringify({ before, after, seen: state.introSeen === true }); })()"""
-    assert ev(b, js) == '{"before":true,"after":false,"seen":true}'
+    # test build: the banner is a letter in the yard's mailbox; the door inside counts it
+    js = """(() => { const letter = () => letters().some(l => l.id === 'intro'); const before0 = letter(); state.startChosen = true; const before = letter();   // after the 起點 choice (1.0.6) the 第 0 週 letter comes
+      location.hash = '#/outside'; route(); openLetters(); const go = !!document.querySelector('.letter[data-letter=intro] [data-act=nav][data-route="#/course/intro"]');
+      document.querySelector('.letter[data-letter=intro] [data-act=letter-done]').click(); const after = letter(); closeModal(true);
+      return JSON.stringify({ before0, before, go, after, seen: state.introSeen === true }); })()"""
+    assert ev(b, js) == '{"before0":false,"before":true,"go":true,"after":false,"seen":true}'
 
 def test_part_of_speech_chip_opens_the_glossary(b):
     js = """(() => { const v = REG.vocab.find(x => x.builtin && x.p === 'i' && meaningOptions(x));
@@ -946,9 +948,10 @@ def test_tapping_the_kanji_on_a_kanji_card_pauses_the_player_and_opens_the_kanji
     r = json.loads(ev(b, js))
     assert r == {'btn': True, 'playing': True, 'after': False, 'modal': True}, r
 
-# every kanji card fits the Today card's player box (260px on a computer) without scrolling, on a computer and on a phone
+# every kanji card fits the player box of 聽一輪 (the test build's page for it; it was the Today card's) without scrolling, on a
+# computer and on a phone
 def test_every_kanji_card_fits_the_today_player_without_scrolling(b):
-    js = "(() => { " + MAIN + HUSH + AT_N3 + """ setListenPref({ source: 'theme', theme: '自然與天氣' }); LISTEN = null; location.hash = '#/today'; route(); ACTIONS['today-tab']({ dataset: { tab: 'theme' } });
+    js = "(() => { " + MAIN + HUSH + AT_N3 + """ setListenPref({ source: 'theme', theme: '自然與天氣' }); LISTEN = null; location.hash = '#/listen'; route();
       const card = document.getElementById('listenCard'); const seen = new Set(); const over = [];
       vocabThemes().forEach(g => listenSourceEntries({ kind: 'theme', theme: g.c }).forEach(e => { if (e.kind !== 'k' || seen.has(e.id)) return; seen.add(e.id);
         LISTEN.items = [e]; LISTEN.idx = 0; listenRenderNow(); if (card.scrollHeight > card.clientHeight + 1) over.push(e.k.k); }));

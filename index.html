@@ -6382,7 +6382,7 @@ const ROOM = (() => {
   // the things' name tags: today's practice shows the day's progress, the drawer how many are in the notebook, the door the
   // letters waiting in the mailbox outside
   function tagOf(id, pct, mk) {
-    if (id === 'notebook') return pct >= 100 ? '今日完成・多學' : `今日練習 ${pct}%`;
+    if (id === 'notebook') return pct < 100 ? `今日練習 ${pct}%` : extraQueue().items.length ? '今日完成・多學' : '今日完成';   // nothing new left anywhere: no 多學
     if (id === 'drawer') return `錯題本${mk ? ` ${mk}` : ''}`;
     if (id === 'door') { const n = mailCount(); return n ? `出門・${n} 封信` : '出門'; }
     return THINGS.find((t) => t.id === id).label;
@@ -6583,7 +6583,7 @@ function planNoteHtml(plan) { return plan.note ? `<div class="plan-note">${esc(p
 function todayCardHtml() {
   const t = todayStr(), d = parseDate(t), st = streakStats(), plan = dailyPlan();
   let body;
-  if (plan.remaining === 0) body = `<p class="small muted">今天的題目做完了${itemsDoneToday() ? `，共 ${itemsDoneToday()} 題` : ''}。想再練，點書桌上的筆記本「多學」。</p>`;
+  if (plan.remaining === 0) body = `<p class="small muted">今天的題目做完了${itemsDoneToday() ? `，共 ${itemsDoneToday()} 題` : ''}。${extraQueue().items.length ? '想再練，點書桌上的筆記本「多學」。' : ''}</p>`;
   else {
     const reviewN = plan.dueV.length + plan.dueG.length + (plan.dueC || []).length + plan.q4.length + plan.q5.length;
     const newN = plan.newV.length + plan.newG.length + (plan.newC || []).length;

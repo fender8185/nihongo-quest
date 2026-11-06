@@ -92,7 +92,8 @@ def test_pre_stage_ends_by_itself_once_everything_is_seen_and_accuracy_holds(b):
     # 1.0.15: no 進入第 1 週／再練一陣子 question — kana gate open + every 入門 word seen + recent accuracy ≥ 80% moves on by itself
     js = """(() => { const t = todayStr(); const words = REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5');
       const mark = (it) => { state.srs[it.key] = { b: 2, due: addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -1) }; };
-      const today = () => { DAILY_CACHE = null; location.hash = '#/today'; route(); return document.getElementById('view').textContent; };
+      // 書房 moves the stage on by itself (renderToday); 課程's 目前 card says how 入門 ends (test build: the 今日 card did)
+      const today = () => { DAILY_CACHE = null; location.hash = '#/today'; route(); location.hash = '#/course'; route(); return (document.querySelector('#view .now-card') || {}).textContent || ''; };
       const out = { n: words.length };
       words.concat(REG.grammar.filter(g => g.u === 'm0')).forEach(mark); state.recent = Array(40).fill(1); today(); out.wordsOnly = state.stage;
       REG.kana.filter(x => x.seion).forEach(mark); state.recent = Array(30).fill(1).concat(Array(10).fill(0));   // 75%
@@ -108,8 +109,10 @@ def test_pre_stage_ends_by_itself_once_everything_is_seen_and_accuracy_holds(b):
 FRESH = TAG_PRE + "state.srs = {}; state.startChosen = false; state.stage = 'main'; state.kanaKnown = false; DAILY_CACHE = null; location.hash = '#/today'; true"
 
 def test_new_account_banner_sets_the_stage(b):
-    js = """(() => { route(); const out = { btns: ['start-zero', 'start-test'].map(a => Boolean(document.querySelector(`[data-act="${a}"]`))) };
-      document.querySelector('[data-act="start-zero"]').click(); out.stage = state.stage; out.gone = !document.querySelector('[data-act="start-zero"]');
+    # test build: a brand-new learner taps the notebook in 書房 and picks a start in a dialog
+    js = """(() => { route(); ACTIONS['study-practice'](document.querySelector('[data-thing=notebook]'));
+      const out = { btns: ['start-zero', 'start-test'].map(a => Boolean(document.querySelector(`.modal [data-act="${a}"]`))) };
+      document.querySelector('.modal [data-act="start-zero"]').click(); out.stage = state.stage; out.gone = !document.querySelector('[data-act="start-zero"]');
       state.startChosen = false; route(); ACTIONS['start-basics'](); out.stage2 = state.stage; out.known = state.kanaKnown;
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", FRESH)]))
@@ -457,7 +460,7 @@ def test_week0_items_follow_lesson_order_with_a_lesson_card_first(b):
 def test_pre_account_with_words_done_stays_until_week0_is_seen(b):
     js = """(() => { const t = todayStr(); const mark = (it) => { state.srs[it.key] = { b: 2, due: addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -1) }; };
       REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').forEach(mark); REG.kana.filter(x => x.seion).forEach(mark); state.recent = Array(40).fill(1);
-      const today = () => { DAILY_CACHE = null; location.hash = '#/today'; route(); return document.getElementById('view').textContent; };
+      const today = () => { DAILY_CACHE = null; location.hash = '#/today'; route(); location.hash = '#/course'; route(); return (document.querySelector('#view .now-card') || {}).textContent || ''; };   // 書房 moves the stage on; 課程's 目前 card counts 入門
       const out = { left: introLeft(), done: preDone() }; const txt = today(); out.stage1 = state.stage; const g1 = dailyPlan().newG; out.newG = g1.length > 0 && g1.every(g => g.u === 'm0'); out.line = txt.includes('句型 0／20');
       REG.grammar.filter(g => g.u === 'm0').forEach(mark); today(); out.stage2 = state.stage; out.m0Done = state.completedUnits.includes('m0');
       state.stage = 'pre'; state.srs = {}; REG.kana.filter(x => x.seion).forEach(mark); REG.grammar.filter(g => g.u === 'm0').forEach(mark);

@@ -32,10 +32,10 @@ def test_current_stage_follows_stage_and_unit(b):
     assert json.loads(ev(b, js)) == ['pre', 'p1', 'p3']
 
 # ---- Task 2: 課程頁四張卡、單一「目前」、stageTests ----
-COURSE = [("nav", URL + "#/course"), ("wait", "document.querySelectorAll('#view .card').length >= 4")]
+COURSE = [("nav", URL + "#/course"), ("wait", "document.querySelectorAll('#view .stage-card').length >= 4")]   # the stage cards (the page opens with its 目前 card, test build)
 
 def test_course_has_one_current_chip_and_week0_in_pre_card(b):
-    js = """(() => { const cards = [...document.querySelectorAll('#view .card')].slice(0, 4);
+    js = """(() => { const cards = [...document.querySelectorAll('#view .stage-card')].slice(0, 4);
       const chips = [...document.querySelectorAll('#view .chip-accent')].filter(c => c.textContent.trim() === '目前');
       return JSON.stringify({ n: cards.length, titles: cards.map(c => c.querySelector('.card-title').textContent.trim().slice(0, 2)),
         week0In: cards.map(c => c.textContent.includes('第 0 週')), chips: chips.length, chipIn: chips.map(c => Boolean(c.closest('.unit-row')) ? 'row' : 'head'),
@@ -61,7 +61,7 @@ def test_course_page_survives_missing_stage_tests(b):
     assert ev(b, js) == 6
 
 # ---- 1.0.27: the four stage cards fold; only the current stage is open by default ----
-SHOWN = "[...document.querySelectorAll('#view .card')].slice(0, 4).map(c => c.querySelector('.unit-row').checkVisibility())"   # which cards show their rows (a folded card keeps its rows' boxes, so not getClientRects)
+SHOWN = "[...document.querySelectorAll('#view .stage-card')].slice(0, 4).map(c => c.querySelector('.unit-row').checkVisibility())"   # which cards show their rows (a folded card keeps its rows' boxes, so not getClientRects)
 
 def test_course_opens_only_the_current_stage(b):
     js = """(() => { const shown = () => { location.hash = '#/course'; route(); return """ + SHOWN + """; }; const out = {};
@@ -74,7 +74,7 @@ def test_course_opens_only_the_current_stage(b):
 
 def test_course_keeps_opened_and_closed_stages_until_a_reload(b):
     pre = [("eval", "state.stage = 'main'; state.currentUnit = 'm2'; saveState(); true")] + COURSE
-    js = """(() => { const cards = [...document.querySelectorAll('#view .card')].slice(0, 4);
+    js = """(() => { const cards = [...document.querySelectorAll('#view .stage-card')].slice(0, 4);
       cards[3].querySelector('.card-title').click(); cards[1].querySelector('.card-title').click();   // open 第三階段, close 第一階段 (the current one)
       return new Promise(r => setTimeout(r, 50)).then(() => { location.hash = '#/today'; route(); location.hash = '#/course'; route(); return JSON.stringify(""" + SHOWN + """); }); })()"""
     assert json.loads(ev(b, js, pre)) == [False, False, False, True]
@@ -86,7 +86,7 @@ def test_a_stage_head_shows_done_or_its_percent(b):
     pre = [("eval", """state.stage = 'main'; state.currentUnit = 'm1'; state.srs = {}; state.completedUnits = []; markPassedStage('p1', new Set()); LAST_BULK_MARK = null;
       unitItems('m13').forEach(it => { state.srs[it.key] = { b: 3, due: addDays(todayStr(), 9), n: 3, ok: 3, ng: 0, s: 9, d: 5, last: todayStr(), intro: todayStr() }; });
       saveState(); true""")] + COURSE
-    js = "JSON.stringify([...document.querySelectorAll('#view .card')].slice(0, 4).map(c => c.querySelector('.stage-state').textContent.trim()))"
+    js = "JSON.stringify([...document.querySelectorAll('#view .stage-card')].slice(0, 4).map(c => c.querySelector('.stage-state').textContent.trim()))"
     assert json.loads(ev(b, js, pre)) == ['完成', '完成', '0%', '17%']   # 第三階段: m13 at 100%, five units at 0% → 16.7
 
 # ---- Task 3: 階段測驗 ----
@@ -330,7 +330,7 @@ def test_no_pre_test_line_on_the_today_page(b):
 
 def test_course_page_counts_its_stages_and_units_and_opens_an_n3_stage(b):   # 1.0.33 review: it said 四個階段 and 18 個單元
     js = """(() => { const sub = document.querySelector('.page-sub').textContent;
-      const open = [...document.querySelectorAll('#view .card')].slice(0, 6).map(c => c.querySelector('.unit-row') && c.querySelector('.unit-row').checkVisibility());
+      const open = [...document.querySelectorAll('#view .stage-card')].slice(0, 6).map(c => c.querySelector('.unit-row') && c.querySelector('.unit-row').checkVisibility());
       return JSON.stringify({ sub, open }); })()"""
     r = json.loads(ev(b, js, [("eval", "state.stage = 'main'; state.currentUnit = 'm20'; state.stageTests = {}; saveState(); true")] + COURSE))
     assert r['sub'].startswith('整體完成度 ') and r['open'] == [False, False, False, False, True, False], r   # m20 is in phase 4
