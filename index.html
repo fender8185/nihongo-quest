@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
 <style>
-/* test build: the pages wear 書房's colours — by night its navy under the lamps, by day warm paper; the indigo is the one of the
+/* 1.1.0: the pages wear 書房's colours — by night its navy under the lamps, by day warm paper; the indigo is the one of the
    room's 今日練習／聽一輪 tags. The last group is for the room's things on the pages (課程's shelf and course books, ribbons). */
 :root, [data-theme="dark"] {
   --bg: #23253f; --bg-elev: #2d2f52; --bg-elev-2: #34375e; --bg-sunken: #1d1f36; --bg-hover: #383b64;
@@ -195,13 +195,13 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.35; }
 .seg-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
 .legs { display: flex; flex-wrap: wrap; gap: 4px 12px; } .leg { white-space: nowrap; }   /* a legend item never breaks between its name and number */
 .plan-note { color: var(--fg-3); font-size: 13px; margin: 0 0 14px; }   /* 1.0.35: a quiet line next to what it is about, not a yellow box */
-/* test build: 學習分析's 今天 card (today's scope, the day's note, 說明) and 課程's 目前 card hold what the 今日 card held */
+/* 1.1.0: 學習分析's 今天 card (today's scope, the day's note, 說明) and 課程's 目前 card hold what the 今日 card held */
 .plan-topics { display: flex; flex-direction: column; gap: 4px; margin: 0 0 10px; color: var(--fg-2); font-size: 14px; line-height: 1.6; }
 .plan-topics b { color: var(--fg-3); font-weight: 500; font-size: 12px; margin-right: 8px; }
 .plan-line { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 12px; color: var(--fg-2); font-size: 14px; }
 .plan-line b { color: var(--fg); font-variant-numeric: tabular-nums; }
 .day-card .plan-note { margin-bottom: 10px; }
-/* 學習分析 as 書房's cork board (test build): a strip of cork with its pinned papers on top, a pin in every card, 今天 a note */
+/* 學習分析 as 書房's cork board (1.1.0): a strip of cork with its pinned papers on top, a pin in every card, 今天 a note */
 .cork-strip { position: relative; display: flex; align-items: center; gap: 16px; height: 80px; margin: 0 0 22px; padding: 0 18px; border: 6px solid color-mix(in srgb, #9a6c42 var(--cover-keep), var(--cover-shade)); border-radius: 10px;
   background: radial-gradient(rgba(90, 55, 25, .3) 1px, transparent 1.7px) 0 0 / 7px 7px, radial-gradient(rgba(255, 236, 200, .28) 1px, transparent 1.7px) 3px 4px / 9px 9px, color-mix(in srgb, #c99a6b var(--cover-keep), var(--cover-shade)); }
 @media (max-width: 900px) { .cork-strip { margin: -16px -16px 20px; border-width: 0 0 6px; border-radius: 0; } }
@@ -246,7 +246,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table tr:last-child td { border-bottom: 0; }
 .empty { text-align: center; color: var(--fg-3); padding: 28px 12px; font-size: 14px; }
 
-/* ---------- 書房 and the yard (test build): the app lives in a house ----------
+/* ---------- 書房 and the yard (1.1.0): the app lives in a house ----------
    The app opens in 書房, a room where every feature is a thing to tap (ROOM) and the door leads out to the yard; in the
    yard, a tap on the house goes back in. Both follow the clock: --day (0 night, 1 day) and --warm (the sunrise／sunset glow) come
    from the phone's clock (sceneTick, on body); dawn 5–7 and dusk 17–19 blend the two. --f (0–1) is how much of today's list is
@@ -468,7 +468,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .study:not(.wide) .thing:not(.away) { z-index: 1; }   /* where tap areas overlap, the stop you are at wins over one peeking in */
 .sky .house .enter { position: absolute; left: 4px; right: 4px; top: 14px; bottom: 0; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; }
 .sky .house .enter .tag { top: calc(100% + 13px); }
-/* the mail (test build): the door's tag counts the letters in the mailbox outside and wears a red dot, so does the door's stop
+/* the mail (1.1.0): the door's tag counts the letters in the mailbox outside and wears a red dot, so does the door's stop
    dot; a letter this device has not been told about brings the hint at the top left once */
 .thing.mail:not(.away) .tag { opacity: 1; }
 .thing.mail .tag::after, .room-stops .dot.mail::after, .sky .mailbox.has .tag::after { content: ''; position: absolute; top: -2px; right: -2px; width: 7px; height: 7px; border-radius: 50%; background: #ef4f45; box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .85); }
@@ -512,11 +512,11 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
   background: radial-gradient(closest-side, #fff, color-mix(in srgb, var(--accent) 50%, #fff) 15%, var(--accent) 40%, color-mix(in srgb, var(--accent) 70%, var(--bg)) 62%, transparent); }   /* sized so the opaque 62% reaches the farthest corner */
 .dive-veil.cover { transform: scale(1); opacity: 1; }
 .dive-veil.out { opacity: 0; transition: opacity .35s ease-out; }
-.tools-part { margin-top: 36px; }   /* 工具與 AI below 學習分析 (test build) */
+.tools-part { margin-top: 36px; }   /* 工具與 AI below 學習分析 (1.1.0) */
 .top-home { display: inline-flex; align-items: center; padding: 4px 11px 4px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--bg-elev); color: var(--fg-2); font-size: 13px; cursor: pointer; }
 /* ---------- 聽一輪 (the 🎧 tab): 錯題本｜單字 over the player ---------- */
 .listen-seg { display: flex; margin-bottom: 12px; }
-/* 書房's headphones on their stand over the player (test build); the notes rise while it plays */
+/* 書房's headphones on their stand over the player (1.1.0); the notes rise while it plays */
 .listen-top { align-items: center; }
 @media (max-width: 900px) { .listen-top { justify-content: center; margin-bottom: 8px; } }
 .listen-stand { position: relative; flex: none; width: 64px; height: 60px; }
@@ -621,7 +621,7 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .stage-card[open] > summary .card-title::before { transform: rotate(90deg); }
 .stage-card > summary .card-sub { padding-left: 1em; }
 .stage-card:not([open]) > summary { margin-bottom: 0; }
-/* 課程 as 書房's bookcase (test build): the shelf of course books on top, each stage card the cover of its book (a stage not begun
+/* 課程 as 書房's bookcase (1.1.0): the shelf of course books on top, each stage card the cover of its book (a stage not begun
    waits dashed), ribbons on the current unit and the 目前 card; the covers darken under the night lamps (--cover-keep) */
 .course-shelf { margin: 0 0 18px; padding: 12px 16px 6px; border-radius: 14px; background: var(--shelf); border: 1px solid var(--line); }
 @media (max-width: 900px) { .course-shelf { margin: -16px -16px 16px; border-radius: 0; border-width: 0 0 1px; } }
@@ -684,7 +684,7 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .kana-row-btn { border: 1px solid var(--line); background: var(--bg-elev-2); border-radius: 8px; font-size: 10px; cursor: pointer; color: inherit; }
 .kanji-chip { cursor: pointer; font-size: 15px; padding: 1px 8px; }
 .theme-card { cursor: pointer; } .theme-card:hover { border-color: var(--line-2); background: var(--bg-hover); }   /* the card opens its word table (1.0.27) */
-/* 單字 as 書房's card box (test build): the themes are index cards (a coloured tab at the top left, the red rule under the
+/* 單字 as 書房's card box (1.1.0): the themes are index cards (a coloured tab at the top left, the red rule under the
    heading), the levels its dividers */
 .theme-grid { row-gap: 22px; }
 .index-card { position: relative; margin-top: 10px; overflow: visible; }
@@ -840,7 +840,7 @@ details.mrow > summary::-webkit-details-marker { display: none; }
 details.mrow > summary .mprompt { flex: 1 1 240px; font-size: 16px; line-height: 1.8; min-width: 0; }
 details.mrow .mbody { padding: 4px 0 14px; }
 .mgroup .mlist { padding: 0; }
-/* 錯題本 as 書房's red notebook (test build): its cover on top, the list on ruled paper with a red margin line */
+/* 錯題本 as 書房's red notebook (1.1.0): its cover on top, the list on ruled paper with a red margin line */
 .notebook-cover { position: relative; display: flex; align-items: center; height: 76px; margin: 0 0 18px; padding: 0 18px 0 48px; border-radius: 10px 14px 14px 10px; background: color-mix(in srgb, #b8463a var(--cover-keep), var(--cover-shade)); box-shadow: inset 12px 0 0 rgba(0, 0, 0, .14), 0 8px 18px -12px rgba(80, 30, 20, .6); }
 @media (max-width: 900px) { .notebook-cover { margin: -16px -16px 16px; border-radius: 0; } }
 .notebook-cover .stitch { position: absolute; left: 24px; top: 10px; bottom: 10px; border-left: 2px dashed rgba(255, 236, 210, .5); }
@@ -849,7 +849,7 @@ details.mrow .mbody { padding: 4px 0 14px; }
 .card.ruled { position: relative; padding-left: 32px; }
 .card.ruled::before { content: ''; position: absolute; left: 19px; top: 0; bottom: 0; width: 1.5px; background: color-mix(in srgb, #d9786a 60%, transparent); }
 .card.ruled details.mrow { border-bottom-color: color-mix(in srgb, #7f9cc8 38%, transparent); }
-/* 模擬考's countdown with 書房's 日めくり hanging beside it (test build): hung on a nail by a string, its page in paper colours */
+/* 模擬考's countdown with 書房's 日めくり hanging beside it (1.1.0): hung on a nail by a string, its page in paper colours */
 .exam-cal-card { display: flex; align-items: flex-start; gap: 18px; }
 .exam-cal-card > .grow { min-width: 0; }
 .day-cal { position: relative; flex: none; width: 104px; padding-top: 16px; }
@@ -1383,12 +1383,20 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.0.51';   // keep equal to the version in sw.js CACHE ('nq-v1.0.51'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.1.0';   // keep equal to the version in sw.js CACHE ('nq-v1.1.0'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
-// 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個 1.0.x 一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
-// 版本號（APP_VERSION）每次推送都會變（1.0.x 的 x 加一），不必和紀錄一對一。label 有的話取代 v 顯示。
+// 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個版本一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
+// 版本號（APP_VERSION）每次推送都會變（通常最後一位加一；1.1.0 是書房改版），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.1.0', date: '2026-11-07', items: [
+    'App 搬進一間書房：打開就在書房裡，每個功能都是房間裡的一樣東西。書桌上的筆記本是今日練習（名牌寫今天做到幾 %），耳機是聽一輪；書櫃是課程（每開始一個階段多一本課本），書櫃上層的卡片盒是單字；往右看，抽屜櫃是錯題本、軟木板是學習分析、日曆是模擬考；右上角齒輪是設定。手機左右滑動看房間不同的地方，電腦和橫放的平板看得到整間。下方的選單拿掉了，各頁左上角的「‹ 書房」回到房間。',
+    '書房跟著時間變成白天、黃昏或晚上，晚上串燈隨今天的進度一顆顆亮起來；日曆上的紅色印章是連續天數。點房間裡的東西會先有一段動作再進頁面（書滑出、卡片跳出、耳機提起、日曆撕頁、抽屜拉開、開門）。',
+    '從門出去是院子。房子旁邊的信箱收通知（歡迎、第 0 週、加到主畫面、網站搬家、舊版匯入），取代原本今日頁上方的橫幅；有新信時門的名牌會寫幾封，第一次還會在左上角提醒。',
+    '主題改成「跟著時間／永夜／永晝」：跟著時間是白天淺色、晚上深色，和書房一起變，只在換頁時變，不會做題做到一半變色；永夜、永晝連書房和院子一起固定。原本選淺色的改成永晝，其他人都改成跟著時間。',
+    '各頁換成書房的顏色（白天暖色紙張、晚上夜藍），也接上房間裡的東西：課程頁上方是書櫃（點書背跳到那個階段），每個階段是一本書的封面；單字的主題是索引卡、等級切換是分隔頁；錯題本是紅色筆記本，錯題列在橫線紙上；學習分析是軟木板；模擬考旁掛著日曆；聽一輪上方是耳機架，播放時飄音符。',
+    '原本今日卡片上的東西換了地方：目前單元（含「前往下一單元」）在課程頁最上面；今天的範圍、說明、日期和連續天數在學習分析最上面；「今天新內容少一點」這類提示在當天第一組的第一個畫面。今日卡片裡的錯題本／單字播放器變成耳機點進去的「聽一輪」頁，工具與 AI 併到學習分析最下面。'
+  ] },
   { v: '1.0.51', date: '2026-11-05', items: [
     '排序題的字塊前面不再標 1、2、3、4，數字鍵也不再放字塊（用點的或拖的，Enter 送出、Backspace 拿回最後一塊照舊）；拼字、活用、排序、配對題下方不再顯示「按 1–4 作答」。帶漢字的字塊（例如「公園を」）字不再被拆開。'
   ] },
@@ -1728,7 +1736,7 @@ function defaultSettings() {
     furigana: true,
     speechRate: 1.0,
     sfx: true,               // 答題音效 (1.0.50)
-    theme: 'clock',          // 跟著時間 | 永夜 'night' | 永晝 'day' (test build; older saves: dark／auto, light — themeMode)
+    theme: 'clock',          // 跟著時間 | 永夜 'night' | 永晝 'day' (1.1.0; older saves: dark／auto, light — themeMode)
     examDate: '2027-07-04',
     examLevel: 'N4',         /* level-literal-ok: default */ // the JLPT level the exam date is for: 學習分析 and the exam countdown project against it (1.0.26)
     duolingoScore: 22,
@@ -4481,7 +4489,7 @@ function startSession(mode, opt = {}) {
     if (!opt.extra && dailyPlan(size).remaining === 0) opt = Object.assign({}, opt, { extra: true });   // the day is done (e.g. 再練一組 on the summary): offer the 加練 set
     const r = opt.extra ? extraQueue() : dailyQueue(size);
     entries = r.items.map(item => ({ item }));
-    // the day's note (fewer new items today, a level to finish first) over the first question of the day's first set (test build:
+    // the day's note (fewer new items today, a level to finish first) over the first question of the day's first set (1.1.0:
     // 書房 has no card for it; 學習分析's 今天 card keeps it all day)
     meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: !opt.extra && itemsDoneToday() === 0 ? dailyPlan(size).note || '' : '' };
   } else if (mode === 'unit') {
@@ -5361,7 +5369,7 @@ function route() {
     }
     else if (r.name === 'mistakes') { if (r.parts[1] === 'loop') renderMistakeLoop(view); else if (r.parts[1] === 'listen') renderListen(view); else renderMistakes(view, r.params); }
     else if (r.name === 'exam') renderExam(view, r.parts[1] || '', r.params);
-    else if (r.name === 'tools') { location.replace('#/stats?at=tools'); return route(); }   // test build: 工具與 AI lives at the bottom of 學習分析
+    else if (r.name === 'tools') { location.replace('#/stats?at=tools'); return route(); }   // 1.1.0: 工具與 AI lives at the bottom of 學習分析
     else if (r.name === 'listen') renderListenTab(view);
     else if (r.name === 'stats') { renderStats(view); if (r.params.at === 'tools') requestAnimationFrame(() => scrollBelowTopbar(document.getElementById('toolsPart'))); }   // after route() hides the repeated page title
     else renderToday(view);
@@ -5398,7 +5406,7 @@ function closeModal(fromRoute) {
 function modalOpen() { return Boolean(document.getElementById('modalRoot').innerHTML); }
 
 // ---------- theme & furigana ----------
-// The theme (test build): 跟著時間 lights the pages as 書房 and the yard are lit, light from half daylight (about 6:00 to 18:00)
+// The theme (1.1.0): 跟著時間 lights the pages as 書房 and the yard are lit, light from half daylight (about 6:00 to 18:00)
 // and dark before and after; 永晝／永夜 hold all of it at noon／midnight. Older saves hold dark or auto (→ 跟著時間) and light (→ 永晝).
 function themeMode() { const t = state.settings.theme; return t === 'day' || t === 'light' ? 'day' : t === 'night' ? 'night' : 'clock'; }
 function lightHour(h = sceneHour()) { const m = themeMode(); return m === 'day' ? 12 : m === 'night' ? 0 : h; }
@@ -5407,7 +5415,7 @@ function applyTheme() {
   themeColor();
 }
 function midQuestions() { const r = currentRoute(); return r.name === 'practice' || (r.name === 'exam' && r.parts[1] === 'run'); }
-// the browser bar's colour: the page background, or (test build) the yard's sky／書房's wall at this hour
+// the browser bar's colour: the page background, or (1.1.0) the yard's sky／書房's wall at this hour
 function themeColor() {
   const meta = document.querySelector('meta[name="theme-color"]'); if (!meta) return;
   const b = document.body.classList;
@@ -5416,7 +5424,7 @@ function themeColor() {
   meta.setAttribute('content', b.contains('outside') ? mixHex(mixHex('#05060f', '#3d8cdb', c.day), '#e8875f', c.warm * 0.5) : mixHex('#3a3c63', '#f2e8d8', c.day));
 }
 function mixHex(a, b, t) { const ch = (h, i) => parseInt(h.slice(i, i + 2), 16); return '#' + [1, 3, 5].map(i => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * t).toString(16).padStart(2, '0')).join(''); }
-// 主頁's clock (test build): the phone's own time and time zone, UTC+8 only when no zone can be read. --day is the daylight (0 by
+// The scenes' clock (1.1.0): the phone's own time and time zone, UTC+8 only when no zone can be read. --day is the daylight (0 by
 // night, 1 by day; dawn 5–7 and dusk 17–19 ease between), --warm the sunrise／sunset glow (strongest at 6 and 18), --sx/--sy the
 // sun on its arc (up at 5:12, down at 18:48, behind the hills at either end), --hh／--mm the hands of 書房's clock. Set on body.
 function sceneHour() {
@@ -5665,7 +5673,7 @@ function weekdayZh(d) { return '日一二三四五六'[parseDate(d).getDay()]; }
 // iOS ignores user-scalable=no inside Safari; the gesture events still stop a pinch from zooming the page
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
 
-// 書房 and the yard (test build). The app opens in 書房 (renderToday); its door leads out to the yard (renderOutside), whose house
+// 書房 and the yard (1.1.0). The app opens in 書房 (renderToday); its door leads out to the yard (renderOutside), whose house
 // leads back in. Both follow the clock (sceneTick) and today's list (dayProgress, the ring they replace).
 function renderToday(view) {
   finishPreIfReady();
@@ -5764,7 +5772,7 @@ function yardHtml(pct) {
     </div>
   </div>`;
 }
-// 書房 (test build): an isometric room drawn much bigger than the screen, with the things you tap; on a phone the camera stops at
+// 書房 (1.1.0): an isometric room drawn much bigger than the screen, with the things you tap; on a phone the camera stops at
 // four places along it (the door; the bookcase and the desk; the chest of drawers; the bed) and a swipe slides between them.
 // ROOM.html draws it, ROOM.mount sets the camera and the swipes once it is on the page, ROOM.level follows today's progress in
 // place, and ROOM.enter／pull／door play a thing's way into its page.
@@ -6681,7 +6689,7 @@ function sessionTopicsHtml(q) {
     </div>`;
 }
 function planNoteHtml(plan) { return plan.note ? `<div class="plan-note">${esc(plan.note)}</div>` : ''; }
-// 學習分析's head (test build): a strip of 書房's cork board with the papers pinned on it there (a chart, a sticky note, a photo)
+// 學習分析's head (1.1.0): a strip of 書房's cork board with the papers pinned on it there (a chart, a sticky note, a photo)
 function corkStripHtml() {
   return `<div class="cork-strip" aria-hidden="true">
     <span class="pinned chart"><svg viewBox="0 0 54 38"><path d="M6 34V20M17 34V12M28 34V24M39 34V8" stroke="#4a5fcf" stroke-width="6"/><path d="M3 22L17 10L30 18L50 4" stroke="#d9534f" stroke-width="2" fill="none"/></svg></span>
@@ -6689,7 +6697,7 @@ function corkStripHtml() {
     <span class="pinned photo"><i></i></span>
   </div>`;
 }
-// 學習分析's first card (test build; it was the 今日 card's date line and its 說明 and 範圍 folds): the date and the streak, what is
+// 學習分析's first card (1.1.0; it was the 今日 card's date line and its 說明 and 範圍 folds): the date and the streak, what is
 // left of today's list — the next set's themes and grammar points, then the counts — the day's note, and 說明 (folded)
 function todayCardHtml() {
   const t = todayStr(), d = parseDate(t), st = streakStats(), plan = dailyPlan();
@@ -7041,7 +7049,7 @@ function stageStateHtml(rows) {
   return `<span class="muted num">${Math.round(rows.reduce((a, r) => a + r.pct, 0) / rows.length)}%</span>`;
 }
 const courseOpen = {};   // stage id → open, for the cards opened or closed by hand: kept while the app is open, only the current stage open again after a reload
-// 課程 wears 書房's bookcase (test build): the shelf of course books along its top — a stage begun or passed stands in its colour
+// 課程 wears 書房's bookcase (1.1.0): the shelf of course books along its top — a stage begun or passed stands in its colour
 // (the one being studied taller, with a ribbon), the rest wait as dashed outlines, the shelf's daruma at the end; a tap opens that
 // stage below. Each stage card is that book's cover; the current unit and the 目前 card carry its ribbon.
 const ribbonSvg = () => '<svg class="ribbon" viewBox="0 0 14 26" aria-hidden="true"><path d="M0 0H14V26L7 20L0 26Z"/></svg>';
@@ -7055,7 +7063,7 @@ function courseShelfHtml() {
   };
   return `<div class="course-shelf"><div class="spines">${STAGES.map(spine).join('')}<span class="grow"></span>${DARUMA}</div><div class="board"></div></div>`;
 }
-// 課程's first card (test build; it was the 今日 card's 目前單元 fold): in 入門, its counts and, once its words are all seen,
+// 課程's first card (1.1.0; it was the 今日 card's 目前單元 fold): in 入門, its counts and, once its words are all seen,
 // how it ends; after it, the current unit — its bar, today's reviews in it, 看講義／練習本單元, 前往下一單元 once it is well known
 function courseNowHtml() {
   if (inPreStage()) {
@@ -7457,7 +7465,7 @@ function renderVocabLevel(view, lv) {
   const desktop = window.matchMedia('(min-width: 761px)').matches;
   const ring = ringHtml(L.total ? L.learned / L.total : 0, `<div class="num" style="font-size:18px">${L.total ? Math.round(L.learned / L.total * 100) : 0}%</div>`, 84);
   // 1.0.27: the card itself opens the theme's word table (its title is the link for the keyboard); the kanji and buttons keep their own action.
-  // Test build: each is an index card from 書房's card box, its coloured tab at the top left.
+  // 1.1.0: each is an index card from 書房's card box, its coloured tab at the top left.
   const cards = themes.map((g, i) => { const list = `#/vocab/list?lv=${lv}&c=${encodeURIComponent(g.c)}`; return `<div class="card theme-card index-card" style="--tab:${CARD_TABS[i % CARD_TABS.length]}" data-c="${esc(g.c)}" data-lv="${lv}" data-act="nav" data-route="${list}">
       <div class="row between"><a class="card-title theme-link" href="${list}" data-act="nav" data-route="${list}">${esc(g.c)}</a><span class="tiny muted nowrap">${g.total} 字 ›</span></div>
       ${stackBarHtml(g)}
@@ -7514,7 +7522,7 @@ function defaultVocabLevel() {
   return curLevel();   // the level new items come from (每一級封死)
 }
 const CARD_TABS = ['#e3907f', '#79a46c', '#5f88b2', '#e0b04a', '#8b6aa8'];   // the index cards' tabs in 書房's card box
-function vocabTabs(tab) {   // test build: the card box's dividers
+function vocabTabs(tab) {   // 1.1.0: the card box's dividers
   return `<div class="seg mb-4 dividers">
     ${levels().map(l => `<button type="button" aria-pressed="${tab === l}" data-act="nav" data-route="#/vocab/level?lv=${l}">${lvLabel(l)}</button>`).join('')}
     <button type="button" aria-pressed="${tab === 'cards'}" data-act="nav" data-route="#/vocab/cards">字卡</button>
@@ -8160,9 +8168,9 @@ function renderListen(view) {
   view.innerHTML = `<div class="card listen full">${listenPanelHtml(true)}</div>`;
   listenRenderNow();
 }
-// 聽一輪 (the 🎧 tab, test build): the player the 今日 card used to carry, over the notebook or a word theme; the switch opens
+// 聽一輪 (書房's headphones, 1.1.0): the player the 今日 card used to carry, over the notebook or a word theme; the switch opens
 // on the last choice (kept on the device)
-// 聽一輪 opens under 書房's headphones on their stand (test build); music notes rise from them while the player plays
+// 聽一輪 opens under 書房's headphones on their stand (1.1.0); music notes rise from them while the player plays
 function listenStandHtml() {
   return `<div class="listen-stand${LISTEN && LISTEN.playing ? ' playing' : ''}" aria-hidden="true">
     <svg viewBox="0 0 80 74"><ellipse class="base" cx="40" cy="70" rx="20" ry="3.5"/><rect class="pole" x="38" y="22" width="4" height="48" rx="1"/>
@@ -8263,7 +8271,7 @@ Object.assign(ACTIONS, {
   'mloop-next': () => { if (!MLOOP || !MLOOP.flipped) return; mloopAdvance(); }
 });
 
-// 錯題本 is the red notebook in 書房's drawer (test build): its cover on top, the label counting what is in it; the list is on
+// 錯題本 is the red notebook in 書房's drawer (1.1.0): its cover on top, the label counting what is in it; the list is on
 // ruled paper with a red margin line
 function notebookCoverHtml(active, mastered) {
   return `<div class="notebook-cover" aria-hidden="true"><i class="stitch"></i><div class="nb-label"><b>錯題本</b><span>待複習 ${active}・已掌握 ${mastered}</span></div></div>`;
@@ -8614,7 +8622,7 @@ function assemblePaper(level, size, subjects) {
 // ---------- exam page ----------
 // 考試倒數 (模擬考 page): days left and the 課程進度 line for the target level (1.0.26: the per-unit pace went, it could
 // disagree with the projection)
-// Test build: beside it hangs 書房's 日めくり — the month, the date, the weekday, the streak's red stamp, the days to the exam
+// 1.1.0: beside it hangs 書房's 日めくり — the month, the date, the weekday, the streak's red stamp, the days to the exam
 function examCountdownHtml() {
   const p = coursePace(), d = parseDate(todayStr()), wd = d.getDay(), n = streakStats().current;
   return `<div class="card exam-cal-card">
@@ -9100,7 +9108,7 @@ function offlineAnalysis(text) {
 }
 
 let TOOLS_STATE = { conjWord: '書く', conjKind: 'auto', sentence: '', genUnit: '' };
-// 工具與 AI (test build): drawn at the bottom of 學習分析 (renderStats), no page of its own; #/tools scrolls there
+// 工具與 AI (1.1.0): drawn at the bottom of 學習分析 (renderStats), no page of its own; #/tools scrolls there
 function scrollBelowTopbar(el) {
   if (!el) return;
   const bar = document.querySelector('.topbar'); const off = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect().height : 0;
@@ -11041,7 +11049,7 @@ Object.assign(ACTIONS, {
   'install-prompt': async () => { const p = deferredInstall; if (!p) return; deferredInstall = null; try { p.prompt(); await p.userChoice; } catch (e) { /* dismissed */ } route(); }
 });
 
-// ---------- the mailbox (test build): what the 今日 page said on banners, as letters in the mailbox by the house ----------
+// ---------- the mailbox (1.1.0): what the 今日 page said on banners, as letters in the mailbox by the house ----------
 // The letters are worked out when asked: the site move (on the old address; it stays), 書房's welcome, 第 0 週 for a beginner,
 // 加到主畫面 on a phone's browser, and the notices kept in the state. 知道了 puts one away for good. Inside, the door's tag counts
 // them and its dot glows; a letter this device has not been told about yet brings the 「外面信箱有新信」 hint once.
