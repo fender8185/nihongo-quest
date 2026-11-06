@@ -78,23 +78,18 @@ a { color: var(--accent); }
 .topbar-title { font-weight: 600; font-size: 15px; }
 .content { width: 100%; max-width: 1000px; margin: 0 auto; padding: 28px 32px 72px; }
 .content:focus { outline: none; }
-.bottomnav { display: none; }
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; }
   .sidebar { display: none; }
   .topbar { display: flex; }
-  .content { padding: 16px 16px calc(92px + env(safe-area-inset-bottom)); }
+  .content { padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); }
   .page-head .page-title.dup-title { display: none; }   /* the topbar shows it already */
   .page-head .page-title.dup-title + .page-sub { margin-top: 0; }
   .page-head { margin-bottom: 14px; }
   body.practicing .content { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }   /* no tab bar while practising, so no room kept for it */
   body.practicing .content:has(> .pr-next) { padding-bottom: 0; }   /* the sticky 下一題 strip carries its own bottom padding: the page ends exactly under the button (not the one in a phone's result panel) */
-  .bottomnav { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--bg-elev) 94%, transparent); backdrop-filter: blur(10px); border-top: 1px solid var(--line); }
-  .bottomnav button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; border: 0; background: transparent; color: var(--fg-3); font-size: 11px; cursor: pointer; border-radius: 8px; }
-  .bottomnav button svg { width: 22px; height: 22px; }
-  .bottomnav button[aria-current="page"] { color: var(--accent); }
 }
-body.practicing .sidebar, body.practicing .bottomnav, body.practicing .topbar { display: none; }
+body.practicing .sidebar, body.practicing .topbar { display: none; }
 body.practicing .app { grid-template-columns: 1fr; }
 body.practicing .content { max-width: 760px; padding-top: calc(18px + env(safe-area-inset-top, 0px)); }   /* the topbar (which clears the notch) is hidden here, so the page clears it itself: in an installed app ✕ and the progress bar sat under the status bar */
 
@@ -219,15 +214,17 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table tr:last-child td { border-bottom: 0; }
 .empty { text-align: center; color: var(--fg-3); padding: 28px 12px; font-size: 14px; }
 
-/* ---------- 主頁 (test build): a scene that follows the clock; the crystal ball in the tab bar ----------
-   Three numbers drive it. --f (0–1, on .orb-stage) is how much of today's list is done (the ring it replaces). --day (0 night, 1 day)
-   and --warm (the sunrise／sunset glow) come from the phone's clock (sceneTick, on body); dawn 5–7 and dusk 17–19 blend the two.
-   By night the sky comes out with --f — stars one by one, a nebula from 25%, fireflies from 50%, the aurora and shooting stars
-   from 75%, a constellation at 100% — and the windows warm up. By day the grey sky turns blue with --f, the sun brightens from
-   25%, flowers and butterflies come at 50%, birds at 75%, a rainbow at 100%. The ball (.nav-orb) shows --f on every page: a tap
-   goes to 主頁, a hold dives into 今日練習. Either theme; with motion reduced (the rule at the top) everything stands still. */
-:root { --day: 0; --warm: 0; --sx: 50%; --sy: 20%; }
-.orb-stage { position: relative; z-index: 0; min-height: calc(100vh - 100px); }
+/* ---------- 書房 and the yard (test build): the app lives in a house ----------
+   The app opens in 書房, a room where every feature is a thing to tap (STUDY_THINGS) and the door leads out to the yard; in the
+   yard, a tap on the house goes back in. Both follow the clock: --day (0 night, 1 day) and --warm (the sunrise／sunset glow) come
+   from the phone's clock (sceneTick, on body); dawn 5–7 and dusk 17–19 blend the two. --f (0–1) is how much of today's list is
+   done (the ring it replaces): in the yard the sky comes out with it — by night stars one by one, a nebula from 25%, fireflies
+   from 50%, the aurora and shooting stars from 75%, a constellation at 100%; by day the grey sky turns blue, the sun brightens
+   from 25%, flowers and butterflies come at 50%, birds at 75%, a rainbow at 100% — and in 書房 the desk lamp warms the room.
+   Either theme; with motion reduced (the rule at the top) everything stands still. */
+body.scene .content { max-width: none; padding: 0; }
+:root { --day: 0; --warm: 0; --lit: 0; --sx: 50%; --sy: 20%; }
+.yard { position: relative; z-index: 0; min-height: 100vh; }
 .sky { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; background: radial-gradient(130% 70% at 50% 100%, #17143f, #0a0a22 45%, #05060f); }
 @media (min-width: 901px) { .sky { left: 236px; } }   /* beside the sidebar */
 .sky .tint { position: absolute; inset: 0; transition: opacity 3s; }
@@ -259,14 +256,14 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 @keyframes twinkle { from { opacity: .2; } to { opacity: 1; } }
 .sky .dipper { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 2s; }
 .sky .dipper path { fill: none; stroke: rgba(200, 210, 255, .4); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
-.orb-stage.full .dipper { opacity: 1; }
+.yard.full .dipper { opacity: 1; }
 .sky .meteors { position: absolute; inset: 0; opacity: clamp(0, (var(--f) - .75) * 8, 1); transition: opacity 1.5s; }
 .sky .meteor { position: absolute; width: 120px; height: 1.5px; border-radius: 1px; background: linear-gradient(90deg, transparent, #fff); opacity: 0; transform-origin: 0 50%; animation: meteor var(--d) linear var(--w) infinite; }
 @keyframes meteor { 0% { transform: rotate(28deg) translateX(0); opacity: 0; } 1% { opacity: 1; } 6% { transform: rotate(28deg) translateX(320px); opacity: 0; } 100% { transform: rotate(28deg) translateX(320px); opacity: 0; } }
 /* by day: clouds always (greyer at 0%, peach at dawn and dusk), birds from 75%, a rainbow at 100% */
 .sky .rainbow { position: absolute; left: 50%; bottom: 120px; width: 130vmin; height: 130vmin; margin-left: -65vmin; border-radius: 50%; transform: translateY(50%); opacity: 0; transition: opacity 3s;
   background: radial-gradient(closest-side, transparent 80%, rgba(255, 96, 96, .5) 81%, rgba(255, 168, 72, .5) 83%, rgba(255, 228, 92, .5) 85%, rgba(112, 208, 120, .5) 87%, rgba(88, 158, 238, .5) 89%, rgba(150, 110, 228, .5) 91%, transparent 92.5%); }
-.orb-stage.full .rainbow { opacity: .8; }
+.yard.full .rainbow { opacity: .8; }
 .sky .cloud { position: absolute; left: 0; width: 92px; height: 26px; border-radius: 20px; animation: cloud var(--d) linear var(--w) infinite;
   background: color-mix(in srgb, #ffd2b4 calc(var(--warm) * 100%), color-mix(in srgb, #fff calc((.55 + .45 * var(--f)) * 100%), #c5ced6)); }
 .sky .cloud::before, .sky .cloud::after { content: ''; position: absolute; border-radius: 50%; background: inherit; }
@@ -317,54 +314,89 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 @keyframes flutter { 0% { transform: translate(0, 0); } 25% { transform: translate(var(--dx), calc(var(--dy) * -1)); } 50% { transform: translate(calc(var(--dx) * 1.6), var(--dy)); } 75% { transform: translate(calc(var(--dx) * .6), calc(var(--dy) * -1.4)); } 100% { transform: translate(calc(var(--dx) * -.4), 0); } }
 /* the page opens: the sky comes out with the energy (each star at its share of the way), then the rest */
 @keyframes skyFade { from { opacity: 0; } }
-.orb-stage.anim .st.on { animation: skyFade 1s ease-out var(--in) backwards; }
-.orb-stage.anim :is(.nebula, .clouds) { animation: skyFade 1.2s ease-out .3s backwards; }
-.orb-stage.anim :is(.pane, .win, .spill, .flowers, .butterflies) { animation: skyFade 1.2s ease-out .4s backwards; }
-.orb-stage.anim :is(.aurora, .meteors, .flies, .birds) { animation: skyFade 1.4s ease-out .7s backwards; }
-.orb-stage.anim :is(.dipper, .rainbow) { animation: skyFade 1.5s ease-out 1.2s backwards; }
-/* the ball: glass, the energy (two waves, light drifting inside, sparks), a halo, and the ring a hold fills */
-.nav-orb { --accent: #8b9cff; --fg-3: #80838f; --e1: color-mix(in srgb, var(--accent) 62%, #fff); --e3: color-mix(in srgb, var(--accent) 55%, #3b0764); --glass: color-mix(in srgb, var(--accent) 14%, #0e1030); --glass-2: #05060f;
-  -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; }   /* a hold must not select, open a menu or scroll */
-.orb { display: block; overflow: visible; transition: transform .25s, filter .25s; }
-.orb .g0 { stop-color: var(--glass); } .orb .g1 { stop-color: var(--glass-2); }
-.orb .e1 { stop-color: var(--e1); } .orb .e2 { stop-color: var(--accent); } .orb .e3 { stop-color: var(--e3); }
-.orb .w0 { stop-color: #fff; stop-opacity: .45; } .orb .w1 { stop-color: #fff; stop-opacity: 0; }   /* the light inside, the shine on the glass */
-.orb .h0 { stop-color: var(--accent); stop-opacity: 0; } .orb .h1 { stop-color: var(--accent); stop-opacity: .5; }
-.orb .back { fill: var(--accent); opacity: .45; } .orb .surf { fill: none; stroke: #fff; stroke-opacity: .6; stroke-width: 2.4; }
-.orb .rim { fill: none; stroke: color-mix(in srgb, var(--accent) 45%, var(--fg-3)); stroke-opacity: .7; stroke-width: 3; }
-.orb .glint { fill: #fff; opacity: .7; } .orb .gleam { fill: none; stroke: #fff; stroke-opacity: .16; stroke-width: 6; stroke-linecap: round; }
-.orb .glow { opacity: calc(.3 + .5 * var(--f)); transition: opacity 1s; } .nav-orb.here .orb .glow { opacity: 1; }   /* on 主頁 the ball is lit */
-.orb .lv { transform: translateY(calc(6px + 217px * (1 - var(--f)))); transition: transform 1s cubic-bezier(.3, .7, .2, 1); }   /* the surface: y 223 under the glass (empty) up to y 6 over it (full) */
-.orb .sparks { --rise: max(0px, 184px - 217px * (1 - var(--f))); opacity: clamp(0, (var(--f) - .12) * 12, 1); }   /* they climb from y 196 to just under the surface */
-.orb .hold { fill: none; stroke: var(--e1); stroke-width: 10; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; opacity: 0; transform: rotate(-90deg); transform-origin: 120px 112px; transition: stroke-dashoffset .2s, opacity .2s; }
-@keyframes orbWave { to { transform: translateX(-80px); } }   /* one wavelength, so the loop is seamless */
-@keyframes orbDrift { from { transform: translate(-16px, 3px) scale(.9); opacity: .45; } to { transform: translate(20px, -5px) scale(1.12); opacity: 1; } }
-@keyframes orbSpark { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: .9; } 80% { opacity: .5; } 100% { transform: translateY(calc(var(--rise) * -1)); opacity: 0; } }
-@keyframes orbGlow { 50% { transform: scale(1.05); opacity: .7; } }
-.orb .wave { animation: orbWave 4.5s linear infinite; } .orb .wave.back { animation-duration: 7s; animation-direction: reverse; }
-.orb .blob { transform-box: fill-box; transform-origin: center; animation: orbDrift 9s ease-in-out infinite alternate; }
-.orb .blob.b2 { animation-duration: 12s; animation-delay: -4s; } .orb .blob.b3 { animation-duration: 10s; animation-delay: -7s; } .orb .blob.b4 { animation-duration: 13s; animation-delay: -2s; }
-.orb .spark { fill: #fff; opacity: 0; animation: orbSpark var(--d) ease-in var(--w) infinite; }
-.orb .halo { transform-box: fill-box; transform-origin: center; animation: orbGlow 5s ease-in-out infinite; }
-/* a hold: the ring fills round the ball while the energy rises and the ball swells; let go early and it all falls back (a tap) */
-.nav-orb.charging .orb { transform: scale(1.12); filter: brightness(1.3); transition: transform .48s ease-in, filter .48s; }
-.nav-orb.charging .orb .hold { stroke-dashoffset: 0; opacity: 1; transition: stroke-dashoffset .48s linear, opacity .1s; }
-.nav-orb.charging .orb .lv { transform: translateY(-12px); transition: transform .48s cubic-bezier(.5, 0, .7, .4); }
-.nav-orb.charging .orb .glow { opacity: 1; }
-@keyframes orbNudge { 30% { transform: translateY(-4px) scale(1.08); } 60% { transform: translateY(0) scale(.97); } }
-.nav-orb.nudge .orb { animation: orbNudge .5s ease-out; }   /* a tap on 主頁: the ball bobs and the hint says to hold it */
-/* the dive (orbStart): the ball flares, then its light spreads over the screen and fades into the questions */
-.nav-orb.surge .orb { transform: scale(1.18); filter: brightness(1.5) saturate(1.15); }
-.nav-orb.surge .orb .glow { opacity: 1; } .nav-orb.surge .orb .halo { animation: none; transform: scale(1.3); transition: transform .3s; }
-.orb-veil { position: fixed; z-index: 90; border-radius: 50%; pointer-events: none; transform: scale(.04); opacity: 0; transition: transform .34s cubic-bezier(.5, 0, .8, .4), opacity .1s;
+.yard.anim .st.on { animation: skyFade 1s ease-out var(--in) backwards; }
+.yard.anim :is(.nebula, .clouds) { animation: skyFade 1.2s ease-out .3s backwards; }
+.yard.anim :is(.pane, .win, .spill, .flowers, .butterflies) { animation: skyFade 1.2s ease-out .4s backwards; }
+.yard.anim :is(.aurora, .meteors, .flies, .birds) { animation: skyFade 1.4s ease-out .7s backwards; }
+.yard.anim :is(.dipper, .rainbow) { animation: skyFade 1.5s ease-out 1.2s backwards; }
+/* 書房: one drawing 400 wide and 800 tall, fitted whole and standing on the screen's bottom edge (the wall and the floor carry on
+   round it); its things' buttons, name tags and moving parts sit on it by percentage (x/4 %, y/8 %) */
+.study { --wallc: color-mix(in srgb, #e0956f calc(var(--warm) * 32%), color-mix(in srgb, #efe3cf calc(var(--day) * 100%), #1d1f3e)); --floorc: color-mix(in srgb, #b8704e calc(var(--warm) * 28%), color-mix(in srgb, #c79f76 calc(var(--day) * 100%), #17182f));   /* a sunset glow on the wall and floor at dawn and dusk */
+  position: relative; container-type: size; height: 100vh; height: 100dvh; display: flex; align-items: flex-end; justify-content: center; overflow: hidden;
+  background: linear-gradient(var(--wallc) 75.5%, var(--floorc) 75.5%); }
+.room { position: relative; flex: none; width: min(100cqw, 50cqh); aspect-ratio: 1 / 2; }
+.room > * { position: absolute; }
+.room .art { inset: 0; width: 100%; height: 100%; }
+.room .art * { transition: fill 3s, stroke 3s; }
+.room .art .wall { fill: var(--wallc); } .room .art .trim { fill: color-mix(in srgb, #d6bf9c calc(var(--day) * 100%), #15172e); }
+.room .art .floor { fill: var(--floorc); } .room .art .boards { fill: none; stroke: color-mix(in srgb, rgba(110, 70, 40, .28) calc(var(--day) * 100%), rgba(0, 0, 0, .35)); stroke-width: 1.2; }
+.room .art .beam { fill: color-mix(in srgb, rgba(255, 246, 210, .35) calc(var(--day) * 100%), rgba(170, 190, 255, .1)); }   /* the window's light on the floor */
+.room .art .rug { fill: color-mix(in srgb, #c46f61 calc(var(--day) * 100%), #2a2350); } .room .art .rug2 { fill: none; stroke: color-mix(in srgb, #e7b3a3 calc(var(--day) * 100%), #3d3470); stroke-width: 2; stroke-dasharray: 6 4; }
+.room .art .rod { fill: color-mix(in srgb, #8a6a4a calc(var(--day) * 100%), #3a3d70); } .room .art :is(.wframe, .sill) { fill: color-mix(in srgb, #fbf6ee calc(var(--day) * 100%), #2c2f59); } .room .art .wbar { fill: none; stroke: color-mix(in srgb, #fbf6ee calc(var(--day) * 100%), #2c2f59); stroke-width: 4; }
+.room .art .curtain { fill: color-mix(in srgb, #86a9c9 calc(var(--day) * 100%), #2f3b6b); }
+.room .art .c-rim { fill: color-mix(in srgb, #8a5a3c calc(var(--day) * 100%), #3b3f78); } .room .art .c-face { fill: color-mix(in srgb, #fffaf0 calc(var(--lit) * 100%), #2b2e58); } .room .art .c-tick { fill: none; stroke: color-mix(in srgb, #8a5a3c calc(var(--lit) * 100%), #8e95d8); stroke-width: 2; stroke-linecap: round; }
+.room .art .cal { fill: color-mix(in srgb, #fffdf8 calc(var(--lit) * 100%), #2b2e58); } .room .art .cal-top { fill: color-mix(in srgb, #d9534f calc(var(--day) * 100%), #8e3b4f); } .room .art .cal-ring { fill: color-mix(in srgb, #6b5040 calc(var(--day) * 100%), #9aa0e0); }
+.room .art .cal-m { fill: #fff; font-size: 10px; font-weight: 700; } .room .art .cal-d { fill: color-mix(in srgb, #3a2a20 calc(var(--lit) * 100%), #e6e8ff); font-size: 32px; font-weight: 700; } .room .art .cal-dots { fill: none; stroke: color-mix(in srgb, #5cb85c calc(var(--day) * 100%), #43d39a); stroke-width: 3; stroke-linecap: round; }
+.room .art .hook { fill: none; stroke: color-mix(in srgb, #8a6a4a calc(var(--day) * 100%), #4a4f88); stroke-width: 3; stroke-linecap: round; }
+.room .art .hp-band { fill: none; stroke: color-mix(in srgb, #3d4a7a calc(var(--day) * 100%), #7d89d8); stroke-width: 5; stroke-linecap: round; } .room .art .hp-cup { fill: color-mix(in srgb, #3d4a7a calc(var(--day) * 100%), #6a76c8); }
+.room .art .d-frame { fill: color-mix(in srgb, #b0835a calc(var(--day) * 100%), #34376a); } .room .art .d-panel { fill: color-mix(in srgb, #9b6b45 calc(var(--day) * 100%), #2a2d5c); } .room .art .d-inset { fill: color-mix(in srgb, #8a5c39 calc(var(--day) * 100%), #24275a); } .room .art .d-knob { fill: #e6c36a; } .room .art .mat { fill: color-mix(in srgb, #8a6a4a calc(var(--day) * 100%), #2a2340); }
+.room .art .sw { fill: color-mix(in srgb, #fffaf0 calc(var(--day) * 100%), #3a3d70); } .room .art .sw-t { fill: color-mix(in srgb, #c9b8a0 calc(var(--day) * 100%), #7a80c8); }
+.room .art .sh { fill: color-mix(in srgb, #8a5a3c calc(var(--day) * 100%), #2b2e5a); } .room .art .sh-in { fill: color-mix(in srgb, #6e4a30 calc(var(--day) * 100%), #202247); } .room .art .sh-b { fill: none; stroke: color-mix(in srgb, #8a5a3c calc(var(--day) * 100%), #2b2e5a); stroke-width: 5; }
+.room .art .b1 { fill: color-mix(in srgb, #c0504d calc(var(--day) * 100%), #5a3550); } .room .art .b2 { fill: color-mix(in srgb, #4f81bd calc(var(--day) * 100%), #34477a); } .room .art .b3 { fill: color-mix(in srgb, #9bbb59 calc(var(--day) * 100%), #3d5a4a); } .room .art .b4 { fill: color-mix(in srgb, #8064a2 calc(var(--day) * 100%), #4a3d7a); } .room .art .b5 { fill: color-mix(in srgb, #e0a84a calc(var(--day) * 100%), #6a5a40); }
+.room .art .cbox { fill: color-mix(in srgb, #e2b866 calc(var(--day) * 100%), #4a4a78); } .room .art .card { fill: color-mix(in srgb, #fffdf8 calc(var(--day) * 100%), #c9ceff); }
+.room .art .desk { fill: color-mix(in srgb, #a8744c calc(var(--day) * 100%), #343870); } .room .art .desk2 { fill: color-mix(in srgb, #946440 calc(var(--day) * 100%), #2a2d5c); } .room .art .deskl { fill: none; stroke: color-mix(in srgb, #7a5233 calc(var(--day) * 100%), #1e2048); stroke-width: 1.5; } .room .art .dknob { fill: color-mix(in srgb, #e0c070 calc(var(--day) * 100%), #8e95d8); }
+.room .art .lap { fill: color-mix(in srgb, #c9ccd6 calc(var(--day) * 100%), #4a4e86); } .room .art .lap-scr { fill: color-mix(in srgb, #8fb8ea calc(var(--day) * 100%), #7b8eff); }
+.room .art .nb-cover { fill: color-mix(in srgb, #3d6fb0 calc(var(--day) * 100%), #3a4a8a); } .room .art .nb-page { fill: color-mix(in srgb, #fffdf8 calc(var(--day) * 100%), #e2e4ff); } .room .art .nb-line { fill: none; stroke: color-mix(in srgb, #b8c4d8 calc(var(--day) * 100%), #a0a8e8); stroke-width: 1.2; }
+.room .art .red { fill: color-mix(in srgb, #d0453f calc(var(--day) * 100%), #b03a4c); } .room .art .red-sp { fill: color-mix(in srgb, #a3332e calc(var(--day) * 100%), #82283a); } .room .art .red-lb { fill: color-mix(in srgb, #fffdf8 calc(var(--day) * 100%), #e6e8ff); }
+.room .art .lamp { fill: color-mix(in srgb, #3a4256 calc(var(--day) * 100%), #4a5088); } .room .art .lamp-arm { fill: none; stroke: color-mix(in srgb, #3a4256 calc(var(--day) * 100%), #4a5088); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; } .room .art .shade { fill: color-mix(in srgb, #e8b84a calc(var(--day) * 100%), #f0c050); } .room .art .bulb { fill: #fff3c4; }
+.room .art .pot { fill: color-mix(in srgb, #c8734f calc(var(--day) * 100%), #5a3a4a); } .room .art .leaf { fill: color-mix(in srgb, #4f9a52 calc(var(--day) * 100%), #2e5a52); }
+/* the window: the sky at this hour, a moon and stars by night, a cloud going by in the day, the hills */
+.room .w-sky { left: 38.5%; top: 10.75%; width: 23%; height: 17.25%; overflow: hidden; background: linear-gradient(#090a22, #1d1a4a); }
+.w-sky > * { position: absolute; transition: opacity 3s; }
+.w-sky .wt-day { inset: 0; background: linear-gradient(#4a97de, #b5dcf4); opacity: var(--day); }
+.w-sky .wt-warm { inset: 0; background: linear-gradient(to top, #ffb36b, #ff8a7a 35%, rgba(150, 96, 200, .45) 70%, transparent); opacity: var(--warm); }
+.w-sky .w-night { inset: 0; opacity: calc(1 - var(--day)); } .w-sky .w-day { inset: 0; opacity: var(--day); }
+.w-sky .w-moon { position: absolute; left: 58%; top: 12%; width: 18%; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 4px -2px 0 0 #f3efe0; transform: rotate(-20deg); filter: drop-shadow(0 0 4px rgba(255, 246, 220, .5)); }
+.w-sky .w-star { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; animation: twinkle var(--d) ease-in-out var(--w) infinite alternate; }
+.w-sky .w-cloud { position: absolute; left: 0; width: 46%; height: 13%; border-radius: 10px; background: color-mix(in srgb, rgba(255, 255, 255, .92) calc(var(--day) * 100%), rgba(255, 255, 255, .92)); animation: wcloud var(--d) linear var(--w) infinite; }
+@keyframes wcloud { from { transform: translateX(-110%); } to { transform: translateX(230%); } }
+.w-sky .w-hills { left: -10%; right: -10%; bottom: -6%; height: 30%; border-radius: 50% 50% 0 0; background: color-mix(in srgb, #86c17a calc(var(--day) * 100%), #12143a); }
+/* the clock tells the time (sceneTick's --hh／--mm; the second hand runs on its own from the second the room was drawn) */
+.room .clock-hands { left: 15.25%; top: 14.625%; width: 12.5%; height: 6.25%; }
+.clock-hands i { position: absolute; left: 50%; bottom: 50%; border-radius: 2px; transform-origin: 50% 100%; background: color-mix(in srgb, #3a2a20 calc(var(--lit) * 100%), #d4d8ff); transition: background-color .4s; }
+.clock-hands .hh { width: 3px; height: 26%; margin-left: -1.5px; transform: rotate(var(--hh)); }
+.clock-hands .mm { width: 2px; height: 38%; margin-left: -1px; transform: rotate(var(--mm)); }
+.clock-hands .ss { width: 1px; height: 40%; margin-left: -.5px; background: #e0524b; animation: tick 60s steps(60) var(--ssd) infinite; }
+@keyframes tick { to { transform: rotate(360deg); } }
+/* the desk lamp warms the room as today's list fills (most of it by night); the notebook glows while questions wait */
+.room .lamp-glow { left: 34.5%; top: 29.5%; width: 80%; height: 42%; border-radius: 50%; pointer-events: none; opacity: calc((.15 + .85 * var(--f)) * (1 - .7 * var(--day))); transition: opacity 1.5s; }
+.room .lamp-glow::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 204, 128, .55), rgba(255, 190, 110, .2) 50%, transparent); animation: breathe 6s ease-in-out infinite alternate; }
+@keyframes breathe { from { opacity: .85; } to { opacity: 1; } }
+.room .note-glow { left: 33%; top: 50.25%; width: 34%; height: 11%; border-radius: 50%; pointer-events: none; transition: opacity 1s, transform .4s ease-in; }
+.room .note-glow::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 244, 200, .6), rgba(255, 236, 170, .22) 55%, transparent); animation: notePulse 2.6s ease-in-out infinite alternate; }
+@keyframes notePulse { from { opacity: .55; transform: scale(.94); } to { opacity: 1; transform: scale(1.04); } }
+.study.full .note-glow { opacity: .35; }   /* the day's list done: a quiet glow (a tap still gives 多學) */
+.study.diving .note-glow { opacity: 1; transform: scale(1.7); }
+/* a thing: a clear button over the drawing, its name tag at --tx／--ty (light or dark by --lit, which flips at half daylight) */
+.thing { position: absolute; padding: 0; border: 0; border-radius: 14px; background: none; cursor: pointer; }
+.thing::before { content: ''; position: absolute; inset: -8%; border-radius: 16px; background: radial-gradient(closest-side, rgba(255, 236, 170, .38), transparent); opacity: 0; transition: opacity .15s; }
+.thing:active::before, .thing:focus-visible::before { opacity: 1; } .thing:focus-visible { outline: none; }
+.tag { position: absolute; left: var(--tx, 50%); top: var(--ty, 100%); transform: translate(-50%, -50%); padding: 2px 8px; border-radius: 99px; font-size: 11px; line-height: 1.5; white-space: nowrap; letter-spacing: .02em; transition: transform .12s, color .4s, background-color .4s;
+  color: color-mix(in srgb, #2a3352 calc(var(--lit) * 100%), #e8eaff); background: color-mix(in srgb, rgba(255, 255, 255, .84) calc(var(--lit) * 100%), rgba(14, 16, 40, .74)); box-shadow: 0 1px 4px rgba(0, 0, 0, .18); }
+.thing:active .tag { transform: translate(-50%, -50%) scale(.94); } .thing[data-thing="notebook"] .tag { font-weight: 600; }
+.sky .house .enter { position: absolute; left: 4px; right: 4px; top: 14px; bottom: 0; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; }
+.sky .house .enter .tag { top: calc(100% + 13px); }
+/* walking in and out: the yard zooms into the door, the room shrinks away; 書房 eases in when it opens */
+@keyframes roomIn { from { opacity: 0; transform: scale(1.05); } }
+.study.anim .room { animation: roomIn .4s ease-out backwards; }
+.study.leaving .room { transform: scale(.94); opacity: 0; transition: transform .32s ease-in, opacity .32s ease-in; }
+.yard.entering .sky { transform: scale(2.6); opacity: 0; transform-origin: 50% calc(100% - 232px); transition: transform .42s ease-in, opacity .42s ease-in; }
+/* the dive (diveInto): the notebook's light spreads over the screen and fades into the questions */
+.dive-veil { position: fixed; z-index: 90; border-radius: 50%; pointer-events: none; transform: scale(.04); opacity: 0; transition: transform .34s cubic-bezier(.5, 0, .8, .4), opacity .1s;
   background: radial-gradient(closest-side, #fff, color-mix(in srgb, var(--accent) 50%, #fff) 15%, var(--accent) 40%, color-mix(in srgb, var(--accent) 70%, var(--bg)) 62%, transparent); }   /* sized so the opaque 62% reaches the farthest corner */
-.orb-veil.cover { transform: scale(1); opacity: 1; }
-.orb-veil.out { opacity: 0; transition: opacity .35s ease-out; }
-.orb-hint { position: fixed; z-index: 40; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom, 0px)); padding: 7px 12px; border-radius: 10px; border: 1px solid rgba(160, 172, 255, .25); background: rgba(20, 22, 52, .94); color: #dfe3ff; font-size: 13px; white-space: nowrap; box-shadow: 0 6px 20px rgba(0, 0, 0, .4);
-  transform: translate(-50%, 6px); opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; }
-.orb-hint::after { content: ''; position: absolute; left: 50%; bottom: -6px; margin-left: -6px; border: 6px solid transparent; border-bottom: 0; border-top-color: rgba(20, 22, 52, .94); }
-.orb-hint.show { opacity: 1; transform: translate(-50%, 0); }
-.nav-item.nav-orb .orb { width: 26px; height: 26px; margin: -4px 0 -4px -4px; opacity: 1; }   /* the sidebar's 主頁 row */
+.dive-veil.cover { transform: scale(1); opacity: 1; }
+.dive-veil.out { opacity: 0; transition: opacity .35s ease-out; }
+.top-home { display: inline-flex; align-items: center; padding: 4px 11px 4px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--bg-elev); color: var(--fg-2); font-size: 13px; cursor: pointer; }
 /* ---------- 聽一輪 (the 🎧 tab): 錯題本｜單字 over the player ---------- */
 .listen-seg { display: flex; margin-bottom: 12px; }
 .listen-seg button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
@@ -376,7 +408,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 /* 沉浸播放 (the full-page player): no chrome, the card fills the screen, always the landscape layout (word + meaning | example).
    A portrait viewport (iPhone cannot be turned by script) gets the whole page rotated 90°: the box is sized to the swapped
    viewport and turned around its top-left corner, so the notch (device top) ends up at the page's left edge. */
-body.immersive .sidebar, body.immersive .bottomnav, body.immersive .topbar { display: none; }
+body.immersive .sidebar, body.immersive .topbar { display: none; }
 body.immersive .app { grid-template-columns: 1fr; height: 100svh; } @supports (height: 1dvh) { body.immersive .app { height: 100dvh; } }
 body.immersive .main { min-height: 0; background: var(--bg); }
 body.immersive .content { max-width: none; flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; padding: calc(8px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
@@ -415,7 +447,7 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .listen-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .listen-head .select { min-width: 0; flex: 1 1 0; padding-top: 7px; padding-bottom: 7px; font-size: 13px; }   /* fills to the card's right edge, flush with the switch above */
 @media (min-width: 901px) { .listen-head .select { max-width: 280px; } }
-/* phones and tablets: 主頁 and 聽一輪 are one screen each — the ball sits in the middle, the player card takes the height left */
+/* phones and tablets: 書房, the yard and 聽一輪 are one screen each — the player card takes the height left */
 @media (max-width: 900px) {
   /* a fixed-height shell (min-height alone never lets flex items shrink); the content area scrolls on its own when a short screen needs it */
   body.fit .app { height: 100svh; } @supports (height: 1dvh) { body.fit .app { height: 100dvh; } }
@@ -423,14 +455,8 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
   #view.fit { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
   #view.fit > * { flex: none; }
   #view.fit > .listen-card { flex: 1 1 auto; display: flex; flex-direction: column; }
-  #view.fit > .orb-stage { flex: 1 1 auto; min-height: 0; }
-  body.today .topbar { display: none; }   /* 主頁 (test build): the ball and the tab bar, nothing else */
-  body.today .content { padding-top: calc(16px + env(safe-area-inset-top, 0px)); }
-  body.today .bottomnav { background: linear-gradient(to top, color-mix(in srgb, rgba(255, 255, 255, .7) calc(clamp(0, (var(--day) - .45) * 10, 1) * 100%), rgba(5, 6, 18, .7)), transparent) border-box; border-top-color: transparent; -webkit-backdrop-filter: none; backdrop-filter: none; }   /* no bar: the buttons stand on the scene, a fade from the bottom keeps them readable (border-box: else the fade repeats into the top border as a bright line) */
-  body.today .bottomnav button:not(.nav-orb) { color: color-mix(in srgb, #1d2b5e calc(clamp(0, (var(--day) - .45) * 10, 1) * 100%), #e2e6ff); text-shadow: 0 0 6px color-mix(in srgb, #fff calc(clamp(0, (var(--day) - .45) * 10, 1) * 100%), rgba(139, 156, 255, .9)); }
-  body.today .bottomnav button:not(.nav-orb) svg { stroke-width: 2; filter: drop-shadow(0 0 2.5px color-mix(in srgb, #fff calc(clamp(0, (var(--day) - .45) * 10, 1) * 100%), rgba(139, 156, 255, .95))); }   /* glowing lines by night, a white rim by day: they switch at half daylight, so dawn and dusk never leave them a grey that reads on neither */
-  .bottomnav .nav-orb { position: relative; }
-  .bottomnav .nav-orb .orb { position: absolute; left: 50%; top: -24px; width: 66px; height: 66px; margin-left: -33px; }   /* the glass (59px) stands about 15px above the bar */
+  #view.fit > :is(.yard, .study) { flex: 1 1 auto; min-height: 0; height: auto; }
+  body.scene .topbar { display: none; }   /* 書房 and the yard are whole screens */
   /* contain: size — the item area's content does not count toward the card's minimum height, so the card shrinks until the
      area is 150px (then the content area scrolls) and never ends up shorter than its own controls */
   #view.fit .listen.compact #listenCard { contain: size; flex: 1 1 0; height: auto; min-height: 150px; max-height: 420px; }
@@ -802,7 +828,7 @@ tr.lag td { color: var(--warn, #d08a00); font-weight: 600; }
 .sync-chip.is-pending::before, .sync-chip.is-syncing::before { background: var(--warn); }
 .sync-chip.is-error::before { background: var(--bad); }
 .topbar #syncChip { margin-left: auto; }
-@media (max-width: 900px) { .toast { bottom: calc(84px + env(safe-area-inset-bottom)); } body.practicing .toast { bottom: 24px; } }
+@media (max-width: 900px) { .toast { bottom: calc(24px + env(safe-area-inset-bottom)); } body.practicing .toast { bottom: 24px; } }
 .banner { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--accent-line); background: var(--accent-soft); margin-bottom: 14px; font-size: 14px; }
 .banner.warn { border-color: transparent; background: var(--warn-soft); }
 .spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line-2); border-top-color: var(--accent); animation: spin .8s linear infinite; display: inline-block; vertical-align: middle; }
@@ -825,13 +851,12 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
   </aside>
   <div class="main">
     <header class="topbar">
-      <div class="row"><div class="brand-mark">日</div><span class="topbar-title" id="topTitle">主頁</span></div>
+      <div class="row"><button type="button" class="top-home" data-act="nav" data-route="#/today" aria-label="回書房">‹ 書房</button><span class="topbar-title" id="topTitle">書房</span></div>
       <span id="syncChip"></span>
       <div class="row" id="topActions"></div>
     </header>
     <main id="view" class="content" tabindex="-1"></main>
   </div>
-  <nav class="bottomnav" id="bottomNav" aria-label="主選單"></nav>
 </div>
 <div id="modalRoot"></div>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -5034,7 +5059,7 @@ function reportCurrentItem() {
    App shell: router, navigation, actions, keyboard
    ========================================================================== */
 const NAV = [
-  { id: 'today', label: '主頁', icon: 'today', route: '#/today' },
+  { id: 'today', label: '書房', icon: 'today', route: '#/today' },
   { id: 'course', label: '課程', icon: 'course', route: '#/course' },
   { id: 'vocab', label: '單字', icon: 'vocab', route: '#/vocab' },
   { id: 'listen', label: '聽一輪', icon: 'listen', route: '#/listen' },
@@ -5086,17 +5111,10 @@ function currentRoute() {
 
 function renderNav(active) {
   const mistakeCount = activeMistakes().length;
-  const pct = storedDayPct();
-  // 主頁 is the crystal ball (test build): the sidebar's first row, the middle of the phone tab bar. Both stay put across redraws, so
-  // their motion and a hold in progress carry on; only the rows round them are redrawn.
-  const side = document.getElementById('sideNav');
-  let sideOrb = side.querySelector('.nav-orb');
-  if (!sideOrb) { side.innerHTML = `<button type="button" class="nav-item nav-orb">${orbSvg('so')}<span>主頁</span></button>`; sideOrb = side.firstElementChild; }
-  side.querySelectorAll(':scope > :not(.nav-orb)').forEach(el => el.remove());
-  sideOrb.insertAdjacentHTML('afterend', NAV.slice(1).map(n => `
+  document.getElementById('sideNav').innerHTML = NAV.map(n => `
     <button type="button" class="nav-item" data-act="nav" data-route="${n.route}" ${n.id === active ? 'aria-current="page"' : ''}>
       ${icon(n.icon)}<span>${n.label}</span>${n.id === 'mistakes' && mistakeCount ? `<span class="count">${mistakeCount}</span>` : ''}
-    </button>`).join(''));
+    </button>`).join('');
   const st = streakStats();
   document.getElementById('sideFoot').innerHTML = `
     <div class="panel small">
@@ -5106,15 +5124,6 @@ function renderNav(active) {
     </div>
     <button type="button" class="nav-item" data-act="toggle-furi" title="快速鍵 F">${icon('furi')}<span>振假名：${FURI_LABEL[furiState()]}</span></button>
     <button type="button" class="nav-item" data-act="settings">${icon('settings')}<span>設定</span></button>`;
-  const bar = document.getElementById('bottomNav');
-  let barOrb = bar.querySelector('.nav-orb');
-  if (!barOrb) { bar.innerHTML = `<button type="button" class="nav-orb">${orbSvg('bo')}</button>`; barOrb = bar.firstElementChild; }
-  bar.querySelectorAll(':scope > :not(.nav-orb)').forEach(el => el.remove());
-  const tab = (n) => `<button type="button" data-act="${n.id === 'more' ? 'more-menu' : 'nav'}" data-route="${n.route || ''}" ${n.id === active || (n.id === 'more' && NAV.slice(4).some(x => x.id === active)) ? 'aria-current="page"' : ''}>${icon(n.icon)}<span>${n.label}</span></button>`;
-  const mobile = NAV.slice(1, 4).concat({ id: 'more', label: '更多', icon: 'more' });   // 課程・單字｜the ball｜聽一輪・更多; the rest sit under 更多
-  barOrb.insertAdjacentHTML('beforebegin', mobile.slice(0, 2).map(tab).join(''));
-  barOrb.insertAdjacentHTML('afterend', mobile.slice(2).map(tab).join(''));
-  [sideOrb, barOrb].forEach(b => navOrbLevel(b, pct, active === 'today'));
   const navItem = NAV.find(n => n.id === active);
   document.getElementById('topTitle').textContent = navItem ? navItem.label : 'Nihongo Quest';
   renderSyncChip();
@@ -5122,12 +5131,13 @@ function renderNav(active) {
 }
 
 function route() {
-  orbHintHide();
   const r = currentRoute();
   const view = document.getElementById('view');
   const opened = r.name !== animRoute || animForce; animRoute = r.name; animForce = false;
-  const fit = r.name === 'today' || r.name === 'listen';   // one screen each on a phone: the ball, the player
-  view.classList.toggle('fit', fit); document.body.classList.toggle('fit', fit); document.body.classList.toggle('today', r.name === 'today'); themeColor();
+  const scene = r.name === 'today' || r.name === 'outside';   // 書房 and the yard: whole screens, the clock's colours
+  const fit = scene || r.name === 'listen';   // one screen each on a phone
+  view.classList.toggle('fit', fit); document.body.classList.toggle('fit', fit); document.body.classList.toggle('scene', scene);
+  document.body.classList.toggle('today', r.name === 'today'); document.body.classList.toggle('outside', r.name === 'outside'); themeColor();
   document.body.classList.toggle('immersive', (r.name === 'mistakes' || r.name === 'vocab') && r.parts[1] === 'listen');
   const tip = document.getElementById('chartTip');
   if (tip) tip.classList.remove('show');
@@ -5141,6 +5151,7 @@ function route() {
   renderNav(r.name === 'course' ? 'course' : r.name);
   try {
     if (r.name === 'today') renderToday(view);
+    else if (r.name === 'outside') renderOutside(view);
     else if (r.name === 'course') { if (r.parts[1]) renderUnit(view, r.parts[1] === 'intro' ? 'm0' : r.parts[1], r.params.tab || 'lesson'); else renderCourse(view); }
     else if (r.name === 'vocab') {
       if (!r.parts[1] || r.parts[1] === 'themes') { location.replace('#/vocab/level?lv=' + defaultVocabLevel()); return route(); }   // replace, so Back leaves the vocab page   // the vocab page opens on the learner's level; the old 主題 tab lives there too
@@ -5159,7 +5170,7 @@ function route() {
     view.querySelectorAll('.page-head .page-title').forEach(el => el.classList.toggle('dup-title', el.textContent.trim() === top));
   } catch (e) {
     console.error(e);
-    view.innerHTML = `<div class="card"><div class="card-title">這個頁面出錯了</div><p class="muted small">${esc(e.message)}</p><button class="btn" data-act="nav" data-route="#/today">回到主頁</button></div>`;
+    view.innerHTML = `<div class="card"><div class="card-title">這個頁面出錯了</div><p class="muted small">${esc(e.message)}</p><button class="btn" data-act="nav" data-route="#/today">回到書房</button></div>`;
   }
   view.focus({ preventScroll: true });
 }
@@ -5192,17 +5203,18 @@ function applyTheme() {
   document.documentElement.setAttribute('data-theme', resolved);
   themeColor();
 }
-// the browser bar's colour: the page background, or 主頁's sky at this hour (test build) whatever the theme
+// the browser bar's colour: the page background, or (test build) the yard's sky／書房's wall at this hour, whatever the theme
 function themeColor() {
   const meta = document.querySelector('meta[name="theme-color"]'); if (!meta) return;
-  if (!document.body.classList.contains('today')) { meta.setAttribute('content', document.documentElement.getAttribute('data-theme') === 'light' ? '#f5f6f8' : '#0e0f13'); return; }
+  const b = document.body.classList;
+  if (!b.contains('scene')) { meta.setAttribute('content', document.documentElement.getAttribute('data-theme') === 'light' ? '#f5f6f8' : '#0e0f13'); return; }
   const c = sceneClock();
-  meta.setAttribute('content', mixHex(mixHex('#05060f', '#3d8cdb', c.day), '#e8875f', c.warm * 0.5));
+  meta.setAttribute('content', b.contains('outside') ? mixHex(mixHex('#05060f', '#3d8cdb', c.day), '#e8875f', c.warm * 0.5) : mixHex('#1d1f3e', '#efe3cf', c.day));
 }
 function mixHex(a, b, t) { const ch = (h, i) => parseInt(h.slice(i, i + 2), 16); return '#' + [1, 3, 5].map(i => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * t).toString(16).padStart(2, '0')).join(''); }
 // 主頁's clock (test build): the phone's own time and time zone, UTC+8 only when no zone can be read. --day is the daylight (0 by
 // night, 1 by day; dawn 5–7 and dusk 17–19 ease between), --warm the sunrise／sunset glow (strongest at 6 and 18), --sx/--sy the
-// sun on its arc (up at 5:12, down at 18:48, behind the hills at either end). Set on body: the scene and 主頁's tab bar both read it.
+// sun on its arc (up at 5:12, down at 18:48, behind the hills at either end), --hh／--mm the hands of 書房's clock. Set on body.
 function sceneHour() {
   const d = new Date();
   let zone = ''; try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { /* no zone */ }
@@ -5216,14 +5228,16 @@ function sceneClock(h = sceneHour()) {
   return { day, warm, sx: 8 + 84 * p, sy: 72 - 60 * Math.sin(Math.PI * p) };
 }
 function sceneTick() {
-  const c = sceneClock(), b = document.body;
+  const h = sceneHour(), c = sceneClock(h), b = document.body;
+  b.style.setProperty('--hh', `${((h % 12) * 30).toFixed(1)}deg`); b.style.setProperty('--mm', `${((h % 1) * 360).toFixed(1)}deg`);
+  b.style.setProperty('--lit', c.day >= 0.5 ? '1' : '0');   // the name tags: dark on light from half daylight, light on dark before
   b.style.setProperty('--day', c.day.toFixed(3)); b.style.setProperty('--warm', c.warm.toFixed(3));
   b.style.setProperty('--sx', `${c.sx.toFixed(1)}%`); b.style.setProperty('--sy', `${c.sy.toFixed(1)}%`);
   b.classList.toggle('scene-day', c.day > 0.999); b.classList.toggle('scene-night', c.day < 0.001);
   themeColor();
 }
-setInterval(() => { if (document.body.classList.contains('today')) sceneTick(); }, 60000);   // the scene moves with the clock while 主頁 is open
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && document.body.classList.contains('today')) sceneTick(); });
+setInterval(() => { if (document.body.classList.contains('scene')) sceneTick(); }, 60000);   // the scenes move with the clock while one is open
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && document.body.classList.contains('scene')) sceneTick(); });
 // furigana: all → smart (no readings on mastered words) → off
 const FURI_LABEL = { all: '顯示', smart: '熟練的字不標', off: '隱藏' };
 function furiState() { return !state.settings.furigana ? 'off' : (state.settings.furiMode === 'smart' ? 'smart' : 'all'); }
@@ -5254,9 +5268,9 @@ const ACTIONS = {
   'sync-delete-cloud': async () => { if (!confirm('確定刪除雲端上的進度？本機進度不受影響。')) return; await Sync.deleteCloud(); if (modalOpen()) refreshSettings(); },
   nav: (el) => go(el.dataset.route),
   settings: () => openSettings(),
-  'more-menu': () => openModal('更多', `<div class="list">
-      ${NAV.slice(4).map(n => `<button type="button" class="list-item clickable" style="border:0;background:none;width:100%;text-align:left" data-act="nav" data-route="${n.route}">${icon(n.icon)}<span>${n.label}</span></button>`).join('')}
-      <button type="button" class="list-item clickable" style="border:0;background:none;width:100%;text-align:left" data-act="settings">${icon('settings')}<span>設定</span></button></div>`, { width: 420 }),
+  'study-practice': (el) => diveInto(el),
+  'enter-house': () => sceneGo('#/today', 'entering'),
+  'leave-house': () => sceneGo('#/outside', 'leaving'),
   'close-modal': () => closeModal(),
   'modal-back': (el, ev) => { if (ev.target === el) closeModal(); },
   'toggle-furi': () => toggleFurigana(),
@@ -5450,23 +5464,28 @@ function noticesHtml() {
 // iOS ignores user-scalable=no inside Safari; the gesture events still stop a pinch from zooming the page
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
 
-// 主頁 (test build): the land and a house under a sky that follows the clock (sceneTick) and comes out as today's list fills
-// (dayProgress, the ring it replaces). The crystal ball lives in the tab bar (renderNav): a tap comes here, a hold dives into 今日練習.
+// 書房 and the yard (test build). The app opens in 書房 (renderToday); its door leads out to the yard (renderOutside), whose house
+// leads back in. Both follow the clock (sceneTick) and today's list (dayProgress, the ring they replace).
 function renderToday(view) {
   finishPreIfReady();
   sceneTick();
   const pct = ringPct(dayProgress());
-  document.querySelectorAll('.nav-orb').forEach(b => navOrbLevel(b, pct, true));   // today's list may only now exist
-  const stage = view.querySelector('.orb-stage');
-  if (stage) { orbLevel(stage, pct); return; }   // a redraw (a sync, a setting): new stars fade in, the motion carries on
-  view.innerHTML = homeHtml(pct);
-  orbHintSoon();
+  const st = view.querySelector('.study');
+  if (st && st.dataset.date === todayStr()) { studyLevel(st, pct); return; }   // a redraw (a sync, a setting): the tags change, the motion carries on
+  view.innerHTML = studyHtml(pct);
 }
-function orbLevel(stage, pct) {
+function renderOutside(view) {
+  sceneTick();
+  const pct = ringPct(dayProgress());
+  const yard = view.querySelector('.yard');
+  if (yard) { yardLevel(yard, pct); return; }   // a redraw: new stars fade in, the motion carries on
+  view.innerHTML = yardHtml(pct);
+}
+function yardLevel(yard, pct) {
   const f = pct / 100;
-  stage.style.setProperty('--f', f);
-  stage.classList.toggle('full', pct >= 100);
-  stage.querySelectorAll('.st').forEach(el => el.classList.toggle('on', Number(el.dataset.t) <= f));
+  yard.style.setProperty('--f', f);
+  yard.classList.toggle('full', pct >= 100);
+  yard.querySelectorAll('.st').forEach(el => el.classList.toggle('on', Number(el.dataset.t) <= f));
 }
 // the sky's layout, the same every day (a fixed seed): each star carries the share of the list that lights it — six faint ones
 // from the start, the rest by 80%, the seven of the constellation at 100%
@@ -5480,12 +5499,12 @@ const SKY = (() => {
   const flowers = Array.from({ length: 16 }, () => ({ x: r2(3 + rnd() * 94), y: Math.round(150 + rnd() * 56), c: ['#ff9ec4', '#ffffff', '#ffd166', '#c9a7ff', '#ff8a8a'][Math.floor(rnd() * 5)], d: r2(2.5 + rnd() * 2), w: r2(rnd() * 3) }));
   return { stars, flies, flowers };
 })();
-function homeHtml(pct) {
+function yardHtml(pct) {
   const f = pct / 100;
   const star = (s) => `<i class="st${s.dip ? ' dip' : ''}${s.t <= f ? ' on' : ''}" data-t="${s.t}" style="left:${s.x}%;top:${s.y}%;--s:${s.s}px;--d:${s.d}s;--w:-${s.w}s;--in:${f ? Math.round(s.t / f * 120) / 100 : 0}s"></i>`;
   const dip = SKY.stars.filter(s => s.dip).map(s => `${s.x} ${s.y}`);
   const ground = 'M0 170 C150 152 300 142 450 147 C520 149 560 150 600 150 C640 150 690 149 760 146 C900 141 1050 151 1200 162';
-  return `<div class="orb-stage${pct >= 100 ? ' full' : ''}" data-anim style="--f:${f}">
+  return `<div class="yard${pct >= 100 ? ' full' : ''}" data-anim style="--f:${f}">
     <div class="sky" aria-hidden="true">
       <i class="tint t-grey"></i><i class="tint t-blue"></i><i class="tint t-warm"></i>
       <i class="sun"></i>
@@ -5523,136 +5542,135 @@ function homeHtml(pct) {
         </svg>
         <i class="win w1"></i><i class="win w2"></i><i class="win w3"></i>
         <i class="smoke"></i><i class="smoke"></i><i class="smoke"></i>
+        <button type="button" class="enter" data-act="enter-house" aria-label="進屋"><span class="tag">進屋</span></button>
       </div>
       <div class="flies">${SKY.flies.map(q => `<i style="left:${q.x}%;top:${q.y}px;--dx:${q.dx}px;--dy:${q.dy}px;--d:${q.d}s;--w:-${q.w}s"></i>`).join('')}</div>
       <div class="butterflies"><i class="bf" style="left:28%;top:40px;--dx:40px;--dy:18px;--d:7s;--w:-2s;--c:#ffb3d1"></i><i class="bf" style="left:66%;top:66px;--dx:-36px;--dy:14px;--d:8.5s;--w:-5s;--c:#ffe08a"></i></div>
     </div>
   </div>`;
 }
-// the crystal ball, the sphere alone: glass, two waves of energy at the level --f, light drifting inside, sparks, a halo and the ring
-// a hold fills. Ids carry a prefix: the tab bar and the sidebar each have one.
-const ORB_SPARKS = [[92, 3, 4.2, 0], [104, 2.2, 3.4, 1.3], [118, 3.6, 5, 2.6], [128, 2.4, 3.8, 0.6], [140, 3.2, 4.6, 3.1], [150, 2.2, 3.6, 1.9], [112, 2.6, 4.4, 3.8]];   // x, radius, seconds to climb, head start
-function orbSvg(id) {
-  const wave = 'M0 0 Q20 -16 40 0 T80 0 T120 0 T160 0 T200 0 T240 0 T280 0 T320 0';   // four wavelengths: one scrolls out while the glass shows the rest
-  return `<svg class="orb" viewBox="8 0 224 224" aria-hidden="true">
-      <defs>
-        <radialGradient id="${id}G" cx=".4" cy=".36" r=".7"><stop offset="0" class="g0"/><stop offset="1" class="g1"/></radialGradient>
-        <linearGradient id="${id}E" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="150"><stop offset="0" class="e1"/><stop offset=".3" class="e2"/><stop offset="1" class="e3"/></linearGradient>
-        <radialGradient id="${id}L"><stop offset="0" class="w0"/><stop offset="1" class="w1"/></radialGradient>
-        <radialGradient id="${id}H"><stop offset=".7" class="h0"/><stop offset=".84" class="h1"/><stop offset="1" class="h0"/></radialGradient>
-        <clipPath id="${id}C"><circle cx="120" cy="112" r="98"/></clipPath>
-        <clipPath id="${id}U"><rect x="0" y="8" width="320" height="230"/></clipPath>
-      </defs>
-      <g class="glow"><circle class="halo" cx="120" cy="112" r="126" fill="url(#${id}H)"/></g>
-      <circle cx="120" cy="112" r="100" fill="url(#${id}G)"/>
-      <g clip-path="url(#${id}C)">
-        <g class="lv">
-          <g transform="translate(0 -7)"><path class="wave back" d="${wave} V232 H0 Z"/></g>
-          <g class="wave"><path d="${wave} V232 H0 Z" fill="url(#${id}E)"/><path class="surf" d="${wave}"/></g>
-          <g clip-path="url(#${id}U)">
-            <ellipse class="blob" cx="72" cy="38" rx="46" ry="20" fill="url(#${id}L)"/><ellipse class="blob b2" cx="166" cy="78" rx="40" ry="18" fill="url(#${id}L)"/>
-            <ellipse class="blob b3" cx="104" cy="122" rx="54" ry="22" fill="url(#${id}L)"/><ellipse class="blob b4" cx="150" cy="172" rx="48" ry="20" fill="url(#${id}L)"/>
-          </g>
-        </g>
-        <g class="sparks">${ORB_SPARKS.map(([x, r, d, w]) => `<circle class="spark" cx="${x}" cy="196" r="${r}" style="--d:${d}s;--w:-${w}s"/>`).join('')}</g>
-      </g>
-      <ellipse cx="84" cy="60" rx="42" ry="24" transform="rotate(-38 84 60)" fill="url(#${id}L)" opacity=".7"/>
-      <circle class="glint" cx="70" cy="52" r="5"/>
-      <path class="gleam" d="M184 140 A76 76 0 0 1 150 196"/>
-      <circle class="rim" cx="120" cy="112" r="99"/>
-      <circle class="hold" cx="120" cy="112" r="114" pathLength="1"/>
-    </svg>`;
+// 書房's things: the drawing is 400 wide and 800 tall; box is the button (x, y, width, height), tag the name tag's centre
+const STUDY_THINGS = [
+  { id: 'clock', route: '#/exam', label: '模擬考', box: [52, 108, 68, 68], tag: [86, 190] },
+  { id: 'calendar', route: '#/stats', label: '學習分析', box: [280, 92, 72, 92], tag: [316, 196] },
+  { id: 'phones', route: '#/listen', label: '聽一輪', box: [160, 248, 80, 76], tag: [200, 336] },
+  { id: 'switch', act: 'settings', label: '設定', box: [82, 350, 44, 54], tag: [104, 414] },
+  { id: 'door', act: 'leave-house', label: '出門', box: [8, 332, 76, 274], tag: [46, 632] },
+  { id: 'shelf', route: '#/course', label: '課程', box: [316, 306, 78, 350], tag: [355, 668] },
+  { id: 'cards', route: '#/vocab', label: '單字', box: [322, 254, 70, 52], tag: [357, 244] },
+  { id: 'laptop', route: '#/tools', label: '工具與 AI', box: [98, 412, 66, 58], tag: [131, 494] },
+  { id: 'notebook', act: 'study-practice', box: [166, 410, 70, 60], tag: [201, 522] },
+  { id: 'redbook', route: '#/mistakes', box: [234, 416, 40, 54], tag: [253, 494] }
+];
+function studyTag(id, pct, mk) {
+  if (id === 'notebook') return pct >= 100 ? '今日完成・多學' : `今日練習 ${pct}%`;
+  if (id === 'redbook') return `錯題本${mk ? ` ${mk}` : ''}`;
+  return STUDY_THINGS.find(t => t.id === id).label;
 }
-function orbLabel(pct) { return `主頁（今天完成 ${pct}%）・按住開始今日練習`; }
-// the tab bar's reading of today's progress, from the list as stored: drawing the bar must never make or remake the list (dailyPlan
-// does that when 主頁 or a set asks, then 主頁 sets the balls). No list yet today: nothing of it done. A list 主頁 is about to
-// remake (the stage or the start changed): null, the ball keeps what it shows.
-function storedDayPct() {
-  const pl = state.today.plan;
-  if (!pl || !pl.lists) return 0;
-  if (pl.stage !== state.stage || pl.start !== Boolean(state.startChosen)) return null;
-  const keys = planListKeys(pl).filter(k => REG.byKey.has(k));
-  return ringPct({ done: keys.filter(answeredToday).length, total: keys.length });
+function studyLevel(st, pct) {
+  st.style.setProperty('--f', pct / 100);
+  st.classList.toggle('full', pct >= 100);
+  const mk = activeMistakes().length;
+  st.querySelectorAll('[data-thing="notebook"], [data-thing="redbook"]').forEach(b => { const t = studyTag(b.dataset.thing, pct, mk); b.querySelector('.tag').textContent = t; b.setAttribute('aria-label', t); });
 }
-// the level, the label and "you are here" (pct null: the level stays); a change waits a moment, so after a set
-// the bar is back on screen and the rise shows
-function navOrbLevel(btn, pct, here) {
-  btn.classList.toggle('here', here);
-  if (here) btn.setAttribute('aria-current', 'page'); else btn.removeAttribute('aria-current');
-  if (pct === null) { if (!btn.getAttribute('aria-label')) btn.setAttribute('aria-label', orbLabel(0)); return; }
-  btn.setAttribute('aria-label', orbLabel(pct));
-  const f = String(pct / 100), was = btn.style.getPropertyValue('--f');
-  if (was === '') btn.style.setProperty('--f', f);
-  else if (was !== f) setTimeout(() => btn.style.setProperty('--f', f), 80);
+const SHELF_BOOKS = (() => {   // the bookcase's spines, the same every time
+  const out = [];
+  [[392, 0], [476, 2], [560, 4], [650, 1]].forEach(([floor, i]) => {
+    for (let x = 324; ;) {
+      const w = [7, 9, 6, 8, 10][i % 5], h = [56, 64, 50, 60, 46][(i * 3) % 5];
+      if (x + w > 386) break;
+      out.push(`<rect class="bk b${i % 5 + 1}" x="${x}" y="${floor - h}" width="${w}" height="${h}" rx="1"/>`);
+      x += w + (i % 3 === 0 ? 2 : 1); i++;
+    }
+  });
+  return out.join('');
+})();
+function studyHtml(pct) {
+  const f = pct / 100, mk = activeMistakes().length, d = parseDate(todayStr());
+  const thing = (t) => {
+    const [x, y, w, h] = t.box, [tx, ty] = t.tag, label = studyTag(t.id, pct, mk);
+    const pos = `left:${x / 4}%;top:${y / 8}%;width:${w / 4}%;height:${h / 8}%;--tx:${((tx - x) / w * 100).toFixed(1)}%;--ty:${((ty - y) / h * 100).toFixed(1)}%`;
+    return `<button type="button" class="thing" data-thing="${t.id}" ${t.route ? `data-act="nav" data-route="${t.route}"` : `data-act="${t.act}"`} style="${pos}" aria-label="${label}"><span class="tag">${label}</span></button>`;
+  };
+  return `<div class="study${pct >= 100 ? ' full' : ''}" data-anim data-date="${todayStr()}" style="--f:${f}">
+    <div class="room">
+      <div class="w-sky" aria-hidden="true">
+        <i class="wt-day"></i><i class="wt-warm"></i>
+        <div class="w-night"><i class="w-moon"></i>${[[12, 20, 2.6, 0.4], [30, 44, 3.4, 1.6], [78, 52, 2.2, 0.9], [44, 14, 3, 2.2], [88, 22, 2.8, 1.2], [20, 64, 3.6, 0.2]].map(([x, y, dd, w]) => `<i class="w-star" style="left:${x}%;top:${y}%;--d:${dd}s;--w:-${w}s"></i>`).join('')}</div>
+        <div class="w-day"><i class="w-cloud" style="top:16%;--d:38s;--w:-6s"></i><i class="w-cloud" style="top:40%;--d:54s;--w:-31s;width:34%"></i></div>
+        <i class="w-hills"></i>
+      </div>
+      <svg class="art" viewBox="0 0 400 800" aria-hidden="true">
+        <path class="wall" fill-rule="evenodd" d="M0 0 H400 V604 H0 Z M154 86 V224 H246 V86 Z"/>
+        <rect class="trim" y="596" width="400" height="10"/>
+        <rect class="floor" y="606" width="400" height="194"/>
+        <path class="boards" d="M0 646 H400 M0 694 H400 M0 748 H400 M70 606 V646 M210 606 V646 M330 606 V646 M130 646 V694 M280 646 V694 M40 694 V748 M190 694 V748 M350 694 V748 M110 748 V800 M260 748 V800"/>
+        <path class="beam" d="M154 606 H246 L300 790 H120 Z"/>
+        <ellipse class="rug" cx="200" cy="732" rx="150" ry="40"/><ellipse class="rug2" cx="200" cy="732" rx="126" ry="30"/>
+        <rect class="rod" x="120" y="64" width="160" height="5" rx="2.5"/>
+        <path class="wframe" fill-rule="evenodd" d="M146 78 H254 V232 H146 Z M154 86 V224 H246 V86 Z"/><path class="wbar" d="M200 86 V224 M154 155 H246"/>
+        <rect class="sill" x="140" y="230" width="120" height="8" rx="2"/>
+        <path class="curtain" d="M124 68 H152 C146 120 150 186 142 244 H120 C128 186 124 120 124 68 Z"/><path class="curtain" d="M276 68 H248 C254 120 250 186 258 244 H280 C272 186 276 120 276 68 Z"/>
+        <circle class="c-rim" cx="86" cy="142" r="30"/><circle class="c-face" cx="86" cy="142" r="25"/><path class="c-tick" d="M86 120 V125 M86 159 V164 M64 142 H69 M103 142 H108"/>
+        <rect class="cal" x="286" y="100" width="60" height="78" rx="4"/><path class="cal-top" d="M286 104 a4 4 0 0 1 4 -4 H342 a4 4 0 0 1 4 4 V118 H286 Z"/>
+        <circle class="cal-ring" cx="302" cy="100" r="3"/><circle class="cal-ring" cx="330" cy="100" r="3"/>
+        <text class="cal-m" x="316" y="113" text-anchor="middle">${d.getMonth() + 1}月</text><text class="cal-d" x="316" y="156" text-anchor="middle">${d.getDate()}</text>
+        <path class="cal-dots" d="M298 168 h3 M306 168 h3 M314 168 h3 M322 168 h3 M330 168 h3"/>
+        <path class="hook" d="M200 250 V262"/><path class="hp-band" d="M176 302 C176 262 224 262 224 302"/>
+        <rect class="hp-cup" x="168" y="292" width="15" height="26" rx="7"/><rect class="hp-cup" x="217" y="292" width="15" height="26" rx="7"/>
+        <rect class="d-frame" x="8" y="332" width="76" height="274" rx="2"/><rect class="d-panel" x="15" y="339" width="62" height="267"/>
+        <rect class="d-inset" x="23" y="352" width="46" height="96" rx="2"/><rect class="d-inset" x="23" y="462" width="46" height="128" rx="2"/>
+        <circle class="d-knob" cx="68" cy="478" r="3.5"/><rect class="mat" x="6" y="610" width="80" height="12" rx="3"/>
+        <rect class="sw" x="96" y="364" width="16" height="26" rx="2"/><rect class="sw-t" x="101" y="370" width="6" height="10" rx="1"/>
+        <rect class="sh" x="316" y="304" width="78" height="352" rx="2"/><rect class="sh-in" x="322" y="310" width="66" height="340"/>
+        ${SHELF_BOOKS}<path class="sh-b" d="M322 392 H388 M322 476 H388 M322 560 H388"/>
+        <rect class="cbox" x="326" y="276" width="58" height="28" rx="2"/>
+        <rect class="card" x="332" y="266" width="18" height="14" rx="1"/><rect class="card" x="352" y="262" width="18" height="18" rx="1"/><rect class="card" x="366" y="268" width="14" height="12" rx="1"/>
+        <rect class="desk2" x="96" y="480" width="56" height="176"/><rect class="desk2" x="292" y="480" width="10" height="176"/>
+        <path class="deskl" d="M96 538 H152 M96 596 H152"/>
+        <rect class="dknob" x="118" y="506" width="12" height="3" rx="1.5"/><rect class="dknob" x="118" y="564" width="12" height="3" rx="1.5"/><rect class="dknob" x="118" y="622" width="12" height="3" rx="1.5"/>
+        <rect class="desk" x="88" y="466" width="222" height="14" rx="2"/>
+        <rect class="lap" x="104" y="418" width="52" height="36" rx="3"/><rect class="lap-scr" x="108" y="422" width="44" height="28" rx="1.5"/><path class="lap" d="M98 454 H162 L158 466 H102 Z"/>
+        <path class="nb-cover" d="M166 466 L172 424 L200 430 L228 424 L234 466 Z"/>
+        <path class="nb-page" d="M171 462 L176 428 L200 433 V464 Z"/><path class="nb-page" d="M229 462 L224 428 L200 433 V464 Z"/>
+        <path class="nb-line" d="M180 438 L196 441 M179 446 L196 449 M178 454 L196 457 M220 438 L204 441 M221 446 L204 449 M222 454 L204 457"/>
+        <rect class="red" x="240" y="428" width="24" height="38" rx="2"/><rect class="red-sp" x="240" y="428" width="5" height="38" rx="1"/><rect class="red-lb" x="248" y="436" width="12" height="8" rx="1"/>
+        <path class="lamp" d="M276 466 H306 V461 H276 Z"/><path class="lamp-arm" d="M291 461 L284 420 L296 402"/><path class="shade" d="M280 386 L306 380 L312 400 L284 408 Z"/><circle class="bulb" cx="298" cy="404" r="4"/>
+        <path class="pot" d="M28 700 H62 L57 736 H33 Z"/><path class="leaf" d="M45 700 C34 682 28 664 38 654 C45 668 48 684 45 700 Z M45 700 C53 680 62 668 72 666 C69 680 57 692 45 700 Z M45 700 C44 676 48 658 53 646 C57 666 53 686 45 700 Z"/>
+      </svg>
+      <i class="lamp-glow" aria-hidden="true"></i><i class="note-glow" aria-hidden="true"></i>
+      <div class="clock-hands" aria-hidden="true" style="--ssd:-${new Date().getSeconds()}s"><i class="hh"></i><i class="mm"></i><i class="ss"></i></div>
+      ${STUDY_THINGS.map(thing).join('')}
+    </div>
+  </div>`;
 }
-// a tap goes to 主頁 (on 主頁 the ball bobs and the hint says to hold it); a hold — the ring fills round the ball in ORB_HOLD ms —
-// dives into 今日練習. Both are taken from the pointer (or Enter／Space held on the focused ball), never from the click.
-const ORB_HOLD = 600;
-let orbHold = null;
-function orbDown(ev) {
-  const btn = ev.target && ev.target.closest && ev.target.closest('.nav-orb');
-  if (!btn || orbBusy || orbHold || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
-  orbHold = { btn, show: setTimeout(() => btn.classList.add('charging'), 120), done: setTimeout(() => orbHeld(btn), ORB_HOLD) };
-  orbBuzz(8);
+// walking in or out of the house: a short zoom, then the other scene (straight there with motion reduced)
+function sceneGo(hash, cls) {
+  const box = document.querySelector('#view .yard, #view .study');
+  if (!box || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { go(hash); return; }
+  box.classList.add(cls); setTimeout(() => go(hash), 380);
 }
-function orbUp(ev, cancel) {
-  const h = orbHold; if (!h) return;
-  orbHold = null; clearTimeout(h.show); clearTimeout(h.done);
-  h.btn.classList.remove('charging');
-  const r = h.btn.getBoundingClientRect(), pad = 24;   // a finger that slid well off the ball before letting go: no tap
-  const off = typeof ev.clientX === 'number' && (ev.clientX < r.left - pad || ev.clientX > r.right + pad || ev.clientY < r.top - pad - 30 || ev.clientY > r.bottom + pad);
-  if (cancel || off) return;
-  if (currentRoute().name === 'today') { orbHint(); h.btn.classList.remove('nudge'); void h.btn.offsetWidth; h.btn.classList.add('nudge'); }
-  else go('#/today');
-}
-function orbHeld(btn) {
-  orbHold = null; btn.classList.remove('charging');
-  try { localStorage.setItem('nq_orb_hold', '1'); } catch (e) { /* ignore */ }
-  orbHintHide(); orbBuzz(20);
-  orbStart(btn);
-}
-function orbKey(ev) {
-  const btn = ev.target && ev.target.closest && ev.target.closest('.nav-orb');
-  if (!btn || (ev.key !== 'Enter' && ev.key !== ' ')) return;
-  ev.preventDefault(); ev.stopPropagation();   // no click: the press is the tap or the hold
-  if (ev.type === 'keydown') { if (!ev.repeat) orbDown({ target: btn }); } else orbUp({}, false);
-}
-function orbBuzz(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* no vibration (iPhone) */ } }
-function orbHint() {
-  const nav = document.getElementById('bottomNav'); if (!nav || getComputedStyle(nav).display === 'none') return;   // phones only: it points at the tab bar
-  let el = document.getElementById('orbHint');
-  if (!el) { el = document.createElement('div'); el.id = 'orbHint'; el.className = 'orb-hint'; el.setAttribute('role', 'status'); el.textContent = '按住水晶球，開始今日練習'; document.body.appendChild(el); }
-  clearTimeout(orbHint.t); requestAnimationFrame(() => el.classList.add('show'));
-  orbHint.t = setTimeout(() => el.classList.remove('show'), 3200);
-}
-function orbHintHide() { const el = document.getElementById('orbHint'); if (el) el.classList.remove('show'); }
-function orbHintSoon() {   // until the first hold, 主頁 says how to start
-  let held = false; try { held = localStorage.getItem('nq_orb_hold') === '1'; } catch (e) { /* show it */ }
-  if (!held) setTimeout(() => { if (currentRoute().name === 'today' && !modalOpen() && !SESSION) orbHint(); }, 1200);
-}
-// the dive: the ball flares, its light spreads from the centre of the glass over the screen, and the questions come up as it fades.
-// A brand-new learner picks a start first; nothing to do, or motion reduced: straight in.
-let orbBusy = false;
-function orbStart(btn) {
-  if (orbBusy) return;
+// the dive: the notebook flares, its light spreads over the screen, and the questions come up as it fades. A brand-new learner
+// picks a start first; nothing to do, or motion reduced: straight in.
+let diveBusy = false;
+function diveInto(el) {
+  if (diveBusy) return;
   if (!state.startChosen && Object.keys(state.srs).length === 0) {
     openModal('要從哪裡開始？', `<div class="row-wrap">${startButtonsHtml(false)}</div><p class="small muted mt-2">我是新手：從假名開始。我學過一些：做個小測驗，找到你的起點。</p>`, { width: 420 });
     return;
   }
   const n = (dailyPlan().remaining === 0 ? extraQueue() : dailyQueue()).items.length;
-  const svg = btn && btn.querySelector('.orb'), lv = svg && svg.querySelector('.lv');
-  if (!n || !lv || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { startSession('daily'); return; }
-  orbBusy = true;
-  lv.style.transition = 'transform .3s cubic-bezier(.5, 0, .7, .4)'; lv.style.transform = 'translateY(-12px)';
-  btn.classList.add('surge');
-  const r = svg.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2;
+  if (!n || !el || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { startSession('daily'); return; }
+  diveBusy = true;
+  const st = el.closest('.study'); if (st) st.classList.add('diving');
+  const r = el.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2;
   const d = 2 * Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)) / 0.62;   // its opaque part reaches the farthest corner
-  const veil = document.createElement('div'); veil.className = 'orb-veil';
+  const veil = document.createElement('div'); veil.className = 'dive-veil';
   veil.style.cssText = `left:${x - d / 2}px;top:${y - d / 2}px;width:${d}px;height:${d}px`;
   document.body.appendChild(veil);
-  setTimeout(() => veil.classList.add('cover'), 60);
-  setTimeout(() => { startSession('daily'); veil.classList.add('out'); }, 420);
-  setTimeout(() => { veil.remove(); orbBusy = false; lv.style.transition = ''; lv.style.transform = ''; btn.classList.remove('surge'); }, 800);   // the ball stays in the bar: back to its level, unseen behind the questions
+  setTimeout(() => veil.classList.add('cover'), 140);
+  setTimeout(() => { startSession('daily'); veil.classList.add('out'); }, 520);
+  setTimeout(() => { veil.remove(); diveBusy = false; }, 900);
 }
 
 // 學習紀錄 (學習分析): the calendar, streak tiles and the recent days
@@ -6215,7 +6233,7 @@ function chooseStart(kind) {
   if (kind === 'basics') applyExperienced();
   state.startChosen = true;
   saveState(); DAILY_CACHE = null; closeModal(true);
-  toast(kind === 'zero' ? '從假名開始。點主頁的水晶球開始練習。' : kind === 'kana' ? '從第 1 週開始' : '已套用「我已有基礎」設定');
+  toast(kind === 'zero' ? '從假名開始。點書房桌上的筆記本開始練習。' : kind === 'kana' ? '從第 1 週開始' : '已套用「我已有基礎」設定');
   route();
 }
 function startButtonsHtml(small = true) {
@@ -10191,11 +10209,6 @@ async function init() {
   document.addEventListener('input', (ev) => { if (!ev.isComposing && ev.target && ev.target.id === 'vocabSearch') applyVocabSearch(ev.target); });
   document.addEventListener('compositionend', (ev) => { if (ev.target && ev.target.id === 'vocabSearch') applyVocabSearch(ev.target); });
   document.addEventListener('keydown', handleKey);
-  document.addEventListener('pointerdown', orbDown);   // the crystal ball in the tab bar: tap or hold
-  document.addEventListener('pointerup', (ev) => orbUp(ev, false));
-  document.addEventListener('pointercancel', (ev) => orbUp(ev, true));
-  document.addEventListener('contextmenu', (ev) => { if (ev.target.closest && ev.target.closest('.nav-orb')) ev.preventDefault(); });   // a long press opens no menu
-  document.addEventListener('keydown', orbKey, true); document.addEventListener('keyup', orbKey, true);
   window.addEventListener('hashchange', route);
   if ('speechSynthesis' in window) {
     window.speechSynthesis.onvoiceschanged = () => { if (!modalOpen() && currentRoute().name === 'today' && !SESSION) route(); };
