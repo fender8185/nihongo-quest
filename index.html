@@ -457,8 +457,40 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .study-edit { width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 12px; cursor: pointer;
   color: color-mix(in srgb, #3a3350 calc(var(--lit) * 100%), #dfe3ff); background: color-mix(in srgb, rgba(255, 255, 255, .55) calc(var(--lit) * 100%), rgba(20, 22, 52, .55)); transition: color .4s, background-color .4s; }
 .study-edit svg { width: 22px; height: 22px; }
+/* the hero (test build): a box of its own over the room; the parts move by pose (walk, run, sit, reach, crouch, look, out) */
+:is(.study, .sky) .hero { position: absolute; pointer-events: none; will-change: transform; transition: opacity .3s; }
+:is(.study, .sky) .hero svg { width: 100%; height: 100%; display: block; overflow: visible; }
+:is(.study, .sky) .hero .fig { pointer-events: auto; cursor: pointer; transform-box: view-box; transform-origin: 0 0; }
+:is(.study, .sky) .hero.flip .fig { transform: scaleX(-1); }
+:is(.study, .sky) .hero .f-back { display: none; } :is(.study, .sky) .hero.back .f-front { display: none; } :is(.study, .sky) .hero.back .f-back { display: inline; }
+:is(.study, .sky) .hero :is(.bob, .leg, .arm, .head, .eyes) { transform-box: view-box; }
+:is(.study, .sky) .hero .bob { animation: heroBreathe 3.2s ease-in-out infinite; }
+:is(.study, .sky) .hero .eyes { transform-origin: 5px -121px; animation: heroBlink 4.6s infinite; }
+:is(.study, .sky) .hero .leg.l { transform-origin: -8px -46px; } :is(.study, .sky) .hero .leg.r { transform-origin: 11px -46px; }
+:is(.study, .sky) .hero .arm.l { transform-origin: -27px -88px; } :is(.study, .sky) .hero .arm.r { transform-origin: 31px -88px; transition: transform .25s; }
+:is(.study, .sky) .hero .head { transform-origin: 2px -98px; transition: transform .25s; }
+:is(.study, .sky) .hero:is(.walk, .run) .leg.l { animation: heroLeg var(--step, .42s) ease-in-out infinite alternate; } :is(.study, .sky) .hero:is(.walk, .run) .leg.r { animation: heroLeg var(--step, .42s) ease-in-out infinite alternate-reverse; }
+:is(.study, .sky) .hero:is(.walk, .run) .arm.l { animation: heroArm var(--step, .42s) ease-in-out infinite alternate-reverse; } :is(.study, .sky) .hero:is(.walk, .run) .arm.r { animation: heroArm var(--step, .42s) ease-in-out infinite alternate; }
+:is(.study, .sky) .hero:is(.walk, .run) .bob { animation: heroStep calc(var(--step, .42s) / 2) ease-in-out infinite alternate; }
+:is(.study, .sky) .hero.run { --step: .28s; }
+:is(.study, .sky) .hero.sit .bob { animation: none; transform: translateY(-25px); } :is(.study, .sky) .hero.sit .legs { display: none; }
+:is(.study, .sky) .hero.reach .arm.r { transform: rotate(-155deg); } :is(.study, .sky) .hero.look .head { transform: translateY(-2px) rotate(-6deg); }
+:is(.study, .sky) .hero.crouch .bob { animation: none; transform: translateY(10px) scaleY(.92); } :is(.study, .sky) .hero.crouch .arm.r { transform: rotate(-60deg); }
+:is(.study, .sky) .hero.out { opacity: 0; }
+@keyframes heroBreathe { 50% { transform: translateY(-1.5px); } }
+@keyframes heroBlink { 0%, 95%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
+@keyframes heroLeg { from { transform: rotate(22deg); } to { transform: rotate(-22deg); } }
+@keyframes heroArm { from { transform: rotate(24deg); } to { transform: rotate(-24deg); } }
+@keyframes heroStep { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+.study .front { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; will-change: transform; }
+.study.edit :is(.hero, .front) { display: none; }
+.wardrobe .wr-row { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--line); } .wardrobe .wr-slot { flex: none; width: 40px; padding-top: 20px; font-weight: 700; color: var(--fg-2); }
+.wardrobe .wr-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.wr-it { width: 76px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 1.5px solid transparent; border-radius: 10px; font: inherit; font-size: 12px; color: var(--fg); background: var(--bg-sunken); cursor: pointer; }
+.wr-it svg { width: 56px; height: 56px; } .wr-it.on { border-color: var(--accent); background: var(--accent-soft); }
 /* 擺設 (test build): the room's own controls step aside, each ware gets a clear button, the picked one a glow and its tools */
 .study.edit :is(.study-tools, .room-stops, .room-hint, .mail-hint), .study.edit .thing { display: none; }
+.study .ware-use { position: absolute; padding: 0; border: 0; border-radius: 12px; background: none; cursor: pointer; }
 .study .deco { position: absolute; padding: 0; border: 0; border-radius: 10px; background: none; cursor: grab; touch-action: none; }
 .study .deco.sel { outline: 2px dashed rgba(255, 255, 255, .9); outline-offset: 2px; box-shadow: 0 0 0 4px rgba(90, 108, 240, .35); }
 .study.dragging .deco, .study.dragging .edit-sel { opacity: 0; }
@@ -499,6 +531,32 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
   background: rgba(20, 22, 44, .84); box-shadow: 0 4px 14px rgba(0, 0, 0, .28); cursor: pointer; opacity: 0; transform: translateY(-6px); pointer-events: none; transition: opacity .3s, transform .3s; }
 .mail-hint.on { opacity: 1; transform: none; pointer-events: auto; }
 .mail-hint svg { width: 16px; height: 16px; flex: none; } .mail-hint svg:last-child { width: 13px; height: 13px; opacity: .7; }
+/* 古道具屋's hill (test build): a low hill on the left behind the far hills, the shop on top, a path with lamps by night */
+.sky .mtn { position: absolute; left: 0; bottom: 0; width: 100%; height: 600px; overflow: visible; }
+.sky .mtn .m-far { fill: color-mix(in srgb, color-mix(in srgb, #c2d0dc calc(var(--f) * 100%), #c8cfd4) calc(var(--day) * 100%), #12143c); }
+.sky .mtn .m-main { fill: color-mix(in srgb, color-mix(in srgb, #9dbcb0 calc(var(--f) * 100%), #aebab4) calc(var(--day) * 100%), #181b4b); }
+.sky .mtn .m-shade { fill: color-mix(in srgb, rgba(40, 70, 60, .12) calc(var(--day) * 100%), rgba(0, 0, 20, .25)); }
+.sky .mtn .m-rim { fill: none; stroke: color-mix(in srgb, rgba(255, 255, 255, .5) calc(var(--day) * 100%), rgba(160, 172, 255, .26)); stroke-width: 1.3; stroke-linejoin: round; }
+.sky .mtn .m-path { fill: none; stroke: color-mix(in srgb, rgba(238, 228, 196, .72) calc(var(--day) * 100%), rgba(150, 160, 230, .16)); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.sky .mtn .p-lamp { fill: #ffd28a; opacity: calc(1 - var(--day)); filter: drop-shadow(0 0 3px rgba(255, 200, 120, .9)); }
+.sky .mtn .s-glow { opacity: calc(1 - var(--day)); }
+.sky .mtn .s-ground { fill: color-mix(in srgb, #c9b48a calc(var(--day) * 100%), #1b1e52); }
+.sky .mtn .s-wall { fill: color-mix(in srgb, #9a7350 calc(var(--day) * 100%), #23275e); } .sky .mtn .s-beam { fill: color-mix(in srgb, #6a4a32 calc(var(--day) * 100%), #0f1136); }
+.sky .mtn .s-roof { fill: color-mix(in srgb, #545c70 calc(var(--day) * 100%), #10123a); } .sky .mtn .s-rim { fill: none; stroke: color-mix(in srgb, rgba(255, 255, 255, .55) calc(var(--day) * 100%), rgba(170, 182, 255, .4)); stroke-width: 1; stroke-linejoin: round; }
+.sky .mtn .s-tile { fill: none; stroke: color-mix(in srgb, rgba(255, 255, 255, .22) calc(var(--day) * 100%), rgba(170, 182, 255, .16)); stroke-width: .8; }
+.sky .mtn .s-open { fill: color-mix(in srgb, #5a4334 calc(var(--day) * 100%), #ffc874); } .sky .mtn .s-noren { fill: color-mix(in srgb, #3b3f73 calc(var(--day) * 100%), #2c2f66); }
+.sky .mtn .s-ko { font: 700 6.4px 'Hiragino Mincho ProN', 'Noto Serif JP', serif; fill: #fff; opacity: .92; }
+.sky .mtn .s-sign { fill: color-mix(in srgb, #e9d6ae calc(var(--day) * 100%), #3a3e78); stroke: color-mix(in srgb, #6a4a32 calc(var(--day) * 100%), #0f1136); stroke-width: .8; }
+.sky .mtn .s-cord { stroke: color-mix(in srgb, #3a2a20 calc(var(--day) * 100%), #0c0d25); stroke-width: 1; } .sky .mtn .s-paper { fill: color-mix(in srgb, #fbf3e2 calc(var(--day) * 100%), #ffd58e); } .sky .mtn .s-band { stroke: #d9483b; stroke-width: 1; }
+.sky .mtn .s-pot { fill: color-mix(in srgb, #8c5a3c calc(var(--day) * 100%), #15173f); } .sky .mtn .s-pot-rim { fill: color-mix(in srgb, #6e4430 calc(var(--day) * 100%), #10123a); }
+.sky .mtn .s-box { fill: color-mix(in srgb, #b98d5c calc(var(--day) * 100%), #1a1d4a); } .sky .mtn .s-box2 { fill: color-mix(in srgb, #a07a4e calc(var(--day) * 100%), #171a45); }
+.sky .mtn .s-owl { fill: color-mix(in srgb, #8a5f3e calc(var(--day) * 100%), #2a2550); stroke: none; } .sky .mtn .s-owl path { fill: none; stroke: color-mix(in srgb, #6e4a30 calc(var(--day) * 100%), #2a2550); stroke-width: .8; } .sky .mtn .s-owl-eye { fill: color-mix(in srgb, #fff8e6 calc(var(--day) * 100%), #ffd36b); }
+.sky .shop-btn { position: absolute; width: 64px; height: 52px; margin-left: -32px; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; }
+.sky .shop-btn .tag { top: calc(100% + 4px); }
+/* the hero in the yard: its feet at the bottom edge, moved up the lawn and scaled by distance; darker by night; behind the mailbox when further up */
+.sky .yhero { left: 50%; bottom: -10px; width: 120px; height: 210px; margin-left: -60px; transform-origin: 50% 95.24%; }
+.sky .yhero svg { filter: brightness(calc(.45 + .55 * var(--day))) saturate(calc(.75 + .25 * var(--day))); }
+.sky .yhero { z-index: 1; } .sky .yhero.behind { z-index: auto; }   /* before the mailbox in the page: behind it unless lifted */
 /* the mailbox by the house: its flag is up while there are letters (and rises as the yard opens), its door drops open on a tap */
 .sky .mailbox { position: absolute; left: 50%; bottom: 154px; width: 52px; height: 66px; margin-left: 30px; }
 .sky .mailbox svg { position: absolute; inset: 0; overflow: visible; } .sky .mailbox svg * { transform-box: view-box; }
@@ -5590,11 +5648,15 @@ const ACTIONS = {
   'sync-delete-cloud': async () => { if (!confirm('確定刪除雲端上的進度？本機進度不受影響。')) return; await Sync.deleteCloud(); if (modalOpen()) refreshSettings(); },
   nav: (el) => go(el.dataset.route),
   settings: () => openSettings(),
-  'study-practice': (el) => diveInto(el),
-  'study-go': (el) => ROOM.enter(el),
-  'study-drawer': (el) => ROOM.pull(el),
-  'study-door': (el) => ROOM.door(el),
-  'enter-house': () => sceneGo('#/today', 'entering'),
+  'study-practice': (el) => (!state.startChosen && !Object.keys(state.srs).length ? diveInto(el) : ROOM.use(el, () => diveInto(el))),   // the hero walks over first (test build); a brand-new learner picks a start straight away
+  'study-go': (el) => ROOM.use(el, () => ROOM.enter(el)),
+  'study-drawer': (el) => ROOM.use(el, () => ROOM.pull(el)),
+  'study-door': (el) => ROOM.use(el, () => { yh.fromDoor = true; ROOM.door(el); }),
+  'enter-house': (el) => yUse(el, [0, 214], () => { ROOM.heroIn(); sceneGo('#/today', 'entering'); }),   // the hero walks to the door first (test build)
+  'yard-shop': (el) => yUse(el, [-(el.closest('.yard').querySelector('.sky').clientWidth / 2) + 36, 206], () => {   // up the path to 古道具屋
+    const h = el.closest('.yard').querySelector('.yhero'); if (h) h.classList.add('out');
+    setTimeout(() => go('#/shop'), 280);
+  }),
   'close-modal': () => closeModal(),
   'modal-back': (el, ev) => { if (ev.target === el) closeModal(); },
   'toggle-furi': () => toggleFurigana(),
@@ -5798,6 +5860,17 @@ function renderOutside(view) {
   const yard = view.querySelector('.yard');
   if (yard) { yardLevel(yard, pct); return; }   // a redraw: new stars fade in, the motion carries on
   view.innerHTML = yardHtml(pct);
+  const y = view.querySelector('.yard');
+  const sk = y.querySelector('.sky'), k = Math.max(1, sk.clientWidth / 1200), sb = y.querySelector('.shop-btn');   // the hill scales up on a very wide screen
+  sb.style.left = `calc(50% - ${Math.round(118 * k)}px)`; sb.style.bottom = `${Math.round(346 * k - 6)}px`;
+  if (yh.fromDoor) { yh.fromDoor = false; yh.X = 0; yh.Y = 214; yh.back = false; yHeroPlace(y); setTimeout(() => yHeroWalk(y, [8, 150]), 260); }   // out of the door, onto the lawn (below the 進屋 tag)
+  else yHeroPlace(y);
+  y.addEventListener('click', (e) => {   // a tap on the lawn: the hero walks there
+    if (e.target.closest('button, .hero, a')) return;
+    const r = y.querySelector('.sky').getBoundingClientRect(), Y = r.bottom - e.clientY;
+    if (Y < 4 || Y > 222) return;
+    yHeroWalk(y, [e.clientX - (r.left + r.width / 2), Y]);
+  });
 }
 function yardLevel(yard, pct) {
   const f = pct / 100;
@@ -5818,6 +5891,52 @@ const SKY = (() => {
   const flowers = Array.from({ length: 16 }, () => ({ x: r2(3 + rnd() * 94), y: Math.round(150 + rnd() * 56), c: ['#ff9ec4', '#ffffff', '#ffd166', '#c9a7ff', '#ff8a8a'][Math.floor(rnd() * 5)], d: r2(2.5 + rnd() * 2), w: r2(rnd() * 3) }));
   return { stars, flies, flowers };
 })();
+// 古道具屋 on its hill (test build): an old wooden shop, a tiled roof with turned-up eaves, a 古 noren, a paper lantern, a pot and
+// a box outside, 福爺 at the door; by night the lantern and the doorway glow, so do the lamps on the path
+const HILL = 'M320 600 V356 C370 340 412 304 446 276 C460 264 470 252 482 250 C494 248 506 256 520 268 C552 296 594 326 646 350';
+const SHOP_ART = `<circle class="s-glow" cx="0" cy="-18" r="48" fill="url(#shopGlow)"/><path class="s-ground" d="M-36 2 Q0 -4 36 2 L36 5 L-36 5 Z"/>
+  <rect class="s-wall" x="-20" y="-25" width="40" height="26"/><path class="s-beam" d="M-20 -25 H20 V-22 H-20 Z M-20 -12 H-13 V-10 H-20 Z M13 -12 H20 V-10 H13 Z"/>
+  <rect class="s-open" x="-12" y="-20" width="24" height="21"/><path class="s-noren" d="M-13 -21 H13 V-9 H8.9 V-12 H4.3 V-9 H0.1 V-12 H-4.3 V-9 H-8.6 V-12 H-13 Z"/><text class="s-ko" x="0" y="-13.4" text-anchor="middle">古</text>
+  <path class="s-roof" d="M-29 -21 Q-25 -22 -22 -25 L-14 -36 H14 L22 -25 Q25 -22 29 -21 Z"/><path class="s-rim" d="M-29 -21 Q-25 -22 -22 -25 L-14 -36 H14 L22 -25 Q25 -22 29 -21"/><path class="s-tile" d="M-17 -32 H17 M-20 -28 H20"/>
+  <rect class="s-sign" x="-9" y="-35" width="18" height="6" rx=".8"/><line class="s-cord" x1="23" y1="-22" x2="23" y2="-18.5"/><ellipse class="s-paper" cx="23" cy="-14" rx="3.3" ry="4.4"/><path class="s-band" d="M19.9 -15.6 H26.1 M19.9 -12.4 H26.1"/>
+  <path class="s-pot" d="M-27 1 C-30 -2 -30 -7 -27 -9 H-23 C-20 -7 -20 -2 -23 1 Z"/><rect class="s-pot-rim" x="-27.6" y="-10.4" width="5.2" height="1.6" rx=".6"/><rect class="s-box" x="21" y="-5" width="9" height="6"/><rect class="s-box2" x="22.5" y="-9" width="6" height="4"/>
+  <g class="s-owl"><ellipse cx="-16" cy="-3.6" rx="3.2" ry="3.8"/><path d="M-18.6 -6.6 L-18 -8.6 L-16.6 -7 M-13.4 -6.6 L-14 -8.6 L-15.4 -7"/><circle class="s-owl-eye" cx="-17.2" cy="-4.6" r=".9"/><circle class="s-owl-eye" cx="-14.8" cy="-4.6" r=".9"/></g>`;
+// the hero out in the yard (test build): the same drawing, smaller the further up the lawn (X: px from the middle, Y: px up from the
+// bottom, the ground running from the bottom to the house at 218px). Walks where you tap, to the mailbox, the house and the path.
+const yh = { X: 0, Y: 186, back: false, flip: false, raf: 0, fromDoor: false };
+try { const h = JSON.parse(localStorage.getItem('nq_hero') || 'null'); if (h && h.yard && Number.isFinite(h.yard.X) && Number.isFinite(h.yard.Y)) Object.assign(yh, { X: h.yard.X, Y: h.yard.Y }); } catch (e) { /* first time out */ }
+function yHeroSave() { try { const h = JSON.parse(localStorage.getItem('nq_hero') || '{}') || {}; h.yard = { X: Math.round(yh.X), Y: Math.round(yh.Y) }; localStorage.setItem('nq_hero', JSON.stringify(h)); } catch (e) { /* no storage */ } }
+const yScale = (Y) => 0.19 + 0.31 * Math.max(0, Math.min(1, (212 - Y) / 198));
+function yHeroHtml() { return `<div class="hero yhero" data-act="hero-wardrobe" aria-label="主角（點一下換衣服）">${HERO.svg({ wear: state.wear })}</div>`; }
+function yHeroPlace(yard) {
+  const el = yard.querySelector('.yhero'); if (!el) return;
+  el.style.transform = `translate(${yh.X.toFixed(1)}px,${(-yh.Y).toFixed(1)}px) scale(${yScale(yh.Y).toFixed(3)})`;
+  el.classList.toggle('back', yh.back); el.classList.toggle('flip', yh.flip); el.classList.toggle('behind', yh.Y > 150);
+}
+function yHeroWalk(yard, to, done) {
+  cancelAnimationFrame(yh.raf);
+  const el = yard.querySelector('.yhero'), sky = yard.querySelector('.sky').getBoundingClientRect(), lim = sky.width / 2 - 20;
+  const from = [yh.X, yh.Y], goal = [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(214, to[1]))], dx = goal[0] - from[0], dy = goal[1] - from[1], len = Math.hypot(dx, dy);
+  if (!el || len < 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { yh.X = goal[0]; yh.Y = goal[1]; if (el) yHeroPlace(yard); yHeroSave(); if (done) done(); return; }
+  const v = Math.max(170, len / 1.1);   // px a second: a long way hurries, about a second at most
+  yh.back = dy > 0; if (Math.abs(dx) > 1) yh.flip = dx < 0;
+  el.classList.remove('out'); el.classList.toggle('run', v > 260); el.classList.toggle('walk', v <= 260);
+  const t0 = performance.now();
+  const step = (now) => {
+    if (!yard.isConnected) return;
+    const t = Math.min(1, (now - t0) / 1000 * v / len);
+    yh.X = from[0] + dx * t; yh.Y = from[1] + dy * t; yHeroPlace(yard);
+    if (t < 1) { yh.raf = requestAnimationFrame(step); return; }
+    el.classList.remove('walk', 'run'); yHeroSave(); if (done) done();
+  };
+  yh.raf = requestAnimationFrame(step);
+}
+// a thing in the yard tapped: the hero walks over, turns to it, then the thing does its bit
+function yUse(el, to, fn) {
+  const yard = el.closest('.yard');
+  if (!yard || !yard.querySelector('.yhero')) { fn(); return; }
+  yHeroWalk(yard, to, () => { yh.back = true; yHeroPlace(yard); setTimeout(fn, 120); });
+}
 function yardHtml(pct) {
   const f = pct / 100, mail = mailCount();
   const star = (s) => `<i class="st${s.dip ? ' dip' : ''}${s.t <= f ? ' on' : ''}" data-t="${s.t}" style="left:${s.x}%;top:${s.y}%;--s:${s.s}px;--d:${s.d}s;--w:-${s.w}s;--in:${f ? Math.round(s.t / f * 120) / 100 : 0}s"></i>`;
@@ -5840,6 +5959,14 @@ function yardHtml(pct) {
         <div class="clouds">${[[10, 1, 110, 20], [24, 0.7, 140, 80], [5, 0.85, 125, 55], [34, 0.6, 160, 120]].map(([y, k, d, w]) => `<i class="cloud" style="top:${y}%;--k:${k};--d:${d}s;--w:-${w}s"></i>`).join('')}</div>
         <div class="birds"><div class="flock">${[[52, 14], [38, 6], [38, 22], [24, 0], [24, 28]].map(([x, y]) => `<i style="left:${x}px;top:${y}px"></i>`).join('')}</div></div>
       </div>
+      <svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
+        <defs><radialGradient id="shopGlow"><stop offset="0" stop-color="rgba(255,196,110,.55)"/><stop offset=".5" stop-color="rgba(255,196,110,.16)"/><stop offset="1" stop-color="rgba(255,196,110,0)"/></radialGradient></defs>
+        <path class="m-far" d="M520 600 V340 C560 330 600 314 640 304 C670 296 700 294 730 298 C770 306 810 328 860 342 V600 Z"/>
+        <path class="m-main" d="${HILL} V600 Z"/><path class="m-shade" d="M482 250 C494 248 506 256 520 268 C552 296 594 326 646 350 V372 C590 340 548 306 516 280 C502 268 492 258 482 250 Z"/><path class="m-rim" d="${HILL}"/>
+        <path class="m-path" d="M540 342 L514 326 L546 306 L506 290 L526 272 L490 260"/>
+        ${[[514, 326], [546, 306], [506, 290], [526, 272]].map(([x, y]) => `<circle class="p-lamp" cx="${x}" cy="${y}" r="1.4"/>`).join('')}
+        <g transform="translate(482 254) scale(.8)">${SHOP_ART}</g>
+      </svg>
       <svg class="land" viewBox="0 0 1200 370" preserveAspectRatio="xMidYMax slice">
         <path class="far" d="M0 118 C110 96 210 98 320 114 S520 90 640 104 S860 124 990 98 S1140 94 1200 106 V370 H0 Z"/>
         <path class="near" d="${ground} V370 H0 Z"/><path class="ridge" d="${ground}"/>
@@ -5863,6 +5990,7 @@ function yardHtml(pct) {
         <i class="smoke"></i><i class="smoke"></i><i class="smoke"></i>
         <button type="button" class="enter" data-act="enter-house" aria-label="進屋"><span class="tag">進屋</span></button>
       </div>
+      ${yHeroHtml()}
       <div class="mailbox${mail ? ' has' : ''}">
         <svg viewBox="0 0 52 66" aria-hidden="true">
           <ellipse class="mb-shadow" cx="26" cy="64.5" rx="15" ry="2.4"/>
@@ -5875,6 +6003,7 @@ function yardHtml(pct) {
         </svg>
         <button type="button" class="mbox" data-act="mailbox" aria-label="信箱"><span class="tag">${mail ? `信箱・${mail} 封信` : '信箱'}</span></button>
       </div>
+      <button type="button" class="shop-btn" data-act="yard-shop" aria-label="古道具屋" style="left:calc(50% - 118px);bottom:340px"><span class="tag">古道具屋</span></button>
       <div class="flies">${SKY.flies.map(q => `<i style="left:${q.x}%;top:${q.y}px;--dx:${q.dx}px;--dy:${q.dy}px;--d:${q.d}s;--w:-${q.w}s"></i>`).join('')}</div>
       <div class="butterflies"><i class="bf" style="left:28%;top:40px;--dx:40px;--dy:18px;--d:7s;--w:-2s;--c:#ffb3d1"></i><i class="bf" style="left:66%;top:66px;--dx:-36px;--dy:14px;--d:8.5s;--w:-5s;--c:#ffe08a"></i></div>
     </div>
@@ -6353,11 +6482,12 @@ const ROOM = (() => {
     s += box(C.oak, x0, y0, zs, x1, y1, zs + 0.12, { t: C.oakTop, hlv: true });
     s += box(C.mustard, x0 + 0.08, y0 + 0.08, zs + 0.12, x1 - 0.08, y1 - 0.16, zs + 0.22, { t: false, hl: false });
     s += `<g transform="${onZ(zs + 0.22)}"><rect x="${x0 + 0.06}" y="${y0 + 0.06}" width="${(x1 - x0 - 0.12).toFixed(2)}" height="${(y1 - y0 - 0.2).toFixed(2)}" rx=".14" ${F(C.mustard, 't', [(x0 + x1) / 2, (y0 + y1) / 2, 2])}/><rect x="${x0 + 0.2}" y="${y0 + 0.2}" width="${(x1 - x0 - 0.4).toFixed(2)}" height="${(y1 - y0 - 0.48).toFixed(2)}" rx=".08" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width=".025"/></g>`;
-    // the back: two posts from the back corners, a rail at the top and one lower down
-    s += box(C.oakDk, x0 + 0.04, y1 - 0.12, zs + 0.12, x0 + 0.04 + g, y1 - 0.02, 4.0, {}) + box(C.oakDk, x1 - 0.04 - g, y1 - 0.12, zs + 0.12, x1 - 0.04, y1 - 0.02, 4.0, { hlv: true });
-    s += box(C.oak, x0 + 0.14, y1 - 0.1, 2.72, x1 - 0.14, y1 - 0.04, 2.86, {});
-    s += box(C.oak, x0 + 0.02, y1 - 0.11, 3.56, x1 - 0.02, y1 - 0.03, 3.98, { t: C.oakTop, hlv: true });
     return s;
+  }
+  function chairBackArt() {   // the back: two posts from the back corners, a rail at the top and one lower down
+    const x0 = 2.85, x1 = 3.95, y1 = 3.7, zs = 1.72, g = 0.1;
+    return box(C.oakDk, x0 + 0.04, y1 - 0.12, zs + 0.12, x0 + 0.04 + g, y1 - 0.02, 4.0, {}) + box(C.oakDk, x1 - 0.04 - g, y1 - 0.12, zs + 0.12, x1 - 0.04, y1 - 0.02, 4.0, { hlv: true })
+      + box(C.oak, x0 + 0.14, y1 - 0.1, 2.72, x1 - 0.14, y1 - 0.04, 2.86, {}) + box(C.oak, x0 + 0.02, y1 - 0.11, 3.56, x1 - 0.02, y1 - 0.03, 3.98, { t: C.oakTop, hlv: true });
   }
   // a round rug on the floor
   function rugArt(cx, cy, r, body, ring) {
@@ -6620,7 +6750,8 @@ const ROOM = (() => {
   const FIXED = [
     { id: 'bookcase', fp: [0, BC.y0, BC.x1, BC.y1], art: (bk) => bookcaseArt(bk) },
     { id: 'desk', fp: [DESK.x0, 0, DESK.x1, DESK.y1], art: () => deskArt() + `<g transform="${onZ(DESK.z1 + 0.003)}" class="night-only"><ellipse cx="3.3" cy="1.5" rx="1.7" ry="1.25" fill="url(#pool)" style="opacity:calc(.35 + .65 * var(--f))"/></g>` },
-    { id: 'chair', fp: [2.85, 2.62, 3.95, 3.7], art: () => chairArt() },
+    { id: 'chair', fp: [2.85, 2.62, 3.95, 3.58], art: () => chairArt() },
+    { id: 'chairBack', fp: [2.85, 3.58, 3.95, 3.7], art: () => chairBackArt() },
     { id: 'chest', fp: [DR.x0, 0, DR.x1, DR.y1], art: () => chestArt() },
     { id: 'plant', fp: [11.53, 0.58, 12.37, 1.42], art: () => plantArt(11.95, 1.0) },
     { id: 'nightTable', fp: [NT.x0, NT.y0, NT.x1, NT.y1], art: () => nightTableArt() },
@@ -6647,12 +6778,12 @@ const ROOM = (() => {
     }
     return out;
   }
-  // where the hero stands to use a thing (facing: the way it looks, sx／sy on screen), kept clear of wares
+  // where the hero stands to use a thing (look: toward the right wall R or the left wall L; act: what it does there), kept clear of wares
   const SPOTS = {
-    notebook: { x: 3.4, y: 3.15, look: -1, act: 'sit' }, phones: { x: 4.6, y: 2.95, look: -1, act: 'reach' },
-    shelf: { x: 1.95, y: 2.95, look: -1, act: 'reach' }, cards: { x: 1.95, y: 2.95, look: -1, act: 'reach' },
-    drawer: { x: 8.45, y: 2.45, look: -1, act: 'crouch' }, board: { x: 8.45, y: 2.45, look: -1, act: 'look' },
-    calendar: { x: 10.65, y: 1.6, look: -1, act: 'reach' }, door: { x: 1.25, y: 5.1, look: -2, act: 'walk' }
+    notebook: { x: 3.4, y: 3.15, look: 'R', act: 'sit' }, phones: { x: 4.6, y: 2.95, look: 'R', act: 'reach' },
+    shelf: { x: 1.95, y: 2.95, look: 'L', act: 'reach' }, cards: { x: 1.95, y: 2.95, look: 'L', act: 'reach' },
+    drawer: { x: 8.45, y: 2.45, look: 'R', act: 'crouch' }, board: { x: 8.45, y: 2.45, look: 'R', act: 'look' },
+    calendar: { x: 10.65, y: 1.6, look: 'R', act: 'reach' }, door: { x: 1.25, y: 5.1, look: 'L', act: 'out' }
   };
   const box2 = (x, y, r) => [x - r, y - r, x + r, y + r];
   const KEEP_F = [[0, 3.9, 2.4, 6.3], [0, 7.4, 0.85, 8.1]].concat(Object.values(SPOTS).map((p) => box2(p.x, p.y, 0.35)));   // the door's swing, the umbrella, the spots
@@ -6686,7 +6817,7 @@ const ROOM = (() => {
       ${wares.filter((o) => o.it.kind === 'wall').map((o) => `<g data-o="w:${o.id}">${DECOR.wall(o.id, o.p)}</g>`).join('')}${lightsWire()}
       ${floorArt()}${doorMatArt()}${umbrellaArt()}
       ${rugArt(9.2, 3.55, 1.25, '#dfe6d6', '#93ad8c')}${bedRugArt()}${wares.filter((o) => o.it.kind === 'rug').map((o) => `<g data-o="w:${o.id}">${DECOR.floor(o.id, o.p)}</g>`).join('')}
-      ${standing(bk).map((o) => `<g data-o="${o.id}">${o.art}</g>`).join('')}
+      ${(shown = standing(bk)).map((o) => `<g data-o="${o.id}">${o.art}</g>`).join('')}
     </svg>`;
   }
   // ===== 擺設: moving the wares about. A mode of 書房's own, so a swipe on empty space still moves along the room. A ware is picked
@@ -6761,6 +6892,144 @@ const ROOM = (() => {
     } else if (cmd === 'put' && o) { delete state.placed[o.id]; ed.sel = null; saveState(); }
     redraw(st);
   }
+  // ===== the hero: stands in the room in a box of its own over the drawing (walking never repaints the room), walks round the
+  // furniture and the wares to where it is sent, and uses the things: sits at the desk for today's practice, reaches for the books,
+  // crouches at the drawer… Whatever stands in front of it is copied onto a layer over it (heroFront). Where it stands is this
+  // device's own (localStorage nq_hero). =====
+  let shown = [];   // the standing things as last drawn (id, footprint, art)
+  const hero = { x: 3.4, y: 4.7, back: false, flip: false, pose: '', raf: 0, going: null, frontKey: '' };
+  try { const h = JSON.parse(localStorage.getItem('nq_hero') || 'null'); if (h && h.room && Number.isFinite(h.room.x) && Number.isFinite(h.room.y)) Object.assign(hero, { x: h.room.x, y: h.room.y, back: !!h.room.back, flip: !!h.room.flip, pose: h.room.pose === 'sit' ? 'sit' : '' }); } catch (e) { /* first time here */ }
+  function heroSave() { try { const h = JSON.parse(localStorage.getItem('nq_hero') || '{}') || {}; h.room = { x: hero.x, y: hero.y, back: hero.back, flip: hero.flip, pose: hero.pose }; localStorage.setItem('nq_hero', JSON.stringify(h)); } catch (e) { /* no storage: it starts by the desk */ } }
+  const heroArt = () => HERO.svg({ L: (h, z) => F(h, 'y', [hero.x, hero.y + 0.3, z || 1]), wear: state.wear });
+  function heroHtml() {
+    const [px, py] = P(hero.x, hero.y, 0);
+    return `<div class="hero${hero.back ? ' back' : ''}${hero.flip ? ' flip' : ''}${hero.pose ? ' ' + hero.pose : ''}" style="${vbPct(px - 60, py - 200)};${vbSize(120, 210)}" data-act="hero-wardrobe" aria-label="主角（點一下換衣服）">${heroArt()}</div><svg class="front" viewBox="${VB.join(' ')}" aria-hidden="true"></svg>`;
+  }
+  function heroPlace(st) {
+    const el = st.querySelector('.hero'); if (!el) return;
+    const [px, py] = P(hero.x, hero.y, 0);
+    el.style.left = `${((px - 60 - VB[0]) / VB[2] * 100).toFixed(3)}%`; el.style.top = `${((py - 200 - VB[1]) / VB[3] * 100).toFixed(3)}%`;
+    el.classList.toggle('back', hero.back); el.classList.toggle('flip', hero.flip); el.classList.toggle('sit', hero.pose === 'sit');
+    heroFront(st);
+  }
+  // the things standing in front of the hero where they overlap it on screen, copied over it
+  function heroFront(st) {
+    const f = [hero.x - 0.25, hero.y - 0.25, hero.x + 0.25, hero.y + 0.25], z0 = hero.pose === 'sit' ? 1.72 : 0, a = hero.x - hero.y;
+    const ids = shown.filter((o) => {
+      if (o.fp[2] - o.fp[1] <= a - 1.4 || a + 1.4 <= o.fp[0] - o.fp[3]) return false;   // apart on screen
+      const heroBehind = f[2] <= o.fp[0] + 1e-6 || f[3] <= o.fp[1] + 1e-6, itBehind = o.fp[2] <= f[0] + 1e-6 || o.fp[3] <= f[1] + 1e-6;
+      if (heroBehind !== itBehind) return heroBehind;
+      return z0 !== (o.z0 || 0) ? z0 < (o.z0 || 0) : f[0] + f[1] + f[2] + f[3] < o.fp[0] + o.fp[1] + o.fp[2] + o.fp[3];
+    }).map((o) => o.id), key = ids.join(',');
+    if (key === hero.frontKey) return;
+    hero.frontKey = key;
+    const layer = st.querySelector('svg.front'); if (layer) layer.innerHTML = shown.filter((o) => ids.includes(o.id)).map((o) => o.art).join('');
+  }
+  // the floor in half-unit cells: furniture, wares and the walls' edges are in the way; A* finds the way, then pulls it straight
+  const CELL = 0.5, GW = RW / CELL, GH = RD / CELL;
+  function walkGrid() {
+    const g = new Uint8Array(GW * GH), pad = 0.3;
+    const rects = FIXED.map((o) => o.fp).concat([[0, 7.4, 0.85, 8.1]], placedWares().filter((o) => o.it.kind === 'floor').map((o) => wareFootprint(o.it, o.p)));
+    for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) {
+      const cx = (i + 0.5) * CELL, cy = (j + 0.5) * CELL;
+      if (cx < 0.4 || cy < 0.4 || cx > RW - 0.4 || cy > RD - 0.4 || rects.some((r) => cx > r[0] - pad && cx < r[2] + pad && cy > r[1] - pad && cy < r[3] + pad)) g[j * GW + i] = 1;
+    }
+    return g;
+  }
+  function pathTo(from, to) {
+    const g = walkGrid(), cellOf = (p) => [Math.max(0, Math.min(GW - 1, Math.floor(p[0] / CELL))), Math.max(0, Math.min(GH - 1, Math.floor(p[1] / CELL)))];
+    const free = (i, j) => i >= 0 && j >= 0 && i < GW && j < GH && !g[j * GW + i], id = (i, j) => j * GW + i;
+    const near = ([i, j]) => { if (free(i, j)) return [i, j]; for (let r = 1; r < 14; r++) for (let a = -r; a <= r; a++) for (const [di, dj] of [[a, -r], [a, r], [-r, a], [r, a]]) if (free(i + di, j + dj)) return [i + di, j + dj]; return null; };
+    const s = near(cellOf(from)), t = near(cellOf(to));
+    if (!s || !t) return null;
+    const sid = id(...s), tid = id(...t), gs = new Float32Array(GW * GH).fill(Infinity), came = new Int32Array(GW * GH).fill(-1), done = new Uint8Array(GW * GH), open = [];
+    const hh = (i, j) => { const dx = Math.abs(i - t[0]), dy = Math.abs(j - t[1]); return Math.max(dx, dy) + 0.414 * Math.min(dx, dy); };
+    gs[sid] = 0; open.push([hh(...s), sid]);
+    while (open.length) {
+      let b = 0; for (let k = 1; k < open.length; k++) if (open[k][0] < open[b][0]) b = k;
+      const cur = open.splice(b, 1)[0][1];
+      if (done[cur]) continue; done[cur] = 1;
+      if (cur === tid) break;
+      const ci = cur % GW, cj = (cur - ci) / GW;
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+        const ni = ci + di, nj = cj + dj;
+        if (!free(ni, nj) || (di && dj && (!free(ci + di, cj) || !free(ci, cj + dj)))) continue;   // no cutting corners
+        const nid = id(ni, nj), ng = gs[cur] + (di && dj ? 1.414 : 1);
+        if (ng < gs[nid]) { gs[nid] = ng; came[nid] = cur; open.push([ng + hh(ni, nj), nid]); }
+      }
+    }
+    if (tid !== sid && came[tid] < 0) return null;
+    const cells = [tid]; while (cells[0] !== sid) cells.unshift(came[cells[0]]);
+    const pts = cells.map((c) => [(c % GW + 0.5) * CELL, (Math.floor(c / GW) + 0.5) * CELL]);
+    pts[0] = from.slice();
+    if (free(...cellOf(to))) pts.push(to.slice());   // the very spot it was sent to, when that is clear
+    const clear = (a, b) => { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.2); for (let k = 1; k < n; k++) if (!free(...cellOf([a[0] + (b[0] - a[0]) * k / n, a[1] + (b[1] - a[1]) * k / n]))) return false; return true; };
+    const out = [pts[0]]; let k = 0;
+    while (k < pts.length - 1) { let m = pts.length - 1; while (m > k + 1 && !clear(pts[k], pts[m])) m--; out.push(pts[m]); k = m; }
+    return out;
+  }
+  function heroWalk(st, pts, done) {
+    cancelAnimationFrame(hero.raf);
+    const el = st.querySelector('.hero');
+    const seg = []; let len = 0;
+    for (let k = 1; k < pts.length; k++) { const d = Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]); if (d > 1e-3) { seg.push([pts[k - 1], pts[k], len, d]); len += d; } }
+    if (!el || !seg.length) { if (done) done(); return; }
+    const v = Math.max(5.5, len / 1.1);   // room units a second: a long way hurries, about a second at most
+    hero.pose = ''; el.classList.remove('sit', 'reach', 'crouch', 'look', 'out'); el.classList.add(v > 8 ? 'run' : 'walk'); el.classList.toggle('run', v > 8); el.classList.toggle('walk', v <= 8);
+    const t0 = performance.now();
+    const step = (now) => {
+      if (!st.isConnected) return;
+      const d = Math.min(len, (now - t0) / 1000 * v), q = seg.find((x) => d <= x[2] + x[3]) || seg[seg.length - 1], t = (d - q[2]) / q[3];
+      const dx = q[1][0] - q[0][0], dy = q[1][1] - q[0][1];
+      hero.x = q[0][0] + dx * t; hero.y = q[0][1] + dy * t; hero.back = dx + dy < 0; if (Math.abs(dx - dy) > 1e-3) hero.flip = dx - dy < 0;
+      heroPlace(st);
+      if (d < len) { hero.raf = requestAnimationFrame(step); return; }
+      el.classList.remove('walk', 'run'); el.innerHTML = heroArt(); heroSave();   // lit where it stopped
+      if (done) done();
+    };
+    hero.raf = requestAnimationFrame(step);
+  }
+  function goHero(st, to, done) {
+    if (hero.pose === 'sit') { hero.pose = ''; hero.y += 1.0; }   // up from the chair, out behind it
+    const pts = pathTo([hero.x, hero.y], to);
+    if (!pts) { heroPlace(st); if (done) done(); return; }
+    heroWalk(st, pts, done);
+  }
+  function heroLook(look) { if (look === 'R') { hero.back = true; hero.flip = false; } else if (look === 'L') { hero.back = true; hero.flip = true; } }
+  function heroAt(st, sp) {   // at a thing's spot, facing it, doing its bit (sit stays; the rest pass)
+    const el = st.querySelector('.hero');
+    hero.x = sp.x; hero.y = sp.y; heroLook(sp.look); hero.pose = sp.act === 'sit' ? 'sit' : '';
+    heroPlace(st); heroSave();
+    if (el && sp.act !== 'sit') { el.classList.add(sp.act); if (sp.act !== 'out') setTimeout(() => el.classList.remove(sp.act), 900); }
+  }
+  const POSE_MS = { sit: 300, reach: 340, crouch: 340, look: 300, out: 60 };
+  // a thing tapped: the hero walks to it and does its bit, then the thing's own way into its page; tapped again on the way: straight in
+  function use(el, fn, spot) {
+    const st = el.closest('.study'), id = el.dataset.thing || 'w:' + el.dataset.ware, sp = spot || SPOTS[id];
+    if (!st || !sp || !st.querySelector('.hero') || ed.on) { fn(); return; }
+    if (reduced() || hero.going === id) { cancelAnimationFrame(hero.raf); hero.going = null; heroAt(st, sp); fn(); return; }
+    hero.going = id;
+    goHero(st, sp.act === 'sit' ? [sp.x, sp.y + 1.0] : [sp.x, sp.y], () => {
+      if (hero.going !== id) return;
+      heroAt(st, sp);
+      setTimeout(() => { if (hero.going !== id) return; hero.going = null; fn(); }, POSE_MS[sp.act] || 300);
+    });
+  }
+  // a ware that does something (the gramophone plays 聽一輪): the hero goes to the clear side of it first
+  function useWare(el) {
+    const o = placedWares().find((q) => q.id === el.dataset.ware); if (!o) return;
+    const f = wareFootprint(o.it, o.p), g = walkGrid(), ok = ([x, y]) => { const i = Math.floor(x / CELL), j = Math.floor(y / CELL); return i >= 0 && j >= 0 && i < GW && j < GH && !g[j * GW + i]; };
+    const [x, y, look] = [[o.p.x, f[3] + 0.5, 'R'], [f[2] + 0.5, o.p.y, 'L']].find(ok) || [o.p.x, f[3] + 0.5, 'R'];
+    use(el, () => { if (o.it.act === 'listen') go('#/listen'); }, { x, y, look, act: 'reach' });
+  }
+  function heroSettle(st) {   // back in the room: out of anything just put where it stood
+    if (hero.pose === 'sit') { heroPlace(st); return; }
+    const g = walkGrid(), i = Math.floor(hero.x / CELL), j = Math.floor(hero.y / CELL);
+    if (i < 0 || j < 0 || i >= GW || j >= GH || g[j * GW + i]) { const p = pathTo([hero.x, hero.y], [hero.x, hero.y]); if (p) { const q = p[p.length - 1]; hero.x = q[0]; hero.y = q[1]; } }
+    heroPlace(st);
+  }
+  function heroRedraw(st) { const el = st && st.querySelector('.hero'); if (el) el.innerHTML = heroArt(); if (st) st.dataset.sig = roomSig(); }
+  function heroIn() { hero.x = SPOTS.door.x + 0.3; hero.y = SPOTS.door.y; hero.back = false; hero.flip = false; hero.pose = ''; heroSave(); }   // in from the yard: just inside the door
   // the clocks on the walls tell the time: their hands are overlays (sceneTick's --hh／--mm), skewed onto the wall they hang on
   function handsHtml() {
     return placedWares().filter((o) => o.it.hands).map(({ it, p }) => {
@@ -6815,6 +7084,7 @@ const ROOM = (() => {
         ${BULBS.map((b) => { const [x, y] = P(...b.p); return `<i class="bulb${b.t <= f ? ' on' : ''}" data-t="${b.t}" aria-hidden="true" style="${vbPct(x, y)}"></i>`; }).join('')}
         ${handsHtml()}
         ${drawerFx()}${bookFx(bk)}${cardFx()}${pageFx(d, left)}${doorFx()}${phonesFx()}
+        ${heroHtml()}
         <i class="glow lamp-glow" aria-hidden="true" style="${vbPct(lx - 150, ly - 110)};${vbSize(300, 220)}"></i>
         <i class="glow lamp-glow lamp2" aria-hidden="true" style="${vbPct(l2x - 110, l2y - 80)};${vbSize(220, 160)}"></i>
         <i class="glow lamp-glow lamp2" aria-hidden="true" style="${vbPct(l3x - 110, l3y - 80)};${vbSize(220, 160)}"></i>
@@ -6822,6 +7092,7 @@ const ROOM = (() => {
         <div class="tune" aria-hidden="true" style="${vbPct(hx - 20, hy - 66)};${vbSize(40, 60)}"><i style="--w:0s;--dx:-14px">♪</i><i style="--w:-1.2s;--dx:12px">♫</i><i style="--w:-2.4s;--dx:-4px">♪</i></div>
         <div class="steam" aria-hidden="true" style="${vbPct(mx - 8, my - 40)};${vbSize(16, 24)}"><i style="--w:0s"></i><i style="--w:-1.1s;left:50%"></i><i style="--w:-2.3s;left:20%"></i></div>
         ${THINGS.map(thing).join('')}
+        ${ed.on ? '' : placedWares().filter((o) => o.it.act).map((o) => { const b = wareBox(o); return `<button type="button" class="ware-use" data-act="ware-use" data-ware="${o.id}" style="${vbPct(b[0], b[1])};${vbSize(b[2] - b[0], b[3] - b[1])}" aria-label="${esc(o.it.name)}：${o.it.act === 'listen' ? '聽一輪' : ''}"></button>`; }).join('')}
         ${ed.on ? `${decosHtml()}${selHtml()}<svg class="ghost" viewBox="${VB.join(' ')}" aria-hidden="true"><g></g></svg>` : ''}
       </div></div>
       ${ed.on ? editHtml() : ''}
@@ -6884,6 +7155,7 @@ const ROOM = (() => {
   // after the room is in the page: the camera at the last stop, swipes, taps on a thing at another stop (they go there first)
   function mount(st) {
     measure(st); goStop(st, stop, false);
+    hero.frontKey = ''; hero.going = null; heroSettle(st);
     if (ed.on) {
       fitThumbs(st);
       const es = st.querySelector('.edit-sel');   // the picked ware's tools stay on the screen
@@ -6958,6 +7230,11 @@ const ROOM = (() => {
       if (swallow) { swallow = false; e.stopPropagation(); e.preventDefault(); return; }
       const b = e.target.closest('.room-stops [data-go], .room-stops [data-stop]');
       if (b) { goStop(st, b.dataset.stop !== undefined ? Number(b.dataset.stop) : stop + Number(b.dataset.go)); moved(st); return; }
+      if (!ed.on && !busy && e.target.closest('.room') && !e.target.closest('.thing, .hero, .deco, .ware-use')) {   // a tap on the floor: the hero walks there
+        const [x, y] = floorAt(roomPoint(st, e));
+        if (x > 0.2 && y > 0.2 && x < RW - 0.2 && y < RD - 0.2) { hero.going = null; goHero(st, [x, y]); }
+        return;
+      }
       if (ed.on && ed.sel && e.target.closest('.room') && !e.target.closest('.deco, .edit-sel')) {   // 擺設: the picked ware goes to the tapped spot
         e.stopPropagation(); e.preventDefault();
         const o = placedWares().find((q) => q.id === ed.sel); if (!o) return;
@@ -6980,7 +7257,7 @@ const ROOM = (() => {
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { goStop(st, stop + (e.key === 'ArrowLeft' ? -1 : 1)); moved(st); }
   });
   const kit = { S, P, pt, poly, line, onX, onY, onZ, F, FS, tone, box, qX, qY, qZ, shadow, bb, C, q2, r1, DEFS, VB };
-  return { html, level, mount, enter, pull, door, mark, out, kit, fits, SPOTS, edit: (el, cmd, id) => editCmd(el.closest('.study'), cmd, id) };
+  return { html, level, mount, enter, pull, door, mark, out, kit, fits, SPOTS, use, useWare, heroRedraw, heroIn, edit: (el, cmd, id) => editCmd(el.closest('.study'), cmd, id) };
 })();
 // ---------- 古道具屋's wares in 書房 (test build): each one drawn with 書房's own pencils and light (ROOM.kit) ----------
 // DECOR.wall(id, p) draws a wall ware where it hangs, DECOR.floor(id, p) one standing or lying on the floor (p.r turns it a
@@ -7284,6 +7561,56 @@ function fitThumbs(root) {
     svg.setAttribute('viewBox', [b.x + b.width / 2 - side / 2, b.y + b.height / 2 - side / 2, side, side].map((v) => v.toFixed(1)).join(' '));
   });
 }
+// ---------- the hero (test build): the learner, in 書房 and out in the yard ----------
+// HERO.svg(o) draws them, feet at (0, 0), about 170 units tall (4.25 of 書房's units), in front and back views (the page shows
+// one, .back), with what they wear by part; o.L(colour, z) lights a colour at a height (書房's light), else daylight colours.
+// Poses are classes on the .hero box (walk, run, sit, reach, crouch, look) and move the parts in CSS.
+const HERO = (() => {
+  const SKIN = '#f3d5bf', HAIR = '#3b2f2a', HOOD = '#5a68d8', HOOD_DK = '#4552b8', PANTS = '#3f4660', SHOE = '#f4f1ea';
+  // the things worn: [front, back] drawings by part, in the figure's own units (head centre about (2, -128))
+  const WEAR = {
+    beanie: (L) => { const c = L('#d9534a', 4.2), r = L('#c2433b', 4.1); const cap = `<path ${c} d="M-32 -132 C-32 -170 36 -170 36 -132 Z"/><path ${r} d="M-33 -136 H37 V-128 Q2 -124 -33 -128 Z"/><path d="M-20 -140 V-158 M-6 -138 V-164 M8 -138 V-164 M22 -140 V-158" stroke="#fff" stroke-opacity=".18" stroke-width="2"/><circle cx="2" cy="-166" r="8" ${L('#f4efe6', 4.4)}/>`; return [cap, cap]; },
+    strawhat: (L) => { const h = `<ellipse cx="2" cy="-148" rx="52" ry="11" ${L('#e3c27a', 4.2)}/><path ${L('#d8b366', 4.3)} d="M-24 -150 C-24 -176 28 -176 28 -150 Z"/><path d="M-24 -154 Q2 -149 28 -154 V-148 Q2 -143 -24 -148 Z" fill="#d0453c"/><ellipse cx="2" cy="-148" rx="52" ry="11" fill="none" stroke="#b9954f" stroke-width="1.2"/>`; return [h, h]; },
+    catears: (L) => { const e = (x, s) => `<path ${L('#3d3a44', 4.3)} d="M${x - 11 * s} -152 L${x - 2 * s} -176 L${x + 10 * s} -154 Z"/>`; const band = `<path d="M-30 -146 C-24 -168 28 -168 34 -146" fill="none" stroke="#3d3a44" stroke-width="4"/>`; return [band + e(-12, 1) + e(16, -1) + `<path d="M-17 -156 L-13 -169 L-8 -157 Z M21 -156 L17 -169 L12 -157 Z" fill="#f2a8b8"/>`, band + e(-12, 1) + e(16, -1)]; },
+    hachimaki: (L) => { const band = `<path ${L('#f8f6f0', 4)} d="M-33 -142 Q2 -134 37 -142 V-132 Q2 -124 -33 -132 Z"/>`; return [band + `<circle cx="8" cy="-134" r="4.4" fill="#d0453c"/><text x="-14" y="-131.5" font-size="7.5" font-weight="700" fill="#d0453c" font-family="'Hiragino Mincho ProN', serif">必勝</text>`, band + `<path d="M2 -134 L-10 -112 L-2 -114 L4 -134 L14 -110 L20 -114 Z" ${L('#f2efe6', 3.8)}/>`]; },
+    beret: (L) => { const b = `<ellipse cx="-2" cy="-156" rx="36" ry="12" transform="rotate(-8 -2 -156)" ${L('#2f3b63', 4.3)}/><path d="M-30 -150 Q2 -144 30 -154" fill="none" stroke="#24304f" stroke-width="3"/><rect x="-4" y="-172" width="3" height="7" rx="1.4" fill="#24304f"/>`; return [b, b]; },
+    gradcap: (L) => { const c = `<path ${L('#26262e', 4.3)} d="M-26 -150 Q2 -142 30 -150 V-138 Q2 -132 -26 -138 Z"/><path ${L('#33333d', 4.5)} d="M2 -172 L48 -160 L2 -148 L-44 -160 Z"/><circle cx="2" cy="-160" r="2.6" fill="#e6c25a"/><path d="M2 -160 L38 -156 V-136" fill="none" stroke="#e6c25a" stroke-width="1.8"/><path d="M35 -136 h6 l-1 8 h-4 Z" fill="#e6c25a"/>`; return [c, c]; },
+    glasses: () => [`<g fill="none" stroke="#3a3328" stroke-width="2"><circle cx="-5" cy="-121" r="8"/><circle cx="16" cy="-121" r="8"/><path d="M3 -122 Q5.5 -124 8 -122 M-13 -122 L-31 -126"/></g><path d="M-9 -125 l4 -3 M12 -125 l4 -3" stroke="#fff" stroke-opacity=".7" stroke-width="1.4"/>`, `<path d="M-33 -124 L-26 -122 M37 -124 L30 -122" stroke="#3a3328" stroke-width="2"/>`],
+    scarf: (L) => { const w = `<path ${L('#d0453c', 3.3)} d="M-22 -98 Q2 -88 26 -98 L26 -88 Q2 -78 -22 -88 Z"/>`; return [w + `<path ${L('#b93a33', 3)} d="M8 -88 L18 -88 L20 -58 L10 -56 Z"/><path d="M10 -58 v5 M14 -58 v5 M18 -58 v5" stroke="#b93a33" stroke-width="1.6"/>`, w + `<path ${L('#b93a33', 3)} d="M-14 -88 L-4 -88 L-6 -60 L-16 -62 Z"/>`]; },
+    bowtie: () => [`<path d="M2 -92 L-10 -98 L-10 -86 Z M2 -92 L14 -98 L14 -86 Z" fill="#c8453d"/><circle cx="2" cy="-92" r="3" fill="#a63831"/>`, ''],
+    backpack: (L) => [`<path ${L('#e6a23c', 2.6)} d="M-27 -90 Q-34 -76 -30 -52 H-22 V-90 Z"/><path d="M-16 -94 Q-20 -76 -18 -62 M20 -94 Q22 -76 20 -62" fill="none" stroke="#b8792a" stroke-width="3.4" stroke-linecap="round"/>`, `<rect x="-20" y="-96" width="44" height="48" rx="10" ${L('#e6a23c', 2.6)}/><rect x="-12" y="-74" width="28" height="20" rx="5" ${L('#d48f2c', 2.4)}/><path d="M-10 -66 H14" stroke="#b8792a" stroke-width="1.6"/><path d="M-14 -96 Q2 -104 18 -96" fill="none" stroke="#b8792a" stroke-width="3"/>`],
+    haori: (L) => [`<path ${L('#3f5a4a', 2.8)} d="M-25 -92 L-6 -92 L-2 -44 L-28 -44 Q-31 -70 -25 -92 Z M29 -92 L10 -92 L6 -44 L32 -44 Q35 -70 29 -92 Z"/><path d="M-20 -86 l4 4 l-4 4 l-4 -4 Z M-16 -64 l4 4 l-4 4 l-4 -4 Z M22 -74 l4 4 l-4 4 l-4 -4 Z" fill="#fff" fill-opacity=".35"/><path d="M-4 -70 Q2 -66 8 -70" fill="none" stroke="#f4efe6" stroke-width="2"/><circle cx="-3" cy="-70" r="2" fill="#f4efe6"/><circle cx="7" cy="-70" r="2" fill="#f4efe6"/>`,
+      `<path ${L('#3f5a4a', 2.8)} d="M-26 -94 H30 Q35 -70 32 -44 H-28 Q-31 -70 -26 -94 Z"/><circle cx="2" cy="-80" r="7" fill="none" stroke="#f4efe6" stroke-width="1.8"/><path d="M2 -86 v12 M-4 -80 h12" stroke="#f4efe6" stroke-width="1.4"/>`]
+  };
+  const day = (h) => `fill="${h}"`;
+  function svg(o = {}) {
+    const L = o.L || ((h) => day(h)), wear = o.wear || {}, W = (slot, side) => { const id = wear[slot]; const f = id && WEAR[id]; return f ? f(L)[side] || '' : ''; };
+    const legs = (side) => `<g class="legs"><g class="leg l"><rect x="-15" y="-48" width="13" height="42" rx="5" ${L(PANTS, 0.8)}/><path ${L(SHOE, 0.2)} d="M-17 -8 h${side ? 15 : 17} a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -3 3 h-${side ? 16 : 18} Z"/></g>
+      <g class="leg r"><rect x="5" y="-48" width="13" height="42" rx="5" ${L(PANTS, 0.8)}/><path ${L(SHOE, 0.2)} d="M3 -8 h${side ? 15 : 18} a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -3 3 h-${side ? 16 : 19} Z"/></g></g>`;
+    const arm = (cls, x) => `<g class="arm ${cls}"><rect x="${x - 6}" y="-92" width="12" height="40" rx="6" ${L(HOOD_DK, 2.4)}/><circle cx="${x}" cy="-52" r="6.4" ${L(SKIN, 2)}/></g>`;
+    const body = `<path ${L(HOOD, 2.6)} d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -46 Q2 -40 -26 -46 Z"/>`;
+    const front = `${W('back', 0)}${legs(0)}${body}<path d="M-14 -66 H18 V-54 Q2 -50 -14 -54 Z" fill="#000" fill-opacity=".08"/><path d="M-2 -98 V-80 M6 -98 V-82" stroke="#e8ecff" stroke-width="1.6" stroke-linecap="round"/>${W('body', 0)}${W('neck', 0)}${arm('l', -27)}${arm('r', 31)}
+      <g class="head"><path ${L(HOOD_DK, 3.2)} d="M-26 -104 Q2 -96 30 -104 L28 -94 Q2 -88 -24 -94 Z"/>
+        <ellipse cx="2" cy="-128" rx="34" ry="32" ${L(SKIN, 3.6)}/><circle cx="-31" cy="-122" r="5" ${L(SKIN, 3.5)}/>
+        <path ${L(HAIR, 4)} d="M-35 -124 C-38 -158 -10 -168 6 -165 C28 -163 40 -150 37 -126 C33 -136 26 -142 18 -142 C14 -134 4 -132 -2 -138 C-8 -132 -20 -130 -26 -134 C-30 -128 -33 -124 -35 -124 Z"/>
+        <path d="M-26 -150 C-16 -160 4 -162 18 -156" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="3" stroke-linecap="round"/>
+        <g class="eyes"><ellipse cx="-5" cy="-121" rx="3.4" ry="4.6" fill="#2a2730"/><ellipse cx="16" cy="-121" rx="3.4" ry="4.6" fill="#2a2730"/><circle cx="-4" cy="-123" r="1.2" fill="#fff"/><circle cx="17" cy="-123" r="1.2" fill="#fff"/></g>
+        <ellipse cx="-11" cy="-111" rx="5" ry="3" fill="#f2a8a0" fill-opacity=".7"/><ellipse cx="24" cy="-111" rx="5" ry="3" fill="#f2a8a0" fill-opacity=".7"/><path d="M3 -110 Q6 -107 9 -110" fill="none" stroke="#7a4a3a" stroke-width="1.6" stroke-linecap="round"/>
+        ${W('face', 0)}${W('head', 0)}</g>`;
+    const back = `${legs(1)}${arm('l', -27)}${arm('r', 31)}${body}${W('body', 1)}<path ${L(HOOD_DK, 3)} d="M-18 -100 Q2 -92 22 -100 L20 -80 Q2 -72 -16 -80 Z"/>${W('neck', 1)}${W('back', 1)}
+      <g class="head"><circle cx="-31" cy="-124" r="5" ${L(SKIN, 3.5)}/><circle cx="35" cy="-124" r="5" ${L(SKIN, 3.5)}/><ellipse cx="2" cy="-128" rx="34" ry="32" ${L(HAIR, 3.8)}/>
+        <path d="M-22 -150 C-10 -160 10 -160 24 -152" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="3" stroke-linecap="round"/><path d="M-30 -112 Q2 -100 34 -112" fill="none" stroke="#000" stroke-opacity=".12" stroke-width="2"/>
+        ${W('face', 1)}${W('head', 1)}</g>`;
+    return `<svg viewBox="-60 -200 120 210" aria-hidden="true"><ellipse class="h-shadow" rx="24" ry="7" fill="#2b1c12" fill-opacity=".2"/><g class="fig"><g class="bob"><g class="f-front">${front}</g><g class="f-back">${back}</g></g></g></svg>`;
+  }
+  // a thing worn, on its own (古道具屋, the wardrobe): drawn on a faint head and shoulders so it reads
+  function thumb(id) {
+    const f = WEAR[id]; if (!f) return '';
+    return `<svg class="thumb" viewBox="-60 -185 120 140" aria-hidden="true"><g class="base" opacity=".28"><ellipse cx="2" cy="-128" rx="34" ry="32" fill="#c9bfae"/><path d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -50 H-26 Z" fill="#c9bfae"/></g><g>${f((h) => `fill="${h}"`)[0]}</g></svg>`;
+  }
+  return { svg, thumb, slots: Object.keys(WEAR) };
+})();
+
 // ---------- 古道具屋 (test build): the old shop up the hill, kept by 福爺 the owl, who takes 言靈 and nothing else ----------
 const onTestSite = () => /nihongo-quest-test|^localhost$|^127\.0\.0\.1$/.test(location.hostname);
 // 福爺 says a line in Japanese with its meaning: when you come in, after a sale, when 言靈 is short, and whatever when tapped
@@ -7331,6 +7658,12 @@ function renderShop(view) {
     <svg class="defs-only" width="0" height="0" aria-hidden="true">${DECOR.DEFS}</svg>`;
   fitThumbs(view);
 }
+// the wardrobe (a tap on the hero): what they own to wear, by part, on or off with a tap
+function wardrobeHtml() {
+  const got = WARES.filter((it) => it.kind === 'wear' && owns(it.id));
+  const rows = WEAR_SLOTS.map(([slot, name]) => { const list = got.filter((it) => it.slot === slot); return list.length ? `<div class="wr-row"><div class="wr-slot">${name}</div><div class="wr-list">${list.map((it) => `<button type="button" class="wr-it${state.wear[slot] === it.id ? ' on' : ''}" data-act="ware-wear" data-id="${it.id}" aria-pressed="${state.wear[slot] === it.id}">${HERO.thumb(it.id)}<span>${esc(it.name)}</span></button>`).join('')}</div></div>` : ''; }).join('');
+  return `<div class="wardrobe">${rows || '<p class="muted">還沒有可以穿的東西。古道具屋的「主角穿戴」有帽子、眼鏡、圍巾、背包……</p>'}<div class="row-wrap mt-3"><button type="button" class="btn btn-sm" data-act="nav" data-route="#/shop">去古道具屋</button></div></div>`;
+}
 // a purchase: paid once, then into 書房 at its spot when the spot is free (else the storage box); a wear goes on if that part is free
 function buyWare(it) {
   state.owned[it.id] = { paid: it.price, on: todayStr() };
@@ -7343,6 +7676,7 @@ function buyWare(it) {
 }
 Object.assign(ACTIONS, {
   'room-edit': (el) => ROOM.edit(el, 'on'),
+  'ware-use': (el) => ROOM.useWare(el),
   'room-edit-done': (el) => ROOM.edit(el, 'done'),
   'room-edit-take': (el) => ROOM.edit(el, 'take', el.dataset.id),
   'room-edit-turn': (el) => ROOM.edit(el, 'turn'),
@@ -7367,8 +7701,13 @@ Object.assign(ACTIONS, {
     const it = WARE.get(el.dataset.id);
     if (!it || !owns(it.id) || it.kind !== 'wear') return;
     state.wear[it.slot] = state.wear[it.slot] === it.id ? null : it.id;
-    saveState(); route();
+    saveState();
+    if (document.querySelector('#modalBody .wardrobe')) {
+      document.getElementById('modalBody').innerHTML = wardrobeHtml(); ROOM.heroRedraw(document.querySelector('#view .study'));
+      const yhEl = document.querySelector('#view .yhero'); if (yhEl) yhEl.innerHTML = HERO.svg({ wear: state.wear });
+    } else route();
   },
+  'hero-wardrobe': () => openModal('衣櫃', wardrobeHtml(), { width: 420, noFocus: true }),
   'koto-gift': () => { state.koto.gift = (Number(state.koto.gift) || 0) + 100; saveState(); route(); toast('測試用：多了 100 言靈'); }
 });
 
@@ -11835,11 +12174,11 @@ function mailboxLevel() {
   box.classList.toggle('has', n > 0); tag.textContent = n ? `信箱・${n} 封信` : '信箱';
 }
 Object.assign(ACTIONS, {
-  mailbox: (el) => {   // its door drops open, then the letters
+  mailbox: (el) => yUse(el, [52, 146], () => {   // the hero walks over (test build); its door drops open, then the letters
     const box = el.closest('.mailbox');
     if (!box || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { openLetters(); return; }
     box.classList.add('open'); setTimeout(openLetters, 320); setTimeout(() => box.classList.remove('open'), 900);
-  },
+  }),
   'letter-done': (el) => {
     const id = el.dataset.id;
     if (id === 'room' || id === 'install' || id === 'shop') { try { localStorage.setItem({ room: 'nq_letter_room', install: 'nq_install_hint', shop: 'nq_letter_shop' }[id], todayStr()); } catch (e) { /* ignore */ } }

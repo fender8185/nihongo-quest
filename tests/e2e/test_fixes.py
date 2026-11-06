@@ -1936,7 +1936,7 @@ def test_theme_follows_the_clock_or_holds_night_or_day(b):
 # 信箱: the letters sit in the mailbox by the house; inside, the door's tag counts them and its stop dot glows, and a letter this
 # device has not been told about brings the hint once (not for a brand-new learner, who picks a start first); the hint walks out
 def test_mailbox_letters_show_on_the_door_and_the_hint_comes_once(b):
-    js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1');
+    js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); localStorage.setItem('nq_letter_shop', '1');   /* test build: 古道具屋's letter put away, this is about the room's */
       const wait = (ms) => new Promise(r => setTimeout(r, ms)); const enter = async () => { location.hash = '#/stats'; route(); location.hash = '#/today'; route(); await wait(1200); };
       const door = () => { const d = document.querySelector('#view [data-thing=door]'); return [d.querySelector('.tag').textContent.trim(), d.classList.contains('mail'), document.querySelector('.room-stops .dot[data-stop="0"]').classList.contains('mail')]; };
       await enter(); const first = { ids: letters().map(l => l.id), door: door(), hint: document.querySelector('.mail-hint').classList.contains('on'), seen: mailSeen() };
@@ -1946,7 +1946,7 @@ def test_mailbox_letters_show_on_the_door_and_the_hint_comes_once(b):
       openLetters(); document.querySelector('.letter[data-letter=room] [data-act=letter-done]').click();
       const after = { left: mailCount(), modal: modalOpen(), flag: document.querySelector('#view .mailbox').classList.contains('has'), stored: !!localStorage.getItem('nq_letter_room') };
       await enter(); const quiet = door();
-      state.startChosen = false; state.srs = {}; localStorage.clear(); saveState(); await enter(); const newbie = { hint: document.querySelector('.mail-hint').classList.contains('on'), door: door() };
+      state.startChosen = false; state.srs = {}; localStorage.clear(); localStorage.setItem('nq_letter_shop', '1'); saveState(); await enter(); const newbie = { hint: document.querySelector('.mail-hint').classList.contains('on'), door: door() };
       return JSON.stringify({ first, second, out, after, quiet, newbie }); })()"""
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
     assert r['first'] == {'ids': ['room'], 'door': ['出門・1 封信', True, True], 'hint': True, 'seen': ['room']}, r['first']
