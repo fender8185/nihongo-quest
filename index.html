@@ -189,6 +189,16 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.35; }
 .seg-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
 .legs { display: flex; flex-wrap: wrap; gap: 4px 12px; } .leg { white-space: nowrap; }   /* a legend item never breaks between its name and number */
 .plan-note { color: var(--fg-3); font-size: 13px; margin: 0 0 14px; }   /* 1.0.35: a quiet line next to what it is about, not a yellow box */
+/* test build: 學習分析's 今天 card (today's scope, the day's note, 說明) and 課程's 目前 card hold what the 今日 card held */
+.plan-topics { display: flex; flex-direction: column; gap: 4px; margin: 0 0 10px; color: var(--fg-2); font-size: 14px; line-height: 1.6; }
+.plan-topics b { color: var(--fg-3); font-weight: 500; font-size: 12px; margin-right: 8px; }
+.plan-line { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 12px; color: var(--fg-2); font-size: 14px; }
+.plan-line b { color: var(--fg); font-variant-numeric: tabular-nums; }
+.day-card .plan-note { margin-bottom: 10px; }
+.day-help summary { display: inline-block; font-size: 12px; color: var(--fg-3); border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; cursor: pointer; list-style: none; }
+.day-help summary::-webkit-details-marker { display: none; } .day-help summary::before { content: "▸ "; } .day-help[open] summary::before { content: "▾ "; }
+.day-help p { margin: 10px 0 0; line-height: 1.7; }
+.now-card .label { font-size: 12px; color: var(--fg-3); margin-bottom: 2px; }
 .dots { display: inline-flex; gap: 3px; vertical-align: middle; }
 .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line-2); display: inline-block; }
 .dots i.on { background: var(--ok); }
@@ -402,7 +412,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .study.fx-phones .tune i { animation-duration: 1.1s; }
 .thing.picked::before { opacity: .45; }
 .study.zoom .room-wrap { transform: scale(1.6); opacity: 0; transition: transform .32s cubic-bezier(.55, 0, .8, .4), opacity .3s ease-in; }
-.study.zoom :is(.room-stops, .room-hint, .study-gear) { opacity: 0; transition: opacity .2s; }
+.study.zoom :is(.room-stops, .room-hint, .study-gear, .mail-hint) { opacity: 0; transition: opacity .2s; }
 @keyframes roomBack { from { opacity: 0; transform: scale(1.5); } }
 .study.anim.back .room-wrap { animation: roomBack .45s cubic-bezier(.2, .7, .3, 1) backwards; }
 #view.page-in { animation: pageIn .3s ease-out both; }
@@ -436,6 +446,41 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .study:not(.wide) .thing:not(.away) { z-index: 1; }   /* where tap areas overlap, the stop you are at wins over one peeking in */
 .sky .house .enter { position: absolute; left: 4px; right: 4px; top: 14px; bottom: 0; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; }
 .sky .house .enter .tag { top: calc(100% + 13px); }
+/* the mail (test build): the door's tag counts the letters in the mailbox outside and wears a red dot, so does the door's stop
+   dot; a letter this device has not been told about brings the hint at the top left once */
+.thing.mail:not(.away) .tag { opacity: 1; }
+.thing.mail .tag::after, .room-stops .dot.mail::after, .sky .mailbox.has .tag::after { content: ''; position: absolute; top: -2px; right: -2px; width: 7px; height: 7px; border-radius: 50%; background: #ef4f45; box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .85); }
+.room-stops .dot { position: relative; } .room-stops .dot.mail::after { top: 10px; right: 2px; width: 6px; height: 6px; }
+.mail-hint { position: absolute; z-index: 3; top: calc(12px + env(safe-area-inset-top, 0px)); left: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 9px 8px 11px; border: 0; border-radius: 99px; font: inherit; font-size: 12.5px; color: #fff;
+  background: rgba(20, 22, 44, .84); box-shadow: 0 4px 14px rgba(0, 0, 0, .28); cursor: pointer; opacity: 0; transform: translateY(-6px); pointer-events: none; transition: opacity .3s, transform .3s; }
+.mail-hint.on { opacity: 1; transform: none; pointer-events: auto; }
+.mail-hint svg { width: 16px; height: 16px; flex: none; } .mail-hint svg:last-child { width: 13px; height: 13px; opacity: .7; }
+/* the mailbox by the house: its flag is up while there are letters (and rises as the yard opens), its door drops open on a tap */
+.sky .mailbox { position: absolute; left: 50%; bottom: 154px; width: 52px; height: 66px; margin-left: 30px; }
+.sky .mailbox svg { position: absolute; inset: 0; overflow: visible; } .sky .mailbox svg * { transform-box: view-box; }
+.sky .mailbox .mb-shadow { fill: rgba(0, 0, 0, .16); opacity: var(--day); }
+.sky .mailbox .mb-post { fill: color-mix(in srgb, #8a5a36 calc(var(--day) * 100%), #15173c); transition: fill 3s; }
+.sky .mailbox .mb-body { fill: color-mix(in srgb, #4a7fa8 calc(var(--day) * 100%), #1d2152); transition: fill 3s; }
+.sky .mailbox .mb-rim { fill: none; stroke: color-mix(in srgb, rgba(255, 255, 255, .45) calc(var(--day) * 100%), rgba(160, 170, 255, .2)); stroke-width: 1.2; stroke-linecap: round; }
+.sky .mailbox .mb-lid { fill: color-mix(in srgb, #3a6a92 calc(var(--day) * 100%), #171a45); transform-origin: 6.2px 35px; transition: fill 3s, transform .28s ease-out; }
+.sky .mailbox.open .mb-lid { transform: rotate(-80deg); }
+.sky .mailbox .mb-flag { fill: color-mix(in srgb, #e2483b calc(var(--day) * 100%), #c9463c); transform-origin: 38px 27.9px; transition: fill 3s, transform .55s cubic-bezier(.3, 1.6, .5, 1); }
+.sky .mailbox.has .mb-flag { transform: rotate(90deg); }
+.sky .mailbox .mb-pin { fill: color-mix(in srgb, #d7dde4 calc(var(--day) * 100%), #4a4f80); }
+.sky .mailbox .mb-env { fill: color-mix(in srgb, #fffdf5 calc(var(--day) * 100%), #c9cdea); opacity: 0; transition: fill 3s, opacity .3s; }
+.sky .mailbox.has .mb-env { opacity: 1; }
+.sky .mailbox .mbox { position: absolute; left: -8px; right: -8px; top: 6px; bottom: -4px; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; }
+.sky .mailbox .mbox .tag { top: calc(100% + 10px); }
+@keyframes flagUp { from { transform: rotate(0deg); } }
+.yard.anim .mailbox.has .mb-flag { animation: flagUp .7s cubic-bezier(.3, 1.6, .5, 1) .7s backwards; }
+/* the letters: paper cards in their own light colours, whatever the theme */
+.letters { display: flex; flex-direction: column; gap: 12px; }
+.letter { --bg-elev: #fffdf6; --bg-elev-2: #f6eedc; --bg-hover: #f3ead6; --line: #e6dcc6; --line-2: #d8c9a8; --fg: #3b3428; --fg-2: #5b513f; --fg-3: #8a7d66; --accent: #4b57d1; --accent-fg: #fff; color-scheme: light;
+  position: relative; padding: 14px 16px; border-radius: 12px; background: #fbf5e6; color: var(--fg); box-shadow: inset 0 0 0 1px rgba(120, 96, 50, .12), 0 6px 18px -12px rgba(0, 0, 0, .45); }
+.letter::before { content: ''; position: absolute; top: 12px; right: 12px; width: 20px; height: 24px; border-radius: 2px; background: repeating-linear-gradient(45deg, #e9a28f 0 3px, #f3c2b2 3px 6px); box-shadow: 0 0 0 2px #fbf5e6, 0 0 0 3px rgba(200, 120, 100, .35); }   /* a stamp */
+.letter-title { font-weight: 700; font-size: 15px; margin: 0 30px 6px 0; }
+.letter-body { font-size: 14px; line-height: 1.75; color: var(--fg-2); }
+.letter-body ul { margin: 6px 0 0; padding-left: 1.2em; } .letter-body li + li { margin-top: 3px; }
 /* walking in: the yard zooms into the door; 書房 eases in when it opens (out through the door: ROOM.door) */
 @keyframes roomIn { from { opacity: 0; transform: scale(1.05); } }
 .study.anim .room-wrap { animation: roomIn .4s ease-out backwards; }
@@ -1583,7 +1628,7 @@ function defaultSettings() {
     furigana: true,
     speechRate: 1.0,
     sfx: true,               // 答題音效 (1.0.50)
-    theme: 'dark',
+    theme: 'clock',          // 跟著時間 | 永夜 'night' | 永晝 'day' (test build; older saves: dark／auto, light — themeMode)
     examDate: '2027-07-04',
     examLevel: 'N4',         /* level-literal-ok: default */ // the JLPT level the exam date is for: 學習分析 and the exam countdown project against it (1.0.26)
     duolingoScore: 22,
@@ -2751,6 +2796,7 @@ const ICONS = {
   chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
   spark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg>',
   back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>',
+  mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m3.6 7 8.4 6.4L20.4 7"/></svg>',
   furi: '<span class="ico-furi" aria-hidden="true"><ruby>字<rt>じ</rt></ruby></span>'
 };
 function icon(name) { return ICONS[name] || ''; }
@@ -4335,7 +4381,9 @@ function startSession(mode, opt = {}) {
     if (!opt.extra && dailyPlan(size).remaining === 0) opt = Object.assign({}, opt, { extra: true });   // the day is done (e.g. 再練一組 on the summary): offer the 加練 set
     const r = opt.extra ? extraQueue() : dailyQueue(size);
     entries = r.items.map(item => ({ item }));
-    meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: '' };   // the day's note sits on the 今日 card; the session repeats only the drill note
+    // the day's note (fewer new items today, a level to finish first) over the first question of the day's first set (test build:
+    // 書房 has no card for it; 學習分析's 今天 card keeps it all day)
+    meta = { newCount: r.newCount, reviewCount: r.reviewCount, note: !opt.extra && itemsDoneToday() === 0 ? dailyPlan(size).note || '' : '' };
   } else if (mode === 'unit') {
     const uq = buildUnitQueue(opt.unit, opt.size || 15);
     entries = uq.map(item => ({ item }));
@@ -4538,7 +4586,7 @@ function renderPractice() {
       ${prBarHtml(pct)}
       ${prCountHtml()}
     </div>
-    ${SESSION.idx === 0 && !answered && SESSION.meta && SESSION.meta.note ? `<div class="plan-note">${esc(SESSION.meta.note)}</div>` : ''}
+    ${sessionNoteHtml(answered)}
     <div class="q-card${just}">
       <div class="q-label"><span>${esc(q.label || '')}</span>${e.requeued ? '<span class="chip">再練一次</span>' : ''}${e.encore ? '<span class="chip">換個方式再考</span>' : ''}${ladder}${rec && rec.leech ? '<span class="chip chip-bad" title="這題答錯了很多次">常錯</span>' : ''}${q.kind !== 'm' ? srsBadge(q.key) : ''}</div>
       <div class="q-instr">${esc(q.instr || '')}</div>
@@ -4609,6 +4657,8 @@ function prCountHtml() {
   const c = sessionCount();
   return `<div class="pr-count">${c.n} / ${c.total}${c.extra ? ` <span class="tiny muted">加考 ${c.extra}</span>` : ''}</div>`;
 }
+// the session's note (the day's, or a drill's) over its first screen, a question or a new item's preview
+function sessionNoteHtml(answered = false) { return SESSION.idx === 0 && !answered && SESSION.meta && SESSION.meta.note ? `<div class="plan-note">${esc(SESSION.meta.note)}</div>` : ''; }
 function previewHtml(e, pct) {
   if (e.item.kind === 'g') return grammarPreviewHtml(e, pct);
   const v = e.item;
@@ -4619,6 +4669,7 @@ function previewHtml(e, pct) {
       ${prBarHtml(pct)}
       ${prCountHtml()}
     </div>
+    ${sessionNoteHtml()}
     <div class="q-card">
       <div class="q-label"><span>新單字 · ${esc(lvLabel(v.lv))} · ${esc(vocabTheme(v))}</span><span class="chip chip-accent">新</span></div>
       <div class="q-instr">先看一遍，接著會用幾種方式考這個字。</div>
@@ -5194,6 +5245,7 @@ function route() {
   if (LISTEN && !(r.name === 'listen' || ((r.name === 'mistakes' || r.name === 'vocab') && r.parts[1] === 'listen'))) listenStop(true);   // leaving the pages that host the player ends it
   if (r.name === 'practice') { renderPractice(); return; }
   if (r.name === 'exam' && r.parts[1] === 'run') { renderExamRunner(); return; }
+  applyTheme();   // 跟著時間: the colours change between pages, never in the middle of questions
   lastMainRoute = location.hash || '#/today';
   settingsDirty = false;
   closeModal(true);
@@ -5246,18 +5298,21 @@ function closeModal(fromRoute) {
 function modalOpen() { return Boolean(document.getElementById('modalRoot').innerHTML); }
 
 // ---------- theme & furigana ----------
+// The theme (test build): 跟著時間 lights the pages as 書房 and the yard are lit, light from half daylight (about 6:00 to 18:00)
+// and dark before and after; 永晝／永夜 hold all of it at noon／midnight. Older saves hold dark or auto (→ 跟著時間) and light (→ 永晝).
+function themeMode() { const t = state.settings.theme; return t === 'day' || t === 'light' ? 'day' : t === 'night' ? 'night' : 'clock'; }
+function lightHour(h = sceneHour()) { const m = themeMode(); return m === 'day' ? 12 : m === 'night' ? 0 : h; }
 function applyTheme() {
-  const t = state.settings.theme || 'dark';
-  const resolved = t === 'auto' ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : t;
-  document.documentElement.setAttribute('data-theme', resolved);
+  document.documentElement.setAttribute('data-theme', sceneClock(lightHour()).day >= 0.5 ? 'light' : 'dark');
   themeColor();
 }
-// the browser bar's colour: the page background, or (test build) the yard's sky／書房's wall at this hour, whatever the theme
+function midQuestions() { const r = currentRoute(); return r.name === 'practice' || (r.name === 'exam' && r.parts[1] === 'run'); }
+// the browser bar's colour: the page background, or (test build) the yard's sky／書房's wall at this hour
 function themeColor() {
   const meta = document.querySelector('meta[name="theme-color"]'); if (!meta) return;
   const b = document.body.classList;
   if (!b.contains('scene')) { meta.setAttribute('content', document.documentElement.getAttribute('data-theme') === 'light' ? '#f5f6f8' : '#0e0f13'); return; }
-  const c = sceneClock();
+  const c = sceneClock(lightHour());
   meta.setAttribute('content', b.contains('outside') ? mixHex(mixHex('#05060f', '#3d8cdb', c.day), '#e8875f', c.warm * 0.5) : mixHex('#3a3c63', '#f2e8d8', c.day));
 }
 function mixHex(a, b, t) { const ch = (h, i) => parseInt(h.slice(i, i + 2), 16); return '#' + [1, 3, 5].map(i => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * t).toString(16).padStart(2, '0')).join(''); }
@@ -5277,16 +5332,20 @@ function sceneClock(h = sceneHour()) {
   return { day, warm, sx: 8 + 84 * p, sy: 72 - 60 * Math.sin(Math.PI * p) };
 }
 function sceneTick() {
-  const h = sceneHour(), c = sceneClock(h), b = document.body;
+  const h = sceneHour(), c = sceneClock(lightHour(h)), b = document.body;   // 書房's clock keeps the real time under 永夜／永晝
   b.style.setProperty('--hh', `${((h % 12) * 30).toFixed(1)}deg`); b.style.setProperty('--mm', `${((h % 1) * 360).toFixed(1)}deg`);
   b.style.setProperty('--lit', c.day >= 0.5 ? '1' : '0');   // the name tags: dark on light from half daylight, light on dark before
   b.style.setProperty('--day', c.day.toFixed(3)); b.style.setProperty('--warm', c.warm.toFixed(3));
   b.style.setProperty('--sx', `${c.sx.toFixed(1)}%`); b.style.setProperty('--sy', `${c.sy.toFixed(1)}%`);
   b.classList.toggle('scene-day', c.day > 0.999); b.classList.toggle('scene-night', c.day < 0.001);
-  themeColor();
+  applyTheme();   // a dialog opened over a scene is lit as the scene
 }
 setInterval(() => { if (document.body.classList.contains('scene')) sceneTick(); }, 60000);   // the scenes move with the clock while one is open
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && document.body.classList.contains('scene')) sceneTick(); });
+// back in the app after a while: the scenes catch up with the clock, and so do the pages' colours, except in the middle of questions
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState !== 'visible') return;
+  if (document.body.classList.contains('scene')) sceneTick(); else if (!midQuestions()) applyTheme();
+});
 // furigana: all → smart (no readings on mastered words) → off
 const FURI_LABEL = { all: '顯示', smart: '熟練的字不標', off: '隱藏' };
 function furiState() { return !state.settings.furigana ? 'off' : (state.settings.furiMode === 'smart' ? 'smart' : 'all'); }
@@ -5434,7 +5493,6 @@ const ACTIONS = {
   speak: (el) => speak(el.dataset.text, el.dataset.reading ? { reading: el.dataset.reading } : undefined),
   'ai-explain': () => aiExplainCurrent(),
   'report-item': () => reportCurrentItem(),
-  'dismiss-notice': (el) => { state.notices = state.notices.filter(n => n.id !== el.dataset.id); saveState(); route(); },
   'start-zero': () => chooseStart('zero'),
   'start-kana': () => chooseStart('kana'),
   'start-basics': () => chooseStart('basics'),
@@ -5504,14 +5562,6 @@ function handleKey(ev) {
    ========================================================================== */
 function weekdayZh(d) { return '日一二三四五六'[parseDate(d).getDay()]; }
 
-function noticesHtml() {
-  return (state.notices || []).map(n => `
-    <div class="banner">
-      <div class="grow">${n.lines.map(l => `<div>${esc(l)}</div>`).join('')}</div>
-      <button type="button" class="btn btn-sm btn-ghost" data-act="dismiss-notice" data-id="${esc(n.id)}">知道了</button>
-    </div>`).join('');
-}
-
 // iOS ignores user-scalable=no inside Safari; the gesture events still stop a pinch from zooming the page
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
 
@@ -5538,6 +5588,7 @@ function yardLevel(yard, pct) {
   yard.style.setProperty('--f', f);
   yard.classList.toggle('full', pct >= 100);
   yard.querySelectorAll('.st').forEach(el => el.classList.toggle('on', Number(el.dataset.t) <= f));
+  mailboxLevel();
 }
 // the sky's layout, the same every day (a fixed seed): each star carries the share of the list that lights it — six faint ones
 // from the start, the rest by 80%, the seven of the constellation at 100%
@@ -5552,7 +5603,7 @@ const SKY = (() => {
   return { stars, flies, flowers };
 })();
 function yardHtml(pct) {
-  const f = pct / 100;
+  const f = pct / 100, mail = mailCount();
   const star = (s) => `<i class="st${s.dip ? ' dip' : ''}${s.t <= f ? ' on' : ''}" data-t="${s.t}" style="left:${s.x}%;top:${s.y}%;--s:${s.s}px;--d:${s.d}s;--w:-${s.w}s;--in:${f ? Math.round(s.t / f * 120) / 100 : 0}s"></i>`;
   const dip = SKY.stars.filter(s => s.dip).map(s => `${s.x} ${s.y}`);
   const ground = 'M0 170 C150 152 300 142 450 147 C520 149 560 150 600 150 C640 150 690 149 760 146 C900 141 1050 151 1200 162';
@@ -5595,6 +5646,18 @@ function yardHtml(pct) {
         <i class="win w1"></i><i class="win w2"></i><i class="win w3"></i>
         <i class="smoke"></i><i class="smoke"></i><i class="smoke"></i>
         <button type="button" class="enter" data-act="enter-house" aria-label="進屋"><span class="tag">進屋</span></button>
+      </div>
+      <div class="mailbox${mail ? ' has' : ''}">
+        <svg viewBox="0 0 52 66" aria-hidden="true">
+          <ellipse class="mb-shadow" cx="26" cy="64.5" rx="15" ry="2.4"/>
+          <rect class="mb-post" x="23" y="33" width="6" height="32" rx="1"/>
+          <rect class="mb-body" x="6" y="14" width="40" height="20" rx="6"/><path class="mb-rim" d="M12 14.6 H40"/>
+          <rect class="mb-env" x="-4" y="18.5" width="12" height="6.5" rx=".8" transform="rotate(-14 2 21.7)"/>
+          <rect class="mb-lid" x="3.5" y="13" width="5.5" height="22" rx="2.2"/>
+          <g class="mb-flag"><rect x="16" y="26.6" width="23" height="2.6" rx="1.3"/><rect x="16" y="20" width="8" height="7.5" rx="1"/></g>
+          <circle class="mb-pin" cx="38" cy="27.9" r="1.6"/>
+        </svg>
+        <button type="button" class="mbox" data-act="mailbox" aria-label="信箱"><span class="tag">${mail ? `信箱・${mail} 封信` : '信箱'}</span></button>
       </div>
       <div class="flies">${SKY.flies.map(q => `<i style="left:${q.x}%;top:${q.y}px;--dx:${q.dx}px;--dy:${q.dy}px;--d:${q.d}s;--w:-${q.w}s"></i>`).join('')}</div>
       <div class="butterflies"><i class="bf" style="left:28%;top:40px;--dx:40px;--dy:18px;--d:7s;--w:-2s;--c:#ffb3d1"></i><i class="bf" style="left:66%;top:66px;--dx:-36px;--dy:14px;--d:8.5s;--w:-5s;--c:#ffe08a"></i></div>
@@ -5749,16 +5812,21 @@ const ROOM = (() => {
   // the day — blue on a Saturday, red on a Sunday — with its weekday, and the days left to the exam
   const CAL = { x0: 9.95, x1: 11.35, z0: 4.5, z1: 6.65 };
   const JMONTH = (m) => (m < 10 ? '一二三四五六七八九十'[m] : m === 10 ? '十一' : '十二') + '月';   // m: 0 for January
-  function calendarSheet(d, left) {   // the page of the day (also the one that drops away when the calendar is tapped)
+  // the page of the day (also the one that drops away when the calendar is tapped): the month, the date, the weekday, the streak
+  // as a red stamp (none before a first day), the days to the exam
+  function calendarSheet(d, left) {
     const { x0, x1, z0, z1 } = CAL, xm = (x0 + x1) / 2, zm = (z0 + z1) / 2, wd = d.getDay(), dc = wd === 6 ? '#3f6fc6' : wd === 0 ? C.red : C.ink;
+    const n = streakStats().current, sv = q2(-z1 + 1.58), sw = q2(0.16 * (3 + String(n).length * 0.55) + 0.2), at = [xm, 0.07, z1 - 1.58];
     return `${box(C.paper, x0, 0, z0, x1, 0.07, z1, { t: false })}
       <g transform="${onY(0.072)}">
         <rect x="${x0}" y="${-z1}" width="${q2(x1 - x0)}" height=".44" ${F(C.red, 'y', [xm, 0.07, z1])}/>
         <text x="${xm}" y="${q2(-z1 + 0.32)}" font-size=".26" font-weight="700" text-anchor="middle" fill="#fff">${JMONTH(d.getMonth())}</text>
-        <text x="${xm}" y="${q2(-z1 + 1.3)}" font-size=".8" font-weight="800" text-anchor="middle" ${F(dc, 'y', [xm, 0.07, zm])}>${d.getDate()}</text>
-        <text x="${xm}" y="${q2(-z1 + 1.62)}" font-size=".21" font-weight="700" text-anchor="middle" ${F(dc, 'y', [xm, 0.07, zm])}>${'日月火水木金土'[wd]}曜日</text>
-        <path d="M${q2(x0 + 0.12)} ${q2(-z0 - 0.42)} H${q2(x1 - 0.12)}" stroke="#000" stroke-opacity=".08" stroke-width=".02"/>
-        <text x="${xm}" y="${q2(-z0 - 0.17)}" font-size=".18" font-weight="700" text-anchor="middle" ${F(C.red, 'y', [xm, 0.07, z0 + 0.1])}>${left > 0 ? `試験まで${left}日` : '試験の日'}</text>
+        <text x="${xm}" y="${q2(-z1 + 1.08)}" font-size=".66" font-weight="800" text-anchor="middle" ${F(dc, 'y', [xm, 0.07, zm])}>${d.getDate()}</text>
+        <text x="${xm}" y="${q2(-z1 + 1.33)}" font-size=".2" font-weight="700" text-anchor="middle" ${F(dc, 'y', [xm, 0.07, zm])}>${'日月火水木金土'[wd]}曜日</text>
+        ${n ? `<g class="cal-stamp" opacity=".9" transform="rotate(-5 ${xm} ${sv})"><rect x="${q2(xm - sw / 2)}" y="${q2(sv - 0.13)}" width="${sw}" height=".26" rx=".05" fill="none" stroke-width=".03" ${FS(C.red, 'y', at)}/>
+          <text x="${xm}" y="${q2(sv + 0.06)}" font-size=".16" font-weight="700" text-anchor="middle" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', 'Noto Serif CJK JP', serif" ${F(C.red, 'y', at)}>${n}日連続</text></g>` : ''}
+        <path d="M${q2(x0 + 0.12)} ${q2(-z0 - 0.32)} H${q2(x1 - 0.12)}" stroke="#000" stroke-opacity=".08" stroke-width=".02"/>
+        <text x="${xm}" y="${q2(-z0 - 0.11)}" font-size=".17" font-weight="700" text-anchor="middle" ${F(C.red, 'y', [xm, 0.07, z0 + 0.1])}>${left > 0 ? `試験まで${left}日` : '試験の日'}</text>
       </g>`;
   }
   function calendarArt(d, left) {
@@ -6266,6 +6334,14 @@ const ROOM = (() => {
     walk(st, el, '#/outside', 300);
   }
   function mark(id) { back = id; }   // today's practice dives in by itself (diveInto); 書房 still comes back out of the notebook
+  function out(st) {   // the mail hint: along the room to the door, then out to the mailbox
+    if (busy) return;
+    const d = st.querySelector('.thing[data-thing="door"]');
+    st.querySelector('.mail-hint').classList.remove('on');
+    if (cam.wide || stop === 0 || reduced()) { door(d); return; }
+    goStop(st, 0); moved(st);
+    setTimeout(() => { if (st.isConnected) door(d); }, 520);
+  }
 
   function studyArt(d, left, bk) {
     return `<svg class="art" viewBox="${VB.join(' ')}" aria-hidden="true">${DEFS}
@@ -6303,20 +6379,22 @@ const ROOM = (() => {
     { id: 'calendar', view: 2, route: '#/exam', label: '模擬考', pts: [[CAL.x0, 0, CAL.z0], [CAL.x1, 0, CAL.z1]], tag: [(CAL.x0 + CAL.x1) / 2, 0, CAL.z0 - 0.32], pad: 6 }
   ];
 
-  // the things' name tags: today's practice shows the day's progress, the drawer how many are in the notebook
+  // the things' name tags: today's practice shows the day's progress, the drawer how many are in the notebook, the door the
+  // letters waiting in the mailbox outside
   function tagOf(id, pct, mk) {
     if (id === 'notebook') return pct >= 100 ? '今日完成・多學' : `今日練習 ${pct}%`;
     if (id === 'drawer') return `錯題本${mk ? ` ${mk}` : ''}`;
+    if (id === 'door') { const n = mailCount(); return n ? `出門・${n} 封信` : '出門'; }
     return THINGS.find((t) => t.id === id).label;
   }
   const chev = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
   function html(pct) {
-    const f = pct / 100, mk = activeMistakes().length, d = parseDate(todayStr()), left = examPace().daysLeft, bk = shelfBooks();
+    const f = pct / 100, mk = activeMistakes().length, d = parseDate(todayStr()), left = examPace().daysLeft, bk = shelfBooks(), mail = mailCount();
     const thing = (t) => {
       const a = P(...t.pts[0]), sp = t.sb ? [[a[0] + t.sb[0], a[1] + t.sb[1]], [a[0] + t.sb[2], a[1] + t.sb[3]]] : t.pts.map((p) => P(...p)), pad = t.pad || 4;
       const x0 = Math.min(...sp.map((p) => p[0])) - pad, x1 = Math.max(...sp.map((p) => p[0])) + pad, y0 = Math.min(...sp.map((p) => p[1])) - pad, y1 = Math.max(...sp.map((p) => p[1])) + pad;
       const [tx, ty] = P(...t.tag), label = tagOf(t.id, pct, mk);
-      return `<button type="button" class="thing${t.primary ? ' primary' : t.minor ? ' minor' : ''}" data-thing="${t.id}" data-view="${t.view}" ${t.route ? `data-act="study-go" data-route="${t.route}"` : `data-act="${t.act}"`} style="${vbPct(x0, y0)};${vbSize(x1 - x0, y1 - y0)};--tx:${((tx - x0) / (x1 - x0) * 100).toFixed(1)}%;--ty:${((ty - y0) / (y1 - y0) * 100).toFixed(1)}%" aria-label="${label}"><span class="tag">${t.icon ? icon(t.icon) : ''}<span>${label}</span></span></button>`;
+      return `<button type="button" class="thing${t.primary ? ' primary' : t.minor ? ' minor' : ''}${t.id === 'door' && mail ? ' mail' : ''}" data-thing="${t.id}" data-view="${t.view}" ${t.route ? `data-act="study-go" data-route="${t.route}"` : `data-act="${t.act}"`} style="${vbPct(x0, y0)};${vbSize(x1 - x0, y1 - y0)};--tx:${((tx - x0) / (x1 - x0) * 100).toFixed(1)}%;--ty:${((ty - y0) / (y1 - y0) * 100).toFixed(1)}%" aria-label="${label}"><span class="tag">${t.icon ? icon(t.icon) : ''}<span>${label}</span></span></button>`;
     };
     const [wx, wy] = P(WIN.x0, -0.34, WIN.z1), [cx, cy] = P(0.1, CLK.y + CLK.r, CLK.z + CLK.r), [lx, ly] = P(...LIGHTS[0].p), [l2x, l2y] = P(...LIGHTS[1].p), [l3x, l3y] = P(...LIGHTS[2].p);
     const [nx, ny] = P((NB.x0 + NB.x1) / 2, (NB.y0 + NB.y1) / 2, DESK.z1), [hx, hy] = P(HP.x, HP.y, HP.top), [mx, my] = P(MUG[0], MUG[1], DESK.z1);
@@ -6344,19 +6422,22 @@ const ROOM = (() => {
       <button type="button" class="study-gear" data-act="settings" aria-label="設定" title="設定">${icon('settings')}</button>
       <nav class="room-stops" aria-label="房間裡的位置">
         <button type="button" class="arr" data-go="-1" aria-label="往左看">${chev('M15 6l-6 6 6 6')}</button>
-        ${VIEWS.map((v, i) => `<button type="button" class="dot" data-stop="${i}" aria-label="${v.label}"><i></i></button>`).join('')}
+        ${VIEWS.map((v, i) => `<button type="button" class="dot${i === 0 && mail ? ' mail' : ''}" data-stop="${i}" aria-label="${v.label}"><i></i></button>`).join('')}
         <button type="button" class="arr" data-go="1" aria-label="往右看">${chev('M9 6l6 6-6 6')}</button>
       </nav>
       <div class="room-hint">左右滑動，看看房間其他地方</div>
+      <button type="button" class="mail-hint" data-act="mail-hint">${icon('mail')}<span>外面信箱有新信</span>${chev('M9 6l6 6-6 6')}</button>
     </div>`;
   }
   // a redraw on the same day (a sync, a setting): the tags, the bulbs and the lamps follow, the motion carries on
   function level(st, pct) {
     st.style.setProperty('--f', pct / 100);
     st.classList.toggle('full', pct >= 100);
-    const mk = activeMistakes().length;
-    st.querySelectorAll('[data-thing="notebook"], [data-thing="drawer"]').forEach((b) => { const t = tagOf(b.dataset.thing, pct, mk); b.querySelector('.tag span:last-child').textContent = t; b.setAttribute('aria-label', t); });
+    const mk = activeMistakes().length, mail = mailCount() > 0;
+    st.querySelectorAll('[data-thing="notebook"], [data-thing="drawer"], [data-thing="door"]').forEach((b) => { const t = tagOf(b.dataset.thing, pct, mk); b.querySelector('.tag span:last-child').textContent = t; b.setAttribute('aria-label', t); });
+    st.querySelector('[data-thing="door"]').classList.toggle('mail', mail); st.querySelector('.room-stops .dot[data-stop="0"]').classList.toggle('mail', mail);
     st.querySelectorAll('.bulb').forEach((e) => e.classList.toggle('on', Number(e.dataset.t) <= pct / 100));
+    st.querySelectorAll('.cal-stamp text').forEach((e) => { e.textContent = `${streakStats().current}日連続`; });   // another device's answers today
   }
 
   // the camera: one stop fills a phone screen and a swipe slides along the room to the next; a wide screen sees the whole room
@@ -6405,7 +6486,7 @@ const ROOM = (() => {
     let drag = null, swallow = false, at = stop;
     st.addEventListener('pointerdown', (e) => {
       swallow = false;
-      if (cam.wide || (e.pointerType === 'mouse' && e.button !== 0) || e.target.closest('.room-stops, .study-gear')) return;
+      if (cam.wide || (e.pointerType === 'mouse' && e.button !== 0) || e.target.closest('.room-stops, .study-gear, .mail-hint')) return;
       drag = { id: e.pointerId, x: e.clientX, y: e.clientY, p0: stop, on: false, hist: [[performance.now(), e.clientX]] };
     });
     st.addEventListener('pointermove', (e) => {
@@ -6439,6 +6520,8 @@ const ROOM = (() => {
     }, true);
     let seen = movedOnce; try { seen = seen || Boolean(localStorage.getItem('nq_room_moved')); } catch (e) { /* no storage: show it */ }
     if (!cam.wide && !seen) { const h = st.querySelector('.room-hint'); setTimeout(() => { if (st.isConnected && !movedOnce) h.classList.add('on'); }, 600); setTimeout(() => h.classList.remove('on'), 5200); }
+    const fresh = newMail();   // a letter this device has not been told about: the hint once, a tap walks out to the mailbox
+    if (fresh.length) { const m = st.querySelector('.mail-hint'); markMailSeen(fresh); setTimeout(() => { if (st.isConnected) m.classList.add('on'); }, 900); setTimeout(() => m.classList.remove('on'), 8000); }
   }
   // ← → move between the stops on 書房 (not while typing or with a dialog open)
   document.addEventListener('keydown', (e) => {
@@ -6446,7 +6529,7 @@ const ROOM = (() => {
     if (!st || cam.wide || modalOpen() || (e.target && e.target.closest && e.target.closest('input, textarea, select'))) return;
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { goStop(st, stop + (e.key === 'ArrowLeft' ? -1 : 1)); moved(st); }
   });
-  return { html, level, mount, enter, pull, door, mark };
+  return { html, level, mount, enter, pull, door, mark, out };
 })();
 // walking in or out of the house: a short zoom, then the other scene (straight there with motion reduced)
 function sceneGo(hash, cls) {
@@ -6475,6 +6558,53 @@ function diveInto(el) {
   setTimeout(() => veil.classList.add('cover'), 140);
   setTimeout(() => { startSession('daily'); veil.classList.add('out'); }, 520);
   setTimeout(() => { veil.remove(); diveBusy = false; }, 900);
+}
+
+// The topics the next daily set touches: vocabulary themes (the active pair when new words are in, otherwise the themes most of
+// the review words belong to) and the grammar points of its grammar questions, new ones first.
+function sessionTopicsHtml(q) {
+  const words = q.items.filter(it => it.kind === 'v');
+  const present = new Set(words.map(vocabTheme));
+  const all = [...present].sort((a, b) => themeRank(a) - themeRank(b));
+  const themes = all.slice(0, 3); if (all.length > 3) themes.push(`等 ${all.length} 個`);
+  const vocabText = themes.length ? themes.join('・') : '今天的單字已完成';   // the line is always there: a finished day just says so
+  const gItems = q.items.filter(it => it.kind === 'g');
+  const pts = [];
+  gItems.filter(it => !state.srs[it.key]).concat(gItems.filter(it => state.srs[it.key])).forEach(g => { if (g.pt && !pts.includes(g.pt)) pts.push(g.pt); });
+  const shown = pts.slice(0, 5); if (pts.length > 5) shown.push(`等 ${pts.length} 個考點`);
+  return `<div class="plan-topics">
+      <span><b>單字主題</b>${esc(vocabText)}</span>
+      ${shown.length ? `<span><b>文法</b>${esc(shown.join('・'))}</span>` : ''}
+    </div>`;
+}
+function planNoteHtml(plan) { return plan.note ? `<div class="plan-note">${esc(plan.note)}</div>` : ''; }
+// 學習分析's first card (test build; it was the 今日 card's date line and its 說明 and 範圍 folds): the date and the streak, what is
+// left of today's list — the next set's themes and grammar points, then the counts — the day's note, and 說明 (folded)
+function todayCardHtml() {
+  const t = todayStr(), d = parseDate(t), st = streakStats(), plan = dailyPlan();
+  let body;
+  if (plan.remaining === 0) body = `<p class="small muted">今天的題目做完了${itemsDoneToday() ? `，共 ${itemsDoneToday()} 題` : ''}。想再練，點書桌上的筆記本「多學」。</p>`;
+  else {
+    const reviewN = plan.dueV.length + plan.dueG.length + (plan.dueC || []).length + plan.q4.length + plan.q5.length;
+    const newN = plan.newV.length + plan.newG.length + (plan.newC || []).length;
+    const exA = (plan.dueA || []).length + (plan.newA || []).length, exK = plan.dueK.length + plan.newK.length;
+    const exL = Math.min(plan.dueL.length + plan.newL.length, LISTEN_PER_DAY), exR = Math.min(1, plan.dueR.length + plan.newR.length);
+    const extraN = exA + exK + exL + exR;
+    const extraText = [exA && `假名 ${exA}`, exK && `漢字 ${exK}`, exL && `聽力 ${exL}`, exR && `閱讀 ${exR}`].filter(Boolean).join('・');
+    body = `${sessionTopicsHtml(dailyQueue(SESSION_SIZE))}
+      <div class="plan-line">
+        <span>待複習 <b>${reviewN}</b>（單字 ${plan.dueV.length}・文法 ${plan.dueG.length}${plan.dueC && plan.dueC.length ? `・變化 ${plan.dueC.length}` : ''}${[['四顆', plan.q4], ['五顆', plan.q5]].map(([name, l]) => (l.length ? `・${name} ${l.length}` : '')).join('')}${plan.relearnN ? `・其中錯題 ${plan.relearnN}` : ''}）</span>
+        <span>新內容 <b>${newN}</b>（單字 ${plan.newV.length}・文法 ${plan.newG.length}${plan.newC && plan.newC.length ? `・變化 ${plan.newC.length}` : ''}）</span>
+        ${extraN ? `<span>另有 <b>${extraN}</b>（${extraText}）</span>` : ''}
+        <span>共 <b>${plan.remaining}</b> 題</span>
+      </div>`;
+  }
+  return `<div class="card day-card">
+    <div class="card-head"><div><div class="card-title">今天</div><div class="card-sub">${d.getMonth() + 1} 月 ${d.getDate()} 日（${weekdayZh(t)}）・連續 ${st.current} 天</div></div></div>
+    ${body}
+    ${planNoteHtml(plan)}
+    <details class="day-help"><summary>說明</summary><p class="small muted">每天練一點就好。這裡用的是 SRS（間隔重複）的改良版：在你快忘記的時候再考一次，記得會更久。答對越多，每天的新題目就會越多；想學快一點，做完後按「多學」就好。</p></details>
+  </div>`;
 }
 
 // 學習紀錄 (學習分析): the calendar, streak tiles and the recent days
@@ -6800,6 +6930,29 @@ function stageStateHtml(rows) {
   return `<span class="muted num">${Math.round(rows.reduce((a, r) => a + r.pct, 0) / rows.length)}%</span>`;
 }
 const courseOpen = {};   // stage id → open, for the cards opened or closed by hand: kept while the app is open, only the current stage open again after a reload
+// 課程's first card (test build; it was the 今日 card's 目前單元 fold): in 入門, its counts and, once its words are all seen,
+// how it ends; after it, the current unit — its bar, today's reviews in it, 看講義／練習本單元, 前往下一單元 once it is well known
+function courseNowHtml() {
+  if (inPreStage()) {
+    const pw = REG.vocab.filter(v => v.lv === 'PRE_N5'), m0 = unitItems('m0'), seen = (l) => l.filter(x => state.srs[x.key]).length;
+    return `<div class="card now-card">
+      <div class="label">目前</div><div class="card-title">入門</div>
+      <div class="small muted mt-2 legs"><span class="leg">假名 ${seen(REG.kana)}／${REG.kana.length}</span><span class="leg">單字 ${seen(pw)}／${pw.length}</span><span class="leg">句型 ${seen(m0)}／${m0.length}</span></div>
+      ${preDone() ? `<div class="banner mt-3"><div class="grow">入門單字都看過了；最近正確率 ${Math.round((recentAccuracy() || 0) * 100)}%，到 ${Math.round(PRE_PASS_ACC * 100)}% 就會自動進入第 1 週。</div></div>` : ''}
+    </div>`;
+  }
+  const cur = unitById(state.currentUnit), us = unitStats(cur.id);
+  return `<div class="card now-card">
+    <div class="row between mb-2"><div><div class="label">目前單元</div><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div></div><span class="chip">${esc(cur.lv)}</span></div>
+    <div class="row">${unitBarHtml(us, 'grow', true)}<span class="small num muted">${us.pct}%</span></div>
+    <div class="small muted mt-2 legs"><span class="leg">已學 ${us.ok3 + us.ok1 + us.seen0}／${us.total} 題</span>${us.due ? `<span class="leg">今天要複習 ${us.due} 題</span>` : ''}</div>
+    ${us.pct >= 85 && !us.done ? `<div class="banner mt-3"><div class="grow">這個單元已經很熟了，可以前往下一單元。</div><button type="button" class="btn btn-sm btn-primary" data-act="advance-unit">前往下一單元</button></div>` : ''}
+    <div class="row-wrap mt-3">
+      <button type="button" class="btn btn-sm" data-act="nav" data-route="#/course/${cur.id}">看講義</button>
+      <button type="button" class="btn btn-sm" data-act="start-unit" data-unit="${cur.id}">練習本單元</button>
+    </div>
+  </div>`;
+}
 function renderCourse(view) {
   const cp = courseProgress();
   const cur = state.currentUnit;
@@ -6850,6 +7003,7 @@ function renderCourse(view) {
       <div><div class="page-title">課程</div><div class="page-sub">整體完成度 ${cp.pct}%</div></div>
       <button type="button" class="btn" data-act="open-level">依程度選擇起點</button>
     </div>
+    ${courseNowHtml()}
     ${(() => { const gp = grammarPause(); return gp ? `<div class="plan-note">${esc(grammarPauseText(gp))}</div>` : ''; })()}
     ${LAST_BULK_MARK ? `<div class="banner"><div class="grow">已把 ${LAST_BULK_MARK.changed} 個項目標成「四顆」。重新整理後就不能復原了。</div><button type="button" class="btn btn-sm" data-act="bulk-mark-undo">復原</button></div>` : ''}
     ${cards}`;
@@ -8903,7 +9057,7 @@ function boolRow(key, label, hint) {
     <label class="switch"><input type="checkbox" ${state.settings[key] ? 'checked' : ''} data-change="setting" data-key="${key}" data-type="bool" /><span class="track"></span></label></div>`;
 }
 function selRow(key, label, hint, options) {
-  const cur = key === 'furiState' ? furiState() : state.settings[key];
+  const cur = key === 'furiState' ? furiState() : key === 'theme' ? themeMode() : state.settings[key];
   return `<div class="setting-row"><div><div class="label">${label}</div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>
     <select class="select" style="width:auto;max-width:260px" data-change="setting" data-key="${key}">${options.map(([v, l]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div>`;
 }
@@ -8968,7 +9122,7 @@ function changelogItems(list) {
 }
 function settingsLook() {
   return `
-    ${selRow('theme', '主題', '', [['dark', '深色'], ['light', '淺色'], ['auto', '跟隨系統']])}
+    ${selRow('theme', '主題', '跟著時間：白天淺色、晚上深色，和書房一起。永夜、永晝：一直是晚上／白天，書房和院子也一樣。', [['clock', '跟著時間'], ['night', '永夜'], ['day', '永晝']])}
     ${selRow('furiState', '振假名', '「熟練的字不標」：已經記熟的字不標讀音。', [['all', '全部顯示'], ['smart', '熟練的字不標'], ['off', '全部隱藏']])}
     <div class="setting-row kbd-hint"><div><div class="label">鍵盤快速鍵</div><div class="hint">練習：1–4 作答、Enter 下一題、R 發音、T 顯示中文、F 振假名、Esc 結束。字卡：Space 翻面、1–4 評分。</div></div></div>
     <details class="disclose mt-3">
@@ -9018,7 +9172,7 @@ Object.assign(CHANGE_ACTIONS, {
     if (k === 'retention') v = Number(v) || 0.9;
     state.settings[k] = v;
     saveState();
-    if (k === 'theme') applyTheme();
+    if (k === 'theme') { if (document.body.classList.contains('scene')) sceneTick(); else applyTheme(); }   // a scene behind the dialog changes too
     if (k === 'furigana') applyFurigana();
     if (k === 'speechRate') { const hint = el.closest('.setting-row').querySelector('.hint'); if (hint) hint.textContent = `目前 ${Number(v).toFixed(2)} 倍`; }
     if (modalOpen()) settingsDirty = true; else route();
@@ -9361,6 +9515,7 @@ function renderStats(view) {
 
   view.innerHTML = `
     <div class="page-head"><div><div class="page-title">學習分析</div></div></div>
+    ${todayCardHtml()}
     ${progressCard}
     ${weekCardHtml(weekSummary())}
     <div class="grid grid-4">
@@ -9465,6 +9620,7 @@ function grammarPreviewHtml(e, pct) {
       ${prBarHtml(pct)}
       ${prCountHtml()}
     </div>
+    ${sessionNoteHtml()}
     <div class="q-card">
       <div class="q-label"><span>新文法 · ${esc(u.short)}</span><span class="chip chip-accent">新</span></div>
       <div class="q-instr">先看這一段講義，接下來的題目會考這裡的用法。</div>
@@ -10674,16 +10830,11 @@ async function requestPersistence() {
 }
 
 // ---------- moved: the site left GitHub Pages for nihongoquest.app in 1.0.39 ----------
-// Each address keeps its own data, so the old one says where to go; progress follows through the cloud login
+// Each address keeps its own data, so the old one says where to go (a letter in the mailbox); progress follows through the cloud login
 const OLD_SITE_HOST = 'fender8185.github.io';
 const NEW_SITE_URL = 'https://nihongoquest.app/';
 let OLD_SITE_FORCE = null;   // tests: true／false instead of looking at the address
 function onOldSite() { return OLD_SITE_FORCE !== null ? OLD_SITE_FORCE : location.host === OLD_SITE_HOST; }
-function movedBannerHtml() {
-  if (!onOldSite()) return '';
-  return `<div class="banner warn moved-banner"><div class="grow"><b>網站搬家了：新網址是 nihongoquest.app</b><br>在新網址用同一個 Email 登入雲端同步，進度就會接上；還沒登入過的，先在這裡登入一次（設定 › 資料）。加到主畫面的，新網址要重新加一次；AI 的金鑰也要重新貼。</div>
-    <div class="row-wrap"><a class="btn btn-sm btn-primary" href="${NEW_SITE_URL}#/today" target="_blank" rel="noopener">打開新網址</a></div></div>`;
-}
 
 // ---------- install (add to home screen) ----------
 // The app is a PWA: on a phone it is far better installed (full screen, one-page home, offline). Nothing in a browser
@@ -10725,18 +10876,76 @@ function installGuideHtml(info = installInfo()) {
     ${info.canPrompt ? '<button type="button" class="btn btn-sm btn-primary mt-2" data-act="install-prompt">安裝</button>' : ''}
   </div>`;
 }
-function installBannerHtml() {
-  const info = installInfo();
-  if (info.standalone || !info.touch) return '';
-  try { if (localStorage.getItem('nq_install_hint')) return ''; } catch (e) { /* no storage: show it */ }
-  return `<div class="banner compact install-banner"><div class="grow">加到主畫面會更好用：全螢幕、首頁剛好一頁、離線也能開。</div>
-    <div class="row-wrap">${info.canPrompt ? '<button type="button" class="btn btn-sm btn-primary" data-act="install-prompt">安裝</button>' : '<button type="button" class="btn btn-sm btn-primary" data-act="install-how">怎麼做</button>'}<button type="button" class="btn btn-sm btn-ghost" data-act="install-dismiss">知道了</button></div></div>`;
-}
 Object.assign(ACTIONS, {
   'install-how': () => openModal('加到主畫面', installGuideHtml(), { width: 520 }),
   'copy-url': async () => { const url = appUrl(); try { await navigator.clipboard.writeText(url); toast('已複製網址，開 Safari 貼上。'); } catch (e) { prompt('複製這個網址，到 Safari 貼上：', url); } },
-  'install-dismiss': () => { try { localStorage.setItem('nq_install_hint', todayStr()); } catch (e) { /* ignore */ } route(); },
   'install-prompt': async () => { const p = deferredInstall; if (!p) return; deferredInstall = null; try { p.prompt(); await p.userChoice; } catch (e) { /* dismissed */ } route(); }
+});
+
+// ---------- the mailbox (test build): what the 今日 page said on banners, as letters in the mailbox by the house ----------
+// The letters are worked out when asked: the site move (on the old address; it stays), 書房's welcome, 第 0 週 for a beginner,
+// 加到主畫面 on a phone's browser, and the notices kept in the state. 知道了 puts one away for good. Inside, the door's tag counts
+// them and its dot glows; a letter this device has not been told about yet brings the 「外面信箱有新信」 hint once.
+function storedFlag(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function letters() {
+  const out = [], n = Object.keys(state.srs).length;
+  if (onOldSite()) out.push({ id: 'moved', keep: true, title: '網站搬家了', body: '新網址是 nihongoquest.app。在新網址用同一個 Email 登入雲端同步，進度就會接上；還沒登入過的，先在這裡登入一次（設定 › 資料）。加到主畫面的，新網址要重新加一次。',
+    acts: `<a class="btn btn-sm btn-primary" href="${NEW_SITE_URL}#/today" target="_blank" rel="noopener">打開新網址</a>` });
+  if (!storedFlag('nq_letter_room')) out.push({ id: 'room', title: '歡迎來到書房', body: `每個功能都是房間裡的一樣東西：<ul>
+      <li>書桌：筆記本是今日練習，耳機是聽一輪</li>
+      <li>書櫃是課程，最上面有目前單元；書櫃上層的卡片盒是單字</li>
+      <li>往右看：抽屜櫃是錯題本；軟木板是學習分析，最上面有今天的範圍和說明；日曆是模擬考，紅色印章是連續天數</li>
+      <li>右上角的齒輪是設定</li>
+      <li>顏色跟著時間走，想固定可以到設定 › 外觀選永夜或永晝</li></ul>` });
+  if ((state.startChosen || n) && !state.introSeen && n < 40) out.push({ id: 'intro', title: '先看「第 0 週」', body: '假名和最基本的句型都在「第 0 週」，開始之前看一遍會輕鬆很多。',
+    acts: '<button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button>' });
+  const info = installInfo();
+  if (!info.standalone && info.touch && !storedFlag('nq_install_hint')) out.push({ id: 'install', title: '加到主畫面', body: '加到主畫面會更好用：全螢幕、打開就是書房、離線也能練。',
+    acts: info.canPrompt ? '<button type="button" class="btn btn-sm btn-primary" data-act="install-prompt">安裝</button>' : '<button type="button" class="btn btn-sm btn-primary" data-act="install-how">怎麼做</button>' });
+  (state.notices || []).forEach(x => out.push({ id: 'notice:' + x.id, title: '通知', body: x.lines.map(esc).join('<br>') }));
+  return out;
+}
+function mailCount() { return letters().length; }
+function mailSeen() { try { return JSON.parse(localStorage.getItem('nq_mail_seen') || '[]'); } catch (e) { return []; } }
+function markMailSeen(ids) { try { localStorage.setItem('nq_mail_seen', JSON.stringify([...new Set(mailSeen().concat(ids))].slice(-40))); } catch (e) { /* ignore */ } }
+function newMail() {   // the letters this device has not been told about (a brand-new learner picks a start first)
+  if (!state.startChosen && !Object.keys(state.srs).length) return [];
+  const seen = mailSeen(); return letters().map(l => l.id).filter(id => !seen.includes(id));
+}
+function lettersHtml() {
+  return `<div class="letters">${letters().map(l => `<div class="letter" data-letter="${esc(l.id)}">
+      <div class="letter-title">${esc(l.title)}</div>
+      <div class="letter-body">${l.body}</div>
+      <div class="row-wrap mt-3">${l.acts || ''}${l.keep ? '' : `<button type="button" class="btn btn-sm" data-act="letter-done" data-id="${esc(l.id)}">知道了</button>`}</div>
+    </div>`).join('')}</div>`;
+}
+function openLetters() {
+  const ids = letters().map(l => l.id);
+  if (!ids.length) { toast('信箱是空的'); return; }
+  markMailSeen(ids);
+  openModal('信箱', lettersHtml(), { width: 460, noFocus: true });
+}
+// the yard's mailbox follows the letters in place: the flag, the tag
+function mailboxLevel() {
+  const box = document.querySelector('#view .yard .mailbox'); if (!box) return;
+  const n = mailCount(), tag = box.querySelector('.tag');
+  box.classList.toggle('has', n > 0); tag.textContent = n ? `信箱・${n} 封信` : '信箱';
+}
+Object.assign(ACTIONS, {
+  mailbox: (el) => {   // its door drops open, then the letters
+    const box = el.closest('.mailbox');
+    if (!box || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { openLetters(); return; }
+    box.classList.add('open'); setTimeout(openLetters, 320); setTimeout(() => box.classList.remove('open'), 900);
+  },
+  'letter-done': (el) => {
+    const id = el.dataset.id;
+    if (id === 'room' || id === 'install') { try { localStorage.setItem(id === 'room' ? 'nq_letter_room' : 'nq_install_hint', todayStr()); } catch (e) { /* ignore */ } }
+    else if (id === 'intro') { state.introSeen = true; saveState(); }
+    else if (id.startsWith('notice:')) { state.notices = (state.notices || []).filter(x => x.id !== id.slice(7)); saveState(); }
+    if (mailCount()) document.getElementById('modalBody').innerHTML = lettersHtml(); else closeModal();
+    mailboxLevel();
+  },
+  'mail-hint': (el) => ROOM.out(el.closest('.study'))
 });
 
 // ---- 84_store.js ----
@@ -11023,10 +11232,6 @@ async function init() {
   window.addEventListener('hashchange', route);
   if ('speechSynthesis' in window) {
     window.speechSynthesis.onvoiceschanged = () => { if (!modalOpen() && currentRoute().name === 'today' && !SESSION) route(); };
-  }
-  if (window.matchMedia) {
-    const mq = window.matchMedia('(prefers-color-scheme: light)');
-    if (mq.addEventListener) mq.addEventListener('change', () => { if (state.settings.theme === 'auto') applyTheme(); });
   }
   setInterval(checkDayRollover, 60000);
   // a phone keeps the installed app suspended: back in front after a while, catch up on what an offline run missed
