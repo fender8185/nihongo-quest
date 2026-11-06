@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="theme-color" content="#0e0f13" />
+<meta name="theme-color" content="#23253f" />
 <link rel="manifest" href="./manifest.webmanifest" />
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -18,30 +18,36 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
 <style>
+/* test build: the pages wear 書房's colours — by night its navy under the lamps, by day warm paper; the indigo is the one of the
+   room's 今日練習／聽一輪 tags. The last group is for the room's things on the pages (課程's shelf and course books, ribbons). */
 :root, [data-theme="dark"] {
-  --bg: #0e0f13; --bg-elev: #15161b; --bg-elev-2: #1c1d24; --bg-sunken: #0a0b0e; --bg-hover: #20222a;
-  --line: #262830; --line-2: #343743;
-  --fg: #ecedf1; --fg-2: #b3b6c3; --fg-3: #80838f;
-  --accent: #8b9cff; --accent-fg: #0d0f1a; --accent-soft: rgba(139,156,255,.14); --accent-line: rgba(139,156,255,.45);
-  --ok: #34d399; --ok-soft: rgba(52,211,153,.12); --ok-line: rgba(52,211,153,.5);
-  --bad: #fb7185; --bad-soft: rgba(251,113,133,.12); --bad-line: rgba(251,113,133,.5);
-  --warn: #fbbf24; --warn-soft: rgba(251,191,36,.12);
-  --heat-0: #1c1d24; --heat-1: #14432f; --heat-2: #17694a; --heat-3: #1f9a68; --heat-4: #43d39a; --gauge-seen: #17694a;
-  --shadow: 0 1px 2px rgba(0,0,0,.45), 0 8px 24px -12px rgba(0,0,0,.5);
-  --ruby: #9ea1ad;
+  --bg: #23253f; --bg-elev: #2d2f52; --bg-elev-2: #34375e; --bg-sunken: #1d1f36; --bg-hover: #383b64;
+  --line: #3a3d66; --line-2: #4a4d7a;
+  --fg: #ecebf6; --fg-2: #c3c1dc; --fg-3: #9e9cc2;
+  --accent: #9aa6ff; --accent-fg: #14162e; --accent-soft: rgba(154,166,255,.16); --accent-line: rgba(154,166,255,.5);
+  --ok: #7cc98e; --ok-soft: rgba(124,201,142,.14); --ok-line: rgba(124,201,142,.5);
+  --bad: #ff8a7a; --bad-soft: rgba(255,138,122,.14); --bad-line: rgba(255,138,122,.5);
+  --warn: #f4c15d; --warn-soft: rgba(244,193,93,.14);
+  --heat-0: #34375e; --heat-1: #2f4a45; --heat-2: #3f6a52; --heat-3: #5a9a6c; --heat-4: #86cf92; --gauge-seen: #3f6a52;
+  --shadow: 0 1px 2px rgba(0,0,0,.35), 0 10px 24px -14px rgba(0,0,0,.6);
+  --ruby: #a9a7c8;
+  --shelf: #2b2a44; --wood: #5a4535; --wood-edge: #46362a; --label: #e6dcc4; --label-ink: #2f2a22; --label-ink-2: #5b5144; --gold: #c9a64f;
+  --cover-keep: 76%; --cover-shade: #1c1e38;
   color-scheme: dark;
 }
 [data-theme="light"] {
-  --bg: #f5f6f8; --bg-elev: #ffffff; --bg-elev-2: #f0f1f4; --bg-sunken: #e9ebef; --bg-hover: #eceef2;
-  --line: #e1e3e9; --line-2: #cfd2da;
-  --fg: #16171c; --fg-2: #474a55; --fg-3: #767986;
-  --accent: #4b57d1; --accent-fg: #ffffff; --accent-soft: rgba(75,87,209,.09); --accent-line: rgba(75,87,209,.45);
-  --ok: #04885b; --ok-soft: rgba(4,136,91,.09); --ok-line: rgba(4,136,91,.45);
-  --bad: #d7264f; --bad-soft: rgba(215,38,79,.08); --bad-line: rgba(215,38,79,.45);
-  --warn: #a35d00; --warn-soft: rgba(217,119,6,.1);
-  --heat-0: #e6e8ed; --heat-1: #b9e8cf; --heat-2: #74cfa1; --heat-3: #2fa96f; --heat-4: #0b7a4a; --gauge-seen: #4dbd8a;
-  --shadow: 0 1px 2px rgba(20,22,30,.06), 0 8px 24px -14px rgba(20,22,30,.18);
-  --ruby: #6b6e79;
+  --bg: #f3ebde; --bg-elev: #fffaf2; --bg-elev-2: #f7f0e3; --bg-sunken: #ece2d0; --bg-hover: #f1e8d8;
+  --line: #e8dcc6; --line-2: #d9c9ab;
+  --fg: #3a3328; --fg-2: #5f5443; --fg-3: #726550;
+  --accent: #5262e8; --accent-fg: #ffffff; --accent-soft: rgba(82,98,232,.1); --accent-line: rgba(82,98,232,.45);
+  --ok: #3f7a4a; --ok-soft: rgba(79,128,92,.13); --ok-line: rgba(79,128,92,.5);
+  --bad: #c2412f; --bad-soft: rgba(200,85,63,.11); --bad-line: rgba(200,85,63,.45);
+  --warn: #9a5b00; --warn-soft: rgba(201,140,40,.14);
+  --heat-0: #ebe2d1; --heat-1: #cfe0c2; --heat-2: #9cc58f; --heat-3: #5f9a6c; --heat-4: #3f7a4a; --gauge-seen: #8fbf86;
+  --shadow: 0 1px 2px rgba(90,70,40,.07), 0 10px 24px -16px rgba(90,70,40,.32);
+  --ruby: #7a6d57;
+  --shelf: #ece1cc; --wood: #c99a63; --wood-edge: #a87843; --label: #f6efdf; --label-ink: #3a3328; --label-ink-2: #6b604d; --gold: #ecc66a;
+  --cover-keep: 100%; --cover-shade: #1c1e38;
   color-scheme: light;
 }
 * { box-sizing: border-box; }
@@ -589,6 +595,43 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .stage-card[open] > summary .card-title::before { transform: rotate(90deg); }
 .stage-card > summary .card-sub { padding-left: 1em; }
 .stage-card:not([open]) > summary { margin-bottom: 0; }
+/* 課程 as 書房's bookcase (test build): the shelf of course books on top, each stage card the cover of its book (a stage not begun
+   waits dashed), ribbons on the current unit and the 目前 card; the covers darken under the night lamps (--cover-keep) */
+.course-shelf { margin: 0 0 18px; padding: 12px 16px 6px; border-radius: 14px; background: var(--shelf); border: 1px solid var(--line); }
+@media (max-width: 900px) { .course-shelf { margin: -16px -16px 16px; border-radius: 0; border-width: 0 0 1px; } }
+[data-theme="dark"] .course-shelf { background: radial-gradient(170px 90px at 74px 62px, rgba(255, 190, 110, .18), rgba(255, 190, 110, 0) 70%), var(--shelf); }   /* the lamp on the books */
+.course-shelf .spines { display: flex; align-items: flex-end; gap: 6px; height: 82px; }
+.course-shelf .board { height: 8px; border-radius: 2px; background: var(--wood); box-shadow: 0 3px 0 var(--wood-edge); margin-bottom: 3px; }
+.course-shelf .daruma { width: 34px; height: 38px; flex: none; }
+[data-theme="dark"] .course-shelf .daruma { filter: brightness(.78); }
+.spine { position: relative; flex: none; width: 34px; height: var(--h); padding: 7px 0 0; border: 1.5px dashed var(--line-2); border-radius: 3px 3px 1px 1px; background: none; font: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
+.spine.on { border: 0; background: color-mix(in srgb, var(--book) var(--cover-keep), var(--cover-shade)); box-shadow: inset -3px 0 0 rgba(0, 0, 0, .12); }
+.spine.cur { height: calc(var(--h) + 10px); box-shadow: inset -3px 0 0 rgba(0, 0, 0, .14), 0 6px 12px -6px rgba(60, 30, 15, .6); }
+.spine .lab { width: 22px; padding: 4px 0; border-radius: 2px; background: var(--label); color: var(--label-ink); font-size: 12px; font-weight: 700; line-height: 1.15; display: flex; justify-content: center; }
+.spine .lab.v { writing-mode: vertical-rl; font-size: 11px; letter-spacing: 1px; align-items: center; }
+.spine i { width: 24px; height: 2px; margin-top: auto; background: var(--gold); }   /* two gilt lines near the foot */
+.spine i + i { margin: 3px 0 7px; }
+.spine .num { font-size: 12px; font-weight: 700; color: var(--fg-3); }
+.spine .rib { position: absolute; top: -4px; right: 3px; width: 10px; height: 22px; fill: var(--gold); }
+.spine:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.stage-card.book { padding: 0; overflow: hidden; }
+.stage-card.book > summary { margin: 0; padding: 9px 10px; background: color-mix(in srgb, var(--book) var(--cover-keep), var(--cover-shade)); box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .1); }
+.stage-card.book > :not(summary) { margin-left: 16px; margin-right: 16px; }
+.stage-card.book > .stage-foot { margin-bottom: 16px; }
+.stage-card.book > .list { margin-top: 8px; margin-left: 6px; margin-right: 6px; }
+.stage-label { flex: 1; min-width: 0; }
+.stage-card.book .stage-label { background: var(--label); border-radius: 6px; padding: 8px 12px; }
+.stage-card.book .stage-label .card-title { color: var(--label-ink); }
+.stage-card.book .stage-label .card-title::before, .stage-card.book .stage-label .card-sub { color: var(--label-ink-2); }
+.stage-card.book .stage-state { flex: none; padding: 3px 10px; border-radius: 99px; background: var(--label); color: var(--label-ink); font-size: 13px; font-weight: 700; }
+.stage-card.book .stage-state .muted { color: var(--label-ink); }
+.stage-card.book .stage-state .chip { padding: 0; border: 0; background: none; color: #3f6338; font-weight: 700; }
+.stage-card.unbegun { background: none; border: 1.5px dashed var(--line-2); box-shadow: none; }
+.now-card { position: relative; }
+.now-card > .ribbon { position: absolute; top: -1px; right: 20px; width: 16px; height: 30px; fill: color-mix(in srgb, var(--book) var(--cover-keep), var(--cover-shade)); }
+.now-card .label, .now-card .card-title { padding-right: 30px; }
+.unit-row.current { position: relative; padding-right: 32px; }
+.unit-row > .ribbon { position: absolute; top: -1px; right: 10px; width: 14px; height: 26px; fill: color-mix(in srgb, var(--book) var(--cover-keep), var(--cover-shade)); }
 .stage-state { flex: none; font-size: 13px; }
 .lesson h3 { font-size: 16px; margin: 18px 0 6px; }
 .lesson .rule { display: inline-block; font-size: 13px; color: var(--fg-2); background: var(--bg-sunken); border: 1px solid var(--line); padding: 4px 10px; border-radius: 8px; margin: 2px 0 8px; }
@@ -5311,7 +5354,7 @@ function midQuestions() { const r = currentRoute(); return r.name === 'practice'
 function themeColor() {
   const meta = document.querySelector('meta[name="theme-color"]'); if (!meta) return;
   const b = document.body.classList;
-  if (!b.contains('scene')) { meta.setAttribute('content', document.documentElement.getAttribute('data-theme') === 'light' ? '#f5f6f8' : '#0e0f13'); return; }
+  if (!b.contains('scene')) { meta.setAttribute('content', document.documentElement.getAttribute('data-theme') === 'light' ? '#f3ebde' : '#23253f'); return; }
   const c = sceneClock(lightHour());
   meta.setAttribute('content', b.contains('outside') ? mixHex(mixHex('#05060f', '#3d8cdb', c.day), '#e8875f', c.warm * 0.5) : mixHex('#3a3c63', '#f2e8d8', c.day));
 }
@@ -5668,6 +5711,16 @@ function yardHtml(pct) {
 // four places along it (the door; the bookcase and the desk; the chest of drawers; the bed) and a swipe slides between them.
 // ROOM.html draws it, ROOM.mount sets the camera and the swipes once it is on the page, ROOM.level follows today's progress in
 // place, and ROOM.enter／pull／door play a thing's way into its page.
+// The course books, one per stage (入門, 第一…第五階段; N2/N1 will add stages): their colours and spine labels, on 書房's shelf
+// and on 課程 (its shelf, the stage cards as their covers)
+const BOOK_COLORS = ['#e3907f', '#c8553f', '#79a46c', '#4f805c', '#5f88b2', '#3e5f8e', '#8b6aa8', '#6b4d8a', '#c79a3a', '#9b7424'];
+const BOOK_LABELS = ['入門', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+const bookColor = (i) => BOOK_COLORS[i % BOOK_COLORS.length];
+// the books on the shelf: one for every stage begun or passed (n), and the stage being studied (cur)
+function shelfBooks() {
+  const cur = stageIndex(currentStageId());
+  return { n: STAGES.reduce((m, g, i) => (((state.stageTests || {})[g.id] || []).some((r) => r.passed) ? Math.max(m, i + 1) : m), cur + 1), cur, skip: -1 };   // an old save may have no stageTests
+}
 const ROOM = (() => {
   const S = 40, RW = 24, RD = 16, RH = 19, WAIN = 3.2;
   const P = (x, y, z = 0) => [(x - y) * S, (x + y) * S / 2 - z * S];
@@ -5930,13 +5983,11 @@ const ROOM = (() => {
   // the course books: their shelf, a book's width and its slot (the first at the near end), at most six for now; a colour per level
   // (入門, N5, N4 twice, N3 twice, then N2 and N1 to come) and the stage on a label on the spine
   const SB = { k: 3, w: 0.29, slot: 0.31, max: 6 };
-  const SB_COLOR = ['#e3907f', '#c8553f', '#79a46c', '#4f805c', '#5f88b2', '#3e5f8e', '#8b6aa8', '#6b4d8a', '#c79a3a', '#9b7424'];
-  const SB_LABEL = ['入門', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
   const bookSlot = (i) => { const y1 = SHELF_Y[1] - i * SB.slot; return [q2(y1 - SB.w), q2(y1)]; };
   function courseBook(i, z0, cur) {   // the stage being studied sticks out a little
     const [y0, y1] = bookSlot(i), x1 = cur ? 1.28 : 1.16, hh = [1.1, 1.2, 1.15, 1.22, 1.13, 1.18][i % 6], ym = q2((y0 + y1) / 2);
-    const lab = SB_LABEL[i] || '', top = q2(-z0 - hh + 0.14), at = [x1, ym, z0 + hh - 0.3];
-    return box(SB_COLOR[i % SB_COLOR.length], 0.2, y0, z0, x1, y1, z0 + hh, { t: '#efe6d2' }) + `<g transform="${onX(x1 + 0.002)}">
+    const lab = BOOK_LABELS[i] || '', top = q2(-z0 - hh + 0.14), at = [x1, ym, z0 + hh - 0.3];
+    return box(bookColor(i), 0.2, y0, z0, x1, y1, z0 + hh, { t: '#efe6d2' }) + `<g transform="${onX(x1 + 0.002)}">
       <rect x="${q2(-y1 + 0.045)}" y="${top}" width="${q2(SB.w - 0.09)}" height="${lab.length > 1 ? 0.5 : 0.3}" rx=".02" ${F('#f6efdf', 'x', at)}/>
       ${[...lab].map((ch, j) => `<text x="${-ym}" y="${q2(top + 0.225 + j * 0.22)}" font-size=".18" font-weight="700" text-anchor="middle" ${F(C.ink, 'x', at)}>${ch}</text>`).join('')}
       <path d="M${q2(-y1 + 0.04)} ${q2(-z0 - 0.2)} H${q2(-y0 - 0.04)} M${q2(-y1 + 0.04)} ${q2(-z0 - 0.27)} H${q2(-y0 - 0.04)}" stroke="#ecc66a" stroke-opacity=".85" stroke-width=".022"/></g>`;
@@ -6357,11 +6408,6 @@ const ROOM = (() => {
       ${nightTableArt()}
       ${bedArt()}
     </svg>`;
-  }
-  // the course books on the shelf: one for every stage begun or passed, and the stage being studied
-  function shelfBooks() {
-    const cur = stageIndex(currentStageId());
-    return { n: STAGES.reduce((m, g, i) => ((state.stageTests[g.id] || []).some((r) => r.passed) ? Math.max(m, i + 1) : m), cur + 1), cur, skip: -1 };
   }
 
   // ===== the things you can tap; view: the stop each belongs to, route or act: where it leads =====
@@ -6930,20 +6976,34 @@ function stageStateHtml(rows) {
   return `<span class="muted num">${Math.round(rows.reduce((a, r) => a + r.pct, 0) / rows.length)}%</span>`;
 }
 const courseOpen = {};   // stage id → open, for the cards opened or closed by hand: kept while the app is open, only the current stage open again after a reload
+// 課程 wears 書房's bookcase (test build): the shelf of course books along its top — a stage begun or passed stands in its colour
+// (the one being studied taller, with a ribbon), the rest wait as dashed outlines, the shelf's daruma at the end; a tap opens that
+// stage below. Each stage card is that book's cover; the current unit and the 目前 card carry its ribbon.
+const ribbonSvg = () => '<svg class="ribbon" viewBox="0 0 14 26" aria-hidden="true"><path d="M0 0H14V26L7 20L0 26Z"/></svg>';
+const DARUMA = '<svg class="daruma" viewBox="0 0 34 38" aria-hidden="true"><ellipse cx="17" cy="22" rx="15" ry="15.5" fill="#c94436"/><ellipse cx="17" cy="19" rx="9.5" ry="8.5" fill="#f6ead6"/><circle cx="13.5" cy="18" r="2.2" fill="#2f2a22"/><circle cx="20.5" cy="18" r="2.2" fill="#f6ead6" stroke="#2f2a22" stroke-width="1.2"/><path d="M13 23.5q4 2.4 8 0" stroke="#2f2a22" stroke-width="1.3" fill="none" stroke-linecap="round"/><path d="M9 31q8 4 16 0" stroke="#e8c05a" stroke-width="2" fill="none" stroke-linecap="round"/></svg>';
+function courseShelfHtml() {
+  const bk = shelfBooks();
+  const spine = (st, i) => {
+    const on = i < bk.n, cur = i === bk.cur, lab = BOOK_LABELS[i] || String(i + 1);
+    return `<button type="button" class="spine${on ? ' on' : ''}${cur ? ' cur' : ''}" style="--book:${bookColor(i)};--h:${[66, 70, 72, 66, 70, 68][i % 6]}px" data-act="course-shelf" data-stage="${st.id}" aria-label="${esc(st.title)}${cur ? '（目前）' : on ? '' : '（還沒開始）'}">
+      ${on ? `<span class="lab${lab.length > 1 ? ' v' : ''}">${lab}</span><i></i><i></i>` : `<span class="num">${lab}</span>`}${cur ? '<svg class="rib" viewBox="0 0 10 22" aria-hidden="true"><path d="M0 0H10V22L5 17L0 22Z"/></svg>' : ''}</button>`;
+  };
+  return `<div class="course-shelf"><div class="spines">${STAGES.map(spine).join('')}<span class="grow"></span>${DARUMA}</div><div class="board"></div></div>`;
+}
 // 課程's first card (test build; it was the 今日 card's 目前單元 fold): in 入門, its counts and, once its words are all seen,
 // how it ends; after it, the current unit — its bar, today's reviews in it, 看講義／練習本單元, 前往下一單元 once it is well known
 function courseNowHtml() {
   if (inPreStage()) {
     const pw = REG.vocab.filter(v => v.lv === 'PRE_N5'), m0 = unitItems('m0'), seen = (l) => l.filter(x => state.srs[x.key]).length;
-    return `<div class="card now-card">
+    return `<div class="card now-card" style="--book:${bookColor(0)}">${ribbonSvg()}
       <div class="label">目前</div><div class="card-title">入門</div>
       <div class="small muted mt-2 legs"><span class="leg">假名 ${seen(REG.kana)}／${REG.kana.length}</span><span class="leg">單字 ${seen(pw)}／${pw.length}</span><span class="leg">句型 ${seen(m0)}／${m0.length}</span></div>
       ${preDone() ? `<div class="banner mt-3"><div class="grow">入門單字都看過了；最近正確率 ${Math.round((recentAccuracy() || 0) * 100)}%，到 ${Math.round(PRE_PASS_ACC * 100)}% 就會自動進入第 1 週。</div></div>` : ''}
     </div>`;
   }
   const cur = unitById(state.currentUnit), us = unitStats(cur.id);
-  return `<div class="card now-card">
-    <div class="row between mb-2"><div><div class="label">目前單元</div><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div></div><span class="chip">${esc(cur.lv)}</span></div>
+  return `<div class="card now-card" style="--book:${bookColor(stageIndex(currentStageId()))}">${ribbonSvg()}
+    <div class="mb-2"><div class="label">目前單元・${esc(cur.lv)}</div><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div></div>
     <div class="row">${unitBarHtml(us, 'grow', true)}<span class="small num muted">${us.pct}%</span></div>
     <div class="small muted mt-2 legs"><span class="leg">已學 ${us.ok3 + us.ok1 + us.seen0}／${us.total} 題</span>${us.due ? `<span class="leg">今天要複習 ${us.due} 題</span>` : ''}</div>
     ${us.pct >= 85 && !us.done ? `<div class="banner mt-3"><div class="grow">這個單元已經很熟了，可以前往下一單元。</div><button type="button" class="btn btn-sm btn-primary" data-act="advance-unit">前往下一單元</button></div>` : ''}
@@ -6958,6 +7018,7 @@ function renderCourse(view) {
   const cur = state.currentUnit;
   const pre = inPreStage();
   const curStage = currentStageId();
+  const bk = shelfBooks();   // the stages begun: their cards are books, the rest dashed outlines
   const is = unitStats('m0');
   const introRow = `<div class="unit-row" data-act="nav" data-route="#/course/intro" role="button" tabindex="0">
         <div class="unit-weeks">${esc(INTRO_UNIT.weeks)}</div>
@@ -6972,7 +7033,7 @@ function renderCourse(view) {
       const kanji = REG.kanji.filter(k => k.lv === 'PRE_N5'); const kanjiSeen = kanji.filter(k => state.srs[k.key]).length;
       const total = REG.kana.length + words.length + kanji.length; const seen = kanaSeen + wordsSeen + kanjiSeen; const pct = total ? Math.floor(seen / total * 100) : 0;
       const status = seen >= total ? '<span class="chip chip-ok">完成</span>' : pre ? '<span class="chip chip-accent">目前</span>' : seen ? '<span class="chip">進行中</span>' : '';
-      rows = `<div class="list">${introRow}<div class="unit-row ${pre ? 'current' : ''}" data-act="nav" data-route="#/vocab/level?lv=PRE_N5" role="button" tabindex="0">
+      rows = `<div class="list">${introRow}<div class="unit-row ${pre ? 'current' : ''}" data-act="nav" data-route="#/vocab/level?lv=PRE_N5" role="button" tabindex="0">${pre ? ribbonSvg() : ''}
         <div class="unit-weeks">入門</div>
         <div class="grow"><div class="unit-title">假名與入門單字</div><div class="unit-desc">平假名、片假名，以及只用假名寫的基本單字。</div></div>
         <div><div class="row between small"><span>${status}</span><span class="muted num">${pct}%</span></div>${segBarHtml(total, [['learned', seen]], 'thin mt-1')}</div>
@@ -6986,7 +7047,7 @@ function renderCourse(view) {
         parts.push({ done: s.done, pct: s.done ? 100 : s.pct });
         const isCur = !pre && u.id === cur;   // 「目前」 appears once on the page: here in the main course, on the 入門 card before it
         const status = s.done ? '<span class="chip chip-ok">完成</span>' : isCur ? '<span class="chip chip-accent">目前</span>' : s.seen ? '<span class="chip">進行中</span>' : '';
-        return `<div class="unit-row ${isCur ? 'current' : ''}" data-act="nav" data-route="#/course/${u.id}" role="button" tabindex="0">
+        return `<div class="unit-row ${isCur ? 'current' : ''}" data-act="nav" data-route="#/course/${u.id}" role="button" tabindex="0">${isCur ? ribbonSvg() : ''}
         <div class="unit-weeks">${esc(u.weeks)}</div>
         <div class="grow"><div class="unit-title">${esc(u.title)}</div><div class="unit-desc">${esc(u.desc)}</div></div>
         <div><div class="row between small"><span>${status}</span><span class="muted num">${s.done ? 100 : s.pct}%</span></div>${unitBarHtml(s, 'thin mt-1')}</div>
@@ -6995,10 +7056,12 @@ function renderCourse(view) {
     }
     const isCurStage = st.id === 'pre' && pre;
     const open = st.id in courseOpen ? courseOpen[st.id] : st.id === curStage;
-    return `<details class="card stage-card ${st.id === 'pre' ? 'pre-card' : ''} ${isCurStage ? 'current' : ''}" data-stage="${st.id}" ${open ? 'open' : ''}><summary class="card-head"><div><div class="card-title">${esc(st.title)}</div><div class="card-sub">${esc(st.sub)}</div></div><span class="stage-state">${stageStateHtml(parts)}</span></summary>
+    const i = STAGES.indexOf(st), begun = i < bk.n;   // a stage begun is its book's cover; one not begun yet waits dashed
+    return `<details class="card stage-card ${begun ? 'book' : 'unbegun'} ${st.id === 'pre' ? 'pre-card' : ''} ${isCurStage ? 'current' : ''}" data-stage="${st.id}" style="--book:${bookColor(i)}" ${open ? 'open' : ''}><summary class="card-head"><div class="stage-label"><div class="card-title">${esc(st.title)}</div><div class="card-sub">${esc(st.sub)}${begun ? '' : '・還沒開始'}</div></div><span class="stage-state">${stageStateHtml(parts)}</span></summary>
       ${rows}${stageFootHtml(st.id, extra)}</details>`;
   }).join('');
   view.innerHTML = `
+    ${courseShelfHtml()}
     <div class="page-head">
       <div><div class="page-title">課程</div><div class="page-sub">整體完成度 ${cp.pct}%</div></div>
       <button type="button" class="btn" data-act="open-level">依程度選擇起點</button>
@@ -7211,6 +7274,10 @@ function applyStartUnit(unit, markPrev, experienced = false) {
 
 Object.assign(ACTIONS, {
   'set-current': (el) => { state.currentUnit = el.dataset.unit; saveState(); toast(`目前單元：${unitById(el.dataset.unit).weeks}`); route(); },
+  'course-shelf': (el) => {   // a book on 課程's shelf: its stage opens below and comes into view
+    const d = document.querySelector(`#view details.stage-card[data-stage="${el.dataset.stage}"]`); if (!d) return;
+    d.open = true; courseOpen[el.dataset.stage] = true; scrollBelowTopbar(d);
+  },
   'toggle-done': (el) => {
     const id = el.dataset.unit;
     if (state.completedUnits.includes(id)) state.completedUnits = state.completedUnits.filter(x => x !== id);
