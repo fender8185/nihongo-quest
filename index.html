@@ -339,11 +339,11 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .w-sky .wt-day { inset: 0; background: linear-gradient(#5aa3e6, #bfe2f6); opacity: var(--day); }
 .w-sky .wt-warm { inset: 0; background: linear-gradient(to top, #ffb36b, #ff8a7a 35%, rgba(150, 96, 200, .45) 70%, transparent); opacity: var(--warm); }
 .w-sky .w-night { inset: 0; opacity: calc(1 - var(--day)); } .w-sky .w-day { inset: 0; opacity: var(--day); }
-.w-sky .w-moon { left: 58%; top: 14%; width: 20%; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 5px -2px 0 0 #f6f1e0; transform: rotate(-20deg); filter: drop-shadow(0 0 5px rgba(255, 246, 220, .55)); }
-.w-sky .w-star { width: 2px; height: 2px; border-radius: 50%; background: #fff; animation: twinkle var(--d) ease-in-out var(--w) infinite alternate; }
-.w-sky .w-cloud { left: 0; width: 46%; height: 10%; border-radius: 99px; background: rgba(255, 255, 255, .95); animation: wcloud var(--d) linear var(--w) infinite; }
+.w-sky .w-moon { left: 58%; top: 14%; width: 20%; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 5px -2px 0 0 #f6f1e0; transform: rotate(-20deg); }
+.w-sky .w-star { width: 2px; height: 2px; border-radius: 50%; background: #fff; opacity: var(--o); }
+.w-sky .w-cloud { left: -56%; width: 46%; height: 10%; border-radius: 99px; background: rgba(255, 255, 255, .95); animation: wcloud var(--d) steps(160) var(--w) infinite; }   /* left, in small steps: no layer of its own */
 .w-sky .w-cloud::before { content: ''; position: absolute; left: 22%; top: -70%; width: 42%; height: 150%; border-radius: 50%; background: inherit; }
-@keyframes wcloud { from { transform: translateX(-120%); } to { transform: translateX(230%); } }
+@keyframes wcloud { from { left: -56%; } to { left: 106%; } }
 .w-sky .w-hills { left: -10%; right: -10%; bottom: -8%; height: 30%; border-radius: 50% 50% 0 0; background: color-mix(in srgb, #8cc47e calc(var(--day) * 100%), #141640); }
 .w-sky .w-hills2 { left: 30%; right: -30%; bottom: -12%; height: 34%; border-radius: 50% 50% 0 0; background: color-mix(in srgb, #74b06a calc(var(--day) * 100%), #10122f); }
 /* the clock tells the time (sceneTick's --hh／--mm; the second hand runs on its own from the second the room was drawn) */
@@ -374,7 +374,17 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .room .steam { pointer-events: none; }
 .room .steam i { position: absolute; left: 30%; bottom: 0; width: 8px; height: 8px; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, rgba(255, 255, 255, .95) calc(var(--day) * 100%), rgba(230, 232, 255, .6)), transparent); opacity: 0; animation: steam 3.4s ease-out var(--w) infinite; }
 @keyframes steam { 0% { transform: translate(0, 0) scale(.6); opacity: 0; } 30% { opacity: .85; } 100% { transform: translate(4px, -20px) scale(1.7); opacity: 0; } }
-.room .warm-wash { inset: 0; pointer-events: none; background: linear-gradient(160deg, rgba(255, 170, 110, .22), rgba(255, 130, 90, .1)); opacity: var(--warm); }   /* dawn and dusk */
+.study > .warm-wash { position: absolute; inset: 0; z-index: 1; pointer-events: none; background: linear-gradient(160deg, rgba(255, 170, 110, .22), rgba(255, 130, 90, .1)); opacity: var(--warm); }   /* dawn and dusk, over the screen */
+/* layers in the room, so nothing swaps places while the camera slides (iPhone Safari did, with the window's sky): nothing under the
+   big drawing has a layer of its own — the sky behind the window paints with the room — and every overlay above it that moves, or
+   is drawn over one that moves, has one (the lamps' light, the glows and notes, the drawer, the tags), in page order */
+.room .lamp-glow { will-change: opacity; }
+.study .thing { will-change: transform; }
+/* the top drawer of the chest slides out before 錯題本 opens (ROOM.pull) */
+.room .drawer-fx { display: none; overflow: visible; pointer-events: none; will-change: transform; }
+.study.drawer-pull .drawer-fx { display: block; }
+.study.drawer-pull .dw-slide { animation: drawerOut .42s cubic-bezier(.2, .8, .3, 1) both; }
+@keyframes drawerOut { from { transform: translate(var(--dwx), var(--dwy)); } }
 /* the stops: where you are in the room and the way to the next place; a hint until the first move */
 .room-stops { position: absolute; z-index: 3; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; align-items: center; padding: 3px; border-radius: 99px;
   background: color-mix(in srgb, rgba(255, 255, 255, .72) calc(var(--lit) * 100%), rgba(16, 18, 44, .62)); box-shadow: 0 2px 10px rgba(0, 0, 0, .12); color: color-mix(in srgb, #3a3350 calc(var(--lit) * 100%), #e2e5ff); }
@@ -5286,6 +5296,7 @@ const ACTIONS = {
   nav: (el) => go(el.dataset.route),
   settings: () => openSettings(),
   'study-practice': (el) => diveInto(el),
+  'study-drawer': (el) => ROOM.pull(el),
   'enter-house': () => sceneGo('#/today', 'entering'),
   'leave-house': () => sceneGo('#/outside', 'leaving'),
   'close-modal': () => closeModal(),
@@ -5682,7 +5693,7 @@ const ROOM = (() => {
     s += qX(C.wall, x0, -d, 0, z0, z1, 'x') + qZ(C.wall, z0, x0, x1, -d, 0);
     // the sashes in the glass plane, the glare on the glass by day
     s += `<g transform="${onY(-d + 0.05)}">
-      <rect x="${x0}" y="${-z1}" width="${x1 - x0}" height="${z1 - z0}" fill="url(#glass)" class="day-only"/>
+      <rect x="${x0}" y="${-z1 + 0.3}" width="${x1 - x0 - 0.3}" height="${z1 - z0 - 0.3}" fill="url(#glass)" class="day-only"/>
       <path ${F(C.cream, 'y', [xm, -d, 6.6])} fill-rule="evenodd" d="M${x0} ${-z1} H${x1} V${-z0} H${x0} Z M${x0 + 0.13} ${-z1 + 0.13} V${-z0 - 0.13} H${xm - 0.04} V${-z1 + 0.13} Z M${xm + 0.04} ${-z1 + 0.13} V${-z0 - 0.13} H${x1 - 0.13} V${-z1 + 0.13} Z"/>
       <rect x="${x0 + 0.13}" y="${-6.63}" width="${x1 - x0 - 0.26}" height=".07" ${F(C.cream, 'y', [xm, -d, 6.6])}/>
     </g>`;
@@ -5810,7 +5821,9 @@ const ROOM = (() => {
     s += `<path fill-rule="evenodd" ${F(C.oak, 'x', [x1, (y0 + y1) / 2, 3.6])} d="${poly([[x1, y0, 0], [x1, y1, 0], [x1, y1, z1], [x1, y0, z1]])}${holes}"/>`;
     s += `<path class="hl" d="${line([[0, y1, z1], [x1, y1, z1], [x1, y0, z1]])} ${line([[x1, y1, z1], [x1, y1, 0]])}"/>`;
     levels.slice(1, -1).forEach((z) => { s += `<path class="hl" d="${line([[x1, y0 + t, z + 0.09], [x1, y1 - t, z + 0.09]])}"/>`; });
-    s += cardBoxArt();
+    // on top: two books lying flat and a small plant
+    s += box('#5e7f9c', 0.24, 1.25, z1, 1.08, 2.1, z1 + 0.12, { t: '#6f90ad' }) + box('#e0c8a0', 0.3, 1.32, z1 + 0.12, 1.02, 2.02, z1 + 0.22, { t: '#eadcc0' });
+    s += bb(0.66, 2.45, z1, `<ellipse rx="9" ry="3.6" fill="#2b1c12" fill-opacity=".14"/><path ${F(C.pot, 'y', [0.66, 2.5, z1 + 0.2])} d="M-7.5 -1 L-6 -12 H6 L7.5 -1 Z"/><path d="M-6.5 -12 H6.5" class="hl"/><g ${F(C.leaf, 'y', [0.66, 2.45, z1 + 0.6])}><path d="M0 -12 C-9 -15 -13 -24 -10 -30 C-4 -25 -1 -18 0 -12 Z"/><path d="M0 -12 C7 -18 13 -21 17 -19 C13 -13 7 -12 0 -12 Z"/><path d="M0 -12 C0 -22 3 -30 7 -34 C9 -25 5 -17 0 -12 Z"/></g>`);
     return s;
   }
   function shelfRow(k, z0, h, ya, yb) {
@@ -5818,6 +5831,7 @@ const ROOM = (() => {
     const deco = { 1: 'daruma', 3: 'plant' }[k];
     const stop = yb;
     if (deco) y = ya + 0.8;
+    if (k === 4) { s += cardBoxArt(z0, ya); y = ya + 1.0; }   // the top shelf starts with the card box (單字)
     if (k === 2) {   // a stack lying flat, then books
       [[0.18, '#e7dbc6'], [0.14, '#5e7f9c'], [0.17, '#b65d50']].reduce((zz, [th, c]) => { s += box(c, 0.25, ya + 0.02, zz, 1.15, ya + 0.72, zz + th, { t: zz + th > zz + 0.16 ? '#efe6d2' : '#efe6d2' }); return zz + th; }, z0);
       y = ya + 0.85;
@@ -5834,19 +5848,18 @@ const ROOM = (() => {
     if (deco === 'plant') s += bb(0.66, ya + 0.38, z0, `<path ${F('#e9dccb', 'y', [0.7, yb - 0.4, z0])} d="M-8 0 L-7 -10 H7 L8 0 Z"/><g ${F(C.leaf, 'y', [0.7, yb - 0.4, z0 + 0.5])}><path d="M0 -10 C-12 -10 -18 -18 -18 -24 C-10 -22 -4 -17 0 -10 Z"/><path d="M0 -10 C10 -12 17 -20 16 -27 C8 -24 2 -18 0 -10 Z"/><path d="M0 -10 C-3 -20 -1 -30 3 -36 C6 -27 4 -18 0 -10 Z"/></g><g ${F(C.leafDk, 'y', [0.7, yb - 0.4, z0 + 0.5])}><path d="M0 -10 C-6 -14 -11 -14 -14 -12 C-9 -9 -5 -9 0 -10 Z"/></g>`);
     return s;
   }
-  function cardBoxArt() {
-    const z = BC.z1;
-    let s = shadow(0.12, 0.7, 1.25, 2.45, 0.6, z + 0.002);
-    s += box(C.oakDk, 0.2, 0.78, z, 1.12, 2.38, z + 0.5, { t: false });
-    s += qZ(C.shelfIn, z + 0.5, 0.2, 1.12, 0.78, 2.38);
-    for (let i = 0; i < 7; i++) {   // index cards standing in the box, two with tabs
-      const y = 0.92 + i * 0.2, top = z + 0.78 + [0, 0.06, 0.02, 0.09, 0.03, 0.07, 0][i], col = i % 2 ? '#f6f1e6' : C.paper;
-      s += box(col, 0.3, y, z + 0.1, 1.02, y + 0.04, top, { x: false, hl: false });
-      s += `<path class="ln" stroke="#8a6a4a" stroke-opacity=".35" stroke-width=".8" d="${line([[0.3, y + 0.04, top], [1.02, y + 0.04, top]])}"/>`;
-      if (i === 1 || i === 4) s += qY(i === 1 ? '#f2a65a' : '#7fb2d9', y + 0.04, i === 1 ? 0.4 : 0.7, i === 1 ? 0.62 : 0.92, top, top + 0.17, 'y');
+  // the card box (單字) at the near end of the top shelf: index cards standing in it, two with tabs, its walls in front of them
+  function cardBoxArt(z, ya) {
+    const x0 = 0.4, x1 = 1.24, y0 = ya + 0.02, y1 = ya + 0.92, h = 0.3;
+    let s = qZ(C.shelfIn, z + h, x0, x1, y0, y1);
+    for (let i = 0; i < 5; i++) {
+      const y = y0 + 0.12 + i * 0.15, top = z + 0.5 + [0, 0.04, 0.02, 0.06, 0][i], col = i % 2 ? '#f6f1e6' : C.paper;
+      s += box(col, x0 + 0.08, y, z + 0.06, x1 - 0.08, y + 0.035, top, { x: false, hl: false });
+      s += `<path class="ln" stroke="#8a6a4a" stroke-opacity=".35" stroke-width=".8" d="${line([[x0 + 0.08, y + 0.035, top], [x1 - 0.08, y + 0.035, top]])}"/>`;
+      if (i === 1 || i === 3) s += qY(i === 1 ? '#f2a65a' : '#7fb2d9', y + 0.035, i === 1 ? 0.58 : 0.84, i === 1 ? 0.78 : 1.04, top, top + 0.12, 'y');
     }
-    s += qY(C.oak, 2.38, 0.2, 1.12, z, z + 0.42, 'y') + `<path class="hl" d="${line([[0.2, 2.38, z + 0.42], [1.12, 2.38, z + 0.42]])}"/>`;
-    s += `<g transform="${onY(2.381)}"><rect x=".5" y="${-z - 0.33}" width=".32" height=".2" rx=".02" ${F(C.paper, 'y', [0.6, 2.38, z + 0.2])}/><text x=".66" y="${-z - 0.17}" font-size=".15" font-weight="700" text-anchor="middle" fill="#6e4a31">あ</text></g>`;
+    s += box(C.oakDk, x0, y0, z, x1, y1, z + h, { t: false });
+    s += `<g transform="${onX(x1 + 0.002)}"><rect x="${(-y1 + 0.28).toFixed(2)}" y="${(-z - 0.27).toFixed(2)}" width=".3" height=".19" rx=".02" ${F(C.paper, 'x', [x1, (y0 + y1) / 2, z + 0.2])}/><text x="${(-y1 + 0.43).toFixed(2)}" y="${(-z - 0.13).toFixed(2)}" font-size=".14" font-weight="700" text-anchor="middle" fill="#6e4a31">あ</text></g>`;
     return s;
   }
   // ===== furniture in the middle stop =====
@@ -5906,6 +5919,21 @@ const ROOM = (() => {
       <path d="M-29.5 45 V56" class="hl"/><circle cx="-25.5" cy="51" r="2.4" fill="#fff" fill-opacity=".35"/></g>`);
     return s;
   }
+  // the chair, pulled out from the desk a little, its back to the room
+  function chairArt() {
+    const x0 = 2.85, x1 = 3.95, y0 = 2.62, y1 = 3.7, zs = 1.72, g = 0.1;
+    const leg = (x, y) => box(C.oakDk, x, y, 0, x + g, y + g, zs, { hl: false });
+    let s = shadow(x0 - 0.05, y0 - 0.05, x1 + 0.2, y1 + 0.2, 0.7);
+    s += leg(x0 + 0.04, y0 + 0.04) + leg(x1 - 0.04 - g, y0 + 0.04) + leg(x0 + 0.04, y1 - 0.04 - g) + leg(x1 - 0.04 - g, y1 - 0.04 - g);
+    s += box(C.oak, x0, y0, zs, x1, y1, zs + 0.12, { t: C.oakTop, hlv: true });
+    s += box(C.mustard, x0 + 0.08, y0 + 0.08, zs + 0.12, x1 - 0.08, y1 - 0.16, zs + 0.22, { t: false, hl: false });
+    s += `<g transform="${onZ(zs + 0.22)}"><rect x="${x0 + 0.06}" y="${y0 + 0.06}" width="${(x1 - x0 - 0.12).toFixed(2)}" height="${(y1 - y0 - 0.2).toFixed(2)}" rx=".14" ${F(C.mustard, 't', [(x0 + x1) / 2, (y0 + y1) / 2, 2])}/><rect x="${x0 + 0.2}" y="${y0 + 0.2}" width="${(x1 - x0 - 0.4).toFixed(2)}" height="${(y1 - y0 - 0.48).toFixed(2)}" rx=".08" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width=".025"/></g>`;
+    // the back: two posts from the back corners, a rail at the top and one lower down
+    s += box(C.oakDk, x0 + 0.04, y1 - 0.12, zs + 0.12, x0 + 0.04 + g, y1 - 0.02, 4.0, {}) + box(C.oakDk, x1 - 0.04 - g, y1 - 0.12, zs + 0.12, x1 - 0.04, y1 - 0.02, 4.0, { hlv: true });
+    s += box(C.oak, x0 + 0.14, y1 - 0.1, 2.72, x1 - 0.14, y1 - 0.04, 2.86, {});
+    s += box(C.oak, x0 + 0.02, y1 - 0.11, 3.56, x1 - 0.02, y1 - 0.03, 3.98, { t: C.oakTop, hlv: true });
+    return s;
+  }
   // a round rug on the floor
   function rugArt(cx, cy, r, body, ring) {
     return `<g transform="${onZ(0.015)}"><circle cx="${cx}" cy="${cy}" r="${r + 0.08}" fill="#2b1c12" fill-opacity=".1"/><circle cx="${cx}" cy="${cy}" r="${r}" ${F(body, 't', [cx, cy, 0])}/>
@@ -5913,35 +5941,50 @@ const ROOM = (() => {
       <circle cx="${cx}" cy="${cy}" r="${(r * 0.38).toFixed(2)}" fill="none" stroke-width=".07" stroke-dasharray=".14 .1" ${FS(ring, 't', [cx, cy, 0])}/></g>`;
   }
 
-  // ===== the right-hand stop: the chest of drawers (錯題本 in its open top drawer), the cork board (學習分析), the calendar =====
+  // ===== the right-hand stop: the chest of drawers (錯題本 in its top drawer), the cork board (學習分析), the calendar =====
   const DR = { x0: 7.25, x1: 9.65, y1: 1.7, h: 3.3 };
+  const DRW = { x0: DR.x0 + 0.12, x1: DR.x1 - 0.12, z0: 2.52, z1: 3.14, out: 0.62, depth: 1.3 };   // the top drawer, and how far it comes out
+  const knob = (x, z, y) => bb(x, y + 0.02, z, `<circle r="3.2" ${F('#e6c36a', 'y', [x, y, z])}/><circle cx="-1" cy="-1" r="1.1" fill="#fff8d8" fill-opacity=".8"/>`);
   function chestArt() {
     const { x0, x1, y1, h } = DR, xm = (x0 + x1) / 2;
     let s = shadow(x0 - 0.12, -0.1, x1 + 0.3, y1 + 0.85, 0.85);
     s += box(C.oakDk, x0 + 0.1, 0.06, 0, x1 - 0.1, y1 - 0.06, 0.22, { hl: false });
     s += box(C.oak, x0, 0, 0.22, x1, y1, h, { t: C.oakTop, x: C.oakDk, hlv: true });
-    const knob = (x, z, y = y1) => bb(x, y + 0.02, z, `<circle r="3.2" ${F('#e6c36a', 'y', [x, y, z])}/><circle cx="-1" cy="-1" r="1.1" fill="#fff8d8" fill-opacity=".8"/>`);
-    [[0.36, 1.34], [1.44, 2.42]].forEach(([a, b]) => {
+    [[0.36, 1.34], [1.44, 2.42], [DRW.z0, DRW.z1]].forEach(([a, b]) => {
       s += qY(C.oakTop, y1 + 0.004, x0 + 0.12, x1 - 0.12, a, b, 'y') + `<path class="hl" d="${line([[x0 + 0.12, y1 + 0.005, b], [x1 - 0.12, y1 + 0.005, b]])}"/>`;
-      s += knob(xm - 0.55, (a + b) / 2) + knob(xm + 0.55, (a + b) / 2);
+      s += knob(xm - 0.55, (a + b) / 2, y1) + knob(xm + 0.55, (a + b) / 2, y1);
     });
-    // the top drawer, pulled out: the dark slot behind it, its inside, the two red notebooks, its side and front
-    const dy1 = y1 + 0.62, dz0 = 2.52, dz1 = 3.14, dx0 = x0 + 0.12, dx1 = x1 - 0.12;
-    s += qY(C.shelfIn, y1 + 0.004, dx0, dx1, dz0, dz1, 'y');
-    s += qZ(C.shelfIn, dz0 + 0.05, dx0 + 0.06, dx1 - 0.06, y1 - 0.5, dy1 - 0.07);
-    s += qX(C.oakDk, dx0 + 0.06, y1 - 0.5, dy1 - 0.07, dz0 + 0.05, dz1, 'x');
-    s += box(C.red, dx0 + 0.25, y1 - 0.42, dz0 + 0.05, dx0 + 1.05, dy1 - 0.12, dz0 + 0.18, { t: '#d86a5a', y: '#b84a3e', x: '#a8443a' });
-    s += box('#c94c40', dx0 + 1.15, y1 - 0.3, dz0 + 0.05, dx0 + 1.95, dy1 - 0.12, dz0 + 0.14, { t: '#d65f52', y: '#b0443a', x: '#9e3e35' });
-    s += `<g transform="${onZ(dz0 + 0.181)}"><rect x="${dx0 + 0.42}" y="${y1 - 0.1}" width=".46" height=".18" rx=".02" fill="#fff" fill-opacity=".88"/><path d="M${dx0 + 0.5} ${y1 + 0.18} h.3" stroke="#fff" stroke-opacity=".5" stroke-width=".03"/></g>`;
-    s += `<g transform="${onZ(dz0 + 0.141)}"><rect x="${dx0 + 1.32}" y="${y1 + 0.02}" width=".46" height=".18" rx=".02" fill="#fff" fill-opacity=".8"/></g>`;
-    s += box(C.oak, dx1 - 0.06, y1 - 0.5, dz0, dx1, dy1, dz1, { y: false });
-    s += box(C.oakTop, dx0, dy1 - 0.07, dz0, dx1, dy1, dz1, { hlv: true });
-    s += knob(xm - 0.55, (dz0 + dz1) / 2, dy1) + knob(xm + 0.55, (dz0 + dz1) / 2, dy1);
     // on top: a photo, a little mushroom lamp, a small plant
     s += bb(7.85, 0.45, h, `<path ${F(C.walnut, 'y', [7.85, 0.5, 3.7])} d="M-11 0 L-9 -22 H9 L11 0 Z"/><path ${F('#cfe0e8', 'y', [7.85, 0.5, 3.7])} d="M-7.5 -3 L-6.3 -19 H6.3 L7.5 -3 Z"/><path d="M-7.2 -7 Q-2 -14 2 -9 Q5 -6 7.3 -9 L7.5 -3 H-7.5 Z" fill="#8fbf86"/><circle cx="3" cy="-14.5" r="2.2" fill="#fff6c8"/>`);
     s += bb(9.1, 0.45, h, `<ellipse rx="8" ry="3.2" fill="#2b1c12" fill-opacity=".14"/><rect x="-2" y="-14" width="4" height="14" ${F('#efe6d6', 'y', [9.1, 0.5, 3.6])}/><path ${F('#f2d9b8', 'y', [9.1, 0.5, 4.1])} d="M-13 -13 C-13 -28 13 -28 13 -13 Q0 -10 -13 -13 Z"/><path d="M-11 -17 C-9 -24 -3 -26 2 -26" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.2"/><ellipse cy="-13" rx="12" ry="2.6" fill="#fff6dc" fill-opacity=".9"/>`);
     s += bb(8.55, 1.05, h, `<ellipse rx="8" ry="3.2" fill="#2b1c12" fill-opacity=".14"/><path ${F('#e9dccb', 'y', [8.55, 1.1, 3.5])} d="M-6.5 -1 L-5.5 -10 H5.5 L6.5 -1 Z"/><g ${F(C.leaf, 'y', [8.55, 1.05, 3.9])}><circle cx="-4" cy="-14" r="4.5"/><circle cx="3" cy="-16" r="5"/><circle cx="0" cy="-21" r="4.2"/><circle cx="5.5" cy="-11.5" r="3.4"/></g>`);
     return s;
+  }
+  // the top drawer sliding out (ROOM.pull), on a small layer of its own over the chest: the dark slot it leaves, then the drawer on
+  // its way out, clipped to the opening and the space in front of it so the part still inside the chest never shows
+  const DRW_HULL = (() => { const { x0, x1, z0, z1, out } = DRW, y = DR.y1, f = y + out + 0.1; return [[x0 - 0.06, y, z1 + 0.05], [x1 + 0.06, y, z1 + 0.05], [x1 + 0.06, y, z0 - 0.08], [x1 + 0.06, f, z0 - 0.08], [x0 - 0.06, f, z0 - 0.08], [x0 - 0.06, f, z1 + 0.05]]; })();
+  const DRW_BOX = (() => { const p = DRW_HULL.map((q) => P(...q)), xs = p.map((q) => q[0]), ys = p.map((q) => q[1]); return [Math.min(...xs) - 8, Math.min(...ys) - 8, Math.max(...xs) - Math.min(...xs) + 16, Math.max(...ys) - Math.min(...ys) + 16]; })();
+  function drawerFx() {
+    const { x0, x1, z0, z1, out, depth } = DRW, y1 = DR.y1, f = y1 + out, xm = (DR.x0 + DR.x1) / 2;
+    const parts = qZ(C.shelfIn, z0 + 0.05, x0 + 0.06, x1 - 0.06, f - depth, f - 0.07) + qX(C.oakDk, x0 + 0.06, f - depth, f - 0.07, z0 + 0.05, z1, 'x')
+      + box(C.red, x0 + 0.25, f - 1.0, z0 + 0.05, x0 + 1.05, f - 0.12, z0 + 0.18, { t: '#d86a5a', y: '#b84a3e', x: '#a8443a' })
+      + box('#c94c40', x0 + 1.15, f - 0.9, z0 + 0.05, x0 + 1.95, f - 0.12, z0 + 0.14, { t: '#d65f52', y: '#b0443a', x: '#9e3e35' })
+      + `<g transform="${onZ(z0 + 0.181)}"><rect x="${(x0 + 0.42).toFixed(2)}" y="${(f - 0.72).toFixed(2)}" width=".46" height=".18" rx=".02" fill="#fff" fill-opacity=".88"/></g>`
+      + box(C.oak, x1 - 0.06, f - depth, z0, x1, f, z1, { y: false }) + box(C.oakTop, x0, f - 0.07, z0, x1, f, z1, { hlv: true })
+      + knob(xm - 0.55, (z0 + z1) / 2, f) + knob(xm + 0.55, (z0 + z1) / 2, f);
+    return `<svg class="drawer-fx" viewBox="${DRW_BOX.map((v) => v.toFixed(1)).join(' ')}" style="${vbPct(DRW_BOX[0], DRW_BOX[1])};${vbSize(DRW_BOX[2], DRW_BOX[3])}" aria-hidden="true">
+      <defs><clipPath id="drawerClip" clipPathUnits="userSpaceOnUse"><path d="${poly(DRW_HULL)}"/></clipPath></defs>
+      ${qY(C.shelfIn, y1 + 0.006, x0, x1, z0, z1, 'y')}
+      <g clip-path="url(#drawerClip)"><g class="dw-slide" style="--dwx:${(out * S).toFixed(1)}px;--dwy:${(-out * S / 2).toFixed(1)}px">${parts}</g></g>
+    </svg>`;
+  }
+  let pulling = false;
+  function pull(el) {   // 錯題本: the top drawer slides out, then its page opens (straight there with motion reduced)
+    const st = el.closest('.study');
+    if (pulling) return;
+    if (!st || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { go('#/mistakes'); return; }
+    pulling = true; st.classList.add('drawer-pull');
+    setTimeout(() => { pulling = false; go('#/mistakes'); }, 560);
   }
   // the cork board above it: a pinned chart and two notes
   const BD = { x0: 7.35, x1: 9.55, z0: 4.45, z1: 6.55 };
@@ -5982,10 +6025,11 @@ const ROOM = (() => {
     return `<svg class="art" viewBox="${VB.join(' ')}" aria-hidden="true">${DEFS}
       ${shellArt()}${doorArt()}${wallShadeArt()}${windowArt()}${calendarArt(d, left)}${clockArt()}${printArt()}${boardArt()}${lightsWire()}
       ${floorArt()}
-      ${rugArt(5.25, 3.7, 1.75, '#e9dcc6', '#c98f6d')}${rugArt(9.2, 3.55, 1.25, '#dfe6d6', '#93ad8c')}
+      ${rugArt(9.2, 3.55, 1.25, '#dfe6d6', '#93ad8c')}
       ${bookcaseArt()}
       ${deskArt()}
       <g transform="${onZ(DESK.z1 + 0.003)}" class="night-only"><ellipse cx="3.3" cy="1.5" rx="1.7" ry="1.25" fill="url(#pool)" style="opacity:calc(.35 + .65 * var(--f))"/></g>
+      ${chairArt()}
       ${chestArt()}
       ${plantArt(11.95, 1.0)}
     </svg>`;
@@ -5997,10 +6041,10 @@ const ROOM = (() => {
   const THINGS = [
     { id: 'door', view: 0, act: 'leave-house', label: '出門', minor: true, pts: [[0, DOOR.y0, 0], [0, DOOR.y1, 0], [0, DOOR.y1, DOOR.z1], [0, DOOR.y0, DOOR.z1]], tag: [0.25, DOOR.y0 + 0.45, 3.3] },
     { id: 'shelf', view: 0, route: '#/course', label: '課程', pts: [[0, 0.35, 0], [1.3, 0.35, 0], [1.3, 2.85, 0], [1.3, 2.85, 7.3], [0, 2.85, 7.3]], tag: [1.3, 1.6, 3.95] },
-    { id: 'cards', view: 0, route: '#/vocab', label: '單字', pts: [[0.2, 0.78, 7.3], [1.12, 0.78, 7.3], [1.12, 2.38, 7.3], [0.2, 2.38, 7.3], [0.3, 0.92, 8.3], [1.02, 2.2, 8.3]], tag: [0.7, 1.6, 8.72], pad: 6 },
+    { id: 'cards', view: 0, route: '#/vocab', label: '單字', pts: [[0.4, 0.53, 6.19], [1.24, 0.53, 6.19], [1.24, 1.43, 6.19], [0.4, 1.43, 6.19], [0.48, 0.65, 6.8], [1.16, 1.3, 6.8]], tag: [1.3, 0.98, 7.48], pad: 8 },
     { id: 'notebook', view: 1, act: 'study-practice', label: '今日練習', icon: 'practice', primary: true, pts: [[NB.x0, NB.y0, DESK.z1], [NB.x1, NB.y0, DESK.z1], [NB.x1, NB.y1, DESK.z1], [NB.x0, NB.y1, DESK.z1]], tag: [(NB.x0 + NB.x1) / 2 + 2.4 - (NB.y0 + NB.y1) / 2, DESK.y1, 2.62], pad: 14 },
     { id: 'phones', view: 1, route: '#/listen', label: '聽一輪', icon: 'listen', primary: true, pts: [[HP.x, HP.y, HP.top]], sb: [-48, -8, 48, 92], tag: [DESK.x1, HP.y + 0.62, 2.55] },
-    { id: 'drawer', view: 2, route: '#/mistakes', label: '錯題本', pts: [[DR.x0, DR.y1, 0.2], [DR.x1, DR.y1, 3.3], [DR.x0 + 0.12, DR.y1 + 0.62, 2.52], [DR.x1 - 0.12, DR.y1 + 0.62, 3.14], [DR.x0, 0, 3.3], [DR.x1, 0, 3.3]], tag: [8.45, DR.y1 + 0.62, 1.75], pad: 6 },
+    { id: 'drawer', view: 2, act: 'study-drawer', label: '錯題本', pts: [[DR.x0, DR.y1, 0.2], [DR.x1, DR.y1, 0.2], [DR.x1, 0, 0.2], [DR.x0, DR.y1, DR.h], [DR.x0, 0, DR.h], [DR.x1, 0, DR.h]], tag: [8.45, DR.y1, 1.9], pad: 6 },
     { id: 'board', view: 2, route: '#/stats', label: '學習分析', pts: [[BD.x0, 0, BD.z0], [BD.x1, 0, BD.z1]], tag: [(BD.x0 + BD.x1) / 2, 0, BD.z1 + 0.32], pad: 6 },
     { id: 'calendar', view: 2, route: '#/exam', label: '模擬考', pts: [[CAL.x0, 0, CAL.z0], [CAL.x1, 0, CAL.z1]], tag: [(CAL.x0 + CAL.x1) / 2, 0, CAL.z0 - 0.32], pad: 6 }
   ];
@@ -6026,21 +6070,22 @@ const ROOM = (() => {
       <div class="room-wrap"><div class="room">
         <div class="w-sky" aria-hidden="true" style="${vbPct(wx, wy)};${vbSize((WIN.x1 - WIN.x0) * S, (WIN.z1 - WIN.z0) * S)}">
           <i class="wt-day"></i><i class="wt-warm"></i>
-          <div class="w-night"><i class="w-moon"></i>${[[12, 20, 2.6, 0.4], [30, 44, 3.4, 1.6], [78, 52, 2.2, 0.9], [44, 14, 3, 2.2], [88, 22, 2.8, 1.2], [20, 64, 3.6, 0.2]].map(([x, y, dd, w]) => `<i class="w-star" style="left:${x}%;top:${y}%;--d:${dd}s;--w:-${w}s"></i>`).join('')}</div>
+          <div class="w-night"><i class="w-moon"></i>${[[12, 20, 2.6, 0.4], [30, 44, 3.4, 1.6], [78, 52, 2.2, 0.9], [44, 14, 3, 2.2], [88, 22, 2.8, 1.2], [20, 64, 3.6, 0.2]].map(([x, y, dd, w]) => `<i class="w-star" style="left:${x}%;top:${y}%;--o:${(0.45 + w / 4.4).toFixed(2)}"></i>`).join('')}</div>
           <div class="w-day"><i class="w-cloud" style="top:18%;--d:40s;--w:-8s"></i><i class="w-cloud" style="top:42%;--d:56s;--w:-31s;width:34%"></i></div>
           <i class="w-hills"></i><i class="w-hills2"></i>
         </div>
         ${studyArt(d, left)}
+        ${BULBS.map((b) => { const [x, y] = P(...b.p); return `<i class="bulb${b.t <= f ? ' on' : ''}" data-t="${b.t}" aria-hidden="true" style="${vbPct(x, y)}"></i>`; }).join('')}
+        <div class="clock-hands" aria-hidden="true" style="${vbPct(cx, cy)};${vbSize(2 * CLK.r * S, 2 * CLK.r * S)};--ssd:-${new Date().getSeconds()}s"><i class="hh"></i><i class="mm"></i><i class="ss"></i></div>
+        ${drawerFx()}
         <i class="glow lamp-glow" aria-hidden="true" style="${vbPct(lx - 150, ly - 110)};${vbSize(300, 220)}"></i>
         <i class="glow lamp-glow lamp2" aria-hidden="true" style="${vbPct(l2x - 110, l2y - 80)};${vbSize(220, 160)}"></i>
         <i class="note-glow" aria-hidden="true" style="${vbPct(nx - 100, ny - 54)};${vbSize(200, 108)}"></i>
-        <div class="clock-hands" aria-hidden="true" style="${vbPct(cx, cy)};${vbSize(2 * CLK.r * S, 2 * CLK.r * S)};--ssd:-${new Date().getSeconds()}s"><i class="hh"></i><i class="mm"></i><i class="ss"></i></div>
-        ${BULBS.map((b) => { const [x, y] = P(...b.p); return `<i class="bulb${b.t <= f ? ' on' : ''}" data-t="${b.t}" aria-hidden="true" style="${vbPct(x, y)}"></i>`; }).join('')}
         <div class="tune" aria-hidden="true" style="${vbPct(hx - 20, hy - 66)};${vbSize(40, 60)}"><i style="--w:0s;--dx:-14px">♪</i><i style="--w:-1.2s;--dx:12px">♫</i><i style="--w:-2.4s;--dx:-4px">♪</i></div>
         <div class="steam" aria-hidden="true" style="${vbPct(mx - 8, my - 40)};${vbSize(16, 24)}"><i style="--w:0s"></i><i style="--w:-1.1s;left:50%"></i><i style="--w:-2.3s;left:20%"></i></div>
         ${THINGS.map(thing).join('')}
-        <i class="warm-wash" aria-hidden="true"></i>
       </div></div>
+      <i class="warm-wash" aria-hidden="true"></i>
       <button type="button" class="study-gear" data-act="settings" aria-label="設定" title="設定">${icon('settings')}</button>
       <nav class="room-stops" aria-label="房間裡的位置">
         <button type="button" class="arr" data-go="-1" aria-label="往左看">${chev('M15 6l-6 6 6 6')}</button>
@@ -6086,7 +6131,9 @@ const ROOM = (() => {
     st.querySelector('.room-stops [data-go="1"]').disabled = stop === VIEWS.length - 1;
     st.querySelectorAll('.thing').forEach((t) => t.classList.toggle('away', !cam.wide && Number(t.dataset.view) !== stop));
   }
+  let movedOnce = false;
   function moved(st) {   // the first move ends the hint for good
+    movedOnce = true;
     st.querySelector('.room-hint').classList.remove('on');
     try { localStorage.setItem('nq_room_moved', '1'); } catch (e) { /* ignore */ }
   }
@@ -6130,8 +6177,8 @@ const ROOM = (() => {
       const t = e.target.closest('.thing');
       if (t && !cam.wide && Number(t.dataset.view) !== stop) { e.stopPropagation(); e.preventDefault(); goStop(st, Number(t.dataset.view)); moved(st); }
     }, true);
-    let seen = false; try { seen = Boolean(localStorage.getItem('nq_room_moved')); } catch (e) { /* no storage: show it */ }
-    if (!cam.wide && !seen) { const h = st.querySelector('.room-hint'); setTimeout(() => { if (st.isConnected) h.classList.add('on'); }, 600); setTimeout(() => h.classList.remove('on'), 5200); }
+    let seen = movedOnce; try { seen = seen || Boolean(localStorage.getItem('nq_room_moved')); } catch (e) { /* no storage: show it */ }
+    if (!cam.wide && !seen) { const h = st.querySelector('.room-hint'); setTimeout(() => { if (st.isConnected && !movedOnce) h.classList.add('on'); }, 600); setTimeout(() => h.classList.remove('on'), 5200); }
   }
   // ← → move between the stops on 書房 (not while typing or with a dialog open)
   document.addEventListener('keydown', (e) => {
@@ -6139,7 +6186,7 @@ const ROOM = (() => {
     if (!st || cam.wide || modalOpen() || (e.target && e.target.closest && e.target.closest('input, textarea, select'))) return;
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { goStop(st, stop + (e.key === 'ArrowLeft' ? -1 : 1)); moved(st); }
   });
-  return { html, level, mount };
+  return { html, level, mount, pull };
 })();
 // walking in or out of the house: a short zoom, then the other scene (straight there with motion reduced)
 function sceneGo(hash, cls) {
