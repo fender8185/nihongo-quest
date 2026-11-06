@@ -319,71 +319,132 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .yard.anim :is(.pane, .win, .spill, .flowers, .butterflies) { animation: skyFade 1.2s ease-out .4s backwards; }
 .yard.anim :is(.aurora, .meteors, .flies, .birds) { animation: skyFade 1.4s ease-out .7s backwards; }
 .yard.anim :is(.dipper, .rainbow) { animation: skyFade 1.5s ease-out 1.2s backwards; }
-/* 書房: one drawing 400 wide and 800 tall, fitted whole and standing on the screen's bottom edge (the wall and the floor carry on
-   round it); its things' buttons, name tags and moving parts sit on it by percentage (x/4 %, y/8 %) */
-.study { --wallc: color-mix(in srgb, #e0956f calc(var(--warm) * 32%), color-mix(in srgb, #efe3cf calc(var(--day) * 100%), #1d1f3e)); --floorc: color-mix(in srgb, #b8704e calc(var(--warm) * 28%), color-mix(in srgb, #c79f76 calc(var(--day) * 100%), #17182f));   /* a sunset glow on the wall and floor at dawn and dusk */
-  position: relative; container-type: size; height: 100vh; height: 100dvh; display: flex; align-items: flex-end; justify-content: center; overflow: hidden;
-  background: linear-gradient(var(--wallc) 75.5%, var(--floorc) 75.5%); }
-.room { position: relative; flex: none; width: min(100cqw, 50cqh); aspect-ratio: 1 / 2; }
+/* 書房: an isometric room (studyArt) — x along the right wall, y along the left wall, z up, the back corner at 0, 10 × 10 with walls
+   11 high — drawn in units of ISO per room unit, viewBox -420 -470 840 900. It stands in the middle of the screen; a phone sees
+   two thirds of its width (the room is 150% of the screen wide), so the far ends of the walls run off the sides. Its things'
+   buttons, name tags and moving parts sit on it by percentage of the drawing. */
+.study { --wl: color-mix(in srgb, #e0956f calc(var(--warm) * 26%), color-mix(in srgb, #efe3cf calc(var(--day) * 100%), #222448)); --wr: color-mix(in srgb, #e0956f calc(var(--warm) * 26%), color-mix(in srgb, #e3d3ba calc(var(--day) * 100%), #1c1e3f)); --fl: color-mix(in srgb, #e0956f calc(var(--warm) * 26%), color-mix(in srgb, #c9a27b calc(var(--day) * 100%), #1a1b36));
+  position: relative; container-type: size; height: 100vh; height: 100dvh; display: flex; align-items: center; justify-content: center; overflow: hidden;
+  background: linear-gradient(color-mix(in srgb, #e0956f calc(var(--warm) * 26%), color-mix(in srgb, #efe6d6 calc(var(--day) * 100%), #14162f)), color-mix(in srgb, #e0956f calc(var(--warm) * 26%), color-mix(in srgb, #e1d3bd calc(var(--day) * 100%), #0b0c1f))); }
+.room { position: relative; flex: none; width: min(150cqw, 93.3cqh); aspect-ratio: 840 / 900; }
 .room > * { position: absolute; }
-.room .art { inset: 0; width: 100%; height: 100%; }
+.room .art { inset: 0; width: 100%; height: 100%; overflow: visible; }
 .room .art * { transition: fill 3s, stroke 3s; }
-.room .art .wall { fill: var(--wallc); } .room .art .trim { fill: color-mix(in srgb, #d6bf9c calc(var(--day) * 100%), #15172e); }
-.room .art .floor { fill: var(--floorc); } .room .art .boards { fill: none; stroke: color-mix(in srgb, rgba(110, 70, 40, .28) calc(var(--day) * 100%), rgba(0, 0, 0, .35)); stroke-width: 1.2; }
-.room .art .beam { fill: color-mix(in srgb, rgba(255, 246, 210, .35) calc(var(--day) * 100%), rgba(170, 190, 255, .1)); }   /* the window's light on the floor */
-.room .art .rug { fill: color-mix(in srgb, #c46f61 calc(var(--day) * 100%), #2a2350); } .room .art .rug2 { fill: none; stroke: color-mix(in srgb, #e7b3a3 calc(var(--day) * 100%), #3d3470); stroke-width: 2; stroke-dasharray: 6 4; }
-.room .art .rod { fill: color-mix(in srgb, #8a6a4a calc(var(--day) * 100%), #3a3d70); } .room .art :is(.wframe, .sill) { fill: color-mix(in srgb, #fbf6ee calc(var(--day) * 100%), #2c2f59); } .room .art .wbar { fill: none; stroke: color-mix(in srgb, #fbf6ee calc(var(--day) * 100%), #2c2f59); stroke-width: 4; }
-.room .art .curtain { fill: color-mix(in srgb, #86a9c9 calc(var(--day) * 100%), #2f3b6b); }
-.room .art .c-rim { fill: color-mix(in srgb, #8a5a3c calc(var(--day) * 100%), #3b3f78); } .room .art .c-face { fill: color-mix(in srgb, #fffaf0 calc(var(--lit) * 100%), #2b2e58); } .room .art .c-tick { fill: none; stroke: color-mix(in srgb, #8a5a3c calc(var(--lit) * 100%), #8e95d8); stroke-width: 2; stroke-linecap: round; }
-.room .art .cal { fill: color-mix(in srgb, #fffdf8 calc(var(--lit) * 100%), #2b2e58); } .room .art .cal-top { fill: color-mix(in srgb, #d9534f calc(var(--day) * 100%), #8e3b4f); } .room .art .cal-ring { fill: color-mix(in srgb, #6b5040 calc(var(--day) * 100%), #9aa0e0); }
-.room .art .cal-m { fill: #fff; font-size: 10px; font-weight: 700; } .room .art .cal-d { fill: color-mix(in srgb, #3a2a20 calc(var(--lit) * 100%), #e6e8ff); font-size: 32px; font-weight: 700; } .room .art .cal-dots { fill: none; stroke: color-mix(in srgb, #5cb85c calc(var(--day) * 100%), #43d39a); stroke-width: 3; stroke-linecap: round; }
-.room .art .hook { fill: none; stroke: color-mix(in srgb, #8a6a4a calc(var(--day) * 100%), #4a4f88); stroke-width: 3; stroke-linecap: round; }
-.room .art .hp-band { fill: none; stroke: color-mix(in srgb, #3d4a7a calc(var(--day) * 100%), #7d89d8); stroke-width: 5; stroke-linecap: round; } .room .art .hp-cup { fill: color-mix(in srgb, #3d4a7a calc(var(--day) * 100%), #6a76c8); }
-.room .art .d-frame { fill: color-mix(in srgb, #b0835a calc(var(--day) * 100%), #34376a); } .room .art .d-panel { fill: color-mix(in srgb, #9b6b45 calc(var(--day) * 100%), #2a2d5c); } .room .art .d-inset { fill: color-mix(in srgb, #8a5c39 calc(var(--day) * 100%), #24275a); } .room .art .d-knob { fill: #e6c36a; } .room .art .mat { fill: color-mix(in srgb, #8a6a4a calc(var(--day) * 100%), #2a2340); }
-.room .art .sw { fill: color-mix(in srgb, #fffaf0 calc(var(--day) * 100%), #3a3d70); } .room .art .sw-t { fill: color-mix(in srgb, #c9b8a0 calc(var(--day) * 100%), #7a80c8); }
-.room .art .sh { fill: color-mix(in srgb, #8a5a3c calc(var(--day) * 100%), #2b2e5a); } .room .art .sh-in { fill: color-mix(in srgb, #6e4a30 calc(var(--day) * 100%), #202247); } .room .art .sh-b { fill: none; stroke: color-mix(in srgb, #8a5a3c calc(var(--day) * 100%), #2b2e5a); stroke-width: 5; }
-.room .art .b1 { fill: color-mix(in srgb, #c0504d calc(var(--day) * 100%), #5a3550); } .room .art .b2 { fill: color-mix(in srgb, #4f81bd calc(var(--day) * 100%), #34477a); } .room .art .b3 { fill: color-mix(in srgb, #9bbb59 calc(var(--day) * 100%), #3d5a4a); } .room .art .b4 { fill: color-mix(in srgb, #8064a2 calc(var(--day) * 100%), #4a3d7a); } .room .art .b5 { fill: color-mix(in srgb, #e0a84a calc(var(--day) * 100%), #6a5a40); }
-.room .art .cbox { fill: color-mix(in srgb, #e2b866 calc(var(--day) * 100%), #4a4a78); } .room .art .card { fill: color-mix(in srgb, #fffdf8 calc(var(--day) * 100%), #c9ceff); }
-.room .art .desk { fill: color-mix(in srgb, #a8744c calc(var(--day) * 100%), #343870); } .room .art .desk2 { fill: color-mix(in srgb, #946440 calc(var(--day) * 100%), #2a2d5c); } .room .art .deskl { fill: none; stroke: color-mix(in srgb, #7a5233 calc(var(--day) * 100%), #1e2048); stroke-width: 1.5; } .room .art .dknob { fill: color-mix(in srgb, #e0c070 calc(var(--day) * 100%), #8e95d8); }
-.room .art .lap { fill: color-mix(in srgb, #c9ccd6 calc(var(--day) * 100%), #4a4e86); } .room .art .lap-scr { fill: color-mix(in srgb, #8fb8ea calc(var(--day) * 100%), #7b8eff); }
-.room .art .nb-cover { fill: color-mix(in srgb, #3d6fb0 calc(var(--day) * 100%), #3a4a8a); } .room .art .nb-page { fill: color-mix(in srgb, #fffdf8 calc(var(--day) * 100%), #e2e4ff); } .room .art .nb-line { fill: none; stroke: color-mix(in srgb, #b8c4d8 calc(var(--day) * 100%), #a0a8e8); stroke-width: 1.2; }
-.room .art .red { fill: color-mix(in srgb, #d0453f calc(var(--day) * 100%), #b03a4c); } .room .art .red-sp { fill: color-mix(in srgb, #a3332e calc(var(--day) * 100%), #82283a); } .room .art .red-lb { fill: color-mix(in srgb, #fffdf8 calc(var(--day) * 100%), #e6e8ff); }
-.room .art .lamp { fill: color-mix(in srgb, #3a4256 calc(var(--day) * 100%), #4a5088); } .room .art .lamp-arm { fill: none; stroke: color-mix(in srgb, #3a4256 calc(var(--day) * 100%), #4a5088); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; } .room .art .shade { fill: color-mix(in srgb, #e8b84a calc(var(--day) * 100%), #f0c050); } .room .art .bulb { fill: #fff3c4; }
-.room .art .pot { fill: color-mix(in srgb, #c8734f calc(var(--day) * 100%), #5a3a4a); } .room .art .leaf { fill: color-mix(in srgb, #4f9a52 calc(var(--day) * 100%), #2e5a52); }
-/* the window: the sky at this hour, a moon and stars by night, a cloud going by in the day, the hills */
-.room .w-sky { left: 38.5%; top: 10.75%; width: 23%; height: 17.25%; overflow: hidden; background: linear-gradient(#090a22, #1d1a4a); }
+.room .wall-l { fill: var(--wl); } .room .wall-r { fill: var(--wr); } .room .floor { fill: var(--fl); }
+.room .plank { fill: none; stroke: color-mix(in srgb, rgba(110, 70, 40, .22) calc(var(--day) * 100%), rgba(0, 0, 0, .3)); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.room .rug2 { fill: none; stroke: color-mix(in srgb, #e7b3a3 calc(var(--day) * 100%), #3d3470); stroke-width: 2; stroke-dasharray: 6 4; vector-effect: non-scaling-stroke; }
+.room .wbar { fill: none; stroke: color-mix(in srgb, #fbf6ee calc(var(--day) * 100%), #2c2f59); stroke-width: 4; vector-effect: non-scaling-stroke; }
+.room .c-tick, .room .hp-band, .room .hook, .room .lamp-arm { fill: none; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.room .c-tick { stroke: color-mix(in srgb, #8a5a3c calc(var(--lit) * 100%), #8e95d8); stroke-width: 2; } .room .hook { stroke: color-mix(in srgb, #8a6a4a calc(var(--day) * 100%), #4a4f88); stroke-width: 3; }
+.room .hp-band { stroke: color-mix(in srgb, #3d4a7a calc(var(--day) * 100%), #7d89d8); stroke-width: 5; } .room .lamp-arm { stroke: color-mix(in srgb, #3a4256 calc(var(--day) * 100%), #565c98); stroke-width: 3; stroke-linejoin: round; }
+.room .cal-m { fill: #fff; font-weight: 700; } .room .cal-d { fill: color-mix(in srgb, #3a2a20 calc(var(--lit) * 100%), #e6e8ff); font-weight: 700; } .room .cal-n { fill: color-mix(in srgb, #b0453f calc(var(--lit) * 100%), #ff9aa8); font-weight: 700; }
+.room .shelf.top { fill: color-mix(in srgb, #a06d48 calc(var(--day) * 100%), #34386a); }
+.room .shelf.front { fill: color-mix(in srgb, #8a5a3c calc(var(--day) * 100%), #2b2e5a); }
+.room .shelf.side { fill: color-mix(in srgb, #774c31 calc(var(--day) * 100%), #232650); }
+.room .desk.top { fill: color-mix(in srgb, #b07c52 calc(var(--day) * 100%), #3a3e76); }
+.room .desk.front { fill: color-mix(in srgb, #976640 calc(var(--day) * 100%), #2d3062); }
+.room .desk.side { fill: color-mix(in srgb, #85593a calc(var(--day) * 100%), #262955); }
+.room .ped.top { fill: color-mix(in srgb, #a87650 calc(var(--day) * 100%), #363a70); }
+.room .ped.front { fill: color-mix(in srgb, #946440 calc(var(--day) * 100%), #2a2d5c); }
+.room .ped.side { fill: color-mix(in srgb, #82573a calc(var(--day) * 100%), #242750); }
+.room .drawer.top { fill: color-mix(in srgb, #5c3d27 calc(var(--day) * 100%), #1b1d3c); }
+.room .drawer.front { fill: color-mix(in srgb, #a06d48 calc(var(--day) * 100%), #323668); }
+.room .drawer.side { fill: color-mix(in srgb, #8a5a3c calc(var(--day) * 100%), #2a2d5a); }
+.room .dleg.top { fill: color-mix(in srgb, #946440 calc(var(--day) * 100%), #2a2d5c); }
+.room .dleg.front { fill: color-mix(in srgb, #85593a calc(var(--day) * 100%), #262955); }
+.room .dleg.side { fill: color-mix(in srgb, #6f4a30 calc(var(--day) * 100%), #1f2148); }
+.room .lap.top { fill: color-mix(in srgb, #d4d7e0 calc(var(--day) * 100%), #4d5290); }
+.room .lap.front { fill: color-mix(in srgb, #b9bdc9 calc(var(--day) * 100%), #3e4378); }
+.room .lap.side { fill: color-mix(in srgb, #a6aab8 calc(var(--day) * 100%), #353a6c); }
+.room .cbox.top { fill: color-mix(in srgb, #ecc675 calc(var(--day) * 100%), #56578a); }
+.room .cbox.front { fill: color-mix(in srgb, #d9ae5a calc(var(--day) * 100%), #4a4a78); }
+.room .cbox.side { fill: color-mix(in srgb, #c49a48 calc(var(--day) * 100%), #40406c); }
+.room .icard.top { fill: color-mix(in srgb, #fffdf8 calc(var(--day) * 100%), #d6daff); }
+.room .icard.front { fill: color-mix(in srgb, #efe9dc calc(var(--day) * 100%), #b9beef); }
+.room .icard.side { fill: color-mix(in srgb, #e2dccd calc(var(--day) * 100%), #a8addf); }
+.room .pot.top { fill: color-mix(in srgb, #d98060 calc(var(--day) * 100%), #6a4458); }
+.room .pot.front { fill: color-mix(in srgb, #c8734f calc(var(--day) * 100%), #5a3a4a); }
+.room .pot.side { fill: color-mix(in srgb, #b0613f calc(var(--day) * 100%), #4a3040); }
+.room .lampm.top { fill: color-mix(in srgb, #4a5268 calc(var(--day) * 100%), #565c98); }
+.room .lampm.front { fill: color-mix(in srgb, #3a4256 calc(var(--day) * 100%), #4a5088); }
+.room .lampm.side { fill: color-mix(in srgb, #30374a calc(var(--day) * 100%), #40457a); }
+.room .cap { fill: color-mix(in srgb, #f8f1e4 calc(var(--day) * 100%), #2c2f5c); }
+.room .cut { fill: color-mix(in srgb, #d8c6a8 calc(var(--day) * 100%), #181a36); }
+.room .base { fill: color-mix(in srgb, #d6bf9c calc(var(--day) * 100%), #15172e); }
+.room .slab-l { fill: color-mix(in srgb, #a9825d calc(var(--day) * 100%), #121329); }
+.room .slab-r { fill: color-mix(in srgb, #977352 calc(var(--day) * 100%), #0f1024); }
+.room .beam { fill: color-mix(in srgb, rgba(255, 246, 210, .38) calc(var(--day) * 100%), rgba(170, 190, 255, .1)); }
+.room .rug { fill: color-mix(in srgb, #c46f61 calc(var(--day) * 100%), #2a2350); }
+.room .mat { fill: color-mix(in srgb, #8a6a4a calc(var(--day) * 100%), #2a2340); }
+.room .wframe { fill: color-mix(in srgb, #fbf6ee calc(var(--day) * 100%), #2c2f59); }
+.room .curtain { fill: color-mix(in srgb, #86a9c9 calc(var(--day) * 100%), #2f3b6b); }
+.room .rod { fill: color-mix(in srgb, #8a6a4a calc(var(--day) * 100%), #3a3d70); }
+.room .d-frame { fill: color-mix(in srgb, #b0835a calc(var(--day) * 100%), #34376a); }
+.room .d-panel { fill: color-mix(in srgb, #9b6b45 calc(var(--day) * 100%), #2a2d5c); }
+.room .d-inset { fill: color-mix(in srgb, #8a5c39 calc(var(--day) * 100%), #24275a); }
+.room .d-knob { fill: #e6c36a; }
+.room .c-rim { fill: color-mix(in srgb, #8a5a3c calc(var(--day) * 100%), #3b3f78); }
+.room .c-face { fill: color-mix(in srgb, #fffaf0 calc(var(--lit) * 100%), #2b2e58); }
+.room .cal { fill: color-mix(in srgb, #fffdf8 calc(var(--lit) * 100%), #2b2e58); }
+.room .cal-top { fill: color-mix(in srgb, #d9534f calc(var(--day) * 100%), #8e3b4f); }
+.room .cal-ring { fill: color-mix(in srgb, #6b5040 calc(var(--day) * 100%), #9aa0e0); }
+.room .hp { fill: color-mix(in srgb, #3d4a7a calc(var(--day) * 100%), #7d89d8); }
+.room .sh-in { fill: color-mix(in srgb, #5e3f29 calc(var(--day) * 100%), #1c1e40); }
+.room .sh-b { fill: color-mix(in srgb, #8a5a3c calc(var(--day) * 100%), #2b2e5a); }
+.room .b1 { fill: color-mix(in srgb, #c0504d calc(var(--day) * 100%), #5a3550); }
+.room .b2 { fill: color-mix(in srgb, #4f81bd calc(var(--day) * 100%), #34477a); }
+.room .b3 { fill: color-mix(in srgb, #9bbb59 calc(var(--day) * 100%), #3d5a4a); }
+.room .b4 { fill: color-mix(in srgb, #8064a2 calc(var(--day) * 100%), #4a3d7a); }
+.room .b5 { fill: color-mix(in srgb, #e0a84a calc(var(--day) * 100%), #6a5a40); }
+.room .knob { fill: color-mix(in srgb, #e0c070 calc(var(--day) * 100%), #8e95d8); }
+.room .redbk { fill: color-mix(in srgb, #d0453f calc(var(--day) * 100%), #b03a4c); }
+.room .bezel { fill: color-mix(in srgb, #3a3f50 calc(var(--day) * 100%), #2a2d50); }
+.room .screen { fill: color-mix(in srgb, #8fb8ea calc(var(--day) * 100%), #7b8eff); }
+.room .lbar { fill: color-mix(in srgb, #ffffff calc(var(--day) * 100%), #e6e8ff); }
+.room .nb-cover { fill: color-mix(in srgb, #3d6fb0 calc(var(--day) * 100%), #3a4a8a); }
+.room .nb-page { fill: color-mix(in srgb, #fffdf8 calc(var(--day) * 100%), #eceeff); }
+.room .shade { fill: color-mix(in srgb, #e8b84a calc(var(--day) * 100%), #f0c050); }
+.room .bulb { fill: #fff3c4; }
+.room .leaf { fill: color-mix(in srgb, #4f9a52 calc(var(--day) * 100%), #2e5a52); }
+/* the window: the sky at this hour (a moon and stars by night, clouds going by in the day), seen on the slant of the left wall */
+.room .w-sky { overflow: hidden; transform-origin: 0 0; transform: matrix(1, -.5, 0, 1, 0, 0); background: linear-gradient(#090a22, #1d1a4a); }
 .w-sky > * { position: absolute; transition: opacity 3s; }
 .w-sky .wt-day { inset: 0; background: linear-gradient(#4a97de, #b5dcf4); opacity: var(--day); }
 .w-sky .wt-warm { inset: 0; background: linear-gradient(to top, #ffb36b, #ff8a7a 35%, rgba(150, 96, 200, .45) 70%, transparent); opacity: var(--warm); }
 .w-sky .w-night { inset: 0; opacity: calc(1 - var(--day)); } .w-sky .w-day { inset: 0; opacity: var(--day); }
-.w-sky .w-moon { position: absolute; left: 58%; top: 12%; width: 18%; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 4px -2px 0 0 #f3efe0; transform: rotate(-20deg); filter: drop-shadow(0 0 4px rgba(255, 246, 220, .5)); }
+.w-sky .w-moon { position: absolute; left: 52%; top: 12%; width: 22%; aspect-ratio: 1; border-radius: 50%; box-shadow: inset 4px -2px 0 0 #f3efe0; transform: rotate(-20deg); filter: drop-shadow(0 0 4px rgba(255, 246, 220, .5)); }
 .w-sky .w-star { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; animation: twinkle var(--d) ease-in-out var(--w) infinite alternate; }
-.w-sky .w-cloud { position: absolute; left: 0; width: 46%; height: 13%; border-radius: 10px; background: color-mix(in srgb, rgba(255, 255, 255, .92) calc(var(--day) * 100%), rgba(255, 255, 255, .92)); animation: wcloud var(--d) linear var(--w) infinite; }
-@keyframes wcloud { from { transform: translateX(-110%); } to { transform: translateX(230%); } }
-.w-sky .w-hills { left: -10%; right: -10%; bottom: -6%; height: 30%; border-radius: 50% 50% 0 0; background: color-mix(in srgb, #86c17a calc(var(--day) * 100%), #12143a); }
+.w-sky .w-cloud { position: absolute; left: 0; width: 50%; height: 11%; border-radius: 10px; background: rgba(255, 255, 255, .92); animation: wcloud var(--d) linear var(--w) infinite; }
+@keyframes wcloud { from { transform: translateX(-110%); } to { transform: translateX(210%); } }
+.w-sky .w-hills { left: -10%; right: -10%; bottom: -6%; height: 26%; border-radius: 50% 50% 0 0; background: color-mix(in srgb, #86c17a calc(var(--day) * 100%), #12143a); }
 /* the clock tells the time (sceneTick's --hh／--mm; the second hand runs on its own from the second the room was drawn) */
-.room .clock-hands { left: 15.25%; top: 14.625%; width: 12.5%; height: 6.25%; }
+.room .clock-hands { transform-origin: 0 0; transform: matrix(1, -.5, 0, 1, 0, 0); }
 .clock-hands i { position: absolute; left: 50%; bottom: 50%; border-radius: 2px; transform-origin: 50% 100%; background: color-mix(in srgb, #3a2a20 calc(var(--lit) * 100%), #d4d8ff); transition: background-color .4s; }
 .clock-hands .hh { width: 3px; height: 26%; margin-left: -1.5px; transform: rotate(var(--hh)); }
-.clock-hands .mm { width: 2px; height: 38%; margin-left: -1px; transform: rotate(var(--mm)); }
-.clock-hands .ss { width: 1px; height: 40%; margin-left: -.5px; background: #e0524b; animation: tick 60s steps(60) var(--ssd) infinite; }
+.clock-hands .mm { width: 2px; height: 36%; margin-left: -1px; transform: rotate(var(--mm)); }
+.clock-hands .ss { width: 1px; height: 38%; margin-left: -.5px; background: #e0524b; animation: tick 60s steps(60) var(--ssd) infinite; }
 @keyframes tick { to { transform: rotate(360deg); } }
 /* the desk lamp warms the room as today's list fills (most of it by night); the notebook glows while questions wait */
-.room .lamp-glow { left: 34.5%; top: 29.5%; width: 80%; height: 42%; border-radius: 50%; pointer-events: none; opacity: calc((.15 + .85 * var(--f)) * (1 - .7 * var(--day))); transition: opacity 1.5s; }
+.room .lamp-glow { border-radius: 50%; pointer-events: none; opacity: calc((.15 + .85 * var(--f)) * (1 - .7 * var(--day))); transition: opacity 1.5s; }
 .room .lamp-glow::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 204, 128, .55), rgba(255, 190, 110, .2) 50%, transparent); animation: breathe 6s ease-in-out infinite alternate; }
 @keyframes breathe { from { opacity: .85; } to { opacity: 1; } }
-.room .note-glow { left: 33%; top: 50.25%; width: 34%; height: 11%; border-radius: 50%; pointer-events: none; transition: opacity 1s, transform .4s ease-in; }
-.room .note-glow::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 244, 200, .6), rgba(255, 236, 170, .22) 55%, transparent); animation: notePulse 2.6s ease-in-out infinite alternate; }
-@keyframes notePulse { from { opacity: .55; transform: scale(.94); } to { opacity: 1; transform: scale(1.04); } }
+.room .note-glow { border-radius: 50%; pointer-events: none; transition: opacity 1s, transform .4s ease-in; }
+.room .note-glow::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 244, 200, .75), rgba(255, 236, 170, .28) 55%, transparent); animation: notePulse 2.6s ease-in-out infinite alternate; }
+@keyframes notePulse { from { opacity: .55; transform: scale(.94); } to { opacity: 1; transform: scale(1.06); } }
 .study.full .note-glow { opacity: .35; }   /* the day's list done: a quiet glow (a tap still gives 多學) */
 .study.diving .note-glow { opacity: 1; transform: scale(1.7); }
+.study-gear { position: absolute; z-index: 2; top: calc(10px + env(safe-area-inset-top, 0px)); right: 12px; width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 12px; cursor: pointer;
+  color: color-mix(in srgb, #3a3350 calc(var(--lit) * 100%), #dfe3ff); background: color-mix(in srgb, rgba(255, 255, 255, .55) calc(var(--lit) * 100%), rgba(20, 22, 52, .55)); transition: color .4s, background-color .4s; }
+.study-gear svg { width: 22px; height: 22px; }
 /* a thing: a clear button over the drawing, its name tag at --tx／--ty (light or dark by --lit, which flips at half daylight) */
 .thing { position: absolute; padding: 0; border: 0; border-radius: 14px; background: none; cursor: pointer; }
 .thing::before { content: ''; position: absolute; inset: -8%; border-radius: 16px; background: radial-gradient(closest-side, rgba(255, 236, 170, .38), transparent); opacity: 0; transition: opacity .15s; }
 .thing:active::before, .thing:focus-visible::before { opacity: 1; } .thing:focus-visible { outline: none; }
-.tag { position: absolute; left: var(--tx, 50%); top: var(--ty, 100%); transform: translate(-50%, -50%); padding: 2px 8px; border-radius: 99px; font-size: 11px; line-height: 1.5; white-space: nowrap; letter-spacing: .02em; transition: transform .12s, color .4s, background-color .4s;
+.tag { position: absolute; left: var(--tx, 50%); top: var(--ty, 100%); transform: translate(-50%, -50%); padding: 2px 8px; border-radius: 99px; font-size: 11px; line-height: 1.5; white-space: nowrap; letter-spacing: .02em; font-size: 10.5px; transition: transform .12s, color .4s, background-color .4s;
   color: color-mix(in srgb, #2a3352 calc(var(--lit) * 100%), #e8eaff); background: color-mix(in srgb, rgba(255, 255, 255, .84) calc(var(--lit) * 100%), rgba(14, 16, 40, .74)); box-shadow: 0 1px 4px rgba(0, 0, 0, .18); }
-.thing:active .tag { transform: translate(-50%, -50%) scale(.94); } .thing[data-thing="notebook"] .tag { font-weight: 600; }
+.thing:active .tag { transform: translate(-50%, -50%) scale(.94); }
+.thing.primary .tag { padding: 4px 13px; font-size: 13px; font-weight: 700; color: #fff; background: #5a6cf0; box-shadow: 0 3px 12px rgba(70, 90, 230, .45); }   /* 今日練習: the one that matters */
+.thing.minor .tag { opacity: .7; }
 .sky .house .enter { position: absolute; left: 4px; right: 4px; top: 14px; bottom: 0; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; }
 .sky .house .enter .tag { top: calc(100% + 13px); }
 /* walking in and out: the yard zooms into the door, the room shrinks away; 書房 eases in when it opens */
@@ -396,6 +457,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
   background: radial-gradient(closest-side, #fff, color-mix(in srgb, var(--accent) 50%, #fff) 15%, var(--accent) 40%, color-mix(in srgb, var(--accent) 70%, var(--bg)) 62%, transparent); }   /* sized so the opaque 62% reaches the farthest corner */
 .dive-veil.cover { transform: scale(1); opacity: 1; }
 .dive-veil.out { opacity: 0; transition: opacity .35s ease-out; }
+.tools-part { margin-top: 36px; }   /* 工具與 AI below 學習分析 (test build) */
 .top-home { display: inline-flex; align-items: center; padding: 4px 11px 4px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--bg-elev); color: var(--fg-2); font-size: 13px; cursor: pointer; }
 /* ---------- 聽一輪 (the 🎧 tab): 錯題本｜單字 over the player ---------- */
 .listen-seg { display: flex; margin-bottom: 12px; }
@@ -5065,8 +5127,7 @@ const NAV = [
   { id: 'listen', label: '聽一輪', icon: 'listen', route: '#/listen' },
   { id: 'stats', label: '學習分析', icon: 'chart', route: '#/stats' },
   { id: 'exam', label: '模擬考', icon: 'exam', route: '#/exam' },
-  { id: 'mistakes', label: '錯題本', icon: 'mistakes', route: '#/mistakes' },
-  { id: 'tools', label: '工具與 AI', icon: 'tools', route: '#/tools' }
+  { id: 'mistakes', label: '錯題本', icon: 'mistakes', route: '#/mistakes' }
 ];
 let lastMainRoute = '#/today';
 
@@ -5160,9 +5221,9 @@ function route() {
     }
     else if (r.name === 'mistakes') { if (r.parts[1] === 'loop') renderMistakeLoop(view); else if (r.parts[1] === 'listen') renderListen(view); else renderMistakes(view, r.params); }
     else if (r.name === 'exam') renderExam(view, r.parts[1] || '', r.params);
-    else if (r.name === 'tools') renderTools(view);
+    else if (r.name === 'tools') { location.replace('#/stats?at=tools'); return route(); }   // test build: 工具與 AI lives at the bottom of 學習分析
     else if (r.name === 'listen') renderListenTab(view);
-    else if (r.name === 'stats') renderStats(view);
+    else if (r.name === 'stats') { renderStats(view); if (r.params.at === 'tools') requestAnimationFrame(() => scrollBelowTopbar(document.getElementById('toolsPart'))); }   // after route() hides the repeated page title
     else renderToday(view);
     if (opened) playAnims(view);
     // the phone topbar already names the page: a page title that repeats it is hidden there (unit names, scores etc. stay)
@@ -5549,99 +5610,152 @@ function yardHtml(pct) {
     </div>
   </div>`;
 }
-// 書房's things: the drawing is 400 wide and 800 tall; box is the button (x, y, width, height), tag the name tag's centre
+// 書房 (test build): an isometric room. Room units: x along the right wall, y along the left wall, z up, the back corner at 0; the
+// room is 10 × 10 with walls 11 high. isoP turns a room point into the drawing's units (ISO per room unit; viewBox STUDY_VB).
+// Flat things are drawn in the plane they lie on: onRight(y) a face looking along +y (u = x, v = -z), onLeft the left wall
+// (u = -y, v = -z), onLevel(z) a level surface (u = x, v = y).
+const ISO = 40, STUDY_VB = [-420, -470, 840, 900];
+const isoP = (x, y, z = 0) => [(x - y) * ISO, (x + y) * ISO / 2 - z * ISO];
+const isoPath = (pts) => `M${pts.map(([a, b]) => `${+a.toFixed(1)} ${+b.toFixed(1)}`).join(' L')} Z`;
+const isoPoly = (cls, pts) => `<path class="${cls}" d="${isoPath(pts)}"/>`;
+// a box from (x0, y0, z0) to (x1, y1, z1): the three faces the camera sees
+function isoBox(cls, x0, y0, z0, x1, y1, z1) {
+  return isoPoly(`${cls} top`, [isoP(x0, y0, z1), isoP(x1, y0, z1), isoP(x1, y1, z1), isoP(x0, y1, z1)])
+    + isoPoly(`${cls} front`, [isoP(x0, y1, z0), isoP(x1, y1, z0), isoP(x1, y1, z1), isoP(x0, y1, z1)])
+    + isoPoly(`${cls} side`, [isoP(x1, y0, z0), isoP(x1, y1, z0), isoP(x1, y1, z1), isoP(x1, y0, z1)]);
+}
+const onRight = (y = 0) => { const [tx, ty] = isoP(0, y); return `matrix(${ISO} ${ISO / 2} 0 ${ISO} ${tx} ${ty})`; };
+const onLeft = `matrix(${ISO} ${-ISO / 2} 0 ${ISO} 0 0)`;
+const onLevel = (z) => `matrix(${ISO} ${ISO / 2} ${-ISO} ${ISO / 2} 0 ${-z * ISO})`;
+const vbPct = (sx, sy) => `left:${((sx - STUDY_VB[0]) / STUDY_VB[2] * 100).toFixed(2)}%;top:${((sy - STUDY_VB[1]) / STUDY_VB[3] * 100).toFixed(2)}%`;
+const vbSize = (w, h) => `width:${(w / STUDY_VB[2] * 100).toFixed(2)}%;height:${(h / STUDY_VB[3] * 100).toFixed(2)}%`;
+// the things: box is the button and tag the name tag's centre, in drawing units; later ones lie over earlier ones
 const STUDY_THINGS = [
-  { id: 'clock', route: '#/exam', label: '模擬考', box: [52, 108, 68, 68], tag: [86, 190] },
-  { id: 'calendar', route: '#/stats', label: '學習分析', box: [280, 92, 72, 92], tag: [316, 196] },
-  { id: 'phones', route: '#/listen', label: '聽一輪', box: [160, 248, 80, 76], tag: [200, 336] },
-  { id: 'switch', act: 'settings', label: '設定', box: [82, 350, 44, 54], tag: [104, 414] },
-  { id: 'door', act: 'leave-house', label: '出門', box: [8, 332, 76, 274], tag: [46, 632] },
-  { id: 'shelf', route: '#/course', label: '課程', box: [316, 306, 78, 350], tag: [355, 668] },
-  { id: 'cards', route: '#/vocab', label: '單字', box: [322, 254, 70, 52], tag: [357, 244] },
-  { id: 'laptop', route: '#/tools', label: '工具與 AI', box: [98, 412, 66, 58], tag: [131, 494] },
-  { id: 'notebook', act: 'study-practice', box: [166, 410, 70, 60], tag: [201, 522] },
-  { id: 'redbook', route: '#/mistakes', box: [234, 416, 40, 54], tag: [253, 494] }
+  { id: 'door', act: 'leave-house', label: '出門', box: [-276, -142, 96, 282], tag: [-228, 156], minor: true },
+  { id: 'shelf', route: '#/course', label: '課程', box: [-46, -262, 154, 344], tag: [6, -24] },
+  { id: 'cards', route: '#/vocab', label: '單字', box: [-14, -340, 92, 74], tag: [32, -352] },
+  { id: 'phones', route: '#/listen', label: '聽一輪', box: [104, -232, 66, 98], tag: [138, -246] },
+  { id: 'calendar', route: '#/exam', label: '模擬考', box: [172, -248, 72, 124], tag: [208, -110] },
+  { id: 'laptop', route: '#/stats', label: '學習分析', box: [88, -88, 82, 78], tag: [128, -100] },
+  { id: 'drawer', route: '#/mistakes', box: [22, 2, 74, 156], tag: [52, 132] },
+  { id: 'notebook', act: 'study-practice', box: [104, -14, 126, 70], tag: [182, 92], primary: true }
 ];
 function studyTag(id, pct, mk) {
   if (id === 'notebook') return pct >= 100 ? '今日完成・多學' : `今日練習 ${pct}%`;
-  if (id === 'redbook') return `錯題本${mk ? ` ${mk}` : ''}`;
+  if (id === 'drawer') return `錯題本${mk ? ` ${mk}` : ''}`;
   return STUDY_THINGS.find(t => t.id === id).label;
 }
 function studyLevel(st, pct) {
   st.style.setProperty('--f', pct / 100);
   st.classList.toggle('full', pct >= 100);
   const mk = activeMistakes().length;
-  st.querySelectorAll('[data-thing="notebook"], [data-thing="redbook"]').forEach(b => { const t = studyTag(b.dataset.thing, pct, mk); b.querySelector('.tag').textContent = t; b.setAttribute('aria-label', t); });
+  st.querySelectorAll('[data-thing="notebook"], [data-thing="drawer"]').forEach(b => { const t = studyTag(b.dataset.thing, pct, mk); b.querySelector('.tag').textContent = t; b.setAttribute('aria-label', t); });
 }
-const SHELF_BOOKS = (() => {   // the bookcase's spines, the same every time
+// the bookcase's spines (room units on its front face), the same every time
+const SHELF_BOOKS = (() => {
   const out = [];
-  [[392, 0], [476, 2], [560, 4], [650, 1]].forEach(([floor, i]) => {
-    for (let x = 324; ;) {
-      const w = [7, 9, 6, 8, 10][i % 5], h = [56, 64, 50, 60, 46][(i * 3) % 5];
-      if (x + w > 386) break;
-      out.push(`<rect class="bk b${i % 5 + 1}" x="${x}" y="${floor - h}" width="${w}" height="${h}" rx="1"/>`);
-      x += w + (i % 3 === 0 ? 2 : 1); i++;
+  [[1.75, 0], [3.55, 2], [5.35, 4], [7.05, 1]].forEach(([top, i]) => {
+    for (let x = 0.5; ;) {
+      const w = [0.16, 0.21, 0.13, 0.18, 0.24][i % 5], h = [1.25, 1.45, 1.1, 1.35, 1.0][(i * 3) % 5];
+      if (x + w > 2.42) break;
+      out.push(`<rect class="b${i % 5 + 1}" x="${x.toFixed(2)}" y="${(-top + 0.12).toFixed(2)}" width="${w}" height="${h}" transform="translate(0 ${-h})" rx="0.02"/>`);
+      x += w + (i % 3 === 0 ? 0.05 : 0.02); i++;
     }
   });
   return out.join('');
 })();
+// the drawing itself; d is today's date (the calendar), left the days to the exam
+function studyArt(d, left) {
+  const lwall = [isoP(0, 0, 0), isoP(0, 10, 0), isoP(0, 10, 11), isoP(0, 0, 11)], hole = [isoP(0, 1.4, 4.6), isoP(0, 3.8, 4.6), isoP(0, 3.8, 8.4), isoP(0, 1.4, 8.4)];
+  const planks = Array.from({ length: 9 }, (_, i) => `M0 ${i + 1} H10`).join(' ');
+  return `<svg class="art" viewBox="${STUDY_VB.join(' ')}" aria-hidden="true">
+      <path class="wall-l" fill-rule="evenodd" d="${isoPath(lwall)} ${isoPath(hole)}"/>
+      ${isoPoly('wall-r', [isoP(0, 0, 0), isoP(10, 0, 0), isoP(10, 0, 11), isoP(0, 0, 11)])}
+      ${isoPoly('base', [isoP(0, 0, 0), isoP(0, 10, 0), isoP(0, 10, 0.32), isoP(0, 0, 0.32)])}${isoPoly('base', [isoP(0, 0, 0), isoP(10, 0, 0), isoP(10, 0, 0.32), isoP(0, 0, 0.32)])}
+      ${isoPoly('cap', [isoP(0, 0, 11), isoP(0, 10, 11), isoP(-0.35, 10, 11), isoP(-0.35, -0.35, 11)])}${isoPoly('cap', [isoP(0, 0, 11), isoP(10, 0, 11), isoP(10, -0.35, 11), isoP(-0.35, -0.35, 11)])}
+      ${isoPoly('cut', [isoP(-0.35, 10, 0), isoP(0, 10, 0), isoP(0, 10, 11), isoP(-0.35, 10, 11)])}${isoPoly('cut', [isoP(10, -0.35, 0), isoP(10, 0, 0), isoP(10, 0, 11), isoP(10, -0.35, 11)])}
+      <g transform="${onLeft}">
+        <rect class="rod" x="-4.7" y="-9.05" width="4.2" height="0.13" rx="0.06"/>
+        <path class="wframe" fill-rule="evenodd" d="M-3.95 -8.55 H-1.25 V-4.45 H-3.95 Z M-3.8 -8.4 V-4.6 H-1.4 V-8.4 Z"/><path class="wbar" d="M-2.6 -8.4 V-4.6 M-3.8 -6.5 H-1.4"/>
+        <rect class="wframe" x="-4.1" y="-4.6" width="3" height="0.24" rx="0.05"/>
+        <path class="curtain" d="M-4.45 -8.95 H-3.75 C-3.9 -7.6 -3.8 -6 -4.05 -4.2 H-4.6 C-4.4 -6 -4.5 -7.6 -4.45 -8.95 Z"/><path class="curtain" d="M-0.75 -8.95 H-1.45 C-1.3 -7.6 -1.4 -6 -1.15 -4.2 H-0.6 C-0.8 -6 -0.7 -7.6 -0.75 -8.95 Z"/>
+        <rect class="d-frame" x="-6.75" y="-5.75" width="2.1" height="5.75" rx="0.04"/><rect class="d-panel" x="-6.6" y="-5.6" width="1.8" height="5.6"/>
+        <rect class="d-inset" x="-6.45" y="-5.4" width="1.5" height="2.3" rx="0.05"/><rect class="d-inset" x="-6.45" y="-2.9" width="1.5" height="2.6" rx="0.05"/><circle class="d-knob" cx="-4.98" cy="-2.75" r="0.09"/>
+        <circle class="c-rim" cx="-5.7" cy="-7.6" r="0.72"/><circle class="c-face" cx="-5.7" cy="-7.6" r="0.6"/><path class="c-tick" d="M-5.7 -8.15 V-8.02 M-5.7 -7.18 V-7.05 M-6.25 -7.6 H-6.12 M-5.28 -7.6 H-5.15"/>
+      </g>
+      <g transform="${onRight(0)}">
+        <rect class="cal" x="4.4" y="-8.2" width="1.4" height="2" rx="0.08"/><rect class="cal-top" x="4.4" y="-8.2" width="1.4" height="0.48" rx="0.08"/>
+        <circle class="cal-ring" cx="4.72" cy="-8.2" r="0.07"/><circle class="cal-ring" cx="5.48" cy="-8.2" r="0.07"/>
+        <text class="cal-m" x="5.1" y="-7.86" font-size="0.3" text-anchor="middle">${d.getMonth() + 1}月</text><text class="cal-d" x="5.1" y="-6.86" font-size="0.82" text-anchor="middle">${d.getDate()}</text>
+        <text class="cal-n" x="5.1" y="-6.4" font-size="0.24" text-anchor="middle">距考 ${left} 天</text>
+        <path class="hook" d="M3.5 -7.05 V-6.8"/><path class="hp-band" d="M3.13 -5.95 C3.13 -6.95 3.87 -6.95 3.87 -5.95"/>
+        <rect class="hp" x="3.0" y="-6.12" width="0.27" height="0.64" rx="0.12"/><rect class="hp" x="3.73" y="-6.12" width="0.27" height="0.64" rx="0.12"/>
+      </g>
+      ${isoPoly('floor', [isoP(0, 0), isoP(10, 0), isoP(10, 10), isoP(0, 10)])}
+      <g transform="${onLevel(0)}">
+        <path class="plank" d="${planks}"/>
+        <path class="beam" d="M0.05 1.6 L2.7 2.4 L2.7 4.9 L0.05 4.1 Z"/>
+        <ellipse class="rug" cx="6.3" cy="6.1" rx="2.5" ry="1.85"/><ellipse class="rug2" cx="6.3" cy="6.1" rx="2.1" ry="1.5"/>
+        <rect class="mat" x="0.08" y="4.75" width="0.85" height="1.9" rx="0.12"/>
+      </g>
+      ${isoPoly('slab-l', [isoP(-0.35, 10, 0), isoP(10, 10, 0), isoP(10, 10, -0.5), isoP(-0.35, 10, -0.5)])}${isoPoly('slab-r', [isoP(10, -0.35, 0), isoP(10, 10, 0), isoP(10, 10, -0.5), isoP(10, -0.35, -0.5)])}
+      ${isoBox('shelf', 0.3, 0, 0, 2.6, 1.3, 7.2)}
+      <g transform="${onRight(1.3)}">
+        <rect class="sh-in" x="0.45" y="-7.05" width="1.99" height="6.9"/>${SHELF_BOOKS}
+        <rect class="sh-b" x="0.45" y="-1.83" width="1.99" height="0.1"/><rect class="sh-b" x="0.45" y="-3.63" width="1.99" height="0.1"/><rect class="sh-b" x="0.45" y="-5.43" width="1.99" height="0.1"/>
+      </g>
+      ${isoBox('cbox', 0.9, 0.25, 7.2, 2.0, 1.1, 7.72)}${isoBox('icard', 1.05, 0.5, 7.72, 1.45, 0.56, 8.18)}${isoBox('icard', 1.5, 0.62, 7.72, 1.86, 0.68, 8.08)}
+      ${isoBox('pot', 0.45, 2.15, 0, 1.05, 2.75, 0.62)}
+      ${(() => { const [px, py] = isoP(0.75, 2.45, 0.62); return `<path class="leaf" d="M${px} ${py} c-14 -16 -20 -34 -10 -46 c8 14 12 30 10 46 Z M${px} ${py} c8 -20 18 -32 30 -34 c-4 14 -16 26 -30 34 Z M${px} ${py} c-2 -24 2 -42 8 -54 c4 20 0 40 -8 54 Z"/>`; })()}
+      ${isoBox('ped', 3.3, 0.1, 0, 4.8, 2.6, 2.75)}
+      <g transform="${onRight(2.6)}">
+        <rect class="knob" x="3.9" y="-1.5" width="0.32" height="0.07" rx="0.03"/><rect class="knob" x="3.9" y="-0.6" width="0.32" height="0.07" rx="0.03"/>
+        <path class="d-inset" d="M3.38 -1.83 H4.72 V-1.8 H3.38 Z M3.38 -0.95 H4.72 V-0.92 H3.38 Z"/>
+      </g>
+      ${isoBox('dleg', 7.25, 0.05, 0, 7.5, 0.3, 2.75)}${isoBox('dleg', 7.25, 2.35, 0, 7.5, 2.6, 2.75)}
+      ${isoBox('desk', 3.2, 0, 2.75, 7.6, 2.7, 3.0)}
+      ${isoBox('drawer', 3.42, 2.6, 1.95, 4.68, 3.05, 2.62)}
+      <g transform="${onLevel(2.63)}"><rect class="redbk" x="3.62" y="2.66" width="0.82" height="0.32" rx="0.03"/></g>
+      <g transform="${onRight(3.05)}"><rect class="knob" x="3.9" y="-2.4" width="0.32" height="0.07" rx="0.03"/></g>
+      <g transform="${onRight(0.42)}">
+        <rect class="bezel" x="3.4" y="-3.92" width="1" height="0.86" rx="0.05"/><rect class="screen" x="3.47" y="-3.85" width="0.86" height="0.72" rx="0.03"/>
+        ${[[3.58, 0.3], [3.76, 0.46], [3.94, 0.36], [4.12, 0.56]].map(([x, h]) => `<rect class="lbar" x="${x}" y="${(-3.2 - h).toFixed(2)}" width="0.11" height="${h}"/>`).join('')}
+      </g>
+      ${isoBox('lap', 3.4, 0.42, 3.0, 4.4, 1.2, 3.06)}
+      <g transform="${onLevel(3.0)}">
+        <rect class="nb-cover" x="4.72" y="0.78" width="1.76" height="1.36" rx="0.06"/>
+        <rect class="nb-page" x="4.8" y="0.86" width="0.8" height="1.2" rx="0.03"/><rect class="nb-page" x="5.68" y="0.86" width="0.72" height="1.2" rx="0.03"/>
+        <path class="plank" d="M4.9 1.1 H5.5 M4.9 1.3 H5.5 M4.9 1.5 H5.5 M4.9 1.7 H5.4 M5.78 1.1 H6.3 M5.78 1.3 H6.3 M5.78 1.5 H6.2"/>
+      </g>
+      ${isoBox('lampm', 6.55, 0.3, 3.0, 6.95, 0.7, 3.08)}
+      <path class="lamp-arm" d="M${isoP(6.75, 0.5, 3.08).join(' ')} L${isoP(6.8, 0.45, 4.4).join(' ')} L${isoP(6.3, 0.8, 4.75).join(' ')}"/>
+      ${isoPoly('shade', [isoP(6.0, 0.8, 4.98), isoP(6.55, 0.75, 4.98), isoP(6.65, 1.0, 4.5), isoP(5.9, 1.05, 4.5)])}
+      <circle class="bulb" cx="${isoP(6.25, 0.95, 4.45)[0]}" cy="${isoP(6.25, 0.95, 4.45)[1]}" r="5"/>
+    </svg>`;
+}
 function studyHtml(pct) {
-  const f = pct / 100, mk = activeMistakes().length, d = parseDate(todayStr());
+  const f = pct / 100, mk = activeMistakes().length, d = parseDate(todayStr()), left = examPace().daysLeft;
   const thing = (t) => {
     const [x, y, w, h] = t.box, [tx, ty] = t.tag, label = studyTag(t.id, pct, mk);
-    const pos = `left:${x / 4}%;top:${y / 8}%;width:${w / 4}%;height:${h / 8}%;--tx:${((tx - x) / w * 100).toFixed(1)}%;--ty:${((ty - y) / h * 100).toFixed(1)}%`;
-    return `<button type="button" class="thing" data-thing="${t.id}" ${t.route ? `data-act="nav" data-route="${t.route}"` : `data-act="${t.act}"`} style="${pos}" aria-label="${label}"><span class="tag">${label}</span></button>`;
+    const pos = `${vbPct(x, y)};${vbSize(w, h)};--tx:${((tx - x) / w * 100).toFixed(1)}%;--ty:${((ty - y) / h * 100).toFixed(1)}%`;
+    return `<button type="button" class="thing${t.primary ? ' primary' : t.minor ? ' minor' : ''}" data-thing="${t.id}" ${t.route ? `data-act="nav" data-route="${t.route}"` : `data-act="${t.act}"`} style="${pos}" aria-label="${label}"><span class="tag">${label}</span></button>`;
   };
+  const [wx, wy] = isoP(0, 3.8, 8.4), [cx, cy] = isoP(0, 6.42, 8.32), [lx, ly] = isoP(6.25, 0.95, 4.45), [nx, ny] = isoP(5.6, 1.45, 3.0);
   return `<div class="study${pct >= 100 ? ' full' : ''}" data-anim data-date="${todayStr()}" style="--f:${f}">
     <div class="room">
-      <div class="w-sky" aria-hidden="true">
+      <div class="w-sky" aria-hidden="true" style="${vbPct(wx, wy)};${vbSize(2.4 * ISO, 3.8 * ISO)}">
         <i class="wt-day"></i><i class="wt-warm"></i>
         <div class="w-night"><i class="w-moon"></i>${[[12, 20, 2.6, 0.4], [30, 44, 3.4, 1.6], [78, 52, 2.2, 0.9], [44, 14, 3, 2.2], [88, 22, 2.8, 1.2], [20, 64, 3.6, 0.2]].map(([x, y, dd, w]) => `<i class="w-star" style="left:${x}%;top:${y}%;--d:${dd}s;--w:-${w}s"></i>`).join('')}</div>
-        <div class="w-day"><i class="w-cloud" style="top:16%;--d:38s;--w:-6s"></i><i class="w-cloud" style="top:40%;--d:54s;--w:-31s;width:34%"></i></div>
+        <div class="w-day"><i class="w-cloud" style="top:16%;--d:38s;--w:-6s"></i><i class="w-cloud" style="top:40%;--d:54s;--w:-31s;width:36%"></i></div>
         <i class="w-hills"></i>
       </div>
-      <svg class="art" viewBox="0 0 400 800" aria-hidden="true">
-        <path class="wall" fill-rule="evenodd" d="M0 0 H400 V604 H0 Z M154 86 V224 H246 V86 Z"/>
-        <rect class="trim" y="596" width="400" height="10"/>
-        <rect class="floor" y="606" width="400" height="194"/>
-        <path class="boards" d="M0 646 H400 M0 694 H400 M0 748 H400 M70 606 V646 M210 606 V646 M330 606 V646 M130 646 V694 M280 646 V694 M40 694 V748 M190 694 V748 M350 694 V748 M110 748 V800 M260 748 V800"/>
-        <path class="beam" d="M154 606 H246 L300 790 H120 Z"/>
-        <ellipse class="rug" cx="200" cy="732" rx="150" ry="40"/><ellipse class="rug2" cx="200" cy="732" rx="126" ry="30"/>
-        <rect class="rod" x="120" y="64" width="160" height="5" rx="2.5"/>
-        <path class="wframe" fill-rule="evenodd" d="M146 78 H254 V232 H146 Z M154 86 V224 H246 V86 Z"/><path class="wbar" d="M200 86 V224 M154 155 H246"/>
-        <rect class="sill" x="140" y="230" width="120" height="8" rx="2"/>
-        <path class="curtain" d="M124 68 H152 C146 120 150 186 142 244 H120 C128 186 124 120 124 68 Z"/><path class="curtain" d="M276 68 H248 C254 120 250 186 258 244 H280 C272 186 276 120 276 68 Z"/>
-        <circle class="c-rim" cx="86" cy="142" r="30"/><circle class="c-face" cx="86" cy="142" r="25"/><path class="c-tick" d="M86 120 V125 M86 159 V164 M64 142 H69 M103 142 H108"/>
-        <rect class="cal" x="286" y="100" width="60" height="78" rx="4"/><path class="cal-top" d="M286 104 a4 4 0 0 1 4 -4 H342 a4 4 0 0 1 4 4 V118 H286 Z"/>
-        <circle class="cal-ring" cx="302" cy="100" r="3"/><circle class="cal-ring" cx="330" cy="100" r="3"/>
-        <text class="cal-m" x="316" y="113" text-anchor="middle">${d.getMonth() + 1}月</text><text class="cal-d" x="316" y="156" text-anchor="middle">${d.getDate()}</text>
-        <path class="cal-dots" d="M298 168 h3 M306 168 h3 M314 168 h3 M322 168 h3 M330 168 h3"/>
-        <path class="hook" d="M200 250 V262"/><path class="hp-band" d="M176 302 C176 262 224 262 224 302"/>
-        <rect class="hp-cup" x="168" y="292" width="15" height="26" rx="7"/><rect class="hp-cup" x="217" y="292" width="15" height="26" rx="7"/>
-        <rect class="d-frame" x="8" y="332" width="76" height="274" rx="2"/><rect class="d-panel" x="15" y="339" width="62" height="267"/>
-        <rect class="d-inset" x="23" y="352" width="46" height="96" rx="2"/><rect class="d-inset" x="23" y="462" width="46" height="128" rx="2"/>
-        <circle class="d-knob" cx="68" cy="478" r="3.5"/><rect class="mat" x="6" y="610" width="80" height="12" rx="3"/>
-        <rect class="sw" x="96" y="364" width="16" height="26" rx="2"/><rect class="sw-t" x="101" y="370" width="6" height="10" rx="1"/>
-        <rect class="sh" x="316" y="304" width="78" height="352" rx="2"/><rect class="sh-in" x="322" y="310" width="66" height="340"/>
-        ${SHELF_BOOKS}<path class="sh-b" d="M322 392 H388 M322 476 H388 M322 560 H388"/>
-        <rect class="cbox" x="326" y="276" width="58" height="28" rx="2"/>
-        <rect class="card" x="332" y="266" width="18" height="14" rx="1"/><rect class="card" x="352" y="262" width="18" height="18" rx="1"/><rect class="card" x="366" y="268" width="14" height="12" rx="1"/>
-        <rect class="desk2" x="96" y="480" width="56" height="176"/><rect class="desk2" x="292" y="480" width="10" height="176"/>
-        <path class="deskl" d="M96 538 H152 M96 596 H152"/>
-        <rect class="dknob" x="118" y="506" width="12" height="3" rx="1.5"/><rect class="dknob" x="118" y="564" width="12" height="3" rx="1.5"/><rect class="dknob" x="118" y="622" width="12" height="3" rx="1.5"/>
-        <rect class="desk" x="88" y="466" width="222" height="14" rx="2"/>
-        <rect class="lap" x="104" y="418" width="52" height="36" rx="3"/><rect class="lap-scr" x="108" y="422" width="44" height="28" rx="1.5"/><path class="lap" d="M98 454 H162 L158 466 H102 Z"/>
-        <path class="nb-cover" d="M166 466 L172 424 L200 430 L228 424 L234 466 Z"/>
-        <path class="nb-page" d="M171 462 L176 428 L200 433 V464 Z"/><path class="nb-page" d="M229 462 L224 428 L200 433 V464 Z"/>
-        <path class="nb-line" d="M180 438 L196 441 M179 446 L196 449 M178 454 L196 457 M220 438 L204 441 M221 446 L204 449 M222 454 L204 457"/>
-        <rect class="red" x="240" y="428" width="24" height="38" rx="2"/><rect class="red-sp" x="240" y="428" width="5" height="38" rx="1"/><rect class="red-lb" x="248" y="436" width="12" height="8" rx="1"/>
-        <path class="lamp" d="M276 466 H306 V461 H276 Z"/><path class="lamp-arm" d="M291 461 L284 420 L296 402"/><path class="shade" d="M280 386 L306 380 L312 400 L284 408 Z"/><circle class="bulb" cx="298" cy="404" r="4"/>
-        <path class="pot" d="M28 700 H62 L57 736 H33 Z"/><path class="leaf" d="M45 700 C34 682 28 664 38 654 C45 668 48 684 45 700 Z M45 700 C53 680 62 668 72 666 C69 680 57 692 45 700 Z M45 700 C44 676 48 658 53 646 C57 666 53 686 45 700 Z"/>
-      </svg>
-      <i class="lamp-glow" aria-hidden="true"></i><i class="note-glow" aria-hidden="true"></i>
-      <div class="clock-hands" aria-hidden="true" style="--ssd:-${new Date().getSeconds()}s"><i class="hh"></i><i class="mm"></i><i class="ss"></i></div>
+      ${studyArt(d, left)}
+      <i class="lamp-glow" aria-hidden="true" style="${vbPct(lx - 210, ly - 160)};${vbSize(420, 320)}"></i>
+      <i class="note-glow" aria-hidden="true" style="${vbPct(nx - 120, ny - 66)};${vbSize(240, 132)}"></i>
+      <div class="clock-hands" aria-hidden="true" style="${vbPct(cx, cy)};${vbSize(1.44 * ISO, 1.44 * ISO)};--ssd:-${new Date().getSeconds()}s"><i class="hh"></i><i class="mm"></i><i class="ss"></i></div>
       ${STUDY_THINGS.map(thing).join('')}
     </div>
+    <button type="button" class="study-gear" data-act="settings" aria-label="設定" title="設定">${icon('settings')}</button>
   </div>`;
 }
 // walking in or out of the house: a short zoom, then the other scene (straight there with motion reduced)
@@ -7984,10 +8098,16 @@ function offlineAnalysis(text) {
 }
 
 let TOOLS_STATE = { conjWord: '書く', conjKind: 'auto', sentence: '', genUnit: '' };
-function renderTools(view) {
+// 工具與 AI (test build): drawn at the bottom of 學習分析 (renderStats), no page of its own; #/tools scrolls there
+function scrollBelowTopbar(el) {
+  if (!el) return;
+  const bar = document.querySelector('.topbar'); const off = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect().height : 0;
+  window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - off - 12);
+}
+function toolsHtml() {
   const ai = aiReady();
   const unitOpts = DATA.UNITS.map(u => `<option value="${u.id}" ${(TOOLS_STATE.genUnit || state.currentUnit) === u.id ? 'selected' : ''}>${esc(u.weeks)}・${esc(u.short)}</option>`).join('');
-  view.innerHTML = `
+  return `
     <div class="page-head"><div><div class="page-title">工具與 AI</div><div class="page-sub">${ai ? '' : '登入後就能用 AI'}</div></div>
       ${ai ? '' : '<button type="button" class="btn" data-act="sync-open">登入</button>'}</div>
     <div class="card">
@@ -8570,7 +8690,8 @@ function renderStats(view) {
         <div class="card-head"><div><div class="card-title">各題型正確率</div></div></div>
         ${fmtRows || '<div class="empty">還沒有足夠的資料。</div>'}
       </div>
-    </div>`;
+    </div>
+    <section class="tools-part" id="toolsPart">${toolsHtml()}</section>`;
   attachChartTips(view);
 }
 
