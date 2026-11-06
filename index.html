@@ -12,6 +12,7 @@
 <script src="./vendor/supabase.js"></script>
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
+<script src="./mascot.js"></script>
 <script src="./data.js?v=21"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -5396,12 +5397,14 @@ function renderToday(view) {
     ${movedBannerHtml()}
     ${installBannerHtml()}
     <div class="page-head today-head"><div><div class="page-title">今日</div><div class="page-sub">${greeting}・連續 ${st.current} 天</div></div></div>
+    <div class="mascot-slot" id="mascotSlot"></div>
     <div class="card today-card${todayTab === 'practice' ? '' : ' listen compact'}">
       <div class="seg today-seg">${segBtn('practice', '練習')}${segBtn('mistakes', `錯題本${mk.length ? ` <span class="n">${mk.length}</span>` : ''}${live('mistakes')}`)}${segBtn('theme', `單字${live('theme')}`)}</div>
       ${todayTab === 'practice' ? practiceHtml : playerHtml}
     </div>
 `;
   listenRenderNow();
+  if (window.Mascot) Mascot.mount(document.getElementById('mascotSlot'), { done: plan.remaining === 0, started: doneToday > 0, day: t });   // mascot.js (test build): Cat_02 on the card's top edge
 }
 
 // 學習紀錄 (學習分析): the calendar, streak tiles and the recent days

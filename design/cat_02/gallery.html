@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cat_02 動作庫</title>
+<style>
+:root {
+  --bg: #f5f6f8; --card: #ffffff; --line: #e2e5ee; --text: #16171c; --muted: #5d6475;
+  --accent: #4b57d1; --accent-soft: rgba(75, 87, 209, .1); --stage: #0e0f13;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e0f13; --card: #15161b; --line: #262833; --text: #eceef4; --muted: #9aa0b4;
+    --accent: #8b9cff; --accent-soft: rgba(139, 156, 255, .14); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e0f13; --card: #15161b; --line: #262833; --text: #eceef4; --muted: #9aa0b4;
+  --accent: #8b9cff; --accent-soft: rgba(139, 156, 255, .14); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", sans-serif; }
+main { max-width: 1040px; margin: 0 auto; padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { margin: 0; font-size: 22px; }
+.sub { margin: 2px 0 16px; color: var(--muted); font-size: 14px; }
+.stage-card { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; background: var(--bg); padding-bottom: 12px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.stage { display: block; width: 100%; height: auto; background: var(--stage); border-radius: 14px; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
+.now { flex: 1 1 200px; min-width: 0; font-weight: 600; }
+.now small { color: var(--muted); font-weight: 400; margin-right: 6px; }
+button { font: inherit; color: var(--text); background: var(--card); border: 1px solid var(--line); border-radius: 999px;
+  padding: 7px 14px; min-height: 36px; cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button[aria-pressed="true"], button.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+section { margin-top: 18px; }
+section h2 { font-size: 15px; margin: 0 0 8px; display: flex; gap: 8px; align-items: baseline; }
+section h2 span { color: var(--muted); font-weight: 400; font-size: 13px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { padding: 5px 12px; min-height: 34px; font-size: 14px; }
+@media (max-width: 560px) { h1 { font-size: 19px; } }
+/* gallery.html#play=<id>: just the stage, looping one action (for record.py and embedding) */
+body.solo main { max-width: none; padding-block: 0; padding-left: 0; padding-right: 0; }
+body.solo main > :not(.stage-card), body.solo .bar { display: none; }
+body.solo .stage { border-radius: 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Cat_02 動作庫</h1>
+  <p class="sub" id="count"></p>
+  <div class="stage-card">
+    <svg class="stage" id="stage" viewBox="0 0 2000 820" role="img" aria-label="Cat_02 舞台"></svg>
+    <div class="bar">
+      <div class="now" id="now" aria-live="polite"></div>
+      <button type="button" id="bored" aria-pressed="false">無聊輪播</button>
+      <button type="button" id="all" aria-pressed="false">依序播放全部</button>
+      <button type="button" id="speed">速度 1×</button>
+    </div>
+  </div>
+  <div id="groups"></div>
+</main>
+<script src="cat_02-data.js"></script>
+<script src="../neon_cat/player.js"></script>
+<script src="../neon_cat/builder.js"></script>
+<script src="actions.js"></script>
+<script src="../neon_cat/gallery.js"></script>
+<script>
+NeonCatGallery({data: CAT02_DATA, actions: CAT02_ACTIONS, groups: CAT02_GROUPS,
+  idle: {pose: 'stand', action: 'base.stand', label: '站著'}, stage: {x: 1000, floor: 765, scale: 0.5}});
+</script>
+</body>
+</html>
