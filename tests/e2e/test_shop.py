@@ -133,6 +133,43 @@ def test_arrange_takes_out_moves_turns_and_puts_away(b):
     r = json.loads(ev(b, js))
     assert r == {'tray': ['chabudai'], 'p1ok': True, 'moved': True, 'turned': True, 'desk': False, 'gone': True, 'edit': False}, r
 
+def test_the_rooms_own_things_are_laid_out_and_can_be_put_away(b):
+    js = "(() => { " + FRESH + """ const own = ['bed', 'nightTable', 'bigPlant', 'umbrella', 'sageRug', 'bedRug', 'doorMat', 'fujiPrint', 'kanaChart', 'nightPicture', 'pegRail'];
+      const laid = own.every(id => state.placed[id]); """ + GO_ROOM + """
+      document.querySelector('.study-edit').click(); const st = () => document.querySelector('.study');
+      st().querySelector('.deco[data-ware="bed"]').dispatchEvent(new PointerEvent('pointerdown', { clientX: 1, clientY: 1, pointerId: 3, pointerType: 'mouse', button: 0, buttons: 1, bubbles: true }));
+      st().dispatchEvent(new PointerEvent('pointerup', { clientX: 1, clientY: 1, pointerId: 3, pointerType: 'mouse', button: 0, bubbles: true }));
+      const turn = !!st().querySelector('[data-act="room-edit-turn"]'); st().querySelector('[data-act="room-edit-put"]').click();
+      const stored = !state.placed.bed, inBox = !!st().querySelector('.tray-it[data-id="bed"]'), notSold = !WARES.some(w => w.starter && document.querySelector('#view [data-ware="' + w.id + '"] .price'));
+      st().querySelector('.tray-it[data-id="bed"]').click(); const back = !!state.placed.bed;
+      return JSON.stringify({ laid, turn, stored, inBox, back, shop: WARES.filter(w => w.starter).some(w => shopCardHtml(w, 0).includes('ware-buy')) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'laid': True, 'turn': False, 'stored': True, 'inBox': True, 'back': True, 'shop': False}, r
+
+def test_working_things_move_but_never_go_in_the_box(b):
+    js = "(() => { " + FRESH + GO_ROOM + """ const st = () => document.querySelector('.study'), box = (id) => { const r = st().querySelector('[data-thing="' + id + '"]').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top)]; };
+      const before = box('notebook'), spot0 = ROOM.use.length;
+      const ok = ROOM.fits(WARE.get('desk'), { w: 'F', x: 6, y: 6, r: 0 }); state.placed.desk = { w: 'F', x: 6, y: 6, r: 0 }; saveState(); """ + GO_ROOM + """
+      const after = box('notebook');
+      document.querySelector('.study-edit').click();
+      const tray = [...st().querySelectorAll('.tray-it')].map(x => x.dataset.id).filter(id => WARE.get(id).fixed);
+      st().querySelector('.deco[data-ware="desk"]').dispatchEvent(new PointerEvent('pointerdown', { clientX: 1, clientY: 1, pointerId: 4, pointerType: 'mouse', button: 0, buttons: 1, bubbles: true }));
+      st().dispatchEvent(new PointerEvent('pointerup', { clientX: 1, clientY: 1, pointerId: 4, pointerType: 'mouse', button: 0, bubbles: true }));
+      const put = !!st().querySelector('[data-act="room-edit-put"]'), note = (st().querySelector('.edit-sel .sel-note') || {}).textContent || '';
+      ROOM.edit(st().querySelector('.edit-top button'), 'put'); const still = !!state.placed.desk;
+      const wall = ROOM.fits(WARE.get('calendar'), { w: 'L', u: 3.2, v: 5.5 }), door = ROOM.fits(WARE.get('calendar'), { w: 'L', u: 4.6, v: 5.5 });
+      return JSON.stringify({ ok, moved: before[0] !== after[0] || before[1] !== after[1], tray, put, note, still, wall, door }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'ok': True, 'moved': True, 'tray': [], 'put': False, 'note': '只能搬，不能收', 'still': True, 'wall': True, 'door': False}, r
+
+def test_the_hero_finds_a_thing_moved_to_the_other_wall(b):
+    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); state.placed.calendar = { w: 'L', u: 3.2, v: 5.5 }; saveState(); """ + GO_ROOM + """
+      const t = document.querySelector('[data-thing="calendar"]'); let n = 0; ROOM.use(t, () => { n++; });
+      await new Promise(q => setTimeout(q, 2400)); const h = JSON.parse(localStorage.getItem('nq_hero')).room;
+      return JSON.stringify({ view: t.dataset.view, n, nearWall: h.x < 2.5 && Math.abs(h.y - 3.2) < 0.3, faces: h.back && h.flip }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'view': '0', 'n': 1, 'nearWall': True, 'faces': True}, r
+
 # ---- the hero ----
 def test_the_hero_walks_to_a_thing_then_opens_it(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + GO_ROOM + """
@@ -141,7 +178,7 @@ def test_the_hero_walks_to_a_thing_then_opens_it(b):
       const h = JSON.parse(localStorage.getItem('nq_hero')).room;
       return JSON.stringify({ opened: opened > 200, at: [h.x, h.y], back: h.back }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'opened': True, 'at': [10.65, 1.6], 'back': True}, r
+    assert r == {'opened': True, 'at': [10.65, 1.4], 'back': True}, r   # the first clear place in front of the calendar
 
 def test_a_second_tap_goes_straight_in_and_a_floor_tap_moves_the_hero(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + GO_ROOM + """
