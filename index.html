@@ -12,7 +12,6 @@
 <script src="./vendor/supabase.js"></script>
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
-<script src="./mascot.js"></script>
 <script src="./data.js?v=21"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -86,7 +85,6 @@ a { color: var(--accent); }
   .topbar { display: flex; }
   .content { padding: 16px 16px calc(92px + env(safe-area-inset-bottom)); }
   .page-head .page-title.dup-title { display: none; }   /* the topbar shows it already */
-  .page-head.today-head { display: none; }   /* 今日: the card carries the date on a phone */
   .page-head .page-title.dup-title + .page-sub { margin-top: 0; }
   .page-head { margin-bottom: 14px; }
   body.practicing .content { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }   /* no tab bar while practising, so no room kept for it */
@@ -195,8 +193,6 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.35; }
 .seg-dot.seen { background: var(--heat-2); }
 .seg-dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
 .legs { display: flex; flex-wrap: wrap; gap: 4px 12px; } .leg { white-space: nowrap; }   /* a legend item never breaks between its name and number */
-.plan-topics { display: flex; flex-direction: column; gap: 4px; margin: -6px 0 14px; color: var(--fg-2); font-size: 14px; line-height: 1.6; }
-.plan-topics b { color: var(--fg-3); font-weight: 500; font-size: 12px; margin-right: 8px; }
 .plan-note { color: var(--fg-3); font-size: 13px; margin: 0 0 14px; }   /* 1.0.35: a quiet line next to what it is about, not a yellow box */
 .dots { display: inline-flex; gap: 3px; vertical-align: middle; }
 .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line-2); display: inline-block; }
@@ -223,24 +219,52 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table tr:last-child td { border-bottom: 0; }
 .empty { text-align: center; color: var(--fg-3); padding: 28px 12px; font-size: 14px; }
 
-/* ---------- today ---------- */
-.hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 18px; align-items: center; }
-.hero h2 { font-size: 20px; }
-.plan-line { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 0 14px; color: var(--fg-2); font-size: 14px; }
-.plan-line b { color: var(--fg); font-variant-numeric: tabular-nums; }
-.today-seg { display: flex; margin-bottom: 12px; }
-.today-seg button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
-.today-seg .n { font-size: 11px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
-.seg-live { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+/* ---------- 主頁 (test build): the crystal ball ----------
+   --f (0–1) is how much of today's list is done (the ring it replaces): the energy's surface, how far the sparks climb and the
+   glow follow it. The waves, the light inside and the sparks always move; with motion reduced (the rule at the top) it stands still. */
+.orb-stage { display: grid; place-items: center; min-height: calc(100vh - 100px); }
+.orb { --e1: color-mix(in srgb, var(--accent) 62%, #fff); --e3: color-mix(in srgb, var(--accent) 55%, #3b0764); --glass: color-mix(in srgb, var(--accent) 10%, var(--bg-elev)); --glass-2: var(--bg-sunken); --stand: #2b2d38; --stand-2: #111217; --shade: .5;
+  display: block; width: min(84vw, 52svh, 360px); aspect-ratio: 240 / 280; padding: 0; border: 0; border-radius: 40%; background: none; cursor: pointer; transition: transform .2s ease; }
+[data-theme="light"] .orb { --glass: #fff; --glass-2: color-mix(in srgb, var(--accent) 12%, #e2e5ec); --stand: #c7cad4; --stand-2: #8d92a1; --shade: .2; }
+.orb:active { transform: scale(.97); }
+.orb svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.orb .g0 { stop-color: var(--glass); } .orb .g1 { stop-color: var(--glass-2); }
+.orb .e1 { stop-color: var(--e1); } .orb .e2 { stop-color: var(--accent); } .orb .e3 { stop-color: var(--e3); }
+.orb .t0 { stop-color: var(--stand-2); } .orb .t1 { stop-color: var(--stand); }
+.orb .w0 { stop-color: #fff; stop-opacity: .45; } .orb .w1 { stop-color: #fff; stop-opacity: 0; }   /* the light inside, the shine on the glass */
+.orb .h0 { stop-color: var(--accent); stop-opacity: 0; } .orb .h1 { stop-color: var(--accent); stop-opacity: .5; }
+.orb .d0 { stop-color: #000; stop-opacity: var(--shade); } .orb .d1 { stop-color: #000; stop-opacity: 0; }
+.orb .back { fill: var(--accent); opacity: .45; } .orb .surf { fill: none; stroke: #fff; stroke-opacity: .6; stroke-width: 1.4; }
+.orb .rim { fill: none; stroke: color-mix(in srgb, var(--accent) 45%, var(--fg-3)); stroke-opacity: .55; stroke-width: 1.5; } .orb.full .rim { stroke: var(--e1); stroke-opacity: .9; }
+.orb .glint { fill: #fff; opacity: .65; } .orb .gleam { fill: none; stroke: #fff; stroke-opacity: .14; stroke-width: 4; stroke-linecap: round; }
+.orb .seam { stroke: var(--e1); stroke-width: 1.5; stroke-linecap: round; opacity: calc(.15 + .75 * var(--f)); transition: opacity 1s; }
+.orb .glow { opacity: calc(.3 + .7 * var(--f)); transition: opacity 1s; }
+.orb .lv { transform: translateY(calc(11px + 208px * (1 - var(--f)))); transition: transform 1s cubic-bezier(.3, .7, .2, 1); }   /* the surface: y 219 under the glass (empty) up to y 11 over it (full) */
+.orb .sparks { --rise: max(0px, 179px - 208px * (1 - var(--f))); opacity: clamp(0, (var(--f) - .12) * 12, 1); }   /* they climb from y 196 to just under the surface */
+@keyframes orbFill { from { transform: translateY(219px); } }   /* the page opens: the energy rises from empty */
+@keyframes orbWave { to { transform: translateX(-80px); } }   /* one wavelength, so the loop is seamless */
+@keyframes orbDrift { from { transform: translate(-16px, 3px) scale(.9); opacity: .45; } to { transform: translate(20px, -5px) scale(1.12); opacity: 1; } }
+@keyframes orbSpark { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: .9; } 80% { opacity: .5; } 100% { transform: translateY(calc(var(--rise) * -1)); opacity: 0; } }
+@keyframes orbGlow { 50% { transform: scale(1.05); opacity: .7; } }
+.orb .lv.anim { animation: orbFill 1.4s cubic-bezier(.25, .8, .25, 1) backwards; }
+.orb .wave { animation: orbWave 4.5s linear infinite; } .orb .wave.back { animation-duration: 7s; animation-direction: reverse; }
+.orb .blob { transform-box: fill-box; transform-origin: center; animation: orbDrift 9s ease-in-out infinite alternate; }
+.orb .blob.b2 { animation-duration: 12s; animation-delay: -4s; } .orb .blob.b3 { animation-duration: 10s; animation-delay: -7s; } .orb .blob.b4 { animation-duration: 13s; animation-delay: -2s; }
+.orb .spark { fill: #fff; opacity: 0; animation: orbSpark var(--d) ease-in var(--w) infinite; }
+.orb .halo { transform-box: fill-box; transform-origin: center; animation: orbGlow 5s ease-in-out infinite; } .orb.full .halo { animation-duration: 2.6s; }
+/* the dive (orbStart): the energy surges and the ball brightens, then its light spreads over the screen and fades into the questions */
+.orb.surge { transform: scale(1.06); transition: transform .4s cubic-bezier(.3, 0, .2, 1); }
+.orb.surge svg { filter: brightness(1.45) saturate(1.15); transition: filter .4s; }
+.orb.surge .glow { opacity: 1; } .orb.surge .halo { animation: none; transform: scale(1.25); transition: transform .4s; }
+.orb-veil { position: fixed; z-index: 90; border-radius: 50%; pointer-events: none; transform: scale(.04); opacity: 0; transition: transform .36s cubic-bezier(.5, 0, .8, .4), opacity .1s;
+  background: radial-gradient(closest-side, #fff, color-mix(in srgb, var(--accent) 50%, #fff) 15%, var(--accent) 40%, color-mix(in srgb, var(--accent) 70%, var(--bg)) 62%, transparent); }   /* sized so the opaque 62% reaches the farthest corner */
+.orb-veil.cover { transform: scale(1); opacity: 1; }
+.orb-veil.out { opacity: 0; transition: opacity .35s ease-out; }
+/* ---------- 聽一輪 (the 🎧 tab): 錯題本｜單字 over the player ---------- */
+.listen-seg { display: flex; margin-bottom: 12px; }
+.listen-seg button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+.listen-seg .n { font-size: 11px; color: var(--fg-3); font-variant-numeric: tabular-nums; }
 .install-guide ol { padding-left: 20px; margin: 4px 0 0; } .install-guide li { margin-bottom: 4px; } .install-guide p { margin: 6px 0 0; }
-@media (min-width: 901px) { .hero-center .hero-date { display: none; } }   /* the page head shows the date on wide screens */
-/* 練習: the ring on top, then the start button, the date and the fold tabs, all centred */
-.hero.hero-center { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; padding: 14px 0 4px; }
-.hero-center > .ring { order: -1; }
-.hero-center > div { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; min-width: 0; }
-.hero-center .hero-tabs { justify-content: center; margin: 0; }
-.hero-center .hero-panel { text-align: left; width: 100%; }
-.hero-center .plan-note { width: 100%; }
 .listen.compact .listen-opts { position: relative; }
 @media (max-width: 600px) { .listen.compact .listen-opts { padding-right: 84px; } }   /* the pills keep clear of the count at the corner */
 .listen.compact .listen-count { position: absolute; right: 0; bottom: 6px; font-size: 11px; color: var(--fg-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -282,20 +306,21 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .theme-row { font: inherit; text-align: left; width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg-elev); color: var(--fg); cursor: pointer; }
 .theme-row.on { border-color: var(--accent-line); background: var(--accent-soft); } .theme-row:disabled { opacity: .45; cursor: default; }
 .theme-row .tp-name { font-weight: 500; } .theme-row .bar { margin-top: 8px; }
-/* the player: icon and (word mode) the theme select, or a link to the notebook, on one line */
+/* the player: (word mode) the theme select, or the notebook's count, and the full-screen button on one line */
 .listen-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.listen-icon { display: inline-grid; place-items: center; color: var(--fg-2); flex: none; } .listen-icon svg { width: 22px; height: 22px; }
 .listen-head .select { min-width: 0; flex: 1 1 0; padding-top: 7px; padding-bottom: 7px; font-size: 13px; }   /* fills to the card's right edge, flush with the switch above */
 @media (min-width: 901px) { .listen-head .select { max-width: 280px; } }
-/* phones and tablets: the today page is one screen — the listen card takes whatever height the practice card leaves */
+/* phones and tablets: 主頁 and 聽一輪 are one screen each — the ball sits in the middle, the player card takes the height left */
 @media (max-width: 900px) {
-  /* a fixed-height shell (min-height alone never lets flex items shrink); the content area scrolls on its own when a banner or a short screen needs it */
-  body.today .app { height: 100svh; } @supports (height: 1dvh) { body.today .app { height: 100dvh; } }
-  body.today .main { min-height: 0; }
+  /* a fixed-height shell (min-height alone never lets flex items shrink); the content area scrolls on its own when a short screen needs it */
+  body.fit .app { height: 100svh; } @supports (height: 1dvh) { body.fit .app { height: 100dvh; } }
+  body.fit .main { min-height: 0; }
   #view.fit { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
   #view.fit > * { flex: none; }
-  #view.fit > .today-card { flex: 1 1 auto; display: flex; flex-direction: column; }
-  #view.fit > .today-card > .hero-center { flex: 1 1 auto; justify-content: center; padding-bottom: 24px; }   /* 練習: the group sits in the middle of the card instead of leaving the bottom empty */
+  #view.fit > .listen-card { flex: 1 1 auto; display: flex; flex-direction: column; }
+  #view.fit > .orb-stage { flex: 1 1 auto; min-height: 0; }
+  body.today .topbar { display: none; }   /* 主頁 (test build): the ball and the tab bar, nothing else */
+  body.today .content { padding-top: calc(16px + env(safe-area-inset-top, 0px)); }
   /* contain: size — the item area's content does not count toward the card's minimum height, so the card shrinks until the
      area is 150px (then the content area scrolls) and never ends up shorter than its own controls */
   #view.fit .listen.compact #listenCard { contain: size; flex: 1 1 0; height: auto; min-height: 150px; max-height: 420px; }
@@ -420,10 +445,6 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .pr-actions .left, .pr-actions .right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .pr-actions .more-items { flex-basis: 100%; display: flex; gap: 6px; flex-wrap: wrap; } .pr-actions .more-items[hidden] { display: none; }   /* ⋯ opens a row below, no floating menu (1.0.35) */
 @media (hover: none) and (pointer: coarse) { .kbd-hint { display: none !important; } }   /* touch screens: no keyboard, no key hints */
-.hero-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; } .hero-tabs + .hero-panel { margin-top: 10px; }
-.hero-tab { font: inherit; font-size: 12px; color: var(--fg-3); background: transparent; border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; cursor: pointer; }
-.hero-tab::before { content: "▸ "; } .hero-tab.open { color: var(--fg); border-color: var(--line-2); background: var(--bg-sunken); } .hero-tab.open::before { content: "▾ "; }
-.hero-panel { margin: 0; } .hero-panel + .plan-note, .hero-tabs + .plan-note { margin-top: 10px; } .hero-panel .plan-topics { margin: 0 0 8px; } .hero-panel .plan-line { margin: 0 0 6px; }
 .banner.compact { padding: 8px 12px; font-size: 13px; gap: 8px 12px; }
 .pr-next { display: flex; justify-content: flex-end; margin-top: 12px; }
 @media (max-width: 600px) {
@@ -694,7 +715,7 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
   </aside>
   <div class="main">
     <header class="topbar">
-      <div class="row"><div class="brand-mark">日</div><span class="topbar-title" id="topTitle">今日</span></div>
+      <div class="row"><div class="brand-mark">日</div><span class="topbar-title" id="topTitle">主頁</span></div>
       <span id="syncChip"></span>
       <div class="row" id="topActions"></div>
     </header>
@@ -4903,9 +4924,10 @@ function reportCurrentItem() {
    App shell: router, navigation, actions, keyboard
    ========================================================================== */
 const NAV = [
-  { id: 'today', label: '今日', icon: 'today', route: '#/today' },
+  { id: 'today', label: '主頁', icon: 'today', route: '#/today' },
   { id: 'course', label: '課程', icon: 'course', route: '#/course' },
   { id: 'vocab', label: '單字', icon: 'vocab', route: '#/vocab' },
+  { id: 'listen', label: '聽一輪', icon: 'listen', route: '#/listen' },
   { id: 'stats', label: '學習分析', icon: 'chart', route: '#/stats' },
   { id: 'exam', label: '模擬考', icon: 'exam', route: '#/exam' },
   { id: 'mistakes', label: '錯題本', icon: 'mistakes', route: '#/mistakes' },
@@ -4967,9 +4989,9 @@ function renderNav(active) {
     </div>
     <button type="button" class="nav-item" data-act="toggle-furi" title="快速鍵 F">${icon('furi')}<span>振假名：${FURI_LABEL[furiState()]}</span></button>
     <button type="button" class="nav-item" data-act="settings">${icon('settings')}<span>設定</span></button>`;
-  const mobile = [NAV[0], NAV[1], NAV[2], NAV[3], { id: 'more', label: '更多', icon: 'more' }];
+  const mobile = NAV.slice(0, 4).concat({ id: 'more', label: '更多', icon: 'more' });   // the rest sit under 更多
   document.getElementById('bottomNav').innerHTML = mobile.map(n => `
-    <button type="button" data-act="${n.id === 'more' ? 'more-menu' : 'nav'}" data-route="${n.route || ''}" ${n.id === active || (n.id === 'more' && ['exam', 'stats', 'tools'].includes(active)) ? 'aria-current="page"' : ''}>${icon(n.icon)}<span>${n.label}</span></button>`).join('');
+    <button type="button" data-act="${n.id === 'more' ? 'more-menu' : 'nav'}" data-route="${n.route || ''}" ${n.id === active || (n.id === 'more' && NAV.slice(4).some(x => x.id === active)) ? 'aria-current="page"' : ''}>${icon(n.icon)}<span>${n.label}</span></button>`).join('');
   const navItem = NAV.find(n => n.id === active);
   document.getElementById('topTitle').textContent = navItem ? navItem.label : 'Nihongo Quest';
   renderSyncChip();
@@ -4980,13 +5002,13 @@ function route() {
   const r = currentRoute();
   const view = document.getElementById('view');
   const opened = r.name !== animRoute || animForce; animRoute = r.name; animForce = false;
-  view.classList.toggle('fit', r.name === 'today'); document.body.classList.toggle('today', r.name === 'today');
-  if (r.name !== 'today') { todayTab = 'practice'; heroTab = 'unit'; }
+  const fit = r.name === 'today' || r.name === 'listen';   // one screen each on a phone: the ball, the player
+  view.classList.toggle('fit', fit); document.body.classList.toggle('fit', fit); document.body.classList.toggle('today', r.name === 'today');
   document.body.classList.toggle('immersive', (r.name === 'mistakes' || r.name === 'vocab') && r.parts[1] === 'listen');
   const tip = document.getElementById('chartTip');
   if (tip) tip.classList.remove('show');
   if (r.name !== 'practice') { document.body.classList.remove('practicing'); }
-  if (LISTEN && !(r.name === 'today' || ((r.name === 'mistakes' || r.name === 'vocab') && r.parts[1] === 'listen'))) listenStop(true);   // leaving the pages that host the player ends it
+  if (LISTEN && !(r.name === 'listen' || ((r.name === 'mistakes' || r.name === 'vocab') && r.parts[1] === 'listen'))) listenStop(true);   // leaving the pages that host the player ends it
   if (r.name === 'practice') { renderPractice(); return; }
   if (r.name === 'exam' && r.parts[1] === 'run') { renderExamRunner(); return; }
   lastMainRoute = location.hash || '#/today';
@@ -5004,6 +5026,7 @@ function route() {
     else if (r.name === 'mistakes') { if (r.parts[1] === 'loop') renderMistakeLoop(view); else if (r.parts[1] === 'listen') renderListen(view); else renderMistakes(view, r.params); }
     else if (r.name === 'exam') renderExam(view, r.parts[1] || '', r.params);
     else if (r.name === 'tools') renderTools(view);
+    else if (r.name === 'listen') renderListenTab(view);
     else if (r.name === 'stats') renderStats(view);
     else renderToday(view);
     if (opened) playAnims(view);
@@ -5012,7 +5035,7 @@ function route() {
     view.querySelectorAll('.page-head .page-title').forEach(el => el.classList.toggle('dup-title', el.textContent.trim() === top));
   } catch (e) {
     console.error(e);
-    view.innerHTML = `<div class="card"><div class="card-title">這個頁面出錯了</div><p class="muted small">${esc(e.message)}</p><button class="btn" data-act="nav" data-route="#/today">回到首頁</button></div>`;
+    view.innerHTML = `<div class="card"><div class="card-title">這個頁面出錯了</div><p class="muted small">${esc(e.message)}</p><button class="btn" data-act="nav" data-route="#/today">回到主頁</button></div>`;
   }
   view.focus({ preventScroll: true });
 }
@@ -5082,8 +5105,7 @@ const ACTIONS = {
   'close-modal': () => closeModal(),
   'modal-back': (el, ev) => { if (ev.target === el) closeModal(); },
   'toggle-furi': () => toggleFurigana(),
-  'start-daily': (el) => startSession('daily', { size: Number(el.dataset.size) || undefined }),
-  'start-extra': () => startSession('daily', { extra: true }),
+  'start-daily': (el) => orbStart(el),
   'start-unit': (el) => startSession('unit', { unit: el.dataset.unit, title: `${unitById(el.dataset.unit).short}・單元練習` }),
   'start-vocab': (el) => startSession('vocab', { filter: el.dataset.filter || 'all' }),
   'start-mistakes': () => startSession('mistakes'),
@@ -5194,7 +5216,6 @@ const ACTIONS = {
   'ai-explain': () => aiExplainCurrent(),
   'report-item': () => reportCurrentItem(),
   'dismiss-notice': (el) => { state.notices = state.notices.filter(n => n.id !== el.dataset.id); saveState(); route(); },
-  'intro-dismiss': () => { state.introSeen = true; saveState(); route(); },
   'start-zero': () => chooseStart('zero'),
   'start-kana': () => chooseStart('kana'),
   'start-basics': () => chooseStart('basics'),
@@ -5272,139 +5293,86 @@ function noticesHtml() {
     </div>`).join('');
 }
 
-// The topics the 開始練習 session touches: vocabulary themes (the active pair when new words are in, otherwise the
-// themes most of the review words belong to) and the grammar points of its grammar questions, new ones first.
-function sessionTopicsHtml(q, plan) {
-  const words = q.items.filter(it => it.kind === 'v');
-  const present = new Set(words.map(vocabTheme));
-  const all = [...present].sort((a, b) => themeRank(a) - themeRank(b));
-  const themes = all.slice(0, 3); if (all.length > 3) themes.push(`等 ${all.length} 個`);
-  // the line is always there: a finished day just says so
-  const vocabText = themes.length ? themes.join('・') : '今天的單字已完成';
-  const gItems = q.items.filter(it => it.kind === 'g');
-  const pts = [];
-  gItems.filter(it => !state.srs[it.key]).concat(gItems.filter(it => state.srs[it.key])).forEach(g => { if (g.pt && !pts.includes(g.pt)) pts.push(g.pt); });
-  const shown = pts.slice(0, 5); if (pts.length > 5) shown.push(`等 ${pts.length} 個考點`);
-  return `<div class="plan-topics">
-      <span><b>單字主題</b>${esc(vocabText)}</span>
-      ${shown.length ? `<span><b>文法</b>${esc(shown.join('・'))}</span>` : ''}
-    </div>`;
-}
-function planNoteHtml(plan) { return plan.note ? `<div class="plan-note">${esc(plan.note)}</div>` : ''; }
-// 說明 / 今天的範圍 under the 今日練習 title: two toggles, at most one open (kept while the app is open)
 // iOS ignores user-scalable=no inside Safari; the gesture events still stop a pinch from zooming the page
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
-let heroTab = 'unit';        // which fold is open on the practice view; 目前單元 whenever the page is entered from elsewhere
-let todayTab = 'practice';   // the today card's switch: 'practice' | 'mistakes' | 'theme'; back to 練習 whenever the page is entered from elsewhere
 
+// 主頁 (test build): one crystal ball. Its energy is how much of today's list is done (dayProgress, the ring it replaces): empty
+// when the day starts, full when the list is done. A tap dives into 今日練習 (多學 once the day is done).
 function renderToday(view) {
-  const t = todayStr();
   finishPreIfReady();
-  const doneToday = itemsDoneToday();
-  const plan = dailyPlan();
-  const st = streakStats();
-  const cur = unitById(state.currentUnit);
-  const us = unitStats(cur.id);
-  const pace = examPace();
-  const vs = vocabStats();
-  const mk = activeMistakes();
-  const reviewN = plan.dueV.length + plan.dueG.length + (plan.dueC || []).length + plan.q4.length + plan.q5.length;
-  const newN = plan.newV.length + plan.newG.length + (plan.newC || []).length;
-  const exK = plan.dueK.length + plan.newK.length;
-  const exL = Math.min(plan.dueL.length + plan.newL.length, LISTEN_PER_DAY);
-  const exR = Math.min(1, plan.dueR.length + plan.newR.length);
-  const exA = (plan.dueA || []).length + (plan.newA || []).length;
-  const size = SESSION_SIZE;
-  const extraN = exK + exL + exR + exA;
-  const extraText = [exA && `假名 ${exA}`, exK && `漢字 ${exK}`, exL && `聽力 ${exL}`, exR && `閱讀 ${exR}`].filter(Boolean).join('・');
-  const dq = dailyQueue(size);
-  const prog = dayProgress();   // the ring: items answered today / today's items
-  const d = parseDate(t);
-  const greeting = `${d.getMonth() + 1} 月 ${d.getDate()} 日（${weekdayZh(t)}）`;
-
-  let heroBody; let scopeHtml = '';
-  if (plan.remaining === 0) {
-    const xq = extraQueue(); const xn = xq.items.length;
-    heroBody = `<p class="dim">今天做了 ${doneToday} 題。${xn ? '' : '明天再來，或到課程頁預習下一單元。'}</p>
-      ${xn ? `<div><button type="button" class="btn btn-primary" data-act="start-extra">多學 ${xn} 題</button></div>` : ''}`;
-  } else {
-    // the counts live in the 今天的範圍 panel (scopeHtml below); the card itself shows only the button when everything is folded
-    scopeHtml = `${sessionTopicsHtml(dq, plan)}
-      <div class="plan-line">
-        <span>待複習 <b>${reviewN}</b>（單字 ${plan.dueV.length}・文法 ${plan.dueG.length}${plan.dueC && plan.dueC.length ? `・變化 ${plan.dueC.length}` : ''}${[['四顆', plan.q4], ['五顆', plan.q5]].map(([name, l]) => (l.length ? `・${name} ${l.length}` : '')).join('')}${plan.relearnN ? `・其中錯題 ${plan.relearnN}` : ''}）</span>
-        <span>新內容 <b>${newN}</b>（單字 ${plan.newV.length}・文法 ${plan.newG.length}${plan.newC && plan.newC.length ? `・變化 ${plan.newC.length}` : ''}）</span>
-        ${extraN ? `<span>另有 <b>${extraN}</b>（${extraText}）</span>` : ''}
-        <span>共 <b>${plan.remaining}</b> 題</span>
-      </div>
-`;
-    heroBody = planNoteHtml(plan);
+  const pct = ringPct(dayProgress());
+  const orb = view.querySelector('.orb');
+  if (orb) { orbLevel(orb, pct); return; }   // a redraw (a sync, a setting): the level glides and the motion carries on
+  view.innerHTML = `<div class="orb-stage">${orbHtml(pct)}</div>`;
+}
+function orbLabel(pct) { return pct >= 100 ? '今天完成了，點一下多學一些' : `開始今日練習（今天完成 ${pct}%）`; }
+function orbLevel(orb, pct) {
+  orb.style.setProperty('--f', pct / 100);
+  orb.classList.toggle('full', pct >= 100);
+  orb.setAttribute('aria-label', orbLabel(pct));
+}
+const ORB_SPARKS = [[92, 1.6, 4.2, 0], [104, 1.1, 3.4, 1.3], [118, 2, 5, 2.6], [128, 1.3, 3.8, 0.6], [140, 1.8, 4.6, 3.1], [150, 1.2, 3.6, 1.9], [112, 1.4, 4.4, 3.8]];   // x, radius, seconds to climb, head start
+function orbHtml(pct) {
+  const wave = 'M0 0 Q20 -10 40 0 T80 0 T120 0 T160 0 T200 0 T240 0 T280 0 T320 0';   // four wavelengths: one scrolls out while the glass shows the rest
+  return `<button type="button" class="orb${pct >= 100 ? ' full' : ''}" data-act="start-daily" aria-label="${orbLabel(pct)}" style="--f:${pct / 100}">
+    <svg viewBox="0 0 240 280" aria-hidden="true">
+      <defs>
+        <radialGradient id="orbGlass" cx=".4" cy=".36" r=".7"><stop offset="0" class="g0"/><stop offset="1" class="g1"/></radialGradient>
+        <linearGradient id="orbEnergy" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="150"><stop offset="0" class="e1"/><stop offset=".3" class="e2"/><stop offset="1" class="e3"/></linearGradient>
+        <linearGradient id="orbStand"><stop offset="0" class="t0"/><stop offset=".45" class="t1"/><stop offset="1" class="t0"/></linearGradient>
+        <radialGradient id="orbLight"><stop offset="0" class="w0"/><stop offset="1" class="w1"/></radialGradient>
+        <radialGradient id="orbHalo"><stop offset=".7" class="h0"/><stop offset=".84" class="h1"/><stop offset="1" class="h0"/></radialGradient>
+        <radialGradient id="orbShade"><stop offset="0" class="d0"/><stop offset="1" class="d1"/></radialGradient>
+        <clipPath id="orbGlassClip"><circle cx="120" cy="112" r="98"/></clipPath>
+        <clipPath id="orbUnder"><rect x="0" y="5" width="320" height="230"/></clipPath>
+      </defs>
+      <ellipse cx="120" cy="266" rx="88" ry="8" fill="url(#orbShade)"/>
+      <g class="glow"><circle class="halo" cx="120" cy="112" r="126" fill="url(#orbHalo)"/></g>
+      <path d="M94 196 C98 222 84 236 64 248 H176 C156 236 142 222 146 196 Z" fill="url(#orbStand)"/>
+      <rect x="50" y="246" width="140" height="16" rx="8" fill="url(#orbStand)"/>
+      <path class="seam" d="M64 247.5 H176"/>
+      <circle cx="120" cy="112" r="100" fill="url(#orbGlass)"/>
+      <g clip-path="url(#orbGlassClip)">
+        <g class="lv" data-anim>
+          <g transform="translate(0 -5)"><path class="wave back" d="${wave} V215 H0 Z"/></g>
+          <g class="wave"><path d="${wave} V215 H0 Z" fill="url(#orbEnergy)"/><path class="surf" d="${wave}"/></g>
+          <g clip-path="url(#orbUnder)">
+            <ellipse class="blob" cx="72" cy="38" rx="46" ry="20" fill="url(#orbLight)"/><ellipse class="blob b2" cx="166" cy="78" rx="40" ry="18" fill="url(#orbLight)"/>
+            <ellipse class="blob b3" cx="104" cy="122" rx="54" ry="22" fill="url(#orbLight)"/><ellipse class="blob b4" cx="150" cy="172" rx="48" ry="20" fill="url(#orbLight)"/>
+          </g>
+        </g>
+        <g class="sparks">${ORB_SPARKS.map(([x, r, d, w]) => `<circle class="spark" cx="${x}" cy="196" r="${r}" style="--d:${d}s;--w:-${w}s"/>`).join('')}</g>
+      </g>
+      <ellipse cx="84" cy="60" rx="42" ry="24" transform="rotate(-38 84 60)" fill="url(#orbLight)" opacity=".7"/>
+      <circle class="glint" cx="70" cy="52" r="4.5"/>
+      <path class="gleam" d="M184 140 A76 76 0 0 1 150 196"/>
+      <circle class="rim" cx="120" cy="112" r="99.5"/>
+    </svg>
+  </button>`;
+}
+// the dive: the energy surges and the ball brightens, its light spreads from the centre of the glass over the screen, and the
+// questions come up as it fades. A brand-new learner picks a start first; nothing to do, or motion reduced: straight in.
+let orbBusy = false;
+function orbStart(btn) {
+  if (orbBusy) return;
+  if (!state.startChosen && Object.keys(state.srs).length === 0) {
+    openModal('要從哪裡開始？', `<div class="row-wrap">${startButtonsHtml(false)}</div><p class="small muted mt-2">我是新手：從假名開始。我學過一些：做個小測驗，找到你的起點。</p>`, { width: 420 });
+    return;
   }
-
-  // the card's switch: 練習 (default) or the player over the notebook / a word theme; a playing player keeps going behind 練習
-  const isTheme = todayTab === 'theme';
-  const listenReady = todayTab === 'practice' ? false : listenInit(isTheme ? { kind: 'theme', theme: listenDefaultTheme() } : { kind: 'mistakes', cat: '' });
-  const live = (kind) => LISTEN && LISTEN.playing && LISTEN.source.kind === kind ? '<i class="seg-live" title="播放中"></i>' : '';
-  const segBtn = (tab, label) => `<button type="button" aria-pressed="${todayTab === tab}" data-act="today-tab" data-tab="${tab}">${label}</button>`;
-
-  const startBanner = !state.startChosen && Object.keys(state.srs).length === 0
-    ? `<div class="banner intro-banner"><div class="grow"><div class="strong">要從哪裡開始？</div><div class="row-wrap mt-2">${startButtonsHtml()}</div><div class="small muted mt-2">我是新手：從假名開始。我學過一些：做個小測驗，找到你的起點。</div></div></div>`
-    : '';
-  const introBanner = startBanner ? '' : !state.introSeen && Object.keys(state.srs).length < 40
-    ? `<div class="banner intro-banner"><div class="grow">先看「第 0 週」：假名和最基本的句型。</div><div class="row-wrap"><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button><button type="button" class="btn btn-sm btn-ghost" data-act="intro-dismiss">知道了</button></div></div>`
-    : '';
-  const preDoneCard = inPreStage() && preDone()
-    ? `<div class="banner mt-2"><div class="grow">入門單字都看過了；最近正確率 ${Math.round((recentAccuracy() || 0) * 100)}%，到 ${Math.round(PRE_PASS_ACC * 100)}% 就會自動進入第 1 週。</div></div>`
-    : '';
-  const practiceHtml = `
-      ${preDoneCard}
-      <div class="hero hero-center">
-        <div>
-          ${plan.remaining === 0 ? '<h2>今天完成了</h2>' : `<div><button type="button" class="btn btn-primary btn-lg" data-act="start-daily">開始練習・這組 ${dq.items.length} 題</button></div>${plan.remaining > dq.items.length ? `<div class="small muted mt-1">今天還有 ${plan.remaining} 題</div>` : ''}`}
-          <div class="tiny muted hero-date">${greeting}・連續 ${st.current} 天</div>
-          ${inPreStage() ? `<div class="small muted mt-1">入門：假名 ${REG.kana.filter(x => state.srs[x.key]).length}／${REG.kana.length}・單字 ${REG.vocab.filter(v => v.lv === 'PRE_N5' && state.srs[v.key]).length}／${REG.vocab.filter(v => v.lv === 'PRE_N5').length}・句型 ${unitItems('m0').filter(g => state.srs[g.key]).length}／${unitItems('m0').length}</div>` : ''}
-          <div class="hero-tabs">
-            <button type="button" class="hero-tab${heroTab === 'help' ? ' open' : ''}" data-act="hero-tab" data-tab="help" aria-expanded="${heroTab === 'help'}">說明</button>
-            ${plan.remaining ? `<button type="button" class="hero-tab${heroTab === 'scope' ? ' open' : ''}" data-act="hero-tab" data-tab="scope" aria-expanded="${heroTab === 'scope'}">範圍</button>` : ''}
-            ${inPreStage() ? '' : `<button type="button" class="hero-tab${heroTab === 'unit' ? ' open' : ''}" data-act="hero-tab" data-tab="unit" aria-expanded="${heroTab === 'unit'}">目前單元</button>`}
-          </div>
-          <div class="hero-panel small muted" data-panel="help" ${heroTab === 'help' ? '' : 'hidden'}>每天練一點就好。這裡用的是 SRS（間隔重複）的改良版：在你快忘記的時候再考一次，記得會更久。答對越多，每天的新題目就會越多；想學快一點，做完後按「多學」就好。</div>
-          ${plan.remaining ? `<div class="hero-panel" data-panel="scope" ${heroTab === 'scope' ? '' : 'hidden'}>${scopeHtml}</div>` : ''}
-          <div class="hero-panel" data-panel="unit" ${heroTab === 'unit' && !inPreStage() ? '' : 'hidden'}>
-            <div class="row between mb-2"><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div><span class="chip">${esc(cur.lv)}</span></div>
-            <div class="row">${unitBarHtml(us, 'grow', true)}<span class="small num muted">${us.pct}%</span></div>
-            <div class="small muted mt-2 legs"><span class="leg">已學 ${us.ok3 + us.ok1 + us.seen0}／${us.total} 題</span>${us.due ? `<span class="leg">今天要複習 ${us.due} 題</span>` : ''}</div>
-            ${us.pct >= 85 && !us.done ? `<div class="banner mt-3"><div class="grow">這個單元已經很熟了，可以前往下一單元。</div><button type="button" class="btn btn-sm btn-primary" data-act="advance-unit">前往下一單元</button></div>` : ''}
-            <div class="row-wrap mt-3">
-              <button type="button" class="btn btn-sm" data-act="nav" data-route="#/course/${cur.id}">看講義</button>
-              ${inPreStage() ? '' : `<button type="button" class="btn btn-sm" data-act="start-unit" data-unit="${cur.id}">練習本單元</button>`}
-            </div>
-          </div>
-          ${heroBody}
-        </div>
-        ${ringHtml(ringPct(prog) / 100, `<b>${ringPct(prog)}%</b>`, 110, 0)}
-      </div>`;
-  const playerHtml = `
-      <div class="listen-head">
-        <span class="listen-icon" title="聽一輪" aria-label="聽一輪">${icon('listen')}</span>
-        ${isTheme ? themePickHtml(LISTEN ? LISTEN.source.theme : listenDefaultTheme())
-          : `<span class="small muted">錯題本${mk.length ? `・${mk.length} 條` : ''}</span>`}
-        ${listenReady ? `<button type="button" class="btn btn-sm btn-ghost btn-icon listen-full" data-act="listen-full" title="全螢幕播放" aria-label="全螢幕播放">${icon('expand')}</button>` : ''}
-      </div>
-      ${listenReady ? listenPanelHtml(false) : `<div class="small muted">${isTheme ? '這個主題沒有單字。' : '目前沒有可以聽的錯題。'}</div>`}`;
-  view.innerHTML = `
-    ${noticesHtml()}
-    ${startBanner}${introBanner}
-    ${movedBannerHtml()}
-    ${installBannerHtml()}
-    <div class="page-head today-head"><div><div class="page-title">今日</div><div class="page-sub">${greeting}・連續 ${st.current} 天</div></div></div>
-    <div class="mascot-slot" id="mascotSlot"></div>
-    <div class="card today-card${todayTab === 'practice' ? '' : ' listen compact'}">
-      <div class="seg today-seg">${segBtn('practice', '練習')}${segBtn('mistakes', `錯題本${mk.length ? ` <span class="n">${mk.length}</span>` : ''}${live('mistakes')}`)}${segBtn('theme', `單字${live('theme')}`)}</div>
-      ${todayTab === 'practice' ? practiceHtml : playerHtml}
-    </div>
-`;
-  listenRenderNow();
-  if (window.Mascot) Mascot.mount(document.getElementById('mascotSlot'), { done: plan.remaining === 0, started: doneToday > 0, day: t });   // mascot.js (test build): Cat_02 on the card's top edge
+  const n = (dailyPlan().remaining === 0 ? extraQueue() : dailyQueue()).items.length;
+  const lv = btn && btn.querySelector('.lv');
+  if (!n || !lv || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { startSession('daily'); return; }
+  orbBusy = true;
+  lv.classList.remove('anim'); lv.style.transition = 'transform .4s cubic-bezier(.5, 0, .7, .4)'; lv.style.transform = 'translateY(-12px)';
+  btn.classList.add('surge');
+  const r = btn.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height * 112 / 280;
+  const d = 2 * Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)) / 0.62;   // its opaque part reaches the farthest corner
+  const veil = document.createElement('div'); veil.className = 'orb-veil';
+  veil.style.cssText = `left:${x - d / 2}px;top:${y - d / 2}px;width:${d}px;height:${d}px`;
+  document.body.appendChild(veil);
+  setTimeout(() => veil.classList.add('cover'), 220);
+  setTimeout(() => { startSession('daily'); veil.classList.add('out'); }, 590);
+  setTimeout(() => { veil.remove(); orbBusy = false; }, 900);
 }
 
 // 學習紀錄 (學習分析): the calendar, streak tiles and the recent days
@@ -5967,7 +5935,7 @@ function chooseStart(kind) {
   if (kind === 'basics') applyExperienced();
   state.startChosen = true;
   saveState(); DAILY_CACHE = null; closeModal(true);
-  toast(kind === 'zero' ? '從假名開始。每天的練習在今日頁。' : kind === 'kana' ? '從第 1 週開始' : '已套用「我已有基礎」設定');
+  toast(kind === 'zero' ? '從假名開始。點主頁的水晶球開始練習。' : kind === 'kana' ? '從第 1 週開始' : '已套用「我已有基礎」設定');
   route();
 }
 function startButtonsHtml(small = true) {
@@ -6797,8 +6765,27 @@ function listenPanelHtml(full) {
       ${full ? '<p class="hint mt-3" style="text-align:center">循環唸到你按停；不寫排程、不算題數。播放中螢幕保持亮著，iPhone 鎖屏會停（Safari 的限制）。</p>' : ''}`;
 }
 function renderListen(view) {
-  if (!LISTEN && !listenInit()) { toast('沒有可以聽的內容。'); go('#/today'); return; }
+  if (!LISTEN && !listenInit()) { toast('沒有可以聽的內容。'); go('#/listen'); return; }
   view.innerHTML = `<div class="card listen full">${listenPanelHtml(true)}</div>`;
+  listenRenderNow();
+}
+// 聽一輪 (the 🎧 tab, test build): the player the 今日 card used to carry, over the notebook or a word theme; the switch opens
+// on the last choice (kept on the device)
+function renderListenTab(view) {
+  const isTheme = listenPref().source === 'theme';
+  const mk = activeMistakes();
+  const ready = listenInit(isTheme ? { kind: 'theme', theme: listenDefaultTheme() } : { kind: 'mistakes', cat: '' });
+  const segBtn = (kind, label) => `<button type="button" aria-pressed="${isTheme === (kind === 'theme')}" data-act="listen-source" data-source="${kind}">${label}</button>`;
+  view.innerHTML = `
+    <div class="page-head"><div><div class="page-title">聽一輪</div></div></div>
+    <div class="card listen compact listen-card">
+      <div class="seg listen-seg">${segBtn('mistakes', `錯題本${mk.length ? ` <span class="n">${mk.length}</span>` : ''}`)}${segBtn('theme', '單字')}</div>
+      <div class="listen-head">
+        ${isTheme ? themePickHtml(LISTEN ? LISTEN.source.theme : listenDefaultTheme()) : `<span class="small muted">錯題本${mk.length ? `・${mk.length} 條` : ''}</span>`}
+        ${ready ? `<button type="button" class="btn btn-sm btn-ghost btn-icon listen-full" data-act="listen-full" title="全螢幕播放" aria-label="全螢幕播放">${icon('expand')}</button>` : ''}
+      </div>
+      ${ready ? listenPanelHtml(false) : `<div class="small muted">${isTheme ? '這個主題沒有單字。' : '目前沒有可以聽的錯題。'}</div>`}
+    </div>`;
   listenRenderNow();
 }
 // 沉浸播放: the full-page player hides the chrome (body.immersive, like practising); Android also goes fullscreen and
@@ -6836,22 +6823,20 @@ Object.assign(ACTIONS, {
   'listen-start': (el) => startListen({ kind: 'mistakes', cat: el.dataset.cat || '' }),
   'listen-kanji': (el) => { listenPause(); ACTIONS['kanji-open'](el); },   // the kanji's sheet has its own play buttons: the player waits
   'listen-theme-start': (el) => startListen({ kind: 'theme', theme: el.dataset.theme || listenDefaultTheme() }),
-  'today-tab': (el) => {
-    const tab = ['practice', 'mistakes', 'theme'].includes(el.dataset.tab) ? el.dataset.tab : 'practice';
-    todayTab = tab;
-    // a player over the other source gives way; the same source (or 練習) keeps it, playing or paused
-    if (tab !== 'practice') { setListenPref({ source: tab }); if (LISTEN && LISTEN.source.kind !== tab) { if (LISTEN.playing) listenStop(true); else LISTEN = null; } }
+  'listen-source': (el) => {   // the 聽一輪 switch: a player over the other source gives way; the same source keeps it, playing or paused
+    const kind = el.dataset.source === 'theme' ? 'theme' : 'mistakes';
+    setListenPref({ source: kind });
+    if (LISTEN && LISTEN.source.kind !== kind) { if (LISTEN.playing) listenStop(true); else LISTEN = null; }
     route();
   },
-  'listen-source': (el) => ACTIONS['today-tab']({ dataset: { tab: el.dataset.source === 'theme' ? 'theme' : 'mistakes' } }),
   'listen-toggle': () => { if (LISTEN && LISTEN.playing) listenPause(); else listenPlay(); },
   'listen-next': () => listenSeek(1),
   'listen-prev': () => listenSeek(-1),
   'listen-exit': () => listenStop(),
   'theme-pick': () => themePickerModal(),
-  'listen-theme-pick': (el) => { const theme = el.dataset.theme || ''; closeModal(true); setListenPref({ source: 'theme', theme }); todayTab = 'theme'; if (LISTEN) { if (LISTEN.playing) listenStop(true); else LISTEN = null; } route(); },
-  'listen-full': () => { if (!LISTEN) return; LISTEN.from = 'today'; immersiveEnter(); go(LISTEN.source.kind === 'theme' ? '#/vocab/listen' : '#/mistakes/listen'); },
-  'listen-close': () => { const L = LISTEN; immersiveLeave(); if (L && L.from === 'today') { L.from = ''; todayTab = L.source.kind === 'theme' ? 'theme' : 'mistakes'; go('#/today'); } else listenStop(); },
+  'listen-theme-pick': (el) => { const theme = el.dataset.theme || ''; closeModal(true); setListenPref({ source: 'theme', theme }); if (LISTEN) { if (LISTEN.playing) listenStop(true); else LISTEN = null; } route(); },
+  'listen-full': () => { if (!LISTEN) return; LISTEN.from = 'tab'; immersiveEnter(); go(LISTEN.source.kind === 'theme' ? '#/vocab/listen' : '#/mistakes/listen'); },
+  'listen-close': () => { const L = LISTEN; immersiveLeave(); if (L && L.from === 'tab') { L.from = ''; go('#/listen'); } else listenStop(); },
   'listen-set': (el) => listenSet(el.dataset.key, el.dataset.key === 'zh' ? el.dataset.value === 'true' : el.dataset.value),
   'listen-cycle': (el) => {
     const k = el.dataset.key; if (!LISTEN) return;
@@ -7943,13 +7928,6 @@ Object.assign(ACTIONS, {
   },
   'cloud-gen-stop': () => { if (CLOUD_GEN) CLOUD_GEN.stop = true; },
   'more-toggle': (el) => { const box = el.closest('.pr-actions').querySelector('.more-items'); box.hidden = !box.hidden; el.setAttribute('aria-expanded', String(!box.hidden)); },
-  'hero-tab': (el) => {
-    heroTab = heroTab === el.dataset.tab ? null : el.dataset.tab;
-    const hero = el.closest('.hero'); if (!hero) return;
-    hero.querySelectorAll('.hero-tab').forEach(b => { const on = b.dataset.tab === heroTab; b.classList.toggle('open', on); b.setAttribute('aria-expanded', String(on)); });
-    hero.querySelectorAll('.hero-panel').forEach(p => { p.hidden = p.dataset.panel !== heroTab; });
-    const unit = heroTab === 'unit' && hero.querySelector('[data-panel="unit"]'); if (unit) playAnims(unit);   // the unit bar fills again (not the ring)
-  },
   'cloud-dl-all': (el) => cloudDownloadAll(el.dataset.kind || 'ja'),
   'cloud-dl-stop': () => { if (CLOUD_DL) CLOUD_DL.stop = true; },
   'legacy-reimport': () => {
