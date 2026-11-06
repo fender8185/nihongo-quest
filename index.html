@@ -219,13 +219,49 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .table tr:last-child td { border-bottom: 0; }
 .empty { text-align: center; color: var(--fg-3); padding: 28px 12px; font-size: 14px; }
 
-/* ---------- 主頁 (test build): the crystal ball ----------
-   --f (0–1) is how much of today's list is done (the ring it replaces): the energy's surface, how far the sparks climb and the
-   glow follow it. The waves, the light inside and the sparks always move; with motion reduced (the rule at the top) it stands still. */
-.orb-stage { display: grid; place-items: center; min-height: calc(100vh - 100px); }
-.orb { --e1: color-mix(in srgb, var(--accent) 62%, #fff); --e3: color-mix(in srgb, var(--accent) 55%, #3b0764); --glass: color-mix(in srgb, var(--accent) 10%, var(--bg-elev)); --glass-2: var(--bg-sunken); --stand: #2b2d38; --stand-2: #111217; --shade: .5;
-  display: block; width: min(84vw, 52svh, 360px); aspect-ratio: 240 / 280; padding: 0; border: 0; border-radius: 40%; background: none; cursor: pointer; transition: transform .2s ease; }
-[data-theme="light"] .orb { --glass: #fff; --glass-2: color-mix(in srgb, var(--accent) 12%, #e2e5ec); --stand: #c7cad4; --stand-2: #8d92a1; --shade: .2; }
+/* ---------- 主頁 (test build): a small crystal ball in a night sky ----------
+   --f (0–1, on .orb-stage) is how much of today's list is done (the ring it replaces). The ball's energy, its sparks and glow,
+   and how much of the sky has come out all follow it: stars one by one, a nebula from 25%, motes rising from the ball from 50%,
+   the aurora and shooting stars from 75%, a constellation at 100%. The scene keeps the dark palette in either theme; with
+   motion reduced (the rule at the top) it is a still picture. */
+.orb-stage { --accent: #8b9cff; --fg-3: #80838f; color-scheme: dark; position: relative; z-index: 0; display: grid; place-items: center; min-height: calc(100vh - 100px); }
+.orb-stage::before { content: ''; position: absolute; left: 50%; top: calc(50% - 10px); width: 360px; height: 360px; margin: -180px 0 0 -180px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(139, 156, 255, .34), rgba(139, 156, 255, .1) 45%, transparent); opacity: calc(.25 + .75 * var(--f)); transition: opacity 1.5s; }   /* the ball's light on the sky */
+.sky { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; background: radial-gradient(130% 70% at 50% 100%, #17143f, #0a0a22 45%, #05060f); }
+@media (min-width: 901px) { .sky { left: 236px; } }   /* beside the sidebar */
+.sky .nebula { position: absolute; border-radius: 50%; opacity: calc(clamp(0, (var(--f) - .25) / .35, 1) * .6); transition: opacity 1.5s; }   /* still: big moving layers cost a phone too much memory */
+.sky .n1 { width: 130vw; height: 70vh; left: -45vw; top: -12vh; background: radial-gradient(closest-side, rgba(124, 92, 255, .45), rgba(124, 92, 255, .12) 55%, transparent); }
+.sky .n2 { width: 120vw; height: 60vh; right: -50vw; top: 38vh; background: radial-gradient(closest-side, rgba(64, 140, 255, .38), rgba(64, 140, 255, .1) 55%, transparent); }
+.sky .aurora { position: absolute; left: -25%; right: -25%; top: -6%; height: 44%; opacity: calc(clamp(0, (var(--f) - .75) / .2, 1) * .8); transition: opacity 1.5s;
+  -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 2px, rgba(0, 0, 0, .8) 2px 5px, #000 5px 9px, rgba(0, 0, 0, .86) 9px 13px); mask-image: repeating-linear-gradient(90deg, #000 0 2px, rgba(0, 0, 0, .8) 2px 5px, #000 5px 9px, rgba(0, 0, 0, .86) 9px 13px); }   /* faint, uneven vertical rays */
+.sky .aurora i { position: absolute; inset: 0; transform-origin: 50% 0; animation: aurora 16s ease-in-out infinite alternate;
+  background: radial-gradient(26% 15% at 24% 64%, rgba(72, 232, 184, .5), transparent 72%), radial-gradient(26% 13% at 46% 50%, rgba(72, 232, 184, .42), transparent 72%), radial-gradient(28% 14% at 70% 40%, rgba(110, 200, 255, .34), transparent 72%); }   /* a chain of glows climbing to the right: a bent ribbon */
+.sky .aurora i + i { animation-duration: 21s; animation-delay: -9s; background: radial-gradient(26% 12% at 34% 44%, rgba(168, 120, 255, .4), transparent 72%), radial-gradient(24% 12% at 62% 60%, rgba(168, 120, 255, .32), transparent 72%); }
+@keyframes aurora { from { transform: translateX(-7%) skewX(-14deg) scaleY(.8); } to { transform: translateX(7%) skewX(12deg) scaleY(1.15); } }
+.sky .st { position: absolute; width: var(--s); height: var(--s); margin: calc(var(--s) / -2) 0 0 calc(var(--s) / -2); opacity: 0; transition: opacity 1.5s; }
+.sky .st.on { opacity: 1; }
+.sky .st::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: #fff; box-shadow: 0 0 calc(var(--s) * 2.5) rgba(190, 200, 255, .85); opacity: .8; }
+.sky .st.on::after { animation: twinkle var(--d) ease-in-out var(--w) infinite alternate; }
+.sky .st.dip::after { box-shadow: 0 0 8px 1px rgba(205, 212, 255, .95); }
+@keyframes twinkle { from { opacity: .2; } to { opacity: 1; } }
+.sky .dipper { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; transition: opacity 2s; }
+.sky .dipper path { fill: none; stroke: rgba(200, 210, 255, .4); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.orb-stage.full .dipper { opacity: 1; }
+.sky .meteors { position: absolute; inset: 0; opacity: clamp(0, (var(--f) - .75) * 8, 1); transition: opacity 1.5s; }
+.sky .meteor { position: absolute; width: 120px; height: 1.5px; border-radius: 1px; background: linear-gradient(90deg, transparent, #fff); opacity: 0; transform-origin: 0 50%; animation: meteor var(--d) linear var(--w) infinite; }
+@keyframes meteor { 0% { transform: rotate(28deg) translateX(0); opacity: 0; } 1% { opacity: 1; } 6% { transform: rotate(28deg) translateX(320px); opacity: 0; } 100% { transform: rotate(28deg) translateX(320px); opacity: 0; } }
+.motes { position: absolute; left: 50%; top: calc(50% - 10px); width: 0; height: 0; pointer-events: none; opacity: clamp(0, (var(--f) - .5) / .25, 1); transition: opacity 1.5s; }
+.motes i { position: absolute; width: var(--s); height: var(--s); border-radius: 50%; background: #d5dbff; box-shadow: 0 0 6px 1px rgba(139, 156, 255, .9); opacity: 0; animation: mote var(--d) ease-out var(--w) infinite; }
+@keyframes mote { 0% { transform: translate(0, 0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(var(--dx), calc(var(--rise) * -1)); opacity: 0; } }
+/* the page opens: the sky comes out with the energy (each star at its share of the way up) */
+@keyframes skyFade { from { opacity: 0; } }
+.orb-stage.anim .st.on { animation: skyFade 1s ease-out var(--in) backwards; }
+.orb-stage.anim :is(.nebula, .motes) { animation: skyFade 1.2s ease-out .3s backwards; }
+.orb-stage.anim :is(.aurora, .meteors) { animation: skyFade 1.4s ease-out .7s backwards; }
+.orb-stage.anim .dipper { animation: skyFade 1.5s ease-out 1.2s backwards; }
+/* the ball: a quarter of the first test build's width (the user's pick), its strokes and waves drawn heavier to read at that size */
+.orb { --e1: color-mix(in srgb, var(--accent) 62%, #fff); --e3: color-mix(in srgb, var(--accent) 55%, #3b0764); --glass: color-mix(in srgb, var(--accent) 14%, #0e1030); --glass-2: #05060f; --stand: #2c3166; --stand-2: #0b0c22;
+  display: block; box-sizing: content-box; width: min(21vw, 13svh, 90px); aspect-ratio: 240 / 280; padding: 14px; margin: -14px; border: 0; border-radius: 40%; background: none; cursor: pointer; transition: transform .2s ease; }   /* the padding: a bigger target than the ball */
 .orb:active { transform: scale(.97); }
 .orb svg { display: block; width: 100%; height: 100%; overflow: visible; }
 .orb .g0 { stop-color: var(--glass); } .orb .g1 { stop-color: var(--glass-2); }
@@ -233,25 +269,25 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .orb .t0 { stop-color: var(--stand-2); } .orb .t1 { stop-color: var(--stand); }
 .orb .w0 { stop-color: #fff; stop-opacity: .45; } .orb .w1 { stop-color: #fff; stop-opacity: 0; }   /* the light inside, the shine on the glass */
 .orb .h0 { stop-color: var(--accent); stop-opacity: 0; } .orb .h1 { stop-color: var(--accent); stop-opacity: .5; }
-.orb .d0 { stop-color: #000; stop-opacity: var(--shade); } .orb .d1 { stop-color: #000; stop-opacity: 0; }
-.orb .back { fill: var(--accent); opacity: .45; } .orb .surf { fill: none; stroke: #fff; stroke-opacity: .6; stroke-width: 1.4; }
-.orb .rim { fill: none; stroke: color-mix(in srgb, var(--accent) 45%, var(--fg-3)); stroke-opacity: .55; stroke-width: 1.5; } .orb.full .rim { stroke: var(--e1); stroke-opacity: .9; }
-.orb .glint { fill: #fff; opacity: .65; } .orb .gleam { fill: none; stroke: #fff; stroke-opacity: .14; stroke-width: 4; stroke-linecap: round; }
-.orb .seam { stroke: var(--e1); stroke-width: 1.5; stroke-linecap: round; opacity: calc(.15 + .75 * var(--f)); transition: opacity 1s; }
+.orb .d0 { stop-color: #000; stop-opacity: .5; } .orb .d1 { stop-color: #000; stop-opacity: 0; }
+.orb .back { fill: var(--accent); opacity: .45; } .orb .surf { fill: none; stroke: #fff; stroke-opacity: .6; stroke-width: 2.4; }
+.orb .rim { fill: none; stroke: color-mix(in srgb, var(--accent) 45%, var(--fg-3)); stroke-opacity: .6; stroke-width: 3; } .orb-stage.full .rim { stroke: var(--e1); stroke-opacity: .9; }
+.orb .glint { fill: #fff; opacity: .7; } .orb .gleam { fill: none; stroke: #fff; stroke-opacity: .16; stroke-width: 6; stroke-linecap: round; }
+.orb .seam { stroke: var(--e1); stroke-width: 3; stroke-linecap: round; opacity: calc(.15 + .75 * var(--f)); transition: opacity 1s; }
 .orb .glow { opacity: calc(.3 + .7 * var(--f)); transition: opacity 1s; }
-.orb .lv { transform: translateY(calc(11px + 208px * (1 - var(--f)))); transition: transform 1s cubic-bezier(.3, .7, .2, 1); }   /* the surface: y 219 under the glass (empty) up to y 11 over it (full) */
-.orb .sparks { --rise: max(0px, 179px - 208px * (1 - var(--f))); opacity: clamp(0, (var(--f) - .12) * 12, 1); }   /* they climb from y 196 to just under the surface */
-@keyframes orbFill { from { transform: translateY(219px); } }   /* the page opens: the energy rises from empty */
+.orb .lv { transform: translateY(calc(6px + 217px * (1 - var(--f)))); transition: transform 1s cubic-bezier(.3, .7, .2, 1); }   /* the surface: y 223 under the glass (empty) up to y 6 over it (full) */
+.orb .sparks { --rise: max(0px, 184px - 217px * (1 - var(--f))); opacity: clamp(0, (var(--f) - .12) * 12, 1); }   /* they climb from y 196 to just under the surface */
+@keyframes orbFill { from { transform: translateY(223px); } }   /* the page opens: the energy rises from empty */
 @keyframes orbWave { to { transform: translateX(-80px); } }   /* one wavelength, so the loop is seamless */
 @keyframes orbDrift { from { transform: translate(-16px, 3px) scale(.9); opacity: .45; } to { transform: translate(20px, -5px) scale(1.12); opacity: 1; } }
 @keyframes orbSpark { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: .9; } 80% { opacity: .5; } 100% { transform: translateY(calc(var(--rise) * -1)); opacity: 0; } }
 @keyframes orbGlow { 50% { transform: scale(1.05); opacity: .7; } }
-.orb .lv.anim { animation: orbFill 1.4s cubic-bezier(.25, .8, .25, 1) backwards; }
+.orb-stage.anim .lv { animation: orbFill 1.4s cubic-bezier(.25, .8, .25, 1) backwards; }
 .orb .wave { animation: orbWave 4.5s linear infinite; } .orb .wave.back { animation-duration: 7s; animation-direction: reverse; }
 .orb .blob { transform-box: fill-box; transform-origin: center; animation: orbDrift 9s ease-in-out infinite alternate; }
 .orb .blob.b2 { animation-duration: 12s; animation-delay: -4s; } .orb .blob.b3 { animation-duration: 10s; animation-delay: -7s; } .orb .blob.b4 { animation-duration: 13s; animation-delay: -2s; }
 .orb .spark { fill: #fff; opacity: 0; animation: orbSpark var(--d) ease-in var(--w) infinite; }
-.orb .halo { transform-box: fill-box; transform-origin: center; animation: orbGlow 5s ease-in-out infinite; } .orb.full .halo { animation-duration: 2.6s; }
+.orb .halo { transform-box: fill-box; transform-origin: center; animation: orbGlow 5s ease-in-out infinite; } .orb-stage.full .halo { animation-duration: 2.6s; }
 /* the dive (orbStart): the energy surges and the ball brightens, then its light spreads over the screen and fades into the questions */
 .orb.surge { transform: scale(1.06); transition: transform .4s cubic-bezier(.3, 0, .2, 1); }
 .orb.surge svg { filter: brightness(1.45) saturate(1.15); transition: filter .4s; }
@@ -321,6 +357,9 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
   #view.fit > .orb-stage { flex: 1 1 auto; min-height: 0; }
   body.today .topbar { display: none; }   /* 主頁 (test build): the ball and the tab bar, nothing else */
   body.today .content { padding-top: calc(16px + env(safe-area-inset-top, 0px)); }
+  body.today .bottomnav { background: rgba(7, 8, 24, .38); border-top-color: rgba(170, 182, 255, .12); }   /* the tab bar is dark glass on the sky, whatever the theme */
+  body.today .bottomnav button { color: rgba(200, 208, 255, .55); }
+  body.today .bottomnav button[aria-current="page"] { color: #c7ceff; } body.today .bottomnav button[aria-current="page"] svg { filter: drop-shadow(0 0 6px rgba(139, 156, 255, .9)); }
   /* contain: size — the item area's content does not count toward the card's minimum height, so the card shrinks until the
      area is 150px (then the content area scrolls) and never ends up shorter than its own controls */
   #view.fit .listen.compact #listenCard { contain: size; flex: 1 1 0; height: auto; min-height: 150px; max-height: 420px; }
@@ -5003,7 +5042,7 @@ function route() {
   const view = document.getElementById('view');
   const opened = r.name !== animRoute || animForce; animRoute = r.name; animForce = false;
   const fit = r.name === 'today' || r.name === 'listen';   // one screen each on a phone: the ball, the player
-  view.classList.toggle('fit', fit); document.body.classList.toggle('fit', fit); document.body.classList.toggle('today', r.name === 'today');
+  view.classList.toggle('fit', fit); document.body.classList.toggle('fit', fit); document.body.classList.toggle('today', r.name === 'today'); themeColor();
   document.body.classList.toggle('immersive', (r.name === 'mistakes' || r.name === 'vocab') && r.parts[1] === 'listen');
   const tip = document.getElementById('chartTip');
   if (tip) tip.classList.remove('show');
@@ -5066,8 +5105,12 @@ function applyTheme() {
   const t = state.settings.theme || 'dark';
   const resolved = t === 'auto' ? (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : t;
   document.documentElement.setAttribute('data-theme', resolved);
+  themeColor();
+}
+// the browser bar's colour: the page background, or 主頁's night sky (test build) whatever the theme
+function themeColor() {
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', resolved === 'light' ? '#f5f6f8' : '#0e0f13');
+  if (meta) meta.setAttribute('content', document.body.classList.contains('today') ? '#05060f' : document.documentElement.getAttribute('data-theme') === 'light' ? '#f5f6f8' : '#0e0f13');
 }
 // furigana: all → smart (no readings on mastered words) → off
 const FURI_LABEL = { all: '顯示', smart: '熟練的字不標', off: '隱藏' };
@@ -5296,25 +5339,55 @@ function noticesHtml() {
 // iOS ignores user-scalable=no inside Safari; the gesture events still stop a pinch from zooming the page
 ['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, (e) => e.preventDefault(), { passive: false }));
 
-// 主頁 (test build): one crystal ball. Its energy is how much of today's list is done (dayProgress, the ring it replaces): empty
-// when the day starts, full when the list is done. A tap dives into 今日練習 (多學 once the day is done).
+// 主頁 (test build): a small crystal ball in a night sky. The ball's energy is how much of today's list is done (dayProgress,
+// the ring it replaces): empty when the day starts, full when the list is done; the sky comes out with it. A tap dives into
+// 今日練習 (多學 once the day is done).
 function renderToday(view) {
   finishPreIfReady();
   const pct = ringPct(dayProgress());
-  const orb = view.querySelector('.orb');
-  if (orb) { orbLevel(orb, pct); return; }   // a redraw (a sync, a setting): the level glides and the motion carries on
-  view.innerHTML = `<div class="orb-stage">${orbHtml(pct)}</div>`;
+  const stage = view.querySelector('.orb-stage');
+  if (stage) { orbLevel(stage, pct); return; }   // a redraw (a sync, a setting): the level glides, new stars fade in, the motion carries on
+  view.innerHTML = homeHtml(pct);
 }
 function orbLabel(pct) { return pct >= 100 ? '今天完成了，點一下多學一些' : `開始今日練習（今天完成 ${pct}%）`; }
-function orbLevel(orb, pct) {
-  orb.style.setProperty('--f', pct / 100);
-  orb.classList.toggle('full', pct >= 100);
-  orb.setAttribute('aria-label', orbLabel(pct));
+function orbLevel(stage, pct) {
+  const f = pct / 100;
+  stage.style.setProperty('--f', f);
+  stage.classList.toggle('full', pct >= 100);
+  stage.querySelectorAll('.st').forEach(el => el.classList.toggle('on', Number(el.dataset.t) <= f));
+  const orb = stage.querySelector('.orb'); if (orb) orb.setAttribute('aria-label', orbLabel(pct));
 }
-const ORB_SPARKS = [[92, 1.6, 4.2, 0], [104, 1.1, 3.4, 1.3], [118, 2, 5, 2.6], [128, 1.3, 3.8, 0.6], [140, 1.8, 4.6, 3.1], [150, 1.2, 3.6, 1.9], [112, 1.4, 4.4, 3.8]];   // x, radius, seconds to climb, head start
+// the sky's layout, the same every day (a fixed seed): each star carries the share of the list that lights it — six faint ones
+// from the start, the rest by 80%, the seven of the constellation at 100%
+const SKY = (() => {
+  let a = 20261106;
+  const rnd = () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };   // mulberry32
+  const r2 = (x) => Math.round(x * 100) / 100;
+  const stars = Array.from({ length: 72 }, (_, i) => ({ x: r2(rnd() * 100), y: r2(rnd() * 100), s: r2(rnd() < 0.12 ? 2.2 + rnd() * 0.6 : 1 + rnd() * 1.1), t: i < 6 ? 0 : r2(0.8 * (i - 5) / 66), d: r2(2 + rnd() * 3.5), w: r2(rnd() * 5) }));
+  [[60, 15], [66, 13], [72, 16], [77, 21], [75, 28], [83, 30], [85, 23]].forEach(([x, y], i) => stars.push({ x, y, s: 2.6, t: 1, d: 3, w: i * 0.4, dip: true }));
+  const motes = Array.from({ length: 14 }, () => ({ x: Math.round(rnd() * 130 - 65), y: Math.round(rnd() * 40 - 5), s: r2(2 + rnd() * 2), rise: Math.round(140 + rnd() * 150), dx: Math.round(rnd() * 50 - 25), d: r2(6 + rnd() * 5), w: r2(rnd() * 10) }));
+  return { stars, motes };
+})();
+function homeHtml(pct) {
+  const f = pct / 100;
+  const star = (s) => `<i class="st${s.dip ? ' dip' : ''}${s.t <= f ? ' on' : ''}" data-t="${s.t}" style="left:${s.x}%;top:${s.y}%;--s:${s.s}px;--d:${s.d}s;--w:-${s.w}s;--in:${f ? Math.round(s.t / f * 120) / 100 : 0}s"></i>`;
+  const dip = SKY.stars.filter(s => s.dip).map(s => `${s.x} ${s.y}`);
+  return `<div class="orb-stage${pct >= 100 ? ' full' : ''}" data-anim style="--f:${f}">
+    <div class="sky" aria-hidden="true">
+      <i class="nebula n1"></i><i class="nebula n2"></i>
+      <div class="aurora"><i></i><i></i></div>
+      <svg class="dipper" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M${dip.join(' L')} L${dip[3]}"/></svg>
+      ${SKY.stars.map(star).join('')}
+      <div class="meteors"><i class="meteor" style="left:6%;top:10%;--d:9s;--w:-3s"></i><i class="meteor" style="left:36%;top:3%;--d:13s;--w:-9s"></i></div>
+    </div>
+    <div class="motes" aria-hidden="true">${SKY.motes.map(m => `<i style="left:${m.x}px;top:${m.y}px;--s:${m.s}px;--rise:${m.rise}px;--dx:${m.dx}px;--d:${m.d}s;--w:-${m.w}s"></i>`).join('')}</div>
+    ${orbHtml(pct)}
+  </div>`;
+}
+const ORB_SPARKS = [[92, 3, 4.2, 0], [104, 2.2, 3.4, 1.3], [118, 3.6, 5, 2.6], [128, 2.4, 3.8, 0.6], [140, 3.2, 4.6, 3.1], [150, 2.2, 3.6, 1.9], [112, 2.6, 4.4, 3.8]];   // x, radius, seconds to climb, head start
 function orbHtml(pct) {
-  const wave = 'M0 0 Q20 -10 40 0 T80 0 T120 0 T160 0 T200 0 T240 0 T280 0 T320 0';   // four wavelengths: one scrolls out while the glass shows the rest
-  return `<button type="button" class="orb${pct >= 100 ? ' full' : ''}" data-act="start-daily" aria-label="${orbLabel(pct)}" style="--f:${pct / 100}">
+  const wave = 'M0 0 Q20 -16 40 0 T80 0 T120 0 T160 0 T200 0 T240 0 T280 0 T320 0';   // four wavelengths: one scrolls out while the glass shows the rest
+  return `<button type="button" class="orb" data-act="start-daily" aria-label="${orbLabel(pct)}">
     <svg viewBox="0 0 240 280" aria-hidden="true">
       <defs>
         <radialGradient id="orbGlass" cx=".4" cy=".36" r=".7"><stop offset="0" class="g0"/><stop offset="1" class="g1"/></radialGradient>
@@ -5324,7 +5397,7 @@ function orbHtml(pct) {
         <radialGradient id="orbHalo"><stop offset=".7" class="h0"/><stop offset=".84" class="h1"/><stop offset="1" class="h0"/></radialGradient>
         <radialGradient id="orbShade"><stop offset="0" class="d0"/><stop offset="1" class="d1"/></radialGradient>
         <clipPath id="orbGlassClip"><circle cx="120" cy="112" r="98"/></clipPath>
-        <clipPath id="orbUnder"><rect x="0" y="5" width="320" height="230"/></clipPath>
+        <clipPath id="orbUnder"><rect x="0" y="8" width="320" height="230"/></clipPath>
       </defs>
       <ellipse cx="120" cy="266" rx="88" ry="8" fill="url(#orbShade)"/>
       <g class="glow"><circle class="halo" cx="120" cy="112" r="126" fill="url(#orbHalo)"/></g>
@@ -5333,9 +5406,9 @@ function orbHtml(pct) {
       <path class="seam" d="M64 247.5 H176"/>
       <circle cx="120" cy="112" r="100" fill="url(#orbGlass)"/>
       <g clip-path="url(#orbGlassClip)">
-        <g class="lv" data-anim>
-          <g transform="translate(0 -5)"><path class="wave back" d="${wave} V215 H0 Z"/></g>
-          <g class="wave"><path d="${wave} V215 H0 Z" fill="url(#orbEnergy)"/><path class="surf" d="${wave}"/></g>
+        <g class="lv">
+          <g transform="translate(0 -7)"><path class="wave back" d="${wave} V232 H0 Z"/></g>
+          <g class="wave"><path d="${wave} V232 H0 Z" fill="url(#orbEnergy)"/><path class="surf" d="${wave}"/></g>
           <g clip-path="url(#orbUnder)">
             <ellipse class="blob" cx="72" cy="38" rx="46" ry="20" fill="url(#orbLight)"/><ellipse class="blob b2" cx="166" cy="78" rx="40" ry="18" fill="url(#orbLight)"/>
             <ellipse class="blob b3" cx="104" cy="122" rx="54" ry="22" fill="url(#orbLight)"/><ellipse class="blob b4" cx="150" cy="172" rx="48" ry="20" fill="url(#orbLight)"/>
@@ -5344,9 +5417,9 @@ function orbHtml(pct) {
         <g class="sparks">${ORB_SPARKS.map(([x, r, d, w]) => `<circle class="spark" cx="${x}" cy="196" r="${r}" style="--d:${d}s;--w:-${w}s"/>`).join('')}</g>
       </g>
       <ellipse cx="84" cy="60" rx="42" ry="24" transform="rotate(-38 84 60)" fill="url(#orbLight)" opacity=".7"/>
-      <circle class="glint" cx="70" cy="52" r="4.5"/>
+      <circle class="glint" cx="70" cy="52" r="5"/>
       <path class="gleam" d="M184 140 A76 76 0 0 1 150 196"/>
-      <circle class="rim" cx="120" cy="112" r="99.5"/>
+      <circle class="rim" cx="120" cy="112" r="99"/>
     </svg>
   </button>`;
 }
@@ -5363,9 +5436,10 @@ function orbStart(btn) {
   const lv = btn && btn.querySelector('.lv');
   if (!n || !lv || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { startSession('daily'); return; }
   orbBusy = true;
-  lv.classList.remove('anim'); lv.style.transition = 'transform .4s cubic-bezier(.5, 0, .7, .4)'; lv.style.transform = 'translateY(-12px)';
+  const stage = btn.closest('.orb-stage'); if (stage) stage.classList.remove('anim');   // a tap while the page still opens: the rise gives way to the surge
+  lv.style.transition = 'transform .4s cubic-bezier(.5, 0, .7, .4)'; lv.style.transform = 'translateY(-12px)';
   btn.classList.add('surge');
-  const r = btn.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height * 112 / 280;
+  const r = btn.querySelector('svg').getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height * 112 / 280;
   const d = 2 * Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)) / 0.62;   // its opaque part reaches the farthest corner
   const veil = document.createElement('div'); veil.className = 'orb-veil';
   veil.style.cssText = `left:${x - d / 2}px;top:${y - d / 2}px;width:${d}px;height:${d}px`;
