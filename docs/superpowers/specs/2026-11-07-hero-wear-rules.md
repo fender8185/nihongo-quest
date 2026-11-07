@@ -22,7 +22,7 @@ follows from now on.
 | kind | wares | rule |
 | --- | --- | --- |
 | on top | 貓耳髮箍, 必勝頭巾 (and 圓框眼鏡 on the face) | drawn over every hairstyle as it is, facing us and from behind; it hides no hair |
-| hat with its own hairstyle (`HAT_HAIR`) | 毛帽 → 短碎髮, 草帽 → 清爽短髮, 貝雷帽 → 鮑伯頭, 學士帽 → 中分 | drawn big enough to cover the plain crown, so a hairstyle with a plain crown keeps its own hair under it; a tall hairstyle is drawn as the hat's own while the hat is on |
+| hat with its own hairstyle (`HAT_HAIR`) | 毛帽 → 短碎髮, 草帽 → 清爽短髮, 貝雷帽 → 鮑伯頭, 學士帽 → 中分, 貓耳兜帽 → 短碎髮 | drawn big enough to cover the plain crown, so a hairstyle with a plain crown keeps its own hair under it; a tall hairstyle is drawn as the hat's own while the hat is on |
 | whole head (`FULL`) | 貓咪頭套 | takes the place of the head, hair and face; nothing is worn on the face |
 
 - **Tall hairstyles** (`tall: true` in `HAIR`): 呆毛短髮, 刺蝟頭, 自然捲, 爆炸頭, 高馬尾, 丸子頭. Their hair rises out of the plain
@@ -34,6 +34,16 @@ follows from now on.
   dressing room says the same (with the hat's name) on 髮型 and 穿戴, and 「戴著貓咪頭套，看不到臉和頭髮。」 on the face's tabs.
   Nothing is said when nothing is swapped.
 - The dressing room frames the hero 12 units higher while something is on the head, so a hat never runs under the top bar.
+
+## Colours and sets
+
+- A ware is drawn in its own colours, or in their top's colour where it belongs to an outfit: a `WEAR` drawing gets
+  `(L, c, d)`, their top's colour and a shade of it (貓耳兜帽 is the top's colour, with a cream fluffy edge).
+- **The cat suit** is 貓咪上衣 + 貓咪褲 + 貓耳兜帽 (a cat suit with their face) or 貓咪頭套 (a whole cat). The drawing is marked
+  `data-set="cat"`. Idling, it beckons now and then like a 招き猫 (the right paw raised beside the head) instead of waving or
+  bouncing; a tap also says にゃ, にゃーん, にゃ？ or にゃっ in a bubble over the head. A paw at the face would be hidden, since
+  the head is drawn over the arms, so there is no face-washing.
+- Tails (`bt.tail`) are drawn in a group of their own (`.tail`) and sway all the time.
 
 ## Adding a ware or a hairstyle
 

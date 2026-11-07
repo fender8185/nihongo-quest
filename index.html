@@ -482,6 +482,9 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.study, .sky) .hero:is(.idle-wave, .wave) .arm.r { animation: heroWave 1.5s ease-in-out; } :is(.study, .sky) .hero.wave .arm.r { animation-duration: 1.2s; }
 :is(.study, .sky) .hero.idle-sway .bob { animation: heroSway 2.2s ease-in-out; } :is(.study, .sky) .hero.idle-bounce .bob { animation: heroBounce .9s ease-in-out; }
 :is(.study, .sky) .hero.spin:not(.sit) .bob { animation: heroSpin .7s ease-in-out; }
+:is(.study, .sky) .hero .tail { transform-box: view-box; animation: heroTail 2.8s ease-in-out infinite; } :is(.study, .sky) .hero .tail.t0 { transform-origin: 24px -52px; } :is(.study, .sky) .hero .tail.t1 { transform-origin: 2px -50px; }
+:is(.study, .sky) .hero.idle-maneki .arm.r { animation: heroManeki 1.8s ease-in-out; } :is(.study, .sky) .hero.idle-maneki .head { animation: heroTilt 1.8s ease-in-out; }
+:is(.study, .sky) .hero .nya { position: absolute; left: 60%; top: -4%; padding: 1px 8px 2px; border-radius: 10px; font-style: normal; font-weight: 700; font-size: 13px; line-height: 1.5; white-space: nowrap; color: #3b3428; background: #fffdf6; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); pointer-events: none; animation: heroNya 1.4s ease-out forwards; }
 @keyframes heroBreathe { 50% { transform: translateY(-1.5px); } }
 @keyframes heroBlink { 0%, 95%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
 @keyframes heroLeg { from { transform: rotate(22deg); } to { transform: rotate(-22deg); } }
@@ -497,6 +500,10 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 @keyframes heroSway { 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
 @keyframes heroBounce { 25%, 75% { transform: translateY(-6px); } 50% { transform: none; } }
 @keyframes heroSpin { 25% { transform: scaleX(.15); } 50% { transform: scaleX(-1); } 75% { transform: scaleX(-.15); } }
+@keyframes heroTail { 50% { transform: rotate(8deg); } }
+@keyframes heroManeki { 15%, 45%, 75% { transform: rotate(-168deg); } 30%, 60% { transform: rotate(-146deg); } }
+@keyframes heroTilt { 20%, 80% { transform: rotate(5deg); } }
+@keyframes heroNya { 0% { opacity: 0; transform: translateY(6px) scale(.6); } 15% { opacity: 1; transform: none; } 80% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-8px); } }
 .study .front { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; will-change: transform; }
 .study.edit :is(.hero, .front) { display: none; }
 /* the dressing room (test build): the 衣櫃 button zooms in on the hero — the room grows round them and dims, a big copy of them flies
@@ -6202,6 +6209,7 @@ const WARES = [
   { id: 'backpack', kind: 'wear', slot: 'back', name: '背包', price: 18, desc: '出門用的小背包。' },
   { id: 'haori', kind: 'wear', slot: 'body', name: '羽織', price: 30, desc: '披在連帽衫外面的羽織。' },
   { id: 'cathead', kind: 'wear', slot: 'head', name: '貓咪頭套', price: 30, desc: '整顆貓咪頭，毛色跟著上衣的顏色。配貓咪上衣和貓咪褲，就變成一隻貓。' },
+  { id: 'cathood', kind: 'wear', slot: 'head', name: '貓耳兜帽', price: 20, desc: '有貓耳朵的兜帽，臉旁一圈毛毛，顏色跟著上衣。配貓咪上衣和貓咪褲，就是一整件貓咪布偶裝。' },
   // clothes (test build): a style of top or trousers, dyed in the hero's own colours (look.top, look.bottom) and chosen in the
   // dressing room's 衣服 — 帽T and 長褲 are everyone's, these are sold
   { id: 'tee', kind: 'clothes', slot: 'top', name: 'T恤', price: 8, desc: '短袖 T 恤，顏色在衣櫃自己配。' },
@@ -8318,10 +8326,16 @@ const HERO = (() => {
   // - a hat (HAT_HAIR): drawn big enough to cover the plain crown, so every hairstyle with one keeps its own hair under it; a tall
   //   one gives way, while the hat is on, to the hairstyle the hat comes with, in their own hair colour
   // - a whole head (FULL): takes the place of the head, hair and face; nothing is worn on the face
-  const HAT_HAIR = { beanie: 'crop', strawhat: 'neat', beret: 'bob', gradcap: 'curtain' };
+  const HAT_HAIR = { beanie: 'crop', strawhat: 'neat', beret: 'bob', gradcap: 'curtain', cathood: 'crop' };
   const hairWorn = (lk, wear) => { const h = wear && HAT_HAIR[wear.head]; return h && HAIR[lk.hair].tall ? h : lk.hair; };   // the hairstyle drawn
-  // the things worn: [front, back] drawings by part, in the figure's own units
+  // the things worn: [front, back] drawings by part, in the figure's own units; c and d are their top's colour and a shade of it
   const WEAR = {
+    cathood: (L, c, d) => {   // 貓耳兜帽: a hood up round the face, a fluffy edge, ears on top; with 貓咪上衣 and 貓咪褲 a whole cat suit
+      const ears = both(`<path ${L(c, 4.4)} d="M-36 -164 L-30 -200 L-8 -183 Z"/>`), outer = 'M-48 -98 C-54 -128 -46 -166 -22 -180 C-10 -186 14 -186 26 -180 C50 -166 58 -128 52 -98';
+      return [ears + both('<path fill="#f2a8b8" d="M-30.4 -171 L-27.6 -192 L-14 -182.6 Z"/>') + `<path ${L(c, 4.3)} d="${outer} L40 -98 C43 -124 34 -158 2 -162 C-30 -158 -39 -124 -36 -98 Z"/>
+        <path ${L('#fbf6ee', 4.35)} d="M42.8 -98 C46 -126 36.6 -161 2 -165 C-32.6 -161 -42 -126 -38.8 -98 L-33.2 -98 C-36 -122 -27.4 -155 2 -159 C31.4 -155 40 -122 37.2 -98 Z"/>`,
+        ears + `<path ${L(c, 4.3)} d="${outer} Q2 -88 -48 -98 Z"/><path d="M2 -184 V-100" stroke="${d}" stroke-width="1.4" stroke-opacity=".6"/>`];
+    },
     beanie: (L) => {   // pulled down over the crown to the fringe, a turned-up rib cuff, a pompom
       const ribs = [-38, -28, -18, -8, 2, 12, 22, 32, 42].map((x) => { const u = (x - 2) / 48.5, w = 3 * (1 - u * u); return `M${x} ${q(-147.4 - w)} V${q(-138.6 + w)}`; }).join(' ');
       const cap = `<path ${L('#d9534a', 4.2)} d="M-44 -141 C-46 -171 -23 -185 2 -185 C27 -185 50 -171 48 -141 Z"/>${both('<path d="M-24 -151 C-23 -164 -16 -175 -5 -182 M-9 -152 C-8 -165 -5 -175 -1 -183" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="2.2" stroke-linecap="round"/>')}
@@ -8356,7 +8370,8 @@ const HERO = (() => {
   let uid = 0;   // each drawing's own clip ids
   // the figure, both views: o.look, o.wear, o.L as above
   function svg(o = {}) {
-    const lk = norm(o.look), L = o.L || day, wear = o.wear || {}, W = (slot, side) => { const id = wear[slot]; const f = id && WEAR[id]; return f ? f(L)[side] || '' : ''; };
+    const lk = norm(o.look), L = o.L || day, wear = o.wear || {}, W = (slot, side) => { const id = wear[slot]; const f = id && WEAR[id]; return f ? f(L, lk.top, dk(lk.top, 0.84))[side] || '' : ''; };
+    const cat = lk.topStyle === 'cattop' && lk.bottomStyle === 'catpants' && (wear.head === 'cathood' || wear.head === 'cathead');   // the whole cat suit
     const n = ++uid, hairOf = HAIR[hairWorn(lk, wear)], hf = L(lk.hairColor, 4), hk = L(dk(lk.hairColor, 0.8), 3.8), hs = `stroke="${dk(lk.hairColor, 0.68)}"`;
     const top = lk.top, topDk = dk(lk.top, 0.84), pants = lk.bottom, skin = lk.skin, tp = TOPS[lk.topStyle], bt = BOTTOMS[lk.bottomStyle], full = FULL[wear.head];
     const defs = `<defs><clipPath id="fc${n}" clipPathUnits="userSpaceOnUse"><path d="${FACE[lk.face]}"/></clipPath></defs>`;
@@ -8373,11 +8388,11 @@ const HERO = (() => {
       <g class="eyes">${EYES[lk.eyes](lk.eyeColor)}</g>${both(`<path d="${BROWS[lk.brows][0]}" fill="none" stroke="${dk(lk.hairColor, 0.8)}" stroke-width="${BROWS[lk.brows][1]}" stroke-linecap="round"/>`)}`;
     const fd = dk(top, 0.74), whole = full && full(L, top, fd), collar = tp.collar ? tp.collar(L, top, topDk) : '';   // a whole head: the hero's own, hair and face things give way
     const shade = `<g opacity=".13" transform="translate(0 2.4)" clip-path="url(#fc${n})">${hairOf.front('fill="#3a2016"')}</g>`;   // the fringe's shadow on the forehead
-    const front = `<g class="head">${whole ? '' : hairOf.back(hf, hk)}</g>${bt.tail ? bt.tail(L, pants, pd, 0) : ''}${W('back', 0)}${legs(0)}${tp.front(L, top, topDk)}${W('body', 0)}${W('neck', 0)}${arm('l', -27)}${arm('r', 31)}
+    const front = `<g class="head">${whole ? '' : hairOf.back(hf, hk)}</g>${bt.tail ? `<g class="tail t0">${bt.tail(L, pants, pd, 0)}</g>` : ''}${W('back', 0)}${legs(0)}${tp.front(L, top, topDk)}${W('body', 0)}${W('neck', 0)}${arm('l', -27)}${arm('r', 31)}
       <g class="head">${collar}${whole ? whole[0] : `${face}${shade}${hairOf.front(hf)}${hairOf.deco(hs)}${W('face', 0)}${W('head', 0)}`}</g>`;
-    const back = `${legs(1)}${arm('l', -27)}${arm('r', 31)}${tp.back(L, top, topDk)}${W('body', 1)}${tp.over ? tp.over(L, top, topDk) : ''}${bt.tail ? bt.tail(L, pants, pd, 1) : ''}${W('neck', 1)}${W('back', 1)}
+    const back = `${legs(1)}${arm('l', -27)}${arm('r', 31)}${tp.back(L, top, topDk)}${W('body', 1)}${tp.over ? tp.over(L, top, topDk) : ''}${bt.tail ? `<g class="tail t1">${bt.tail(L, pants, pd, 1)}</g>` : ''}${W('neck', 1)}${W('back', 1)}
       <g class="head">${whole ? whole[1] : `<ellipse cx="2" cy="-128" rx="34" ry="32" ${L(skin, 3.6)}/>${hairOf.rear(hf, hk, hs)}${W('face', 1)}${W('head', 1)}`}</g>`;
-    return `<svg viewBox="${o.box || '-60 -200 120 210'}"${o.box ? ' style="overflow:hidden"' : ''} aria-hidden="true">${defs}<ellipse class="h-shadow" rx="24" ry="7" fill="#2b1c12" fill-opacity=".2"/><g class="fig"><g class="bob"><g class="f-front">${front}</g>${o.front ? '' : `<g class="f-back">${back}</g>`}</g></g></svg>`;   // front: the front view only
+    return `<svg viewBox="${o.box || '-60 -200 120 210'}"${o.box ? ' style="overflow:hidden"' : ''}${cat ? ' data-set="cat"' : ''} aria-hidden="true">${defs}<ellipse class="h-shadow" rx="24" ry="7" fill="#2b1c12" fill-opacity=".2"/><g class="fig"><g class="bob"><g class="f-front">${front}</g>${o.front ? '' : `<g class="f-back">${back}</g>`}</g></g></svg>`;   // front: the front view only
   }
   // the head alone, in daylight, for the choices in the dressing room: 'head' frames the hair, 'face' the eyes, brows and mouth
   const head = (look, crop) => svg({ look, front: true, box: crop === 'face' ? '-27 -138 58 52' : '-58 -198 120 120' });
@@ -8387,12 +8402,14 @@ const HERO = (() => {
   function thumb(id, look) {
     if (FULL[id]) { const lk = norm(look); return `<svg class="thumb" viewBox="-46 -186 96 100" aria-hidden="true">${FULL[id](day, lk.top, dk(lk.top, 0.74))[0]}</svg>`; }
     const f = WEAR[id]; if (!f) return '';
-    const hat = !!HAT_HAIR[id];   // a hat is drawn round a crown of hair: a bigger frame, the faint head with its hair
-    return `<svg class="thumb" viewBox="${hat ? '-68 -203 136 158' : '-60 -185 120 140'}" aria-hidden="true"><g class="base" opacity=".28"><ellipse cx="2" cy="-128" rx="34" ry="32" fill="#c9bfae"/>${hat ? '<path d="M-44 -128 C-45 -160 -20 -172 2 -172 C24 -172 49 -160 48 -128 Q2 -150 -44 -128 Z" fill="#a3957d"/>' : ''}<path d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -50 H-26 Z" fill="#c9bfae"/></g><g>${f((h) => `fill="${h}"`)[0]}</g></svg>`;
+    const hat = !!HAT_HAIR[id], lk = norm(look);   // a hat is drawn round a crown of hair: a bigger frame, the faint head with its hair
+    return `<svg class="thumb" viewBox="${hat ? '-68 -203 136 158' : '-60 -185 120 140'}" aria-hidden="true"><g class="base" opacity=".28"><ellipse cx="2" cy="-128" rx="34" ry="32" fill="#c9bfae"/>${hat ? '<path d="M-44 -128 C-45 -160 -20 -172 2 -172 C24 -172 49 -160 48 -128 Q2 -150 -44 -128 Z" fill="#a3957d"/>' : ''}<path d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -50 H-26 Z" fill="#c9bfae"/></g><g>${f(day, lk.top, dk(lk.top, 0.84))[0]}</g></svg>`;
   }
   // idling (test build): standing still they now and then look round, stretch, wave (facing us), sway or bounce — one at a time,
   // 6–12 s apart (the first after 4), never the same twice running; sitting they nod over the notebook. ok(): may they now?
-  const IDLES = { look: 1800, stretch: 1600, wave: 1500, sway: 2200, bounce: 900 }, IDLE_CLS = ['nod', ...Object.keys(IDLES)].map((k) => 'idle-' + k);
+  const IDLES = { look: 1800, stretch: 1600, wave: 1500, sway: 2200, bounce: 900, maneki: 1800 }, IDLE_CLS = ['nod', ...Object.keys(IDLES)].map((k) => 'idle-' + k);
+  const PEOPLE = ['look', 'stretch', 'wave', 'sway', 'bounce'], CATS = ['look', 'stretch', 'maneki', 'sway'];   // in the cat suit: a 招き猫's paw for a wave
+  const inCat = (el) => !!el.querySelector('svg[data-set="cat"]');
   const calm = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   function idle(el, ok, first) {
     if (!el) return;
@@ -8401,7 +8418,7 @@ const HERO = (() => {
     el._idle = setTimeout(() => {
       if (!el.isConnected) return;
       if (!ok()) { idle(el, ok); return; }
-      const sit = el.classList.contains('sit'), names = sit ? ['nod'] : Object.keys(IDLES).filter((k) => k !== el._idleLast && !(k === 'wave' && el.classList.contains('back')));
+      const sit = el.classList.contains('sit'), names = sit ? ['nod'] : (inCat(el) ? CATS : PEOPLE).filter((k) => k !== el._idleLast && !((k === 'wave' || k === 'maneki') && el.classList.contains('back')));
       const k = names[Math.floor(Math.random() * names.length)]; el._idleLast = k;
       el.classList.add('idle-' + k);
       setTimeout(() => { el.classList.remove('idle-' + k); idle(el, ok); }, sit ? 1600 : IDLES[k]);
@@ -8416,6 +8433,15 @@ const HERO = (() => {
     const k = names[Math.floor(Math.random() * names.length)]; el._tapLast = k;
     el.classList.remove(...Object.keys(TAPS)); still(el); void el.offsetWidth; el.classList.add(k);
     clearTimeout(el._tap); el._tap = setTimeout(() => el.classList.remove(k), TAPS[k]);
+    if (inCat(el)) nya(el);
+  }
+  // the cat suit answers a tap with a にゃ over their head, a different one each time
+  const NYA = ['にゃ', 'にゃーん', 'にゃ？', 'にゃっ'];
+  function nya(el) {
+    el.querySelectorAll('.nya').forEach((b) => b.remove());
+    const b = document.createElement('i'); b.className = 'nya'; b.lang = 'ja';
+    el._nya = ((el._nya || 0) + 1) % NYA.length; b.textContent = NYA[el._nya];
+    el.appendChild(b); setTimeout(() => b.remove(), 1400);
   }
   return { svg, head, thumb, clothes, idle, still, react, norm, OPTS, LOOK0, slots: Object.keys(WEAR).concat(Object.keys(FULL)),
     hairWorn: (look, wear) => hairWorn(norm(look), wear), whole: (id) => !!FULL[id] };

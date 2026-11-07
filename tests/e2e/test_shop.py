@@ -391,7 +391,7 @@ def test_a_hat_sits_on_plain_hair_brings_its_own_for_tall_hair_and_unknown_looks
       state.look = 'nope'; const fixed = normalizeState(state).look;
       return JSON.stringify({ cut, swaps, fair, onTop, cat: HERO.whole('cathead'), odd: [odd.hair, odd.skin, odd.eyes], fixed, styles: hairs.length }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'cut': False, 'swaps': {'beanie': 'crop', 'strawhat': 'neat', 'beret': 'bob', 'gradcap': 'curtain'}, 'fair': True, 'onTop': True,
+    assert r == {'cut': False, 'swaps': {'beanie': 'crop', 'strawhat': 'neat', 'beret': 'bob', 'gradcap': 'curtain', 'cathood': 'crop'}, 'fair': True, 'onTop': True,
                  'cat': True, 'odd': ['crop', '#f3d1b5', 'big'], 'fixed': {}, 'styles': 16}, r   # 'mohawk' and the old styles' ids fall back to 短碎髮
 
 def test_a_hat_that_swaps_their_hairstyle_says_so_in_the_shop_and_the_dressing_room(b):
@@ -411,6 +411,27 @@ def test_a_hat_that_swaps_their_hairstyle_says_so_in_the_shop_and_the_dressing_r
     assert r['shop'] == {'beanie': '蓋不住丸子頭，戴著時換成短碎髮。', 'beret': '蓋不住丸子頭，戴著時換成鮑伯頭。', 'catears': None, 'scarf': None}, r
     assert r['face'] is None and r['hair'] == '毛帽蓋不住丸子頭，戴著時換成短碎髮。' and r['long'] is None, r   # 長直髮 fits under it
     assert r['wear'] is None and r['cat'] == '戴著貓咪頭套，看不到臉和頭髮。', r
+
+# 2026-11-07 (test build): 貓耳兜帽 in their top's colour; with 貓咪上衣 and 貓咪褲 (or the whole cat's head) it is the cat suit, which
+# beckons like a 招き猫 instead of waving or bouncing and answers a tap with a にゃ; the tail sways in a group of its own
+def test_the_cat_hood_makes_a_cat_suit_that_beckons_and_says_nya(b):
+    js = "(async () => { " + FRESH + """ state.koto.gift = 100; ['cathood', 'cattop', 'catpants'].forEach(id => buyWare(WARE.get(id)));
+      const suit = { topStyle: 'cattop', bottomStyle: 'catpants', top: '#4a4a55' }, svg = (look, head) => HERO.svg({ look, wear: { head } });
+      const hood = svg(suit, 'cathood'), sets = { hood: hood.includes('data-set="cat"'), head: svg(suit, 'cathead').includes('data-set="cat"'),
+        noPants: svg(Object.assign({}, suit, { bottomStyle: 'pants' }), 'cathood').includes('data-set'), ears: svg(suit, 'catears').includes('data-set') };
+      const fur = /<path fill="#4a4a55" d="M-48 -98 C-54 -128/.test(hood), tails = (hood.match(/<g class="tail t[01]">/g) || []).length;
+      location.hash = '#/shop'; route(); const card = !!document.querySelector('[data-ware="cathood"] [data-act="ware-wear"]');
+      const box = (look) => { const el = document.createElement('div'); el.className = 'hero'; el.innerHTML = svg(look, 'cathood'); document.body.appendChild(el); return el; };   /* not in #view: the hash change redraws it */
+      const cat = box(suit), person = box({});
+      HERO.react(cat); HERO.react(person); const nya = cat.querySelector('.nya'), said = nya ? nya.textContent : null, quiet = !person.querySelector('.nya');
+      const rnd = Math.random; Math.random = () => 0.6; HERO.idle(cat, () => true, true); HERO.idle(person, () => true, true);
+      await new Promise(q => setTimeout(q, 4300)); Math.random = rnd;
+      const idles = [cat, person].map(el => [...el.classList].find(c => c.startsWith('idle-')) || null);
+      return JSON.stringify({ sets, fur, tails, card, said, quiet, idles }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['sets'] == {'hood': True, 'head': True, 'noPants': False, 'ears': False} and r['fur'] and r['tails'] == 2 and r['card'], r
+    assert r['said'] in ('にゃ', 'にゃーん', 'にゃ？', 'にゃっ') and r['quiet'], r
+    assert r['idles'] == ['idle-maneki', 'idle-sway'], r   # the same roll: the cat's third idle, a person's fourth
 
 def test_clothes_are_sold_put_on_in_the_dressing_room_and_dyed_in_the_heros_colours(b):
     js = "(async () => { " + FRESH + """ state.koto.gift = 50; saveState(); const msg = buyWare(WARE.get('tee'));
