@@ -836,6 +836,20 @@ def test_walking_across_the_screen_he_does_not_keep_turning_round(b):
     assert r['left']['moving'] > 30 and r['right']['moving'] > 30, r
     assert r['left']['turns'] <= 1 and r['right']['turns'] <= 1, r   # sideways he keeps the way he faced
 
+def test_a_long_yard_walk_or_the_climb_sets_no_css_variable_round_the_hero_each_frame(b):
+    # 1.2.x: on an iPhone his legs stopped on long walks out in the yard: the camera following him set a CSS variable on the whole
+    # yard every frame (and the climb one on him), and every change round him began his steps again there
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + POINTER + """ location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); await wait(500);
+      const y = document.querySelector('.yard'), h = y.querySelector('.yhero'), set = CSSStyleDeclaration.prototype.setProperty, seen = [];
+      CSSStyleDeclaration.prototype.setProperty = function (k, v, p) { if (String(k).startsWith('--')) seen.push(k); return set.call(this, k, v, p); };
+      yHeroWalk(y, [520, 100]); await wait(1400); const walk = { calls: seen.length, cam: Math.round(ycam.x) }; seen.length = 0;
+      y.querySelector('.shop-btn').click(); await wait(2600); const climb = { calls: seen.length, hash: location.hash };
+      CSSStyleDeclaration.prototype.setProperty = set;
+      return JSON.stringify({ walk, climb }); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert r['walk']['cam'] > 200 and r['walk']['calls'] == 0, r   # the camera went along, no variable set
+    assert r['climb']['calls'] <= 1, r   # up the hill: none per frame (the one before the shop opens is fine)
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

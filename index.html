@@ -653,9 +653,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .yhero { left: 50%; bottom: -10px; width: 120px; height: 210px; margin-left: -60px; transform-origin: 50% 95.24%; }
 .sky .yhero svg { filter: brightness(calc(.64 + .36 * var(--day))) saturate(calc(.8 + .2 * var(--day))); }   /* by night a little darker than by day, never dark (1.2.0) */
 .sky .yhero { z-index: 1; }   /* in the order of the yard's things by how far up the lawn (inline); behind the house on the hill path */
-/* up the hill path to 古道具屋 (1.2.0): small with the distance and outlined so he stands out by day and by night (--hs: his
-   scale, so the outline stays about a pixel on the screen); the house stands in front of the path */
-.sky .yhero.climb svg { filter: brightness(calc(.8 + .2 * var(--day))) drop-shadow(0 0 calc(1.3px / var(--hs, .12)) rgba(255, 255, 255, .95)) drop-shadow(0 0 calc(2.6px / var(--hs, .12)) rgba(255, 238, 200, calc(.3 + .45 * (1 - var(--day))))); }
+/* up the hill path to 古道具屋 (1.2.0): small with the distance and outlined so he stands out by day and by night (the outline is
+   set on his drawing as he goes, yClimbLook, so it stays about a pixel on the screen); the house stands in front of the path */
 .yard.climbing .house { z-index: 2; } .yard.climbing .shop-btn .tag { opacity: 0; transition: opacity .3s; }   /* its name steps aside while he runs up to it */
 /* the mailbox by the house: its flag is up while there are letters (and rises as the yard opens), its door drops open on a tap */
 .sky .mailbox { position: absolute; z-index: 146; left: 50%; bottom: 154px; width: 52px; height: 66px; margin-left: 30px; }   /* 300 − its 154 px up the lawn, like the wares */
@@ -6108,7 +6107,8 @@ function yCamTo(yard, x, give = 0) {   // the camera there (give: how much of a 
   const m = yCamMax();
   ycam.x = x < -m ? -m - (-m - x) * give : x > m ? m + (x - m) * give : x;
   const w = yard.querySelector('.yworld'); if (w) w.style.transform = `translate3d(${(-ycam.x).toFixed(1)}px,0,0)`;
-  yard.style.setProperty('--ycx', `${(-ycam.x).toFixed(1)}px`);
+  // no CSS variable here: one set on the yard every frame of a long walk began the hero's steps again on an iPhone (his legs
+  // stopped, 1.2.x); the zoom into the door reads the camera when it starts (sceneGo)
 }
 function yardLayout(yard) {   // the world as wide as it should be on this screen, the hill's shop sign with it, the camera inside
   const sky = yard.querySelector('.sky'), w = yard.querySelector('.yworld'); if (!sky || !w) return;
@@ -6396,7 +6396,7 @@ function yHeroRedraw(yard) { const el = yard.querySelector('.yhero'); if (el) el
 function yHeroHold(yard) {   // the dressing room opens: the hero stops where they are
   cancelAnimationFrame(yh.raf); yh.climb = null; yh.s = 0; yard.classList.remove('climbing');
   const el = yard.querySelector('.yhero'); if (!el) return;
-  el.classList.remove('walk', 'run', 'climb'); HERO.still(el); yHeroPlace(yard); yHeroSave();
+  el.classList.remove('walk', 'run', 'climb'); yClimbLook(el, 0); HERO.still(el); yHeroPlace(yard); yHeroSave();
 }
 function yHeroPlace(yard) {
   const el = yard.querySelector('.yhero'); if (!el) return;
@@ -6404,10 +6404,17 @@ function yHeroPlace(yard) {
   el.classList.toggle('back', yh.back); el.classList.toggle('flip', yh.flip); el.style.zIndex = yh.climb === 'hill' ? '' : String(300 - Math.round(yh.Y));
   if (el.matches('.walk, .run')) yFollow(yard);   // on the move: the camera goes along
 }
+// up the hill path: outlined about a pixel on the screen however small he gets (s: his scale; none: off the path). Set on his
+// drawing, and only when the width changes, never as a CSS variable round him (his legs would begin again each time on an iPhone)
+function yClimbLook(h, s) {
+  const svg = h && h.querySelector('svg'); if (!svg) return;
+  const px = s ? Math.round(1.3 / s * 2) / 2 : 0; if (svg._outline === px) return; svg._outline = px;
+  svg.style.filter = px ? `brightness(calc(.8 + .2 * var(--day))) drop-shadow(0 0 ${px}px rgba(255, 255, 255, .95)) drop-shadow(0 0 ${px * 2}px rgba(255, 238, 200, calc(.3 + .45 * (1 - var(--day)))))` : '';
+}
 function yHeroWalk(yard, to, done) {
   cancelAnimationFrame(yh.raf);
   const el = yard.querySelector('.yhero'), lim = ycam.YW / 2 - 20;
-  yh.climb = null; yh.s = 0; yard.classList.remove('climbing'); if (el) el.classList.remove('climb');   // off the hill path, if he was on it
+  yh.climb = null; yh.s = 0; yard.classList.remove('climbing'); if (el) { el.classList.remove('climb'); yClimbLook(el, 0); }   // off the hill path, if he was on it
   HERO.still(el);
   const from = [yh.X, yh.Y], goal = [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(214, to[1]))], dx = goal[0] - from[0], dy = goal[1] - from[1], len = Math.hypot(dx, dy);
   if (!el || len < 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { yh.X = goal[0]; yh.Y = goal[1]; if (el) yHeroPlace(yard); yHeroSave(); if (done) done(); return; }
@@ -6444,7 +6451,7 @@ function yClimb(el) {
       const d = Math.min(len, (now - t0) / 1000 * v), q = seg.find((x) => d <= x[2] + x[3]) || seg[seg.length - 1], t = (d - q[2]) / q[3];
       const dx = q[1][0] - q[0][0], dy = q[1][1] - q[0][1];
       yh.X = q[0][0] + dx * t; yh.Y = q[0][1] + dy * t; yh.back = dy > 0; if (Math.abs(dx) > 0.5) yh.flip = dx < 0;
-      yh.s = s0 + (s1 - s0) * d / len; h.style.setProperty('--hs', yh.s.toFixed(3)); yHeroPlace(yard);
+      yh.s = s0 + (s1 - s0) * d / len; yClimbLook(h, yh.s); yHeroPlace(yard);
       if (d < len) { yh.raf = requestAnimationFrame(step); return; }
       h.classList.add('out'); keep(); setTimeout(() => go('#/shop'), 280);   // in at the door
     };
@@ -9187,6 +9194,7 @@ Object.assign(ACTIONS, {
 function sceneGo(hash, cls) {
   const box = document.querySelector('#view .yard, #view .study');
   if (!box || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { go(hash); return; }
+  if (box.classList.contains('yard')) box.style.setProperty('--ycx', `${(-ycam.x).toFixed(1)}px`);   // the door where the camera has it
   box.classList.add(cls); setTimeout(() => go(hash), 380);
 }
 // the dive: the notebook flares, its light spreads over the screen, and the questions come up as it fades. A brand-new learner
