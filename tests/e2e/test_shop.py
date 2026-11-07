@@ -173,14 +173,14 @@ def test_the_desk_and_the_window_stand_off_the_bookcase_and_an_older_room_follow
       const p0 = JSON.parse(JSON.stringify(state.placed)); ['garland1', 'garland2', 'garland3', 'garland4'].forEach(id => delete p0[id]);
       const old = (placed, owned) => normalizeState(Object.assign(JSON.parse(JSON.stringify(state)), { roomV: 2, placed: Object.assign({}, p0, placed), owned: owned || {} }));   /* a room saved before roomV 3 */
       const a = old({ desk: { w: 'F', x: 3.3, y: 1.85, r: 0 }, japanmap: { w: 'R', u: 6.4, v: 6.3 } }, { japanmap: { paid: 18, on: todayStr() } });
-      const b2 = old({ desk: { w: 'F', x: 3.3, y: 1.85, r: 0 }, telescope: { w: 'F', x: 5.75, y: 2.75, r: 0 } }, { telescope: { paid: 45, on: todayStr() } });
+      const b2 = old({ desk: { w: 'F', x: 3.3, y: 1.85, r: 0 }, gramophone: { w: 'F', x: 5.75, y: 2.75, r: 0 } }, { gramophone: { paid: 40, on: todayStr() } });   /* (the telescope that stood here went out to the yard) */
       const c = old({ desk: { w: 'F', x: 10, y: 6, r: 0 } });
       return JSON.stringify({ fresh, v, a: { desk: a.placed.desk.x, map: a.placed.japanmap || null, lights: ['garland1', 'garland2', 'garland3', 'garland4'].every(id => a.placed[id]), v: a.roomV },
         b: b2.placed.desk.x, c: c.placed.desk.x, win: ROOM.fits(WARE.get('japanmap'), { w: 'R', u: 6.4, v: 6.3 }), gap: ROOM.fits(WARE.get('cactus'), { w: 'F', x: 1.75, y: 0.5, r: 0 }) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['fresh'] == {'w': 'F', 'x': 4.1, 'y': 1.85, 'r': 0} and r['v'] == 3, r
-    assert r['a'] == {'desk': 4.1, 'map': None, 'lights': True, 'v': 3}, r   # the desk went along; the map the window now covers went in the box
-    assert r['b'] == 3.3 and r['c'] == 10, r   # a telescope where the desk would go keeps it where it was; a desk moved by hand stays put
+    assert r['fresh'] == {'w': 'F', 'x': 4.1, 'y': 1.85, 'r': 0} and r['v'] == 4, r   # roomV 4: the telescope went out to the yard
+    assert r['a'] == {'desk': 4.1, 'map': None, 'lights': True, 'v': 4}, r   # the desk went along; the map the window now covers went in the box
+    assert r['b'] == 3.3 and r['c'] == 10, r   # a gramophone where the desk would go keeps it where it was; a desk moved by hand stays put
     assert r['win'] is False and r['gap'] is True, r   # the window and its curtains reach further right; a cactus fits between the bookcase and the desk
 
 def test_the_string_of_lights_is_four_strings_that_move_and_go_in_the_box(b):
@@ -391,14 +391,14 @@ def test_a_hat_sits_on_plain_hair_brings_its_own_for_tall_hair_and_unknown_looks
       state.look = 'nope'; const fixed = normalizeState(state).look;
       return JSON.stringify({ cut, swaps, fair, onTop, cat: HERO.whole('cathead'), odd: [odd.hair, odd.skin, odd.eyes], fixed, styles: hairs.length }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'cut': False, 'swaps': {'beanie': 'crop', 'strawhat': 'neat', 'beret': 'bob', 'gradcap': 'curtain', 'cathood': 'crop'}, 'fair': True, 'onTop': True,
+    assert r == {'cut': False, 'swaps': {'beanie': 'crop', 'strawhat': 'neat', 'beret': 'bob', 'gradcap': 'curtain', 'cathood': 'crop', 'witchhat': 'shoulder'}, 'fair': True, 'onTop': True,
                  'cat': True, 'odd': ['crop', '#f3d1b5', 'big'], 'fixed': {}, 'styles': 16}, r   # 'mohawk' and the old styles' ids fall back to 短碎髮
 
 def test_a_hat_that_swaps_their_hairstyle_says_so_in_the_shop_and_the_dressing_room(b):
     js = "(async () => { " + FRESH + """ state.koto.gift = 120; ['beanie', 'catears', 'cathead'].forEach(id => buyWare(WARE.get(id))); state.look = Object.assign({}, state.look, { hair: 'bun' }); saveState();
       const wait = (ms) => new Promise(q => setTimeout(q, ms)), act = (sel) => document.querySelector(sel).click(), note = () => { const n = document.querySelector('.dress-note'); return n ? n.textContent : null; };
       const card = (id) => { const n = document.querySelector('[data-ware="' + id + '"] .ds.swap'); return n ? n.textContent : null; };
-      location.hash = '#/shop'; route(); const shop = { beanie: card('beanie'), beret: card('beret'), catears: card('catears'), scarf: card('scarf') };
+      shopTab = 'wear'; location.hash = '#/shop'; route(); const shop = { beanie: card('beanie'), beret: card('beret'), catears: card('catears'), scarf: card('scarf') };
       state.wear = { head: 'beanie' }; saveState(); """ + GO_ROOM + """ await wait(200);
       act('.study-tools [data-act="wardrobe"]'); await wait(200); const face = note();
       act('[data-act="dress-tab"][data-tab="hair"]'); const hair = note();
@@ -420,7 +420,7 @@ def test_the_cat_hood_makes_a_cat_suit_that_beckons_and_says_nya(b):
       const hood = svg(suit, 'cathood'), sets = { hood: hood.includes('data-set="cat"'), head: svg(suit, 'cathead').includes('data-set="cat"'),
         noPants: svg(Object.assign({}, suit, { bottomStyle: 'pants' }), 'cathood').includes('data-set'), ears: svg(suit, 'catears').includes('data-set') };
       const fur = /<path fill="#4a4a55" d="M-48 -98 C-54 -128/.test(hood), tails = (hood.match(/<g class="tail t[01]">/g) || []).length;
-      location.hash = '#/shop'; route(); const card = !!document.querySelector('[data-ware="cathood"] [data-act="ware-wear"]');
+      shopTab = 'wear'; location.hash = '#/shop'; route(); const card = !!document.querySelector('[data-ware="cathood"] [data-act="ware-wear"]');
       const box = (look) => { const el = document.createElement('div'); el.className = 'hero'; el.innerHTML = svg(look, 'cathood'); document.body.appendChild(el); return el; };   /* not in #view: the hash change redraws it */
       const cat = box(suit), person = box({});
       HERO.react(cat); HERO.react(person); const nya = cat.querySelector('.nya'), said = nya ? nya.textContent : null, quiet = !person.querySelector('.nya');
@@ -433,18 +433,105 @@ def test_the_cat_hood_makes_a_cat_suit_that_beckons_and_says_nya(b):
     assert r['said'] in ('にゃ', 'にゃーん', 'にゃ？', 'にゃっ') and r['quiet'], r
     assert r['idles'] == ['idle-maneki', 'idle-sway'], r   # the same roll: the cat's third idle, a person's fourth
 
+# ---- 2026-11-07 (test build): the shop's tabs, limited sales by the server's day, the yard's own wares and 擺設 ----
+def test_haori_is_gone_and_its_purchase_with_it(b):
+    js = "(() => { " + FRESH + """ state.koto.gift = 40; state.owned.haori = { paid: 30, on: '2026-11-07' }; state.wear = { body: 'haori', head: 'beanie' }; const before = kotoBalance();
+      state = normalizeState(state); return JSON.stringify({ known: WARE.has('haori'), owned: 'haori' in state.owned, wear: state.wear, back: kotoBalance() - before, drawn: HERO.slots.includes('haori') }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'known': False, 'owned': False, 'wear': {'head': 'beanie'}, 'back': 30, 'drawn': False}, r   # what was paid comes back
+
+def test_the_shop_has_four_tabs_and_opens_on_the_last_one_used(b):
+    js = "(async () => { " + FRESH + """ saveState(); location.hash = '#/shop'; route(); await new Promise(q => setTimeout(q, 300));
+      const heads = () => [...document.querySelectorAll('#view .shop-h')].map(h => h.textContent), cards = () => [...document.querySelectorAll('#view .shop-item[data-ware]')].map(c => c.dataset.ware);
+      const tab = (t) => document.querySelector('[data-act="shop-tab"][data-tab="' + t + '"]').click(), limited = WARES.filter(w => w.limited).map(w => w.id);
+      const tabs = [...document.querySelectorAll('.shop-tabs [data-act="shop-tab"]')].map(t => t.textContent), seen = { in: heads() }; let leak = cards().some(id => limited.includes(id));
+      tab('wear'); seen.wear = heads(); leak = leak || cards().some(id => limited.includes(id));
+      tab('out'); seen.out = heads(); seen.outCards = cards();
+      location.hash = '#/today'; route(); location.hash = '#/shop'; route();
+      return JSON.stringify({ tabs, seen, leak, back: document.querySelector('.shop-tabs [aria-selected="true"]').dataset.tab, stored: localStorage.getItem('nq_shop_tab') }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['tabs'] == ['室內', '戶外', '穿搭', '限時'], r
+    assert r['seen']['in'] == ['家具擺飾', '地墊', '牆上'] and r['seen']['out'] == ['戶外擺設'] and r['seen']['wear'] == ['衣服褲子', '主角穿戴'], r
+    assert r['seen']['outCards'] == ['telescope', 'stonelantern', 'engawa', 'tanuki', 'pond'] and not r['leak'], r   # limited wares only under 限時
+    assert r['back'] == 'out' and r['stored'] == 'out', r
+
+def test_limited_sales_go_by_the_servers_day_not_the_phones(b):
+    js = "(async () => { " + FRESH + """ state.koto.gift = 100; saveState();
+      const edges = ['2026-10-20', '2026-10-21', '2026-11-10', '2026-11-11'].map(d => saleOn('halloween', d)), real = await saleClock();   /* this server's own Date header */
+      const look = () => ({ head: [...document.querySelectorAll('#view .shop-h')].map(h => h.textContent), cards: [...document.querySelectorAll('#view .shop-item[data-ware]')].map(c => c.dataset.ware), note: (document.querySelector('#view .shop-note') || {}).textContent || null, dot: !!document.querySelector('.shop-tabs .dot') });
+      const at = (day) => { saleDay = { day, at: Date.now(), ask: null, failed: false }; shopTab = 'sale'; location.hash = '#/shop'; route(); return look(); };
+      const on = at('2026-11-07'), last = at('2026-11-10'), off = at('2026-11-11');
+      saleDay = { day: null, at: 0, ask: null, failed: true }; route(); const offline = look().note;
+      saleDay = { day: '2026-12-01', at: Date.now(), ask: null, failed: false };   /* whatever the phone says, the server says December */
+      let bought = null; saleCheck(WARE.get('witchhat'), () => { bought = 'yes'; }); await new Promise(q => setTimeout(q, 50));
+      localStorage.setItem('nq_sale_preview', '1'); const preview = at('2026-12-01');
+      return JSON.stringify({ edges, real: /^\\d{4}-\\d{2}-\\d{2}$/.test(real), on, last: last.head, off, offline, bought, preview: preview.cards }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['edges'] == [False, True, True, False] and r['real'], r   # ten days either side of Halloween, both ends in
+    assert r['on'] == {'head': ['萬聖節限定 · 賣到 11/10（還有 3 天）'], 'cards': ['witchhat', 'wizrobe', 'pumpkin'], 'note': None, 'dot': True}, r
+    assert r['last'] == ['萬聖節限定 · 賣到 11/10（今天最後一天）'], r
+    assert r['off'] == {'head': [], 'cards': [], 'note': '現在沒有限時商品。下一檔：萬聖節 10/21–11/10', 'dot': False}, r
+    assert r['offline'] == '限時商品要連上網路才看得到。' and r['bought'] is None, r
+    assert r['preview'] == ['witchhat', 'wizrobe', 'pumpkin'], r   # the test site can look whatever the day
+
+def test_the_halloween_wares_are_a_hat_a_robe_and_a_pumpkin_that_glows(b):
+    js = """(() => { const robe = HERO.svg({ look: { topStyle: 'wizrobe', top: '#e58fa8' } }), p = WARE.get('pumpkin');
+      return JSON.stringify({ hat: HERO.hairWorn({ hair: 'bun' }, { head: 'witchhat' }), keep: HERO.hairWorn({ hair: 'long' }, { head: 'witchhat' }), dyed: robe.includes('fill="#e58fa8"'),
+        style: HERO.OPTS.topStyle.some(([v]) => v === 'wizrobe'), lamp: !!p.light && p.kind === 'floor', glow: DECOR.thumb('pumpkin').includes('#ffd36a'), sale: ['witchhat', 'wizrobe', 'pumpkin'].map(id => WARE.get(id).limited) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'hat': 'shoulder', 'keep': 'long', 'dyed': True, 'style': True, 'lamp': True, 'glow': True, 'sale': ['halloween'] * 3}, r
+
+def test_the_telescope_went_out_to_the_yard(b):
+    js = "(() => { " + FRESH + """ state.owned.telescope = { paid: 45, on: '2026-11-01' }; state.placed.telescope = { w: 'F', x: 6, y: 6, r: 0 }; state.roomV = 3;
+      const s = normalizeState(state); return JSON.stringify({ kind: WARE.get('telescope').kind, placed: s.placed.telescope || null, v: s.roomV, owned: !!s.owned.telescope }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'kind': 'yard', 'placed': None, 'v': 4, 'owned': True}, r   # waits in the yard's box
+
+def test_the_yard_is_arranged_like_the_room(b):
+    js = "(async () => { " + FRESH + """ state.koto.gift = 200; ['pond', 'engawa', 'tanuki'].forEach(id => buyWare(WARE.get(id))); saveState();
+      const wait = (ms) => new Promise(q => setTimeout(q, ms)); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
+      const y = document.querySelector('.yard'), q = (sel) => y.querySelector(sel), ids = ['pond', 'engawa', 'tanuki'];
+      q('[data-act="yard-edit"]').click(); const edit = y.classList.contains('edit'), tray = [...y.querySelectorAll('.yedit .tray-it')].map(t => t.dataset.id);
+      ids.forEach(id => q('.yedit [data-act="yard-edit-take"][data-id="' + id + '"]').click());
+      const spots = Object.fromEntries(ids.map(id => [id, Object.assign({}, state.placed[id])])), ok = ids.every(id => spots[id].w === 'Y' && yardFits(id, spots[id]));
+      const rules = { path: yardFits('tanuki', { x: -20, y: 40 }), house: yardFits('tanuki', { x: 0, y: 194 }), mailbox: yardFits('tanuki', { x: 56, y: 150 }), over: yardFits('tanuki', { x: spots.pond.x, y: spots.pond.y }), edge: yardFits('tanuki', { x: 180, y: 60 }) };
+      const pe = (el, type, x, yy) => el.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: yy, pointerId: 7, pointerType: 'touch', isPrimary: true, button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true, cancelable: true }));
+      const sky = q('.sky').getBoundingClientRect(), scr = (p) => [sky.left + sky.width / 2 + p.x, sky.bottom - p.y], t0 = spots.tanuki, [a0, b0] = scr(t0);
+      const drag = (to) => { const [a1, b1] = scr(to); pe(q('.yware[data-ware="tanuki"]'), 'pointerdown', a0, b0); pe(y, 'pointermove', a0 + 10, b0); pe(y, 'pointermove', a1, b1); const red = q('.yware[data-ware="tanuki"]').classList.contains('bad'); pe(y, 'pointerup', a1, b1); return red; };
+      const red = drag(spots.pond), back = state.placed.tanuki.x === t0.x && state.placed.tanuki.y === t0.y;   /* onto the pond: red, and back it goes */
+      let free = null; for (let yy = 30; yy <= 180 && !free; yy += 10) for (let x = -160; x <= 160 && !free; x += 10) if (Math.abs(x - t0.x) > 40 && yardFits('tanuki', { x, y: yy })) free = { x, y: yy };
+      const green = !drag(free), moved = state.placed.tanuki; await wait(20);
+      q('.yware[data-ware="engawa"]').click(); q('.yedit [data-act="yard-edit-put"]').click(); const away = !state.placed.engawa && !!q('.yedit .tray-it[data-id="engawa"]');
+      q('.yedit [data-act="yard-edit-done"]').click(); const done = !y.classList.contains('edit') && !q('.yedit .edit-top');
+      const order = [...y.querySelectorAll('.sky .yware')].every(w => Number(w.style.zIndex) === 300 - state.placed[w.dataset.ware].y);
+      return JSON.stringify({ edit, tray, ok, rules, red, back, green, moved: moved.x === free.x && moved.y === free.y, away, done, order }); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert r['edit'] and r['tray'] == ['engawa', 'tanuki', 'pond'] and r['ok'], r
+    assert r['rules'] == {'path': False, 'house': False, 'mailbox': False, 'over': False, 'edge': False}, r
+    assert r['red'] and r['back'] and r['green'] and r['moved'], r   # where it cannot stand it turns red and goes back
+    assert r['away'] and r['done'] and r['order'], r   # drawn by how far up the lawn
+
+def test_a_tap_on_a_yard_ware_sends_the_hero_beside_it(b):
+    js = "(async () => { " + FRESH + """ buyWare(WARE.get('tanuki')); state.placed.tanuki = { w: 'Y', x: 120, y: 60 }; saveState(); localStorage.removeItem('nq_hero');
+      location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); await new Promise(q => setTimeout(q, 300));
+      const y = document.querySelector('.yard'), gx = 120 - (72 * yScale(60) / 2 + 16); yh.X = 0; yh.Y = 100; yHeroPlace(y);
+      y.querySelector('.yware[data-ware="tanuki"]').click(); await new Promise(q => setTimeout(q, 1600));
+      return JSON.stringify({ near: Math.abs(yh.X - gx) < 1, y: Math.round(yh.Y), flip: yh.flip, z: y.querySelector('.yhero').style.zIndex }); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert r == {'near': True, 'y': 56, 'flip': False, 'z': '244'}, r   # on the side he came from, facing it, in front of it
+
 def test_clothes_are_sold_put_on_in_the_dressing_room_and_dyed_in_the_heros_colours(b):
     js = "(async () => { " + FRESH + """ state.koto.gift = 50; saveState(); const msg = buyWare(WARE.get('tee'));
       const bought = { owned: owns('tee'), style: HERO.norm(state.look).topStyle, msg: msg.includes('衣服') }; """ + GO_ROOM + """
       const wait = (ms) => new Promise(q => setTimeout(q, ms)), act = (sel) => document.querySelector(sel).click();
       act('.study-edit'); const box = [...document.querySelectorAll('.tray-it')].some(t => t.dataset.id === 'tee'); act('[data-act="room-edit-done"]');   /* clothes are no furniture */
       act('.study-tools [data-act="wardrobe"]'); act('[data-act="dress-tab"][data-tab="clothes"]');
-      const offered = [...document.querySelectorAll('[data-act="dress-pick"][data-key="topStyle"]')].map(b => b.dataset.val), more = (document.querySelector('.dress-more') || {}).textContent || '';
+      const offered = [...document.querySelectorAll('[data-act="dress-pick"][data-key="topStyle"]')].map(b => b.dataset.val), more = (document.querySelector('.dress-more') || {}).textContent || '', sold = WARES.filter(it => it.kind === 'clothes' && !owns(it.id) && forSale(it)).length;
       act('[data-act="dress-pick"][data-key="topStyle"][data-val="tee"]'); act('[data-act="dress-pick"][data-key="top"][data-val="#3f9a8c"]'); DRESS.pick('topStyle', 'sweater');   /* not bought: not put on */
       act('[data-act="dress-done"]'); await wait(600); const worn = HERO.norm(state.look);
-      location.hash = '#/shop'; route(); const card = document.querySelector('[data-ware="tee"] [data-act="clothes-wear"]'), label = card.textContent, clip = document.querySelector('[data-ware="tee"] .art svg').getAttribute('style');
+      shopTab = 'wear'; location.hash = '#/shop'; route(); const card = document.querySelector('[data-ware="tee"] [data-act="clothes-wear"]'), label = card.textContent, clip = document.querySelector('[data-ware="tee"] .art svg').getAttribute('style');
       card.click(); const off = HERO.norm(state.look).topStyle;
-      return JSON.stringify({ bought, box, offered, more: more.includes('8'), worn: [worn.topStyle, worn.top], label, clip, off }); })()"""
+      return JSON.stringify({ bought, box, offered, more: sold >= 8 && more.includes(String(sold)), worn: [worn.topStyle, worn.top], label, clip, off }); })()"""
     r = json.loads(ev(b, js))
     assert r['bought'] == {'owned': True, 'style': 'hoodie', 'msg': True} and r['box'] is False, r   # into the wardrobe, not put on, not in the storage box
     assert r['offered'] == ['hoodie', 'tee'] and r['more'], r   # 帽T and what was bought; eight more at 古道具屋

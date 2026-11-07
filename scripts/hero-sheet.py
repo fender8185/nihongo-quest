@@ -16,7 +16,7 @@ READY = "typeof state === 'object' && !!state.updatedAt && typeof HERO === 'obje
 SHEET = r"""((rowKey, only, cols, back, cell) => {
   const slots = rowKey === 'hair' ? ['head', 'face'] : ['neck', 'back', 'body'];
   const wares = cols || [null, ...WARES.filter(w => w.kind === 'wear' && slots.includes(w.slot)).map(w => w.id)];
-  const rows = only || HERO.OPTS[rowKey].map(o => o[0]), box = rowKey === 'hair' ? '-62 -205 128 132' : '-62 -200 128 210';
+  const rows = only || HERO.OPTS[rowKey].map(o => o[0]), box = rowKey === 'hair' ? '-62 -238 128 165' : '-62 -200 128 210';
   const draw = (v, id) => { let s = HERO.svg({ look: { hairColor: '#6b4a32', [rowKey]: v }, wear: id ? { [WARE.get(id).slot]: id } : {}, front: !back, box });
     if (back) s = s.replace('<g class="f-front">', '<g class="f-front" style="display:none">');
     return `<div class="c">${s}</div>`; };

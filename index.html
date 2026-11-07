@@ -634,14 +634,29 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 /* the hero in the yard: its feet at the bottom edge, moved up the lawn and scaled by distance; darker by night; behind the mailbox when further up */
 .sky .yhero { left: 50%; bottom: -10px; width: 120px; height: 210px; margin-left: -60px; transform-origin: 50% 95.24%; }
 .sky .yhero svg { filter: brightness(calc(.45 + .55 * var(--day))) saturate(calc(.75 + .25 * var(--day))); }
-.sky .yhero { z-index: 1; } .sky .yhero.behind { z-index: auto; }   /* before the mailbox in the page: behind it unless lifted */
+.sky .yhero { z-index: 1; }   /* in the order of the yard's things by how far up the lawn (inline); behind the house on the hill path */
 /* up the hill path to 古道具屋 (test build): small with the distance and outlined so he stands out by day and by night (--hs: his
    scale, so the outline stays about a pixel on the screen); the house stands in front of the path */
 .sky .yhero.climb svg { filter: brightness(calc(.8 + .2 * var(--day))) drop-shadow(0 0 calc(1.3px / var(--hs, .12)) rgba(255, 255, 255, .95)) drop-shadow(0 0 calc(2.6px / var(--hs, .12)) rgba(255, 238, 200, calc(.3 + .45 * (1 - var(--day))))); }
 .yard.climbing .house { z-index: 2; } .yard.climbing .shop-btn .tag { opacity: 0; transition: opacity .3s; }   /* its name steps aside while he runs up to it */
 /* the mailbox by the house: its flag is up while there are letters (and rises as the yard opens), its door drops open on a tap */
-.sky .mailbox { position: absolute; left: 50%; bottom: 154px; width: 52px; height: 66px; margin-left: 30px; }
-.sky .mailbox > svg { position: absolute; inset: 0; overflow: visible; } .sky .mailbox > svg * { transform-box: view-box; }
+.sky .mailbox { position: absolute; z-index: 146; left: 50%; bottom: 154px; width: 52px; height: 66px; margin-left: 30px; }   /* 300 − its 154 px up the lawn, like the wares */
+.sky .mailbox > svg { position: absolute; inset: 0; overflow: visible; }
+.sky .yware { position: absolute; left: 50%; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; touch-action: none; }
+.sky .yware .art { width: 100%; height: 100%; display: block; overflow: visible; filter: brightness(calc(.45 + .55 * var(--day))) saturate(calc(.75 + .25 * var(--day))); }
+.sky .yware .glow { position: absolute; border-radius: 50%; pointer-events: none; background: radial-gradient(closest-side, rgba(255, 214, 130, .85), rgba(255, 190, 100, .3) 45%, transparent); opacity: calc(1 - var(--day)); transition: opacity 1.5s; }
+.sky .yware .koi { transform-box: view-box; transform-origin: 0 0; animation: koiSwim 16s linear infinite; } .sky .yware .koi.k2 { animation-duration: 22s; animation-direction: reverse; }
+@keyframes koiSwim { to { transform: rotate(360deg); } }
+.yard.edit .sky .yware { cursor: grab; } .yard.edit .sky .yware.sel { outline: 2px dashed rgba(255, 255, 255, .9); outline-offset: 2px; border-radius: 10px; }
+.yard.edit .sky .yware.bad .art { filter: drop-shadow(0 0 2px #e0524b) drop-shadow(0 0 3px #e0524b); opacity: .75; }
+.yard.dragging .yedit .edit-sel { opacity: 0; }
+.yard-tools { position: fixed; z-index: 5; top: calc(10px + env(safe-area-inset-top, 0px)); right: 12px; display: flex; gap: 8px; }
+.yard-edit { width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 12px; cursor: pointer; color: color-mix(in srgb, #3a3350 calc(var(--day) * 100%), #dfe3ff); background: color-mix(in srgb, rgba(255, 255, 255, .55) calc(var(--day) * 100%), rgba(20, 22, 52, .55)); }
+.yard-edit svg { width: 22px; height: 22px; }
+.yard.edit .yard-tools, .yard.edit .sky .thing { display: none; }
+.yard .yedit { position: fixed; inset: 0; z-index: 6; pointer-events: none; } .yard .yedit > * { pointer-events: auto; }
+.yard .yedit .edit-tray { top: calc(58px + env(safe-area-inset-top, 0px)); bottom: auto; padding-bottom: 10px; }
+.yard .yedit .edit-sel { top: auto; transform: translate(-50%, 0); } .sky .mailbox > svg * { transform-box: view-box; }
 .sky .mailbox .mb-shadow { fill: rgba(0, 0, 0, .16); opacity: var(--day); }
 .sky .mailbox .mb-post { fill: color-mix(in srgb, #8a5a36 calc(var(--day) * 100%), #15173c); transition: fill 3s; }
 .sky .mailbox .mb-body { fill: color-mix(in srgb, #4a7fa8 calc(var(--day) * 100%), #1d2152); transition: fill 3s; }
@@ -1218,6 +1233,11 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 .shop-front .counter { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; background: var(--wood); border-top: 4px solid var(--wood-edge); }
 .shop-front .purse { position: absolute; right: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px 6px 9px; border-radius: 99px; background: var(--label); color: var(--label-ink); font-size: 14px; box-shadow: 0 4px 10px -4px rgba(0, 0, 0, .45); }
 .shop-front .purse b { font-size: 17px; font-variant-numeric: tabular-nums; } .shop-front .purse .koto-i { width: 22px; height: 22px; }
+.shop-tabs { display: flex; gap: 6px; margin: 0 0 4px; overflow-x: auto; }
+.shop-tabs button { position: relative; flex: none; padding: 8px 16px; border: 1px solid var(--line); border-radius: 99px; font: inherit; font-size: 14px; font-weight: 600; color: var(--fg-2); background: var(--bg-elev); cursor: pointer; }
+.shop-tabs button[aria-selected="true"] { color: var(--accent-fg); border-color: var(--accent); background: var(--accent); }
+.shop-tabs .dot { position: absolute; top: 3px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: #e0524b; box-shadow: 0 0 0 2px var(--bg-elev); }
+.shop-note { margin: 18px 2px; font-size: 14px; color: var(--fg-2); }
 .shop-sec { margin-top: 18px; } .shop-h { margin: 0 0 10px; font-size: 15px; font-weight: 700; color: var(--fg-2); letter-spacing: .04em; }
 .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
 .shop-item { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 12px; }
@@ -2045,10 +2065,14 @@ function normalizeState(s) {
   const kt = out.koto && typeof out.koto === 'object' && !Array.isArray(out.koto) ? out.koto : {};
   out.koto = { sets: kt.sets && typeof kt.sets === 'object' && !Array.isArray(kt.sets) ? kt.sets : {}, days: Array.isArray(kt.days) ? kt.days : [], gift: Number(kt.gift) || 0 };
   ['owned', 'placed', 'wear', 'look'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)
+  // test build: 羽織 is gone and its purchase with it (the user's call; the one id not kept). Every time: sync merges owned as a union
+  delete out.owned.haori; if (out.wear.body === 'haori') delete out.wear.body;
   // test build: 書房's own furniture and pictures became wares (moved, put away): laid out where they always stood, once
   if ((out.roomV || 0) < 2) { WARES.filter(w => w.starter).forEach(w => { if (!out.placed[w.id]) out.placed[w.id] = Object.assign({}, w.at); }); out.roomV = 2; }
   // test build (roomV 3): the string of lights became four strings, hung where it ran; the desk and the window moved right
   if (out.roomV < 3) { WARES.filter(w => w.garland).forEach(w => { if (!out.placed[w.id]) out.placed[w.id] = Object.assign({}, w.at); }); ROOM.moveOff(out.placed); out.roomV = 3; }
+  // test build (roomV 4): 望遠鏡 went out to the yard; one standing in 書房 waits in the yard's box
+  if (out.roomV < 4) { const t = out.placed.telescope; if (t && t.w !== 'Y') delete out.placed.telescope; out.roomV = 4; }
   WARES.filter(w => w.fixed).forEach(w => { if (!out.placed[w.id]) out.placed[w.id] = Object.assign({}, w.at); });   // the working things are always somewhere
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
   if (out.stage !== 'pre' && out.stage !== 'main') out.stage = 'main';   // 入門階段 (1.0.6); accounts from before it are in the main course
@@ -5943,11 +5967,141 @@ function renderToday(view) {
   view.innerHTML = ROOM.html(pct);
   ROOM.mount(view.querySelector('.study'));
 }
+// ---------- the yard's things (test build): drawn facing us in the hero's units (feet at 0, x round 0), scaled with distance like
+// him (yScale) and darker by night like him. box: their drawing's [x, y, width, height]; glow: [x, y, r] of a light by night ----------
+const YARD = (() => {
+  const SHADE = (rx, ry = 6) => `<ellipse rx="${rx}" ry="${ry}" fill="#2b1c12" fill-opacity=".16"/>`;
+  const ART = {
+    telescope: { box: [-62, -146, 124, 152], draw: () => `${SHADE(34)}<path d="M0 -84 L4 -3" stroke="#6f4c33" stroke-width="5" stroke-linecap="round"/><path d="M0 -84 L-32 0 M0 -84 L30 0" fill="none" stroke="#8f6444" stroke-width="5.4" stroke-linecap="round"/>
+      <circle cy="-87" r="6.4" fill="#3a3d4c"/><g transform="translate(0 -92) rotate(-28)"><rect x="-56" y="-6" width="12" height="12" rx="2.4" fill="#3a3d4c"/><rect x="-46" y="-10" width="80" height="20" rx="4" fill="#f2efe8"/><rect x="32" y="-12" width="14" height="24" rx="3" fill="#5a68d8"/>
+      <rect x="-12" y="-11" width="6" height="22" fill="#5a68d8" fill-opacity=".85"/><rect x="-4" y="-18" width="22" height="7" rx="2" fill="#d8d3c8"/><path d="M-40 -5 H28" stroke="#fff" stroke-opacity=".6" stroke-width="2.4" stroke-linecap="round"/></g>` },
+    stonelantern: { box: [-42, -146, 84, 152], glow: [0, -93, 34], draw: () => `${SHADE(30, 5.5)}<path d="M-26 0 L-22 -12 H22 L26 0 Z" fill="#9c988e"/><path d="M-8 -12 L-7 -70 H7 L8 -12 Z" fill="#aaa69c"/><rect x="-10" y="-46" width="20" height="5" rx="2" fill="#9c988e"/>
+      <path d="M-24 -70 L-18 -80 H18 L24 -70 Z" fill="#9c988e"/><rect x="-17" y="-106" width="34" height="26" rx="2" fill="#aaa69c"/><rect x="-9" y="-101" width="18" height="16" rx="1.5" style="fill:color-mix(in srgb,#4a4842 calc(var(--day,1)*100%),#ffd27a)"/>
+      <path d="M-38 -104 Q-20 -110 -12 -120 H12 Q20 -110 38 -104 Q41 -100 36 -100 H-36 Q-41 -100 -38 -104 Z" fill="#8c887e"/><rect x="-6" y="-124" width="12" height="4.4" rx="1.6" fill="#9c988e"/><path d="M0 -137 C-6 -133 -7 -127 -4 -123 H4 C7 -127 6 -133 0 -137 Z" fill="#8c887e"/>
+      <g fill="#7f9a5a" fill-opacity=".75"><circle cx="-20" cy="-3" r="2.6"/><circle cx="-15" cy="-2" r="2"/><circle cx="18" cy="-74" r="2.2"/><circle cx="-30" cy="-102" r="2.4"/></g>` },
+    engawa: { box: [-104, -72, 208, 78], draw: () => `${SHADE(96, 7)}<rect x="-80" y="-40" width="7" height="34" fill="#7a5638"/><rect x="73" y="-40" width="7" height="34" fill="#7a5638"/>
+      <rect x="-92" y="-38" width="8" height="38" rx="1.5" fill="#9c7048"/><rect x="84" y="-38" width="8" height="38" rx="1.5" fill="#9c7048"/>
+      <path d="M-100 -46 L-90 -52 H90 L100 -46 Z" fill="#c9996a"/><rect x="-100" y="-46" width="200" height="8" fill="#a77a4c"/><path d="M-60 -51 L-64 -46 M-20 -51 L-21 -46 M20 -51 L21 -46 M60 -51 L64 -46" stroke="#9c7048" stroke-width="1.2"/>
+      <path d="M-58 -52 H58 L62 -46 V-31 Q0 -28 -62 -31 V-46 Z" fill="#c8453d"/><path d="M-58 -52 H58 L62 -46 H-62 Z" fill="#d85a50"/>
+      <ellipse cx="36" cy="-52.6" rx="9" ry="2.2" fill="#d8cdb6"/><path d="M30 -62 h12 l-1.6 9 h-8.8 Z" fill="#ece5d3"/><path d="M33 -59 h6" stroke="#5f7a3a" stroke-width="1.6"/><path d="M34 -66 q-2 -4 0 -7 M38.4 -66 q2 -4 0 -7" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1.4" stroke-linecap="round"/>` },
+    tanuki: { box: [-54, -126, 108, 132], draw: () => `${SHADE(34)}<ellipse cx="-14" cy="-4" rx="11" ry="6" fill="#6f5139"/><ellipse cx="18" cy="-4" rx="11" ry="6" fill="#6f5139"/>
+      <path d="M-30 -10 C-36 -40 -26 -66 2 -68 C30 -66 40 -40 34 -10 Q2 0 -30 -10 Z" fill="#8a6848"/><ellipse cx="2" cy="-30" rx="22" ry="21" fill="#ead9b8"/>
+      <ellipse cx="-26" cy="-44" rx="7" ry="12" transform="rotate(22 -26 -44)" fill="#7d5d40"/><path d="M38 -40 c-6 0 -9 6 -9 12 c0 7 4 11 9 11 c5 0 9 -4 9 -11 c0 -6 -3 -12 -9 -12 Z" fill="#d9c49a"/><rect x="35.4" y="-46" width="5.2" height="7" rx="1.4" fill="#cbb487"/><path d="M33 -30 h10" stroke="#b5532f" stroke-width="2"/><ellipse cx="29" cy="-46" rx="7" ry="12" transform="rotate(-24 29 -46)" fill="#7d5d40"/>
+      <circle cx="2" cy="-80" r="22" fill="#8a6848"/><ellipse cx="2" cy="-73" rx="11" ry="8" fill="#ead9b8"/><ellipse cx="-8" cy="-84" rx="6.4" ry="5.4" fill="#5a4030"/><ellipse cx="12" cy="-84" rx="6.4" ry="5.4" fill="#5a4030"/>
+      <circle cx="-8" cy="-84" r="2.8" fill="#fff"/><circle cx="12" cy="-84" r="2.8" fill="#fff"/><circle cx="-7.4" cy="-84" r="1.5" fill="#2a2730"/><circle cx="12.6" cy="-84" r="1.5" fill="#2a2730"/><ellipse cx="2" cy="-77" rx="3.4" ry="2.4" fill="#2a2730"/>
+      <path d="M-2 -70 Q2 -67 6 -70" fill="none" stroke="#5a4030" stroke-width="1.4" stroke-linecap="round"/><ellipse cx="-12" cy="-72" rx="3.6" ry="2" fill="#f2a3a0" fill-opacity=".6"/><ellipse cx="16" cy="-72" rx="3.6" ry="2" fill="#f2a3a0" fill-opacity=".6"/>
+      <path d="M-30 -96 L2 -120 L34 -96 Q2 -90 -30 -96 Z" fill="#d8b366"/><path d="M-16 -104 L2 -118 M18 -104 L2 -118 M2 -94 V-118" stroke="#b9954f" stroke-width="1"/>` },
+    pond: { box: [-132, -50, 264, 56], draw: () => `<ellipse cy="-19" rx="124" ry="27" fill="#8c887e"/>${[[-118, -22, 12, 7], [-96, -38, 14, 6], [-62, -45, 13, 5], [-20, -47, 15, 5], [24, -47, 13, 5], [66, -44, 14, 5], [100, -37, 13, 6], [118, -21, 12, 7], [96, -4, 15, 7], [52, 2, 16, 6], [4, 4, 17, 6], [-46, 3, 16, 6], [-92, -5, 15, 7]].map(([x, y, rx, ry], i) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${i % 2 ? '#a3a097' : '#b4b0a6'}"/>`).join('')}
+      <ellipse cy="-20" rx="106" ry="20" fill="#4f8fb8"/><ellipse cx="-24" cy="-26" rx="58" ry="7" fill="#fff" fill-opacity=".14"/>
+      <g transform="translate(0 -20) scale(1 .19)"><g class="koi k1"><path d="M66 0 c-6 -6 -18 -6 -24 0 c6 6 18 6 24 0 Z M42 0 l-9 -6 v12 Z" fill="#f08a3c"/><circle cx="58" cy="-2" r="2.6" fill="#fff"/></g><g class="koi k2"><path d="M-36 0 c6 -6 18 -6 24 0 c-6 6 -18 6 -24 0 Z M-12 0 l9 -6 v12 Z" fill="#f6f1e8"/><circle cx="-26" cy="1" r="3.4" fill="#e0574b"/></g></g>
+      <path d="M44 -24 a10 4.6 0 1 0 1.6 -1.2 L38 -24 Z" fill="#5f9a4a"/><path d="M-70 -14 a8 3.6 0 1 0 1.4 -1 L-76 -14 Z" fill="#6aa653"/>` }
+  };
+  // the ware as it stands in the yard: a button the size of its drawing, its feet at (p.x, p.y), drawn in order of distance
+  function el(id, p, sel) {
+    const a = ART[id], it = WARE.get(id); if (!a || !it) return '';
+    const [x0, y0, w, h] = a.box, k = yScale(p.y);
+    const glow = a.glow ? `<i class="glow" style="left:${a.glow[0] - x0 - a.glow[2]}px;top:${a.glow[1] - y0 - a.glow[2]}px;width:${2 * a.glow[2]}px;height:${2 * a.glow[2]}px"></i>` : '';
+    return `<button type="button" class="yware${sel ? ' sel' : ''}" data-act="yard-ware" data-ware="${id}" aria-label="${esc(it.name)}" style="width:${w}px;height:${h}px;margin-left:${x0}px;bottom:${-(y0 + h)}px;transform-origin:${-x0}px ${-y0}px;transform:translate(${p.x}px,${-p.y}px) scale(${k.toFixed(3)});z-index:${300 - Math.round(p.y)}"><svg class="art" viewBox="${a.box.join(' ')}" aria-hidden="true">${a.draw()}</svg>${glow}</button>`;
+  }
+  const thumb = (id) => (ART[id] ? `<svg class="thumb" viewBox="${ART[id].box.join(' ')}" aria-hidden="true">${ART[id].draw()}</svg>` : '');
+  return { ART, el, thumb };
+})();
+// where a yard ware may stand: on the lawn (x within ±170 px of the middle, whole on a phone; y 14–196 px up), off the path from
+// the door (a strip from x -60…6 at the bottom to -10…10 by the house), the house front and the mailbox, and clear of the others
+// (their ground: width × scale across, depth × scale deep)
+function yardFits(id, p) {
+  const a = YARD.ART[id], it = WARE.get(id); if (!a || !it || Math.abs(p.x) > 170 || p.y < 14 || p.y > 196) return false;
+  const k = yScale(p.y), hw = it.ground[0] * k / 2, hd = it.ground[1] * k;
+  if (Math.abs(p.x - (-27 + 27 * p.y / 220)) < hw + (33 - 23 * p.y / 220) + 4) return false;
+  const over = (x0, x1, y0, y1) => p.x + hw > x0 && p.x - hw < x1 && p.y + hd > y0 && p.y - hd < y1;
+  if (over(-95, 95, 186, 999) || over(20, 92, 136, 230)) return false;
+  return yardPlaced().every((o) => { if (o.id === id) return true; const t = yScale(o.p.y); return Math.abs(p.x - o.p.x) >= hw + o.it.ground[0] * t / 2 || Math.abs(p.y - o.p.y) >= hd + o.it.ground[1] * t; });
+}
+function yardPlaced() { return Object.keys(state.placed).filter((id) => owns(id) && WARE.has(id) && WARE.get(id).kind === 'yard' && state.placed[id].w === 'Y').map((id) => ({ id, it: WARE.get(id), p: state.placed[id] })); }
+function yardSpot(id) {   // where a ware taken out of the box goes: the free spot nearest the lower middle
+  const c = [];
+  for (let y = 20; y <= 190; y += 10) for (let x = -170; x <= 170; x += 10) c.push({ x, y, d: Math.hypot(x, (y - 70) * 1.4) });
+  c.sort((a, b) => a.d - b.d);
+  const hit = c.find((q) => yardFits(id, q));
+  return hit ? { x: hit.x, y: hit.y } : null;
+}
+const yardWaresHtml = () => yardPlaced().map((o) => YARD.el(o.id, o.p, yed.on && yed.sel === o.id)).join('');
+const yardSig = () => yardPlaced().map((o) => `${o.id}:${o.p.x},${o.p.y}`).join('|');
+// 擺設 in the yard (test build), as in 書房: pick a ware, drag it or tap the lawn to move it, 收起 puts it in the yard's box
+const yed = { on: false, sel: null, drag: null };
+function yeditHtml(yard) {
+  const box = WARES.filter((it) => it.kind === 'yard' && owns(it.id) && !(state.placed[it.id] && state.placed[it.id].w === 'Y'));
+  const o = yed.sel && yardPlaced().find((q) => q.id === yed.sel), a = o && YARD.ART[o.id];
+  const tools = o ? `<div class="edit-sel" style="left:calc(50% + ${o.p.x}px);bottom:${Math.round(o.p.y + -a.box[1] * yScale(o.p.y) + 8)}px"><button type="button" data-act="yard-edit-put">收起</button></div>` : '';
+  return `<div class="edit-top"><span class="edit-hint">${o ? '拖曳搬動，或點草地把它移過去' : '點一下院子裡的東西選取，再拖曳搬動'}</span><button type="button" class="btn btn-primary btn-sm" data-act="yard-edit-done">完成</button></div>
+    <div class="edit-tray" aria-label="院子的收納箱">${box.length ? box.map((it) => `<button type="button" class="tray-it" data-act="yard-edit-take" data-id="${it.id}">${YARD.thumb(it.id)}<span>${esc(it.name)}</span></button>`).join('') : '<div class="tray-empty">收納箱是空的。古道具屋的「戶外」有望遠鏡、石燈籠……</div>'}</div>${tools}`;
+}
+function yardDraw(yard) {   // the wares and the 擺設 bar drawn again; the hero and the sky stay as they are
+  yard.classList.toggle('edit', yed.on);
+  const w = yard.querySelector('.ywares'); w.innerHTML = yardWaresHtml(); w.dataset.sig = yardSig();
+  yard.querySelector('.yedit').innerHTML = yed.on ? yeditHtml(yard) : '';
+}
+function yardEdit(yard, cmd, id) {
+  if (!yard) return;
+  if (cmd === 'on') { yed.on = true; yed.sel = null; }
+  else if (cmd === 'done') { yed.on = false; yed.sel = null; }
+  else if (cmd === 'pick') yed.sel = id;
+  else if (cmd === 'take') {
+    const p = yardSpot(id);
+    if (!p) { toast('院子放不下了，先收起別的東西再試試'); return; }
+    state.placed[id] = Object.assign({ w: 'Y' }, p); yed.sel = id; saveState();
+  } else if (cmd === 'put' && yed.sel) { delete state.placed[yed.sel]; yed.sel = null; saveState(); }
+  yardDraw(yard);
+}
+const yardPoint = (yard, e) => { const r = yard.querySelector('.sky').getBoundingClientRect(); return { x: e.clientX - (r.left + r.width / 2), y: r.bottom - e.clientY }; };
+const snap2 = (v) => Math.round(v / 2) * 2;
+function yardMoveTo(yard, id, p) {   // the picked ware to a spot, if it can stand there
+  const q = { w: 'Y', x: snap2(p.x), y: snap2(p.y) };
+  if (!yardFits(id, q)) { toast('這裡放不下'); return; }
+  state.placed[id] = q; saveState(); yardDraw(yard);
+}
+// a drag on a ware in 擺設: it follows the finger (red where it cannot stand) and stays where it is let go, or goes back
+function yardDragStart(yard, e) {
+  const b = e.target.closest('.yware'); if (!b || !yed.on || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  const id = b.dataset.ware, p = state.placed[id], at = yardPoint(yard, e);
+  yed.drag = { id, b, from: p, off: { x: at.x - p.x, y: at.y - p.y }, x0: e.clientX, y0: e.clientY, moved: false, to: null };
+  try { b.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
+}
+function yardDragMove(yard, e) {
+  const d = yed.drag; if (!d) return;
+  if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
+  d.moved = true; yed.sel = d.id;
+  const at = yardPoint(yard, e), q = { w: 'Y', x: snap2(at.x - d.off.x), y: snap2(at.y - d.off.y) }, ok = yardFits(d.id, q);
+  d.to = ok ? q : null;
+  d.b.style.transform = `translate(${q.x}px,${-q.y}px) scale(${yScale(q.y).toFixed(3)})`; d.b.style.zIndex = String(300 - Math.round(q.y));
+  d.b.classList.toggle('bad', !ok); yard.classList.add('dragging');
+}
+function yardDragEnd(yard) {
+  const d = yed.drag; yed.drag = null; if (!d || !d.moved) return;
+  yard.classList.remove('dragging'); yard._noClick = true; setTimeout(() => { yard._noClick = false; }, 0);   // the click that ends a drag is no tap
+  if (d.to) { state.placed[d.id] = d.to; saveState(); }
+  yardDraw(yard);
+}
+// outside 擺設 a tap on a ware sends the hero to stand beside it, facing it; at the telescope by night they look up a while
+function yardUse(yard, id) {
+  const o = yardPlaced().find((q) => q.id === id); if (!yard || !o) return;
+  const side = yh.X <= o.p.x ? -1 : 1, gx = o.p.x + side * (o.it.ground[0] * yScale(o.p.y) / 2 + 16);
+  yHeroWalk(yard, [gx, Math.max(12, o.p.y - 4)], () => {
+    const el = yard.querySelector('.yhero'); if (!el) return;
+    yh.flip = side > 0; yh.back = false; yHeroPlace(yard);
+    if (id === 'telescope' && sceneClock(lightHour()).day < 0.5) { el.classList.add('look'); setTimeout(() => el.classList.remove('look'), 3000); }
+  });
+}
 function renderOutside(view) {
   sceneTick();
   const pct = ringPct(dayProgress());
   const yard = view.querySelector('.yard');
-  if (yard) { yardLevel(yard, pct); return; }   // a redraw: new stars fade in, the motion carries on
+  if (yard) {   // a redraw: new stars fade in, the motion carries on; the yard's things again only if they moved (sync, another device)
+    yardLevel(yard, pct);
+    const w = yard.querySelector('.ywares'); if (w && !yed.on && w.dataset.sig !== yardSig()) { w.innerHTML = yardWaresHtml(); w.dataset.sig = yardSig(); }
+    return;
+  }
+  yed.on = false; yed.sel = null; yed.drag = null;   // a yard drawn anew opens out of 擺設
   view.innerHTML = yardHtml(pct);
   const y = view.querySelector('.yard');
   const sk = y.querySelector('.sky'), k = Math.max(1, sk.clientWidth / 1200), sb = y.querySelector('.shop-btn');   // the hill scales up on a very wide screen
@@ -5956,8 +6110,11 @@ function renderOutside(view) {
   else yHeroPlace(y);
   const yel = y.querySelector('.yhero');   // idling now and then while left be
   HERO.idle(yel, () => !yh.climb && !document.hidden && !yel.matches('.walk, .run, .out, .hop, .wave, .spin, .cheer'), true);
-  y.addEventListener('click', (e) => {   // a tap on the lawn: the hero walks there
-    if (e.target.closest('button, .hero, a')) return;
+  y.addEventListener('pointerdown', (e) => yardDragStart(y, e)); y.addEventListener('pointermove', (e) => yardDragMove(y, e));
+  y.addEventListener('pointerup', () => yardDragEnd(y)); y.addEventListener('pointercancel', () => yardDragEnd(y));
+  y.addEventListener('click', (e) => {   // a tap on the lawn: the hero walks there (in 擺設: the picked ware goes there)
+    if (y._noClick || e.target.closest('button, .hero, a')) return;
+    if (yed.on) { if (yed.sel) yardMoveTo(y, yed.sel, yardPoint(y, e)); return; }
     const r = y.querySelector('.sky').getBoundingClientRect(), Y = r.bottom - e.clientY;
     if (Y < 4 || Y > 222) return;
     yHeroWalk(y, [e.clientX - (r.left + r.width / 2), Y]);
@@ -6007,7 +6164,7 @@ function yHeroHtml() { return `<div class="hero yhero" data-act="hero-hop" aria-
 function yHeroPlace(yard) {
   const el = yard.querySelector('.yhero'); if (!el) return;
   el.style.transform = `translate(${yh.X.toFixed(1)}px,${(-yh.Y).toFixed(1)}px) scale(${(yh.s || yScale(yh.Y)).toFixed(3)})`;
-  el.classList.toggle('back', yh.back); el.classList.toggle('flip', yh.flip); el.classList.toggle('behind', yh.Y > 150);
+  el.classList.toggle('back', yh.back); el.classList.toggle('flip', yh.flip); el.style.zIndex = yh.climb === 'hill' ? '' : String(300 - Math.round(yh.Y));
 }
 function yHeroWalk(yard, to, done) {
   cancelAnimationFrame(yh.raf);
@@ -6128,6 +6285,7 @@ function yardHtml(pct) {
         <button type="button" class="thing enter" data-act="enter-house" aria-label="進屋"><span class="tag">${ySign('door', '進屋')}</span></button>
       </div>
       ${yHeroHtml()}
+      <div class="ywares" data-sig="${yardSig()}">${yardWaresHtml()}</div>
       <div class="mailbox${mail ? ' has' : ''}">
         <svg viewBox="0 0 52 66" aria-hidden="true">
           <ellipse class="mb-shadow" cx="26" cy="64.5" rx="15" ry="2.4"/>
@@ -6144,6 +6302,8 @@ function yardHtml(pct) {
       <div class="flies">${SKY.flies.map(q => `<i style="left:${q.x}%;top:${q.y}px;--dx:${q.dx}px;--dy:${q.dy}px;--d:${q.d}s;--w:-${q.w}s"></i>`).join('')}</div>
       <div class="butterflies"><i class="bf" style="left:28%;top:40px;--dx:40px;--dy:18px;--d:7s;--w:-2s;--c:#ffb3d1"></i><i class="bf" style="left:66%;top:66px;--dx:-36px;--dy:14px;--d:8.5s;--w:-5s;--c:#ffe08a"></i></div>
     </div>
+    <div class="yard-tools"><button type="button" class="yard-edit" data-act="yard-edit" aria-label="擺設" title="擺設">${icon('arrange')}</button></div>
+    <div class="yedit"></div>
   </div>`;
 }
 // 書房 (1.1.0): an isometric room drawn much bigger than the screen, with the things you tap; on a phone the camera shows a part
@@ -6182,7 +6342,6 @@ const WARES = [
   { id: 'daruma', kind: 'floor', h: 1.25, name: '大達摩', price: 15, fp: [0.8, 0.8], desc: '過了一個階段測驗，就畫上另一隻眼睛。' },
   { id: 'manekineko', kind: 'floor', h: 1.25, name: '招き猫', price: 18, fp: [0.6, 0.6], desc: '舉著手招來好運。' },
   { id: 'guitar', kind: 'floor', h: 2.8, name: '吉他', price: 35, fp: [0.7, 0.6], desc: '放在架上，偶爾彈一下。' },
-  { id: 'telescope', kind: 'floor', h: 2.0, name: '望遠鏡', price: 45, fp: [0.9, 0.9], desc: '晚上可以看星星。' },
   { id: 'rushmat', kind: 'rug', name: '圓草蓆', price: 10, fp: [2, 2], desc: '藺草編的圓蓆，有草的香味。' },
   { id: 'rug', kind: 'rug', name: '和風地毯', price: 16, fp: [2.6, 1.8], desc: '藍底白紋的和風地毯。' },
   { id: 'tatami', kind: 'rug', name: '榻榻米', price: 20, fp: [1.8, 1.8], desc: '兩張榻榻米，鋪在哪裡都可以。' },
@@ -6197,6 +6356,12 @@ const WARES = [
   { id: 'uchiwa', kind: 'wall', name: '團扇', price: 8, size: [1.1, 1.2], desc: '夏天祭典的團扇。' },
   { id: 'wallshelf', kind: 'wall', name: '壁掛層架', price: 16, size: [1.4, 0.9], desc: '放幾個小東西的木架。' },
   { id: 'mirror', kind: 'wall', name: '圓鏡', price: 14, size: [1, 1], desc: '出門前照一下。' },
+  // the yard's (test build): set out on the lawn in the yard's own 擺設; ground: [width, depth] where it stands, in the hero's units
+  { id: 'telescope', kind: 'yard', name: '望遠鏡', price: 45, ground: [76, 12], desc: '架在院子裡，晚上可以看星星。' },
+  { id: 'stonelantern', kind: 'yard', name: '石燈籠', price: 26, ground: [64, 12], desc: '院子裡的石燈籠，天黑了會亮起來。' },
+  { id: 'engawa', kind: 'yard', name: '緣台', price: 20, ground: [196, 22], desc: '木頭長椅，鋪著紅布，放了一杯茶。' },
+  { id: 'tanuki', kind: 'yard', name: '狸貓擺飾', price: 18, ground: [72, 12], desc: '戴斗笠、提著酒壺的信楽燒狸貓。' },
+  { id: 'pond', kind: 'yard', name: '小池塘', price: 40, ground: [244, 34], desc: '石頭圍起來的小池塘，兩條錦鯉慢慢游。' },
   { id: 'beanie', kind: 'wear', slot: 'head', name: '毛帽', price: 10, desc: '軟軟的毛線帽。' },
   { id: 'strawhat', kind: 'wear', slot: 'head', name: '草帽', price: 14, desc: '夏天出門戴的草帽。' },
   { id: 'catears', kind: 'wear', slot: 'head', name: '貓耳髮箍', price: 16, desc: '戴上就變成貓。' },
@@ -6207,7 +6372,6 @@ const WARES = [
   { id: 'scarf', kind: 'wear', slot: 'neck', name: '圍巾', price: 12, desc: '紅色的長圍巾。' },
   { id: 'bowtie', kind: 'wear', slot: 'neck', name: '領結', price: 9, desc: '正式場合用的小領結。' },
   { id: 'backpack', kind: 'wear', slot: 'back', name: '背包', price: 18, desc: '出門用的小背包。' },
-  { id: 'haori', kind: 'wear', slot: 'body', name: '羽織', price: 30, desc: '披在連帽衫外面的羽織。' },
   { id: 'cathead', kind: 'wear', slot: 'head', name: '貓咪頭套', price: 30, desc: '整顆貓咪頭，毛色跟著上衣的顏色。配貓咪上衣和貓咪褲，就變成一隻貓。' },
   { id: 'cathood', kind: 'wear', slot: 'head', name: '貓耳兜帽', price: 20, desc: '有貓耳朵的兜帽，臉旁一圈毛毛，顏色跟著上衣。配貓咪上衣和貓咪褲，就是一整件貓咪布偶裝。' },
   // clothes (test build): a style of top or trousers, dyed in the hero's own colours (look.top, look.bottom) and chosen in the
@@ -6221,6 +6385,10 @@ const WARES = [
   { id: 'wide', kind: 'clothes', slot: 'bottom', name: '寬褲', price: 14, desc: '寬鬆的寬褲，走起路來很舒服。' },
   { id: 'skirt', kind: 'clothes', slot: 'bottom', name: '裙子', price: 12, desc: '及膝的 A 字裙。' },
   { id: 'catpants', kind: 'clothes', slot: 'bottom', name: '貓咪褲', price: 20, desc: '有尾巴的貓咪褲，腳是肉球。' },
+  // limited (test build): sold under 限時 only while their sale is on (SALES); once bought, theirs like any other
+  { id: 'witchhat', kind: 'wear', slot: 'head', limited: 'halloween', name: '魔法師帽', price: 22, desc: '尖尖的魔法師帽，帽尖彎彎的，顏色跟著上衣，有金色的星星和月亮。' },
+  { id: 'wizrobe', kind: 'clothes', slot: 'top', limited: 'halloween', name: '魔法師長袍', price: 30, desc: '長到腳踝的長袍，滿是金色星星，腰上掛著一本小魔法書。顏色在衣櫃自己配。' },
+  { id: 'pumpkin', kind: 'floor', limited: 'halloween', h: 1, name: '南瓜燈', price: 20, fp: [0.8, 0.8], desc: '刻了笑臉的南瓜，晚上會從裡面亮起來。', light: { z: 0.5, r: 2.8 } },
   // 書房's own (starter: had from the start, not sold): laid out where they always stood, then moved or put away like the rest
   { id: 'bed', kind: 'floor', starter: true, turn: false, h: 3, name: '床', fp: [2.9, 5.25], at: { w: 'F', x: 18.45, y: 2.625, r: 0 }, desc: '' },
   { id: 'nightTable', kind: 'floor', starter: true, turn: false, h: 3.2, name: '床頭櫃', fp: [1, 1], at: { w: 'F', x: 16.25, y: 0.55, r: 0 }, desc: '' },
@@ -8008,13 +8176,13 @@ const DECOR = (() => {
         <path d="M-9 -40 C-12 -33 -12 -26 -9 -20" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.6" stroke-linecap="round"/></g>`);
       return s;
     },
-    telescope: (x, y, r) => {
-      const L = lit(x, y);
-      let s = shadow(x - 0.46, y - 0.46, x + 0.56, y + 0.56, 0.7);
-      s += upright(x, y, 0, r, `<path d="M0 -40 L-14 0 M0 -40 L13 2 M0 -40 L2 -2" fill="none" stroke-width="2.4" stroke-linecap="round" ${FS('#8f6444', 'y', [x, y, 0.8])}/>
-        <circle cy="-41" r="3.4" fill="#3a3d4c"/>
-        <g transform="translate(0 -44) rotate(-32)"><rect x="-26" y="-6.5" width="46" height="13" rx="3" ${L('#f2efe8', 1.8)}/><rect x="20" y="-8" width="9" height="16" rx="2" ${L(C.accent, 2)}/><rect x="-32" y="-4" width="8" height="8" rx="1.6" ${L('#3a3d4c', 1.6)}/>
-        <path d="M-22 -4 H18" stroke="#fff" stroke-opacity=".6" stroke-width="1.6" stroke-linecap="round"/><rect x="-8" y="-7" width="4" height="14" fill="${C.accent}" fill-opacity=".85"/></g>`);
+    pumpkin: (x, y, r) => {   // 南瓜燈 (Halloween): a carved pumpkin, lit from inside by night
+      const L = lit(x, y), carve = 'style="fill:color-mix(in srgb,#5a2e12 calc(var(--day)*100%),#ffd36a)"';
+      let s = shadow(x - 0.36, y - 0.36, x + 0.44, y + 0.44, 0.7);
+      s += `<g class="night-only" style="opacity:calc(.5 + .5 * var(--f))"><g transform="${onZ(0.01)}"><ellipse cx="${x}" cy="${y}" rx="1" ry="1" fill="url(#pool)"/></g></g>`;
+      s += upright(x, y, 0, r, `<ellipse rx="15" ry="4" fill="#2b1c12" fill-opacity=".14"/><path ${L('#e8873a', 0.5)} d="M0 -1 C-11 -1 -18 -7 -18 -16 C-18 -25 -11 -31 0 -31 C11 -31 18 -25 18 -16 C18 -7 11 -1 0 -1 Z"/>
+        <path d="M-7 -30 C-11 -23 -11 -9 -7 -2 M7 -30 C11 -23 11 -9 7 -2" fill="none" stroke="#c4621f" stroke-width="1.3" stroke-opacity=".7"/><path ${L('#5f7a3a', 1.1)} d="M-1.8 -30 Q-2.2 -36 1.4 -38.4 L3.4 -36.6 Q1.2 -34 1.8 -30 Z"/>
+        <path ${carve} d="M-9 -20 L-4.6 -20 L-6.8 -24.4 Z M4.6 -20 L9 -20 L6.8 -24.4 Z M-10 -12 Q0 -6 10 -12 L7.6 -12.4 L6 -10.2 L4 -12 L2 -10 L0 -12 L-2 -10 L-4 -12 L-6 -10.2 L-7.6 -12.4 Z"/>`);
       return s;
     },
     rushmat: (x, y) => {
@@ -8054,7 +8222,8 @@ const DECOR = (() => {
 function fitThumbs(root) {
   root.querySelectorAll('svg.thumb').forEach((svg) => {
     const g = svg.querySelector('g.t'); if (!g) return;
-    let b; try { b = g.getBBox(); } catch (e) { return; }
+    const night = [...g.querySelectorAll('.night-only')]; night.forEach((n) => { n.style.display = 'none'; });   // a light's pool by night is no part of the thing
+    let b; try { b = g.getBBox(); } catch (e) { return; } finally { night.forEach((n) => { n.style.display = ''; }); }
     if (!b.width || !b.height) return;
     const pad = Math.max(b.width, b.height) * 0.08, side = Math.max(b.width, b.height) + pad * 2;
     svg.setAttribute('viewBox', [b.x + b.width / 2 - side / 2, b.y + b.height / 2 - side / 2, side, side].map((v) => v.toFixed(1)).join(' '));
@@ -8081,7 +8250,7 @@ const HERO = (() => {
     mouth: [['smile', '微笑'], ['grin', '開心'], ['cat', '貓嘴'], ['flat', '一字'], ['o', '圓嘴'], ['tongue', '吐舌']],
     beard: [['none', '無'], ['stubble', '鬍渣'], ['mustache', '八字鬍'], ['goatee', '山羊鬍'], ['full', '落腮鬍']],
     top: [['#5a68d8', '靛藍'], ['#3f9a8c', '青綠'], ['#d0574b', '紅'], ['#d9a43a', '芥末黃'], ['#4f7a4a', '森林綠'], ['#4a4a55', '炭灰'], ['#e9e2d0', '米白'], ['#e58fa8', '粉紅']],
-    topStyle: [['hoodie', '帽T'], ['tee', 'T恤'], ['sweater', '毛衣'], ['shirt', '襯衫'], ['jinbei', '甚平'], ['cattop', '貓咪上衣']],
+    topStyle: [['hoodie', '帽T'], ['tee', 'T恤'], ['sweater', '毛衣'], ['shirt', '襯衫'], ['jinbei', '甚平'], ['cattop', '貓咪上衣'], ['wizrobe', '魔法師長袍']],
     bottomStyle: [['pants', '長褲'], ['shorts', '短褲'], ['wide', '寬褲'], ['skirt', '裙子'], ['catpants', '貓咪褲']],
     bottom: [['#3f4660', '深藍'], ['#2b2b33', '黑'], ['#b8a27a', '卡其'], ['#4f6f9e', '牛仔藍'], ['#6e4f3a', '咖啡'], ['#8a8f99', '灰'], ['#ecebe6', '白'], ['#6b7a45', '橄欖綠']]
   };
@@ -8101,6 +8270,7 @@ const HERO = (() => {
     pointed: `${DOME} C36 -113 24 -100 2 -90.5 C-20 -100 -32 -113 -32 -128 Z`
   };
   const both = (s) => `${s}<g transform="matrix(-1 0 0 1 4 0)">${s}</g>`;   // a left half and its mirror round the figure's middle (x = 2)
+  const star = (x, y, r, fill = '#e6c25a') => `<path fill="${fill}" d="M${Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, k = i % 2 ? r * 0.45 : r; return `${q(x + k * Math.cos(a))} ${q(y + k * Math.sin(a))}`; }).join(' L')} Z"/>`;   // five points
   const EY = -117, EX = [-10.5, 14.5];   // the eyes' height and middles
   const ink = (d, w = 2.4) => `<path d="${d}" fill="none" stroke="${INK}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
   // an eye: its colour, darker under the lid, the pupil, a big and a small highlight (both lit from the upper right)
@@ -8266,6 +8436,7 @@ const HERO = (() => {
   };
   // tops (F: the light, c: the hero's top colour, d: a shade of it): the torso from the front and from behind (over: drawn over a
   // body wear, the hood), the collar round the neck (in the head, under the chin), the sleeves (long, short, wide; cuff; paw hands)
+  const ROBE = 'M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L37 -13 Q2 -7 -33 -13 Z';   // a long robe's body, from the shoulders to the ankles
   const TORSO = 'M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -46 Q2 -40 -26 -46 Z';
   const BELLY = '<ellipse cx="2" cy="-68" rx="13" ry="17" fill="#fbf6ee" fill-opacity=".92"/>';
   const TOPS = {
@@ -8292,7 +8463,13 @@ const HERO = (() => {
       front: (F, c) => `<path ${F(c, 2.6)} d="M-25 -88 Q-26 -98 -12 -99 H16 Q30 -98 29 -88 L31 -45 Q2 -38 -27 -45 Z"/>${BELLY}`,
       collar: () => '<path fill="#d0453c" d="M-24 -101 Q2 -94 28 -101 L27 -96.5 Q2 -89.5 -23 -96.5 Z"/><circle cx="2" cy="-91.5" r="3.4" fill="#e6c25a"/><path d="M0 -91 h4" stroke="#9a7a2a" stroke-width=".8"/>',
       back: (F, c, d) => `<path ${F(c, 2.6)} d="M-25 -88 Q-26 -98 -12 -99 H16 Q30 -98 29 -88 L31 -45 Q2 -38 -27 -45 Z"/><path d="M-12 -86 q14 5 28 0 M-14 -74 q16 5 32 0 M-14 -62 q16 5 32 0" fill="none" stroke="${d}" stroke-width="2.2" stroke-linecap="round"/>`,
-      over: () => '<path fill="#d0453c" d="M-18 -101 Q2 -95 22 -101 L21 -97 Q2 -91 -17 -97 Z"/>' }
+      over: () => '<path fill="#d0453c" d="M-18 -101 Q2 -95 22 -101 L21 -97 Q2 -91 -17 -97 Z"/>' },
+    wizrobe: { sleeve: 'robe',   // 魔法師長袍 (Halloween): to the ankles, gold stars and hem, a belt with a little spell book at the hip
+      front: (F, c, d) => `<path ${F(c, 2.6)} d="${ROBE}"/><path d="M-33 -13 Q2 -7 37 -13" fill="none" stroke="#e6c25a" stroke-width="2.4"/>${[[-14, -80, 2.4], [16, -84, 1.8], [12, -70, 2.2], [-6, -66, 1.8], [-18, -40, 2.6], [6, -30, 2.2], [26, -24, 2], [-24, -22, 2], [-8, -18, 1.6]].map((a) => star(...a)).join('')}
+        <path ${F(d, 2.7)} d="M-25 -60 Q2 -55 29 -60 V-54 Q2 -49 -25 -54 Z"/><rect x="-1" y="-60.6" width="6" height="7.4" rx="1.2" fill="#e6c25a"/><path d="M19 -55 V-50" stroke="#e6c25a" stroke-width="1.2"/>
+        <g transform="rotate(-8 22 -42)"><rect x="15" y="-50" width="14" height="17" rx="1.6" fill="#6b3f2a"/><rect x="16.4" y="-48.6" width="11.2" height="14.2" rx="1" fill="none" stroke="#e6c25a" stroke-width=".9"/>${star(22, -41.4, 3.2)}</g>`,
+      collar: (F, c, d) => `<path ${F(d, 3.2)} d="M-16 -101 L2 -90 L20 -101 L18 -96 L2 -86 L-14 -96 Z"/><circle cx="2" cy="-89" r="2.4" fill="#e6c25a"/>`,
+      back: (F, c) => `<path ${F(c, 2.6)} d="${ROBE}"/><path d="M-33 -13 Q2 -7 37 -13" fill="none" stroke="#e6c25a" stroke-width="2.4"/>${star(8, -66, 8)}<path d="M-12 -84 a10 10 0 1 0 9 14 a8 8 0 1 1 -9 -14 Z" fill="#e6c25a"/>` }
   };
   // bottoms (c: the trousers' colour): a leg at x (its left side, 13 wide), the foot, and what goes with them — a skirt over both
   // legs, a tail behind; the shoe is everyone's but the cat's paws
@@ -8326,10 +8503,16 @@ const HERO = (() => {
   // - a hat (HAT_HAIR): drawn big enough to cover the plain crown, so every hairstyle with one keeps its own hair under it; a tall
   //   one gives way, while the hat is on, to the hairstyle the hat comes with, in their own hair colour
   // - a whole head (FULL): takes the place of the head, hair and face; nothing is worn on the face
-  const HAT_HAIR = { beanie: 'crop', strawhat: 'neat', beret: 'bob', gradcap: 'curtain', cathood: 'crop' };
+  const HAT_HAIR = { beanie: 'crop', strawhat: 'neat', beret: 'bob', gradcap: 'curtain', cathood: 'crop', witchhat: 'shoulder' };
+  const HEAD_TOP = { witchhat: -232 };   // how high a thing on the head reaches, where it stands above a hat's usual -196
   const hairWorn = (lk, wear) => { const h = wear && HAT_HAIR[wear.head]; return h && HAIR[lk.hair].tall ? h : lk.hair; };   // the hairstyle drawn
   // the things worn: [front, back] drawings by part, in the figure's own units; c and d are their top's colour and a shade of it
   const WEAR = {
+    witchhat: (L, c, d) => {   // 魔法師帽 (Halloween): a wide brim, a tall crown bent over at the tip, a gold band, a star and a moon
+      const h = `<ellipse cx="2" cy="-150" rx="58" ry="11.5" ${L(d, 4.2)}/><path ${L(c, 4.4)} d="M-36 -152 C-30 -180 -14 -206 4 -222 C10 -228 20 -230 28 -222 C18 -220 13 -212 14 -200 C17 -184 32 -168 40 -152 Q2 -144 -36 -152 Z"/>
+        <path d="M-36 -152 Q2 -144 40 -152 L39 -160 Q2 -152 -35 -160 Z" fill="#e6c25a"/>${star(-2, -180, 5.6)}<path d="M15 -197 a6 6 0 1 0 4 10 a4.6 4.6 0 1 1 -4 -10 Z" fill="#e6c25a"/>`;
+      return [h, h];
+    },
     cathood: (L, c, d) => {   // 貓耳兜帽: a hood up round the face, a fluffy edge, ears on top; with 貓咪上衣 and 貓咪褲 a whole cat suit
       const ears = both(`<path ${L(c, 4.4)} d="M-36 -164 L-30 -200 L-8 -183 Z"/>`), outer = 'M-48 -98 C-54 -128 -46 -166 -22 -180 C-10 -186 14 -186 26 -180 C50 -166 58 -128 52 -98';
       return [ears + both('<path fill="#f2a8b8" d="M-30.4 -171 L-27.6 -192 L-14 -182.6 Z"/>') + `<path ${L(c, 4.3)} d="${outer} L40 -98 C43 -124 34 -158 2 -162 C-30 -158 -39 -124 -36 -98 Z"/>
@@ -8363,8 +8546,6 @@ const HERO = (() => {
     scarf: (L) => { const w = `<path ${L('#d0453c', 3.3)} d="M-22 -98 Q2 -88 26 -98 L26 -88 Q2 -78 -22 -88 Z"/>`; return [w + `<path ${L('#b93a33', 3)} d="M8 -88 L18 -88 L20 -58 L10 -56 Z"/><path d="M10 -58 v5 M14 -58 v5 M18 -58 v5" stroke="#b93a33" stroke-width="1.6"/>`, w + `<path ${L('#b93a33', 3)} d="M-14 -88 L-4 -88 L-6 -60 L-16 -62 Z"/>`]; },
     bowtie: () => [`<path d="M2 -92 L-10 -98 L-10 -86 Z M2 -92 L14 -98 L14 -86 Z" fill="#c8453d"/><circle cx="2" cy="-92" r="3" fill="#a63831"/>`, ''],
     backpack: (L) => [`<path ${L('#e6a23c', 2.6)} d="M-27 -90 Q-34 -76 -30 -52 H-22 V-90 Z"/><path d="M-16 -94 Q-20 -76 -18 -62 M20 -94 Q22 -76 20 -62" fill="none" stroke="#b8792a" stroke-width="3.4" stroke-linecap="round"/>`, `<rect x="-20" y="-96" width="44" height="48" rx="10" ${L('#e6a23c', 2.6)}/><rect x="-12" y="-74" width="28" height="20" rx="5" ${L('#d48f2c', 2.4)}/><path d="M-10 -66 H14" stroke="#b8792a" stroke-width="1.6"/><path d="M-14 -96 Q2 -104 18 -96" fill="none" stroke="#b8792a" stroke-width="3"/>`],
-    haori: (L) => [`<path ${L('#3f5a4a', 2.8)} d="M-25 -92 L-6 -92 L-2 -44 L-28 -44 Q-31 -70 -25 -92 Z M29 -92 L10 -92 L6 -44 L32 -44 Q35 -70 29 -92 Z"/><path d="M-20 -86 l4 4 l-4 4 l-4 -4 Z M-16 -64 l4 4 l-4 4 l-4 -4 Z M22 -74 l4 4 l-4 4 l-4 -4 Z" fill="#fff" fill-opacity=".35"/><path d="M-4 -70 Q2 -66 8 -70" fill="none" stroke="#f4efe6" stroke-width="2"/><circle cx="-3" cy="-70" r="2" fill="#f4efe6"/><circle cx="7" cy="-70" r="2" fill="#f4efe6"/>`,
-      `<path ${L('#3f5a4a', 2.8)} d="M-26 -94 H30 Q35 -70 32 -44 H-28 Q-31 -70 -26 -94 Z"/><circle cx="2" cy="-80" r="7" fill="none" stroke="#f4efe6" stroke-width="1.8"/><path d="M2 -86 v12 M-4 -80 h12" stroke="#f4efe6" stroke-width="1.4"/>`]
   };
   const day = (h) => `fill="${h}"`;
   let uid = 0;   // each drawing's own clip ids
@@ -8379,6 +8560,7 @@ const HERO = (() => {
     const legs = (side) => `<g class="legs">${leg('l', -15, side)}${leg('r', 5, side)}</g>${bt.over ? bt.over(L, pants, pd) : ''}`;   // a skirt hangs over both legs, not with them
     const arm = (cls, x) => {
       const hand = tp.paw ? `<circle cx="${x}" cy="-52" r="7" ${L(top, 2)}/><circle cx="${x}" cy="-50.5" r="2.2" fill="#f2a8b8"/>` : `<circle cx="${x}" cy="-52" r="6.4" ${L(skin, 2)}/>`;
+      if (tp.sleeve === 'robe') return `<g class="arm ${cls}"><path ${L(topDk, 2.5)} d="M${x - 6.5} -93 H${x + 6.5} L${x + 11} -58 Q${x} -55 ${x - 11} -58 Z"/><path d="M${x - 11} -58 Q${x} -55 ${x + 11} -58" fill="none" stroke="#e6c25a" stroke-width="2"/>${hand}</g>`;
       if (tp.sleeve === 'short') return `<g class="arm ${cls}"><rect x="${x - 5}" y="-80" width="10" height="28" rx="5" ${L(skin, 2.2)}/><rect x="${x - 6.5}" y="-92" width="13" height="17" rx="6" ${L(topDk, 2.5)}/>${hand}</g>`;
       if (tp.sleeve === 'wide') return `<g class="arm ${cls}"><rect x="${x - 5}" y="-80" width="10" height="28" rx="5" ${L(skin, 2.2)}/><path ${L(topDk, 2.5)} d="M${x - 7} -93 H${x + 7} L${x + 9.5} -72 H${x - 9.5} Z"/>${hand}</g>`;
       const cuff = tp.cuff ? `<rect x="${x - 6.2}" y="-61" width="12.4" height="5" rx="2" ${L(tp.light ? lt(top, 0.55) : dk(topDk, 0.85), 2.2)}/>` : '';
@@ -8402,8 +8584,8 @@ const HERO = (() => {
   function thumb(id, look) {
     if (FULL[id]) { const lk = norm(look); return `<svg class="thumb" viewBox="-46 -186 96 100" aria-hidden="true">${FULL[id](day, lk.top, dk(lk.top, 0.74))[0]}</svg>`; }
     const f = WEAR[id]; if (!f) return '';
-    const hat = !!HAT_HAIR[id], lk = norm(look);   // a hat is drawn round a crown of hair: a bigger frame, the faint head with its hair
-    return `<svg class="thumb" viewBox="${hat ? '-68 -203 136 158' : '-60 -185 120 140'}" aria-hidden="true"><g class="base" opacity=".28"><ellipse cx="2" cy="-128" rx="34" ry="32" fill="#c9bfae"/>${hat ? '<path d="M-44 -128 C-45 -160 -20 -172 2 -172 C24 -172 49 -160 48 -128 Q2 -150 -44 -128 Z" fill="#a3957d"/>' : ''}<path d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -50 H-26 Z" fill="#c9bfae"/></g><g>${f(day, lk.top, dk(lk.top, 0.84))[0]}</g></svg>`;
+    const hat = !!HAT_HAIR[id], lk = norm(look), t = Math.min(-203, (HEAD_TOP[id] || -196) - 7);   // a hat is drawn round a crown of hair: a bigger frame (taller for a tall hat), the faint head with its hair
+    return `<svg class="thumb" viewBox="${hat ? `-68 ${t} 136 ${-45 - t}` : '-60 -185 120 140'}" aria-hidden="true"><g class="base" opacity=".28"><ellipse cx="2" cy="-128" rx="34" ry="32" fill="#c9bfae"/>${hat ? '<path d="M-44 -128 C-45 -160 -20 -172 2 -172 C24 -172 49 -160 48 -128 Q2 -150 -44 -128 Z" fill="#a3957d"/>' : ''}<path d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -50 H-26 Z" fill="#c9bfae"/></g><g>${f(day, lk.top, dk(lk.top, 0.84))[0]}</g></svg>`;
   }
   // idling (test build): standing still they now and then look round, stretch, wave (facing us), sway or bounce — one at a time,
   // 6–12 s apart (the first after 4), never the same twice running; sitting they nod over the notebook. ok(): may they now?
@@ -8444,7 +8626,7 @@ const HERO = (() => {
     el.appendChild(b); setTimeout(() => b.remove(), 1400);
   }
   return { svg, head, thumb, clothes, idle, still, react, norm, OPTS, LOOK0, slots: Object.keys(WEAR).concat(Object.keys(FULL)),
-    hairWorn: (look, wear) => hairWorn(norm(look), wear), whole: (id) => !!FULL[id] };
+    hairWorn: (look, wear) => hairWorn(norm(look), wear), whole: (id) => !!FULL[id], headTop: (id) => (!id ? -184 : HEAD_TOP[id] || -196) };
 })();
 
 // ---------- 古道具屋 (test build): the old shop up the hill, kept by 福爺 the owl, who takes 言靈 and nothing else ----------
@@ -8470,7 +8652,47 @@ function fukuSvg() {
     <path d="M41 53 L45 60 L49 53 Z" fill="#e0a23a"/>
     <path d="M30 60 Q45 68 60 60 L56 70 Q45 74 34 70 Z" fill="#3f4479"/><text x="45" y="69" font-size="7" font-weight="700" text-anchor="middle" fill="#fff" font-family="'Hiragino Mincho ProN', serif">古</text></svg>`;
 }
-const SHOP_SECTIONS = [['floor', '家具擺飾'], ['rug', '地墊'], ['wall', '牆上'], ['clothes', '衣服褲子'], ['wear', '主角穿戴']];
+// the shop's tabs (test build): for 書房, for the yard, to wear, and what is sold for a while only. The last one used comes back.
+const SHOP_TABS = [['in', '室內', [['floor', '家具擺飾'], ['rug', '地墊'], ['wall', '牆上']]], ['out', '戶外', [['yard', '戶外擺設']]], ['wear', '穿搭', [['clothes', '衣服褲子'], ['wear', '主角穿戴']]], ['sale', '限時']];
+let shopTab = (() => { try { const t = localStorage.getItem('nq_shop_tab'); return SHOP_TABS.some(([k]) => k === t) ? t : 'in'; } catch (e) { return 'in'; } })();
+// limited sales (test build): month-day, both ends in, every year. A ware joins one with limited: its key; it is shown under 限時
+// only, and only while the sale is on; once bought it is theirs like any other.
+const SALES = { halloween: { name: '萬聖節', from: '10-21', to: '11-10' } };
+const saleOn = (key, day) => { const s = SALES[key], md = day && day.slice(5); return !!(s && md && md >= s.from && md <= s.to); };
+const salePreview = () => { try { return onTestSite() && localStorage.getItem('nq_sale_preview') === '1'; } catch (e) { return false; } };   // test site: every sale as if on
+// the day a sale goes by is the server's, never the phone's (its clock and time zone are anyone's to change): the site's own
+// answer carries a Date header, and that moment in Taipei (UTC+8, where the learners are) is the day. Kept 10 minutes; failed:
+// no answer (offline), asked again when 限時 is opened
+let saleDay = { day: null, at: 0, ask: null, failed: false };
+function saleClock() {
+  if (saleDay.day && Date.now() - saleDay.at < 600000) return Promise.resolve(saleDay.day);
+  if (!saleDay.ask) saleDay.ask = fetch(`./?clock=${Date.now()}`, { method: 'HEAD', cache: 'no-store' }).then((r) => {
+    const t = Date.parse(r.headers.get('Date')); if (!Number.isFinite(t)) throw new Error('no Date header');
+    const d = new Date(t + 8 * 3600000);
+    saleDay = { day: `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`, at: Date.now(), ask: null, failed: false };
+    return saleDay.day;
+  }).catch(() => { saleDay = { day: null, at: 0, ask: null, failed: true }; return null; });
+  return saleDay.ask;
+}
+const saleNow = () => (saleDay.day && Date.now() - saleDay.at < 600000 ? saleDay.day : null);
+const forSale = (it) => !it.limited || salePreview() || saleOn(it.limited, saleNow());   // in the shop now (a limited one: by the server's day, when known)
+// a limited ware is bought only on a day the server says its sale is on (asked again when the answer is old)
+function saleCheck(it, go) {
+  if (!it.limited || salePreview()) { go(); return; }
+  saleClock().then((day) => { if (saleOn(it.limited, day)) go(); else { toast(day ? '這個限時商品已經下架了' : '限時商品要連上網路才買得到'); route(); } });
+}
+const mdText = (md) => md.split('-').map(Number).join('/');
+function saleHtml(day, live, grid) {   // 限時: the sales on now with their wares, or when the next one is
+  if (!live.length) {
+    if (!day) return `<p class="shop-note">${saleDay.failed ? '限時商品要連上網路才看得到。' : '查看中…'}</p>`;
+    return `<p class="shop-note">現在沒有限時商品。下一檔：${Object.values(SALES).map((x) => `${x.name} ${mdText(x.from)}–${mdText(x.to)}`).join('、')}</p>`;
+  }
+  return live.map((k) => {
+    const x = SALES[k], left = day ? Math.round((Date.parse(`${day.slice(0, 4)}-${x.to}`) - Date.parse(day)) / 86400000) : null;
+    const when = left === null || !saleOn(k, day) ? '測試預覽' : left > 0 ? `還有 ${left} 天` : '今天最後一天';
+    return `<section class="shop-sec"><h2 class="shop-h">${x.name}限定 · 賣到 ${mdText(x.to)}（${when}）</h2>${grid(WARES.filter((it) => it.limited === k))}</section>`;
+  }).join('');
+}
 const styleKey = (it) => (it.slot === 'top' ? 'topStyle' : 'bottomStyle'), styleOn = (it) => HERO.norm(state.look)[styleKey(it)] === it.id;
 const hairName = (v) => (HERO.OPTS.hair.find(([x]) => x === v) || [, ''])[1];
 // a hat that cannot sit on their hairstyle (a tall one) and brings its own while it is on: what they will see
@@ -8483,21 +8705,27 @@ function shopCardHtml(it, bal) {
   let act;
   if (owned && it.kind === 'wear') act = `<button type="button" class="btn btn-sm" data-act="ware-wear" data-id="${it.id}">${state.wear[it.slot] === it.id ? '脫下' : '穿上'}</button>`;
   else if (owned && it.kind === 'clothes') act = `<button type="button" class="btn btn-sm" data-act="clothes-wear" data-id="${it.id}">${styleOn(it) ? '脫下' : '換上'}</button>`;
-  else if (owned) act = `<span class="chip">${state.placed[it.id] ? '在書房' : '在收納箱'}</span>`;
+  else if (owned) act = `<span class="chip">${state.placed[it.id] ? (it.kind === 'yard' ? '在院子' : '在書房') : '在收納箱'}</span>`;
   else if (short > 0) act = `<button type="button" class="btn btn-sm btn-muted" data-act="ware-short" aria-disabled="true">還差 ${short}</button>`;
   else act = `<button type="button" class="btn btn-sm btn-primary" data-act="ware-buy" data-id="${it.id}">買下</button>`;
-  const art = it.kind === 'wear' ? HERO.thumb(it.id, state.look) : it.kind === 'clothes' ? HERO.clothes(it.id, HERO.norm(state.look)) : DECOR.thumb(it.id);   // clothes in the hero's own colours
+  const art = it.kind === 'wear' ? HERO.thumb(it.id, state.look) : it.kind === 'clothes' ? HERO.clothes(it.id, HERO.norm(state.look)) : it.kind === 'yard' ? YARD.thumb(it.id) : DECOR.thumb(it.id);   // clothes in the hero's own colours
   return `<div class="card shop-item${owned ? ' owned' : ''}" data-ware="${it.id}"><div class="art">${art}</div><div class="nm">${esc(it.name)}</div><div class="ds">${esc(it.desc)}</div>${swap ? `<div class="ds swap">${swap}</div>` : ''}
     <div class="buy">${owned ? '<span class="price got">已擁有</span>' : `<span class="price">${kotoIcon()}${it.price}</span>`}${act}</div></div>`;
 }
+const SOON = '<div class="card shop-item soon"><div class="art"><svg viewBox="0 0 80 80"><g fill="none" stroke="currentColor" stroke-opacity=".45" stroke-width="2" stroke-linejoin="round"><path d="M16 34 L40 24 L64 34 L40 44 Z"/><path d="M16 34 V56 L40 66 V44 M64 34 V56 L40 66"/></g></svg></div><div class="nm">福爺還在找</div><div class="ds">之後會有更多老東西。</div></div>';   // the last card under 主角穿戴
 function renderShop(view) {
   const bal = kotoBalance(), night = sceneClock(lightHour()).day < 0.5;
+  const day = saleNow(), live = Object.keys(SALES).filter((k) => salePreview() || saleOn(k, day));
+  const grid = (list, extra = '') => `<div class="shop-grid">${list.map((it) => shopCardHtml(it, bal)).join('')}${extra}</div>`;
+  if (!day && !saleDay.ask && !saleDay.failed) saleClock().then(() => { if (location.hash === '#/shop') route(); });   // the server's day: the 限時 dot, its wares
   document.getElementById('topTitle').textContent = '古道具屋';
   view.innerHTML = `<div class="shop-front"><i class="beam"></i><div class="noren"><i><b>古</b></i><i><b>道</b></i><i><b>具</b></i></div><i class="lantern"><i></i><i></i></i>
       <button type="button" class="fuku" data-act="fuku-talk" aria-label="福爺">${fukuSvg()}</button><div class="fuku-say" aria-live="polite">${fukuLine(night ? 'night' : 'hello')}</div>
       <div class="counter"></div><div class="purse">${kotoIcon()}言靈 <b>${bal}</b></div></div>
     <div class="page-head"><div><div class="page-title">古道具屋</div><div class="page-sub">山上的老店，老闆福爺不收錢，只收言靈。今日練習每做完一組 +1，當天的清單做完再 +10。</div></div></div>
-    ${SHOP_SECTIONS.map(([k, name]) => `<section class="shop-sec"><h2 class="shop-h">${name}</h2><div class="shop-grid">${WARES.filter((it) => it.kind === k && !it.starter).map((it) => shopCardHtml(it, bal)).join('')}${k === 'wear' ? '<div class="card shop-item soon"><div class="art"><svg viewBox="0 0 80 80"><g fill="none" stroke="currentColor" stroke-opacity=".45" stroke-width="2" stroke-linejoin="round"><path d="M16 34 L40 24 L64 34 L40 44 Z"/><path d="M16 34 V56 L40 66 V44 M64 34 V56 L40 66"/></g></svg></div><div class="nm">福爺還在找</div><div class="ds">之後會有更多老東西。</div></div>' : ''}</div></section>`).join('')}
+    <div class="shop-tabs" role="tablist">${SHOP_TABS.map(([k, name]) => `<button type="button" role="tab" data-act="shop-tab" data-tab="${k}" aria-selected="${shopTab === k}">${name}${k === 'sale' && live.length ? '<i class="dot" aria-label="特賣中"></i>' : ''}</button>`).join('')}</div>
+    ${shopTab === 'sale' ? saleHtml(day, live, grid) : SHOP_TABS.find(([k]) => k === shopTab)[2].map(([k, name]) => `<section class="shop-sec"><h2 class="shop-h">${name}</h2>${grid(WARES.filter((it) => it.kind === k && !it.starter && !it.limited), k === 'wear' ? SOON : '')}</section>`).join('')}
+    ${onTestSite() && shopTab === 'sale' ? `<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="sale-preview">測試用：${salePreview() ? '關掉限時預覽，照日期來' : '不看日期，顯示限時商品'}</button></div>` : ''}
     ${onTestSite() ? '<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="koto-gift">測試用：+100 言靈</button></div>' : ''}
     <svg class="defs-only" width="0" height="0" aria-hidden="true">${DECOR.DEFS}</svg>`;
   fitThumbs(view);
@@ -8516,7 +8744,7 @@ const DRESS = (() => {
   function frame(dr, part) {
     const p = dr.querySelector('.dress-panel'), side = p.offsetLeft > 0, W = dr.clientWidth, H = dr.clientHeight;
     const x0 = 0, y0 = 58, x1 = side ? p.offsetLeft : W, y1 = side ? H - 12 : p.offsetTop - 8;
-    const up = d && d.wear.head ? 12 : 0;   // what is on the head can stand above the hair (a hat's top, a pompom)
+    const up = -184 - HERO.headTop(d && d.wear.head);   // what is on the head can stand above the hair (a hat's top, a pompom, a wizard's tip)
     const [a0, b0, a1, b1] = part === 'head' ? [-52, -184 - up, 56, -84] : [-48, -182 - up, 52, 8];
     const s = Math.min((x1 - x0) * (part === 'head' ? 0.78 : 0.86) / (a1 - a0), (y1 - y0) * 0.9 / (b1 - b0)), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     dr.style.setProperty('--spx', `${cx}px`); dr.style.setProperty('--spy', `${cy}px`);
@@ -8545,7 +8773,7 @@ const DRESS = (() => {
     if (d.tab === 'features') return sec('眼睛', opts('eyes', 'face')) + sec('眼睛顏色', sws('eyeColor')) + sec('眉毛', opts('brows', 'face')) + sec('嘴巴', opts('mouth', 'face'));
     if (d.tab === 'beard') return sec('鬍子', opts('beard', 'face'));
     if (d.tab === 'clothes') {
-      const more = WARES.filter((it) => it.kind === 'clothes' && !owns(it.id)).length;
+      const more = WARES.filter((it) => it.kind === 'clothes' && !owns(it.id) && forSale(it)).length;   // a limited one only while its sale is on
       return sec('上衣', styles('topStyle')) + sec('上衣顏色', sws('top')) + sec('褲子', styles('bottomStyle')) + sec('褲子顏色', sws('bottom'))
         + (more ? `<p class="dress-more">古道具屋還有 ${more} 件衣服褲子<button type="button" class="btn btn-sm" data-act="dress-shop">去看看</button></p>` : '');
     }
@@ -8619,7 +8847,7 @@ const DRESS = (() => {
 function buyWare(it) {
   state.owned[it.id] = { paid: it.price, on: todayStr() };
   saveState();
-  return it.kind === 'wear' ? '收進衣櫃了，按書房右上角的衣櫃就能穿上' : it.kind === 'clothes' ? '收進衣櫃了，按書房右上角的衣櫃，在「衣服」換上' : '收在收納箱，到書房按「擺設」拿出來擺';
+  return it.kind === 'wear' ? '收進衣櫃了，按書房右上角的衣櫃就能穿上' : it.kind === 'clothes' ? '收進衣櫃了，按書房右上角的衣櫃，在「衣服」換上' : it.kind === 'yard' ? '收在院子的收納箱，到院子按「擺設」拿出來擺' : '收在收納箱，到書房按「擺設」拿出來擺';
 }
 Object.assign(ACTIONS, {
   'room-edit': (el) => ROOM.edit(el, 'on'),
@@ -8634,15 +8862,14 @@ Object.assign(ACTIONS, {
     const it = WARE.get(el.dataset.id);
     if (!it || owns(it.id)) return;
     if (kotoBalance() < it.price) { fukuSay('short'); return; }
-    openModal(`買下${it.name}？`, `<p>用 <b>${it.price}</b> 言靈買下「${esc(it.name)}」。${it.kind === 'wear' ? '買了之後按書房右上角的衣櫃就能穿上或脫下。' : it.kind === 'clothes' ? '買了之後按書房右上角的衣櫃，在「衣服」換上，顏色照你配的。' : '買了會先收在收納箱，到書房按「擺設」拿出來擺。'}</p>
-      <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="ware-buy-ok" data-id="${it.id}">買下</button><button type="button" class="btn" data-act="close-modal">再想想</button></div>`, { width: 380 });
+    saleCheck(it, () => openModal(`買下${it.name}？`, `<p>用 <b>${it.price}</b> 言靈買下「${esc(it.name)}」。${it.kind === 'wear' ? '買了之後按書房右上角的衣櫃就能穿上或脫下。' : it.kind === 'clothes' ? '買了之後按書房右上角的衣櫃，在「衣服」換上，顏色照你配的。' : it.kind === 'yard' ? '買了會先收在院子的收納箱，到院子按「擺設」拿出來擺。' : '買了會先收在收納箱，到書房按「擺設」拿出來擺。'}</p>
+      <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="ware-buy-ok" data-id="${it.id}">買下</button><button type="button" class="btn" data-act="close-modal">再想想</button></div>`, { width: 380 }));
   },
   'ware-buy-ok': (el) => {
     const it = WARE.get(el.dataset.id);
     closeModal();
     if (!it || owns(it.id) || kotoBalance() < it.price) return;
-    const where = buyWare(it);
-    route(); fukuSay('thanks'); toast(`${it.name}${where}`);
+    saleCheck(it, () => { const where = buyWare(it); route(); fukuSay('thanks'); toast(`${it.name}${where}`); });
   },
   'ware-wear': (el) => {
     const it = WARE.get(el.dataset.id);
@@ -8666,6 +8893,17 @@ Object.assign(ACTIONS, {
   'dress-cancel': () => DRESS.close(false),
   'dress-shop': () => DRESS.shop(),
   'hero-hop': (el) => ROOM.tapHero(el),
+  'shop-tab': (el) => {
+    shopTab = el.dataset.tab; try { localStorage.setItem('nq_shop_tab', shopTab); } catch (e) { /* no storage */ }
+    if (shopTab === 'sale' && saleDay.failed) saleDay.failed = false;   // asked again: perhaps back online
+    route();
+  },
+  'sale-preview': () => { try { localStorage.setItem('nq_sale_preview', salePreview() ? '0' : '1'); } catch (e) { /* no storage */ } route(); },
+  'yard-edit': (el) => yardEdit(el.closest('.yard'), 'on'),
+  'yard-edit-done': (el) => yardEdit(el.closest('.yard'), 'done'),
+  'yard-edit-take': (el) => yardEdit(el.closest('.yard'), 'take', el.dataset.id),
+  'yard-edit-put': (el) => yardEdit(el.closest('.yard'), 'put'),
+  'yard-ware': (el) => { const y = el.closest('.yard'); if (y && y._noClick) return; if (yed.on) yardEdit(y, 'pick', el.dataset.ware); else yardUse(y, el.dataset.ware); },
   'koto-gift': () => { state.koto.gift = (Number(state.koto.gift) || 0) + 100; saveState(); route(); toast('測試用：多了 100 言靈'); }
 });
 

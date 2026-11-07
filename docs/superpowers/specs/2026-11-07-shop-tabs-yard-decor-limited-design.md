@@ -6,10 +6,12 @@ limited sale, for now Halloween: one outfit and one indoor decoration, sold only
 then changed to **ten days either side**). The yard is arranged the same way as 書房 (A, over fixed spots). For the rest
 they said 「都照你的建議來」.
 
-## 1. 羽織 goes
+## 1. 羽織 goes, with its purchase
 
-The ware and its drawing are deleted. A save that owns or wears it keeps the id (a later build may know it again); nothing
-draws it, and the wardrobe no longer lists it.
+It is only a test build, so the user asked for the purchase to go too. The ware and its drawing are deleted, and
+`normalizeState` deletes `owned.haori` and a worn one on every load: sync merges `owned` as a union, so another device's copy
+would bring it back otherwise. The 30 言靈 paid come back, since the balance counts what is owned. (This is the one
+exception to keeping ids a build does not know.)
 
 ## 2. The shop's tabs
 
@@ -30,8 +32,15 @@ A tab row under the shop front: **室內 · 戶外 · 穿搭 · 限時**.
 
 ## 3. Limited sales
 
-- `SALES = { halloween: { name: '萬聖節', from: '10-21', to: '11-10' } }`: month-day, both ends included, by the phone's own
-  date, every year. `saleOn(key, day)` compares `MM-DD`. A ware joins a sale with `limited: 'halloween'`.
+- `SALES = { halloween: { name: '萬聖節', from: '10-21', to: '11-10' } }`: month-day, both ends included, every year.
+  `saleOn(key, day)` compares `MM-DD`. A ware joins a sale with `limited: 'halloween'`.
+- **The day is the server's, not the phone's.** The user worried that once the app is out, people would change the phone's
+  date to buy. `saleClock()` asks the site itself (a `HEAD` for `./`, never cached; the service worker lets anything but GET
+  through) and takes its `Date` header's moment in Taipei (UTC+8), so neither the phone's clock nor its time zone moves a
+  sale. The answer is kept 10 minutes. Until it comes, 限時 says 「查看中…」; with none (offline) it says
+  「限時商品要連上網路才看得到」, and nothing limited can be bought. 買下 checks again before the purchase.
+- This stops the easy trick only: 言靈 and purchases are still kept on the device, so someone who edits the save can still
+  cheat. Real protection needs the server, when in-app purchases come.
 - 限時 during the sale: a header 「萬聖節限定 · 賣到 11/10（還有 N 天）」 (「今天最後一天」 on the last day), then its wares.
   Outside it: 「現在沒有限時商品。下一檔：萬聖節 10/21–11/10」.
 - What was bought stays theirs after the sale; it only leaves the shop.
@@ -101,3 +110,14 @@ A tap on an outdoor ware (outside 擺設) sends the hero to stand beside it, fac
 
 Sitting on the bench, a view through the telescope, a set bonus for the wizard (as the cat suit has), other sales (the SALES
 table takes them when they come).
+
+## Built (same day)
+
+As above, with these details settled while building:
+- `forSale(it)` (a limited ware only while its sale is on, by the server's day when known) also counts the dressing room's
+  「古道具屋還有 N 件衣服褲子」.
+- The yard's 擺設 keeps its storage box at the top of the screen (the sky is empty there; the lawn is at the bottom) and its
+  tools in a fixed layer over the sky (`.yedit`); the yard's things, the mailbox (146) and the hero take `z-index` 300 − y.
+- Thumbnails fit without a lamp's pool of light by night (`fitThumbs` leaves `.night-only` out), so 南瓜燈 and 行燈 fill
+  their cards.
+- The telescope's room drawing is gone; the yard draws its own.
