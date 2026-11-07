@@ -7709,8 +7709,20 @@ const ROOM = (() => {
       if (d <= go) { hero.x = tx; hero.y = ty; go -= d; w.pts.shift(); } else { hero.x += (tx - hero.x) / d * go; hero.y += (ty - hero.y) / d * go; go = 0; }
     }
     const dx = hero.x - x0, dy = hero.y - y0, moving = Math.abs(dx) + Math.abs(dy) > 1e-6;
-    el.classList.toggle('run', moving && w.v > 8); el.classList.toggle('walk', moving && w.v <= 8);
-    if (moving) { hero.back = dx + dy < 0; if (Math.abs(dx - dy) > 1e-3) hero.flip = dx - dy < 0; heroPlace(st); follow(st, dx - dy); }
+    // led, he catches up with the finger between two aims (one every 90 ms) and would stand a frame: he keeps his step through
+    // such a moment, or his walk would begin again from its first step each time and he would seem to slide (1.2.x)
+    w.still = moving ? 0 : (w.still || 0) + dt;
+    const stepping = moving || (hero.lead && w.still < 0.25);
+    el.classList.toggle('run', stepping && w.v > 8); el.classList.toggle('walk', stepping && w.v <= 8);
+    if (moving) {
+      // which way he faces, by his step on the screen (sx across, sy up or down): from behind or facing us only when it clearly goes
+      // up or down, mirrored only when it clearly goes left or right. Going nearly across, his step points a hair up or down by
+      // turns: he turned round with it, and each turn began the legs' step again (1.2.x)
+      const sx = dx - dy, sy = (dx + dy) / 2;
+      if (Math.abs(sy) > 0.2 * Math.abs(sx)) hero.back = sy < 0;
+      if (Math.abs(sx) > 0.2 * Math.abs(sy)) hero.flip = sx < 0;
+      heroPlace(st); follow(st, sx);
+    }
     if (w.pts.length || hero.lead) { hero.raf = requestAnimationFrame((t) => heroStep(st, t)); return; }
     hero.walk = null; grid = null; el.classList.remove('walk', 'run'); el.innerHTML = heroArt(); heroSave();   // lit where it stopped
     if (w.done) w.done();

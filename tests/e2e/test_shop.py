@@ -801,6 +801,41 @@ def test_the_mushroom_house_changes_the_yards_house_and_its_card_switches_back(b
     assert r['price'] == 2000 and r['after'] == {'house': 'mushroomhouse', 'bal': 0, 'btn': '換回小屋'} and r['drawn'], r
     assert r['back'] == '' and r['kept'] == 'castle' and r['cottage'], r
 
+def test_a_led_hero_keeps_stepping_while_the_finger_moves(b):
+    # 1.2.x: led by a finger, he caught up between two new aims (about 11 a second), stood a frame, and his walk began again from
+    # its first step each time: his legs kept snapping back, so he seemed to slide
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); localStorage.setItem('nq_hero_led', '1'); " + GO_ROOM + POINTER + """ await wait(500);
+      const st = document.querySelector('.study'), hero = () => st.querySelector('.room .hero'), f = hero().querySelector('.fig').getBoundingClientRect(), [x0, y0] = [f.left + f.width / 2, f.top + f.height / 2];
+      const frames = []; let on = true;
+      const watch = () => { const h = hero(), legs = h.getAnimations({ subtree: true }).filter(a => a.animationName === 'heroLeg'); frames.push({ pose: h.matches('.walk, .run'), anim: legs[0] || null }); if (on) requestAnimationFrame(watch); };
+      pe(st, 'pointerdown', x0, y0, 1); requestAnimationFrame(watch);
+      for (let i = 1; i <= 20; i++) { pe(st, 'pointermove', x0 - 6 * i, y0 + 4 * i, 1); await wait(70); }   /* a slow, steady finger */
+      on = false; pe(st, 'pointerup', x0 - 120, y0 + 80, 1); await wait(50);
+      const first = frames.findIndex(q => q.pose), during = frames.slice(first, frames.length - 3);
+      return JSON.stringify({ frames: frames.length, first, gaps: during.filter(q => !q.pose).length, walks: new Set(during.map(q => q.anim).filter(Boolean)).size }); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert r['first'] >= 0 and r['gaps'] == 0, r   # once he set off, he never stood still while the finger moved
+    assert r['walks'] == 1, r   # one walk all along: his steps never began again
+
+def test_walking_across_the_screen_he_does_not_keep_turning_round(b):
+    # 1.2.x: going sideways on the screen his step points a hair toward the back or the front by turns, and he turned round with it
+    # (from behind, facing us, from behind…), each turn showing legs that began their step again: he seemed to slide
+    js = "(async () => { " + FRESH + " localStorage.setItem('nq_hero', JSON.stringify({ room: { x: 9, y: 7, back: false, flip: false, pose: '' } })); localStorage.setItem('nq_hero_led', '1'); location.reload(); })()"
+    js2 = "(async () => { " + GO_ROOM + POINTER + """ await wait(500);
+      const st = document.querySelector('.study'), hero = () => st.querySelector('.room .hero'), out = {};
+      for (const [name, dx] of [['left', -6], ['right', 6]]) {
+        const f = hero().querySelector('.fig').getBoundingClientRect(), [x0, y0] = [f.left + f.width / 2, f.top + f.height / 2], frames = []; let on = true;
+        const w = () => { const h = hero(); frames.push({ pose: h.matches('.walk, .run'), back: h.classList.contains('back') }); if (on) requestAnimationFrame(w); };
+        pe(st, 'pointerdown', x0, y0, 1); requestAnimationFrame(w);
+        for (let i = 1; i <= 24; i++) { pe(st, 'pointermove', x0 + dx * i, y0, 1); await wait(60); }
+        on = false; pe(st, 'pointerup', x0 + dx * 24, y0, 1); await wait(400);
+        const m = frames.filter(q => q.pose); out[name] = { moving: m.length, turns: m.filter((q, i) => i && q.back !== m[i - 1].back).length };
+      }
+      return JSON.stringify(out); })()"""
+    r = json.loads(b.run([("metrics", PHONE), ("nav", URL), ("wait", READY), ("eval", js), ("wait", READY), ("eval", js2)])[-1])
+    assert r['left']['moving'] > 30 and r['right']['moving'] > 30, r
+    assert r['left']['turns'] <= 1 and r['right']['turns'] <= 1, r   # sideways he keeps the way he faced
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
