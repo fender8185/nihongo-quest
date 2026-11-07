@@ -97,13 +97,13 @@ def test_a_set_past_the_days_cap_gives_nothing_and_says_so(b):
 def test_fukuyas_opening_letter_brings_10_koto_once_with_his_face_and_no_rules(b):
     js = """(() => { const l = letters().find(x => x.id === 'opening'); if (!l) return 'none';
       const bal0 = kotoBalance(); openLetters(); const card = () => document.querySelector('#modalBody [data-letter="opening"]');
-      const face = !!card().querySelector('.letter-from svg'), stamp = getComputedStyle(card(), '::before').display, rules = /做完一組|\\+1|\\+10|一組/.test(card().textContent);
+      const face = !!card().querySelector('.letter-from svg'), stamp = getComputedStyle(card(), '::before').display, rules = /做完一組|\\+1|\\+10|一組|掛鐘|擺設|衣櫃/.test(card().textContent), learn = card().textContent.includes('吸收一分知識');
       card().querySelector('[data-act="letter-gift"]').click(); const gain = kotoBalance() - bal0, got = !!card().querySelector('.letter-got'), shop = !!card().querySelector('[data-route="#/shop"]');
       takeLetterGift('opening'); const again = kotoBalance() - bal0 - gain;   /* another device took it as well: once */
       card().querySelector('[data-act="letter-done"]').click();
-      return JSON.stringify({ title: l.title, from: l.from, face, stamp, rules, gain, got, shop, again, gone: !letters().some(x => x.id === 'opening'), mail: state.koto.mail }); })()"""
+      return JSON.stringify({ title: l.title, from: l.from, face, stamp, rules, learn, gain, got, shop, again, gone: !letters().some(x => x.id === 'opening'), mail: state.koto.mail }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'title': '古道具屋開張了', 'from': 'fuku', 'face': True, 'stamp': 'none', 'rules': False, 'gain': 10, 'got': True, 'shop': True, 'again': 0, 'gone': True, 'mail': {'opening': 10}}, r
+    assert r == {'title': '古道具屋開張了', 'from': 'fuku', 'face': True, 'stamp': 'none', 'rules': False, 'learn': True, 'gain': 10, 'got': True, 'shop': True, 'again': 0, 'gone': True, 'mail': {'opening': 10}}, r   # no rules, no wares, no how-to
 
 def test_putting_the_opening_letter_away_still_takes_its_koto(b):
     js = """(() => { const bal0 = kotoBalance(); openLetters(); document.querySelector('#modalBody [data-letter="opening"] [data-act="letter-done"]').click();
@@ -113,7 +113,7 @@ def test_putting_the_opening_letter_away_still_takes_its_koto(b):
 
 # ---- 古道具屋, 書房's wares, 擺設 ----
 GO_ROOM = "location.hash = '#/today'; document.getElementById('view').innerHTML = ''; route();"
-def test_a_bought_clock_waits_in_the_storage_box_and_its_nail_till_it_hangs(b):
+def test_a_bought_clock_waits_in_the_storage_box_till_it_hangs(b):
     js = "(() => { " + FRESH + GO_ROOM + """ const now = () => ({ hands: !!document.querySelector('.study .clock-hands'), nail: document.querySelectorAll('.study svg.art circle[r=".055"]').length, placed: !!state.placed.clock });
       const before = now();
       state.koto.gift = 1; saveState(); location.hash = '#/shop'; route();
@@ -123,8 +123,8 @@ def test_a_bought_clock_waits_in_the_storage_box_and_its_nail_till_it_hangs(b):
       document.querySelector('.study-edit').click(); document.querySelector('.tray-it[data-id="clock"]').click(); document.querySelector('[data-act="room-edit-done"]').click();
       return JSON.stringify({ before, bought, hung: now(), card, ask: ask.includes('收納箱'), bal: kotoBalance() }); })()"""
     r = json.loads(ev(b, js))
-    assert r['before'] == {'hands': False, 'nail': 1, 'placed': False}, r
-    assert r['bought'] == {'hands': False, 'nail': 1, 'placed': False} and r['card'] == '在收納箱' and r['ask'] and r['bal'] == 0, r
+    assert r['before'] == {'hands': False, 'nail': 0, 'placed': False}, r   # the room has no clock of its own (and no nail where one hung)
+    assert r['bought'] == {'hands': False, 'nail': 0, 'placed': False} and r['card'] == '在收納箱' and r['ask'] and r['bal'] == 0, r
     assert r['hung'] == {'hands': True, 'nail': 0, 'placed': True}, r
 
 def test_short_koto_buys_nothing_and_says_so(b):
@@ -780,12 +780,13 @@ def test_the_yard_has_the_rooms_buttons_up_top_that_rest_and_its_own_dressing_ro
       await wait(4400); const quiet = y.classList.contains('quiet'), gear = y.querySelector('.study-gear'), faded = getComputedStyle(gear).opacity;
       const g = gear.getBoundingClientRect(); pe(gear, 'pointerdown', g.left + 5, g.top + 5, 1); pe(gear, 'pointerup', g.left + 5, g.top + 5, 1); gear.click(); const first = modalOpen();
       y.querySelector('[data-act="wardrobe"]').click(); await wait(100); const dressing = y.classList.contains('dressing') && !!y.querySelector('.dress .dress-hero');
+      const shown = (sel) => getComputedStyle(y.querySelector('.dress .dress-hero ' + sel)).display, facing = [shown('.f-front'), shown('.f-back')];   /* facing us, not from behind */
       document.querySelector('[data-act="dress-tab"][data-tab="wear"]').click(); document.querySelector('[data-act="dress-wear"][data-id="beanie"]').click(); document.querySelector('[data-act="dress-done"]').click(); await wait(650);
-      return JSON.stringify({ acts, bal, quiet, faded, first, dressing, worn: state.wear.head, hat: !!y.querySelector('.yhero svg [class*="beanie"], .yhero svg .w-beanie') || y.querySelector('.yhero').innerHTML.includes('beanie'), closed: !y.classList.contains('dressing') && !y.querySelector('.dress') }); })()"""
+      return JSON.stringify({ acts, bal, quiet, faded, first, dressing, facing, worn: state.wear.head, hat: !!y.querySelector('.yhero svg [class*="beanie"], .yhero svg .w-beanie') || y.querySelector('.yhero').innerHTML.includes('beanie'), closed: !y.classList.contains('dressing') && !y.querySelector('.dress') }); })()"""
     r = json.loads(ev_at(b, PHONE, js))
     assert r['acts'] == ['nav', 'wardrobe', 'yard-edit', 'settings'] and r['bal'] == '90', r   # 言靈, 衣櫃, 擺設, 設定
     assert r['quiet'] and r['faded'] == '0' and r['first'] is False, r   # resting; a first tap only wakes them
-    assert r['dressing'] and r['worn'] == 'beanie' and r['closed'], r
+    assert r['dressing'] and r['facing'] == ['inline', 'none'] and r['worn'] == 'beanie' and r['closed'], r
 
 def test_the_mushroom_house_changes_the_yards_house_and_its_card_switches_back(b):
     js = "(async () => { " + FRESH + """ state.koto.gift = 2000; saveState(); location.hash = '#/shop'; shopTab = 'out'; route();

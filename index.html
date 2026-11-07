@@ -468,35 +468,35 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.study-edit, .study-wear) svg { width: 22px; height: 22px; }
 /* the hero (test build): a box of its own over the room; the parts move by pose (walk, run, sit, reach, crouch, look, out), now and
    then on their own (idle-…: HERO.idle) and when tapped (hop, wave, spin, cheer: HERO.react) */
-:is(.study, .sky) .hero { position: absolute; pointer-events: none; will-change: transform; transition: opacity .3s; }
-:is(.study, .sky) .hero svg { width: 100%; height: 100%; display: block; overflow: visible; }
-:is(.study, .sky) .hero .fig { pointer-events: auto; cursor: pointer; transform-box: view-box; transform-origin: 0 0; }
-:is(.study, .sky) .hero.flip .fig { transform: scaleX(-1); }
-:is(.study, .sky) .hero .f-back { display: none; } :is(.study, .sky) .hero.back .f-front { display: none; } :is(.study, .sky) .hero.back .f-back { display: inline; }
-:is(.study, .sky) .hero :is(.bob, .leg, .arm, .head, .eyes) { transform-box: view-box; }
-:is(.study, .sky) .hero .bob { animation: heroBreathe 3.2s ease-in-out infinite; }
-:is(.study, .sky) .hero .eyes { transform-origin: 2px -117px; animation: heroBlink 4.6s infinite; }
-:is(.study, .sky) .hero .leg.l { transform-origin: -8px -46px; } :is(.study, .sky) .hero .leg.r { transform-origin: 11px -46px; }
-:is(.study, .sky) .hero .arm.l { transform-origin: -27px -88px; } :is(.study, .sky) .hero .arm.r { transform-origin: 31px -88px; transition: transform .25s; }
-:is(.study, .sky) .hero .head { transform-origin: 2px -98px; transition: transform .25s; }
-:is(.study, .sky) .hero:is(.walk, .run) .leg.l { animation: heroLeg var(--step, .42s) ease-in-out infinite alternate; } :is(.study, .sky) .hero:is(.walk, .run) .leg.r { animation: heroLeg var(--step, .42s) ease-in-out infinite alternate-reverse; }
-:is(.study, .sky) .hero:is(.walk, .run) .arm.l { animation: heroArm var(--step, .42s) ease-in-out infinite alternate-reverse; } :is(.study, .sky) .hero:is(.walk, .run) .arm.r { animation: heroArm var(--step, .42s) ease-in-out infinite alternate; }
-:is(.study, .sky) .hero:is(.walk, .run) .bob { animation: heroStep calc(var(--step, .42s) / 2) ease-in-out infinite alternate; }
-:is(.study, .sky) .hero.walk { --lean: 2deg; } :is(.study, .sky) .hero.run { --step: .28s; --lean: 4deg; }   /* leaning into the way they go (.flip mirrors it) */
-:is(.study, .sky) .hero.sit .bob { animation: none; transform: translateY(-25px); } :is(.study, .sky) .hero.sit .legs { display: none; }
-:is(.study, .sky) .hero.reach .arm.r { transform: rotate(-155deg); } :is(.study, .sky) .hero.look .head { transform: translateY(-2px) rotate(-6deg); }
-:is(.study, .sky) .hero.crouch .bob { animation: none; transform: translateY(10px) scaleY(.92); } :is(.study, .sky) .hero.crouch .arm.r { transform: rotate(-60deg); }
-:is(.study, .sky) .hero.out { opacity: 0; }
-:is(.study, .sky) .hero.hop:not(.sit) .bob { animation: heroHop .5s cubic-bezier(.3, .7, .4, 1); }
-:is(.study, .sky) .hero.idle-look .head { animation: heroLookRound 1.8s ease-in-out; } :is(.study, .sky) .hero.idle-nod .head { animation: heroNod 1.6s ease-in-out; }
-:is(.study, .sky) .hero:is(.idle-stretch, .cheer) .arm.l { animation: heroUpL 1.6s ease-in-out; } :is(.study, .sky) .hero:is(.idle-stretch, .cheer) .arm.r { animation: heroUpR 1.6s ease-in-out; } :is(.study, .sky) .hero.idle-stretch .bob { animation: heroTall 1.6s ease-in-out; }
-:is(.study, .sky) .hero.cheer :is(.arm.l, .arm.r) { animation-duration: .9s; } :is(.study, .sky) .hero.cheer:not(.sit) .bob { animation: heroHop .5s cubic-bezier(.3, .7, .4, 1) .15s; }
-:is(.study, .sky) .hero:is(.idle-wave, .wave) .arm.r { animation: heroWave 1.5s ease-in-out; } :is(.study, .sky) .hero.wave .arm.r { animation-duration: 1.2s; }
-:is(.study, .sky) .hero.idle-sway .bob { animation: heroSway 2.2s ease-in-out; } :is(.study, .sky) .hero.idle-bounce .bob { animation: heroBounce .9s ease-in-out; }
-:is(.study, .sky) .hero.spin:not(.sit) .bob { animation: heroSpin .7s ease-in-out; }
-:is(.study, .sky) .hero .tail { transform-box: view-box; animation: heroTail 2.8s ease-in-out infinite; } :is(.study, .sky) .hero .tail.t0 { transform-origin: 24px -52px; } :is(.study, .sky) .hero .tail.t1 { transform-origin: 2px -50px; }
-:is(.study, .sky) .hero.idle-maneki .arm.r { animation: heroManeki 1.8s ease-in-out; } :is(.study, .sky) .hero.idle-maneki .head { animation: heroTilt 1.8s ease-in-out; }
-:is(.study, .sky) .hero .nya { position: absolute; left: 60%; top: -4%; padding: 1px 8px 2px; border-radius: 10px; font-style: normal; font-weight: 700; font-size: 13px; line-height: 1.5; white-space: nowrap; color: #3b3428; background: #fffdf6; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); pointer-events: none; animation: heroNya 1.4s ease-out forwards; }
+:is(.study, .yard) .hero { position: absolute; pointer-events: none; will-change: transform; transition: opacity .3s; }
+:is(.study, .yard) .hero svg { width: 100%; height: 100%; display: block; overflow: visible; }
+:is(.study, .yard) .hero .fig { pointer-events: auto; cursor: pointer; transform-box: view-box; transform-origin: 0 0; }
+:is(.study, .yard) .hero.flip .fig { transform: scaleX(-1); }
+:is(.study, .yard) .hero .f-back { display: none; } :is(.study, .yard) .hero.back .f-front { display: none; } :is(.study, .yard) .hero.back .f-back { display: inline; }
+:is(.study, .yard) .hero :is(.bob, .leg, .arm, .head, .eyes) { transform-box: view-box; }
+:is(.study, .yard) .hero .bob { animation: heroBreathe 3.2s ease-in-out infinite; }
+:is(.study, .yard) .hero .eyes { transform-origin: 2px -117px; animation: heroBlink 4.6s infinite; }
+:is(.study, .yard) .hero .leg.l { transform-origin: -8px -46px; } :is(.study, .yard) .hero .leg.r { transform-origin: 11px -46px; }
+:is(.study, .yard) .hero .arm.l { transform-origin: -27px -88px; } :is(.study, .yard) .hero .arm.r { transform-origin: 31px -88px; transition: transform .25s; }
+:is(.study, .yard) .hero .head { transform-origin: 2px -98px; transition: transform .25s; }
+:is(.study, .yard) .hero:is(.walk, .run) .leg.l { animation: heroLeg var(--step, .42s) ease-in-out infinite alternate; } :is(.study, .yard) .hero:is(.walk, .run) .leg.r { animation: heroLeg var(--step, .42s) ease-in-out infinite alternate-reverse; }
+:is(.study, .yard) .hero:is(.walk, .run) .arm.l { animation: heroArm var(--step, .42s) ease-in-out infinite alternate-reverse; } :is(.study, .yard) .hero:is(.walk, .run) .arm.r { animation: heroArm var(--step, .42s) ease-in-out infinite alternate; }
+:is(.study, .yard) .hero:is(.walk, .run) .bob { animation: heroStep calc(var(--step, .42s) / 2) ease-in-out infinite alternate; }
+:is(.study, .yard) .hero.walk { --lean: 2deg; } :is(.study, .yard) .hero.run { --step: .28s; --lean: 4deg; }   /* leaning into the way they go (.flip mirrors it) */
+:is(.study, .yard) .hero.sit .bob { animation: none; transform: translateY(-25px); } :is(.study, .yard) .hero.sit .legs { display: none; }
+:is(.study, .yard) .hero.reach .arm.r { transform: rotate(-155deg); } :is(.study, .yard) .hero.look .head { transform: translateY(-2px) rotate(-6deg); }
+:is(.study, .yard) .hero.crouch .bob { animation: none; transform: translateY(10px) scaleY(.92); } :is(.study, .yard) .hero.crouch .arm.r { transform: rotate(-60deg); }
+:is(.study, .yard) .hero.out { opacity: 0; }
+:is(.study, .yard) .hero.hop:not(.sit) .bob { animation: heroHop .5s cubic-bezier(.3, .7, .4, 1); }
+:is(.study, .yard) .hero.idle-look .head { animation: heroLookRound 1.8s ease-in-out; } :is(.study, .yard) .hero.idle-nod .head { animation: heroNod 1.6s ease-in-out; }
+:is(.study, .yard) .hero:is(.idle-stretch, .cheer) .arm.l { animation: heroUpL 1.6s ease-in-out; } :is(.study, .yard) .hero:is(.idle-stretch, .cheer) .arm.r { animation: heroUpR 1.6s ease-in-out; } :is(.study, .yard) .hero.idle-stretch .bob { animation: heroTall 1.6s ease-in-out; }
+:is(.study, .yard) .hero.cheer :is(.arm.l, .arm.r) { animation-duration: .9s; } :is(.study, .yard) .hero.cheer:not(.sit) .bob { animation: heroHop .5s cubic-bezier(.3, .7, .4, 1) .15s; }
+:is(.study, .yard) .hero:is(.idle-wave, .wave) .arm.r { animation: heroWave 1.5s ease-in-out; } :is(.study, .yard) .hero.wave .arm.r { animation-duration: 1.2s; }
+:is(.study, .yard) .hero.idle-sway .bob { animation: heroSway 2.2s ease-in-out; } :is(.study, .yard) .hero.idle-bounce .bob { animation: heroBounce .9s ease-in-out; }
+:is(.study, .yard) .hero.spin:not(.sit) .bob { animation: heroSpin .7s ease-in-out; }
+:is(.study, .yard) .hero .tail { transform-box: view-box; animation: heroTail 2.8s ease-in-out infinite; } :is(.study, .yard) .hero .tail.t0 { transform-origin: 24px -52px; } :is(.study, .yard) .hero .tail.t1 { transform-origin: 2px -50px; }
+:is(.study, .yard) .hero.idle-maneki .arm.r { animation: heroManeki 1.8s ease-in-out; } :is(.study, .yard) .hero.idle-maneki .head { animation: heroTilt 1.8s ease-in-out; }
+:is(.study, .yard) .hero .nya { position: absolute; left: 60%; top: -4%; padding: 1px 8px 2px; border-radius: 10px; font-style: normal; font-weight: 700; font-size: 13px; line-height: 1.5; white-space: nowrap; color: #3b3428; background: #fffdf6; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); pointer-events: none; animation: heroNya 1.4s ease-out forwards; }
 @keyframes heroBreathe { 50% { transform: translateY(-1.5px); } }
 @keyframes heroBlink { 0%, 95%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
 @keyframes heroLeg { from { transform: rotate(22deg); } to { transform: rotate(-22deg); } }
@@ -704,11 +704,11 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .letter-title { font-weight: 700; font-size: 15px; margin: 0 30px 6px 0; }
 .letter-body { font-size: 14px; line-height: 1.75; color: var(--fg-2); }
 .letter-body ul { margin: 6px 0 0; padding-left: 1.2em; } .letter-body li + li { margin-top: 3px; }
-.letter-body p { margin: 0 0 6px; } .letter-body .letter-sign { margin: 8px 0 0; text-align: right; font-weight: 700; color: var(--fg); }
+.letter-body p { margin: 0 0 6px; text-wrap: pretty; } .letter-body .letter-sign { margin: 8px 0 0; text-align: right; font-weight: 700; color: var(--fg); }
 /* a letter from someone (test build): their face in the top right corner instead of the stamp */
 .letter.from::before { display: none; }
-.letter.from .letter-title { margin-right: 58px; min-height: 30px; }
-.letter-from { position: absolute; top: 10px; right: 12px; width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: #efe2c4; box-shadow: 0 0 0 2px #fbf5e6, 0 0 0 3px rgba(150, 110, 60, .35); }
+.letter.from .letter-title { margin-right: 0; }
+.letter-from { float: right; width: 48px; height: 48px; margin: -4px -4px 6px 12px; border-radius: 50%; overflow: hidden; background: #efe2c4; box-shadow: 0 0 0 2px #fbf5e6, 0 0 0 3px rgba(150, 110, 60, .35); }   /* the words wrap round it */
 .letter-from svg { width: 100%; height: 100%; transform: translateY(3px) scale(1.08); }
 .letter-got { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #8a6a1c; }
 .letter-got .koto-i, .letter [data-act="letter-gift"] .koto-i { width: 18px; height: 18px; }
@@ -6840,12 +6840,8 @@ const ROOM = (() => {
     const { x0, x1, z1 } = CAL, xm = (x0 + x1) / 2;
     return `<path class="ln" ${FS(C.walnut, 'y', [xm, 0, z1])} stroke-width="1.2" d="${line([[xm - 0.28, 0.03, z1 - 0.02], [xm, 0.03, z1 + 0.3], [xm + 0.28, 0.03, z1 - 0.02]])}"/>${calendarSheet(d, left)}`;
   }
-  // the 富士山 print between the bookcase and the door; above the bookcase a nail where the clock hung until 古道具屋 took it
-  // (bought back, it is a ware like the others: DECOR draws it, its hands are an overlay, handsHtml; the nail stays till it hangs)
-  function nailArt() {
-    const u = 1.25, v = 10.42;
-    return `<g transform="${onX(0.04)}"><circle cx="${q2(-u + 0.03)}" cy="${q2(-v + 0.03)}" r=".06" fill="#2b1c12" fill-opacity=".18"/><circle cx="${-u}" cy="${-v}" r=".055" ${F('#7a5a44', 'L', [0.05, u, v])}/><circle cx="${q2(-u - 0.015)}" cy="${q2(-v - 0.015)}" r=".02" fill="#fff" fill-opacity=".55"/></g>`;
-  }
+  // the 富士山 print between the bookcase and the door (the wall clock is no longer the room's own: bought at 古道具屋, it is a ware
+  // like the others — DECOR draws it, its hands are an overlay, handsHtml)
   function printArt() {
     const y0 = 2.75, y1 = 4.15, z0 = 7.3, z1 = 8.55, ym = (y0 + y1) / 2, zm = (z0 + z1) / 2;
     return `<g transform="${onX(0.05)}"><rect x="${-y1 + 0.06}" y="${-z1 + 0.08}" width="${y1 - y0}" height="${z1 - z0}" fill="#2b1c12" fill-opacity=".14"/></g>
@@ -7493,7 +7489,7 @@ const ROOM = (() => {
   function studyArt(d, left, bk) {
     const wares = placedWares();
     return `<svg class="art" viewBox="${VB.join(' ')}" aria-hidden="true">${DEFS}
-      ${shellArt()}${doorArt()}${wallShadeArt()}${state.placed.clock && owns('clock') ? '' : nailArt()}
+      ${shellArt()}${doorArt()}${wallShadeArt()}
       ${wares.filter((o) => o.it.kind === 'wall').map((o) => `<g data-o="w:${o.id}">${o.it.garland ? wireArt(o.it.size[0], o.p) : o.id === 'window' ? windowArt(o.p) : DECOR.wall(o.id, o.p)}</g>`).join('')}
       ${floorArt()}
       ${wares.filter((o) => o.it.kind === 'rug').map((o) => `<g data-o="w:${o.id}">${DECOR.floor(o.id, o.p)}</g>`).join('')}
@@ -13596,10 +13592,9 @@ function letters() {
     acts: info.canPrompt ? '<button type="button" class="btn btn-sm btn-primary" data-act="install-prompt">安裝</button>' : '<button type="button" class="btn btn-sm btn-primary" data-act="install-how">怎麼做</button>' });
   if (!storedFlag('nq_letter_opening')) {   // 福爺's opening letter (test build), with 10 言靈 in it (once for the account: koto.mail)
     const got = Boolean(state.koto.mail.opening);
-    out.push({ id: 'opening', from: 'fuku', title: '古道具屋開張了', body: `<p>你好，我是住在門外左邊山上的福爺。</p>
-      <p>我在山上開了一間古道具屋，擺著一些老東西：放書房的、擺院子的，還有穿戴的衣服帽子。小店不收錢，只收「言靈」——日本人說，話語裡住著力量。</p>
+    out.push({ id: 'opening', from: 'fuku', title: '古道具屋開張了', body: `<p>你好，我是住在門外左邊山上的福爺。山上的古道具屋今天開張了，小店不收錢，只收「言靈」。</p>
+      <p>日本人相信，話語裡住著靈魂。你每多吸收一分知識，就可能有言靈悄悄聚到你身邊來。</p>
       <p>信裡附上 ${LETTER_GIFT.opening} 言靈，當作開張的見面禮，有空上山來坐坐。</p>
-      <ul><li>你書房那座掛鐘，我先收到店裡了，1 言靈就還你。</li><li>買回去的東西，在書房或院子按右上角的「擺設」自己擺；衣服帽子在書房的「衣櫃」換。</li></ul>
       <p class="letter-sign">古道具屋　福爺</p>`,
       acts: got ? `<span class="letter-got">${kotoIcon()}已收下 ${LETTER_GIFT.opening} 言靈</span><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/shop">去古道具屋</button>`
         : `<button type="button" class="btn btn-sm btn-primary" data-act="letter-gift" data-id="opening">${kotoIcon()}收下 ${LETTER_GIFT.opening} 言靈</button>` });
