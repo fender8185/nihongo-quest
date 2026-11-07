@@ -239,7 +239,7 @@ def test_a_tag_at_a_side_of_the_screen_slides_in_to_stay_whole(b):
     assert r['away'] is False and r['left'] >= 0 and r['right'] <= 390, r   # half of it would be off the screen where it stands
 
 # ---- the things' badges: signs instead of words; at rest they go out of sight, a touch brings them back ----
-def test_the_things_wear_signs_with_the_days_ring_and_the_notebooks_count(b):
+def test_the_things_wear_signs_with_the_days_ring_and_the_notebook_stays_plain(b):
     js = "(async () => { " + FRESH + " state.mistakes = [{ key: 'v1' }, { key: 'v2' }, { key: 'v3', mastered: true }]; saveState(); " + GO_ROOM + POINTER + """ await wait(200);
       const st = document.querySelector('.study'); ROOM.level(st, 40);
       const things = [...st.querySelectorAll('.thing')].map(t => { const tag = t.querySelector('.tag'), name = tag.querySelector('.tag-name');
@@ -249,9 +249,9 @@ def test_the_things_wear_signs_with_the_days_ring_and_the_notebooks_count(b):
     r = json.loads(ev(b, js))
     got = {t[0]: t[1:] for t in r['things']}
     assert all(v[0] is True and v[1] == 'none' for v in got.values()), got   # every thing shows its sign, its words wait
-    assert {k: v[2] for k, v in got.items() if k != 'door'} == {'shelf': '課程', 'cards': '單字', 'notebook': '今日練習 40%', 'phones': '聽一輪', 'drawer': '錯題本 2', 'board': '學習分析', 'calendar': '模擬考'}, got
+    assert {k: v[2] for k, v in got.items() if k != 'door'} == {'shelf': '課程', 'cards': '單字', 'notebook': '今日練習 40%', 'phones': '聽一輪', 'drawer': '錯題本', 'board': '學習分析', 'calendar': '模擬考'}, got
     assert got['door'][2].startswith('出門'), got   # the words are still there for a screen reader
-    assert (r['ring'], r['count']) == ('40 100', '2'), r
+    assert (r['ring'], r['count']) == ('40 100', None), r   # two in the notebook, nothing on it asking for a tap (聽一輪 is the one to push)
 
 def test_a_tap_on_a_thing_shows_its_name_for_a_moment_then_opens_it(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + GO_ROOM + POINTER + """ await wait(200);
@@ -322,10 +322,33 @@ def test_the_wheel_zooms_round_the_pointer(b):
 def test_the_yard_has_the_shop_and_the_hero_walks_up_to_it(b):
     js = "(async () => { " + FRESH + """ location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();
       const tag = document.querySelector('.yard .shop-btn .tag').textContent, hero = !!document.querySelector('.yard .yhero');
-      document.querySelector('.yard .shop-btn').click(); await new Promise(q => setTimeout(q, 2200));
+      document.querySelector('.yard .shop-btn').click(); await new Promise(q => setTimeout(q, 4500));
       return JSON.stringify({ tag, hero, hash: location.hash, fuku: !!document.querySelector('.shop-front .fuku') }); })()"""
     r = json.loads(ev(b, js))
     assert r == {'tag': '古道具屋', 'hero': True, 'hash': '#/shop', 'fuku': True}, r
+
+# a tap on 古道具屋: the hero runs over the lawn and up the hill path, small with the distance but outlined, in at the shop's door
+def test_a_tap_on_the_shop_runs_the_hero_up_the_hill_path(b):
+    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();
+      await new Promise(q => setTimeout(q, 200));
+      const h = () => document.querySelector('.yard .yhero'), scale = () => { const m = new DOMMatrix(getComputedStyle(h()).transform); return Math.hypot(m.a, m.b); };
+      document.querySelector('.yard .shop-btn').click();
+      let top = 0, small = 1, climb = false;
+      for (let i = 0; i < 45 && location.hash === '#/outside'; i++) { await new Promise(q => setTimeout(q, 100)); if (!h()) break; top = Math.max(top, yh.Y); small = Math.min(small, scale()); climb = climb || h().classList.contains('climb'); }
+      await new Promise(q => setTimeout(q, 600));
+      const saved = JSON.parse(localStorage.getItem('nq_hero') || '{}').yard || null;
+      return JSON.stringify({ top: Math.round(top), small: +small.toFixed(3), climb, hash: location.hash, saved }); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    # on a 390 px phone the hill is drawn 1:1: the path starts 258 px up and the shop's door is 345 px up (the lawn ends at 214)
+    assert r['top'] >= 330 and r['small'] < 0.12 and r['climb'] is True, r
+    assert r['hash'] == '#/shop' and r['saved'] == {'X': -60, 'Y': 214}, r   # next time out he stands at the foot of the path
+
+def test_a_second_tap_on_the_shop_goes_straight_in(b):
+    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();
+      await new Promise(q => setTimeout(q, 200)); const btn = document.querySelector('.yard .shop-btn');
+      btn.click(); await new Promise(q => setTimeout(q, 300)); btn.click(); await new Promise(q => setTimeout(q, 700));
+      return location.hash; })()"""
+    assert ev_at(b, PHONE, js) == '#/shop'
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
