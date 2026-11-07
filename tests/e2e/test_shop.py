@@ -116,7 +116,7 @@ GO_ROOM = "location.hash = '#/today'; document.getElementById('view').innerHTML 
 def test_a_bought_clock_waits_in_the_storage_box_till_it_hangs(b):
     js = "(() => { " + FRESH + GO_ROOM + """ const now = () => ({ hands: !!document.querySelector('.study .clock-hands'), nail: document.querySelectorAll('.study svg.art circle[r=".055"]').length, placed: !!state.placed.clock });
       const before = now();
-      state.koto.gift = 1; saveState(); location.hash = '#/shop'; route();
+      state.koto.gift = 20; saveState(); location.hash = '#/shop'; route();
       document.querySelector('[data-act="ware-buy"][data-id="clock"]').click(); const ask = document.querySelector('#modalBody p').textContent; document.querySelector('[data-act="ware-buy-ok"]').click();
       const card = document.querySelector('[data-ware="clock"] .chip').textContent;
       """ + GO_ROOM + """ const bought = now();
