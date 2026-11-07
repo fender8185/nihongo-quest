@@ -2,8 +2,8 @@
 and back, so a new ware or hairstyle can be checked against all the others before it ships (docs/superpowers/specs/
 2026-11-07-hero-wear-rules.md).
 
-usage: .venv/bin/python3 -I scripts/hero-sheet.py out.png [--rows hair|topStyle] [--only a,b] [--cols -,beanie,…] [--cell 92]
-  writes out.png (facing us) and out-back.png (from behind). --cols: ware ids, '-' for nothing worn; by default every ware worn
+usage: .venv/bin/python3 -I scripts/hero-sheet.py out.png [--rows hair|topStyle] [--only a,b] [--cols none,beanie,…] [--cell 92]
+  writes out.png (facing us) and out-back.png (from behind). --cols: ware ids, 'none' for nothing worn; by default every ware worn
   on the head or face with hair rows, every neck, back and body ware with top rows."""
 import argparse, asyncio, base64, json, os, subprocess, sys, time
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -35,7 +35,7 @@ def main():
     ap.add_argument("--only"); ap.add_argument("--cols"); ap.add_argument("--cell", type=int, default=92)
     a = ap.parse_args()
     only = a.only.split(",") if a.only else None
-    cols = [None if c == "-" else c for c in a.cols.split(",")] if a.cols else None
+    cols = [None if c == "none" else c for c in a.cols.split(",")] if a.cols else None
     srv = subprocess.Popen(["/usr/bin/python3", "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
     try:
