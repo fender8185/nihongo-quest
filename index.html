@@ -321,6 +321,16 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .house .wall { fill: color-mix(in srgb, #f1e3c6 calc(var(--day) * 100%), #0c0d25); } .sky .house .chim { fill: color-mix(in srgb, #9a5640 calc(var(--day) * 100%), #0c0d25); } .sky .house .roof { fill: color-mix(in srgb, #b4543c calc(var(--day) * 100%), #11133a); } .sky .house .rim { fill: none; stroke: color-mix(in srgb, rgba(255, 255, 255, .45) calc(var(--day) * 100%), rgba(170, 182, 255, .35)); stroke-width: 1.4; stroke-linejoin: round; }
 .sky .house .pane { fill: color-mix(in srgb, #cfe9f8 calc(var(--day) * 100%), #ffcf7a); opacity: calc((.28 + .72 * var(--f)) * (1 - var(--day)) + var(--day)); } .sky .house .mull { stroke: color-mix(in srgb, #ffffff calc(var(--day) * 100%), #0c0d25); stroke-width: 2; }   /* lit by night, the sky in them by day */
 .sky .house .door { fill: color-mix(in srgb, #7a4b2e calc(var(--day) * 100%), #15173c); } .sky .house .knob { fill: #ffcf7a; }
+/* 蘑菇屋 (test build): a red cap with white spots over a cream stem; the same pane, door and rim colours as the cottage */
+:is(.sky .house, .house-thumb) :is(.m-stem, .m-cap, .m-dot, .m-gill, .m-pipe, .m-shade) { transition: fill 3s; }
+:is(.sky .house, .house-thumb) .m-stem { fill: color-mix(in srgb, #f4e8d2 calc(var(--day) * 100%), #0e0f2a); }
+:is(.sky .house, .house-thumb) .m-shade { fill: color-mix(in srgb, rgba(150, 110, 70, .22) calc(var(--day) * 100%), rgba(0, 0, 20, .3)); }
+:is(.sky .house, .house-thumb) .m-cap { fill: color-mix(in srgb, #d4473a calc(var(--day) * 100%), #2a1838); }
+:is(.sky .house, .house-thumb) .m-dot { fill: color-mix(in srgb, #fff8ec calc(var(--day) * 100%), #4a3c66); }
+:is(.sky .house, .house-thumb) .m-gill { fill: color-mix(in srgb, #ead6b4 calc(var(--day) * 100%), #15163a); }
+:is(.sky .house, .house-thumb) .m-pipe { fill: color-mix(in srgb, #7e6a5a calc(var(--day) * 100%), #0c0d25); }
+:is(.sky .house, .house-thumb) .m-grass { fill: none; stroke: color-mix(in srgb, #5f9a4a calc(var(--day) * 100%), #0b0c22); stroke-width: 1.6; stroke-linecap: round; }
+.house-thumb :is(.wall, .roof, .chim) { fill: #f1e3c6; } .house-thumb .rim { fill: none; stroke: rgba(255, 255, 255, .45); stroke-width: 1.4; } .house-thumb .pane { fill: #cfe9f8; } .house-thumb .mull { stroke: #fff; stroke-width: 2; } .house-thumb .door { fill: #7a4b2e; } .house-thumb .knob { fill: #ffcf7a; }
 .sky .house .win { position: absolute; border-radius: 50%; opacity: calc((.12 + .88 * var(--f)) * (1 - var(--day))); transition: opacity 1.5s; }   /* the light round each window, warmer as the list fills */
 .sky .house .win::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 196, 110, .55), rgba(255, 196, 110, .14) 55%, transparent); animation: flicker 3.2s ease-in-out infinite alternate; }
 .sky .house .w1 { left: 13px; top: 61px; width: 60px; height: 60px; } .sky .house .w2 { left: 67px; top: 61px; width: 60px; height: 60px; } .sky .house .w3 { left: 53px; top: 35px; width: 34px; height: 34px; }
@@ -372,6 +382,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.room, svg.thumb) .day-only { opacity: var(--day); } :is(.room, svg.thumb) .night-only { opacity: calc(1 - var(--day)); } .room .wp { opacity: calc(.18 + .82 * var(--day)); }   /* wp: the wallpaper's stripes, faint by night */
 /* the window: the sky at this hour behind the glass, on the slant of the right wall */
 .w-sky { overflow: hidden; transform-origin: 0 0; transform: matrix(1, .5, 0, 1, 0, 0); background: linear-gradient(#0b0c26, #232056); }
+.w-sky.l { transform: matrix(1, -.5, 0, 1, 0, 0); }   /* a window moved to the left wall (test build) */
+.room svg.art .win-patch { display: none; } .study.drag-window .room svg.art .win-patch { display: inline; } .study.drag-window .w-sky { visibility: hidden; }   /* the wall whole while the window is dragged */
 .w-sky > *, .w-sky :is(.w-moon, .w-star, .w-cloud) { position: absolute; }
 .w-sky .wt-day { inset: 0; background: linear-gradient(#5aa3e6, #bfe2f6); opacity: var(--day); }
 .w-sky .wt-warm { inset: 0; background: linear-gradient(to top, #ffb36b, #ff8a7a 35%, rgba(150, 96, 200, .45) 70%, transparent); opacity: var(--warm); }
@@ -512,6 +524,9 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .study .room-wrap { transition: transform .5s cubic-bezier(.2, .8, .25, 1); }
 .study.dressing .room-wrap { transform: scale(1.5); transform-origin: var(--zx, 50%) var(--zy, 50%); }
 .study:is(.dressing, .undressing) .room .hero, .study.dressing :is(.study-tools, .room-hint, .mail-hint, .thing) { visibility: hidden; }
+.yard .sky { transition: transform .5s cubic-bezier(.2, .8, .25, 1); }   /* the dressing room out in the yard (test build) */
+.yard.dressing .sky { transform: scale(1.5); transform-origin: var(--zx, 50%) var(--zy, 50%); }
+.yard:is(.dressing, .undressing) .sky .yhero, .yard.dressing :is(.yard-tools, .sky .thing) { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) { .study .room-wrap, .dress .dress-hero.fly, .dress-panel { transition: none; } }
 .dress { position: absolute; inset: 0; z-index: 6; --panel-h: min(50%, 440px); --panel-w: 0px; }
 .dress-dim { position: absolute; inset: 0; opacity: 0; transition: opacity .45s; background: radial-gradient(closest-side at var(--spx, 50%) var(--spy, 30%), rgba(255, 246, 226, .5), rgba(255, 246, 226, 0)), rgba(16, 18, 38, .66); }
@@ -571,6 +586,9 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .tray-it { flex: none; width: 74px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 0; border-radius: 10px; font: inherit; font-size: 11.5px; color: #fff; background: rgba(255, 255, 255, .1); cursor: pointer; --day: 1; --f: 1; --lit: 1; }
 .tray-it svg { width: 50px; height: 50px; overflow: visible; }
 .tray-empty { padding: 10px 4px; font-size: 13px; color: rgba(255, 255, 255, .85); }
+.edit-tray { touch-action: pan-x; transition: background-color .15s, box-shadow .15s; }   /* sideways the box scrolls; up and down a ware is pulled out (test build) */
+.edit-tray.drop { background: rgba(70, 86, 210, .9); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .85); }   /* a ware held over it goes in */
+.edit-tray.no-drop { box-shadow: inset 0 0 0 2px #e0524b; }
 .study-gear { width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 12px; cursor: pointer;
   color: color-mix(in srgb, #3a3350 calc(var(--lit) * 100%), #dfe3ff); background: color-mix(in srgb, rgba(255, 255, 255, .55) calc(var(--lit) * 100%), rgba(20, 22, 52, .55)); transition: color .4s, background-color .4s, opacity .4s; }
 .study-gear svg { width: 22px; height: 22px; }
@@ -633,7 +651,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .shop-btn .tag { top: calc(100% + 4px); }
 /* the hero in the yard: its feet at the bottom edge, moved up the lawn and scaled by distance; darker by night; behind the mailbox when further up */
 .sky .yhero { left: 50%; bottom: -10px; width: 120px; height: 210px; margin-left: -60px; transform-origin: 50% 95.24%; }
-.sky .yhero svg { filter: brightness(calc(.45 + .55 * var(--day))) saturate(calc(.75 + .25 * var(--day))); }
+.sky .yhero svg { filter: brightness(calc(.64 + .36 * var(--day))) saturate(calc(.8 + .2 * var(--day))); }   /* by night a little darker than by day, never dark (test build) */
 .sky .yhero { z-index: 1; }   /* in the order of the yard's things by how far up the lawn (inline); behind the house on the hill path */
 /* up the hill path to 古道具屋 (test build): small with the distance and outlined so he stands out by day and by night (--hs: his
    scale, so the outline stays about a pixel on the screen); the house stands in front of the path */
@@ -649,14 +667,20 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 @keyframes koiSwim { to { transform: rotate(360deg); } }
 .yard.edit .sky .yware { cursor: grab; } .yard.edit .sky .yware.sel { outline: 2px dashed rgba(255, 255, 255, .9); outline-offset: 2px; border-radius: 10px; }
 .yard.edit .sky .yware.bad .art { filter: drop-shadow(0 0 2px #e0524b) drop-shadow(0 0 3px #e0524b); opacity: .75; }
-.yard.dragging .yedit .edit-sel { opacity: 0; }
-.yard-tools { position: fixed; z-index: 5; top: calc(10px + env(safe-area-inset-top, 0px)); right: 12px; display: flex; gap: 8px; }
-.yard-edit { width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 12px; cursor: pointer; color: color-mix(in srgb, #3a3350 calc(var(--day) * 100%), #dfe3ff); background: color-mix(in srgb, rgba(255, 255, 255, .55) calc(var(--day) * 100%), rgba(20, 22, 52, .55)); }
-.yard-edit svg { width: 22px; height: 22px; }
+.yard.dragging .ysel .edit-sel { opacity: 0; }
+.yard-tools { position: fixed; z-index: 5; top: calc(10px + env(safe-area-inset-top, 0px)); right: 12px; display: flex; gap: 8px; }   /* 書房's buttons (sceneTools) */
+.yard.quiet .yard-tools > :not(:focus-visible) { opacity: 0; }   /* resting with the signs: a first tap only brings them back */
 .yard.edit .yard-tools, .yard.edit .sky .thing { display: none; }
+/* the yard as wide as a computer's screen on every screen (test build): the ground and what stands on it are a world 1200px wide
+   (or the screen's width, when wider) that a phone swipes along and that follows the hero; the sky stays put */
+.yard { touch-action: none; }
+.sky .yworld { position: absolute; top: 0; bottom: 0; left: 50%; will-change: transform; }
+.sky .yworld.glide { transition: transform .35s cubic-bezier(.2, .8, .3, 1); }
+.sky .ysel .edit-sel { z-index: 400; pointer-events: auto; }
+.sky .yware.new { z-index: 450 !important; }
 .yard .yedit { position: fixed; inset: 0; z-index: 6; pointer-events: none; } .yard .yedit > * { pointer-events: auto; }
 .yard .yedit .edit-tray { top: calc(58px + env(safe-area-inset-top, 0px)); bottom: auto; padding-bottom: 10px; }
-.yard .yedit .edit-sel { top: auto; transform: translate(-50%, 0); } .sky .mailbox > svg * { transform-box: view-box; }
+.yard .ysel .edit-sel { top: auto; transform: translate(-50%, 0); } .sky .mailbox > svg * { transform-box: view-box; }
 .sky .mailbox .mb-shadow { fill: rgba(0, 0, 0, .16); opacity: var(--day); }
 .sky .mailbox .mb-post { fill: color-mix(in srgb, #8a5a36 calc(var(--day) * 100%), #15173c); transition: fill 3s; }
 .sky .mailbox .mb-body { fill: color-mix(in srgb, #4a7fa8 calc(var(--day) * 100%), #1d2152); transition: fill 3s; }
@@ -680,10 +704,19 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .letter-title { font-weight: 700; font-size: 15px; margin: 0 30px 6px 0; }
 .letter-body { font-size: 14px; line-height: 1.75; color: var(--fg-2); }
 .letter-body ul { margin: 6px 0 0; padding-left: 1.2em; } .letter-body li + li { margin-top: 3px; }
+.letter-body p { margin: 0 0 6px; } .letter-body .letter-sign { margin: 8px 0 0; text-align: right; font-weight: 700; color: var(--fg); }
+/* a letter from someone (test build): their face in the top right corner instead of the stamp */
+.letter.from::before { display: none; }
+.letter.from .letter-title { margin-right: 58px; min-height: 30px; }
+.letter-from { position: absolute; top: 10px; right: 12px; width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: #efe2c4; box-shadow: 0 0 0 2px #fbf5e6, 0 0 0 3px rgba(150, 110, 60, .35); }
+.letter-from svg { width: 100%; height: 100%; transform: translateY(3px) scale(1.08); }
+.letter-got { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #8a6a1c; }
+.letter-got .koto-i, .letter [data-act="letter-gift"] .koto-i { width: 18px; height: 18px; }
+.letter [data-act="letter-gift"] { display: inline-flex; align-items: center; gap: 5px; }
 /* walking in: the yard zooms into the door; 書房 eases in when it opens (out through the door: ROOM.door) */
 @keyframes roomIn { from { opacity: 0; transform: scale(1.05); } }
 .study.anim .room-wrap { animation: roomIn .4s ease-out backwards; }
-.yard.entering .sky { transform: scale(2.6); opacity: 0; transform-origin: 50% calc(100% - 232px); transition: transform .42s ease-in, opacity .42s ease-in; }
+.yard.entering .sky { transform: scale(2.6); opacity: 0; transform-origin: calc(50% + var(--ycx, 0px)) calc(100% - 232px); transition: transform .42s ease-in, opacity .42s ease-in; }
 /* the dive (diveInto): the notebook's light spreads over the screen and fades into the questions */
 .dive-veil { position: fixed; z-index: 90; border-radius: 50%; pointer-events: none; transform: scale(.04); opacity: 0; transition: transform .34s cubic-bezier(.5, 0, .8, .4), opacity .1s;
   background: radial-gradient(closest-side, #fff, color-mix(in srgb, var(--accent) 50%, #fff) 15%, var(--accent) 40%, color-mix(in srgb, var(--accent) 70%, var(--bg)) 62%, transparent); }   /* sized so the opaque 62% reaches the farthest corner */
@@ -1257,6 +1290,13 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .koto-gain b { font-size: 17px; font-variant-numeric: tabular-nums; }
 .koto-gain .sep { width: 1px; height: 18px; background: color-mix(in srgb, var(--gold) 50%, transparent); }
 .koto-gain .tot { margin-left: auto; font-size: 13px; opacity: .75; font-variant-numeric: tabular-nums; }
+.koto-gain .cap { font-size: 13px; opacity: .8; }
+/* 言靈 gained away from a set's end (test build): every 5 minutes 聽一輪 plays, a letter's gift; a small あ rising at the top */
+.koto-pop { position: fixed; z-index: 60; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); display: flex; align-items: center; gap: 6px; padding: 7px 14px 7px 9px; border-radius: 99px; font-size: 14px; color: var(--fg);
+  background: color-mix(in srgb, var(--gold) 22%, var(--bg)); border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent); box-shadow: 0 6px 18px rgba(0, 0, 0, .18); pointer-events: none; transform: translateX(-50%); animation: kotoRise 2.6s ease-out both; }
+.koto-pop .koto-i { width: 22px; height: 22px; } .koto-pop b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.koto-pop.full { animation-duration: 4.2s; }
+@keyframes kotoRise { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -8px); } }
 .koto-gain.pop { animation: kotoIn .5s cubic-bezier(.3, 1.4, .5, 1) .35s backwards; } .koto-gain.pop .koto-i { animation: kotoSpin .7s ease-out .45s backwards; }
 @keyframes kotoIn { from { opacity: 0; transform: translateY(6px) scale(.96); } }
 @keyframes kotoSpin { from { transform: scale(.4) rotate(-40deg); opacity: 0; } 60% { transform: scale(1.18) rotate(6deg); opacity: 1; } }
@@ -2001,10 +2041,11 @@ function defaultState() {
     recent: [],
     legacy: null,
     notices: [],
-    koto: { sets: {}, days: [], gift: 0 },   // 言靈 (test build): sets finished per device, days that gave the day's bonus, the test site's gift
+    koto: { daySets: {}, days: [], listen: {}, mail: {}, sets: {}, gift: 0 },   // 言靈 (test build), see kotoBalance
     owned: {},              // things bought at 古道具屋: { id: { paid, on } }
     placed: {},             // where owned things stand in 書房: { id: { w: 'F', x, y, r } | { w: 'L'|'R', u, v } }; not here = in the storage box
-    wear: {}                // what the hero wears, by part: { head, face, neck, back, body }
+    wear: {},               // what the hero wears, by part: { head, face, neck, back, body }
+    house: ''               // the yard's house: '' the cottage, or a look bought at 古道具屋 (test build)
   };
 }
 
@@ -2062,17 +2103,22 @@ function normalizeState(s) {
   ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt', 'stageTests'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
   ['customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   // test build: 言靈 and the things from 古道具屋 (ids this build does not know are kept: a later one may sell them)
-  const kt = out.koto && typeof out.koto === 'object' && !Array.isArray(out.koto) ? out.koto : {};
-  out.koto = { sets: kt.sets && typeof kt.sets === 'object' && !Array.isArray(kt.sets) ? kt.sets : {}, days: Array.isArray(kt.days) ? kt.days : [], gift: Number(kt.gift) || 0 };
+  const kt = out.koto && typeof out.koto === 'object' && !Array.isArray(out.koto) ? out.koto : {}, obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+  out.koto = { daySets: obj(kt.daySets), days: Array.isArray(kt.days) ? kt.days : [], listen: obj(kt.listen), mail: obj(kt.mail), sets: obj(kt.sets), gift: Number(kt.gift) || 0 };
   ['owned', 'placed', 'wear', 'look'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)
-  // test build: 羽織 is gone and its purchase with it (the user's call; the one id not kept). Every time: sync merges owned as a union
+  if (typeof out.house !== 'string') out.house = '';   // an id this build does not know is kept: the cottage is drawn meanwhile
+  // test build: 羽織 and 地球儀 are gone and their purchases with them, and 書房's umbrella (the user's calls; the only ids not
+  // kept: what was paid comes back). Every time: sync merges owned as a union
   delete out.owned.haori; if (out.wear.body === 'haori') delete out.wear.body;
+  delete out.owned.globe; delete out.placed.globe; delete out.placed.umbrella;
   // test build: 書房's own furniture and pictures became wares (moved, put away): laid out where they always stood, once
   if ((out.roomV || 0) < 2) { WARES.filter(w => w.starter).forEach(w => { if (!out.placed[w.id]) out.placed[w.id] = Object.assign({}, w.at); }); out.roomV = 2; }
   // test build (roomV 3): the string of lights became four strings, hung where it ran; the desk and the window moved right
   if (out.roomV < 3) { WARES.filter(w => w.garland).forEach(w => { if (!out.placed[w.id]) out.placed[w.id] = Object.assign({}, w.at); }); ROOM.moveOff(out.placed); out.roomV = 3; }
   // test build (roomV 4): 望遠鏡 went out to the yard; one standing in 書房 waits in the yard's box
   if (out.roomV < 4) { const t = out.placed.telescope; if (t && t.w !== 'Y') delete out.placed.telescope; out.roomV = 4; }
+  // test build (roomV 5): the window became a ware (moved along a wall, put away); it hangs where it always was, once
+  if (out.roomV < 5) { if (!out.placed.window) out.placed.window = Object.assign({}, WARE.get('window').at); out.roomV = 5; }
   WARES.filter(w => w.fixed).forEach(w => { if (!out.placed[w.id]) out.placed[w.id] = Object.assign({}, w.at); });   // the working things are always somewhere
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
   if (out.stage !== 'pre' && out.stage !== 'main') out.stage = 'main';   // 入門階段 (1.0.6); accounts from before it are in the main course
@@ -2670,25 +2716,60 @@ function streakStats() {
 }
 
 // ---------- 言靈 (test build): what studying earns, spent at 古道具屋 up the hill ----------
-// A set of 今日練習 played to its end (多學 sets too) gives 1; the day's list done gives 10, once a day. Each device counts its
-// own sets (sync keeps the larger count per device), the bonus days are a list (once however many devices finish the day), and
-// a purchase keeps what was paid (sync-core mergeKoto), so nothing is counted twice or lost when two devices meet.
-const KOTO_DAY = 10;
+// Answering: a set of 今日練習 played to its end (多學 sets too) gives 1, the day's list done gives 10 once a day, and the two
+// together give at most 20 a day. 聽一輪: every 5 minutes of listening without a pause gives 1, at most 30 a day. A letter may
+// bring some (福爺's opening letter: 10). What is kept are counts, never sums: sets and listens by day and by device (only that
+// device adds to its own count, so sync keeps the larger), the bonus days as a list, what each letter brought (sync-core
+// mergeKoto) — so nothing is counted twice or lost when two devices meet, and a day's cap holds across devices.
+// sets: the sets each device finished under the first rule (no cap, before 2026-11-08), still counted, no longer added to.
+// The caps are applied when the balance is worked out: a rule changed later goes by date, so past days keep theirs.
+const KOTO_DAY = 10, KOTO_QUIZ_CAP = 20, KOTO_LISTEN_CAP = 30, KOTO_LISTEN_MS = 300000;
 function kotoDevice() { return (typeof Sync !== 'undefined' && Sync.meta && Sync.meta.deviceId) || 'local'; }
+const kotoSum = (byDev) => Object.values(byDev || {}).reduce((a, n) => a + (Number(n) || 0), 0);
+// what a day gave by answering (its sets on every device, its bonus) and by listening, each up to its cap
+const kotoQuizDay = (k, d) => Math.min(KOTO_QUIZ_CAP, kotoSum(k.daySets[d]) + (k.days.includes(d) ? KOTO_DAY : 0));
+const kotoListenDay = (k, d) => Math.min(KOTO_LISTEN_CAP, kotoSum(k.listen[d]));
 function kotoBalance() {
-  const k = state.koto, got = Object.values(k.sets).reduce((a, n) => a + (Number(n) || 0), 0) + KOTO_DAY * k.days.length + (Number(k.gift) || 0);
+  const k = state.koto, quizDays = new Set([...Object.keys(k.daySets), ...k.days]);
+  const got = kotoSum(k.sets) + [...quizDays].reduce((a, d) => a + kotoQuizDay(k, d), 0) + Object.keys(k.listen).reduce((a, d) => a + kotoListenDay(k, d), 0)
+    + kotoSum(k.mail) + (Number(k.gift) || 0);
   return got - Object.values(state.owned).reduce((a, o) => a + ((o && Number(o.paid)) || 0), 0);
 }
-// the set that just ended, once (renderSummary keeps it on the session): +1 for a 今日練習 set played to its end, +10 when the
-// day's list is done for the first time today (whatever practice finished it, as the notebook's percentage counts)
+// the set that just ended, once (renderSummary keeps it on the session): what it gave for the set and for the day's list done,
+// each as much as the day's cap left (full: the cap was reached, so some or all of it was not given)
 function earnKoto(s) {
-  const t = todayStr(), prog = dayProgress();
-  const set = s.mode === 'daily' && !s.quit && s.results.length > 0 ? 1 : 0;
-  const day = prog.total > 0 && prog.left === 0 && itemsDoneToday() > 0 && !state.koto.days.includes(t) ? KOTO_DAY : 0;
-  if (set) { const d = kotoDevice(); state.koto.sets[d] = (Number(state.koto.sets[d]) || 0) + 1; }
-  if (day) state.koto.days.push(t);
+  const t = todayStr(), k = state.koto, prog = dayProgress(), before = kotoQuizDay(k, t);
+  const set = s.mode === 'daily' && !s.quit && s.results.length > 0;
+  const day = prog.total > 0 && prog.left === 0 && itemsDoneToday() > 0 && !k.days.includes(t);
+  if (set) { const d = kotoDevice(), m = k.daySets[t] || (k.daySets[t] = {}); m[d] = (Number(m[d]) || 0) + 1; }
+  const mid = kotoQuizDay(k, t);
+  if (day) k.days.push(t);
   if (set || day) saveState();
-  return { set, day };
+  const after = kotoQuizDay(k, t);
+  return { set: mid - before, day: after - mid, full: (set && mid - before < 1) || (day && after - mid < KOTO_DAY) };
+}
+// 聽一輪 (test build): the time it has played without a pause, told after every line it speaks; a gap of over a minute and a half
+// (the page was stopped, the phone slept) starts it over, so does a pause. Every 5 minutes: 1 言靈, as long as today has room.
+function listenKotoTick(L, now = Date.now()) {
+  if (!L) return 0;
+  if (!L.since || now - L.since > 90000) { L.since = now; L.heard = 0; return 0; }
+  L.heard = (L.heard || 0) + (now - L.since); L.since = now;
+  let got = 0;
+  while (L.heard >= KOTO_LISTEN_MS) {
+    L.heard -= KOTO_LISTEN_MS;
+    const t = todayStr(), k = state.koto;
+    if (kotoListenDay(k, t) >= KOTO_LISTEN_CAP) { L.heard = 0; if (!L.capSaid) { L.capSaid = true; kotoPop(0, '今天聽一輪的言靈拿滿了'); } break; }
+    const m = k.listen[t] || (k.listen[t] = {}), d = kotoDevice(); m[d] = (Number(m[d]) || 0) + 1; got++;
+  }
+  if (got) { saveState(); kotoPop(got); }
+  return got;
+}
+const listenKotoStop = (L) => { if (L) { L.since = 0; L.heard = 0; } };   // a pause, a stop: the next 5 minutes start from nothing
+// a little あ rising at the top of the screen, whatever page is open: n 言靈 gained, or only words (the day's cap reached)
+function kotoPop(n, words = '言靈') {
+  const el = document.createElement('div'); el.className = 'koto-pop' + (n ? '' : ' full'); el.setAttribute('role', 'status');
+  el.innerHTML = `${kotoIcon()}<span>${words}</span>${n ? `<b>+${n}</b>` : ''}`;
+  document.body.appendChild(el); setTimeout(() => el.remove(), n ? 2600 : 4200);
 }
 // a glowing あ: the mark of 言靈 (circles, no gradient, so a copy in a hidden place never breaks the others)
 function kotoIcon(cls = '') {
@@ -5489,7 +5570,7 @@ function renderSummary(view) {
         <div class="stat"><span class="stat-v">${s.stats.newCount}</span><span class="stat-l">新學</span></div>
         <div class="stat"><span class="stat-v">${Math.max(1, Math.round((Date.now() - s.startedAt) / 60000))}</span><span class="stat-l">分鐘</span></div>
       </div>
-      ${gain.set || gain.day ? `<div class="koto-gain${first ? ' pop' : ''}">${kotoIcon()}<span>言靈</span>${gain.set ? '<b>+1</b><span>做完一組</span>' : ''}${gain.set && gain.day ? '<i class="sep"></i>' : ''}${gain.day ? `<b>+${gain.day}</b><span>今日完成</span>` : ''}<span class="tot">共 ${kotoBalance()}</span></div>` : ''}
+      ${gain.set || gain.day || gain.full ? `<div class="koto-gain${first ? ' pop' : ''}">${kotoIcon()}<span>言靈</span>${gain.set ? '<b>+1</b><span>做完一組</span>' : ''}${gain.set && gain.day ? '<i class="sep"></i>' : ''}${gain.day ? `<b>+${gain.day}</b><span>今日完成</span>` : ''}${gain.full ? '<span class="cap">今天作答的言靈拿滿了</span>' : ''}<span class="tot">共 ${kotoBalance()}</span></div>` : ''}
       ${dayDone ? '<div class="banner mt-4">今天的進度完成了。答對的題目會在幾天後再出現，答錯的明天再複習。</div>' : `<div class="hint mt-4">今天還有 ${prog.left} 題。</div>`}
       <div class="row-wrap mt-4">
         <button type="button" class="btn btn-primary" data-act="again">再練一組</button>
@@ -6006,21 +6087,49 @@ const YARD = (() => {
   const thumb = (id) => (ART[id] ? `<svg class="thumb" viewBox="${ART[id].box.join(' ')}" aria-hidden="true">${ART[id].draw()}</svg>` : '');
   return { ART, el, thumb };
 })();
-// where a yard ware may stand: on the lawn (x within ±170 px of the middle, whole on a phone; y 14–196 px up), off the path from
-// the door (a strip from x -60…6 at the bottom to -10…10 by the house), the house front and the mailbox, and clear of the others
-// (their ground: width × scale across, depth × scale deep)
+// the yard's world (test build): the ground 1200px wide (wider on a screen wider than that), its middle the house's; the camera: x,
+// how far right of the world's middle the screen's middle is (0 on a screen as wide as the world), kept while the app runs
+const YARD_HALF = 600;   // where yard wares may stand: within the middle 1200px, the same on every screen
+const yardWorldW = () => Math.max(2 * YARD_HALF, document.documentElement.clientWidth || window.innerWidth || 0);
+const ycam = { x: 0, W: 0, YW: 2 * YARD_HALF };
+let ypan = null, ycoast = 0;   // a finger looking along the yard; its fling
+const yCamMax = () => Math.max(0, (ycam.YW - ycam.W) / 2);
+function yCamTo(yard, x, give = 0) {   // the camera there (give: how much of a pull past an end a finger gets)
+  const m = yCamMax();
+  ycam.x = x < -m ? -m - (-m - x) * give : x > m ? m + (x - m) * give : x;
+  const w = yard.querySelector('.yworld'); if (w) w.style.transform = `translate3d(${(-ycam.x).toFixed(1)}px,0,0)`;
+  yard.style.setProperty('--ycx', `${(-ycam.x).toFixed(1)}px`);
+}
+function yardLayout(yard) {   // the world as wide as it should be on this screen, the hill's shop sign with it, the camera inside
+  const sky = yard.querySelector('.sky'), w = yard.querySelector('.yworld'); if (!sky || !w) return;
+  ycam.W = sky.clientWidth || window.innerWidth; ycam.YW = Math.max(2 * YARD_HALF, ycam.W);
+  w.style.width = `${ycam.YW}px`; w.style.marginLeft = `${-ycam.YW / 2}px`;
+  const k = ycam.YW / 1200, sb = yard.querySelector('.shop-btn');   // the hill scales up on a very wide screen
+  if (sb) { sb.style.left = `calc(50% - ${Math.round(118 * k)}px)`; sb.style.bottom = `${Math.round(346 * k - 6)}px`; }
+  yCamTo(yard, ycam.x);
+}
+// the hero walking out of the middle half of the screen: the camera goes along (not while a finger has it)
+function yFollow(yard) {
+  if (ypan || !yCamMax()) return;
+  const z = ycam.W / 4, hx = yh.X - ycam.x;
+  if (hx > z) yCamTo(yard, yh.X - z); else if (hx < -z) yCamTo(yard, yh.X + z);
+}
+// where a yard ware may stand: on the lawn (whole within the middle 1200px; y 14–196 px up), off the path from the door (a strip
+// from x -60…6 at the bottom to -10…10 by the house), the house front and the mailbox, and clear of the others (their ground:
+// width × scale across, depth × scale deep)
 function yardFits(id, p) {
-  const a = YARD.ART[id], it = WARE.get(id); if (!a || !it || Math.abs(p.x) > 170 || p.y < 14 || p.y > 196) return false;
+  const a = YARD.ART[id], it = WARE.get(id); if (!a || !it || p.y < 14 || p.y > 196) return false;
   const k = yScale(p.y), hw = it.ground[0] * k / 2, hd = it.ground[1] * k;
+  if (Math.abs(p.x) + hw > YARD_HALF - 10) return false;
   if (Math.abs(p.x - (-27 + 27 * p.y / 220)) < hw + (33 - 23 * p.y / 220) + 4) return false;
   const over = (x0, x1, y0, y1) => p.x + hw > x0 && p.x - hw < x1 && p.y + hd > y0 && p.y - hd < y1;
   if (over(-95, 95, 186, 999) || over(20, 92, 136, 230)) return false;
   return yardPlaced().every((o) => { if (o.id === id) return true; const t = yScale(o.p.y); return Math.abs(p.x - o.p.x) >= hw + o.it.ground[0] * t / 2 || Math.abs(p.y - o.p.y) >= hd + o.it.ground[1] * t; });
 }
 function yardPlaced() { return Object.keys(state.placed).filter((id) => owns(id) && WARE.has(id) && WARE.get(id).kind === 'yard' && state.placed[id].w === 'Y').map((id) => ({ id, it: WARE.get(id), p: state.placed[id] })); }
-function yardSpot(id) {   // where a ware taken out of the box goes: the free spot nearest the lower middle
+function yardSpot(id) {   // where a ware taken out of the box goes: the free spot nearest the lower middle of the screen
   const c = [];
-  for (let y = 20; y <= 190; y += 10) for (let x = -170; x <= 170; x += 10) c.push({ x, y, d: Math.hypot(x, (y - 70) * 1.4) });
+  for (let y = 20; y <= 190; y += 10) for (let x = -YARD_HALF; x <= YARD_HALF; x += 10) c.push({ x, y, d: Math.hypot(x - ycam.x, (y - 70) * 1.4) });
   c.sort((a, b) => a.d - b.d);
   const hit = c.find((q) => yardFits(id, q));
   return hit ? { x: hit.x, y: hit.y } : null;
@@ -6029,17 +6138,21 @@ const yardWaresHtml = () => yardPlaced().map((o) => YARD.el(o.id, o.p, yed.on &&
 const yardSig = () => yardPlaced().map((o) => `${o.id}:${o.p.x},${o.p.y}`).join('|');
 // 擺設 in the yard (test build), as in 書房: pick a ware, drag it or tap the lawn to move it, 收起 puts it in the yard's box
 const yed = { on: false, sel: null, drag: null };
-function yeditHtml(yard) {
+function yeditHtml() {
   const box = WARES.filter((it) => it.kind === 'yard' && owns(it.id) && !(state.placed[it.id] && state.placed[it.id].w === 'Y'));
+  return `<div class="edit-top"><span class="edit-hint">${yed.sel ? '拖曳搬動，拖到上面收起來' : '拖曳搬動；收納箱的東西拖出來擺'}</span><button type="button" class="btn btn-primary btn-sm" data-act="yard-edit-done">完成</button></div>
+    <div class="edit-tray" aria-label="院子的收納箱">${box.length ? box.map((it) => `<button type="button" class="tray-it" data-act="yard-edit-take" data-id="${it.id}">${YARD.thumb(it.id)}<span>${esc(it.name)}</span></button>`).join('') : '<div class="tray-empty">收納箱是空的。古道具屋的「戶外」有望遠鏡、石燈籠……</div>'}</div>`;
+}
+function yselHtml() {   // the picked ware's tools, over it in the world
   const o = yed.sel && yardPlaced().find((q) => q.id === yed.sel), a = o && YARD.ART[o.id];
-  const tools = o ? `<div class="edit-sel" style="left:calc(50% + ${o.p.x}px);bottom:${Math.round(o.p.y + -a.box[1] * yScale(o.p.y) + 8)}px"><button type="button" data-act="yard-edit-put">收起</button></div>` : '';
-  return `<div class="edit-top"><span class="edit-hint">${o ? '拖曳搬動，或點草地把它移過去' : '點一下院子裡的東西選取，再拖曳搬動'}</span><button type="button" class="btn btn-primary btn-sm" data-act="yard-edit-done">完成</button></div>
-    <div class="edit-tray" aria-label="院子的收納箱">${box.length ? box.map((it) => `<button type="button" class="tray-it" data-act="yard-edit-take" data-id="${it.id}">${YARD.thumb(it.id)}<span>${esc(it.name)}</span></button>`).join('') : '<div class="tray-empty">收納箱是空的。古道具屋的「戶外」有望遠鏡、石燈籠……</div>'}</div>${tools}`;
+  return o ? `<div class="edit-sel" style="left:calc(50% + ${o.p.x}px);bottom:${Math.round(o.p.y + -a.box[1] * yScale(o.p.y) + 8)}px"><button type="button" data-act="yard-edit-put">收起</button></div>` : '';
 }
 function yardDraw(yard) {   // the wares and the 擺設 bar drawn again; the hero and the sky stay as they are
   yard.classList.toggle('edit', yed.on);
   const w = yard.querySelector('.ywares'); w.innerHTML = yardWaresHtml(); w.dataset.sig = yardSig();
-  yard.querySelector('.yedit').innerHTML = yed.on ? yeditHtml(yard) : '';
+  yard.querySelector('.yedit').innerHTML = yed.on ? yeditHtml() : '';
+  yard.querySelector('.ysel').innerHTML = yed.on ? yselHtml() : '';
+  if (yed.on) fitThumbs(yard.querySelector('.yedit'));
 }
 function yardEdit(yard, cmd, id) {
   if (!yard) return;
@@ -6053,33 +6166,73 @@ function yardEdit(yard, cmd, id) {
   } else if (cmd === 'put' && yed.sel) { delete state.placed[yed.sel]; yed.sel = null; saveState(); }
   yardDraw(yard);
 }
-const yardPoint = (yard, e) => { const r = yard.querySelector('.sky').getBoundingClientRect(); return { x: e.clientX - (r.left + r.width / 2), y: r.bottom - e.clientY }; };
+const yardPoint = (yard, e) => { const r = yard.querySelector('.yworld').getBoundingClientRect(); return { x: e.clientX - (r.left + r.width / 2), y: r.bottom - e.clientY }; };   // in the world
 const snap2 = (v) => Math.round(v / 2) * 2;
 function yardMoveTo(yard, id, p) {   // the picked ware to a spot, if it can stand there
   const q = { w: 'Y', x: snap2(p.x), y: snap2(p.y) };
   if (!yardFits(id, q)) { toast('這裡放不下'); return; }
   state.placed[id] = q; saveState(); yardDraw(yard);
 }
-// a drag on a ware in 擺設: it follows the finger (red where it cannot stand) and stays where it is let go, or goes back
+// a drag in 擺設: a ware on the lawn follows the finger (red where it cannot stand) and stays where it is let go, or goes back; one
+// held in the box up top comes out with a downward pull (a sideways swipe scrolls the box); let go over the box, a ware goes in.
+// Near a side of the screen the camera goes along.
 function yardDragStart(yard, e) {
-  const b = e.target.closest('.yware'); if (!b || !yed.on || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  if (!yed.on || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  const t = e.target.closest('.yedit .tray-it');
+  if (t) { yed.drag = { id: t.dataset.id, b: null, from: null, off: { x: 0, y: 0 }, x0: e.clientX, y0: e.clientY, moved: false, to: null, fromBox: true, box: false }; return; }
+  const b = e.target.closest('.yware'); if (!b) return;
   const id = b.dataset.ware, p = state.placed[id], at = yardPoint(yard, e);
-  yed.drag = { id, b, from: p, off: { x: at.x - p.x, y: at.y - p.y }, x0: e.clientX, y0: e.clientY, moved: false, to: null };
+  yed.drag = { id, b, from: p, off: { x: at.x - p.x, y: at.y - p.y }, x0: e.clientX, y0: e.clientY, moved: false, to: null, fromBox: false, box: false };
   try { b.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
 }
 function yardDragMove(yard, e) {
   const d = yed.drag; if (!d) return;
-  if (!d.moved && Math.hypot(e.clientX - d.x0, e.clientY - d.y0) < 6) return;
-  d.moved = true; yed.sel = d.id;
-  const at = yardPoint(yard, e), q = { w: 'Y', x: snap2(at.x - d.off.x), y: snap2(at.y - d.off.y) }, ok = yardFits(d.id, q);
+  if (!d.moved) {
+    const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
+    if (Math.hypot(dx, dy) < 6) return;
+    if (d.fromBox && e.pointerType !== 'mouse' && Math.abs(dx) > Math.abs(dy)) { yed.drag = null; return; }   // sideways: the box scrolls
+    d.moved = true;
+    if (d.fromBox) {   // the ware out of the box, under the finger
+      const w = yard.querySelector('.ywares'); w.insertAdjacentHTML('beforeend', YARD.el(d.id, { x: 0, y: 100 })); d.b = w.lastElementChild; d.b.classList.add('new');
+      try { yard.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
+    } else yed.sel = d.id;
+    yard.classList.add('dragging');
+  }
+  d.cx = e.clientX; d.cy = e.clientY;
+  yardDragAt(yard, d);
+  yEdgePan(yard);
+}
+function yardDragAt(yard, d) {   // the dragged ware where the finger is now (also as the camera moves under it)
+  const tray = yard.querySelector('.yedit .edit-tray'), tr = tray && tray.getBoundingClientRect(), hint = yard.querySelector('.yedit .edit-hint');
+  d.box = Boolean(tr && d.cy <= tr.bottom && d.cx >= tr.left && d.cx <= tr.right);
+  if (tray) tray.classList.toggle('drop', d.box && !d.fromBox);
+  const say = d.box && !d.fromBox ? '放開就收起來' : '拖到想放的地方放開'; if (hint && hint.textContent !== say) hint.textContent = say;
+  d.b.style.visibility = d.box ? 'hidden' : '';
+  if (d.box) { d.to = null; return; }
+  const at = yardPoint(yard, { clientX: d.cx, clientY: d.cy }), q = { w: 'Y', x: snap2(at.x - d.off.x), y: snap2(at.y - d.off.y) }, ok = yardFits(d.id, q);
   d.to = ok ? q : null;
-  d.b.style.transform = `translate(${q.x}px,${-q.y}px) scale(${yScale(q.y).toFixed(3)})`; d.b.style.zIndex = String(300 - Math.round(q.y));
-  d.b.classList.toggle('bad', !ok); yard.classList.add('dragging');
+  d.b.style.transform = `translate(${q.x}px,${-q.y}px) scale(${yScale(q.y).toFixed(3)})`; if (!d.fromBox) d.b.style.zIndex = String(300 - Math.round(q.y));
+  d.b.classList.toggle('bad', !ok);
+}
+let yEdgeT = 0;
+function yEdgePan(yard) {   // a ware held near a side of the screen: the camera goes that way, the ware with the finger
+  cancelAnimationFrame(yEdgeT);
+  const d = yed.drag; if (!d || !d.moved || d.box || !yCamMax()) return;
+  const r = yard.getBoundingClientRect(), dir = d.cx < r.left + 44 ? -1 : d.cx > r.right - 44 ? 1 : 0;
+  if (!dir) return;
+  const step = () => {
+    const dd = yed.drag; if (dd !== d || !yard.isConnected) return;
+    const x0 = ycam.x; yCamTo(yard, ycam.x + dir * 7); if (ycam.x === x0) return;
+    yardDragAt(yard, d); yEdgeT = requestAnimationFrame(step);
+  };
+  yEdgeT = requestAnimationFrame(step);
 }
 function yardDragEnd(yard) {
-  const d = yed.drag; yed.drag = null; if (!d || !d.moved) return;
+  const d = yed.drag; yed.drag = null; cancelAnimationFrame(yEdgeT); if (!d || !d.moved) return;
   yard.classList.remove('dragging'); yard._noClick = true; setTimeout(() => { yard._noClick = false; }, 0);   // the click that ends a drag is no tap
-  if (d.to) { state.placed[d.id] = d.to; saveState(); }
+  if (d.box) { if (!d.fromBox) { delete state.placed[d.id]; if (yed.sel === d.id) yed.sel = null; saveState(); } }
+  else if (d.to) { state.placed[d.id] = d.to; yed.sel = d.id; saveState(); }
+  else if (d.fromBox) toast('這裡放不下');
   yardDraw(yard);
 }
 // outside 擺設 a tap on a ware sends the hero to stand beside it, facing it; at the telescope by night they look up a while
@@ -6096,36 +6249,81 @@ function renderOutside(view) {
   sceneTick();
   const pct = ringPct(dayProgress());
   const yard = view.querySelector('.yard');
-  if (yard) {   // a redraw: new stars fade in, the motion carries on; the yard's things again only if they moved (sync, another device)
+  if (yard && yard.dataset.house !== (state.house || '')) { yard.remove(); }   // the house changed (another device): drawn anew
+  else if (yard) {   // a redraw: new stars fade in, the motion carries on; the yard's things again only if they moved (sync, another device)
     yardLevel(yard, pct);
     const w = yard.querySelector('.ywares'); if (w && !yed.on && w.dataset.sig !== yardSig()) { w.innerHTML = yardWaresHtml(); w.dataset.sig = yardSig(); }
     return;
   }
-  yed.on = false; yed.sel = null; yed.drag = null;   // a yard drawn anew opens out of 擺設
+  yed.on = false; yed.sel = null; yed.drag = null; ypan = null;   // a yard drawn anew opens out of 擺設
   view.innerHTML = yardHtml(pct);
   const y = view.querySelector('.yard');
-  const sk = y.querySelector('.sky'), k = Math.max(1, sk.clientWidth / 1200), sb = y.querySelector('.shop-btn');   // the hill scales up on a very wide screen
-  sb.style.left = `calc(50% - ${Math.round(118 * k)}px)`; sb.style.bottom = `${Math.round(346 * k - 6)}px`;
+  y.dataset.house = state.house || '';
+  ycam.x = yh.fromDoor ? 0 : yh.X; yardLayout(y);   // the camera on the hero (at the door, coming out)
+  const ro = new ResizeObserver(() => { if (!y.isConnected) { ro.disconnect(); return; } yardLayout(y); });
+  ro.observe(y.querySelector('.sky'));
   if (yh.fromDoor) { yh.fromDoor = false; yh.X = 0; yh.Y = 214; yh.back = false; yHeroPlace(y); setTimeout(() => yHeroWalk(y, [8, 150]), 260); }   // out of the door, onto the lawn (below the 進屋 tag)
   else yHeroPlace(y);
   const yel = y.querySelector('.yhero');   // idling now and then while left be
   HERO.idle(yel, () => !yh.climb && !document.hidden && !yel.matches('.walk, .run, .out, .hop, .wave, .spin, .cheer'), true);
-  y.addEventListener('pointerdown', (e) => yardDragStart(y, e)); y.addEventListener('pointermove', (e) => yardDragMove(y, e));
-  y.addEventListener('pointerup', () => yardDragEnd(y)); y.addEventListener('pointercancel', () => yardDragEnd(y));
+  y.addEventListener('pointerdown', (e) => { if (!y.classList.contains('dressing')) { yardDragStart(y, e); yPanStart(y, e); } });
+  y.addEventListener('pointermove', (e) => { yardDragMove(y, e); yPanMove(y, e); });
+  y.addEventListener('pointerup', (e) => { yardDragEnd(y); yPanEnd(y, e); }); y.addEventListener('pointercancel', (e) => { yardDragEnd(y); yPanEnd(y, e); });
   y.addEventListener('click', (e) => {   // a tap on the lawn: the hero walks there (in 擺設: the picked ware goes there)
-    if (y._noClick || e.target.closest('button, .hero, a')) return;
-    if (yed.on) { if (yed.sel) yardMoveTo(y, yed.sel, yardPoint(y, e)); return; }
-    const r = y.querySelector('.sky').getBoundingClientRect(), Y = r.bottom - e.clientY;
-    if (Y < 4 || Y > 222) return;
-    yHeroWalk(y, [e.clientX - (r.left + r.width / 2), Y]);
+    if (y._noClick || y.classList.contains('dressing') || e.target.closest('button, .hero, a, .dress')) return;
+    const at = yardPoint(y, e);
+    if (yed.on) { if (yed.sel) yardMoveTo(y, yed.sel, at); return; }
+    if (at.y < 4 || at.y > 222) return;
+    yHeroWalk(y, [at.x, at.y]);
   });
+  let swallow = false;   // the buttons up top while they rest: a first tap only brings them back (as in 書房)
+  y.addEventListener('pointerdown', (e) => { swallow = y.classList.contains('quiet') && !!e.target.closest('.yard-tools'); }, true);
+  y.addEventListener('click', (e) => { if (swallow) { swallow = false; e.stopPropagation(); e.preventDefault(); } }, true);
   let restT = 0;   // the signs: in sight when the yard opens and after a touch, out of sight 4 s later (a tap on a thing still works)
   const wake = () => { y.classList.remove('quiet'); clearTimeout(restT); restT = setTimeout(() => { if (y.isConnected) y.classList.add('quiet'); }, 4000); };
   y.addEventListener('pointerdown', wake); y.addEventListener('pointerup', wake);
   y.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' && !e.buttons) wake(); });   // a mouse over the yard
   wake();
 }
+function kotoButtons(root) {   // the 言靈 button up top (書房, the yard) with the balance now
+  root.querySelectorAll('.study-koto').forEach((kb) => { kb.querySelector('span').textContent = kotoBalance(); kb.setAttribute('aria-label', `言靈 ${kotoBalance()}，到古道具屋`); });
+}
+// a swipe on the yard (test build): one finger anywhere but on a button (a ware outside 擺設 too) looks along the yard; let go
+// moving, it coasts on; pulled past an end, it springs back
+function yPanStart(yard, e) {
+  if (yed.drag || !yCamMax() || (e.pointerType === 'mouse' && e.button !== 0) || e.target.closest('.yard-tools, .yedit, .dress, .hero, a') || (e.target.closest('button') && !(e.target.closest('.yware') && !yed.on))) return;
+  cancelAnimationFrame(ycoast); yard.querySelector('.yworld').classList.remove('glide');
+  ypan = { id: e.pointerId, x0: e.clientX, y0: e.clientY, c0: ycam.x, on: false, hist: [] };
+}
+function yPanMove(yard, e) {
+  if (!ypan || e.pointerId !== ypan.id) return;
+  const dx = e.clientX - ypan.x0, dy = e.clientY - ypan.y0;
+  if (!ypan.on) {
+    if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy)) return;
+    ypan.on = true; try { yard.setPointerCapture(e.pointerId); } catch (err) { /* a pointer the page did not see go down */ }
+  }
+  yCamTo(yard, ypan.c0 - dx, 0.3);
+  ypan.hist.push([performance.now(), e.clientX]); if (ypan.hist.length > 8) ypan.hist.shift();
+}
+function yPanEnd(yard, e) {
+  if (!ypan || e.pointerId !== ypan.id) return;
+  const p = ypan; ypan = null; if (!p.on) return;
+  yard._noClick = true; setTimeout(() => { yard._noClick = false; }, 0);   // the click that ends a swipe is no tap
+  const m = yCamMax(), w = yard.querySelector('.yworld');
+  if (Math.abs(ycam.x) > m) { w.classList.add('glide'); yCamTo(yard, Math.max(-m, Math.min(m, ycam.x))); setTimeout(() => w.classList.remove('glide'), 380); return; }
+  const now = performance.now(), h = p.hist.filter((q) => now - q[0] < 100);
+  if (h.length < 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  let v = (h[0][1] - h[h.length - 1][1]) / Math.max(16, h[h.length - 1][0] - h[0][0]), t0 = now;   // px a ms
+  if (Math.abs(v) < 0.1) return;
+  const step = (t) => {
+    const dt = Math.min(50, t - t0); t0 = t;
+    const x0 = ycam.x; yCamTo(yard, ycam.x + v * dt); v *= Math.pow(0.94, dt / 16);
+    if (yard.isConnected && ycam.x !== x0 && Math.abs(v) > 0.02) ycoast = requestAnimationFrame(step);
+  };
+  ycoast = requestAnimationFrame(step);
+}
 function yardLevel(yard, pct) {
+  kotoButtons(yard);
   const f = pct / 100;
   yard.style.setProperty('--f', f);
   yard.classList.toggle('full', pct >= 100);
@@ -6133,15 +6331,16 @@ function yardLevel(yard, pct) {
   mailboxLevel();
 }
 // the sky's layout, the same every day (a fixed seed): each star carries the share of the list that lights it — six faint ones
-// from the start, the rest by 80%, the seven of the constellation at 100%
+// from the start, the rest by 80%, the seven of the constellation at 100%; fireflies and flowers spread along the yard's whole
+// width (test build: 1200px, a phone sees a third of it at a time)
 const SKY = (() => {
   let a = 20261106;
   const rnd = () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };   // mulberry32
   const r2 = (x) => Math.round(x * 100) / 100;
   const stars = Array.from({ length: 72 }, (_, i) => ({ x: r2(rnd() * 100), y: r2(rnd() * 100), s: r2(rnd() < 0.12 ? 2.2 + rnd() * 0.6 : 1 + rnd() * 1.1), t: i < 6 ? 0 : r2(0.8 * (i - 5) / 66), d: r2(2 + rnd() * 3.5), w: r2(rnd() * 5) }));
   [[60, 15], [66, 13], [72, 16], [77, 21], [75, 28], [83, 30], [85, 23]].forEach(([x, y], i) => stars.push({ x, y, s: 2.6, t: 1, d: 3, w: i * 0.4, dip: true }));
-  const flies = Array.from({ length: 12 }, () => ({ x: r2(4 + rnd() * 92), y: Math.round(rnd() * 160), dx: Math.round(rnd() * 60 - 30), dy: Math.round(rnd() * 30 - 15), d: r2(5 + rnd() * 5), w: r2(rnd() * 6) }));
-  const flowers = Array.from({ length: 16 }, () => ({ x: r2(3 + rnd() * 94), y: Math.round(150 + rnd() * 56), c: ['#ff9ec4', '#ffffff', '#ffd166', '#c9a7ff', '#ff8a8a'][Math.floor(rnd() * 5)], d: r2(2.5 + rnd() * 2), w: r2(rnd() * 3) }));
+  const flies = Array.from({ length: 30 }, () => ({ x: r2(4 + rnd() * 92), y: Math.round(rnd() * 160), dx: Math.round(rnd() * 60 - 30), dy: Math.round(rnd() * 30 - 15), d: r2(5 + rnd() * 5), w: r2(rnd() * 6) }));
+  const flowers = Array.from({ length: 40 }, () => ({ x: r2(3 + rnd() * 94), y: Math.round(150 + rnd() * 56), c: ['#ff9ec4', '#ffffff', '#ffd166', '#c9a7ff', '#ff8a8a'][Math.floor(rnd() * 5)], d: r2(2.5 + rnd() * 2), w: r2(rnd() * 3) }));
   return { stars, flies, flowers };
 })();
 // 古道具屋 on its hill (test build): an old wooden shop, a tiled roof with turned-up eaves, a 古 noren, a paper lantern, a pot and
@@ -6154,6 +6353,28 @@ const SHOP_ART = `<circle class="s-glow" cx="0" cy="-18" r="48" fill="url(#shopG
   <rect class="s-sign" x="-9" y="-35" width="18" height="6" rx=".8"/><line class="s-cord" x1="23" y1="-22" x2="23" y2="-18.5"/><ellipse class="s-paper" cx="23" cy="-14" rx="3.3" ry="4.4"/><path class="s-band" d="M19.9 -15.6 H26.1 M19.9 -12.4 H26.1"/>
   <path class="s-pot" d="M-27 1 C-30 -2 -30 -7 -27 -9 H-23 C-20 -7 -20 -2 -23 1 Z"/><rect class="s-pot-rim" x="-27.6" y="-10.4" width="5.2" height="1.6" rx=".6"/><rect class="s-box" x="21" y="-5" width="9" height="6"/><rect class="s-box2" x="22.5" y="-9" width="6" height="4"/>
   <g class="s-owl"><ellipse cx="-16" cy="-3.6" rx="3.2" ry="3.8"/><path d="M-18.6 -6.6 L-18 -8.6 L-16.6 -7 M-13.4 -6.6 L-14 -8.6 L-15.4 -7"/><circle class="s-owl-eye" cx="-17.2" cy="-4.6" r=".9"/><circle class="s-owl-eye" cx="-14.8" cy="-4.6" r=".9"/></g>`;
+// the house in the yard: the cottage, or a look bought at 古道具屋 (test build: 蘑菇屋), drawn in the same 140 × 130 box with its
+// windows, chimney and door where the cottage has them (the lights by night, the smoke and 進屋 stay where they are)
+const HOUSE_ART = {
+  cottage: `<rect class="chim" x="92" y="30" width="12" height="30"/><rect class="roof" x="89" y="27" width="18" height="5" rx="1"/>
+    <rect class="wall" x="22" y="66" width="96" height="64"/>
+    <path class="roof" d="M10 72 L70 20 L130 72 Z"/><path class="rim" d="M10 72 L70 20 L130 72 M89 27 H107"/>
+    <circle class="pane" cx="70" cy="52" r="6"/><path class="mull" d="M70 46 V58 M64 52 H76"/>
+    <rect class="pane" x="34" y="82" width="18" height="18" rx="2"/><rect class="pane" x="88" y="82" width="18" height="18" rx="2"/>
+    <path class="mull" d="M43 82 V100 M34 91 H52 M97 82 V100 M88 91 H106"/>
+    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/>`,
+  mushroomhouse: `<rect class="m-pipe" x="94" y="9" width="7" height="20" rx="1.5"/><rect class="m-pipe" x="92.5" y="7" width="10" height="4" rx="1"/>
+    <path class="m-stem" d="M38 130 C35 108 39 88 46 72 H94 C101 88 105 108 102 130 Z"/><path class="m-shade" d="M46 72 H94 C96 76 97 79 98 82 C80 86 60 86 42 82 C43 79 44 76 46 72 Z"/>
+    <path class="m-gill" d="M12 72 C40 85 100 85 128 72 C100 80 40 80 12 72 Z"/>
+    <path class="m-cap" d="M6 72 C4 34 36 11 70 11 C104 11 136 34 134 72 C110 80 30 80 6 72 Z"/><path class="rim" d="M6 72 C4 34 36 11 70 11 C104 11 136 34 134 72"/>
+    <circle class="m-dot" cx="36" cy="38" r="8"/><circle class="m-dot" cx="64" cy="24" r="5.5"/><circle class="m-dot" cx="102" cy="40" r="8.5"/><circle class="m-dot" cx="20" cy="60" r="5"/>
+    <circle class="m-dot" cx="120" cy="61" r="5.5"/><circle class="m-dot" cx="88" cy="22" r="4"/><circle class="m-dot" cx="50" cy="60" r="4.2"/><circle class="m-dot" cx="94" cy="62" r="4.6"/>
+    <circle class="pane" cx="70" cy="48" r="6"/><path class="mull" d="M70 42 V54 M64 48 H76"/>
+    <circle class="pane" cx="45" cy="96" r="8"/><circle class="pane" cx="95" cy="96" r="8"/><path class="mull" d="M45 88 V104 M37 96 H53 M95 88 V104 M87 96 H103"/>
+    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/>
+    <path class="m-grass" d="M34 130 q2 -7 4 0 q2 -5 4 0 M98 130 q2 -6 4 0 q2 -7 4 0"/>`
+};
+const houseArt = () => HOUSE_ART[state.house && owns(state.house) && HOUSE_ART[state.house] ? state.house : 'cottage'];
 // the hero out in the yard (test build): the same drawing, smaller the further up the lawn (X: px from the middle, Y: px up from the
 // bottom, the ground running from the bottom to the house at 218px). Walks where you tap, to the mailbox, the house and the path.
 const yh = { X: 0, Y: 186, back: false, flip: false, raf: 0, fromDoor: false, climb: null, s: 0 };   // climb, s: on the way up to 古道具屋, and his scale there
@@ -6161,14 +6382,21 @@ try { const h = JSON.parse(localStorage.getItem('nq_hero') || 'null'); if (h && 
 function yHeroSave() { try { const h = JSON.parse(localStorage.getItem('nq_hero') || '{}') || {}; h.yard = { X: Math.round(yh.X), Y: Math.round(yh.Y) }; localStorage.setItem('nq_hero', JSON.stringify(h)); } catch (e) { /* no storage */ } }
 const yScale = (Y) => 0.19 + 0.31 * Math.max(0, Math.min(1, (212 - Y) / 198));
 function yHeroHtml() { return `<div class="hero yhero" data-act="hero-hop" aria-label="主角">${HERO.svg({ wear: state.wear, look: state.look })}</div>`; }
+function yHeroRedraw(yard) { const el = yard.querySelector('.yhero'); if (el) el.innerHTML = HERO.svg({ wear: state.wear, look: state.look }); }   // dressed anew
+function yHeroHold(yard) {   // the dressing room opens: the hero stops where they are
+  cancelAnimationFrame(yh.raf); yh.climb = null; yh.s = 0; yard.classList.remove('climbing');
+  const el = yard.querySelector('.yhero'); if (!el) return;
+  el.classList.remove('walk', 'run', 'climb'); HERO.still(el); yHeroPlace(yard); yHeroSave();
+}
 function yHeroPlace(yard) {
   const el = yard.querySelector('.yhero'); if (!el) return;
   el.style.transform = `translate(${yh.X.toFixed(1)}px,${(-yh.Y).toFixed(1)}px) scale(${(yh.s || yScale(yh.Y)).toFixed(3)})`;
   el.classList.toggle('back', yh.back); el.classList.toggle('flip', yh.flip); el.style.zIndex = yh.climb === 'hill' ? '' : String(300 - Math.round(yh.Y));
+  if (el.matches('.walk, .run')) yFollow(yard);   // on the move: the camera goes along
 }
 function yHeroWalk(yard, to, done) {
   cancelAnimationFrame(yh.raf);
-  const el = yard.querySelector('.yhero'), sky = yard.querySelector('.sky').getBoundingClientRect(), lim = sky.width / 2 - 20;
+  const el = yard.querySelector('.yhero'), lim = ycam.YW / 2 - 20;
   yh.climb = null; yh.s = 0; yard.classList.remove('climbing'); if (el) el.classList.remove('climb');   // off the hill path, if he was on it
   HERO.still(el);
   const from = [yh.X, yh.Y], goal = [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(214, to[1]))], dx = goal[0] - from[0], dy = goal[1] - from[1], len = Math.hypot(dx, dy);
@@ -6193,7 +6421,7 @@ const SHOP_PATH = [[540, 342], [514, 326], [546, 306], [506, 290], [526, 272], [
 function yClimb(el) {
   yNamed(el);
   const yard = el.closest('.yard'), h = yard && yard.querySelector('.yhero');
-  const k = yard ? Math.max(1, yard.querySelector('.sky').clientWidth / 1200) : 1, at = ([x, y]) => [(x - 600) * k, (600 - y) * k], foot = [Math.round(at(SHOP_PATH[0])[0]), 214];
+  const k = ycam.YW / 1200, at = ([x, y]) => [(x - 600) * k, (600 - y) * k], foot = [Math.round(at(SHOP_PATH[0])[0]), 214];
   const keep = () => { yh.climb = null; yh.s = 0; yh.X = foot[0]; yh.Y = foot[1]; yh.back = false; yHeroSave(); };
   if (!h || yh.climb || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { cancelAnimationFrame(yh.raf); keep(); go('#/shop'); return; }
   yHeroWalk(yard, foot, () => {
@@ -6232,7 +6460,7 @@ function yUse(el, to, fn) {
   yHeroWalk(yard, to, () => { yh.back = true; yHeroPlace(yard); setTimeout(fn, 120); });
 }
 function yardHtml(pct) {
-  const f = pct / 100, mail = mailCount();
+  const f = pct / 100, mail = mailCount(), yw = yardWorldW();
   const star = (s) => `<i class="st${s.dip ? ' dip' : ''}${s.t <= f ? ' on' : ''}" data-t="${s.t}" style="left:${s.x}%;top:${s.y}%;--s:${s.s}px;--d:${s.d}s;--w:-${s.w}s;--in:${f ? Math.round(s.t / f * 120) / 100 : 0}s"></i>`;
   const dip = SKY.stars.filter(s => s.dip).map(s => `${s.x} ${s.y}`);
   const ground = 'M0 170 C150 152 300 142 450 147 C520 149 560 150 600 150 C640 150 690 149 760 146 C900 141 1050 151 1200 162';
@@ -6253,6 +6481,7 @@ function yardHtml(pct) {
         <div class="clouds">${[[10, 1, 110, 20], [24, 0.7, 140, 80], [5, 0.85, 125, 55], [34, 0.6, 160, 120]].map(([y, k, d, w]) => `<i class="cloud" style="top:${y}%;--k:${k};--d:${d}s;--w:-${w}s"></i>`).join('')}</div>
         <div class="birds"><div class="flock">${[[52, 14], [38, 6], [38, 22], [24, 0], [24, 28]].map(([x, y]) => `<i style="left:${x}px;top:${y}px"></i>`).join('')}</div></div>
       </div>
+      <div class="yworld" style="width:${yw}px;margin-left:${-yw / 2}px">
       <svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
         <defs><radialGradient id="shopGlow"><stop offset="0" stop-color="rgba(255,196,110,.55)"/><stop offset=".5" stop-color="rgba(255,196,110,.16)"/><stop offset="1" stop-color="rgba(255,196,110,0)"/></radialGradient></defs>
         <path class="m-far" d="M520 600 V340 C560 330 600 314 640 304 C670 296 700 294 730 298 C770 306 810 328 860 342 V600 Z"/>
@@ -6266,20 +6495,14 @@ function yardHtml(pct) {
         <path class="near" d="${ground} V370 H0 Z"/><path class="ridge" d="${ground}"/>
         <path class="lane" d="M590 150 C588 210 562 290 540 370 H606 C612 292 612 210 610 150 Z"/>
         <rect class="trunk" x="465" y="104" width="8" height="46"/><g class="crown"><circle cx="469" cy="96" r="22"/><circle cx="452" cy="110" r="15"/><circle cx="487" cy="108" r="16"/></g>
+        <rect class="trunk" x="166" y="113" width="7" height="41"/><g class="crown"><circle cx="169.5" cy="105" r="19"/><circle cx="155" cy="117" r="13"/><circle cx="184" cy="116" r="14"/></g>
+        <rect class="trunk" x="1036" y="110" width="8" height="42"/><g class="crown"><circle cx="1040" cy="101" r="21"/><circle cx="1024" cy="114" r="14"/><circle cx="1057" cy="113" r="15"/></g>
         ${[700, 722, 744, 766].map(x => `<rect class="post" x="${x}" y="131" width="4" height="19" rx="1"/>`).join('')}<path class="rail" d="M698 138 H772 M698 145 H772"/>
       </svg>
       <div class="flowers">${SKY.flowers.map(q => `<i class="fl" style="left:${q.x}%;bottom:${q.y}px;--c:${q.c};--d:${q.d}s;--w:-${q.w}s"></i>`).join('')}</div>
       <div class="house">
         <i class="spill"></i>
-        <svg viewBox="0 0 140 130">
-          <rect class="chim" x="92" y="30" width="12" height="30"/><rect class="roof" x="89" y="27" width="18" height="5" rx="1"/>
-          <rect class="wall" x="22" y="66" width="96" height="64"/>
-          <path class="roof" d="M10 72 L70 20 L130 72 Z"/><path class="rim" d="M10 72 L70 20 L130 72 M89 27 H107"/>
-          <circle class="pane" cx="70" cy="52" r="6"/><path class="mull" d="M70 46 V58 M64 52 H76"/>
-          <rect class="pane" x="34" y="82" width="18" height="18" rx="2"/><rect class="pane" x="88" y="82" width="18" height="18" rx="2"/>
-          <path class="mull" d="M43 82 V100 M34 91 H52 M97 82 V100 M88 91 H106"/>
-          <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/>
-        </svg>
+        <svg viewBox="0 0 140 130">${houseArt()}</svg>
         <i class="win w1"></i><i class="win w2"></i><i class="win w3"></i>
         <i class="smoke"></i><i class="smoke"></i><i class="smoke"></i>
         <button type="button" class="thing enter" data-act="enter-house" aria-label="進屋"><span class="tag">${ySign('door', '進屋')}</span></button>
@@ -6300,11 +6523,17 @@ function yardHtml(pct) {
       </div>
       <button type="button" class="thing shop-btn" data-act="yard-shop" aria-label="古道具屋" style="left:calc(50% - 118px);bottom:340px"><span class="tag">${ySign('shop', '古道具屋')}</span></button>
       <div class="flies">${SKY.flies.map(q => `<i style="left:${q.x}%;top:${q.y}px;--dx:${q.dx}px;--dy:${q.dy}px;--d:${q.d}s;--w:-${q.w}s"></i>`).join('')}</div>
-      <div class="butterflies"><i class="bf" style="left:28%;top:40px;--dx:40px;--dy:18px;--d:7s;--w:-2s;--c:#ffb3d1"></i><i class="bf" style="left:66%;top:66px;--dx:-36px;--dy:14px;--d:8.5s;--w:-5s;--c:#ffe08a"></i></div>
+      <div class="butterflies">${[[18, 52, 34, 16, 7.5, 1, '#c9a7ff'], [41, 40, 40, 18, 7, 2, '#ffb3d1'], [55, 66, -36, 14, 8.5, 5, '#ffe08a'], [70, 48, -30, 16, 7.8, 3, '#ffffff'], [86, 60, 32, 12, 8.2, 4, '#ffb3d1']].map(([x, t, dx, dy, d, w, c]) => `<i class="bf" style="left:${x}%;top:${t}px;--dx:${dx}px;--dy:${dy}px;--d:${d}s;--w:-${w}s;--c:${c}"></i>`).join('')}</div>
+      <div class="ysel"></div>
+      </div>
     </div>
-    <div class="yard-tools"><button type="button" class="yard-edit" data-act="yard-edit" aria-label="擺設" title="擺設">${icon('arrange')}</button></div>
+    <div class="yard-tools">${sceneTools('yard-edit')}</div>
     <div class="yedit"></div>
   </div>`;
+}
+// the buttons up top in 書房 and the yard (test build): 言靈 (to 古道具屋), 衣櫃, 擺設 (each place its own), 設定
+function sceneTools(editAct) {
+  return `<button type="button" class="study-koto" data-act="nav" data-route="#/shop" aria-label="言靈 ${kotoBalance()}，到古道具屋" title="古道具屋">${kotoIcon()}<span>${kotoBalance()}</span></button><button type="button" class="study-wear" data-act="wardrobe" aria-label="衣櫃" title="衣櫃">${icon('hanger')}</button><button type="button" class="study-edit${editAct === 'yard-edit' ? ' yard-edit' : ''}" data-act="${editAct}" aria-label="擺設" title="擺設">${icon('arrange')}</button><button type="button" class="study-gear" data-act="settings" aria-label="設定" title="設定">${icon('settings')}</button>`;
 }
 // 書房 (1.1.0): an isometric room drawn much bigger than the screen, with the things you tap; on a phone the camera shows a part
 // of it round the hero and goes along with him as he walks (test build: a drag on him leads him, a swipe looks round freely, two
@@ -6328,10 +6557,9 @@ function shelfBooks() {
 // ware bought goes into the storage box (a wear or clothes into the wardrobe); at: where one of 書房's own (starter) is laid out
 // at first.
 const WARES = [
-  { id: 'gramophone', kind: 'floor', h: 2.7, name: '留聲機', price: 40, fp: [1, 1], desc: '老唱機。點它就開始聽一輪。', act: 'listen' },
+  { id: 'gramophone', kind: 'floor', h: 2.7, name: '留聲機', price: 100, fp: [1, 1], desc: '老唱機。點它就開始聽一輪。', act: 'listen' },
   { id: 'goldfish', kind: 'floor', h: 2.5, name: '金魚缸', price: 28, fp: [0.8, 0.8], desc: '兩隻金魚在裡面慢慢游。' },
   { id: 'bonsai', kind: 'floor', h: 1.4, name: '盆栽', price: 12, fp: [0.8, 0.8], desc: '小小一棵松，修得很用心。' },
-  { id: 'globe', kind: 'floor', h: 2.1, name: '地球儀', price: 25, fp: [0.8, 0.8], desc: '轉一轉，看看日本在哪裡。' },
   { id: 'monstera', kind: 'floor', h: 2.7, name: '龜背芋', price: 24, fp: [0.9, 0.9], desc: '葉子大大的，房間一下就有精神。' },
   { id: 'cactus', kind: 'floor', h: 1.8, name: '仙人掌', price: 6, fp: [0.6, 0.6], desc: '很好養，忘了澆水也沒關係。' },
   { id: 'bamboo', kind: 'floor', h: 3.4, name: '竹子', price: 14, fp: [0.7, 0.7], desc: '一盆細竹，長得直直的。' },
@@ -6362,38 +6590,39 @@ const WARES = [
   { id: 'engawa', kind: 'yard', name: '緣台', price: 20, ground: [196, 22], desc: '木頭長椅，鋪著紅布，放了一杯茶。' },
   { id: 'tanuki', kind: 'yard', name: '狸貓擺飾', price: 18, ground: [72, 12], desc: '戴斗笠、提著酒壺的信楽燒狸貓。' },
   { id: 'pond', kind: 'yard', name: '小池塘', price: 40, ground: [244, 34], desc: '石頭圍起來的小池塘，兩條錦鯉慢慢游。' },
-  { id: 'beanie', kind: 'wear', slot: 'head', name: '毛帽', price: 10, desc: '軟軟的毛線帽。' },
-  { id: 'strawhat', kind: 'wear', slot: 'head', name: '草帽', price: 14, desc: '夏天出門戴的草帽。' },
-  { id: 'catears', kind: 'wear', slot: 'head', name: '貓耳髮箍', price: 16, desc: '戴上就變成貓。' },
-  { id: 'hachimaki', kind: 'wear', slot: 'head', name: '必勝頭巾', price: 8, desc: '考試前綁上，寫著「必勝」。' },
-  { id: 'beret', kind: 'wear', slot: 'head', name: '貝雷帽', price: 12, desc: '有點文青的貝雷帽。' },
-  { id: 'gradcap', kind: 'wear', slot: 'head', name: '學士帽', price: 50, desc: '學成的證明。' },
-  { id: 'glasses', kind: 'wear', slot: 'face', name: '圓框眼鏡', price: 10, desc: '圓圓的眼鏡，看起來很會讀書。' },
-  { id: 'scarf', kind: 'wear', slot: 'neck', name: '圍巾', price: 12, desc: '紅色的長圍巾。' },
-  { id: 'bowtie', kind: 'wear', slot: 'neck', name: '領結', price: 9, desc: '正式場合用的小領結。' },
-  { id: 'backpack', kind: 'wear', slot: 'back', name: '背包', price: 18, desc: '出門用的小背包。' },
-  { id: 'cathead', kind: 'wear', slot: 'head', name: '貓咪頭套', price: 30, desc: '整顆貓咪頭，毛色跟著上衣的顏色。配貓咪上衣和貓咪褲，就變成一隻貓。' },
-  { id: 'cathood', kind: 'wear', slot: 'head', name: '貓耳兜帽', price: 20, desc: '有貓耳朵的兜帽，臉旁一圈毛毛，顏色跟著上衣。配貓咪上衣和貓咪褲，就是一整件貓咪布偶裝。' },
+  // the house's look (test build): bought, the yard's house becomes it at once; its card puts it on or back to the cottage (state.house)
+  { id: 'mushroomhouse', kind: 'house', name: '蘑菇屋', price: 2000, desc: '紅色大蘑菇蓋成的房子，白點點、圓窗戶，屋頂冒著煙。買了院子的房子就換成它。' },
+  { id: 'beanie', kind: 'wear', slot: 'head', name: '毛帽', price: 30, desc: '軟軟的毛線帽。' },
+  { id: 'strawhat', kind: 'wear', slot: 'head', name: '草帽', price: 42, desc: '夏天出門戴的草帽。' },
+  { id: 'catears', kind: 'wear', slot: 'head', name: '貓耳髮箍', price: 48, desc: '戴上就變成貓。' },
+  { id: 'hachimaki', kind: 'wear', slot: 'head', name: '必勝頭巾', price: 24, desc: '考試前綁上，寫著「必勝」。' },
+  { id: 'beret', kind: 'wear', slot: 'head', name: '貝雷帽', price: 36, desc: '有點文青的貝雷帽。' },
+  { id: 'gradcap', kind: 'wear', slot: 'head', name: '學士帽', price: 150, desc: '學成的證明。' },
+  { id: 'glasses', kind: 'wear', slot: 'face', name: '圓框眼鏡', price: 30, desc: '圓圓的眼鏡，看起來很會讀書。' },
+  { id: 'scarf', kind: 'wear', slot: 'neck', name: '圍巾', price: 36, desc: '紅色的長圍巾。' },
+  { id: 'bowtie', kind: 'wear', slot: 'neck', name: '領結', price: 27, desc: '正式場合用的小領結。' },
+  { id: 'backpack', kind: 'wear', slot: 'back', name: '背包', price: 54, desc: '出門用的小背包。' },
+  { id: 'cathead', kind: 'wear', slot: 'head', name: '貓咪頭套', price: 90, desc: '整顆貓咪頭，毛色跟著上衣的顏色。配貓咪上衣和貓咪褲，就變成一隻貓。' },
+  { id: 'cathood', kind: 'wear', slot: 'head', name: '貓耳兜帽', price: 60, desc: '有貓耳朵的兜帽，臉旁一圈毛毛，顏色跟著上衣。配貓咪上衣和貓咪褲，就是一整件貓咪布偶裝。' },
   // clothes (test build): a style of top or trousers, dyed in the hero's own colours (look.top, look.bottom) and chosen in the
   // dressing room's 衣服 — 帽T and 長褲 are everyone's, these are sold
-  { id: 'tee', kind: 'clothes', slot: 'top', name: 'T恤', price: 8, desc: '短袖 T 恤，顏色在衣櫃自己配。' },
-  { id: 'sweater', kind: 'clothes', slot: 'top', name: '毛衣', price: 16, desc: '有麻花紋的針織毛衣。' },
-  { id: 'shirt', kind: 'clothes', slot: 'top', name: '襯衫', price: 14, desc: '有領子的襯衫，看起來很認真。' },
-  { id: 'jinbei', kind: 'clothes', slot: 'top', name: '甚平', price: 22, desc: '夏天在家穿的和風上衣。' },
-  { id: 'cattop', kind: 'clothes', slot: 'top', name: '貓咪上衣', price: 24, desc: '毛茸茸的貓咪裝，白肚子、貓掌手，還有鈴鐺。' },
-  { id: 'shorts', kind: 'clothes', slot: 'bottom', name: '短褲', price: 8, desc: '及膝短褲。' },
-  { id: 'wide', kind: 'clothes', slot: 'bottom', name: '寬褲', price: 14, desc: '寬鬆的寬褲，走起路來很舒服。' },
-  { id: 'skirt', kind: 'clothes', slot: 'bottom', name: '裙子', price: 12, desc: '及膝的 A 字裙。' },
-  { id: 'catpants', kind: 'clothes', slot: 'bottom', name: '貓咪褲', price: 20, desc: '有尾巴的貓咪褲，腳是肉球。' },
+  { id: 'tee', kind: 'clothes', slot: 'top', name: 'T恤', price: 24, desc: '短袖 T 恤，顏色在衣櫃自己配。' },
+  { id: 'sweater', kind: 'clothes', slot: 'top', name: '毛衣', price: 48, desc: '有麻花紋的針織毛衣。' },
+  { id: 'shirt', kind: 'clothes', slot: 'top', name: '襯衫', price: 42, desc: '有領子的襯衫，看起來很認真。' },
+  { id: 'jinbei', kind: 'clothes', slot: 'top', name: '甚平', price: 66, desc: '夏天在家穿的和風上衣。' },
+  { id: 'cattop', kind: 'clothes', slot: 'top', name: '貓咪上衣', price: 72, desc: '毛茸茸的貓咪裝，白肚子、貓掌手，還有鈴鐺。' },
+  { id: 'shorts', kind: 'clothes', slot: 'bottom', name: '短褲', price: 24, desc: '及膝短褲。' },
+  { id: 'wide', kind: 'clothes', slot: 'bottom', name: '寬褲', price: 42, desc: '寬鬆的寬褲，走起路來很舒服。' },
+  { id: 'skirt', kind: 'clothes', slot: 'bottom', name: '裙子', price: 36, desc: '及膝的 A 字裙。' },
+  { id: 'catpants', kind: 'clothes', slot: 'bottom', name: '貓咪褲', price: 60, desc: '有尾巴的貓咪褲，腳是肉球。' },
   // limited (test build): sold under 限時 only while their sale is on (SALES); once bought, theirs like any other
-  { id: 'witchhat', kind: 'wear', slot: 'head', limited: 'halloween', name: '魔法師帽', price: 22, desc: '尖尖的魔法師帽，帽尖彎彎的，顏色跟著上衣，有金色的星星和月亮。' },
-  { id: 'wizrobe', kind: 'clothes', slot: 'top', limited: 'halloween', name: '魔法師長袍', price: 30, desc: '長到腳踝的長袍，滿是金色星星，腰上掛著一本小魔法書。顏色在衣櫃自己配。' },
+  { id: 'witchhat', kind: 'wear', slot: 'head', limited: 'halloween', name: '魔法師帽', price: 66, desc: '尖尖的魔法師帽，帽尖彎彎的，顏色跟著上衣，有金色的星星和月亮。' },
+  { id: 'wizrobe', kind: 'clothes', slot: 'top', limited: 'halloween', name: '魔法師長袍', price: 90, desc: '長到腳踝的長袍，滿是金色星星，腰上掛著一本小魔法書。顏色在衣櫃自己配。' },
   { id: 'pumpkin', kind: 'floor', limited: 'halloween', h: 1, name: '南瓜燈', price: 20, fp: [0.8, 0.8], desc: '刻了笑臉的南瓜，晚上會從裡面亮起來。', light: { z: 0.5, r: 2.8 } },
   // 書房's own (starter: had from the start, not sold): laid out where they always stood, then moved or put away like the rest
   { id: 'bed', kind: 'floor', starter: true, turn: false, h: 3, name: '床', fp: [2.9, 5.25], at: { w: 'F', x: 18.45, y: 2.625, r: 0 }, desc: '' },
   { id: 'nightTable', kind: 'floor', starter: true, turn: false, h: 3.2, name: '床頭櫃', fp: [1, 1], at: { w: 'F', x: 16.25, y: 0.55, r: 0 }, desc: '' },
   { id: 'bigPlant', kind: 'floor', starter: true, turn: false, h: 3.7, name: '觀葉植物', fp: [0.84, 0.84], at: { w: 'F', x: 11.95, y: 1, r: 0 }, desc: '' },
-  { id: 'umbrella', kind: 'floor', starter: true, turn: false, h: 2.4, name: '雨傘', fp: [0.5, 0.5], at: { w: 'F', x: 0.45, y: 7.75, r: 0 }, desc: '' },
   { id: 'sageRug', kind: 'rug', starter: true, turn: false, name: '圓地毯', fp: [2.5, 2.5], at: { w: 'F', x: 9.2, y: 3.55, r: 0 }, desc: '' },
   { id: 'bedRug', kind: 'rug', starter: true, turn: false, name: '床邊地毯', fp: [2.6, 2.64], at: { w: 'F', x: 14.9, y: 2.92, r: 0 }, desc: '' },
   { id: 'doorMat', kind: 'rug', starter: true, turn: false, name: '腳踏墊', fp: [1.1, 1.6], at: { w: 'F', x: 0.7, y: 5.1, r: 0 }, desc: '' },
@@ -6401,13 +6630,15 @@ const WARES = [
   { id: 'kanaChart', kind: 'wall', starter: true, name: '平假名表', size: [1.55, 2.15], at: { w: 'R', u: 14.075, v: 5.375 }, desc: '' },
   { id: 'nightPicture', kind: 'wall', starter: true, name: '夜空畫', size: [1.3, 1.1], at: { w: 'R', u: 18.45, v: 4.4 }, desc: '' },
   { id: 'pegRail', kind: 'wall', starter: true, name: '掛勾架', size: [1.6, 1.5], at: { w: 'L', u: 7.7, v: 5.05 }, desc: '' },
+  // the window (test build): moved along either wall, or put away (the wall is whole then); its curtains and sill go with it
+  { id: 'window', kind: 'wall', starter: true, name: '窗戶', size: [4.7, 5.4], at: { w: 'R', u: 4.1, v: 6.6 }, desc: '' },
   // the string of lights along the tops of the walls, as four strings (test build): hung end to end where it ran, three on the
   // right wall and one on the left, each moved or put away on its own; their bulbs light up one by one as the day's list fills
   { id: 'garland1', kind: 'wall', starter: true, garland: true, name: '串燈', size: [7.5, 0.5], at: { w: 'R', u: 4.05, v: 10.85 }, desc: '' },
   { id: 'garland2', kind: 'wall', starter: true, garland: true, name: '串燈', size: [7.5, 0.5], at: { w: 'R', u: 11.55, v: 10.85 }, desc: '' },
   { id: 'garland3', kind: 'wall', starter: true, garland: true, name: '串燈', size: [7.5, 0.5], at: { w: 'R', u: 19.05, v: 10.85 }, desc: '' },
   { id: 'garland4', kind: 'wall', starter: true, garland: true, name: '串燈', size: [7.5, 0.5], at: { w: 'L', u: 4.05, v: 10.85 }, desc: '' },
-  // 書房's working things (fixed: moved, never put away; the door and the window are the house's own and stay). drawn: where the
+  // 書房's working things (fixed: moved, never put away; the door is the house's own and stays). drawn: where the
   // desk's drawing stands, which is no longer its first place (the desk and the window moved right, off the bookcase; roomV 3)
   { id: 'bookcase', kind: 'floor', starter: true, fixed: true, turn: false, h: 7.9, name: '書櫃', fp: [1.3, 2.25], at: { w: 'F', x: 0.65, y: 1.275, r: 0 }, desc: '' },
   { id: 'desk', kind: 'floor', starter: true, fixed: true, turn: false, h: 3.2, name: '書桌和椅子', fp: [3.8, 3.7], at: { w: 'F', x: 4.1, y: 1.85, r: 0 }, drawn: { w: 'F', x: 3.3, y: 1.85, r: 0 }, desc: '' },
@@ -6451,9 +6682,11 @@ const ROOM = (() => {
   const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
   const hex = (c) => '#' + c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
   const FACE = { t: [0, 0, 1, 1], y: [0, 1, 0, 0.9], x: [1, 0, 0, 0.79], L: [1, 0, 0, 0.94], R: [0, 1, 0, 1] };   // the normal and its share of daylight
-  const MOON = [0.25, 0.27, 0.48];
+  const MOON = [0.35, 0.37, 0.57];   // by night (test build: raised from 0.25 0.27 0.48, the room was too dark)
+  // the hero by night (test build): lit as if a soft light followed him, so he reads clearly in a dark corner (the lamps add to it)
+  const HERO_AMB = [0.66, 0.66, 0.8];
   const LIGHTS = [
-    { p: [2.6, 0.98, 4.66], c: [1, 0.8, 0.52], r: 7.0, lo: 0.32, hi: 1.3 },   // the desk lamp, over the notebook
+    { p: [2.6, 0.98, 4.66], c: [1, 0.8, 0.52], r: 7.0, lo: 0.42, hi: 1.3 },   // the desk lamp, over the notebook
     { p: [9.1, 0.45, 4.05], c: [1, 0.72, 0.5], r: 4.6, lo: 0.45, hi: 0.85 },   // the little lamp on the chest of drawers
     { p: [16.05, 0.5, 2.6], c: [1, 0.76, 0.52], r: 4.8, lo: 0.45, hi: 0.8 }    // the reading lamp on the night table by the bed
   ];
@@ -6461,9 +6694,9 @@ const ROOM = (() => {
   // the lamps bought (roomLights, worked out each time the room is drawn)
   let LIT = LIGHTS;
   let SH = [0, 0, 0];   // a thing drawn at its old place and moved there whole (shifted, inPlace): lit where it is now
-  function tone(h, face, at0) {
+  function tone(h, face, at0, moon = MOON) {
     const at = SH[0] || SH[1] || SH[2] ? [at0[0] + SH[0], at0[1] + SH[1], at0[2] + SH[2]] : at0;
-    const [nx, ny, nz, k] = FACE[face], b = rgb(h), amb = MOON.map((v) => v * (0.72 + 0.28 * k));
+    const [nx, ny, nz, k] = FACE[face], b = rgb(h), amb = moon.map((v) => v * (0.72 + 0.28 * k));
     const lit = (lvl) => {
       const s = [0, 0, 0];
       for (const L of LIT) {
@@ -6518,15 +6751,25 @@ const ROOM = (() => {
   </defs>`;
 
   // ===== the room =====
-  const WIN = { x0: 2.7, x1: 5.5, z0: 4.7, z1: 8.5 };   // over the desk (both moved 0.8 right, off the bookcase, in roomV 3)
   const q2 = (v) => Math.round(v * 100) / 100;
+  // the window (a ware, test build): where it hangs now (null: put away), and its opening there — u along its wall, z the height;
+  // X0…X1 the opening in its wall's own flat drawing (onY: u; onX: -u), which runs left to right on the screen on both walls
+  const winAt = () => (state.placed.window && (state.placed.window.w === 'L' || state.placed.window.w === 'R') ? state.placed.window : null);
+  function winHole(p) {
+    const u0 = q2(p.u - 1.4), u1 = q2(p.u + 1.4), z0 = q2(p.v - 1.9), z1 = q2(p.v + 1.9), R = p.w === 'R';
+    return { R, u0, u1, z0, z1, X0: R ? u0 : -u1, X1: R ? u1 : -u0, at: (X, d, z) => (R ? [X, d, z] : [d, -X, z]), plane: R ? onY : onX, face: R ? 'y' : 'x' };
+  }
+  const holeD = (h, w) => (h && h.R === (w === 'R') ? ' ' + poly([h.at(h.X0, 0, h.z0), h.at(h.X1, 0, h.z0), h.at(h.X1, 0, h.z1), h.at(h.X0, 0, h.z1)]) : '');
+  const holeFlat = (h, w) => (h && h.R === (w === 'R') ? ` M${h.X0} ${-h.z1} H${h.X1} V${-h.z0} H${h.X0} Z` : '');
   function shellArt() {
-    const { x0, x1, z0, z1 } = WIN;
+    const wp = winAt(), h = wp && winHole(wp);
     let s = '';
-    s += `<path ${F(C.wall, 'L', [0, 3, 7])} d="${poly([[0, 0, 0], [0, RD, 0], [0, RD, RH], [0, 0, RH]])}"/>`;
-    s += `<path fill-rule="evenodd" ${F(C.wall, 'R', [3, 0, 7])} d="${poly([[0, 0, 0], [RW, 0, 0], [RW, 0, RH], [0, 0, RH]])} ${poly([[x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [x0, 0, z1]])}"/>`;
-    s += `<g transform="${onY(0)}" class="wp"><path fill="url(#stripes)" fill-rule="evenodd" d="M0 ${-RH} H${RW} V${-WAIN} H0 Z M${x0} ${-z1} H${x1} V${-z0} H${x0} Z"/></g>`;
-    s += `<g transform="${onX(0)}" class="wp"><rect x="${-RD}" y="${-RH}" width="${RD}" height="${RH - WAIN}" fill="url(#stripes)"/></g>`;
+    s += `<path fill-rule="evenodd" ${F(C.wall, 'L', [0, 3, 7])} d="${poly([[0, 0, 0], [0, RD, 0], [0, RD, RH], [0, 0, RH]])}${holeD(h, 'L')}"/>`;
+    s += `<path fill-rule="evenodd" ${F(C.wall, 'R', [3, 0, 7])} d="${poly([[0, 0, 0], [RW, 0, 0], [RW, 0, RH], [0, 0, RH]])}${holeD(h, 'R')}"/>`;
+    s += `<g transform="${onY(0)}" class="wp"><path fill="url(#stripes)" fill-rule="evenodd" d="M0 ${-RH} H${RW} V${-WAIN} H0 Z${holeFlat(h, 'R')}"/></g>`;
+    s += `<g transform="${onX(0)}" class="wp"><path fill="url(#stripes)" fill-rule="evenodd" d="M${-RD} ${-RH} H0 V${-WAIN} H${-RD} Z${holeFlat(h, 'L')}"/></g>`;
+    // the wall where the opening is, shown only while the window is dragged in 擺設 (the room keeps its drawing meanwhile)
+    if (h) s += `<g class="win-patch"><path ${F(C.wall, h.R ? 'R' : 'L', h.at((h.X0 + h.X1) / 2, 0, 7))} d="${holeD(h, wp.w).slice(1)}"/><g transform="${h.plane(0)}"><path fill="url(#stripes)" d="${holeFlat(h, wp.w).slice(1)}"/></g></g>`;
     // wainscot: panels, battens, the rail on top and the skirting
     s += qX(C.wain, 0, 0, RD, 0, WAIN, 'L') + qY(C.wain, 0, 0, RW, 0, WAIN, 'R');
     for (let i = 0.7; i < RW; i += 0.72) s += qY(C.batten, 0.01, i, i + 0.07, 0.3, WAIN, 'R');
@@ -6541,35 +6784,36 @@ const ROOM = (() => {
     s += `<path class="hl" d="${line([[RW, -T, RH], [RW, 0, RH], [0, 0, RH], [0, RD, RH], [-T, RD, RH]])} ${line([[-T, RD, 0], [RW, RD, 0], [RW, -T, 0]])}"/>`;
     return s;
   }
-  function windowArt() {
-    const { x0, x1, z0, z1 } = WIN, d = 0.34, xm = (x0 + x1) / 2;
+  function windowArt(p, alone) {
+    const h = winHole(p), { X0, X1, z0, z1, at, plane, face } = h, d = 0.34, Xm = q2((X0 + X1) / 2), zm = q2((z0 + z1) / 2), v = p.v;
     let s = '';
-    // the opening's depth: its left side and its bottom
-    s += qX(C.wall, x0, -d, 0, z0, z1, 'x') + qZ(C.wall, z0, x0, x1, -d, 0);
+    if (alone) s += `<g transform="${plane(-d)}"><rect x="${X0}" y="${-z1}" width="${q2(X1 - X0)}" height="${q2(z1 - z0)}" style="fill:color-mix(in srgb,#9fd0f0 calc(var(--day,1)*100%),#232056)"/></g>`;
+    // the opening's depth: the side the room sees (the left one on the right wall, the right one on the left wall) and its bottom
+    s += h.R ? qX(C.wall, X0, -d, 0, z0, z1, 'x') + qZ(C.wall, z0, X0, X1, -d, 0) : qY(C.wall, -X1, -d, 0, z0, z1, 'y') + qZ(C.wall, z0, -d, 0, -X1, -X0);
     // the sashes in the glass plane, the glare on the glass by day
-    s += `<g transform="${onY(-d + 0.05)}">
-      <rect x="${x0}" y="${-z1 + 0.3}" width="${x1 - x0 - 0.3}" height="${z1 - z0 - 0.3}" fill="url(#glass)" class="day-only"/>
-      <path ${F(C.cream, 'y', [xm, -d, 6.6])} fill-rule="evenodd" d="M${x0} ${-z1} H${x1} V${-z0} H${x0} Z M${x0 + 0.13} ${-z1 + 0.13} V${-z0 - 0.13} H${xm - 0.04} V${-z1 + 0.13} Z M${xm + 0.04} ${-z1 + 0.13} V${-z0 - 0.13} H${x1 - 0.13} V${-z1 + 0.13} Z"/>
-      <rect x="${x0 + 0.13}" y="${-6.63}" width="${x1 - x0 - 0.26}" height=".07" ${F(C.cream, 'y', [xm, -d, 6.6])}/>
+    s += `<g transform="${plane(-d + 0.05)}">
+      <rect x="${X0}" y="${q2(-z1 + 0.3)}" width="${q2(X1 - X0 - 0.3)}" height="${q2(z1 - z0 - 0.3)}" fill="url(#glass)" class="day-only"/>
+      <path ${F(C.cream, face, at(Xm, -d, zm))} fill-rule="evenodd" d="M${X0} ${-z1} H${X1} V${-z0} H${X0} Z M${q2(X0 + 0.13)} ${q2(-z1 + 0.13)} V${q2(-z0 - 0.13)} H${q2(Xm - 0.04)} V${q2(-z1 + 0.13)} Z M${q2(Xm + 0.04)} ${q2(-z1 + 0.13)} V${q2(-z0 - 0.13)} H${q2(X1 - 0.13)} V${q2(-z1 + 0.13)} Z"/>
+      <rect x="${q2(X0 + 0.13)}" y="${q2(-zm - 0.03)}" width="${q2(X1 - X0 - 0.26)}" height=".07" ${F(C.cream, face, at(Xm, -d, zm))}/>
     </g>`;
     // the casing round the opening, and the sill
-    s += `<g transform="${onY(0.012)}"><path ${F(C.cream, 'y', [xm, 0, 6.6])} fill-rule="evenodd" d="M${x0 - 0.16} ${-z1 - 0.16} H${x1 + 0.16} V${-z0} H${x0 - 0.16} Z M${x0} ${-z1} H${x1} V${-z0} H${x0} Z"/></g>`;
-    s += box(C.cream, x0 - 0.3, 0, z0 - 0.16, x1 + 0.3, 0.42, z0, { hlv: true });
+    s += `<g transform="${plane(0.012)}"><path ${F(C.cream, face, at(Xm, 0, zm))} fill-rule="evenodd" d="M${q2(X0 - 0.16)} ${q2(-z1 - 0.16)} H${q2(X1 + 0.16)} V${-z0} H${q2(X0 - 0.16)} Z M${X0} ${-z1} H${X1} V${-z0} H${X0} Z"/></g>`;
+    s += h.R ? box(C.cream, X0 - 0.3, 0, z0 - 0.16, X1 + 0.3, 0.42, z0, { hlv: true }) : box(C.cream, 0, -X1 - 0.3, z0 - 0.16, 0.42, -X0 + 0.3, z0, { hlv: true });
     // a little plant and a cactus on the sill
-    const pl = q2(x0 + 0.5), ca = q2(x1 - 0.5);
-    s += bb(pl, 0.22, z0, `<path ${F(C.pot, 'y', [pl, 0.3, z0])} d="M-7 -1 L-5.5 -11 H5.5 L7 -1 Z"/><path d="M-6 -11 H6" class="hl"/><g ${F(C.leaf, 't', [pl, 0.2, z0 + 0.6])}><path d="M0 -11 C-9 -16 -12 -26 -8 -31 C-3 -24 -1 -17 0 -11 Z"/><path d="M0 -11 C7 -18 13 -22 17 -21 C13 -14 7 -12 0 -11 Z"/><path d="M0 -11 C0 -22 3 -30 6 -34 C8 -26 5 -17 0 -11 Z"/></g>`);
-    s += bb(ca, 0.2, z0, `<path ${F('#e8d9c4', 'y', [ca, 0.3, z0])} d="M-6 0 L-5 -8 H5 L6 0 Z"/><rect x="-3.2" y="-21" width="6.4" height="14" rx="3.2" ${F('#7fae79', 'y', [ca, 0.2, z0 + 0.4])}/><rect x="2" y="-16" width="5" height="3.2" rx="1.6" ${F('#7fae79', 'y', [ca, 0.2, z0 + 0.4])}/><rect x="5" y="-19" width="2.6" height="5" rx="1.3" ${F('#7fae79', 'y', [ca, 0.2, z0 + 0.4])}/>`);
+    const pl = at(q2(X0 + 0.5), 0.22, z0), ca = at(q2(X1 - 0.5), 0.2, z0), lit = (q, dd, z) => at(h.R ? q[0] : -q[1], dd, z);
+    s += bb(...pl, `<path ${F(C.pot, face, lit(pl, 0.3, z0))} d="M-7 -1 L-5.5 -11 H5.5 L7 -1 Z"/><path d="M-6 -11 H6" class="hl"/><g ${F(C.leaf, 't', lit(pl, 0.2, z0 + 0.6))}><path d="M0 -11 C-9 -16 -12 -26 -8 -31 C-3 -24 -1 -17 0 -11 Z"/><path d="M0 -11 C7 -18 13 -22 17 -21 C13 -14 7 -12 0 -11 Z"/><path d="M0 -11 C0 -22 3 -30 6 -34 C8 -26 5 -17 0 -11 Z"/></g>`);
+    s += bb(...ca, `<path ${F('#e8d9c4', face, lit(ca, 0.3, z0))} d="M-6 0 L-5 -8 H5 L6 0 Z"/><rect x="-3.2" y="-21" width="6.4" height="14" rx="3.2" ${F('#7fae79', face, lit(ca, 0.2, z0 + 0.4))}/><rect x="2" y="-16" width="5" height="3.2" rx="1.6" ${F('#7fae79', face, lit(ca, 0.2, z0 + 0.4))}/><rect x="5" y="-19" width="2.6" height="5" rx="1.3" ${F('#7fae79', face, lit(ca, 0.2, z0 + 0.4))}/>`);
     // curtains on a rod, folds drawn as a soft repeating shade
-    const rod = 9.05, ra = q2(x0 - 0.85), rb = q2(x1 + 0.85);
-    s += `<path class="ln" ${FS(C.walnut, 'y', [xm, 0.2, rod])} stroke-width="3.2" d="${line([[ra, 0.2, rod], [rb, 0.2, rod]])}"/>`;
-    s += bb(ra, 0.2, rod, `<circle r="4" ${F(C.walnut, 't', [ra, 0.2, rod])}/>`) + bb(rb, 0.2, rod, `<circle r="4" ${F(C.walnut, 't', [rb, 0.2, rod])}/>`);
+    const rod = q2(z1 + 0.55), ra = q2(X0 - 0.85), rb = q2(X1 + 0.85);
+    s += `<path class="ln" ${FS(C.walnut, face, at(Xm, 0.2, rod))} stroke-width="3.2" d="${line([at(ra, 0.2, rod), at(rb, 0.2, rod)])}"/>`;
+    s += bb(...at(ra, 0.2, rod), `<circle r="4" ${F(C.walnut, 't', at(ra, 0.2, rod))}/>`) + bb(...at(rb, 0.2, rod), `<circle r="4" ${F(C.walnut, 't', at(rb, 0.2, rod))}/>`);
     const curtain = (a, b, flip) => {
       const c = flip ? b : a, o = flip ? a : b, e = flip ? -1 : 1;   // c: the side by the wall end, o: the side by the glass, e: the way to the glass
       // along the rod from the wall end to the glass, down the glass side, along the hem, back up the wall side
-      const d = `M${c} ${-rod + 0.05} H${o} C${q2(o - e * 0.05)} ${-7.2} ${q2(o + e * 0.18)} ${-5.6} ${q2(o + e * 0.05)} ${-4.15} Q${q2((a + b) / 2)} ${-4.0} ${c} ${-4.12} C${c} ${-5.6} ${c} ${-7.4} ${c} ${-rod + 0.05} Z`;
-      return `<g transform="${onY(0.16)}"><path ${F('#a9bfd3', 'y', [(a + b) / 2, 0.2, 6.6])} d="${d}"/><path fill="url(#fold)" d="${d}"/></g>`;
+      const dd = `M${c} ${q2(-rod + 0.05)} H${o} C${q2(o - e * 0.05)} ${q2(-v - 0.6)} ${q2(o + e * 0.18)} ${q2(-v + 1)} ${q2(o + e * 0.05)} ${q2(-v + 2.45)} Q${q2((a + b) / 2)} ${q2(-v + 2.6)} ${c} ${q2(-v + 2.48)} C${c} ${q2(-v + 1)} ${c} ${q2(-v - 0.8)} ${c} ${q2(-rod + 0.05)} Z`;
+      return `<g transform="${plane(0.16)}"><path ${F('#a9bfd3', face, at((a + b) / 2, 0.2, v))} d="${dd}"/><path fill="url(#fold)" d="${dd}"/></g>`;
     };
-    s += curtain(q2(x0 - 0.7), q2(x0 + 0.3), false) + curtain(q2(x1 - 0.3), q2(x1 + 0.7), true);
+    s += curtain(q2(X0 - 0.7), q2(X0 + 0.3), false) + curtain(q2(X1 - 0.3), q2(X1 + 0.7), true);
     return s;
   }
   // the calendar (模擬考) on the right wall past the chest of drawers, a Japanese day-by-day one (日めくり): the month in kanji,
@@ -6636,7 +6880,7 @@ const ROOM = (() => {
     s += slip(0.35, ym - 0.42) + slip(0.42, ym + 0.08);
     return s;
   }
-  // by the door: a peg rail with a tote bag and a scarf, an umbrella leaning on the wall under it
+  // by the door: a peg rail with a tote bag and a scarf
   function pegsArt() {
     const y0 = 6.9, y1 = 8.5, z = 5.6;
     let s = `<g transform="${onX(0.03)}"><rect x="${-y1}" y="${q2(-z - 0.1)}" width="${q2(y1 - y0)}" height=".16" rx=".03" ${F(C.walnut, 'L', [0.05, 7.7, z])}/></g>`;
@@ -6644,9 +6888,6 @@ const ROOM = (() => {
     s += bb(0.2, 7.2, z - 0.02, `<path d="M-7 18 C-7 6 -3 0 0 0 C3 0 7 6 7 18" fill="none" stroke-width="2" ${FS('#b8925a', 'L', [0.2, 7.2, z - 0.5])}/><rect x="-13" y="16" width="26" height="30" rx="3" ${F('#e8d3a8', 'L', [0.2, 7.2, z - 1])}/><rect x="-13" y="33" width="26" height="5" ${F('#c95f4c', 'L', [0.2, 7.2, z - 1.2])}/><path d="M-13 19 V43" class="hl"/>`);
     s += bb(0.2, 8.2, z - 0.02, `<path d="M-6 0 Q0 4 6 0 L5 44 L-1 44 L0 7 L-4 40 L-9 40 Z" ${F('#d0675a', 'L', [0.2, 8.2, z - 1])}/><path d="M-1 44 V48 M1.5 44 V48 M4 44 V48 M-9 40 V44 M-6.5 40 V44 M-4 40 V44" stroke-width="1.2" ${FS('#d0675a', 'L', [0.2, 8.2, z - 1.5])}/>`);
     return s;
-  }
-  function umbrellaArt() {
-    return bb(0.4, 7.75, 0, `<g transform="rotate(-9)"><path d="M0 -1 V-7" stroke="#5b4636" stroke-width="2"/><path ${F('#5f86b0', 'L', [0.4, 7.75, 1.4])} d="M-4.5 -7 Q-1 -50 0 -80 Q1 -50 4.5 -7 Z"/><path d="M0 -80 V-87" stroke="#5b4636" stroke-width="1.6"/><path d="M-4.5 -7 Q-1 -50 0 -80" class="hl"/></g><path d="M-1 -2 Q-1 5 5 5" fill="none" stroke="#5b4636" stroke-width="2.4" stroke-linecap="round"/>`);
   }
   // the floor: oak planks and the shadows along the walls
   function floorArt() {
@@ -7198,7 +7439,8 @@ const ROOM = (() => {
     Object.keys(OWNER).forEach((t) => { const o = OWNER[t]; if (WARE.get(o).kind === 'wall' || o === own) return; const sp = spotOf(t); out.push(box2(sp.x, sp.y, 0.35)); });
     return out;
   }
-  const KEEP_W = { L: [[4.0, 0, 6.2, 6.7]], R: [[1.8, 3.9, 6.45, 9.3]] };   // [u0, v0, u1, v1]: the door, the window and its curtains
+  const KEEP_W = { L: [[4.0, 0, 6.2, 6.7]], R: [] };   // [u0, v0, u1, v1]: the door (the window is a ware now, test build)
+  const WIN_STRIP = [1.8, 3.9, 6.45, 9.3];   // where the window and its curtains came to hang in roomV 3
   // a floor thing standing against a wall covers that wall up to its height: [[wall, [u0, v0, u1, v1]], …]
   function wallCover(it, p) {
     if (it.kind !== 'floor') return [];
@@ -7236,7 +7478,7 @@ const ROOM = (() => {
     }
     Object.keys(placed).forEach((id) => {
       const it = WARE.get(id), p = placed[id];
-      if (!it || it.kind !== 'wall' || p.w !== 'R' || !KEEP_W.R.some((k) => over(wareRect(it, p), k))) return;
+      if (!it || id === 'window' || it.kind !== 'wall' || p.w !== 'R' || !over(wareRect(it, p), WIN_STRIP)) return;
       if (it.fixed) placed[id] = Object.assign({}, it.at); else delete placed[id];
     });
   }
@@ -7251,8 +7493,8 @@ const ROOM = (() => {
   function studyArt(d, left, bk) {
     const wares = placedWares();
     return `<svg class="art" viewBox="${VB.join(' ')}" aria-hidden="true">${DEFS}
-      ${shellArt()}${doorArt()}${wallShadeArt()}${windowArt()}${state.placed.clock && owns('clock') ? '' : nailArt()}
-      ${wares.filter((o) => o.it.kind === 'wall').map((o) => `<g data-o="w:${o.id}">${o.it.garland ? wireArt(o.it.size[0], o.p) : DECOR.wall(o.id, o.p)}</g>`).join('')}
+      ${shellArt()}${doorArt()}${wallShadeArt()}${state.placed.clock && owns('clock') ? '' : nailArt()}
+      ${wares.filter((o) => o.it.kind === 'wall').map((o) => `<g data-o="w:${o.id}">${o.it.garland ? wireArt(o.it.size[0], o.p) : o.id === 'window' ? windowArt(o.p) : DECOR.wall(o.id, o.p)}</g>`).join('')}
       ${floorArt()}
       ${wares.filter((o) => o.it.kind === 'rug').map((o) => `<g data-o="w:${o.id}">${DECOR.floor(o.id, o.p)}</g>`).join('')}
       ${(shown = standing(bk)).map((o) => `<g data-o="${o.id}">${o.art}</g>`).join('')}
@@ -7291,8 +7533,8 @@ const ROOM = (() => {
   }
   function editHtml() {   // the 擺設 bar and the storage box (shown by .study.edit)
     const box = WARES.filter((it) => forRoom(it) && !it.fixed && owns(it.id) && !state.placed[it.id]);
-    return `<div class="edit-top"><span class="edit-hint">${ed.sel ? '拖曳搬動，或點地上、牆上把它移過去' : '點一下書房裡的東西選取，再拖曳搬動'}</span><button type="button" class="btn btn-primary btn-sm" data-act="room-edit-done">完成</button></div>
-      <div class="edit-tray" aria-label="收納箱">${box.length ? box.map((it) => `<button type="button" class="tray-it" data-act="room-edit-take" data-id="${it.id}">${DECOR.thumb(it.id)}<span>${esc(it.name)}</span></button>`).join('') : '<div class="tray-empty">收納箱是空的。到古道具屋買東西，或選了書房裡的東西按「收起」。</div>'}</div>`;
+    return `<div class="edit-top"><span class="edit-hint">${ed.sel ? '拖曳搬動，拖到下面收起來' : '拖曳搬動；收納箱的東西拖出來擺'}</span><button type="button" class="btn btn-primary btn-sm" data-act="room-edit-done">完成</button></div>
+      <div class="edit-tray" aria-label="收納箱">${box.length ? box.map((it) => `<button type="button" class="tray-it" data-act="room-edit-take" data-id="${it.id}">${DECOR.thumb(it.id)}<span>${esc(it.name)}</span></button>`).join('') : '<div class="tray-empty">收納箱是空的。到古道具屋買東西，或把書房裡的東西拖到這裡收起來。</div>'}</div>`;
   }
   // a free spot for a ware taken out of the box: in view, nearest the middle (a wall ware) or the lower middle (a floor one)
   function freeSpot(it) {
@@ -7347,7 +7589,7 @@ const ROOM = (() => {
   const hero = { x: 4.2, y: 4.7, back: false, flip: false, pose: '', raf: 0, t: 0, walk: null, lead: null, going: null, frontKey: '' };
   try { const h = JSON.parse(localStorage.getItem('nq_hero') || 'null'); if (h && h.room && Number.isFinite(h.room.x) && Number.isFinite(h.room.y)) Object.assign(hero, { x: h.room.x, y: h.room.y, back: !!h.room.back, flip: !!h.room.flip, pose: h.room.pose === 'sit' ? 'sit' : '' }); } catch (e) { /* first time here */ }
   function heroSave() { try { const h = JSON.parse(localStorage.getItem('nq_hero') || '{}') || {}; h.room = { x: hero.x, y: hero.y, back: hero.back, flip: hero.flip, pose: hero.pose }; localStorage.setItem('nq_hero', JSON.stringify(h)); } catch (e) { /* no storage: it starts by the desk */ } }
-  const heroArt = () => HERO.svg({ L: (h, z) => F(h, 'y', [hero.x, hero.y + 0.3, z || 1]), wear: state.wear, look: state.look });
+  const heroArt = () => HERO.svg({ L: (h, z) => `style="fill:${tone(h, 'y', [hero.x, hero.y + 0.3, z || 1], HERO_AMB)}"`, wear: state.wear, look: state.look });
   function heroHtml() {
     const [px, py] = P(hero.x, hero.y, 0);
     return `<div class="hero${hero.back ? ' back' : ''}${hero.flip ? ' flip' : ''}${hero.pose ? ' ' + hero.pose : ''}" style="${vbPct(px - 60, py - 200)};${vbSize(120, 210)}" data-act="hero-hop" aria-label="主角（按住拖曳，帶他走）">${heroArt()}</div><svg class="front" viewBox="${VB.join(' ')}" aria-hidden="true"></svg>`;
@@ -7578,16 +7820,17 @@ const ROOM = (() => {
       const [tx, ty] = P(...t.tag), label = tagOf(t.id, pct);
       return `<button type="button" class="thing${t.primary ? ' primary' : t.minor ? ' minor' : ''}${t.id === 'door' && mail ? ' mail' : ''}" data-thing="${t.id}" data-tag="${r1(tx)} ${r1(ty)}" ${t.route ? `data-act="study-go" data-route="${t.route}"` : `data-act="${t.act}"`} style="${vbPct(x0, y0)};${vbSize(x1 - x0, y1 - y0)};--tx:${((tx - x0) / (x1 - x0) * 100).toFixed(1)}%;--ty:${((ty - y0) / (y1 - y0) * 100).toFixed(1)}%" aria-label="${label}"><span class="tag">${tagInner(t.id, pct)}</span></button>`;
     };
-    const dm = mover('desk').map, [wx, wy] = P(WIN.x0, -0.34, WIN.z1), [lx, ly] = P(...LIT[0].p), [l2x, l2y] = P(...LIT[1].p);
+    const dm = mover('desk').map, [lx, ly] = P(...LIT[0].p), [l2x, l2y] = P(...LIT[1].p);
+    const wp = winAt(), wh = wp && winHole(wp), [wx, wy] = wh ? P(...wh.at(wh.X0, -0.34, wh.z1)) : [0, 0];   // the sky behind the window, where it hangs
     const [nx, ny] = P(...dm([(NB.x0 + NB.x1) / 2, (NB.y0 + NB.y1) / 2, DESK.z1])), [hx, hy] = P(...dm([HP.x, HP.y, HP.top])), [mx, my] = P(...dm([MUG[0], MUG[1], DESK.z1]));
     return `<div class="study${pct >= 100 ? ' full' : ''}${ed.on ? ' edit' : ''}" data-anim data-date="${todayStr()}" data-sig="${roomSig()}" style="--f:${f}">
       <div class="room-wrap"><div class="room">
-        <div class="w-sky" aria-hidden="true" style="${vbPct(wx, wy)};${vbSize((WIN.x1 - WIN.x0) * S, (WIN.z1 - WIN.z0) * S)}">
+        ${wh ? `<div class="w-sky${wh.R ? '' : ' l'}" aria-hidden="true" style="${vbPct(wx, wy)};${vbSize((wh.u1 - wh.u0) * S, (wh.z1 - wh.z0) * S)}">
           <i class="wt-day"></i><i class="wt-warm"></i>
           <div class="w-night"><i class="w-moon"></i>${[[12, 20, 2.6, 0.4], [30, 44, 3.4, 1.6], [78, 52, 2.2, 0.9], [44, 14, 3, 2.2], [88, 22, 2.8, 1.2], [20, 64, 3.6, 0.2]].map(([x, y, dd, w]) => `<i class="w-star" style="left:${x}%;top:${y}%;--o:${(0.45 + w / 4.4).toFixed(2)}"></i>`).join('')}</div>
           <div class="w-day"><i class="w-cloud" style="top:18%;--d:40s;--w:-8s"></i><i class="w-cloud" style="top:42%;--d:56s;--w:-31s;width:34%"></i></div>
           <i class="w-hills"></i><i class="w-hills2"></i>
-        </div>
+        </div>` : ''}
         ${studyArt(d, left, bk)}
         ${bulbsHtml(f)}
         ${handsHtml()}
@@ -7605,7 +7848,7 @@ const ROOM = (() => {
       </div></div>
       ${ed.on ? editHtml() : ''}
       <i class="warm-wash" aria-hidden="true"></i>
-      <div class="study-tools"><button type="button" class="study-koto" data-act="nav" data-route="#/shop" aria-label="言靈 ${kotoBalance()}，到古道具屋" title="古道具屋">${kotoIcon()}<span>${kotoBalance()}</span></button><button type="button" class="study-wear" data-act="wardrobe" aria-label="衣櫃" title="衣櫃">${icon('hanger')}</button><button type="button" class="study-edit" data-act="room-edit" aria-label="擺設" title="擺設">${icon('arrange')}</button><button type="button" class="study-gear" data-act="settings" aria-label="設定" title="設定">${icon('settings')}</button></div>
+      <div class="study-tools">${sceneTools('room-edit')}</div>
       <div class="room-hint">按住主角拖曳，帶他在房間走走</div>
       <button type="button" class="mail-hint" data-act="mail-hint">${icon('mail')}<span>外面信箱有新信</span>${chev('M9 6l6 6-6 6')}</button>
     </div>`;
@@ -7619,7 +7862,7 @@ const ROOM = (() => {
     st.querySelector('[data-thing="door"]').classList.toggle('mail', mail);
     st.querySelectorAll('.bulb').forEach((e) => e.classList.toggle('on', Number(e.dataset.t) <= pct / 100));
     st.querySelectorAll('.cal-stamp text').forEach((e) => { e.textContent = `${streakStats().current}日連続`; });   // another device's answers today
-    const kb = st.querySelector('.study-koto'); if (kb) { kb.querySelector('span').textContent = kotoBalance(); kb.setAttribute('aria-label', `言靈 ${kotoBalance()}，到古道具屋`); }
+    kotoButtons(st);
     if (cam.c) place(st);   // the tags whose words changed, kept whole at a side
   }
 
@@ -7758,6 +8001,7 @@ const ROOM = (() => {
       if (fingers.size > 1 || afterPinch) return;
       cancelAnimationFrame(coast);
       if (ed.on && e.target.closest('.deco')) { startWareDrag(st, e); return; }
+      if (ed.on && e.target.closest('.tray-it') && !(e.pointerType === 'mouse' && e.button !== 0)) { startBoxDrag(st, e); return; }   // pulled out of the box (a tap still takes it out)
       if ((e.pointerType === 'mouse' && e.button !== 0) || e.target.closest('.study-tools, .mail-hint, .edit-top, .edit-tray, .edit-sel')) return;
       if (onHero(e)) grab = { id: e.pointerId, x: e.clientX, y: e.clientY, on: false };
       else pan = { id: e.pointerId, x: e.clientX, y: e.clientY, c0: cam.c.slice(), on: false, hist: [] };
@@ -7793,7 +8037,11 @@ const ROOM = (() => {
       cam.c = inBound([pan.c0[0] - dx / cam.k, pan.c0[1] - dy / cam.k], 0.3); place(st);
       pan.hist.push([performance.now(), e.clientX, e.clientY]); if (pan.hist.length > 8) pan.hist.shift();
     });
-    let wd = null;   // a ware being dragged in 擺設
+    let wd = null;   // a ware being dragged in 擺設 (fromBox: pulled out of the storage box; box: over the box now)
+    function startBoxDrag(st, e) {   // a ware in the box held: pulled up into the room it goes where it is let go (a sideways swipe scrolls the box)
+      const id = e.target.closest('.tray-it').dataset.id, it = WARE.get(id); if (!it) return;
+      wd = { id: e.pointerId, o: { id, it, p: null }, off: it.kind === 'wall' ? [0, it.size[1] / 2 + 0.2] : [0, 0], x: e.clientX, y: e.clientY, on: false, to: null, fromBox: true, box: false };
+    }
     function startWareDrag(st, e) {
       const id = e.target.closest('.deco').dataset.ware, o = placedWares().find((q) => q.id === id); if (!o) return;
       const p0 = roomPoint(st, e), at = o.it.kind === 'wall' ? wallAt(p0) : floorAt(p0);
@@ -7803,22 +8051,34 @@ const ROOM = (() => {
     }
     function moveWare(st, e) {
       if (!wd.on) {
-        if (Math.hypot(e.clientX - wd.x, e.clientY - wd.y) < 6) return;
+        const dx = e.clientX - wd.x, dy = e.clientY - wd.y;
+        if (Math.hypot(dx, dy) < 6) return;
+        if (wd.fromBox && e.pointerType !== 'mouse' && Math.abs(dx) > Math.abs(dy)) { wd = null; return; }   // sideways: the box scrolls
         wd.on = true; try { st.setPointerCapture(e.pointerId); } catch (err) { /* a pointer the page did not see go down */ } st.classList.add('dragging');
         st.querySelectorAll(`svg.art [data-o="w:${wd.o.id}"], svg.art [data-o^="w:${wd.o.id}:"], .bulb[data-w="${wd.o.id}"]`).forEach((g) => { g.style.visibility = 'hidden'; });
-        st.classList.add('drag-' + wd.o.id);   // the desk's headphones live on a layer of their own: hidden with it
+        st.classList.add('drag-' + wd.o.id);   // the desk's headphones live on a layer of their own: hidden with it; so is the window's sky
       }
-      const p = spotUnder(wd.o.it, roomPoint(st, e), wd.off, wd.o.p), ok = fits(wd.o.it, p);
+      // over the storage box: let go, a ware goes in (a working thing cannot; one pulled out goes back)
+      const tray = st.querySelector('.edit-tray'), tr = tray && tray.getBoundingClientRect(), gh = st.querySelector('.ghost');
+      wd.box = Boolean(tr && e.clientY >= tr.top && e.clientX >= tr.left && e.clientX <= tr.right);
+      if (tray) { tray.classList.toggle('drop', wd.box && !wd.fromBox && !wd.o.it.fixed); tray.classList.toggle('no-drop', wd.box && !wd.fromBox && !!wd.o.it.fixed); }
+      const hint = st.querySelector('.edit-hint'), say = wd.box && !wd.fromBox ? (wd.o.it.fixed ? '只能搬，不能收' : '放開就收起來') : '拖到想放的地方放開';
+      if (hint && hint.textContent !== say) hint.textContent = say;
+      if (wd.box) { gh.querySelector('g').innerHTML = ''; return; }
+      const p = spotUnder(wd.o.it, roomPoint(st, e), wd.off, wd.o.p || { r: 0 }), ok = fits(wd.o.it, p);
       if (ok) wd.to = p;
-      const gh = st.querySelector('.ghost');
       gh.querySelector('g').innerHTML = wd.o.it.kind === 'wall' ? DECOR.wall(wd.o.id, p) : DECOR.floor(wd.o.id, p);
       gh.classList.toggle('bad', !ok);
     }
     function endWare(st) {
       const d = wd; wd = null;
-      if (!d.on) { redraw(st); return; }   // a tap: picked, its tools come up
+      if (!d.on) { if (!d.fromBox) redraw(st); return; }   // a tap: picked, its tools come up (one in the box: its click takes it out)
       swallow = true;
-      if (d.to) { state.placed[d.o.id] = d.to; saveState(); }
+      if (d.box) {
+        if (d.o.it.fixed) toast('只能搬，不能收');
+        else if (!d.fromBox) { delete state.placed[d.o.id]; if (ed.sel === d.o.id) ed.sel = null; saveState(); }
+      } else if (d.to) { state.placed[d.o.id] = d.to; ed.sel = d.o.id; saveState(); }
+      else if (d.fromBox) toast('那裡放不下');
       redraw(st);
     }
     const end = (e) => {
@@ -7892,8 +8152,9 @@ const ROOM = (() => {
     desk: (x, y) => inPlace('desk', () => WORK.desk.map(([, , art]) => art()).join('') + phonesArt(), { w: 'F', x, y, r: 0 }),
     chest: (x, y) => inPlace('chest', chestArt, { w: 'F', x, y, r: 0 }),
     board: (p) => inPlace('board', boardArt, p), calendar: (p) => inPlace('calendar', () => calendarArt(parseDate(todayStr()), examPace().daysLeft), p),
+    window: (p) => windowArt(p, true),   // on its own (the box, a drag): the sky in it
     bed: (x, y) => shifted(x - 18.45, y - 2.625, bedArt), nightTable: (x, y) => shifted(x - 16.25, y - 0.55, nightTableArt), bigPlant: (x, y) => plantArt(x, y),
-    umbrella: (x, y) => shifted(x - 0.45, y - 7.75, umbrellaArt), sageRug: (x, y) => rugArt(x, y, 1.25, '#dfe6d6', '#93ad8c'),
+    sageRug: (x, y) => rugArt(x, y, 1.25, '#dfe6d6', '#93ad8c'),
     bedRug: (x, y) => shifted(x - 14.9, y - 2.92, bedRugArt), doorMat: (x, y) => shifted(x - 0.7, y - 5.1, doorMatArt)
   };
   const kit = { S, P, pt, poly, line, onX, onY, onZ, F, FS, tone, box, qX, qY, qZ, shadow, bb, C, q2, r1, DEFS, VB, own, wireArt, bulbsAt };
@@ -8057,18 +8318,6 @@ const DECOR = (() => {
         <g fill="#7fb36d" fill-opacity=".7"><ellipse cx="-14" cy="-32" rx="7" ry="2.4"/><ellipse cx="13" cy="-30" rx="6" ry="2.2"/><ellipse cx="0" cy="-40.5" rx="7.5" ry="2.6"/></g>`);
       return s;
     },
-    globe: (x, y, r) => {
-      const L = lit(x, y);
-      let s = shadow(x - 0.4, y - 0.4, x + 0.5, y + 0.5, 0.7);
-      s += `<g transform="${onZ(0.02)}"><ellipse cx="${x}" cy="${y}" rx=".3" ry=".3" ${F(C.walnut, 't', [x, y, 0])}/></g>`;
-      s += upright(x, y, 0, r, `<path d="M-2 0 L-1 -22 H1 L2 0 Z" ${L('#8f6444', 0.5)}/>
-        <circle cy="-48" r="21" ${L('#6aa6d6', 1.2)}/>
-        <g ${L('#8cc07a', 1.2)}><path d="M-13 -60 C-6 -66 4 -64 6 -57 C2 -52 -6 -54 -9 -49 C-14 -46 -17 -54 -13 -60 Z"/><path d="M5 -44 C11 -47 16 -42 14 -35 C10 -31 6 -36 3 -39 Z"/><path d="M-6 -36 C-2 -38 1 -34 -2 -30 C-5 -29 -8 -32 -6 -36 Z"/></g>
-        <circle cx="9" cy="-55" r="1.8" fill="#e0574c"/>
-        <path d="M-17 -60 A21 21 0 0 1 -6 -67" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="2.2" stroke-linecap="round"/>
-        <path d="M-25 -36 A26 26 0 0 1 19 -70" fill="none" stroke-width="2.4" ${FS('#c9a24c', 'y', [x, y, 1.2])}/>`);
-      return s;
-    },
     monstera: (x, y, r) => {
       const L = lit(x, y);
       let s = shadow(x - 0.5, y - 0.5, x + 0.62, y + 0.62, 0.7);
@@ -8207,7 +8456,7 @@ const DECOR = (() => {
   const FLAT = { fujiPrint: 0.08, kanaChart: 0.05, nightPicture: 0.05 };   // 書房's own pictures: as close to the wall as they always hung
   // a string of lights on its own (dragged in 擺設, or in the storage box): the wire and its bulbs, unlit (in 書房 the bulbs are an overlay)
   const garland = (len, p) => wireArt(len, p) + bulbsAt(len, p).map((q) => bb(...q, '<ellipse cy="1.6" rx="2.2" ry="2.8" fill="#fffaf0" stroke="#8a7a60" stroke-width=".6"/>')).join('');
-  function wall(id, p) { const it = WARE.get(id); if (it && it.garland) return garland(it.size[0], p); if (id === 'board' || id === 'calendar') return own[id](p); if (id === 'wallshelf') return wallShelf(p); if (id === 'pegRail') return pegRail(p); const f = WALL[id]; return !f ? '' : FLAT[id] ? onWall(p, f, FLAT[id], true) : onWall(p, f); }
+  function wall(id, p) { const it = WARE.get(id); if (it && it.garland) return garland(it.size[0], p); if (id === 'board' || id === 'calendar' || id === 'window') return own[id](p); if (id === 'wallshelf') return wallShelf(p); if (id === 'pegRail') return pegRail(p); const f = WALL[id]; return !f ? '' : FLAT[id] ? onWall(p, f, FLAT[id], true) : onWall(p, f); }
   function floor(id, p) { const it = WARE.get(id), f = FLOOR[id]; return f ? f(p.x, p.y, p.r || 0, it) : own[id] ? own[id](p.x, p.y) : crate(p.x, p.y, it, p.r); }
   // on its own (the page sets the view box round it once it is drawn, fitThumbs): a wall ware on the right wall, one on the floor
   // at a spot of its own, in daylight
@@ -8653,7 +8902,7 @@ function fukuSvg() {
     <path d="M30 60 Q45 68 60 60 L56 70 Q45 74 34 70 Z" fill="#3f4479"/><text x="45" y="69" font-size="7" font-weight="700" text-anchor="middle" fill="#fff" font-family="'Hiragino Mincho ProN', serif">古</text></svg>`;
 }
 // the shop's tabs (test build): for 書房, for the yard, to wear, and what is sold for a while only. The last one used comes back.
-const SHOP_TABS = [['in', '室內', [['floor', '家具擺飾'], ['rug', '地墊'], ['wall', '牆上']]], ['out', '戶外', [['yard', '戶外擺設']]], ['wear', '穿搭', [['clothes', '衣服褲子'], ['wear', '主角穿戴']]], ['sale', '限時']];
+const SHOP_TABS = [['in', '室內', [['floor', '家具擺飾'], ['rug', '地墊'], ['wall', '牆上']]], ['out', '戶外', [['yard', '戶外擺設'], ['house', '房子外觀']]], ['wear', '穿搭', [['clothes', '衣服褲子'], ['wear', '主角穿戴']]], ['sale', '限時']];
 let shopTab = (() => { try { const t = localStorage.getItem('nq_shop_tab'); return SHOP_TABS.some(([k]) => k === t) ? t : 'in'; } catch (e) { return 'in'; } })();
 // limited sales (test build): month-day, both ends in, every year. A ware joins one with limited: its key; it is shown under 限時
 // only, and only while the sale is on; once bought it is theirs like any other.
@@ -8705,10 +8954,11 @@ function shopCardHtml(it, bal) {
   let act;
   if (owned && it.kind === 'wear') act = `<button type="button" class="btn btn-sm" data-act="ware-wear" data-id="${it.id}">${state.wear[it.slot] === it.id ? '脫下' : '穿上'}</button>`;
   else if (owned && it.kind === 'clothes') act = `<button type="button" class="btn btn-sm" data-act="clothes-wear" data-id="${it.id}">${styleOn(it) ? '脫下' : '換上'}</button>`;
+  else if (owned && it.kind === 'house') act = `<button type="button" class="btn btn-sm" data-act="house-wear" data-id="${it.id}">${state.house === it.id ? '換回小屋' : '換上'}</button>`;
   else if (owned) act = `<span class="chip">${state.placed[it.id] ? (it.kind === 'yard' ? '在院子' : '在書房') : '在收納箱'}</span>`;
   else if (short > 0) act = `<button type="button" class="btn btn-sm btn-muted" data-act="ware-short" aria-disabled="true">還差 ${short}</button>`;
   else act = `<button type="button" class="btn btn-sm btn-primary" data-act="ware-buy" data-id="${it.id}">買下</button>`;
-  const art = it.kind === 'wear' ? HERO.thumb(it.id, state.look) : it.kind === 'clothes' ? HERO.clothes(it.id, HERO.norm(state.look)) : it.kind === 'yard' ? YARD.thumb(it.id) : DECOR.thumb(it.id);   // clothes in the hero's own colours
+  const art = it.kind === 'wear' ? HERO.thumb(it.id, state.look) : it.kind === 'clothes' ? HERO.clothes(it.id, HERO.norm(state.look)) : it.kind === 'yard' ? YARD.thumb(it.id) : it.kind === 'house' ? `<svg class="house-thumb" viewBox="0 0 140 130" aria-hidden="true">${HOUSE_ART[it.id]}</svg>` : DECOR.thumb(it.id);   // clothes in the hero's own colours
   return `<div class="card shop-item${owned ? ' owned' : ''}" data-ware="${it.id}"><div class="art">${art}</div><div class="nm">${esc(it.name)}</div><div class="ds">${esc(it.desc)}</div>${swap ? `<div class="ds swap">${swap}</div>` : ''}
     <div class="buy">${owned ? '<span class="price got">已擁有</span>' : `<span class="price">${kotoIcon()}${it.price}</span>`}${act}</div></div>`;
 }
@@ -8722,11 +8972,11 @@ function renderShop(view) {
   view.innerHTML = `<div class="shop-front"><i class="beam"></i><div class="noren"><i><b>古</b></i><i><b>道</b></i><i><b>具</b></i></div><i class="lantern"><i></i><i></i></i>
       <button type="button" class="fuku" data-act="fuku-talk" aria-label="福爺">${fukuSvg()}</button><div class="fuku-say" aria-live="polite">${fukuLine(night ? 'night' : 'hello')}</div>
       <div class="counter"></div><div class="purse">${kotoIcon()}言靈 <b>${bal}</b></div></div>
-    <div class="page-head"><div><div class="page-title">古道具屋</div><div class="page-sub">山上的老店，老闆福爺不收錢，只收言靈。今日練習每做完一組 +1，當天的清單做完再 +10。</div></div></div>
+    <div class="page-head"><div><div class="page-title">古道具屋</div><div class="page-sub">山上的老店，老闆福爺不收錢，只收言靈。</div></div></div>
     <div class="shop-tabs" role="tablist">${SHOP_TABS.map(([k, name]) => `<button type="button" role="tab" data-act="shop-tab" data-tab="${k}" aria-selected="${shopTab === k}">${name}${k === 'sale' && live.length ? '<i class="dot" aria-label="特賣中"></i>' : ''}</button>`).join('')}</div>
     ${shopTab === 'sale' ? saleHtml(day, live, grid) : SHOP_TABS.find(([k]) => k === shopTab)[2].map(([k, name]) => `<section class="shop-sec"><h2 class="shop-h">${name}</h2>${grid(WARES.filter((it) => it.kind === k && !it.starter && !it.limited), k === 'wear' ? SOON : '')}</section>`).join('')}
     ${onTestSite() && shopTab === 'sale' ? `<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="sale-preview">測試用：${salePreview() ? '關掉限時預覽，照日期來' : '不看日期，顯示限時商品'}</button></div>` : ''}
-    ${onTestSite() ? '<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="koto-gift">測試用：+100 言靈</button></div>' : ''}
+    ${onTestSite() ? '<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="koto-gift">測試用：+100 言靈</button><button type="button" class="btn btn-sm" data-act="koto-gift" data-n="1000">測試用：+1000 言靈</button></div>' : ''}
     <svg class="defs-only" width="0" height="0" aria-hidden="true">${DECOR.DEFS}</svg>`;
   fitThumbs(view);
 }
@@ -8786,11 +9036,13 @@ const DRESS = (() => {
   function open(st) {
     if (!st || (d && box())) return;
     st.querySelectorAll('.dress').forEach((x) => x.remove()); st.classList.remove('undressing');   // one still flying back
-    ROOM.hold();
-    const hel = st.querySelector('.room .hero'), sr = st.getBoundingClientRect(), hr = hel && hel.getBoundingClientRect();
+    const yard = st.classList.contains('yard');   // test build: out in the yard too, the sky and the lawn grow round the hero there
+    if (yard) yHeroHold(st); else ROOM.hold();
+    const hel = st.querySelector(yard ? '.yhero' : '.room .hero'), sr = st.getBoundingClientRect(), hr = hel && hel.getBoundingClientRect();
     const from = hr && hr.width ? { x: hr.left - sr.left, y: hr.top - sr.top, s: hr.width / 120 } : { x: sr.width / 2 - 30, y: sr.height / 2 - 52, s: 0.5 };
     d = { st, look: HERO.norm(state.look), wear: Object.assign({}, state.wear), tab: 'face', back: false, from };
-    st.style.setProperty('--zx', `${(from.x + 60 * from.s).toFixed(1)}px`); st.style.setProperty('--zy', `${(from.y + 150 * from.s).toFixed(1)}px`);
+    const zr = yard ? st.querySelector('.sky').getBoundingClientRect() : sr;   // what grows: 書房's room, the yard's sky (on the whole screen)
+    st.style.setProperty('--zx', `${(from.x + 60 * from.s + sr.left - zr.left).toFixed(1)}px`); st.style.setProperty('--zy', `${(from.y + 150 * from.s + sr.top - zr.top).toFixed(1)}px`);
     st.insertAdjacentHTML('beforeend', `<div class="dress" role="dialog" aria-modal="true" aria-label="打扮">
       <i class="dress-dim"></i>
       <div class="hero dress-hero" data-act="dress-turn" aria-label="主角（點一下轉身）">${copy()}</div>
@@ -8833,7 +9085,7 @@ const DRESS = (() => {
   function close(save) {
     const dr = box(); if (!d) return;
     const { st, from } = d;
-    if (save) { state.look = Object.assign({}, d.look); state.wear = Object.assign({}, d.wear); saveState(); ROOM.heroRedraw(st); }
+    if (save) { state.look = Object.assign({}, d.look); state.wear = Object.assign({}, d.wear); saveState(); if (st.classList.contains('yard')) yHeroRedraw(st); else ROOM.heroRedraw(st); }
     d = null; window.removeEventListener('resize', reframe);
     if (!dr) return;
     const cp = dr.querySelector('.dress-hero'); cp.classList.remove('back');
@@ -8846,8 +9098,9 @@ const DRESS = (() => {
 // a purchase: paid once, then put away (test build): a thing into the storage box, to be set out in 擺設; a wear into the wardrobe
 function buyWare(it) {
   state.owned[it.id] = { paid: it.price, on: todayStr() };
+  if (it.kind === 'house') state.house = it.id;   // the yard's house becomes it at once
   saveState();
-  return it.kind === 'wear' ? '收進衣櫃了，按書房右上角的衣櫃就能穿上' : it.kind === 'clothes' ? '收進衣櫃了，按書房右上角的衣櫃，在「衣服」換上' : it.kind === 'yard' ? '收在院子的收納箱，到院子按「擺設」拿出來擺' : '收在收納箱，到書房按「擺設」拿出來擺';
+  return it.kind === 'house' ? '，院子的房子換好了' : it.kind === 'wear' ? '收進衣櫃了，按書房右上角的衣櫃就能穿上' : it.kind === 'clothes' ? '收進衣櫃了，按書房右上角的衣櫃，在「衣服」換上' : it.kind === 'yard' ? '收在院子的收納箱，到院子按「擺設」拿出來擺' : '收在收納箱，到書房按「擺設」拿出來擺';
 }
 Object.assign(ACTIONS, {
   'room-edit': (el) => ROOM.edit(el, 'on'),
@@ -8862,7 +9115,7 @@ Object.assign(ACTIONS, {
     const it = WARE.get(el.dataset.id);
     if (!it || owns(it.id)) return;
     if (kotoBalance() < it.price) { fukuSay('short'); return; }
-    saleCheck(it, () => openModal(`買下${it.name}？`, `<p>用 <b>${it.price}</b> 言靈買下「${esc(it.name)}」。${it.kind === 'wear' ? '買了之後按書房右上角的衣櫃就能穿上或脫下。' : it.kind === 'clothes' ? '買了之後按書房右上角的衣櫃，在「衣服」換上，顏色照你配的。' : it.kind === 'yard' ? '買了會先收在院子的收納箱，到院子按「擺設」拿出來擺。' : '買了會先收在收納箱，到書房按「擺設」拿出來擺。'}</p>
+    saleCheck(it, () => openModal(`買下${it.name}？`, `<p>用 <b>${it.price}</b> 言靈買下「${esc(it.name)}」。${it.kind === 'wear' ? '買了之後按書房右上角的衣櫃就能穿上或脫下。' : it.kind === 'clothes' ? '買了之後按書房右上角的衣櫃，在「衣服」換上，顏色照你配的。' : it.kind === 'house' ? '買了院子的房子馬上換成它；想換回原本的小屋，在這張卡片上切換。' : it.kind === 'yard' ? '買了會先收在院子的收納箱，到院子按「擺設」拿出來擺。' : '買了會先收在收納箱，到書房按「擺設」拿出來擺。'}</p>
       <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="ware-buy-ok" data-id="${it.id}">買下</button><button type="button" class="btn" data-act="close-modal">再想想</button></div>`, { width: 380 }));
   },
   'ware-buy-ok': (el) => {
@@ -8877,13 +9130,18 @@ Object.assign(ACTIONS, {
     state.wear[it.slot] = state.wear[it.slot] === it.id ? null : it.id;
     saveState(); route();
   },
+  'house-wear': (el) => {   // 古道具屋's card: the yard's house in this look, or back to the cottage
+    const it = WARE.get(el.dataset.id);
+    if (!it || !owns(it.id) || it.kind !== 'house') return;
+    state.house = state.house === it.id ? '' : it.id; saveState(); route();
+  },
   'clothes-wear': (el) => {   // 古道具屋's card: on, or back to everyone's 帽T／長褲
     const it = WARE.get(el.dataset.id);
     if (!it || !owns(it.id) || it.kind !== 'clothes') return;
     state.look = Object.assign({}, state.look, { [styleKey(it)]: styleOn(it) ? HERO.LOOK0[styleKey(it)] : it.id });
     saveState(); route();
   },
-  wardrobe: (el) => DRESS.open(el.closest('.study')),   // the dressing room (test build)
+  wardrobe: (el) => DRESS.open(el.closest('.study, .yard')),   // the dressing room (test build), in 書房 or out in the yard
   'dress-tab': (el) => DRESS.tab(el.dataset.tab),
   'dress-pick': (el) => DRESS.pick(el.dataset.key, el.dataset.val),
   'dress-wear': (el) => DRESS.wear(el.dataset.id),
@@ -8904,7 +9162,7 @@ Object.assign(ACTIONS, {
   'yard-edit-take': (el) => yardEdit(el.closest('.yard'), 'take', el.dataset.id),
   'yard-edit-put': (el) => yardEdit(el.closest('.yard'), 'put'),
   'yard-ware': (el) => { const y = el.closest('.yard'); if (y && y._noClick) return; if (yed.on) yardEdit(y, 'pick', el.dataset.ware); else yardUse(y, el.dataset.ware); },
-  'koto-gift': () => { state.koto.gift = (Number(state.koto.gift) || 0) + 100; saveState(); route(); toast('測試用：多了 100 言靈'); }
+  'koto-gift': (el) => { const n = Number(el && el.dataset.n) || 100; state.koto.gift = (Number(state.koto.gift) || 0) + n; saveState(); route(); toast(`測試用：多了 ${n} 言靈`); }
 });
 
 // walking in or out of the house: a short zoom, then the other scene (straight there with motion reduced)
@@ -10263,6 +10521,7 @@ async function listenWake(on) {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && LISTEN && LISTEN.playing) listenWake(true); });
 function listenPlay() {
   if (!LISTEN || !LISTEN.items.length) return;
+  if (!LISTEN.playing) { LISTEN.since = Date.now(); LISTEN.heard = 0; }   // 言靈's 5 minutes start now (test build)
   LISTEN.playing = true; speechRateOverride = LISTEN.rate || 1; listenWake(true); listenRenderNow();
   primeTtsPlayer();   // still inside the tap (page button or lock screen): the player starts now, the first line only swaps the source
   listenRun();
@@ -10270,13 +10529,13 @@ function listenPlay() {
 function listenPause() {
   if (!LISTEN) return;
   if (LISTEN.playing) { stopSpeaking(); stopSilence(); }   // only a playing player owns the speech; a paused one must not cut a listening question
-  LISTEN.playing = false; LISTEN.run++; speechRateOverride = 0; listenWake(false); listenRenderNow();
+  LISTEN.playing = false; LISTEN.run++; speechRateOverride = 0; listenWake(false); listenKotoStop(LISTEN); listenRenderNow();
 }
 function listenStop(silent) {
   if (!LISTEN) return;
   if (LISTEN.playing) { stopSpeaking(); stopSilence(); }
   const back = LISTEN.source && LISTEN.source.kind === 'theme' ? '#/vocab/level?lv=' + defaultVocabLevel() : '#/mistakes';
-  LISTEN.playing = false; LISTEN.run++; speechRateOverride = 0; listenWake(false); LISTEN = null;
+  LISTEN.playing = false; LISTEN.run++; speechRateOverride = 0; listenWake(false); listenKotoStop(LISTEN); LISTEN = null;
   if (!silent) go(back);
 }
 function listenSeek(delta) {
@@ -10316,6 +10575,7 @@ async function listenSpeak(e, alive) {
     const r = await fn();
     if (r === false) { if (alive()) listenPause(); return false; }
     if (!alive()) return false;
+    listenKotoTick(LISTEN);
     await playSilence(gap);
     return alive();
   };
@@ -13334,24 +13594,37 @@ function letters() {
   const info = installInfo();
   if (!info.standalone && info.touch && !storedFlag('nq_install_hint')) out.push({ id: 'install', title: '加到主畫面', body: '加到主畫面會更好用：全螢幕、打開就是書房、離線也能練。',
     acts: info.canPrompt ? '<button type="button" class="btn btn-sm btn-primary" data-act="install-prompt">安裝</button>' : '<button type="button" class="btn btn-sm btn-primary" data-act="install-how">怎麼做</button>' });
-  if (!storedFlag('nq_letter_shop')) out.push({ id: 'shop', title: '山上的古道具屋開張了', body: `門外左邊那座山上開了一間古道具屋，老闆福爺不收錢，只收「言靈」。<ul>
-      <li>言靈是日本人說的「話語裡住著的力量」，你學的每個字都在累積它</li>
-      <li>今日練習每做完一組 +1，當天的清單全部做完再 +10</li>
-      <li>書房的掛鐘先被福爺收走了，1 言靈就能買回來</li>
-      <li>買來的東西可以在書房按右上角的「擺設」自己擺；衣服帽子按右上角的「衣櫃」換</li></ul>`,
-    acts: '<button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/shop">去古道具屋</button>' });
+  if (!storedFlag('nq_letter_opening')) {   // 福爺's opening letter (test build), with 10 言靈 in it (once for the account: koto.mail)
+    const got = Boolean(state.koto.mail.opening);
+    out.push({ id: 'opening', from: 'fuku', title: '古道具屋開張了', body: `<p>你好，我是住在門外左邊山上的福爺。</p>
+      <p>我在山上開了一間古道具屋，擺著一些老東西：放書房的、擺院子的，還有穿戴的衣服帽子。小店不收錢，只收「言靈」——日本人說，話語裡住著力量。</p>
+      <p>信裡附上 ${LETTER_GIFT.opening} 言靈，當作開張的見面禮，有空上山來坐坐。</p>
+      <ul><li>你書房那座掛鐘，我先收到店裡了，1 言靈就還你。</li><li>買回去的東西，在書房或院子按右上角的「擺設」自己擺；衣服帽子在書房的「衣櫃」換。</li></ul>
+      <p class="letter-sign">古道具屋　福爺</p>`,
+      acts: got ? `<span class="letter-got">${kotoIcon()}已收下 ${LETTER_GIFT.opening} 言靈</span><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/shop">去古道具屋</button>`
+        : `<button type="button" class="btn btn-sm btn-primary" data-act="letter-gift" data-id="opening">${kotoIcon()}收下 ${LETTER_GIFT.opening} 言靈</button>` });
+  }
   (state.notices || []).forEach(x => out.push({ id: 'notice:' + x.id, title: '通知', body: x.lines.map(esc).join('<br>') }));
   return out;
 }
 function mailCount() { return letters().length; }
+function takeLetterGift(id) {
+  const n = LETTER_GIFT[id]; if (!n || state.koto.mail[id]) return;
+  state.koto.mail[id] = n; saveState(); kotoPop(n);
+  kotoButtons(document.getElementById('view'));   // the 言靈 button up top, if it is under the letters
+}
 function mailSeen() { try { return JSON.parse(localStorage.getItem('nq_mail_seen') || '[]'); } catch (e) { return []; } }
 function markMailSeen(ids) { try { localStorage.setItem('nq_mail_seen', JSON.stringify([...new Set(mailSeen().concat(ids))].slice(-40))); } catch (e) { /* ignore */ } }
 function newMail() {   // the letters this device has not been told about (a brand-new learner picks a start first)
   if (!state.startChosen && !Object.keys(state.srs).length) return [];
   const seen = mailSeen(); return letters().map(l => l.id).filter(id => !seen.includes(id));
 }
+// who wrote a letter (test build): their face in its top right corner (福爺 for now; the app's own letters have none)
+const LETTER_FROM = { fuku: ['福爺', () => fukuSvg()] };
+const LETTER_GIFT = { opening: 10 };   // 言靈 that come with a letter
 function lettersHtml() {
-  return `<div class="letters">${letters().map(l => `<div class="letter" data-letter="${esc(l.id)}">
+  return `<div class="letters">${letters().map(l => `<div class="letter${l.from ? ' from' : ''}" data-letter="${esc(l.id)}">
+      ${l.from && LETTER_FROM[l.from] ? `<div class="letter-from" title="${LETTER_FROM[l.from][0]}" aria-label="寄件者：${LETTER_FROM[l.from][0]}">${LETTER_FROM[l.from][1]()}</div>` : ''}
       <div class="letter-title">${esc(l.title)}</div>
       <div class="letter-body">${l.body}</div>
       <div class="row-wrap mt-3">${l.acts || ''}${l.keep ? '' : `<button type="button" class="btn btn-sm" data-act="letter-done" data-id="${esc(l.id)}">知道了</button>`}</div>
@@ -13375,9 +13648,14 @@ Object.assign(ACTIONS, {
     if (!box || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { openLetters(); return; }
     box.classList.add('open'); setTimeout(openLetters, 320); setTimeout(() => box.classList.remove('open'), 900);
   }),
+  'letter-gift': (el) => {   // what came with a letter, taken (once for the account); the letter stays till 知道了
+    takeLetterGift(el.dataset.id);
+    if (document.getElementById('modalBody')) document.getElementById('modalBody').innerHTML = lettersHtml();
+  },
   'letter-done': (el) => {
     const id = el.dataset.id;
-    if (id === 'room' || id === 'install' || id === 'shop') { try { localStorage.setItem({ room: 'nq_letter_room', install: 'nq_install_hint', shop: 'nq_letter_shop' }[id], todayStr()); } catch (e) { /* ignore */ } }
+    takeLetterGift(id);   // put away before taking it: it is taken all the same
+    if (id === 'room' || id === 'install' || id === 'opening') { try { localStorage.setItem({ room: 'nq_letter_room', install: 'nq_install_hint', opening: 'nq_letter_opening' }[id], todayStr()); } catch (e) { /* ignore */ } }
     else if (id === 'intro') { state.introSeen = true; saveState(); }
     else if (id.startsWith('notice:')) { state.notices = (state.notices || []).filter(x => x.id !== id.slice(7)); saveState(); }
     if (mailCount()) document.getElementById('modalBody').innerHTML = lettersHtml(); else closeModal();

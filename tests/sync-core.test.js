@@ -154,6 +154,17 @@ test('mergeStates adds up 言靈 per device, gives a day bonus once and charges 
   assert.equal(m.owned.clock.paid, 1);
   assert.deepEqual(a.koto.sets, { phone: 3, pc: 1 }, 'inputs untouched');
 });
+test('mergeStates keeps the larger count of each day and device for answering and listening, and each letter once', () => {
+  const a = { updatedAt: '2026-11-08T01:00:00.000Z', srs: {}, koto: { daySets: { '2026-11-08': { phone: 5, pc: 1 } }, days: [], listen: { '2026-11-08': { phone: 3 } }, mail: { opening: 10 }, sets: {}, gift: 0 } };
+  const b = { updatedAt: '2026-11-08T02:00:00.000Z', srs: {}, koto: { daySets: { '2026-11-08': { phone: 4, pc: 6 }, '2026-11-07': { pc: 2 } }, days: ['2026-11-08'], listen: { '2026-11-07': { pc: 9 } }, mail: {}, sets: { pc: 3 }, gift: 0 } };
+  const m = C.mergeStates(a, b);
+  assert.deepEqual(m.koto.daySets, { '2026-11-08': { phone: 5, pc: 6 }, '2026-11-07': { pc: 2 } });
+  assert.deepEqual(m.koto.listen, { '2026-11-08': { phone: 3 }, '2026-11-07': { pc: 9 } });
+  assert.deepEqual(m.koto.mail, { opening: 10 });   // a letter's 言靈 once, whichever device took it
+  assert.deepEqual(m.koto.sets, { pc: 3 });
+  assert.deepEqual(m.koto.days, ['2026-11-08']);
+  assert.deepEqual(a.koto.daySets, { '2026-11-08': { phone: 5, pc: 1 } }, 'inputs untouched');
+});
 test('mergeStates keeps 言靈 and purchases that only one copy has', () => {
   const a = { updatedAt: '2026-11-07T01:00:00.000Z', srs: {}, koto: { sets: { phone: 2 }, days: [] }, owned: { fan: { paid: 8, on: '2026-11-07' } } };
   const b = { updatedAt: '2026-11-07T02:00:00.000Z', srs: {} };
