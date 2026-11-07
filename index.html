@@ -541,6 +541,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .dress-sw[aria-pressed="true"] { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .14), 0 0 0 2px var(--bg-elev), 0 0 0 4px var(--accent); }
 .dress-wear { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; } .dress-wear .slot { flex: none; width: 40px; padding-top: 22px; font-size: 12.5px; font-weight: 700; color: var(--fg-2); }
 .dress-wear .list { display: flex; flex-wrap: wrap; gap: 8px; }
+.dress-note { margin: 12px 2px 0; padding: 8px 10px; border-radius: 9px; font-size: 12.5px; line-height: 1.5; color: var(--fg-2); background: var(--bg-sunken); }
 .dress-more { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 14px 2px 4px; font-size: 13px; color: var(--fg-2); }
 .wr-it { width: 72px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 1.5px solid transparent; border-radius: 10px; font: inherit; font-size: 12px; color: var(--fg); background: var(--bg-sunken); cursor: pointer; }
 .wr-it svg { width: 56px; height: 56px; } .wr-it.on { border-color: var(--accent); background: var(--accent-soft); }
@@ -1215,7 +1216,7 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 .shop-item { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 12px; }
 .shop-item .art { height: 92px; display: grid; place-items: center; border-radius: 10px; background: var(--bg-sunken); --day: 1; --f: 1; --lit: 1; color: var(--fg-2); }
 .shop-item .art svg { width: 84px; height: 84px; overflow: visible; }
-.shop-item .nm { font-weight: 700; font-size: 15px; } .shop-item .ds { font-size: 12.5px; line-height: 1.5; color: var(--fg-2); }
+.shop-item .nm { font-weight: 700; font-size: 15px; } .shop-item .ds { font-size: 12.5px; line-height: 1.5; color: var(--fg-2); } .shop-item .ds.swap { color: var(--accent); }
 .shop-item .buy { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: auto; padding-top: 4px; }
 .shop-item .price { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; } .shop-item .price.got { font-size: 13px; font-weight: 600; color: var(--fg-2); }
 .shop-item .price .koto-i { width: 20px; height: 20px; }
@@ -8134,7 +8135,8 @@ const HERO = (() => {
   };
   // ===== the hair (16 styles), Q版: a crown with volume, the fringe in pointed clumps, side locks hanging where the ears would be.
   // f: its colour, k: a darker shade for the hair behind (it frames the face), s: a stroke for strands. back: behind the head (drawn
-  // first), front: over the face, deco: strands and the shine round the crown, rear: from behind. =====
+  // first), front: over the face, deco: strands and the shine round the crown, rear: from behind. tall: hair that rises or bulges
+  // out of the plain crown (a tuft, spikes, curls, a high tail, a bun), so no hat can sit on it (see HAT_HAIR). =====
   // a clump of hair: wide at the top (x0…x1 at y top), coming to a point at (tx, ty), bent sideways by b
   const clump = (f, x0, x1, tx, ty, b = 0, top = -158) => `<path ${f} d="M${x0} ${top} C${q(x0 + b)} ${q(ty - 12)} ${q(tx - 3 + b)} ${q(ty - 5)} ${tx} ${ty} C${q(tx + 2.4 + b)} ${q(ty - 7)} ${q(x1 + b)} ${q(ty - 15)} ${x1} ${top} Z"/>`;
   const crown = (f, top = -172) => both(`<path ${f} d="M2.6 ${top} C-19 ${top} -39 ${top + 12} -42.4 -138 C-43.2 -130 -42 -122 -39.6 -115 C-36 -128 -30 -142 -20 -149 C-12 -153 -4 -154.6 2.6 -154.6 Z"/>`);
@@ -8175,13 +8177,13 @@ const HERO = (() => {
       deco: (s) => strands(s, 'M2 -170 V-154') + both(strands(s, 'M-4 -152 C-10 -148 -16 -140 -19 -133 M-30 -140 Q-34 -128 -33 -114')) + RING,
       rear: (f) => NAPE(f, -100) + RING
     },
-    ahoge: {   // 呆毛短髮: a short cut with one tuft standing up
+    ahoge: { tall: true,   // 呆毛短髮: a short cut with one tuft standing up
       back: (f, k) => backShort(k, -102),
       front: (f) => `<path ${f} d="M-1 -170 C-4 -184 6 -193 15 -188 C9 -187 5 -183 5 -172 Z"/>` + crown(f) + fringe(f, 'short') + both(lock(f, -110)),
       deco: (s) => both(strands(s, 'M-26 -150 Q-24 -142 -24 -136 M-12 -152 Q-12 -144 -13 -134')) + RING,
       rear: (f) => `<path ${f} d="M-1 -170 C-4 -184 6 -193 15 -188 C9 -187 5 -183 5 -172 Z"/>` + NAPE(f, -100) + RING
     },
-    spiky: {   // 刺蝟頭
+    spiky: { tall: true,   // 刺蝟頭
       back: (f, k) => both(`<path ${k} d="M2.6 -168 C-20 -168 -43 -158 -44.6 -134 L-48 -124 L-43 -118 L-45 -106 L-36 -102 L2.6 -102 Z"/>`),
       front: (f) => both(`<path ${f} d="M2.6 -178 L-6 -163 L-16 -177 L-19 -160 L-33 -169 L-30 -153 L-45 -152 L-38 -141 L-46 -132 L-40 -124 C-36 -132 -30 -144 -20 -150 C-12 -154 -4 -155 2.6 -155 Z"/>`) + fringe(f, 'spiky') + both(lock(f, -112, -1)),
       deco: (s) => both(strands(s, 'M-12 -160 L-9 -151 M-25 -156 L-20 -149')) + RING,
@@ -8193,13 +8195,13 @@ const HERO = (() => {
       deco: (s) => both(strands(s, 'M-24 -150 C-22 -160 -12 -168 0 -171 M-15 -153 C-12 -161 -4 -166 6 -167.6 M-34 -140 C-34 -152 -27 -161 -17 -165')) + '<path d="M-18 -166 C-10 -172 2 -174 12 -172" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="3.2" stroke-linecap="round"/>',
       rear: (f, k, s) => NAPE(f, -100) + strands(s, 'M-28 -160 C-16 -152 -4 -150 2 -142 M32 -160 C20 -152 8 -150 2 -142 M-32 -140 C-20 -134 -8 -130 2 -118 M36 -140 C24 -134 12 -130 2 -118')
     },
-    curly: {   // 自然捲: short curls, curly side locks
+    curly: { tall: true,   // 自然捲: short curls, curly side locks
       back: (f, k) => both(blobs(k, [[-40, -124, 9], [-38, -110, 7.5], [-30, -150, 14]])),
       front: (f) => both(blobs(f, [[-32, -142, 10], [-26, -157, 11.5], [-12, -166, 11.5], [2.6, -169, 10.5], [-37, -130, 7.5], [-35.6, -118, 6.6], [-31.6, -107.6, 5.4], [-20, -144, 7], [-9, -147, 7], [2.6, -147.6, 7]])),
       deco: (s) => both(strands(s, 'M-29 -154 a5 5 0 0 1 8 -2 M-9 -162 a5 5 0 0 1 8 0 M-23 -143 a4 4 0 0 1 6 0 M-37 -130 a4 4 0 0 1 5 -3 M-36 -118 a3.4 3.4 0 0 1 4.6 -2')),
       rear: (f, k, s) => blobs(f, [[2, -132, 32], [-31, -146, 12.5], [-21, -161, 13], [2, -168, 13], [25, -161, 13], [35, -146, 12.5], [-36, -126, 11], [40, -126, 11], [-30, -108, 10.5], [34, -108, 10.5], [2, -102, 13]]) + strands(s, 'M-22 -156 a5 5 0 0 1 8 -2 M10 -160 a5 5 0 0 1 8 2 M-12 -122 a5 5 0 0 1 8 0 M14 -114 a5 5 0 0 1 8 2')
     },
-    afro: {   // 爆炸頭: a big round cloud round the face
+    afro: { tall: true,   // 爆炸頭: a big round cloud round the face
       back: (f) => both(blobs(f, [[-36, -108, 12.5], [-43, -128, 14.5], [-40, -151, 15.5], [-27, -171, 15.5], [-9, -182, 15.5], [2.6, -184, 14.5]]) + `<ellipse cx="2.6" cy="-142" rx="42" ry="40" ${f}/>`),
       front: (f) => both(blobs(f, [[-29, -152, 8.8], [-16.6, -157, 8.8], [-3, -159, 8.8], [-37, -138, 7.6], [-37.6, -124, 6.6]])),
       deco: (s) => both(strands(s, 'M-35 -161 a5 5 0 0 1 8 -2 M-17 -175 a5 5 0 0 1 8 0 M-44 -138 a5 5 0 0 1 6 -4 M-40 -116 a5 5 0 0 1 6 -2 M-23 -157 a4 4 0 0 1 6 0')),
@@ -8235,7 +8237,7 @@ const HERO = (() => {
       deco: (s) => both(strands(s, 'M-38 -134 C-41 -124 -36 -118 -40 -108 C-43 -100 -38 -94 -37 -90')) + RING,
       rear: (f, k, s) => `<path ${f} d="M-44 -136 C-44 -162 -20 -171 2 -171 C24 -171 48 -162 48 -136 C52 -124 46 -116 50 -104 C54 -92 46 -84 48 -74 C49 -67 43 -63 36 -63 L-32 -63 C-39 -63 -45 -67 -44 -74 C-42 -84 -50 -92 -46 -104 C-42 -116 -48 -124 -44 -136 Z"/>` + strands(s, 'M-24 -128 C-30 -116 -20 -104 -26 -92 C-30 -82 -24 -74 -26 -68 M2 -132 C-4 -118 8 -106 2 -94 C-2 -84 4 -76 2 -66 M28 -128 C34 -116 24 -104 30 -92 C34 -82 28 -74 30 -68') + RING
     },
-    ponytail: {   // 高馬尾: a high tail, a swept fringe
+    ponytail: { tall: true,   // 高馬尾: a high tail, a swept fringe
       back: (f, k) => `<path ${f} d="M8 -174 C30 -186 53 -171 54 -146 C56 -124 49 -106 41 -95 C44 -112 44 -128 38 -142 C34 -152 23 -160 11 -161 Z"/>` + backShort(k, -102),
       front: (f) => crown(f) + fringe(f, 'swept') + both(lock(f, -108, 1)),
       deco: (s) => '<circle cx="10" cy="-170" r="3.6" fill="#d0574b"/>' + strands(s, 'M30 -170 C44 -164 50 -146 48 -122 M-8 -153 C0 -150 8 -142 13 -130') + RING,
@@ -8247,7 +8249,7 @@ const HERO = (() => {
       deco: (s) => both('<circle cx="-38" cy="-150" r="4" fill="#d0574b"/>' + strands(s, 'M-50 -136 Q-53 -116 -50 -94 M-26 -150 Q-24 -140 -24 -132')) + RING,
       rear: (f, k, s) => NAPE(f, -100) + both(`<path ${f} d="M-36 -152 C-53 -152 -60 -132 -58 -110 C-57 -96 -54 -88 -48 -80 C-46.6 -92 -45 -108 -44.6 -124 C-44 -136 -41.6 -144 -36 -152 Z"/><circle cx="-38" cy="-150" r="4" fill="#d0574b"/>`) + strands(s, 'M2 -170 V-100')
     },
-    bun: {   // 丸子頭: a bun on top, a short fringe
+    bun: { tall: true,   // 丸子頭: a bun on top, a short fringe
       back: (f, k) => `<circle cx="2.6" cy="-174" r="12" ${f}/>` + backShort(k, -102),
       front: (f) => crown(f, -170) + fringe(f, 'short') + both(lock(f, -108)),
       deco: (s) => strands(s, 'M-3.4 -176 a6 6 0 1 1 6 6') + '<path d="M-8.4 -164.6 Q2.6 -161 13.6 -164.6" fill="none" stroke="#d0574b" stroke-width="2.6" stroke-linecap="round"/>' + both(strands(s, 'M-26 -150 Q-24 -142 -24 -136')) + RING,
@@ -8311,17 +8313,38 @@ const HERO = (() => {
         ear(1) + ear(-1) + `<path ${F(c, 4)} d="${headPath}"/><path d="M-14 -160 q16 6 32 0 M-18 -146 q20 6 40 0 M-16 -132 q18 6 36 0" fill="none" stroke="${d}" stroke-width="2.4" stroke-linecap="round"/>`];
     }
   };
-  // hats that cover the crown: the hair above their band and within their width is cut off ([band, left, right]), so a bun or spikes
-  // never poke through, while curls or spikes beside a small hat still show
-  const HAT_CUT = { beanie: [-131, -34, 38], strawhat: [-146, -50, 54], beret: [-148, -37, 35], gradcap: [-138, -44, 48] };
+  // what is worn on the head comes in three kinds (test build), and none of them ever cuts the hair:
+  // - on top (貓耳髮箍, 必勝頭巾; 眼鏡 on the face): drawn over any of the 16 hairstyles as they are, front and back
+  // - a hat (HAT_HAIR): drawn big enough to cover the plain crown, so every hairstyle with one keeps its own hair under it; a tall
+  //   one gives way, while the hat is on, to the hairstyle the hat comes with, in their own hair colour
+  // - a whole head (FULL): takes the place of the head, hair and face; nothing is worn on the face
+  const HAT_HAIR = { beanie: 'crop', strawhat: 'neat', beret: 'bob', gradcap: 'curtain' };
+  const hairWorn = (lk, wear) => { const h = wear && HAT_HAIR[wear.head]; return h && HAIR[lk.hair].tall ? h : lk.hair; };   // the hairstyle drawn
   // the things worn: [front, back] drawings by part, in the figure's own units
   const WEAR = {
-    beanie: (L) => { const c = L('#d9534a', 4.2), r = L('#c2433b', 4.1); const cap = `<path ${c} d="M-32 -132 C-32 -170 36 -170 36 -132 Z"/><path ${r} d="M-33 -136 H37 V-128 Q2 -124 -33 -128 Z"/><path d="M-20 -140 V-158 M-6 -138 V-164 M8 -138 V-164 M22 -140 V-158" stroke="#fff" stroke-opacity=".18" stroke-width="2"/><circle cx="2" cy="-166" r="8" ${L('#f4efe6', 4.4)}/>`; return [cap, cap]; },
-    strawhat: (L) => { const h = `<ellipse cx="2" cy="-148" rx="52" ry="11" ${L('#e3c27a', 4.2)}/><path ${L('#d8b366', 4.3)} d="M-24 -150 C-24 -176 28 -176 28 -150 Z"/><path d="M-24 -154 Q2 -149 28 -154 V-148 Q2 -143 -24 -148 Z" fill="#d0453c"/><ellipse cx="2" cy="-148" rx="52" ry="11" fill="none" stroke="#b9954f" stroke-width="1.2"/>`; return [h, h]; },
+    beanie: (L) => {   // pulled down over the crown to the fringe, a turned-up rib cuff, a pompom
+      const ribs = [-38, -28, -18, -8, 2, 12, 22, 32, 42].map((x) => { const u = (x - 2) / 48.5, w = 3 * (1 - u * u); return `M${x} ${q(-147.4 - w)} V${q(-138.6 + w)}`; }).join(' ');
+      const cap = `<path ${L('#d9534a', 4.2)} d="M-44 -141 C-46 -171 -23 -185 2 -185 C27 -185 50 -171 48 -141 Z"/>${both('<path d="M-24 -151 C-23 -164 -16 -175 -5 -182 M-9 -152 C-8 -165 -5 -175 -1 -183" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="2.2" stroke-linecap="round"/>')}
+        <path ${L('#c2433b', 4.1)} d="M-46.5 -149 Q2 -155 50.5 -149 Q52.6 -143 50.5 -137 Q2 -131 -46.5 -137 Q-48.6 -143 -46.5 -149 Z"/><path d="${ribs}" stroke="#000" stroke-opacity=".12" stroke-width="1.6" stroke-linecap="round"/>
+        <circle cx="2" cy="-187" r="8.6" ${L('#f4efe6', 4.4)}/>`;
+      return [cap, cap];
+    },
+    strawhat: (L) => {   // a wide brim at the top of the fringe, a crown that holds the hair, a red band
+      const h = `<ellipse cx="2" cy="-150" rx="60" ry="12.5" ${L('#e3c27a', 4.2)}/><ellipse cx="2" cy="-150" rx="60" ry="12.5" fill="none" stroke="#b9954f" stroke-width="1.2"/><ellipse cx="2" cy="-150" rx="49" ry="9" fill="none" stroke="#b9954f" stroke-opacity=".35" stroke-width="1"/>
+        <path ${L('#d8b366', 4.3)} d="M-31 -153.4 C-33 -190 37 -190 35 -153.4 Q2 -146.4 -31 -153.4 Z"/><path d="M-31 -160 Q2 -153 35 -160 V-153.4 Q2 -146.4 -31 -153.4 Z" fill="#d0453c"/>`;
+      return [h, h];
+    },
     catears: (L) => { const e = (x, s) => `<path ${L('#3d3a44', 4.3)} d="M${x - 11 * s} -152 L${x - 2 * s} -176 L${x + 10 * s} -154 Z"/>`; const band = `<path d="M-30 -146 C-24 -168 28 -168 34 -146" fill="none" stroke="#3d3a44" stroke-width="4"/>`; return [band + e(-12, 1) + e(16, -1) + `<path d="M-17 -156 L-13 -169 L-8 -157 Z M21 -156 L17 -169 L12 -157 Z" fill="#f2a8b8"/>`, band + e(-12, 1) + e(16, -1)]; },
     hachimaki: (L) => { const band = `<path ${L('#f8f6f0', 4)} d="M-33 -142 Q2 -134 37 -142 V-132 Q2 -124 -33 -132 Z"/>`; return [band + `<circle cx="18" cy="-134" r="4.4" fill="#d0453c"/><text x="-12" y="-131.5" font-size="7.5" font-weight="700" fill="#d0453c" font-family="'Hiragino Mincho ProN', serif">必勝</text>`, band + `<path d="M2 -134 L-10 -112 L-2 -114 L4 -134 L14 -110 L20 -114 Z" ${L('#f2efe6', 3.8)}/>`]; },
-    beret: (L) => { const b = `<ellipse cx="-2" cy="-156" rx="36" ry="12" transform="rotate(-8 -2 -156)" ${L('#2f3b63', 4.3)}/><path d="M-30 -150 Q2 -144 30 -154" fill="none" stroke="#24304f" stroke-width="3"/><rect x="-4" y="-172" width="3" height="7" rx="1.4" fill="#24304f"/>`; return [b, b]; },
-    gradcap: (L) => { const c = `<path ${L('#26262e', 4.3)} d="M-26 -150 Q2 -142 30 -150 V-138 Q2 -132 -26 -138 Z"/><path ${L('#33333d', 4.5)} d="M2 -172 L48 -160 L2 -148 L-44 -160 Z"/><circle cx="2" cy="-160" r="2.6" fill="#e6c25a"/><path d="M2 -160 L38 -156 V-136" fill="none" stroke="#e6c25a" stroke-width="1.8"/><path d="M35 -136 h6 l-1 8 h-4 Z" fill="#e6c25a"/>`; return [c, c]; },
+    beret: (L) => {   // perched on the crown, tipped down to the left, with a stalk
+      const b = `<g transform="translate(-1 -167) rotate(-8)"><ellipse rx="40" ry="12.5" ${L('#2f3b63', 4.3)}/><path d="M-35 5 Q0 15 35 5" fill="none" stroke="#24304f" stroke-width="3" stroke-linecap="round"/><path d="M-19 -7 Q-3 -12 15 -9" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="2.4" stroke-linecap="round"/><path d="M0 -12.4 q-.6 -4.6 2.6 -6.6" fill="none" stroke="#24304f" stroke-width="2.6" stroke-linecap="round"/></g>`;
+      return [b, b];
+    },
+    gradcap: (L) => {   // a skull cap over the crown, the board on top, the tassel to the right
+      const c = `<path ${L('#26262e', 4.3)} d="M-42 -146 Q2 -136 46 -146 L42 -166 Q2 -173 -38 -166 Z"/><path ${L('#1d1d24', 4.4)} d="M-52 -175 L2 -160 L56 -175 V-172 L2 -157 L-52 -172 Z"/><path ${L('#33333d', 4.5)} d="M2 -190 L56 -175 L2 -160 L-52 -175 Z"/>
+        <circle cx="2" cy="-175" r="2.8" fill="#e6c25a"/><path d="M2 -175 L46 -170 V-150" fill="none" stroke="#e6c25a" stroke-width="1.8"/><path d="M43 -150 h6 l-1 9 h-4 Z" fill="#e6c25a"/>`;
+      return [c, c];
+    },
     glasses: () => [`<g fill="none" stroke="#3a3328" stroke-width="2"><circle cx="-10.5" cy="-117" r="8.6"/><circle cx="14.5" cy="-117" r="8.6"/><path d="M-1.9 -118 Q2 -120.6 5.9 -118 M-19.1 -118.6 L-33 -121.6 M23.1 -118.6 L37 -121.6"/></g><path d="M-15 -121.4 l4 -3 M10 -121.4 l4 -3" stroke="#fff" stroke-opacity=".7" stroke-width="1.4"/>`, `<path d="M-33 -122 L-26 -120 M37 -122 L30 -120" stroke="#3a3328" stroke-width="2"/>`],
     scarf: (L) => { const w = `<path ${L('#d0453c', 3.3)} d="M-22 -98 Q2 -88 26 -98 L26 -88 Q2 -78 -22 -88 Z"/>`; return [w + `<path ${L('#b93a33', 3)} d="M8 -88 L18 -88 L20 -58 L10 -56 Z"/><path d="M10 -58 v5 M14 -58 v5 M18 -58 v5" stroke="#b93a33" stroke-width="1.6"/>`, w + `<path ${L('#b93a33', 3)} d="M-14 -88 L-4 -88 L-6 -60 L-16 -62 Z"/>`]; },
     bowtie: () => [`<path d="M2 -92 L-10 -98 L-10 -86 Z M2 -92 L14 -98 L14 -86 Z" fill="#c8453d"/><circle cx="2" cy="-92" r="3" fill="#a63831"/>`, ''],
@@ -8334,10 +8357,9 @@ const HERO = (() => {
   // the figure, both views: o.look, o.wear, o.L as above
   function svg(o = {}) {
     const lk = norm(o.look), L = o.L || day, wear = o.wear || {}, W = (slot, side) => { const id = wear[slot]; const f = id && WEAR[id]; return f ? f(L)[side] || '' : ''; };
-    const n = ++uid, hat = HAT_CUT[wear.head], hairOf = HAIR[lk.hair], hf = L(lk.hairColor, 4), hk = L(dk(lk.hairColor, 0.8), 3.8), hs = `stroke="${dk(lk.hairColor, 0.68)}"`;
+    const n = ++uid, hairOf = HAIR[hairWorn(lk, wear)], hf = L(lk.hairColor, 4), hk = L(dk(lk.hairColor, 0.8), 3.8), hs = `stroke="${dk(lk.hairColor, 0.68)}"`;
     const top = lk.top, topDk = dk(lk.top, 0.84), pants = lk.bottom, skin = lk.skin, tp = TOPS[lk.topStyle], bt = BOTTOMS[lk.bottomStyle], full = FULL[wear.head];
-    const cut = (s) => (s && hat ? `<g clip-path="url(#hc${n})">${s}</g>` : s || '');   // the hair under a hat that covers the crown
-    const defs = `<defs><clipPath id="fc${n}" clipPathUnits="userSpaceOnUse"><path d="${FACE[lk.face]}"/></clipPath>${hat ? `<clipPath id="hc${n}" clipPathUnits="userSpaceOnUse"><path clip-rule="evenodd" d="M-90 -230 H94 V30 H-90 Z M${hat[1]} ${hat[0]} V-230 H${hat[2]} V${hat[0]} Z"/></clipPath>` : ''}</defs>`;
+    const defs = `<defs><clipPath id="fc${n}" clipPathUnits="userSpaceOnUse"><path d="${FACE[lk.face]}"/></clipPath></defs>`;
     const pd = dk(pants, 0.78), leg = (cls, x, side) => `<g class="leg ${cls}">${bt.leg(L, pants, x, skin)}${bt.foot ? bt.foot(L, pants, x, pd) : shoe(L, x, side)}</g>`;
     const legs = (side) => `<g class="legs">${leg('l', -15, side)}${leg('r', 5, side)}</g>${bt.over ? bt.over(L, pants, pd) : ''}`;   // a skirt hangs over both legs, not with them
     const arm = (cls, x) => {
@@ -8351,10 +8373,10 @@ const HERO = (() => {
       <g class="eyes">${EYES[lk.eyes](lk.eyeColor)}</g>${both(`<path d="${BROWS[lk.brows][0]}" fill="none" stroke="${dk(lk.hairColor, 0.8)}" stroke-width="${BROWS[lk.brows][1]}" stroke-linecap="round"/>`)}`;
     const fd = dk(top, 0.74), whole = full && full(L, top, fd), collar = tp.collar ? tp.collar(L, top, topDk) : '';   // a whole head: the hero's own, hair and face things give way
     const shade = `<g opacity=".13" transform="translate(0 2.4)" clip-path="url(#fc${n})">${hairOf.front('fill="#3a2016"')}</g>`;   // the fringe's shadow on the forehead
-    const front = `<g class="head">${whole ? '' : cut(hairOf.back(hf, hk))}</g>${bt.tail ? bt.tail(L, pants, pd, 0) : ''}${W('back', 0)}${legs(0)}${tp.front(L, top, topDk)}${W('body', 0)}${W('neck', 0)}${arm('l', -27)}${arm('r', 31)}
-      <g class="head">${collar}${whole ? whole[0] : `${face}${cut(shade + hairOf.front(hf) + hairOf.deco(hs))}${W('face', 0)}${W('head', 0)}`}</g>`;
+    const front = `<g class="head">${whole ? '' : hairOf.back(hf, hk)}</g>${bt.tail ? bt.tail(L, pants, pd, 0) : ''}${W('back', 0)}${legs(0)}${tp.front(L, top, topDk)}${W('body', 0)}${W('neck', 0)}${arm('l', -27)}${arm('r', 31)}
+      <g class="head">${collar}${whole ? whole[0] : `${face}${shade}${hairOf.front(hf)}${hairOf.deco(hs)}${W('face', 0)}${W('head', 0)}`}</g>`;
     const back = `${legs(1)}${arm('l', -27)}${arm('r', 31)}${tp.back(L, top, topDk)}${W('body', 1)}${tp.over ? tp.over(L, top, topDk) : ''}${bt.tail ? bt.tail(L, pants, pd, 1) : ''}${W('neck', 1)}${W('back', 1)}
-      <g class="head">${whole ? whole[1] : `<ellipse cx="2" cy="-128" rx="34" ry="32" ${L(skin, 3.6)}/>${cut(hairOf.rear(hf, hk, hs))}${W('face', 1)}${W('head', 1)}`}</g>`;
+      <g class="head">${whole ? whole[1] : `<ellipse cx="2" cy="-128" rx="34" ry="32" ${L(skin, 3.6)}/>${hairOf.rear(hf, hk, hs)}${W('face', 1)}${W('head', 1)}`}</g>`;
     return `<svg viewBox="${o.box || '-60 -200 120 210'}"${o.box ? ' style="overflow:hidden"' : ''} aria-hidden="true">${defs}<ellipse class="h-shadow" rx="24" ry="7" fill="#2b1c12" fill-opacity=".2"/><g class="fig"><g class="bob"><g class="f-front">${front}</g>${o.front ? '' : `<g class="f-back">${back}</g>`}</g></g></svg>`;   // front: the front view only
   }
   // the head alone, in daylight, for the choices in the dressing room: 'head' frames the hair, 'face' the eyes, brows and mouth
@@ -8365,7 +8387,8 @@ const HERO = (() => {
   function thumb(id, look) {
     if (FULL[id]) { const lk = norm(look); return `<svg class="thumb" viewBox="-46 -186 96 100" aria-hidden="true">${FULL[id](day, lk.top, dk(lk.top, 0.74))[0]}</svg>`; }
     const f = WEAR[id]; if (!f) return '';
-    return `<svg class="thumb" viewBox="-60 -185 120 140" aria-hidden="true"><g class="base" opacity=".28"><ellipse cx="2" cy="-128" rx="34" ry="32" fill="#c9bfae"/><path d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -50 H-26 Z" fill="#c9bfae"/></g><g>${f((h) => `fill="${h}"`)[0]}</g></svg>`;
+    const hat = !!HAT_HAIR[id];   // a hat is drawn round a crown of hair: a bigger frame, the faint head with its hair
+    return `<svg class="thumb" viewBox="${hat ? '-68 -203 136 158' : '-60 -185 120 140'}" aria-hidden="true"><g class="base" opacity=".28"><ellipse cx="2" cy="-128" rx="34" ry="32" fill="#c9bfae"/>${hat ? '<path d="M-44 -128 C-45 -160 -20 -172 2 -172 C24 -172 49 -160 48 -128 Q2 -150 -44 -128 Z" fill="#a3957d"/>' : ''}<path d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -50 H-26 Z" fill="#c9bfae"/></g><g>${f((h) => `fill="${h}"`)[0]}</g></svg>`;
   }
   // idling (test build): standing still they now and then look round, stretch, wave (facing us), sway or bounce — one at a time,
   // 6–12 s apart (the first after 4), never the same twice running; sitting they nod over the notebook. ok(): may they now?
@@ -8394,7 +8417,8 @@ const HERO = (() => {
     el.classList.remove(...Object.keys(TAPS)); still(el); void el.offsetWidth; el.classList.add(k);
     clearTimeout(el._tap); el._tap = setTimeout(() => el.classList.remove(k), TAPS[k]);
   }
-  return { svg, head, thumb, clothes, idle, still, react, norm, OPTS, LOOK0, slots: Object.keys(WEAR).concat(Object.keys(FULL)) };
+  return { svg, head, thumb, clothes, idle, still, react, norm, OPTS, LOOK0, slots: Object.keys(WEAR).concat(Object.keys(FULL)),
+    hairWorn: (look, wear) => hairWorn(norm(look), wear), whole: (id) => !!FULL[id] };
 })();
 
 // ---------- 古道具屋 (test build): the old shop up the hill, kept by 福爺 the owl, who takes 言靈 and nothing else ----------
@@ -8422,8 +8446,14 @@ function fukuSvg() {
 }
 const SHOP_SECTIONS = [['floor', '家具擺飾'], ['rug', '地墊'], ['wall', '牆上'], ['clothes', '衣服褲子'], ['wear', '主角穿戴']];
 const styleKey = (it) => (it.slot === 'top' ? 'topStyle' : 'bottomStyle'), styleOn = (it) => HERO.norm(state.look)[styleKey(it)] === it.id;
+const hairName = (v) => (HERO.OPTS.hair.find(([x]) => x === v) || [, ''])[1];
+// a hat that cannot sit on their hairstyle (a tall one) and brings its own while it is on: what they will see
+function hatSwapNote(id, look) {
+  const lk = HERO.norm(look), worn = HERO.hairWorn(lk, { head: id });
+  return worn === lk.hair ? '' : `蓋不住${hairName(lk.hair)}，戴著時換成${hairName(worn)}。`;
+}
 function shopCardHtml(it, bal) {
-  const owned = owns(it.id), short = it.price - bal;
+  const owned = owns(it.id), short = it.price - bal, swap = it.kind === 'wear' ? hatSwapNote(it.id, state.look) : '';
   let act;
   if (owned && it.kind === 'wear') act = `<button type="button" class="btn btn-sm" data-act="ware-wear" data-id="${it.id}">${state.wear[it.slot] === it.id ? '脫下' : '穿上'}</button>`;
   else if (owned && it.kind === 'clothes') act = `<button type="button" class="btn btn-sm" data-act="clothes-wear" data-id="${it.id}">${styleOn(it) ? '脫下' : '換上'}</button>`;
@@ -8431,7 +8461,7 @@ function shopCardHtml(it, bal) {
   else if (short > 0) act = `<button type="button" class="btn btn-sm btn-muted" data-act="ware-short" aria-disabled="true">還差 ${short}</button>`;
   else act = `<button type="button" class="btn btn-sm btn-primary" data-act="ware-buy" data-id="${it.id}">買下</button>`;
   const art = it.kind === 'wear' ? HERO.thumb(it.id, state.look) : it.kind === 'clothes' ? HERO.clothes(it.id, HERO.norm(state.look)) : DECOR.thumb(it.id);   // clothes in the hero's own colours
-  return `<div class="card shop-item${owned ? ' owned' : ''}" data-ware="${it.id}"><div class="art">${art}</div><div class="nm">${esc(it.name)}</div><div class="ds">${esc(it.desc)}</div>
+  return `<div class="card shop-item${owned ? ' owned' : ''}" data-ware="${it.id}"><div class="art">${art}</div><div class="nm">${esc(it.name)}</div><div class="ds">${esc(it.desc)}</div>${swap ? `<div class="ds swap">${swap}</div>` : ''}
     <div class="buy">${owned ? '<span class="price got">已擁有</span>' : `<span class="price">${kotoIcon()}${it.price}</span>`}${act}</div></div>`;
 }
 function renderShop(view) {
@@ -8460,7 +8490,8 @@ const DRESS = (() => {
   function frame(dr, part) {
     const p = dr.querySelector('.dress-panel'), side = p.offsetLeft > 0, W = dr.clientWidth, H = dr.clientHeight;
     const x0 = 0, y0 = 58, x1 = side ? p.offsetLeft : W, y1 = side ? H - 12 : p.offsetTop - 8;
-    const [a0, b0, a1, b1] = part === 'head' ? [-52, -184, 56, -84] : [-48, -182, 52, 8];
+    const up = d && d.wear.head ? 12 : 0;   // what is on the head can stand above the hair (a hat's top, a pompom)
+    const [a0, b0, a1, b1] = part === 'head' ? [-52, -184 - up, 56, -84] : [-48, -182 - up, 52, 8];
     const s = Math.min((x1 - x0) * (part === 'head' ? 0.78 : 0.86) / (a1 - a0), (y1 - y0) * 0.9 / (b1 - b0)), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     dr.style.setProperty('--spx', `${cx}px`); dr.style.setProperty('--spy', `${cy}px`);
     return { s, x: cx - ((a0 + a1) / 2 + 60) * s, y: cy - ((b0 + b1) / 2 + 200) * s };
@@ -8470,10 +8501,19 @@ const DRESS = (() => {
   const opts = (key, crop) => `<div class="dress-opts">${HERO.OPTS[key].map(([v, name]) => `<button type="button" class="dress-opt" data-act="dress-pick" data-key="${key}" data-val="${v}" aria-pressed="${d.look[key] === v}">${HERO.head(Object.assign({}, d.look, { [key]: v }), crop)}<span>${name}</span></button>`).join('')}</div>`;
   const sws = (key) => `<div class="dress-sws">${HERO.OPTS[key].map(([v, name]) => `<button type="button" class="dress-sw" data-act="dress-pick" data-key="${key}" data-val="${v}" style="--c:${v}" aria-pressed="${d.look[key] === v}" aria-label="${name}" title="${name}"></button>`).join('')}</div>`;
   const sec = (title, inner) => `<section class="dress-sec"><h3>${title}</h3>${inner}</section>`;
+  // what the copy does not show because of what is on the head: a whole head hides the face and hair (the face's tabs); a hat that
+  // cannot sit on their hairstyle wears its own (髮型, 穿戴)
+  function note() {
+    const it = d.wear.head && WARE.get(d.wear.head); if (!it) return '';
+    const swap = hatSwapNote(it.id, d.look);
+    const say = HERO.whole(it.id) ? (kind() === 'head' ? `戴著${it.name}，看不到臉和頭髮。` : '') : swap && (d.tab === 'hair' || d.tab === 'wear') ? it.name + swap : '';
+    return say ? `<p class="dress-note">${esc(say)}</p>` : '';
+  }
   // the styles of tops or trousers they have (帽T and 長褲 and what was bought), each on the hero in their colours
   const have = (key, v) => v === HERO.LOOK0[key] || owns(v);
   const styles = (key) => `<div class="dress-opts">${HERO.OPTS[key].filter(([v]) => have(key, v)).map(([v, name]) => `<button type="button" class="dress-opt" data-act="dress-pick" data-key="${key}" data-val="${v}" aria-pressed="${d.look[key] === v}">${HERO.clothes(v, d.look)}<span>${name}</span></button>`).join('')}</div>`;
-  function body() {
+  function body() { return note() + parts(); }
+  function parts() {
     if (d.tab === 'face') return sec('臉型', opts('face', 'head')) + sec('膚色', sws('skin')) + sec('臉頰', opts('cheeks', 'face'));
     if (d.tab === 'hair') return sec('髮型', opts('hair', 'head')) + sec('髮色', sws('hairColor'));
     if (d.tab === 'features') return sec('眼睛', opts('eyes', 'face')) + sec('眼睛顏色', sws('eyeColor')) + sec('眉毛', opts('brows', 'face')) + sec('嘴巴', opts('mouth', 'face'));
@@ -8527,7 +8567,7 @@ const DRESS = (() => {
     if (!box() || !HERO.OPTS[key] || !HERO.OPTS[key].some(([v]) => v === val) || ((key === 'topStyle' || key === 'bottomStyle') && !have(key, val))) return;
     d.look[key] = val; redraw(true);
   }
-  function wear(id) { const it = WARE.get(id); if (!box() || !it || it.kind !== 'wear' || !owns(id)) return; d.wear[it.slot] = d.wear[it.slot] === id ? null : id; redraw(true); }
+  function wear(id) { const it = WARE.get(id); if (!box() || !it || it.kind !== 'wear' || !owns(id)) return; d.wear[it.slot] = d.wear[it.slot] === id ? null : id; redraw(true); reframe(); }
   function random() {   // a whole new face and hair (most rolls without a beard); clothes and what they wear stay
     if (!box()) return;
     const any = (k) => { const o = HERO.OPTS[k]; return o[Math.floor(Math.random() * o.length)][0]; };

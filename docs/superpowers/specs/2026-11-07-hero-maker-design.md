@@ -79,3 +79,9 @@ allowing a new model as long as it keeps the app's flat style. The head now:
   strands and a light band round the crown. Sixteen styles: 短碎髮, 清爽短髮, 中分, 呆毛短髮, 刺蝟頭, 油頭, 自然捲, 爆炸頭,
   鮑伯頭, 狼尾, 及肩髮, 長直髮, 長捲髮, 高馬尾, 雙馬尾, 丸子頭 (平頭 gave way to 呆毛短髮, which keeps the ears hidden).
 Looks saved before fall back where their choice is gone (eyes → 普通, square face → 圓臉, 平頭 or 及肩 tucked → 短碎髮).
+
+## Fourth round: rules for what is worn
+
+Hats no longer cut the hair. What is worn on the head now sits on top, comes as a hat with a hairstyle of its own for the tall
+hairstyles, or replaces the whole head. Those rules, and the ones for adding a ware or a hairstyle, are in
+2026-11-07-hero-wear-rules.md.

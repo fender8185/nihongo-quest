@@ -114,7 +114,7 @@ def test_wearing_goes_on_and_off_and_shows_on_the_hero(b):
       const bought = state.wear.head || null; """ + GO_ROOM + """
       const wait = (ms) => new Promise(q => setTimeout(q, ms)), act = (sel) => document.querySelector(sel).click();
       const dress = async (ids, keep) => { act('.study-tools [data-act="wardrobe"]'); act('[data-act="dress-tab"][data-tab="wear"]'); ids.forEach(id => act('[data-act="dress-wear"][data-id="' + id + '"]')); act(keep ? '[data-act="dress-done"]' : '[data-act="dress-cancel"]'); await wait(600); };
-      await dress(['beanie'], true); const worn = state.wear.head, has = document.querySelector('.study .room .hero').innerHTML.includes('cy="-166" r="8"');   /* the beanie's pompom (colours are lit, so not its hex) */
+      await dress(['beanie'], true); const worn = state.wear.head, has = document.querySelector('.study .room .hero').innerHTML.includes('cy="-187" r="8.6"');   /* the beanie's pompom (colours are lit, so not its hex) */
       await dress(['strawhat'], true); const now = state.wear.head;
       await dress(['strawhat'], false); const kept = state.wear.head;   /* taken off, then 取消: still on */
       await dress(['strawhat'], true);
@@ -376,13 +376,41 @@ def test_the_hero_idles_now_and_then_and_a_tap_never_gets_the_same_reaction_twic
     assert all(g in ('hop', 'wave', 'spin', 'cheer') for g in r['got']) and all(a != b2 for a, b2 in zip(r['got'], r['got'][1:])), r
     assert r['idleOff'], r   # a tap stops what they were idly doing
 
-def test_a_hat_cuts_the_hair_off_above_its_band_and_unknown_looks_fall_back(b):
-    js = """(() => { const bun = HERO.svg({ look: { hair: 'bun' }, wear: { head: 'beanie' } }), band = HERO.svg({ look: { hair: 'bun' }, wear: { head: 'catears' } });
+# 2026-11-07 (test build): nothing on the head cuts the hair. A hat sits on a hairstyle with a plain crown; a tall one (a tuft,
+# spikes, curls, a high tail, a bun) gives way to the hat's own hairstyle while it is on; things on top keep every hairstyle
+def test_a_hat_sits_on_plain_hair_brings_its_own_for_tall_hair_and_unknown_looks_fall_back(b):
+    js = """(() => { const same = (s) => s.replace(/fc\\d+/g, 'fc'), draw = (hair, head) => same(HERO.svg({ look: { hair }, wear: { head } }));
+      const heads = WARES.filter(w => w.kind === 'wear' && w.slot === 'head').map(w => w.id), hairs = HERO.OPTS.hair.map(h => h[0]);
+      const cut = heads.some(h => hairs.some(x => /clip-path="url\\(#hc/.test(HERO.svg({ look: { hair: x }, wear: { head: h } }))));
+      const tall = ['ahoge', 'spiky', 'curly', 'afro', 'ponytail', 'bun'], plain = hairs.filter(x => !tall.includes(x)), swaps = {};
+      heads.forEach(h => { const to = HERO.hairWorn({ hair: 'bun' }, { head: h }); if (to !== 'bun') swaps[h] = to; });
+      const fair = Object.entries(swaps).every(([h, to]) => tall.every(x => HERO.hairWorn({ hair: x }, { head: h }) === to && draw(x, h) === draw(to, h))
+        && plain.every(x => HERO.hairWorn({ hair: x }, { head: h }) === x));   /* a tall one is drawn as the hat's own; the hat's own is plain */
+      const onTop = heads.filter(h => !swaps[h] && !HERO.whole(h)).every(h => tall.every(x => HERO.hairWorn({ hair: x }, { head: h }) === x)) && HERO.svg({ look: { hair: 'bun' }, wear: { head: 'catears' } }).includes('<circle cx="2.6" cy="-174"');
       const odd = HERO.norm({ hair: 'mohawk', skin: '#123456', eyes: 'big' });
       state.look = 'nope'; const fixed = normalizeState(state).look;
-      return JSON.stringify({ cut: /clip-path="url\(#hc\d+\)"><circle cx="2.6" cy="-174"/.test(bun), band: !band.includes('url(#hc'), odd: [odd.hair, odd.skin, odd.eyes], fixed, styles: HERO.OPTS.hair.length }); })()"""
+      return JSON.stringify({ cut, swaps, fair, onTop, cat: HERO.whole('cathead'), odd: [odd.hair, odd.skin, odd.eyes], fixed, styles: hairs.length }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'cut': True, 'band': True, 'odd': ['crop', '#f3d1b5', 'big'], 'fixed': {}, 'styles': 16}, r   # 'mohawk' and the old styles' ids fall back to 短碎髮
+    assert r == {'cut': False, 'swaps': {'beanie': 'crop', 'strawhat': 'neat', 'beret': 'bob', 'gradcap': 'curtain'}, 'fair': True, 'onTop': True,
+                 'cat': True, 'odd': ['crop', '#f3d1b5', 'big'], 'fixed': {}, 'styles': 16}, r   # 'mohawk' and the old styles' ids fall back to 短碎髮
+
+def test_a_hat_that_swaps_their_hairstyle_says_so_in_the_shop_and_the_dressing_room(b):
+    js = "(async () => { " + FRESH + """ state.koto.gift = 120; ['beanie', 'catears', 'cathead'].forEach(id => buyWare(WARE.get(id))); state.look = Object.assign({}, state.look, { hair: 'bun' }); saveState();
+      const wait = (ms) => new Promise(q => setTimeout(q, ms)), act = (sel) => document.querySelector(sel).click(), note = () => { const n = document.querySelector('.dress-note'); return n ? n.textContent : null; };
+      const card = (id) => { const n = document.querySelector('[data-ware="' + id + '"] .ds.swap'); return n ? n.textContent : null; };
+      location.hash = '#/shop'; route(); const shop = { beanie: card('beanie'), beret: card('beret'), catears: card('catears'), scarf: card('scarf') };
+      state.wear = { head: 'beanie' }; saveState(); """ + GO_ROOM + """ await wait(200);
+      act('.study-tools [data-act="wardrobe"]'); await wait(200); const face = note();
+      act('[data-act="dress-tab"][data-tab="hair"]'); const hair = note();
+      act('[data-act="dress-pick"][data-key="hair"][data-val="long"]'); const long = note();
+      act('[data-act="dress-tab"][data-tab="wear"]'); act('[data-act="dress-wear"][data-id="cathead"]'); const wear = note();
+      act('[data-act="dress-tab"][data-tab="features"]'); const cat = note();
+      act('[data-act="dress-cancel"]'); await wait(600);
+      return JSON.stringify({ shop, face, hair, long, wear, cat }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['shop'] == {'beanie': '蓋不住丸子頭，戴著時換成短碎髮。', 'beret': '蓋不住丸子頭，戴著時換成鮑伯頭。', 'catears': None, 'scarf': None}, r
+    assert r['face'] is None and r['hair'] == '毛帽蓋不住丸子頭，戴著時換成短碎髮。' and r['long'] is None, r   # 長直髮 fits under it
+    assert r['wear'] is None and r['cat'] == '戴著貓咪頭套，看不到臉和頭髮。', r
 
 def test_clothes_are_sold_put_on_in_the_dressing_room_and_dyed_in_the_heros_colours(b):
     js = "(async () => { " + FRESH + """ state.koto.gift = 50; saveState(); const msg = buyWare(WARE.get('tee'));
