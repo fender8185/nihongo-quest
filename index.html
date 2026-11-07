@@ -1316,7 +1316,6 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
     <header class="topbar">
       <div class="row"><button type="button" class="top-home" data-act="nav" data-route="#/today" aria-label="回書房">‹ 書房</button><span class="topbar-title" id="topTitle">書房</span></div>
       <span id="syncChip"></span>
-      <div class="row" id="topActions"></div>
     </header>
     <main id="view" class="content" tabindex="-1"></main>
   </div>
@@ -5649,9 +5648,13 @@ function syncChipLabel() {
     default: return '未登入';
   }
 }
+// the sync state: always in the sidebar (a computer); up in a page's bar only when it failed (test build: the pages' bars lost the
+// login chip, 振假名 and 設定 — they are in 設定, the ⋯ under a question and 書房's buttons)
 function renderSyncChip() {
   const html = `<span class="sync-chip is-${Sync.status}" data-act="sync-open" title="${Sync.status === 'error' ? esc(Sync.lastError || '') : '雲端同步'}">${syncChipLabel()}</span>`;
-  ['sideSync', 'syncChip'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML = html; });
+  const side = document.getElementById('sideSync'), top = document.getElementById('syncChip');
+  if (side) side.innerHTML = html;
+  if (top) top.innerHTML = Sync.status === 'error' ? html : '';
 }
 
 // 1.0.41: a page's progress (rings, bars and gauges marked data-anim) plays when the page is opened: the app started, another page
@@ -5695,7 +5698,6 @@ function renderNav(active) {
   const navItem = NAV.find(n => n.id === active);
   document.getElementById('topTitle').textContent = navItem ? navItem.label : 'Nihongo Quest';
   renderSyncChip();
-  document.getElementById('topActions').innerHTML = `<button type="button" class="btn btn-ghost btn-icon" data-act="toggle-furi" title="振假名">${icon('furi')}</button><button type="button" class="btn btn-ghost btn-icon" data-act="settings" aria-label="設定">${icon('settings')}</button>`;
 }
 
 function route() {
