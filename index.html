@@ -454,7 +454,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.study-edit, .study-wear) { width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 12px; cursor: pointer;
   color: color-mix(in srgb, #3a3350 calc(var(--lit) * 100%), #dfe3ff); background: color-mix(in srgb, rgba(255, 255, 255, .55) calc(var(--lit) * 100%), rgba(20, 22, 52, .55)); transition: color .4s, background-color .4s, opacity .4s; }
 :is(.study-edit, .study-wear) svg { width: 22px; height: 22px; }
-/* the hero (test build): a box of its own over the room; the parts move by pose (walk, run, sit, reach, crouch, look, out) */
+/* the hero (test build): a box of its own over the room; the parts move by pose (walk, run, sit, reach, crouch, look, out), now and
+   then on their own (idle-…: HERO.idle) and when tapped (hop, wave, spin, cheer: HERO.react) */
 :is(.study, .sky) .hero { position: absolute; pointer-events: none; will-change: transform; transition: opacity .3s; }
 :is(.study, .sky) .hero svg { width: 100%; height: 100%; display: block; overflow: visible; }
 :is(.study, .sky) .hero .fig { pointer-events: auto; cursor: pointer; transform-box: view-box; transform-origin: 0 0; }
@@ -462,30 +463,85 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.study, .sky) .hero .f-back { display: none; } :is(.study, .sky) .hero.back .f-front { display: none; } :is(.study, .sky) .hero.back .f-back { display: inline; }
 :is(.study, .sky) .hero :is(.bob, .leg, .arm, .head, .eyes) { transform-box: view-box; }
 :is(.study, .sky) .hero .bob { animation: heroBreathe 3.2s ease-in-out infinite; }
-:is(.study, .sky) .hero .eyes { transform-origin: 5px -121px; animation: heroBlink 4.6s infinite; }
+:is(.study, .sky) .hero .eyes { transform-origin: 2px -121px; animation: heroBlink 4.6s infinite; }
 :is(.study, .sky) .hero .leg.l { transform-origin: -8px -46px; } :is(.study, .sky) .hero .leg.r { transform-origin: 11px -46px; }
 :is(.study, .sky) .hero .arm.l { transform-origin: -27px -88px; } :is(.study, .sky) .hero .arm.r { transform-origin: 31px -88px; transition: transform .25s; }
 :is(.study, .sky) .hero .head { transform-origin: 2px -98px; transition: transform .25s; }
 :is(.study, .sky) .hero:is(.walk, .run) .leg.l { animation: heroLeg var(--step, .42s) ease-in-out infinite alternate; } :is(.study, .sky) .hero:is(.walk, .run) .leg.r { animation: heroLeg var(--step, .42s) ease-in-out infinite alternate-reverse; }
 :is(.study, .sky) .hero:is(.walk, .run) .arm.l { animation: heroArm var(--step, .42s) ease-in-out infinite alternate-reverse; } :is(.study, .sky) .hero:is(.walk, .run) .arm.r { animation: heroArm var(--step, .42s) ease-in-out infinite alternate; }
 :is(.study, .sky) .hero:is(.walk, .run) .bob { animation: heroStep calc(var(--step, .42s) / 2) ease-in-out infinite alternate; }
-:is(.study, .sky) .hero.run { --step: .28s; }
+:is(.study, .sky) .hero.walk { --lean: 2deg; } :is(.study, .sky) .hero.run { --step: .28s; --lean: 4deg; }   /* leaning into the way they go (.flip mirrors it) */
 :is(.study, .sky) .hero.sit .bob { animation: none; transform: translateY(-25px); } :is(.study, .sky) .hero.sit .legs { display: none; }
 :is(.study, .sky) .hero.reach .arm.r { transform: rotate(-155deg); } :is(.study, .sky) .hero.look .head { transform: translateY(-2px) rotate(-6deg); }
 :is(.study, .sky) .hero.crouch .bob { animation: none; transform: translateY(10px) scaleY(.92); } :is(.study, .sky) .hero.crouch .arm.r { transform: rotate(-60deg); }
 :is(.study, .sky) .hero.out { opacity: 0; }
-:is(.study, .sky) .hero.hop:not(.sit) .bob { animation: heroHop .5s cubic-bezier(.3, .7, .4, 1); }   /* a tap on him */
+:is(.study, .sky) .hero.hop:not(.sit) .bob { animation: heroHop .5s cubic-bezier(.3, .7, .4, 1); }
+:is(.study, .sky) .hero.idle-look .head { animation: heroLookRound 1.8s ease-in-out; } :is(.study, .sky) .hero.idle-nod .head { animation: heroNod 1.6s ease-in-out; }
+:is(.study, .sky) .hero:is(.idle-stretch, .cheer) .arm.l { animation: heroUpL 1.6s ease-in-out; } :is(.study, .sky) .hero:is(.idle-stretch, .cheer) .arm.r { animation: heroUpR 1.6s ease-in-out; } :is(.study, .sky) .hero.idle-stretch .bob { animation: heroTall 1.6s ease-in-out; }
+:is(.study, .sky) .hero.cheer :is(.arm.l, .arm.r) { animation-duration: .9s; } :is(.study, .sky) .hero.cheer:not(.sit) .bob { animation: heroHop .5s cubic-bezier(.3, .7, .4, 1) .15s; }
+:is(.study, .sky) .hero:is(.idle-wave, .wave) .arm.r { animation: heroWave 1.5s ease-in-out; } :is(.study, .sky) .hero.wave .arm.r { animation-duration: 1.2s; }
+:is(.study, .sky) .hero.idle-sway .bob { animation: heroSway 2.2s ease-in-out; } :is(.study, .sky) .hero.idle-bounce .bob { animation: heroBounce .9s ease-in-out; }
+:is(.study, .sky) .hero.spin:not(.sit) .bob { animation: heroSpin .7s ease-in-out; }
 @keyframes heroBreathe { 50% { transform: translateY(-1.5px); } }
 @keyframes heroBlink { 0%, 95%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
 @keyframes heroLeg { from { transform: rotate(22deg); } to { transform: rotate(-22deg); } }
 @keyframes heroArm { from { transform: rotate(24deg); } to { transform: rotate(-24deg); } }
-@keyframes heroStep { from { transform: translateY(0); } to { transform: translateY(-3px); } }
+@keyframes heroStep { from { transform: rotate(var(--lean, 0deg)); } to { transform: translateY(-3px) rotate(var(--lean, 0deg)); } }
 @keyframes heroHop { 40% { transform: translateY(-16px); } 75% { transform: translateY(1px) scaleY(.97); } }
+@keyframes heroLookRound { 25% { transform: rotate(-7deg); } 65% { transform: rotate(7deg); } }
+@keyframes heroNod { 30%, 70% { transform: rotate(6deg) translateY(1px); } 50% { transform: none; } }
+@keyframes heroUpL { 30%, 70% { transform: rotate(160deg); } }
+@keyframes heroUpR { 30%, 70% { transform: rotate(-160deg); } }
+@keyframes heroTall { 30%, 70% { transform: translateY(-3px) scaleY(1.03); } }
+@keyframes heroWave { 15%, 45%, 75% { transform: rotate(-150deg); } 30%, 60% { transform: rotate(-125deg); } }
+@keyframes heroSway { 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
+@keyframes heroBounce { 25%, 75% { transform: translateY(-6px); } 50% { transform: none; } }
+@keyframes heroSpin { 25% { transform: scaleX(.15); } 50% { transform: scaleX(-1); } 75% { transform: scaleX(-.15); } }
 .study .front { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; will-change: transform; }
 .study.edit :is(.hero, .front) { display: none; }
-.wardrobe .wr-row { display: flex; gap: 12px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--line); } .wardrobe .wr-slot { flex: none; width: 40px; padding-top: 20px; font-weight: 700; color: var(--fg-2); }
-.wardrobe .wr-list { display: flex; flex-wrap: wrap; gap: 8px; }
-.wr-it { width: 76px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 1.5px solid transparent; border-radius: 10px; font: inherit; font-size: 12px; color: var(--fg); background: var(--bg-sunken); cursor: pointer; }
+/* the dressing room (test build): the 衣櫃 button zooms in on the hero — the room grows round them and dims, a big copy of them flies
+   up to the stage (DRESS: the head for the face's tabs, all of them for clothes) and the panel slides in, from the right on a wide
+   screen. A tap on one of the choices shows it on them at once. */
+.study .room-wrap { transition: transform .5s cubic-bezier(.2, .8, .25, 1); }
+.study.dressing .room-wrap { transform: scale(1.5); transform-origin: var(--zx, 50%) var(--zy, 50%); }
+.study:is(.dressing, .undressing) .room .hero, .study.dressing :is(.study-tools, .room-hint, .mail-hint, .thing) { visibility: hidden; }
+@media (prefers-reduced-motion: reduce) { .study .room-wrap, .dress .dress-hero.fly, .dress-panel { transition: none; } }
+.dress { position: absolute; inset: 0; z-index: 6; --panel-h: min(50%, 440px); --panel-w: 0px; }
+.dress-dim { position: absolute; inset: 0; opacity: 0; transition: opacity .45s; background: radial-gradient(closest-side at var(--spx, 50%) var(--spy, 30%), rgba(255, 246, 226, .5), rgba(255, 246, 226, 0)), rgba(16, 18, 38, .66); }
+.dress.on .dress-dim { opacity: 1; }
+.dress .dress-hero { left: 0; top: 0; width: 120px; height: 210px; transform-origin: 0 0; }
+.dress .dress-hero .fig { cursor: pointer; }
+.dress .dress-hero.fly { transition: transform .5s cubic-bezier(.2, .8, .25, 1); }
+.dress-bar { position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); left: 12px; right: calc(var(--panel-w) + 12px); display: flex; align-items: center; justify-content: space-between; gap: 8px; opacity: 0; transition: opacity .3s .2s; }
+.dress.on .dress-bar { opacity: 1; }
+.dress-bar .t { font-weight: 700; font-size: 15px; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, .4); }
+.dress-bar button { display: inline-flex; align-items: center; gap: 5px; padding: 8px 14px; border: 0; border-radius: 99px; font: inherit; font-size: 13.5px; font-weight: 700; color: #fff; background: rgba(20, 22, 44, .62); cursor: pointer; }
+.dress-bar .ok { background: #5a6cf0; box-shadow: 0 4px 14px rgba(70, 90, 230, .4); }
+.dress-tools { position: absolute; right: calc(var(--panel-w) + 10px); bottom: calc(var(--panel-h) + 12px); display: flex; flex-direction: column; gap: 8px; opacity: 0; transition: opacity .3s .2s; }   /* 隨機 and 轉身, round, at the stage's edge */
+.dress.on .dress-tools { opacity: 1; }
+.dress-tools button { width: 42px; height: 42px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 50%; color: #fff; background: rgba(20, 22, 44, .62); cursor: pointer; }
+.dress-tools svg { width: 20px; height: 20px; }
+.dress-panel { position: absolute; left: 0; right: 0; bottom: 0; height: var(--panel-h); display: flex; flex-direction: column; border-radius: 18px 18px 0 0; color: var(--fg); background: var(--bg-elev); box-shadow: 0 -8px 30px rgba(0, 0, 0, .28); transform: translateY(102%); transition: transform .45s cubic-bezier(.2, .8, .25, 1); }
+.dress.on .dress-panel { transform: none; }
+@media (min-width: 760px) and (min-aspect-ratio: 1/1) {
+  .dress { --panel-h: 0px; --panel-w: 380px; }
+  .dress-panel { left: auto; top: 0; width: var(--panel-w); height: auto; border-radius: 18px 0 0 18px; transform: translateX(102%); }
+}
+.dress-tabs { flex: none; display: flex; gap: 6px; overflow-x: auto; padding: 12px 12px 6px; scrollbar-width: none; }
+.dress-tabs button { flex: none; padding: 7px 13px; border: 0; border-radius: 99px; font: inherit; font-size: 13px; font-weight: 600; color: var(--fg-2); background: var(--bg-elev-2); cursor: pointer; }
+.dress-tabs button[aria-pressed="true"] { color: var(--accent-fg); background: var(--accent); }
+.dress-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 0 12px calc(14px + env(safe-area-inset-bottom, 0px)); }
+.dress-sec h3 { margin: 12px 2px 7px; font-size: 12.5px; font-weight: 700; color: var(--fg-2); }
+.dress-opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
+.dress-opt { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 4px 6px; border: 2px solid transparent; border-radius: 12px; font: inherit; font-size: 11.5px; color: var(--fg); background: var(--bg-elev-2); cursor: pointer; }
+.dress-opt svg { width: 58px; height: 58px; display: block; overflow: hidden; }
+.dress-opt[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.dress-sws { display: flex; flex-wrap: wrap; gap: 10px; padding: 2px 2px 4px; }
+.dress-sw { width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .14); cursor: pointer; }
+.dress-sw[aria-pressed="true"] { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .14), 0 0 0 2px var(--bg-elev), 0 0 0 4px var(--accent); }
+.dress-wear { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; } .dress-wear .slot { flex: none; width: 40px; padding-top: 22px; font-size: 12.5px; font-weight: 700; color: var(--fg-2); }
+.dress-wear .list { display: flex; flex-wrap: wrap; gap: 8px; }
+.wr-it { width: 72px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 1.5px solid transparent; border-radius: 10px; font: inherit; font-size: 12px; color: var(--fg); background: var(--bg-sunken); cursor: pointer; }
 .wr-it svg { width: 56px; height: 56px; } .wr-it.on { border-color: var(--accent); background: var(--accent-soft); }
 /* 擺設 (test build): the room's own controls step aside, each ware gets a clear button, the picked one a glow and its tools */
 .study.edit :is(.study-tools, .room-hint, .mail-hint), .study.edit .thing { display: none; }
@@ -1979,7 +2035,7 @@ function normalizeState(s) {
   // test build: 言靈 and the things from 古道具屋 (ids this build does not know are kept: a later one may sell them)
   const kt = out.koto && typeof out.koto === 'object' && !Array.isArray(out.koto) ? out.koto : {};
   out.koto = { sets: kt.sets && typeof kt.sets === 'object' && !Array.isArray(kt.sets) ? kt.sets : {}, days: Array.isArray(kt.days) ? kt.days : [], gift: Number(kt.gift) || 0 };
-  ['owned', 'placed', 'wear'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
+  ['owned', 'placed', 'wear', 'look'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)
   // test build: 書房's own furniture and pictures became wares (moved, put away): laid out where they always stood, once
   if ((out.roomV || 0) < 2) { WARES.filter(w => w.starter).forEach(w => { if (!out.placed[w.id]) out.placed[w.id] = Object.assign({}, w.at); }); out.roomV = 2; }
   // test build (roomV 3): the string of lights became four strings, hung where it ran; the desk and the window moved right
@@ -3091,6 +3147,8 @@ const ICONS = {
   door: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 21V4.8A1.8 1.8 0 0 1 8.3 3h7.4a1.8 1.8 0 0 1 1.8 1.8V21"/><path d="M4 21h16"/><circle cx="14.6" cy="12.4" r=".95" fill="currentColor" stroke="none"/></svg>',
   shop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 9.5 5.4 4.5h13.2l2.6 5z"/><path d="M5 9.5V20h14V9.5"/><path d="M7.5 9.5v4.6h9V9.5M10.5 9.5v4.6M13.5 9.5v4.6"/></svg>',   // 古道具屋: a shop front, its noren
   hanger: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5.2a2 2 0 1 1 2 2v1"/><path d="M12 8.2 3.6 14.3a1 1 0 0 0 .6 1.8h15.6a1 1 0 0 0 .6-1.8z"/></svg>',
+  dice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r="1.1" fill="currentColor"/><circle cx="15" cy="9" r="1.1" fill="currentColor"/><circle cx="9" cy="15" r="1.1" fill="currentColor"/><circle cx="15" cy="15" r="1.1" fill="currentColor"/></svg>',
+  turn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/></svg>',
   arrange: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 11V8.5a3 3 0 0 1 3-3h7a3 3 0 0 1 3 3V11"/><path d="M3 12.5a2 2 0 0 1 4 0V14h10v-1.5a2 2 0 0 1 4 0V16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M6 18v1.5M18 18v1.5"/></svg>'
 };
 function icon(name) { return ICONS[name] || ''; }
@@ -5866,7 +5924,7 @@ function weekdayZh(d) { return '日一二三四五六'[parseDate(d).getDay()]; }
 // 書房 and the yard (1.1.0). The app opens in 書房 (renderToday); its door leads out to the yard (renderOutside), whose house
 // leads back in. Both follow the clock (sceneTick) and today's list (dayProgress, the ring they replace).
 // what 書房 shows of the wares: a change (bought on another device, a sync) draws the room again
-function roomSig() { return Object.keys(state.placed).sort().map((k) => { const p = state.placed[k]; return `${k}:${p.w}${p.x ?? p.u},${p.y ?? p.v},${p.r || 0}`; }).join('|') + '/' + Object.keys(state.owned).length + '/' + Object.values(state.wear).join(','); }
+function roomSig() { return Object.keys(state.placed).sort().map((k) => { const p = state.placed[k]; return `${k}:${p.w}${p.x ?? p.u},${p.y ?? p.v},${p.r || 0}`; }).join('|') + '/' + Object.keys(state.owned).length + '/' + Object.values(state.wear).join(',') + '/' + Object.values(HERO.norm(state.look)).join(','); }
 function renderToday(view) {
   finishPreIfReady();
   sceneTick();
@@ -5887,6 +5945,8 @@ function renderOutside(view) {
   sb.style.left = `calc(50% - ${Math.round(118 * k)}px)`; sb.style.bottom = `${Math.round(346 * k - 6)}px`;
   if (yh.fromDoor) { yh.fromDoor = false; yh.X = 0; yh.Y = 214; yh.back = false; yHeroPlace(y); setTimeout(() => yHeroWalk(y, [8, 150]), 260); }   // out of the door, onto the lawn (below the 進屋 tag)
   else yHeroPlace(y);
+  const yel = y.querySelector('.yhero');   // idling now and then while left be
+  HERO.idle(yel, () => !yh.climb && !document.hidden && !yel.matches('.walk, .run, .out, .hop, .wave, .spin, .cheer'), true);
   y.addEventListener('click', (e) => {   // a tap on the lawn: the hero walks there
     if (e.target.closest('button, .hero, a')) return;
     const r = y.querySelector('.sky').getBoundingClientRect(), Y = r.bottom - e.clientY;
@@ -5934,7 +5994,7 @@ const yh = { X: 0, Y: 186, back: false, flip: false, raf: 0, fromDoor: false, cl
 try { const h = JSON.parse(localStorage.getItem('nq_hero') || 'null'); if (h && h.yard && Number.isFinite(h.yard.X) && Number.isFinite(h.yard.Y)) Object.assign(yh, { X: h.yard.X, Y: h.yard.Y }); } catch (e) { /* first time out */ }
 function yHeroSave() { try { const h = JSON.parse(localStorage.getItem('nq_hero') || '{}') || {}; h.yard = { X: Math.round(yh.X), Y: Math.round(yh.Y) }; localStorage.setItem('nq_hero', JSON.stringify(h)); } catch (e) { /* no storage */ } }
 const yScale = (Y) => 0.19 + 0.31 * Math.max(0, Math.min(1, (212 - Y) / 198));
-function yHeroHtml() { return `<div class="hero yhero" data-act="hero-hop" aria-label="主角">${HERO.svg({ wear: state.wear })}</div>`; }
+function yHeroHtml() { return `<div class="hero yhero" data-act="hero-hop" aria-label="主角">${HERO.svg({ wear: state.wear, look: state.look })}</div>`; }
 function yHeroPlace(yard) {
   const el = yard.querySelector('.yhero'); if (!el) return;
   el.style.transform = `translate(${yh.X.toFixed(1)}px,${(-yh.Y).toFixed(1)}px) scale(${(yh.s || yScale(yh.Y)).toFixed(3)})`;
@@ -5944,6 +6004,7 @@ function yHeroWalk(yard, to, done) {
   cancelAnimationFrame(yh.raf);
   const el = yard.querySelector('.yhero'), sky = yard.querySelector('.sky').getBoundingClientRect(), lim = sky.width / 2 - 20;
   yh.climb = null; yh.s = 0; yard.classList.remove('climbing'); if (el) el.classList.remove('climb');   // off the hill path, if he was on it
+  HERO.still(el);
   const from = [yh.X, yh.Y], goal = [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(214, to[1]))], dx = goal[0] - from[0], dy = goal[1] - from[1], len = Math.hypot(dx, dy);
   if (!el || len < 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { yh.X = goal[0]; yh.Y = goal[1]; if (el) yHeroPlace(yard); yHeroSave(); if (done) done(); return; }
   const v = Math.max(170, len / 1.1);   // px a second: a long way hurries, about a second at most
@@ -7094,7 +7155,7 @@ const ROOM = (() => {
   const hero = { x: 4.2, y: 4.7, back: false, flip: false, pose: '', raf: 0, t: 0, walk: null, lead: null, going: null, frontKey: '' };
   try { const h = JSON.parse(localStorage.getItem('nq_hero') || 'null'); if (h && h.room && Number.isFinite(h.room.x) && Number.isFinite(h.room.y)) Object.assign(hero, { x: h.room.x, y: h.room.y, back: !!h.room.back, flip: !!h.room.flip, pose: h.room.pose === 'sit' ? 'sit' : '' }); } catch (e) { /* first time here */ }
   function heroSave() { try { const h = JSON.parse(localStorage.getItem('nq_hero') || '{}') || {}; h.room = { x: hero.x, y: hero.y, back: hero.back, flip: hero.flip, pose: hero.pose }; localStorage.setItem('nq_hero', JSON.stringify(h)); } catch (e) { /* no storage: it starts by the desk */ } }
-  const heroArt = () => HERO.svg({ L: (h, z) => F(h, 'y', [hero.x, hero.y + 0.3, z || 1]), wear: state.wear });
+  const heroArt = () => HERO.svg({ L: (h, z) => F(h, 'y', [hero.x, hero.y + 0.3, z || 1]), wear: state.wear, look: state.look });
   function heroHtml() {
     const [px, py] = P(hero.x, hero.y, 0);
     return `<div class="hero${hero.back ? ' back' : ''}${hero.flip ? ' flip' : ''}${hero.pose ? ' ' + hero.pose : ''}" style="${vbPct(px - 60, py - 200)};${vbSize(120, 210)}" data-act="hero-hop" aria-label="主角（按住拖曳，帶他走）">${heroArt()}</div><svg class="front" viewBox="${VB.join(' ')}" aria-hidden="true"></svg>`;
@@ -7173,13 +7234,13 @@ const ROOM = (() => {
   function heroWalk(st, pts, done) {
     const el = st.querySelector('.hero'), len = pathLength(pts);
     if (!el || len < 1e-3) { heroHalt(); if (done) done(); return; }
-    hero.pose = ''; hero.lead = null; el.classList.remove('sit', 'reach', 'crouch', 'look', 'out');
+    hero.pose = ''; hero.lead = null; el.classList.remove('sit', 'reach', 'crouch', 'look', 'out'); HERO.still(el);
     hero.walk = { pts: pts.slice(1), v: Math.max(5.5, len / 1.1), done };   // a long way hurries, about a second at most
     heroSteps(st);
   }
   function heroLead(st, off) {   // a finger on the hero leads him (off: from the finger to his feet, on the screen)
     if (hero.pose === 'sit') { hero.pose = ''; hero.y += 1.0; heroPlace(st); }   // up from the chair, out behind it
-    st.querySelector('.hero').classList.remove('sit', 'reach', 'crouch', 'look', 'out');
+    st.querySelector('.hero').classList.remove('sit', 'reach', 'crouch', 'look', 'out'); HERO.still(st.querySelector('.hero'));
     hero.going = null; hero.lead = { x: 0, y: 0, off, t: 0, to: null };
     grid = null; grid = walkGrid(); hero.walk = { pts: [], v: 5.5, done: null }; heroSteps(st);
   }
@@ -7448,15 +7509,15 @@ const ROOM = (() => {
     cam.c = c; place(st);
   }
   // how to lead the hero: shown when 書房 opens and on a tap on him, till he has been led once (localStorage nq_hero_led)
-  let ledOnce = false, hintT = 0, hopT = 0;
+  let ledOnce = false, hintT = 0;
   function ledBefore() { if (ledOnce) return true; try { return Boolean(localStorage.getItem('nq_hero_led')); } catch (e) { return false; } }
   function led(st) {
     ledOnce = true; st.querySelector('.room-hint').classList.remove('on');
     try { localStorage.setItem('nq_hero_led', '1'); } catch (e) { /* ignore */ }
   }
   function roomHint(st, ms) { const h = st.querySelector('.room-hint'); h.classList.add('on'); clearTimeout(hintT); hintT = setTimeout(() => h.classList.remove('on'), ms); }
-  function tapHero(el) {   // a tap on the hero (in 書房 or the yard): a little hop
-    if (!reduced()) { el.classList.remove('hop'); void el.offsetWidth; el.classList.add('hop'); clearTimeout(hopT); hopT = setTimeout(() => el.classList.remove('hop'), 520); }
+  function tapHero(el) {   // a tap on the hero (in 書房 or the yard): a hop, a wave, a spin or a cheer
+    HERO.react(el);
     const st = el.closest('.study');
     if (st && !ledBefore()) roomHint(st, 3000);
   }
@@ -7465,6 +7526,8 @@ const ROOM = (() => {
     measure(st);
     cam.c = inBound(cam.c || homeView()); place(st);
     hero.frontKey = ''; hero.going = null; hero.lead = null; heroSettle(st);
+    const hel = st.querySelector('.room .hero');   // idling now and then while left be
+    HERO.idle(hel, () => !hero.walk && !hero.lead && !ed.on && !document.hidden && !st.classList.contains('dressing') && !hel.matches('.reach, .crouch, .look, .out, .walk, .run, .hop, .wave, .spin, .cheer'), true);
     if (ed.on) {
       fitThumbs(st);
       const es = st.querySelector('.edit-sel');   // the picked ware's tools stay on the screen
@@ -7488,6 +7551,7 @@ const ROOM = (() => {
     const onHero = (e) => { const f = !ed.on && st.querySelector('.hero .fig'); if (!f) return false; const r = f.getBoundingClientRect(); return e.clientX > r.left - 10 && e.clientX < r.right + 10 && e.clientY > r.top - 10 && e.clientY < r.bottom + 6; };
     const mid = () => { const [a, b] = [...fingers.values()], r = st.getBoundingClientRect(); return [(a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top, Math.hypot(a[0] - b[0], a[1] - b[1])]; };
     st.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.dress')) return;   // the dressing room's own
       swallow = st.classList.contains('quiet') && !!e.target.closest('.study-tools'); wake();   // a tap on the buttons up top while they rest only brings them back
       if (grab) { grab = null; hero.lead = null; }   // a finger that never said it let go
       pan = null; held = false;
@@ -7611,6 +7675,7 @@ const ROOM = (() => {
     }, true);
     let wheelT = 0;
     st.addEventListener('wheel', (e) => {   // the wheel (a trackpad's pinch too) zooms round the pointer
+      if (st.classList.contains('dressing')) return;   // the dressing room's lists scroll
       e.preventDefault(); hush();
       const r = st.getBoundingClientRect(), mx = e.clientX - r.left, my = e.clientY - r.top, q = [cam.c[0] + (mx - cam.W / 2) / cam.k, cam.c[1] + (my - cam.H / 2) / cam.k];
       cam.k = Math.max(cam.kMin, Math.min(cam.kMax, cam.k * Math.exp(-e.deltaY * (e.deltaMode === 1 ? 0.05 : 0.002))));
@@ -7625,6 +7690,7 @@ const ROOM = (() => {
   document.addEventListener('keydown', (e) => {
     const st = document.querySelector('#view .study');
     if (!st || !cam.c || modalOpen() || (e.target && e.target.closest && e.target.closest('input, textarea, select'))) return;
+    if (st.classList.contains('dressing')) { if (e.key === 'Escape') DRESS.close(false); return; }
     if (wakeRoom) wakeRoom();
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { cam.c = inBound([cam.c[0] + (e.key === 'ArrowLeft' ? -0.8 : 0.8) * halfView()[0], cam.c[1]]); glide(st); }
     else if (e.key === '+' || e.key === '=' || e.key === '-') { cam.k = Math.max(cam.kMin, Math.min(cam.kMax, cam.k * (e.key === '-' ? 0.8 : 1.25))); zoomed(st); }
@@ -7639,7 +7705,8 @@ const ROOM = (() => {
     bedRug: (x, y) => shifted(x - 14.9, y - 2.92, bedRugArt), doorMat: (x, y) => shifted(x - 0.7, y - 5.1, doorMatArt)
   };
   const kit = { S, P, pt, poly, line, onX, onY, onZ, F, FS, tone, box, qX, qY, qZ, shadow, bb, C, q2, r1, DEFS, VB, own, wireArt, bulbsAt };
-  return { html, level, mount, enter, pull, door, mark, out, kit, fits, moveOff, SPOTS, use, useWare, heroRedraw, heroIn, tapHero, edit: (el, cmd, id) => editCmd(el.closest('.study'), cmd, id) };
+  function hold() { heroHalt(); hero.going = null; hero.lead = null; }   // the dressing room opens: the hero stops where they are
+  return { html, level, mount, enter, pull, door, mark, out, kit, fits, moveOff, SPOTS, use, useWare, heroRedraw, heroIn, tapHero, hold, edit: (el, cmd, id) => editCmd(el.closest('.study'), cmd, id) };
 })();
 // ---------- 古道具屋's wares in 書房 (test build): each one drawn with 書房's own pencils and light (ROOM.kit) ----------
 // DECOR.wall(id, p) draws a wall ware where it hangs, DECOR.floor(id, p) one standing or lying on the floor (p.r turns it a
@@ -7970,20 +8037,131 @@ function fitThumbs(root) {
   });
 }
 // ---------- the hero (test build): the learner, in 書房 and out in the yard ----------
-// HERO.svg(o) draws them, feet at (0, 0), about 170 units tall (4.25 of 書房's units), in front and back views (the page shows
-// one, .back), with what they wear by part; o.L(colour, z) lights a colour at a height (書房's light), else daylight colours.
-// Poses are classes on the .hero box (walk, run, sit, reach, crouch, look) and move the parts in CSS.
+// HERO.svg(o) draws them, feet at (0, 0), about 170 units tall (4.25 of 書房's units), facing us and from behind (the page shows
+// one, .back), as they chose to look (o.look: state.look, see OPTS) and with what they wear by part (o.wear); o.L(colour, z) lights
+// a colour at a height (書房's light), else daylight colours. The figure stands round x = 2, the head's middle at (2, -128).
+// Poses and motions are classes on the .hero box and move the parts in CSS: walk, run, sit, reach, crouch, look; idle-… (HERO.idle);
+// hop, wave, spin, cheer (a tap).
 const HERO = (() => {
-  const SKIN = '#f3d5bf', HAIR = '#3b2f2a', HOOD = '#5a68d8', HOOD_DK = '#4552b8', PANTS = '#3f4660', SHOE = '#f4f1ea';
-  // the things worn: [front, back] drawings by part, in the figure's own units (head centre about (2, -128))
+  const SHOE = '#f4f1ea', INK = '#2a2730', LIP = '#7a4a3a';
+  // what they can choose, no part anyone's by gender: [id, name] (a colour's id is the colour); LOOK0 is a new hero's look
+  const OPTS = {
+    face: [['round', '圓臉'], ['oval', '鵝蛋臉'], ['square', '方臉'], ['pointed', '尖下巴']],
+    skin: [['#f8dcc8', '白皙'], ['#f3d1b5', '淺膚'], ['#e8bd98', '自然'], ['#d39f78', '小麥'], ['#a9714d', '古銅'], ['#76492f', '深褐']],
+    cheeks: [['blush', '腮紅'], ['freckles', '雀斑'], ['none', '無']],
+    hair: [['tousle', '微亂短髮'], ['sidepart', '旁分'], ['buzz', '平頭'], ['curly', '捲髮'], ['bob', '鮑伯頭'], ['long', '長直髮'], ['ponytail', '馬尾'], ['bun', '丸子頭'], ['spiky', '刺蝟頭'], ['bald', '光頭']],
+    hairColor: [['#2a2524', '黑'], ['#3b2f2a', '深棕'], ['#6b4a32', '棕'], ['#8a4a2e', '紅棕'], ['#c9a25a', '金'], ['#a3a3a8', '灰'], ['#3d5a99', '藍'], ['#d98aa6', '粉紅']],
+    eyes: [['round', '圓眼'], ['happy', '笑眼'], ['almond', '杏眼'], ['big', '大眼'], ['sleepy', '睏眼']],
+    eyeColor: [['#2a2730', '黑'], ['#5a3a28', '棕'], ['#3a5f9a', '藍'], ['#3f7a52', '綠'], ['#6b6f7a', '灰']],
+    brows: [['soft', '自然'], ['straight', '平眉'], ['thick', '粗眉'], ['raised', '細挑']],
+    mouth: [['smile', '微笑'], ['grin', '開心'], ['flat', '一字'], ['o', '圓嘴'], ['cat', '貓嘴']],
+    beard: [['none', '無'], ['stubble', '鬍渣'], ['mustache', '八字鬍'], ['goatee', '山羊鬍'], ['full', '落腮鬍']],
+    top: [['#5a68d8', '靛藍'], ['#3f9a8c', '青綠'], ['#d0574b', '紅'], ['#d9a43a', '芥末黃'], ['#4f7a4a', '森林綠'], ['#4a4a55', '炭灰'], ['#e9e2d0', '米白'], ['#e58fa8', '粉紅']],
+    bottom: [['#3f4660', '深藍'], ['#2b2b33', '黑'], ['#b8a27a', '卡其'], ['#4f6f9e', '牛仔藍'], ['#6e4f3a', '咖啡'], ['#8a8f99', '灰'], ['#ecebe6', '白'], ['#6b7a45', '橄欖綠']]
+  };
+  const LOOK0 = { face: 'round', skin: '#f3d1b5', cheeks: 'blush', hair: 'tousle', hairColor: '#3b2f2a', eyes: 'round', eyeColor: '#2a2730', brows: 'soft', mouth: 'smile', beard: 'none', top: '#5a68d8', bottom: '#3f4660' };
+  // a saved look as drawn: anything this build does not know (or is missing) is the new hero's
+  const norm = (look) => Object.fromEntries(Object.keys(LOOK0).map((k) => [k, look && OPTS[k].some(([v]) => v === look[k]) ? look[k] : LOOK0[k]]));
+  const dk = (h, k) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(h.slice(i, i + 2), 16) * k).toString(16).padStart(2, '0')).join('');
+  // the face: the same dome on top (so hair and hats fit every face), the jaw by its shape
+  const DOME = 'M-32 -128 C-32 -145.7 -16.8 -160 2 -160 C20.8 -160 36 -145.7 36 -128';
+  const FACE = {
+    round: `${DOME} C36 -110.3 20.8 -96 2 -96 C-16.8 -96 -32 -110.3 -32 -128 Z`,
+    oval: `${DOME} C35.5 -106 17 -92 2 -92 C-13 -92 -31.5 -106 -32 -128 Z`,
+    square: `${DOME} C36 -113 35.5 -103 29 -99 Q22 -95.5 2 -95.5 Q-18 -95.5 -25 -99 C-31.5 -103 -32 -113 -32 -128 Z`,
+    pointed: `${DOME} C36 -113 25 -100 2 -91 C-21 -100 -32 -113 -32 -128 Z`
+  };
+  const EYE_X = [-9, 13];
+  const EYES = {
+    round: (c) => EYE_X.map((x) => `<ellipse cx="${x}" cy="-121" rx="3.6" ry="4.8" fill="${c}"/><circle cx="${x + 1}" cy="-123" r="1.3" fill="#fff"/>`).join(''),
+    happy: () => `<path d="M-13.5 -120 Q-9 -126 -4.5 -120 M8.5 -120 Q13 -126 17.5 -120" fill="none" stroke="${INK}" stroke-width="2.2" stroke-linecap="round"/>`,
+    almond: (c) => EYE_X.map((x) => `<circle cx="${x}" cy="-120.6" r="3.7" fill="${c}"/><circle cx="${x + 1.1}" cy="-122" r="1.2" fill="#fff"/>`).join('') + `<path d="M-14.5 -121.5 Q-9 -127 -3.5 -122.6 M7.5 -122.6 Q13 -127 18.5 -121.5" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round"/>`,
+    big: (c) => EYE_X.map((x) => `<ellipse cx="${x}" cy="-121.5" rx="4.6" ry="6" fill="${c}"/><circle cx="${x + 1.4}" cy="-124" r="1.7" fill="#fff"/><circle cx="${x - 1.6}" cy="-118.6" r=".9" fill="#fff"/>`).join(''),
+    sleepy: (c) => EYE_X.map((x) => `<path d="M${x - 4.4} -121.5 h8.8 a4.4 4.4 0 0 1 -8.8 0 Z" fill="${c}"/>`).join('') + `<path d="M-14 -121.6 H-4 M8 -121.6 H18" stroke="${INK}" stroke-width="1.8" stroke-linecap="round"/>`
+  };
+  const BROWS = { soft: ['M-14 -131 Q-9 -134.2 -4 -131.6 M8 -131.6 Q13 -134.2 18 -131', 2], straight: ['M-14 -132 H-4 M8 -132 H18', 2.2], thick: ['M-14.5 -131 Q-9 -135.2 -3.5 -132.2 M7.5 -132.2 Q13 -135.2 18.5 -131', 3.6], raised: ['M-14.5 -130.5 Q-10 -134.6 -4 -134 M8 -134 Q14 -134.6 18.5 -130.5', 1.4] };
+  const MOUTH = {   // c: the line's colour (darker on the darkest skin, so the mouth still reads)
+    smile: (c) => `<path d="M-2 -110 Q2 -106.5 6 -110" fill="none" stroke="${c}" stroke-width="1.8" stroke-linecap="round"/>`,
+    grin: () => `<path d="M-3.6 -111 Q2 -109.8 7.6 -111 Q7 -104.4 2 -104.4 Q-3 -104.4 -3.6 -111 Z" fill="#5c2626"/><path d="M-1 -106 Q2 -107.6 5 -106 Q4.2 -104.6 2 -104.6 Q-.2 -104.6 -1 -106 Z" fill="#e07c7c"/>`,
+    flat: (c) => `<path d="M-1.6 -109 H5.6" stroke="${c}" stroke-width="1.8" stroke-linecap="round"/>`,
+    o: () => `<ellipse cx="2" cy="-108.4" rx="2.4" ry="2.9" fill="#5c2626"/>`,
+    cat: (c) => `<path d="M-3.4 -110.2 Q-.7 -106.8 2 -109.4 Q4.7 -106.8 7.4 -110.2" fill="none" stroke="${c}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`
+  };
+  const CHEEKS = {
+    blush: '<ellipse cx="-18" cy="-111" rx="5" ry="3" fill="#f2a0a0" fill-opacity=".6"/><ellipse cx="22" cy="-111" rx="5" ry="3" fill="#f2a0a0" fill-opacity=".6"/>',
+    freckles: [[-21, -113], [-17.5, -111.2], [-21, -109.5], [-15, -113.5], [25, -113], [21.5, -111.2], [25, -109.5], [19, -113.5]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".85" fill="#a8643f" fill-opacity=".55"/>`).join(''),
+    none: ''
+  };
+  // beards in the hair's colour, drawn bigger than any jaw and clipped to the face (f: the fill)
+  const MUSTACHE = 'M2 -113.2 C-1 -116.6 -8 -116.4 -10.5 -112.2 C-7.4 -113.6 -3.6 -112.2 2 -111 C7.6 -112.2 11.4 -113.6 14.5 -112.2 C12 -116.4 5 -116.6 2 -113.2 Z';
+  const BEARD = {
+    none: () => '',
+    stubble: (f) => `<path ${f} fill-opacity=".13" d="M-34 -118 C-30 -104 -14 -86 2 -86 C18 -86 34 -104 38 -118 C30 -110 20 -105 12 -105.5 Q2 -103 -8 -105.5 C-16 -105 -26 -110 -34 -118 Z M-6 -114 Q2 -116.5 10 -114 Q8 -112 2 -112 Q-4 -112 -6 -114 Z"/>${[[-24, -106], [-18, -102], [-11, -99], [-4, -101], [8, -101], [15, -99], [22, -102], [28, -106], [-14, -96], [2, -97], [18, -96], [-2, -114], [6, -114]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".7" ${f} fill-opacity=".45"/>`).join('')}`,
+    mustache: (f) => `<path ${f} d="${MUSTACHE}"/>`,
+    goatee: (f) => `<path ${f} d="M-2.5 -104.2 Q2 -102.6 6.5 -104.2 Q7.2 -97 2 -92.5 Q-3.2 -97 -2.5 -104.2 Z"/><path ${f} transform="translate(2 -112) scale(.75) translate(-2 112)" d="${MUSTACHE}"/>`,
+    full: (f) => `<path ${f} d="M-34 -126 C-34 -98 -14 -84 2 -84 C18 -84 38 -98 38 -126 L33 -126 C32 -115 24 -106 12 -105.6 Q2 -103.4 -8 -105.6 C-20 -106 -28 -115 -29 -126 Z"/><path ${f} d="${MUSTACHE}"/>`
+  };
+  // the hair (f: its fill, s: a darker stroke for curls and partings): front over the face, behind it (long hair, before the body),
+  // rear (from behind, over the head)
+  const SHINE = '<path d="M-24 -153 C-14 -162 6 -164 18 -159" fill="none" stroke="#fff" stroke-opacity=".17" stroke-width="3" stroke-linecap="round"/>';
+  const REAR = 'M-34.5 -126 C-36 -152 -18 -164 2 -164 C22 -164 40 -152 38.5 -126 C38 -110 32 -101 24 -99 Q2 -95 -20 -99 C-28 -101 -34 -110 -34.5 -126 Z';
+  const blobs = (f, a) => a.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" ${f}/>`).join('');
+  const HAIR = {
+    tousle: {
+      front: (f) => `<path ${f} d="M-35.5 -121 C-39 -157 -12 -169 2 -167 C16 -169 43 -157 39.5 -121 C36.5 -132 31 -139 23 -141 C20 -134 11 -132 6 -138.5 C1 -131.5 -9.5 -132 -14 -139 C-22 -138.5 -31 -132 -35.5 -121 Z"/>${SHINE}`,
+      rear: (f) => `<path ${f} d="M-34.5 -126 C-36 -152 -18 -164 2 -164 C22 -164 40 -152 38.5 -126 C38 -112 33 -103 26 -100 L22 -104 L16 -99 L10 -104 L2 -98 L-6 -104 L-12 -99 L-18 -104 L-22 -100 C-29 -103 -34 -112 -34.5 -126 Z"/>${SHINE}`
+    },
+    sidepart: {
+      front: (f, s) => `<path ${f} d="M-35.5 -120 C-38 -150 -22 -167 -6 -166 C18 -169 42 -156 39.5 -121 C36 -134 28 -147 12 -147.5 C3 -147.5 -3 -144 -7.5 -137 C-9.5 -146 -17 -150.5 -23 -149 C-30.5 -146 -34 -136 -35.5 -120 Z"/><path d="M-6.5 -165 Q-7.5 -153 -7.5 -146.5" fill="none" ${s} stroke-width="1.4" stroke-opacity=".6"/>${SHINE}`,
+      rear: (f) => `<path ${f} d="${REAR}"/>${SHINE}`
+    },
+    buzz: {
+      front: (f) => `<path ${f} fill-opacity=".9" d="M-33.5 -127 C-34.5 -150 -17 -163 2 -163 C21 -163 38.5 -150 37.5 -127 C35 -137 29 -144.5 2 -146 C-25 -144.5 -31 -137 -33.5 -127 Z"/>`,
+      rear: (f) => `<path ${f} fill-opacity=".9" d="M-33.5 -127 C-34.5 -152 -17 -163 2 -163 C21 -163 38.5 -152 37.5 -127 C37 -112 31 -104 23 -102 Q2 -98.5 -19 -102 C-27 -104 -33 -112 -33.5 -127 Z"/>`
+    },
+    curly: {
+      behind: (f) => blobs(f, [[-37, -108, 8.5], [41, -108, 8.5], [-35, -97, 7], [39, -97, 7]]),
+      front: (f, s) => blobs(f, [[-31, -136, 10], [-24, -153, 12], [-8, -162, 12.5], [10, -163, 12.5], [27, -154, 12], [35, -137, 10], [-36, -122, 7.5], [40, -122, 7.5], [-16, -143, 7.5], [-2, -146.5, 7.5], [12, -146, 7.5], [25, -142, 7]])
+        + `<path d="M-28 -152 a5 5 0 0 1 8 -3 M4 -160 a5 5 0 0 1 8 0 M22 -150 a5 5 0 0 1 6 4 M-8 -146 a4 4 0 0 1 6 0" fill="none" ${s} stroke-width="1.2" stroke-opacity=".45" stroke-linecap="round"/>`,
+      rear: (f, s) => blobs(f, [[2, -130, 30], [-30, -140, 12], [-20, -156, 13], [2, -164, 13.5], [24, -156, 13], [34, -140, 12], [-34, -120, 11], [38, -120, 11], [-26, -104, 11], [30, -104, 11], [2, -100, 13]])
+        + `<path d="M-22 -150 a5 5 0 0 1 8 -2 M10 -156 a5 5 0 0 1 8 2 M-10 -118 a5 5 0 0 1 8 0 M16 -112 a5 5 0 0 1 8 2" fill="none" ${s} stroke-width="1.2" stroke-opacity=".45" stroke-linecap="round"/>`
+    },
+    bob: {
+      behind: (f) => `<path ${f} d="M-38.5 -132 C-39.5 -112 -38 -104 -36 -99 H40 C42 -104 43.5 -112 42.5 -132 Z"/>`,
+      front: (f) => `<path ${f} d="M-37.5 -99 C-41 -150 -20 -167 2 -167 C24 -167 45 -150 41.5 -99 C38.5 -100.5 35.5 -102 33 -104.5 C32.5 -119 31.5 -128 30 -134.5 L-26 -134.5 C-27.5 -128 -28.5 -119 -29 -104.5 C-31.5 -102 -34.5 -100.5 -37.5 -99 Z"/>${SHINE}`,
+      rear: (f) => `<path ${f} d="M-37.5 -99 C-41 -150 -20 -167 2 -167 C24 -167 45 -150 41.5 -99 Q2 -93 -37.5 -99 Z"/>${SHINE}`
+    },
+    long: {
+      behind: (f) => `<path ${f} d="M-38.5 -134 C-41 -100 -39 -76 -35 -62 Q2 -58 39 -62 C43 -76 45 -100 42.5 -134 Z"/>`,
+      front: (f) => `<path ${f} d="M-37.5 -94 C-41 -150 -20 -167 2 -167 C24 -167 45 -150 41.5 -94 C38.5 -96 35.5 -98.5 33 -101 C33 -121 30 -138 18.5 -146.5 C12 -142 6 -140 2 -138 C-2 -140 -8 -142 -14.5 -146.5 C-26 -138 -29 -121 -29 -101 C-31.5 -98.5 -34.5 -96 -37.5 -94 Z"/>${SHINE}`,
+      rear: (f) => `<path ${f} d="M-38.5 -134 C-40 -158 -20 -167 2 -167 C24 -167 44 -158 42.5 -134 C45 -100 43 -76 39 -62 Q2 -58 -35 -62 C-39 -76 -41 -100 -38.5 -134 Z"/>${SHINE}`
+    },
+    ponytail: {
+      behind: (f) => `<path ${f} d="M28 -152 C46 -156 54 -134 50 -110 C48.5 -100 44 -93 39 -90 C43 -104 43.5 -122 35 -138 Z"/><circle cx="31" cy="-150" r="3.4" fill="#d0574b"/>`,
+      front: (f) => `<path ${f} d="M-34.5 -121 C-37.5 -154 -16 -166 2 -165.5 C21 -166 41 -154 38.5 -123 C34.5 -136 26.5 -144.5 14 -146.5 C4 -146.5 -6 -142.5 -12.5 -136 C-20 -140 -28.5 -134 -34.5 -121 Z"/>${SHINE}`,
+      rear: (f) => `<path ${f} d="${REAR}"/><path ${f} d="M-5 -151 C-12 -132 -10 -108 -3 -92 C0 -88 5 -88 7 -92 C14 -108 16 -132 9 -151 Z"/><circle cx="2" cy="-152" r="4" fill="#d0574b"/>${SHINE}`
+    },
+    bun: {
+      front: (f, s) => `<circle cx="2" cy="-170" r="11.5" ${f}/><path d="M-4 -172 a6 6 0 1 1 6 6" fill="none" ${s} stroke-width="1.3" stroke-opacity=".5"/><path ${f} d="M-34.5 -124 C-37.5 -156 -16 -165 2 -164 C20 -165 41.5 -156 38.5 -124 C35.5 -134 30 -141 22 -142.5 C14.5 -138.5 8 -138.5 2 -142.5 C-4 -138.5 -10.5 -138.5 -18 -142.5 C-26 -141 -31.5 -134 -34.5 -124 Z"/>${SHINE}`,
+      rear: (f, s) => `<circle cx="2" cy="-168" r="11.5" ${f}/><path ${f} d="${REAR}"/><path d="M-9 -158 Q2 -154.5 13 -158" fill="none" stroke="#d0574b" stroke-width="2.4" stroke-linecap="round"/><path d="M-4 -170 a6 6 0 1 1 6 6" fill="none" ${s} stroke-width="1.3" stroke-opacity=".5"/>${SHINE}`
+    },
+    spiky: {
+      front: (f) => `<path ${f} d="M-35.5 -120 L-38.5 -146 L-28.5 -142 L-31 -164 L-16.5 -154 L-10.5 -173 L0 -158.5 L8.5 -175 L14.5 -157.5 L27 -169 L26 -151.5 L41 -157 L36.5 -138.5 L40.5 -121 C36.5 -133 30.5 -140 22.5 -141 L16.5 -134 L10.5 -140 L4 -133 L-2 -140 L-8 -134 L-14 -140.5 C-24 -138.5 -31 -131 -35.5 -120 Z"/>`,
+      rear: (f) => `<path ${f} d="M-34.5 -128 L-39 -148 L-27 -147 L-27 -167 L-13 -158 L-5 -175 L4 -161 L14 -173 L18 -157 L32 -166 L30 -149 L43 -149 L38.5 -128 C38.5 -110 31 -101 22 -99 Q2 -95.5 -18 -99 C-27 -101 -34.5 -110 -34.5 -128 Z"/>`
+    },
+    bald: { front: () => '<path d="M-20 -150 C-11 -157.5 5 -158.5 15 -155" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="3" stroke-linecap="round"/>', rear: () => '<path d="M-20 -150 C-11 -157.5 5 -158.5 15 -155" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="3" stroke-linecap="round"/>' }
+  };
+  // hats that cover the crown: the hair is cut off above their band, so a bun or spikes never poke through
+  const HAT_LINE = { beanie: -131, strawhat: -146, beret: -148, gradcap: -138 };
+  // the things worn: [front, back] drawings by part, in the figure's own units
   const WEAR = {
     beanie: (L) => { const c = L('#d9534a', 4.2), r = L('#c2433b', 4.1); const cap = `<path ${c} d="M-32 -132 C-32 -170 36 -170 36 -132 Z"/><path ${r} d="M-33 -136 H37 V-128 Q2 -124 -33 -128 Z"/><path d="M-20 -140 V-158 M-6 -138 V-164 M8 -138 V-164 M22 -140 V-158" stroke="#fff" stroke-opacity=".18" stroke-width="2"/><circle cx="2" cy="-166" r="8" ${L('#f4efe6', 4.4)}/>`; return [cap, cap]; },
     strawhat: (L) => { const h = `<ellipse cx="2" cy="-148" rx="52" ry="11" ${L('#e3c27a', 4.2)}/><path ${L('#d8b366', 4.3)} d="M-24 -150 C-24 -176 28 -176 28 -150 Z"/><path d="M-24 -154 Q2 -149 28 -154 V-148 Q2 -143 -24 -148 Z" fill="#d0453c"/><ellipse cx="2" cy="-148" rx="52" ry="11" fill="none" stroke="#b9954f" stroke-width="1.2"/>`; return [h, h]; },
     catears: (L) => { const e = (x, s) => `<path ${L('#3d3a44', 4.3)} d="M${x - 11 * s} -152 L${x - 2 * s} -176 L${x + 10 * s} -154 Z"/>`; const band = `<path d="M-30 -146 C-24 -168 28 -168 34 -146" fill="none" stroke="#3d3a44" stroke-width="4"/>`; return [band + e(-12, 1) + e(16, -1) + `<path d="M-17 -156 L-13 -169 L-8 -157 Z M21 -156 L17 -169 L12 -157 Z" fill="#f2a8b8"/>`, band + e(-12, 1) + e(16, -1)]; },
-    hachimaki: (L) => { const band = `<path ${L('#f8f6f0', 4)} d="M-33 -142 Q2 -134 37 -142 V-132 Q2 -124 -33 -132 Z"/>`; return [band + `<circle cx="8" cy="-134" r="4.4" fill="#d0453c"/><text x="-14" y="-131.5" font-size="7.5" font-weight="700" fill="#d0453c" font-family="'Hiragino Mincho ProN', serif">必勝</text>`, band + `<path d="M2 -134 L-10 -112 L-2 -114 L4 -134 L14 -110 L20 -114 Z" ${L('#f2efe6', 3.8)}/>`]; },
+    hachimaki: (L) => { const band = `<path ${L('#f8f6f0', 4)} d="M-33 -142 Q2 -134 37 -142 V-132 Q2 -124 -33 -132 Z"/>`; return [band + `<circle cx="18" cy="-134" r="4.4" fill="#d0453c"/><text x="-12" y="-131.5" font-size="7.5" font-weight="700" fill="#d0453c" font-family="'Hiragino Mincho ProN', serif">必勝</text>`, band + `<path d="M2 -134 L-10 -112 L-2 -114 L4 -134 L14 -110 L20 -114 Z" ${L('#f2efe6', 3.8)}/>`]; },
     beret: (L) => { const b = `<ellipse cx="-2" cy="-156" rx="36" ry="12" transform="rotate(-8 -2 -156)" ${L('#2f3b63', 4.3)}/><path d="M-30 -150 Q2 -144 30 -154" fill="none" stroke="#24304f" stroke-width="3"/><rect x="-4" y="-172" width="3" height="7" rx="1.4" fill="#24304f"/>`; return [b, b]; },
     gradcap: (L) => { const c = `<path ${L('#26262e', 4.3)} d="M-26 -150 Q2 -142 30 -150 V-138 Q2 -132 -26 -138 Z"/><path ${L('#33333d', 4.5)} d="M2 -172 L48 -160 L2 -148 L-44 -160 Z"/><circle cx="2" cy="-160" r="2.6" fill="#e6c25a"/><path d="M2 -160 L38 -156 V-136" fill="none" stroke="#e6c25a" stroke-width="1.8"/><path d="M35 -136 h6 l-1 8 h-4 Z" fill="#e6c25a"/>`; return [c, c]; },
-    glasses: () => [`<g fill="none" stroke="#3a3328" stroke-width="2"><circle cx="-5" cy="-121" r="8"/><circle cx="16" cy="-121" r="8"/><path d="M3 -122 Q5.5 -124 8 -122 M-13 -122 L-31 -126"/></g><path d="M-9 -125 l4 -3 M12 -125 l4 -3" stroke="#fff" stroke-opacity=".7" stroke-width="1.4"/>`, `<path d="M-33 -124 L-26 -122 M37 -124 L30 -122" stroke="#3a3328" stroke-width="2"/>`],
+    glasses: () => [`<g fill="none" stroke="#3a3328" stroke-width="2"><circle cx="-9" cy="-121" r="8"/><circle cx="13" cy="-121" r="8"/><path d="M-1 -122 Q2 -124.5 5 -122 M-17 -122.5 L-32 -125.5 M21 -122.5 L36 -125.5"/></g><path d="M-13 -125 l4 -3 M9 -125 l4 -3" stroke="#fff" stroke-opacity=".7" stroke-width="1.4"/>`, `<path d="M-33 -124 L-26 -122 M37 -124 L30 -122" stroke="#3a3328" stroke-width="2"/>`],
     scarf: (L) => { const w = `<path ${L('#d0453c', 3.3)} d="M-22 -98 Q2 -88 26 -98 L26 -88 Q2 -78 -22 -88 Z"/>`; return [w + `<path ${L('#b93a33', 3)} d="M8 -88 L18 -88 L20 -58 L10 -56 Z"/><path d="M10 -58 v5 M14 -58 v5 M18 -58 v5" stroke="#b93a33" stroke-width="1.6"/>`, w + `<path ${L('#b93a33', 3)} d="M-14 -88 L-4 -88 L-6 -60 L-16 -62 Z"/>`]; },
     bowtie: () => [`<path d="M2 -92 L-10 -98 L-10 -86 Z M2 -92 L14 -98 L14 -86 Z" fill="#c8453d"/><circle cx="2" cy="-92" r="3" fill="#a63831"/>`, ''],
     backpack: (L) => [`<path ${L('#e6a23c', 2.6)} d="M-27 -90 Q-34 -76 -30 -52 H-22 V-90 Z"/><path d="M-16 -94 Q-20 -76 -18 -62 M20 -94 Q22 -76 20 -62" fill="none" stroke="#b8792a" stroke-width="3.4" stroke-linecap="round"/>`, `<rect x="-20" y="-96" width="44" height="48" rx="10" ${L('#e6a23c', 2.6)}/><rect x="-12" y="-74" width="28" height="20" rx="5" ${L('#d48f2c', 2.4)}/><path d="M-10 -66 H14" stroke="#b8792a" stroke-width="1.6"/><path d="M-14 -96 Q2 -104 18 -96" fill="none" stroke="#b8792a" stroke-width="3"/>`],
@@ -7991,32 +8169,62 @@ const HERO = (() => {
       `<path ${L('#3f5a4a', 2.8)} d="M-26 -94 H30 Q35 -70 32 -44 H-28 Q-31 -70 -26 -94 Z"/><circle cx="2" cy="-80" r="7" fill="none" stroke="#f4efe6" stroke-width="1.8"/><path d="M2 -86 v12 M-4 -80 h12" stroke="#f4efe6" stroke-width="1.4"/>`]
   };
   const day = (h) => `fill="${h}"`;
+  let uid = 0;   // each drawing's own clip ids
+  // the figure, both views: o.look, o.wear, o.L as above
   function svg(o = {}) {
-    const L = o.L || ((h) => day(h)), wear = o.wear || {}, W = (slot, side) => { const id = wear[slot]; const f = id && WEAR[id]; return f ? f(L)[side] || '' : ''; };
-    const legs = (side) => `<g class="legs"><g class="leg l"><rect x="-15" y="-48" width="13" height="42" rx="5" ${L(PANTS, 0.8)}/><path ${L(SHOE, 0.2)} d="M-17 -8 h${side ? 15 : 17} a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -3 3 h-${side ? 16 : 18} Z"/></g>
-      <g class="leg r"><rect x="5" y="-48" width="13" height="42" rx="5" ${L(PANTS, 0.8)}/><path ${L(SHOE, 0.2)} d="M3 -8 h${side ? 15 : 18} a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -3 3 h-${side ? 16 : 19} Z"/></g></g>`;
-    const arm = (cls, x) => `<g class="arm ${cls}"><rect x="${x - 6}" y="-92" width="12" height="40" rx="6" ${L(HOOD_DK, 2.4)}/><circle cx="${x}" cy="-52" r="6.4" ${L(SKIN, 2)}/></g>`;
-    const body = `<path ${L(HOOD, 2.6)} d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -46 Q2 -40 -26 -46 Z"/>`;
-    const front = `${W('back', 0)}${legs(0)}${body}<path d="M-14 -66 H18 V-54 Q2 -50 -14 -54 Z" fill="#000" fill-opacity=".08"/><path d="M-2 -98 V-80 M6 -98 V-82" stroke="#e8ecff" stroke-width="1.6" stroke-linecap="round"/>${W('body', 0)}${W('neck', 0)}${arm('l', -27)}${arm('r', 31)}
-      <g class="head"><path ${L(HOOD_DK, 3.2)} d="M-26 -104 Q2 -96 30 -104 L28 -94 Q2 -88 -24 -94 Z"/>
-        <ellipse cx="2" cy="-128" rx="34" ry="32" ${L(SKIN, 3.6)}/><circle cx="-31" cy="-122" r="5" ${L(SKIN, 3.5)}/>
-        <path ${L(HAIR, 4)} d="M-35 -124 C-38 -158 -10 -168 6 -165 C28 -163 40 -150 37 -126 C33 -136 26 -142 18 -142 C14 -134 4 -132 -2 -138 C-8 -132 -20 -130 -26 -134 C-30 -128 -33 -124 -35 -124 Z"/>
-        <path d="M-26 -150 C-16 -160 4 -162 18 -156" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width="3" stroke-linecap="round"/>
-        <g class="eyes"><ellipse cx="-5" cy="-121" rx="3.4" ry="4.6" fill="#2a2730"/><ellipse cx="16" cy="-121" rx="3.4" ry="4.6" fill="#2a2730"/><circle cx="-4" cy="-123" r="1.2" fill="#fff"/><circle cx="17" cy="-123" r="1.2" fill="#fff"/></g>
-        <ellipse cx="-11" cy="-111" rx="5" ry="3" fill="#f2a8a0" fill-opacity=".7"/><ellipse cx="24" cy="-111" rx="5" ry="3" fill="#f2a8a0" fill-opacity=".7"/><path d="M3 -110 Q6 -107 9 -110" fill="none" stroke="#7a4a3a" stroke-width="1.6" stroke-linecap="round"/>
-        ${W('face', 0)}${W('head', 0)}</g>`;
-    const back = `${legs(1)}${arm('l', -27)}${arm('r', 31)}${body}${W('body', 1)}<path ${L(HOOD_DK, 3)} d="M-18 -100 Q2 -92 22 -100 L20 -80 Q2 -72 -16 -80 Z"/>${W('neck', 1)}${W('back', 1)}
-      <g class="head"><circle cx="-31" cy="-124" r="5" ${L(SKIN, 3.5)}/><circle cx="35" cy="-124" r="5" ${L(SKIN, 3.5)}/><ellipse cx="2" cy="-128" rx="34" ry="32" ${L(HAIR, 3.8)}/>
-        <path d="M-22 -150 C-10 -160 10 -160 24 -152" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="3" stroke-linecap="round"/><path d="M-30 -112 Q2 -100 34 -112" fill="none" stroke="#000" stroke-opacity=".12" stroke-width="2"/>
-        ${W('face', 1)}${W('head', 1)}</g>`;
-    return `<svg viewBox="-60 -200 120 210" aria-hidden="true"><ellipse class="h-shadow" rx="24" ry="7" fill="#2b1c12" fill-opacity=".2"/><g class="fig"><g class="bob"><g class="f-front">${front}</g><g class="f-back">${back}</g></g></g></svg>`;
+    const lk = norm(o.look), L = o.L || day, wear = o.wear || {}, W = (slot, side) => { const id = wear[slot]; const f = id && WEAR[id]; return f ? f(L)[side] || '' : ''; };
+    const n = ++uid, hat = HAT_LINE[wear.head], hairOf = HAIR[lk.hair], hf = L(lk.hairColor, 4), hs = `stroke="${dk(lk.hairColor, 0.72)}"`;
+    const top = lk.top, topDk = dk(lk.top, 0.84), pants = lk.bottom, skin = lk.skin;
+    const cut = (s) => (s && hat ? `<g clip-path="url(#hc${n})">${s}</g>` : s || '');   // the hair under a hat that covers the crown
+    const defs = `<defs><clipPath id="fc${n}" clipPathUnits="userSpaceOnUse"><path d="${FACE[lk.face]}"/></clipPath>${hat ? `<clipPath id="hc${n}" clipPathUnits="userSpaceOnUse"><rect x="-90" y="${hat}" width="180" height="220"/></clipPath>` : ''}</defs>`;
+    const legs = (side) => `<g class="legs"><g class="leg l"><rect x="-15" y="-48" width="13" height="42" rx="5" ${L(pants, 0.8)}/><path ${L(SHOE, 0.2)} d="M-17 -8 h${side ? 15 : 17} a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -3 3 h-${side ? 16 : 18} Z"/></g>
+      <g class="leg r"><rect x="5" y="-48" width="13" height="42" rx="5" ${L(pants, 0.8)}/><path ${L(SHOE, 0.2)} d="M3 -8 h${side ? 15 : 18} a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -3 3 h-${side ? 16 : 19} Z"/></g></g>`;
+    const arm = (cls, x) => `<g class="arm ${cls}"><rect x="${x - 6}" y="-92" width="12" height="40" rx="6" ${L(topDk, 2.4)}/><circle cx="${x}" cy="-52" r="6.4" ${L(skin, 2)}/></g>`;
+    const body = `<path ${L(top, 2.6)} d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -46 Q2 -40 -26 -46 Z"/>`;
+    const ears = `<circle cx="-32" cy="-121" r="5.5" ${L(skin, 3.5)}/><circle cx="36" cy="-121" r="5.5" ${L(skin, 3.5)}/><path d="M-33.5 -123 q2 2 0 4 M37.5 -123 q-2 2 0 4" fill="none" stroke="#000" stroke-opacity=".12" stroke-width="1.2"/>`;
+    const face = `<path ${L(skin, 3.6)} d="${FACE[lk.face]}"/>${CHEEKS[lk.cheeks]}<g clip-path="url(#fc${n})">${BEARD[lk.beard](L(lk.hairColor, 3.4))}</g>${MOUTH[lk.mouth](['#a9714d', '#76492f'].includes(skin) ? '#3a1d14' : LIP)}
+      <g class="eyes">${EYES[lk.eyes](lk.eyeColor)}</g><path d="${BROWS[lk.brows][0]}" fill="none" stroke="${dk(lk.hairColor, 0.8)}" stroke-width="${BROWS[lk.brows][1]}" stroke-linecap="round"/>`;
+    const front = `<g class="head">${cut(hairOf.behind && hairOf.behind(hf, hs))}</g>${W('back', 0)}${legs(0)}${body}<path d="M-14 -66 H18 V-54 Q2 -50 -14 -54 Z" fill="#000" fill-opacity=".08"/><path d="M-2 -98 V-80 M6 -98 V-82" stroke="#e8ecff" stroke-width="1.6" stroke-linecap="round"/>${W('body', 0)}${W('neck', 0)}${arm('l', -27)}${arm('r', 31)}
+      <g class="head"><path ${L(topDk, 3.2)} d="M-26 -104 Q2 -96 30 -104 L28 -94 Q2 -88 -24 -94 Z"/>${ears}${face}${cut(hairOf.front(hf, hs))}${W('face', 0)}${W('head', 0)}</g>`;
+    const back = `${legs(1)}${arm('l', -27)}${arm('r', 31)}${body}${W('body', 1)}<path ${L(topDk, 3)} d="M-18 -100 Q2 -92 22 -100 L20 -80 Q2 -72 -16 -80 Z"/>${W('neck', 1)}${W('back', 1)}
+      <g class="head">${ears}<ellipse cx="2" cy="-128" rx="34" ry="32" ${L(skin, 3.6)}/>${cut(hairOf.rear(hf, hs))}<path d="M-30 -112 Q2 -100 34 -112" fill="none" stroke="#000" stroke-opacity=".1" stroke-width="2"/>${W('face', 1)}${W('head', 1)}</g>`;
+    return `<svg viewBox="${o.box || '-60 -200 120 210'}" aria-hidden="true">${defs}<ellipse class="h-shadow" rx="24" ry="7" fill="#2b1c12" fill-opacity=".2"/><g class="fig"><g class="bob"><g class="f-front">${front}</g>${o.front ? '' : `<g class="f-back">${back}</g>`}</g></g></svg>`;   // front: the front view only
   }
+  // the head alone, in daylight, for the choices in the dressing room: 'head' frames the hair, 'face' the eyes, brows and mouth
+  const head = (look, crop) => svg({ look, front: true, box: crop === 'face' ? '-26 -144 56 52' : '-52 -188 108 108' });
   // a thing worn, on its own (古道具屋, the wardrobe): drawn on a faint head and shoulders so it reads
   function thumb(id) {
     const f = WEAR[id]; if (!f) return '';
     return `<svg class="thumb" viewBox="-60 -185 120 140" aria-hidden="true"><g class="base" opacity=".28"><ellipse cx="2" cy="-128" rx="34" ry="32" fill="#c9bfae"/><path d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -50 H-26 Z" fill="#c9bfae"/></g><g>${f((h) => `fill="${h}"`)[0]}</g></svg>`;
   }
-  return { svg, thumb, slots: Object.keys(WEAR) };
+  // idling (test build): standing still they now and then look round, stretch, wave (facing us), sway or bounce — one at a time,
+  // 6–12 s apart (the first after 4), never the same twice running; sitting they nod over the notebook. ok(): may they now?
+  const IDLES = { look: 1800, stretch: 1600, wave: 1500, sway: 2200, bounce: 900 }, IDLE_CLS = ['nod', ...Object.keys(IDLES)].map((k) => 'idle-' + k);
+  const calm = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function idle(el, ok, first) {
+    if (!el) return;
+    clearTimeout(el._idle);
+    if (calm()) return;
+    el._idle = setTimeout(() => {
+      if (!el.isConnected) return;
+      if (!ok()) { idle(el, ok); return; }
+      const sit = el.classList.contains('sit'), names = sit ? ['nod'] : Object.keys(IDLES).filter((k) => k !== el._idleLast && !(k === 'wave' && el.classList.contains('back')));
+      const k = names[Math.floor(Math.random() * names.length)]; el._idleLast = k;
+      el.classList.add('idle-' + k);
+      setTimeout(() => { el.classList.remove('idle-' + k); idle(el, ok); }, sit ? 1600 : IDLES[k]);
+    }, first ? 4000 : 6000 + Math.random() * 6000);
+  }
+  const still = (el) => { if (el) el.classList.remove(...IDLE_CLS); };   // off on a walk: whatever they were doing stops
+  // a tap on them: a hop, a wave, a spin or a cheer, in turn at random (sitting: a wave)
+  const TAPS = { hop: 520, wave: 1200, spin: 700, cheer: 900 };
+  function react(el) {
+    if (calm()) return;
+    const names = el.classList.contains('sit') ? ['wave'] : Object.keys(TAPS).filter((k) => k !== el._tapLast && !(k === 'wave' && el.classList.contains('back')));
+    const k = names[Math.floor(Math.random() * names.length)]; el._tapLast = k;
+    el.classList.remove(...Object.keys(TAPS)); still(el); void el.offsetWidth; el.classList.add(k);
+    clearTimeout(el._tap); el._tap = setTimeout(() => el.classList.remove(k), TAPS[k]);
+  }
+  return { svg, head, thumb, idle, still, react, norm, OPTS, LOOK0, slots: Object.keys(WEAR) };
 })();
 
 // ---------- 古道具屋 (test build): the old shop up the hill, kept by 福爺 the owl, who takes 言靈 and nothing else ----------
@@ -8066,12 +8274,99 @@ function renderShop(view) {
     <svg class="defs-only" width="0" height="0" aria-hidden="true">${DECOR.DEFS}</svg>`;
   fitThumbs(view);
 }
-// the wardrobe (書房's 衣櫃 button, top right): what they own to wear, by part, on or off with a tap
-function wardrobeHtml() {
-  const got = WARES.filter((it) => it.kind === 'wear' && owns(it.id));
-  const rows = WEAR_SLOTS.map(([slot, name]) => { const list = got.filter((it) => it.slot === slot); return list.length ? `<div class="wr-row"><div class="wr-slot">${name}</div><div class="wr-list">${list.map((it) => `<button type="button" class="wr-it${state.wear[slot] === it.id ? ' on' : ''}" data-act="ware-wear" data-id="${it.id}" aria-pressed="${state.wear[slot] === it.id}">${HERO.thumb(it.id)}<span>${esc(it.name)}</span></button>`).join('')}</div></div>` : ''; }).join('');
-  return `<div class="wardrobe">${rows || '<p class="muted">還沒有可以穿的東西。古道具屋的「主角穿戴」有帽子、眼鏡、圍巾、背包……</p>'}<div class="row-wrap mt-3"><button type="button" class="btn btn-sm" data-act="nav" data-route="#/shop">去古道具屋</button></div></div>`;
-}
+// the dressing room (test build): 書房's 衣櫃 button zooms in on the hero to choose how they look (HERO.OPTS) and what they wear.
+// A copy of them flies from where they stand to the stage — their head for the face's tabs, all of them for clothes — while the
+// room grows round them and dims; a choice is tried on at once. 完成 keeps it all (state.look, state.wear), 取消 or Esc puts it
+// back; either way the copy flies back to its place and the room zooms out.
+const DRESS = (() => {
+  const TABS = [['face', '臉型', 'head'], ['hair', '髮型', 'head'], ['features', '五官', 'head'], ['beard', '鬍子', 'head'], ['clothes', '衣服', 'body'], ['wear', '穿戴', 'body']];
+  let d = null;   // open: { st, look, wear, tab, back, from }
+  const box = () => (d && d.st.isConnected ? d.st.querySelector('.dress') : null);
+  const kind = () => TABS.find((t) => t[0] === d.tab)[2];
+  const put = (cp, f) => { cp.style.transform = `translate(${f.x.toFixed(1)}px, ${f.y.toFixed(1)}px) scale(${f.s.toFixed(4)})`; };
+  // where the copy's 120 × 210 box goes: the part asked for, framed in the stage (over the panel, or beside it on a wide screen)
+  function frame(dr, part) {
+    const p = dr.querySelector('.dress-panel'), side = p.offsetLeft > 0, W = dr.clientWidth, H = dr.clientHeight;
+    const x0 = 0, y0 = 58, x1 = side ? p.offsetLeft : W, y1 = side ? H - 12 : p.offsetTop - 8;
+    const [a0, b0, a1, b1] = part === 'head' ? [-52, -184, 56, -84] : [-48, -182, 52, 8];
+    const s = Math.min((x1 - x0) * (part === 'head' ? 0.78 : 0.86) / (a1 - a0), (y1 - y0) * 0.9 / (b1 - b0)), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    dr.style.setProperty('--spx', `${cx}px`); dr.style.setProperty('--spy', `${cy}px`);
+    return { s, x: cx - ((a0 + a1) / 2 + 60) * s, y: cy - ((b0 + b1) / 2 + 200) * s };
+  }
+  const tabs = () => TABS.map(([id, name]) => `<button type="button" role="tab" data-act="dress-tab" data-tab="${id}" aria-pressed="${d.tab === id}">${name}</button>`).join('');
+  // a part's styles, each drawn on the hero as they look now; a part's colours
+  const opts = (key, crop) => `<div class="dress-opts">${HERO.OPTS[key].map(([v, name]) => `<button type="button" class="dress-opt" data-act="dress-pick" data-key="${key}" data-val="${v}" aria-pressed="${d.look[key] === v}">${HERO.head(Object.assign({}, d.look, { [key]: v }), crop)}<span>${name}</span></button>`).join('')}</div>`;
+  const sws = (key) => `<div class="dress-sws">${HERO.OPTS[key].map(([v, name]) => `<button type="button" class="dress-sw" data-act="dress-pick" data-key="${key}" data-val="${v}" style="--c:${v}" aria-pressed="${d.look[key] === v}" aria-label="${name}" title="${name}"></button>`).join('')}</div>`;
+  const sec = (title, inner) => `<section class="dress-sec"><h3>${title}</h3>${inner}</section>`;
+  function body() {
+    if (d.tab === 'face') return sec('臉型', opts('face', 'head')) + sec('膚色', sws('skin')) + sec('臉頰', opts('cheeks', 'face'));
+    if (d.tab === 'hair') return sec('髮型', opts('hair', 'head')) + sec('髮色', sws('hairColor'));
+    if (d.tab === 'features') return sec('眼睛', opts('eyes', 'face')) + sec('眼睛顏色', sws('eyeColor')) + sec('眉毛', opts('brows', 'face')) + sec('嘴巴', opts('mouth', 'face'));
+    if (d.tab === 'beard') return sec('鬍子', opts('beard', 'face'));
+    if (d.tab === 'clothes') return sec('上衣', sws('top')) + sec('褲子', sws('bottom'));
+    // what was bought at 古道具屋, by part: a tap puts it on or takes it off
+    const got = WARES.filter((it) => it.kind === 'wear' && owns(it.id));
+    const rows = WEAR_SLOTS.map(([slot, name]) => { const list = got.filter((it) => it.slot === slot); return list.length ? `<div class="dress-wear"><div class="slot">${name}</div><div class="list">${list.map((it) => `<button type="button" class="wr-it${d.wear[slot] === it.id ? ' on' : ''}" data-act="dress-wear" data-id="${it.id}" aria-pressed="${d.wear[slot] === it.id}">${HERO.thumb(it.id)}<span>${esc(it.name)}</span></button>`).join('')}</div></div>` : ''; }).join('');
+    return rows || '<p class="muted mt-3">還沒有可以穿戴的東西。古道具屋的「主角穿戴」有帽子、眼鏡、圍巾、背包……</p><div class="row-wrap mt-3"><button type="button" class="btn btn-sm" data-act="dress-shop">去古道具屋</button></div>';
+  }
+  const copy = () => HERO.svg({ look: d.look, wear: d.wear });
+  function open(st) {
+    if (!st || (d && box())) return;
+    st.querySelectorAll('.dress').forEach((x) => x.remove()); st.classList.remove('undressing');   // one still flying back
+    ROOM.hold();
+    const hel = st.querySelector('.room .hero'), sr = st.getBoundingClientRect(), hr = hel && hel.getBoundingClientRect();
+    const from = hr && hr.width ? { x: hr.left - sr.left, y: hr.top - sr.top, s: hr.width / 120 } : { x: sr.width / 2 - 30, y: sr.height / 2 - 52, s: 0.5 };
+    d = { st, look: HERO.norm(state.look), wear: Object.assign({}, state.wear), tab: 'face', back: false, from };
+    st.style.setProperty('--zx', `${(from.x + 60 * from.s).toFixed(1)}px`); st.style.setProperty('--zy', `${(from.y + 150 * from.s).toFixed(1)}px`);
+    st.insertAdjacentHTML('beforeend', `<div class="dress" role="dialog" aria-modal="true" aria-label="打扮">
+      <i class="dress-dim"></i>
+      <div class="hero dress-hero" data-act="dress-turn" aria-label="主角（點一下轉身）">${copy()}</div>
+      <div class="dress-bar"><button type="button" data-act="dress-cancel">取消</button><span class="t">打扮</span><button type="button" class="ok" data-act="dress-done">完成</button></div>
+      <div class="dress-tools"><button type="button" data-act="dress-random" aria-label="隨機" title="隨機">${icon('dice')}</button><button type="button" data-act="dress-turn" aria-label="轉身" title="轉身">${icon('turn')}</button></div>
+      <div class="dress-panel"><div class="dress-tabs" role="tablist">${tabs()}</div><div class="dress-body">${body()}</div></div>
+    </div>`);
+    const dr = box(), cp = dr.querySelector('.dress-hero');
+    put(cp, from); void dr.offsetWidth;   // the copy starts where they stand
+    st.classList.add('dressing'); dr.classList.add('on'); cp.classList.add('fly'); put(cp, frame(dr, kind()));
+    window.addEventListener('resize', reframe);
+  }
+  function reframe() { const dr = box(); if (dr) put(dr.querySelector('.dress-hero'), frame(dr, kind())); }
+  function redraw(hop) {   // the copy and the panel (the list keeps its place)
+    const dr = box(); if (!dr) return;
+    const cp = dr.querySelector('.dress-hero'), b = dr.querySelector('.dress-body'), top = b.scrollTop;
+    cp.innerHTML = copy(); b.innerHTML = body(); b.scrollTop = top;
+    if (hop && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { cp.classList.remove('hop'); void cp.offsetWidth; cp.classList.add('hop'); clearTimeout(cp._hop); cp._hop = setTimeout(() => cp.classList.remove('hop'), 520); }
+  }
+  function tab(id) {
+    if (!box() || !TABS.some((t) => t[0] === id)) return;
+    d.tab = id;
+    const dr = box(); dr.querySelectorAll('.dress-tabs button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === id)));
+    const b = dr.querySelector('.dress-body'); b.innerHTML = body(); b.scrollTop = 0;
+    reframe();
+  }
+  function pick(key, val) { if (!box() || !HERO.OPTS[key] || !HERO.OPTS[key].some(([v]) => v === val)) return; d.look[key] = val; redraw(true); }
+  function wear(id) { const it = WARE.get(id); if (!box() || !it || it.kind !== 'wear' || !owns(id)) return; d.wear[it.slot] = d.wear[it.slot] === id ? null : id; redraw(true); }
+  function random() {   // a whole new face and hair (most rolls without a beard); clothes and what they wear stay
+    if (!box()) return;
+    const any = (k) => { const o = HERO.OPTS[k]; return o[Math.floor(Math.random() * o.length)][0]; };
+    ['face', 'skin', 'cheeks', 'hair', 'hairColor', 'eyes', 'eyeColor', 'brows', 'mouth'].forEach((k) => { d.look[k] = any(k); });
+    d.look.beard = Math.random() < 0.65 ? 'none' : any('beard');
+    redraw(true);
+  }
+  function turn() { const dr = box(); if (!dr) return; d.back = !d.back; dr.querySelector('.dress-hero').classList.toggle('back', d.back); }
+  function close(save) {
+    const dr = box(); if (!d) return;
+    const { st, from } = d;
+    if (save) { state.look = Object.assign({}, d.look); state.wear = Object.assign({}, d.wear); saveState(); ROOM.heroRedraw(st); }
+    d = null; window.removeEventListener('resize', reframe);
+    if (!dr) return;
+    const cp = dr.querySelector('.dress-hero'); cp.classList.remove('back');
+    st.classList.add('undressing'); st.classList.remove('dressing'); dr.classList.remove('on'); put(cp, from);   // back to where they stand
+    setTimeout(() => { dr.remove(); st.classList.remove('undressing'); }, 520);
+  }
+  function shop() { if (!d) return; state.look = Object.assign({}, d.look); state.wear = Object.assign({}, d.wear); saveState(); d = null; window.removeEventListener('resize', reframe); go('#/shop'); }   // off to buy something: what was chosen is kept
+  return { open, close, tab, pick, wear, random, turn, shop };
+})();
 // a purchase: paid once, then put away (test build): a thing into the storage box, to be set out in 擺設; a wear into the wardrobe
 function buyWare(it) {
   state.owned[it.id] = { paid: it.price, on: todayStr() };
@@ -8105,13 +8400,17 @@ Object.assign(ACTIONS, {
     const it = WARE.get(el.dataset.id);
     if (!it || !owns(it.id) || it.kind !== 'wear') return;
     state.wear[it.slot] = state.wear[it.slot] === it.id ? null : it.id;
-    saveState();
-    if (document.querySelector('#modalBody .wardrobe')) {
-      document.getElementById('modalBody').innerHTML = wardrobeHtml(); ROOM.heroRedraw(document.querySelector('#view .study'));
-      const yhEl = document.querySelector('#view .yhero'); if (yhEl) yhEl.innerHTML = HERO.svg({ wear: state.wear });
-    } else route();
+    saveState(); route();
   },
-  wardrobe: () => openModal('衣櫃', wardrobeHtml(), { width: 420, noFocus: true }),
+  wardrobe: (el) => DRESS.open(el.closest('.study')),   // the dressing room (test build)
+  'dress-tab': (el) => DRESS.tab(el.dataset.tab),
+  'dress-pick': (el) => DRESS.pick(el.dataset.key, el.dataset.val),
+  'dress-wear': (el) => DRESS.wear(el.dataset.id),
+  'dress-random': () => DRESS.random(),
+  'dress-turn': () => DRESS.turn(),
+  'dress-done': () => DRESS.close(true),
+  'dress-cancel': () => DRESS.close(false),
+  'dress-shop': () => DRESS.shop(),
   'hero-hop': (el) => ROOM.tapHero(el),
   'koto-gift': () => { state.koto.gift = (Number(state.koto.gift) || 0) + 100; saveState(); route(); toast('測試用：多了 100 言靈'); }
 });

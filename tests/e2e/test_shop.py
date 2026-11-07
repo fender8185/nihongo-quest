@@ -110,14 +110,17 @@ def test_a_bought_ware_goes_in_the_storage_box_and_a_wear_in_the_wardrobe(b):
     assert r['owned'] and r['bal'] == 200 - 6 - 10, r
 
 def test_wearing_goes_on_and_off_and_shows_on_the_hero(b):
-    js = "(() => { " + FRESH + """ state.koto.gift = 30; saveState(); buyWare(WARE.get('beanie')); buyWare(WARE.get('strawhat'));
+    js = "(async () => { " + FRESH + """ state.koto.gift = 30; saveState(); buyWare(WARE.get('beanie')); buyWare(WARE.get('strawhat'));
       const bought = state.wear.head || null; """ + GO_ROOM + """
-      document.querySelector('.study-tools [data-act="wardrobe"]').click(); const pick = (id) => document.querySelector('#modalBody [data-act="ware-wear"][data-id="' + id + '"]').click();
-      pick('beanie'); const worn = state.wear.head, has = document.querySelector('.study .hero').innerHTML.includes('cy="-166" r="8"');   /* the beanie's pompom (colours are lit, so not its hex) */
-      pick('strawhat'); const now = state.wear.head; pick('strawhat');
-      return JSON.stringify({ bought, worn, has, now, off: state.wear.head }); })()"""
+      const wait = (ms) => new Promise(q => setTimeout(q, ms)), act = (sel) => document.querySelector(sel).click();
+      const dress = async (ids, keep) => { act('.study-tools [data-act="wardrobe"]'); act('[data-act="dress-tab"][data-tab="wear"]'); ids.forEach(id => act('[data-act="dress-wear"][data-id="' + id + '"]')); act(keep ? '[data-act="dress-done"]' : '[data-act="dress-cancel"]'); await wait(600); };
+      await dress(['beanie'], true); const worn = state.wear.head, has = document.querySelector('.study .room .hero').innerHTML.includes('cy="-166" r="8"');   /* the beanie's pompom (colours are lit, so not its hex) */
+      await dress(['strawhat'], true); const now = state.wear.head;
+      await dress(['strawhat'], false); const kept = state.wear.head;   /* taken off, then 取消: still on */
+      await dress(['strawhat'], true);
+      return JSON.stringify({ bought, worn, has, now, kept, off: state.wear.head }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'bought': None, 'worn': 'beanie', 'has': True, 'now': 'strawhat', 'off': None}, r
+    assert r == {'bought': None, 'worn': 'beanie', 'has': True, 'now': 'strawhat', 'kept': 'strawhat', 'off': None}, r
 
 def test_arrange_takes_out_moves_turns_and_puts_away(b):
     js = "(async () => { " + FRESH + """ state.owned.chabudai = { paid: 0, on: todayStr() }; saveState(); """ + GO_ROOM + """
@@ -243,18 +246,20 @@ POINTER = """const wait = (ms) => new Promise(q => setTimeout(q, ms));
   const pe = (el, type, x, y, id, kind) => el.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, pointerId: id, pointerType: kind || 'touch', isPrimary: id === 1, button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true, cancelable: true }));
   const cam = () => { const m = new DOMMatrix(getComputedStyle(document.querySelector('.study .room')).transform); return [m.m41, m.m42]; };"""
 
-def test_the_wardrobe_is_a_button_up_top_and_a_tap_on_the_hero_makes_him_hop(b):
+def test_the_wardrobe_is_a_button_up_top_and_a_tap_on_the_hero_gets_a_reaction(b):
     js = "(async () => { " + FRESH + GO_ROOM + POINTER + """ await wait(200);
       const btn = document.querySelector('.study-tools [data-act="wardrobe"]'); if (btn) btn.click();
-      const wardrobe = !!document.querySelector('#modalBody .wardrobe'); closeModal();
-      document.querySelector('.study .hero .fig').dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      const room = { modal: modalOpen(), hop: document.querySelector('.study .hero').classList.contains('hop') }; closeModal();
+      const dressing = !!document.querySelector('.study.dressing .dress'); document.querySelector('[data-act="dress-cancel"]').click(); await wait(600);
+      const moves = ['hop', 'wave', 'spin', 'cheer'], did = (el) => moves.filter(m => el.classList.contains(m));
+      document.querySelector('.study .room .hero .fig').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      const room = { modal: modalOpen(), did: did(document.querySelector('.study .room .hero')) };
       location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); await wait(200);
       document.querySelector('.yard .yhero .fig').dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      const yard = { modal: modalOpen(), hop: document.querySelector('.yard .yhero').classList.contains('hop') };
-      return JSON.stringify({ wardrobe, room, yard }); })()"""
+      const yard = { modal: modalOpen(), did: did(document.querySelector('.yard .yhero')) };
+      return JSON.stringify({ dressing, room, yard }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'wardrobe': True, 'room': {'modal': False, 'hop': True}, 'yard': {'modal': False, 'hop': True}}, r
+    assert r['dressing'] and not r['room']['modal'] and not r['yard']['modal'], r
+    assert len(r['room']['did']) == 1 and len(r['yard']['did']) == 1, r   # one of a hop, a wave, a spin or a cheer
 
 def test_a_swipe_looks_round_the_room_and_stays_where_it_is_let_go(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
@@ -330,6 +335,54 @@ def test_the_buttons_up_top_rest_with_the_signs_and_a_first_tap_only_wakes_them(
       return JSON.stringify({ quiet, faded, first, second }); })()"""
     r = json.loads(ev(b, js))
     assert r == {'quiet': True, 'faded': '0', 'first': {'modal': False, 'quiet': False}, 'second': True}, r
+
+# ---- the hero's looks (test build): the dressing room zooms in on them; idling; a tap gets a reaction ----
+def test_the_dressing_room_zooms_in_and_keeps_or_drops_what_was_chosen(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + GO_ROOM + """
+      const wait = (ms) => new Promise(q => setTimeout(q, ms)), act = (sel) => document.querySelector(sel).click(), st = document.querySelector('.study');
+      const scale = () => new DOMMatrix(getComputedStyle(document.querySelector('.dress-hero')).transform).a, small = document.querySelector('.study .room .hero').getBoundingClientRect().width / 120;
+      act('.study-tools [data-act="wardrobe"]'); await wait(650);
+      const open = { dressing: st.classList.contains('dressing'), hidden: getComputedStyle(document.querySelector('.study .room .hero')).visibility, tabs: [...document.querySelectorAll('.dress-tabs button')].map(t => t.textContent) };
+      const head = scale(); act('[data-act="dress-tab"][data-tab="clothes"]'); await wait(650); const body = scale();
+      act('[data-act="dress-tab"][data-tab="hair"]'); act('[data-act="dress-pick"][data-key="hair"][data-val="bun"]');
+      const tried = { copy: document.querySelector('.dress-hero').innerHTML.includes('cy="-170"'), saved: HERO.norm(state.look).hair };   /* the bun on the copy, not yet kept */
+      act('[data-act="dress-cancel"]'); await wait(650);
+      const dropped = { hair: HERO.norm(state.look).hair, gone: !document.querySelector('.dress'), back: !st.classList.contains('dressing') && getComputedStyle(document.querySelector('.study .room .hero')).visibility };
+      act('.study-tools [data-act="wardrobe"]'); await wait(200);
+      act('[data-act="dress-tab"][data-tab="hair"]'); act('[data-act="dress-pick"][data-key="hair"][data-val="long"]'); act('[data-act="dress-pick"][data-key="hairColor"][data-val="#c9a25a"]');
+      act('[data-act="dress-tab"][data-tab="features"]'); act('[data-act="dress-pick"][data-key="eyes"][data-val="big"]');
+      act('[data-act="dress-tab"][data-tab="beard"]'); act('[data-act="dress-pick"][data-key="beard"][data-val="goatee"]');
+      act('[data-act="dress-tab"][data-tab="clothes"]'); act('[data-act="dress-pick"][data-key="top"][data-val="#d0574b"]');
+      const pressed = document.querySelector('[data-act="dress-pick"][data-key="top"][data-val="#d0574b"]').getAttribute('aria-pressed');
+      act('[data-act="dress-done"]'); await wait(650);
+      const lk = HERO.norm(state.look), sig = st.dataset.sig === roomSig();
+      return JSON.stringify({ open, zoom: [head > small * 2, body < head], tried, dropped, pressed, kept: [lk.hair, lk.hairColor, lk.eyes, lk.beard, lk.top], sig }); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert r['open'] == {'dressing': True, 'hidden': 'hidden', 'tabs': ['臉型', '髮型', '五官', '鬍子', '衣服', '穿戴']}, r
+    assert r['zoom'] == [True, True], r   # flown up to frame the head, all of them for clothes
+    assert r['tried'] == {'copy': True, 'saved': 'tousle'}, r
+    assert r['dropped'] == {'hair': 'tousle', 'gone': True, 'back': 'visible'}, r
+    assert r['pressed'] == 'true' and r['kept'] == ['long', '#c9a25a', 'big', 'goatee', '#d0574b'] and r['sig'], r
+
+def test_the_hero_idles_now_and_then_and_a_tap_never_gets_the_same_reaction_twice(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + GO_ROOM + """
+      const el = document.querySelector('.study .room .hero'), seen = new Set(), t0 = Date.now();
+      while (Date.now() - t0 < 6500) { [...el.classList].filter(c => c.startsWith('idle-')).forEach(c => seen.add(c)); await new Promise(q => setTimeout(q, 100)); }
+      const moves = ['hop', 'wave', 'spin', 'cheer'], got = [];
+      for (let i = 0; i < 6; i++) { ROOM.tapHero(el); got.push(moves.find(m => el.classList.contains(m))); }
+      return JSON.stringify({ idle: [...seen], got, idleOff: ![...el.classList].some(c => c.startsWith('idle-')) }); })()"""
+    r = json.loads(ev(b, js))
+    assert len(r['idle']) >= 1 and all(c in ('idle-look', 'idle-stretch', 'idle-wave', 'idle-sway', 'idle-bounce') for c in r['idle']), r   # within a few seconds of standing still
+    assert all(g in ('hop', 'wave', 'spin', 'cheer') for g in r['got']) and all(a != b2 for a, b2 in zip(r['got'], r['got'][1:])), r
+    assert r['idleOff'], r   # a tap stops what they were idly doing
+
+def test_a_hat_cuts_the_hair_off_above_its_band_and_unknown_looks_fall_back(b):
+    js = """(() => { const bun = HERO.svg({ look: { hair: 'bun' }, wear: { head: 'beanie' } }), band = HERO.svg({ look: { hair: 'bun' }, wear: { head: 'catears' } });
+      const odd = HERO.norm({ hair: 'mohawk', skin: '#123456', eyes: 'big' });
+      state.look = 'nope'; const fixed = normalizeState(state).look;
+      return JSON.stringify({ cut: /clip-path="url\(#hc\d+\)"><circle cx="2" cy="-170"/.test(bun), band: !band.includes('url(#hc'), odd: [odd.hair, odd.skin, odd.eyes], fixed }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'cut': True, 'band': True, 'odd': ['tousle', '#f3d1b5', 'big'], 'fixed': {}}, r
 
 def test_a_drag_on_the_hero_leads_him_and_the_view_follows(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
