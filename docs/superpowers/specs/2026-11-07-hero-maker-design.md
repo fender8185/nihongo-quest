@@ -51,3 +51,17 @@ from where he stands to the top of the screen, and a panel slides up from the bo
 ## Not now
 
 Body types, hairstyles that are only a recolour, eye-color for the closed 笑眼 (it has none), a full-length mirror ware.
+
+## Second round (same day): clothes for sale, a cat, new hair
+
+- **Clothes are styles; the colours stay theirs.** `look.topStyle` and `look.bottomStyle` pick the garment, `look.top` and
+  `look.bottom` still dye it. 帽T and 長褲 are everyone's; 古道具屋 sells T恤, 毛衣, 襯衫, 甚平, 貓咪上衣 and 短褲, 寬褲, 裙子,
+  貓咪褲 (kind `clothes`, a shelf 衣服褲子 of their own). Bought, they wait in the wardrobe; the dressing room's 衣服 offers the
+  styles they have, then the colours, and says how many more the shop has. A shop card can put one on or take it off.
+- **The cat.** 貓咪頭套 is a thing worn on the head that takes the place of the whole head (and of glasses), in the fur of the
+  top's colour; 貓咪上衣 has a white belly, paws and a bell; 貓咪褲 a tail and paw feet in the trousers' colour. Matching colours
+  make a ginger, grey or white cat.
+- **Hair, redrawn.** The user disliked all ten styles, the ears most of all. Sixteen new ones (短碎髮, 清爽短髮, 平頭, 中分, 油頭,
+  刺蝟頭, 自然捲, 爆炸頭, 鮑伯頭, 狼尾, 及肩髮, 長直髮, 長捲髮, 高馬尾, 雙馬尾, 丸子頭); 光頭 is gone with the old ones. Ears are
+  ear-shaped; short cuts keep a darker layer of hair behind the ears and a sideburn in front, long ones fall over them; the
+  fringe casts a faint shadow on the forehead. A crown-covering hat cuts away only the hair in the band above it.

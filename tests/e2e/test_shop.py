@@ -345,7 +345,7 @@ def test_the_dressing_room_zooms_in_and_keeps_or_drops_what_was_chosen(b):
       const open = { dressing: st.classList.contains('dressing'), hidden: getComputedStyle(document.querySelector('.study .room .hero')).visibility, tabs: [...document.querySelectorAll('.dress-tabs button')].map(t => t.textContent) };
       const head = scale(); act('[data-act="dress-tab"][data-tab="clothes"]'); await wait(650); const body = scale();
       act('[data-act="dress-tab"][data-tab="hair"]'); act('[data-act="dress-pick"][data-key="hair"][data-val="bun"]');
-      const tried = { copy: document.querySelector('.dress-hero').innerHTML.includes('cy="-170"'), saved: HERO.norm(state.look).hair };   /* the bun on the copy, not yet kept */
+      const tried = { copy: document.querySelector('.dress-hero').innerHTML.includes('cy="-174"'), saved: HERO.norm(state.look).hair };   /* the bun on the copy, not yet kept */
       act('[data-act="dress-cancel"]'); await wait(650);
       const dropped = { hair: HERO.norm(state.look).hair, gone: !document.querySelector('.dress'), back: !st.classList.contains('dressing') && getComputedStyle(document.querySelector('.study .room .hero')).visibility };
       act('.study-tools [data-act="wardrobe"]'); await wait(200);
@@ -360,8 +360,8 @@ def test_the_dressing_room_zooms_in_and_keeps_or_drops_what_was_chosen(b):
     r = json.loads(ev_at(b, PHONE, js))
     assert r['open'] == {'dressing': True, 'hidden': 'hidden', 'tabs': ['臉型', '髮型', '五官', '鬍子', '衣服', '穿戴']}, r
     assert r['zoom'] == [True, True], r   # flown up to frame the head, all of them for clothes
-    assert r['tried'] == {'copy': True, 'saved': 'tousle'}, r
-    assert r['dropped'] == {'hair': 'tousle', 'gone': True, 'back': 'visible'}, r
+    assert r['tried'] == {'copy': True, 'saved': 'crop'}, r
+    assert r['dropped'] == {'hair': 'crop', 'gone': True, 'back': 'visible'}, r
     assert r['pressed'] == 'true' and r['kept'] == ['long', '#c9a25a', 'big', 'goatee', '#d0574b'] and r['sig'], r
 
 def test_the_hero_idles_now_and_then_and_a_tap_never_gets_the_same_reaction_twice(b):
@@ -380,9 +380,34 @@ def test_a_hat_cuts_the_hair_off_above_its_band_and_unknown_looks_fall_back(b):
     js = """(() => { const bun = HERO.svg({ look: { hair: 'bun' }, wear: { head: 'beanie' } }), band = HERO.svg({ look: { hair: 'bun' }, wear: { head: 'catears' } });
       const odd = HERO.norm({ hair: 'mohawk', skin: '#123456', eyes: 'big' });
       state.look = 'nope'; const fixed = normalizeState(state).look;
-      return JSON.stringify({ cut: /clip-path="url\(#hc\d+\)"><circle cx="2" cy="-170"/.test(bun), band: !band.includes('url(#hc'), odd: [odd.hair, odd.skin, odd.eyes], fixed }); })()"""
+      return JSON.stringify({ cut: /clip-path="url\(#hc\d+\)"><circle cx="2.6" cy="-174"/.test(bun), band: !band.includes('url(#hc'), odd: [odd.hair, odd.skin, odd.eyes], fixed, styles: HERO.OPTS.hair.length }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'cut': True, 'band': True, 'odd': ['tousle', '#f3d1b5', 'big'], 'fixed': {}}, r
+    assert r == {'cut': True, 'band': True, 'odd': ['crop', '#f3d1b5', 'big'], 'fixed': {}, 'styles': 16}, r   # 'mohawk' and the old styles' ids fall back to 短碎髮
+
+def test_clothes_are_sold_put_on_in_the_dressing_room_and_dyed_in_the_heros_colours(b):
+    js = "(async () => { " + FRESH + """ state.koto.gift = 50; saveState(); const msg = buyWare(WARE.get('tee'));
+      const bought = { owned: owns('tee'), style: HERO.norm(state.look).topStyle, msg: msg.includes('衣服') }; """ + GO_ROOM + """
+      const wait = (ms) => new Promise(q => setTimeout(q, ms)), act = (sel) => document.querySelector(sel).click();
+      act('.study-edit'); const box = [...document.querySelectorAll('.tray-it')].some(t => t.dataset.id === 'tee'); act('[data-act="room-edit-done"]');   /* clothes are no furniture */
+      act('.study-tools [data-act="wardrobe"]'); act('[data-act="dress-tab"][data-tab="clothes"]');
+      const offered = [...document.querySelectorAll('[data-act="dress-pick"][data-key="topStyle"]')].map(b => b.dataset.val), more = (document.querySelector('.dress-more') || {}).textContent || '';
+      act('[data-act="dress-pick"][data-key="topStyle"][data-val="tee"]'); act('[data-act="dress-pick"][data-key="top"][data-val="#3f9a8c"]'); DRESS.pick('topStyle', 'sweater');   /* not bought: not put on */
+      act('[data-act="dress-done"]'); await wait(600); const worn = HERO.norm(state.look);
+      location.hash = '#/shop'; route(); const card = document.querySelector('[data-ware="tee"] [data-act="clothes-wear"]'), label = card.textContent, clip = document.querySelector('[data-ware="tee"] .art svg').getAttribute('style');
+      card.click(); const off = HERO.norm(state.look).topStyle;
+      return JSON.stringify({ bought, box, offered, more: more.includes('8'), worn: [worn.topStyle, worn.top], label, clip, off }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['bought'] == {'owned': True, 'style': 'hoodie', 'msg': True} and r['box'] is False, r   # into the wardrobe, not put on, not in the storage box
+    assert r['offered'] == ['hoodie', 'tee'] and r['more'], r   # 帽T and what was bought; eight more at 古道具屋
+    assert r['worn'] == ['tee', '#3f9a8c'] and r['label'] == '脫下' and r['clip'] == 'overflow:hidden' and r['off'] == 'hoodie', r
+
+def test_a_cat_head_top_and_trousers_make_a_cat(b):
+    js = """(() => { const cat = HERO.svg({ look: { topStyle: 'cattop', bottomStyle: 'catpants', top: '#d9a43a', bottom: '#d9a43a' }, wear: { head: 'cathead', face: 'glasses' } });
+      const plain = HERO.svg({ look: {}, wear: { face: 'glasses' } });
+      const ear = 'M-29 -129.5 C-36.5 -133', glasses = '<circle cx="-9" cy="-121" r="8"/>';
+      return JSON.stringify({ catHead: cat.includes('#e8869a'), fur: cat.includes('#d9a43a'), tail: cat.includes('C44 -54 52 -74 44 -92'), ownEars: cat.includes(ear), glasses: cat.includes(glasses), plain: [plain.includes(ear), plain.includes(glasses)], sold: ['cathead', 'cattop', 'catpants'].every(id => WARE.has(id)) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'catHead': True, 'fur': True, 'tail': True, 'ownEars': False, 'glasses': False, 'plain': [True, True], 'sold': True}, r   # the whole head takes the place of theirs (and their glasses)
 
 def test_a_drag_on_the_hero_leads_him_and_the_view_follows(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
