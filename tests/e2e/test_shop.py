@@ -379,25 +379,25 @@ def test_the_dressing_room_zooms_in_and_keeps_or_drops_what_was_chosen(b):
       act('.study-tools [data-act="wardrobe"]'); await wait(650);
       const open = { dressing: st.classList.contains('dressing'), hidden: getComputedStyle(document.querySelector('.study .room .hero')).visibility, tabs: [...document.querySelectorAll('.dress-tabs button')].map(t => t.textContent) };
       const head = scale(); act('[data-act="dress-tab"][data-tab="clothes"]'); await wait(650); const body = scale();
-      act('[data-act="dress-tab"][data-tab="hair"]'); act('[data-act="dress-pick"][data-key="hair"][data-val="bun"]');
-      const tried = { copy: document.querySelector('.dress-hero').innerHTML.includes('cy="-174"'), saved: HERO.norm(state.look).hair };   /* the bun on the copy, not yet kept */
+      act('[data-act="dress-tab"][data-tab="hair"]'); act('[data-act="dress-pick"][data-key="hairTop"][data-val="bun"]');
+      const tried = { copy: document.querySelector('.dress-hero').innerHTML.includes('cy="-176"'), saved: HERO.norm(state.look).hairTop };   /* the bun on the copy, not yet kept */
       act('[data-act="dress-cancel"]'); await wait(650);
-      const dropped = { hair: HERO.norm(state.look).hair, gone: !document.querySelector('.dress'), back: !st.classList.contains('dressing') && getComputedStyle(document.querySelector('.study .room .hero')).visibility };
+      const dropped = { hair: HERO.norm(state.look).hairTop, gone: !document.querySelector('.dress'), back: !st.classList.contains('dressing') && getComputedStyle(document.querySelector('.study .room .hero')).visibility };
       act('.study-tools [data-act="wardrobe"]'); await wait(200);
-      act('[data-act="dress-tab"][data-tab="hair"]'); act('[data-act="dress-pick"][data-key="hair"][data-val="long"]'); act('[data-act="dress-pick"][data-key="hairColor"][data-val="#c9a25a"]');
+      act('[data-act="dress-tab"][data-tab="hair"]'); ['fringe:curtain', 'sides:long', 'hairBack:long'].forEach((kv) => { const [k, v] = kv.split(':'); act('[data-act="dress-pick"][data-key="' + k + '"][data-val="' + v + '"]'); }); act('[data-act="dress-pick"][data-key="hairColor"][data-val="#c9a25a"]');
       act('[data-act="dress-tab"][data-tab="features"]'); act('[data-act="dress-pick"][data-key="eyes"][data-val="big"]');
       act('[data-act="dress-tab"][data-tab="beard"]'); act('[data-act="dress-pick"][data-key="beard"][data-val="goatee"]');
       act('[data-act="dress-tab"][data-tab="clothes"]'); act('[data-act="dress-pick"][data-key="top"][data-val="#d0574b"]');
       const pressed = document.querySelector('[data-act="dress-pick"][data-key="top"][data-val="#d0574b"]').getAttribute('aria-pressed');
       act('[data-act="dress-done"]'); await wait(650);
       const lk = HERO.norm(state.look), sig = st.dataset.sig === roomSig();
-      return JSON.stringify({ open, zoom: [head > small * 2, body < head], tried, dropped, pressed, kept: [lk.hair, lk.hairColor, lk.eyes, lk.beard, lk.top], sig }); })()"""
+      return JSON.stringify({ open, zoom: [head > small * 2, body < head], tried, dropped, pressed, kept: [lk.fringe, lk.sides, lk.hairBack, lk.hairColor, lk.eyes, lk.beard, lk.top], sig }); })()"""
     r = json.loads(ev_at(b, PHONE, js))
     assert r['open'] == {'dressing': True, 'hidden': 'hidden', 'tabs': ['臉型', '髮型', '五官', '鬍子', '衣服', '穿戴']}, r
     assert r['zoom'] == [True, True], r   # flown up to frame the head, all of them for clothes
-    assert r['tried'] == {'copy': True, 'saved': 'crop'}, r
-    assert r['dropped'] == {'hair': 'crop', 'gone': True, 'back': 'visible'}, r
-    assert r['pressed'] == 'true' and r['kept'] == ['long', '#c9a25a', 'big', 'goatee', '#d0574b'] and r['sig'], r
+    assert r['tried'] == {'copy': True, 'saved': 'none'}, r
+    assert r['dropped'] == {'hair': 'none', 'gone': True, 'back': 'visible'}, r
+    assert r['pressed'] == 'true' and r['kept'] == ['curtain', 'long', 'long', '#c9a25a', 'big', 'goatee', '#d0574b'] and r['sig'], r
 
 def test_the_hero_idles_now_and_then_and_a_tap_never_gets_the_same_reaction_twice(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + GO_ROOM + """
@@ -411,40 +411,42 @@ def test_the_hero_idles_now_and_then_and_a_tap_never_gets_the_same_reaction_twic
     assert all(g in ('hop', 'wave', 'spin', 'cheer') for g in r['got']) and all(a != b2 for a, b2 in zip(r['got'], r['got'][1:])), r
     assert r['idleOff'], r   # a tap stops what they were idly doing
 
-# 2026-11-07 (test build): nothing on the head cuts the hair. A hat sits on a hairstyle with a plain crown; a tall one (a tuft,
-# spikes, curls, a high tail, a bun) gives way to the hat's own hairstyle while it is on; things on top keep every hairstyle
-def test_a_hat_sits_on_plain_hair_brings_its_own_for_tall_hair_and_unknown_looks_fall_back(b):
-    js = """(() => { const same = (s) => s.replace(/fc\\d+/g, 'fc'), draw = (hair, head) => same(HERO.svg({ look: { hair }, wear: { head } }));
-      const heads = WARES.filter(w => w.kind === 'wear' && w.slot === 'head').map(w => w.id), hairs = HERO.OPTS.hair.map(h => h[0]);
-      const cut = heads.some(h => hairs.some(x => /clip-path="url\\(#hc/.test(HERO.svg({ look: { hair: x }, wear: { head: h } }))));
-      const tall = ['ahoge', 'spiky', 'curly', 'afro', 'ponytail', 'bun'], plain = hairs.filter(x => !tall.includes(x)), swaps = {};
-      heads.forEach(h => { const to = HERO.hairWorn({ hair: 'bun' }, { head: h }); if (to !== 'bun') swaps[h] = to; });
-      const fair = Object.entries(swaps).every(([h, to]) => tall.every(x => HERO.hairWorn({ hair: x }, { head: h }) === to && draw(x, h) === draw(to, h))
-        && plain.every(x => HERO.hairWorn({ hair: x }, { head: h }) === x));   /* a tall one is drawn as the hat's own; the hat's own is plain */
-      const onTop = heads.filter(h => !swaps[h] && !HERO.whole(h)).every(h => tall.every(x => HERO.hairWorn({ hair: x }, { head: h }) === x)) && HERO.svg({ look: { hair: 'bun' }, wear: { head: 'catears' } }).includes('<circle cx="2.6" cy="-174"');
-      const odd = HERO.norm({ hair: 'mohawk', skin: '#123456', eyes: 'big' });
+# 1.2.x (test build): hair in parts. Nothing on the head cuts the hair and no hat swaps it any more: a hat tucks away only what sits
+# on top of the head (呆毛, 丸子, 雙丸子); fringes, sides, backs and tails stay. A look from before (one of the 16 hairstyles) gets the
+# parts nearest it; an unknown part falls back to the new hero's
+def test_a_hat_tucks_away_what_sits_on_top_and_old_looks_become_parts(b):
+    js = """(() => { const heads = WARES.filter(w => w.kind === 'wear' && w.slot === 'head').map(w => w.id), tops = HERO.OPTS.hairTop.map(h => h[0]);
+      const cut = heads.some(h => tops.some(t => /clip-path="url\\(#hc/.test(HERO.svg({ look: { hairTop: t }, wear: { head: h } }))));
+      const tucks = {}; heads.forEach(h => { const t = tops.filter(x => HERO.tucked({ hairTop: x }, h)); if (t.length) tucks[h] = t; });
+      const bun = (head) => HERO.svg({ look: { hairTop: 'bun' }, wear: head ? { head } : {} }).includes('cy="-176"');
+      const tail = HERO.svg({ look: { hairTop: 'ponytail' }, wear: { head: 'beanie' } }).includes('M8 -175');
+      const old = HERO.norm({ hair: 'bun' }), wavy = HERO.norm({ hair: 'wavy' }), odd = HERO.norm({ fringe: 'mohawk', sides: 'long', skin: '#123456', eyes: 'big' });
       state.look = 'nope'; const fixed = normalizeState(state).look;
-      return JSON.stringify({ cut, swaps, fair, onTop, cat: HERO.whole('cathead'), odd: [odd.hair, odd.skin, odd.eyes], fixed, styles: hairs.length }); })()"""
+      return JSON.stringify({ cut, tucks, bun: [bun(), bun('beanie'), bun('catears')], tail, cat: HERO.whole('cathead'), old: [old.fringe, old.sides, old.hairBack, old.hairTop], wavy: [wavy.fringe, wavy.sides, wavy.hairBack],
+        odd: [odd.fringe, odd.sides, odd.skin, odd.eyes], fixed, counts: ['fringe', 'sides', 'hairBack', 'hairTop'].map(k => HERO.OPTS[k].length) }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'cut': False, 'swaps': {'beanie': 'crop', 'strawhat': 'neat', 'beret': 'bob', 'gradcap': 'curtain', 'cathood': 'crop', 'witchhat': 'shoulder'}, 'fair': True, 'onTop': True,
-                 'cat': True, 'odd': ['crop', '#f3d1b5', 'big'], 'fixed': {}, 'styles': 16}, r   # 'mohawk' and the old styles' ids fall back to 短碎髮
+    assert r['cut'] is False and r['cat'] is True, r
+    assert r['tucks'] == {h: ['ahoge', 'bun', 'twinbuns'] for h in ['beanie', 'strawhat', 'beret', 'gradcap', 'cathood', 'witchhat']}, r   # a hat over what sits on top
+    assert r['bun'] == [True, False, True] and r['tail'], r   # tucked under a beanie, not under 貓耳髮箍; a high tail stays
+    assert r['old'] == ['short', 'short', 'short', 'bun'] and r['wavy'] == ['sidepart', 'wave', 'wavy'], r   # the old 丸子頭, 長捲髮
+    assert r['odd'] == ['round', 'long', '#f3d1b5', 'big'] and r['fixed'] == {} and r['counts'] == [20, 15, 5, 7], r
 
-def test_a_hat_that_swaps_their_hairstyle_says_so_in_the_shop_and_the_dressing_room(b):
-    js = "(async () => { " + FRESH + """ state.koto.gift = 120; ['beanie', 'catears', 'cathead'].forEach(id => buyWare(WARE.get(id))); state.look = Object.assign({}, state.look, { hair: 'bun' }); saveState();
+def test_a_hat_that_tucks_away_what_sits_on_top_says_so_in_the_shop_and_the_dressing_room(b):
+    js = "(async () => { " + FRESH + """ state.koto.gift = 120; ['beanie', 'catears', 'cathead'].forEach(id => buyWare(WARE.get(id))); state.look = Object.assign({}, state.look, { hairTop: 'bun' }); saveState();
       const wait = (ms) => new Promise(q => setTimeout(q, ms)), act = (sel) => document.querySelector(sel).click(), note = () => { const n = document.querySelector('.dress-note'); return n ? n.textContent : null; };
       const card = (id) => { const n = document.querySelector('[data-ware="' + id + '"] .ds.swap'); return n ? n.textContent : null; };
       shopTab = 'wear'; location.hash = '#/shop'; route(); const shop = { beanie: card('beanie'), beret: card('beret'), catears: card('catears'), scarf: card('scarf') };
       state.wear = { head: 'beanie' }; saveState(); """ + GO_ROOM + """ await wait(200);
       act('.study-tools [data-act="wardrobe"]'); await wait(200); const face = note();
       act('[data-act="dress-tab"][data-tab="hair"]'); const hair = note();
-      act('[data-act="dress-pick"][data-key="hair"][data-val="long"]'); const long = note();
+      act('[data-act="dress-pick"][data-key="hairTop"][data-val="ponytail"]'); const long = note();
       act('[data-act="dress-tab"][data-tab="wear"]'); act('[data-act="dress-wear"][data-id="cathead"]'); const wear = note();
       act('[data-act="dress-tab"][data-tab="features"]'); const cat = note();
       act('[data-act="dress-cancel"]'); await wait(600);
       return JSON.stringify({ shop, face, hair, long, wear, cat }); })()"""
     r = json.loads(ev(b, js))
-    assert r['shop'] == {'beanie': '蓋不住丸子頭，戴著時換成短碎髮。', 'beret': '蓋不住丸子頭，戴著時換成鮑伯頭。', 'catears': None, 'scarf': None}, r
-    assert r['face'] is None and r['hair'] == '毛帽蓋不住丸子頭，戴著時換成短碎髮。' and r['long'] is None, r   # 長直髮 fits under it
+    assert r['shop'] == {'beanie': '戴著時丸子會收進帽子裡。', 'beret': '戴著時丸子會收進帽子裡。', 'catears': None, 'scarf': None}, r
+    assert r['face'] is None and r['hair'] == '毛帽戴著時丸子會收進帽子裡。' and r['long'] is None, r   # a high tail stays out
     assert r['wear'] is None and r['cat'] == '戴著貓咪頭套，看不到臉和頭髮。', r
 
 # 2026-11-07 (test build): 貓耳兜帽 in their top's colour; with 貓咪上衣 and 貓咪褲 (or the whole cat's head) it is the cat suit, which
@@ -511,10 +513,10 @@ def test_limited_sales_go_by_the_servers_day_not_the_phones(b):
 
 def test_the_halloween_wares_are_a_hat_a_robe_and_a_pumpkin_that_glows(b):
     js = """(() => { const robe = HERO.svg({ look: { topStyle: 'wizrobe', top: '#e58fa8' } }), p = WARE.get('pumpkin');
-      return JSON.stringify({ hat: HERO.hairWorn({ hair: 'bun' }, { head: 'witchhat' }), keep: HERO.hairWorn({ hair: 'long' }, { head: 'witchhat' }), dyed: robe.includes('fill="#e58fa8"'),
+      return JSON.stringify({ hat: HERO.tucked({ hairTop: 'bun' }, 'witchhat'), keep: HERO.tucked({ hairTop: 'none', hairBack: 'long' }, 'witchhat'), dyed: robe.includes('fill="#e58fa8"'),
         style: HERO.OPTS.topStyle.some(([v]) => v === 'wizrobe'), lamp: !!p.light && p.kind === 'floor', glow: DECOR.thumb('pumpkin').includes('#ffd36a'), sale: ['witchhat', 'wizrobe', 'pumpkin'].map(id => WARE.get(id).limited) }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'hat': 'shoulder', 'keep': 'long', 'dyed': True, 'style': True, 'lamp': True, 'glow': True, 'sale': ['halloween'] * 3}, r
+    assert r == {'hat': '丸子', 'keep': '', 'dyed': True, 'style': True, 'lamp': True, 'glow': True, 'sale': ['halloween'] * 3}, r
 
 def test_the_telescope_went_out_to_the_yard(b):
     js = "(() => { " + FRESH + """ state.owned.telescope = { paid: 45, on: '2026-11-01' }; state.placed.telescope = { w: 'F', x: 6, y: 6, r: 0 }; state.roomV = 3;
@@ -581,12 +583,12 @@ def test_a_cat_head_top_and_trousers_make_a_cat(b):
     assert r == {'catHead': True, 'fur': True, 'tail': True, 'ownFace': False, 'glasses': False, 'plain': [True, True], 'sold': True}, r   # the whole head takes the place of theirs (and their glasses)
 
 def test_the_q_head_has_no_ears_and_the_new_choices(b):
-    js = """(() => { const svg = HERO.svg({ look: { hair: 'crop' } }), o = HERO.OPTS;
-      return JSON.stringify({ ears: svg.includes('M-29 -129.5'), eyes: o.eyes.map(e => e[1]), mouth: o.mouth.length, cheeks: o.cheeks.map(c => c[1]), hair: o.hair.length, face: o.face.map(f => f[0]), old: HERO.norm({ eyes: 'round', face: 'square', hair: 'tucked' }) }); })()"""
+    js = """(() => { const svg = HERO.svg({ look: {} }), o = HERO.OPTS, ear = HERO.svg({ look: { sides: 'tucked' } });
+      return JSON.stringify({ ears: svg.includes('M-31 -126 C-36.4'), ear: ear.includes('M-31 -126 C-36.4'), eyes: o.eyes.map(e => e[1]), mouth: o.mouth.length, cheeks: o.cheeks.map(c => c[1]), hair: o.fringe.length, face: o.face.map(f => f[0]), old: HERO.norm({ eyes: 'round', face: 'square', hair: 'tucked' }) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['ears'] is False and r['eyes'] == ['普通', '吊眼', '垂眼', '笑眼', '大眼', '睏眼'] and r['mouth'] == 6 and r['hair'] == 16, r
+    assert r['ears'] is False and r['ear'] is True and r['eyes'] == ['普通', '吊眼', '垂眼', '笑眼', '大眼', '睏眼'] and r['mouth'] == 6 and r['hair'] == 20, r   # an ear only with 耳後, 耳上短, 鬢角
     assert r['cheeks'] == ['腮紅', '害羞', '雀斑', '無'] and r['face'] == ['round', 'chubby', 'oval', 'pointed'], r
-    assert [r['old'][k] for k in ('eyes', 'face', 'hair')] == ['normal', 'round', 'crop'], r   # a look saved before falls back where its choice is gone
+    assert [r['old'][k] for k in ('eyes', 'face', 'fringe')] == ['normal', 'round', 'round'], r   # a look saved before falls back where its choice is gone
 
 def test_a_drag_on_the_hero_leads_him_and_the_view_follows(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);

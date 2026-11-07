@@ -2,9 +2,9 @@
 and back, so a new ware or hairstyle can be checked against all the others before it ships (docs/superpowers/specs/
 2026-11-07-hero-wear-rules.md).
 
-usage: .venv/bin/python3 -I scripts/hero-sheet.py out.png [--rows hair|topStyle] [--only a,b] [--cols none,beanie,…] [--cell 92]
+usage: .venv/bin/python3 -I scripts/hero-sheet.py out.png [--rows fringe|sides|hairBack|hairTop|topStyle] [--only a,b] [--cols none,beanie,…] [--cell 92]
   writes out.png (facing us) and out-back.png (from behind). --cols: ware ids, 'none' for nothing worn; by default every ware worn
-  on the head or face with hair rows, every neck, back and body ware with top rows."""
+  on the head or face with hair rows (each a hair part, 1.2.x), every neck, back and body ware with top rows."""
 import argparse, asyncio, base64, json, os, subprocess, sys, time
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(ROOT, "tests", "e2e"))
@@ -14,9 +14,9 @@ import websockets
 PORT = 8833
 READY = "typeof state === 'object' && !!state.updatedAt && typeof HERO === 'object'"
 SHEET = r"""((rowKey, only, cols, back, cell) => {
-  const slots = rowKey === 'hair' ? ['head', 'face'] : ['neck', 'back', 'body'];
+  const hairRow = rowKey !== 'topStyle', slots = hairRow ? ['head', 'face'] : ['neck', 'back', 'body'];
   const wares = cols || [null, ...WARES.filter(w => w.kind === 'wear' && slots.includes(w.slot)).map(w => w.id)];
-  const rows = only || HERO.OPTS[rowKey].map(o => o[0]), box = rowKey === 'hair' ? '-62 -238 128 165' : '-62 -200 128 210';
+  const rows = only || HERO.OPTS[rowKey].map(o => o[0]), box = hairRow ? '-62 -238 128 200' : '-62 -200 128 210';
   const draw = (v, id) => { let s = HERO.svg({ look: { hairColor: '#6b4a32', [rowKey]: v }, wear: id ? { [WARE.get(id).slot]: id } : {}, front: !back, box });
     if (back) s = s.replace('<g class="f-front">', '<g class="f-front" style="display:none">');
     return `<div class="c">${s}</div>`; };
@@ -31,7 +31,7 @@ SHEET = r"""((rowKey, only, cols, back, cell) => {
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("out"); ap.add_argument("--rows", default="hair", choices=["hair", "topStyle"])
+    ap.add_argument("out"); ap.add_argument("--rows", default="fringe", choices=["fringe", "sides", "hairBack", "hairTop", "topStyle"])
     ap.add_argument("--only"); ap.add_argument("--cols"); ap.add_argument("--cell", type=int, default=92)
     a = ap.parse_args()
     only = a.only.split(",") if a.only else None

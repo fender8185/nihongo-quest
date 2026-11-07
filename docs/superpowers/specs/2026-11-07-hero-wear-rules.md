@@ -5,6 +5,19 @@
 comes with a whole hairstyle of its own, and the wares change to match. These are the rules every hairstyle and every ware
 follows from now on.
 
+## Update (1.2.x, test build): hair in parts, hats no longer swap it
+
+The testers found the pointed fringes too sharp, and the user asked for hair put together from parts: 瀏海 (20), 兩側 (15),
+後面 (5), 造型 (7), every end rounded and layered (a darker tier behind the front clumps). The look keeps `fringe`, `sides`,
+`hairBack`, `hairTop` instead of one `hair`; a look saved with one of the 16 old hairstyles gets the parts nearest it (`OLD_HAIR`).
+Three sides (耳後, 耳上短, 鬢角) leave the ear showing: one small rounded ear, drawn only with them (from behind too).
+
+What this changes below: there are no whole hairstyles any more, so **no hat swaps the hair**. `HAT_HAIR` and `tall` are gone. A hat
+(`HATS`: 毛帽, 草帽, 貝雷帽, 學士帽, 貓耳兜帽, 魔法師帽) covers the crown as before and tucks away only what sits on top of the head
+(造型 with `under`: 呆毛, 丸子, 雙丸子); the fringe, the sides, the back and any tail (高馬尾, 雙馬尾, 低馬尾) stay. Things on top
+(貓耳髮箍, 必勝頭巾, 眼鏡) and the whole head (貓咪頭套) are unchanged. The shop card and the dressing room say 「戴著時丸子會收進帽子裡。」
+when a hat tucks something away. The rest of this page describes the rules as they were before the parts.
+
 ## The figure
 
 - Facing us it is symmetric round x = 2 (a left half is mirrored with `matrix(-1 0 0 1 4 0)`); the feet are at y 0, the head's
