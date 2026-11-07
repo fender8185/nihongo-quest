@@ -65,3 +65,17 @@ Body types, hairstyles that are only a recolour, eye-color for the closed 笑眼
   刺蝟頭, 自然捲, 爆炸頭, 鮑伯頭, 狼尾, 及肩髮, 長直髮, 長捲髮, 高馬尾, 雙馬尾, 丸子頭); 光頭 is gone with the old ones. Ears are
   ear-shaped; short cuts keep a darker layer of hair behind the ears and a sideburn in front, long ones fall over them; the
   fringe casts a faint shadow on the forehead. A crown-covering hat cuts away only the hair in the band above it.
+
+## Third round: the head redrawn the Q版 way
+
+The user was still unhappy round the ears and sent five Q版 references (2–3 heads tall, big low eyes, hair that hides the ears),
+allowing a new model as long as it keeps the app's flat style. The head now:
+- has **no ears**: every style has side locks (or volume) where they would be;
+- has **big eyes low on the face** (y -117): the colour darker under the lid, a pupil, two highlights from the upper right, a dark
+  lash line. Six kinds after the reference sheet: 普通, 吊眼, 垂眼, 笑眼, 大眼, 睏眼;
+- has a small mouth lower down (y -104), six kinds (with 吐舌); brows five (with 八字眉); cheeks four (with 害羞's hatched blush);
+  faces 圓臉, 包子臉, 鵝蛋臉, 尖下巴; beards and glasses moved to the new features;
+- has **hair in clumps**: a crown with volume, the fringe as pointed clumps (six fringe patterns), side locks, a darker layer behind,
+  strands and a light band round the crown. Sixteen styles: 短碎髮, 清爽短髮, 中分, 呆毛短髮, 刺蝟頭, 油頭, 自然捲, 爆炸頭,
+  鮑伯頭, 狼尾, 及肩髮, 長直髮, 長捲髮, 高馬尾, 雙馬尾, 丸子頭 (平頭 gave way to 呆毛短髮, which keeps the ears hidden).
+Looks saved before fall back where their choice is gone (eyes → 普通, square face → 圓臉, 平頭 or 及肩 tucked → 短碎髮).

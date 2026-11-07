@@ -404,10 +404,18 @@ def test_clothes_are_sold_put_on_in_the_dressing_room_and_dyed_in_the_heros_colo
 def test_a_cat_head_top_and_trousers_make_a_cat(b):
     js = """(() => { const cat = HERO.svg({ look: { topStyle: 'cattop', bottomStyle: 'catpants', top: '#d9a43a', bottom: '#d9a43a' }, wear: { head: 'cathead', face: 'glasses' } });
       const plain = HERO.svg({ look: {}, wear: { face: 'glasses' } });
-      const ear = 'M-29 -129.5 C-36.5 -133', glasses = '<circle cx="-9" cy="-121" r="8"/>';
-      return JSON.stringify({ catHead: cat.includes('#e8869a'), fur: cat.includes('#d9a43a'), tail: cat.includes('C44 -54 52 -74 44 -92'), ownEars: cat.includes(ear), glasses: cat.includes(glasses), plain: [plain.includes(ear), plain.includes(glasses)], sold: ['cathead', 'cattop', 'catpants'].every(id => WARE.has(id)) }); })()"""
+      const face = 'C36 -110 21 -94 2 -94', glasses = '<circle cx="-10.5" cy="-117" r="8.6"/>';   /* their own (round) face; the glasses over its eyes */
+      return JSON.stringify({ catHead: cat.includes('#e8869a'), fur: cat.includes('#d9a43a'), tail: cat.includes('C44 -54 52 -74 44 -92'), ownFace: cat.replace(/<defs>[\s\S]*?<\/defs>/, '').includes(face), glasses: cat.includes(glasses), plain: [plain.includes(face), plain.includes(glasses)], sold: ['cathead', 'cattop', 'catpants'].every(id => WARE.has(id)) }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'catHead': True, 'fur': True, 'tail': True, 'ownEars': False, 'glasses': False, 'plain': [True, True], 'sold': True}, r   # the whole head takes the place of theirs (and their glasses)
+    assert r == {'catHead': True, 'fur': True, 'tail': True, 'ownFace': False, 'glasses': False, 'plain': [True, True], 'sold': True}, r   # the whole head takes the place of theirs (and their glasses)
+
+def test_the_q_head_has_no_ears_and_the_new_choices(b):
+    js = """(() => { const svg = HERO.svg({ look: { hair: 'crop' } }), o = HERO.OPTS;
+      return JSON.stringify({ ears: svg.includes('M-29 -129.5'), eyes: o.eyes.map(e => e[1]), mouth: o.mouth.length, cheeks: o.cheeks.map(c => c[1]), hair: o.hair.length, face: o.face.map(f => f[0]), old: HERO.norm({ eyes: 'round', face: 'square', hair: 'tucked' }) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['ears'] is False and r['eyes'] == ['普通', '吊眼', '垂眼', '笑眼', '大眼', '睏眼'] and r['mouth'] == 6 and r['hair'] == 16, r
+    assert r['cheeks'] == ['腮紅', '害羞', '雀斑', '無'] and r['face'] == ['round', 'chubby', 'oval', 'pointed'], r
+    assert [r['old'][k] for k in ('eyes', 'face', 'hair')] == ['normal', 'round', 'crop'], r   # a look saved before falls back where its choice is gone
 
 def test_a_drag_on_the_hero_leads_him_and_the_view_follows(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
