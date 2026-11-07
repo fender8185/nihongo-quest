@@ -12,9 +12,11 @@ def test_chip_shows_logged_out_and_opens_data_tab(b):
     out = boot(b, [
         ("eval", "JSON.stringify({ side: document.querySelector('#sideSync .sync-chip')?.textContent.trim(), cls: document.querySelector('#sideSync .sync-chip')?.className, top: !!document.querySelector('#syncChip .sync-chip') })"),
         ("eval", "document.querySelector('#sideSync .sync-chip').click(); JSON.stringify({ modal: modalOpen(), tab: settingsTab, email: !!document.getElementById('syncEmail') })"),
+        ("eval", "closeModal(); Sync.lastError = 'x'; Sync.setStatus('error'); JSON.stringify({ top: (document.querySelector('#syncChip .sync-chip') || {}).textContent || null, furi: !!document.querySelector('.topbar [data-act=toggle-furi]'), gear: !!document.querySelector('.topbar [data-act=settings]') })"),
     ])
-    assert out[-2] == '{"side":"未登入","cls":"sync-chip is-off","top":true}', out[-2]
-    assert out[-1] == '{"modal":true,"tab":"data","email":true}', out[-1]
+    assert out[-3] == '{"side":"未登入","cls":"sync-chip is-off","top":false}', out[-3]   # a page's bar shows it only when sync failed
+    assert out[-2] == '{"modal":true,"tab":"data","email":true}', out[-2]
+    assert out[-1] == '{"top":"同步失敗","furi":false,"gear":false}', out[-1]   # 振假名 and 設定 left the bar for good
 
 def test_login_button_sends_normalized_email(b):
     out = boot(b, [

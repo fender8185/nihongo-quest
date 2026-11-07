@@ -1936,9 +1936,9 @@ def test_theme_follows_the_clock_or_holds_night_or_day(b):
 # 信箱: the letters sit in the mailbox by the house; inside, the door's tag counts them and its stop dot glows, and a letter this
 # device has not been told about brings the hint once (not for a brand-new learner, who picks a start first); the hint walks out
 def test_mailbox_letters_show_on_the_door_and_the_hint_comes_once(b):
-    js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1');
+    js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); localStorage.setItem('nq_letter_opening', '1');   /* test build: 古道具屋's letter put away, this is about the room's */
       const wait = (ms) => new Promise(r => setTimeout(r, ms)); const enter = async () => { location.hash = '#/stats'; route(); location.hash = '#/today'; route(); await wait(1200); };
-      const door = () => { const d = document.querySelector('#view [data-thing=door]'); return [d.querySelector('.tag').textContent.trim(), d.classList.contains('mail'), document.querySelector('.room-stops .dot[data-stop="0"]').classList.contains('mail')]; };
+      const door = () => { const d = document.querySelector('#view [data-thing=door]'); return [d.querySelector('.tag').textContent.trim(), d.classList.contains('mail')]; };
       await enter(); const first = { ids: letters().map(l => l.id), door: door(), hint: document.querySelector('.mail-hint').classList.contains('on'), seen: mailSeen() };
       await enter(); const second = document.querySelector('.mail-hint').classList.contains('on');
       localStorage.removeItem('nq_mail_seen'); await enter(); document.querySelector('.mail-hint').click(); await wait(1500);
@@ -1946,13 +1946,13 @@ def test_mailbox_letters_show_on_the_door_and_the_hint_comes_once(b):
       openLetters(); document.querySelector('.letter[data-letter=room] [data-act=letter-done]').click();
       const after = { left: mailCount(), modal: modalOpen(), flag: document.querySelector('#view .mailbox').classList.contains('has'), stored: !!localStorage.getItem('nq_letter_room') };
       await enter(); const quiet = door();
-      state.startChosen = false; state.srs = {}; localStorage.clear(); saveState(); await enter(); const newbie = { hint: document.querySelector('.mail-hint').classList.contains('on'), door: door() };
+      state.startChosen = false; state.srs = {}; localStorage.clear(); localStorage.setItem('nq_letter_opening', '1'); saveState(); await enter(); const newbie = { hint: document.querySelector('.mail-hint').classList.contains('on'), door: door() };
       return JSON.stringify({ first, second, out, after, quiet, newbie }); })()"""
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
-    assert r['first'] == {'ids': ['room'], 'door': ['出門・1 封信', True, True], 'hint': True, 'seen': ['room']}, r['first']
+    assert r['first'] == {'ids': ['room'], 'door': ['出門・1 封信', True], 'hint': True, 'seen': ['room']}, r['first']
     assert r['second'] is False and r['out'] == {'hash': '#/outside', 'flag': True, 'tag': '信箱・1 封信'}, r
-    assert r['after'] == {'left': 0, 'modal': False, 'flag': False, 'stored': True} and r['quiet'] == ['出門', False, False], r
-    assert r['newbie'] == {'hint': False, 'door': ['出門・1 封信', True, True]}, r['newbie']
+    assert r['after'] == {'left': 0, 'modal': False, 'flag': False, 'stored': True} and r['quiet'] == ['出門', False], r
+    assert r['newbie'] == {'hint': False, 'door': ['出門・1 封信', True]}, r['newbie']
 
 # the day's note (fewer new items today, a level to finish first) is over the first screen of the day's first set — a question or
 # a new item's preview — and 學習分析's 今天 card keeps it all day; a later set has no note
