@@ -165,6 +165,14 @@ test('mergeStates keeps the larger count of each day and device for answering an
   assert.deepEqual(m.koto.days, ['2026-11-08']);
   assert.deepEqual(a.koto.daySets, { '2026-11-08': { phone: 5, pc: 1 } }, 'inputs untouched');
 });
+test('mergeStates keeps what each one-time find brought once, whichever device found it', () => {
+  const k = { daySets: {}, days: [], listen: {}, mail: {}, sets: {}, gift: 0 };
+  const a = { updatedAt: '2026-11-07T01:00:00.000Z', srs: {}, koto: Object.assign({}, k, { found: { 'witch-2026': 100 } }) };
+  const b = { updatedAt: '2026-11-07T02:00:00.000Z', srs: {}, koto: Object.assign({}, k) };
+  assert.deepEqual(C.mergeStates(a, b).koto.found, { 'witch-2026': 100 });   // the newer copy never had it (an older build)
+  const c = { updatedAt: '2026-11-07T03:00:00.000Z', srs: {}, koto: Object.assign({}, k, { found: { 'witch-2026': 100 } }) };
+  assert.deepEqual(C.mergeStates(a, c).koto.found, { 'witch-2026': 100 });   // both devices caught the witch: 100, not 200
+});
 test('mergeStates keeps 言靈 and purchases that only one copy has', () => {
   const a = { updatedAt: '2026-11-07T01:00:00.000Z', srs: {}, koto: { sets: { phone: 2 }, days: [] }, owned: { fan: { paid: 8, on: '2026-11-07' } } };
   const b = { updatedAt: '2026-11-07T02:00:00.000Z', srs: {} };

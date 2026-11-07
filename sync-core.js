@@ -130,8 +130,9 @@
     return out;
   }
   // 言靈 (1.2): counts only ever added to by one device, so the larger of two copies is right — sets and listens by day and
-  // device (daySets, listen), the first rule's sets per device (sets), what each letter brought (mail) — the days that gave the
-  // day's bonus (a union: once a day however many devices finished it), the test site's gift (the larger)
+  // device (daySets, listen), the first rule's sets per device (sets), what each letter brought (mail), what each find brought
+  // (found, 1.2.2: the Halloween witch) — the days that gave the day's bonus (a union: once a day however many devices
+  // finished it), the test site's gift (the larger)
   function maxBy(o, n) {
     const out = {};
     new Set([...Object.keys(o || {}), ...Object.keys(n || {})]).forEach(k => { out[k] = Math.max(Number((o || {})[k]) || 0, Number((n || {})[k]) || 0); });
@@ -145,7 +146,7 @@
   function mergeKoto(olderK, newerK) {
     const o = olderK || {}, n = newerK || {};
     return { daySets: maxByDay(o.daySets, n.daySets), days: [...new Set([...(o.days || []), ...(n.days || [])])], listen: maxByDay(o.listen, n.listen),
-      mail: maxBy(o.mail, n.mail), sets: maxBy(o.sets, n.sets), gift: Math.max(o.gift || 0, n.gift || 0) };
+      mail: maxBy(o.mail, n.mail), found: maxBy(o.found, n.found), sets: maxBy(o.sets, n.sets), gift: Math.max(o.gift || 0, n.gift || 0) };
   }
   function mergeStates(a, b) {
     const [newer, older] = (stampOf(a) >= stampOf(b) ? [a, b] : [b, a]).map(clone);

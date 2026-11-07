@@ -518,6 +518,83 @@ def test_the_halloween_wares_are_a_hat_a_robe_and_a_pumpkin_that_glows(b):
     r = json.loads(ev(b, js))
     assert r == {'hat': '丸子', 'keep': '', 'dyed': True, 'style': True, 'lamp': True, 'glow': True, 'sale': ['halloween'] * 3}, r
 
+# the Halloween witch: far off in the yard's night sky while Halloween is on (the server's day), a tap drops her off her broom
+# for 100 言靈 once a Halloween. open(theme, day): the yard drawn anew under 永夜／永晝 on that server day
+WITCH_OPEN = """const wait = (ms) => new Promise(q => setTimeout(q, ms));
+  const open = (theme, day) => { state.settings.theme = theme; saveState(); saleDay = { day, at: Date.now(), ask: null, failed: false };
+    location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); return document.querySelector('.yard .sky .night .witch'); };"""
+
+def test_the_halloween_witch_flies_far_off_in_the_yards_night_sky(b):
+    js = "(async () => { " + FRESH + WITCH_OPEN + """
+      const w = open('night', '2026-11-07'), id = w && w.dataset.witch, shown = !!w && w.getClientRects().length > 0;
+      w.style.animationDelay = '-5s'; await wait(50);   /* mid-way over, not resting off the screen */
+      const fig = () => w.querySelector('.w-fig').getBoundingClientRect(), r0 = fig(); await wait(1200); const r1 = fig();
+      const hit = w.querySelector('.w-hit'), hr = hit.getBoundingClientRect();
+      const out = { id, shown, size: [Math.round(r0.width), Math.round(r0.height)], moved: Math.abs(r1.left - r0.left) > 5, high: r1.bottom < innerHeight * 0.45,
+        hit: getComputedStyle(hit).pointerEvents, tap: [Math.round(hr.width), Math.round(hr.height)], top: document.elementFromPoint(hr.left + hr.width / 2, hr.top + hr.height / 2) === hit };
+      const day = open('day', '2026-11-07'); out.day = !!day && day.getClientRects().length > 0;
+      out.edges = ['2026-10-20', '2026-10-21', '2026-11-10', '2026-11-11'].map(d => !!open('night', d));
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert r['id'] == 'witch-2026' and r['shown'], r
+    assert 16 <= r['size'][0] <= 24 and r['size'][1] <= 18, r   # far off: about 20 px across
+    assert r['moved'] and r['high'], r   # flying, up in the sky
+    assert r['hit'] == 'auto' and r['tap'] == [44, 44] and r['top'], r   # a finger can catch her, small as she is (nothing over her)
+    assert r['day'] is False, r   # not by day
+    assert r['edges'] == [False, True, True, False], r   # Halloween by the server's day, as the limited sale
+
+def test_a_tap_on_the_witch_drops_her_off_her_broom_for_100_koto_once(b):
+    js = "(async () => { " + FRESH + WITCH_OPEN + """
+      const w = open('night', '2026-11-07'), bal0 = kotoBalance();
+      w.querySelector('.w-hit').click();
+      const out = { fall: w.classList.contains('fall'), found: Object.assign({}, state.koto.found), add: kotoBalance() - bal0 };
+      w.querySelector('.w-hit').click(); out.again = kotoBalance() - bal0 - out.add;   /* a second tap while she falls */
+      await wait(3400); out.gone = !document.querySelector('.yard .witch');
+      out.back = !!open('night', '2026-11-07');   /* the yard drawn anew: caught is caught */
+      out.kept = normalizeState(JSON.parse(JSON.stringify(state))).koto.found;
+      out.junk = normalizeState({ koto: { found: [3] } }).koto.found;
+      location.hash = '#/shop'; route(); document.querySelector('[data-act="witch-again"]').click();   /* the test site: once more */
+      out.reset = Object.keys(state.koto.found).length === 0; out.there = !!open('night', '2026-11-07');
+      state.koto.found['witch-2026'] = 100; route(); out.synced = !document.querySelector('.yard .witch');   /* caught on another device */
+      out.next = !!open('night', '2027-10-25');   /* next Halloween she flies again */
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert r['fall'] and r['found'] == {'witch-2026': 100} and r['add'] == 100 and r['again'] == 0, r
+    assert r['gone'] and not r['back'], r
+    assert r['kept'] == {'witch-2026': 100} and r['junk'] == {}, r
+    assert r['reset'] and r['there'] and r['synced'] and r['next'], r
+
+# her 100 言靈 seen: ten あ burst out where she slipped, then fly into the 言靈 button up top, which counts up 10 a coin; +100
+# beside it at the end; the buttons stay up meanwhile. In 擺設 (the buttons put away) the pop up top says it instead
+def test_the_witchs_koto_fly_from_her_into_the_koto_button_and_count_up(b):
+    js = "(async () => { " + FRESH + WITCH_OPEN + """
+      const w = open('night', '2026-11-07'); w.style.animationDelay = '-8s'; await wait(50);   /* on the screen, by the moon */
+      const y = document.querySelector('.yard'), bal0 = kotoBalance(), num = () => Number(y.querySelector('.study-koto span').textContent);
+      const wr = w.querySelector('.w-fig').getBoundingClientRect(), wc = [wr.left + wr.width / 2, wr.top + wr.height / 2];
+      w.querySelector('.w-hit').click();
+      const seen = [], t0 = performance.now(); let coins = null, near = null, ring = null, plus = null, pops = 0;
+      while (performance.now() - t0 < 3600) {
+        await wait(40);
+        const cs = [...document.querySelectorAll('.koto-coin')];
+        if (coins === null && performance.now() - t0 > 800 && cs.length) { coins = cs.length; near = cs.every(c => { const r = c.getBoundingClientRect(); return Math.hypot(r.left + r.width / 2 - wc[0], r.top + r.height / 2 - wc[1]) < 70; }); }
+        const ri = document.querySelector('.koto-burst'); if (ri && ring === null) { const r = ri.getBoundingClientRect(); ring = Math.hypot(r.left + r.width / 2 - wc[0], r.top + r.height / 2 - wc[1]) < 12; }
+        seen.push(num() - bal0); const p = document.querySelector('.koto-plus'); if (p && plus === null) plus = p.textContent;
+        pops = Math.max(pops, document.querySelectorAll('.koto-pop').length);
+      }
+      await wait(1000);   /* 4.6 s after the tap: past the yard's 4 s rest */
+      const out = { coins, near, ring, seen, plus, pops, awake: !y.classList.contains('quiet'), left: document.querySelectorAll('.koto-coin').length, final: num() - bal0 };
+      state.koto.found = {}; const w2 = open('night', '2026-11-07'); document.querySelector('.yard [data-act="yard-edit"]').click();
+      w2.querySelector('.w-hit').click(); await wait(800);
+      out.edit = [...document.querySelectorAll('.koto-pop')].map(p => p.textContent.replace(/\\s+/g, '')).join('|'); out.editCoins = document.querySelectorAll('.koto-coin').length;
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert r['coins'] == 10 and r['near'] and r['ring'], r   # where she slipped (the ring too), while she falls
+    s = r['seen']
+    assert s[0] == 0 and s[-1] == 100 and all(a <= b for a, b in zip(s, s[1:])) and all(v % 10 == 0 for v in s), s   # 10 a coin, never back
+    assert len({v for v in s if 0 < v < 100}) >= 3, s   # counted up coin by coin, not in one jump
+    assert r['plus'] == '+100' and r['pops'] == 0 and r['awake'] and r['left'] == 0 and r['final'] == 100, r
+    assert 'あ言靈+100' in r['edit'] and r['editCoins'] == 0, r   # the button put away: the pop up top
+
 def test_the_telescope_went_out_to_the_yard(b):
     js = "(() => { " + FRESH + """ state.owned.telescope = { paid: 45, on: '2026-11-01' }; state.placed.telescope = { w: 'F', x: 6, y: 6, r: 0 }; state.roomV = 3;
       const s = normalizeState(state); return JSON.stringify({ kind: WARE.get('telescope').kind, placed: s.placed.telescope || null, v: s.roomV, owned: !!s.owned.telescope }); })()"""

@@ -292,6 +292,44 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .meteors { position: absolute; inset: 0; opacity: clamp(0, (var(--f) - .75) * 8, 1); transition: opacity 1.5s; }
 .sky .meteor { position: absolute; width: 120px; height: 1.5px; border-radius: 1px; background: linear-gradient(90deg, transparent, #fff); opacity: 0; transform-origin: 0 50%; animation: meteor var(--d) linear var(--w) infinite; }
 @keyframes meteor { 0% { transform: rotate(28deg) translateX(0); opacity: 0; } 1% { opacity: 1; } 6% { transform: rotate(28deg) translateX(320px); opacity: 0; } 100% { transform: rotate(28deg) translateX(320px); opacity: 0; } }
+/* the Halloween witch (1.2.2, yWitch): far off, a dark shape rimmed by the moonlight with a few sparks off her broom; over
+   the sky and back once a minute (past the moon going right), bobbing; only by night. The finger's target is bigger than she is.
+   Standing still (motion reduced) she hovers by the moon */
+.sky .witch { position: absolute; left: 0; top: 0; width: 22px; height: 16px; display: none; transform: translate(22vw, 15vh); animation: witchFly 60s linear infinite; }
+[data-theme="dark"] .sky .witch { display: block; }
+.sky .witch .w-bob { position: absolute; inset: 0; animation: witchBob 2.8s ease-in-out infinite alternate; }
+.sky .witch .w-fig { position: absolute; inset: 0; filter: drop-shadow(0 0 .6px rgba(222, 228, 255, .9)) drop-shadow(0 0 2.5px rgba(160, 172, 255, .4)); }
+.sky .witch svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; fill: #0f0c26; stroke: #0f0c26; stroke-width: 0; stroke-linecap: round; }
+.sky .witch .w-hit { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; padding: 0; border: 0; border-radius: 50%; background: none; pointer-events: auto; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.sky .witch .w-spark { position: absolute; left: 1px; top: 12px; width: 1.6px; height: 1.6px; border-radius: 50%; background: #ffe9a8; box-shadow: 0 0 3px 1px rgba(255, 216, 130, .7); opacity: 0; animation: witchSpark 1.5s ease-out infinite; }
+.sky .witch .w-spark + .w-spark { top: 13.5px; animation-delay: -.5s; } .sky .witch .w-spark + .w-spark + .w-spark { top: 11px; animation-delay: -1s; }
+@keyframes witchBob { from { transform: translateY(-2.5px); } to { transform: translateY(2.5px); } }
+@keyframes witchSpark { 0% { transform: none; opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(-8px, 6px); opacity: 0; } }
+@keyframes witchFly {   /* x: from just off the left (-40px) to just off the right, a share p of the way at p × 42% of the minute */
+  0% { transform: translate(-40px, 15vh) scaleX(1); }
+  4.2% { transform: translate(calc(-40px + .1 * (100vw + 54px)), calc(9vh + 6px)) scaleX(1); }
+  11.76% { transform: translate(calc(-40px + .28 * (100vw + 54px)), calc(9vh + 8px)) scaleX(1); }
+  21% { transform: translate(calc(-40px + .5 * (100vw + 54px)), 17vh) scaleX(1); }
+  31.5% { transform: translate(calc(-40px + .75 * (100vw + 54px)), 12vh) scaleX(1); }
+  42%, 46% { transform: translate(calc(100vw + 14px), 16vh) scaleX(1); }
+  46.01%, 50% { transform: translate(calc(100vw + 14px), 27vh) scaleX(-1); }
+  60.5% { transform: translate(calc(-40px + .75 * (100vw + 54px)), 22vh) scaleX(-1); }
+  71% { transform: translate(calc(-40px + .5 * (100vw + 54px)), 29vh) scaleX(-1); }
+  81.5% { transform: translate(calc(-40px + .25 * (100vw + 54px)), 23vh) scaleX(-1); }
+  92%, 96% { transform: translate(-40px, 26vh) scaleX(-1); }
+  96.01%, 100% { transform: translate(-40px, 15vh) scaleX(1); }
+}
+/* caught (witchCatch keeps her where she was): she slips off and tumbles down behind the hills, her hat a beat behind, and the
+   broom wobbles on and away */
+.sky .witch.fall .w-hit { pointer-events: none; } .sky .witch.fall .w-spark { display: none; }
+.sky .witch .w-rider { transform-origin: 52% 55%; } .sky .witch .w-hat { transform-origin: 54% 20%; } .sky .witch .w-broom { transform-origin: 50% 75%; }
+.sky .witch.fall .w-rider { animation: witchFall 1.9s forwards; }
+.sky .witch.fall .w-hat { animation: witchHat 2.8s linear forwards; }
+.sky .witch.fall .w-broom { animation: witchBroom 2.2s ease-in forwards; }
+@keyframes witchFall { 0% { transform: none; animation-timing-function: ease-out; } 14% { transform: translate(1px, -5px) rotate(-25deg); animation-timing-function: cubic-bezier(.5, 0, 1, .6); } 100% { transform: translate(-6px, 80vh) rotate(-560deg); } }
+@keyframes witchHat { 0% { transform: none; } 25% { transform: translate(5px, 14px) rotate(30deg); } 50% { transform: translate(-3px, 34px) rotate(-25deg); } 75% { transform: translate(6px, 58px) rotate(25deg); opacity: 1; } 100% { transform: translate(0, 86px) rotate(-15deg); opacity: 0; } }
+@keyframes witchBroom { 0% { transform: none; } 18% { transform: translate(3px, -2px) rotate(-14deg); } 36% { transform: translate(8px, 2px) rotate(12deg); } 100% { transform: translate(110px, -48px) rotate(-10deg); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .sky .witch.fall { visibility: hidden; } }
 /* by day: clouds always (greyer at 0%, peach at dawn and dusk), birds from 75%, a rainbow at 100% */
 .sky .rainbow { position: absolute; left: 50%; bottom: 120px; width: 130vmin; height: 130vmin; margin-left: -65vmin; border-radius: 50%; transform: translateY(50%); opacity: 0; transition: opacity 3s;
   background: radial-gradient(closest-side, transparent 80%, rgba(255, 96, 96, .5) 81%, rgba(255, 168, 72, .5) 83%, rgba(255, 228, 92, .5) 85%, rgba(112, 208, 120, .5) 87%, rgba(88, 158, 238, .5) 89%, rgba(150, 110, 228, .5) 91%, transparent 92.5%); }
@@ -461,7 +499,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .room-hint.on { opacity: 1; }
 .study-tools { position: absolute; z-index: 2; top: calc(10px + env(safe-area-inset-top, 0px)); right: 12px; display: flex; gap: 8px; }
 .study-koto { height: 40px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px 0 9px; border: 0; border-radius: 12px; font: inherit; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; cursor: pointer;
-  color: color-mix(in srgb, #3a3350 calc(var(--lit) * 100%), #f2e6c4); background: color-mix(in srgb, rgba(255, 255, 255, .55) calc(var(--lit) * 100%), rgba(20, 22, 52, .55)); transition: color .4s, background-color .4s, opacity .4s; }
+  color: color-mix(in srgb, #3a3350 calc(var(--lit) * 100%), #f2e6c4); background: color-mix(in srgb, rgba(255, 255, 255, .55) calc(var(--lit) * 100%), rgba(20, 22, 52, .55)); transition: color .4s, background-color .4s, opacity .4s, box-shadow .4s; }
 .study-koto .koto-i { width: 22px; height: 22px; }
 :is(.study-edit, .study-wear) { width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 12px; cursor: pointer;
   color: color-mix(in srgb, #3a3350 calc(var(--lit) * 100%), #dfe3ff); background: color-mix(in srgb, rgba(255, 255, 255, .55) calc(var(--lit) * 100%), rgba(20, 22, 52, .55)); transition: color .4s, background-color .4s, opacity .4s; }
@@ -1296,6 +1334,19 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .koto-pop .koto-i { width: 22px; height: 22px; } .koto-pop b { font-size: 16px; font-variant-numeric: tabular-nums; }
 .koto-pop.full { animation-duration: 4.2s; }
 @keyframes kotoRise { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -8px); } }
+/* the witch's 言靈 (1.2.2, witchCoins): a ring of light and ten glowing あ where she slipped, flown into the 言靈 button
+   (moved by the script); the button bounces at each, glows at the last, +100 rises beside it */
+.koto-coin, .koto-burst { position: fixed; z-index: 55; left: 0; top: 0; pointer-events: none; }
+.koto-coin { width: 18px; height: 18px; margin: -9px 0 0 -9px; filter: drop-shadow(0 0 4px rgba(255, 214, 120, .85)); }
+.koto-coin .koto-i { display: block; width: 100%; height: 100%; animation: coinTwinkle .8s ease-in-out infinite alternate; }
+.koto-burst { width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; border: 2px solid rgba(255, 222, 140, .9); box-shadow: 0 0 12px rgba(255, 210, 120, .7), inset 0 0 8px rgba(255, 210, 120, .5); animation: coinBurst .55s ease-out forwards; }
+.study-koto.bump { animation: kotoBump .22s ease-out; }
+.study-koto.glow { box-shadow: 0 0 0 2px rgba(255, 214, 120, .9), 0 0 18px 4px rgba(255, 200, 90, .55); }
+.koto-plus { position: fixed; z-index: 56; pointer-events: none; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; color: #ffd978; text-shadow: 0 1px 2px rgba(0, 0, 0, .55), 0 0 10px rgba(255, 200, 90, .65); transform: translate(-100%, -50%); animation: kotoPlus 1.6s ease-out forwards; }
+@keyframes coinTwinkle { from { transform: scale(.88); } to { transform: scale(1.08); } }
+@keyframes coinBurst { from { transform: scale(.2); opacity: 1; } to { transform: scale(1.2); opacity: 0; } }
+@keyframes kotoBump { 40% { transform: scale(1.14); } }
+@keyframes kotoPlus { 0% { opacity: 0; transform: translate(-100%, calc(-50% + 8px)); } 15% { opacity: 1; transform: translate(-100%, -50%); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-100%, calc(-50% - 14px)); } }
 .koto-gain.pop { animation: kotoIn .5s cubic-bezier(.3, 1.4, .5, 1) .35s backwards; } .koto-gain.pop .koto-i { animation: kotoSpin .7s ease-out .45s backwards; }
 @keyframes kotoIn { from { opacity: 0; transform: translateY(6px) scale(.96); } }
 @keyframes kotoSpin { from { transform: scale(.4) rotate(-40deg); opacity: 0; } 60% { transform: scale(1.18) rotate(6deg); opacity: 1; } }
@@ -1649,12 +1700,15 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.2.1';   // keep equal to the version in sw.js CACHE ('nq-v1.2.1'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.2.2';   // keep equal to the version in sw.js CACHE ('nq-v1.2.2'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個版本一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（通常最後一位加一；1.1.0 是書房改版），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.2.2', date: '2026-11-07', items: [
+    '萬聖節限定（到 11/10）：晚上到院子抬頭看看，天上好像有什麼小小的東西飛來飛去……'
+  ] },
   { v: '1.2.1', date: '2026-11-07', items: [
     '主角的頭髮重畫成日系動漫風：髮尾是尖的，有從髮根到髮尾的漸層、頭頂的天使光圈和一圈細細的描邊，整頭頭髮連成一塊。衣櫃的髮型改成分開選：瀏海 21 種、兩側 15 種、後面 6 種、造型 13 種（丸子、雙馬尾、辮子……）；原本選的髮型會換成最接近的組合。戴帽子時只有頭頂的呆毛和丸子收進帽子裡。',
     '臉型多了麻糬臉（新角色預設）；不蓋住耳朵的髮型會露出小小的耳朵。',
@@ -2052,7 +2106,7 @@ function defaultState() {
     recent: [],
     legacy: null,
     notices: [],
-    koto: { daySets: {}, days: [], listen: {}, mail: {}, sets: {}, gift: 0 },   // 言靈 (1.2.0), see kotoBalance
+    koto: { daySets: {}, days: [], listen: {}, mail: {}, found: {}, sets: {}, gift: 0 },   // 言靈 (1.2.0), see kotoBalance
     owned: {},              // things bought at 古道具屋: { id: { paid, on } }
     placed: {},             // where owned things stand in 書房: { id: { w: 'F', x, y, r } | { w: 'L'|'R', u, v } }; not here = in the storage box
     wear: {},               // what the hero wears, by part: { head, face, neck, back, body }
@@ -2115,7 +2169,7 @@ function normalizeState(s) {
   ['customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   // 1.2.0: 言靈 and the things from 古道具屋 (ids this build does not know are kept: a later one may sell them)
   const kt = out.koto && typeof out.koto === 'object' && !Array.isArray(out.koto) ? out.koto : {}, obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
-  out.koto = { daySets: obj(kt.daySets), days: Array.isArray(kt.days) ? kt.days : [], listen: obj(kt.listen), mail: obj(kt.mail), sets: obj(kt.sets), gift: Number(kt.gift) || 0 };
+  out.koto = { daySets: obj(kt.daySets), days: Array.isArray(kt.days) ? kt.days : [], listen: obj(kt.listen), mail: obj(kt.mail), found: obj(kt.found), sets: obj(kt.sets), gift: Number(kt.gift) || 0 };
   ['owned', 'placed', 'wear', 'look'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)
   if (typeof out.house !== 'string') out.house = '';   // an id this build does not know is kept: the cottage is drawn meanwhile
   // 1.2.0: 羽織 and 地球儀 are gone and their purchases with them, and 書房's umbrella (the user's calls; the only ids not
@@ -2729,9 +2783,10 @@ function streakStats() {
 // ---------- 言靈 (1.2.0): what studying earns, spent at 古道具屋 up the hill ----------
 // Answering: a set of 今日練習 played to its end (多學 sets too) gives 1, the day's list done gives 10 once a day, and the two
 // together give at most 20 a day. 聽一輪: every 5 minutes of listening without a pause gives 1, at most 30 a day. A letter may
-// bring some (福爺's opening letter: 10). What is kept are counts, never sums: sets and listens by day and by device (only that
-// device adds to its own count, so sync keeps the larger), the bonus days as a list, what each letter brought (sync-core
-// mergeKoto) — so nothing is counted twice or lost when two devices meet, and a day's cap holds across devices.
+// bring some (福爺's opening letter: 10), so may a find (1.2.2: the Halloween witch, 100). What is kept are counts, never
+// sums: sets and listens by day and by device (only that device adds to its own count, so sync keeps the larger), the bonus
+// days as a list, what each letter and each find brought (sync-core mergeKoto) — so nothing is counted twice or lost when two
+// devices meet, and a day's cap holds across devices.
 // sets: the sets each device finished under the first rule (the test site's, no cap), still counted, no longer added to.
 // The caps are applied when the balance is worked out: a rule changed later goes by date, so past days keep theirs.
 const KOTO_DAY = 10, KOTO_QUIZ_CAP = 20, KOTO_LISTEN_CAP = 30, KOTO_LISTEN_MS = 300000;
@@ -2743,7 +2798,7 @@ const kotoListenDay = (k, d) => Math.min(KOTO_LISTEN_CAP, kotoSum(k.listen[d]));
 function kotoBalance() {
   const k = state.koto, quizDays = new Set([...Object.keys(k.daySets), ...k.days]);
   const got = kotoSum(k.sets) + [...quizDays].reduce((a, d) => a + kotoQuizDay(k, d), 0) + Object.keys(k.listen).reduce((a, d) => a + kotoListenDay(k, d), 0)
-    + kotoSum(k.mail) + (Number(k.gift) || 0);
+    + kotoSum(k.mail) + kotoSum(k.found) + (Number(k.gift) || 0);
   return got - Object.values(state.owned).reduce((a, o) => a + ((o && Number(o.paid)) || 0), 0);
 }
 // the set that just ended, once (renderSummary keeps it on the session): what it gave for the set and for the day's list done,
@@ -5865,6 +5920,7 @@ const ACTIONS = {
   'study-door': (el) => ROOM.use(el, () => { yh.fromDoor = true; ROOM.door(el); }),
   'enter-house': (el) => yUse(el, [0, 214], () => { ROOM.heroIn(); sceneGo('#/today', 'entering'); }),   // the hero walks to the door first (1.2.0)
   'yard-shop': (el) => yClimb(el),   // up the hill path to 古道具屋
+  witch: (el) => witchCatch(el),   // the Halloween witch caught (1.2.2)
   'close-modal': () => closeModal(),
   'modal-back': (el, ev) => { if (ev.target === el) closeModal(); },
   'toggle-furi': () => toggleFurigana(),
@@ -6268,6 +6324,7 @@ function renderOutside(view) {
   else if (yard) {   // a redraw: new stars fade in, the motion carries on; the yard's things again only if they moved (sync, another device)
     yardLevel(yard, pct);
     const w = yard.querySelector('.ywares'); if (w && !yed.on && w.dataset.sig !== yardSig()) { w.innerHTML = yardWaresHtml(); w.dataset.sig = yardSig(); }
+    yWitch(yard);
     return;
   }
   yed.on = false; yed.sel = null; yed.drag = null; ypan = null;   // a yard drawn anew opens out of 擺設
@@ -6279,6 +6336,7 @@ function renderOutside(view) {
   ro.observe(y.querySelector('.sky'));
   if (yh.fromDoor) { yh.fromDoor = false; yh.X = 0; yh.Y = 214; yh.back = false; yHeroPlace(y); setTimeout(() => yHeroWalk(y, [8, 150]), 260); }   // out of the door, onto the lawn (below the 進屋 tag)
   else yHeroPlace(y);
+  yWitch(y);
   const yel = y.querySelector('.yhero');   // idling now and then while left be
   HERO.idle(yel, () => !yh.climb && !document.hidden && !yel.matches('.walk, .run, .out, .hop, .wave, .spin, .cheer'), true);
   y.addEventListener('pointerdown', (e) => { if (!y.classList.contains('dressing')) { yardDragStart(y, e); yPanStart(y, e); } });
@@ -6296,6 +6354,7 @@ function renderOutside(view) {
   y.addEventListener('click', (e) => { if (swallow) { swallow = false; e.stopPropagation(); e.preventDefault(); } }, true);
   let restT = 0;   // the signs: in sight when the yard opens and after a touch, out of sight 4 s later (a tap on a thing still works)
   const wake = () => { y.classList.remove('quiet'); clearTimeout(restT); restT = setTimeout(() => { if (y.isConnected) y.classList.add('quiet'); }, 4000); };
+  y._wake = wake;   // the witch's 言靈 keep the 言靈 button up while they fly in
   y.addEventListener('pointerdown', wake); y.addEventListener('pointerup', wake);
   y.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' && !e.buttons) wake(); });   // a mouse over the yard
   wake();
@@ -6480,6 +6539,89 @@ function yUse(el, to, fn) {
   const yard = el.closest('.yard');
   if (!yard || !yard.querySelector('.yhero')) { fn(); return; }
   yHeroWalk(yard, to, () => { yh.back = true; yHeroPlace(yard); setTimeout(fn, 120); });
+}
+// the Halloween witch (1.2.2): far off in the yard's night sky, about 20 px across, over and back while Halloween is on by
+// the server's day (SALES.halloween, as the limited sale; the test site's 限時預覽 too) until she is caught — by night only (the
+// CSS: 永夜 always, 永晝 never). A tap drops her off her broom for 100 言靈, once a Halloween (koto.found, by the year)
+const WITCH_GIFT = 100;
+const witchId = (day) => `witch-${day.slice(0, 4)}`;
+const WITCH_ART = {   // facing right in a 28 × 20 box: the broom, the witch, her hat (each falls its own way)
+  broom: '<path d="M7.5 16.2 L27.2 12.6" fill="none" stroke-width="1.25"/><path d="M9 15.2 C6 14.6 3 13.4 .6 12.8 C1.4 14.6 1.2 16.8 .4 18.8 C3.4 18.4 6.4 17.6 9.2 17.2 Z"/>',
+  rider: '<path d="M13.4 8.4 C10.8 8.6 8 8.2 5.6 7 C6.8 9 8.6 10.8 11.6 11.6 Z"/><path d="M12.4 9.6 C11.2 11.6 10.2 13.6 9.4 15.4 C11.8 15.6 14.6 15.4 17.2 14.6 C16.4 12.8 15.8 11 15.4 9.4 Z"/>'
+    + '<path d="M12.8 10.4 C12.6 8.8 13.2 7.8 14.4 7.6 C15.6 7.8 16 9 15.6 10.6 Z"/><circle cx="15.3" cy="6.5" r="1.7"/>'
+    + '<path d="M14.6 5.3 C12.8 5.3 11 5.9 9.6 6.8 C10.6 6.9 11.2 7.2 11.6 7.6 C10.8 8 10.2 8.6 9.8 9.2 C11.6 9 13.4 8.4 14.8 7.4 Z"/>'
+    + '<path d="M15.6 9 L19.6 13.4" fill="none" stroke-width="1"/><path d="M16.4 14.6 L18.4 17.2 L20.7 16.7" fill="none" stroke-width="1.05" stroke-linejoin="round"/>',
+  hat: '<path d="M11.8 5.3 Q15 4.1 18.8 4.9 Q15.2 6.1 11.8 5.3 Z"/><path d="M13.4 5 L16.9 4.8 L14.9 1.8 Q14.3 .9 12.4 .8 Q13.6 1.6 13.4 5 Z"/>'
+};
+function witchHtml(id) {   // somewhere along her minute when the yard opens
+  return `<div class="witch" data-witch="${id}" style="animation-delay:-${(Math.random() * 60).toFixed(1)}s"><div class="w-bob"><i class="w-spark"></i><i class="w-spark"></i><i class="w-spark"></i>
+    <div class="w-fig">${['broom', 'rider', 'hat'].map((p) => `<svg class="w-${p}" viewBox="0 0 28 20">${WITCH_ART[p]}</svg>`).join('')}</div>
+    <button type="button" class="w-hit" data-act="witch" aria-label="巫婆"></button></div></div>`;
+}
+function yWitch(yard) {   // she joins the sky, or leaves it (caught on another device, Halloween over); the server's day asked if not known
+  const put = (day) => {
+    if (!yard.isConnected) return;
+    const d = day || (salePreview() ? todayStr() : null), had = yard.querySelector('.witch');
+    const id = d && (salePreview() || saleOn('halloween', d)) && !state.koto.found[witchId(d)] ? witchId(d) : null;
+    if (had && !had.classList.contains('fall') && had.dataset.witch !== id) had.remove();
+    if (id && !yard.querySelector('.witch')) yard.querySelector('.sky .night').insertAdjacentHTML('beforeend', witchHtml(id));
+  };
+  const day = saleNow();
+  if (day || salePreview()) put(day); else saleClock().then(put);
+}
+function witchCatch(el) {
+  const w = el.closest('.witch'), yard = el.closest('.yard'), id = w && w.dataset.witch;
+  if (!w || !id || w.classList.contains('fall')) return;
+  [w, w.querySelector('.w-bob')].forEach((x) => { const t = getComputedStyle(x).transform; x.style.animation = 'none'; x.style.transform = t === 'none' ? '' : t; });   // held where the tap found her
+  w.classList.add('fall');
+  setTimeout(() => w.remove(), 2900);
+  if (state.koto.found[id] || !yard) return;   // already caught on another device: she only falls
+  state.koto.found[id] = WITCH_GIFT; saveState(); sfxReady();   // the sound woken inside the tap, so the coins' 叮 can play later (iOS)
+  const r = w.querySelector('.w-fig').getBoundingClientRect();
+  witchCoins(yard, [r.left + r.width / 2, r.top + r.height / 2], WITCH_GIFT);
+}
+// her 言靈 seen (1.2.2): while she falls, a ring of light and ten あ burst out where she slipped; once she is behind the
+// hills they fly one by one into the 言靈 button up top, which bounces and counts up a tenth each (a rising 叮 with 答題音效 on),
+// glows at the last, and +n rises beside it; the buttons are kept up meanwhile. The button put away (擺設, the dressing room):
+// the pop up top says it; motion reduced: no flight, the new count at once
+function witchCoins(yard, at, n) {
+  const kb = yard.querySelector('.yard-tools .study-koto'), num = kb && kb.querySelector('span'), wake = () => { if (yard._wake) yard._wake(); };
+  if (!num || !kb.getBoundingClientRect().width || getComputedStyle(kb).visibility !== 'visible') { setTimeout(() => kotoPop(n), 450); return; }
+  const from = kotoBalance() - n;
+  const end = () => {
+    if (!kb.isConnected) return;
+    kotoButtons(yard); kb.classList.add('glow'); setTimeout(() => kb.classList.remove('glow'), 900);
+    const r = kb.getBoundingClientRect(), p = document.createElement('div');
+    p.className = 'koto-plus'; p.textContent = `+${n}`; p.style.left = `${r.left - 8}px`; p.style.top = `${r.top + r.height / 2}px`;
+    document.body.appendChild(p); setTimeout(() => p.remove(), 1700); wake();
+  };
+  num.textContent = from; wake();
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { end(); return; }
+  const go = ([x, y], s) => `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${s.toFixed(2)})`;
+  setTimeout(() => {   // the ring stands where she was (its own animation scales it)
+    const b = document.createElement('i'); b.className = 'koto-burst'; b.style.left = `${at[0]}px`; b.style.top = `${at[1]}px`;
+    document.body.appendChild(b); setTimeout(() => b.remove(), 600);
+  }, 350);
+  let got = 0;
+  for (let i = 0; i < 10; i++) {
+    const a = i / 10 * 2 * Math.PI + (i % 3) * 0.25, d = 20 + (i * 7) % 22, spot = [at[0] + Math.cos(a) * d, at[1] + Math.sin(a) * d * 0.8];
+    const c = document.createElement('i'); c.className = 'koto-coin'; c.innerHTML = kotoIcon(); c.style.opacity = '0'; c.style.transform = go(at, 0.3); document.body.appendChild(c);
+    c.animate([{ transform: go(at, 0.3), opacity: 0 }, { transform: go(spot, 1), opacity: 1 }], { duration: 450, delay: 350 + i * 12, easing: 'cubic-bezier(.2, .8, .3, 1)', fill: 'forwards' });
+    setTimeout(() => {   // up and over into the button, along a curve (its points sampled), faster as it goes
+      if (!kb.isConnected) { c.remove(); return; }   // the yard was left meanwhile
+      const t = kb.querySelector('.koto-i').getBoundingClientRect(), to = [t.left + t.width / 2, t.top + t.height / 2], via = [spot[0] + (i - 4.5) * 5, Math.min(spot[1], to[1]) - 36];
+      const path = Array.from({ length: 13 }, (_, j) => { const s = j / 12, u = 1 - s;
+        return { transform: go([u * u * spot[0] + 2 * u * s * via[0] + s * s * to[0], u * u * spot[1] + 2 * u * s * via[1] + s * s * to[1]], 1 - 0.35 * s), opacity: 1 }; });
+      c.getAnimations().forEach((x) => x.cancel());
+      c.animate(path, { duration: 650, easing: 'cubic-bezier(.45, 0, .8, .6)', fill: 'forwards' }).onfinish = () => {
+        c.remove(); if (!kb.isConnected) return;
+        got++; num.textContent = from + Math.round(n * got / 10);
+        kb.classList.remove('bump'); void kb.offsetWidth; kb.classList.add('bump');
+        playSfx('coin', got - 1); wake();
+        if (got === 10) end();
+      };
+    }, 1500 + i * 80);
+  }
 }
 function yardHtml(pct) {
   const f = pct / 100, mail = mailCount(), yw = yardWorldW();
@@ -9104,7 +9246,7 @@ function renderShop(view) {
     <div class="shop-tabs" role="tablist">${SHOP_TABS.map(([k, name]) => `<button type="button" role="tab" data-act="shop-tab" data-tab="${k}" aria-selected="${shopTab === k}">${name}${k === 'sale' && live.length ? '<i class="dot" aria-label="特賣中"></i>' : ''}</button>`).join('')}</div>
     ${shopTab === 'sale' ? saleHtml(day, live, grid) : SHOP_TABS.find(([k]) => k === shopTab)[2].map(([k, name]) => `<section class="shop-sec"><h2 class="shop-h">${name}</h2>${grid(WARES.filter((it) => it.kind === k && !it.starter && !it.limited), k === 'wear' ? SOON : '')}</section>`).join('')}
     ${onTestSite() && shopTab === 'sale' ? `<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="sale-preview">測試用：${salePreview() ? '關掉限時預覽，照日期來' : '不看日期，顯示限時商品'}</button></div>` : ''}
-    ${onTestSite() ? '<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="koto-gift">測試用：+100 言靈</button><button type="button" class="btn btn-sm" data-act="koto-gift" data-n="1000">測試用：+1000 言靈</button></div>' : ''}
+    ${onTestSite() ? '<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="koto-gift">測試用：+100 言靈</button><button type="button" class="btn btn-sm" data-act="koto-gift" data-n="1000">測試用：+1000 言靈</button><button type="button" class="btn btn-sm" data-act="witch-again">測試用：巫婆再飛一次</button></div>' : ''}
     <svg class="defs-only" width="0" height="0" aria-hidden="true">${DECOR.DEFS}</svg>`;
   fitThumbs(view);
 }
@@ -9292,7 +9434,11 @@ Object.assign(ACTIONS, {
   'yard-edit-take': (el) => yardEdit(el.closest('.yard'), 'take', el.dataset.id),
   'yard-edit-put': (el) => yardEdit(el.closest('.yard'), 'put'),
   'yard-ware': (el) => { const y = el.closest('.yard'); if (y && y._noClick) return; if (yed.on) yardEdit(y, 'pick', el.dataset.ware); else yardUse(y, el.dataset.ware); },
-  'koto-gift': (el) => { const n = Number(el && el.dataset.n) || 100; state.koto.gift = (Number(state.koto.gift) || 0) + n; saveState(); route(); toast(`測試用：多了 ${n} 言靈`); }
+  'koto-gift': (el) => { const n = Number(el && el.dataset.n) || 100; state.koto.gift = (Number(state.koto.gift) || 0) + n; saveState(); route(); toast(`測試用：多了 ${n} 言靈`); },
+  'witch-again': () => {   // test site (1.2.2): the Halloween witch flies again, her 100 言靈 with her
+    Object.keys(state.koto.found).filter((k) => k.startsWith('witch-')).forEach((k) => { delete state.koto.found[k]; });
+    saveState(); route(); toast('測試用：巫婆會再飛出來（晚上的院子）');
+  }
 });
 
 // walking in or out of the house: a short zoom, then the other scene (straight there with motion reduced)
@@ -12768,14 +12914,21 @@ function unlockTtsPlayer() {
 // for each answer of a run (up to five); three when the item reaches 熟悉 or 已熟練. Wrong: one quieter note sliding down.
 // Triangle waves: a phone speaker drops most of a pure low tone. Returns its length in ms, 0 when nothing played.
 let sfxCtx = null;
-function playSfx(kind, step = 0) {
+function sfxReady() {   // the sounds' context, made and woken (inside a tap, a sound played later is let through on iOS); null: off
   const AC = window.AudioContext || window.webkitAudioContext;
-  if (!state.settings.sfx || !AC) return 0;
+  if (!state.settings.sfx || !AC) return null;
   try {
     if (!sfxCtx) sfxCtx = new AC();
     if (sfxCtx.state !== 'running') sfxCtx.resume().catch(() => {});   // iOS also leaves it 'interrupted' after a call
+    return sfxCtx;
+  } catch (e) { return null; }
+}
+function playSfx(kind, step = 0) {
+  if (!sfxReady()) return 0;
+  try {
     const t0 = sfxCtx.currentTime + 0.02, k = Math.pow(2, clamp(step, 0, 5) / 12);
     const notes = kind === 'bad' ? [[311, 0, 0.22, 0.09, 233]]   // [Hz, start s, length s, volume, slide to Hz]
+      : kind === 'coin' ? [[1319 * Math.pow(2, clamp(step, 0, 12) / 12), 0, 0.1, 0.06]]   // a 言靈 into its button (1.2.2): a short 叮, a semitone up each
       : (kind === 'up' ? [659, 831, 988] : [659, 988]).map((f, i, all) => [f * k, i * 0.075, i === all.length - 1 ? 0.28 : 0.12, 0.12]);
     notes.forEach(([f, at, len, vol, to]) => {
       const o = sfxCtx.createOscillator(), g = sfxCtx.createGain();
