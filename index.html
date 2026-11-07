@@ -6443,9 +6443,6 @@ const ROOM = (() => {
     s += `<path fill-rule="evenodd" ${F(C.oak, 'x', [x1, (y0 + y1) / 2, 3.6])} d="${poly([[x1, y0, 0], [x1, y1, 0], [x1, y1, z1], [x1, y0, z1]])}${holes}"/>`;
     s += `<path class="hl" d="${line([[0, y1, z1], [x1, y1, z1], [x1, y0, z1]])} ${line([[x1, y1, z1], [x1, y1, 0]])}"/>`;
     levels.slice(1, -1).forEach((z) => { s += `<path class="hl" d="${line([[x1, y0 + t, z + 0.09], [x1, y1 - t, z + 0.09]])}"/>`; });
-    // on top: two books lying flat and a small plant
-    s += box('#5e7f9c', 0.24, 0.85, z1, 1.08, 1.7, z1 + 0.12, { t: '#6f90ad' }) + box('#e0c8a0', 0.3, 0.92, z1 + 0.12, 1.02, 1.62, z1 + 0.22, { t: '#eadcc0' });
-    s += bb(0.66, 2.05, z1, `<ellipse rx="9" ry="3.6" fill="#2b1c12" fill-opacity=".14"/><path ${F(C.pot, 'y', [0.66, 2.1, z1 + 0.2])} d="M-7.5 -1 L-6 -12 H6 L7.5 -1 Z"/><path d="M-6.5 -12 H6.5" class="hl"/><g ${F(C.leaf, 'y', [0.66, 2.05, z1 + 0.6])}><path d="M0 -12 C-9 -15 -13 -24 -10 -30 C-4 -25 -1 -18 0 -12 Z"/><path d="M0 -12 C7 -18 13 -21 17 -19 C13 -13 7 -12 0 -12 Z"/><path d="M0 -12 C0 -22 3 -30 7 -34 C9 -25 5 -17 0 -12 Z"/></g>`);
     return s;
   }
   function shelfBack(k) {   // inside an opening: the back, the right-hand side, the shelf
