@@ -238,6 +238,46 @@ def test_a_tag_at_a_side_of_the_screen_slides_in_to_stay_whole(b):
     r = json.loads(ev_at(b, PHONE, js))
     assert r['away'] is False and r['left'] >= 0 and r['right'] <= 390, r   # half of it would be off the screen where it stands
 
+# ---- the things' badges: signs instead of words; at rest they go out of sight, a touch brings them back ----
+def test_the_things_wear_signs_with_the_days_ring_and_the_notebooks_count(b):
+    js = "(async () => { " + FRESH + " state.mistakes = [{ key: 'v1' }, { key: 'v2' }, { key: 'v3', mastered: true }]; saveState(); " + GO_ROOM + POINTER + """ await wait(200);
+      const st = document.querySelector('.study'); ROOM.level(st, 40);
+      const things = [...st.querySelectorAll('.thing')].map(t => { const tag = t.querySelector('.tag'), name = tag.querySelector('.tag-name');
+        return [t.dataset.thing, !!tag.querySelector('svg:not(.ring)'), name ? getComputedStyle(name).display : 'no name', t.getAttribute('aria-label')]; });
+      const fill = st.querySelector('[data-thing="notebook"] .ring .fill'), count = st.querySelector('[data-thing="drawer"] .count');
+      return JSON.stringify({ things, ring: fill && fill.getAttribute('stroke-dasharray'), count: count && count.textContent }); })()"""
+    r = json.loads(ev(b, js))
+    got = {t[0]: t[1:] for t in r['things']}
+    assert all(v[0] is True and v[1] == 'none' for v in got.values()), got   # every thing shows its sign, its words wait
+    assert {k: v[2] for k, v in got.items() if k != 'door'} == {'shelf': '課程', 'cards': '單字', 'notebook': '今日練習 40%', 'phones': '聽一輪', 'drawer': '錯題本 2', 'board': '學習分析', 'calendar': '模擬考'}, got
+    assert got['door'][2].startswith('出門'), got   # the words are still there for a screen reader
+    assert (r['ring'], r['count']) == ('40 100', '2'), r
+
+def test_a_tap_on_a_thing_shows_its_name_for_a_moment_then_opens_it(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + GO_ROOM + POINTER + """ await wait(200);
+      const t = document.querySelector('.study [data-thing="shelf"]'); t.click(); await wait(50);
+      const name = t.querySelector('.tag-name'), shown = { named: t.classList.contains('named'), shown: !!name && getComputedStyle(name).display !== 'none', text: name ? name.textContent : '' };
+      await wait(2600);
+      return JSON.stringify({ shown, hash: location.hash }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'shown': {'named': True, 'shown': True, 'text': '課程'}, 'hash': '#/course'}, r
+
+def test_the_signs_rest_out_of_sight_a_touch_brings_them_back_and_a_tap_still_opens(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """
+      const st = document.querySelector('.study'), quiet = () => st.classList.contains('quiet'), op = (id) => getComputedStyle(st.querySelector('[data-thing="' + id + '"] .tag')).opacity;
+      await wait(300); const atFirst = quiet();
+      await wait(4600); const later = [quiet(), op('phones'), op('door')];   /* letters wait in the mailbox: the door's sign stays */
+      const r = st.getBoundingClientRect(), x0 = r.left + r.width * 0.6, y0 = r.top + 300;
+      pe(st, 'pointerdown', x0, y0, 1); const touched = quiet();
+      for (let i = 1; i <= 6; i++) { pe(st, 'pointermove', x0 - 15 * i, y0, 1); await wait(30); } const moving = quiet();
+      await wait(200); pe(st, 'pointermove', x0 - 90, y0, 1); pe(st, 'pointerup', x0 - 90, y0, 1); const letGo = quiet();   /* held still, then let go (a fling keeps them away while it coasts) */
+      await wait(4600); const again = quiet();
+      const ph = st.querySelector('[data-thing="phones"]'), q = ph.getBoundingClientRect(), px = q.left + q.width / 2, py = q.top + q.height / 2;
+      pe(ph, 'pointerdown', px, py, 2); pe(ph, 'pointerup', px, py, 2); ph.click(); await wait(2600);   /* a tap: out of sight, still there to tap */
+      return JSON.stringify({ atFirst, later, touched, moving, letGo, again, hash: location.hash }); })()"""
+    r = json.loads(ev_at(b, DESK, js))
+    assert r == {'atFirst': False, 'later': [True, '0', '1'], 'touched': False, 'moving': True, 'letGo': False, 'again': True, 'hash': '#/listen'}, r
+
 def test_a_drag_on_the_hero_leads_him_and_the_view_follows(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
       const st = document.querySelector('.study'), r = st.getBoundingClientRect(), f = st.querySelector('.hero .fig').getBoundingClientRect();
