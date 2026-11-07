@@ -110,7 +110,7 @@ def test_a_bought_ware_goes_to_its_spot_or_the_storage_box(b):
 def test_wearing_goes_on_and_off_and_shows_on_the_hero(b):
     js = "(() => { " + FRESH + """ state.koto.gift = 30; saveState(); buyWare(WARE.get('beanie')); buyWare(WARE.get('strawhat'));
       const worn = state.wear.head; """ + GO_ROOM + """ const has = document.querySelector('.study .hero').innerHTML.includes('cy="-166" r="8"');   /* the beanie's pompom (colours are lit, so not its hex) */
-      ACTIONS['hero-wardrobe'](); const swap = document.querySelector('#modalBody [data-act="ware-wear"][data-id="strawhat"]'); swap.click();
+      document.querySelector('.study-tools [data-act="wardrobe"]').click(); const swap = document.querySelector('#modalBody [data-act="ware-wear"][data-id="strawhat"]'); swap.click();
       const now = state.wear.head; document.querySelector('#modalBody [data-act="ware-wear"][data-id="strawhat"]').click();
       return JSON.stringify({ worn, has, now, off: state.wear.head }); })()"""
     r = json.loads(ev(b, js))
@@ -166,9 +166,9 @@ def test_the_hero_finds_a_thing_moved_to_the_other_wall(b):
     js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); state.placed.calendar = { w: 'L', u: 3.2, v: 5.5 }; saveState(); """ + GO_ROOM + """
       const t = document.querySelector('[data-thing="calendar"]'); let n = 0; ROOM.use(t, () => { n++; });
       await new Promise(q => setTimeout(q, 2400)); const h = JSON.parse(localStorage.getItem('nq_hero')).room;
-      return JSON.stringify({ view: t.dataset.view, n, nearWall: h.x < 2.5 && Math.abs(h.y - 3.2) < 0.3, faces: h.back && h.flip }); })()"""
+      return JSON.stringify({ n, nearWall: h.x < 2.5 && Math.abs(h.y - 3.2) < 0.3, faces: h.back && h.flip }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'view': '0', 'n': 1, 'nearWall': True, 'faces': True}, r
+    assert r == {'n': 1, 'nearWall': True, 'faces': True}, r
 
 # ---- the hero ----
 def test_the_hero_walks_to_a_thing_then_opens_it(b):
@@ -191,6 +191,93 @@ def test_a_second_tap_goes_straight_in_and_a_floor_tap_moves_the_hero(b):
       return JSON.stringify({ quick, later, near: Math.hypot(h.x - 4.5, h.y - 5.5) < 0.6 }); })()"""
     r = json.loads(ev(b, js))
     assert r == {'quick': 1, 'later': 1, 'near': True}, r
+
+# ---- 書房's camera (no stops): a swipe looks round freely, a drag on the hero leads him and the view follows, two fingers zoom ----
+PHONE, DESK = (390, 844), (1280, 800, False)
+def ev_at(b, size, js):   # the page opened at that screen size
+    return b.run([("metrics", size), ("nav", URL), ("wait", READY), ("eval", js)])[-1]
+# pe: a pointer event (a finger unless said); cam: the room's offset on screen (px)
+POINTER = """const wait = (ms) => new Promise(q => setTimeout(q, ms));
+  const pe = (el, type, x, y, id, kind) => el.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: y, pointerId: id, pointerType: kind || 'touch', isPrimary: id === 1, button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true, cancelable: true }));
+  const cam = () => { const m = new DOMMatrix(getComputedStyle(document.querySelector('.study .room')).transform); return [m.m41, m.m42]; };"""
+
+def test_the_wardrobe_is_a_button_up_top_and_a_tap_on_the_hero_makes_him_hop(b):
+    js = "(async () => { " + FRESH + GO_ROOM + POINTER + """ await wait(200);
+      const btn = document.querySelector('.study-tools [data-act="wardrobe"]'); if (btn) btn.click();
+      const wardrobe = !!document.querySelector('#modalBody .wardrobe'); closeModal();
+      document.querySelector('.study .hero .fig').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      const room = { modal: modalOpen(), hop: document.querySelector('.study .hero').classList.contains('hop') }; closeModal();
+      location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); await wait(200);
+      document.querySelector('.yard .yhero .fig').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      const yard = { modal: modalOpen(), hop: document.querySelector('.yard .yhero').classList.contains('hop') };
+      return JSON.stringify({ wardrobe, room, yard }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'wardrobe': True, 'room': {'modal': False, 'hop': True}, 'yard': {'modal': False, 'hop': True}}, r
+
+def test_a_swipe_looks_round_the_room_and_stays_where_it_is_let_go(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
+      const st = document.querySelector('.study'), r = st.getBoundingClientRect(), x0 = r.left + r.width * 0.6, y0 = r.top + r.height * 0.85, before = cam();
+      pe(st, 'pointerdown', x0, y0, 1);
+      for (let i = 1; i <= 15; i++) { pe(st, 'pointermove', x0 - 20 * i, y0, 1); await wait(30); }   /* 300 px to the left */
+      await wait(200); pe(st, 'pointermove', x0 - 300, y0, 1); pe(st, 'pointerup', x0 - 300, y0, 1);   /* held still before letting go: no fling */
+      await wait(700); const after = cam(), away = (id) => document.querySelector('.study [data-thing="' + id + '"]').classList.contains('away');
+      return JSON.stringify({ dots: !!st.querySelector('.room-stops'), dx: Math.round(after[0] - before[0]), notebook: away('notebook'), drawer: away('drawer') }); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert abs(r['dx'] + 300) <= 2, r   # the room moved with the finger and stayed there (no stop to snap to)
+    assert {k: r[k] for k in ('dots', 'notebook', 'drawer')} == {'dots': False, 'notebook': True, 'drawer': False}, r   # the desk's tag waits off screen, the chest's shows
+
+def test_a_tag_at_a_side_of_the_screen_slides_in_to_stay_whole(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
+      const st = document.querySelector('.study'), tag = () => document.querySelector('.study [data-thing="phones"] .tag').getBoundingClientRect();
+      const t0 = tag(), x0 = 300, y0 = 330, dx = Math.round(t0.left + t0.width / 2 - 30);   /* the 聽一輪 tag's middle to 30 px from the left side */
+      pe(st, 'pointerdown', x0, y0, 1);
+      for (let i = 1; i <= 10; i++) { pe(st, 'pointermove', x0 - dx * i / 10, y0, 1); await wait(30); }
+      await wait(200); pe(st, 'pointermove', x0 - dx, y0, 1); pe(st, 'pointerup', x0 - dx, y0, 1); await wait(600);
+      const t1 = tag();
+      return JSON.stringify({ away: document.querySelector('.study [data-thing="phones"]').classList.contains('away'), left: Math.round(t1.left), right: Math.round(t1.right), w: Math.round(t1.width) }); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert r['away'] is False and r['left'] >= 0 and r['right'] <= 390, r   # half of it would be off the screen where it stands
+
+def test_a_drag_on_the_hero_leads_him_and_the_view_follows(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
+      const st = document.querySelector('.study'), r = st.getBoundingClientRect(), f = st.querySelector('.hero .fig').getBoundingClientRect();
+      const x0 = f.left + f.width / 2, y0 = f.top + f.height * 0.6, edge = r.right - 6, before = cam();
+      pe(document.elementFromPoint(x0, y0), 'pointerdown', x0, y0, 5);
+      for (let i = 1; i <= 10; i++) { pe(st, 'pointermove', x0 + (edge - x0) * i / 10, y0, 5); await wait(30); }
+      for (let i = 0; i < 24; i++) { pe(st, 'pointermove', edge, y0, 5); await wait(50); }   /* held at the screen's edge */
+      pe(st, 'pointerup', edge, y0, 5); await wait(1500);
+      const h = JSON.parse(localStorage.getItem('nq_hero') || '{}').room || { x: 3.4, y: 4.7 }, after = cam();
+      return JSON.stringify({ went: +((h.x - h.y) - (3.4 - 4.7)).toFixed(2), panned: Math.round(before[0] - after[0]), modal: modalOpen(), hash: location.hash }); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert r['went'] > 4 and r['panned'] > 80, r   # he went right along the room (screen units) and the view went with him
+    assert (r['modal'], r['hash']) == (False, '#/today'), r
+
+def test_two_fingers_zoom_between_the_whole_room_and_twice_as_close_and_it_is_remembered(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
+      const st = () => document.querySelector('.study'), width = () => document.querySelector('.study .room').offsetWidth, w0 = width();
+      const pinch = async (a0, b0, a1, b1) => { pe(st(), 'pointerdown', a0, 400, 11); pe(st(), 'pointerdown', b0, 400, 12);
+        for (let i = 1; i <= 8; i++) { pe(st(), 'pointermove', a0 + (a1 - a0) * i / 8, 400, 11); pe(st(), 'pointermove', b0 + (b1 - b0) * i / 8, 400, 12); await wait(20); }
+        pe(st(), 'pointerup', a1, 400, 11); pe(st(), 'pointerup', b1, 400, 12); await wait(150); };
+      await pinch(150, 240, 60, 330); const big = width() / w0, saved = localStorage.getItem('nq_room_zoom');   /* 90 → 270 px apart */
+      """ + GO_ROOM + """ await wait(150); const again = width() / w0;
+      await pinch(60, 330, 190, 200); const small = width() / w0;   /* 270 → 10 px apart */
+      return JSON.stringify({ size: [st().clientWidth, st().clientHeight], big: +big.toFixed(3), saved: Number(saved), again: +again.toFixed(3), small: +small.toFixed(4) }); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert r['size'] == [390, 844], r
+    assert (r['big'], r['saved'], r['again']) == (2.0, 2.0, 2.0), r   # three times as close is held to twice the starting zoom, kept for next time
+    # at 390×844 the start is 390 / (8 × 40) = 1.21875 (the bookcase with the desk across the screen) and the whole room (as far
+    # as the old stops reached: 28.8 room units across) is 390 / (28.8 × 40) = 0.33854, so as far out as it goes is 0.2778 of the start
+    assert abs(r['small'] - 0.2778) < 0.002, r
+
+def test_the_wheel_zooms_round_the_pointer(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
+      const st = document.querySelector('.study'), nb = () => { const q = document.querySelector('.study [data-thing="notebook"]').getBoundingClientRect(); return [q.left + q.width / 2, q.top + q.height / 2]; };
+      const [x, y] = nb(), w0 = document.querySelector('.study .room').offsetWidth;
+      st.dispatchEvent(new WheelEvent('wheel', { deltaY: -300, deltaMode: 0, clientX: x, clientY: y, bubbles: true, cancelable: true })); await wait(400);
+      const [x1, y1] = nb();
+      return JSON.stringify({ grew: +(document.querySelector('.study .room').offsetWidth / w0).toFixed(2), dx: Math.round(x1 - x), dy: Math.round(y1 - y) }); })()"""
+    r = json.loads(ev_at(b, DESK, js))
+    assert r['grew'] > 1.3 and abs(r['dx']) <= 2 and abs(r['dy']) <= 2, r   # closer, and the notebook under the pointer stayed under it
 
 def test_the_yard_has_the_shop_and_the_hero_walks_up_to_it(b):
     js = "(async () => { " + FRESH + """ location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();
