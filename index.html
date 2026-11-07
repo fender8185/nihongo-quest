@@ -356,7 +356,12 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
    two fingers zoom from the whole room (where a wide screen starts) to twice as close. Every colour in the drawing is worked out per face: its daylight
    colour, mixed by --day with two night versions (the lamps dim, and bright when today's list is done) mixed by --f. Moving parts
    are HTML overlays so the big drawing never repaints. */
-.study { position: relative; height: 100vh; height: 100dvh; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; background: color-mix(in srgb, #e9dfcf calc(var(--day) * 100%), #171831); }
+.study { position: relative; height: 100vh; height: 100dvh; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none;
+  background: radial-gradient(circle at 7% 9%, rgba(255, 255, 255, 0.90) 0 1.0px, transparent 1.7px), radial-gradient(circle at 19% 4%, rgba(255, 255, 255, 0.82) 0 0.8px, transparent 1.5px), radial-gradient(circle at 31% 14%, rgba(255, 255, 255, 0.78) 0 0.7px, transparent 1.4px), radial-gradient(circle at 44% 6%, rgba(255, 255, 255, 0.90) 0 1.0px, transparent 1.7px), radial-gradient(circle at 58% 11%, rgba(255, 255, 255, 0.82) 0 0.8px, transparent 1.5px), radial-gradient(circle at 71% 4%, rgba(255, 255, 255, 0.86) 0 0.9px, transparent 1.6px), radial-gradient(circle at 86% 9%, rgba(255, 255, 255, 0.90) 0 1.0px, transparent 1.7px), radial-gradient(circle at 94% 21%, rgba(255, 255, 255, 0.78) 0 0.7px, transparent 1.4px), radial-gradient(circle at 12% 27%, rgba(255, 255, 255, 0.78) 0 0.7px, transparent 1.4px), radial-gradient(circle at 63% 24%, rgba(255, 255, 255, 0.74) 0 0.6px, transparent 1.3px), radial-gradient(circle at 80% 31%, rgba(255, 255, 255, 0.82) 0 0.8px, transparent 1.5px), radial-gradient(circle at 4% 46%, rgba(255, 255, 255, 0.78) 0 0.7px, transparent 1.4px), radial-gradient(circle at 96% 52%, rgba(255, 255, 255, 0.82) 0 0.8px, transparent 1.5px), radial-gradient(circle at 9% 78%, rgba(255, 255, 255, 0.78) 0 0.7px, transparent 1.4px), radial-gradient(circle at 91% 84%, rgba(255, 255, 255, 0.86) 0 0.9px, transparent 1.6px), radial-gradient(circle at 22% 92%, rgba(255, 255, 255, 0.74) 0 0.6px, transparent 1.3px), radial-gradient(circle at 76% 95%, rgba(255, 255, 255, 0.78) 0 0.7px, transparent 1.4px), radial-gradient(130% 70% at 50% 100%, #17143f, #0a0a22 45%, #05060f); }
+/* round the room (a block cut open, test build): the yard's sky — its night with a few stars, and over it by day its grey that turns
+   blue as the day's list fills (dawn and dusk: .warm-wash) */
+.study::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: var(--day);
+  background: linear-gradient(color-mix(in srgb, #3d8cdb calc((.15 + .85 * var(--f)) * 100%), #93a3b3), color-mix(in srgb, #8bc5ef calc((.15 + .85 * var(--f)) * 100%), #c6d0d8) 58%, color-mix(in srgb, #e0f2fb calc((.15 + .85 * var(--f)) * 100%), #e2e7eb)); }
 .room-wrap { position: absolute; inset: 0; }   /* walking in and out zooms this, round the middle of the screen */
 .room { position: absolute; left: 0; top: 0; transform-origin: 0 0; }   /* sized and slid by the camera (ROOM.place); scaled as well while two fingers zoom, sized again when they let go */
 .room.glide { transition: transform .45s cubic-bezier(.2, .8, .25, 1); }
@@ -6166,7 +6171,7 @@ function placedWares() { return Object.keys(state.placed).filter((id) => owns(id
 function wareFootprint(it, p) { const [w, d] = p.r ? [it.fp[1], it.fp[0]] : it.fp; return [p.x - w / 2, p.y - d / 2, p.x + w / 2, p.y + d / 2]; }
 function wareRect(it, p) { return [p.u - it.size[0] / 2, p.v - it.size[1] / 2, p.u + it.size[0] / 2, p.v + it.size[1] / 2]; }
 const ROOM = (() => {
-  const S = 40, RW = 24, RD = 16, RH = 19, WAIN = 3.2;
+  const S = 40, RW = 24, RD = 16, RH = 12, WAIN = 3.2;   // RH: the walls were 19 high, to fill a wide screen's top corners, till the room became a block in the sky (test build)
   const P = (x, y, z = 0) => [(x - y) * S, (x + y) * S / 2 - z * S];
   const r1 = (v) => Math.round(v * 10) / 10;
   const pt = (x, y, z = 0) => P(x, y, z).map(r1).join(' ');
@@ -6176,13 +6181,14 @@ const ROOM = (() => {
   const onX = (x0) => `matrix(${S} ${-S / 2} 0 ${S} ${x0 * S} ${x0 * S / 2})`;   // a face looking along +x (the left wall): u = -y, v = -z
   const onY = (y0) => `matrix(${S} ${S / 2} 0 ${S} ${-y0 * S} ${y0 * S / 2})`;   // a face looking along +y (the right wall): u = x, v = -z
   const onZ = (z0) => `matrix(${S} ${S / 2} ${-S} ${S / 2} 0 ${-z0 * S})`;        // a level surface: u = x, v = y
-  const VB = [-RD * S, -RH * S, (RW + RD) * S, (RH + (RW + RD) / 2) * S + 30];
+  const VB = [-(RD + 0.5) * S, -(RH + 0.5) * S, (RW + RD + 1) * S, (RH + (RW + RD) / 2 + 1.5) * S + 30];   // the block, its cut edges too
   // where the camera looks, [x0, y0, x1, y1] in the room's screen units (P / S): the four places a phone used to stop at (the
   // door; the bookcase and the desk; the chest of drawers; the bed) frame the room round the hero when 書房 first opens, and the
   // line through their middles is how high the camera looks as it follows him. FRAME, the widest and the tallest of them, sets a
-  // phone's zoom to start with; BOUND is as far as the camera looks (the whole room, where a wide screen starts).
+  // phone's zoom to start with; BOUND is as far as the camera looks: the whole block and a little sky round it (where a wide
+  // screen starts, and as far out as two fingers go).
   const VIEWS = [[-8.9, -8.6, -1.3, 4.6], [-2.05, -9.9, 5.95, 4.3], [5.35, -7.2, 12.15, 6.9], [11.7, -3.2, 19.6, 13.6]];   // the second moved right with the desk (roomV 3)
-  const FRAME = [8, 16.8], BOUND = [-9.1, -11.5, 19.7, 14];
+  const FRAME = [8, 16.8], BOUND = [-17.5, -13.5, 25.5, 21.9];
   const vbPct = (sx, sy) => `left:${((sx - VB[0]) / VB[2] * 100).toFixed(3)}%;top:${((sy - VB[1]) / VB[3] * 100).toFixed(3)}%`;
   const vbSize = (w, h) => `width:${(w / VB[2] * 100).toFixed(3)}%;height:${(h / VB[3] * 100).toFixed(3)}%`;
 
@@ -6274,6 +6280,12 @@ const ROOM = (() => {
     for (let i = 0.7; i < RD; i += 0.72) s += qX(C.batten, 0.01, i, i + 0.07, 0.3, WAIN, 'L');
     s += box(C.rail, 0, 0, WAIN, RW, 0.1, WAIN + 0.14, { x: false }) + box(C.rail, 0, 0.1, WAIN, 0.1, RD, WAIN + 0.14, { y: false });
     s += box(C.skirt, 0, 0, 0, RW, 0.06, 0.32, { x: false }) + box(C.skirt, 0, 0.06, 0, 0.06, RD, 0.32, { y: false });
+    // the room as a block cut open (test build): the floor's edge along the two open sides, the walls' ends standing on it and
+    // their tops, all as thick as the walls — round the block, the sky at this hour (.study's background)
+    const T = 0.45, D = 0.9;
+    s += qY('#b98c60', RD, -T, RW, -D, 0) + qX('#a77a52', RW, -T, RD, -D, 0) + qY('#e2d5bf', RD, -T, 0, 0, RH) + qX('#ddd0b8', RW, -T, 0, 0, RH);
+    s += `<path ${F('#cdbb9e', 't', [RW / 2, -T / 2, RH])} d="${poly([[-T, -T, RH], [RW, -T, RH], [RW, 0, RH], [0, 0, RH], [0, RD, RH], [-T, RD, RH]])}"/>`;
+    s += `<path class="hl" d="${line([[RW, -T, RH], [RW, 0, RH], [0, 0, RH], [0, RD, RH], [-T, RD, RH]])} ${line([[-T, RD, 0], [RW, RD, 0], [RW, -T, 0]])}"/>`;
     return s;
   }
   function windowArt() {

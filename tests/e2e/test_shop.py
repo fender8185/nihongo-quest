@@ -358,9 +358,23 @@ def test_two_fingers_zoom_between_the_whole_room_and_twice_as_close_and_it_is_re
     r = json.loads(ev_at(b, PHONE, js))
     assert r['size'] == [390, 844], r
     assert (r['big'], r['saved'], r['again']) == (2.0, 2.0, 2.0), r   # three times as close is held to twice the starting zoom, kept for next time
-    # at 390×844 the start is 390 / (8 × 40) = 1.21875 (the bookcase with the desk across the screen) and the whole room (as far
-    # as the old stops reached: 28.8 room units across) is 390 / (28.8 × 40) = 0.33854, so as far out as it goes is 0.2778 of the start
-    assert abs(r['small'] - 0.2778) < 0.002, r
+    # at 390×844 the start is 390 / (8 × 40) = 1.21875 (the bookcase with the desk across the screen) and the whole block with the
+    # sky round it (43 room units across) is 390 / (43 × 40) = 0.22674, so as far out as it goes is 0.1860 of the start
+    assert abs(r['small'] - 0.1860) < 0.002, r
+
+# the room as a block cut open in the sky (test build): all of it on the screen at the widest, a phone zoomed out or a wide screen as it opens
+BLOCK = """const st = document.querySelector('.study'), box = st.getBoundingClientRect(), room = st.querySelector('.room').getBoundingClientRect(), vb = ROOM.kit.VB, P = ROOM.kit.P;
+      const at = (x, y, z) => { const [sx, sy] = P(x, y, z); return [room.left + (sx - vb[0]) / vb[2] * room.width, room.top + (sy - vb[1]) / vb[3] * room.height]; };
+      const ends = [at(-0.45, -0.45, 12), at(24, -0.45, 12), at(-0.45, 16, 12), at(-0.45, 16, -0.9), at(24, -0.45, -0.9), at(24, 16, -0.9)];   /* the walls' tops and ends, the floor's edge */
+      const whole = ends.every(([x, y]) => x >= box.left - 1 && x <= box.right + 1 && y >= box.top - 1 && y <= box.bottom + 1);
+      return JSON.stringify({ whole, sky: getComputedStyle(st).backgroundImage.includes('radial-gradient') && getComputedStyle(st, '::before').backgroundImage.includes('linear-gradient') });"""
+def test_zoomed_all_the_way_out_the_room_is_a_block_in_the_sky(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + """ await new Promise(q => setTimeout(q, 300));
+      for (let i = 0; i < 14; i++) document.dispatchEvent(new KeyboardEvent('keydown', { key: '-' })); await new Promise(q => setTimeout(q, 700));
+      """ + BLOCK + " })()"
+    assert json.loads(ev_at(b, PHONE, js)) == {'whole': True, 'sky': True}
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + " await new Promise(q => setTimeout(q, 500)); " + BLOCK + " })()"
+    assert json.loads(ev_at(b, DESK, js)) == {'whole': True, 'sky': True}
 
 def test_the_wheel_zooms_round_the_pointer(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
