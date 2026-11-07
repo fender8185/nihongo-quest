@@ -78,17 +78,19 @@ def test_the_shop_letter_is_in_the_mailbox(b):
 
 # ---- 古道具屋, 書房's wares, 擺設 ----
 GO_ROOM = "location.hash = '#/today'; document.getElementById('view').innerHTML = ''; route();"
-def test_the_clock_hangs_again_once_bought_and_a_nail_waits_till_then(b):
-    js = "(() => { " + FRESH + GO_ROOM + """ const before = { hands: !!document.querySelector('.study .clock-hands'), nail: document.querySelectorAll('.study svg.art circle[r=".055"]').length };
+def test_a_bought_clock_waits_in_the_storage_box_and_its_nail_till_it_hangs(b):
+    js = "(() => { " + FRESH + GO_ROOM + """ const now = () => ({ hands: !!document.querySelector('.study .clock-hands'), nail: document.querySelectorAll('.study svg.art circle[r=".055"]').length, placed: !!state.placed.clock });
+      const before = now();
       state.koto.gift = 1; saveState(); location.hash = '#/shop'; route();
-      document.querySelector('[data-act="ware-buy"][data-id="clock"]').click(); document.querySelector('[data-act="ware-buy-ok"]').click();
+      document.querySelector('[data-act="ware-buy"][data-id="clock"]').click(); const ask = document.querySelector('#modalBody p').textContent; document.querySelector('[data-act="ware-buy-ok"]').click();
       const card = document.querySelector('[data-ware="clock"] .chip').textContent;
-      """ + GO_ROOM + """ const after = { hands: !!document.querySelector('.study .clock-hands'), nail: document.querySelectorAll('.study svg.art circle[r=".055"]').length };
-      return JSON.stringify({ before, after, card, bal: kotoBalance(), at: state.placed.clock }); })()"""
+      """ + GO_ROOM + """ const bought = now();
+      document.querySelector('.study-edit').click(); document.querySelector('.tray-it[data-id="clock"]').click(); document.querySelector('[data-act="room-edit-done"]').click();
+      return JSON.stringify({ before, bought, hung: now(), card, ask: ask.includes('收納箱'), bal: kotoBalance() }); })()"""
     r = json.loads(ev(b, js))
-    assert r['before'] == {'hands': False, 'nail': 1}, r
-    assert r['after'] == {'hands': True, 'nail': 0}, r
-    assert r['card'] == '在書房' and r['bal'] == 0 and r['at'] == {'w': 'L', 'u': 1.25, 'v': 9.9}, r
+    assert r['before'] == {'hands': False, 'nail': 1, 'placed': False}, r
+    assert r['bought'] == {'hands': False, 'nail': 1, 'placed': False} and r['card'] == '在收納箱' and r['ask'] and r['bal'] == 0, r
+    assert r['hung'] == {'hands': True, 'nail': 0, 'placed': True}, r
 
 def test_short_koto_buys_nothing_and_says_so(b):
     js = "(() => { " + FRESH + """ state.koto.gift = 5; saveState(); location.hash = '#/shop'; route();
@@ -98,23 +100,24 @@ def test_short_koto_buys_nothing_and_says_so(b):
     assert r['label'] == '還差 1' and not r['owned'] and not r['buy'], r
     assert '言靈還不夠' in r['say'] or '再加油' in r['say'], r
 
-def test_a_bought_ware_goes_to_its_spot_or_the_storage_box(b):
-    js = "(() => { " + FRESH + """ state.koto.gift = 200; state.owned.bonsai = { paid: 0, on: todayStr() }; state.placed.bonsai = { w: 'F', x: 14, y: 0.75, r: 0 }; saveState();   // the gramophone's spot is taken
-      const a = buyWare(WARE.get('cactus')), b2 = buyWare(WARE.get('gramophone'));
-      return JSON.stringify({ a, b: b2, cactus: state.placed.cactus || null, gram: state.placed.gramophone || null, bal: kotoBalance() }); })()"""
+def test_a_bought_ware_goes_in_the_storage_box_and_a_wear_in_the_wardrobe(b):
+    js = "(() => { " + FRESH + """ state.koto.gift = 200; saveState();
+      const a = buyWare(WARE.get('cactus')), w = buyWare(WARE.get('beanie'));
+      return JSON.stringify({ a, w, cactus: state.placed.cactus || null, head: state.wear.head || null, owned: owns('cactus') && owns('beanie'), bal: kotoBalance() }); })()"""
     r = json.loads(ev(b, js))
-    assert r['cactus'] == {'w': 'F', 'x': 0.6, 'y': 3.15, 'r': 0} and r['a'] == '放進書房了', r
-    assert r['gram'] is None and '收納箱' in r['b'], r
-    assert r['bal'] == 200 - 6 - 40, r
+    assert r['cactus'] is None and '收納箱' in r['a'], r   # set out in 擺設 when they like
+    assert r['head'] is None and '衣櫃' in r['w'], r   # put on from the wardrobe
+    assert r['owned'] and r['bal'] == 200 - 6 - 10, r
 
 def test_wearing_goes_on_and_off_and_shows_on_the_hero(b):
     js = "(() => { " + FRESH + """ state.koto.gift = 30; saveState(); buyWare(WARE.get('beanie')); buyWare(WARE.get('strawhat'));
-      const worn = state.wear.head; """ + GO_ROOM + """ const has = document.querySelector('.study .hero').innerHTML.includes('cy="-166" r="8"');   /* the beanie's pompom (colours are lit, so not its hex) */
-      document.querySelector('.study-tools [data-act="wardrobe"]').click(); const swap = document.querySelector('#modalBody [data-act="ware-wear"][data-id="strawhat"]'); swap.click();
-      const now = state.wear.head; document.querySelector('#modalBody [data-act="ware-wear"][data-id="strawhat"]').click();
-      return JSON.stringify({ worn, has, now, off: state.wear.head }); })()"""
+      const bought = state.wear.head || null; """ + GO_ROOM + """
+      document.querySelector('.study-tools [data-act="wardrobe"]').click(); const pick = (id) => document.querySelector('#modalBody [data-act="ware-wear"][data-id="' + id + '"]').click();
+      pick('beanie'); const worn = state.wear.head, has = document.querySelector('.study .hero').innerHTML.includes('cy="-166" r="8"');   /* the beanie's pompom (colours are lit, so not its hex) */
+      pick('strawhat'); const now = state.wear.head; pick('strawhat');
+      return JSON.stringify({ bought, worn, has, now, off: state.wear.head }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'worn': 'beanie', 'has': True, 'now': 'strawhat', 'off': None}, r
+    assert r == {'bought': None, 'worn': 'beanie', 'has': True, 'now': 'strawhat', 'off': None}, r
 
 def test_arrange_takes_out_moves_turns_and_puts_away(b):
     js = "(async () => { " + FRESH + """ state.owned.chabudai = { paid: 0, on: todayStr() }; saveState(); """ + GO_ROOM + """
@@ -134,7 +137,7 @@ def test_arrange_takes_out_moves_turns_and_puts_away(b):
     assert r == {'tray': ['chabudai'], 'p1ok': True, 'moved': True, 'turned': True, 'desk': False, 'gone': True, 'edit': False}, r
 
 def test_the_rooms_own_things_are_laid_out_and_can_be_put_away(b):
-    js = "(() => { " + FRESH + """ const own = ['bed', 'nightTable', 'bigPlant', 'umbrella', 'sageRug', 'bedRug', 'doorMat', 'fujiPrint', 'kanaChart', 'nightPicture', 'pegRail'];
+    js = "(() => { " + FRESH + """ const own = ['bed', 'nightTable', 'bigPlant', 'umbrella', 'sageRug', 'bedRug', 'doorMat', 'fujiPrint', 'kanaChart', 'nightPicture', 'pegRail', 'garland1', 'garland2', 'garland3', 'garland4'];
       const laid = own.every(id => state.placed[id]); """ + GO_ROOM + """
       document.querySelector('.study-edit').click(); const st = () => document.querySelector('.study');
       st().querySelector('.deco[data-ware="bed"]').dispatchEvent(new PointerEvent('pointerdown', { clientX: 1, clientY: 1, pointerId: 3, pointerType: 'mouse', button: 0, buttons: 1, bubbles: true }));
@@ -161,6 +164,45 @@ def test_working_things_move_but_never_go_in_the_box(b):
       return JSON.stringify({ ok, moved: before[0] !== after[0] || before[1] !== after[1], tray, put, note, still, wall, door }); })()"""
     r = json.loads(ev(b, js))
     assert r == {'ok': True, 'moved': True, 'tray': [], 'put': False, 'note': '只能搬，不能收', 'still': True, 'wall': True, 'door': False}, r
+
+def test_the_desk_and_the_window_stand_off_the_bookcase_and_an_older_room_follows(b):
+    js = "(() => { " + FRESH + """ const fresh = Object.assign({}, state.placed.desk), v = state.roomV;
+      const p0 = JSON.parse(JSON.stringify(state.placed)); ['garland1', 'garland2', 'garland3', 'garland4'].forEach(id => delete p0[id]);
+      const old = (placed, owned) => normalizeState(Object.assign(JSON.parse(JSON.stringify(state)), { roomV: 2, placed: Object.assign({}, p0, placed), owned: owned || {} }));   /* a room saved before roomV 3 */
+      const a = old({ desk: { w: 'F', x: 3.3, y: 1.85, r: 0 }, japanmap: { w: 'R', u: 6.4, v: 6.3 } }, { japanmap: { paid: 18, on: todayStr() } });
+      const b2 = old({ desk: { w: 'F', x: 3.3, y: 1.85, r: 0 }, telescope: { w: 'F', x: 5.75, y: 2.75, r: 0 } }, { telescope: { paid: 45, on: todayStr() } });
+      const c = old({ desk: { w: 'F', x: 10, y: 6, r: 0 } });
+      return JSON.stringify({ fresh, v, a: { desk: a.placed.desk.x, map: a.placed.japanmap || null, lights: ['garland1', 'garland2', 'garland3', 'garland4'].every(id => a.placed[id]), v: a.roomV },
+        b: b2.placed.desk.x, c: c.placed.desk.x, win: ROOM.fits(WARE.get('japanmap'), { w: 'R', u: 6.4, v: 6.3 }), gap: ROOM.fits(WARE.get('cactus'), { w: 'F', x: 1.75, y: 0.5, r: 0 }) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['fresh'] == {'w': 'F', 'x': 4.1, 'y': 1.85, 'r': 0} and r['v'] == 3, r
+    assert r['a'] == {'desk': 4.1, 'map': None, 'lights': True, 'v': 3}, r   # the desk went along; the map the window now covers went in the box
+    assert r['b'] == 3.3 and r['c'] == 10, r   # a telescope where the desk would go keeps it where it was; a desk moved by hand stays put
+    assert r['win'] is False and r['gap'] is True, r   # the window and its curtains reach further right; a cactus fits between the bookcase and the desk
+
+def test_the_string_of_lights_is_four_strings_that_move_and_go_in_the_box(b):
+    js = "(async () => { " + FRESH + GO_ROOM + """ const st = () => document.querySelector('.study'), bulbs = () => st().querySelectorAll('.bulb').length;
+      const all = bulbs(), wires = ['garland1', 'garland2', 'garland3', 'garland4'].map(id => !!st().querySelector('svg.art [data-o="w:' + id + '"] path'));
+      document.querySelector('.study-edit').click();
+      const pe = (el, type, px, py) => el.dispatchEvent(new PointerEvent(type, { clientX: px, clientY: py, pointerId: 9, pointerType: 'mouse', button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true }));
+      pe(st().querySelector('.deco[data-ware="garland2"]'), 'pointerdown', 1, 1); pe(st(), 'pointerup', 1, 1);   /* a tap picks it */
+      const under = !!st().querySelector('.edit-sel.under'), clip = st().querySelector('.deco[data-ware="garland2"]').style.clipPath.startsWith('polygon');
+      const d = st().querySelector('.deco[data-ware="garland2"]'), r0 = d.getBoundingClientRect(), x = r0.left + r0.width / 2, y = r0.top + r0.height / 2, v0 = state.placed.garland2.v;
+      pe(d, 'pointerdown', x, y); for (let i = 1; i <= 5; i++) { pe(st(), 'pointermove', x, y + 9 * i); await new Promise(q => setTimeout(q, 20)); }   /* dragged 45 px down its wall */
+      const dragging = { hidden: [...st().querySelectorAll('.bulb[data-w="garland2"]')].every(e => e.style.visibility === 'hidden'), ghost: st().querySelectorAll('.ghost ellipse').length };
+      pe(st(), 'pointerup', x, y + 45); const lower = state.placed.garland2.v <= v0 - 0.5;
+      st().querySelector('[data-act="room-edit-put"]').click();
+      const stored = !state.placed.garland2, inBox = !!st().querySelector('.tray-it[data-id="garland2"] svg.thumb ellipse'), fewer = bulbs();
+      const low = { w: 'L', u: 10, v: 6.5 }, ok = ROOM.fits(WARE.get('garland4'), low), tooHigh = ROOM.fits(WARE.get('garland4'), { w: 'L', u: 10, v: 11 });
+      state.placed.garland4 = low; saveState(); st().querySelector('[data-act="room-edit-done"]').click();
+      const moved = st().querySelectorAll('.bulb[data-w="garland4"]').length, ts = [...st().querySelectorAll('.bulb')].map(e => Number(e.dataset.t)).sort((x, y) => x - y);
+      return JSON.stringify({ all, wires, dragging, lower, under, clip, stored, inBox, fewer, ok, tooHigh, moved, first: ts.slice(0, 3), last: ts[ts.length - 1] }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['all'] == 64 and r['wires'] == [True] * 4, r   # four strings of sixteen bulbs where the one string ran
+    assert r['dragging'] == {'hidden': True, 'ghost': 16} and r['lower'], r   # dragged: its own bulbs wait, the ghost shows them; let go lower down
+    assert r['under'] and r['clip'] and r['stored'] and r['inBox'] and r['fewer'] == 48, r   # picked up high, its tools under it; put away with its bulbs
+    assert r['ok'] and not r['tooHigh'] and r['moved'] == 16, r   # lower down the other wall, its bulbs with it
+    assert r['first'] == [0, 0.02, 0.04] and r['last'] == 0.98, r   # the bulbs still hung light up in turn over the day
 
 def test_the_hero_finds_a_thing_moved_to_the_other_wall(b):
     js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); state.placed.calendar = { w: 'L', u: 3.2, v: 5.5 }; saveState(); """ + GO_ROOM + """
@@ -278,6 +320,17 @@ def test_the_signs_rest_out_of_sight_a_touch_brings_them_back_and_a_tap_still_op
     r = json.loads(ev_at(b, DESK, js))
     assert r == {'atFirst': False, 'later': [True, '0', '1'], 'touched': False, 'moving': True, 'letGo': False, 'again': True, 'hash': '#/listen'}, r
 
+def test_the_buttons_up_top_rest_with_the_signs_and_a_first_tap_only_wakes_them(b):
+    js = "(async () => { " + FRESH + GO_ROOM + """ await new Promise(q => setTimeout(q, 4500));
+      const st = document.querySelector('.study'), gear = st.querySelector('.study-gear'), quiet = st.classList.contains('quiet'), faded = getComputedStyle(gear).opacity;
+      const tap = () => { const r = gear.getBoundingClientRect(), o = { clientX: r.left + 10, clientY: r.top + 10, pointerId: 1, pointerType: 'touch', isPrimary: true, button: 0, bubbles: true, cancelable: true };
+        gear.dispatchEvent(new PointerEvent('pointerdown', Object.assign({ buttons: 1 }, o))); gear.dispatchEvent(new PointerEvent('pointerup', Object.assign({ buttons: 0 }, o))); gear.click(); };
+      tap(); const first = { modal: modalOpen(), quiet: st.classList.contains('quiet') };
+      tap(); const second = modalOpen();
+      return JSON.stringify({ quiet, faded, first, second }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'quiet': True, 'faded': '0', 'first': {'modal': False, 'quiet': False}, 'second': True}, r
+
 def test_a_drag_on_the_hero_leads_him_and_the_view_follows(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
       const st = document.querySelector('.study'), r = st.getBoundingClientRect(), f = st.querySelector('.hero .fig').getBoundingClientRect();
@@ -342,6 +395,21 @@ def test_a_tap_on_the_shop_runs_the_hero_up_the_hill_path(b):
     # on a 390 px phone the hill is drawn 1:1: the path starts 258 px up and the shop's door is 345 px up (the lawn ends at 214)
     assert r['top'] >= 330 and r['small'] < 0.12 and r['climb'] is True, r
     assert r['hash'] == '#/shop' and r['saved'] == {'X': -60, 'Y': 214}, r   # next time out he stands at the foot of the path
+
+def test_the_yards_signs_rest_wake_and_say_their_names_on_a_tap(b):
+    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();
+      const y = document.querySelector('.yard'), tag = (sel) => y.querySelector(sel + ' .tag'), shown = (sel) => getComputedStyle(tag(sel)).opacity === '1';
+      const signs = ['.enter', '.mbox', '.shop-btn'].map(sel => !!tag(sel).querySelector('svg') && tag(sel).querySelector('.tag-name').offsetWidth === 0);
+      const words = ['.enter', '.shop-btn'].map(sel => tag(sel).textContent), mail = mailCount() > 0, red = y.querySelector('.mbox').classList.contains('mail');
+      await new Promise(q => setTimeout(q, 4500));
+      const rest = { quiet: y.classList.contains('quiet'), enter: shown('.enter'), shop: shown('.shop-btn'), mbox: shown('.mbox') };
+      y.dispatchEvent(new PointerEvent('pointerdown', { clientX: 5, clientY: 5, pointerId: 1, pointerType: 'touch', bubbles: true })); const woke = !y.classList.contains('quiet');
+      y.querySelector('.shop-btn').click(); const named = y.querySelector('.shop-btn').classList.contains('named') && tag('.shop-btn').querySelector('.tag-name').offsetWidth > 0;
+      return JSON.stringify({ signs, words, mail: mail === red, rest, woke, named, mbox: mail }); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert r['signs'] == [True] * 3 and r['words'] == ['進屋', '古道具屋'] and r['mail'], r   # signs, the words kept for screen readers and a tap
+    assert r['rest'] == {'quiet': True, 'enter': False, 'shop': False, 'mbox': r['mbox']}, r   # resting; the mailbox's stays while letters wait
+    assert r['woke'] and r['named'], r
 
 def test_a_second_tap_on_the_shop_goes_straight_in(b):
     js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();
