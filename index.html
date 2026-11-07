@@ -653,9 +653,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .yhero { left: 50%; bottom: -10px; width: 120px; height: 210px; margin-left: -60px; transform-origin: 50% 95.24%; }
 .sky .yhero svg { filter: brightness(calc(.64 + .36 * var(--day))) saturate(calc(.8 + .2 * var(--day))); }   /* by night a little darker than by day, never dark (1.2.0) */
 .sky .yhero { z-index: 1; }   /* in the order of the yard's things by how far up the lawn (inline); behind the house on the hill path */
-/* up the hill path to 古道具屋 (1.2.0): small with the distance and outlined so he stands out by day and by night (--hs: his
-   scale, so the outline stays about a pixel on the screen); the house stands in front of the path */
-.sky .yhero.climb svg { filter: brightness(calc(.8 + .2 * var(--day))) drop-shadow(0 0 calc(1.3px / var(--hs, .12)) rgba(255, 255, 255, .95)) drop-shadow(0 0 calc(2.6px / var(--hs, .12)) rgba(255, 238, 200, calc(.3 + .45 * (1 - var(--day))))); }
+/* up the hill path to 古道具屋 (1.2.0): small with the distance and outlined so he stands out by day and by night (the outline is
+   set on his drawing as he goes, yClimbLook, so it stays about a pixel on the screen); the house stands in front of the path */
 .yard.climbing .house { z-index: 2; } .yard.climbing .shop-btn .tag { opacity: 0; transition: opacity .3s; }   /* its name steps aside while he runs up to it */
 /* the mailbox by the house: its flag is up while there are letters (and rises as the yard opens), its door drops open on a tap */
 .sky .mailbox { position: absolute; z-index: 146; left: 50%; bottom: 154px; width: 52px; height: 66px; margin-left: 30px; }   /* 300 − its 154 px up the lawn, like the wares */
@@ -1650,12 +1649,17 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.2.0';   // keep equal to the version in sw.js CACHE ('nq-v1.2.0'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.2.1';   // keep equal to the version in sw.js CACHE ('nq-v1.2.1'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個版本一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（通常最後一位加一；1.1.0 是書房改版），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.2.1', date: '2026-11-07', items: [
+    '主角的頭髮重畫成日系動漫風：髮尾是尖的，有從髮根到髮尾的漸層、頭頂的天使光圈和一圈細細的描邊，整頭頭髮連成一塊。衣櫃的髮型改成分開選：瀏海 21 種、兩側 15 種、後面 6 種、造型 13 種（丸子、雙馬尾、辮子……）；原本選的髮型會換成最接近的組合。戴帽子時只有頭頂的呆毛和丸子收進帽子裡。',
+    '臉型多了麻糬臉（新角色預設）；不蓋住耳朵的髮型會露出小小的耳朵。',
+    '主角走路比較不會像在滑動：被手指帶著走、橫著走時不再一直重新起步或轉來轉去，院子裡走遠時也照樣踏步。'
+  ] },
   { v: '1.2.0', date: '2026-11-07', items: [
     '山上開了古道具屋：老闆福爺不收錢，只收「言靈」。用言靈可以買東西擺進書房和院子，也能買衣服帽子給主角；店裡分室內、戶外、穿搭、限時（萬聖節限定賣到 11/10）。福爺寄了一封開張信到院子的信箱，附上 10 言靈。',
     '書房裡多了主角：點地板他會走過去，按住拖曳可以帶著他走；點房間裡的東西，他會先走過去再打開。右上角的衣櫃可以換臉型、髮型、五官、衣服和穿戴。',
@@ -6108,7 +6112,8 @@ function yCamTo(yard, x, give = 0) {   // the camera there (give: how much of a 
   const m = yCamMax();
   ycam.x = x < -m ? -m - (-m - x) * give : x > m ? m + (x - m) * give : x;
   const w = yard.querySelector('.yworld'); if (w) w.style.transform = `translate3d(${(-ycam.x).toFixed(1)}px,0,0)`;
-  yard.style.setProperty('--ycx', `${(-ycam.x).toFixed(1)}px`);
+  // no CSS variable here: one set on the yard every frame of a long walk began the hero's steps again on an iPhone (his legs
+  // stopped, 1.2.1); the zoom into the door reads the camera when it starts (sceneGo)
 }
 function yardLayout(yard) {   // the world as wide as it should be on this screen, the hill's shop sign with it, the camera inside
   const sky = yard.querySelector('.sky'), w = yard.querySelector('.yworld'); if (!sky || !w) return;
@@ -6396,7 +6401,7 @@ function yHeroRedraw(yard) { const el = yard.querySelector('.yhero'); if (el) el
 function yHeroHold(yard) {   // the dressing room opens: the hero stops where they are
   cancelAnimationFrame(yh.raf); yh.climb = null; yh.s = 0; yard.classList.remove('climbing');
   const el = yard.querySelector('.yhero'); if (!el) return;
-  el.classList.remove('walk', 'run', 'climb'); HERO.still(el); yHeroPlace(yard); yHeroSave();
+  el.classList.remove('walk', 'run', 'climb'); yClimbLook(el, 0); HERO.still(el); yHeroPlace(yard); yHeroSave();
 }
 function yHeroPlace(yard) {
   const el = yard.querySelector('.yhero'); if (!el) return;
@@ -6404,10 +6409,17 @@ function yHeroPlace(yard) {
   el.classList.toggle('back', yh.back); el.classList.toggle('flip', yh.flip); el.style.zIndex = yh.climb === 'hill' ? '' : String(300 - Math.round(yh.Y));
   if (el.matches('.walk, .run')) yFollow(yard);   // on the move: the camera goes along
 }
+// up the hill path: outlined about a pixel on the screen however small he gets (s: his scale; none: off the path). Set on his
+// drawing, and only when the width changes, never as a CSS variable round him (his legs would begin again each time on an iPhone)
+function yClimbLook(h, s) {
+  const svg = h && h.querySelector('svg'); if (!svg) return;
+  const px = s ? Math.round(1.3 / s * 2) / 2 : 0; if (svg._outline === px) return; svg._outline = px;
+  svg.style.filter = px ? `brightness(calc(.8 + .2 * var(--day))) drop-shadow(0 0 ${px}px rgba(255, 255, 255, .95)) drop-shadow(0 0 ${px * 2}px rgba(255, 238, 200, calc(.3 + .45 * (1 - var(--day)))))` : '';
+}
 function yHeroWalk(yard, to, done) {
   cancelAnimationFrame(yh.raf);
   const el = yard.querySelector('.yhero'), lim = ycam.YW / 2 - 20;
-  yh.climb = null; yh.s = 0; yard.classList.remove('climbing'); if (el) el.classList.remove('climb');   // off the hill path, if he was on it
+  yh.climb = null; yh.s = 0; yard.classList.remove('climbing'); if (el) { el.classList.remove('climb'); yClimbLook(el, 0); }   // off the hill path, if he was on it
   HERO.still(el);
   const from = [yh.X, yh.Y], goal = [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(214, to[1]))], dx = goal[0] - from[0], dy = goal[1] - from[1], len = Math.hypot(dx, dy);
   if (!el || len < 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { yh.X = goal[0]; yh.Y = goal[1]; if (el) yHeroPlace(yard); yHeroSave(); if (done) done(); return; }
@@ -6444,7 +6456,7 @@ function yClimb(el) {
       const d = Math.min(len, (now - t0) / 1000 * v), q = seg.find((x) => d <= x[2] + x[3]) || seg[seg.length - 1], t = (d - q[2]) / q[3];
       const dx = q[1][0] - q[0][0], dy = q[1][1] - q[0][1];
       yh.X = q[0][0] + dx * t; yh.Y = q[0][1] + dy * t; yh.back = dy > 0; if (Math.abs(dx) > 0.5) yh.flip = dx < 0;
-      yh.s = s0 + (s1 - s0) * d / len; h.style.setProperty('--hs', yh.s.toFixed(3)); yHeroPlace(yard);
+      yh.s = s0 + (s1 - s0) * d / len; yClimbLook(h, yh.s); yHeroPlace(yard);
       if (d < len) { yh.raf = requestAnimationFrame(step); return; }
       h.classList.add('out'); keep(); setTimeout(() => go('#/shop'), 280);   // in at the door
     };
@@ -7709,8 +7721,20 @@ const ROOM = (() => {
       if (d <= go) { hero.x = tx; hero.y = ty; go -= d; w.pts.shift(); } else { hero.x += (tx - hero.x) / d * go; hero.y += (ty - hero.y) / d * go; go = 0; }
     }
     const dx = hero.x - x0, dy = hero.y - y0, moving = Math.abs(dx) + Math.abs(dy) > 1e-6;
-    el.classList.toggle('run', moving && w.v > 8); el.classList.toggle('walk', moving && w.v <= 8);
-    if (moving) { hero.back = dx + dy < 0; if (Math.abs(dx - dy) > 1e-3) hero.flip = dx - dy < 0; heroPlace(st); follow(st, dx - dy); }
+    // led, he catches up with the finger between two aims (one every 90 ms) and would stand a frame: he keeps his step through
+    // such a moment, or his walk would begin again from its first step each time and he would seem to slide (1.2.1)
+    w.still = moving ? 0 : (w.still || 0) + dt;
+    const stepping = moving || (hero.lead && w.still < 0.25);
+    el.classList.toggle('run', stepping && w.v > 8); el.classList.toggle('walk', stepping && w.v <= 8);
+    if (moving) {
+      // which way he faces, by his step on the screen (sx across, sy up or down): from behind or facing us only when it clearly goes
+      // up or down, mirrored only when it clearly goes left or right. Going nearly across, his step points a hair up or down by
+      // turns: he turned round with it, and each turn began the legs' step again (1.2.1)
+      const sx = dx - dy, sy = (dx + dy) / 2;
+      if (Math.abs(sy) > 0.2 * Math.abs(sx)) hero.back = sy < 0;
+      if (Math.abs(sx) > 0.2 * Math.abs(sy)) hero.flip = sx < 0;
+      heroPlace(st); follow(st, sx);
+    }
     if (w.pts.length || hero.lead) { hero.raf = requestAnimationFrame((t) => heroStep(st, t)); return; }
     hero.walk = null; grid = null; el.classList.remove('walk', 'run'); el.innerHTML = heroArt(); heroSave();   // lit where it stopped
     if (w.done) w.done();
@@ -8494,10 +8518,9 @@ const HERO = (() => {
   const SHOE = '#f4f1ea', INK = '#2a2730', LIP = '#7a4a3a';
   // what they can choose, no part anyone's by gender: [id, name] (a colour's id is the colour); LOOK0 is a new hero's look
   const OPTS = {
-    face: [['round', '圓臉'], ['chubby', '包子臉'], ['oval', '鵝蛋臉'], ['pointed', '尖下巴']],
+    face: [['mochi', '麻糬臉'], ['round', '圓臉'], ['chubby', '包子臉'], ['oval', '鵝蛋臉'], ['pointed', '尖下巴']],
     skin: [['#f8dcc8', '白皙'], ['#f3d1b5', '淺膚'], ['#e8bd98', '自然'], ['#d39f78', '小麥'], ['#a9714d', '古銅'], ['#76492f', '深褐']],
     cheeks: [['blush', '腮紅'], ['shy', '害羞'], ['freckles', '雀斑'], ['none', '無']],
-    hair: [['crop', '短碎髮'], ['neat', '清爽短髮'], ['curtain', '中分'], ['ahoge', '呆毛短髮'], ['spiky', '刺蝟頭'], ['slick', '油頭'], ['curly', '自然捲'], ['afro', '爆炸頭'], ['bob', '鮑伯頭'], ['wolf', '狼尾'], ['shoulder', '及肩髮'], ['long', '長直髮'], ['wavy', '長捲髮'], ['ponytail', '高馬尾'], ['twintails', '雙馬尾'], ['bun', '丸子頭']],
     hairColor: [['#2a2524', '黑'], ['#3b2f2a', '深棕'], ['#6b4a32', '棕'], ['#8a4a2e', '紅棕'], ['#c9a25a', '金'], ['#a3a3a8', '灰'], ['#3d5a99', '藍'], ['#d98aa6', '粉紅']],
     eyes: [['normal', '普通'], ['sharp', '吊眼'], ['droopy', '垂眼'], ['happy', '笑眼'], ['big', '大眼'], ['sleepy', '睏眼']],
     eyeColor: [['#2a2730', '黑'], ['#5a3a28', '棕'], ['#3a5f9a', '藍'], ['#3f7a52', '綠'], ['#6b6f7a', '灰']],
@@ -8509,9 +8532,18 @@ const HERO = (() => {
     bottomStyle: [['pants', '長褲'], ['shorts', '短褲'], ['wide', '寬褲'], ['skirt', '裙子'], ['catpants', '貓咪褲']],
     bottom: [['#3f4660', '深藍'], ['#2b2b33', '黑'], ['#b8a27a', '卡其'], ['#4f6f9e', '牛仔藍'], ['#6e4f3a', '咖啡'], ['#8a8f99', '灰'], ['#ecebe6', '白'], ['#6b7a45', '橄欖綠']]
   };
-  const LOOK0 = { face: 'round', skin: '#f3d1b5', cheeks: 'blush', hair: 'crop', hairColor: '#3b2f2a', eyes: 'normal', eyeColor: '#2a2730', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'hoodie', top: '#5a68d8', bottomStyle: 'pants', bottom: '#3f4660' };
-  // a saved look as drawn: anything this build does not know (or is missing) is the new hero's
-  const norm = (look) => Object.fromEntries(Object.keys(LOOK0).map((k) => [k, look && OPTS[k].some(([v]) => v === look[k]) ? look[k] : LOOK0[k]]));
+  const LOOK0 = { face: 'mochi', skin: '#f3d1b5', cheeks: 'blush', fringe: 'round', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'normal', eyeColor: '#2a2730', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'hoodie', top: '#5a68d8', bottomStyle: 'pants', bottom: '#3f4660' };
+  // the 16 hairstyles before the hair came in parts (1.2.1): each as its nearest 瀏海, 兩側, 後面, 造型
+  const OLD_HAIR = { crop: ['round', 'short', 'short', 'none'], neat: ['swept', 'short', 'short', 'none'], curtain: ['center', 'chin', 'short', 'none'], ahoge: ['round', 'short', 'short', 'ahoge'],
+    spiky: ['choppy', 'short', 'short', 'none'], slick: ['none', 'short', 'short', 'none'], curly: ['curly', 'curls', 'short', 'none'], afro: ['curly', 'curls', 'bob', 'none'], bob: ['blunt', 'incurl', 'bob', 'none'],
+    wolf: ['choppy', 'layered', 'shoulder', 'none'], shoulder: ['center', 'chin', 'shoulder', 'none'], long: ['round', 'long', 'long', 'none'], wavy: ['sidepart', 'wave', 'wavy', 'none'],
+    ponytail: ['swept', 'short', 'short', 'ponytail'], twintails: ['round', 'short', 'short', 'twintails'], bun: ['short', 'short', 'short', 'bun'] };
+  // a saved look as drawn: anything this build does not know (or is missing) is the new hero's; a look from before the hair came in
+  // parts (hair: one of the 16, no fringe) gets the parts nearest it
+  const norm = (look) => {
+    const old = look && !look.fringe && OLD_HAIR[look.hair], lk = old ? Object.assign({}, look, { fringe: old[0], sides: old[1], hairBack: old[2], hairTop: old[3] }) : look;
+    return Object.fromEntries(Object.keys(LOOK0).map((k) => [k, lk && OPTS[k].some(([v]) => v === lk[k]) ? lk[k] : LOOK0[k]]));
+  };
   const dk = (h, k) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(h.slice(i, i + 2), 16) * k).toString(16).padStart(2, '0')).join('');
   const lt = (h, k) => '#' + [1, 3, 5].map((i) => { const v = parseInt(h.slice(i, i + 2), 16); return Math.round(v + (255 - v) * k).toString(16).padStart(2, '0'); }).join('');
   // the head, drawn the Q版 way (1.2.0): no ears — side locks hang where they would be — big eyes low on the face, a small
@@ -8519,6 +8551,7 @@ const HERO = (() => {
   const q = (v) => Math.round(v * 100) / 100;
   const DOME = 'M-32 -128 C-32 -145.7 -16.8 -160 2 -160 C20.8 -160 36 -145.7 36 -128';
   const FACE = {
+    mochi: `${DOME} C36.6 -116 36.4 -104.6 31 -99 C25.6 -94.6 15 -93.6 2 -93.6 C-11 -93.6 -21.6 -94.6 -27 -99 C-32.4 -104.6 -32.6 -116 -32 -128 Z`,   // 麻糬: wide, a soft square jaw (the user's 日系 sheet)
     round: `${DOME} C36 -110 21 -94 2 -94 C-17 -94 -32 -110 -32 -128 Z`,
     chubby: `${DOME} C37 -112 31 -95.6 2 -95 C-27 -95.6 -33 -112 -32 -128 Z`,
     oval: `${DOME} C35.5 -106 17 -91 2 -91 C-13 -91 -31.5 -106 -32 -128 Z`,
@@ -8566,129 +8599,212 @@ const HERO = (() => {
     goatee: (f) => `<path ${f} d="M-2.5 -98.6 Q2 -97 6.5 -98.6 Q7.2 -91.4 2 -86.9 Q-3.2 -91.4 -2.5 -98.6 Z"/><path ${f} transform="translate(2 -106.4) scale(.75) translate(-2 106.4)" d="${MUSTACHE}"/>`,
     full: (f) => `<path ${f} d="M-34 -122 C-34 -94 -14 -78 2 -78 C18 -78 38 -94 38 -122 L33 -122 C32 -110 24 -100.4 12 -100 Q2 -97.8 -8 -100 C-20 -100.4 -28 -110 -29 -122 Z"/><path ${f} d="${MUSTACHE}"/>`
   };
-  // ===== the hair (16 styles), Q版: a crown with volume, the fringe in pointed clumps, side locks hanging where the ears would be.
-  // f: its colour, k: a darker shade for the hair behind (it frames the face), s: a stroke for strands. back: behind the head (drawn
-  // first), front: over the face, deco: strands and the shine round the crown, rear: from behind. tall: hair that rises or bulges
-  // out of the plain crown (a tuft, spikes, curls, a high tail, a bun), so no hat can sit on it (see HAT_HAIR). =====
-  // a clump of hair: wide at the top (x0…x1 at y top), coming to a point at (tx, ty), bent sideways by b
-  const clump = (f, x0, x1, tx, ty, b = 0, top = -158) => `<path ${f} d="M${x0} ${top} C${q(x0 + b)} ${q(ty - 12)} ${q(tx - 3 + b)} ${q(ty - 5)} ${tx} ${ty} C${q(tx + 2.4 + b)} ${q(ty - 7)} ${q(x1 + b)} ${q(ty - 15)} ${x1} ${top} Z"/>`;
-  const crown = (f, top = -172) => both(`<path ${f} d="M2.6 ${top} C-19 ${top} -39 ${top + 12} -42.4 -138 C-43.2 -130 -42 -122 -39.6 -115 C-36 -128 -30 -142 -20 -149 C-12 -153 -4 -154.6 2.6 -154.6 Z"/>`);
-  // a side lock in front of where the ear is, from the temple to its tip at len (the left one; both() for a pair)
-  const lock = (f, len = -104, b = 0) => `<path ${f} d="M-42 -142 C${q(-43 + b)} -126 ${q(-39 + b)} ${len + 14} ${q(-31 + b)} ${len} C${q(-31.4 + b)} ${len + 11} -29.4 -128 -26.6 -141 Z"/>`;
-  const backShort = (k, nape = -100) => both(`<path ${k} d="M2.6 -168 C-20 -168 -43 -158 -44.6 -134 C-45.4 -120 -42 -107 -36 ${nape} L2.6 ${nape} Z"/>`);
-  const RING = '<path d="M-21 -157.6 q4 -2.4 8.2 -1.4 M-6.6 -161 q4.2 -1.6 8.4 -.9 M8.4 -160.4 q4.2 -.3 8.2 1.4" fill="none" stroke="#fff" stroke-opacity=".36" stroke-width="2.4" stroke-linecap="round"/>';   // the shine round the crown
-  const strands = (s, d) => `<path d="${d}" fill="none" ${s} stroke-width="1.1" stroke-opacity=".42" stroke-linecap="round"/>`;
-  const blobs = (f, a) => a.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" ${f}/>`).join('');
-  const NAPE = (f, y = -100) => `<path ${f} d="M-43 -134 C-44 -160 -20 -171 2 -171 C24 -171 48 -160 47 -134 C47 -118 43 -106 37 ${y + 3} L32 ${y - 3} L28 ${y + 4} L22 ${y - 2} L16 ${y + 4} L10 ${y - 2} L4 ${y + 4} L-2 ${y - 2} L-8 ${y + 4} L-14 ${y - 2} L-20 ${y + 4} L-24 ${y - 3} L-29 ${y + 3} C-36 -106 -42 -118 -43 -134 Z"/>`;   // the back of a short cut, its ends in points
-  const LONG = (f, end) => `<path ${f} d="M-44 -136 C-44 -162 -20 -171 2 -171 C24 -171 48 -162 48 -136 C50 -112 49 ${end + 30} 46 ${end} L40 ${end + 6} L34 ${end - 2} L26 ${end + 6} L18 ${end} L10 ${end + 7} L2 ${end + 1} L-6 ${end + 7} L-14 ${end} L-22 ${end + 6} L-30 ${end - 2} L-36 ${end + 6} L-42 ${end} C-45 ${end + 30} -46 -112 -44 -136 Z"/>`;   // long hair from behind
-  // the fringes: [x0, x1, tip x, tip y, bend] clumps, left to right
+  // ===== the hair (1.2.1), 日系 anime after the user's sheet of 48 chibi hairstyles and their brief (2026-11-07):
+  // every lock ends in a sharp, tapering tip (a ぱっつん or 公主切 line is cut straight); three layers — the back hair, the side
+  // locks, the fringe with a stray wisp or two; a gradient from the roots (lighter) to the ends (darker), a fine outline a shade
+  // darker than the hair, and a jagged angel ring of light on the crown. The outline goes round the whole of the hair, never where
+  // its parts meet (the user found the parts looked pasted together): each layer is drawn twice, its outline under its fills, so
+  // the parts are drawn plain (f, k) and HERO.svg gives the outline. Put together from four parts (瀏海, 兩側, 後面, 造型);
+  // STYLES are whole hairstyles made of them. Head space: centre x = 2, forehead top y -160, brows ≈ -129, eyes -117, chin ≈ -94.
+  // f: the hair (gradient and outline), k: the back hair (darker), s: a strand stroke, w: the hair's fill alone (wisps), skin: the
+  // ear's fill. Layers: back (behind the head and body), front (over the face), deco, rear (from behind).
+  const HAIRP = (() => {
+  const r = (v) => Math.round(v * 10) / 10;
+  const both = (s) => `${s}<g transform="matrix(-1 0 0 1 4 0)">${s}</g>`;
+  const P = (f, d) => `<path ${f} d="${d}"/>`;
+  const strands = (s, d, o = 0.42) => `<path d="${d}" fill="none" ${s} stroke-width=".8" stroke-opacity="${o}" stroke-linecap="round"/>`;
+  const shine = (d, o = 0.3) => `<path d="${d}" fill="#fff" fill-opacity="${o}"/>`;
+  // a run of locks: from the first notch down to each tip and up to the next (ns: n + 1 notches, ts: n tips). Each lock keeps its
+  // width and tapers late to a sharp tip; a: how far it sweeps sideways from its root, t: how wide the tip (of the lock's width)
+  function locks(ns, ts, a = 0.15, t = 0.16) {
+    let d = '';
+    ts.forEach(([tx, ty], i) => {
+      const [nx, ny] = ns[i], [mx, my] = ns[i + 1], w = Math.abs(mx - nx);
+      d += ` C${r(nx + (tx - nx) * a - w * 0.06)} ${r(ny + (ty - ny) * 0.55)} ${r(tx - w * t)} ${r(ty - (ty - ny) * 0.32)} ${tx} ${ty}`;
+      d += ` C${r(tx + w * t)} ${r(ty - (ty - my) * 0.32)} ${r(mx + (tx - mx) * a + w * 0.06)} ${r(my + (ty - my) * 0.55)} ${mx} ${my}`;
+    });
+    return d;
+  }
+  // a lock on its own: from x0…x1 at y0 down to a sharp tip (tx, ty)
+  const leaf = (f, x0, x1, y0, tx, ty) => P(f, `M${x0} ${y0}${locks([[x0, y0], [x1, y0]], [[tx, ty]], 0.2, 0.2)} Z`);
+  // a stray wisp: a sliver wd wide at its root (x0, y0), bending through (cx, cy) to a sharp end at (x1, y1)
+  const wisp = (w, x0, y0, cx, cy, x1, y1, wd = 1.8) => P(w, `M${r(x0 - wd / 2)} ${y0} Q${r(cx - wd / 3)} ${cy} ${x1} ${y1} Q${r(cx + wd / 3)} ${cy} ${r(x0 + wd / 2)} ${y0} Z`);
+  // the angel ring: a band of light round the crown, smooth on top, in uneven teeth below
+  const RING = (() => {
+    const pt = (a, k) => `${r(2 + 40.6 * k * Math.cos(a))} ${r(-135 - 34 * k * Math.sin(a))}`, a0 = 0.62, a1 = Math.PI - 0.62, n = 22, teeth = [0.7, 0.66, 0.71, 0.64, 0.7, 0.67];
+    let d = `M${pt(a0, 0.79)}`;
+    for (let i = 1; i <= n; i++) d += ` L${pt(a0 + (a1 - a0) * i / n, 0.79)}`;
+    for (let i = n; i >= 0; i--) d += ` L${pt(a0 + (a1 - a0) * i / n, i % 2 ? teeth[i % 6] : 0.735)}`;
+    return `<path d="${d} Z" fill="#fff" fill-opacity=".27"/>`;
+  })();
+  // ===== the crown, with the fringe as its lower edge from the left temple (-33 -138) to the right (37 -138); at the sides it comes
+  // down to just over the ear in a sharp sideburn, so the side locks hang from inside it
+  const OUT = ' C37.4 -133 38.4 -126.4 39.6 -121.2 C40.8 -123.6 42.8 -125.4 45 -126.6 C48.8 -129 50.4 -134 50.2 -141 C49.6 -159 32 -174.4 2 -174.4 C-28 -174.4 -45.6 -159 -46.2 -141 C-46.4 -134 -44.8 -129 -41 -126.6 C-38.8 -125.4 -36.8 -123.6 -35.6 -121.2 C-34.4 -126.4 -33.4 -133 -33 -138 Z';
+  const crown = (f, e) => P(f, `M-33 -138${e}${OUT}`);
+  const L0 = [-33, -138], R0 = [37, -138];
+  // a fringe: its edge; b: a darker tier behind it (k); u: hanging from under the crown (f); x: on it (f); its strands and wisps
+  const F = (name, e, o = {}) => ({ name, e, b: o.b || (() => ''), u: o.u || (() => ''), x: o.x || (() => ''), deco: o.deco || (() => '') });
+  const fl = (name, ns, ts, a, t, o) => F(name, locks([L0, ...ns, R0], ts, a, t), o);
+  // a ぱっつん line at y, crisp corners at the temples, slits cut up into it at xs
+  function cut(y, xs, dy = 5) {
+    let d = ` C-32.8 ${r(y - 3)} -32.4 ${r(y - 0.8)} -30.4 ${y}`;
+    xs.forEach((x) => { d += ` L${r(x - 1.3)} ${r(y + 0.6)} L${x} ${r(y - dy)} L${r(x + 1.3)} ${r(y + 0.6)}`; });
+    return `${d} L34.4 ${y} C36.4 ${r(y - 0.8)} 36.8 ${r(y - 3)} 37 -138`;
+  }
+  // spikes standing out round the crown, part of it (deg: where, from the right; len: how far out; s: which way the tip turns)
+  const spikes = (k) => [[168, 10, -1], [136, 11, 1], [104, 10.4, -1], [72, 11, 1], [40, 10, -1], [10, 9, 1]].map(([deg, len, s]) => {
+    const a = (deg * Math.PI) / 180, p = (b, q) => `${r(2 + q * 44 * Math.cos(b))} ${r(-136 - q * 37 * Math.sin(b))}`;
+    return P(k, `M${p(a - 0.24, 0.86)} Q${p(a - 0.08 + s * 0.05, 1.06)} ${p(a + s * 0.14, 1 + len / 40)} Q${p(a + 0.1 + s * 0.05, 1.04)} ${p(a + 0.24, 0.86)} Z`);
+  }).join('');
+  // a curl: a round lock that ends in a sharp tail (x, y its middle, rr its size, s: 1 tail to the right, -1 to the left)
+  const curl = (f, x, y, rr, s = 1) => P(f, `M${r(x - rr * s)} ${r(y + rr * 0.1)} C${r(x - rr * s)} ${r(y - rr * 1.3)} ${r(x + rr * 1.2 * s)} ${r(y - rr * 1.2)} ${r(x + rr * s)} ${r(y + rr * 0.2)} C${r(x + rr * 0.9 * s)} ${r(y + rr * 0.9)} ${r(x + rr * 0.4 * s)} ${r(y + rr * 1.3)} ${r(x - rr * 0.2 * s)} ${r(y + rr * 1.9)} C${r(x - rr * 0.1 * s)} ${r(y + rr * 1.2)} ${r(x - rr * 0.9 * s)} ${r(y + rr * 1.1)} ${r(x - rr * s)} ${r(y + rr * 0.1)} Z`);
+  const swirl = (s, pts) => strands(s, pts.map(([x, y, rr]) => `M${r(x - rr * 0.5)} ${r(y + rr * 0.3)} a${r(rr * 0.5)} ${r(rr * 0.5)} 0 1 1 ${r(rr * 0.5)} ${r(rr * 0.5)}`).join(' '), 0.5);
   const FRINGE = {
-    even: [[-34, -19, -25, -128.6, 0], [-23, -6, -14, -125.6, 0], [-10, 8, 0, -127, 0], [4, 21, 13, -125, 0], [17, 33, 25, -127.6, 0], [28, 40, 34, -131.6, 0]],
-    swept: [[-34, -18, -27, -131, 3], [-22, -4, -15, -127.4, 4], [-8, 10, 1, -124.6, 4.6], [6, 24, 15, -122.6, 5], [20, 38, 30, -124, 5]],
-    part: [[-6, 2, -10, -137, -3], [-14, -2, -20, -131, -4], [-26, -12, -28, -126.6, -3], [2, 10, 14, -137, 3], [6, 18, 24, -131, 4], [16, 30, 32, -126.6, 3]],
-    short: [[-34, -18, -25, -133, 0], [-22, -6, -14, -130.6, 0], [-10, 8, 0, -132, 0], [4, 20, 13, -130, 0], [16, 33, 25, -132.6, 0], [28, 40, 34, -134.6, 0]],
-    blunt: [[-32, -16, -24, -130.4, 0], [-20, -4, -12, -129.4, 0], [-8, 8, 0, -129.8, 0], [4, 20, 12, -129.2, 0], [16, 32, 24, -130.2, 0], [26, 38, 32, -130.8, 0]],
-    spiky: [[-34, -20, -28, -126, -3], [-24, -8, -16, -123, -2], [-10, 6, -2, -125, 0], [4, 18, 12, -122.6, 2], [16, 30, 24, -124.6, 3], [28, 40, 36, -128, 3]]
+    round: fl('自然', [[-20, -150], [-6, -153], [9, -152.4], [24, -148.6]], [[-29.4, -127.6], [-14, -126.2], [1, -124.2], [16.6, -126.2], [31.6, -128.2]], 0.25, 0.15,
+      { deco: (s, w) => strands(s, 'M-13 -150 C-13.6 -144 -13.8 -138 -13.8 -132 M2 -152 C1.8 -145 1.6 -138 1.2 -130') + wisp(w, -4, -152, -8, -140, -11.4, -124.6, 1.6) }),
+    short: fl('短瀏海', [[-20, -151.4], [-6, -154], [9, -153.6], [24, -150.6]], [[-29.2, -133.4], [-14, -137.4], [1, -135.4], [16.4, -137.6], [31.4, -133.8]], 0.2, 0.15,
+      { deco: (s) => strands(s, 'M-13 -151 C-13.4 -147 -13.6 -143 -13.8 -140 M2 -153 C1.8 -148 1.6 -142 1.2 -138') }),
+    spiky: fl('刺刺', [[-24, -148.6], [-14, -151.4], [-4, -149.4], [6, -152.4], [16, -149.4], [26, -148.6]], [[-30.6, -128], [-19.4, -133.4], [-9.4, -124.8], [1.6, -132.6], [11.4, -124.4], [21.4, -131.8], [32.6, -127]], 0.1, 0.13,
+      { x: (f) => spikes(f), deco: (s) => strands(s, 'M-9 -149 C-9.4 -142 -9.6 -135 -9.4 -129 M11 -150 C11.4 -143 11.4 -135 11.4 -128') }),
+    blunt: F('齊瀏海', cut(-129.6, [-14.6, .4, 16.4]), { deco: (s) => strands(s, 'M-14.6 -150 V-135.4 M.4 -152 V-135 M16.4 -150 V-135.4 M-24 -146 C-24.4 -141 -24.4 -137 -24.2 -133 M26 -146 C26.4 -141 26.4 -137 26.2 -133', 0.36) }),
+    shortblunt: F('短齊', cut(-140.4, [-12, 4, 19], 3.6), { deco: (s) => strands(s, 'M-12 -152 V-144.6 M4 -154 V-144.6 M19 -152 V-144.6', 0.36) }),
+    airy: F('空氣', ' C-32 -145 -18 -149.6 2 -149.6 C22 -149.6 36 -145 37 -138', {
+      u: (f) => [[-33, -24, -28.6, -128.6], [-23, -13.6, -16.4, -126], [-11.6, -5, -7.4, -129.6], [-3.6, 6.6, 1.6, -124.6], [8.4, 14.6, 12.6, -128.8], [16, 25.6, 21.2, -125.8], [27, 37, 32.4, -128.4]].map(([x0, x1, tx, ty]) => leaf(f, x0, x1, -153, tx, ty)).join(''),
+      deco: (s, w) => wisp(w, -6, -150, -9, -138, -12.6, -123.6, 1.4) + wisp(w, 15, -149, 15.6, -138, 17.6, -122.6, 1.4) }),
+    swept: fl('斜瀏海', [[-21, -153.4], [-5, -150.4], [11, -147.4], [26, -143]], [[-29.6, -130.6], [-1.6, -130.6], [15.2, -127.6], [30.6, -125.8], [36.2, -129.4]], 0.5, 0.14,
+      { deco: (s, w) => strands(s, 'M-17 -152 C-11 -147 -6 -140 -3.4 -134 M-2 -149 C3 -144 8 -137 12.4 -131') + wisp(w, -18, -153, -8, -146.6, 3.6, -141.4) }),
+    longswept: fl('大斜', [[-17, -155], [13, -142.6]], [[-29.6, -131.4], [22, -121.4], [34, -125.6]], 0.55, 0.12,
+      { deco: (s) => strands(s, 'M-13 -154 C-4 -148 6 -139 15 -127 M0 -152 C8 -147 15 -140 21 -131') }),
+    sidepart: fl('旁分', [[-8, -154.4], [29, -140.6]], [[-25.4, -126.6], [25, -124.2], [35.4, -130]], 0.5, 0.12,
+      { deco: (s, w) => strands(s, 'M-8 -168 V-157 M-11 -151 C-16 -145 -20 -138 -23 -131 M-3 -151 C5 -146 13 -139 20 -130') + wisp(w, -9, -154, -3, -147, 2.4, -142, 1.6) }),
+    center: F('中分', ' C-32.4 -132 -29.6 -126.4 -25 -123.2 C-22 -132 -10 -149 2 -157.4 C14 -149 26 -132 29 -123.2 C33.6 -126.4 36.4 -132 37 -138',
+      { deco: (s) => strands(s, 'M2 -172 V-158 M-3 -153 C-10 -147 -17 -138 -21.6 -129 M7 -153 C14 -147 21 -138 25.6 -129') }),
+    curtain: F('八字', ' C-32.8 -131 -31.8 -125.4 -29.6 -121 C-27.6 -134 -15 -151 2 -153.6 C19 -151 31.6 -134 33.6 -121 C35.8 -125.4 36.8 -131 37 -138',
+      { deco: (s, w) => strands(s, 'M2 -170 V-155 M-4 -151 C-14 -145 -22 -135 -26.6 -126 M8 -151 C18 -145 26 -135 30.6 -126') + wisp(w, -2, -153, -9, -145, -15, -134, 1.4) }),
+    mshape: fl('M字', [[-12, -149.4], [16, -149.4]], [[-28.4, -122.8], [2, -137.6], [32.4, -122.8]], 0.3, 0.14,
+      { deco: (s) => strands(s, 'M2 -166 V-151 M-9 -147 C-16 -141 -21 -134 -25 -126 M13 -147 C20 -141 25 -134 29 -126') }),
+    fluffy: fl('蓬鬆', [[-23, -150], [-11, -153], [1, -152], [13, -151], [24, -148]], [[-30.6, -129], [-17.4, -131.4], [-5.2, -126.4], [7.6, -127.8], [19, -126], [32.4, -128.4]], 0.35, 0.13,
+      { deco: (s, w) => strands(s, 'M-10 -151 C-9 -145 -7.6 -138 -6.4 -131 M7 -151 C8 -145 8.6 -138 8.4 -132') + wisp(w, -21, -150, -26, -144, -35, -141) + wisp(w, 22, -149, 26, -140, 26.4, -122.6, 1.5) }),
+    choppy: fl('碎束', [[-25, -148], [-16, -150.6], [-7, -149], [2, -151.6], [11, -149.6], [20, -151], [28, -147.6]], [[-30.4, -131], [-20.6, -136.8], [-11.6, -128.4], [-2.4, -136], [6.4, -127.4], [15.4, -134.8], [24.6, -129.2], [33, -134]], 0.12, 0.14,
+      { deco: (s) => strands(s, 'M-11 -148 C-11.4 -142 -11.6 -136 -11.6 -131 M6 -149 C6.4 -142 6.4 -136 6.4 -130') }),
+    curly: F('捲瀏海', ' C-33 -144 -24 -149 2 -149 C28 -149 37 -144 37 -138', {
+      x: (f) => [[-26, -141.4, 6.4, -1], [-12, -140.4, 7, 1], [3, -139.6, 7.2, -1], [17, -140.4, 7, 1], [30, -141.4, 6.4, -1]].map(([x, y, rr, s]) => curl(f, x, y, rr, s)).join(''),
+      deco: (s) => swirl(s, [[-26, -141.4, 6.4], [-12, -140.4, 7], [3, -139.6, 7.2], [17, -140.4, 7], [30, -141.4, 6.4]]) }),
+    none: F('露額', ' C-31.6 -146 -16 -152 2 -152 C20 -152 35.6 -146 37 -138', { deco: (s, w) => strands(s, 'M-22 -151 C-17 -159 -9 -164 0 -166 M-8 -155 C-4 -161 2 -164 9 -165 M24 -151 C19 -159 12 -163 5 -165') + wisp(w, -8, -155, -14, -148, -18.6, -140.6, 1.4) }),
+    longbangs: fl('長瀏海', [[-20, -149], [-3, -151.4], [9, -151.4], [24, -149]], [[-27.4, -118.6], [-11.6, -125.4], [2.4, -117.2], [16, -125.4], [31.4, -118.6]], 0.1, 0.13,
+      { deco: (s) => strands(s, 'M-22 -150 C-23.4 -142 -24.6 -134 -25.6 -125 M2.4 -152 C2.4 -144 2.4 -134 2.4 -124 M26 -150 C27.4 -142 28.6 -134 29.6 -125') }),
+    incurl: fl('圓瀏海', [[-12, -137.4], [16, -137.4]], [[-25.6, -129.8], [2, -128.4], [29.6, -129.8]], 0.05, 0.22,
+      { deco: (s) => strands(s, 'M-12 -148 C-12.6 -145 -12.6 -142 -12 -139.4 M16 -148 C16.6 -145 16.6 -142 16 -139.4', 0.36) }),
+    flip: fl('外翹', [[-16, -149.4], [2, -152], [20, -149.4]], [[-37.6, -129.8], [-6, -128], [10, -128], [41.6, -129.8]], 0.45, 0.14,
+      { deco: (s) => strands(s, 'M-13 -148 C-20 -144 -27 -139 -33 -133 M17 -148 C24 -144 31 -139 37 -133') }),
+    asym: fl('不對稱', [[-19, -148.6], [-4, -151], [11, -151], [25, -148]], [[-28.8, -121.4], [-12.6, -124.2], [3.6, -130.6], [17.6, -136.4], [31.6, -136.8]], 0.2, 0.14,
+      { deco: (s) => strands(s, 'M-12 -149 C-12.6 -142 -12.8 -135 -12.6 -128') }),
+    layered: fl('層次', [[-20, -150], [-6, -153], [9, -152.6], [24, -149]], [[-29.8, -135], [-14, -137.4], [1, -135], [16.4, -137.6], [31.8, -135.4]], 0.15, 0.15,
+      { b: (k) => [[-32, -19, -26.6, -127], [-19, -6, -13, -126], [-6, 9, 2, -124.6], [9, 22, 16.6, -126], [22, 36, 30.4, -127.2]].map(([x0, x1, tx, ty]) => leaf(k, x0, x1, -146, tx, ty)).join(''),
+        deco: (s) => strands(s, 'M-13 -151 C-13.4 -147 -13.6 -143 -13.8 -140 M2 -153 C1.8 -148 1.6 -142 1.2 -138') })
   };
-  const fringe = (f, kind) => FRINGE[kind].map(([x0, x1, ...c]) => clump(f, Math.max(x0, -31), Math.min(x1, 35), ...c)).join('');   // their tops kept inside the crown's outline
-  const HAIR = {
-    crop: {   // 短碎髮: an even fringe, short side locks
-      back: (f, k) => backShort(k, -102),
-      front: (f) => crown(f) + fringe(f, 'even') + both(lock(f, -110)),
-      deco: (s) => both(strands(s, 'M-26 -150 Q-24 -140 -24 -132 M-12 -152 Q-12 -142 -13 -130 M-36 -136 Q-37 -124 -34 -114')) + RING,
-      rear: (f) => NAPE(f, -100) + RING
-    },
-    neat: {   // 清爽短髮: the fringe swept to one side
-      back: (f, k) => backShort(k, -102),
-      front: (f) => crown(f) + fringe(f, 'swept') + both(lock(f, -108, 1)),
-      deco: (s) => strands(s, 'M-8 -153 C0 -150 8 -142 13 -130 M6 -154 C14 -150 20 -142 24 -132 M-22 -150 C-18 -146 -15 -140 -15 -132') + RING,
-      rear: (f) => NAPE(f, -100) + RING
-    },
-    curtain: {   // 中分: parted in the middle, falling to both sides
-      back: (f, k) => backShort(k, -100),
-      front: (f) => crown(f) + fringe(f, 'part') + both(lock(f, -106)),
-      deco: (s) => strands(s, 'M2 -170 V-154') + both(strands(s, 'M-4 -152 C-10 -148 -16 -140 -19 -133 M-30 -140 Q-34 -128 -33 -114')) + RING,
-      rear: (f) => NAPE(f, -100) + RING
-    },
-    ahoge: { tall: true,   // 呆毛短髮: a short cut with one tuft standing up
-      back: (f, k) => backShort(k, -102),
-      front: (f) => `<path ${f} d="M-1 -170 C-4 -184 6 -193 15 -188 C9 -187 5 -183 5 -172 Z"/>` + crown(f) + fringe(f, 'short') + both(lock(f, -110)),
-      deco: (s) => both(strands(s, 'M-26 -150 Q-24 -142 -24 -136 M-12 -152 Q-12 -144 -13 -134')) + RING,
-      rear: (f) => `<path ${f} d="M-1 -170 C-4 -184 6 -193 15 -188 C9 -187 5 -183 5 -172 Z"/>` + NAPE(f, -100) + RING
-    },
-    spiky: { tall: true,   // 刺蝟頭
-      back: (f, k) => both(`<path ${k} d="M2.6 -168 C-20 -168 -43 -158 -44.6 -134 L-48 -124 L-43 -118 L-45 -106 L-36 -102 L2.6 -102 Z"/>`),
-      front: (f) => both(`<path ${f} d="M2.6 -178 L-6 -163 L-16 -177 L-19 -160 L-33 -169 L-30 -153 L-45 -152 L-38 -141 L-46 -132 L-40 -124 C-36 -132 -30 -144 -20 -150 C-12 -154 -4 -155 2.6 -155 Z"/>`) + fringe(f, 'spiky') + both(lock(f, -112, -1)),
-      deco: (s) => both(strands(s, 'M-12 -160 L-9 -151 M-25 -156 L-20 -149')) + RING,
-      rear: (f) => `<path ${f} d="M-43 -128 L-48 -150 L-33 -149 L-33 -170 L-17 -160 L-7 -179 L4 -163 L15 -177 L20 -159 L36 -170 L35 -151 L51 -151 L47 -128 C47 -114 42 -104 34 -100 L28 -95 L24 -101 L16 -95 L10 -101 L2 -94 L-6 -101 L-12 -95 L-20 -101 L-24 -95 L-30 -100 C-38 -104 -43 -114 -43 -128 Z"/>`
-    },
-    slick: {   // 油頭: combed back, the forehead clear, the sides swept back over the ears
-      back: (f, k) => backShort(k, -102),
-      front: (f) => both(`<path ${f} d="M2.6 -175 C-18 -175 -39 -165 -43 -142 C-44 -132 -42.6 -120 -39.6 -112 C-38 -122 -36 -134 -30.6 -144 C-24 -151 -12 -154.4 2.6 -154.6 Z"/><path ${f} d="M-41 -140 C-42 -128 -40 -118 -35.6 -110 C-35.4 -118 -34 -128 -31 -136 Z"/>`),
-      deco: (s) => both(strands(s, 'M-24 -150 C-22 -160 -12 -168 0 -171 M-15 -153 C-12 -161 -4 -166 6 -167.6 M-34 -140 C-34 -152 -27 -161 -17 -165')) + '<path d="M-18 -166 C-10 -172 2 -174 12 -172" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="3.2" stroke-linecap="round"/>',
-      rear: (f, k, s) => NAPE(f, -100) + strands(s, 'M-28 -160 C-16 -152 -4 -150 2 -142 M32 -160 C20 -152 8 -150 2 -142 M-32 -140 C-20 -134 -8 -130 2 -118 M36 -140 C24 -134 12 -130 2 -118')
-    },
-    curly: { tall: true,   // 自然捲: short curls, curly side locks
-      back: (f, k) => both(blobs(k, [[-40, -124, 9], [-38, -110, 7.5], [-30, -150, 14]])),
-      front: (f) => both(blobs(f, [[-32, -142, 10], [-26, -157, 11.5], [-12, -166, 11.5], [2.6, -169, 10.5], [-37, -130, 7.5], [-35.6, -118, 6.6], [-31.6, -107.6, 5.4], [-20, -144, 7], [-9, -147, 7], [2.6, -147.6, 7]])),
-      deco: (s) => both(strands(s, 'M-29 -154 a5 5 0 0 1 8 -2 M-9 -162 a5 5 0 0 1 8 0 M-23 -143 a4 4 0 0 1 6 0 M-37 -130 a4 4 0 0 1 5 -3 M-36 -118 a3.4 3.4 0 0 1 4.6 -2')),
-      rear: (f, k, s) => blobs(f, [[2, -132, 32], [-31, -146, 12.5], [-21, -161, 13], [2, -168, 13], [25, -161, 13], [35, -146, 12.5], [-36, -126, 11], [40, -126, 11], [-30, -108, 10.5], [34, -108, 10.5], [2, -102, 13]]) + strands(s, 'M-22 -156 a5 5 0 0 1 8 -2 M10 -160 a5 5 0 0 1 8 2 M-12 -122 a5 5 0 0 1 8 0 M14 -114 a5 5 0 0 1 8 2')
-    },
-    afro: { tall: true,   // 爆炸頭: a big round cloud round the face
-      back: (f) => both(blobs(f, [[-36, -108, 12.5], [-43, -128, 14.5], [-40, -151, 15.5], [-27, -171, 15.5], [-9, -182, 15.5], [2.6, -184, 14.5]]) + `<ellipse cx="2.6" cy="-142" rx="42" ry="40" ${f}/>`),
-      front: (f) => both(blobs(f, [[-29, -152, 8.8], [-16.6, -157, 8.8], [-3, -159, 8.8], [-37, -138, 7.6], [-37.6, -124, 6.6]])),
-      deco: (s) => both(strands(s, 'M-35 -161 a5 5 0 0 1 8 -2 M-17 -175 a5 5 0 0 1 8 0 M-44 -138 a5 5 0 0 1 6 -4 M-40 -116 a5 5 0 0 1 6 -2 M-23 -157 a4 4 0 0 1 6 0')),
-      rear: (f, k, s) => blobs(f, [[2, -140, 45], [-37, -110, 12.5], [41, -110, 12.5], [-44, -134, 14.5], [48, -134, 14.5], [-37, -161, 15.5], [41, -161, 15.5], [-18, -179, 15.5], [22, -179, 15.5], [2, -185, 14.5]]) + strands(s, 'M-30 -162 a5 5 0 0 1 8 -2 M14 -172 a5 5 0 0 1 8 2 M-14 -130 a5 5 0 0 1 8 0 M20 -122 a5 5 0 0 1 8 2')
-    },
-    bob: {   // 鮑伯頭: chin length, a blunt fringe
-      back: (f, k) => both(`<path ${k} d="M2.6 -170 C-20 -170 -43 -160 -45.4 -134 C-46.6 -120 -46 -106 -43 -96 Q-38 -92.6 -31 -94 L2.6 -94 Z"/>`),
-      front: (f) => crown(f) + fringe(f, 'blunt') + both(`<path ${f} d="M-42.4 -144 C-44.6 -126 -44 -108 -40.6 -95.4 C-38 -93.4 -34.6 -93.6 -31.6 -95.6 C-33 -106 -32.6 -122 -29.6 -138 Z"/>`),
-      deco: (s) => both(strands(s, 'M-38 -136 Q-39 -116 -37 -98 M-26 -152 Q-24 -142 -24 -134 M-10 -153 Q-10 -142 -11 -133')) + RING,
-      rear: (f, k, s) => `<path ${f} d="M-45 -136 C-45 -162 -20 -171 2 -171 C24 -171 49 -162 49 -136 C49.6 -120 49 -104 46 -95 Q2 -88.6 -42 -95 C-45 -104 -45.6 -120 -45 -136 Z"/>` + strands(s, 'M-32 -128 Q-33 -112 -31 -97 M-16 -134 V-94 M2 -136 V-93 M20 -134 V-94 M36 -128 Q37 -112 35 -97') + RING
-    },
-    wolf: {   // 狼尾: choppy and layered, long at the nape
-      back: (f, k) => both(`<path ${k} d="M2.6 -168 C-20 -168 -43 -158 -45 -134 C-46 -118 -43 -102 -38 -90 L-34 -82 L-31 -92 L-27 -84 L-24 -96 L2.6 -98 Z"/>`),
-      front: (f) => crown(f) + fringe(f, 'spiky') + both(`<path ${f} d="M-42.4 -144 C-44.6 -130 -43.6 -116 -39 -104 L-37.4 -112 L-35 -102 L-33 -112 C-32.6 -122 -31 -132 -27.6 -140 Z"/>`),
-      deco: (s) => both(strands(s, 'M-37 -140 Q-37 -126 -37 -112 M-26 -152 Q-25 -142 -26 -133')) + RING,
-      rear: (f) => `<path ${f} d="M-44 -134 C-45 -161 -20 -171 2 -171 C24 -171 49 -161 48 -134 C48 -116 45 -100 41 -88 L36 -94 L34 -82 L28 -94 L22 -84 L16 -95 L10 -84 L4 -94 L-2 -84 L-8 -95 L-14 -84 L-20 -94 L-26 -82 L-30 -94 L-37 -88 C-41 -100 -44 -116 -44 -134 Z"/>` + RING
-    },
-    shoulder: {   // 及肩髮: shoulder length, side locks over the ears
-      back: (f, k) => both(`<path ${k} d="M2.6 -170 C-20 -170 -43 -160 -45.6 -136 C-47 -116 -46 -98 -42 -84 Q-36 -80 -28 -82 L-26 -98 L2.6 -98 Z"/>`),
-      front: (f) => crown(f) + fringe(f, 'part') + both(lock(f, -90, -1.6)),
-      deco: (s) => strands(s, 'M2 -170 V-154') + both(strands(s, 'M-37 -134 Q-38 -112 -34 -94 M-4 -152 C-10 -148 -16 -140 -19 -133')) + RING,
-      rear: (f, k, s) => LONG(f, -84) + strands(s, 'M-28 -130 Q-30 -110 -28 -92 M2 -134 V-88 M32 -130 Q34 -110 32 -92') + RING
-    },
-    long: {   // 長直髮: long, an even fringe, long side locks
-      back: (f, k) => both(`<path ${k} d="M2.6 -170 C-20 -170 -44 -160 -46 -136 C-48 -110 -47 -84 -44 -64 Q-34 -59 -22 -60 L2.6 -60 Z"/>`),
-      front: (f) => crown(f) + fringe(f, 'even') + both(lock(f, -84, -2)),
-      deco: (s) => both(strands(s, 'M-37 -132 Q-39 -110 -35 -90 M-26 -150 Q-24 -140 -24 -132')) + RING,
-      rear: (f, k, s) => LONG(f, -62) + strands(s, 'M-28 -130 Q-30 -100 -28 -68 M2 -134 V-64 M32 -130 Q34 -100 32 -68') + RING
-    },
-    wavy: {   // 長捲髮: long waves
-      back: (f, k) => both(`<path ${k} d="M2.6 -170 C-22 -170 -44 -160 -46 -136 C-50 -124 -43 -116 -48 -104 C-52 -92 -44 -84 -46 -74 C-47 -67 -41 -63 -34 -63 L2.6 -63 Z"/>`),
-      front: (f) => crown(f) + fringe(f, 'swept') + both(`<path ${f} d="M-42.4 -144 C-46 -132 -40 -124 -44 -112 C-47 -100 -40 -94 -40.6 -86 C-37 -84.6 -34 -85.6 -32.6 -88 C-36 -96 -32 -102 -33.6 -112 C-35 -122 -31 -130 -28 -140 Z"/>`),
-      deco: (s) => both(strands(s, 'M-38 -134 C-41 -124 -36 -118 -40 -108 C-43 -100 -38 -94 -37 -90')) + RING,
-      rear: (f, k, s) => `<path ${f} d="M-44 -136 C-44 -162 -20 -171 2 -171 C24 -171 48 -162 48 -136 C52 -124 46 -116 50 -104 C54 -92 46 -84 48 -74 C49 -67 43 -63 36 -63 L-32 -63 C-39 -63 -45 -67 -44 -74 C-42 -84 -50 -92 -46 -104 C-42 -116 -48 -124 -44 -136 Z"/>` + strands(s, 'M-24 -128 C-30 -116 -20 -104 -26 -92 C-30 -82 -24 -74 -26 -68 M2 -132 C-4 -118 8 -106 2 -94 C-2 -84 4 -76 2 -66 M28 -128 C34 -116 24 -104 30 -92 C34 -82 28 -74 30 -68') + RING
-    },
-    ponytail: { tall: true,   // 高馬尾: a high tail, a swept fringe
-      back: (f, k) => `<path ${f} d="M8 -174 C30 -186 53 -171 54 -146 C56 -124 49 -106 41 -95 C44 -112 44 -128 38 -142 C34 -152 23 -160 11 -161 Z"/>` + backShort(k, -102),
-      front: (f) => crown(f) + fringe(f, 'swept') + both(lock(f, -108, 1)),
-      deco: (s) => '<circle cx="10" cy="-170" r="3.6" fill="#d0574b"/>' + strands(s, 'M30 -170 C44 -164 50 -146 48 -122 M-8 -153 C0 -150 8 -142 13 -130') + RING,
-      rear: (f, k, s) => NAPE(f, -100) + `<path ${f} d="M-6 -164 C-14 -138 -12 -110 -4 -90 C0 -86 6 -86 8 -90 C16 -110 18 -138 10 -164 Z"/>` + strands(s, 'M-2 -150 C-6 -128 -4 -108 0 -94 M6 -150 C8 -128 6 -108 4 -94') + '<circle cx="2" cy="-164" r="4.4" fill="#d0574b"/>' + RING
-    },
-    twintails: {   // 雙馬尾: two tails tied high at the sides
-      back: (f, k) => both(`<path ${f} d="M-36 -152 C-53 -152 -60 -132 -58 -110 C-57 -96 -54 -88 -48 -80 C-46.6 -92 -45 -108 -44.6 -124 C-44 -136 -41.6 -144 -36 -152 Z"/>`) + backShort(k, -102),
-      front: (f) => crown(f) + fringe(f, 'even') + both(lock(f, -108)),
-      deco: (s) => both('<circle cx="-38" cy="-150" r="4" fill="#d0574b"/>' + strands(s, 'M-50 -136 Q-53 -116 -50 -94 M-26 -150 Q-24 -140 -24 -132')) + RING,
-      rear: (f, k, s) => NAPE(f, -100) + both(`<path ${f} d="M-36 -152 C-53 -152 -60 -132 -58 -110 C-57 -96 -54 -88 -48 -80 C-46.6 -92 -45 -108 -44.6 -124 C-44 -136 -41.6 -144 -36 -152 Z"/><circle cx="-38" cy="-150" r="4" fill="#d0574b"/>`) + strands(s, 'M2 -170 V-100')
-    },
-    bun: { tall: true,   // 丸子頭: a bun on top, a short fringe
-      back: (f, k) => `<circle cx="2.6" cy="-174" r="12" ${f}/>` + backShort(k, -102),
-      front: (f) => crown(f, -170) + fringe(f, 'short') + both(lock(f, -108)),
-      deco: (s) => strands(s, 'M-3.4 -176 a6 6 0 1 1 6 6') + '<path d="M-8.4 -164.6 Q2.6 -161 13.6 -164.6" fill="none" stroke="#d0574b" stroke-width="2.6" stroke-linecap="round"/>' + both(strands(s, 'M-26 -150 Q-24 -142 -24 -136')) + RING,
-      rear: (f, k, s) => `<circle cx="2" cy="-172" r="12" ${f}/>` + NAPE(f, -100) + '<path d="M-9 -162 Q2 -158.4 13 -162" fill="none" stroke="#d0574b" stroke-width="2.6" stroke-linecap="round"/>' + strands(s, 'M-4 -174 a6 6 0 1 1 6 6') + RING
-    }
+  // ===== 兩側 sides (the left one; both drawn). The crown already comes down to over the ear; a lock hangs from inside it, its
+  // outer edge carrying on from the crown's. ear: the ear shows; b: drawn behind the head (k)
+  const SIDES = {
+    short: { name: '短', d: (f) => both(P(f, 'M-44 -151 C-47.6 -141 -48.6 -124 -42.8 -108.4 C-41.6 -112.6 -39.8 -116.8 -37.8 -119.6 C-36.8 -116.4 -35.2 -113.8 -33 -112 C-32.2 -122 -31.2 -132 -29.4 -141 Z')), deco: (s) => both(strands(s, 'M-40 -134 C-40.6 -128 -39.8 -122 -38.4 -117')) },
+    chin: { name: '到下巴', d: (f) => both(P(f, 'M-44 -151 C-48 -140 -49.4 -116 -43.6 -95.6 C-42.4 -100 -40.6 -104.6 -38.4 -107.6 C-37.2 -103.6 -35.4 -100.6 -32.6 -98.6 C-31.6 -110 -31 -126 -29.4 -141 Z')), deco: (s) => both(strands(s, 'M-40.4 -134 C-41.2 -125 -40.4 -116 -38.8 -108')) },
+    long: { name: '長', d: (f) => both(P(f, 'M-44 -151 C-48.6 -138 -49.6 -100 -45.4 -66 C-43.8 -72 -42 -78 -40 -82.4 C-38.8 -78 -37 -74.6 -34.6 -72.6 C-33.6 -92 -32.2 -122 -29.4 -141 Z')), deco: (s) => both(strands(s, 'M-40.6 -132 C-41.8 -116 -41.4 -98 -40 -86') + shine('M-44.6 -122 C-45.4 -112 -45.2 -102 -44 -94 C-43.4 -102 -43.2 -112 -43.6 -122 Z', 0.22)) },
+    incurl: { name: '內彎', d: (f) => both(P(f, 'M-44 -151 C-48.6 -140 -49.4 -112 -44.6 -98 C-41.6 -91.4 -34.6 -90 -28.4 -94.4 C-32.8 -95.4 -35.4 -98.8 -36 -103.6 C-36.4 -116 -33.4 -131 -29.4 -141 Z')), deco: (s) => both(strands(s, 'M-41 -132 C-42.2 -123 -41.8 -112 -39.6 -103')) },
+    wave: { name: '波浪', d: (f) => both(P(f, 'M-44 -151 C-48 -144 -46 -128 -48 -118 C-51 -108 -45.4 -101 -47 -92 C-47.6 -88.6 -46.6 -85.6 -44.6 -83.6 C-42 -88 -38.6 -91 -37.4 -95.6 C-36 -102 -40.4 -109 -36.6 -117.6 C-33.4 -126 -32 -134 -29.4 -141 Z')), deco: (s) => both(strands(s, 'M-40.6 -132 C-43 -126 -40.4 -121 -42.4 -113 C-44.2 -105 -41 -99 -41.8 -93')) },
+    layered: { name: '層次', b: (k) => both(P(k, 'M-46.4 -140 C-49 -124 -48.4 -108 -44.4 -96 C-42.8 -100.4 -41 -103.4 -39 -105 C-38 -116 -36.8 -128 -33.4 -140 Z')), d: (f) => both(P(f, 'M-44 -151 C-47.6 -141 -47.6 -126 -43.4 -113.6 C-41.6 -117 -39.6 -119.6 -37.4 -121 C-36.4 -118 -34.6 -116 -32.4 -114.6 C-31.6 -124 -30.8 -133 -29.4 -141 Z')), deco: (s) => both(strands(s, 'M-40 -134 C-40.6 -129 -40.2 -125 -39.2 -121')) },
+    hime: { name: '公主切', d: (f) => both(P(f, 'M-44 -151 C-47 -142 -46.8 -118 -46.2 -102.6 L-30.8 -102.6 C-30.8 -118 -30.2 -132 -29.4 -141 Z')), deco: (s) => both(strands(s, 'M-41.6 -134 V-105 M-36 -134 V-105', 0.34)) },
+    wisps: { name: '觸角', ear: true, d: (f) => both(P(f, 'M-36.8 -134 C-37.4 -122 -36.2 -110 -33.8 -98 C-32.8 -103.6 -31.8 -110 -31 -116 C-30.6 -124 -30.6 -130 -31 -136 Z') + P(f, 'M-31.8 -138 C-31.6 -130 -31 -121 -29.2 -110.6 C-28.4 -115 -27.8 -120 -27.4 -125 C-27.2 -131 -27.6 -136 -28.8 -140 Z')), deco: () => '' },
+    flip: { name: '外翹', d: (f) => both(P(f, 'M-44 -151 C-47.8 -140 -47.4 -116 -44.6 -103.4 C-47.4 -101.4 -50.6 -100.6 -53.6 -101.4 C-50 -96.4 -43 -95 -38 -97.4 C-35.6 -98.8 -34 -101.6 -33.4 -104.6 C-32.4 -116 -31.4 -130 -29.4 -141 Z')), deco: (s) => both(strands(s, 'M-40.4 -134 C-41 -125 -40.6 -114 -39.4 -105')) },
+    curls: { name: '捲曲', d: (f) => both(P(f, 'M-44 -151 C-47.4 -144 -47.6 -133 -44.6 -125 C-41 -127 -37 -127.6 -33 -127 C-31.6 -132 -30.6 -137 -29.4 -141 Z') + curl(f, -39.6, -120, 6.2, -1) + curl(f, -41, -108, 6, 1) + curl(f, -39.4, -97, 5.6, -1)), deco: (s) => both(swirl(s, [[-39.6, -120, 6.2], [-41, -108, 6], [-39.4, -97, 5.6]])) },
+    braid: { name: '辮子', d: (f) => both(P(f, 'M-44 -151 C-47.6 -142 -47 -126 -42.4 -116.6 C-40 -119 -37 -120 -33.4 -119.6 C-32.2 -127 -31.2 -134 -29.4 -141 Z') + plait(f, -38, -114, 4) + P(f, 'M-40.4 -87 C-41.2 -83 -40.4 -79.6 -38.2 -76.6 C-35.8 -79.6 -34.8 -83 -35.6 -87 Z')), t: () => both(tie(-38, -88, 2.4)), deco: (s) => both(plaitLines(s, -38, -114, 4)) },
+    longlayer: { name: '長層次', d: (f) => both(P(f, 'M-44 -151 C-48.6 -138 -49.6 -100 -45.6 -70 C-43.8 -75 -41.8 -80 -39.6 -83.6 C-38.4 -80 -36.8 -77.4 -34.8 -76 C-34 -94 -33 -112 -32 -124 Z') + P(f, 'M-44 -151 C-47.6 -141 -47.8 -124 -43.6 -110.6 C-41.6 -114 -39.6 -116.6 -37.4 -118 C-36.4 -115 -34.8 -113 -32.6 -111.6 C-31.6 -122 -30.8 -132 -29.4 -141 Z')), deco: (s) => both(strands(s, 'M-43.6 -110.6 C-41.6 -114 -39.6 -116.6 -37.4 -118 C-36.4 -115 -34.8 -113 -32.6 -111.6', 0.5) + strands(s, 'M-41 -106 C-41.6 -99 -41.2 -92 -40 -87')) },
+    tucked: { name: '耳後', ear: true, b: (k) => both(P(k, 'M-46.4 -140 C-48.6 -122 -47.4 -104 -43.6 -94 C-42 -97 -40.4 -99.4 -38.4 -100.6 C-37.6 -110 -36.6 -124 -34 -140 Z')), d: () => '', deco: () => '' },
+    above: { name: '耳上短', ear: true, d: () => '', deco: () => '' },
+    sideburn: { name: '鬢角', ear: true, d: (f) => both(P(f, 'M-36.8 -136 C-37.4 -126 -36.2 -116 -33.4 -106.6 C-32.4 -111 -31.4 -116 -30.6 -121 C-30.4 -127 -30.6 -133 -31 -138 Z')), deco: () => '' }
   };
+  // the ear (only with the sides that leave it showing): small and round, at the side of the face by the eyes
+  const EAR = (skin) => both(`<path ${skin} d="M-31.4 -124.6 C-35.8 -126.4 -39.4 -122.6 -39 -117 C-38.6 -112 -35.6 -108.8 -31.6 -110.2 Z"/><path d="M-33 -121.4 C-35.8 -121.2 -36.4 -116.6 -34.6 -113.4" fill="none" stroke="#c98a6e" stroke-opacity=".6" stroke-width="1.2" stroke-linecap="round"/>`);
+  const EAR_REAR = (skin) => both(`<path ${skin} d="M-40.4 -124.6 C-45.4 -125.4 -47.6 -119 -46.4 -114 C-45.6 -110.8 -43 -110 -40.8 -111.2 Z"/>`);
+  // ===== 後面 back: behind the head facing us (the left half, k), and all of it from behind (r, f; rd: its strands), its hem in
+  // sharp tips
+  const hemTips = (y, x0, x1, n, dy = 6) => { const w = (x1 - x0) / n, ns = [], ts = []; for (let i = 0; i <= n; i++) ns.push([r(x1 - w * i), i === 0 || i === n ? y - 3 : y - dy]); for (let i = 0; i < n; i++) ts.push([r(x1 - w * i - w * 0.55), r(y + (i % 2 ? -1 : 1))]); return locks(ns, ts, 0.1, 0.16); };
+  const rear = (f, y, x = 46, n = 6) => P(f, `M-${r(x - 2)} -136 C-${r(x - 2)} -162 -22 -174.4 2 -174.4 C26 -174.4 ${r(x + 2)} -162 ${r(x + 2)} -136 C${r(x + 2.6)} -120 ${r(x + 2.4)} ${r(y + 18)} ${r(x + 0.4)} ${r(y - 3)}${hemTips(y, -(x - 3.6), x + 0.4, n)} C-${r(x - 1.6)} ${r(y + 18)} -${r(x - 1.4)} -120 -${r(x - 2)} -136 Z`);
+  const BACKS = {
+    short: { name: '短', b: (k) => both(P(k, 'M2 -174.4 C-30 -174.4 -46.4 -156 -46.4 -138 C-46.4 -128 -44 -120 -39 -116 L2 -116 Z')), r: (f) => rear(f, -101, 45, 6), rd: (s) => strands(s, 'M-20 -150 C-22 -132 -20 -116 -18 -106 M2 -156 V-106 M24 -150 C26 -132 24 -116 22 -106') },
+    bob: { name: '鮑伯', b: (k) => both(P(k, 'M2 -174.4 C-30 -174.4 -49 -150 -49 -126 C-49 -110 -48.4 -98 -45.6 -91.4 C-43.6 -94 -41.6 -95.4 -39.6 -96 C-38.4 -93 -36.4 -91.4 -34 -90.6 L2 -90.6 Z')), r: (f) => rear(f, -91, 47.4, 7), rd: (s) => strands(s, 'M-22 -150 C-25 -130 -23 -110 -21 -97 M2 -156 V-96 M26 -150 C29 -130 27 -110 25 -97') },
+    shoulder: { name: '及肩', b: (k) => both(P(k, 'M2 -174.4 C-30 -174.4 -49.6 -150 -49.6 -124 C-49.6 -104 -51 -90 -50 -79.6 C-47.8 -83 -45.4 -85 -43 -85.6 C-41.6 -82 -39 -79.6 -36 -78.6 L2 -78.6 Z')), r: (f) => rear(f, -79, 48.4, 7), rd: (s) => strands(s, 'M-24 -150 C-27 -126 -25 -102 -23 -86 M2 -156 V-85 M28 -150 C31 -126 29 -102 27 -86') },
+    long: { name: '長直', b: (k) => both(P(k, 'M2 -174.4 C-30 -174.4 -50 -150 -50 -122 C-50 -96 -51.4 -72 -50.4 -55.6 C-48.4 -59.6 -46 -62 -43.4 -62.8 C-42 -58.6 -39.4 -56 -36 -54.8 L2 -54.8 Z')), r: (f) => rear(f, -56, 49, 8), rd: (s) => strands(s, 'M-26 -150 C-29 -120 -28 -88 -26 -64 M2 -156 V-62 M30 -150 C33 -120 32 -88 30 -64') + shine('M-30 -118 C-31 -100 -30.4 -84 -29 -72 C-28.2 -84 -28.4 -100 -27.6 -118 Z', 0.18) },
+    wavy: { name: '長捲', b: (k) => both(P(k, 'M2 -174.4 C-30 -174.4 -50 -150 -50 -128 C-54 -116 -46 -106 -51 -94 C-55.6 -82 -47.4 -72 -50.4 -61 C-51 -58 -50.4 -55.4 -48.6 -53.6 C-46 -57.6 -42.4 -60 -39.4 -60.4 C-37.6 -57 -35 -55 -32 -54.6 L2 -54.6 Z')),
+      r: (f) => P(f, `M-44 -136 C-44 -162 -20 -174.4 2 -174.4 C24 -174.4 48 -162 48 -136 C52 -124 46 -116 50 -104 C54 -92 46 -84 48 -74 C49 -66 46 -62 41 -60${hemTips(-57, -36, 41, 7)} C-42 -60 -45 -66 -44 -74 C-42 -84 -50 -92 -46 -104 C-42 -116 -48 -124 -44 -136 Z`), rd: (s) => strands(s, 'M-24 -128 C-30 -116 -20 -104 -26 -92 C-30 -82 -24 -74 -26 -66 M2 -132 C-4 -118 8 -106 2 -94 C-2 -84 4 -76 2 -64 M28 -128 C34 -116 24 -104 30 -92 C34 -82 28 -74 30 -66') },
+    curly: { name: '蓬捲', b: (k) => both(P(k, 'M2 -176 C-30 -176 -48 -152 -48 -124 C-48 -106 -40 -92 -28 -88 L2 -88 Z') + [[-46, -146, 8, -1], [-51, -130, 8.4, 1], [-52, -114, 8.4, -1], [-49, -99, 8, 1], [-40, -90, 7.6, -1]].map(([x, y, rr, s]) => curl(k, x, y, rr, s)).join('')),
+      r: (f) => P(f, 'M-46 -136 C-46 -164 -22 -176 2 -176 C26 -176 50 -164 50 -136 C52 -116 46 -96 2 -90 C-42 -96 -48 -116 -46 -136 Z') + [[-44, -150, 8, -1], [-50, -132, 8.4, 1], [-50, -114, 8.4, -1], [-42, -100, 8, 1], [-26, -94, 8, -1], [-10, -92, 8, 1], [6, -92, 8, -1], [22, -93, 8, 1], [38, -98, 8, -1], [50, -112, 8.4, 1], [54, -130, 8.4, -1], [48, -148, 8, 1]].map(([x, y, rr, q]) => curl(f, x, y, rr, q)).join(''),
+      rd: (s) => swirl(s, [[-24, -150, 7], [6, -156, 7], [30, -146, 7], [-14, -122, 7], [18, -120, 7], [-42, -100, 7], [-10, -92, 7], [22, -93, 7], [50, -112, 7]]) }
+  };
+  // ===== 造型 on top or hanging from it, part of the hair's one shape facing us (f) and from behind (r); t, rt: the ties over it;
+  // d, rd: its strands. under: tucked under a hat (it sits on top of the head)
+  const TIE = '#d0574b';
+  const tie = (x, y, rr = 3.2) => `<circle cx="${x}" cy="${y}" r="${rr}" fill="${TIE}"/>`;
+  const band = (d) => `<path d="${d}" fill="none" stroke="${TIE}" stroke-width="2.6" stroke-linecap="round"/>`;
+  const bun = (f, x, y, rr) => `<circle cx="${x}" cy="${y}" r="${rr}" ${f}/>`;
+  // a tail from a rounded root at (x0, y0) hanging to a sharp end (tx, ty), w wide at its root, bowing out by o
+  const tail = (f, x0, y0, tx, ty, w, o = 0) => P(f, `M${r(x0 - w / 2)} ${y0} C${r(x0 - w / 2 + o - w * 0.3)} ${r(y0 + (ty - y0) * 0.35)} ${r(tx - w * 0.5 + o * 0.6)} ${r(ty - (ty - y0) * 0.3)} ${tx} ${ty} C${r(tx + w * 0.42 + o * 0.6)} ${r(ty - (ty - y0) * 0.34)} ${r(x0 + w / 2 + o + w * 0.2)} ${r(y0 + (ty - y0) * 0.35)} ${r(x0 + w / 2)} ${y0} Q${x0} ${r(y0 - w * 0.62)} ${r(x0 - w / 2)} ${y0} Z`);
+  // a plait: n crossed strands, each a lobe pointing down and to one side in turn, from (x, y0) down, drifting dx a strand;
+  // plaitLines: their edges again over the one shape, so the plait still reads
+  const lobe = (x, y0, i, dx) => { const cx = x + dx * i, y = y0 + i * 6.4, o = i % 2 ? 1 : -1; return `M${r(cx - 5 * o)} ${r(y - 3.6)} C${r(cx - 5.8 * o)} ${r(y + 1)} ${r(cx - 2 * o)} ${r(y + 4.6)} ${r(cx + 3.4 * o)} ${r(y + 5.6)} C${r(cx + 5.6 * o)} ${r(y + 2)} ${r(cx + 4 * o)} ${r(y - 2.6)} ${r(cx - 5 * o)} ${r(y - 3.6)} Z`; };
+  const tailLine = (s, ...a) => strands(s, tail('d=""', ...a).match(/ d="([^"]+)"/)[1], 0.8);
+  const plait = (f, x, y0, n, dx = 0) => Array.from({ length: n }, (_, i) => P(f, lobe(x, y0, i, dx))).join('');
+  const plaitLines = (s, x, y0, n, dx = 0) => strands(s, Array.from({ length: n }, (_, i) => lobe(x, y0, i, dx)).join(' '), 0.75);
+  const N = () => '';
+  const T = (name, o) => Object.assign({ name, f: N, t: N, d: N, r: N, rt: N, rd: N }, o);
+  const TOPS = {
+    none: T('無', {}),
+    ahoge: T('呆毛', { under: true, f: (f) => P(f, 'M-1.4 -173 C-4.6 -186 4.4 -196.6 16.6 -193.4 C8 -190.6 3.6 -184 4.4 -173.4 Z'), r: (f) => P(f, 'M-1.4 -173 C-4.6 -186 4.4 -196.6 16.6 -193.4 C8 -190.6 3.6 -184 4.4 -173.4 Z') }),
+    bun: T('丸子', { under: true, f: (f) => bun(f, 2, -183, 12.4), t: () => band('M-8.4 -172.4 Q2 -168.8 12.4 -172.4'), d: (s) => swirl(s, [[2, -184, 12]]), r: (f) => bun(f, 2, -181, 12.4), rt: () => band('M-9 -170 Q2 -166.4 13 -170'), rd: (s) => swirl(s, [[2, -182, 12]]) }),
+    twinbuns: T('雙丸子', { under: true, f: (f) => both(bun(f, -26, -168, 10.4)), t: () => both(tie(-20.6, -161.6, 2.6)), d: (s) => both(swirl(s, [[-26, -169, 10]])), r: (f) => both(bun(f, -26, -168, 10.4)), rt: () => both(tie(-20.6, -161.6, 2.6)) }),
+    lowbuns: T('低丸子', { f: (f) => both(bun(f, -40, -104, 8.4)), t: () => both(tie(-35, -107, 2.4)), d: (s) => both(swirl(s, [[-40, -104, 8]])), r: (f) => both(bun(f, -34, -102, 8.4)), rt: () => both(tie(-29, -105, 2.4)) }),
+    ponytail: T('高馬尾', { f: (f) => tail(f, 28, -170, 52, -96, 17, 16), t: () => tie(27, -170.6, 3.6), d: (s) => strands(s, 'M36 -160 C46 -148 50 -128 50 -104'), r: (f) => tail(f, 2, -168, 2.6, -92, 16, 0), rt: () => tie(2, -167, 4), rd: (s) => tailLine(s, 2, -168, 2.6, -92, 16, 0) + strands(s, 'M0 -156 C-2 -134 -1 -114 1 -100') }),
+    sidetail: T('側馬尾', { f: (f) => tail(f, 46, -158, 58, -104, 14, 9), t: () => tie(45.4, -158, 3.6), r: (f) => tail(f, -42, -158, -54, -104, 14, -9), rt: () => tie(-41.4, -158, 3.6) }),
+    sidelow: T('低側馬尾', { f: (f) => tail(f, -36, -108, -28, -72, 15, -8), t: () => tie(-35.4, -106, 3.4), d: (s) => strands(s, 'M-38 -100 C-40 -92 -38 -82 -31 -76'), r: (f) => tail(f, 22, -106, 32, -80, 14, 6), rt: () => tie(21, -104, 3.4) }),
+    twintails: T('雙馬尾', { f: (f) => both(tail(f, -41, -157, -54, -86, 15, -10)), t: () => both(tie(-40, -157, 3.6)), d: (s) => both(strands(s, 'M-46 -148 C-52 -134 -53 -114 -52 -96')), r: (f) => both(tail(f, -41, -157, -54, -86, 15, -10)), rt: () => both(tie(-40, -157, 3.6)) }),
+    lowtails: T('低雙馬尾', { f: (f) => both(P(f, 'M-40 -110 C-49 -106 -54 -96 -53.4 -84.6 C-50.6 -88 -48.4 -89.4 -46.4 -89.6 C-46 -86 -44.6 -83.6 -42.4 -82 C-41.4 -86 -39.6 -88.6 -37.6 -89.6 C-36.4 -86.6 -34.6 -84.6 -32.4 -83.6 C-32 -94 -34 -104 -34.4 -110 Z')), t: () => both(tie(-37.4, -109, 3.2)),
+      r: (f) => both(P(f, 'M-32 -108 C-42 -104 -48 -94 -47.6 -84.6 C-45 -88 -42.6 -89.4 -40.6 -89.6 C-40 -86 -38.6 -83.6 -36.4 -82 C-35.4 -86 -33.6 -88.6 -31.6 -89.6 C-30.4 -86.6 -28.6 -84.6 -26.4 -83.6 C-26 -94 -26 -104 -26.4 -108 Z')), rt: () => both(tie(-29.4, -107, 3.2)) }),
+    braids: T('雙辮子', { f: (f) => both(plait(f, -37, -102, 5) + P(f, 'M-39.4 -70 C-40.2 -66 -39.4 -62.6 -37.2 -59.6 C-34.8 -62.6 -33.8 -66 -34.6 -70 Z')), t: () => both(tie(-37, -71.4, 2.6)), d: (s) => both(plaitLines(s, -37, -102, 5)), r: (f) => both(plait(f, -22, -104, 3, -3.4)), rt: () => both(tie(-30, -86, 2.6)), rd: (s) => both(plaitLines(s, -22, -104, 3, -3.4)) }),
+    sidebraid: T('側辮', { f: (f) => plait(f, -35, -104, 6, 1) + P(f, 'M-32.4 -67 C-33.2 -63 -32.4 -59.6 -30.2 -56.6 C-27.8 -59.6 -26.8 -63 -27.6 -67 Z'), t: () => tie(-30, -68.6, 2.8), d: (s) => plaitLines(s, -35, -104, 6, 1), r: (f) => plait(f, 24, -104, 3, 3.4), rt: () => tie(32, -86, 2.6), rd: (s) => plaitLines(s, 24, -104, 3, 3.4) }),
+    lowtail: T('低馬尾', { r: (f) => tail(f, 2, -104, 2.4, -58, 13, 0), rt: () => tie(2, -104, 4), rd: (s) => tailLine(s, 2, -104, 2.4, -58, 13, 0) + strands(s, 'M1 -96 C0 -84 1 -72 2 -64') })
+  };
+  // a look's hair, layer by layer (hat: what sits on top of the head is tucked under it). back, front, rear: the shapes of a layer,
+  // drawn plain (f, k) — HERO.svg draws each twice, the outline under the fills; over, rearOver: the ties on top
+  function assemble(lk, hat) {
+    const fr = FRINGE[lk.fringe] || FRINGE.round, sd = SIDES[lk.sides] || SIDES.short, bk = BACKS[lk.hairBack] || BACKS.short, tp0 = TOPS[lk.hairTop] || TOPS.none, tp = hat && tp0.under ? TOPS.none : tp0;
+    return {
+      ear: (skin) => (sd.ear ? EAR(skin) : ''),
+      back: (f, k) => (sd.b ? sd.b(k || f) : '') + bk.b(k || f),
+      front: (f, k) => sd.d(f) + fr.b(k || f) + fr.u(f) + crown(f, fr.e) + fr.x(f) + tp.f(f),
+      over: () => (sd.t ? sd.t() : '') + tp.t(),
+      deco: (s, w) => fr.deco(s, w || s) + sd.deco(s) + tp.d(s) + RING,
+      rear: (f) => bk.r(f) + tp.r(f),
+      rearOver: (s, skin) => tp.rt() + bk.rd(s) + tp.rd(s) + (sd.ear && skin ? EAR_REAR(skin) : '') + RING
+    };
+  }
+  // the user's sheet of 48 hairstyles (in its order) as parts: [name, 瀏海, 兩側, 後面, 造型]; 隨機 rolls one of them, so its parts
+  // go together (the 整套 row that offered them was dropped before 1.2.1)
+  const STYLES = [
+    ['短髮', 'round', 'above', 'short', 'none'], ['刺蝟頭', 'spiky', 'above', 'short', 'none'], ['中分', 'center', 'chin', 'bob', 'none'], ['旁分呆毛', 'sidepart', 'above', 'short', 'ahoge'],
+    ['齊瀏海長髮', 'blunt', 'tucked', 'long', 'none'], ['斜瀏海長髮', 'swept', 'long', 'long', 'none'], ['呆毛長髮', 'fluffy', 'long', 'long', 'ahoge'], ['觸角長髮', 'swept', 'wisps', 'long', 'none'],
+    ['短鮑伯', 'round', 'incurl', 'bob', 'none'], ['空氣鮑伯', 'airy', 'chin', 'bob', 'none'], ['香菇頭', 'blunt', 'incurl', 'bob', 'ahoge'], ['大斜鮑伯', 'longswept', 'flip', 'bob', 'none'],
+    ['蓬鬆中長', 'fluffy', 'wave', 'shoulder', 'none'], ['斜瀏海波浪', 'swept', 'wave', 'wavy', 'none'], ['齊瀏海波浪', 'blunt', 'wave', 'wavy', 'none'], ['M字波浪', 'mshape', 'wave', 'wavy', 'none'],
+    ['斜分及肩', 'longswept', 'tucked', 'shoulder', 'none'], ['露額長髮', 'none', 'tucked', 'long', 'none'], ['妹妹頭', 'shortblunt', 'incurl', 'bob', 'none'], ['捲鮑伯', 'swept', 'wave', 'bob', 'none'],
+    ['旁分大波浪', 'sidepart', 'wave', 'wavy', 'none'], ['空氣長直', 'airy', 'long', 'long', 'none'], ['長捲髮', 'curly', 'curls', 'wavy', 'none'], ['爆炸頭', 'curly', 'curls', 'curly', 'none'],
+    ['丸子頭', 'none', 'above', 'short', 'bun'], ['雙丸子', 'blunt', 'above', 'short', 'twinbuns'], ['丸子長髮', 'shortblunt', 'tucked', 'long', 'twinbuns'], ['露額鮑伯', 'none', 'tucked', 'bob', 'none'],
+    ['側馬尾', 'airy', 'chin', 'short', 'sidetail'], ['低側馬尾', 'sidepart', 'tucked', 'short', 'sidelow'], ['低丸子', 'round', 'above', 'short', 'lowbuns'], ['高馬尾', 'airy', 'wisps', 'short', 'ponytail'],
+    ['旁分丸子', 'longswept', 'tucked', 'short', 'bun'], ['八字低丸子', 'curtain', 'tucked', 'short', 'lowbuns'], ['斜瀏海丸子', 'swept', 'above', 'short', 'bun'], ['八字丸子', 'curtain', 'wisps', 'short', 'bun'],
+    ['雙馬尾', 'blunt', 'above', 'short', 'twintails'], ['小雙丸子', 'shortblunt', 'above', 'short', 'twinbuns'], ['低雙馬尾', 'blunt', 'chin', 'short', 'lowtails'], ['斜瀏海低雙馬尾', 'swept', 'chin', 'short', 'lowtails'],
+    ['中分觸角', 'center', 'wisps', 'long', 'none'], ['公主切', 'blunt', 'hime', 'long', 'none'], ['空氣丸子', 'airy', 'wisps', 'short', 'bun'], ['斜瀏海丸子長髮', 'swept', 'long', 'long', 'bun'],
+    ['雙辮子', 'blunt', 'tucked', 'short', 'braids'], ['側辮', 'swept', 'tucked', 'short', 'sidebraid'], ['旁分雙辮', 'sidepart', 'chin', 'short', 'braids'], ['圓瀏海', 'incurl', 'incurl', 'shoulder', 'none']
+  ];
+  return { FRINGE, SIDES, BACKS, TOPS, STYLES, assemble };
+  })();
+  [['fringe', HAIRP.FRINGE], ['sides', HAIRP.SIDES], ['hairBack', HAIRP.BACKS], ['hairTop', HAIRP.TOPS]].forEach(([k, m]) => { OPTS[k] = Object.entries(m).map(([v, p]) => [v, p.name]); });
   // tops (F: the light, c: the hero's top colour, d: a shade of it): the torso from the front and from behind (over: drawn over a
   // body wear, the hood), the collar round the neck (in the head, under the chin), the sleeves (long, short, wide; cuff; paw hands)
   const ROBE = 'M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L37 -13 Q2 -7 -33 -13 Z';   // a long robe's body, from the shoulders to the ankles
@@ -8753,14 +8869,14 @@ const HERO = (() => {
         ear(1) + ear(-1) + `<path ${F(c, 4)} d="${headPath}"/><path d="M-14 -160 q16 6 32 0 M-18 -146 q20 6 40 0 M-16 -132 q18 6 36 0" fill="none" stroke="${d}" stroke-width="2.4" stroke-linecap="round"/>`];
     }
   };
-  // what is worn on the head comes in three kinds (1.2.0), and none of them ever cuts the hair:
-  // - on top (貓耳髮箍, 必勝頭巾; 眼鏡 on the face): drawn over any of the 16 hairstyles as they are, front and back
-  // - a hat (HAT_HAIR): drawn big enough to cover the plain crown, so every hairstyle with one keeps its own hair under it; a tall
-  //   one gives way, while the hat is on, to the hairstyle the hat comes with, in their own hair colour
+  // what is worn on the head comes in three kinds, and none of them ever cuts the hair:
+  // - on top (貓耳髮箍, 必勝頭巾; 眼鏡 on the face): drawn over any hair as it is, front and back
+  // - a hat (HATS): drawn big enough to cover the crown, so the fringe, the sides, the back and any tail stay as they are; what sits
+  //   on top of the head (呆毛, 丸子, 雙丸子) is tucked under it while it is on (1.2.1: hats no longer swap the whole hairstyle)
   // - a whole head (FULL): takes the place of the head, hair and face; nothing is worn on the face
-  const HAT_HAIR = { beanie: 'crop', strawhat: 'neat', beret: 'bob', gradcap: 'curtain', cathood: 'crop', witchhat: 'shoulder' };
+  const HATS = new Set(['beanie', 'strawhat', 'beret', 'gradcap', 'cathood', 'witchhat']);
   const HEAD_TOP = { witchhat: -232 };   // how high a thing on the head reaches, where it stands above a hat's usual -196
-  const hairWorn = (lk, wear) => { const h = wear && HAT_HAIR[wear.head]; return h && HAIR[lk.hair].tall ? h : lk.hair; };   // the hairstyle drawn
+  const tucked = (lk, id) => (HATS.has(id) && HAIRP.TOPS[lk.hairTop].under ? HAIRP.TOPS[lk.hairTop].name : '');   // what a hat tucks away
   // the things worn: [front, back] drawings by part, in the figure's own units; c and d are their top's colour and a shade of it
   const WEAR = {
     witchhat: (L, c, d) => {   // 魔法師帽 (Halloween): a wide brim, a tall crown bent over at the tip, a gold band, a star and a moon
@@ -8803,14 +8919,20 @@ const HERO = (() => {
     backpack: (L) => [`<path ${L('#e6a23c', 2.6)} d="M-27 -90 Q-34 -76 -30 -52 H-22 V-90 Z"/><path d="M-16 -94 Q-20 -76 -18 -62 M20 -94 Q22 -76 20 -62" fill="none" stroke="#b8792a" stroke-width="3.4" stroke-linecap="round"/>`, `<rect x="-20" y="-96" width="44" height="48" rx="10" ${L('#e6a23c', 2.6)}/><rect x="-12" y="-74" width="28" height="20" rx="5" ${L('#d48f2c', 2.4)}/><path d="M-10 -66 H14" stroke="#b8792a" stroke-width="1.6"/><path d="M-14 -96 Q2 -104 18 -96" fill="none" stroke="#b8792a" stroke-width="3"/>`],
   };
   const day = (h) => `fill="${h}"`;
+  const paint = (a) => (a.match(/fill[:=]"?([^";]+)/) || [])[1] || '#000';   // the colour a lit fill attribute paints
   let uid = 0;   // each drawing's own clip ids
   // the figure, both views: o.look, o.wear, o.L as above
   function svg(o = {}) {
     const lk = norm(o.look), L = o.L || day, wear = o.wear || {}, W = (slot, side) => { const id = wear[slot]; const f = id && WEAR[id]; return f ? f(L, lk.top, dk(lk.top, 0.84))[side] || '' : ''; };
     const cat = lk.topStyle === 'cattop' && lk.bottomStyle === 'catpants' && (wear.head === 'cathood' || wear.head === 'cathead');   // the whole cat suit
-    const n = ++uid, hairOf = HAIR[hairWorn(lk, wear)], hf = L(lk.hairColor, 4), hk = L(dk(lk.hairColor, 0.8), 3.8), hs = `stroke="${dk(lk.hairColor, 0.68)}"`;
+    // the hair (1.2.1): a gradient from the roots to the ends and a fine outline a shade darker, both lit as the room lights it.
+    // hair(): a layer's outline drawn under its fills, so the line goes round the whole of it and never where its parts meet
+    const n = ++uid, hairOf = HAIRP.assemble(lk, HATS.has(wear.head)), hc = lk.hairColor, C = (h) => paint(L(h, 4)), edge = C(dk(hc, 0.56));
+    const grad = (id, a, b, c) => `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="-180" x2="0" y2="-56"><stop offset="0" style="stop-color:${a}"/><stop offset=".42" style="stop-color:${b}"/><stop offset="1" style="stop-color:${c}"/></linearGradient>`;
+    const hw = `fill="url(#hg${n})"`, ol = `fill="none" style="stroke:${edge};stroke-width:2px;stroke-linejoin:round"`, hs = `style="stroke:${edge}"`;
+    const hair = (draw) => draw(ol, ol) + draw(hw, `fill="url(#hk${n})"`);
     const top = lk.top, topDk = dk(lk.top, 0.84), pants = lk.bottom, skin = lk.skin, tp = TOPS[lk.topStyle], bt = BOTTOMS[lk.bottomStyle], full = FULL[wear.head];
-    const defs = `<defs><clipPath id="fc${n}" clipPathUnits="userSpaceOnUse"><path d="${FACE[lk.face]}"/></clipPath></defs>`;
+    const defs = `<defs><clipPath id="fc${n}" clipPathUnits="userSpaceOnUse"><path d="${FACE[lk.face]}"/></clipPath>${grad(`hg${n}`, C(lt(hc, 0.26)), C(hc), C(dk(hc, 0.72)))}${grad(`hk${n}`, C(dk(hc, 0.86)), C(dk(hc, 0.78)), C(dk(hc, 0.64)))}</defs>`;
     const pd = dk(pants, 0.78), leg = (cls, x, side) => `<g class="leg ${cls}">${bt.leg(L, pants, x, skin)}${bt.foot ? bt.foot(L, pants, x, pd) : shoe(L, x, side)}</g>`;
     const legs = (side) => `<g class="legs">${leg('l', -15, side)}${leg('r', 5, side)}</g>${bt.over ? bt.over(L, pants, pd) : ''}`;   // a skirt hangs over both legs, not with them
     const arm = (cls, x) => {
@@ -8825,21 +8947,22 @@ const HERO = (() => {
       <g class="eyes">${EYES[lk.eyes](lk.eyeColor)}</g>${both(`<path d="${BROWS[lk.brows][0]}" fill="none" stroke="${dk(lk.hairColor, 0.8)}" stroke-width="${BROWS[lk.brows][1]}" stroke-linecap="round"/>`)}`;
     const fd = dk(top, 0.74), whole = full && full(L, top, fd), collar = tp.collar ? tp.collar(L, top, topDk) : '';   // a whole head: the hero's own, hair and face things give way
     const shade = `<g opacity=".13" transform="translate(0 2.4)" clip-path="url(#fc${n})">${hairOf.front('fill="#3a2016"')}</g>`;   // the fringe's shadow on the forehead
-    const front = `<g class="head">${whole ? '' : hairOf.back(hf, hk)}</g>${bt.tail ? `<g class="tail t0">${bt.tail(L, pants, pd, 0)}</g>` : ''}${W('back', 0)}${legs(0)}${tp.front(L, top, topDk)}${W('body', 0)}${W('neck', 0)}${arm('l', -27)}${arm('r', 31)}
-      <g class="head">${collar}${whole ? whole[0] : `${face}${shade}${hairOf.front(hf)}${hairOf.deco(hs)}${W('face', 0)}${W('head', 0)}`}</g>`;
+    const front = `<g class="head">${whole ? '' : hair(hairOf.back)}</g>${bt.tail ? `<g class="tail t0">${bt.tail(L, pants, pd, 0)}</g>` : ''}${W('back', 0)}${legs(0)}${tp.front(L, top, topDk)}${W('body', 0)}${W('neck', 0)}${arm('l', -27)}${arm('r', 31)}
+      <g class="head">${collar}${whole ? whole[0] : `${face}${shade}${hairOf.ear(L(skin, 3.6))}${hair(hairOf.front)}${hairOf.over()}${hairOf.deco(hs, hw)}${W('face', 0)}${W('head', 0)}`}</g>`;
     const back = `${legs(1)}${arm('l', -27)}${arm('r', 31)}${tp.back(L, top, topDk)}${W('body', 1)}${tp.over ? tp.over(L, top, topDk) : ''}${bt.tail ? `<g class="tail t1">${bt.tail(L, pants, pd, 1)}</g>` : ''}${W('neck', 1)}${W('back', 1)}
-      <g class="head">${whole ? whole[1] : `<ellipse cx="2" cy="-128" rx="34" ry="32" ${L(skin, 3.6)}/>${hairOf.rear(hf, hk, hs)}${W('face', 1)}${W('head', 1)}`}</g>`;
-    return `<svg viewBox="${o.box || '-60 -200 120 210'}"${o.box ? ' style="overflow:hidden"' : ''}${cat ? ' data-set="cat"' : ''} aria-hidden="true">${defs}<ellipse class="h-shadow" rx="24" ry="7" fill="#2b1c12" fill-opacity=".2"/><g class="fig"><g class="bob"><g class="f-front">${front}</g>${o.front ? '' : `<g class="f-back">${back}</g>`}</g></g></svg>`;   // front: the front view only
+      <g class="head">${whole ? whole[1] : `<ellipse cx="2" cy="-128" rx="34" ry="32" ${L(skin, 3.6)}/>${hair(hairOf.rear)}${hairOf.rearOver(hs, L(skin, 3.6))}${W('face', 1)}${W('head', 1)}`}</g>`;
+    return `<svg viewBox="${o.box || '-60 -200 120 210'}"${o.box ? ' style="overflow:hidden"' : ''}${cat ? ' data-set="cat"' : ''} aria-hidden="true">${defs}<ellipse class="h-shadow" rx="24" ry="7" fill="#2b1c12" fill-opacity=".2"/><g class="fig"><g class="bob">${o.back ? `<g class="f-back" style="display:inline">${back}</g>` : `<g class="f-front">${front}</g>${o.front ? '' : `<g class="f-back">${back}</g>`}`}</g></g></svg>`;   // front: the front view only; back: from behind only
   }
   // the head alone, in daylight, for the choices in the dressing room: 'head' frames the hair, 'face' the eyes, brows and mouth
-  const head = (look, crop) => svg({ look, front: true, box: crop === 'face' ? '-27 -138 58 52' : '-58 -198 120 120' });
+  // a choice drawn on them: the face, the head, the head and shoulders (sides that reach them), from behind (the back, 造型)
+  const head = (look, crop) => (crop === 'back' ? svg({ look, back: true, box: '-62 -200 128 150' }) : svg({ look, front: true, box: crop === 'face' ? '-27 -138 58 52' : crop === 'bust' ? '-62 -200 128 150' : '-58 -198 120 120' }));
   const isTop = (id) => TOPS[id] !== undefined;
   const clothes = (id, look) => svg({ look: Object.assign({}, look, isTop(id) ? { topStyle: id } : { bottomStyle: id }), front: true, box: isTop(id) ? '-46 -110 96 70' : '-44 -60 92 68' });
   // a thing worn, on its own (古道具屋, the wardrobe): drawn on a faint head and shoulders so it reads; a whole head on its own
   function thumb(id, look) {
     if (FULL[id]) { const lk = norm(look); return `<svg class="thumb" viewBox="-46 -186 96 100" aria-hidden="true">${FULL[id](day, lk.top, dk(lk.top, 0.74))[0]}</svg>`; }
     const f = WEAR[id]; if (!f) return '';
-    const hat = !!HAT_HAIR[id], lk = norm(look), t = Math.min(-203, (HEAD_TOP[id] || -196) - 7);   // a hat is drawn round a crown of hair: a bigger frame (taller for a tall hat), the faint head with its hair
+    const hat = HATS.has(id), lk = norm(look), t = Math.min(-203, (HEAD_TOP[id] || -196) - 7);   // a hat is drawn round a crown of hair: a bigger frame (taller for a tall hat), the faint head with its hair
     return `<svg class="thumb" viewBox="${hat ? `-68 ${t} 136 ${-45 - t}` : '-60 -185 120 140'}" aria-hidden="true"><g class="base" opacity=".28"><ellipse cx="2" cy="-128" rx="34" ry="32" fill="#c9bfae"/>${hat ? '<path d="M-44 -128 C-45 -160 -20 -172 2 -172 C24 -172 49 -160 48 -128 Q2 -150 -44 -128 Z" fill="#a3957d"/>' : ''}<path d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -50 H-26 Z" fill="#c9bfae"/></g><g>${f(day, lk.top, dk(lk.top, 0.84))[0]}</g></svg>`;
   }
   // idling (1.2.0): standing still they now and then look round, stretch, wave (facing us), sway or bounce — one at a time,
@@ -8880,8 +9003,8 @@ const HERO = (() => {
     el._nya = ((el._nya || 0) + 1) % NYA.length; b.textContent = NYA[el._nya];
     el.appendChild(b); setTimeout(() => b.remove(), 1400);
   }
-  return { svg, head, thumb, clothes, idle, still, react, norm, OPTS, LOOK0, slots: Object.keys(WEAR).concat(Object.keys(FULL)),
-    hairWorn: (look, wear) => hairWorn(norm(look), wear), whole: (id) => !!FULL[id], headTop: (id) => (!id ? -184 : HEAD_TOP[id] || -196) };
+  return { svg, head, thumb, clothes, idle, still, react, norm, OPTS, LOOK0, STYLES: HAIRP.STYLES, slots: Object.keys(WEAR).concat(Object.keys(FULL)),
+    tucked: (look, id) => tucked(norm(look), id), whole: (id) => !!FULL[id], headTop: (id) => (!id ? -184 : HEAD_TOP[id] || -196) };
 })();
 
 // ---------- 古道具屋 (1.2.0): the old shop up the hill, kept by 福爺 the owl, who takes 言靈 and nothing else ----------
@@ -8949,11 +9072,10 @@ function saleHtml(day, live, grid) {   // 限時: the sales on now with their wa
   }).join('');
 }
 const styleKey = (it) => (it.slot === 'top' ? 'topStyle' : 'bottomStyle'), styleOn = (it) => HERO.norm(state.look)[styleKey(it)] === it.id;
-const hairName = (v) => (HERO.OPTS.hair.find(([x]) => x === v) || [, ''])[1];
-// a hat that cannot sit on their hairstyle (a tall one) and brings its own while it is on: what they will see
+// a hat over what sits on top of their head (呆毛, 丸子, 雙丸子): it is tucked away while the hat is on (1.2.1)
 function hatSwapNote(id, look) {
-  const lk = HERO.norm(look), worn = HERO.hairWorn(lk, { head: id });
-  return worn === lk.hair ? '' : `蓋不住${hairName(lk.hair)}，戴著時換成${hairName(worn)}。`;
+  const t = HERO.tucked(look, id);
+  return t ? `戴著時${t}會收進帽子裡。` : '';
 }
 function shopCardHtml(it, bal) {
   const owned = owns(it.id), short = it.price - bal, swap = it.kind === 'wear' ? hatSwapNote(it.id, state.look) : '';
@@ -9011,6 +9133,7 @@ const DRESS = (() => {
   const opts = (key, crop) => `<div class="dress-opts">${HERO.OPTS[key].map(([v, name]) => `<button type="button" class="dress-opt" data-act="dress-pick" data-key="${key}" data-val="${v}" aria-pressed="${d.look[key] === v}">${HERO.head(Object.assign({}, d.look, { [key]: v }), crop)}<span>${name}</span></button>`).join('')}</div>`;
   const sws = (key) => `<div class="dress-sws">${HERO.OPTS[key].map(([v, name]) => `<button type="button" class="dress-sw" data-act="dress-pick" data-key="${key}" data-val="${v}" style="--c:${v}" aria-pressed="${d.look[key] === v}" aria-label="${name}" title="${name}"></button>`).join('')}</div>`;
   const sec = (title, inner) => `<section class="dress-sec"><h3>${title}</h3>${inner}</section>`;
+  const HAIR4 = ['fringe', 'sides', 'hairBack', 'hairTop'];
   // what the copy does not show because of what is on the head: a whole head hides the face and hair (the face's tabs); a hat that
   // cannot sit on their hairstyle wears its own (髮型, 穿戴)
   function note() {
@@ -9025,7 +9148,7 @@ const DRESS = (() => {
   function body() { return note() + parts(); }
   function parts() {
     if (d.tab === 'face') return sec('臉型', opts('face', 'head')) + sec('膚色', sws('skin')) + sec('臉頰', opts('cheeks', 'face'));
-    if (d.tab === 'hair') return sec('髮型', opts('hair', 'head')) + sec('髮色', sws('hairColor'));
+    if (d.tab === 'hair') return sec('瀏海', opts('fringe', 'head')) + sec('兩側', opts('sides', 'bust')) + sec('後面', opts('hairBack', 'back')) + sec('造型', opts('hairTop', 'back')) + sec('髮色', sws('hairColor'));   // 1.2.1: hair in parts
     if (d.tab === 'features') return sec('眼睛', opts('eyes', 'face')) + sec('眼睛顏色', sws('eyeColor')) + sec('眉毛', opts('brows', 'face')) + sec('嘴巴', opts('mouth', 'face'));
     if (d.tab === 'beard') return sec('鬍子', opts('beard', 'face'));
     if (d.tab === 'clothes') {
@@ -9080,10 +9203,11 @@ const DRESS = (() => {
     d.look[key] = val; redraw(true);
   }
   function wear(id) { const it = WARE.get(id); if (!box() || !it || it.kind !== 'wear' || !owns(id)) return; d.wear[it.slot] = d.wear[it.slot] === id ? null : id; redraw(true); reframe(); }
-  function random() {   // a whole new face and hair (most rolls without a beard); clothes and what they wear stay
+  function random() {   // a whole new face and hair — one of the whole hairstyles, so the parts go together (most rolls without a beard); clothes and what they wear stay
     if (!box()) return;
     const any = (k) => { const o = HERO.OPTS[k]; return o[Math.floor(Math.random() * o.length)][0]; };
-    ['face', 'skin', 'cheeks', 'hair', 'hairColor', 'eyes', 'eyeColor', 'brows', 'mouth'].forEach((k) => { d.look[k] = any(k); });
+    ['face', 'skin', 'cheeks', 'hairColor', 'eyes', 'eyeColor', 'brows', 'mouth'].forEach((k) => { d.look[k] = any(k); });
+    const st = HERO.STYLES[Math.floor(Math.random() * HERO.STYLES.length)]; HAIR4.forEach((k, j) => { d.look[k] = st[j + 1]; });
     d.look.beard = Math.random() < 0.65 ? 'none' : any('beard');
     redraw(true);
   }
@@ -9175,6 +9299,7 @@ Object.assign(ACTIONS, {
 function sceneGo(hash, cls) {
   const box = document.querySelector('#view .yard, #view .study');
   if (!box || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { go(hash); return; }
+  if (box.classList.contains('yard')) box.style.setProperty('--ycx', `${(-ycam.x).toFixed(1)}px`);   // the door where the camera has it
   box.classList.add(cls); setTimeout(() => go(hash), 380);
 }
 // the dive: the notebook flares, its light spreads over the screen, and the questions come up as it fades. A brand-new learner
