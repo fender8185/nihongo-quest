@@ -429,7 +429,7 @@ def test_a_hat_tucks_away_what_sits_on_top_and_old_looks_become_parts(b):
     assert r['tucks'] == {h: ['ahoge', 'bun', 'twinbuns'] for h in ['beanie', 'strawhat', 'beret', 'gradcap', 'cathood', 'witchhat']}, r   # a hat over what sits on top
     assert r['bun'] == [True, False, True] and r['tail'], r   # tucked under a beanie, not under 貓耳髮箍; a high tail stays
     assert r['old'] == ['short', 'short', 'short', 'bun'] and r['wavy'] == ['sidepart', 'wave', 'wavy'], r   # the old 丸子頭, 長捲髮
-    assert r['odd'] == ['round', 'long', '#f3d1b5', 'big'] and r['fixed'] == {} and r['counts'] == [21, 16, 7, 13], r
+    assert r['odd'] == ['round', 'long', '#f3d1b5', 'big'] and r['fixed'] == {} and r['counts'] == [20, 16, 7, 13], r
 
 def test_a_hat_that_tucks_away_what_sits_on_top_says_so_in_the_shop_and_the_dressing_room(b):
     js = "(async () => { " + FRESH + """ state.koto.gift = 120; ['beanie', 'catears', 'cathead'].forEach(id => buyWare(WARE.get(id))); state.look = Object.assign({}, state.look, { hairTop: 'bun' }); saveState();
@@ -466,7 +466,7 @@ def test_the_cat_hood_makes_a_cat_suit_that_beckons_and_says_nya(b):
       const idles = [cat, person].map(el => [...el.classList].find(c => c.startsWith('idle-')) || null);
       return JSON.stringify({ sets, fur, tails, card, said, quiet, idles }); })()"""
     r = json.loads(ev(b, js))
-    assert r['sets'] == {'hood': True, 'head': True, 'noPants': False, 'ears': False} and r['fur'] and r['tails'] == 2 and r['card'], r
+    assert r['sets'] == {'hood': True, 'head': True, 'noPants': False, 'ears': False} and r['fur'] and r['tails'] == 4 and r['card'], r   # a tail in each of the four views (straight and turned, facing us and from behind)
     assert r['said'] in ('にゃ', 'にゃーん', 'にゃ？', 'にゃっ') and r['quiet'], r
     assert r['idles'] == ['idle-maneki', 'idle-sway'], r   # the same roll: the cat's third idle, a person's fourth
 
@@ -667,7 +667,7 @@ def test_ears_show_only_with_the_sides_that_leave_them_free_and_the_new_choices(
       return JSON.stringify({ ears: [ear(), ear('short'), ear('tucked'), ear('long')], eyes: o.eyes.map(e => e[1]), mouth: o.mouth.length, cheeks: o.cheeks.map(c => c[1]), hair: o.fringe.length, face: o.face.map(f => f[0]),
         drawn: [/<linearGradient id="hg\d+"/.test(svg), /stroke-width:2px/.test(svg), /<path style="fill:#[0-9a-f]{6};stroke:#[0-9a-f]{6};stroke-width:1.6px/.test(svg), svg.includes('fill-opacity=".2"')], old: HERO.norm({ eyes: 'round', face: 'square', hair: 'tucked' }) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['ears'] == [True, False, True, False] and r['eyes'] == ['水汪汪', 'Q版眼', '普通', '吊眼', '垂眼', '笑眼', '大眼', '睏眼'] and r['mouth'] == 6 and r['hair'] == 21, r
+    assert r['ears'] == [True, False, True, False] and r['eyes'] == ['水汪汪', 'Q版眼', '普通', '吊眼', '垂眼', '笑眼', '大眼', '睏眼'] and r['mouth'] == 6 and r['hair'] == 20, r
     assert r['cheeks'] == ['腮紅', '柔腮紅', '害羞', '雀斑', '無'] and r['face'] == ['mochi', 'round', 'chubby', 'oval', 'pointed'] and r['drawn'] == [False, False, True, True], r
     assert [r['old'][k] for k in ('eyes', 'face', 'fringe')] == ['normal', 'mochi', 'round'], r   # a look saved before falls back where its choice is gone
 

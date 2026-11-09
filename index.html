@@ -510,7 +510,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.study, .yard) .hero svg { width: 100%; height: 100%; display: block; overflow: visible; }
 :is(.study, .yard) .hero .fig { pointer-events: auto; cursor: pointer; transform-box: view-box; transform-origin: 0 0; }
 :is(.study, .yard) .hero.flip .fig { transform: scaleX(-1); }
-:is(.study, .yard) .hero .f-back { display: none; } :is(.study, .yard) .hero.back .f-front { display: none; } :is(.study, .yard) .hero.back .f-back { display: inline; }
+:is(.study, .yard) .hero :is(.f-back, .f-front3, .f-back3) { display: none; } :is(.study, .yard) .hero:is(.back, .turn) .f-front { display: none; }   /* four views: facing us or from behind, straight or a little turned (.turn; .flip mirrors it) */
+:is(.study, .yard) .hero.turn:not(.back) .f-front3, :is(.study, .yard) .hero.back:not(.turn) .f-back, :is(.study, .yard) .hero.back.turn .f-back3 { display: inline; }
 :is(.study, .yard) .hero :is(.bob, .leg, .arm, .head, .eyes) { transform-box: view-box; }
 :is(.study, .yard) .hero .bob { animation: heroBreathe 3.2s ease-in-out infinite; }
 :is(.study, .yard) .hero .eyes { transform-origin: 2px -117px; animation: heroBlink 4.6s infinite; }
@@ -531,7 +532,6 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.study, .yard) .hero.cheer :is(.arm.l, .arm.r) { animation-duration: .9s; } :is(.study, .yard) .hero.cheer:not(.sit) .bob { animation: heroHop .5s cubic-bezier(.3, .7, .4, 1) .15s; }
 :is(.study, .yard) .hero:is(.idle-wave, .wave) .arm.r { animation: heroWave 1.5s ease-in-out; } :is(.study, .yard) .hero.wave .arm.r { animation-duration: 1.2s; }
 :is(.study, .yard) .hero.idle-sway .bob { animation: heroSway 2.2s ease-in-out; } :is(.study, .yard) .hero.idle-bounce .bob { animation: heroBounce .9s ease-in-out; }
-:is(.study, .yard) .hero.spin:not(.sit) .bob { animation: heroSpin .7s ease-in-out; }
 :is(.study, .yard) .hero .tail { transform-box: view-box; animation: heroTail 2.8s ease-in-out infinite; } :is(.study, .yard) .hero .tail.t0 { transform-origin: 18px -31px; } :is(.study, .yard) .hero .tail.t1 { transform-origin: 2px -30px; }
 :is(.study, .yard) .hero.idle-maneki .arm.r { animation: heroManeki 1.8s ease-in-out; } :is(.study, .yard) .hero.idle-maneki .head { animation: heroTilt 1.8s ease-in-out; }
 :is(.study, .yard) .hero .nya { position: absolute; left: 60%; top: -4%; padding: 1px 8px 2px; border-radius: 10px; font-style: normal; font-weight: 700; font-size: 13px; line-height: 1.5; white-space: nowrap; color: #3b3428; background: #fffdf6; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); pointer-events: none; animation: heroNya 1.4s ease-out forwards; }
@@ -549,7 +549,6 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 @keyframes heroWave { 15%, 45%, 75% { transform: rotate(-80deg); } 30%, 60% { transform: rotate(-58deg); } }
 @keyframes heroSway { 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
 @keyframes heroBounce { 25%, 75% { transform: translateY(-6px); } 50% { transform: none; } }
-@keyframes heroSpin { 25% { transform: scaleX(.15); } 50% { transform: scaleX(-1); } 75% { transform: scaleX(-.15); } }
 @keyframes heroTail { 50% { transform: rotate(8deg); } }
 @keyframes heroManeki { 15%, 45%, 75% { transform: rotate(-76deg); } 30%, 60% { transform: rotate(-54deg); } }
 @keyframes heroTilt { 20%, 80% { transform: rotate(5deg); } }
@@ -6315,7 +6314,7 @@ function yardUse(yard, id) {
   const side = yh.X <= o.p.x ? -1 : 1, gx = o.p.x + side * (o.it.ground[0] * yScale(o.p.y) / 2 + 16);
   yHeroWalk(yard, [gx, Math.max(12, o.p.y - 4)], () => {
     const el = yard.querySelector('.yhero'); if (!el) return;
-    yh.flip = side > 0; yh.back = false; yHeroPlace(yard);
+    yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard);   // turned to it
     if (id === 'telescope' && sceneClock(lightHour()).day < 0.5) { el.classList.add('look'); setTimeout(() => el.classList.remove('look'), 3000); }
   });
 }
@@ -6454,7 +6453,7 @@ const HOUSE_ART = {
 const houseArt = () => HOUSE_ART[state.house && owns(state.house) && HOUSE_ART[state.house] ? state.house : 'cottage'];
 // the hero out in the yard (1.2.0): the same drawing, smaller the further up the lawn (X: px from the middle, Y: px up from the
 // bottom, the ground running from the bottom to the house at 218px). Walks where you tap, to the mailbox, the house and the path.
-const yh = { X: 0, Y: 186, back: false, flip: false, raf: 0, fromDoor: false, climb: null, s: 0 };   // climb, s: on the way up to 古道具屋, and his scale there
+const yh = { X: 0, Y: 186, back: false, flip: false, turn: false, raf: 0, fromDoor: false, climb: null, s: 0 };   // climb, s: on the way up to 古道具屋, and his scale there
 try { const h = JSON.parse(localStorage.getItem('nq_hero') || 'null'); if (h && h.yard && Number.isFinite(h.yard.X) && Number.isFinite(h.yard.Y)) Object.assign(yh, { X: h.yard.X, Y: h.yard.Y }); } catch (e) { /* first time out */ }
 function yHeroSave() { try { const h = JSON.parse(localStorage.getItem('nq_hero') || '{}') || {}; h.yard = { X: Math.round(yh.X), Y: Math.round(yh.Y) }; localStorage.setItem('nq_hero', JSON.stringify(h)); } catch (e) { /* no storage */ } }
 const yScale = (Y) => 0.19 + 0.31 * Math.max(0, Math.min(1, (212 - Y) / 198));
@@ -6468,7 +6467,7 @@ function yHeroHold(yard) {   // the dressing room opens: the hero stops where th
 function yHeroPlace(yard) {
   const el = yard.querySelector('.yhero'); if (!el) return;
   el.style.transform = `translate(${yh.X.toFixed(1)}px,${(-yh.Y).toFixed(1)}px) scale(${(yh.s || yScale(yh.Y)).toFixed(3)})`;
-  el.classList.toggle('back', yh.back); el.classList.toggle('flip', yh.flip); el.style.zIndex = yh.climb === 'hill' ? '' : String(300 - Math.round(yh.Y));
+  el.classList.toggle('back', yh.back); el.classList.toggle('turn', yh.turn); el.classList.toggle('flip', yh.flip); el.style.zIndex = yh.climb === 'hill' ? '' : String(300 - Math.round(yh.Y));
   if (el.matches('.walk, .run')) yFollow(yard);   // on the move: the camera goes along
 }
 // up the hill path: outlined about a pixel on the screen however small he gets (s: his scale; none: off the path). Set on his
@@ -6486,7 +6485,7 @@ function yHeroWalk(yard, to, done) {
   const from = [yh.X, yh.Y], goal = [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(214, to[1]))], dx = goal[0] - from[0], dy = goal[1] - from[1], len = Math.hypot(dx, dy);
   if (!el || len < 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { yh.X = goal[0]; yh.Y = goal[1]; if (el) yHeroPlace(yard); yHeroSave(); if (done) done(); return; }
   const v = Math.max(170, len / 1.1);   // px a second: a long way hurries, about a second at most
-  yh.back = dy > 0; if (Math.abs(dx) > 1) yh.flip = dx < 0;
+  yh.back = dy > 0; if (Math.abs(dx) > 1) yh.flip = dx < 0; yh.turn = Math.abs(dx) > 0.5 * Math.abs(dy);   // across the lawn: a little turned
   el.classList.remove('out'); el.classList.toggle('run', v > 260); el.classList.toggle('walk', v <= 260);
   const t0 = performance.now();
   const step = (now) => {
@@ -6517,7 +6516,7 @@ function yClimb(el) {
       if (!yard.isConnected || yh.climb !== 'hill') return;
       const d = Math.min(len, (now - t0) / 1000 * v), q = seg.find((x) => d <= x[2] + x[3]) || seg[seg.length - 1], t = (d - q[2]) / q[3];
       const dx = q[1][0] - q[0][0], dy = q[1][1] - q[0][1];
-      yh.X = q[0][0] + dx * t; yh.Y = q[0][1] + dy * t; yh.back = dy > 0; if (Math.abs(dx) > 0.5) yh.flip = dx < 0;
+      yh.X = q[0][0] + dx * t; yh.Y = q[0][1] + dy * t; yh.back = dy > 0; if (Math.abs(dx) > 0.5) yh.flip = dx < 0; yh.turn = Math.abs(dx) > 0.5 * Math.abs(dy);
       yh.s = s0 + (s1 - s0) * d / len; yClimbLook(h, yh.s); yHeroPlace(yard);
       if (d < len) { yh.raf = requestAnimationFrame(step); return; }
       h.classList.add('out'); keep(); setTimeout(() => go('#/shop'), 280);   // in at the door
@@ -6541,7 +6540,7 @@ function yUse(el, to, fn) {
   yNamed(el);
   const yard = el.closest('.yard');
   if (!yard || !yard.querySelector('.yhero')) { fn(); return; }
-  yHeroWalk(yard, to, () => { yh.back = true; yHeroPlace(yard); setTimeout(fn, 120); });
+  yHeroWalk(yard, to, () => { yh.back = true; yh.turn = false; yHeroPlace(yard); setTimeout(fn, 120); });
 }
 // the Halloween witch (1.2.2): far off in the yard's night sky, about 20 px across, over and back while Halloween is on by
 // the server's day (SALES.halloween, as the limited sale; the test site's 限時預覽 too) until she is caught — by night only (the
@@ -7800,12 +7799,12 @@ const ROOM = (() => {
   // crouches at the drawer… Whatever stands in front of it is copied onto a layer over it (heroFront). Where it stands is this
   // device's own (localStorage nq_hero). =====
   let shown = [];   // the standing things as last drawn (id, footprint, art)
-  const hero = { x: 4.2, y: 4.7, back: false, flip: false, pose: '', raf: 0, t: 0, walk: null, lead: null, going: null, frontKey: '' };
+  const hero = { x: 4.2, y: 4.7, back: false, flip: false, turn: false, pose: '', raf: 0, t: 0, walk: null, lead: null, going: null, frontKey: '' };
   // where the hero stands in each room (1.3.0): the one shown is `hero`, the other waits here; saved as nq_hero's room (書房, as
   // before) and bed
   const HKEY = { study: 'room', bed: 'bed' }, heroPos = {};
-  const heroOf = () => ({ x: hero.x, y: hero.y, back: hero.back, flip: hero.flip, pose: hero.pose });
-  try { const h = JSON.parse(localStorage.getItem('nq_hero') || 'null') || {}; Object.keys(HKEY).forEach((rm) => { const q = h[HKEY[rm]]; if (q && Number.isFinite(q.x) && Number.isFinite(q.y)) heroPos[rm] = { x: q.x, y: q.y, back: !!q.back, flip: !!q.flip, pose: q.pose === 'sit' && rm === 'study' ? 'sit' : '' }; }); } catch (e) { /* first time here */ }
+  const heroOf = () => ({ x: hero.x, y: hero.y, back: hero.back, flip: hero.flip, turn: hero.turn, pose: hero.pose });
+  try { const h = JSON.parse(localStorage.getItem('nq_hero') || 'null') || {}; Object.keys(HKEY).forEach((rm) => { const q = h[HKEY[rm]]; if (q && Number.isFinite(q.x) && Number.isFinite(q.y)) heroPos[rm] = { x: q.x, y: q.y, back: !!q.back, flip: !!q.flip, turn: !!q.turn, pose: q.pose === 'sit' && rm === 'study' ? 'sit' : '' }; }); } catch (e) { /* first time here */ }
   function heroSave() {
     try {
       if (ROOMID) heroPos[ROOMID] = heroOf();
@@ -7817,13 +7816,13 @@ const ROOM = (() => {
   const heroArt = () => HERO.svg({ L: (h, z) => `style="fill:${tone(h, 'y', [hero.x, hero.y + 0.3, z || 1], HERO_AMB)}"`, wear: state.wear, look: state.look });
   function heroHtml() {
     const [px, py] = P(hero.x, hero.y, 0);
-    return `<div class="hero${hero.back ? ' back' : ''}${hero.flip ? ' flip' : ''}${hero.pose ? ' ' + hero.pose : ''}" style="${vbPct(px - 60, py - 200)};${vbSize(120, 210)}" data-act="hero-hop" aria-label="主角（按住拖曳，帶他走）">${heroArt()}</div><svg class="front" viewBox="${VB.join(' ')}" aria-hidden="true"></svg>`;
+    return `<div class="hero${hero.back ? ' back' : ''}${hero.turn ? ' turn' : ''}${hero.flip ? ' flip' : ''}${hero.pose ? ' ' + hero.pose : ''}" style="${vbPct(px - 60, py - 200)};${vbSize(120, 210)}" data-act="hero-hop" aria-label="主角（按住拖曳，帶他走）">${heroArt()}</div><svg class="front" viewBox="${VB.join(' ')}" aria-hidden="true"></svg>`;
   }
   function heroPlace(st) {
     const el = st.querySelector('.hero'); if (!el) return;
     const [px, py] = P(hero.x, hero.y, 0);
     el.style.left = `${((px - 60 - VB[0]) / VB[2] * 100).toFixed(3)}%`; el.style.top = `${((py - 200 - VB[1]) / VB[3] * 100).toFixed(3)}%`;
-    el.classList.toggle('back', hero.back); el.classList.toggle('flip', hero.flip); el.classList.toggle('sit', hero.pose === 'sit');
+    el.classList.toggle('back', hero.back); el.classList.toggle('turn', !!hero.turn); el.classList.toggle('flip', hero.flip); el.classList.toggle('sit', hero.pose === 'sit');
     heroFront(st);
   }
   // the things standing in front of the hero where they overlap it on screen, copied over it
@@ -7940,6 +7939,7 @@ const ROOM = (() => {
       const sx = dx - dy, sy = (dx + dy) / 2;
       if (Math.abs(sy) > 0.2 * Math.abs(sx)) hero.back = sy < 0;
       if (Math.abs(sx) > 0.2 * Math.abs(sy)) hero.flip = sx < 0;
+      if (Math.abs(sx) > 0.6 * Math.abs(sy)) hero.turn = true; else if (Math.abs(sx) < 0.3 * Math.abs(sy)) hero.turn = false;   // across (the room's own lines run so): a little turned; straight up or down: square on (a gap between, so no flicker)
       heroPlace(st); follow(st, sx);
     }
     if (w.pts.length || hero.lead) { hero.raf = requestAnimationFrame((t) => heroStep(st, t)); return; }
@@ -7952,7 +7952,7 @@ const ROOM = (() => {
     if (!pts) { heroPlace(st); if (done) done(); return; }
     heroWalk(st, pts, done);
   }
-  function heroLook(look) { if (look === 'R') { hero.back = true; hero.flip = false; } else if (look === 'L') { hero.back = true; hero.flip = true; } }
+  function heroLook(look) { if (look === 'R') { hero.back = true; hero.flip = false; hero.turn = true; } else if (look === 'L') { hero.back = true; hero.flip = true; hero.turn = true; } }   // a wall runs at a slant: turned to it
   function heroAt(st, sp) {   // at a thing's spot, facing it, doing its bit (sit stays; the rest pass)
     const el = st.querySelector('.hero');
     hero.x = sp.x; hero.y = sp.y; heroLook(sp.look); hero.pose = sp.act === 'sit' ? 'sit' : '';
@@ -7994,7 +7994,7 @@ const ROOM = (() => {
     heroPlace(st);
   }
   function heroRedraw(st) { const el = st && st.querySelector('.hero'); if (el) el.innerHTML = heroArt(); if (st) st.dataset.sig = roomSig(); }
-  function heroIn() { const p = { x: SPOTS.door.x + 0.3, y: SPOTS.door.y, back: false, flip: false, pose: '' }; if (ROOMID === 'study') Object.assign(hero, p); heroPos.study = p; heroSave(); }   // in from the yard: just inside 書房's door
+  function heroIn() { const p = { x: SPOTS.door.x + 0.3, y: SPOTS.door.y, back: false, flip: false, turn: false, pose: '' }; if (ROOMID === 'study') Object.assign(hero, p); heroPos.study = p; heroSave(); }   // in from the yard: just inside 書房's door
   // the clocks on the walls tell the time: their hands are overlays (sceneTick's --hh／--mm), skewed onto the wall they hang on
   function handsHtml() {
     return placedWares().filter((o) => o.it.hands).map(({ it, p }) => {
@@ -8839,7 +8839,7 @@ const HERO = (() => {
   const LOOK0 = { face: 'mochi', skin: '#f3d1b5', cheeks: 'blush', fringe: 'round', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'normal', eyeColor: '#2a2730', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'hoodie', top: '#5a68d8', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#ecebe6' };
   // the 16 hairstyles before the hair came in parts (1.2.1): each as its nearest 瀏海, 兩側, 後面, 造型
   const OLD_HAIR = { crop: ['round', 'short', 'short', 'none'], neat: ['swept', 'short', 'short', 'none'], curtain: ['center', 'chin', 'short', 'none'], ahoge: ['round', 'short', 'short', 'ahoge'],
-    spiky: ['choppy', 'short', 'short', 'none'], slick: ['none', 'short', 'short', 'none'], curly: ['curly', 'curls', 'short', 'none'], afro: ['curly', 'curls', 'bob', 'none'], bob: ['blunt', 'incurl', 'bob', 'none'],
+    spiky: ['choppy', 'short', 'short', 'none'], slick: ['none', 'short', 'short', 'none'], curly: ['fluffy', 'curls', 'short', 'none'], afro: ['fluffy', 'curls', 'bob', 'none'], bob: ['blunt', 'incurl', 'bob', 'none'],
     wolf: ['choppy', 'layered', 'shoulder', 'none'], shoulder: ['center', 'chin', 'shoulder', 'none'], long: ['round', 'long', 'long', 'none'], wavy: ['sidepart', 'wave', 'wavy', 'none'],
     ponytail: ['swept', 'short', 'short', 'ponytail'], twintails: ['round', 'short', 'short', 'twintails'], bun: ['short', 'short', 'short', 'bun'] };
   // a saved look as drawn: anything this build does not know (or is missing) is the new hero's; a look from before the hair came in
@@ -8864,6 +8864,7 @@ const HERO = (() => {
   const both = (s) => `${s}<g transform="matrix(-1 0 0 1 4 0)">${s}</g>`;   // a left half and its mirror round the figure's middle (x = 2)
   const star = (x, y, r, fill = '#e6c25a') => `<path fill="${fill}" d="M${Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, k = i % 2 ? r * 0.45 : r; return `${q(x + k * Math.cos(a))} ${q(y + k * Math.sin(a))}`; }).join(' L')} Z"/>`;   // five points
   const EY = -117, EX = [-10.5, 14.5];   // the eyes' height and middles
+  let ex = EX;   // the middles as drawn: a head turned a little (svg) has the far eye nearer
   const ink = (d, w = 2.4) => `<path d="${d}" fill="none" stroke="${INK}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
   // an eye: its colour, darker under the lid, the pupil, a big and a small highlight (both lit from the upper right)
   const iris = (x, c, rx = 5, ry = 6.6, dy = 0) => { const y = EY + dy; return `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${c}"/><path d="M${q(x - rx)} ${y} a${rx} ${ry} 0 0 1 ${q(2 * rx)} 0 Z" fill="#000" fill-opacity=".3"/><ellipse cx="${x}" cy="${q(y + 0.8)}" rx="${q(rx * 0.48)}" ry="${q(ry * 0.5)}" fill="#1b1820"/><ellipse cx="${q(x + rx * 0.36)}" cy="${q(y - ry * 0.42)}" rx="${q(rx * 0.4)}" ry="${q(ry * 0.34)}" fill="#fff"/><circle cx="${q(x - rx * 0.42)}" cy="${q(y + ry * 0.48)}" r="${q(rx * 0.22)}" fill="#fff" fill-opacity=".85"/>`; };
@@ -8876,20 +8877,20 @@ const HERO = (() => {
     '#3a5f9a': ['#0f1f4a', '#5fa8e8', '#b4ecff'], '#3f7a52': ['#0f2a1c', '#5fbf7a', '#d2f7a8'], '#5a3a9a': ['#1e1236', '#9a7ad8', '#e2ccff'], '#6b6f7a': ['#24262c', '#9aa0ac', '#e0e4ec'] };
   const tones = (c) => { const t = TONES[c] || [dk(c, 0.45), lt(c, 0.35), lt(c, 0.7)]; return [t[0], c, t[1], t[2]]; };
   const EYES = {
-    normal: (c) => EX.map((x, i) => iris(x, c) + lid(x, i ? 1 : -1)).join(''),
-    sharp: (c) => EX.map((x, i) => iris(x, c, 4.8, 5.8, 0.8) + lid(x, i ? 1 : -1, 2.8, 5)).join(''),   // 吊眼: the outer corners up
-    droopy: (c) => EX.map((x, i) => iris(x, c, 5, 6.2, 0.4) + lid(x, i ? 1 : -1, -3.4, 6.6)).join(''),   // 垂眼: down
-    happy: () => EX.map((x) => ink(`M${q(x - 5.6)} ${EY + 1} Q${x} ${EY - 6} ${q(x + 5.6)} ${EY + 1}`, 2.3)).join(''),   // ^ ^
-    big: (c) => EX.map((x, i) => iris(x, c, 6, 7.8, -0.4) + `<circle cx="${q(x + 2.6)}" cy="${q(EY + 2.6)}" r=".9" fill="#fff"/>` + lid(x, i ? 1 : -1, 0, 8.2)).join(''),
-    sleepy: (c) => EX.map((x) => `<path d="M${q(x - 5)} ${EY - 1} h10 a5 5.4 0 0 1 -10 0 Z" fill="${c}"/><circle cx="${q(x + 1.6)}" cy="${EY + 1.2}" r="1.1" fill="#fff" fill-opacity=".8"/>` + ink(`M${q(x - 6.2)} ${EY - 1} H${q(x + 6.2)}`, 2.2)).join(''),
+    normal: (c) => ex.map((x, i) => iris(x, c) + lid(x, i ? 1 : -1)).join(''),
+    sharp: (c) => ex.map((x, i) => iris(x, c, 4.8, 5.8, 0.8) + lid(x, i ? 1 : -1, 2.8, 5)).join(''),   // 吊眼: the outer corners up
+    droopy: (c) => ex.map((x, i) => iris(x, c, 5, 6.2, 0.4) + lid(x, i ? 1 : -1, -3.4, 6.6)).join(''),   // 垂眼: down
+    happy: () => ex.map((x) => ink(`M${q(x - 5.6)} ${EY + 1} Q${x} ${EY - 6} ${q(x + 5.6)} ${EY + 1}`, 2.3)).join(''),   // ^ ^
+    big: (c) => ex.map((x, i) => iris(x, c, 6, 7.8, -0.4) + `<circle cx="${q(x + 2.6)}" cy="${q(EY + 2.6)}" r=".9" fill="#fff"/>` + lid(x, i ? 1 : -1, 0, 8.2)).join(''),
+    sleepy: (c) => ex.map((x) => `<path d="M${q(x - 5)} ${EY - 1} h10 a5 5.4 0 0 1 -10 0 Z" fill="${c}"/><circle cx="${q(x + 1.6)}" cy="${EY + 1.2}" r="1.1" fill="#fff" fill-opacity=".8"/>` + ink(`M${q(x - 6.2)} ${EY - 1} H${q(x + 6.2)}`, 2.2)).join(''),
     // Q版眼 (test, 2026-11-09): big and round, the lower half of the iris lighter, two highlights, a lash with a flick
-    chibi: (c) => EX.map((x, i) => bigEye(x, i, `<ellipse rx="8.6" ry="10.5" fill="#fff"/><ellipse cy="1" rx="7.4" ry="9.45" fill="${c}"/><ellipse cy="4.6" rx="5.3" ry="4.4" fill="${tones(c)[2]}" fill-opacity=".75"/><ellipse rx="3.6" ry="5.25" fill="${INK}"/>
+    chibi: (c) => ex.map((x, i) => bigEye(x, i, `<ellipse rx="8.6" ry="10.5" fill="#fff"/><ellipse cy="1" rx="7.4" ry="9.45" fill="${c}"/><ellipse cy="4.6" rx="5.3" ry="4.4" fill="${tones(c)[2]}" fill-opacity=".75"/><ellipse rx="3.6" ry="5.25" fill="${INK}"/>
       <circle cx="2.8" cy="-3.8" r="2.7" fill="#fff"/><circle cx="-3" cy="4.4" r="1.2" fill="#fff"/><path d="M-10.2 -4.6 Q-1.7 -14.1 10 -6.6 L12.2 -8.6 L9.8 -3.6 Q-.9 -11.1 -9.2 -2.2 Z" fill="${INK}"/>`)).join(''),
     // 水汪汪 (test, 2026-11-09): the iris darkest under the lid and glowing at the bottom, three highlights, a heavy lash
     kira: (c) => {
       const t = tones(c), n = ++uid, W = 'M-9.8 -1.5 C-9.8 -8.6 -5 -12.2 .6 -12.2 C6.4 -12.2 10.2 -8.2 10.2 -1.2 C10.2 6.4 5.8 11.6 .2 11.6 C-5.6 11.6 -9.8 5.8 -9.8 -1.5 Z';
       const defs = `<defs><linearGradient id="ki${n}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${t[0]}"/><stop offset=".42" stop-color="${c}"/><stop offset=".78" stop-color="${t[2]}"/><stop offset="1" stop-color="${t[3]}"/></linearGradient><clipPath id="kc${n}"><path d="${W}"/></clipPath></defs>`;
-      return defs + EX.map((x, i) => bigEye(x, i, `<path d="${W}" fill="#fff"/><g clip-path="url(#kc${n})"><ellipse cx=".4" cy="1.6" rx="8.8" ry="11.4" fill="url(#ki${n})"/><path d="M-9 -4.4 Q.6 -9.4 10 -4.2 V-12 H-9 Z" fill="${t[0]}" fill-opacity=".85"/>
+      return defs + ex.map((x, i) => bigEye(x, i, `<path d="${W}" fill="#fff"/><g clip-path="url(#kc${n})"><ellipse cx=".4" cy="1.6" rx="8.8" ry="11.4" fill="url(#ki${n})"/><path d="M-9 -4.4 Q.6 -9.4 10 -4.2 V-12 H-9 Z" fill="${t[0]}" fill-opacity=".85"/>
         <ellipse cx=".5" cy="1" rx="3.4" ry="5.4" fill="${t[0]}"/><path d="M-6.4 5 Q.4 12.4 7.4 4.8 Q.4 8.8 -6.4 5 Z" fill="${t[3]}" fill-opacity=".95"/><ellipse cx=".4" cy="1.6" rx="8.8" ry="11.4" fill="none" stroke="${t[0]}" stroke-width=".8"/>
         <path d="M-9.8 -12 H10.4 V-6.4 Q.6 -11 -9.8 -5.6 Z" fill="${t[0]}" fill-opacity=".35"/><ellipse cx="3.6" cy="-4.4" rx="2.9" ry="3.7" fill="#fff" transform="rotate(-20 3.6 -4.4)"/><circle cx="-3.6" cy="4.8" r="1.4" fill="#fff"/><circle cx="5.2" cy="3.4" r=".8" fill="#fff"/>
         <path d="M-6.6 -1 Q-7.4 3 -5.6 6" stroke="${t[3]}" stroke-width="1.1" fill="none" stroke-linecap="round" stroke-opacity=".6"/></g>
@@ -9010,9 +9011,6 @@ const HERO = (() => {
       { deco: (s, w) => strands(s, 'M-10 -151 C-9 -145 -7.6 -138 -6.4 -131 M7 -151 C8 -145 8.6 -138 8.4 -132') + wisp(w, -21, -150, -26, -144, -35, -141) + wisp(w, 22, -149, 26, -140, 26.4, -122.6, 1.5) }),
     choppy: fl('碎束', [[-25, -148], [-16, -150.6], [-7, -149], [2, -151.6], [11, -149.6], [20, -151], [28, -147.6]], [[-30.4, -131], [-20.6, -136.8], [-11.6, -128.4], [-2.4, -136], [6.4, -127.4], [15.4, -134.8], [24.6, -129.2], [33, -134]], 0.12, 0.14,
       { deco: (s) => strands(s, 'M-11 -148 C-11.4 -142 -11.6 -136 -11.6 -131 M6 -149 C6.4 -142 6.4 -136 6.4 -130') }),
-    curly: F('捲瀏海', ' C-33 -144 -24 -149 2 -149 C28 -149 37 -144 37 -138', {
-      x: (f) => [[-26, -141.4, 6.4, -1], [-12, -140.4, 7, 1], [3, -139.6, 7.2, -1], [17, -140.4, 7, 1], [30, -141.4, 6.4, -1]].map(([x, y, rr, s]) => curl(f, x, y, rr, s)).join(''),
-      deco: (s) => swirl(s, [[-26, -141.4, 6.4], [-12, -140.4, 7], [3, -139.6, 7.2], [17, -140.4, 7], [30, -141.4, 6.4]]) }),
     none: F('露額', ' C-31.6 -146 -16 -152 2 -152 C20 -152 35.6 -146 37 -138', { deco: (s, w) => strands(s, 'M-22 -151 C-17 -159 -9 -164 0 -166 M-8 -155 C-4 -161 2 -164 9 -165 M24 -151 C19 -159 12 -163 5 -165') + wisp(w, -8, -155, -14, -148, -18.6, -140.6, 1.4) }),
     longbangs: fl('長瀏海', [[-20, -149], [-3, -151.4], [9, -151.4], [24, -149]], [[-27.4, -118.6], [-11.6, -125.4], [2.4, -117.2], [16, -125.4], [31.4, -118.6]], 0.1, 0.13,
       { deco: (s) => strands(s, 'M-22 -150 C-23.4 -142 -24.6 -134 -25.6 -125 M2.4 -152 C2.4 -144 2.4 -134 2.4 -124 M26 -150 C27.4 -142 28.6 -134 29.6 -125') }),
@@ -9121,7 +9119,7 @@ const HERO = (() => {
     ['短鮑伯', 'round', 'incurl', 'bob', 'none'], ['空氣鮑伯', 'airy', 'chin', 'bob', 'none'], ['香菇頭', 'blunt', 'incurl', 'bob', 'ahoge'], ['大斜鮑伯', 'longswept', 'flip', 'bob', 'none'],
     ['蓬鬆中長', 'fluffy', 'wave', 'shoulder', 'none'], ['斜瀏海波浪', 'swept', 'wave', 'wavy', 'none'], ['齊瀏海波浪', 'blunt', 'wave', 'wavy', 'none'], ['M字波浪', 'mshape', 'wave', 'wavy', 'none'],
     ['斜分及肩', 'longswept', 'tucked', 'shoulder', 'none'], ['露額長髮', 'none', 'tucked', 'long', 'none'], ['妹妹頭', 'shortblunt', 'incurl', 'bob', 'none'], ['捲鮑伯', 'swept', 'wave', 'bob', 'none'],
-    ['旁分大波浪', 'sidepart', 'wave', 'wavy', 'none'], ['空氣長直', 'airy', 'long', 'long', 'none'], ['長捲髮', 'curly', 'curls', 'wavy', 'none'], ['爆炸頭', 'curly', 'curls', 'curly', 'none'],
+    ['旁分大波浪', 'sidepart', 'wave', 'wavy', 'none'], ['空氣長直', 'airy', 'long', 'long', 'none'], ['長捲髮', 'fluffy', 'curls', 'wavy', 'none'], ['爆炸頭', 'fluffy', 'curls', 'curly', 'none'],
     ['丸子頭', 'none', 'above', 'short', 'bun'], ['雙丸子', 'blunt', 'above', 'short', 'twinbuns'], ['丸子長髮', 'shortblunt', 'tucked', 'long', 'twinbuns'], ['露額鮑伯', 'none', 'tucked', 'bob', 'none'],
     ['側馬尾', 'airy', 'chin', 'short', 'sidetail'], ['低側馬尾', 'sidepart', 'tucked', 'short', 'sidelow'], ['低丸子', 'round', 'above', 'short', 'lowbuns'], ['高馬尾', 'airy', 'wisps', 'short', 'ponytail'],
     ['旁分丸子', 'longswept', 'tucked', 'short', 'bun'], ['八字低丸子', 'curtain', 'tucked', 'short', 'lowbuns'], ['斜瀏海丸子', 'swept', 'above', 'short', 'bun'], ['八字丸子', 'curtain', 'wisps', 'short', 'bun'],
@@ -9179,7 +9177,7 @@ const HERO = (() => {
   // an arm (s: -1 the left, 1 the right) hangs from the shoulder a little off the body; drawn hanging straight down from (0, 0) and
   // turned out, so a pose turns it round the shoulder (the .arm group, in CSS)
   const SHOULDER = [13.5, -63.5];
-  function arm(L, tp, top, topDk, skin, cls, s) {
+  function arm(L, tp, top, topDk, skin, cls, s, dx = 0) {
     const hand = tp.paw ? `<circle cy="27" r="4.8" ${L(top, 0.9)}/><circle cy="28.4" r="1.6" fill="#f2a8b8"/>` : `<circle cy="27" r="4.3" ${L(skin, 0.9)}/>`;
     const bare = `<rect x="-3.2" y="2" width="6.4" height="23" rx="3.2" ${L(skin, 1.2)}/>`;
     const cuff = tp.cuff ? (tp.light ? lt(top, 0.55) : dk(topDk, 0.85)) : topDk;
@@ -9187,7 +9185,7 @@ const HERO = (() => {
       : tp.sleeve === 'short' ? bare + `<path ${L(top, 1.4)} d="M-4.6 -2 Q0 -5 4.6 -2 L5 9 Q0 10.6 -5 9 Z"/>`
       : tp.sleeve === 'wide' ? bare + `<path ${L(topDk, 1.3)} d="M-4.6 -2 Q0 -5 4.6 -2 L7.4 15 Q0 16.6 -7.4 15 Z"/>`
       : `<path ${L(top, 1.3)} d="M-4 -2 Q0 -4.5 4 -2 L4.4 21 Q0 22.6 -4.4 21 Z"/><path ${L(cuff, 1)} d="M-4.4 18.4 Q0 20 4.4 18.4 L4.5 21.6 Q0 23.2 -4.5 21.6 Z"/>`;
-    return `<g class="arm ${cls}"><g transform="translate(${q(2 + s * SHOULDER[0])} ${SHOULDER[1]}) rotate(${-s * 26})">${art}${hand}</g></g>`;
+    return `<g class="arm ${cls}"><g transform="translate(${q(2 + s * SHOULDER[0] + dx)} ${SHOULDER[1]}) rotate(${-s * 26})">${art}${hand}</g></g>`;
   }
   // bottoms (c: the trousers' colour): a leg round x, the hips over both legs, the foot, and what goes with them — a skirt over
   // both legs, a tail behind; the shoe is everyone's but the cat's paws
@@ -9290,18 +9288,31 @@ const HERO = (() => {
     const top = lk.top, topDk = dk(lk.top, 0.84), pants = lk.bottom, skin = lk.skin, tp = TOPS[lk.topStyle], bt = BOTTOMS[lk.bottomStyle], full = FULL[wear.head];
     const defs = `<defs><clipPath id="fc${n}" clipPathUnits="userSpaceOnUse"><path d="${FACE[lk.face]}"/></clipPath></defs>`;
     const pd = dk(pants, 0.78), leg = (cls, x) => `<g class="leg ${cls}">${bt.leg(L, pants, x, skin)}${bt.foot ? bt.foot(L, pants, x, pd) : (SHOES[lk.shoeStyle] || SHOES.sneaker)(L, lk.shoe, x)}</g>`;
-    const legs = () => `<g class="legs">${bt.hips ? bt.hips(L, pants) : ''}${leg('l', -7)}${leg('r', 11)}</g>${bt.over ? bt.over(L, pants, pd) : ''}`;   // a skirt hangs over both legs, not with them
-    const arms = arm(L, tp, top, topDk, skin, 'l', -1) + arm(L, tp, top, topDk, skin, 'r', 1);
-    const face = `<path ${L(skin, 2.4)} d="${FACE[lk.face]}"/><g transform="${CHEEK}">${CHEEKS[lk.cheeks]}</g><g clip-path="url(#fc${n})">${BEARD[lk.beard](L(lk.hairColor, 2.2))}</g>${MOUTH[lk.mouth](['#a9714d', '#76492f'].includes(skin) ? '#3a1d14' : LIP)}
-      <g class="eyes">${EYES[lk.eyes](lk.eyeColor)}</g>${both(`<path d="${BROWS[lk.brows][0]}" fill="none" stroke="${dk(lk.hairColor, 0.8)}" stroke-width="${BROWS[lk.brows][1]}" stroke-linecap="round"/>`)}`;
+    const legs = (t) => `<g class="legs">${bt.hips ? bt.hips(L, pants) : ''}${leg('l', -7 + t * 0.2)}${leg('r', 11 - t * 0.4)}</g>${bt.over ? bt.over(L, pants, pd) : ''}`;   // a skirt hangs over both legs, not with them
+    const arms = (t) => arm(L, tp, top, topDk, skin, 'l', -1, t * 0.3) + arm(L, tp, top, topDk, skin, 'r', 1, -t * 0.5);
     const fd = dk(top, 0.74), whole = full && full(L, top, fd), collar = tp.collar ? tp.collar(L, top, topDk) : '';   // a whole head: the hero's own, hair and face things give way
-    const shade = `<g opacity=".13" transform="translate(0 2.4)" clip-path="url(#fc${n})">${hairOf.front('fill="#3a2016"')}</g>`;   // the fringe's shadow on the forehead
     const onHead = (s) => `<g class="head"><g transform="${HEAD}">${s}</g></g>`;   // the head's things in the head's units, set on the body
-    const front = `${onHead(whole ? '' : hair(hairOf.back))}${bt.tail ? `<g class="tail t0">${bt.tail(L, pants, pd, 0)}</g>` : ''}${W('back', 0)}${legs()}${tp.front(L, top, topDk)}${W('body', 0)}${W('neck', 0)}${arms}${collar}
-      ${onHead(whole ? whole[0] : `${face}${shade}${hairOf.ear(L(skin, 2.4))}${hair(hairOf.front)}${hairOf.over()}${hairOf.deco(hs, hw)}${W('face', 0)}${W('head', 0)}`)}`;   // the arms under the head: a raised hand never covers the face (the user), it goes out to the side
-    const back = `${legs()}${arms}${tp.back(L, top, topDk)}${W('body', 1)}${tp.over ? tp.over(L, top, topDk) : ''}${bt.tail ? `<g class="tail t1">${bt.tail(L, pants, pd, 1)}</g>` : ''}${W('neck', 1)}${W('back', 1)}
-      ${onHead(whole ? whole[1] : `<ellipse cx="2" cy="-128" rx="34" ry="32" ${L(skin, 2.4)}/>${hair(hairOf.rear)}${hairOf.rearOver(hs, L(skin, 2.4))}${W('face', 1)}${W('head', 1)}`)}`;
-    return `<svg viewBox="${o.box || '-60 -200 120 210'}"${o.box ? ' style="overflow:hidden"' : ''}${cat ? ' data-set="cat"' : ''} aria-hidden="true">${defs}<ellipse class="h-shadow" rx="24" ry="7" fill="#2b1c12" fill-opacity=".2"/><g class="fig"><g class="bob">${o.back ? `<g class="f-back" style="display:inline">${back}</g>` : `<g class="f-front">${front}</g>${o.front ? '' : `<g class="f-back">${back}</g>`}`}</g></g></svg>`;   // front: the front view only; back: from behind only
+    // a little turned (test, 2026-11-09: 微微側身), to the viewer's right — the other way is it mirrored (.flip): the head's layers
+    // slide apart (the face's things most, the fringe less, the back hair the other way, so more of it shows behind), the far eye
+    // comes nearer, the body narrows a little and the far arm and leg tuck in. t: how far, in the head's units (0: straight on)
+    const by = (x, s) => (x ? `<g transform="translate(${q(x)} 0)">${s}</g>` : s);
+    const narrow = (t, s) => (t ? `<g transform="translate(${q(2 + t * 0.15)} 0) scale(.94 1) translate(-2 0)">${s}</g>` : s);
+    const face = (t) => {
+      ex = t ? [EX[0], EX[1] - t * 0.5] : EX;
+      const s = by(t * 0.3, `<path ${L(skin, 2.4)} d="${FACE[lk.face]}"/><g clip-path="url(#fc${n})">${BEARD[lk.beard](L(lk.hairColor, 2.2))}</g>`)
+        + by(t, `<g transform="${CHEEK}">${CHEEKS[lk.cheeks]}</g>${MOUTH[lk.mouth](['#a9714d', '#76492f'].includes(skin) ? '#3a1d14' : LIP)}<g class="eyes">${EYES[lk.eyes](lk.eyeColor)}</g>${both(`<path d="${BROWS[lk.brows][0]}" fill="none" stroke="${dk(lk.hairColor, 0.8)}" stroke-width="${BROWS[lk.brows][1]}" stroke-linecap="round"/>`)}${W('face', 0)}`);
+      ex = EX; return s;
+    };
+    const shade = (t) => by(t * 0.45, `<g opacity=".13" transform="translate(0 2.4)" clip-path="url(#fc${n})">${hairOf.front('fill="#3a2016"')}</g>`);   // the fringe's shadow on the forehead
+    const front = (t) => `${onHead(whole ? '' : by(-t * 0.5, hair(hairOf.back)))}${bt.tail ? `<g class="tail t0">${bt.tail(L, pants, pd, 0)}</g>` : ''}${W('back', 0)}${legs(t)}${narrow(t, tp.front(L, top, topDk) + W('body', 0) + W('neck', 0))}${arms(t)}${narrow(t, collar)}
+      ${onHead(whole ? by(t * 0.4, whole[0]) : `${face(t)}${shade(t)}${by(t * 0.3, hairOf.ear(L(skin, 2.4)))}${by(t * 0.45, hair(hairOf.front) + hairOf.over() + hairOf.deco(hs, hw) + W('head', 0))}`)}`;   // the arms under the head: a raised hand never covers the face (the user), it goes out to the side
+    // from behind, turned the same way: the hair slides left over the head, so a sliver of cheek shows on the right
+    const back = (t) => `${legs(-t)}${arms(-t)}${narrow(-t, tp.back(L, top, topDk) + W('body', 1) + (tp.over ? tp.over(L, top, topDk) : ''))}${bt.tail ? `<g class="tail t1">${bt.tail(L, pants, pd, 1)}</g>` : ''}${narrow(-t, W('neck', 1) + W('back', 1))}
+      ${onHead(whole ? by(-t * 0.4, whole[1]) : `<ellipse cx="2" cy="-128" rx="34" ry="32" ${L(skin, 2.4)}/>${by(-t * 0.6, hair(hairOf.rear) + hairOf.rearOver(hs, L(skin, 2.4)) + W('face', 1) + W('head', 1))}`)}`;
+    const T = 6;   // the turn
+    const views = o.back ? `<g class="f-back" style="display:inline">${back(0)}</g>` : o.front ? `<g class="f-front">${front(0)}</g>`
+      : `<g class="f-front">${front(0)}</g><g class="f-front3">${front(T)}</g><g class="f-back">${back(0)}</g><g class="f-back3">${back(T)}</g>`;
+    return `<svg viewBox="${o.box || '-60 -200 120 210'}"${o.box ? ' style="overflow:hidden"' : ''}${cat ? ' data-set="cat"' : ''} aria-hidden="true">${defs}<ellipse class="h-shadow" rx="24" ry="7" fill="#2b1c12" fill-opacity=".2"/><g class="fig"><g class="bob">${views}</g></g></svg>`;   // front: the front view only; back: from behind only
   }
   // the head alone, in daylight, for the choices in the dressing room: 'head' frames the hair, 'face' the eyes, brows and mouth
   // a choice drawn on them: the face, the head, the head and shoulders (sides that reach them), from behind (the back, 造型). The
@@ -9349,7 +9360,22 @@ const HERO = (() => {
     const k = names[Math.floor(Math.random() * names.length)]; el._tapLast = k;
     el.classList.remove(...Object.keys(TAPS)); still(el); void el.offsetWidth; el.classList.add(k);
     clearTimeout(el._tap); el._tap = setTimeout(() => el.classList.remove(k), TAPS[k]);
+    if (k === 'spin') turnRound(el);
     if (inCat(el)) nya(el);
+  }
+  // spin (test, 2026-11-09): a turn right round through the views, a frame each — facing us, turned, from behind turned, from behind,
+  // the other way back round — then as they were, unless they were sent walking meanwhile (their view is then the walk's)
+  const ROUND = [[0, 1, 0], [1, 1, 0], [1, 0, 0], [1, 1, 1], [0, 1, 1]];   // back, turn, flip
+  function turnRound(el) {
+    const was = ['back', 'turn', 'flip'].map((c) => el.classList.contains(c)), set = (v) => ['back', 'turn', 'flip'].forEach((c, i) => el.classList.toggle(c, !!v[i]));
+    let i = 0;
+    clearInterval(el._round);
+    el._round = setInterval(() => {
+      const now = ['back', 'turn', 'flip'].map((c) => el.classList.contains(c)), last = i ? ROUND[i - 1].map(Boolean) : was;
+      if (now.some((v, j) => v !== last[j])) { clearInterval(el._round); return; }   // something else turned them
+      if (i === ROUND.length) { set(was); clearInterval(el._round); return; }
+      set(ROUND[i++]);
+    }, 115);
   }
   // the cat suit answers a tap with a にゃ over their head, a different one each time
   const NYA = ['にゃ', 'にゃーん', 'にゃ？', 'にゃっ'];
@@ -9567,7 +9593,7 @@ const DRESS = (() => {
     d.look.beard = Math.random() < 0.65 ? 'none' : any('beard');
     redraw(true);
   }
-  function turn() { const dr = box(); if (!dr) return; d.back = !d.back; dr.querySelector('.dress-hero').classList.toggle('back', d.back); }
+  function turn() { const dr = box(); if (!dr) return; d.view = ((d.view || 0) + 1) % 4; const h = dr.querySelector('.dress-hero'); h.classList.toggle('turn', d.view % 2 === 1); h.classList.toggle('back', d.view >= 2); }   // facing us, turned, from behind, turned from behind
   function close(save) {
     const dr = box(); if (!d) return;
     const { st, from } = d;
