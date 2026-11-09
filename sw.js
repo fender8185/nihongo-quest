@@ -17,7 +17,8 @@ const PRECACHE = [
   './vendor/supabase.js',
   './sync-core.js',
   './config.js',
-  './data.js?v=21'
+  './data.js?v=21',
+  './events.js?v=1'
 ];
 // Versioned, immutable files: when the previous cache already holds the same URL, copy it instead of downloading
 const IMMUTABLE = /\?v=\d+$/;

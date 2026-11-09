@@ -2,7 +2,7 @@
 # Runs every automated check: syntax, unit tests, headless-Chrome e2e.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-node --check sw.js && node --check sync-core.js && node --check data.js
+node --check sw.js && node --check sync-core.js && node --check data.js && node --check events.js
 # every built-in grammar item names the lesson section it belongs to (-1 = none; the practice card is skipped for those)
 node scripts/data-file.js --check   # one entry per line, so grep finds an item (node scripts/data-file.js puts it back)
 node -e "const D=require('./scripts/data-file').load();const bad=D.GRAMMAR.filter(g=>!Number.isInteger(g.sec)||g.sec<-1||g.sec>=(D.LESSONS[g.u]||{sections:[]}).sections.length);if(bad.length){console.log('grammar items without a valid sec:',bad.slice(0,5).map(g=>g.id).join(' '),bad.length);process.exit(1)}"
@@ -11,6 +11,11 @@ node -e "const D=require('./scripts/data-file').load();const bad=D.GRAMMAR.filte
 # the data file version must agree in index.html (<script src>), sw.js (PRECACHE) and data.js (header)
 dv="$(grep -o 'data.js?v=[0-9]*' index.html | tr -d -c 0-9)"
 [ "$dv" = "$(grep -o 'data.js?v=[0-9]*' sw.js | tr -d -c 0-9)" ] && [ "$dv" = "$(grep -o 'DATA_VERSION [0-9]*' data.js | tr -d -c 0-9)" ] || { echo "data.js version differs between index.html, sw.js and data.js"; exit 1; }
+# the town's events (events.js): its version agrees in index.html, sw.js and its header; the checker passes (kanji marked, levels, grammar, people)
+ev="$(grep -o 'events.js?v=[0-9]*' index.html | tr -d -c 0-9)"
+[ "$ev" = "$(grep -o 'events.js?v=[0-9]*' sw.js | tr -d -c 0-9)" ] && [ "$ev" = "$(grep -o 'EVENTS_VERSION [0-9]*' events.js | tr -d -c 0-9)" ] || { echo "events.js version differs between index.html, sw.js and events.js"; exit 1; }
+node --test-reporter=tap tests/events.test.js | grep -E "^# (pass|fail)"
+node scripts/check-events.js | tail -1
 node --test-reporter=tap tests/sync-core.test.js | grep -E "^# (pass|fail)"   # tap: Node 23+ prints "ℹ pass" by default
 node --test-reporter=tap tests/curriculum.test.js | grep -E "^# (pass|fail)"   # the N3–N1 curriculum outline: sources, candidates, checker
 node scripts/curriculum/check-outline.js | tail -1   # the outline files themselves pass the checker (exit 1 on any problem)
