@@ -6958,7 +6958,7 @@ function yClimb(el) {
 // 小春 (a young hairdresser with a salon in town, #/town along the yard to the right) and ムギ (a shiba who collects old records, on the
 // beach, #/beach, along the yard to the left; home: where they are to be found). Both knew the grandmother who left the hero
 // the house (STORY).
-// Each comes knocking at 書房's front door once (one a day): 小春 after the first set done, ムギ after the first 聽一輪. The door
+// Each comes knocking at 書房's front door once (one at a time: the next not before NPC.gap later, and 書房 opened again): 小春 after the first set done, ムギ after the first 聽一輪. The door
 // shakes, 叩叩; tapped, the hero goes and opens it, they say hello and give a present — 小春 the full-length mirror (the face and
 // the hair are changed in front of it), ムギ the gramophone with its two records (one bought before: what was paid comes back).
 // state.met: { id: the day they came }. After that they are on the beach, a tap for a word. Lines: [Japanese ({漢字|かな}), 中文]
@@ -6999,9 +6999,11 @@ const NPCS = {
 };
 const NPC = (() => {
   const met = (id) => Boolean(state.met && state.met[id]);
-  // who is at the door now: the first not met whose time has come, none if someone came today
+  // who is at the door now: the first not met whose time has come, none for a while after someone came (the user: one a day
+  // was too slow — ムギ never came the day 小春 did)
+  const gap = { ms: 3 * 60 * 1000, last: 0 };
   function visitor() {
-    if (Object.values(state.met || {}).includes(todayStr())) return null;
+    if (Date.now() - gap.last < gap.ms) return null;
     return Object.keys(NPCS).find((id) => !met(id) && NPCS[id].due()) || null;
   }
   const art = (id) => (id === 'mugi' ? `<svg viewBox="-60 -200 120 210" aria-hidden="true">${MUGI_ART}</svg>` : HERO.svg({ look: KOHARU_LOOK }));
@@ -7049,7 +7051,7 @@ const NPC = (() => {
   }
   function give(id, paid) {   // the present: theirs at once (what was paid comes back), set out where it belongs if there is room
     const w = NPCS[id].gift;
-    state.met = Object.assign({}, state.met, { [id]: todayStr() });
+    gap.last = Date.now(); state.met = Object.assign({}, state.met, { [id]: todayStr() });
     if (paid) state.owned[w].paid = 0; else if (!state.owned[w]) state.owned[w] = { paid: 0, on: todayStr() };
     if (!state.placed[w]) ROOM.give(w);
     if (w === 'gramophone') state.musicOff = false;
@@ -7060,7 +7062,7 @@ const NPC = (() => {
     const side = yh.X <= a.X ? -1 : 1, lines = NPCS[id].chat, L = lines[Math.floor(Math.random() * lines.length)];
     yHeroWalk(yard, [a.X + side * 76 * yScale(a.Y), a.Y + 2], () => { yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard); TALK.open(yard, id, [L]); });
   }
-  return { visitor, check, visit, talk, onBeach, face, art };
+  return { visitor, check, visit, talk, onBeach, face, art, gap };
 })();
 // the opening (test, 2026-11-09; the user's pick of three): a letter from Japan — the grandmother has left the hero her little
 // house by the sea, in a town of kind people, and their words are the way in. Four pictures with a line each, the first time

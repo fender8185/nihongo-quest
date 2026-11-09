@@ -1168,7 +1168,7 @@ def test_a_neighbour_knocks_brings_a_present_and_lives_on_the_beach(b):
       talk.querySelector('[data-talk="take"]').click(); const got = [owns('fullMirror'), state.placed.fullMirror && state.placed.fullMirror.rm, state.met.koharu === todayStr()];
       while (document.querySelector('.talk')) { document.querySelector('.talk').click(); await wait(30); } await wait(300);
       const after = { visitor: NPC.visitor(), knock: !!document.querySelector('#view .knock'), doorOut: (() => { const d = st().querySelector('[data-thing="door"]'); return !d.classList.contains('knocking'); })() };
-      state.met.koharu = '2026-11-01'; saveState(); const k0 = kotoBalance(), next = NPC.visitor();
+      NPC.gap.last = Date.now() - NPC.gap.ms - 1; const k0 = kotoBalance(), next = NPC.visitor();   /* a few minutes on */
       location.hash = '#/beach'; await wait(600); const npcs = [...document.querySelectorAll('#view .yard .npc')].map(e => e.dataset.npc);   /* 小春 is in town, not on the beach */
       location.hash = '#/town'; await wait(600); const bch = document.querySelector('#view .yard'), town = [bch.dataset.place, [...bch.querySelectorAll('.npc')].map(e => e.dataset.npc)];
       bch.querySelector('.town-shop[data-shop="salon"]').click(); let chat = null; for (let i = 0; i < 120 && !chat; i++) { await wait(50); chat = bch.querySelector('.talk'); }
@@ -1177,7 +1177,7 @@ def test_a_neighbour_knocks_brings_a_present_and_lives_on_the_beach(b):
     assert r['before'] == {'visitor': 'koharu', 'shop': ['fullMirror', 'gramophone'], 'mirror': False}, r   # 小春 first; presents are not sold
     assert r['knock'] == [True, True] and r['guest'] and r['name'].startswith('小春') and r['held'], r
     assert r['got'] == [True, 'bed', True], r   # the mirror by the wardrobe
-    assert r['after'] == {'visitor': None, 'knock': False, 'doorOut': True} and r['next'] == 'mugi', r   # one a day; ムギ the next day
+    assert r['after'] == {'visitor': None, 'knock': False, 'doorOut': True} and r['next'] == 'mugi', r   # not straight after; ムギ a few minutes on
     assert r['npcs'] == [] and r['town'] == ['town', ['koharu']] and r['chat'].startswith('小春') and not r['take'], r   # in her salon in town once met: a word, no present
 
 def test_mugi_gives_back_what_a_bought_gramophone_cost(b):
