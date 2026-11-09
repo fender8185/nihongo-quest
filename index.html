@@ -1459,7 +1459,7 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 .shop-item .art svg { width: 84px; height: 84px; overflow: visible; }
 .shop-item .nm { font-weight: 700; font-size: 15px; } .shop-item .ds { font-size: 12.5px; line-height: 1.5; color: var(--fg-2); } .shop-item .ds.swap { color: var(--accent); }
 .shop-item .buy { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: auto; padding-top: 4px; }
-.shop-item .price { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; } .shop-item .price.got { font-size: 13px; font-weight: 600; color: var(--fg-2); }
+.shop-item .price { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; } .shop-item .price.owned { font-size: 13px; font-weight: 600; color: var(--fg-2); }
 .shop-item .price .koto-i { width: 20px; height: 20px; }
 .shop-item.soon { background: none; box-shadow: none; border: 1.5px dashed var(--line-2); } .shop-item.soon .nm, .shop-item.soon .ds { opacity: .6; }
 .btn.btn-muted { opacity: .55; cursor: default; }
@@ -1844,12 +1844,15 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.4.1';   // keep equal to the version in sw.js CACHE ('nq-v1.4.1'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.4.2';   // keep equal to the version in sw.js CACHE ('nq-v1.4.2'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個版本一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（通常最後一位加一；1.1.0 是書房改版），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.4.2', date: '2026-11-09', items: [
+    '修正：買過的東西在古道具屋卡片上的「已擁有」字樣，會變成蓋住整個畫面的暗色遮罩，看起來像當掉、什麼都點不了（買完東西離開再進古道具屋就會發生）。'
+  ] },
   { v: '1.4.1', date: '2026-11-09', items: [
     '之後有新版本會自動換上，不用再點「有新版本」的提示：剛打開 app 時直接更新；正在用的話，等換頁或回到 app 時再換，練習、考試、聽一輪到一半都不會被打斷。'
   ] },
@@ -10582,7 +10585,7 @@ function shopCardHtml(it, bal) {
   else act = `<button type="button" class="btn btn-sm btn-primary" data-act="ware-buy" data-id="${it.id}">買下</button>`;
   const art = wareArt(it);
   return `<div class="card shop-item${owned ? ' owned' : ''}" data-ware="${it.id}"><div class="art">${art}</div><div class="nm">${esc(it.name)}</div><div class="ds">${esc(it.desc)}</div>${swap ? `<div class="ds swap">${swap}</div>` : ''}
-    <div class="buy">${owned ? '<span class="price got">已擁有</span>' : `<span class="price">${kotoIcon()}${it.price}</span>`}${act}</div></div>`;
+    <div class="buy">${owned ? '<span class="price owned">已擁有</span>' : `<span class="price">${kotoIcon()}${it.price}</span>`}${act}</div></div>`;
 }
 const SOON = '<div class="card shop-item soon"><div class="art"><svg viewBox="0 0 80 80"><g fill="none" stroke="currentColor" stroke-opacity=".45" stroke-width="2" stroke-linejoin="round"><path d="M16 34 L40 24 L64 34 L40 44 Z"/><path d="M16 34 V56 L40 66 V44 M64 34 V56 L40 66"/></g></svg></div><div class="nm">福爺還在找</div><div class="ds">之後會有更多老東西。</div></div>';   // the last card under 主角穿戴
 function renderShop(view) {
