@@ -54,6 +54,10 @@ test('chat lines are checked like event lines', () => {
   assert.deepEqual(kinds(check(town([ev()], { CHAT: { miku: [['m1', '花！', '花！']] } }), DATA)), ['bare-kanji']);
   assert.deepEqual(kinds(check(town([ev()], { CHAT: { ghost: [['m1', 'はい。', '是。']] } }), DATA)), ['ref']);
 });
+test('a line in Chinese only (empty Japanese) is fine', () => {
+  assert.deepEqual(check(town([ev({ lines: [['miku', '', '（用中文）你好']] })]), DATA), []);
+  assert.deepEqual(check(town([ev()], { CHAT: { miku: [['m1', '', '（用中文）你好']] } }), DATA), []);
+});
 test('events.js itself passes against data.js', () => {
   const D = require('../scripts/data-file').load();
   assert.deepEqual(check(loadTown(), D), []);

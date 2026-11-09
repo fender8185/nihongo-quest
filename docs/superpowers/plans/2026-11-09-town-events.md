@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- 只上 `test` 分支與測試站；`sw.js` 的 CACHE 用 `'nq-v1.4.1-test.N'`（下一個 N 從 1 開始）；APP_VERSION 不動（上 main 時才換）。
+- 只上 `test` 分支與測試站；`sw.js` 的 CACHE 用 `'nq-v1.4.2-test.N'`（1.4.2 熱修之後；下一個 N 從 1 開始）；APP_VERSION 不動（上 main 時才換）。
 - 營業時間與作息用 `sceneHour()`（真實時間），不是 `lightHour()`。
 - 事件條件：目前單元的事件要隔 ≥2 個學習日（`dayActive(dailyLogs[d])`，完成當天不算），已過的單元 ≥1 個；第一個事件不用等。
 - 一次只有一個事件在等，地圖上只有一個「！」。
@@ -139,3 +139,4 @@
 
 | 輪 | 單元 | 事件 | commit |
 |---|---|---|---|
+| 0 | m0 | 5 | (this commit) 引擎、小鎮換店、美玖／健太／陽菜／林 |

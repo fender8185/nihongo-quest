@@ -172,6 +172,28 @@ def test_the_right_reply_is_said_and_the_event_finishes_with_10_koto(b):
     assert r['next']['name'] == '美玖' and r['next']['ja'] == 'よし！', r
     assert not r['open'] and r['done'] and r['gain'] == 10 and not r['mark'] and r['seen'] == {'kenta': 1, 'miku': 1}, r
 
+def test_a_line_in_chinese_only_shows_no_japanese(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([['a1', 'm1', 'lin', 'town', { lines: [['lin', '', '（用中文）你好！']] }]]); begin('m1');
+      await go('town', 12); y().querySelector('.npc-lin').click(); let t = null; for (let i = 0; i < 120 && !t; i++) { await wait(50); t = document.querySelector('.talk'); }
+      return JSON.stringify({ ja: !!t.querySelector('.talk-ja'), zh: t.querySelector('.talk-zh').textContent, hidden: t.querySelector('.talk-zh').classList.contains('hide'), btn: !!t.querySelector('[data-talk="zh"]') }); })()"""))
+    assert r == {'ja': False, 'zh': '（用中文）你好！', 'hidden': False, 'btn': False}, r
+
+def test_every_written_event_plays_to_its_end(b):
+    # events.js as written: each event opens in the talk, every line shows (furigana, no stray braces), each reply choice is
+    # answered right first time, and the last line closes it
+    r = json.loads(ev(b, """(() => { const root = document.body, bad = [];
+      for (const e of TOWN.EVENTS) {
+        let ended = false, guard = 0; TALK.open(root, e.who, e.lines, () => { ended = true; }, null, { ev: true });
+        while (!ended && guard++ < 200) {
+          const t = document.querySelector('.talk'); if (/[{}|]/.test(t.textContent)) bad.push(e.id + ': ' + t.textContent.slice(0, 40));
+          const opts = t.querySelectorAll('.talk-opt'); if (opts.length) { const L = e.lines.find((l, i) => !Array.isArray(l) && t.querySelector('.talk-name span').textContent === l.ask);
+            opts[L.opts.findIndex((o) => o[1])].click(); } else t.click();
+        }
+        if (!ended) bad.push(e.id + ': did not end');
+      }
+      return JSON.stringify({ n: TOWN.EVENTS.length, bad }); })()"""))
+    assert r['n'] >= 5 and r['bad'] == [], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
