@@ -116,6 +116,28 @@ def test_someone_with_nothing_on_says_a_word_of_the_units_reached(b):
       return JSON.stringify({ name: t.querySelector('.talk-name').textContent, ja: t.querySelector('.talk-ja').textContent.trim() }); })()"""))
     assert r['name'].startswith('森 健太') and r['ja'] == 'いらっしゃい！', r
 
+# ---- the one waiting: its mark, the way to it, a word on entering 書房 ----
+def test_one_mark_on_the_waiting_person(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([['a1', 'm1', 'kenta', 'town'], ['a2', 'm1', 'lin', 'town']]); begin('m1'); state.town.seen.lin = 1;
+      await go('town', 9); const marks = [...y().querySelectorAll('.ev-mark')].map(m => m.closest('.npc').dataset.npc);
+      return JSON.stringify({ marks, people: [...y().querySelectorAll('.npc')].map(e => e.dataset.npc).sort() }); })()"""))
+    assert r == {'marks': ['kenta'], 'people': ['kenta', 'lin']}, r   # 健太 not met yet, there for his event
+
+def test_the_yard_signs_point_toward_the_event(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([['a1', 'm1', 'mugi', 'beach']]); begin('m1'); state.met = { koharu: 1, mugi: 1 };
+      await go('outside', 9); const dots = [...y().querySelectorAll('.way-btn .ev-dot')].map(d => d.closest('.way-btn').dataset.to);
+      fake([]); await go('outside', 9); const none = y().querySelectorAll('.ev-dot').length;
+      return JSON.stringify({ dots, none }); })()"""))
+    assert r == {'dots': ['beach'], 'none': 0}, r
+
+def test_entering_the_study_says_where_someone_waits_once_a_day(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([['a1', 'm1', 'kenta', 'town']]); begin('m1'); localStorage.removeItem('nq_town_hint');
+      const said = []; toast = (m) => said.push(m); TOWNEV.clock = { h: 9, day: new Date(2026, 10, 10) };
+      location.hash = '#/today'; document.getElementById('view').innerHTML = ''; route(); await wait(400);
+      document.getElementById('view').innerHTML = ''; route(); await wait(400);
+      return JSON.stringify(said); })()"""))
+    assert len(r) == 1 and '小鎮' in r[0], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
