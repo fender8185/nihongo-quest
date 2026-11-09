@@ -1141,14 +1141,20 @@ def test_a_tap_on_the_pond_stirs_it(b):
     r = json.loads(ev(b, js))
     assert r == {'stir': True, 'crouch': True, 'parts': [9, True], 'gone': True}, r
 
-def test_the_hero_sits_at_the_bus_stop(b):
-    js = "(async () => { " + FRESH + """ location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); const wait = (ms) => new Promise(q => setTimeout(q, ms)), y = () => document.querySelector('.yard'), h = () => y().querySelector('.yhero');
-      const drawn = [!!y().querySelector('.busstop svg'), y().querySelector('.bus-btn').getAttribute('aria-label')];
-      y().querySelector('.bus-btn').click(); await wait(3000); const sat = h().classList.contains('bench'), facing = !h().classList.contains('back');
-      yHeroWalk(y(), [0, 60]); const up = !h().classList.contains('bench');
-      return JSON.stringify({ drawn, sat, facing, up, keepOff: yardFits('pond', { w: 'Y', x: BUS.X, y: BUS.Y + 6 }) }); })()"""
+def test_down_the_path_to_the_main_road_the_bus_stop_and_home_again(b):
+    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); const wait = (ms) => new Promise(q => setTimeout(q, ms)), y = () => document.querySelector('#view .yard'), h = () => y().querySelector('.yhero');
+      const yard = { bus: !!y().querySelector('.busstop'), way: y().querySelector('.way-btn').getAttribute('aria-label') };
+      y().querySelector('[data-act="to-street"]').click(); for (let i = 0; i < 100 && location.hash !== '#/street'; i++) await wait(50); await wait(2500);
+      const street = { hash: location.hash, place: y().dataset.place, bus: !!y().querySelector('.busstop svg'), house: !!y().querySelector('.house, .mailbox, .ywares'), edit: getComputedStyle(y().querySelector('.study-edit')).display };
+      y().querySelector('.bus-btn').click(); await wait(3000); const sat = [h().classList.contains('bench'), !h().classList.contains('back')];
+      y().querySelector('[data-act="to-yard"]').click(); const up = !h().classList.contains('bench'); for (let i = 0; i < 100 && location.hash !== '#/outside'; i++) await wait(50); await wait(300);
+      const home = { hash: location.hash, place: y().dataset.place, house: !!y().querySelector('.house') }, saved = JSON.parse(localStorage.getItem('nq_hero'));
+      return JSON.stringify({ yard, street, sat, up, home, both: !!(saved.yard && saved.street), keepOff: yardFits('pond', { w: 'Y', x: LANE.at(1)[0], y: 14 }) }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'drawn': [True, '公車站'], 'sat': True, 'facing': True, 'up': True, 'keepOff': False}, r   # sat on the bench facing us; up again to walk; no ware on it
+    assert r['yard'] == {'bus': False, 'way': '公車站'}, r   # the yard stays quiet: only a sign at the path's end
+    assert r['street'] == {'hash': '#/street', 'place': 'street', 'bus': True, 'house': False, 'edit': 'none'}, r
+    assert r['sat'] == [True, True] and r['up'], r   # sat on the bench facing us; up to walk home
+    assert r['home'] == {'hash': '#/outside', 'place': 'yard', 'house': True} and r['both'] and r['keepOff'] is False, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
