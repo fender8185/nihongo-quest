@@ -1065,6 +1065,17 @@ def test_the_telescope_shows_the_stars_and_a_stone_lantern_switches(b):
     assert r['open'] and r['name'] == '北斗七星ほくとしちせい' and r['lines'] == 7 and r['next'] == 'オリオン座オリオンざ' and r['closed'] and r['n'] == 6, r
     assert r['lantern'] == [True, True], r   # walked over, switched off
 
+def test_the_hero_sleeps_on_the_bed_and_waters_a_plant(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); location.hash = '#/bedroom'; document.getElementById('view').innerHTML = ''; route(); " + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('#view .study'), h = () => st().querySelector('.hero');
+      const bed = st().querySelector('.ware-use[data-ware="bed"]'); bed.click(); await wait(2200); bed.click(); await wait(500);
+      const sleep = h().classList.contains('sleep'), saved = JSON.parse(localStorage.getItem('nq_hero')).bed.pose;
+      const plant = st().querySelector('.ware-use[data-ware="bedPlant"]'); plant.click(); let can = false;
+      for (let i = 0; i < 80 && !can; i++) { await wait(50); can = !!st().querySelector('.watering'); }
+      const joy = !!st().querySelector('svg.art [data-o="w:bedPlant"].joy'), awake = !h().classList.contains('sleep'); await wait(3200);
+      return JSON.stringify({ sleep, saved, can, joy, awake, gone: !st().querySelector('.watering'), plants: WARES.filter(w => w.act === 'water').map(w => w.id).sort() }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'sleep': True, 'saved': '', 'can': True, 'joy': True, 'awake': True, 'gone': True, 'plants': ['bamboo', 'bedPlant', 'bigPlant', 'bonsai', 'cactus']}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

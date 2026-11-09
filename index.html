@@ -533,6 +533,23 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 @keyframes heroSwing { from { transform: rotate(-12deg); } to { transform: rotate(10deg); } }
 :is(.study, .yard) .hero.kneel .bob { animation: none; transform: translateY(20px); } :is(.study, .yard) .hero.kneel .legs { display: none; }
 :is(.study, .yard) .hero.sofa .h-shadow { display: none; }   /* up on the cushion */
+/* test (2026-11-09): asleep on the bed — laid along it (feet at the hero's spot, the head toward the pillow), eyes shut, z z Z */
+:is(.study, .yard) .hero.sleep .bob { animation: heroSleep 3.2s ease-in-out infinite; transform-origin: 0 0; transform: translateY(-54px) rotate(63deg); } :is(.study, .yard) .hero.sleep .h-shadow { display: none; }
+@keyframes heroSleep { 50% { transform: translateY(-55.5px) rotate(63deg); } }
+:is(.study, .yard) .hero.sleep .eyes { animation: none; transform: scaleY(.1); }
+.study .hero.sleep::after { content: 'z'; position: absolute; left: 118%; top: 2%; font: 700 15px/1 system-ui, sans-serif; color: #8fa4d8; text-shadow: 9px -9px 0 rgba(143, 164, 216, .75), 18px -20px 0 rgba(143, 164, 216, .5); animation: heroZzz 2.4s ease-in-out infinite; pointer-events: none; }
+@keyframes heroZzz { 0% { transform: translate(0, 6px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(6px, -10px); opacity: 0; } }
+/* watering a plant: a can tips over it, drops fall, the plant sways */
+.study .watering { position: absolute; pointer-events: none; } .study .watering svg { width: 100%; height: 100%; overflow: visible; }
+.study .watering .can { transform-box: fill-box; transform-origin: 30% 70%; animation: canTip 1.9s ease-in-out forwards; }
+@keyframes canTip { 0% { transform: rotate(0) translateY(6px); opacity: 0; } 15% { opacity: 1; transform: rotate(0); } 35%, 80% { transform: rotate(32deg); opacity: 1; } 100% { transform: rotate(0) translateY(-4px); opacity: 0; } }
+.study .watering .drop { opacity: 0; animation: dropFall .5s ease-in infinite; animation-delay: var(--w); } .study .watering .drops { animation: dropsOn 1.9s linear forwards; }
+@keyframes dropFall { 0% { transform: translate(0, 0); opacity: .9; } 100% { transform: translate(4px, 30px); opacity: 0; } }
+@keyframes dropsOn { 0%, 30% { opacity: 0; } 34%, 80% { opacity: 1; } 84%, 100% { opacity: 0; } }
+.study .watering .spark { opacity: 0; animation: sparkUp 1s ease-out 1.5s forwards; } .study .watering .spark:nth-child(2) { animation-delay: 1.65s; } .study .watering .spark:nth-child(3) { animation-delay: 1.8s; }
+@keyframes sparkUp { 0% { transform: translateY(6px) scale(.5); opacity: 0; } 40% { opacity: 1; } 100% { transform: translateY(-12px) scale(1); opacity: 0; } }
+.room svg.art g.joy { transform-box: fill-box; transform-origin: 50% 100%; animation: plantJoy .7s ease-in-out 1.6s 2; }
+@keyframes plantJoy { 25% { transform: rotate(-3deg) scaleY(1.03); } 75% { transform: rotate(3deg) scaleY(1.03); } }
 :is(.study, .yard) .hero.hop:not(.sit, .sofa, .kneel) .bob { animation: heroHop .5s cubic-bezier(.3, .7, .4, 1); }
 :is(.study, .yard) .hero.idle-look .head { animation: heroLookRound 1.8s ease-in-out; } :is(.study, .yard) .hero.idle-nod .head { animation: heroNod 1.6s ease-in-out; }
 :is(.study, .yard) .hero:is(.idle-stretch, .cheer) .arm.l { animation: heroUpL 1.6s ease-in-out; } :is(.study, .yard) .hero:is(.idle-stretch, .cheer) .arm.r { animation: heroUpR 1.6s ease-in-out; } :is(.study, .yard) .hero.idle-stretch .bob { animation: heroTall 1.6s ease-in-out; }
@@ -6880,10 +6897,10 @@ function shelfBooks() {
 const WARES = [
   { id: 'gramophone', kind: 'floor', h: 2.7, name: '留聲機', price: 100, fp: [1, 1], desc: '老唱機。點它就開始聽一輪。', act: 'listen' },
   { id: 'goldfish', kind: 'floor', h: 2.5, name: '金魚缸', price: 28, fp: [0.8, 0.8], desc: '兩隻金魚在裡面慢慢游。' },
-  { id: 'bonsai', kind: 'floor', h: 1.4, name: '盆栽', price: 12, fp: [0.8, 0.8], desc: '小小一棵松，修得很用心。' },
+  { id: 'bonsai', kind: 'floor', h: 1.4, name: '盆栽', price: 12, fp: [0.8, 0.8], desc: '小小一棵松，修得很用心。', act: 'water' },
   { id: 'monstera', kind: 'floor', h: 2.7, name: '龜背芋', price: 24, fp: [0.9, 0.9], desc: '葉子大大的，房間一下就有精神。' },
-  { id: 'cactus', kind: 'floor', h: 1.8, name: '仙人掌', price: 6, fp: [0.6, 0.6], desc: '很好養，忘了澆水也沒關係。' },
-  { id: 'bamboo', kind: 'floor', h: 3.4, name: '竹子', price: 14, fp: [0.7, 0.7], desc: '一盆細竹，長得直直的。' },
+  { id: 'cactus', kind: 'floor', h: 1.8, name: '仙人掌', price: 6, fp: [0.6, 0.6], desc: '很好養，忘了澆水也沒關係。', act: 'water' },
+  { id: 'bamboo', kind: 'floor', h: 3.4, name: '竹子', price: 14, fp: [0.7, 0.7], desc: '一盆細竹，長得直直的。', act: 'water' },
   { id: 'floorlamp', kind: 'floor', h: 4.1, name: '落地燈', price: 30, fp: [0.7, 0.7], desc: '晚上會亮的暖黃色立燈。', light: { z: 3.7, r: 5 } },
   { id: 'andon', kind: 'floor', h: 1.5, name: '行燈', price: 30, fp: [0.8, 0.8], desc: '和紙糊的燈，晚上透出柔柔的光。', light: { z: 0.9, r: 3.4 } },
   { id: 'chabudai', kind: 'floor', h: 1.0, name: '矮桌', price: 20, fp: [1.6, 1.6], desc: '圓圓的矮桌，放杯茶剛好。' },
@@ -6945,9 +6962,9 @@ const WARES = [
   { id: 'pumpkinhouse', kind: 'house', limited: 'halloween', name: '南瓜屋', price: 2000, desc: '胖胖的大南瓜，頂上一根藤蔓和葉子，三角形的窗戶晚上從裡面亮起來。' },
   { id: 'pumpkin', kind: 'floor', limited: 'halloween', h: 1, name: '南瓜燈', price: 20, fp: [0.8, 0.8], desc: '刻了笑臉的南瓜，晚上會從裡面亮起來。', light: { z: 0.5, r: 2.8 } },
   // 書房's own (starter: had from the start, not sold): laid out where they always stood, then moved or put away like the rest
-  { id: 'bed', kind: 'floor', starter: true, turn: false, h: 3, name: '床', fp: [2.9, 5.25], at: { w: 'F', x: 9.45, y: 2.625, r: 0, rm: 'bed' }, desc: '' },
+  { id: 'bed', kind: 'floor', starter: true, turn: false, h: 3, name: '床', fp: [2.9, 5.25], at: { w: 'F', x: 9.45, y: 2.625, r: 0, rm: 'bed' }, desc: '', act: 'bed' },
   { id: 'nightTable', kind: 'floor', starter: true, turn: false, h: 3.2, name: '床頭櫃', fp: [1, 1], at: { w: 'F', x: 7.25, y: 0.55, r: 0, rm: 'bed' }, desc: '' },
-  { id: 'bigPlant', kind: 'floor', starter: true, turn: false, h: 3.7, name: '觀葉植物', fp: [0.84, 0.84], at: { w: 'F', x: 16.2, y: 1, r: 0 }, desc: '' },
+  { id: 'bigPlant', kind: 'floor', starter: true, turn: false, h: 3.7, name: '觀葉植物', fp: [0.84, 0.84], at: { w: 'F', x: 16.2, y: 1, r: 0 }, desc: '', act: 'water' },
   { id: 'sageRug', kind: 'rug', starter: true, turn: false, name: '圓地毯', fp: [2.5, 2.5], at: { w: 'F', x: 5.4, y: 6.2, r: 0 }, desc: '' },
   { id: 'bedRug', kind: 'rug', starter: true, turn: false, name: '床邊地毯', fp: [2.6, 2.64], at: { w: 'F', x: 5.9, y: 2.92, r: 0, rm: 'bed' }, desc: '' },
   { id: 'fujiPrint', kind: 'wall', starter: true, name: '富士山版畫', size: [1.4, 1.25], at: { w: 'L', u: 3.45, v: 7.925 }, desc: '' },
@@ -6967,7 +6984,7 @@ const WARES = [
   { id: 'bedWindow', kind: 'wall', starter: true, since: 7, win: true, name: '臥房的窗', size: [4.7, 5.4], at: { w: 'R', u: 15.6, v: 6.6, rm: 'bed' }, desc: '' },
   { id: 'wardrobe', kind: 'floor', starter: true, since: 7, turn: false, h: 6.2, name: '衣櫃', fp: [1.3, 2.6], at: { w: 'F', x: 0.65, y: 8.3, r: 0, rm: 'bed' }, desc: '', act: 'wardrobe' },
   { id: 'dresser', kind: 'floor', starter: true, since: 7, turn: false, h: 2.6, name: '矮櫃', fp: [2.4, 1.2], at: { w: 'F', x: 15.6, y: 0.6, r: 0, rm: 'bed' }, desc: '' },
-  { id: 'bedPlant', kind: 'floor', starter: true, since: 7, turn: false, h: 3.7, name: '盆栽植物', fp: [0.84, 0.84], at: { w: 'F', x: 18.9, y: 0.8, r: 0, rm: 'bed' }, desc: '' },
+  { id: 'bedPlant', kind: 'floor', starter: true, since: 7, turn: false, h: 3.7, name: '盆栽植物', fp: [0.84, 0.84], at: { w: 'F', x: 18.9, y: 0.8, r: 0, rm: 'bed' }, desc: '', act: 'water' },
   // test (since: 8): more windows (書房 one behind the sofa and one over the low shelf, the bedroom one by the corner) and wall
   // lamps (their light: lit by night like the lamps, light.dz above their middle)
   { id: 'sofaWindow', kind: 'wall', starter: true, since: 8, win: true, bare: true, name: '沙發旁的窗', size: [4.7, 5.4], at: { w: 'R', u: 22.2, v: 6.6 }, desc: '' },
@@ -7554,6 +7571,37 @@ const ROOM = (() => {
     s += `<path class="hl" d="${line([[x0 - 0.04, t1, dt + 0.03], [dx + 0.04, t1, dt + 0.03], [dx + 0.04, t0, dt + 0.03]])}"/>`;
     return s;
   }
+  // the duvet pulled up over the hero asleep (test, 2026-11-09): drawn over him, soft — puffed up over his body, its sides
+  // hanging in a wavy hem, the sheet turned back under his chin in a round roll, the mustard throw across the foot again
+  function blanketArt() {
+    const { x0, x1, y1 } = BED, xa = x0 - 0.06, xb = x1 + 0.16, ya = 2.35, yb = y1 + 0.12, xm = (x0 + x1) / 2;
+    const zt = (x) => 1.4 + 0.24 * Math.exp(-(((x - xm) / 0.8) ** 2)), N = 12;   // the hump over his body
+    const xs = Array.from({ length: N + 1 }, (_, i) => xa + (xb - xa) * i / N), ys = (y0, y9) => Array.from({ length: N + 1 }, (_, i) => y0 + (y9 - y0) * i / N);
+    const wave = (i) => 0.05 * Math.sin(i * 1.9);
+    const curve = (pts, move = true) => {   // a smooth line through room points
+      const q = pts.map((p) => P(...p).map(r1)), mid = (a, b) => [r1((a[0] + b[0]) / 2), r1((a[1] + b[1]) / 2)];
+      let d = `${move ? 'M' : 'L'}${q[0].join(' ')}`;
+      for (let i = 1; i < q.length - 1; i++) d += ` Q${q[i].join(' ')} ${mid(q[i], q[i + 1]).join(' ')}`;
+      return d + ` L${q[q.length - 1].join(' ')}`;
+    };
+    const top = (y) => xs.map((x) => [x, y, zt(x)]);
+    let s = '';
+    // the side and the front hanging down, a wavy hem
+    s += `<path ${F('#86a2c4', 'x', [xb, (ya + yb) / 2, 1])} d="${curve(ys(ya, yb).map((y) => [xb, y, zt(xb)]))}${curve(ys(yb, ya).map((y, i) => (i ? [xb + 0.05, y, 0.56 + wave(i)] : [xb + 0.05, yb + 0.05, 0.56])), false)} Z"/>`;
+    s += `<path ${F('#8eaacb', 'y', [xm, yb, 1])} d="${curve(top(yb))}${curve(xs.slice().reverse().map((x, i) => (i ? [x, yb + 0.05, 0.56 + wave(i + 3)] : [xb + 0.05, yb + 0.05, 0.56])), false)} Z"/>`;
+    // the top, puffed up, a soft light along the hump and two soft folds across it
+    s += `<path ${F('#9db7d6', 't', [xm, (ya + yb) / 2, 1.6])} d="${curve(top(ya))}${curve(top(yb).reverse(), false)} Z"/>`;
+    s += `<path d="${curve(ys(ya + 0.3, yb - 0.1).map((y) => [xm - 0.15, y, zt(xm) + 0.01]))}" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="9" stroke-linecap="round"/>`;
+    [3.05, 4.05].forEach((y) => { s += `<path d="${curve(top(y))}" fill="none" stroke="#6f8db2" stroke-opacity=".35" stroke-width="1.6" stroke-linecap="round"/>`; });
+    // the throw across the foot, following the hump and over the side
+    const t0 = y1 - 1.2, t1 = y1 - 0.52, up = (x) => [x, 0, zt(x) + 0.02];
+    s += `<path ${F(C.mustard, 't', [xm, (t0 + t1) / 2, 1.7])} d="${curve(xs.map((x) => [x, t0, up(x)[2]]))}${curve(xs.slice().reverse().map((x) => [x, t1, up(x)[2]]), false)} Z"/>`;
+    s += `<path ${F('#d3a443', 'x', [xb, (t0 + t1) / 2, 1.2])} d="${curve([[xb + 0.01, t0, zt(xb) + 0.02], [xb + 0.01, t1, zt(xb) + 0.02]])}${curve([[xb + 0.06, t1, 0.95], [xb + 0.06, (t0 + t1) / 2, 0.9], [xb + 0.06, t0, 0.95]], false)} Z"/>`;
+    // the sheet turned back: a round roll under his chin
+    s += `<path d="${curve(top(ya + 0.12).map(([x, y, z]) => [x, y, z + 0.02]))}" fill="none" stroke="#2b1c12" stroke-opacity=".12" stroke-width="15" stroke-linecap="round"/>`;
+    s += `<path d="${curve(top(ya + 0.08).map(([x, y, z]) => [x, y, z + 0.06]))}" fill="none" stroke-width="12" stroke-linecap="round" ${FS('#f8f5ee', 't', [xm, ya, 1.6])}/>`;
+    return s;
+  }
   function nightTableArt() {
     const { x0, x1, y0, y1, h } = NT, xm = (x0 + x1) / 2;
     let s = shadow(x0 - 0.1, y0 - 0.05, x1 + 0.25, y1 + 0.3, 0.7);
@@ -8014,22 +8062,23 @@ const ROOM = (() => {
     const el = st.querySelector('.hero'); if (!el) return;
     const [px, py] = P(hero.x, hero.y, 0);
     el.style.left = `${((px - 60 - VB[0]) / VB[2] * 100).toFixed(3)}%`; el.style.top = `${((py - 200 - VB[1]) / VB[3] * 100).toFixed(3)}%`;
-    el.classList.toggle('back', hero.back); el.classList.toggle('turn', !!hero.turn); el.classList.toggle('flip', hero.flip); ['sit', 'sofa', 'kneel'].forEach((k) => el.classList.toggle(k, hero.pose === k));
+    el.classList.toggle('back', hero.back); el.classList.toggle('turn', !!hero.turn); el.classList.toggle('flip', hero.flip); ['sit', 'sofa', 'kneel', 'sleep'].forEach((k) => el.classList.toggle(k, hero.pose === k));
     heroFront(st);
   }
   // the things standing in front of the hero where they overlap it on screen, copied over it
   function heroFront(st) {
     const f = [hero.x - 0.25, hero.y - 0.25, hero.x + 0.25, hero.y + 0.25], z0 = hero.pose === 'sit' ? 1.72 : 0, a = hero.x - hero.y;
     const ids = shown.filter((o) => {
-      if (hero.pose === 'sofa' && o.id === hero.seat) return false;   // on the sofa: over it, legs over its edge
+      if ((hero.pose === 'sofa' || hero.pose === 'sleep') && o.id === hero.seat) return false;   // on the sofa (legs over its edge) or the bed: over it
       if (o.fp[2] - o.fp[1] <= a - 1.4 || a + 1.4 <= o.fp[0] - o.fp[3]) return false;   // apart on screen
       const heroBehind = f[2] <= o.fp[0] + 1e-6 || f[3] <= o.fp[1] + 1e-6, itBehind = o.fp[2] <= f[0] + 1e-6 || o.fp[3] <= f[1] + 1e-6;
       if (heroBehind !== itBehind) return heroBehind;
       return z0 !== (o.z0 || 0) ? z0 < (o.z0 || 0) : f[0] + f[1] + f[2] + f[3] < o.fp[0] + o.fp[1] + o.fp[2] + o.fp[3];
-    }).map((o) => o.id), key = ids.join(',');
+    }).map((o) => o.id), bed = hero.pose === 'sleep' && placedWares().find((q) => q.id === 'bed'), key = ids.join(',') + (bed ? `+bed${bed.p.x},${bed.p.y}` : '');
     if (key === hero.frontKey) return;
     hero.frontKey = key;
-    const layer = st.querySelector('svg.front'); if (layer) layer.innerHTML = shown.filter((o) => ids.includes(o.id)).map((o) => o.art).join('');
+    const over = bed ? shifted(bed.p.x - 18.45, bed.p.y - 2.625, blanketArt) : '';   // asleep: tucked in under the duvet
+    const layer = st.querySelector('svg.front'); if (layer) layer.innerHTML = shown.filter((o) => ids.includes(o.id)).map((o) => o.art).join('') + over;
   }
   // the floor in half-unit cells: furniture, wares and the walls' edges are in the way, and so is floor the camera never shows
   // (BOUND); A* finds the way, then pulls it straight
@@ -8085,13 +8134,13 @@ const ROOM = (() => {
   function heroWalk(st, pts, done) {
     const el = st.querySelector('.hero'), len = pathLength(pts);
     if (!el || len < 1e-3) { heroHalt(); if (done) done(); return; }
-    hero.pose = ''; hero.lead = null; el.classList.remove('sit', 'sofa', 'kneel', 'reach', 'crouch', 'look', 'out'); HERO.still(el);
+    hero.pose = ''; hero.lead = null; el.classList.remove('sit', 'sofa', 'kneel', 'sleep', 'reach', 'crouch', 'look', 'out'); HERO.still(el);
     hero.walk = { pts: pts.slice(1), v: Math.max(5.5, len / 1.1), done };   // a long way hurries, about a second at most
     heroSteps(st);
   }
   function heroLead(st, off) {   // a finger on the hero leads him (off: from the finger to his feet, on the screen)
     if (standUp()) heroPlace(st);   // up from the chair (out behind it), the sofa or the kotatsu
-    st.querySelector('.hero').classList.remove('sit', 'sofa', 'kneel', 'reach', 'crouch', 'look', 'out'); HERO.still(st.querySelector('.hero'));
+    st.querySelector('.hero').classList.remove('sit', 'sofa', 'kneel', 'sleep', 'reach', 'crouch', 'look', 'out'); HERO.still(st.querySelector('.hero'));
     hero.going = null; hero.lead = { x: 0, y: 0, off, t: 0, to: null };
     grid = null; grid = walkGrid(); hero.walk = { pts: [], v: 5.5, done: null }; heroSteps(st);
   }
@@ -8147,7 +8196,7 @@ const ROOM = (() => {
   }
   // seated (test, 2026-11-09: the sofa and the kotatsu besides the chair): getting up steps out — behind the chair, off the
   // sofa or the cushion the way the hero came (hero.out)
-  const SEATED = ['sit', 'sofa', 'kneel'];
+  const SEATED = ['sit', 'sofa', 'kneel', 'sleep'];
   function standUp() {
     if (!hero.pose) return false;
     const o = hero.pose === 'sit' ? [0, 1.0] : hero.out || [0, 1];
@@ -8163,7 +8212,7 @@ const ROOM = (() => {
     heroPlace(st); heroSave();
     if (el && !SEATED.includes(sp.act)) { el.classList.add(sp.act); if (sp.act !== 'out') setTimeout(() => el.classList.remove(sp.act), 900); }
   }
-  const POSE_MS = { sit: 300, sofa: 300, kneel: 300, reach: 340, crouch: 340, look: 300, out: 60 };
+  const POSE_MS = { sit: 300, sofa: 300, kneel: 300, sleep: 300, reach: 340, crouch: 340, look: 300, out: 60 };
   // a thing tapped: the hero walks to it and does its bit, then the thing's own way into its page; tapped again on the way: straight in
   let namedT = 0;
   function named(st, el) {   // a tapped thing shows its words for a moment (they wait in its badge)
@@ -8192,10 +8241,28 @@ const ROOM = (() => {
       const sx = o.p.x + (hero.x < o.p.x ? -0.75 : 0.75), sy = o.p.y + 0.45;
       use(el, () => {}, { x: sx, y: sy, look: 'F', act: 'sofa', from: [sx, o.p.y + 1.4], out: [0, 0.95], seat: 'w:' + o.id }); return;
     }
+    // the bed (test, 2026-11-09): lain on, the head on the pillow, getting off by its open side
+    if (o.it.act === 'bed') { use(el, () => {}, { x: o.p.x, y: o.p.y + 1.22, look: 'F', act: 'sleep', from: [o.p.x + 1.95, o.p.y + 1], out: [1.95, -0.2], seat: 'w:' + o.id }); return; }
     if (o.it.act === 'kotatsu') { use(el, () => {}, { x: o.p.x - 1.18, y: o.p.y, look: 'X', act: 'kneel', from: [o.p.x - 1.9, o.p.y], out: [-0.72, 0] }); return; }
     const f = wareFootprint(o.it, o.p), g = walkGrid(), ok = ([x, y]) => { const i = Math.floor(x / CELL), j = Math.floor(y / CELL); return i >= 0 && j >= 0 && i < GW && j < GH && !g[j * GW + i]; };
     const [x, y, look] = [[o.p.x, f[3] + 0.5, 'R'], [f[2] + 0.5, o.p.y, 'L']].find(ok) || [o.p.x, f[3] + 0.5, 'R'];
-    use(el, () => { if (o.it.act === 'listen') go('#/listen'); else if (o.it.act === 'wardrobe') DRESS.open(el.closest('.study')); }, { x, y, look, act: 'reach' });
+    use(el, () => { if (o.it.act === 'listen') go('#/listen'); else if (o.it.act === 'wardrobe') DRESS.open(el.closest('.study')); else if (o.it.act === 'water') water(el.closest('.study'), o, look); }, { x, y, look, act: 'reach' });
+  }
+  // watering a plant (test, 2026-11-09): a can over it from the hero's side tips, drops fall on it, it sways, a few sparkles
+  function water(st, o, look) {
+    if (!st) return;
+    const [x, y] = P(o.p.x, o.p.y, (o.it.h || 2) * 0.8), flip = look === 'L';   // the hero to its right (L): the can comes from there
+    const el = document.createElement('div');
+    el.className = 'watering'; el.style.cssText = `${vbPct(x - 70, y - 64)};${vbSize(140, 100)}`;
+    el.innerHTML = `<svg viewBox="0 0 140 100" aria-hidden="true"><g${flip ? ' transform="translate(140 0) scale(-1 1)"' : ''}>
+      <g class="can"><path d="M22 30 Q22 22 30 22 H52 Q60 22 60 30 V52 Q60 58 54 58 H28 Q22 58 22 52 Z" fill="#5aa0b8"/><path d="M28 22 Q41 6 54 22" fill="none" stroke="#3f7f96" stroke-width="4" stroke-linecap="round"/>
+        <path d="M58 46 L84 30" stroke="#5aa0b8" stroke-width="6" stroke-linecap="round"/><ellipse cx="86" cy="29" rx="4" ry="6" transform="rotate(-30 86 29)" fill="#3f7f96"/><path d="M26 34 H56" stroke="#8fc6d8" stroke-width="3" stroke-linecap="round"/></g>
+      <g class="drops">${[[86, 40, 0], [92, 44, -0.17], [80, 46, -0.33], [96, 38, -0.25], [88, 50, -0.08]].map(([dx, dy, w]) => `<ellipse class="drop" cx="${dx}" cy="${dy}" rx="1.8" ry="3" fill="#7cc4ea" style="--w:${w}s"/>`).join('')}</g>
+      <g fill="#ffe27a">${[[74, 52], [104, 58], [90, 40]].map(([sx, sy]) => `<path class="spark" d="M${sx} ${sy - 5} L${sx + 1.6} ${sy - 1.6} L${sx + 5} ${sy} L${sx + 1.6} ${sy + 1.6} L${sx} ${sy + 5} L${sx - 1.6} ${sy + 1.6} L${sx - 5} ${sy} L${sx - 1.6} ${sy - 1.6} Z"/>`).join('')}</g></g></svg>`;
+    st.querySelector('.room').appendChild(el);
+    const g = st.querySelector(`svg.art [data-o="w:${o.id}"]`);
+    if (g) { g.classList.remove('joy'); void g.getBoundingClientRect(); g.classList.add('joy'); setTimeout(() => g.classList.remove('joy'), 3200); }
+    setTimeout(() => el.remove(), 3000);
   }
   function heroSettle(st) {   // back in the room: out of anything just put where it stood (off a chair moved away)
     if (hero.pose === 'sit') { const c = spotOf('notebook'); if (Math.hypot(hero.x - c.x, hero.y - c.y) < 0.05) { heroPlace(st); return; } } standUp();
@@ -8286,7 +8353,7 @@ const ROOM = (() => {
         <div class="steam" aria-hidden="true" style="${vbPct(mx - 8, my - 40)};${vbSize(16, 24)}"><i style="--w:0s"></i><i style="--w:-1.1s;left:50%"></i><i style="--w:-2.3s;left:20%"></i></div>` : ''}
         ${THINGS.map(thing).join('')}
         ${ed.on ? '' : LAMPS.map((L) => { const [lx, ly] = P(...L.p); return `<button type="button" class="lamp-tap${lampOff(L.id) ? ' off' : ''}" data-act="lamp-toggle" data-lamp="${L.id}" style="${vbPct(lx - 24, ly - 24)};${vbSize(48, 48)}" aria-label="${lampOff(L.id) ? '開燈' : '關燈'}"></button>`; }).join('')}
-        ${ed.on ? '' : placedWares().filter((o) => o.it.act).map((o) => { const b = wareBox(o); return `<button type="button" class="ware-use" data-act="ware-use" data-ware="${o.id}" style="${vbPct(b[0], b[1])};${vbSize(b[2] - b[0], b[3] - b[1])}" aria-label="${esc(o.it.name)}：${{ listen: '聽一輪', sofa: '坐下', kotatsu: '坐下', wardrobe: '衣櫃' }[o.it.act] || ''}"></button>`; }).join('')}
+        ${ed.on ? '' : placedWares().filter((o) => o.it.act).map((o) => { const b = wareBox(o); return `<button type="button" class="ware-use" data-act="ware-use" data-ware="${o.id}" style="${vbPct(b[0], b[1])};${vbSize(b[2] - b[0], b[3] - b[1])}" aria-label="${esc(o.it.name)}：${{ listen: '聽一輪', sofa: '坐下', kotatsu: '坐下', wardrobe: '衣櫃', bed: '睡覺', water: '澆水' }[o.it.act] || ''}"></button>`; }).join('')}
         ${ed.on ? `${decosHtml()}${selHtml()}<svg class="ghost" viewBox="${VB.join(' ')}" aria-hidden="true"><g></g></svg>` : ''}
       </div></div>
       ${ed.on ? editHtml() : ''}
@@ -9582,6 +9649,7 @@ const HERO = (() => {
     el._idle = setTimeout(() => {
       if (!el.isConnected) return;
       if (!ok()) { idle(el, ok); return; }
+      if (el.classList.contains('sleep')) { idle(el, ok); return; }   // asleep: no fidgeting
       const sit = el.matches('.sit, .sofa, .kneel'), names = sit ? ['nod'] : (inCat(el) ? CATS : PEOPLE).filter((k) => k !== el._idleLast && !((k === 'wave' || k === 'maneki') && el.classList.contains('back')));
       const k = names[Math.floor(Math.random() * names.length)]; el._idleLast = k;
       el.classList.add('idle-' + k);
@@ -9593,6 +9661,7 @@ const HERO = (() => {
   const TAPS = { hop: 520, wave: 1200, spin: 700, cheer: 900 };
   function react(el) {
     if (calm()) return;
+    if (el.classList.contains('sleep')) return;   // asleep
     const names = el.matches('.sit, .sofa, .kneel') ? ['wave'] : Object.keys(TAPS).filter((k) => k !== el._tapLast && !(k === 'wave' && el.classList.contains('back')));
     const k = names[Math.floor(Math.random() * names.length)]; el._tapLast = k;
     el.classList.remove(...Object.keys(TAPS)); still(el); void el.offsetWidth; el.classList.add(k);
