@@ -415,7 +415,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .room.glide { transition: transform .45s cubic-bezier(.2, .8, .25, 1); }
 .room > * { position: absolute; }
 .room .art { left: 0; top: 0; width: 100%; height: 100%; overflow: visible; }
-:is(.room, svg.thumb) .hl { fill: none; stroke: color-mix(in srgb, rgba(255, 255, 255, .6) calc(var(--day) * 100%), rgba(255, 214, 170, .14)); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }   /* the lit edges */
+:is(.room, svg.thumb) .hl { fill: none; stroke: color-mix(in srgb, rgba(255, 255, 255, .22) calc(var(--day) * 100%), rgba(255, 214, 170, .1)); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }   /* the lit edges */
 :is(.room, svg.thumb) .ln { fill: none; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
 :is(.room, svg.thumb) .day-only { opacity: var(--day); } :is(.room, svg.thumb) .night-only { opacity: calc(1 - var(--day)); } .room .wp { opacity: calc(.18 + .82 * var(--day)); }   /* wp: the wallpaper's stripes, faint by night */
 /* the window: the sky at this hour behind the glass, on the slant of the right wall */
@@ -2185,6 +2185,9 @@ function normalizeState(s) {
   if (out.roomV < 5) { if (!out.placed.window) out.placed.window = Object.assign({}, WARE.get('window').at); out.roomV = 5; }
   // 1.3.0 (roomV 7): 書房 grew, the bedroom is a room of its own; the bed and its things move in, 書房's own things spread out
   if (out.roomV < 7) { ROOM.settle(out.placed); out.roomV = 7; }
+  // test (roomV 8): the strings of lights come down into the storage box, 腳踏墊 is gone (the user's call), more windows and wall
+  // lamps, the desk further off the bookcase, the kotatsu by the low shelf, the round rug in front of the desk
+  if (out.roomV < 8) { delete out.placed.doorMat; ROOM.settle8(out.placed); out.roomV = 8; }
   WARES.filter(w => w.fixed).forEach(w => { if (!out.placed[w.id]) out.placed[w.id] = Object.assign({}, w.at); });   // the working things are always somewhere
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
   if (out.stage !== 'pre' && out.stage !== 'main') out.stage = 'main';   // 入門階段 (1.0.6); accounts from before it are in the main course
@@ -6789,37 +6792,47 @@ const WARES = [
   { id: 'bed', kind: 'floor', starter: true, turn: false, h: 3, name: '床', fp: [2.9, 5.25], at: { w: 'F', x: 9.45, y: 2.625, r: 0, rm: 'bed' }, desc: '' },
   { id: 'nightTable', kind: 'floor', starter: true, turn: false, h: 3.2, name: '床頭櫃', fp: [1, 1], at: { w: 'F', x: 7.25, y: 0.55, r: 0, rm: 'bed' }, desc: '' },
   { id: 'bigPlant', kind: 'floor', starter: true, turn: false, h: 3.7, name: '觀葉植物', fp: [0.84, 0.84], at: { w: 'F', x: 16.2, y: 1, r: 0 }, desc: '' },
-  { id: 'sageRug', kind: 'rug', starter: true, turn: false, name: '圓地毯', fp: [2.5, 2.5], at: { w: 'F', x: 3.4, y: 12.6, r: 0 }, desc: '' },
+  { id: 'sageRug', kind: 'rug', starter: true, turn: false, name: '圓地毯', fp: [2.5, 2.5], at: { w: 'F', x: 5.4, y: 6.2, r: 0 }, desc: '' },
   { id: 'bedRug', kind: 'rug', starter: true, turn: false, name: '床邊地毯', fp: [2.6, 2.64], at: { w: 'F', x: 5.9, y: 2.92, r: 0, rm: 'bed' }, desc: '' },
-  { id: 'doorMat', kind: 'rug', starter: true, turn: false, name: '腳踏墊', fp: [1.1, 1.6], at: { w: 'F', x: 0.7, y: 5.1, r: 0 }, desc: '' },
   { id: 'fujiPrint', kind: 'wall', starter: true, name: '富士山版畫', size: [1.4, 1.25], at: { w: 'L', u: 3.45, v: 7.925 }, desc: '' },
-  { id: 'kanaChart', kind: 'wall', starter: true, name: '平假名表', size: [1.55, 2.15], at: { w: 'R', u: 22.2, v: 5.6 }, desc: '' },
+  { id: 'kanaChart', kind: 'wall', starter: true, name: '平假名表', size: [1.55, 2.15], at: { w: 'R', u: 18.6, v: 5.6 }, desc: '' },
   { id: 'nightPicture', kind: 'wall', starter: true, name: '夜空畫', size: [1.3, 1.1], at: { w: 'R', u: 9.45, v: 4.4, rm: 'bed' }, desc: '' },
   { id: 'pegRail', kind: 'wall', starter: true, name: '掛勾架', size: [1.6, 1.5], at: { w: 'L', u: 7.7, v: 5.05 }, desc: '' },
   // the window (1.2.0): moved along either wall, or put away (the wall is whole then); its curtains and sill go with it
-  { id: 'window', kind: 'wall', starter: true, win: true, name: '窗戶', size: [4.7, 5.4], at: { w: 'R', u: 4.1, v: 6.6 }, desc: '' },
+  { id: 'window', kind: 'wall', starter: true, win: true, name: '窗戶', size: [4.7, 5.4], at: { w: 'R', u: 5.5, v: 6.6 }, desc: '' },
   // 1.3.0 (since: 7, set out once where there is room): more of the house's own, so 書房 is no longer all round the desk — a
   // kotatsu in the middle, a reading corner (a sofa, a side table with a lamp, a rug) and a low shelf by the left wall; in the bedroom a window, a
   // wardrobe (it opens 衣櫃, as the button does), a dresser and a plant
   { id: 'sofa', kind: 'floor', starter: true, since: 7, turn: false, h: 2.3, name: '沙發', fp: [3.4, 1.5], at: { w: 'F', x: 22.2, y: 0.75, r: 0 }, desc: '' },
   { id: 'sideTable', kind: 'floor', starter: true, since: 7, turn: false, h: 2.6, name: '小邊桌', fp: [0.9, 0.9], at: { w: 'F', x: 24.55, y: 0.5, r: 0 }, desc: '', light: { z: 2.5, r: 4.2 } },
-  { id: 'kotatsu', kind: 'floor', starter: true, since: 7, turn: false, h: 1.1, name: '暖桌', fp: [2.8, 2.8], at: { w: 'F', x: 11.5, y: 9, r: 0 }, desc: '' },
+  { id: 'kotatsu', kind: 'floor', starter: true, since: 7, turn: false, h: 1.1, name: '暖桌', fp: [2.8, 2.8], at: { w: 'F', x: 4.6, y: 12.6, r: 0 }, desc: '' },
   { id: 'loungeRug', kind: 'rug', starter: true, since: 7, turn: false, name: '長地毯', fp: [4.4, 2.8], at: { w: 'F', x: 22.4, y: 3.3, r: 0 }, desc: '' },
   { id: 'lowShelf', kind: 'floor', starter: true, since: 7, turn: false, h: 2.4, name: '矮書架', fp: [1.1, 3.4], at: { w: 'F', x: 0.55, y: 12.6, r: 0 }, desc: '' },
   { id: 'bedWindow', kind: 'wall', starter: true, since: 7, win: true, name: '臥房的窗', size: [4.7, 5.4], at: { w: 'R', u: 15.6, v: 6.6, rm: 'bed' }, desc: '' },
   { id: 'wardrobe', kind: 'floor', starter: true, since: 7, turn: false, h: 6.2, name: '衣櫃', fp: [1.3, 2.6], at: { w: 'F', x: 0.65, y: 8.3, r: 0, rm: 'bed' }, desc: '', act: 'wardrobe' },
   { id: 'dresser', kind: 'floor', starter: true, since: 7, turn: false, h: 2.6, name: '矮櫃', fp: [2.4, 1.2], at: { w: 'F', x: 15.6, y: 0.6, r: 0, rm: 'bed' }, desc: '' },
   { id: 'bedPlant', kind: 'floor', starter: true, since: 7, turn: false, h: 3.7, name: '盆栽植物', fp: [0.84, 0.84], at: { w: 'F', x: 18.9, y: 0.8, r: 0, rm: 'bed' }, desc: '' },
+  // test (since: 8): more windows (書房 one behind the sofa and one over the low shelf, the bedroom one by the corner) and wall
+  // lamps (their light: lit by night like the lamps, light.dz above their middle)
+  { id: 'sofaWindow', kind: 'wall', starter: true, since: 8, win: true, bare: true, name: '沙發旁的窗', size: [4.7, 5.4], at: { w: 'R', u: 22.2, v: 6.6 }, desc: '' },
+  { id: 'shelfWindow', kind: 'wall', starter: true, since: 8, win: true, bare: true, name: '矮書架上的窗', size: [4.7, 5.4], at: { w: 'L', u: 12.6, v: 6.6 }, desc: '' },
+  { id: 'bedWindow2', kind: 'wall', starter: true, since: 8, win: true, bare: true, name: '臥房角落的窗', size: [4.7, 5.4], at: { w: 'R', u: 3.5, v: 6.6, rm: 'bed' }, desc: '' },
+  { id: 'sconce1', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'R', u: 9.4, v: 5.4 }, desc: '', light: { dz: 0.35, r: 4.4 } },
+  { id: 'sconce2', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'R', u: 27.2, v: 5.4 }, desc: '', light: { dz: 0.35, r: 4.4 } },
+  { id: 'sconce3', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'L', u: 16.6, v: 5.4 }, desc: '', light: { dz: 0.35, r: 4.4 } },
+  { id: 'sconce4', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'R', u: 11.8, v: 5.4, rm: 'bed' }, desc: '', light: { dz: 0.35, r: 4.4 } },
   // the string of lights along the tops of the walls, as four strings (1.2.0): hung end to end where it ran, three on the
-  // right wall and one on the left, each moved or put away on its own; their bulbs light up one by one as the day's list fills
+  // right wall and one on the left, each moved or put away on its own; their bulbs light up one by one as the day's list fills.
+  // test (roomV 8): they start in the storage box (at: where they hung, and where a string still hanging there is taken down from)
   { id: 'garland1', kind: 'wall', starter: true, garland: true, name: '串燈', size: [7.5, 0.5], at: { w: 'R', u: 4.05, v: 10.85 }, desc: '' },
   { id: 'garland2', kind: 'wall', starter: true, garland: true, name: '串燈', size: [7.5, 0.5], at: { w: 'R', u: 11.55, v: 10.85 }, desc: '' },
   { id: 'garland3', kind: 'wall', starter: true, garland: true, name: '串燈', size: [7.5, 0.5], at: { w: 'R', u: 19.05, v: 10.85 }, desc: '' },
   { id: 'garland4', kind: 'wall', starter: true, garland: true, name: '串燈', size: [7.5, 0.5], at: { w: 'L', u: 4.05, v: 10.85 }, desc: '' },
   // 書房's working things (fixed: moved, never put away; the door is the house's own and stays). drawn: where the
-  // desk's drawing stands, which is no longer its first place (the desk and the window moved right, off the bookcase; roomV 3)
+  // desk's drawing stands, which is no longer its first place (the desk and the window moved right, off the bookcase; roomV 3,
+  // and further in roomV 8)
   { id: 'bookcase', kind: 'floor', starter: true, fixed: true, turn: false, h: 7.9, name: '書櫃', fp: [1.3, 2.25], at: { w: 'F', x: 0.65, y: 1.275, r: 0 }, desc: '' },
-  { id: 'desk', kind: 'floor', starter: true, fixed: true, turn: false, h: 3.2, name: '書桌和椅子', fp: [3.8, 3.7], at: { w: 'F', x: 4.1, y: 1.85, r: 0 }, drawn: { w: 'F', x: 3.3, y: 1.85, r: 0 }, desc: '' },
+  { id: 'desk', kind: 'floor', starter: true, fixed: true, turn: false, h: 3.2, name: '書桌和椅子', fp: [3.8, 3.7], at: { w: 'F', x: 5.5, y: 1.85, r: 0 }, drawn: { w: 'F', x: 3.3, y: 1.85, r: 0 }, desc: '' },
   { id: 'chest', kind: 'floor', starter: true, fixed: true, turn: false, h: 4.3, name: '抽屜櫃', fp: [2.4, 1.7], at: { w: 'F', x: 12.5, y: 0.85, r: 0 }, drawn: { w: 'F', x: 8.45, y: 0.85, r: 0 }, desc: '' },
   { id: 'board', kind: 'wall', starter: true, fixed: true, name: '軟木板', size: [2.4, 2.3], at: { w: 'R', u: 12.5, v: 5.5 }, drawn: { w: 'R', u: 8.45, v: 5.5 }, desc: '' },
   { id: 'calendar', kind: 'wall', starter: true, fixed: true, name: '日曆', size: [1.6, 2.7], at: { w: 'R', u: 14.7, v: 5.75 }, drawn: { w: 'R', u: 10.65, v: 5.75 }, desc: '' }
@@ -6975,7 +6988,7 @@ const ROOM = (() => {
     s += `<path class="hl" d="${line([[RW, -T, RH], [RW, 0, RH], [0, 0, RH], [0, RD, RH], [-T, RD, RH]])} ${line([[-T, RD, 0], [RW, RD, 0], [RW, -T, 0]])}"/>`;
     return s;
   }
-  function windowArt(p, alone) {
+  function windowArt(p, alone, bare) {   // bare: nothing on the sill (the windows put up in roomV 8)
     const h = winHole(p), { X0, X1, z0, z1, at, plane, face } = h, d = 0.34, Xm = q2((X0 + X1) / 2), zm = q2((z0 + z1) / 2), v = p.v;
     let s = '';
     if (alone) s += `<g transform="${plane(-d)}"><rect x="${X0}" y="${-z1}" width="${q2(X1 - X0)}" height="${q2(z1 - z0)}" style="fill:color-mix(in srgb,#9fd0f0 calc(var(--day,1)*100%),#232056)"/></g>`;
@@ -6992,8 +7005,8 @@ const ROOM = (() => {
     s += h.R ? box(C.cream, X0 - 0.3, 0, z0 - 0.16, X1 + 0.3, 0.42, z0, { hlv: true }) : box(C.cream, 0, -X1 - 0.3, z0 - 0.16, 0.42, -X0 + 0.3, z0, { hlv: true });
     // a little plant and a cactus on the sill
     const pl = at(q2(X0 + 0.5), 0.22, z0), ca = at(q2(X1 - 0.5), 0.2, z0), lit = (q, dd, z) => at(h.R ? q[0] : -q[1], dd, z);
-    s += bb(...pl, `<path ${F(C.pot, face, lit(pl, 0.3, z0))} d="M-7 -1 L-5.5 -11 H5.5 L7 -1 Z"/><path d="M-6 -11 H6" class="hl"/><g ${F(C.leaf, 't', lit(pl, 0.2, z0 + 0.6))}><path d="M0 -11 C-9 -16 -12 -26 -8 -31 C-3 -24 -1 -17 0 -11 Z"/><path d="M0 -11 C7 -18 13 -22 17 -21 C13 -14 7 -12 0 -11 Z"/><path d="M0 -11 C0 -22 3 -30 6 -34 C8 -26 5 -17 0 -11 Z"/></g>`);
-    s += bb(...ca, `<path ${F('#e8d9c4', face, lit(ca, 0.3, z0))} d="M-6 0 L-5 -8 H5 L6 0 Z"/><rect x="-3.2" y="-21" width="6.4" height="14" rx="3.2" ${F('#7fae79', face, lit(ca, 0.2, z0 + 0.4))}/><rect x="2" y="-16" width="5" height="3.2" rx="1.6" ${F('#7fae79', face, lit(ca, 0.2, z0 + 0.4))}/><rect x="5" y="-19" width="2.6" height="5" rx="1.3" ${F('#7fae79', face, lit(ca, 0.2, z0 + 0.4))}/>`);
+    if (!bare) s += bb(...pl, `<path ${F(C.pot, face, lit(pl, 0.3, z0))} d="M-7 -1 L-5.5 -11 H5.5 L7 -1 Z"/><path d="M-6 -11 H6" class="hl"/><g ${F(C.leaf, 't', lit(pl, 0.2, z0 + 0.6))}><path d="M0 -11 C-9 -16 -12 -26 -8 -31 C-3 -24 -1 -17 0 -11 Z"/><path d="M0 -11 C7 -18 13 -22 17 -21 C13 -14 7 -12 0 -11 Z"/><path d="M0 -11 C0 -22 3 -30 6 -34 C8 -26 5 -17 0 -11 Z"/></g>`);
+    if (!bare) s += bb(...ca, `<path ${F('#e8d9c4', face, lit(ca, 0.3, z0))} d="M-6 0 L-5 -8 H5 L6 0 Z"/><rect x="-3.2" y="-21" width="6.4" height="14" rx="3.2" ${F('#7fae79', face, lit(ca, 0.2, z0 + 0.4))}/><rect x="2" y="-16" width="5" height="3.2" rx="1.6" ${F('#7fae79', face, lit(ca, 0.2, z0 + 0.4))}/><rect x="5" y="-19" width="2.6" height="5" rx="1.3" ${F('#7fae79', face, lit(ca, 0.2, z0 + 0.4))}/>`);
     // curtains on a rod, folds drawn as a soft repeating shade
     const rod = q2(z1 + 0.55), ra = q2(X0 - 0.85), rb = q2(X1 + 0.85);
     s += `<path class="ln" ${FS(C.walnut, face, at(Xm, 0.2, rod))} stroke-width="3.2" d="${line([at(ra, 0.2, rod), at(rb, 0.2, rod)])}"/>`;
@@ -7043,29 +7056,32 @@ const ROOM = (() => {
       <path d="M${-ym - 0.05} ${-z1 + 0.5} L${-ym - 0.26} ${-z1 + 0.78} Q${-ym - 0.12} ${-z1 + 0.72} ${-ym - 0.04} ${-z1 + 0.8} Q${-ym + 0.06} ${-z1 + 0.7} ${-ym + 0.12} ${-z1 + 0.78} Q${-ym + 0.2} ${-z1 + 0.72} ${-ym + 0.26} ${-z1 + 0.78} L${-ym + 0.05} ${-z1 + 0.5} Z" fill="#fff"/>
       <path d="M${-y1 + 0.1} ${-z0 - 0.26} Q${-ym} ${-z0 - 0.42} ${-y0 - 0.1} ${-z0 - 0.24} V${-z0 - 0.1} H${-y1 + 0.1} Z" ${F('#9fbf93', 'L', [0.1, ym, zm])}/></g>`;
   }
-  // the doors on the left wall (ROOMS: 出門 past the bookcase, a mat and slippers in front of it; 1.3.0: the bedroom's, and back)
-  const DOOR = { y0: 4.2, y1: 6.0, z1: 6.5 };   // 出門's, where the mat's drawing stands
+  // the doors on the left wall (ROOMS: 出門 past the bookcase; 1.3.0: the bedroom's, and back)
+  const DOOR = { z1: 6.5 };   // how high the doors are
+  // a door's leaf, flat in its plane from x0 for w (the hinge at x0, the handle at the far end), z up as -y; L(colour, z) lights it.
+  // test (roomV 8): 出門 is the house's front door, painted deep blue, frosted glass in four panes above, a raised panel below, a
+  // brass lever, a keyhole and a kick plate; the doors between the rooms stay plain oak with two panels and a round knob
+  function leafArt(dd, x0, w, L) {
+    const z1 = DOOR.z1, X = (v) => q2(x0 + v), W = (v) => q2(w - v);
+    if (dd.in) return `<rect x="${X(0)}" y="${-z1}" width="${w}" height="${z1}" ${L(C.oak, 3)}/>
+      <rect x="${X(0.22)}" y="${-z1 + 0.3}" width="${W(0.44)}" height="2.5" rx=".06" ${L(C.oakDk, 5)}/><rect x="${X(0.22)}" y="-3.3" width="${W(0.44)}" height="2.9" rx=".06" ${L(C.oakDk, 2)}/>
+      <rect x="${X(0.3)}" y="${-z1 + 0.38}" width="${W(0.6)}" height="2.34" rx=".05" ${L(C.oak, 5)}/><rect x="${X(0.3)}" y="-3.22" width="${W(0.6)}" height="2.74" rx=".05" ${L(C.oak, 2)}/>
+      <circle cx="${X(w - 0.22)}" cy="-3.3" r=".1" fill="#e9c46a"/><circle cx="${X(w - 0.24)}" cy="-3.33" r=".035" fill="#fff8d8"/>`;
+    const blue = '#45607f', dk = '#364d68', lt = '#516f92', gz = -z1 + 0.42, gh = 2.2, gm = q2(gz + gh / 2);
+    return `<rect x="${X(0)}" y="${-z1}" width="${w}" height="${z1}" ${L(blue, 3)}/>
+      <rect x="${X(0.24)}" y="${q2(gz - 0.1)}" width="${W(0.48)}" height="${q2(gh + 0.2)}" rx=".05" ${L(dk, 5)}/>
+      <rect x="${X(0.32)}" y="${gz}" width="${W(0.64)}" height="${gh}" rx=".03" style="fill:color-mix(in srgb,#dce8ee calc(var(--day)*100%),#4a5878)"/>
+      <path d="M${X(0.36)} ${q2(gz + 0.1)} L${X(0.9)} ${q2(gz + gh - 0.15)}" stroke="#fff" stroke-opacity=".45" stroke-width=".06" class="day-only"/>
+      <rect x="${X(w / 2 - 0.035)}" y="${gz}" width=".07" height="${gh}" ${L(dk, 5)}/><rect x="${X(0.32)}" y="${q2(gm - 0.035)}" width="${W(0.64)}" height=".07" ${L(dk, 5)}/>
+      <rect x="${X(0.24)}" y="-3.3" width="${W(0.48)}" height="2.6" rx=".05" ${L(dk, 2)}/><rect x="${X(0.32)}" y="-3.22" width="${W(0.64)}" height="2.44" rx=".04" ${L(lt, 2)}/>
+      <rect x="${X(0.06)}" y="-.42" width="${W(0.12)}" height=".32" rx=".03" ${L('#c9a24e', 0.3)}/>
+      <circle cx="${X(w - 0.24)}" cy="-3.55" r=".1" fill="#e9c46a"/><rect x="${X(w - 0.62)}" y="-3.6" width=".4" height=".1" rx=".05" fill="#e9c46a"/><circle cx="${X(w - 0.24)}" cy="-3.2" r=".045" fill="#7a5a2a"/>`;
+  }
   function doorArt(d) {
     const { y0, y1 } = d, z1 = DOOR.z1, ym = (y0 + y1) / 2;
     let s = '';
     s += `<g transform="${onX(0.012)}"><path ${F(C.cream, 'L', [0, ym, 3])} fill-rule="evenodd" d="M${-y1 - 0.18} 0 V${-z1 - 0.18} H${-y0 + 0.18} V0 Z M${-y1} 0 V${-z1} H${-y0} V0 Z"/></g>`;
-    s += qX(C.oak, 0.02, y0, y1, 0, z1, 'L');
-    s += `<g transform="${onX(0.025)}">
-      <rect x="${-y1 + 0.22}" y="${-z1 + 0.3}" width="${y1 - y0 - 0.44}" height="2.5" rx=".06" ${F(C.oakDk, 'L', [0, ym, 5])}/>
-      <rect x="${-y1 + 0.22}" y="${-3.3}" width="${y1 - y0 - 0.44}" height="2.9" rx=".06" ${F(C.oakDk, 'L', [0, ym, 2])}/>
-      <rect x="${-y1 + 0.3}" y="${-z1 + 0.38}" width="${y1 - y0 - 0.6}" height="2.34" rx=".05" ${F(C.oak, 'L', [0, ym, 5])}/>
-      <rect x="${-y1 + 0.3}" y="${-3.22}" width="${y1 - y0 - 0.6}" height="2.74" rx=".05" ${F(C.oak, 'L', [0, ym, 2])}/>
-      <circle cx="${-y0 - 0.22}" cy="-3.3" r=".1" fill="#e9c46a"/><circle cx="${-y0 - 0.24}" cy="-3.33" r=".035" fill="#fff8d8"/></g>`;
-    return s;
-  }
-  function doorMatArt() {   // on the floor, so drawn after it
-    const { y0, y1 } = DOOR, ym = (y0 + y1) / 2;
-    let s = shadow(0.05, y0 - 0.1, 1.3, y1 + 0.1, 0.4);
-    s += box('#9c7c63', 0.15, y0 + 0.1, 0, 1.25, y1 - 0.1, 0.05, {});
-    s += `<g transform="${onZ(0.052)}"><rect x=".27" y="${y0 + 0.22}" width=".86" height="${y1 - y0 - 0.44}" rx=".04" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width=".04" stroke-dasharray=".08 .06"/></g>`;
-    const slip = (x, y) => `<g transform="${onZ(0.06)}"><rect x="${x}" y="${y}" width=".62" height=".26" rx=".13" ${F('#e8a9a0', 't', [x, y, 0.1])}/><rect x="${x}" y="${y + 0.02}" width=".3" height=".22" rx=".1" ${F('#f6d6cf', 't', [x, y, 0.1])}/></g>`;
-    s += slip(0.35, ym - 0.42) + slip(0.42, ym + 0.08);
-    return s;
+    return s + `<g transform="${onX(0.02)}">${leafArt(d, -y1, q2(y1 - y0), (h, z) => F(h, 'L', [0, ym, z]))}</g>`;
   }
   // by the door: a peg rail with a tote bag and a scarf
   function pegsArt() {
@@ -7249,21 +7265,29 @@ const ROOM = (() => {
     s += plane(0.17, `<path d="M${q2(hx - w - 0.12)} ${q2(hy - 0.1)} A.17 .21 0 0 1 ${q2(hx - w + 0.05)} ${q2(hy - 0.19)}" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width=".025"/>`);
     return s;
   }
-  // the chair, pulled out from the desk a little, its back to the room
+  // the chair, pulled out from the desk a little, its back to the room (test, roomV 8: drawn again — a seat board on an apron,
+  // stretchers low between the legs, a thick cushion with piping and a button, a back of two posts, two spindles and a curved crest)
   function chairArt() {
-    const x0 = 2.85, x1 = 3.95, y0 = 2.62, y1 = 3.7, zs = 1.72, g = 0.1;
+    const x0 = 2.85, x1 = 3.95, y0 = 2.62, y1 = 3.7, zs = 1.72, g = 0.12, xm = (x0 + x1) / 2, ym = (y0 + y1) / 2;
     const leg = (x, y) => box(C.oakDk, x, y, 0, x + g, y + g, zs, { hl: false });
     let s = shadow(x0 - 0.05, y0 - 0.05, x1 + 0.2, y1 + 0.2, 0.7);
-    s += leg(x0 + 0.04, y0 + 0.04) + leg(x1 - 0.04 - g, y0 + 0.04) + leg(x0 + 0.04, y1 - 0.04 - g) + leg(x1 - 0.04 - g, y1 - 0.04 - g);
-    s += box(C.oak, x0, y0, zs, x1, y1, zs + 0.12, { t: C.oakTop, hlv: true });
-    s += box(C.mustard, x0 + 0.08, y0 + 0.08, zs + 0.12, x1 - 0.08, y1 - 0.16, zs + 0.22, { t: false, hl: false });
-    s += `<g transform="${onZ(zs + 0.22)}"><rect x="${x0 + 0.06}" y="${y0 + 0.06}" width="${(x1 - x0 - 0.12).toFixed(2)}" height="${(y1 - y0 - 0.2).toFixed(2)}" rx=".14" ${F(C.mustard, 't', [(x0 + x1) / 2, (y0 + y1) / 2, 2])}/><rect x="${x0 + 0.2}" y="${y0 + 0.2}" width="${(x1 - x0 - 0.4).toFixed(2)}" height="${(y1 - y0 - 0.48).toFixed(2)}" rx=".08" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width=".025"/></g>`;
+    s += leg(x0 + 0.05, y0 + 0.05) + leg(x1 - 0.05 - g, y0 + 0.05) + leg(x0 + 0.05, y1 - 0.05 - g);
+    s += box(C.oakDk, x0 + 0.12, y1 - 0.14, 0.48, x1 - 0.12, y1 - 0.08, 0.56, { hl: false }) + box(C.oakDk, x1 - 0.14, y0 + 0.12, 0.48, x1 - 0.08, y1 - 0.12, 0.56, { hl: false });
+    s += box(C.oak, x0 + 0.06, y0 + 0.06, zs - 0.22, x1 - 0.06, y1 - 0.06, zs, { t: false, hl: false }) + leg(x1 - 0.05 - g, y1 - 0.05 - g);
+    s += box(C.oak, x0, y0, zs, x1, y1, zs + 0.1, { t: C.oakTop });
+    s += box('#c99a3e', x0 + 0.08, y0 + 0.08, zs + 0.1, x1 - 0.08, y1 - 0.2, zs + 0.24, { t: false, hl: false });
+    s += `<g transform="${onZ(zs + 0.24)}"><rect x="${x0 + 0.06}" y="${y0 + 0.06}" width="${q2(x1 - x0 - 0.12)}" height="${q2(y1 - y0 - 0.24)}" rx=".18" ${F(C.mustard, 't', [xm, ym, 2])}/>
+      <rect x="${x0 + 0.16}" y="${y0 + 0.16}" width="${q2(x1 - x0 - 0.32)}" height="${q2(y1 - y0 - 0.44)}" rx=".12" fill="none" stroke="#a87c2e" stroke-opacity=".35" stroke-width=".03" stroke-dasharray=".07 .05"/>
+      <circle cx="${q2(xm)}" cy="${q2(ym - 0.06)}" r=".05" ${F('#b8862e', 't', [xm, ym, 2])}/></g>`;
     return s;
   }
-  function chairBackArt() {   // the back: two posts from the back corners, a rail at the top and one lower down
-    const x0 = 2.85, x1 = 3.95, y1 = 3.7, zs = 1.72, g = 0.1;
-    return box(C.oakDk, x0 + 0.04, y1 - 0.12, zs + 0.12, x0 + 0.04 + g, y1 - 0.02, 4.0, {}) + box(C.oakDk, x1 - 0.04 - g, y1 - 0.12, zs + 0.12, x1 - 0.04, y1 - 0.02, 4.0, { hlv: true })
-      + box(C.oak, x0 + 0.14, y1 - 0.1, 2.72, x1 - 0.14, y1 - 0.04, 2.86, {}) + box(C.oak, x0 + 0.02, y1 - 0.11, 3.56, x1 - 0.02, y1 - 0.03, 3.98, { t: C.oakTop, hlv: true });
+  function chairBackArt() {   // the back: two posts from the back corners, a rail low down, two spindles up to a curved crest
+    const x0 = 2.85, x1 = 3.95, y1 = 3.7, zs = 1.72, g = 0.12, xm = (x0 + x1) / 2;
+    const crest = (y, h) => `<g transform="${onY(y)}"><path ${F(h, 'y', [xm, y, 3.75])} d="M${x0 + 0.01} -3.4 V-3.8 Q${q2(xm)} -4.16 ${x1 - 0.01} -3.8 V-3.4 Q${q2(xm)} -3.58 ${x0 + 0.01} -3.4 Z"/></g>`;
+    let s = box(C.oakDk, x0 + 0.05, y1 - 0.14, zs + 0.1, x0 + 0.05 + g, y1 - 0.02, 3.6, { hl: false }) + box(C.oakDk, x1 - 0.05 - g, y1 - 0.14, zs + 0.1, x1 - 0.05, y1 - 0.02, 3.6, { hl: false });
+    s += box(C.oak, x0 + 0.17, y1 - 0.11, 2.5, x1 - 0.17, y1 - 0.05, 2.62, {});
+    [-0.17, 0.17].forEach((d) => { s += box(C.oak, xm + d - 0.035, y1 - 0.1, 2.62, xm + d + 0.035, y1 - 0.06, 3.5, { hl: false }); });
+    return s + crest(y1 - 0.13, C.oakDk) + crest(y1 - 0.02, C.oak);
   }
   // a round rug on the floor
   function rugArt(cx, cy, r, body, ring) {
@@ -7406,11 +7430,9 @@ const ROOM = (() => {
         <text x="${q2(xm)}" y="${q2(-z1 + 0.31)}" font-size=".23" font-weight="700" text-anchor="middle" fill="#fff">あいうえお</text>${cells}
         <circle cx="${q2(xm)}" cy="${q2(-z1 + 0.06)}" r=".05" fill="#5a68d8"/></g>`;
   }
-  function bedRugArt() {   // a rug beside the bed, slippers on it
-    const slip = (x, y) => `<g transform="${onZ(0.03)}"><rect x="${x}" y="${y}" width=".62" height=".26" rx=".13" ${F('#9db7d6', 't', [x, y, 0.1])}/><rect x="${x}" y="${q2(y + 0.02)}" width=".3" height=".22" rx=".1" ${F('#d6e2ef', 't', [x, y, 0.1])}/></g>`;
+  function bedRugArt() {   // a rug beside the bed (test, roomV 8: the slippers on it gone, the user's call)
     return `<g transform="${onZ(0.015)}"><rect x="13.65" y="1.66" width="2.65" height="2.7" rx=".25" fill="#2b1c12" fill-opacity=".08"/><rect x="13.6" y="1.6" width="2.6" height="2.64" rx=".25" ${F('#eadcc6', 't', [14.9, 2.9, 0])}/>
-      <rect x="13.78" y="1.78" width="2.24" height="2.28" rx=".16" fill="none" stroke-width=".07" ${FS('#c98f6d', 't', [14.9, 2.9, 0])}/><path d="M13.78 2.54 H16.02 M13.78 3.3 H16.02" stroke-width=".04" ${FS('#d9b48e', 't', [14.9, 2.9, 0])}/></g>`
-      + slip(15.2, 2.55) + slip(15.28, 3.0);
+      <rect x="13.78" y="1.78" width="2.24" height="2.28" rx=".16" fill="none" stroke-width=".07" ${FS('#c98f6d', 't', [14.9, 2.9, 0])}/><path d="M13.78 2.54 H16.02 M13.78 3.3 H16.02" stroke-width=".04" ${FS('#d9b48e', 't', [14.9, 2.9, 0])}/></g>`;
   }
 
   // ===== a thing's way into its page: a small motion of its own, on a layer of its own over the room (shown only then), then
@@ -7461,10 +7483,7 @@ const ROOM = (() => {
     const { y0, y1 } = dd, z1 = DOOR.z1, w = q2(y1 - y0), ym = (y0 + y1) / 2, [ox, oy] = P(0.025, y1, 0);
     const sky = dd.in ? 'style="fill:color-mix(in srgb,#efe3cf calc(var(--day)*100%),#3a3350)"' : 'style="fill:color-mix(in srgb,#bfe0f4 calc(var(--day)*100%),#1b2050)"';
     const grass = dd.in ? 'style="fill:color-mix(in srgb,#c79b6e calc(var(--day)*100%),#2e2533)"' : 'style="fill:color-mix(in srgb,#8cc47e calc(var(--day)*100%),#141640)"';
-    const leaf = `<rect x="0" y="${-z1}" width="${w}" height="${z1}" ${F(C.oak, 'L', [0.5, ym, 3])}/>
-      <rect x=".22" y="${-z1 + 0.3}" width="${q2(w - 0.44)}" height="2.5" rx=".06" ${F(C.oakDk, 'L', [0.5, ym, 5])}/><rect x=".22" y="-3.3" width="${q2(w - 0.44)}" height="2.9" rx=".06" ${F(C.oakDk, 'L', [0.5, ym, 2])}/>
-      <rect x=".3" y="${-z1 + 0.38}" width="${q2(w - 0.6)}" height="2.34" rx=".05" ${F(C.oak, 'L', [0.5, ym, 5])}/><rect x=".3" y="-3.22" width="${q2(w - 0.6)}" height="2.74" rx=".05" ${F(C.oak, 'L', [0.5, ym, 2])}/>
-      <circle cx="${q2(w - 0.22)}" cy="-3.3" r=".1" fill="#e9c46a"/>`;
+    const leaf = leafArt(dd, 0, w, (h, z) => F(h, 'L', [0.5, ym, z]));
     const hz = dd.in ? 0.8 : 1.6;   // where the floor beyond meets its wall, or the grass the sky
     return fxSvg('fx-door', [[0, y0, 0], [0, y1, z1], [0, y0, z1], [w, y1, 0], [w, y1, z1]], `<path ${sky} d="${poly([[0.012, y0, hz], [0.012, y1, hz], [0.012, y1, z1], [0.012, y0, z1]])}"/><path ${grass} d="${poly([[0.012, y0, 0], [0.012, y1, 0], [0.012, y1, hz], [0.012, y0, hz]])}"/>
       <g class="leaf" data-o="${r1(ox)} ${r1(oy)}" transform="matrix(${S} ${-S / 2} 0 ${S} ${r1(ox)} ${r1(oy)})">${leaf}</g>`, null, ` data-door="${dd.id}"`);
@@ -7536,6 +7555,7 @@ const ROOM = (() => {
     const out = ROOMID === 'study' ? [Object.assign({}, LIGHTS[0], { p: mover('desk').map(LIGHTS[0].p) }), Object.assign({}, LIGHTS[1], { p: mover('chest').map(LIGHTS[1].p) })] : [];
     placedWares().forEach((o) => {
       if (o.id === 'nightTable') out.push(Object.assign({}, LIGHTS[2], { p: [LIGHTS[2].p[0] + o.p.x - 16.25, LIGHTS[2].p[1] + o.p.y - 0.55, LIGHTS[2].p[2]] }));
+      else if (o.it.light && o.it.kind === 'wall') { const z = o.p.v + o.it.light.dz; out.push({ p: o.p.w === 'L' ? [0.45, o.p.u, z] : [o.p.u, 0.45, z], c: [1, 0.76, 0.5], r: o.it.light.r, lo: 0.45, hi: 0.85 }); }
       else if (o.it.light) out.push({ p: [o.p.x, o.p.y, o.it.light.z], c: [1, 0.76, 0.5], r: o.it.light.r, lo: 0.45, hi: 0.85 });
     });
     return out;
@@ -7668,12 +7688,12 @@ const ROOM = (() => {
     const d = placed.desk, desk = WARE.get('desk');
     if (d && d.w === 'F' && d.x === 3.3 && d.y === 1.85 && !d.r) {
       const fs = footprints({ id: 'desk', it: desk }, desk.at);
-      const taken = Object.keys(placed).some((id) => id !== 'desk' && WARE.has(id) && WARE.get(id).kind === 'floor' && footprints({ id, it: WARE.get(id) }, placed[id]).some((r) => fs.some((f) => over(f, r))));
+      const taken = Object.keys(placed).some((id) => id !== 'desk' && WARE.has(id) && WARE.get(id).kind === 'floor' && !placed[id].rm && footprints({ id, it: WARE.get(id) }, placed[id]).some((r) => fs.some((f) => over(f, r))));
       if (!taken) placed.desk = Object.assign({}, desk.at);
     }
     Object.keys(placed).forEach((id) => {
       const it = WARE.get(id), p = placed[id];
-      if (!it || id === 'window' || it.kind !== 'wall' || p.w !== 'R' || !over(wareRect(it, p), WIN_STRIP)) return;
+      if (!it || id === 'window' || it.kind !== 'wall' || p.w !== 'R' || p.rm || !over(wareRect(it, p), WIN_STRIP)) return;
       if (it.fixed) placed[id] = Object.assign({}, it.at); else delete placed[id];
     });
   }
@@ -7695,6 +7715,17 @@ const ROOM = (() => {
     });
     WARES.filter((w) => w.starter && w.since === 7 && !placed[w.id]).forEach((w) => { if (fitsAt(w.id, fresh(w.id))) placed[w.id] = fresh(w.id); });
   }
+  // roomV 8 (test): the strings of lights still hanging where they first hung go to the storage box; the desk (and the window over
+  // it), the kotatsu, the round rug and the kana chart still where roomV 7 put them go to their new places when those are clear;
+  // the new windows and wall lamps are put up where there is room
+  const OLD8 = { kanaChart: { w: 'R', u: 22.2, v: 5.6 }, desk: { x: 4.1, y: 1.85 }, window: { w: 'R', u: 4.1, v: 6.6 }, kotatsu: { x: 11.5, y: 9 }, sageRug: { x: 3.4, y: 12.6 } };
+  function settle8(placed) {
+    const fresh = (id) => Object.assign({}, WARE.get(id).at), fitsAt = (id, p) => inRoomOf(roomOf(p), () => fits(WARE.get(id), p, placed));
+    const at = (p, o) => p && !p.r && !p.rm && Object.keys(o).every((k) => p[k] === o[k]);
+    WARES.filter((w) => w.garland).forEach((w) => { if (at(placed[w.id], w.at)) delete placed[w.id]; });
+    Object.keys(OLD8).forEach((id) => { if (at(placed[id], OLD8[id]) && fitsAt(id, fresh(id))) placed[id] = fresh(id); });
+    WARES.filter((w) => w.starter && w.since === 8 && !placed[w.id]).forEach((w) => { if (fitsAt(w.id, fresh(w.id))) placed[w.id] = fresh(w.id); });
+  }
   function standingList() {   // the floor wares (a working thing in its parts), unsorted
     return placedWares().filter((o) => o.it.kind === 'floor').flatMap((o) => {
       if (!WORK[o.id]) return [{ id: 'w:' + o.id, fp: wareFootprint(o.it, o.p), ware: o }];
@@ -7707,7 +7738,7 @@ const ROOM = (() => {
     const wares = placedWares();
     return `<svg class="art" viewBox="${VB.join(' ')}" aria-hidden="true">${DEFS}
       ${shellArt()}${DOORS.map(doorArt).join('')}${wallShadeArt()}
-      ${wares.filter((o) => o.it.kind === 'wall').map((o) => `<g data-o="w:${o.id}">${o.it.garland ? wireArt(o.it.size[0], o.p) : o.it.win ? windowArt(o.p) : DECOR.wall(o.id, o.p)}</g>`).join('')}
+      ${wares.filter((o) => o.it.kind === 'wall').map((o) => `<g data-o="w:${o.id}">${o.it.garland ? wireArt(o.it.size[0], o.p) : o.it.win ? windowArt(o.p, false, o.it.bare) : DECOR.wall(o.id, o.p)}</g>`).join('')}
       ${floorArt()}
       ${wares.filter((o) => o.it.kind === 'rug').map((o) => `<g data-o="w:${o.id}">${DECOR.floor(o.id, o.p)}</g>`).join('')}
       ${(shown = standing(bk)).map((o) => `<g data-o="${o.id}">${o.art}</g>`).join('')}
@@ -8385,10 +8416,10 @@ const ROOM = (() => {
     desk: (x, y) => inPlace('desk', () => WORK.desk.map(([, , art]) => art()).join('') + phonesArt(), { w: 'F', x, y, r: 0 }),
     chest: (x, y) => inPlace('chest', chestArt, { w: 'F', x, y, r: 0 }),
     board: (p) => inPlace('board', boardArt, p), calendar: (p) => inPlace('calendar', () => calendarArt(parseDate(todayStr()), examPace().daysLeft), p),
-    window: (p) => windowArt(p, true),   // on its own (the box, a drag): the sky in it
+    window: (p, bare) => windowArt(p, true, bare),   // on its own (the box, a drag): the sky in it
     bed: (x, y) => shifted(x - 18.45, y - 2.625, bedArt), nightTable: (x, y) => shifted(x - 16.25, y - 0.55, nightTableArt), bigPlant: (x, y) => plantArt(x, y), bedPlant: (x, y) => plantArt(x, y),
     sageRug: (x, y) => rugArt(x, y, 1.25, '#dfe6d6', '#93ad8c'),
-    bedRug: (x, y) => shifted(x - 14.9, y - 2.92, bedRugArt), doorMat: (x, y) => shifted(x - 0.7, y - 5.1, doorMatArt)
+    bedRug: (x, y) => shifted(x - 14.9, y - 2.92, bedRugArt)
   };
   // the room the drawing works in (its size, camera, doors, things); show also swaps the hero and the camera for the other room's
   function setRoom(id) {
@@ -8410,7 +8441,7 @@ const ROOM = (() => {
   setRoom('study'); Object.assign(hero, heroPos.study || {});
   const kit = { S, P, pt, poly, line, onX, onY, onZ, F, FS, tone, box, qX, qY, qZ, shadow, bb, C, q2, r1, DEFS, VB, own, wireArt, bulbsAt };
   function hold() { heroHalt(); hero.going = null; hero.lead = null; }   // the dressing room opens: the hero stops where they are
-  return { html, level, mount, enter, pull, door, mark, out, kit, fits, moveOff, settle, SPOTS, room: () => ROOMID, use, useWare, heroRedraw, heroIn, tapHero, hold, edit: (el, cmd, id) => editCmd(el.closest('.study'), cmd, id) };
+  return { html, level, mount, enter, pull, door, mark, out, kit, fits, moveOff, settle, settle8, SPOTS, room: () => ROOMID, use, useWare, heroRedraw, heroIn, tapHero, hold, edit: (el, cmd, id) => editCmd(el.closest('.study'), cmd, id) };
 })();
 // ---------- 古道具屋's wares in 書房 (1.2.0): each one drawn with 書房's own pencils and light (ROOM.kit) ----------
 // DECOR.wall(id, p) draws a wall ware where it hangs, DECOR.floor(id, p) one standing or lying on the floor (p.r turns it a
@@ -8448,6 +8479,16 @@ const DECOR = (() => {
     s += bb(...pt3(0.5, z - 0.02), `<path d="M-7 18 C-7 6 -3 0 0 0 C3 0 7 6 7 18" fill="none" stroke-width="2" ${FS('#b8925a', face, pt3(0.5, z - 0.5))}/><rect x="-13" y="16" width="26" height="30" rx="3" ${F('#e8d3a8', face, pt3(0.5, z - 1))}/><rect x="-13" y="33" width="26" height="5" ${F('#c95f4c', face, pt3(0.5, z - 1.2))}/><path d="M-13 19 V43" class="hl"/>`);
     s += bb(...pt3(-0.5, z - 0.02), `<path d="M-6 0 Q0 4 6 0 L5 44 L-1 44 L0 7 L-4 40 L-9 40 Z" ${F('#d0675a', face, pt3(-0.5, z - 1))}/><path d="M-1 44 V48 M1.5 44 V48 M4 44 V48 M-9 40 V44 M-6.5 40 V44 M-4 40 V44" stroke-width="1.2" ${FS('#d0675a', face, pt3(-0.5, z - 1.5))}/>`);
     return s;
+  }
+  // a wall lamp (test, roomV 8): a round brass plate on the wall, an arm out from it and up, a cloth shade lit from inside by
+  // night, a wash of light on the wall round it
+  function sconce(p) {
+    const face = p.w === 'L' ? 'L' : 'y', pt3 = (lx, lz, d) => (p.w === 'L' ? [d, p.u - lx, p.v + lz] : [p.u + lx, d, p.v + lz]), brass = '#b8925a';
+    let s = `<g class="night-only" style="opacity:calc(.55 + .45 * var(--f))">${onWall(p, () => '<ellipse cy="-.3" rx=".95" ry="1.25" fill="url(#pool)"/>', 0.006)}</g>`;
+    s += onWall(p, (k) => `<ellipse cx=".04" cy=".24" rx=".22" ry=".32" fill="#2b1c12" fill-opacity=".14"/><ellipse cy=".18" rx=".21" ry=".31" ${k.F(brass)}/><ellipse cy=".18" rx=".12" ry=".19" ${k.F('#d2ad6e')}/>`, 0.02);
+    s += `<path class="ln" stroke-width="3.4" ${FS(brass, face, pt3(0, 0, 0.3))} d="${line([pt3(0, -0.2, 0.03), pt3(0, -0.2, 0.5), pt3(0, -0.02, 0.55)])}"/>`;
+    return s + bb(...pt3(0, -0.02, 0.55), `<circle r="3" ${F(brass, face, pt3(0, 0, 0.55))}/><ellipse cy="-2" rx="6" ry="3" fill="#fff4d8" class="night-only"/>
+      <path d="M-16 0 L16 0 L10 -22 L-10 -22 Z" style="fill:color-mix(in srgb,#e9d4ad calc(var(--day)*100%),#ffd27a)"/><path d="M-16 0 Q0 4 16 0" fill="none" stroke="#b8925a" stroke-width="1.6"/><path d="M-10 -22 H10" stroke="#b8925a" stroke-width="1.4"/><path d="M-10 -22 L-16 0" class="hl"/>`);
   }
   const WALL = {
     fujiPrint: (k) => `<rect x="-.64" y="-.545" width="1.4" height="1.25" fill="#2b1c12" fill-opacity=".14"/><rect x="-.7" y="-.625" width="1.4" height="1.25" ${k.F(C.walnut)}/><rect x="-.6" y="-.525" width="1.2" height="1.05" ${k.F('#f4ead8')}/>
@@ -8532,6 +8573,7 @@ const DECOR = (() => {
   };
   // the floor wares: (x, y) the middle of the footprint, r turned a quarter; L lights a point of it (by default its middle, 0.6 up)
   const lit = (x, y) => (h, z = 0.6, f = 'y') => F(h, f, [x, y, z]);
+  let CLIPN = 0;   // clip ids, new each drawing (a ware may be drawn twice at once: in the room and on the drag layer)
   const FLOOR = {
     // ---- the house's own since 1.3.0: 書房's reading corner and low shelf, the bedroom's wardrobe and dresser ----
     sofa: (x, y) => {   // a two-seater, its back to the right wall: a base on short legs, the back, two arms, two seat cushions, two throw pillows
@@ -8575,14 +8617,25 @@ const DECOR = (() => {
         ${[-1.2, -0.4, 0.4, 1.2].map((dx, i) => `<path d="M${q2(x + dx - 0.25)} ${y} l.25 -.35 l.25 .35 l-.25 .35 Z" ${F(i % 2 ? '#5f88b2' : '#b0574a', 't', a)}/>`).join('')}</g>`;
     },
     lowShelf: (x, y) => {   // a low open shelf against the left wall: books above, two baskets below, a plant, a radio and a photo on top
+      // (test, roomV 8: each cell drawn as a hollow — its back, its floor, its left side — and what stands in it seen only through
+      // its opening, so no book stands out over the frame)
       const x0 = x - 0.55, x1 = x + 0.55, y0 = y - 1.7, y1 = y + 1.7, h = 2.4, L = lit(x1, y);
       const cells = [[y0 + 0.12, y - 0.05, 0.2, 1.12], [y + 0.05, y1 - 0.12, 0.2, 1.12], [y0 + 0.12, y - 0.05, 1.24, 2.26], [y + 0.05, y1 - 0.12, 1.24, 2.26]];
-      let s = shadow(x0, y0 - 0.1, x1 + 0.35, y1 + 0.3, 0.85) + box(C.oak, x0, y0, 0, x1, y1, h, { t: C.oakTop, x: C.oakDk, hlv: true });
-      cells.forEach(([a, b, za, zb]) => { s += qX(C.shelfIn, x1 + 0.003, a, b, za, zb, 'x'); });
-      cells.slice(0, 2).forEach(([a, b, za]) => { s += box('#c9a06a', x1 - 0.75, a + 0.08, za, x1 - 0.02, b - 0.08, za + 0.7, { t: '#8a6a48', hlv: true }) + `<path class="ln" stroke="#9c7346" stroke-opacity=".6" stroke-width="1" d="${[0.2, 0.38, 0.56].map((dz) => line([[x1 - 0.015, a + 0.1, za + dz], [x1 - 0.015, b - 0.1, za + dz]])).join(' ')}"/>`; });
       const PAL = ['#b65d50', '#d8a748', '#5e7f9c', '#86a17a', '#8b6e94', '#e7dbc6', '#40516d'];
-      let i = 0;
-      cells.slice(2).forEach(([a, b, za]) => { for (let yy = a + 0.05; ; i++) { const w = [0.14, 0.18, 0.12, 0.16, 0.2][i % 5], hh = [0.8, 0.92, 0.7, 0.86, 0.76][(i * 3) % 5]; if (yy + w > b - 0.04) break; s += box(PAL[(i * 3) % PAL.length], x1 - 0.6, yy, za, x1 - 0.04, yy + w, za + hh, { t: '#ece3d0' }); yy += w + 0.015; } });
+      let s = shadow(x0, y0 - 0.1, x1 + 0.35, y1 + 0.3, 0.85) + box(C.oak, x0, y0, 0, x1, y1, h, { t: C.oakTop, x: C.oakDk, hlv: true }), i = 0;
+      cells.forEach(([a, b, za, zb], k) => {
+        const id = `lsc${++CLIPN}`, xb = x0 + 0.08;
+        s += `<clipPath id="${id}"><path d="${poly([[x1, a, za], [x1, b, za], [x1, b, zb], [x1, a, zb]])}"/></clipPath><g clip-path="url(#${id})">`;
+        s += qX('#5a3b26', xb, a, b, za, zb, 'x') + qY('#7a5538', a, xb, x1, za, zb, 'y') + qZ('#8d6644', za, xb, x1, a, b);
+        s += `<path d="${poly([[xb, a, za], [x1, a, za], [x1, b, za]])}" fill="#2b1c12" fill-opacity=".12"/>`;
+        if (k < 2) s += box('#c9a06a', x1 - 0.8, a + 0.08, za, x1 - 0.1, b - 0.08, za + 0.7, { t: '#8a6a48', hlv: true }) + `<path class="ln" stroke="#9c7346" stroke-opacity=".6" stroke-width="1" d="${[0.2, 0.38, 0.56].map((dz) => line([[x1 - 0.095, a + 0.1, za + dz], [x1 - 0.095, b - 0.1, za + dz]])).join(' ')}"/>`;
+        else for (let yy = a + 0.06; ; i++) {
+          const w = [0.14, 0.18, 0.12, 0.16, 0.2][i % 5], hh = [0.8, 0.9, 0.7, 0.86, 0.76][(i * 3) % 5];
+          if (yy + w > b - 0.05) break;
+          s += box(PAL[(i * 3) % PAL.length], x0 + 0.22, yy, za, x1 - 0.12, yy + w, za + hh, { t: '#ece3d0', hl: false }); yy += w + 0.015;
+        }
+        s += '</g>';
+      });
       s += bb(x, y0 + 0.55, h, `<ellipse rx="7" ry="2.6" fill="#2b1c12" fill-opacity=".14"/><path ${L(C.pot, h + 0.2)} d="M-5.5 -1 L-4.5 -10 H4.5 L5.5 -1 Z"/><g ${L(C.leaf, h + 0.6)}><path d="M0 -10 C-10 -14 -13 -24 -9 -30 C-4 -23 -1 -16 0 -10 Z"/><path d="M0 -10 C8 -16 14 -20 18 -19 C14 -12 8 -10 0 -10 Z"/><path d="M0 -10 C0 -21 3 -29 6 -33 C8 -25 5 -16 0 -10 Z"/></g>`);
       s += box('#c95f4c', x0 + 0.25, y - 0.45, h, x1 - 0.15, y + 0.35, h + 0.45, { t: '#d8735f', hlv: true }) + bb(x1 - 0.14, y - 0.05, h + 0.22, `<circle r="4.4" fill="#3b3653" fill-opacity=".75"/><circle r="1.6" fill="#e6c36a"/>`);
       return s + bb(x, y1 - 0.5, h, `<path ${L(C.walnut, h + 0.3)} d="M-7 0 L-6 -15 H6 L7 0 Z"/><rect x="-4.4" y="-12.5" width="8.8" height="10" fill="#f2e9d6"/><circle cx="1.5" cy="-9" r="1.8" fill="#e8743a"/><path d="M-4.4 -5 L-1 -8 L2 -6 L4.4 -8.5 V-2.5 H-4.4 Z" fill="#8fbf8a"/>`);
@@ -8783,7 +8836,7 @@ const DECOR = (() => {
   const FLAT = { fujiPrint: 0.08, kanaChart: 0.05, nightPicture: 0.05 };   // 書房's own pictures: as close to the wall as they always hung
   // a string of lights on its own (dragged in 擺設, or in the storage box): the wire and its bulbs, unlit (in 書房 the bulbs are an overlay)
   const garland = (len, p) => wireArt(len, p) + bulbsAt(len, p).map((q) => bb(...q, '<ellipse cy="1.6" rx="2.2" ry="2.8" fill="#fffaf0" stroke="#8a7a60" stroke-width=".6"/>')).join('');
-  function wall(id, p) { const it = WARE.get(id); if (it && it.garland) return garland(it.size[0], p); if (id === 'board' || id === 'calendar') return own[id](p); if (it && it.win) return own.window(p); if (id === 'wallshelf') return wallShelf(p); if (id === 'pegRail') return pegRail(p); const f = WALL[id]; return !f ? '' : FLAT[id] ? onWall(p, f, FLAT[id], true) : onWall(p, f); }
+  function wall(id, p) { const it = WARE.get(id); if (it && it.garland) return garland(it.size[0], p); if (id === 'board' || id === 'calendar') return own[id](p); if (it && it.win) return own.window(p, it.bare); if (id === 'wallshelf') return wallShelf(p); if (id === 'pegRail') return pegRail(p); if (it && it.light) return sconce(p); const f = WALL[id]; return !f ? '' : FLAT[id] ? onWall(p, f, FLAT[id], true) : onWall(p, f); }
   function floor(id, p) { const it = WARE.get(id), f = FLOOR[id]; return f ? f(p.x, p.y, p.r || 0, it) : own[id] ? own[id](p.x, p.y) : crate(p.x, p.y, it, p.r); }
   // on its own (the page sets the view box round it once it is drawn, fitThumbs): a wall ware on the right wall, one on the floor
   // at a spot of its own, in daylight
@@ -9053,6 +9106,10 @@ const HERO = (() => {
   const rear = (f, y, x = 46, n = 6) => P(f, `M-${r(x - 2)} -136 C-${r(x - 2)} -162 -22 -174.4 2 -174.4 C26 -174.4 ${r(x + 2)} -162 ${r(x + 2)} -136 C${r(x + 2.6)} -120 ${r(x + 2.4)} ${r(y + 18)} ${r(x + 0.4)} ${r(y - 3)}${hemTips(y, -(x - 3.6), x + 0.4, n)} C-${r(x - 1.6)} ${r(y + 18)} -${r(x - 1.4)} -120 -${r(x - 2)} -136 Z`);
   const BACKS = {
     short: { name: '短', b: (k) => both(P(k, 'M2 -174.4 C-30 -174.4 -46.4 -156 -46.4 -138 C-46.4 -128 -44 -120 -39 -116 L2 -116 Z')), r: (f) => rear(f, -101, 45, 6), rd: (s) => strands(s, 'M-20 -150 C-22 -132 -20 -116 -18 -106 M2 -156 V-106 M24 -150 C26 -132 24 -116 22 -106') },
+    // 清爽 (test, 2026-11-09, the user's ask: 短 still read long for a man): a plain short cut, narrowing down the back of the
+    // head to a short, finely tipped hem at the nape
+    crop: { name: '清爽', b: (k) => both(P(k, 'M2 -174.4 C-30 -174.4 -45.6 -157 -45.6 -141 C-45.6 -133 -44 -127 -40.4 -123 L2 -123 Z')), r: (f) => P(f, `M-44 -136 C-44 -162 -22 -174.4 2 -174.4 C26 -174.4 48 -162 48 -136 C48.4 -124 45 -115 35 -108.6${hemTips(-105, -31, 35, 6, 3.4)} C-41 -115 -44.4 -124 -44 -136 Z`),
+      rd: (s) => strands(s, 'M-18 -152 C-20 -138 -18 -124 -15 -112 M2 -158 V-110 M22 -152 C24 -138 22 -124 19 -112') },
     bob: { name: '鮑伯', b: (k) => both(P(k, 'M2 -174.4 C-30 -174.4 -49 -150 -49 -126 C-49 -110 -48.4 -98 -45.6 -91.4 C-43.6 -94 -41.6 -95.4 -39.6 -96 C-38.4 -93 -36.4 -91.4 -34 -90.6 L2 -90.6 Z')), r: (f) => rear(f, -91, 47.4, 7), rd: (s) => strands(s, 'M-22 -150 C-25 -130 -23 -110 -21 -97 M2 -156 V-96 M26 -150 C29 -130 27 -110 25 -97') },
     shoulder: { name: '及肩', b: (k) => both(P(k, 'M2 -174.4 C-30 -174.4 -49.6 -150 -49.6 -124 C-49.6 -104 -51 -90 -50 -79.6 C-47.8 -83 -45.4 -85 -43 -85.6 C-41.6 -82 -39 -79.6 -36 -78.6 L2 -78.6 Z')), r: (f) => rear(f, -79, 48.4, 7), rd: (s) => strands(s, 'M-24 -150 C-27 -126 -25 -102 -23 -86 M2 -156 V-85 M28 -150 C31 -126 29 -102 27 -86') },
     long: { name: '長直', b: (k) => both(P(k, 'M2 -174.4 C-30 -174.4 -50 -150 -50 -122 C-50 -96 -51.4 -72 -50.4 -55.6 C-48.4 -59.6 -46 -62 -43.4 -62.8 C-42 -58.6 -39.4 -56 -36 -54.8 L2 -54.8 Z')), r: (f) => rear(f, -56, 49, 8), rd: (s) => strands(s, 'M-26 -150 C-29 -120 -28 -88 -26 -64 M2 -156 V-62 M30 -150 C33 -120 32 -88 30 -64') + shine('M-30 -118 C-31 -100 -30.4 -84 -29 -72 C-28.2 -84 -28.4 -100 -27.6 -118 Z', 0.18) },

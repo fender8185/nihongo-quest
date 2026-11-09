@@ -164,7 +164,7 @@ def test_arrange_takes_out_moves_turns_and_puts_away(b):
       st().querySelector('.tray-it[data-id="chabudai"]').click(); const p1 = Object.assign({}, state.placed.chabudai);
       const d = st().querySelector('.deco[data-ware="chabudai"]'), r = d.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height * 0.7;
       const pe = (el, type, px, py) => el.dispatchEvent(new PointerEvent(type, { clientX: px, clientY: py, pointerId: 9, pointerType: 'mouse', button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true }));
-      pe(d, 'pointerdown', x, y); for (let i = 1; i <= 6; i++) { pe(st(), 'pointermove', x + 6 * i, y + 4 * i); await new Promise(q => setTimeout(q, 20)); } pe(st(), 'pointerup', x + 36, y + 24);
+      pe(d, 'pointerdown', x, y); for (let i = 1; i <= 6; i++) { pe(st(), 'pointermove', x + 6 * i, y - 4 * i); await new Promise(q => setTimeout(q, 20)); } pe(st(), 'pointerup', x + 36, y - 24);   /* up the room: just above the box it is taken out to (down would drop it back in) */
       const p2 = Object.assign({}, state.placed.chabudai);
       st().querySelector('[data-act="room-edit-turn"]').click(); const p3 = Object.assign({}, state.placed.chabudai);
       const desk = ROOM.fits(WARE.get('chabudai'), { w: 'F', x: 3, y: 1, r: 0 });
@@ -172,11 +172,11 @@ def test_arrange_takes_out_moves_turns_and_puts_away(b):
       st().querySelector('[data-act="room-edit-done"]').click();
       return JSON.stringify({ tray, p1ok: ROOM.fits(WARE.get('chabudai'), p1), moved: p1.x !== p2.x || p1.y !== p2.y, turned: p3.r === 1, desk, gone, edit: !!document.querySelector('.study.edit') }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'tray': ['chabudai'], 'p1ok': True, 'moved': True, 'turned': True, 'desk': False, 'gone': True, 'edit': False}, r
+    assert r == {'tray': ['chabudai', 'garland1', 'garland2', 'garland3', 'garland4'], 'p1ok': True, 'moved': True, 'turned': True, 'desk': False, 'gone': True, 'edit': False}, r
 
 def test_the_rooms_own_things_are_laid_out_and_can_be_put_away(b):
-    js = "(() => { " + FRESH + """ const own = ['bed', 'nightTable', 'bigPlant', 'sageRug', 'bedRug', 'doorMat', 'fujiPrint', 'kanaChart', 'nightPicture', 'pegRail', 'garland1', 'garland2', 'garland3', 'garland4'];
-      const laid = own.every(id => state.placed[id]); """ + GO_ROOM + """
+    js = "(() => { " + FRESH + """ const own = ['bed', 'nightTable', 'bigPlant', 'sageRug', 'bedRug', 'fujiPrint', 'kanaChart', 'nightPicture', 'pegRail', 'sofaWindow', 'shelfWindow', 'bedWindow2', 'sconce1', 'sconce2', 'sconce3', 'sconce4'];
+      const laid = own.every(id => state.placed[id]) && ['garland1', 'garland2', 'garland3', 'garland4'].every(id => !state.placed[id] && owns(id)) && !WARE.has('doorMat'); """ + GO_ROOM + """
       document.querySelector('.study-edit').click(); const st = () => document.querySelector('.study');
       st().querySelector('.deco[data-ware="bigPlant"]').dispatchEvent(new PointerEvent('pointerdown', { clientX: 1, clientY: 1, pointerId: 3, pointerType: 'mouse', button: 0, buttons: 1, bubbles: true }));
       st().dispatchEvent(new PointerEvent('pointerup', { clientX: 1, clientY: 1, pointerId: 3, pointerType: 'mouse', button: 0, bubbles: true }));
@@ -213,13 +213,13 @@ def test_the_desk_and_the_window_stand_off_the_bookcase_and_an_older_room_follow
       return JSON.stringify({ fresh, v, a: { desk: a.placed.desk.x, map: a.placed.japanmap || null, lights: ['garland1', 'garland2', 'garland3', 'garland4'].every(id => a.placed[id]), v: a.roomV },
         b: b2.placed.desk.x, c: c.placed.desk.x, win: ROOM.fits(WARE.get('japanmap'), { w: 'R', u: 6.4, v: 6.3 }), gap: ROOM.fits(WARE.get('cactus'), { w: 'F', x: 1.75, y: 0.5, r: 0 }) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['fresh'] == {'w': 'F', 'x': 4.1, 'y': 1.85, 'r': 0} and r['v'] == 7, r   # roomV 7: the bedroom (roomV 5: the window is a ware)
-    assert r['a'] == {'desk': 4.1, 'map': None, 'lights': True, 'v': 7}, r   # the desk went along; the map the window now covers went in the box
+    assert r['fresh'] == {'w': 'F', 'x': 5.5, 'y': 1.85, 'r': 0} and r['v'] == 8, r   # roomV 8: the desk further off the bookcase (roomV 7: the bedroom)
+    assert r['a'] == {'desk': 5.5, 'map': None, 'lights': False, 'v': 8}, r   # the desk went along; the map the window now covers went in the box; the strings came down
     assert r['b'] == 3.3 and r['c'] == 10, r   # a gramophone where the desk would go keeps it where it was; a desk moved by hand stays put
     assert r['win'] is False and r['gap'] is True, r   # the window and its curtains reach further right; a cactus fits between the bookcase and the desk
 
 def test_the_string_of_lights_is_four_strings_that_move_and_go_in_the_box(b):
-    js = "(async () => { " + FRESH + GO_ROOM + """ const st = () => document.querySelector('.study'), bulbs = () => st().querySelectorAll('.bulb').length;
+    js = "(async () => { " + FRESH + """ ['garland1', 'garland2', 'garland3', 'garland4'].forEach(id => { state.placed[id] = Object.assign({}, WARE.get(id).at); }); saveState(); """ + GO_ROOM + """ const st = () => document.querySelector('.study'), bulbs = () => st().querySelectorAll('.bulb').length;   /* (in the box from the start since roomV 8: hung where they used to hang) */
       const all = bulbs(), wires = ['garland1', 'garland2', 'garland3', 'garland4'].map(id => !!st().querySelector('svg.art [data-o="w:' + id + '"] path'));
       document.querySelector('.study-edit').click();
       const pe = (el, type, px, py) => el.dispatchEvent(new PointerEvent(type, { clientX: px, clientY: py, pointerId: 9, pointerType: 'mouse', button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true }));
@@ -231,7 +231,7 @@ def test_the_string_of_lights_is_four_strings_that_move_and_go_in_the_box(b):
       pe(st(), 'pointerup', x, y + 45); const lower = state.placed.garland2.v <= v0 - 0.5;
       st().querySelector('[data-act="room-edit-put"]').click();
       const stored = !state.placed.garland2, inBox = !!st().querySelector('.tray-it[data-id="garland2"] svg.thumb ellipse'), fewer = bulbs();
-      const low = { w: 'L', u: 10, v: 6.5 }, ok = ROOM.fits(WARE.get('garland4'), low), tooHigh = ROOM.fits(WARE.get('garland4'), { w: 'L', u: 10, v: 11 });
+      const low = { w: 'L', u: 10, v: 10 }, ok = ROOM.fits(WARE.get('garland4'), low), tooHigh = ROOM.fits(WARE.get('garland4'), { w: 'L', u: 10, v: 11 });
       state.placed.garland4 = low; saveState(); st().querySelector('[data-act="room-edit-done"]').click();
       const moved = st().querySelectorAll('.bulb[data-w="garland4"]').length, ts = [...st().querySelectorAll('.bulb')].map(e => Number(e.dataset.t)).sort((x, y) => x - y);
       return JSON.stringify({ all, wires, dragging, lower, under, clip, stored, inBox, fewer, ok, tooHigh, moved, first: ts.slice(0, 3), last: ts[ts.length - 1] }); })()"""
@@ -306,7 +306,7 @@ def test_a_swipe_looks_round_the_room_and_stays_where_it_is_let_go(b):
       return JSON.stringify({ dots: !!st.querySelector('.room-stops'), dx: Math.round(after[0] - before[0]), notebook: away('notebook'), phones: away('phones'), drawer: away('drawer') }); })()"""
     r = json.loads(ev_at(b, PHONE, js))
     assert abs(r['dx'] + 300) <= 2, r   # the room moved with the finger and stayed there (no stop to snap to)
-    assert {k: r[k] for k in ('dots', 'notebook', 'phones', 'drawer')} == {'dots': False, 'notebook': True, 'phones': False, 'drawer': True}, r   # the notebook's tag waits off screen, the headphones' shows (the chest is further on since 1.3.0)
+    assert {k: r[k] for k in ('dots', 'notebook', 'phones', 'drawer')} == {'dots': False, 'notebook': False, 'phones': False, 'drawer': True}, r   # the chest's tag waits off screen, the desk's show (the chest is further on since 1.3.0, the desk since roomV 8)
 
 def test_a_tag_at_a_side_of_the_screen_slides_in_to_stay_whole(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
@@ -429,7 +429,7 @@ def test_a_hat_tucks_away_what_sits_on_top_and_old_looks_become_parts(b):
     assert r['tucks'] == {h: ['ahoge', 'bun', 'twinbuns'] for h in ['beanie', 'strawhat', 'beret', 'gradcap', 'cathood', 'witchhat']}, r   # a hat over what sits on top
     assert r['bun'] == [True, False, True] and r['tail'], r   # tucked under a beanie, not under 貓耳髮箍; a high tail stays
     assert r['old'] == ['short', 'short', 'short', 'bun'] and r['wavy'] == ['sidepart', 'wave', 'wavy'], r   # the old 丸子頭, 長捲髮
-    assert r['odd'] == ['round', 'long', '#f3d1b5', 'big'] and r['fixed'] == {} and r['counts'] == [20, 16, 7, 13], r
+    assert r['odd'] == ['round', 'long', '#f3d1b5', 'big'] and r['fixed'] == {} and r['counts'] == [20, 16, 8, 13], r   # 後面 gained 清爽 (test, 2026-11-09)
 
 def test_a_hat_that_tucks_away_what_sits_on_top_says_so_in_the_shop_and_the_dressing_room(b):
     js = "(async () => { " + FRESH + """ state.koto.gift = 120; ['beanie', 'catears', 'cathead'].forEach(id => buyWare(WARE.get(id))); state.look = Object.assign({}, state.look, { hairTop: 'bun' }); saveState();
@@ -599,7 +599,7 @@ def test_the_telescope_went_out_to_the_yard(b):
     js = "(() => { " + FRESH + """ state.owned.telescope = { paid: 45, on: '2026-11-01' }; state.placed.telescope = { w: 'F', x: 6, y: 6, r: 0 }; state.roomV = 3;
       const s = normalizeState(state); return JSON.stringify({ kind: WARE.get('telescope').kind, placed: s.placed.telescope || null, v: s.roomV, owned: !!s.owned.telescope }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'kind': 'yard', 'placed': None, 'v': 7, 'owned': True}, r   # waits in the yard's box
+    assert r == {'kind': 'yard', 'placed': None, 'v': 8, 'owned': True}, r   # waits in the yard's box
 
 def test_the_yard_is_arranged_like_the_room(b):
     js = "(async () => { " + FRESH + """ state.koto.gift = 200; ['pond', 'engawa', 'tanuki'].forEach(id => buyWare(WARE.get(id))); saveState();
@@ -795,7 +795,7 @@ def test_prices_the_globe_and_the_umbrella_gone(b):
     assert r == {'gramophone': 100, 'beanie': 30, 'tee': 24, 'witchhat': 66, 'gradcap': 150, 'known': [], 'kept': [], 'back': 25}, r   # what was paid for the globe comes back
 
 def test_the_window_moves_along_either_wall_and_can_be_put_away(b):
-    js = "(async () => { " + FRESH + GO_ROOM + """ await new Promise(q => setTimeout(q, 200));
+    js = "(async () => { " + FRESH + """ ['sofaWindow', 'shelfWindow', 'sconce2'].forEach(id => { delete state.placed[id]; }); saveState(); """ + GO_ROOM + """ await new Promise(q => setTimeout(q, 200));   /* the one window (roomV 8 put up two more, and a lamp where it goes) */
       const look = () => { const st = document.querySelector('.study'), sky = st.querySelector('.w-sky'); return { sky: sky ? (sky.classList.contains('l') ? 'L' : 'R') : null, holes: [...st.querySelectorAll('svg.art > path[fill-rule="evenodd"]')].filter(p => (p.getAttribute('d').match(/M/g) || []).length > 1).length, drawn: !!st.querySelector('svg.art [data-o="w:window"]') }; };
       const at = Object.assign({}, state.placed.window), start = look(), win = WARE.get('window');
       const fits = { right: ROOM.fits(win, { w: 'R', u: 27, v: 7.5 }), left: ROOM.fits(win, { w: 'L', u: 11.5, v: 6.8 }), door: ROOM.fits(win, { w: 'L', u: 5, v: 6.6 }), low: ROOM.fits(win, { w: 'R', u: 27, v: 6 }) };
@@ -806,11 +806,11 @@ def test_the_window_moves_along_either_wall_and_can_be_put_away(b):
       const old = normalizeState(Object.assign(JSON.parse(JSON.stringify(state)), { roomV: 4 }));   /* a room saved before the window was a ware */
       return JSON.stringify({ at, start, fits, left, tools, away, box, old: old.placed.window, v: old.roomV }); })()"""
     r = json.loads(ev(b, js))
-    assert r['at'] == {'w': 'R', 'u': 4.1, 'v': 6.6} and r['start'] == {'sky': 'R', 'holes': 1, 'drawn': True}, r
+    assert r['at'] == {'w': 'R', 'u': 5.5, 'v': 6.6} and r['start'] == {'sky': 'R', 'holes': 1, 'drawn': True}, r
     assert r['fits'] == {'right': True, 'left': True, 'door': False, 'low': False}, r   # not over the door, not into the wainscot
     assert r['left'] == {'sky': 'L', 'holes': 1, 'drawn': True} and r['tools'] == '收起', r   # the opening went along to the left wall
     assert r['away'] == {'sky': None, 'holes': 0, 'drawn': False} and r['box'], r   # put away: the wall is whole, the window waits in the box
-    assert r['old'] == {'w': 'R', 'u': 4.1, 'v': 6.6} and r['v'] == 7, r
+    assert r['old'] == {'w': 'R', 'u': 5.5, 'v': 6.6} and r['v'] == 8, r
 
 def test_a_ware_is_dragged_out_of_the_box_to_a_spot_and_back_into_the_box(b):
     js = "(async () => { " + FRESH + " state.koto.gift = 100; buyWare(WARE.get('chabudai')); saveState(); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
@@ -961,7 +961,7 @@ def test_the_bedroom_is_a_room_of_its_own_through_a_door(b):
     r = json.loads(ev(b, js))
     assert r['study'] == {'room': 'study', 'things': ['bdoor', 'board', 'calendar', 'cards', 'door', 'drawer', 'notebook', 'phones', 'shelf'], 'sofa': True, 'bed': False}, r
     assert r['opening'], r   # the door swings open
-    assert r['bed'] == {'hash': '#/bedroom', 'room': 'bed', 'things': ['sdoor'], 'bed': True, 'wardrobe': True, 'skies': 1, 'mail': False}, r
+    assert r['bed'] == {'hash': '#/bedroom', 'room': 'bed', 'things': ['sdoor'], 'bed': True, 'wardrobe': True, 'skies': 2, 'mail': False}, r   # two windows since roomV 8
     assert r['h']['x'] == 1.55 and abs(r['h']['y'] - 3.2) < 1e-6, r   # in just inside the bedroom's door
     assert r['back'] == ['#/today', 'study'] and r['hero']['y'] == 19.5, r   # back in 書房 by its bedroom door
 
@@ -986,11 +986,26 @@ def test_an_older_room_moves_its_bed_into_the_bedroom(b):
       return JSON.stringify({ v: a.roomV, bed: a.placed.bed, nt: a.placed.nightTable.rm, rug: a.placed.bedRug.rm, pic: a.placed.nightPicture, chest: a.placed.chest.x, board: a.placed.board.u,
         sofa: a.placed.sofa, wardrobe: a.placed.wardrobe, moved: [b2.placed.bed, b2.placed.chest.x], t6: t6.placed.bed.rm }); })()"""
     r = json.loads(ev(b, js))
-    assert r['v'] == 7 and r['bed'] == {'w': 'F', 'x': 9.45, 'y': 2.625, 'r': 0, 'rm': 'bed'} and r['nt'] == 'bed' and r['rug'] == 'bed', r
+    assert r['v'] == 8 and r['bed'] == {'w': 'F', 'x': 9.45, 'y': 2.625, 'r': 0, 'rm': 'bed'} and r['nt'] == 'bed' and r['rug'] == 'bed', r
     assert r['pic'] == {'w': 'R', 'u': 9.45, 'v': 4.4, 'rm': 'bed'} and r['chest'] == 12.5 and r['board'] == 12.5, r   # 書房's own things spread out
     assert r['sofa'] == {'w': 'F', 'x': 22.2, 'y': 0.75, 'r': 0} and r['wardrobe']['rm'] == 'bed', r   # the new things are set out
     assert r['moved'] == [{'w': 'F', 'x': 6, 'y': 8, 'r': 0}, 15], r   # what was moved by hand stays where it is
     assert r['t6'] == 'bed', r
+
+def test_roomV_8_takes_the_lights_down_and_lays_the_room_out_again(b):
+    js = "(() => { " + FRESH + """ const base = JSON.parse(JSON.stringify(state)); WARES.filter(w => w.since === 8).forEach(w => { delete base.placed[w.id]; }); base.owned.cactus = { paid: 6, on: todayStr() };
+      const old = (placed) => normalizeState(Object.assign(JSON.parse(JSON.stringify(base)), { roomV: 7, placed: Object.assign({}, base.placed, placed) }));
+      const g = (id) => Object.assign({}, WARE.get(id).at);
+      const a = old({ garland1: g('garland1'), garland2: g('garland2'), garland3: { w: 'R', u: 19.05, v: 10 }, doorMat: { w: 'F', x: 0.7, y: 5.1, r: 0 }, desk: { w: 'F', x: 4.1, y: 1.85, r: 0 }, window: { w: 'R', u: 4.1, v: 6.6 },
+        kanaChart: { w: 'R', u: 22.2, v: 5.6 }, kotatsu: { w: 'F', x: 11.5, y: 9, r: 0 }, sageRug: { w: 'F', x: 3.4, y: 12.6, r: 0 } });   /* roomV 7's places; one string moved by hand */
+      const b2 = old({ desk: { w: 'F', x: 4.1, y: 1.85, r: 0 }, kotatsu: { w: 'F', x: 15, y: 15, r: 0 }, cactus: { w: 'F', x: 6.2, y: 1, r: 0 } });   /* a cactus where the desk would go; the kotatsu moved by hand */
+      const pl = a.placed;
+      return JSON.stringify({ v: a.roomV, lights: ['garland1', 'garland2', 'garland3'].map(id => pl[id] || null), mat: 'doorMat' in pl, desk: pl.desk.x, win: pl.window.u, kana: pl.kanaChart.u, kotatsu: [pl.kotatsu.x, pl.kotatsu.y], rug: [pl.sageRug.x, pl.sageRug.y],
+        added: WARES.filter(w => w.since === 8).every(w => pl[w.id] && (pl[w.id].rm || '') === (w.at.rm || '')), kept: [b2.placed.desk.x, b2.placed.kotatsu.x] }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['v'] == 8 and r['lights'] == [None, None, {'w': 'R', 'u': 19.05, 'v': 10}] and r['mat'] is False, r   # the strings still hung where they first hung come down; 腳踏墊 is gone
+    assert r['desk'] == 5.5 and r['win'] == 5.5 and r['kana'] == 18.6 and r['kotatsu'] == [4.6, 12.6] and r['rug'] == [5.4, 6.2], r
+    assert r['added'] and r['kept'] == [4.1, 15], r   # the new windows and wall lamps go up; what blocks the new place, or was moved by hand, keeps it where it is
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
