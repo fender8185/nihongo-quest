@@ -755,7 +755,7 @@ def test_the_yard_has_the_shop_and_the_hero_walks_up_to_it(b):
 
 # a tap on 古道具屋: the hero runs over the lawn and up the hill path, small with the distance but outlined, in at the shop's door
 def test_a_tap_on_the_shop_runs_the_hero_up_the_hill_path(b):
-    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();
+    js = "(async () => { " + FRESH + """ TOWN.EVENTS = []; TOWNEV.clock = { h: 12, day: new Date(2026, 10, 10) }; localStorage.removeItem('nq_hero'); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();
       await new Promise(q => setTimeout(q, 200));
       const h = () => document.querySelector('.yard .yhero'), scale = () => { const m = new DOMMatrix(getComputedStyle(h()).transform); return Math.hypot(m.a, m.b); };
       document.querySelector('.yard .shop-btn').click();
@@ -1157,7 +1157,7 @@ def test_down_the_path_to_the_main_road_the_bus_stop_and_home_again(b):
     assert r['home'] == {'hash': '#/outside', 'place': 'yard', 'house': True} and r['both'] and r['keepOff'] is False, r
 
 def test_a_neighbour_knocks_brings_a_present_and_lives_on_the_beach(b):
-    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); state.storyV = 9; state.koto.sets = { dev: 1 }; state.koto.listen = { '2026-11-08': 2 }; state.owned.gramophone = { paid: 100, on: '2026-11-01' }; saveState();
+    js = "(async () => { " + FRESH + """ TOWN.EVENTS = []; TOWNEV.clock = { h: 12, day: new Date(2026, 10, 10) }; localStorage.removeItem('nq_hero'); state.storyV = 9; state.koto.sets = { dev: 1 }; state.koto.listen = { '2026-11-08': 2 }; state.owned.gramophone = { paid: 100, on: '2026-11-01' }; saveState();
       const before = { visitor: NPC.visitor(), shop: WARES.filter(w => w.gift).map(w => w.id).sort(), mirror: owns('fullMirror') };
       """ + GO_ROOM + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('#view .study');
       await wait(1200); const knock = [!!st().querySelector('.knock'), st().querySelector('[data-thing="door"]').classList.contains('knocking')];
@@ -1228,7 +1228,7 @@ def test_the_town_is_along_the_yard_to_the_right(b):
       return JSON.stringify({ signs, town, shut, back: location.hash }); })()"""
     r = json.loads(ev(b, js))
     assert r['signs'] == ['beach', 'street', 'town'], r
-    assert r['town'] == {'place': 'town', 'shops': ['salon', 'bakery', 'books', 'cafe', 'flowers', 'greens', 'goods'], 'koharu': False, 'edit': 'none'}, r   # 小春 only once she has come by
+    assert r['town'] == {'place': 'town', 'shops': ['salon', 'bakery', 'shokudo', 'cafe', 'flowers', 'izakaya', 'goods'], 'koharu': False, 'edit': 'none'}, r   # 小春 only once she has come by
     assert '準備中' in r['shut'] and r['back'] == '#/outside', r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]

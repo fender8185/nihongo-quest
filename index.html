@@ -6107,8 +6107,8 @@ const ACTIONS = {
   'yard-shop': (el) => yClimb(el),
   'bus-stop': (el) => busSit(el),   // test: the hero sits on the bench
   'go-place': (el) => yGo(el, el.dataset.to),   // test: to the main road, the beach, home to the yard
-  'npc-talk': (el) => NPC.talk(el),   // test: a word with a neighbour (the beach, the town)
-  'town-shop': () => toast('這家店還在準備中，之後會開張。'),   // up the hill path to 古道具屋
+  'npc-talk': (el) => TOWNEV.talk(el),   // test: a word with a neighbour (the beach, the town)
+  'town-shop': (el) => TOWNEV.shopTap(el),   // up the hill path to 古道具屋
   witch: (el) => witchCatch(el),   // the Halloween witch caught (1.2.2)
   'close-modal': () => closeModal(),
   'modal-back': (el, ev) => { if (ev.target === el) closeModal(); },
@@ -7097,9 +7097,6 @@ const NPC = (() => {
   }
   const art = (id) => (id === 'mugi' ? `<svg viewBox="-60 -200 120 210" aria-hidden="true">${MUGI_ART}</svg>` : HERO.svg({ look: KOHARU_LOOK }));
   const face = (id) => (id === 'mugi' ? `<svg viewBox="-44 -132 88 88" aria-hidden="true">${MUGI_ART}</svg>` : HERO.head(KOHARU_LOOK, 'bust'));
-  // on the beach: drawn like the hero, smaller further up; a tap sends the hero over for a word
-  const onBeach = () => Object.keys(NPCS).filter((id) => met(id) && NPCS[id].home === 'beach').map((id) => { const a = NPCS[id].at, k = yScale(a.Y);
-    return `<button type="button" class="hero npc npc-${id}" data-act="npc-talk" data-npc="${id}" aria-label="${NPCS[id].name}" style="transform:translate(${a.X}px,${-a.Y}px) scale(${k.toFixed(3)});z-index:${300 - a.Y}">${art(id)}</button>`; }).join('');
   // the knock (WebAudio, as the answer sounds; off with them): two dull taps on wood
   function knockSound() {
     const c = sfxReady(); if (!c) return;
@@ -7146,12 +7143,7 @@ const NPC = (() => {
     if (w === 'gramophone') state.musicOff = false;
     saveState();
   }
-  function talk(el) {   // on the beach: the hero walks over, turns to them, a word
-    const id = el.dataset.npc, yard = el.closest('.yard'), a = NPCS[id] && NPCS[id].at; if (!a || !yard) return;
-    const side = yh.X <= a.X ? -1 : 1, lines = NPCS[id].chat, L = lines[Math.floor(Math.random() * lines.length)];
-    yHeroWalk(yard, [a.X + side * 76 * yScale(a.Y), a.Y + 2], () => { yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard); TALK.open(yard, id, [L]); });
-  }
-  return { visitor, check, visit, talk, onBeach, face, art, gap };
+  return { visitor, check, visit, face, art, gap };
 })();
 // the town's events (test, 2026-11-09; docs/superpowers/specs/2026-11-09-town-events-design.md): the people of events.js (TOWN)
 // where their hours put them, and the next event of the course. An event opens when its unit is reached (入門: m0 only) — and,
@@ -7198,7 +7190,48 @@ const TOWNEV = (() => {
     if (!state.koto.found['ev-' + id]) state.koto.found['ev-' + id] = 10;
     saveState();
   }
-  return { unitIdx, reachedIdx, started, studyDaysSince, due, waiting, whereIs, isOpen, finish };
+  // the hour the town is drawn at: the phone's (TOWNEV.clock holds a fixed one for tests)
+  const now = () => (api.clock ? api.clock.h : sceneHour()), today = () => (api.clock ? api.clock.day : new Date());
+  const seen = (id) => (T().CAST[id].art === 'npc' ? met(id) : Boolean(state.town.seen[id]));
+  const ownerOf = (shop) => Object.keys(T().CAST).find((id) => T().CAST[id].shop === shop);
+  // a shop: 'prep' until its keeper is met (準備中), then 'open' or 'closed' by its hours
+  const shopState = (shop) => { const o = ownerOf(shop); return !o || !seen(o) ? 'prep' : isOpen(shop, now()) ? 'open' : 'closed'; };
+  const art = (id) => { const c = T().CAST[id]; return c.art === 'npc' ? NPC.art(id) : HERO.svg({ look: c.look, wear: c.wear || {} }); };
+  const face = (id) => { if (id === 'hero') return HERO.head(state.look, 'bust'); const c = T().CAST[id]; return c.art === 'npc' ? NPC.face(id) : HERO.head(c.look, 'bust'); };
+  // the people at a place now: those met, where their hours put them, and whoever an event there waits on (marked ！)
+  function here(place) {
+    const w = waiting(now(), today()), out = [];
+    Object.keys(T().CAST).forEach((id) => {
+      const host = w && w.ev.who === id && w.place === place, at = host ? { place, spot: w.spot } : whereIs(id, now(), today());
+      if (at && at.place === place && (host || seen(id)) && T().SPOTS[place] && T().SPOTS[place][at.spot]) out.push({ id, spot: T().SPOTS[place][at.spot], host });
+    });
+    return out;
+  }
+  function castHtml(place) {
+    return here(place).map(({ id, spot, host }) => { const k = yScale(spot.Y) * (T().CAST[id].size || 1);
+      return `<button type="button" class="hero npc npc-${id}${host ? ' ev-host' : ''}" data-act="npc-talk" data-npc="${id}" aria-label="${esc(T().CAST[id].name)}" style="transform:translate(${spot.X}px,${-spot.Y}px) scale(${k.toFixed(3)});z-index:${300 - spot.Y}">${art(id)}</button>`; }).join('');
+  }
+  // nothing on: a word of what they can say by the unit reached (小春, ムギ: their old words too)
+  function chatLine(id) {
+    const R = reachedIdx(), own = (T().CHAT[id] || []).filter((l) => unitIdx(l[0]) <= R).map((l) => [l[1], l[2]]);
+    const lines = own.concat(NPCS[id] ? NPCS[id].chat : []);
+    return lines[Math.floor(Math.random() * lines.length)] || ['……', '……'];
+  }
+  // a tap on someone: the hero walks over, turns to them, a word
+  function talk(el) {
+    const id = el.dataset.npc, yard = el.closest('.yard'), p = yard && here(yard.dataset.place).find((x) => x.id === id); if (!p) return;
+    const a = p.spot, side = yh.X <= a.X ? -1 : 1;
+    yHeroWalk(yard, [a.X + side * 76 * yScale(a.Y), a.Y + 2], () => { yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard); TALK.open(yard, id, [chatLine(id)]); });
+  }
+  function shopTap(el) {   // a shop front: its keeper if they are here, else what the door says
+    const shop = el.dataset.shop, st = shopState(shop), o = ownerOf(shop), sign = (TOWN_SHOPS.find((x) => x[6] === shop) || [])[5] || '';
+    if (st === 'prep') { toast('這家店還在準備中，之後會開張。'); return; }
+    if (st === 'closed') { const [f, t] = T().HOURS[shop]; toast(`${sign}：營業時間 ${f}:00–${t}:00，現在打烊了。`); return; }
+    const p = el.closest('.yard').querySelector(`.npc-${o}`);
+    if (p) talk(p); else toast(`${T().CAST[o].name}現在不在店裡。`);
+  }
+  const api = { unitIdx, reachedIdx, started, studyDaysSince, due, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine };
+  return api;
 })();
 // the opening (test, 2026-11-09; the user's picks): as a child the hero never understood what their Japanese grandmother said
 // ("I'll learn it later"); grown up and busy in the city they never did; then a letter from Japan — she has gone, and left them
@@ -7305,8 +7338,8 @@ const TALK = (() => {
   let cur = null;
   const ruby = (s) => esc(s).replace(/\{([^|}]+)\|([^}]+)\}/g, '<ruby>$1<rt>$2</rt></ruby>'), plain = (s) => s.replace(/\{([^|}]+)\|[^}]+\}/g, '$1');
   function show() {
-    const [ja, zh, kind] = cur.lines[cur.i], n = NPCS[cur.id], w = n.gift;
-    cur.el.innerHTML = `<div class="talk-card"><div class="talk-face">${NPC.face(cur.id)}</div><div class="talk-body">
+    const [ja, zh, kind] = cur.lines[cur.i], n = NPCS[cur.id] || TOWN.CAST[cur.id], w = n.gift;
+    cur.el.innerHTML = `<div class="talk-card"><div class="talk-face">${TOWNEV.face(cur.id)}</div><div class="talk-body">
       <div class="talk-name">${esc(n.name)}<span>${esc(n.role)}</span></div>
       <p class="talk-ja" lang="ja">${ruby(ja)} <button type="button" class="talk-say" data-talk="say" aria-label="唸出來">${icon('speaker')}</button></p><p class="talk-zh">${esc(zh)}</p>
       ${kind === 'gift' ? `<div class="talk-gift">${DECOR.thumb(w)}<b>${esc(WARE.get(w).name)}</b><button type="button" class="btn btn-primary btn-sm" data-talk="take">收下</button></div>` : '<span class="talk-next" aria-hidden="true">▼</span>'}</div></div>`;
@@ -7320,7 +7353,7 @@ const TALK = (() => {
   }
   function open(root, id, lines, done, take) {
     close();
-    const el = document.createElement('div'); el.className = 'talk'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', NPCS[id].name);
+    const el = document.createElement('div'); el.className = 'talk'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', (NPCS[id] || TOWN.CAST[id]).name);
     cur = { el, id, lines, done, take, i: 0 };
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     el.addEventListener('click', (e) => {
@@ -7358,30 +7391,35 @@ function beachHtml() {
     </svg>
     ${yHeroHtml()}
     <div class="busstop beach-prop" aria-hidden="true" style="width:${w}px;height:${h}px;margin-left:${x0}px;bottom:${-(y0 + h)}px;transform-origin:${-x0}px ${-y0}px;transform:translate(-120px,-64px) scale(${k.toFixed(3)});z-index:${300 - 64}"><svg viewBox="${BEACH_PROP.join(' ')}">${BEACH_PROP_ART()}</svg></div>
-    ${NPC.onBeach()}
+    ${TOWNEV.castHtml('beach')}
     <button type="button" class="thing way-btn" data-act="go-place" data-to="yard" aria-label="回院子" style="margin-left:${YARD_HALF - 72}px;bottom:70px"><span class="tag">${ySign('today', '回院子')}</span></button>
     <div class="ysel"></div>`;
 }
 // the town (test, 2026-11-09), along the yard to the right: a row of little shops on a paved street — 小春's salon first, the
 // rest not open yet (a tap: 準備中). 小春 stands in her doorway once she has come by; a tap on her or the salon for a word
-const TOWN_SHOPS = [   // [x in the land's 1200, width, height, wall, awning, sign, id]
-  [150, 150, 128, '#f6e9e4', '#e58fa8', '美容室 こはる', 'salon'], [320, 120, 112, '#f3e3c4', '#d9a43a', 'パン', 'bakery'], [460, 132, 140, '#e3e8ec', '#4f6f9e', '本屋', 'books'],
-  [612, 118, 118, '#efe1d2', '#6e4f3a', '喫茶', 'cafe'], [748, 124, 104, '#e6efe2', '#4f7a4a', '花屋', 'flowers'], [890, 140, 132, '#f1e6da', '#c8553f', '八百屋', 'greens'], [1050, 120, 116, '#e9e4f1', '#6b4d8a', '雑貨', 'goods']];
+const TOWN_SHOPS = [   // [x in the land's 1200, width, height, wall, awning, sign, id] — 2026-11-09: 八百屋 and 本屋 gave way to まんぷく食堂 and 居酒屋とり吉
+  [150, 150, 128, '#f6e9e4', '#e58fa8', '美容室 こはる', 'salon'], [320, 120, 112, '#f3e3c4', '#d9a43a', '森のパン', 'bakery'], [460, 132, 140, '#efe6d6', '#3f4a6e', 'まんぷく食堂', 'shokudo'],
+  [612, 118, 118, '#efe1d2', '#6e4f3a', '喫茶しずく', 'cafe'], [748, 124, 104, '#e6efe2', '#4f7a4a', 'ひなた花店', 'flowers'], [890, 140, 132, '#e8dccb', '#8a2f2a', '居酒屋とり吉', 'izakaya'], [1050, 120, 116, '#e9e4f1', '#6b4d8a', '雑貨りんりん', 'goods']];
 const TOWN_FOOT = 236;   // the shops' fronts stand on this line of the land (y), 134 px up
 function townHtml() {
   const shop = ([x, w, h, wall, aw, sign, id]) => {
     const t = TOWN_FOOT - h, dx = x + w / 2;
-    return `<g class="shop-front" data-shop="${id}">
+    const st = TOWNEV.shopState(id), shut = st !== 'open', wx = x + 10, ww = w * 0.42, dx0 = x + w - 44;
+    const shutter = (sx, sy, sw, sh) => `<rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" rx="2" ${hc('#b9b6ae', '#2a2b48')}/>${Array.from({ length: Math.floor(sh / 7) }, (_, k) => `<path d="M${sx + 2} ${sy + 5 + k * 7} h${sw - 4}" ${hs('#9a978e', '#1e1f3a')} stroke-width="1.2"/>`).join('')}`;
+    const lantern = (lx) => `<path d="M${lx} ${t + 30} v6" ${hs('#2b2b33', '#1c1d3c')} stroke-width="1.5"/><ellipse cx="${lx}" cy="${t + 46}" rx="9" ry="12" ${hc('#d84a3a', '#5a2030')}/><ellipse cx="${lx}" cy="${t + 46}" rx="18" ry="20" fill="#ffb070" style="opacity:calc((1 - var(--day, 1)) * ${st === 'open' ? 0.45 : 0})"/><path d="M${lx - 9} ${t + 46} h18" ${hs('#f6d9a0', '#6a3a40')} stroke-width="1"/>`;
+    return `<g class="shop-front${shut ? ' closed' : ''}" data-shop="${id}">
       <rect x="${x}" y="${t}" width="${w}" height="${h}" ${hc(wall, '#25264a')}/><rect x="${x - 4}" y="${t - 8}" width="${w + 8}" height="10" rx="2" ${hc('#8a6a52', '#1c1d3c')}/>
       <rect x="${dx - w * 0.36}" y="${t + 10}" width="${w * 0.72}" height="20" rx="3" ${hc('#fbf7ec', '#3a3b62')}/><text x="${dx}" y="${t + 25}" text-anchor="middle" font-size="13" font-weight="700" ${hc('#4a3a2c', '#c9c4e8')} font-family="system-ui, sans-serif">${sign}</text>
       <path d="M${x - 2} ${t + 38} H${x + w + 2} L${x + w - 6} ${t + 56} H${x + 6} Z" ${hc(aw, '#3a2c4a')}/>${Array.from({ length: Math.floor(w / 16) }, (_, k) => `<path d="M${x + 6 + k * 16} ${t + 56} q8 8 16 0" ${hc(aw, '#3a2c4a')}/>`).join('')}
       <rect x="${x + 10}" y="${t + 66}" width="${w * 0.42}" height="${h - 92}" rx="3" ${hc('#cfe6ec', '#ffd98a')}/><path d="M${x + 14} ${t + 72} l14 22" ${hs('#ffffff', '#fff3c8')} stroke-width="3" stroke-opacity=".6"/>
       <rect x="${x + w - 44}" y="${t + 70}" width="32" height="${h - 70}" rx="2" ${hc('#8a6a52', '#3a2c40')}/><circle cx="${x + w - 18}" cy="${t + 70 + (h - 70) / 2}" r="2" ${hc('#e3c46a', '#a88a4a')}/>
       ${id === 'salon' ? `<rect x="${x + w + 6}" y="${t + 60}" width="8" height="40" rx="4" fill="#fff"/><path d="M${x + w + 6} ${t + 66} l8 -4 M${x + w + 6} ${t + 76} l8 -4 M${x + w + 6} ${t + 86} l8 -4 M${x + w + 6} ${t + 96} l8 -4" stroke="#e58fa8" stroke-width="3"/>` : ''}
+      ${id === 'shokudo' ? `<path d="M${dx0 - 4} ${t + 70} h40 v22 h-40 Z" ${hc('#2f3a5e', '#1c1f3a')}/><path d="M${dx0 + 9} ${t + 70} v22 M${dx0 + 22} ${t + 70} v22" ${hs('#efe6d6', '#3a3d60')} stroke-width="1.2"/><text x="${dx0 + 16}" y="${t + 86}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" fill-opacity=".9" font-family="serif">めし</text>` : ''}
+      ${id === 'izakaya' ? lantern(x + 8) + lantern(x + w - 8) : ''}
+      ${shut ? shutter(wx - 2, t + 64, ww + 4, h - 88) + shutter(dx0 - 2, t + 68, 36, h - 68) + `<rect x="${dx0 + 1}" y="${t + 84}" width="30" height="13" rx="2" ${hc('#fbf7ec', '#3a3b62')}/><text x="${dx0 + 16}" y="${t + 94}" text-anchor="middle" font-size="8.5" font-weight="700" ${hc('#8a2f2a', '#c9c4e8')} font-family="system-ui, sans-serif">準備中</text>` : ''}
     </g>`;
   };
   const lamp = (x) => `<rect x="${x - 2}" y="${TOWN_FOOT - 96}" width="4" height="96" ${hc('#4a4a55', '#1c1d3c')}/><circle cx="${x}" cy="${TOWN_FOOT - 100}" r="8" ${hc('#f2efe4', '#ffe2a0')}/><circle cx="${x}" cy="${TOWN_FOOT - 100}" r="16" fill="#ffd98a" style="opacity:calc((1 - var(--day, 1)) * .22)"/>`;
-  const k = NPCS.koharu, here = state.met && state.met.koharu;
   return `<svg class="land town-land" viewBox="0 0 1200 370" preserveAspectRatio="xMidYMax slice">
       <path class="far" d="M0 122 C120 100 240 104 360 118 S560 96 700 110 S900 126 1020 104 S1150 100 1200 110 V370 H0 Z"/>
       <rect class="near" x="-20" y="150" width="1240" height="220"/>
@@ -7390,8 +7428,8 @@ function townHtml() {
       ${Array.from({ length: 30 }, (_, j) => `<path class="seam" d="M${j * 44 - 20} ${TOWN_FOOT + 40 + (j % 3) * 30} h26"/>`).join('')}
     </svg>
     ${yHeroHtml()}
-    ${here ? `<button type="button" class="hero npc npc-koharu" data-act="npc-talk" data-npc="koharu" aria-label="${k.name}" style="transform:translate(${k.at.X}px,${-k.at.Y}px) scale(${yScale(k.at.Y).toFixed(3)});z-index:${300 - k.at.Y}">${NPC.art('koharu')}</button>` : ''}
-    ${TOWN_SHOPS.map(([x, w, h, , , sign, id]) => `<button type="button" class="town-shop" data-act="${id === 'salon' && here ? 'npc-talk' : 'town-shop'}" data-npc="koharu" data-shop="${id}" aria-label="${sign}" style="margin-left:${x - 600}px;width:${w}px;bottom:${370 - TOWN_FOOT}px;height:${h}px"></button>`).join('')}
+    ${TOWNEV.castHtml('town')}
+    ${TOWN_SHOPS.map(([x, w, h, , , sign, id]) => `<button type="button" class="town-shop" data-act="town-shop" data-shop="${id}" aria-label="${sign}" style="margin-left:${x - 600}px;width:${w}px;bottom:${370 - TOWN_FOOT}px;height:${h}px"></button>`).join('')}
     <button type="button" class="thing way-btn" data-act="go-place" data-to="yard" aria-label="回院子" style="margin-left:${-YARD_HALF + 40}px;bottom:70px"><span class="tag">${ySign('today', '回院子')}</span></button>
     <div class="ysel"></div>`;
 }

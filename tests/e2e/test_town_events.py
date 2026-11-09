@@ -73,6 +73,49 @@ def test_an_old_save_without_town_loads(b):
     r = json.loads(ev(b, js))
     assert r == {'town': {'done': {}, 'seen': {}, 'stops': {}}}, r
 
+# ---- the town: its shops, their hours, the people where their hours put them ----
+TOWN_AT = """const wait = (ms) => new Promise(q => setTimeout(q, ms)), y = () => document.querySelector('#view .yard');
+  const toastText = () => [...document.querySelectorAll('#toast, .toast')].map(t => t.textContent).join(' ');
+  const go = async (place, h, day) => { TOWNEV.clock = { h, day: day || new Date(2026, 10, 10) }; localStorage.removeItem('nq_hero'); location.hash = '#/' + place; document.getElementById('view').innerHTML = ''; route(); await wait(300); };"""
+
+def test_town_has_the_new_shops(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); await go('town', 12);
+      return JSON.stringify([...y().querySelectorAll('.town-shop')].map(e => e.dataset.shop)); })()"""))
+    assert r == ['salon', 'bakery', 'shokudo', 'cafe', 'flowers', 'izakaya', 'goods'], r
+
+def test_a_shop_whose_owner_you_have_not_met_is_still_preparing(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); await go('town', 12);
+      const shut = y().querySelector('.shop-front[data-shop="flowers"]').classList.contains('closed'); y().querySelector('.town-shop[data-shop="flowers"]').click(); await wait(100);
+      return JSON.stringify({ shut, toast: toastText(), hina: !!y().querySelector('.npc-hina') }); })()"""))
+    assert r['shut'] and '準備中' in r['toast'] and not r['hina'], r
+
+def test_a_closed_shop_says_its_hours(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.seen.kenta = 1; await go('town', 3);
+      const shut = y().querySelector('.shop-front[data-shop="bakery"]').classList.contains('closed'); y().querySelector('.town-shop[data-shop="bakery"]').click(); await wait(100);
+      const night = toastText(); await go('town', 9); const open = !y().querySelector('.shop-front[data-shop="bakery"]').classList.contains('closed');
+      return JSON.stringify({ shut, night, open, kenta: !!y().querySelector('.npc-kenta') }); })()"""))
+    assert r['shut'] and '6' in r['night'] and '14' in r['night'] and r['open'] and r['kenta'], r
+
+def test_people_stand_where_their_hours_say(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.seen.hina = 1; state.met = { koharu: 1 };
+      await go('town', 17); const eve = [...y().querySelectorAll('.npc')].map(e => e.dataset.npc).sort();
+      await go('town', 10); const morning = [...y().querySelectorAll('.npc')].map(e => e.dataset.npc).sort();
+      await go('town', 10, new Date(2026, 10, 14)); const sat = [...y().querySelectorAll('.npc')].map(e => e.dataset.npc).sort();
+      return JSON.stringify({ eve, morning, sat }); })()"""))
+    assert r == {'eve': ['hina', 'koharu'], 'morning': ['koharu'], 'sat': ['hina', 'koharu']}, r   # 陽菜 at school on a weekday morning
+
+def test_the_izakaya_is_shut_by_day(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); await go('town', 12);
+      return JSON.stringify(y().querySelector('.shop-front[data-shop="izakaya"]').classList.contains('closed')); })()"""))
+    assert r is True, r
+
+def test_someone_with_nothing_on_says_a_word_of_the_units_reached(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.seen.kenta = 1;
+      TOWN.CHAT.kenta = [['m0', 'いらっしゃい！', '歡迎光臨！'], ['m9', 'まだだよ。', '還沒。']]; await go('town', 9);
+      y().querySelector('.npc-kenta').click(); let t = null; for (let i = 0; i < 120 && !t; i++) { await wait(50); t = document.querySelector('.talk'); }
+      return JSON.stringify({ name: t.querySelector('.talk-name').textContent, ja: t.querySelector('.talk-ja').textContent.trim() }); })()"""))
+    assert r['name'].startswith('森 健太') and r['ja'] == 'いらっしゃい！', r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
