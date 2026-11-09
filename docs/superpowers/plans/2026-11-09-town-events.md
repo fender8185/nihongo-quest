@@ -147,7 +147,7 @@
 | 5 | m5 | 5 | 7648ef1 美咲／中村／健二；小春改用常體（-test.6，events.js v5） |
 | 6 | m6 | 5 | 6ef3790 鈴木（計程車）；第一階段（N5 文法）完（-test.7，events.js v6） |
 | 7 | m7 | 5 | 7bacc8e アレックス；進入 N4（-test.8，events.js v7） |
-| 8 | m8 | 5 | (this commit) 稲荷神社與晚上的緣日，千早／タツ，浴衣（-test.9，events.js v8） |
+| 8 | m8 | 5 | 524638a 稲荷神社與晚上的緣日，千早／タツ，浴衣（-test.9，events.js v8） |
 
 ## 寫作規則（審查後加的）
 
