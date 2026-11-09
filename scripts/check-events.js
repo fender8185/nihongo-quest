@@ -53,7 +53,9 @@ function check(T, D) {
     if (!cast[e.who]) bad('ref', where, `no one called ${e.who} to host it`);
     if (!places.includes(e.at)) bad('ref', where, `no place ${e.at} drawn yet`);
     else if (cast[e.who] && !(cast[e.who].hours || []).some((h) => h[2] === e.at && spots[e.at] && spots[e.at][h[3]])) bad('host', where, `${e.who} is never at ${e.at} by their hours`);
-    if (e.after && !(T.EVENTS || []).some(x => x.id === e.after)) bad('ref', where, `no event ${e.after} before it`);
+    const before = e.after && (T.EVENTS || []).find(x => x.id === e.after);
+    if (e.after && !before) bad('ref', where, `no event ${e.after} before it`);
+    else if (before && before.when === 'night') bad('night-chain', where, `follows ${e.after}, which only happens at night`);
     (e.lines || []).forEach((l, i) => {
       const at = `${where}#${i}`;
       if (Array.isArray(l)) { who(l[0], at); text(l[1], e.u, at); return; }

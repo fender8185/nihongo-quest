@@ -68,6 +68,9 @@ test('an event must be hostable: its person is there by their hours, the place d
 test('a word written after お／ご is found as the course has it (お風呂)', () => {
   assert.deepEqual(check(town([ev({ lines: [['miku', 'お{風呂|ふろ}です。', '是浴室。']] })]), DATA), []);
 });
+test('no event waits on one that only happens at night (a daytime player would never get past it)', () => {
+  assert.deepEqual(kinds(check(town([ev({ when: 'night' }), ev({ id: 'e2', after: 'e1' })]), DATA)), ['night-chain']);
+});
 test('events.js itself passes against data.js', () => {
   const D = require('../scripts/data-file').load();
   assert.deepEqual(check(loadTown(), D), []);
