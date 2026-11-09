@@ -13,7 +13,7 @@
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
 <script src="./data.js?v=21"></script>
-<script src="./events.js?v=7"></script>
+<script src="./events.js?v=8"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -474,8 +474,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.sky .house, .house-thumb) .m-dot { fill: color-mix(in srgb, #fff8ec calc(var(--day) * 100%), #4a3c66); }
 :is(.sky .house, .house-thumb) .m-gill { fill: color-mix(in srgb, #ead6b4 calc(var(--day) * 100%), #15163a); }
 :is(.sky .house, .house-thumb) .m-pipe { fill: color-mix(in srgb, #7e6a5a calc(var(--day) * 100%), #0c0d25); }
-:is(.sky .house, .house-thumb, .sky .busstop, .sky .town-land, .sky .station-land, .sky .sento-land) .hc { fill: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); transition: fill 3s; }
-:is(.sky .house, .house-thumb, .sky .busstop, .sky .town-land, .sky .station-land, .sky .sento-land) .hs { fill: none; stroke: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); stroke-linecap: round; stroke-linejoin: round; transition: stroke 3s; }
+:is(.sky .house, .house-thumb, .sky .busstop, .sky .town-land, .sky .station-land, .sky .sento-land, .sky .shrine-land) .hc { fill: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); transition: fill 3s; }
+:is(.sky .house, .house-thumb, .sky .busstop, .sky .town-land, .sky .station-land, .sky .sento-land, .sky .shrine-land) .hs { fill: none; stroke: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); stroke-linecap: round; stroke-linejoin: round; transition: stroke 3s; }
 :is(.sky .house, .house-thumb) .m-grass { fill: none; stroke: color-mix(in srgb, #5f9a4a calc(var(--day) * 100%), #0b0c22); stroke-width: 1.6; stroke-linecap: round; }
 .house-thumb :is(.wall, .roof, .chim) { fill: #f1e3c6; } .house-thumb .rim { fill: none; stroke: rgba(255, 255, 255, .45); stroke-width: 1.4; } .house-thumb .pane { fill: #cfe9f8; } .house-thumb .mull { stroke: #fff; stroke-width: 2; } .house-thumb .door { fill: #7a4b2e; } .house-thumb .knob { fill: #ffcf7a; }
 .sky .house .win { position: absolute; border-radius: 50%; opacity: calc((.12 + .88 * var(--f)) * (1 - var(--day))); transition: opacity 1.5s; }   /* the light round each window, warmer as the list fills */
@@ -7244,7 +7244,9 @@ const TOWNEV = (() => {
   const shopState = (shop) => { const o = ownerOf(shop), w = waiting(now(), today());
     if (w && w.place === shop) return 'open';
     return !o || !seen(o) ? 'prep' : isOpen(shop, now()) ? 'open' : 'closed'; };
-  const art = (id) => { const c = T().CAST[id]; return c.art === 'npc' ? NPC.art(id) : HERO.svg({ look: c.look, wear: c.wear || {} }); };
+  // what someone wears where they are: their festival clothes (festa) at the shrine while its 緣日 is on
+  const look = (id, place, h = now()) => { const c = T().CAST[id]; return c.festa && place === 'shrine' && isOpen('ennichi', h) ? Object.assign({}, c.look, c.festa) : c.look; };
+  const art = (id, place) => { const c = T().CAST[id]; return c.art === 'npc' ? NPC.art(id) : HERO.svg({ look: look(id, place), wear: c.wear || {} }); };
   const face = (id) => { if (id === 'hero') return HERO.head(state.look, 'bust'); const c = T().CAST[id]; return c.art === 'npc' ? NPC.face(id) : HERO.head(c.look, 'bust'); };
   // the people at a place now: those met, where their hours put them, and whoever an event there waits on (marked ！)
   function here(place) {
@@ -7256,10 +7258,11 @@ const TOWNEV = (() => {
     return out;
   }
   // what a place shows of the town now (its shops' doors, who stands where, the mark): drawn anew when it changes
-  const sig = (place) => (place === 'town' ? TOWN_SHOPS.map((x) => shopState(x[6])).join() : '') + '|' + here(place).map((p) => p.id + (p.host ? '!' : '')).join();
+  const sig = (place) => (place === 'town' ? TOWN_SHOPS.map((x) => shopState(x[6])).join() : place === 'shrine' ? String(isOpen('ennichi', now())) : '') + '|' + here(place).map((p) => p.id + (p.host ? '!' : '')).join();
+  const festival = () => isOpen('ennichi', now());
   function castHtml(place) {
     return here(place).map(({ id, spot, host }) => { const k = yScale(spot.Y) * (T().CAST[id].size || 1);
-      return `<button type="button" class="hero npc npc-${id}${host ? ' ev-host' : ''}" data-act="npc-talk" data-npc="${id}" aria-label="${esc(T().CAST[id].name)}" style="transform:translate(${spot.X}px,${-spot.Y}px) scale(${k.toFixed(3)});z-index:${300 - spot.Y}">${art(id)}${host ? '<i class="ev-mark" aria-hidden="true">！</i>' : ''}</button>`; }).join('');
+      return `<button type="button" class="hero npc npc-${id}${host ? ' ev-host' : ''}" data-act="npc-talk" data-npc="${id}" aria-label="${esc(T().CAST[id].name)}" style="transform:translate(${spot.X}px,${-spot.Y}px) scale(${k.toFixed(3)});z-index:${300 - spot.Y}">${art(id, place)}${host ? '<i class="ev-mark" aria-hidden="true">！</i>' : ''}</button>`; }).join('');
   }
   // the way to the one waiting: each place's way back towards the yard, and from the yard out (the bus stop for the places the
   // bus goes to); a dot on the sign of the next step there
@@ -7305,7 +7308,7 @@ const TOWNEV = (() => {
     const p = el.closest('.yard').querySelector(`.npc-${o}`);
     if (p) talk(p); else toast(`${T().CAST[o].name}現在不在店裡。`);
   }
-  const api = { unitIdx, reachedIdx, started, studyDaysSince, due, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, hop, dot, busDot, hint, PLACE_NAME, sig, seen };
+  const api = { unitIdx, reachedIdx, started, studyDaysSince, due, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, hop, dot, busDot, hint, PLACE_NAME, sig, seen, look, festival };
   return api;
 })();
 // the opening (test, 2026-11-09; the user's picks): as a child the hero never understood what their Japanese grandmother said
@@ -7646,7 +7649,7 @@ function streetHtml() {
 // between the places out of doors (test, 2026-11-09): the yard's path down to the main road, the yard's left edge along to the
 // beach. The hero walks to the way out (out), fades, and the other place opens with him coming in (in: where he appears, where
 // he walks to; yh.arrive)
-const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento' };
+const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento', shrine: '#/shrine' };
 const OUT_PLACES = Object.keys(PLACE_ROUTE).filter((p) => p !== 'yard');   // the places out and about besides the yard, each its own route
 const WAYS = {
   'yard>street': { out: () => [LANE.at(1)[0], 4], in: () => [[STREET_LANE.at(0)[0], 214], [STREET_LANE.at(1)[0] + 8, 126]] },
@@ -7688,13 +7691,42 @@ function busStopHtml() {
   return `<div class="busstop" aria-hidden="true" style="width:${w}px;height:${h}px;margin-left:${x0}px;bottom:${-(y0 + h)}px;transform-origin:${-x0}px ${-y0}px;transform:translate(${BUS.X}px,${-BUS.Y}px) scale(${k.toFixed(3)});z-index:${300 - BUS.Y}"><svg viewBox="${BUS_BOX.join(' ')}">${SHELTER_ART()}</svg></div>
     <button type="button" class="thing bus-btn" data-act="bus-stop" aria-label="公車站" style="margin-left:${Math.round(BUS.X - 130 * k)}px;bottom:${BUS.Y}px;width:${Math.round(290 * k)}px;height:${Math.round(240 * k)}px"><span class="tag">${ySign('bus', '公車站')}</span>${TOWNEV.busDot('street')}</button>`;
 }
+// 稲荷神社 (test, 2026-11-09), up the bus line on the hill: a red torii, a stone path with lanterns, two stone foxes, the hall
+// with its rope and bell, the ema board and the omikuji box. From 18 to 22 its 緣日: a row of stalls under paper lanterns — 金魚すくい,
+// やきそば, わたあめ — and the people in yukata (TOWNEV.look)
+function shrineHtml() {
+  const F = 236, fest = TOWNEV.festival();
+  const lantern = (x) => `<rect x="${x - 6}" y="${F - 52}" width="12" height="52" ${hc('#a9a497', '#2c2e4c')}/><rect x="${x - 12}" y="${F - 70}" width="24" height="20" rx="2" ${hc('#c9c4b8', '#3a3c5e')}/><rect x="${x - 7}" y="${F - 66}" width="14" height="12" ${hc('#efe6d6', '#ffd98a')}/><path d="M${x - 16} ${F - 70} L${x} ${F - 82} L${x + 16} ${F - 70} Z" ${hc('#8d9097', '#25264a')}/>`;
+  const fox = (x, flip) => `<g transform="translate(${x} ${F - 30}) scale(${flip ? -1 : 1} 1)"><rect x="-14" y="10" width="28" height="20" ${hc('#a9a497', '#2c2e4c')}/><path d="M-8 10 Q-10 -14 0 -22 L4 -34 L7 -20 Q12 -10 8 10 Z" ${hc('#e9e2d0', '#4a4c6e')}/><path d="M-2 -18 L2 -26" ${hs('#d0453c', '#5a2c40')} stroke-width="2"/><path d="M-6 0 h12" ${hs('#d0453c', '#5a2c40')} stroke-width="3"/></g>`;
+  const stall = (x, w, aw, sign) => `<g><rect x="${x}" y="${F - 70}" width="${w}" height="70" ${hc('#c58a54', '#3a2c40')}/><path d="M${x - 6} ${F - 70} h${w + 12} l-8 -22 h${-w + 4} Z" ${hc(aw, '#5a2030')}/>
+    ${Array.from({ length: Math.floor(w / 18) }, (_, k) => `<path d="M${x - 4 + k * 18} ${F - 70} q9 8 18 0" ${hc(aw, '#5a2030')}/>`).join('')}<rect x="${x + 10}" y="${F - 64}" width="${w - 20}" height="18" rx="2" ${hc('#fbf7ec', '#e8dcb4')}/>
+    <text x="${x + w / 2}" y="${F - 50}" text-anchor="middle" font-size="12" font-weight="700" ${hc('#8a2f2a', '#8a2f2a')} font-family="system-ui, sans-serif">${sign}</text><rect x="${x + 6}" y="${F - 26}" width="${w - 12}" height="10" ${hc('#efe6d6', '#ffe2a0')}/></g>`;
+  const chochin = (x0, x1) => `<path d="M${x0} ${F - 120} Q${(x0 + x1) / 2} ${F - 100} ${x1} ${F - 120}" fill="none" ${hs('#2b2b33', '#2b2b33')} stroke-width="1.5"/>${Array.from({ length: Math.floor((x1 - x0) / 36) }, (_, k) => { const x = x0 + 18 + k * 36, y = F - 116 + 10 * Math.sin(Math.PI * (x - x0) / (x1 - x0)); return `<ellipse cx="${x}" cy="${y}" rx="7" ry="9" fill="#e8592e"/><ellipse cx="${x}" cy="${y}" rx="16" ry="18" fill="#ffb070" opacity=".35"/>`; }).join('')}`;
+  return `<svg class="land shrine-land" viewBox="0 0 1200 370" preserveAspectRatio="xMidYMax slice">
+      <path class="far" d="M0 122 C120 100 240 104 360 118 S560 96 700 110 S900 126 1020 104 S1150 100 1200 110 V370 H0 Z"/>
+      <rect class="near" x="-20" y="150" width="1240" height="220"/>
+      ${[60, 1160].map((x) => `<rect class="trunk" x="${x - 6}" y="${F - 140}" width="12" height="140"/><g class="crown"><circle cx="${x}" cy="${F - 150}" r="40"/><circle cx="${x - 28}" cy="${F - 120}" r="28"/><circle cx="${x + 30}" cy="${F - 124}" r="30"/></g>`).join('')}
+      <rect x="110" y="${F - 150}" width="12" height="150" fill="#d0453c"/><rect x="238" y="${F - 150}" width="12" height="150" fill="#d0453c"/><path d="M84 ${F - 160} Q180 ${F - 172} 276 ${F - 160} L272 ${F - 150} Q180 ${F - 160} 88 ${F - 150} Z" fill="#2b2b33"/><rect x="96" y="${F - 140}" width="168" height="10" fill="#d0453c"/><rect x="170" y="${F - 152}" width="20" height="22" fill="#d0453c"/>
+      <rect x="760" y="${F - 120}" width="300" height="120" ${hc('#a8743f', '#2a2440')}/><path d="M730 ${F - 120} Q910 ${F - 190} 1090 ${F - 120} L1070 ${F - 108} Q910 ${F - 168} 780 ${F - 108} Z" ${hc('#5a6a5a', '#1c2240')}/>
+      <rect x="880" y="${F - 106}" width="60" height="16" ${hc('#efe6d6', '#e8dcb4')}/><path d="M800 ${F - 96} Q910 ${F - 80} 1020 ${F - 96}" fill="none" stroke="#e8d8a8" stroke-width="7"/><path d="M910 ${F - 90} v40" stroke="#e8d8a8" stroke-width="3"/><circle cx="910" cy="${F - 46}" r="8" fill="#d9b04a"/>
+      <rect x="800" y="${F - 70}" width="220" height="70" ${hc('#6e4f3a', '#3a2c40')}/>${[830, 870, 950, 990].map((x) => `<rect x="${x - 12}" y="${F - 64}" width="24" height="64" ${hc('#c8b896', '#ffd98a')}/>`).join('')}
+      ${lantern(320)}${lantern(700)}${fox(360, false)}${fox(660, true)}
+      <rect x="1080" y="${F - 70}" width="70" height="40" rx="2" ${hc('#c58a54', '#3a2c40')}/>${[0, 1, 2].map((k) => `<path d="M${1088 + k * 20} ${F - 62} l8 -4 l8 4 v10 h-16 Z" ${hc('#efe6d6', '#e8dcb4')}/>`).join('')}<rect x="1110" y="${F - 30}" width="10" height="30" ${hc('#6e4f3a', '#2c2440')}/>
+      ${fest ? `<g class="ennichi">${chochin(280, 760)}${stall(400, 100, '#3f7ac8', '金魚すくい')}${stall(510, 90, '#d0453c', 'やきそば')}${stall(610, 90, '#e58fa8', 'わたあめ')}</g>` : ''}
+      <rect class="pave" x="-20" y="${F}" width="1240" height="${370 - F}" style="fill:color-mix(in srgb, #d8cfbd calc(var(--day) * 100%), #2a2a48)"/>
+      ${Array.from({ length: 24 }, (_, j) => `<rect x="${60 + j * 48}" y="${F + 20 + (j % 2) * 26}" width="34" height="16" rx="3" ${hc('#c9c4b8', '#3a3c5e')}/>`).join('')}
+    </svg>
+    ${yHeroHtml()}
+    ${busPoleHtml('shrine')}
+    <div class="ysel"></div>`;
+}
 // the bus (test, 2026-11-09): sat on the bench, the bus comes in and its board shows the stops — 駅前, 月の湯, 稲荷神社, 白鷺城,
 // each opened by the event that first takes the hero there (TOWN events' opens); from a stop out there, home to the main road too.
 // Picked: the hero gets on, the bus pulls away, and the place opens with him getting off at its stop
 const BUS_STOPS = [['station', '駅前'], ['sento', '月の湯'], ['shrine', '稲荷神社'], ['castle', '白鷺城']];
-const BUS_AT = { street: BUS, station: { X: 470, Y: 84, seat: 0 }, sento: { X: 470, Y: 84, seat: 0 } };   // where each place's stop stands
+const BUS_AT = { street: BUS, station: { X: 470, Y: 84, seat: 0 }, sento: { X: 470, Y: 84, seat: 0 }, shrine: { X: 470, Y: 84, seat: 0 } };   // where each place's stop stands
 const BUS_PLACES = ['street'].concat(BUS_STOPS.map((x) => x[0]));
-const BUS_IN = { street: () => [[BUS.X + 40, 122], [BUS.X - 60, 108]], station: () => [[440, 80], [360, 66]], sento: () => [[440, 80], [360, 66]] };   // getting off: where he steps down, where he walks to
+const BUS_IN = { street: () => [[BUS.X + 40, 122], [BUS.X - 60, 108]], station: () => [[440, 80], [360, 66]], sento: () => [[440, 80], [360, 66]], shrine: () => [[440, 80], [360, 66]] };   // getting off: where he steps down, where he walks to
 const BUS_ART = `<rect x="-130" y="-104" width="260" height="96" rx="16" fill="#3f9a8c"/><rect x="-130" y="-56" width="260" height="10" fill="#f6f1e4"/>
   ${[-104, -60, -16, 28].map((x) => `<rect x="${x}" y="-94" width="38" height="30" rx="4" fill="#cfe6ec"/>`).join('')}<rect x="72" y="-94" width="34" height="80" rx="4" fill="#2f6f64"/><rect x="76" y="-90" width="26" height="40" rx="3" fill="#cfe6ec"/>
   <rect x="-122" y="-120" width="90" height="18" rx="4" fill="#2b2b33"/><text x="-77" y="-106" text-anchor="middle" font-size="12" font-weight="700" fill="#ffd27a" font-family="system-ui, sans-serif">みなと市バス</text>
@@ -7930,7 +7962,7 @@ function yardHtml(pct, place = 'yard') {
         <div class="birds"><div class="flock">${[[52, 14], [38, 6], [38, 22], [24, 0], [24, 28]].map(([x, y]) => `<i style="left:${x}px;top:${y}px"></i>`).join('')}</div></div>
       </div>
       <div class="yworld" style="width:${yw}px;margin-left:${-yw / 2}px">
-      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
+      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : place === 'shrine' ? shrineHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
         <defs><radialGradient id="shopGlow"><stop offset="0" stop-color="rgba(255,196,110,.55)"/><stop offset=".5" stop-color="rgba(255,196,110,.16)"/><stop offset="1" stop-color="rgba(255,196,110,0)"/></radialGradient></defs>
         <path class="m-far" d="M520 600 V340 C560 330 600 314 640 304 C670 296 700 294 730 298 C770 306 810 328 860 342 V600 Z"/>
         <path class="m-main" d="${HILL} V600 Z"/><path class="m-shade" d="M482 250 C494 248 506 256 520 268 C552 296 594 326 646 350 V372 C590 340 548 306 516 280 C502 268 492 258 482 250 Z"/><path class="m-rim" d="${HILL}"/>
@@ -10310,7 +10342,7 @@ const HERO = (() => {
     mouth: [['smile', '微笑'], ['grin', '開心'], ['cat', '貓嘴'], ['flat', '一字'], ['o', '圓嘴'], ['tongue', '吐舌']],
     beard: [['none', '無'], ['stubble', '鬍渣'], ['mustache', '八字鬍'], ['goatee', '山羊鬍'], ['full', '落腮鬍']],
     top: CLOTH,
-    topStyle: [['hoodie', '帽T'], ['tee', 'T恤'], ['sweater', '毛衣'], ['shirt', '襯衫'], ['jinbei', '甚平'], ['cattop', '貓咪上衣'], ['wizrobe', '魔法師長袍']],
+    topStyle: [['hoodie', '帽T'], ['tee', 'T恤'], ['sweater', '毛衣'], ['shirt', '襯衫'], ['jinbei', '甚平'], ['cattop', '貓咪上衣'], ['wizrobe', '魔法師長袍'], ['yukata', '浴衣']],
     bottomStyle: [['pants', '長褲'], ['shorts', '短褲'], ['wide', '寬褲'], ['skirt', '裙子'], ['catpants', '貓咪褲']],
     bottom: CLOTH,
     shoeStyle: [['sneaker', '球鞋'], ['boots', '短靴'], ['loafer', '皮鞋']],   // everyone's, none sold
@@ -10656,7 +10688,12 @@ const HERO = (() => {
         <path ${F(d, 1.3)} d="M-19 -40 Q2 -36 23 -40 V-35.6 Q2 -31.6 -19 -35.6 Z"/><rect x="0" y="-40.4" width="4.4" height="5.4" rx="1" fill="#e6c25a"/>
         <g transform="rotate(-8 19 -28)"><rect x="14" y="-34" width="10" height="12" rx="1.2" fill="#6b3f2a"/><rect x="15" y="-33" width="8" height="10" rx=".8" fill="none" stroke="#e6c25a" stroke-width=".7"/>${star(19, -28, 2.4)}</g>`,
       collar: (F, c, d) => `<path ${F(d, 1.6)} d="M-8 -67 L2 -59 L12 -67 L10.6 -63.6 L2 -56 L-6.6 -63.6 Z"/><circle cx="2" cy="-57.6" r="1.8" fill="#e6c25a"/>`,
-      back: (F, c) => `<path ${F(c, 1.2)} d="${ROBE}"/><path d="M-26 -5 Q2 0 30 -5" fill="none" stroke="#e6c25a" stroke-width="2"/>${star(8, -40, 6)}<path d="M-6 -60 a7 7 0 1 0 6.4 10 a5.6 5.6 0 1 1 -6.4 -10 Z" fill="#e6c25a"/>` }
+      back: (F, c) => `<path ${F(c, 1.2)} d="${ROBE}"/><path d="M-26 -5 Q2 0 30 -5" fill="none" stroke="#e6c25a" stroke-width="2"/>${star(8, -40, 6)}<path d="M-6 -60 a7 7 0 1 0 6.4 10 a5.6 5.6 0 1 1 -6.4 -10 Z" fill="#e6c25a"/>` },
+    yukata: { sleeve: 'robe',   // 浴衣 (test, 2026-11-09: the town's 緣日; not sold, the festival's people wear it): to the ankles, a crossed collar, a wide light obi, little flowers
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="${ROBE}"/><path d="M-9 -66 L12 -40" fill="none" stroke="${d}" stroke-width="1.4"/>${[[-6, -58], [12, -52], [-12, -24], [10, -16], [18, -30], [-2, -12]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.8" fill="${lt(c, 0.75)}"/><circle cx="${x}" cy="${y}" r="1" fill="${d}"/>`).join('')}
+        <path ${F(lt(c, 0.7), 1.3)} d="M-18 -43 Q2 -39 22 -43 V-34 Q2 -30 -18 -34 Z"/><path d="M-18 -38.6 Q2 -34.6 22 -38.6" fill="none" stroke="${d}" stroke-opacity=".5" stroke-width=".9"/>`,
+      collar: (F, c) => `<path ${F(lt(c, 0.85), 1.6)} d="M-8 -67 L5 -53 L12 -67 L9 -67 L5 -59 L-5 -67 Z"/>`,
+      back: (F, c) => `<path ${F(c, 1.2)} d="${ROBE}"/><path ${F(lt(c, 0.7), 1.3)} d="M-18 -43 Q2 -39 22 -43 V-34 Q2 -30 -18 -34 Z"/><path ${F(lt(c, 0.7), 1.3)} d="M-7 -46 L2 -39 L11 -46 L11 -30 L2 -36 L-7 -30 Z"/>` }
   };
   // an arm (s: -1 the left, 1 the right) hangs from the shoulder a little off the body; drawn hanging straight down from (0, 0) and
   // turned out, so a pose turns it round the shoulder (the .arm group, in CSS)

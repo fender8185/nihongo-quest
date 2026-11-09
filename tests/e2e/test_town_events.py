@@ -294,6 +294,16 @@ def test_the_bus_goes_to_the_bathhouse_once_its_stop_is_open(b):
       return JSON.stringify({ place: y().dataset.place, art: !!y().querySelector('.sento-land'), matsu: !!y().querySelector('.npc-matsu'), stop: !!y().querySelector('[data-act="bus-stop"]') }); })()"""))
     assert r == {'place': 'sento', 'art': True, 'matsu': True, 'stop': True}, r
 
+# ---- pass 8: 稲荷神社 and its 緣日 by night ----
+def test_the_shrine_holds_its_festival_by_night_with_people_in_yukata(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.stops = { station: 1, shrine: 1 }; state.town.seen.chihaya = 1; state.town.seen.tatsu = 1;
+      await go('shrine', 12); const day = { place: y().dataset.place, stalls: !!y().querySelector('.shrine-land .ennichi'), people: [...y().querySelectorAll('.npc')].map(e => e.dataset.npc).sort() };
+      await go('shrine', 20); const night = { stalls: !!y().querySelector('.shrine-land .ennichi'), people: [...y().querySelectorAll('.npc')].map(e => e.dataset.npc).sort(), yukata: y().querySelector('.npc-chihaya').innerHTML !== day.html };
+      return JSON.stringify({ day, night, dress: [TOWNEV.look('chihaya', 'shrine', 20).topStyle, TOWNEV.look('chihaya', 'shrine', 12).topStyle] }); })()"""))
+    assert r['day'] == {'place': 'shrine', 'stalls': False, 'people': ['chihaya']}, r
+    assert r['night']['stalls'] and r['night']['people'] == ['chihaya', 'tatsu'], r
+    assert r['dress'] == ['yukata', 'shirt'], r   # 千早 in a yukata for the festival
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
