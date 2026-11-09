@@ -146,4 +146,4 @@
 
 - 不要把 `after:` 接在 `when: 'night'` 的事件後面（只在白天玩的人會一直卡住）。
 - 新地點要畫得出人時，才把它加進 `events.js` 的 `PLACES`；角色的作息地點和位置要在 `SPOTS` 裡（檢查腳本會擋）。
-- 第 2 輪要把 タロウ、原田、小林（scratchpad 的 cast2.js／spots2.js）放回 events.js，並把 street、station 加進 PLACES。
+- 第 2 輪要把 タロウ、原田、小林（草稿在 .superpowers/sdd/2026-11-09-town-events/drafts/：cast2.js、spots2.js、m2.js）放回 events.js，並把 street、station 加進 PLACES。
