@@ -153,6 +153,7 @@
 | 11 | m11 | 5 | 1e8c9bb 授受；外婆的果醬食譜、林媽媽來訪（-test.12，events.js v11） |
 | 12 | m12 | 5 | cf2e112 西村；海邊度假飯店傳聞（N3 開發案伏筆）（-test.13，events.js v12） |
 | 13 | m13 | 5 | 5005fa0 受身（-test.14，events.js v13） |
+| 14 | m14 | 5 | (this commit) 使役；陽菜的媽媽和子（-test.15，events.js v14） |
 
 ## 寫作規則（審查後加的）
 
