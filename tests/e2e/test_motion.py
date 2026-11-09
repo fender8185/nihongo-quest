@@ -12,7 +12,7 @@ def ev(b, js, pre=()):
     return b.run([("nav", URL), ("wait", READY)] + list(pre) + [("eval", js)])[-1]
 
 # a main-course account at week 1 with nothing learned yet
-FRESH = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storySeen = true; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
+FRESH = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storyV = 9; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
 # the CSS animations running on what a selector finds (pseudo-elements included)
 NAMES = "const names = (sel) => [...document.querySelectorAll(sel)].flatMap(x => x.getAnimations({ subtree: true }).map(a => a.animationName)).sort();"
 # answers the current session to its last card, one in three wrong, and leaves the summary on screen

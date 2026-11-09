@@ -844,7 +844,7 @@ def test_vocab_search_filters_live_on_input_and_preserves_focus(b):
 TESTS += [test_n4_words_open_once_n5_words_kanji_and_units_are_done, test_bulk_i_know_marks_the_filtered_words_and_can_be_undone, test_preview_card_has_i_know_which_skips_the_word_and_its_encore, test_experienced_shortcut_in_the_level_picker_turns_chinese_off, test_vocab_search_filters_live_on_input_and_preserves_focus]
 
 # ---- 1.0.27: no 字表 button; a theme card opens its word table wherever its own buttons are not ----
-MAIN = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storySeen = true; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
+MAIN = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storyV = 9; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
 
 def test_a_theme_card_opens_its_word_table_except_on_its_buttons(b):
     js = "(() => { " + MAIN + """ const card = () => { location.hash = '#/vocab/level?lv=N5'; route(); return document.querySelector('.theme-card[data-c="飲食"]'); };

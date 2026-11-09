@@ -11,7 +11,7 @@ def ev(b, js, pre=()):
     return b.run([("nav", URL), ("wait", READY)] + list(pre) + [("eval", js)])[-1]
 
 # a main-course account at week 1 with nothing learned yet
-FRESH = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storySeen = true; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
+FRESH = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storyV = 9; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
 # plays the current session to its end (preview cards dismissed), the summary drawn as the app does
 PLAY = """(() => { let guard = 0;
   while (SESSION && SESSION.idx < SESSION.entries.length && guard++ < 600) {
@@ -1157,7 +1157,7 @@ def test_down_the_path_to_the_main_road_the_bus_stop_and_home_again(b):
     assert r['home'] == {'hash': '#/outside', 'place': 'yard', 'house': True} and r['both'] and r['keepOff'] is False, r
 
 def test_a_neighbour_knocks_brings_a_present_and_lives_on_the_beach(b):
-    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); state.storySeen = true; state.koto.sets = { dev: 1 }; state.koto.listen = { '2026-11-08': 2 }; state.owned.gramophone = { paid: 100, on: '2026-11-01' }; saveState();
+    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); state.storyV = 9; state.koto.sets = { dev: 1 }; state.koto.listen = { '2026-11-08': 2 }; state.owned.gramophone = { paid: 100, on: '2026-11-01' }; saveState();
       const before = { visitor: NPC.visitor(), shop: WARES.filter(w => w.gift).map(w => w.id).sort(), mirror: owns('fullMirror') };
       """ + GO_ROOM + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('#view .study');
       await wait(1200); const knock = [!!st().querySelector('.knock'), st().querySelector('[data-thing="door"]').classList.contains('knocking')];
@@ -1181,7 +1181,7 @@ def test_a_neighbour_knocks_brings_a_present_and_lives_on_the_beach(b):
     assert r['npcs'] == [] and r['town'] == ['town', ['koharu']] and r['chat'].startswith('小春') and not r['take'], r   # in her salon in town once met: a word, no present
 
 def test_mugi_gives_back_what_a_bought_gramophone_cost(b):
-    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); state.storySeen = true; state.koto.listen = { '2026-11-08': 2 }; state.met = { koharu: '2026-11-01' }; state.owned.gramophone = { paid: 100, on: '2026-11-01' }; saveState();
+    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); state.storyV = 9; state.koto.listen = { '2026-11-08': 2 }; state.met = { koharu: '2026-11-01' }; state.owned.gramophone = { paid: 100, on: '2026-11-01' }; saveState();
       """ + GO_ROOM + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('#view .study'), k0 = kotoBalance();
       st().querySelector('[data-thing="door"]').click(); let talk = null; for (let i = 0; i < 100 && !talk; i++) { await wait(50); talk = document.querySelector('.talk'); }
       for (let i = 0; i < 6 && !talk.querySelector('[data-talk="take"]'); i++) { talk.click(); await wait(30); }
@@ -1191,16 +1191,29 @@ def test_mugi_gives_back_what_a_bought_gramophone_cost(b):
     assert r['back'] == 100 and '100 言靈還你' in r['zh'] and r['placed'] and r['on'], r
 
 def test_the_opening_tells_of_the_grandmothers_house_once(b):
-    js = "(async () => { " + FRESH + """ state.storySeen = false; state.koto.sets = { dev: 1 }; saveState(); """ + GO_ROOM + """ const wait = (ms) => new Promise(q => setTimeout(q, ms));
+    js = "(async () => { " + FRESH + """ state.storyV = 0; state.koto.sets = { dev: 1 }; saveState(); """ + GO_ROOM + """ const wait = (ms) => new Promise(q => setTimeout(q, ms));
       const st = document.querySelector('.story'), pages = []; for (let i = 0; i < 6 && document.querySelector('.story [data-page]'); i++) { pages.push(document.querySelector('.story [data-page]').dataset.page); if (document.querySelector('.story [data-story="end"]')) break; st.click(); await wait(20); }
       const letter = !!document.querySelector('.story-letter') || pages.includes('1'), knockBefore = !!document.querySelector('#view .knock');
       document.querySelector('.story [data-story="end"]').click(); await wait(500);
-      const after = { seen: state.storySeen, gone: !document.querySelector('.story'), knock: !!document.querySelector('#view .knock') };
+      const after = { seen: state.storyV, gone: !document.querySelector('.story'), knock: !!document.querySelector('#view .knock') };
       """ + GO_ROOM + """ await wait(200); const again = !!document.querySelector('.story');
-      return JSON.stringify({ pages, letter, knockBefore, after, again, norm: [normalizeState({}).storySeen, normalizeState({ storySeen: 'x' }).storySeen] }); })()"""
+      return JSON.stringify({ pages, letter, knockBefore, after, again, norm: [normalizeState({}).storyV, normalizeState({ storySeen: true }).storyV, 'storySeen' in normalizeState({ storySeen: true })] }); })()"""
     r = json.loads(ev(b, js))
-    assert r['pages'] == ['0', '1', '2', '3'] and r['letter'] and not r['knockBefore'], r   # four pages, the letter among them; no knock under it
-    assert r['after'] == {'seen': True, 'gone': True, 'knock': True} and not r['again'] and r['norm'] == [False, False], r   # once; then 小春 knocks
+    assert r['pages'] == ['0', '1', '2', '3', '4', '5'] and r['letter'] and not r['knockBefore'], r   # six pages, the letter among them; no knock under it
+    assert r['after'] == {'seen': 2, 'gone': True, 'knock': True} and not r['again'] and r['norm'] == [0, 1, False], r   # once; then 小春 knocks; the old four-page one seen: this one still shows
+
+def test_the_grandmothers_diary_opens_a_page_more_for_each_stage_passed(b):
+    js = "(async () => { " + FRESH + """ state.stageTests = {}; saveState(); """ + GO_ROOM + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('#view .study');
+      st().querySelector('.ware-use[data-ware="lowShelf"]').click(); let d = null; for (let i = 0; i < 100 && !d; i++) { await wait(50); d = document.querySelector('.diary'); }
+      const first = { page: d.querySelector('.diary-head span:last-child').textContent, ruby: !!d.querySelector('.diary-page rt'), zh: !!d.querySelector('.diary-zh') };
+      d.querySelector('[data-diary="1"]').click(); const second = { locked: d.querySelector('.diary-page').classList.contains('locked'), hint: d.querySelector('.diary-lock').textContent };
+      d.querySelector('[data-diary="x"]').click(); const closed = !document.querySelector('.diary');
+      state.stageTests = { [STAGES[0].id]: [{ passed: true }] }; DIARY.open(); const later = document.querySelector('.diary .diary-head span:last-child').textContent; DIARY.close();
+      return JSON.stringify({ first, second, closed, later, last: DIARY.readable(DIARY.PAGES.length - 1) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['first'] == {'page': '1 / 6', 'ruby': True, 'zh': True}, r   # the first page from the start, with furigana and 看中文
+    assert r['second']['locked'] and '入門' in r['second']['hint'] and r['closed'], r   # the next blurred: what it takes
+    assert r['later'] == '2 / 6' and r['last'] is False, r   # a stage passed: it opens at the page just readable; the last needs them all
 
 def test_the_town_is_along_the_yard_to_the_right(b):
     js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); const wait = (ms) => new Promise(q => setTimeout(q, ms)), y = () => document.querySelector('#view .yard');

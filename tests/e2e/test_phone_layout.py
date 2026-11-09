@@ -11,7 +11,7 @@ def ev(b, js, pre=()):
     return b.run(list(pre) + [("nav", URL), ("wait", READY), ("eval", js)])[-1]
 
 # a main-course account at week 1; the first plain vocabulary question of a daily set on screen (word previews skipped)
-FRESH = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storySeen = true; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
+FRESH = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storyV = 9; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
 VOCAB_Q = """startSession('daily', { size: 20 }); route();   /* what the hashchange would do next: today's fit layout off */ const es = SESSION.entries; es.forEach(e => { e.preview = false; });
   for (let i = 0; i < es.length; i++) { SESSION.idx = i; prepareEntry(i); if (es[i].q.kind === 'v' && !es[i].q.custom && es[i].q.fmt !== 'v-cloze') break; }
   renderPractice(); window.scrollTo(0, 0);"""

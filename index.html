@@ -390,6 +390,20 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .story-hero { position: relative; width: 100%; height: 100%; display: grid; place-items: center; background: radial-gradient(closest-side, #fff6e0, #f3e9d6); } .story-hero > svg { height: 92%; width: auto; }
 .story-hero i { position: absolute; top: 18%; left: calc(14% + var(--i) * 17%); font-style: normal; font-weight: 800; font-size: 22px; color: #5a68d8; opacity: 0; animation: storyKana 3s ease-in-out calc(var(--i) * .4s) infinite; }
 @keyframes storyKana { 0% { transform: translateY(16px); opacity: 0; } 30%, 70% { opacity: .9; } 100% { transform: translateY(-14px); opacity: 0; } }
+.story-mem { position: relative; width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 6%; background: linear-gradient(#f6e7cf, #efd9b6); }
+.sm-fig { position: relative; display: grid; } .sm-fig > svg { width: auto; } .sm-fig.granny > svg { height: 200px; } .sm-fig.kid > svg { height: 128px; }
+.sm-say { position: absolute; top: 4%; left: 50%; transform: translateX(-50%); white-space: nowrap; padding: 3px 9px; border-radius: 12px; background: #fff; color: #4a3a2c; font-size: 15px; box-shadow: 0 2px 6px rgba(0, 0, 0, .15); } .sm-fig.granny .sm-say { left: 70%; } .sm-say.q { top: -12%; font-weight: 800; color: #5a68d8; }
+.story-diary { position: relative; display: flex; gap: 4px; width: 92%; height: 82%; padding: 10px; border-radius: 6px; background: #7a5a3a; }
+.sd-page { flex: 1; padding: 10px 8px; background: #fbf6ea; color: #4a3a2c; font-family: serif; font-size: 11px; line-height: 1.8; overflow: hidden; filter: blur(1.1px); } .sd-page p { margin: 0; }
+.sd-q { position: absolute; inset: 0; display: grid; place-items: center; font-size: 30px; font-weight: 800; color: #5a68d8; text-shadow: 0 2px 0 #fff; }
+.diary { position: fixed; inset: 0; z-index: 75; display: grid; place-items: center; padding: 16px; background: rgba(20, 16, 28, .6); animation: gotIn .25s ease-out; }
+.diary-book { width: min(440px, 100%); padding: 18px; border-radius: 12px; background: #fbf6ea; color: #4a3a2c; box-shadow: 0 16px 40px rgba(0, 0, 0, .35); border-left: 10px solid #7a5a3a; }
+.diary-head { display: flex; justify-content: space-between; font-size: 13px; color: #9a8a74; margin-bottom: 10px; } .diary-head rt { font-size: 8px; }
+.diary-page { font-family: serif; font-size: 18px; line-height: 2.1; min-height: 9em; } .diary-page p { margin: 0; } .diary-page rt { font-size: 9px; color: #9a8a74; }
+.diary-page.locked { filter: blur(3.5px); user-select: none; opacity: .7; }
+.diary-zh summary { cursor: pointer; font-size: 13px; color: #8a6a52; } .diary-zh p { margin: 6px 0 0; font-size: 14px; color: #6b5a48; }
+.diary-lock { margin: 8px 0 0; font-size: 13.5px; color: #8a6a52; }
+.diary-nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 14px; }
 .got { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: rgba(12, 10, 24, .62); cursor: pointer; animation: gotIn .25s ease-out; overflow: hidden; }
 .got.out { opacity: 0; transition: opacity .25s; } @keyframes gotIn { from { opacity: 0; } }
 .got > * { grid-area: 1 / 1; }
@@ -2248,7 +2262,7 @@ function defaultState() {
     record: '',             // test (2026-11-09): the record on the gramophone (MUSIC.RECORDS; '' the first)
     musicOff: false,        // test (2026-11-09): the gramophone stopped by hand
     met: {},                // test (2026-11-09): the neighbours who have come by (NPCS): { id: the day }
-    storySeen: false,       // test (2026-11-09): the opening (STORY) shown
+    storyV: 0,              // test (2026-11-09): the version of the opening (STORY.V) seen, 0 none
     placed: {},             // where owned things stand in 書房: { id: { w: 'F', x, y, r } | { w: 'L'|'R', u, v } }; not here = in the storage box
     wear: {},               // what the hero wears, by part: { head, face, neck, back, body }
     house: ''               // the yard's house: '' the cottage, or a look bought at 古道具屋 (1.2.0)
@@ -2313,7 +2327,7 @@ function normalizeState(s) {
   out.koto = { daySets: obj(kt.daySets), days: Array.isArray(kt.days) ? kt.days : [], listen: obj(kt.listen), mail: obj(kt.mail), found: obj(kt.found), sets: obj(kt.sets), gift: Number(kt.gift) || 0 };
   ['owned', 'placed', 'wear', 'look', 'lampsOff', 'met'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)
   if (typeof out.house !== 'string') out.house = '';
-  if (typeof out.record !== 'string') out.record = ''; out.musicOff = out.musicOff === true; out.storySeen = out.storySeen === true;   // an id this build does not know is kept: the cottage is drawn meanwhile
+  if (typeof out.record !== 'string') out.record = ''; out.musicOff = out.musicOff === true; out.storyV = Number(out.storyV) || (out.storySeen === true ? 1 : 0); delete out.storySeen;   // the four-page opening was 1   // an id this build does not know is kept: the cottage is drawn meanwhile
   // 1.2.0: 羽織 and 地球儀 are gone and their purchases with them, and 書房's umbrella (the user's calls; the only ids not
   // kept: what was paid comes back). Every time: sync merges owned as a union
   delete out.owned.haori; if (out.wear.body === 'haori') delete out.wear.body;
@@ -5963,7 +5977,7 @@ function route() {
     const top = document.getElementById('topTitle').textContent.trim();
     view.querySelectorAll('.page-head .page-title').forEach(el => el.classList.toggle('dup-title', el.textContent.trim() === top));
     MUSIC.sync();   // the notes over the gramophone in a room drawn anew
-    if (r.name === 'today') { if (!state.storySeen) STORY.open(); else NPC.check(); }   // the opening the first time; someone at the front door
+    if (r.name === 'today') { if (STORY.due()) STORY.open(); else NPC.check(); }   // the opening the first time; someone at the front door
   } catch (e) {
     console.error(e);
     view.innerHTML = `<div class="card"><div class="card-title">這個頁面出錯了</div><p class="muted small">${esc(e.message)}</p><button class="btn" data-act="nav" data-route="#/today">回到書房</button></div>`;
@@ -6985,7 +6999,8 @@ const NPCS = {
       ['{全身鏡|ぜんしんきょう}です。{髪型|かみがた}も{顔|かお}の{雰囲気|ふんいき}も、いつでも{変|か}えられますよ。', '是全身鏡喔。髮型和臉的感覺，隨時都能換。'],
       ['{町|まち}に{来|き}たら、お{店|みせ}に{寄|よ}ってくださいね！', '來鎮上的話，到店裡坐坐喔！']],
     chat: [['{今日|きょう}も{勉強|べんきょう}おつかれさま！', '今天也辛苦了！'], ['{波|なみ}の{音|おと}を{聞|き}くと、{落|お}ち{着|つ}くんだ。', '聽著海浪的聲音，心情就會平靜下來。'],
-      ['{鏡|かがみ}、{使|つか}ってる？{新|あたら}しい{髪型|かみがた}も{似合|にあ}うと{思|おも}うよ。', '鏡子有在用嗎？我覺得新髮型也會很適合你。'], ['{今日|きょう}は{風|かぜ}が{気持|きも}ちいいね。', '今天的風好舒服呢。']] },
+      ['{鏡|かがみ}、{使|つか}ってる？{新|あたら}しい{髪型|かみがた}も{似合|にあ}うと{思|おも}うよ。', '鏡子有在用嗎？我覺得新髮型也會很適合你。'], ['{今日|きょう}は{風|かぜ}が{気持|きも}ちいいね。', '今天的風好舒服呢。'],
+      ['おばあちゃん、いつもお{孫|まご}さんの{話|はなし}ばかりしていましたよ。', '你外婆啊，總是在說孫兒的事呢。'], ['{子|こ}どものころ、おばあちゃんの{髪|かみ}を{切|き}らせてもらったのが、{私|わたし}の{始|はじ}まりなんです。', '小時候外婆讓我幫她剪頭髮，那就是我當美容師的開始。']] },
   mugi: { name: 'ムギ', role: '柴犬', gift: 'gramophone', home: 'beach', at: { X: -170, Y: 58 },
     due: () => Object.keys(state.koto.listen).length > 0,
     hello: (paid) => [
@@ -6996,7 +7011,8 @@ const NPCS = {
         : ['{蓄音機|ちくおんき}とレコード{二枚|にまい}だワン。〈{縁側|えんがわ}の{午後|ごご}〉と〈{夜桜|よざくら}〉。', '留聲機和兩張唱片：〈縁側の午後〉和〈夜桜〉。'],
       ['いつも{海辺|うみべ}にいるワン。{新|あたら}しいレコードが{入|はい}ったら{教|おし}えるワン。またね！', '我都在海邊。有新唱片的話告訴你，再見！']],
     chat: [['{今日|きょう}のおすすめは〈{夜桜|よざくら}〉だワン。', '今天推薦〈夜桜〉。'], ['レコードの{音|おと}は、あったかいワン。', '唱片的聲音很溫暖。'],
-      ['しっぽが{勝手|かって}に{揺|ゆ}れるワン。', '尾巴自己搖起來了。'], ['{波|なみ}の{音|おと}も、いい{音楽|おんがく}だワン。', '海浪的聲音也是很棒的音樂。']] }
+      ['しっぽが{勝手|かって}に{揺|ゆ}れるワン。', '尾巴自己搖起來了。'], ['{波|なみ}の{音|おと}も、いい{音楽|おんがく}だワン。', '海浪的聲音也是很棒的音樂。'],
+      ['おばあちゃんは、{夕方|ゆうがた}になるとここで〈{夜桜|よざくら}〉をかけたワン。', '你外婆每到傍晚，就會在這裡放〈夜桜〉。'], ['おばあちゃん、{手紙|てがみ}を{書|か}く{練習|れんしゅう}をしてたワン。だれに{書|か}いてたのかな。', '你外婆以前在練習寫信喔。不知道是要寫給誰呢。']] }
 };
 const NPC = (() => {
   const met = (id) => Boolean(state.met && state.met[id]);
@@ -7027,7 +7043,7 @@ const NPC = (() => {
   }
   // 書房 open with someone at the door: 叩叩 by it (three times, a few seconds apart), its sign kept in sight, a word the first time
   function check() {
-    const st = document.querySelector('#view .study[data-room="study"]'), id = st && state.storySeen && visitor();   // the opening first (STORY)
+    const st = document.querySelector('#view .study[data-room="study"]'), id = st && !STORY.due() && visitor();   // the opening first (STORY)
     if (!st) return;
     ROOM.knock(st, Boolean(id));
     if (!id || st._knock) return;
@@ -7065,11 +7081,20 @@ const NPC = (() => {
   }
   return { visitor, check, visit, talk, onBeach, face, art, gap };
 })();
-// the opening (test, 2026-11-09; the user's pick of three): a letter from Japan — the grandmother has left the hero her little
-// house by the sea, in a town of kind people, and their words are the way in. Four pictures with a line each, the first time
-// 書房 opens (state.storySeen); a tap goes on, 略過 skips. The neighbours knock after it (NPC.check)
+// the opening (test, 2026-11-09; the user's picks): as a child the hero never understood what their Japanese grandmother said
+// ("I'll learn it later"); grown up and busy in the city they never did; then a letter from Japan — she has gone, and left them
+// her little house by the sea, in a town of kind people, and a diary all in Japanese they cannot read. To read it, and to
+// understand the people who knew her, they move in and learn (DIARY: a page more for each stage passed). Six pictures with a
+// line each, the first time 書房 opens (state.storyV: the version seen — V 2 is this one); a tap goes on, 略過 skips. The
+// neighbours knock after it (NPC.check)
+const GRANNY_LOOK = { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#b8a27a', bottomStyle: 'skirt', bottom: '#6e4f3a', shoeStyle: 'loafer', shoe: '#6e4f3a' };
 const STORY = (() => {
+  const V = 2;
   const ruby = (s) => esc(s).replace(/\{([^|}]+)\|([^}]+)\}/g, '<ruby>$1<rt>$2</rt></ruby>');
+  const memory = () => `<div class="story-mem"><div class="sm-fig granny">${HERO.svg({ look: GRANNY_LOOK, wear: { face: 'glasses' }, front: true })}<span class="sm-say" lang="ja">{大|おお}きくなったね。</span></div>
+    <div class="sm-fig kid">${HERO.svg({ look: state.look, wear: {}, front: true })}<span class="sm-say q">？</span></div></div>`.replace(/\{([^|}]+)\|([^}]+)\}/g, '$1');
+  const city = `<svg viewBox="0 0 300 200" aria-hidden="true"><rect width="300" height="200" fill="#1d2142"/>${[[10, 70, 40], [54, 40, 34], [92, 90, 46], [142, 30, 38], [184, 64, 44], [232, 46, 30], [266, 84, 40]].map(([x, t, w]) => `<rect x="${x}" y="${t}" width="${w}" height="${200 - t}" fill="#2c3160"/>${Array.from({ length: Math.floor((200 - t - 14) / 16) * 2 }, (_, k) => `<rect x="${x + 7 + (k % 2) * (w / 2 - 4)}" y="${t + 10 + Math.floor(k / 2) * 16}" width="${w / 2 - 12}" height="7" fill="${(x + k * 7) % 5 ? '#3a3f72' : '#f2d27a'}"/>`).join('')}`).join('')}
+    <circle cx="250" cy="24" r="9" fill="#f4ecdc"/><text x="150" y="120" text-anchor="middle" font-size="40" fill="#f4ecdc" fill-opacity=".1" font-family="serif">忙</text></svg>`;
   const envelope = `<svg viewBox="0 0 220 160" aria-hidden="true"><rect x="16" y="26" width="188" height="118" rx="6" fill="#f6efe0" stroke="#d8ccb4" stroke-width="2"/><path d="M16 32 L110 98 L204 32" fill="none" stroke="#d8ccb4" stroke-width="2"/>
     <rect x="150" y="38" width="40" height="46" rx="2" fill="#fff" stroke="#e3907f" stroke-width="2" stroke-dasharray="4 3"/><rect x="155" y="43" width="30" height="36" fill="#bfe0f4"/><path d="M155 79 L170 54 L185 79 Z" fill="#5f88b2"/><path d="M165 62 L170 54 L175 62 L172 60 L170 63 L168 60 Z" fill="#fff"/><circle cx="178" cy="49" r="4" fill="#d0574b"/>
     <circle cx="140" cy="70" r="17" fill="none" stroke="#c8553f" stroke-width="2" stroke-opacity=".7"/><path d="M126 64 H154 M126 76 H154" stroke="#c8553f" stroke-width="1.6" stroke-opacity=".7"/>
@@ -7078,13 +7103,15 @@ const STORY = (() => {
     <rect width="300" height="200" fill="url(#stSky)"/><circle cx="244" cy="44" r="16" fill="#fff6d8"/><rect y="118" width="300" height="34" fill="#5fa6d0"/><path d="M0 120 H300" stroke="#9acbe3" stroke-width="3"/>
     <path d="M0 200 V150 C60 134 120 128 170 134 C220 140 260 150 300 146 V200 Z" fill="#7fb26e"/><path d="M150 200 C152 180 158 166 166 156 H176 C172 168 170 184 172 200 Z" fill="#e8d6a8"/>
     <svg class="house-thumb" x="108" y="62" width="120" height="112" viewBox="0 0 140 130" style="--day:1">${HOUSE_ART.cottage}</svg></svg>`;
-  const study = () => `<div class="story-hero">${HERO.svg({ look: state.look, wear: state.wear })}${['あ', 'い', 'う', '日', 'ね'].map((k, i) => `<i style="--i:${i}">${k}</i>`).join('')}</div>`;
+  const diary = () => `<div class="story-diary" lang="ja"><div class="sd-page">${DIARY.PAGES[0].ja.split('\n').map((l) => `<p>${esc(l.replace(/\{([^|}]+)\|[^}]+\}/g, '$1'))}</p>`).join('')}</div><div class="sd-page">${DIARY.PAGES[3].ja.split('\n').map((l) => `<p>${esc(l.replace(/\{([^|}]+)\|[^}]+\}/g, '$1'))}</p>`).join('')}</div><span class="sd-q">？？？</span></div>`;
   const PAGES = [
-    { art: () => envelope, zh: '某天，一封從日本寄來的信，送到了你手上。' },
+    { art: memory, zh: '小時候，外婆總是笑著跟你說話。可是她說的日文，你一句也聽不懂。' },
+    { art: () => city, zh: '「以後再學就好。」長大後，你在城市裡忙得喘不過氣，日文一直沒有學。' },
+    { art: () => envelope, zh: '直到某天，一封從日本寄來的信送到了你手上。外婆走了。' },
     { letter: '{大切|たいせつ}な{孫|まご}へ\n{海|うみ}の{見|み}える{小|ちい}さな{家|いえ}を、あなたに{残|のこ}します。\nこの{町|まち}の{人|ひと}たちは、みんなやさしいよ。\n{言葉|ことば}がわかれば、きっと{全部|ぜんぶ}わかるから。\nおばあちゃんより',
       zh: '給親愛的孫兒：我把看得見海的小房子留給你。這個小鎮的人都很溫柔。只要聽得懂他們說的話，你一定就會明白一切。——外婆' },
-    { art: house, zh: '外婆的小屋在海邊的小鎮上。你決定搬過去，住進這間小屋。' },
-    { art: study, zh: '一邊在這裡生活，一邊學日語。總有一天，要聽懂鎮上每個人說的話。' }
+    { art: house, zh: '你來到海邊的小鎮，住進外婆的小屋。書架上，有一本寫滿日文的日記。' },
+    { art: diary, zh: '你一個字也讀不懂。總有一天，要讀懂外婆寫下的每一頁，也要聽懂這個小鎮的人說的話。' }
   ];
   let el = null, i = 0;
   function show() {
@@ -7097,10 +7124,11 @@ const STORY = (() => {
   function close() {
     if (!el) return;
     el.classList.add('out'); const e = el; el = null; setTimeout(() => e.remove(), 400);
-    state.storySeen = true; saveState(); NPC.check();
+    state.storyV = V; saveState(); NPC.check();
   }
+  const due = () => (state.storyV || 0) < V;
   function open() {
-    if (el || state.storySeen) return;
+    if (el || !due()) return;
     i = 0; el = document.createElement('div'); el.className = 'story'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', '開場');
     el.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -7109,8 +7137,48 @@ const STORY = (() => {
     });
     document.body.appendChild(el); show();
   }
-  const drop = () => { if (el && state.storySeen) { el.remove(); el = null; } };   // seen on another device meanwhile (sync)
-  return { open, close, drop, PAGES };
+  const drop = () => { if (el && !due()) { el.remove(); el = null; } };   // seen on another device meanwhile (sync)
+  return { open, close, drop, due, V, PAGES };
+})();
+// the grandmother's diary (test, 2026-11-09), on the low bookshelf: a page more can be read for each stage test passed — the
+// first from the start, the last when every stage is passed (what she never got to say). A page not yet read is blurred, with
+// what it takes; a read one is in Japanese with furigana, its Chinese under 看中文
+const DIARY = (() => {
+  const PAGES = [
+    { ja: '{今日|きょう}は いい {天気|てんき}です。\n{海|うみ}が とても きれいです。\n{孫|まご}に {会|あ}いたいです。', zh: '今天天氣很好。海非常漂亮。好想見孫兒。' },
+    { ja: '{近所|きんじょ}の {小春|こはる}ちゃんが、{私|わたし}の {髪|かみ}を {切|き}ってくれました。\n{小|ちい}さいのに、とても {上手|じょうず}です。\n{将来|しょうらい}は {美容師|びようし}になりたいそうです。', zh: '鄰居的小春幫我剪了頭髮。年紀小小的，剪得卻很好。她說將來想當美容師。' },
+    { ja: '{夕方|ゆうがた}、{海辺|うみべ}で ムギと レコードを {聞|き}きました。\nムギは〈{夜桜|よざくら}〉が {好|す}きみたい。しっぽを {振|ふ}っていました。', zh: '傍晚和ムギ在海邊聽唱片。ムギ好像喜歡〈夜桜〉，一直搖著尾巴。' },
+    { ja: '{孫|まご}から {電話|でんわ}がありました。\nでも、{私|わたし}の {日本語|にほんご}は {通|つう}じません。\n{笑|わら}って「ハロー」と {言|い}うだけでした。', zh: '孫兒打電話來了。可是我說的日語，孩子聽不懂。我們只能笑著說「哈囉」。' },
+    { ja: '{最近|さいきん}、{手紙|てがみ}を {書|か}く {練習|れんしゅう}をしています。\nいつか {孫|まご}が {読|よ}んでくれるかもしれないから。\n{難|むずか}しい {言葉|ことば}は {使|つか}わないようにしよう。', zh: '最近在練習寫信。說不定有一天，孫兒會讀到。不要用太難的字吧。' },
+    { last: true, ja: '{言葉|ことば}が わからなくても、あなたの {笑顔|えがお}を {見|み}れば {全部|ぜんぶ} わかっていたよ。\nでも {本当|ほんとう}は、いつか あなたと {日本語|にほんご}で お{話|はなし}が したかった。\nこのページが {読|よ}めたなら、その {夢|ゆめ}は もう {叶|かな}ったね。\nありがとう。{大好|だいす}きよ。',
+      zh: '就算語言不通，看到你的笑容，我就什麼都懂了。可是其實，我好想有一天能和你用日語聊天。如果你讀得懂這一頁，這個夢想就已經實現了。謝謝你。最喜歡你了。' }
+  ];
+  const ruby = (s) => esc(s).replace(/\{([^|}]+)\|([^}]+)\}/g, '<ruby>$1<rt>$2</rt></ruby>'), plain = (s) => s.replace(/\{([^|}]+)\|[^}]+\}/g, '$1');
+  const passed = () => STAGES.filter((g) => ((state.stageTests || {})[g.id] || []).some((r) => r.passed)).length;
+  const need = (k) => (PAGES[k].last ? STAGES.length : k);   // stages passed to read page k
+  const open = (k) => k === 0 || passed() >= need(k);
+  let el = null, at = 0;
+  function show() {
+    const p = PAGES[at], ok = open(at);
+    el.innerHTML = `<div class="diary-book"><div class="diary-head"><span>おばあちゃんの{日記|にっき}</span><span>${at + 1} / ${PAGES.length}</span></div>
+      <div class="diary-page${ok ? '' : ' locked'}" lang="ja">${p.ja.split('\n').map((l) => `<p>${ok ? ruby(l) : esc(plain(l))}</p>`).join('')}</div>
+      ${ok ? `<details class="diary-zh"><summary>看中文</summary><p>${esc(p.zh)}</p></details>` : `<p class="diary-lock">還讀不懂。${p.last ? '通過所有階段測驗' : `通過「${esc(STAGES[need(at) - 1].title)}」的階段測驗`}，就讀得懂這一頁。</p>`}
+      <div class="diary-nav"><button type="button" class="btn btn-sm" data-diary="-1"${at ? '' : ' disabled'}>‹ 上一頁</button><button type="button" class="btn btn-sm" data-diary="x">闔上</button><button type="button" class="btn btn-sm" data-diary="1"${at < PAGES.length - 1 ? '' : ' disabled'}>下一頁 ›</button></div></div>`
+      .replace('おばあちゃんの{日記|にっき}', 'おばあちゃんの<ruby>日記<rt>にっき</rt></ruby>');
+  }
+  function close() { if (el) { el.remove(); el = null; } }
+  function openBook() {
+    close(); at = Math.max(0, PAGES.findIndex((_, k) => !open(k)) - 1); if (at < 0 || PAGES.every((_, k) => open(k))) at = PAGES.length - 1;   // at the last page read
+    el = document.createElement('div'); el.className = 'diary'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', '外婆的日記');
+    el.addEventListener('pointerdown', (e) => e.stopPropagation());
+    el.addEventListener('click', (e) => {
+      e.stopPropagation(); const b = e.target.closest('[data-diary]');
+      if (b) { if (b.dataset.diary === 'x') close(); else { at = Math.max(0, Math.min(PAGES.length - 1, at + Number(b.dataset.diary))); show(); } }
+      else if (e.target === el) close();
+    });
+    document.body.appendChild(el); show();
+  }
+  return { PAGES, open: openBook, close, readable: open, passed };
 })();
 // a few lines with someone (test, 2026-11-09): their face, their name, a line in Japanese (furigana; 🔊 reads it) and in Chinese;
 // a tap goes on. A present waits for 收下 (its thumbnail) — take(): it is theirs then — and done() once the last line is read
@@ -7567,7 +7635,7 @@ const WARES = [
   { id: 'sideTable', kind: 'floor', starter: true, since: 7, turn: false, h: 2.6, name: '小邊桌', fp: [0.9, 0.9], at: { w: 'F', x: 24.55, y: 0.5, r: 0 }, desc: '', light: { z: 2.5, r: 4.2 } },
   { id: 'kotatsu', kind: 'floor', starter: true, since: 7, turn: false, h: 1.1, name: '暖桌', fp: [2.8, 2.8], at: { w: 'F', x: 4.6, y: 12.6, r: 0 }, desc: '', act: 'kotatsu' },
   { id: 'loungeRug', kind: 'rug', starter: true, since: 7, turn: false, name: '長地毯', fp: [4.4, 2.8], at: { w: 'F', x: 22.4, y: 3.3, r: 0 }, desc: '' },
-  { id: 'lowShelf', kind: 'floor', starter: true, since: 7, turn: false, h: 2.4, name: '矮書架', fp: [1.1, 3.4], at: { w: 'F', x: 0.55, y: 12.6, r: 0 }, desc: '' },
+  { id: 'lowShelf', kind: 'floor', starter: true, since: 7, turn: false, h: 2.4, name: '矮書架', fp: [1.1, 3.4], at: { w: 'F', x: 0.55, y: 12.6, r: 0 }, desc: '', act: 'diary' },
   { id: 'bedWindow', kind: 'wall', starter: true, since: 7, win: true, name: '臥房的窗', size: [4.7, 5.4], at: { w: 'R', u: 15.6, v: 6.6, rm: 'bed' }, desc: '' },
   { id: 'wardrobe', kind: 'floor', starter: true, since: 7, turn: false, h: 6.2, name: '衣櫃', fp: [1.3, 2.6], at: { w: 'F', x: 0.65, y: 8.3, r: 0, rm: 'bed' }, desc: '', act: 'wardrobe' },
   { id: 'dresser', kind: 'floor', starter: true, since: 7, turn: false, h: 2.6, name: '矮櫃', fp: [2.4, 1.2], at: { w: 'F', x: 15.6, y: 0.6, r: 0, rm: 'bed' }, desc: '', act: 'mirror' },
@@ -8868,7 +8936,7 @@ const ROOM = (() => {
     const f = o.it.kind === 'wall' ? null : wareFootprint(o.it, o.p);
     const [x, y, look] = f ? [[o.p.x, f[3] + 0.5, 'R'], [f[2] + 0.5, o.p.y, 'L']].find(ok) || [o.p.x, f[3] + 0.5, 'R']
       : [1.2, 1.7, 2.4].map((d) => (o.p.w === 'L' ? [d, o.p.u, 'L'] : [o.p.u, d, 'R'])).find(ok) || (o.p.w === 'L' ? [1.2, o.p.u, 'L'] : [o.p.u, 1.2, 'R']);
-    use(el, () => { if (o.it.act === 'music') MUSIC.pick(el.closest('.study')); else if (o.it.act === 'wardrobe') DRESS.open(el.closest('.study')); else if (o.it.act === 'mirror') DRESS.open(el.closest('.study'), 'mirror', o.it.name === '矮櫃' ? '梳妝鏡' : o.it.name); else if (o.it.act === 'water') water(el.closest('.study'), o, look); }, { x, y, look, act: 'reach' });
+    use(el, () => { if (o.it.act === 'music') MUSIC.pick(el.closest('.study')); else if (o.it.act === 'wardrobe') DRESS.open(el.closest('.study')); else if (o.it.act === 'mirror') DRESS.open(el.closest('.study'), 'mirror', o.it.name === '矮櫃' ? '梳妝鏡' : o.it.name); else if (o.it.act === 'diary') DIARY.open(); else if (o.it.act === 'water') water(el.closest('.study'), o, look); }, { x, y, look, act: 'reach' });
   }
   // the gramophone playing (test, 2026-11-09): notes rise from its horn (shown while .study.music)
   function gramoTune() {
@@ -8995,7 +9063,7 @@ const ROOM = (() => {
         ${gramoTune()}
         ${THINGS.map(thing).join('')}
         ${ed.on ? '' : LAMPS.map((L) => { const [lx, ly] = P(...L.p); return `<button type="button" class="lamp-tap${lampOff(L.id) ? ' off' : ''}" data-act="lamp-toggle" data-lamp="${L.id}" style="${vbPct(lx - 24, ly - 24)};${vbSize(48, 48)}" aria-label="${lampOff(L.id) ? '開燈' : '關燈'}"></button>`; }).join('')}
-        ${ed.on ? '' : placedWares().filter((o) => o.it.act).map((o) => { const b = wareBox(o); return `<button type="button" class="ware-use" data-act="ware-use" data-ware="${o.id}" style="${vbPct(b[0], b[1])};${vbSize(b[2] - b[0], b[3] - b[1])}" aria-label="${esc(o.it.name)}：${{ music: '換唱片', sofa: '坐下', kotatsu: '坐下', kneel: '跪坐', wardrobe: '衣櫃', bed: '睡覺', water: '澆水', mirror: '照鏡子' }[o.it.act] || ''}"></button>`; }).join('')}
+        ${ed.on ? '' : placedWares().filter((o) => o.it.act).map((o) => { const b = wareBox(o); return `<button type="button" class="ware-use" data-act="ware-use" data-ware="${o.id}" style="${vbPct(b[0], b[1])};${vbSize(b[2] - b[0], b[3] - b[1])}" aria-label="${esc(o.it.name)}：${{ music: '換唱片', sofa: '坐下', kotatsu: '坐下', kneel: '跪坐', diary: '外婆的日記', wardrobe: '衣櫃', bed: '睡覺', water: '澆水', mirror: '照鏡子' }[o.it.act] || ''}"></button>`; }).join('')}
         ${ed.on ? `${decosHtml()}${selHtml()}<svg class="ghost" viewBox="${VB.join(' ')}" aria-hidden="true"><g></g></svg>` : ''}
       </div></div>
       ${ed.on ? editHtml() : ''}

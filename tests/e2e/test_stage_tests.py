@@ -294,7 +294,7 @@ def test_a_failed_pre_test_marks_nothing(b):
 
 # an account in the main course (here week 9) that passes the 入門 test gets 入門's items at four stars and keeps its week
 def test_a_main_account_passing_the_pre_test_keeps_its_week(b):
-    js = "(() => { " + RESET + PLAY_TEST + """ state.stage = 'main'; state.currentUnit = 'm9'; state.kanaKnown = true; state.introSeen = true; state.storySeen = true; state.startChosen = true;
+    js = "(() => { " + RESET + PLAY_TEST + """ state.stage = 'main'; state.currentUnit = 'm9'; state.kanaKnown = true; state.introSeen = true; state.storyV = 9; state.startChosen = true;
       state.stageTests = {}; LAST_BULK_MARK = null; saveState();
       startSession('stage', { stage: 'pre' }); playTest(() => false);
       const kana = REG.kana.filter(k => state.srs[k.key]);
