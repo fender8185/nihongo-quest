@@ -172,7 +172,7 @@ def test_arrange_takes_out_moves_turns_and_puts_away(b):
       st().querySelector('[data-act="room-edit-done"]').click();
       return JSON.stringify({ tray, p1ok: ROOM.fits(WARE.get('chabudai'), p1), moved: p1.x !== p2.x || p1.y !== p2.y, turned: p3.r === 1, desk, gone, edit: !!document.querySelector('.study.edit') }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'tray': ['chabudai', 'garland1', 'garland2', 'garland3', 'garland4'], 'p1ok': True, 'moved': True, 'turned': True, 'desk': False, 'gone': True, 'edit': False}, r
+    assert r == {'tray': ['chabudai', 'garland1'], 'p1ok': True, 'moved': True, 'turned': True, 'desk': False, 'gone': True, 'edit': False}, r
 
 def test_the_rooms_own_things_are_laid_out_and_can_be_put_away(b):
     js = "(() => { " + FRESH + """ const own = ['bed', 'nightTable', 'bigPlant', 'sageRug', 'bedRug', 'fujiPrint', 'kanaChart', 'nightPicture', 'pegRail', 'sofaWindow', 'shelfWindow', 'bedWindow2', 'sconce1', 'sconce2', 'sconce3', 'sconce4'];
@@ -1020,6 +1020,50 @@ def test_the_yards_box_holds_the_houses_bought_and_a_tap_puts_one_up(b):
     assert r['none'] == 0 and r['ids'] == ['', 'stumphouse', 'teapothouse'] and r['p0'] == '', r   # no house bought: no houses in the box; then the cottage and the two bought
     assert r['up'] == {'house': 'stumphouse', 'drawn': True, 'pressed': 'stumphouse', 'edit': True}, r   # a tap puts it up at once, still in 擺設
     assert r['back'] == ['', True] and r['prices'] == [2000] * 5 and r['pumpkin'] == 'halloween', r
+
+def test_the_same_things_lie_in_one_pile_in_the_box(b):
+    js = "(() => { " + FRESH + """ ['sconce1', 'sconce2'].forEach(id => { delete state.placed[id]; }); saveState(); """ + GO_ROOM + """ document.querySelector('.study-edit').click(); const st = () => document.querySelector('.study');
+      const tray = () => [...st().querySelectorAll('.tray-it')].map(e => [e.dataset.id, (e.querySelector('.tray-n') || {}).textContent || '', e.querySelector('span').textContent]);
+      const before = tray(); st().querySelector('.tray-it[data-id="garland1"]').click(); const after = tray();
+      return JSON.stringify({ before, after, out: !!state.placed.garland1 }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['before'] == [['sconce1', '×2', '壁燈'], ['garland1', '×4', '串燈']], r   # four strings of lights, one pile
+    assert r['out'] and r['after'] == [['sconce1', '×2', '壁燈'], ['garland2', '×3', '串燈']], r   # the pile gives out its first one
+
+def test_a_tap_switches_a_lamp_and_the_room_keeps_its_place(b):
+    js = "(async () => { " + FRESH + GO_ROOM + """ await new Promise(q => setTimeout(q, 300)); const st = () => document.querySelector('.study'), tf = () => st().querySelector('.room').style.transform;
+      const lamps = [...st().querySelectorAll('.lamp-tap')].map(e => e.dataset.lamp).sort(), glows = () => st().querySelectorAll('.lamp-glow').length, a = tf(), g0 = glows();
+      st().querySelector('.lamp-tap[data-lamp="sconce1"]').click(); await new Promise(q => setTimeout(q, 100));
+      const off = { saved: state.lampsOff.sconce1 === true, wrapped: !!st().querySelector('svg.art [data-o="w:sconce1"] .lamp-off'), glows: glows(), btn: st().querySelector('.lamp-tap[data-lamp="sconce1"]').classList.contains('off'), cam: tf() === a };
+      st().querySelector('.lamp-tap[data-lamp="sconce1"]').click(); await new Promise(q => setTimeout(q, 100));
+      return JSON.stringify({ lamps, g0, off, on: [!!state.lampsOff.sconce1, glows()] }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['lamps'] == ['chest', 'desk', 'sconce1', 'sconce2', 'sconce3', 'sideTable'] and r['g0'] == 6, r   # every lamp in 書房 can be tapped
+    assert r['off'] == {'saved': True, 'wrapped': True, 'glows': 5, 'btn': True, 'cam': True}, r   # off: its light and glow gone, the camera stays
+    assert r['on'] == [False, 6], r
+
+def test_the_hero_sits_on_the_sofa_and_kneels_at_the_kotatsu(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + GO_ROOM + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('.study'), h = () => st().querySelector('.hero');
+      const seat = async (id) => { const b = st().querySelector('.ware-use[data-ware="' + id + '"]'); b.click(); await wait(2200); b.click(); await wait(500); return [...h().classList].filter(c => ['sofa', 'kneel', 'sit'].includes(c)); };
+      const sofa = await seat('sofa'), saved = JSON.parse(localStorage.getItem('nq_hero')).room.pose;
+      const kneel = await seat('kotatsu');
+      st().querySelector('.ware-use[data-ware="sofa"]').click(); await wait(200); const up = [...h().classList].includes('kneel');
+      return JSON.stringify({ sofa, saved, kneel, up }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'sofa': ['sofa'], 'saved': '', 'kneel': ['kneel'], 'up': False}, r   # seated, saved standing; off the cushion to walk on
+
+def test_the_telescope_shows_the_stars_and_a_stone_lantern_switches(b):
+    js = "(async () => { " + FRESH + """ ['telescope', 'stonelantern'].forEach(id => { state.owned[id] = { paid: 0, on: todayStr() }; }); state.placed.telescope = { w: 'Y', x: -60, y: 80 }; state.placed.stonelantern = { w: 'Y', x: 60, y: 60 }; saveState();
+      location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); const wait = (ms) => new Promise(q => setTimeout(q, ms)), y = () => document.querySelector('.yard');
+      y().querySelector('.yware[data-ware="telescope"]').click(); let open = false; for (let i = 0; i < 60 && !open; i++) { await wait(100); open = !!y().querySelector('.scope'); }
+      const name = y().querySelector('.scope .sc-name').textContent, lines = y().querySelectorAll('.scope .sc-line').length;
+      y().querySelector('.scope [data-sc="1"]').click(); const next = y().querySelector('.scope .sc-name').textContent;
+      y().querySelector('.scope [data-sc="x"]').click(); const closed = !y().querySelector('.scope');
+      y().querySelector('.yware[data-ware="stonelantern"]').click(); await wait(2500);
+      return JSON.stringify({ open, name, lines, next, closed, n: SCOPE.SKIES.length, lantern: [!!state.lampsOff.stonelantern, y().querySelector('.yware[data-ware="stonelantern"]').classList.contains('off')] }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['open'] and r['name'] == '北斗七星ほくとしちせい' and r['lines'] == 7 and r['next'] == 'オリオン座オリオンざ' and r['closed'] and r['n'] == 6, r
+    assert r['lantern'] == [True, True], r   # walked over, switched off
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

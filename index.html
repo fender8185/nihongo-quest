@@ -528,10 +528,15 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.study, .yard) .hero.reach .arm.r { transform: rotate(-88deg); } :is(.study, .yard) .hero.look .head { transform: translateY(-2px) rotate(-6deg); }
 :is(.study, .yard) .hero.crouch .bob { animation: none; transform: translateY(10px) scaleY(.92); } :is(.study, .yard) .hero.crouch .arm.r { transform: rotate(-60deg); }
 :is(.study, .yard) .hero.out { opacity: 0; }
-:is(.study, .yard) .hero.hop:not(.sit) .bob { animation: heroHop .5s cubic-bezier(.3, .7, .4, 1); }
+/* test (2026-11-09): on the sofa, feet swinging over the edge; kneeling at the kotatsu, the legs folded under */
+:is(.study, .yard) .hero.sofa .bob { animation: none; transform: translateY(-22px); } :is(.study, .yard) .hero.sofa .leg.l { animation: heroSwing 1.3s ease-in-out infinite alternate; } :is(.study, .yard) .hero.sofa .leg.r { animation: heroSwing 1.3s ease-in-out -.65s infinite alternate; }
+@keyframes heroSwing { from { transform: rotate(-12deg); } to { transform: rotate(10deg); } }
+:is(.study, .yard) .hero.kneel .bob { animation: none; transform: translateY(20px); } :is(.study, .yard) .hero.kneel .legs { display: none; }
+:is(.study, .yard) .hero.sofa .h-shadow { display: none; }   /* up on the cushion */
+:is(.study, .yard) .hero.hop:not(.sit, .sofa, .kneel) .bob { animation: heroHop .5s cubic-bezier(.3, .7, .4, 1); }
 :is(.study, .yard) .hero.idle-look .head { animation: heroLookRound 1.8s ease-in-out; } :is(.study, .yard) .hero.idle-nod .head { animation: heroNod 1.6s ease-in-out; }
 :is(.study, .yard) .hero:is(.idle-stretch, .cheer) .arm.l { animation: heroUpL 1.6s ease-in-out; } :is(.study, .yard) .hero:is(.idle-stretch, .cheer) .arm.r { animation: heroUpR 1.6s ease-in-out; } :is(.study, .yard) .hero.idle-stretch .bob { animation: heroTall 1.6s ease-in-out; }
-:is(.study, .yard) .hero.cheer :is(.arm.l, .arm.r) { animation-duration: .9s; } :is(.study, .yard) .hero.cheer:not(.sit) .bob { animation: heroHop .5s cubic-bezier(.3, .7, .4, 1) .15s; }
+:is(.study, .yard) .hero.cheer :is(.arm.l, .arm.r) { animation-duration: .9s; } :is(.study, .yard) .hero.cheer:not(.sit, .sofa, .kneel) .bob { animation: heroHop .5s cubic-bezier(.3, .7, .4, 1) .15s; }
 :is(.study, .yard) .hero:is(.idle-wave, .wave) .arm.r { animation: heroWave 1.5s ease-in-out; } :is(.study, .yard) .hero.wave .arm.r { animation-duration: 1.2s; }
 :is(.study, .yard) .hero.idle-sway .bob { animation: heroSway 2.2s ease-in-out; } :is(.study, .yard) .hero.idle-bounce .bob { animation: heroBounce .9s ease-in-out; }
 :is(.study, .yard) .hero .tail { transform-box: view-box; animation: heroTail 2.8s ease-in-out infinite; } :is(.study, .yard) .hero .tail.t0 { transform-origin: 18px -31px; } :is(.study, .yard) .hero .tail.t1 { transform-origin: 2px -30px; }
@@ -608,6 +613,11 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .wr-it svg { width: 56px; height: 56px; } .wr-it.on { border-color: var(--accent); background: var(--accent-soft); }
 /* 擺設 (1.2.0): the room's own controls step aside, each ware gets a clear button, the picked one a glow and its tools */
 .study.edit :is(.study-tools, .room-hint, .mail-hint), .study.edit .thing { display: none; }
+.study .lamp-tap { position: absolute; padding: 0; border: 0; border-radius: 50%; background: none; cursor: pointer; }   /* a lamp: a tap switches it */
+/* a lamp switched off (test): no pool of light, its shade and bulb dark by night */
+.lamp-off .night-only { display: none; }
+.lamp-off :is([fill="#fff4d2"], [fill="#fff4d8"], [fill="#fffbea"]) { fill: color-mix(in srgb, #f3ecdc calc(var(--day) * 100%), #4a4658); }
+.lamp-off :is([style*="#ffd27a"], [style*="#ffd36a"], [style*="#ffd98a"], [style*="#fff1c4"]) { fill: color-mix(in srgb, #e9dcc0 calc(var(--day) * 100%), #4a4458) !important; }
 .study .ware-use { position: absolute; padding: 0; border: 0; border-radius: 12px; background: none; cursor: pointer; }
 .study .deco { position: absolute; padding: 0; border: 0; border-radius: 10px; background: none; cursor: grab; touch-action: none; }
 .study .deco.sel { outline: 2px dashed rgba(255, 255, 255, .9); outline-offset: 2px; box-shadow: 0 0 0 4px rgba(90, 108, 240, .35); }
@@ -624,6 +634,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .edit-tray { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; display: flex; gap: 8px; overflow-x: auto; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); background: rgba(20, 22, 44, .82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .tray-it { flex: none; width: 74px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 0; border-radius: 10px; font: inherit; font-size: 11.5px; color: #fff; background: rgba(255, 255, 255, .1); cursor: pointer; --day: 1; --f: 1; --lit: 1; }
 .tray-it svg { width: 50px; height: 50px; overflow: visible; }
+.tray-it { position: relative; } .tray-it .tray-n { position: absolute; right: 5px; top: 4px; min-width: 22px; padding: 1px 5px; border-radius: 10px; font-size: 11px; font-weight: 700; line-height: 1.5; color: #3b3428; background: #ffd27a; }   /* a pile: how many */
 .tray-house[aria-pressed="true"] { background: rgba(255, 255, 255, .26); box-shadow: inset 0 0 0 2px #ffd27a; }   /* the house up now */
 .tray-empty { padding: 10px 4px; font-size: 13px; color: rgba(255, 255, 255, .85); }
 .edit-tray { touch-action: pan-x; transition: background-color .15s, box-shadow .15s; }   /* sideways the box scrolls; up and down a ware is pulled out (1.2.0) */
@@ -702,6 +713,24 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .yware { position: absolute; left: 50%; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; touch-action: none; }
 .sky .yware .art { width: 100%; height: 100%; display: block; overflow: visible; filter: brightness(calc(.45 + .55 * var(--day))) saturate(calc(.75 + .25 * var(--day))); }
 .sky .yware .glow { position: absolute; border-radius: 50%; pointer-events: none; background: radial-gradient(closest-side, rgba(255, 214, 130, .85), rgba(255, 190, 100, .3) 45%, transparent); opacity: calc(1 - var(--day)); transition: opacity 1.5s; }
+.sky .yware.off .glow { display: none; } .sky .yware.off [style*="#ffd27a"] { fill: #4a4842 !important; }   /* a lamp switched off */
+/* 觀星 (test): the telescope's eyepiece over the dark, the constellation's name under it */
+.yard .scope { position: fixed; inset: 0; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px; background: rgba(4, 5, 18, .9); color: #f3f0e6; text-align: center; animation: scopeIn .35s ease-out; }
+@keyframes scopeIn { from { opacity: 0; } }
+.scope .sc-ring { width: min(80vw, 56vh, 420px); aspect-ratio: 1; border-radius: 50%; padding: 6px; background: #2a2c38; box-shadow: 0 0 0 3px #4a4d5e, 0 10px 40px rgba(0, 0, 0, .6); animation: scopeZoom .5s cubic-bezier(.2, .8, .25, 1); }
+@keyframes scopeZoom { from { transform: scale(.6); } }
+.scope .sc-view, .scope .sc-sky { width: 100%; height: 100%; display: block; border-radius: 50%; }
+.scope .sc-bg { fill: #0b0d2a; } .scope .sc-sky.day .sc-bg { fill: #8fc3ea; }
+.scope .sc-dust { fill: #fff; animation: scTwinkle 3s ease-in-out infinite alternate; animation-delay: var(--w); } .scope .sc-sky.day :is(.sc-dust, .sc-star) { opacity: .28; animation: none; }
+.scope .sc-star { animation: scTwinkle 2.4s ease-in-out infinite alternate; animation-delay: var(--w); filter: drop-shadow(0 0 3px rgba(255, 250, 220, .9)); }
+@keyframes scTwinkle { from { opacity: .45; } to { opacity: 1; } }
+.scope .sc-line { fill: none; stroke: rgba(170, 200, 255, .55); stroke-width: 1; stroke-dasharray: var(--len); stroke-dashoffset: var(--len); animation: scLine .9s ease-out .25s forwards; } .scope .sc-sky.day .sc-line { stroke: rgba(255, 255, 255, .6); }
+@keyframes scLine { to { stroke-dashoffset: 0; } }
+.scope .sc-meteor { stroke: #fff; stroke-width: 1.2; stroke-linecap: round; stroke-dasharray: 40; stroke-dashoffset: 40; opacity: 0; animation: scMeteor 7s ease-in 2s infinite; } .scope .sc-sky.day .sc-meteor { display: none; }
+@keyframes scMeteor { 0% { stroke-dashoffset: 40; opacity: 0; } 4% { opacity: 1; } 10% { stroke-dashoffset: -40; opacity: 0; } 100% { opacity: 0; } }
+.scope .sc-name { margin-top: 10px; font-size: 28px; font-weight: 700; letter-spacing: .06em; } .scope .sc-name rt { font-size: 12px; font-weight: 400; letter-spacing: .1em; color: #c9c6ff; }
+.scope .sc-zh { font-size: 14px; color: #d9d5c8; max-width: 420px; } .scope .sc-note { font-size: 12px; color: #9a98b6; min-height: 1.4em; }
+.scope .sc-btns { display: flex; gap: 10px; margin-top: 6px; } .scope .sc-btns .btn { min-width: 44px; }
 .sky .yware .koi { transform-box: view-box; transform-origin: 0 0; animation: koiSwim 16s linear infinite; } .sky .yware .koi.k2 { animation-duration: 22s; animation-direction: reverse; }
 @keyframes koiSwim { to { transform: rotate(360deg); } }
 .yard.edit .sky .yware { cursor: grab; } .yard.edit .sky .yware.sel { outline: 2px dashed rgba(255, 255, 255, .9); outline-offset: 2px; border-radius: 10px; }
@@ -2116,6 +2145,7 @@ function defaultState() {
     notices: [],
     koto: { daySets: {}, days: [], listen: {}, mail: {}, found: {}, sets: {}, gift: 0 },   // 言靈 (1.2.0), see kotoBalance
     owned: {},              // things bought at 古道具屋: { id: { paid, on } }
+    lampsOff: {},           // test (2026-11-09): the lamps switched off by a tap ({ id: true }: desk, chest, nightTable, or a ware's id)
     placed: {},             // where owned things stand in 書房: { id: { w: 'F', x, y, r } | { w: 'L'|'R', u, v } }; not here = in the storage box
     wear: {},               // what the hero wears, by part: { head, face, neck, back, body }
     house: ''               // the yard's house: '' the cottage, or a look bought at 古道具屋 (1.2.0)
@@ -2178,7 +2208,7 @@ function normalizeState(s) {
   // 1.2.0: 言靈 and the things from 古道具屋 (ids this build does not know are kept: a later one may sell them)
   const kt = out.koto && typeof out.koto === 'object' && !Array.isArray(out.koto) ? out.koto : {}, obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
   out.koto = { daySets: obj(kt.daySets), days: Array.isArray(kt.days) ? kt.days : [], listen: obj(kt.listen), mail: obj(kt.mail), found: obj(kt.found), sets: obj(kt.sets), gift: Number(kt.gift) || 0 };
-  ['owned', 'placed', 'wear', 'look'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)
+  ['owned', 'placed', 'wear', 'look', 'lampsOff'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)
   if (typeof out.house !== 'string') out.house = '';   // an id this build does not know is kept: the cottage is drawn meanwhile
   // 1.2.0: 羽織 and 地球儀 are gone and their purchases with them, and 書房's umbrella (the user's calls; the only ids not
   // kept: what was paid comes back). Every time: sync merges owned as a union
@@ -6122,7 +6152,16 @@ function weekdayZh(d) { return '日一二三四五六'[parseDate(d).getDay()]; }
 // 書房 and the yard (1.1.0). The app opens in 書房 (renderToday); its door leads out to the yard (renderOutside), whose house
 // leads back in. Both follow the clock (sceneTick) and today's list (dayProgress, the ring they replace).
 // what 書房 shows of the wares: a change (bought on another device, a sync) draws the room again
-function roomSig() { return Object.keys(state.placed).sort().map((k) => { const p = state.placed[k]; return `${k}:${p.rm || ''}${p.w}${p.x ?? p.u},${p.y ?? p.v},${p.r || 0}`; }).join('|') + '/' + Object.keys(state.owned).length + '/' + Object.values(state.wear).join(',') + '/' + Object.values(HERO.norm(state.look)).join(','); }
+// the storage boxes (test, 2026-11-09): things that look the same (the strings of lights, the wall lamps, the windows, or one
+// name) lie in one pile, shown once with how many; a pile gives out its first one
+const stackKey = (it) => (it.garland ? '串燈' : it.win ? '窗戶' : it.name);
+function stacks(items) {
+  const out = new Map();
+  items.forEach((it) => { const k = stackKey(it), q = out.get(k); if (q) q.n++; else out.set(k, { it, n: 1, name: k }); });
+  return [...out.values()];
+}
+const lampOff = (id) => Boolean(state.lampsOff && state.lampsOff[id]);
+function roomSig() { return Object.keys(state.lampsOff || {}).filter(lampOff).sort().join(',') + '#' + Object.keys(state.placed).sort().map((k) => { const p = state.placed[k]; return `${k}:${p.rm || ''}${p.w}${p.x ?? p.u},${p.y ?? p.v},${p.r || 0}`; }).join('|') + '/' + Object.keys(state.owned).length + '/' + Object.values(state.wear).join(',') + '/' + Object.values(HERO.norm(state.look)).join(','); }
 function renderToday(view, rm = 'study') {   // 書房, or the bedroom beyond its door (1.3.0: #/bedroom)
   finishPreIfReady();
   sceneTick();
@@ -6166,7 +6205,7 @@ const YARD = (() => {
     const a = ART[id], it = WARE.get(id); if (!a || !it) return '';
     const [x0, y0, w, h] = a.box, k = yScale(p.y);
     const glow = a.glow ? `<i class="glow" style="left:${a.glow[0] - x0 - a.glow[2]}px;top:${a.glow[1] - y0 - a.glow[2]}px;width:${2 * a.glow[2]}px;height:${2 * a.glow[2]}px"></i>` : '';
-    return `<button type="button" class="yware${sel ? ' sel' : ''}" data-act="yard-ware" data-ware="${id}" aria-label="${esc(it.name)}" style="width:${w}px;height:${h}px;margin-left:${x0}px;bottom:${-(y0 + h)}px;transform-origin:${-x0}px ${-y0}px;transform:translate(${p.x}px,${-p.y}px) scale(${k.toFixed(3)});z-index:${300 - Math.round(p.y)}"><svg class="art" viewBox="${a.box.join(' ')}" aria-hidden="true">${a.draw()}</svg>${glow}</button>`;
+    return `<button type="button" class="yware${sel ? ' sel' : ''}${a.glow && lampOff(id) ? ' off' : ''}" data-act="yard-ware" data-ware="${id}" aria-label="${esc(it.name)}" style="width:${w}px;height:${h}px;margin-left:${x0}px;bottom:${-(y0 + h)}px;transform-origin:${-x0}px ${-y0}px;transform:translate(${p.x}px,${-p.y}px) scale(${k.toFixed(3)});z-index:${300 - Math.round(p.y)}"><svg class="art" viewBox="${a.box.join(' ')}" aria-hidden="true">${a.draw()}</svg>${glow}</button>`;
   }
   const thumb = (id) => (ART[id] ? `<svg class="thumb" viewBox="${ART[id].box.join(' ')}" aria-hidden="true">${ART[id].draw()}</svg>` : '');
   return { ART, el, thumb };
@@ -6230,7 +6269,7 @@ function yeditHtml() {
   const now = state.house && owns(state.house) && HOUSE_ART[state.house] ? state.house : '';
   const houseIt = (h) => `<button type="button" class="tray-it tray-house" data-act="yard-house" data-id="${h.id}" aria-pressed="${h.id === now}"><svg class="house-thumb" viewBox="0 0 140 130" aria-hidden="true">${HOUSE_ART[h.id || 'cottage']}</svg><span>${esc(h.name)}</span></button>`;
   return `<div class="edit-top"><span class="edit-hint">${yed.sel ? '拖曳搬動，拖到上面收起來' : houses.length ? '點房子換外觀；其他東西拖出來擺' : '拖曳搬動；收納箱的東西拖出來擺'}</span><button type="button" class="btn btn-primary btn-sm" data-act="yard-edit-done">完成</button></div>
-    <div class="edit-tray" aria-label="院子的收納箱">${houses.map(houseIt).join('')}${box.length ? box.map((it) => `<button type="button" class="tray-it" data-act="yard-edit-take" data-id="${it.id}">${YARD.thumb(it.id)}<span>${esc(it.name)}</span></button>`).join('') : houses.length ? '' : '<div class="tray-empty">收納箱是空的。古道具屋的「戶外」有望遠鏡、石燈籠……</div>'}</div>`;
+    <div class="edit-tray" aria-label="院子的收納箱">${houses.map(houseIt).join('')}${box.length ? stacks(box).map(({ it, n, name }) => `<button type="button" class="tray-it" data-act="yard-edit-take" data-id="${it.id}">${YARD.thumb(it.id)}<span>${esc(name)}</span>${n > 1 ? `<b class="tray-n">×${n}</b>` : ''}</button>`).join('') : houses.length ? '' : '<div class="tray-empty">收納箱是空的。古道具屋的「戶外」有望遠鏡、石燈籠……</div>'}</div>`;
 }
 function yselHtml() {   // the picked ware's tools, over it in the world
   const o = yed.sel && yardPlaced().find((q) => q.id === yed.sel), a = o && YARD.ART[o.id];
@@ -6330,14 +6369,63 @@ function yardDragEnd(yard) {
   else if (d.fromBox) toast('這裡放不下');
   yardDraw(yard);
 }
-// outside 擺設 a tap on a ware sends the hero to stand beside it, facing it; at the telescope by night they look up a while
+// 觀星 (test, 2026-11-09): the telescope's eyepiece over the sky, one constellation at a time with its Japanese name (its reading,
+// its Chinese name), ‹ › to the next, the lines drawn in each time. By day the stars are faint and it says so.
+const SCOPE = (() => {
+  const SKIES = [
+    { ja: '北斗七星', kana: 'ほくとしちせい', zh: '北斗七星（大熊座的一部分）', s: [[40, 70], [62, 66], [80, 76], [98, 88], [104, 116], [136, 124], [148, 100]], l: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 3]] },
+    { ja: 'オリオン座', kana: 'オリオンざ', zh: '獵戶座：紅色的參宿四、藍白色的參宿七', s: [[72, 54, 5, '#ffb08a'], [128, 62], [90, 102], [100, 98], [110, 94], [80, 148], [130, 142, 5, '#cfe2ff']], l: [[0, 2], [1, 4], [2, 3], [3, 4], [2, 5], [4, 6], [0, 1]] },
+    { ja: 'カシオペア座', kana: 'カシオペアざ', zh: '仙后座：天上的 W', s: [[40, 80], [70, 110], [98, 86], [126, 112], [158, 82]], l: [[0, 1], [1, 2], [2, 3], [3, 4]] },
+    { ja: '夏の大三角', kana: 'なつのだいさんかく', zh: '夏季大三角：織女星（ベガ）、天津四（デネブ）、牛郎星（アルタイル）', s: [[78, 56, 5], [148, 74, 4.4], [102, 150, 4.6]], l: [[0, 1], [1, 2], [2, 0]] },
+    { ja: 'さそり座', kana: 'さそりざ', zh: '天蠍座：心臟是紅色的心宿二', s: [[150, 44], [158, 62], [150, 80], [128, 84, 5, '#ff9a7a'], [116, 98], [108, 116], [100, 134], [88, 146], [70, 150], [56, 142], [52, 126], [62, 116]], l: [[0, 1], [1, 2], [1, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [10, 11]] },
+    { ja: 'はくちょう座', kana: 'はくちょうざ', zh: '天鵝座：張開翅膀的天鵝', s: [[100, 40, 4.6], [100, 86], [100, 124], [100, 162], [54, 72], [76, 80], [124, 92], [148, 100]], l: [[0, 1], [1, 2], [2, 3], [4, 5], [5, 1], [1, 6], [6, 7]] }
+  ];
+  const rnd = ((n) => () => { n = (n * 9301 + 49297) % 233280; return n / 233280; })(7);
+  const DUST = Array.from({ length: 80 }, () => [Math.round(rnd() * 200), Math.round(rnd() * 200), (0.4 + rnd() * 0.9).toFixed(2), (rnd() * 4).toFixed(2)]);
+  let i = 0;
+  function sky(day) {
+    const k = SKIES[i];
+    const lines = k.l.map(([a, b]) => { const p = k.s[a], q = k.s[b], len = Math.hypot(q[0] - p[0], q[1] - p[1]).toFixed(1); return `<path class="sc-line" d="M${p[0]} ${p[1]} L${q[0]} ${q[1]}" style="--len:${len}"/>`; }).join('');
+    const stars = k.s.map(([x, y, r = 3.4, c = '#fffbe8'], j) => `<circle class="sc-star" cx="${x}" cy="${y}" r="${r}" fill="${c}" style="--w:-${(j * 0.7).toFixed(1)}s"/>`).join('');
+    return `<svg class="sc-sky${day ? ' day' : ''}" viewBox="0 0 200 200" aria-hidden="true"><defs><clipPath id="scClip"><circle cx="100" cy="100" r="100"/></clipPath><radialGradient id="scVig"><stop offset=".72" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".7"/></radialGradient></defs>
+      <g clip-path="url(#scClip)"><rect width="200" height="200" class="sc-bg"/>${DUST.map(([x, y, r, w]) => `<circle class="sc-dust" cx="${x}" cy="${y}" r="${r}" style="--w:-${w}s"/>`).join('')}
+      <path class="sc-meteor" d="M150 20 L120 44"/>${lines}${stars}<rect width="200" height="200" fill="url(#scVig)"/></g></svg>`;
+  }
+  function draw(el) {
+    const day = sceneClock(lightHour()).day >= 0.5, k = SKIES[i];
+    el.querySelector('.sc-view').innerHTML = sky(day);
+    el.querySelector('.sc-name').innerHTML = `<ruby>${esc(k.ja)}<rt>${esc(k.kana)}</rt></ruby>`;
+    el.querySelector('.sc-zh').textContent = k.zh;
+    el.querySelector('.sc-note').textContent = day ? '白天太亮，星星很淡；晚上再來看會清楚很多。' : `${i + 1} / ${SKIES.length}`;
+  }
+  function open(yard) {
+    if (!yard || yard.querySelector('.scope')) return;
+    const el = document.createElement('div');
+    el.className = 'scope'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', '望遠鏡');
+    el.innerHTML = `<div class="sc-ring"><div class="sc-view"></div></div><div class="sc-name"></div><div class="sc-zh"></div><div class="sc-note"></div>
+      <div class="sc-btns"><button type="button" class="btn btn-sm" data-sc="-1" aria-label="上一個">‹</button><button type="button" class="btn btn-primary btn-sm" data-sc="x">收起望遠鏡</button><button type="button" class="btn btn-sm" data-sc="1" aria-label="下一個">›</button></div>`;
+    const close = () => { el.remove(); document.removeEventListener('keydown', key); };
+    const step = (d) => { i = (i + d + SKIES.length) % SKIES.length; draw(el); };
+    const key = (e) => { if (e.key === 'Escape') close(); else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'ArrowRight') step(1); };
+    el.addEventListener('click', (e) => { const b = e.target.closest('[data-sc]'); if (b) { if (b.dataset.sc === 'x') close(); else step(Number(b.dataset.sc)); } else if (e.target === el) close(); });
+    el.addEventListener('pointerdown', (e) => e.stopPropagation());
+    document.addEventListener('keydown', key);
+    yard.appendChild(el); draw(el);
+  }
+  return { open, SKIES };
+})();
+// outside 擺設 a tap on a ware sends the hero to stand beside it, facing it; at the telescope they look into it (test: 觀星)
 function yardUse(yard, id) {
   const o = yardPlaced().find((q) => q.id === id); if (!yard || !o) return;
   const side = yh.X <= o.p.x ? -1 : 1, gx = o.p.x + side * (o.it.ground[0] * yScale(o.p.y) / 2 + 16);
   yHeroWalk(yard, [gx, Math.max(12, o.p.y - 4)], () => {
     const el = yard.querySelector('.yhero'); if (!el) return;
     yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard);   // turned to it
-    if (id === 'telescope' && sceneClock(lightHour()).day < 0.5) { el.classList.add('look'); setTimeout(() => el.classList.remove('look'), 3000); }
+    if (id === 'telescope') { el.classList.add('look'); setTimeout(() => { el.classList.remove('look'); if (yard.isConnected) SCOPE.open(yard); }, 700); }
+    if (YARD.ART[id] && YARD.ART[id].glow) {   // a lamp (test, 2026-11-09): switched on or off
+      if (lampOff(id)) delete state.lampsOff[id]; else state.lampsOff[id] = true; saveState();
+      const b = yard.querySelector(`.yware[data-ware="${id}"]`); if (b) b.classList.toggle('off', lampOff(id));
+    }
   });
 }
 function renderOutside(view) {
@@ -6871,9 +6959,9 @@ const WARES = [
   // 1.3.0 (since: 7, set out once where there is room): more of the house's own, so 書房 is no longer all round the desk — a
   // kotatsu in the middle, a reading corner (a sofa, a side table with a lamp, a rug) and a low shelf by the left wall; in the bedroom a window, a
   // wardrobe (it opens 衣櫃, as the button does), a dresser and a plant
-  { id: 'sofa', kind: 'floor', starter: true, since: 7, turn: false, h: 2.3, name: '沙發', fp: [3.4, 1.5], at: { w: 'F', x: 22.2, y: 0.75, r: 0 }, desc: '' },
+  { id: 'sofa', kind: 'floor', starter: true, since: 7, turn: false, h: 2.3, name: '沙發', fp: [3.4, 1.5], at: { w: 'F', x: 22.2, y: 0.75, r: 0 }, desc: '', act: 'sofa' },
   { id: 'sideTable', kind: 'floor', starter: true, since: 7, turn: false, h: 2.6, name: '小邊桌', fp: [0.9, 0.9], at: { w: 'F', x: 24.55, y: 0.5, r: 0 }, desc: '', light: { z: 2.5, r: 4.2 } },
-  { id: 'kotatsu', kind: 'floor', starter: true, since: 7, turn: false, h: 1.1, name: '暖桌', fp: [2.8, 2.8], at: { w: 'F', x: 4.6, y: 12.6, r: 0 }, desc: '' },
+  { id: 'kotatsu', kind: 'floor', starter: true, since: 7, turn: false, h: 1.1, name: '暖桌', fp: [2.8, 2.8], at: { w: 'F', x: 4.6, y: 12.6, r: 0 }, desc: '', act: 'kotatsu' },
   { id: 'loungeRug', kind: 'rug', starter: true, since: 7, turn: false, name: '長地毯', fp: [4.4, 2.8], at: { w: 'F', x: 22.4, y: 3.3, r: 0 }, desc: '' },
   { id: 'lowShelf', kind: 'floor', starter: true, since: 7, turn: false, h: 2.4, name: '矮書架', fp: [1.1, 3.4], at: { w: 'F', x: 0.55, y: 12.6, r: 0 }, desc: '' },
   { id: 'bedWindow', kind: 'wall', starter: true, since: 7, win: true, name: '臥房的窗', size: [4.7, 5.4], at: { w: 'R', u: 15.6, v: 6.6, rm: 'bed' }, desc: '' },
@@ -7619,14 +7707,18 @@ const ROOM = (() => {
     use(d, () => door(d));
   }
 
-  function roomLights() {   // 書房's desk lamp and the lamp on the chest of drawers first (in 書房), then the lamps of the wares
-    const out = ROOMID === 'study' ? [Object.assign({}, LIGHTS[0], { p: mover('desk').map(LIGHTS[0].p) }), Object.assign({}, LIGHTS[1], { p: mover('chest').map(LIGHTS[1].p) })] : [];
+  // 書房's desk lamp and the lamp on the chest of drawers first (in 書房), then the lamps of the wares, each with its id; test
+  // (2026-11-09): every lamp switches on and off with a tap — LAMPS all of them (where to tap), the lights only those on
+  let LAMPS = [];
+  function roomLights() {
+    const out = ROOMID === 'study' ? [Object.assign({ id: 'desk' }, LIGHTS[0], { p: mover('desk').map(LIGHTS[0].p) }), Object.assign({ id: 'chest' }, LIGHTS[1], { p: mover('chest').map(LIGHTS[1].p) })] : [];
     placedWares().forEach((o) => {
-      if (o.id === 'nightTable') out.push(Object.assign({}, LIGHTS[2], { p: [LIGHTS[2].p[0] + o.p.x - 16.25, LIGHTS[2].p[1] + o.p.y - 0.55, LIGHTS[2].p[2]] }));
-      else if (o.it.light && o.it.kind === 'wall') { const z = o.p.v + o.it.light.dz; out.push({ p: o.p.w === 'L' ? [0.45, o.p.u, z] : [o.p.u, 0.45, z], c: [1, 0.76, 0.5], r: o.it.light.r, lo: 0.45, hi: 0.85 }); }
-      else if (o.it.light) out.push({ p: [o.p.x, o.p.y, o.it.light.z], c: [1, 0.76, 0.5], r: o.it.light.r, lo: 0.45, hi: 0.85 });
+      if (o.id === 'nightTable') out.push(Object.assign({ id: o.id }, LIGHTS[2], { p: [LIGHTS[2].p[0] + o.p.x - 16.25, LIGHTS[2].p[1] + o.p.y - 0.55, LIGHTS[2].p[2]] }));
+      else if (o.it.light && o.it.kind === 'wall') { const z = o.p.v + o.it.light.dz; out.push({ id: o.id, p: o.p.w === 'L' ? [0.45, o.p.u, z] : [o.p.u, 0.45, z], c: [1, 0.76, 0.5], r: o.it.light.r, lo: 0.45, hi: 0.85 }); }
+      else if (o.it.light) out.push({ id: o.id, p: [o.p.x, o.p.y, o.it.light.z], c: [1, 0.76, 0.5], r: o.it.light.r, lo: 0.45, hi: 0.85 });
     });
-    return out;
+    LAMPS = out;
+    return out.filter((L) => !lampOff(L.id));
   }
   // one of 書房's own things drawn where it always stood, the whole of it moved by (dx, dy) on the floor, lit where it ends up
   function shifted(dx, dy, draw) {
@@ -7801,12 +7893,13 @@ const ROOM = (() => {
       return WORK[o.id].map(([pid, , art], i) => ({ id: pid, fp: fs[i], work: [o.id, art] }));
     });
   }
-  function standing(bk) { return depthSort(standingList()).map((q) => ({ id: q.id, fp: q.fp, art: q.work ? inPlace(q.work[0], () => q.work[1](bk)) : DECOR.floor(q.ware.id, q.ware.p) })); }
+  const offArt = (id, art) => (lampOff(id) ? `<g class="lamp-off">${art}</g>` : art);   // a lamp switched off
+  function standing(bk) { return depthSort(standingList()).map((q) => ({ id: q.id, fp: q.fp, art: offArt(q.id.replace(/^w:/, ''), q.work ? inPlace(q.work[0], () => q.work[1](bk)) : DECOR.floor(q.ware.id, q.ware.p)) })); }
   function studyArt(d, left, bk) {
     const wares = placedWares();
     return `<svg class="art" viewBox="${VB.join(' ')}" aria-hidden="true">${DEFS}
       ${shellArt()}${DOORS.map(doorArt).join('')}${wallShadeArt()}
-      ${wares.filter((o) => o.it.kind === 'wall').map((o) => `<g data-o="w:${o.id}">${o.it.garland ? wireArt(o.it.size[0], o.p) : o.it.win ? windowArt(o.p, false, o.it.bare) : DECOR.wall(o.id, o.p)}</g>`).join('')}
+      ${wares.filter((o) => o.it.kind === 'wall').map((o) => `<g data-o="w:${o.id}">${o.it.garland ? wireArt(o.it.size[0], o.p) : o.it.win ? windowArt(o.p, false, o.it.bare) : offArt(o.id, DECOR.wall(o.id, o.p))}</g>`).join('')}
       ${floorArt()}
       ${wares.filter((o) => o.it.kind === 'rug').map((o) => `<g data-o="w:${o.id}">${DECOR.floor(o.id, o.p)}</g>`).join('')}
       ${(shown = standing(bk)).map((o) => `<g data-o="${o.id}">${o.art}</g>`).join('')}
@@ -7844,9 +7937,9 @@ const ROOM = (() => {
     return `<div class="edit-sel${under ? ' under' : ''}" style="${vbPct(x, y)}">${o.it.kind !== 'wall' && o.it.turn !== false ? '<button type="button" data-act="room-edit-turn">轉向</button>' : ''}${o.it.fixed ? '<span class="sel-note">只能搬，不能收</span>' : '<button type="button" data-act="room-edit-put">收起</button>'}</div>`;
   }
   function editHtml() {   // the 擺設 bar and the storage box (shown by .study.edit)
-    const box = WARES.filter((it) => forRoom(it) && !it.fixed && owns(it.id) && !state.placed[it.id]);
+    const box = stacks(WARES.filter((it) => forRoom(it) && !it.fixed && owns(it.id) && !state.placed[it.id]));
     return `<div class="edit-top"><span class="edit-hint">${ed.sel ? '拖曳搬動，拖到下面收起來' : '拖曳搬動；收納箱的東西拖出來擺'}</span><button type="button" class="btn btn-primary btn-sm" data-act="room-edit-done">完成</button></div>
-      <div class="edit-tray" aria-label="收納箱">${box.length ? box.map((it) => `<button type="button" class="tray-it" data-act="room-edit-take" data-id="${it.id}">${DECOR.thumb(it.id)}<span>${esc(it.name)}</span></button>`).join('') : '<div class="tray-empty">收納箱是空的。到古道具屋買東西，或把書房裡的東西拖到這裡收起來。</div>'}</div>`;
+      <div class="edit-tray" aria-label="收納箱">${box.length ? box.map(({ it, n, name }) => `<button type="button" class="tray-it" data-act="room-edit-take" data-id="${it.id}">${DECOR.thumb(it.id)}<span>${esc(name)}</span>${n > 1 ? `<b class="tray-n">×${n}</b>` : ''}</button>`).join('') : '<div class="tray-empty">收納箱是空的。到古道具屋買東西，或把書房裡的東西拖到這裡收起來。</div>'}</div>`;
   }
   // a free spot for a ware taken out of the box: in view, nearest the middle (a wall ware) or the lower middle (a floor one)
   function freeSpot(it) {
@@ -7902,7 +7995,7 @@ const ROOM = (() => {
   // where the hero stands in each room (1.3.0): the one shown is `hero`, the other waits here; saved as nq_hero's room (書房, as
   // before) and bed
   const HKEY = { study: 'room', bed: 'bed' }, heroPos = {};
-  const heroOf = () => ({ x: hero.x, y: hero.y, back: hero.back, flip: hero.flip, turn: hero.turn, pose: hero.pose });
+  const heroOf = () => (hero.pose && hero.pose !== 'sit' ? { x: hero.x + (hero.out || [0, 1])[0], y: hero.y + (hero.out || [0, 1])[1], back: hero.back, flip: hero.flip, turn: hero.turn, pose: '' } : { x: hero.x, y: hero.y, back: hero.back, flip: hero.flip, turn: hero.turn, pose: hero.pose });   // on the sofa or the kotatsu: kept standing up
   try { const h = JSON.parse(localStorage.getItem('nq_hero') || 'null') || {}; Object.keys(HKEY).forEach((rm) => { const q = h[HKEY[rm]]; if (q && Number.isFinite(q.x) && Number.isFinite(q.y)) heroPos[rm] = { x: q.x, y: q.y, back: !!q.back, flip: !!q.flip, turn: !!q.turn, pose: q.pose === 'sit' && rm === 'study' ? 'sit' : '' }; }); } catch (e) { /* first time here */ }
   function heroSave() {
     try {
@@ -7921,13 +8014,14 @@ const ROOM = (() => {
     const el = st.querySelector('.hero'); if (!el) return;
     const [px, py] = P(hero.x, hero.y, 0);
     el.style.left = `${((px - 60 - VB[0]) / VB[2] * 100).toFixed(3)}%`; el.style.top = `${((py - 200 - VB[1]) / VB[3] * 100).toFixed(3)}%`;
-    el.classList.toggle('back', hero.back); el.classList.toggle('turn', !!hero.turn); el.classList.toggle('flip', hero.flip); el.classList.toggle('sit', hero.pose === 'sit');
+    el.classList.toggle('back', hero.back); el.classList.toggle('turn', !!hero.turn); el.classList.toggle('flip', hero.flip); ['sit', 'sofa', 'kneel'].forEach((k) => el.classList.toggle(k, hero.pose === k));
     heroFront(st);
   }
   // the things standing in front of the hero where they overlap it on screen, copied over it
   function heroFront(st) {
     const f = [hero.x - 0.25, hero.y - 0.25, hero.x + 0.25, hero.y + 0.25], z0 = hero.pose === 'sit' ? 1.72 : 0, a = hero.x - hero.y;
     const ids = shown.filter((o) => {
+      if (hero.pose === 'sofa' && o.id === hero.seat) return false;   // on the sofa: over it, legs over its edge
       if (o.fp[2] - o.fp[1] <= a - 1.4 || a + 1.4 <= o.fp[0] - o.fp[3]) return false;   // apart on screen
       const heroBehind = f[2] <= o.fp[0] + 1e-6 || f[3] <= o.fp[1] + 1e-6, itBehind = o.fp[2] <= f[0] + 1e-6 || o.fp[3] <= f[1] + 1e-6;
       if (heroBehind !== itBehind) return heroBehind;
@@ -7991,13 +8085,13 @@ const ROOM = (() => {
   function heroWalk(st, pts, done) {
     const el = st.querySelector('.hero'), len = pathLength(pts);
     if (!el || len < 1e-3) { heroHalt(); if (done) done(); return; }
-    hero.pose = ''; hero.lead = null; el.classList.remove('sit', 'reach', 'crouch', 'look', 'out'); HERO.still(el);
+    hero.pose = ''; hero.lead = null; el.classList.remove('sit', 'sofa', 'kneel', 'reach', 'crouch', 'look', 'out'); HERO.still(el);
     hero.walk = { pts: pts.slice(1), v: Math.max(5.5, len / 1.1), done };   // a long way hurries, about a second at most
     heroSteps(st);
   }
   function heroLead(st, off) {   // a finger on the hero leads him (off: from the finger to his feet, on the screen)
-    if (hero.pose === 'sit') { hero.pose = ''; hero.y += 1.0; heroPlace(st); }   // up from the chair, out behind it
-    st.querySelector('.hero').classList.remove('sit', 'reach', 'crouch', 'look', 'out'); HERO.still(st.querySelector('.hero'));
+    if (standUp()) heroPlace(st);   // up from the chair (out behind it), the sofa or the kotatsu
+    st.querySelector('.hero').classList.remove('sit', 'sofa', 'kneel', 'reach', 'crouch', 'look', 'out'); HERO.still(st.querySelector('.hero'));
     hero.going = null; hero.lead = { x: 0, y: 0, off, t: 0, to: null };
     grid = null; grid = walkGrid(); hero.walk = { pts: [], v: 5.5, done: null }; heroSteps(st);
   }
@@ -8046,19 +8140,30 @@ const ROOM = (() => {
     if (w.done) w.done();
   }
   function goHero(st, to, done) {
-    if (hero.pose === 'sit') { hero.pose = ''; hero.y += 1.0; }   // up from the chair, out behind it
+    standUp();
     const pts = pathTo([hero.x, hero.y], to);
     if (!pts) { heroPlace(st); if (done) done(); return; }
     heroWalk(st, pts, done);
   }
-  function heroLook(look) { if (look === 'R') { hero.back = true; hero.flip = false; hero.turn = true; } else if (look === 'L') { hero.back = true; hero.flip = true; hero.turn = true; } }   // a wall runs at a slant: turned to it
+  // seated (test, 2026-11-09: the sofa and the kotatsu besides the chair): getting up steps out — behind the chair, off the
+  // sofa or the cushion the way the hero came (hero.out)
+  const SEATED = ['sit', 'sofa', 'kneel'];
+  function standUp() {
+    if (!hero.pose) return false;
+    const o = hero.pose === 'sit' ? [0, 1.0] : hero.out || [0, 1];
+    hero.x += o[0]; hero.y += o[1]; hero.pose = ''; hero.out = null; hero.seat = null;
+    return true;
+  }
+  function heroLook(look) {
+    if (look === 'F' || look === 'X') { hero.back = false; hero.flip = false; hero.turn = look === 'X'; return; }   // facing us; turned along +x
+    if (look === 'R') { hero.back = true; hero.flip = false; hero.turn = true; } else if (look === 'L') { hero.back = true; hero.flip = true; hero.turn = true; } }   // a wall runs at a slant: turned to it
   function heroAt(st, sp) {   // at a thing's spot, facing it, doing its bit (sit stays; the rest pass)
     const el = st.querySelector('.hero');
-    hero.x = sp.x; hero.y = sp.y; heroLook(sp.look); hero.pose = sp.act === 'sit' ? 'sit' : '';
+    hero.x = sp.x; hero.y = sp.y; heroLook(sp.look); hero.pose = SEATED.includes(sp.act) ? sp.act : ''; hero.out = sp.out || null; hero.seat = sp.seat || null;
     heroPlace(st); heroSave();
-    if (el && sp.act !== 'sit') { el.classList.add(sp.act); if (sp.act !== 'out') setTimeout(() => el.classList.remove(sp.act), 900); }
+    if (el && !SEATED.includes(sp.act)) { el.classList.add(sp.act); if (sp.act !== 'out') setTimeout(() => el.classList.remove(sp.act), 900); }
   }
-  const POSE_MS = { sit: 300, reach: 340, crouch: 340, look: 300, out: 60 };
+  const POSE_MS = { sit: 300, sofa: 300, kneel: 300, reach: 340, crouch: 340, look: 300, out: 60 };
   // a thing tapped: the hero walks to it and does its bit, then the thing's own way into its page; tapped again on the way: straight in
   let namedT = 0;
   function named(st, el) {   // a tapped thing shows its words for a moment (they wait in its badge)
@@ -8073,7 +8178,7 @@ const ROOM = (() => {
     if (!st || !sp || !st.querySelector('.hero') || ed.on) { fn(); return; }
     if (reduced() || hero.going === id) { heroHalt(); hero.going = null; heroAt(st, sp); fn(); return; }
     hero.going = id;
-    goHero(st, sp.act === 'sit' ? [sp.x, sp.y + 1.0] : [sp.x, sp.y], () => {
+    goHero(st, sp.from || (sp.act === 'sit' ? [sp.x, sp.y + 1.0] : [sp.x, sp.y]), () => {
       if (hero.going !== id) return;
       heroAt(st, sp);
       setTimeout(() => { if (hero.going !== id) return; hero.going = null; fn(); }, POSE_MS[sp.act] || 300);
@@ -8082,12 +8187,18 @@ const ROOM = (() => {
   // a ware that does something (the gramophone plays 聽一輪): the hero goes to the clear side of it first
   function useWare(el) {
     const o = placedWares().find((q) => q.id === el.dataset.ware); if (!o) return;
+    // test (2026-11-09): the sofa, sat on (the nearer of its two seats, facing us); the kotatsu, knelt at (its left cushion, facing along it)
+    if (o.it.act === 'sofa') {
+      const sx = o.p.x + (hero.x < o.p.x ? -0.75 : 0.75), sy = o.p.y + 0.45;
+      use(el, () => {}, { x: sx, y: sy, look: 'F', act: 'sofa', from: [sx, o.p.y + 1.4], out: [0, 0.95], seat: 'w:' + o.id }); return;
+    }
+    if (o.it.act === 'kotatsu') { use(el, () => {}, { x: o.p.x - 1.18, y: o.p.y, look: 'X', act: 'kneel', from: [o.p.x - 1.9, o.p.y], out: [-0.72, 0] }); return; }
     const f = wareFootprint(o.it, o.p), g = walkGrid(), ok = ([x, y]) => { const i = Math.floor(x / CELL), j = Math.floor(y / CELL); return i >= 0 && j >= 0 && i < GW && j < GH && !g[j * GW + i]; };
     const [x, y, look] = [[o.p.x, f[3] + 0.5, 'R'], [f[2] + 0.5, o.p.y, 'L']].find(ok) || [o.p.x, f[3] + 0.5, 'R'];
     use(el, () => { if (o.it.act === 'listen') go('#/listen'); else if (o.it.act === 'wardrobe') DRESS.open(el.closest('.study')); }, { x, y, look, act: 'reach' });
   }
   function heroSettle(st) {   // back in the room: out of anything just put where it stood (off a chair moved away)
-    if (hero.pose === 'sit') { const c = spotOf('notebook'); if (Math.hypot(hero.x - c.x, hero.y - c.y) < 0.05) { heroPlace(st); return; } hero.pose = ''; hero.y += 1.0; }
+    if (hero.pose === 'sit') { const c = spotOf('notebook'); if (Math.hypot(hero.x - c.x, hero.y - c.y) < 0.05) { heroPlace(st); return; } } standUp();
     const g = walkGrid(), i = Math.floor(hero.x / CELL), j = Math.floor(hero.y / CELL);
     if (i < 0 || j < 0 || i >= GW || j >= GH || g[j * GW + i]) { const p = pathTo([hero.x, hero.y], [hero.x, hero.y]); if (p) { const q = p[p.length - 1]; hero.x = q[0]; hero.y = q[1]; } }
     heroPlace(st);
@@ -8169,12 +8280,13 @@ const ROOM = (() => {
         ${handsHtml()}
         ${study ? `${fxLit('chest', drawerFx)}${bookFx(bk)}${cardFx()}${pageFx(d, left)}${phonesFx()}` : ''}${DOORS.map(doorFx).join('')}
         ${heroHtml()}
-        ${LIT.map((L, i) => (study && i === 0 ? glow(L, 300, 220, '') : glow(L, 220, 160, ' lamp2'))).join('')}
+        ${LIT.map((L) => (L.id === 'desk' ? glow(L, 300, 220, '') : glow(L, 220, 160, ' lamp2'))).join('')}
         ${study ? `<i class="note-glow" aria-hidden="true" style="${vbPct(nx - 100, ny - 54)};${vbSize(200, 108)}"></i>
         <div class="tune" aria-hidden="true" style="${vbPct(hx - 20, hy - 66)};${vbSize(40, 60)}"><i style="--w:0s;--dx:-14px">♪</i><i style="--w:-1.2s;--dx:12px">♫</i><i style="--w:-2.4s;--dx:-4px">♪</i></div>
         <div class="steam" aria-hidden="true" style="${vbPct(mx - 8, my - 40)};${vbSize(16, 24)}"><i style="--w:0s"></i><i style="--w:-1.1s;left:50%"></i><i style="--w:-2.3s;left:20%"></i></div>` : ''}
         ${THINGS.map(thing).join('')}
-        ${ed.on ? '' : placedWares().filter((o) => o.it.act).map((o) => { const b = wareBox(o); return `<button type="button" class="ware-use" data-act="ware-use" data-ware="${o.id}" style="${vbPct(b[0], b[1])};${vbSize(b[2] - b[0], b[3] - b[1])}" aria-label="${esc(o.it.name)}：${o.it.act === 'listen' ? '聽一輪' : ''}"></button>`; }).join('')}
+        ${ed.on ? '' : LAMPS.map((L) => { const [lx, ly] = P(...L.p); return `<button type="button" class="lamp-tap${lampOff(L.id) ? ' off' : ''}" data-act="lamp-toggle" data-lamp="${L.id}" style="${vbPct(lx - 24, ly - 24)};${vbSize(48, 48)}" aria-label="${lampOff(L.id) ? '開燈' : '關燈'}"></button>`; }).join('')}
+        ${ed.on ? '' : placedWares().filter((o) => o.it.act).map((o) => { const b = wareBox(o); return `<button type="button" class="ware-use" data-act="ware-use" data-ware="${o.id}" style="${vbPct(b[0], b[1])};${vbSize(b[2] - b[0], b[3] - b[1])}" aria-label="${esc(o.it.name)}：${{ listen: '聽一輪', sofa: '坐下', kotatsu: '坐下', wardrobe: '衣櫃' }[o.it.act] || ''}"></button>`; }).join('')}
         ${ed.on ? `${decosHtml()}${selHtml()}<svg class="ghost" viewBox="${VB.join(' ')}" aria-hidden="true"><g></g></svg>` : ''}
       </div></div>
       ${ed.on ? editHtml() : ''}
@@ -9470,7 +9582,7 @@ const HERO = (() => {
     el._idle = setTimeout(() => {
       if (!el.isConnected) return;
       if (!ok()) { idle(el, ok); return; }
-      const sit = el.classList.contains('sit'), names = sit ? ['nod'] : (inCat(el) ? CATS : PEOPLE).filter((k) => k !== el._idleLast && !((k === 'wave' || k === 'maneki') && el.classList.contains('back')));
+      const sit = el.matches('.sit, .sofa, .kneel'), names = sit ? ['nod'] : (inCat(el) ? CATS : PEOPLE).filter((k) => k !== el._idleLast && !((k === 'wave' || k === 'maneki') && el.classList.contains('back')));
       const k = names[Math.floor(Math.random() * names.length)]; el._idleLast = k;
       el.classList.add('idle-' + k);
       setTimeout(() => { el.classList.remove('idle-' + k); idle(el, ok); }, sit ? 1600 : IDLES[k]);
@@ -9481,7 +9593,7 @@ const HERO = (() => {
   const TAPS = { hop: 520, wave: 1200, spin: 700, cheer: 900 };
   function react(el) {
     if (calm()) return;
-    const names = el.classList.contains('sit') ? ['wave'] : Object.keys(TAPS).filter((k) => k !== el._tapLast && !(k === 'wave' && el.classList.contains('back')));
+    const names = el.matches('.sit, .sofa, .kneel') ? ['wave'] : Object.keys(TAPS).filter((k) => k !== el._tapLast && !(k === 'wave' && el.classList.contains('back')));
     const k = names[Math.floor(Math.random() * names.length)]; el._tapLast = k;
     el.classList.remove(...Object.keys(TAPS)); still(el); void el.offsetWidth; el.classList.add(k);
     clearTimeout(el._tap); el._tap = setTimeout(() => el.classList.remove(k), TAPS[k]);
@@ -9742,6 +9854,7 @@ function buyWare(it) {
 Object.assign(ACTIONS, {
   'room-edit': (el) => ROOM.edit(el, 'on'),
   'ware-use': (el) => ROOM.useWare(el),
+  'lamp-toggle': (el) => { const id = el.dataset.lamp; if (lampOff(id)) delete state.lampsOff[id]; else state.lampsOff[id] = true; saveState(); route(); },
   'room-edit-done': (el) => ROOM.edit(el, 'done'),
   'room-edit-take': (el) => ROOM.edit(el, 'take', el.dataset.id),
   'room-edit-turn': (el) => ROOM.edit(el, 'turn'),
