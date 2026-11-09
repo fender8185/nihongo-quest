@@ -1099,6 +1099,48 @@ def test_the_full_length_mirror_stands_in_the_bedroom_and_the_wardrobe_rolls_clo
     assert r['tabs'] == ['臉型', '髮型', '五官'] and r['feats'] == ['眼睛', '眼睛顏色', '眉毛', '嘴巴', '鬍子'], r
     assert r['faceKept'] and r['styles'] == [True, True], r   # the wardrobe's dice: only clothes they have
 
+def test_every_mirror_opens_the_mirror_and_a_low_table_or_a_cushion_is_knelt_at(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + """ ['mirror', 'chabudai', 'zabuton'].forEach(id => { state.owned[id] = { paid: 0, on: todayStr() }; });
+      state.placed.mirror = { w: 'L', u: 9.5, v: 5 }; state.placed.chabudai = { w: 'F', x: 12, y: 9, r: 0 }; state.placed.zabuton = { w: 'F', x: 10.6, y: 9, r: 0 }; saveState(); """ + GO_ROOM + """
+      const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('.study'), h = () => st().querySelector('.hero');
+      st().querySelector('.ware-use[data-ware="mirror"]').click(); let open = false; for (let i = 0; i < 100 && !open; i++) { await wait(50); open = !!st().querySelector('.dress.on'); }
+      const title = st().querySelector('.dress-bar .t').textContent, tabs = [...st().querySelectorAll('.dress-tabs button')].map(t => t.textContent);
+      st().querySelector('[data-act="dress-cancel"]').click(); await wait(650);
+      const t = st().querySelector('.ware-use[data-ware="chabudai"]'); t.click(); await wait(2500); t.click(); await wait(500);
+      const knelt = { pose: h().classList.contains('kneel'), turn: h().classList.contains('turn'), back: h().classList.contains('back') };
+      return JSON.stringify({ open, title, tabs, knelt, mirrors: WARES.filter(w => w.act === 'mirror').map(w => w.id).sort(), kneel: WARES.filter(w => w.act === 'kneel').map(w => w.id).sort() }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['open'] and r['title'] == '圓鏡' and r['tabs'] == ['臉型', '髮型', '五官'], r
+    assert r['knelt'] == {'pose': True, 'turn': True, 'back': False}, r   # on the cushion left of the table, turned to it
+    assert r['mirrors'] == ['dresser', 'fullMirror', 'mirror'] and r['kneel'] == ['chabudai', 'zabuton'], r
+
+def test_the_gramophone_plays_a_record_and_its_records_change(b):
+    js = "(async () => { " + FRESH + """ state.owned.gramophone = { paid: 0, on: todayStr() }; state.placed.gramophone = { w: 'F', x: 12, y: 9, r: 0 }; saveState(); """ + GO_ROOM + """
+      const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('.study');
+      const first = { playing: MUSIC.playing(), shown: st().classList.contains('music'), notes: !!st().querySelector('.tune.gramo') };
+      st().querySelector('.ware-use[data-ware="gramophone"]').click(); let open = false; for (let i = 0; i < 100 && !open; i++) { await wait(50); open = !!document.querySelector('.rec-list'); }
+      const recs = [...document.querySelectorAll('.rec')].map(e => [e.dataset.id, e.classList.contains('on')]);
+      document.querySelector('.rec[data-id="yozakura"]').click();
+      const put = [state.record, document.querySelector('.rec[data-id="yozakura"]').classList.contains('on'), MUSIC.playing()];
+      document.querySelector('[data-act="music-stop"]').click(); const stopped = [state.musicOff, MUSIC.playing(), st().classList.contains('music')];
+      document.querySelector('[data-act="music-stop"]').click(); const again = MUSIC.playing(); closeModal();
+      location.hash = '#/stats'; await wait(300); const away = MUSIC.playing();
+      return JSON.stringify({ first, open, recs, put, stopped, again, away, saved: [normalizeState({ record: 3, musicOff: 'x' }).record, normalizeState({}).musicOff] }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['first'] == {'playing': True, 'shown': True, 'notes': True} and r['open'], r   # on from the start, notes from its horn
+    assert r['recs'] == [['engawa', True], ['yozakura', False]] and r['put'] == ['yozakura', True, True], r
+    assert r['stopped'] == [True, False, False] and r['again'] and not r['away'], r   # stopped by hand; only in the rooms
+    assert r['saved'] == ['', False], r
+
+def test_a_tap_on_the_pond_stirs_it(b):
+    js = "(async () => { " + FRESH + """ state.owned.pond = { paid: 0, on: todayStr() }; state.placed.pond = { w: 'Y', x: 60, y: 60 }; saveState();
+      location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); const wait = (ms) => new Promise(q => setTimeout(q, ms)), y = () => document.querySelector('.yard');
+      y().querySelector('.yware[data-ware="pond"]').click(); let stir = false; for (let i = 0; i < 80 && !stir; i++) { await wait(50); stir = !!y().querySelector('.yware[data-ware="pond"] .stir'); }
+      const crouch = y().querySelector('.yhero').classList.contains('crouch'), parts = [y().querySelectorAll('.stir .rip').length, !!y().querySelector('.stir .leap')]; await wait(3800);
+      return JSON.stringify({ stir, crouch, parts, gone: !y().querySelector('.stir') }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'stir': True, 'crouch': True, 'parts': [9, True], 'gone': True}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
