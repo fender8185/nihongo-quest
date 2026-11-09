@@ -8813,7 +8813,11 @@ function fitThumbs(root) {
 // Poses and motions are classes on the .hero box and move the parts in CSS: walk, run, sit, reach, crouch, look; idle-… (HERO.idle);
 // hop, wave, spin, cheer (a tap).
 const HERO = (() => {
-  const SHOE = '#f4f1ea', INK = '#2a2730', LIP = '#7a4a3a';
+  const INK = '#2a2730', LIP = '#7a4a3a';
+  // the clothes' colours (test, 2026-11-09): one palette of 16 for the top, the trousers and the shoes — the 8 tops' and the 8
+  // trousers' colours before it, so a look saved then keeps its colours
+  const CLOTH = [['#ecebe6', '白'], ['#e9e2d0', '米白'], ['#b8a27a', '卡其'], ['#d9a43a', '芥末黃'], ['#6e4f3a', '咖啡'], ['#d0574b', '紅'], ['#e58fa8', '粉紅'], ['#6b7a45', '橄欖綠'],
+    ['#4f7a4a', '森林綠'], ['#3f9a8c', '青綠'], ['#4f6f9e', '牛仔藍'], ['#5a68d8', '靛藍'], ['#3f4660', '深藍'], ['#8a8f99', '灰'], ['#4a4a55', '炭灰'], ['#2b2b33', '黑']];
   // what they can choose, no part anyone's by gender: [id, name] (a colour's id is the colour); LOOK0 is a new hero's look
   const OPTS = {
     face: [['mochi', '麻糬臉'], ['round', '圓臉'], ['chubby', '包子臉'], ['oval', '鵝蛋臉'], ['pointed', '尖下巴']],
@@ -8825,12 +8829,14 @@ const HERO = (() => {
     brows: [['soft', '自然'], ['straight', '平眉'], ['thick', '粗眉'], ['worried', '八字眉'], ['raised', '挑眉']],
     mouth: [['smile', '微笑'], ['grin', '開心'], ['cat', '貓嘴'], ['flat', '一字'], ['o', '圓嘴'], ['tongue', '吐舌']],
     beard: [['none', '無'], ['stubble', '鬍渣'], ['mustache', '八字鬍'], ['goatee', '山羊鬍'], ['full', '落腮鬍']],
-    top: [['#5a68d8', '靛藍'], ['#3f9a8c', '青綠'], ['#d0574b', '紅'], ['#d9a43a', '芥末黃'], ['#4f7a4a', '森林綠'], ['#4a4a55', '炭灰'], ['#e9e2d0', '米白'], ['#e58fa8', '粉紅']],
+    top: CLOTH,
     topStyle: [['hoodie', '帽T'], ['tee', 'T恤'], ['sweater', '毛衣'], ['shirt', '襯衫'], ['jinbei', '甚平'], ['cattop', '貓咪上衣'], ['wizrobe', '魔法師長袍']],
     bottomStyle: [['pants', '長褲'], ['shorts', '短褲'], ['wide', '寬褲'], ['skirt', '裙子'], ['catpants', '貓咪褲']],
-    bottom: [['#3f4660', '深藍'], ['#2b2b33', '黑'], ['#b8a27a', '卡其'], ['#4f6f9e', '牛仔藍'], ['#6e4f3a', '咖啡'], ['#8a8f99', '灰'], ['#ecebe6', '白'], ['#6b7a45', '橄欖綠']]
+    bottom: CLOTH,
+    shoeStyle: [['sneaker', '球鞋'], ['boots', '短靴'], ['loafer', '皮鞋']],   // everyone's, none sold
+    shoe: CLOTH
   };
-  const LOOK0 = { face: 'mochi', skin: '#f3d1b5', cheeks: 'blush', fringe: 'round', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'normal', eyeColor: '#2a2730', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'hoodie', top: '#5a68d8', bottomStyle: 'pants', bottom: '#3f4660' };
+  const LOOK0 = { face: 'mochi', skin: '#f3d1b5', cheeks: 'blush', fringe: 'round', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'normal', eyeColor: '#2a2730', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'hoodie', top: '#5a68d8', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#ecebe6' };
   // the 16 hairstyles before the hair came in parts (1.2.1): each as its nearest 瀏海, 兩側, 後面, 造型
   const OLD_HAIR = { crop: ['round', 'short', 'short', 'none'], neat: ['swept', 'short', 'short', 'none'], curtain: ['center', 'chin', 'short', 'none'], ahoge: ['round', 'short', 'short', 'ahoge'],
     spiky: ['choppy', 'short', 'short', 'none'], slick: ['none', 'short', 'short', 'none'], curly: ['curly', 'curls', 'short', 'none'], afro: ['curly', 'curls', 'bob', 'none'], bob: ['blunt', 'incurl', 'bob', 'none'],
@@ -9185,7 +9191,14 @@ const HERO = (() => {
   }
   // bottoms (c: the trousers' colour): a leg round x, the hips over both legs, the foot, and what goes with them — a skirt over
   // both legs, a tail behind; the shoe is everyone's but the cat's paws
-  const shoe = (F, x) => `<path ${F(SHOE, 0.1)} d="M${q(x - 6.5)} -9 h13 v4.6 q0 4.4 -4.2 4.4 h-5 q-3.8 0 -3.8 -4.4 Z"/><path d="M${q(x - 6.5)} -3.4 h13" stroke="#000" stroke-opacity=".12" stroke-width="1.2"/>`;
+  // shoes (test, 2026-11-09), each round x in its colour c: a sneaker on a white sole (a darker one under a light shoe), a short boot
+  // over the trouser's hem, a low leather shoe with a shine
+  const light = (c) => [1, 3, 5].reduce((a, i) => a + parseInt(c.slice(i, i + 2), 16), 0) > 560;
+  const SHOES = {
+    sneaker: (F, c, x) => `<path ${F(c, 0.1)} d="M${q(x - 6.5)} -9 h13 v4.6 q0 4.4 -4.2 4.4 h-5 q-3.8 0 -3.8 -4.4 Z"/><path ${F(light(c) ? dk(c, 0.8) : '#f4f1ea', 0.05)} d="M${q(x - 6.5)} -3.4 h13 q-.2 3.4 -4.2 3.4 h-5 q-3.6 0 -3.8 -3.4 Z"/><path d="M${q(x - 2.6)} -7 h5.2" stroke="${light(c) ? dk(c, 0.75) : lt(c, 0.45)}" stroke-width="1" stroke-linecap="round"/>`,
+    boots: (F, c, x) => `<path ${F(c, 0.15)} d="M${q(x - 6)} -15 h12 v10.6 q0 4.4 -4.2 4.4 h-4.6 q-3.2 0 -3.2 -4.4 Z"/><path ${F(dk(c, 0.82), 0.3)} d="M${q(x - 6.4)} -16 h12.8 v3 h-12.8 Z"/><path d="M${q(x - 6)} -2 h12" stroke="#000" stroke-opacity=".18" stroke-width="1.4"/>`,
+    loafer: (F, c, x) => `<path ${F(c, 0.1)} d="M${q(x - 6.5)} -7 h13 v2.6 q0 4.4 -4.2 4.4 h-5 q-3.8 0 -3.8 -4.4 Z"/><path d="M${q(x - 3)} -5.6 h6" stroke="${dk(c, 0.7)}" stroke-width="1.1" stroke-linecap="round"/><ellipse cx="${q(x + 2.6)}" cy="-3.4" rx="2" ry=".9" fill="#fff" fill-opacity=".35"/>`
+  };
   const HIPS = (F, c) => `<path ${F(c, 0.7)} d="M-17 -33 H21 L21.6 -22 H-17.6 Z"/>`;
   const BOTTOMS = {
     pants: { hips: HIPS, leg: (F, c, x) => `<rect x="${q(x - 5.5)}" y="-28" width="11" height="23" rx="4" ${F(c, 0.4)}/>` },
@@ -9276,7 +9289,7 @@ const HERO = (() => {
     const hw = flat(hc), hs = `style="stroke:${C(dk(hc, 0.7))}"`, hair = (draw) => draw(hw, flat(dk(hc, 0.8)));
     const top = lk.top, topDk = dk(lk.top, 0.84), pants = lk.bottom, skin = lk.skin, tp = TOPS[lk.topStyle], bt = BOTTOMS[lk.bottomStyle], full = FULL[wear.head];
     const defs = `<defs><clipPath id="fc${n}" clipPathUnits="userSpaceOnUse"><path d="${FACE[lk.face]}"/></clipPath></defs>`;
-    const pd = dk(pants, 0.78), leg = (cls, x) => `<g class="leg ${cls}">${bt.leg(L, pants, x, skin)}${bt.foot ? bt.foot(L, pants, x, pd) : shoe(L, x)}</g>`;
+    const pd = dk(pants, 0.78), leg = (cls, x) => `<g class="leg ${cls}">${bt.leg(L, pants, x, skin)}${bt.foot ? bt.foot(L, pants, x, pd) : (SHOES[lk.shoeStyle] || SHOES.sneaker)(L, lk.shoe, x)}</g>`;
     const legs = () => `<g class="legs">${bt.hips ? bt.hips(L, pants) : ''}${leg('l', -7)}${leg('r', 11)}</g>${bt.over ? bt.over(L, pants, pd) : ''}`;   // a skirt hangs over both legs, not with them
     const arms = arm(L, tp, top, topDk, skin, 'l', -1) + arm(L, tp, top, topDk, skin, 'r', 1);
     const face = `<path ${L(skin, 2.4)} d="${FACE[lk.face]}"/><g transform="${CHEEK}">${CHEEKS[lk.cheeks]}</g><g clip-path="url(#fc${n})">${BEARD[lk.beard](L(lk.hairColor, 2.2))}</g>${MOUTH[lk.mouth](['#a9714d', '#76492f'].includes(skin) ? '#3a1d14' : LIP)}
@@ -9296,7 +9309,8 @@ const HERO = (() => {
   const onBody = (b) => { const [x, y, w, h] = b.split(' ').map(Number); return [HX(x), HY(y), q(w * HS), q(h * HS)].join(' '); };
   const head = (look, crop) => (crop === 'back' ? svg({ look, back: true, box: onBody('-62 -200 128 132') }) : svg({ look, front: true, box: onBody(crop === 'face' ? '-27 -138 58 52' : crop === 'bust' ? '-62 -200 128 132' : '-58 -198 120 120') }));
   const isTop = (id) => TOPS[id] !== undefined;
-  const clothes = (id, look) => svg({ look: Object.assign({}, look, isTop(id) ? { topStyle: id } : { bottomStyle: id }), front: true, box: isTop(id) ? '-34 -76 72 56' : '-30 -40 64 44' });
+  const clothes = (id, look) => (SHOES[id] ? svg({ look: Object.assign({}, look, { shoeStyle: id, bottomStyle: 'shorts' }), front: true, box: '-17 -19 38 23' })   // a shoe on bare legs
+    : svg({ look: Object.assign({}, look, isTop(id) ? { topStyle: id } : { bottomStyle: id }), front: true, box: isTop(id) ? '-34 -76 72 56' : '-30 -40 64 44' }));
   // a thing worn, on its own (古道具屋, the wardrobe): drawn on a faint head and shoulders so it reads (what goes on the body, on a
   // faint body, the backpack from behind); a whole head on its own
   function thumb(id, look) {
@@ -9484,8 +9498,8 @@ const DRESS = (() => {
     const say = HERO.whole(it.id) ? (kind() === 'head' ? `戴著${it.name}，看不到臉和頭髮。` : '') : swap && (d.tab === 'hair' || d.tab === 'wear') ? it.name + swap : '';
     return say ? `<p class="dress-note">${esc(say)}</p>` : '';
   }
-  // the styles of tops or trousers they have (帽T and 長褲 and what was bought), each on the hero in their colours
-  const have = (key, v) => v === HERO.LOOK0[key] || owns(v);
+  // the styles of tops, trousers and shoes they have (帽T and 長褲 and what was bought; every shoe), each on the hero in their colours
+  const have = (key, v) => key === 'shoeStyle' || v === HERO.LOOK0[key] || owns(v);
   const styles = (key) => `<div class="dress-opts">${HERO.OPTS[key].filter(([v]) => have(key, v)).map(([v, name]) => `<button type="button" class="dress-opt" data-act="dress-pick" data-key="${key}" data-val="${v}" aria-pressed="${d.look[key] === v}">${HERO.clothes(v, d.look)}<span>${name}</span></button>`).join('')}</div>`;
   function body() { return note() + parts(); }
   function parts() {
@@ -9495,7 +9509,7 @@ const DRESS = (() => {
     if (d.tab === 'beard') return sec('鬍子', opts('beard', 'face'));
     if (d.tab === 'clothes') {
       const more = WARES.filter((it) => it.kind === 'clothes' && !owns(it.id) && forSale(it)).length;   // a limited one only while its sale is on
-      return sec('上衣', styles('topStyle')) + sec('上衣顏色', sws('top')) + sec('褲子', styles('bottomStyle')) + sec('褲子顏色', sws('bottom'))
+      return sec('上衣', styles('topStyle')) + sec('上衣顏色', sws('top')) + sec('褲子', styles('bottomStyle')) + sec('褲子顏色', sws('bottom')) + sec('鞋子', styles('shoeStyle')) + sec('鞋子顏色', sws('shoe'))
         + (more ? `<p class="dress-more">古道具屋還有 ${more} 件衣服褲子<button type="button" class="btn btn-sm" data-act="dress-shop">去看看</button></p>` : '');
     }
     // what was bought at 古道具屋, by part: a tap puts it on or takes it off
