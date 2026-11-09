@@ -7,9 +7,10 @@ const DATA = {
   VOCAB: [{ w: '花', r: 'はな', lv: 'N5' }, { w: '食べる', r: 'たべる', lv: 'N5' }, { w: '経済', r: 'けいざい', lv: 'N3' }, { w: 'これ', r: 'これ', lv: 'PRE_N5' }],
   GRAMMAR: [{ id: 'g1', u: 'm3' }]
 };
-const CAST = { miku: { name: '美玖' }, kenta: { name: '健太' } };
+const CAST = { miku: { name: '美玖', hours: [[7, 20, 'town', 'bakeryIn']] }, kenta: { name: '健太', hours: [[5, 21, 'town', 'bakery']] } };
+const SPOTS = { town: { bakery: {}, bakeryIn: {} } };
 const ev = (o) => Object.assign({ id: 'e1', u: 'm1', who: 'miku', at: 'town', title: 't', lines: [['miku', 'これ、なに？', '這是什麼？']] }, o);
-const town = (events, extra) => Object.assign({ CAST, NAMES: ['美玖'], EVENTS: events }, extra);
+const town = (events, extra) => Object.assign({ CAST, SPOTS, PLACES: ['town', 'beach'], NAMES: ['美玖'], EVENTS: events }, extra);
 const kinds = (probs) => [...new Set(probs.map(p => p.split(':')[0]))].sort();
 
 test('a clean event passes', () => {
@@ -57,6 +58,12 @@ test('chat lines are checked like event lines', () => {
 test('a line in Chinese only (empty Japanese) is fine', () => {
   assert.deepEqual(check(town([ev({ lines: [['miku', '', '（用中文）你好']] })]), DATA), []);
   assert.deepEqual(check(town([ev()], { CHAT: { miku: [['m1', '', '（用中文）你好']] } }), DATA), []);
+});
+test('an event must be hostable: its person is there by their hours, the place draws people, the spot exists', () => {
+  assert.deepEqual(kinds(check(town([ev({ at: 'beach' })]), DATA)), ['host']);   // 美玖 is never on the beach
+  assert.deepEqual(kinds(check(town([ev({ who: 'hero' })]), DATA)), ['ref']);   // the hero hosts nothing
+  assert.deepEqual(kinds(check(town([ev()], { SPOTS: { town: { bakery: {} } } }), DATA)), ['host']);   // 美玖's spot is missing
+  assert.deepEqual(kinds(check(town([ev({ at: 'station' })]), DATA)), ['ref']);   // a place not drawn yet
 });
 test('events.js itself passes against data.js', () => {
   const D = require('../scripts/data-file').load();

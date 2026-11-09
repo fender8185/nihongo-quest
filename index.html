@@ -6083,11 +6083,17 @@ function sceneTick() {
   b.classList.toggle('scene-day', c.day > 0.999); b.classList.toggle('scene-night', c.day < 0.001);
   applyTheme();   // a dialog opened over a scene is lit as the scene
 }
-setInterval(() => { if (document.body.classList.contains('scene')) sceneTick(); }, 60000);   // the scenes move with the clock while one is open
+// a minute on (or back in the app): the clock, and out and about the town as the hour has it — people gone home, shops shut (TOWNEV)
+function sceneMinute() {
+  sceneTick();
+  const yd = document.querySelector('#view .yard');
+  if (yd && !TALK.on() && yd.dataset.sig !== TOWNEV.sig(yd.dataset.place)) route();
+}
+setInterval(() => { if (document.body.classList.contains('scene')) sceneMinute(); }, 60000);   // the scenes move with the clock while one is open
 // back in the app after a while: the scenes catch up with the clock, and so do the pages' colours, except in the middle of questions
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
-  if (document.body.classList.contains('scene')) sceneTick(); else if (!midQuestions()) applyTheme();
+  if (document.body.classList.contains('scene')) sceneMinute(); else if (!midQuestions()) applyTheme();
 });
 // furigana: all → smart (no readings on mastered words) → off
 const FURI_LABEL = { all: '顯示', smart: '熟練的字不標', off: '隱藏' };
@@ -6802,7 +6808,7 @@ function renderOutside(view, place = 'yard') {
   sceneTick();
   const pct = ringPct(dayProgress());
   const yard = view.querySelector('.yard');
-  if (yard && (yard.dataset.house !== (state.house || '') || yard.dataset.place !== place)) { yard.remove(); }   // the house changed (another device), or the other place: drawn anew
+  if (yard && (yard.dataset.house !== (state.house || '') || yard.dataset.place !== place || (yard.dataset.sig !== TOWNEV.sig(place) && !TALK.on()))) { yard.remove(); }   // the house changed (another device), the other place, or who is about (TOWNEV): drawn anew
   else if (yard) {   // a redraw: new stars fade in, the motion carries on; the yard's things again only if they moved (sync, another device)
     yardLevel(yard, pct);
     const w = yard.querySelector('.ywares'); if (w && !yed.on && w.dataset.sig !== yardSig()) { w.innerHTML = yardWaresHtml(); w.dataset.sig = yardSig(); }
@@ -6820,7 +6826,7 @@ function renderOutside(view, place = 'yard') {
   if (INDOOR.includes(place)) yh.Y = Math.min(yh.Y, INDOOR_BACK);   // in a room: on its floor
   view.innerHTML = yardHtml(pct, place);
   const y = view.querySelector('.yard');
-  y.dataset.house = state.house || '';
+  y.dataset.house = state.house || ''; y.dataset.sig = TOWNEV.sig(place);
   ycam.x = yh.fromDoor ? 0 : yh.X; yardLayout(y);   // the camera on the hero (at the door, coming out)
   const ro = new ResizeObserver(() => { if (!y.isConnected) { ro.disconnect(); return; } yardLayout(y); });
   ro.observe(y.querySelector('.sky'));
@@ -7184,8 +7190,9 @@ const TOWNEV = (() => {
   const need = (e) => (!lastDone() ? 0 : unitIdx(e.u) < reachedIdx() ? 1 : 2);
   function due() {
     const done = state.town.done, R = reachedIdx(), days = studyDaysSince(lastDone());
+    const can = (id) => { const c = T().CAST[id]; return Boolean(c) && (c.art !== 'npc' || met(id)); };   // 小春, ムギ: once they have knocked
     return T().EVENTS.filter((e) => { const i = unitIdx(e.u);
-      return !done[e.id] && i >= 0 && i <= R && (i < R || started(e.u)) && (!e.after || done[e.after]) && days >= need(e); });
+      return !done[e.id] && i >= 0 && i <= R && (i < R || started(e.u)) && (!e.after || done[e.after]) && days >= need(e) && can(e.who); });
   }
   const inside = (h, [from, to]) => (from <= to ? h >= from && h < to : h >= from || h < to);
   const isOpen = (shop, h = sceneHour()) => !T().HOURS[shop] || inside(h, T().HOURS[shop]);
@@ -7198,9 +7205,9 @@ const TOWNEV = (() => {
   function waiting(h = sceneHour(), day = new Date()) {
     const list = due(); if (!list.length) return null;
     for (const e of list) { const w = whereIs(e.who, h, day); if (w && w.place === e.at) return { ev: e, place: w.place, spot: w.spot }; }
-    const e = list[0], home = (T().CAST[e.who].hours.find((x) => x[2] === e.at) || [])[3];
-    if (e.when !== 'night' && home && studyDaysSince(lastDone()) - need(e) >= 3) return { ev: e, place: e.at, spot: home };
-    return null;
+    const home = (e) => (T().CAST[e.who].hours.find((x) => x[2] === e.at) || [])[3];
+    const e = list.find((x) => x.when !== 'night' && home(x));
+    return e && studyDaysSince(lastDone()) - need(e) >= 3 ? { ev: e, place: e.at, spot: home(e) } : null;
   }
   function finish(id) {   // done: the day, the people in it met, a bus stop it opens, its 10 言靈 (once: koto.found)
     const e = T().EVENTS.find((x) => x.id === id); if (!e) return;
@@ -7231,6 +7238,8 @@ const TOWNEV = (() => {
     });
     return out;
   }
+  // what a place shows of the town now (its shops' doors, who stands where, the mark): drawn anew when it changes
+  const sig = (place) => (place === 'town' ? TOWN_SHOPS.map((x) => shopState(x[6])).join() : '') + '|' + here(place).map((p) => p.id + (p.host ? '!' : '')).join();
   function castHtml(place) {
     return here(place).map(({ id, spot, host }) => { const k = yScale(spot.Y) * (T().CAST[id].size || 1);
       return `<button type="button" class="hero npc npc-${id}${host ? ' ev-host' : ''}" data-act="npc-talk" data-npc="${id}" aria-label="${esc(T().CAST[id].name)}" style="transform:translate(${spot.X}px,${-spot.Y}px) scale(${k.toFixed(3)});z-index:${300 - spot.Y}">${art(id)}${host ? '<i class="ev-mark" aria-hidden="true">！</i>' : ''}</button>`; }).join('');
@@ -7261,9 +7270,10 @@ const TOWNEV = (() => {
   // a tap on someone: the hero walks over, turns to them, and their event if one waits on them here (done: its 言靈, the mark
   // and the dots gone), else a word
   function talk(el) {
-    const id = el.dataset.npc, yard = el.closest('.yard'), p = yard && here(yard.dataset.place).find((x) => x.id === id); if (!p) return;
+    const id = el.dataset.npc, yard = el.closest('.yard'), p = yard && here(yard.dataset.place).find((x) => x.id === id);
+    if (!p) { if (yard) { toast(`${T().CAST[id].name}已經離開了。`); route(); } return; }   // gone home since the place was drawn
     const a = p.spot, side = yh.X <= a.X ? -1 : 1, w = p.host && waiting(now(), today()), e = w && w.ev;
-    const ended = () => { finish(e.id); yard.querySelectorAll('.ev-mark, .ev-dot').forEach((x) => x.remove()); yard.querySelectorAll('.ev-host').forEach((x) => x.classList.remove('ev-host')); kotoButtons(yard); toast(`完成「${e.title}」・言靈 +10`, 3200); };
+    const ended = () => { finish(e.id); toast(`完成「${e.title}」・言靈 +10`, 3200); route(); };   // drawn anew: its shop open, the mark gone
     yHeroWalk(yard, [a.X + side * 76 * yScale(a.Y), a.Y + 2], () => {
       yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard);
       if (e) TALK.open(yard, id, e.lines, ended, null, { ev: true }); else TALK.open(yard, id, [chatLine(id)]);
@@ -7277,7 +7287,7 @@ const TOWNEV = (() => {
     const p = el.closest('.yard').querySelector(`.npc-${o}`);
     if (p) talk(p); else toast(`${T().CAST[o].name}現在不在店裡。`);
   }
-  const api = { unitIdx, reachedIdx, started, studyDaysSince, due, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, hop, dot, hint, PLACE_NAME };
+  const api = { unitIdx, reachedIdx, started, studyDaysSince, due, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, hop, dot, hint, PLACE_NAME, sig };
   return api;
 })();
 // the opening (test, 2026-11-09; the user's picks): as a child the hero never understood what their Japanese grandmother said

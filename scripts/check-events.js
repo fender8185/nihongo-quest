@@ -1,14 +1,15 @@
 // Checks the town's people, chat and events (events.js) against the course (data.js): every kanji is in a ruby mark, a word above
 // the event's level or not in the course carries a Chinese gloss ({漢字|かな|中文}) unless it is a name, a reply choice practises
 // grammar from its unit or before and has a right answer and a wrong one with its reason, the people, places and earlier events
-// named exist, and no unit is skipped up to the last one written.
+// named exist, each event's person is at its place by their hours (on a spot that is drawn), and no unit is skipped up to the last
+// one written.
 // usage: node scripts/check-events.js   — one line a problem, exit 1 when there is any (scripts/test.sh)
 const fs = require('fs');
 const path = require('path');
 
 const FILE = path.join(__dirname, '..', 'events.js');
 const LEVELS = ['PRE_N5', 'N5', 'N4', 'N3', 'N2', 'N1'];
-const PLACES = ['yard', 'beach', 'town', 'street', 'shokudo', 'izakaya', 'station', 'sento', 'shrine', 'castle'];
+const PLACES = ['beach', 'town', 'shokudo', 'izakaya'];   // the places index.html draws people in (events.js TOWN.PLACES)
 const KANJI = /[㐀-鿿豈-﫿々〆]/;
 const MARK = /\{([^|}]+)\|([^|}]+)(?:\|([^}]+))?\}/g;
 
@@ -37,14 +38,20 @@ function check(T, D) {
     }
   }
   const who = (id, where) => { if (id !== 'hero' && !cast[id]) bad('ref', where, `no one called ${id}`); };
+  const spots = T.SPOTS || {};
+  Object.entries(cast).forEach(([id, c]) => (c.hours || []).forEach(([, , place, spot]) => {   // everyone's hours put them on a spot that is drawn
+    if (!places.includes(place)) bad('ref', `cast ${id}`, `no place ${place} drawn yet`);
+    else if (!spots[place] || !spots[place][spot]) bad('host', `cast ${id}`, `no spot ${place}.${spot}`);
+  }));
   const ids = new Set(), used = new Set();
   (T.EVENTS || []).forEach((e) => {
     const where = e.id;
     if (ids.has(e.id)) bad('ref', where, 'the same id twice'); ids.add(e.id);
     if (unitIdx(e.u) < 0) { bad('ref', where, `no unit ${e.u}`); return; }
     used.add(unitIdx(e.u));
-    who(e.who, where);
-    if (!places.includes(e.at)) bad('ref', where, `no place ${e.at}`);
+    if (!cast[e.who]) bad('ref', where, `no one called ${e.who} to host it`);
+    if (!places.includes(e.at)) bad('ref', where, `no place ${e.at} drawn yet`);
+    else if (cast[e.who] && !(cast[e.who].hours || []).some((h) => h[2] === e.at && spots[e.at] && spots[e.at][h[3]])) bad('host', where, `${e.who} is never at ${e.at} by their hours`);
     if (e.after && !(T.EVENTS || []).some(x => x.id === e.after)) bad('ref', where, `no event ${e.after} before it`);
     (e.lines || []).forEach((l, i) => {
       const at = `${where}#${i}`;

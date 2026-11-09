@@ -225,6 +225,28 @@ def test_people_indoors_are_drawn_closer_up_than_in_town(b):
       return JSON.stringify({ town, room, hero }); })()"""))
     assert r['town'] < 0.5 and r['room'] > 0.6 and r['hero'] > 0.6, r   # the counter comes to their middle, not over their heads
 
+# ---- review fixes (pass 0) ----
+def test_mugi_hosts_nothing_before_he_has_knocked(b):
+    r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['k1', 'm1', 'kenta', 'town'], ['g1', 'm1', 'mugi', 'beach'], ['k2', 'm1', 'kenta', 'town']]); begin('m1');
+      state.met = { koharu: Date.now() - 86400000 }; state.koto.sets = { dev: 1 }; state.town.done.k1 = '2026-11-01'; study('2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06');
+      const wd = new Date(2026, 10, 10), w = (h) => { const x = TOWNEV.waiting(h, wd); return x && x.ev.id; };
+      return JSON.stringify({ due: ids(), noon: w(12), late: w(23), visitor: NPC.visitor() }); })()"""))
+    assert r == {'due': ['k2'], 'noon': 'k2', 'late': 'k2', 'visitor': 'mugi'}, r   # not 'g1' before he knocks; the one after him goes on
+
+def test_the_town_redraws_when_an_event_ends_and_when_the_hour_moves_on(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + TALK_EV + """
+      t.click(); await wait(30); t.querySelectorAll('.talk-opt')[0].click(); await wait(30); t.click(); await wait(30); t.click(); await wait(400);
+      const shut = y().querySelector('.shop-front[data-shop="bakery"]').classList.contains('closed');
+      TOWNEV.clock = { h: 23, day: new Date(2026, 10, 10) }; sceneMinute(); await wait(300);
+      return JSON.stringify({ shut, kenta: !!y().querySelector('.npc-kenta'), place: y().dataset.place }); })()"""))
+    assert r == {'shut': False, 'kenta': False, 'place': 'town'}, r   # 健太 met: his bakery open at once; at 23 he has gone home
+
+def test_tapping_someone_who_has_left_says_so(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.seen.kenta = 1; await go('town', 9);
+      const k = y().querySelector('.npc-kenta'); TOWNEV.clock = { h: 23, day: new Date(2026, 10, 10) }; k.click(); await wait(200);
+      return JSON.stringify({ toast: toastText(), talk: !!document.querySelector('.talk') }); })()"""))
+    assert '離開' in r['toast'] and not r['talk'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

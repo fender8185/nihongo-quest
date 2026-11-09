@@ -5,10 +5,10 @@
    `node scripts/check-events.js` checks all of it against data.js (scripts/test.sh runs it). See
    docs/superpowers/specs/2026-11-09-town-events-design.md. */
 const TOWN = {
-  // the places people can be (index.html draws each one)
-  PLACES: ['yard', 'beach', 'town', 'street', 'shokudo', 'izakaya', 'station', 'sento', 'shrine', 'castle'],
+  // the places index.html draws people in (a new one goes here when it is drawn: street, station, sento, shrine, castle)
+  PLACES: ['beach', 'town', 'shokudo', 'izakaya'],
   // names of people, shops and places: no gloss needed
-  NAMES: ['美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山'],
+  NAMES: ['美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前'],
   // the shops' hours (the phone's real time; to < from runs past midnight)
   HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18] },
   // where people stand, by place: X along the land (0 the middle), Y up from the front
