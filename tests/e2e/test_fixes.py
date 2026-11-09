@@ -1547,7 +1547,7 @@ def test_listen_pills_keep_the_place_and_the_example_chinese_is_read(b):
 # ---- 2026-10-28: the today page is one card on one phone screen: 練習／錯題本／單字 switch, practice by default ----
 def test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest(b):
     # test build: 書房 is one screen on a phone (no top bar, nothing to scroll); 聽一輪 is one screen too, its player taking the rest
-    seed = """(() => { const t = todayStr(); state.introSeen = true; state.mistakes = [];
+    seed = """(() => { const t = todayStr(); state.introSeen = true; state.storySeen = true; state.mistakes = [];
       REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 30).forEach(v => { state.srs[v.key] = { b: 2, due: addDays(t, -1), n: 2, ok: 2, ng: 0, s: 3, d: 5, last: addDays(t, -4), intro: addDays(t, -9), f: {} }; });
       localStorage.removeItem('nq_listen_pref'); saveState(); LISTEN = null; location.hash = '#/vocab'; route(); location.hash = '#/today'; route(); return true; })()"""
     js = """(() => { const view = document.getElementById('view'); const fits = () => ({ scroll: document.documentElement.scrollHeight, viewScroll: view.scrollHeight, viewH: view.clientHeight, inner: innerHeight });
@@ -1654,7 +1654,7 @@ def test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones(b):
 # ---- 2026-10-28: the install hint ----
 def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed(b):
     # test build: the hint is a letter in the mailbox by the house (its 知道了 puts it away for good)
-    js = """(() => { localStorage.removeItem('nq_install_hint'); state.introSeen = true; saveState(); const show = () => { location.hash = '#/outside'; route(); openLetters(); return document.querySelector('.modal .letter[data-letter=install]'); };
+    js = """(() => { localStorage.removeItem('nq_install_hint'); state.introSeen = true; state.storySeen = true; saveState(); const show = () => { location.hash = '#/outside'; route(); openLetters(); return document.querySelector('.modal .letter[data-letter=install]'); };
       INSTALL_FORCE = { platform: 'ios', safari: true }; const ios = show(); const iosBtns = ios ? [...ios.querySelectorAll('[data-act]')].map(b => b.dataset.act) : null;
       ACTIONS['install-how'](); const modal = document.querySelector('.modal'); const guide = modal ? modal.textContent : ''; closeModal(true);
       const iosGuide = /加入主畫面/.test(guide) && /分享/.test(guide) && /進度是分開的/.test(guide) && !/⋮/.test(guide) && /Brave/.test(guide);
@@ -1875,7 +1875,7 @@ def test_a_browser_tab_does_not_download_audio_ahead_by_itself(b):
 # ---- 2026-11-05 (1.0.39): the site moved to nihongoquest.app; manual backups are gone ----
 def test_the_old_address_says_the_site_moved_and_data_settings_have_no_backup_file(b):
     # test build: the move is a letter in the mailbox by the house, one that cannot be put away
-    js = """(() => { state.introSeen = true; saveState(); const card = () => { location.hash = '#/outside'; route(); openLetters(); return document.querySelector('.modal .letter[data-letter=moved]'); };
+    js = """(() => { state.introSeen = true; state.storySeen = true; saveState(); const card = () => { location.hash = '#/outside'; route(); openLetters(); return document.querySelector('.modal .letter[data-letter=moved]'); };
       const here = !!card(); OLD_SITE_FORCE = true; const el = card(); const a = el && el.querySelector('a.btn'); OLD_SITE_FORCE = false; const off = !!card(); OLD_SITE_FORCE = null;
       openSettings('data'); const body = document.querySelector('.modal').textContent;
       const data = { dl: body.includes('下載備份'), restore: body.includes('從備份還原'), file: !!document.querySelector('.modal input[type=file]'), snaps: !!document.getElementById('snapList') }; closeModal(true);
@@ -1914,7 +1914,7 @@ def test_a_clip_not_on_the_device_while_offline_says_so(b):
     assert '無法使用' in seen[1] and '離線' not in seen[1], seen   # online but unreachable: the service itself is the problem
 
 # ---- test build: 書房 ready for main ----
-LEARNER = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
+LEARNER = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storySeen = true; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
 
 # 主題: 跟著時間 lights the pages as the scenes are lit (light from half daylight), 永夜／永晝 hold everything at midnight／noon;
 # older saves read dark／auto as 跟著時間 and light as 永晝. The colours change between pages, never in the middle of questions.

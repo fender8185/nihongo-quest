@@ -10,7 +10,7 @@ READY = "typeof state === 'object' && !!state.updatedAt && typeof speakScript ==
 def ev(b, js, pre=()):
     return b.run(list(pre) + [("nav", URL), ("wait", READY), ("eval", js)])[-1]
 
-FRESH = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
+FRESH = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storySeen = true; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
 # a 假名拼字 card for a four-kana word with no repeated kana; LINE: the kana on the line
 SPELL = FRESH + """ const v = REG.vocab.find(x => x.builtin && x.lv === 'N5' && [...x.r].length === 4 && new Set([...x.r]).size === 4 && canSpell(x)); srsAnswer(v.key, true);
   startSession('items', { items: [v] }); route(); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-spell' }); renderPractice();

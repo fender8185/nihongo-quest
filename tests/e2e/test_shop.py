@@ -11,7 +11,7 @@ def ev(b, js, pre=()):
     return b.run([("nav", URL), ("wait", READY)] + list(pre) + [("eval", js)])[-1]
 
 # a main-course account at week 1 with nothing learned yet
-FRESH = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
+FRESH = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storySeen = true; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"
 # plays the current session to its end (preview cards dismissed), the summary drawn as the app does
 PLAY = """(() => { let guard = 0;
   while (SESSION && SESSION.idx < SESSION.entries.length && guard++ < 600) {
@@ -1157,7 +1157,7 @@ def test_down_the_path_to_the_main_road_the_bus_stop_and_home_again(b):
     assert r['home'] == {'hash': '#/outside', 'place': 'yard', 'house': True} and r['both'] and r['keepOff'] is False, r
 
 def test_a_neighbour_knocks_brings_a_present_and_lives_on_the_beach(b):
-    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); state.koto.sets = { dev: 1 }; state.koto.listen = { '2026-11-08': 2 }; state.owned.gramophone = { paid: 100, on: '2026-11-01' }; saveState();
+    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); state.storySeen = true; state.koto.sets = { dev: 1 }; state.koto.listen = { '2026-11-08': 2 }; state.owned.gramophone = { paid: 100, on: '2026-11-01' }; saveState();
       const before = { visitor: NPC.visitor(), shop: WARES.filter(w => w.gift).map(w => w.id).sort(), mirror: owns('fullMirror') };
       """ + GO_ROOM + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('#view .study');
       await wait(1200); const knock = [!!st().querySelector('.knock'), st().querySelector('[data-thing="door"]').classList.contains('knocking')];
@@ -1169,18 +1169,19 @@ def test_a_neighbour_knocks_brings_a_present_and_lives_on_the_beach(b):
       while (document.querySelector('.talk')) { document.querySelector('.talk').click(); await wait(30); } await wait(300);
       const after = { visitor: NPC.visitor(), knock: !!document.querySelector('#view .knock'), doorOut: (() => { const d = st().querySelector('[data-thing="door"]'); return !d.classList.contains('knocking'); })() };
       state.met.koharu = '2026-11-01'; saveState(); const k0 = kotoBalance(), next = NPC.visitor();
-      location.hash = '#/beach'; await wait(600); const bch = document.querySelector('#view .yard'), npcs = [...bch.querySelectorAll('.npc')].map(e => e.dataset.npc);
-      bch.querySelector('.npc-koharu').click(); let chat = null; for (let i = 0; i < 120 && !chat; i++) { await wait(50); chat = bch.querySelector('.talk'); }
-      return JSON.stringify({ before, knock, guest, name, held, got, after, next, k0, npcs, chat: !!chat && chat.querySelector('.talk-name').textContent, take: !!(chat && chat.querySelector('[data-talk="take"]')) }); })()"""
+      location.hash = '#/beach'; await wait(600); const npcs = [...document.querySelectorAll('#view .yard .npc')].map(e => e.dataset.npc);   /* 小春 is in town, not on the beach */
+      location.hash = '#/town'; await wait(600); const bch = document.querySelector('#view .yard'), town = [bch.dataset.place, [...bch.querySelectorAll('.npc')].map(e => e.dataset.npc)];
+      bch.querySelector('.town-shop[data-shop="salon"]').click(); let chat = null; for (let i = 0; i < 120 && !chat; i++) { await wait(50); chat = bch.querySelector('.talk'); }
+      return JSON.stringify({ before, knock, guest, name, held, got, after, next, k0, npcs, town, chat: !!chat && chat.querySelector('.talk-name').textContent, take: !!(chat && chat.querySelector('[data-talk="take"]')) }); })()"""
     r = json.loads(ev(b, js))
     assert r['before'] == {'visitor': 'koharu', 'shop': ['fullMirror', 'gramophone'], 'mirror': False}, r   # 小春 first; presents are not sold
     assert r['knock'] == [True, True] and r['guest'] and r['name'].startswith('小春') and r['held'], r
     assert r['got'] == [True, 'bed', True], r   # the mirror by the wardrobe
     assert r['after'] == {'visitor': None, 'knock': False, 'doorOut': True} and r['next'] == 'mugi', r   # one a day; ムギ the next day
-    assert r['npcs'] == ['koharu'] and r['chat'].startswith('小春') and not r['take'], r   # on the beach once met: a word, no present
+    assert r['npcs'] == [] and r['town'] == ['town', ['koharu']] and r['chat'].startswith('小春') and not r['take'], r   # in her salon in town once met: a word, no present
 
 def test_mugi_gives_back_what_a_bought_gramophone_cost(b):
-    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); state.koto.listen = { '2026-11-08': 2 }; state.met = { koharu: '2026-11-01' }; state.owned.gramophone = { paid: 100, on: '2026-11-01' }; saveState();
+    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); state.storySeen = true; state.koto.listen = { '2026-11-08': 2 }; state.met = { koharu: '2026-11-01' }; state.owned.gramophone = { paid: 100, on: '2026-11-01' }; saveState();
       """ + GO_ROOM + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('#view .study'), k0 = kotoBalance();
       st().querySelector('[data-thing="door"]').click(); let talk = null; for (let i = 0; i < 100 && !talk; i++) { await wait(50); talk = document.querySelector('.talk'); }
       for (let i = 0; i < 6 && !talk.querySelector('[data-talk="take"]'); i++) { talk.click(); await wait(30); }
@@ -1188,6 +1189,31 @@ def test_mugi_gives_back_what_a_bought_gramophone_cost(b):
       return JSON.stringify({ back: kotoBalance() - k0, zh, placed: !!state.placed.gramophone, on: !state.musicOff }); })()"""
     r = json.loads(ev(b, js))
     assert r['back'] == 100 and '100 言靈還你' in r['zh'] and r['placed'] and r['on'], r
+
+def test_the_opening_tells_of_the_grandmothers_house_once(b):
+    js = "(async () => { " + FRESH + """ state.storySeen = false; state.koto.sets = { dev: 1 }; saveState(); """ + GO_ROOM + """ const wait = (ms) => new Promise(q => setTimeout(q, ms));
+      const st = document.querySelector('.story'), pages = []; for (let i = 0; i < 6 && document.querySelector('.story [data-page]'); i++) { pages.push(document.querySelector('.story [data-page]').dataset.page); if (document.querySelector('.story [data-story="end"]')) break; st.click(); await wait(20); }
+      const letter = !!document.querySelector('.story-letter') || pages.includes('1'), knockBefore = !!document.querySelector('#view .knock');
+      document.querySelector('.story [data-story="end"]').click(); await wait(500);
+      const after = { seen: state.storySeen, gone: !document.querySelector('.story'), knock: !!document.querySelector('#view .knock') };
+      """ + GO_ROOM + """ await wait(200); const again = !!document.querySelector('.story');
+      return JSON.stringify({ pages, letter, knockBefore, after, again, norm: [normalizeState({}).storySeen, normalizeState({ storySeen: 'x' }).storySeen] }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['pages'] == ['0', '1', '2', '3'] and r['letter'] and not r['knockBefore'], r   # four pages, the letter among them; no knock under it
+    assert r['after'] == {'seen': True, 'gone': True, 'knock': True} and not r['again'] and r['norm'] == [False, False], r   # once; then 小春 knocks
+
+def test_the_town_is_along_the_yard_to_the_right(b):
+    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); const wait = (ms) => new Promise(q => setTimeout(q, ms)), y = () => document.querySelector('#view .yard');
+      const signs = [...y().querySelectorAll('.way-btn')].map(e => e.dataset.to).sort();
+      y().querySelector('[data-to="town"]').click(); for (let i = 0; i < 100 && location.hash !== '#/town'; i++) await wait(50); await wait(300);
+      const town = { place: y().dataset.place, shops: [...y().querySelectorAll('.town-shop')].map(e => e.dataset.shop), koharu: !!y().querySelector('.npc-koharu'), edit: getComputedStyle(y().querySelector('.study-edit')).display };
+      y().querySelector('.town-shop[data-shop="bakery"]').click(); await wait(100); const shut = document.querySelector('#toast') ? document.querySelector('#toast').textContent : [...document.querySelectorAll('.toast')].map(t => t.textContent).join();
+      y().querySelector('[data-to="yard"]').click(); for (let i = 0; i < 100 && location.hash !== '#/outside'; i++) await wait(50);
+      return JSON.stringify({ signs, town, shut, back: location.hash }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['signs'] == ['beach', 'street', 'town'], r
+    assert r['town'] == {'place': 'town', 'shops': ['salon', 'bakery', 'books', 'cafe', 'flowers', 'greens', 'goods'], 'koharu': False, 'edit': 'none'}, r   # 小春 only once she has come by
+    assert '準備中' in r['shut'] and r['back'] == '#/outside', r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

@@ -241,7 +241,7 @@ def test_conflict_merge_redoes_todays_list_from_the_merged_progress(b):
     # this device made today's list before the pull; the other device learned X last night
     out = boot(b, [
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
-        ("eval", """(() => { state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.startChosen = true; state.currentUnit = 'm1';
+        ("eval", """(() => { state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storySeen = true; state.startChosen = true; state.currentUnit = 'm1';
           delete state.today.plan; dailyPlan(); const X = state.today.plan.lists.newV[0], Y = state.today.plan.lists.newV[1];
           srsAnswer(Y, true);
           const cloud = JSON.parse(JSON.stringify(state)); const y = addDays(todayStr(), -1);
