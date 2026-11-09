@@ -1084,7 +1084,7 @@ def test_the_hero_sleeps_on_the_bed_and_waters_a_plant(b):
 
 def test_the_full_length_mirror_stands_in_the_bedroom_and_the_wardrobe_rolls_clothes(b):
     js = "(async () => { " + FRESH + """ const old = normalizeState(Object.assign(JSON.parse(JSON.stringify(state)), { roomV: 8 }));   /* roomV 9 no longer sets it out: 小春 brings it */
-      state.owned.fullMirror = { paid: 0, on: todayStr() }; state.placed.fullMirror = Object.assign({}, WARE.get('fullMirror').home); saveState();
+      state.owned.fullMirror = { paid: 0, on: todayStr() }; state.placed.fullMirror = { w: 'F', x: 0.3, y: 11.2, r: 0, rm: 'bed' }; saveState();
       location.hash = '#/bedroom'; document.getElementById('view').innerHTML = ''; route(); const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('#view .study');
       const btn = !!st().querySelector('.ware-use[data-ware="fullMirror"]'); st().querySelector('.ware-use[data-ware="fullMirror"]').click(); let open = false;
       for (let i = 0; i < 80 && !open; i++) { await wait(50); open = !!st().querySelector('.dress.on'); }
@@ -1165,10 +1165,10 @@ def test_a_neighbour_knocks_brings_a_present_and_lives_on_the_beach(b):
       const guest = !!st().querySelector('.guest'), name = talk.querySelector('.talk-name').textContent;
       let held = 0; for (let i = 0; i < 6 && !talk.querySelector('[data-talk="take"]'); i++) { talk.click(); await wait(30); }
       talk.click(); held = !!talk.querySelector('[data-talk="take"]');   /* the present waits for 收下 */
-      talk.querySelector('[data-talk="take"]').click(); const got = [owns('fullMirror'), state.placed.fullMirror && state.placed.fullMirror.rm, state.met.koharu === todayStr()];
+      talk.querySelector('[data-talk="take"]').click(); const got = [owns('fullMirror'), state.placed.fullMirror && [state.placed.fullMirror.rm || 'study', state.placed.fullMirror.y], typeof state.met.koharu === 'number'];
       while (document.querySelector('.talk')) { document.querySelector('.talk').click(); await wait(30); } await wait(300);
       const after = { visitor: NPC.visitor(), knock: !!document.querySelector('#view .knock'), doorOut: (() => { const d = st().querySelector('[data-thing="door"]'); return !d.classList.contains('knocking'); })() };
-      NPC.gap.last = Date.now() - NPC.gap.ms - 1; const k0 = kotoBalance(), next = NPC.visitor();   /* a few minutes on */
+      state.met.koharu = Date.now() - NPC.gap.ms - 1000; const k0 = kotoBalance(), next = NPC.visitor();   /* a few minutes on */
       location.hash = '#/beach'; await wait(600); const npcs = [...document.querySelectorAll('#view .yard .npc')].map(e => e.dataset.npc);   /* 小春 is in town, not on the beach */
       location.hash = '#/town'; await wait(600); const bch = document.querySelector('#view .yard'), town = [bch.dataset.place, [...bch.querySelectorAll('.npc')].map(e => e.dataset.npc)];
       bch.querySelector('.town-shop[data-shop="salon"]').click(); let chat = null; for (let i = 0; i < 120 && !chat; i++) { await wait(50); chat = bch.querySelector('.talk'); }
@@ -1176,8 +1176,8 @@ def test_a_neighbour_knocks_brings_a_present_and_lives_on_the_beach(b):
     r = json.loads(ev(b, js))
     assert r['before'] == {'visitor': 'koharu', 'shop': ['fullMirror', 'gramophone'], 'mirror': False}, r   # 小春 first; presents are not sold
     assert r['knock'] == [True, True] and r['guest'] and r['name'].startswith('小春') and r['held'], r
-    assert r['got'] == [True, 'bed', True], r   # the mirror by the wardrobe
-    assert r['after'] == {'visitor': None, 'knock': False, 'doorOut': True} and r['next'] == 'mugi', r   # not straight after; ムギ a few minutes on
+    assert r['got'] == [True, ['study', 3.25], True], r   # the mirror by 書房's front door
+    assert r['after'] == {'visitor': None, 'knock': False, 'doorOut': True} and r['next'] == 'mugi', r   # not straight after; ムギ a few minutes after 小春
     assert r['npcs'] == [] and r['town'] == ['town', ['koharu']] and r['chat'].startswith('小春') and not r['take'], r   # in her salon in town once met: a word, no present
 
 def test_mugi_gives_back_what_a_bought_gramophone_cost(b):
@@ -1186,8 +1186,11 @@ def test_mugi_gives_back_what_a_bought_gramophone_cost(b):
       st().querySelector('[data-thing="door"]').click(); let talk = null; for (let i = 0; i < 100 && !talk; i++) { await wait(50); talk = document.querySelector('.talk'); }
       for (let i = 0; i < 6 && !talk.querySelector('[data-talk="take"]'); i++) { talk.click(); await wait(30); }
       talk.querySelector('[data-talk="take"]').click(); const zh = talk.querySelector('.talk-zh').textContent;
-      return JSON.stringify({ back: kotoBalance() - k0, zh, placed: !!state.placed.gramophone, on: !state.musicOff }); })()"""
+      state.koto.listen = {}; state.met = { koharu: Date.now() - 60000 }; const soon = NPC.visitor(); state.met = { koharu: Date.now() - NPC.gap.ms - 1000 }; const due = NPC.visitor();
+      state.met = {}; state.koto.sets = {}; const none = NPC.visitor();
+      return JSON.stringify({ back: kotoBalance() - k0, zh, placed: !!state.placed.gramophone, on: !state.musicOff, soon, due, none }); })()"""
     r = json.loads(ev(b, js))
+    assert r['soon'] is None and r['due'] == 'mugi' and r['none'] is None, r   # ムギ three minutes after 小春, listening or not
     assert r['back'] == 100 and '100 言靈還你' in r['zh'] and r['placed'] and r['on'], r
 
 def test_the_opening_tells_of_the_grandmothers_house_once(b):

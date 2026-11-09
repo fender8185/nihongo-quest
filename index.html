@@ -6632,6 +6632,7 @@ const MUSIC = (() => {
     clearInterval(timer);
     timer = setInterval(() => {
       if (!play || ctx.state !== 'running') return;
+      if (play.t < ctx.currentTime) play.t = ctx.currentTime + 0.05;   // fallen behind (the timer held up, the phone asleep): on from now, never a heap of notes at once
       while (play.t < ctx.currentTime + 0.3) {
         const k = play.i % play.sc.len;
         play.sc.ev.forEach((e) => { if (e[0] === k) note(play.t, e[1], e[2], e[3], e[4], play.step); });
@@ -6653,12 +6654,15 @@ const MUSIC = (() => {
     document.querySelectorAll('.study').forEach((st) => st.classList.toggle('music', on));
     if (!on) { if (ctx && play) { fade(0, 0.5); const p = play; setTimeout(() => { if (play === p && !wanted()) { stop(); ctx.suspend().catch(() => {}); } }, 600); } return; }
     if (!ctx && !build()) return;
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older Safari */ }
     const rec = current();
     if (!play || play.id !== rec.id) { if (play) { fade(0, 0.3); stop(); } start(rec); }
     if (ctx.state !== 'running') ctx.resume().catch(() => {});
     fade(0.8, 1.2);
     if (!wake) {   // a browser lets sound start only from a tap or a key: the first one wakes it
-      wake = () => { if (ctx && ctx.state !== 'running' && wanted()) ctx.resume().catch(() => {}); };
+      // iOS: Web Audio stays silent (the ring switch) until a media element has played — the user heard the records only after a
+      // saved clip: the shared player plays its silence from this tap too, and the page asks for a playback session
+      wake = () => { if (ctx && ctx.state !== 'running' && wanted()) { try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older Safari */ } unlockTtsPlayer(); ctx.resume().catch(() => {}); } };
       ['pointerdown', 'keydown'].forEach((t) => document.addEventListener(t, wake, true));
     }
   }
@@ -6973,10 +6977,10 @@ function yClimb(el) {
 // 小春 (a young hairdresser with a salon in town, #/town along the yard to the right) and ムギ (a shiba who collects old records, on the
 // beach, #/beach, along the yard to the left; home: where they are to be found). Both knew the grandmother who left the hero
 // the house (STORY).
-// Each comes knocking at 書房's front door once (one at a time: the next not before NPC.gap later, and 書房 opened again): 小春 after the first set done, ムギ after the first 聽一輪. The door
+// Each comes knocking at 書房's front door once (one at a time: the next not before NPC.gap later, and 書房 opened again): 小春 after the first set done, ムギ a few minutes after her (the user's call). The door
 // shakes, 叩叩; tapped, the hero goes and opens it, they say hello and give a present — 小春 the full-length mirror (the face and
 // the hair are changed in front of it), ムギ the gramophone with its two records (one bought before: what was paid comes back).
-// state.met: { id: the day they came }. After that they are on the beach, a tap for a word. Lines: [Japanese ({漢字|かな}), 中文]
+// state.met: { id: when they came (ms; an older save's day) }. After that they are on the beach, a tap for a word. Lines: [Japanese ({漢字|かな}), 中文]
 const KOHARU_LOOK = { face: 'oval', skin: '#f8dcc8', cheeks: 'blush', fringe: 'sidepart', sides: 'wave', hairBack: 'wavy', hairTop: 'none', hairColor: '#8a4a2e', eyes: 'chibi', eyeColor: '#5a3a28', brows: 'soft', mouth: 'grin', beard: 'none', topStyle: 'shirt', top: '#e9e2d0', bottomStyle: 'skirt', bottom: '#e58fa8', shoeStyle: 'loafer', shoe: '#6e4f3a' };
 const MUGI_ART = `<ellipse cy="-2" rx="36" ry="6" fill="#2b1c12" fill-opacity=".16"/>
   <g class="mugi-tail"><path d="M24 -30 C44 -34 48 -58 34 -64 C24 -68 18 -58 26 -54 C34 -50 30 -40 20 -40 Z" fill="#d9894a"/><path d="M30 -58 C36 -54 34 -46 28 -44" fill="none" stroke="#fbf1e2" stroke-width="5" stroke-linecap="round"/></g>
@@ -7002,7 +7006,7 @@ const NPCS = {
       ['{鏡|かがみ}、{使|つか}ってる？{新|あたら}しい{髪型|かみがた}も{似合|にあ}うと{思|おも}うよ。', '鏡子有在用嗎？我覺得新髮型也會很適合你。'], ['{今日|きょう}は{風|かぜ}が{気持|きも}ちいいね。', '今天的風好舒服呢。'],
       ['おばあちゃん、いつもお{孫|まご}さんの{話|はなし}ばかりしていましたよ。', '你外婆啊，總是在說孫兒的事呢。'], ['{子|こ}どものころ、おばあちゃんの{髪|かみ}を{切|き}らせてもらったのが、{私|わたし}の{始|はじ}まりなんです。', '小時候外婆讓我幫她剪頭髮，那就是我當美容師的開始。']] },
   mugi: { name: 'ムギ', role: '柴犬', gift: 'gramophone', home: 'beach', at: { X: -170, Y: 58 },
-    due: () => Object.keys(state.koto.listen).length > 0,
+    due: () => met('koharu'),   // after 小春 (and NPC.gap), the user's call
     hello: (paid) => [
       ['わん！はじめまして、ムギだワン。', '汪！初次見面，我是ムギ。'],
       ['おばあちゃんとは、よく{海辺|うみべ}でレコードを{聞|き}いたワン。', '我以前常和你外婆在海邊聽唱片。'],
@@ -7014,13 +7018,14 @@ const NPCS = {
       ['しっぽが{勝手|かって}に{揺|ゆ}れるワン。', '尾巴自己搖起來了。'], ['{波|なみ}の{音|おと}も、いい{音楽|おんがく}だワン。', '海浪的聲音也是很棒的音樂。'],
       ['おばあちゃんは、{夕方|ゆうがた}になるとここで〈{夜桜|よざくら}〉をかけたワン。', '你外婆每到傍晚，就會在這裡放〈夜桜〉。'], ['おばあちゃん、{手紙|てがみ}を{書|か}く{練習|れんしゅう}をしてたワン。だれに{書|か}いてたのかな。', '你外婆以前在練習寫信喔。不知道是要寫給誰呢。']] }
 };
+const met = (id) => Boolean(state.met && state.met[id]);   // a neighbour has come by
 const NPC = (() => {
-  const met = (id) => Boolean(state.met && state.met[id]);
   // who is at the door now: the first not met whose time has come, none for a while after someone came (the user: one a day
   // was too slow — ムギ never came the day 小春 did)
-  const gap = { ms: 3 * 60 * 1000, last: 0 };
+  const gap = { ms: 3 * 60 * 1000 };
+  const lastCame = () => Math.max(0, ...Object.values(state.met || {}).map((v) => (typeof v === 'number' ? v : Date.parse(v) || 0)));
   function visitor() {
-    if (Date.now() - gap.last < gap.ms) return null;
+    if (Date.now() - lastCame() < gap.ms) return null;
     return Object.keys(NPCS).find((id) => !met(id) && NPCS[id].due()) || null;
   }
   const art = (id) => (id === 'mugi' ? `<svg viewBox="-60 -200 120 210" aria-hidden="true">${MUGI_ART}</svg>` : HERO.svg({ look: KOHARU_LOOK }));
@@ -7068,7 +7073,7 @@ const NPC = (() => {
   }
   function give(id, paid) {   // the present: theirs at once (what was paid comes back), set out where it belongs if there is room
     const w = NPCS[id].gift;
-    gap.last = Date.now(); state.met = Object.assign({}, state.met, { [id]: todayStr() });
+    state.met = Object.assign({}, state.met, { [id]: Date.now() });
     if (paid) state.owned[w].paid = 0; else if (!state.owned[w]) state.owned[w] = { paid: 0, on: todayStr() };
     if (!state.placed[w]) ROOM.give(w);
     if (w === 'gramophone') state.musicOff = false;
@@ -7648,8 +7653,8 @@ const WARES = [
   { id: 'sconce1', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'R', u: 9.4, v: 5.4 }, desc: '', light: { dz: 0.35, r: 4.4 } },
   { id: 'sconce2', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'R', u: 27.2, v: 5.4 }, desc: '', light: { dz: 0.35, r: 4.4 } },
   { id: 'sconce3', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'L', u: 16.6, v: 5.4 }, desc: '', light: { dz: 0.35, r: 4.4 } },
-  // test: a full-length mirror — the face, the hair and the features are changed in front of it; 小春's present (by the wardrobe)
-  { id: 'fullMirror', kind: 'floor', gift: 'koharu', turn: false, h: 5, name: '全身鏡', fp: [0.6, 1.3], home: { w: 'F', x: 0.3, y: 11.2, r: 0, rm: 'bed' }, desc: '', act: 'mirror' },
+  // test: a full-length mirror — the face, the hair and the features are changed in front of it; 小春's present (by 書房's front door, the user's call)
+  { id: 'fullMirror', kind: 'floor', gift: 'koharu', turn: false, h: 5, name: '全身鏡', fp: [0.6, 1.3], home: { w: 'F', x: 0.3, y: 3.25, r: 0 }, desc: '', act: 'mirror' },
   { id: 'sconce4', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'R', u: 11.8, v: 5.4, rm: 'bed' }, desc: '', light: { dz: 0.35, r: 4.4 } },
   // the string of lights along the tops of the walls, as four strings (1.2.0): hung end to end where it ran, three on the
   // right wall and one on the left, each moved or put away on its own; their bulbs light up one by one as the day's list fills.
