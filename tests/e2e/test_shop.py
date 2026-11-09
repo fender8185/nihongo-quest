@@ -1117,7 +1117,7 @@ def test_every_mirror_opens_the_mirror_and_a_low_table_or_a_cushion_is_knelt_at(
 def test_the_gramophone_plays_a_record_and_its_records_change(b):
     js = "(async () => { " + FRESH + """ state.owned.gramophone = { paid: 0, on: todayStr() }; state.placed.gramophone = { w: 'F', x: 12, y: 9, r: 0 }; saveState(); """ + GO_ROOM + """
       const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('.study');
-      const first = { playing: MUSIC.playing(), shown: st().classList.contains('music'), notes: !!st().querySelector('.tune.gramo') };
+      await wait(600); const first = { playing: MUSIC.playing(), shown: st().classList.contains('music'), notes: !!st().querySelector('.tune.gramo'), file: MUSIC.mode() };
       st().querySelector('.ware-use[data-ware="gramophone"]').click(); let open = false; for (let i = 0; i < 100 && !open; i++) { await wait(50); open = !!document.querySelector('.rec-list'); }
       const recs = [...document.querySelectorAll('.rec')].map(e => [e.dataset.id, e.classList.contains('on')]);
       document.querySelector('.rec[data-id="yozakura"]').click();
@@ -1127,7 +1127,7 @@ def test_the_gramophone_plays_a_record_and_its_records_change(b):
       location.hash = '#/stats'; await wait(300); const away = MUSIC.playing();
       return JSON.stringify({ first, open, recs, put, stopped, again, away, saved: [normalizeState({ record: 3, musicOff: 'x' }).record, normalizeState({}).musicOff] }); })()"""
     r = json.loads(ev(b, js))
-    assert r['first'] == {'playing': True, 'shown': True, 'notes': True} and r['open'], r   # on from the start, notes from its horn
+    assert r['first'] == {'playing': True, 'shown': True, 'notes': True, 'file': 'file'} and r['open'], r   # on from the start, from its file, notes from its horn
     assert r['recs'] == [['engawa', True], ['yozakura', False]] and r['put'] == ['yozakura', True, True], r
     assert r['stopped'] == [True, False, False] and r['again'] and not r['away'], r   # stopped by hand; only in the rooms
     assert r['saved'] == ['', False], r
@@ -1162,7 +1162,7 @@ def test_a_neighbour_knocks_brings_a_present_and_lives_on_the_beach(b):
       """ + GO_ROOM + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('#view .study');
       await wait(1200); const knock = [!!st().querySelector('.knock'), st().querySelector('[data-thing="door"]').classList.contains('knocking')];
       st().querySelector('[data-thing="door"]').click(); let talk = null; for (let i = 0; i < 100 && !talk; i++) { await wait(50); talk = document.querySelector('.talk'); }
-      const guest = !!st().querySelector('.guest'), name = talk.querySelector('.talk-name').textContent;
+      const guest = !!st().querySelector('.guest') && !!(document.elementFromPoint(20, 200) || document.body).closest('.talk'), name = talk.querySelector('.talk-name').textContent;   /* the talk covers the screen */
       let held = 0; for (let i = 0; i < 6 && !talk.querySelector('[data-talk="take"]'); i++) { talk.click(); await wait(30); }
       talk.click(); held = !!talk.querySelector('[data-talk="take"]');   /* the present waits for 收下 */
       talk.querySelector('[data-talk="take"]').click(); const got = [owns('fullMirror'), state.placed.fullMirror && [state.placed.fullMirror.rm || 'study', state.placed.fullMirror.y], typeof state.met.koharu === 'number'];

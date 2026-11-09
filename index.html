@@ -376,7 +376,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 @keyframes knockPop { 0% { opacity: 0; transform: translateY(6px) scale(.7); } 15% { opacity: 1; transform: translateY(0) scale(1.08); } 70% { opacity: 1; } 100% { opacity: 0; transform: translateY(-6px); } }
 .study .thing.knocking .tag { animation: doorShake .5s ease-in-out 3; }
 @keyframes doorShake { 25% { transform: translateX(-3px) rotate(-4deg); } 75% { transform: translateX(3px) rotate(4deg); } }
-.talk { position: fixed; z-index: 60; left: 0; right: 0; bottom: 0; padding: 12px 12px calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: center; cursor: pointer; }
+.talk { position: fixed; z-index: 60; inset: 0; padding: 12px 12px calc(14px + env(safe-area-inset-bottom, 0px)); display: flex; align-items: flex-end; justify-content: center; cursor: pointer; }   /* the whole screen: a tap anywhere goes on (the user: taps beside the card sent the hero off) */
 .story { position: fixed; inset: 0; z-index: 80; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 24px 20px calc(24px + env(safe-area-inset-bottom, 0px)); background: #241f2e; color: #f4ecdc; cursor: pointer; animation: gotIn .5s ease-out; }
 .story.out { opacity: 0; transition: opacity .4s; }
 .story-skip { position: absolute; top: calc(14px + env(safe-area-inset-top, 0px)); right: 14px; padding: 6px 12px; border: 1px solid rgba(244, 236, 220, .35); border-radius: 999px; background: none; color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
@@ -416,7 +416,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 @keyframes gotSpark { 0% { transform: translate(0, 0) scale(.3); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(var(--x), var(--y)) scale(1.1) rotate(90deg); opacity: 0; } }
 .got-text { align-self: end; margin-bottom: 18vh; display: grid; justify-items: center; gap: 4px; color: #fff; text-shadow: 0 2px 8px rgba(0, 0, 0, .4); animation: talkIn .4s ease-out .25s backwards; }
 .got-text span { font-size: 13px; letter-spacing: .3em; color: #ffe27a; } .got-text b { font-size: 24px; } .got-text small { font-size: 13px; opacity: .85; }
-.yard .talk { bottom: auto; top: calc(72px + env(safe-area-inset-top, 0px)); }   /* out of doors the people stand low on the screen: the words go up top */
+.yard .talk { align-items: flex-start; padding-top: calc(72px + env(safe-area-inset-top, 0px)); }   /* out of doors the people stand low on the screen: the words go up top */
 .talk-card { position: relative; display: flex; gap: 12px; align-items: flex-start; width: min(560px, 100%); padding: 14px; border-radius: 16px; background: var(--bg-elev); color: var(--fg); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, .22); animation: talkIn .25s ease-out; }
 @keyframes talkIn { from { transform: translateY(14px); opacity: 0; } }
 .talk-face { flex: none; width: 76px; height: 76px; border-radius: 14px; background: var(--bg-sunken); overflow: hidden; } .talk-face svg { width: 100%; height: 100%; }
@@ -6565,11 +6565,11 @@ const SCOPE = (() => {
 // RECORDS: the house's own (own); one sold later is had once bought (owns)
 const MUSIC = (() => {
   const RECORDS = [
-    { id: 'engawa', own: true, name: '縁側の午後', kana: 'えんがわのごご', zh: '簷廊的午後', style: '電鋼琴・音樂盒', color: '#e3907f', bpm: 76, bar: 8, lead: 'keys', arp: [0, 2, 1, 2, 3, 2, 1, 2],
+    { id: 'engawa', own: true, file: 'music/engawa-1.m4a', name: '縁側の午後', kana: 'えんがわのごご', zh: '簷廊的午後', style: '電鋼琴・音樂盒', color: '#e3907f', bpm: 76, bar: 8, lead: 'keys', arp: [0, 2, 1, 2, 3, 2, 1, 2],
       chords: ['F3 A3 C4 E4', 'G3 B3 D4 E4', 'E3 G3 B3 D4', 'A3 C4 E4 G4', 'D3 F3 A3 C4', 'G3 B3 D4 F4', 'C3 E3 G3 B3', 'C3 E3 G3 D4'],
       mel: 'A4:2 G4 A4 C5:2 E5:2 | D5:3 C5 D5:2 G4:2 | E5:2 D5 E5 G5:2 E5:2 | D5:3 C5 A4:4 | C5:2 D5 C5 A4:2 G4:2 | A4:2 C5:2 D5:2 G4:2 | E5:4 D5:2 C5:2 | C5:6 -:2 |'
         + 'A4:2 G4 A4 C5:2 E5:2 | D5:3 C5 D5:2 G5:2 | E5:2 G5 A5 G5:2 E5:2 | D5:3 E5 C5:4 | A5:2 G5 E5 D5:2 C5:2 | D5:2 E5:2 G5:2 D5:2 | E5:3 D5 C5:2 A4:2 | C5:8' },
-    { id: 'yozakura', own: true, name: '夜桜', kana: 'よざくら', zh: '夜裡的櫻花', style: '琴・音樂盒', color: '#8b6aa8', bpm: 66, bar: 6, lead: 'koto', arp: [0, 1, 2, 1, 2, 1],
+    { id: 'yozakura', own: true, file: 'music/yozakura-1.m4a', name: '夜桜', kana: 'よざくら', zh: '夜裡的櫻花', style: '琴・音樂盒', color: '#8b6aa8', bpm: 66, bar: 6, lead: 'koto', arp: [0, 1, 2, 1, 2, 1],
       chords: ['A3 C4 E4', 'A#3 D4 F4 A4', 'D3 F3 A3', 'E3 A3 D4', 'A3 C4 E4', 'F3 A3 C4 E4', 'D3 F3 A3 C4', 'A3 C4 E4'],
       mel: 'E5:2 D5 E5 A5:2 | F5:3 E5 D5:2 | E5:2 F5 E5 D5:2 | A#4:2 A4:4 | A4:2 D5:2 E5:2 | F5:2 E5 F5 A5:2 | F5:2 E5:2 D5:2 | E5:6 |'
         + 'E5:2 D5 E5 A5:2 | A#5:3 A5 F5:2 | E5:2 F5 E5 D5:2 | A#4:2 A4:4 | A5:2 A#5 A5 F5:2 | E5:4 F5:2 | E5:2 D5:2 A#4:2 | A4:6' }
@@ -6592,18 +6592,21 @@ const MUSIC = (() => {
     }
     return { ev, len: bars * rec.bar };
   }
-  let ctx = null, out = null, bus = null, timer = 0, play = null, wake = null, kept = {};
-  function build() {
-    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
-    ctx = new AC();
-    out = ctx.createGain(); out.gain.value = 0; out.connect(ctx.destination);
+  // two ways to play (test, 2026-11-09): a record's file (file: the music below rendered once by scripts/render-music.py, served
+  // with the site, kept by the service worker like the clips) through a looping <audio> — smooth, and iOS plays it as it plays
+  // any media; or, when the file cannot be had (offline before it was ever fetched), the music made here and now (synth)
+  let ctx = null, out = null, bus = null, timer = 0, play = null, wake = null, kept = {}, player = null, fadeT = 0;
+  const VOL = 0.8, blobs = {};   // blobs: a record's file as a blob: URL, fetched once a session
+  function chain(c) {   // the synth's way out: a warm filter, a small room's echo
+    ctx = c;
+    out = ctx.createGain(); out.connect(ctx.destination);
     const warm = ctx.createBiquadFilter(); warm.type = 'lowpass'; warm.frequency.value = 5200; warm.Q.value = 0.4; warm.connect(out);
     bus = ctx.createGain(); bus.gain.value = 0.9; bus.connect(warm);
-    const rv = ctx.createConvolver(), sr = ctx.sampleRate, ir = ctx.createBuffer(2, Math.floor(sr * 2.2), sr);   // a small room's echo
-    for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
+    const rv = ctx.createConvolver(), sr = ctx.sampleRate, ir = ctx.createBuffer(2, Math.floor(sr * 2.2), sr);
+    for (let c2 = 0; c2 < 2; c2++) { const d = ir.getChannelData(c2); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
     rv.buffer = ir; const wet = ctx.createGain(); wet.gain.value = 0.22; bus.connect(rv); rv.connect(wet); wet.connect(warm);
-    return true;
   }
+  function build() { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false; chain(new AC()); out.gain.value = 0; return true; }
   function koto(f) {   // a plucked string (Karplus–Strong), made once a pitch
     const k = Math.round(f); if (kept[k]) return kept[k];
     const sr = ctx.sampleRate, b = ctx.createBuffer(1, Math.floor(sr * 2.4), sr), d = b.getChannelData(0), N = Math.max(2, Math.round(sr / f));
@@ -6626,12 +6629,13 @@ const MUSIC = (() => {
       f.forEach((h) => { osc('triangle', h * 1.003, at, at + len + 1.1, lp); osc('triangle', h * 0.997, at, at + len + 1.1, lp); });
     }
   }
-  function start(rec) {   // from its first bar, a step ahead
+  function startSynth(rec) {   // from its first bar, a step ahead
+    if (!ctx && !build()) return;
     const sc = score(rec), step = 60 / rec.bpm / 2;
-    play = { id: rec.id, sc, step, i: 0, t: ctx.currentTime + 0.15 };
+    Object.assign(play, { sc, step, i: 0, t: ctx.currentTime + 0.15 });
     clearInterval(timer);
     timer = setInterval(() => {
-      if (!play || ctx.state !== 'running') return;
+      if (!play || play.mode !== 'synth' || ctx.state !== 'running') return;
       if (play.t < ctx.currentTime) play.t = ctx.currentTime + 0.05;   // fallen behind (the timer held up, the phone asleep): on from now, never a heap of notes at once
       while (play.t < ctx.currentTime + 0.3) {
         const k = play.i % play.sc.len;
@@ -6640,9 +6644,32 @@ const MUSIC = (() => {
         if (k === play.sc.len - 1) play.t += play.step * 2;   // a breath before it comes round again
       }
     }, 60);
+    ctx.resume().catch(() => {}); fade(VOL, 1.2);
   }
-  function stop() { clearInterval(timer); timer = 0; play = null; }
   const fade = (v, s) => { const t = ctx.currentTime; out.gain.cancelScheduledValues(t); out.gain.setValueAtTime(out.gain.value, t); out.gain.linearRampToValueAtTime(v, t + s); };
+  function fadeFile(v, s) {   // the player's volume to v (an iPhone keeps it at 1: there it only starts and stops)
+    clearInterval(fadeT); const from = player.volume, t0 = performance.now();
+    fadeT = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / (s * 1000)); try { player.volume = from + (v - from) * k; } catch (e) { /* read-only */ } if (k >= 1) clearInterval(fadeT); }, 50);
+  }
+  const playFile = () => { const pr = player.play(); if (pr && pr.catch) pr.catch(() => {}); };   // refused before a first tap: wake tries again
+  function startFile(rec, p) {
+    if (!player) { player = new Audio(); player.loop = true; player.preload = 'auto'; player.setAttribute('playsinline', ''); }
+    const go = () => {
+      if (play !== p) return;
+      if (player.dataset.id !== rec.id) { player.src = blobs[rec.id]; player.dataset.id = rec.id; }   // the same record again: on from where it stopped
+      try { player.volume = 0; } catch (e) { /* read-only */ }
+      playFile(); fadeFile(VOL, 1.2);
+    };
+    if (blobs[rec.id]) { go(); return; }
+    fetch(rec.file).then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then((b) => { blobs[rec.id] = URL.createObjectURL(b); go(); })
+      .catch(() => { if (play !== p) return; p.mode = 'synth'; startSynth(rec); });   // no file to be had: made here instead
+  }
+  function start(rec) { play = { id: rec.id, mode: rec.file ? 'file' : 'synth' }; if (play.mode === 'file') startFile(rec, play); else startSynth(rec); }
+  function halt() {   // stopped: the file paused where it is, the synth's timer stopped and its sound asleep
+    if (!play) return;
+    if (play.mode === 'file') { clearInterval(fadeT); player.pause(); } else { clearInterval(timer); timer = 0; if (ctx) ctx.suspend().catch(() => {}); }
+    play = null;
+  }
   // whether it should play now: in 書房 or the bedroom (#/, #/today, #/bedroom), the gramophone set out, not stopped, the page in sight
   function wanted() {
     const r = currentRoute().name;
@@ -6652,19 +6679,45 @@ const MUSIC = (() => {
   function tune() {
     const on = wanted();
     document.querySelectorAll('.study').forEach((st) => st.classList.toggle('music', on));
-    if (!on) { if (ctx && play) { fade(0, 0.5); const p = play; setTimeout(() => { if (play === p && !wanted()) { stop(); ctx.suspend().catch(() => {}); } }, 600); } return; }
-    if (!ctx && !build()) return;
+    if (!on) {
+      if (!play) return;
+      if (document.hidden) { halt(); return; }
+      const p = play; if (p.mode === 'file') fadeFile(0, 0.5); else fade(0, 0.5);
+      setTimeout(() => { if (play === p && !wanted()) halt(); }, 600);
+      return;
+    }
     try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older Safari */ }
     const rec = current();
-    if (!play || play.id !== rec.id) { if (play) { fade(0, 0.3); stop(); } start(rec); }
-    if (ctx.state !== 'running') ctx.resume().catch(() => {});
-    fade(0.8, 1.2);
+    if (!play || play.id !== rec.id) { halt(); start(rec); }
+    else if (play.mode === 'file') { if (player.paused) playFile(); fadeFile(VOL, 0.6); }   // back before it had stopped
+    else { ctx.resume().catch(() => {}); fade(VOL, 1.2); }
     if (!wake) {   // a browser lets sound start only from a tap or a key: the first one wakes it
       // iOS: Web Audio stays silent (the ring switch) until a media element has played — the user heard the records only after a
       // saved clip: the shared player plays its silence from this tap too, and the page asks for a playback session
-      wake = () => { if (ctx && ctx.state !== 'running' && wanted()) { try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older Safari */ } unlockTtsPlayer(); ctx.resume().catch(() => {}); } };
+      wake = () => {
+        if (!play || !wanted()) return;
+        if (play.mode === 'file') { if (player.paused && player.src) playFile(); return; }
+        if (ctx && ctx.state !== 'running') { try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older Safari */ } unlockTtsPlayer(); ctx.resume().catch(() => {}); }
+      };
       ['pointerdown', 'keydown'].forEach((t) => document.addEventListener(t, wake, true));
     }
+  }
+  // a record as a file (scripts/render-music.py): the music made here, rendered offline twice round with the second kept — its
+  // start carries the first's echoes, so it loops on without a seam — at peak, as 16-bit stereo WAV in base64
+  async function render(id, peak = 0.5) {
+    const rec = RECORDS.find((r) => r.id === id), sc = score(rec), step = 60 / rec.bpm / 2, L = (sc.len + 2) * step, sr = 44100, n = Math.round(L * sr);
+    const was = [ctx, out, bus, kept], oc = new OfflineAudioContext(2, n * 2, sr);
+    kept = {}; chain(oc); out.gain.value = 1;
+    for (let k = 0; k < 2; k++) sc.ev.forEach((e) => note(k * L + e[0] * step, e[1], e[2], e[3], e[4], step));
+    const buf = await oc.startRendering(); [ctx, out, bus, kept] = was;
+    const ch = [0, 1].map((c) => buf.getChannelData(c).subarray(n, 2 * n));
+    let top = 0; ch.forEach((d) => { for (let i = 0; i < d.length; i++) top = Math.max(top, Math.abs(d[i])); });
+    const g = peak / (top || 1), bytes = new Uint8Array(44 + n * 4), v = new DataView(bytes.buffer), str = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    str(0, 'RIFF'); v.setUint32(4, 36 + n * 4, true); str(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 2, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * 4, true); v.setUint16(32, 4, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, n * 4, true);
+    for (let i = 0; i < n; i++) for (let c = 0; c < 2; c++) v.setInt16(44 + (i * 2 + c) * 2, Math.max(-32767, Math.min(32767, Math.round(ch[c][i] * g * 32767))), true);
+    let b64 = ''; for (let i = 0; i < bytes.length; i += 0x8000) b64 += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return { seconds: L, top, b64: btoa(b64) };
   }
   document.addEventListener('visibilitychange', () => sync());
   saveHooks.push(() => sync());   // set out or put away, stopped or another record (here or from another device)
@@ -6680,7 +6733,7 @@ const MUSIC = (() => {
   function redo() { saveState(); const b = document.getElementById('modalBody'); if (b) b.innerHTML = body(); }
   const put = (id) => { state.record = id; state.musicOff = false; redo(); };
   const pause = () => { state.musicOff = !state.musicOff; redo(); };
-  return { RECORDS, sync, pick, put, pause, playing: () => Boolean(play) && wanted() };
+  return { RECORDS, sync, pick, put, pause, render, playing: () => Boolean(play) && wanted(), mode: () => play && play.mode };
 })();
 // outside 擺設 a tap on a ware sends the hero to stand beside it, facing it; at the telescope they look into it (test: 觀星)
 function yardUse(yard, id) {
