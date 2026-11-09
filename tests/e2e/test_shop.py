@@ -213,8 +213,8 @@ def test_the_desk_and_the_window_stand_off_the_bookcase_and_an_older_room_follow
       return JSON.stringify({ fresh, v, a: { desk: a.placed.desk.x, map: a.placed.japanmap || null, lights: ['garland1', 'garland2', 'garland3', 'garland4'].every(id => a.placed[id]), v: a.roomV },
         b: b2.placed.desk.x, c: c.placed.desk.x, win: ROOM.fits(WARE.get('japanmap'), { w: 'R', u: 6.4, v: 6.3 }), gap: ROOM.fits(WARE.get('cactus'), { w: 'F', x: 1.75, y: 0.5, r: 0 }) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['fresh'] == {'w': 'F', 'x': 4.1, 'y': 1.85, 'r': 0} and r['v'] == 5, r   # roomV 5: the window is a ware
-    assert r['a'] == {'desk': 4.1, 'map': None, 'lights': True, 'v': 5}, r   # the desk went along; the map the window now covers went in the box
+    assert r['fresh'] == {'w': 'F', 'x': 4.1, 'y': 1.85, 'r': 0} and r['v'] == 6, r   # roomV 6: the bedroom (roomV 5: the window is a ware)
+    assert r['a'] == {'desk': 4.1, 'map': None, 'lights': True, 'v': 6}, r   # the desk went along; the map the window now covers went in the box
     assert r['b'] == 3.3 and r['c'] == 10, r   # a gramophone where the desk would go keeps it where it was; a desk moved by hand stays put
     assert r['win'] is False and r['gap'] is True, r   # the window and its curtains reach further right; a cactus fits between the bookcase and the desk
 
@@ -599,7 +599,7 @@ def test_the_telescope_went_out_to_the_yard(b):
     js = "(() => { " + FRESH + """ state.owned.telescope = { paid: 45, on: '2026-11-01' }; state.placed.telescope = { w: 'F', x: 6, y: 6, r: 0 }; state.roomV = 3;
       const s = normalizeState(state); return JSON.stringify({ kind: WARE.get('telescope').kind, placed: s.placed.telescope || null, v: s.roomV, owned: !!s.owned.telescope }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'kind': 'yard', 'placed': None, 'v': 5, 'owned': True}, r   # waits in the yard's box
+    assert r == {'kind': 'yard', 'placed': None, 'v': 6, 'owned': True}, r   # waits in the yard's box
 
 def test_the_yard_is_arranged_like_the_room(b):
     js = "(async () => { " + FRESH + """ state.koto.gift = 200; ['pond', 'engawa', 'tanuki'].forEach(id => buyWare(WARE.get(id))); saveState();
@@ -711,8 +711,9 @@ def test_two_fingers_zoom_between_the_whole_room_and_twice_as_close_and_it_is_re
     assert r['size'] == [390, 844], r
     assert (r['big'], r['saved'], r['again']) == (2.0, 2.0, 2.0), r   # three times as close is held to twice the starting zoom, kept for next time
     # at 390×844 the start is 390 / (8 × 40) = 1.21875 (the bookcase with the desk across the screen) and the whole block with the
-    # sky round it (43 room units across) is 390 / (43 × 40) = 0.22674, so as far out as it goes is 0.1860 of the start
-    assert abs(r['small'] - 0.1860) < 0.002, r
+    # sky round it (57 room units across since 1.3.0's bigger room) is 390 / (57 × 40) = 0.17105, so as far out as it goes is 0.1404
+    # of the start
+    assert abs(r['small'] - 0.1404) < 0.002, r
 
 # the room as a block cut open in the sky (test build): all of it on the screen at the widest, a phone zoomed out or a wide screen as it opens
 BLOCK = """const st = document.querySelector('.study'), box = st.getBoundingClientRect(), room = st.querySelector('.room').getBoundingClientRect(), vb = ROOM.kit.VB, P = ROOM.kit.P;
@@ -809,12 +810,12 @@ def test_the_window_moves_along_either_wall_and_can_be_put_away(b):
     assert r['fits'] == {'right': True, 'left': True, 'door': False, 'low': False}, r   # not over the door, not into the wainscot
     assert r['left'] == {'sky': 'L', 'holes': 1, 'drawn': True} and r['tools'] == '收起', r   # the opening went along to the left wall
     assert r['away'] == {'sky': None, 'holes': 0, 'drawn': False} and r['box'], r   # put away: the wall is whole, the window waits in the box
-    assert r['old'] == {'w': 'R', 'u': 4.1, 'v': 6.6} and r['v'] == 5, r
+    assert r['old'] == {'w': 'R', 'u': 4.1, 'v': 6.6} and r['v'] == 6, r
 
 def test_a_ware_is_dragged_out_of_the_box_to_a_spot_and_back_into_the_box(b):
     js = "(async () => { " + FRESH + " state.koto.gift = 100; buyWare(WARE.get('chabudai')); saveState(); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
       const st = () => document.querySelector('.study'), room = () => st().querySelector('.room').getBoundingClientRect();
-      const VBx = [-16.5 * 40, -12.5 * 40, 41 * 40, (12 + 20 + 1.5) * 40 + 30], scr = (x, y) => { const r = room(), sx = (x - y) * 40, sy = (x + y) * 20; return [r.left + (sx - VBx[0]) / VBx[2] * r.width, r.top + (sy - VBx[1]) / VBx[3] * r.height]; };
+      const VBx = [-24.5 * 40, -12.5 * 40, 55 * 40, (12 + 27 + 1.5) * 40 + 30]   /* the room's viewBox: 30 × 24, walls 12 (1.3.0) */, scr = (x, y) => { const r = room(), sx = (x - y) * 40, sy = (x + y) * 20; return [r.left + (sx - VBx[0]) / VBx[2] * r.width, r.top + (sy - VBx[1]) / VBx[3] * r.height]; };
       st().querySelector('.study-edit').click(); await wait(100);
       for (let i = 0; i < 3; i++) document.dispatchEvent(new KeyboardEvent('keydown', { key: '-', bubbles: true }));   /* zoomed out: more floor in view */
       await wait(100); let it = st().querySelector('.tray-it[data-id="chabudai"]').getBoundingClientRect(); const [tx, ty] = [it.left + it.width / 2, it.top + it.height / 2];

@@ -473,7 +473,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .study.drawer-pull .dw-slide { animation: drawerOut .42s cubic-bezier(.2, .8, .3, 1) both; }
 @keyframes drawerOut { from { transform: translate(var(--dwx), var(--dwy)); } }
 /* tapping a thing (ROOM.enter): its own small motion first — the newest course book slides out, a card hops out of the card box, the
-   headphones lift off their stand, the calendar's page drops away, the door swings open (ROOM.door) — then the room zooms into it as it
+   headphones are picked up off the desk, the calendar's page drops away, the door swings open (ROOM.door) — then the room zooms into it as it
    fades and the page eases in; back in 書房 the room zooms out of the thing you left by. Each moving part is a small drawing of its
    own (.fx), hidden until its thing is tapped; the headphones always are one. */
 .room .fx { display: none; overflow: visible; pointer-events: none; will-change: transform; }
@@ -763,12 +763,12 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .top-home { display: inline-flex; align-items: center; padding: 4px 11px 4px 8px; border: 1px solid var(--line); border-radius: 99px; background: var(--bg-elev); color: var(--fg-2); font-size: 13px; cursor: pointer; }
 /* ---------- 聽一輪 (the 🎧 tab): 錯題本｜單字 over the player ---------- */
 .listen-seg { display: flex; margin-bottom: 12px; }
-/* 書房's headphones on their stand over the player (1.1.0); the notes rise while it plays */
+/* 書房's headphones lying on the desk over the player (1.1.0; no stand since 1.3.0); the notes rise while it plays */
 .listen-top { align-items: center; }
 @media (max-width: 900px) { .listen-top { justify-content: center; margin-bottom: 8px; } }
 .listen-stand { position: relative; flex: none; width: 64px; height: 60px; }
 .listen-stand svg { display: block; width: 64px; height: 60px; overflow: visible; }
-.listen-stand :is(.base, .pole) { fill: color-mix(in srgb, var(--fg) 45%, var(--bg)); }
+.listen-stand .desk-top { fill: color-mix(in srgb, #b08159 70%, var(--bg)); }
 .listen-stand .band { stroke: #5a6cf0; } .listen-stand .cup { fill: #4a58d6; } .listen-stand .pad { fill: #333d9c; }
 .listen-stand .notes i { position: absolute; left: 50%; top: 8px; font-style: normal; font-size: 14px; font-weight: 700; line-height: 1; color: var(--accent); opacity: 0; pointer-events: none; }
 .listen-stand.playing .notes i { animation: tune 3.3s ease-in-out var(--w) infinite; }
@@ -2184,6 +2184,8 @@ function normalizeState(s) {
   if (out.roomV < 4) { const t = out.placed.telescope; if (t && t.w !== 'Y') delete out.placed.telescope; out.roomV = 4; }
   // 1.2.0 (roomV 5): the window became a ware (moved along a wall, put away); it hangs where it always was, once
   if (out.roomV < 5) { if (!out.placed.window) out.placed.window = Object.assign({}, WARE.get('window').at); out.roomV = 5; }
+  // 1.3.0 (roomV 6): 書房 grew and a bedroom was walled off; the bed and its things move in, nothing stands across the walls
+  if (out.roomV < 6) { ROOM.settle(out.placed); out.roomV = 6; }
   WARES.filter(w => w.fixed).forEach(w => { if (!out.placed[w.id]) out.placed[w.id] = Object.assign({}, w.at); });   // the working things are always somewhere
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
   if (out.stage !== 'pre' && out.stage !== 'main') out.stage = 'main';   // 入門階段 (1.0.6); accounts from before it are in the main course
@@ -6784,15 +6786,15 @@ const WARES = [
   { id: 'wizrobe', kind: 'clothes', slot: 'top', limited: 'halloween', name: '魔法師長袍', price: 90, desc: '長到腳踝的長袍，滿是金色星星，腰上掛著一本小魔法書。顏色在衣櫃自己配。' },
   { id: 'pumpkin', kind: 'floor', limited: 'halloween', h: 1, name: '南瓜燈', price: 20, fp: [0.8, 0.8], desc: '刻了笑臉的南瓜，晚上會從裡面亮起來。', light: { z: 0.5, r: 2.8 } },
   // 書房's own (starter: had from the start, not sold): laid out where they always stood, then moved or put away like the rest
-  { id: 'bed', kind: 'floor', starter: true, turn: false, h: 3, name: '床', fp: [2.9, 5.25], at: { w: 'F', x: 18.45, y: 2.625, r: 0 }, desc: '' },
-  { id: 'nightTable', kind: 'floor', starter: true, turn: false, h: 3.2, name: '床頭櫃', fp: [1, 1], at: { w: 'F', x: 16.25, y: 0.55, r: 0 }, desc: '' },
+  { id: 'bed', kind: 'floor', starter: true, turn: false, h: 3, name: '床', fp: [2.9, 5.25], at: { w: 'F', x: 1.6, y: 14.775, r: 0 }, desc: '' },
+  { id: 'nightTable', kind: 'floor', starter: true, turn: false, h: 3.2, name: '床頭櫃', fp: [1, 1], at: { w: 'F', x: 3.65, y: 12.7, r: 0 }, desc: '' },
   { id: 'bigPlant', kind: 'floor', starter: true, turn: false, h: 3.7, name: '觀葉植物', fp: [0.84, 0.84], at: { w: 'F', x: 11.95, y: 1, r: 0 }, desc: '' },
-  { id: 'sageRug', kind: 'rug', starter: true, turn: false, name: '圓地毯', fp: [2.5, 2.5], at: { w: 'F', x: 9.2, y: 3.55, r: 0 }, desc: '' },
-  { id: 'bedRug', kind: 'rug', starter: true, turn: false, name: '床邊地毯', fp: [2.6, 2.64], at: { w: 'F', x: 14.9, y: 2.92, r: 0 }, desc: '' },
+  { id: 'sageRug', kind: 'rug', starter: true, turn: false, name: '圓地毯', fp: [2.5, 2.5], at: { w: 'F', x: 7.6, y: 6.4, r: 0 }, desc: '' },
+  { id: 'bedRug', kind: 'rug', starter: true, turn: false, name: '床邊地毯', fp: [2.6, 2.64], at: { w: 'F', x: 4.6, y: 15.6, r: 0 }, desc: '' },
   { id: 'doorMat', kind: 'rug', starter: true, turn: false, name: '腳踏墊', fp: [1.1, 1.6], at: { w: 'F', x: 0.7, y: 5.1, r: 0 }, desc: '' },
   { id: 'fujiPrint', kind: 'wall', starter: true, name: '富士山版畫', size: [1.4, 1.25], at: { w: 'L', u: 3.45, v: 7.925 }, desc: '' },
   { id: 'kanaChart', kind: 'wall', starter: true, name: '平假名表', size: [1.55, 2.15], at: { w: 'R', u: 14.075, v: 5.375 }, desc: '' },
-  { id: 'nightPicture', kind: 'wall', starter: true, name: '夜空畫', size: [1.3, 1.1], at: { w: 'R', u: 18.45, v: 4.4 }, desc: '' },
+  { id: 'nightPicture', kind: 'wall', starter: true, name: '夜空畫', size: [1.3, 1.1], at: { w: 'L', u: 14.8, v: 5.2 }, desc: '' },
   { id: 'pegRail', kind: 'wall', starter: true, name: '掛勾架', size: [1.6, 1.5], at: { w: 'L', u: 7.7, v: 5.05 }, desc: '' },
   // the window (1.2.0): moved along either wall, or put away (the wall is whole then); its curtains and sill go with it
   { id: 'window', kind: 'wall', starter: true, name: '窗戶', size: [4.7, 5.4], at: { w: 'R', u: 4.1, v: 6.6 }, desc: '' },
@@ -6819,7 +6821,7 @@ function placedWares() { return Object.keys(state.placed).filter((id) => owns(id
 function wareFootprint(it, p) { const [w, d] = p.r ? [it.fp[1], it.fp[0]] : it.fp; return [p.x - w / 2, p.y - d / 2, p.x + w / 2, p.y + d / 2]; }
 function wareRect(it, p) { return [p.u - it.size[0] / 2, p.v - it.size[1] / 2, p.u + it.size[0] / 2, p.v + it.size[1] / 2]; }
 const ROOM = (() => {
-  const S = 40, RW = 24, RD = 16, RH = 12, WAIN = 3.2;   // RH: the walls were 19 high, to fill a wide screen's top corners, till the room became a block in the sky (1.2.0)
+  const S = 40, RW = 30, RD = 24, RH = 12, WAIN = 3.2;   // 1.3.0 (roomV 6): 24 × 16 grew to 30 × 24, a bedroom walled off in the front left corner   // RH: the walls were 19 high, to fill a wide screen's top corners, till the room became a block in the sky (1.2.0)
   const P = (x, y, z = 0) => [(x - y) * S, (x + y) * S / 2 - z * S];
   const r1 = (v) => Math.round(v * 10) / 10;
   const pt = (x, y, z = 0) => P(x, y, z).map(r1).join(' ');
@@ -6831,12 +6833,14 @@ const ROOM = (() => {
   const onZ = (z0) => `matrix(${S} ${S / 2} ${-S} ${S / 2} 0 ${-z0 * S})`;        // a level surface: u = x, v = y
   const VB = [-(RD + 0.5) * S, -(RH + 0.5) * S, (RW + RD + 1) * S, (RH + (RW + RD) / 2 + 1.5) * S + 30];   // the block, its cut edges too
   // where the camera looks, [x0, y0, x1, y1] in the room's screen units (P / S): the four places a phone used to stop at (the
-  // door; the bookcase and the desk; the chest of drawers; the bed) frame the room round the hero when 書房 first opens, and the
-  // line through their middles is how high the camera looks as it follows him. FRAME, the widest and the tallest of them, sets a
+  // door; the bookcase and the desk; the chest of drawers; the right wall past it; 1.3.0: the bedroom before them, the far end
+  // of the right wall after them) frame the room round the hero when 書房 first opens, and the line through their middles is how
+  // high the camera looks as it follows him. FRAME, the widest and the tallest of them, sets a
   // phone's zoom to start with; BOUND is as far as the camera looks: the whole block and a little sky round it (where a wide
   // screen starts, and as far out as two fingers go).
-  const VIEWS = [[-8.9, -8.6, -1.3, 4.6], [-2.05, -9.9, 5.95, 4.3], [5.35, -7.2, 12.15, 6.9], [11.7, -3.2, 19.6, 13.6]];   // the second moved right with the desk (roomV 3)
-  const FRAME = [8, 16.8], BOUND = [-17.5, -13.5, 25.5, 21.9];
+  const VIEWS = [[-17.5, 1.5, -9.5, 15.5], [-8.9, -8.6, -1.3, 4.6], [-2.05, -9.9, 5.95, 4.3], [5.35, -7.2, 12.15, 6.9], [11.7, -3.2, 19.6, 13.6], [19.5, 0.5, 27.5, 15.5]];
+  const DOOR_VIEW = 1;   // the stop by the door (the hero walks out from there)
+  const FRAME = [8, 16.8], BOUND = [-25.5, -13.5, 31.5, 28.9];
   const vbPct = (sx, sy) => `left:${((sx - VB[0]) / VB[2] * 100).toFixed(3)}%;top:${((sy - VB[1]) / VB[3] * 100).toFixed(3)}%`;
   const vbSize = (w, h) => `width:${(w / VB[2] * 100).toFixed(3)}%;height:${(h / VB[3] * 100).toFixed(3)}%`;
 
@@ -7171,7 +7175,7 @@ const ROOM = (() => {
   // the notebook, with a pencil cup and a mug around them
   const DESK = { x0: 1.4, x1: 5.2, y1: 2.4, z0: 2.85, z1: 3.05 };
   const NB = { x0: 2.3, x1: 3.94, y0: 1.0, y1: 2.24 };   // the notebook, open on the desk
-  const HP = { x: 4.62, y: 0.78, top: 5.22, k: 1.3 };      // the headphone stand: where it stands, how tall, how big the headphones are
+  const HP = { x: 4.66, y: 0.98, a: 62 };   // the headphones on the desk: their middle and how far they are turned (degrees)
   const MUG = [4.74, 2.0];
   function deskArt() {
     const { x0, x1, y1, z0, z1 } = DESK, g = 0.17;
@@ -7205,25 +7209,22 @@ const ROOM = (() => {
     s += `<path class="ln" stroke-width="3.2" stroke="#f2c14e" d="M${pt(nm + 0.2, ny1 - 0.28, zb + 0.08)} L${pt(nx1 - 0.15, ny0 + 0.32, zb + 0.08)}"/><path class="ln" stroke-width="3.2" stroke="#f6d9b0" d="M${pt(nm + 0.12, ny1 - 0.22, zb + 0.08)} L${pt(nm + 0.2, ny1 - 0.28, zb + 0.08)}"/><path class="ln" stroke-width="3.2" stroke="#e98a8a" d="M${pt(nx1 - 0.15, ny0 + 0.32, zb + 0.08)} L${pt(nx1 - 0.08, ny0 + 0.27, zb + 0.08)}"/>`;
     // the mug
     s += bb(MUG[0], MUG[1], zb, `<ellipse cy="0" rx="9" ry="3.6" fill="#2b1c12" fill-opacity=".14"/><path ${F('#f3efe6', 'y', [MUG[0], MUG[1] + 0.1, 3.3])} d="M-7.5 -16 V-2 Q-7.5 1 0 1 Q7.5 1 7.5 -2 V-16 Z"/><path d="M7.5 -12 q6 0 6 4.5 q0 4.5 -6 4.5" fill="none" stroke-width="2.2" ${FS('#e5dfd3', 'x', [MUG[0], MUG[1], 3.3])}/><ellipse cy="-16" rx="7.5" ry="2.8" fill="#9a6a3a"/><ellipse cy="-16" rx="7.5" ry="2.8" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width=".8"/><path d="M-7.5 -12 V-3" class="hl"/><path d="M-3 -8 h6" stroke="#5a68d8" stroke-width="1.6" stroke-linecap="round" stroke-opacity=".7"/>`);
-    // the headphones' stand, a soft light behind it; the headphones hang on it on a layer of their own (phonesFx), to lift off
-    const { x: hx, y: hy, top } = HP;
-    s += bb(hx, hy, top, `<ellipse cy="40" rx="66" ry="58" fill="url(#halo)"/>`);
-    s += shadow(hx - 0.42, hy - 0.42, hx + 0.5, hy + 0.5, 0.6, zb + 0.002);
-    s += box('#3a3f55', hx - 0.28, hy - 0.28, zb, hx + 0.28, hy + 0.28, zb + 0.08, { t: '#4a5068' });
-    s += `<path class="ln" stroke-width="3.2" ${FS('#3a3f55', 'y', [hx, hy, 4])} d="M${pt(hx, hy, zb + 0.08)} L${pt(hx, hy, top - 0.22)}"/>`;
     return s;
   }
+  // the headphones lying on the desk (1.3.0, no stand): two ear cups on their backs, the band lying between them, turned a little;
+  // drawn on a layer of their own (phonesFx), to be picked up
   function phonesArt() {
-    const { x: hx, y: hy, top, k } = HP;
-    return bb(hx, hy, top, `<g transform="scale(${k})">
-      <path d="M-10 9 Q0 4 10 9" fill="none" stroke-width="3.4" stroke-linecap="round" ${FS('#3a3f55', 'y', [hx, hy, top])}/>
-      <path d="M-25 40 C-25 -2 25 -2 25 40" fill="none" stroke-width="7" stroke-linecap="round" ${FS(C.accent, 'y', [hx, hy + 0.2, 4.6])}/>
-      <path d="M-18 24 C-13 9 13 9 18 24" fill="none" stroke-width="4.5" stroke-linecap="round" ${FS('#ece5d8', 'y', [hx, hy + 0.2, 4.6])}/>
-      <path d="M-23 27 C-20 13 -10 7.5 0 7.5" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1.4" stroke-linecap="round"/>
-      <rect x="-27.5" y="33" width="5" height="9" rx="1.5" ${F('#8d96b8', 'y', [hx, hy, 4.2])}/><rect x="22.5" y="33" width="5" height="9" rx="1.5" ${F('#8d96b8', 'x', [hx, hy, 4.2])}/>
-      <rect x="-33" y="40" width="15" height="22" rx="7" ${F(C.accent, 'y', [hx - 0.3, hy + 0.3, 3.8])}/><rect x="-20" y="42.5" width="6" height="17" rx="3" ${F('#2f3552', 'x', [hx, hy, 3.8])}/>
-      <rect x="18" y="40" width="15" height="22" rx="7" ${F(C.accentDk, 'x', [hx + 0.3, hy, 3.8])}/><rect x="14" y="42.5" width="6" height="17" rx="3" ${F('#2f3552', 'y', [hx, hy, 3.8])}/>
-      <path d="M-29.5 45 V56" class="hl"/><circle cx="-25.5" cy="51" r="2.4" fill="#fff" fill-opacity=".35"/></g>`);
+    const { x: hx, y: hy, a } = HP, z = DESK.z1, w = 0.34, at = (dz) => [hx, hy, z + dz];
+    const plane = (dz, inner) => `<g transform="${onZ(z + dz)}"><g transform="rotate(${a} ${hx} ${hy})">${inner}</g></g>`;
+    const cups = (dz, c, face, rx = 0.17, ry = 0.21) => plane(dz, [-w, w].map((d) => `<ellipse cx="${q2(hx + d)}" cy="${hy}" rx="${rx}" ry="${ry}" ${F(c, face, at(dz))}/>`).join(''));
+    const band = `M${q2(hx - w)} ${q2(hy - 0.12)} C${q2(hx - w)} ${q2(hy - 0.66)} ${q2(hx + w)} ${q2(hy - 0.66)} ${q2(hx + w)} ${q2(hy - 0.12)}`;
+    let s = plane(0.003, [-w, w].map((d) => `<ellipse cx="${q2(hx + d + 0.04)}" cy="${q2(hy + 0.05)}" rx=".24" ry=".27" fill="#2b1c12" fill-opacity=".16"/>`).join(''));
+    s += plane(0.05, `<path d="${band}" fill="none" stroke-width=".11" stroke-linecap="round" ${FS(C.accentDk, 'y', at(0.05))}/>`);
+    s += plane(0.09, `<path d="${band}" fill="none" stroke-width=".1" stroke-linecap="round" ${FS(C.accent, 't', at(0.09))}/><path d="${band}" fill="none" stroke-width=".035" stroke-linecap="round" ${FS('#ece5d8', 't', at(0.1))} transform="translate(0 .03)"/>`);
+    for (let dz = 0.02; dz < 0.15; dz += 0.03) s += cups(dz, '#2f3552', 'y');
+    s += cups(0.16, C.accent, 't') + cups(0.165, '#2f3552', 't', 0.1, 0.13);
+    s += plane(0.17, `<path d="M${q2(hx - w - 0.12)} ${q2(hy - 0.1)} A.17 .21 0 0 1 ${q2(hx - w + 0.05)} ${q2(hy - 0.19)}" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width=".025"/>`);
+    return s;
   }
   // the chair, pulled out from the desk a little, its back to the room
   function chairArt() {
@@ -7321,8 +7322,38 @@ const ROOM = (() => {
       + bb(x, y, 1.05, `<path d="${stems}" fill="none" stroke="#3f7a42" stroke-width="2.2" stroke-linecap="round"/>${leaves}`);
   }
 
-  // ===== the far right: the bed (nothing to tap) against the right wall, the night table beside it with a reading lamp and an
-  // alarm clock, a night-sky picture over it, a hiragana chart on the wall past the plant, a rug and slippers =====
+  // ===== the bedroom (1.3.0): the front left corner (x 0…12, y 12…24) walled off by two low walls as high as the wainscot, a
+  // doorway in the right-hand one with a 暖簾 on a lintel. Each wall is a footprint like a piece of furniture (PARTS: they sort
+  // with the things and the hero, the hero walks round them, nothing stands on them); the lintel (LINTEL) only sorts =====
+  const BR = { x: 12, y: 12, t: 0.15, door: [13.4, 15.6] };
+  const PARTS = [[0, BR.y - BR.t, BR.x + BR.t, BR.y + BR.t], [BR.x - BR.t, BR.y + BR.t, BR.x + BR.t, BR.door[0]], [BR.x - BR.t, BR.door[1], BR.x + BR.t, RD]];
+  const LINTEL = [BR.x - BR.t, BR.door[0], BR.x + BR.t, BR.door[1]];
+  const DOORWAY = [BR.x - 1.1, BR.door[0], BR.x + 1.1, BR.door[1]];   // kept clear on both sides, so the bedroom is never shut
+  function lowWallArt(i) {   // a low wall: wainscot panels and battens on the side we see, a skirting, a rail on top
+    const [x0, y0, x1, y1] = PARTS[i], h = WAIN, alongX = i === 0;
+    let s = box(C.wain, x0, y0, 0, x1, y1, h, { t: false, hl: false });
+    if (alongX) { for (let u = x0 + 0.7; u < x1 - 0.1; u += 0.72) s += qY(C.batten, y1 + 0.005, u, u + 0.07, 0.3, h); s += box(C.skirt, x0, y1, 0, x1, y1 + 0.06, 0.32, { x: false }); }
+    else { for (let u = y0 + 0.4; u < y1 - 0.1; u += 0.72) s += qX(C.batten, x1 + 0.005, u, u + 0.07, 0.3, h); s += box(C.skirt, x1, y0, 0, x1 + 0.06, y1, 0.32, { y: false }); }
+    s += box(C.rail, x0 - 0.04, y0 - 0.04, h, x1 + 0.04, y1 + 0.04, h + 0.14, { hlv: true });
+    // the doorway's posts, up to the lintel
+    if (i === 1) s += box(C.walnut, x0 - 0.03, y1 - 0.2, 0, x1 + 0.03, y1, 6.0, { t: false, hlv: true });
+    if (i === 2) s += box(C.walnut, x0 - 0.03, y0, 0, x1 + 0.03, y0 + 0.2, 6.0, { t: false, hlv: true });
+    return s;
+  }
+  function lintelArt() {   // the lintel over the doorway and an indigo 暖簾 in two halves hanging from it, a crescent moon on it
+    const [, a, , b] = LINTEL, x = BR.x + BR.t + 0.04, m = (a + b) / 2, z0 = 4.55, z1 = 6.0, at = [x, m, (z0 + z1) / 2];
+    const half = (p, q) => `<path ${F('#3e5f8e', 'x', at)} d="M${-q} ${-z1} H${-p} V${-z0 - 0.06} Q${-(p + q) / 2} ${-z0 + 0.04} ${-q} ${-z0 - 0.06} Z"/>`;
+    return box(C.walnut, BR.x - BR.t - 0.03, a - 0.2, z1, BR.x + BR.t + 0.03, b + 0.2, z1 + 0.32, { t: C.oak, hlv: true })
+      + `<g transform="${onX(x)}">${half(a + 0.06, m - 0.03)}${half(m + 0.03, b - 0.06)}
+        <path d="M${q2(-m + 0.12)} ${q2(-z1 + 0.36)} a.32 .32 0 1 0 0 .64 a.25 .25 0 1 1 0 -.64 Z" fill="#f4efe3" fill-opacity=".92"/>
+        <path d="M${q2(-b + 0.06)} ${q2(-z1 + 0.14)} H${q2(-a - 0.06)}" stroke="#fff" stroke-opacity=".25" stroke-width=".04"/></g>`;
+  }
+  // a floor ware's footprints that the low walls or the doorway now cross
+  const walledIn = (fs) => fs.some((r) => PARTS.some((q) => over(r, q)) || over(r, DOORWAY));
+
+  // ===== the bed (nothing to tap): drawn where it first stood, against the right wall, and moved whole into the bedroom (its
+  // headboard against the low wall); the night table beside it with a reading lamp and an alarm clock, a night-sky picture over
+  // it, a rug and slippers; a hiragana chart on the wall past the plant =====
   const BED = { x0: 17.0, x1: 19.9, y1: 5.25 };
   const NT = { x0: 15.75, x1: 16.75, y0: 0.05, y1: 1.05, h: 1.75 };
   function bedArt() {
@@ -7423,11 +7454,9 @@ const ROOM = (() => {
     return fxSvg('fx-card', pts, fxLit('bookcase', () => `<defs><clipPath id="cardClip" clipPathUnits="userSpaceOnUse"><path d="${hullPath(pts)}"/></clipPath></defs>
       <g clip-path="url(#cardClip)"><g class="mv" style="--fx:${css(-ex)};--fy:${css(-ey)};--ux:${css(ux - ex)};--uy:${css(uy - ey)}"><g transform="translate(${r1(ex)} ${r1(ey)})">${indexCard(yc, z + 0.06, z + 0.56, C.paper, [C.accent, 0.7])}</g></g>${cardBoxWalls()}${plainBooks(CB.y1 + 0.06, SHELF_Y[1], z0, zb - z0, 21)}</g>`), 'bookcase');
   }
-  // 聽一輪: the headphones hang on their stand on this layer all the time, and lift off
-  function phonesFx() {
-    const [ax, ay] = P(HP.x, HP.y, HP.top), k = HP.k, b = [ax - 46 * k, ay - 30, 92 * k, 30 + 66 * k], [dx, dy] = mover('desk').d;
-    return `<svg class="fx fx-phones" viewBox="${b.map((v) => v.toFixed(1)).join(' ')}" style="${vbPct(b[0] + dx, b[1] + dy)};${vbSize(b[2], b[3])}" aria-hidden="true"><g class="mv">${fxLit('desk', phonesArt)}</g></svg>`;
-  }
+  // 聽一輪: the headphones lie on the desk on this layer all the time, and are picked up
+  const PH_PTS = [[HP.x - 0.7, HP.y - 0.7, DESK.z1], [HP.x + 0.7, HP.y - 0.7, DESK.z1], [HP.x + 0.7, HP.y + 0.7, DESK.z1], [HP.x - 0.7, HP.y + 0.7, DESK.z1 + 0.3]];
+  function phonesFx() { return fxSvg('fx-phones', PH_PTS, `<g class="mv">${fxLit('desk', phonesArt)}</g>`, 'desk'); }
   // 模擬考: today's page drops off the calendar (the same day stays under it)
   function pageFx(d, left) {
     const { x0, x1, z0, z1 } = CAL, [ex, ey] = P(0, 0.4, -1.0);
@@ -7496,7 +7525,7 @@ const ROOM = (() => {
     const d = st.querySelector('.thing[data-thing="door"]');
     st.querySelector('.mail-hint').classList.remove('on');
     if (reduced()) { door(d); return; }
-    cam.c = inBound(RIDE[0].slice()); glide(st);
+    cam.c = inBound(RIDE[DOOR_VIEW].slice()); glide(st);
     use(d, () => { yh.fromDoor = true; door(d); });
   }
 
@@ -7593,10 +7622,11 @@ const ROOM = (() => {
   };
   const box2 = (x, y, r) => [x - r, y - r, x + r, y + r];
   const DOOR_SWING = [0, 3.9, 2.4, 6.3];
-  // kept clear on the floor: the door's swing, where the hero stands at the floor things (but those of `own`, being moved, at p)
-  function keepF(own, p) {
-    const out = [DOOR_SWING, box2(SPOTS.door.x, SPOTS.door.y, 0.35)];
-    Object.keys(OWNER).forEach((t) => { const o = OWNER[t]; if (WARE.get(o).kind === 'wall' || o === own) return; const sp = spotOf(t); out.push(box2(sp.x, sp.y, 0.35)); });
+  // kept clear on the floor: the door's swing, the bedroom's doorway, where the hero stands at the floor things (but those of
+  // `own`, being moved; with `pl`, the working things where it lays them out)
+  function keepF(own, pl) {
+    const out = [DOOR_SWING, box2(SPOTS.door.x, SPOTS.door.y, 0.35), DOORWAY];
+    Object.keys(OWNER).forEach((t) => { const o = OWNER[t]; if (WARE.get(o).kind === 'wall' || o === own) return; const sp = spotOf(t, pl && (pl[o] || WARE.get(o).at)); out.push(box2(sp.x, sp.y, 0.35)); });
     return out;
   }
   const KEEP_W = { L: [[4.0, 0, 6.2, 6.7]], R: [] };   // [u0, v0, u1, v1]: the door (the window is a ware now, 1.2.0)
@@ -7610,18 +7640,19 @@ const ROOM = (() => {
     return out;
   }
   const over = (a, b) => a[0] < b[2] - 1e-6 && b[0] < a[2] - 1e-6 && a[1] < b[3] - 1e-6 && b[1] < a[3] - 1e-6;
-  // can this ware go there (other wares as they stand now, itself left out)?
-  function fits(it, p) {
-    const others = placedWares().filter((o) => o.id !== it.id);
+  // can this ware go there (other wares as they stand now, or as `pl` lays them out; itself left out)?
+  const waresIn = (pl) => Object.keys(pl).filter((id) => WARE.has(id) && forRoom(WARE.get(id))).map((id) => ({ id, it: WARE.get(id), p: pl[id] }));
+  function fits(it, p, pl) {
+    const others = (pl ? waresIn(pl) : placedWares()).filter((o) => o.id !== it.id);
     if (it.kind === 'wall') {
       const r = wareRect(it, p), len = p.w === 'L' ? RD : RW;
       if (r[0] < 0.1 || r[2] > len - 0.1 || r[1] < WAIN + 0.2 || r[3] > 11.1) return false;   // up to the strings of lights along the tops
       return !KEEP_W[p.w].some((k) => over(r, k)) && !others.some((o) => (o.it.kind === 'wall' && o.p.w === p.w && over(r, wareRect(o.it, o.p))) || wallCover(o.it, o.p).some(([w, c]) => w === p.w && over(r, c)));
     }
     const f = wareFootprint(it, p), fs = footprints({ id: it.id, it }, p), inRoom = (r) => r[0] >= -1e-6 && r[1] >= -1e-6 && r[2] <= RW + 1e-6 && r[3] <= RD + 1e-6;   // flush with a wall is fine
-    if (!inRoom(f) || !fs.every(inRoom)) return false;
+    if (!inRoom(f) || !fs.every(inRoom) || fs.some((r) => PARTS.some((q) => over(r, q)))) return false;
     if (it.kind === 'rug') return !others.some((o) => o.it.kind === 'rug' && over(f, wareFootprint(o.it, o.p)));
-    const theirs = others.filter((o) => o.it.kind === 'floor').flatMap((o) => footprints(o)), keep = keepF(it.id);
+    const theirs = others.filter((o) => o.it.kind === 'floor').flatMap((o) => footprints(o)).concat(PARTS), keep = keepF(it.id, pl);
     const mine = Object.keys(OWNER).filter((t) => OWNER[t] === it.id && t !== 'notebook').map((t) => { const sp = spotOf(t, p); return box2(sp.x, sp.y, 0.3); });   // its own spots must stay clear
     return !fs.some((r) => keep.some((k) => over(r, k)) || theirs.some((t) => over(r, t))) && mine.every((r) => inRoom(r) && !theirs.some((t) => over(r, t)))
       && !wallCover(it, p).some(([w, c]) => others.some((o) => o.it.kind === 'wall' && o.p.w === w && over(c, wareRect(o.it, o.p))));
@@ -7642,14 +7673,36 @@ const ROOM = (() => {
       if (it.fixed) placed[id] = Object.assign({}, it.at); else delete placed[id];
     });
   }
-  function standingList() {   // the floor wares (a working thing in its parts), unsorted
+  // roomV 6 (1.3.0): the room grew and the bedroom was walled off. 書房's own things still where they first stood go to their new
+  // places, once (the bed, its night table and rug into the bedroom, the night-sky picture over the bed, the round rug out from the
+  // wall), if their new place is clear; then whatever the low walls or the doorway cross moves to the nearest clear spot, or into
+  // the storage box when there is none (a working thing, never put away, back to its own place)
+  const OLD6 = { bed: { w: 'F', x: 18.45, y: 2.625 }, nightTable: { w: 'F', x: 16.25, y: 0.55 }, bedRug: { w: 'F', x: 14.9, y: 2.92 }, sageRug: { w: 'F', x: 9.2, y: 3.55 }, nightPicture: { w: 'R', u: 18.45, v: 4.4 } };
+  function settle(placed) {
+    Object.keys(OLD6).forEach((id) => {
+      const p = placed[id], o = OLD6[id], it = WARE.get(id);
+      if (p && !p.r && Object.keys(o).every((k) => p[k] === o[k]) && fits(it, it.at, placed)) placed[id] = Object.assign({}, it.at);
+    });
+    Object.keys(placed).forEach((id) => {
+      const it = WARE.get(id), p = placed[id];
+      if (!it || (it.kind !== 'floor' && it.kind !== 'rug') || p.w !== 'F' || !walledIn(footprints({ id, it }, p))) return;
+      const near = [];
+      for (let x = 0.5; x < RW; x += 0.25) for (let y = 0.5; y < RD; y += 0.25) near.push({ x, y, d: Math.hypot(x - p.x, y - p.y) });
+      near.sort((a, b) => a.d - b.d);
+      const hit = near.find((q) => { const c = { w: 'F', x: q.x, y: q.y, r: p.r || 0 }; return !walledIn(footprints({ id, it }, c)) && fits(it, c, placed); });
+      if (hit) placed[id] = { w: 'F', x: hit.x, y: hit.y, r: p.r || 0 };
+      else if (it.fixed) placed[id] = Object.assign({}, it.at);
+      else delete placed[id];
+    });
+  }
+  function standingList() {   // the floor wares (a working thing in its parts) and the bedroom's low walls, unsorted
     return placedWares().filter((o) => o.it.kind === 'floor').flatMap((o) => {
       if (!WORK[o.id]) return [{ id: 'w:' + o.id, fp: wareFootprint(o.it, o.p), ware: o }];
       const fs = footprints(o);
       return WORK[o.id].map(([pid, , art], i) => ({ id: pid, fp: fs[i], work: [o.id, art] }));
-    });
+    }).concat(PARTS.map((fp, i) => ({ id: 'part' + i, fp, art: () => lowWallArt(i) })), [{ id: 'lintel', fp: LINTEL, z0: 4.5, art: lintelArt }]);
   }
-  function standing(bk) { return depthSort(standingList()).map((q) => ({ id: q.id, fp: q.fp, art: q.work ? inPlace(q.work[0], () => q.work[1](bk)) : DECOR.floor(q.ware.id, q.ware.p) })); }
+  function standing(bk) { return depthSort(standingList()).map((q) => ({ id: q.id, fp: q.fp, z0: q.z0, art: q.art ? q.art() : q.work ? inPlace(q.work[0], () => q.work[1](bk)) : DECOR.floor(q.ware.id, q.ware.p) })); }
   function studyArt(d, left, bk) {
     const wares = placedWares();
     return `<svg class="art" viewBox="${VB.join(' ')}" aria-hidden="true">${DEFS}
@@ -7781,7 +7834,7 @@ const ROOM = (() => {
   function walkGrid() {
     if (grid) return grid;
     const g = new Uint8Array(GW * GH), pad = 0.3;
-    const rects = placedWares().filter((o) => o.it.kind === 'floor').flatMap((o) => footprints(o));
+    const rects = placedWares().filter((o) => o.it.kind === 'floor').flatMap((o) => footprints(o)).concat(PARTS);
     for (let j = 0; j < GH; j++) for (let i = 0; i < GW; i++) {
       const cx = (i + 0.5) * CELL, cy = (j + 0.5) * CELL, sx = cx - cy, sy = (cx + cy) / 2;   // sx, sy: the cell on the screen (P / S)
       if (cx < 0.4 || cy < 0.4 || cx > RW - 0.4 || cy > RD - 0.4 || sx < BOUND[0] + 0.6 || sx > BOUND[2] - 0.6 || sy > BOUND[3] - 0.4 || rects.some((r) => cx > r[0] - pad && cx < r[2] + pad && cy > r[1] - pad && cy < r[3] + pad)) g[j * GW + i] = 1;
@@ -7947,7 +8000,7 @@ const ROOM = (() => {
     { id: 'shelf', route: '#/course', label: '課程', icon: 'course', pts: [[0, BC.y1, 3.1], [BC.x1, BC.y1, 3.1], [BC.x1, BC.y0, 3.1], [BC.x1, BC.y1, BC.z1], [0, BC.y0, BC.z1]], tag: [BC.x1, 1.9, 4.42] },
     { id: 'cards', route: '#/vocab', label: '單字', icon: 'vocab', pts: [[CB.x0, CB.y0, CB.z], [CB.x1, CB.y0, CB.z], [CB.x1, CB.y1, CB.z], [CB.x0, CB.y1, CB.z], [CB.x0 + 0.08, CB.y0 + 0.12, CB.z + 0.61], [CB.x1 - 0.08, CB.y1 - 0.13, CB.z + 0.61]], tag: [BC.x1, (CB.y0 + CB.y1) / 2, BC.z1 + 0.18], pad: 8 },
     { id: 'notebook', act: 'study-practice', label: '今日練習', icon: 'practice', primary: true, pts: [[NB.x0, NB.y0, DESK.z1], [NB.x1, NB.y0, DESK.z1], [NB.x1, NB.y1, DESK.z1], [NB.x0, NB.y1, DESK.z1]], tag: [(NB.x0 + NB.x1) / 2 + 2.0 - (NB.y0 + NB.y1) / 2, DESK.y1, 2.62], pad: 14 },
-    { id: 'phones', route: '#/listen', label: '聽一輪', icon: 'listen', primary: true, pts: [[HP.x, HP.y, HP.top]], sb: [-48, -8, 48, 92], tag: [DESK.x1 + 0.2, HP.y + 0.62, 2.55] },
+    { id: 'phones', route: '#/listen', label: '聽一輪', icon: 'listen', primary: true, pts: PH_PTS, tag: [DESK.x1 + 0.2, HP.y + 0.62, 2.55], pad: 10 },
     { id: 'drawer', act: 'study-drawer', label: '錯題本', icon: 'mistakes', pts: [[DR.x0, DR.y1, 0.2], [DR.x1, DR.y1, 0.2], [DR.x1, 0, 0.2], [DR.x0, DR.y1, DR.h], [DR.x0, 0, DR.h], [DR.x1, 0, DR.h]], tag: [8.45, DR.y1, 1.9], pad: 6 },
     { id: 'board', route: '#/stats', label: '學習分析', icon: 'chart', pts: [[BD.x0, 0, BD.z0], [BD.x1, 0, BD.z1]], tag: [(BD.x0 + BD.x1) / 2, 0, BD.z1 + 0.32], pad: 6 },
     { id: 'calendar', route: '#/exam', label: '模擬考', icon: 'exam', pts: [[CAL.x0, 0, CAL.z0], [CAL.x1, 0, CAL.z1]], tag: [(CAL.x0 + CAL.x1) / 2, 0, CAL.z0 - 0.32], pad: 6 }
@@ -7994,7 +8047,7 @@ const ROOM = (() => {
     };
     const dm = mover('desk').map, [lx, ly] = P(...LIT[0].p), [l2x, l2y] = P(...LIT[1].p);
     const wp = winAt(), wh = wp && winHole(wp), [wx, wy] = wh ? P(...wh.at(wh.X0, -0.34, wh.z1)) : [0, 0];   // the sky behind the window, where it hangs
-    const [nx, ny] = P(...dm([(NB.x0 + NB.x1) / 2, (NB.y0 + NB.y1) / 2, DESK.z1])), [hx, hy] = P(...dm([HP.x, HP.y, HP.top])), [mx, my] = P(...dm([MUG[0], MUG[1], DESK.z1]));
+    const [nx, ny] = P(...dm([(NB.x0 + NB.x1) / 2, (NB.y0 + NB.y1) / 2, DESK.z1])), [hx, hy] = P(...dm([HP.x, HP.y, DESK.z1 + 0.6])), [mx, my] = P(...dm([MUG[0], MUG[1], DESK.z1]));
     return `<div class="study${pct >= 100 ? ' full' : ''}${ed.on ? ' edit' : ''}" data-anim data-date="${todayStr()}" data-sig="${roomSig()}" style="--f:${f}">
       <div class="room-wrap"><div class="room">
         ${wh ? `<div class="w-sky${wh.R ? '' : ' l'}" aria-hidden="true" style="${vbPct(wx, wy)};${vbSize((wh.u1 - wh.u0) * S, (wh.z1 - wh.z0) * S)}">
@@ -8331,7 +8384,7 @@ const ROOM = (() => {
   };
   const kit = { S, P, pt, poly, line, onX, onY, onZ, F, FS, tone, box, qX, qY, qZ, shadow, bb, C, q2, r1, DEFS, VB, own, wireArt, bulbsAt };
   function hold() { heroHalt(); hero.going = null; hero.lead = null; }   // the dressing room opens: the hero stops where they are
-  return { html, level, mount, enter, pull, door, mark, out, kit, fits, moveOff, SPOTS, use, useWare, heroRedraw, heroIn, tapHero, hold, edit: (el, cmd, id) => editCmd(el.closest('.study'), cmd, id) };
+  return { html, level, mount, enter, pull, door, mark, out, kit, fits, moveOff, settle, SPOTS, use, useWare, heroRedraw, heroIn, tapHero, hold, edit: (el, cmd, id) => editCmd(el.closest('.study'), cmd, id) };
 })();
 // ---------- 古道具屋's wares in 書房 (1.2.0): each one drawn with 書房's own pencils and light (ROOM.kit) ----------
 // DECOR.wall(id, p) draws a wall ware where it hangs, DECOR.floor(id, p) one standing or lying on the floor (p.r turns it a
@@ -10972,13 +11025,13 @@ function renderListen(view) {
 }
 // 聽一輪 (書房's headphones, 1.1.0): the player the 今日 card used to carry, over the notebook or a word theme; the switch opens
 // on the last choice (kept on the device)
-// 聽一輪 opens under 書房's headphones on their stand (1.1.0); music notes rise from them while the player plays
+// 聽一輪 opens under 書房's headphones lying on the desk (1.1.0; no stand since 1.3.0); music notes rise from them while it plays
 function listenStandHtml() {
   return `<div class="listen-stand${LISTEN && LISTEN.playing ? ' playing' : ''}" aria-hidden="true">
-    <svg viewBox="0 0 80 74"><ellipse class="base" cx="40" cy="70" rx="20" ry="3.5"/><rect class="pole" x="38" y="22" width="4" height="48" rx="1"/>
-      <path class="band" d="M17 44a23 23 0 0 1 46 0" fill="none" stroke-width="6" stroke-linecap="round"/>
-      <rect class="cup" x="9" y="38" width="15" height="24" rx="6"/><rect class="cup" x="56" y="38" width="15" height="24" rx="6"/>
-      <rect class="pad" x="20" y="41" width="5" height="18" rx="2"/><rect class="pad" x="55" y="41" width="5" height="18" rx="2"/></svg>
+    <svg viewBox="0 0 80 74"><rect class="desk-top" x="2" y="64" width="76" height="6" rx="2"/>
+      <path class="band" d="M19 56a21 21 0 0 1 42 0" fill="none" stroke-width="6" stroke-linecap="round"/>
+      <rect class="cup" x="10" y="48" width="17" height="16" rx="6"/><rect class="cup" x="53" y="48" width="17" height="16" rx="6"/>
+      <rect class="pad" x="24" y="51" width="5" height="13" rx="2"/><rect class="pad" x="51" y="51" width="5" height="13" rx="2"/></svg>
     <div class="notes"><i style="--w:0s;--dx:-14px">♪</i><i style="--w:-1.1s;--dx:12px">♫</i><i style="--w:-2.2s;--dx:-4px">♪</i></div>
   </div>`;
 }
