@@ -304,6 +304,30 @@ def test_the_shrine_holds_its_festival_by_night_with_people_in_yukata(b):
     assert r['night']['stalls'] and r['night']['people'] == ['chihaya', 'tatsu'], r
     assert r['dress'] == ['yukata', 'shirt'], r   # 千早 in a yukata for the festival
 
+def test_the_bus_goes_on_to_the_castle_and_its_guide(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + BUS + """ fake([]); state.town.stops = { station: 1, castle: 1 }; state.town.seen.takahashi = 1; await go('station', 11);
+      y().querySelector('[data-act="bus-stop"]').click(); const bd = await board(); const list = [...bd.querySelectorAll('[data-bus]')].filter(x => !x.disabled).map(x => x.dataset.bus);
+      bd.querySelector('[data-bus="castle"]').click(); for (let i = 0; i < 120 && location.hash !== '#/castle'; i++) await wait(50); await wait(300);
+      return JSON.stringify({ list, place: y().dataset.place, art: !!y().querySelector('.castle-land'), guide: !!y().querySelector('.npc-takahashi') }); })()"""))
+    assert r == {'list': ['street', 'castle'], 'place': 'castle', 'art': True, 'guide': True}, r
+
+# ---- the test site's tools in 町の手帳 (the user: try every stage's people on the test site) ----
+def test_the_test_site_notebook_meets_everyone_sets_the_hour_and_plays_any_event(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)); const k0 = kotoBalance();
+      DIARY.open('town'); const d = () => document.querySelector('.diary');
+      const tools = !!d().querySelector('.town-tools'), listed = d().querySelectorAll('[data-try]').length;
+      d().querySelector('[data-tool="meet"]').click(); await wait(30);
+      const seen = Object.keys(TOWN.CAST).filter(id => TOWN.CAST[id].art !== 'npc').every(id => state.town.seen[id]), stops = Object.keys(state.town.stops).sort();
+      d().querySelector('[data-tool="hour"][data-h="20"]').click(); const h = TOWNEV.clock && TOWNEV.clock.h;
+      d().querySelector('[data-try="m10-3"]').click(); await wait(50); const talk = document.querySelector('.talk .talk-name').textContent;
+      while (document.querySelector('.talk')) { const t = document.querySelector('.talk'), o = t.querySelectorAll('.talk-opt'); if (o.length) { const L = TOWN.EVENTS.find(e => e.id === 'm10-3').lines.find(l => !Array.isArray(l) && l.ask === t.querySelector('.talk-name span').textContent); o[L.opts.findIndex(x => x[1])].click(); } else t.click(); await wait(10); }
+      const after = { done: !!state.town.done['m10-3'], koto: kotoBalance() - k0, back: !!document.querySelector('.diary .town-tools') };
+      d().querySelector('[data-tool="hour"][data-h="now"]').click();
+      return JSON.stringify({ tools, listed, seen, stops, h, talk, after, real: TOWNEV.clock }); })()"""))
+    assert r['tools'] and r['listed'] >= 55 and r['seen'] and r['stops'] == ['castle', 'sento', 'shrine', 'station'], r
+    assert r['h'] == 20 and r['talk'].startswith('ソフィア'), r
+    assert r['after'] == {'done': False, 'koto': 0, 'back': True} and r['real'] is None, r   # a try gives nothing and marks nothing done
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -13,7 +13,7 @@
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
 <script src="./data.js?v=21"></script>
-<script src="./events.js?v=9"></script>
+<script src="./events.js?v=10"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -428,6 +428,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .town-book { max-height: min(60vh, 520px); overflow-y: auto; display: grid; gap: 14px; }
 .tb-person { display: flex; gap: 10px; } .tb-face { flex: none; width: 52px; height: 52px; border-radius: 12px; background: #efe6d4; overflow: hidden; } .tb-face svg { width: 100%; height: 100%; }
 .tb-body { flex: 1; min-width: 0; font-size: 13.5px; } .tb-body b { font-size: 15px; } .tb-body > span { margin-left: 8px; font-size: 12px; color: #9a8a74; } .tb-body p { margin: 4px 0 0; line-height: 1.6; color: #6b5a48; }
+.town-tools { margin-top: 6px; padding-top: 12px; border-top: 1px dashed #d9ccb4; font-size: 13px; } .town-tools .btn[aria-pressed="true"] { background: #7a5a3a; color: #fbf6ea; }
+.tt-unit { margin-top: 10px; } .tt-unit > span { font-weight: 700; color: #8a6a52; }
 .tb-ev { display: flex; justify-content: space-between; width: 100%; margin-top: 6px; padding: 6px 10px; border: 1px solid #d9ccb4; border-radius: 10px; font: inherit; font-size: 13px; color: #4a3a2c; background: #fffdf6; cursor: pointer; } .tb-ev small { color: #9a8a74; }
 .got { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: rgba(12, 10, 24, .62); cursor: pointer; animation: gotIn .25s ease-out; overflow: hidden; }
 .got.out { opacity: 0; transition: opacity .25s; } @keyframes gotIn { from { opacity: 0; } }
@@ -474,8 +476,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.sky .house, .house-thumb) .m-dot { fill: color-mix(in srgb, #fff8ec calc(var(--day) * 100%), #4a3c66); }
 :is(.sky .house, .house-thumb) .m-gill { fill: color-mix(in srgb, #ead6b4 calc(var(--day) * 100%), #15163a); }
 :is(.sky .house, .house-thumb) .m-pipe { fill: color-mix(in srgb, #7e6a5a calc(var(--day) * 100%), #0c0d25); }
-:is(.sky .house, .house-thumb, .sky .busstop, .sky .town-land, .sky .station-land, .sky .sento-land, .sky .shrine-land) .hc { fill: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); transition: fill 3s; }
-:is(.sky .house, .house-thumb, .sky .busstop, .sky .town-land, .sky .station-land, .sky .sento-land, .sky .shrine-land) .hs { fill: none; stroke: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); stroke-linecap: round; stroke-linejoin: round; transition: stroke 3s; }
+:is(.sky .house, .house-thumb, .sky .busstop, .sky .town-land, .sky .station-land, .sky .sento-land, .sky .shrine-land, .sky .castle-land) .hc { fill: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); transition: fill 3s; }
+:is(.sky .house, .house-thumb, .sky .busstop, .sky .town-land, .sky .station-land, .sky .sento-land, .sky .shrine-land, .sky .castle-land) .hs { fill: none; stroke: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); stroke-linecap: round; stroke-linejoin: round; transition: stroke 3s; }
 :is(.sky .house, .house-thumb) .m-grass { fill: none; stroke: color-mix(in srgb, #5f9a4a calc(var(--day) * 100%), #0b0c22); stroke-width: 1.6; stroke-linecap: round; }
 .house-thumb :is(.wall, .roof, .chim) { fill: #f1e3c6; } .house-thumb .rim { fill: none; stroke: rgba(255, 255, 255, .45); stroke-width: 1.4; } .house-thumb .pane { fill: #cfe9f8; } .house-thumb .mull { stroke: #fff; stroke-width: 2; } .house-thumb .door { fill: #7a4b2e; } .house-thumb .knob { fill: #ffcf7a; }
 .sky .house .win { position: absolute; border-radius: 50%; opacity: calc((.12 + .88 * var(--f)) * (1 - var(--day))); transition: opacity 1.5s; }   /* the light round each window, warmer as the list fills */
@@ -7398,7 +7400,25 @@ const DIARY = (() => {
       return `<section class="tb-person"><div class="tb-face">${TOWNEV.face(id)}</div><div class="tb-body"><b>${esc(c.name)}</b><span>${esc(c.role)}</span>
         ${c.bio.slice(0, 1 + list.length).map((b) => `<p>${esc(b)}</p>`).join('')}
         ${list.map((e) => `<button type="button" class="tb-ev" data-replay="${esc(e.id)}">${esc(e.title)}<small>再讀一次</small></button>`).join('')}</div></section>`; }).join('')
-      : '<p class="diary-lock">還沒有認識鎮上的人。到小鎮、海邊走走看吧。</p>'}</div>`;
+      : '<p class="diary-lock">還沒有認識鎮上的人。到小鎮、海邊走走看吧。</p>'}${onTestSite() ? townTools() : ''}</div>`;
+  }
+  // the test site only (the user, 2026-11-10: try every stage's people there): meet everyone and open every stop, see the town at
+  // an hour of the day, start over, and play any event (no 言靈, nothing marked done)
+  function townTools() {
+    const hrs = [['now', '現在'], [7, '7 點'], [12, '12 點'], [17, '17 點'], [20, '20 點'], [23, '23 點']], cur = TOWNEV.clock ? TOWNEV.clock.h : 'now';
+    const byUnit = {}; TOWN.EVENTS.forEach((e) => { (byUnit[e.u] = byUnit[e.u] || []).push(e); });
+    return `<section class="town-tools"><b>測試用（只在測試站）</b>
+      <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="meet">認識所有人、開通所有公車站</button><button type="button" class="btn btn-sm" data-tool="reset">小鎮事件從頭開始</button></div>
+      <div class="row-wrap mt-2">時間：${hrs.map(([h, n]) => `<button type="button" class="btn btn-sm" data-tool="hour" data-h="${h}" aria-pressed="${String(h) === String(cur)}">${n}</button>`).join('')}</div>
+      ${Object.entries(byUnit).map(([u, list]) => `<div class="tt-unit"><span>${esc(u)}</span>${list.map((e) => `<button type="button" class="tb-ev" data-try="${esc(e.id)}">${esc(e.title)}<small>${esc((TOWN.CAST[e.who] || {}).name || e.who)}・${esc(TOWNEV.PLACE_NAME[e.at] || e.at)}${e.when === 'night' ? '・晚上' : ''}</small></button>`).join('')}</div>`).join('')}
+    </section>`;
+  }
+  function tool(b) {
+    const t = b.dataset.tool;
+    if (t === 'meet') { Object.keys(TOWN.CAST).forEach((id) => { if (TOWN.CAST[id].art !== 'npc') state.town.seen[id] = 1; }); BUS_STOPS.forEach(([id]) => { state.town.stops[id] = 1; }); saveState(); toast('認識所有人、開通所有公車站了'); }
+    if (t === 'reset') { state.town = { done: {}, seen: {}, stops: {} }; Object.keys(state.koto.found).filter((k) => k.startsWith('ev-')).forEach((k) => delete state.koto.found[k]); saveState(); toast('小鎮事件從頭開始'); }
+    if (t === 'hour') TOWNEV.clock = b.dataset.h === 'now' ? null : { h: Number(b.dataset.h), day: new Date() };
+    show();
   }
   function show() {
     if (tab === 'town') { el.innerHTML = `<div class="diary-book">${tabs()}${townBook()}<div class="diary-nav"><span></span><button type="button" class="btn btn-sm" data-diary="x">闔上</button><span></span></div></div>`; return; }
@@ -7416,7 +7436,9 @@ const DIARY = (() => {
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     el.addEventListener('click', (e) => {
       e.stopPropagation(); const b = e.target.closest('[data-diary]'), r = e.target.closest('[data-replay]');
-      if (r) { const ev = TOWN.EVENTS.find((x) => x.id === r.dataset.replay); close(); if (ev) TALK.open(document.body, ev.who, ev.lines, () => openBook('town'), null, { ev: true }); return; }
+      const tr = e.target.closest('[data-try]'), tl = e.target.closest('[data-tool]');
+      if (tl) { tool(tl); return; }
+      if (r || tr) { const ev = TOWN.EVENTS.find((x) => x.id === (r || tr).dataset[r ? 'replay' : 'try']); close(); if (ev) TALK.open(document.body, ev.who, ev.lines, () => openBook('town'), null, { ev: true }); return; }
       if (b) { const d = b.dataset.diary; if (d === 'x') close(); else if (d.startsWith('tab-')) { tab = d.slice(4); show(); } else { at = Math.max(0, Math.min(PAGES.length - 1, at + Number(d))); show(); } }
       else if (e.target === el) close();
     });
@@ -7649,7 +7671,7 @@ function streetHtml() {
 // between the places out of doors (test, 2026-11-09): the yard's path down to the main road, the yard's left edge along to the
 // beach. The hero walks to the way out (out), fades, and the other place opens with him coming in (in: where he appears, where
 // he walks to; yh.arrive)
-const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento', shrine: '#/shrine' };
+const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento', shrine: '#/shrine', castle: '#/castle' };
 const OUT_PLACES = Object.keys(PLACE_ROUTE).filter((p) => p !== 'yard');   // the places out and about besides the yard, each its own route
 const WAYS = {
   'yard>street': { out: () => [LANE.at(1)[0], 4], in: () => [[STREET_LANE.at(0)[0], 214], [STREET_LANE.at(1)[0] + 8, 126]] },
@@ -7720,13 +7742,40 @@ function shrineHtml() {
     ${busPoleHtml('shrine')}
     <div class="ysel"></div>`;
 }
+// 白鷺城 (test, 2026-11-09), the end of the bus line: the white keep in tiers on its stone walls, the gate, old pines, the
+// guides' booth (案内所) and its board of the castle's story
+function castleHtml() {
+  const F = 236;
+  const tier = (y, w, h) => `<rect x="${860 - w / 2}" y="${y}" width="${w}" height="${h}" ${hc('#f6f3ec', '#3a3c62')}/><path d="M${860 - w / 2 - 20} ${y + 4} Q860 ${y - 18} ${860 + w / 2 + 20} ${y + 4} L${860 + w / 2 + 6} ${y + 12} Q860 ${y - 6} ${860 - w / 2 - 6} ${y + 12} Z" ${hc('#5a6470', '#1c2240')}/>
+    ${Array.from({ length: Math.floor(w / 34) }, (_, k) => `<rect x="${860 - w / 2 + 12 + k * 34}" y="${y + h / 2 - 5}" width="14" height="10" ${hc('#3b3b44', '#ffd98a')}/>`).join('')}`;
+  const pine = (x, s) => `<path d="M${x} ${F} V${F - 70 * s}" ${hs('#6b4a2f', '#0b0c22')} stroke-width="${8 * s}"/>${[[0, -78, 44], [-24, -60, 34], [26, -58, 32], [0, -100, 28]].map(([dx, dy, r]) => `<ellipse cx="${x + dx * s}" cy="${F + dy * s}" rx="${r * s}" ry="${r * s * 0.42}" class="crown"/>`).join('')}`;
+  return `<svg class="land castle-land" viewBox="0 0 1200 370" preserveAspectRatio="xMidYMax slice">
+      <path class="far" d="M0 122 C120 100 240 104 360 118 S560 96 700 110 S900 126 1020 104 S1150 100 1200 110 V370 H0 Z"/>
+      <rect class="near" x="-20" y="150" width="1240" height="220"/>
+      <path d="M700 ${F} L730 ${F - 60} H990 L1020 ${F} Z" ${hc('#b8b0a0', '#2a2c48')}/>${Array.from({ length: 7 }, (_, k) => `<path d="M${712 + k * 6} ${F - 8 - k * 8} H${1008 - k * 6}" ${hs('#9a9284', '#1c1d3c')} stroke-width="1"/>`).join('')}
+      ${tier(F - 100, 230, 40)}${tier(F - 148, 180, 36)}${tier(F - 190, 130, 32)}
+      <path d="M836 ${F - 210} Q860 ${F - 236} 884 ${F - 210} Z" ${hc('#5a6470', '#1c2240')}/><path d="M830 ${F - 214} q-6 -10 2 -16 M890 ${F - 214} q6 -10 -2 -16" ${hs('#d9b04a', '#a88a4a')} stroke-width="3"/>
+      <rect x="160" y="${F - 110}" width="200" height="110" ${hc('#6e4f3a', '#2a2440')}/><path d="M140 ${F - 110} Q260 ${F - 140} 380 ${F - 110} L370 ${F - 100} Q260 ${F - 126} 150 ${F - 100} Z" ${hc('#4a5468', '#141632')}/>
+      <rect x="210" y="${F - 90}" width="100" height="90" ${hc('#3a2a20', '#141228')}/><path d="M260 ${F - 90} V${F}" ${hs('#6e4f3a', '#2a2440')} stroke-width="3"/>${[230, 290].map((x) => `<circle cx="${x}" cy="${F - 45}" r="3" ${hc('#d9b04a', '#a88a4a')}/>`).join('')}
+      <rect x="430" y="${F - 70}" width="130" height="70" ${hc('#efe6d6', '#25264a')}/><path d="M420 ${F - 70} h150 l-12 -16 h-126 Z" ${hc('#8a6a52', '#1c1d3c')}/><rect x="450" y="${F - 62}" width="90" height="18" rx="2" ${hc('#2f4a6e', '#1c1d3c')}/>
+      <text x="495" y="${F - 49}" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="system-ui, sans-serif">案内所</text><rect x="455" y="${F - 36}" width="80" height="36" ${hc('#cfe6ec', '#ffd98a')}/>
+      <rect x="590" y="${F - 64}" width="70" height="46" rx="2" ${hc('#fbf7ec', '#3a3b62')}/><rect x="620" y="${F - 18}" width="8" height="18" ${hc('#6e4f3a', '#2c2440')}/><text x="625" y="${F - 48}" text-anchor="middle" font-size="10" font-weight="700" ${hc('#3b2a1c', '#c9c4e8')} font-family="system-ui, sans-serif">白鷺城</text>
+      <path d="M598 ${F - 38} h54 M598 ${F - 30} h44" ${hs('#9a9184', '#4a4e78')} stroke-width="2"/>
+      ${pine(70, 1.1)}${pine(400, 0.8)}${pine(1110, 1)}
+      <rect class="pave" x="-20" y="${F}" width="1240" height="${370 - F}" style="fill:color-mix(in srgb, #ddd3bd calc(var(--day) * 100%), #2a2a48)"/>
+      ${Array.from({ length: 30 }, (_, j) => `<path class="seam" d="M${j * 44 - 20} ${F + 40 + (j % 3) * 30} h26"/>`).join('')}
+    </svg>
+    ${yHeroHtml()}
+    ${busPoleHtml('castle')}
+    <div class="ysel"></div>`;
+}
 // the bus (test, 2026-11-09): sat on the bench, the bus comes in and its board shows the stops — 駅前, 月の湯, 稲荷神社, 白鷺城,
 // each opened by the event that first takes the hero there (TOWN events' opens); from a stop out there, home to the main road too.
 // Picked: the hero gets on, the bus pulls away, and the place opens with him getting off at its stop
 const BUS_STOPS = [['station', '駅前'], ['sento', '月の湯'], ['shrine', '稲荷神社'], ['castle', '白鷺城']];
-const BUS_AT = { street: BUS, station: { X: 470, Y: 84, seat: 0 }, sento: { X: 470, Y: 84, seat: 0 }, shrine: { X: 470, Y: 84, seat: 0 } };   // where each place's stop stands
+const BUS_AT = { street: BUS, station: { X: 470, Y: 84, seat: 0 }, sento: { X: 470, Y: 84, seat: 0 }, shrine: { X: 470, Y: 84, seat: 0 }, castle: { X: 470, Y: 84, seat: 0 } };   // where each place's stop stands
 const BUS_PLACES = ['street'].concat(BUS_STOPS.map((x) => x[0]));
-const BUS_IN = { street: () => [[BUS.X + 40, 122], [BUS.X - 60, 108]], station: () => [[440, 80], [360, 66]], sento: () => [[440, 80], [360, 66]], shrine: () => [[440, 80], [360, 66]] };   // getting off: where he steps down, where he walks to
+const BUS_IN = { street: () => [[BUS.X + 40, 122], [BUS.X - 60, 108]], station: () => [[440, 80], [360, 66]], sento: () => [[440, 80], [360, 66]], shrine: () => [[440, 80], [360, 66]], castle: () => [[440, 80], [360, 66]] };   // getting off: where he steps down, where he walks to
 const BUS_ART = `<rect x="-130" y="-104" width="260" height="96" rx="16" fill="#3f9a8c"/><rect x="-130" y="-56" width="260" height="10" fill="#f6f1e4"/>
   ${[-104, -60, -16, 28].map((x) => `<rect x="${x}" y="-94" width="38" height="30" rx="4" fill="#cfe6ec"/>`).join('')}<rect x="72" y="-94" width="34" height="80" rx="4" fill="#2f6f64"/><rect x="76" y="-90" width="26" height="40" rx="3" fill="#cfe6ec"/>
   <rect x="-122" y="-120" width="90" height="18" rx="4" fill="#2b2b33"/><text x="-77" y="-106" text-anchor="middle" font-size="12" font-weight="700" fill="#ffd27a" font-family="system-ui, sans-serif">みなと市バス</text>
@@ -7962,7 +8011,7 @@ function yardHtml(pct, place = 'yard') {
         <div class="birds"><div class="flock">${[[52, 14], [38, 6], [38, 22], [24, 0], [24, 28]].map(([x, y]) => `<i style="left:${x}px;top:${y}px"></i>`).join('')}</div></div>
       </div>
       <div class="yworld" style="width:${yw}px;margin-left:${-yw / 2}px">
-      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : place === 'shrine' ? shrineHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
+      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : place === 'shrine' ? shrineHtml() : place === 'castle' ? castleHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
         <defs><radialGradient id="shopGlow"><stop offset="0" stop-color="rgba(255,196,110,.55)"/><stop offset=".5" stop-color="rgba(255,196,110,.16)"/><stop offset="1" stop-color="rgba(255,196,110,0)"/></radialGradient></defs>
         <path class="m-far" d="M520 600 V340 C560 330 600 314 640 304 C670 296 700 294 730 298 C770 306 810 328 860 342 V600 Z"/>
         <path class="m-main" d="${HILL} V600 Z"/><path class="m-shade" d="M482 250 C494 248 506 256 520 268 C552 296 594 326 646 350 V372 C590 340 548 306 516 280 C502 268 492 258 482 250 Z"/><path class="m-rim" d="${HILL}"/>
