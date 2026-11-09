@@ -13,7 +13,7 @@
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
 <script src="./data.js?v=21"></script>
-<script src="./events.js?v=3"></script>
+<script src="./events.js?v=4"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -474,8 +474,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.sky .house, .house-thumb) .m-dot { fill: color-mix(in srgb, #fff8ec calc(var(--day) * 100%), #4a3c66); }
 :is(.sky .house, .house-thumb) .m-gill { fill: color-mix(in srgb, #ead6b4 calc(var(--day) * 100%), #15163a); }
 :is(.sky .house, .house-thumb) .m-pipe { fill: color-mix(in srgb, #7e6a5a calc(var(--day) * 100%), #0c0d25); }
-:is(.sky .house, .house-thumb, .sky .busstop, .sky .town-land, .sky .station-land) .hc { fill: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); transition: fill 3s; }
-:is(.sky .house, .house-thumb, .sky .busstop, .sky .town-land, .sky .station-land) .hs { fill: none; stroke: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); stroke-linecap: round; stroke-linejoin: round; transition: stroke 3s; }
+:is(.sky .house, .house-thumb, .sky .busstop, .sky .town-land, .sky .station-land, .sky .sento-land) .hc { fill: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); transition: fill 3s; }
+:is(.sky .house, .house-thumb, .sky .busstop, .sky .town-land, .sky .station-land, .sky .sento-land) .hs { fill: none; stroke: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); stroke-linecap: round; stroke-linejoin: round; transition: stroke 3s; }
 :is(.sky .house, .house-thumb) .m-grass { fill: none; stroke: color-mix(in srgb, #5f9a4a calc(var(--day) * 100%), #0b0c22); stroke-width: 1.6; stroke-linecap: round; }
 .house-thumb :is(.wall, .roof, .chim) { fill: #f1e3c6; } .house-thumb .rim { fill: none; stroke: rgba(255, 255, 255, .45); stroke-width: 1.4; } .house-thumb .pane { fill: #cfe9f8; } .house-thumb .mull { stroke: #fff; stroke-width: 2; } .house-thumb .door { fill: #7a4b2e; } .house-thumb .knob { fill: #ffcf7a; }
 .sky .house .win { position: absolute; border-radius: 50%; opacity: calc((.12 + .88 * var(--f)) * (1 - var(--day))); transition: opacity 1.5s; }   /* the light round each window, warmer as the list fills */
@@ -6001,12 +6001,12 @@ function route() {
   lastMainRoute = location.hash || '#/today';
   settingsDirty = false;
   closeModal(true);
-  renderNav(r.name === 'course' ? 'course' : r.name === 'bedroom' ? 'today' : ['street', 'beach', 'town', 'station', ...INDOOR].includes(r.name) ? 'outside' : r.name);
+  renderNav(r.name === 'course' ? 'course' : r.name === 'bedroom' ? 'today' : OUT_PLACES.includes(r.name) ? 'outside' : r.name);
   try {
     if (r.name === 'today') renderToday(view);
     else if (r.name === 'bedroom') renderToday(view, 'bed');
     else if (r.name === 'outside') renderOutside(view);
-    else if (['street', 'beach', 'town', 'station', ...INDOOR].includes(r.name)) renderOutside(view, r.name);   // test: the main road with the bus stop, the beach
+    else if (OUT_PLACES.includes(r.name)) renderOutside(view, r.name);   // test: the main road with the bus stop, the beach
     else if (r.name === 'course') { if (r.parts[1]) renderUnit(view, r.parts[1] === 'intro' ? 'm0' : r.parts[1], r.params.tab || 'lesson'); else renderCourse(view); }
     else if (r.name === 'vocab') {
       if (!r.parts[1] || r.parts[1] === 'themes') { location.replace('#/vocab/level?lv=' + defaultVocabLevel()); return route(); }   // replace, so Back leaves the vocab page   // the vocab page opens on the learner's level; the old 主題 tab lives there too
@@ -7646,7 +7646,8 @@ function streetHtml() {
 // between the places out of doors (test, 2026-11-09): the yard's path down to the main road, the yard's left edge along to the
 // beach. The hero walks to the way out (out), fades, and the other place opens with him coming in (in: where he appears, where
 // he walks to; yh.arrive)
-const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station' };
+const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento' };
+const OUT_PLACES = Object.keys(PLACE_ROUTE).filter((p) => p !== 'yard');   // the places out and about besides the yard, each its own route
 const WAYS = {
   'yard>street': { out: () => [LANE.at(1)[0], 4], in: () => [[STREET_LANE.at(0)[0], 214], [STREET_LANE.at(1)[0] + 8, 126]] },
   'street>yard': { out: () => [STREET_LANE.at(0)[0], 222], in: () => [[LANE.at(1)[0], 12], [-11, 56]] },
@@ -7691,9 +7692,9 @@ function busStopHtml() {
 // each opened by the event that first takes the hero there (TOWN events' opens); from a stop out there, home to the main road too.
 // Picked: the hero gets on, the bus pulls away, and the place opens with him getting off at its stop
 const BUS_STOPS = [['station', '駅前'], ['sento', '月の湯'], ['shrine', '稲荷神社'], ['castle', '白鷺城']];
-const BUS_AT = { street: BUS, station: { X: 470, Y: 84, seat: 0 } };   // where each place's stop stands
+const BUS_AT = { street: BUS, station: { X: 470, Y: 84, seat: 0 }, sento: { X: 470, Y: 84, seat: 0 } };   // where each place's stop stands
 const BUS_PLACES = ['street'].concat(BUS_STOPS.map((x) => x[0]));
-const BUS_IN = { street: () => [[BUS.X + 40, 122], [BUS.X - 60, 108]], station: () => [[440, 80], [360, 66]] };   // getting off: where he steps down, where he walks to
+const BUS_IN = { street: () => [[BUS.X + 40, 122], [BUS.X - 60, 108]], station: () => [[440, 80], [360, 66]], sento: () => [[440, 80], [360, 66]] };   // getting off: where he steps down, where he walks to
 const BUS_ART = `<rect x="-130" y="-104" width="260" height="96" rx="16" fill="#3f9a8c"/><rect x="-130" y="-56" width="260" height="10" fill="#f6f1e4"/>
   ${[-104, -60, -16, 28].map((x) => `<rect x="${x}" y="-94" width="38" height="30" rx="4" fill="#cfe6ec"/>`).join('')}<rect x="72" y="-94" width="34" height="80" rx="4" fill="#2f6f64"/><rect x="76" y="-90" width="26" height="40" rx="3" fill="#cfe6ec"/>
   <rect x="-122" y="-120" width="90" height="18" rx="4" fill="#2b2b33"/><text x="-77" y="-106" text-anchor="middle" font-size="12" font-weight="700" fill="#ffd27a" font-family="system-ui, sans-serif">みなと市バス</text>
@@ -7766,9 +7767,44 @@ function stationHtml() {
       ${[220, 700].map((x) => `<rect x="${x}" y="${F + 50}" width="90" height="8" rx="2" ${hc('#c58a54', '#3a2c40')}/><rect x="${x + 8}" y="${F + 58}" width="6" height="20" ${hc('#6e4f3a', '#2c2440')}/><rect x="${x + 76}" y="${F + 58}" width="6" height="20" ${hc('#6e4f3a', '#2c2440')}/>`).join('')}
     </svg>
     ${yHeroHtml()}
-    <div class="busstop" aria-hidden="true" style="width:30px;height:120px;margin-left:${at.X + 40}px;bottom:${at.Y}px;transform-origin:0 100%;transform:scale(${(k * 1.6).toFixed(3)});z-index:${300 - at.Y}"><svg viewBox="0 0 30 120"><rect x="13" y="20" width="4" height="100" fill="#8d9097"/><circle cx="15" cy="16" r="13" fill="#fff" stroke="#2f7a5a" stroke-width="3"/><text x="15" y="20" text-anchor="middle" font-size="9" font-weight="700" fill="#2f7a5a" font-family="system-ui, sans-serif">バス</text></svg></div>
-    ${TOWNEV.castHtml('station')}
-    <button type="button" class="thing bus-btn" data-act="bus-stop" aria-label="公車站" style="margin-left:${at.X - 20}px;bottom:${at.Y}px;width:90px;height:110px"><span class="tag">${ySign('bus', '搭公車')}</span>${TOWNEV.busDot('station')}</button>
+    ${busPoleHtml('station')}
+    <div class="ysel"></div>`;
+}
+// out where the bus goes: the hero, the people there, the stop's pole and its button (the bus home and on)
+function busPoleHtml(place) {
+  const at = BUS_AT[place], k = yScale(at.Y);
+  return `<div class="busstop" aria-hidden="true" style="width:30px;height:120px;margin-left:${at.X + 40}px;bottom:${at.Y}px;transform-origin:0 100%;transform:scale(${(k * 1.6).toFixed(3)});z-index:${300 - at.Y}"><svg viewBox="0 0 30 120"><rect x="13" y="20" width="4" height="100" fill="#8d9097"/><circle cx="15" cy="16" r="13" fill="#fff" stroke="#2f7a5a" stroke-width="3"/><text x="15" y="20" text-anchor="middle" font-size="9" font-weight="700" fill="#2f7a5a" font-family="system-ui, sans-serif">バス</text></svg></div>
+    ${TOWNEV.castHtml(place)}
+    <button type="button" class="thing bus-btn" data-act="bus-stop" aria-label="公車站" style="margin-left:${at.X - 20}px;bottom:${at.Y}px;width:90px;height:110px"><span class="tag">${ySign('bus', '搭公車')}</span>${TOWNEV.busDot(place)}</button>`;
+}
+// 月の湯 (test, 2026-11-09), an old public bath up the bus line: a wooden front under a tiled roof, its noren split 男 (blue) and
+// 女 (red) with ゆ on them, the chimney with its name, a bench outside and the milk machine; lit warm by night
+function sentoHtml() {
+  const F = 236;
+  return `<svg class="land sento-land" viewBox="0 0 1200 370" preserveAspectRatio="xMidYMax slice">
+      <path class="far" d="M0 122 C120 100 240 104 360 118 S560 96 700 110 S900 126 1020 104 S1150 100 1200 110 V370 H0 Z"/>
+      <rect class="near" x="-20" y="150" width="1240" height="220"/>
+      <rect x="860" y="${F - 216}" width="40" height="216" ${hc('#b4ad9e', '#25264a')}/><rect x="854" y="${F - 222}" width="52" height="10" ${hc('#8a8f99', '#1c1d3c')}/>
+      <text x="880" y="${F - 196}" text-anchor="middle" font-size="18" font-weight="700" ${hc('#3b2a1c', '#c9c4e8')} font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif" writing-mode="tb">月の湯</text>
+      <rect x="320" y="${F - 140}" width="480" height="140" ${hc('#a8743f', '#2a2440')}/>
+      <path d="M290 ${F - 140} Q560 ${F - 200} 830 ${F - 140} L800 ${F - 128} Q560 ${F - 182} 320 ${F - 128} Z" ${hc('#4a5468', '#141632')}/>
+      <path d="M470 ${F - 196} Q560 ${F - 236} 650 ${F - 196} L640 ${F - 186} Q560 ${F - 222} 480 ${F - 186} Z" ${hc('#4a5468', '#141632')}/><rect x="480" y="${F - 192}" width="160" height="58" ${hc('#a8743f', '#2a2440')}/>
+      <rect x="500" y="${F - 186}" width="120" height="34" rx="3" ${hc('#f3e7cc', '#e8dcb4')}/><text x="560" y="${F - 162}" text-anchor="middle" font-size="20" font-weight="700" ${hc('#3b2a1c', '#3b2a1c')} font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif">月の湯</text>
+      <rect x="430" y="${F - 112}" width="260" height="112" ${hc('#5a3b28', '#ffd98a')}/>
+      <path d="M432 ${F - 112} h126 v52 h-126 Z" fill="#2f5a9a"/><path d="M562 ${F - 112} h126 v52 h-126 Z" fill="#c8453a"/>
+      ${[474, 516, 604, 646].map((x) => `<path d="M${x} ${F - 112} v52" stroke="#efe6d6" stroke-width="1.5"/>`).join('')}
+      <text x="495" y="${F - 78}" text-anchor="middle" font-size="22" font-weight="700" fill="#fff" font-family="serif">ゆ</text><text x="625" y="${F - 78}" text-anchor="middle" font-size="22" font-weight="700" fill="#fff" font-family="serif">ゆ</text>
+      <text x="495" y="${F - 124}" text-anchor="middle" font-size="12" font-weight="700" ${hc('#fbf7ec', '#c9c4e8')} font-family="system-ui, sans-serif">男</text><text x="625" y="${F - 124}" text-anchor="middle" font-size="12" font-weight="700" ${hc('#fbf7ec', '#c9c4e8')} font-family="system-ui, sans-serif">女</text>
+      ${[350, 730].map((x) => `<rect x="${x}" y="${F - 110}" width="56" height="60" rx="3" ${hc('#cfe6ec', '#ffd98a')}/><path d="M${x + 28} ${F - 110} v60 M${x} ${F - 80} h56" ${hs('#7a5230', '#3a2c40')} stroke-width="2"/>`).join('')}
+      <circle cx="560" cy="${F - 60}" r="160" fill="#ffd98a" style="opacity:calc((1 - var(--day, 1)) * .18)"/>
+      <rect x="180" y="${F - 92}" width="62" height="92" rx="4" ${hc('#3f7ac8', '#22305e')}/><rect x="188" y="${F - 84}" width="46" height="34" rx="2" ${hc('#fbf7ec', '#cfd6ff')}/>
+      <text x="211" y="${F - 62}" text-anchor="middle" font-size="10" font-weight="700" ${hc('#3f7ac8', '#22305e')} font-family="system-ui, sans-serif">牛乳</text>${[192, 206, 220].map((x) => `<rect x="${x}" y="${F - 42}" width="10" height="14" rx="2" ${hc('#f6f1e4', '#9da2c8')}/>`).join('')}
+      <rect class="pave" x="-20" y="${F}" width="1240" height="${370 - F}"/><path class="rline" d="M-20 ${F + 1} H1220" style="stroke-dasharray:none;opacity:.5"/>
+      ${Array.from({ length: 30 }, (_, j) => `<path class="seam" d="M${j * 44 - 20} ${F + 40 + (j % 3) * 30} h26"/>`).join('')}
+      <rect x="250" y="${F + 50}" width="110" height="9" rx="2" ${hc('#c58a54', '#3a2c40')}/><rect x="258" y="${F + 59}" width="6" height="20" ${hc('#6e4f3a', '#2c2440')}/><rect x="346" y="${F + 59}" width="6" height="20" ${hc('#6e4f3a', '#2c2440')}/>
+    </svg>
+    ${yHeroHtml()}
+    ${busPoleHtml('sento')}
     <div class="ysel"></div>`;
 }
 // the yard's signs (1.2.0), like 書房's: a round sign each, its words in it for a moment when tapped; they rest out of sight 4 s
@@ -7894,7 +7930,7 @@ function yardHtml(pct, place = 'yard') {
         <div class="birds"><div class="flock">${[[52, 14], [38, 6], [38, 22], [24, 0], [24, 28]].map(([x, y]) => `<i style="left:${x}px;top:${y}px"></i>`).join('')}</div></div>
       </div>
       <div class="yworld" style="width:${yw}px;margin-left:${-yw / 2}px">
-      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
+      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
         <defs><radialGradient id="shopGlow"><stop offset="0" stop-color="rgba(255,196,110,.55)"/><stop offset=".5" stop-color="rgba(255,196,110,.16)"/><stop offset="1" stop-color="rgba(255,196,110,0)"/></radialGradient></defs>
         <path class="m-far" d="M520 600 V340 C560 330 600 314 640 304 C670 296 700 294 730 298 C770 306 810 328 860 342 V600 Z"/>
         <path class="m-main" d="${HILL} V600 Z"/><path class="m-shade" d="M482 250 C494 248 506 256 520 268 C552 296 594 326 646 350 V372 C590 340 548 306 516 280 C502 268 492 258 482 250 Z"/><path class="m-rim" d="${HILL}"/>

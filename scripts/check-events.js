@@ -24,7 +24,8 @@ function check(T, D) {
   const names = new Set(T.NAMES || []), cast = T.CAST || {}, places = T.PLACES || PLACES;
   const lvOf = (w, r) => {   // the lowest level a word in the course has, by its kanji and reading; -1 not in the course
     let best = -1;
-    D.VOCAB.forEach(v => { if (v.w === w || (v.w.startsWith(w) && String(v.r).startsWith(r))) { const L = LEVELS.indexOf(v.lv); if (L >= 0 && (best < 0 || L < best)) best = L; } });
+    const hit = (v) => v.w === w || (v.w.startsWith(w) && String(v.r).startsWith(r)) || ['お', 'ご'].some((p) => v.w === p + w || (v.w.startsWith(p + w) && String(v.r).startsWith(p + r)));   // お風呂 written お{風呂|ふろ}
+    D.VOCAB.forEach(v => { if (hit(v)) { const L = LEVELS.indexOf(v.lv); if (L >= 0 && (best < 0 || L < best)) best = L; } });
     return best;
   };
   function text(ja, u, where) {

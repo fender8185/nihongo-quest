@@ -4,7 +4,7 @@ const { check, loadTown } = require('../scripts/check-events');
 // a tiny course: three N5 units, a word at each level, one grammar item in m3
 const DATA = {
   UNITS: [{ id: 'm1', lv: 'N5' }, { id: 'm2', lv: 'N5' }, { id: 'm3', lv: 'N5' }, { id: 'm7', lv: 'N4' }],
-  VOCAB: [{ w: '花', r: 'はな', lv: 'N5' }, { w: '食べる', r: 'たべる', lv: 'N5' }, { w: '経済', r: 'けいざい', lv: 'N3' }, { w: 'これ', r: 'これ', lv: 'PRE_N5' }],
+  VOCAB: [{ w: '花', r: 'はな', lv: 'N5' }, { w: '食べる', r: 'たべる', lv: 'N5' }, { w: '経済', r: 'けいざい', lv: 'N3' }, { w: 'これ', r: 'これ', lv: 'PRE_N5' }, { w: 'お風呂', r: 'おふろ', lv: 'N5' }],
   GRAMMAR: [{ id: 'g1', u: 'm3' }]
 };
 const CAST = { miku: { name: '美玖', hours: [[7, 20, 'town', 'bakeryIn']] }, kenta: { name: '健太', hours: [[5, 21, 'town', 'bakery']] } };
@@ -64,6 +64,9 @@ test('an event must be hostable: its person is there by their hours, the place d
   assert.deepEqual(kinds(check(town([ev({ who: 'hero' })]), DATA)), ['ref']);   // the hero hosts nothing
   assert.deepEqual(kinds(check(town([ev()], { SPOTS: { town: { bakery: {} } } }), DATA)), ['host']);   // 美玖's spot is missing
   assert.deepEqual(kinds(check(town([ev({ at: 'station' })]), DATA)), ['ref']);   // a place not drawn yet
+});
+test('a word written after お／ご is found as the course has it (お風呂)', () => {
+  assert.deepEqual(check(town([ev({ lines: [['miku', 'お{風呂|ふろ}です。', '是浴室。']] })]), DATA), []);
 });
 test('events.js itself passes against data.js', () => {
   const D = require('../scripts/data-file').load();

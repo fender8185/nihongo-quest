@@ -286,6 +286,14 @@ def test_an_event_at_a_bus_stop_waits_for_the_stop_to_open(b):
       const before = ids(); state.town.stops.station = 1; return JSON.stringify({ before, after: ids() }); })()"""))
     assert r == {'before': ['t1'], 'after': ['s1', 't1']}, r
 
+# ---- pass 4: 月の湯 ----
+def test_the_bus_goes_to_the_bathhouse_once_its_stop_is_open(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + BUS + """ fake([]); state.town.stops = { station: 1, sento: 1 }; state.town.seen.matsu = 1; await go('street', 16);
+      y().querySelector('[data-act="bus-stop"]').click(); const bd = await board(); bd.querySelector('[data-bus="sento"]').click();
+      for (let i = 0; i < 120 && location.hash !== '#/sento'; i++) await wait(50); await wait(300);
+      return JSON.stringify({ place: y().dataset.place, art: !!y().querySelector('.sento-land'), matsu: !!y().querySelector('.npc-matsu'), stop: !!y().querySelector('[data-act="bus-stop"]') }); })()"""))
+    assert r == {'place': 'sento', 'art': True, 'matsu': True, 'stop': True}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
