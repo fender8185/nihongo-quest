@@ -182,3 +182,12 @@ test('mergeStates keeps 言靈 and purchases that only one copy has', () => {
   const n = C.mergeStates({ updatedAt: '2026-11-07T01:00:00.000Z', srs: {} }, { updatedAt: '2026-11-07T02:00:00.000Z', srs: {} });
   assert.equal(n.koto, undefined); assert.equal(n.owned, undefined);   // neither copy had any: nothing invented
 });
+test('mergeStates: the town events done, people met and bus stops opened on either device are all kept', () => {
+  const a = { updatedAt: '2026-11-10T10:00:00.000Z', town: { done: { 'm0-1': '2026-11-09' }, seen: { miku: 1 }, stops: {} } };
+  const b = { updatedAt: '2026-11-10T09:00:00.000Z', town: { done: { 'm0-2': '2026-11-10' }, seen: { kenta: 1 }, stops: { station: 1 } } };
+  const m = C.mergeStates(a, b);
+  assert.deepEqual(m.town.done, { 'm0-1': '2026-11-09', 'm0-2': '2026-11-10' });
+  assert.deepEqual(m.town.seen, { miku: 1, kenta: 1 });
+  assert.deepEqual(m.town.stops, { station: 1 });
+  assert.deepEqual(C.mergeStates({ updatedAt: '2026-11-10T10:00:00.000Z' }, b).town.done, { 'm0-2': '2026-11-10' }, 'an old save without town keeps the other side');
+});

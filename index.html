@@ -2274,6 +2274,7 @@ function defaultState() {
     musicOff: false,        // test (2026-11-09): the gramophone stopped by hand
     met: {},                // test (2026-11-09): the neighbours who have come by (NPCS): { id: the day }
     storyV: 0,              // test (2026-11-09): the version of the opening (STORY.V) seen, 0 none
+    town: { done: {}, seen: {}, stops: {} },   // test (2026-11-09): the town's events (TOWNEV): done { id: day }, people met { id: 1 }, bus stops opened { id: 1 }
     placed: {},             // where owned things stand in 書房: { id: { w: 'F', x, y, r } | { w: 'L'|'R', u, v } }; not here = in the storage box
     wear: {},               // what the hero wears, by part: { head, face, neck, back, body }
     house: ''               // the yard's house: '' the cottage, or a look bought at 古道具屋 (1.2.0)
@@ -2336,6 +2337,7 @@ function normalizeState(s) {
   // 1.2.0: 言靈 and the things from 古道具屋 (ids this build does not know are kept: a later one may sell them)
   const kt = out.koto && typeof out.koto === 'object' && !Array.isArray(out.koto) ? out.koto : {}, obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
   out.koto = { daySets: obj(kt.daySets), days: Array.isArray(kt.days) ? kt.days : [], listen: obj(kt.listen), mail: obj(kt.mail), found: obj(kt.found), sets: obj(kt.sets), gift: Number(kt.gift) || 0 };
+  const tw = obj(out.town); out.town = { done: obj(tw.done), seen: obj(tw.seen), stops: obj(tw.stops) };
   ['owned', 'placed', 'wear', 'look', 'lampsOff', 'met'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)
   if (typeof out.house !== 'string') out.house = '';
   if (typeof out.record !== 'string') out.record = ''; out.musicOff = out.musicOff === true; out.storyV = Number(out.storyV) || (out.storySeen === true ? 1 : 0); delete out.storySeen;   // the four-page opening was 1   // an id this build does not know is kept: the cottage is drawn meanwhile
@@ -7150,6 +7152,53 @@ const NPC = (() => {
     yHeroWalk(yard, [a.X + side * 76 * yScale(a.Y), a.Y + 2], () => { yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard); TALK.open(yard, id, [L]); });
   }
   return { visitor, check, visit, talk, onBeach, face, art, gap };
+})();
+// the town's events (test, 2026-11-09; docs/superpowers/specs/2026-11-09-town-events-design.md): the people of events.js (TOWN)
+// where their hours put them, and the next event of the course. An event opens when its unit is reached (入門: m0 only) — and,
+// for the unit being studied, begun (a grammar item of it learned; m0: anything) — once enough days with practice have gone by
+// since the last one was done (2 for the unit being studied, 1 for a unit already passed, so a tester far on catches up a day
+// at a time; the day it was done does not count), and the one it follows is done. Only one waits at a time: the first whose
+// person is now where it happens — so one that wants the evening lets a daytime one through — or, three study days past its
+// time, the first whatever the hour (an evening learner is not stuck on a daytime event), unless it is meant for the night
+const TOWNEV = (() => {
+  const T = () => TOWN;
+  const units = () => ['m0'].concat(DATA.UNITS.map((u) => u.id));
+  const unitIdx = (u) => units().indexOf(u);
+  const reachedIdx = () => (inPreStage() ? 0 : Math.max(unitIdx(state.currentUnit), ...(state.completedUnits || []).map(unitIdx)));
+  const started = (u) => (u === 'm0' ? Object.keys(state.srs || {}).length > 0 : REG.grammar.some((g) => g.u === u && state.srs['g:' + g.id]));
+  const studyDaysSince = (date) => Object.keys(state.dailyLogs || {}).filter((d) => d > (date || '') && d <= todayStr() && dayActive(state.dailyLogs[d])).length;
+  const lastDone = () => Object.values(state.town.done).sort().pop() || '';
+  const need = (e) => (!lastDone() ? 0 : unitIdx(e.u) < reachedIdx() ? 1 : 2);
+  function due() {
+    const done = state.town.done, R = reachedIdx(), days = studyDaysSince(lastDone());
+    return T().EVENTS.filter((e) => { const i = unitIdx(e.u);
+      return !done[e.id] && i >= 0 && i <= R && (i < R || started(e.u)) && (!e.after || done[e.after]) && days >= need(e); });
+  }
+  const inside = (h, [from, to]) => (from <= to ? h >= from && h < to : h >= from || h < to);
+  const isOpen = (shop, h = sceneHour()) => !T().HOURS[shop] || inside(h, T().HOURS[shop]);
+  function whereIs(id, h = sceneHour(), day = new Date()) {
+    const c = T().CAST[id]; if (!c || (c.art === 'npc' && !met(id))) return null;   // 小春, ムギ: once they have come by
+    const we = day.getDay() === 0 || day.getDay() === 6;
+    const at = c.hours.find(([from, to, , , days]) => (!days || (days === 'we') === we) && inside(h, [from, to]));
+    return at ? { place: at[2], spot: at[3] } : null;
+  }
+  function waiting(h = sceneHour(), day = new Date()) {
+    const list = due(); if (!list.length) return null;
+    for (const e of list) { const w = whereIs(e.who, h, day); if (w && w.place === e.at) return { ev: e, place: w.place, spot: w.spot }; }
+    const e = list[0], home = (T().CAST[e.who].hours.find((x) => x[2] === e.at) || [])[3];
+    if (e.when !== 'night' && home && studyDaysSince(lastDone()) - need(e) >= 3) return { ev: e, place: e.at, spot: home };
+    return null;
+  }
+  function finish(id) {   // done: the day, the people in it met, a bus stop it opens, its 10 言靈 (once: koto.found)
+    const e = T().EVENTS.find((x) => x.id === id); if (!e) return;
+    const t = state.town;
+    if (!t.done[id]) t.done[id] = todayStr();
+    [e.who].concat((e.lines || []).filter(Array.isArray).map((l) => l[0])).forEach((w) => { if (w !== 'hero') t.seen[w] = 1; });
+    if (e.opens) t.stops[e.opens] = 1;
+    if (!state.koto.found['ev-' + id]) state.koto.found['ev-' + id] = 10;
+    saveState();
+  }
+  return { unitIdx, reachedIdx, started, studyDaysSince, due, waiting, whereIs, isOpen, finish };
 })();
 // the opening (test, 2026-11-09; the user's picks): as a child the hero never understood what their Japanese grandmother said
 // ("I'll learn it later"); grown up and busy in the city they never did; then a letter from Japan — she has gone, and left them
