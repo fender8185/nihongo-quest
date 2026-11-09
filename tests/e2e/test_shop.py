@@ -669,7 +669,7 @@ def test_ears_show_only_with_the_sides_that_leave_them_free_and_the_new_choices(
     r = json.loads(ev(b, js))
     assert r['ears'] == [True, False, True, False] and r['eyes'] == ['水汪汪', 'Q版眼', '普通', '吊眼', '垂眼', '笑眼', '大眼', '睏眼'] and r['mouth'] == 6 and r['hair'] == 21, r
     assert r['cheeks'] == ['腮紅', '柔腮紅', '害羞', '雀斑', '無'] and r['face'] == ['mochi', 'round', 'chubby', 'oval', 'pointed'] and r['drawn'] == [False, False, True, True], r
-    assert [r['old'][k] for k in ('eyes', 'face', 'fringe')] == ['kira', 'mochi', 'round'], r   # a look saved before falls back where its choice is gone (the new hero's eyes are 水汪汪 since the Q版 body)
+    assert [r['old'][k] for k in ('eyes', 'face', 'fringe')] == ['normal', 'mochi', 'round'], r   # a look saved before falls back where its choice is gone
 
 # 髮型 is the four parts and the colour; 隨機 rolls one of the user's 48 hairstyles (HERO.STYLES), so its parts go together
 def test_the_hair_tab_is_the_parts_and_random_rolls_one_of_the_48_hairstyles(b):

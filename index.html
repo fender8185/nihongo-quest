@@ -522,7 +522,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.study, .yard) .hero:is(.walk, .run) .bob { animation: heroStep calc(var(--step, .42s) / 2) ease-in-out infinite alternate; }
 :is(.study, .yard) .hero.walk { --lean: 2deg; } :is(.study, .yard) .hero.run { --step: .28s; --lean: 4deg; }   /* leaning into the way they go (.flip mirrors it) */
 :is(.study, .yard) .hero.sit .bob { animation: none; transform: translateY(-43px); } :is(.study, .yard) .hero.sit .legs { display: none; }
-:is(.study, .yard) .hero.reach .arm.r { transform: rotate(-112deg); } :is(.study, .yard) .hero.look .head { transform: translateY(-2px) rotate(-6deg); }
+:is(.study, .yard) .hero.reach .arm.r { transform: rotate(-88deg); } :is(.study, .yard) .hero.look .head { transform: translateY(-2px) rotate(-6deg); }
 :is(.study, .yard) .hero.crouch .bob { animation: none; transform: translateY(10px) scaleY(.92); } :is(.study, .yard) .hero.crouch .arm.r { transform: rotate(-60deg); }
 :is(.study, .yard) .hero.out { opacity: 0; }
 :is(.study, .yard) .hero.hop:not(.sit) .bob { animation: heroHop .5s cubic-bezier(.3, .7, .4, 1); }
@@ -538,20 +538,20 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 @keyframes heroBreathe { 50% { transform: translateY(-1.5px); } }
 @keyframes heroBlink { 0%, 95%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
 @keyframes heroLeg { from { transform: rotate(22deg); } to { transform: rotate(-22deg); } }
-@keyframes heroArm { from { transform: rotate(24deg); } to { transform: rotate(-24deg); } }
+@keyframes heroArm { from { transform: rotate(12deg); } to { transform: rotate(-12deg); } }   /* a small swing: the Q版 arms are short */
 @keyframes heroStep { from { transform: rotate(var(--lean, 0deg)); } to { transform: translateY(-3px) rotate(var(--lean, 0deg)); } }
 @keyframes heroHop { 40% { transform: translateY(-16px); } 75% { transform: translateY(1px) scaleY(.97); } }
 @keyframes heroLookRound { 25% { transform: rotate(-7deg); } 65% { transform: rotate(7deg); } }
 @keyframes heroNod { 30%, 70% { transform: rotate(6deg) translateY(1px); } 50% { transform: none; } }
-@keyframes heroUpL { 30%, 70% { transform: rotate(104deg); } }
-@keyframes heroUpR { 30%, 70% { transform: rotate(-104deg); } }
+@keyframes heroUpL { 30%, 70% { transform: rotate(74deg); } }
+@keyframes heroUpR { 30%, 70% { transform: rotate(-74deg); } }   /* arms out to the sides, under the chin: the big head hides any higher */
 @keyframes heroTall { 30%, 70% { transform: translateY(-3px) scaleY(1.03); } }
-@keyframes heroWave { 15%, 45%, 75% { transform: rotate(-108deg); } 30%, 60% { transform: rotate(-88deg); } }
+@keyframes heroWave { 15%, 45%, 75% { transform: rotate(-80deg); } 30%, 60% { transform: rotate(-58deg); } }
 @keyframes heroSway { 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
 @keyframes heroBounce { 25%, 75% { transform: translateY(-6px); } 50% { transform: none; } }
 @keyframes heroSpin { 25% { transform: scaleX(.15); } 50% { transform: scaleX(-1); } 75% { transform: scaleX(-.15); } }
 @keyframes heroTail { 50% { transform: rotate(8deg); } }
-@keyframes heroManeki { 15%, 45%, 75% { transform: rotate(-114deg); } 30%, 60% { transform: rotate(-94deg); } }
+@keyframes heroManeki { 15%, 45%, 75% { transform: rotate(-76deg); } 30%, 60% { transform: rotate(-54deg); } }
 @keyframes heroTilt { 20%, 80% { transform: rotate(5deg); } }
 @keyframes heroNya { 0% { opacity: 0; transform: translateY(6px) scale(.6); } 15% { opacity: 1; transform: none; } 80% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-8px); } }
 .study .front { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; will-change: transform; }
@@ -8830,7 +8830,7 @@ const HERO = (() => {
     bottomStyle: [['pants', '長褲'], ['shorts', '短褲'], ['wide', '寬褲'], ['skirt', '裙子'], ['catpants', '貓咪褲']],
     bottom: [['#3f4660', '深藍'], ['#2b2b33', '黑'], ['#b8a27a', '卡其'], ['#4f6f9e', '牛仔藍'], ['#6e4f3a', '咖啡'], ['#8a8f99', '灰'], ['#ecebe6', '白'], ['#6b7a45', '橄欖綠']]
   };
-  const LOOK0 = { face: 'mochi', skin: '#f3d1b5', cheeks: 'blush', fringe: 'round', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'kira', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'hoodie', top: '#5a68d8', bottomStyle: 'pants', bottom: '#3f4660' };
+  const LOOK0 = { face: 'mochi', skin: '#f3d1b5', cheeks: 'blush', fringe: 'round', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'normal', eyeColor: '#2a2730', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'hoodie', top: '#5a68d8', bottomStyle: 'pants', bottom: '#3f4660' };
   // the 16 hairstyles before the hair came in parts (1.2.1): each as its nearest 瀏海, 兩側, 後面, 造型
   const OLD_HAIR = { crop: ['round', 'short', 'short', 'none'], neat: ['swept', 'short', 'short', 'none'], curtain: ['center', 'chin', 'short', 'none'], ahoge: ['round', 'short', 'short', 'ahoge'],
     spiky: ['choppy', 'short', 'short', 'none'], slick: ['none', 'short', 'short', 'none'], curly: ['curly', 'curls', 'short', 'none'], afro: ['curly', 'curls', 'bob', 'none'], bob: ['blunt', 'incurl', 'bob', 'none'],
@@ -9284,8 +9284,8 @@ const HERO = (() => {
     const fd = dk(top, 0.74), whole = full && full(L, top, fd), collar = tp.collar ? tp.collar(L, top, topDk) : '';   // a whole head: the hero's own, hair and face things give way
     const shade = `<g opacity=".13" transform="translate(0 2.4)" clip-path="url(#fc${n})">${hairOf.front('fill="#3a2016"')}</g>`;   // the fringe's shadow on the forehead
     const onHead = (s) => `<g class="head"><g transform="${HEAD}">${s}</g></g>`;   // the head's things in the head's units, set on the body
-    const front = `${onHead(whole ? '' : hair(hairOf.back))}${bt.tail ? `<g class="tail t0">${bt.tail(L, pants, pd, 0)}</g>` : ''}${W('back', 0)}${legs()}${tp.front(L, top, topDk)}${W('body', 0)}${W('neck', 0)}${collar}
-      ${onHead(whole ? whole[0] : `${face}${shade}${hairOf.ear(L(skin, 2.4))}${hair(hairOf.front)}${hairOf.over()}${hairOf.deco(hs, hw)}${W('face', 0)}${W('head', 0)}`)}${arms}`;   // the arms over the head: a hand raised by the big head stays in sight
+    const front = `${onHead(whole ? '' : hair(hairOf.back))}${bt.tail ? `<g class="tail t0">${bt.tail(L, pants, pd, 0)}</g>` : ''}${W('back', 0)}${legs()}${tp.front(L, top, topDk)}${W('body', 0)}${W('neck', 0)}${arms}${collar}
+      ${onHead(whole ? whole[0] : `${face}${shade}${hairOf.ear(L(skin, 2.4))}${hair(hairOf.front)}${hairOf.over()}${hairOf.deco(hs, hw)}${W('face', 0)}${W('head', 0)}`)}`;   // the arms under the head: a raised hand never covers the face (the user), it goes out to the side
     const back = `${legs()}${arms}${tp.back(L, top, topDk)}${W('body', 1)}${tp.over ? tp.over(L, top, topDk) : ''}${bt.tail ? `<g class="tail t1">${bt.tail(L, pants, pd, 1)}</g>` : ''}${W('neck', 1)}${W('back', 1)}
       ${onHead(whole ? whole[1] : `<ellipse cx="2" cy="-128" rx="34" ry="32" ${L(skin, 2.4)}/>${hair(hairOf.rear)}${hairOf.rearOver(hs, L(skin, 2.4))}${W('face', 1)}${W('head', 1)}`)}`;
     return `<svg viewBox="${o.box || '-60 -200 120 210'}"${o.box ? ' style="overflow:hidden"' : ''}${cat ? ' data-set="cat"' : ''} aria-hidden="true">${defs}<ellipse class="h-shadow" rx="24" ry="7" fill="#2b1c12" fill-opacity=".2"/><g class="fig"><g class="bob">${o.back ? `<g class="f-back" style="display:inline">${back}</g>` : `<g class="f-front">${front}</g>${o.front ? '' : `<g class="f-back">${back}</g>`}`}</g></g></svg>`;   // front: the front view only; back: from behind only
