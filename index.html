@@ -367,6 +367,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.sky .house, .house-thumb) .m-dot { fill: color-mix(in srgb, #fff8ec calc(var(--day) * 100%), #4a3c66); }
 :is(.sky .house, .house-thumb) .m-gill { fill: color-mix(in srgb, #ead6b4 calc(var(--day) * 100%), #15163a); }
 :is(.sky .house, .house-thumb) .m-pipe { fill: color-mix(in srgb, #7e6a5a calc(var(--day) * 100%), #0c0d25); }
+:is(.sky .house, .house-thumb) .hc { fill: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); transition: fill 3s; }
+:is(.sky .house, .house-thumb) .hs { fill: none; stroke: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); stroke-linecap: round; stroke-linejoin: round; transition: stroke 3s; }
 :is(.sky .house, .house-thumb) .m-grass { fill: none; stroke: color-mix(in srgb, #5f9a4a calc(var(--day) * 100%), #0b0c22); stroke-width: 1.6; stroke-linecap: round; }
 .house-thumb :is(.wall, .roof, .chim) { fill: #f1e3c6; } .house-thumb .rim { fill: none; stroke: rgba(255, 255, 255, .45); stroke-width: 1.4; } .house-thumb .pane { fill: #cfe9f8; } .house-thumb .mull { stroke: #fff; stroke-width: 2; } .house-thumb .door { fill: #7a4b2e; } .house-thumb .knob { fill: #ffcf7a; }
 .sky .house .win { position: absolute; border-radius: 50%; opacity: calc((.12 + .88 * var(--f)) * (1 - var(--day))); transition: opacity 1.5s; }   /* the light round each window, warmer as the list fills */
@@ -622,6 +624,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .edit-tray { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; display: flex; gap: 8px; overflow-x: auto; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); background: rgba(20, 22, 44, .82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .tray-it { flex: none; width: 74px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 0; border-radius: 10px; font: inherit; font-size: 11.5px; color: #fff; background: rgba(255, 255, 255, .1); cursor: pointer; --day: 1; --f: 1; --lit: 1; }
 .tray-it svg { width: 50px; height: 50px; overflow: visible; }
+.tray-house[aria-pressed="true"] { background: rgba(255, 255, 255, .26); box-shadow: inset 0 0 0 2px #ffd27a; }   /* the house up now */
 .tray-empty { padding: 10px 4px; font-size: 13px; color: rgba(255, 255, 255, .85); }
 .edit-tray { touch-action: pan-x; transition: background-color .15s, box-shadow .15s; }   /* sideways the box scrolls; up and down a ware is pulled out (1.2.0) */
 .edit-tray.drop { background: rgba(70, 86, 210, .9); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .85); }   /* a ware held over it goes in */
@@ -6222,8 +6225,12 @@ const yardSig = () => yardPlaced().map((o) => `${o.id}:${o.p.x},${o.p.y}`).join(
 const yed = { on: false, sel: null, drag: null };
 function yeditHtml() {
   const box = WARES.filter((it) => it.kind === 'yard' && owns(it.id) && !(state.placed[it.id] && state.placed[it.id].w === 'Y'));
-  return `<div class="edit-top"><span class="edit-hint">${yed.sel ? '拖曳搬動，拖到上面收起來' : '拖曳搬動；收納箱的東西拖出來擺'}</span><button type="button" class="btn btn-primary btn-sm" data-act="yard-edit-done">完成</button></div>
-    <div class="edit-tray" aria-label="院子的收納箱">${box.length ? box.map((it) => `<button type="button" class="tray-it" data-act="yard-edit-take" data-id="${it.id}">${YARD.thumb(it.id)}<span>${esc(it.name)}</span></button>`).join('') : '<div class="tray-empty">收納箱是空的。古道具屋的「戶外」有望遠鏡、石燈籠……</div>'}</div>`;
+  // the houses (test, 2026-11-09): once one is bought, the cottage and each house bought sit at the front of the box; a tap puts it up
+  const houses = WARES.some((it) => it.kind === 'house' && owns(it.id)) ? [{ id: '', name: '小屋' }].concat(WARES.filter((it) => it.kind === 'house' && owns(it.id) && HOUSE_ART[it.id])) : [];
+  const now = state.house && owns(state.house) && HOUSE_ART[state.house] ? state.house : '';
+  const houseIt = (h) => `<button type="button" class="tray-it tray-house" data-act="yard-house" data-id="${h.id}" aria-pressed="${h.id === now}"><svg class="house-thumb" viewBox="0 0 140 130" aria-hidden="true">${HOUSE_ART[h.id || 'cottage']}</svg><span>${esc(h.name)}</span></button>`;
+  return `<div class="edit-top"><span class="edit-hint">${yed.sel ? '拖曳搬動，拖到上面收起來' : houses.length ? '點房子換外觀；其他東西拖出來擺' : '拖曳搬動；收納箱的東西拖出來擺'}</span><button type="button" class="btn btn-primary btn-sm" data-act="yard-edit-done">完成</button></div>
+    <div class="edit-tray" aria-label="院子的收納箱">${houses.map(houseIt).join('')}${box.length ? box.map((it) => `<button type="button" class="tray-it" data-act="yard-edit-take" data-id="${it.id}">${YARD.thumb(it.id)}<span>${esc(it.name)}</span></button>`).join('') : houses.length ? '' : '<div class="tray-empty">收納箱是空的。古道具屋的「戶外」有望遠鏡、石燈籠……</div>'}</div>`;
 }
 function yselHtml() {   // the picked ware's tools, over it in the world
   const o = yed.sel && yardPlaced().find((q) => q.id === yed.sel), a = o && YARD.ART[o.id];
@@ -6246,6 +6253,11 @@ function yardEdit(yard, cmd, id) {
     if (!p) { toast('院子放不下了，先收起別的東西再試試'); return; }
     state.placed[id] = Object.assign({ w: 'Y' }, p); yed.sel = id; saveState();
   } else if (cmd === 'put' && yed.sel) { delete state.placed[yed.sel]; yed.sel = null; saveState(); }
+  else if (cmd === 'house') {   // the yard's house in this look (id '' the cottage), at once
+    if (id && !(WARE.has(id) && owns(id) && HOUSE_ART[id])) return;
+    state.house = id; saveState();
+    yard.querySelector('.house > svg').innerHTML = houseArt(); yard.dataset.house = state.house;
+  }
   yardDraw(yard);
 }
 const yardPoint = (yard, e) => { const r = yard.querySelector('.yworld').getBoundingClientRect(); return { x: e.clientX - (r.left + r.width / 2), y: r.bottom - e.clientY }; };   // in the world
@@ -6261,6 +6273,7 @@ function yardMoveTo(yard, id, p) {   // the picked ware to a spot, if it can sta
 function yardDragStart(yard, e) {
   if (!yed.on || (e.pointerType === 'mouse' && e.button !== 0)) return;
   const t = e.target.closest('.yedit .tray-it');
+  if (t && t.classList.contains('tray-house')) return;   // a house is only tapped
   if (t) { yed.drag = { id: t.dataset.id, b: null, from: null, off: { x: 0, y: 0 }, x0: e.clientX, y0: e.clientY, moved: false, to: null, fromBox: true, box: false }; return; }
   const b = e.target.closest('.yware'); if (!b) return;
   const id = b.dataset.ware, p = state.placed[id], at = yardPoint(yard, e);
@@ -6440,6 +6453,7 @@ const SHOP_ART = `<circle class="s-glow" cx="0" cy="-18" r="48" fill="url(#shopG
   <g class="s-owl"><ellipse cx="-16" cy="-3.6" rx="3.2" ry="3.8"/><path d="M-18.6 -6.6 L-18 -8.6 L-16.6 -7 M-13.4 -6.6 L-14 -8.6 L-15.4 -7"/><circle class="s-owl-eye" cx="-17.2" cy="-4.6" r=".9"/><circle class="s-owl-eye" cx="-14.8" cy="-4.6" r=".9"/></g>`;
 // the house in the yard: the cottage, or a look bought at 古道具屋 (1.2.0: 蘑菇屋), drawn in the same 140 × 130 box with its
 // windows, chimney and door where the cottage has them (the lights by night, the smoke and 進屋 stay where they are)
+const hc = (c, n) => `class="hc" style="--c:${c};--n:${n}"`, hs = (c, n) => `class="hs" style="--c:${c};--n:${n}"`;   // a part of a house: its colour by day, by night
 const HOUSE_ART = {
   cottage: `<rect class="chim" x="92" y="30" width="12" height="30"/><rect class="roof" x="89" y="27" width="18" height="5" rx="1"/>
     <rect class="wall" x="22" y="66" width="96" height="64"/>
@@ -6449,7 +6463,7 @@ const HOUSE_ART = {
     <path class="mull" d="M43 82 V100 M34 91 H52 M97 82 V100 M88 91 H106"/>
     <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/>`,
   mushroomhouse: `<rect class="m-pipe" x="94" y="9" width="7" height="20" rx="1.5"/><rect class="m-pipe" x="92.5" y="7" width="10" height="4" rx="1"/>
-    <path class="m-stem" d="M38 130 C35 108 39 88 46 72 H94 C101 88 105 108 102 130 Z"/><path class="m-shade" d="M46 72 H94 C96 76 97 79 98 82 C80 86 60 86 42 82 C43 79 44 76 46 72 Z"/>
+    <path class="m-stem" d="M30 130 C20 114 22 90 38 72 H102 C118 90 120 114 110 130 Z"/><path class="m-shade" d="M38 72 H102 C104 75 106 78 108 81 C84 87 56 87 32 81 C34 78 36 75 38 72 Z"/>
     <path class="m-gill" d="M12 72 C40 85 100 85 128 72 C100 80 40 80 12 72 Z"/>
     <path class="m-cap" d="M6 72 C4 34 36 11 70 11 C104 11 136 34 134 72 C110 80 30 80 6 72 Z"/><path class="rim" d="M6 72 C4 34 36 11 70 11 C104 11 136 34 134 72"/>
     <circle class="m-dot" cx="36" cy="38" r="8"/><circle class="m-dot" cx="64" cy="24" r="5.5"/><circle class="m-dot" cx="102" cy="40" r="8.5"/><circle class="m-dot" cx="20" cy="60" r="5"/>
@@ -6457,7 +6471,51 @@ const HOUSE_ART = {
     <circle class="pane" cx="70" cy="48" r="6"/><path class="mull" d="M70 42 V54 M64 48 H76"/>
     <circle class="pane" cx="45" cy="96" r="8"/><circle class="pane" cx="95" cy="96" r="8"/><path class="mull" d="M45 88 V104 M37 96 H53 M95 88 V104 M87 96 H103"/>
     <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/>
-    <path class="m-grass" d="M34 130 q2 -7 4 0 q2 -5 4 0 M98 130 q2 -6 4 0 q2 -7 4 0"/>`
+    <path class="m-grass" d="M26 130 q2 -7 4 0 q2 -5 4 0 M106 130 q2 -6 4 0 q2 -7 4 0"/>`,
+  // test (2026-11-09): 薑餅屋, 樹墩屋, 茶壺屋 and, sold for Halloween, 南瓜屋 — each part coloured by day and by night (hc／hs)
+  gingerhouse: `<rect ${hc('#b8584a', '#1e1424')} x="92" y="30" width="12" height="30"/><rect ${hc('#fffaf2', '#4a4668')} x="90" y="27" width="16" height="5" rx="2.5"/>
+    <rect ${hc('#c98a4f', '#20161c')} x="20" y="66" width="100" height="64" rx="2"/>
+    <path ${hc('#a8653c', '#1a1220')} d="M8 72 L70 20 L132 72 Z"/><path ${hs('#fffaf2', '#4a4668')} stroke-width="5" d="M8 72 L70 20 L132 72"/>
+    <path ${hc('#fffaf2', '#4a4668')} d="M6 69 H134 V74 H6 Z${[14, 26, 38, 50, 62, 74, 86, 98, 110, 122].map((x, i) => ` M${x} 73 v${i % 2 ? 4 : 7} a3 3 0 0 0 6 0 v-${i % 2 ? 4 : 7} Z`).join('')}"/>
+    ${[[44, 52, '#f27fa6', '#3a1a34'], [70, 36, '#7cc47a', '#16301e'], [96, 52, '#f4c542', '#3a3016'], [58, 61, '#6fa8e8', '#18244a'], [84, 62, '#f27fa6', '#3a1a34']].map(([x, y, c, n]) => `<path ${hc(c, n)} d="M${x - 4.5} ${y + 2} a4.5 4.5 0 0 1 9 0 Z"/>`).join('')}
+    <circle class="pane" cx="70" cy="50" r="6"/><path class="mull" d="M70 44 V56 M64 50 H76"/><circle ${hs('#fffaf2', '#4a4668')} stroke-width="2.4" cx="70" cy="50" r="7.4"/>
+    <rect class="pane" x="34" y="82" width="18" height="18" rx="2"/><rect class="pane" x="88" y="82" width="18" height="18" rx="2"/><path class="mull" d="M43 82 V100 M34 91 H52 M97 82 V100 M88 91 H106"/>
+    <rect ${hs('#fffaf2', '#4a4668')} stroke-width="2.4" x="32.5" y="80.5" width="21" height="21" rx="3"/><rect ${hs('#fffaf2', '#4a4668')} stroke-width="2.4" x="86.5" y="80.5" width="21" height="21" rx="3"/>
+    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/><path ${hs('#fffaf2', '#4a4668')} stroke-width="2.4" d="M59 130 V108 a11 11 0 0 1 22 0 V130"/>
+    <path ${hs('#fffaf2', '#4a4668')} stroke-width="3" d="M88 130 V113 a4 4 0 0 1 8 0"/><path ${hs('#d8463c', '#3a1a2a')} stroke-width="3" stroke-dasharray="2.4 2.4" d="M88 130 V113 a4 4 0 0 1 8 0"/>
+    ${[[28, 122, '#7cc47a', '#16301e'], [40, 124, '#f4c542', '#3a3016'], [104, 124, '#f27fa6', '#3a1a34'], [114, 121, '#6fa8e8', '#18244a']].map(([x, y, c, n]) => `<circle ${hc(c, n)} cx="${x}" cy="${y}" r="2.6"/>`).join('')}`,
+  stumphouse: `<rect ${hc('#a39d94', '#14152e')} x="92" y="18" width="10" height="26"/><rect ${hc('#8a847b', '#101126')} x="90" y="15" width="14" height="4" rx="1"/>
+    <path ${hc('#9a6a42', '#1a1426')} d="M22 130 C18 112 23 84 24 42 H116 C117 84 122 112 118 130 Z M26 118 C18 123 10 128 2 130 H30 Z M114 118 C122 123 130 128 138 130 H110 Z"/>
+    <path ${hs('#7a4f30', '#0e0c1e')} stroke-width="1.6" d="M34 58 C32 80 34 100 32 122 M54 62 C53 72 55 82 54 92 M108 56 C110 78 108 100 110 124 M86 104 V126"/>
+    <ellipse ${hc('#e8c690', '#2a2238')} cx="70" cy="42" rx="46" ry="10"/><g ${hs('#c99c62', '#1c1730')} stroke-width="1.3"><ellipse cx="70" cy="42" rx="34" ry="7"/><ellipse cx="70" cy="42" rx="22" ry="4.6"/><ellipse cx="70" cy="42" rx="10" ry="2"/></g>
+    <g ${hc('#7fb069', '#12241e')}><ellipse cx="30" cy="48" rx="9" ry="4"/><ellipse cx="50" cy="51" rx="7" ry="3.2"/><ellipse cx="110" cy="48" rx="8" ry="4"/><ellipse cx="26" cy="126" rx="7" ry="3.4"/></g>
+    <path ${hs('#5f8f4a', '#12241e')} stroke-width="2" d="M58 42 C58 36 58 32 57 28"/><path ${hc('#7fb069', '#12241e')} d="M57 30 C50 22 42 25 44 29 C48 32 53 32 57 30 Z M57 28 C61 19 71 18 71 22 C68 28 62 29 57 28 Z"/>
+    <circle class="pane" cx="70" cy="62" r="6"/><path class="mull" d="M70 56 V68 M64 62 H76"/>
+    <circle class="pane" cx="45" cy="96" r="8"/><circle class="pane" cx="95" cy="96" r="8"/><path class="mull" d="M45 88 V104 M37 96 H53 M95 88 V104 M87 96 H103"/>
+    <circle ${hs('#e8c690', '#2a2238')} stroke-width="2" cx="45" cy="96" r="9.4"/><circle ${hs('#e8c690', '#2a2238')} stroke-width="2" cx="95" cy="96" r="9.4"/>
+    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/><path ${hs('#e8c690', '#2a2238')} stroke-width="2" d="M59.5 130 V108 a10.5 10.5 0 0 1 21 0 V130"/>
+    <rect ${hc('#f3e6d0', '#1a1830')} x="124" y="123" width="4" height="7" rx="1.5"/><path ${hc('#d4473a', '#2a1838')} d="M119 124 C119 116 133 116 133 124 Z"/><circle ${hc('#fff8ec', '#4a3c66')} cx="124" cy="120" r="1.2"/>`,
+  teapothouse: `<rect ${hc('#5e7f9c', '#141a36')} x="92" y="22" width="8" height="26" rx="2"/><rect ${hc('#4d6a84', '#10142c')} x="90" y="19" width="12" height="4" rx="1.5"/>
+    <path ${hs('#6fa3b8', '#151a36')} stroke-width="9" d="M118 72 C142 72 142 118 114 116"/>
+    <path ${hc('#9fd0de', '#18203e')} d="M26 98 C14 92 10 80 4 66 L12 62 C17 72 23 80 32 85 Z"/><ellipse ${hc('#6fa3b8', '#151a36')} cx="8" cy="64" rx="5" ry="2.6" transform="rotate(-28 8 64)"/>
+    <path ${hc('#9fd0de', '#18203e')} d="M70 50 C110 50 128 70 128 94 C128 112 118 124 108 130 H32 C22 124 12 112 12 94 C12 70 30 50 70 50 Z"/>
+    <rect ${hc('#6fa3b8', '#151a36')} x="34" y="126" width="72" height="4" rx="2"/>
+    <path ${hs('#fffaf2', '#3a4268')} stroke-width="4" d="M16 80 C40 72 100 72 124 80"/>${[30, 50, 90, 110].map((x) => `<circle ${hc('#f08bb0', '#3a1a34')} cx="${x}" cy="${x === 30 || x === 110 ? 77.5 : 75}" r="1.8"/>`).join('')}
+    <path ${hc('#7fb6c8', '#141a38')} d="M34 54 C36 38 104 38 106 54 Z"/><rect ${hc('#6fa3b8', '#151a36')} x="30" y="52" width="80" height="5" rx="2.5"/><circle ${hc('#f2c14e', '#3a3016')} cx="70" cy="36" r="6"/>
+    <circle class="pane" cx="70" cy="47" r="5"/><path class="mull" d="M70 42 V52 M65 47 H75"/>
+    <circle class="pane" cx="45" cy="98" r="8"/><circle class="pane" cx="95" cy="98" r="8"/><path class="mull" d="M45 90 V106 M37 98 H53 M95 90 V106 M87 98 H103"/>
+    <circle ${hs('#fffaf2', '#3a4268')} stroke-width="2" cx="45" cy="98" r="9.4"/><circle ${hs('#fffaf2', '#3a4268')} stroke-width="2" cx="95" cy="98" r="9.4"/>
+    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/>
+    ${[[26, 110], [114, 110]].map(([x, y]) => `<g ${hc('#f08bb0', '#3a1a34')}>${[[0, -2.6], [2.5, -0.8], [1.5, 2.1], [-1.5, 2.1], [-2.5, -0.8]].map(([dx, dy]) => `<circle cx="${x + dx}" cy="${y + dy}" r="1.6"/>`).join('')}</g><circle ${hc('#f4c542', '#3a3016')} cx="${x}" cy="${y}" r="1.3"/>`).join('')}`,
+  pumpkinhouse: `<rect ${hc('#5b4636', '#120e1e')} x="93" y="22" width="8" height="24" rx="2"/><rect ${hc('#4a382a', '#0e0b18')} x="91" y="19" width="12" height="4" rx="1.5"/>
+    <ellipse ${hc('#e8792a', '#2a1626')} cx="38" cy="92" rx="32" ry="38"/><ellipse ${hc('#e8792a', '#2a1626')} cx="102" cy="92" rx="32" ry="38"/>
+    <ellipse ${hc('#f5913a', '#33192a')} cx="70" cy="88" rx="36" ry="42"/>
+    <path ${hs('#d0661f', '#1a0e1c')} stroke-width="1.6" d="M50 52 C42 72 42 110 52 128 M90 52 C98 72 98 110 88 128 M18 70 C12 88 14 110 22 124 M122 70 C128 88 126 110 118 124"/>
+    <path ${hc('#6a8a3c', '#14221a')} d="M66 48 C64 40 66 32 72 28 L76 31 C72 35 71 41 73 48 Z"/><path ${hc('#7fb069', '#12241e')} d="M74 36 C82 28 94 30 96 36 C88 40 80 40 74 36 Z"/>
+    <path ${hs('#6a8a3c', '#14221a')} stroke-width="1.4" d="M65 44 C57 40 56 32 62 32 C66 32 66 37 62 37"/>
+    <circle class="pane" cx="70" cy="60" r="5"/><path class="mull" d="M70 55 V65 M65 60 H75"/>
+    <path class="pane" d="M35 100 L45 84 L55 100 Z"/><path class="pane" d="M85 100 L95 84 L105 100 Z"/>
+    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/>`
 };
 const houseArt = () => HOUSE_ART[state.house && owns(state.house) && HOUSE_ART[state.house] ? state.house : 'cottage'];
 // the hero out in the yard (1.2.0): the same drawing, smaller the further up the lawn (X: px from the middle, Y: px up from the
@@ -6767,6 +6825,9 @@ const WARES = [
   { id: 'pond', kind: 'yard', name: '小池塘', price: 40, ground: [244, 34], desc: '石頭圍起來的小池塘，兩條錦鯉慢慢游。' },
   // the house's look (1.2.0): bought, the yard's house becomes it at once; its card puts it on or back to the cottage (state.house)
   { id: 'mushroomhouse', kind: 'house', name: '蘑菇屋', price: 2000, desc: '紅色大蘑菇蓋成的房子，白點點、圓窗戶，屋頂冒著煙。買了院子的房子就換成它。' },
+  { id: 'gingerhouse', kind: 'house', name: '薑餅屋', price: 2000, desc: '餅乾牆、巧克力屋頂，屋簷滴著糖霜，屋頂黏著軟糖，門邊插一根拐杖糖。' },
+  { id: 'stumphouse', kind: 'house', name: '樹墩屋', price: 2000, desc: '老樹墩挖成的家，頂上有年輪和一株小芽，青苔、樹根，門口長了一朵小蘑菇。' },
+  { id: 'teapothouse', kind: 'house', name: '茶壺屋', price: 2000, desc: '圓滾滾的水藍色茶壺，壺蓋上開一扇小窗，壺嘴、把手都在，身上畫著小花。' },
   { id: 'beanie', kind: 'wear', slot: 'head', name: '毛帽', price: 30, desc: '軟軟的毛線帽。' },
   { id: 'strawhat', kind: 'wear', slot: 'head', name: '草帽', price: 42, desc: '夏天出門戴的草帽。' },
   { id: 'catears', kind: 'wear', slot: 'head', name: '貓耳髮箍', price: 48, desc: '戴上就變成貓。' },
@@ -6793,6 +6854,7 @@ const WARES = [
   // limited (1.2.0): sold under 限時 only while their sale is on (SALES); once bought, theirs like any other
   { id: 'witchhat', kind: 'wear', slot: 'head', limited: 'halloween', name: '魔法師帽', price: 66, desc: '尖尖的魔法師帽，帽尖彎彎的，顏色跟著上衣，有金色的星星和月亮。' },
   { id: 'wizrobe', kind: 'clothes', slot: 'top', limited: 'halloween', name: '魔法師長袍', price: 90, desc: '長到腳踝的長袍，滿是金色星星，腰上掛著一本小魔法書。顏色在衣櫃自己配。' },
+  { id: 'pumpkinhouse', kind: 'house', limited: 'halloween', name: '南瓜屋', price: 2000, desc: '胖胖的大南瓜，頂上一根藤蔓和葉子，三角形的窗戶晚上從裡面亮起來。' },
   { id: 'pumpkin', kind: 'floor', limited: 'halloween', h: 1, name: '南瓜燈', price: 20, fp: [0.8, 0.8], desc: '刻了笑臉的南瓜，晚上會從裡面亮起來。', light: { z: 0.5, r: 2.8 } },
   // 書房's own (starter: had from the start, not sold): laid out where they always stood, then moved or put away like the rest
   { id: 'bed', kind: 'floor', starter: true, turn: false, h: 3, name: '床', fp: [2.9, 5.25], at: { w: 'F', x: 9.45, y: 2.625, r: 0, rm: 'bed' }, desc: '' },
@@ -9735,6 +9797,7 @@ Object.assign(ACTIONS, {
   'yard-edit': (el) => yardEdit(el.closest('.yard'), 'on'),
   'yard-edit-done': (el) => yardEdit(el.closest('.yard'), 'done'),
   'yard-edit-take': (el) => yardEdit(el.closest('.yard'), 'take', el.dataset.id),
+  'yard-house': (el) => yardEdit(el.closest('.yard'), 'house', el.dataset.id),
   'yard-edit-put': (el) => yardEdit(el.closest('.yard'), 'put'),
   'yard-ware': (el) => { const y = el.closest('.yard'); if (y && y._noClick) return; if (yed.on) yardEdit(y, 'pick', el.dataset.ware); else yardUse(y, el.dataset.ware); },
   'koto-gift': (el) => { const n = Number(el && el.dataset.n) || 100; state.koto.gift = (Number(state.koto.gift) || 0) + n; saveState(); route(); toast(`測試用：多了 ${n} 言靈`); },
