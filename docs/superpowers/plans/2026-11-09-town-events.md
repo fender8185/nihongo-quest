@@ -154,6 +154,7 @@
 | 12 | m12 | 5 | cf2e112 西村；海邊度假飯店傳聞（N3 開發案伏筆）（-test.13，events.js v12） |
 | 13 | m13 | 5 | 5005fa0 受身（-test.14，events.js v13） |
 | 14 | m14 | 5 | b9471bc 使役；陽菜的媽媽和子（-test.15，events.js v14） |
+| 15 | m15 | 5 | (this commit) 敬語；渚保管外婆的東西（信的伏筆）（-test.16，events.js v15） |
 
 ## 寫作規則（審查後加的）
 
