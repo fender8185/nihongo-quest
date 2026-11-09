@@ -857,7 +857,7 @@ def test_the_yard_is_as_wide_as_a_computers_and_a_phone_swipes_along_it(b):
       return JSON.stringify({ start, swiped, end, walked }); })()"""
     r = json.loads(ev_at(b, PHONE, js))
     assert r['start'] == {'width': 1200, 'off': 0, 'house': r['start']['house']} and r['start']['off'] == 0, r
-    assert -260 <= r['swiped'] <= -240, r   # a 250 px swipe left: the yard moved with the finger
+    assert r['swiped'] == -405, r   # a 250 px swipe left moves the view 1.8× as far (YSWIPE): all the way to the yard's end
     assert r['end'] == -405, r   # a fling stops at the yard's end: (1200 − 390) / 2
     assert r['walked']['x'] == 520 and r['walked']['onScreen'] and r['walked']['off'] < -200, r   # the camera went along with the hero
 

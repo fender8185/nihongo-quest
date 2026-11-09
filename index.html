@@ -6754,6 +6754,7 @@ function yPanStart(yard, e) {
   cancelAnimationFrame(ycoast); yard.querySelector('.yworld').classList.remove('glide');
   ypan = { id: e.pointerId, x0: e.clientX, y0: e.clientY, c0: ycam.x, on: false, hist: [] };
 }
+const YSWIPE = 1.8;   // test (2026-11-09; the user: less swiping out of doors): the view goes this much further than the finger, and coasts as much faster
 function yPanMove(yard, e) {
   if (!ypan || e.pointerId !== ypan.id) return;
   const dx = e.clientX - ypan.x0, dy = e.clientY - ypan.y0;
@@ -6761,7 +6762,7 @@ function yPanMove(yard, e) {
     if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy)) return;
     ypan.on = true; try { yard.setPointerCapture(e.pointerId); } catch (err) { /* a pointer the page did not see go down */ }
   }
-  yCamTo(yard, ypan.c0 - dx, 0.3);
+  yCamTo(yard, ypan.c0 - dx * YSWIPE, 0.3);
   ypan.hist.push([performance.now(), e.clientX]); if (ypan.hist.length > 8) ypan.hist.shift();
 }
 function yPanEnd(yard, e) {
@@ -6772,7 +6773,7 @@ function yPanEnd(yard, e) {
   if (Math.abs(ycam.x) > m) { w.classList.add('glide'); yCamTo(yard, Math.max(-m, Math.min(m, ycam.x))); setTimeout(() => w.classList.remove('glide'), 380); return; }
   const now = performance.now(), h = p.hist.filter((q) => now - q[0] < 100);
   if (h.length < 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
-  let v = (h[0][1] - h[h.length - 1][1]) / Math.max(16, h[h.length - 1][0] - h[0][0]), t0 = now;   // px a ms
+  let v = YSWIPE * (h[0][1] - h[h.length - 1][1]) / Math.max(16, h[h.length - 1][0] - h[0][0]), t0 = now;   // px a ms
   if (Math.abs(v) < 0.1) return;
   const step = (t) => {
     const dt = Math.min(50, t - t0); t0 = t;
