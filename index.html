@@ -514,15 +514,15 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.study, .yard) .hero :is(.bob, .leg, .arm, .head, .eyes) { transform-box: view-box; }
 :is(.study, .yard) .hero .bob { animation: heroBreathe 3.2s ease-in-out infinite; }
 :is(.study, .yard) .hero .eyes { transform-origin: 2px -117px; animation: heroBlink 4.6s infinite; }
-:is(.study, .yard) .hero .leg.l { transform-origin: -8px -46px; } :is(.study, .yard) .hero .leg.r { transform-origin: 11px -46px; }
-:is(.study, .yard) .hero .arm.l { transform-origin: -27px -88px; } :is(.study, .yard) .hero .arm.r { transform-origin: 31px -88px; transition: transform .25s; }
-:is(.study, .yard) .hero .head { transform-origin: 2px -98px; transition: transform .25s; }
+:is(.study, .yard) .hero .leg.l { transform-origin: -7px -27px; } :is(.study, .yard) .hero .leg.r { transform-origin: 11px -27px; }   /* the Q版 body (test): hips, shoulders, neck */
+:is(.study, .yard) .hero .arm.l { transform-origin: -11.5px -63.5px; } :is(.study, .yard) .hero .arm.r { transform-origin: 15.5px -63.5px; transition: transform .25s; }
+:is(.study, .yard) .hero .head { transform-origin: 2px -64px; transition: transform .25s; }
 :is(.study, .yard) .hero:is(.walk, .run) .leg.l { animation: heroLeg var(--step, .42s) ease-in-out infinite alternate; } :is(.study, .yard) .hero:is(.walk, .run) .leg.r { animation: heroLeg var(--step, .42s) ease-in-out infinite alternate-reverse; }
 :is(.study, .yard) .hero:is(.walk, .run) .arm.l { animation: heroArm var(--step, .42s) ease-in-out infinite alternate-reverse; } :is(.study, .yard) .hero:is(.walk, .run) .arm.r { animation: heroArm var(--step, .42s) ease-in-out infinite alternate; }
 :is(.study, .yard) .hero:is(.walk, .run) .bob { animation: heroStep calc(var(--step, .42s) / 2) ease-in-out infinite alternate; }
 :is(.study, .yard) .hero.walk { --lean: 2deg; } :is(.study, .yard) .hero.run { --step: .28s; --lean: 4deg; }   /* leaning into the way they go (.flip mirrors it) */
-:is(.study, .yard) .hero.sit .bob { animation: none; transform: translateY(-25px); } :is(.study, .yard) .hero.sit .legs { display: none; }
-:is(.study, .yard) .hero.reach .arm.r { transform: rotate(-155deg); } :is(.study, .yard) .hero.look .head { transform: translateY(-2px) rotate(-6deg); }
+:is(.study, .yard) .hero.sit .bob { animation: none; transform: translateY(-43px); } :is(.study, .yard) .hero.sit .legs { display: none; }
+:is(.study, .yard) .hero.reach .arm.r { transform: rotate(-112deg); } :is(.study, .yard) .hero.look .head { transform: translateY(-2px) rotate(-6deg); }
 :is(.study, .yard) .hero.crouch .bob { animation: none; transform: translateY(10px) scaleY(.92); } :is(.study, .yard) .hero.crouch .arm.r { transform: rotate(-60deg); }
 :is(.study, .yard) .hero.out { opacity: 0; }
 :is(.study, .yard) .hero.hop:not(.sit) .bob { animation: heroHop .5s cubic-bezier(.3, .7, .4, 1); }
@@ -532,7 +532,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.study, .yard) .hero:is(.idle-wave, .wave) .arm.r { animation: heroWave 1.5s ease-in-out; } :is(.study, .yard) .hero.wave .arm.r { animation-duration: 1.2s; }
 :is(.study, .yard) .hero.idle-sway .bob { animation: heroSway 2.2s ease-in-out; } :is(.study, .yard) .hero.idle-bounce .bob { animation: heroBounce .9s ease-in-out; }
 :is(.study, .yard) .hero.spin:not(.sit) .bob { animation: heroSpin .7s ease-in-out; }
-:is(.study, .yard) .hero .tail { transform-box: view-box; animation: heroTail 2.8s ease-in-out infinite; } :is(.study, .yard) .hero .tail.t0 { transform-origin: 24px -52px; } :is(.study, .yard) .hero .tail.t1 { transform-origin: 2px -50px; }
+:is(.study, .yard) .hero .tail { transform-box: view-box; animation: heroTail 2.8s ease-in-out infinite; } :is(.study, .yard) .hero .tail.t0 { transform-origin: 18px -31px; } :is(.study, .yard) .hero .tail.t1 { transform-origin: 2px -30px; }
 :is(.study, .yard) .hero.idle-maneki .arm.r { animation: heroManeki 1.8s ease-in-out; } :is(.study, .yard) .hero.idle-maneki .head { animation: heroTilt 1.8s ease-in-out; }
 :is(.study, .yard) .hero .nya { position: absolute; left: 60%; top: -4%; padding: 1px 8px 2px; border-radius: 10px; font-style: normal; font-weight: 700; font-size: 13px; line-height: 1.5; white-space: nowrap; color: #3b3428; background: #fffdf6; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); pointer-events: none; animation: heroNya 1.4s ease-out forwards; }
 @keyframes heroBreathe { 50% { transform: translateY(-1.5px); } }
@@ -543,15 +543,15 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 @keyframes heroHop { 40% { transform: translateY(-16px); } 75% { transform: translateY(1px) scaleY(.97); } }
 @keyframes heroLookRound { 25% { transform: rotate(-7deg); } 65% { transform: rotate(7deg); } }
 @keyframes heroNod { 30%, 70% { transform: rotate(6deg) translateY(1px); } 50% { transform: none; } }
-@keyframes heroUpL { 30%, 70% { transform: rotate(160deg); } }
-@keyframes heroUpR { 30%, 70% { transform: rotate(-160deg); } }
+@keyframes heroUpL { 30%, 70% { transform: rotate(104deg); } }
+@keyframes heroUpR { 30%, 70% { transform: rotate(-104deg); } }
 @keyframes heroTall { 30%, 70% { transform: translateY(-3px) scaleY(1.03); } }
-@keyframes heroWave { 15%, 45%, 75% { transform: rotate(-150deg); } 30%, 60% { transform: rotate(-125deg); } }
+@keyframes heroWave { 15%, 45%, 75% { transform: rotate(-108deg); } 30%, 60% { transform: rotate(-88deg); } }
 @keyframes heroSway { 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
 @keyframes heroBounce { 25%, 75% { transform: translateY(-6px); } 50% { transform: none; } }
 @keyframes heroSpin { 25% { transform: scaleX(.15); } 50% { transform: scaleX(-1); } 75% { transform: scaleX(-.15); } }
 @keyframes heroTail { 50% { transform: rotate(8deg); } }
-@keyframes heroManeki { 15%, 45%, 75% { transform: rotate(-168deg); } 30%, 60% { transform: rotate(-146deg); } }
+@keyframes heroManeki { 15%, 45%, 75% { transform: rotate(-114deg); } 30%, 60% { transform: rotate(-94deg); } }
 @keyframes heroTilt { 20%, 80% { transform: rotate(5deg); } }
 @keyframes heroNya { 0% { opacity: 0; transform: translateY(6px) scale(.6); } 15% { opacity: 1; transform: none; } 80% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-8px); } }
 .study .front { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; will-change: transform; }
@@ -8806,9 +8806,10 @@ function fitThumbs(root) {
   });
 }
 // ---------- the hero (1.2.0): the learner, in 書房 and out in the yard ----------
-// HERO.svg(o) draws them, feet at (0, 0), about 170 units tall (4.25 of 書房's units), facing us and from behind (the page shows
+// HERO.svg(o) draws them, feet at (0, 0), about 150 units tall (Q版 since test 2026-11-09), facing us and from behind (the page shows
 // one, .back), as they chose to look (o.look: state.look, see OPTS) and with what they wear by part (o.wear); o.L(colour, z) lights
-// a colour at a height (書房's light), else daylight colours. The figure stands round x = 2, the head's middle at (2, -128).
+// a colour at a height (書房's light), else daylight colours. The figure stands round x = 2; the head is drawn in its own units
+// (its middle at (2, -128)) and set on the body bigger (HEAD).
 // Poses and motions are classes on the .hero box and move the parts in CSS: walk, run, sit, reach, crouch, look; idle-… (HERO.idle);
 // hop, wave, spin, cheer (a tap).
 const HERO = (() => {
@@ -8817,10 +8818,10 @@ const HERO = (() => {
   const OPTS = {
     face: [['mochi', '麻糬臉'], ['round', '圓臉'], ['chubby', '包子臉'], ['oval', '鵝蛋臉'], ['pointed', '尖下巴']],
     skin: [['#f8dcc8', '白皙'], ['#f3d1b5', '淺膚'], ['#e8bd98', '自然'], ['#d39f78', '小麥'], ['#a9714d', '古銅'], ['#76492f', '深褐']],
-    cheeks: [['blush', '腮紅'], ['shy', '害羞'], ['freckles', '雀斑'], ['none', '無']],
+    cheeks: [['blush', '腮紅'], ['soft', '柔腮紅'], ['shy', '害羞'], ['freckles', '雀斑'], ['none', '無']],
     hairColor: [['#2a2524', '黑'], ['#3b2f2a', '深棕'], ['#6b4a32', '棕'], ['#8a4a2e', '紅棕'], ['#c9a25a', '金'], ['#a3a3a8', '灰'], ['#3d5a99', '藍'], ['#d98aa6', '粉紅']],
-    eyes: [['normal', '普通'], ['sharp', '吊眼'], ['droopy', '垂眼'], ['happy', '笑眼'], ['big', '大眼'], ['sleepy', '睏眼']],
-    eyeColor: [['#2a2730', '黑'], ['#5a3a28', '棕'], ['#3a5f9a', '藍'], ['#3f7a52', '綠'], ['#6b6f7a', '灰']],
+    eyes: [['kira', '水汪汪'], ['chibi', 'Q版眼'], ['normal', '普通'], ['sharp', '吊眼'], ['droopy', '垂眼'], ['happy', '笑眼'], ['big', '大眼'], ['sleepy', '睏眼']],
+    eyeColor: [['#2a2730', '黑'], ['#5a3a28', '棕'], ['#8a3a2a', '紅'], ['#3a5f9a', '藍'], ['#3f7a52', '綠'], ['#5a3a9a', '紫'], ['#6b6f7a', '灰']],
     brows: [['soft', '自然'], ['straight', '平眉'], ['thick', '粗眉'], ['worried', '八字眉'], ['raised', '挑眉']],
     mouth: [['smile', '微笑'], ['grin', '開心'], ['cat', '貓嘴'], ['flat', '一字'], ['o', '圓嘴'], ['tongue', '吐舌']],
     beard: [['none', '無'], ['stubble', '鬍渣'], ['mustache', '八字鬍'], ['goatee', '山羊鬍'], ['full', '落腮鬍']],
@@ -8829,7 +8830,7 @@ const HERO = (() => {
     bottomStyle: [['pants', '長褲'], ['shorts', '短褲'], ['wide', '寬褲'], ['skirt', '裙子'], ['catpants', '貓咪褲']],
     bottom: [['#3f4660', '深藍'], ['#2b2b33', '黑'], ['#b8a27a', '卡其'], ['#4f6f9e', '牛仔藍'], ['#6e4f3a', '咖啡'], ['#8a8f99', '灰'], ['#ecebe6', '白'], ['#6b7a45', '橄欖綠']]
   };
-  const LOOK0 = { face: 'mochi', skin: '#f3d1b5', cheeks: 'blush', fringe: 'round', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'normal', eyeColor: '#2a2730', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'hoodie', top: '#5a68d8', bottomStyle: 'pants', bottom: '#3f4660' };
+  const LOOK0 = { face: 'mochi', skin: '#f3d1b5', cheeks: 'blush', fringe: 'round', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'kira', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'hoodie', top: '#5a68d8', bottomStyle: 'pants', bottom: '#3f4660' };
   // the 16 hairstyles before the hair came in parts (1.2.1): each as its nearest 瀏海, 兩側, 後面, 造型
   const OLD_HAIR = { crop: ['round', 'short', 'short', 'none'], neat: ['swept', 'short', 'short', 'none'], curtain: ['center', 'chin', 'short', 'none'], ahoge: ['round', 'short', 'short', 'ahoge'],
     spiky: ['choppy', 'short', 'short', 'none'], slick: ['none', 'short', 'short', 'none'], curly: ['curly', 'curls', 'short', 'none'], afro: ['curly', 'curls', 'bob', 'none'], bob: ['blunt', 'incurl', 'bob', 'none'],
@@ -8862,13 +8863,33 @@ const HERO = (() => {
   const iris = (x, c, rx = 5, ry = 6.6, dy = 0) => { const y = EY + dy; return `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${c}"/><path d="M${q(x - rx)} ${y} a${rx} ${ry} 0 0 1 ${q(2 * rx)} 0 Z" fill="#000" fill-opacity=".3"/><ellipse cx="${x}" cy="${q(y + 0.8)}" rx="${q(rx * 0.48)}" ry="${q(ry * 0.5)}" fill="#1b1820"/><ellipse cx="${q(x + rx * 0.36)}" cy="${q(y - ry * 0.42)}" rx="${q(rx * 0.4)}" ry="${q(ry * 0.34)}" fill="#fff"/><circle cx="${q(x - rx * 0.42)}" cy="${q(y + ry * 0.48)}" r="${q(rx * 0.22)}" fill="#fff" fill-opacity=".85"/>`; };
   // the upper lash line over an eye, inner corner to outer (o: -1 the left eye, 1 the right), its outer end lifted by up
   const lid = (x, o, up = 0, h = 6.2) => ink(`M${q(x - 6 * o)} ${q(EY - 3.2)} Q${x} ${q(EY - h - 2.6)} ${q(x + 6.6 * o)} ${q(EY - 3.6 - up)}`);
+  // the Q版 eyes are drawn in the body's units (the head is drawn bigger, HS) round their middle, the left one mirrored; each eye
+  // colour has its own dark, light and glow (an unknown colour gets them by darkening and lightening)
+  const bigEye = (x, i, s) => `<g transform="translate(${x} ${EY + 2.5}) scale(${q((i ? 1 : -1) / HS)} ${q(1 / HS)})">${s}</g>`;
+  const TONES = { '#2a2730': ['#14121a', '#5a5272', '#a99fd0'], '#5a3a28': ['#2a1410', '#c8743a', '#f6bf78'], '#8a3a2a': ['#2e1010', '#d06a4a', '#ffb89a'],
+    '#3a5f9a': ['#0f1f4a', '#5fa8e8', '#b4ecff'], '#3f7a52': ['#0f2a1c', '#5fbf7a', '#d2f7a8'], '#5a3a9a': ['#1e1236', '#9a7ad8', '#e2ccff'], '#6b6f7a': ['#24262c', '#9aa0ac', '#e0e4ec'] };
+  const tones = (c) => { const t = TONES[c] || [dk(c, 0.45), lt(c, 0.35), lt(c, 0.7)]; return [t[0], c, t[1], t[2]]; };
   const EYES = {
     normal: (c) => EX.map((x, i) => iris(x, c) + lid(x, i ? 1 : -1)).join(''),
     sharp: (c) => EX.map((x, i) => iris(x, c, 4.8, 5.8, 0.8) + lid(x, i ? 1 : -1, 2.8, 5)).join(''),   // 吊眼: the outer corners up
     droopy: (c) => EX.map((x, i) => iris(x, c, 5, 6.2, 0.4) + lid(x, i ? 1 : -1, -3.4, 6.6)).join(''),   // 垂眼: down
     happy: () => EX.map((x) => ink(`M${q(x - 5.6)} ${EY + 1} Q${x} ${EY - 6} ${q(x + 5.6)} ${EY + 1}`, 2.3)).join(''),   // ^ ^
     big: (c) => EX.map((x, i) => iris(x, c, 6, 7.8, -0.4) + `<circle cx="${q(x + 2.6)}" cy="${q(EY + 2.6)}" r=".9" fill="#fff"/>` + lid(x, i ? 1 : -1, 0, 8.2)).join(''),
-    sleepy: (c) => EX.map((x) => `<path d="M${q(x - 5)} ${EY - 1} h10 a5 5.4 0 0 1 -10 0 Z" fill="${c}"/><circle cx="${q(x + 1.6)}" cy="${EY + 1.2}" r="1.1" fill="#fff" fill-opacity=".8"/>` + ink(`M${q(x - 6.2)} ${EY - 1} H${q(x + 6.2)}`, 2.2)).join('')
+    sleepy: (c) => EX.map((x) => `<path d="M${q(x - 5)} ${EY - 1} h10 a5 5.4 0 0 1 -10 0 Z" fill="${c}"/><circle cx="${q(x + 1.6)}" cy="${EY + 1.2}" r="1.1" fill="#fff" fill-opacity=".8"/>` + ink(`M${q(x - 6.2)} ${EY - 1} H${q(x + 6.2)}`, 2.2)).join(''),
+    // Q版眼 (test, 2026-11-09): big and round, the lower half of the iris lighter, two highlights, a lash with a flick
+    chibi: (c) => EX.map((x, i) => bigEye(x, i, `<ellipse rx="8.6" ry="10.5" fill="#fff"/><ellipse cy="1" rx="7.4" ry="9.45" fill="${c}"/><ellipse cy="4.6" rx="5.3" ry="4.4" fill="${tones(c)[2]}" fill-opacity=".75"/><ellipse rx="3.6" ry="5.25" fill="${INK}"/>
+      <circle cx="2.8" cy="-3.8" r="2.7" fill="#fff"/><circle cx="-3" cy="4.4" r="1.2" fill="#fff"/><path d="M-10.2 -4.6 Q-1.7 -14.1 10 -6.6 L12.2 -8.6 L9.8 -3.6 Q-.9 -11.1 -9.2 -2.2 Z" fill="${INK}"/>`)).join(''),
+    // 水汪汪 (test, 2026-11-09): the iris darkest under the lid and glowing at the bottom, three highlights, a heavy lash
+    kira: (c) => {
+      const t = tones(c), n = ++uid, W = 'M-9.8 -1.5 C-9.8 -8.6 -5 -12.2 .6 -12.2 C6.4 -12.2 10.2 -8.2 10.2 -1.2 C10.2 6.4 5.8 11.6 .2 11.6 C-5.6 11.6 -9.8 5.8 -9.8 -1.5 Z';
+      const defs = `<defs><linearGradient id="ki${n}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${t[0]}"/><stop offset=".42" stop-color="${c}"/><stop offset=".78" stop-color="${t[2]}"/><stop offset="1" stop-color="${t[3]}"/></linearGradient><clipPath id="kc${n}"><path d="${W}"/></clipPath></defs>`;
+      return defs + EX.map((x, i) => bigEye(x, i, `<path d="${W}" fill="#fff"/><g clip-path="url(#kc${n})"><ellipse cx=".4" cy="1.6" rx="8.8" ry="11.4" fill="url(#ki${n})"/><path d="M-9 -4.4 Q.6 -9.4 10 -4.2 V-12 H-9 Z" fill="${t[0]}" fill-opacity=".85"/>
+        <ellipse cx=".5" cy="1" rx="3.4" ry="5.4" fill="${t[0]}"/><path d="M-6.4 5 Q.4 12.4 7.4 4.8 Q.4 8.8 -6.4 5 Z" fill="${t[3]}" fill-opacity=".95"/><ellipse cx=".4" cy="1.6" rx="8.8" ry="11.4" fill="none" stroke="${t[0]}" stroke-width=".8"/>
+        <path d="M-9.8 -12 H10.4 V-6.4 Q.6 -11 -9.8 -5.6 Z" fill="${t[0]}" fill-opacity=".35"/><ellipse cx="3.6" cy="-4.4" rx="2.9" ry="3.7" fill="#fff" transform="rotate(-20 3.6 -4.4)"/><circle cx="-3.6" cy="4.8" r="1.4" fill="#fff"/><circle cx="5.2" cy="3.4" r=".8" fill="#fff"/>
+        <path d="M-6.6 -1 Q-7.4 3 -5.6 6" stroke="${t[3]}" stroke-width="1.1" fill="none" stroke-linecap="round" stroke-opacity=".6"/></g>
+        <path d="M-11.4 -2.4 C-10.8 -11 -4.8 -15 1 -14.8 C6.8 -14.6 11.2 -11 13 -6.6 L16 -8.4 L13.8 -5 L16.4 -3.6 L12.6 -3 L11 -4 C9.6 -8.2 5.6 -11.2 .8 -11.4 C-4.4 -11.6 -8.8 -8.4 -9.8 -1.6 Z" fill="${INK}"/>
+        <path d="M4 11.4 Q8.4 10.2 10 5.4" stroke="${INK}" stroke-width=".85" fill="none" stroke-linecap="round" stroke-opacity=".75"/><path d="M-6 -16.6 Q1.6 -18.8 9.4 -14.6" stroke="#c99a80" stroke-width=".75" fill="none" stroke-linecap="round"/>`)).join('');
+    }
   };
   // the brows (the left one; the right mirrors it): [path, width], in a shade of the hair
   const BROWS = { soft: ['M-15 -128 Q-10.5 -130.8 -6 -128.8', 1.8], straight: ['M-15 -129 H-6', 2], thick: ['M-15.4 -127.8 Q-10.5 -131.6 -5.6 -129', 3.2], worried: ['M-15 -128 Q-10 -128.4 -6 -131.2', 1.8], raised: ['M-15.2 -130.8 Q-10.5 -131.6 -6 -128.4', 1.7] };
@@ -8883,6 +8904,7 @@ const HERO = (() => {
   const BLUSH = '<ellipse cx="-16.5" cy="-107.6" rx="5.4" ry="3.2" fill="#f5a3a3" fill-opacity=".55"/><ellipse cx="20.5" cy="-107.6" rx="5.4" ry="3.2" fill="#f5a3a3" fill-opacity=".55"/>';
   const CHEEKS = {
     blush: BLUSH,
+    soft: [-16.5, 20.5].map((x) => `<ellipse cx="${x}" cy="-107" rx="6" ry="3.4" fill="#f4a9b4" fill-opacity=".3"/><ellipse cx="${x}" cy="-107" rx="4.2" ry="2.3" fill="#f4a9b4" fill-opacity=".4"/><path d="M${x - 2.6} -106.2 l1.2 -2 M${x} -106.2 l1.2 -2 M${x + 2.6} -106.2 l1.2 -2" stroke="#e98b98" stroke-width=".7" stroke-linecap="round" stroke-opacity=".75"/>`).join(''),
     shy: BLUSH + '<path d="M-19.6 -105.8 l2 -3.6 M-16.6 -105.8 l2 -3.6 M-13.6 -105.8 l2 -3.6 M17.4 -105.8 l2 -3.6 M20.4 -105.8 l2 -3.6 M23.4 -105.8 l2 -3.6" stroke="#e0787a" stroke-width="1" stroke-linecap="round" stroke-opacity=".8"/>',
     freckles: [[-20, -110], [-16.6, -108.4], [-20, -106.8], [-13.6, -110.6], [24, -110], [20.6, -108.4], [24, -106.8], [17.6, -110.6]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".85" fill="#a8643f" fill-opacity=".55"/>`).join(''),
     none: ''
@@ -8896,7 +8918,8 @@ const HERO = (() => {
     goatee: (f) => `<path ${f} d="M-2.5 -98.6 Q2 -97 6.5 -98.6 Q7.2 -91.4 2 -86.9 Q-3.2 -91.4 -2.5 -98.6 Z"/><path ${f} transform="translate(2 -106.4) scale(.75) translate(-2 106.4)" d="${MUSTACHE}"/>`,
     full: (f) => `<path ${f} d="M-34 -122 C-34 -94 -14 -78 2 -78 C18 -78 38 -94 38 -122 L33 -122 C32 -110 24 -100.4 12 -100 Q2 -97.8 -8 -100 C-20 -100.4 -28 -110 -29 -122 Z"/><path ${f} d="${MUSTACHE}"/>`
   };
-  // ===== the hair (1.2.1), 日系 anime after the user's sheet of 48 chibi hairstyles and their brief (2026-11-07):
+  // ===== the hair (1.2.1), 日系 anime after the user's sheet of 48 chibi hairstyles and their brief (2026-11-07). Since the Q版
+  // body (test, 2026-11-09) it is drawn flat — no gradient, no outline, a soft shine for the ring (HERO.svg) — the shapes as below:
   // every lock ends in a sharp, tapering tip (a ぱっつん or 公主切 line is cut straight); three layers — the back hair, the side
   // locks, the fringe with a stray wisp or two; a gradient from the roots (lighter) to the ends (darker), a fine outline a shade
   // darker than the hair, and a jagged angel ring of light on the crown. The outline goes round the whole of the hair, never where
@@ -8909,7 +8932,7 @@ const HERO = (() => {
   const r = (v) => Math.round(v * 10) / 10;
   const both = (s) => `${s}<g transform="matrix(-1 0 0 1 4 0)">${s}</g>`;
   const P = (f, d) => `<path ${f} d="${d}"/>`;
-  const strands = (s, d, o = 0.42) => `<path d="${d}" fill="none" ${s} stroke-width=".8" stroke-opacity="${o}" stroke-linecap="round"/>`;
+  const strands = (s, d, o = 0.42) => `<path d="${d}" fill="none" ${s} stroke-width="1.1" stroke-opacity="${r(Math.min(0.9, o * 1.8))}" stroke-linecap="round"/>`;   // stronger since the outline went (test)
   const shine = (d, o = 0.3) => `<path d="${d}" fill="#fff" fill-opacity="${o}"/>`;
   // a run of locks: from the first notch down to each tip and up to the next (ns: n + 1 notches, ts: n tips). Each lock keeps its
   // width and tapers late to a sharp tip; a: how far it sweeps sideways from its root, t: how wide the tip (of the lock's width)
@@ -8926,18 +8949,15 @@ const HERO = (() => {
   const leaf = (f, x0, x1, y0, tx, ty) => P(f, `M${x0} ${y0}${locks([[x0, y0], [x1, y0]], [[tx, ty]], 0.2, 0.2)} Z`);
   // a stray wisp: a sliver wd wide at its root (x0, y0), bending through (cx, cy) to a sharp end at (x1, y1)
   const wisp = (w, x0, y0, cx, cy, x1, y1, wd = 1.8) => P(w, `M${r(x0 - wd / 2)} ${y0} Q${r(cx - wd / 3)} ${cy} ${x1} ${y1} Q${r(cx + wd / 3)} ${cy} ${r(x0 + wd / 2)} ${y0} Z`);
-  // the angel ring: a band of light round the crown, smooth on top, in uneven teeth below
-  const RING = (() => {
-    const pt = (a, k) => `${r(2 + 40.6 * k * Math.cos(a))} ${r(-135 - 34 * k * Math.sin(a))}`, a0 = 0.62, a1 = Math.PI - 0.62, n = 22, teeth = [0.7, 0.66, 0.71, 0.64, 0.7, 0.67];
-    let d = `M${pt(a0, 0.79)}`;
-    for (let i = 1; i <= n; i++) d += ` L${pt(a0 + (a1 - a0) * i / n, 0.79)}`;
-    for (let i = n; i >= 0; i--) d += ` L${pt(a0 + (a1 - a0) * i / n, i % 2 ? teeth[i % 6] : 0.735)}`;
-    return `<path d="${d} Z" fill="#fff" fill-opacity=".27"/>`;
-  })();
+  // the shine on the crown (test, 2026-11-09, after the user's pick of the flat Q版 look): one soft streak of light up to the left
+  const RING = '<ellipse cx="-10" cy="-163" rx="11" ry="3" transform="rotate(-14 -10 -163)" fill="#fff" fill-opacity=".2"/>';
   // ===== the crown, with the fringe as its lower edge from the left temple (-33 -138) to the right (37 -138); at the sides it comes
   // down to just over the ear in a sharp sideburn, so the side locks hang from inside it
   const OUT = ' C37.4 -133 38.4 -126.4 39.6 -121.2 C40.8 -123.6 42.8 -125.4 45 -126.6 C48.8 -129 50.4 -134 50.2 -141 C49.6 -159 32 -174.4 2 -174.4 C-28 -174.4 -45.6 -159 -46.2 -141 C-46.4 -134 -44.8 -129 -41 -126.6 C-38.8 -125.4 -36.8 -123.6 -35.6 -121.2 C-34.4 -126.4 -33.4 -133 -33 -138 Z';
-  const crown = (f, e) => P(f, `M-33 -138${e}${OUT}`);
+  const crown = (f, e, out = OUT) => P(f, `M-33 -138${e}${out}`);
+  // a crown kept close over the ears (推高, test 2026-11-09: the sides and back clipped short so the top stands up, for the cuts men
+  // like): no sideburn, a little higher on top
+  const SLIM = ' C38.6 -143 40.4 -149 40.6 -154 C40.4 -168 24 -177 2 -177 C-20 -177 -36.4 -168 -36.6 -154 C-36.4 -149 -34.6 -143 -33 -138 Z';
   const L0 = [-33, -138], R0 = [37, -138];
   // a fringe: its edge; b: a darker tier behind it (k); u: hanging from under the crown (f); x: on it (f); its strands and wisps
   const F = (name, e, o = {}) => ({ name, e, b: o.b || (() => ''), u: o.u || (() => ''), x: o.x || (() => ''), deco: o.deco || (() => '') });
@@ -9017,7 +9037,8 @@ const HERO = (() => {
     longlayer: { name: '長層次', d: (f) => both(P(f, 'M-44 -151 C-48.6 -138 -49.6 -100 -45.6 -70 C-43.8 -75 -41.8 -80 -39.6 -83.6 C-38.4 -80 -36.8 -77.4 -34.8 -76 C-34 -94 -33 -112 -32 -124 Z') + P(f, 'M-44 -151 C-47.6 -141 -47.8 -124 -43.6 -110.6 C-41.6 -114 -39.6 -116.6 -37.4 -118 C-36.4 -115 -34.8 -113 -32.6 -111.6 C-31.6 -122 -30.8 -132 -29.4 -141 Z')), deco: (s) => both(strands(s, 'M-43.6 -110.6 C-41.6 -114 -39.6 -116.6 -37.4 -118 C-36.4 -115 -34.8 -113 -32.6 -111.6', 0.5) + strands(s, 'M-41 -106 C-41.6 -99 -41.2 -92 -40 -87')) },
     tucked: { name: '耳後', ear: true, b: (k) => both(P(k, 'M-46.4 -140 C-48.6 -122 -47.4 -104 -43.6 -94 C-42 -97 -40.4 -99.4 -38.4 -100.6 C-37.6 -110 -36.6 -124 -34 -140 Z')), d: () => '', deco: () => '' },
     above: { name: '耳上短', ear: true, d: () => '', deco: () => '' },
-    sideburn: { name: '鬢角', ear: true, d: (f) => both(P(f, 'M-36.8 -136 C-37.4 -126 -36.2 -116 -33.4 -106.6 C-32.4 -111 -31.4 -116 -30.6 -121 C-30.4 -127 -30.6 -133 -31 -138 Z')), deco: () => '' }
+    sideburn: { name: '鬢角', ear: true, d: (f) => both(P(f, 'M-36.8 -136 C-37.4 -126 -36.2 -116 -33.4 -106.6 C-32.4 -111 -31.4 -116 -30.6 -121 C-30.4 -127 -30.6 -133 -31 -138 Z')), deco: () => '' },
+    undercut: { name: '推高', ear: true, out: SLIM, earRear: (skin) => both(`<path ${skin} d="M-31.4 -124.6 C-36.4 -125.4 -38.6 -119 -37.4 -114 C-36.6 -110.8 -34 -110 -31.8 -111.2 Z"/>`), d: (f) => `<g opacity=".38">${both(P(f, 'M-34.4 -152 C-36 -142 -35.4 -130 -32.4 -119 C-31 -121 -29.6 -122 -28.4 -122.4 C-29 -132 -29.4 -142 -28.6 -151 Z'))}</g>`, deco: () => '' }
   };
   // the ear (only with the sides that leave it showing): small and round, at the side of the face by the eyes
   const EAR = (skin) => both(`<path ${skin} d="M-31.4 -124.6 C-35.8 -126.4 -39.4 -122.6 -39 -117 C-38.6 -112 -35.6 -108.8 -31.6 -110.2 Z"/><path d="M-33 -121.4 C-35.8 -121.2 -36.4 -116.6 -34.6 -113.4" fill="none" stroke="#c98a6e" stroke-opacity=".6" stroke-width="1.2" stroke-linecap="round"/>`);
@@ -9035,7 +9056,10 @@ const HERO = (() => {
       r: (f) => P(f, `M-44 -136 C-44 -162 -20 -174.4 2 -174.4 C24 -174.4 48 -162 48 -136 C52 -124 46 -116 50 -104 C54 -92 46 -84 48 -74 C49 -66 46 -62 41 -60${hemTips(-57, -36, 41, 7)} C-42 -60 -45 -66 -44 -74 C-42 -84 -50 -92 -46 -104 C-42 -116 -48 -124 -44 -136 Z`), rd: (s) => strands(s, 'M-24 -128 C-30 -116 -20 -104 -26 -92 C-30 -82 -24 -74 -26 -66 M2 -132 C-4 -118 8 -106 2 -94 C-2 -84 4 -76 2 -64 M28 -128 C34 -116 24 -104 30 -92 C34 -82 28 -74 30 -66') },
     curly: { name: '蓬捲', b: (k) => both(P(k, 'M2 -176 C-30 -176 -48 -152 -48 -124 C-48 -106 -40 -92 -28 -88 L2 -88 Z') + [[-46, -146, 8, -1], [-51, -130, 8.4, 1], [-52, -114, 8.4, -1], [-49, -99, 8, 1], [-40, -90, 7.6, -1]].map(([x, y, rr, s]) => curl(k, x, y, rr, s)).join('')),
       r: (f) => P(f, 'M-46 -136 C-46 -164 -22 -176 2 -176 C26 -176 50 -164 50 -136 C52 -116 46 -96 2 -90 C-42 -96 -48 -116 -46 -136 Z') + [[-44, -150, 8, -1], [-50, -132, 8.4, 1], [-50, -114, 8.4, -1], [-42, -100, 8, 1], [-26, -94, 8, -1], [-10, -92, 8, 1], [6, -92, 8, -1], [22, -93, 8, 1], [38, -98, 8, -1], [50, -112, 8.4, 1], [54, -130, 8.4, -1], [48, -148, 8, 1]].map(([x, y, rr, q]) => curl(f, x, y, rr, q)).join(''),
-      rd: (s) => swirl(s, [[-24, -150, 7], [6, -156, 7], [30, -146, 7], [-14, -122, 7], [18, -120, 7], [-42, -100, 7], [-10, -92, 7], [22, -93, 7], [50, -112, 7]]) }
+      rd: (s) => swirl(s, [[-24, -150, 7], [6, -156, 7], [30, -146, 7], [-14, -122, 7], [18, -120, 7], [-42, -100, 7], [-10, -92, 7], [22, -93, 7], [50, -112, 7]]) },
+    undercut: { name: '推高', b: (k) => both(P(k, 'M2 -177 C-22 -177 -38 -166 -39.6 -152 L2 -152 Z')),
+      r: (f) => P(f, 'M-37.6 -146 C-39 -166 -20 -177 2 -177 C24 -177 43 -166 41.6 -146 C30 -139 -26 -139 -37.6 -146 Z') + `<g opacity=".24">${P(f, 'M-33.6 -144 C-24 -138.6 28 -138.6 37.6 -144 C38.4 -126 35.4 -110 26 -101.4 C14 -97 -10 -97 -22 -101.4 C-31.4 -110 -34.4 -126 -33.6 -144 Z')}</g>`,
+      rd: (s) => strands(s, 'M-18 -172 C-21 -162 -22 -152 -20 -143 M2 -177 V-141 M22 -172 C25 -162 26 -152 24 -143') }
   };
   // ===== 造型 on top or hanging from it, part of the hair's one shape facing us (f) and from behind (r); t, rt: the ties over it;
   // d, rd: its strands. under: tucked under a hat (it sits on top of the head)
@@ -9076,11 +9100,11 @@ const HERO = (() => {
     return {
       ear: (skin) => (sd.ear ? EAR(skin) : ''),
       back: (f, k) => (sd.b ? sd.b(k || f) : '') + bk.b(k || f),
-      front: (f, k) => sd.d(f) + fr.b(k || f) + fr.u(f) + crown(f, fr.e) + fr.x(f) + tp.f(f),
+      front: (f, k) => sd.d(f) + fr.b(k || f) + fr.u(f) + crown(f, fr.e, sd.out) + fr.x(f) + tp.f(f),
       over: () => (sd.t ? sd.t() : '') + tp.t(),
       deco: (s, w) => fr.deco(s, w || s) + sd.deco(s) + tp.d(s) + RING,
       rear: (f) => bk.r(f) + tp.r(f),
-      rearOver: (s, skin) => tp.rt() + bk.rd(s) + tp.rd(s) + (sd.ear && skin ? EAR_REAR(skin) : '') + RING
+      rearOver: (s, skin) => tp.rt() + bk.rd(s) + tp.rd(s) + (sd.ear && skin ? (sd.earRear || EAR_REAR)(skin) : '') + RING
     };
   }
   // the user's sheet of 48 hairstyles (in its order) as parts: [name, 瀏海, 兩側, 後面, 造型]; 隨機 rolls one of them, so its parts
@@ -9102,56 +9126,77 @@ const HERO = (() => {
   return { FRINGE, SIDES, BACKS, TOPS, STYLES, assemble };
   })();
   [['fringe', HAIRP.FRINGE], ['sides', HAIRP.SIDES], ['hairBack', HAIRP.BACKS], ['hairTop', HAIRP.TOPS]].forEach(([k, m]) => { OPTS[k] = Object.entries(m).map(([v, p]) => [v, p.name]); });
+  // ===== the body (test, 2026-11-09): Q版 after the user's pick — a big head on a small body: an A-line top, short arms held a
+  // little off it, stubby legs, round shoes; flat colours, no outline. The head (face, hair, what is worn on it) is drawn as before in
+  // its own units and set on the body HS times bigger (HEAD): HX, HY put a point of the head's units in the body's. Body space:
+  // centre x = 2, shoulders y -66, the top's hem -30, hips -28, feet 0.
+  const HS = 1.1, HX = (x) => q(2 + (x - 2) * HS), HY = (y) => q(-63 + (y + 93.6) * HS);
+  const HEAD = `translate(2 -63) scale(${HS}) translate(-2 93.6)`;
+  const CHEEK = 'translate(2 5.8) scale(1.18 1) translate(-2 0)';   // the cheeks lower and further out, under the outer corners of the eyes (the user's pick)
   // tops (F: the light, c: the hero's top colour, d: a shade of it): the torso from the front and from behind (over: drawn over a
-  // body wear, the hood), the collar round the neck (in the head, under the chin), the sleeves (long, short, wide; cuff; paw hands)
-  const ROBE = 'M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L37 -13 Q2 -7 -33 -13 Z';   // a long robe's body, from the shoulders to the ankles
-  const TORSO = 'M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -46 Q2 -40 -26 -46 Z';
-  const BELLY = '<ellipse cx="2" cy="-68" rx="13" ry="17" fill="#fbf6ee" fill-opacity=".92"/>';
+  // body wear, the hood), the collar round the neck (over the arms, under the chin), the sleeves (long, short, wide, robe; cuff; paws)
+  const TORSO = 'M-13 -66 Q2 -67.6 17 -66 L26 -30 Q2 -25 -22 -30 Z', HEM = 'M-22 -30 Q2 -25 26 -30 L25.2 -34 Q2 -29 -21.2 -34 Z';
+  const ROBE = 'M-13 -66 Q2 -67.6 17 -66 L30 -5 Q2 0 -26 -5 Z';   // a long robe's body, from the shoulders to the ankles
+  const BELLY = '<ellipse cx="2" cy="-45" rx="10" ry="12" fill="#fbf6ee" fill-opacity=".92"/>';
   const TOPS = {
     hoodie: { sleeve: 'long',
-      front: (F, c) => `<path ${F(c, 2.6)} d="${TORSO}"/><path d="M-14 -66 H18 V-54 Q2 -50 -14 -54 Z" fill="#000" fill-opacity=".08"/><path d="M-2 -98 V-80 M6 -98 V-82" stroke="#e8ecff" stroke-width="1.6" stroke-linecap="round"/>`,
-      collar: (F, c, d) => `<path ${F(d, 3.2)} d="M-26 -104 Q2 -96 30 -104 L28 -94 Q2 -88 -24 -94 Z"/>`,
-      back: (F, c) => `<path ${F(c, 2.6)} d="${TORSO}"/>`, over: (F, c, d) => `<path ${F(d, 3)} d="M-18 -100 Q2 -92 22 -100 L20 -80 Q2 -72 -16 -80 Z"/>` },
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path ${F(d, 0.8)} d="${HEM}"/><path ${F(d, 1)} d="M-10 -47 H14 L12 -38 H-8 Z"/><path d="M-1.4 -62 V-53 M5.4 -62 V-53" stroke="#e8ecff" stroke-width="1.3" stroke-linecap="round"/>`,
+      collar: (F, c, d) => `<path ${F(d, 1.6)} d="M-13 -67 Q2 -57 17 -67 L15 -70 Q2 -61 -11 -70 Z"/>`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path ${F(d, 0.8)} d="${HEM}"/>`, over: (F, c, d) => `<path ${F(d, 1.5)} d="M-12 -67 Q2 -46 16 -67 Q2 -61 -12 -67 Z"/>` },
     tee: { sleeve: 'short',
-      front: (F, c, d) => `<path ${F(c, 2.6)} d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L29 -48 Q2 -43 -25 -48 Z"/><path d="M-8 -99.5 Q2 -92 12 -99.5" fill="none" stroke="${d}" stroke-width="2.6"/>`,
-      back: (F, c, d) => `<path ${F(c, 2.6)} d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L29 -48 Q2 -43 -25 -48 Z"/><path d="M-7 -99.5 Q2 -96.5 11 -99.5" fill="none" stroke="${d}" stroke-width="2.2"/>` },
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path ${F(d, 0.8)} d="${HEM}"/><path d="M-6 -66.4 Q2 -59 10 -66.4" fill="none" stroke="${d}" stroke-width="2"/>`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path ${F(d, 0.8)} d="${HEM}"/><path d="M-5 -66.6 Q2 -64 9 -66.6" fill="none" stroke="${d}" stroke-width="1.8"/>` },
     sweater: { sleeve: 'long', cuff: true,
-      front: (F, c, d) => `<path ${F(c, 2.6)} d="${TORSO}"/><path d="M-26 -49 Q2 -43 30 -49" fill="none" stroke="${d}" stroke-width="4" stroke-linecap="round"/><path d="M-7 -94 l3 4 l-3 4 l3 4 l-3 4 l3 4 l-3 4 l3 4 l-3 4 l3 4 M9 -94 l3 4 l-3 4 l3 4 l-3 4 l3 4 l-3 4 l3 4 l-3 4 l3 4" fill="none" stroke="${d}" stroke-opacity=".6" stroke-width="1.2"/>`,
-      collar: (F, c, d) => `<path ${F(d, 3.1)} d="M-15 -101 Q2 -94 19 -101 L18 -96 Q2 -90 -14 -96 Z"/>`,
-      back: (F, c, d) => `<path ${F(c, 2.6)} d="${TORSO}"/><path d="M-26 -49 Q2 -43 30 -49" fill="none" stroke="${d}" stroke-width="4" stroke-linecap="round"/>` },
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path d="M-21.6 -31 Q2 -26 25.6 -31" fill="none" stroke="${d}" stroke-width="3.4" stroke-linecap="round"/><path d="M-4 -61 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 M8 -61 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3" fill="none" stroke="${d}" stroke-opacity=".6" stroke-width="1"/>`,
+      collar: (F, c, d) => `<path ${F(d, 1.6)} d="M-9 -68 Q2 -64.6 13 -68 L13.6 -63 Q2 -59.4 -9.6 -63 Z"/>`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path d="M-21.6 -31 Q2 -26 25.6 -31" fill="none" stroke="${d}" stroke-width="3.4" stroke-linecap="round"/>` },
     shirt: { sleeve: 'long', cuff: true, light: true,
-      front: (F, c, d) => `<path ${F(c, 2.6)} d="${TORSO}"/><path d="M2 -97 V-44" stroke="${d}" stroke-opacity=".6" stroke-width="1"/>${[-88, -76, -64, -52].map((y) => `<circle cx="4.4" cy="${y}" r="1.2" fill="${lt(c, 0.65)}"/>`).join('')}<path d="M-15 -86 h8 v8 h-8 Z" fill="none" stroke="${d}" stroke-opacity=".5" stroke-width="1"/>`,
-      collar: (F, c) => `<path ${F(lt(c, 0.55), 3.2)} d="M-14 -101 L-2 -90 L2 -97 Z M18 -101 L6 -90 L2 -97 Z"/>`,
-      back: (F, c, d) => `<path ${F(c, 2.6)} d="${TORSO}"/><path d="M-22 -88 Q2 -84 26 -88" fill="none" stroke="${d}" stroke-opacity=".45" stroke-width="1.2"/>` },
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path d="M2 -62 V-28" stroke="${d}" stroke-opacity=".6" stroke-width=".9"/>${[-56, -48, -40].map((y) => `<circle cx="3.6" cy="${y}" r="1" fill="${lt(c, 0.65)}"/>`).join('')}<path d="M-10 -55 h6 v6 h-6 Z" fill="none" stroke="${d}" stroke-opacity=".5" stroke-width=".9"/>`,
+      collar: (F, c) => `<path ${F(lt(c, 0.55), 1.6)} d="M-9 -67.4 L-1 -59 L2 -65 Z M13 -67.4 L5 -59 L2 -65 Z"/>`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path d="M-13 -58 Q2 -55.6 17 -58" fill="none" stroke="${d}" stroke-opacity=".45" stroke-width="1"/>` },
     jinbei: { sleeve: 'wide',
-      front: (F, c, d) => `<path ${F(c, 2.6)} d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L29 -46 H-25 Z"/><path ${F(d, 2.7)} d="M16 -99 L-4 -62 L1 -60 L20 -96 Z"/><path d="M-10 -99 L2 -78 M-20 -64 l6 2 M-20 -62 l5 5" fill="none" stroke="${d}" stroke-width="1.6"/>${[[-14, -84], [-8, -70], [18, -78], [22, -60], [-16, -54]].map(([x, y]) => `<path d="M${x - 2} ${y} h4 M${x} ${y - 2} v4" stroke="${lt(c, 0.5)}" stroke-opacity=".7" stroke-width="1"/>`).join('')}`,
-      collar: (F, c, d) => `<path ${F(d, 3.2)} d="M-12 -101 L2 -88 L16 -101 L12 -101 L2 -92 L-8 -101 Z"/>`,
-      back: (F, c, d) => `<path ${F(c, 2.6)} d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L29 -46 H-25 Z"/><path d="M2 -98 V-46" stroke="${d}" stroke-opacity=".4" stroke-width="1.2"/>` },
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L22 -28 H-18 Z"/><path ${F(d, 1.3)} d="M15 -66 L-1 -42 L3 -41 L18 -63 Z"/><path d="M-6 -66 L2 -52 M-14 -42 l5 1.6 M-14 -40 l4 4" fill="none" stroke="${d}" stroke-width="1.2"/>${[[-8, -56], [-4, -46], [12, -50], [15, -38], [-12, -34]].map(([x, y]) => `<path d="M${x - 1.6} ${y} h3.2 M${x} ${y - 1.6} v3.2" stroke="${lt(c, 0.5)}" stroke-opacity=".7" stroke-width=".9"/>`).join('')}`,
+      collar: (F, c, d) => `<path ${F(d, 1.6)} d="M-7 -67 L2 -58 L11 -67 L8.4 -67 L2 -61 L-4.4 -67 Z"/>`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L22 -28 H-18 Z"/><path d="M2 -66 V-28" stroke="${d}" stroke-opacity=".4" stroke-width="1"/>` },
     cattop: { sleeve: 'long', paw: true,   // fur in the top's colour, a white belly, a red collar and a bell
-      front: (F, c) => `<path ${F(c, 2.6)} d="M-25 -88 Q-26 -98 -12 -99 H16 Q30 -98 29 -88 L31 -45 Q2 -38 -27 -45 Z"/>${BELLY}`,
-      collar: () => '<path fill="#d0453c" d="M-24 -101 Q2 -94 28 -101 L27 -96.5 Q2 -89.5 -23 -96.5 Z"/><circle cx="2" cy="-91.5" r="3.4" fill="#e6c25a"/><path d="M0 -91 h4" stroke="#9a7a2a" stroke-width=".8"/>',
-      back: (F, c, d) => `<path ${F(c, 2.6)} d="M-25 -88 Q-26 -98 -12 -99 H16 Q30 -98 29 -88 L31 -45 Q2 -38 -27 -45 Z"/><path d="M-12 -86 q14 5 28 0 M-14 -74 q16 5 32 0 M-14 -62 q16 5 32 0" fill="none" stroke="${d}" stroke-width="2.2" stroke-linecap="round"/>`,
-      over: () => '<path fill="#d0453c" d="M-18 -101 Q2 -95 22 -101 L21 -97 Q2 -91 -17 -97 Z"/>' },
+      front: (F, c) => `<path ${F(c, 1.2)} d="M-14 -66 Q2 -67.6 18 -66 L27 -29 Q2 -23 -23 -29 Z"/>${BELLY}`,
+      collar: () => '<path fill="#d0453c" d="M-12 -67 Q2 -61 16 -67 L15.6 -63.6 Q2 -57.6 -11.6 -63.6 Z"/><circle cx="2" cy="-59.4" r="2.6" fill="#e6c25a"/><path d="M.6 -59 h2.8" stroke="#9a7a2a" stroke-width=".7"/>',
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="M-14 -66 Q2 -67.6 18 -66 L27 -29 Q2 -23 -23 -29 Z"/><path d="M-8 -58 q10 3.5 20 0 M-10 -49 q12 3.5 24 0 M-12 -40 q14 3.5 28 0" fill="none" stroke="${d}" stroke-width="1.8" stroke-linecap="round"/>`,
+      over: () => '<path fill="#d0453c" d="M-11 -67 Q2 -63 15 -67 L14.6 -64 Q2 -60 -10.6 -64 Z"/>' },
     wizrobe: { sleeve: 'robe',   // 魔法師長袍 (Halloween): to the ankles, gold stars and hem, a belt with a little spell book at the hip
-      front: (F, c, d) => `<path ${F(c, 2.6)} d="${ROBE}"/><path d="M-33 -13 Q2 -7 37 -13" fill="none" stroke="#e6c25a" stroke-width="2.4"/>${[[-14, -80, 2.4], [16, -84, 1.8], [12, -70, 2.2], [-6, -66, 1.8], [-18, -40, 2.6], [6, -30, 2.2], [26, -24, 2], [-24, -22, 2], [-8, -18, 1.6]].map((a) => star(...a)).join('')}
-        <path ${F(d, 2.7)} d="M-25 -60 Q2 -55 29 -60 V-54 Q2 -49 -25 -54 Z"/><rect x="-1" y="-60.6" width="6" height="7.4" rx="1.2" fill="#e6c25a"/><path d="M19 -55 V-50" stroke="#e6c25a" stroke-width="1.2"/>
-        <g transform="rotate(-8 22 -42)"><rect x="15" y="-50" width="14" height="17" rx="1.6" fill="#6b3f2a"/><rect x="16.4" y="-48.6" width="11.2" height="14.2" rx="1" fill="none" stroke="#e6c25a" stroke-width=".9"/>${star(22, -41.4, 3.2)}</g>`,
-      collar: (F, c, d) => `<path ${F(d, 3.2)} d="M-16 -101 L2 -90 L20 -101 L18 -96 L2 -86 L-14 -96 Z"/><circle cx="2" cy="-89" r="2.4" fill="#e6c25a"/>`,
-      back: (F, c) => `<path ${F(c, 2.6)} d="${ROBE}"/><path d="M-33 -13 Q2 -7 37 -13" fill="none" stroke="#e6c25a" stroke-width="2.4"/>${star(8, -66, 8)}<path d="M-12 -84 a10 10 0 1 0 9 14 a8 8 0 1 1 -9 -14 Z" fill="#e6c25a"/>` }
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="${ROBE}"/><path d="M-26 -5 Q2 0 30 -5" fill="none" stroke="#e6c25a" stroke-width="2"/>${[[-6, -56, 1.8], [10, -58, 1.4], [8, -48, 1.6], [-4, -44, 1.4], [-12, -24, 2], [4, -16, 1.7], [20, -12, 1.5], [-18, -12, 1.5], [-4, -8, 1.3]].map((a) => star(...a)).join('')}
+        <path ${F(d, 1.3)} d="M-19 -40 Q2 -36 23 -40 V-35.6 Q2 -31.6 -19 -35.6 Z"/><rect x="0" y="-40.4" width="4.4" height="5.4" rx="1" fill="#e6c25a"/>
+        <g transform="rotate(-8 19 -28)"><rect x="14" y="-34" width="10" height="12" rx="1.2" fill="#6b3f2a"/><rect x="15" y="-33" width="8" height="10" rx=".8" fill="none" stroke="#e6c25a" stroke-width=".7"/>${star(19, -28, 2.4)}</g>`,
+      collar: (F, c, d) => `<path ${F(d, 1.6)} d="M-8 -67 L2 -59 L12 -67 L10.6 -63.6 L2 -56 L-6.6 -63.6 Z"/><circle cx="2" cy="-57.6" r="1.8" fill="#e6c25a"/>`,
+      back: (F, c) => `<path ${F(c, 1.2)} d="${ROBE}"/><path d="M-26 -5 Q2 0 30 -5" fill="none" stroke="#e6c25a" stroke-width="2"/>${star(8, -40, 6)}<path d="M-6 -60 a7 7 0 1 0 6.4 10 a5.6 5.6 0 1 1 -6.4 -10 Z" fill="#e6c25a"/>` }
   };
-  // bottoms (c: the trousers' colour): a leg at x (its left side, 13 wide), the foot, and what goes with them — a skirt over both
-  // legs, a tail behind; the shoe is everyone's but the cat's paws
-  const shoe = (F, x, side) => `<path ${F(SHOE, 0.2)} d="M${x - 2} -8 h${side ? 15 : 17} a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -3 3 h-${side ? 16 : 18} Z"/>`;
+  // an arm (s: -1 the left, 1 the right) hangs from the shoulder a little off the body; drawn hanging straight down from (0, 0) and
+  // turned out, so a pose turns it round the shoulder (the .arm group, in CSS)
+  const SHOULDER = [13.5, -63.5];
+  function arm(L, tp, top, topDk, skin, cls, s) {
+    const hand = tp.paw ? `<circle cy="27" r="4.8" ${L(top, 0.9)}/><circle cy="28.4" r="1.6" fill="#f2a8b8"/>` : `<circle cy="27" r="4.3" ${L(skin, 0.9)}/>`;
+    const bare = `<rect x="-3.2" y="2" width="6.4" height="23" rx="3.2" ${L(skin, 1.2)}/>`;
+    const cuff = tp.cuff ? (tp.light ? lt(top, 0.55) : dk(topDk, 0.85)) : topDk;
+    const art = tp.sleeve === 'robe' ? `<path ${L(topDk, 1.3)} d="M-4.6 -2 Q0 -5 4.6 -2 L8.6 22 Q0 24 -8.6 22 Z"/><path d="M-8.6 22 Q0 24 8.6 22" fill="none" stroke="#e6c25a" stroke-width="1.4"/>`
+      : tp.sleeve === 'short' ? bare + `<path ${L(top, 1.4)} d="M-4.6 -2 Q0 -5 4.6 -2 L5 9 Q0 10.6 -5 9 Z"/>`
+      : tp.sleeve === 'wide' ? bare + `<path ${L(topDk, 1.3)} d="M-4.6 -2 Q0 -5 4.6 -2 L7.4 15 Q0 16.6 -7.4 15 Z"/>`
+      : `<path ${L(top, 1.3)} d="M-4 -2 Q0 -4.5 4 -2 L4.4 21 Q0 22.6 -4.4 21 Z"/><path ${L(cuff, 1)} d="M-4.4 18.4 Q0 20 4.4 18.4 L4.5 21.6 Q0 23.2 -4.5 21.6 Z"/>`;
+    return `<g class="arm ${cls}"><g transform="translate(${q(2 + s * SHOULDER[0])} ${SHOULDER[1]}) rotate(${-s * 26})">${art}${hand}</g></g>`;
+  }
+  // bottoms (c: the trousers' colour): a leg round x, the hips over both legs, the foot, and what goes with them — a skirt over
+  // both legs, a tail behind; the shoe is everyone's but the cat's paws
+  const shoe = (F, x) => `<path ${F(SHOE, 0.1)} d="M${q(x - 6.5)} -9 h13 v4.6 q0 4.4 -4.2 4.4 h-5 q-3.8 0 -3.8 -4.4 Z"/><path d="M${q(x - 6.5)} -3.4 h13" stroke="#000" stroke-opacity=".12" stroke-width="1.2"/>`;
+  const HIPS = (F, c) => `<path ${F(c, 0.7)} d="M-17 -33 H21 L21.6 -22 H-17.6 Z"/>`;
   const BOTTOMS = {
-    pants: { leg: (F, c, x) => `<rect x="${x}" y="-48" width="13" height="42" rx="5" ${F(c, 0.8)}/>` },
-    shorts: { leg: (F, c, x, skin) => `<rect x="${x + 1}" y="-34" width="11" height="28" rx="5" ${F(skin, 0.6)}/><rect x="${x - 0.5}" y="-48" width="14" height="20" rx="5" ${F(c, 0.9)}/>` },
-    wide: { leg: (F, c, x) => `<path ${F(c, 0.8)} d="M${x} -48 H${x + 13} L${x + 15.5} -7 Q${x + 6.5} -5 ${x - 2.5} -7 Z"/>` },
-    skirt: { leg: (F, c, x, skin) => `<rect x="${x + 1}" y="-40" width="11" height="34" rx="5" ${F(skin, 0.6)}/>`,
-      over: (F, c, d) => `<path ${F(c, 1.2)} d="M-24 -52 H28 L34 -22 Q2 -16 -30 -22 Z"/><path d="M-12 -50 L-16 -21 M2 -50 V-18 M16 -50 L20 -21" stroke="${d}" stroke-opacity=".35" stroke-width="1.2"/>` },
-    catpants: { leg: (F, c, x) => `<rect x="${x}" y="-48" width="13" height="40" rx="5" ${F(c, 0.8)}/>`,
-      foot: (F, c, x, d) => `<ellipse cx="${x + 6.5}" cy="-4.5" rx="9" ry="5.5" ${F(c, 0.2)}/><path d="M${x + 3} -6 v3 M${x + 6.5} -6.5 v3 M${x + 10} -6 v3" stroke="${d}" stroke-width="1.1" stroke-linecap="round"/>`,
-      tail: (F, c, d, side) => (side ? `<path d="M2 -50 C2 -28 30 -30 34 -54 C36 -66 30 -74 25 -71" fill="none" stroke="${c}" stroke-width="7" stroke-linecap="round"/><path d="M28 -73 C27 -74 25 -72 25 -71" stroke="${d}" stroke-width="7" stroke-linecap="round"/>`
-        : `<path d="M24 -52 C44 -54 52 -74 44 -92" fill="none" stroke="${c}" stroke-width="7" stroke-linecap="round"/><path d="M45.5 -89 C45 -91 44.5 -92 44 -92" stroke="${d}" stroke-width="7" stroke-linecap="round"/>`) }
+    pants: { hips: HIPS, leg: (F, c, x) => `<rect x="${q(x - 5.5)}" y="-28" width="11" height="23" rx="4" ${F(c, 0.4)}/>` },
+    shorts: { hips: HIPS, leg: (F, c, x, skin) => `<rect x="${q(x - 4.8)}" y="-24" width="9.6" height="19" rx="4" ${F(skin, 0.3)}/><rect x="${q(x - 6)}" y="-28" width="12" height="10" rx="3" ${F(c, 0.5)}/>` },
+    wide: { hips: HIPS, leg: (F, c, x) => `<path ${F(c, 0.4)} d="M${q(x - 6)} -28 H${q(x + 6)} L${q(x + 7.6)} -5 Q${x} -3.6 ${q(x - 7.6)} -5 Z"/>` },
+    skirt: { leg: (F, c, x, skin) => `<rect x="${q(x - 4.8)}" y="-24" width="9.6" height="19" rx="4" ${F(skin, 0.3)}/>`,
+      over: (F, c, d) => `<path ${F(c, 0.7)} d="M-16 -36 H20 L26 -16 Q2 -12 -22 -16 Z"/><path d="M-8 -34 L-11 -15 M2 -34 V-13.4 M12 -34 L15 -15" stroke="${d}" stroke-opacity=".35" stroke-width="1"/>` },
+    catpants: { hips: HIPS, leg: (F, c, x) => `<rect x="${q(x - 5.5)}" y="-28" width="11" height="22" rx="4" ${F(c, 0.4)}/>`,
+      foot: (F, c, x, d) => `<ellipse cx="${x}" cy="-4.4" rx="7" ry="4.4" ${F(c, 0.1)}/><path d="M${q(x - 2.8)} -5.6 v2.4 M${x} -6 v2.4 M${q(x + 2.8)} -5.6 v2.4" stroke="${d}" stroke-width=".9" stroke-linecap="round"/>`,
+      tail: (F, c, d, side) => (side ? `<path d="M2 -30 C2 -14 22 -16 25 -32 C26 -40 22 -46 18 -44" fill="none" stroke="${c}" stroke-width="5.4" stroke-linecap="round"/><path d="M20 -45.4 C19.4 -45.6 18.4 -44.8 18 -44" stroke="${d}" stroke-width="5.4" stroke-linecap="round"/>`
+        : `<path d="M18 -31 C32 -32 38 -46 33 -58" fill="none" stroke="${c}" stroke-width="5.4" stroke-linecap="round"/><path d="M34 -56.4 C33.8 -57.4 33.4 -58 33 -58" stroke="${d}" stroke-width="5.4" stroke-linecap="round"/>`) }
   };
   // a head worn whole (猫の頭): it takes the place of the hero's own head, hair and face, in the fur of their top
   const CAT_EYES = '<g class="eyes"><ellipse cx="-11" cy="-126" rx="5.4" ry="7" fill="#2a2730"/><ellipse cx="15" cy="-126" rx="5.4" ry="7" fill="#2a2730"/><circle cx="-9.4" cy="-128.6" r="1.9" fill="#fff"/><circle cx="16.6" cy="-128.6" r="1.9" fill="#fff"/></g>';
@@ -9172,7 +9217,8 @@ const HERO = (() => {
   //   on top of the head (呆毛, 丸子, 雙丸子) is tucked under it while it is on (1.2.1: hats no longer swap the whole hairstyle)
   // - a whole head (FULL): takes the place of the head, hair and face; nothing is worn on the face
   const HATS = new Set(['beanie', 'strawhat', 'beret', 'gradcap', 'cathood', 'witchhat']);
-  const HEAD_TOP = { witchhat: -232 };   // how high a thing on the head reaches, where it stands above a hat's usual -196
+  const HEAD_TOP = { witchhat: -232 };   // how high a thing on the head reaches, where it stands above a hat's usual -196 (head units)
+  const ON_BODY = new Set(['scarf', 'bowtie', 'backpack']);   // drawn in the body's units, not on the head
   const tucked = (lk, id) => (HATS.has(id) && HAIRP.TOPS[lk.hairTop].under ? HAIRP.TOPS[lk.hairTop].name : '');   // what a hat tucks away
   // the things worn: [front, back] drawings by part, in the figure's own units; c and d are their top's colour and a shade of it
   const WEAR = {
@@ -9211,9 +9257,10 @@ const HERO = (() => {
       return [c, c];
     },
     glasses: () => [`<g fill="none" stroke="#3a3328" stroke-width="2"><circle cx="-10.5" cy="-117" r="8.6"/><circle cx="14.5" cy="-117" r="8.6"/><path d="M-1.9 -118 Q2 -120.6 5.9 -118 M-19.1 -118.6 L-33 -121.6 M23.1 -118.6 L37 -121.6"/></g><path d="M-15 -121.4 l4 -3 M10 -121.4 l4 -3" stroke="#fff" stroke-opacity=".7" stroke-width="1.4"/>`, `<path d="M-33 -122 L-26 -120 M37 -122 L30 -120" stroke="#3a3328" stroke-width="2"/>`],
-    scarf: (L) => { const w = `<path ${L('#d0453c', 3.3)} d="M-22 -98 Q2 -88 26 -98 L26 -88 Q2 -78 -22 -88 Z"/>`; return [w + `<path ${L('#b93a33', 3)} d="M8 -88 L18 -88 L20 -58 L10 -56 Z"/><path d="M10 -58 v5 M14 -58 v5 M18 -58 v5" stroke="#b93a33" stroke-width="1.6"/>`, w + `<path ${L('#b93a33', 3)} d="M-14 -88 L-4 -88 L-6 -60 L-16 -62 Z"/>`]; },
-    bowtie: () => [`<path d="M2 -92 L-10 -98 L-10 -86 Z M2 -92 L14 -98 L14 -86 Z" fill="#c8453d"/><circle cx="2" cy="-92" r="3" fill="#a63831"/>`, ''],
-    backpack: (L) => [`<path ${L('#e6a23c', 2.6)} d="M-27 -90 Q-34 -76 -30 -52 H-22 V-90 Z"/><path d="M-16 -94 Q-20 -76 -18 -62 M20 -94 Q22 -76 20 -62" fill="none" stroke="#b8792a" stroke-width="3.4" stroke-linecap="round"/>`, `<rect x="-20" y="-96" width="44" height="48" rx="10" ${L('#e6a23c', 2.6)}/><rect x="-12" y="-74" width="28" height="20" rx="5" ${L('#d48f2c', 2.4)}/><path d="M-10 -66 H14" stroke="#b8792a" stroke-width="1.6"/><path d="M-14 -96 Q2 -104 18 -96" fill="none" stroke="#b8792a" stroke-width="3"/>`],
+    // on the body (test, 2026-11-09: the Q版 body), in the body's units
+    scarf: (L) => { const w = `<path ${L('#d0453c', 1.6)} d="M-12 -68 Q2 -61 16 -68 L16.4 -62 Q2 -55 -12.4 -62 Z"/>`; return [w + `<path ${L('#b93a33', 1.4)} d="M7 -61 L13 -61.6 L14.6 -46 L8.6 -45 Z"/><path d="M9 -46 v3.4 M11.6 -46.4 v3.4 M14 -46.6 v3.4" stroke="#b93a33" stroke-width="1.2"/>`, w + `<path ${L('#b93a33', 1.4)} d="M-6 -61 L0 -61 L-1 -46 L-7 -46.6 Z"/>`]; },
+    bowtie: () => [`<path d="M2 -61 L-5 -64.6 L-5 -57.4 Z M2 -61 L9 -64.6 L9 -57.4 Z" fill="#c8453d"/><circle cx="2" cy="-61" r="2" fill="#a63831"/>`, ''],
+    backpack: (L) => [`<path ${L('#e6a23c', 1.3)} d="M-15 -62 Q-21 -52 -18 -36 H-13 V-62 Z"/><path d="M-6 -66 Q-9 -55 -8 -42 M10 -66 Q13 -55 12 -42" fill="none" stroke="#b8792a" stroke-width="2.6" stroke-linecap="round"/>`, `<rect x="-12" y="-64" width="28" height="30" rx="7" ${L('#e6a23c', 1.3)}/><rect x="-7" y="-50" width="18" height="13" rx="3.6" ${L('#d48f2c', 1.1)}/><path d="M-5 -45 H9" stroke="#b8792a" stroke-width="1.2"/><path d="M-8 -64 Q2 -69 12 -64" fill="none" stroke="#b8792a" stroke-width="2.2"/>`],
   };
   const day = (h) => `fill="${h}"`;
   const paint = (a) => (a.match(/fill[:=]"?([^";]+)/) || [])[1] || '#000';   // the colour a lit fill attribute paints
@@ -9222,45 +9269,43 @@ const HERO = (() => {
   function svg(o = {}) {
     const lk = norm(o.look), L = o.L || day, wear = o.wear || {}, W = (slot, side) => { const id = wear[slot]; const f = id && WEAR[id]; return f ? f(L, lk.top, dk(lk.top, 0.84))[side] || '' : ''; };
     const cat = lk.topStyle === 'cattop' && lk.bottomStyle === 'catpants' && (wear.head === 'cathood' || wear.head === 'cathead');   // the whole cat suit
-    // the hair (1.2.1): a gradient from the roots to the ends and a fine outline a shade darker, both lit as the room lights it.
-    // hair(): a layer's outline drawn under its fills, so the line goes round the whole of it and never where its parts meet
-    const n = ++uid, hairOf = HAIRP.assemble(lk, HATS.has(wear.head)), hc = lk.hairColor, C = (h) => paint(L(h, 4)), edge = C(dk(hc, 0.56));
-    const grad = (id, a, b, c) => `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="-180" x2="0" y2="-56"><stop offset="0" style="stop-color:${a}"/><stop offset=".42" style="stop-color:${b}"/><stop offset="1" style="stop-color:${c}"/></linearGradient>`;
-    const hw = `fill="url(#hg${n})"`, ol = `fill="none" style="stroke:${edge};stroke-width:2px;stroke-linejoin:round"`, hs = `style="stroke:${edge}"`;
-    const hair = (draw) => draw(ol, ol) + draw(hw, `fill="url(#hk${n})"`);
+    // the hair (test, 2026-11-09, after the user's pick of the flat Q版 look): flat colours lit as the room lights them, the back
+    // hair darker, no outline; each part drawn with a thin stroke of its own colour, which softens the tips and joins
+    const n = ++uid, hairOf = HAIRP.assemble(lk, HATS.has(wear.head)), hc = lk.hairColor, C = (h) => paint(L(h, 3));
+    const flat = (h) => `style="fill:${C(h)};stroke:${C(h)};stroke-width:1.6px;stroke-linejoin:round"`;
+    const hw = flat(hc), hs = `style="stroke:${C(dk(hc, 0.7))}"`, hair = (draw) => draw(hw, flat(dk(hc, 0.8)));
     const top = lk.top, topDk = dk(lk.top, 0.84), pants = lk.bottom, skin = lk.skin, tp = TOPS[lk.topStyle], bt = BOTTOMS[lk.bottomStyle], full = FULL[wear.head];
-    const defs = `<defs><clipPath id="fc${n}" clipPathUnits="userSpaceOnUse"><path d="${FACE[lk.face]}"/></clipPath>${grad(`hg${n}`, C(lt(hc, 0.26)), C(hc), C(dk(hc, 0.72)))}${grad(`hk${n}`, C(dk(hc, 0.86)), C(dk(hc, 0.78)), C(dk(hc, 0.64)))}</defs>`;
-    const pd = dk(pants, 0.78), leg = (cls, x, side) => `<g class="leg ${cls}">${bt.leg(L, pants, x, skin)}${bt.foot ? bt.foot(L, pants, x, pd) : shoe(L, x, side)}</g>`;
-    const legs = (side) => `<g class="legs">${leg('l', -15, side)}${leg('r', 5, side)}</g>${bt.over ? bt.over(L, pants, pd) : ''}`;   // a skirt hangs over both legs, not with them
-    const arm = (cls, x) => {
-      const hand = tp.paw ? `<circle cx="${x}" cy="-52" r="7" ${L(top, 2)}/><circle cx="${x}" cy="-50.5" r="2.2" fill="#f2a8b8"/>` : `<circle cx="${x}" cy="-52" r="6.4" ${L(skin, 2)}/>`;
-      if (tp.sleeve === 'robe') return `<g class="arm ${cls}"><path ${L(topDk, 2.5)} d="M${x - 6.5} -93 H${x + 6.5} L${x + 11} -58 Q${x} -55 ${x - 11} -58 Z"/><path d="M${x - 11} -58 Q${x} -55 ${x + 11} -58" fill="none" stroke="#e6c25a" stroke-width="2"/>${hand}</g>`;
-      if (tp.sleeve === 'short') return `<g class="arm ${cls}"><rect x="${x - 5}" y="-80" width="10" height="28" rx="5" ${L(skin, 2.2)}/><rect x="${x - 6.5}" y="-92" width="13" height="17" rx="6" ${L(topDk, 2.5)}/>${hand}</g>`;
-      if (tp.sleeve === 'wide') return `<g class="arm ${cls}"><rect x="${x - 5}" y="-80" width="10" height="28" rx="5" ${L(skin, 2.2)}/><path ${L(topDk, 2.5)} d="M${x - 7} -93 H${x + 7} L${x + 9.5} -72 H${x - 9.5} Z"/>${hand}</g>`;
-      const cuff = tp.cuff ? `<rect x="${x - 6.2}" y="-61" width="12.4" height="5" rx="2" ${L(tp.light ? lt(top, 0.55) : dk(topDk, 0.85), 2.2)}/>` : '';
-      return `<g class="arm ${cls}"><rect x="${x - 6}" y="-92" width="12" height="40" rx="6" ${L(topDk, 2.4)}/>${cuff}${hand}</g>`;
-    };
-    const face = `<path ${L(skin, 3.6)} d="${FACE[lk.face]}"/>${CHEEKS[lk.cheeks]}<g clip-path="url(#fc${n})">${BEARD[lk.beard](L(lk.hairColor, 3.4))}</g>${MOUTH[lk.mouth](['#a9714d', '#76492f'].includes(skin) ? '#3a1d14' : LIP)}
+    const defs = `<defs><clipPath id="fc${n}" clipPathUnits="userSpaceOnUse"><path d="${FACE[lk.face]}"/></clipPath></defs>`;
+    const pd = dk(pants, 0.78), leg = (cls, x) => `<g class="leg ${cls}">${bt.leg(L, pants, x, skin)}${bt.foot ? bt.foot(L, pants, x, pd) : shoe(L, x)}</g>`;
+    const legs = () => `<g class="legs">${bt.hips ? bt.hips(L, pants) : ''}${leg('l', -7)}${leg('r', 11)}</g>${bt.over ? bt.over(L, pants, pd) : ''}`;   // a skirt hangs over both legs, not with them
+    const arms = arm(L, tp, top, topDk, skin, 'l', -1) + arm(L, tp, top, topDk, skin, 'r', 1);
+    const face = `<path ${L(skin, 2.4)} d="${FACE[lk.face]}"/><g transform="${CHEEK}">${CHEEKS[lk.cheeks]}</g><g clip-path="url(#fc${n})">${BEARD[lk.beard](L(lk.hairColor, 2.2))}</g>${MOUTH[lk.mouth](['#a9714d', '#76492f'].includes(skin) ? '#3a1d14' : LIP)}
       <g class="eyes">${EYES[lk.eyes](lk.eyeColor)}</g>${both(`<path d="${BROWS[lk.brows][0]}" fill="none" stroke="${dk(lk.hairColor, 0.8)}" stroke-width="${BROWS[lk.brows][1]}" stroke-linecap="round"/>`)}`;
     const fd = dk(top, 0.74), whole = full && full(L, top, fd), collar = tp.collar ? tp.collar(L, top, topDk) : '';   // a whole head: the hero's own, hair and face things give way
     const shade = `<g opacity=".13" transform="translate(0 2.4)" clip-path="url(#fc${n})">${hairOf.front('fill="#3a2016"')}</g>`;   // the fringe's shadow on the forehead
-    const front = `<g class="head">${whole ? '' : hair(hairOf.back)}</g>${bt.tail ? `<g class="tail t0">${bt.tail(L, pants, pd, 0)}</g>` : ''}${W('back', 0)}${legs(0)}${tp.front(L, top, topDk)}${W('body', 0)}${W('neck', 0)}${arm('l', -27)}${arm('r', 31)}
-      <g class="head">${collar}${whole ? whole[0] : `${face}${shade}${hairOf.ear(L(skin, 3.6))}${hair(hairOf.front)}${hairOf.over()}${hairOf.deco(hs, hw)}${W('face', 0)}${W('head', 0)}`}</g>`;
-    const back = `${legs(1)}${arm('l', -27)}${arm('r', 31)}${tp.back(L, top, topDk)}${W('body', 1)}${tp.over ? tp.over(L, top, topDk) : ''}${bt.tail ? `<g class="tail t1">${bt.tail(L, pants, pd, 1)}</g>` : ''}${W('neck', 1)}${W('back', 1)}
-      <g class="head">${whole ? whole[1] : `<ellipse cx="2" cy="-128" rx="34" ry="32" ${L(skin, 3.6)}/>${hair(hairOf.rear)}${hairOf.rearOver(hs, L(skin, 3.6))}${W('face', 1)}${W('head', 1)}`}</g>`;
+    const onHead = (s) => `<g class="head"><g transform="${HEAD}">${s}</g></g>`;   // the head's things in the head's units, set on the body
+    const front = `${onHead(whole ? '' : hair(hairOf.back))}${bt.tail ? `<g class="tail t0">${bt.tail(L, pants, pd, 0)}</g>` : ''}${W('back', 0)}${legs()}${tp.front(L, top, topDk)}${W('body', 0)}${W('neck', 0)}${collar}
+      ${onHead(whole ? whole[0] : `${face}${shade}${hairOf.ear(L(skin, 2.4))}${hair(hairOf.front)}${hairOf.over()}${hairOf.deco(hs, hw)}${W('face', 0)}${W('head', 0)}`)}${arms}`;   // the arms over the head: a hand raised by the big head stays in sight
+    const back = `${legs()}${arms}${tp.back(L, top, topDk)}${W('body', 1)}${tp.over ? tp.over(L, top, topDk) : ''}${bt.tail ? `<g class="tail t1">${bt.tail(L, pants, pd, 1)}</g>` : ''}${W('neck', 1)}${W('back', 1)}
+      ${onHead(whole ? whole[1] : `<ellipse cx="2" cy="-128" rx="34" ry="32" ${L(skin, 2.4)}/>${hair(hairOf.rear)}${hairOf.rearOver(hs, L(skin, 2.4))}${W('face', 1)}${W('head', 1)}`)}`;
     return `<svg viewBox="${o.box || '-60 -200 120 210'}"${o.box ? ' style="overflow:hidden"' : ''}${cat ? ' data-set="cat"' : ''} aria-hidden="true">${defs}<ellipse class="h-shadow" rx="24" ry="7" fill="#2b1c12" fill-opacity=".2"/><g class="fig"><g class="bob">${o.back ? `<g class="f-back" style="display:inline">${back}</g>` : `<g class="f-front">${front}</g>${o.front ? '' : `<g class="f-back">${back}</g>`}`}</g></g></svg>`;   // front: the front view only; back: from behind only
   }
   // the head alone, in daylight, for the choices in the dressing room: 'head' frames the hair, 'face' the eyes, brows and mouth
-  // a choice drawn on them: the face, the head, the head and shoulders (sides that reach them), from behind (the back, 造型)
-  const head = (look, crop) => (crop === 'back' ? svg({ look, back: true, box: '-62 -200 128 150' }) : svg({ look, front: true, box: crop === 'face' ? '-27 -138 58 52' : crop === 'bust' ? '-62 -200 128 150' : '-58 -198 120 120' }));
+  // a choice drawn on them: the face, the head, the head and shoulders (sides that reach them), from behind (the back, 造型). The
+  // frames are the head's (in its units), set where the head now sits on the body
+  const onBody = (b) => { const [x, y, w, h] = b.split(' ').map(Number); return [HX(x), HY(y), q(w * HS), q(h * HS)].join(' '); };
+  const head = (look, crop) => (crop === 'back' ? svg({ look, back: true, box: onBody('-62 -200 128 132') }) : svg({ look, front: true, box: onBody(crop === 'face' ? '-27 -138 58 52' : crop === 'bust' ? '-62 -200 128 132' : '-58 -198 120 120') }));
   const isTop = (id) => TOPS[id] !== undefined;
-  const clothes = (id, look) => svg({ look: Object.assign({}, look, isTop(id) ? { topStyle: id } : { bottomStyle: id }), front: true, box: isTop(id) ? '-46 -110 96 70' : '-44 -60 92 68' });
-  // a thing worn, on its own (古道具屋, the wardrobe): drawn on a faint head and shoulders so it reads; a whole head on its own
+  const clothes = (id, look) => svg({ look: Object.assign({}, look, isTop(id) ? { topStyle: id } : { bottomStyle: id }), front: true, box: isTop(id) ? '-34 -76 72 56' : '-30 -40 64 44' });
+  // a thing worn, on its own (古道具屋, the wardrobe): drawn on a faint head and shoulders so it reads (what goes on the body, on a
+  // faint body, the backpack from behind); a whole head on its own
   function thumb(id, look) {
     if (FULL[id]) { const lk = norm(look); return `<svg class="thumb" viewBox="-46 -186 96 100" aria-hidden="true">${FULL[id](day, lk.top, dk(lk.top, 0.74))[0]}</svg>`; }
     const f = WEAR[id]; if (!f) return '';
-    const hat = HATS.has(id), lk = norm(look), t = Math.min(-203, (HEAD_TOP[id] || -196) - 7);   // a hat is drawn round a crown of hair: a bigger frame (taller for a tall hat), the faint head with its hair
-    return `<svg class="thumb" viewBox="${hat ? `-68 ${t} 136 ${-45 - t}` : '-60 -185 120 140'}" aria-hidden="true"><g class="base" opacity=".28"><ellipse cx="2" cy="-128" rx="34" ry="32" fill="#c9bfae"/>${hat ? '<path d="M-44 -128 C-45 -160 -20 -172 2 -172 C24 -172 49 -160 48 -128 Q2 -150 -44 -128 Z" fill="#a3957d"/>' : ''}<path d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -50 H-26 Z" fill="#c9bfae"/></g><g>${f(day, lk.top, dk(lk.top, 0.84))[0]}</g></svg>`;
+    const lk = norm(look), art = f(day, lk.top, dk(lk.top, 0.84));
+    if (ON_BODY.has(id)) return `<svg class="thumb" viewBox="-34 -84 72 60" aria-hidden="true"><g class="base" opacity=".28"><path d="${TORSO}" fill="#c9bfae"/><ellipse cx="2" cy="-82" rx="24" ry="14" fill="#c9bfae"/></g><g>${art[id === 'backpack' ? 1 : 0]}</g></svg>`;
+    const hat = HATS.has(id), t = Math.min(-203, (HEAD_TOP[id] || -196) - 7);   // a hat is drawn round a crown of hair: a bigger frame (taller for a tall hat), the faint head with its hair
+    return `<svg class="thumb" viewBox="${hat ? `-68 ${t} 136 ${-45 - t}` : '-60 -185 120 140'}" aria-hidden="true"><g class="base" opacity=".28"><ellipse cx="2" cy="-128" rx="34" ry="32" fill="#c9bfae"/>${hat ? '<path d="M-44 -128 C-45 -160 -20 -172 2 -172 C24 -172 49 -160 48 -128 Q2 -150 -44 -128 Z" fill="#a3957d"/>' : ''}<path d="M-24 -88 Q-25 -98 -12 -99 H16 Q29 -98 28 -88 L30 -50 H-26 Z" fill="#c9bfae"/></g><g>${art[0]}</g></svg>`;
   }
   // idling (1.2.0): standing still they now and then look round, stretch, wave (facing us), sway or bounce — one at a time,
   // 6–12 s apart (the first after 4), never the same twice running; sitting they nod over the notebook. ok(): may they now?
@@ -9301,7 +9346,7 @@ const HERO = (() => {
     el.appendChild(b); setTimeout(() => b.remove(), 1400);
   }
   return { svg, head, thumb, clothes, idle, still, react, norm, OPTS, LOOK0, STYLES: HAIRP.STYLES, slots: Object.keys(WEAR).concat(Object.keys(FULL)),
-    tucked: (look, id) => tucked(norm(look), id), whole: (id) => !!FULL[id], headTop: (id) => (!id ? -184 : HEAD_TOP[id] || -196) };
+    tucked: (look, id) => tucked(norm(look), id), whole: (id) => !!FULL[id], headTop: (id) => HY(!id ? -184 : HEAD_TOP[id] || -196) };   // in the body's units
 })();
 
 // ---------- 古道具屋 (1.2.0): the old shop up the hill, kept by 福爺 the owl, who takes 言靈 and nothing else ----------
@@ -9419,8 +9464,8 @@ const DRESS = (() => {
   function frame(dr, part) {
     const p = dr.querySelector('.dress-panel'), side = p.offsetLeft > 0, W = dr.clientWidth, H = dr.clientHeight;
     const x0 = 0, y0 = 58, x1 = side ? p.offsetLeft : W, y1 = side ? H - 12 : p.offsetTop - 8;
-    const up = -184 - HERO.headTop(d && d.wear.head);   // what is on the head can stand above the hair (a hat's top, a pompom, a wizard's tip)
-    const [a0, b0, a1, b1] = part === 'head' ? [-52, -184 - up, 56, -84] : [-48, -182 - up, 52, 8];
+    const top = HERO.headTop(d && d.wear.head);   // what is on the head can stand above the hair (a hat's top, a pompom, a wizard's tip)
+    const [a0, b0, a1, b1] = part === 'head' ? [-54, top, 58, -56] : [-48, top + 2, 52, 8];
     const s = Math.min((x1 - x0) * (part === 'head' ? 0.78 : 0.86) / (a1 - a0), (y1 - y0) * 0.9 / (b1 - b0)), cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     dr.style.setProperty('--spx', `${cx}px`); dr.style.setProperty('--spy', `${cy}px`);
     return { s, x: cx - ((a0 + a1) / 2 + 60) * s, y: cy - ((b0 + b1) / 2 + 200) * s };

@@ -429,7 +429,7 @@ def test_a_hat_tucks_away_what_sits_on_top_and_old_looks_become_parts(b):
     assert r['tucks'] == {h: ['ahoge', 'bun', 'twinbuns'] for h in ['beanie', 'strawhat', 'beret', 'gradcap', 'cathood', 'witchhat']}, r   # a hat over what sits on top
     assert r['bun'] == [True, False, True] and r['tail'], r   # tucked under a beanie, not under 貓耳髮箍; a high tail stays
     assert r['old'] == ['short', 'short', 'short', 'bun'] and r['wavy'] == ['sidepart', 'wave', 'wavy'], r   # the old 丸子頭, 長捲髮
-    assert r['odd'] == ['round', 'long', '#f3d1b5', 'big'] and r['fixed'] == {} and r['counts'] == [21, 15, 6, 13], r
+    assert r['odd'] == ['round', 'long', '#f3d1b5', 'big'] and r['fixed'] == {} and r['counts'] == [21, 16, 7, 13], r
 
 def test_a_hat_that_tucks_away_what_sits_on_top_says_so_in_the_shop_and_the_dressing_room(b):
     js = "(async () => { " + FRESH + """ state.koto.gift = 120; ['beanie', 'catears', 'cathead'].forEach(id => buyWare(WARE.get(id))); state.look = Object.assign({}, state.look, { hairTop: 'bun' }); saveState();
@@ -655,21 +655,21 @@ def test_a_cat_head_top_and_trousers_make_a_cat(b):
     js = """(() => { const cat = HERO.svg({ look: { face: 'round', topStyle: 'cattop', bottomStyle: 'catpants', top: '#d9a43a', bottom: '#d9a43a' }, wear: { head: 'cathead', face: 'glasses' } });
       const plain = HERO.svg({ look: { face: 'round' }, wear: { face: 'glasses' } });
       const face = 'C36 -110 21 -94 2 -94', glasses = '<circle cx="-10.5" cy="-117" r="8.6"/>';   /* their own (round) face; the glasses over its eyes */
-      return JSON.stringify({ catHead: cat.includes('#e8869a'), fur: cat.includes('#d9a43a'), tail: cat.includes('C44 -54 52 -74 44 -92'), ownFace: cat.replace(/<defs>[\s\S]*?<\/defs>/, '').includes(face), glasses: cat.includes(glasses), plain: [plain.includes(face), plain.includes(glasses)], sold: ['cathead', 'cattop', 'catpants'].every(id => WARE.has(id)) }); })()"""
+      return JSON.stringify({ catHead: cat.includes('#e8869a'), fur: cat.includes('#d9a43a'), tail: cat.includes('C32 -32 38 -46 33 -58'), ownFace: cat.replace(/<defs>[\s\S]*?<\/defs>/, '').includes(face), glasses: cat.includes(glasses), plain: [plain.includes(face), plain.includes(glasses)], sold: ['cathead', 'cattop', 'catpants'].every(id => WARE.has(id)) }); })()"""
     r = json.loads(ev(b, js))
     assert r == {'catHead': True, 'fur': True, 'tail': True, 'ownFace': False, 'glasses': False, 'plain': [True, True], 'sold': True}, r   # the whole head takes the place of theirs (and their glasses)
 
 # 1.2.1, the 日系 round: a small round ear only with the sides that leave it free (耳上短, the new hero's, among them);
-# 麻糬臉 is the new hero's face; the hair is drawn in a gradient with an angel ring, its outline drawn under its fills (one line round
-# the whole of it, none where its parts meet)
+# 麻糬臉 is the new hero's face. Test 2026-11-09 (the Q版 body): 水汪汪 and Q版眼 first among the eyes, 柔腮紅; the hair drawn flat —
+# no gradient, no outline — each part in a thin stroke of its own colour, a soft shine on the crown
 def test_ears_show_only_with_the_sides_that_leave_them_free_and_the_new_choices(b):
     js = """(() => { const o = HERO.OPTS, ear = (sides) => HERO.svg({ look: sides ? { sides } : {} }).includes('M-31.4 -124.6 C-35.8'), svg = HERO.svg({ look: {} });
       return JSON.stringify({ ears: [ear(), ear('short'), ear('tucked'), ear('long')], eyes: o.eyes.map(e => e[1]), mouth: o.mouth.length, cheeks: o.cheeks.map(c => c[1]), hair: o.fringe.length, face: o.face.map(f => f[0]),
-        drawn: [/<linearGradient id="hg\d+"/.test(svg), /fill="none" style="stroke:#[0-9a-f]{6};stroke-width:2px/.test(svg) && /<path fill="url\(#hg\d+\)" d=/.test(svg), svg.includes('fill-opacity=".27"')], old: HERO.norm({ eyes: 'round', face: 'square', hair: 'tucked' }) }); })()"""
+        drawn: [/<linearGradient id="hg\d+"/.test(svg), /stroke-width:2px/.test(svg), /<path style="fill:#[0-9a-f]{6};stroke:#[0-9a-f]{6};stroke-width:1.6px/.test(svg), svg.includes('fill-opacity=".2"')], old: HERO.norm({ eyes: 'round', face: 'square', hair: 'tucked' }) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['ears'] == [True, False, True, False] and r['eyes'] == ['普通', '吊眼', '垂眼', '笑眼', '大眼', '睏眼'] and r['mouth'] == 6 and r['hair'] == 21, r
-    assert r['cheeks'] == ['腮紅', '害羞', '雀斑', '無'] and r['face'] == ['mochi', 'round', 'chubby', 'oval', 'pointed'] and r['drawn'] == [True, True, True], r
-    assert [r['old'][k] for k in ('eyes', 'face', 'fringe')] == ['normal', 'mochi', 'round'], r   # a look saved before falls back where its choice is gone
+    assert r['ears'] == [True, False, True, False] and r['eyes'] == ['水汪汪', 'Q版眼', '普通', '吊眼', '垂眼', '笑眼', '大眼', '睏眼'] and r['mouth'] == 6 and r['hair'] == 21, r
+    assert r['cheeks'] == ['腮紅', '柔腮紅', '害羞', '雀斑', '無'] and r['face'] == ['mochi', 'round', 'chubby', 'oval', 'pointed'] and r['drawn'] == [False, False, True, True], r
+    assert [r['old'][k] for k in ('eyes', 'face', 'fringe')] == ['kira', 'mochi', 'round'], r   # a look saved before falls back where its choice is gone (the new hero's eyes are 水汪汪 since the Q版 body)
 
 # 髮型 is the four parts and the colour; 隨機 rolls one of the user's 48 hairstyles (HERO.STYLES), so its parts go together
 def test_the_hair_tab_is_the_parts_and_random_rolls_one_of_the_48_hairstyles(b):
