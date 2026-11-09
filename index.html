@@ -2244,6 +2244,8 @@ function normalizeState(s) {
   // test (roomV 8): the strings of lights come down into the storage box, 腳踏墊 is gone (the user's call), more windows and wall
   // lamps, the desk further off the bookcase, the kotatsu by the low shelf, the round rug in front of the desk
   if (out.roomV < 8) { delete out.placed.doorMat; ROOM.settle8(out.placed); out.roomV = 8; }
+  // test (roomV 9): the full-length mirror stands by the wardrobe where there is room
+  if (out.roomV < 9) { ROOM.settleNew(out.placed, 9); out.roomV = 9; }
   WARES.filter(w => w.fixed).forEach(w => { if (!out.placed[w.id]) out.placed[w.id] = Object.assign({}, w.at); });   // the working things are always somewhere
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
   if (out.stage !== 'pre' && out.stage !== 'main') out.stage = 'main';   // 入門階段 (1.0.6); accounts from before it are in the main course
@@ -6993,6 +6995,8 @@ const WARES = [
   { id: 'sconce1', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'R', u: 9.4, v: 5.4 }, desc: '', light: { dz: 0.35, r: 4.4 } },
   { id: 'sconce2', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'R', u: 27.2, v: 5.4 }, desc: '', light: { dz: 0.35, r: 4.4 } },
   { id: 'sconce3', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'L', u: 16.6, v: 5.4 }, desc: '', light: { dz: 0.35, r: 4.4 } },
+  // test (since: 9): a full-length mirror by the wardrobe — the face, the hair and the features are changed in front of it
+  { id: 'fullMirror', kind: 'floor', starter: true, since: 9, turn: false, h: 5, name: '全身鏡', fp: [0.6, 1.3], at: { w: 'F', x: 0.3, y: 11.2, r: 0, rm: 'bed' }, desc: '', act: 'mirror' },
   { id: 'sconce4', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'R', u: 11.8, v: 5.4, rm: 'bed' }, desc: '', light: { dz: 0.35, r: 4.4 } },
   // the string of lights along the tops of the walls, as four strings (1.2.0): hung end to end where it ran, three on the
   // right wall and one on the left, each moved or put away on its own; their bulbs light up one by one as the day's list fills.
@@ -7932,7 +7936,11 @@ const ROOM = (() => {
     const at = (p, o) => p && !p.r && !p.rm && Object.keys(o).every((k) => p[k] === o[k]);
     WARES.filter((w) => w.garland).forEach((w) => { if (at(placed[w.id], w.at)) delete placed[w.id]; });
     Object.keys(OLD8).forEach((id) => { if (at(placed[id], OLD8[id]) && fitsAt(id, fresh(id))) placed[id] = fresh(id); });
-    WARES.filter((w) => w.starter && w.since === 8 && !placed[w.id]).forEach((w) => { if (fitsAt(w.id, fresh(w.id))) placed[w.id] = fresh(w.id); });
+    settleNew(placed, 8);
+  }
+  function settleNew(placed, since) {   // the house's own things new in this roomV, set out where there is room
+    const fresh = (id) => Object.assign({}, WARE.get(id).at), fitsAt = (id, p) => inRoomOf(roomOf(p), () => fits(WARE.get(id), p, placed));
+    WARES.filter((w) => w.starter && w.since === since && !placed[w.id]).forEach((w) => { if (fitsAt(w.id, fresh(w.id))) placed[w.id] = fresh(w.id); });
   }
   function standingList() {   // the floor wares (a working thing in its parts), unsorted
     return placedWares().filter((o) => o.it.kind === 'floor').flatMap((o) => {
@@ -8246,7 +8254,7 @@ const ROOM = (() => {
     if (o.it.act === 'kotatsu') { use(el, () => {}, { x: o.p.x - 1.18, y: o.p.y, look: 'X', act: 'kneel', from: [o.p.x - 1.9, o.p.y], out: [-0.72, 0] }); return; }
     const f = wareFootprint(o.it, o.p), g = walkGrid(), ok = ([x, y]) => { const i = Math.floor(x / CELL), j = Math.floor(y / CELL); return i >= 0 && j >= 0 && i < GW && j < GH && !g[j * GW + i]; };
     const [x, y, look] = [[o.p.x, f[3] + 0.5, 'R'], [f[2] + 0.5, o.p.y, 'L']].find(ok) || [o.p.x, f[3] + 0.5, 'R'];
-    use(el, () => { if (o.it.act === 'listen') go('#/listen'); else if (o.it.act === 'wardrobe') DRESS.open(el.closest('.study')); else if (o.it.act === 'water') water(el.closest('.study'), o, look); }, { x, y, look, act: 'reach' });
+    use(el, () => { if (o.it.act === 'listen') go('#/listen'); else if (o.it.act === 'wardrobe') DRESS.open(el.closest('.study')); else if (o.it.act === 'mirror') DRESS.open(el.closest('.study'), 'mirror'); else if (o.it.act === 'water') water(el.closest('.study'), o, look); }, { x, y, look, act: 'reach' });
   }
   // watering a plant (test, 2026-11-09): a can over it from the hero's side tips, drops fall on it, it sways, a few sparkles
   function water(st, o, look) {
@@ -8353,7 +8361,7 @@ const ROOM = (() => {
         <div class="steam" aria-hidden="true" style="${vbPct(mx - 8, my - 40)};${vbSize(16, 24)}"><i style="--w:0s"></i><i style="--w:-1.1s;left:50%"></i><i style="--w:-2.3s;left:20%"></i></div>` : ''}
         ${THINGS.map(thing).join('')}
         ${ed.on ? '' : LAMPS.map((L) => { const [lx, ly] = P(...L.p); return `<button type="button" class="lamp-tap${lampOff(L.id) ? ' off' : ''}" data-act="lamp-toggle" data-lamp="${L.id}" style="${vbPct(lx - 24, ly - 24)};${vbSize(48, 48)}" aria-label="${lampOff(L.id) ? '開燈' : '關燈'}"></button>`; }).join('')}
-        ${ed.on ? '' : placedWares().filter((o) => o.it.act).map((o) => { const b = wareBox(o); return `<button type="button" class="ware-use" data-act="ware-use" data-ware="${o.id}" style="${vbPct(b[0], b[1])};${vbSize(b[2] - b[0], b[3] - b[1])}" aria-label="${esc(o.it.name)}：${{ listen: '聽一輪', sofa: '坐下', kotatsu: '坐下', wardrobe: '衣櫃', bed: '睡覺', water: '澆水' }[o.it.act] || ''}"></button>`; }).join('')}
+        ${ed.on ? '' : placedWares().filter((o) => o.it.act).map((o) => { const b = wareBox(o); return `<button type="button" class="ware-use" data-act="ware-use" data-ware="${o.id}" style="${vbPct(b[0], b[1])};${vbSize(b[2] - b[0], b[3] - b[1])}" aria-label="${esc(o.it.name)}：${{ listen: '聽一輪', sofa: '坐下', kotatsu: '坐下', wardrobe: '衣櫃', bed: '睡覺', water: '澆水', mirror: '照鏡子' }[o.it.act] || ''}"></button>`; }).join('')}
         ${ed.on ? `${decosHtml()}${selHtml()}<svg class="ghost" viewBox="${VB.join(' ')}" aria-hidden="true"><g></g></svg>` : ''}
       </div></div>
       ${ed.on ? editHtml() : ''}
@@ -8688,7 +8696,7 @@ const ROOM = (() => {
   setRoom('study'); Object.assign(hero, heroPos.study || {});
   const kit = { S, P, pt, poly, line, onX, onY, onZ, F, FS, tone, box, qX, qY, qZ, shadow, bb, C, q2, r1, DEFS, VB, own, wireArt, bulbsAt };
   function hold() { heroHalt(); hero.going = null; hero.lead = null; }   // the dressing room opens: the hero stops where they are
-  return { html, level, mount, enter, pull, door, mark, out, kit, fits, moveOff, settle, settle8, SPOTS, room: () => ROOMID, use, useWare, heroRedraw, heroIn, tapHero, hold, edit: (el, cmd, id) => editCmd(el.closest('.study'), cmd, id) };
+  return { html, level, mount, enter, pull, door, mark, out, kit, fits, moveOff, settle, settle8, settleNew, SPOTS, room: () => ROOMID, use, useWare, heroRedraw, heroIn, tapHero, hold, edit: (el, cmd, id) => editCmd(el.closest('.study'), cmd, id) };
 })();
 // ---------- 古道具屋's wares in 書房 (1.2.0): each one drawn with 書房's own pencils and light (ROOM.kit) ----------
 // DECOR.wall(id, p) draws a wall ware where it hangs, DECOR.floor(id, p) one standing or lying on the floor (p.r turns it a
@@ -8886,6 +8894,17 @@ const DECOR = (() => {
       s += bb(x, y0 + 0.55, h, `<ellipse rx="7" ry="2.6" fill="#2b1c12" fill-opacity=".14"/><path ${L(C.pot, h + 0.2)} d="M-5.5 -1 L-4.5 -10 H4.5 L5.5 -1 Z"/><g ${L(C.leaf, h + 0.6)}><path d="M0 -10 C-10 -14 -13 -24 -9 -30 C-4 -23 -1 -16 0 -10 Z"/><path d="M0 -10 C8 -16 14 -20 18 -19 C14 -12 8 -10 0 -10 Z"/><path d="M0 -10 C0 -21 3 -29 6 -33 C8 -25 5 -16 0 -10 Z"/></g>`);
       s += box('#c95f4c', x0 + 0.25, y - 0.45, h, x1 - 0.15, y + 0.35, h + 0.45, { t: '#d8735f', hlv: true }) + bb(x1 - 0.14, y - 0.05, h + 0.22, `<circle r="4.4" fill="#3b3653" fill-opacity=".75"/><circle r="1.6" fill="#e6c36a"/>`);
       return s + bb(x, y1 - 0.5, h, `<path ${L(C.walnut, h + 0.3)} d="M-7 0 L-6 -15 H6 L7 0 Z"/><rect x="-4.4" y="-12.5" width="8.8" height="10" fill="#f2e9d6"/><circle cx="1.5" cy="-9" r="1.8" fill="#e8743a"/><path d="M-4.4 -5 L-1 -8 L2 -6 L4.4 -8.5 V-2.5 H-4.4 Z" fill="#8fbf8a"/>`);
+    },
+    fullMirror: (x, y) => {   // a full-length mirror leaning on the left wall: a walnut frame on two little feet, the glass catching the light
+      const x0 = x - 0.3, x1 = x + 0.3, y0 = y - 0.65, y1 = y + 0.65, h = 5, a = [x1, y, 2.5];
+      let s = shadow(x0, y0 - 0.1, x1 + 0.35, y1 + 0.3, 0.75);
+      s += box(C.oakDk, x0 + 0.1, y0 + 0.05, 0, x1, y0 + 0.25, 0.18, { hl: false }) + box(C.oakDk, x0 + 0.1, y1 - 0.25, 0, x1, y1 - 0.05, 0.18, { hl: false });
+      s += box(C.walnut, x0 + 0.12, y0, 0.18, x0 + 0.34, y1, h, { t: C.oak, y: '#7a5438', x: C.walnut, hlv: true });
+      s += `<g transform="${onX(x0 + 0.345)}"><defs><linearGradient id="fmGlass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9f3f6"/><stop offset=".55" stop-color="#bcd6e0"/><stop offset="1" stop-color="#9fc0cf"/></linearGradient></defs>
+        <rect x="${q2(-y1 + 0.13)}" y="${q2(-h + 0.14)}" width="${q2(y1 - y0 - 0.26)}" height="${q2(h - 0.46)}" rx=".5" fill="url(#fmGlass)" style="opacity:calc(.55 + .45 * var(--day))"/>
+        <path d="M${q2(-y1 + 0.35)} ${q2(-h + 1.4)} L${q2(-y1 + 0.75)} ${q2(-h + 0.6)} M${q2(-y1 + 0.35)} ${q2(-h + 2.1)} L${q2(-y1 + 1.05)} ${q2(-h + 0.75)}" stroke="#fff" stroke-opacity=".7" stroke-width=".08" stroke-linecap="round"/>
+        <rect x="${q2(-y1 + 0.13)}" y="${q2(-h + 0.14)}" width="${q2(y1 - y0 - 0.26)}" height="${q2(h - 0.46)}" rx=".5" fill="none" stroke-width=".05" ${FS(C.oak, 'x', a)}/></g>`;
+      return s;
     },
     wardrobe: (x, y) => {   // a tall wardrobe against the left wall: a plinth, two doors with panels and knobs, a cornice, a hat box on top (tapped: 衣櫃)
       const x0 = x - 0.65, x1 = x + 0.65, y0 = y - 1.3, y1 = y + 1.3, h = 6.2, a = (z) => [x1, y, z];
@@ -9801,10 +9820,13 @@ function renderShop(view) {
 // room grows round them and dims; a choice is tried on at once. 完成 keeps it all (state.look, state.wear), 取消 or Esc puts it
 // back; either way the copy flies back to its place and the room zooms out.
 const DRESS = (() => {
-  const TABS = [['face', '臉型', 'head'], ['hair', '髮型', 'head'], ['features', '五官', 'head'], ['beard', '鬍子', 'head'], ['clothes', '衣服', 'body'], ['wear', '穿戴', 'body']];
-  let d = null;   // open: { st, look, wear, tab, back, from }
+  // test (2026-11-09): two of them — the wardrobe (the button up top, the wardrobe in the bedroom) for what is worn, the full-length
+  // mirror for the face, the hair and the features (the beard among them)
+  const MODES = { wear: { title: '衣櫃', tabs: [['clothes', '衣服', 'body'], ['wear', '穿戴', 'body']] }, mirror: { title: '全身鏡', tabs: [['face', '臉型', 'head'], ['hair', '髮型', 'head'], ['features', '五官', 'head']] } };
+  let d = null;   // open: { st, mode, look, wear, tab, back, from }
+  const TABS_OF = () => MODES[d.mode].tabs;
   const box = () => (d && d.st.isConnected ? d.st.querySelector('.dress') : null);
-  const kind = () => TABS.find((t) => t[0] === d.tab)[2];
+  const kind = () => TABS_OF().find((t) => t[0] === d.tab)[2];
   const put = (cp, f) => { cp.style.transform = `translate(${f.x.toFixed(1)}px, ${f.y.toFixed(1)}px) scale(${f.s.toFixed(4)})`; };
   // where the copy's 120 × 210 box goes: the part asked for, framed in the stage (over the panel, or beside it on a wide screen)
   function frame(dr, part) {
@@ -9816,7 +9838,7 @@ const DRESS = (() => {
     dr.style.setProperty('--spx', `${cx}px`); dr.style.setProperty('--spy', `${cy}px`);
     return { s, x: cx - ((a0 + a1) / 2 + 60) * s, y: cy - ((b0 + b1) / 2 + 200) * s };
   }
-  const tabs = () => TABS.map(([id, name]) => `<button type="button" role="tab" data-act="dress-tab" data-tab="${id}" aria-pressed="${d.tab === id}">${name}</button>`).join('');
+  const tabs = () => TABS_OF().map(([id, name]) => `<button type="button" role="tab" data-act="dress-tab" data-tab="${id}" aria-pressed="${d.tab === id}">${name}</button>`).join('');
   // a part's styles, each drawn on the hero as they look now; a part's colours
   const opts = (key, crop) => `<div class="dress-opts">${HERO.OPTS[key].map(([v, name]) => `<button type="button" class="dress-opt" data-act="dress-pick" data-key="${key}" data-val="${v}" aria-pressed="${d.look[key] === v}">${HERO.head(Object.assign({}, d.look, { [key]: v }), crop)}<span>${name}</span></button>`).join('')}</div>`;
   const sws = (key) => `<div class="dress-sws">${HERO.OPTS[key].map(([v, name]) => `<button type="button" class="dress-sw" data-act="dress-pick" data-key="${key}" data-val="${v}" style="--c:${v}" aria-pressed="${d.look[key] === v}" aria-label="${name}" title="${name}"></button>`).join('')}</div>`;
@@ -9837,8 +9859,7 @@ const DRESS = (() => {
   function parts() {
     if (d.tab === 'face') return sec('臉型', opts('face', 'head')) + sec('膚色', sws('skin')) + sec('臉頰', opts('cheeks', 'face'));
     if (d.tab === 'hair') return sec('瀏海', opts('fringe', 'head')) + sec('兩側', opts('sides', 'bust')) + sec('後面', opts('hairBack', 'back')) + sec('造型', opts('hairTop', 'back')) + sec('髮色', sws('hairColor'));   // 1.2.1: hair in parts
-    if (d.tab === 'features') return sec('眼睛', opts('eyes', 'face')) + sec('眼睛顏色', sws('eyeColor')) + sec('眉毛', opts('brows', 'face')) + sec('嘴巴', opts('mouth', 'face'));
-    if (d.tab === 'beard') return sec('鬍子', opts('beard', 'face'));
+    if (d.tab === 'features') return sec('眼睛', opts('eyes', 'face')) + sec('眼睛顏色', sws('eyeColor')) + sec('眉毛', opts('brows', 'face')) + sec('嘴巴', opts('mouth', 'face')) + sec('鬍子', opts('beard', 'face'));
     if (d.tab === 'clothes') {
       const more = WARES.filter((it) => it.kind === 'clothes' && !owns(it.id) && forSale(it)).length;   // a limited one only while its sale is on
       return sec('上衣', styles('topStyle')) + sec('上衣顏色', sws('top')) + sec('褲子', styles('bottomStyle')) + sec('褲子顏色', sws('bottom')) + sec('鞋子', styles('shoeStyle')) + sec('鞋子顏色', sws('shoe'))
@@ -9850,20 +9871,20 @@ const DRESS = (() => {
     return rows || '<p class="muted mt-3">還沒有可以穿戴的東西。古道具屋的「主角穿戴」有帽子、眼鏡、圍巾、背包……</p><div class="row-wrap mt-3"><button type="button" class="btn btn-sm" data-act="dress-shop">去古道具屋</button></div>';
   }
   const copy = () => HERO.svg({ look: d.look, wear: d.wear });
-  function open(st) {
+  function open(st, mode = 'wear') {
     if (!st || (d && box())) return;
     st.querySelectorAll('.dress').forEach((x) => x.remove()); st.classList.remove('undressing');   // one still flying back
     const yard = st.classList.contains('yard');   // 1.2.0: out in the yard too, the sky and the lawn grow round the hero there
     if (yard) yHeroHold(st); else ROOM.hold();
     const hel = st.querySelector(yard ? '.yhero' : '.room .hero'), sr = st.getBoundingClientRect(), hr = hel && hel.getBoundingClientRect();
     const from = hr && hr.width ? { x: hr.left - sr.left, y: hr.top - sr.top, s: hr.width / 120 } : { x: sr.width / 2 - 30, y: sr.height / 2 - 52, s: 0.5 };
-    d = { st, look: HERO.norm(state.look), wear: Object.assign({}, state.wear), tab: 'face', back: false, from };
+    d = { st, mode: MODES[mode] ? mode : 'wear', look: HERO.norm(state.look), wear: Object.assign({}, state.wear), back: false, from }; d.tab = TABS_OF()[0][0];
     const zr = yard ? st.querySelector('.sky').getBoundingClientRect() : sr;   // what grows: 書房's room, the yard's sky (on the whole screen)
     st.style.setProperty('--zx', `${(from.x + 60 * from.s + sr.left - zr.left).toFixed(1)}px`); st.style.setProperty('--zy', `${(from.y + 150 * from.s + sr.top - zr.top).toFixed(1)}px`);
     st.insertAdjacentHTML('beforeend', `<div class="dress" role="dialog" aria-modal="true" aria-label="打扮">
       <i class="dress-dim"></i>
       <div class="hero dress-hero" data-act="dress-turn" aria-label="主角（點一下轉身）">${copy()}</div>
-      <div class="dress-bar"><button type="button" data-act="dress-cancel">取消</button><span class="t">打扮</span><button type="button" class="ok" data-act="dress-done">完成</button></div>
+      <div class="dress-bar"><button type="button" data-act="dress-cancel">取消</button><span class="t">${MODES[d.mode].title}</span><button type="button" class="ok" data-act="dress-done">完成</button></div>
       <div class="dress-tools"><button type="button" data-act="dress-random" aria-label="隨機" title="隨機">${icon('dice')}</button><button type="button" data-act="dress-turn" aria-label="轉身" title="轉身">${icon('turn')}</button></div>
       <div class="dress-panel"><div class="dress-tabs" role="tablist">${tabs()}</div><div class="dress-body">${body()}</div></div>
     </div>`);
@@ -9880,7 +9901,7 @@ const DRESS = (() => {
     if (hop && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { cp.classList.remove('hop'); void cp.offsetWidth; cp.classList.add('hop'); clearTimeout(cp._hop); cp._hop = setTimeout(() => cp.classList.remove('hop'), 520); }
   }
   function tab(id) {
-    if (!box() || !TABS.some((t) => t[0] === id)) return;
+    if (!box() || !TABS_OF().some((t) => t[0] === id)) return;
     d.tab = id;
     const dr = box(); dr.querySelectorAll('.dress-tabs button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === id)));
     const b = dr.querySelector('.dress-body'); b.innerHTML = body(); b.scrollTop = 0;
@@ -9891,9 +9912,16 @@ const DRESS = (() => {
     d.look[key] = val; redraw(true);
   }
   function wear(id) { const it = WARE.get(id); if (!box() || !it || it.kind !== 'wear' || !owns(id)) return; d.wear[it.slot] = d.wear[it.slot] === id ? null : id; redraw(true); reframe(); }
-  function random() {   // a whole new face and hair — one of the whole hairstyles, so the parts go together (most rolls without a beard); clothes and what they wear stay
+  // the mirror: a whole new face and hair — one of the whole hairstyles, so the parts go together (most rolls without a beard);
+  // the wardrobe: clothes they have, in any colours (what they wear on the head and so on stays)
+  function random() {
     if (!box()) return;
     const any = (k) => { const o = HERO.OPTS[k]; return o[Math.floor(Math.random() * o.length)][0]; };
+    if (d.mode === 'wear') {
+      ['topStyle', 'bottomStyle', 'shoeStyle'].forEach((k) => { const o = HERO.OPTS[k].filter(([v]) => have(k, v)); d.look[k] = o[Math.floor(Math.random() * o.length)][0]; });
+      ['top', 'bottom', 'shoe'].forEach((k) => { d.look[k] = any(k); });
+      redraw(true); return;
+    }
     ['face', 'skin', 'cheeks', 'hairColor', 'eyes', 'eyeColor', 'brows', 'mouth'].forEach((k) => { d.look[k] = any(k); });
     const st = HERO.STYLES[Math.floor(Math.random() * HERO.STYLES.length)]; HAIR4.forEach((k, j) => { d.look[k] = st[j + 1]; });
     d.look.beard = Math.random() < 0.65 ? 'none' : any('beard');

@@ -213,8 +213,8 @@ def test_the_desk_and_the_window_stand_off_the_bookcase_and_an_older_room_follow
       return JSON.stringify({ fresh, v, a: { desk: a.placed.desk.x, map: a.placed.japanmap || null, lights: ['garland1', 'garland2', 'garland3', 'garland4'].every(id => a.placed[id]), v: a.roomV },
         b: b2.placed.desk.x, c: c.placed.desk.x, win: ROOM.fits(WARE.get('japanmap'), { w: 'R', u: 6.4, v: 6.3 }), gap: ROOM.fits(WARE.get('cactus'), { w: 'F', x: 1.75, y: 0.5, r: 0 }) }); })()"""
     r = json.loads(ev(b, js))
-    assert r['fresh'] == {'w': 'F', 'x': 5.5, 'y': 1.85, 'r': 0} and r['v'] == 8, r   # roomV 8: the desk further off the bookcase (roomV 7: the bedroom)
-    assert r['a'] == {'desk': 5.5, 'map': None, 'lights': False, 'v': 8}, r   # the desk went along; the map the window now covers went in the box; the strings came down
+    assert r['fresh'] == {'w': 'F', 'x': 5.5, 'y': 1.85, 'r': 0} and r['v'] == 9, r   # roomV 8: the desk further off the bookcase (roomV 7: the bedroom)
+    assert r['a'] == {'desk': 5.5, 'map': None, 'lights': False, 'v': 9}, r   # the desk went along; the map the window now covers went in the box; the strings came down
     assert r['b'] == 3.3 and r['c'] == 10, r   # a gramophone where the desk would go keeps it where it was; a desk moved by hand stays put
     assert r['win'] is False and r['gap'] is True, r   # the window and its curtains reach further right; a cactus fits between the bookcase and the desk
 
@@ -376,24 +376,28 @@ def test_the_dressing_room_zooms_in_and_keeps_or_drops_what_was_chosen(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + GO_ROOM + """
       const wait = (ms) => new Promise(q => setTimeout(q, ms)), act = (sel) => document.querySelector(sel).click(), st = document.querySelector('.study');
       const scale = () => new DOMMatrix(getComputedStyle(document.querySelector('.dress-hero')).transform).a, small = document.querySelector('.study .room .hero').getBoundingClientRect().width / 120;
+      const tabs = () => [...document.querySelectorAll('.dress-tabs button')].map(t => t.textContent), mirror = () => DRESS.open(st, 'mirror');   /* (the full-length mirror in the bedroom opens it) */
       act('.study-tools [data-act="wardrobe"]'); await wait(650);
-      const open = { dressing: st.classList.contains('dressing'), hidden: getComputedStyle(document.querySelector('.study .room .hero')).visibility, tabs: [...document.querySelectorAll('.dress-tabs button')].map(t => t.textContent) };
-      const head = scale(); act('[data-act="dress-tab"][data-tab="clothes"]'); await wait(650); const body = scale();
+      const open = { dressing: st.classList.contains('dressing'), hidden: getComputedStyle(document.querySelector('.study .room .hero')).visibility, tabs: tabs(), title: document.querySelector('.dress-bar .t').textContent };
+      const body = scale(); act('[data-act="dress-cancel"]'); await wait(650);
+      mirror(); await wait(650); const mtabs = [tabs(), document.querySelector('.dress-bar .t').textContent], head = scale();
       act('[data-act="dress-tab"][data-tab="hair"]'); act('[data-act="dress-pick"][data-key="hairTop"][data-val="bun"]');
       const tried = { copy: document.querySelector('.dress-hero').innerHTML.includes('cy="-183"'), saved: HERO.norm(state.look).hairTop };   /* the bun on the copy, not yet kept */
       act('[data-act="dress-cancel"]'); await wait(650);
       const dropped = { hair: HERO.norm(state.look).hairTop, gone: !document.querySelector('.dress'), back: !st.classList.contains('dressing') && getComputedStyle(document.querySelector('.study .room .hero')).visibility };
-      act('.study-tools [data-act="wardrobe"]'); await wait(200);
+      mirror(); await wait(200);
       act('[data-act="dress-tab"][data-tab="hair"]'); ['fringe:curtain', 'sides:long', 'hairBack:long'].forEach((kv) => { const [k, v] = kv.split(':'); act('[data-act="dress-pick"][data-key="' + k + '"][data-val="' + v + '"]'); }); act('[data-act="dress-pick"][data-key="hairColor"][data-val="#c9a25a"]');
       act('[data-act="dress-tab"][data-tab="features"]'); act('[data-act="dress-pick"][data-key="eyes"][data-val="big"]');
-      act('[data-act="dress-tab"][data-tab="beard"]'); act('[data-act="dress-pick"][data-key="beard"][data-val="goatee"]');
+      act('[data-act="dress-pick"][data-key="beard"][data-val="goatee"]');   /* the beard is among the features */
+      act('[data-act="dress-done"]'); await wait(650); act('.study-tools [data-act="wardrobe"]'); await wait(200);
       act('[data-act="dress-tab"][data-tab="clothes"]'); act('[data-act="dress-pick"][data-key="top"][data-val="#d0574b"]');
       const pressed = document.querySelector('[data-act="dress-pick"][data-key="top"][data-val="#d0574b"]').getAttribute('aria-pressed');
       act('[data-act="dress-done"]'); await wait(650);
       const lk = HERO.norm(state.look), sig = st.dataset.sig === roomSig();
-      return JSON.stringify({ open, zoom: [head > small * 2, body < head], tried, dropped, pressed, kept: [lk.fringe, lk.sides, lk.hairBack, lk.hairColor, lk.eyes, lk.beard, lk.top], sig }); })()"""
+      return JSON.stringify({ open, mtabs, zoom: [head > small * 2, body < head], tried, dropped, pressed, kept: [lk.fringe, lk.sides, lk.hairBack, lk.hairColor, lk.eyes, lk.beard, lk.top], sig }); })()"""
     r = json.loads(ev_at(b, PHONE, js))
-    assert r['open'] == {'dressing': True, 'hidden': 'hidden', 'tabs': ['臉型', '髮型', '五官', '鬍子', '衣服', '穿戴']}, r
+    assert r['open'] == {'dressing': True, 'hidden': 'hidden', 'tabs': ['衣服', '穿戴'], 'title': '衣櫃'}, r   # the wardrobe: what is worn
+    assert r['mtabs'] == [['臉型', '髮型', '五官'], '全身鏡'], r   # the mirror: the face, the hair, the features
     assert r['zoom'] == [True, True], r   # flown up to frame the head, all of them for clothes
     assert r['tried'] == {'copy': True, 'saved': 'none'}, r
     assert r['dropped'] == {'hair': 'none', 'gone': True, 'back': 'visible'}, r
@@ -437,10 +441,12 @@ def test_a_hat_that_tucks_away_what_sits_on_top_says_so_in_the_shop_and_the_dres
       const card = (id) => { const n = document.querySelector('[data-ware="' + id + '"] .ds.swap'); return n ? n.textContent : null; };
       shopTab = 'wear'; location.hash = '#/shop'; route(); const shop = { beanie: card('beanie'), beret: card('beret'), catears: card('catears'), scarf: card('scarf') };
       state.wear = { head: 'beanie' }; saveState(); """ + GO_ROOM + """ await wait(200);
-      act('.study-tools [data-act="wardrobe"]'); await wait(200); const face = note();
+      const st = document.querySelector('.study'); DRESS.open(st, 'mirror'); await wait(200); const face = note();
       act('[data-act="dress-tab"][data-tab="hair"]'); const hair = note();
       act('[data-act="dress-pick"][data-key="hairTop"][data-val="ponytail"]'); const long = note();
+      act('[data-act="dress-cancel"]'); await wait(600); act('.study-tools [data-act="wardrobe"]'); await wait(200);
       act('[data-act="dress-tab"][data-tab="wear"]'); act('[data-act="dress-wear"][data-id="cathead"]'); const wear = note();
+      act('[data-act="dress-done"]'); await wait(600); DRESS.open(st, 'mirror'); await wait(200);
       act('[data-act="dress-tab"][data-tab="features"]'); const cat = note();
       act('[data-act="dress-cancel"]'); await wait(600);
       return JSON.stringify({ shop, face, hair, long, wear, cat }); })()"""
@@ -599,7 +605,7 @@ def test_the_telescope_went_out_to_the_yard(b):
     js = "(() => { " + FRESH + """ state.owned.telescope = { paid: 45, on: '2026-11-01' }; state.placed.telescope = { w: 'F', x: 6, y: 6, r: 0 }; state.roomV = 3;
       const s = normalizeState(state); return JSON.stringify({ kind: WARE.get('telescope').kind, placed: s.placed.telescope || null, v: s.roomV, owned: !!s.owned.telescope }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'kind': 'yard', 'placed': None, 'v': 8, 'owned': True}, r   # waits in the yard's box
+    assert r == {'kind': 'yard', 'placed': None, 'v': 9, 'owned': True}, r   # waits in the yard's box
 
 def test_the_yard_is_arranged_like_the_room(b):
     js = "(async () => { " + FRESH + """ state.koto.gift = 200; ['pond', 'engawa', 'tanuki'].forEach(id => buyWare(WARE.get(id))); saveState();
@@ -675,7 +681,7 @@ def test_ears_show_only_with_the_sides_that_leave_them_free_and_the_new_choices(
 def test_the_hair_tab_is_the_parts_and_random_rolls_one_of_the_48_hairstyles(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + GO_ROOM + """
       const wait = (ms) => new Promise(q => setTimeout(q, ms)), act = (sel) => document.querySelector(sel).click();
-      act('.study-tools [data-act="wardrobe"]'); await wait(200); act('[data-act="dress-tab"][data-tab="hair"]');
+      DRESS.open(document.querySelector('.study'), 'mirror'); await wait(200); act('[data-act="dress-tab"][data-tab="hair"]');
       const heads = [...document.querySelectorAll('.dress-sec h3')].map(h => h.textContent), rolls = [];
       for (let i = 0; i < 5; i++) { act('[data-act="dress-random"]'); rolls.push(['fringe', 'sides', 'hairBack', 'hairTop'].map(k => document.querySelector('[data-act="dress-pick"][data-key="' + k + '"][aria-pressed="true"]').dataset.val).join()); }
       act('[data-act="dress-cancel"]'); await wait(650);
@@ -810,7 +816,7 @@ def test_the_window_moves_along_either_wall_and_can_be_put_away(b):
     assert r['fits'] == {'right': True, 'left': True, 'door': False, 'low': False}, r   # not over the door, not into the wainscot
     assert r['left'] == {'sky': 'L', 'holes': 1, 'drawn': True} and r['tools'] == '收起', r   # the opening went along to the left wall
     assert r['away'] == {'sky': None, 'holes': 0, 'drawn': False} and r['box'], r   # put away: the wall is whole, the window waits in the box
-    assert r['old'] == {'w': 'R', 'u': 5.5, 'v': 6.6} and r['v'] == 8, r
+    assert r['old'] == {'w': 'R', 'u': 5.5, 'v': 6.6} and r['v'] == 9, r
 
 def test_a_ware_is_dragged_out_of_the_box_to_a_spot_and_back_into_the_box(b):
     js = "(async () => { " + FRESH + " state.koto.gift = 100; buyWare(WARE.get('chabudai')); saveState(); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
@@ -986,7 +992,7 @@ def test_an_older_room_moves_its_bed_into_the_bedroom(b):
       return JSON.stringify({ v: a.roomV, bed: a.placed.bed, nt: a.placed.nightTable.rm, rug: a.placed.bedRug.rm, pic: a.placed.nightPicture, chest: a.placed.chest.x, board: a.placed.board.u,
         sofa: a.placed.sofa, wardrobe: a.placed.wardrobe, moved: [b2.placed.bed, b2.placed.chest.x], t6: t6.placed.bed.rm }); })()"""
     r = json.loads(ev(b, js))
-    assert r['v'] == 8 and r['bed'] == {'w': 'F', 'x': 9.45, 'y': 2.625, 'r': 0, 'rm': 'bed'} and r['nt'] == 'bed' and r['rug'] == 'bed', r
+    assert r['v'] == 9 and r['bed'] == {'w': 'F', 'x': 9.45, 'y': 2.625, 'r': 0, 'rm': 'bed'} and r['nt'] == 'bed' and r['rug'] == 'bed', r
     assert r['pic'] == {'w': 'R', 'u': 9.45, 'v': 4.4, 'rm': 'bed'} and r['chest'] == 12.5 and r['board'] == 12.5, r   # 書房's own things spread out
     assert r['sofa'] == {'w': 'F', 'x': 22.2, 'y': 0.75, 'r': 0} and r['wardrobe']['rm'] == 'bed', r   # the new things are set out
     assert r['moved'] == [{'w': 'F', 'x': 6, 'y': 8, 'r': 0}, 15], r   # what was moved by hand stays where it is
@@ -1003,7 +1009,7 @@ def test_roomV_8_takes_the_lights_down_and_lays_the_room_out_again(b):
       return JSON.stringify({ v: a.roomV, lights: ['garland1', 'garland2', 'garland3'].map(id => pl[id] || null), mat: 'doorMat' in pl, desk: pl.desk.x, win: pl.window.u, kana: pl.kanaChart.u, kotatsu: [pl.kotatsu.x, pl.kotatsu.y], rug: [pl.sageRug.x, pl.sageRug.y],
         added: WARES.filter(w => w.since === 8).every(w => pl[w.id] && (pl[w.id].rm || '') === (w.at.rm || '')), kept: [b2.placed.desk.x, b2.placed.kotatsu.x] }); })()"""
     r = json.loads(ev(b, js))
-    assert r['v'] == 8 and r['lights'] == [None, None, {'w': 'R', 'u': 19.05, 'v': 10}] and r['mat'] is False, r   # the strings still hung where they first hung come down; 腳踏墊 is gone
+    assert r['v'] == 9 and r['lights'] == [None, None, {'w': 'R', 'u': 19.05, 'v': 10}] and r['mat'] is False, r   # the strings still hung where they first hung come down; 腳踏墊 is gone
     assert r['desk'] == 5.5 and r['win'] == 5.5 and r['kana'] == 18.6 and r['kotatsu'] == [4.6, 12.6] and r['rug'] == [5.4, 6.2], r
     assert r['added'] and r['kept'] == [4.1, 15], r   # the new windows and wall lamps go up; what blocks the new place, or was moved by hand, keeps it where it is
 
@@ -1075,6 +1081,23 @@ def test_the_hero_sleeps_on_the_bed_and_waters_a_plant(b):
       return JSON.stringify({ sleep, saved, can, joy, awake, gone: !st().querySelector('.watering'), plants: WARES.filter(w => w.act === 'water').map(w => w.id).sort() }); })()"""
     r = json.loads(ev(b, js))
     assert r == {'sleep': True, 'saved': '', 'can': True, 'joy': True, 'awake': True, 'gone': True, 'plants': ['bamboo', 'bedPlant', 'bigPlant', 'bonsai', 'cactus']}, r
+
+def test_the_full_length_mirror_stands_in_the_bedroom_and_the_wardrobe_rolls_clothes(b):
+    js = "(async () => { " + FRESH + """ const base = JSON.parse(JSON.stringify(state)); delete base.placed.fullMirror;
+      const old = normalizeState(Object.assign(JSON.parse(JSON.stringify(base)), { roomV: 8 }));   /* a room from before the mirror */
+      location.hash = '#/bedroom'; document.getElementById('view').innerHTML = ''; route(); const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('#view .study');
+      const btn = !!st().querySelector('.ware-use[data-ware="fullMirror"]'); st().querySelector('.ware-use[data-ware="fullMirror"]').click(); let open = false;
+      for (let i = 0; i < 80 && !open; i++) { await wait(50); open = !!st().querySelector('.dress.on'); }
+      const tabs = [...st().querySelectorAll('.dress-tabs button')].map(t => t.textContent), feats = (st().querySelector('[data-act="dress-tab"][data-tab="features"]').click(), [...st().querySelectorAll('.dress-sec h3')].map(h => h.textContent));
+      st().querySelector('[data-act="dress-cancel"]').click(); await wait(650);
+      st().querySelector('.study-tools [data-act="wardrobe"]').click(); await wait(200); const lk0 = JSON.stringify(HERO.norm(state.look));
+      const face = ['face', 'fringe', 'eyes', 'beard']; for (let i = 0; i < 4; i++) st().querySelector('[data-act="dress-random"]').click();
+      st().querySelector('[data-act="dress-done"]').click(); await wait(650); const lk = HERO.norm(state.look), before = JSON.parse(lk0);
+      return JSON.stringify({ at: old.placed.fullMirror, v: old.roomV, btn, open, tabs, feats, faceKept: face.every(k => lk[k] === before[k]), styles: [HERO.OPTS.topStyle.some(o => o[0] === lk.topStyle), lk.topStyle === 'hoodie' || owns(lk.topStyle)] }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['at'] == {'w': 'F', 'x': 0.3, 'y': 11.2, 'r': 0, 'rm': 'bed'} and r['v'] == 9 and r['btn'] and r['open'], r   # by the wardrobe, put up in roomV 9
+    assert r['tabs'] == ['臉型', '髮型', '五官'] and r['feats'] == ['眼睛', '眼睛顏色', '眉毛', '嘴巴', '鬍子'], r
+    assert r['faceKept'] and r['styles'] == [True, True], r   # the wardrobe's dice: only clothes they have
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
