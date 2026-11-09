@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 1 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 2 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -6,7 +6,7 @@
    docs/superpowers/specs/2026-11-09-town-events-design.md. */
 const TOWN = {
   // the places index.html draws people in (a new one goes here when it is drawn: street, station, sento, shrine, castle)
-  PLACES: ['beach', 'town', 'shokudo', 'izakaya'],
+  PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station'],
   // names of people, shops and places: no gloss needed
   NAMES: ['美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前'],
   // the shops' hours (the phone's real time; to < from runs past midnight)
@@ -18,7 +18,9 @@ const TOWN = {
     beach: { mat: { X: -170, Y: 58 }, shore: { X: 220, Y: 96 } },
     // indoors the floor runs from the front (0) to the back wall (134): people stand before the counter, at the tables
     shokudo: { counter: { X: -130, Y: 118 }, kitchen: { X: 560, Y: 124 }, table1: { X: -380, Y: 74 }, table2: { X: 380, Y: 74 }, stool: { X: 160, Y: 112 } },
-    izakaya: { counter: { X: 110, Y: 120 }, seat1: { X: -180, Y: 104 }, seat2: { X: -80, Y: 104 }, seat3: { X: 220, Y: 104 }, seat4: { X: 320, Y: 104 } }
+    izakaya: { counter: { X: 110, Y: 120 }, seat1: { X: -180, Y: 104 }, seat2: { X: -80, Y: 104 }, seat3: { X: 220, Y: 104 }, seat4: { X: 320, Y: 104 } },
+    street: { stop: { X: 150, Y: 120 }, walk: { X: -160, Y: 110 } },
+    station: { gate: { X: -60, Y: 120 }, koban: { X: 330, Y: 112 }, plaza: { X: -300, Y: 70 }, stop: { X: 470, Y: 80 } }
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they
   // have come by; size: smaller than the hero
@@ -50,7 +52,19 @@ const TOWN = {
       hours: [[10, 21, 'shokudo', 'kitchen']] },
     teppei: { name: '吉田 鉄平', kana: 'よしだ てっぺい', role: '居酒屋の大将', shop: 'izakaya', look: { face: 'chubby', skin: '#d39f78', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#a3a3a8', eyes: 'sharp', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'full', topStyle: 'jinbei', top: '#3f4660', bottomStyle: 'wide', bottom: '#3f4660', shoeStyle: 'boots', shoe: '#2b2b33' },
       bio: ['「居酒屋とり吉」的老闆，58 歲。粗獷、愛面子，其實很照顧年輕人。以前是漁夫，跟林的先生健二一起出過海。', '說話是江湖味的常體（らっしゃい！〜だろ）。你外婆常坐在吧台，只喝一杯。'],
-      hours: [[17, 1, 'izakaya', 'counter']] }
+      hours: [[17, 1, 'izakaya', 'counter']] },
+    nagisa: { name: '渚', kana: 'なぎさ', role: '喫茶店のマスター', shop: 'cafe', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'sidepart', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#a3a3a8', eyes: 'sleepy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'mustache', topStyle: 'shirt', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { neck: 'bowtie' },
+      bio: ['「喫茶しずく」的老闆，67 歲。安靜、說話慢、愛爵士唱片和手沖咖啡，常常一句話就很有道理。', '你外婆的青梅竹馬。他好像保管著外婆的什麼東西……'],
+      hours: [[7, 18, 'town', 'cafe']] },
+    taro: { name: 'タロウ', kana: 'たろう', role: '配達員', look: { face: 'mochi', skin: '#e8bd98', cheeks: 'blush', fringe: 'choppy', sides: 'above', hairBack: 'short', hairTop: 'ahoge', hairColor: '#6b4a32', eyes: 'big', eyeColor: '#2a2730', brows: 'raised', mouth: 'grin', beard: 'none', topStyle: 'tee', top: '#4f7a4a', bottomStyle: 'shorts', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: { back: 'backpack' },
+      bio: ['宅配員，22 歲。永遠在趕路、常常送錯地址，可是很有精神。', '其實想當音樂人，休假時會去海邊找ムギ聽唱片。'],
+      hours: [[8, 13, 'street', 'stop'], [13, 18, 'station', 'stop']] },
+    harada: { name: '原田', kana: 'はらだ', role: '駅員', look: { face: 'round', skin: '#f3d1b5', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'smile', beard: 'mustache', topStyle: 'shirt', top: '#3f4660', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'loafer', shoe: '#2b2b33' },
+      bio: ['みなと駅的站務員，50 多歲。說話一板一眼，票價、時刻表倒背如流。'],
+      hours: [[6, 23, 'station', 'gate']] },
+    kobayashi: { name: '小林 翔太', kana: 'こばやし しょうた', role: '巡査', look: { face: 'oval', skin: '#f8dcc8', cheeks: 'shy', fringe: 'round', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'kira', eyeColor: '#2a2730', brows: 'worried', mouth: 'o', beard: 'none', topStyle: 'shirt', top: '#4f6f9e', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'boots', shoe: '#2b2b33' },
+      bio: ['駅前交番的巡查，28 歲。認真、過度客氣、敬語滿分，可是有點冒失。'],
+      hours: [[0, 24, 'station', 'koban']] }
   },
   // [unit, ja, zh]: said when there is nothing on, from that unit
   CHAT: {
@@ -124,6 +138,36 @@ const TOWN = {
       { ask: '問她：幾點去？', opts: [['{何時|なんじ}に {行|い}きますか。', 1, '幾點去？'], ['{何時|なんじ}で {行|い}きますか。', 0, '時間點用「に」。'], ['{何時|なんじ}を {行|い}きますか。', 0, '時間點用「に」。']], pt: 'm1' },
       ['koharu', '{十一時|じゅういちじ|十一點}に、{家|いえ}の {前|まえ}で {会|あ}いましょう！', '十一點在你家前面見吧！'], ['koharu', 'それで……おべんとうは だれが {作|つく}る？', '然後……便當誰來做？'],
       { ask: '自告奮勇：我來做！', opts: [['わたしが {作|つく}ります！', 1, '我來做！'], ['わたしを {作|つく}ります！', 0, '用「を」會變成「把我做出來」。做的人用「が」。'], ['わたしに {作|つく}ります！', 0, '問「だれが」的時候，回答也用「が」。']], pt: 'm1' },
-      ['koharu', 'えっ、ほんと？ わたし、{料理|りょうり}は ぜんぜん だめで……たすかる！', '欸，真的嗎？我完全不會做菜……得救了！']] }
+      ['koharu', 'えっ、ほんと？ わたし、{料理|りょうり}は ぜんぜん だめで……たすかる！', '欸，真的嗎？我完全不會做菜……得救了！']] },
+    // ---- m2 形容詞：〜くない／〜かった・〜じゃない／〜でした・〜くて／〜で・〜く／〜に ----
+    { id: 'm2-1', u: 'm2', who: 'kenta', at: 'town', title: '新しいパン', lines: [['kenta', 'おっ、いいところに！ {新|あたら}しいパンです。どうぞ！', '喔，來得正好！新的麵包，請吃！'], ['kenta', 'あまい？ あまくない？ {正直|しょうじき|老實}に！', '甜嗎？不甜嗎？老實說！'],
+      { ask: '吃起來不太甜。說：不太甜。', opts: [['あまり あまくないです。', 1, '不太甜。'], ['あまり あまいじゃないです。', 0, 'い形容詞的否定是去掉「い」加「くない」：あまい→あまくない。'], ['あまり あまくです。', 0, 'い形容詞的否定是「〜くない」：あまくないです。']], pt: 'm2' },
+      ['kenta', 'そうか……。じゃあ、おいしくない？', '這樣啊……那，不好吃嗎？'],
+      { ask: '其實很好吃，而且很軟。說：又軟又好吃。', opts: [['やわらかくて、おいしいです。', 1, '又軟又好吃。'], ['やわらかいで、おいしいです。', 0, 'い形容詞連接下一句用「〜くて」：やわらかい→やわらかくて。'], ['やわらかいくて、おいしいです。', 0, '要先去掉「い」再加「くて」：やわらかくて。']], pt: 'm2' },
+      ['kenta', 'よかった！ さとうを {少|すく}なく したんです。{美玖|みく}の {歯|は|牙齒}の ために……なんて！', '太好了！我把糖放少了。為了美玖的牙齒……之類的！'], ['miku', 'パパ、わたし、あまい パンが すき！', '爸爸，我喜歡甜的麵包！'], ['kenta', '……ですよねー。', '……我想也是啦。']] },
+    { id: 'm2-2', u: 'm2', who: 'nagisa', at: 'town', after: 'm2-1', title: '喫茶しずく', lines: [['nagisa', '……いらっしゃいませ。', '……歡迎光臨。'], ['nagisa', 'この{店|みせ}は、いつも {静|しず}かです。ゆっくり して ください。', '這間店一直都很安靜。請慢慢坐。'],
+      { ask: '稱讚這間店：又安靜又好。', opts: [['{静|しず}かで、いい {店|みせ}ですね。', 1, '又安靜，是間好店呢。'], ['{静|しず}かくて、いい {店|みせ}ですね。', 0, '「静か」是な形容詞，連接用「〜で」：静かで。'], ['{静|しず}かな、いい {店|みせ}ですね。', 0, '「静かな」後面要直接接名詞；要連接兩個形容詞用「静かで」。']], pt: 'm2' },
+      ['nagisa', 'ありがとう。……あなたの おばあさんとは、{子|こ}どもの ころからの {友|とも}だちでした。', '謝謝。……我和你外婆從小就是朋友。'], ['nagisa', 'おばあさんは {明|あか}るくて、やさしい {人|ひと}でしたよ。', '你外婆是個開朗又溫柔的人。'],
+      ['nagisa', '{若|わか}い ころは……{歌|うた}が あまり {上手|じょうず}じゃ なかったですが。', '年輕的時候嘛……歌唱得不太好就是了。'],
+      { ask: '問他：外婆唱歌不好嗎？（用「上手じゃなかった」）', opts: [['{歌|うた}は {上手|じょうず}じゃ なかったですか。', 1, '唱歌不好嗎？'], ['{歌|うた}は {上手|じょうず}くなかったですか。', 0, '「上手」是な形容詞，過去否定是「上手じゃなかった」。'], ['{歌|うた}は {上手|じょうず}でしたじゃないですか。', 0, 'な形容詞過去否定是「〜じゃなかった（です）」。']], pt: 'm2' },
+      ['nagisa', 'ええ。でも、いつも {楽|たの}しそうに {歌|うた}っていました。……{今日|きょう}は コーヒーを {一杯|いっぱい}、ごちそうしましょう。', '是啊。不過她總是唱得很開心。……今天這杯咖啡我請你。']] },
+    { id: 'm2-3', u: 'm2', who: 'hina', at: 'town', after: 'm2-2', title: '先週の花', lines: [['hina', 'ねえ、これ どう？ {花|はな}、{生|い|插（花）}けてみたんだけど。', '欸，你覺得這個怎樣？我試著插了花。'],
+      { ask: '說：非常漂亮。', opts: [['とても きれいです。', 1, '非常漂亮。'], ['とても きれくないです。', 0, '「きれい」雖然是「い」結尾，其實是な形容詞，否定是「きれいじゃない」——而且你是要稱讚她啦。'], ['とても きれいいです。', 0, '「きれい」本身就是な形容詞，直接加「です」。']], pt: 'm2' },
+      ['hina', 'ふ、ふーん。……{先週|せんしゅう}のは？', '哼、哼嗯。……那上個禮拜的呢？'],
+      { ask: '上個禮拜的也很漂亮。說：上週的也很漂亮。', opts: [['{先週|せんしゅう}のも きれいでした。', 1, '上週的也很漂亮。'], ['{先週|せんしゅう}のも きれいかったです。', 0, '「きれい」是な形容詞，過去式是「きれいでした」，不是「〜かった」。'], ['{先週|せんしゅう}のも きれいだでした。', 0, 'な形容詞的過去式是「〜でした」（常體「〜だった」），不能疊在一起。']], pt: 'm2' },
+      ['hina', '……あれ、ほんとは ぜんぜん だめだった。お{母|かあ}さんに すごく {言|い}われた。', '……那個其實超失敗的。被我媽唸了好久。'], ['hina', '{来月|らいげつ}、{生|い|插}け{花|ばな|花}の コンテストが あるの。……{見|み}に {来|き|來}ても いいよ。', '下個月有插花比賽。……你要來看也可以啦。']] },
+    { id: 'm2-4', u: 'm2', who: 'mugi', at: 'beach', after: 'm2-1', title: 'さむかった日', lines: [['mugi', '{今日|きょう}は あたたかいワン。', '今天好暖和喔。'], ['mugi', 'きのうは {風|かぜ}が {強|つよ}くて、ブルブルだったワン。', '昨天風好大，冷得發抖。'],
+      { ask: '附和牠：昨天很冷呢。', opts: [['きのうは さむかったですね。', 1, '昨天很冷呢。'], ['きのうは さむいでしたね。', 0, 'い形容詞的過去式是「〜かった」：さむい→さむかった（です）。'], ['きのうは さむくでしたね。', 0, 'い形容詞的過去式是「〜かった」：さむかったです。']], pt: 'm2' },
+      ['mugi', '{今日|きょう}は、きのうより ずっと いい {天気|てんき}だワン。{海|うみ}も {静|しず}かだワン。', '今天天氣比昨天好太多了。海也很平靜。'],
+      { ask: 'ムギ想散步。說：我們安靜地走吧。', opts: [['{静|しず}かに {歩|ある}きましょう。', 1, '安靜地走吧。'], ['{静|しず}かく {歩|ある}きましょう。', 0, 'な形容詞當副詞用「〜に」：静かに。'], ['{静|しず}かで {歩|ある}きましょう。', 0, '修飾動詞要用副詞形：静かに。']], pt: 'm2' },
+      ['mugi', 'ワン！ ……あ、カモメだワン！ まてー！', '汪！……啊，海鷗！等等我——！'], ['mugi', '……ぜんぜん {静|しず}かじゃ なかったワン。', '……一點都不安靜呢。']] },
+    { id: 'm2-5', u: 'm2', who: 'taro', at: 'street', after: 'm2-3', opens: 'station', title: '配達員タロウ', lines: [['taro', 'はぁ、はぁ……あっ、すみません！ この{荷物|にもつ|包裹}、{重|おも}くて……。', '呼、呼……啊，不好意思！這個包裹好重……'],
+      ['taro', '{宅配|たくはい|宅配}の タロウです！ この{辺|へん}の {人|ひと}ですか。', '我是宅配員タロウ！您是這附近的人嗎？'], ['hero', 'はい、そうです。', '是的。'],
+      ['taro', 'よかった！ 「{森|もり}のパン」は どこですか。', '太好了！「森のパン」在哪裡？'],
+      { ask: '告訴他：在小鎮上，很近。', opts: [['{町|まち}に あります。とても {近|ちか}いです。', 1, '在小鎮上，很近。'], ['{町|まち}に あります。とても {近|ちか}かったです。', 0, '現在就很近，不用過去式。'], ['{町|まち}に あります。とても {近|ちか}いだです。', 0, 'い形容詞直接加「です」，不加「だ」。']], pt: 'm2' },
+      ['taro', 'ありがとうございます！ ……いつも {急|いそ|急忙}いで いるので、ときどき まちがえるんです。', '謝謝您！……我總是很趕，所以常常送錯。'],
+      { ask: '笑著說：タロウ先生總是走得很快呢。', opts: [['タロウさんは いつも はやく {歩|ある}きますね。', 1, 'タロウ先生總是走得很快呢。'], ['タロウさんは いつも はやい {歩|ある}きますね。', 0, 'い形容詞修飾動詞要變成副詞「〜く」：はやい→はやく。'], ['タロウさんは いつも はやに {歩|ある}きますね。', 0, '「はやい」是い形容詞，副詞是「はやく」；「〜に」是な形容詞用的。']], pt: 'm2' },
+      ['taro', 'あはは……{仕事|しごと}が {多|おお}くて。……あ、{駅前|えきまえ|車站前}へ {行|い}く バスが {来|き|來}ましたよ。{駅前|えきまえ|車站前}は にぎやかで、おもしろいですよ！', '哈哈……工作太多了嘛。……啊，往車站前的公車來了。車站前很熱鬧，很好玩喔！'],
+      ['taro', 'じゃ、また！', '那，再見！']] }
   ]
 };

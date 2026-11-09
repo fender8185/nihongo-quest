@@ -247,6 +247,40 @@ def test_tapping_someone_who_has_left_says_so(b):
       return JSON.stringify({ toast: toastText(), talk: !!document.querySelector('.talk') }); })()"""))
     assert '離開' in r['toast'] and not r['talk'], r
 
+# ---- pass 2: the bus, 駅前, 町の手帳 ----
+BUS = """const board = async () => { for (let i = 0; i < 120 && !document.querySelector('.bus-board'); i++) await wait(50); return document.querySelector('.bus-board'); };"""
+
+def test_the_bus_goes_to_a_stop_opened_and_back(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + BUS + """ fake([]); state.town.stops.station = 1; state.town.seen.harada = 1; await go('street', 12);
+      y().querySelector('[data-act="bus-stop"]').click(); const bd = await board();
+      const stops = [...bd.querySelectorAll('[data-bus]')].map(x => [x.dataset.bus, x.disabled]);
+      bd.querySelector('[data-bus="station"]').click(); for (let i = 0; i < 120 && location.hash !== '#/station'; i++) await wait(50); await wait(300);
+      const there = { place: y().dataset.place, harada: !!y().querySelector('.npc-harada') };
+      y().querySelector('[data-act="bus-stop"]').click(); const bd2 = await board(); const back = [...bd2.querySelectorAll('[data-bus]')].filter(x => !x.disabled).map(x => x.dataset.bus);
+      bd2.querySelector('[data-bus="street"]').click(); for (let i = 0; i < 120 && location.hash !== '#/street'; i++) await wait(50);
+      return JSON.stringify({ stops, there, back, home: location.hash }); })()"""))
+    assert r['stops'] == [['station', False], ['sento', True], ['shrine', True], ['castle', True]], r
+    assert r['there'] == {'place': 'station', 'harada': True} and r['back'] == ['street'] and r['home'] == '#/street', r
+
+def test_with_no_stop_open_the_bus_board_says_so(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + BUS + """ fake([]); await go('street', 12);
+      y().querySelector('[data-act="bus-stop"]').click(); const bd = await board();
+      return JSON.stringify({ open: [...bd.querySelectorAll('[data-bus]')].filter(x => !x.disabled).length, note: bd.textContent }); })()"""))
+    assert r['open'] == 0 and '還沒有開通' in r['note'], r
+
+def test_taro_waits_by_the_bus_stop_in_the_morning(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.seen.taro = 1; await go('street', 9); const am = !!y().querySelector('.npc-taro');
+      await go('street', 15); const pm = !!y().querySelector('.npc-taro'); return JSON.stringify({ am, pm }); })()"""))
+    assert r == {'am': True, 'pm': False}, r
+
+def test_the_town_notebook_lists_people_met_and_replays_without_koto(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([['a1', 'm1', 'kenta', 'town', { title: '試吃', lines: [['kenta', 'はい。', '是。']] }]]); state.town.seen.kenta = 1; state.town.done.a1 = '2026-11-01'; state.koto.found['ev-a1'] = 10;
+      const k0 = kotoBalance(); DIARY.open(); document.querySelector('.diary [data-diary="tab-town"]').click(); await wait(50);
+      const book = document.querySelector('.diary').textContent; document.querySelector('.diary [data-replay="a1"]').click(); await wait(50);
+      const talk = !!document.querySelector('.talk'), gone = !document.querySelector('.diary'); document.querySelector('.talk').click(); await wait(50);
+      return JSON.stringify({ kenta: book.includes('森 健太'), title: book.includes('試吃'), talk, gone, back: !!document.querySelector('.diary .town-book'), koto: kotoBalance() - k0 }); })()"""))
+    assert r == {'kenta': True, 'title': True, 'talk': True, 'gone': True, 'back': True, 'koto': 0}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -141,9 +141,10 @@
 |---|---|---|---|
 | 0 | m0 | 5 | b8bb37e 引擎、小鎮換店、美玖／健太／陽菜／林；審查修正 32783a1 |
 | 1 | m1 | 5 | 95665ef 食堂、居酒屋室內，トメ／剛／鉄平（-test.2） |
+| 2 | m2 | 5 | (this commit) 公車與路線牌、駅前、町の手帳，渚／タロウ／原田／小林（-test.3，events.js v2） |
 
 ## 寫作規則（審查後加的）
 
 - 不要把 `after:` 接在 `when: 'night'` 的事件後面（只在白天玩的人會一直卡住）。
 - 新地點要畫得出人時，才把它加進 `events.js` 的 `PLACES`；角色的作息地點和位置要在 `SPOTS` 裡（檢查腳本會擋）。
-- 第 2 輪要把 タロウ、原田、小林（草稿在 .superpowers/sdd/2026-11-09-town-events/drafts/：cast2.js、spots2.js、m2.js）放回 events.js，並把 street、station 加進 PLACES。
+- 每次推 test 都要把 events.js 的版本（EVENTS_VERSION 與兩處 ?v=）加一（test.sh 會檢查）。

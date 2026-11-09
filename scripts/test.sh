@@ -16,6 +16,12 @@ ev="$(grep -o 'events.js?v=[0-9]*' index.html | tr -d -c 0-9)"
 [ "$ev" = "$(grep -o 'events.js?v=[0-9]*' sw.js | tr -d -c 0-9)" ] && [ "$ev" = "$(grep -o 'EVENTS_VERSION [0-9]*' events.js | tr -d -c 0-9)" ] || { echo "events.js version differs between index.html, sw.js and events.js"; exit 1; }
 node --test-reporter=tap tests/events.test.js | grep -E "^# (pass|fail)"
 node scripts/check-events.js | tail -1
+# events.js changed since the last push (main or test) ⇒ its version changed too, or phones keep the old copy (the service worker reuses ?v= files)
+for base in origin/main origin/test; do
+  if git rev-parse --verify -q "$base" >/dev/null 2>&1 && git cat-file -e "$base:events.js" 2>/dev/null && ! git diff --quiet "$base" -- events.js; then
+    [ "$(git show "$base:events.js" | grep -o 'EVENTS_VERSION [0-9]*')" != "$(grep -o 'EVENTS_VERSION [0-9]*' events.js)" ] || { echo "events.js changed since $base but its EVENTS_VERSION is unchanged"; exit 1; }
+  fi
+done
 node --test-reporter=tap tests/sync-core.test.js | grep -E "^# (pass|fail)"   # tap: Node 23+ prints "ℹ pass" by default
 node --test-reporter=tap tests/curriculum.test.js | grep -E "^# (pass|fail)"   # the N3–N1 curriculum outline: sources, candidates, checker
 node scripts/curriculum/check-outline.js | tail -1   # the outline files themselves pass the checker (exit 1 on any problem)
