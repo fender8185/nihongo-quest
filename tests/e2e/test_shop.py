@@ -1141,6 +1141,15 @@ def test_a_tap_on_the_pond_stirs_it(b):
     r = json.loads(ev(b, js))
     assert r == {'stir': True, 'crouch': True, 'parts': [9, True], 'gone': True}, r
 
+def test_the_hero_sits_at_the_bus_stop(b):
+    js = "(async () => { " + FRESH + """ location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); const wait = (ms) => new Promise(q => setTimeout(q, ms)), y = () => document.querySelector('.yard'), h = () => y().querySelector('.yhero');
+      const drawn = [!!y().querySelector('.busstop svg'), y().querySelector('.bus-btn').getAttribute('aria-label')];
+      y().querySelector('.bus-btn').click(); await wait(3000); const sat = h().classList.contains('bench'), facing = !h().classList.contains('back');
+      yHeroWalk(y(), [0, 60]); const up = !h().classList.contains('bench');
+      return JSON.stringify({ drawn, sat, facing, up, keepOff: yardFits('pond', { w: 'Y', x: BUS.X, y: BUS.Y + 6 }) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'drawn': [True, '公車站'], 'sat': True, 'facing': True, 'up': True, 'keepOff': False}, r   # sat on the bench facing us; up again to walk; no ware on it
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

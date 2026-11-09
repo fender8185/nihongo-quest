@@ -352,6 +352,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .land :is(.far, .near, .trunk, .crown, .post, .lane) { transition: fill 3s; } .sky .land :is(.ridge, .rail) { transition: stroke 3s; }
 .sky .land .far { fill: color-mix(in srgb, color-mix(in srgb, #8fc486 calc(var(--f) * 100%), #a6b3a2) calc(var(--day) * 100%), #121436); } .sky .land .near { fill: color-mix(in srgb, color-mix(in srgb, #5a9e4d calc(var(--f) * 100%), #7f9179) calc(var(--day) * 100%), #090a1e); } .sky .land .ridge { fill: none; stroke: color-mix(in srgb, rgba(255, 255, 255, .4) calc(var(--day) * 100%), rgba(150, 165, 255, .18)); stroke-width: 1.2; }
 .sky .land .trunk { fill: color-mix(in srgb, #6b4a2f calc(var(--day) * 100%), #0b0c22); } .sky .land .crown { fill: color-mix(in srgb, color-mix(in srgb, #3f8a46 calc(var(--f) * 100%), #6f8669) calc(var(--day) * 100%), #0b0c22); } .sky .land .post { fill: color-mix(in srgb, #c9a679 calc(var(--day) * 100%), #0b0c22); } .sky .land .rail { fill: none; stroke: color-mix(in srgb, #c9a679 calc(var(--day) * 100%), #0b0c22); stroke-width: 2.4; }
+.sky .land .road { fill: color-mix(in srgb, #8d8a86 calc(var(--day) * 100%), #1a1b38); transition: fill 3s; } .sky .land .curb { fill: none; stroke: color-mix(in srgb, #d8d3c6 calc(var(--day) * 100%), #2c2e52); stroke-width: 3; transition: stroke 3s; }
+.sky .land .road-line { fill: none; stroke: color-mix(in srgb, #f2efe4 calc(var(--day) * 100%), #3a3c66); stroke-width: 2; stroke-dasharray: 18 14; transition: stroke 3s; }
 .sky .land .lane { fill: color-mix(in srgb, rgba(232, 214, 168, .95) calc(var(--day) * 100%), rgba(150, 160, 230, .07)); }
 .sky .house { position: absolute; left: 50%; bottom: 218px; width: 140px; height: 130px; margin-left: -70px; transform: scale(1.15); transform-origin: 50% 100%; }
 .sky .house > svg { position: absolute; inset: 0; overflow: visible; }
@@ -367,8 +369,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.sky .house, .house-thumb) .m-dot { fill: color-mix(in srgb, #fff8ec calc(var(--day) * 100%), #4a3c66); }
 :is(.sky .house, .house-thumb) .m-gill { fill: color-mix(in srgb, #ead6b4 calc(var(--day) * 100%), #15163a); }
 :is(.sky .house, .house-thumb) .m-pipe { fill: color-mix(in srgb, #7e6a5a calc(var(--day) * 100%), #0c0d25); }
-:is(.sky .house, .house-thumb) .hc { fill: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); transition: fill 3s; }
-:is(.sky .house, .house-thumb) .hs { fill: none; stroke: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); stroke-linecap: round; stroke-linejoin: round; transition: stroke 3s; }
+:is(.sky .house, .house-thumb, .sky .busstop) .hc { fill: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); transition: fill 3s; }
+:is(.sky .house, .house-thumb, .sky .busstop) .hs { fill: none; stroke: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); stroke-linecap: round; stroke-linejoin: round; transition: stroke 3s; }
 :is(.sky .house, .house-thumb) .m-grass { fill: none; stroke: color-mix(in srgb, #5f9a4a calc(var(--day) * 100%), #0b0c22); stroke-width: 1.6; stroke-linecap: round; }
 .house-thumb :is(.wall, .roof, .chim) { fill: #f1e3c6; } .house-thumb .rim { fill: none; stroke: rgba(255, 255, 255, .45); stroke-width: 1.4; } .house-thumb .pane { fill: #cfe9f8; } .house-thumb .mull { stroke: #fff; stroke-width: 2; } .house-thumb .door { fill: #7a4b2e; } .house-thumb .knob { fill: #ffcf7a; }
 .sky .house .win { position: absolute; border-radius: 50%; opacity: calc((.12 + .88 * var(--f)) * (1 - var(--day))); transition: opacity 1.5s; }   /* the light round each window, warmer as the list fills */
@@ -723,6 +725,12 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .mtn .s-owl { fill: color-mix(in srgb, #8a5f3e calc(var(--day) * 100%), #2a2550); stroke: none; } .sky .mtn .s-owl path { fill: none; stroke: color-mix(in srgb, #6e4a30 calc(var(--day) * 100%), #2a2550); stroke-width: .8; } .sky .mtn .s-owl-eye { fill: color-mix(in srgb, #fff8e6 calc(var(--day) * 100%), #ffd36b); }
 .sky .shop-btn { position: absolute; width: 64px; height: 52px; margin-left: -32px; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; }
 .sky .shop-btn .tag { top: calc(100% + 4px); }
+/* the bus stop (test, 2026-11-09): drawn like a ware; its sign button over it, unscaled; the hero on its bench, legs swinging */
+.sky .busstop { position: absolute; left: 50%; pointer-events: none; } .sky .busstop svg { width: 100%; height: 100%; overflow: visible; }
+.sky .bus-btn { position: absolute; left: 50%; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; } .sky .bus-btn .tag { top: -14px; }
+.yard .hero.bench .bob { animation: none; transform: translateY(-13px); } .yard .hero.bench .h-shadow { display: none; }   /* the hips on the seat (40 up), the thighs coming at us (the legs short) */
+.yard .hero.bench .legs { transform-box: view-box; transform-origin: 2px -27px; transform: scaleY(.55); }
+.yard .hero.bench .leg.l { animation: heroSwing 1.3s ease-in-out infinite alternate; } .yard .hero.bench .leg.r { animation: heroSwing 1.3s ease-in-out -.65s infinite alternate; }
 /* the hero in the yard: its feet at the bottom edge, moved up the lawn and scaled by distance; darker by night; behind the mailbox when further up */
 .sky .yhero { left: 50%; bottom: -10px; width: 120px; height: 210px; margin-left: -60px; transform-origin: 50% 95.24%; }
 .sky .yhero svg { filter: brightness(calc(.64 + .36 * var(--day))) saturate(calc(.8 + .2 * var(--day))); }   /* by night a little darker than by day, never dark (1.2.0) */
@@ -3403,6 +3411,7 @@ const ICONS = {
   mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="m3.6 7 8.4 6.4L20.4 7"/></svg>',
   furi: '<span class="ico-furi" aria-hidden="true"><ruby>字<rt>じ</rt></ruby></span>',
   door: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 21V4.8A1.8 1.8 0 0 1 8.3 3h7.4a1.8 1.8 0 0 1 1.8 1.8V21"/><path d="M4 21h16"/><circle cx="14.6" cy="12.4" r=".95" fill="currentColor" stroke="none"/></svg>',
+  bus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="3.5" width="15" height="14" rx="3"/><path d="M4.5 11h15M8 17.5V20M16 17.5V20"/><circle cx="8.3" cy="14.3" r=".6" fill="currentColor"/><circle cx="15.7" cy="14.3" r=".6" fill="currentColor"/></svg>',
   shop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.8 9.5 5.4 4.5h13.2l2.6 5z"/><path d="M5 9.5V20h14V9.5"/><path d="M7.5 9.5v4.6h9V9.5M10.5 9.5v4.6M13.5 9.5v4.6"/></svg>',   // 古道具屋: a shop front, its noren
   hanger: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5.2a2 2 0 1 1 2 2v1"/><path d="M12 8.2 3.6 14.3a1 1 0 0 0 .6 1.8h15.6a1 1 0 0 0 .6-1.8z"/></svg>',
   dice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r="1.1" fill="currentColor"/><circle cx="15" cy="9" r="1.1" fill="currentColor"/><circle cx="9" cy="15" r="1.1" fill="currentColor"/><circle cx="15" cy="15" r="1.1" fill="currentColor"/></svg>',
@@ -6000,7 +6009,8 @@ const ACTIONS = {
   'study-drawer': (el) => ROOM.use(el, () => ROOM.pull(el)),
   'study-door': (el) => ROOM.use(el, () => ROOM.door(el)),   // out to the yard, or to the other room (1.3.0)
   'enter-house': (el) => yUse(el, [0, 214], () => { ROOM.heroIn(); sceneGo('#/today', 'entering'); }),   // the hero walks to the door first (1.2.0)
-  'yard-shop': (el) => yClimb(el),   // up the hill path to 古道具屋
+  'yard-shop': (el) => yClimb(el),
+  'bus-stop': (el) => busSit(el),   // test: the hero sits on the bench   // up the hill path to 古道具屋
   witch: (el) => witchCatch(el),   // the Halloween witch caught (1.2.2)
   'close-modal': () => closeModal(),
   'modal-back': (el, ev) => { if (ev.target === el) closeModal(); },
@@ -6275,16 +6285,27 @@ function yFollow(yard) {
   const z = ycam.W / 4, hx = yh.X - ycam.x;
   if (hx > z) yCamTo(yard, yh.X - z); else if (hx < -z) yCamTo(yard, yh.X + z);
 }
-// where a yard ware may stand: on the lawn (whole within the middle 1200px; y 14–196 px up), off the path from the door (a strip
-// from x -60…6 at the bottom to -10…10 by the house), the house front and the mailbox, and clear of the others (their ground:
+// where a yard ware may stand: on the lawn (whole within the middle 1200px; y 14–196 px up), off the path from the door (LANE) and
+// the road (ROAD), the house front, the mailbox and the bus stop, and clear of the others (their ground:
 // width × scale across, depth × scale deep)
+// test (2026-11-09): a road across the lawn (Y0…Y1 px up), the bus stop on its far side; the path from the door winds down to it
+// (LANE: its middle and half width t of the way from the door, 0, to the road, 1). The land is drawn 370 high, y down from its top
+const ROAD = { Y0: 80, Y1: 106 };
+const LANE = { Y: 220, at: (t) => [22 * Math.sin(Math.PI * 1.5 * t) - 6 * t, 10 + 13 * t] };
+const laneAt = (Y) => LANE.at(Math.max(0, Math.min(1, (LANE.Y - Y) / (LANE.Y - ROAD.Y1))));
+function laneD() {
+  const n = 24, pt = (i, side) => { const t = i / n, [c, w] = LANE.at(t), Y = LANE.Y - (LANE.Y - ROAD.Y1 + 4) * t; return `${(600 + c + side * w).toFixed(1)} ${(370 - Y).toFixed(1)}`; };
+  const L = [], R = []; for (let i = 0; i <= n; i++) { L.push(pt(i, -1)); R.unshift(pt(i, 1)); }
+  return `M${L.join(' L')} L${R.join(' L')} Z`;
+}
 function yardFits(id, p) {
   const a = YARD.ART[id], it = WARE.get(id); if (!a || !it || p.y < 14 || p.y > 196) return false;
   const k = yScale(p.y), hw = it.ground[0] * k / 2, hd = it.ground[1] * k;
   if (Math.abs(p.x) + hw > YARD_HALF - 10) return false;
-  if (Math.abs(p.x - (-27 + 27 * p.y / 220)) < hw + (33 - 23 * p.y / 220) + 4) return false;
+  const [lc, lw] = laneAt(p.y); if (p.y + hd > ROAD.Y1 && Math.abs(p.x - lc) < hw + lw + 4) return false;   // off the path and the road
+  if (p.y + hd > ROAD.Y0 - 2 && p.y < ROAD.Y1 + 2) return false;
   const over = (x0, x1, y0, y1) => p.x + hw > x0 && p.x - hw < x1 && p.y + hd > y0 && p.y - hd < y1;
-  if (over(-95, 95, 186, 999) || over(20, 92, 136, 230)) return false;
+  if (over(-95, 95, 186, 999) || over(20, 92, 136, 230) || over(BUS.X - 62, BUS.X + 62, BUS.Y - 6, BUS.Y + 30)) return false;   // the house, the mailbox, the bus stop
   return yardPlaced().every((o) => { if (o.id === id) return true; const t = yScale(o.p.y); return Math.abs(p.x - o.p.x) >= hw + o.it.ground[0] * t / 2 || Math.abs(p.y - o.p.y) >= hd + o.it.ground[1] * t; });
 }
 function yardPlaced() { return Object.keys(state.placed).filter((id) => owns(id) && WARE.has(id) && WARE.get(id).kind === 'yard' && state.placed[id].w === 'Y').map((id) => ({ id, it: WARE.get(id), p: state.placed[id] })); }
@@ -6454,7 +6475,7 @@ const SCOPE = (() => {
 // test (2026-11-09): the gramophone plays a record while 書房 or the bedroom is open and it stands in either (state.record: the one
 // on it, '' the first; state.musicOff: stopped by hand). Made up here and played by Web Audio, so there is nothing to fetch: a
 // tune (mel: notes in eighths, name:length, - a rest), a chord a bar (its first note an octave down for the bass), a music-box
-// arpeggio over it (arp: the chord's notes, a step each), a soft pad, the gramophone's warm filter and a little crackle.
+// arpeggio over it (arp: the chord's notes, a step each), a soft pad and the gramophone's warm filter — clean, no crackle (the user's call).
 // RECORDS: the house's own (own); one sold later is had once bought (owns)
 const MUSIC = (() => {
   const RECORDS = [
@@ -6485,7 +6506,7 @@ const MUSIC = (() => {
     }
     return { ev, len: bars * rec.bar };
   }
-  let ctx = null, out = null, bus = null, crackle = null, timer = 0, play = null, wake = null, kept = {};
+  let ctx = null, out = null, bus = null, timer = 0, play = null, wake = null, kept = {};
   function build() {
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
     ctx = new AC();
@@ -6495,11 +6516,6 @@ const MUSIC = (() => {
     const rv = ctx.createConvolver(), sr = ctx.sampleRate, ir = ctx.createBuffer(2, Math.floor(sr * 2.2), sr);   // a small room's echo
     for (let c = 0; c < 2; c++) { const d = ir.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
     rv.buffer = ir; const wet = ctx.createGain(); wet.gain.value = 0.22; bus.connect(rv); rv.connect(wet); wet.connect(warm);
-    const nb = ctx.createBuffer(1, sr * 3, sr), nd = nb.getChannelData(0);   // the needle in the groove
-    for (let i = 0; i < nd.length; i++) nd[i] = Math.random() < 0.0006 ? (Math.random() * 2 - 1) * 0.5 : (Math.random() * 2 - 1) * 0.006;
-    crackle = ctx.createBufferSource(); crackle.buffer = nb; crackle.loop = true;
-    const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1400; const cg = ctx.createGain(); cg.gain.value = 0.35;
-    crackle.connect(hp); hp.connect(cg); cg.connect(out); crackle.start();
     return true;
   }
   function koto(f) {   // a plucked string (Karplus–Strong), made once a pitch
@@ -6813,7 +6829,7 @@ function yHeroWalk(yard, to, done) {
   cancelAnimationFrame(yh.raf);
   const el = yard.querySelector('.yhero'), lim = ycam.YW / 2 - 20;
   yh.climb = null; yh.s = 0; yard.classList.remove('climbing'); if (el) { el.classList.remove('climb'); yClimbLook(el, 0); }   // off the hill path, if he was on it
-  HERO.still(el);
+  HERO.still(el); if (el) el.classList.remove('bench');   // up off the bus stop's bench
   const from = [yh.X, yh.Y], goal = [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(214, to[1]))], dx = goal[0] - from[0], dy = goal[1] - from[1], len = Math.hypot(dx, dy);
   if (!el || len < 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { yh.X = goal[0]; yh.Y = goal[1]; if (el) yHeroPlace(yard); yHeroSave(); if (done) done(); return; }
   const v = Math.max(170, len / 1.1);   // px a second: a long way hurries, about a second at most
@@ -6856,6 +6872,38 @@ function yClimb(el) {
     yh.raf = requestAnimationFrame(step);
   });
   yh.climb = yh.climb || 'lawn';   // on the way over the lawn: a second tap goes straight in
+}
+// the bus stop (test, 2026-11-09): the yard's own, on the right of the lawn — a shelter with a bench, a timetable and the stop's
+// round sign on a pole, on a paved kerb. Tapped: the hero walks over and sits on the bench, legs swinging (later the bus takes
+// him to other places). Drawn like a yard ware (in the hero's units, its feet at BUS, smaller up the lawn); its sign is apart, unscaled
+const BUS = { X: 300, Y: 112, seat: 40 };   // seat: the bench's height
+const BUS_BOX = [-170, -268, 340, 278];
+const BUS_ART = () => `<ellipse cy="2" rx="150" ry="9" fill="#2b1c12" fill-opacity=".14"/>
+  <path d="M-160 8 L156 8 L146 -10 L-150 -10 Z" ${hc('#c9c4b8', '#3a3c5e')}/><path d="M-160 8 H156 V14 H-160 Z" ${hc('#a9a497', '#2c2e4c')}/>
+  <rect x="-118" y="-196" width="8" height="190" rx="2" ${hc('#5f7f6a', '#272c4a')}/><rect x="110" y="-196" width="8" height="190" rx="2" ${hc('#5f7f6a', '#272c4a')}/>
+  <rect x="-108" y="-178" width="216" height="128" rx="4" ${hc('#cfe6ec', '#2c3560')} fill-opacity=".72"/><path d="M-96 -166 L-60 -70 M-70 -170 L-40 -96" ${hs('#ffffff', '#5a66a8')} stroke-width="5" stroke-opacity=".5"/>
+  <rect x="-108" y="-56" width="216" height="6" ${hc('#5f7f6a', '#272c4a')}/>
+  <path d="M-136 -192 Q0 -226 136 -192 L136 -184 Q0 -214 -136 -184 Z" ${hc('#d9604c', '#5a2c40')}/><path d="M-136 -186 Q0 -216 136 -186 L134 -176 Q0 -204 -134 -176 Z" ${hc('#b8483a', '#45223a')}/>
+  <rect x="-84" y="-44" width="168" height="9" rx="3" ${hc('#c58a54', '#4a3a4c')}/><rect x="-84" y="-40" width="168" height="4" ${hc('#a8703e', '#3a2c40')}/>
+  <rect x="-74" y="-36" width="7" height="36" ${hc('#7a5a3a', '#2c2440')}/><rect x="67" y="-36" width="7" height="36" ${hc('#7a5a3a', '#2c2440')}/>
+  <rect x="-102" y="-150" width="42" height="56" rx="3" ${hc('#fbf7ec', '#8c90b8')}/><path d="M-96 -140 H-66 M-96 -130 H-72 M-96 -121 H-68 M-96 -112 H-74 M-96 -103 H-70" ${hs('#9a9184', '#4a4e78')} stroke-width="2.4"/>
+  <rect x="146" y="-232" width="6" height="232" rx="2" ${hc('#8d9097', '#3a3c58')}/>
+  <circle cx="149" cy="-236" r="26" ${hc('#ffffff', '#9da2c8')}/><circle cx="149" cy="-236" r="26" fill="none" ${hs('#2f7a5a', '#2a4a5a')} stroke-width="5"/>
+  <rect x="136" y="-250" width="26" height="20" rx="5" ${hc('#2f7a5a', '#2a4a5a')}/><rect x="140" y="-246" width="18" height="7" rx="1.5" ${hc('#ffffff', '#9da2c8')}/><circle cx="142" cy="-229" r="3" ${hc('#2f7a5a', '#2a4a5a')}/><circle cx="156" cy="-229" r="3" ${hc('#2f7a5a', '#2a4a5a')}/>
+  <rect x="128" y="-204" width="42" height="18" rx="3" ${hc('#2f7a5a', '#2a4a5a')}/><text x="149" y="-190.5" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" fill-opacity=".92" font-family="system-ui, sans-serif">バス停</text>`;
+function busStopHtml() {
+  const [x0, y0, w, h] = BUS_BOX, k = yScale(BUS.Y);
+  return `<div class="busstop" aria-hidden="true" style="width:${w}px;height:${h}px;margin-left:${x0}px;bottom:${-(y0 + h)}px;transform-origin:${-x0}px ${-y0}px;transform:translate(${BUS.X}px,${-BUS.Y}px) scale(${k.toFixed(3)});z-index:${300 - BUS.Y}"><svg viewBox="${BUS_BOX.join(' ')}">${BUS_ART()}</svg></div>
+    <button type="button" class="thing bus-btn" data-act="bus-stop" aria-label="公車站" style="margin-left:${Math.round(BUS.X - 130 * k)}px;bottom:${BUS.Y}px;width:${Math.round(290 * k)}px;height:${Math.round(240 * k)}px"><span class="tag">${ySign('bus', '公車站')}</span></button>`;
+}
+function busSit(el) {
+  yNamed(el);
+  const yard = el.closest('.yard'), k = yScale(BUS.Y), h = yard && yard.querySelector('.yhero'); if (!h) return;
+  if (h.classList.contains('bench')) { toast('公車路線還在規劃中，之後可以搭公車去別的地方。'); return; }
+  yHeroWalk(yard, [BUS.X + 20 * k, BUS.Y - 2], () => {
+    yh.back = false; yh.turn = false; yh.flip = false; h.classList.add('bench'); yHeroPlace(yard);
+    toast('坐在公車亭等公車。路線還在規劃中，之後可以搭公車去別的地方。');
+  });
 }
 // the yard's signs (1.2.0), like 書房's: a round sign each, its words in it for a moment when tapped; they rest out of sight 4 s
 // after the last touch (renderOutside), the mailbox's not while letters wait
@@ -6991,7 +7039,8 @@ function yardHtml(pct) {
       <svg class="land" viewBox="0 0 1200 370" preserveAspectRatio="xMidYMax slice">
         <path class="far" d="M0 118 C110 96 210 98 320 114 S520 90 640 104 S860 124 990 98 S1140 94 1200 106 V370 H0 Z"/>
         <path class="near" d="${ground} V370 H0 Z"/><path class="ridge" d="${ground}"/>
-        <path class="lane" d="M590 150 C588 210 562 290 540 370 H606 C612 292 612 210 610 150 Z"/>
+        <path class="road" d="M-20 ${370 - ROAD.Y1} H1220 V${370 - ROAD.Y0} H-20 Z"/><path class="curb" d="M-20 ${370 - ROAD.Y1} H1220 M-20 ${370 - ROAD.Y0} H1220"/><path class="road-line" d="M-20 ${370 - (ROAD.Y0 + ROAD.Y1) / 2} H1220"/>
+        <path class="lane" d="${laneD()}"/>
         <rect class="trunk" x="465" y="104" width="8" height="46"/><g class="crown"><circle cx="469" cy="96" r="22"/><circle cx="452" cy="110" r="15"/><circle cx="487" cy="108" r="16"/></g>
         <rect class="trunk" x="166" y="113" width="7" height="41"/><g class="crown"><circle cx="169.5" cy="105" r="19"/><circle cx="155" cy="117" r="13"/><circle cx="184" cy="116" r="14"/></g>
         <rect class="trunk" x="1036" y="110" width="8" height="42"/><g class="crown"><circle cx="1040" cy="101" r="21"/><circle cx="1024" cy="114" r="14"/><circle cx="1057" cy="113" r="15"/></g>
@@ -7006,6 +7055,7 @@ function yardHtml(pct) {
         <button type="button" class="thing enter" data-act="enter-house" aria-label="進屋"><span class="tag">${ySign('door', '進屋')}</span></button>
       </div>
       ${yHeroHtml()}
+      ${busStopHtml()}
       <div class="ywares" data-sig="${yardSig()}">${yardWaresHtml()}</div>
       <div class="mailbox${mail ? ' has' : ''}">
         <svg viewBox="0 0 52 66" aria-hidden="true">
