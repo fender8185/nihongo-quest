@@ -281,6 +281,11 @@ def test_the_town_notebook_lists_people_met_and_replays_without_koto(b):
       return JSON.stringify({ kenta: book.includes('森 健太'), title: book.includes('試吃'), talk, gone, back: !!document.querySelector('.diary .town-book'), koto: kotoBalance() - k0 }); })()"""))
     assert r == {'kenta': True, 'title': True, 'talk': True, 'gone': True, 'back': True, 'koto': 0}, r
 
+def test_an_event_at_a_bus_stop_waits_for_the_stop_to_open(b):
+    r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['s1', 'm1', 'kobayashi', 'station'], ['t1', 'm1', 'kenta', 'town']]); begin('m1');
+      const before = ids(); state.town.stops.station = 1; return JSON.stringify({ before, after: ids() }); })()"""))
+    assert r == {'before': ['t1'], 'after': ['s1', 't1']}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -13,7 +13,7 @@
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
 <script src="./data.js?v=21"></script>
-<script src="./events.js?v=2"></script>
+<script src="./events.js?v=3"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -7207,8 +7207,9 @@ const TOWNEV = (() => {
   function due() {
     const done = state.town.done, R = reachedIdx(), days = studyDaysSince(lastDone());
     const can = (id) => { const c = T().CAST[id]; return Boolean(c) && (c.art !== 'npc' || met(id)); };   // 小春, ムギ: once they have knocked
+    const reach = (place) => !BUS_STOPS.some((x) => x[0] === place) || Boolean(state.town.stops[place]);   // out by bus: once its stop is open
     return T().EVENTS.filter((e) => { const i = unitIdx(e.u);
-      return !done[e.id] && i >= 0 && i <= R && (i < R || started(e.u)) && (!e.after || done[e.after]) && days >= need(e) && can(e.who); });
+      return !done[e.id] && i >= 0 && i <= R && (i < R || started(e.u)) && (!e.after || done[e.after]) && days >= need(e) && can(e.who) && reach(e.at); });
   }
   const inside = (h, [from, to]) => (from <= to ? h >= from && h < to : h >= from || h < to);
   const isOpen = (shop, h = sceneHour()) => !T().HOURS[shop] || inside(h, T().HOURS[shop]);
