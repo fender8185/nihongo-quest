@@ -1231,6 +1231,18 @@ def test_the_town_is_along_the_yard_to_the_right(b):
     assert r['town'] == {'place': 'town', 'shops': ['salon', 'bakery', 'shokudo', 'cafe', 'flowers', 'izakaya', 'goods'], 'koharu': False, 'edit': 'none'}, r   # 小春 only once she has come by
     assert '準備中' in r['shut'] and r['back'] == '#/outside', r
 
+def test_an_owned_wares_label_in_the_shop_does_not_cover_the_screen(b):
+    # 1.4.1 bug (the user): after buying, the shop came back dimmed and nothing could be tapped — the card's 已擁有 label wore
+    # the class of the 獲得 close-up (.got: fixed over the whole screen)
+    js = "(async () => { " + FRESH + """ state.koto.gift = 200; saveState(); buyWare(WARE.get('cactus'));
+      location.hash = '#/shop'; document.getElementById('view').innerHTML = ''; route(); await new Promise(q => setTimeout(q, 400));
+      const tabs = [...document.querySelectorAll('[data-act="shop-tab"]')]; const indoor = tabs.find(t => /室內/.test(t.textContent)); if (indoor) { indoor.click(); await new Promise(q => setTimeout(q, 300)); }
+      const label = [...document.querySelectorAll('.shop-item .price')].find(p => p.textContent.includes('已擁有'));
+      const top = document.elementFromPoint(innerWidth / 2, innerHeight / 2), cs = label && getComputedStyle(label);
+      return JSON.stringify({ label: !!label, position: cs && cs.position, cover: !!(top && top.closest('.price')) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'label': True, 'position': 'static', 'cover': False}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
