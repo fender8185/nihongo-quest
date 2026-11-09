@@ -72,12 +72,48 @@ def test_a_cached_clip_is_found_by_its_address_whatever_it_varies_on(b):
     out = b.run([("nav", URL), ("wait", READY), ("wait", "!!navigator.serviceWorker.controller"), ("eval", js)])
     r = __import__('json').loads(out[-1])
     assert r == {'status': 200, 'body': [6]}, r
+def test_a_new_version_puts_itself_on_untouched_at_once_else_at_a_calm_page_change(b):
+    """1.4.1 (the user: 直接換上): sw.js skips waiting; a page that had a controller reloads itself — at once when nothing was
+    touched yet, else on the next page change with nothing under way (never under a dialog)."""
+    import shutil, tempfile
+    site = tempfile.mkdtemp(prefix="nq-update-")
+    shutil.copytree(ROOT, site, dirs_exist_ok=True, ignore=shutil.ignore_patterns(".git", ".venv", "tests", "curriculum", "docs", "scripts", "supabase", "music", "*.md"))
+    port = PORT + 7
+    srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"], cwd=site, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        time.sleep(0.8)
+        url = f"http://127.0.0.1:{port}/"
+        bump = lambda v: open(os.path.join(site, "sw.js"), "w").write(open(os.path.join(ROOT, "sw.js")).read().replace("const CACHE = 'nq-v", f"const CACHE = 'nq-v{v}-"))
+        out = b.run([("nav", url), ("wait", READY), ("wait", "!!navigator.serviceWorker.controller"),
+            ("nav", url), ("wait", READY),   # opened again: a page under the installed version (the first install is no update)
+            ("eval", "window.__old = 1; new Promise(r => setTimeout(r, 300)).then(() => 1)")])
+        bump("8")   # a new version, nothing touched: it reloads by itself
+        out = b.run([("eval", "navigator.serviceWorker.getRegistration().then(r => r.update()).then(() => 1)"),
+            ("wait", "!window.__old && typeof state === 'object' && !!state.updatedAt"),
+            ("wait", "!!document.querySelector('#toast') && document.querySelector('#toast').textContent.includes('已更新到新版本')"),
+            ("eval", "caches.keys().then(ks => JSON.stringify({ nav: performance.getEntriesByType('navigation')[0].type, caches: ks.filter(k => k.startsWith('nq-v')) }))")], timeout=60)
+        r = __import__("json").loads(out[-1])
+        assert r["nav"] == "reload" and len(r["caches"]) == 1 and r["caches"][0].startswith("nq-v8-"), r
+        # touched, then a dialog open: it waits; the dialog closed and another page: on
+        bump("9")
+        out = b.run([("eval", """(async () => { const wait = (ms) => new Promise(q => setTimeout(q, ms)); state.storyV = 9; STORY.drop(); document.dispatchEvent(new PointerEvent('pointerdown')); window.__mid = 1;   /* the opening seen (it would hold the update too) */
+            openModal('x', '<p>y</p>'); await (await navigator.serviceWorker.getRegistration()).update(); for (let i = 0; i < 60 && !swUpdated; i++) await wait(100);
+            const waited = swUpdated && window.__mid === 1; updateIfCalm(); await wait(300); const stillHere = window.__mid === 1; closeModal(); location.hash = '#/stats'; return JSON.stringify({ waited, stillHere }); })()"""),
+            ("wait", "!window.__mid && typeof state === 'object' && !!state.updatedAt"),
+            ("eval", "caches.keys().then(ks => JSON.stringify({ hash: location.hash, caches: ks.filter(k => k.startsWith('nq-v')) }))")], timeout=60)
+        a, c = __import__("json").loads(out[0]), __import__("json").loads(out[-1])
+        assert a == {"waited": True, "stillHere": True}, a   # under a dialog: not yet
+        assert c["hash"] == "#/stats" and c["caches"][0].startswith("nq-v9-"), c   # the next calm page: on
+    finally:
+        srv.terminate(); shutil.rmtree(site, ignore_errors=True)
+
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
     tests = [test_first_visit_does_not_reload_itself, test_app_renders_while_auth_session_restore_hangs, test_app_renders_and_sync_is_off_when_client_creation_throws, test_data_lives_in_its_own_versioned_file_and_is_precached, test_the_page_is_precached_as_the_folder_only,
-             test_a_clip_cached_under_the_supabase_address_answers_for_its_r2_address, test_a_cached_clip_is_found_by_its_address_whatever_it_varies_on]
+             test_a_clip_cached_under_the_supabase_address_answers_for_its_r2_address, test_a_cached_clip_is_found_by_its_address_whatever_it_varies_on,
+             test_a_new_version_puts_itself_on_untouched_at_once_else_at_a_calm_page_change]
     failed = 0
     try:
         for t in tests:

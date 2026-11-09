@@ -1844,12 +1844,15 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.4.0';   // keep equal to the version in sw.js CACHE ('nq-v1.4.0'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.4.1';   // keep equal to the version in sw.js CACHE ('nq-v1.4.1'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個版本一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（通常最後一位加一；1.1.0 是書房改版），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.4.1', date: '2026-11-09', items: [
+    '之後有新版本會自動換上，不用再點「有新版本」的提示：剛打開 app 時直接更新；正在用的話，等換頁或回到 app 時再換，練習、考試、聽一輪到一半都不會被打斷。'
+  ] },
   { v: '1.4.0', date: '2026-11-09', items: [
     '你為什麼會住進這間小屋？第一次打開書房會有一段開場。書房的矮書架上有一本外婆的日記，學得越多，讀得懂的頁數就越多。',
     '兩位鄰居會來敲門：聽到「叩叩」時點大門去開門看看，他們會帶禮物來（全身鏡、留聲機和兩張黑膠）。之後可以到海邊或小鎮找他們聊天，日文附假名，也能唸出來。',
@@ -5984,7 +5987,8 @@ function route() {
     const top = document.getElementById('topTitle').textContent.trim();
     view.querySelectorAll('.page-head .page-title').forEach(el => el.classList.toggle('dup-title', el.textContent.trim() === top));
     MUSIC.sync();   // the notes over the gramophone in a room drawn anew
-    if (r.name === 'today') { if (STORY.due()) STORY.open(); else NPC.check(); }   // the opening the first time; someone at the front door
+    if (r.name === 'today') { if (STORY.due()) STORY.open(); else NPC.check(); }
+    if (swUpdated) setTimeout(() => updateIfCalm(), 0);   // a new version waiting for a calm moment   // the opening the first time; someone at the front door
   } catch (e) {
     console.error(e);
     view.innerHTML = `<div class="card"><div class="card-title">這個頁面出錯了</div><p class="muted small">${esc(e.message)}</p><button class="btn" data-act="nav" data-route="#/today">回到書房</button></div>`;
@@ -15621,33 +15625,33 @@ async function init() {
   Sync.init().catch((e) => { console.warn('sync init failed', e); Sync.client = null; Sync.setStatus('off'); });
 }
 
-let userWantsUpdate = false;
-let updateWorker = null;
+// a new version (1.4.1; the user: 直接換上): its service worker takes over as soon as it is installed (sw.js skipWaiting), and
+// the page goes over to it by itself — at once when the app has only just opened and nothing has been touched, else at the
+// next calm moment: a page change or the app back from the background, while nothing is under way (a practice set, an exam,
+// 聽一輪 playing, the dressing room, 擺設, a dialog, a talk, the opening, the diary). The reloaded page says so once
+let swUpdated = false, touchedYet = false, reloadPage = () => location.reload();
+function calmForUpdate() {
+  const r = currentRoute();
+  if (r.name === 'practice' || (r.name === 'exam' && r.parts[1] === 'run') || LISTEN || modalOpen()) return false;
+  return !document.querySelector('.dress.on, .talk, .story, .diary, .scope, .study.edit, .yard.edit');
+}
+function updateIfCalm(now) {
+  if (!swUpdated || !(now || calmForUpdate())) return;
+  swUpdated = false;
+  try { sessionStorage.setItem('nq_updated', '1'); } catch (e) { /* the note is lost, the update is not */ }
+  reloadPage();
+}
 function registerServiceWorker() {
+  try { if (sessionStorage.getItem('nq_updated')) { sessionStorage.removeItem('nq_updated'); setTimeout(() => toast(`已更新到新版本 ${APP_VERSION}`), 600); } } catch (e) { /* none */ }
   if (!('serviceWorker' in navigator)) return;
+  ['pointerdown', 'keydown'].forEach((t) => document.addEventListener(t, () => { touchedYet = true; }, { capture: true, once: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) updateIfCalm(); });
+  // the first install also changes the controller (clients.claim): only a page that already had one is being updated
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (!hadController) return; swUpdated = true; updateIfCalm(!touchedYet); });
   navigator.serviceWorker.register('./sw.js').then((reg) => {
-    const promptUpdate = (worker) => {
-      updateWorker = worker;
-      toast('有新版本可用，點這裡重新整理', 8000);
-      setTimeout(() => { if (updateWorker === worker) updateWorker = null; }, 8000);   // a later, unrelated toast must not trigger the update
-    };
-    document.getElementById('toast').addEventListener('click', () => {
-      if (!updateWorker) return;
-      userWantsUpdate = true;
-      updateWorker.postMessage({ type: 'SKIP_WAITING' });
-    });
-    if (reg.waiting && navigator.serviceWorker.controller) promptUpdate(reg.waiting);
-    reg.addEventListener('updatefound', () => {
-      const w = reg.installing;
-      if (!w) return;
-      w.addEventListener('statechange', () => {
-        if (w.state === 'installed' && navigator.serviceWorker.controller) promptUpdate(w);
-      });
-    });
+    if (reg.waiting && navigator.serviceWorker.controller) reg.waiting.postMessage({ type: 'SKIP_WAITING' });   // one an older page left waiting
   }).catch(() => { /* offline or unsupported: app works without it */ });
-  let reloading = false;
-  // first install also fires controllerchange (clients.claim); only reload when the user accepted an update
-  navigator.serviceWorker.addEventListener('controllerchange', () => { if (userWantsUpdate && !reloading) { reloading = true; location.reload(); } });
 }
 init();
 
