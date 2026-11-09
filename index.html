@@ -430,6 +430,14 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .talk-ja { margin: 6px 0 2px; font-size: 18px; line-height: 1.9; } .talk-ja rt { font-size: 10px; color: var(--fg-3); } .talk-zh { margin: 0; font-size: 13.5px; color: var(--fg-2); }
 .talk-say { display: inline-flex; vertical-align: middle; padding: 3px; border: 0; background: none; color: var(--accent); cursor: pointer; } .talk-say svg { width: 18px; height: 18px; }
 .talk-gift { display: flex; align-items: center; gap: 10px; margin-top: 10px; } .talk-gift .thumb { width: 54px; height: 54px; border-radius: 10px; background: var(--bg-sunken); } .talk-gift b { flex: 1; }
+.talk-gloss { margin: 0 0 4px; font-size: 12px; color: var(--accent); } .talk-zh.hide { display: none; }
+.talk-zh-btn { padding: 2px 10px; border: 1px solid var(--line-2); border-radius: 99px; font: inherit; font-size: 12px; color: var(--fg-3); background: none; cursor: pointer; }
+.talk-card.asking .talk-name span { font-weight: 600; color: var(--fg-2); }
+.talk-opts { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; } .talk-opt { display: flex; align-items: center; gap: 4px; }
+.talk-pick { flex: 1; text-align: left; padding: 9px 14px; border: 1.5px solid var(--line-2); border-radius: 12px; font: inherit; font-size: 17px; line-height: 1.8; color: var(--fg); background: var(--bg-elev-2); cursor: pointer; } .talk-pick rt { font-size: 10px; color: var(--fg-3); }
+.talk-pick:hover { border-color: var(--accent); } .talk-opt.wrong .talk-pick { opacity: .45; border-style: dashed; cursor: default; } .talk-opt.shake { animation: talkShake .35s; }
+@keyframes talkShake { 25% { transform: translateX(-6px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
+.talk-why { margin: 8px 0 0; font-size: 13px; color: var(--bad, #c0503a); }
 .talk-next { position: absolute; right: 14px; bottom: 8px; font-size: 11px; color: var(--fg-3); animation: talkNext 1s ease-in-out infinite alternate; } @keyframes talkNext { to { transform: translateY(3px); } }
 .sky .way-btn { position: absolute; left: 50%; width: 64px; height: 44px; margin-left: -32px; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; } .sky .way-btn .tag { top: -8px; }
 .sky .land .lane { fill: color-mix(in srgb, rgba(232, 214, 168, .95) calc(var(--day) * 100%), rgba(150, 160, 230, .07)); }
@@ -7239,11 +7247,16 @@ const TOWNEV = (() => {
     const lines = own.concat(NPCS[id] ? NPCS[id].chat : []);
     return lines[Math.floor(Math.random() * lines.length)] || ['……', '……'];
   }
-  // a tap on someone: the hero walks over, turns to them, a word
+  // a tap on someone: the hero walks over, turns to them, and their event if one waits on them here (done: its 言靈, the mark
+  // and the dots gone), else a word
   function talk(el) {
     const id = el.dataset.npc, yard = el.closest('.yard'), p = yard && here(yard.dataset.place).find((x) => x.id === id); if (!p) return;
-    const a = p.spot, side = yh.X <= a.X ? -1 : 1;
-    yHeroWalk(yard, [a.X + side * 76 * yScale(a.Y), a.Y + 2], () => { yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard); TALK.open(yard, id, [chatLine(id)]); });
+    const a = p.spot, side = yh.X <= a.X ? -1 : 1, w = p.host && waiting(now(), today()), e = w && w.ev;
+    const ended = () => { finish(e.id); yard.querySelectorAll('.ev-mark, .ev-dot').forEach((x) => x.remove()); yard.querySelectorAll('.ev-host').forEach((x) => x.classList.remove('ev-host')); kotoButtons(yard); toast(`完成「${e.title}」・言靈 +10`, 3200); };
+    yHeroWalk(yard, [a.X + side * 76 * yScale(a.Y), a.Y + 2], () => {
+      yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard);
+      if (e) TALK.open(yard, id, e.lines, ended, null, { ev: true }); else TALK.open(yard, id, [chatLine(id)]);
+    });
   }
   function shopTap(el) {   // a shop front: its keeper if they are here, else what the door says
     const shop = el.dataset.shop, st = shopState(shop), o = ownerOf(shop), sign = (TOWN_SHOPS.find((x) => x[6] === shop) || [])[5] || '';
@@ -7355,33 +7368,62 @@ const DIARY = (() => {
   return { PAGES, open: openBook, close, readable: open, passed };
 })();
 // a few lines with someone (test, 2026-11-09): their face, their name, a line in Japanese (furigana; 🔊 reads it) and in Chinese;
-// a tap goes on. A present waits for 收下 (its thumbnail) — take(): it is theirs then — and done() once the last line is read
+// a tap goes on. A present waits for 收下 (its thumbnail) — take(): it is theirs then — and done() once the last line is read.
+// The town's events (opt.ev, events.js) are several people's lines, the hero's among them ([who, ja, zh]); their Chinese folded
+// away under 中文 (open, it stays open for the rest of the talk); a word glossed ({漢字|かな|中文}) has its Chinese under the line;
+// at a reply choice ({ ask, opts: [[ja, right, zh | why wrong]] }) the hero picks what to say: a wrong one shakes and says why,
+// and can be tried again; the right one is said, and the talk goes on
 const TALK = (() => {
   let cur = null;
-  const ruby = (s) => esc(s).replace(/\{([^|}]+)\|([^}]+)\}/g, '<ruby>$1<rt>$2</rt></ruby>'), plain = (s) => s.replace(/\{([^|}]+)\|[^}]+\}/g, '$1');
+  const MARK = /\{([^|}]+)\|([^|}]+)(?:\|([^}]+))?\}/g;
+  const ruby = (s) => esc(s).replace(MARK, '<ruby>$1<rt>$2</rt></ruby>'), plain = (s) => s.replace(MARK, '$1');
+  const glosses = (s) => [...s.matchAll(MARK)].filter((m) => m[3]).map((m) => `${m[1]}（${m[2]}）${m[3]}`);
+  const who = (id) => (id === 'hero' ? { name: '我', role: '' } : NPCS[id] || TOWN.CAST[id]);
+  // a line as shown: { id, ja, zh, kind } or a reply choice { ask, opts }
+  const line = (l) => (!cur.ev ? { id: cur.id, ja: l[0], zh: l[1], kind: l[2] } : Array.isArray(l) ? { id: l[0], ja: l[1], zh: l[2] } : l);
+  const say = (ja) => `<button type="button" class="talk-say" data-talk="say" data-ja="${esc(plain(ja))}" aria-label="唸出來">${icon('speaker')}</button>`;
   function show() {
-    const [ja, zh, kind] = cur.lines[cur.i], n = NPCS[cur.id] || TOWN.CAST[cur.id], w = n.gift;
-    cur.el.innerHTML = `<div class="talk-card"><div class="talk-face">${TOWNEV.face(cur.id)}</div><div class="talk-body">
+    const L = cur.said || line(cur.lines[cur.i]);
+    if (L.ask) {
+      cur.el.innerHTML = `<div class="talk-card asking"><div class="talk-face">${TOWNEV.face('hero')}</div><div class="talk-body">
+        <div class="talk-name">我<span>${esc(L.ask)}</span></div>
+        <div class="talk-opts">${L.opts.map((o, k) => `<div class="talk-opt${cur.wrong.includes(k) ? ' wrong' : ''}" data-pick="${k}"><button type="button" class="talk-pick" lang="ja">${ruby(o[0])}</button>${say(o[0])}</div>`).join('')}</div>
+        ${cur.why ? `<p class="talk-why">${esc(cur.why)}</p>` : ''}</div></div>`;
+      return;
+    }
+    const n = who(L.id), w = n.gift, gl = cur.ev ? glosses(L.ja) : [];
+    cur.el.innerHTML = `<div class="talk-card"><div class="talk-face">${TOWNEV.face(L.id)}</div><div class="talk-body">
       <div class="talk-name">${esc(n.name)}<span>${esc(n.role)}</span></div>
-      <p class="talk-ja" lang="ja">${ruby(ja)} <button type="button" class="talk-say" data-talk="say" aria-label="唸出來">${icon('speaker')}</button></p><p class="talk-zh">${esc(zh)}</p>
-      ${kind === 'gift' ? `<div class="talk-gift">${DECOR.thumb(w)}<b>${esc(WARE.get(w).name)}</b><button type="button" class="btn btn-primary btn-sm" data-talk="take">收下</button></div>` : '<span class="talk-next" aria-hidden="true">▼</span>'}</div></div>`;
-    fitThumbs(cur.el);
+      <p class="talk-ja" lang="ja">${ruby(L.ja)} ${say(L.ja)}</p>${gl.length ? `<p class="talk-gloss">${gl.map(esc).join('　')}</p>` : ''}
+      ${cur.ev ? `<p class="talk-zh${cur.zh ? '' : ' hide'}">${esc(L.zh)}</p>${cur.zh ? '' : '<button type="button" class="talk-zh-btn" data-talk="zh">中文</button>'}` : `<p class="talk-zh">${esc(L.zh)}</p>`}
+      ${L.kind === 'gift' ? `<div class="talk-gift">${DECOR.thumb(w)}<b>${esc(WARE.get(w).name)}</b><button type="button" class="btn btn-primary btn-sm" data-talk="take">收下</button></div>` : '<span class="talk-next" aria-hidden="true">▼</span>'}</div></div>`;
+    if (L.kind === 'gift') fitThumbs(cur.el);
+  }
+  function pick(k) {
+    const L = line(cur.lines[cur.i]), o = L.opts[k]; if (!o || cur.wrong.includes(k)) return;
+    if (!o[1]) { cur.wrong.push(k); cur.why = o[2] || ''; show(); const el = cur.el.querySelectorAll('.talk-opt')[k]; if (el) el.classList.add('shake'); playSfx('bad'); return; }
+    playSfx('good'); cur.said = { id: 'hero', ja: o[0], zh: o[2] || '' }; show();
   }
   function next() {
     if (!cur) return;
-    if (cur.lines[cur.i][2] === 'gift' && cur.take) { cur.take(); cur.take = null; }
+    if (!cur.said && line(cur.lines[cur.i]).ask) return;   // the hero has to pick
+    if (cur.said) cur.said = null;
+    if (!cur.ev && cur.lines[cur.i][2] === 'gift' && cur.take) { cur.take(); cur.take = null; }
+    cur.wrong = []; cur.why = '';
     if (++cur.i < cur.lines.length) { show(); return; }
     const d = cur.done; close(); if (d) d();
   }
-  function open(root, id, lines, done, take) {
+  function open(root, id, lines, done, take, opt = {}) {
     close();
-    const el = document.createElement('div'); el.className = 'talk'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', (NPCS[id] || TOWN.CAST[id]).name);
-    cur = { el, id, lines, done, take, i: 0 };
+    const el = document.createElement('div'); el.className = 'talk'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', who(id).name);
+    cur = { el, id, lines, done, take, i: 0, ev: Boolean(opt.ev), zh: false, wrong: [], why: '', said: null };
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     el.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (e.target.closest('[data-talk="say"]')) { speak(plain(cur.lines[cur.i][0])); return; }
-      if (cur.lines[cur.i][2] === 'gift' && !e.target.closest('[data-talk="take"]')) return;   // the present waits for 收下
+      const sayBtn = e.target.closest('[data-talk="say"]'); if (sayBtn) { speak(sayBtn.dataset.ja); return; }
+      if (e.target.closest('[data-talk="zh"]')) { cur.zh = true; show(); return; }
+      const p = e.target.closest('[data-pick]'); if (p) { pick(Number(p.dataset.pick)); return; }
+      if (!cur.ev && cur.lines[cur.i][2] === 'gift' && !e.target.closest('[data-talk="take"]')) return;   // the present waits for 收下
       next();
     });
     root.appendChild(el); show();

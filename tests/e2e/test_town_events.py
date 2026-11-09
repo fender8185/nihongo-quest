@@ -138,6 +138,40 @@ def test_entering_the_study_says_where_someone_waits_once_a_day(b):
       return JSON.stringify(said); })()"""))
     assert len(r) == 1 and '小鎮' in r[0], r
 
+# ---- the talk: several people, reply choices, glosses, the Chinese folded away, done ----
+TALK_EV = """fake([['a1', 'm1', 'kenta', 'town', { title: '試吃', lines: [['kenta', '{経済|けいざい|經濟}だ！', '是經濟！'],
+      { ask: '回答健太', opts: [['はい。', 1, '是。'], ['いいえ。', 0, '不對喔']], pt: 'm1' }, ['miku', 'よし！', '好！']] }]]); begin('m1');
+  await go('town', 9); const k0 = kotoBalance(); y().querySelector('.npc-kenta').click();
+  let t = null; for (let i = 0; i < 120 && !t; i++) { await wait(50); t = document.querySelector('.talk'); }
+  const card = () => ({ name: t.querySelector('.talk-name') && t.querySelector('.talk-name').firstChild.textContent, ja: t.querySelector('.talk-ja') && t.querySelector('.talk-ja').textContent.trim(),
+    opts: [...t.querySelectorAll('.talk-opt')].map(o => o.className.includes('wrong') ? 'x' : '-').join(''), why: (t.querySelector('.talk-why') || {}).textContent || '' });"""
+
+def test_a_line_shows_its_gloss_and_folds_the_chinese(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + TALK_EV + """
+      const first = { gloss: t.querySelector('.talk-gloss').textContent, hidden: t.querySelector('.talk-zh').classList.contains('hide'), ja: card().ja };
+      t.querySelector('[data-talk="zh"]').click(); const shown = !t.querySelector('.talk-zh').classList.contains('hide');
+      return JSON.stringify({ first, shown, still: card().name }); })()"""))
+    assert '經濟' in r['first']['gloss'] and r['first']['hidden'] and r['first']['ja'].startswith('経済'), r
+    assert r['shown'] and r['still'] == '森 健太', r   # 中文 opens the Chinese, the line stays
+
+def test_a_wrong_reply_shakes_and_stays(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + TALK_EV + """
+      t.click(); await wait(30); const ask = card(); t.click(); await wait(30); const tapped = card();
+      t.querySelectorAll('.talk-opt')[1].click(); await wait(30); const wrong = card();
+      return JSON.stringify({ ask, tapped, wrong }); })()"""))
+    assert r['ask']['opts'] == '--' and r['ask']['name'] == '我', r   # the hero's turn: two replies
+    assert r['tapped']['opts'] == '--', r   # a tap beside them does not go on
+    assert r['wrong']['opts'] == '-x' and r['wrong']['why'] == '不對喔', r
+
+def test_the_right_reply_is_said_and_the_event_finishes_with_10_koto(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + TALK_EV + """
+      t.click(); await wait(30); t.querySelectorAll('.talk-opt')[0].click(); await wait(30); const said = card();
+      t.click(); await wait(30); const next = card(); t.click(); await wait(400);
+      return JSON.stringify({ said, next, open: !!document.querySelector('.talk'), done: !!state.town.done.a1, gain: kotoBalance() - k0, mark: !!y().querySelector('.ev-mark'), seen: state.town.seen }); })()"""))
+    assert r['said']['name'] == '我' and r['said']['ja'] == 'はい。' and r['said']['opts'] == '', r
+    assert r['next']['name'] == '美玖' and r['next']['ja'] == 'よし！', r
+    assert not r['open'] and r['done'] and r['gain'] == 10 and not r['mark'] and r['seen'] == {'kenta': 1, 'miku': 1}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
