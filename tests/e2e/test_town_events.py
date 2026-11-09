@@ -194,6 +194,37 @@ def test_every_written_event_plays_to_its_end(b):
       return JSON.stringify({ n: TOWN.EVENTS.length, bad }); })()"""))
     assert r['n'] >= 5 and r['bad'] == [], r
 
+# ---- pass 1: まんぷく食堂 and 居酒屋とり吉, walked into ----
+def test_the_shokudo_is_walked_into_while_open_and_left_by_its_door(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.seen.tome = 1; state.town.seen.go = 1; await go('town', 12);
+      y().querySelector('.town-shop[data-shop="shokudo"]').click(); for (let i = 0; i < 100 && location.hash !== '#/shokudo'; i++) await wait(50); await wait(300);
+      const inside = { place: y().dataset.place, room: !!y().querySelector('.indoor-land'), indoor: y().classList.contains('indoor'), people: [...y().querySelectorAll('.npc')].map(e => e.dataset.npc).sort() };
+      y().querySelector('.way-btn[data-to="town"]').click(); for (let i = 0; i < 100 && location.hash !== '#/town'; i++) await wait(50);
+      return JSON.stringify({ inside, back: location.hash }); })()"""))
+    assert r['inside'] == {'place': 'shokudo', 'room': True, 'indoor': True, 'people': ['go', 'tome']} and r['back'] == '#/town', r
+
+def test_the_izakaya_lets_you_in_only_at_night(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.seen.teppei = 1; await go('town', 12);
+      y().querySelector('.town-shop[data-shop="izakaya"]').click(); await wait(200); const day = { hash: location.hash, toast: toastText() };
+      await go('town', 20); y().querySelector('.town-shop[data-shop="izakaya"]').click(); for (let i = 0; i < 100 && location.hash !== '#/izakaya'; i++) await wait(50); await wait(300);
+      return JSON.stringify({ day, night: location.hash, teppei: !!y().querySelector('.npc-teppei') }); })()"""))
+    assert r['day']['hash'] == '#/town' and '18' in r['day']['toast'], r
+    assert r['night'] == '#/izakaya' and r['teppei'], r
+
+def test_a_shop_opens_its_door_the_first_time_an_event_waits_inside(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([['s1', 'm1', 'tome', 'shokudo']]); begin('m1'); await go('town', 12);
+      const st = TOWNEV.shopState('shokudo'), dot = !!y().querySelector('.ev-dot');
+      y().querySelector('.town-shop[data-shop="shokudo"]').click(); for (let i = 0; i < 100 && location.hash !== '#/shokudo'; i++) await wait(50); await wait(300);
+      return JSON.stringify({ st, mark: [...y().querySelectorAll('.ev-mark')].map(m => m.closest('.npc').dataset.npc) }); })()"""))
+    assert r == {'st': 'open', 'mark': ['tome']}, r
+
+def test_people_indoors_are_drawn_closer_up_than_in_town(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.seen.tome = 1; state.town.seen.go = 1; state.town.seen.kenta = 1;
+      const k = (sel) => Number(/scale\(([\d.]+)\)/.exec(y().querySelector(sel).style.transform)[1]);
+      await go('town', 12); const town = k('.npc-kenta'); await go('shokudo', 12); const room = k('.npc-tome'), hero = k('.yhero');
+      return JSON.stringify({ town, room, hero }); })()"""))
+    assert r['town'] < 0.5 and r['room'] > 0.6 and r['hero'] > 0.6, r   # the counter comes to their middle, not over their heads
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

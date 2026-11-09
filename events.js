@@ -8,14 +8,17 @@ const TOWN = {
   // the places people can be (index.html draws each one)
   PLACES: ['yard', 'beach', 'town', 'street', 'shokudo', 'izakaya', 'station', 'sento', 'shrine', 'castle'],
   // names of people, shops and places: no gloss needed
-  NAMES: ['美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二'],
+  NAMES: ['美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山'],
   // the shops' hours (the phone's real time; to < from runs past midnight)
   HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18] },
   // where people stand, by place: X along the land (0 the middle), Y up from the front
   SPOTS: {
     town: { salon: { X: -328, Y: 130 }, bakery: { X: -230, Y: 112 }, bakeryIn: { X: -188, Y: 130 }, shokudo: { X: -80, Y: 112 }, cafe: { X: 60, Y: 112 },
       flowers: { X: 200, Y: 112 }, izakaya: { X: 360, Y: 112 }, goods: { X: 500, Y: 112 }, street: { X: 280, Y: 70 } },
-    beach: { mat: { X: -170, Y: 58 }, shore: { X: 220, Y: 96 } }
+    beach: { mat: { X: -170, Y: 58 }, shore: { X: 220, Y: 96 } },
+    // indoors the floor runs from the front (0) to the back wall (134): people stand before the counter, at the tables
+    shokudo: { counter: { X: -130, Y: 118 }, kitchen: { X: 560, Y: 124 }, table1: { X: -380, Y: 74 }, table2: { X: 380, Y: 74 }, stool: { X: 160, Y: 112 } },
+    izakaya: { counter: { X: 110, Y: 120 }, seat1: { X: -180, Y: 104 }, seat2: { X: -80, Y: 104 }, seat3: { X: 220, Y: 104 }, seat4: { X: 320, Y: 104 } }
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they
   // have come by; size: smaller than the hero
@@ -38,7 +41,16 @@ const TOWN = {
       hours: [[16, 22, 'town', 'flowers', 'wd'], [9, 22, 'town', 'flowers', 'we']] },
     lin: { name: '林 美玲', kana: 'リン メイリン', role: '雑貨屋', shop: 'goods', look: { face: 'oval', skin: '#e8bd98', cheeks: 'soft', fringe: 'sidepart', sides: 'tucked', hairBack: 'short', hairTop: 'sidelow', hairColor: '#2a2524', eyes: 'droopy', eyeColor: '#2a2730', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#3f9a8c', bottomStyle: 'wide', bottom: '#e9e2d0', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { face: 'glasses' },
       bio: ['雜貨店「雑貨りんりん」的老闆，43 歲，台灣人。十五年前嫁來這裡，長大以後才開始學日文。', '溫柔有耐心，最懂學日文的辛苦，偶爾會冒出一句中文。先生健二是漁夫。'],
-      hours: [[9, 21, 'town', 'goods']] }
+      hours: [[9, 21, 'town', 'goods']] },
+    tome: { name: '大山 トメ', kana: 'おおやま とめ', role: '食堂のおかみ', shop: 'shokudo', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'grin', beard: 'none', topStyle: 'sweater', top: '#d0574b', bottomStyle: 'skirt', bottom: '#6e4f3a', shoeStyle: 'loafer', shoe: '#6e4f3a' },
+      bio: ['「まんぷく食堂」的老闆娘，72 歲。大嗓門，像媽媽一樣一直叫你多吃，會唸人。', '你外婆的老朋友兼牌友。說話是老太太的常體（〜だよ、〜しな）。'],
+      hours: [[10, 21, 'shokudo', 'counter']] },
+    go: { name: '大山 剛', kana: 'おおやま ごう', role: '食堂の料理人', look: { face: 'oval', skin: '#e8bd98', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'sharp', eyeColor: '#2a2730', brows: 'thick', mouth: 'flat', beard: 'stubble', topStyle: 'jinbei', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'boots', shoe: '#2b2b33' },
+      bio: ['トメ的兒子，45 歲，食堂的廚師。沉默寡言，手藝很好，常跟媽媽鬥嘴。', '想改菜單、加新菜，可是媽媽不肯。'],
+      hours: [[10, 21, 'shokudo', 'kitchen']] },
+    teppei: { name: '吉田 鉄平', kana: 'よしだ てっぺい', role: '居酒屋の大将', shop: 'izakaya', look: { face: 'chubby', skin: '#d39f78', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#a3a3a8', eyes: 'sharp', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'full', topStyle: 'jinbei', top: '#3f4660', bottomStyle: 'wide', bottom: '#3f4660', shoeStyle: 'boots', shoe: '#2b2b33' },
+      bio: ['「居酒屋とり吉」的老闆，58 歲。粗獷、愛面子，其實很照顧年輕人。以前是漁夫，跟林的先生健二一起出過海。', '說話是江湖味的常體（らっしゃい！〜だろ）。你外婆常坐在吧台，只喝一杯。'],
+      hours: [[17, 1, 'izakaya', 'counter']] }
   },
   // [unit, ja, zh]: said when there is nothing on, from that unit
   CHAT: {
@@ -81,6 +93,37 @@ const TOWN = {
       { ask: '麵包在你手上。回答ムギ：這是麵包。', opts: [['これは パンです。', 1, '這是麵包。'], ['それは パンです。', 0, '麵包在你手上、離你近：要用「これ」。'], ['あれは パンです。', 0, '「あれ」是離兩個人都遠的東西。']], pt: 'm0' },
       ['mugi', 'パン！ ちょっと……ほしいワン。', '麵包！有一點……想要。'],
       { ask: '把麵包分給ムギ的時候說什麼？', opts: [['どうぞ。', 1, '請用。'], ['ください。', 0, '「ください」是「請給我」，跟別人要東西時說的。'], ['ただいま。', 0, '「ただいま」是回到家時說的「我回來了」。']], pt: 'm0' },
-      ['mugi', 'いただきますワン！', '我開動了！'], ['mugi', '……おいしい！ ごちそうさまでした、ワン！', '……好好吃！謝謝招待！']] }
+      ['mugi', 'いただきますワン！', '我開動了！'], ['mugi', '……おいしい！ ごちそうさまでした、ワン！', '……好好吃！謝謝招待！']] },
+    // ---- m1 助詞：は・が・を・に・で・へ・と ----
+    { id: 'm1-1', u: 'm1', who: 'tome', at: 'shokudo', title: 'まんぷく食堂', lines: [['tome', 'いらっしゃい！ すきな{席|せき|座位}に すわりな。', '歡迎！隨便找位子坐。'], ['tome', 'おや、{見|み|看}ない{顔|かお|臉}だね。', '喲，生面孔呢。'],
+      ['tome', 'なにを {食|た}べる？', '要吃什麼？'],
+      { ask: '看牆上的菜單，點咖哩：「請給我咖哩。」', opts: [['カレーを ください。', 1, '請給我咖哩。'], ['カレーが ください。', 0, '「ください」要的東西是受詞，用「を」。'], ['カレーに ください。', 0, '「に」不是用來標要的東西，要用「を」。']], pt: 'm1' },
+      ['tome', 'カレーね！ ゴウ、カレー ひとつ！', '咖哩是吧！阿剛，咖哩一份！'], ['go', '……はい。', '……好。'], ['tome', 'ここで {食|た}べる？ {持|も|拿}って{帰|かえ|回去}る？', '在這裡吃？還是帶走？'],
+      { ask: '回答：在這裡吃。', opts: [['ここで {食|た}べます。', 1, '在這裡吃。'], ['ここに {食|た}べます。', 0, '做動作的地方用「で」；「に」是存在、到達的地方。'], ['ここを {食|た}べます。', 0, '用「を」會變成「把這裡吃掉」。']], pt: 'm1' },
+      ['tome', 'はいよ！ ……あんた、やせすぎだよ。たくさん {食|た}べな！', '好嘞！……你也太瘦了，多吃點！'], ['go', '……カレー、どうぞ。', '……咖哩，請用。'], ['hero', 'いただきます！', '我開動了！'],
+      ['tome', 'うちの カレーは {町|まち}で いちばんだよ。おばあちゃんも {毎週|まいしゅう}{来|き|來}たんだ。', '我們家的咖哩是鎮上第一喔。你外婆以前每個禮拜都來。']] },
+    { id: 'm1-2', u: 'm1', who: 'lin', at: 'town', after: 'm1-1', title: 'コップはどこ？', lines: [['lin', 'いらっしゃいませ。', '歡迎光臨。'], ['hero', 'すみません。', '不好意思。'],
+      { ask: '問林小姐：杯子在哪裡？', opts: [['コップは どこに ありますか。', 1, '杯子在哪裡？'], ['コップは どこで ありますか。', 0, '東西「在」某處用「に」：〜に あります。'], ['コップを どこに ありますか。', 0, '「あります」的主角用「は／が」，不用「を」。']], pt: 'm1' },
+      ['lin', 'コップは あの{棚|たな|架子}の {上|うえ}に ありますよ。', '杯子在那個架子上面喔。'], ['lin', 'この {赤|あか}い コップは どうですか。おばあちゃんも この コップが すきでした。', '這個紅色的杯子怎麼樣？你外婆也很喜歡這個杯子。'],
+      { ask: '杯子已經在你手上了。說：請給我這個。', opts: [['これを ください。', 1, '請給我這個。'], ['これが ください。', 0, '要的東西是受詞，用「を」。'], ['あれを ください。', 0, '「あれ」是遠處的東西，杯子就在你手上。']], pt: 'm1' },
+      ['lin', 'ありがとうございます。{三百円|さんびゃくえん|三百日圓}です。', '謝謝。三百日圓。'], ['lin', '', '（用中文）「を」和「が」一開始我也常搞錯，慢慢來！']] },
+    { id: 'm1-3', u: 'm1', who: 'miku', at: 'town', after: 'm1-2', title: 'パパはどこ？', lines: [['miku', 'ねえ、パパ、どこ？', '欸，爸爸在哪裡？'],
+      { ask: '剛剛看到健太在店裡。告訴美玖：爸爸在麵包店。', opts: [['パパは パン{屋|や|店}に います。', 1, '爸爸在麵包店。'], ['パパは パン{屋|や|店}で います。', 0, '人或動物「在」某處用「に います」。'], ['パパは パン{屋|や|店}に あります。', 0, '人和動物用「います」，東西才用「あります」。']], pt: 'm1' },
+      ['miku', 'ほんと？ ……いない！', '真的？……不在！'], ['kenta', 'おーい、{美玖|みく}！ ここだよ！', '喂——美玖！我在這裡啦！'], ['kenta', 'ごめん、ごめん。{外|そと}で {電話|でんわ}を してた。', '抱歉抱歉，剛剛在外面講電話。'],
+      ['miku', 'ねえ、あした どこへ いく？', '欸，你明天要去哪裡？'],
+      { ask: '告訴美玖：要去海邊。', opts: [['{海|うみ}へ {行|い}きます。', 1, '要去海邊。'], ['{海|うみ}を {行|い}きます。', 0, '要去的方向、目的地用「へ」或「に」。'], ['{海|うみ}で {行|い}きます。', 0, '「で」是做動作的地方，去的方向用「へ」。']], pt: 'm1' },
+      ['miku', 'いいなあ！ ムギも {海|うみ}に いるよ！', '真好！ムギ也在海邊喔！']] },
+    { id: 'm1-4', u: 'm1', who: 'teppei', at: 'izakaya', when: 'night', title: '居酒屋とり吉', lines: [['teppei', 'らっしゃい！ ……おっ、{見|み|看}ない{顔|かお|臉}だな。', '歡迎光臨！……喔，生面孔啊。'],
+      ['teppei', 'おれは {鉄平|てっぺい}。ここの {大将|たいしょう|老闆}だ。{飲|の}みものは？', '我是鐵平，這裡的老闆。喝什麼？'],
+      { ask: '看黑板，點烏龍茶。', opts: [['ウーロン{茶|ちゃ}を ください。', 1, '請給我烏龍茶。'], ['ウーロン{茶|ちゃ}で ください。', 0, '要的東西用「を」。'], ['ウーロン{茶|ちゃ}が {飲|の}みます。', 0, '「飲みます」喝的東西是受詞，用「を」。']], pt: 'm1' },
+      ['teppei', 'ウーロン{茶|ちゃ}か。まあ、いい。{焼|や}き{鳥|とり|雞}は どうだ？ うまいぞ。', '烏龍茶啊。好吧。烤雞串呢？很好吃喔。'],
+      { ask: '點烤雞串和毛豆。', opts: [['{焼|や}き{鳥|とり|雞}と えだまめを ください。', 1, '請給我烤雞串和毛豆。'], ['{焼|や}き{鳥|とり|雞}に えだまめを ください。', 0, '把兩樣東西並列用「と」。'], ['{焼|や}き{鳥|とり|雞}を えだまめを ください。', 0, '兩樣東西要用「と」連起來，最後才加「を」。']], pt: 'm1' },
+      ['teppei', 'あいよ！ ……あんた、ばあさんの {孫|まご|孫子}だろ？', '好嘞！……你是那位老太太的孫子吧？'],
+      ['teppei', 'ばあさんは よく、この {席|せき|座位}で {一杯|いっぱい|一杯（酒）}だけ {飲|の}んだ。いい {人|ひと}だった。', '老太太常坐這個位子，只喝一杯。是個好人。']] },
+    { id: 'm1-5', u: 'm1', who: 'koharu', at: 'town', after: 'm1-3', title: '日曜日のピクニック', lines: [['koharu', 'あ、こんにちは！ {日曜日|にちようび}に、ムギと {海|うみ}で ピクニックを します。', '啊，你好！星期天我要跟ムギ在海邊野餐。'], ['koharu', 'いっしょに どうですか。', '要不要一起來？'],
+      { ask: '問她：幾點去？', opts: [['{何時|なんじ}に {行|い}きますか。', 1, '幾點去？'], ['{何時|なんじ}で {行|い}きますか。', 0, '時間點用「に」。'], ['{何時|なんじ}を {行|い}きますか。', 0, '時間點用「に」。']], pt: 'm1' },
+      ['koharu', '{十一時|じゅういちじ|十一點}に、{家|いえ}の {前|まえ}で {会|あ}いましょう！', '十一點在你家前面見吧！'], ['koharu', 'それで……おべんとうは だれが {作|つく}る？', '然後……便當誰來做？'],
+      { ask: '自告奮勇：我來做！', opts: [['わたしが {作|つく}ります！', 1, '我來做！'], ['わたしを {作|つく}ります！', 0, '用「を」會變成「把我做出來」。做的人用「が」。'], ['わたしに {作|つく}ります！', 0, '問「だれが」的時候，回答也用「が」。']], pt: 'm1' },
+      ['koharu', 'えっ、ほんと？ わたし、{料理|りょうり}は ぜんぜん だめで……たすかる！', '欸，真的嗎？我完全不會做菜……得救了！']] }
   ]
 };
