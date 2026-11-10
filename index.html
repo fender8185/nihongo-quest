@@ -885,6 +885,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .land [data-fx].shake { transform-box: fill-box; transform-origin: 50% 100%; animation: fxShake .16s ease-in-out 10 alternate; } @keyframes fxShake { from { transform: rotate(-1.6deg); } to { transform: rotate(1.6deg); } }
 .sky .land [data-fx].pinch { animation-play-state: paused; } .sky .land .pinch .claws { transform-box: fill-box; transform-origin: 50% 100%; animation: fxPinch .2s ease-in-out infinite alternate; } @keyframes fxPinch { to { transform: translateY(-4px) scaleY(1.2); } }
 .sky .land [data-fx].spout { animation: none; transform-box: fill-box; transform-origin: 0 100%; transform: scale(1.9); }
+.sky .land [data-fx] { transition: opacity .5s; } .sky .land [data-fx].gone { opacity: 0; } .sky .land [data-fx].jingle .fx-sway { animation-duration: .2s !important; }
+.sky .land [data-fx].flop path { transform-box: fill-box; transform-origin: 50% 100%; animation: fxFlop .16s ease-in-out 10 alternate; } @keyframes fxFlop { to { transform: translateY(-4px) rotate(-14deg); } }
 .sky .land [data-fx].cheer .fx-flag { animation-duration: .22s; } .sky .land [data-fx].beckon .paw { transform-box: fill-box; transform-origin: 30% 100%; animation: fxBeckon .28s ease-in-out 8 alternate; } @keyframes fxBeckon { to { transform: rotate(-26deg); } }
 :is(.study, .yard) .hero.bow .bob { animation: heroBow 1.4s ease-in-out; } @keyframes heroBow { 35%, 65% { transform: translateY(5px) scaleY(.93); } }
 @media (prefers-reduced-motion: reduce) { .sky :is(.ypop, .yleaf), .sky .use-btn::after { animation-duration: .01s; } .sky .land [data-fx][class] { animation: none !important; } .yard .yhero > svg { animation: none !important; } }
@@ -7224,10 +7226,12 @@ function yRoute(place, p, goal, free) {
 // depth there dep (his scale; drawn just behind the layer in front, or at z); 'ride': sat on it and swung or rocked with it (fx: the
 // land part moving with him, both turning round the same point, piv Y up); 'slide': up the ladder and down the chute; 'do': turned
 // to it (back: it stands behind him), a pose for a moment, words popping up over it (say, then), its part (fx) doing fxc for ms,
-// a fortune, a toast, a burst of petals or leaves
+// a fortune, a toast (or what it says now), a burst of petals or leaves; out: he goes in and comes back ms later (then: words as he
+// does); when: there only then (an open shop, the festival); go may follow the tap ((tap) => [X, Y]: the words over him)
 const KUJI = [['大吉', '一切都會很順利！'], ['中吉', '努力會有好結果。'], ['小吉', '小小的好事在等你。'], ['吉', '平平穩穩就是福。'], ['末吉', '慢慢來，會越來越好。']];
 const PLACE_USE = {
-  yard: [{ id: 'tree', name: '樹', box: [440, 70, 500, 150], kind: 'do', go: [-110, 208], back: 1, pose: 'reach', fx: 'ytree', fxc: 'shake', burst: ['#6f9a5a', '#8ab86e', '#5a8a4a'] }],
+  yard: [{ id: 'tree', name: '樹', box: [440, 70, 500, 150], kind: 'do', go: [-110, 208], back: 1, pose: 'reach', fx: 'ytree', fxc: 'shake', burst: ['#6f9a5a', '#8ab86e', '#5a8a4a'] },
+    { id: 'fence', name: '柵欄', box: [694, 124, 778, 152], kind: 'do', go: [136, 210], back: 1, pose: 'look', say: 'いい眺め〜' }],
   park: [
     { id: 'swing0', name: '鞦韆', box: [500, 136, 540, 236], kind: 'ride', ride: 'swing', fx: 'swing0', seats: [-80], top: 166, dep: 134, piv: 230, go: [-80, 124] },
     { id: 'swing1', name: '鞦韆', box: [560, 136, 600, 236], kind: 'ride', ride: 'swing', fx: 'swing1', seats: [-20], top: 166, dep: 134, piv: 230, go: [-20, 124] },
@@ -7237,43 +7241,71 @@ const PLACE_USE = {
     { id: 'benchR', name: '長椅', box: [980, 268, 1070, 320], kind: 'sit', seats: [405, 445], top: 74, dep: 50 },
     { id: 'fountain', name: '飲水台', box: [842, 246, 880, 298], kind: 'do', go: [261, 62], back: 1, pose: 'reach', say: 'ゴクゴク', fx: 'fountain', fxc: 'spout' },
     { id: 'pigeons', name: '鴿子', box: [540, 322, 624, 346], kind: 'do', go: [-80, 40], pose: 'wave', fx: 'pigeons', fxc: 'flown', ms: 6000 },
-    { id: 'jizo', name: '地藏', box: [108, 176, 160, 236], kind: 'do', go: [-466, 122], back: 1, pose: 'bow', say: 'ペコリ' }],
+    { id: 'jizo', name: '地藏', box: [108, 176, 160, 236], kind: 'do', go: [-466, 122], back: 1, pose: 'bow', say: 'ペコリ' },
+    { id: 'clock', name: '時鐘', box: [784, 92, 824, 210], kind: 'do', go: [204, 124], back: 1, pose: 'look', toast: () => { const h = sceneHour(); return `公園的時鐘：${Math.floor(h)} 點 ${String(Math.floor((h % 1) * 60)).padStart(2, '0')} 分`; } },
+    { id: 'tulips', name: '鬱金香', box: [638, 210, 782, 236], kind: 'do', go: [70, 124], back: 1, pose: 'look', say: 'いい香り' }],
   street: [
     { id: 'vend', name: '自動販賣機', box: [388, 158, 438, 236], kind: 'do', go: [-187, 126], back: 1, pose: 'reach', say: 'ガコン！', fx: 'vend', fxc: 'buy' },
-    { id: 'post', name: '郵筒', box: [745, 174, 775, 236], kind: 'do', go: [160, 126], back: 1, pose: 'reach', say: 'ポトン', fx: 'post', fxc: 'buy' }],
+    { id: 'post', name: '郵筒', box: [745, 174, 775, 236], kind: 'do', go: [160, 126], back: 1, pose: 'reach', say: 'ポトン', fx: 'post', fxc: 'buy' },
+    { id: 'mirror', name: 'カーブミラー', box: [484, 136, 516, 236], kind: 'do', go: [-100, 126], back: 1, pose: 'look', say: 'あ、映ってる！' }],
   beach: [
     { id: 'crab', name: '螃蟹', box: [540, 262, 650, 298], kind: 'do', go: [-20, 72], pose: 'crouch', say: 'チョキチョキ', fx: 'crab', fxc: 'pinch', ms: 2600 },
     { id: 'castle', name: '沙堡', box: [350, 262, 420, 320], kind: 'do', go: [-214, 46], pose: 'crouch', say: '✨', fx: 'castle', fxc: 'cheer' },
-    { id: 'ice', name: '海之家', box: [776, 196, 876, 258], kind: 'do', go: [225, 98], back: 1, pose: 'reach', say: 'かき氷！' }],
-  town: [{ id: 'cat', name: '貓', box: [400, 128, 470, 180], kind: 'do', go: [-168, 122], back: 1, pose: 'wave', say: 'ニャー', fx: 'awncat', fxc: 'wake', ms: 2600 }],
+    { id: 'ice', name: '海之家', box: [776, 196, 876, 258], kind: 'do', go: [225, 98], back: 1, pose: 'reach', say: 'かき氷！' },
+    { id: 'star', name: '海星', box: [686, 304, 714, 332], kind: 'do', go: [100, 42], pose: 'crouch', say: 'ヒトデ！', fx: 'star', fxc: 'gone', ms: 9000 },
+    { id: 'shell', name: '貝殼', box: [456, 316, 484, 338], kind: 'do', go: [-130, 34], pose: 'crouch', say: 'きれいな貝！', fx: 'shell', fxc: 'gone', ms: 9000 },
+    { id: 'sea', name: '海', box: [0, 222, 1060, 248], kind: 'do', go: (tap) => [Math.max(-560, Math.min(440, tap.x)), 116], back: 1, pose: 'crouch', say: 'パシャパシャ' }],
+  town: [{ id: 'cat', name: '貓', box: [400, 128, 470, 180], kind: 'do', go: [-168, 122], back: 1, pose: 'wave', say: 'ニャー', fx: 'awncat', fxc: 'wake', ms: 2600 },
+    { id: 'bread', name: '麵包', box: [328, 188, 384, 212], kind: 'do', go: [-246, 122], back: 1, pose: 'look', say: 'おいしそう…', when: () => TOWNEV.shopState('bakery') === 'open' },
+    { id: 'board', name: '咖啡黑板', box: [648, 204, 682, 236], kind: 'do', go: [65, 122], back: 1, pose: 'look', toast: '喫茶しずく：本日の珈琲 400円・ケーキセット 700円', when: () => TOWNEV.shopState('cafe') === 'open' },
+    { id: 'flowers', name: '花桶', box: [752, 206, 808, 236], kind: 'do', go: [176, 122], back: 1, pose: 'look', say: 'いい香り', when: () => TOWNEV.shopState('flowers') === 'open' },
+    { id: 'chimes', name: '風鈴', box: [1064, 176, 1130, 212], kind: 'do', go: [496, 122], back: 1, pose: 'reach', say: 'チリンチリン', fx: 'chimes', fxc: 'jingle', ms: 2200, when: () => TOWNEV.shopState('goods') === 'open' }],
   harbor: [
     { id: 'cat', name: '貓', box: [460, 252, 496, 290], kind: 'do', go: [-98, 60], pose: 'crouch', say: '♡ ニャー', fx: 'hcat', fxc: 'purr', ms: 2600 },
-    { id: 'gull', name: '海鷗', box: [540, 222, 582, 246], kind: 'do', go: [-40, 112], pose: 'wave', fx: 'gull', fxc: 'flown', ms: 6000 }],
+    { id: 'gull', name: '海鷗', box: [540, 222, 582, 246], kind: 'do', go: [-40, 112], pose: 'wave', fx: 'gull', fxc: 'flown', ms: 6000 },
+    { id: 'bollardL', name: '繫船柱', box: [286, 226, 314, 252], kind: 'sit', seats: [-300], top: 134, dep: 120 },
+    { id: 'bollardR', name: '繫船柱', box: [806, 226, 834, 252], kind: 'sit', seats: [220], top: 134, dep: 120 },
+    { id: 'fish', name: '魚箱', box: [378, 240, 458, 268], kind: 'do', go: [-180, 70], pose: 'look', say: 'ピチピチ！', fx: 'fish', fxc: 'flop', ms: 1800 }],
   station: [
     { id: 'vend', name: '自動販賣機', box: [242, 164, 304, 236], kind: 'do', go: [-327, 122], back: 1, pose: 'reach', say: 'ガコン！', fx: 'svend', fxc: 'buy' },
     { id: 'benchL', name: '長椅', box: [220, 252, 310, 304], kind: 'sit', seats: [-355, -310], top: 90, dep: 66 },
     { id: 'benchR', name: '長椅', box: [760, 252, 850, 304], kind: 'sit', seats: [185, 225], top: 90, dep: 66 },
     { id: 'pigeons', name: '鴿子', box: [576, 292, 676, 316], kind: 'do', go: [30, 42], pose: 'wave', fx: 'spigeons', fxc: 'flown', ms: 6000 },
-    { id: 'taxi', name: '計程車', box: [110, 188, 232, 258], kind: 'do', go: [-400, 94], pose: 'wave', say: 'プップー', fx: 'taxi', fxc: 'honk' }],
+    { id: 'taxi', name: '計程車', box: [110, 188, 232, 258], kind: 'do', go: [-400, 94], pose: 'wave', say: 'プップー', fx: 'taxi', fxc: 'honk' },
+    { id: 'gate', name: '剪票口', box: [480, 150, 640, 236], kind: 'do', go: [-20, 126], back: 1, pose: 'reach', say: 'ピッ' },
+    { id: 'board', name: '電子看板', box: [448, 104, 672, 138], kind: 'do', go: [60, 126], back: 1, pose: 'look', toast: () => { const h = Math.floor(sceneHour()); return `下一班電車：${h}:30 快速 みなと港・${h}:45 普通 白鷺`; } },
+    { id: 'koban', name: '交番', box: [880, 140, 1006, 236], kind: 'do', go: [384, 126], back: 1, pose: 'wave', say: 'こんにちは！' }],
   sento: [
     { id: 'milk', name: '牛奶販賣機', box: [158, 142, 224, 236], kind: 'do', go: [-409, 122], back: 1, pose: 'reach', say: 'ぷはー！', fx: 'milk', fxc: 'buy' },
-    { id: 'cat', name: '貓', box: [304, 254, 358, 288], kind: 'do', go: [-270, 50], pose: 'crouch', say: '♡', fx: 'scat', fxc: 'purr', ms: 2600 }],
+    { id: 'cat', name: '貓', box: [304, 254, 358, 288], kind: 'do', go: [-270, 50], pose: 'crouch', say: '♡', fx: 'scat', fxc: 'purr', ms: 2600 },
+    { id: 'bath', name: '泡澡', box: [474, 130, 688, 236], kind: 'do', go: [20, 126], back: 1, out: 2600, then: '♨ いい湯だった〜' },
+    { id: 'laundry', name: '投幣洗衣店', box: [992, 168, 1088, 232], kind: 'do', go: [440, 126], back: 1, pose: 'look', say: 'ぐるぐる…' }],
   shrine: [
     { id: 'bell', name: '鈴', box: [870, 140, 950, 236], kind: 'do', go: [310, 126], back: 1, pose: 'reach', say: 'カランカラン', then: 'パンパン 🙏', fx: 'bell', fxc: 'ring', ms: 2100 },
     { id: 'kuji', name: '籤', box: [1076, 160, 1156, 236], kind: 'do', go: [515, 122], back: 1, pose: 'reach', fortune: 1 },
     { id: 'crow', name: '烏鴉', box: [220, 42, 266, 80], kind: 'do', go: [-350, 112], pose: 'look', say: 'カァー', fx: 'crow', fxc: 'flown', ms: 7000 },
-    { id: 'fox', name: '狐狸', box: [338, 166, 382, 236], kind: 'do', go: [-240, 120], back: 1, pose: 'bow', say: 'ペコリ' }],
+    { id: 'fox', name: '狐狸', box: [338, 166, 382, 236], kind: 'do', go: [-240, 120], back: 1, pose: 'bow', say: 'ペコリ' },
+    { id: 'kingyo', name: '金魚撈', box: [400, 144, 500, 236], kind: 'do', go: [-130, 126], back: 1, pose: 'crouch', say: 'とれた！🐟', when: () => TOWNEV.festival() },
+    { id: 'yakisoba', name: '炒麵攤', box: [510, 144, 600, 236], kind: 'do', go: [-45, 126], back: 1, pose: 'reach', say: 'やきそば、おいしい！', when: () => TOWNEV.festival() },
+    { id: 'wataame', name: '棉花糖攤', box: [610, 144, 700, 236], kind: 'do', go: [55, 126], back: 1, pose: 'reach', say: 'ふわふわ〜', when: () => TOWNEV.festival() }],
   castle: [
     { id: 'sakuraL', name: '櫻花', box: [0, 60, 130, 236], kind: 'do', go: [-520, 112], pose: 'reach', fx: 'sakuraL', fxc: 'shake', burst: ['#f7c6d2', '#f2b8c6', '#fbdde4'] },
     { id: 'sakuraR', name: '櫻花', box: [1080, 60, 1210, 236], kind: 'do', go: [520, 112], pose: 'reach', fx: 'sakuraR', fxc: 'shake', burst: ['#f7c6d2', '#f2b8c6', '#fbdde4'] },
-    { id: 'board', name: '告示牌', box: [586, 166, 664, 236], kind: 'do', go: [25, 122], back: 1, pose: 'look', toast: '白鷺城：大約四百年前建的白色天守，遠看像白鷺展開翅膀，所以叫白鷺城。' }],
+    { id: 'board', name: '告示牌', box: [586, 166, 664, 236], kind: 'do', go: [25, 122], back: 1, pose: 'look', toast: '白鷺城：大約四百年前建的白色天守，遠看像白鷺展開翅膀，所以叫白鷺城。' },
+    { id: 'gate', name: '城門', box: [200, 140, 320, 198], kind: 'do', go: [-300, 126], back: 1, pose: 'reach', say: 'コンコン' },
+    { id: 'moat', name: '護城河', box: [600, 200, 1060, 234], kind: 'do', go: (tap) => [Math.max(0, Math.min(440, tap.x)), 126], back: 1, pose: 'look', say: 'クワッ' }],
   shokudo: [
     { id: 'tableL', name: '桌子', box: [70, 250, 390, 320], kind: 'sit', seats: [-543, -217], top: 90, dep: 52, z: 244, say: 'いただきます！' },
     { id: 'tableR', name: '桌子', box: [810, 250, 1130, 320], kind: 'sit', seats: [217, 543], top: 90, dep: 52, z: 244, say: 'いただきます！' },
-    { id: 'maneki', name: '招財貓', box: [402, 64, 440, 110], kind: 'do', go: [-180, 114], back: 1, pose: 'wave', say: '招福！', fx: 'maneki', fxc: 'beckon' }],
-  izakaya: [{ id: 'counter', name: '吧台座位', box: [384, 200, 936, 292], kind: 'sit', seats: [-180, -60, 60, 180, 300], top: 164, dep: 79, z: 220, say: 'かんぱい！' }]
+    { id: 'maneki', name: '招財貓', box: [402, 64, 440, 110], kind: 'do', go: [-180, 114], back: 1, pose: 'wave', say: '招福！', fx: 'maneki', fxc: 'beckon' },
+    { id: 'tv', name: '電視', box: [1010, -12, 1132, 82], kind: 'do', go: [470, 118], back: 1, pose: 'look', say: 'あはは！' },
+    { id: 'kitchen', name: '廚房', box: [1140, 30, 1212, 236], kind: 'do', go: [500, 116], back: 1, pose: 'wave', say: 'ごちそうさまでした！' }],
+  izakaya: [{ id: 'counter', name: '吧台座位', box: [384, 200, 936, 292], kind: 'sit', seats: [-180, -60, 60, 180, 300], top: 164, dep: 79, z: 220, say: 'かんぱい！' },
+    { id: 'grill', name: '烤爐', box: [598, -34, 802, 18], kind: 'do', go: [160, 122], back: 1, pose: 'look', say: 'いい匂い！' },
+    { id: 'taru', name: '酒樽', box: [1012, 120, 1162, 236], kind: 'do', go: [490, 116], back: 1, pose: 'reach', say: 'おもい…！' },
+    { id: 'menu', name: '黑板', box: [80, -252, 502, -58], kind: 'do', go: [-310, 120], back: 1, pose: 'look', toast: 'きょうのおすすめ：焼き鳥 1本 120円・からあげ 480円' }]
 };
-const useBtnsHtml = (place) => (PLACE_USE[place] || []).map((t) => { const [x0, y0, x1, y1] = t.box; return `<button type="button" class="use-btn" data-act="scene-use" data-use="${t.id}" aria-label="${t.name}" style="margin-left:${x0 - 600}px;bottom:${370 - y1}px;width:${x1 - x0}px;height:${y1 - y0}px;z-index:${Math.round(150 - (370 - y1) / 4)}"></button>`; }).join('');
+const useBtnsHtml = (place) => (PLACE_USE[place] || []).filter((t) => !t.when || t.when()).map((t) => { const [x0, y0, x1, y1] = t.box; return `<button type="button" class="use-btn" data-act="scene-use" data-use="${t.id}" aria-label="${t.name}" style="margin-left:${x0 - 600}px;bottom:${370 - y1}px;width:${x1 - x0}px;height:${y1 - y0}px;z-index:${Math.round(150 - (370 - y1) / 4)}"></button>`; }).join('');
 // words popping up over a thing (x, y in the land's units), a burst of petals or leaves off a tree
 function yPop(yard, x, y, text) {
   const w = yard && yard.querySelector('.yworld'); if (!w) return;
@@ -7299,7 +7331,7 @@ function sceneUse(el) {
     if (seat === undefined) { yPop(yard, (x0 + x1) / 2, y0 - 4, '坐滿了'); return; }
     yHeroWalk(yard, t.go || [seat, Math.max(14, t.dep - 16)], () => ySit(yard, t, seat));
   } else if (t.kind === 'slide') yHeroWalk(yard, t.go, () => ySlide(yard));
-  else yHeroWalk(yard, t.go, () => yDo(yard, t));
+  else yHeroWalk(yard, typeof t.go === 'function' ? t.go(yard._at || { x: (x0 + x1) / 2 - 600, y: 0 }) : t.go, () => yDo(yard, t));
 }
 function ySit(yard, t, X) {
   const h = yard.querySelector('.yhero'); if (!h) return;
@@ -7347,8 +7379,9 @@ function ySlide(yard) {
 }
 function yDo(yard, t) {
   const h = yard.querySelector('.yhero'); if (!h) return;
-  const [x0, y0, x1] = t.box, cx = (x0 + x1) / 2;
+  const [x0, y0, x1] = t.box, cx = typeof t.go === 'function' ? yh.X + 600 : (x0 + x1) / 2;
   yh.back = !!t.back; yh.flip = cx - 600 < yh.X; yh.turn = !t.back; yHeroPlace(yard);
+  if (t.out) { h.classList.add('out'); setTimeout(() => { if (!yard.isConnected) return; h.classList.remove('out'); yh.back = false; yHeroPlace(yard); if (t.then) yPop(yard, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), t.then); }, t.out); return; }   // in and out again
   if (t.pose) { h.classList.remove(t.pose); void h.offsetWidth; h.classList.add(t.pose); setTimeout(() => h.classList.remove(t.pose), 1500); }
   const part = t.fx && yard.querySelector(`.land [data-fx="${t.fx}"]`);
   if (part) { part.classList.remove(t.fxc); void part.getBoundingClientRect(); part.classList.add(t.fxc); clearTimeout(part._fxT); part._fxT = setTimeout(() => part.classList.remove(t.fxc), t.ms || 1800); }
@@ -7356,7 +7389,7 @@ function yDo(yard, t) {
   if (t.fortune) { const [a, b] = KUJI[Math.floor(Math.random() * KUJI.length)]; say = a; toast(`おみくじ：${a}・${b}`, 3600); }
   if (say) yPop(yard, cx, y0 - 4, say);
   if (t.then) setTimeout(() => yPop(yard, cx, y0 - 4, t.then), 1200);
-  if (t.toast) toast(t.toast, 4600);
+  if (t.toast) toast(typeof t.toast === 'function' ? t.toast() : t.toast, 4600);
   if (t.burst) yBurst(yard, t.box, t.burst);
 }
 // a spot off the things (where he was kept, a thing put down where he stands): the nearest free side
@@ -7953,8 +7986,8 @@ function beachHtml() {
       <path class="wet" d="M-20 236 C200 230 400 242 600 238 S1000 230 1220 238 V258 H-20 Z"/>
       <path class="foam" d="M-20 240 C120 234 240 246 380 240 S640 232 780 240 S1060 246 1220 238"/>
       <path class="sand" d="M-20 252 C300 246 700 256 1220 248 V370 H-20 Z"/>
-      ${[[180, 300, '#f0c2b0'], [470, 330, '#f6e3c8'], [860, 296, '#f0c2b0'], [1010, 336, '#f6e3c8']].map(([x, y, c]) => `<path class="shell" d="M${x - 6} ${y} Q${x} ${y - 9} ${x + 6} ${y} Z" style="--c:${c}"/>`).join('')}
-      <path class="star" d="M700 318 l2.4 5 5.4 .6 -4 3.6 1.2 5.4 -5 -2.8 -5 2.8 1.2 -5.4 -4 -3.6 5.4 -.6 Z"/>
+      ${[[180, 300, '#f0c2b0'], [470, 330, '#f6e3c8'], [860, 296, '#f0c2b0'], [1010, 336, '#f6e3c8']].map(([x, y, c]) => `<path class="shell"${x === 470 ? ' data-fx="shell"' : ''} d="M${x - 6} ${y} Q${x} ${y - 9} ${x + 6} ${y} Z" style="--c:${c}"/>`).join('')}
+      <path class="star" data-fx="star" d="M700 318 l2.4 5 5.4 .6 -4 3.6 1.2 5.4 -5 -2.8 -5 2.8 1.2 -5.4 -4 -3.6 5.4 -.6 Z"/>
       <g class="fx-crab" data-fx="crab"><g class="fx-legs"><path d="M554 286 l-8 4 M556 289 l-8 6 M574 286 l8 4 M572 289 l8 6" ${hs('#c8453a', '#4a2030')} stroke-width="2"/></g><ellipse cx="564" cy="284" rx="11" ry="7" ${hc('#e0584a', '#5a2a36')}/><g class="claws"><path d="M553 280 q-8 -6 -4 -12 q4 2 6 6 M575 280 q8 -6 4 -12 q-4 2 -6 6" ${hc('#e0584a', '#5a2a36')}/></g><path d="M560 278 v-5 M568 278 v-5" ${hs('#c8453a', '#4a2030')} stroke-width="1.6"/><circle cx="560" cy="272" r="1.8" fill="#2b2b33"/><circle cx="568" cy="272" r="1.8" fill="#2b2b33"/></g>
       <g data-fx="castle"><path d="M352 318 h64 l-4 -12 h-56 Z" ${hc('#dcc48e', '#4a4466')}/><rect x="360" y="290" width="18" height="18" ${hc('#e6d2a0', '#4a4466')}/><rect x="390" y="284" width="20" height="24" ${hc('#e6d2a0', '#4a4466')}/>${[360, 366, 372, 390, 397, 404].map((x) => `<rect x="${x}" y="${x < 380 ? 286 : 280}" width="4" height="5" ${hc('#e6d2a0', '#4a4466')}/>`).join('')}<rect x="397" y="296" width="6" height="12" rx="3" ${hc('#c9b07c', '#3a3858')}/><path d="M400 280 V264" ${hs('#6e4f3a', '#2c2440')} stroke-width="1.4"/><path d="M400 264 l12 4 l-12 4 Z" class="fx-flag" fill="#d0453c"/></g>
       <rect x="760" y="196" width="130" height="62" ${hc('#c9a06a', '#2a2440')}/><path d="M744 200 L825 168 L906 200 Z" ${hc('#b9a070', '#1e1c38')}/>${[770, 790, 810, 830, 850, 870].map((x) => `<path d="M${x} 186 l-6 14" ${hs('#9a8058', '#1a1832')} stroke-width="1.4"/>`).join('')}<rect x="776" y="214" width="98" height="30" ${hc('#efe6d6', '#ffd98a')}/><path d="M748 202 Q786 210 825 202 Q864 210 902 202" fill="none" ${hs('#6a6a74', '#2a2c50')} stroke-width="1"/>${Array.from({ length: 9 }, (_, k) => { const x = 752 + k * 18.5, yy = 202 + 6 * Math.sin(Math.PI * ((x - 748) % 77) / 77); return `<circle cx="${x}" cy="${yy + 3}" r="2.6" ${hc('#e8e4d8', '#ffe08a')}/><circle class="glow" cx="${x}" cy="${yy + 3}" r="9" fill="url(#glw)"/>`; }).join('')}${lightPool(825, 262, 80)}<text x="825" y="234" text-anchor="middle" font-size="13" font-weight="700" ${hc('#2f5a9a', '#3a3456')} font-family="system-ui, sans-serif">海の家</text>
@@ -7984,7 +8017,7 @@ const SHOP_SHOW = {
   shokudo: (x, w, t, f) => `<path d="M${x + 12} ${f - 28} h${w * 0.42 - 4}" ${hs('#7a5230', '#3a2c40')} stroke-width="2"/>${[0, 1, 2].map((k) => `<ellipse cx="${x + 22 + k * 17}" cy="${f - 31}" rx="7.5" ry="2.6" ${hc('#fbf8f0', '#5a5a7a')}/><ellipse cx="${x + 22 + k * 17}" cy="${f - 34}" rx="5" ry="3.4" ${hc(['#e6a23c', '#c84a3a', '#d9b04a'][k], '#4a3a3a')}/>`).join('')}`,
   flowers: (x, w, t, f) => [0, 1, 2].map((k) => { const bx = x + 14 + k * 18; return `${[[-4, '#e86f5e'], [0, '#f2c94c'], [4, '#e58fa8'], [-2, '#ffffff'], [3, '#c9a7ff']].map(([d, c], j) => `<path d="M${bx + d} ${f - 12} v${-8 - (j % 3) * 3}" stroke="#4f7a4a" stroke-width="1.2"/><circle cx="${bx + d}" cy="${f - 21 - (j % 3) * 3}" r="2.6" fill="${c}"/>`).join('')}<path d="M${bx - 7} ${f - 12} h14 l-2 12 h-10 Z" ${hc('#9aa4ae', '#2a2c50')}/>`; }).join(''),
   cafe: (x, w, t, f) => `<path d="M${x + 40} ${f} l5 -30 h16 l5 30" fill="none" ${hs('#6e4f3a', '#2c2440')} stroke-width="2"/><rect x="${x + 43}" y="${f - 30}" width="20" height="22" rx="1" ${hc('#2f3b33', '#1c2a24')}/><path d="M${x + 46} ${f - 24} h12 M${x + 46} ${f - 19} h9 M${x + 46} ${f - 14} h13" stroke="#f3e7cc" stroke-width="1.2" stroke-linecap="round"/><circle cx="${x + 59}" cy="${f - 25}" r="1.6" fill="#e86f5e"/>`,
-  goods: (x, w, t, f) => [0, 1, 2].map((k) => `<g class="fx-sway" style="animation-delay:-${k * 0.6}s;animation-duration:${1.6 + k * 0.3}s"><path d="M${x + 24 + k * 22} ${t + 58} v6" stroke="#6a6a74" stroke-width="1"/><path d="M${x + 19 + k * 22} ${t + 70} q5 -9 10 0 Z" fill="${['#9fd0f0', '#b8e0c8', '#f6c6d6'][k]}" fill-opacity=".9"/><path d="M${x + 24 + k * 22} ${t + 70} v10" stroke="#6a6a74" stroke-width=".8"/><rect x="${x + 21 + k * 22}" y="${t + 80}" width="6" height="10" fill="#fbf7ec"/></g>`).join(''),
+  goods: (x, w, t, f) => '<g data-fx="chimes">' + [0, 1, 2].map((k) => `<g class="fx-sway" style="animation-delay:-${k * 0.6}s;animation-duration:${1.6 + k * 0.3}s"><path d="M${x + 24 + k * 22} ${t + 58} v6" stroke="#6a6a74" stroke-width="1"/><path d="M${x + 19 + k * 22} ${t + 70} q5 -9 10 0 Z" fill="${['#9fd0f0', '#b8e0c8', '#f6c6d6'][k]}" fill-opacity=".9"/><path d="M${x + 24 + k * 22} ${t + 70} v10" stroke="#6a6a74" stroke-width=".8"/><rect x="${x + 21 + k * 22}" y="${t + 80}" width="6" height="10" fill="#fbf7ec"/></g>`).join('') + '</g>',
   salon: (x, w, t, f) => `<path d="M${x + w - 64} ${f - 14} h16 l-2 14 h-12 Z" ${hc('#c58a54', '#3a2c40')}/>${[[-6, -24], [0, -30], [6, -24], [-3, -18], [4, -19]].map(([dx, dy]) => `<ellipse cx="${x + w - 56 + dx}" cy="${f + dy}" rx="5" ry="3.2" transform="rotate(${dx * 6} ${x + w - 56 + dx} ${f + dy})" ${hc('#5f9a4a', '#16243a')}/>`).join('')}`
 };
 function townHtml() {
@@ -8082,7 +8115,7 @@ function harborHtml() {
       ${gull(300, -120, 0)}${gull(620, -60, 1)}${gull(860, -180, 2)}
       <g data-fx="gull"><g transform="translate(560 ${F + 4})"><ellipse rx="8" ry="6" ${hc('#f6f6f2', '#7a7ea8')}/><circle cx="7" cy="-6" r="4" ${hc('#f6f6f2', '#7a7ea8')}/><path d="M11 -6 l4 1" ${hs('#e6a23c', '#5a4a3a')} stroke-width="2"/><path d="M-8 -2 l-6 -2" ${hs('#8a8f99', '#4a4c72')} stroke-width="3"/></g></g>
     </svg>
-    ${landProp(82, crate(400, F + 10, '#3f7ac8') + [404, 414, 426].map((fx, k) => `<path d="M${fx} ${F + 10} q6 -6 12 0 q-6 4 -12 0 Z M${fx + 12} ${F + 10} l4 -3 v6 Z" ${hc(['#b9c8d4', '#a8b8c8', '#c8d4dc'][k], '#4a4c72')}/>`).join('') + crate(380, F + 30, '#3f7ac8') + crate(424, F + 30, '#d0574b')
+    ${landProp(82, crate(400, F + 10, '#3f7ac8') + '<g data-fx="fish">' + [404, 414, 426].map((fx, k) => `<path d="M${fx} ${F + 10} q6 -6 12 0 q-6 4 -12 0 Z M${fx + 12} ${F + 10} l4 -3 v6 Z" ${hc(['#b9c8d4', '#a8b8c8', '#c8d4dc'][k], '#4a4c72')}/>`).join('') + '</g>' + crate(380, F + 30, '#3f7ac8') + crate(424, F + 30, '#d0574b')
       + `<g data-fx="hcat"><g transform="translate(476 ${F + 52})"><path d="M-10 0 q-2 -18 10 -20 q12 2 10 20 Z" ${hc('#f2ede2', '#5a5a6a')}/><circle cx="0" cy="-24" r="8" ${hc('#f2ede2', '#5a5a6a')}/><path d="M-7 -29 l2 -7 l4 5 M7 -29 l-2 -7 l-4 5" ${hc('#f2ede2', '#5a5a6a')}/><path d="M-8 -26 h-3 M-8 -23 h-3" stroke="#8a8a94" stroke-width=".8"/><circle cx="-3" cy="-25" r="1.2" fill="#2b2b33"/><circle cx="3" cy="-25" r="1.2" fill="#2b2b33"/><path d="M10 -2 q10 0 8 -12" class="fx-sway" fill="none" ${hs('#f2ede2', '#5a5a6a')} stroke-width="3"/><path d="M-6 -16 q6 6 12 0" fill="none" ${hs('#2b2b33', '#5a5a6a')} stroke-width="1"/></g></g>`)}${landProp(78, crate(1090, F + 34, '#e6a23c'))}
     ${landProp(76, [[800, F + 40], [822, F + 48], [842, F + 38]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="9" ${hc('#f08a3a', '#5a3a2a')}/><path d="M${x - 8} ${y - 2} q8 4 16 0" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1.6"/>`).join(''))}
     ${yHeroHtml()}
@@ -8505,7 +8538,7 @@ function stationHtml() {
   const car = (x, k) => `<g transform="translate(${x} -2)"><rect x="0" y="0" width="216" height="46" rx="8" ${hc('#e8ebee', '#3a3f66')}/><rect x="0" y="30" width="216" height="6" ${hc('#3f9a8c', '#2a4a5a')}/>${[14, 50, 86, 122, 158].map((wx) => `<rect x="${wx}" y="8" width="26" height="16" rx="3" ${hc('#9fc0d0', '#ffe2a0')}/>`).join('')}<rect x="190" y="6" width="16" height="30" rx="2" ${hc('#c9cdd4', '#2a2c50')}/>${k === 0 ? `<path d="M0 6 Q-16 10 -18 30 V40 H0 Z" ${hc('#e8ebee', '#3a3f66')}/>` : ''}</g>`;
   const bike = (x) => `<g ${hs('#4a4a55', '#3a3d66')} stroke-width="2"><circle cx="${x}" cy="${F + 30}" r="9"/><circle cx="${x + 26}" cy="${F + 30}" r="9"/><path d="M${x} ${F + 30} L${x + 10} ${F + 14} L${x + 22} ${F + 14} L${x + 26} ${F + 30} M${x + 10} ${F + 14} L${x + 14} ${F + 30} L${x + 22} ${F + 14} M${x + 8} ${F + 10} h6 M${x + 22} ${F + 14} l2 -6 h5"/></g>`;
   const pigeon = (x, k) => `<g class="fx-peck" style="animation-delay:-${k * 0.6}s"><ellipse cx="${x}" cy="${F + 70}" rx="9" ry="6" ${hc('#8d93a8', '#2c2f52')}/><circle cx="${x + 8}" cy="${F + 64}" r="4" ${hc('#7a8098', '#2c2f52')}/><path d="M${x + 12} ${F + 64} l3 1" ${hs('#d0904a', '#3a3d66')} stroke-width="1.6"/><path d="M${x - 9} ${F + 68} l-6 -2" ${hs('#6a7088', '#2c2f52')} stroke-width="3"/></g>`;
-  const board = '次の電車　12:30 快速 みなと港　・　12:45 普通 白鷺　・　';
+  const hr = Math.floor(sceneHour()), board = `次の電車　${hr}:30 快速 みなと港　・　${hr}:45 普通 白鷺　・　`;   // the scene's hour (2026-11-10)
   return `<svg class="land tall station-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
       <defs><clipPath id="stLed"><rect x="452" y="${F - 124}" width="216" height="20" rx="2"/></clipPath></defs>
       ${tower(20, 120, 320, '#b9c3cc')}${tower(150, 90, 250, '#c9ccd2')}${tower(760, 130, 360, '#b4bec8')}${tower(900, 100, 280, '#c4c8ce')}${tower(1020, 150, 330, '#b9c3cc')}

@@ -516,10 +516,17 @@ def test_the_shrine_bell_rings_and_the_omikuji_tells_a_fortune(b):
       return JSON.stringify({ rung, words, fortune: KUJI.some(([k]) => k === fortune), toast: toastText().includes('おみくじ') }); })()"""))
     assert r['rung'] and 'カランカラン' in r['words'] and r['fortune'] and r['toast'], r
 
+def test_the_festival_stalls_are_there_only_at_the_festival_and_the_bath_takes_him_in_and_out(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + USE + """ fake([]); state.town.stops = { shrine: 1, sento: 1 }; await go('shrine', 12); const day = !!y().querySelector('.use-btn[data-use="kingyo"]');
+      await go('shrine', 20); const night = !!y().querySelector('.use-btn[data-use="kingyo"]');
+      await go('sento', 15); await use('bath', 1600); const inside = y().querySelector('.yhero').classList.contains('out'); await wait(2800);
+      return JSON.stringify({ day, night, inside, back: !y().querySelector('.yhero').classList.contains('out'), words: [...y().querySelectorAll('.ypop')].map((e) => e.textContent) }); })()"""))
+    assert r == {'day': False, 'night': True, 'inside': True, 'back': True, 'words': ['♨ いい湯だった〜']}, r
+
 def test_every_thing_to_use_has_its_button_and_its_moving_part(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.stops = { station: 1, sento: 1, shrine: 1, castle: 1 }; const miss = [];
       for (const [p, list] of Object.entries(PLACE_USE)) { await go(p === 'yard' ? 'outside' : p, p === 'izakaya' ? 21 : 12);
-        list.forEach((t) => { if (!y().querySelector(`.use-btn[data-use="${t.id}"]`)) miss.push(p + '.' + t.id); if (t.fx && !y().querySelector(`.land [data-fx="${t.fx}"]`)) miss.push(p + '.' + t.fx); }); }
+        list.filter((t) => !t.when || t.when()).forEach((t) => { if (!y().querySelector(`.use-btn[data-use="${t.id}"]`)) miss.push(p + '.' + t.id); if (t.fx && !y().querySelector(`.land [data-fx="${t.fx}"]`)) miss.push(p + '.' + t.fx); }); }
       return JSON.stringify(miss); })()"""))
     assert r == [], r
 
