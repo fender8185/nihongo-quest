@@ -546,6 +546,35 @@ def test_the_two_rooms_are_seen_at_45_degrees_the_hero_stays_on_their_floor_and_
       return JSON.stringify({ iso, floor: u > 0 && u < ISO.RW && v > 0 && v < ISO.RD, behind, sat, under: tableZ > z(h) }); })()"""))
     assert r == {'iso': True, 'floor': True, 'behind': True, 'sat': True, 'under': True}, r   # the cook behind the counter; sat facing us behind a table
 
+# ---- after round 7 (2026-11-10, the user's list) ----
+def test_the_way_down_to_the_beach_is_long_small_along_the_far_path_and_a_tap_gets_there_at_once(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ state.met = { koharu: 1, mugi: 1 }; fake([]); await go('outside', 12);
+      y().querySelector('.way-btn[data-to="beach"]').click(); const seen = []; for (let i = 0; i < 25; i++) { await wait(100); seen.push([yh.s, yh.climb]); }
+      const small = seen.some(([s, c]) => s === 0.1 && c === 'hill'), still = location.hash; y().click(); for (let i = 0; i < 20 && location.hash !== '#/beach'; i++) await wait(50);
+      return JSON.stringify({ small, still, then: location.hash }); })()"""))
+    assert r == {'small': True, 'still': '#/outside', 'then': '#/beach'}, r   # small on the far path, not there yet; a tap: there
+
+def test_the_curve_mirror_startles_then_opens_the_mirror(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + USE + """ fake([]); await go('street', 12); await use('mirror', 1000);
+      const words = [...y().querySelectorAll('.ypop')].map((e) => e.textContent); await wait(2200);
+      return JSON.stringify({ words, mirror: !!document.querySelector('.dress') }); })()"""))
+    assert r == {'words': ['あ、映ってる！'], 'mirror': True}, r
+
+def test_a_swipe_that_starts_on_someone_still_moves_the_view(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.seen.tome = 1; state.town.seen.go = 1; await go('shokudo', 12);
+      const npc = y().querySelector('.npc-tome'), r = npc.getBoundingClientRect(), x = r.left + r.width / 2, yy = r.top + r.height * 0.5, cam = ycam.x;
+      const pe = (type, el, cx) => el.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: cx, clientY: yy, pointerId: 7, pointerType: 'touch', isPrimary: true }));
+      pe('pointerdown', document.elementFromPoint(x, yy), x); for (let k = 1; k <= 6; k++) pe('pointermove', y(), x + k * 15); pe('pointerup', y(), x + 90); await wait(400);
+      return JSON.stringify({ moved: Math.abs(ycam.x - cam) > 40, talk: !!document.querySelector('.talk') }); })()"""))
+    assert r == {'moved': True, 'talk': False}, r
+
+def test_signs_are_written_down_a_character_at_a_time_and_the_balloon_never_leaves_marks(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); const out = { marks: 0 };
+      for (let i = 0; i < 8; i++) { await go(['outside', 'beach', 'town', 'park'][i % 4], 12); if (y().textContent.includes('-->')) out.marks += 1; }
+      await go('shokudo', 12); out.vertical = document.querySelectorAll('#view [writing-mode]').length; out.chars = [...y().querySelectorAll('.land text')].filter((t) => t.textContent === '親').length;
+      return JSON.stringify(out); })()"""))
+    assert r == {'marks': 0, 'vertical': 0, 'chars': 1}, r
+
 # ---- a new player stays in (2026-11-10, the user): the front door holds until ムギ has brought the gramophone ----
 def test_a_new_player_stays_in_until_mugi_has_brought_the_gramophone(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ const wait = (ms) => new Promise(q => setTimeout(q, ms));
@@ -614,7 +643,7 @@ def test_the_yards_left_is_the_shore_and_its_right_the_market(b):
       const near = (to) => { const [x, bt] = at(to); return Math.abs(x - YARD_GATE[to][0]) < 30 && bt > 150; };
       const sides = { shore: !!y().querySelector('.land .yard-shore .sea'), market: !!y().querySelector('.land .yard-market'), beach: near('beach'), town: near('town') };
       await new Promise((q) => yHeroWalk(y(), [-520, 220], q)); sides.sea = Math.round(yh.Y); await new Promise((q) => yHeroWalk(y(), [520, 220], q)); sides.shops = Math.round(yh.Y);
-      y().querySelector('.way-btn[data-to="beach"]').click(); for (let i = 0; i < 60 && location.hash !== '#/beach'; i++) await wait(80);
+      y().querySelector('.way-btn[data-to="beach"]').click(); for (let i = 0; i < 150 && location.hash !== '#/beach'; i++) await wait(80);
       sides.went = location.hash; yh.arrive = { from: 'town', to: 'yard' }; location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); sides.came = [Math.round(yh.X), Math.round(yh.Y)];
       return JSON.stringify(sides); })()"""))
     assert r == {'shore': True, 'market': True, 'beach': True, 'town': True, 'sea': 166, 'shops': 166, 'went': '#/beach', 'came': [480, 214]}, r   # the signs where the beach and the town are seen; back from the town, in from there

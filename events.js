@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 40 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 41 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -21,7 +21,7 @@ const TOWN = {
     // sit: on a bench (its seat 40 of their units up: Y = the seat's height − 40 × their scale), drawn between its back and its seat.
     // The two rooms are seen at 45° (2026-11-10): a spot there is a floor point (u along the right wall, v along the left, h up on a
     // stool or the tatami; index.html works out X, Y); sit / kneel, and pose: which way they face (turn, back, flip)
-    shokudo: { counter: { u: 17.8, v: 3.7 }, kitchen: { u: 9.8, v: 0.75 }, table1: { u: 8.8, v: 6.85, sit: 1, pose: 'turn flip' }, table2: { u: 14.8, v: 6.85, sit: 1, pose: 'turn flip' }, stool: { u: 6.5, v: 3.35, h: 0.2, sit: 1, pose: 'turn' } },
+    shokudo: { counter: { u: 17.8, v: 3.7 }, kitchen: { u: 9.8, v: 0.75 }, table1: { u: 7.3, v: 7.25, sit: 1, pose: 'turn flip' }, table2: { u: 13.8, v: 7.25, sit: 1, pose: 'turn flip' }, stool: { u: 6.5, v: 3.35, h: 0.2, sit: 1, pose: 'turn' } },
     izakaya: { counter: { u: 10.6, v: 0.85 }, seat1: { u: 4, v: 3.6, h: 0.2, sit: 1, pose: 'turn' }, seat2: { u: 6.5, v: 3.6, h: 0.2, sit: 1, pose: 'turn flip' }, seat3: { u: 17.6, v: 9.3, h: 0.6, kneel: 1, pose: 'turn flip' }, seat4: { u: 19.2, v: 9.3, h: 0.6, kneel: 1, pose: 'turn flip' } },
     street: { stop: { X: 150, Y: 120 }, walk: { X: -160, Y: 110 } },
     castle: { gate: { X: -340, Y: 110 }, info: { X: -110, Y: 112 }, plaza: { X: 60, Y: 78 }, keep: { X: 250, Y: 120 } },

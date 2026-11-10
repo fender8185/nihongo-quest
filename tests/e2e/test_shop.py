@@ -1221,7 +1221,7 @@ def test_the_grandmothers_diary_opens_a_page_more_for_each_stage_passed(b):
 def test_the_town_is_along_the_yard_to_the_right(b):
     js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); const wait = (ms) => new Promise(q => setTimeout(q, ms)), y = () => document.querySelector('#view .yard');
       const signs = [...y().querySelectorAll('.way-btn')].map(e => e.dataset.to).sort();
-      y().querySelector('[data-to="town"]').click(); for (let i = 0; i < 100 && location.hash !== '#/town'; i++) await wait(50); await wait(300);
+      y().querySelector('[data-to="town"]').click(); for (let i = 0; i < 240 && location.hash !== '#/town'; i++) await wait(50); await wait(300);
       const town = { place: y().dataset.place, shops: [...y().querySelectorAll('.town-shop')].map(e => e.dataset.shop), koharu: !!y().querySelector('.npc-koharu'), edit: getComputedStyle(y().querySelector('.study-edit')).display };
       y().querySelector('.town-shop[data-shop="bakery"]').click(); await wait(100); const shut = document.querySelector('#toast') ? document.querySelector('#toast').textContent : [...document.querySelectorAll('.toast')].map(t => t.textContent).join();
       y().querySelector('[data-to="yard"]').click(); for (let i = 0; i < 100 && location.hash !== '#/outside'; i++) await wait(50);
