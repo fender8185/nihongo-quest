@@ -279,10 +279,28 @@ def test_taro_waits_by_the_bus_stop_in_the_morning(b):
 def test_the_town_notebook_lists_people_met_and_replays_without_koto(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([['a1', 'm1', 'kenta', 'town', { title: '試吃', lines: [['kenta', 'はい。', '是。']] }]]); state.town.seen.kenta = 1; state.town.done.a1 = '2026-11-01'; state.koto.found['ev-a1'] = 10;
       const k0 = kotoBalance(); DIARY.open(); document.querySelector('.diary [data-diary="tab-town"]').click(); await wait(50);
+      const cover = document.querySelector('.diary').textContent; document.querySelector('.diary [data-page-of="kenta"]').click(); await wait(50);
       const book = document.querySelector('.diary').textContent; document.querySelector('.diary [data-replay="a1"]').click(); await wait(50);
       const talk = !!document.querySelector('.talk'), gone = !document.querySelector('.diary'); document.querySelector('.talk').click(); await wait(50);
-      return JSON.stringify({ kenta: book.includes('森 健太'), title: book.includes('試吃'), talk, gone, back: !!document.querySelector('.diary .town-book'), koto: kotoBalance() - k0 }); })()"""))
-    assert r == {'kenta': True, 'title': True, 'talk': True, 'gone': True, 'back': True, 'koto': 0}, r
+      const page = document.querySelector('.diary .tb-page');
+      return JSON.stringify({ kenta: cover.includes('森 健太') && book.includes('森 健太'), title: book.includes('試吃'), talk, gone, back: !!page && page.dataset.id === 'kenta', koto: kotoBalance() - k0 }); })()"""))
+    assert r == {'kenta': True, 'title': True, 'talk': True, 'gone': True, 'back': True, 'koto': 0}, r   # back on his page
+
+# 2026-11-10 (the user): a page each, turned over; those not met yet have theirs too, all of it blurred; each page keeps the talks had
+def test_the_town_notebook_has_a_page_for_everyone_blurred_until_met_with_the_talks_had(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([['a1', 'm1', 'kenta', 'town', { title: '試吃', lines: [['kenta', '{新|あたら}しいパン！', '新麵包！'], ['miku', 'おいしい！', '好吃！'], { ask: '回答', opts: [['はい。', 1, '是。'], ['いいえ。', 0, '不對']], pt: 'm1' }] }]]);
+      state.town.seen = { kenta: 1, miku: 1 }; state.town.done.a1 = '2026-11-01';
+      DIARY.open('town'); const d = () => document.querySelector('.diary'), page = () => d().querySelector('.tb-page');
+      const n = Object.keys(TOWN.CAST).length, head = d().querySelector('.tb-count').textContent;
+      d().querySelector('[data-page-of="kenta"]').click(); await wait(30); const kenta = { id: page().dataset.id, blur: page().classList.contains('blur'), text: page().textContent };
+      d().querySelector('[data-diary="1"]').click(); await wait(30); const next = page().dataset.id;
+      DIARY.close(); DIARY.open('town', 'nakamura'); const stranger = { blur: page().classList.contains('blur'), named: page().textContent.includes('中村') };
+      DIARY.open('town', 'miku'); const miku = page().textContent.includes('試吃');
+      DIARY.close(); return JSON.stringify({ n, head, kenta, next, stranger, miku }); })()"""))
+    assert r['head'] == '1 / %d' % (r['n'] + 1), r   # the cover, then a page each
+    assert r['kenta']['id'] == 'kenta' and r['kenta']['blur'] is False and all(w in r['kenta']['text'] for w in ['森 健太', 'パン屋', '試吃', '新麵包！', '好吃！', 'はい。']), r   # the talk had: their lines and the hero's answer
+    assert r['next'] != 'kenta' and r['stranger'] == {'blur': True, 'named': False}, r   # turned over; one not met: there, blurred, no name
+    assert r['miku'] is True, r   # a talk one spoke in is on their page too
 
 def test_an_event_at_a_bus_stop_waits_for_the_stop_to_open(b):
     r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['s1', 'm1', 'kobayashi', 'station'], ['t1', 'm1', 'kenta', 'town']]); learn('m1', 1);

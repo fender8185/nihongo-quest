@@ -425,7 +425,16 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .diary-nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 14px; }
 .diary-tabs { display: flex; gap: 6px; margin: -4px 0 12px; } .diary-tabs button { flex: 1; padding: 6px 0; border: 1px solid #d9ccb4; border-radius: 99px; font: inherit; font-size: 13px; color: #8a6a52; background: none; cursor: pointer; }
 .diary-tabs button[aria-pressed="true"] { color: #fbf6ea; background: #7a5a3a; border-color: #7a5a3a; }
-.town-book { max-height: min(60vh, 520px); overflow-y: auto; display: grid; gap: 14px; }
+.town-book { max-height: min(62vh, 560px); overflow-y: auto; display: grid; gap: 12px; align-content: start; }
+.tb-count { margin: -4px 0 0; text-align: center; font-size: 12px; color: #9a8a74; } .tb-intro { margin: 0; font-size: 13px; color: #6b5a48; }
+.tb-index { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; } .tb-who { display: grid; justify-items: center; gap: 3px; padding: 6px 2px; border: 1px solid #e6dac4; border-radius: 10px; font: inherit; font-size: 11.5px; color: #4a3a2c; background: #fffdf6; cursor: pointer; }
+.tb-who .tb-face { width: 44px; height: 44px; } .tb-who.blur .tb-face { filter: blur(5px) grayscale(.8); opacity: .65; }
+.tb-page { display: grid; gap: 8px; } .tb-top { display: flex; gap: 12px; align-items: center; } .tb-face.big { width: 76px; height: 76px; }
+.tb-name { display: grid; gap: 2px; } .tb-name b { font-size: 18px; } .tb-name ruby, .tb-name span { font-size: 12px; color: #9a8a74; }
+.tb-bio { margin: 0; font-size: 13.5px; line-height: 1.65; color: #5a4a3a; } .tb-h { margin: 6px 0 0; font-size: 13px; color: #8a6a52; border-bottom: 1px dashed #d9ccb4; padding-bottom: 4px; }
+.tb-talk { border: 1px solid #e6dac4; border-radius: 10px; background: #fffdf6; padding: 6px 10px; } .tb-talk summary { cursor: pointer; font-size: 13.5px; font-weight: 600; } .tb-talk summary small { margin-left: 8px; font-weight: 400; color: #9a8a74; }
+.tb-lines { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; } .tb-lines li { display: grid; gap: 1px; font-size: 13px; } .tb-lines b { font-size: 11.5px; color: #8a6a52; } .tb-lines span { font-size: 14px; } .tb-lines small { color: #8a7a66; }
+.tb-page.blur .tb-top, .tb-page.blur .tb-fog { filter: blur(8px) grayscale(.6); user-select: none; pointer-events: none; } .tb-fog p { margin: 0 0 6px; font-size: 13.5px; } .tb-yet { margin: 4px 0 0; font-size: 13px; color: #9a8a74; text-align: center; }
 .tb-person { display: flex; gap: 10px; } .tb-face { flex: none; width: 52px; height: 52px; border-radius: 12px; background: #efe6d4; overflow: hidden; } .tb-face svg { width: 100%; height: 100%; }
 .tb-body { flex: 1; min-width: 0; font-size: 13.5px; } .tb-body b { font-size: 15px; } .tb-body > span { margin-left: 8px; font-size: 12px; color: #9a8a74; } .tb-body p { margin: 4px 0 0; line-height: 1.6; color: #6b5a48; }
 .town-tools { margin-top: 6px; padding-top: 12px; border-top: 1px dashed #d9ccb4; font-size: 13px; } .town-tools .btn[aria-pressed="true"] { background: #7a5a3a; color: #fbf6ea; }
@@ -476,8 +485,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 :is(.sky .house, .house-thumb) .m-dot { fill: color-mix(in srgb, #fff8ec calc(var(--day) * 100%), #4a3c66); }
 :is(.sky .house, .house-thumb) .m-gill { fill: color-mix(in srgb, #ead6b4 calc(var(--day) * 100%), #15163a); }
 :is(.sky .house, .house-thumb) .m-pipe { fill: color-mix(in srgb, #7e6a5a calc(var(--day) * 100%), #0c0d25); }
-:is(.sky .house, .house-thumb, .sky .busstop, .sky .town-land, .sky .station-land, .sky .sento-land, .sky .shrine-land, .sky .castle-land) .hc { fill: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); transition: fill 3s; }
-:is(.sky .house, .house-thumb, .sky .busstop, .sky .town-land, .sky .station-land, .sky .sento-land, .sky .shrine-land, .sky .castle-land) .hs { fill: none; stroke: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); stroke-linecap: round; stroke-linejoin: round; transition: stroke 3s; }
+:is(.sky .house, .house-thumb, .sky .busstop, .sky .land) .hc { fill: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); transition: fill 3s; }
+:is(.sky .house, .house-thumb, .sky .busstop, .sky .land) .hs { fill: none; stroke: color-mix(in srgb, var(--c) calc(var(--day, 1) * 100%), var(--n)); stroke-linecap: round; stroke-linejoin: round; transition: stroke 3s; }
 :is(.sky .house, .house-thumb) .m-grass { fill: none; stroke: color-mix(in srgb, #5f9a4a calc(var(--day) * 100%), #0b0c22); stroke-width: 1.6; stroke-linecap: round; }
 .house-thumb :is(.wall, .roof, .chim) { fill: #f1e3c6; } .house-thumb .rim { fill: none; stroke: rgba(255, 255, 255, .45); stroke-width: 1.4; } .house-thumb .pane { fill: #cfe9f8; } .house-thumb .mull { stroke: #fff; stroke-width: 2; } .house-thumb .door { fill: #7a4b2e; } .house-thumb .knob { fill: #ffcf7a; }
 .sky .house .win { position: absolute; border-radius: 50%; opacity: calc((.12 + .88 * var(--f)) * (1 - var(--day))); transition: opacity 1.5s; }   /* the light round each window, warmer as the list fills */
@@ -846,6 +855,31 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .bus-btn { position: absolute; left: 50%; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; } .sky .bus-btn .tag { top: -14px; }
 .sky .beach-prop { pointer-events: none; }
 .sky .town-shop { position: absolute; left: 50%; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; z-index: 1; }   /* the town's shop fronts, to tap */
+/* test (2026-11-10): the places out and about drawn taller (.tall: up into the sky) and each with its own life — wires and a
+   passing truck on the main road, a train over the station, smoke from the bath's chimney, leaves and the festival's fireworks at
+   the shrine, petals and the moat at the castle, flags in town, gulls and the lighthouse at the beach */
+.sky .land.tall { height: 770px; }
+.sky .land .wire { fill: none; stroke: color-mix(in srgb, #55555f calc(var(--day) * 100%), #3a3d66); stroke-width: 1.4; }
+.sky .land .lit { fill: #ffd98a; opacity: calc(.08 + .92 * (1 - var(--day))); transition: opacity 3s; }
+.sky .land .glow { opacity: calc((1 - var(--day)) * .9); transition: opacity 3s; } .sky .land .day-only { opacity: var(--day); }
+.sky .land .fx-car { animation: fxCar 19s linear infinite; } @keyframes fxCar { 0% { transform: translateX(-300px); } 50%, 100% { transform: translateX(1500px); } }
+.sky .land .fx-train { animation: fxTrain 21s linear infinite; } @keyframes fxTrain { 0%, 30% { transform: translateX(1500px); } 70%, 100% { transform: translateX(-1300px); } }
+.sky .land .fx-bob { transform-box: fill-box; transform-origin: 50% 100%; animation: fxBob 2.4s ease-in-out infinite alternate; } @keyframes fxBob { from { transform: rotate(-3deg) translateY(0); } to { transform: rotate(3deg) translateY(-1.5px); } }
+.sky .land .fx-peck { transform-box: fill-box; transform-origin: 30% 80%; animation: fxPeck 1.8s ease-in-out infinite; } @keyframes fxPeck { 0%, 60%, 100% { transform: rotate(0); } 70%, 90% { transform: rotate(28deg); } }
+.sky .land .fx-sway { transform-box: fill-box; transform-origin: 50% 0; animation: fxSway 3.2s ease-in-out infinite alternate; } @keyframes fxSway { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+.sky .land .fx-flag { transform-box: fill-box; transform-origin: 0 50%; animation: fxFlag 1.6s ease-in-out infinite alternate; } @keyframes fxFlag { from { transform: skewY(-4deg) scaleX(.94); } to { transform: skewY(4deg) scaleX(1); } }
+.sky .land .fx-smoke { transform-box: fill-box; transform-origin: center; animation: fxSmoke 7s ease-out infinite; opacity: 0; } @keyframes fxSmoke { 0% { transform: translate(0, 0) scale(.5); opacity: 0; } 15% { opacity: .7; } 100% { transform: translate(90px, -170px) scale(2.6); opacity: 0; } }
+.sky .land .fx-steam { transform-box: fill-box; transform-origin: center; animation: fxSteam 4.5s ease-out infinite; opacity: 0; } @keyframes fxSteam { 0% { transform: translate(0, 0) scale(.5); opacity: 0; } 25% { opacity: .55; } 100% { transform: translate(14px, -60px) scale(1.8); opacity: 0; } }
+.sky .land .fx-fall { animation: fxFall 11s linear infinite; opacity: 0; } @keyframes fxFall { 0% { transform: translate(0, 0) rotate(0); opacity: 0; } 8% { opacity: .95; } 92% { opacity: .9; } 100% { transform: translate(-70px, 330px) rotate(540deg); opacity: 0; } }
+.sky .land .fx-ripple { transform-box: fill-box; transform-origin: center; animation: fxRipple 3.6s ease-out infinite; opacity: 0; } @keyframes fxRipple { 0% { transform: scale(.3); opacity: .8; } 100% { transform: scale(1.6); opacity: 0; } }
+.sky .land .fx-blink { animation: fxBlink 1.4s steps(2) infinite; } @keyframes fxBlink { 50% { opacity: .25; } }
+.sky .land .fx-scroll { animation: fxScroll 9s linear infinite; } @keyframes fxScroll { from { transform: translateX(0); } to { transform: translateX(-260px); } }
+.sky .land .fx-fly { animation: fxFly 26s linear infinite; } @keyframes fxFly { 0% { transform: translate(-160px, 0); } 100% { transform: translate(1400px, -60px); } }
+.sky .land .fx-wing { transform-box: fill-box; transform-origin: center; animation: fxWing .5s ease-in-out infinite alternate; } @keyframes fxWing { to { transform: scaleY(.45); } }
+.sky .land .fx-gull { animation: fxGull 18s ease-in-out infinite; } @keyframes fxGull { 0% { transform: translate(0, 0); } 25% { transform: translate(160px, -30px); } 50% { transform: translate(300px, 10px); } 75% { transform: translate(150px, 30px); } 100% { transform: translate(0, 0); } }
+.sky .land .fx-beam { transform-box: view-box; animation: fxBeam 6s linear infinite; opacity: calc((1 - var(--day)) * .55); } @keyframes fxBeam { 0% { transform: scaleX(1); } 50% { transform: scaleX(-1); } 100% { transform: scaleX(1); } }
+.sky .land .fx-boom { transform-box: fill-box; transform-origin: center; animation: fxBoom 4.2s ease-out infinite; opacity: 0; } @keyframes fxBoom { 0%, 8% { transform: scale(.1); opacity: 0; } 12% { opacity: 1; } 45% { transform: scale(1); opacity: .9; } 70%, 100% { transform: scale(1.12); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .sky .land :is(.fx-car, .fx-train, .fx-bob, .fx-peck, .fx-sway, .fx-flag, .fx-smoke, .fx-steam, .fx-fall, .fx-ripple, .fx-blink, .fx-scroll, .fx-fly, .fx-wing, .fx-gull, .fx-beam, .fx-boom) { animation: none; } }
 .sky .land .seam { fill: none; stroke: color-mix(in srgb, #b4ad9e calc(var(--day) * 100%), #1c1d3e); stroke-width: 2; stroke-linecap: round; }
 .yard .hero.bench .bob { animation: none; transform: translateY(-13px); } .yard .hero.bench .h-shadow { display: none; }   /* the hips on the seat (40 up), the thighs coming at us (the legs short) */
 .yard .hero.bench .legs { transform-box: view-box; transform-origin: 2px -27px; transform: scaleY(.55); }
@@ -7465,19 +7499,42 @@ const DIARY = (() => {
   const open = (k) => k === 0 || passed() >= need(k);
   let el = null, at = 0, tab = 'g';
   const tabs = () => `<div class="diary-tabs"><button type="button" data-diary="tab-g" aria-pressed="${tab === 'g'}">外婆的日記</button><button type="button" data-diary="tab-town" aria-pressed="${tab === 'town'}">町の手帳</button></div>`;
-  // 町の手帳 (test, 2026-11-09): everyone met in town — their face, who they are (a line more for each event with them), and
-  // their events done, each to be read again (the reply choices too; no 言靈 the second time)
-  function townBook() {
-    const done = state.town.done, ids = Object.keys(TOWN.CAST).filter((id) => TOWNEV.seen(id));
-    const evs = (id) => TOWN.EVENTS.filter((e) => e.who === id && done[e.id]);
+  // 町の手帳 (test, 2026-11-09; a page each since 2026-11-10, the user): a cover — who waits, everyone at a glance (a tap: their
+  // page), the test site's tools — then a page a person, turned over (‹ ›, or a swipe): their face, name, who they are (a line more
+  // for each event of theirs), and the talks had with them, each to be read through there or played again (no 言靈 the second
+  // time). One not met yet has a page too, all of it blurred.
+  let tp = 0;   // the page open in 町の手帳: 0 the cover, k the k-th person
+  const people = () => Object.keys(TOWN.CAST);
+  const rubyEv = (s) => esc(s).replace(/\{([^|}]+)\|([^|}]+)(?:\|[^}]+)?\}/g, '<ruby>$1<rt>$2</rt></ruby>');
+  const talksOf = (id) => TOWN.EVENTS.filter((e) => state.town.done[e.id] && (e.who === id || (e.lines || []).some((l) => Array.isArray(l) && l[0] === id)));
+  function logOf(e) {   // a talk as it went: each line by who said it, the hero's answers as picked
+    const name = (w) => (w === 'hero' ? '我' : (TOWN.CAST[w] || {}).name || w);
+    const row = (w, ja, zh) => `<li><b>${esc(name(w))}</b>${ja ? `<span lang="ja">${rubyEv(ja)}</span>` : ''}<small>${esc(zh || '')}</small></li>`;
+    return `<ol class="tb-lines">${(e.lines || []).map((l) => { if (Array.isArray(l)) return row(l[0], l[1], l[2]); const o = (l.opts || []).find((x) => x[1]); return o ? row('hero', o[0], o[2]) : ''; }).join('')}</ol>`;
+  }
+  function townCover() {
     const n = TOWNEV.openN(), next = TOWNEV.due().slice(0, 3);
     const wait = n ? `<section class="tb-wait"><b>開著的事件：${n} 件</b>${next.map((e) => `<p>${esc(TOWNEV.seen(e.who) ? TOWN.CAST[e.who].name : '還沒見過的人')}・${esc(TOWNEV.PLACE_NAME[e.at] || e.at)}・${esc(TOWNEV.when(e) || '什麼時間都可能')}</p>`).join('')}
       <p class="muted small">做完今日練習，可以到臥房的床上睡到早上、中午、傍晚或晚上。</p></section>` : '';
-    return `<div class="town-book">${wait}${ids.length ? ids.map((id) => { const c = TOWN.CAST[id], list = evs(id);
-      return `<section class="tb-person"><div class="tb-face">${TOWNEV.face(id)}</div><div class="tb-body"><b>${esc(c.name)}</b><span>${esc(c.role)}</span>
-        ${c.bio.slice(0, 1 + list.length).map((b) => `<p>${esc(b)}</p>`).join('')}
-        ${list.map((e) => `<button type="button" class="tb-ev" data-replay="${esc(e.id)}">${esc(e.title)}<small>再讀一次</small></button>`).join('')}</div></section>`; }).join('')
-      : '<p class="diary-lock">還沒有認識鎮上的人。到小鎮、海邊走走看吧。</p>'}${onTestSite() ? townTools() : ''}</div>`;
+    const met = people().filter((id) => TOWNEV.seen(id)).length;
+    return `${wait}<p class="tb-intro">鎮上的人：認識了 ${met} / ${people().length} 位。點一個人，翻到他的那一頁。</p>
+      <div class="tb-index">${people().map((id) => { const k = TOWNEV.seen(id); return `<button type="button" class="tb-who${k ? '' : ' blur'}" data-page-of="${id}"><span class="tb-face">${TOWNEV.face(id)}</span><span>${k ? esc(TOWN.CAST[id].name) : '？？？'}</span></button>`; }).join('')}</div>
+      ${onTestSite() ? townTools() : ''}`;
+  }
+  function townPage(id) {
+    const c = TOWN.CAST[id], known = TOWNEV.seen(id), mine = TOWN.EVENTS.filter((e) => e.who === id && state.town.done[e.id]), talks = talksOf(id);
+    if (!known) return `<section class="tb-page blur" data-id="${id}"><div class="tb-top"><div class="tb-face big">${TOWNEV.face(id)}</div><div class="tb-name"><b>？？？</b><span>？？？</span></div></div>
+      <div class="tb-fog" aria-hidden="true"><p>這個人好像住在這附近，每天都在某個地方忙著。</p><p>聽說他和外婆以前也認識。</p><p>總有一天會在鎮上遇到吧。</p></div>
+      <p class="tb-yet">還沒遇到這個人。</p></section>`;
+    return `<section class="tb-page" data-id="${id}"><div class="tb-top"><div class="tb-face big">${TOWNEV.face(id)}</div><div class="tb-name"><b>${esc(c.name)}</b><ruby>${esc(c.kana || '')}</ruby><span>${esc(c.role)}</span></div></div>
+      ${c.bio.slice(0, 1 + mine.length).map((b) => `<p class="tb-bio">${esc(b)}</p>`).join('')}
+      <h4 class="tb-h">對話紀錄</h4>
+      ${talks.length ? talks.map((e) => `<details class="tb-talk"><summary>${esc(e.title)}<small>${esc(TOWNEV.PLACE_NAME[e.at] || e.at)}・${esc(state.town.done[e.id])}</small></summary>${logOf(e)}<button type="button" class="tb-ev" data-replay="${esc(e.id)}">再讀一次<small>不再給言靈</small></button></details>`).join('')
+        : '<p class="tb-yet">還沒和他好好聊過。</p>'}</section>`;
+  }
+  function townBook() {
+    const all = people(); tp = Math.max(0, Math.min(all.length, tp));
+    return `<div class="town-book"><p class="tb-count">${tp + 1} / ${all.length + 1}</p>${tp ? townPage(all[tp - 1]) : townCover()}</div>`;
   }
   // the test site only (the user, 2026-11-10: try every stage's people there): meet everyone and open every stop, see the town at
   // an hour of the day, start over, and play any event (no 言靈, nothing marked done)
@@ -7498,7 +7555,7 @@ const DIARY = (() => {
     show();
   }
   function show() {
-    if (tab === 'town') { el.innerHTML = `<div class="diary-book">${tabs()}${townBook()}<div class="diary-nav"><span></span><button type="button" class="btn btn-sm" data-diary="x">闔上</button><span></span></div></div>`; return; }
+    if (tab === 'town') { const n = people().length; el.innerHTML = `<div class="diary-book">${tabs()}${townBook()}<div class="diary-nav"><button type="button" class="btn btn-sm" data-diary="-1"${tp ? '' : ' disabled'}>‹ 上一頁</button><button type="button" class="btn btn-sm" data-diary="x">闔上</button><button type="button" class="btn btn-sm" data-diary="1"${tp < n ? '' : ' disabled'}>下一頁 ›</button></div></div>`; return; }
     const p = PAGES[at], ok = open(at);
     el.innerHTML = `<div class="diary-book">${tabs()}<div class="diary-head"><span>おばあちゃんの{日記|にっき}</span><span>${at + 1} / ${PAGES.length}</span></div>
       <div class="diary-page${ok ? '' : ' locked'}" lang="ja">${p.ja.split('\n').map((l) => `<p>${ok ? ruby(l) : esc(plain(l))}</p>`).join('')}</div>
@@ -7507,16 +7564,21 @@ const DIARY = (() => {
       .replace('おばあちゃんの{日記|にっき}', 'おばあちゃんの<ruby>日記<rt>にっき</rt></ruby>');
   }
   function close() { if (el) { el.remove(); el = null; } }
-  function openBook(which = 'g') {
-    close(); tab = which; at = Math.max(0, PAGES.findIndex((_, k) => !open(k)) - 1); if (at < 0 || PAGES.every((_, k) => open(k))) at = PAGES.length - 1;   // at the last page read
+  function turn(d) { if (tab === 'town') tp = Math.max(0, Math.min(people().length, tp + d)); else at = Math.max(0, Math.min(PAGES.length - 1, at + d)); show(); }
+  function openBook(which = 'g', who) {
+    close(); tab = which; if (who) tp = people().indexOf(who) + 1; at = Math.max(0, PAGES.findIndex((_, k) => !open(k)) - 1); if (at < 0 || PAGES.every((_, k) => open(k))) at = PAGES.length - 1;   // at the last page read
     el = document.createElement('div'); el.className = 'diary'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', '外婆的日記');
-    el.addEventListener('pointerdown', (e) => e.stopPropagation());
+    let sx = null;   // a swipe turns the page
+    el.addEventListener('pointerdown', (e) => { e.stopPropagation(); sx = [e.clientX, e.clientY]; });
+    el.addEventListener('pointerup', (e) => { if (!sx) return; const dx = e.clientX - sx[0], dy = e.clientY - sx[1]; sx = null; if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy) && e.target.closest('.diary-book')) { el._swiped = true; turn(dx < 0 ? 1 : -1); } });
     el.addEventListener('click', (e) => {
+      if (el._swiped) { el._swiped = false; return; }   // the click after a swipe
       e.stopPropagation(); const b = e.target.closest('[data-diary]'), r = e.target.closest('[data-replay]');
       const tr = e.target.closest('[data-try]'), tl = e.target.closest('[data-tool]');
       if (tl) { tool(tl); return; }
       if (r || tr) { const ev = TOWN.EVENTS.find((x) => x.id === (r || tr).dataset[r ? 'replay' : 'try']); close(); if (ev) TALK.open(document.body, ev.who, ev.lines, () => openBook('town'), null, { ev: true }); return; }
-      if (b) { const d = b.dataset.diary; if (d === 'x') close(); else if (d.startsWith('tab-')) { tab = d.slice(4); show(); } else { at = Math.max(0, Math.min(PAGES.length - 1, at + Number(d))); show(); } }
+      const po = e.target.closest('[data-page-of]'); if (po) { tp = people().indexOf(po.dataset.pageOf) + 1; show(); return; }
+      if (b) { const d = b.dataset.diary; if (d === 'x') close(); else if (d.startsWith('tab-')) { tab = d.slice(4); show(); } else turn(Number(d)); }
       else if (e.target === el) close();
     });
     document.body.appendChild(el); show();
@@ -7726,17 +7788,39 @@ function izakayaHtml() {
 const BUS = { X: 56, Y: 126, seat: 40 };   // seat: the bench's height
 // the main road (#/street): the path from the yard comes down from the far fields to its far pavement, the bus stop beside it;
 // the road across, a pavement this side, grass below. The same sky as the yard's
+// a soft light that fades out (warm: lamps and doors; cool: a drinks machine), shown by night (.glow): one set for whichever
+// place is drawn — a flat disc at low opacity read as a grey blot on the dark (2026-11-10)
+const GLOW_DEFS = `<defs><radialGradient id="glw"><stop offset="0" stop-color="#ffd98a" stop-opacity=".7"/><stop offset=".55" stop-color="#ffc870" stop-opacity=".22"/><stop offset="1" stop-color="#ffc870" stop-opacity="0"/></radialGradient>
+  <radialGradient id="glc"><stop offset="0" stop-color="#e6f2ff" stop-opacity=".7"/><stop offset=".55" stop-color="#cfe2ff" stop-opacity=".2"/><stop offset="1" stop-color="#cfe2ff" stop-opacity="0"/></radialGradient></defs>`;
 function streetHtml() {
   const y = (Y) => 370 - Y, [w0, w1] = STREET.walk, [r0, r1] = STREET.road, [n0, n1] = STREET.near, ground = 'M0 164 C220 150 420 146 600 148 C800 150 1000 146 1200 158';
   const tree = (x, b, r) => `<rect class="trunk" x="${x - r * 0.18}" y="${b - r * 2.1}" width="${r * 0.36}" height="${r * 2.1}"/><g class="crown"><circle cx="${x}" cy="${b - r * 2.4}" r="${r}"/><circle cx="${x - r * 0.75}" cy="${b - r * 1.75}" r="${r * 0.68}"/><circle cx="${x + r * 0.8}" cy="${b - r * 1.8}" r="${r * 0.72}"/></g>`;
-  return `<svg class="land" viewBox="0 0 1200 370" preserveAspectRatio="xMidYMax slice">
+  // 2026-11-10: the village up the hill, the poles and their wires over the road (sparrows on them), a drinks machine lit by
+  // night, a red postbox, a crossing, and now and then a little truck along the near lane
+  const house = (x, b, w, h, roof, wall) => `<rect x="${x}" y="${b - h}" width="${w}" height="${h}" ${hc(wall, '#1e2042')}/><path d="M${x - 5} ${b - h + 2} L${x + w / 2} ${b - h - w * 0.32} L${x + w + 5} ${b - h + 2} Z" ${hc(roof, '#15163a')}/><rect class="lit" x="${x + w * 0.2}" y="${b - h * 0.62}" width="${w * 0.22}" height="${h * 0.3}"/><rect class="lit" x="${x + w * 0.58}" y="${b - h * 0.62}" width="${w * 0.22}" height="${h * 0.3}" style="opacity:calc(.08 + .6 * (1 - var(--day)))"/>`;
+  const POLES = [160, 520, 880], WY = [-82, -66, -50], sag = (t, s) => 2 * t * (1 - t) * s;
+  const pole = (x) => `<rect x="${x - 5}" y="-100" width="10" height="${w1 > 0 ? 336 : 0}" ${hc('#8d8a84', '#24254a')}/><rect x="${x - 30}" y="-86" width="60" height="5" rx="1" ${hc('#6f6c66', '#1c1d3e')}/><rect x="${x - 24}" y="-70" width="48" height="4" rx="1" ${hc('#6f6c66', '#1c1d3e')}/>${[-24, -8, 8, 24].map((d) => `<rect x="${x + d - 2}" y="-92" width="4" height="7" rx="1.5" ${hc('#e8e4d8', '#4a4c78')}/>`).join('')}<rect x="${x - 8}" y="-30" width="16" height="22" rx="2" ${hc('#a8a49a', '#2a2c50')}/>`;
+  const spans = [-200].concat(POLES, [1240]);
+  const wires = WY.map((wy, k) => spans.slice(0, -1).map((x0, i) => { const x1 = spans[i + 1]; return `<path class="wire" d="M${x0} ${wy} Q${(x0 + x1) / 2} ${wy + 2 * (26 + k * 4)} ${x1} ${wy}"/>`; }).join('')).join('');
+  const sparrow = (x0, x1, t, wy, s, k) => { const x = x0 + (x1 - x0) * t, yy = wy + sag(t, 2 * s) - 4; return `<g class="fx-peck" style="animation-delay:-${k * 0.7}s"><ellipse cx="${x}" cy="${yy}" rx="5" ry="4" ${hc('#7a5a3e', '#1a1b36')}/><circle cx="${x + 4}" cy="${yy - 3}" r="2.6" ${hc('#7a5a3e', '#1a1b36')}/><path d="M${x - 4} ${yy} l-5 2" ${hs('#5a4030', '#1a1b36')} stroke-width="2"/></g>`; };
+  const vend = (x) => `<rect x="${x}" y="160" width="46" height="76" rx="3" ${hc('#e9edf0', '#3a4470')}/><rect x="${x + 4}" y="166" width="38" height="34" rx="2" ${hc('#cfe6ec', '#e6f2ff')}/>${[0, 1, 2].map((r) => [0, 1, 2, 3].map((c) => `<rect x="${x + 7 + c * 9}" y="${169 + r * 11}" width="6" height="8" rx="1.5" fill="${['#d0574b', '#3f7ac8', '#e6a23c', '#4f7a4a'][(r + c) % 4]}"/>`).join('')).join('')}<rect x="${x + 6}" y="206" width="34" height="5" rx="1" ${hc('#2b2b33', '#1c1d3c')}/><rect x="${x + 10}" y="218" width="26" height="10" rx="2" ${hc('#2b2b33', '#141530')}/><ellipse class="glow" cx="${x + 23}" cy="196" rx="70" ry="56" fill="url(#glc)"/>`;
+  const post = (x) => `<rect x="${x - 3}" y="206" width="6" height="30" ${hc('#5a5a64', '#1c1d3c')}/><rect x="${x - 13}" y="176" width="26" height="34" rx="6" ${hc('#d0453c', '#5a2030')}/><rect x="${x - 8}" y="184" width="16" height="3" rx="1" ${hc('#2b2b33', '#1c1d3c')}/><path d="M${x - 6} 192 h12 M${x - 6} 196 h12 M${x} 196 v8" ${hs('#fff', '#c9c4e8')} stroke-width="1.6"/>`;   // 〒
+  const truck = `<g class="fx-car"><g transform="translate(0 ${y((r0 + r1) / 2 - 22)})"><path d="M-56 -4 V-26 H6 V-4 Z" ${hc('#ecebe6', '#4a4c72')}/><path d="M6 -4 V-34 Q6 -40 12 -40 H30 Q38 -40 42 -30 L50 -16 V-4 Z" ${hc('#f4f3ee', '#555880')}/><path d="M14 -36 H28 Q33 -36 36 -30 L40 -22 H14 Z" ${hc('#9fc6d6', '#ffe2a0')}/><circle cx="-36" cy="-4" r="8" fill="#2b2b33"/><circle cx="34" cy="-4" r="8" fill="#2b2b33"/><circle cx="-36" cy="-4" r="3" fill="#9a9ea8"/><circle cx="34" cy="-4" r="3" fill="#9a9ea8"/><path class="glow" d="M50 -14 L200 -40 L200 22 Z" fill="#fff2c0" fill-opacity=".35"/><circle cx="49" cy="-14" r="3" fill="#ffd98a"/></g></g>`;
+  return `<svg class="land tall street-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
       <path class="far" d="M0 122 C120 100 240 104 360 118 S560 96 700 110 S900 126 1020 104 S1150 100 1200 110 V370 H0 Z"/>
+      ${house(110, 126, 54, 34, '#8a5a44', '#efe4d2')}${house(300, 118, 46, 30, '#5f6f8a', '#ece6da')}${house(660, 116, 60, 36, '#8a5a44', '#f1e8d8')}${house(840, 124, 44, 28, '#6f5a7a', '#ede4d6')}${house(1040, 112, 58, 34, '#5f6f8a', '#efe6d4')}
       <path class="near" d="${ground} V370 H0 Z"/><path class="ridge" d="${ground}"/>
       ${tree(250, 214, 15)}${tree(430, 206, 12)}${tree(500, 216, 9)}${tree(760, 196, 13)}${tree(980, 218, 16)}${tree(1110, 196, 10)}
       <path class="lane" d="${stripD(STREET_LANE, 18)}"/>
+      ${wires}${POLES.map(pole).join('')}
+      ${sparrow(160, 520, 0.32, WY[0], 26, 0)}${sparrow(160, 520, 0.4, WY[0], 26, 1)}${sparrow(520, 880, 0.62, WY[1], 30, 2)}${sparrow(880, 1240, 0.3, WY[2], 34, 3)}
+      <g class="fx-fly"><g transform="translate(0 -250)"><path class="fx-wing" d="M0 0 q8 -8 16 0 q8 -8 16 0" ${hs('#4a4a55', '#5a5e90')} stroke-width="2.4"/></g><g transform="translate(40 -230) scale(.8)"><path class="fx-wing" style="animation-delay:-.2s" d="M0 0 q8 -8 16 0 q8 -8 16 0" ${hs('#4a4a55', '#5a5e90')} stroke-width="2.4"/></g></g>
       <rect class="pave" x="-20" y="${y(w1)}" width="1240" height="${w1 - w0}"/><rect class="kerb" x="-20" y="${y(w0) - 3}" width="1240" height="4"/>
+      ${vend(390)}${post(760)}
       <rect class="asphalt" x="-20" y="${y(r1)}" width="1240" height="${r1 - r0}"/>
       <path class="rline" d="M-20 ${y(r1) + 6} H1220 M-20 ${y(r0) - 6} H1220"/><path class="rline dash" d="M-20 ${y((r0 + r1) / 2)} H1220"/>
+      ${Array.from({ length: 6 }, (_, i) => `<rect x="${930}" y="${y(r1) + 10 + i * 10}" width="90" height="5" ${hc('#f4f2ec', '#3a3d66')}/>`).join('')}
+      ${truck}
       <rect class="kerb" x="-20" y="${y(n1)}" width="1240" height="4"/><rect class="pave" x="-20" y="${y(n1) + 4}" width="1240" height="${n1 - n0 - 4}"/>
     </svg>
     ${yHeroHtml()}
@@ -7777,7 +7861,7 @@ const SHELTER_ART = () => `<ellipse cy="2" rx="150" ry="9" fill="#2b1c12" fill-o
   <rect x="-108" y="-178" width="216" height="128" rx="4" ${hc('#cfe6ec', '#2c3560')} fill-opacity=".72"/><path d="M-96 -166 L-60 -70 M-70 -170 L-40 -96" ${hs('#ffffff', '#5a66a8')} stroke-width="5" stroke-opacity=".5"/>
   <rect x="-108" y="-56" width="216" height="6" ${hc('#5f7f6a', '#272c4a')}/>
   <path d="M-136 -192 Q0 -226 136 -192 L136 -184 Q0 -214 -136 -184 Z" ${hc('#d9604c', '#5a2c40')}/><path d="M-136 -186 Q0 -216 136 -186 L134 -176 Q0 -204 -134 -176 Z" ${hc('#b8483a', '#45223a')}/>
-  <ellipse cy="-70" rx="120" ry="100" fill="#ffd98a" style="opacity:calc((1 - var(--day, 1)) * .16)"/><rect x="-56" y="-184" width="112" height="5" rx="2.5" ${hc('#e8e4d8', '#ffe2a0')}/>
+  <defs><radialGradient id="bsg"><stop offset="0" stop-color="#ffd98a" stop-opacity=".55"/><stop offset="1" stop-color="#ffd98a" stop-opacity="0"/></radialGradient></defs><ellipse cy="-90" rx="150" ry="120" fill="url(#bsg)" style="opacity:calc(1 - var(--day, 1))"/><rect x="-56" y="-184" width="112" height="5" rx="2.5" ${hc('#e8e4d8', '#ffe2a0')}/>
   <rect x="-84" y="-44" width="168" height="9" rx="3" ${hc('#c58a54', '#4a3a4c')}/><rect x="-84" y="-40" width="168" height="4" ${hc('#a8703e', '#3a2c40')}/>
   <rect x="-74" y="-36" width="7" height="36" ${hc('#7a5a3a', '#2c2440')}/><rect x="67" y="-36" width="7" height="36" ${hc('#7a5a3a', '#2c2440')}/>
   <rect x="-102" y="-150" width="42" height="56" rx="3" ${hc('#fbf7ec', '#e8dcb4')}/><path d="M-96 -140 H-66 M-96 -130 H-72 M-96 -121 H-68 M-96 -112 H-74 M-96 -103 H-70" ${hs('#9a9184', '#4a4e78')} stroke-width="2.4"/>
