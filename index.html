@@ -340,6 +340,15 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .cloud::before, .sky .cloud::after { content: ''; position: absolute; border-radius: 50%; background: inherit; }
 .sky .cloud::before { width: 42px; height: 42px; left: 14px; top: -20px; } .sky .cloud::after { width: 32px; height: 32px; left: 44px; top: -13px; }
 @keyframes cloud { from { transform: translateX(-130px) scale(var(--k)); } to { transform: translateX(calc(100vw + 30px)) scale(var(--k)); } }
+.sky .plane { position: absolute; left: 0; top: 7%; width: 46px; height: 16px; animation: skyPlane 80s linear -20s infinite; }   /* round 7 (2026-11-10): life in the sky over the places out */
+.sky .plane svg { position: absolute; inset: 0; width: 100%; height: 100%; } .sky .plane .trail { position: absolute; right: 40px; top: 7px; width: 240px; height: 2px; border-radius: 1px; background: linear-gradient(to left, rgba(255, 255, 255, .8), rgba(255, 255, 255, 0)); }
+@keyframes skyPlane { 0% { transform: translate(-320px, 30px); } 45% { transform: translate(calc(100vw + 60px), 0); } 100% { transform: translate(calc(100vw + 60px), 0); } }
+.sky .balloon { position: absolute; left: 0; top: 30%; width: 34px; height: 51px; animation: skyBalloon 150s linear -40s infinite; } .sky .balloon svg { width: 100%; height: 100%; animation: balloonBob 6s ease-in-out infinite alternate; }
+@keyframes skyBalloon { from { transform: translateX(-60px); } to { transform: translateX(calc(100vw + 20px)); } } @keyframes balloonBob { to { transform: translateY(-14px); } }
+.sky .nplane { position: absolute; left: 0; top: 12%; width: 3px; height: 3px; border-radius: 50%; background: #ff5a5a; box-shadow: 9px 1px 0 #fff; animation: skyPlane 95s linear -50s infinite, nplaneBlink 1.2s steps(2) infinite; }
+@keyframes nplaneBlink { 50% { opacity: .2; } }
+.yard.indoor .sky :is(.plane, .balloon, .nplane) { display: none; }
+@media (prefers-reduced-motion: reduce) { .sky :is(.plane, .balloon, .nplane), .sky .balloon svg { animation: none; display: none; } }
 .sky .birds { position: absolute; left: 0; right: 0; top: 16%; height: 50px; opacity: clamp(0, (var(--f) - .75) / .15, 1); transition: opacity 2s; }
 .sky .flock { position: absolute; left: 0; top: 0; width: 70px; height: 40px; animation: flock 24s linear infinite; }
 @keyframes flock { from { transform: translateX(-90px); } to { transform: translateX(calc(100vw + 20px)); } }
@@ -373,6 +382,9 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 @keyframes evMark { from { transform: translateY(0); } to { transform: translateY(-14px); } }
 .sky .town-shop .ev-dot { position: absolute; left: 50%; top: 4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: #f0883e; box-shadow: 0 0 0 2px #fff; animation: evDot 1.2s ease-in-out infinite alternate; pointer-events: none; }
 .yard.indoor { --day: 1; --warm: 0; }   /* a room is lit the same by night and day (its lamps) */
+.yard.indoor .npc:is(.npc-go, .npc-teppei) .arm.r { animation: heroArm .42s ease-in-out infinite alternate; }   /* at the stove, at the grill */
+.yard.indoor .npc:is(.bench, .kneel):not(.back) .head { animation: heroNod 2.8s ease-in-out infinite; }   /* eating, talking */
+@media (prefers-reduced-motion: reduce) { .yard.indoor .npc .arm.r, .yard.indoor .npc .head { animation: none; } }
 .yard.indoor .sky { background: radial-gradient(ellipse at 50% 38%, #f7eedd, #dccaa8); } .yard.indoor[data-place="izakaya"] .sky { background: radial-gradient(ellipse at 50% 38%, #4c3324, #1e140d); }   /* round the room block (seen at 45°) */
 .yard.indoor .sky > :not(.yworld) { display: none; }
 .sky .bus { position: absolute; left: 50%; width: 280px; height: 140px; transform-origin: 50% 100%; transform: translateX(900px) scale(var(--k)); transition: transform .6s cubic-bezier(.2, .8, .3, 1); pointer-events: none; }
@@ -8041,6 +8053,7 @@ function beachHtml() {
       <path class="isle" d="M850 147 C868 132 892 124 918 132 C934 124 962 128 982 147 Z"/><path class="isle" d="M240 147 C252 140 266 138 278 147 Z"/>
       ${[[300, 172, 40], [520, 192, 60], [760, 178, 30], [640, 214, 70], [420, 226, 50], [960, 204, 44]].map(([x, y, l], i) => `<path class="glint" d="M${x} ${y} h${l}" style="--w:-${i * 0.7}s"/>`).join('')}
       ${moonGlitter(330, 160, 236)}
+      <path d="M520 296 Q560 120 640 -150" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1"/><rect x="517" y="290" width="6" height="10" fill="#8a6a46"/><g class="fx-sway" style="animation-duration:2.6s;transform-origin:640px -150px"><path d="M640 -176 L658 -150 L640 -124 L622 -150 Z" ${hc('#d0453c', '#5a2030')}/><path d="M640 -176 V-124 M622 -150 H658" stroke="#fff" stroke-opacity=".7" stroke-width="1.2"/><path d="M640 -124 q-6 14 4 26 q-8 12 2 24" fill="none" stroke="#3f7ac8" stroke-width="2"/></g>
       <path class="wet" d="M-20 236 C200 230 400 242 600 238 S1000 230 1220 238 V258 H-20 Z"/>
       <path class="foam" d="M-20 240 C120 234 240 246 380 240 S640 232 780 240 S1060 246 1220 238"/>
       <path class="sand" d="M-20 252 C300 246 700 256 1220 248 V370 H-20 Z"/>
@@ -8207,6 +8220,7 @@ function parkHtml() {
       <rect x="800" y="${F - 120}" width="8" height="120" ${hc('#5a5a64', '#1c1d3c')}/><circle cx="804" cy="${F - 132}" r="18" ${hc('#fbf7ec', '#fff0c0')}/><circle cx="804" cy="${F - 132}" r="18" fill="none" ${hs('#3a3a44', '#3a3a44')} stroke-width="3"/>${clockHands(804, F - 132, 16)}<circle class="glow" cx="804" cy="${F - 132}" r="60" fill="url(#glw)"/>${lightPool(804, F + 8, 90)}${streetLamp(1030, F + 2, 116)}
       <rect x="114" y="${F - 12}" width="40" height="12" ${hc('#a9a497', '#2c2e4c')}/><path d="M120 ${F - 12} Q120 ${F - 52} 134 ${F - 54} Q148 ${F - 52} 148 ${F - 12} Z" ${hc('#b4ad9e', '#3a3c5e')}/><path d="M122 ${F - 32} Q134 ${F - 22} 146 ${F - 32} L144 ${F - 24} Q134 ${F - 16} 124 ${F - 24} Z" ${hc('#d0453c', '#5a2030')}/>
       ${[[880, -60], [1000, -20], [1100, -80], [60, -40], [160, -90], [700, 20]].map(([x, y], k) => leaf(x, y, k)).join('')}
+      <path d="M700 ${F + 4} Q720 -40 760 -230" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1"/><g class="fx-sway" style="animation-duration:3s;transform-origin:760px -230px"><path d="M744 -262 h32 v30 h-32 Z" ${hc('#f2c94c', '#5a5030')}/><path d="M744 -262 l32 30 M776 -262 l-32 30" stroke="#d0453c" stroke-width="1.6"/><path d="M760 -232 q-8 16 4 30 q-10 14 2 28" fill="none" stroke="#e58fa8" stroke-width="2"/></g>
       <rect x="-20" y="${F}" width="1240" height="134" ${hc('#d9c7a2', '#2a2846')}/>${Array.from({ length: 22 }, (_, j) => `<path d="M${j * 56} ${F + 30 + (j % 3) * 28} q6 -6 12 0" ${hs('#c2ad84', '#22203e')} stroke-width="2"/>`).join('')}
       <g data-fx="pigeons">${pigeonArt(560, F + 100, 0)}${pigeonArt(596, F + 106, 1)}</g>
       ${Array.from({ length: 9 }, (_, k) => `<path d="M${646 + k * 16} ${F - 2} v-12" stroke="#4f7a4a" stroke-width="1.6"/><path d="M${642 + k * 16} ${F - 20} q4 -6 8 0 v5 h-8 Z" ${hc(['#e86f5e', '#f2c94c', '#e58fa8'][k % 3], '#3a2c48')}/>`).join('')}
@@ -8274,7 +8288,7 @@ function shokudoHtml() {
   const tanzaku = [['親子丼', '700円'], ['天ぷら', '900円'], ['生姜焼き', '780円'], ['冷やっこ', '250円'], ['お新香', '200円'], ['ビール', '500円']];
   const table = (u0, u1, v0, v1, k) => { const um = (u0 + u1) / 2, [sx, sy] = isoPt(um, (v0 + v1) / 2, 1.42);
     return [[u0 + 0.2, v0 + 0.2], [u1 - 0.3, v0 + 0.2], [u0 + 0.2, v1 - 0.3], [u1 - 0.3, v1 - 0.3]].map(([a, b]) => iBox('#5e3e24', a, b, 0, a + 0.1, b + 0.1, 1.3)).join('') + iBox('#b07a46', u0, v0, 1.3, u1, v1, 1.42, { top: '#c8925a' })
-      + iBowl(um - 0.7, v0 + 0.5, 1.42, '#e6a23c') + iBowl(um + 0.7, v0 + 0.5, 1.42, '#c84a3a') + iSteam(um - 0.7, v0 + 0.5, 1.42, k) + iSteam(um + 0.7, v0 + 0.5, 1.42, k + 1.6)
+      + iBowl(um - 0.7, v0 + 0.5, 1.42, '#e6a23c') + iBowl(um + 0.7, v0 + 0.5, 1.42, '#c84a3a') + iBowl(um - 0.7, v1 - 0.5, 1.42, '#d9b04a') + iBowl(um + 0.7, v1 - 0.5, 1.42, '#7fae5a') + iSteam(um - 0.7, v0 + 0.5, 1.42, k) + iSteam(um + 0.7, v0 + 0.5, 1.42, k + 1.6) + iSteam(um + 0.7, v1 - 0.5, 1.42, k + 0.8)
       + `<rect x="${(sx - 3).toFixed(1)}" y="${(sy - 13).toFixed(1)}" width="6" height="11" rx="2" fill="#4a2a1c"/><rect x="${(sx + 5).toFixed(1)}" y="${(sy - 9).toFixed(1)}" width="9" height="7" rx="1" fill="#f3ead6"/>`; };
   const tables = [[8, 11, 7.6, 9.4], [14, 17, 7.6, 9.4], [14, 17, 12.4, 14.2]];
   const [cx, cy] = isoPt(2.4, 2.0, 1.95);
@@ -8857,11 +8871,14 @@ function yardHtml(pct, place = 'yard') {
         <div class="aurora"><i></i><i></i></div>
         <svg class="dipper" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M${dip.join(' L')} L${dip[3]}"/></svg>
         ${SKY.stars.map(star).join('')}
+        <i class="nplane" aria-hidden="true"></i>
         <div class="meteors"><i class="meteor" style="left:6%;top:10%;--d:9s;--w:-3s"></i><i class="meteor" style="left:36%;top:3%;--d:13s;--w:-9s"></i></div>
       </div>
       <div class="dayset">
         <i class="rainbow"></i>
         <div class="clouds">${[[10, 1, 110, 20], [24, 0.7, 140, 80], [5, 0.85, 125, 55], [34, 0.6, 160, 120]].map(([y, k, d, w]) => `<i class="cloud" style="top:${y}%;--k:${k};--d:${d}s;--w:-${w}s"></i>`).join('')}</div>
+        <div class="plane" aria-hidden="true"><i class="trail"></i><svg viewBox="0 0 40 14"><path d="M2 7 Q6 4 30 5 Q38 5.4 39 7 Q38 8.6 30 9 Q6 10 2 7 Z" fill="#f4f6f8"/><path d="M16 6 L24 0 H27 L22 6.4 Z M16 8 L24 14 H27 L22 7.6 Z M3 7 L1 2 H4 L8 6.4 Z" fill="#dfe4ea"/><path d="M30 6 h5" stroke="#9fb0c8" stroke-width="1.2"/></svg></div>
+        <div class="balloon" aria-hidden="true"><svg viewBox="0 0 40 60"><path d="M20 2 C8 2 2 11 2 20 C2 31 12 38 16 44 H24 C28 38 38 31 38 20 C38 11 32 2 20 2 Z" fill="#e8913a"/><path d="M20 2 C14 6 12 14 12 22 C12 32 15 39 16 44 H24 C25 39 28 32 28 22 C28 14 26 6 20 2 Z" fill="#f2c94c"/><path d="M20 2 C18 10 17 20 17.5 30 C18 37 18.6 41 19 44 H21 C21.4 41 22 37 22.5 30 C23 20 22 10 20 2 Z" fill="#d0574b"/><path d="M16 44 L17 50 M24 44 L23 50" stroke="#8a6a46" stroke-width=".8"/><rect x="16.5" y="50" width="7" height="6" rx="1" fill="#a8743f"/></svg></div>
         <div class="birds"><div class="flock">${[[52, 14], [38, 6], [38, 22], [24, 0], [24, 28]].map(([x, y]) => `<i style="left:${x}px;top:${y}px"></i>`).join('')}</div></div>
       </div>
       <div class="yworld" style="width:${yw}px;margin-left:${-yw / 2}px">
