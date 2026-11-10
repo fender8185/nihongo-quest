@@ -960,6 +960,11 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .letters { display: flex; flex-direction: column; gap: 12px; }
 .letter { --bg-elev: #fffdf6; --bg-elev-2: #f6eedc; --bg-hover: #f3ead6; --line: #e6dcc6; --line-2: #d8c9a8; --fg: #3b3428; --fg-2: #5b513f; --fg-3: #8a7d66; --accent: #4b57d1; --accent-fg: #fff; color-scheme: light;
   position: relative; padding: 14px 16px; border-radius: 12px; background: #fbf5e6; color: var(--fg); box-shadow: inset 0 0 0 1px rgba(120, 96, 50, .12), 0 6px 18px -12px rgba(0, 0, 0, .45); }
+.letter-list { display: grid; gap: 8px; }
+.letter-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg-elev); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.letter-row .lr-face { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 10px; background: var(--bg-sunken); overflow: hidden; } .letter-row .lr-face svg { width: 100%; height: 100%; }
+.letter-row .lr-title { flex: 1; min-width: 0; display: grid; font-weight: 600; } .letter-row .lr-title small { font-weight: 400; color: var(--fg-3); }
+.letter-row .lr-state { flex: none; font-size: 12px; padding: 2px 8px; border-radius: 99px; } .letter-row.unread .lr-state { color: #fff; background: #ef4f45; } .letter-row.read { opacity: .72; } .letter-row.read .lr-state { color: var(--fg-3); border: 1px solid var(--line); }
 .letter::before { content: ''; position: absolute; top: 12px; right: 12px; width: 20px; height: 24px; border-radius: 2px; background: repeating-linear-gradient(45deg, #e9a28f 0 3px, #f3c2b2 3px 6px); box-shadow: 0 0 0 2px #fbf5e6, 0 0 0 3px rgba(200, 120, 100, .35); }   /* a stamp */
 .letter-title { font-weight: 700; font-size: 15px; margin: 0 30px 6px 0; }
 .letter-body { font-size: 14px; line-height: 1.75; color: var(--fg-2); }
@@ -3052,12 +3057,17 @@ const kotoSum = (byDev) => Object.values(byDev || {}).reduce((a, n) => a + (Numb
 // what a day gave by answering (its sets on every device, its bonus) and by listening, each up to its cap
 const kotoQuizDay = (k, d) => Math.min(KOTO_QUIZ_CAP, kotoSum(k.daySets[d]) + (k.days.includes(d) ? KOTO_DAY : 0));
 const kotoListenDay = (k, d) => Math.min(KOTO_LISTEN_CAP, kotoSum(k.listen[d]));
-function kotoBalance() {
+function kotoEarned() {   // all the 言靈 ever come by, spent or not
   const k = state.koto, quizDays = new Set([...Object.keys(k.daySets), ...k.days]);
-  const got = kotoSum(k.sets) + [...quizDays].reduce((a, d) => a + kotoQuizDay(k, d), 0) + Object.keys(k.listen).reduce((a, d) => a + kotoListenDay(k, d), 0)
+  return kotoSum(k.sets) + [...quizDays].reduce((a, d) => a + kotoQuizDay(k, d), 0) + Object.keys(k.listen).reduce((a, d) => a + kotoListenDay(k, d), 0)
     + kotoSum(k.mail) + kotoSum(k.found) + (Number(k.gift) || 0);
-  return got - Object.values(state.owned).reduce((a, o) => a + ((o && Number(o.paid)) || 0), 0);
 }
+function kotoBalance() { return kotoEarned() - Object.values(state.owned).reduce((a, o) => a + ((o && Number(o.paid)) || 0), 0); }
+// 古道具屋 opens (2026-11-10, the user) once 20 言靈 have been earned — 福爺's letter comes then; one who has bought there already
+// or has his letter's 言靈 finds it open
+const SHOP_OPEN_AT = 20;
+const shopOpen = () => kotoEarned() >= SHOP_OPEN_AT || Boolean(state.koto.mail.opening) || Object.values(state.owned).some((o) => o && Number(o.paid) > 0);
+const shopShut = () => toast(`山上的古道具屋還在準備開張。存到 ${SHOP_OPEN_AT} 言靈，福爺就會寫信來。`, 3600);
 // the set that just ended, once (renderSummary keeps it on the session): what it gave for the set and for the day's list done,
 // each as much as the day's cap left (full: the cap was reached, so some or all of it was not given)
 function earnKoto(s) {
@@ -7122,6 +7132,7 @@ function yHeroWalk(yard, to, done, free) {   // free: on the way out of the plac
 const SHOP_PATH = [[540, 342], [514, 326], [546, 306], [506, 290], [526, 272], [490, 260], [482, 255]];   // in the hill's own units (.mtn), the last at the door
 function yClimb(el) {
   yNamed(el);
+  if (!shopOpen()) { shopShut(); return; }   // not open yet
   const yard = el.closest('.yard'), h = yard && yard.querySelector('.yhero');
   const k = ycam.YW / 1200, at = ([x, y]) => [(x - 600) * k, (600 - y) * k], foot = [Math.round(at(SHOP_PATH[0])[0]), 214];
   const keep = () => { yh.climb = null; yh.s = 0; yh.X = foot[0]; yh.Y = foot[1]; yh.back = false; yHeroSave(); };
@@ -8234,7 +8245,7 @@ function yardHtml(pct, place = 'yard') {
 }
 // the buttons up top in 書房 and the yard (1.2.0): 言靈 (to 古道具屋), 衣櫃, 擺設 (each place its own), 設定
 function sceneTools(editAct) {
-  return `<button type="button" class="study-koto" data-act="nav" data-route="#/shop" aria-label="言靈 ${kotoBalance()}，到古道具屋" title="古道具屋">${kotoIcon()}<span>${kotoBalance()}</span></button><button type="button" class="study-wear" data-act="wardrobe" aria-label="衣櫃" title="衣櫃">${icon('hanger')}</button><button type="button" class="study-edit${editAct === 'yard-edit' ? ' yard-edit' : ''}" data-act="${editAct}" aria-label="擺設" title="擺設">${icon('arrange')}</button><button type="button" class="study-gear" data-act="settings" aria-label="設定" title="設定">${icon('settings')}</button>`;
+  return `<button type="button" class="study-koto" data-act="koto-shop" aria-label="言靈 ${kotoBalance()}，到古道具屋" title="古道具屋">${kotoIcon()}<span>${kotoBalance()}</span></button><button type="button" class="study-wear" data-act="wardrobe" aria-label="衣櫃" title="衣櫃">${icon('hanger')}</button><button type="button" class="study-edit${editAct === 'yard-edit' ? ' yard-edit' : ''}" data-act="${editAct}" aria-label="擺設" title="擺設">${icon('arrange')}</button><button type="button" class="study-gear" data-act="settings" aria-label="設定" title="設定">${icon('settings')}</button>`;
 }
 // 書房 (1.1.0): an isometric room drawn much bigger than the screen, with the things you tap; on a phone the camera shows a part
 // of it round the hero and goes along with him as he walks (1.2.0: a drag on him leads him, a swipe looks round freely, two
@@ -11427,7 +11438,7 @@ const DRESS = (() => {
     st.classList.add('undressing'); st.classList.remove('dressing'); dr.classList.remove('on'); put(cp, from);   // back to where they stand
     setTimeout(() => { dr.remove(); st.classList.remove('undressing'); }, 520);
   }
-  function shop() { if (!d) return; state.look = Object.assign({}, d.look); state.wear = Object.assign({}, d.wear); saveState(); d = null; window.removeEventListener('resize', reframe); go('#/shop'); }   // off to buy something: what was chosen is kept
+  function shop() { if (!d) return; if (!shopOpen()) { shopShut(); return; } state.look = Object.assign({}, d.look); state.wear = Object.assign({}, d.wear); saveState(); d = null; window.removeEventListener('resize', reframe); go('#/shop'); }   // off to buy something: what was chosen is kept
   return { open, close, tab, pick, wear, random, turn, shop };
 })();
 // a purchase: paid once, then put away (1.2.0): a thing into the storage box, to be set out in 擺設; a wear into the wardrobe
@@ -15927,38 +15938,53 @@ Object.assign(ACTIONS, {
 });
 
 // ---------- the mailbox (1.1.0): what the 今日 page said on banners, as letters in the mailbox by the house ----------
-// The letters are worked out when asked: the site move (on the old address; it stays), 書房's welcome, 第 0 週 for a beginner,
-// 加到主畫面 on a phone's browser, and the notices kept in the state. 知道了 puts one away for good. Inside, the door's tag counts
-// them and its dot glows; a letter this device has not been told about yet brings the 「外面信箱有新信」 hint once.
+// A letter comes when its time does — the site move (on the old address), 渚's welcome to grandmother's house, 第 0 週 for a
+// beginner, 加到主畫面 on a phone's browser, 福爺's when 古道具屋 opens, the notices kept in the state — and stays (2026-11-10, the
+// user): read or not, in the mailbox for good (nq_letters: got, read; this device's). Inside, the door's tag counts the unread and
+// its dot glows; a letter this device has not been told about yet brings the 「外面信箱有新信」 hint once. Opened: the list, 新 on
+// the unread; a tap reads one (read from then on).
 function storedFlag(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
-function letters() {
-  const out = [], n = Object.keys(state.srs).length;
-  if (onOldSite()) out.push({ id: 'moved', keep: true, title: '網站搬家了', body: '新網址是 nihongoquest.app。在新網址用同一個 Email 登入雲端同步，進度就會接上；還沒登入過的，先在這裡登入一次（設定 › 資料）。加到主畫面的，新網址要重新加一次。',
-    acts: `<a class="btn btn-sm btn-primary" href="${NEW_SITE_URL}#/today" target="_blank" rel="noopener">打開新網址</a>` });
-  if (!storedFlag('nq_letter_room')) out.push({ id: 'room', title: '歡迎來到書房', body: `每個功能都是房間裡的一樣東西：<ul>
-      <li>書桌：筆記本是今日練習，耳機是聽一輪</li>
-      <li>書櫃是課程，最上面有目前單元；書櫃上層的卡片盒是單字</li>
-      <li>往右看：抽屜櫃是錯題本；軟木板是學習分析，最上面有今天的範圍和說明；日曆是模擬考，紅色印章是連續天數</li>
-      <li>右上角的齒輪是設定</li>
-      <li>顏色跟著時間走，想固定可以到設定 › 外觀選永夜或永晝</li></ul>` });
-  if ((state.startChosen || n) && !state.introSeen && n < 40) out.push({ id: 'intro', title: '先看「第 0 週」', body: '假名和最基本的句型都在「第 0 週」，開始之前看一遍會輕鬆很多。',
-    acts: '<button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button>' });
-  const info = installInfo();
-  if (!info.standalone && info.touch && !storedFlag('nq_install_hint')) out.push({ id: 'install', title: '加到主畫面', body: '加到主畫面會更好用：全螢幕、打開就是書房、離線也能練。',
-    acts: info.canPrompt ? '<button type="button" class="btn btn-sm btn-primary" data-act="install-prompt">安裝</button>' : '<button type="button" class="btn btn-sm btn-primary" data-act="install-how">怎麼做</button>' });
-  if (!storedFlag('nq_letter_opening')) {   // 福爺's opening letter (1.2.0), with 10 言靈 in it (once for the account: koto.mail)
-    const got = Boolean(state.koto.mail.opening);
-    out.push({ id: 'opening', from: 'fuku', title: '古道具屋開張了', body: `<p>你好，我是住在門外左邊山上的福爺。山上的古道具屋今天開張了，小店不收錢，只收「言靈」。</p>
+function letterBox() {
+  let b = null; try { b = JSON.parse(localStorage.getItem('nq_letters') || 'null'); } catch (e) { /* none */ }
+  if (!b || !b.got) {   // before 2026-11-10 a letter put away (知道了) went: it is here, read
+    b = { got: {}, read: {} };
+    [['room', 'nq_letter_room'], ['opening', 'nq_letter_opening'], ['install', 'nq_install_hint']].forEach(([id, k]) => { const v = storedFlag(k); if (v) { b.got[id] = v; b.read[id] = v; } });
+  }
+  return b;
+}
+function letterBoxSave(b) { try { localStorage.setItem('nq_letters', JSON.stringify(b)); } catch (e) { /* this device keeps nothing */ } }
+function letterKinds() {   // every letter there is: when it comes (due), when it is no longer wanted (gone)
+  const n = Object.keys(state.srs).length, info = installInfo(), got = Boolean(state.koto.mail.opening);
+  return [
+    { id: 'moved', due: () => onOldSite(), gone: () => !onOldSite(), title: '網站搬家了', body: '新網址是 nihongoquest.app。在新網址用同一個 Email 登入雲端同步，進度就會接上；還沒登入過的，先在這裡登入一次（設定 › 資料）。加到主畫面的，新網址要重新加一次。',
+      acts: `<a class="btn btn-sm btn-primary" href="${NEW_SITE_URL}#/today" target="_blank" rel="noopener">打開新網址</a>` },
+    { id: 'room', from: 'nagisa', due: () => true, title: '歡迎回到外婆的家', body: `<p>你好。我是渚，你外婆從小到大的朋友，在鎮上開一間小小的咖啡店「喫茶しずく」。</p>
+      <p>聽說你搬進了她的家。這個家裡的東西，都是她留給你的：</p><ul>
+      <li>書房的書桌：筆記本是每天的練習；戴上耳機，可以聽一輪。</li>
+      <li>書櫃是課程，卡片盒裡是單字；抽屜裡的錯題本、牆上的軟木板和日曆，記著你走過的每一天。</li>
+      <li>臥房可以休息，衣櫃和鏡子可以換個樣子。做完當天的練習，還能在床上睡到想去的時間。</li>
+      <li>門外有院子和海邊，往右是小鎮，坐公車還能去更遠的地方。鎮上的人會慢慢認識你，用你學到的日文跟你說話。</li></ul>
+      <p>不用急，一天一點就好。你外婆總說：話要慢慢說，才會說進心裡。</p><p class="letter-sign">喫茶しずく　渚</p>` },
+    { id: 'intro', due: () => (state.startChosen || n) && !state.introSeen && n < 40, title: '先看「第 0 週」', body: '假名和最基本的句型都在「第 0 週」，開始之前看一遍會輕鬆很多。',
+      acts: '<button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button>' },
+    { id: 'install', due: () => !info.standalone && info.touch, gone: () => info.standalone, title: '加到主畫面', body: '加到主畫面會更好用：全螢幕、打開就是書房、離線也能練。',
+      acts: info.canPrompt ? '<button type="button" class="btn btn-sm btn-primary" data-act="install-prompt">安裝</button>' : '<button type="button" class="btn btn-sm btn-primary" data-act="install-how">怎麼做</button>' },
+    { id: 'opening', from: 'fuku', due: () => shopOpen(), title: '古道具屋開張了', body: `<p>你好，我是住在門外左邊山上的福爺。山上的古道具屋今天開張了，小店不收錢，只收「言靈」。</p>
       <p>日本人相信，話語裡住著靈魂。你每多吸收一分知識，就可能有言靈悄悄聚到你身邊來。</p>
       <p>信裡附上 ${LETTER_GIFT.opening} 言靈，當作開張的見面禮，有空上山來坐坐。</p>
       <p class="letter-sign">古道具屋　福爺</p>`,
       acts: got ? `<span class="letter-got">${kotoIcon()}已收下 ${LETTER_GIFT.opening} 言靈</span><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/shop">去古道具屋</button>`
-        : `<button type="button" class="btn btn-sm btn-primary" data-act="letter-gift" data-id="opening">${kotoIcon()}收下 ${LETTER_GIFT.opening} 言靈</button>` });
-  }
-  (state.notices || []).forEach(x => out.push({ id: 'notice:' + x.id, title: '通知', body: x.lines.map(esc).join('<br>') }));
-  return out;
+        : `<button type="button" class="btn btn-sm btn-primary" data-act="letter-gift" data-id="opening">${kotoIcon()}收下 ${LETTER_GIFT.opening} 言靈</button>` }
+  ].concat((state.notices || []).map((x) => ({ id: 'notice:' + x.id, due: () => true, title: '通知', body: x.lines.map(esc).join('<br>') })));
 }
-function mailCount() { return letters().length; }
+function letters() {   // the letters in the mailbox, each with read (newest first; one that comes now is kept from now on)
+  const b = letterBox(); let changed = !storedFlag('nq_letters');
+  const out = letterKinds().filter((l) => !(l.gone && l.gone()) && (b.got[l.id] || (l.due() && (b.got[l.id] = todayStr(), changed = true))));
+  if (changed) letterBoxSave(b);
+  return out.map((l) => Object.assign(l, { got: b.got[l.id], read: Boolean(b.read[l.id]) })).sort((x, y) => (y.got || '').localeCompare(x.got || ''));
+}
+function letterRead(id) { const b = letterBox(); if (!b.read[id]) { b.read[id] = todayStr(); letterBoxSave(b); } }
+function mailCount() { return letters().filter((l) => !l.read).length; }   // the unread
 function takeLetterGift(id) {
   const n = LETTER_GIFT[id]; if (!n || state.koto.mail[id]) return;
   state.koto.mail[id] = n; saveState(); kotoPop(n);
@@ -15966,26 +15992,33 @@ function takeLetterGift(id) {
 }
 function mailSeen() { try { return JSON.parse(localStorage.getItem('nq_mail_seen') || '[]'); } catch (e) { return []; } }
 function markMailSeen(ids) { try { localStorage.setItem('nq_mail_seen', JSON.stringify([...new Set(mailSeen().concat(ids))].slice(-40))); } catch (e) { /* ignore */ } }
-function newMail() {   // the letters this device has not been told about (a brand-new learner picks a start first)
+function newMail() {   // the unread letters this device has not been told about (a brand-new learner picks a start first)
   if (!state.startChosen && !Object.keys(state.srs).length) return [];
-  const seen = mailSeen(); return letters().map(l => l.id).filter(id => !seen.includes(id));
+  const seen = mailSeen(); return letters().filter((l) => !l.read).map((l) => l.id).filter((id) => !seen.includes(id));
 }
-// who wrote a letter (1.2.0): their face in its top right corner (福爺 for now; the app's own letters have none)
-const LETTER_FROM = { fuku: ['福爺', () => fukuSvg()] };
+// who wrote a letter (1.2.0): their face in its top right corner (福爺; 渚 since 2026-11-10; the app's own letters have none)
+const LETTER_FROM = { fuku: ['福爺', () => fukuSvg()], nagisa: ['渚', () => TOWNEV.face('nagisa')] };
 const LETTER_GIFT = { opening: 10 };   // 言靈 that come with a letter
+let letterOpen = null;   // the letter read in the mailbox now (none: the list)
 function lettersHtml() {
-  return `<div class="letters">${letters().map(l => `<div class="letter${l.from ? ' from' : ''}" data-letter="${esc(l.id)}">
+  const all = letters(), l = letterOpen && all.find((x) => x.id === letterOpen);
+  if (!l) return `<div class="letter-list">${all.map((x) => `<button type="button" class="letter-row ${x.read ? 'read' : 'unread'}" data-act="letter-open" data-id="${esc(x.id)}">
+      <span class="lr-face">${x.from && LETTER_FROM[x.from] ? LETTER_FROM[x.from][1]() : icon('mail')}</span><span class="lr-title">${esc(x.title)}<small>${esc(x.from && LETTER_FROM[x.from] ? LETTER_FROM[x.from][0] : 'Nihongo Quest')}${x.got && x.got.length === 10 ? '・' + esc(x.got.slice(5).replace('-', '/')) : ''}</small></span>
+      <span class="lr-state">${x.read ? '已讀' : '新'}</span></button>`).join('')}</div>`;
+  return `<div class="letters"><div class="letter${l.from ? ' from' : ''}" data-letter="${esc(l.id)}">
       ${l.from && LETTER_FROM[l.from] ? `<div class="letter-from" title="${LETTER_FROM[l.from][0]}" aria-label="寄件者：${LETTER_FROM[l.from][0]}">${LETTER_FROM[l.from][1]()}</div>` : ''}
       <div class="letter-title">${esc(l.title)}</div>
       <div class="letter-body">${l.body}</div>
-      <div class="row-wrap mt-3">${l.acts || ''}${l.keep ? '' : `<button type="button" class="btn btn-sm" data-act="letter-done" data-id="${esc(l.id)}">知道了</button>`}</div>
-    </div>`).join('')}</div>`;
+      <div class="row-wrap mt-3">${l.acts || ''}<button type="button" class="btn btn-sm" data-act="letter-done" data-id="${esc(l.id)}">‹ 回信箱</button></div>
+    </div></div>`;
 }
-function openLetters() {
-  const ids = letters().map(l => l.id);
-  if (!ids.length) { toast('信箱是空的'); return; }
-  markMailSeen(ids);
+function openLetters(id) {   // the mailbox: its list, or (id) that letter (read from now on)
+  const all = letters();
+  if (!all.length) { toast('信箱是空的'); return; }
+  markMailSeen(all.map((l) => l.id));
+  letterOpen = id && all.some((l) => l.id === id) ? id : null; if (letterOpen) letterRead(letterOpen);
   openModal('信箱', lettersHtml(), { width: 460, noFocus: true });
+  mailboxLevel();
 }
 // the yard's mailbox follows the letters in place: the flag, the tag
 function mailboxLevel() {
@@ -15999,19 +16032,19 @@ Object.assign(ACTIONS, {
     if (!box || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { openLetters(); return; }
     box.classList.add('open'); setTimeout(openLetters, 320); setTimeout(() => box.classList.remove('open'), 900);
   }),
-  'letter-gift': (el) => {   // what came with a letter, taken (once for the account); the letter stays till 知道了
+  'letter-gift': (el) => {   // what came with a letter, taken (once for the account)
     takeLetterGift(el.dataset.id);
     if (document.getElementById('modalBody')) document.getElementById('modalBody').innerHTML = lettersHtml();
   },
-  'letter-done': (el) => {
+  'letter-open': (el) => { letterOpen = el.dataset.id; letterRead(letterOpen); document.getElementById('modalBody').innerHTML = lettersHtml(); mailboxLevel(); },
+  'letter-done': (el) => {   // ‹ 回信箱: back to the list, the letter kept (read)
     const id = el.dataset.id;
     takeLetterGift(id);   // put away before taking it: it is taken all the same
-    if (id === 'room' || id === 'install' || id === 'opening') { try { localStorage.setItem({ room: 'nq_letter_room', install: 'nq_install_hint', opening: 'nq_letter_opening' }[id], todayStr()); } catch (e) { /* ignore */ } }
-    else if (id === 'intro') { state.introSeen = true; saveState(); }
-    else if (id.startsWith('notice:')) { state.notices = (state.notices || []).filter(x => x.id !== id.slice(7)); saveState(); }
-    if (mailCount()) document.getElementById('modalBody').innerHTML = lettersHtml(); else closeModal();
+    letterRead(id); if (id === 'intro') { state.introSeen = true; saveState(); }
+    letterOpen = null; document.getElementById('modalBody').innerHTML = lettersHtml();
     mailboxLevel();
   },
+  'koto-shop': () => (shopOpen() ? go('#/shop') : shopShut()),
   'mail-hint': (el) => ROOM.out(el.closest('.study'))
 });
 

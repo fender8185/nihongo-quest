@@ -95,21 +95,21 @@ def test_a_set_past_the_days_cap_gives_nothing_and_says_so(b):
     assert r['line'] == 'あ言靈今天作答的言靈拿滿了共20', r
 
 def test_fukuyas_opening_letter_brings_10_koto_once_with_his_face_and_no_rules(b):
-    js = """(() => { const l = letters().find(x => x.id === 'opening'); if (!l) return 'none';
-      const bal0 = kotoBalance(); openLetters(); const card = () => document.querySelector('#modalBody [data-letter="opening"]');
+    js = """(() => { state.koto.gift = (Number(state.koto.gift) || 0) + 20; const l = letters().find(x => x.id === 'opening'); if (!l) return 'none';   /* 20 earned: 古道具屋 opens */
+      const bal0 = kotoBalance(); openLetters('opening'); const card = () => document.querySelector('#modalBody [data-letter="opening"]');
       const face = !!card().querySelector('.letter-from svg'), stamp = getComputedStyle(card(), '::before').display, rules = /做完一組|\\+1|\\+10|一組|掛鐘|擺設|衣櫃/.test(card().textContent), learn = card().textContent.includes('吸收一分知識');
       card().querySelector('[data-act="letter-gift"]').click(); const gain = kotoBalance() - bal0, got = !!card().querySelector('.letter-got'), shop = !!card().querySelector('[data-route="#/shop"]');
       takeLetterGift('opening'); const again = kotoBalance() - bal0 - gain;   /* another device took it as well: once */
       card().querySelector('[data-act="letter-done"]').click();
-      return JSON.stringify({ title: l.title, from: l.from, face, stamp, rules, learn, gain, got, shop, again, gone: !letters().some(x => x.id === 'opening'), mail: state.koto.mail }); })()"""
+      return JSON.stringify({ title: l.title, from: l.from, face, stamp, rules, learn, gain, got, shop, again, kept: letters().some(x => x.id === 'opening'), unread: !letters().find(x => x.id === 'opening').read, mail: state.koto.mail }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'title': '古道具屋開張了', 'from': 'fuku', 'face': True, 'stamp': 'none', 'rules': False, 'learn': True, 'gain': 10, 'got': True, 'shop': True, 'again': 0, 'gone': True, 'mail': {'opening': 10}}, r   # no rules, no wares, no how-to
+    assert r == {'title': '古道具屋開張了', 'from': 'fuku', 'face': True, 'stamp': 'none', 'rules': False, 'learn': True, 'gain': 10, 'got': True, 'shop': True, 'again': 0, 'kept': True, 'unread': False, 'mail': {'opening': 10}}, r   # no rules, no wares, no how-to
 
 def test_putting_the_opening_letter_away_still_takes_its_koto(b):
-    js = """(() => { const bal0 = kotoBalance(); openLetters(); document.querySelector('#modalBody [data-letter="opening"] [data-act="letter-done"]').click();
-      return JSON.stringify({ gain: kotoBalance() - bal0, gone: !letters().some(x => x.id === 'opening') }); })()"""
+    js = """(() => { state.koto.gift = (Number(state.koto.gift) || 0) + 20; const bal0 = kotoBalance(); openLetters('opening'); document.querySelector('#modalBody [data-letter="opening"] [data-act="letter-done"]').click();
+      return JSON.stringify({ gain: kotoBalance() - bal0, kept: letters().some(x => x.id === 'opening') }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'gain': 10, 'gone': True}, r
+    assert r == {'gain': 10, 'kept': True}, r   # put away: its 言靈 taken; the letter stays, read
 
 # ---- 古道具屋, 書房's wares, 擺設 ----
 GO_ROOM = "location.hash = '#/today'; document.getElementById('view').innerHTML = ''; route();"
@@ -746,7 +746,7 @@ def test_the_wheel_zooms_round_the_pointer(b):
     assert r['grew'] > 1.3 and abs(r['dx']) <= 2 and abs(r['dy']) <= 2, r   # closer, and the notebook under the pointer stayed under it
 
 def test_the_yard_has_the_shop_and_the_hero_walks_up_to_it(b):
-    js = "(async () => { " + FRESH + """ location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();
+    js = "(async () => { " + FRESH + """ state.koto.gift = 20; location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();
       const tag = document.querySelector('.yard .shop-btn .tag').textContent, hero = !!document.querySelector('.yard .yhero');
       document.querySelector('.yard .shop-btn').click(); await new Promise(q => setTimeout(q, 4500));
       return JSON.stringify({ tag, hero, hash: location.hash, fuku: !!document.querySelector('.shop-front .fuku') }); })()"""
@@ -755,7 +755,7 @@ def test_the_yard_has_the_shop_and_the_hero_walks_up_to_it(b):
 
 # a tap on 古道具屋: the hero runs over the lawn and up the hill path, small with the distance but outlined, in at the shop's door
 def test_a_tap_on_the_shop_runs_the_hero_up_the_hill_path(b):
-    js = "(async () => { " + FRESH + """ TOWN.EVENTS = []; TOWNEV.clock = { h: 12, day: new Date(2026, 10, 10) }; localStorage.removeItem('nq_hero'); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();
+    js = "(async () => { " + FRESH + """ state.koto.gift = 20; TOWN.EVENTS = []; TOWNEV.clock = { h: 12, day: new Date(2026, 10, 10) }; localStorage.removeItem('nq_hero'); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();
       await new Promise(q => setTimeout(q, 200));
       const h = () => document.querySelector('.yard .yhero'), scale = () => { const m = new DOMMatrix(getComputedStyle(h()).transform); return Math.hypot(m.a, m.b); };
       document.querySelector('.yard .shop-btn').click();
@@ -785,7 +785,7 @@ def test_the_yards_signs_rest_wake_and_say_their_names_on_a_tap(b):
     assert r['woke'] and r['named'], r
 
 def test_a_second_tap_on_the_shop_goes_straight_in(b):
-    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();
+    js = "(async () => { " + FRESH + """ state.koto.gift = 20; localStorage.removeItem('nq_hero'); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();   /* 古道具屋 open: 20 言靈 earned */
       await new Promise(q => setTimeout(q, 200)); const btn = document.querySelector('.yard .shop-btn');
       btn.click(); await new Promise(q => setTimeout(q, 300)); btn.click(); await new Promise(q => setTimeout(q, 700));
       return location.hash; })()"""
@@ -886,7 +886,7 @@ def test_the_yard_has_the_rooms_buttons_up_top_that_rest_and_its_own_dressing_ro
       document.querySelector('[data-act="dress-tab"][data-tab="wear"]').click(); document.querySelector('[data-act="dress-wear"][data-id="beanie"]').click(); document.querySelector('[data-act="dress-done"]').click(); await wait(650);
       return JSON.stringify({ acts, bal, quiet, faded, first, dressing, facing, worn: state.wear.head, hat: !!y.querySelector('.yhero svg [class*="beanie"], .yhero svg .w-beanie') || y.querySelector('.yhero').innerHTML.includes('beanie'), closed: !y.classList.contains('dressing') && !y.querySelector('.dress') }); })()"""
     r = json.loads(ev_at(b, PHONE, js))
-    assert r['acts'] == ['nav', 'wardrobe', 'yard-edit', 'settings'] and r['bal'] == '90', r   # 言靈, 衣櫃, 擺設, 設定
+    assert r['acts'] == ['koto-shop', 'wardrobe', 'yard-edit', 'settings'] and r['bal'] == '90', r   # 言靈, 衣櫃, 擺設, 設定
     assert r['quiet'] and r['faded'] == '0' and r['first'] is False, r   # resting; a first tap only wakes them
     assert r['dressing'] and r['facing'] == ['inline', 'none'] and r['worn'] == 'beanie' and r['closed'], r
 

@@ -350,10 +350,10 @@ def test_intro_lesson_renders_with_kana_table_and_marks_itself_seen(b):
 def test_new_user_banner_points_to_the_intro_until_dismissed(b):
     # test build: the banner is a letter in the yard's mailbox; the door inside counts it
     js = """(() => { const letter = () => letters().some(l => l.id === 'intro'); const before0 = letter(); state.startChosen = true; const before = letter();   // after the 起點 choice (1.0.6) the 第 0 週 letter comes
-      location.hash = '#/outside'; route(); openLetters(); const go = !!document.querySelector('.letter[data-letter=intro] [data-act=nav][data-route="#/course/intro"]');
-      document.querySelector('.letter[data-letter=intro] [data-act=letter-done]').click(); const after = letter(); closeModal(true);
+      location.hash = '#/outside'; route(); openLetters('intro'); const go = !!document.querySelector('.letter[data-letter=intro] [data-act=nav][data-route="#/course/intro"]');
+      document.querySelector('.letter[data-letter=intro] [data-act=letter-done]').click(); const after = letters().some(l => l.id === 'intro' && l.read); closeModal(true);   // read, kept (2026-11-10)
       return JSON.stringify({ before0, before, go, after, seen: state.introSeen === true }); })()"""
-    assert ev(b, js) == '{"before0":false,"before":true,"go":true,"after":false,"seen":true}'
+    assert ev(b, js) == '{"before0":false,"before":true,"go":true,"after":true,"seen":true}'
 
 def test_part_of_speech_chip_opens_the_glossary(b):
     js = """(() => { const v = REG.vocab.find(x => x.builtin && x.p === 'i' && meaningOptions(x));

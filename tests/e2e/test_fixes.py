@@ -1654,7 +1654,7 @@ def test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones(b):
 # ---- 2026-10-28: the install hint ----
 def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed(b):
     # test build: the hint is a letter in the mailbox by the house (its 知道了 puts it away for good)
-    js = """(() => { localStorage.removeItem('nq_install_hint'); state.introSeen = true; state.storyV = 9; saveState(); const show = () => { location.hash = '#/outside'; route(); openLetters(); return document.querySelector('.modal .letter[data-letter=install]'); };
+    js = """(() => { localStorage.removeItem('nq_install_hint'); state.introSeen = true; state.storyV = 9; saveState(); const show = () => { localStorage.removeItem('nq_letters'); location.hash = '#/outside'; route(); openLetters('install'); return document.querySelector('.modal .letter[data-letter=install]'); };   /* a phone's or a computer's own mailbox */
       INSTALL_FORCE = { platform: 'ios', safari: true }; const ios = show(); const iosBtns = ios ? [...ios.querySelectorAll('[data-act]')].map(b => b.dataset.act) : null;
       ACTIONS['install-how'](); const modal = document.querySelector('.modal'); const guide = modal ? modal.textContent : ''; closeModal(true);
       const iosGuide = /加入主畫面/.test(guide) && /分享/.test(guide) && /進度是分開的/.test(guide) && !/⋮/.test(guide) && /Brave/.test(guide);
@@ -1663,7 +1663,7 @@ def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_aw
       INSTALL_FORCE = { platform: 'android', canPrompt: true }; const and = show(); const andBtns = and ? [...and.querySelectorAll('[data-act]')].map(b => b.dataset.act) : null; const andGuide = /安裝應用程式/.test(installGuideHtml()) && /data-act="install-prompt"/.test(installGuideHtml());
       INSTALL_FORCE = { platform: 'desktop', firefox: true, touch: false }; const desk = !show() && /Firefox 不支援/.test(installGuideHtml());
       INSTALL_FORCE = { platform: 'ios', standalone: true }; const standalone = !show() && /安裝好的 app/.test(installGuideHtml());
-      INSTALL_FORCE = { platform: 'ios' }; show().querySelector('[data-act=letter-done]').click(); const dismissed = !document.querySelector('.modal .letter[data-letter=install]') && !letters().some(l => l.id === 'install') && !!localStorage.getItem('nq_install_hint');
+      INSTALL_FORCE = { platform: 'ios' }; show().querySelector('[data-act=letter-done]').click(); const dismissed = !document.querySelector('.modal .letter[data-letter=install]') && letters().find(l => l.id === 'install').read;   /* back on the list, read (kept since 2026-11-10) */
       openSettings('look'); const inSettings = /怎麼安裝成 app？/.test(document.querySelector('.modal').textContent) && /加入主畫面/.test(document.querySelector('.modal').textContent); closeModal(true);
       INSTALL_FORCE = null; localStorage.removeItem('nq_install_hint'); return JSON.stringify({ ios: !!ios, iosBtns, iosGuide, chromeIos, braveAnd, and: !!and, andBtns, andGuide, desk, standalone, dismissed, inSettings }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
@@ -1875,7 +1875,7 @@ def test_a_browser_tab_does_not_download_audio_ahead_by_itself(b):
 # ---- 2026-11-05 (1.0.39): the site moved to nihongoquest.app; manual backups are gone ----
 def test_the_old_address_says_the_site_moved_and_data_settings_have_no_backup_file(b):
     # test build: the move is a letter in the mailbox by the house, one that cannot be put away
-    js = """(() => { state.introSeen = true; state.storyV = 9; saveState(); const card = () => { location.hash = '#/outside'; route(); openLetters(); return document.querySelector('.modal .letter[data-letter=moved]'); };
+    js = """(() => { state.introSeen = true; state.storyV = 9; saveState(); const card = () => { location.hash = '#/outside'; route(); openLetters('moved'); return document.querySelector('.modal .letter[data-letter=moved]'); };
       const here = !!card(); OLD_SITE_FORCE = true; const el = card(); const a = el && el.querySelector('a.btn'); OLD_SITE_FORCE = false; const off = !!card(); OLD_SITE_FORCE = null;
       openSettings('data'); const body = document.querySelector('.modal').textContent;
       const data = { dl: body.includes('下載備份'), restore: body.includes('從備份還原'), file: !!document.querySelector('.modal input[type=file]'), snaps: !!document.getElementById('snapList') }; closeModal(true);
@@ -1955,29 +1955,57 @@ def test_the_days_practice_and_listening_badges_turn_plain_when_done(b):
 
 # a new player stays in until ムギ has come (2026-11-10): no hint pointing out of the door while it holds
 def test_the_mail_hint_waits_while_the_player_stays_in(b):
-    js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); localStorage.setItem('nq_letter_opening', '1'); state.met = {}; state.koto.sets = {}; state.koto.daySets = {}; saveState();   /* no one at the door yet */
+    js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); state.met = {}; state.koto.sets = {}; state.koto.daySets = {}; saveState();   /* no one at the door yet */
       const wait = (ms) => new Promise(r => setTimeout(r, ms)); location.hash = '#/stats'; route(); location.hash = '#/today'; route(); await wait(1200);
       return JSON.stringify({ letters: letters().length, hint: document.querySelector('.mail-hint').classList.contains('on') }); })()"""
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
     assert r == {'letters': 1, 'hint': False}, r
 
+# 2026-11-10 (the user): a letter read stays in the mailbox, marked read; the welcome is 渚's, about grandmother's house; 古道具屋
+# opens — and 福爺 writes — once 20 言靈 have been earned
+def test_letters_stay_in_the_mailbox_once_read_and_the_welcome_is_nagisas(b):
+    js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); state.met = { koharu: 1, mugi: 1 }; saveState();
+      const rows = () => [...document.querySelectorAll('#modalBody .letter-row')].map((r) => [r.dataset.id, r.classList.contains('unread') ? 'new' : 'read', r.textContent.includes('新') ? '新' : r.textContent.includes('已讀') ? '已讀' : '']);
+      const ids = letters().map((l) => l.id), unread0 = mailCount(); openLetters(); const before = rows();
+      document.querySelector('#modalBody .letter-row[data-id=room]').click(); const card = document.querySelector('#modalBody .letter[data-letter=room]');
+      const welcome = { from: letters().find((l) => l.id === 'room').from, face: !!card.querySelector('.letter-from svg'), says: ['外婆', '院子', '小鎮', '公車', '書桌'].every((w) => card.textContent.includes(w)), sign: card.textContent.includes('渚') };
+      const unread1 = mailCount(); document.querySelector('#modalBody [data-act=letter-done]').click(); const after = rows(); closeModal();
+      localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); localStorage.setItem('nq_letter_room', '2026-11-01'); const old = { ids: letters().map((l) => l.id), unread: mailCount() };
+      return JSON.stringify({ ids, unread0, before, welcome, unread1, after, old }); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
+    assert r['ids'] == ['room'] and r['unread0'] == 1 and r['before'] == [['room', 'new', '新']], r
+    assert r['welcome'] == {'from': 'nagisa', 'face': True, 'says': True, 'sign': True}, r
+    assert r['unread1'] == 0 and r['after'] == [['room', 'read', '已讀']], r   # opened: read, and still there
+    assert r['old'] == {'ids': ['room'], 'unread': 0}, r   # put away before (知道了): there, read
+
+def test_the_old_shop_opens_and_fuku_writes_once_20_koto_are_earned(b):
+    js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); state.met = { koharu: 1, mugi: 1 }; state.koto.gift = 0; state.owned = {}; saveState();
+      const wait = (ms) => new Promise(r => setTimeout(r, ms)), said = []; toast = (m) => said.push(m);
+      const out = async () => { location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); await wait(500); };
+      await out(); const shut = { letter: letters().some((l) => l.id === 'opening'), open: shopOpen() }; document.querySelector('.yard .shop-btn').click(); await wait(800); shut.hash = location.hash; shut.said = said.join(' ');
+      state.koto.gift = 20; saveState(); await out(); const open = { letter: letters().some((l) => l.id === 'opening'), unread: letters().find((l) => l.id === 'opening') && mailCount() >= 1, open: shopOpen() };
+      return JSON.stringify({ shut, open }); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
+    assert r['shut']['letter'] is False and r['shut']['open'] is False and r['shut']['hash'] == '#/outside' and '準備' in r['shut']['said'], r
+    assert r['open'] == {'letter': True, 'unread': True, 'open': True}, r
+
 def test_mailbox_letters_show_on_the_door_and_the_hint_comes_once(b):
-    js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); localStorage.setItem('nq_letter_opening', '1');   /* test build: 古道具屋's letter put away, this is about the room's */ state.met = { koharu: 1, mugi: 1 };   /* out of the door: the neighbours have been */
+    js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); state.met = { koharu: 1, mugi: 1 };   /* out of the door: the neighbours have been */
       const wait = (ms) => new Promise(r => setTimeout(r, ms)); const enter = async () => { location.hash = '#/stats'; route(); location.hash = '#/today'; route(); await wait(1200); };
       const door = () => { const d = document.querySelector('#view [data-thing=door]'); return [d.querySelector('.tag').textContent.trim().replace(/・\\d+ 件事$/, ''), d.classList.contains('mail')]; };   /* the town's events open: another test's */
       await enter(); const first = { ids: letters().map(l => l.id), door: door(), hint: document.querySelector('.mail-hint').classList.contains('on'), seen: mailSeen() };
       await enter(); const second = document.querySelector('.mail-hint').classList.contains('on');
       localStorage.removeItem('nq_mail_seen'); await enter(); document.querySelector('.mail-hint').click(); await wait(1500);
       const out = { hash: location.hash, flag: document.querySelector('#view .mailbox').classList.contains('has'), tag: document.querySelector('#view .mailbox .tag').textContent };
-      openLetters(); document.querySelector('.letter[data-letter=room] [data-act=letter-done]').click();
-      const after = { left: mailCount(), modal: modalOpen(), flag: document.querySelector('#view .mailbox').classList.contains('has'), stored: !!localStorage.getItem('nq_letter_room') };
+      openLetters('room'); document.querySelector('.letter[data-letter=room] [data-act=letter-done]').click();
+      const after = { left: mailCount(), list: !!document.querySelector('#modalBody .letter-row[data-id=room].read'), flag: document.querySelector('#view .mailbox').classList.contains('has'), kept: letters().some(l => l.id === 'room') };
       await enter(); const quiet = door();
-      state.startChosen = false; state.srs = {}; localStorage.clear(); localStorage.setItem('nq_letter_opening', '1'); saveState(); await enter(); const newbie = { hint: document.querySelector('.mail-hint').classList.contains('on'), door: door() };
+      closeModal(); state.startChosen = false; state.srs = {}; localStorage.clear(); saveState(); await enter(); const newbie = { hint: document.querySelector('.mail-hint').classList.contains('on'), door: door() };
       return JSON.stringify({ first, second, out, after, quiet, newbie }); })()"""
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
     assert r['first'] == {'ids': ['room'], 'door': ['出門・1 封信', True], 'hint': True, 'seen': ['room']}, r['first']
     assert r['second'] is False and r['out'] == {'hash': '#/outside', 'flag': True, 'tag': '信箱・1 封信'}, r
-    assert r['after'] == {'left': 0, 'modal': False, 'flag': False, 'stored': True} and r['quiet'] == ['出門', False], r
+    assert r['after'] == {'left': 0, 'list': True, 'flag': False, 'kept': True} and r['quiet'] == ['出門', False], r   # read: back on the list as 已讀, still there
     assert r['newbie'] == {'hint': False, 'door': ['出門・1 封信', True]}, r['newbie']
 
 # the day's note (fewer new items today, a level to finish first) is over the first screen of the day's first set — a question or
@@ -2027,7 +2055,7 @@ if __name__ == "__main__":
              test_offline_audio_keeps_the_japanese_clips_of_todays_practice, test_offline_audio_fills_the_cache_skipping_stored_and_missing_clips_and_stops_offline,
              test_installed_app_keeps_the_coming_audio_by_itself_and_again_when_back_online, test_a_browser_tab_does_not_download_audio_ahead_by_itself, test_the_old_address_says_the_site_moved_and_data_settings_have_no_backup_file,
              test_a_clip_not_on_the_device_while_offline_says_so,
-             test_theme_follows_the_clock_or_holds_night_or_day, test_mailbox_letters_show_on_the_door_and_the_hint_comes_once, test_the_mail_hint_waits_while_the_player_stays_in, test_the_days_practice_and_listening_badges_turn_plain_when_done, test_the_days_note_sits_over_the_first_screen_of_the_days_first_set,
+             test_theme_follows_the_clock_or_holds_night_or_day, test_mailbox_letters_show_on_the_door_and_the_hint_comes_once, test_letters_stay_in_the_mailbox_once_read_and_the_welcome_is_nagisas, test_the_old_shop_opens_and_fuku_writes_once_20_koto_are_earned, test_the_mail_hint_waits_while_the_player_stays_in, test_the_days_practice_and_listening_badges_turn_plain_when_done, test_the_days_note_sits_over_the_first_screen_of_the_days_first_set,
              test_the_calendar_stamps_the_streak_and_the_course_opens_on_the_current_unit]
     only = sys.argv[1:]
     failed = 0
