@@ -13,7 +13,7 @@
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
 <script src="./data.js?v=21"></script>
-<script src="./events.js?v=39"></script>
+<script src="./events.js?v=40"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -373,7 +373,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 @keyframes evMark { from { transform: translateY(0); } to { transform: translateY(-14px); } }
 .sky .town-shop .ev-dot { position: absolute; left: 50%; top: 4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: #f0883e; box-shadow: 0 0 0 2px #fff; animation: evDot 1.2s ease-in-out infinite alternate; pointer-events: none; }
 .yard.indoor { --day: 1; --warm: 0; }   /* a room is lit the same by night and day (its lamps) */
-.yard.indoor .sky { background: #f1e2c4; } .yard.indoor[data-place="izakaya"] .sky { background: #5a3b28; }
+.yard.indoor .sky { background: radial-gradient(ellipse at 50% 38%, #f7eedd, #dccaa8); } .yard.indoor[data-place="izakaya"] .sky { background: radial-gradient(ellipse at 50% 38%, #4c3324, #1e140d); }   /* round the room block (seen at 45°) */
 .yard.indoor .sky > :not(.yworld) { display: none; }
 .sky .bus { position: absolute; left: 50%; width: 280px; height: 140px; transform-origin: 50% 100%; transform: translateX(900px) scale(var(--k)); transition: transform .6s cubic-bezier(.2, .8, .3, 1); pointer-events: none; }
 .sky .bus.in { transform: translateX(-140px) scale(var(--k)); } .sky .bus.go { transform: translateX(-1100px) scale(var(--k)); transition-duration: .8s; transition-timing-function: ease-in; }
@@ -922,6 +922,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .land .fx-swim { transform-box: fill-box; transform-origin: center; animation: fxSwim 34s linear infinite; } @keyframes fxSwim { 0% { transform: translateX(0) scaleX(1); } 48% { transform: translateX(260px) scaleX(1); } 50% { transform: translateX(260px) scaleX(-1); } 98% { transform: translateX(0) scaleX(-1); } 100% { transform: translateX(0) scaleX(1); } }
 .sky .land .fx-spin { transform-box: view-box; animation: fxSpin 1.4s linear infinite; } @keyframes fxSpin { to { transform: rotate(360deg); } }
 .sky .land .fx-sail { animation: fxSail 70s linear infinite; } @keyframes fxSail { from { transform: translateX(-200px); } to { transform: translateX(1300px); } }
+.sky .land .fx-tvpic { animation: fxTv 3s linear infinite; } @keyframes fxTv { to { transform: translateX(-2.16px); } }   /* in the wall's own units (×31) */
 .sky .land .fx-tuft { transform-box: fill-box; transform-origin: 50% 100%; animation: fxTuft 3s ease-in-out infinite alternate; } @keyframes fxTuft { from { transform: skewX(-7deg); } to { transform: skewX(7deg); } }
 @media (prefers-reduced-motion: reduce) { .sky .land :is(.fx-sweep, .fx-car, .fx-train, .fx-bob, .fx-peck, .fx-sway, .fx-flag, .fx-smoke, .fx-steam, .fx-fall, .fx-ripple, .fx-blink, .fx-scroll, .fx-fly, .fx-wing, .fx-gull, .fx-beam, .fx-boom, .fx-fan, .fx-crab, .fx-legs, .fx-swim, .fx-tuft, .fx-spin, .fx-sail) { animation: none; } }
 .sky .land .seam { fill: none; stroke: color-mix(in srgb, #b4ad9e calc(var(--day) * 100%), #1c1d3e); stroke-width: 2; stroke-linecap: round; }
@@ -6965,7 +6966,7 @@ function renderOutside(view, place = 'yard') {
   const a = yh.arrive && yh.arrive.to === place ? yh.arrive : null, bus = a && BUS_PLACES.includes(a.from) && BUS_PLACES.includes(place) && BUS_IN[place];
   const way = a && (WAYS[`${a.from}>${place}`] || (bus && { in: bus })), come = way ? way.in() : null; yh.arrive = null; TALK.close();   // by the bus: off at its stop
   if (come) { [yh.X, yh.Y] = come[0]; yh.back = place === 'yard'; }
-  if (!come) { yh.Y = Math.min(yh.Y, walkTop(place)); [yh.X, yh.Y] = yFree(place, [yh.X, yh.Y]); }   // where he was kept: on the ground (a room: its floor), not on a building nor in a thing
+  if (!come) { if (INDOOR.includes(place)) [yh.X, yh.Y] = isoClamp([yh.X, yh.Y]); else yh.Y = Math.min(yh.Y, walkTop(place)); [yh.X, yh.Y] = yFree(place, [yh.X, yh.Y]); }   // where he was kept: on the ground (a room: its floor), not on a building nor in a thing
   view.innerHTML = yardHtml(pct, place);
   const y = view.querySelector('.yard');
   y.dataset.house = state.house || ''; y.dataset.sig = TOWNEV.sig(place);
@@ -6985,8 +6986,8 @@ function renderOutside(view, place = 'yard') {
     if (y._noClick || y.classList.contains('dressing') || e.target.closest('button, .hero, a, .dress')) return;
     const at = yardPoint(y, e);
     if (yed.on) { if (yed.sel) yardMoveTo(y, yed.sel, at); return; }
-    if (at.y < 4 || at.y > 222) return;
-    yHeroWalk(y, [at.x, INDOOR.includes(place) ? Math.min(at.y, INDOOR_BACK) : at.y]);   // in a room: no further back than the floor
+    if (!INDOOR.includes(place) && (at.y < 4 || at.y > 222)) return;
+    yHeroWalk(y, [at.x, at.y]);   // in a room: onto its floor
   });
   let swallow = false;   // the buttons up top while they rest: a first tap only brings them back (as in 書房)
   y.addEventListener('pointerdown', (e) => { swallow = y.classList.contains('quiet') && !!e.target.closest('.yard-tools'); }, true);
@@ -7141,7 +7142,7 @@ const yh = { X: 0, Y: 186, back: false, flip: false, turn: false, raf: 0, fromDo
 try { const h = JSON.parse(localStorage.getItem('nq_hero') || 'null'); if (h && h.yard && Number.isFinite(h.yard.X) && Number.isFinite(h.yard.Y)) Object.assign(yh, { X: h.yard.X, Y: h.yard.Y }); } catch (e) { /* first time out */ }
 let yPlace = 'yard';   // the yard or the main road (#/street): where the hero is out, each its own spot in nq_hero
 function yHeroSave() { try { const h = JSON.parse(localStorage.getItem('nq_hero') || '{}') || {}; const [X, Y] = yh.use ? yh.use.up : [yh.X, yh.Y]; h[yPlace] = { X: Math.round(X), Y: Math.round(Y) }; localStorage.setItem('nq_hero', JSON.stringify(h)); } catch (e) { /* no storage */ } }
-const yScale = (Y) => (0.19 + 0.31 * Math.max(0, Math.min(1, (212 - Y) / 198))) * (INDOOR.includes(yPlace) ? INDOOR_K : 1);   // in a room people are seen closer up (INDOOR_K)
+const yScale = (Y) => (INDOOR.includes(yPlace) ? ISO.k : 0.19 + 0.31 * Math.max(0, Math.min(1, (212 - Y) / 198)));   // in a room (seen at 45°) one size anywhere
 function yHeroHtml() { return `<div class="hero yhero" data-act="hero-hop" aria-label="主角">${HERO.svg({ wear: state.wear, look: state.look })}</div>`; }
 function yHeroRedraw(yard) { const el = yard.querySelector('.yhero'); if (el) el.innerHTML = HERO.svg({ wear: state.wear, look: state.look }); }   // dressed anew
 function yHeroHold(yard) {   // the dressing room opens: the hero stops where they are
@@ -7152,7 +7153,7 @@ function yHeroHold(yard) {   // the dressing room opens: the hero stops where th
 function yHeroPlace(yard) {
   const el = yard.querySelector('.yhero'); if (!el) return;
   el.style.transform = `translate(${yh.X.toFixed(1)}px,${(-yh.Y).toFixed(1)}px) scale(${(yh.s || yScale(yh.Y)).toFixed(3)})`;
-  el.classList.toggle('back', yh.back); el.classList.toggle('turn', yh.turn); el.classList.toggle('flip', yh.flip); el.style.zIndex = yh.climb === 'hill' ? '' : String(yh.z || 300 - Math.round(yh.Y));
+  el.classList.toggle('back', yh.back); el.classList.toggle('turn', yh.turn); el.classList.toggle('flip', yh.flip); el.style.zIndex = yh.climb === 'hill' ? '' : String(yh.z || (INDOOR.includes(yPlace) ? isoZ(...isoUV(yh.X, yh.Y)) : 300 - Math.round(yh.Y)));
   if (el.matches('.walk, .run')) yFollow(yard);   // on the move: the camera goes along
 }
 // up the hill path: outlined about a pixel on the screen however small he gets (s: his scale; none: off the path). Set on his
@@ -7162,6 +7163,33 @@ function yClimbLook(h, s) {
   const px = s ? Math.round(1.3 / s * 2) / 2 : 0; if (svg._outline === px) return; svg._outline = px;
   svg.style.filter = px ? `brightness(calc(.8 + .2 * var(--day))) drop-shadow(0 0 ${px}px rgba(255, 255, 255, .95)) drop-shadow(0 0 ${px * 2}px rgba(255, 238, 200, calc(.3 + .45 * (1 - var(--day)))))` : '';
 }
+// ---------- 食堂 and 居酒屋 seen at 45° like 書房 (2026-11-10, the user: their seats looked odd side on) ----------
+// Each is a room block: its floor u along the right wall and v along the left wall from the back corner (RW × RD units, U px a
+// unit), the walls RH high, the back corner at (ox, oy) in the land's 1200 × 900 frame. The hero and the people stand in it at X,
+// Y like everywhere out (from the world's middle, up from the bottom), all one size (k) anywhere in it; they walk the floor round
+// the furniture (WALK_BLOCK in floor units), and who is drawn over whom goes by the furniture they stand before or behind (isoZ)
+const INDOOR = ['shokudo', 'izakaya'];
+const ISO = { U: 31, RW: 22, RD: 16, RH: 8, ox: 507, oy: -259, k: 0.64, door: [0.25, 13.4], in: [2.6, 13] };
+const isoPt = (u, v, h = 0) => [ISO.ox + (u - v) * ISO.U, ISO.oy + (u + v) * ISO.U / 2 - h * ISO.U];   // in the land's svg
+const isoXY = (u, v, h = 0) => { const [x, y] = isoPt(u, v, h); return [x - 600, 370 - y]; };   // in the hero's units
+const isoUV = (X, Y) => { const a = (X + 600 - ISO.ox) / ISO.U, b = (370 - Y - ISO.oy) * 2 / ISO.U; return [(a + b) / 2, (b - a) / 2]; };
+const isoClamp = (q, m = 0.7) => isoXY(...(([u, v]) => [Math.max(m, Math.min(ISO.RW - m, u)), Math.max(m, Math.min(ISO.RD - m, v))])(isoUV(q[0], q[1])));   // onto the floor
+const isoBBox = (u0, u1, v0, v1, h0, h1) => { const ps = [u0, u1].flatMap((u) => [v0, v1].flatMap((v) => [h0, h1].map((h) => isoPt(u, v, h)))), xs = ps.map((q) => q[0]), ys = ps.map((q) => q[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)].map(Math.round); };   // a thing's box on the screen (PLACE_USE)
+// the furniture drawn over people in the room shown now ({ box: [u0, u1, v0, v1], z }), its layer by how near its front corner is
+let isoProps = [];
+const isoProp = (box, art) => { const z = 1000 + Math.round((box[1] + box[3]) * 20); isoProps.push({ box, z }); return `<svg class="land prop indoor-land" viewBox="0 -530 1200 900" preserveAspectRatio="xMidYMax slice" aria-hidden="true" style="z-index:${z};height:900px">${art}</svg>`; };
+// someone at floor point (u, v): over what they stand in front of (past its +u or its +v face), under what they stand behind
+function isoZ(u, v) {
+  const x = isoPt(u, v)[0], d = Math.round(Math.max(0, Math.min(38, u + v)) / 38 * 8);
+  let z = 990 + d, cap = Infinity;
+  isoProps.forEach(({ box: [u0, u1, v0, v1], z: pz }) => {
+    if (x < isoPt(u0, v1)[0] - 36 || x > isoPt(u1, v0)[0] + 36) return;   // not across it on the screen
+    if (u >= u1 || v >= v1) z = Math.max(z, pz + 1 + d); else cap = Math.min(cap, pz - 1);
+  });
+  return Math.min(z, cap);
+}
+// the people's spots in the two rooms are floor points (u, v, h: up on a stool or the tatami): where they are drawn, their feet
+INDOOR.forEach((pl) => Object.values(TOWN.SPOTS[pl] || {}).forEach((sp) => { if (sp.u !== undefined) { [sp.X, sp.Y] = isoXY(sp.u, sp.v, sp.h || 0); sp.foot = isoXY(sp.u, sp.v); } }));
 // how far up each place the hero walks (Y px up): the ground in front of its buildings, never up onto them (2026-11-10, the user);
 // the yard up to its house, the main road to its far pavement, a room to its floor
 const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128 };
@@ -7176,8 +7204,10 @@ const WALK_BLOCK = {
   harbor: [[-222, -134, 78, 106], [488, 532, 76, 94], [188, 252, 74, 98]],
   station: [[-382, -288, 62, 80], [158, 252, 62, 80], [26, 120, 90, 106], [-492, -368, 106, 140]],
   sento: [[-352, -238, 60, 78]],
-  shokudo: [[-494, -266, 48, 66], [-574, -512, 46, 62], [-248, -186, 46, 62], [266, 494, 48, 66], [186, 248, 46, 62], [512, 574, 46, 62]],
-  izakaya: [-180, -60, 60, 180, 300].map((x) => [x - 24, x + 24, 72, 88])
+  // the two rooms (seen at 45°): [u0, u1, v0, v1] on the floor — the kitchen and the counter, the stools, the tables with their
+  // chairs, the crates and the barrels, the tatami
+  shokudo: [[0, 15, 0, 2.8], [3.4, 12.1, 2.8, 3.9], [7.4, 11.6, 6.3, 10.7], [13.4, 17.6, 6.3, 10.7], [13.4, 17.6, 11.1, 15.5], [0.4, 2.2, 9.4, 11.2]],
+  izakaya: [[0, 15.6, 0, 3.0], [3.4, 14.6, 3.0, 4.2], [14.4, 22, 7.2, 16], [0.3, 1.9, 8.6, 11.5], [13.7, 14.6, 10.8, 12.0]]
 };
 function walkBlocks(place) {
   const b = (WALK_BLOCK[place] || []).slice();
@@ -7198,16 +7228,19 @@ function yCross(b, p, q) {   // does the way from p to q go through the inside o
 }
 // the way from p to the goal round what stands between (the corners of the things, a little apart from them, as stepping stones;
 // the shortest), the goal moved off a thing to its nearest free side. free: on the way out of the place (no top, the goal kept)
-function yRoute(place, p, goal, free) {
-  const lim = ycam.YW / 2 - 20, bs = walkBlocks(place).map(([a, b, c, d]) => [a - 12, b + 12, c - 5, d + 5]).filter((b) => !yIn(b, p));   // one he stands in he may leave
-  const ok = (q) => Math.abs(q[0]) <= lim && q[1] >= 12 && (free || q[1] <= walkTop(place, q[0])) && !bs.some((b) => yIn(b, q));
+function yRoute(place, p0, goal0, free) {
+  const iso = INDOOR.includes(place), cv = iso ? (q) => isoUV(q[0], q[1]) : (q) => q, back = iso ? (q) => isoXY(q[0], q[1]) : (q) => q;   // a room: on its floor
+  const [mx, my] = iso ? [0.45, 0.45] : [12, 5], lim = ycam.YW / 2 - 20, p = cv(p0);
+  let goal = cv(goal0);
+  const bs = walkBlocks(place).map(([a, b, c, d]) => [a - mx, b + mx, c - my, d + my]).filter((b) => !yIn(b, p));   // one he stands in he may leave
+  const ok = (q) => (iso ? free || (q[0] >= 0.6 && q[0] <= ISO.RW - 0.6 && q[1] >= 0.6 && q[1] <= ISO.RD - 0.6) : Math.abs(q[0]) <= lim && q[1] >= 12 && (free || q[1] <= walkTop(place, q[0]))) && !bs.some((b) => yIn(b, q));
   if (!free && bs.some((b) => yIn(b, goal))) {
     const c = []; bs.filter((b) => yIn(b, goal)).forEach((b) => c.push([goal[0], b[2]], [goal[0], b[3]], [b[0], goal[1]], [b[1], goal[1]]));
     const best = c.filter(ok).sort((u, v) => Math.hypot(u[0] - goal[0], u[1] - goal[1]) - Math.hypot(v[0] - goal[0], v[1] - goal[1]))[0];
     goal = best || p;
   }
   const clear = (u, v) => !bs.some((b) => yCross(b, u, v));
-  if (clear(p, goal)) return [p, goal];
+  if (clear(p, goal)) return [p0, back(goal)];
   const n = [p, goal].concat(bs.flatMap((b) => [[b[0], b[2]], [b[1], b[2]], [b[0], b[3]], [b[1], b[3]]]).filter(ok));
   const dist = n.map(() => Infinity), prev = n.map(() => -1), done = n.map(() => false); dist[0] = 0;
   for (;;) {
@@ -7216,9 +7249,9 @@ function yRoute(place, p, goal, free) {
     done[i] = true;
     n.forEach((q, j) => { if (done[j]) return; const d = dist[i] + Math.hypot(q[0] - n[i][0], q[1] - n[i][1]); if (d < dist[j] && clear(n[i], q)) { dist[j] = d; prev[j] = i; } });
   }
-  if (prev[1] < 0) return [p, goal];   // no way round: straight on, as before
+  if (prev[1] < 0) return [p0, back(goal)];   // no way round: straight on, as before
   const way = []; for (let i = 1; i >= 0; i = prev[i]) way.unshift(n[i]);
-  return way;
+  return [p0].concat(way.slice(1).map(back));
 }
 // ---------- things in the places the hero can use (round 4, 2026-11-10, the user: more things to do something with) ----------
 // box: where to tap, in the land's units [x0, y0, x1, y1] (y down); go: where he walks to first [X, Y] (a seat: in front of it).
@@ -7294,18 +7327,27 @@ const PLACE_USE = {
     { id: 'board', name: '告示牌', box: [586, 166, 664, 236], kind: 'do', go: [25, 122], back: 1, pose: 'look', toast: '白鷺城：大約四百年前建的白色天守，遠看像白鷺展開翅膀，所以叫白鷺城。' },
     { id: 'gate', name: '城門', box: [200, 140, 320, 198], kind: 'do', go: [-300, 126], back: 1, pose: 'reach', say: 'コンコン' },
     { id: 'moat', name: '護城河', box: [600, 200, 1060, 234], kind: 'do', go: (tap) => [Math.max(0, Math.min(440, tap.x)), 126], back: 1, pose: 'look', say: 'クワッ' }],
+  // the two rooms (seen at 45°): seats as [u, v, h, how he sits there] (bench: on a chair or a stool; kneel: on the tatami; back,
+  // turn, flip: which way he faces), things as everywhere (face: which way he turns to them)
   shokudo: [
-    { id: 'tableL', name: '桌子', box: [70, 250, 390, 320], kind: 'sit', seats: [-543, -217], top: 90, dep: 52, z: 244, say: 'いただきます！' },
-    { id: 'tableR', name: '桌子', box: [810, 250, 1130, 320], kind: 'sit', seats: [217, 543], top: 90, dep: 52, z: 244, say: 'いただきます！' },
-    { id: 'maneki', name: '招財貓', box: [402, 64, 440, 110], kind: 'do', go: [-180, 114], back: 1, pose: 'wave', say: '招福！', fx: 'maneki', fxc: 'beckon' },
-    { id: 'tv', name: '電視', box: [1010, -12, 1132, 82], kind: 'do', go: [470, 118], back: 1, pose: 'look', say: 'あはは！' },
-    { id: 'kitchen', name: '廚房', box: [1140, 30, 1212, 236], kind: 'do', go: [500, 116], back: 1, pose: 'wave', say: 'ごちそうさまでした！' }],
-  izakaya: [{ id: 'counter', name: '吧台座位', box: [384, 200, 936, 292], kind: 'sit', seats: [-180, -60, 60, 180, 300], top: 164, dep: 79, z: 220, say: 'かんぱい！' },
-    { id: 'grill', name: '烤爐', box: [598, -34, 802, 18], kind: 'do', go: [160, 122], back: 1, pose: 'look', say: 'いい匂い！' },
-    { id: 'taru', name: '酒樽', box: [1012, 120, 1162, 236], kind: 'do', go: [490, 116], back: 1, pose: 'reach', say: 'おもい…！' },
-    { id: 'menu', name: '黑板', box: [80, -252, 502, -58], kind: 'do', go: [-310, 120], back: 1, pose: 'look', toast: 'きょうのおすすめ：焼き鳥 1本 120円・からあげ 480円' }]
+    { id: 'stools', name: '吧台座位', box: isoBBox(3.4, 12.1, 2.9, 3.8, 0, 1.6), kind: 'seat', seats: [4, 6.5, 9, 11.5].map((u) => [u, 3.35, 0.2, 'bench back turn']), say: 'いただきます！' },
+    ...[[8, 11, 7.6, 9.4], [14, 17, 7.6, 9.4], [14, 17, 12.4, 14.2]].map(([u0, u1, v0, v1], i) => ({ id: 'table' + i, name: '桌子', box: isoBBox(u0, u1, v0 - 1.2, v1 + 1.2, 0, 2.1), kind: 'seat', say: 'いただきます！',
+      seats: [[u0 + 0.8, v0 - 0.75, 0, 'bench turn flip'], [u1 - 0.8, v0 - 0.75, 0, 'bench turn flip'], [u0 + 0.8, v1 + 0.75, 0, 'bench back turn'], [u1 - 0.8, v1 + 0.75, 0, 'bench back turn']] })),
+    { id: 'maneki', name: '招財貓', box: isoBBox(2.1, 2.7, 1.7, 2.3, 1.95, 3.1), kind: 'do', go: isoXY(2.4, 3.4), face: 'back turn', pose: 'wave', say: '招福！', fx: 'maneki', fxc: 'beckon' },
+    { id: 'tv', name: '電視', box: isoBBox(19, 21.4, 0, 0.1, 5.1, 6.7), kind: 'do', go: isoXY(20.2, 1.6), face: 'back turn', pose: 'look', say: 'あはは！' },
+    { id: 'kitchen', name: '廚房', box: isoBBox(16, 18.4, 0, 0.1, 0, 4.1), kind: 'do', go: isoXY(17.2, 1.4), face: 'back turn', pose: 'wave', say: 'ごちそうさまでした！' },
+    { id: 'menu', name: '菜單', box: isoBBox(0, 0.1, 4.8, 10.4, 3.4, 6.2), kind: 'do', go: isoXY(1.5, 7.6), face: 'back turn flip', pose: 'look', toast: 'お品書き：カレー 500円・ラーメン 600円・からあげ定食 750円……' },
+    { id: 'kamidana', name: '神棚', box: isoBBox(0, 0.1, 1.4, 4.1, 6, 7.3), kind: 'do', go: isoXY(1.5, 2.7), face: 'back turn flip', pose: 'bow', say: 'パンパン 🙏' },
+    { id: 'crates', name: '啤酒箱', box: isoBBox(0.5, 1.9, 9.6, 11, 0, 1.9), kind: 'do', go: isoXY(2.7, 10.3), face: 'back turn flip', pose: 'reach', say: 'おもい…！' }],
+  izakaya: [
+    { id: 'stools', name: '吧台座位', box: isoBBox(3.4, 14.6, 3.2, 4.0, 0, 1.6), kind: 'seat', seats: [4, 6.5, 9, 11.5, 14].map((u) => [u, 3.6, 0.2, 'bench back turn']), say: 'とりあえずビール！' },
+    { id: 'zashiki', name: '小上がり', box: isoBBox(16.6, 20.2, 8.6, 14, 0.6, 2), kind: 'seat', say: 'かんぱい！',
+      seats: [[17.6, 9.3, 0.6, 'kneel turn flip'], [19.2, 9.3, 0.6, 'kneel turn flip'], [17.6, 13.2, 0.6, 'kneel back turn'], [19.2, 13.2, 0.6, 'kneel back turn']] },
+    { id: 'grill', name: '烤爐', box: isoBBox(6, 9.4, 1.6, 2.1, 1.95, 3), kind: 'do', go: isoXY(7.7, 4.8), face: 'back turn', pose: 'look', say: 'いい匂い！' },
+    { id: 'taru', name: '酒樽', box: isoBBox(0.5, 1.7, 8.8, 11.3, 0, 2.4), kind: 'do', go: isoXY(2.6, 10.1), face: 'back turn flip', pose: 'reach', say: 'おもい…！' },
+    { id: 'menu', name: '黑板', box: isoBBox(0, 0.1, 2.9, 8.7, 3.5, 6.5), kind: 'do', go: isoXY(1.4, 5.8), face: 'back turn flip', pose: 'look', toast: 'きょうのおすすめ：焼き鳥 1本 120円・からあげ 480円' }]
 };
-const useBtnsHtml = (place) => (PLACE_USE[place] || []).filter((t) => !t.when || t.when()).map((t) => { const [x0, y0, x1, y1] = t.box; return `<button type="button" class="use-btn" data-act="scene-use" data-use="${t.id}" aria-label="${t.name}" style="margin-left:${x0 - 600}px;bottom:${370 - y1}px;width:${x1 - x0}px;height:${y1 - y0}px;z-index:${Math.round(150 - (370 - y1) / 4)}"></button>`; }).join('');
+const useBtnsHtml = (place) => (PLACE_USE[place] || []).filter((t) => !t.when || t.when()).map((t) => { const [x0, y0, x1, y1] = t.box; return `<button type="button" class="use-btn" data-act="scene-use" data-use="${t.id}" aria-label="${t.name}" style="margin-left:${x0 - 600}px;bottom:${370 - y1}px;width:${x1 - x0}px;height:${y1 - y0}px;z-index:${INDOOR.includes(place) ? 1 : Math.round(150 - (370 - y1) / 4)}"></button>`; }).join('');
 // words popping up over a thing (x, y in the land's units), a burst of petals or leaves off a tree
 function yPop(yard, x, y, text) {
   const w = yard && yard.querySelector('.yworld'); if (!w) return;
@@ -7321,6 +7363,14 @@ function yBurst(yard, [x0, y0, x1], colours) {
   }
 }
 const npcAt = (el) => { const m = /translate\((-?[\d.]+)px/.exec(el.style.transform || ''); return m ? Number(m[1]) : NaN; };
+const npcXY = (el) => { const m = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px/.exec(el.style.transform || ''); return m ? [Number(m[1]), -Number(m[2])] : [NaN, NaN]; };
+function ySeat(yard, t, [u, v, h, how]) {
+  const el = yard.querySelector('.yhero'); if (!el) return;
+  const f = how.split(' ');
+  yh.use = { up: [yh.X, yh.Y] }; [yh.X, yh.Y] = isoXY(u, v, h); yh.z = isoZ(u, v);
+  yh.back = f.includes('back'); yh.turn = f.includes('turn'); yh.flip = f.includes('flip'); el.classList.add(f.includes('kneel') ? 'kneel' : 'bench'); yHeroPlace(yard);
+  if (t.say) yPop(yard, yh.X + 600, 370 - yh.Y - 190 * ISO.k, t.say);
+}
 function sceneUse(el) {
   const yard = el.closest('.yard'); if (!yard || yed.on || yard.classList.contains('dressing')) return;
   const t = (PLACE_USE[yard.dataset.place] || []).find((q) => q.id === el.dataset.use), [x0, y0, x1] = t ? t.box : [];
@@ -7330,6 +7380,12 @@ function sceneUse(el) {
     const seat = t.seats.filter((x) => taken.every((n) => !(Math.abs(n - x) < 30))).sort((a, b) => Math.abs(a - tap) - Math.abs(b - tap))[0];
     if (seat === undefined) { yPop(yard, (x0 + x1) / 2, y0 - 4, '坐滿了'); return; }
     yHeroWalk(yard, t.go || [seat, Math.max(14, t.dep - 16)], () => ySit(yard, t, seat));
+  } else if (t.kind === 'seat') {   // in a room: [u, v, h, how he sits] — a free one nearest the tap
+    const taken = [...yard.querySelectorAll('.npc')].map(npcXY), tap = yard._at ? [yard._at.x, yard._at.y] : null;
+    const free = t.seats.filter(([u, v, h]) => { const [X, Y] = isoXY(u, v, h); return taken.every(([nx, ny]) => Math.hypot(nx - X, ny - Y) > 14); });
+    const seat = free.sort((a, b) => (tap ? Math.hypot(...isoXY(a[0], a[1], a[2]).map((c, i) => c - tap[i])) - Math.hypot(...isoXY(b[0], b[1], b[2]).map((c, i) => c - tap[i])) : 0))[0];
+    if (!seat) { yPop(yard, (x0 + x1) / 2, y0 - 4, '坐滿了'); return; }
+    yHeroWalk(yard, isoXY(seat[0], seat[1]), () => ySeat(yard, t, seat));
   } else if (t.kind === 'slide') yHeroWalk(yard, t.go, () => ySlide(yard));
   else yHeroWalk(yard, typeof t.go === 'function' ? t.go(yard._at || { x: (x0 + x1) / 2 - 600, y: 0 }) : t.go, () => yDo(yard, t));
 }
@@ -7348,7 +7404,7 @@ function yUseEnd(yard) {   // up off a seat, a ride, the slide (a walk, the plac
   const u = yh.use; if (!u) return; yh.use = null; yh.s = 0; yh.z = 0;
   if (u.part) u.part.classList.remove('ride-swing', 'ride-rock');
   const h = yard && yard.querySelector('.yhero');
-  if (h) { h.classList.remove('bench', 'ride-swing', 'ride-rock', 'sliding', 'walk'); const svg = h.querySelector('svg'); if (svg) svg.style.transformOrigin = ''; }
+  if (h) { h.classList.remove('bench', 'kneel', 'ride-swing', 'ride-rock', 'sliding', 'walk'); const svg = h.querySelector('svg'); if (svg) svg.style.transformOrigin = ''; }
   [yh.X, yh.Y] = u.up;
 }
 // the park's slide: up the ladder (seen from behind), sat down the chute, off at its foot
@@ -7380,7 +7436,8 @@ function ySlide(yard) {
 function yDo(yard, t) {
   const h = yard.querySelector('.yhero'); if (!h) return;
   const [x0, y0, x1] = t.box, cx = typeof t.go === 'function' ? yh.X + 600 : (x0 + x1) / 2;
-  yh.back = !!t.back; yh.flip = cx - 600 < yh.X; yh.turn = !t.back; yHeroPlace(yard);
+  if (t.face) { const f = t.face.split(' '); yh.back = f.includes('back'); yh.turn = f.includes('turn'); yh.flip = f.includes('flip'); } else { yh.back = !!t.back; yh.flip = cx - 600 < yh.X; yh.turn = !t.back; }   // face: which way, in a room
+  yHeroPlace(yard);
   if (t.out) { h.classList.add('out'); setTimeout(() => { if (!yard.isConnected) return; h.classList.remove('out'); yh.back = false; yHeroPlace(yard); if (t.then) yPop(yard, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), t.then); }, t.out); return; }   // in and out again
   if (t.pose) { h.classList.remove(t.pose); void h.offsetWidth; h.classList.add(t.pose); setTimeout(() => h.classList.remove(t.pose), 1500); }
   const part = t.fx && yard.querySelector(`.land [data-fx="${t.fx}"]`);
@@ -7400,7 +7457,7 @@ function yHeroWalk(yard, to, done, free) {   // free: on the way out of the plac
   const el = yard.querySelector('.yhero'), lim = ycam.YW / 2 - 20;
   yh.climb = null; yh.s = 0; yard.classList.remove('climbing'); if (el) { el.classList.remove('climb'); yClimbLook(el, 0); }   // off the hill path, if he was on it
   HERO.still(el); if (el) el.classList.remove('bench');   // up off the bus stop's bench
-  const from = [yh.X, yh.Y], aim = [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(free ? 222 : walkTop(yPlace, Math.max(-lim, Math.min(lim, to[0]))), to[1]))];
+  const from = [yh.X, yh.Y], aim = INDOOR.includes(yPlace) ? (free ? to : isoClamp(to)) : [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(free ? 222 : walkTop(yPlace, Math.max(-lim, Math.min(lim, to[0]))), to[1]))];
   const pts = yRoute(yPlace, from, aim, free), goal = pts[pts.length - 1], seg = []; let len = 0;   // round what stands in the way
   for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (d) { seg.push([pts[i - 1], pts[i], len, d]); len += d; } }
   if (!el || len < 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { yh.X = goal[0]; yh.Y = goal[1]; if (el) yHeroPlace(yard); yHeroSave(); if (done) done(); return; }
@@ -7646,7 +7703,7 @@ const TOWNEV = (() => {
   const festival = () => isOpen('ennichi', now());
   function castHtml(place) {
     return here(place).map(({ id, spot, host }) => { const k = yScale(spot.Y) * (T().CAST[id].size || 1);
-      return `<button type="button" class="hero npc npc-${id}${host ? ' ev-host' : ''}${spot.sit ? ' bench' : ''}" data-act="npc-talk" data-npc="${id}" aria-label="${esc(T().CAST[id].name)}" style="transform:translate(${spot.X}px,${-spot.Y}px) scale(${k.toFixed(3)});z-index:${300 - spot.Y}">${art(id, place)}${host ? '<i class="ev-mark" aria-hidden="true">！</i>' : ''}</button>`; }).join('');
+      return `<button type="button" class="hero npc npc-${id}${host ? ' ev-host' : ''}${spot.sit ? ' bench' : ''}${spot.kneel ? ' kneel' : ''}${spot.pose ? ' ' + spot.pose : ''}" data-act="npc-talk" data-npc="${id}" aria-label="${esc(T().CAST[id].name)}" style="transform:translate(${spot.X.toFixed(1)}px,${(-spot.Y).toFixed(1)}px) scale(${k.toFixed(3)});z-index:${spot.u !== undefined ? isoZ(spot.u, spot.v) : 300 - spot.Y}">${art(id, place)}${host ? '<i class="ev-mark" aria-hidden="true">！</i>' : ''}</button>`; }).join('');
   }
   // the way to the one waiting (2026-11-10: the map joined up all round — beach | yard | town over harbor | street | park, the two
   // shops off the town, the bus's stops off the street and one another): the next step on a shortest way there, a dot on its sign
@@ -7686,7 +7743,8 @@ const TOWNEV = (() => {
     if (!p) { if (yard) { toast(`${T().CAST[id].name}已經離開了。`); route(); } return; }   // gone home since the place was drawn
     const a = p.spot, side = yh.X <= a.X ? -1 : 1, w = p.host && waiting(now(), today()), e = w && w.ev;
     const ended = () => { finish(e.id); toast(`完成「${e.title}」・言靈 +10`, 3200); route(); };   // drawn anew: its shop open, the mark gone
-    yHeroWalk(yard, [a.X + side * 76 * yScale(a.Y), a.Y + 2], () => {
+    const f = a.foot || [a.X, a.Y];   // beside their feet (up on a stool: the floor under it)
+    yHeroWalk(yard, [f[0] + side * 76 * yScale(f[1]), f[1] + 2], () => {
       yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard);
       if (e) TALK.open(yard, id, e.lines, ended, null, { ev: true }); else TALK.open(yard, id, [chatLine(id)]);
     });
@@ -8160,79 +8218,129 @@ function parkHtml() {
     <button type="button" class="thing way-btn" data-act="go-place" data-to="street" aria-label="往大馬路" style="margin-left:${-YARD_HALF + 40}px;bottom:70px"><span class="tag">${ySign('bus', '往大馬路')}</span>${TOWNEV.dot('street', 'park')}</button>
     <div class="ysel"></div>`;
 }
-// the two shops one can walk into (test, 2026-11-09): drawn like the places out of doors, a land 1200 wide — here a room, the
-// floor along the bottom (the hero's feet from 0 to 134 px up), the back wall above, up to the ceiling 530 px over the floor line
-const INDOOR = ['shokudo', 'izakaya'], INDOOR_FOOT = 236, INDOOR_DOOR = -532, INDOOR_BACK = 128, INDOOR_K = 2.1;   // the door on the left; the hero's feet stay on the floor (Y ≤ 128); people ×2.1, so a counter comes to their middle
-// in a room: the hero, the people there now, the way out by the door
-const indoorRest = (place) => `${yHeroHtml()}${TOWNEV.castHtml(place)}
-    <button type="button" class="thing way-btn" data-act="go-place" data-to="town" aria-label="出去" style="margin-left:${INDOOR_DOOR - 32}px;bottom:150px"><span class="tag">${ySign('today', '出去')}</span>${TOWNEV.dot('town', place)}</button>
-    <div class="ysel"></div>`;
-const menuTag = (x, y, w, name, price, bg = '#f3e7cc', ink = '#3b2a1c') => `<g><rect x="${x}" y="${y}" width="${w}" height="30" rx="2" fill="${bg}" stroke="#8a6a46" stroke-width="1.5"/>
-  <text x="${x + 8}" y="${y + 20}" font-size="14" font-weight="700" fill="${ink}" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif">${name}</text>
-  <text x="${x + w - 8}" y="${y + 20}" text-anchor="end" font-size="12" fill="#a0402c" font-family="system-ui, sans-serif">${price}</text></g>`;
-const pendant = (x, len, c = '#f4e3b8') => `<path d="M${x} -530 V${-530 + len}" stroke="#3a2c20" stroke-width="2"/><path d="M${x - 22} ${-530 + len + 18} Q${x} ${-530 + len - 6} ${x + 22} ${-530 + len + 18} Z" fill="${c}"/>
-  <circle cx="${x}" cy="${-530 + len + 40}" r="110" fill="url(#glw)" opacity=".55"/>`;
+// the two shops one can walk into (2026-11-10: seen at 45° like 書房, ISO): drawn in the 1200 × 900 frame of a room's land.
+// In a room: the hero, the people there now, the way out by its door (on the left wall)
+const indoorRest = (place) => { const [dx, dy] = isoXY(0, ISO.door[1], 4.9); return `${yHeroHtml()}${TOWNEV.castHtml(place)}
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="town" aria-label="出去" style="margin-left:${Math.round(dx) - 32}px;bottom:${Math.round(dy)}px"><span class="tag">${ySign('today', '出去')}</span>${TOWNEV.dot('town', place)}</button>
+    <div class="ysel"></div>`; };
+// drawing in the room: a point, a face, a box (its two faces toward us and its top, shaded as 書房's light falls), flat things on
+// the left wall (p = −v, q = −h), on a wall or face across at v (p = u, q = −h), on a level at height h (p = u, q = v); a round
+// thing standing up (a stool, a barrel)
+const iPt = (u, v, h = 0) => isoPt(u, v, h).map((n) => n.toFixed(1)).join(' ');
+const iPoly = (pts, fill, more = '') => `<path d="M${pts.map((q) => iPt(...q)).join(' L')} Z" fill="${fill}"${more}/>`;
+const iShade = (c, k) => mixHex(c, '#1c120a', k);
+const iBox = (c, u0, v0, h0, u1, v1, h1, o = {}) => iPoly([[u0, v1, h0], [u1, v1, h0], [u1, v1, h1], [u0, v1, h1]], o.fv || iShade(c, 0.1))
+  + iPoly([[u1, v0, h0], [u1, v1, h0], [u1, v1, h1], [u1, v0, h1]], o.fu || iShade(c, 0.24)) + iPoly([[u0, v0, h1], [u1, v0, h1], [u1, v1, h1], [u0, v1, h1]], o.top || c);
+const iOnL = (inner, u0 = 0) => `<g transform="matrix(${ISO.U} ${-ISO.U / 2} 0 ${ISO.U} ${ISO.ox + u0 * ISO.U} ${ISO.oy + u0 * ISO.U / 2})">${inner}</g>`;
+const iOnV = (v0, inner) => `<g transform="matrix(${ISO.U} ${ISO.U / 2} 0 ${ISO.U} ${ISO.ox - v0 * ISO.U} ${ISO.oy + v0 * ISO.U / 2})">${inner}</g>`;
+const iOnF = (h, inner) => `<g transform="matrix(${ISO.U} ${ISO.U / 2} ${-ISO.U} ${ISO.U / 2} ${ISO.ox} ${ISO.oy - h * ISO.U})">${inner}</g>`;
+function iCyl(u, v, r, h0, h1, side, top) {
+  const [x, y0] = isoPt(u, v, h0), y1 = isoPt(u, v, h1)[1], rx = r * ISO.U * Math.SQRT2, ry = rx / 2;
+  return `<path d="M${(x - rx).toFixed(1)} ${y1.toFixed(1)} V${y0.toFixed(1)} A${rx.toFixed(1)} ${ry.toFixed(1)} 0 0 0 ${(x + rx).toFixed(1)} ${y0.toFixed(1)} V${y1.toFixed(1)} Z" fill="${side}"/><ellipse cx="${x.toFixed(1)}" cy="${y1.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="${top}"/>`;
+}
+const ISO_DEFS = `<defs><linearGradient id="isoAoV" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity=".2"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
+  <linearGradient id="isoAoU" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".2"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient></defs>`;
+const SERIF = `font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif"`;
+// the room's shell: the floor in planks, the two walls with their wainscot, the shade where they meet the floor, the block's cut
+// edges (the floor's front edges, the walls' ends and tops) as 書房's
+function isoShell(c) {
+  const { RW, RD, RH } = ISO, T = 0.5, W = 2.4;
+  let seams = ''; for (let i = 0, q = 0.7; q < RD; q += 0.7, i++) { seams += `M0 ${q.toFixed(2)} H${RW} `; for (let p = (i * 1.9) % 3.4 + 0.6; p < RW; p += 3.4) seams += `M${p.toFixed(2)} ${(q - 0.7).toFixed(2)} v.7 `; }
+  const battens = (n) => Array.from({ length: Math.floor(n / 0.8) }, (_, i) => `M${(0.4 + i * 0.8).toFixed(2)} ${-W} V0`).join(' ');
+  return iPoly([[0, 0, 0], [RW, 0, 0], [RW, RD, 0], [0, RD, 0]], c.floor) + iOnF(0, `<path d="${seams}" fill="none" stroke="${c.seam}" stroke-width=".035"/>`)
+    + iPoly([[0, 0, 0], [0, RD, 0], [0, RD, RH], [0, 0, RH]], c.wallL) + iPoly([[0, 0, 0], [RW, 0, 0], [RW, 0, RH], [0, 0, RH]], c.wallR)
+    + iOnL(`<rect x="${-RD}" y="${-W}" width="${RD}" height="${W}" fill="${c.wainL}"/><path d="${battens(RD).replace(/M(\d)/g, 'M-$1')}" stroke="${c.batten}" stroke-width=".07"/><rect x="${-RD}" y="${-W - 0.14}" width="${RD}" height=".16" fill="${c.trim}"/><rect x="${-RD}" y="${-RH}" width="${RD}" height=".22" fill="${c.trim}"/>`)
+    + iOnV(0, `<rect x="0" y="${-W}" width="${RW}" height="${W}" fill="${c.wainR}"/><path d="${battens(RW)}" stroke="${c.batten}" stroke-width=".07"/><rect x="0" y="${-W - 0.14}" width="${RW}" height=".16" fill="${c.trim}"/><rect x="0" y="${-RH}" width="${RW}" height=".22" fill="${c.trim}"/>`)
+    + iOnF(0, `<rect x="0" y="0" width="${RW}" height=".9" fill="url(#isoAoV)"/><rect x="0" y="0" width=".9" height="${RD}" fill="url(#isoAoU)"/>`)
+    + iPoly([[RW, -T, 0], [RW, RD, 0], [RW, RD, -T], [RW, -T, -T]], c.edgeU) + iPoly([[-T, RD, 0], [RW, RD, 0], [RW, RD, -T], [-T, RD, -T]], c.edgeV)
+    + iPoly([[0, RD, 0], [-T, RD, 0], [-T, RD, RH], [0, RD, RH]], c.capV) + iPoly([[RW, 0, 0], [RW, -T, 0], [RW, -T, RH], [RW, 0, RH]], c.capU)
+    + iPoly([[-T, -T, RH], [RW, -T, RH], [RW, 0, RH], [0, 0, RH], [0, RD, RH], [-T, RD, RH]], c.top);
+}
+// a chair at a table, its seat at (u, v): its back on the far side (far: whoever sits there faces us) or on the near side
+function iChair(u, v, far, c = '#9a6a40') {
+  const w = 0.42, back = far ? iBox(iShade(c, 0.12), u - w, v - w, 0.85, u + w, v - w + 0.12, 2.1) : iBox(iShade(c, 0.12), u - w, v + w - 0.12, 0.85, u + w, v + w, 2.1);
+  const legs = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([a, b]) => iBox(iShade(c, 0.3), u + a * 0.34 - 0.05, v + b * 0.34 - 0.05, 0, u + a * 0.34 + 0.05, v + b * 0.34 + 0.05, 0.75)).join('');
+  return far ? back + legs + iBox(c, u - w, v - w, 0.75, u + w, v + w, 0.85) : legs + iBox(c, u - w, v - w, 0.75, u + w, v + w, 0.85) + back;
+}
+// a hanging paper lantern by a wall (at u, v, its top at h), swaying, with its glow; the char on it
+const iLantern = (u, v, h, k, ch) => { const [x, y] = isoPt(u, v, h); return `<circle cx="${x.toFixed(1)}" cy="${(y + 24).toFixed(1)}" r="70" fill="url(#glw)" opacity=".55"/><g class="fx-sway" style="animation-delay:-${(k * 0.7).toFixed(1)}s;animation-duration:${(3 + (k % 3) * 0.4).toFixed(1)}s"><path d="M${x.toFixed(1)} ${(y - 12).toFixed(1)} v10" stroke="#2b2b33" stroke-width="1.6"/><rect x="${(x - 9).toFixed(1)}" y="${(y - 3).toFixed(1)}" width="18" height="5" fill="#2b2b33"/><ellipse cx="${x.toFixed(1)}" cy="${(y + 18).toFixed(1)}" rx="15" ry="19" fill="#d84a3a"/><path d="M${(x - 15).toFixed(1)} ${(y + 12).toFixed(1)} h30 M${(x - 15).toFixed(1)} ${(y + 24).toFixed(1)} h30" stroke="#a8302a" stroke-width="1.4"/><ellipse cx="${(x - 5).toFixed(1)}" cy="${(y + 13).toFixed(1)}" rx="4" ry="8" fill="#ffd0a0" opacity=".35"/><text x="${x.toFixed(1)}" y="${(y + 22).toFixed(1)}" text-anchor="middle" font-size="10" font-weight="700" fill="#2b2b33" ${SERIF}>${ch}</text><rect x="${(x - 9).toFixed(1)}" y="${(y + 35).toFixed(1)}" width="18" height="4" fill="#2b2b33"/></g>`; };
+// steam off something at (u, v, h)
+const iSteam = (u, v, h, k, r = 6) => { const [x, y] = isoPt(u, v, h); return `<g transform="translate(${x.toFixed(1)} ${(y - 8).toFixed(1)})"><ellipse rx="${r}" ry="${r * 0.75}" class="fx-steam" fill="#fff" style="animation-delay:-${k}s"/></g>`; };
+// a bowl on a table or the counter (at its top, h)
+const iBowl = (u, v, h, c) => { const [x, y] = isoPt(u, v, h); return `<path d="M${(x - 8).toFixed(1)} ${(y - 4).toFixed(1)} h16 q-1 7 -8 7 q-7 0 -8 -7 Z" fill="#f4efe4"/><ellipse cx="${x.toFixed(1)}" cy="${(y - 4).toFixed(1)}" rx="8" ry="2.8" fill="${c}"/>`; };
 function shokudoHtml() {
-  const F = INDOOR_FOOT;
+  isoProps = [];
   const menu = [['カレー', '500円'], ['ラーメン', '600円'], ['うどん', '450円'], ['ぎゅうどん', '550円'], ['さかな定食', '800円'], ['からあげ定食', '750円'], ['おにぎり', '150円'], ['みそしる', '100円']];
-  const table = (x) => `<rect x="${x - 70}" y="${F + 42}" width="140" height="10" rx="3" fill="#a8743f"/><rect x="${x - 66}" y="${F + 52}" width="132" height="4" fill="#7a5230" opacity=".6"/><rect x="${x - 60}" y="${F + 52}" width="8" height="28" fill="#7a5230"/><rect x="${x + 52}" y="${F + 52}" width="8" height="28" fill="#7a5230"/>
-    <rect x="${x - 120}" y="${F + 58}" width="36" height="7" rx="2" fill="#c9a06a"/><rect x="${x - 116}" y="${F + 65}" width="5" height="17" fill="#7a5230"/><rect x="${x - 93}" y="${F + 65}" width="5" height="17" fill="#7a5230"/>
-    <rect x="${x + 84}" y="${F + 58}" width="36" height="7" rx="2" fill="#c9a06a"/><rect x="${x + 88}" y="${F + 65}" width="5" height="17" fill="#7a5230"/><rect x="${x + 111}" y="${F + 65}" width="5" height="17" fill="#7a5230"/>
-    <path d="M${x - 34} ${F + 34} h22 q-2 8 -11 8 q-9 0 -11 -8 Z" fill="#f4efe4"/><path d="M${x - 34} ${F + 36} h22" stroke="#c84a3a" stroke-width="1.4"/><rect x="${x + 16}" y="${F + 32}" width="10" height="10" rx="2" fill="#c84a3a"/><path d="M${x - 4} ${F + 28} l14 12 M${x - 1} ${F + 27} l14 12" stroke="#c9a06a" stroke-width="1.2"/>
-    ${[0, 1].map((k) => `<g transform="translate(${x - 23} ${F + 28})"><ellipse rx="5" ry="4" class="fx-steam" fill="#fff" style="animation-delay:-${k * 2.2}s"/></g>`).join('')}`;
   const tanzaku = [['親子丼', '700円'], ['天ぷら', '900円'], ['生姜焼き', '780円'], ['冷やっこ', '250円'], ['お新香', '200円'], ['ビール', '500円']];
-  return `<svg class="land indoor-land" viewBox="0 -530 1200 900" preserveAspectRatio="xMidYMax slice" style="height:900px">${GLOW_DEFS}
-    <rect x="-20" y="-530" width="1240" height="${F + 530}" fill="#f1e2c4"/>
-    ${Array.from({ length: 13 }, (_, i) => `<rect x="${i * 100 - 10}" y="-530" width="18" height="${F + 530}" fill="#e6d2ae" opacity=".55"/>`).join('')}
-    <rect x="-20" y="-530" width="1240" height="40" fill="#7a5230"/>${[150, 450, 750, 1050].map((x) => `<rect x="${x - 10}" y="-530" width="20" height="60" fill="#5e3e24"/>`).join('')}
-    ${pendant(420, 220)}${pendant(1100, 220)}
-    <path d="M600 -490 V-440" stroke="#3a2c20" stroke-width="3"/><rect x="590" y="-446" width="20" height="14" rx="4" fill="#5e3e24"/><g class="fx-fan"><path d="M600 -436 C560 -444 520 -442 486 -436 C520 -428 560 -428 600 -436 Z" fill="#8a5a34"/><path d="M600 -436 C640 -444 680 -442 714 -436 C680 -428 640 -428 600 -436 Z" fill="#7a4e2c"/></g><circle cx="600" cy="-434" r="7" fill="#c9a06a"/><path d="M600 -428 V-404" stroke="#3a2c20" stroke-width="2"/><path d="M590 -404 q10 -10 20 0 Z" fill="#f4e3b8"/><circle cx="600" cy="-396" r="80" fill="url(#glw)" opacity=".4"/>
-    <rect x="120" y="-380" width="190" height="10" fill="#7a5230"/><path d="M128 -370 l-6 22 M302 -370 l6 22" stroke="#7a5230" stroke-width="4"/><path d="M168 -380 h110 l-6 -10 h-98 Z" fill="#5e3e24"/><rect x="178" y="-428" width="90" height="38" fill="#c9a06a"/><path d="M170 -428 L223 -452 L276 -428 Z" fill="#5e3e24"/><rect x="214" y="-420" width="18" height="30" fill="#8a5a34"/><path d="M182 -398 q41 10 82 0" fill="none" stroke="#e8d8a8" stroke-width="4"/>${[196, 222, 248].map((x) => `<path d="M${x} -395 l3 5 l-3 5" fill="none" stroke="#fff" stroke-width="2"/>`).join('')}<path d="M150 -392 q-6 -14 4 -22 M296 -392 q6 -14 -4 -22" fill="none" stroke="#4f7a4a" stroke-width="5" stroke-linecap="round"/>
-    ${tanzaku.map(([n, pr], i) => `<g transform="translate(${690 + i * 62} -400)"><rect x="-22" y="0" width="44" height="118" fill="#fbf6e9" stroke="#d9c79a" stroke-width="1"/><text x="0" y="12" dominant-baseline="hanging" text-anchor="middle" font-size="15" font-weight="700" fill="#3b2a1c" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif" writing-mode="tb">${n}</text><text x="0" y="108" text-anchor="middle" font-size="10" fill="#a0402c" font-family="system-ui, sans-serif">${pr}</text></g>`).join('')}<path d="M660 -402 H1030" stroke="#7a5230" stroke-width="4"/>
-    <rect x="-20" y="${F - 70}" width="1240" height="70" fill="#a8743f"/><rect x="-20" y="${F - 74}" width="1240" height="6" fill="#7a5230"/>
-    <rect x="80" y="-120" width="1040" height="96" fill="#7a5230" rx="3"/>${menu.map(([n, p], i) => menuTag(96 + (i % 4) * 256, -112 + Math.floor(i / 4) * 44, 236, n, p)).join('')}
-    <rect x="430" y="-6" width="340" height="112" fill="#3b2f2a" rx="3"/><rect x="438" y="2" width="324" height="96" fill="#6b5240"/><path d="M438 2 h324 v16 h-324 Z" fill="#2f3a5e"/>
-    ${[470, 540, 610, 680, 740].map((x) => `<path d="M${x} 2 v16" stroke="#efe6d6" stroke-width="1.2"/>`).join('')}<text x="600" y="14" text-anchor="middle" font-size="11" fill="#fff" font-weight="700" font-family="serif">まんぷく</text>
-    <circle cx="520" cy="70" r="20" fill="#8a8f99"/><circle cx="520" cy="70" r="16" fill="#4a4a55"/>${[0, 1, 2].map((k) => `<g transform="translate(${600 + k * 14} 54)"><ellipse rx="12" ry="9" class="fx-steam" fill="#fff" style="animation-delay:-${k * 1.5}s"/></g>`).join('')}<rect x="660" y="56" width="60" height="30" rx="4" fill="#d9d2c4"/>
-    <rect x="390" y="110" width="420" height="16" rx="3" fill="#c58a54"/><rect x="400" y="126" width="400" height="${F - 126}" fill="#9a6538"/>
-    ${[440, 520, 600, 680, 760].map((x) => `<rect x="${x - 3}" y="126" width="6" height="${F - 126}" fill="#7a5230" opacity=".5"/>`).join('')}
-    <g data-fx="maneki"><g transform="translate(420 82)"><ellipse cx="0" cy="26" rx="14" ry="4" fill="#000" opacity=".15"/><path d="M-11 26 Q-13 6 0 4 Q13 6 11 26 Z" fill="#fff"/><circle cy="0" r="10" fill="#fff"/><path d="M-8 -6 L-6 -14 L-2 -8 M8 -6 L6 -14 L2 -8" fill="#fff" stroke="#e58fa8" stroke-width="1"/><path class="paw" d="M11 6 Q20 -6 14 -16" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="-4" cy="0" r="1.3" fill="#333"/><circle cx="4" cy="0" r="1.3" fill="#333"/><circle cy="14" r="4" fill="#e3c46a"/></g></g>
-    <rect x="1010" y="-10" width="120" height="78" rx="6" fill="#3a3a44"/><rect x="1018" y="-2" width="104" height="62" rx="3" fill="#7fb3d8"/><defs><clipPath id="tvPic"><rect x="1018" y="-2" width="104" height="62" rx="3"/></clipPath></defs><g clip-path="url(#tvPic)"><g class="fx-scroll" style="animation-duration:6s"><path d="M1018 40 q20 -24 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0" stroke="#fff" stroke-opacity=".5" stroke-width="3" fill="none"/></g><circle cx="1104" cy="10" r="7" fill="#f2c94c" opacity=".8"/></g><rect x="1064" y="68" width="12" height="12" fill="#3a3a44"/>
-    <circle cx="190" cy="40" r="26" fill="#fbf7ec" stroke="#7a5230" stroke-width="4"/>${[0, 1, 2, 3].map((k) => `<path d="M190 ${18} v4" stroke="#7a5230" stroke-width="2" transform="rotate(${k * 90} 190 40)"/>`).join('')}${clockHands(190, 40, 22)}
-    <rect x="20" y="40" width="96" height="${F - 40}" fill="#7a5230"/><rect x="28" y="48" width="80" height="${F - 48}" fill="#cfe6ec" opacity=".7"/><path d="M24 40 h88 v54 h-88 Z" fill="#2f3a5e"/><path d="M53 40 v54 M83 40 v54" stroke="#efe6d6" stroke-width="1.5"/>
-    <text x="68" y="74" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="serif">めし</text>
-    <rect x="1140" y="30" width="70" height="${F - 30}" fill="#6e4f3a"/><rect x="1138" y="26" width="74" height="6" fill="#4a3426"/>${[0, 1].map((k) => `<path class="fx-sway" style="animation-delay:-${k * 0.8}s;animation-duration:3.4s" d="M${1141 + k * 35} 32 h33 v58 h-33 Z" fill="#c84a3a"/>`).join('')}<text x="1175" y="66" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="serif">厨房</text>
-    ${[0, 1].map((r) => `<g transform="translate(1062 ${F - 34 - r * 34})"><rect width="60" height="34" rx="3" fill="#e6c23a"/><rect x="4" y="12" width="52" height="4" fill="#c9a52a"/>${[8, 20, 32, 44].map((bx) => `<rect x="${bx}" y="-10" width="8" height="12" rx="3" fill="#6b3a2a"/>`).join('')}</g>`).join('')}
-    <rect x="-20" y="${F}" width="1240" height="${370 - F}" fill="#c9a06a"/>${Array.from({ length: 8 }, (_, j) => `<path d="M-20 ${F + 4 + j * 17} H1220" stroke="#b38a55" stroke-width="2"/>`).join('')}
-  </svg>${[220, 980].map((x) => landProp(55, `<g transform="translate(${x} ${F + 82}) scale(1.6) translate(${-x} ${-(F + 82)})">${table(x)}</g>`, true)).join('')}${indoorRest('shokudo')}`;
+  const table = (u0, u1, v0, v1, k) => { const um = (u0 + u1) / 2, [sx, sy] = isoPt(um, (v0 + v1) / 2, 1.42);
+    return [[u0 + 0.2, v0 + 0.2], [u1 - 0.3, v0 + 0.2], [u0 + 0.2, v1 - 0.3], [u1 - 0.3, v1 - 0.3]].map(([a, b]) => iBox('#5e3e24', a, b, 0, a + 0.1, b + 0.1, 1.3)).join('') + iBox('#b07a46', u0, v0, 1.3, u1, v1, 1.42, { top: '#c8925a' })
+      + iBowl(um - 0.7, v0 + 0.5, 1.42, '#e6a23c') + iBowl(um + 0.7, v0 + 0.5, 1.42, '#c84a3a') + iSteam(um - 0.7, v0 + 0.5, 1.42, k) + iSteam(um + 0.7, v0 + 0.5, 1.42, k + 1.6)
+      + `<rect x="${(sx - 3).toFixed(1)}" y="${(sy - 13).toFixed(1)}" width="6" height="11" rx="2" fill="#4a2a1c"/><rect x="${(sx + 5).toFixed(1)}" y="${(sy - 9).toFixed(1)}" width="9" height="7" rx="1" fill="#f3ead6"/>`; };
+  const tables = [[8, 11, 7.6, 9.4], [14, 17, 7.6, 9.4], [14, 17, 12.4, 14.2]];
+  const [cx, cy] = isoPt(2.4, 2.0, 1.95);
+  return `<svg class="land indoor-land iso" viewBox="0 -530 1200 900" preserveAspectRatio="xMidYMax slice" style="height:900px">${GLOW_DEFS}${ISO_DEFS}
+    ${isoShell({ floor: '#c9a276', seam: '#9a744c', wallL: '#efe2c6', wallR: '#f6ead2', wainL: '#a87a4c', wainR: '#b88a5c', batten: '#946640', trim: '#6e4a30', edgeU: '#8a6440', edgeV: '#a07850', capU: '#d9c9a8', capV: '#e8d8b8', top: '#cdb995' })}
+    ${iOnF(0, `<rect x="0" y="0" width="15" height="1.4" fill="#dcd6ca"/><path d="${Array.from({ length: 30 }, (_, i) => `M${(i * 0.5).toFixed(1)} 0 v1.4`).join(' ')} M0 .7 H15" stroke="#c4bdb0" stroke-width=".03"/>`)}
+    ${iOnV(0, `<rect x=".3" y="-4.3" width="14.3" height="2.4" fill="#eef0ea"/><path d="${Array.from({ length: 24 }, (_, i) => `M${(0.3 + i * 0.6).toFixed(1)} -4.3 v2.4`).join(' ')} M.3 -3.7 H14.6 M.3 -3.1 H14.6 M.3 -2.5 H14.6" stroke="#d2d6cc" stroke-width=".03"/>
+      <rect x="1" y="-4.86" width="7.2" height=".14" fill="#6e4a30"/>${[0, 1, 2, 3, 4].map((i) => `<path d="M${1.3 + i * 1.35} -4.86 q.45 -.5 .9 0 Z M${1.3 + i * 1.35} -5.1 q.45 -.5 .9 0 Z" fill="#fbf8f0" stroke="#d9d2c4" stroke-width=".02"/>`).join('')}
+      <path d="M8.9 -6.74 H14.7" stroke="#7a5230" stroke-width=".08"/>${tanzaku.map(([n, pr], i) => `<rect x="${(9.1 + i * 0.92).toFixed(2)}" y="-6.7" width=".74" height="2.2" fill="#fbf6e9" stroke="#d9c79a" stroke-width=".02"/><text x="${(9.47 + i * 0.92).toFixed(2)}" y="-6.55" dominant-baseline="hanging" text-anchor="middle" font-size=".34" font-weight="700" fill="#3b2a1c" writing-mode="tb" ${SERIF}>${n}</text><text x="${(9.47 + i * 0.92).toFixed(2)}" y="-4.64" text-anchor="middle" font-size=".22" fill="#a0402c" font-family="system-ui, sans-serif">${pr}</text>`).join('')}
+      <rect x="16" y="-4.1" width="2.4" height="4.1" fill="#3a2a20"/><path d="M15.9 -4.12 H18.5" stroke="#5e3e24" stroke-width=".12"/>${[0, 1].map((k) => `<path class="fx-sway" style="animation-duration:3.4s;animation-delay:-${k * 0.8}s" d="M${16.05 + k * 1.17} -4.05 h1.12 v1.45 h-1.12 Z" fill="#c84a3a"/>`).join('')}<text x="17.2" y="-3.2" text-anchor="middle" font-size=".42" font-weight="700" fill="#fff" ${SERIF}>厨房</text>
+      <path d="M20.2 -6.95 v.35" stroke="#3a3a44" stroke-width=".12"/><rect x="19" y="-6.62" width="2.4" height="1.52" rx=".08" fill="#3a3a44"/><rect x="19.12" y="-6.5" width="2.16" height="1.28" fill="#7fb3d8"/><g clip-path="url(#isoTv)"><g class="fx-tvpic"><path d="M19.12 -5.7${Array.from({ length: 8 }, () => ' q.27 -.32 .54 0 t.54 0').join('')}" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width=".08"/></g><circle cx="21" cy="-6.2" r=".14" fill="#f2c94c"/></g>
+      <circle cx="15.2" cy="-6.4" r=".46" fill="#fbf7ec" stroke="#6e4a30" stroke-width=".08"/><path d="M15.2 -6.4 v-.24" stroke="#3b2a1c" stroke-width=".07" stroke-linecap="round" style="transform-box:fill-box;transform-origin:50% 100%;transform:rotate(var(--hh, 0deg))"/><path d="M15.2 -6.4 v-.36" stroke="#3b2a1c" stroke-width=".045" stroke-linecap="round" style="transform-box:fill-box;transform-origin:50% 100%;transform:rotate(var(--mm, 0deg))"/>
+      ${[3.4, 7.6].map((u) => `<path d="M${u} -6.2 v.3" stroke="#5e3e24" stroke-width=".08"/><path d="M${u - 0.3} -5.7 h.6 l-.12 -.3 h-.36 Z" fill="#f4e3b8"/>`).join('')}
+      <defs><clipPath id="isoTv"><rect x="19.12" y="-6.5" width="2.16" height="1.28"/></clipPath></defs>`)}
+    ${[3.4, 7.6].map((u) => { const [x, y] = isoPt(u, 0.2, 5.6); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="80" fill="url(#glw)" opacity=".5"/>`; }).join('')}
+    ${iOnL(`<rect x="-4.05" y="-6.02" width="2.7" height=".13" fill="#7a5230"/><path d="M-3.9 -5.9 l.25 .3 M-1.5 -5.9 l-.25 .3" stroke="#7a5230" stroke-width=".08"/><rect x="-3.3" y="-6.76" width="1.2" height=".74" fill="#d8b47a"/><path d="M-3.48 -6.76 L-2.7 -7.18 L-1.92 -6.76 Z" fill="#5e3e24"/><rect x="-2.83" y="-6.6" width=".26" height=".58" fill="#8a5a34"/><path d="M-3.3 -6.12 q.6 .2 1.2 0" stroke="#e8d8a8" stroke-width=".07" fill="none"/>${[-3, -2.7, -2.4].map((x) => `<path d="M${x} -6.05 l.06 .12 l-.06 .12 l.06 .12" stroke="#fff" stroke-width=".04" fill="none"/>`).join('')}<path d="M-3.6 -6.05 q-.2 -.4 .05 -.7 M-1.8 -6.05 q.2 -.4 -.05 -.7" stroke="#4f7a4a" stroke-width=".13" stroke-linecap="round" fill="none"/>
+      <rect x="-10.4" y="-6.2" width="5.6" height="2.8" rx=".06" fill="#6e4a30"/><rect x="-10.26" y="-6.06" width="5.32" height="2.52" fill="#f6ecd4"/><text x="-7.6" y="-5.6" text-anchor="middle" font-size=".36" font-weight="700" fill="#3b2a1c" ${SERIF}>お品書き</text>
+      ${menu.map(([n, pr], i) => { const x = i < 4 ? -10.05 : -7.45, y = -5.15 + (i % 4) * 0.42; return `<text x="${x}" y="${y.toFixed(2)}" font-size=".27" font-weight="700" fill="#3b2a1c" ${SERIF}>${n}</text><text x="${(x + 2.3).toFixed(2)}" y="${y.toFixed(2)}" text-anchor="end" font-size=".23" fill="#a0402c" font-family="system-ui, sans-serif">${pr}</text>`; }).join('')}
+      <rect x="-11.75" y="-6.35" width=".9" height="1.1" fill="#fbf7ec"/><rect x="-11.75" y="-6.35" width=".9" height=".26" fill="#d0453c"/><text x="-11.3" y="-5.4" text-anchor="middle" font-size=".5" font-weight="800" fill="#3b2a1c">11</text>
+      <rect x="-14.8" y="-4.62" width="2.8" height="4.62" fill="#6e4a30"/>${[0, 1].map((k) => `<rect x="${(-14.66 + k * 1.33).toFixed(2)}" y="-4.48" width="1.27" height="4.48" fill="#d6e8ee" opacity=".92"/><path d="M${(-14.66 + k * 1.33).toFixed(2)} -3 h1.27 M${(-14.66 + k * 1.33).toFixed(2)} -1.6 h1.27 M${(-14.03 + k * 1.33).toFixed(2)} -4.48 v4.48" stroke="#8a6a52" stroke-width=".06"/>`).join('')}
+      ${[0, 1, 2].map((k) => `<path class="fx-sway" style="animation-duration:3.6s;animation-delay:-${k * 0.6}s" d="M${(-14.72 + k * 0.9).toFixed(2)} -4.5 h.86 v1.2 h-.86 Z" fill="#2f3a5e"/>`).join('')}<text x="-13.4" y="-3.72" text-anchor="middle" font-size=".44" font-weight="700" fill="#fff" ${SERIF}>めし</text>`)}
+    ${iBox('#c9cdd2', 0.3, 0.05, 0, 14.6, 0.65, 1.8, { top: '#e2e5e8', fv: '#b8bcc2', fu: '#a4a8ae' })}${iOnF(1.8, `${[2.4, 3.4].map((u) => `<circle cx="${u}" cy=".35" r=".26" fill="none" stroke="#3a3a44" stroke-width=".06"/>`).join('')}<rect x="7.6" y=".12" width="1.6" height=".42" fill="#e8d8b8"/>`)}
+    ${iCyl(5.2, 0.35, 0.32, 1.8, 2.35, '#8a8f99', '#a8adb6')}${iSteam(5.2, 0.35, 2.35, 0, 9)}${iSteam(5.2, 0.35, 2.35, 1.5, 9)}${iCyl(11, 0.35, 0.28, 1.8, 2.3, '#f2efe8', '#e2ddd2')}
+    ${iBox('#e6c23a', 0.5, 9.6, 0, 1.9, 11, 0.75)}${iBox('#d9b42e', 0.5, 9.6, 0.75, 1.9, 11, 1.5)}${[[0.85, 9.95], [1.55, 9.95], [0.85, 10.65], [1.55, 10.65]].map(([u, v]) => iCyl(u, v, 0.12, 1.5, 1.85, '#6b3a2a', '#8a5a40')).join('')}
+    ${iCyl(21.1, 1.1, 0.36, 0, 0.8, '#a8604a', '#7a4434')}${(() => { const [x, y] = isoPt(21.1, 1.1, 0.8); return [[-10, -18, 12], [8, -22, 13], [0, -34, 12], [-14, -32, 10], [12, -38, 9]].map(([dx, dy, r]) => `<circle cx="${(x + dx).toFixed(1)}" cy="${(y + dy).toFixed(1)}" r="${r}" fill="#5f9a4a"/>`).join(''); })()}
+    ${[4, 6.5, 9, 11.5].map((u) => iCyl(u, 3.35, 0.3, 0, 0.05, '#4a4a55', '#5a5a64') + iCyl(u, 3.35, 0.07, 0.05, 0.92, '#5a5a64', '#5a5a64') + iCyl(u, 3.35, 0.42, 0.92, 1.05, '#a8302a', '#d0453c')).join('')}
+    ${tables.flatMap(([u0, u1, v0]) => [u0 + 0.8, u1 - 0.8].map((u) => iChair(u, v0 - 0.75, true))).join('')}
+  </svg>
+  ${isoProp([1.6, 14.4, 1.4, 2.6], iBox('#9a6538', 1.6, 1.4, 0, 14.4, 2.6, 1.95, { top: '#d8ad7f', fv: '#9a6538', fu: '#7a5030' }) + iOnV(2.6, Array.from({ length: 16 }, (_, i) => `<path d="M${(2.1 + i * 0.8).toFixed(1)} -.05 V-1.85" stroke="#7a5230" stroke-width=".05"/>`).join('') + '<path d="M1.6 -1.86 H14.4" stroke="#c58a54" stroke-width=".1"/>')
+    + [4, 6.5, 9, 11.5].map((u, i) => iBowl(u, 2.2, 1.95, ['#e6a23c', '#c84a3a', '#d9b04a', '#7fae5a'][i])).join('') + [5.3, 10.3].map((u) => { const [x, y] = isoPt(u, 2.1, 1.95); return `<rect x="${(x - 3).toFixed(1)}" y="${(y - 12).toFixed(1)}" width="6" height="10" rx="2" fill="#4a2a1c"/><rect x="${(x + 5).toFixed(1)}" y="${(y - 10).toFixed(1)}" width="10" height="8" rx="1" fill="#f3ead6"/>`; }).join('')
+    + `<g data-fx="maneki"><g transform="translate(${cx.toFixed(1)} ${(cy - 18).toFixed(1)}) scale(.7)"><ellipse cx="0" cy="26" rx="14" ry="4" fill="#000" opacity=".15"/><path d="M-11 26 Q-13 6 0 4 Q13 6 11 26 Z" fill="#fff"/><circle cy="0" r="10" fill="#fff"/><path d="M-8 -6 L-6 -14 L-2 -8 M8 -6 L6 -14 L2 -8" fill="#fff" stroke="#e58fa8" stroke-width="1"/><path class="paw" d="M11 6 Q20 -6 14 -16" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="-4" cy="0" r="1.3" fill="#333"/><circle cx="4" cy="0" r="1.3" fill="#333"/><circle cy="14" r="4" fill="#e3c46a"/></g></g>`)}
+  ${tables.map(([u0, u1, v0, v1], k) => isoProp([u0, u1, v0, v1], table(u0, u1, v0, v1, k * 0.9))).join('')}
+  ${tables.flatMap(([u0, u1, , v1]) => [u0 + 0.8, u1 - 0.8].map((u) => isoProp([u - 0.42, u + 0.42, v1 + 0.33, v1 + 1.17], iChair(u, v1 + 0.75, false)))).join('')}
+  ${indoorRest('shokudo')}`;
 }
 function izakayaHtml() {
-  const F = INDOOR_FOOT;
+  isoProps = [];
   const board = [['焼き鳥', '1本 120円'], ['えだまめ', '300円'], ['からあげ', '480円'], ['おにぎり', '200円'], ['ウーロン茶', '250円'], ['ビール', '500円']];
-  const lantern = (x, y, k) => `<circle cx="${x}" cy="${y}" r="110" fill="url(#glw)" opacity=".6"/><g class="fx-sway" style="animation-delay:-${k * 0.7}s;animation-duration:${3 + (k % 3) * 0.4}s"><path d="M${x} ${y - 34} v10" stroke="#2b2b33" stroke-width="2"/><rect x="${x - 12}" y="${y - 32}" width="24" height="6" fill="#2b2b33"/><ellipse cx="${x}" cy="${y}" rx="22" ry="28" fill="#d84a3a"/><path d="M${x - 22} ${y - 8} h44 M${x - 22} ${y + 8} h44" stroke="#a8302a" stroke-width="2"/><ellipse cx="${x - 7}" cy="${y - 6}" rx="6" ry="12" fill="#ffd0a0" opacity=".35"/><text x="${x}" y="${y + 5}" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2b33" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif">${'酒鳥吉酒鳥吉'[k]}</text><rect x="${x - 12}" y="${y + 26}" width="24" height="6" fill="#2b2b33"/></g>`;
-  const taru = (x, y) => `<rect x="${x - 34}" y="${y - 56}" width="68" height="56" rx="8" fill="#f3ead6"/><path d="M${x - 34} ${y - 44} h68 M${x - 34} ${y - 12} h68" stroke="#8a6a46" stroke-width="3"/><path d="M${x - 30} ${y - 54} l8 52 M${x + 30} ${y - 54} l-8 52" stroke="#c9b48a" stroke-width="1.4"/><text x="${x}" y="${y - 22}" text-anchor="middle" font-size="16" font-weight="800" fill="#c8453a" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif">酒</text>`;
-  const bottle = (x, h, c) => `<rect x="${x}" y="${-h}" width="16" height="${h}" rx="4" fill="${c}"/><rect x="${x + 5}" y="${-h - 14}" width="6" height="16" fill="${c}"/><rect x="${x + 2}" y="${-h + 14}" width="12" height="16" fill="#f3e7cc"/>`;
-  return `<svg class="land indoor-land" viewBox="0 -530 1200 900" preserveAspectRatio="xMidYMax slice" style="height:900px">${GLOW_DEFS}
-    <rect x="-20" y="-530" width="1240" height="${F + 530}" fill="#5a3b28"/>
-    ${Array.from({ length: 25 }, (_, i) => `<rect x="${i * 50 - 10}" y="-530" width="4" height="${F + 530}" fill="#4a2f20"/>`).join('')}
-    <rect x="-20" y="-530" width="1240" height="46" fill="#2e1e14"/>
-    <path d="M40 -380 Q600 -330 1160 -380" stroke="#2b2b33" stroke-width="2" fill="none"/>${[120, 300, 480, 720, 900, 1080].map((x, i) => lantern(x, -352 + (i % 3 === 1 ? 10 : 0), i)).join('')}
-    <rect x="80" y="-250" width="420" height="190" rx="4" fill="#7a5230"/><rect x="92" y="-238" width="396" height="166" fill="#2f3b33"/>
-    <text x="290" y="-208" text-anchor="middle" font-size="20" font-weight="700" fill="#f3e7cc" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif">今日のおすすめ</text>
-    ${board.map(([n, p], i) => `<text x="${110 + (i % 2) * 196}" y="${-170 + Math.floor(i / 2) * 34}" font-size="15" fill="#f3e7cc" font-family="system-ui, sans-serif">${n}</text><text x="${284 + (i % 2) * 196}" y="${-170 + Math.floor(i / 2) * 34}" text-anchor="end" font-size="13" fill="#ffd27a" font-family="system-ui, sans-serif">${p}</text>`).join('')}
-    <rect x="620" y="-150" width="480" height="12" fill="#3a2418"/><rect x="620" y="-40" width="480" height="12" fill="#3a2418"/>
-    <g transform="translate(0 -150)">${[640, 668, 700, 730, 764, 794, 828, 860, 892, 926, 960, 996, 1030, 1064].map((x, i) => bottle(x, 60 + (i % 3) * 14, ['#2f5a3a', '#6b3a2a', '#e9e2d0', '#3a4a6e'][i % 4])).join('')}</g>
-    <g transform="translate(0 -40)">${[640, 690, 740, 790, 840, 890, 940, 990, 1040].map((x, i) => `<rect x="${x}" y="-40" width="34" height="40" rx="4" fill="${i % 2 ? '#c9a06a' : '#e8dcc4'}"/><path d="M${x + 4} -26 h26" stroke="#7a5230" stroke-width="2"/>`).join('')}</g>
-    <rect x="330" y="20" width="620" height="16" rx="3" fill="#c58a54"/><rect x="340" y="36" width="600" height="${F - 36}" fill="#3a2418"/>${Array.from({ length: 15 }, (_, k) => `<rect x="${344 + k * 40}" y="44" width="36" height="${F - 52}" rx="2" fill="#4a2f1f"/>`).join('')}<rect x="340" y="36" width="600" height="10" fill="#2e1e14"/>
-    ${taru(1050, F)}${taru(1124, F)}${taru(1087, F - 56)}
-    <rect x="600" y="-8" width="200" height="28" rx="3" fill="#2b2b33"/>${[620, 650, 680, 710, 740, 770].map((x) => `<path d="M${x} -8 l10 -18" stroke="#c9a06a" stroke-width="3" stroke-linecap="round"/><circle cx="${x + 6}" cy="-18" r="4" fill="#a0502c"/>`).join('')}
-    ${[620, 660, 700, 740, 780].map((x, k) => `<g transform="translate(${x} -24)"><ellipse rx="12" ry="9" class="fx-steam" fill="#e8e2d4" style="animation-delay:-${k * 0.9}s"/></g>`).join('')}<rect x="604" y="4" width="192" height="10" fill="#e8592e" opacity=".8"/><rect x="604" y="4" width="192" height="10" fill="#ffb24a" class="fx-blink" style="animation-duration:2.2s;opacity:.6"/>
-    ${[420, 520, 860].map((x) => `<rect x="${x - 14}" y="10" width="28" height="12" rx="2" fill="#e9e2d0"/>`).join('')}
-    ${[470, 560, 900].map((x) => `<rect x="${x}" y="-6" width="16" height="26" rx="2" fill="#f0b43c" fill-opacity=".9"/><path d="M${x + 16} -1 h5 v12 h-5" fill="none" stroke="#e9e2d0" stroke-width="2"/><path d="M${x - 1} -6 q4 -6 9 -2 q5 -5 9 2 Z" fill="#fbf8f0"/>`).join('')}<ellipse cx="420" cy="8" rx="13" ry="4" fill="#7fae5a"/><path d="M846 20 q-6 -10 2 -22 h4 q8 12 2 22 Z" fill="#f3ead6"/><path d="M847 -2 h6" stroke="#2f4a6e" stroke-width="2"/>
-    <rect x="20" y="20" width="96" height="${F - 20}" fill="#2e1e14"/><rect x="28" y="28" width="80" height="${F - 28}" fill="#1c2340"/><path d="M24 20 h88 v66 h-88 Z" fill="#8a2f2a"/><path d="M53 20 v66 M83 20 v66" stroke="#efe6d6" stroke-width="1.5"/>
-    <text x="68" y="60" text-anchor="middle" font-size="13" font-weight="700" fill="#fff" font-family="serif">とり吉</text>
-    <rect x="-20" y="${F}" width="1240" height="${370 - F}" fill="#4a3426"/>${Array.from({ length: 8 }, (_, j) => `<path d="M-20 ${F + 4 + j * 17} H1220" stroke="#3a281c" stroke-width="2"/>`).join('')}
-  </svg>${[420, 540, 660, 780, 900].map((x) => landProp(79, `<g transform="translate(${x} ${F + 55}) scale(1.5) translate(${-x} ${-(F + 55)})"><rect x="${x - 20}" y="${F - 2}" width="40" height="10" rx="3" fill="#c58a54"/><rect x="${x - 4}" y="${F + 8}" width="8" height="44" fill="#2e1e14"/><path d="M${x - 10} ${F + 30} h20" stroke="#2e1e14" stroke-width="3"/><rect x="${x - 16}" y="${F + 50}" width="32" height="5" rx="2" fill="#2e1e14"/></g>`, true)).join('')}${indoorRest('izakaya')}`;
+  const bottle = (x, k) => { const c = ['#2f5a3a', '#6b3a2a', '#e9e2d0', '#3a4a6e'][k % 4], hh = 0.8 + (k % 3) * 0.14; return `<rect x="${x.toFixed(2)}" y="${(-hh).toFixed(2)}" width=".34" height="${hh.toFixed(2)}" rx=".08" fill="${c}"/><rect x="${(x + 0.11).toFixed(2)}" y="${(-hh - 0.26).toFixed(2)}" width=".12" height=".3" fill="${c}"/><rect x="${(x + 0.04).toFixed(2)}" y="${(-hh + 0.2).toFixed(2)}" width=".26" height=".26" fill="#f3e7cc"/>`; };
+  const taru = (u, v, h) => { const [x, y] = isoPt(u + 0.42, v + 0.42, h + 0.62); return iCyl(u, v, 0.6, h, h + 1.2, '#efe6d0', '#e2d6bc') + iOnF(h + 1.2, `<circle cx="${u}" cy="${v}" r=".45" fill="none" stroke="#c9b48a" stroke-width=".05"/>`) + (() => { const [x0, y0] = isoPt(u, v, h + 0.3), [, y1] = isoPt(u, v, h + 0.9), rx = 0.6 * ISO.U * Math.SQRT2; return `<path d="M${(x0 - rx).toFixed(1)} ${y0.toFixed(1)} A${rx.toFixed(1)} ${(rx / 2).toFixed(1)} 0 0 0 ${(x0 + rx).toFixed(1)} ${y0.toFixed(1)} M${(x0 - rx).toFixed(1)} ${y1.toFixed(1)} A${rx.toFixed(1)} ${(rx / 2).toFixed(1)} 0 0 0 ${(x0 + rx).toFixed(1)} ${y1.toFixed(1)}" fill="none" stroke="#8a6a46" stroke-width="2.4"/>`; })() + `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" font-size="14" font-weight="800" fill="#c8453a" ${SERIF}>酒</text>`; };
+  const [gx, gy] = isoPt(7.7, 1.85, 2.25);
+  return `<svg class="land indoor-land iso" viewBox="0 -530 1200 900" preserveAspectRatio="xMidYMax slice" style="height:900px">${GLOW_DEFS}${ISO_DEFS}
+    ${isoShell({ floor: '#5c3e2b', seam: '#3a281c', wallL: '#6c4832', wallR: '#78523a', wainL: '#4a2f20', wainR: '#523424', batten: '#3a2418', trim: '#2e1e14', edgeU: '#3a281c', edgeV: '#46301f', capU: '#5a3e2c', capV: '#664632', top: '#4e3424' })}
+    ${iOnF(0, '<rect x="0" y="0" width="15.6" height="1.6" fill="#4a3426"/>')}
+    ${iOnV(0, `${[3.4, 4.9].map((y) => `<rect x="2" y="${-y}" width="12.2" height=".12" fill="#2e1c12"/>${Array.from({ length: 14 }, (_, i) => bottle(2.25 + i * 0.84, i + (y > 4 ? 1 : 0))).join('').replace(/y="(-[\d.]+)"/g, (m, v) => `y="${(Number(v) - y).toFixed(2)}"`)}`).join('')}
+      <rect x="16.6" y="-4.1" width="2.4" height="4.1" fill="#21160f"/>${[0, 1].map((k) => `<path class="fx-sway" style="animation-duration:3.4s;animation-delay:-${k * 0.8}s" d="M${16.65 + k * 1.17} -4.05 h1.12 v1.2 h-1.12 Z" fill="#2f3a5e"/>`).join('')}
+      <rect x="19.9" y="-6.4" width="1.6" height="2.2" fill="#f3e7cc"/><circle cx="20.7" cy="-5.6" r=".42" fill="#f0b43c"/><path d="M20.4 -5.9 h.6 v.62 h-.6 Z" fill="#fbf8f0" opacity=".8"/><text x="20.7" y="-4.45" text-anchor="middle" font-size=".34" font-weight="800" fill="#c8453a" font-family="system-ui, sans-serif">ビール</text>`)}
+    ${iOnL(`<rect x="-8.7" y="-6.5" width="5.8" height="3.0" rx=".06" fill="#7a5230"/><rect x="-8.56" y="-6.36" width="5.52" height="2.72" fill="#2f3b33"/><text x="-5.8" y="-5.86" text-anchor="middle" font-size=".38" font-weight="700" fill="#f3e7cc" ${SERIF}>今日のおすすめ</text>
+      ${board.map(([n, pr], i) => { const x = i % 2 ? -5.7 : -8.35, y = -5.3 + Math.floor(i / 2) * 0.48; return `<text x="${x}" y="${y.toFixed(2)}" font-size=".3" fill="#f3e7cc" font-family="system-ui, sans-serif">${n}</text><text x="${(x + 2.5).toFixed(2)}" y="${y.toFixed(2)}" text-anchor="end" font-size=".26" fill="#ffd27a" font-family="system-ui, sans-serif">${pr}</text>`; }).join('')}
+      <rect x="-14.8" y="-4.62" width="2.8" height="4.62" fill="#2e1e14"/><rect x="-14.6" y="-4.42" width="2.4" height="4.42" fill="#1c2340"/>${[0, 1, 2].map((k) => `<path class="fx-sway" style="animation-duration:3.6s;animation-delay:-${k * 0.6}s" d="M${(-14.72 + k * 0.9).toFixed(2)} -4.5 h.86 v1.5 h-.86 Z" fill="#8a2f2a"/>`).join('')}<text x="-13.4" y="-3.55" text-anchor="middle" font-size=".42" font-weight="700" fill="#fff" ${SERIF}>とり吉</text>`)}
+    ${iBox('#4a2f20', 0.3, 0.05, 0, 15, 0.6, 1.7, { top: '#6e4a30' })}${[2.6, 3.4, 9.6, 10.4, 13.2].map((u, i) => iCyl(u, 0.32, 0.14, 1.7, 2.35 - (i % 2) * 0.15, ['#e9e2d0', '#2f5a3a', '#e9e2d0', '#6b3a2a', '#3a4a6e'][i], '#3a2a20')).join('')}
+    ${taru(1.1, 9.4, 0)}${taru(1.1, 10.7, 0)}${taru(1.1, 10.05, 1.2)}
+    ${iBox('#6e4a30', 14.6, 7.4, 0, 22, 16, 0.6, { top: '#b9c288', fv: '#5e3e24', fu: '#4e3220' })}${iOnF(0.6, `<path d="M14.6 7.4 H22 V16 H14.6 Z M18.3 7.4 V16 M14.6 11.7 H22" fill="none" stroke="#56603a" stroke-width=".09"/>${[[17.6, 9.3], [19.2, 9.3], [17.6, 13.2], [19.2, 13.2]].map(([u, v]) => `<rect x="${u - 0.45}" y="${v - 0.45}" width=".9" height=".9" rx=".14" fill="#7a4a8a"/>`).join('')}`)}${iBox('#a8a49a', 13.8, 10.9, 0, 14.6, 11.9, 0.3, { top: '#bdb8ac' })}
+    ${[4, 6.5, 9, 11.5, 14].map((u) => iCyl(u, 3.6, 0.3, 0, 0.05, '#21160f', '#2e1e14') + iCyl(u, 3.6, 0.07, 0.05, 0.92, '#2e1e14', '#2e1e14') + iCyl(u, 3.6, 0.42, 0.92, 1.05, '#a8743f', '#c58a54')).join('')}
+    <path d="M${iPt(3, 0.55, 7.15)} L${iPt(19.5, 0.55, 7.15)} M${iPt(0.55, 1.5, 7.15)} L${iPt(0.55, 11, 7.15)}" stroke="#2b2b33" stroke-width="1.4" fill="none"/>
+    ${[3, 7, 11, 15, 19.5].map((u, k) => iLantern(u, 0.55, 7.15, k, '酒鳥吉酒鳥'[k])).join('')}${[1.6, 10.2].map((v, k) => iLantern(0.55, v, 7.15, k + 5, '吉酒'[k])).join('')}
+  </svg>
+  ${isoProp([1.8, 15.2, 1.6, 2.8], iBox('#3a2418', 1.8, 1.6, 0, 15.2, 2.8, 1.95, { top: '#c58a54', fv: '#3a2418', fu: '#2e1c12' }) + iOnV(2.8, Array.from({ length: 17 }, (_, i) => `<path d="M${(2.2 + i * 0.8).toFixed(1)} -.05 V-1.85" stroke="#2a1810" stroke-width=".06"/>`).join(''))
+    + iBox('#2b2b33', 6, 1.65, 1.95, 9.4, 2.05, 2.15) + iOnF(2.15, '<rect x="6.1" y="1.7" width="3.2" height=".3" fill="#e8592e"/><rect x="6.1" y="1.7" width="3.2" height=".3" fill="#ffb24a" class="fx-blink" style="animation-duration:2.2s;opacity:.6"/>')
+    + [6.4, 6.9, 7.4, 7.9, 8.4, 8.9].map((u) => { const [x, y] = isoPt(u, 1.85, 2.15); return `<path d="M${(x - 4).toFixed(1)} ${(y + 1).toFixed(1)} l8 -10" stroke="#c9a06a" stroke-width="2" stroke-linecap="round"/><circle cx="${(x + 1).toFixed(1)}" cy="${(y - 5).toFixed(1)}" r="3" fill="#a0502c"/>`; }).join('')
+    + [0, 1, 2].map((k) => `<g transform="translate(${(gx - 20 + k * 20).toFixed(1)} ${(gy - 14).toFixed(1)})"><ellipse rx="11" ry="8" class="fx-steam" fill="#e8e2d4" style="animation-delay:-${k * 1.3}s"/></g>`).join('')
+    + [[4.1, 2.4], [6.6, 2.45], [11.6, 2.4]].map(([u, v]) => { const [x, y] = isoPt(u, v, 1.95); return `<rect x="${(x - 5).toFixed(1)}" y="${(y - 15).toFixed(1)}" width="10" height="14" rx="1.5" fill="#f0b43c"/><path d="M${(x + 5).toFixed(1)} ${(y - 12).toFixed(1)} h3 v7 h-3" fill="none" stroke="#e9e2d0" stroke-width="1.6"/><path d="M${(x - 6).toFixed(1)} ${(y - 15).toFixed(1)} q3 -4 6 -1 q3 -3 6 1 Z" fill="#fbf8f0"/>`; }).join('')
+    + iBowl(5.3, 2.25, 1.95, '#7fae5a') + (() => { const [x, y] = isoPt(12.8, 2.2, 1.95); return `<path d="M${(x - 4).toFixed(1)} ${(y - 1).toFixed(1)} q-4 -8 1 -16 h6 q5 8 1 16 Z" fill="#f3ead6"/><path d="M${(x - 2).toFixed(1)} ${(y - 15).toFixed(1)} h5" stroke="#2f4a6e" stroke-width="1.6"/>`; })())}
+  ${isoProp([17, 19.8, 10.1, 12.4], [[17.2, 10.3], [19.5, 10.3], [17.2, 12.1], [19.5, 12.1]].map(([u, v]) => iBox('#4a2f20', u, v, 0.6, u + 0.12, v + 0.12, 1.05)).join('') + iBox('#7a5232', 17, 10.1, 1.05, 19.8, 12.4, 1.17, { top: '#8f6040' })
+    + iBowl(17.9, 10.8, 1.17, '#7fae5a') + iCyl(18.6, 11.3, 0.3, 1.17, 1.5, '#5a5a64', '#3a3a44') + iSteam(18.6, 11.3, 1.5, 0.5, 8) + (() => { const [x, y] = isoPt(19.2, 10.9, 1.17); return `<path d="M${(x - 4).toFixed(1)} ${(y - 1).toFixed(1)} q-4 -8 1 -16 h6 q5 8 1 16 Z" fill="#f3ead6"/><rect x="${(x + 6).toFixed(1)}" y="${(y - 6).toFixed(1)}" width="6" height="5" fill="#f3ead6"/>`; })())}
+  ${indoorRest('izakaya')}`;
 }
 // the bus stop (test, 2026-11-09) on the main road's far pavement (#/street) — a shelter with a bench, a timetable and the stop's
 // round sign on a pole. Tapped: the hero walks over and sits on the bench, legs swinging (later the bus takes him to other
@@ -8328,10 +8436,10 @@ const WAYS = {
   'yard>town': { out: () => YARD_GATE.town, in: () => [[-YARD_HALF, 64], [-YARD_HALF + 90, 64]] },
   'town>yard': { out: () => [-YARD_HALF, 64], in: () => [YARD_GATE.town, [360, 120]] },
   // through a shop's door in town (its door: TOWN_SHOPS, x + w − 28 − 600) into the room, in by its door on the left
-  'town>shokudo': { out: () => [-36, 130], in: () => [[INDOOR_DOOR, 126], [INDOOR_DOOR + 100, 92]] },
-  'shokudo>town': { out: () => [INDOOR_DOOR, 126], in: () => [[-36, 130], [-36, 98]] },
-  'town>izakaya': { out: () => [402, 130], in: () => [[INDOOR_DOOR, 126], [INDOOR_DOOR + 100, 92]] },
-  'izakaya>town': { out: () => [INDOOR_DOOR, 126], in: () => [[402, 130], [402, 98]] },
+  'town>shokudo': { out: () => [-36, 130], in: () => [isoXY(...ISO.door), isoXY(...ISO.in)] },   // in by the room's door, on its left wall
+  'shokudo>town': { out: () => isoXY(...ISO.door), in: () => [[-36, 130], [-36, 98]] },
+  'town>izakaya': { out: () => [402, 130], in: () => [isoXY(...ISO.door), isoXY(...ISO.in)] },
+  'izakaya>town': { out: () => isoXY(...ISO.door), in: () => [[402, 130], [402, 98]] },
   // 2026-11-10, the map joined up: along the edges in a row (the near pavement or the shore), down to the viewer and in by a path
   // from the back between the rows (the beach down to the harbor, the town down to the park)
   'street>harbor': { out: () => [-YARD_HALF, 40], in: () => [[YARD_HALF, 40], [YARD_HALF - 90, 40]] },

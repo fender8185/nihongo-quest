@@ -454,24 +454,24 @@ def test_the_bus_pulls_up_on_the_road_in_front_of_the_stop(b):
 
 def test_the_hero_never_walks_up_onto_the_buildings(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ state.town.stops = { station: 1, sento: 1, shrine: 1, castle: 1 }; const out = {};
-      for (const p of ['street', 'beach', 'town', 'shokudo', 'izakaya', 'station', 'sento', 'shrine', 'castle']) { await go(p, 12);
+      for (const p of ['street', 'beach', 'town', 'station', 'sento', 'shrine', 'castle']) { await go(p, 12);
         await new Promise((q) => yHeroWalk(y(), [0, 220], q)); out[p] = Math.round(yh.Y); }
       localStorage.setItem('nq_hero', JSON.stringify({ castle: { X: 0, Y: 200 } })); yPlace = 'yard'; location.hash = '#/castle'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
       out.kept = Math.round(yh.Y); return JSON.stringify(out); })()"""))
-    top = {'street': 134, 'beach': 118, 'town': 126, 'shokudo': 128, 'izakaya': 128, 'station': 128, 'sento': 128, 'shrine': 128, 'castle': 128, 'kept': 128}
+    top = {'street': 134, 'beach': 118, 'town': 126, 'station': 128, 'sento': 128, 'shrine': 128, 'castle': 128, 'kept': 128}
     assert all(r[k] <= v for k, v in top.items()), r   # the ground in front of the buildings, not on them (a spot kept from before too)
 
 # ---- what stands in the way (2026-11-10, the user: he walked about as if every place were flat ground) ----
 def test_the_hero_walks_round_a_table_and_a_tap_on_one_sends_him_beside_it(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); await go('shokudo', 12);
-      const blocks = walkBlocks('shokudo'), inside = (p) => blocks.some((k) => p[0] > k[0] && p[0] < k[1] && p[1] > k[2] && p[1] < k[3]);
-      yh.X = -380; yh.Y = 20; yHeroPlace(y()); const seen = []; let on = true;
+      const blocks = walkBlocks('shokudo'), inside = (q) => { const [u, v] = isoUV(q[0], q[1]); return blocks.some((k) => u > k[0] && u < k[1] && v > k[2] && v < k[3]); };
+      [yh.X, yh.Y] = isoXY(9.5, 5.1); yHeroPlace(y()); const seen = []; let on = true;
       const watch = () => { if (!on) return; seen.push([yh.X, yh.Y]); requestAnimationFrame(watch); }; requestAnimationFrame(watch);
-      await new Promise((q) => yHeroWalk(y(), [-380, 100], q)); on = false;
-      const behind = [Math.round(yh.X), Math.round(yh.Y)], through = seen.some(inside);
-      await new Promise((q) => yHeroWalk(y(), [-380, 58], q));
-      return JSON.stringify({ behind, through, steps: seen.length > 5, tapped: inside([yh.X, yh.Y]) }); })()"""))
-    assert r == {'behind': [-380, 100], 'through': False, 'steps': True, 'tapped': False}, r   # round the stools, not over the table; a tap on it: beside it
+      await new Promise((q) => yHeroWalk(y(), isoXY(9.5, 12), q)); on = false;
+      const there = isoUV(yh.X, yh.Y).map((c) => Math.round(c * 10) / 10), through = seen.some(inside);
+      await new Promise((q) => yHeroWalk(y(), isoXY(9.5, 8.5), q));
+      return JSON.stringify({ there, through, steps: seen.length > 5, tapped: inside([yh.X, yh.Y]) }); })()"""))
+    assert r == {'there': [9.5, 12], 'through': False, 'steps': True, 'tapped': False}, r   # round the table and its chairs, not over them; a tap on it: beside it
 
 def test_a_bench_is_drawn_over_the_hero_behind_it_and_under_him_in_front(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); await go('park', 12);
@@ -531,10 +531,20 @@ def test_every_thing_to_use_has_its_button_and_its_moving_part(b):
     assert r == [], r
 
 def test_a_spot_kept_inside_a_thing_is_moved_off_it(b):
-    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); localStorage.setItem('nq_hero', JSON.stringify({ izakaya: { X: 60, Y: 80 } })); yPlace = 'yard';
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); const [X, Y] = isoXY(9, 3.6); localStorage.setItem('nq_hero', JSON.stringify({ izakaya: { X, Y } })); yPlace = 'yard';
       TOWNEV.clock = { h: 21, day: new Date(2026, 10, 14) }; location.hash = '#/izakaya'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
-      return JSON.stringify([Math.round(yh.X), Math.round(yh.Y)]); })()"""))
-    assert r[0] == 60 and (r[1] <= 67 or r[1] >= 93), r   # off the stool, in front of it or behind
+      const [u, v] = isoUV(yh.X, yh.Y); return JSON.stringify({ u: Math.round(u * 10) / 10, off: walkBlocks('izakaya').every((k) => !(u > k[0] && u < k[1] && v > k[2] && v < k[3])) }); })()"""))
+    assert r['off'] and abs(r['u'] - 9) < 0.6, r   # off the stools, in front of them
+
+def test_the_two_rooms_are_seen_at_45_degrees_the_hero_stays_on_their_floor_and_sits_at_a_table(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + USE + """ fake([]); state.town.seen.tome = 1; state.town.seen.go = 1; await go('shokudo', 12);
+      const iso = !!y().querySelector('.indoor-land.iso'), z = (el) => Number(el.style.zIndex), counter = [...y().querySelectorAll('.land.prop')].map(z).sort((a, b) => a - b);
+      await new Promise((q) => yHeroWalk(y(), [600, 900], q)); const [u, v] = isoUV(yh.X, yh.Y);
+      const cook = z(y().querySelector('.npc-go')), behind = counter.some((c) => c > cook);
+      y()._at = null; await use('table0', 3200); const h = y().querySelector('.yhero'), sat = h.classList.contains('bench') && !h.classList.contains('back');
+      const tableZ = Math.max(...[...y().querySelectorAll('.land.prop')].map(z).filter((c) => c > z(h)).slice(0, 1).concat([0]));
+      return JSON.stringify({ iso, floor: u > 0 && u < ISO.RW && v > 0 && v < ISO.RD, behind, sat, under: tableZ > z(h) }); })()"""))
+    assert r == {'iso': True, 'floor': True, 'behind': True, 'sat': True, 'under': True}, r   # the cook behind the counter; sat facing us behind a table
 
 # ---- a new player stays in (2026-11-10, the user): the front door holds until ムギ has brought the gramophone ----
 def test_a_new_player_stays_in_until_mugi_has_brought_the_gramophone(b):
