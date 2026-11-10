@@ -1,5 +1,6 @@
-"""test build (2026-11-09): the town's events — when the next one opens (the unit reached and begun, study days between them),
-who is where by the hour, the mark on the one waiting, the talk with reply choices, the 言靈 for finishing."""
+"""test build (2026-11-09): the town's events — when the next one opens (the unit passed, or the one studied learned far enough;
+no days between them, 2026-11-10), who is where by the hour, the mark on the one waiting, the talk with reply choices, the 言靈
+for finishing; the bed (2026-11-10): after the day's practice a sleep moves the world on to 8, 12, 17 or 20 o'clock for the day."""
 import json, os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from cdp import Browser
@@ -13,10 +14,12 @@ def ev(b, js, pre=()):
 
 # a main-course account at m1, nothing learned; helpers: a study day, an m-unit begun, fake events in place of the real ones
 FRESH = """state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storyV = 9; state.startChosen = true; state.currentUnit = 'm1';
-  state.srs = {}; state.dailyLogs = {}; state.town = { done: {}, seen: {}, stops: {} }; saveState(); DAILY_CACHE = null;
+  state.srs = {}; state.dailyLogs = {}; state.town = { done: {}, seen: {}, stops: {} }; saveState(); DAILY_CACHE = null; localStorage.removeItem('nq_wake'); TOWNEV.clock = null;
   const study = (...ds) => ds.forEach((d) => { state.dailyLogs[d] = { date: d, vocabCount: 3, grammarCount: 2, quizCount: 0, bonusCount: 0, minutes: 2, topics: [], mistakeTopics: [] }; });
   const begin = (u) => { const g = REG.grammar.find((x) => x.u === u); state.srs['g:' + g.id] = { n: 1, last: '2026-11-01' }; };
   const fake = (list) => { TOWN.EVENTS = list.map(([id, u, who, at, more]) => Object.assign({ id, u, who, at, title: id, lines: [[who, 'はい。', '是。']] }, more || {})); };
+  const learn = (u, f) => { const gs = REG.grammar.filter((x) => x.u === u); gs.slice(0, Math.ceil(gs.length * f)).forEach((g) => { state.srs['g:' + g.id] = { n: 1, last: '2026-11-01' }; }); };
+  const doneToday = (yes) => { dayProgress = () => (yes ? { done: 3, left: 0, total: 3 } : { done: 1, left: 2, total: 3 }); };
   const ids = () => TOWNEV.due().map((e) => e.id);"""
 
 def test_first_event_needs_the_unit_begun(b):
@@ -24,18 +27,18 @@ def test_first_event_needs_the_unit_begun(b):
       const before = ids(); begin('m1'); return JSON.stringify({ before, after: ids() }); })()"""))
     assert r == {'before': [], 'after': ['a1']}, r
 
-def test_two_study_days_between_events_of_the_current_unit(b):
-    r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['a1', 'm1', 'kenta', 'town'], ['a2', 'm1', 'kenta', 'town']]); begin('m1');
-      state.town.done.a1 = '2026-11-01'; study('2026-11-01'); const sameDay = ids();
-      study('2026-11-02'); const one = ids(); study('2026-11-04'); const two = ids();
-      return JSON.stringify({ sameDay, one, two }); })()"""))
-    assert r == {'sameDay': [], 'one': [], 'two': ['a2']}, r   # the day it was done does not count
+def test_events_of_the_unit_studied_open_as_its_grammar_is_learned(b):
+    r = json.loads(ev(b, "(() => { " + FRESH + """ fake(['a1', 'a2', 'a3', 'a4', 'a5'].map((id) => [id, 'm1', 'kenta', 'town']));
+      const at = [ids()]; begin('m1'); at.push(ids()); learn('m1', 0.4); at.push(ids()); learn('m1', 1); at.push(ids());
+      return JSON.stringify(at); })()"""))
+    assert r == [[], ['a1'], ['a1', 'a2', 'a3'], ['a1', 'a2', 'a3', 'a4', 'a5']], r   # the first once begun, then one more each fifth learned
 
-def test_catching_up_takes_one_study_day(b):
-    r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['a1', 'm1', 'kenta', 'town'], ['a2', 'm1', 'kenta', 'town'], ['b1', 'm2', 'kenta', 'town']]);
-      state.currentUnit = 'm3'; begin('m3'); state.town.done.a1 = '2026-11-01'; const none = ids(); study('2026-11-02'); const one = ids();
-      return JSON.stringify({ none, one }); })()"""))
-    assert r == {'none': [], 'one': ['a2', 'b1']}, r   # units already passed (m1, m2) need no begun mark and one day
+def test_no_study_days_between_events(b):
+    r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['a1', 'm1', 'kenta', 'town'], ['a2', 'm1', 'kenta', 'town', { after: 'a1' }], ['b1', 'm2', 'kenta', 'town']]);
+      learn('m1', 1); const first = ids(); TOWNEV.finish('a1'); const sameDay = ids();
+      state.currentUnit = 'm3'; begin('m3'); const passed = ids();
+      return JSON.stringify({ first, sameDay, passed }); })()"""))
+    assert r == {'first': ['a1'], 'sameDay': ['a2'], 'passed': ['a2', 'b1']}, r   # the next is open the day one is done; units passed open whole
 
 def test_pre_stage_only_reaches_m0(b):
     r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['p1', 'm0', 'miku', 'town'], ['a1', 'm1', 'kenta', 'town']]);
@@ -44,18 +47,18 @@ def test_pre_stage_only_reaches_m0(b):
     assert r == {'reached': 0, 'none': [], 'then': ['p1']}, r   # m0 begins with anything learned
 
 def test_one_waiting_and_a_closed_place_lets_the_next_through(b):
-    r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['c1', 'm1', 'hina', 'town'], ['c2', 'm1', 'kenta', 'town']]); begin('m1');
+    r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['c1', 'm1', 'hina', 'town'], ['c2', 'm1', 'kenta', 'town']]); learn('m1', 1);
       const wd = new Date(2026, 10, 10), we = new Date(2026, 10, 14);   /* a Tuesday, a Saturday */
       const w = (h, d) => { const x = TOWNEV.waiting(h, d); return x && [x.ev.id, x.place, x.spot]; };
       return JSON.stringify({ morning: w(10, wd), evening: w(17, wd), weekend: w(10, we), night: w(3, wd) }); })()"""))
     assert r == {'morning': ['c2', 'town', 'bakery'], 'evening': ['c1', 'town', 'flowers'], 'weekend': ['c1', 'town', 'flowers'], 'night': None}, r
 
-def test_an_event_waiting_long_finds_its_host_at_any_hour(b):
+def test_an_event_waiting_two_study_days_finds_its_host_at_any_hour(b):
     r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['c1', 'm1', 'hina', 'town'], ['n1', 'm1', 'kenta', 'town', { after: 'c1', when: 'night' }]]); begin('m1');
       const wd = new Date(2026, 10, 10), w = (h) => { const x = TOWNEV.waiting(h, wd); return x && [x.ev.id, x.spot]; };
-      const soon = w(9); study('2026-11-02', '2026-11-03'); const two = w(9); study('2026-11-04'); const three = w(9);
-      return JSON.stringify({ soon, two, three }); })()"""))
-    assert r == {'soon': None, 'two': None, 'three': ['c1', 'flowers']}, r   # three study days on, 陽菜 waits at her shop whatever the hour
+      const soon = w(9); study('2026-11-02'); const one = w(9); study('2026-11-03'); const two = w(9);
+      return JSON.stringify({ soon, one, two }); })()"""))
+    assert r == {'soon': None, 'one': None, 'two': ['c1', 'flowers']}, r   # two study days on, 陽菜 waits at her shop whatever the hour
 
 def test_open_hours_wrap_past_midnight(b):
     r = json.loads(ev(b, "JSON.stringify([TOWNEV.isOpen('izakaya', 0.5), TOWNEV.isOpen('izakaya', 12), TOWNEV.isOpen('izakaya', 20), TOWNEV.isOpen('bakery', 13.9), TOWNEV.isOpen('bakery', 14), TOWNEV.isOpen('beach', 3)])"))
@@ -227,7 +230,7 @@ def test_people_indoors_are_drawn_closer_up_than_in_town(b):
 
 # ---- review fixes (pass 0) ----
 def test_mugi_hosts_nothing_before_he_has_knocked(b):
-    r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['k1', 'm1', 'kenta', 'town'], ['g1', 'm1', 'mugi', 'beach'], ['k2', 'm1', 'kenta', 'town']]); begin('m1');
+    r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['k1', 'm1', 'kenta', 'town'], ['g1', 'm1', 'mugi', 'beach'], ['k2', 'm1', 'kenta', 'town']]); learn('m1', 1);
       state.met = { koharu: Date.now() - 86400000 }; state.koto.sets = { dev: 1 }; state.town.done.k1 = '2026-11-01'; study('2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06');
       const wd = new Date(2026, 10, 10), w = (h) => { const x = TOWNEV.waiting(h, wd); return x && x.ev.id; };
       return JSON.stringify({ due: ids(), noon: w(12), late: w(23), visitor: NPC.visitor() }); })()"""))
@@ -282,7 +285,7 @@ def test_the_town_notebook_lists_people_met_and_replays_without_koto(b):
     assert r == {'kenta': True, 'title': True, 'talk': True, 'gone': True, 'back': True, 'koto': 0}, r
 
 def test_an_event_at_a_bus_stop_waits_for_the_stop_to_open(b):
-    r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['s1', 'm1', 'kobayashi', 'station'], ['t1', 'm1', 'kenta', 'town']]); begin('m1');
+    r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['s1', 'm1', 'kobayashi', 'station'], ['t1', 'm1', 'kenta', 'town']]); learn('m1', 1);
       const before = ids(); state.town.stops.station = 1; return JSON.stringify({ before, after: ids() }); })()"""))
     assert r == {'before': ['t1'], 'after': ['s1', 't1']}, r
 
@@ -327,6 +330,99 @@ def test_the_test_site_notebook_meets_everyone_sets_the_hour_and_plays_any_event
     assert r['tools'] and r['listed'] >= 55 and r['seen'] and r['stops'] == ['castle', 'sento', 'shrine', 'station'], r
     assert r['h'] == 20 and r['talk'].startswith('ソフィア'), r
     assert r['after'] == {'done': False, 'koto': 0, 'back': True} and r['real'] is None, r   # a try gives nothing and marks nothing done
+
+# ---- the bed (2026-11-10): after the day's practice, a sleep to 8, 12, 17 or 20 o'clock; the time holds for the day ----
+NEAR = """const real = () => { const d = new Date(); return d.getHours() + d.getMinutes() / 60; };
+  const near = (a, x) => Math.abs(((a - x) % 24 + 36) % 24 - 12) < 0.1;"""
+
+def test_the_bed_offers_the_times_only_after_the_days_practice(b):
+    r = json.loads(ev(b, "(() => { " + FRESH + """ const said = []; toast = (m) => said.push(m); closeModal();
+      doneToday(false); NAP.offer(); const before = { modal: !!document.querySelector('#modalRoot .modal'), said: said.join(' ') };
+      doneToday(true); NAP.offer(); const opts = [...document.querySelectorAll('#modalRoot [data-act="nap-to"]')].map((x) => [Number(x.dataset.h), x.textContent.trim()]);
+      closeModal(); return JSON.stringify({ before, opts }); })()"""))
+    assert r['before']['modal'] is False and '今日練習' in r['before']['said'], r
+    assert r['opts'] == [[8, '早上 8 點'], [12, '中午 12 點'], [17, '傍晚 5 點'], [20, '晚上 8 點']], r
+
+def test_sleeping_moves_the_world_on_and_holds_it_for_the_day(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + NEAR + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)); const said = []; toast = (m) => said.push(m); doneToday(true);
+      const r0 = near(sceneHour(), real()); NAP.to(20); const night = near(sceneHour(), 20), o1 = JSON.parse(localStorage.getItem('nq_wake')).off;
+      NAP.to(8); const morning = near(sceneHour(), 8), o2 = JSON.parse(localStorage.getItem('nq_wake')).off;
+      const ahead = Math.abs(sceneDate().getTime() - Date.now() - o2 * 3600000) < 5000; await wait(1000);
+      localStorage.setItem('nq_wake', JSON.stringify({ day: '2026-01-01', off: o2 })); const back = near(sceneHour(), real());
+      return JSON.stringify({ r0, night, morning, on: o1 > 0 && o2 > o1, ahead, back, said: said.join(' ') }); })()"""))
+    assert {k: r[k] for k in ['r0', 'night', 'morning', 'on', 'ahead', 'back']} == {'r0': True, 'night': True, 'morning': True, 'on': True, 'ahead': True, 'back': True}, r
+    assert '晚上 8 點' in r['said'] and '早上 8 點' in r['said'], r   # 晚上 → 早上 is the next morning: always on; the next day the phone's own time
+
+def test_the_time_slept_to_stays_when_the_app_is_opened_again(b):
+    out = b.run([("nav", URL), ("wait", READY), ("eval", "localStorage.setItem('nq_wake', JSON.stringify({ day: todayStr(), off: 5 })); '1'"),
+                 ("nav", URL), ("wait", READY), ("eval", "(() => { " + NEAR + " const r = near(sceneHour(), real() + 5); localStorage.removeItem('nq_wake'); return JSON.stringify(r); })()")])
+    assert json.loads(out[-1]) is True, out
+
+def test_the_sleep_menu_marks_the_times_someone_waits(b):
+    r = json.loads(ev(b, "(() => { " + FRESH + """ doneToday(true); state.met = { koharu: 1, mugi: 1 }; TOWNEV.clock = { h: 9.5, day: new Date(2026, 10, 10) };
+      const dots = () => { NAP.offer(); const d = [...document.querySelectorAll('#modalRoot [data-act="nap-to"]')].filter((x) => x.querySelector('.ev-dot')).map((x) => Number(x.dataset.h)); closeModal(); return d; };
+      fake([['n1', 'm1', 'nakamura', 'izakaya', { when: 'night' }]]); begin('m1'); const night = dots();
+      fake([['c1', 'm1', 'alex', 'beach']]); const late = dots();
+      TOWNEV.clock = null; return JSON.stringify({ night, late }); })()"""))
+    assert r == {'night': [20], 'late': [17]}, r   # 中村 at the izakaya 19–24; アレックス on the beach 15–18 (at noon in the 食堂)
+
+def test_the_bed_can_be_moved_but_not_put_away(b):
+    r = json.loads(ev(b, """(() => { const s = JSON.parse(JSON.stringify(state)); delete s.placed.bed; const n = normalizeState(s);
+      return JSON.stringify({ fixed: !!WARES.find((w) => w.id === 'bed').fixed, back: !!n.placed.bed }); })()"""))
+    assert r == {'fixed': True, 'back': True}, r
+
+def test_a_tap_on_the_bed_lies_down_and_asks_how_long_to_sleep(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)); doneToday(true); state.met = { koharu: 1, mugi: 1 }; closeModal();
+      location.hash = '#/bedroom'; document.getElementById('view').innerHTML = ''; route(); await wait(500);
+      document.querySelector('[data-act="ware-use"][data-ware="bed"]').click();
+      let m = null; for (let i = 0; i < 100 && !m; i++) { await wait(60); m = document.querySelector('#modalRoot [data-act="nap-to"]'); }
+      const asleep = !!document.querySelector('.study .hero.sleep'); closeModal(); return JSON.stringify({ menu: !!m, asleep }); })()"""))
+    assert r == {'menu': True, 'asleep': True}, r
+
+def test_the_way_to_bed_is_marked_when_a_sleep_would_meet_someone(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)); state.met = { koharu: 1, mugi: 1 }; TOWNEV.clock = { h: 9.5, day: new Date(2026, 10, 10) };
+      fake([['n1', 'm1', 'nakamura', 'izakaya', { when: 'night' }]]); begin('m1');
+      const look = async (hash) => { location.hash = hash; document.getElementById('view').innerHTML = ''; route(); await wait(400); };
+      const on = (sel) => document.querySelector(sel).classList.contains('calls');
+      doneToday(false); await look('#/today'); const before = on('[data-thing="bdoor"]');
+      doneToday(true); await look('#/today'); const door = on('[data-thing="bdoor"]');
+      await look('#/bedroom'); const bed = on('[data-ware="bed"]');
+      TOWNEV.clock = { h: 20, day: new Date(2026, 10, 10) }; await look('#/today'); const there = on('[data-thing="bdoor"]');
+      TOWNEV.clock = null; return JSON.stringify({ before, door, bed, there }); })()"""))
+    assert r == {'before': False, 'door': True, 'bed': True, 'there': False}, r   # at 20:00 he is there already: out, not to bed
+
+def test_entering_the_study_says_when_someone_waits_and_that_a_sleep_gets_there(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([['n1', 'm1', 'nakamura', 'izakaya', { when: 'night' }]]); begin('m1'); localStorage.removeItem('nq_town_hint');
+      state.met = { koharu: 1, mugi: 1 }; const said = []; toast = (m) => said.push(m); TOWNEV.clock = { h: 9.5, day: new Date(2026, 10, 10) };
+      const look = async () => { location.hash = '#/today'; document.getElementById('view').innerHTML = ''; route(); await wait(400); };
+      doneToday(false); await look(); await look(); doneToday(true); await look(); await look();
+      TOWNEV.clock = null; return JSON.stringify(said); })()"""))
+    assert len(r) == 2 and all(w in r[0] for w in ['晚上', '居酒屋', '今日練習']) and '床' in r[1] and '今日練習' not in r[1], r
+
+def test_the_front_door_counts_the_events_open(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)); state.met = { koharu: 1, mugi: 1 };
+      fake([['a1', 'm1', 'kenta', 'town'], ['a2', 'm1', 'kenta', 'town', { after: 'a1' }], ['a3', 'm1', 'kenta', 'town', { after: 'a2' }]]); learn('m1', 1);
+      location.hash = '#/today'; document.getElementById('view').innerHTML = ''; route(); await wait(400);
+      return JSON.stringify(document.querySelector('[data-thing="door"]').getAttribute('aria-label')); })()"""))
+    assert r.startswith('出門') and r.endswith('・3 件事'), r
+
+def test_the_town_notebook_says_who_waits_where_and_when(b):
+    r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['n1', 'm1', 'nakamura', 'izakaya', { when: 'night' }], ['n2', 'm1', 'nakamura', 'izakaya', { after: 'n1' }]]); learn('m1', 1); state.town.seen.nakamura = 1;
+      DIARY.open('town'); const w = document.querySelector('.diary .tb-wait'); const t = w ? w.textContent : ''; DIARY.close && DIARY.close();
+      return JSON.stringify(t); })()"""))
+    assert all(w in r for w in ['2 件', '中村', '居酒屋とり吉', '晚上']), r
+
+def test_a_weekend_of_sleeps_meets_every_event_open(b):
+    r = json.loads(ev(b, "(() => { " + FRESH + """ state.currentUnit = 'm6'; learn('m6', 1); state.met = { koharu: 1, mugi: 1 };
+      const run = (day) => { state.town = { done: {}, seen: {}, stops: {} }; let moved = true;
+        while (moved) { moved = false; for (const h of TOWN.WAKE) { let w; while ((w = TOWNEV.waiting(h, day))) { TOWNEV.finish(w.ev.id); moved = true; } } }
+        return TOWN.EVENTS.filter((e) => TOWNEV.unitIdx(e.u) <= TOWNEV.unitIdx('m6') && !state.town.done[e.id]).map((e) => e.id); };
+      return JSON.stringify({ sat: run(new Date(2026, 10, 14)), tue: run(new Date(2026, 10, 10)) }); })()"""))
+    assert r == {'sat': [], 'tue': []}, r   # weekdays only practice; a weekend (or any day) of sleeps meets them all
+
+def test_the_shrine_festival_runs_until_23(b):
+    r = json.loads(ev(b, "JSON.stringify([TOWNEV.isOpen('ennichi', 22.5), TOWNEV.isOpen('ennichi', 23), (TOWNEV.whereIs('hina', 22.5, new Date(2026, 10, 10)) || {}).place, (TOWNEV.whereIs('tatsu', 22.5) || {}).place])"))
+    assert r == [True, False, 'shrine', 'shrine'], r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

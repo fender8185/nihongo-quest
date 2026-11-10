@@ -75,3 +75,8 @@ test('events.js itself passes against data.js', () => {
   const D = require('../scripts/data-file').load();
   assert.deepEqual(check(loadTown(), D), []);
 });
+test('every event can be met at one of the times the bed wakes to', () => {
+  const late = { miku: { name: '美玖', hours: [[21, 23, 'town', 'bakeryIn']] }, kenta: CAST.kenta };
+  assert.deepEqual(kinds(check(town([ev()], { CAST: late, WAKE: [8, 12, 17, 20] }), DATA)), ['wake']);
+  assert.deepEqual(check(town([ev()], { WAKE: [8, 12, 17, 20] }), DATA), []);
+});

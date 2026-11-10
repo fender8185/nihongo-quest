@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 33 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 34 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -9,8 +9,10 @@ const TOWN = {
   PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle'],
   // names of people, shops and places: no gloss needed
   NAMES: ['美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野'],
-  // the shops' hours (the phone's real time; to < from runs past midnight)
-  HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 22] },
+  // the shops' hours (the world's time: the phone's, or where a sleep moved it on; to < from runs past midnight)
+  HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 23] },
+  // the hours a sleep in bed wakes to (早上, 中午, 傍晚, 晚上): every event's person is at its place at one of them, weekdays and weekends
+  WAKE: [8, 12, 17, 20],
   // where people stand, by place: X along the land (0 the middle), Y up from the front
   SPOTS: {
     town: { salon: { X: -328, Y: 130 }, bakery: { X: -230, Y: 112 }, bakeryIn: { X: -188, Y: 130 }, shokudo: { X: -80, Y: 112 }, cafe: { X: 60, Y: 112 },
@@ -44,7 +46,7 @@ const TOWN = {
     hina: { name: '日向 陽菜', kana: 'ひなた ひな', role: '花屋', shop: 'flowers', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'soft', fringe: 'airy', sides: 'wisps', hairBack: 'short', hairTop: 'ponytail', hairColor: '#6b4a32', eyes: 'sharp', eyeColor: '#3f7a52', brows: 'raised', mouth: 'grin', beard: 'none', topStyle: 'shirt', top: '#ecebe6', bottomStyle: 'skirt', bottom: '#3f4660', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { neck: 'bowtie' },
       bio: ['高中二年級，17 歲，放學後幫媽媽顧「ひなた花店」。急性子、直率、愛吐槽，其實很細心。', '說話是年輕人的常體。想去東京念設計，為這件事跟媽媽吵架。'],
       festa: { topStyle: 'yukata', top: '#3f4660' },   // the 緣日: a navy yukata
-      hours: [[16, 19, 'town', 'flowers', 'wd'], [9, 19, 'town', 'flowers', 'we'], [19, 22, 'shrine', 'ennichi2']] },
+      hours: [[16, 19, 'town', 'flowers', 'wd'], [9, 19, 'town', 'flowers', 'we'], [19, 23, 'shrine', 'ennichi2']] },
     lin: { name: '林 美玲', kana: 'リン メイリン', role: '雑貨屋', shop: 'goods', look: { face: 'oval', skin: '#e8bd98', cheeks: 'soft', fringe: 'sidepart', sides: 'tucked', hairBack: 'short', hairTop: 'sidelow', hairColor: '#2a2524', eyes: 'droopy', eyeColor: '#2a2730', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#3f9a8c', bottomStyle: 'wide', bottom: '#e9e2d0', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { face: 'glasses' },
       bio: ['雜貨店「雑貨りんりん」的老闆，43 歲，台灣人。十五年前嫁來這裡，長大以後才開始學日文。', '溫柔有耐心，最懂學日文的辛苦，偶爾會冒出一句中文。先生健二是漁夫。'],
       hours: [[9, 21, 'town', 'goods']] },
@@ -93,10 +95,10 @@ const TOWN = {
     chihaya: { name: '千早', kana: 'ちはや', role: '神社の巫女', look: { face: 'oval', skin: '#f8dcc8', cheeks: 'soft', fringe: 'blunt', sides: 'hime', hairBack: 'long', hairTop: 'none', hairColor: '#2a2524', eyes: 'sleepy', eyeColor: '#5a3a9a', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'shirt', top: '#ecebe6', bottomStyle: 'wide', bottom: '#d0574b', shoeStyle: 'loafer', shoe: '#6e4f3a' },
       festa: { topStyle: 'yukata', top: '#6b4d8a' },
       bio: ['稲荷神社宮司的孫女，20 歲的大學生，平常在神社當巫女。神秘、說話慢慢的，最愛講傳說和占卜。', '晚上緣日的時候會換上紫色的浴衣。'],
-      hours: [[9, 17, 'shrine', 'haiden'], [18, 22, 'shrine', 'ennichi']] },
+      hours: [[9, 17, 'shrine', 'haiden'], [18, 23, 'shrine', 'ennichi']] },
     tatsu: { name: 'タツ', kana: 'たつ', role: '金魚すくいの屋台', look: { face: 'round', skin: '#d39f78', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'jinbei', top: '#3f7ac8', bottomStyle: 'shorts', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' },
       bio: ['緣日裡金魚撈攤位的老闆，60 多歲。嗓門大、愛熱鬧，每個晚上都在神社擺攤。', '撈不到的人，他最後都會偷偷多送一隻。'],
-      hours: [[18, 22, 'shrine', 'stall']] },
+      hours: [[18, 23, 'shrine', 'stall']] },
     takahashi: { name: '高橋', kana: 'たかはし', role: 'ボランティアガイド', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'sidepart', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#a3a3a8', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#6b7a45', bottomStyle: 'pants', bottom: '#6e4f3a', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { face: 'glasses' },
       bio: ['白鷺城的志工導覽，66 歲，退休的歷史老師。說話是很有禮貌的敬語，講到城的歷史就停不下來。', '喜歡隨口考你一題。'],
       hours: [[9, 17, 'castle', 'info']] },

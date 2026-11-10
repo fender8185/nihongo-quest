@@ -1,8 +1,8 @@
 // Checks the town's people, chat and events (events.js) against the course (data.js): every kanji is in a ruby mark, a word above
 // the event's level or not in the course carries a Chinese gloss ({漢字|かな|中文}) unless it is a name, a reply choice practises
 // grammar from its unit or before and has a right answer and a wrong one with its reason, the people, places and earlier events
-// named exist, each event's person is at its place by their hours (on a spot that is drawn), and no unit is skipped up to the last
-// one written.
+// named exist, each event's person is at its place by their hours (on a spot that is drawn) — and at one of the hours a sleep wakes
+// to (TOWN.WAKE), on weekdays and at the weekend — and no unit is skipped up to the last one written.
 // usage: node scripts/check-events.js   — one line a problem, exit 1 when there is any (scripts/test.sh)
 const fs = require('fs');
 const path = require('path');
@@ -53,6 +53,10 @@ function check(T, D) {
     if (!cast[e.who]) bad('ref', where, `no one called ${e.who} to host it`);
     if (!places.includes(e.at)) bad('ref', where, `no place ${e.at} drawn yet`);
     else if (cast[e.who] && !(cast[e.who].hours || []).some((h) => h[2] === e.at && spots[e.at] && spots[e.at][h[3]])) bad('host', where, `${e.who} is never at ${e.at} by their hours`);
+    if (T.WAKE && cast[e.who]) {   // a sleep can take one there: at one of the hours woken to, on a weekday and at the weekend
+      const at = (we) => T.WAKE.some((h) => (cast[e.who].hours || []).some(([a, b, p, , d]) => p === e.at && (!d || (d === 'we') === we) && (a <= b ? h >= a && h < b : h >= a || h < b)));
+      if (!at(false) || !at(true)) bad('wake', where, `${e.who} is not at ${e.at} at any of the hours woken to (${T.WAKE.join(', ')})`);
+    }
     const before = e.after && (T.EVENTS || []).find(x => x.id === e.after);
     if (e.after && !before) bad('ref', where, `no event ${e.after} before it`);
     else if (before && before.when === 'night') bad('night-chain', where, `follows ${e.after}, which only happens at night`);

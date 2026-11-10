@@ -1938,7 +1938,7 @@ def test_theme_follows_the_clock_or_holds_night_or_day(b):
 def test_mailbox_letters_show_on_the_door_and_the_hint_comes_once(b):
     js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); localStorage.setItem('nq_letter_opening', '1');   /* test build: 古道具屋's letter put away, this is about the room's */
       const wait = (ms) => new Promise(r => setTimeout(r, ms)); const enter = async () => { location.hash = '#/stats'; route(); location.hash = '#/today'; route(); await wait(1200); };
-      const door = () => { const d = document.querySelector('#view [data-thing=door]'); return [d.querySelector('.tag').textContent.trim(), d.classList.contains('mail')]; };
+      const door = () => { const d = document.querySelector('#view [data-thing=door]'); return [d.querySelector('.tag').textContent.trim().replace(/・\\d+ 件事$/, ''), d.classList.contains('mail')]; };   /* the town's events open: another test's */
       await enter(); const first = { ids: letters().map(l => l.id), door: door(), hint: document.querySelector('.mail-hint').classList.contains('on'), seen: mailSeen() };
       await enter(); const second = document.querySelector('.mail-hint').classList.contains('on');
       localStorage.removeItem('nq_mail_seen'); await enter(); document.querySelector('.mail-hint').click(); await wait(1500);

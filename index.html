@@ -13,7 +13,7 @@
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
 <script src="./data.js?v=21"></script>
-<script src="./events.js?v=33"></script>
+<script src="./events.js?v=34"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -804,6 +804,15 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 /* the mail (1.1.0): the door's tag counts the letters in the mailbox outside and wears a red dot; a letter this device has
    not been told about brings the hint at the top left once (under the room's buttons on a phone) */
 .thing.mail:not(.away) .tag { opacity: 1; }
+.thing.calls:not(.away) .tag { opacity: 1; }
+/* test (2026-11-10): the bed — the way there marked when a sleep would meet someone; the menu of hours; the fade of a sleep */
+.thing.calls .tag::after, .study .ware-use.calls::after { content: ''; position: absolute; top: -2px; right: -2px; width: 7px; height: 7px; border-radius: 50%; background: #ef4f45; box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .85); }
+.study .ware-use.calls::after { top: 6%; right: auto; left: 50%; width: 12px; height: 12px; margin-left: -6px; box-shadow: 0 0 0 2px #fff; animation: evDot 1.2s ease-in-out infinite alternate; }
+.nap-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; } .nap-to { position: relative; }
+.nap-to .ev-dot { position: absolute; right: -4px; top: -4px; width: 12px; height: 12px; border-radius: 50%; background: #ef4f45; box-shadow: 0 0 0 2px var(--bg-elev); }
+.nap-fade { position: fixed; inset: 0; z-index: 2000; background: #0b0d1a; pointer-events: none; animation: napFade 1.5s ease-in-out forwards; }
+@keyframes napFade { 0% { opacity: 0; } 40%, 55% { opacity: 1; } 100% { opacity: 0; } }
+.tb-wait { display: grid; gap: 4px; padding: 10px 12px; border-radius: 10px; background: var(--bg-sunken); } .tb-wait p { margin: 0; }
 .thing.mail .tag::after { content: ''; position: absolute; top: -2px; right: -2px; width: 7px; height: 7px; border-radius: 50%; background: #ef4f45; box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .85); }
 .mail-hint { position: absolute; z-index: 3; top: calc(12px + env(safe-area-inset-top, 0px)); left: 12px; display: inline-flex; align-items: center; gap: 6px; padding: 8px 9px 8px 11px; border: 0; border-radius: 99px; font: inherit; font-size: 12.5px; color: #fff;
   background: rgba(20, 22, 44, .84); box-shadow: 0 4px 14px rgba(0, 0, 0, .28); cursor: pointer; opacity: 0; transform: translateY(-6px); pointer-events: none; transition: opacity .3s, transform .3s; }
@@ -6076,14 +6085,18 @@ function themeColor() {
   meta.setAttribute('content', b.contains('outside') ? mixHex(mixHex('#05060f', '#3d8cdb', c.day), '#e8875f', c.warm * 0.5) : mixHex('#3a3c63', '#f2e8d8', c.day));
 }
 function mixHex(a, b, t) { const ch = (h, i) => parseInt(h.slice(i, i + 2), 16); return '#' + [1, 3, 5].map(i => Math.round(ch(a, i) + (ch(b, i) - ch(a, i)) * t).toString(16).padStart(2, '0')).join(''); }
-// The scenes' clock (1.1.0): the phone's own time and time zone, UTC+8 only when no zone can be read. --day is the daylight (0 by
-// night, 1 by day; dawn 5–7 and dusk 17–19 ease between), --warm the sunrise／sunset glow (strongest at 6 and 18), --sx/--sy the
-// sun on its arc (up at 5:12, down at 18:48, behind the hills at either end), --hh／--mm the hands of 書房's clock. Set on body.
+// The scenes' clock (1.1.0): the phone's own time and time zone, UTC+8 only when no zone can be read — moved on by a sleep in bed
+// (test, 2026-11-10: NAP), which holds for the rest of the phone's day. --day is the daylight (0 by night, 1 by day; dawn 5–7 and
+// dusk 17–19 ease between), --warm the sunrise／sunset glow (strongest at 6 and 18), --sx/--sy the sun on its arc (up at 5:12,
+// down at 18:48, behind the hills at either end), --hh／--mm the hands of 書房's clock. Set on body.
 function sceneHour() {
   const d = new Date();
   let zone = ''; try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { /* no zone */ }
-  return zone ? d.getHours() + d.getMinutes() / 60 : (d.getUTCHours() + 8) % 24 + d.getUTCMinutes() / 60;
+  return ((zone ? d.getHours() + d.getMinutes() / 60 : (d.getUTCHours() + 8) % 24 + d.getUTCMinutes() / 60) + wakeOff()) % 24;
 }
+// the hours slept on today (NAP; this device's): none on another day — the next day wakes to the phone's own time
+function wakeOff() { try { const w = JSON.parse(localStorage.getItem('nq_wake') || 'null'); return w && w.day === todayStr() ? Number(w.off) || 0 : 0; } catch (e) { return 0; } }
+function sceneDate() { return new Date(Date.now() + wakeOff() * 3600000); }   // the world's day: a weekday or the weekend, as slept on to
 function sceneClock(h = sceneHour()) {
   const ease = (t) => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
   const day = h < 5 || h >= 19 ? 0 : h < 7 ? ease((h - 5) / 2) : h < 17 ? 1 : ease((19 - h) / 2);
@@ -7191,12 +7204,12 @@ const NPC = (() => {
   return { visitor, check, visit, face, art, gap };
 })();
 // the town's events (test, 2026-11-09; docs/superpowers/specs/2026-11-09-town-events-design.md): the people of events.js (TOWN)
-// where their hours put them, and the next event of the course. An event opens when its unit is reached (入門: m0 only) — and,
-// for the unit being studied, begun (a grammar item of it learned; m0: anything) — once enough days with practice have gone by
-// since the last one was done (2 for the unit being studied, 1 for a unit already passed, so a tester far on catches up a day
-// at a time; the day it was done does not count), and the one it follows is done. Only one waits at a time: the first whose
-// person is now where it happens — so one that wants the evening lets a daytime one through — or, three study days past its
-// time, the first whatever the hour (an evening learner is not stuck on a daytime event), unless it is meant for the night
+// where their hours put them, and the next event of the course. An event opens with the course (2026-11-10: no days between
+// them, so a week's learning can be met at the weekend): all of a unit passed, and of the unit being studied (入門: m0 only) the
+// first once it is begun (a grammar item of it learned; m0: anything), then one more for each fifth of its grammar learned —
+// once the one it follows is done. Only one waits at a time: the first whose person is now where it happens — so one that wants
+// the evening lets a daytime one through — or, two study days on from the last one done, the first whatever the hour (one who
+// cannot sleep to it, NAP, is not stuck on a daytime event), unless it is meant for the night
 const TOWNEV = (() => {
   const T = () => TOWN;
   const units = () => ['m0'].concat(DATA.UNITS.map((u) => u.id));
@@ -7205,29 +7218,40 @@ const TOWNEV = (() => {
   const started = (u) => (u === 'm0' ? Object.keys(state.srs || {}).length > 0 : REG.grammar.some((g) => g.u === u && state.srs['g:' + g.id]));
   const studyDaysSince = (date) => Object.keys(state.dailyLogs || {}).filter((d) => d > (date || '') && d <= todayStr() && dayActive(state.dailyLogs[d])).length;
   const lastDone = () => Object.values(state.town.done).sort().pop() || '';
-  const need = (e) => (!lastDone() ? 0 : unitIdx(e.u) < reachedIdx() ? 1 : 2);
+  const share = (u) => { const gs = REG.grammar.filter((g) => g.u === u); return gs.length ? gs.filter((g) => state.srs['g:' + g.id]).length / gs.length : 0; };
+  function opened(e) {   // by the course: its unit passed, or the one studied learned as far as the event's place among its events
+    const i = unitIdx(e.u), R = reachedIdx(); if (i < 0 || i > R) return false; if (i < R) return true;
+    const list = T().EVENTS.filter((x) => x.u === e.u), k = list.indexOf(e);
+    return started(e.u) && (k <= 0 || share(e.u) >= k / list.length);
+  }
+  const openN = () => T().EVENTS.filter((e) => !state.town.done[e.id] && opened(e)).length;   // open and not done (the front door's count)
   function due() {
-    const done = state.town.done, R = reachedIdx(), days = studyDaysSince(lastDone());
+    const done = state.town.done;
     const can = (id) => { const c = T().CAST[id]; return Boolean(c) && (c.art !== 'npc' || met(id)); };   // 小春, ムギ: once they have knocked
     const reach = (place) => !BUS_STOPS.some((x) => x[0] === place) || Boolean(state.town.stops[place]);   // out by bus: once its stop is open
-    return T().EVENTS.filter((e) => { const i = unitIdx(e.u);
-      return !done[e.id] && i >= 0 && i <= R && (i < R || started(e.u)) && (!e.after || done[e.after]) && days >= need(e) && can(e.who) && reach(e.at); });
+    return T().EVENTS.filter((e) => !done[e.id] && (!e.after || done[e.after]) && opened(e) && can(e.who) && reach(e.at));
   }
   const inside = (h, [from, to]) => (from <= to ? h >= from && h < to : h >= from || h < to);
   const isOpen = (shop, h = sceneHour()) => !T().HOURS[shop] || inside(h, T().HOURS[shop]);
-  function whereIs(id, h = sceneHour(), day = new Date()) {
+  function whereIs(id, h = sceneHour(), day = sceneDate()) {
     const c = T().CAST[id]; if (!c || (c.art === 'npc' && !met(id))) return null;   // 小春, ムギ: once they have come by
     const we = day.getDay() === 0 || day.getDay() === 6;
     const at = c.hours.find(([from, to, , , days]) => (!days || (days === 'we') === we) && inside(h, [from, to]));
     return at ? { place: at[2], spot: at[3] } : null;
   }
-  function waiting(h = sceneHour(), day = new Date()) {
+  function waiting(h = sceneHour(), day = sceneDate()) {
     const list = due(); if (!list.length) return null;
     for (const e of list) { const w = whereIs(e.who, h, day); if (w && w.place === e.at) return { ev: e, place: w.place, spot: w.spot }; }
     const home = (e) => (T().CAST[e.who].hours.find((x) => x[2] === e.at) || [])[3];
     const e = list.find((x) => x.when !== 'night' && home(x));
-    return e && studyDaysSince(lastDone()) - need(e) >= 3 ? { ev: e, place: e.at, spot: home(e) } : null;
+    return e && studyDaysSince(lastDone()) >= 2 ? { ev: e, place: e.at, spot: home(e) } : null;
   }
+  // the hours a sleep wakes to (TOWN.WAKE) at which an event's person is at its place, on the day one would wake
+  const wakeDay = (h) => new Date(today().getTime() + (((h - now()) % 24 + 24) % 24 || 24) * 3600000);
+  const slots = (e) => (T().WAKE || []).filter((h) => { const w = whereIs(e.who, h, wakeDay(h)); return Boolean(w) && w.place === e.at; });
+  const calls = () => { const list = due(); return (T().WAKE || []).filter((h) => list.some((e) => slots(e).includes(h))); };   // the sleep menu's dots
+  const WAKE_WORD = { 8: '早上', 12: '中午', 17: '傍晚', 20: '晚上' };
+  const when = (e) => slots(e).map((h) => WAKE_WORD[h]).join('、');
   function finish(id) {   // done: the day, the people in it met, a bus stop it opens, its 10 言靈 (once: koto.found)
     const e = T().EVENTS.find((x) => x.id === id); if (!e) return;
     const t = state.town;
@@ -7238,7 +7262,7 @@ const TOWNEV = (() => {
     saveState();
   }
   // the hour the town is drawn at: the phone's (TOWNEV.clock holds a fixed one for tests)
-  const now = () => (api.clock ? api.clock.h : sceneHour()), today = () => (api.clock ? api.clock.day : new Date());
+  const now = () => (api.clock ? api.clock.h : sceneHour()), today = () => (api.clock ? api.clock.day : sceneDate());
   const seen = (id) => (T().CAST[id].art === 'npc' ? met(id) : Boolean(state.town.seen[id]));
   const ownerOf = (shop) => Object.keys(T().CAST).find((id) => T().CAST[id].shop === shop);
   // a shop: 'prep' until its keeper is met (準備中), then 'open' or 'closed' by its hours
@@ -7277,12 +7301,15 @@ const TOWNEV = (() => {
   }
   const dot = (to, from) => { const w = waiting(now(), today()); return w && hop(from, w.place) === to ? '<i class="ev-dot" aria-hidden="true"></i>' : ''; };
   const busDot = (from) => { const w = waiting(now(), today()), to = w && hop(from, w.place); return to && to !== 'yard' && BUS_PLACES.includes(to) ? '<i class="ev-dot" aria-hidden="true"></i>' : ''; };   // the way on is by bus
-  // 書房 opened with someone waiting (and no one at the door): where, once a day
+  // 書房 opened with someone waiting (and no one at the door): where, once a day; or, no one there now, when someone will be and that
+  // a sleep gets there (once before the day's practice is done, once after)
   function hint() {
     if (NPC.visitor()) return;
-    const w = waiting(now(), today()); if (!w) return;
-    try { if (localStorage.getItem('nq_town_hint') === todayStr()) return; localStorage.setItem('nq_town_hint', todayStr()); } catch (e) { return; }
-    toast(`好像有人在${PLACE_NAME[w.place]}找你。`, 3600);
+    const w = waiting(now(), today()), e = !w && due().find((x) => slots(x).length); if (!w && !e) return;
+    const key = todayStr() + (w ? '' : NAP.done() ? '+nap' : '-nap');
+    try { if (localStorage.getItem('nq_town_hint') === key) return; localStorage.setItem('nq_town_hint', key); } catch (x) { return; }
+    if (w) { toast(`好像有人在${PLACE_NAME[w.place]}找你。`, 3600); return; }
+    toast(`${seen(e.who) ? T().CAST[e.who].name : '有人'}${when(e)}會在${PLACE_NAME[e.at]}等你。${NAP.done() ? '到臥房的床上，就能睡到那個時間。' : '做完今日練習，就能到臥房的床上睡到那個時間。'}`, 4600);
   }
   // nothing on: a word of what they can say by the unit reached (小春, ムギ: their old words too)
   function chatLine(id) {
@@ -7310,8 +7337,36 @@ const TOWNEV = (() => {
     const p = el.closest('.yard').querySelector(`.npc-${o}`);
     if (p) talk(p); else toast(`${T().CAST[o].name}現在不在店裡。`);
   }
-  const api = { unitIdx, reachedIdx, started, studyDaysSince, due, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, hop, dot, busDot, hint, PLACE_NAME, sig, seen, look, festival };
+  const api = { unitIdx, reachedIdx, started, studyDaysSince, due, opened, openN, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, hop, dot, busDot, hint, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
   return api;
+})();
+// the bed (test, 2026-11-10; the user's call): once the day's practice is done (書桌上的筆記本「今日完成」), a sleep there moves the
+// world on — 書房, the yard, the town and its people — to 早上 8 點, 中午 12 點, 傍晚 5 點 or 晚上 8 點 (TOWN.WAKE; a dot where someone
+// waits), as often as wanted and always on (晚上 → 早上 is the next morning); the time goes on from there for the rest of the day
+// (wakeOff), and the next day is the phone's own again
+const NAP = (() => {
+  const NAME = { 8: '早上 8 點', 12: '中午 12 點', 17: '傍晚 5 點', 20: '晚上 8 點' };
+  const done = () => ringPct(dayProgress()) >= 100;
+  const calls = () => done() && !TOWNEV.waiting(TOWNEV.now(), TOWNEV.today()) && TOWNEV.calls().length > 0;   // the way to bed marked: a sleep would meet someone
+  function body() {
+    const c = TOWNEV.calls();
+    return `<p class="muted small">睡醒後，今天都照那個時間走下去；明天回到真實的時間。</p>
+      <div class="nap-list">${TOWN.WAKE.map((h) => `<button type="button" class="btn nap-to" data-act="nap-to" data-h="${h}">${NAME[h]}${c.includes(h) ? '<i class="ev-dot" aria-hidden="true"></i>' : ''}</button>`).join('')}</div>`;
+  }
+  function offer() {   // lain down: the times to sleep to, or what it takes
+    if (!done()) { toast('做完今日練習，就能在床上睡到想要的時間：早上、中午、傍晚或晚上。', 3600); return; }
+    openModal('睡到幾點？', body(), { width: 380, noFocus: true });
+  }
+  function to(h) {
+    let d = ((h - sceneHour()) % 24 + 24) % 24; if (d < 1 / 60) d = 24;   // always on: the hour it is now is tomorrow's
+    try { localStorage.setItem('nq_wake', JSON.stringify({ day: todayStr(), off: wakeOff() + d })); } catch (e) { toast('這台裝置沒辦法記下時間。'); return; }
+    TOWNEV.clock = null; closeModal();   // the test site's hour (町の手帳) gives way to the world's
+    const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const fade = document.createElement('div'); fade.className = 'nap-fade'; if (!still) document.body.appendChild(fade);
+    setTimeout(() => { sceneTick(); route(); toast(`睡到${NAME[h]}了。`, 2600); }, still ? 0 : 700);
+    setTimeout(() => fade.remove(), still ? 0 : 1500);
+  }
+  return { NAME, done, calls, offer, to };
 })();
 // the opening (test, 2026-11-09; the user's picks): as a child the hero never understood what their Japanese grandmother said
 // ("I'll learn it later"); grown up and busy in the city they never did; then a letter from Japan — she has gone, and left them
@@ -7396,7 +7451,10 @@ const DIARY = (() => {
   function townBook() {
     const done = state.town.done, ids = Object.keys(TOWN.CAST).filter((id) => TOWNEV.seen(id));
     const evs = (id) => TOWN.EVENTS.filter((e) => e.who === id && done[e.id]);
-    return `<div class="town-book">${ids.length ? ids.map((id) => { const c = TOWN.CAST[id], list = evs(id);
+    const n = TOWNEV.openN(), next = TOWNEV.due().slice(0, 3);
+    const wait = n ? `<section class="tb-wait"><b>開著的事件：${n} 件</b>${next.map((e) => `<p>${esc(TOWNEV.seen(e.who) ? TOWN.CAST[e.who].name : '還沒見過的人')}・${esc(TOWNEV.PLACE_NAME[e.at] || e.at)}・${esc(TOWNEV.when(e) || '什麼時間都可能')}</p>`).join('')}
+      <p class="muted small">做完今日練習，可以到臥房的床上睡到早上、中午、傍晚或晚上。</p></section>` : '';
+    return `<div class="town-book">${wait}${ids.length ? ids.map((id) => { const c = TOWN.CAST[id], list = evs(id);
       return `<section class="tb-person"><div class="tb-face">${TOWNEV.face(id)}</div><div class="tb-body"><b>${esc(c.name)}</b><span>${esc(c.role)}</span>
         ${c.bio.slice(0, 1 + list.length).map((b) => `<p>${esc(b)}</p>`).join('')}
         ${list.map((e) => `<button type="button" class="tb-ev" data-replay="${esc(e.id)}">${esc(e.title)}<small>再讀一次</small></button>`).join('')}</div></section>`; }).join('')
@@ -7409,7 +7467,7 @@ const DIARY = (() => {
     const byUnit = {}; TOWN.EVENTS.forEach((e) => { (byUnit[e.u] = byUnit[e.u] || []).push(e); });
     return `<section class="town-tools"><b>測試用（只在測試站）</b>
       <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="meet">認識所有人、開通所有公車站</button><button type="button" class="btn btn-sm" data-tool="reset">小鎮事件從頭開始</button></div>
-      <div class="row-wrap mt-2">時間：${hrs.map(([h, n]) => `<button type="button" class="btn btn-sm" data-tool="hour" data-h="${h}" aria-pressed="${String(h) === String(cur)}">${n}</button>`).join('')}</div>
+      <div class="row-wrap mt-2">時間（只改小鎮；「現在」也清掉睡覺跳過的時間）：${hrs.map(([h, n]) => `<button type="button" class="btn btn-sm" data-tool="hour" data-h="${h}" aria-pressed="${String(h) === String(cur)}">${n}</button>`).join('')}</div>
       ${Object.entries(byUnit).map(([u, list]) => `<div class="tt-unit"><span>${esc(u)}</span>${list.map((e) => `<button type="button" class="tb-ev" data-try="${esc(e.id)}">${esc(e.title)}<small>${esc((TOWN.CAST[e.who] || {}).name || e.who)}・${esc(TOWNEV.PLACE_NAME[e.at] || e.at)}${e.when === 'night' ? '・晚上' : ''}</small></button>`).join('')}</div>`).join('')}
     </section>`;
   }
@@ -7417,7 +7475,7 @@ const DIARY = (() => {
     const t = b.dataset.tool;
     if (t === 'meet') { Object.keys(TOWN.CAST).forEach((id) => { if (TOWN.CAST[id].art !== 'npc') state.town.seen[id] = 1; }); BUS_STOPS.forEach(([id]) => { state.town.stops[id] = 1; }); saveState(); toast('認識所有人、開通所有公車站了'); }
     if (t === 'reset') { state.town = { done: {}, seen: {}, stops: {} }; Object.keys(state.koto.found).filter((k) => k.startsWith('ev-')).forEach((k) => delete state.koto.found[k]); saveState(); toast('小鎮事件從頭開始'); }
-    if (t === 'hour') TOWNEV.clock = b.dataset.h === 'now' ? null : { h: Number(b.dataset.h), day: new Date() };
+    if (t === 'hour') { TOWNEV.clock = b.dataset.h === 'now' ? null : { h: Number(b.dataset.h), day: new Date() }; if (b.dataset.h === 'now') { try { localStorage.removeItem('nq_wake'); } catch (e) { /* none kept */ } sceneTick(); } }   // 現在: a sleep's hours gone too
     show();
   }
   function show() {
@@ -8157,7 +8215,7 @@ const WARES = [
   { id: 'pumpkinhouse', kind: 'house', limited: 'halloween', name: '南瓜屋', price: 2000, desc: '胖胖的大南瓜，頂上一根藤蔓和葉子，三角形的窗戶晚上從裡面亮起來。' },
   { id: 'pumpkin', kind: 'floor', limited: 'halloween', h: 1, name: '南瓜燈', price: 20, fp: [0.8, 0.8], desc: '刻了笑臉的南瓜，晚上會從裡面亮起來。', light: { z: 0.5, r: 2.8 } },
   // 書房's own (starter: had from the start, not sold): laid out where they always stood, then moved or put away like the rest
-  { id: 'bed', kind: 'floor', starter: true, turn: false, h: 3, name: '床', fp: [2.9, 5.25], at: { w: 'F', x: 9.45, y: 2.625, r: 0, rm: 'bed' }, desc: '', act: 'bed' },
+  { id: 'bed', kind: 'floor', starter: true, fixed: true, turn: false, h: 3, name: '床', fp: [2.9, 5.25], at: { w: 'F', x: 9.45, y: 2.625, r: 0, rm: 'bed' }, desc: '', act: 'bed' },
   { id: 'nightTable', kind: 'floor', starter: true, turn: false, h: 3.2, name: '床頭櫃', fp: [1, 1], at: { w: 'F', x: 7.25, y: 0.55, r: 0, rm: 'bed' }, desc: '' },
   { id: 'bigPlant', kind: 'floor', starter: true, turn: false, h: 3.7, name: '觀葉植物', fp: [0.84, 0.84], at: { w: 'F', x: 16.2, y: 1, r: 0 }, desc: '', act: 'water' },
   { id: 'sageRug', kind: 'rug', starter: true, turn: false, name: '圓地毯', fp: [2.5, 2.5], at: { w: 'F', x: 5.4, y: 6.2, r: 0 }, desc: '' },
@@ -9468,7 +9526,7 @@ const ROOM = (() => {
       use(el, () => {}, { x: sx, y: sy, look: 'F', act: 'sofa', from: [sx, o.p.y + 1.4], out: [0, 0.95], seat: 'w:' + o.id }); return;
     }
     // the bed (test, 2026-11-09): lain on, the head on the pillow, getting off by its open side
-    if (o.it.act === 'bed') { use(el, () => {}, { x: o.p.x, y: o.p.y + 1.22, look: 'F', act: 'sleep', from: [o.p.x + 1.95, o.p.y + 1], out: [1.95, -0.2], seat: 'w:' + o.id }); return; }
+    if (o.it.act === 'bed') { use(el, () => NAP.offer(), { x: o.p.x, y: o.p.y + 1.22, look: 'F', act: 'sleep', from: [o.p.x + 1.95, o.p.y + 1], out: [1.95, -0.2], seat: 'w:' + o.id }); return; }
     if (o.it.act === 'kotatsu') { use(el, () => {}, { x: o.p.x - 1.18, y: o.p.y, look: 'X', act: 'kneel', from: [o.p.x - 1.9, o.p.y], out: [-0.72, 0] }); return; }
     const g = walkGrid(), ok = ([x, y]) => { const i = Math.floor(x / CELL), j = Math.floor(y / CELL); return i >= 0 && j >= 0 && i < GW && j < GH && !g[j * GW + i]; };
     if (o.it.act === 'kneel') { use(el, () => {}, kneelSpot(o, ok)); return; }
@@ -9549,7 +9607,7 @@ const ROOM = (() => {
   // letters waiting in the mailbox outside
   function tagOf(id, pct) {
     if (id === 'notebook') return pct < 100 ? `今日練習 ${pct}%` : extraQueue().items.length ? '今日完成・多學' : '今日完成';   // nothing new left anywhere: no 多學
-    if (id === 'door') { const n = mailCount(); return n ? `出門・${n} 封信` : '出門'; }
+    if (id === 'door') { const n = mailCount(), m = TOWNEV.openN(); return `出門${n ? `・${n} 封信` : ''}${m ? `・${m} 件事` : ''}`; }   // letters, and town events open
     return THINGS.find((t) => t.id === id).label;
   }
   // a thing's badge (1.2.0): its sign, and what its words said — today's practice a ring that fills with the day, the door's
@@ -9578,7 +9636,7 @@ const ROOM = (() => {
       const a = P(...t.pts[0]), sp = t.sb ? [[a[0] + t.sb[0], a[1] + t.sb[1]], [a[0] + t.sb[2], a[1] + t.sb[3]]] : t.pts.map((p) => P(...p)), pad = t.pad || 4;
       const x0 = Math.min(...sp.map((p) => p[0])) - pad, x1 = Math.max(...sp.map((p) => p[0])) + pad, y0 = Math.min(...sp.map((p) => p[1])) - pad, y1 = Math.max(...sp.map((p) => p[1])) + pad;
       const [tx, ty] = P(...t.tag), label = tagOf(t.id, pct);
-      return `<button type="button" class="thing${t.primary ? ' primary' : t.minor ? ' minor' : ''}${t.id === 'door' && mail ? ' mail' : ''}" data-thing="${t.id}" data-tag="${r1(tx)} ${r1(ty)}" ${t.route ? `data-act="study-go" data-route="${t.route}"` : `data-act="${t.act}"`} style="${vbPct(x0, y0)};${vbSize(x1 - x0, y1 - y0)};--tx:${((tx - x0) / (x1 - x0) * 100).toFixed(1)}%;--ty:${((ty - y0) / (y1 - y0) * 100).toFixed(1)}%" aria-label="${label}"><span class="tag">${tagInner(t.id, pct)}</span></button>`;
+      return `<button type="button" class="thing${t.primary ? ' primary' : t.minor ? ' minor' : ''}${t.id === 'door' && mail ? ' mail' : ''}${t.id === 'bdoor' && NAP.calls() ? ' calls' : ''}" data-thing="${t.id}" data-tag="${r1(tx)} ${r1(ty)}" ${t.route ? `data-act="study-go" data-route="${t.route}"` : `data-act="${t.act}"`} style="${vbPct(x0, y0)};${vbSize(x1 - x0, y1 - y0)};--tx:${((tx - x0) / (x1 - x0) * 100).toFixed(1)}%;--ty:${((ty - y0) / (y1 - y0) * 100).toFixed(1)}%" aria-label="${label}"><span class="tag">${tagInner(t.id, pct)}</span></button>`;
     };
     const dm = mover('desk').map, glow = (L, w, h, c) => { const [gx, gy] = P(...L.p); return `<i class="glow lamp-glow${c}" aria-hidden="true" style="${vbPct(gx - w / 2, gy - h / 2)};${vbSize(w, h)}"></i>`; };
     const [nx, ny] = P(...dm([(NB.x0 + NB.x1) / 2, (NB.y0 + NB.y1) / 2, DESK.z1])), [hx, hy] = P(...dm([HP.x, HP.y, DESK.z1 + 0.6])), [mx, my] = P(...dm([MUG[0], MUG[1], DESK.z1]));
@@ -9603,7 +9661,7 @@ const ROOM = (() => {
         ${gramoTune()}
         ${THINGS.map(thing).join('')}
         ${ed.on ? '' : LAMPS.map((L) => { const [lx, ly] = P(...L.p); return `<button type="button" class="lamp-tap${lampOff(L.id) ? ' off' : ''}" data-act="lamp-toggle" data-lamp="${L.id}" style="${vbPct(lx - 24, ly - 24)};${vbSize(48, 48)}" aria-label="${lampOff(L.id) ? '開燈' : '關燈'}"></button>`; }).join('')}
-        ${ed.on ? '' : placedWares().filter((o) => o.it.act).map((o) => { const b = wareBox(o); return `<button type="button" class="ware-use" data-act="ware-use" data-ware="${o.id}" style="${vbPct(b[0], b[1])};${vbSize(b[2] - b[0], b[3] - b[1])}" aria-label="${esc(o.it.name)}：${{ music: '換唱片', sofa: '坐下', kotatsu: '坐下', kneel: '跪坐', diary: '外婆的日記', wardrobe: '衣櫃', bed: '睡覺', water: '澆水', mirror: '照鏡子' }[o.it.act] || ''}"></button>`; }).join('')}
+        ${ed.on ? '' : placedWares().filter((o) => o.it.act).map((o) => { const b = wareBox(o); return `<button type="button" class="ware-use${o.id === 'bed' && NAP.calls() ? ' calls' : ''}" data-act="ware-use" data-ware="${o.id}" style="${vbPct(b[0], b[1])};${vbSize(b[2] - b[0], b[3] - b[1])}" aria-label="${esc(o.it.name)}：${{ music: '換唱片', sofa: '坐下', kotatsu: '坐下', kneel: '跪坐', diary: '外婆的日記', wardrobe: '衣櫃', bed: '睡覺', water: '澆水', mirror: '照鏡子' }[o.it.act] || ''}"></button>`; }).join('')}
         ${ed.on ? `${decosHtml()}${selHtml()}<svg class="ghost" viewBox="${VB.join(' ')}" aria-hidden="true"><g></g></svg>` : ''}
       </div></div>
       ${ed.on ? editHtml() : ''}
@@ -9620,6 +9678,7 @@ const ROOM = (() => {
     const mail = mailCount() > 0;
     st.querySelectorAll('[data-thing="notebook"], [data-thing="door"]').forEach((b) => { b.querySelector('.tag').innerHTML = tagInner(b.dataset.thing, pct); b.setAttribute('aria-label', tagOf(b.dataset.thing, pct)); delete b.dataset.w; });
     const yd = st.querySelector('[data-thing="door"]'); if (yd) yd.classList.toggle('mail', mail);
+    const nap = NAP.calls(); st.querySelectorAll('[data-thing="bdoor"], .ware-use[data-ware="bed"]').forEach((e) => e.classList.toggle('calls', nap));   // the way to bed
     st.querySelectorAll('.bulb').forEach((e) => e.classList.toggle('on', Number(e.dataset.t) <= pct / 100));
     st.querySelectorAll('.cal-stamp text').forEach((e) => { e.textContent = `${streakStats().current}日連続`; });   // another device's answers today
     kotoButtons(st);
@@ -11214,6 +11273,7 @@ function buyWare(it) {
 Object.assign(ACTIONS, {
   'room-edit': (el) => ROOM.edit(el, 'on'),
   'ware-use': (el) => ROOM.useWare(el),
+  'nap-to': (el) => NAP.to(Number(el.dataset.h)),
   'music-rec': (el) => MUSIC.put(el.dataset.id),
   'music-stop': () => MUSIC.pause(),
   'lamp-toggle': (el) => { const id = el.dataset.lamp; if (lampOff(id)) delete state.lampsOff[id]; else state.lampsOff[id] = true; saveState(); route(); },
