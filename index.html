@@ -6854,7 +6854,7 @@ function renderOutside(view, place = 'yard') {
   const a = yh.arrive && yh.arrive.to === place ? yh.arrive : null, bus = a && BUS_PLACES.includes(a.from) && BUS_PLACES.includes(place) && BUS_IN[place];
   const way = a && (WAYS[`${a.from}>${place}`] || (bus && { in: bus })), come = way ? way.in() : null; yh.arrive = null; TALK.close();   // by the bus: off at its stop
   if (come) { [yh.X, yh.Y] = come[0]; yh.back = place === 'yard'; }
-  if (INDOOR.includes(place)) yh.Y = Math.min(yh.Y, INDOOR_BACK);   // in a room: on its floor
+  if (!come) yh.Y = Math.min(yh.Y, walkTop(place));   // where he was kept: on the ground (a room: its floor), not on a building
   view.innerHTML = yardHtml(pct, place);
   const y = view.querySelector('.yard');
   y.dataset.house = state.house || ''; y.dataset.sig = TOWNEV.sig(place);
@@ -7050,12 +7050,16 @@ function yClimbLook(h, s) {
   const px = s ? Math.round(1.3 / s * 2) / 2 : 0; if (svg._outline === px) return; svg._outline = px;
   svg.style.filter = px ? `brightness(calc(.8 + .2 * var(--day))) drop-shadow(0 0 ${px}px rgba(255, 255, 255, .95)) drop-shadow(0 0 ${px * 2}px rgba(255, 238, 200, calc(.3 + .45 * (1 - var(--day)))))` : '';
 }
-function yHeroWalk(yard, to, done) {
+// how far up each place the hero walks (Y px up): the ground in front of its buildings, never up onto them (2026-11-10, the user);
+// the yard up to its house, the main road to its far pavement, a room to its floor
+const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128 };
+const walkTop = (place) => WALK_TOP[place] || 214;
+function yHeroWalk(yard, to, done, free) {   // free: on the way out of the place (up the path home), past its top
   cancelAnimationFrame(yh.raf);
   const el = yard.querySelector('.yhero'), lim = ycam.YW / 2 - 20;
   yh.climb = null; yh.s = 0; yard.classList.remove('climbing'); if (el) { el.classList.remove('climb'); yClimbLook(el, 0); }   // off the hill path, if he was on it
   HERO.still(el); if (el) el.classList.remove('bench');   // up off the bus stop's bench
-  const from = [yh.X, yh.Y], goal = [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(yPlace === 'beach' ? 118 : yPlace === 'town' ? 126 : 214, to[1]))], dx = goal[0] - from[0], dy = goal[1] - from[1], len = Math.hypot(dx, dy);
+  const from = [yh.X, yh.Y], goal = [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(free ? 222 : walkTop(yPlace), to[1]))], dx = goal[0] - from[0], dy = goal[1] - from[1], len = Math.hypot(dx, dy);
   if (!el || len < 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { yh.X = goal[0]; yh.Y = goal[1]; if (el) yHeroPlace(yard); yHeroSave(); if (done) done(); return; }
   const v = Math.max(170, len / 1.1);   // px a second: a long way hurries, about a second at most
   yh.back = dy > 0; if (Math.abs(dx) > 1) yh.flip = dx < 0; yh.turn = Math.abs(dx) > 0.5 * Math.abs(dy);   // across the lawn: a little turned
@@ -7201,7 +7205,15 @@ const NPC = (() => {
     if (w === 'gramophone') state.musicOff = false;
     saveState();
   }
-  return { visitor, check, visit, face, art, gap };
+  // a new player stays in (2026-11-10, the user) until ムギ has come by with the gramophone: at the front door the hero says why —
+  // first a little practice (小春 comes after the first set), then, 小春 met, a dog heard outside (ムギ, NPC.gap later)
+  const housebound = () => !met('mugi');
+  function stayIn(st) {
+    const lines = met('koharu') ? [['あれ？ そとで いぬの こえが する……。', '咦？外面好像有狗叫聲……'], ['', '（好像有誰要來找我。在家裡再練幾題，等一下吧。）']]
+      : [['まずは れんしゅう！', '先來練習！'], ['', '（外面的路還不熟。先坐到書桌前，點筆記本做一點今日練習，熟悉一下題目吧。）']];
+    TALK.open(st, 'hero', lines);
+  }
+  return { visitor, check, visit, face, art, gap, housebound, stayIn };
 })();
 // the town's events (test, 2026-11-09; docs/superpowers/specs/2026-11-09-town-events-design.md): the people of events.js (TOWN)
 // where their hours put them, and the next event of the course. An event opens with the course (2026-11-10: no days between
@@ -7749,7 +7761,7 @@ function yGo(el, to) {
   const yard = el.closest('.yard'), h = yard && yard.querySelector('.yhero'), way = WAYS[`${yPlace}>${to}`]; if (!way) return;
   const leave = () => { yh.arrive = { from: yPlace, to }; go(PLACE_ROUTE[to]); };
   if (!h || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { leave(); return; }
-  yHeroWalk(yard, way.out(), () => { h.classList.add('out'); setTimeout(leave, 260); });
+  yHeroWalk(yard, way.out(), () => { h.classList.add('out'); setTimeout(leave, 260); }, true);
 }
 const BUS_BOX = [-170, -268, 340, 278];
 const SHELTER_ART = () => `<ellipse cy="2" rx="150" ry="9" fill="#2b1c12" fill-opacity=".14"/>
@@ -7795,6 +7807,7 @@ function shrineHtml() {
       ${fest ? `<g class="ennichi">${chochin(280, 760)}${stall(400, 100, '#3f7ac8', '金魚すくい')}${stall(510, 90, '#d0453c', 'やきそば')}${stall(610, 90, '#e58fa8', 'わたあめ')}</g>` : ''}
       <rect class="pave" x="-20" y="${F}" width="1240" height="${370 - F}" style="fill:color-mix(in srgb, #d8cfbd calc(var(--day) * 100%), #2a2a48)"/>
       ${Array.from({ length: 24 }, (_, j) => `<rect x="${60 + j * 48}" y="${F + 20 + (j % 2) * 26}" width="34" height="16" rx="3" ${hc('#c9c4b8', '#3a3c5e')}/>`).join('')}
+      ${busRoad()}
     </svg>
     ${yHeroHtml()}
     ${busPoleHtml('shrine')}
@@ -7822,6 +7835,7 @@ function castleHtml() {
       ${pine(70, 1.1)}${pine(400, 0.8)}${pine(1110, 1)}
       <rect class="pave" x="-20" y="${F}" width="1240" height="${370 - F}" style="fill:color-mix(in srgb, #ddd3bd calc(var(--day) * 100%), #2a2a48)"/>
       ${Array.from({ length: 30 }, (_, j) => `<path class="seam" d="M${j * 44 - 20} ${F + 40 + (j % 3) * 30} h26"/>`).join('')}
+      ${busRoad()}
     </svg>
     ${yHeroHtml()}
     ${busPoleHtml('castle')}
@@ -7831,9 +7845,10 @@ function castleHtml() {
 // each opened by the event that first takes the hero there (TOWN events' opens); from a stop out there, home to the main road too.
 // Picked: the hero gets on, the bus pulls away, and the place opens with him getting off at its stop
 const BUS_STOPS = [['station', '駅前'], ['sento', '月の湯'], ['shrine', '稲荷神社'], ['castle', '白鷺城']];
-const BUS_AT = { street: BUS, station: { X: 470, Y: 84, seat: 0 }, sento: { X: 470, Y: 84, seat: 0 }, shrine: { X: 470, Y: 84, seat: 0 }, castle: { X: 470, Y: 84, seat: 0 } };   // where each place's stop stands
+const BUS_AT = { street: BUS, station: { X: 470, Y: 56, seat: 0 }, sento: { X: 470, Y: 56, seat: 0 }, shrine: { X: 470, Y: 56, seat: 0 }, castle: { X: 470, Y: 56, seat: 0 } };   // where each place's stop stands (out there: by the kerb)
+const BUS_LANE = { street: 92, station: 16, sento: 16, shrine: 16, castle: 16 };   // where the bus runs (Y): on the road in front of the stop (2026-11-10, the user)
 const BUS_PLACES = ['street'].concat(BUS_STOPS.map((x) => x[0]));
-const BUS_IN = { street: () => [[BUS.X + 40, 122], [BUS.X - 60, 108]], station: () => [[440, 80], [360, 66]], sento: () => [[440, 80], [360, 66]], shrine: () => [[440, 80], [360, 66]], castle: () => [[440, 80], [360, 66]] };   // getting off: where he steps down, where he walks to
+const BUS_IN = { street: () => [[BUS.X + 40, 122], [BUS.X - 60, 108]], station: () => [[440, 50], [360, 72]], sento: () => [[440, 50], [360, 72]], shrine: () => [[440, 50], [360, 72]], castle: () => [[440, 50], [360, 72]] };   // getting off: where he steps down, where he walks to
 const BUS_ART = `<rect x="-130" y="-104" width="260" height="96" rx="16" fill="#3f9a8c"/><rect x="-130" y="-56" width="260" height="10" fill="#f6f1e4"/>
   ${[-104, -60, -16, 28].map((x) => `<rect x="${x}" y="-94" width="38" height="30" rx="4" fill="#cfe6ec"/>`).join('')}<rect x="72" y="-94" width="34" height="80" rx="4" fill="#2f6f64"/><rect x="76" y="-90" width="26" height="40" rx="3" fill="#cfe6ec"/>
   <rect x="-122" y="-120" width="90" height="18" rx="4" fill="#2b2b33"/><text x="-77" y="-106" text-anchor="middle" font-size="12" font-weight="700" fill="#ffd27a" font-family="system-ui, sans-serif">みなと市バス</text>
@@ -7847,12 +7862,12 @@ function busSit(el) {
     busCome(yard);
   });
 }
-function busCome(yard) {   // the bus in, its board up
-  const at = BUS_AT[yPlace] || BUS, k = yScale(at.Y) * 1.05;
+function busCome(yard) {   // the bus in along the road, in front of the stop, its board up
+  const at = BUS_AT[yPlace] || BUS, lane = BUS_LANE[yPlace] ?? at.Y, k = yScale(lane) * 2.1;   // a bus: a good deal bigger than the people
   let bus = yard.querySelector('.bus');
   if (!bus) {
     bus = document.createElement('div'); bus.className = 'bus'; bus.setAttribute('aria-hidden', 'true');
-    bus.style.cssText = `margin-left:${Math.round(at.X - 40)}px;bottom:${at.Y + 6}px;z-index:${300 - at.Y - 2};--k:${k.toFixed(3)}`;
+    bus.style.cssText = `margin-left:${Math.round(at.X - 40)}px;bottom:${lane}px;z-index:${300 - lane};--k:${k.toFixed(3)}`;
     bus.innerHTML = `<svg viewBox="-140 -126 280 140">${BUS_ART}</svg>`;
     yard.querySelector('.yworld').appendChild(bus); requestAnimationFrame(() => bus.classList.add('in'));
   }
@@ -7904,11 +7919,14 @@ function stationHtml() {
       <rect class="pave" x="-20" y="${F}" width="1240" height="${370 - F}"/><path class="rline" d="M-20 ${F + 1} H1220" style="stroke-dasharray:none;opacity:.5"/>
       ${Array.from({ length: 30 }, (_, j) => `<path class="seam" d="M${j * 44 - 20} ${F + 40 + (j % 3) * 30} h26"/>`).join('')}
       ${[220, 700].map((x) => `<rect x="${x}" y="${F + 50}" width="90" height="8" rx="2" ${hc('#c58a54', '#3a2c40')}/><rect x="${x + 8}" y="${F + 58}" width="6" height="20" ${hc('#6e4f3a', '#2c2440')}/><rect x="${x + 76}" y="${F + 58}" width="6" height="20" ${hc('#6e4f3a', '#2c2440')}/>`).join('')}
+      ${busRoad()}
     </svg>
     ${yHeroHtml()}
     ${busPoleHtml('station')}
     <div class="ysel"></div>`;
 }
+// the road along the front of a place out by bus (2026-11-10): the bus runs on it (BUS_LANE), the stop by its kerb
+const busRoad = () => `<rect class="asphalt" x="-20" y="326" width="1240" height="44"/><path class="rline dash" d="M-20 350 H1220"/><rect class="kerb" x="-20" y="322" width="1240" height="5"/>`;
 // out where the bus goes: the hero, the people there, the stop's pole and its button (the bus home and on)
 function busPoleHtml(place) {
   const at = BUS_AT[place], k = yScale(at.Y);
@@ -7941,6 +7959,7 @@ function sentoHtml() {
       <rect class="pave" x="-20" y="${F}" width="1240" height="${370 - F}"/><path class="rline" d="M-20 ${F + 1} H1220" style="stroke-dasharray:none;opacity:.5"/>
       ${Array.from({ length: 30 }, (_, j) => `<path class="seam" d="M${j * 44 - 20} ${F + 40 + (j % 3) * 30} h26"/>`).join('')}
       <rect x="250" y="${F + 50}" width="110" height="9" rx="2" ${hc('#c58a54', '#3a2c40')}/><rect x="258" y="${F + 59}" width="6" height="20" ${hc('#6e4f3a', '#2c2440')}/><rect x="346" y="${F + 59}" width="6" height="20" ${hc('#6e4f3a', '#2c2440')}/>
+      ${busRoad()}
     </svg>
     ${yHeroHtml()}
     ${busPoleHtml('sento')}
@@ -8985,6 +9004,7 @@ const ROOM = (() => {
   function door(el) {
     const st = el.closest('.study'), d = DOORS.find((q) => q.id === el.dataset.thing), pair = PAIR[d.id];
     if (busy) return;
+    if (d.to === '#/outside' && NPC.housebound() && st) { NPC.stayIn(st); return; }   // a new player: not out yet (the hero says why at the door)
     if (d.to === '#/outside') yh.fromDoor = true;
     if (pair) { const sp = SPOTS[pair[1]]; heroPos[pair[0]] = { x: sp.x + 0.3, y: sp.y, back: false, flip: false, pose: '' }; heroSave(); }   // he comes in just inside the other room's door
     if (!st || reduced()) { go(d.to); return; }
@@ -9955,7 +9975,7 @@ const ROOM = (() => {
       clearTimeout(wheelT); wheelT = setTimeout(() => { if (st.isConnected) { zoomed(st); wake(); } }, 160);
     }, { passive: false });
     if (!ledBefore()) setTimeout(() => { if (st.isConnected && !ledOnce) roomHint(st, 4600); }, 600);
-    const fresh = ROOMID === 'study' ? newMail() : [];   // a letter this device has not been told about: the hint once (in 書房), a tap walks out to the mailbox
+    const fresh = ROOMID === 'study' && !NPC.housebound() ? newMail() : [];   // staying in (a new player): the letters wait   // a letter this device has not been told about: the hint once (in 書房), a tap walks out to the mailbox
     if (fresh.length) { const m = st.querySelector('.mail-hint'); markMailSeen(fresh); setTimeout(() => { if (st.isConnected) m.classList.add('on'); }, 900); setTimeout(() => m.classList.remove('on'), 8000); }
   }
   // ← → look along the room, + − zoom, on 書房 (not while typing or with a dialog open)

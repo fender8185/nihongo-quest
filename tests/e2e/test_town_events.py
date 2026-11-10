@@ -424,6 +424,40 @@ def test_the_shrine_festival_runs_until_23(b):
     r = json.loads(ev(b, "JSON.stringify([TOWNEV.isOpen('ennichi', 22.5), TOWNEV.isOpen('ennichi', 23), (TOWNEV.whereIs('hina', 22.5, new Date(2026, 10, 10)) || {}).place, (TOWNEV.whereIs('tatsu', 22.5) || {}).place])"))
     assert r == [True, False, 'shrine', 'shrine'], r
 
+# ---- the scenes (2026-11-10, the user: the bus came from behind the stop; one could walk up onto the buildings) ----
+def test_the_bus_pulls_up_on_the_road_in_front_of_the_stop(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ state.town.stops = { station: 1, sento: 1, shrine: 1, castle: 1 }; const out = {};
+      for (const p of ['street', 'station', 'sento', 'shrine', 'castle']) { await go(p, 12); busCome(y()); await wait(50); const bus = y().querySelector('.bus'), at = BUS_AT[p];
+        out[p] = { front: parseFloat(bus.style.bottom) < at.Y - 20, over: Number(bus.style.zIndex) > 300 - at.Y, road: parseFloat(bus.style.bottom) === BUS_LANE[p] };
+        document.querySelectorAll('.bus-board').forEach((x) => x.remove()); }
+      return JSON.stringify(out); })()"""))
+    want = {'front': True, 'over': True, 'road': True}
+    assert all(v == want for v in r.values()), r   # on the road, nearer than the stop and drawn over it
+
+def test_the_hero_never_walks_up_onto_the_buildings(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ state.town.stops = { station: 1, sento: 1, shrine: 1, castle: 1 }; const out = {};
+      for (const p of ['street', 'beach', 'town', 'shokudo', 'izakaya', 'station', 'sento', 'shrine', 'castle']) { await go(p, 12);
+        await new Promise((q) => yHeroWalk(y(), [0, 220], q)); out[p] = Math.round(yh.Y); }
+      localStorage.setItem('nq_hero', JSON.stringify({ castle: { X: 0, Y: 200 } })); yPlace = 'yard'; location.hash = '#/castle'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
+      out.kept = Math.round(yh.Y); return JSON.stringify(out); })()"""))
+    top = {'street': 134, 'beach': 118, 'town': 126, 'shokudo': 128, 'izakaya': 128, 'station': 128, 'sento': 128, 'shrine': 128, 'castle': 128, 'kept': 128}
+    assert all(r[k] <= v for k, v in top.items()), r   # the ground in front of the buildings, not on them (a spot kept from before too)
+
+# ---- a new player stays in (2026-11-10, the user): the front door holds until ムギ has brought the gramophone ----
+def test_a_new_player_stays_in_until_mugi_has_brought_the_gramophone(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ const wait = (ms) => new Promise(q => setTimeout(q, ms));
+      const look = async () => { location.hash = '#/today'; document.getElementById('view').innerHTML = ''; route(); await wait(600); };
+      const tryOut = async () => { TALK.close(); document.querySelector('#view [data-thing="door"]').click(); let t = null;
+        for (let i = 0; i < 70 && !t && location.hash === '#/today'; i++) { await wait(80); t = document.querySelector('.talk'); } return { hash: location.hash, said: t ? t.textContent : '' }; };
+      state.met = {}; state.koto.sets = {}; state.koto.daySets = {}; await look(); const fresh = await tryOut();
+      state.met = { koharu: Date.now() - 60000 }; await look(); const waiting = await tryOut();
+      state.met = { koharu: Date.now() - 86400000, mugi: Date.now() - 86400000 }; await look(); TALK.close(); document.querySelector('#view [data-thing="door"]').click();
+      for (let i = 0; i < 50 && location.hash === '#/today'; i++) await wait(100);
+      return JSON.stringify({ fresh, waiting, out: location.hash }); })()"""))
+    assert r['fresh']['hash'] == '#/today' and '練習' in r['fresh']['said'], r   # first: practise a little
+    assert r['waiting']['hash'] == '#/today' and '狗' in r['waiting']['said'], r   # 小春 has been: someone else is coming
+    assert r['out'] == '#/outside', r   # ムギ has been: out
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
