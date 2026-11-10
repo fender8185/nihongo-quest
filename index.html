@@ -1532,20 +1532,26 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 .shop-front .counter { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; background: var(--wood); border-top: 4px solid var(--wood-edge); }
 .shop-front .purse { position: absolute; right: 14px; bottom: 14px; display: inline-flex; align-items: center; gap: 6px; padding: 6px 13px 6px 9px; border-radius: 99px; background: var(--label); color: var(--label-ink); font-size: 14px; box-shadow: 0 4px 10px -4px rgba(0, 0, 0, .45); }
 .shop-front .purse b { font-size: 17px; font-variant-numeric: tabular-nums; } .shop-front .purse .koto-i { width: 22px; height: 22px; }
-.shop-tabs { display: flex; gap: 6px; margin: 0 0 4px; overflow-x: auto; }
+.shop-tabs { position: sticky; top: 0; z-index: 6; display: flex; gap: 6px; margin: 0 -16px 4px; padding: 8px 16px; overflow-x: auto; background: var(--bg); }   /* held up top while the wares scroll by (2026-11-10) */
+@media (max-width: 900px) { .shop-tabs { top: calc(54px + env(safe-area-inset-top)); } .shop-head { display: none; } }   /* under the top bar; its title says 古道具屋 already */
 .shop-tabs button { position: relative; flex: none; padding: 8px 16px; border: 1px solid var(--line); border-radius: 99px; font: inherit; font-size: 14px; font-weight: 600; color: var(--fg-2); background: var(--bg-elev); cursor: pointer; }
 .shop-tabs button[aria-selected="true"] { color: var(--accent-fg); border-color: var(--accent); background: var(--accent); }
 .shop-tabs .dot { position: absolute; top: 3px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: #e0524b; box-shadow: 0 0 0 2px var(--bg-elev); }
 .shop-note { margin: 18px 2px; font-size: 14px; color: var(--fg-2); }
 .shop-sec { margin-top: 18px; } .shop-h { margin: 0 0 10px; font-size: 15px; font-weight: 700; color: var(--fg-2); letter-spacing: .04em; }
-.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
-.shop-item { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 12px; }
-.shop-item .art { height: 92px; display: grid; place-items: center; border-radius: 10px; background: var(--bg-sunken); --day: 1; --f: 1; --lit: 1; color: var(--fg-2); }
-.shop-item .art svg { width: 84px; height: 84px; overflow: visible; }
-.shop-item .nm { font-weight: 700; font-size: 15px; } .shop-item .ds { font-size: 12.5px; line-height: 1.5; color: var(--fg-2); } .shop-item .ds.swap { color: var(--accent); }
-.shop-item .buy { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: auto; padding-top: 4px; }
-.shop-item .price { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; } .shop-item .price.owned { font-size: 13px; font-weight: 600; color: var(--fg-2); }
-.shop-item .price .koto-i { width: 20px; height: 20px; }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+@media (min-width: 900px) { .shop-grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; } }
+.shop-item { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 6px 6px 8px; }
+.shop-item .art { width: 100%; aspect-ratio: 1; height: auto; padding: 0; border: 0; display: grid; place-items: center; border-radius: 10px; background: var(--bg-sunken); --day: 1; --f: 1; --lit: 1; color: var(--fg-2); cursor: pointer; }
+.shop-item .art svg { width: 84%; height: 84%; overflow: visible; }
+.shop-item .nm { font-weight: 700; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .shop-item .ds { display: none; font-size: 13px; line-height: 1.55; color: var(--fg-2); } .shop-item .ds.swap { color: var(--accent); }
+.shop-item .buy { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px; margin-top: auto; }
+.shop-grid > .shop-item.card { margin: 0; }   /* .card + .card's space pushed every tile but the first down */
+.shop-item .buy .btn { padding: 3px 9px; min-height: 0; font-size: 12px; } .shop-item .buy .chip { font-size: 11px; padding: 2px 6px; }
+.ware-peek .shop-item.big { padding: 0; gap: 8px; } .ware-peek .shop-item.big .art { aspect-ratio: auto; height: 200px; cursor: default; } .ware-peek .shop-item.big .art svg { width: 170px; height: 170px; }
+.ware-peek .shop-item.big .nm { font-size: 17px; white-space: normal; } .ware-peek .shop-item.big .ds { display: block; } .ware-peek .shop-item.big .buy .btn { padding: 8px 16px; font-size: 14px; } .ware-peek .shop-item.big .price { font-size: 16px; }
+.shop-item .price { display: inline-flex; align-items: center; gap: 3px; font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; } .shop-item .price.owned { font-size: 13px; font-weight: 600; color: var(--fg-2); }
+.shop-item .price .koto-i { width: 16px; height: 16px; }
 .shop-item.soon { background: none; box-shadow: none; border: 1.5px dashed var(--line-2); } .shop-item.soon .nm, .shop-item.soon .ds { opacity: .6; }
 .btn.btn-muted { opacity: .55; cursor: default; }
 svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
@@ -11485,8 +11491,15 @@ function shopCardHtml(it, bal) {
   else if (short > 0) act = `<button type="button" class="btn btn-sm btn-muted" data-act="ware-short" aria-disabled="true">還差 ${short}</button>`;
   else act = `<button type="button" class="btn btn-sm btn-primary" data-act="ware-buy" data-id="${it.id}">買下</button>`;
   const art = wareArt(it);
-  return `<div class="card shop-item${owned ? ' owned' : ''}" data-ware="${it.id}"><div class="art">${art}</div><div class="nm">${esc(it.name)}</div><div class="ds">${esc(it.desc)}</div>${swap ? `<div class="ds swap">${swap}</div>` : ''}
+  // 2026-11-10 (the user: by the pictures, less to scroll): a small tile — the picture (a tap: the ware big, ware-peek), the
+  // name, the price and its button; its words show in the big view
+  return `<div class="card shop-item${owned ? ' owned' : ''}" data-ware="${it.id}"><button type="button" class="art" data-act="ware-peek" data-id="${it.id}" aria-label="${esc(it.name)}：看看">${art}</button><div class="nm">${esc(it.name)}</div><div class="ds">${esc(it.desc)}</div>${swap ? `<div class="ds swap">${swap}</div>` : ''}
     <div class="buy">${owned ? '<span class="price owned">已擁有</span>' : `<span class="price">${kotoIcon()}${it.price}</span>`}${act}</div></div>`;
+}
+function warePeek(id) {   // a ware big: its picture, its words, the tile's own buttons
+  const it = WARE.get(id); if (!it) return;
+  openModal(it.name, `<div class="ware-peek">${shopCardHtml(it, kotoBalance()).replace('class="card shop-item', 'class="shop-item big')}</div>`, { width: 380, noFocus: true });
+  fitThumbs(document.getElementById('modalBody'));
 }
 const SOON = '<div class="card shop-item soon"><div class="art"><svg viewBox="0 0 80 80"><g fill="none" stroke="currentColor" stroke-opacity=".45" stroke-width="2" stroke-linejoin="round"><path d="M16 34 L40 24 L64 34 L40 44 Z"/><path d="M16 34 V56 L40 66 V44 M64 34 V56 L40 66"/></g></svg></div><div class="nm">福爺還在找</div><div class="ds">之後會有更多老東西。</div></div>';   // the last card under 主角穿戴
 function renderShop(view) {
@@ -11498,7 +11511,7 @@ function renderShop(view) {
   view.innerHTML = `<div class="shop-front"><i class="beam"></i><div class="noren"><i><b>古</b></i><i><b>道</b></i><i><b>具</b></i></div><i class="lantern"><i></i><i></i></i>
       <button type="button" class="fuku" data-act="fuku-talk" aria-label="福爺">${fukuSvg()}</button><div class="fuku-say" aria-live="polite">${fukuLine(night ? 'night' : 'hello')}</div>
       <div class="counter"></div><div class="purse">${kotoIcon()}言靈 <b>${bal}</b></div></div>
-    <div class="page-head"><div><div class="page-title">古道具屋</div><div class="page-sub">山上的老店，老闆福爺不收錢，只收言靈。</div></div></div>
+    <div class="page-head shop-head"><div><div class="page-title">古道具屋</div><div class="page-sub">山上的老店，老闆福爺不收錢，只收言靈。</div></div></div>
     <div class="shop-tabs" role="tablist">${SHOP_TABS.map(([k, name]) => `<button type="button" role="tab" data-act="shop-tab" data-tab="${k}" aria-selected="${shopTab === k}">${name}${k === 'sale' && live.length ? '<i class="dot" aria-label="特賣中"></i>' : ''}</button>`).join('')}</div>
     ${shopTab === 'sale' ? saleHtml(day, live, grid) : SHOP_TABS.find(([k]) => k === shopTab)[2].map(([k, name]) => `<section class="shop-sec"><h2 class="shop-h">${name}</h2>${grid(WARES.filter((it) => it.kind === k && !it.starter && !it.limited && !it.gift), k === 'wear' ? SOON : '')}</section>`).join('')}
     ${onTestSite() && shopTab === 'sale' ? `<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="sale-preview">測試用：${salePreview() ? '關掉限時預覽，照日期來' : '不看日期，顯示限時商品'}</button></div>` : ''}
@@ -11652,6 +11665,7 @@ Object.assign(ACTIONS, {
   'room-edit-put': (el) => ROOM.edit(el, 'put'),
   'fuku-talk': () => fukuSay('idle'),
   'ware-short': () => fukuSay('short'),
+  'ware-peek': (el) => { if (!el.closest('.ware-peek')) warePeek(el.dataset.id); },
   'ware-buy': (el) => {
     const it = WARE.get(el.dataset.id);
     if (!it || owns(it.id) || it.gift) return;

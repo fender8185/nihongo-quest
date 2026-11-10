@@ -1243,6 +1243,18 @@ def test_an_owned_wares_label_in_the_shop_does_not_cover_the_screen(b):
     r = json.loads(ev(b, js))
     assert r == {'label': True, 'position': 'static', 'cover': False}, r
 
+# 2026-11-10 (the user): 古道具屋 by its pictures, less to scroll — small tiles, three a row on a phone, no words but the name and the
+# price; a tap on the picture shows the ware big with its words and the same buttons; the tabs stay up top while scrolling
+def test_the_shop_shows_wares_as_pictures_three_a_row_and_a_tap_shows_one_big(b):
+    js = "(async () => { " + FRESH + """ state.koto.gift = 300; saveState(); location.hash = '#/shop'; document.getElementById('view').innerHTML = ''; route(); await new Promise(q => setTimeout(q, 300));
+      const tiles = [...document.querySelectorAll('#view .shop-grid')[0].querySelectorAll('.shop-item')], tops = tiles.slice(0, 4).map((t) => Math.round(t.getBoundingClientRect().top));
+      const ds = getComputedStyle(tiles[0].querySelector('.ds')).display, h = Math.round(tiles[0].getBoundingClientRect().height), sticky = getComputedStyle(document.querySelector('#view .shop-tabs')).position;
+      const id = tiles[0].dataset.ware; tiles[0].querySelector('.art').click(); await new Promise(q => setTimeout(q, 100));
+      const peek = document.querySelector('#modalRoot .ware-peek'), text = peek ? peek.textContent : '';
+      return JSON.stringify({ row: tops[0] === tops[1] && tops[1] === tops[2] && tops[3] > tops[0], ds, short: h < 230, sticky, peek: !!peek, desc: text.includes(WARE.get(id).desc), buy: !!(peek && peek.querySelector('[data-act="ware-buy"]')) }); })()"""
+    r = json.loads(b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
+    assert r == {'row': True, 'ds': 'none', 'short': True, 'sticky': 'sticky', 'peek': True, 'desc': True, 'buy': True}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
