@@ -493,6 +493,15 @@ def test_a_new_hero_and_the_young_people_have_round_soft_faces(b):
     assert r['hero'] == ['chubby', 'blush', 'blunt', 'wisps', 'crop', 'bun', '#6b4a32', 'hoodie', '#d0574b', 'pants', '#2b2b33', 'sneaker', '#2b2b33'], r   # the user's pick: reads neither boy nor girl
     assert r['young'] == [] and r['kira'] == [], r   # 包子臉, 麻糬臉, 圓臉; no one in town with 水汪汪 eyes (the user: it breaks the spell)
 
+# 2026-11-10, the user: ムギ marked on the beach did nothing when tapped — the people's buttons took no taps at all (the hero's
+# pointer-events: none won over them); .click() in the other tests never asks what a finger would hit
+def test_a_finger_on_someone_lands_on_them(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ state.met = { koharu: 1, mugi: 1 }; state.town.seen.kenta = 1; fake([['g1', 'm1', 'mugi', 'beach']]); learn('m1', 1);
+      const hit = (sel) => { const el = y().querySelector(sel), r = el.getBoundingClientRect(), x = document.elementFromPoint(r.left + r.width / 2, r.top + r.height * 0.8); return Boolean(x && x.closest(sel)); };
+      await go('beach', 12); const mugi = hit('.npc-mugi'); await go('town', 9); const kenta = hit('.npc-kenta');
+      return JSON.stringify({ mugi, kenta }); })()"""))
+    assert r == {'mugi': True, 'kenta': True}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

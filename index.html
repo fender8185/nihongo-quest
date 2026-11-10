@@ -367,6 +367,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .land .foam { fill: none; stroke: color-mix(in srgb, rgba(255, 255, 255, .95) calc(var(--day) * 100%), rgba(170, 180, 240, .35)); stroke-width: 4; stroke-linecap: round; animation: foamIn 5.5s ease-in-out infinite alternate; }
 @keyframes foamIn { from { transform: translateY(-5px); opacity: .7; } to { transform: translateY(5px); opacity: 1; } }
 .sky .npc { position: absolute; left: 50%; bottom: -10px; width: 120px; height: 210px; margin-left: -60px; transform-origin: 50% 95.24%; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; }
+.sky .hero.npc { pointer-events: auto; }   /* the whole of someone takes a tap — :is(.study, .yard) .hero (none) came later and won, so ムギ (his own drawing) took none at all (2026-11-10) */
 .sky .npc svg { width: 100%; height: 100%; overflow: visible; filter: brightness(calc(.64 + .36 * var(--day))) saturate(calc(.8 + .2 * var(--day))); }
 .sky .npc .ev-mark { position: absolute; left: 50%; top: -14%; width: 64px; height: 64px; margin-left: -32px; display: grid; place-items: center; border-radius: 50%; font-style: normal; font-weight: 900; font-size: 44px; line-height: 1; color: #fff; background: #f0883e; box-shadow: 0 4px 0 #c45f1e, 0 0 0 6px rgba(255, 255, 255, .85); animation: evMark 1.1s ease-in-out infinite alternate; pointer-events: none; }   /* scaled with the person (×.2–.5) */
 @keyframes evMark { from { transform: translateY(0); } to { transform: translateY(-14px); } }
