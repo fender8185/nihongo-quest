@@ -306,7 +306,7 @@ def test_a_swipe_looks_round_the_room_and_stays_where_it_is_let_go(b):
       return JSON.stringify({ dots: !!st.querySelector('.room-stops'), dx: Math.round(after[0] - before[0]), notebook: away('notebook'), phones: away('phones'), drawer: away('drawer') }); })()"""
     r = json.loads(ev_at(b, PHONE, js))
     assert abs(r['dx'] + 300) <= 2, r   # the room moved with the finger and stayed there (no stop to snap to)
-    assert {k: r[k] for k in ('dots', 'notebook', 'phones', 'drawer')} == {'dots': False, 'notebook': False, 'phones': False, 'drawer': True}, r   # the chest's tag waits off screen, the desk's show (the chest is further on since 1.3.0, the desk since roomV 8)
+    assert {k: r[k] for k in ('dots', 'notebook', 'phones', 'drawer')} == {'dots': False, 'notebook': True, 'phones': False, 'drawer': False}, r   # the notebook's tag waits off the screen's left, the headphones' and the chest's show (2026-11-10: a phone starts further out)
 
 def test_a_tag_at_a_side_of_the_screen_slides_in_to_stay_whole(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
@@ -616,7 +616,7 @@ def test_the_yard_is_arranged_like_the_room(b):
       const spots = Object.fromEntries(ids.map(id => [id, Object.assign({}, state.placed[id])])), ok = ids.every(id => spots[id].w === 'Y' && yardFits(id, spots[id]));
       const rules = { path: yardFits('tanuki', { x: -20, y: 40 }), house: yardFits('tanuki', { x: 0, y: 194 }), mailbox: yardFits('tanuki', { x: 56, y: 150 }), over: yardFits('tanuki', { x: spots.pond.x, y: spots.pond.y }), edge: yardFits('tanuki', { x: 580, y: 60 }), wide: yardFits('tanuki', { x: -440, y: 60 }) };   /* (the far left edge is the way to the beach) */
       const pe = (el, type, x, yy) => el.dispatchEvent(new PointerEvent(type, { clientX: x, clientY: yy, pointerId: 7, pointerType: 'touch', isPrimary: true, button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true, cancelable: true }));
-      const sky = q('.yworld').getBoundingClientRect(), scr = (p) => [sky.left + sky.width / 2 + p.x, sky.bottom - p.y], t0 = spots.tanuki, [a0, b0] = scr(t0);
+      const sky = q('.yworld').getBoundingClientRect(), scr = (p) => [sky.left + sky.width / 2 + p.x * ycam.z, sky.bottom - p.y * ycam.z], t0 = spots.tanuki, [a0, b0] = scr(t0);   /* drawn ycam.z as large on a phone held upright */
       const drag = (to) => { const [a1, b1] = scr(to); pe(q('.yware[data-ware="tanuki"]'), 'pointerdown', a0, b0); pe(y, 'pointermove', a0 + 10, b0); pe(y, 'pointermove', a1, b1); const red = q('.yware[data-ware="tanuki"]').classList.contains('bad'); pe(y, 'pointerup', a1, b1); return red; };
       const red = drag(spots.pond), back = state.placed.tanuki.x === t0.x && state.placed.tanuki.y === t0.y;   /* onto the pond: red, and back it goes */
       let free = null; for (let yy = 30; yy <= 180 && !free; yy += 10) for (let x = -160; x <= 160 && !free; x += 10) if (Math.abs(x - t0.x) > 40 && yardFits('tanuki', { x, y: yy })) free = { x, y: yy };
@@ -703,23 +703,23 @@ def test_a_drag_on_the_hero_leads_him_and_the_view_follows(b):
     assert r['went'] > 4 and r['panned'] > 80, r   # he went right along the room (screen units) and the view went with him
     assert (r['modal'], r['hash']) == (False, '#/today'), r
 
-def test_two_fingers_zoom_between_the_whole_room_and_twice_as_close_and_it_is_remembered(b):
+def test_two_fingers_zoom_between_the_whole_room_and_close_up_and_it_is_remembered(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(300);
       const st = () => document.querySelector('.study'), width = () => document.querySelector('.study .room').offsetWidth, w0 = width();
       const pinch = async (a0, b0, a1, b1) => { pe(st(), 'pointerdown', a0, 400, 11); pe(st(), 'pointerdown', b0, 400, 12);
         for (let i = 1; i <= 8; i++) { pe(st(), 'pointermove', a0 + (a1 - a0) * i / 8, 400, 11); pe(st(), 'pointermove', b0 + (b1 - b0) * i / 8, 400, 12); await wait(20); }
         pe(st(), 'pointerup', a1, 400, 11); pe(st(), 'pointerup', b1, 400, 12); await wait(150); };
-      await pinch(150, 240, 60, 330); const big = width() / w0, saved = localStorage.getItem('nq_room_zoom');   /* 90 → 270 px apart */
+      await pinch(180, 210, 30, 360); const big = width() / w0, saved = localStorage.getItem('nq_room_zoom');   /* 30 → 330 px apart */
       """ + GO_ROOM + """ await wait(150); const again = width() / w0;
-      await pinch(60, 330, 190, 200); const small = width() / w0;   /* 270 → 10 px apart */
+      await pinch(30, 360, 190, 200); const small = width() / w0;   /* 330 → 10 px apart */
       return JSON.stringify({ size: [st().clientWidth, st().clientHeight], big: +big.toFixed(3), saved: Number(saved), again: +again.toFixed(3), small: +small.toFixed(4) }); })()"""
     r = json.loads(ev_at(b, PHONE, js))
     assert r['size'] == [390, 844], r
-    assert (r['big'], r['saved'], r['again']) == (2.0, 2.0, 2.0), r   # three times as close is held to twice the starting zoom, kept for next time
-    # at 390×844 the start is 390 / (8 × 40) = 1.21875 (the bookcase with the desk across the screen) and the whole block with the
-    # sky round it (57 room units across since 1.3.0's bigger room) is 390 / (57 × 40) = 0.17105, so as far out as it goes is 0.1404
-    # of the start
-    assert abs(r['small'] - 0.1404) < 0.002, r
+    assert abs(r['big'] - 4) < 0.01 and r['saved'] == 4 and abs(r['again'] - 4) < 0.01, r   # eleven times as close is held to twice the old stops' zoom (four times a phone's start since 2026-11-10), kept for next time
+    # at 390×844 the start is half of 390 / (8 × 40) = 0.609375 (2026-11-10: the bookcase, the desk and the window across the screen)
+    # and the whole block with the sky round it (57 room units across since 1.3.0's bigger room) is 390 / (57 × 40) = 0.17105, so as
+    # far out as it goes is 0.2807 of the start
+    assert abs(r['small'] - 0.2807) < 0.002, r
 
 # the room as a block cut open in the sky (test build): all of it on the screen at the widest, a phone zoomed out or a wide screen as it opens
 BLOCK = """const st = document.querySelector('.study'), box = st.getBoundingClientRect(), room = st.querySelector('.room').getBoundingClientRect(), vb = ROOM.kit.VB, P = ROOM.kit.P;
@@ -854,17 +854,19 @@ def test_the_yard_is_as_wide_as_a_computers_and_a_phone_swipes_along_it(b):
       const end = off();
       yCamTo(y, 0); yh.X = 0; yh.Y = 120; yHeroPlace(y); yHeroWalk(y, [520, 100]); await wait(2000);
       const walked = { x: Math.round(yh.X), off: off(), onScreen: (() => { const h = y.querySelector('.yhero').getBoundingClientRect(); return h.left > 0 && h.right < r.width; })() };
-      return JSON.stringify({ start, swiped, end, walked }); })()"""
+      return JSON.stringify({ start, swiped, end, walked, z: ycam.z }); })()"""
     r = json.loads(ev_at(b, PHONE, js))
+    z = r['z']
+    assert abs(z - 844 / 540) < 0.001, r   # 2026-11-10: a phone held upright draws the yard larger, its ground along the bottom
     assert r['start'] == {'width': 1200, 'off': 0, 'house': r['start']['house']} and r['start']['off'] == 0, r
-    assert r['swiped'] == -405, r   # a 250 px swipe left moves the view 1.8× as far (YSWIPE): all the way to the yard's end
-    assert r['end'] == -405, r   # a fling stops at the yard's end: (1200 − 390) / 2
+    assert abs(r['swiped'] + 250 * 1.8 * z) <= 1, r   # a 250 px swipe left moves the view 1.8× as far in the yard (YSWIPE), drawn z times as large
+    assert abs(r['end'] + (1200 - 390 / z) / 2 * z) <= 1, r   # a fling stops at the yard's end: (1200 − what the screen shows) / 2
     assert r['walked']['x'] == 520 and r['walked']['onScreen'] and r['walked']['off'] < -200, r   # the camera went along with the hero
 
 def test_a_yard_ware_comes_out_of_the_box_by_drag_and_goes_back_in(b):
     js = "(async () => { " + FRESH + " state.koto.gift = 100; buyWare(WARE.get('tanuki')); saveState(); " + POINTER + """ location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
       const y = document.querySelector('.yard'), q = (s) => y.querySelector(s); q('[data-act="yard-edit"]').click(); await wait(50);
-      const it = q('.yedit .tray-it[data-id="tanuki"]').getBoundingClientRect(), wr = () => q('.yworld').getBoundingClientRect(), scr = (p) => [wr().left + wr().width / 2 + p.x, wr().bottom - p.y];
+      const it = q('.yedit .tray-it[data-id="tanuki"]').getBoundingClientRect(), wr = () => q('.yworld').getBoundingClientRect(), scr = (p) => [wr().left + wr().width / 2 + p.x * ycam.z, wr().bottom - p.y * ycam.z];   /* drawn ycam.z as large on a phone held upright */
       const [ax, ay] = [it.left + it.width / 2, it.top + it.height / 2], [bx, by] = scr({ x: 120, y: 60 });
       pe(it.width ? q('.yedit .tray-it[data-id="tanuki"]') : y, 'pointerdown', ax, ay, 1); pe(y, 'pointermove', ax, ay + 20, 1); pe(y, 'pointermove', bx, by, 1); const shown = !!q('.yware.new'); pe(y, 'pointerup', bx, by, 1); await wait(50);
       const placed = Object.assign({}, state.placed.tanuki || {});

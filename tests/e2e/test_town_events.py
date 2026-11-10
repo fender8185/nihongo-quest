@@ -509,6 +509,31 @@ def test_the_festival_stalls_are_there_only_at_the_festival_and_the_bath_takes_h
       return JSON.stringify({ day, night, inside, back: !y().querySelector('.yhero').classList.contains('out'), words: [...y().querySelectorAll('.ypop')].map((e) => e.textContent) }); })()"""))
     assert r == {'day': False, 'night': True, 'inside': True, 'back': True, 'words': ['♨ いい湯だった〜']}, r
 
+# ---- 2026-11-10 (the user's go-ahead on the screen suggestions): calmer dots, the night, a sky of each place's own ----
+def test_a_things_dot_goes_once_it_has_been_tried_and_stays_gone(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + USE + """ fake([]); localStorage.removeItem('nq_used'); await go('park', 15);
+      const dot = (id) => getComputedStyle(y().querySelector(`.use-btn[data-use="${id}"]`), '::after').display;
+      const before = [dot('swing0'), dot('fountain')]; await use('swing0', 600); const after = [dot('swing0'), dot('fountain')];
+      await go('park', 15); return JSON.stringify({ before, after, again: [dot('swing0'), dot('fountain')], kept: JSON.parse(localStorage.getItem('nq_used')) }); })()"""))
+    assert r == {'before': ['block', 'block'], 'after': ['none', 'block'], 'again': ['none', 'block'], 'kept': {'park.swing0': 1}}, r
+
+def test_by_night_the_sky_is_deep_blue_with_faint_stars_and_the_moon_lights_the_land(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]);
+      const look = async (h) => { sceneHour = () => h; sceneTick(); await go('street', h); const sky = y().querySelector('.sky'), p = document.createElement('i');
+        p.style.opacity = 'var(--md)'; sky.appendChild(p); const md = Number(getComputedStyle(p).opacity); p.remove();
+        return { md: Math.round(md * 100) / 100, faint: sky.querySelectorAll('.night .faint circle').length, blue: getComputedStyle(sky).backgroundImage.includes('rgb(12, 18, 51)') }; };
+      return JSON.stringify({ night: await look(21), day: await look(12) }); })()"""))
+    assert r['night'] == {'md': 0.2, 'faint': 78, 'blue': True}, r   # a fifth of the land's daylight colour by night; the sky deep blue, not black
+    assert r['day']['md'] == 1, r
+
+def test_each_place_has_clouds_of_its_own_and_gulls_over_the_sea(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.stops = { shrine: 1 }; const out = {};
+      for (const p of ['outside', 'beach', 'town', 'shrine']) { await go(p, 12); const s = y().querySelector('.sky'), f = s.querySelector('.fliers');
+        out[p] = { clouds: [...s.querySelectorAll('.clouds .cloud')].map((c) => c.style.top).join(' '), birds: f ? f.className.replace('fliers', '').trim() : '', fliers: f ? f.children.length : 0 }; }
+      return JSON.stringify(out); })()"""))
+    assert len({r[p]['clouds'] for p in r}) == 4, r   # no two places with the same clouds
+    assert [(r[p]['birds'], r[p]['fliers']) for p in ('outside', 'beach', 'town', 'shrine')] == [('', 0), ('gull', 3), ('', 0), ('crow', 3)], r
+
 def test_every_thing_to_use_has_its_button_and_its_moving_part(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.stops = { station: 1, sento: 1, shrine: 1, castle: 1 }; const miss = [];
       for (const [p, list] of Object.entries(PLACE_USE)) { await go(p === 'yard' ? 'outside' : p, p === 'izakaya' ? 21 : 12);
