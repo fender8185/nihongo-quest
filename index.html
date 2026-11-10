@@ -380,7 +380,6 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .npc svg { width: 100%; height: 100%; overflow: visible; filter: brightness(calc(.64 + .36 * var(--day))) saturate(calc(.8 + .2 * var(--day))); }
 .sky .npc .ev-mark { position: absolute; left: 50%; top: -14%; width: 64px; height: 64px; margin-left: -32px; display: grid; place-items: center; border-radius: 50%; font-style: normal; font-weight: 900; font-size: 44px; line-height: 1; color: #fff; background: #f0883e; box-shadow: 0 4px 0 #c45f1e, 0 0 0 6px rgba(255, 255, 255, .85); animation: evMark 1.1s ease-in-out infinite alternate; pointer-events: none; }   /* scaled with the person (×.2–.5) */
 @keyframes evMark { from { transform: translateY(0); } to { transform: translateY(-14px); } }
-.sky .town-shop .ev-dot { position: absolute; left: 50%; top: 4px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: #f0883e; box-shadow: 0 0 0 2px #fff; animation: evDot 1.2s ease-in-out infinite alternate; pointer-events: none; }
 .yard.indoor { --day: 1; --warm: 0; }   /* a room is lit the same by night and day (its lamps) */
 .yard.indoor .npc:is(.npc-go, .npc-teppei) .arm.r { animation: heroArm .42s ease-in-out infinite alternate; }   /* at the stove, at the grill */
 .yard.indoor .npc:is(.bench, .kneel):not(.back) .head { animation: heroNod 2.8s ease-in-out infinite; }   /* eating, talking */
@@ -394,11 +393,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .bus-card { width: min(340px, 100%); display: grid; gap: 8px; padding: 14px; border-radius: 16px; background: var(--bg-elev); color: var(--fg); border: 1px solid var(--line); box-shadow: 0 10px 30px rgba(0, 0, 0, .22); animation: talkIn .25s ease-out; }
 .bus-stop-btn { position: relative; display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border: 1.5px solid var(--line-2); border-radius: 12px; font: inherit; font-size: 15px; font-weight: 600; color: var(--fg); background: var(--bg-elev-2); cursor: pointer; }
 .bus-stop-btn:disabled { opacity: .5; cursor: default; } .bus-stop-btn small { font-size: 12px; font-weight: 400; color: var(--fg-3); }
-.bus-stop-btn .ev-dot { position: absolute; right: -4px; top: -4px; width: 12px; height: 12px; border-radius: 50%; background: #f0883e; box-shadow: 0 0 0 2px var(--bg-elev); }
 .bus-note { margin: 0; font-size: 13px; color: var(--fg-3); }
-.sky .bus-btn .ev-dot, .sky .way-btn .ev-dot { position: absolute; right: -3px; top: -3px; width: 12px; height: 12px; border-radius: 50%; background: #f0883e; box-shadow: 0 0 0 2px #fff; animation: evDot 1.2s ease-in-out infinite alternate; pointer-events: none; }
-@keyframes evDot { to { transform: scale(1.3); } }
-@media (prefers-reduced-motion: reduce) { .sky .npc .ev-mark, .sky .way-btn .ev-dot { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .sky .npc .ev-mark { animation: none; } }
 .sky .npc-mugi .mugi-tail { transform-box: fill-box; transform-origin: 0% 100%; animation: mugiWag .45s ease-in-out infinite alternate; }
 @keyframes mugiWag { from { transform: rotate(-10deg); } to { transform: rotate(12deg); } }
 /* test (2026-11-09): someone at the front door — コンコン by it; a few lines with a neighbour */
@@ -826,12 +822,8 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 /* the mail (1.1.0): the door's tag counts the letters in the mailbox outside and wears a red dot; a letter this device has
    not been told about brings the hint at the top left once (under the room's buttons on a phone) */
 .thing.mail:not(.away) .tag { opacity: 1; }
-.thing.calls:not(.away) .tag { opacity: 1; }
 /* test (2026-11-10): the bed — the way there marked when a sleep would meet someone; the menu of hours; the fade of a sleep */
-.thing.calls .tag::after, .study .ware-use.calls::after { content: ''; position: absolute; top: -2px; right: -2px; width: 7px; height: 7px; border-radius: 50%; background: #ef4f45; box-shadow: 0 0 0 1.5px rgba(255, 255, 255, .85); }
-.study .ware-use.calls::after { top: 6%; right: auto; left: 50%; width: 12px; height: 12px; margin-left: -6px; box-shadow: 0 0 0 2px #fff; animation: evDot 1.2s ease-in-out infinite alternate; }
 .nap-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; } .nap-to { position: relative; }
-.nap-to .ev-dot { position: absolute; right: -4px; top: -4px; width: 12px; height: 12px; border-radius: 50%; background: #ef4f45; box-shadow: 0 0 0 2px var(--bg-elev); }
 .nap-fade { position: fixed; inset: 0; z-index: 2000; background: #0b0d1a; pointer-events: none; animation: napFade 1.5s ease-in-out forwards; }
 @keyframes napFade { 0% { opacity: 0; } 40%, 55% { opacity: 1; } 100% { opacity: 0; } }
 .tb-wait { display: grid; gap: 4px; padding: 10px 12px; border-radius: 10px; background: var(--bg-sunken); } .tb-wait p { margin: 0; }
@@ -6168,7 +6160,7 @@ function route() {
     const top = document.getElementById('topTitle').textContent.trim();
     view.querySelectorAll('.page-head .page-title').forEach(el => el.classList.toggle('dup-title', el.textContent.trim() === top));
     MUSIC.sync();   // the notes over the gramophone in a room drawn anew
-    if (r.name === 'today') { if (STORY.due()) STORY.open(); else { NPC.check(); TOWNEV.hint(); } }
+    if (r.name === 'today') { if (STORY.due()) STORY.open(); else NPC.check(); }
     if (swUpdated) setTimeout(() => updateIfCalm(), 0);   // a new version waiting for a calm moment   // the opening the first time; someone at the front door
   } catch (e) {
     console.error(e);
@@ -7767,18 +7759,6 @@ const TOWNEV = (() => {
     while (q.length) { const at = q.shift(); for (const n of ADJ[at] || []) { if (n in first) continue; first[n] = first[at] || n; if (n === to) return first[n]; q.push(n); } }
     return null;
   }
-  const dot = (to, from) => { const w = waiting(now(), today()); return w && hop(from, w.place) === to ? '<i class="ev-dot" aria-hidden="true"></i>' : ''; };
-  const busDot = (from) => { const w = waiting(now(), today()), to = w && hop(from, w.place); return to && to !== 'yard' && BUS_PLACES.includes(to) ? '<i class="ev-dot" aria-hidden="true"></i>' : ''; };   // the way on is by bus
-  // 書房 opened with someone waiting (and no one at the door): where, once a day; or, no one there now, when someone will be and that
-  // a sleep gets there (once before the day's practice is done, once after)
-  function hint() {
-    if (NPC.visitor()) return;
-    const w = waiting(now(), today()), e = !w && due().find((x) => slots(x).length); if (!w && !e) return;
-    const key = todayStr() + (w ? '' : NAP.done() ? '+nap' : '-nap');
-    try { if (localStorage.getItem('nq_town_hint') === key) return; localStorage.setItem('nq_town_hint', key); } catch (x) { return; }
-    if (w) { toast(`好像有人在${PLACE_NAME[w.place]}找你。`, 3600); return; }
-    toast(`${seen(e.who) ? T().CAST[e.who].name : '有人'}${when(e)}會在${PLACE_NAME[e.at]}等你。${NAP.done() ? '到臥房的床上，就能睡到那個時間。' : '做完今日練習，就能到臥房的床上睡到那個時間。'}`, 4600);
-  }
   // nothing on: a word of what they can say by the unit reached (小春, ムギ: their old words too)
   function chatLine(id) {
     const R = reachedIdx(), own = (T().CHAT[id] || []).filter((l) => unitIdx(l[0]) <= R).map((l) => [l[1], l[2]]);
@@ -7806,7 +7786,7 @@ const TOWNEV = (() => {
     const p = el.closest('.yard').querySelector(`.npc-${o}`);
     if (p) talk(p); else toast(`${T().CAST[o].name}現在不在店裡。`);
   }
-  const api = { unitIdx, reachedIdx, started, studyDaysSince, due, opened, openN, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, hop, dot, busDot, hint, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
+  const api = { unitIdx, reachedIdx, started, studyDaysSince, due, opened, openN, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, hop, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
   return api;
 })();
 // the bed (test, 2026-11-10; the user's call): once the day's practice is done (書桌上的筆記本「今日完成」), a sleep there moves the
@@ -7816,11 +7796,9 @@ const TOWNEV = (() => {
 const NAP = (() => {
   const NAME = { 8: '早上 8 點', 12: '中午 12 點', 17: '傍晚 5 點', 20: '晚上 8 點' };
   const done = () => ringPct(dayProgress()) >= 100;
-  const calls = () => done() && !TOWNEV.waiting(TOWNEV.now(), TOWNEV.today()) && TOWNEV.calls().length > 0;   // the way to bed marked: a sleep would meet someone
   function body() {
-    const c = TOWNEV.calls();
     return `<p class="muted small">睡醒後，今天都照那個時間走下去；明天回到真實的時間。</p>
-      <div class="nap-list">${TOWN.WAKE.map((h) => `<button type="button" class="btn nap-to" data-act="nap-to" data-h="${h}">${NAME[h]}${c.includes(h) ? '<i class="ev-dot" aria-hidden="true"></i>' : ''}</button>`).join('')}</div>`;
+      <div class="nap-list">${TOWN.WAKE.map((h) => `<button type="button" class="btn nap-to" data-act="nap-to" data-h="${h}">${NAME[h]}</button>`).join('')}</div>`;
   }
   function offer() {   // lain down: the times to sleep to, or what it takes
     if (!done()) { toast('做完今日練習，就能在床上睡到想要的時間：早上、中午、傍晚或晚上。', 3600); return; }
@@ -7835,7 +7813,7 @@ const NAP = (() => {
     setTimeout(() => { sceneTick(); route(); toast(`睡到${NAME[h]}了。`, 2600); }, still ? 0 : 700);
     setTimeout(() => fade.remove(), still ? 0 : 1500);
   }
-  return { NAME, done, calls, offer, to };
+  return { NAME, done, offer, to };
 })();
 // the opening (test, 2026-11-09; the user's picks): as a child the hero never understood what their Japanese grandmother said
 // ("I'll learn it later"); grown up and busy in the city they never did; then a letter from Japan — she has gone, and left them
@@ -7929,9 +7907,8 @@ const DIARY = (() => {
     return `<ol class="tb-lines">${(e.lines || []).map((l) => { if (Array.isArray(l)) return row(l[0], l[1], l[2]); const o = (l.opts || []).find((x) => x[1]); return o ? row('hero', o[0], o[2]) : ''; }).join('')}</ol>`;
   }
   function townCover() {
-    const n = TOWNEV.openN(), next = TOWNEV.due().slice(0, 3);
-    const wait = n ? `<section class="tb-wait"><b>開著的事件：${n} 件</b>${next.map((e) => `<p>${esc(TOWNEV.seen(e.who) ? TOWN.CAST[e.who].name : '還沒見過的人')}・${esc(TOWNEV.PLACE_NAME[e.at] || e.at)}・${esc(TOWNEV.when(e) || '什麼時間都可能')}</p>`).join('')}
-      <p class="muted small">做完今日練習，可以到臥房的床上睡到早上、中午、傍晚或晚上。</p></section>` : '';
+    const n = TOWNEV.openN();
+    const wait = n ? `<section class="tb-wait"><b>還沒遇到的事件：${n} 件</b><p class="muted small">在鎮上走走，頭上有「！」的人就是在等你的人。做完今日練習，也可以到臥房的床上睡到早上、中午、傍晚或晚上，遇見不同時間出門的人。</p></section>` : '';   // how many, not who, where or when (2026-11-10, the user: let people find them, less pressure)
     const met = people().filter((id) => TOWNEV.seen(id)).length;
     return `${wait}<p class="tb-intro">鎮上的人：認識了 ${met} / ${people().length} 位。點一個人，翻到他的那一頁。</p>
       <div class="tb-index">${people().map((id) => { const k = TOWNEV.seen(id); return `<button type="button" class="tb-who${k ? '' : ' blur'}" data-page-of="${id}"><span class="tb-face">${TOWNEV.face(id)}</span><span>${k ? esc(TOWN.CAST[id].name) : '？？？'}</span></button>`; }).join('')}</div>
@@ -8108,8 +8085,8 @@ function beachHtml() {
     ${yHeroHtml()}
     <div class="busstop beach-prop" aria-hidden="true" style="width:${w}px;height:${h}px;margin-left:${x0}px;bottom:${-(y0 + h)}px;transform-origin:${-x0}px ${-y0}px;transform:translate(-120px,-64px) scale(${k.toFixed(3)});z-index:${300 - 64}"><svg viewBox="${BEACH_PROP.join(' ')}">${BEACH_PROP_ART()}</svg></div>
     ${TOWNEV.castHtml('beach')}
-    <button type="button" class="thing way-btn" data-act="go-place" data-to="yard" aria-label="回院子" style="margin-left:${YARD_HALF - 72}px;bottom:70px"><span class="tag">${ySign('today', '回院子')}</span>${TOWNEV.dot('yard', 'beach')}</button>
-    <button type="button" class="thing way-btn" data-act="go-place" data-to="harbor" aria-label="往漁港" style="margin-left:-452px;bottom:14px"><span class="tag">${ySign('wave', '往漁港')}</span>${TOWNEV.dot('harbor', 'beach')}</button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="yard" aria-label="回院子" style="margin-left:${YARD_HALF - 72}px;bottom:70px"><span class="tag">${ySign('today', '回院子')}</span></button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="harbor" aria-label="往漁港" style="margin-left:-452px;bottom:14px"><span class="tag">${ySign('wave', '往漁港')}</span></button>
     <div class="ysel"></div>`;
 }
 // the town (test, 2026-11-09), along the yard to the right: a row of little shops on a paved street — 小春's salon first, the
@@ -8186,9 +8163,9 @@ function townHtml() {
     </svg>
     ${yHeroHtml()}
     ${TOWNEV.castHtml('town')}
-    ${TOWN_SHOPS.map(([x, w, h, , , sign, id]) => `<button type="button" class="town-shop" data-act="town-shop" data-shop="${id}" aria-label="${sign}" style="margin-left:${x - 600}px;width:${w}px;bottom:${370 - TOWN_FOOT}px;height:${h}px">${INDOOR.includes(id) ? TOWNEV.dot(id, 'town') : ''}</button>`).join('')}
-    <button type="button" class="thing way-btn" data-act="go-place" data-to="yard" aria-label="回院子" style="margin-left:${-YARD_HALF + 40}px;bottom:70px"><span class="tag">${ySign('today', '回院子')}</span>${TOWNEV.dot('yard', 'town')}</button>
-    <button type="button" class="thing way-btn" data-act="go-place" data-to="park" aria-label="往公園" style="margin-left:148px;bottom:14px"><span class="tag">${ySign('spark', '往公園')}</span>${TOWNEV.dot('park', 'town')}</button>
+    ${TOWN_SHOPS.map(([x, w, h, , , sign, id]) => `<button type="button" class="town-shop" data-act="town-shop" data-shop="${id}" aria-label="${sign}" style="margin-left:${x - 600}px;width:${w}px;bottom:${370 - TOWN_FOOT}px;height:${h}px"></button>`).join('')}
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="yard" aria-label="回院子" style="margin-left:${-YARD_HALF + 40}px;bottom:70px"><span class="tag">${ySign('today', '回院子')}</span></button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="park" aria-label="往公園" style="margin-left:148px;bottom:14px"><span class="tag">${ySign('spark', '往公園')}</span></button>
     <div class="ysel"></div>`;
 }
 // みなと漁港 (test, 2026-11-10; the map joined up): below the beach, along the street's left — the harbour's quay, boats bobbing at
@@ -8230,8 +8207,8 @@ function harborHtml() {
     ${landProp(76, [[800, F + 40], [822, F + 48], [842, F + 38]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="9" ${hc('#f08a3a', '#5a3a2a')}/><path d="M${x - 8} ${y - 2} q8 4 16 0" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1.6"/>`).join(''), null, [788, F + 26, 854, F + 60])}
     ${yHeroHtml()}
     ${TOWNEV.castHtml('harbor')}
-    <button type="button" class="thing way-btn" data-act="go-place" data-to="beach" aria-label="往海邊" style="margin-left:${HARBOR_PATH - 32}px;bottom:186px"><span class="tag">${ySign('wave', '往海邊')}</span>${TOWNEV.dot('beach', 'harbor')}</button>
-    <button type="button" class="thing way-btn" data-act="go-place" data-to="street" aria-label="往大馬路" style="margin-left:${YARD_HALF - 72}px;bottom:70px"><span class="tag">${ySign('bus', '往大馬路')}</span>${TOWNEV.dot('street', 'harbor')}</button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="beach" aria-label="往海邊" style="margin-left:${HARBOR_PATH - 32}px;bottom:186px"><span class="tag">${ySign('wave', '往海邊')}</span></button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="street" aria-label="往大馬路" style="margin-left:${YARD_HALF - 72}px;bottom:70px"><span class="tag">${ySign('bus', '往大馬路')}</span></button>
     <div class="ysel"></div>`;
 }
 // ひだまり公園 (test, 2026-11-10; the map joined up): below the town, along the street's right — a park on the hillside: houses up
@@ -8267,14 +8244,14 @@ function parkHtml() {
     ${benchProps(200, F + 60, 50)}${benchProps(980, F + 60, 50)}${landProp(74, `<rect x="852" y="${F + 26}" width="18" height="34" rx="2" ${hc('#a9a497', '#2c2e4c')}/><rect x="844" y="${F + 20}" width="34" height="8" rx="3" ${hc('#bdb8aa', '#3a3c5e')}/><path d="M861 ${F + 20} v-6 h6" fill="none" ${hs('#8a8f99', '#3a3d66')} stroke-width="2.4"/><path data-fx="fountain" d="M867 ${F + 14} q4 -6 7 2" fill="none" stroke="#9fd0f0" stroke-width="1.6" class="fx-blink"/>`, null, [838, F + 2, 886, F + 62])}${landProp(116, panda(430, F + 18), null, [402, F - 50, 466, F + 22])}
     ${yHeroHtml()}
     ${TOWNEV.castHtml('park')}
-    <button type="button" class="thing way-btn" data-act="go-place" data-to="town" aria-label="往小鎮" style="margin-left:${PARK_PATH - 32}px;bottom:186px"><span class="tag">${ySign('shop', '往小鎮')}</span>${TOWNEV.dot('town', 'park')}</button>
-    <button type="button" class="thing way-btn" data-act="go-place" data-to="street" aria-label="往大馬路" style="margin-left:${-YARD_HALF + 40}px;bottom:70px"><span class="tag">${ySign('bus', '往大馬路')}</span>${TOWNEV.dot('street', 'park')}</button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="town" aria-label="往小鎮" style="margin-left:${PARK_PATH - 32}px;bottom:186px"><span class="tag">${ySign('shop', '往小鎮')}</span></button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="street" aria-label="往大馬路" style="margin-left:${-YARD_HALF + 40}px;bottom:70px"><span class="tag">${ySign('bus', '往大馬路')}</span></button>
     <div class="ysel"></div>`;
 }
 // the two shops one can walk into (2026-11-10: seen at 45° like 書房, ISO): drawn in the 1200 × 900 frame of a room's land.
 // In a room: the hero, the people there now, the way out by its door (on the left wall)
 const indoorRest = (place) => { const [dx, dy] = isoXY(0, ISO.door[1], 4.9); return `${yHeroHtml()}${TOWNEV.castHtml(place)}
-    <button type="button" class="thing way-btn" data-act="go-place" data-to="town" aria-label="出去" style="margin-left:${Math.round(dx) - 32}px;bottom:${Math.round(dy)}px"><span class="tag">${ySign('today', '出去')}</span>${TOWNEV.dot('town', place)}</button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="town" aria-label="出去" style="margin-left:${Math.round(dx) - 32}px;bottom:${Math.round(dy)}px"><span class="tag">${ySign('today', '出去')}</span></button>
     <div class="ysel"></div>`; };
 // drawing in the room: a point, a face, a box (its two faces toward us and its top, shaded as 書房's light falls), flat things on
 // the left wall (p = −v, q = −h), on a wall or face across at v (p = u, q = −h), on a level at height h (p = u, q = v); a round
@@ -8499,9 +8476,9 @@ function streetHtml() {
     ${yHeroHtml()}
     ${busStopHtml()}
     ${TOWNEV.castHtml('street')}
-    <button type="button" class="thing way-btn" data-act="go-place" data-to="yard" aria-label="回家" style="margin-left:${Math.round(STREET_LANE.at(0)[0]) - 32}px;bottom:${STREET_LANE.Y0 - 30}px"><span class="tag">${ySign('today', '回家')}</span>${TOWNEV.dot('yard', 'street')}</button>
-    <button type="button" class="thing way-btn" data-act="go-place" data-to="harbor" aria-label="往漁港" style="margin-left:${-YARD_HALF + 40}px;bottom:58px"><span class="tag">${ySign('wave', '往漁港')}</span>${TOWNEV.dot('harbor', 'street')}</button>
-    <button type="button" class="thing way-btn" data-act="go-place" data-to="park" aria-label="往公園" style="margin-left:${YARD_HALF - 72}px;bottom:58px"><span class="tag">${ySign('spark', '往公園')}</span>${TOWNEV.dot('park', 'street')}</button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="yard" aria-label="回家" style="margin-left:${Math.round(STREET_LANE.at(0)[0]) - 32}px;bottom:${STREET_LANE.Y0 - 30}px"><span class="tag">${ySign('today', '回家')}</span></button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="harbor" aria-label="往漁港" style="margin-left:${-YARD_HALF + 40}px;bottom:58px"><span class="tag">${ySign('wave', '往漁港')}</span></button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="park" aria-label="往公園" style="margin-left:${YARD_HALF - 72}px;bottom:58px"><span class="tag">${ySign('spark', '往公園')}</span></button>
     <div class="ysel"></div>`;
 }
 // between the places out of doors (test, 2026-11-09): the yard's path down to the main road, the yard's left edge along to the
@@ -8590,7 +8567,7 @@ const SHELTER_ART = () => `<ellipse cy="2" rx="150" ry="9" fill="#2b1c12" fill-o
 function busStopHtml() {
   const [x0, y0, w, h] = BUS_BOX, k = yScale(BUS.Y);
   return `<div class="busstop" aria-hidden="true" style="width:${w}px;height:${h}px;margin-left:${x0}px;bottom:${-(y0 + h)}px;transform-origin:${-x0}px ${-y0}px;transform:translate(${BUS.X}px,${-BUS.Y}px) scale(${k.toFixed(3)});z-index:${300 - BUS.Y}"><svg viewBox="${BUS_BOX.join(' ')}">${SHELTER_ART()}</svg></div>
-    <button type="button" class="thing bus-btn" data-act="bus-stop" aria-label="公車站" style="margin-left:${Math.round(BUS.X - 130 * k)}px;bottom:${BUS.Y}px;width:${Math.round(290 * k)}px;height:${Math.round(240 * k)}px"><span class="tag">${ySign('bus', '公車站')}</span>${TOWNEV.busDot('street')}</button>`;
+    <button type="button" class="thing bus-btn" data-act="bus-stop" aria-label="公車站" style="margin-left:${Math.round(BUS.X - 130 * k)}px;bottom:${BUS.Y}px;width:${Math.round(290 * k)}px;height:${Math.round(240 * k)}px"><span class="tag">${ySign('bus', '公車站')}</span></button>`;
 }
 // 稲荷神社 (test, 2026-11-09), up the bus line on the hill: a red torii, a stone path with lanterns, two stone foxes, the hall
 // with its rope and bell, the ema board and the omikuji box. From 18 to 22 its 緣日: a row of stalls under paper lanterns — 金魚すくい,
@@ -8730,7 +8707,7 @@ function busBoard(yard) {
   const opened = (id) => id === 'street' || Boolean(state.town.stops[id]), any = list.some((x) => opened(x[0]));
   const el = document.createElement('div'); el.className = 'bus-board'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', '公車路線');
   el.innerHTML = `<div class="bus-card"><b>みなと市バス・路線</b>
-    ${list.map(([id, name]) => `<button type="button" class="bus-stop-btn" data-bus="${id}"${opened(id) ? '' : ' disabled'}>${esc(name)}${opened(id) ? '' : '<small>還沒開通</small>'}${TOWNEV.dot(id, here)}</button>`).join('')}
+    ${list.map(([id, name]) => `<button type="button" class="bus-stop-btn" data-bus="${id}"${opened(id) ? '' : ' disabled'}>${esc(name)}${opened(id) ? '' : '<small>還沒開通</small>'}</button>`).join('')}
     ${any ? '' : '<p class="bus-note">現在還沒有開通的路線。多認識鎮上的人，之後就能搭公車去別的地方。</p>'}
     <button type="button" class="btn btn-sm" data-bus-x>不搭了</button></div>`;
   el.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -8804,7 +8781,7 @@ function busPoleHtml(place) {
   const at = BUS_AT[place], k = yScale(at.Y);
   return `<div class="busstop" aria-hidden="true" style="width:30px;height:120px;margin-left:${at.X + 40}px;bottom:${at.Y}px;transform-origin:0 100%;transform:scale(${(k * 1.6).toFixed(3)});z-index:${300 - at.Y}"><svg viewBox="0 0 30 120"><rect x="13" y="20" width="4" height="100" fill="#8d9097"/><circle cx="15" cy="16" r="13" fill="#fff" stroke="#2f7a5a" stroke-width="3"/><text x="15" y="20" text-anchor="middle" font-size="9" font-weight="700" fill="#2f7a5a" font-family="system-ui, sans-serif">バス</text></svg></div>
     ${TOWNEV.castHtml(place)}
-    <button type="button" class="thing bus-btn" data-act="bus-stop" aria-label="公車站" style="margin-left:${at.X - 20}px;bottom:${at.Y}px;width:90px;height:110px"><span class="tag">${ySign('bus', '搭公車')}</span>${TOWNEV.busDot(place)}</button>`;
+    <button type="button" class="thing bus-btn" data-act="bus-stop" aria-label="公車站" style="margin-left:${at.X - 20}px;bottom:${at.Y}px;width:90px;height:110px"><span class="tag">${ySign('bus', '搭公車')}</span></button>`;
 }
 // 月の湯 (test, 2026-11-09), an old public bath up the bus line: a wooden front under a tiled roof, its noren split 男 (blue) and
 // 女 (red) with ゆ on them, the chimney with its name, a bench outside and the milk machine; lit warm by night
@@ -9021,9 +8998,9 @@ function yardHtml(pct, place = 'yard') {
       </div>
       ${yHeroHtml()}
       <div class="ywares" data-sig="${yardSig()}">${yardWaresHtml()}</div>
-      <button type="button" class="thing way-btn" data-act="go-place" data-to="beach" aria-label="海邊" style="margin-left:${YARD_GATE.beach[0] - 22}px;bottom:${YARD_GATE.beach[1] - 8}px"><span class="tag">${ySign('wave', '海邊')}</span>${TOWNEV.dot('beach', 'yard')}</button>
-      <button type="button" class="thing way-btn" data-act="go-place" data-to="town" aria-label="商店街" style="margin-left:${YARD_GATE.town[0] - 22}px;bottom:${YARD_GATE.town[1] - 8}px"><span class="tag">${ySign('shop', '商店街')}</span>${TOWNEV.dot('town', 'yard')}</button>
-      <button type="button" class="thing way-btn" data-act="go-place" data-to="street" aria-label="公車站" style="margin-left:${Math.round(LANE.at(1)[0]) - 32}px;bottom:4px"><span class="tag">${ySign('bus', '公車站')}</span>${TOWNEV.dot('street', 'yard')}</button>
+      <button type="button" class="thing way-btn" data-act="go-place" data-to="beach" aria-label="海邊" style="margin-left:${YARD_GATE.beach[0] - 22}px;bottom:${YARD_GATE.beach[1] - 8}px"><span class="tag">${ySign('wave', '海邊')}</span></button>
+      <button type="button" class="thing way-btn" data-act="go-place" data-to="town" aria-label="商店街" style="margin-left:${YARD_GATE.town[0] - 22}px;bottom:${YARD_GATE.town[1] - 8}px"><span class="tag">${ySign('shop', '商店街')}</span></button>
+      <button type="button" class="thing way-btn" data-act="go-place" data-to="street" aria-label="公車站" style="margin-left:${Math.round(LANE.at(1)[0]) - 32}px;bottom:4px"><span class="tag">${ySign('bus', '公車站')}</span></button>
       <div class="mailbox${mail ? ' has' : ''}">
         <svg viewBox="0 0 52 66" aria-hidden="true">
           <ellipse class="mb-shadow" cx="26" cy="64.5" rx="15" ry="2.4"/>
@@ -10552,7 +10529,7 @@ const ROOM = (() => {
   function tagOf(id, pct) {
     if (id === 'notebook') return pct < 100 ? `今日練習 ${pct}%` : extraQueue().items.length ? '今日完成・多學' : '今日完成';   // nothing new left anywhere: no 多學
     if (id === 'phones') { const ms = listenHeardToday(); return ms < KOTO_LISTEN_MS ? `聽一輪 ${Math.floor(ms / 60000)}/5 分鐘` : '聽一輪・今天聽夠了'; }
-    if (id === 'door') { const n = mailCount(), m = TOWNEV.openN(); return `出門${n ? `・${n} 封信` : ''}${m ? `・${m} 件事` : ''}`; }   // letters, and town events open
+    if (id === 'door') { const n = mailCount(); return `出門${n ? `・${n} 封信` : ''}`; }   // and the letters (how many events are open: 町の手帳 only, 2026-11-10)
     return THINGS.find((t) => t.id === id).label;
   }
   // a thing's badge (1.2.0): its sign, and what its words said — today's practice a ring that fills with the day, the door's
@@ -10584,7 +10561,7 @@ const ROOM = (() => {
       const a = P(...t.pts[0]), sp = t.sb ? [[a[0] + t.sb[0], a[1] + t.sb[1]], [a[0] + t.sb[2], a[1] + t.sb[3]]] : t.pts.map((p) => P(...p)), pad = t.pad || 4;
       const x0 = Math.min(...sp.map((p) => p[0])) - pad, x1 = Math.max(...sp.map((p) => p[0])) + pad, y0 = Math.min(...sp.map((p) => p[1])) - pad, y1 = Math.max(...sp.map((p) => p[1])) + pad;
       const [tx, ty] = P(...t.tag), label = tagOf(t.id, pct);
-      return `<button type="button" class="thing${blue(t, pct) ? ' primary' : t.minor ? ' minor' : ''}${t.id === 'door' && mail ? ' mail' : ''}${t.id === 'bdoor' && NAP.calls() ? ' calls' : ''}" data-thing="${t.id}" data-tag="${r1(tx)} ${r1(ty)}" ${t.route ? `data-act="study-go" data-route="${t.route}"` : `data-act="${t.act}"`} style="${vbPct(x0, y0)};${vbSize(x1 - x0, y1 - y0)};--tx:${((tx - x0) / (x1 - x0) * 100).toFixed(1)}%;--ty:${((ty - y0) / (y1 - y0) * 100).toFixed(1)}%" aria-label="${label}"><span class="tag">${tagInner(t.id, pct)}</span></button>`;
+      return `<button type="button" class="thing${blue(t, pct) ? ' primary' : t.minor ? ' minor' : ''}${t.id === 'door' && mail ? ' mail' : ''}" data-thing="${t.id}" data-tag="${r1(tx)} ${r1(ty)}" ${t.route ? `data-act="study-go" data-route="${t.route}"` : `data-act="${t.act}"`} style="${vbPct(x0, y0)};${vbSize(x1 - x0, y1 - y0)};--tx:${((tx - x0) / (x1 - x0) * 100).toFixed(1)}%;--ty:${((ty - y0) / (y1 - y0) * 100).toFixed(1)}%" aria-label="${label}"><span class="tag">${tagInner(t.id, pct)}</span></button>`;
     };
     const dm = mover('desk').map, glow = (L, w, h, c) => { const [gx, gy] = P(...L.p); return `<i class="glow lamp-glow${c}" aria-hidden="true" style="${vbPct(gx - w / 2, gy - h / 2)};${vbSize(w, h)}"></i>`; };
     const [nx, ny] = P(...dm([(NB.x0 + NB.x1) / 2, (NB.y0 + NB.y1) / 2, DESK.z1])), [mx, my] = P(...dm([MUG[0], MUG[1], DESK.z1]));
@@ -10609,7 +10586,7 @@ const ROOM = (() => {
         ${gramoTune()}
         ${THINGS.map(thing).join('')}
         ${ed.on ? '' : LAMPS.map((L) => { const [lx, ly] = P(...L.p); return `<button type="button" class="lamp-tap${lampOff(L.id) ? ' off' : ''}" data-act="lamp-toggle" data-lamp="${L.id}" style="${vbPct(lx - 24, ly - 24)};${vbSize(48, 48)}" aria-label="${lampOff(L.id) ? '開燈' : '關燈'}"></button>`; }).join('')}
-        ${ed.on ? '' : placedWares().filter((o) => o.it.act).map((o) => { const b = wareBox(o); return `<button type="button" class="ware-use${o.id === 'bed' && NAP.calls() ? ' calls' : ''}" data-act="ware-use" data-ware="${o.id}" style="${vbPct(b[0], b[1])};${vbSize(b[2] - b[0], b[3] - b[1])}" aria-label="${esc(o.it.name)}：${{ music: '換唱片', sofa: '坐下', kotatsu: '坐下', kneel: '跪坐', diary: '外婆的日記', wardrobe: '衣櫃', bed: '睡覺', water: '澆水', mirror: '照鏡子' }[o.it.act] || ''}"></button>`; }).join('')}
+        ${ed.on ? '' : placedWares().filter((o) => o.it.act).map((o) => { const b = wareBox(o); return `<button type="button" class="ware-use" data-act="ware-use" data-ware="${o.id}" style="${vbPct(b[0], b[1])};${vbSize(b[2] - b[0], b[3] - b[1])}" aria-label="${esc(o.it.name)}：${{ music: '換唱片', sofa: '坐下', kotatsu: '坐下', kneel: '跪坐', diary: '外婆的日記', wardrobe: '衣櫃', bed: '睡覺', water: '澆水', mirror: '照鏡子' }[o.it.act] || ''}"></button>`; }).join('')}
         ${ed.on ? `${decosHtml()}${selHtml()}<svg class="ghost" viewBox="${VB.join(' ')}" aria-hidden="true"><g></g></svg>` : ''}
       </div></div>
       ${ed.on ? editHtml() : ''}
@@ -10627,7 +10604,6 @@ const ROOM = (() => {
     st.querySelectorAll('[data-thing="notebook"], [data-thing="door"], [data-thing="phones"]').forEach((b) => { b.querySelector('.tag').innerHTML = tagInner(b.dataset.thing, pct); b.setAttribute('aria-label', tagOf(b.dataset.thing, pct)); delete b.dataset.w; });
     st.querySelectorAll('[data-thing="notebook"], [data-thing="phones"]').forEach((b) => b.classList.toggle('primary', blue(THINGS.find((t) => t.id === b.dataset.thing), pct)));
     const yd = st.querySelector('[data-thing="door"]'); if (yd) yd.classList.toggle('mail', mail);
-    const nap = NAP.calls(); st.querySelectorAll('[data-thing="bdoor"], .ware-use[data-ware="bed"]').forEach((e) => e.classList.toggle('calls', nap));   // the way to bed
     st.querySelectorAll('.bulb').forEach((e) => e.classList.toggle('on', Number(e.dataset.t) <= pct / 100));
     st.querySelectorAll('.cal-stamp text').forEach((e) => { e.textContent = `${streakStats().current}日連続`; });   // another device's answers today
     kotoButtons(st);

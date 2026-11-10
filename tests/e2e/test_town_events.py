@@ -126,20 +126,19 @@ def test_one_mark_on_the_waiting_person(b):
       return JSON.stringify({ marks, people: [...y().querySelectorAll('.npc')].map(e => e.dataset.npc).sort() }); })()"""))
     assert r == {'marks': ['kenta'], 'people': ['kenta', 'lin']}, r   # 健太 not met yet, there for his event
 
-def test_the_yard_signs_point_toward_the_event(b):
+def test_no_red_dot_points_the_way_to_someone_waiting(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([['a1', 'm1', 'mugi', 'beach']]); begin('m1'); state.met = { koharu: 1, mugi: 1 };
-      await go('outside', 9); const dots = [...y().querySelectorAll('.way-btn .ev-dot')].map(d => d.closest('.way-btn').dataset.to);
-      fake([]); await go('outside', 9); const none = y().querySelectorAll('.ev-dot').length;
-      return JSON.stringify({ dots, none }); })()"""))
-    assert r == {'dots': ['beach'], 'none': 0}, r
+      const dots = []; for (const p of ['outside', 'street', 'town', 'beach']) { await go(p, 9); dots.push(y().querySelectorAll('.ev-dot').length); }
+      const mark = [...y().querySelectorAll('.ev-mark')].map((m) => m.closest('.npc').dataset.npc);
+      return JSON.stringify({ dots, mark }); })()"""))
+    assert r == {'dots': [0, 0, 0, 0], 'mark': ['mugi']}, r   # (2026-11-10, the user) people find them themselves: only the ！ over the one waiting
 
-def test_entering_the_study_says_where_someone_waits_once_a_day(b):
-    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([['a1', 'm1', 'kenta', 'town']]); begin('m1'); localStorage.removeItem('nq_town_hint');
-      const said = []; toast = (m) => said.push(m); TOWNEV.clock = { h: 9, day: new Date(2026, 10, 10) };
-      location.hash = '#/today'; document.getElementById('view').innerHTML = ''; route(); await wait(400);
-      document.getElementById('view').innerHTML = ''; route(); await wait(400);
-      return JSON.stringify(said); })()"""))
-    assert len(r) == 1 and '小鎮' in r[0], r
+def test_entering_the_study_says_nothing_about_who_waits_where(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([['a1', 'm1', 'kenta', 'town'], ['n1', 'm1', 'nakamura', 'izakaya', { when: 'night' }]]); begin('m1');
+      state.met = { koharu: 1, mugi: 1 }; const said = []; toast = (m) => said.push(m); TOWNEV.clock = { h: 9, day: new Date(2026, 10, 10) };
+      const look = async () => { location.hash = '#/today'; document.getElementById('view').innerHTML = ''; route(); await wait(400); };
+      doneToday(false); await look(); doneToday(true); await look(); TOWNEV.clock = null; return JSON.stringify(said); })()"""))
+    assert r == [], r   # (2026-11-10, the user) less pressure: 町の手帳 says how many are open, nothing says where
 
 # ---- the talk: several people, reply choices, glosses, the Chinese folded away, done ----
 TALK_EV = """fake([['a1', 'm1', 'kenta', 'town', { title: '試吃', lines: [['kenta', '{経済|けいざい|經濟}だ！', '是經濟！'],
@@ -376,13 +375,12 @@ def test_the_time_slept_to_stays_when_the_app_is_opened_again(b):
                  ("nav", URL), ("wait", READY), ("eval", "(() => { " + NEAR + " const r = near(sceneHour(), real() + 5); localStorage.removeItem('nq_wake'); return JSON.stringify(r); })()")])
     assert json.loads(out[-1]) is True, out
 
-def test_the_sleep_menu_marks_the_times_someone_waits(b):
+def test_the_sleep_menu_marks_none_of_its_times(b):
     r = json.loads(ev(b, "(() => { " + FRESH + """ doneToday(true); state.met = { koharu: 1, mugi: 1 }; TOWNEV.clock = { h: 9.5, day: new Date(2026, 10, 10) };
-      const dots = () => { NAP.offer(); const d = [...document.querySelectorAll('#modalRoot [data-act="nap-to"]')].filter((x) => x.querySelector('.ev-dot')).map((x) => Number(x.dataset.h)); closeModal(); return d; };
-      fake([['n1', 'm1', 'nakamura', 'izakaya', { when: 'night' }]]); begin('m1'); const night = dots();
-      fake([['c1', 'm1', 'alex', 'beach']]); const late = dots();
-      TOWNEV.clock = null; return JSON.stringify({ night, late }); })()"""))
-    assert r == {'night': [20], 'late': [17]}, r   # 中村 at the izakaya 19–24; アレックス on the beach 15–18 (at noon in the 食堂)
+      fake([['n1', 'm1', 'nakamura', 'izakaya', { when: 'night' }]]); begin('m1'); NAP.offer();
+      const times = [...document.querySelectorAll('#modalRoot [data-act="nap-to"]')].map((x) => [Number(x.dataset.h), x.children.length]); closeModal();
+      TOWNEV.clock = null; return JSON.stringify(times); })()"""))
+    assert r == [[8, 0], [12, 0], [17, 0], [20, 0]], r   # the four times, none marked (2026-11-10)
 
 def test_the_bed_can_be_moved_but_not_put_away(b):
     r = json.loads(ev(b, """(() => { const s = JSON.parse(JSON.stringify(state)); delete s.placed.bed; const n = normalizeState(s);
@@ -397,38 +395,26 @@ def test_a_tap_on_the_bed_lies_down_and_asks_how_long_to_sleep(b):
       const asleep = !!document.querySelector('.study .hero.sleep'); closeModal(); return JSON.stringify({ menu: !!m, asleep }); })()"""))
     assert r == {'menu': True, 'asleep': True}, r
 
-def test_the_way_to_bed_is_marked_when_a_sleep_would_meet_someone(b):
+def test_the_way_to_bed_is_not_marked(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)); state.met = { koharu: 1, mugi: 1 }; TOWNEV.clock = { h: 9.5, day: new Date(2026, 10, 10) };
-      fake([['n1', 'm1', 'nakamura', 'izakaya', { when: 'night' }]]); begin('m1');
+      fake([['n1', 'm1', 'nakamura', 'izakaya', { when: 'night' }]]); begin('m1'); doneToday(true);
       const look = async (hash) => { location.hash = hash; document.getElementById('view').innerHTML = ''; route(); await wait(400); };
-      const on = (sel) => document.querySelector(sel).classList.contains('calls');
-      doneToday(false); await look('#/today'); const before = on('[data-thing="bdoor"]');
-      doneToday(true); await look('#/today'); const door = on('[data-thing="bdoor"]');
-      await look('#/bedroom'); const bed = on('[data-ware="bed"]');
-      TOWNEV.clock = { h: 20, day: new Date(2026, 10, 10) }; await look('#/today'); const there = on('[data-thing="bdoor"]');
-      TOWNEV.clock = null; return JSON.stringify({ before, door, bed, there }); })()"""))
-    assert r == {'before': False, 'door': True, 'bed': True, 'there': False}, r   # at 20:00 he is there already: out, not to bed
+      await look('#/today'); const door = document.querySelectorAll('.calls').length; await look('#/bedroom'); const bed = document.querySelectorAll('.calls').length;
+      TOWNEV.clock = null; return JSON.stringify({ door, bed }); })()"""))
+    assert r == {'door': 0, 'bed': 0}, r
 
-def test_entering_the_study_says_when_someone_waits_and_that_a_sleep_gets_there(b):
-    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([['n1', 'm1', 'nakamura', 'izakaya', { when: 'night' }]]); begin('m1'); localStorage.removeItem('nq_town_hint');
-      state.met = { koharu: 1, mugi: 1 }; const said = []; toast = (m) => said.push(m); TOWNEV.clock = { h: 9.5, day: new Date(2026, 10, 10) };
-      const look = async () => { location.hash = '#/today'; document.getElementById('view').innerHTML = ''; route(); await wait(400); };
-      doneToday(false); await look(); await look(); doneToday(true); await look(); await look();
-      TOWNEV.clock = null; return JSON.stringify(said); })()"""))
-    assert len(r) == 2 and all(w in r[0] for w in ['晚上', '居酒屋', '今日練習']) and '床' in r[1] and '今日練習' not in r[1], r
-
-def test_the_front_door_counts_the_events_open(b):
+def test_the_front_door_says_its_letters_not_the_events_open(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)); state.met = { koharu: 1, mugi: 1 };
       fake([['a1', 'm1', 'kenta', 'town'], ['a2', 'm1', 'kenta', 'town', { after: 'a1' }], ['a3', 'm1', 'kenta', 'town', { after: 'a2' }]]); learn('m1', 1);
       location.hash = '#/today'; document.getElementById('view').innerHTML = ''; route(); await wait(400);
       return JSON.stringify(document.querySelector('[data-thing="door"]').getAttribute('aria-label')); })()"""))
-    assert r.startswith('出門') and r.endswith('・3 件事'), r
+    assert r.startswith('出門') and '件事' not in r, r
 
-def test_the_town_notebook_says_who_waits_where_and_when(b):
+def test_the_town_notebook_says_how_many_are_open_not_who_or_where(b):
     r = json.loads(ev(b, "(() => { " + FRESH + """ fake([['n1', 'm1', 'nakamura', 'izakaya', { when: 'night' }], ['n2', 'm1', 'nakamura', 'izakaya', { after: 'n1' }]]); learn('m1', 1); state.town.seen.nakamura = 1;
       DIARY.open('town'); const w = document.querySelector('.diary .tb-wait'); const t = w ? w.textContent : ''; DIARY.close && DIARY.close();
       return JSON.stringify(t); })()"""))
-    assert all(w in r for w in ['2 件', '中村', '居酒屋とり吉', '晚上']), r
+    assert '2 件' in r and '中村' not in r and '居酒屋' not in r, r
 
 def test_a_weekend_of_sleeps_meets_every_event_open(b):
     r = json.loads(ev(b, "(() => { " + FRESH + """ state.currentUnit = 'm6'; learn('m6', 1); state.met = { koharu: 1, mugi: 1 };
