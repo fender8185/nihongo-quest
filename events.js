@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 36 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 37 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -18,16 +18,17 @@ const TOWN = {
     town: { salon: { X: -328, Y: 130 }, bakery: { X: -230, Y: 112 }, bakeryIn: { X: -188, Y: 130 }, shokudo: { X: -80, Y: 112 }, cafe: { X: 60, Y: 112 },
       flowers: { X: 200, Y: 112 }, flowers2: { X: 262, Y: 120 }, izakaya: { X: 360, Y: 112 }, goods: { X: 500, Y: 112 }, street: { X: 280, Y: 70 } },
     beach: { mat: { X: -170, Y: 58 }, shore: { X: 220, Y: 96 } },
-    // indoors the floor runs from the front (0) to the back wall (134): people stand before the counter, at the tables
+    // indoors the floor runs from the front (0) to the back wall (134): people stand before the counter, at the tables. sit: on a
+    // bench (its seat 40 of their units up: Y = the seat's height − 40 × their scale), drawn between its back and its seat
     shokudo: { counter: { X: -130, Y: 118 }, kitchen: { X: 560, Y: 124 }, table1: { X: -380, Y: 74 }, table2: { X: 380, Y: 74 }, stool: { X: 160, Y: 112 } },
     izakaya: { counter: { X: 110, Y: 120 }, seat1: { X: -180, Y: 104 }, seat2: { X: -80, Y: 104 }, seat3: { X: 220, Y: 104 }, seat4: { X: 320, Y: 104 } },
     street: { stop: { X: 150, Y: 120 }, walk: { X: -160, Y: 110 } },
     castle: { gate: { X: -340, Y: 110 }, info: { X: -110, Y: 112 }, plaza: { X: 60, Y: 78 }, keep: { X: 250, Y: 120 } },
     shrine: { haiden: { X: 300, Y: 118 }, torii: { X: -420, Y: 96 }, ennichi: { X: -60, Y: 86 }, ennichi2: { X: 80, Y: 92 }, stall: { X: -150, Y: 112 } },
-    sento: { door: { X: -40, Y: 124 }, bench: { X: -260, Y: 70 }, milk: { X: -360, Y: 112 } },
+    sento: { door: { X: -40, Y: 124 }, bench: { X: -322, Y: 71, sit: 1 }, milk: { X: -360, Y: 112 } },
     harbor: { pier: { X: 120, Y: 96 }, hut: { X: 370, Y: 112 } },
     park: { slide: { X: -220, Y: 92 }, bench: { X: 140, Y: 62 } },
-    station: { taxi: { X: -430, Y: 96 }, gate: { X: -60, Y: 120 }, koban: { X: 330, Y: 112 }, plaza: { X: -300, Y: 70 }, stop: { X: 470, Y: 80 } }
+    station: { taxi: { X: -430, Y: 96 }, gate: { X: -60, Y: 120 }, koban: { X: 330, Y: 112 }, plaza: { X: -335, Y: 74, sit: 1 }, stop: { X: 470, Y: 80 } }
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they
   // have come by; size: smaller than the hero

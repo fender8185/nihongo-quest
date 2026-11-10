@@ -13,7 +13,7 @@
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
 <script src="./data.js?v=21"></script>
-<script src="./events.js?v=36"></script>
+<script src="./events.js?v=37"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -859,9 +859,10 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 /* test (2026-11-10): the places out and about drawn taller (.tall: up into the sky) and each with its own life — wires and a
    passing truck on the main road, a train over the station, smoke from the bath's chimney, leaves and the festival's fireworks at
    the shrine, petals and the moat at the castle, flags in town, gulls and the lighthouse at the beach */
+.study .art .cur { transform-box: fill-box; transform-origin: 50% 0; animation: curSway 5.5s ease-in-out var(--w, 0s) infinite alternate; } @keyframes curSway { from { transform: skewX(-1.6deg); } to { transform: skewX(1.6deg) scaleY(1.005); } }
 .study .art .sun { fill: color-mix(in srgb, #fff0bf calc(var(--day, 1) * 100%), #c4d0ff); opacity: calc(.07 + .2 * var(--day, 1)); pointer-events: none; }
 .study .art .mote { fill: #fffbe8; opacity: 0; animation: mote var(--d) ease-in-out var(--w) infinite; pointer-events: none; } @keyframes mote { 0%, 100% { transform: translate(0, 0); opacity: 0; } 30% { opacity: calc(.75 * var(--day, 1)); } 70% { opacity: calc(.6 * var(--day, 1)); } 50% { transform: translate(5px, 9px); } }
-@media (prefers-reduced-motion: reduce) { .study .art .mote { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .study .art :is(.mote, .cur) { animation: none; } }
 .sky .land.tall { height: 770px; } .sky .land.prop { pointer-events: none; }
 .sky .land .wire { fill: none; stroke: color-mix(in srgb, #55555f calc(var(--day) * 100%), #3a3d66); stroke-width: 1.4; }
 .sky .land .lit { fill: #ffd98a; opacity: calc(.08 + .92 * (1 - var(--day))); transition: opacity 3s; }
@@ -888,8 +889,10 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .land .fx-crab { animation: fxCrab 11s ease-in-out infinite; } @keyframes fxCrab { 0%, 12% { transform: translateX(0); } 30%, 52% { transform: translateX(70px); } 70%, 100% { transform: translateX(0); } }
 .sky .land .fx-legs { animation: fxLegs .18s steps(2) infinite; } @keyframes fxLegs { 50% { transform: translateY(-1.5px); } }
 .sky .land .fx-swim { transform-box: fill-box; transform-origin: center; animation: fxSwim 34s linear infinite; } @keyframes fxSwim { 0% { transform: translateX(0) scaleX(1); } 48% { transform: translateX(260px) scaleX(1); } 50% { transform: translateX(260px) scaleX(-1); } 98% { transform: translateX(0) scaleX(-1); } 100% { transform: translateX(0) scaleX(1); } }
+.sky .land .fx-spin { transform-box: view-box; animation: fxSpin 1.4s linear infinite; } @keyframes fxSpin { to { transform: rotate(360deg); } }
+.sky .land .fx-sail { animation: fxSail 70s linear infinite; } @keyframes fxSail { from { transform: translateX(-200px); } to { transform: translateX(1300px); } }
 .sky .land .fx-tuft { transform-box: fill-box; transform-origin: 50% 100%; animation: fxTuft 3s ease-in-out infinite alternate; } @keyframes fxTuft { from { transform: skewX(-7deg); } to { transform: skewX(7deg); } }
-@media (prefers-reduced-motion: reduce) { .sky .land :is(.fx-sweep, .fx-car, .fx-train, .fx-bob, .fx-peck, .fx-sway, .fx-flag, .fx-smoke, .fx-steam, .fx-fall, .fx-ripple, .fx-blink, .fx-scroll, .fx-fly, .fx-wing, .fx-gull, .fx-beam, .fx-boom, .fx-fan, .fx-crab, .fx-legs, .fx-swim, .fx-tuft) { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .sky .land :is(.fx-sweep, .fx-car, .fx-train, .fx-bob, .fx-peck, .fx-sway, .fx-flag, .fx-smoke, .fx-steam, .fx-fall, .fx-ripple, .fx-blink, .fx-scroll, .fx-fly, .fx-wing, .fx-gull, .fx-beam, .fx-boom, .fx-fan, .fx-crab, .fx-legs, .fx-swim, .fx-tuft, .fx-spin, .fx-sail) { animation: none; } }
 .sky .land .seam { fill: none; stroke: color-mix(in srgb, #b4ad9e calc(var(--day) * 100%), #1c1d3e); stroke-width: 2; stroke-linecap: round; }
 .yard .hero.bench .bob { animation: none; transform: translateY(-13px); } .yard .hero.bench .h-shadow { display: none; }   /* the hips on the seat (40 up), the thighs coming at us (the legs short) */
 .yard .hero.bench .legs { transform-box: view-box; transform-origin: 2px -27px; transform: scaleY(.55); }
@@ -7137,7 +7140,7 @@ const walkTop = (place, X) => (place === 'yard' && X !== undefined ? Math.round(
 // its nearest free side. Those he can stand behind are drawn over him then (landProp)
 const WALK_BLOCK = {
   beach: [[-130, -110, 58, 70], [150, 302, 106, 130], [478, 640, -10, 54], [496, 640, 80, 140]],
-  park: [[-404, -306, 44, 62], [376, 474, 44, 62], [58, 172, 62, 106], [-192, -148, 108, 126]],
+  park: [[-404, -306, 44, 62], [376, 474, 44, 62], [58, 172, 62, 106], [-192, -148, 108, 126], [242, 280, 70, 84]],
   harbor: [[-222, -134, 78, 106], [488, 532, 76, 94], [88, 152, 74, 98]],
   station: [[-382, -288, 62, 80], [158, 252, 62, 80], [26, 120, 90, 106], [-492, -368, 106, 140]],
   sento: [[-352, -238, 60, 78]],
@@ -7438,7 +7441,7 @@ const TOWNEV = (() => {
   const festival = () => isOpen('ennichi', now());
   function castHtml(place) {
     return here(place).map(({ id, spot, host }) => { const k = yScale(spot.Y) * (T().CAST[id].size || 1);
-      return `<button type="button" class="hero npc npc-${id}${host ? ' ev-host' : ''}" data-act="npc-talk" data-npc="${id}" aria-label="${esc(T().CAST[id].name)}" style="transform:translate(${spot.X}px,${-spot.Y}px) scale(${k.toFixed(3)});z-index:${300 - spot.Y}">${art(id, place)}${host ? '<i class="ev-mark" aria-hidden="true">！</i>' : ''}</button>`; }).join('');
+      return `<button type="button" class="hero npc npc-${id}${host ? ' ev-host' : ''}${spot.sit ? ' bench' : ''}" data-act="npc-talk" data-npc="${id}" aria-label="${esc(T().CAST[id].name)}" style="transform:translate(${spot.X}px,${-spot.Y}px) scale(${k.toFixed(3)});z-index:${300 - spot.Y}">${art(id, place)}${host ? '<i class="ev-mark" aria-hidden="true">！</i>' : ''}</button>`; }).join('');
   }
   // the way to the one waiting (2026-11-10: the map joined up all round — beach | yard | town over harbor | street | park, the two
   // shops off the town, the bus's stops off the street and one another): the next step on a shortest way there, a dot on its sign
@@ -7770,6 +7773,7 @@ function beachHtml() {
       <path d="M940 148 C990 128 1050 108 1110 100 C1150 96 1190 98 1220 102 V148 Z" ${hc('#a6bd96', '#161c38')}/><path d="M1124 92 l5 -6 l12 -5 l12 5 l5 6 Z" ${hc('#c8553f', '#3a2030')}/><rect x="1130" y="92" width="22" height="9" ${hc('#efe4d2', '#1e2042')}/><path d="M1138 104 L1118 112 L1140 120 L1104 130 L1128 138" fill="none" ${hs('#e3cf9e', '#3a3858')} stroke-width="1.6"/>
       <path class="sea" d="M-20 146 H1220 V242 H-20 Z"/><path class="sea-far" d="M-20 146 H1220 V158 H-20 Z"/>
       <path d="M-20 142 H120 V148 H-20 Z" ${hc('#b4ad9e', '#2a2c48')}/><rect x="116" y="114" width="8" height="30" ${hc('#f4f1ea', '#4a4c72')}/><rect x="116" y="122" width="8" height="5" ${hc('#d0453c', '#5a2030')}/><rect x="116" y="132" width="8" height="5" ${hc('#d0453c', '#5a2030')}/><circle class="fx-blink glow" cx="120" cy="112" r="6" fill="#fff3b0"/>
+      <g class="fx-sail"><g class="fx-bob" style="animation-duration:4s"><path d="M120 150 h26 l-4 5 h-18 Z" ${hc('#f4f3ee', '#4a4c72')}/><path d="M133 149 V118 L150 146 Z" ${hc('#fbfaf6', '#6a6c92')}/><path d="M131 146 L120 126 V146 Z" ${hc('#e86f5e', '#4a2c48')}/></g></g>
       <g class="fx-bob" style="animation-duration:3.2s"><path d="M640 152 h40 l-5 6 h-30 Z" ${hc('#d0574b', '#2a2c50')}/><rect x="652" y="144" width="10" height="8" ${hc('#f4f3ee', '#4a4c72')}/></g>
       <path class="isle" d="M850 147 C868 132 892 124 918 132 C934 124 962 128 982 147 Z"/><path class="isle" d="M240 147 C252 140 266 138 278 147 Z"/>
       ${[[300, 172, 40], [520, 192, 60], [760, 178, 30], [640, 214, 70], [420, 226, 50], [960, 204, 44]].map(([x, y, l], i) => `<path class="glint" d="M${x} ${y} h${l}" style="--w:-${i * 0.7}s"/>`).join('')}
@@ -7783,6 +7787,7 @@ function beachHtml() {
       <rect x="760" y="196" width="130" height="62" ${hc('#c9a06a', '#2a2440')}/><path d="M744 200 L825 168 L906 200 Z" ${hc('#b9a070', '#1e1c38')}/>${[770, 790, 810, 830, 850, 870].map((x) => `<path d="M${x} 186 l-6 14" ${hs('#9a8058', '#1a1832')} stroke-width="1.4"/>`).join('')}<rect x="776" y="214" width="98" height="30" ${hc('#efe6d6', '#ffd98a')}/><text x="825" y="234" text-anchor="middle" font-size="13" font-weight="700" ${hc('#2f5a9a', '#3a3456')} font-family="system-ui, sans-serif">海の家</text>
       <path d="M900 258 V178" ${hs('#6e4f3a', '#2c2440')} stroke-width="3"/><path d="M901 180 h20 v40 h-20 Z" ${hcx('fx-flag', '#fbf7ec', '#4a4c72')}/><text x="911" y="196" text-anchor="middle" font-size="9" font-weight="700" fill="#d0453c" font-family="system-ui, sans-serif" writing-mode="tb">氷</text>
       <path d="M260 340 q30 -8 60 -2 q10 2 18 -4" fill="none" ${hs('#a8875e', '#3a3050')} stroke-width="6"/>
+      ${Array.from({ length: 7 }, (_, k) => `<ellipse cx="${740 - k * 26 + (k % 2) * 6}" cy="${300 - k * 7 + (k % 2) * 4}" rx="3.4" ry="2" ${hc('#d8c49a', '#2a2a46')}/>`).join('')}
       <path class="near" d="M1060 370 C1074 320 1094 270 1124 232 C1150 196 1180 168 1220 156 V370 Z"/>${[1100, 1140, 1180].map((x) => `<path d="M${x} ${330 - (x - 1100) * 0.9} q4 -12 8 0 M${x + 6} ${331 - (x - 1100) * 0.9} q5 -10 9 -1" ${hs('#7f9d6c', '#1a2a3a')} stroke-width="2"/>`).join('')}
       <path d="M980 300 L1220 292 V306 L980 314 Z" ${hc('#c9a06a', '#3a2c40')}/>${Array.from({ length: 12 }, (_, k2) => `<path d="M${990 + k2 * 20} ${299.6 - k2 * 0.66} v14" ${hs('#a8804e', '#2a2440')} stroke-width="1.6"/>`).join('')}
       ${[1000, 1060, 1120, 1180].map((x) => `<rect x="${x}" y="276" width="4" height="22" ${hc('#8a6a4a', '#2c2440')}/>`).join('')}<path d="M1000 282 L1184 278" ${hs('#8a6a4a', '#2c2440')} stroke-width="2"/>
@@ -7800,6 +7805,15 @@ const TOWN_SHOPS = [   // [x in the land's 1200, width, height, wall, awning, si
   [150, 150, 128, '#f6e9e4', '#e58fa8', '美容室 こはる', 'salon'], [320, 120, 112, '#f3e3c4', '#d9a43a', '森のパン', 'bakery'], [460, 132, 140, '#efe6d6', '#3f4a6e', 'まんぷく食堂', 'shokudo'],
   [612, 118, 118, '#efe1d2', '#6e4f3a', '喫茶しずく', 'cafe'], [748, 124, 104, '#e6efe2', '#4f7a4a', 'ひなた花店', 'flowers'], [890, 140, 132, '#e8dccb', '#8a2f2a', '居酒屋とり吉', 'izakaya'], [1050, 120, 116, '#e9e4f1', '#6b4d8a', '雑貨りんりん', 'goods']];
 const TOWN_FOOT = 236;   // the shops' fronts stand on this line of the land (y), 134 px up
+// what an open shop shows in its window or before it (2026-11-10): x, w its front, t its top, f its foot
+const SHOP_SHOW = {
+  bakery: (x, w, t, f) => `<path d="M${x + 12} ${f - 28} h${w * 0.42 - 4}" ${hs('#a8743f', '#3a2c40')} stroke-width="2"/>${[0, 1, 2].map((k) => `<ellipse cx="${x + 22 + k * 15}" cy="${f - 33}" rx="7" ry="4.5" ${hc(['#c8823c', '#b8702e', '#d8a050'][k], '#4a3a3a')}/><path d="M${x + 18 + k * 15} ${f - 35} l3 2 M${x + 22 + k * 15} ${f - 35.5} l3 2" stroke="#fff" stroke-opacity=".5" stroke-width="1"/>`).join('')}<path d="M${x + 22} ${f - 44} q8 -8 16 0 q-8 -3 -16 0 Z" ${hc('#d8a050', '#4a3a3a')}/>`,
+  shokudo: (x, w, t, f) => `<path d="M${x + 12} ${f - 28} h${w * 0.42 - 4}" ${hs('#7a5230', '#3a2c40')} stroke-width="2"/>${[0, 1, 2].map((k) => `<ellipse cx="${x + 22 + k * 17}" cy="${f - 31}" rx="7.5" ry="2.6" ${hc('#fbf8f0', '#5a5a7a')}/><ellipse cx="${x + 22 + k * 17}" cy="${f - 34}" rx="5" ry="3.4" ${hc(['#e6a23c', '#c84a3a', '#d9b04a'][k], '#4a3a3a')}/>`).join('')}`,
+  flowers: (x, w, t, f) => [0, 1, 2].map((k) => { const bx = x + 14 + k * 18; return `${[[-4, '#e86f5e'], [0, '#f2c94c'], [4, '#e58fa8'], [-2, '#ffffff'], [3, '#c9a7ff']].map(([d, c], j) => `<path d="M${bx + d} ${f - 12} v${-8 - (j % 3) * 3}" stroke="#4f7a4a" stroke-width="1.2"/><circle cx="${bx + d}" cy="${f - 21 - (j % 3) * 3}" r="2.6" fill="${c}"/>`).join('')}<path d="M${bx - 7} ${f - 12} h14 l-2 12 h-10 Z" ${hc('#9aa4ae', '#2a2c50')}/>`; }).join(''),
+  cafe: (x, w, t, f) => `<path d="M${x + 40} ${f} l5 -30 h16 l5 30" fill="none" ${hs('#6e4f3a', '#2c2440')} stroke-width="2"/><rect x="${x + 43}" y="${f - 30}" width="20" height="22" rx="1" ${hc('#2f3b33', '#1c2a24')}/><path d="M${x + 46} ${f - 24} h12 M${x + 46} ${f - 19} h9 M${x + 46} ${f - 14} h13" stroke="#f3e7cc" stroke-width="1.2" stroke-linecap="round"/><circle cx="${x + 59}" cy="${f - 25}" r="1.6" fill="#e86f5e"/>`,
+  goods: (x, w, t, f) => [0, 1, 2].map((k) => `<g class="fx-sway" style="animation-delay:-${k * 0.6}s;animation-duration:${1.6 + k * 0.3}s"><path d="M${x + 24 + k * 22} ${t + 58} v6" stroke="#6a6a74" stroke-width="1"/><path d="M${x + 19 + k * 22} ${t + 70} q5 -9 10 0 Z" fill="${['#9fd0f0', '#b8e0c8', '#f6c6d6'][k]}" fill-opacity=".9"/><path d="M${x + 24 + k * 22} ${t + 70} v10" stroke="#6a6a74" stroke-width=".8"/><rect x="${x + 21 + k * 22}" y="${t + 80}" width="6" height="10" fill="#fbf7ec"/></g>`).join(''),
+  salon: (x, w, t, f) => `<path d="M${x + w - 64} ${f - 14} h16 l-2 14 h-12 Z" ${hc('#c58a54', '#3a2c40')}/>${[[-6, -24], [0, -30], [6, -24], [-3, -18], [4, -19]].map(([dx, dy]) => `<ellipse cx="${x + w - 56 + dx}" cy="${f + dy}" rx="5" ry="3.2" transform="rotate(${dx * 6} ${x + w - 56 + dx} ${f + dy})" ${hc('#5f9a4a', '#16243a')}/>`).join('')}`
+};
 function townHtml() {
   const shop = ([x, w, h, wall, aw, sign, id]) => {
     const t = TOWN_FOOT - h, dx = x + w / 2;
@@ -7815,6 +7829,7 @@ function townHtml() {
       <path d="M${x - 2} ${t + 38} H${x + w + 2} L${x + w - 6} ${t + 56} H${x + 6} Z" ${hc(aw, '#3a2c4a')}/>${Array.from({ length: Math.floor(w / 16) }, (_, k) => `<path d="M${x + 6 + k * 16} ${t + 56} q8 8 16 0" ${hc(aw, '#3a2c4a')}/>`).join('')}
       <rect x="${x + 10}" y="${t + 66}" width="${w * 0.42}" height="${h - 92}" rx="3" ${hc('#cfe6ec', '#ffd98a')}/><path d="M${x + 14} ${t + 72} l14 22" ${hs('#ffffff', '#fff3c8')} stroke-width="3" stroke-opacity=".6"/>
       <rect x="${x + w - 44}" y="${t + 70}" width="32" height="${h - 70}" rx="2" ${hc('#8a6a52', '#3a2c40')}/><circle cx="${x + w - 18}" cy="${t + 70 + (h - 70) / 2}" r="2" ${hc('#e3c46a', '#a88a4a')}/>
+      ${shut ? '' : SHOP_SHOW[id] ? SHOP_SHOW[id](x, w, t, TOWN_FOOT) : ''}
       ${id === 'salon' ? `<rect x="${x + w + 6}" y="${t + 60}" width="8" height="40" rx="4" fill="#fff"/><path d="M${x + w + 6} ${t + 66} l8 -4 M${x + w + 6} ${t + 76} l8 -4 M${x + w + 6} ${t + 86} l8 -4 M${x + w + 6} ${t + 96} l8 -4" stroke="#e58fa8" stroke-width="3"/>` : ''}
       ${id === 'shokudo' ? `<path d="M${dx0 - 4} ${t + 70} h40 v22 h-40 Z" ${hc('#2f3a5e', '#1c1f3a')}/><path d="M${dx0 + 9} ${t + 70} v22 M${dx0 + 22} ${t + 70} v22" ${hs('#efe6d6', '#3a3d60')} stroke-width="1.2"/><text x="${dx0 + 16}" y="${t + 86}" text-anchor="middle" font-size="11" font-weight="700" fill="#fff" fill-opacity=".9" font-family="serif">めし</text>` : ''}
       ${id === 'izakaya' ? lantern(x + 8) + lantern(x + w - 8) : ''}
@@ -7885,13 +7900,15 @@ function harborHtml() {
       <rect x="880" y="${F - 52}" width="54" height="52" ${hc('#5a3b28', '#ffd98a')}/><rect x="960" y="${F - 52}" width="90" height="34" ${hc('#cfe6ec', '#ffd98a')}/>
       <path d="M1074 ${F - 106} V${F - 186}" ${hs('#6e4f3a', '#2c2440')} stroke-width="3"/><g ${hcx('fx-flag', '#f6f3ec', '#4a4c72', 'filter:brightness(calc(.5 + .5 * var(--day)))')}><path d="M1075 ${F - 184} h62 v40 h-62 Z"/><path d="M1075 ${F - 184} h62 v10 h-62 Z" fill="#d0453c"/><path d="M1075 ${F - 154} h62 v10 h-62 Z" fill="#3f7ac8"/><circle cx="1092" cy="${F - 164}" r="7" fill="#e6c23a"/><text x="1120" y="${F - 159}" text-anchor="middle" font-size="12" font-weight="800" fill="#d0453c" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif">大漁</text></g>
       <path d="M640 ${F} V${F - 70} M760 ${F} V${F - 70}" ${hs('#6e4f3a', '#2c2440')} stroke-width="4"/><path d="M640 ${F - 66} Q700 ${F - 40} 760 ${F - 66} V${F - 20} Q700 ${F - 2} 640 ${F - 20} Z" fill="none" ${hs('#4f6f6a', '#2a3a4a')} stroke-width="1.4"/>${Array.from({ length: 7 }, (_, k) => `<path d="M${648 + k * 16} ${F - 60 + Math.abs(3 - k) * 3} V${F - 12}" ${hs('#4f6f6a', '#2a3a4a')} stroke-width="1"/>`).join('')}
+      ${[380, 520, 700, 860, 1040].map((x, k) => `<g transform="translate(${x} ${F - 3})"><path d="M-12 0 q6 -5 12 0 q6 -5 12 0" fill="none" ${hsx('fx-ripple', '#ffffff', '#5a6aa0', `animation-delay:-${k * 0.8}s`)} stroke-width="1.6"/></g>`).join('')}
       <rect class="pave" x="-20" y="${F}" width="1240" height="134" style="fill:color-mix(in srgb, #cfcac0 calc(var(--day) * 100%), #262848)"/><path d="M-20 ${F + 2} H1220" ${hs('#9a958a', '#1c1d3e')} stroke-width="4"/>
       ${[300, 560, 820].map((x) => `<path d="M${x - 8} ${F + 14} h16 v-10 q-8 -8 -16 0 Z" ${hc('#4a4a55', '#1c1d3c')}/>`).join('')}
       <path d="M600 ${F + 56} a18 8 0 1 0 1 0 a12 5 0 1 0 1 0" fill="none" ${hs('#c9b48a', '#4a4466')} stroke-width="3"/>
       ${gull(300, -120, 0)}${gull(620, -60, 1)}${gull(860, -180, 2)}
       <g transform="translate(560 ${F + 4})"><ellipse rx="8" ry="6" ${hc('#f6f6f2', '#7a7ea8')}/><circle cx="7" cy="-6" r="4" ${hc('#f6f6f2', '#7a7ea8')}/><path d="M11 -6 l4 1" ${hs('#e6a23c', '#5a4a3a')} stroke-width="2"/><path d="M-8 -2 l-6 -2" ${hs('#8a8f99', '#4a4c72')} stroke-width="3"/></g>
     </svg>
-    ${landProp(82, crate(400, F + 10, '#3f7ac8') + crate(380, F + 30, '#3f7ac8') + crate(424, F + 30, '#d0574b') + `<path d="M392 ${F + 28} q8 -5 16 0" fill="none" ${hs('#b9c8d4', '#4a4c72')} stroke-width="3"/>`)}${landProp(78, crate(1090, F + 34, '#e6a23c'))}
+    ${landProp(82, crate(400, F + 10, '#3f7ac8') + [404, 414, 426].map((fx, k) => `<path d="M${fx} ${F + 10} q6 -6 12 0 q-6 4 -12 0 Z M${fx + 12} ${F + 10} l4 -3 v6 Z" ${hc(['#b9c8d4', '#a8b8c8', '#c8d4dc'][k], '#4a4c72')}/>`).join('') + crate(380, F + 30, '#3f7ac8') + crate(424, F + 30, '#d0574b')
+      + `<g transform="translate(476 ${F + 52})"><path d="M-10 0 q-2 -18 10 -20 q12 2 10 20 Z" ${hc('#f2ede2', '#5a5a6a')}/><circle cx="0" cy="-24" r="8" ${hc('#f2ede2', '#5a5a6a')}/><path d="M-7 -29 l2 -7 l4 5 M7 -29 l-2 -7 l-4 5" ${hc('#f2ede2', '#5a5a6a')}/><path d="M-8 -26 h-3 M-8 -23 h-3" stroke="#8a8a94" stroke-width=".8"/><circle cx="-3" cy="-25" r="1.2" fill="#2b2b33"/><circle cx="3" cy="-25" r="1.2" fill="#2b2b33"/><path d="M10 -2 q10 0 8 -12" class="fx-sway" fill="none" ${hs('#f2ede2', '#5a5a6a')} stroke-width="3"/><path d="M-6 -16 q6 6 12 0" fill="none" ${hs('#2b2b33', '#5a5a6a')} stroke-width="1"/></g>`)}${landProp(78, crate(1090, F + 34, '#e6a23c'))}
     ${landProp(76, [[700, F + 40], [722, F + 48], [742, F + 38]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="9" ${hc('#f08a3a', '#5a3a2a')}/><path d="M${x - 8} ${y - 2} q8 4 16 0" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1.6"/>`).join(''))}
     ${yHeroHtml()}
     ${TOWNEV.castHtml('harbor')}
@@ -7921,13 +7938,14 @@ function parkHtml() {
       <path d="M327 ${F - 92} C300 ${F - 92} 292 ${F - 62} 274 ${F - 32} C262 ${F - 12} 250 ${F - 6} 228 ${F - 6}" fill="none" ${hs('#3f7ac8', '#2a3460')} stroke-width="13" stroke-linecap="round"/><path d="M327 ${F - 98} C298 ${F - 98} 288 ${F - 68} 270 ${F - 38} C258 ${F - 18} 246 ${F - 12} 226 ${F - 12}" fill="none" ${hs('#7fb0e8', '#3a4a7a')} stroke-width="3" stroke-linecap="round"/><path d="M278 ${F - 30} V${F}" ${hs('#8a8f99', '#3a3d66')} stroke-width="4"/><path d="M330 ${F - 90} V${F} M352 ${F - 90} V${F}" ${hs('#8a8f99', '#3a3d66')} stroke-width="4"/>${[0, 1, 2, 3, 4].map((k) => `<path d="M330 ${F - 18 - k * 18} H352" ${hs('#8a8f99', '#3a3d66')} stroke-width="3"/>`).join('')}<rect x="326" y="${F - 98}" width="30" height="10" rx="2" ${hc('#e6a23c', '#4a3a2a')}/>
       <path d="M470 ${F} L490 ${F - 100} H610 L630 ${F}" fill="none" ${hs('#d0574b', '#4a2c40')} stroke-width="5"/>${swing(520, 0)}${swing(580, 1)}
       <rect x="660" y="${F + 30}" width="110" height="40" rx="4" ${hc('#e6d3a8', '#3a3456')}/><rect x="660" y="${F + 30}" width="110" height="40" rx="4" fill="none" ${hs('#b9a37a', '#2a2a46')} stroke-width="5"/><path d="M690 ${F + 52} q10 -12 20 0 Z" ${hc('#d9c08a', '#3a3456')}/><path d="M728 ${F + 40} h18 l-3 16 h-12 Z" ${hc('#d0453c', '#5a2030')}/><path d="M729 ${F + 40} q8 -10 16 0" fill="none" ${hs('#8a2f2a', '#3a2030')} stroke-width="1.4"/><path d="M752 ${F + 36} l10 18" ${hs('#e6c23a', '#5a5030')} stroke-width="3" stroke-linecap="round"/><path d="M760 ${F + 52} l6 10 l-8 -2 Z" ${hc('#e6c23a', '#5a5030')}/>
-      <rect x="800" y="${F - 120}" width="8" height="120" ${hc('#5a5a64', '#1c1d3c')}/><circle cx="804" cy="${F - 132}" r="18" ${hc('#fbf7ec', '#fff0c0')}/><circle cx="804" cy="${F - 132}" r="18" fill="none" ${hs('#3a3a44', '#3a3a44')} stroke-width="3"/><path d="M804 ${F - 132} v-11 M804 ${F - 132} l8 4" ${hs('#3b2a1c', '#3b2a1c')} stroke-width="2"/><circle class="glow" cx="804" cy="${F - 132}" r="60" fill="url(#glw)"/>
+      <rect x="800" y="${F - 120}" width="8" height="120" ${hc('#5a5a64', '#1c1d3c')}/><circle cx="804" cy="${F - 132}" r="18" ${hc('#fbf7ec', '#fff0c0')}/><circle cx="804" cy="${F - 132}" r="18" fill="none" ${hs('#3a3a44', '#3a3a44')} stroke-width="3"/>${clockHands(804, F - 132, 16)}<circle class="glow" cx="804" cy="${F - 132}" r="60" fill="url(#glw)"/>
       <rect x="114" y="${F - 12}" width="40" height="12" ${hc('#a9a497', '#2c2e4c')}/><path d="M120 ${F - 12} Q120 ${F - 52} 134 ${F - 54} Q148 ${F - 52} 148 ${F - 12} Z" ${hc('#b4ad9e', '#3a3c5e')}/><path d="M122 ${F - 32} Q134 ${F - 22} 146 ${F - 32} L144 ${F - 24} Q134 ${F - 16} 124 ${F - 24} Z" ${hc('#d0453c', '#5a2030')}/>
       ${[[880, -60], [1000, -20], [1100, -80], [60, -40], [160, -90], [700, 20]].map(([x, y], k) => leaf(x, y, k)).join('')}
       <rect x="-20" y="${F}" width="1240" height="134" ${hc('#d9c7a2', '#2a2846')}/>${Array.from({ length: 22 }, (_, j) => `<path d="M${j * 56} ${F + 30 + (j % 3) * 28} q6 -6 12 0" ${hs('#c2ad84', '#22203e')} stroke-width="2"/>`).join('')}
       ${pigeonArt(560, F + 100, 0)}${pigeonArt(596, F + 106, 1)}
+      ${Array.from({ length: 9 }, (_, k) => `<path d="M${646 + k * 16} ${F - 2} v-12" stroke="#4f7a4a" stroke-width="1.6"/><path d="M${642 + k * 16} ${F - 20} q4 -6 8 0 v5 h-8 Z" ${hc(['#e86f5e', '#f2c94c', '#e58fa8'][k % 3], '#3a2c48')}/>`).join('')}
     </svg>
-    ${landProp(50, benchArt(200, F + 60))}${landProp(50, benchArt(980, F + 60))}${landProp(116, panda(430, F + 18))}
+    ${benchProps(200, F + 60, 50)}${benchProps(980, F + 60, 50)}${landProp(74, `<rect x="852" y="${F + 26}" width="18" height="34" rx="2" ${hc('#a9a497', '#2c2e4c')}/><rect x="844" y="${F + 20}" width="34" height="8" rx="3" ${hc('#bdb8aa', '#3a3c5e')}/><path d="M861 ${F + 20} v-6 h6" fill="none" ${hs('#8a8f99', '#3a3d66')} stroke-width="2.4"/><path d="M867 ${F + 14} q4 -6 7 2" fill="none" stroke="#9fd0f0" stroke-width="1.6" class="fx-blink"/>`)}${landProp(116, panda(430, F + 18))}
     ${yHeroHtml()}
     ${TOWNEV.castHtml('park')}
     <button type="button" class="thing way-btn" data-act="go-place" data-to="town" aria-label="往小鎮" style="margin-left:${PARK_PATH - 32}px;bottom:186px"><span class="tag">${ySign('shop', '往小鎮')}</span>${TOWNEV.dot('town', 'park')}</button>
@@ -7972,10 +7990,11 @@ function shokudoHtml() {
     ${[440, 520, 600, 680, 760].map((x) => `<rect x="${x - 3}" y="126" width="6" height="${F - 126}" fill="#7a5230" opacity=".5"/>`).join('')}
     <g transform="translate(420 82)"><ellipse cx="0" cy="26" rx="14" ry="4" fill="#000" opacity=".15"/><path d="M-11 26 Q-13 6 0 4 Q13 6 11 26 Z" fill="#fff"/><circle cy="0" r="10" fill="#fff"/><path d="M-8 -6 L-6 -14 L-2 -8 M8 -6 L6 -14 L2 -8" fill="#fff" stroke="#e58fa8" stroke-width="1"/><path d="M11 6 Q20 -6 14 -16" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="-4" cy="0" r="1.3" fill="#333"/><circle cx="4" cy="0" r="1.3" fill="#333"/><circle cy="14" r="4" fill="#e3c46a"/></g>
     <rect x="1010" y="-10" width="120" height="78" rx="6" fill="#3a3a44"/><rect x="1018" y="-2" width="104" height="62" rx="3" fill="#7fb3d8"/><path d="M1030 40 q20 -24 40 0 t40 0" stroke="#fff" stroke-opacity=".5" stroke-width="3" fill="none"/><rect x="1064" y="68" width="12" height="12" fill="#3a3a44"/>
-    <circle cx="190" cy="40" r="26" fill="#fbf7ec" stroke="#7a5230" stroke-width="4"/><path d="M190 40 v-16 M190 40 l10 6" stroke="#3b2a1c" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="190" cy="40" r="26" fill="#fbf7ec" stroke="#7a5230" stroke-width="4"/>${[0, 1, 2, 3].map((k) => `<path d="M190 ${18} v4" stroke="#7a5230" stroke-width="2" transform="rotate(${k * 90} 190 40)"/>`).join('')}${clockHands(190, 40, 22)}
     <rect x="20" y="40" width="96" height="${F - 40}" fill="#7a5230"/><rect x="28" y="48" width="80" height="${F - 48}" fill="#cfe6ec" opacity=".7"/><path d="M24 40 h88 v54 h-88 Z" fill="#2f3a5e"/><path d="M53 40 v54 M83 40 v54" stroke="#efe6d6" stroke-width="1.5"/>
     <text x="68" y="74" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="serif">めし</text>
-    <rect x="1140" y="30" width="70" height="${F - 30}" fill="#6e4f3a"/><path d="M1140 30 h70 v60 h-70 Z" fill="#c84a3a"/><text x="1175" y="66" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="serif">厨房</text>
+    <rect x="1140" y="30" width="70" height="${F - 30}" fill="#6e4f3a"/><rect x="1138" y="26" width="74" height="6" fill="#4a3426"/>${[0, 1].map((k) => `<path class="fx-sway" style="animation-delay:-${k * 0.8}s;animation-duration:3.4s" d="M${1141 + k * 35} 32 h33 v58 h-33 Z" fill="#c84a3a"/>`).join('')}<text x="1175" y="66" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="serif">厨房</text>
+    ${[0, 1].map((r) => `<g transform="translate(1062 ${F - 34 - r * 34})"><rect width="60" height="34" rx="3" fill="#e6c23a"/><rect x="4" y="12" width="52" height="4" fill="#c9a52a"/>${[8, 20, 32, 44].map((bx) => `<rect x="${bx}" y="-10" width="8" height="12" rx="3" fill="#6b3a2a"/>`).join('')}</g>`).join('')}
     <rect x="-20" y="${F}" width="1240" height="${370 - F}" fill="#c9a06a"/>${Array.from({ length: 8 }, (_, j) => `<path d="M-20 ${F + 4 + j * 17} H1220" stroke="#b38a55" stroke-width="2"/>`).join('')}
   </svg>${[220, 980].map((x) => landProp(55, `<g transform="translate(${x} ${F + 82}) scale(1.6) translate(${-x} ${-(F + 82)})">${table(x)}</g>`, true)).join('')}${indoorRest('shokudo')}`;
 }
@@ -8001,6 +8020,7 @@ function izakayaHtml() {
     <rect x="600" y="-8" width="200" height="28" rx="3" fill="#2b2b33"/>${[620, 650, 680, 710, 740, 770].map((x) => `<path d="M${x} -8 l10 -18" stroke="#c9a06a" stroke-width="3" stroke-linecap="round"/><circle cx="${x + 6}" cy="-18" r="4" fill="#a0502c"/>`).join('')}
     ${[620, 660, 700, 740, 780].map((x, k) => `<g transform="translate(${x} -24)"><ellipse rx="12" ry="9" class="fx-steam" fill="#e8e2d4" style="animation-delay:-${k * 0.9}s"/></g>`).join('')}<rect x="604" y="4" width="192" height="10" fill="#e8592e" opacity=".8"/>
     ${[420, 520, 860].map((x) => `<rect x="${x - 14}" y="10" width="28" height="12" rx="2" fill="#e9e2d0"/>`).join('')}
+    ${[470, 560, 900].map((x) => `<rect x="${x}" y="-6" width="16" height="26" rx="2" fill="#f0b43c" fill-opacity=".9"/><path d="M${x + 16} -1 h5 v12 h-5" fill="none" stroke="#e9e2d0" stroke-width="2"/><path d="M${x - 1} -6 q4 -6 9 -2 q5 -5 9 2 Z" fill="#fbf8f0"/>`).join('')}<ellipse cx="420" cy="8" rx="13" ry="4" fill="#7fae5a"/><path d="M846 20 q-6 -10 2 -22 h4 q8 12 2 22 Z" fill="#f3ead6"/><path d="M847 -2 h6" stroke="#2f4a6e" stroke-width="2"/>
     <rect x="20" y="20" width="96" height="${F - 20}" fill="#2e1e14"/><rect x="28" y="28" width="80" height="${F - 28}" fill="#1c2340"/><path d="M24 20 h88 v66 h-88 Z" fill="#8a2f2a"/><path d="M53 20 v66 M83 20 v66" stroke="#efe6d6" stroke-width="1.5"/>
     <text x="68" y="60" text-anchor="middle" font-size="13" font-weight="700" fill="#fff" font-family="serif">とり吉</text>
     <rect x="-20" y="${F}" width="1240" height="${370 - F}" fill="#4a3426"/>${Array.from({ length: 8 }, (_, j) => `<path d="M-20 ${F + 4 + j * 17} H1220" stroke="#3a281c" stroke-width="2"/>`).join('')}
@@ -8026,9 +8046,13 @@ const farHouse = (x, b, w, h, roof, wall = '#efe6d6', ext = 0) => {
 // a thing on a place's ground the hero can walk behind (2026-11-10): a layer of its own over the land, in front of whoever stands
 // further back than its foot (Y px up), as the yard's wares are; room: drawn in a room's frame (shokudo, izakaya)
 const landProp = (Y, art, room) => `<svg class="land prop ${room ? 'indoor-land' : 'tall'}" viewBox="${room ? '0 -530 1200 900' : '0 -400 1200 770'}" preserveAspectRatio="xMidYMax slice" aria-hidden="true" style="z-index:${300 - Math.round(Y)}${room ? ';height:900px' : ''}">${art}</svg>`;
-// a park bench with a back: its seat from x, w long, at y; legs down to y + 24
-const benchArt = (x, y, w = 90) => `<path d="M${x + 6} ${y} V${y - 22} M${x + w - 6} ${y} V${y - 22}" ${hs('#6e4f3a', '#2c2440')} stroke-width="4"/><rect x="${x + 2}" y="${y - 22}" width="${w - 4}" height="6" rx="2" ${hc('#c58a54', '#3a2c40')}/><rect x="${x + 2}" y="${y - 13}" width="${w - 4}" height="6" rx="2" ${hc('#b67c48', '#33283c')}/>
-  <rect x="${x}" y="${y}" width="${w}" height="8" rx="2" ${hc('#c58a54', '#3a2c40')}/><rect x="${x + 8}" y="${y + 8}" width="6" height="16" ${hc('#6e4f3a', '#2c2440')}/><rect x="${x + w - 14}" y="${y + 8}" width="6" height="16" ${hc('#6e4f3a', '#2c2440')}/>`;
+// a park bench with a back: its seat from x, w long, at y; legs down to y + 24 (foot: Y px up there). Two layers: its back further
+// back than its seat, so someone sitting on it (a spot's sit) shows between them and the hero behind it goes behind both
+const benchBack = (x, y, w = 90) => `<path d="M${x + 6} ${y} V${y - 22} M${x + w - 6} ${y} V${y - 22}" ${hs('#6e4f3a', '#2c2440')} stroke-width="4"/><rect x="${x + 2}" y="${y - 22}" width="${w - 4}" height="6" rx="2" ${hc('#c58a54', '#3a2c40')}/><rect x="${x + 2}" y="${y - 13}" width="${w - 4}" height="6" rx="2" ${hc('#b67c48', '#33283c')}/>`;
+const benchSeat = (x, y, w = 90) => `<rect x="${x}" y="${y}" width="${w}" height="8" rx="2" ${hc('#c58a54', '#3a2c40')}/><rect x="${x + 8}" y="${y + 8}" width="6" height="16" ${hc('#6e4f3a', '#2c2440')}/><rect x="${x + w - 14}" y="${y + 8}" width="6" height="16" ${hc('#6e4f3a', '#2c2440')}/>`;
+const benchProps = (x, y, foot, w = 90, more = '') => landProp(foot + 11, benchBack(x, y, w)) + landProp(foot, benchSeat(x, y, w) + more);
+// a clock's hands at the scenes' hour (body's --hh, --mm, as 書房's clock): round (x, y), r long
+const clockHands = (x, y, r, ink = '#3b2a1c') => `<path d="M${x} ${y} v${-r * 0.55}" stroke="${ink}" stroke-width="${Math.max(2, r * 0.16)}" stroke-linecap="round" style="transform-box:view-box;transform-origin:${x}px ${y}px;transform:rotate(var(--hh, 0deg))"/><path d="M${x} ${y} v${-r * 0.8}" stroke="${ink}" stroke-width="${Math.max(1.4, r * 0.1)}" stroke-linecap="round" style="transform-box:view-box;transform-origin:${x}px ${y}px;transform:rotate(var(--mm, 0deg))"/><circle cx="${x}" cy="${y}" r="${Math.max(1.5, r * 0.1)}" fill="${ink}"/>`;
 const pigeonArt = (x, y, k) => `<g class="fx-peck" style="animation-delay:-${k * 0.6}s"><ellipse cx="${x}" cy="${y}" rx="9" ry="6" ${hc('#8d93a8', '#2c2f52')}/><circle cx="${x + 8}" cy="${y - 6}" r="4" ${hc('#7a8098', '#2c2f52')}/><path d="M${x + 12} ${y - 6} l3 1" ${hs('#d0904a', '#3a3d66')} stroke-width="1.6"/><path d="M${x - 9} ${y - 2} l-6 -2" ${hs('#6a7088', '#2c2f52')} stroke-width="3"/></g>`;
 const GLOW_DEFS = `<defs><radialGradient id="glw"><stop offset="0" stop-color="#ffd98a" stop-opacity=".7"/><stop offset=".55" stop-color="#ffc870" stop-opacity=".22"/><stop offset="1" stop-color="#ffc870" stop-opacity="0"/></radialGradient>
   <radialGradient id="glc"><stop offset="0" stop-color="#e6f2ff" stop-opacity=".7"/><stop offset=".55" stop-color="#cfe2ff" stop-opacity=".2"/><stop offset="1" stop-color="#cfe2ff" stop-opacity="0"/></radialGradient></defs>`;
@@ -8058,8 +8082,10 @@ function streetHtml() {
       <g class="fx-fly"><g transform="translate(0 -250)"><path  d="M0 0 q8 -8 16 0 q8 -8 16 0" ${hsx('fx-wing', '#4a4a55', '#5a5e90')} stroke-width="2.4"/></g><g transform="translate(40 -230) scale(.8)"><path  d="M0 0 q8 -8 16 0 q8 -8 16 0" ${hsx('fx-wing', '#4a4a55', '#5a5e90', `animation-delay:-.2s`)} stroke-width="2.4"/></g></g>
       <rect class="pave" x="-20" y="${y(w1)}" width="1240" height="${w1 - w0}"/><rect class="kerb" x="-20" y="${y(w0) - 3}" width="1240" height="4"/>
       ${vend(390)}${post(760)}
+      <path d="M640 236 V160" ${hs('#e8913a', '#4a3a2a')} stroke-width="4"/><circle cx="640" cy="152" r="14" ${hc('#e8913a', '#4a3a2a')}/><circle cx="640" cy="152" r="10.5" ${hc('#cfe3ea', '#2a3060')}/><path d="M633 148 q7 -6 14 2" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="2"/>
       <rect class="asphalt" x="-20" y="${y(r1)}" width="1240" height="${r1 - r0}"/>
       <path class="rline" d="M-20 ${y(r1) + 6} H1220 M-20 ${y(r0) - 6} H1220"/><path class="rline dash" d="M-20 ${y((r0 + r1) / 2)} H1220"/>
+      <text x="850" y="${y((r0 + r1) / 2) - 8}" text-anchor="middle" font-size="20" font-weight="800" fill="#f4f2ec" fill-opacity=".85" font-family="system-ui, sans-serif" transform="translate(850 ${y((r0 + r1) / 2) - 8}) scale(1 .6) translate(-850 ${-(y((r0 + r1) / 2) - 8)})">止まれ</text>
       ${Array.from({ length: 6 }, (_, i) => `<rect x="${930}" y="${y(r1) + 10 + i * 10}" width="90" height="5" ${hc('#f4f2ec', '#3a3d66')}/>`).join('')}
       ${truck}${cyclist}
       <rect class="kerb" x="-20" y="${y(n1)}" width="1240" height="4"/><rect class="pave" x="-20" y="${y(n1) + 4}" width="1240" height="${n1 - n0 - 4}"/>
@@ -8172,7 +8198,8 @@ function shrineHtml() {
       ${lantern(320)}${lantern(700)}${fox(360, false)}${fox(560, true)}
       <g class="fx-peck" style="animation-duration:3.1s"><path d="M226 ${F - 172} q8 -10 20 -6 q8 3 10 0 l-2 6 q-6 6 -20 6 Z" ${hc('#2b2b33', '#0c0c1c')}/><circle cx="252" cy="${F - 180}" r="5" ${hc('#2b2b33', '#0c0c1c')}/><path d="M256 ${F - 181} l6 2 l-6 1" ${hc('#3a3a44', '#1a1a2a')}/><path d="M234 ${F - 166} v6 M240 ${F - 166} v6" ${hs('#3a3a44', '#1a1a2a')} stroke-width="1.4"/></g>
       <rect x="1080" y="${F - 70}" width="70" height="40" rx="2" ${hc('#c58a54', '#3a2c40')}/>${[0, 1, 2].map((k) => `<path d="M${1088 + k * 20} ${F - 62} l8 -4 l8 4 v10 h-16 Z" ${hc('#efe6d6', '#e8dcb4')}/>`).join('')}<rect x="1110" y="${F - 30}" width="10" height="30" ${hc('#6e4f3a', '#2c2440')}/>
-      <path d="M1160 ${F - 54} h40" ${hs('#6e4f3a', '#2c2440')} stroke-width="2"/>${[1166, 1176, 1186, 1196].map((x) => `<path d="M${x} ${F - 54} v6" ${hs('#ffffff', '#8a8cae')} stroke-width="3"/>`).join('')}
+      <path d="M1160 ${F - 54} h40" ${hs('#6e4f3a', '#2c2440')} stroke-width="2"/>${[1166, 1176, 1186, 1196].map((x, k) => `<path d="M${x} ${F - 54} v7" ${hsx('fx-sway', '#ffffff', '#8a8cae', `animation-delay:-${k * 0.4}s;animation-duration:2.2s`)} stroke-width="3"/>`).join('')}
+      <path d="M672 ${F} L700 ${F - 92}" ${hs('#c9a06a', '#3a2c40')} stroke-width="3"/><path d="M664 ${F} q4 -18 10 -26 q4 12 8 26 Z" ${hc('#b9a070', '#2a2440')}/>${[[600, '#d9533a'], [612, '#e8913a'], [624, '#e6c23a'], [606, '#c8453a'], [618, '#d9533a']].map(([x, c], k) => `<ellipse cx="${x}" cy="${F - 3 - (k > 2 ? 5 : 0)}" rx="7" ry="3.4" ${hc(c, '#5a3a3a')}/>`).join('')}
       ${[[180, -120, '#d9533a'], [420, -60, '#e8913a'], [520, -140, '#e6c23a'], [760, -90, '#d9533a'], [880, -150, '#e8913a'], [1040, -60, '#e6c23a'], [300, -20, '#d9533a']].map(([x, y, c], k) => leaf(x, y, k, c)).join('')}
       ${fest ? `<g class="ennichi">${boom(240, -260, 0, '#ff9a5a')}${boom(520, -320, 1.4, '#ffd166')}${boom(860, -280, 2.8, '#7fd1ff')}${chochin(280, 760)}${stall(400, 100, '#3f7ac8', '金魚すくい')}${stall(510, 90, '#d0453c', 'やきそば')}${stall(610, 90, '#e58fa8', 'わたあめ')}</g>` : ''}
       <rect class="pave" x="-20" y="${F}" width="1240" height="90" style="fill:color-mix(in srgb, #d8cfbd calc(var(--day) * 100%), #2a2a48)"/>
@@ -8214,6 +8241,7 @@ function castleHtml() {
       <rect x="150" y="150" width="50" height="48" ${hc('#b4ab98', '#3a3a58')}/><rect x="320" y="150" width="50" height="48" ${hc('#b4ab98', '#3a3a58')}/><rect x="200" y="140" width="120" height="58" ${hc('#5a3b28', '#2a2440')}/><path d="M260 140 V198" ${hs('#3a2418', '#1c1430')} stroke-width="3"/>${[230, 290].map((x) => `<circle cx="${x}" cy="170" r="3" ${hc('#d9b04a', '#a88a4a')}/>`).join('')}
       <path d="M196 198 H324 L332 ${F} H188 Z" ${hc('#a8743f', '#3a2c40')}/>${[204, 224, 244, 264, 284, 304].map((x) => `<path d="M${x} 200 L${x - 2} ${F}" ${hs('#8a5a30', '#2a2440')} stroke-width="1.6"/>`).join('')}
       ${sakura(60, 1.2)}${sakura(1150, 1.1)}${pine(420, 0.8)}
+      ${[176, 344].map((x) => `<path d="M${x - 12} ${F} l3 -8 h18 l3 8 Z" ${hc('#a9a497', '#2c2e4c')}/><rect x="${x - 4}" y="${F - 40}" width="8" height="32" ${hc('#b4ad9e', '#34365a')}/><rect x="${x - 10}" y="${F - 58}" width="20" height="18" rx="1" ${hc('#b4ad9e', '#34365a')}/><rect x="${x - 5}" y="${F - 54}" width="10" height="10" ${hc('#5a5a64', '#ffd27a')}/><path d="M${x - 16} ${F - 58} L${x} ${F - 70} L${x + 16} ${F - 58} Z" ${hc('#9a958a', '#2a2c4c')}/><circle class="glow" cx="${x}" cy="${F - 49}" r="26" fill="url(#glw)"/>`).join('')}
       <rect x="430" y="${F - 70}" width="130" height="70" ${hc('#efe6d6', '#25264a')}/><path d="M420 ${F - 70} h150 l-12 -16 h-126 Z" ${hc('#8a6a52', '#1c1d3c')}/><rect x="450" y="${F - 62}" width="90" height="18" rx="2" ${hc('#2f4a6e', '#1c1d3c')}/>
       <text x="495" y="${F - 49}" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="system-ui, sans-serif">案内所</text><rect x="455" y="${F - 36}" width="80" height="36" ${hc('#cfe6ec', '#ffd98a')}/>
       <rect x="590" y="${F - 64}" width="70" height="46" rx="2" ${hc('#fbf7ec', '#3a3b62')}/><rect x="620" y="${F - 18}" width="8" height="18" ${hc('#6e4f3a', '#2c2440')}/><text x="625" y="${F - 48}" text-anchor="middle" font-size="10" font-weight="700" ${hc('#3b2a1c', '#c9c4e8')} font-family="system-ui, sans-serif">白鷺城</text>
@@ -8306,11 +8334,13 @@ function stationHtml() {
       <rect x="290" y="${F - 182}" width="540" height="12" ${hc('#8a8f99', '#1c1d3c')}/>
       <rect x="300" y="${F - 170}" width="520" height="170" ${hc('#efe9dd', '#25264a')}/><rect x="300" y="${F - 170}" width="520" height="40" ${hc('#5f7f9a', '#1c2240')}/>
       <rect x="440" y="${F - 166}" width="240" height="30" rx="3" ${hc('#2f4a6e', '#1c1d3c')}/><text x="560" y="${F - 145}" text-anchor="middle" font-size="20" font-weight="700" ${hc('#ffffff', '#ffe9b0')} font-family="system-ui, sans-serif">みなと駅</text>
-      <circle cx="360" cy="${F - 150}" r="15" ${hc('#fbf7ec', '#e8dcb4')}/><path d="M360 ${F - 150} v-10 M360 ${F - 150} l7 4" ${hs('#3b2a1c', '#3b2a1c')} stroke-width="2"/>
+      <circle cx="360" cy="${F - 150}" r="15" ${hc('#fbf7ec', '#e8dcb4')}/>${clockHands(360, F - 150, 13)}
       <rect x="448" y="${F - 128}" width="224" height="28" rx="3" fill="#1c1c22"/>
       <g clip-path="url(#stLed)"><g class="fx-scroll"><text x="456" y="${F - 109}" font-size="13" font-weight="700" fill="#ffae3a" font-family="system-ui, sans-serif">${board}${board}</text></g></g>
       <rect x="320" y="${F - 120}" width="110" height="60" ${hc('#cfe6ec', '#ffd98a')}/><rect x="690" y="${F - 120}" width="110" height="60" ${hc('#cfe6ec', '#ffd98a')}/>
-      <rect x="480" y="${F - 96}" width="160" height="96" ${hc('#6b7a8a', '#141632')}/>${[484, 524, 564, 604].map((x) => `<rect x="${x}" y="${F - 90}" width="34" height="90" ${hc('#cfe6ec', '#ffd98a')}/>`).join('')}
+      <g style="opacity:calc(.5 + .5 * var(--day))"><rect x="336" y="${F - 114}" width="30" height="42" fill="#7fb3d8"/><path d="M338 ${F - 80} L351 ${F - 100} L364 ${F - 80} Z" fill="#fbfaf6"/><path d="M336 ${F - 78} h30 v6 h-30 Z" fill="#4f8a5a"/><rect x="384" y="${F - 114}" width="30" height="42" fill="#f2b8c6"/><circle cx="399" cy="${F - 98}" r="8" fill="#fbfaf6"/><path d="M386 ${F - 80} q13 -8 26 0" fill="none" stroke="#c84a3a" stroke-width="2"/>
+      <rect x="708" y="${F - 114}" width="30" height="42" fill="#3f7ac8"/><path d="M710 ${F - 84} q14 -10 26 0" fill="none" stroke="#fbfaf6" stroke-width="2.4"/><circle cx="728" cy="${F - 102}" r="5" fill="#f2c94c"/></g>
+      <rect x="480" y="${F - 96}" width="160" height="96" ${hc('#6b7a8a', '#141632')}/>${[484, 524, 564, 604].map((x) => `<rect x="${x}" y="${F - 90}" width="34" height="90" ${hc('#cfe6ec', '#ffd98a')}/>`).join('')}${[500, 540, 580, 620].map((x) => `<rect x="${x - 3}" y="${F - 40}" width="6" height="30" fill="#8a96a8" fill-opacity=".55"/><rect x="${x - 10}" y="${F - 40}" width="20" height="5" rx="2" fill="#5a6a7a" fill-opacity=".5"/>`).join('')}
       <ellipse class="glow" cx="560" cy="${F - 30}" rx="220" ry="80" fill="url(#glw)"/>
       ${[330, 368, 406].map((x) => `<rect x="${x}" y="${F - 52}" width="30" height="52" rx="3" ${hc('#d9604c', '#4a2c40')}/><rect x="${x + 5}" y="${F - 46}" width="20" height="12" rx="2" ${hc('#cfe6ec', '#5a66a8')}/>`).join('')}
       <rect x="40" y="${F - 120}" width="8" height="120" ${hc('#5a5a64', '#1c1d3c')}/><rect x="10" y="${F - 134}" width="76" height="22" rx="3" ${hc('#2f4a6e', '#1c1d3c')}/><text x="48" y="${F - 119}" text-anchor="middle" font-size="10" font-weight="700" fill="#fff" font-family="system-ui, sans-serif">タクシー</text>
@@ -8326,7 +8356,7 @@ function stationHtml() {
       ${busRoad()}
     </svg>
     ${landProp(112, `<g transform="translate(110 ${F + 12})"><ellipse cx="60" cy="10" rx="64" ry="5" fill="#000" fill-opacity=".1"/><path d="M0 0 V-22 Q2 -30 14 -32 L34 -46 H82 L104 -32 Q118 -30 120 -22 V0 Z" ${hc('#f3d24a', '#5a5030')}/><path d="M40 -42 H78 L94 -30 H26 Z" ${hc('#9fc0d0', '#ffe2a0')}/><path d="M60 -42 V-30" ${hs('#f3d24a', '#5a5030')} stroke-width="2.4"/><path d="M2 -14 H118" ${hs('#2b2b33', '#2a2a40')} stroke-width="1.4"/><rect x="48" y="-56" width="24" height="10" rx="2" ${hc('#fbf7ec', '#fff0b0')}/><text x="60" y="-48.5" text-anchor="middle" font-size="7" font-weight="700" fill="#2b2b33" font-family="system-ui, sans-serif">TAXI</text><circle cx="26" cy="0" r="10" fill="#2b2b33"/><circle cx="94" cy="0" r="10" fill="#2b2b33"/><circle cx="26" cy="0" r="4" fill="#9a9ea8"/><circle cx="94" cy="0" r="4" fill="#9a9ea8"/><circle cx="118" cy="-16" r="3" fill="#ffd98a"/></g>`)}
-    ${landProp(66, benchArt(220, F + 44))}${landProp(66, benchArt(760, F + 44))}${landProp(95, [628, 660, 692].map(bike).join(''))}
+    ${benchProps(220, F + 44, 66)}${benchProps(760, F + 44, 66)}${landProp(95, [628, 660, 692].map(bike).join(''))}
     ${yHeroHtml()}
     ${busPoleHtml('station')}
     <div class="ysel"></div>`;
@@ -8355,6 +8385,8 @@ function sentoHtml() {
   return `<svg class="land tall sento-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
       <path class="far" d="M0 122 C120 100 240 104 360 118 S560 96 700 110 S900 126 1020 104 S1150 100 1200 110 V370 H0 Z"/>
       ${house(10, 120, 150)}${house(150, 110, 160)}${house(980, 120, 150)}${house(1110, 100, 162)}
+      <rect x="992" y="170" width="96" height="16" rx="2" ${hc('#2f7a9a', '#1c2a44')}/><text x="1040" y="182" text-anchor="middle" font-size="9.5" font-weight="700" fill="#fff" font-family="system-ui, sans-serif">コインランドリー</text>
+      <rect x="994" y="190" width="92" height="40" ${hc('#dfe8ec', '#ffe2a0')}/>${[1014, 1040, 1066].map((x, k) => `<rect x="${x - 11}" y="196" width="22" height="30" rx="2" ${hc('#f4f3ee', '#4a4c72')}/><circle cx="${x}" cy="213" r="8" ${hc('#6a8aa8', '#2a3060')}/><g class="fx-spin" style="animation-delay:-${k * 0.4}s;transform-origin:${x}px 213px"><path d="M${x - 5} 213 a5 5 0 0 1 10 0" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width="2"/><circle cx="${x - 2}" cy="216" r="1.6" fill="#e86f5e"/></g>`).join('')}
       ${[0, 1, 2, 3].map(puff).join('')}
       <path d="M876 ${F} L884 -300 H916 L924 ${F} Z" ${hc('#cfc7b8', '#2a2c4c')}/><rect x="880" y="-306" width="40" height="12" ${hc('#6f6a62', '#1c1d3c')}/><rect x="882" y="-270" width="36" height="8" ${hc('#c8453a', '#4a2030')}/><rect x="882" y="-254" width="36" height="8" ${hc('#c8453a', '#4a2030')}/>
       <text x="900" y="-220" text-anchor="middle" font-size="20" font-weight="700" ${hc('#3b2a1c', '#c9c4e8')} font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif" writing-mode="tb">月の湯</text>
@@ -8381,7 +8413,7 @@ function sentoHtml() {
       <path d="M262 ${F} L272 ${F - 58} H306 L316 ${F}" fill="none" ${hs('#6e4f3a', '#2c2440')} stroke-width="3"/><rect x="268" y="${F - 56}" width="42" height="40" rx="2" ${hc('#fbf7ec', '#3a3b62')}/><text x="289" y="${F - 30}" text-anchor="middle" font-size="10" font-weight="700" ${hc('#c8453a', '#ff9a7a')} font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif" writing-mode="tb">営業中</text>
       ${busRoad()}
     </svg>
-    ${landProp(63, `${benchArt(250, F + 47, 110)}<g class="fx-bob" style="animation-duration:3.4s"><path d="M318 ${F + 47} q-2 -16 16 -18 q18 -1 18 14 q0 4 -2 4 Z" ${hc('#e6a65a', '#5a4a3a')}/><path d="M336 ${F + 30} l3 -7 l4 7 Z M344 ${F + 31} l4 -6 l2 8 Z" ${hc('#e6a65a', '#5a4a3a')}/><path d="M318 ${F + 47} q-14 -2 -12 -10" ${hs('#e6a65a', '#5a4a3a')} stroke-width="4"/><path d="M338 ${F + 37} q3 2 6 0" ${hs('#5a3a28', '#2c2440')} stroke-width="1.2"/></g>`)}
+    ${benchProps(250, F + 47, 63, 110, `<g class="fx-bob" style="animation-duration:3.4s"><path d="M318 ${F + 47} q-2 -16 16 -18 q18 -1 18 14 q0 4 -2 4 Z" ${hc('#e6a65a', '#5a4a3a')}/><path d="M336 ${F + 30} l3 -7 l4 7 Z M344 ${F + 31} l4 -6 l2 8 Z" ${hc('#e6a65a', '#5a4a3a')}/><path d="M318 ${F + 47} q-14 -2 -12 -10" ${hs('#e6a65a', '#5a4a3a')} stroke-width="4"/><path d="M338 ${F + 37} q3 2 6 0" ${hs('#5a3a28', '#2c2440')} stroke-width="1.2"/></g>`)}
     ${yHeroHtml()}
     ${busPoleHtml('sento')}
     <div class="ysel"></div>`;
@@ -8536,6 +8568,7 @@ function yardHtml(pct, place = 'yard') {
         <path d="M1128 216 L1166 200 L1084 188 L1146 174 L1066 164 L1100 152" fill="none" ${hs('#cfc8b8', '#3a3858')} stroke-width="3.4" stroke-linejoin="round"/>
         <path class="near" d="${ground} V370 H0 Z"/><path class="ridge" d="${ground}"/>
         <path class="lane" d="${stripD(LANE, 24)}"/>
+        ${[0.08, 0.2, 0.33, 0.47, 0.6, 0.74, 0.88].flatMap((t, i) => [-1, 1].map((sd) => { const [c, w] = LANE.at(t), Y = LANE.Y0 + (LANE.Y1 - LANE.Y0) * t, x = 600 + c + sd * (w + 4 + (i % 2) * 3), k = 0.6 + t * 0.8; return `<ellipse cx="${x.toFixed(1)}" cy="${(370 - Y + (i % 3)).toFixed(1)}" rx="${(3.2 * k).toFixed(1)}" ry="${(1.9 * k).toFixed(1)}" ${hc(i % 2 ? '#bdb6a6' : '#cfc8b8', '#2a2c4c')}/>`; })).join('')}
         ${[[240, 250, 1], [330, 300, 1.3], [420, 214, .9], [470, 340, 1.4], [520, 262, 1], [690, 236, 1], [740, 318, 1.3], [800, 200, .8], [880, 280, 1.2], [960, 236, 1], [1020, 330, 1.4], [300, 196, .8], [1080, 268, 1.1], [150, 300, 1.3]].map(([x, y, k], i) => `<path d="M${x - 6 * k} ${y} q${2 * k} ${-8 * k} ${1 * k} ${-14 * k} q${3 * k} ${6 * k} ${4 * k} ${12 * k} q${2 * k} ${-9 * k} ${6 * k} ${-12 * k} q${-1 * k} ${8 * k} ${1 * k} ${14 * k} Z" ${hcx('fx-tuft', '#6e9a5c', '#0e1630', `animation-delay:-${(i * 0.7) % 3}s`)}/>`).join('')}
         <rect class="trunk" x="465" y="104" width="8" height="46"/><g class="crown"><circle cx="469" cy="96" r="22"/><circle cx="452" cy="110" r="15"/><circle cx="487" cy="108" r="16"/></g>
         ${[700, 722, 744, 766].map(x => `<rect class="post" x="${x}" y="131" width="4" height="19" rx="1"/>`).join('')}<path class="rail" d="M698 138 H772 M698 145 H772"/>
@@ -8897,7 +8930,7 @@ const ROOM = (() => {
       const c = flip ? b : a, o = flip ? a : b, e = flip ? -1 : 1;   // c: the side by the wall end, o: the side by the glass, e: the way to the glass
       // along the rod from the wall end to the glass, down the glass side, along the hem, back up the wall side
       const dd = `M${c} ${q2(-rod + 0.05)} H${o} C${q2(o - e * 0.05)} ${q2(-v - 0.6)} ${q2(o + e * 0.18)} ${q2(-v + 1)} ${q2(o + e * 0.05)} ${q2(-v + 2.45)} Q${q2((a + b) / 2)} ${q2(-v + 2.6)} ${c} ${q2(-v + 2.48)} C${c} ${q2(-v + 1)} ${c} ${q2(-v - 0.8)} ${c} ${q2(-rod + 0.05)} Z`;
-      return `<g transform="${plane(0.16)}"><path ${F('#a9bfd3', face, at((a + b) / 2, 0.2, v))} d="${dd}"/><path fill="url(#fold)" d="${dd}"/></g>`;
+      return `<g transform="${plane(0.16)}"><g class="cur" style="--w:-${(Math.abs(a) * 1.7) % 6}s"><path ${F('#a9bfd3', face, at((a + b) / 2, 0.2, v))} d="${dd}"/><path fill="url(#fold)" d="${dd}"/></g></g>`;   // a breath of air in them (2026-11-10)
     };
     s += curtain(q2(X0 - 0.7), q2(X0 + 0.3), false) + curtain(q2(X1 - 0.3), q2(X1 + 0.7), true);
     return s;

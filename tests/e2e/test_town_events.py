@@ -480,6 +480,12 @@ def test_a_bench_is_drawn_over_the_hero_behind_it_and_under_him_in_front(b):
       return JSON.stringify({ behind, front, taps: getComputedStyle(bench).pointerEvents }); })()"""))
     assert r == {'behind': True, 'front': True, 'taps': 'none'}, r
 
+def test_someone_at_a_bench_sits_on_it_between_its_back_and_its_seat(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.stops = { station: 1 }; Object.keys(TOWN.CAST).forEach((id) => { state.town.seen[id] = 1; });
+      await go('station', 12); const p = [...y().querySelectorAll('.npc.bench')], z = (el) => Number(getComputedStyle(el).zIndex), layers = [...y().querySelectorAll('.land.prop')].map(z);
+      return JSON.stringify({ sitting: p.length, between: p.every((e) => layers.some((l) => l > z(e)) && layers.some((l) => l < z(e))) }); })()"""))
+    assert r == {'sitting': 1, 'between': True}, r
+
 def test_a_spot_kept_inside_a_thing_is_moved_off_it(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); localStorage.setItem('nq_hero', JSON.stringify({ izakaya: { X: 60, Y: 80 } })); yPlace = 'yard';
       TOWNEV.clock = { h: 21, day: new Date(2026, 10, 14) }; location.hash = '#/izakaya'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
