@@ -7690,6 +7690,7 @@ function beachHtml() {
   const gull = (x, y, k2) => `<g transform="translate(${x} ${y})"><g class="fx-gull" style="animation-delay:-${k2 * 6}s"><path class="hs fx-wing" d="M-14 0 q7 -9 14 0 q7 -9 14 0" style="--c:#f6f6f2;--n:#9a9ec8;animation-delay:-${k2 * 0.25}s" stroke-width="3"/></g></g>`;
   return `<svg class="land tall beach-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
       ${gull(260, -140, 0)}${gull(700, -220, 1)}${gull(980, -90, 2)}
+      <path d="M940 148 C990 128 1050 108 1110 100 C1150 96 1190 98 1220 102 V148 Z" ${hc('#a6bd96', '#161c38')}/><path d="M1124 92 l5 -6 l12 -5 l12 5 l5 6 Z" ${hc('#c8553f', '#3a2030')}/><rect x="1130" y="92" width="22" height="9" ${hc('#efe4d2', '#1e2042')}/><path d="M1138 104 L1118 112 L1140 120 L1104 130 L1128 138" fill="none" ${hs('#e3cf9e', '#3a3858')} stroke-width="1.6"/>
       <path class="sea" d="M-20 146 H1220 V242 H-20 Z"/><path class="sea-far" d="M-20 146 H1220 V158 H-20 Z"/>
       <path d="M-20 142 H120 V148 H-20 Z" ${hc('#b4ad9e', '#2a2c48')}/><rect x="116" y="114" width="8" height="30" ${hc('#f4f1ea', '#4a4c72')}/><rect x="116" y="122" width="8" height="5" ${hc('#d0453c', '#5a2030')}/><rect x="116" y="132" width="8" height="5" ${hc('#d0453c', '#5a2030')}/><circle class="fx-blink glow" cx="120" cy="112" r="6" fill="#fff3b0"/>
       <g class="fx-bob" style="animation-duration:3.2s"><path d="M640 152 h40 l-5 6 h-30 Z" ${hc('#d0574b', '#2a2c50')}/><rect x="652" y="144" width="10" height="8" ${hc('#f4f3ee', '#4a4c72')}/></g>
@@ -7703,9 +7704,6 @@ function beachHtml() {
       <rect x="760" y="196" width="130" height="62" ${hc('#c9a06a', '#2a2440')}/><path d="M744 200 L825 168 L906 200 Z" ${hc('#b9a070', '#1e1c38')}/>${[770, 790, 810, 830, 850, 870].map((x) => `<path d="M${x} 186 l-6 14" ${hs('#9a8058', '#1a1832')} stroke-width="1.4"/>`).join('')}<rect x="776" y="214" width="98" height="30" ${hc('#efe6d6', '#ffd98a')}/><text x="825" y="234" text-anchor="middle" font-size="13" font-weight="700" ${hc('#2f5a9a', '#3a3456')} font-family="system-ui, sans-serif">海の家</text>
       <path d="M900 258 V178" ${hs('#6e4f3a', '#2c2440')} stroke-width="3"/><path d="M901 180 h20 v40 h-20 Z" ${hcx('fx-flag', '#fbf7ec', '#4a4c72')}/><text x="911" y="196" text-anchor="middle" font-size="9" font-weight="700" fill="#d0453c" font-family="system-ui, sans-serif" writing-mode="tb">氷</text>
       <path d="M260 340 q30 -8 60 -2 q10 2 18 -4" fill="none" ${hs('#a8875e', '#3a3050')} stroke-width="6"/>
-      <path d="M900 250 C960 190 1020 100 1090 20 C1130 -24 1170 -40 1220 -44 V370 H900 Z" ${hc('#a6bd96', '#161c38')}/>
-      <path d="M1120 -20 L1130 -36 L1158 -48 L1186 -36 L1196 -20 Z" ${hc('#c8553f', '#3a2030')}/><rect x="1132" y="-22" width="58" height="28" ${hc('#efe4d2', '#1e2042')}/><rect class="lit" x="1140" y="-14" width="9" height="8"/><rect class="lit" x="1172" y="-14" width="9" height="8"/>
-      <path d="M1130 8 L1090 40 L1140 70 L1060 110 L1110 140 L1020 190 L1070 220 L1000 260" fill="none" ${hs('#e3cf9e', '#3a3858')} stroke-width="5" stroke-linejoin="round"/>
       <path class="near" d="M1060 370 C1074 320 1094 270 1124 232 C1150 196 1180 168 1220 156 V370 Z"/>${[1100, 1140, 1180].map((x) => `<path d="M${x} ${330 - (x - 1100) * 0.9} q4 -12 8 0 M${x + 6} ${331 - (x - 1100) * 0.9} q5 -10 9 -1" ${hs('#7f9d6c', '#1a2a3a')} stroke-width="2"/>`).join('')}
       <path d="M980 300 L1220 292 V306 L980 314 Z" ${hc('#c9a06a', '#3a2c40')}/>${Array.from({ length: 12 }, (_, k2) => `<path d="M${990 + k2 * 20} ${299.6 - k2 * 0.66} v14" ${hs('#a8804e', '#2a2440')} stroke-width="1.6"/>`).join('')}
       ${[1000, 1060, 1120, 1180].map((x) => `<rect x="${x}" y="276" width="4" height="22" ${hc('#8a6a4a', '#2c2440')}/>`).join('')}<path d="M1000 282 L1184 278" ${hs('#8a6a4a', '#2c2440')} stroke-width="2"/>
@@ -7975,11 +7973,11 @@ const OUT_PLACES = Object.keys(PLACE_ROUTE).filter((p) => p !== 'yard');   // th
 const WAYS = {
   'yard>street': { out: () => [LANE.at(1)[0], 4], in: () => [[STREET_LANE.at(0)[0], 214], [STREET_LANE.at(1)[0] + 8, 126]] },
   'street>yard': { out: () => [STREET_LANE.at(0)[0], 222], in: () => [[LANE.at(1)[0], 12], [-11, 56]] },
-  // the yard's left goes on to the beach, its right into the market (2026-11-10, the user): along the edges
-  'yard>beach': { out: () => [-YARD_HALF, 70], in: () => [[YARD_HALF, 62], [YARD_HALF - 90, 62]] },
-  'beach>yard': { out: () => [YARD_HALF, 62], in: () => [[-YARD_HALF, 70], [-YARD_HALF + 90, 70]] },
-  'yard>town': { out: () => [YARD_HALF, 70], in: () => [[-YARD_HALF, 64], [-YARD_HALF + 90, 64]] },
-  'town>yard': { out: () => [-YARD_HALF, 64], in: () => [[YARD_HALF, 70], [YARD_HALF - 90, 70]] },
+  // the yard's to the beach and the town go off towards where they are seen far below (YARD_GATE; 2026-11-10, the user)
+  'yard>beach': { out: () => YARD_GATE.beach, in: () => [[YARD_HALF, 62], [YARD_HALF - 90, 62]] },
+  'beach>yard': { out: () => [YARD_HALF, 62], in: () => [YARD_GATE.beach, [-360, 120]] },
+  'yard>town': { out: () => YARD_GATE.town, in: () => [[-YARD_HALF, 64], [-YARD_HALF + 90, 64]] },
+  'town>yard': { out: () => [-YARD_HALF, 64], in: () => [YARD_GATE.town, [360, 120]] },
   // through a shop's door in town (its door: TOWN_SHOPS, x + w − 28 − 600) into the room, in by its door on the left
   'town>shokudo': { out: () => [-36, 130], in: () => [[INDOOR_DOOR, 126], [INDOOR_DOOR + 100, 92]] },
   'shokudo>town': { out: () => [INDOOR_DOOR, 126], in: () => [[-36, 130], [-36, 98]] },
@@ -7997,6 +7995,7 @@ const WAYS = {
   'park>town': { out: () => [PARK_PATH, 222], in: () => [[180, 6], [180, 50]] }
 };
 const HARBOR_PATH = -380, PARK_PATH = 360;
+const YARD_GATE = { beach: [-470, 204], town: [480, 214] };   // the yard's edge towards the beach and the town seen far below (X, Y): their signs stand there
 function yGo(el, to) {
   yNamed(el);
   const yard = el.closest('.yard'), h = yard && yard.querySelector('.yhero'), way = WAYS[`${yPlace}>${to}`]; if (!way) return;
@@ -8425,7 +8424,6 @@ function yardHtml(pct, place = 'yard') {
         <path d="M74 214 L40 202 L118 190 L64 178 L150 168 L120 158" fill="none" ${hs('#e3cf9e', '#3a3858')} stroke-width="3.4" stroke-linejoin="round"/>
         <path d="M1128 216 L1166 200 L1084 188 L1146 174 L1066 164 L1100 152" fill="none" ${hs('#cfc8b8', '#3a3858')} stroke-width="3.4" stroke-linejoin="round"/>
         <path class="near" d="${ground} V370 H0 Z"/><path class="ridge" d="${ground}"/>
-        <path d="M-20 288 C40 286 110 290 168 298 C176 302 176 310 168 314 C110 312 40 310 -20 314 Z" ${hc('#e3cf9e', '#2c2b46')}/><path d="M1220 288 C1160 286 1090 290 1032 298 C1024 302 1024 310 1032 314 C1090 312 1160 310 1220 314 Z" ${hc('#cfc8b8', '#2a2a48')}/>
         <path class="lane" d="${stripD(LANE, 24)}"/>
         <rect class="trunk" x="465" y="104" width="8" height="46"/><g class="crown"><circle cx="469" cy="96" r="22"/><circle cx="452" cy="110" r="15"/><circle cx="487" cy="108" r="16"/></g>
         ${[700, 722, 744, 766].map(x => `<rect class="post" x="${x}" y="131" width="4" height="19" rx="1"/>`).join('')}<path class="rail" d="M698 138 H772 M698 145 H772"/>
@@ -8440,8 +8438,8 @@ function yardHtml(pct, place = 'yard') {
       </div>
       ${yHeroHtml()}
       <div class="ywares" data-sig="${yardSig()}">${yardWaresHtml()}</div>
-      <button type="button" class="thing way-btn" data-act="go-place" data-to="beach" aria-label="海邊" style="margin-left:${-YARD_HALF + 40}px;bottom:70px"><span class="tag">${ySign('wave', '海邊')}</span>${TOWNEV.dot('beach', 'yard')}</button>
-      <button type="button" class="thing way-btn" data-act="go-place" data-to="town" aria-label="商店街" style="margin-left:${YARD_HALF - 72}px;bottom:70px"><span class="tag">${ySign('shop', '商店街')}</span>${TOWNEV.dot('town', 'yard')}</button>
+      <button type="button" class="thing way-btn" data-act="go-place" data-to="beach" aria-label="海邊" style="margin-left:${YARD_GATE.beach[0] - 22}px;bottom:${YARD_GATE.beach[1] - 8}px"><span class="tag">${ySign('wave', '海邊')}</span>${TOWNEV.dot('beach', 'yard')}</button>
+      <button type="button" class="thing way-btn" data-act="go-place" data-to="town" aria-label="商店街" style="margin-left:${YARD_GATE.town[0] - 22}px;bottom:${YARD_GATE.town[1] - 8}px"><span class="tag">${ySign('shop', '商店街')}</span>${TOWNEV.dot('town', 'yard')}</button>
       <button type="button" class="thing way-btn" data-act="go-place" data-to="street" aria-label="公車站" style="margin-left:${Math.round(LANE.at(1)[0]) - 32}px;bottom:4px"><span class="tag">${ySign('bus', '公車站')}</span>${TOWNEV.dot('street', 'yard')}</button>
       <div class="mailbox${mail ? ' has' : ''}">
         <svg viewBox="0 0 52 66" aria-hidden="true">
