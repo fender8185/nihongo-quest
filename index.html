@@ -13,7 +13,7 @@
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
 <script src="./data.js?v=21"></script>
-<script src="./events.js?v=35"></script>
+<script src="./events.js?v=36"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -879,8 +879,9 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .land .fx-wing { transform-box: fill-box; transform-origin: center; animation: fxWing .5s ease-in-out infinite alternate; } @keyframes fxWing { to { transform: scaleY(.45); } }
 .sky .land .fx-gull { animation: fxGull 18s ease-in-out infinite; } @keyframes fxGull { 0% { transform: translate(0, 0); } 25% { transform: translate(160px, -30px); } 50% { transform: translate(300px, 10px); } 75% { transform: translate(150px, 30px); } 100% { transform: translate(0, 0); } }
 .sky .land .fx-beam { transform-box: view-box; animation: fxBeam 6s linear infinite; opacity: calc((1 - var(--day)) * .55); } @keyframes fxBeam { 0% { transform: scaleX(1); } 50% { transform: scaleX(-1); } 100% { transform: scaleX(1); } }
+.sky .land .fx-sweep { transform-box: view-box; animation: fxSweep 7s ease-in-out infinite alternate; } @keyframes fxSweep { from { transform: rotate(-24deg); } to { transform: rotate(30deg); } }
 .sky .land .fx-boom { transform-box: fill-box; transform-origin: center; animation: fxBoom 4.2s ease-out infinite; opacity: 0; } @keyframes fxBoom { 0%, 8% { transform: scale(.1); opacity: 0; } 12% { opacity: 1; } 45% { transform: scale(1); opacity: .9; } 70%, 100% { transform: scale(1.12); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .sky .land :is(.fx-car, .fx-train, .fx-bob, .fx-peck, .fx-sway, .fx-flag, .fx-smoke, .fx-steam, .fx-fall, .fx-ripple, .fx-blink, .fx-scroll, .fx-fly, .fx-wing, .fx-gull, .fx-beam, .fx-boom) { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .sky .land :is(.fx-sweep, .fx-car, .fx-train, .fx-bob, .fx-peck, .fx-sway, .fx-flag, .fx-smoke, .fx-steam, .fx-fall, .fx-ripple, .fx-blink, .fx-scroll, .fx-fly, .fx-wing, .fx-gull, .fx-beam, .fx-boom) { animation: none; } }
 .sky .land .seam { fill: none; stroke: color-mix(in srgb, #b4ad9e calc(var(--day) * 100%), #1c1d3e); stroke-width: 2; stroke-linecap: round; }
 .yard .hero.bench .bob { animation: none; transform: translateY(-13px); } .yard .hero.bench .h-shadow { display: none; }   /* the hips on the seat (40 up), the thighs coming at us (the legs short) */
 .yard .hero.bench .legs { transform-box: view-box; transform-origin: 2px -27px; transform: scaleY(.55); }
@@ -6047,10 +6048,10 @@ function route() {
   const r = currentRoute();
   const view = document.getElementById('view');
   const opened = r.name !== animRoute || animForce; animRoute = r.name; animForce = false;
-  const scene = ['today', 'bedroom', 'outside', 'street', 'beach', 'town'].includes(r.name);   // 書房, the bedroom and the yard: whole screens, the clock's colours
+  const scene = ['today', 'bedroom', 'outside'].includes(r.name) || OUT_PLACES.includes(r.name);   // 書房, the bedroom and the yard: whole screens, the clock's colours
   const fit = scene || r.name === 'listen';   // one screen each on a phone
   view.classList.toggle('fit', fit); document.body.classList.toggle('fit', fit); document.body.classList.toggle('scene', scene);
-  document.body.classList.toggle('today', r.name === 'today' || r.name === 'bedroom'); document.body.classList.toggle('outside', ['outside', 'street', 'beach', 'town'].includes(r.name)); themeColor();
+  document.body.classList.toggle('today', r.name === 'today' || r.name === 'bedroom'); document.body.classList.toggle('outside', r.name === 'outside' || OUT_PLACES.includes(r.name)); themeColor();
   document.body.classList.toggle('immersive', (r.name === 'mistakes' || r.name === 'vocab') && r.parts[1] === 'listen');
   const tip = document.getElementById('chartTip');
   if (tip) tip.classList.remove('show');
@@ -7105,7 +7106,7 @@ function yClimbLook(h, s) {
 }
 // how far up each place the hero walks (Y px up): the ground in front of its buildings, never up onto them (2026-11-10, the user);
 // the yard up to its house, the main road to its far pavement, a room to its floor
-const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128 };
+const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128 };
 const walkTop = (place) => WALK_TOP[place] || 214;
 function yHeroWalk(yard, to, done, free) {   // free: on the way out of the place (up the path home), past its top
   cancelAnimationFrame(yh.raf);
@@ -7356,14 +7357,18 @@ const TOWNEV = (() => {
     return here(place).map(({ id, spot, host }) => { const k = yScale(spot.Y) * (T().CAST[id].size || 1);
       return `<button type="button" class="hero npc npc-${id}${host ? ' ev-host' : ''}" data-act="npc-talk" data-npc="${id}" aria-label="${esc(T().CAST[id].name)}" style="transform:translate(${spot.X}px,${-spot.Y}px) scale(${k.toFixed(3)});z-index:${300 - spot.Y}">${art(id, place)}${host ? '<i class="ev-mark" aria-hidden="true">！</i>' : ''}</button>`; }).join('');
   }
-  // the way to the one waiting: each place's way back towards the yard, and from the yard out (the bus stop for the places the
-  // bus goes to); a dot on the sign of the next step there
-  const UP = { town: 'yard', beach: 'yard', street: 'yard', shokudo: 'town', izakaya: 'town', station: 'street', sento: 'street', shrine: 'street', castle: 'street' };
-  const PLACE_NAME = { yard: '院子', town: '小鎮', beach: '海邊', street: '公車站', shokudo: 'まんぷく食堂', izakaya: '居酒屋とり吉', station: '駅前', sento: '月の湯', shrine: '稲荷神社', castle: '白鷺城' };
+  // the way to the one waiting (2026-11-10: the map joined up all round — beach | yard | town over harbor | street | park, the two
+  // shops off the town, the bus's stops off the street and one another): the next step on a shortest way there, a dot on its sign
+  const STOPS = ['station', 'sento', 'shrine', 'castle'];
+  const ADJ = { yard: ['beach', 'town', 'street'], beach: ['yard', 'harbor'], town: ['yard', 'park', 'shokudo', 'izakaya'], street: ['yard', 'harbor', 'park'].concat(STOPS),
+    harbor: ['beach', 'street'], park: ['town', 'street'], shokudo: ['town'], izakaya: ['town'] };
+  STOPS.forEach((p) => { ADJ[p] = ['street'].concat(STOPS.filter((q) => q !== p)); });
+  const PLACE_NAME = { yard: '院子', town: '小鎮', beach: '海邊', street: '公車站', harbor: 'みなと漁港', park: 'ひだまり公園', shokudo: 'まんぷく食堂', izakaya: '居酒屋とり吉', station: '駅前', sento: '月の湯', shrine: '稲荷神社', castle: '白鷺城' };
   function hop(from, to) {
-    if (from === to) return null;
-    const chain = [to]; while (UP[chain[0]]) chain.unshift(UP[chain[0]]);
-    const i = chain.indexOf(from); return i >= 0 ? chain[i + 1] : UP[from];
+    if (from === to || !ADJ[from]) return null;
+    const first = { [from]: null }, q = [from];   // breadth first: the first step of the way each place was reached by
+    while (q.length) { const at = q.shift(); for (const n of ADJ[at] || []) { if (n in first) continue; first[n] = first[at] || n; if (n === to) return first[n]; q.push(n); } }
+    return null;
   }
   const dot = (to, from) => { const w = waiting(now(), today()); return w && hop(from, w.place) === to ? '<i class="ev-dot" aria-hidden="true"></i>' : ''; };
   const busDot = (from) => { const w = waiting(now(), today()), to = w && hop(from, w.place); return to && to !== 'yard' && BUS_PLACES.includes(to) ? '<i class="ev-dot" aria-hidden="true"></i>' : ''; };   // the way on is by bus
@@ -7674,8 +7679,14 @@ const BEACH_PROP_ART = () => `<ellipse cx="0" cy="-2" rx="112" ry="8" fill="#2b1
   <path d="M60 -38 L50 -34" ${hs('#c9c4b8', '#4a4a6a')} stroke-width="2"/>`;
 function beachHtml() {
   const k = yScale(64), [x0, y0, w, h] = BEACH_PROP;
-  return `<svg class="land" viewBox="0 0 1200 370" preserveAspectRatio="xMidYMax slice">
+  // 2026-11-10: taller, gulls over it, a fishing boat far out, the harbour's breakwater and lighthouse far off on the left (the
+  // way down there), a beach hut with its flag, driftwood; on the right a grassy bank and a boardwalk up to the yard
+  const gull = (x, y, k2) => `<g transform="translate(${x} ${y})"><g class="fx-gull" style="animation-delay:-${k2 * 6}s"><path class="hs fx-wing" d="M-14 0 q7 -9 14 0 q7 -9 14 0" style="--c:#f6f6f2;--n:#9a9ec8;animation-delay:-${k2 * 0.25}s" stroke-width="3"/></g></g>`;
+  return `<svg class="land tall beach-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
+      ${gull(260, -140, 0)}${gull(700, -220, 1)}${gull(980, -90, 2)}
       <path class="sea" d="M-20 146 H1220 V242 H-20 Z"/><path class="sea-far" d="M-20 146 H1220 V158 H-20 Z"/>
+      <path d="M-20 142 H120 V148 H-20 Z" ${hc('#b4ad9e', '#2a2c48')}/><rect x="116" y="114" width="8" height="30" ${hc('#f4f1ea', '#4a4c72')}/><rect x="116" y="122" width="8" height="5" ${hc('#d0453c', '#5a2030')}/><rect x="116" y="132" width="8" height="5" ${hc('#d0453c', '#5a2030')}/><circle class="fx-blink glow" cx="120" cy="112" r="6" fill="#fff3b0"/>
+      <g class="fx-bob" style="animation-duration:3.2s"><path d="M640 152 h40 l-5 6 h-30 Z" ${hc('#d0574b', '#2a2c50')}/><rect x="652" y="144" width="10" height="8" ${hc('#f4f3ee', '#4a4c72')}/></g>
       <path class="isle" d="M850 147 C868 132 892 124 918 132 C934 124 962 128 982 147 Z"/><path class="isle" d="M240 147 C252 140 266 138 278 147 Z"/>
       ${[[300, 172, 40], [520, 192, 60], [760, 178, 30], [640, 214, 70], [420, 226, 50], [960, 204, 44]].map(([x, y, l], i) => `<path class="glint" d="M${x} ${y} h${l}" style="--w:-${i * 0.7}s"/>`).join('')}
       <path class="wet" d="M-20 236 C200 230 400 242 600 238 S1000 230 1220 238 V258 H-20 Z"/>
@@ -7683,11 +7694,18 @@ function beachHtml() {
       <path class="sand" d="M-20 252 C300 246 700 256 1220 248 V370 H-20 Z"/>
       ${[[180, 300, '#f0c2b0'], [470, 330, '#f6e3c8'], [860, 296, '#f0c2b0'], [1010, 336, '#f6e3c8']].map(([x, y, c]) => `<path class="shell" d="M${x - 6} ${y} Q${x} ${y - 9} ${x + 6} ${y} Z" style="--c:${c}"/>`).join('')}
       <path class="star" d="M700 318 l2.4 5 5.4 .6 -4 3.6 1.2 5.4 -5 -2.8 -5 2.8 1.2 -5.4 -4 -3.6 5.4 -.6 Z"/>
+      <rect x="760" y="196" width="130" height="62" ${hc('#c9a06a', '#2a2440')}/><path d="M744 200 L825 168 L906 200 Z" ${hc('#b9a070', '#1e1c38')}/>${[770, 790, 810, 830, 850, 870].map((x) => `<path d="M${x} 186 l-6 14" ${hs('#9a8058', '#1a1832')} stroke-width="1.4"/>`).join('')}<rect x="776" y="214" width="98" height="30" ${hc('#efe6d6', '#ffd98a')}/><text x="825" y="234" text-anchor="middle" font-size="13" font-weight="700" ${hc('#2f5a9a', '#3a3456')} font-family="system-ui, sans-serif">海の家</text>
+      <path d="M900 258 V178" ${hs('#6e4f3a', '#2c2440')} stroke-width="3"/><path d="M901 180 h20 v40 h-20 Z" ${hcx('fx-flag', '#fbf7ec', '#4a4c72')}/><text x="911" y="196" text-anchor="middle" font-size="9" font-weight="700" fill="#d0453c" font-family="system-ui, sans-serif" writing-mode="tb">氷</text>
+      <path d="M260 340 q30 -8 60 -2 q10 2 18 -4" fill="none" ${hs('#a8875e', '#3a3050')} stroke-width="6"/>
+      <path class="near" d="M1060 370 C1074 320 1094 270 1124 232 C1150 196 1180 168 1220 156 V370 Z"/>${[1100, 1140, 1180].map((x) => `<path d="M${x} ${330 - (x - 1100) * 0.9} q4 -12 8 0 M${x + 6} ${331 - (x - 1100) * 0.9} q5 -10 9 -1" ${hs('#7f9d6c', '#1a2a3a')} stroke-width="2"/>`).join('')}
+      <path d="M980 300 L1220 292 V306 L980 314 Z" ${hc('#c9a06a', '#3a2c40')}/>${Array.from({ length: 12 }, (_, k2) => `<path d="M${990 + k2 * 20} ${299.6 - k2 * 0.66} v14" ${hs('#a8804e', '#2a2440')} stroke-width="1.6"/>`).join('')}
+      ${[1000, 1060, 1120, 1180].map((x) => `<rect x="${x}" y="276" width="4" height="22" ${hc('#8a6a4a', '#2c2440')}/>`).join('')}<path d="M1000 282 L1184 278" ${hs('#8a6a4a', '#2c2440')} stroke-width="2"/>
     </svg>
     ${yHeroHtml()}
     <div class="busstop beach-prop" aria-hidden="true" style="width:${w}px;height:${h}px;margin-left:${x0}px;bottom:${-(y0 + h)}px;transform-origin:${-x0}px ${-y0}px;transform:translate(-120px,-64px) scale(${k.toFixed(3)});z-index:${300 - 64}"><svg viewBox="${BEACH_PROP.join(' ')}">${BEACH_PROP_ART()}</svg></div>
     ${TOWNEV.castHtml('beach')}
     <button type="button" class="thing way-btn" data-act="go-place" data-to="yard" aria-label="回院子" style="margin-left:${YARD_HALF - 72}px;bottom:70px"><span class="tag">${ySign('today', '回院子')}</span>${TOWNEV.dot('yard', 'beach')}</button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="harbor" aria-label="往漁港" style="margin-left:-452px;bottom:14px"><span class="tag">${ySign('wave', '往漁港')}</span>${TOWNEV.dot('harbor', 'beach')}</button>
     <div class="ysel"></div>`;
 }
 // the town (test, 2026-11-09), along the yard to the right: a row of little shops on a paved street — 小春's salon first, the
@@ -7702,7 +7720,10 @@ function townHtml() {
     const st = TOWNEV.shopState(id), shut = st !== 'open', wx = x + 10, ww = w * 0.42, dx0 = x + w - 44;
     const shutter = (sx, sy, sw, sh) => `<rect x="${sx}" y="${sy}" width="${sw}" height="${sh}" rx="2" ${hc('#b9b6ae', '#2a2b48')}/>${Array.from({ length: Math.floor(sh / 7) }, (_, k) => `<path d="M${sx + 2} ${sy + 5 + k * 7} h${sw - 4}" ${hs('#9a978e', '#1e1f3a')} stroke-width="1.2"/>`).join('')}`;
     const lantern = (lx) => `<path d="M${lx} ${t + 30} v6" ${hs('#2b2b33', '#1c1d3c')} stroke-width="1.5"/><ellipse cx="${lx}" cy="${t + 46}" rx="9" ry="12" ${hc('#d84a3a', '#5a2030')}/><ellipse cx="${lx}" cy="${t + 46}" rx="18" ry="20" fill="#ffb070" style="opacity:calc((1 - var(--day, 1)) * ${st === 'open' ? 0.45 : 0})"/><path d="M${lx - 9} ${t + 46} h18" ${hs('#f6d9a0', '#6a3a40')} stroke-width="1"/>`;
+    const up = t - 66;   // the floor they live on above the shop (2026-11-10), its tiled roof
     return `<g class="shop-front${shut ? ' closed' : ''}" data-shop="${id}">
+      <rect x="${x + 4}" y="${up}" width="${w - 8}" height="66" ${hc('#efe6d6', '#1e2042')}/><rect class="lit" x="${x + 16}" y="${up + 18}" width="${w * 0.22}" height="22"/><rect class="lit" x="${x + w - 16 - w * 0.22}" y="${up + 18}" width="${w * 0.22}" height="22" style="opacity:calc(.08 + .55 * (1 - var(--day)))"/>
+      <path d="M${x - 6} ${up + 4} L${x + 10} ${up - 18} H${x + w - 10} L${x + w + 6} ${up + 4} Z" ${hc(id === 'izakaya' ? '#4a3a3a' : '#5a6470', '#15163a')}/><path d="M${x + 2} ${up - 6} H${x + w - 2}" ${hs('#6f7a88', '#1e2042')} stroke-width="1.4"/>
       <rect x="${x}" y="${t}" width="${w}" height="${h}" ${hc(wall, '#25264a')}/><rect x="${x - 4}" y="${t - 8}" width="${w + 8}" height="10" rx="2" ${hc('#8a6a52', '#1c1d3c')}/>
       <rect x="${dx - w * 0.36}" y="${t + 10}" width="${w * 0.72}" height="20" rx="3" ${hc('#fbf7ec', '#3a3b62')}/><text x="${dx}" y="${t + 25}" text-anchor="middle" font-size="13" font-weight="700" ${hc('#4a3a2c', '#c9c4e8')} font-family="system-ui, sans-serif">${sign}</text>
       <path d="M${x - 2} ${t + 38} H${x + w + 2} L${x + w - 6} ${t + 56} H${x + 6} Z" ${hc(aw, '#3a2c4a')}/>${Array.from({ length: Math.floor(w / 16) }, (_, k) => `<path d="M${x + 6 + k * 16} ${t + 56} q8 8 16 0" ${hc(aw, '#3a2c4a')}/>`).join('')}
@@ -7715,17 +7736,99 @@ function townHtml() {
     </g>`;
   };
   const lamp = (x) => `<rect x="${x - 2}" y="${TOWN_FOOT - 96}" width="4" height="96" ${hc('#4a4a55', '#1c1d3c')}/><circle cx="${x}" cy="${TOWN_FOOT - 100}" r="8" ${hc('#f2efe4', '#ffe2a0')}/><circle cx="${x}" cy="${TOWN_FOOT - 100}" r="16" fill="#ffd98a" style="opacity:calc((1 - var(--day, 1)) * .22)"/>`;
-  return `<svg class="land town-land" viewBox="0 0 1200 370" preserveAspectRatio="xMidYMax slice">
+  // 2026-11-10: wires over the street from two tall poles, bunting between the lamps, のぼり by three shops, a cat asleep on the
+  // bakery's awning, steam from its chimney; on the left a hedge and the way along from the yard
+  const nobori = (x, c, words, k) => `<path d="M${x} ${TOWN_FOOT} V${TOWN_FOOT - 120}" ${hs('#8a8f99', '#3a3d66')} stroke-width="2.4"/><path d="M${x + 1} ${TOWN_FOOT - 118} h18 v78 h-18 Z" ${hcx('fx-flag', c, '#3a3456', `animation-delay:-${k * 0.5}s`)}/><text x="${x + 10}" y="${TOWN_FOOT - 104}" text-anchor="middle" font-size="10" font-weight="700" fill="#fff" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif" writing-mode="tb">${words}</text>`;
+  const flags = Array.from({ length: 23 }, (_, k) => { const x = 150 + k * 40, t = (x - 130) / 930, y = -24 + 50 * t * (1 - t) * 2; return `<path d="M${x} ${y} l12 0 l-6 12 Z" fill="${['#d0574b', '#e6c23a', '#3f7ac8', '#4f7a4a'][k % 4]}" fill-opacity=".9"/>`; }).join('');
+  return `<svg class="land tall town-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
       <path class="far" d="M0 122 C120 100 240 104 360 118 S560 96 700 110 S900 126 1020 104 S1150 100 1200 110 V370 H0 Z"/>
       <rect class="near" x="-20" y="150" width="1240" height="220"/>
+      ${[130, 1060].map((x) => `<rect x="${x - 5}" y="-80" width="10" height="${TOWN_FOOT + 80}" ${hc('#8d8a84', '#24254a')}/><rect x="${x - 26}" y="-66" width="52" height="5" ${hc('#6f6c66', '#1c1d3e')}/>`).join('')}
+      ${[-62, -46].map((wy) => `<path class="wire" d="M-20 ${wy + 8} Q60 ${wy + 30} 130 ${wy} Q595 ${wy + 80} 1060 ${wy} Q1140 ${wy + 30} 1220 ${wy + 8}"/>`).join('')}
+      <g class="fx-peck"><ellipse cx="420" cy="-26" rx="5" ry="4" ${hc('#7a5a3e', '#1a1b36')}/><circle cx="424" cy="-29" r="2.6" ${hc('#7a5a3e', '#1a1b36')}/></g>
       ${TOWN_SHOPS.map(shop).join('')}${[300, 600, 878, 1180].map(lamp).join('')}
+      <path d="M130 -24 Q595 26 1060 -24" fill="none" ${hs('#6a6a74', '#2a2c50')} stroke-width="1.2"/>${flags}
+      ${nobori(446, '#d0574b', '焼きたて', 0)}${nobori(735, '#6e4f3a', '珈琲', 1)}${nobori(1036, '#8a2f2a', '焼き鳥', 2)}
+      <rect x="418" y="${TOWN_FOOT - 112 - 66 - 34}" width="12" height="22" ${hc('#8a6a52', '#1c1d3c')}/>${[0, 1, 2].map((k) => `<g transform="translate(424 ${TOWN_FOOT - 112 - 66 - 40})"><ellipse rx="10" ry="7" ${hcx('fx-steam', '#ffffff', '#9a9ec8', `animation-delay:-${k * 1.5}s`)}/></g>`).join('')}
+      <g transform="translate(62 0)"><g class="fx-bob" style="animation-duration:3.6s"><path d="M362 ${TOWN_FOOT - 112 + 38} q-2 -15 15 -17 q17 -1 17 13 q0 4 -2 4 Z" ${hc('#e9e2d0', '#5a5a6a')}/><path d="M379 ${TOWN_FOOT - 112 + 22} l3 -7 l4 7 Z M387 ${TOWN_FOOT - 112 + 23} l4 -6 l2 8 Z" ${hc('#e9e2d0', '#5a5a6a')}/><path d="M362 ${TOWN_FOOT - 112 + 38} q-12 4 -16 14" ${hs('#e9e2d0', '#5a5a6a')} stroke-width="4"/></g></g>
+      ${[0, 34, 68, 102].map((dx) => `<circle cx="${dx}" cy="${TOWN_FOOT - 26}" r="24" ${hc('#5a9e4d', '#0f1a30')}/>`).join('')}<rect x="-20" y="${TOWN_FOOT - 26}" width="150" height="26" ${hc('#4f8a44', '#0c162a')}/>
       <rect class="pave" x="-20" y="${TOWN_FOOT}" width="1240" height="${370 - TOWN_FOOT}"/><path class="rline" d="M-20 ${TOWN_FOOT + 1} H1220" style="stroke-dasharray:none;opacity:.5"/>
       ${Array.from({ length: 30 }, (_, j) => `<path class="seam" d="M${j * 44 - 20} ${TOWN_FOOT + 40 + (j % 3) * 30} h26"/>`).join('')}
+      <path d="M-20 296 C30 294 70 296 110 302 C118 306 118 312 110 316 C70 314 30 312 -20 316 Z" ${hc('#cfc8b8', '#2a2a48')}/>
     </svg>
     ${yHeroHtml()}
     ${TOWNEV.castHtml('town')}
     ${TOWN_SHOPS.map(([x, w, h, , , sign, id]) => `<button type="button" class="town-shop" data-act="town-shop" data-shop="${id}" aria-label="${sign}" style="margin-left:${x - 600}px;width:${w}px;bottom:${370 - TOWN_FOOT}px;height:${h}px">${INDOOR.includes(id) ? TOWNEV.dot(id, 'town') : ''}</button>`).join('')}
     <button type="button" class="thing way-btn" data-act="go-place" data-to="yard" aria-label="回院子" style="margin-left:${-YARD_HALF + 40}px;bottom:70px"><span class="tag">${ySign('today', '回院子')}</span>${TOWNEV.dot('yard', 'town')}</button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="park" aria-label="往公園" style="margin-left:148px;bottom:14px"><span class="tag">${ySign('spark', '往公園')}</span>${TOWNEV.dot('park', 'town')}</button>
+    <div class="ysel"></div>`;
+}
+// みなと漁港 (test, 2026-11-10; the map joined up): below the beach, along the street's left — the harbour's quay, boats bobbing at
+// their moorings, a breakwater out to a red lighthouse (its light swinging round by night), the fishermen's hut, crates, floats
+// and a net drying, gulls; a sandy path comes down from the beach at the back on the left
+function harborHtml() {
+  const F = 236, px = 600 + HARBOR_PATH;
+  const boat = (x, y, c, k) => `<g class="fx-bob" style="animation-delay:-${k * 0.8}s;animation-duration:${2.6 + k * 0.4}s"><path d="M${x - 60} ${y} h120 l-14 20 h-92 Z" ${hc(c, '#2a2c50')}/><rect x="${x - 14}" y="${y - 26}" width="34" height="26" rx="2" ${hc('#f4f3ee', '#4a4c72')}/><rect x="${x - 8}" y="${y - 20}" width="10" height="9" ${hc('#9fc6d6', '#ffe2a0')}/><path d="M${x + 30} ${y} V${y - 50}" ${hs('#6e4f3a', '#2c2440')} stroke-width="3"/><path d="M${x + 30} ${y - 48} l20 10" ${hs('#d0453c', '#5a2030')} stroke-width="3"/></g>`;
+  const crate = (x, y, c) => `<rect x="${x}" y="${y}" width="40" height="22" rx="2" ${hc(c, '#2a2c50')}/><path d="M${x + 4} ${y + 7} h32 M${x + 4} ${y + 14} h32" ${hs('#ffffff', '#5a5e90')} stroke-width="1.4" stroke-opacity=".6"/>`;
+  const gull = (x, y, k) => `<g transform="translate(${x} ${y})"><g class="fx-gull" style="animation-delay:-${k * 5}s"><path class="hs fx-wing" d="M-14 0 q7 -9 14 0 q7 -9 14 0" style="--c:#f6f6f2;--n:#9a9ec8;animation-delay:-${k * 0.2}s" stroke-width="3"/></g></g>`;
+  return `<svg class="land tall harbor-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
+      <path class="sea-far" d="M-20 110 H1220 V124 H-20 Z"/><path class="isle" d="M760 112 C790 96 830 90 870 104 C890 98 920 100 940 112 Z"/>
+      <path class="sea" d="M-20 122 H1220 V${F} H-20 Z"/>
+      ${[[200, 160, 50], [420, 190, 40], [640, 150, 60], [900, 200, 44], [1060, 170, 50]].map(([x, y, l], i) => `<path class="glint" d="M${x} ${y} h${l}" style="--w:-${i * 0.7}s"/>`).join('')}
+      <path d="M560 150 H1000 V162 H560 Z" ${hc('#b4ad9e', '#2a2c48')}/>${[580, 620, 660, 700, 740].map((x) => `<path d="M${x} 150 l12 -12 l12 12 l-6 8 h-12 Z" ${hc('#c9c2b4', '#323456')}/>`).join('')}
+      <path d="M990 150 V-40 H1030 V150 Z" ${hc('#f4f1ea', '#4a4c72')}/>${[0, 1, 2, 3].map((k) => `<rect x="990" y="${-20 + k * 44}" width="40" height="16" ${hc('#d0453c', '#5a2030')}/>`).join('')}
+      <rect x="982" y="-62" width="56" height="24" rx="3" ${hc('#3a4254', '#1c2240')}/><rect x="992" y="-58" width="36" height="16" rx="2" ${hc('#cfe6ec', '#fff3b0')}/><path d="M984 -62 L1010 -84 L1036 -62 Z" ${hc('#d0453c', '#5a2030')}/>
+      <path class="glow fx-sweep" d="M1010 -50 L1260 -110 L1260 10 Z" fill="#fff6cc" style="transform-origin:1010px -50px"/>
+      ${boat(180, 196, '#3f7ac8', 0)}${boat(470, 208, '#d0574b', 1)}${boat(760, 192, '#4f7a4a', 2)}
+      <path d="M-20 ${F} V128 C80 122 200 126 300 140 C330 170 340 210 360 ${F} Z" ${hc('#ecdcb0', '#2c2b46')}/><path d="M${px - 18} 132 L${px + 18} 132 L${px + 44} ${F} H${px - 16} Z" ${hc('#d9c79a', '#24243e')}/>
+      ${[40, 90, 150].map((x) => `<path d="M${x} ${F - 18} q4 -14 8 0 M${x + 6} ${F - 16} q5 -12 9 -2" ${hs('#7f9d6c', '#1a2a3a')} stroke-width="2"/>`).join('')}
+      <rect x="860" y="${F - 92}" width="220" height="92" ${hc('#c9a06a', '#2a2440')}/><path d="M846 ${F - 92} L970 ${F - 128} L1094 ${F - 92} Z" ${hc('#5a6470', '#15163a')}/>
+      <rect x="900" y="${F - 84}" width="140" height="22" rx="2" ${hc('#2f4a6e', '#1c1d3c')}/><text x="970" y="${F - 68}" text-anchor="middle" font-size="13" font-weight="700" fill="#fff" font-family="system-ui, sans-serif">みなと漁協</text>
+      <rect x="880" y="${F - 52}" width="54" height="52" ${hc('#5a3b28', '#ffd98a')}/><rect x="960" y="${F - 52}" width="90" height="34" ${hc('#cfe6ec', '#ffd98a')}/>
+      <path d="M640 ${F} V${F - 70} M760 ${F} V${F - 70}" ${hs('#6e4f3a', '#2c2440')} stroke-width="4"/><path d="M640 ${F - 66} Q700 ${F - 40} 760 ${F - 66} V${F - 20} Q700 ${F - 2} 640 ${F - 20} Z" fill="none" ${hs('#4f6f6a', '#2a3a4a')} stroke-width="1.4"/>${Array.from({ length: 7 }, (_, k) => `<path d="M${648 + k * 16} ${F - 60 + Math.abs(3 - k) * 3} V${F - 12}" ${hs('#4f6f6a', '#2a3a4a')} stroke-width="1"/>`).join('')}
+      <rect class="pave" x="-20" y="${F}" width="1240" height="134" style="fill:color-mix(in srgb, #cfcac0 calc(var(--day) * 100%), #262848)"/><path d="M-20 ${F + 2} H1220" ${hs('#9a958a', '#1c1d3e')} stroke-width="4"/>
+      ${[300, 560, 820].map((x) => `<path d="M${x - 8} ${F + 14} h16 v-10 q-8 -8 -16 0 Z" ${hc('#4a4a55', '#1c1d3c')}/>`).join('')}
+      ${crate(380, F + 30, '#3f7ac8')}${crate(424, F + 30, '#d0574b')}${crate(400, F + 10, '#3f7ac8')}${crate(1090, F + 34, '#e6a23c')}
+      ${[[700, F + 40], [722, F + 48], [742, F + 38]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="9" ${hc('#f08a3a', '#5a3a2a')}/>`).join('')}<path d="M600 ${F + 56} a18 8 0 1 0 1 0 a12 5 0 1 0 1 0" fill="none" ${hs('#c9b48a', '#4a4466')} stroke-width="3"/>
+      ${gull(300, -120, 0)}${gull(620, -60, 1)}${gull(860, -180, 2)}
+      <g transform="translate(560 ${F + 4})"><ellipse rx="8" ry="6" ${hc('#f6f6f2', '#7a7ea8')}/><circle cx="7" cy="-6" r="4" ${hc('#f6f6f2', '#7a7ea8')}/><path d="M11 -6 l4 1" ${hs('#e6a23c', '#5a4a3a')} stroke-width="2"/><path d="M-8 -2 l-6 -2" ${hs('#8a8f99', '#4a4c72')} stroke-width="3"/></g>
+    </svg>
+    ${yHeroHtml()}
+    ${TOWNEV.castHtml('harbor')}
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="beach" aria-label="往海邊" style="margin-left:${HARBOR_PATH - 32}px;bottom:186px"><span class="tag">${ySign('wave', '往海邊')}</span>${TOWNEV.dot('beach', 'harbor')}</button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="street" aria-label="往大馬路" style="margin-left:${YARD_HALF - 72}px;bottom:70px"><span class="tag">${ySign('bus', '往大馬路')}</span>${TOWNEV.dot('street', 'harbor')}</button>
+    <div class="ysel"></div>`;
+}
+// ひだまり公園 (test, 2026-11-10; the map joined up): below the town, along the street's right — a park on the hillside: houses up
+// the slope behind, stone steps down from the town at the back on the right, a slide, swings that swing, a sandbox, the park's
+// clock, a jizo in a red bib, ginkgo leaves drifting down, lamps lit by night
+function parkHtml() {
+  const F = 236, px = 600 + PARK_PATH;
+  const house = (x, top, w, roof) => `<rect x="${x}" y="${top}" width="${w}" height="${150 - top + 40}" ${hc('#efe6d6', '#1e2042')}/><path d="M${x - 8} ${top + 4} L${x + w / 2} ${top - 24} L${x + w + 8} ${top + 4} Z" ${hc(roof, '#15163a')}/><rect class="lit" x="${x + 12}" y="${top + 14}" width="16" height="14"/><rect class="lit" x="${x + w - 28}" y="${top + 14}" width="16" height="14" style="opacity:calc(.06 + .6 * (1 - var(--day)))"/>`;
+  const ginkgo = (x, s) => `<rect class="trunk" x="${x - 5 * s}" y="${F - 90 * s}" width="${10 * s}" height="${90 * s}"/><g ${hc('#e6c23a', '#3a3420')}>${[[0, -120, 44], [-30, -96, 32], [30, -98, 34], [0, -150, 30]].map(([dx, dy, r]) => `<circle cx="${x + dx * s}" cy="${F + dy * s}" r="${r * s}"/>`).join('')}</g>`;
+  const leaf = (x, y, k) => `<g transform="translate(${x} ${y})"><path d="M0 0 l-6 -8 q6 -4 12 0 Z" ${hcx('fx-fall', '#e6c23a', '#6a5a3a', `animation-delay:-${k * 1.7}s;animation-duration:${10 + (k % 3) * 2}s`)}/></g>`;
+  const swing = (x, k) => `<g class="fx-sway" style="animation-delay:-${k * 0.9}s;animation-duration:1.8s;transform-origin:${x}px ${F - 96}px;transform-box:view-box"><path d="M${x - 10} ${F - 96} V${F - 30} M${x + 10} ${F - 96} V${F - 30}" ${hs('#8a8f99', '#3a3d66')} stroke-width="2"/><rect x="${x - 14}" y="${F - 32}" width="28" height="6" rx="2" ${hc('#d0574b', '#4a2c40')}/></g>`;
+  return `<svg class="land tall park-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
+      <path class="far" d="M0 40 C200 10 420 0 600 20 S1000 40 1200 0 V370 H0 Z"/>
+      ${house(40, 70, 110, '#8a5a44')}${house(190, 50, 96, '#5f6f8a')}${house(330, 80, 120, '#6f5a7a')}${house(520, 60, 100, '#8a5a44')}${house(660, 76, 110, '#5f6f8a')}
+      <path class="near" d="M0 150 C300 130 700 140 1200 120 V370 H0 Z"/>
+      <path d="M${px - 40} 40 L${px + 40} 40 L${px + 70} ${F} L${px - 10} ${F} Z" ${hc('#c9c4b8', '#2a2c4c')}/>${Array.from({ length: 12 }, (_, k) => { const t = k / 11, y = 40 + (F - 40) * t; return `<path d="M${px - 40 + 30 * t} ${y} H${px + 40 + 30 * t}" ${hs('#a8a49a', '#22244a')} stroke-width="2"/>`; }).join('')}
+      <path d="M${px - 46} 40 L${px - 16} ${F} M${px + 46} 40 L${px + 76} ${F}" ${hs('#8a8f99', '#3a3d66')} stroke-width="3"/>
+      ${ginkgo(900, 1.2)}${ginkgo(1120, 1)}${ginkgo(80, 1.1)}
+      <path d="M-20 ${F - 4} H1220" ${hs('#8a8476', '#2a2a46')} stroke-width="3"/>${Array.from({ length: 30 }, (_, k) => `<path d="M${k * 42} ${F - 18} V${F}" ${hs('#8a8476', '#2a2a46')} stroke-width="3"/>`).join('')}<path d="M-20 ${F - 14} H1220" ${hs('#8a8476', '#2a2a46')} stroke-width="2"/>
+      <path d="M240 ${F} L300 ${F - 90} H330 V${F}" fill="none" ${hs('#3f7ac8', '#2a3460')} stroke-width="6"/><path d="M330 ${F - 90} V${F} M352 ${F - 90} V${F}" ${hs('#8a8f99', '#3a3d66')} stroke-width="4"/>${[0, 1, 2, 3, 4].map((k) => `<path d="M330 ${F - 18 - k * 18} H352" ${hs('#8a8f99', '#3a3d66')} stroke-width="3"/>`).join('')}<rect x="326" y="${F - 98}" width="30" height="10" rx="2" ${hc('#e6a23c', '#4a3a2a')}/>
+      <path d="M470 ${F} L490 ${F - 100} H610 L630 ${F}" fill="none" ${hs('#d0574b', '#4a2c40')} stroke-width="5"/>${swing(520, 0)}${swing(580, 1)}
+      <rect x="660" y="${F + 30}" width="110" height="40" rx="4" ${hc('#e6d3a8', '#3a3456')}/><rect x="660" y="${F + 30}" width="110" height="40" rx="4" fill="none" ${hs('#b9a37a', '#2a2a46')} stroke-width="5"/><path d="M690 ${F + 52} q10 -12 20 0 Z" ${hc('#d9c08a', '#3a3456')}/>
+      <rect x="800" y="${F - 120}" width="8" height="120" ${hc('#5a5a64', '#1c1d3c')}/><circle cx="804" cy="${F - 132}" r="18" ${hc('#fbf7ec', '#fff0c0')}/><circle cx="804" cy="${F - 132}" r="18" fill="none" ${hs('#3a3a44', '#3a3a44')} stroke-width="3"/><path d="M804 ${F - 132} v-11 M804 ${F - 132} l8 4" ${hs('#3b2a1c', '#3b2a1c')} stroke-width="2"/><circle class="glow" cx="804" cy="${F - 132}" r="60" fill="url(#glw)"/>
+      <rect x="114" y="${F - 12}" width="40" height="12" ${hc('#a9a497', '#2c2e4c')}/><path d="M120 ${F - 12} Q120 ${F - 52} 134 ${F - 54} Q148 ${F - 52} 148 ${F - 12} Z" ${hc('#b4ad9e', '#3a3c5e')}/><path d="M122 ${F - 32} Q134 ${F - 22} 146 ${F - 32} L144 ${F - 24} Q134 ${F - 16} 124 ${F - 24} Z" ${hc('#d0453c', '#5a2030')}/>
+      ${[[200, F + 60], [980, F + 60]].map(([x, y]) => `<rect x="${x}" y="${y}" width="90" height="8" rx="2" ${hc('#c58a54', '#3a2c40')}/><rect x="${x + 8}" y="${y + 8}" width="6" height="16" ${hc('#6e4f3a', '#2c2440')}/><rect x="${x + 76}" y="${y + 8}" width="6" height="16" ${hc('#6e4f3a', '#2c2440')}/>`).join('')}
+      ${[[880, -60], [1000, -20], [1100, -80], [60, -40], [160, -90], [700, 20]].map(([x, y], k) => leaf(x, y, k)).join('')}
+      <rect x="-20" y="${F}" width="1240" height="134" ${hc('#d9c7a2', '#2a2846')}/>${Array.from({ length: 22 }, (_, j) => `<path d="M${j * 56} ${F + 30 + (j % 3) * 28} q6 -6 12 0" ${hs('#c2ad84', '#22203e')} stroke-width="2"/>`).join('')}
+    </svg>
+    ${yHeroHtml()}
+    ${TOWNEV.castHtml('park')}
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="town" aria-label="往小鎮" style="margin-left:${PARK_PATH - 32}px;bottom:186px"><span class="tag">${ySign('shop', '往小鎮')}</span>${TOWNEV.dot('town', 'park')}</button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="street" aria-label="往大馬路" style="margin-left:${-YARD_HALF + 40}px;bottom:70px"><span class="tag">${ySign('bus', '往大馬路')}</span>${TOWNEV.dot('street', 'park')}</button>
     <div class="ysel"></div>`;
 }
 // the two shops one can walk into (test, 2026-11-09): drawn like the places out of doors, a land 1200 wide — here a room, the
@@ -7840,12 +7943,14 @@ function streetHtml() {
     ${busStopHtml()}
     ${TOWNEV.castHtml('street')}
     <button type="button" class="thing way-btn" data-act="go-place" data-to="yard" aria-label="回家" style="margin-left:${Math.round(STREET_LANE.at(0)[0]) - 32}px;bottom:${STREET_LANE.Y0 - 30}px"><span class="tag">${ySign('today', '回家')}</span>${TOWNEV.dot('yard', 'street')}</button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="harbor" aria-label="往漁港" style="margin-left:${-YARD_HALF + 40}px;bottom:58px"><span class="tag">${ySign('wave', '往漁港')}</span>${TOWNEV.dot('harbor', 'street')}</button>
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="park" aria-label="往公園" style="margin-left:${YARD_HALF - 72}px;bottom:58px"><span class="tag">${ySign('spark', '往公園')}</span>${TOWNEV.dot('park', 'street')}</button>
     <div class="ysel"></div>`;
 }
 // between the places out of doors (test, 2026-11-09): the yard's path down to the main road, the yard's left edge along to the
 // beach. The hero walks to the way out (out), fades, and the other place opens with him coming in (in: where he appears, where
 // he walks to; yh.arrive)
-const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento', shrine: '#/shrine', castle: '#/castle' };
+const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', harbor: '#/harbor', park: '#/park', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento', shrine: '#/shrine', castle: '#/castle' };
 const OUT_PLACES = Object.keys(PLACE_ROUTE).filter((p) => p !== 'yard');   // the places out and about besides the yard, each its own route
 const WAYS = {
   'yard>street': { out: () => [LANE.at(1)[0], 4], in: () => [[STREET_LANE.at(0)[0], 214], [STREET_LANE.at(1)[0] + 8, 126]] },
@@ -7858,8 +7963,19 @@ const WAYS = {
   'town>shokudo': { out: () => [-36, 130], in: () => [[INDOOR_DOOR, 126], [INDOOR_DOOR + 100, 92]] },
   'shokudo>town': { out: () => [INDOOR_DOOR, 126], in: () => [[-36, 130], [-36, 98]] },
   'town>izakaya': { out: () => [402, 130], in: () => [[INDOOR_DOOR, 126], [INDOOR_DOOR + 100, 92]] },
-  'izakaya>town': { out: () => [INDOOR_DOOR, 126], in: () => [[402, 130], [402, 98]] }
+  'izakaya>town': { out: () => [INDOOR_DOOR, 126], in: () => [[402, 130], [402, 98]] },
+  // 2026-11-10, the map joined up: along the edges in a row (the near pavement or the shore), down to the viewer and in by a path
+  // from the back between the rows (the beach down to the harbor, the town down to the park)
+  'street>harbor': { out: () => [-YARD_HALF, 40], in: () => [[YARD_HALF, 40], [YARD_HALF - 90, 40]] },
+  'harbor>street': { out: () => [YARD_HALF, 40], in: () => [[-YARD_HALF, 40], [-YARD_HALF + 90, 40]] },
+  'street>park': { out: () => [YARD_HALF, 40], in: () => [[-YARD_HALF, 40], [-YARD_HALF + 90, 40]] },
+  'park>street': { out: () => [-YARD_HALF, 40], in: () => [[YARD_HALF, 40], [YARD_HALF - 90, 40]] },
+  'beach>harbor': { out: () => [-420, 4], in: () => [[HARBOR_PATH, 214], [HARBOR_PATH + 20, 104]] },
+  'harbor>beach': { out: () => [HARBOR_PATH, 222], in: () => [[-420, 6], [-400, 50]] },
+  'town>park': { out: () => [180, 4], in: () => [[PARK_PATH, 214], [PARK_PATH - 20, 104]] },
+  'park>town': { out: () => [PARK_PATH, 222], in: () => [[180, 6], [180, 50]] }
 };
+const HARBOR_PATH = -380, PARK_PATH = 360;   // where the path from the row above comes down at the back (X)
 function yGo(el, to) {
   yNamed(el);
   const yard = el.closest('.yard'), h = yard && yard.querySelector('.yhero'), way = WAYS[`${yPlace}>${to}`]; if (!way) return;
@@ -8262,7 +8378,7 @@ function yardHtml(pct, place = 'yard') {
         <div class="birds"><div class="flock">${[[52, 14], [38, 6], [38, 22], [24, 0], [24, 28]].map(([x, y]) => `<i style="left:${x}px;top:${y}px"></i>`).join('')}</div></div>
       </div>
       <div class="yworld" style="width:${yw}px;margin-left:${-yw / 2}px">
-      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : place === 'shrine' ? shrineHtml() : place === 'castle' ? castleHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
+      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'harbor' ? harborHtml() : place === 'park' ? parkHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : place === 'shrine' ? shrineHtml() : place === 'castle' ? castleHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
         <defs><radialGradient id="shopGlow"><stop offset="0" stop-color="rgba(255,196,110,.55)"/><stop offset=".5" stop-color="rgba(255,196,110,.16)"/><stop offset="1" stop-color="rgba(255,196,110,0)"/></radialGradient></defs>
         <path class="m-far" d="M520 600 V340 C560 330 600 314 640 304 C670 296 700 294 730 298 C770 306 810 328 860 342 V600 Z"/>
         <path class="m-main" d="${HILL} V600 Z"/><path class="m-shade" d="M482 250 C494 248 506 256 520 268 C552 296 594 326 646 350 V372 C590 340 548 306 516 280 C502 268 492 258 482 250 Z"/><path class="m-rim" d="${HILL}"/>
@@ -8271,12 +8387,16 @@ function yardHtml(pct, place = 'yard') {
         <g transform="translate(482 254) scale(.8)">${SHOP_ART}</g>
       </svg>
       <svg class="land" viewBox="0 0 1200 370" preserveAspectRatio="xMidYMax slice">
+        <path class="sea" d="M-20 100 C60 98 140 100 230 106 L230 126 C140 124 60 124 -20 126 Z"/>${[[1086, 104], [1124, 98], [1166, 106]].map(([x, y]) => `<path d="M${x - 16} ${y + 12} L${x} ${y} L${x + 16} ${y + 12} Z" ${hc('#8a5a44', '#15163a')}/><rect x="${x - 12}" y="${y + 12}" width="24" height="8" ${hc('#efe4d2', '#1e2042')}/>`).join('')}
         <path class="far" d="M0 118 C110 96 210 98 320 114 S520 90 640 104 S860 124 990 98 S1140 94 1200 106 V370 H0 Z"/>
         <path class="near" d="${ground} V370 H0 Z"/><path class="ridge" d="${ground}"/>
         <path class="lane" d="${stripD(LANE, 24)}"/>
         <rect class="trunk" x="465" y="104" width="8" height="46"/><g class="crown"><circle cx="469" cy="96" r="22"/><circle cx="452" cy="110" r="15"/><circle cx="487" cy="108" r="16"/></g>
         <rect class="trunk" x="166" y="113" width="7" height="41"/><g class="crown"><circle cx="169.5" cy="105" r="19"/><circle cx="155" cy="117" r="13"/><circle cx="184" cy="116" r="14"/></g>
         <rect class="trunk" x="1036" y="110" width="8" height="42"/><g class="crown"><circle cx="1040" cy="101" r="21"/><circle cx="1024" cy="114" r="14"/><circle cx="1057" cy="113" r="15"/></g>
+        <path d="M-20 290 C40 286 100 290 150 298 C158 302 158 310 150 314 C100 312 40 310 -20 314 Z" ${hc('#ecdcb0', '#2c2b46')}/>${[30, 70, 118].map((x) => `<path d="M${x} 290 q3 -12 6 0 M${x + 5} 291 q4 -10 8 -1" ${hs('#7f9d6c', '#1a2a3a')} stroke-width="2"/>`).join('')}
+        <path d="M1050 298 C1100 292 1160 292 1220 294 V316 C1160 314 1100 314 1050 318 Z" ${hc('#cfc8b8', '#2a2a48')}/>${[1070, 1110, 1150, 1190].map((x) => `<path d="M${x} 300 v14" ${hs('#b4ad9e', '#22224a')} stroke-width="2"/>`).join('')}
+        <rect x="1176" y="220" width="5" height="76" ${hc('#4a4a55', '#1c1d3c')}/><circle cx="1178.5" cy="216" r="7" ${hc('#f2efe4', '#ffe2a0')}/>
         ${[700, 722, 744, 766].map(x => `<rect class="post" x="${x}" y="131" width="4" height="19" rx="1"/>`).join('')}<path class="rail" d="M698 138 H772 M698 145 H772"/>
       </svg>
       <div class="flowers">${SKY.flowers.map(q => `<i class="fl" style="left:${q.x}%;bottom:${q.y}px;--c:${q.c};--d:${q.d}s;--w:-${q.w}s"></i>`).join('')}</div>

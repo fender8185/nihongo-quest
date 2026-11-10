@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 35 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 36 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -6,7 +6,7 @@
    docs/superpowers/specs/2026-11-09-town-events-design.md. */
 const TOWN = {
   // the places index.html draws people in (a new one goes here when it is drawn: street, station, sento, shrine, castle)
-  PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle'],
+  PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park'],
   // names of people, shops and places: no gloss needed
   NAMES: ['美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野'],
   // the shops' hours (the world's time: the phone's, or where a sleep moved it on; to < from runs past midnight)
@@ -25,6 +25,8 @@ const TOWN = {
     castle: { gate: { X: -340, Y: 110 }, info: { X: -110, Y: 112 }, plaza: { X: 60, Y: 78 }, keep: { X: 250, Y: 120 } },
     shrine: { haiden: { X: 300, Y: 118 }, torii: { X: -420, Y: 96 }, ennichi: { X: -60, Y: 86 }, ennichi2: { X: 80, Y: 92 }, stall: { X: -150, Y: 112 } },
     sento: { door: { X: -40, Y: 124 }, bench: { X: -260, Y: 70 }, milk: { X: -360, Y: 112 } },
+    harbor: { pier: { X: 120, Y: 96 }, hut: { X: 370, Y: 112 } },
+    park: { slide: { X: -220, Y: 92 }, bench: { X: 140, Y: 62 } },
     station: { taxi: { X: -430, Y: 96 }, gate: { X: -60, Y: 120 }, koban: { X: 330, Y: 112 }, plaza: { X: -300, Y: 70 }, stop: { X: 470, Y: 80 } }
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they
@@ -42,7 +44,7 @@ const TOWN = {
       hours: [[5, 21, 'town', 'bakery']] },
     miku: { name: '美玖', kana: 'みく', role: '健太的女兒', size: 0.72, look: { face: 'mochi', skin: '#f8dcc8', cheeks: 'blush', fringe: 'blunt', sides: 'above', hairBack: 'short', hairTop: 'twinbuns', hairColor: '#3b2f2a', eyes: 'big', eyeColor: '#2a2730', brows: 'soft', mouth: 'o', beard: 'none', topStyle: 'tee', top: '#d9a43a', bottomStyle: 'skirt', bottom: '#e58fa8', shoeStyle: 'sneaker', shoe: '#d0574b' },
       bio: ['健太的女兒，5 歲，上幼稚園。好奇心旺盛，看到什麼都要問「これ、なに？」「どうして？」。', '最喜歡花店的陽菜姊姊。'],
-      hours: [[7, 20, 'town', 'bakeryIn']] },
+      hours: [[15, 17, 'park', 'slide'], [7, 20, 'town', 'bakeryIn']] },   // after school a while in ひだまり公園
     hina: { name: '日向 陽菜', kana: 'ひなた ひな', role: '花屋', shop: 'flowers', look: { face: 'chubby', skin: '#f3d1b5', cheeks: 'soft', fringe: 'airy', sides: 'wisps', hairBack: 'short', hairTop: 'ponytail', hairColor: '#6b4a32', eyes: 'sharp', eyeColor: '#3f7a52', brows: 'raised', mouth: 'grin', beard: 'none', topStyle: 'shirt', top: '#ecebe6', bottomStyle: 'skirt', bottom: '#3f4660', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { neck: 'bowtie' },
       bio: ['高中二年級，17 歲，放學後幫媽媽顧「ひなた花店」。急性子、直率、愛吐槽，其實很細心。', '說話是年輕人的常體。想去東京念設計，為這件事跟媽媽吵架。'],
       festa: { topStyle: 'yukata', top: '#3f4660' },   // the 緣日: a navy yukata
@@ -85,7 +87,7 @@ const TOWN = {
       hours: [[7, 9, 'station', 'plaza'], [19, 24, 'izakaya', 'seat2']] },
     kenji: { name: '林 健二', kana: 'はやし けんじ', role: '漁師', look: { face: 'pointed', skin: '#a9714d', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'sharp', eyeColor: '#2a2730', brows: 'thick', mouth: 'flat', beard: 'stubble', topStyle: 'tee', top: '#4f6f9e', bottomStyle: 'wide', bottom: '#6b7a45', shoeStyle: 'boots', shoe: '#2b2b33' }, wear: { head: 'nejiri', body: 'apron', apron: '#4f7a4a' },
       bio: ['林美玲的先生，46 歲，漁夫。話很少，一開口就是常體短句。', '以前跟鉄平一起出海。天還沒亮就在海邊整理漁網。'],
-      hours: [[5, 10, 'beach', 'shore'], [19, 23, 'izakaya', 'seat1']] },
+      hours: [[5, 10, 'beach', 'shore'], [10, 14, 'harbor', 'pier'], [19, 23, 'izakaya', 'seat1']] },
     suzuki: { name: '鈴木 茂', kana: 'すずき しげる', role: 'タクシー運転手', look: { face: 'chubby', skin: '#e8bd98', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'mustache', topStyle: 'shirt', top: '#ecebe6', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'cap', cap: '#2b2b33', neck: 'necktie', tie: '#3f4660' },
       bio: ['計程車司機，56 歲。這一帶每條路都熟，最愛教人怎麼走。', '每天中午在まんぷく食堂吃同一份炸雞定食。說話是大叔常體。'],
       hours: [[8, 12, 'station', 'taxi'], [12, 15, 'shokudo', 'table2'], [15, 19, 'station', 'taxi']] },

@@ -502,6 +502,25 @@ def test_a_finger_on_someone_lands_on_them(b):
       return JSON.stringify({ mugi, kenta }); })()"""))
     assert r == {'mugi': True, 'kenta': True}, r
 
+# ---- the map joined up (2026-11-10, the user): beach | yard | town over harbor | street | park ----
+def test_the_map_joins_up_all_round(b):
+    r = json.loads(ev(b, """(() => { const pairs = [['yard', 'beach'], ['yard', 'town'], ['yard', 'street'], ['beach', 'harbor'], ['harbor', 'street'], ['street', 'park'], ['park', 'town']];
+      return JSON.stringify({ ways: pairs.filter(([a, c]) => !(WAYS[a + '>' + c] && WAYS[c + '>' + a])), routes: ['harbor', 'park'].map((p) => PLACE_ROUTE[p]),
+        hops: [TOWNEV.hop('harbor', 'town'), TOWNEV.hop('park', 'beach'), TOWNEV.hop('beach', 'street'), TOWNEV.hop('town', 'station'), TOWNEV.hop('harbor', 'izakaya')], names: [TOWNEV.PLACE_NAME.harbor, TOWNEV.PLACE_NAME.park] }); })()"""))
+    assert r['ways'] == [] and r['routes'] == ['#/harbor', '#/park'], r
+    assert r['hops'] == ['beach', 'town', 'yard', 'yard', 'beach'], r   # the next step on a shortest way (ties: the first way of a place)
+    assert r['names'] == ['みなと漁港', 'ひだまり公園'], r
+
+def test_the_harbor_and_the_park_have_their_ways_on_and_every_place_out_is_a_scene(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ state.town.stops = { station: 1, sento: 1, shrine: 1, castle: 1 }; const out = {};
+      for (const p of ['harbor', 'park', 'beach', 'street', 'town', 'station', 'izakaya']) { await go(p, 20); out[p] = { ways: [...y().querySelectorAll('.way-btn')].map((w) => w.dataset.to).sort(), scene: document.body.classList.contains('scene') && document.body.classList.contains('outside') }; }
+      await go('street', 12); y().querySelector('.way-btn[data-to="harbor"]').click(); for (let i = 0; i < 60 && location.hash !== '#/harbor'; i++) await wait(100);
+      out.walked = location.hash; return JSON.stringify(out); })()"""))
+    assert r['harbor']['ways'] == ['beach', 'street'] and r['park']['ways'] == ['street', 'town'], r
+    assert 'harbor' in r['beach']['ways'] and {'harbor', 'park'} <= set(r['street']['ways']) and 'park' in r['town']['ways'], r
+    assert all(r[p]['scene'] for p in ['harbor', 'park', 'beach', 'street', 'town', 'station', 'izakaya']), r   # the clock ticks and the page is the scene
+    assert r['walked'] == '#/harbor', r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
