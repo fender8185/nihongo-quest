@@ -714,16 +714,20 @@ def test_i_know_gives_five_stars_and_mastery_waits_for_the_spelling(b):
     assert r['label'] == '熟悉' and r['b'] >= 5 and r['due'] >= 30 and r['mastered'] == 0 and r['known'] == 1, r
     assert r['afterSpell'] == '已熟練' and r['afterMiss'] != '已熟練' and r['knownAfterMiss'] is None and r['afterUndo'] == '熟悉', r
 
-def test_i_know_this_word_button_is_on_the_word_list_and_the_practice_feedback(b):
-    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x) && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 2 && x.r.length <= 8); const theme = vocabTheme(v);
+# 2026-11-10 (the user): nothing to set right after an answer — no ⋯, 振假名, 這個字我已經會了 or 這題有問題; 發音 and 例句 stay.
+# The new word's preview card keeps 我會了 (skipping a word already known) and lost 振假名 too
+def test_i_know_this_word_button_is_on_the_word_list_not_after_an_answer(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.ex && meaningOptions(x) && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 2 && x.r.length <= 8); const theme = vocabTheme(v);
       renderVocabList(document.getElementById('view'), { c: theme }); const row = document.querySelector(`[data-act=vocab-known][data-key="${v.key}"]`); const out = { listBtn: !!row };
-      startSession('items', { items: [v] }); const e = currentEntry(); e.preview = false; e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice(); answerCurrent(e.q.answer);
-      const btn = document.querySelector('.more-items [data-act=vocab-known]'); out.fbBtn = !!btn; if (btn) btn.click();
-      const fm = document.querySelector('.fb-meta'); out.meta = fm ? fm.textContent + [...fm.querySelectorAll('[title]')].map(x => x.title).join(' ') : ''; out.encoresLeft = SESSION.entries.filter(x => x.encore && x.item.key === v.key).length; out.label = srsLevelLabel(state.srs[v.key], v.key);
-      renderPractice(); out.fbAfter = Boolean(document.querySelector('.more-items [data-act=vocab-known]'));   // vouched for: not offered again
+      startSession('items', { items: [v] }); const e = currentEntry(); renderPractice();   // the new word's preview card: 我會了 stays, no 振假名
+      out.preview = { known: !!document.querySelector('#view [data-act=preview-known]'), furi: !!document.querySelector('#view [data-act=toggle-furi]') };
+      e.preview = false; e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice(); answerCurrent(e.q.answer);
+      out.acts = [...document.querySelectorAll('#view .pr-actions:not(.pr-ghost) [data-act]')].map(x => x.dataset.act);
+      out.gone = ['vocab-known', 'more-toggle', 'toggle-furi', 'report-item'].filter(a => document.querySelector(`#view [data-act="${a}"]`));
       SESSION = null; document.body.classList.remove('practicing'); delete state.srs[v.key]; return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
-    assert r['listBtn'] and r['fbBtn'] and r['label'] == '熟悉' and '熟悉' in r['meta'] and r['fbAfter'] is False and r['encoresLeft'] == 0, r
+    assert r['listBtn'] and r['gone'] == [] and r['acts'] == ['replay', 'speak-example'], r
+    assert r['preview'] == {'known': True, 'furi': False}, r
 
 # final review: on the flashcard page too, a word vouched for with 我會了 is not offered 我會了 again (it reads 熟悉 until spelled)
 def test_flashcard_i_know_is_not_offered_again_once_vouched(b):
@@ -737,7 +741,7 @@ def test_flashcard_i_know_is_not_offered_again_once_vouched(b):
     r = json.loads(ev(b, js))
     assert r == {'before': True, 'after': False, 'known': 1, 'label': '熟悉'}, r
 
-TESTS += [test_i_know_gives_five_stars_and_mastery_waits_for_the_spelling, test_i_know_this_word_button_is_on_the_word_list_and_the_practice_feedback, test_flashcard_i_know_is_not_offered_again_once_vouched]
+TESTS += [test_i_know_gives_five_stars_and_mastery_waits_for_the_spelling, test_i_know_this_word_button_is_on_the_word_list_not_after_an_answer, test_flashcard_i_know_is_not_offered_again_once_vouched]
 
 # ---- 2026-10-27: matching — a wrong pair flashes red, the feedback explains every pair ----
 def test_matching_flashes_a_wrong_pair_and_explains_every_pair_afterwards(b):
@@ -756,7 +760,7 @@ def test_matching_flashes_a_wrong_pair_and_explains_every_pair_afterwards(b):
 
 TESTS += [test_matching_flashes_a_wrong_pair_and_explains_every_pair_afterwards]
 
-# ---- 2026-10-27: 句意 distractors — particle questions ask for the usage (point names), others use look-alike sentences ----
+# ---- 2026-10-27: 句意 distractors — particle questions ask for the usage (point names) ----
 def test_particle_questions_ask_for_the_usage_with_other_points_as_options(b):
     js = """(() => { const g = REG.grammar.find(x => x.u === 'm1' && (x.t || 'choice') === 'choice' && x.pt === '動作場所'); srsAnswer(g.key, true);
       const q = makeGrammarQuestion(g, { forceFmt: 'g-meaning' }); const opts = q.options.map(o => o.text);
@@ -768,18 +772,17 @@ def test_particle_questions_ask_for_the_usage_with_other_points_as_options(b):
     assert r['fmt'] == 'g-meaning' and r['ans'] == '動作場所' and r['n'] == 4 and r['allPts'] and r['badSynonym'] == [] and r['stem'] and r['zh'] == '', r
     assert '用法' in r['instr'] or '表示' in r['instr'], r
 
-def test_meaning_distractors_for_other_items_are_look_alike_sentences(b):
-    js = """(() => { const g = REG.grammar.find(x => x.u === 'm7' && (x.t || 'choice') === 'choice' && x.zh && !/^[にでをがへとはの]$/.test(x.a)); srsAnswer(g.key, true);
-      const content = (z) => [...z].filter(c => /[\u4e00-\u9fff]/.test(c) && !'的了是我你他她在有不也和就都很'.includes(c));
-      const shared = (z) => content(z).filter(c => g.zh.includes(c)).length;
-      const q = makeGrammarQuestion(g, { forceFmt: 'g-meaning' }); const d = q.options.map(o => o.text).filter(t => t !== g.zh);
-      const pool = REG.grammar.filter(x => x.key !== g.key && x.zh && x.zh !== g.zh).map(x => shared(x.zh)); const best = pool.sort((a, b2) => b2 - a).slice(0, 3);
-      return JSON.stringify({ fmt: q.fmt, ans: q.options[q.answer].text === g.zh, d: d.map(shared), best, nd: d.length }); })()"""
+# 2026-11-10 (the user): the four whole sentences of 句意 (other items' Chinese) are gone — one known word gave them away. A particle keeps
+# its 用法 question; the other fill-ins put their Chinese together from pieces (test_tiles)
+def test_meaning_is_never_four_sentences_from_other_items(b):
+    js = """(() => { const t = todayStr(); const G = REG.grammar.filter(g => (g.t || 'choice') === 'choice' && g.zh && !grammarUsageDistractors(g)).slice(0, 200);
+      const seen = new Set(); G.forEach(g => { state.srs[g.key] = { b: 3, due: t, n: 3, ok: 3, ng: 0, s: 6, d: 5, last: addDays(t, -6), gf: { 'g-choice': [3, 0] } };
+        for (let i = 0; i < 4; i++) { const q = makeQuestion(g, {}); if (q) seen.add(q.fmt); } delete state.srs[g.key]; });
+      return JSON.stringify({ seen: [...seen].sort(), forced: makeGrammarQuestion(G[0], { forceFmt: 'g-meaning' }).fmt }); })()"""
     r = json.loads(ev(b, js))
-    assert r['fmt'] == 'g-meaning' and r['ans'] and r['nd'] == 3, r
-    assert min(r['d']) >= 2 and r['best'][0] >= 2, r   # every distractor shares content characters with the right sentence
+    assert 'g-meaning' not in r['seen'] and r['forced'] == 'g-choice', r
 
-TESTS += [test_particle_questions_ask_for_the_usage_with_other_points_as_options, test_meaning_distractors_for_other_items_are_look_alike_sentences]
+TESTS += [test_particle_questions_ask_for_the_usage_with_other_points_as_options, test_meaning_is_never_four_sentences_from_other_items]
 
 # ---- 2026-10-27: learners with a base — open N4 words early, bulk 我會了, 我會了 on the preview card, one-click fast settings ----
 # 1.0.32 每一級封死: N4 opens once N5's words, kanji and units are all done (seeing every N5 word is no longer enough)

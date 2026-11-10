@@ -43,7 +43,7 @@ def test_phone_result_rises_in_a_panel_and_the_options_stay(b):
       const ghost = document.querySelector('.pr-actions.pr-ghost');
       const out = { same: tops() === before, cls: sh.className, head: !!sh.querySelector('.fb-head'), rows: [...sh.querySelectorAll('.fb-opts .fb-opt')].map(r => [r.className.replace('fb-opt', '').trim(), jaPlain(r.querySelector('.fb-mark + span').textContent), !!r.querySelector('.fb-you')]),
         right: jaPlain(q.options[q.answer].text),
-        pickText: jaPlain(q.options[pick].text), next: !!sh.querySelector('.pr-next > #btnNext'), tools: !!sh.querySelector('.pr-actions:not(.pr-ghost) [data-act=more-toggle]'),
+        pickText: jaPlain(q.options[pick].text), next: !!sh.querySelector('.pr-next > #btnNext'), tools: !!sh.querySelector('.pr-actions:not(.pr-ghost) [data-act=replay]'),
         ghostInert: !!ghost && ghost.inert, inCard: !!card.querySelector('.feedback'), tall: sh.getBoundingClientRect().height / innerHeight,
         room: document.getElementById('view').style.getPropertyValue('--sheet-h') === sh.offsetHeight + 'px', names: sh.getAnimations().map(a => a.animationName) };
       renderPractice(); const again = { cls: document.querySelector('.fb-sheet').className, same: tops() === before };   // 顯示中文, a sync: drawn again

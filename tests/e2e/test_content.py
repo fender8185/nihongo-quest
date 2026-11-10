@@ -54,8 +54,8 @@ def test_week0_items_are_kana_only_and_cover_five_points(b):
       const words = new Set(REG.vocab.map(v => v.w)); const gen = new Set(cloudAudioTexts().map(x => x.text)); const full = (g) => g.t === 'choice' ? g.jp.replace(/（[^）]*）/, g.a) : g.jp;
       return JSON.stringify({ n: G.length, pts: G.reduce((m, g) => (m[g.pt] = (m[g.pt] || 0) + 1, m), {}), secs: G.map(g => [g.pt, g.sec]),
         kanji: G.filter(g => /[一-龯々]/.test(ja(g))).map(g => g.id), kata: [...new Set(G.flatMap(g => ja(g).match(/[ァ-ヶー]{2,}/g) || []))].filter(w => !words.has(w)),
-        dupFull: G.length - new Set(G.map(full)).size, built: G.filter(g => { const q = makeQuestion(g, {}); return q && q.options.length === 4; }).length,
-        fmts: G.filter(g => g.t === 'choice').every(g => ['g-choice', 'g-meaning'].every(f => makeGrammarQuestion(g, { forceFmt: f }))),
+        dupFull: G.length - new Set(G.map(full)).size, built: G.filter(g => { const q = makeQuestion(g, {}); return q && (q.custom === 'g-zh' ? q.tiles.length >= 4 : q.options.length === 4); }).length,   // 句意拼貼: pieces and decoys
+        fmts: G.filter(g => g.t === 'choice').every(g => grammarFormats(g).every(f => { const q = makeGrammarQuestion(g, { forceFmt: f }); return q && q.fmt === f; })),
         inGen: G.filter(g => !gen.has(ttsText(full(g)))).map(g => g.id) }); })()"""
     r = json.loads(ev(b, js))
     assert r['n'] == 20 and r['pts'] == {k: 4 for k in WEEK0_PTS}, r
@@ -80,7 +80,7 @@ def test_sentence_choice_is_gone_and_week0_keeps_its_five_as_fill_ins(b):
       return JSON.stringify({ types: [...new Set(G.map(g => g.t || 'choice'))], data: DATA.GRAMMAR.filter(g => g.t === 'correct').length, seen: [...seen].sort(), w0, ai }); })()""".replace('__W0__', json.dumps(WEEK0_FILLS, ensure_ascii=False))
     r = json.loads(ev(b, js))
     assert 'correct' not in r['types'] and r['data'] == 0, r
-    assert r['seen'] == ['g-choice', 'g-meaning'], r
+    assert r['seen'] == ['g-choice', 'g-meaning', 'g-zh'], r   # 2026-11-10: 句意 is 用法 for a particle, 句意拼貼 for the rest
     assert r['w0'] == {k: {'t': 'choice', 'rest': v} for k, v in WEEK0_FILLS.items()}, r['w0']
     assert r['ai'] is None, r
 
@@ -476,6 +476,16 @@ def test_n3_formal_mode_plays_only_the_scene_and_reply_options(b):   # N3's 発�
       const kinds = [...new Set(EXAM.paper.map(q => q.mk + ':' + Boolean(q.audioOptions)))].sort();
       if (typeof examTimer !== 'undefined') clearInterval(examTimer); EXAM = null; document.body.classList.remove('practicing'); return JSON.stringify(kinds); })()"""
     assert json.loads(ev(b, js)) == ['gist:false', 'resp:true', 'scene:true', 'task:false']
+
+# 2026-11-10 (the user): 句意拼貼 — every item with pieces (fill-ins and 句意 items) builds the question from them: its own pieces and its
+# decoys as tiles, its Chinese as the answer; a particle that is asked its 用法 has none
+def test_zh_pieces_build_for_every_item_that_has_them(b):
+    js = """(() => { const G = REG.grammar.filter(g => g.zt);
+      const bad = G.filter(g => { const q = makeGrammarQuestion(g, { forceFmt: 'g-zh' }); return !q || q.fmt !== 'g-zh' || q.tiles.length !== g.zt.length + g.zd.length || q.options[0].text !== (g.t === 'meaning' ? g.a : g.zh); }).map(g => g.id);
+      const usage = G.filter(g => (g.t || 'choice') === 'choice' && grammarUsageDistractors(g)).map(g => g.id);
+      return JSON.stringify({ n: G.length, meaning: G.filter(g => g.t === 'meaning').length, bad, usage }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['n'] >= 1100 and r['meaning'] > 150 and r['bad'] == [] and r['usage'] == [], r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

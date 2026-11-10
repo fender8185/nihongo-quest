@@ -12,7 +12,7 @@
 <script src="./vendor/supabase.js"></script>
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
-<script src="./data.js?v=21"></script>
+<script src="./data.js?v=22"></script>
 <script src="./events.js?v=41"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -1300,7 +1300,6 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .fb-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 10px; font-size: 12px; color: var(--fg-3); }
 .pr-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .pr-actions .left, .pr-actions .right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.pr-actions .more-items { flex-basis: 100%; display: flex; gap: 6px; flex-wrap: wrap; } .pr-actions .more-items[hidden] { display: none; }   /* ⋯ opens a row below, no floating menu (1.0.35) */
 @media (hover: none) and (pointer: coarse) { .kbd-hint { display: none !important; } }   /* touch screens: no keyboard, no key hints */
 .banner.compact { padding: 8px 12px; font-size: 13px; gap: 8px 12px; }
 .pr-next { display: flex; justify-content: flex-end; margin-top: 12px; }
@@ -1362,6 +1361,8 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 button.order-slot { font: inherit; background: none; border-width: 0 0 2px; border-style: solid; border-radius: 0; padding: 0; cursor: pointer; }
 button.order-slot:hover { background: var(--bg-hover); }
 .order-slot.wrong { color: var(--bad); border-color: var(--bad); }
+.order-slot.key { color: var(--accent); font-weight: 700; }   /* 句意拼貼: the piece that carries the grammar point, once answered */
+.zh-build .order-out { font-size: 20px; }
 .order-tiles { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
 .order-tile { padding: 10px 14px; font-size: 20px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); cursor: pointer; }
 .order-tile:disabled { opacity: .25; cursor: default; }
@@ -1656,6 +1657,20 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 @keyframes kotoPlus { 0% { opacity: 0; transform: translate(-100%, calc(-50% + 8px)); } 15% { opacity: 1; transform: translate(-100%, -50%); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-100%, calc(-50% - 14px)); } }
 .koto-gain.pop { animation: kotoIn .5s cubic-bezier(.3, 1.4, .5, 1) .35s backwards; } .koto-gain.pop .koto-i { animation: kotoSpin .7s ease-out .45s backwards; }
 @keyframes kotoIn { from { opacity: 0; transform: translateY(6px) scale(.96); } }
+/* the summary (2026-11-10): 這組的收穫, its chips popping in one by one the first time; the 言靈 total bumps as each あ lands;
+   全對 in gold; confetti over it all (summaryReward) */
+.harvest { margin-top: 14px; padding: 10px 14px; border-radius: 12px; background: var(--bg-sunken); }
+.harvest-h { font-size: 13px; font-weight: 700; color: var(--fg-2); margin-bottom: 6px; }
+.harvest-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 3px 0; }
+.harvest-l { font-size: 12px; color: var(--fg-3); min-width: 4.5em; }
+.harvest.play .chip { animation: chipIn .38s cubic-bezier(.3, 1.5, .5, 1) backwards; animation-delay: calc(.55s + var(--i) * 70ms); }
+@keyframes chipIn { from { opacity: 0; transform: translateY(8px) scale(.7); } }
+.koto-gain .tot .num { display: inline-block; }
+.koto-gain .tot .num.bump { animation: kotoBump .22s ease-out; }
+.page-title.all-right { color: var(--gold); transform-origin: left center; animation: titlePop .55s cubic-bezier(.3, 1.5, .5, 1) .2s backwards; }
+@keyframes titlePop { from { opacity: 0; transform: scale(.6); } }
+.confetti { position: fixed; inset: 0; z-index: 70; pointer-events: none; overflow: hidden; }
+.confetti i { position: absolute; width: 8px; height: 11px; margin: -5px 0 0 -4px; border-radius: 2px; }
 @keyframes kotoSpin { from { transform: scale(.4) rotate(-40deg); opacity: 0; } 60% { transform: scale(1.18) rotate(6deg); opacity: 1; } }
 </style>
 </head>
@@ -3187,7 +3202,7 @@ function earnKoto(s) {
   if (day) k.days.push(t);
   if (set || day) saveState();
   const after = kotoQuizDay(k, t);
-  return { set: mid - before, day: after - mid, full: (set && mid - before < 1) || (day && after - mid < KOTO_DAY) };
+  return { set: mid - before, day: after - mid, full: (set && mid - before < 1) || (day && after - mid < KOTO_DAY), dayNow: day };   // dayNow: this set finished the day's list
 }
 // 聽一輪 (1.2.0): the time it has played without a pause, told after every line it speaks; a gap of over a minute and a half
 // (the page was stopped, the phone slept) starts it over, so does a pause. Every 5 minutes: 1 言靈, as long as today has room.
@@ -4284,25 +4299,6 @@ function makeVocabQuestion(v0, ctx = {}) {
 }
 
 // ---------- grammar ----------
-// Chinese meanings of other items of the same unit (then nearby units) as 句意 distractors
-// 句意 distractors: the sentences that LOOK most like the right one (shared content characters), so the grammar has to be read;
-// a near-copy is skipped because it could pass as a second right answer.
-const ZH_STOP = new Set([...'的了是我你他她在有不也和就都很這那個一要會嗎呢吧']);
-function zhContent(z) { const out = new Set(); for (const c of String(z || '')) if (/[\u4e00-\u9fff]/.test(c) && !ZH_STOP.has(c)) out.add(c); return out; }
-function grammarMeaningDistractors(g) {
-  if (!g.zh) return null;
-  const mine = zhContent(g.zh); const seen = new Set([g.zh]); const scored = [];
-  REG.grammar.forEach(x => {
-    if (x.key === g.key || !x.zh || seen.has(x.zh)) return;
-    seen.add(x.zh);
-    const theirs = zhContent(x.zh); let n = 0; theirs.forEach(c => { if (mine.has(c)) n++; });
-    if (n >= Math.max(3, Math.min(mine.size, theirs.size) * 0.85)) return;
-    scored.push({ zh: x.zh, s: n + (x.u === g.u ? 0.5 : 0) + Math.random() * 0.4 });
-  });
-  scored.sort((a, b) => b.s - a.s);
-  const out = scored.slice(0, 3).map(x => x.zh);
-  return out.length === 3 ? out : null;
-}
 // 用法 question for a particle blank: "what does this に express here?" with the unit's other points as options (same phase as a
 // reserve). A point for the same particle is a distractor only when its name shares little with the right one — otherwise it is
 // the same usage under another name and would be a second right answer.
@@ -4323,15 +4319,33 @@ function grammarUsageDistractors(g) {
   }
   return null;
 }
+// a fill-in item's second format: a particle blank asks its 用法; any other item with pieces (zt) puts its Chinese together
+// (句意拼貼, 2026-11-10). The four whole Chinese sentences of other items it had before went: one known word gave them away
 function grammarFormats(g) {
   const f = ['g-choice'];
-  if (g.zh && (grammarUsageDistractors(g) || grammarMeaningDistractors(g))) f.push('g-meaning');
+  if (g.zh && grammarUsageDistractors(g)) f.push('g-meaning');
+  else if (g.zh && g.zt) f.push('g-zh');
   return f;
 }
-function pickGrammarFormat(g, rec, avoid) {
+function pickGrammarFormat(g, rec, avoid, choiceOnly) {   // choiceOnly: a 階段測驗 asks with options only
   if (!rec) return 'g-choice';
-  const pairs = grammarFormats(g).map(f => [f, (!rec.gf || !rec.gf[f] || rec.gf[f][0] === 0) ? 3 : 1]);
+  const pairs = grammarFormats(g).filter(f => !(choiceOnly && f === 'g-zh')).map(f => [f, (!rec.gf || !rec.gf[f] || rec.gf[f][0] === 0) ? 3 : 1]);
   return weightedPick(pairs, avoid);
+}
+// 句意拼貼 (2026-11-10, the user): the Japanese sentence over Chinese pieces — its own (g.zt) shuffled with two or three decoys (g.zd)
+// that change the grammar point, so the grammar has to be read. Graded by which pieces are placed, not their order (Chinese is the
+// learner's own language); zk marks the piece that carries the point once answered. Option 0 is the Chinese, option 1 what was built
+function makeZhPieceQuestion(q, g, full) {
+  q.fmt = 'g-zh'; q.custom = 'g-zh';
+  q.instr = '用下面的詞塊拼出這句話的意思';
+  q.stemHtml = furi(full);
+  q.fullJp = full; q.zhText = '';
+  q.zhParts = g.zt.slice(); q.zhKey = g.zk;
+  q.tiles = shuffle(g.zt.concat(g.zd));
+  q.mistakePrompt = `${full} 的意思`;
+  q.options = [{ text: g.zt.join('') }, { text: '' }]; q.answer = 0; q.answerText = g.zt.join('');
+  q.wide = true;
+  return q;
 }
 function splitBlank(jp) {
   const m = BLANK_RE.exec(jp);
@@ -4369,30 +4383,22 @@ function makeGrammarQuestion(g, ctx = {}) {
     if (!b) return null;
     const opts = (g.op || []).map(parenReadingToBracket);
     const ans = parenReadingToBracket(g.a);
-    // A fill-in item is also asked as 句意, so a review is not the same question with the answer remembered.
+    // A fill-in item is also asked as 用法 or 句意拼貼, so a review is not the same question with the answer remembered.
     // First sighting is always the plain fill-in. (選正確句, every option filled in, went in 1.0.23.)
-    const fmt = ctx.forceFmt || pickGrammarFormat(g, rec, ctx.avoidFmt);
-    if (fmt === 'g-meaning') {
+    const fmt = ctx.forceFmt || pickGrammarFormat(g, rec, ctx.avoidFmt, ctx.choiceOnly);
+    if (fmt === 'g-zh' && g.zt) return makeZhPieceQuestion(q, g, b.pre + ans + b.post);
+    const usage = fmt === 'g-meaning' && grammarUsageDistractors(g);
+    if (usage) {   // particle: ask what it expresses here, options are point names
       const full = b.pre + ans + b.post;
       q.fmt = 'g-meaning';
       q.fullJp = full;
       q.zhText = '';
-      const usage = grammarUsageDistractors(g);
-      if (usage) {   // particle: ask what it expresses here, options are point names
-        q.instr = `畫線的「${esc(jaPlain(ans))}」在這句表示什麼？`;
-        q.stemHtml = `${furi(b.pre)}<span class="uline">${furi(ans)}</span>${furi(b.post)}`;
-        q.mistakePrompt = `${full} 中「${jaPlain(ans)}」的用法`;
-        finalizeOptions(q, g.pt, usage, false);
-        q.answerText = g.pt;
-        q.wide = false;
-      } else {
-        q.instr = '這句話的意思是？';
-        q.stemHtml = furi(full);
-        q.mistakePrompt = `${full} 的意思`;
-        finalizeOptions(q, g.zh, grammarMeaningDistractors(g), false);
-        q.answerText = g.zh;
-        q.wide = true;
-      }
+      q.instr = `畫線的「${esc(jaPlain(ans))}」在這句表示什麼？`;
+      q.stemHtml = `${furi(b.pre)}<span class="uline">${furi(ans)}</span>${furi(b.post)}`;
+      q.mistakePrompt = `${full} 中「${jaPlain(ans)}」的用法`;
+      finalizeOptions(q, g.pt, usage, false);
+      q.answerText = g.pt;
+      q.wide = false;
       return q;
     }
     q.fmt = 'g-choice';
@@ -4406,6 +4412,8 @@ function makeGrammarQuestion(g, ctx = {}) {
     return q;
   }
   if (t === 'meaning') {
+    // put together from pieces when it has them (a 階段測驗 keeps to options: its four hand-written sentences)
+    if (g.zt && !ctx.choiceOnly) return makeZhPieceQuestion(q, g, g.jp);
     q.fmt = 'g-meaning';
     q.instr = '這句話的意思是？';
     q.stemHtml = furi(g.jp);
@@ -5372,7 +5380,7 @@ function otherFormatQuestion(item) {
   const q = makeQuestion(item, { encore: true, avoidFmts: used, avoidFmt: used });
   return q && q.fmt && !used.includes(q.fmt) ? q : null;
 }
-// a grammar fill-in item that can also be asked as 句意
+// a grammar fill-in item that can also be asked another way (用法, 句意拼貼)
 function grammarHasFormats(g) {
   if (g && g.kind === 'g' && (g.t === 'conj' || g.t === 'adj')) return (state.settings.conjInput || 'auto') !== 'choice';   // four options ↔ spelled
   if (!g || g.kind !== 'g' || (g.t || 'choice') !== 'choice' || !splitBlank(g.jp || '')) return false;
@@ -5490,10 +5498,9 @@ function renderPractice() {
       <div class="left">
         ${q.custom === 'v-match' ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>`}
         ${q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-match' && (answered || q.fmt !== 'v-cloze') ? '<button type="button" class="btn btn-sm btn-ghost" data-act="speak-example" title="朗讀例句">例句</button>' : ''}
-        <button type="button" class="btn btn-sm btn-ghost" data-act="more-toggle" aria-expanded="false" title="更多" aria-label="更多">⋯</button>
+        ${answered ? answeredToolsHtml(e) : ''}
       </div>
       ${answered || q.custom ? '' : '<div class="right"><span class="tiny muted kbd-hint">按 1–4 作答</span></div>'}
-      <div class="more-items" hidden>${moreItemsHtml(e, answered)}</div>
     </div>`;
   const next = answered ? `<div class="pr-next"><button type="button" class="btn btn-primary" data-act="next" id="btnNext">${SESSION.idx + 1 < SESSION.entries.length ? '下一題' : '看結果'} <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button></div>` : '';
   view.innerHTML = `
@@ -5555,13 +5562,13 @@ function dismissPreview() {
   }
   renderPractice(); window.scrollTo({ top: 0 });
 }
-// The counter counts the session's planned items; an encore or a 再練一次 copy is shown apart as 加考 and moves neither number.
+// The counter and the bar count every question the set asks (2026-11-10, the user: the encores stay, but the bar must not fill
+// before they come): what is queued — planned items, encores, 再練一次 copies — and the one more each new item not answered yet
+// will bring (its encore, or its 再練一次 when missed; encoreEstimate's rule). Only a miss makes the total grow (a 階段測驗 has neither).
 function sessionCount() {
-  const planned = (x) => !x.encore && !x.requeued;
-  const es = SESSION.entries; let before = 0, extra = 0;
-  for (let i = 0; i < Math.min(SESSION.idx, es.length); i++) { if (planned(es[i])) before++; else extra++; }
-  const cur = es[SESSION.idx]; const curPlanned = cur ? planned(cur) : false;
-  return { before, n: before + (curPlanned ? 1 : 0), total: es.filter(planned).length, extra: extra + (cur && !curPlanned ? 1 : 0) };
+  const es = SESSION.entries; const at = Math.min(SESSION.idx, es.length);
+  const owed = SESSION.test ? 0 : encoreEstimate(es.slice(at).filter(x => x.item && !x.encore && !x.requeued).map(x => x.item));
+  return { before: at, n: Math.min(at + 1, es.length), total: es.length + owed };
 }
 // the bar on top of a practice card slides from where the last card left it (1.0.41); the same card drawn again keeps still
 function prBarHtml(pct) {
@@ -5571,7 +5578,7 @@ function prBarHtml(pct) {
 }
 function prCountHtml() {
   const c = sessionCount();
-  return `<div class="pr-count">${c.n} / ${c.total}${c.extra ? ` <span class="tiny muted">加考 ${c.extra}</span>` : ''}</div>`;
+  return `<div class="pr-count">${c.n} / ${c.total}</div>`;
 }
 // the session's note (the day's, or a drill's) over its first screen, a question or a new item's preview
 function sessionNoteHtml(answered = false) { return SESSION.idx === 0 && !answered && SESSION.meta && SESSION.meta.note ? `<div class="plan-note">${esc(SESSION.meta.note)}</div>` : ''; }
@@ -5600,7 +5607,6 @@ function previewHtml(e, pct) {
     <div class="pr-actions pr-next-sticky">
       <div class="left">
         <button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>
-        <button type="button" class="btn btn-sm btn-ghost" data-act="toggle-furi" title="切換振假名（F）">振假名：${FURI_LABEL[furiState()]}</button>
         <button type="button" class="btn btn-sm btn-ghost" data-act="preview-known" title="這個字我已經會了：標成五顆、跳過它的題目，之後排進五顆的複習">我會了</button>
       </div>
       <div class="right">${previewGoBtn()}</div>
@@ -5619,6 +5625,7 @@ function tileModel(e) {
   if (q.custom === 'v-spell') return { key: 'spell', need: [...q.options[0].text].length, count: (line) => [...line.map(i => q.tiles[i]).join('')].length };
   if ((q.custom === 'g-conj-type' || q.custom === 'g-adj-type') && q.inputMode !== 'type') return { key: 'conj', need: conjTokens(q.options[0].text).length, count: tiles };
   if (q.custom === 'g-order') return { key: 'order', need: q.orderParts.length, count: tiles };
+  if (q.custom === 'g-zh') return { key: 'zh', need: q.zhParts.length, count: tiles };
   return null;
 }
 // tile i onto the line at `at` (the end when left out), or moved there when it is on the line already; a full line takes no new one
@@ -5642,6 +5649,7 @@ function tileSubmit() {
   const q = e.q; const built = line.map(k => q.tiles[k]).join(''); const ans = q.options[0].text;
   if (m.key === 'spell') finishCustom(e, built === ans, built);
   else if (m.key === 'conj') finishCustom(e, conjMatch(built, ans), jaPlain(built));
+  else if (m.key === 'zh') finishCustom(e, line.every(k => q.zhParts.includes(q.tiles[k])), built);   // the right pieces, in any order
   else finishCustom(e, built === q.orderParts.join(''), q.pre + built + q.post);
 }
 // draw the card again after a tile moved, every tile gliding from where it was to where it is now (a dropped one from where it
@@ -5768,6 +5776,20 @@ function customInteractionHtml(e, answered) {
       ${answered ? '' : tileRowHtml(e, '看答案')}
     </div>`;
   }
+  if (q.custom === 'g-zh') {   // 句意拼貼: a slot for each piece; answered wrong, a decoy on the line is red; the grammar's piece is marked
+    const used = e.zh || [];
+    const slot = (i) => {
+      if (used[i] === undefined) return '<span class="order-slot">＿</span>';
+      const p = q.tiles[used[i]];
+      if (!answered) return placedPiece('zh-untap', i, esc(p), 'order-slot filled', used[i]);
+      return `<span class="order-slot filled${!q.zhParts.includes(p) ? ' wrong' : p === q.zhParts[q.zhKey] ? ' key' : ''}">${esc(p)}</span>`;
+    };
+    return `<div class="order zh-build">
+      <div class="order-out ${answered ? (e.chosen === q.answer ? 'ok' : 'bad') : ''}">${q.zhParts.map((_, i) => slot(i)).join('')}</div>
+      <div class="order-tiles">${q.tiles.map((p, i) => `<button type="button" class="order-tile" data-act="zh-tap" data-i="${i}" ${used.includes(i) || answered ? 'disabled' : `data-ti="${i}"`}>${esc(p)}</button>`).join('')}</div>
+      ${answered ? '' : tileRowHtml(e)}
+    </div>`;
+  }
   if (q.custom === 'v-match') {
     const m = e.match || { sel: null, matched: [], wrong: 0 };
     const pairOf = (w) => q.pairs.find(p => p[0] === w);
@@ -5800,14 +5822,12 @@ function srsBadge(key) {
   return `<span class="row" style="gap:6px">${srsDots(r.b)}</span>`;
 }
 
-// the ⋯ row under a question: 振假名, and once answered 手滑，不算 (a miss), 這個字我已經會了 (a word answered right), AI 解析, 這題有問題
-function moreItemsHtml(e, answered) {
-  const q = e.q; const ok = e.chosen === q.answer; const cur = q.key ? state.srs[q.key] : null;
-  return `<button type="button" class="btn btn-sm btn-ghost" data-act="toggle-furi" title="切換振假名（F）">振假名：${FURI_LABEL[furiState()]}</button>
-    ${answered && !ok && !e.slip && e.undo && !SESSION.test ? '<button type="button" class="btn btn-sm btn-ghost" data-act="slip" title="選錯鍵、看錯行：不進錯題本，排程維持原狀">手滑，不算</button>' : ''}
-    ${answered && q.kind === 'v' && q.key && ok && cur && !SESSION.test && !cur.known && srsLevelLabel(cur, q.key) !== '已熟練' ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(q.key)}">這個字我已經會了</button>` : ''}
-    ${answered && aiReady() ? '<button type="button" class="btn btn-sm btn-ghost" data-act="ai-explain">AI 解析</button>' : ''}
-    ${answered && q.kind !== 'm' ? '<button type="button" class="btn btn-sm btn-ghost" data-act="report-item" title="題目有誤或不自然時，把它移出題庫">這題有問題</button>' : ''}`;
+// once answered, beside 發音 and 例句: 手滑，不算 (a miss) and AI 解析. 2026-11-10 (the user): no ⋯ any more, and nothing to set
+// right after an answer — 振假名 (設定, the F key), 這個字我已經會了 (the word list) and 這題有問題 (it only hid the item) went
+function answeredToolsHtml(e) {
+  const ok = e.chosen === e.q.answer;
+  return `${!ok && !e.slip && e.undo && !SESSION.test ? '<button type="button" class="btn btn-sm btn-ghost" data-act="slip" title="選錯鍵、看錯行：不進錯題本，排程維持原狀">手滑，不算</button>' : ''}
+    ${aiReady() ? '<button type="button" class="btn btn-sm btn-ghost" data-act="ai-explain">AI 解析</button>' : ''}`;
 }
 // what a wrong option is, shown beside it after answering: a word's Chinese meaning, or the word a Chinese meaning belongs to
 // ([text, true] for the latter, set in Japanese type)
@@ -5836,7 +5856,7 @@ function feedbackHtml(e, sheet = false) {
   const srsInfo = e.srs ? `<span title="${esc(srsLevelLabel(e.srs.rec, q.key) + '・' + dueLabel(e.srs.rec, q.key))}">${srsDots(e.srs.rec.b, e.srs.before)}</span>${e.lvUp ? `<span class="chip chip-accent lv-up">升到${e.lvUp}</span>` : ''}`
     : e.encore && cur ? `<span title="${esc(srsLevelLabel(cur, q.key) + '・這次不影響排程')}">${srsDots(cur.b)}</span>` : '';   // the level and next date as a tooltip (1.0.35)
   const mistake = !ok && q.kind !== 'x' && !e.slip && !SESSION.test && !(e.requeued && q.custom === 'v-match') ? '<span>已加入錯題本</span>' : '';   // a 再練一次 配對 writes nothing
-  const slip = e.slip ? '<span class="chip">手滑，不算</span>' : '';   // the button itself is under ⋯ (moreItemsHtml)
+  const slip = e.slip ? '<span class="chip">手滑，不算</span>' : '';   // the button itself is in the tool row (answeredToolsHtml)
   const mNote = e.mistakeDone ? '<span class="chip chip-ok">已移出錯題本</span>' : '';
   // a spelled or typed conjugation: show what was produced, the first wrong character marked
   let diff = '';
@@ -6003,13 +6023,14 @@ function renderSummary(view) {
   const dayDone = prog.left === 0;
   const first = !s.summaryShown; s.summaryShown = true;   // 1.0.41: the ring and the numbers play once, not when a sync draws it again
   const gain = s.koto || (s.koto = earnKoto(s));   // 1.2.0: 言靈 for this set, worked out once
+  const allRight = n >= 5 && !s.stats.wrong && !s.quit;   // 全對: a set of five or more without a miss
   const wrongList = [...wrongKeys.values()].map(r => `<div class="list-item"><div class="grow"><div class="jp">${furi(tidyPrompt(r.q.mistakePrompt || ''))}</div><div class="small muted">正確：<span class="jp">${esc(jaPlain(r.q.options[r.q.answer].text))}</span>・你選：<span class="jp">${esc(jaPlain(r.q.options[r.chosen].text))}</span></div></div></div>`).join('');
   view.innerHTML = `
     <div class="pr-top"><button type="button" class="btn btn-ghost btn-icon" data-act="close-summary" aria-label="關閉">${icon('close')}</button><div class="grow"></div></div>
     <div class="card">
       <div class="row between" style="align-items:flex-start">
         <div>
-          <div class="page-title">${n ? '完成了' : '已結束'}</div>
+          <div class="page-title${allRight ? ' all-right' : ''}">${allRight ? '全對！' : n ? '完成了' : '已結束'}</div>
           <div class="page-sub">${esc(s.title)}・作答 ${n} 題・正確率 ${acc}%</div>
         </div>
         ${ringHtml(ringPct(prog) / 100, `<b>${ringPct(prog)}%</b>`, 96, s.ringFrom == null ? null : s.ringFrom / 100)}
@@ -6020,7 +6041,8 @@ function renderSummary(view) {
         <div class="stat"><span class="stat-v">${s.stats.newCount}</span><span class="stat-l">新學</span></div>
         <div class="stat"><span class="stat-v">${Math.max(1, Math.round((Date.now() - s.startedAt) / 60000))}</span><span class="stat-l">分鐘</span></div>
       </div>
-      ${gain.set || gain.day || gain.full ? `<div class="koto-gain${first ? ' pop' : ''}">${kotoIcon()}<span>言靈</span>${gain.set ? '<b>+1</b><span>做完一組</span>' : ''}${gain.set && gain.day ? '<i class="sep"></i>' : ''}${gain.day ? `<b>+${gain.day}</b><span>今日完成</span>` : ''}${gain.full ? '<span class="cap">今天作答的言靈拿滿了</span>' : ''}<span class="tot">共 ${kotoBalance()}</span></div>` : ''}
+      ${harvestHtml(s, first)}
+      ${gain.set || gain.day || gain.full ? `<div class="koto-gain${first ? ' pop' : ''}">${kotoIcon()}<span>言靈</span>${gain.set ? '<b>+1</b><span>做完一組</span>' : ''}${gain.set && gain.day ? '<i class="sep"></i>' : ''}${gain.day ? `<b>+${gain.day}</b><span>今日完成</span>` : ''}${gain.full ? '<span class="cap">今天作答的言靈拿滿了</span>' : ''}<span class="tot">共 <span class="num">${kotoBalance()}</span></span></div>` : ''}
       ${dayDone ? '<div class="banner mt-4">今天的進度完成了。答對的題目會在幾天後再出現，答錯的明天再複習。</div>' : `<div class="hint mt-4">今天還有 ${prog.left} 題。</div>`}
       <div class="row-wrap mt-4">
         <button type="button" class="btn btn-primary" data-act="again">再練一組</button>
@@ -6029,7 +6051,71 @@ function renderSummary(view) {
       </div>
     </div>
     ${wrongKeys.size ? `<div class="card"><div class="card-head"><div class="card-title">這次答錯的題目</div><span class="chip">${wrongKeys.size}</span></div><div class="list">${wrongList}</div></div>` : ''}`;
-  if (first) { playAnims(view); countUp(view); }
+  if (first) { playAnims(view); countUp(view); summaryReward(view, gain, allRight); }
+}
+// 這組的收穫 (2026-11-10, the user: the summary should show what was won, and move): what rose to 熟悉 or 已熟練 in this set (the
+// chip a right answer showed, 1.0.50) and what was met for the first time — words, grammar points, kanji, kana; the chips pop in
+// one after another the first time it is drawn
+const HARVEST_MAX = 12;
+function harvestHtml(s, play) {
+  const name = (it) => it.kind === 'v' ? jaPlain(it.w) : it.kind === 'g' ? String(it.pt || jaPlain(itemPreview(it))).split('（')[0] : it.kind === 'k' ? it.k : it.ch;
+  const tip = (it) => it.kind === 'v' || it.kind === 'k' ? it.m || '' : '';
+  const rows = [['熟悉', []], ['已熟練', []], ['新學', []]];
+  const seen = new Set();
+  s.entries.forEach(e => {
+    if (!e.done || !e.item || !/^[vgka]$/.test(e.item.kind)) return;
+    const row = e.lvUp ? rows.find(r => r[0] === e.lvUp) : e.srs && e.srs.isNew ? rows[2] : null;
+    if (row && !seen.has(row[0] + e.item.key)) { seen.add(row[0] + e.item.key); row[1].push(e.item); }
+  });
+  let k = 0;
+  const chip = (it, cls) => `<span class="chip${cls}" style="--i:${k++}" title="${esc(tip(it))}"><span class="jp">${esc(name(it))}</span></span>`;
+  const html = rows.filter(([, list]) => list.length).map(([label, list]) => `<div class="harvest-row"><span class="harvest-l">${label === '新學' ? `新學 ${list.length}` : `升到${label}`}</span>
+    ${list.slice(0, HARVEST_MAX).map(it => chip(it, label === '新學' ? '' : ' chip-accent')).join('')}${list.length > HARVEST_MAX ? `<span class="small muted">等 ${list.length} 個</span>` : ''}</div>`).join('');
+  return html ? `<div class="harvest${play ? ' play' : ''}"><div class="harvest-h">這組的收穫</div>${html}</div>` : '';
+}
+// the summary's reward, played once: the 言靈 of the set fly from its +N into the total, which counts up as they land (as the witch's
+// do into the 言靈 button); a set with no miss, or the day's list just done, gets confetti and a short fanfare. Motion reduced: none
+function summaryReward(view, gain, allRight) {
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const box = view.querySelector('.koto-gain'), num = box && box.querySelector('.tot .num'), got = (gain.set || 0) + (gain.day || 0);
+  if (num && got > 0) {
+    const end = Number(num.textContent), from = end - got, n = Math.min(got, 10); let landed = 0;
+    num.textContent = from;
+    const go = ([x, y], sc) => `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${sc.toFixed(2)})`;
+    for (let i = 0; i < n; i++) {
+      setTimeout(() => {
+        if (!box.isConnected) return;
+        const a = box.querySelector('b').getBoundingClientRect(), b = num.getBoundingClientRect();
+        const p0 = [a.left + a.width / 2 + (i % 3 - 1) * 6, a.top + a.height / 2], p2 = [b.left + b.width / 2, b.top + b.height / 2], p1 = [(p0[0] + p2[0]) / 2, Math.min(p0[1], p2[1]) - 40 - (i % 4) * 6];
+        const c = document.createElement('i'); c.className = 'koto-coin'; c.innerHTML = kotoIcon(); document.body.appendChild(c);
+        const path = Array.from({ length: 13 }, (_, j) => { const t = j / 12, u = 1 - t;
+          return { transform: go([u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0], u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1]], 0.6 + 0.4 * Math.sin(Math.PI * t)), opacity: 1 }; });
+        c.animate(path, { duration: 600, easing: 'cubic-bezier(.45, 0, .8, .6)', fill: 'forwards' }).onfinish = () => {
+          c.remove(); if (!num.isConnected) return;
+          landed++; num.textContent = from + Math.round(got * landed / n);
+          num.classList.remove('bump'); void num.offsetWidth; num.classList.add('bump');
+          playSfx('coin', landed - 1);
+        };
+      }, 950 + i * 110);
+    }
+  }
+  if (allRight || gain.dayNow) setTimeout(() => { if (!view.isConnected) return; confetti(view.querySelector('.page-title'), gain.dayNow ? 80 : 44); playSfx('fanfare'); }, 450);
+}
+// paper bits thrown up from an element and falling across the screen
+function confetti(el, n) {
+  if (!el) return;
+  const r = el.getBoundingClientRect(), x0 = r.left + r.width / 2, y0 = r.top + r.height / 2;
+  const layer = document.createElement('div'); layer.className = 'confetti'; document.body.appendChild(layer);
+  const colors = ['#f6c45a', '#5b8def', '#3fb68b', '#ef6f8e', '#a97ff0', '#ff9f43'];
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement('i'); p.style.background = colors[i % colors.length]; p.style.left = `${x0}px`; p.style.top = `${y0}px`;
+    if (i % 3 === 0) p.style.borderRadius = '50%';
+    layer.appendChild(p);
+    const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2, v = 140 + Math.random() * 220, dx = Math.cos(a) * v, up = Math.sin(a) * v, spin = (Math.random() - 0.5) * 900;
+    p.animate([{ transform: 'translate(0, 0) rotate(0deg)', opacity: 1 }, { transform: `translate(${dx * 0.7}px, ${up}px) rotate(${spin / 3}deg)`, opacity: 1, offset: 0.3 },
+      { transform: `translate(${dx}px, ${innerHeight - y0 + 40}px) rotate(${spin}deg)`, opacity: 0.9 }], { duration: 1500 + Math.random() * 1000, easing: 'cubic-bezier(.25, .7, .45, 1)', fill: 'forwards' });
+  }
+  setTimeout(() => layer.remove(), 2700);
 }
 // the summary's numbers count up from 0 (1.0.41); not with motion reduced, which the CSS rule at the top cannot reach for text
 function countUp(root) {
@@ -6054,23 +6140,6 @@ function ringHtml(ratio, inner, size = 96, from = null) {
   const r = 42; const c = 2 * Math.PI * r;
   const anim = from === null ? '' : ` data-anim`, fromVar = from === null ? '' : `--from:${c * (1 - clamp(from, 0, 1))};`;
   return `<div class="ring"${anim} style="${fromVar}width:${size}px;height:${size}px"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="${r}" fill="none" stroke="var(--bg-sunken)" stroke-width="9"/><circle class="arc" cx="50" cy="50" r="${r}" fill="none" stroke="${ratio >= 1 ? 'var(--ok)' : 'var(--accent)'}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - clamp(ratio, 0, 1))}"/></svg><div class="ring-txt"><div>${inner}</div></div></div>`;
-}
-
-// report a bad item: hide it from rotation (built-in) or delete it (an AI question)
-function reportCurrentItem() {
-  const e = currentEntry();
-  if (!e || !e.q || !e.q.item) return;
-  const it = e.q.item;
-  if (!confirm('把這題移出題庫？之後不會再出現（可以在設定 → 資料中還原）。')) return;
-  if (it.builtin) { if (!state.hidden.includes(it.id)) state.hidden.push(it.id); }
-  else if (it.kind === 'g') state.customGrammar = state.customGrammar.filter(g => g.id !== it.id);
-  delete state.srs[it.key];
-  state.mistakes = state.mistakes.filter(m => m.key !== it.key);
-  saveState();
-  buildRegistry();
-  SESSION.entries = SESSION.entries.filter((x, i) => i <= SESSION.idx || !x.item || x.item.key !== it.key);
-  toast('已移出題庫');
-  nextQuestion();
 }
 
 // ---- 70_app.js ----
@@ -6382,8 +6451,8 @@ const ACTIONS = {
     if (!e || !e.q) return;
     const q = e.q;
     if (q.custom === 'v-match') return;   // 配對 has no 發音: each word is read as it is tapped
-    // before answering a grammar question the full sentence would give the answer away
-    const text = q.audio || (e.done ? (q.fullJp || q.speakWord) : (q.fmt && q.fmt.startsWith('g-') ? '' : q.speakWord)) || '';
+    // before answering a grammar question the full sentence would give the answer away (句意拼貼 shows it: it can be heard)
+    const text = q.audio || (e.done || q.fmt === 'g-zh' ? (q.fullJp || q.speakWord) : (q.fmt && q.fmt.startsWith('g-') ? '' : q.speakWord)) || '';
     if (!text) { toast('作答後可以聽整句。'); return; }
     if (text === q.speakWord && q.speakReading) { speak(text, { reading: q.speakReading }); return; }
     if (q.audioScript && text === q.audio) speakScript(text); else speak(text);
@@ -6410,9 +6479,12 @@ const ACTIONS = {
       e.match = { sel: null, matched: e.q.pairs.map(p => p[0]), wrong: m.wrong || 0, missed };
     }
     if (e.q.custom === 'g-order') { e.order = e.q.orderParts.map(p => e.q.tiles.indexOf(p)); }   // show the right order
+    if (e.q.custom === 'g-zh') { e.zh = e.q.zhParts.map(p => e.q.tiles.indexOf(p)); }   // show the right pieces
     finishCustom(e, false, '（看了答案）');
   },
   'order-tap': (el) => tileMove(() => tilePut(Number(el.dataset.i))),
+  'zh-tap': (el) => tileMove(() => tilePut(Number(el.dataset.i))),
+  'zh-untap': (el) => tileMove(() => tileTake(Number(el.dataset.k))),
   // a placed piece tapped on the line goes back to the tiles; the ones after it move up
   'order-untap': (el) => tileMove(() => tileTake(Number(el.dataset.k))),
   'spell-untap': (el) => tileMove(() => tileTake(Number(el.dataset.k))),
@@ -6437,8 +6509,7 @@ const ACTIONS = {
     if (m.matched.length === e.q.pairs.length) finishCustom(e, m.wrong === 0, `配對時錯了 ${m.wrong} 次`); else renderPractice();
   },
   speak: (el) => speak(el.dataset.text, el.dataset.reading ? { reading: el.dataset.reading } : undefined),
-  'ai-explain': () => aiExplainCurrent(),
-  'report-item': () => reportCurrentItem(),
+  'ai-explain': (el) => aiExplainCurrent(el),
   'start-zero': () => chooseStart('zero'),
   'start-kana': () => chooseStart('kana'),
   'start-basics': () => chooseStart('basics'),
@@ -13525,7 +13596,6 @@ Object.assign(ACTIONS, {
   'vocab-known': (el) => {
     const v = REG.byKey.get(el.dataset.key); if (!v) return;
     markKnown(v.key);
-    if (SESSION && SESSION.entries) SESSION.entries = SESSION.entries.filter((x, i) => i <= SESSION.idx || !(x.encore && x.item && x.item.key === v.key));   // no more encores for it
     toast(`「${jaPlain(v.w)}」已標成五顆，之後會排進五顆的複習`);
     if (SESSION && document.body.classList.contains('practicing')) renderPractice(); else route();
   },
@@ -15092,7 +15162,7 @@ function settingsData() {
     ${syncBlock}
     ${legacyExists ? `<div class="setting-row"><div><div class="label">重新匯入舊版進度</div><div class="hint">這個瀏覽器裡還有舊版的資料（舊版本身不受影響）。重新匯入會取代目前的進度。</div></div>
       <button type="button" class="btn btn-sm" data-act="legacy-reimport">重新匯入</button></div>` : ''}
-    ${hiddenN ? `<div class="setting-row"><div><div class="label">已隱藏 ${hiddenN} 個題目或單字</div><div class="hint">練習時按「這題有問題」或在單字表按「隱藏」的項目。</div></div>
+    ${hiddenN ? `<div class="setting-row"><div><div class="label">已隱藏 ${hiddenN} 個題目或單字</div><div class="hint">在單字表按「隱藏」的單字，和以前練習時移出題庫的題目。</div></div>
       <button type="button" class="btn btn-sm" data-act="restore-hidden">全部還原</button></div>` : ''}
     ${state.customGrammar.length || state.customExam.length ? `<div class="setting-row"><div><div class="label">AI／自訂題目</div><div class="hint">文法題 ${state.customGrammar.length} 道、模擬考題 ${state.customExam.length} 道。</div></div>
       <button type="button" class="btn btn-sm btn-ghost btn-danger" data-act="clear-custom-items">清除</button></div>` : ''}
@@ -15183,7 +15253,6 @@ Object.assign(ACTIONS, {
     cloudGenStart(gk, r2);
   },
   'cloud-gen-stop': () => { if (CLOUD_GEN) CLOUD_GEN.stop = true; },
-  'more-toggle': (el) => { const box = el.closest('.pr-actions').querySelector('.more-items'); box.hidden = !box.hidden; el.setAttribute('aria-expanded', String(!box.hidden)); },
   'cloud-dl-all': (el) => cloudDownloadAll(el.dataset.kind || 'ja'),
   'cloud-dl-stop': () => { if (CLOUD_DL) CLOUD_DL.stop = true; },
   'legacy-reimport': () => {
@@ -15272,7 +15341,7 @@ Object.assign(ACTIONS, {
    ========================================================================== */
 const FMT_NAME = {
   'v-meaning': '單字・看字選意思', 'v-recall': '單字・中翻日', 'v-cloze': '單字・例句填空', 'v-reading': '單字・漢字讀音', 'v-kanji': '單字・漢字寫法',
-  'v-listen': '單字・聽音選意思', 'v-spell': '單字・假名拼字', 'v-match': '單字・配對', 'v-sentence': '自訂句子', 'g-choice': '文法・填空', 'g-meaning': '文法・句意／用法', 'g-order': '文法・排序',
+  'v-listen': '單字・聽音選意思', 'v-spell': '單字・假名拼字', 'v-match': '單字・配對', 'v-sentence': '自訂句子', 'g-choice': '文法・填空', 'g-meaning': '文法・句意／用法', 'g-zh': '文法・句意拼貼', 'g-order': '文法・排序',
   'g-correct': '文法・選正確句', 'g-conj': '文法・動詞變化', 'g-adj': '文法・形容詞變化', 'g-identify': '文法・判斷動詞形', 'g-conj-type': '文法・動詞變化（拼寫）', 'g-adj-type': '文法・形容詞變化（拼寫）',   // g-correct (1.0.23), v-sentence (custom cards, 1.0.34): no longer asked, named for the answers given before
   'k-meaning': '漢字・意思', 'k-shape': '漢字・選字', 'k-read': '漢字・讀音', 'l-dialog': '聽力・對話', 'l-resp': '聽力・即時應答',
   'l-scene': '聽力・情境表達', 'r-passage': '閱讀', 'm-card': '錯題卡', 'a-read': '假名・看字選音', 'a-sound': '假名・聽音選字', 'a-pair': '假名・平片對照'
@@ -15955,6 +16024,7 @@ function playSfx(kind, step = 0) {
     const t0 = sfxCtx.currentTime + 0.02, k = Math.pow(2, clamp(step, 0, 5) / 12);
     const notes = kind === 'bad' ? [[311, 0, 0.22, 0.09, 233]]   // [Hz, start s, length s, volume, slide to Hz]
       : kind === 'coin' ? [[1319 * Math.pow(2, clamp(step, 0, 12) / 12), 0, 0.1, 0.06]]   // a 言靈 into its button (1.2.2): a short 叮, a semitone up each
+      : kind === 'fanfare' ? [[523, 0, 0.12, 0.09], [659, 0.1, 0.12, 0.09], [784, 0.2, 0.12, 0.09], [1047, 0.3, 0.45, 0.1]]   // 全對 or the day's list done (2026-11-10): do-mi-sol-do
       : (kind === 'up' ? [659, 831, 988] : [659, 988]).map((f, i, all) => [f * k, i * 0.075, i === all.length - 1 ? 0.28 : 0.12, 0.12]);
     notes.forEach(([f, at, len, vol, to]) => {
       const o = sfxCtx.createOscillator(), g = sfxCtx.createGain();
@@ -16594,12 +16664,12 @@ function htmlToPlain(html) {
 }
 
 // ---------- practice: explain the current question ----------
-async function aiExplainCurrent() {
+// btn: the one tapped (a phone also draws a hidden copy of the tool row under the options, first in the page)
+async function aiExplainCurrent(btn) {
   const e = currentEntry();
   if (!e || !e.q || needAi()) return;
   const q = e.q;
   const box = document.getElementById('aiExplainBox');
-  const btn = $('[data-act="ai-explain"]');
   const stem = htmlToPlain(q.stemHtml) || q.mistakePrompt || '';
   const prompt = `請解析這一題（150 字內）：先用一句話說明考點，再說明正確答案為什麼對，最後簡短說明我選的答案錯在哪裡。
 題型：${q.label}

@@ -25,12 +25,13 @@ PLAY = """(() => { let guard = 0;
 
 # ---- 言靈 ----
 def test_a_finished_daily_set_gives_one_koto(b):
-    js = "(() => { " + FRESH + " startSession('daily', { size: 5 }); const gain = " + PLAY + """;
-      const line = document.querySelector('#view .koto-gain');
+    # 2026-11-10: the set's 言靈 fly into the total, which counts up to it (test_motion); with motion reduced it shows the total at once
+    js = "(() => { " + FRESH + " const mm = window.matchMedia; window.matchMedia = (q) => (/reduced-motion/.test(q) ? { matches: true } : mm.call(window, q)); startSession('daily', { size: 5 }); const gain = " + PLAY + """;
+      window.matchMedia = mm; const line = document.querySelector('#view .koto-gain');
       return JSON.stringify({ gain, bal: kotoBalance(), line: line ? line.textContent.replace(/\\s+/g, '') : null, left: dayProgress().left > 0 }); })()"""
     r = json.loads(ev(b, js))
     assert r['left'], r   # five items do not finish the day
-    assert r['gain'] == {'set': 1, 'day': 0, 'full': False}, r
+    assert r['gain'] == {'set': 1, 'day': 0, 'full': False, 'dayNow': False}, r
     assert r['bal'] == 1, r
     assert r['line'] == 'あ言靈+1做完一組共1', r   # the あ is the icon's
 
@@ -40,7 +41,7 @@ def test_quitting_a_set_early_gives_nothing(b):
       exitPractice(); const gain = SESSION.koto;
       return JSON.stringify({ gain, bal: kotoBalance(), line: !!document.querySelector('#view .koto-gain') }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'gain': {'set': 0, 'day': 0, 'full': False}, 'bal': 0, 'line': False}, r
+    assert r == {'gain': {'set': 0, 'day': 0, 'full': False, 'dayNow': False}, 'bal': 0, 'line': False}, r
 
 def test_other_practice_gives_no_set_koto(b):
     js = "(() => { " + FRESH + " startSession('unit', { unit: 'm1', size: 6 }); const gain = " + PLAY + """;
@@ -56,9 +57,9 @@ def test_the_day_bonus_comes_once(b):
       return JSON.stringify({ sets, bal1, days, last: gains[gains.length - 1], more, bal2: kotoBalance(), today: todayStr() }); })()"""
     r = json.loads(ev(b, js))
     assert r['days'] == [r['today']], r
-    assert r['last'] == {'set': 1, 'day': 10, 'full': False}, r
+    assert r['last'] == {'set': 1, 'day': 10, 'full': False, 'dayNow': True}, r
     assert r['bal1'] == r['sets'] + 10, r
-    assert r['more'] == {'set': 1, 'day': 0, 'full': False}, r
+    assert r['more'] == {'set': 1, 'day': 0, 'full': False, 'dayNow': False}, r
     assert r['bal2'] == r['bal1'] + 1, r
 
 def test_each_device_counts_its_own_sets(b):
@@ -81,8 +82,8 @@ def test_answering_gives_at_most_20_a_day_and_listening_at_most_30(b):
       return JSON.stringify({ b0, g1, g2, b1, b2, got, b3, mine: state.koto.listen[t][d], broke, stopped, pops: document.querySelectorAll('.koto-pop').length }); })()"""
     r = json.loads(ev(b, js))
     assert r['b0'] == 18 + 20 + 28, r   # an old day's 30 sets count as 20; today 18 so far; listening 28
-    assert r['g1'] == {'set': 1, 'day': 0, 'full': False} and r['b1'] == r['b0'] + 1, r
-    assert r['g2'] == {'set': 1, 'day': 0, 'full': False} and r['b2'] == r['b1'] + 1, r   # 20 now: the cap
+    assert r['g1'] == {'set': 1, 'day': 0, 'full': False, 'dayNow': False} and r['b1'] == r['b0'] + 1, r
+    assert r['g2'] == {'set': 1, 'day': 0, 'full': False, 'dayNow': False} and r['b2'] == r['b1'] + 1, r   # 20 now: the cap
     assert r['got'] == 2 and r['mine'] == 2 and r['b3'] == r['b2'] + 2, r   # four lots of 5 minutes, but the day stops at 30
     assert r['broke'] == 0 and r['stopped'] == [0, 0] and r['pops'] >= 1, r
 
@@ -91,7 +92,7 @@ def test_a_set_past_the_days_cap_gives_nothing_and_says_so(b):
       startSession('daily', { size: 4 }); const gain = """ + PLAY + """;
       const line = document.querySelector('#view .koto-gain'); return JSON.stringify({ gain, line: line ? line.textContent.replace(/\\s+/g, '') : null, bal: kotoBalance() }); })()"""
     r = json.loads(ev(b, js))
-    assert r['gain'] == {'set': 0, 'day': 0, 'full': True} and r['bal'] == 20, r
+    assert r['gain'] == {'set': 0, 'day': 0, 'full': True, 'dayNow': False} and r['bal'] == 20, r
     assert r['line'] == 'あ言靈今天作答的言靈拿滿了共20', r
 
 def test_fukuyas_opening_letter_brings_10_koto_once_with_his_face_and_no_rules(b):

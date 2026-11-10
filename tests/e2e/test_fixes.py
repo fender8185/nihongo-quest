@@ -620,25 +620,26 @@ def test_pressing_see_results_after_the_last_question_shows_the_summary(b):
     assert r['ring'] and r['ring'] == r['home'], r   # the summary ring is today's list, as a percentage
     assert '目標' not in r['text'], r
 
-def test_practice_counter_counts_the_planned_items_and_shows_extras_apart(b):
-    js = """(() => { startSession('daily', {}); route(); const n0 = SESSION.entries.length; const count = () => document.querySelector('.pr-count').textContent.replace(/\\s+/g, ' ').trim();
-      const first = count(); const seen = []; let steps = 0, firstExtra = null, wrongDone = false;
+# 2026-11-10 (the user): the encores stay, and the counter counts them from the first question, so it never stands at the end while
+# they still come; only a miss adds one (its 再練一次)
+def test_practice_counter_counts_the_encores_from_the_start(b):
+    js = """(() => { startSession('daily', {}); route(); const n0 = SESSION.entries.length; const owed0 = encoreEstimate(SESSION.entries.map(x => x.item));
+      const count = () => document.querySelector('.pr-count').textContent.replace(/\\s+/g, ' ').trim();
+      const first = count(); const totals = new Set(); let steps = 0, misses = 0, last = '';
       while (SESSION.idx < SESSION.entries.length && steps++ < 200) {
         const e = currentEntry(); if (e.preview && !e.previewDone) { dismissPreview(); continue; }
         if (e.done) { nextQuestion(); continue; }
-        if ((e.encore || e.requeued) && firstExtra === null) firstExtra = { label: count(), idx: SESSION.idx, kind: e.encore ? 'encore' : 'requeue' };
-        if (e.q && e.q.custom) finishCustom(e, true, ''); else { const miss = !wrongDone && !e.encore && !e.requeued && !!state.srs[e.item.key]; if (miss) wrongDone = true; answerCurrent(miss ? (e.q.answer + 1) % e.q.options.length : e.q.answer); }
-        seen.push(count());
+        totals.add(Number(count().split(' / ')[1])); last = count();
+        if (e.q && e.q.custom) finishCustom(e, true, ''); else { const miss = !misses && !e.encore && !e.requeued && !!state.srs[e.item.key]; if (miss) misses++; answerCurrent(miss ? (e.q.answer + 1) % e.q.options.length : e.q.answer); }
       }
-      const last = seen[seen.length - 1]; const extras = SESSION.entries.filter(x => x.encore || x.requeued).length; const total = SESSION.entries.length;
+      const total = SESSION.entries.length; const extras = SESSION.entries.filter(x => x.encore || x.requeued).length;
       SESSION = null; document.body.classList.remove('practicing');
-      return JSON.stringify({ n0, first, firstExtra, last, extras, total }); })()"""
+      return JSON.stringify({ n0, owed0, first, totals: [...totals], last, total, extras, misses }); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=90)
     r = json.loads(out[-1])
-    assert r['first'] == f"1 / {r['n0']}", r
-    assert r['extras'] > 0 and r['total'] == r['n0'] + r['extras'], r
-    assert r['firstExtra'] and re.fullmatch(rf"\d+ / {r['n0']} 加考 1", r['firstExtra']['label']), r   # an extra does not move the planned count, it is counted apart
-    assert r['last'] == f"{r['n0']} / {r['n0']} 加考 {r['extras']}", r
+    assert r['owed0'] > 0 and r['first'] == f"1 / {r['n0'] + r['owed0']}", r   # the new items' encores are in the total from the start
+    assert r['extras'] > 0 and r['total'] == r['n0'] + r['extras'] and r['last'] == f"{r['total']} / {r['total']}", r
+    assert max(r['totals']) - (r['n0'] + r['owed0']) <= r['misses'], r   # only a miss made it grow
 
 FAKE_DAYS = """const RealDate = Date; window.__shift = 0;
 window.Date = class extends RealDate { constructor(...a) { if (a.length) super(...a); else { super(); this.setDate(this.getDate() + window.__shift); } } static now() { return RealDate.now() + window.__shift * 86400000; } };
@@ -1200,7 +1201,7 @@ def test_exam_countdown_leaves_the_projection_to_the_stats_page(b):
 def test_requeue_uses_another_format_when_the_item_has_one(b):
     js = """(() => { const out = {};
       const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.exZh && /[一-龯]/.test(x.w) && meaningOptions(x) && recallOptions(x));   // formats open up once the word has a record
-      const g = REG.grammar.find(x => !state.srs[x.key] && (x.t || 'choice') === 'choice' && x.zh && grammarMeaningDistractors(x));
+      const g = REG.grammar.find(x => !state.srs[x.key] && (x.t || 'choice') === 'choice' && x.zh && grammarFormats(x).length > 1);
       for (const [kind, it] of [['v', v], ['g', g]]) {
         const fill = REG.grammar.filter(x => !state.srs[x.key] && x !== it && x !== g).slice(0, 8);
         startSession('items', { items: [it, ...fill] }); let e = currentEntry(); e.previewDone = true; const f0 = e.q.fmt;
@@ -1216,7 +1217,7 @@ def test_requeue_uses_another_format_when_the_item_has_one(b):
         assert r[k]['sameItem'] and r[k]['f1'] != r[k]['f0'], r
 
 def test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right(b):
-    js = """(() => { const t = todayStr(); const gs = REG.grammar.filter(x => !state.srs[x.key] && (x.t || 'choice') === 'choice' && x.zh && grammarMeaningDistractors(x));
+    js = """(() => { const t = todayStr(); const gs = REG.grammar.filter(x => !state.srs[x.key] && (x.t || 'choice') === 'choice' && x.zh && grammarFormats(x).length > 1);
       const run = (ok) => { const g = gs.shift(); const fill = REG.grammar.filter(x => !state.srs[x.key] && !gs.includes(x) && x !== g).slice(0, 14);
         const est = encoreEstimate([g]); startSession('items', { items: [g, ...fill] }); const e = currentEntry(); e.previewDone = true; const f0 = e.q.fmt;
         answerCurrent(ok ? e.q.answer : (e.q.answer + 1) % e.q.options.length);
@@ -1483,9 +1484,9 @@ def test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue(b):
       const fill = REG.grammar.filter(g => state.srs[g.key]).concat(REG.grammar).slice(0, 6).map(g => { srsAnswer(g.key, true); return g; });
       startSession('items', { items: [v, ...fill] }); const e = currentEntry(); e.q = makeVocabQuestion(v, { forceFmt: 'v-meaning' }); renderPractice();
       answerCurrent((e.q.answer + 1) % e.q.options.length);
-      const out = { btn: !!document.querySelector('.more-items [data-act=slip]'), added: state.mistakes.length - mist, requeued: SESSION.entries.filter(x => x.requeued).length };
+      const out = { btn: !!document.querySelector('#view [data-act=slip]'), added: state.mistakes.length - mist, requeued: SESSION.entries.filter(x => x.requeued).length };
       ACTIONS.slip(); out.restored = JSON.stringify(state.srs[v.key]) === before; out.mistBack = state.mistakes.length === mist; out.requeueGone = SESSION.entries.filter(x => x.requeued).length === 0;
-      out.recent = state.recent.length === rec0; out.ng = (state.statsFmt['v-meaning'] || { ng: 0 }).ng === ng0; out.chip = /手滑/.test((document.querySelector('.fb-meta') || {}).textContent || ''); out.btnGone = !document.querySelector('.more-items [data-act=slip]');
+      out.recent = state.recent.length === rec0; out.ng = (state.statsFmt['v-meaning'] || { ng: 0 }).ng === ng0; out.chip = /手滑/.test((document.querySelector('.fb-meta') || {}).textContent || ''); out.btnGone = !document.querySelector('#view [data-act=slip]');
       out.wrongStat = SESSION.stats.wrong; SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
@@ -1700,7 +1701,7 @@ def test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip(b):
     assert r['wasPlaying'] and r['playing'] is False and r['idx'] == 2 and r['same'] and r['state'] == 'paused', r
     assert r['silence'] == {'calls': 1, 'blob': 'blob:', 'waited': True, 'flagCleared': True}, r['silence']
 
-def test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_hides_kana_drills(b):
+def test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore(b):
     js = """(() => {
       const t = todayStr();
       delete state.dailyLogs[t]; state.themeLane = null;
@@ -1724,22 +1725,12 @@ def test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_h
         newCount: SESSION.stats.newCount
       };
       SESSION = null; document.body.classList.remove('practicing');
-      const k0 = REG.kana[0], d0 = REG.drills[0];
-      const origConfirm = window.confirm; window.confirm = () => true;
-      startSession('items', { items: [k0, d0] });
-      answerCurrent(0); reportCurrentItem();
-      answerCurrent(0); reportCurrentItem();
-      window.confirm = origConfirm;
-      SESSION = null; document.body.classList.remove('practicing');
-      const hiddenOk = !REG.kana.some(x => x.id === k0.id) && !REG.drills.some(x => x.id === d0.id);
-      state.hidden = state.hidden.filter(id => id !== k0.id && id !== d0.id); buildRegistry(); saveState();
-      return JSON.stringify({ afterMiss, afterSlip, hiddenOk });
+      return JSON.stringify({ afterMiss, afterSlip });
     })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     assert r['afterMiss'] == {'hasLog': True, 'hasTheme': True, 'encores': 1, 'requeued': 1}, r
     assert r['afterSlip'] == {'hasLog': False, 'hasTheme': False, 'encores': 0, 'requeued': 0, 'newCount': 0}, r
-    assert r['hiddenOk'] is True, r
 
 # ---- 1.0.15: settings keep what the learner decides; stage, unit, review strength and the speech switches are the app's ----
 def test_settings_drop_the_switches_the_app_now_decides(b):
@@ -2038,7 +2029,7 @@ if __name__ == "__main__":
              test_first_correct_answer_waits_a_few_days_before_repeating, test_new_grammar_of_a_unit_rotates_through_its_points,
              test_audio_options_play_on_click_instead_of_being_read_in_sequence, test_scene_audio_options_have_no_autoplay_and_play_on_click, test_formal_exam_listening_options_play_on_click,
              test_today_button_count_matches_the_session, test_settings_show_the_version_and_its_history,
-             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_planned_items_and_shows_extras_apart, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_clips_are_fetched_from_the_r2_address, test_a_clip_r2_lacks_or_cannot_serve_comes_from_supabase_and_is_no_miss, test_sigv4_signs_like_the_aws_test_suite_and_signs_r2_requests, test_r2_listing_follows_pages_and_an_upload_carries_the_signed_headers, test_r2_errors_name_their_code_and_an_unreachable_bucket_says_so, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_a_silent_cloud_clip_counts_as_missing_and_the_download_skips_it, test_a_pinned_word_without_its_clip_plays_the_clip_of_its_reading, test_numbers_before_man_are_left_to_the_voice_and_buttons_speak_what_the_generator_makes, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_generator_stops_when_r2_refuses_or_cannot_be_reached, test_cloud_generator_retries_a_silent_clip_as_plain_text_then_kana, test_cloud_audio_is_the_only_engine_with_an_admin_generator_at_the_bottom_of_data, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_download_all_counts_clips_cached_under_the_supabase_address_and_adds_no_copy, test_download_all_finds_a_stored_clip_by_its_address_whatever_it_varies_on, test_download_all_takes_from_supabase_what_r2_lacks,test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_stats_today_card_shows_the_scope_and_folds_the_help, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_exam_countdown_leaves_the_projection_to_the_stats_page, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
+             test_every_wrong_answer_waits_until_tomorrow, test_miss_then_requeue_does_not_return_today, test_daily_queue_has_only_due_or_new, test_listening_and_reading_are_capped_per_day, test_new_items_spread_across_sessions, test_done_state_and_extra_session, test_theme_lane_rotates_after_three_days_of_words, test_new_grammar_follows_lesson_sections_with_points_rotating, test_unit_advances_when_its_grammar_is_all_introduced, test_ring_counts_todays_work_and_fills_when_the_day_is_done, test_daily_goal_migrates_and_the_load_cap_no_longer_shapes_the_plan, test_pressing_see_results_after_the_last_question_shows_the_summary, test_practice_counter_counts_the_encores_from_the_start, test_a_miss_walks_the_relearning_ladder_and_then_leaves_the_notebook, test_today_counts_relearning_items_among_reviews_and_puts_them_first, test_cloud_audio_path_is_stable_and_pins_readings, test_cloud_clips_are_fetched_from_the_r2_address, test_a_clip_r2_lacks_or_cannot_serve_comes_from_supabase_and_is_no_miss, test_sigv4_signs_like_the_aws_test_suite_and_signs_r2_requests, test_r2_listing_follows_pages_and_an_upload_carries_the_signed_headers, test_r2_errors_name_their_code_and_an_unreachable_bucket_says_so, test_cloud_engine_falls_back_to_the_browser_voice_and_notes_the_miss, test_a_silent_cloud_clip_counts_as_missing_and_the_download_skips_it, test_a_pinned_word_without_its_clip_plays_the_clip_of_its_reading, test_numbers_before_man_are_left_to_the_voice_and_buttons_speak_what_the_generator_makes, test_cloud_generator_covers_the_built_in_sentences_and_uploads_only_what_is_missing, test_cloud_generator_stops_when_r2_refuses_or_cannot_be_reached, test_cloud_generator_retries_a_silent_clip_as_plain_text_then_kana, test_cloud_audio_is_the_only_engine_with_an_admin_generator_at_the_bottom_of_data, test_download_all_puts_every_clip_in_the_audio_cache_and_skips_what_is_there, test_download_all_counts_clips_cached_under_the_supabase_address_and_adds_no_copy, test_download_all_finds_a_stored_clip_by_its_address_whatever_it_varies_on, test_download_all_takes_from_supabase_what_r2_lacks,test_history_card_lives_in_stats_with_day_statistics_and_the_leech_card_is_gone, test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints, test_unit_legend_chips_exam_subject_rows_and_setting_hints, test_stats_today_card_shows_the_scope_and_folds_the_help, test_mistake_category_chips_fold_and_the_listen_player_reads_the_notebook_in_a_loop, test_listen_reads_order_items_as_whole_sentences_and_skips_listening_and_reading, test_today_notebook_card_is_the_listen_player, test_vocab_theme_card_plays_the_theme, test_exam_countdown_leaves_the_projection_to_the_stats_page, test_requeue_uses_another_format_when_the_item_has_one, test_new_grammar_gets_one_encore_in_another_format_only_when_answered_right, test_unit_and_vocab_practice_do_not_repeat_todays_correct_answers,
              test_heatmap_starts_at_the_week_the_learner_began, test_reset_all_is_folded_away_at_the_bottom_of_data,
              test_modal_header_stays_put_while_the_body_scrolls_and_has_a_bottom_close,
              test_google_tts_engine_sends_ssml_with_known_readings, test_deepgram_gets_kana_for_known_readings_unless_turned_off,
@@ -2050,7 +2041,7 @@ if __name__ == "__main__":
              test_dismissing_a_preview_asks_the_question_a_few_items_later, test_new_word_gets_one_spaced_encore_and_comes_back_tomorrow, test_first_new_question_of_a_lesson_section_shows_that_section_once,
              test_listening_pool_is_the_whole_level_ordered_by_closeness_and_repeats_only_after_two_weeks, test_listening_playback_shows_a_progress_bar_with_the_line_count, test_order_items_are_arranged_by_tapping_the_four_parts_in_practice_but_stay_star_choice_in_the_exam, test_a_wrong_order_marks_the_misplaced_pieces_red, test_a_retry_copy_of_an_order_item_grades_the_right_order_as_right, test_a_kanji_question_reads_its_example_word_once_answered, test_options_of_one_question_share_one_font_size, test_a_slip_undoes_the_schedule_the_notebook_and_the_requeue,
              test_ai_asks_the_site_function_and_keeps_todays_count, test_ai_shows_the_functions_own_message_when_it_refuses, test_ai_explanations_are_cached_per_question_and_show_the_model, test_listen_plays_silence_between_lines_and_pauses_on_a_refused_clip, test_today_page_fits_one_phone_screen_with_the_unit_folded_and_the_player_filling_the_rest, test_listen_pills_keep_the_place_and_the_example_chinese_is_read, test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed, test_notebook_player_skips_grammar_without_chinese_or_without_a_marked_answer, test_review_theme_collects_met_but_unmastered_words_and_is_the_default_until_another_is_picked, test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones, test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_tab, test_fullscreen_player_turns_a_portrait_phone_sideways_and_fits_everything_in_the_box,
-             test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore_and_report_hides_kana_drills,
+             test_slip_on_new_word_restores_daily_logs_theme_lane_and_encore,
              test_a_missed_listening_or_reading_item_gets_no_retry_copy_in_the_session, test_settings_drop_the_switches_the_app_now_decides, test_speech_switches_stay_on_even_when_an_old_copy_saved_them_off, test_sets_hold_twenty_mixed_even_when_an_old_copy_saved_another_size_or_order,
              test_offline_audio_keeps_the_japanese_clips_of_todays_practice, test_offline_audio_fills_the_cache_skipping_stored_and_missing_clips_and_stops_offline,
              test_installed_app_keeps_the_coming_audio_by_itself_and_again_when_back_online, test_a_browser_tab_does_not_download_audio_ahead_by_itself, test_the_old_address_says_the_site_moved_and_data_settings_have_no_backup_file,

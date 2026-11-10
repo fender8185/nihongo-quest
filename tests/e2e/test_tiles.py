@@ -76,6 +76,53 @@ def test_sentence_pieces_drag_between_the_fixed_words(b):
     assert r['between'] == '|'.join(p[:3]) and r['ok'] and r['right'], r
     assert r['plain'] == {'badges': 0, 'hint': False, 'keyed': 0}, r
 
+# ---- 2026-11-10 (the user): 句意拼貼 — the Japanese over Chinese pieces, its own shuffled with decoys that change the grammar point;
+# graded by the pieces placed, in any order; answered, a decoy on the line is red and the grammar's piece marked; 看答案 shows the right ones ----
+# a fill-in item (not a particle's 用法) given three pieces and two decoys here, so the test does not hang on the data
+ZHQ = FRESH + """ const g = REG.grammar.find(x => (x.t || 'choice') === 'choice' && x.zh && [...x.zh].length >= 9 && !grammarUsageDistractors(x));
+  const c = [...g.zh], a = Math.floor(c.length / 3), z = Math.floor(c.length * 2 / 3);
+  g.zt = [c.slice(0, a).join(''), c.slice(a, z).join(''), c.slice(z).join('')]; g.zk = 1; g.zd = ['完全不同的一塊', '另一塊假的']; srsAnswer(g.key, true);
+  const open = () => { SESSION = null; startSession('items', { items: [g] }); route(); const e = currentEntry(); e.q = makeGrammarQuestion(g, { forceFmt: 'g-zh' }); renderPractice(); return e; };
+  const tile = (e, p) => document.querySelector(`.order-tile[data-i="${e.q.tiles.indexOf(p)}"]`);"""
+
+def test_zh_pieces_count_in_any_order_and_a_decoy_shows_red(b):
+    js = "(() => { " + ZHQ + """
+      let e = open(); const q = e.q;
+      const build = { fmt: q.fmt, custom: q.custom, n: q.tiles.length, all: g.zt.concat(g.zd).every(p => q.tiles.includes(p)), zh: q.zhText, stem: !!q.stemHtml, slots: document.querySelectorAll('.zh-build .order-slot').length };
+      [...g.zt].reverse().forEach(p => tile(e, p).click());
+      const full = { ok: !document.querySelector('.tile-ok').disabled, line: (e.zh || []).map(i => q.tiles[i]).join('') };
+      document.querySelector('.tile-ok').click();
+      const right = { right: e.chosen === e.q.answer, okCls: document.querySelector('.order-out').classList.contains('ok'), key: (document.querySelector('.order-slot.key') || {}).textContent || '' };
+      e = open(); const mist = state.mistakes.length;
+      [g.zt[0], g.zd[0], g.zt[2]].forEach(p => tile(e, p).click()); document.querySelector('.tile-ok').click();
+      const m = state.mistakes.find(x => x.key === g.key) || {};
+      const wrong = { right: e.chosen === e.q.answer, red: [...document.querySelectorAll('.order-slot.wrong')].map(x => x.textContent), book: state.mistakes.length - mist, ans: m.answer, chose: m.wrong };
+      e = open(); ACTIONS['custom-giveup'](); const shown = [...document.querySelectorAll('.zh-build .order-slot')].map(x => x.textContent);
+      SESSION = null; document.body.classList.remove('practicing'); delete state.srs[g.key]; state.mistakes = state.mistakes.filter(x => x.key !== g.key);
+      return JSON.stringify({ build, full, right, wrong, shown, zt: g.zt, zd: g.zd, zh: g.zh }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['build'] == {'fmt': 'g-zh', 'custom': 'g-zh', 'n': 5, 'all': True, 'zh': '', 'stem': True, 'slots': 3}, r
+    assert r['full']['ok'] and r['full']['line'] == ''.join(reversed(r['zt'])), r   # placed back to front...
+    assert r['right'] == {'right': True, 'okCls': True, 'key': r['zt'][1]}, r      # ...still right, and the grammar's piece is marked
+    assert r['wrong'] == {'right': False, 'red': [r['zd'][0]], 'book': 1, 'ans': r['zh'], 'chose': r['zt'][0] + r['zd'][0] + r['zt'][2]}, r
+    assert r['shown'] == r['zt'], r   # 看答案: the right pieces in their order
+
+def test_zh_pieces_stay_out_of_stage_tests_and_particles_keep_their_usage_question(b):
+    js = "(() => { " + FRESH + """
+      const g = REG.grammar.find(x => (x.t || 'choice') === 'choice' && x.zh && [...x.zh].length >= 9 && !grammarUsageDistractors(x));
+      const m = REG.grammar.find(x => x.t === 'meaning'); const p = REG.grammar.find(x => (x.t || 'choice') === 'choice' && x.zh && grammarUsageDistractors(x));
+      const cut = (s) => [[...s].slice(0, 3).join(''), [...s].slice(3).join('')];
+      g.zt = cut(g.zh); m.zt = cut(m.a); p.zt = cut(p.zh); [g, m, p].forEach(x => { x.zk = 0; x.zd = ['假的一塊', '假的兩塊']; srsAnswer(x.key, true); });
+      const fmts = (x, ctx) => { const s = new Set(); for (let i = 0; i < 40; i++) { const q = makeQuestion(x, Object.assign({}, ctx)); s.add(q ? q.fmt : null); } return [...s].sort(); };
+      const out = { gFormats: grammarFormats(g), pFormats: grammarFormats(p), gPlain: fmts(g, {}), gStage: fmts(g, { choiceOnly: true }), mPlain: fmts(m, {}), mStage: fmts(m, { choiceOnly: true }), pPlain: fmts(p, {}) };
+      [g, m, p].forEach(x => { delete state.srs[x.key]; });
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['gFormats'] == ['g-choice', 'g-zh'] and r['pFormats'] == ['g-choice', 'g-meaning'], r
+    assert r['gPlain'] == ['g-choice', 'g-zh'] and r['gStage'] == ['g-choice'], r   # a 階段測驗 asks with options only
+    assert r['mPlain'] == ['g-zh'] and r['mStage'] == ['g-meaning'], r              # a 句意 item: pieces; in a test, its own four sentences
+    assert r['pPlain'] == ['g-choice', 'g-meaning'], r                             # a particle keeps 「畫線的に表示什麼」
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

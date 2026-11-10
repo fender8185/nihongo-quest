@@ -184,6 +184,26 @@ def test_the_dots_an_answer_lit_pop_and_a_new_level_says_so(b):
     assert r['redraw'] == [], r   # drawn again (顯示中文, ⋯, a sync): still
     assert r['miss'] == {'lv': None, 'ups': 0, 'chip': False}, r
 
+# 2026-11-10 (the user): the summary shows 這組的收穫 (new and levelled-up items, popping in), 全對 in gold with confetti, and the set's
+# 言靈 fly from its +N into the total, which counts up from where it was to the new balance
+def test_the_summary_shows_the_harvest_and_the_koto_fly_into_the_total(b):
+    js = "(async () => { " + FRESH + """ startSession('daily', {}); route();
+      { let guard = 0; while (SESSION && SESSION.idx < SESSION.entries.length && guard++ < 500) { const e = currentEntry();
+          if (e.preview && !e.previewDone) { dismissPreview(); continue; } if (!e.q) { prepareEntry(SESSION.idx); continue; }
+          if (!e.done) { answerCurrent(e.q.answer); if (!e.done) e.done = true; } nextQuestion(); } }
+      const title = document.querySelector('.page-title'), num = document.querySelector('.koto-gain .tot .num'), g = SESSION.koto;
+      const out = { title: title.textContent, gold: title.classList.contains('all-right'), rows: [...document.querySelectorAll('.harvest-l')].map(x => x.textContent.trim()),
+        chips: document.querySelectorAll('.harvest .chip').length, play: !!document.querySelector('.harvest.play'), start: Number(num.textContent), got: (g.set || 0) + (g.day || 0), bal: kotoBalance() };
+      await new Promise(res => setTimeout(res, 800)); out.confetti = document.querySelectorAll('.confetti i').length;
+      await new Promise(res => setTimeout(res, 2800)); out.end = Number(document.querySelector('.koto-gain .tot .num').textContent);
+      renderPractice(); out.again = { play: !!document.querySelector('.harvest.play'), num: Number(document.querySelector('.koto-gain .tot .num').textContent) };   // a sync draws it again: still
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['title'] == '全對！' and r['gold'], r
+    assert any(x.startswith('新學') for x in r['rows']) and r['chips'] > 0 and r['play'], r
+    assert r['got'] >= 1 and r['start'] == r['bal'] - r['got'] and r['end'] == r['bal'], r   # counted up from the old balance to the new
+    assert r['confetti'] > 0 and r['again'] == {'play': False, 'num': r['bal']}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
