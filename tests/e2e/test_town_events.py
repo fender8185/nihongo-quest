@@ -521,6 +521,18 @@ def test_the_harbor_and_the_park_have_their_ways_on_and_every_place_out_is_a_sce
     assert all(r[p]['scene'] for p in ['harbor', 'park', 'beach', 'street', 'town', 'station', 'izakaya']), r   # the clock ticks and the page is the scene
     assert r['walked'] == '#/harbor', r
 
+# 2026-11-10 (the user): the yard is a hilltop — far off below on its left the beach and the sea, on its right the hillside town,
+# paths winding down to them — and its ways go off those sides; one walks the top, not out over its edge
+def test_the_yards_left_is_the_shore_and_its_right_the_market(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ state.met = { koharu: 1, mugi: 1 };
+      await go('outside', 12); const at = (to) => parseFloat(y().querySelector('.way-btn[data-to="' + to + '"]').style.marginLeft);
+      const sides = { shore: !!y().querySelector('.land .yard-shore .sea'), market: !!y().querySelector('.land .yard-market'), beach: at('beach') < -YARD_HALF + 60, town: at('town') > YARD_HALF - 100 };
+      await new Promise((q) => yHeroWalk(y(), [-520, 220], q)); sides.sea = Math.round(yh.Y); await new Promise((q) => yHeroWalk(y(), [520, 220], q)); sides.shops = Math.round(yh.Y);
+      y().querySelector('.way-btn[data-to="beach"]').click(); for (let i = 0; i < 60 && location.hash !== '#/beach'; i++) await wait(80);
+      sides.went = location.hash; yh.arrive = { from: 'town', to: 'yard' }; location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); sides.came = [Math.round(yh.X), Math.round(yh.Y)];
+      return JSON.stringify(sides); })()"""))
+    assert r == {'shore': True, 'market': True, 'beach': True, 'town': True, 'sea': 166, 'shops': 166, 'went': '#/beach', 'came': [600, 70]}, r   # a hilltop: lower towards its sides, not out over the edge
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

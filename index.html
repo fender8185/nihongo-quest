@@ -7113,13 +7113,13 @@ function yClimbLook(h, s) {
 // how far up each place the hero walks (Y px up): the ground in front of its buildings, never up onto them (2026-11-10, the user);
 // the yard up to its house, the main road to its far pavement, a room to its floor
 const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128 };
-const walkTop = (place) => WALK_TOP[place] || 214;
+const walkTop = (place, X) => (place === 'yard' && X !== undefined ? Math.round(214 - Math.max(0, Math.abs(X) - 300) * 0.22) : WALK_TOP[place] || 214);   // the yard: a hilltop, lower towards its sides — not out over the edge
 function yHeroWalk(yard, to, done, free) {   // free: on the way out of the place (up the path home), past its top
   cancelAnimationFrame(yh.raf);
   const el = yard.querySelector('.yhero'), lim = ycam.YW / 2 - 20;
   yh.climb = null; yh.s = 0; yard.classList.remove('climbing'); if (el) { el.classList.remove('climb'); yClimbLook(el, 0); }   // off the hill path, if he was on it
   HERO.still(el); if (el) el.classList.remove('bench');   // up off the bus stop's bench
-  const from = [yh.X, yh.Y], goal = [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(free ? 222 : walkTop(yPlace), to[1]))], dx = goal[0] - from[0], dy = goal[1] - from[1], len = Math.hypot(dx, dy);
+  const from = [yh.X, yh.Y], goal = [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(free ? 222 : walkTop(yPlace, Math.max(-lim, Math.min(lim, to[0]))), to[1]))], dx = goal[0] - from[0], dy = goal[1] - from[1], len = Math.hypot(dx, dy);
   if (!el || len < 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { yh.X = goal[0]; yh.Y = goal[1]; if (el) yHeroPlace(yard); yHeroSave(); if (done) done(); return; }
   const v = Math.max(170, len / 1.1);   // px a second: a long way hurries, about a second at most
   yh.back = dy > 0; if (Math.abs(dx) > 1) yh.flip = dx < 0; yh.turn = Math.abs(dx) > 0.5 * Math.abs(dy);   // across the lawn: a little turned
@@ -7703,6 +7703,9 @@ function beachHtml() {
       <rect x="760" y="196" width="130" height="62" ${hc('#c9a06a', '#2a2440')}/><path d="M744 200 L825 168 L906 200 Z" ${hc('#b9a070', '#1e1c38')}/>${[770, 790, 810, 830, 850, 870].map((x) => `<path d="M${x} 186 l-6 14" ${hs('#9a8058', '#1a1832')} stroke-width="1.4"/>`).join('')}<rect x="776" y="214" width="98" height="30" ${hc('#efe6d6', '#ffd98a')}/><text x="825" y="234" text-anchor="middle" font-size="13" font-weight="700" ${hc('#2f5a9a', '#3a3456')} font-family="system-ui, sans-serif">海の家</text>
       <path d="M900 258 V178" ${hs('#6e4f3a', '#2c2440')} stroke-width="3"/><path d="M901 180 h20 v40 h-20 Z" ${hcx('fx-flag', '#fbf7ec', '#4a4c72')}/><text x="911" y="196" text-anchor="middle" font-size="9" font-weight="700" fill="#d0453c" font-family="system-ui, sans-serif" writing-mode="tb">氷</text>
       <path d="M260 340 q30 -8 60 -2 q10 2 18 -4" fill="none" ${hs('#a8875e', '#3a3050')} stroke-width="6"/>
+      <path d="M900 250 C960 190 1020 100 1090 20 C1130 -24 1170 -40 1220 -44 V370 H900 Z" ${hc('#a6bd96', '#161c38')}/>
+      <path d="M1120 -20 L1130 -36 L1158 -48 L1186 -36 L1196 -20 Z" ${hc('#c8553f', '#3a2030')}/><rect x="1132" y="-22" width="58" height="28" ${hc('#efe4d2', '#1e2042')}/><rect class="lit" x="1140" y="-14" width="9" height="8"/><rect class="lit" x="1172" y="-14" width="9" height="8"/>
+      <path d="M1130 8 L1090 40 L1140 70 L1060 110 L1110 140 L1020 190 L1070 220 L1000 260" fill="none" ${hs('#e3cf9e', '#3a3858')} stroke-width="5" stroke-linejoin="round"/>
       <path class="near" d="M1060 370 C1074 320 1094 270 1124 232 C1150 196 1180 168 1220 156 V370 Z"/>${[1100, 1140, 1180].map((x) => `<path d="M${x} ${330 - (x - 1100) * 0.9} q4 -12 8 0 M${x + 6} ${331 - (x - 1100) * 0.9} q5 -10 9 -1" ${hs('#7f9d6c', '#1a2a3a')} stroke-width="2"/>`).join('')}
       <path d="M980 300 L1220 292 V306 L980 314 Z" ${hc('#c9a06a', '#3a2c40')}/>${Array.from({ length: 12 }, (_, k2) => `<path d="M${990 + k2 * 20} ${299.6 - k2 * 0.66} v14" ${hs('#a8804e', '#2a2440')} stroke-width="1.6"/>`).join('')}
       ${[1000, 1060, 1120, 1180].map((x) => `<rect x="${x}" y="276" width="4" height="22" ${hc('#8a6a4a', '#2c2440')}/>`).join('')}<path d="M1000 282 L1184 278" ${hs('#8a6a4a', '#2c2440')} stroke-width="2"/>
@@ -7746,8 +7749,18 @@ function townHtml() {
   // bakery's awning, steam from its chimney; on the left a hedge and the way along from the yard
   const nobori = (x, c, words, k) => `<path d="M${x} ${TOWN_FOOT} V${TOWN_FOOT - 120}" ${hs('#8a8f99', '#3a3d66')} stroke-width="2.4"/><path d="M${x + 1} ${TOWN_FOOT - 118} h18 v78 h-18 Z" ${hcx('fx-flag', c, '#3a3456', `animation-delay:-${k * 0.5}s`)}/><text x="${x + 10}" y="${TOWN_FOOT - 104}" text-anchor="middle" font-size="10" font-weight="700" fill="#fff" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif" writing-mode="tb">${words}</text>`;
   const flags = Array.from({ length: 23 }, (_, k) => { const x = 150 + k * 40, t = (x - 130) / 930, y = -24 + 50 * t * (1 - t) * 2; return `<path d="M${x} ${y} l12 0 l-6 12 Z" fill="${['#d0574b', '#e6c23a', '#3f7ac8', '#4f7a4a'][k % 4]}" fill-opacity=".9"/>`; }).join('');
+  // 2026-11-10 (the user: a hillside shopping street, like the hill outside our house): behind the row the hill climbs to the
+  // left, houses stepped up it between stone steps, and our house small on its top far up on the left
+  const terrace = [[60, -170], [110, -150], [170, -126], [230, -98], [300, -70], [360, -48], [430, -24], [500, -4], [570, 16], [650, 34], [730, 50], [820, 64], [900, 76], [990, 88], [1080, 96], [1160, 102],
+    [140, -108], [200, -84], [270, -50], [340, -26], [410, -4], [480, 18], [560, 40], [640, 58], [720, 74], [800, 86], [880, 98]];
+  const roofs = terrace.map(([x, y], k) => `<rect x="${x - 18}" y="${y}" width="36" height="${150 - y}" ${hc(k % 3 ? '#ece2d0' : '#e2d6c2', '#1c1e40')}/><path d="M${x - 22} ${y + 2} L${x} ${y - 14} L${x + 22} ${y + 2} Z" ${hc(['#8a5a44', '#5f6f8a', '#6f5a7a', '#4a5468'][k % 4], '#14163a')}/>${k % 3 === 1 ? `<rect class="lit" x="${x - 6}" y="${y + 8}" width="10" height="9"/>` : ''}`).join('');
   return `<svg class="land tall town-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
       <path class="far" d="M0 122 C120 100 240 104 360 118 S560 96 700 110 S900 126 1020 104 S1150 100 1200 110 V370 H0 Z"/>
+      <path d="M-20 -190 C60 -200 140 -186 220 -150 C400 -70 640 20 900 70 C1020 92 1120 104 1220 108 V370 H-20 Z" ${hc('#a6bd96', '#161c38')}/>
+      <path d="M40 -196 L48 -214 L84 -228 L120 -214 L128 -196 Z" ${hc('#c8553f', '#3a2030')}/><rect x="54" y="-198" width="68" height="34" ${hc('#efe4d2', '#1e2042')}/><rect class="lit" x="64" y="-188" width="10" height="9"/><rect class="lit" x="100" y="-188" width="10" height="9"/>
+      <path d="M150 -150 L190 -124 L150 -100 L230 -70 L190 -44 L280 -10 L250 18 L340 50 L310 80 L400 110 L380 150" fill="none" ${hs('#cfc8b8', '#2a2c50')} stroke-width="5" stroke-linejoin="round"/>
+      ${roofs}
+      ${[[250, -56], [470, 0], [690, 50], [960, 84]].map(([x, y]) => `<rect class="trunk" x="${x - 3}" y="${y - 22}" width="6" height="22"/><g class="crown"><circle cx="${x}" cy="${y - 30}" r="16"/><circle cx="${x - 12}" cy="${y - 20}" r="11"/><circle cx="${x + 12}" cy="${y - 21}" r="12"/></g>`).join('')}
       <rect class="near" x="-20" y="150" width="1240" height="220"/>
       ${[130, 1060].map((x) => `<rect x="${x - 5}" y="-80" width="10" height="${TOWN_FOOT + 80}" ${hc('#8d8a84', '#24254a')}/><rect x="${x - 26}" y="-66" width="52" height="5" ${hc('#6f6c66', '#1c1d3e')}/>`).join('')}
       ${[-62, -46].map((wy) => `<path class="wire" d="M-20 ${wy + 8} Q60 ${wy + 30} 130 ${wy} Q595 ${wy + 80} 1060 ${wy} Q1140 ${wy + 30} 1220 ${wy + 8}"/>`).join('')}
@@ -7761,6 +7774,7 @@ function townHtml() {
       <rect class="pave" x="-20" y="${TOWN_FOOT}" width="1240" height="${370 - TOWN_FOOT}"/><path class="rline" d="M-20 ${TOWN_FOOT + 1} H1220" style="stroke-dasharray:none;opacity:.5"/>
       ${Array.from({ length: 30 }, (_, j) => `<path class="seam" d="M${j * 44 - 20} ${TOWN_FOOT + 40 + (j % 3) * 30} h26"/>`).join('')}
       <path d="M-20 296 C30 294 70 296 110 302 C118 306 118 312 110 316 C70 314 30 312 -20 316 Z" ${hc('#cfc8b8', '#2a2a48')}/>
+      <path d="M86 ${TOWN_FOOT} L130 ${TOWN_FOOT} L112 150 L92 150 Z" ${hc('#cfc8b8', '#2a2a48')}/>${Array.from({ length: 7 }, (_, k) => { const t = k / 6, y = TOWN_FOOT - (TOWN_FOOT - 150) * t; return `<path d="M${86 + 6 * t} ${y} H${130 - 18 * t}" ${hs('#a8a49a', '#22244a')} stroke-width="2"/>`; }).join('')}
     </svg>
     ${yHeroHtml()}
     ${TOWNEV.castHtml('town')}
@@ -7961,6 +7975,7 @@ const OUT_PLACES = Object.keys(PLACE_ROUTE).filter((p) => p !== 'yard');   // th
 const WAYS = {
   'yard>street': { out: () => [LANE.at(1)[0], 4], in: () => [[STREET_LANE.at(0)[0], 214], [STREET_LANE.at(1)[0] + 8, 126]] },
   'street>yard': { out: () => [STREET_LANE.at(0)[0], 222], in: () => [[LANE.at(1)[0], 12], [-11, 56]] },
+  // the yard's left goes on to the beach, its right into the market (2026-11-10, the user): along the edges
   'yard>beach': { out: () => [-YARD_HALF, 70], in: () => [[YARD_HALF, 62], [YARD_HALF - 90, 62]] },
   'beach>yard': { out: () => [YARD_HALF, 62], in: () => [[-YARD_HALF, 70], [-YARD_HALF + 90, 70]] },
   'yard>town': { out: () => [YARD_HALF, 70], in: () => [[-YARD_HALF, 64], [-YARD_HALF + 90, 64]] },
@@ -7981,7 +7996,7 @@ const WAYS = {
   'town>park': { out: () => [180, 4], in: () => [[PARK_PATH, 214], [PARK_PATH - 20, 104]] },
   'park>town': { out: () => [PARK_PATH, 222], in: () => [[180, 6], [180, 50]] }
 };
-const HARBOR_PATH = -380, PARK_PATH = 360;   // where the path from the row above comes down at the back (X)
+const HARBOR_PATH = -380, PARK_PATH = 360;
 function yGo(el, to) {
   yNamed(el);
   const yard = el.closest('.yard'), h = yard && yard.querySelector('.yhero'), way = WAYS[`${yPlace}>${to}`]; if (!way) return;
@@ -8365,7 +8380,7 @@ function yardHtml(pct, place = 'yard') {
   const f = pct / 100, mail = mailCount(), yw = yardWorldW(), street = place !== 'yard';
   const star = (s) => `<i class="st${s.dip ? ' dip' : ''}${s.t <= f ? ' on' : ''}" data-t="${s.t}" style="left:${s.x}%;top:${s.y}%;--s:${s.s}px;--d:${s.d}s;--w:-${s.w}s;--in:${f ? Math.round(s.t / f * 120) / 100 : 0}s"></i>`;
   const dip = SKY.stars.filter(s => s.dip).map(s => `${s.x} ${s.y}`);
-  const ground = 'M0 170 C150 152 300 142 450 147 C520 149 560 150 600 150 C640 150 690 149 760 146 C900 141 1050 151 1200 162';
+  const ground = 'M0 222 C60 204 120 180 210 164 C300 150 380 144 450 147 C520 149 560 150 600 150 C640 150 690 149 760 146 C840 143 920 150 1000 166 C1080 182 1150 204 1200 222';   // a hilltop: it falls away at both sides (2026-11-10)
   return `<div class="yard${street ? ' away ' + place : ''}${INDOOR.includes(place) ? ' indoor' : ''}${pct >= 100 ? ' full' : ''}" data-anim data-place="${place}" style="--f:${f}">
     <div class="sky" aria-hidden="true">
       <i class="tint t-grey"></i><i class="tint t-blue"></i><i class="tint t-warm"></i>
@@ -8392,17 +8407,27 @@ function yardHtml(pct, place = 'yard') {
         ${[[514, 326], [546, 306], [506, 290], [526, 272]].map(([x, y]) => `<circle class="p-lamp" cx="${x}" cy="${y}" r="1.4"/>`).join('')}
         <g transform="translate(482 254) scale(.8)">${SHOP_ART}</g>
       </svg>
-      <svg class="land" viewBox="0 0 1200 370" preserveAspectRatio="xMidYMax slice">
-        <path class="sea" d="M-20 100 C60 98 140 100 230 106 L230 126 C140 124 60 124 -20 126 Z"/>${[[1086, 104], [1124, 98], [1166, 106]].map(([x, y]) => `<path d="M${x - 16} ${y + 12} L${x} ${y} L${x + 16} ${y + 12} Z" ${hc('#8a5a44', '#15163a')}/><rect x="${x - 12}" y="${y + 12}" width="24" height="8" ${hc('#efe4d2', '#1e2042')}/>`).join('')}
-        <path class="far" d="M0 118 C110 96 210 98 320 114 S520 90 640 104 S860 124 990 98 S1140 94 1200 106 V370 H0 Z"/>
+      <svg class="land yard-land" viewBox="0 0 1200 370" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
+        <g class="yard-shore">
+          <path class="sea-far" d="M-20 110 H320 V118 H-20 Z"/><path class="sea" d="M-20 117 H310 V152 H-20 Z"/>
+          ${[[20, 126, 26], [90, 132, 34], [170, 124, 22], [240, 136, 28]].map(([x, y, l], i) => `<path class="glint" d="M${x} ${y} h${l}" style="--w:-${i * 0.7}s"/>`).join('')}
+          <path class="foam" d="M-20 150 C70 147 170 145 300 149"/><path class="sand" d="M-20 150 C70 147 170 145 300 149 L300 160 C170 156 70 158 -20 160 Z"/>
+          ${[[70, 148], [128, 146]].map(([x, y]) => `<path d="M${x - 5} ${y} l5 -5 l5 5 Z" ${hc('#e86f5e', '#4a2c48')}/>`).join('')}
+        </g>
+        <path class="far" d="M190 154 C230 144 262 128 300 116 C340 106 390 98 440 106 S540 90 640 104 S860 124 960 108 C1000 100 1040 98 1080 104 V370 H190 Z"/>
+        <g class="yard-market">
+          <path d="M940 160 C1010 128 1100 102 1220 92 V370 H940 Z" ${hc('#9dbb8e', '#141a36')}/>
+          ${[[1016, 132], [1040, 126], [1064, 118], [1090, 112], [1116, 106], [1144, 100], [1172, 96], [1198, 92], [1030, 142], [1058, 136], [1084, 128], [1110, 122], [1138, 116], [1166, 110], [1194, 106], [1076, 144], [1104, 138], [1132, 132], [1160, 126], [1190, 120]].map(([x, y], k) => `<rect x="${x - 8}" y="${y}" width="16" height="11" ${hc(k % 3 ? '#efe4d2' : '#e6dccb', '#1e2042')}/><path d="M${x - 10} ${y + 1} L${x} ${y - 6} L${x + 10} ${y + 1} Z" ${hc(['#8a5a44', '#5f6f8a', '#6f5a7a', '#8a2f2a'][k % 4], '#15163a')}/>${k % 4 === 1 ? `<rect class="lit" x="${x - 3}" y="${y + 3}" width="5" height="5"/>` : ''}`).join('')}
+          <path d="M1060 112 Q1110 100 1170 92" fill="none" ${hs('#6a6a74', '#2a2c50')} stroke-width=".8"/>${[1072, 1094, 1116, 1138, 1160].map((x, k) => `<path d="M${x} ${108 - k * 3} l3 0 l-1.5 3 Z" fill="${['#d0574b', '#e6c23a', '#3f7ac8'][k % 3]}"/>`).join('')}
+        </g>
+        <path d="M-20 158 C60 156 150 154 230 164 C270 170 300 186 318 214 V370 H-20 Z" ${hc('#a6bd96', '#161c38')}/>
+        <path d="M1220 120 C1150 124 1060 140 990 162 C950 176 920 196 900 222 V370 H1220 Z" ${hc('#a6bd96', '#161c38')}/>
+        <path d="M74 214 L40 202 L118 190 L64 178 L150 168 L120 158" fill="none" ${hs('#e3cf9e', '#3a3858')} stroke-width="3.4" stroke-linejoin="round"/>
+        <path d="M1128 216 L1166 200 L1084 188 L1146 174 L1066 164 L1100 152" fill="none" ${hs('#cfc8b8', '#3a3858')} stroke-width="3.4" stroke-linejoin="round"/>
         <path class="near" d="${ground} V370 H0 Z"/><path class="ridge" d="${ground}"/>
+        <path d="M-20 288 C40 286 110 290 168 298 C176 302 176 310 168 314 C110 312 40 310 -20 314 Z" ${hc('#e3cf9e', '#2c2b46')}/><path d="M1220 288 C1160 286 1090 290 1032 298 C1024 302 1024 310 1032 314 C1090 312 1160 310 1220 314 Z" ${hc('#cfc8b8', '#2a2a48')}/>
         <path class="lane" d="${stripD(LANE, 24)}"/>
         <rect class="trunk" x="465" y="104" width="8" height="46"/><g class="crown"><circle cx="469" cy="96" r="22"/><circle cx="452" cy="110" r="15"/><circle cx="487" cy="108" r="16"/></g>
-        <rect class="trunk" x="166" y="113" width="7" height="41"/><g class="crown"><circle cx="169.5" cy="105" r="19"/><circle cx="155" cy="117" r="13"/><circle cx="184" cy="116" r="14"/></g>
-        <rect class="trunk" x="1036" y="110" width="8" height="42"/><g class="crown"><circle cx="1040" cy="101" r="21"/><circle cx="1024" cy="114" r="14"/><circle cx="1057" cy="113" r="15"/></g>
-        <path d="M-20 290 C40 286 100 290 150 298 C158 302 158 310 150 314 C100 312 40 310 -20 314 Z" ${hc('#ecdcb0', '#2c2b46')}/>${[30, 70, 118].map((x) => `<path d="M${x} 290 q3 -12 6 0 M${x + 5} 291 q4 -10 8 -1" ${hs('#7f9d6c', '#1a2a3a')} stroke-width="2"/>`).join('')}
-        <path d="M1050 298 C1100 292 1160 292 1220 294 V316 C1160 314 1100 314 1050 318 Z" ${hc('#cfc8b8', '#2a2a48')}/>${[1070, 1110, 1150, 1190].map((x) => `<path d="M${x} 300 v14" ${hs('#b4ad9e', '#22224a')} stroke-width="2"/>`).join('')}
-        <rect x="1176" y="220" width="5" height="76" ${hc('#4a4a55', '#1c1d3c')}/><circle cx="1178.5" cy="216" r="7" ${hc('#f2efe4', '#ffe2a0')}/>
         ${[700, 722, 744, 766].map(x => `<rect class="post" x="${x}" y="131" width="4" height="19" rx="1"/>`).join('')}<path class="rail" d="M698 138 H772 M698 145 H772"/>
       </svg>
       <div class="flowers">${SKY.flowers.map(q => `<i class="fl" style="left:${q.x}%;bottom:${q.y}px;--c:${q.c};--d:${q.d}s;--w:-${q.w}s"></i>`).join('')}</div>
@@ -8416,7 +8441,7 @@ function yardHtml(pct, place = 'yard') {
       ${yHeroHtml()}
       <div class="ywares" data-sig="${yardSig()}">${yardWaresHtml()}</div>
       <button type="button" class="thing way-btn" data-act="go-place" data-to="beach" aria-label="海邊" style="margin-left:${-YARD_HALF + 40}px;bottom:70px"><span class="tag">${ySign('wave', '海邊')}</span>${TOWNEV.dot('beach', 'yard')}</button>
-      <button type="button" class="thing way-btn" data-act="go-place" data-to="town" aria-label="小鎮" style="margin-left:${YARD_HALF - 72}px;bottom:70px"><span class="tag">${ySign('shop', '小鎮')}</span>${TOWNEV.dot('town', 'yard')}</button>
+      <button type="button" class="thing way-btn" data-act="go-place" data-to="town" aria-label="商店街" style="margin-left:${YARD_HALF - 72}px;bottom:70px"><span class="tag">${ySign('shop', '商店街')}</span>${TOWNEV.dot('town', 'yard')}</button>
       <button type="button" class="thing way-btn" data-act="go-place" data-to="street" aria-label="公車站" style="margin-left:${Math.round(LANE.at(1)[0]) - 32}px;bottom:4px"><span class="tag">${ySign('bus', '公車站')}</span>${TOWNEV.dot('street', 'yard')}</button>
       <div class="mailbox${mail ? ' has' : ''}">
         <svg viewBox="0 0 52 66" aria-hidden="true">
