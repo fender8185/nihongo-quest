@@ -2007,12 +2007,16 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.7.0';   // keep equal to the version in sw.js CACHE ('nq-v1.4.2'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.7.1';   // keep equal to the version in sw.js CACHE ('nq-v1.4.2'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個版本一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（通常最後一位加一；1.1.0 是書房改版），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.7.1', date: '2026-11-10', items: [
+    '鏡頭讓主角待在畫面中間附近：走路時鏡頭順順地跟著，前進的方向多留一點空間；停下來時慢慢滑回，讓他在正中間。用手指滑過畫面，就會停在你滑到的地方，主角再走才回到他身上。書房和臥室也一樣。',
+    '從院子去海邊和小鎮變快了：遠方山路那段從將近 4 秒縮成 2 秒。'
+  ] },
   { v: '1.7.0', date: '2026-11-10', items: [
     '手機直拿時，外面的場景放大了：天空少一點，人和房子大一點，也比較好點；到白鷺城和食堂，一進去就看得到城和吧台。書房和臥室一開始拉遠一些，書櫃、書桌、窗戶和床都看得到，兩指還是可以拉近。',
     '晚上不再一片黑：天空是深藍色，多了淡淡的星星，地面和房子照著月光，窗戶的燈更亮；書房和臥室的檯燈照得比較開、比較暖。',
