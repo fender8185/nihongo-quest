@@ -449,10 +449,10 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .town-tools { margin-top: 6px; padding-top: 12px; border-top: 1px dashed #d9ccb4; font-size: 13px; } .town-tools .btn[aria-pressed="true"] { background: #7a5a3a; color: #fbf6ea; }
 .tt-unit { margin-top: 10px; } .tt-unit > span { font-weight: 700; color: #8a6a52; }
 .tb-ev { display: flex; justify-content: space-between; width: 100%; margin-top: 6px; padding: 6px 10px; border: 1px solid #d9ccb4; border-radius: 10px; font: inherit; font-size: 13px; color: #4a3a2c; background: #fffdf6; cursor: pointer; } .tb-ev small { color: #9a8a74; }
-.got { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: rgba(12, 10, 24, .62); cursor: pointer; animation: gotIn .25s ease-out; overflow: hidden; }
+.got { position: fixed; inset: 0; z-index: 70; display: grid; grid-template: 100% / 100%; place-items: center; background: rgba(12, 10, 24, .62); cursor: pointer; animation: gotIn .25s ease-out; overflow: hidden; }
 .got.out { opacity: 0; transition: opacity .25s; } @keyframes gotIn { from { opacity: 0; } }
-.got > * { grid-area: 1 / 1; }
-.got-burst { width: 520px; height: 520px; border-radius: 50%; background: repeating-conic-gradient(rgba(255, 236, 170, .34) 0 10deg, transparent 10deg 24deg); -webkit-mask: radial-gradient(closest-side, #000 30%, transparent); mask: radial-gradient(closest-side, #000 30%, transparent); animation: gotSpin 9s linear infinite, gotBurst .5s cubic-bezier(.2, 1.4, .4, 1); }
+.got > * { grid-area: 1 / 1; }   /* (2026-11-10) the one cell the screen's size: a burst wider than a phone grew it from the left edge and set everything off to the right */
+.got-burst { width: min(520px, 130vmin); height: min(520px, 130vmin); border-radius: 50%; background: repeating-conic-gradient(rgba(255, 236, 170, .34) 0 10deg, transparent 10deg 24deg); -webkit-mask: radial-gradient(closest-side, #000 30%, transparent); mask: radial-gradient(closest-side, #000 30%, transparent); animation: gotSpin 9s linear infinite, gotBurst .5s cubic-bezier(.2, 1.4, .4, 1); }
 @keyframes gotSpin { to { transform: rotate(360deg); } } @keyframes gotBurst { from { scale: .2; opacity: 0; } }
 .got-art { width: 168px; height: 168px; display: grid; place-items: center; border-radius: 28px; background: radial-gradient(closest-side, rgba(255, 248, 225, .95), rgba(255, 240, 200, .5) 70%, transparent); animation: gotPop .6s cubic-bezier(.2, 1.5, .4, 1) .05s backwards, gotFloat 2.4s ease-in-out .7s infinite alternate; }
 .got-art > svg { width: 120px; height: 120px; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .25)); }
@@ -486,6 +486,16 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .house .wall { fill: color-mix(in srgb, #f1e3c6 calc(var(--day) * 100%), #0c0d25); } .sky .house .chim { fill: color-mix(in srgb, #9a5640 calc(var(--day) * 100%), #0c0d25); } .sky .house .roof { fill: color-mix(in srgb, #b4543c calc(var(--day) * 100%), #11133a); } .sky .house .rim { fill: none; stroke: color-mix(in srgb, rgba(255, 255, 255, .45) calc(var(--day) * 100%), rgba(170, 182, 255, .35)); stroke-width: 1.4; stroke-linejoin: round; }
 .sky .house .pane { fill: color-mix(in srgb, #cfe9f8 calc(var(--day) * 100%), #ffcf7a); opacity: calc((.28 + .72 * var(--f)) * (1 - var(--day)) + var(--day)); } .sky .house .mull { stroke: color-mix(in srgb, #ffffff calc(var(--day) * 100%), #0c0d25); stroke-width: 2; }   /* lit by night, the sky in them by day */
 .sky .house .door { fill: color-mix(in srgb, #7a4b2e calc(var(--day) * 100%), #15173c); } .sky .house .knob { fill: #ffcf7a; }
+/* the cottage's details (2026-11-10): trims, footing and steps, shingles, bricks, shutters, flower boxes, the door's panels, the lamp */
+:is(.sky .house, .house-thumb) .trim { fill: color-mix(in srgb, #fbf6ec calc(var(--day) * 100%), #1e2044); } :is(.sky .house, .house-thumb) .siding { fill: none; stroke: color-mix(in srgb, rgba(150, 110, 70, .2) calc(var(--day) * 100%), rgba(0, 0, 0, .3)); stroke-width: .8; }
+:is(.sky .house, .house-thumb) .eave { fill: #000; opacity: .09; } :is(.sky .house, .house-thumb) .stone { fill: color-mix(in srgb, #b9b1a3 calc(var(--day) * 100%), #1c1d3e); } :is(.sky .house, .house-thumb) .stone2 { fill: color-mix(in srgb, #a9a193 calc(var(--day) * 100%), #17183a); }
+:is(.sky .house, .house-thumb) :is(.brick, .shingle, .panel, .slat) { fill: none; stroke: #000; stroke-opacity: .17; stroke-width: .9; } :is(.sky .house, .house-thumb) .fascia { fill: none; stroke: color-mix(in srgb, #8a3a2a calc(var(--day) * 100%), #0c0d25); stroke-width: 2.6; stroke-linejoin: round; stroke-linecap: round; }
+:is(.sky .house, .house-thumb) .shutter { fill: color-mix(in srgb, #5f8a7a calc(var(--day) * 100%), #141c34); } :is(.sky .house, .house-thumb) .fbox { fill: color-mix(in srgb, #8a5a3a calc(var(--day) * 100%), #1c1838); } :is(.sky .house, .house-thumb) .mat { fill: color-mix(in srgb, #9a6a40 calc(var(--day) * 100%), #1c1838); }
+:is(.sky .house, .house-thumb) .leafy { fill: color-mix(in srgb, #5f9a4a calc(var(--day) * 100%), #0e1630); } :is(.sky .house, .house-thumb) .flower { opacity: calc(.3 + .7 * var(--day)); } :is(.sky .house, .house-thumb) .bush { fill: color-mix(in srgb, #5a9a4a calc(var(--day) * 100%), #0c162a); }
+:is(.sky .house, .house-thumb) .tread { fill: color-mix(in srgb, #e4ddd0 calc(var(--day) * 100%), #2a2c50); } :is(.sky .house, .house-thumb) .riser { fill: color-mix(in srgb, #a39a8b calc(var(--day) * 100%), #14152e); }
+:is(.sky .house, .house-thumb) .stepshade { fill: #2b1c12; opacity: calc(.08 + .12 * var(--day)); } :is(.sky .house, .house-thumb) .sill { stroke: color-mix(in srgb, #8a7a64 calc(var(--day) * 100%), #0c0d25); stroke-width: 1.4; }
+:is(.sky .house, .house-thumb) .lamp { fill: color-mix(in srgb, #e8dcb4 calc(var(--day) * 100%), #ffd98a); } :is(.sky .house, .house-thumb) .lampglow { fill: #ffd98a; opacity: calc((1 - var(--day)) * .45); }
+.house-thumb :is(.wall) { fill: color-mix(in srgb, #f1e3c6 calc(var(--day) * 100%), #0c0d25); } .house-thumb :is(.roof, .chim) { fill: color-mix(in srgb, #b4543c calc(var(--day) * 100%), #11133a); } .house-thumb .door { fill: color-mix(in srgb, #7a4b2e calc(var(--day) * 100%), #15173c); } .house-thumb .pane { fill: color-mix(in srgb, #cfe9f8 calc(var(--day) * 100%), #ffcf7a); } .house-thumb .mull { stroke: #fff; stroke-width: 2; } .house-thumb .rim { fill: none; stroke: rgba(255, 255, 255, .45); stroke-width: 1.4; } .house-thumb .knob { fill: #ffcf7a; }
 /* 蘑菇屋 (1.2.0): a red cap with white spots over a cream stem; the same pane, door and rim colours as the cottage */
 :is(.sky .house, .house-thumb) :is(.m-stem, .m-cap, .m-dot, .m-gill, .m-pipe, .m-shade) { transition: fill 3s; }
 :is(.sky .house, .house-thumb) .m-stem { fill: color-mix(in srgb, #f4e8d2 calc(var(--day) * 100%), #0e0f2a); }
@@ -7092,13 +7102,28 @@ const SHOP_ART = `<circle class="s-glow" cx="0" cy="-18" r="48" fill="url(#shopG
 const hc = (c, n) => `class="hc" style="--c:${c};--n:${n}"`, hs = (c, n) => `class="hs" style="--c:${c};--n:${n}"`;
 const hcx = (cls, c, n, more = '') => `class="hc ${cls}" style="--c:${c};--n:${n};${more}"`, hsx = (cls, c, n, more = '') => `class="hs ${cls}" style="--c:${c};--n:${n};${more}"`;   // with a class of its own (a moving part, 2026-11-10)   // a part of a house: its colour by day, by night
 const HOUSE_ART = {
-  cottage: `<rect class="chim" x="92" y="30" width="12" height="30"/><rect class="roof" x="89" y="27" width="18" height="5" rx="1"/>
-    <rect class="wall" x="22" y="66" width="96" height="64"/>
-    <path class="roof" d="M10 72 L70 20 L130 72 Z"/><path class="rim" d="M10 72 L70 20 L130 72 M89 27 H107"/>
-    <circle class="pane" cx="70" cy="52" r="6"/><path class="mull" d="M70 46 V58 M64 52 H76"/>
+  // 2026-11-10 (the user: a box with a triangle on it): a brick chimney, the roof in shingles with its fascia, clapboard walls with
+  // corner boards on a stone footing, the shade under the eaves; windows framed, with sills, shutters and boxes of flowers; the door
+  // framed and panelled under a little gabled canopy, a lamp beside it lit by night, a mat; bushes at the corners; two stone steps
+  // down to the lawn, where the path begins (it ran into the door): each a light tread over a shaded riser, a shadow on the grass
+  // under them, so they read as standing out in front of the house (a flat grey shape looked like a lump under the door)
+  cottage: `<rect class="chim" x="92" y="30" width="12" height="30"/><path class="brick" d="M92 36 H104 M92 42 H104 M92 48 H104 M92 54 H104 M98 30 V36 M95 36 V42 M101 36 V42 M98 42 V48 M95 48 V54 M101 48 V54 M98 54 V60"/><rect class="roof" x="89" y="27" width="18" height="5" rx="1"/>
+    <rect class="wall" x="22" y="66" width="96" height="64"/><path class="siding" d="M22 77 H118 M22 85 H118 M22 93 H118 M22 101 H118 M22 109 H118 M22 117 H118"/><path class="eave" d="M22 66 H118 V72 H22 Z"/>
+    <rect class="trim" x="22" y="66" width="4" height="60"/><rect class="trim" x="114" y="66" width="4" height="60"/><rect class="stone" x="20" y="124" width="100" height="6"/><path class="brick" d="M34 124 V130 M52 124 V130 M88 124 V130 M106 124 V130"/>
+    <path class="roof" d="M10 72 L70 20 L130 72 Z"/><path class="shingle" d="M24 60 H116 M36 50 H104 M47 40 H93 M58 31 H82 M40 60 v-4 M56 60 v-4 M72 60 v-4 M88 60 v-4 M104 60 v-4 M48 50 v-4 M64 50 v-4 M80 50 v-4 M96 50 v-4 M58 40 v-4 M74 40 v-4 M86 40 v-4 M68 31 v-3"/><path class="fascia" d="M9 73 L70 19.5 L131 73"/><path class="rim" d="M10 72 L70 20 L130 72 M89 27 H107"/>
+    <circle class="trim" cx="70" cy="52" r="7.6"/><circle class="pane" cx="70" cy="52" r="6"/><path class="mull" d="M70 46 V58 M64 52 H76"/>
+    <rect class="shutter" x="27.5" y="81" width="5.5" height="20" rx="1"/><rect class="shutter" x="53" y="81" width="5.5" height="20" rx="1"/><rect class="shutter" x="81.5" y="81" width="5.5" height="20" rx="1"/><rect class="shutter" x="107" y="81" width="5.5" height="20" rx="1"/><path class="slat" d="M28.5 85 h3.5 M28.5 89 h3.5 M28.5 93 h3.5 M28.5 97 h3.5 M54 85 h3.5 M54 89 h3.5 M54 93 h3.5 M54 97 h3.5 M82.5 85 h3.5 M82.5 89 h3.5 M82.5 93 h3.5 M82.5 97 h3.5 M108 85 h3.5 M108 89 h3.5 M108 93 h3.5 M108 97 h3.5"/>
+    <rect class="trim" x="32.5" y="80.5" width="21" height="21" rx="2.5"/><rect class="trim" x="86.5" y="80.5" width="21" height="21" rx="2.5"/>
     <rect class="pane" x="34" y="82" width="18" height="18" rx="2"/><rect class="pane" x="88" y="82" width="18" height="18" rx="2"/>
     <path class="mull" d="M43 82 V100 M34 91 H52 M97 82 V100 M88 91 H106"/>
-    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/>`,
+    <rect class="trim" x="31" y="100.5" width="24" height="2.6" rx="1"/><rect class="trim" x="85" y="100.5" width="24" height="2.6" rx="1"/>
+    <rect class="fbox" x="32" y="103" width="22" height="5" rx="1"/><rect class="fbox" x="86" y="103" width="22" height="5" rx="1"/>${[[35, '#e86f5e'], [39, '#f2c94c'], [43, '#e58fa8'], [47, '#ffffff'], [51, '#e86f5e'], [89, '#f2c94c'], [93, '#e58fa8'], [97, '#e86f5e'], [101, '#ffffff'], [105, '#f2c94c']].map(([x, c], k) => `<circle class="leafy" cx="${x + 1}" cy="${102.6 - (k % 2)}" r="2.2"/><circle class="flower" cx="${x}" cy="${101.4 - (k % 2) * 1.2}" r="1.5" style="fill:${c}"/>`).join('')}
+    <path class="roof" d="M53 101 L70 91.5 L87 101 Z"/><path class="rim" d="M53 101 L70 91.5 L87 101"/><path class="trim" d="M58.5 130 V108.2 a11.5 11.5 0 0 1 23 0 V130 Z"/>
+    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><path class="panel" d="M64.5 126 V112 h11 V126 Z M64.5 118 h11"/><circle class="knob" cx="75.5" cy="120" r="1.3"/>
+    <circle class="lampglow" cx="88.5" cy="111" r="9"/><path class="trim" d="M86 105 h5 v2.4 h-5 Z"/><path class="lamp" d="M86.2 107.4 h4.6 l-.9 5.6 h-2.8 Z"/>
+    <circle class="bush" cx="20" cy="125" r="7"/><circle class="bush" cx="28" cy="128" r="5"/><circle class="bush" cx="120" cy="125" r="7"/><circle class="bush" cx="112" cy="128" r="5"/>
+    <ellipse class="stepshade" cx="70" cy="139.6" rx="25" ry="2.6"/><path class="tread" d="M57.5 129.6 H82.5 L84.2 131.8 H55.8 Z"/><path class="riser" d="M55.8 131.8 H84.2 V134.2 H55.8 Z"/><path class="tread" d="M53.5 134.2 H86.5 L88.6 136.8 H51.4 Z"/><path class="riser" d="M51.4 136.8 H88.6 V139.4 H51.4 Z"/>
+    <path class="sill" d="M59 130 H81"/><rect class="mat" x="63" y="130.2" width="14" height="1.6" rx=".8"/>`,
   mushroomhouse: `<rect class="m-pipe" x="94" y="9" width="7" height="20" rx="1.5"/><rect class="m-pipe" x="92.5" y="7" width="10" height="4" rx="1"/>
     <path class="m-stem" d="M30 130 C20 114 22 90 38 72 H102 C118 90 120 114 110 130 Z"/><path class="m-shade" d="M38 72 H102 C104 75 106 78 108 81 C84 87 56 87 32 81 C34 78 36 75 38 72 Z"/>
     <path class="m-gill" d="M12 72 C40 85 100 85 128 72 C100 80 40 80 12 72 Z"/>

@@ -1255,6 +1255,13 @@ def test_the_shop_shows_wares_as_pictures_three_a_row_and_a_tap_shows_one_big(b)
     r = json.loads(b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
     assert r == {'row': True, 'ds': 'none', 'short': True, 'sticky': 'sticky', 'peek': True, 'desc': True, 'buy': True}, r
 
+def test_the_close_up_of_a_thing_got_is_centred_on_a_phone(b):
+    js = """(async () => { gotItem('telescope', '院子的收納箱'); await new Promise(q => setTimeout(q, 900));
+      const a = document.querySelector('.got-art').getBoundingClientRect(), t = document.querySelector('.got-text').getBoundingClientRect();
+      return JSON.stringify({ art: Math.round(a.left + a.width / 2 - innerWidth / 2), text: Math.round(t.left + t.width / 2 - innerWidth / 2), up: Math.round(a.top + a.height / 2 - innerHeight / 2) }); })()"""
+    r = json.loads(b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
+    assert r == {'art': 0, 'text': 0, 'up': 0}, r   # (2026-11-10, an iPhone) its burst wider than the phone had set it all off to the right
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
