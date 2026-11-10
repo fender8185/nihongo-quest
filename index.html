@@ -565,7 +565,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
   background: linear-gradient(color-mix(in srgb, #3d8cdb calc((.15 + .85 * var(--f)) * 100%), #93a3b3), color-mix(in srgb, #8bc5ef calc((.15 + .85 * var(--f)) * 100%), #c6d0d8) 58%, color-mix(in srgb, #e0f2fb calc((.15 + .85 * var(--f)) * 100%), #e2e7eb)); }
 .room-wrap { position: absolute; inset: 0; }   /* walking in and out zooms this, round the middle of the screen */
 .room { position: absolute; left: 0; top: 0; transform-origin: 0 0; }   /* sized and slid by the camera (ROOM.place); scaled as well while two fingers zoom, sized again when they let go */
-.room.glide { transition: transform .45s cubic-bezier(.2, .8, .25, 1); }
+.room.glide { transition: transform .45s cubic-bezier(.2, .8, .25, 1); } .room.glide.soft { transition: transform .7s cubic-bezier(.45, 0, .55, 1); }   /* the hero stopped: put in the middle slow in, slow out */
 .room > * { position: absolute; }
 .room .art { left: 0; top: 0; width: 100%; height: 100%; overflow: visible; }
 :is(.room, svg.thumb) .hl { fill: none; stroke: color-mix(in srgb, rgba(255, 255, 255, .22) calc(var(--day) * 100%), rgba(255, 214, 170, .1)); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-linecap: round; stroke-linejoin: round; }   /* the lit edges */
@@ -6604,27 +6604,29 @@ function yardZoom(yard, w, h) {
 // screen kept sliding along and he walked into its side): it eases after a point a little ahead of him the way he walks, so he is a
 // little behind the middle with more in sight where he is going, the point coming back to him as he nears where he goes; when he
 // stops it glides over till he is in the middle (yCamSettle). A swipe leaves the camera be till he is sent somewhere again (free)
-const YCAM = { t: 0, x: 0, lead: 0, free: false };
+const YCAM = { t: 0, x: 0, lead: 0, aim: null, free: false };
 function yFollow(yard) {
   if (ypan || YCAM.free || !yCamMax()) return;
   cancelAnimationFrame(ycoast);   // a glide to him under way gives way
   const now = performance.now(), dt = YCAM.t && now - YCAM.t < 100 ? (now - YCAM.t) / 1000 : 0, vx = dt ? (yh.X - YCAM.x) / dt : 0;
-  YCAM.t = now; YCAM.x = yh.X; if (!dt) return;
-  const L = ycam.W * 0.12, near = Math.min(1, (yh.rem === undefined ? 999 : yh.rem) / 80);
-  YCAM.lead += (Math.max(-L, Math.min(L, vx * 0.3)) * near - YCAM.lead) * (1 - Math.exp(-dt / 0.35));
-  const aim = yh.X + YCAM.lead + vx * 0.15;   // ahead of him by the lead, and by as much as the easing falls behind at his pace
-  const step = (aim - ycam.x) * (1 - Math.exp(-dt / 0.15)), most = 1500 * dt;
+  YCAM.t = now; YCAM.x = yh.X; if (!dt) { YCAM.aim = null; return; }
+  const L = ycam.W * 0.12, near = Math.min(1, (yh.rem === undefined ? 9 : yh.rem / (yh.v || 170)) / 0.7), want = Math.max(-L, Math.min(L, vx * 0.3)) * near * near * (3 - 2 * near);   // the look-ahead fades out over his last 0.7 s, so little is left to make up when he stops (2026-11-10, the user: the swing back was too strong)
+  YCAM.lead += (want - YCAM.lead) * (1 - Math.exp(-dt / (Math.abs(want) < Math.abs(YCAM.lead) ? 0.12 : 0.35)));
+  const T = yh.X + YCAM.lead, vT = YCAM.aim === null ? vx : (T - YCAM.aim) / dt; YCAM.aim = T;   // where it should be and how fast that moves
+  const step = (T + vT * 0.15 - ycam.x) * (1 - Math.exp(-dt / 0.15)), most = 1500 * dt;   // led by as much as the easing falls behind: on the mark, and on it as he stops
   yCamTo(yard, ycam.x + Math.max(-most, Math.min(most, step)));
 }
-function yCamSettle(yard) {
-  YCAM.t = 0; YCAM.lead = 0;
+function yCamSettle(yard) {   // a soft glide, slow in and slow out (the way left is short, so it is soon done)
+  YCAM.t = 0; YCAM.lead = 0; YCAM.aim = null;
   if (ypan || YCAM.free || !yCamMax()) return;
-  cancelAnimationFrame(ycoast); let t0 = performance.now();
+  cancelAnimationFrame(ycoast);
+  const x0 = ycam.x, gap = Math.abs(yh.X - x0); if (gap < 0.5) return;
+  const ms = Math.min(900, 420 + gap * 6), t0 = performance.now();
   const step = (now) => {
     if (!yard.isConnected || ypan || YCAM.free) return;
-    const dt = Math.max(0, Math.min(0.05, (now - t0) / 1000)); t0 = Math.max(t0, now);
-    const x0 = ycam.x; yCamTo(yard, ycam.x + (yh.X - ycam.x) * (1 - Math.exp(-dt / 0.22)));
-    if (Math.abs(yh.X - ycam.x) > 0.5 && (ycam.x !== x0 || !dt)) ycoast = requestAnimationFrame(step);   // till he is in the middle, or the place's end stops it
+    const k = Math.max(0, Math.min(1, (now - t0) / ms));
+    yCamTo(yard, x0 + (yh.X - x0) * (1 - Math.cos(Math.PI * k)) / 2);   // after him if he moves on his seat
+    if (k < 1) ycoast = requestAnimationFrame(step);
   };
   ycoast = requestAnimationFrame(step);
 }
@@ -7593,7 +7595,7 @@ function yHeroWalk(yard, to, done, free) {   // free: on the way out of the plac
   const pts = yRoute(yPlace, from, aim, free), goal = pts[pts.length - 1], seg = []; let len = 0;   // round what stands in the way
   for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (d) { seg.push([pts[i - 1], pts[i], len, d]); len += d; } }
   if (!el || len < 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { yh.X = goal[0]; yh.Y = goal[1]; if (el) yHeroPlace(yard); yHeroSave(); if (done) done(); return; }
-  const v = Math.max(170, len / 1.1);   // px a second: a long way hurries, about a second at most
+  const v = Math.max(170, len / 1.1); yh.v = v;   // px a second: a long way hurries, about a second at most
   const face = ([a, b]) => { const dx = b[0] - a[0], dy = b[1] - a[1]; yh.back = dy > 0; if (Math.abs(dx) > 1) yh.flip = dx < 0; yh.turn = Math.abs(dx) > 0.5 * Math.abs(dy); };   // across the lawn: a little turned
   let on = seg[0]; face(on);
   el.classList.remove('out'); el.classList.toggle('run', v > 260); el.classList.toggle('walk', v <= 260);
@@ -10498,7 +10500,7 @@ const ROOM = (() => {
       if (Math.abs(sx) > 0.2 * Math.abs(sy)) hero.flip = sx < 0;
       if (Math.abs(sx) > 0.6 * Math.abs(sy)) hero.turn = true; else if (Math.abs(sx) < 0.3 * Math.abs(sy)) hero.turn = false;   // across (the room's own lines run so): a little turned; straight up or down: square on (a gap between, so no flicker)
       let rem = 0, at = [hero.x, hero.y]; for (const q of w.pts) { rem += Math.hypot(q[0] - at[0], q[1] - at[1]); at = q; }   // how far he still goes
-      heroPlace(st); follow(st, sx, hero.lead ? 99 : rem);
+      heroPlace(st); follow(st, sx, hero.lead ? 9 : rem / w.v);
     }
     if (w.pts.length || hero.lead) { hero.raf = requestAnimationFrame((t) => heroStep(st, t)); return; }
     hero.walk = null; grid = null; el.classList.remove('walk', 'run'); el.innerHTML = heroArt(); heroSave();   // lit where it stopped
@@ -10752,10 +10754,10 @@ const ROOM = (() => {
     const one = (v, lo, hi) => (lo > hi ? (lo + hi) / 2 : v < lo ? lo - (lo - v) * give : v > hi ? hi + (v - hi) * give : v);
     return [one(x, b[0] + hw, b[2] - hw), one(y, b[1] + hh, b[3] - hh)];
   }
-  function place(st, glide = false) {
+  function place(st, glide = false, soft = false) {
     const room = st.querySelector('.room'); if (!room || !cam.W) return;
     const s = cam.k / cam.kc;
-    room.classList.toggle('glide', glide);
+    room.classList.toggle('glide', glide); room.classList.toggle('soft', soft);
     room.style.transform = `translate3d(${(cam.W / 2 - (cam.c[0] - VB[0]) * cam.k).toFixed(1)}px,${(cam.H / 2 - (cam.c[1] - VB[1]) * cam.k).toFixed(1)}px,0)${Math.abs(s - 1) > 1e-4 ? ` scale(${s.toFixed(4)})` : ''}`;
     st.querySelectorAll('.thing').forEach((t) => {   // a thing off the screen: its tag waits; one at a side: its tag slides in to stay whole
       const [x, y] = t.dataset.tag.split(' ').map(Number), dx = (x - cam.c[0]) * cam.k, dy = (y - cam.c[1]) * cam.k;
@@ -10795,8 +10797,8 @@ const ROOM = (() => {
   // finger: once he is out of the middle half of the screen the camera goes along, only the way he walks (one walking in from off the
   // screen is left to come in) — eased after him, the floor under a finger held still would keep moving away. All of it rides the line
   // of the old stops; a finger that moved the camera (held) leaves it be till the next touch
-  const fol = { t: 0, x: 0, lead: 0 };
-  function follow(st, mx, rem = 99) {
+  const fol = { t: 0, x: 0, lead: 0, aim: null };
+  function follow(st, mx, rem = 9) {
     if (!cam.c || held || performance.now() < glideTill) return;
     const [px, py] = P(hero.x, hero.y, 0), [hw, hh] = halfView(), [cx, cy] = cam.c;
     let nx = cx;
@@ -10805,21 +10807,22 @@ const ROOM = (() => {
       const z = hw / 2; nx = px > cx + z && mx > 0 ? px - z : px < cx - z && mx < 0 ? px + z : cx;
     } else {
       const now = performance.now(), dt = fol.t && now - fol.t < 100 ? (now - fol.t) / 1000 : 0, vx = dt ? (px - fol.x) / dt : 0;
-      fol.t = now; fol.x = px; if (!dt) return;
-      const L = hw * 0.24;
-      fol.lead += (Math.max(-L, Math.min(L, vx * 0.3)) * Math.min(1, rem / 2) - fol.lead) * (1 - Math.exp(-dt / 0.35));
-      nx = cx + (px + fol.lead + vx * 0.15 - cx) * (1 - Math.exp(-dt / 0.15));   // ahead of him by the lead, and by as much as the easing falls behind
+      fol.t = now; fol.x = px; if (!dt) { fol.aim = null; return; }
+      const L = hw * 0.24, near = Math.min(1, rem / 0.7), want = Math.max(-L, Math.min(L, vx * 0.3)) * near * near * (3 - 2 * near);   // rem: the seconds he still walks — the look-ahead gone as he gets there
+      fol.lead += (want - fol.lead) * (1 - Math.exp(-dt / (Math.abs(want) < Math.abs(fol.lead) ? 0.12 : 0.35)));
+      const T = px + fol.lead, vT = fol.aim === null ? vx : (T - fol.aim) / dt; fol.aim = T;
+      nx = cx + (T + vT * 0.15 - cx) * (1 - Math.exp(-dt / 0.15));   // led by as much as the easing falls behind: on the mark, and on it as he stops
     }
     const c = keepHero([nx, cy + rideY(nx) - rideY(cx)], px, py);
     if (Math.abs(c[0] - cx) + Math.abs(c[1] - cy) < 0.05) return;
     cam.c = c; place(st);
   }
   function centerOn(st) {
-    fol.t = 0; fol.lead = 0;
+    fol.t = 0; fol.lead = 0; fol.aim = null;
     if (!cam.c || held) return;
     const [px, py] = P(hero.x, hero.y, 0), [cx, cy] = cam.c, c = keepHero([px, cy + rideY(px) - rideY(cx)], px, py);
     if (Math.abs(c[0] - cx) + Math.abs(c[1] - cy) < 0.5) return;
-    cam.c = c; glide(st);
+    cam.c = c; glideTill = performance.now() + 720; place(st, true, true);   // slow in and slow out
   }
   // how to lead the hero: shown when 書房 opens and on a tap on him, till he has been led once (localStorage nq_hero_led)
   let ledOnce = false, hintT = 0;
