@@ -863,6 +863,46 @@ def test_the_yard_is_as_wide_as_a_computers_and_a_phone_swipes_along_it(b):
     assert abs(r['end'] + (1200 - 390 / z) / 2 * z) <= 1, r   # a fling stops at the yard's end: (1200 − what the screen shows) / 2
     assert r['walked']['x'] == 520 and r['walked']['onScreen'] and r['walked']['off'] < -200, r   # the camera went along with the hero
 
+# ---- 2026-11-10 (the user: keep the hero nearer the middle): the camera eases along a little ahead of him, puts him in the middle
+# when he stops, and leaves a swipe be till he is sent somewhere again; the far path down to the beach takes two seconds ----
+def test_out_of_doors_the_camera_keeps_the_hero_near_the_middle(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + POINTER + """ location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); await wait(400);
+      const y = document.querySelector('.yard'), hx = () => Math.round((yh.X - ycam.x) * ycam.z);   /* his feet from the screen's middle (an idle wave changes his drawing's box, not where he stands) */
+      yCamTo(y, 0); yh.X = 0; yh.Y = 120; yHeroPlace(y); await wait(100);
+      const during = [], iv = setInterval(() => during.push(hx()), 120);
+      yHeroWalk(y, [380, 100]); await wait(1300); clearInterval(iv); await wait(1200); const settled = hx();
+      pe(y, 'pointerdown', 300, 600, 1); for (let i = 1; i <= 8; i++) { pe(y, 'pointermove', 300 - 20 * i, 600, 1); await wait(30); } await wait(120); pe(y, 'pointerup', 140, 600, 1); await wait(900);
+      const swiped = hx(); await wait(800); const stays = hx();
+      yHeroWalk(y, [yh.X - 40, 100]); await wait(1900);
+      return JSON.stringify({ during, settled, swiped, stays, back: hx() }); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    mid = r['during'][2:-1]
+    assert mid and all(-70 <= x <= 5 for x in mid) and min(mid) <= -20, r   # walking right he is a little left of the middle: more in sight ahead
+    assert abs(r['settled']) <= 3, r   # stopped: in the middle
+    assert r['swiped'] < -100 and r['stays'] == r['swiped'], r   # a swipe looks away, and the view stays there while he stands
+    assert abs(r['back']) <= 3, r   # sent somewhere: the camera comes back to him
+
+def test_in_the_room_a_walk_ends_with_the_hero_in_the_middle(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); localStorage.removeItem('nq_room_zoom'); " + GO_ROOM + POINTER + """ await wait(500);
+      const st = document.querySelector('.study'), r = st.getBoundingClientRect(), vb = ROOM.kit.VB;
+      const hx = () => { const room = st.querySelector('.room').getBoundingClientRect(), h = st.querySelector('.room .hero'); return Math.round(room.left + (parseFloat(h.style.left) / 100 + 60 / vb[2]) * room.width - r.left - r.width / 2); };   /* his feet from the screen's middle */
+      const x = r.left + r.width * 0.92, y = r.top + r.height * 0.62, t = document.elementFromPoint(x, y), during = [], iv = setInterval(() => during.push(hx()), 120);
+      pe(t, 'pointerdown', x, y, 1); pe(t, 'pointerup', x, y, 1); t.dispatchEvent(new MouseEvent('click', { clientX: x, clientY: y, bubbles: true }));
+      await wait(1800); clearInterval(iv);
+      return JSON.stringify({ during, end: hx() }); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert min(r['during']) <= -15 and max(r['during']) <= 5, r   # on the way (to the right) a little left of the middle
+    assert abs(r['end']) <= 3, r   # there: in the middle
+
+def test_the_far_path_down_to_the_beach_takes_two_seconds(b):
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + POINTER + """ location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); await wait(400);
+      const y = document.querySelector('.yard'); yh.X = -300; yh.Y = 120; yHeroPlace(y); const t0 = performance.now(), was = location.hash; let on = 0, gone = 0;
+      yGo(y.querySelector('.yhero'), 'beach');
+      for (let i = 0; i < 160 && !gone; i++) { await wait(25); if (!on && yh.climb === 'hill') on = performance.now(); if (location.hash !== was) gone = performance.now(); }
+      return JSON.stringify({ path: Math.round(gone - on), all: Math.round(gone - t0) }); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert 2000 <= r['path'] <= 2700 and r['all'] <= 3800, r   # the far path two seconds and the step off the edge; the whole way about three
+
 def test_a_yard_ware_comes_out_of_the_box_by_drag_and_goes_back_in(b):
     js = "(async () => { " + FRESH + " state.koto.gift = 100; buyWare(WARE.get('tanuki')); saveState(); " + POINTER + """ location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
       const y = document.querySelector('.yard'), q = (s) => y.querySelector(s); q('[data-act="yard-edit"]').click(); await wait(50);

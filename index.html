@@ -6600,11 +6600,33 @@ function yardZoom(yard, w, h) {
   if (!w || !h || h < w * 1.2) return 1;
   return yard.classList.contains('indoor') ? 0.75 : Math.max(1, Math.min(1.6, h / 540));
 }
-// the hero walking out of the middle half of the screen: the camera goes along (not while a finger has it)
+// the camera with the hero on the move (2026-11-10, the user: keep him nearer the middle — at the edge of the middle half the
+// screen kept sliding along and he walked into its side): it eases after a point a little ahead of him the way he walks, so he is a
+// little behind the middle with more in sight where he is going, the point coming back to him as he nears where he goes; when he
+// stops it glides over till he is in the middle (yCamSettle). A swipe leaves the camera be till he is sent somewhere again (free)
+const YCAM = { t: 0, x: 0, lead: 0, free: false };
 function yFollow(yard) {
-  if (ypan || !yCamMax()) return;
-  const z = ycam.W / 4, hx = yh.X - ycam.x;
-  if (hx > z) yCamTo(yard, yh.X - z); else if (hx < -z) yCamTo(yard, yh.X + z);
+  if (ypan || YCAM.free || !yCamMax()) return;
+  cancelAnimationFrame(ycoast);   // a glide to him under way gives way
+  const now = performance.now(), dt = YCAM.t && now - YCAM.t < 100 ? (now - YCAM.t) / 1000 : 0, vx = dt ? (yh.X - YCAM.x) / dt : 0;
+  YCAM.t = now; YCAM.x = yh.X; if (!dt) return;
+  const L = ycam.W * 0.12, near = Math.min(1, (yh.rem === undefined ? 999 : yh.rem) / 80);
+  YCAM.lead += (Math.max(-L, Math.min(L, vx * 0.3)) * near - YCAM.lead) * (1 - Math.exp(-dt / 0.35));
+  const aim = yh.X + YCAM.lead + vx * 0.15;   // ahead of him by the lead, and by as much as the easing falls behind at his pace
+  const step = (aim - ycam.x) * (1 - Math.exp(-dt / 0.15)), most = 1500 * dt;
+  yCamTo(yard, ycam.x + Math.max(-most, Math.min(most, step)));
+}
+function yCamSettle(yard) {
+  YCAM.t = 0; YCAM.lead = 0;
+  if (ypan || YCAM.free || !yCamMax()) return;
+  cancelAnimationFrame(ycoast); let t0 = performance.now();
+  const step = (now) => {
+    if (!yard.isConnected || ypan || YCAM.free) return;
+    const dt = Math.max(0, Math.min(0.05, (now - t0) / 1000)); t0 = Math.max(t0, now);
+    const x0 = ycam.x; yCamTo(yard, ycam.x + (yh.X - ycam.x) * (1 - Math.exp(-dt / 0.22)));
+    if (Math.abs(yh.X - ycam.x) > 0.5 && (ycam.x !== x0 || !dt)) ycoast = requestAnimationFrame(step);   // till he is in the middle, or the place's end stops it
+  };
+  ycoast = requestAnimationFrame(step);
 }
 // where a yard ware may stand: on the lawn (whole within the middle 1200px; y 14–196 px up), off the path from the door (LANE),
 // the house front, the mailbox and the way out at the path's end, and clear of the others (their ground:
@@ -7012,7 +7034,7 @@ function renderOutside(view, place = 'yard') {
     if (place === 'yard') yWitch(yard);
     return;
   }
-  yed.on = false; yed.sel = null; yed.drag = null; ypan = null;   // a yard drawn anew opens out of 擺設
+  yed.on = false; yed.sel = null; yed.drag = null; ypan = null; Object.assign(YCAM, { t: 0, lead: 0, free: false });   // a yard drawn anew opens out of 擺設
   cancelAnimationFrame(yh.raf); yh.climb = null; yh.s = 0; yh.z = 0; if (yh.use) { [yh.X, yh.Y] = yh.use.up; yh.use = null; }   // drawn anew: up off whatever he sat on
   if (yPlace !== place) {   // the other place's spot (test: the main road)
     yPlace = place;
@@ -7032,7 +7054,7 @@ function renderOutside(view, place = 'yard') {
   if (yh.fromDoor && place === 'yard') { yh.fromDoor = false; yh.X = 0; yh.Y = 214; yh.back = false; yHeroPlace(y); setTimeout(() => yHeroWalk(y, [8, 150]), 260); }   // out of the door, onto the lawn (below the 進屋 tag)
   else if (come && place === 'yard' && a && YARD_FAR[a.from]) {   // home from the beach or the town: up the far path, then in over the lawn
     const h = y.querySelector('.yhero'); h.classList.add('out'); yHeroPlace(y);
-    setTimeout(() => yFar(y, a.from, true, () => { [yh.X, yh.Y] = yToward(come[1], come[0], 140); yh.back = false; yHeroPlace(y); h.classList.remove('out'); yHeroWalk(y, come[1]); }), 120);   // in a few steps from where the far path left off
+    setTimeout(() => yFar(y, a.from, true, () => { [yh.X, yh.Y] = yToward(come[1], come[0], 110); yh.back = false; yHeroPlace(y); h.classList.remove('out'); yHeroWalk(y, come[1]); }), 120);   // in a few steps from where the far path left off
   } else if (come) { yHeroPlace(y); setTimeout(() => yHeroWalk(y, come[1]), 200); }   // in along the path
   else yHeroPlace(y);
   if (place === 'yard') yWitch(y);
@@ -7075,7 +7097,7 @@ function yPanMove(yard, e) {
   const dx = e.clientX - ypan.x0, dy = e.clientY - ypan.y0;
   if (!ypan.on) {
     if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy)) return;
-    ypan.on = true; try { yard.setPointerCapture(e.pointerId); } catch (err) { /* a pointer the page did not see go down */ }
+    ypan.on = true; YCAM.free = true; try { yard.setPointerCapture(e.pointerId); } catch (err) { /* a pointer the page did not see go down */ }
   }
   yCamTo(yard, ypan.c0 - dx * YSWIPE, 0.3);
   ypan.hist.push([performance.now(), e.clientX]); if (ypan.hist.length > 8) ypan.hist.shift();
@@ -7563,6 +7585,7 @@ const yFree = (place, q) => { const g = yRoute(place, [q[0], -999], q).pop(); re
 function yHeroWalk(yard, to, done, free) {   // free: on the way out of the place (up the path home), past its top
   cancelAnimationFrame(yh.raf);
   yUseEnd(yard); yh.far = null;   // up off a seat or a ride first; off the long way down
+  YCAM.free = false; YCAM.t = 0;   // sent somewhere: the camera goes with him again
   const el = yard.querySelector('.yhero'), lim = ycam.YW / 2 - 20;
   yh.climb = null; yh.s = 0; yard.classList.remove('climbing'); if (el) { el.classList.remove('climb'); yClimbLook(el, 0); }   // off the hill path, if he was on it
   HERO.still(el); if (el) el.classList.remove('bench');   // up off the bus stop's bench
@@ -7579,9 +7602,9 @@ function yHeroWalk(yard, to, done, free) {   // free: on the way out of the plac
     if (!yard.isConnected) return;
     const d = Math.min(len, (now - t0) / 1000 * v), q = seg.find((x) => d <= x[2] + x[3]) || seg[seg.length - 1], t = Math.min(1, (d - q[2]) / q[3]);
     if (q !== on) { on = q; face(q); }   // round a corner: turned the new way
-    yh.X = q[0][0] + (q[1][0] - q[0][0]) * t; yh.Y = q[0][1] + (q[1][1] - q[0][1]) * t; yHeroPlace(yard);
+    yh.X = q[0][0] + (q[1][0] - q[0][0]) * t; yh.Y = q[0][1] + (q[1][1] - q[0][1]) * t; yh.rem = len - d; yHeroPlace(yard);
     if (d < len) { yh.raf = requestAnimationFrame(step); return; }
-    el.classList.remove('walk', 'run'); yHeroSave(); if (done) done();
+    el.classList.remove('walk', 'run'); yh.rem = undefined; yCamSettle(yard); yHeroSave(); if (done) done();
   };
   yh.raf = requestAnimationFrame(step);
 }
@@ -8587,7 +8610,7 @@ function yGo(el, to) {
   const yard = el.closest('.yard'), h = yard && yard.querySelector('.yhero'), way = WAYS[`${yPlace}>${to}`]; if (!way) return;
   const leave = () => { yh.arrive = { from: yPlace, to }; go(PLACE_ROUTE[to]); };
   if (!h || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { leave(); return; }
-  if (yPlace === 'yard' && YARD_FAR[to]) { h.classList.add('fading'); yHeroWalk(yard, yToward([yh.X, yh.Y], way.out(), 140), () => yFar(yard, to, false, leave), true); return; }   // a few steps toward the edge, fading, then the long way down
+  if (yPlace === 'yard' && YARD_FAR[to]) { h.classList.add('fading'); yHeroWalk(yard, yToward([yh.X, yh.Y], way.out(), 110), () => yFar(yard, to, false, leave), true); return; }   // a few steps toward the edge, fading, then the long way down
   yHeroWalk(yard, way.out(), () => { h.classList.add('out'); setTimeout(leave, 260); }, true);
 }
 // the yard's ways down to the beach and the town (2026-11-10, the user: as far as they are, on the road, like the climb to
@@ -8600,14 +8623,15 @@ const yToward = (from, to, most) => { const dx = to[0] - from[0], dy = to[1] - f
 const YARD_FAR = { beach: [[74, 214], [40, 202], [118, 190], [64, 178], [150, 168], [120, 158]], town: [[1128, 216], [1166, 200], [1084, 188], [1146, 174], [1066, 164], [1100, 152]] };
 function yFar(yard, side, home, done) {
   const h = yard.querySelector('.yhero'); if (!h) { done(); return; }
-  const pts = (home ? YARD_FAR[side].slice().reverse() : YARD_FAR[side]).map(([x, y]) => [x - 600, 370 - y]), s = 0.1, v = 80, seg = []; let len = 0;
+  const pts = (home ? YARD_FAR[side].slice().reverse() : YARD_FAR[side]).map(([x, y]) => [x - 600, 370 - y]), s = 0.1, seg = []; let len = 0;
   for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push([pts[i - 1], pts[i], len, d]); len += d; }
+  const v = len / 2;   // the whole way in two seconds (2026-11-10, the user: it was nearly four)
   let fin = false;
-  const end = () => { if (fin) return; fin = true; cancelAnimationFrame(yh.raf); yh.far = null; h.classList.add('out'); setTimeout(() => { yh.climb = null; yh.s = 0; yClimbLook(h, 0); h.classList.remove('climb', 'walk'); done(); }, 300); };
+  const end = () => { if (fin) return; fin = true; cancelAnimationFrame(yh.raf); yh.far = null; h.classList.add('out'); setTimeout(() => { yh.climb = null; yh.s = 0; yClimbLook(h, 0); h.classList.remove('climb', 'run'); done(); }, 220); };
   yh.far = end; h.classList.add('out'); h.classList.remove('run');   // out of sight over the edge
   setTimeout(() => {
     if (!yard.isConnected || fin) return;
-    yh.climb = 'hill'; yh.s = s; [yh.X, yh.Y] = pts[0]; yClimbLook(h, s); h.classList.add('climb', 'walk'); yHeroPlace(yard); h.classList.remove('out', 'fading');
+    yh.climb = 'hill'; yh.s = s; [yh.X, yh.Y] = pts[0]; yClimbLook(h, s); h.classList.add('climb', 'run'); yHeroPlace(yard); h.classList.remove('out', 'fading');
     const t0 = performance.now();
     const step = (now) => {
       if (!yard.isConnected || fin) return;
@@ -8617,7 +8641,7 @@ function yFar(yard, side, home, done) {
       end();
     };
     yh.raf = requestAnimationFrame(step);
-  }, 320);
+  }, 220);
 }
 const BUS_BOX = [-170, -268, 340, 278];
 const SHELTER_ART = () => `<ellipse cy="2" rx="150" ry="9" fill="#2b1c12" fill-opacity=".14"/>
@@ -10473,11 +10497,12 @@ const ROOM = (() => {
       if (Math.abs(sy) > 0.2 * Math.abs(sx)) hero.back = sy < 0;
       if (Math.abs(sx) > 0.2 * Math.abs(sy)) hero.flip = sx < 0;
       if (Math.abs(sx) > 0.6 * Math.abs(sy)) hero.turn = true; else if (Math.abs(sx) < 0.3 * Math.abs(sy)) hero.turn = false;   // across (the room's own lines run so): a little turned; straight up or down: square on (a gap between, so no flicker)
-      heroPlace(st); follow(st, sx);
+      let rem = 0, at = [hero.x, hero.y]; for (const q of w.pts) { rem += Math.hypot(q[0] - at[0], q[1] - at[1]); at = q; }   // how far he still goes
+      heroPlace(st); follow(st, sx, hero.lead ? 99 : rem);
     }
     if (w.pts.length || hero.lead) { hero.raf = requestAnimationFrame((t) => heroStep(st, t)); return; }
     hero.walk = null; grid = null; el.classList.remove('walk', 'run'); el.innerHTML = heroArt(); heroSave();   // lit where it stopped
-    if (w.done) w.done();
+    if (w.done) w.done(); else centerOn(st);   // to a thing: in the middle near enough as he gets there, its page or its seat next
   }
   function goHero(st, to, done) {
     standUp();
@@ -10763,16 +10788,38 @@ const ROOM = (() => {
     const [px, py] = P(hero.x, hero.y, 0);
     return keepHero([px, rideY(px)], px, py);
   }
-  // the hero took a step (mx: which way on the screen): once he is out of the middle half of the screen the camera goes along,
-  // only the way he walks (one walking in from off the screen is left to come in), riding the line of the old stops
-  function follow(st, mx) {
+  // the hero took a step (mx: which way on the screen; rem: how far he still goes). Sent somewhere (2026-11-10, the user: keep him
+  // nearer the middle — at the edge of the middle half the screen kept sliding and he walked into its side): the camera eases after a
+  // point a little ahead of him the way he walks, coming back to him as he nears where he goes, so he is a little behind the middle
+  // with more in sight ahead; a walk over the bare floor or a lead ends with a glide that puts him in the middle (centerOn). Led by a
+  // finger: once he is out of the middle half of the screen the camera goes along, only the way he walks (one walking in from off the
+  // screen is left to come in) — eased after him, the floor under a finger held still would keep moving away. All of it rides the line
+  // of the old stops; a finger that moved the camera (held) leaves it be till the next touch
+  const fol = { t: 0, x: 0, lead: 0 };
+  function follow(st, mx, rem = 99) {
     if (!cam.c || held || performance.now() < glideTill) return;
     const [px, py] = P(hero.x, hero.y, 0), [hw, hh] = halfView(), [cx, cy] = cam.c;
-    if (Math.abs(px - cx) > hw || py < cy - hh || py - HERO_H > cy + hh) return;
-    const z = hw / 2, nx = px > cx + z && mx > 0 ? px - z : px < cx - z && mx < 0 ? px + z : cx;
+    let nx = cx;
+    if (hero.lead) {
+      if (Math.abs(px - cx) > hw || py < cy - hh || py - HERO_H > cy + hh) return;
+      const z = hw / 2; nx = px > cx + z && mx > 0 ? px - z : px < cx - z && mx < 0 ? px + z : cx;
+    } else {
+      const now = performance.now(), dt = fol.t && now - fol.t < 100 ? (now - fol.t) / 1000 : 0, vx = dt ? (px - fol.x) / dt : 0;
+      fol.t = now; fol.x = px; if (!dt) return;
+      const L = hw * 0.24;
+      fol.lead += (Math.max(-L, Math.min(L, vx * 0.3)) * Math.min(1, rem / 2) - fol.lead) * (1 - Math.exp(-dt / 0.35));
+      nx = cx + (px + fol.lead + vx * 0.15 - cx) * (1 - Math.exp(-dt / 0.15));   // ahead of him by the lead, and by as much as the easing falls behind
+    }
     const c = keepHero([nx, cy + rideY(nx) - rideY(cx)], px, py);
     if (Math.abs(c[0] - cx) + Math.abs(c[1] - cy) < 0.05) return;
     cam.c = c; place(st);
+  }
+  function centerOn(st) {
+    fol.t = 0; fol.lead = 0;
+    if (!cam.c || held) return;
+    const [px, py] = P(hero.x, hero.y, 0), [cx, cy] = cam.c, c = keepHero([px, cy + rideY(px) - rideY(cx)], px, py);
+    if (Math.abs(c[0] - cx) + Math.abs(c[1] - cy) < 0.5) return;
+    cam.c = c; glide(st);
   }
   // how to lead the hero: shown when 書房 opens and on a tap on him, till he has been led once (localStorage nq_hero_led)
   let ledOnce = false, hintT = 0;
@@ -12417,7 +12464,7 @@ Object.assign(ACTIONS, {
 function sceneGo(hash, cls) {
   const box = document.querySelector('#view .yard, #view .study');
   if (!box || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { go(hash); return; }
-  if (box.classList.contains('yard')) box.style.setProperty('--ycx', `${(-ycam.x * ycam.z).toFixed(1)}px`);   // the door where the camera has it
+  if (box.classList.contains('yard')) { cancelAnimationFrame(ycoast); box.style.setProperty('--ycx', `${(-ycam.x * ycam.z).toFixed(1)}px`); }   // the door where the camera has it (a glide stopped there)
   box.classList.add(cls); setTimeout(() => go(hash), 380);
 }
 // the dive: the notebook flares, its light spreads over the screen, and the questions come up as it fades. A brand-new learner
