@@ -880,6 +880,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .study .art .sun { fill: color-mix(in srgb, #fff0bf calc(var(--day, 1) * 100%), #c4d0ff); opacity: calc(.07 + .2 * var(--day, 1)); pointer-events: none; }
 .study .art .mote { fill: #fffbe8; opacity: 0; animation: mote var(--d) ease-in-out var(--w) infinite; pointer-events: none; } @keyframes mote { 0%, 100% { transform: translate(0, 0); opacity: 0; } 30% { opacity: calc(.75 * var(--day, 1)); } 70% { opacity: calc(.6 * var(--day, 1)); } 50% { transform: translate(5px, 9px); } }
 @media (prefers-reduced-motion: reduce) { .study .art :is(.mote, .cur) { animation: none; } }
+.yard .yhero.fading { opacity: 0; transition: opacity .75s ease-in; }   /* off toward the beach or the town: fading as he goes (yGo) */
 .sky .use-btn { position: absolute; left: 50%; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; -webkit-tap-highlight-color: transparent; }   /* PLACE_USE: a thing to tap */
 .sky .use-btn::after { content: ''; position: absolute; left: 50%; top: -4px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: rgba(255, 255, 255, .9); box-shadow: 0 0 0 3px rgba(255, 255, 255, .28), 0 1px 3px rgba(0, 0, 0, .25); transition: opacity .5s; animation: useHint 2.4s ease-in-out infinite; }
 .yard.quiet .sky .use-btn::after { opacity: 0; } .yard.edit .sky .use-btn, .yard.dressing .sky .use-btn { display: none; } @keyframes useHint { 50% { transform: scale(1.4); opacity: .55; } }
@@ -6990,7 +6991,7 @@ function renderOutside(view, place = 'yard') {
   if (yh.fromDoor && place === 'yard') { yh.fromDoor = false; yh.X = 0; yh.Y = 214; yh.back = false; yHeroPlace(y); setTimeout(() => yHeroWalk(y, [8, 150]), 260); }   // out of the door, onto the lawn (below the 進屋 tag)
   else if (come && place === 'yard' && a && YARD_FAR[a.from]) {   // home from the beach or the town: up the far path, then in over the lawn
     const h = y.querySelector('.yhero'); h.classList.add('out'); yHeroPlace(y);
-    setTimeout(() => yFar(y, a.from, true, () => { [yh.X, yh.Y] = come[0]; yh.back = false; yHeroPlace(y); h.classList.remove('out'); yHeroWalk(y, come[1]); }), 120);
+    setTimeout(() => yFar(y, a.from, true, () => { [yh.X, yh.Y] = yToward(come[1], come[0], 140); yh.back = false; yHeroPlace(y); h.classList.remove('out'); yHeroWalk(y, come[1]); }), 120);   // in a few steps from where the far path left off
   } else if (come) { yHeroPlace(y); setTimeout(() => yHeroWalk(y, come[1]), 200); }   // in along the path
   else yHeroPlace(y);
   if (place === 'yard') yWitch(y);
@@ -8521,13 +8522,16 @@ function yGo(el, to) {
   const yard = el.closest('.yard'), h = yard && yard.querySelector('.yhero'), way = WAYS[`${yPlace}>${to}`]; if (!way) return;
   const leave = () => { yh.arrive = { from: yPlace, to }; go(PLACE_ROUTE[to]); };
   if (!h || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { leave(); return; }
-  if (yPlace === 'yard' && YARD_FAR[to]) { yHeroWalk(yard, way.out(), () => yFar(yard, to, false, leave), true); return; }   // the long way down
+  if (yPlace === 'yard' && YARD_FAR[to]) { h.classList.add('fading'); yHeroWalk(yard, yToward([yh.X, yh.Y], way.out(), 140), () => yFar(yard, to, false, leave), true); return; }   // a few steps toward the edge, fading, then the long way down
   yHeroWalk(yard, way.out(), () => { h.classList.add('out'); setTimeout(leave, 260); }, true);
 }
 // the yard's ways down to the beach and the town (2026-11-10, the user: as far as they are, on the road, like the climb to
 // 古道具屋): over the lawn to its edge, out of sight down the hill, then small on the zigzag path seen far below and all the way
 // along it (outlined, behind the yard's things); home the other way, then in over the lawn. YARD_FAR: those paths in the yard's
 // land, from the hill's foot to their far end. A tap on the way: there at once (yh.far)
+// a point at most `most` px from `from` on the way to `to` (2026-11-10, the user: he crossed the whole lawn to its edge first and
+// looked to go twice — now a few steps that way, fading out, before the far path; home the same the other way)
+const yToward = (from, to, most) => { const dx = to[0] - from[0], dy = to[1] - from[1], d = Math.hypot(dx, dy), k = d > most ? most / d : 1; return [from[0] + dx * k, from[1] + dy * k]; };
 const YARD_FAR = { beach: [[74, 214], [40, 202], [118, 190], [64, 178], [150, 168], [120, 158]], town: [[1128, 216], [1166, 200], [1084, 188], [1146, 174], [1066, 164], [1100, 152]] };
 function yFar(yard, side, home, done) {
   const h = yard.querySelector('.yhero'); if (!h) { done(); return; }
@@ -8538,7 +8542,7 @@ function yFar(yard, side, home, done) {
   yh.far = end; h.classList.add('out'); h.classList.remove('run');   // out of sight over the edge
   setTimeout(() => {
     if (!yard.isConnected || fin) return;
-    yh.climb = 'hill'; yh.s = s; [yh.X, yh.Y] = pts[0]; yClimbLook(h, s); h.classList.add('climb', 'walk'); yHeroPlace(yard); h.classList.remove('out');
+    yh.climb = 'hill'; yh.s = s; [yh.X, yh.Y] = pts[0]; yClimbLook(h, s); h.classList.add('climb', 'walk'); yHeroPlace(yard); h.classList.remove('out', 'fading');
     const t0 = performance.now();
     const step = (now) => {
       if (!yard.isConnected || fin) return;
