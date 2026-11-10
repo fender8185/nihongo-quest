@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 38 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 39 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -27,8 +27,8 @@ const TOWN = {
     shrine: { haiden: { X: 300, Y: 118 }, torii: { X: -420, Y: 96 }, ennichi: { X: -60, Y: 86 }, ennichi2: { X: 80, Y: 92 }, stall: { X: -150, Y: 112 } },
     sento: { door: { X: -40, Y: 124 }, bench: { X: -322, Y: 71, sit: 1 }, milk: { X: -360, Y: 112 } },
     harbor: { pier: { X: 120, Y: 96 }, hut: { X: 370, Y: 112 } },
-    park: { slide: { X: -220, Y: 92 }, bench: { X: 425, Y: 57, sit: 1 } },
-    station: { taxi: { X: -430, Y: 96 }, gate: { X: -60, Y: 120 }, koban: { X: 330, Y: 112 }, plaza: { X: -335, Y: 74, sit: 1 }, stop: { X: 470, Y: 80 } }
+    park: { slide: { X: -220, Y: 92 }, bench: { X: 405, Y: 57, sit: 1 } },
+    station: { taxi: { X: -430, Y: 96 }, gate: { X: -60, Y: 120 }, koban: { X: 330, Y: 112 }, plaza: { X: -355, Y: 74, sit: 1 }, stop: { X: 470, Y: 80 } }
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they
   // have come by; size: smaller than the hero

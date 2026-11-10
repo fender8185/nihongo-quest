@@ -486,6 +486,43 @@ def test_someone_at_a_bench_sits_on_it_between_its_back_and_its_seat(b):
       return JSON.stringify({ sitting: p.length, between: p.every((e) => layers.some((l) => l > z(e)) && layers.some((l) => l < z(e))) }); })()"""))
     assert r == {'sitting': 1, 'between': True}, r
 
+# ---- things to use in the places (round 4, 2026-11-10, the user: more things the hero can do something with) ----
+USE = """const use = async (id, ms) => { y().querySelector(`.use-btn[data-use="${id}"]`).click(); await wait(ms || 2600); };"""
+
+def test_the_swing_seats_the_hero_and_swings_with_him_and_a_walk_gets_him_off(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + USE + """ fake([]); await go('park', 15); await use('swing0');
+      const h = y().querySelector('.yhero'), swing = y().querySelector('.land [data-fx="swing0"]');
+      const on = { bench: h.classList.contains('bench'), both: h.classList.contains('ride-swing') && swing.classList.contains('ride-swing'), x: Math.round(yh.X) };
+      await new Promise((q) => yHeroWalk(y(), [300, 40], q));
+      return JSON.stringify({ on, off: h.classList.contains('ride-swing') || swing.classList.contains('ride-swing') || h.classList.contains('bench'), at: [Math.round(yh.X), Math.round(yh.Y)], use: yh.use }); })()"""))
+    assert r == {'on': {'bench': True, 'both': True, 'x': -80}, 'off': False, 'at': [300, 40], 'use': None}, r
+
+def test_a_seat_someone_sits_on_is_left_for_the_free_one(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + USE + """ fake([]); state.town.stops = { station: 1 }; Object.keys(TOWN.CAST).forEach((id) => { state.town.seen[id] = 1; });
+      await go('station', 12); const someone = y().querySelectorAll('.npc.bench').length; await use('benchL');
+      const h = y().querySelector('.yhero'), z = Number(h.style.zIndex), layers = [...y().querySelectorAll('.land.prop')].map((e) => Number(e.style.zIndex));
+      return JSON.stringify({ someone, x: Math.round(yh.X), sat: h.classList.contains('bench'), between: layers.some((l) => l > z) && layers.some((l) => l < z), kept: JSON.parse(localStorage.getItem('nq_hero')).station.Y < 66 }); })()"""))
+    assert r == {'someone': 1, 'x': -310, 'sat': True, 'between': True, 'kept': True}, r   # 鈴木 on the left seat: the right one; kept where he got on
+
+def test_the_slide_goes_up_the_ladder_and_down_to_its_foot(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + USE + """ fake([]); await go('park', 15); let top = 0; const seen = setInterval(() => { top = Math.max(top, yh.Y); }, 30);
+      await use('slide', 5200); clearInterval(seen); return JSON.stringify({ top: top > 200, at: [Math.round(yh.X), Math.round(yh.Y)], use: yh.use, sliding: y().querySelector('.yhero').classList.contains('sliding') }); })()"""))
+    assert r == {'top': True, 'at': [-385, 112], 'use': None, 'sliding': False}, r
+
+def test_the_shrine_bell_rings_and_the_omikuji_tells_a_fortune(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + USE + """ fake([]); state.town.stops = { shrine: 1 }; await go('shrine', 12);
+      await use('bell', 2000); const rung = y().querySelector('.land [data-fx="bell"]').classList.contains('ring'), words = [...y().querySelectorAll('.ypop')].map((e) => e.textContent);
+      await use('kuji', 2200); const fortune = [...y().querySelectorAll('.ypop')].map((e) => e.textContent).pop();
+      return JSON.stringify({ rung, words, fortune: KUJI.some(([k]) => k === fortune), toast: toastText().includes('おみくじ') }); })()"""))
+    assert r['rung'] and 'カランカラン' in r['words'] and r['fortune'] and r['toast'], r
+
+def test_every_thing_to_use_has_its_button_and_its_moving_part(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.stops = { station: 1, sento: 1, shrine: 1, castle: 1 }; const miss = [];
+      for (const [p, list] of Object.entries(PLACE_USE)) { await go(p === 'yard' ? 'outside' : p, p === 'izakaya' ? 21 : 12);
+        list.forEach((t) => { if (!y().querySelector(`.use-btn[data-use="${t.id}"]`)) miss.push(p + '.' + t.id); if (t.fx && !y().querySelector(`.land [data-fx="${t.fx}"]`)) miss.push(p + '.' + t.fx); }); }
+      return JSON.stringify(miss); })()"""))
+    assert r == [], r
+
 def test_a_spot_kept_inside_a_thing_is_moved_off_it(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); localStorage.setItem('nq_hero', JSON.stringify({ izakaya: { X: 60, Y: 80 } })); yPlace = 'yard';
       TOWNEV.clock = { h: 21, day: new Date(2026, 10, 14) }; location.hash = '#/izakaya'; document.getElementById('view').innerHTML = ''; route(); await wait(300);

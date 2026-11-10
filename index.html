@@ -13,7 +13,7 @@
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
 <script src="./data.js?v=21"></script>
-<script src="./events.js?v=38"></script>
+<script src="./events.js?v=39"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -868,6 +868,26 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .study .art .sun { fill: color-mix(in srgb, #fff0bf calc(var(--day, 1) * 100%), #c4d0ff); opacity: calc(.07 + .2 * var(--day, 1)); pointer-events: none; }
 .study .art .mote { fill: #fffbe8; opacity: 0; animation: mote var(--d) ease-in-out var(--w) infinite; pointer-events: none; } @keyframes mote { 0%, 100% { transform: translate(0, 0); opacity: 0; } 30% { opacity: calc(.75 * var(--day, 1)); } 70% { opacity: calc(.6 * var(--day, 1)); } 50% { transform: translate(5px, 9px); } }
 @media (prefers-reduced-motion: reduce) { .study .art :is(.mote, .cur) { animation: none; } }
+.sky .use-btn { position: absolute; left: 50%; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; -webkit-tap-highlight-color: transparent; }   /* PLACE_USE: a thing to tap */
+.sky .use-btn::after { content: ''; position: absolute; left: 50%; top: -4px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: rgba(255, 255, 255, .9); box-shadow: 0 0 0 3px rgba(255, 255, 255, .28), 0 1px 3px rgba(0, 0, 0, .25); transition: opacity .5s; animation: useHint 2.4s ease-in-out infinite; }
+.yard.quiet .sky .use-btn::after { opacity: 0; } .yard.edit .sky .use-btn, .yard.dressing .sky .use-btn { display: none; } @keyframes useHint { 50% { transform: scale(1.4); opacity: .55; } }
+.sky .ypop { position: absolute; z-index: 400; padding: 3px 10px; border-radius: 12px; background: rgba(255, 255, 255, .94); color: #3a2c24; font: 700 13px/1.25 system-ui, sans-serif; font-style: normal; white-space: nowrap; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); pointer-events: none; animation: yPop 1.8s ease-out forwards; }
+@keyframes yPop { 0% { opacity: 0; transform: translate(-50%, 8px) scale(.7); } 14% { opacity: 1; transform: translate(-50%, 0) scale(1.06); } 24% { transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -16px); } }
+.sky .yleaf { position: absolute; z-index: 390; width: 7px; height: 5px; border-radius: 60% 0; background: var(--c); pointer-events: none; opacity: 0; animation: yLeaf var(--d) ease-in var(--w) forwards; }
+@keyframes yLeaf { 0% { opacity: 0; transform: translate(0, 0) rotate(0); } 10% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), 120px) rotate(400deg); } }
+.sky .land [data-fx].ride-swing { animation: rideSwing 1.5s ease-in-out infinite alternate !important; } .yard .yhero.ride-swing > svg { animation: rideSwing 1.5s ease-in-out infinite alternate; }
+@keyframes rideSwing { from { transform: rotate(-18deg); } to { transform: rotate(18deg); } }
+.sky .land [data-fx].ride-rock { animation: rideRock .8s ease-in-out infinite alternate !important; } .yard .yhero.ride-rock > svg { animation: rideRock .8s ease-in-out infinite alternate; }
+@keyframes rideRock { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
+.sky .land [data-fx].flown { animation: fxFlown 6s ease-in-out; } @keyframes fxFlown { 0% { transform: none; opacity: 1; } 14% { transform: translate(80px, -160px); opacity: 0; } 82% { transform: translate(-40px, -70px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.sky .land [data-fx]:is(.buy, .honk, .purr, .wake) { transform-box: fill-box; transform-origin: 50% 100%; animation: fxNudge .2s ease-in-out 8 alternate; } @keyframes fxNudge { to { transform: scale(1.04, .96); } }
+.sky .land [data-fx].ring { animation: fxRing .32s ease-in-out 6 alternate !important; } @keyframes fxRing { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
+.sky .land [data-fx].shake { transform-box: fill-box; transform-origin: 50% 100%; animation: fxShake .16s ease-in-out 10 alternate; } @keyframes fxShake { from { transform: rotate(-1.6deg); } to { transform: rotate(1.6deg); } }
+.sky .land [data-fx].pinch { animation-play-state: paused; } .sky .land .pinch .claws { transform-box: fill-box; transform-origin: 50% 100%; animation: fxPinch .2s ease-in-out infinite alternate; } @keyframes fxPinch { to { transform: translateY(-4px) scaleY(1.2); } }
+.sky .land [data-fx].spout { animation: none; transform-box: fill-box; transform-origin: 0 100%; transform: scale(1.9); }
+.sky .land [data-fx].cheer .fx-flag { animation-duration: .22s; } .sky .land [data-fx].beckon .paw { transform-box: fill-box; transform-origin: 30% 100%; animation: fxBeckon .28s ease-in-out 8 alternate; } @keyframes fxBeckon { to { transform: rotate(-26deg); } }
+:is(.study, .yard) .hero.bow .bob { animation: heroBow 1.4s ease-in-out; } @keyframes heroBow { 35%, 65% { transform: translateY(5px) scaleY(.93); } }
+@media (prefers-reduced-motion: reduce) { .sky :is(.ypop, .yleaf), .sky .use-btn::after { animation-duration: .01s; } .sky .land [data-fx][class] { animation: none !important; } .yard .yhero > svg { animation: none !important; } }
 .sky .cloudshade { position: absolute; left: 0; bottom: 10px; width: 560px; height: 96px; border-radius: 50%; background: radial-gradient(closest-side, rgba(36, 48, 72, .11), rgba(36, 48, 72, 0)); opacity: var(--day); pointer-events: none; animation: cloudShade 110s linear infinite; }   /* a cloud's shadow over the ground by day (2026-11-10) */
 .sky .cloudshade.c2 { width: 320px; height: 80px; bottom: 70px; animation-duration: 150s; animation-delay: -70s; } .yard.indoor .cloudshade { display: none; }
 @keyframes cloudShade { from { transform: translateX(-480px); } to { transform: translateX(1300px); } }
@@ -6250,6 +6270,7 @@ const ACTIONS = {
   'enter-house': (el) => yUse(el, [0, 214], () => { ROOM.heroIn(); sceneGo('#/today', 'entering'); }),   // the hero walks to the door first (1.2.0)
   'yard-shop': (el) => yClimb(el),
   'bus-stop': (el) => busSit(el),   // test: the hero sits on the bench
+  'scene-use': (el) => sceneUse(el),   // a thing in a place: the hero walks over and uses it (PLACE_USE)
   'go-place': (el) => yGo(el, el.dataset.to),   // test: to the main road, the beach, home to the yard
   'npc-talk': (el) => TOWNEV.talk(el),   // test: a word with a neighbour (the beach, the town)
   'town-shop': (el) => TOWNEV.shopTap(el),   // up the hill path to 古道具屋
@@ -6934,7 +6955,7 @@ function renderOutside(view, place = 'yard') {
     return;
   }
   yed.on = false; yed.sel = null; yed.drag = null; ypan = null;   // a yard drawn anew opens out of 擺設
-  cancelAnimationFrame(yh.raf); yh.climb = null; yh.s = 0;
+  cancelAnimationFrame(yh.raf); yh.climb = null; yh.s = 0; yh.z = 0; if (yh.use) { [yh.X, yh.Y] = yh.use.up; yh.use = null; }   // drawn anew: up off whatever he sat on
   if (yPlace !== place) {   // the other place's spot (test: the main road)
     yPlace = place;
     try { const q = (JSON.parse(localStorage.getItem('nq_hero') || '{}') || {})[place]; if (q && Number.isFinite(q.X) && Number.isFinite(q.Y)) { yh.X = q.X; yh.Y = q.Y; } else if (place === 'street') { yh.X = BUS.X - 70; yh.Y = 124; } } catch (e) { /* no storage */ }
@@ -6954,8 +6975,8 @@ function renderOutside(view, place = 'yard') {
   else yHeroPlace(y);
   if (place === 'yard') yWitch(y);
   const yel = y.querySelector('.yhero');   // idling now and then while left be
-  HERO.idle(yel, () => !yh.climb && !document.hidden && !yel.matches('.walk, .run, .out, .hop, .wave, .spin, .cheer'), true);
-  y.addEventListener('pointerdown', (e) => { if (!y.classList.contains('dressing')) { yardDragStart(y, e); yPanStart(y, e); } });
+  HERO.idle(yel, () => !yh.climb && !yh.use && !document.hidden && !yel.matches('.walk, .run, .out, .hop, .wave, .spin, .cheer, .reach, .crouch, .look, .bow'), true);
+  y.addEventListener('pointerdown', (e) => { y._at = yardPoint(y, e); if (!y.classList.contains('dressing')) { yardDragStart(y, e); yPanStart(y, e); } });   // _at: which seat a tap on a row of them meant
   y.addEventListener('pointermove', (e) => { yardDragMove(y, e); yPanMove(y, e); });
   y.addEventListener('pointerup', (e) => { yardDragEnd(y); yPanEnd(y, e); }); y.addEventListener('pointercancel', (e) => { yardDragEnd(y); yPanEnd(y, e); });
   y.addEventListener('click', (e) => {   // a tap on the lawn: the hero walks there (in 擺設: the picked ware goes there)
@@ -7114,10 +7135,10 @@ const HOUSE_ART = {
 const houseArt = () => HOUSE_ART[state.house && owns(state.house) && HOUSE_ART[state.house] ? state.house : 'cottage'];
 // the hero out in the yard (1.2.0): the same drawing, smaller the further up the lawn (X: px from the middle, Y: px up from the
 // bottom, the ground running from the bottom to the house at 218px). Walks where you tap, to the mailbox, the house and the path.
-const yh = { X: 0, Y: 186, back: false, flip: false, turn: false, raf: 0, fromDoor: false, climb: null, s: 0 };   // climb, s: on the way up to 古道具屋, and his scale there
+const yh = { X: 0, Y: 186, back: false, flip: false, turn: false, raf: 0, fromDoor: false, climb: null, s: 0, z: 0, use: null };   // z: his layer when set (sat on a thing), use: sat on / riding it ({ up: where he gets off })   // climb, s: on the way up to 古道具屋, and his scale there
 try { const h = JSON.parse(localStorage.getItem('nq_hero') || 'null'); if (h && h.yard && Number.isFinite(h.yard.X) && Number.isFinite(h.yard.Y)) Object.assign(yh, { X: h.yard.X, Y: h.yard.Y }); } catch (e) { /* first time out */ }
 let yPlace = 'yard';   // the yard or the main road (#/street): where the hero is out, each its own spot in nq_hero
-function yHeroSave() { try { const h = JSON.parse(localStorage.getItem('nq_hero') || '{}') || {}; h[yPlace] = { X: Math.round(yh.X), Y: Math.round(yh.Y) }; localStorage.setItem('nq_hero', JSON.stringify(h)); } catch (e) { /* no storage */ } }
+function yHeroSave() { try { const h = JSON.parse(localStorage.getItem('nq_hero') || '{}') || {}; const [X, Y] = yh.use ? yh.use.up : [yh.X, yh.Y]; h[yPlace] = { X: Math.round(X), Y: Math.round(Y) }; localStorage.setItem('nq_hero', JSON.stringify(h)); } catch (e) { /* no storage */ } }
 const yScale = (Y) => (0.19 + 0.31 * Math.max(0, Math.min(1, (212 - Y) / 198))) * (INDOOR.includes(yPlace) ? INDOOR_K : 1);   // in a room people are seen closer up (INDOOR_K)
 function yHeroHtml() { return `<div class="hero yhero" data-act="hero-hop" aria-label="主角">${HERO.svg({ wear: state.wear, look: state.look })}</div>`; }
 function yHeroRedraw(yard) { const el = yard.querySelector('.yhero'); if (el) el.innerHTML = HERO.svg({ wear: state.wear, look: state.look }); }   // dressed anew
@@ -7129,7 +7150,7 @@ function yHeroHold(yard) {   // the dressing room opens: the hero stops where th
 function yHeroPlace(yard) {
   const el = yard.querySelector('.yhero'); if (!el) return;
   el.style.transform = `translate(${yh.X.toFixed(1)}px,${(-yh.Y).toFixed(1)}px) scale(${(yh.s || yScale(yh.Y)).toFixed(3)})`;
-  el.classList.toggle('back', yh.back); el.classList.toggle('turn', yh.turn); el.classList.toggle('flip', yh.flip); el.style.zIndex = yh.climb === 'hill' ? '' : String(300 - Math.round(yh.Y));
+  el.classList.toggle('back', yh.back); el.classList.toggle('turn', yh.turn); el.classList.toggle('flip', yh.flip); el.style.zIndex = yh.climb === 'hill' ? '' : String(yh.z || 300 - Math.round(yh.Y));
   if (el.matches('.walk, .run')) yFollow(yard);   // on the move: the camera goes along
 }
 // up the hill path: outlined about a pixel on the screen however small he gets (s: his scale; none: off the path). Set on his
@@ -7197,10 +7218,152 @@ function yRoute(place, p, goal, free) {
   const way = []; for (let i = 1; i >= 0; i = prev[i]) way.unshift(n[i]);
   return way;
 }
+// ---------- things in the places the hero can use (round 4, 2026-11-10, the user: more things to do something with) ----------
+// box: where to tap, in the land's units [x0, y0, x1, y1] (y down); go: where he walks to first [X, Y] (a seat: in front of it).
+// kind 'sit': on the free seat (seats: X) nearest the tap — one someone sits on is taken — the seat's top at top (Y px up), his
+// depth there dep (his scale; drawn just behind the layer in front, or at z); 'ride': sat on it and swung or rocked with it (fx: the
+// land part moving with him, both turning round the same point, piv Y up); 'slide': up the ladder and down the chute; 'do': turned
+// to it (back: it stands behind him), a pose for a moment, words popping up over it (say, then), its part (fx) doing fxc for ms,
+// a fortune, a toast, a burst of petals or leaves
+const KUJI = [['大吉', '一切都會很順利！'], ['中吉', '努力會有好結果。'], ['小吉', '小小的好事在等你。'], ['吉', '平平穩穩就是福。'], ['末吉', '慢慢來，會越來越好。']];
+const PLACE_USE = {
+  yard: [{ id: 'tree', name: '樹', box: [440, 70, 500, 150], kind: 'do', go: [-110, 208], back: 1, pose: 'reach', fx: 'ytree', fxc: 'shake', burst: ['#6f9a5a', '#8ab86e', '#5a8a4a'] }],
+  park: [
+    { id: 'swing0', name: '鞦韆', box: [500, 136, 540, 236], kind: 'ride', ride: 'swing', fx: 'swing0', seats: [-80], top: 166, dep: 134, piv: 230, go: [-80, 124] },
+    { id: 'swing1', name: '鞦韆', box: [560, 136, 600, 236], kind: 'ride', ride: 'swing', fx: 'swing1', seats: [-20], top: 166, dep: 134, piv: 230, go: [-20, 124] },
+    { id: 'slide', name: '溜滑梯', box: [222, 130, 358, 236], kind: 'slide', go: [-259, 126] },
+    { id: 'panda', name: '熊貓搖搖馬', box: [404, 186, 462, 256], kind: 'ride', ride: 'rock', fx: 'panda', seats: [-166], top: 163, dep: 116, piv: 135, z: 185, go: [-170, 98] },
+    { id: 'benchL', name: '長椅', box: [200, 268, 290, 320], kind: 'sit', seats: [-370, -330], top: 74, dep: 50 },
+    { id: 'benchR', name: '長椅', box: [980, 268, 1070, 320], kind: 'sit', seats: [405, 445], top: 74, dep: 50 },
+    { id: 'fountain', name: '飲水台', box: [842, 246, 880, 298], kind: 'do', go: [261, 62], back: 1, pose: 'reach', say: 'ゴクゴク', fx: 'fountain', fxc: 'spout' },
+    { id: 'pigeons', name: '鴿子', box: [540, 322, 624, 346], kind: 'do', go: [-80, 40], pose: 'wave', fx: 'pigeons', fxc: 'flown', ms: 6000 },
+    { id: 'jizo', name: '地藏', box: [108, 176, 160, 236], kind: 'do', go: [-466, 122], back: 1, pose: 'bow', say: 'ペコリ' }],
+  street: [
+    { id: 'vend', name: '自動販賣機', box: [388, 158, 438, 236], kind: 'do', go: [-187, 126], back: 1, pose: 'reach', say: 'ガコン！', fx: 'vend', fxc: 'buy' },
+    { id: 'post', name: '郵筒', box: [745, 174, 775, 236], kind: 'do', go: [160, 126], back: 1, pose: 'reach', say: 'ポトン', fx: 'post', fxc: 'buy' }],
+  beach: [
+    { id: 'crab', name: '螃蟹', box: [540, 262, 650, 298], kind: 'do', go: [-20, 72], pose: 'crouch', say: 'チョキチョキ', fx: 'crab', fxc: 'pinch', ms: 2600 },
+    { id: 'castle', name: '沙堡', box: [350, 262, 420, 320], kind: 'do', go: [-214, 46], pose: 'crouch', say: '✨', fx: 'castle', fxc: 'cheer' },
+    { id: 'ice', name: '海之家', box: [776, 196, 876, 258], kind: 'do', go: [225, 98], back: 1, pose: 'reach', say: 'かき氷！' }],
+  town: [{ id: 'cat', name: '貓', box: [400, 128, 470, 180], kind: 'do', go: [-168, 122], back: 1, pose: 'wave', say: 'ニャー', fx: 'awncat', fxc: 'wake', ms: 2600 }],
+  harbor: [
+    { id: 'cat', name: '貓', box: [460, 252, 496, 290], kind: 'do', go: [-98, 60], pose: 'crouch', say: '♡ ニャー', fx: 'hcat', fxc: 'purr', ms: 2600 },
+    { id: 'gull', name: '海鷗', box: [540, 222, 582, 246], kind: 'do', go: [-40, 112], pose: 'wave', fx: 'gull', fxc: 'flown', ms: 6000 }],
+  station: [
+    { id: 'vend', name: '自動販賣機', box: [242, 164, 304, 236], kind: 'do', go: [-327, 122], back: 1, pose: 'reach', say: 'ガコン！', fx: 'svend', fxc: 'buy' },
+    { id: 'benchL', name: '長椅', box: [220, 252, 310, 304], kind: 'sit', seats: [-355, -310], top: 90, dep: 66 },
+    { id: 'benchR', name: '長椅', box: [760, 252, 850, 304], kind: 'sit', seats: [185, 225], top: 90, dep: 66 },
+    { id: 'pigeons', name: '鴿子', box: [576, 292, 676, 316], kind: 'do', go: [30, 42], pose: 'wave', fx: 'spigeons', fxc: 'flown', ms: 6000 },
+    { id: 'taxi', name: '計程車', box: [110, 188, 232, 258], kind: 'do', go: [-400, 94], pose: 'wave', say: 'プップー', fx: 'taxi', fxc: 'honk' }],
+  sento: [
+    { id: 'milk', name: '牛奶販賣機', box: [158, 142, 224, 236], kind: 'do', go: [-409, 122], back: 1, pose: 'reach', say: 'ぷはー！', fx: 'milk', fxc: 'buy' },
+    { id: 'cat', name: '貓', box: [304, 254, 358, 288], kind: 'do', go: [-270, 50], pose: 'crouch', say: '♡', fx: 'scat', fxc: 'purr', ms: 2600 }],
+  shrine: [
+    { id: 'bell', name: '鈴', box: [870, 140, 950, 236], kind: 'do', go: [310, 126], back: 1, pose: 'reach', say: 'カランカラン', then: 'パンパン 🙏', fx: 'bell', fxc: 'ring', ms: 2100 },
+    { id: 'kuji', name: '籤', box: [1076, 160, 1156, 236], kind: 'do', go: [515, 122], back: 1, pose: 'reach', fortune: 1 },
+    { id: 'crow', name: '烏鴉', box: [220, 42, 266, 80], kind: 'do', go: [-350, 112], pose: 'look', say: 'カァー', fx: 'crow', fxc: 'flown', ms: 7000 },
+    { id: 'fox', name: '狐狸', box: [338, 166, 382, 236], kind: 'do', go: [-240, 120], back: 1, pose: 'bow', say: 'ペコリ' }],
+  castle: [
+    { id: 'sakuraL', name: '櫻花', box: [0, 60, 130, 236], kind: 'do', go: [-520, 112], pose: 'reach', fx: 'sakuraL', fxc: 'shake', burst: ['#f7c6d2', '#f2b8c6', '#fbdde4'] },
+    { id: 'sakuraR', name: '櫻花', box: [1080, 60, 1210, 236], kind: 'do', go: [520, 112], pose: 'reach', fx: 'sakuraR', fxc: 'shake', burst: ['#f7c6d2', '#f2b8c6', '#fbdde4'] },
+    { id: 'board', name: '告示牌', box: [586, 166, 664, 236], kind: 'do', go: [25, 122], back: 1, pose: 'look', toast: '白鷺城：大約四百年前建的白色天守，遠看像白鷺展開翅膀，所以叫白鷺城。' }],
+  shokudo: [
+    { id: 'tableL', name: '桌子', box: [70, 250, 390, 320], kind: 'sit', seats: [-543, -217], top: 90, dep: 52, z: 244, say: 'いただきます！' },
+    { id: 'tableR', name: '桌子', box: [810, 250, 1130, 320], kind: 'sit', seats: [217, 543], top: 90, dep: 52, z: 244, say: 'いただきます！' },
+    { id: 'maneki', name: '招財貓', box: [402, 64, 440, 110], kind: 'do', go: [-180, 114], back: 1, pose: 'wave', say: '招福！', fx: 'maneki', fxc: 'beckon' }],
+  izakaya: [{ id: 'counter', name: '吧台座位', box: [384, 200, 936, 292], kind: 'sit', seats: [-180, -60, 60, 180, 300], top: 164, dep: 79, z: 220, say: 'かんぱい！' }]
+};
+const useBtnsHtml = (place) => (PLACE_USE[place] || []).map((t) => { const [x0, y0, x1, y1] = t.box; return `<button type="button" class="use-btn" data-act="scene-use" data-use="${t.id}" aria-label="${t.name}" style="margin-left:${x0 - 600}px;bottom:${370 - y1}px;width:${x1 - x0}px;height:${y1 - y0}px;z-index:${Math.round(150 - (370 - y1) / 4)}"></button>`; }).join('');
+// words popping up over a thing (x, y in the land's units), a burst of petals or leaves off a tree
+function yPop(yard, x, y, text) {
+  const w = yard && yard.querySelector('.yworld'); if (!w) return;
+  const el = document.createElement('i'); el.className = 'ypop'; el.textContent = text; el.style.cssText = `left:calc(50% + ${x - 600}px);bottom:${370 - y}px`;
+  w.appendChild(el); setTimeout(() => el.remove(), 1800);
+}
+function yBurst(yard, [x0, y0, x1], colours) {
+  const w = yard && yard.querySelector('.yworld'); if (!w) return;
+  for (let i = 0; i < 12; i++) {
+    const el = document.createElement('i'); el.className = 'yleaf';
+    el.style.cssText = `left:calc(50% + ${(x0 + (x1 - x0) * Math.random() - 600).toFixed(0)}px);bottom:${(370 - y0 - 30 - 60 * Math.random()).toFixed(0)}px;--c:${colours[i % colours.length]};--dx:${(Math.random() * 80 - 40).toFixed(0)}px;--d:${(1.8 + Math.random() * 1.4).toFixed(2)}s;--w:${(Math.random() * 0.5).toFixed(2)}s`;
+    w.appendChild(el); setTimeout(() => el.remove(), 3800);
+  }
+}
+const npcAt = (el) => { const m = /translate\((-?[\d.]+)px/.exec(el.style.transform || ''); return m ? Number(m[1]) : NaN; };
+function sceneUse(el) {
+  const yard = el.closest('.yard'); if (!yard || yed.on || yard.classList.contains('dressing')) return;
+  const t = (PLACE_USE[yard.dataset.place] || []).find((q) => q.id === el.dataset.use), [x0, y0, x1] = t ? t.box : [];
+  if (!t || !yard.querySelector('.yhero')) return;
+  if (t.kind === 'sit' || t.kind === 'ride') {
+    const taken = [...yard.querySelectorAll('.npc.bench')].map(npcAt), tap = yard._at ? yard._at.x : (x0 + x1) / 2 - 600;
+    const seat = t.seats.filter((x) => taken.every((n) => !(Math.abs(n - x) < 30))).sort((a, b) => Math.abs(a - tap) - Math.abs(b - tap))[0];
+    if (seat === undefined) { yPop(yard, (x0 + x1) / 2, y0 - 4, '坐滿了'); return; }
+    yHeroWalk(yard, t.go || [seat, Math.max(14, t.dep - 16)], () => ySit(yard, t, seat));
+  } else if (t.kind === 'slide') yHeroWalk(yard, t.go, () => ySlide(yard));
+  else yHeroWalk(yard, t.go, () => yDo(yard, t));
+}
+function ySit(yard, t, X) {
+  const h = yard.querySelector('.yhero'); if (!h) return;
+  const s = yScale(t.dep);
+  yh.use = { up: [yh.X, yh.Y] }; yh.X = X; yh.s = s; yh.Y = t.top - 40 * s; yh.z = t.z || 300 - t.dep - 1;
+  yh.back = false; yh.flip = false; yh.turn = false; h.classList.add('bench'); yHeroPlace(yard);
+  if (t.say) yPop(yard, X + 600, 370 - yh.Y - 185 * s, t.say);   // over his head
+  if (t.kind !== 'ride') return;
+  const part = yard.querySelector(`.land [data-fx="${t.fx}"]`), svg = h.querySelector('svg');
+  if (svg) svg.style.transformOrigin = `60px ${(200 - (t.piv - yh.Y) / s).toFixed(1)}px`;   // the point they turn round, in his drawing's px
+  if (part) part.classList.add('ride-' + t.ride); h.classList.add('ride-' + t.ride); yh.use.part = part;   // in the same frame: in step
+}
+function yUseEnd(yard) {   // up off a seat, a ride, the slide (a walk, the place drawn anew)
+  const u = yh.use; if (!u) return; yh.use = null; yh.s = 0; yh.z = 0;
+  if (u.part) u.part.classList.remove('ride-swing', 'ride-rock');
+  const h = yard && yard.querySelector('.yhero');
+  if (h) { h.classList.remove('bench', 'ride-swing', 'ride-rock', 'sliding', 'walk'); const svg = h.querySelector('svg'); if (svg) svg.style.transformOrigin = ''; }
+  [yh.X, yh.Y] = u.up;
+}
+// the park's slide: up the ladder (seen from behind), sat down the chute, off at its foot
+function ySlide(yard) {
+  const h = yard.querySelector('.yhero'); if (!h) return;
+  const F = 236, s = yScale(134), sit = 40 * s, chute = [[327, F - 92], [308, F - 88], [294, F - 68], [282, F - 46], [268, F - 24], [250, F - 11], [228, F - 6]].map(([x, y]) => [x - 600, 370 - y + 6 - sit]);
+  yh.use = { up: [-385, 120] }; yh.s = s; yh.z = 166;
+  const legs = [[[[yh.X, yh.Y], [-259, 134], [-259, 232]], 80, 'walk', { back: true }], [[[-266, 232 - sit], ...chute], 230, 'bench', { flip: true, turn: true }]];
+  let i = -1;
+  const next = () => {
+    i += 1;
+    if (!yard.isConnected || yh.use === null) return;
+    if (i >= legs.length) { yUseEnd(yard); yHeroPlace(yard); yHeroWalk(yard, [-385, 112]); yPop(yard, 215, 200, 'わーい！'); return; }
+    const [pts, v, cls, face] = legs[i], seg = []; let len = 0;
+    for (let k = 1; k < pts.length; k++) { const d = Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]); if (d) { seg.push([pts[k - 1], pts[k], len, d]); len += d; } }
+    h.classList.remove('walk', 'bench', 'run'); h.classList.add(cls, 'sliding'); Object.assign(yh, { back: false, flip: false, turn: false }, face);
+    const t0 = performance.now();
+    const step = (now) => {
+      if (!yard.isConnected || !yh.use) return;
+      const d = Math.min(len, (now - t0) / 1000 * v), q = seg.find((x) => d <= x[2] + x[3]) || seg[seg.length - 1], f = Math.min(1, (d - q[2]) / q[3]);
+      yh.X = q[0][0] + (q[1][0] - q[0][0]) * f; yh.Y = q[0][1] + (q[1][1] - q[0][1]) * f; yHeroPlace(yard);
+      if (d < len) { yh.raf = requestAnimationFrame(step); return; }
+      next();
+    };
+    yh.raf = requestAnimationFrame(step);
+  };
+  next();
+}
+function yDo(yard, t) {
+  const h = yard.querySelector('.yhero'); if (!h) return;
+  const [x0, y0, x1] = t.box, cx = (x0 + x1) / 2;
+  yh.back = !!t.back; yh.flip = cx - 600 < yh.X; yh.turn = !t.back; yHeroPlace(yard);
+  if (t.pose) { h.classList.remove(t.pose); void h.offsetWidth; h.classList.add(t.pose); setTimeout(() => h.classList.remove(t.pose), 1500); }
+  const part = t.fx && yard.querySelector(`.land [data-fx="${t.fx}"]`);
+  if (part) { part.classList.remove(t.fxc); void part.getBoundingClientRect(); part.classList.add(t.fxc); clearTimeout(part._fxT); part._fxT = setTimeout(() => part.classList.remove(t.fxc), t.ms || 1800); }
+  let say = t.say;
+  if (t.fortune) { const [a, b] = KUJI[Math.floor(Math.random() * KUJI.length)]; say = a; toast(`おみくじ：${a}・${b}`, 3600); }
+  if (say) yPop(yard, cx, y0 - 4, say);
+  if (t.then) setTimeout(() => yPop(yard, cx, y0 - 4, t.then), 1200);
+  if (t.toast) toast(t.toast, 4600);
+  if (t.burst) yBurst(yard, t.box, t.burst);
+}
 // a spot off the things (where he was kept, a thing put down where he stands): the nearest free side
 const yFree = (place, q) => { const g = yRoute(place, [q[0], -999], q).pop(); return g[1] < -900 ? q : g; };
 function yHeroWalk(yard, to, done, free) {   // free: on the way out of the place (up the path home), past its top
   cancelAnimationFrame(yh.raf);
+  yUseEnd(yard);   // up off a seat or a ride first
   const el = yard.querySelector('.yhero'), lim = ycam.YW / 2 - 20;
   yh.climb = null; yh.s = 0; yard.classList.remove('climbing'); if (el) { el.classList.remove('climb'); yClimbLook(el, 0); }   // off the hill path, if he was on it
   HERO.still(el); if (el) el.classList.remove('bench');   // up off the bus stop's bench
@@ -7792,8 +7955,8 @@ function beachHtml() {
       <path class="sand" d="M-20 252 C300 246 700 256 1220 248 V370 H-20 Z"/>
       ${[[180, 300, '#f0c2b0'], [470, 330, '#f6e3c8'], [860, 296, '#f0c2b0'], [1010, 336, '#f6e3c8']].map(([x, y, c]) => `<path class="shell" d="M${x - 6} ${y} Q${x} ${y - 9} ${x + 6} ${y} Z" style="--c:${c}"/>`).join('')}
       <path class="star" d="M700 318 l2.4 5 5.4 .6 -4 3.6 1.2 5.4 -5 -2.8 -5 2.8 1.2 -5.4 -4 -3.6 5.4 -.6 Z"/>
-      <g class="fx-crab"><g class="fx-legs"><path d="M554 286 l-8 4 M556 289 l-8 6 M574 286 l8 4 M572 289 l8 6" ${hs('#c8453a', '#4a2030')} stroke-width="2"/></g><ellipse cx="564" cy="284" rx="11" ry="7" ${hc('#e0584a', '#5a2a36')}/><path d="M553 280 q-8 -6 -4 -12 q4 2 6 6 M575 280 q8 -6 4 -12 q-4 2 -6 6" ${hc('#e0584a', '#5a2a36')}/><path d="M560 278 v-5 M568 278 v-5" ${hs('#c8453a', '#4a2030')} stroke-width="1.6"/><circle cx="560" cy="272" r="1.8" fill="#2b2b33"/><circle cx="568" cy="272" r="1.8" fill="#2b2b33"/></g>
-      <path d="M352 318 h64 l-4 -12 h-56 Z" ${hc('#dcc48e', '#4a4466')}/><rect x="360" y="290" width="18" height="18" ${hc('#e6d2a0', '#4a4466')}/><rect x="390" y="284" width="20" height="24" ${hc('#e6d2a0', '#4a4466')}/>${[360, 366, 372, 390, 397, 404].map((x) => `<rect x="${x}" y="${x < 380 ? 286 : 280}" width="4" height="5" ${hc('#e6d2a0', '#4a4466')}/>`).join('')}<rect x="397" y="296" width="6" height="12" rx="3" ${hc('#c9b07c', '#3a3858')}/><path d="M400 280 V264" ${hs('#6e4f3a', '#2c2440')} stroke-width="1.4"/><path d="M400 264 l12 4 l-12 4 Z" class="fx-flag" fill="#d0453c"/>
+      <g class="fx-crab" data-fx="crab"><g class="fx-legs"><path d="M554 286 l-8 4 M556 289 l-8 6 M574 286 l8 4 M572 289 l8 6" ${hs('#c8453a', '#4a2030')} stroke-width="2"/></g><ellipse cx="564" cy="284" rx="11" ry="7" ${hc('#e0584a', '#5a2a36')}/><g class="claws"><path d="M553 280 q-8 -6 -4 -12 q4 2 6 6 M575 280 q8 -6 4 -12 q-4 2 -6 6" ${hc('#e0584a', '#5a2a36')}/></g><path d="M560 278 v-5 M568 278 v-5" ${hs('#c8453a', '#4a2030')} stroke-width="1.6"/><circle cx="560" cy="272" r="1.8" fill="#2b2b33"/><circle cx="568" cy="272" r="1.8" fill="#2b2b33"/></g>
+      <g data-fx="castle"><path d="M352 318 h64 l-4 -12 h-56 Z" ${hc('#dcc48e', '#4a4466')}/><rect x="360" y="290" width="18" height="18" ${hc('#e6d2a0', '#4a4466')}/><rect x="390" y="284" width="20" height="24" ${hc('#e6d2a0', '#4a4466')}/>${[360, 366, 372, 390, 397, 404].map((x) => `<rect x="${x}" y="${x < 380 ? 286 : 280}" width="4" height="5" ${hc('#e6d2a0', '#4a4466')}/>`).join('')}<rect x="397" y="296" width="6" height="12" rx="3" ${hc('#c9b07c', '#3a3858')}/><path d="M400 280 V264" ${hs('#6e4f3a', '#2c2440')} stroke-width="1.4"/><path d="M400 264 l12 4 l-12 4 Z" class="fx-flag" fill="#d0453c"/></g>
       <rect x="760" y="196" width="130" height="62" ${hc('#c9a06a', '#2a2440')}/><path d="M744 200 L825 168 L906 200 Z" ${hc('#b9a070', '#1e1c38')}/>${[770, 790, 810, 830, 850, 870].map((x) => `<path d="M${x} 186 l-6 14" ${hs('#9a8058', '#1a1832')} stroke-width="1.4"/>`).join('')}<rect x="776" y="214" width="98" height="30" ${hc('#efe6d6', '#ffd98a')}/><path d="M748 202 Q786 210 825 202 Q864 210 902 202" fill="none" ${hs('#6a6a74', '#2a2c50')} stroke-width="1"/>${Array.from({ length: 9 }, (_, k) => { const x = 752 + k * 18.5, yy = 202 + 6 * Math.sin(Math.PI * ((x - 748) % 77) / 77); return `<circle cx="${x}" cy="${yy + 3}" r="2.6" ${hc('#e8e4d8', '#ffe08a')}/><circle class="glow" cx="${x}" cy="${yy + 3}" r="9" fill="url(#glw)"/>`; }).join('')}${lightPool(825, 262, 80)}<text x="825" y="234" text-anchor="middle" font-size="13" font-weight="700" ${hc('#2f5a9a', '#3a3456')} font-family="system-ui, sans-serif">海の家</text>
       <path d="M900 258 V178" ${hs('#6e4f3a', '#2c2440')} stroke-width="3"/><path d="M901 180 h20 v40 h-20 Z" ${hcx('fx-flag', '#fbf7ec', '#4a4c72')}/><text x="911" y="196" text-anchor="middle" font-size="9" font-weight="700" fill="#d0453c" font-family="system-ui, sans-serif" writing-mode="tb">氷</text>
       <path d="M260 340 q30 -8 60 -2 q10 2 18 -4" fill="none" ${hs('#a8875e', '#3a3050')} stroke-width="6"/>
@@ -7871,7 +8034,7 @@ function townHtml() {
       <path d="M130 -24 Q595 26 1060 -24" fill="none" ${hs('#6a6a74', '#2a2c50')} stroke-width="1.2"/>${flags}
       ${nobori(446, '#d0574b', '焼きたて', 0)}${nobori(735, '#6e4f3a', '珈琲', 1)}${nobori(1036, '#8a2f2a', '焼き鳥', 2)}
       <rect x="418" y="${TOWN_FOOT - 112 - 66 - 34}" width="12" height="22" ${hc('#8a6a52', '#1c1d3c')}/>${[0, 1, 2].map((k) => `<g transform="translate(424 ${TOWN_FOOT - 112 - 66 - 40})"><ellipse rx="10" ry="7" ${hcx('fx-steam', '#ffffff', '#9a9ec8', `animation-delay:-${k * 1.5}s`)}/></g>`).join('')}
-      <g transform="translate(62 0)"><g class="fx-bob" style="animation-duration:3.6s"><path d="M362 ${TOWN_FOOT - 112 + 38} q-2 -15 15 -17 q17 -1 17 13 q0 4 -2 4 Z" ${hc('#e9e2d0', '#5a5a6a')}/><path d="M379 ${TOWN_FOOT - 112 + 22} l3 -7 l4 7 Z M387 ${TOWN_FOOT - 112 + 23} l4 -6 l2 8 Z" ${hc('#e9e2d0', '#5a5a6a')}/><path d="M362 ${TOWN_FOOT - 112 + 38} q-12 4 -16 14" ${hs('#e9e2d0', '#5a5a6a')} stroke-width="4"/></g></g>
+      <g transform="translate(62 0)"><g class="fx-bob" data-fx="awncat" style="animation-duration:3.6s"><path d="M362 ${TOWN_FOOT - 112 + 38} q-2 -15 15 -17 q17 -1 17 13 q0 4 -2 4 Z" ${hc('#e9e2d0', '#5a5a6a')}/><path d="M379 ${TOWN_FOOT - 112 + 22} l3 -7 l4 7 Z M387 ${TOWN_FOOT - 112 + 23} l4 -6 l2 8 Z" ${hc('#e9e2d0', '#5a5a6a')}/><path d="M362 ${TOWN_FOOT - 112 + 38} q-12 4 -16 14" ${hs('#e9e2d0', '#5a5a6a')} stroke-width="4"/></g></g>
       ${[0, 34, 68, 102].map((dx) => `<circle cx="${dx}" cy="${TOWN_FOOT - 26}" r="24" ${hc('#5a9e4d', '#0f1a30')}/>`).join('')}<rect x="-20" y="${TOWN_FOOT - 26}" width="150" height="26" ${hc('#4f8a44', '#0c162a')}/>
       <rect class="pave" x="-20" y="${TOWN_FOOT}" width="1240" height="${370 - TOWN_FOOT}"/><path class="rline" d="M-20 ${TOWN_FOOT + 1} H1220" style="stroke-dasharray:none;opacity:.5"/>
       ${Array.from({ length: 30 }, (_, j) => `<path class="seam" d="M${j * 44 - 20} ${TOWN_FOOT + 40 + (j % 3) * 30} h26"/>`).join('')}
@@ -7917,10 +8080,10 @@ function harborHtml() {
       ${streetLamp(150, F + 6, 120)}${streetLamp(1140, F + 6, 120)}
       <path d="M600 ${F + 56} a18 8 0 1 0 1 0 a12 5 0 1 0 1 0" fill="none" ${hs('#c9b48a', '#4a4466')} stroke-width="3"/>
       ${gull(300, -120, 0)}${gull(620, -60, 1)}${gull(860, -180, 2)}
-      <g transform="translate(560 ${F + 4})"><ellipse rx="8" ry="6" ${hc('#f6f6f2', '#7a7ea8')}/><circle cx="7" cy="-6" r="4" ${hc('#f6f6f2', '#7a7ea8')}/><path d="M11 -6 l4 1" ${hs('#e6a23c', '#5a4a3a')} stroke-width="2"/><path d="M-8 -2 l-6 -2" ${hs('#8a8f99', '#4a4c72')} stroke-width="3"/></g>
+      <g data-fx="gull"><g transform="translate(560 ${F + 4})"><ellipse rx="8" ry="6" ${hc('#f6f6f2', '#7a7ea8')}/><circle cx="7" cy="-6" r="4" ${hc('#f6f6f2', '#7a7ea8')}/><path d="M11 -6 l4 1" ${hs('#e6a23c', '#5a4a3a')} stroke-width="2"/><path d="M-8 -2 l-6 -2" ${hs('#8a8f99', '#4a4c72')} stroke-width="3"/></g></g>
     </svg>
     ${landProp(82, crate(400, F + 10, '#3f7ac8') + [404, 414, 426].map((fx, k) => `<path d="M${fx} ${F + 10} q6 -6 12 0 q-6 4 -12 0 Z M${fx + 12} ${F + 10} l4 -3 v6 Z" ${hc(['#b9c8d4', '#a8b8c8', '#c8d4dc'][k], '#4a4c72')}/>`).join('') + crate(380, F + 30, '#3f7ac8') + crate(424, F + 30, '#d0574b')
-      + `<g transform="translate(476 ${F + 52})"><path d="M-10 0 q-2 -18 10 -20 q12 2 10 20 Z" ${hc('#f2ede2', '#5a5a6a')}/><circle cx="0" cy="-24" r="8" ${hc('#f2ede2', '#5a5a6a')}/><path d="M-7 -29 l2 -7 l4 5 M7 -29 l-2 -7 l-4 5" ${hc('#f2ede2', '#5a5a6a')}/><path d="M-8 -26 h-3 M-8 -23 h-3" stroke="#8a8a94" stroke-width=".8"/><circle cx="-3" cy="-25" r="1.2" fill="#2b2b33"/><circle cx="3" cy="-25" r="1.2" fill="#2b2b33"/><path d="M10 -2 q10 0 8 -12" class="fx-sway" fill="none" ${hs('#f2ede2', '#5a5a6a')} stroke-width="3"/><path d="M-6 -16 q6 6 12 0" fill="none" ${hs('#2b2b33', '#5a5a6a')} stroke-width="1"/></g>`)}${landProp(78, crate(1090, F + 34, '#e6a23c'))}
+      + `<g data-fx="hcat"><g transform="translate(476 ${F + 52})"><path d="M-10 0 q-2 -18 10 -20 q12 2 10 20 Z" ${hc('#f2ede2', '#5a5a6a')}/><circle cx="0" cy="-24" r="8" ${hc('#f2ede2', '#5a5a6a')}/><path d="M-7 -29 l2 -7 l4 5 M7 -29 l-2 -7 l-4 5" ${hc('#f2ede2', '#5a5a6a')}/><path d="M-8 -26 h-3 M-8 -23 h-3" stroke="#8a8a94" stroke-width=".8"/><circle cx="-3" cy="-25" r="1.2" fill="#2b2b33"/><circle cx="3" cy="-25" r="1.2" fill="#2b2b33"/><path d="M10 -2 q10 0 8 -12" class="fx-sway" fill="none" ${hs('#f2ede2', '#5a5a6a')} stroke-width="3"/><path d="M-6 -16 q6 6 12 0" fill="none" ${hs('#2b2b33', '#5a5a6a')} stroke-width="1"/></g></g>`)}${landProp(78, crate(1090, F + 34, '#e6a23c'))}
     ${landProp(76, [[800, F + 40], [822, F + 48], [842, F + 38]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="9" ${hc('#f08a3a', '#5a3a2a')}/><path d="M${x - 8} ${y - 2} q8 4 16 0" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1.6"/>`).join(''))}
     ${yHeroHtml()}
     ${TOWNEV.castHtml('harbor')}
@@ -7935,10 +8098,10 @@ function parkHtml() {
   const F = 236, px = 600 + PARK_PATH;
   const house = (x, top, w, roof) => farHouse(x, 134, w, 134 - top, roof, '#efe6d6', 56);
   // round 1 (2026-11-10): a panda on a spring rocking to and fro, a bucket and spade left in the sandbox, pigeons by the benches
-  const panda = (x, b) => `<path d="M${x - 2} ${b} l-6 -4 l12 -4 l-12 -4 l12 -4 l-6 -4" fill="none" ${hs('#8a8f99', '#3a3d66')} stroke-width="2.4"/><g class="fx-bob" style="animation-duration:1.7s"><ellipse cx="${x}" cy="${b - 34}" rx="20" ry="13" ${hc('#f6f3ec', '#4a4c72')}/><ellipse cx="${x - 12}" cy="${b - 26}" rx="5" ry="7" ${hc('#2b2b33', '#141428')}/><ellipse cx="${x + 12}" cy="${b - 26}" rx="5" ry="7" ${hc('#2b2b33', '#141428')}/><circle cx="${x + 18}" cy="${b - 48}" r="12" ${hc('#f6f3ec', '#4a4c72')}/><circle cx="${x + 10}" cy="${b - 58}" r="4.5" ${hc('#2b2b33', '#141428')}/><circle cx="${x + 26}" cy="${b - 58}" r="4.5" ${hc('#2b2b33', '#141428')}/><ellipse cx="${x + 14}" cy="${b - 49}" rx="3" ry="3.6" ${hc('#2b2b33', '#141428')}/><ellipse cx="${x + 23}" cy="${b - 49}" rx="3" ry="3.6" ${hc('#2b2b33', '#141428')}/><path d="M${x - 6} ${b - 50} v-6 M${x - 10} ${b - 56} h8" ${hs('#d0453c', '#5a2030')} stroke-width="2.4"/></g>`;
+  const panda = (x, b) => `<path d="M${x - 2} ${b} l-6 -4 l12 -4 l-12 -4 l12 -4 l-6 -4" fill="none" ${hs('#8a8f99', '#3a3d66')} stroke-width="2.4"/><g class="fx-bob" data-fx="panda" style="animation-duration:1.7s"><ellipse cx="${x}" cy="${b - 34}" rx="20" ry="13" ${hc('#f6f3ec', '#4a4c72')}/><ellipse cx="${x - 12}" cy="${b - 26}" rx="5" ry="7" ${hc('#2b2b33', '#141428')}/><ellipse cx="${x + 12}" cy="${b - 26}" rx="5" ry="7" ${hc('#2b2b33', '#141428')}/><circle cx="${x + 18}" cy="${b - 48}" r="12" ${hc('#f6f3ec', '#4a4c72')}/><circle cx="${x + 10}" cy="${b - 58}" r="4.5" ${hc('#2b2b33', '#141428')}/><circle cx="${x + 26}" cy="${b - 58}" r="4.5" ${hc('#2b2b33', '#141428')}/><ellipse cx="${x + 14}" cy="${b - 49}" rx="3" ry="3.6" ${hc('#2b2b33', '#141428')}/><ellipse cx="${x + 23}" cy="${b - 49}" rx="3" ry="3.6" ${hc('#2b2b33', '#141428')}/><path d="M${x - 6} ${b - 50} v-6 M${x - 10} ${b - 56} h8" ${hs('#d0453c', '#5a2030')} stroke-width="2.4"/></g>`;
   const ginkgo = (x, s) => `<rect class="trunk" x="${x - 5 * s}" y="${F - 90 * s}" width="${10 * s}" height="${90 * s}"/><g ${hc('#e6c23a', '#3a3420')}>${[[0, -120, 44], [-30, -96, 32], [30, -98, 34], [0, -150, 30]].map(([dx, dy, r]) => `<circle cx="${x + dx * s}" cy="${F + dy * s}" r="${r * s}"/>`).join('')}</g>`;
   const leaf = (x, y, k) => `<g transform="translate(${x} ${y})"><path d="M0 0 l-6 -8 q6 -4 12 0 Z" ${hcx('fx-fall', '#e6c23a', '#6a5a3a', `animation-delay:-${k * 1.7}s;animation-duration:${10 + (k % 3) * 2}s`)}/></g>`;
-  const swing = (x, k) => `<g class="fx-sway" style="animation-delay:-${k * 0.9}s;animation-duration:1.8s;transform-origin:${x}px ${F - 96}px;transform-box:view-box"><path d="M${x - 10} ${F - 96} V${F - 30} M${x + 10} ${F - 96} V${F - 30}" ${hs('#8a8f99', '#3a3d66')} stroke-width="2"/><rect x="${x - 14}" y="${F - 32}" width="28" height="6" rx="2" ${hc('#d0574b', '#4a2c40')}/></g>`;
+  const swing = (x, k) => `<g class="fx-sway" data-fx="swing${k}" style="animation-delay:-${k * 0.9}s;animation-duration:1.8s;transform-origin:${x}px ${F - 96}px;transform-box:view-box"><path d="M${x - 10} ${F - 96} V${F - 30} M${x + 10} ${F - 96} V${F - 30}" ${hs('#8a8f99', '#3a3d66')} stroke-width="2"/><rect x="${x - 14}" y="${F - 32}" width="28" height="6" rx="2" ${hc('#d0574b', '#4a2c40')}/></g>`;
   return `<svg class="land tall park-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
       <path class="far" d="M0 40 C200 10 420 0 600 20 S1000 40 1200 0 V370 H0 Z"/>
       ${house(40, 70, 110, '#8a5a44')}${house(190, 50, 96, '#5f6f8a')}${house(330, 80, 120, '#6f5a7a')}${house(520, 60, 100, '#8a5a44')}${house(660, 76, 110, '#5f6f8a')}
@@ -7954,10 +8117,10 @@ function parkHtml() {
       <rect x="114" y="${F - 12}" width="40" height="12" ${hc('#a9a497', '#2c2e4c')}/><path d="M120 ${F - 12} Q120 ${F - 52} 134 ${F - 54} Q148 ${F - 52} 148 ${F - 12} Z" ${hc('#b4ad9e', '#3a3c5e')}/><path d="M122 ${F - 32} Q134 ${F - 22} 146 ${F - 32} L144 ${F - 24} Q134 ${F - 16} 124 ${F - 24} Z" ${hc('#d0453c', '#5a2030')}/>
       ${[[880, -60], [1000, -20], [1100, -80], [60, -40], [160, -90], [700, 20]].map(([x, y], k) => leaf(x, y, k)).join('')}
       <rect x="-20" y="${F}" width="1240" height="134" ${hc('#d9c7a2', '#2a2846')}/>${Array.from({ length: 22 }, (_, j) => `<path d="M${j * 56} ${F + 30 + (j % 3) * 28} q6 -6 12 0" ${hs('#c2ad84', '#22203e')} stroke-width="2"/>`).join('')}
-      ${pigeonArt(560, F + 100, 0)}${pigeonArt(596, F + 106, 1)}
+      <g data-fx="pigeons">${pigeonArt(560, F + 100, 0)}${pigeonArt(596, F + 106, 1)}</g>
       ${Array.from({ length: 9 }, (_, k) => `<path d="M${646 + k * 16} ${F - 2} v-12" stroke="#4f7a4a" stroke-width="1.6"/><path d="M${642 + k * 16} ${F - 20} q4 -6 8 0 v5 h-8 Z" ${hc(['#e86f5e', '#f2c94c', '#e58fa8'][k % 3], '#3a2c48')}/>`).join('')}
     </svg>
-    ${benchProps(200, F + 60, 50)}${benchProps(980, F + 60, 50)}${landProp(74, `<rect x="852" y="${F + 26}" width="18" height="34" rx="2" ${hc('#a9a497', '#2c2e4c')}/><rect x="844" y="${F + 20}" width="34" height="8" rx="3" ${hc('#bdb8aa', '#3a3c5e')}/><path d="M861 ${F + 20} v-6 h6" fill="none" ${hs('#8a8f99', '#3a3d66')} stroke-width="2.4"/><path d="M867 ${F + 14} q4 -6 7 2" fill="none" stroke="#9fd0f0" stroke-width="1.6" class="fx-blink"/>`)}${landProp(116, panda(430, F + 18))}
+    ${benchProps(200, F + 60, 50)}${benchProps(980, F + 60, 50)}${landProp(74, `<rect x="852" y="${F + 26}" width="18" height="34" rx="2" ${hc('#a9a497', '#2c2e4c')}/><rect x="844" y="${F + 20}" width="34" height="8" rx="3" ${hc('#bdb8aa', '#3a3c5e')}/><path d="M861 ${F + 20} v-6 h6" fill="none" ${hs('#8a8f99', '#3a3d66')} stroke-width="2.4"/><path data-fx="fountain" d="M867 ${F + 14} q4 -6 7 2" fill="none" stroke="#9fd0f0" stroke-width="1.6" class="fx-blink"/>`)}${landProp(116, panda(430, F + 18))}
     ${yHeroHtml()}
     ${TOWNEV.castHtml('park')}
     <button type="button" class="thing way-btn" data-act="go-place" data-to="town" aria-label="往小鎮" style="margin-left:${PARK_PATH - 32}px;bottom:186px"><span class="tag">${ySign('shop', '往小鎮')}</span>${TOWNEV.dot('town', 'park')}</button>
@@ -8000,7 +8163,7 @@ function shokudoHtml() {
     <circle cx="520" cy="70" r="20" fill="#8a8f99"/><circle cx="520" cy="70" r="16" fill="#4a4a55"/>${[0, 1, 2].map((k) => `<g transform="translate(${600 + k * 14} 54)"><ellipse rx="12" ry="9" class="fx-steam" fill="#fff" style="animation-delay:-${k * 1.5}s"/></g>`).join('')}<rect x="660" y="56" width="60" height="30" rx="4" fill="#d9d2c4"/>
     <rect x="390" y="110" width="420" height="16" rx="3" fill="#c58a54"/><rect x="400" y="126" width="400" height="${F - 126}" fill="#9a6538"/>
     ${[440, 520, 600, 680, 760].map((x) => `<rect x="${x - 3}" y="126" width="6" height="${F - 126}" fill="#7a5230" opacity=".5"/>`).join('')}
-    <g transform="translate(420 82)"><ellipse cx="0" cy="26" rx="14" ry="4" fill="#000" opacity=".15"/><path d="M-11 26 Q-13 6 0 4 Q13 6 11 26 Z" fill="#fff"/><circle cy="0" r="10" fill="#fff"/><path d="M-8 -6 L-6 -14 L-2 -8 M8 -6 L6 -14 L2 -8" fill="#fff" stroke="#e58fa8" stroke-width="1"/><path d="M11 6 Q20 -6 14 -16" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="-4" cy="0" r="1.3" fill="#333"/><circle cx="4" cy="0" r="1.3" fill="#333"/><circle cy="14" r="4" fill="#e3c46a"/></g>
+    <g data-fx="maneki"><g transform="translate(420 82)"><ellipse cx="0" cy="26" rx="14" ry="4" fill="#000" opacity=".15"/><path d="M-11 26 Q-13 6 0 4 Q13 6 11 26 Z" fill="#fff"/><circle cy="0" r="10" fill="#fff"/><path d="M-8 -6 L-6 -14 L-2 -8 M8 -6 L6 -14 L2 -8" fill="#fff" stroke="#e58fa8" stroke-width="1"/><path class="paw" d="M11 6 Q20 -6 14 -16" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="-4" cy="0" r="1.3" fill="#333"/><circle cx="4" cy="0" r="1.3" fill="#333"/><circle cy="14" r="4" fill="#e3c46a"/></g></g>
     <rect x="1010" y="-10" width="120" height="78" rx="6" fill="#3a3a44"/><rect x="1018" y="-2" width="104" height="62" rx="3" fill="#7fb3d8"/><defs><clipPath id="tvPic"><rect x="1018" y="-2" width="104" height="62" rx="3"/></clipPath></defs><g clip-path="url(#tvPic)"><g class="fx-scroll" style="animation-duration:6s"><path d="M1018 40 q20 -24 40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0 t40 0" stroke="#fff" stroke-opacity=".5" stroke-width="3" fill="none"/></g><circle cx="1104" cy="10" r="7" fill="#f2c94c" opacity=".8"/></g><rect x="1064" y="68" width="12" height="12" fill="#3a3a44"/>
     <circle cx="190" cy="40" r="26" fill="#fbf7ec" stroke="#7a5230" stroke-width="4"/>${[0, 1, 2, 3].map((k) => `<path d="M190 ${18} v4" stroke="#7a5230" stroke-width="2" transform="rotate(${k * 90} 190 40)"/>`).join('')}${clockHands(190, 40, 22)}
     <rect x="20" y="40" width="96" height="${F - 40}" fill="#7a5230"/><rect x="28" y="48" width="80" height="${F - 48}" fill="#cfe6ec" opacity=".7"/><path d="M24 40 h88 v54 h-88 Z" fill="#2f3a5e"/><path d="M53 40 v54 M83 40 v54" stroke="#efe6d6" stroke-width="1.5"/>
@@ -8100,7 +8263,7 @@ function streetHtml() {
       ${sparrow(160, 520, 0.32, WY[0], 26, 0)}${sparrow(160, 520, 0.4, WY[0], 26, 1)}${sparrow(520, 880, 0.62, WY[1], 30, 2)}${sparrow(880, 1240, 0.3, WY[2], 34, 3)}
       <g class="fx-fly"><g transform="translate(0 -250)"><path  d="M0 0 q8 -8 16 0 q8 -8 16 0" ${hsx('fx-wing', '#4a4a55', '#5a5e90')} stroke-width="2.4"/></g><g transform="translate(40 -230) scale(.8)"><path  d="M0 0 q8 -8 16 0 q8 -8 16 0" ${hsx('fx-wing', '#4a4a55', '#5a5e90', `animation-delay:-.2s`)} stroke-width="2.4"/></g></g>
       <rect class="pave" x="-20" y="${y(w1)}" width="1240" height="${w1 - w0}"/><rect class="kerb" x="-20" y="${y(w0) - 3}" width="1240" height="4"/>
-      ${vend(390)}${post(760)}
+      <g data-fx="vend">${vend(390)}</g><g data-fx="post">${post(760)}</g>
       <path d="M500 236 V160" ${hs('#e8913a', '#4a3a2a')} stroke-width="4"/><circle cx="500" cy="152" r="14" ${hc('#e8913a', '#4a3a2a')}/><circle cx="500" cy="152" r="10.5" ${hc('#cfe3ea', '#2a3060')}/><path d="M493 148 q7 -6 14 2" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="2"/>
       ${streetLamp(250, 236, 130)}${streetLamp(1000, 236, 130)}
       <rect class="asphalt" x="-20" y="${y(r1)}" width="1240" height="${r1 - r0}"/>
@@ -8210,13 +8373,13 @@ function shrineHtml() {
       ${[72, 86, 100].map((yy) => `<path d="M${840 - (yy - 58) * 1.2} ${yy} H${980 + (yy - 58) * 1.2}" ${hs('#4f7a6a', '#14223a')} stroke-width="1.4"/>`).join('')}
       <path d="M876 58 L910 30 L944 58 Z" ${hc('#efe6d6', '#3a3c5e')}/><path d="M896 34 l-12 -18 M924 34 l12 -18" ${hs('#3a4254', '#10122a')} stroke-width="4"/><path d="M904 52 l6 6 l6 -6" ${hs('#d9b04a', '#a88a4a')} stroke-width="2.6"/>
       <path d="M776 136 Q910 156 1044 136" ${hs('#e8d8a8', '#6a6450')} stroke-width="9"/>${[800, 840, 880, 940, 980, 1020].map((x, k) => `<path d="M${x} ${144 + (x === 880 || x === 940 ? 6 : 2)} l4 7 l-4 7 l4 7" ${hsx('fx-sway', '#ffffff', '#8a8cae', `animation-delay:-${k * 0.5}s;animation-duration:2.6s`)} stroke-width="2.2"/>`).join('')}
-      <g class="fx-sway" style="animation-duration:4.2s"><circle cx="910" cy="160" r="9" ${hc('#d9b04a', '#8a7a4a')}/><path d="M907 168 V212 M913 168 V212" stroke="#d0453c" stroke-width="2.4"/><path d="M910 168 V212" stroke="#fff" stroke-width="2"/></g>
+      <g class="fx-sway" data-fx="bell" style="animation-duration:4.2s"><circle cx="910" cy="160" r="9" ${hc('#d9b04a', '#8a7a4a')}/><path d="M907 168 V212 M913 168 V212" stroke="#d0453c" stroke-width="2.4"/><path d="M910 168 V212" stroke="#fff" stroke-width="2"/></g>
       <rect x="880" y="196" width="60" height="26" ${hc('#8a5a30', '#2a2440')}/>${[886, 896, 906, 916, 926].map((x) => `<path d="M${x} 198 v8" ${hs('#5a3b28', '#1c1838')} stroke-width="2"/>`).join('')}<text x="910" y="218" text-anchor="middle" font-size="9" font-weight="700" ${hc('#efe6d6', '#c9c4e8')} font-family="serif">奉納</text>
       <rect x="104" y="${F - 156}" width="14" height="156" ${hc('#d0453c', '#5a2030')}/><rect x="232" y="${F - 156}" width="14" height="156" ${hc('#d0453c', '#5a2030')}/><rect x="100" y="${F - 18}" width="22" height="18" ${hc('#2b2b33', '#141428')}/><rect x="228" y="${F - 18}" width="22" height="18" ${hc('#2b2b33', '#141428')}/>
       <path d="M76 ${F - 166} Q175 ${F - 180} 274 ${F - 166} L270 ${F - 154} Q175 ${F - 166} 80 ${F - 154} Z" ${hc('#2b2b33', '#141428')}/><rect x="90" y="${F - 156}" width="170" height="8" ${hc('#d0453c', '#5a2030')}/><rect x="96" y="${F - 128}" width="158" height="10" ${hc('#d0453c', '#5a2030')}/>
       <rect x="160" y="${F - 156}" width="30" height="30" ${hc('#2b2b33', '#141428')}/><text x="175" y="${F - 136}" text-anchor="middle" font-size="11" font-weight="700" fill="#d9b04a" font-family="serif" writing-mode="tb">稲荷</text>
       ${lantern(320)}${lantern(700)}${fox(360, false)}${fox(560, true)}
-      <g class="fx-peck" style="animation-duration:3.1s"><path d="M226 ${F - 172} q8 -10 20 -6 q8 3 10 0 l-2 6 q-6 6 -20 6 Z" ${hc('#2b2b33', '#0c0c1c')}/><circle cx="252" cy="${F - 180}" r="5" ${hc('#2b2b33', '#0c0c1c')}/><path d="M256 ${F - 181} l6 2 l-6 1" ${hc('#3a3a44', '#1a1a2a')}/><path d="M234 ${F - 166} v6 M240 ${F - 166} v6" ${hs('#3a3a44', '#1a1a2a')} stroke-width="1.4"/></g>
+      <g data-fx="crow"><g class="fx-peck" style="animation-duration:3.1s"><path d="M226 ${F - 172} q8 -10 20 -6 q8 3 10 0 l-2 6 q-6 6 -20 6 Z" ${hc('#2b2b33', '#0c0c1c')}/><circle cx="252" cy="${F - 180}" r="5" ${hc('#2b2b33', '#0c0c1c')}/><path d="M256 ${F - 181} l6 2 l-6 1" ${hc('#3a3a44', '#1a1a2a')}/><path d="M234 ${F - 166} v6 M240 ${F - 166} v6" ${hs('#3a3a44', '#1a1a2a')} stroke-width="1.4"/></g></g>
       <rect x="1080" y="${F - 70}" width="70" height="40" rx="2" ${hc('#c58a54', '#3a2c40')}/>${[0, 1, 2].map((k) => `<path d="M${1088 + k * 20} ${F - 62} l8 -4 l8 4 v10 h-16 Z" ${hc('#efe6d6', '#e8dcb4')}/>`).join('')}<rect x="1110" y="${F - 30}" width="10" height="30" ${hc('#6e4f3a', '#2c2440')}/>
       <path d="M1160 ${F - 54} h40" ${hs('#6e4f3a', '#2c2440')} stroke-width="2"/>${[1166, 1176, 1186, 1196].map((x, k) => `<path d="M${x} ${F - 54} v7" ${hsx('fx-sway', '#ffffff', '#8a8cae', `animation-delay:-${k * 0.4}s;animation-duration:2.2s`)} stroke-width="3"/>`).join('')}
       <path d="M672 ${F} L700 ${F - 92}" ${hs('#c9a06a', '#3a2c40')} stroke-width="3"/><path d="M664 ${F} q4 -18 10 -26 q4 12 8 26 Z" ${hc('#b9a070', '#2a2440')}/>${[[600, '#d9533a'], [612, '#e8913a'], [624, '#e6c23a'], [606, '#c8453a'], [618, '#d9533a']].map(([x, c], k) => `<ellipse cx="${x}" cy="${F - 3 - (k > 2 ? 5 : 0)}" rx="7" ry="3.4" ${hc(c, '#5a3a3a')}/>`).join('')}
@@ -8260,7 +8423,7 @@ function castleHtml() {
       <rect x="150" y="70" width="220" height="80" ${hc('#f6f3ec', '#e2dac6')}/><path d="M130 76 Q260 52 390 76 L380 86 Q260 64 140 86 Z" ${hc('#4f5a6e', '#2a3150')}/>${[176, 220, 300, 344].map((x) => `<rect ${hc('#3b3b44', '#ffd98a')} x="${x - 6}" y="96" width="12" height="9"/>`).join('')}
       <rect x="150" y="150" width="50" height="48" ${hc('#b4ab98', '#3a3a58')}/><rect x="320" y="150" width="50" height="48" ${hc('#b4ab98', '#3a3a58')}/><rect x="200" y="140" width="120" height="58" ${hc('#5a3b28', '#2a2440')}/><path d="M260 140 V198" ${hs('#3a2418', '#1c1430')} stroke-width="3"/>${[230, 290].map((x) => `<circle cx="${x}" cy="170" r="3" ${hc('#d9b04a', '#a88a4a')}/>`).join('')}
       <path d="M196 198 H324 L332 ${F} H188 Z" ${hc('#a8743f', '#3a2c40')}/>${[204, 224, 244, 264, 284, 304].map((x) => `<path d="M${x} 200 L${x - 2} ${F}" ${hs('#8a5a30', '#2a2440')} stroke-width="1.6"/>`).join('')}
-      ${sakura(60, 1.2)}${sakura(1150, 1.1)}${pine(420, 0.8)}
+      <g data-fx="sakuraL">${sakura(60, 1.2)}</g><g data-fx="sakuraR">${sakura(1150, 1.1)}</g>${pine(420, 0.8)}
       ${[176, 344].map((x) => `<path d="M${x - 12} ${F} l3 -8 h18 l3 8 Z" ${hc('#a9a497', '#2c2e4c')}/><rect x="${x - 4}" y="${F - 40}" width="8" height="32" ${hc('#b4ad9e', '#34365a')}/><rect x="${x - 10}" y="${F - 58}" width="20" height="18" rx="1" ${hc('#b4ad9e', '#34365a')}/><rect x="${x - 5}" y="${F - 54}" width="10" height="10" ${hc('#5a5a64', '#ffd27a')}/><path d="M${x - 16} ${F - 58} L${x} ${F - 70} L${x + 16} ${F - 58} Z" ${hc('#9a958a', '#2a2c4c')}/><circle class="glow" cx="${x}" cy="${F - 49}" r="26" fill="url(#glw)"/>`).join('')}
       <rect x="430" y="${F - 70}" width="130" height="70" ${hc('#efe6d6', '#25264a')}/><path d="M420 ${F - 70} h150 l-12 -16 h-126 Z" ${hc('#8a6a52', '#1c1d3c')}/><rect x="450" y="${F - 62}" width="90" height="18" rx="2" ${hc('#2f4a6e', '#1c1d3c')}/>
       <text x="495" y="${F - 49}" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="system-ui, sans-serif">案内所</text><rect x="455" y="${F - 36}" width="80" height="36" ${hc('#cfe6ec', '#ffd98a')}/>
@@ -8370,12 +8533,12 @@ function stationHtml() {
       <rect x="922" y="${F - 62}" width="40" height="62" ${hc('#8a6a52', '#3a2c40')}/><rect x="968" y="${F - 62}" width="28" height="32" ${hc('#cfe6ec', '#ffd98a')}/>
       ${[1090, 1150].map((x) => `<rect x="${x - 24}" y="${F - 14}" width="48" height="14" rx="2" ${hc('#a8a49a', '#2a2c50')}/><rect class="trunk" x="${x - 3}" y="${F - 70}" width="6" height="58"/><g class="crown"><circle cx="${x}" cy="${F - 84}" r="22"/><circle cx="${x - 16}" cy="${F - 68}" r="15"/><circle cx="${x + 16}" cy="${F - 70}" r="16"/></g>`).join('')}
       <rect class="pave" x="-20" y="${F}" width="1240" height="90"/>${Array.from({ length: 26 }, (_, j) => `<path class="seam" d="M${j * 48 - 20} ${F + 22 + (j % 3) * 22} h30"/>`).join('')}
-      ${pigeon(590, 0)}${pigeon(626, 1)}${pigeon(660, 2)}${streetLamp(860, F + 4, 124)}
-      ${[242, 274].map((x, i) => `<rect x="${x}" y="${F - 72}" width="30" height="72" rx="3" ${hc(i ? '#d0453c' : '#e9edf0', i ? '#4a2030' : '#3a4470')}/><rect x="${x + 3}" y="${F - 66}" width="24" height="26" rx="2" ${hc('#cfe6ec', '#e6f2ff')}/>${[0, 1].map((r) => [0, 1, 2].map((c) => `<rect x="${x + 5 + c * 7}" y="${F - 63 + r * 11}" width="5" height="8" rx="1.5" fill="${['#3f7ac8', '#e6a23c', '#4f7a4a', '#d0574b'][(r + c + i) % 4]}"/>`).join('')).join('')}<rect x="${x + 6}" y="${F - 26}" width="18" height="8" rx="2" ${hc('#2b2b33', '#141530')}/>`).join('')}<ellipse class="glow" cx="273" cy="${F - 46}" rx="70" ry="56" fill="url(#glc)"/>
+      <g data-fx="spigeons">${pigeon(590, 0)}${pigeon(626, 1)}${pigeon(660, 2)}</g>${streetLamp(860, F + 4, 124)}
+      <g data-fx="svend">${[242, 274].map((x, i) => `<rect x="${x}" y="${F - 72}" width="30" height="72" rx="3" ${hc(i ? '#d0453c' : '#e9edf0', i ? '#4a2030' : '#3a4470')}/><rect x="${x + 3}" y="${F - 66}" width="24" height="26" rx="2" ${hc('#cfe6ec', '#e6f2ff')}/>${[0, 1].map((r) => [0, 1, 2].map((c) => `<rect x="${x + 5 + c * 7}" y="${F - 63 + r * 11}" width="5" height="8" rx="1.5" fill="${['#3f7ac8', '#e6a23c', '#4f7a4a', '#d0574b'][(r + c + i) % 4]}"/>`).join('')).join('')}<rect x="${x + 6}" y="${F - 26}" width="18" height="8" rx="2" ${hc('#2b2b33', '#141530')}/>`).join('')}</g><ellipse class="glow" cx="273" cy="${F - 46}" rx="70" ry="56" fill="url(#glc)"/>
       ${[452, 668].map((x) => `<rect x="${x}" y="${F - 18}" width="40" height="18" rx="2" ${hc('#a8a49a', '#2a2c50')}/>${[6, 16, 26, 34].map((d, k) => `<circle cx="${x + d}" cy="${F - 22 - (k % 2) * 4}" r="5" fill="${['#e86f5e', '#f2c94c', '#e58fa8', '#ffffff'][k]}" fill-opacity=".92"/>`).join('')}<path d="M${x + 2} ${F - 18} q18 -10 36 0" fill="none" ${hs('#5f9a4a', '#16243a')} stroke-width="4"/>`).join('')}
       ${busRoad()}
     </svg>
-    ${landProp(112, `<g transform="translate(110 ${F + 12})"><ellipse cx="60" cy="10" rx="64" ry="5" fill="#000" fill-opacity=".1"/><path d="M0 0 V-22 Q2 -30 14 -32 L34 -46 H82 L104 -32 Q118 -30 120 -22 V0 Z" ${hc('#f3d24a', '#5a5030')}/><path d="M40 -42 H78 L94 -30 H26 Z" ${hc('#9fc0d0', '#ffe2a0')}/><path d="M60 -42 V-30" ${hs('#f3d24a', '#5a5030')} stroke-width="2.4"/><path d="M2 -14 H118" ${hs('#2b2b33', '#2a2a40')} stroke-width="1.4"/><rect x="48" y="-56" width="24" height="10" rx="2" ${hc('#fbf7ec', '#fff0b0')}/><text x="60" y="-48.5" text-anchor="middle" font-size="7" font-weight="700" fill="#2b2b33" font-family="system-ui, sans-serif">TAXI</text><circle cx="26" cy="0" r="10" fill="#2b2b33"/><circle cx="94" cy="0" r="10" fill="#2b2b33"/><circle cx="26" cy="0" r="4" fill="#9a9ea8"/><circle cx="94" cy="0" r="4" fill="#9a9ea8"/><circle cx="118" cy="-16" r="3" fill="#ffd98a"/></g>`)}
+    ${landProp(112, `<g data-fx="taxi"><g transform="translate(110 ${F + 12})"><ellipse cx="60" cy="10" rx="64" ry="5" fill="#000" fill-opacity=".1"/><path d="M0 0 V-22 Q2 -30 14 -32 L34 -46 H82 L104 -32 Q118 -30 120 -22 V0 Z" ${hc('#f3d24a', '#5a5030')}/><path d="M40 -42 H78 L94 -30 H26 Z" ${hc('#9fc0d0', '#ffe2a0')}/><path d="M60 -42 V-30" ${hs('#f3d24a', '#5a5030')} stroke-width="2.4"/><path d="M2 -14 H118" ${hs('#2b2b33', '#2a2a40')} stroke-width="1.4"/><rect x="48" y="-56" width="24" height="10" rx="2" ${hc('#fbf7ec', '#fff0b0')}/><text x="60" y="-48.5" text-anchor="middle" font-size="7" font-weight="700" fill="#2b2b33" font-family="system-ui, sans-serif">TAXI</text><circle cx="26" cy="0" r="10" fill="#2b2b33"/><circle cx="94" cy="0" r="10" fill="#2b2b33"/><circle cx="26" cy="0" r="4" fill="#9a9ea8"/><circle cx="94" cy="0" r="4" fill="#9a9ea8"/><circle cx="118" cy="-16" r="3" fill="#ffd98a"/></g></g>`)}
     ${benchProps(220, F + 44, 66)}${benchProps(760, F + 44, 66)}${landProp(95, [628, 660, 692].map(bike).join(''))}
     ${yHeroHtml()}
     ${busPoleHtml('station')}
@@ -8425,15 +8588,15 @@ function sentoHtml() {
       <g class="fx-sway"><path d="M452 130 v8" ${hs('#2b2b33', '#1c1d3c')} stroke-width="1.6"/><ellipse cx="452" cy="152" rx="11" ry="15" ${hc('#d84a3a', '#ff8a5a')}/><text x="452" y="157" text-anchor="middle" font-size="12" font-weight="700" fill="#fff" font-family="serif">ゆ</text></g>
       <circle class="glow" cx="452" cy="152" r="40" fill="url(#glw)"/>
       ${pot(456)}${pot(704)}
-      <rect x="160" y="${F - 92}" width="62" height="92" rx="4" ${hc('#3f7ac8', '#22305e')}/><rect x="168" y="${F - 84}" width="46" height="34" rx="2" ${hc('#fbf7ec', '#cfd6ff')}/>
-      <text x="191" y="${F - 62}" text-anchor="middle" font-size="10" font-weight="700" ${hc('#3f7ac8', '#22305e')} font-family="system-ui, sans-serif">牛乳</text>${[172, 186, 200].map((x) => `<rect x="${x}" y="${F - 42}" width="10" height="14" rx="2" ${hc('#f6f3ec', '#cfd6ff')}/>`).join('')}<ellipse class="glow" cx="191" cy="${F - 50}" rx="70" ry="60" fill="url(#glc)"/>
+      <g data-fx="milk"><rect x="160" y="${F - 92}" width="62" height="92" rx="4" ${hc('#3f7ac8', '#22305e')}/><rect x="168" y="${F - 84}" width="46" height="34" rx="2" ${hc('#fbf7ec', '#cfd6ff')}/>
+      <text x="191" y="${F - 62}" text-anchor="middle" font-size="10" font-weight="700" ${hc('#3f7ac8', '#22305e')} font-family="system-ui, sans-serif">牛乳</text>${[172, 186, 200].map((x) => `<rect x="${x}" y="${F - 42}" width="10" height="14" rx="2" ${hc('#f6f3ec', '#cfd6ff')}/>`).join('')}</g><ellipse class="glow" cx="191" cy="${F - 50}" rx="70" ry="60" fill="url(#glc)"/>
       ${[972, 1004].map((x) => `<g ${hs('#4a4a55', '#3a3d66')} stroke-width="2"><circle cx="${x}" cy="${F - 10}" r="10"/><circle cx="${x + 28}" cy="${F - 10}" r="10"/><path d="M${x} ${F - 10} L${x + 11} ${F - 28} L${x + 24} ${F - 28} L${x + 28} ${F - 10} M${x + 11} ${F - 28} L${x + 15} ${F - 10} L${x + 24} ${F - 28}"/></g>`).join('')}
       <rect class="pave" x="-20" y="${F}" width="1240" height="90"/>${Array.from({ length: 26 }, (_, j) => `<path class="seam" d="M${j * 48 - 20} ${F + 22 + (j % 3) * 22} h30"/>`).join('')}
       ${[[806, 0], [834, 0], [862, 0], [820, 1], [848, 1], [834, 2]].map(([x, r]) => `<path d="M${x - 12} ${F - 14 - r * 14} h24 l-3 14 h-18 Z" ${hc('#f2c94c', '#5a5030')}/><path d="M${x - 12} ${F - 14 - r * 14} h24" ${hs('#d9a43a', '#3a3420')} stroke-width="2"/><text x="${x}" y="${F - 4 - r * 14}" text-anchor="middle" font-size="5.5" font-weight="700" fill="#d0453c" font-family="system-ui, sans-serif">ケロリン</text>`).join('')}
       <path d="M262 ${F} L272 ${F - 58} H306 L316 ${F}" fill="none" ${hs('#6e4f3a', '#2c2440')} stroke-width="3"/><rect x="268" y="${F - 56}" width="42" height="40" rx="2" ${hc('#fbf7ec', '#3a3b62')}/><text x="289" y="${F - 30}" text-anchor="middle" font-size="10" font-weight="700" ${hc('#c8453a', '#ff9a7a')} font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif" writing-mode="tb">営業中</text>
       ${busRoad()}
     </svg>
-    ${benchProps(250, F + 47, 63, 110, `<g class="fx-bob" style="animation-duration:3.4s"><path d="M318 ${F + 47} q-2 -16 16 -18 q18 -1 18 14 q0 4 -2 4 Z" ${hc('#e6a65a', '#5a4a3a')}/><path d="M336 ${F + 30} l3 -7 l4 7 Z M344 ${F + 31} l4 -6 l2 8 Z" ${hc('#e6a65a', '#5a4a3a')}/><path d="M318 ${F + 47} q-14 -2 -12 -10" ${hs('#e6a65a', '#5a4a3a')} stroke-width="4"/><path d="M338 ${F + 37} q3 2 6 0" ${hs('#5a3a28', '#2c2440')} stroke-width="1.2"/></g>`)}
+    ${benchProps(250, F + 47, 63, 110, `<g class="fx-bob" data-fx="scat" style="animation-duration:3.4s"><path d="M318 ${F + 47} q-2 -16 16 -18 q18 -1 18 14 q0 4 -2 4 Z" ${hc('#e6a65a', '#5a4a3a')}/><path d="M336 ${F + 30} l3 -7 l4 7 Z M344 ${F + 31} l4 -6 l2 8 Z" ${hc('#e6a65a', '#5a4a3a')}/><path d="M318 ${F + 47} q-14 -2 -12 -10" ${hs('#e6a65a', '#5a4a3a')} stroke-width="4"/><path d="M338 ${F + 37} q3 2 6 0" ${hs('#5a3a28', '#2c2440')} stroke-width="1.2"/></g>`)}
     ${yHeroHtml()}
     ${busPoleHtml('sento')}
     <div class="ysel"></div>`;
@@ -8590,7 +8753,7 @@ function yardHtml(pct, place = 'yard') {
         <path class="lane" d="${stripD(LANE, 24)}"/>${lightPool(600, 156, 70, 14)}
         ${[0.08, 0.2, 0.33, 0.47, 0.6, 0.74, 0.88].flatMap((t, i) => [-1, 1].map((sd) => { const [c, w] = LANE.at(t), Y = LANE.Y0 + (LANE.Y1 - LANE.Y0) * t, x = 600 + c + sd * (w + 4 + (i % 2) * 3), k = 0.6 + t * 0.8; return `<ellipse cx="${x.toFixed(1)}" cy="${(370 - Y + (i % 3)).toFixed(1)}" rx="${(3.2 * k).toFixed(1)}" ry="${(1.9 * k).toFixed(1)}" ${hc(i % 2 ? '#bdb6a6' : '#cfc8b8', '#2a2c4c')}/>`; })).join('')}
         ${[[240, 250, 1], [330, 300, 1.3], [420, 214, .9], [470, 340, 1.4], [520, 262, 1], [690, 236, 1], [740, 318, 1.3], [800, 200, .8], [880, 280, 1.2], [960, 236, 1], [1020, 330, 1.4], [300, 196, .8], [1080, 268, 1.1], [150, 300, 1.3]].map(([x, y, k], i) => `<path d="M${x - 6 * k} ${y} q${2 * k} ${-8 * k} ${1 * k} ${-14 * k} q${3 * k} ${6 * k} ${4 * k} ${12 * k} q${2 * k} ${-9 * k} ${6 * k} ${-12 * k} q${-1 * k} ${8 * k} ${1 * k} ${14 * k} Z" ${hcx('fx-tuft', '#6e9a5c', '#0e1630', `animation-delay:-${(i * 0.7) % 3}s`)}/>`).join('')}
-        <rect class="trunk" x="465" y="104" width="8" height="46"/><g class="crown"><circle cx="469" cy="96" r="22"/><circle cx="452" cy="110" r="15"/><circle cx="487" cy="108" r="16"/></g>
+        <g data-fx="ytree"><rect class="trunk" x="465" y="104" width="8" height="46"/><g class="crown"><circle cx="469" cy="96" r="22"/><circle cx="452" cy="110" r="15"/><circle cx="487" cy="108" r="16"/></g></g>
         ${[700, 722, 744, 766].map(x => `<rect class="post" x="${x}" y="131" width="4" height="19" rx="1"/>`).join('')}<path class="rail" d="M698 138 H772 M698 145 H772"/>
       </svg>
       <div class="flowers">${SKY.flowers.map(q => `<i class="fl" style="left:${q.x}%;bottom:${q.y}px;--c:${q.c};--d:${q.d}s;--w:-${q.w}s"></i>`).join('')}</div>
@@ -8619,6 +8782,7 @@ function yardHtml(pct, place = 'yard') {
         <button type="button" class="thing mbox${mail ? ' mail' : ''}" data-act="mailbox" aria-label="${mailWords(mail)}"><span class="tag">${ySign('mail', mailWords(mail))}</span></button>
       </div>
       <button type="button" class="thing shop-btn" data-act="yard-shop" aria-label="古道具屋" style="left:calc(50% - 118px);bottom:340px"><span class="tag">${ySign('shop', '古道具屋')}</span></button>`}
+      ${useBtnsHtml(place)}
       <i class="cloudshade" aria-hidden="true"></i><i class="cloudshade c2" aria-hidden="true"></i>
       <div class="flies">${SKY.flies.map(q => `<i style="left:${q.x}%;top:${q.y}px;--dx:${q.dx}px;--dy:${q.dy}px;--d:${q.d}s;--w:-${q.w}s"></i>`).join('')}</div>
       <div class="butterflies">${[[18, 52, 34, 16, 7.5, 1, '#c9a7ff'], [41, 40, 40, 18, 7, 2, '#ffb3d1'], [55, 66, -36, 14, 8.5, 5, '#ffe08a'], [70, 48, -30, 16, 7.8, 3, '#ffffff'], [86, 60, 32, 12, 8.2, 4, '#ffb3d1']].map(([x, t, dx, dy, d, w, c]) => `<i class="bf" style="left:${x}%;top:${t}px;--dx:${dx}px;--dy:${dy}px;--d:${d}s;--w:-${w}s;--c:${c}"></i>`).join('')}</div>
