@@ -331,7 +331,7 @@ def test_the_things_wear_signs_with_the_days_ring_and_the_notebook_stays_plain(b
     r = json.loads(ev(b, js))
     got = {t[0]: t[1:] for t in r['things']}
     assert all(v[0] is True and v[1] == 'none' for v in got.values()), got   # every thing shows its sign, its words wait
-    assert {k: v[2] for k, v in got.items() if k != 'door'} == {'bdoor': '臥房', 'shelf': '課程', 'cards': '單字', 'notebook': '今日練習 40%', 'phones': '聽一輪', 'drawer': '錯題本', 'board': '學習分析', 'calendar': '模擬考'}, got
+    assert {k: v[2] for k, v in got.items() if k != 'door'} == {'bdoor': '臥房', 'shelf': '課程', 'cards': '單字', 'notebook': '今日練習 40%', 'phones': '聽一輪 0/5 分鐘', 'drawer': '錯題本', 'board': '學習分析', 'calendar': '模擬考'}, got
     assert got['door'][2].startswith('出門'), got   # the words are still there for a screen reader
     assert (r['ring'], r['count']) == ('40 100', None), r   # two in the notebook, nothing on it asking for a tap (聽一輪 is the one to push)
 
@@ -399,8 +399,8 @@ def test_the_dressing_room_zooms_in_and_keeps_or_drops_what_was_chosen(b):
     assert r['open'] == {'dressing': True, 'hidden': 'hidden', 'tabs': ['衣服', '穿戴'], 'title': '衣櫃'}, r   # the wardrobe: what is worn
     assert r['mtabs'] == [['臉型', '髮型', '五官'], '全身鏡'], r   # the mirror: the face, the hair, the features
     assert r['zoom'] == [True, True], r   # flown up to frame the head, all of them for clothes
-    assert r['tried'] == {'copy': True, 'saved': 'none'}, r
-    assert r['dropped'] == {'hair': 'none', 'gone': True, 'back': 'visible'}, r
+    assert r['tried'] == {'copy': True, 'saved': 'bun'}, r   # a new hero's 丸子 (the default since 2026-11-10)
+    assert r['dropped'] == {'hair': 'bun', 'gone': True, 'back': 'visible'}, r
     assert r['pressed'] == 'true' and r['kept'] == ['curtain', 'long', 'long', '#c9a25a', 'big', 'goatee', '#d0574b'] and r['sig'], r
 
 def test_the_hero_idles_now_and_then_and_a_tap_never_gets_the_same_reaction_twice(b):
@@ -433,7 +433,7 @@ def test_a_hat_tucks_away_what_sits_on_top_and_old_looks_become_parts(b):
     assert r['tucks'] == {h: ['ahoge', 'bun', 'twinbuns'] for h in ['beanie', 'strawhat', 'beret', 'gradcap', 'cathood', 'witchhat']}, r   # a hat over what sits on top
     assert r['bun'] == [True, False, True] and r['tail'], r   # tucked under a beanie, not under 貓耳髮箍; a high tail stays
     assert r['old'] == ['short', 'short', 'short', 'bun'] and r['wavy'] == ['sidepart', 'wave', 'wavy'], r   # the old 丸子頭, 長捲髮
-    assert r['odd'] == ['round', 'long', '#f3d1b5', 'big'] and r['fixed'] == {} and r['counts'] == [20, 16, 8, 13], r   # 後面 gained 清爽 (test, 2026-11-09)
+    assert r['odd'] == ['blunt', 'long', '#f3d1b5', 'big'] and r['fixed'] == {} and r['counts'] == [20, 16, 8, 13], r   # 後面 gained 清爽 (test, 2026-11-09)
 
 def test_a_hat_that_tucks_away_what_sits_on_top_says_so_in_the_shop_and_the_dressing_room(b):
     js = "(async () => { " + FRESH + """ state.koto.gift = 120; ['beanie', 'catears', 'cathead'].forEach(id => buyWare(WARE.get(id))); state.look = Object.assign({}, state.look, { hairTop: 'bun' }); saveState();
@@ -675,7 +675,7 @@ def test_ears_show_only_with_the_sides_that_leave_them_free_and_the_new_choices(
     r = json.loads(ev(b, js))
     assert r['ears'] == [True, False, True, False] and r['eyes'] == ['水汪汪', 'Q版眼', '普通', '吊眼', '垂眼', '笑眼', '大眼', '睏眼'] and r['mouth'] == 6 and r['hair'] == 20, r
     assert r['cheeks'] == ['腮紅', '柔腮紅', '害羞', '雀斑', '無'] and r['face'] == ['mochi', 'round', 'chubby', 'oval', 'pointed'] and r['drawn'] == [False, False, True, True], r
-    assert [r['old'][k] for k in ('eyes', 'face', 'fringe')] == ['normal', 'mochi', 'round'], r   # a look saved before falls back where its choice is gone
+    assert [r['old'][k] for k in ('eyes', 'face', 'fringe')] == ['normal', 'chubby', 'blunt'], r   # a look saved before falls back where its choice is gone
 
 # 髮型 is the four parts and the colour; 隨機 rolls one of the user's 48 hairstyles (HERO.STYLES), so its parts go together
 def test_the_hair_tab_is_the_parts_and_random_rolls_one_of_the_48_hairstyles(b):

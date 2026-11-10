@@ -13,7 +13,7 @@
 <script src="./sync-core.js"></script>
 <script src="./config.js"></script>
 <script src="./data.js?v=21"></script>
-<script src="./events.js?v=34"></script>
+<script src="./events.js?v=35"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -794,7 +794,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .study.far .thing .tag { padding: 4px; } .study.far .thing.primary .tag { padding: 6px; } .study.far .thing.primary .tag > svg:not(.ring) { width: 16px; height: 16px; }   /* zoomed well out (a wide screen starts there): the room is drawn smaller */
 .thing .tag-name { display: none; } :is(.study, .yard) .thing.named .tag { padding-right: 12px; } .thing.named .tag-name { display: inline; } .thing.named .ring { display: none; }
 .thing .tag svg.ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); pointer-events: none; fill: none; stroke-width: 3; stroke: rgba(255, 255, 255, .3); }
-.thing .ring .fill { stroke: #fff; }
+.thing .ring .fill { stroke: #fff; } .thing:not(.primary) .tag svg.ring { display: none; }   /* done: a plain white badge like the rest */
 :is(.study, .yard).quiet .thing:not(.mail):not(.knocking):not(.named):not(:focus-visible) .tag { opacity: 0; pointer-events: none; }   /* resting: a tap on the thing itself still opens it (the door's letters stay in sight, so does the mailbox's) */
 .thing.minor .tag { opacity: .7; }
 .thing.away .tag { opacity: 0; transition: opacity .2s; }   /* a thing off the screen: its art may peek in at the edge, its tag waits */
@@ -3041,7 +3041,7 @@ function earnKoto(s) {
 function listenKotoTick(L, now = Date.now()) {
   if (!L) return 0;
   if (!L.since || now - L.since > 90000) { L.since = now; L.heard = 0; return 0; }
-  L.heard = (L.heard || 0) + (now - L.since); L.since = now;
+  L.heard = (L.heard || 0) + (now - L.since); heardAdd(now - L.since); L.since = now;
   let got = 0;
   while (L.heard >= KOTO_LISTEN_MS) {
     L.heard -= KOTO_LISTEN_MS;
@@ -3052,7 +3052,14 @@ function listenKotoTick(L, now = Date.now()) {
   if (got) { saveState(); kotoPop(got); }
   return got;
 }
-const listenKotoStop = (L) => { if (L) { L.since = 0; L.heard = 0; } };   // a pause, a stop: the next 5 minutes start from nothing
+const listenKotoStop = (L) => { if (L) { L.since = 0; L.heard = 0; } };
+// 聽一輪's ring in 書房 (2026-11-10, the user): the time heard today on this device, full at 5 minutes — or a 言靈 for it today on any
+function heardAdd(ms) { try { const t = todayStr(), h = JSON.parse(localStorage.getItem('nq_heard') || 'null'), was = h && h.day === t ? Number(h.ms) || 0 : 0; localStorage.setItem('nq_heard', JSON.stringify({ day: t, ms: was + ms })); } catch (e) { /* no storage */ } }
+function listenHeardToday() {
+  if (kotoListenDay(state.koto, todayStr()) >= 1) return KOTO_LISTEN_MS;
+  try { const h = JSON.parse(localStorage.getItem('nq_heard') || 'null'); return h && h.day === todayStr() ? Number(h.ms) || 0 : 0; } catch (e) { return 0; }
+}
+const heardPct = () => Math.min(100, Math.round(listenHeardToday() / KOTO_LISTEN_MS * 100));   // a pause, a stop: the next 5 minutes start from nothing
 // a little あ rising at the top of the screen, whatever page is open: n 言靈 gained, or only words (the day's cap reached)
 function kotoPop(n, words = '言靈') {
   const el = document.createElement('div'); el.className = 'koto-pop' + (n ? '' : ' full'); el.setAttribute('role', 'status');
@@ -9627,13 +9634,17 @@ const ROOM = (() => {
   // letters waiting in the mailbox outside
   function tagOf(id, pct) {
     if (id === 'notebook') return pct < 100 ? `今日練習 ${pct}%` : extraQueue().items.length ? '今日完成・多學' : '今日完成';   // nothing new left anywhere: no 多學
+    if (id === 'phones') { const ms = listenHeardToday(); return ms < KOTO_LISTEN_MS ? `聽一輪 ${Math.floor(ms / 60000)}/5 分鐘` : '聽一輪・今天聽夠了'; }
     if (id === 'door') { const n = mailCount(), m = TOWNEV.openN(); return `出門${n ? `・${n} 封信` : ''}${m ? `・${m} 件事` : ''}`; }   // letters, and town events open
     return THINGS.find((t) => t.id === id).label;
   }
   // a thing's badge (1.2.0): its sign, and what its words said — today's practice a ring that fills with the day, the door's
   // letters its red dot (錯題本 stays plain: nothing to ask for a tap there); the words show for a moment when it is tapped
+  // blue (primary) while the day's part is undone: 今日練習 till done, 聽一輪 till 5 minutes heard (2026-11-10, the user); then white
+  const blue = (t, pct) => t.primary && !(t.id === 'notebook' && pct >= 100) && !(t.id === 'phones' && heardPct() >= 100);
   function tagInner(id, pct) {
-    const ring = id === 'notebook' ? `<svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" pathLength="100"/><circle class="fill" cx="20" cy="20" r="18" pathLength="100" stroke-dasharray="${Math.min(100, pct)} 100"/></svg>` : '';
+    const p = id === 'notebook' ? pct : id === 'phones' ? heardPct() : null;
+    const ring = p !== null ? `<svg class="ring" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" pathLength="100"/><circle class="fill" cx="20" cy="20" r="18" pathLength="100" stroke-dasharray="${Math.min(100, p)} 100"/></svg>` : '';
     return `${ring}${icon(THINGS.find((t) => t.id === id).icon)}<span class="tag-name">${tagOf(id, pct)}</span>`;
   }
   const chev = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${d}"/></svg>`;
@@ -9656,10 +9667,10 @@ const ROOM = (() => {
       const a = P(...t.pts[0]), sp = t.sb ? [[a[0] + t.sb[0], a[1] + t.sb[1]], [a[0] + t.sb[2], a[1] + t.sb[3]]] : t.pts.map((p) => P(...p)), pad = t.pad || 4;
       const x0 = Math.min(...sp.map((p) => p[0])) - pad, x1 = Math.max(...sp.map((p) => p[0])) + pad, y0 = Math.min(...sp.map((p) => p[1])) - pad, y1 = Math.max(...sp.map((p) => p[1])) + pad;
       const [tx, ty] = P(...t.tag), label = tagOf(t.id, pct);
-      return `<button type="button" class="thing${t.primary ? ' primary' : t.minor ? ' minor' : ''}${t.id === 'door' && mail ? ' mail' : ''}${t.id === 'bdoor' && NAP.calls() ? ' calls' : ''}" data-thing="${t.id}" data-tag="${r1(tx)} ${r1(ty)}" ${t.route ? `data-act="study-go" data-route="${t.route}"` : `data-act="${t.act}"`} style="${vbPct(x0, y0)};${vbSize(x1 - x0, y1 - y0)};--tx:${((tx - x0) / (x1 - x0) * 100).toFixed(1)}%;--ty:${((ty - y0) / (y1 - y0) * 100).toFixed(1)}%" aria-label="${label}"><span class="tag">${tagInner(t.id, pct)}</span></button>`;
+      return `<button type="button" class="thing${blue(t, pct) ? ' primary' : t.minor ? ' minor' : ''}${t.id === 'door' && mail ? ' mail' : ''}${t.id === 'bdoor' && NAP.calls() ? ' calls' : ''}" data-thing="${t.id}" data-tag="${r1(tx)} ${r1(ty)}" ${t.route ? `data-act="study-go" data-route="${t.route}"` : `data-act="${t.act}"`} style="${vbPct(x0, y0)};${vbSize(x1 - x0, y1 - y0)};--tx:${((tx - x0) / (x1 - x0) * 100).toFixed(1)}%;--ty:${((ty - y0) / (y1 - y0) * 100).toFixed(1)}%" aria-label="${label}"><span class="tag">${tagInner(t.id, pct)}</span></button>`;
     };
     const dm = mover('desk').map, glow = (L, w, h, c) => { const [gx, gy] = P(...L.p); return `<i class="glow lamp-glow${c}" aria-hidden="true" style="${vbPct(gx - w / 2, gy - h / 2)};${vbSize(w, h)}"></i>`; };
-    const [nx, ny] = P(...dm([(NB.x0 + NB.x1) / 2, (NB.y0 + NB.y1) / 2, DESK.z1])), [hx, hy] = P(...dm([HP.x, HP.y, DESK.z1 + 0.6])), [mx, my] = P(...dm([MUG[0], MUG[1], DESK.z1]));
+    const [nx, ny] = P(...dm([(NB.x0 + NB.x1) / 2, (NB.y0 + NB.y1) / 2, DESK.z1])), [mx, my] = P(...dm([MUG[0], MUG[1], DESK.z1]));
     const sky = (o) => { const wh = winHole(o.p), [wx, wy] = P(...wh.at(wh.X0, -0.34, wh.z1)); return `<div class="w-sky${wh.R ? '' : ' l'}" data-w="${o.id}" aria-hidden="true" style="${vbPct(wx, wy)};${vbSize((wh.u1 - wh.u0) * S, (wh.z1 - wh.z0) * S)}">`; };   // the sky behind a window, where it hangs
     return `<div class="study${pct >= 100 ? ' full' : ''}${ed.on ? ' edit' : ''}" data-room="${ROOMID}" data-anim data-date="${todayStr()}" data-sig="${roomSig()}" style="--f:${f}">
       <div class="room-wrap"><div class="room">
@@ -9676,7 +9687,6 @@ const ROOM = (() => {
         ${heroHtml()}
         ${LIT.map((L) => (L.id === 'desk' ? glow(L, 300, 220, '') : glow(L, 220, 160, ' lamp2'))).join('')}
         ${study ? `<i class="note-glow" aria-hidden="true" style="${vbPct(nx - 100, ny - 54)};${vbSize(200, 108)}"></i>
-        <div class="tune" aria-hidden="true" style="${vbPct(hx - 20, hy - 66)};${vbSize(40, 60)}"><i style="--w:0s;--dx:-14px">♪</i><i style="--w:-1.2s;--dx:12px">♫</i><i style="--w:-2.4s;--dx:-4px">♪</i></div>
         <div class="steam" aria-hidden="true" style="${vbPct(mx - 8, my - 40)};${vbSize(16, 24)}"><i style="--w:0s"></i><i style="--w:-1.1s;left:50%"></i><i style="--w:-2.3s;left:20%"></i></div>` : ''}
         ${gramoTune()}
         ${THINGS.map(thing).join('')}
@@ -9696,7 +9706,8 @@ const ROOM = (() => {
     st.style.setProperty('--f', pct / 100);
     st.classList.toggle('full', pct >= 100);
     const mail = mailCount() > 0;
-    st.querySelectorAll('[data-thing="notebook"], [data-thing="door"]').forEach((b) => { b.querySelector('.tag').innerHTML = tagInner(b.dataset.thing, pct); b.setAttribute('aria-label', tagOf(b.dataset.thing, pct)); delete b.dataset.w; });
+    st.querySelectorAll('[data-thing="notebook"], [data-thing="door"], [data-thing="phones"]').forEach((b) => { b.querySelector('.tag').innerHTML = tagInner(b.dataset.thing, pct); b.setAttribute('aria-label', tagOf(b.dataset.thing, pct)); delete b.dataset.w; });
+    st.querySelectorAll('[data-thing="notebook"], [data-thing="phones"]').forEach((b) => b.classList.toggle('primary', blue(THINGS.find((t) => t.id === b.dataset.thing), pct)));
     const yd = st.querySelector('[data-thing="door"]'); if (yd) yd.classList.toggle('mail', mail);
     const nap = NAP.calls(); st.querySelectorAll('[data-thing="bdoor"], .ware-use[data-ware="bed"]').forEach((e) => e.classList.toggle('calls', nap));   // the way to bed
     st.querySelectorAll('.bulb').forEach((e) => e.classList.toggle('on', Number(e.dataset.t) <= pct / 100));
@@ -10476,7 +10487,8 @@ const HERO = (() => {
     shoeStyle: [['sneaker', '球鞋'], ['boots', '短靴'], ['loafer', '皮鞋']],   // everyone's, none sold
     shoe: CLOTH
   };
-  const LOOK0 = { face: 'mochi', skin: '#f3d1b5', cheeks: 'blush', fringe: 'round', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b2f2a', eyes: 'normal', eyeColor: '#2a2730', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'hoodie', top: '#5a68d8', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#ecebe6' };
+  const ROLE_STYLES = { topStyle: ['hakui', 'samue', 'kappogi', 'chef', 'jacket', 'happi', 'vest'], bottomStyle: ['hakama'], shoeStyle: ['zori'] };   // the town's own, never sold
+  const LOOK0 = { face: 'chubby', skin: '#f3d1b5', cheeks: 'blush', fringe: 'blunt', sides: 'wisps', hairBack: 'crop', hairTop: 'bun', hairColor: '#6b4a32', eyes: 'normal', eyeColor: '#2a2730', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'hoodie', top: '#d0574b', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' };   // 2026-11-10, the user's pick: 包子臉, 齊瀏海, 觸角, 清爽, 丸子, 棕髮; a red hoodie, black trousers and sneakers — neither boy nor girl
   // the 16 hairstyles before the hair came in parts (1.2.1): each as its nearest 瀏海, 兩側, 後面, 造型
   const OLD_HAIR = { crop: ['round', 'short', 'short', 'none'], neat: ['swept', 'short', 'short', 'none'], curtain: ['center', 'chin', 'short', 'none'], ahoge: ['round', 'short', 'short', 'ahoge'],
     spiky: ['choppy', 'short', 'short', 'none'], slick: ['none', 'short', 'short', 'none'], curly: ['fluffy', 'curls', 'short', 'none'], afro: ['fluffy', 'curls', 'bob', 'none'], bob: ['blunt', 'incurl', 'bob', 'none'],
@@ -10486,7 +10498,7 @@ const HERO = (() => {
   // parts (hair: one of the 16, no fringe) gets the parts nearest it
   const norm = (look) => {
     const old = look && !look.fringe && OLD_HAIR[look.hair], lk = old ? Object.assign({}, look, { fringe: old[0], sides: old[1], hairBack: old[2], hairTop: old[3] }) : look;
-    return Object.fromEntries(Object.keys(LOOK0).map((k) => [k, lk && OPTS[k].some(([v]) => v === lk[k]) ? lk[k] : LOOK0[k]]));
+    return Object.fromEntries(Object.keys(LOOK0).map((k) => [k, lk && (OPTS[k].some(([v]) => v === lk[k]) || (ROLE_STYLES[k] || []).includes(lk[k])) ? lk[k] : LOOK0[k]]));
   };
   const dk = (h, k) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(h.slice(i, i + 2), 16) * k).toString(16).padStart(2, '0')).join('');
   const lt = (h, k) => '#' + [1, 3, 5].map((i) => { const v = parseInt(h.slice(i, i + 2), 16); return Math.round(v + (255 - v) * k).toString(16).padStart(2, '0'); }).join('');
@@ -10821,7 +10833,35 @@ const HERO = (() => {
       front: (F, c, d) => `<path ${F(c, 1.2)} d="${ROBE}"/><path d="M-9 -66 L12 -40" fill="none" stroke="${d}" stroke-width="1.4"/>${[[-6, -58], [12, -52], [-12, -24], [10, -16], [18, -30], [-2, -12]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.8" fill="${lt(c, 0.75)}"/><circle cx="${x}" cy="${y}" r="1" fill="${d}"/>`).join('')}
         <path ${F(lt(c, 0.7), 1.3)} d="M-18 -43 Q2 -39 22 -43 V-34 Q2 -30 -18 -34 Z"/><path d="M-18 -38.6 Q2 -34.6 22 -38.6" fill="none" stroke="${d}" stroke-opacity=".5" stroke-width=".9"/>`,
       collar: (F, c) => `<path ${F(lt(c, 0.85), 1.6)} d="M-8 -67 L5 -53 L12 -67 L9 -67 L5 -59 L-5 -67 Z"/>`,
-      back: (F, c) => `<path ${F(c, 1.2)} d="${ROBE}"/><path ${F(lt(c, 0.7), 1.3)} d="M-18 -43 Q2 -39 22 -43 V-34 Q2 -30 -18 -34 Z"/><path ${F(lt(c, 0.7), 1.3)} d="M-7 -46 L2 -39 L11 -46 L11 -30 L2 -36 L-7 -30 Z"/>` }
+      back: (F, c) => `<path ${F(c, 1.2)} d="${ROBE}"/><path ${F(lt(c, 0.7), 1.3)} d="M-18 -43 Q2 -39 22 -43 V-34 Q2 -30 -18 -34 Z"/><path ${F(lt(c, 0.7), 1.3)} d="M-7 -46 L2 -39 L11 -46 L11 -30 L2 -36 L-7 -30 Z"/>` },
+    // the town's work clothes (test, 2026-11-10, the user: who they are at a glance) — ROLE_STYLES, worn by the town's people only
+    hakui: { sleeve: 'kimono',   // 巫女の白衣: white, a crossed collar edged in red, wide sleeves; tucked into the 緋袴
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L22 -34 Q2 -30 -18 -34 Z"/><path d="M-8 -66 L9 -40 M12 -66 L3 -52" fill="none" stroke="${d}" stroke-opacity=".55" stroke-width="1"/>`,
+      collar: (F, c) => `<path ${F('#c8323a', 1.6)} d="M-9.4 -67 L4 -50.4 L13.4 -67 L11.6 -67 L4 -54.6 L-7.4 -67 Z"/><path ${F(lt(c, 0.5), 1.65)} d="M-7.4 -67 L4 -54.6 L11.6 -67 L9.4 -67 L4 -58.4 L-5 -67 Z"/>`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L22 -34 Q2 -30 -18 -34 Z"/><path d="M2 -66 V-34" stroke="${d}" stroke-opacity=".35" stroke-width="1"/>` },
+    samue: { sleeve: 'long', cuff: true,   // 作務衣 (居酒屋の大将): a crossed collar in a darker band, a tie at the side
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path ${F(d, 0.8)} d="${HEM}"/><path ${F(dk(c, 0.7), 1.3)} d="M-9 -66 L11 -38 L15 -39.4 L-5 -66 Z"/><path d="M13 -66 L3 -53" fill="none" stroke="${dk(c, 0.7)}" stroke-width="1.6"/><path d="M14 -40 l5 3 M14 -40 l3 6" fill="none" stroke="${dk(c, 0.6)}" stroke-width="1.2" stroke-linecap="round"/>`,
+      collar: (F, c) => `<path ${F(dk(c, 0.7), 1.6)} d="M-7 -67 L2 -58 L11 -67 L8.4 -67 L2 -61 L-4.4 -67 Z"/>`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path ${F(d, 0.8)} d="${HEM}"/><path d="M2 -66 V-29" stroke="${d}" stroke-opacity=".4" stroke-width="1"/>` },
+    kappogi: { sleeve: 'long', cuff: true, light: true,   // 割烹着 (食堂のおかみ): a white smock past the hips, a round neck, two pockets
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L27 -22 Q2 -17 -23 -22 Z"/><path d="M-23 -22 Q2 -17 27 -22" fill="none" stroke="${d}" stroke-width="1.6"/><path ${F(lt(c, 0.4), 1.25)} d="M-17 -38 h11 v8 q-5.5 2 -11 0 Z M10 -38 h11 v8 q-5.5 2 -11 0 Z"/>`,
+      collar: (F, c, d) => `<path ${F(lt(c, 0.6), 1.6)} d="M-9 -67.6 Q2 -58 13 -67.6 L12 -65 Q2 -56 -8 -65 Z"/><path d="M-8 -65 Q2 -56 12 -65" fill="none" stroke="${d}" stroke-opacity=".5" stroke-width=".8"/>`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L27 -22 Q2 -17 -23 -22 Z"/><path d="M-2 -40 l-6 -3 v6 Z M6 -40 l6 -3 v6 Z" fill="${d}"/>` },
+    chef: { sleeve: 'long', cuff: true, light: true,   // 調理白衣 (食堂の料理人): white, a standing collar, buttoned down the side
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path d="M9 -64 V-27" stroke="${d}" stroke-width="1"/>${[-58, -50, -42, -34].map((y) => `<circle cx="12" cy="${y}" r="1.2" fill="${d}"/>`).join('')}`,
+      collar: (F, c, d) => `<path ${F(lt(c, 0.5), 1.6)} d="M-9 -68.4 Q2 -65 13 -68.4 L13 -63.6 Q2 -60.2 -9 -63.6 Z"/><path d="M-9 -63.6 Q2 -60.2 13 -63.6" fill="none" stroke="${d}" stroke-width=".8"/>`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path d="M2 -64 V-28" stroke="${d}" stroke-opacity=".35" stroke-width="1"/>` },
+    jacket: { sleeve: 'long', cuff: true,   // 制服・スーツ (駅員, 巡査, 会社員): lapels over a white shirt, buttons down the front
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path fill="#f4f1ea" d="M-5 -66.6 L2 -50 L9 -66.6 Z"/><path ${F(dk(c, 0.78), 1.25)} d="M-9 -66 L2 -49 L-0.6 -41 L-12.6 -61 Z M13 -66 L2 -49 L4.6 -41 L16.6 -61 Z"/>${[-44, -36].map((y) => `<circle cx="4.4" cy="${y}" r="1.4" fill="#c9a24a"/>`).join('')}<path d="M-14 -40 h7 M11 -40 h7" stroke="${d}" stroke-width="1.2"/>`,
+      collar: () => '<path fill="#fbf8f0" d="M-5 -67.2 L-0.6 -61 L2 -64.6 Z M9 -67.2 L4.6 -61 L2 -64.6 Z"/>',
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path d="M2 -60 V-28" stroke="${d}" stroke-opacity=".5" stroke-width="1"/>` },
+    happi: { sleeve: 'wide',   // 法被 (屋台, ガイド): open at the front, a dark collar band down it with 祭, a belt, white stripes at the hem; 祭 on the back
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L23 -28 H-19 Z"/><path d="M-19 -31 H23 M-19 -33.4 H23" stroke="#fff" stroke-opacity=".75" stroke-width="1"/><path fill="${dk(c, 0.42)}" d="M-7 -67 L-2 -28 H2.4 L-2.6 -61 Z M11 -67 L6.4 -28 H2 L6.6 -61 Z"/><text x="-1.6" y="-44" font-size="5.6" font-weight="700" fill="#fff" text-anchor="middle" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif">祭</text><rect x="-17" y="-40" width="38" height="3.6" rx="1" fill="${dk(c, 0.5)}"/>`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L23 -28 H-19 Z"/><path d="M-19 -31 H23 M-19 -33.4 H23" stroke="#fff" stroke-opacity=".75" stroke-width="1"/><circle cx="2" cy="-50" r="8.6" fill="none" stroke="#fff" stroke-width="1.5"/><text x="2" y="-46.6" font-size="10" font-weight="700" fill="#fff" text-anchor="middle" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif">祭</text>` },
+    vest: { sleeve: 'long', cuff: true, light: true, sleeveColor: '#f4f1ea',   // ベスト (喫茶店のマスター): over a white shirt, its sleeves white
+      front: (F, c, d) => `<path ${F('#f4f1ea', 1.2)} d="${TORSO}"/><path ${F(c, 1.22)} d="M-13 -66 L-3 -50 L-1 -29.6 Q-11 -29 -22 -30 Z M17 -66 L7 -50 L5 -29.6 Q15 -29 26 -30 Z"/>${[-46, -40, -34].map((y) => `<circle cx="5.6" cy="${y}" r="1.1" fill="${lt(c, 0.5)}"/>`).join('')}`,
+      collar: () => '<path fill="#fbf8f0" d="M-9 -67.4 L-1 -59 L2 -65 Z M13 -67.4 L5 -59 L2 -65 Z"/>',
+      back: (F, c) => `<path ${F(c, 1.2)} d="${TORSO}"/>` }
   };
   // an arm (s: -1 the left, 1 the right) hangs from the shoulder a little off the body; drawn hanging straight down from (0, 0) and
   // turned out, so a pose turns it round the shoulder (the .arm group, in CSS)
@@ -10829,11 +10869,12 @@ const HERO = (() => {
   function arm(L, tp, top, topDk, skin, cls, s, dx = 0) {
     const hand = tp.paw ? `<circle cy="27" r="4.8" ${L(top, 0.9)}/><circle cy="28.4" r="1.6" fill="#f2a8b8"/>` : `<circle cy="27" r="4.3" ${L(skin, 0.9)}/>`;
     const bare = `<rect x="-3.2" y="2" width="6.4" height="23" rx="3.2" ${L(skin, 1.2)}/>`;
-    const cuff = tp.cuff ? (tp.light ? lt(top, 0.55) : dk(topDk, 0.85)) : topDk;
-    const art = tp.sleeve === 'robe' ? `<path ${L(topDk, 1.3)} d="M-4.6 -2 Q0 -5 4.6 -2 L8.6 22 Q0 24 -8.6 22 Z"/><path d="M-8.6 22 Q0 24 8.6 22" fill="none" stroke="#e6c25a" stroke-width="1.4"/>`
+    const sc = tp.sleeveColor || top, cuff = tp.cuff ? (tp.light ? lt(sc, 0.55) : dk(topDk, 0.85)) : topDk;
+    const art = tp.sleeve === 'kimono' ? `<path class="kosode" ${L(sc, 1.3)} d="M-4.6 -2 Q0 -5 4.6 -2 L9.4 23 Q0 25.6 -9.4 23 Z"/><path d="M-9.4 23 Q0 25.6 9.4 23" fill="none" stroke="${dk(sc, 0.8)}" stroke-width="1"/>`
+      : tp.sleeve === 'robe' ? `<path ${L(topDk, 1.3)} d="M-4.6 -2 Q0 -5 4.6 -2 L8.6 22 Q0 24 -8.6 22 Z"/><path d="M-8.6 22 Q0 24 8.6 22" fill="none" stroke="#e6c25a" stroke-width="1.4"/>`
       : tp.sleeve === 'short' ? bare + `<path ${L(top, 1.4)} d="M-4.6 -2 Q0 -5 4.6 -2 L5 9 Q0 10.6 -5 9 Z"/>`
       : tp.sleeve === 'wide' ? bare + `<path ${L(topDk, 1.3)} d="M-4.6 -2 Q0 -5 4.6 -2 L7.4 15 Q0 16.6 -7.4 15 Z"/>`
-      : `<path ${L(top, 1.3)} d="M-4 -2 Q0 -4.5 4 -2 L4.4 21 Q0 22.6 -4.4 21 Z"/><path ${L(cuff, 1)} d="M-4.4 18.4 Q0 20 4.4 18.4 L4.5 21.6 Q0 23.2 -4.5 21.6 Z"/>`;
+      : `<path ${L(sc, 1.3)} d="M-4 -2 Q0 -4.5 4 -2 L4.4 21 Q0 22.6 -4.4 21 Z"/><path ${L(cuff, 1)} d="M-4.4 18.4 Q0 20 4.4 18.4 L4.5 21.6 Q0 23.2 -4.5 21.6 Z"/>`;
     return `<g class="arm ${cls}"><g transform="translate(${q(2 + s * SHOULDER[0] + dx)} ${SHOULDER[1]}) rotate(${-s * 26})">${art}${hand}</g></g>`;
   }
   // bottoms (c: the trousers' colour): a leg round x, the hips over both legs, the foot, and what goes with them — a skirt over
@@ -10846,6 +10887,7 @@ const HERO = (() => {
     boots: (F, c, x) => `<path ${F(c, 0.15)} d="M${q(x - 6)} -15 h12 v10.6 q0 4.4 -4.2 4.4 h-4.6 q-3.2 0 -3.2 -4.4 Z"/><path ${F(dk(c, 0.82), 0.3)} d="M${q(x - 6.4)} -16 h12.8 v3 h-12.8 Z"/><path d="M${q(x - 6)} -2 h12" stroke="#000" stroke-opacity=".18" stroke-width="1.4"/>`,
     loafer: (F, c, x) => `<path ${F(c, 0.1)} d="M${q(x - 6.5)} -7 h13 v2.6 q0 4.4 -4.2 4.4 h-5 q-3.8 0 -3.8 -4.4 Z"/><path d="M${q(x - 3)} -5.6 h6" stroke="${dk(c, 0.7)}" stroke-width="1.1" stroke-linecap="round"/><ellipse cx="${q(x + 2.6)}" cy="-3.4" rx="2" ry=".9" fill="#fff" fill-opacity=".35"/>`
   };
+  SHOES.zori = (F, c, x) => `<path ${F('#f6f3ec', 0.1)} d="M${q(x - 5.6)} -10 h11.2 v5.6 q0 3.6 -4 3.6 h-3.6 q-3.6 0 -3.6 -3.6 Z"/><rect x="${q(x - 7)}" y="-2.2" width="14" height="2.6" rx="1.2" ${F(c, 0.05)}/><path d="M${x} -5.4 l-3.4 3.2 M${x} -5.4 l3.4 3.2" stroke="#8a2f2a" stroke-width="1.1" stroke-linecap="round"/>`;   // 草履: white tabi on a sandal (c)
   const HIPS = (F, c) => `<path ${F(c, 0.7)} d="M-17 -33 H21 L21.6 -22 H-17.6 Z"/>`;
   const BOTTOMS = {
     pants: { hips: HIPS, leg: (F, c, x) => `<rect x="${q(x - 5.5)}" y="-28" width="11" height="23" rx="4" ${F(c, 0.4)}/>` },
@@ -10853,6 +10895,8 @@ const HERO = (() => {
     wide: { hips: HIPS, leg: (F, c, x) => `<path ${F(c, 0.4)} d="M${q(x - 6)} -28 H${q(x + 6)} L${q(x + 7.6)} -5 Q${x} -3.6 ${q(x - 7.6)} -5 Z"/>` },
     skirt: { leg: (F, c, x, skin) => `<rect x="${q(x - 4.8)}" y="-24" width="9.6" height="19" rx="4" ${F(skin, 0.3)}/>`,
       over: (F, c, d) => `<path ${F(c, 0.7)} d="M-16 -36 H20 L26 -16 Q2 -12 -22 -16 Z"/><path d="M-8 -34 L-11 -15 M2 -34 V-13.4 M12 -34 L15 -15" stroke="${d}" stroke-opacity=".35" stroke-width="1"/>` },
+    hakama: { leg: () => '',   // 緋袴 (the miko): wide and pleated over both legs to the ankles, tied in front; only the 草履 show
+      over: (F, c, d) => `<path class="hakama" ${F(c, 0.7)} d="M-17 -38 Q2 -40 21 -38 L27 -6 Q2 -2 -23 -6 Z"/><path d="M-6 -36 L-10 -6 M2 -37 V-3.6 M10 -36 L14 -6" fill="none" stroke="${d}" stroke-opacity=".55" stroke-width="1"/><path d="M-16.6 -36 Q2 -33 20.6 -36" fill="none" stroke="${d}" stroke-width="2"/><path ${F(c, 0.72)} d="M2 -34.4 l-6.4 -3 v6 Z M2 -34.4 l6.4 -3 v6 Z"/><path d="M2 -34.4 l-3 7 M2 -34.4 l3 7" stroke="${c}" stroke-width="1.6" stroke-linecap="round"/>` },
     catpants: { hips: HIPS, leg: (F, c, x) => `<rect x="${q(x - 5.5)}" y="-28" width="11" height="22" rx="4" ${F(c, 0.4)}/>`,
       foot: (F, c, x, d) => `<ellipse cx="${x}" cy="-4.4" rx="7" ry="4.4" ${F(c, 0.1)}/><path d="M${q(x - 2.8)} -5.6 v2.4 M${x} -6 v2.4 M${q(x + 2.8)} -5.6 v2.4" stroke="${d}" stroke-width=".9" stroke-linecap="round"/>`,
       tail: (F, c, d, side) => (side ? `<path d="M2 -30 C2 -14 22 -16 25 -32 C26 -40 22 -46 18 -44" fill="none" stroke="${c}" stroke-width="5.4" stroke-linecap="round"/><path d="M20 -45.4 C19.4 -45.6 18.4 -44.8 18 -44" stroke="${d}" stroke-width="5.4" stroke-linecap="round"/>`
@@ -10876,8 +10920,8 @@ const HERO = (() => {
   // - a hat (HATS): drawn big enough to cover the crown, so the fringe, the sides, the back and any tail stay as they are; what sits
   //   on top of the head (呆毛, 丸子, 雙丸子) is tucked under it while it is on (1.2.1: hats no longer swap the whole hairstyle)
   // - a whole head (FULL): takes the place of the head, hair and face; nothing is worn on the face
-  const HATS = new Set(['beanie', 'strawhat', 'beret', 'gradcap', 'cathood', 'witchhat']);
-  const HEAD_TOP = { witchhat: -232 };   // how high a thing on the head reaches, where it stands above a hat's usual -196 (head units)
+  const HATS = new Set(['beanie', 'strawhat', 'beret', 'gradcap', 'cathood', 'witchhat', 'sankakukin', 'chefcap', 'bakerhat', 'cap']);
+  const HEAD_TOP = { witchhat: -232, bakerhat: -214 };   // how high a thing on the head reaches, where it stands above a hat's usual -196 (head units)
   const ON_BODY = new Set(['scarf', 'bowtie', 'backpack']);   // drawn in the body's units, not on the head
   const tucked = (lk, id) => (HATS.has(id) && HAIRP.TOPS[lk.hairTop].under ? HAIRP.TOPS[lk.hairTop].name : '');   // what a hat tucks away
   // the things worn: [front, back] drawings by part, in the figure's own units; c and d are their top's colour and a shade of it
@@ -10917,6 +10961,24 @@ const HERO = (() => {
       return [c, c];
     },
     glasses: () => [`<g fill="none" stroke="#3a3328" stroke-width="2"><circle cx="-10.5" cy="-117" r="8.6"/><circle cx="14.5" cy="-117" r="8.6"/><path d="M-1.9 -118 Q2 -120.6 5.9 -118 M-19.1 -118.6 L-33 -121.6 M23.1 -118.6 L37 -121.6"/></g><path d="M-15 -121.4 l4 -3 M10 -121.4 l4 -3" stroke="#fff" stroke-opacity=".7" stroke-width="1.4"/>`, `<path d="M-33 -122 L-26 -120 M37 -122 L30 -120" stroke="#3a3328" stroke-width="2"/>`],
+    // the town's work (test, 2026-11-10): w is all that is worn, for a colour or a mark (w.cap, w.apron, w.mark, w.tie)
+    nejiri: () => { const b = `<path class="nejiri" fill="#f6f3ec" d="M-34 -142 Q2 -134 38 -142 V-134.6 Q2 -126.6 -34 -134.6 Z"/><path d="${[-28, -19, -10, -1, 8, 17, 26].map((x) => `M${x} -140.4 l4 6.4`).join(' ')}" stroke="#3f4660" stroke-width="2" stroke-linecap="round"/>`;
+      return [b + '<ellipse cx="34" cy="-138" rx="5.4" ry="4.4" fill="#f6f3ec"/><path d="M33 -139 l4 3 M38 -136 l9 5 M38 -139 l10 -2" stroke="#3f4660" stroke-width="1.8" stroke-linecap="round"/>', b]; },   // ねじり鉢巻: twisted, knotted at the side
+    sankakukin: () => { const s = '<path fill="#f8f6f0" d="M-36 -134 C-37 -166 -14 -182 2 -182 C18 -182 41 -166 40 -134 Q2 -146 -36 -134 Z"/><path d="M-30 -146 Q2 -156 34 -146" fill="none" stroke="#d9d2c2" stroke-width="1.2"/>';
+      return [s, s + '<path fill="#f8f6f0" d="M-8 -140 L2 -112 L12 -140 Z"/><circle cx="2" cy="-136" r="4" fill="#efe9dc"/>']; },   // 三角巾 over the hair, knotted at the back
+    chefcap: () => { const c = '<path fill="#fbfaf6" d="M-31 -146 C-33 -178 37 -178 35 -146 Q2 -138 -31 -146 Z"/><path d="M-31 -151 Q2 -143 35 -151" fill="none" stroke="#dcd6c8" stroke-width="1.4"/>'; return [c, c]; },   // 和帽子
+    bakerhat: () => { const h = '<path fill="#fbfaf6" d="M-28 -146 V-164 Q2 -170 32 -164 V-146 Q2 -140 -28 -146 Z"/><ellipse cx="-12" cy="-182" rx="20" ry="17" fill="#fbfaf6"/><ellipse cx="16" cy="-182" rx="20" ry="17" fill="#fbfaf6"/><ellipse cx="2" cy="-194" rx="22" ry="17" fill="#fbfaf6"/><path d="M-28 -164 Q2 -170 32 -164" fill="none" stroke="#dcd6c8" stroke-width="1.4"/>'; return [h, h]; },   // パン屋のコック帽
+    cap: (L, c, d, w = {}) => {   // a peaked cap (制帽 with a gold badge; the delivery man's plain): w.cap its colour
+      const k = w.cap || '#2b3350', h = `<path ${L(k, 4.3)} d="M-34 -147 C-36 -180 40 -180 38 -147 Q2 -139 -34 -147 Z"/><path ${L(dk(k, 0.7), 4.32)} d="M-34 -151 Q2 -143 38 -151 V-145 Q2 -137 -34 -145 Z"/>`;
+      return [h + `<path fill="#1c1c22" d="M-28 -145 Q2 -128 32 -145 Q2 -136 -28 -145 Z"/>${w.badge === false ? '' : '<circle cx="2" cy="-160" r="4.4" fill="#d9b04a"/><path d="M-2 -160 h8" stroke="#a8862e" stroke-width="1"/>'}`, h]; },
+    mikoribbon: () => ['', '<rect x="-7" y="-106" width="18" height="11" rx="2" fill="#f8f6f0"/><path d="M-7 -102 h18 M-7 -99 h18" stroke="#c8323a" stroke-width="1"/>'],   // 丈長: the long hair tied low behind
+    apron: (L, c, d, w = {}) => {   // 前掛け: w.apron its colour, w.mark a name on it
+      const k = w.apron || '#2f3b5a', m = w.mark ? `<text x="2" y="-18" text-anchor="middle" font-size="${w.mark.length > 2 ? 6.4 : 8}" font-weight="700" fill="#fff" fill-opacity=".92" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif">${esc(w.mark)}</text>` : '';
+      return [`<path class="apron" ${L(k, 1.3)} d="M-17 -38 H21 L23 -8 Q2 -5 -19 -8 Z"/><path d="M-18 -38 H22" stroke="${dk(k, 0.7)}" stroke-width="2.2"/>${m}`, `<path d="M-18 -38 H22" stroke="${k}" stroke-width="2.2"/><path d="M2 -38 l-6 -3.4 v6.8 Z M2 -38 l6 -3.4 v6.8 Z" fill="${k}"/>`]; },
+    necktie: (L, c, d, w = {}) => [`<path fill="${w.tie || '#3f4660'}" d="M0.4 -63.4 h3.2 l1 2.4 -1.4 1.4 1.6 12 -2.8 3 -2.8 -3 1.6 -12 -1.4 -1.4 Z"/>`, ''],
+    camera: () => ['<path d="M-9 -66 L-7 -50 M13 -66 L11 -50" stroke="#2b2b33" stroke-width="1.2"/><rect x="-7" y="-52" width="18" height="12" rx="2" fill="#2b2b33"/><rect x="-5" y="-55" width="6" height="3" rx="1" fill="#2b2b33"/><circle cx="2" cy="-46" r="4" fill="#5a606e" stroke="#a6acb8" stroke-width="1"/>', ''],   // the reporter's
+    towel: () => { const t = '<path fill="#f8f6f0" d="M-12 -68.4 Q2 -62 16 -68.4 L17 -63 Q2 -56.6 -13 -63 Z"/>'; return [t + '<path fill="#f8f6f0" d="M-12 -64 L-13 -45 H-6 L-5.4 -62 Z M16 -64 L17 -45 H10 L9.4 -62 Z"/><path d="M-13 -48 h7 M10 -48 h7" stroke="#5a8ac8" stroke-width="1.4"/>', t]; },   // 銭湯の常連: a towel round the neck
+    lanyard: (L, c, d, w = {}) => [`<path d="M-6 -66 L2 -53 L10 -66" fill="none" stroke="${w.strap || '#3f7ac8'}" stroke-width="1.4"/><rect x="-3" y="-54" width="10" height="13" rx="1.4" fill="#fbfaf6" stroke="#8a8f99" stroke-width=".8"/><rect x="-1.2" y="-51.6" width="6.4" height="3" fill="${w.strap || '#3f7ac8'}"/>`, ''],   // a name card (ガイド, 看護師)
     // on the body (test, 2026-11-09: the Q版 body), in the body's units
     scarf: (L) => { const w = `<path ${L('#d0453c', 1.6)} d="M-12 -68 Q2 -61 16 -68 L16.4 -62 Q2 -55 -12.4 -62 Z"/>`; return [w + `<path ${L('#b93a33', 1.4)} d="M7 -61 L13 -61.6 L14.6 -46 L8.6 -45 Z"/><path d="M9 -46 v3.4 M11.6 -46.4 v3.4 M14 -46.6 v3.4" stroke="#b93a33" stroke-width="1.2"/>`, w + `<path ${L('#b93a33', 1.4)} d="M-6 -61 L0 -61 L-1 -46 L-7 -46.6 Z"/>`]; },
     bowtie: () => [`<path d="M2 -61 L-5 -64.6 L-5 -57.4 Z M2 -61 L9 -64.6 L9 -57.4 Z" fill="#c8453d"/><circle cx="2" cy="-61" r="2" fill="#a63831"/>`, ''],
@@ -10927,7 +10989,7 @@ const HERO = (() => {
   let uid = 0;   // each drawing's own clip ids
   // the figure, both views: o.look, o.wear, o.L as above
   function svg(o = {}) {
-    const lk = norm(o.look), L = o.L || day, wear = o.wear || {}, W = (slot, side) => { const id = wear[slot]; const f = id && WEAR[id]; return f ? f(L, lk.top, dk(lk.top, 0.84))[side] || '' : ''; };
+    const lk = norm(o.look), L = o.L || day, wear = o.wear || {}, W = (slot, side) => { const id = wear[slot]; const f = id && WEAR[id]; return f ? f(L, lk.top, dk(lk.top, 0.84), wear)[side] || '' : ''; };
     const cat = lk.topStyle === 'cattop' && lk.bottomStyle === 'catpants' && (wear.head === 'cathood' || wear.head === 'cathead');   // the whole cat suit
     // the hair (test, 2026-11-09, after the user's pick of the flat Q版 look): flat colours lit as the room lights them, the back
     // hair darker, no outline; each part drawn with a thin stroke of its own colour, which softens the tips and joins

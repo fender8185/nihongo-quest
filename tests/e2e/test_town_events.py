@@ -302,10 +302,10 @@ def test_the_shrine_holds_its_festival_by_night_with_people_in_yukata(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.stops = { station: 1, shrine: 1 }; state.town.seen.chihaya = 1; state.town.seen.tatsu = 1;
       await go('shrine', 12); const day = { place: y().dataset.place, stalls: !!y().querySelector('.shrine-land .ennichi'), people: [...y().querySelectorAll('.npc')].map(e => e.dataset.npc).sort() };
       await go('shrine', 20); const night = { stalls: !!y().querySelector('.shrine-land .ennichi'), people: [...y().querySelectorAll('.npc')].map(e => e.dataset.npc).sort(), yukata: y().querySelector('.npc-chihaya').innerHTML !== day.html };
-      return JSON.stringify({ day, night, dress: [TOWNEV.look('chihaya', 'shrine', 20).topStyle, TOWNEV.look('chihaya', 'shrine', 12).topStyle] }); })()"""))
+      return JSON.stringify({ day, night, dress: [TOWNEV.look('hina', 'shrine', 20).topStyle, TOWNEV.look('chihaya', 'shrine', 20).topStyle] }); })()"""))
     assert r['day'] == {'place': 'shrine', 'stalls': False, 'people': ['chihaya']}, r
     assert r['night']['stalls'] and r['night']['people'] == ['chihaya', 'tatsu'], r
-    assert r['dress'] == ['yukata', 'shirt'], r   # 千早 in a yukata for the festival
+    assert r['dress'] == ['yukata', 'hakui'], r   # 陽菜 in a yukata for the festival; 千早 works it in her miko's white and red
 
 def test_the_bus_goes_on_to_the_castle_and_its_guide(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + BUS + """ fake([]); state.town.stops = { station: 1, castle: 1 }; state.town.seen.takahashi = 1; await go('station', 11);
@@ -457,6 +457,23 @@ def test_a_new_player_stays_in_until_mugi_has_brought_the_gramophone(b):
     assert r['fresh']['hash'] == '#/today' and '練習' in r['fresh']['said'], r   # first: practise a little
     assert r['waiting']['hash'] == '#/today' and '狗' in r['waiting']['said'], r   # 小春 has been: someone else is coming
     assert r['out'] == '#/outside', r   # ムギ has been: out
+
+# ---- the town's people dressed for their work (2026-11-10, the user: a miko should look like one at a glance; an izakaya's 大将) ----
+def test_people_wear_what_their_work_calls_for(b):
+    r = json.loads(ev(b, """(() => { const top = (id) => HERO.norm(TOWN.CAST[id].look).topStyle, art = (id, p) => TOWNEV.art(id, p);
+      return JSON.stringify({ tops: Object.fromEntries(['chihaya', 'teppei', 'go', 'tome', 'harada', 'kobayashi', 'tatsu', 'nagisa', 'sano'].map((id) => [id, top(id)])),
+        miko: ['hakama', 'kosode'].every((k) => art('chihaya', 'shrine').includes(k)), festival: TOWNEV.look('chihaya', 'shrine', 20).topStyle,
+        taisho: ['nejiri', 'apron'].every((k) => art('teppei', 'izakaya').includes(k)), sold: HERO.OPTS.topStyle.some(([v]) => ['hakui', 'samue', 'chef', 'kappogi', 'jacket', 'happi', 'vest'].includes(v)) }); })()"""))
+    assert r['tops'] == {'chihaya': 'hakui', 'teppei': 'samue', 'go': 'chef', 'tome': 'kappogi', 'harada': 'jacket', 'kobayashi': 'jacket', 'tatsu': 'happi', 'nagisa': 'vest', 'sano': 'jacket'}, r
+    assert r['miko'] and r['festival'] == 'hakui' and r['taisho'] and r['sold'] is False, r   # the miko works the festival in her white and red; none of it in the wardrobe
+
+def test_a_new_hero_and_the_young_people_have_round_soft_faces(b):
+    r = json.loads(ev(b, """(() => { const n = HERO.norm(undefined), young = ['miku', 'hina', 'taro', 'kobayashi', 'misaki', 'alex', 'chihaya', 'sophia', 'nishimura', 'lin', 'go', 'kenta', 'nakamura'];
+      return JSON.stringify({ hero: ['face', 'cheeks', 'fringe', 'sides', 'hairBack', 'hairTop', 'hairColor', 'topStyle', 'top', 'bottomStyle', 'bottom', 'shoeStyle', 'shoe'].map((k) => n[k]),
+        young: young.filter((id) => !['chubby', 'mochi', 'round'].includes(TOWN.CAST[id].look.face)),
+        kira: Object.keys(TOWN.CAST).filter((id) => (TOWN.CAST[id].look || {}).eyes === 'kira').concat([KOHARU_LOOK, GRANNY_LOOK].filter((l) => l.eyes === 'kira').map(() => 'npc')) }); })()"""))
+    assert r['hero'] == ['chubby', 'blush', 'blunt', 'wisps', 'crop', 'bun', '#6b4a32', 'hoodie', '#d0574b', 'pants', '#2b2b33', 'sneaker', '#2b2b33'], r   # the user's pick: reads neither boy nor girl
+    assert r['young'] == [] and r['kira'] == [], r   # 包子臉, 麻糬臉, 圓臉; no one in town with 水汪汪 eyes (the user: it breaks the spell)
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
