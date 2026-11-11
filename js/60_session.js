@@ -304,12 +304,14 @@ function computeDailyPlan(size = SESSION_SIZE) {
   const dueAll = scope.filter(x => isDueToday(x, t)).sort(byDue);
   const due = dueAll.filter(x => onLadder(x.key)).concat(dueAll.filter(x => !onLadder(x.key)).slice(0, SRS_DAILY_CAP));
   const ofKind = (kind) => due.filter(x => x.kind === kind);
-  // four and five stars: queues giving a fixed share a day, the longest-waiting first. Four and five stars touched today (answered, marked by a stage pass or the 入門 questions, 我會了) wait until tomorrow, as isDueToday
+  // four stars: a queue giving a fixed share a day, the longest-waiting first; five stars: due by FSRS, the most overdue
+  // first, at most Q5_DAILY_CAP. Four and five stars touched today (answered, marked by a stage pass or the 入門 questions, 我會了) wait until tomorrow, as isDueToday
   // does for the due ones, so a list made again the same day (a stage switch) does not draw what was just marked
-  const share = (len, rate) => (len ? clamp(Math.round(len * rate), QUEUE_MIN, QUEUE_MAX) : 0);
   const byLast = (a, b) => String(state.srs[a.key].last || '').localeCompare(String(state.srs[b.key].last || ''));
-  const queue = (tier) => { const q = scope.filter(x => tierOf(x.key) === tier && !answeredToday(x.key) && state.srs[x.key].last !== t).sort(byLast); return q.slice(0, share(q.length, QUEUE_RATE[tier])); };
-  const q4 = queue('q4'); const q5 = queue('q5');
+  const waiting = (tier) => scope.filter(x => tierOf(x.key) === tier && !answeredToday(x.key) && state.srs[x.key].last !== t);
+  const w4 = waiting('q4').sort(byLast);
+  const q4 = w4.slice(0, w4.length ? clamp(Math.round(w4.length * Q4_RATE), Q4_MIN, Q4_MAX) : 0);
+  const q5 = waiting('q5').filter(x => state.srs[x.key].due <= t).sort(byDue).slice(0, Q5_DAILY_CAP);
   // new items: today's count by how the recent answers went and the notebook, shared by what each bank has left;
   // what was already introduced today (before this list was made) counts against it
   const nc = newCountToday();
@@ -1122,7 +1124,7 @@ function answerCurrent(i) {
   if (e.requeued) {
     recordAction(q.kind === 'v' || q.kind === 'k' || q.kind === 'a' ? 'v' : q.kind === 'g' || q.kind === 'c' ? 'g' : 'q', null, q.kind === 'c' ? 'g' : q.kind);
     SESSION.stats[ok ? 'correct' : 'wrong']++;
-    SESSION.results.push({ key: q.key, ok, q, chosen: i, requeued: true, missed: e.missed, at: Date.now() });
+    SESSION.results.push({ key: q.key, ok, q, chosen: i, requeued: true, missed: e.missed });
     const wait = cheer(e, ok);
     saveState(); renderPractice(); speakAnswered(q, wait);
     return;
@@ -1163,7 +1165,7 @@ function answerCurrent(i) {
     if (!e.encore) retries.push(queueRetry(x.item, null, q));
   });
   if (e.undo) e.undo.retries = retries;
-  SESSION.results.push({ key: q.key, ok, q, chosen: i, missed: e.missed, at: Date.now() });   // at: setPace
+  SESSION.results.push({ key: q.key, ok, q, chosen: i, missed: e.missed });
   const wait = cheer(e, ok);
   saveState();
   renderPractice();
@@ -1249,7 +1251,7 @@ function renderSummary(view) {
       </div>
       ${harvestHtml(s, first)}
       ${gain.set || gain.day || gain.full ? `<div class="koto-gain${first ? ' pop' : ''}">${kotoIcon()}<span>言靈</span>${gain.set ? '<b>+1</b><span>做完一組</span>' : ''}${gain.set && gain.day ? '<i class="sep"></i>' : ''}${gain.day ? `<b>+${gain.day}</b><span>今日完成</span>` : ''}${gain.full ? '<span class="cap">今天作答的言靈拿滿了</span>' : ''}<span class="tot">共 <span class="num">${kotoBalance()}</span></span></div>` : ''}
-      ${dayDone ? '<div class="banner mt-4">今天的進度完成了。答對的題目會在幾天後再出現，答錯的明天再複習。</div>' : `<div class="hint mt-4">${leftText(prog.left, s)}</div>`}
+      ${dayDone ? '<div class="banner mt-4">今天的進度完成了。答對的題目會在幾天後再出現，答錯的明天再複習。</div>' : `<div class="hint mt-4">今天還有 ${prog.left} 題。</div>`}
       <div class="row-wrap mt-4">
         <button type="button" class="btn btn-primary" data-act="again">再練一組</button>
         ${wrongKeys.size ? '<button type="button" class="btn" data-act="retry-wrong">重練答錯的題目</button>' : ''}
@@ -1258,22 +1260,6 @@ function renderSummary(view) {
     </div>
     ${wrongKeys.size ? `<div class="card"><div class="card-head"><div class="card-title">這次答錯的題目</div><span class="chip">${wrongKeys.size}</span></div><div class="list">${wrongList}</div></div>` : ''}`;
   if (first) { playAnims(view); countUp(view); summaryReward(view, gain, allRight); }
-}
-// what is left of today's list in sets and minutes (2026-11-11, the user): sets cut as buildDailyQueue cuts them (a small tail
-// joins the set before it); minutes at this set's own pace — its time per item, encores, 再練一次 and cards included, each
-// answer's wait capped at PACE_GAP_MAX so a pause does not count — left out when the set answered fewer than five items
-const PACE_GAP_MAX = 90000;
-function setsLeft(n, size = SESSION_SIZE) { let sets = 0; while (n > 0) { n -= size; sets++; if (n > 0 && (n <= 5 || n < size / 4)) n = 0; } return sets; }
-function setPace(s) {
-  const items = new Set(s.results.filter(r => !r.requeued).map(r => r.key || r.q.mistakePrompt)).size; if (items < 5) return 0;
-  let ms = 0; let at = s.startedAt;
-  s.results.forEach(r => { if (r.at) { ms += Math.min(r.at - at, PACE_GAP_MAX); at = r.at; } });
-  return ms / items;
-}
-function minutesText(min) { const h = Math.floor(min / 60), m = min % 60; return h ? `${h} 小時${m ? ` ${m} 分鐘` : ''}` : `${m} 分鐘`; }
-function leftText(left, s) {
-  const pace = setPace(s); const min = pace ? Math.max(1, Math.round(left * pace / 60000)) : 0;
-  return `今天還有 ${left} 題，大約 ${setsLeft(left)} 組${min ? `、${minutesText(min)}` : ''}。`;
 }
 // 這組的收穫 (2026-11-10, the user: the summary should show what was won, and move): what rose to 熟悉 or 已熟練 in this set (the
 // chip a right answer showed, 1.0.50) and what was met for the first time — words, grammar points, kanji, kana; the chips pop in

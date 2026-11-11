@@ -1,5 +1,5 @@
 """2026-10-30 (1.0.20): 三顆以下照間隔複習、四顆／五顆／錯題本是每天出固定比例的 queue、新題數看正確率與錯題本。"""
-import json, os, subprocess, sys, time
+import json, os, re, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
 from cdp import Browser
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -72,7 +72,7 @@ def test_a_pre_word_leaves_only_once_mastered(b):
 # word is not 已熟練, so it does not stay out: it waits in the five-star queue, is asked to spell, and is out once spelled
 def test_a_pre_word_marked_out_before_its_spelling_comes_back_to_spell(b):
     js = "(() => { " + FRESH + REC + """ const p = REG.vocab.find(x => x.builtin && x.lv === 'PRE_N5' && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 2 && x.r.length <= 8).key;
-      state.srs = {}; state.srs[p] = rec(6, { out: 1, f: {} });
+      state.srs = {}; state.srs[p] = rec(6, { out: 1, f: {}, due: addDays(t, -1) });   /* past its date: five stars wait for a place */
       const out = { tier: tierOf(p), label: dueLabel(state.srs[p], p) };
       delete state.today.plan; DAILY_CACHE = null; out.queued = computeDailyPlan().q5.some(x => x.key === p);
       out.fmt = makeQuestion(REG.byKey.get(p), {}).fmt;
@@ -135,10 +135,14 @@ def test_queue_draws_follow_the_rates_and_caps(b):
       plant(40, 4); const q40 = computeDailyPlan().q4; out.q40 = q40.length; out.oldest = q40.map(x => x.key).join() === ws.slice(38, 40).reverse().map(v => v.key).join();
       plant(700, 4); out.q700 = computeDailyPlan().q4.length;
       plant(1, 4); out.q1 = computeDailyPlan().q4.length;
-      plant(100, 6); out.q5 = computeDailyPlan().q5.length;
+      // five stars (2026-11-11): only those past their date, the most overdue first, at most 20 — not a share
+      const plant5 = (late, ahead) => { state.srs = {}; ws.slice(0, late + ahead).forEach((v, i) => { state.srs[v.key] = rec(6, { due: i < late ? addDays(t, -(i + 1)) : addDays(t, 5) }); }); };
+      plant5(30, 70); const q5 = computeDailyPlan().q5; out.q5 = q5.length; out.overdue = q5.map(x => x.key).join() === ws.slice(10, 30).reverse().map(v => v.key).join();
+      plant5(3, 97); out.q5few = computeDailyPlan().q5.length;
+      plant5(0, 100); out.q5none = computeDailyPlan().q5.length;
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'q40': 2, 'oldest': True, 'q700': 30, 'q1': 1, 'q5': 3}, r
+    assert r == {'q40': 2, 'oldest': True, 'q700': 20, 'q1': 1, 'q5': 20, 'overdue': True, 'q5few': 3, 'q5none': 0}, r
 
 def test_srs_dues_are_capped_at_fifty_oldest_first(b):
     js = "(() => { " + FRESH + REC + """ state.srs = {}; const ws = words.slice(0, 80);
@@ -296,22 +300,22 @@ def test_four_and_five_stars_are_not_counted_or_dealt_as_due(b):
     r = json.loads(ev(b, js))
     assert r == {'vocab': 1, 'level': 1, 'themes': 1, 'allThemes': 1, 'unit': 1, 'deck': [False, False, True]}, r
 
-# I4: four and five stars say which queue they wait in instead of a date, an 入門 item that left says it will not come
+# I4: four stars say they wait in their queue instead of a date (five stars too once past their date, 2026-11-11), an 入門 item that left says it will not come
 # back — in lists and in the answer feedback
 def test_queue_items_are_labelled_as_queued(b):
     js = "(() => { " + FRESH + REC + """ state.srs = {}; words.slice(0, 40).forEach((v, i) => { state.srs[v.key] = rec(4, { last: addDays(t, -(i + 1)) }); });
-      const [w5, w2] = words.slice(40, 42); state.srs[w5.key] = rec(6); state.srs[w2.key] = rec(2);
+      const [w5, w2, w5b] = words.slice(40, 43); state.srs[w5.key] = rec(6, { due: addDays(t, -2) }); state.srs[w2.key] = rec(2); state.srs[w5b.key] = rec(6, { due: addDays(t, 40) });   // five stars past their date wait for a place, the others say their date
       const p = REG.vocab.find(v => v.builtin && v.lv === 'PRE_N5'); state.srs[p.key] = rec(6, { out: 1, f: { 'v-spell': [1, 0] } });   // left while 已熟練
       const text = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d.textContent; };
-      const list = text(vocabListResultsHtml({}, [words[0], w5, w2, p]));
+      const list = text(vocabListResultsHtml({}, [words[0], w5, w2, w5b, p]));
       delete state.today.plan; DAILY_CACHE = null; const k = dailyPlan().q4[0].key;
       startSession('daily', { size: 60 }); const i = SESSION.entries.findIndex(e => e.item && e.item.key === k); SESSION.idx = i; prepareEntry(i);
       answerCurrent(currentEntry().q.answer); const fbHtml = feedbackHtml(currentEntry()); const fb = text(fbHtml) + ' ' + [...fbHtml.matchAll(/title="([^"]*)"/g)].map(m => m[1]).join(' ');   // 1.0.35: the level is the dots' tooltip
       SESSION = null; document.body.classList.remove('practicing');
       return JSON.stringify({ list, fb, i }); })()"""
     r = json.loads(ev(b, js))
-    assert '四顆・排隊中' in r['list'] and '五顆・排隊中' in r['list'] and '不再出現' in r['list'] and r['list'].count('3 天後') == 1, r['list']
-    assert r['i'] >= 0 and '五顆・排隊中' in r['fb'] and '天後複習' not in r['fb'], r
+    assert '四顆・排隊中' in r['list'] and '五顆・排隊中' in r['list'] and '40 天後' in r['list'] and '不再出現' in r['list'] and r['list'].count('3 天後') == 1, r['list']
+    assert r['i'] >= 0 and re.search(r'\d+ 天後複習', r['fb']) and '排隊中' not in r['fb'], r   # the four stars answered right went up to five: a date
 
 # I6 (the user's call, 2026-10-30): a ladder item answered right before its day — drawn by the notebook queue, a flashcard,
 # unit practice — is extra practice: the 1/3/7 days and the notebook entry stay; on its day it moves up as before
@@ -428,7 +432,7 @@ def test_passing_a_stage_marks_four_stars_and_leaves_today_alone(b):
     assert r['noted'] and r['notebook'], r
     assert r['today'] and r['says'] and r['undo'] and not r['old'], r
     assert r['unit'] == 'm7' and '設成四顆。目前單元：第 13–14 週・可能形' in r['banner'], r   # the pass moved the course on: the page says where to
-    assert r['q4'] == 30, r
+    assert r['q4'] == 20, r   # the next day the four-star queue draws its cap (Q4_MAX, 30 until 2026-11-11)
     assert r['restored'] and r['undone'] and r['missedGone'], r
 
 # a learner still in 入門 with today's list made: a pass of the 入門 test or of p1 moves it to the main course and the list
@@ -662,20 +666,15 @@ def test_a_leech_just_missed_gets_its_card_again_before_it_is_asked(b):
 
 # the summary says how many sets and minutes are left: sets cut like the day's sets (a small tail joins the one before), minutes
 # at this set's pace per item with a long pause counted as 90 s; no minutes after fewer than five items
-def test_the_summary_says_how_many_sets_and_minutes_are_left(b):
-    js = "(() => { " + FRESH + """ const res = (n, gapAt) => Array.from({ length: n }, (_, i) => ({ key: 'v:x' + i, ok: true, q: {}, at: 0 }));
-      const s = { startedAt: 1000, results: res(10) }; let at = 1000; s.results.forEach((r, i) => { at += i === 4 ? 600000 : 30000; r.at = at; });   // 30 s each, one 10-minute pause
-      const out = { sets: [20, 25, 26, 47, 3].map(n => setsLeft(n)), t47: leftText(47, s), t150: leftText(150, s), t200: leftText(200, s), few: leftText(47, { startedAt: 0, results: res(4) }) };
-      delete state.today.plan; DAILY_CACHE = null; startSession('daily', { size: 20 }); SESSION.startedAt = Date.now() - 300000;
-      SESSION.results = res(10).map((r, i) => Object.assign(r, { at: SESSION.startedAt + 30000 * (i + 1) })); SESSION.idx = SESSION.entries.length; route();
-      out.hint = (document.querySelector('#view .hint') || {}).textContent || ''; out.left = dayProgress().left;
+def test_the_summary_says_how_many_are_left_but_not_how_long(b):
+    # 2026-11-11, the user: sets and minutes left read as pressure; the line only counts what is left of today's list
+    js = "(() => { " + FRESH + """ delete state.today.plan; DAILY_CACHE = null; startSession('daily', { size: 20 }); SESSION.startedAt = Date.now() - 300000;
+      SESSION.results = SESSION.entries.slice(0, 10).map(e => ({ key: e.item.key, ok: true, q: {} })); SESSION.idx = SESSION.entries.length; route();
+      const out = { hint: (document.querySelector('#view .hint') || {}).textContent || '', left: dayProgress().left };
       SESSION = null; document.body.classList.remove('practicing');
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['sets'] == [1, 1, 2, 3, 1], r
-    assert r['t47'] == '今天還有 47 題，大約 3 組、28 分鐘。' and r['t150'].endswith('、1 小時 30 分鐘。') and r['t200'].endswith('、2 小時。'), r   # 36 s an item
-    assert r['few'] == '今天還有 47 題，大約 3 組。', r
-    assert r['hint'].startswith(f"今天還有 {r['left']} 題，大約 ") and '分鐘' in r['hint'], r
+    assert r['left'] > 0 and r['hint'] == f"今天還有 {r['left']} 題。", r
 
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

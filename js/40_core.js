@@ -651,13 +651,16 @@ const LR_GAPS = [30, 90, 180];   // 聽力／閱讀 answered right the 1st, 2nd,
 const LR_MISS_GAP = 7;           // 聽力／閱讀 answered wrong: back after a week, not the next day
 // 1.0.20 tiers: up to three stars follow FSRS due dates (at RETENTION; at most SRS_DAILY_CAP a day, the oldest first), and
 // the missed items on the 1/3/7 ladder come on their days on top of that cap (1.0.21; the notebook was a queue of its own
-// before); four and five stars are queues that give a fixed share a day, the longest-waiting first (at least QUEUE_MIN, at
-// most QUEUE_MAX, none when empty). New items a day: NEW_STEPS by the last RECENT_MAX answers, minus one per ten notebook
-// entries.
+// before); four stars are a queue that gives a fixed share a day, the longest-waiting first (at least Q4_MIN, at most Q4_MAX,
+// none when empty) — a stage pass marks hundreds at once, and their dates would all fall on one day. Five stars (2026-11-11,
+// the user: fewer of them a day; they were a 3% queue of up to 30 that asked a word known for a year as often as one that
+// just got there) come on their FSRS dates, the most overdue first, at most Q5_DAILY_CAP a day. New items a day: NEW_STEPS
+// by the last RECENT_MAX answers, minus one per ten notebook entries.
 const SRS_DAILY_CAP = 50;
-const QUEUE_RATE = { q4: 0.05, q5: 0.03 };
-const QUEUE_MIN = 1;
-const QUEUE_MAX = 30;
+const Q4_RATE = 0.05;
+const Q4_MIN = 1;
+const Q4_MAX = 20;
+const Q5_DAILY_CAP = 20;
 const LISTEN_PER_DAY = 3;
 const NEW_STEPS = [[0.9, 20], [0.8, 15], [0.7, 10], [0, 5]];
 const NEW_DEFAULT = 15;
@@ -844,13 +847,15 @@ function srsLevelLabel(rec, key) {
   if (rec.b >= 1) return '學習中';
   return '待加強';
 }
-// when an item comes back: four and five stars wait in their queues (their date is not used), an 入門 item that left never does
+// when an item comes back: four stars wait in their queue (their date is not used), five stars past their date wait for a
+// place (at most Q5_DAILY_CAP a day), an 入門 item that left never does
 function dueLabel(rec, key) {
   if (!rec) return '';
   const tier = tierOf(key);
-  if (tier === 'q4' || tier === 'q5') return `${tier === 'q4' ? '四' : '五'}顆・排隊中`;
+  if (tier === 'q4') return '四顆・排隊中';
   if (tier === 'out') return '不再出現';
   const d = daysBetween(todayStr(), rec.due);
+  if (tier === 'q5' && d <= 0) return '五顆・排隊中';
   if (d <= 0) return '今天複習';
   if (d === 1) return '明天複習';
   return `${d} 天後複習`;

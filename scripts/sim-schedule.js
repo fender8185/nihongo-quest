@@ -3,11 +3,11 @@
    Usage: node scripts/sim-schedule.js [index.html] [--bulk N]
           node scripts/sim-schedule.js --levels [N]   每一級封死 (1.0.32): the day-by-day split of N new items (default 15) by level
    Three learners (strong, middling, weak) study the whole course for 300 days and do everything each day's list holds:
-   three stars and under by FSRS (at most SRS_DAILY_CAP a day) with the missed items on the 1/3/7 ladder on top, four and
-   five stars as queues. --bulk N marks N items four stars on day 0 first, as a passed stage test does.
+   three stars and under by FSRS (at most SRS_DAILY_CAP a day) with the missed items on the 1/3/7 ladder on top, four stars
+   as a queue, five stars on their dates (at most Q5_DAILY_CAP a day). --bulk N marks N items four stars on day 0 first, as a passed stage test does.
    One line each: new items a day, the day everything had been met, questions a day (overall, and for days 1–30, 31–100,
    101–200, 201–300), the notebook, and how much they would remember on the exam morning. Rerun it, with and without
-   --bulk 2000, after changing the 5% / 3% / 50 / new-count numbers. Not part of test.sh.
+   --bulk 2000, after changing the 5% / 20 / 20 / 50 / new-count numbers. Not part of test.sh.
    The FSRS functions and the constants are lifted out of index.html by name, not copied, so they follow the app. The rest
    mirrors the app by hand: srsAnswer, tierOf, computeDailyPlan, newCountToday and splitNew. Not modelled: listening and
    reading (outside the queues), hand-made notebook entries, the 再練一次 and encore repeats, 入門 (kana, PRE_N5 words and
@@ -34,7 +34,7 @@ const LEARNERS = [
 ];
 
 // what is lifted from index.html (clamp and hashStr are fsrsDays' helpers)
-const CONSTANTS = ['FSRS_W', 'FSRS_DECAY', 'FSRS_FACTOR', 'RETENTION', 'LEVEL_FROM_S', 'RELEARN_GAPS', 'SRS_DAILY_CAP', 'QUEUE_RATE', 'QUEUE_MIN', 'QUEUE_MAX',
+const CONSTANTS = ['FSRS_W', 'FSRS_DECAY', 'FSRS_FACTOR', 'RETENTION', 'LEVEL_FROM_S', 'RELEARN_GAPS', 'SRS_DAILY_CAP', 'Q4_RATE', 'Q4_MIN', 'Q4_MAX', 'Q5_DAILY_CAP',
   'NEW_STEPS', 'NEW_DEFAULT', 'NEW_MIN', 'NEW_MAX', 'RECENT_MAX'];
 const FUNCTIONS = ['clamp', 'hashStr', 'levelFromS', 'fsrsD0', 'fsrsR', 'fsrsInterval', 'fsrsNext', 'fsrsDays'];
 
@@ -72,7 +72,7 @@ function mulberry32(a) {
 }
 
 function simulate(bind, L, bulk) {
-  const { clamp, levelFromS, fsrsR, fsrsNext, fsrsDays, LEVEL_FROM_S, RELEARN_GAPS, SRS_DAILY_CAP, QUEUE_RATE, QUEUE_MIN, QUEUE_MAX,
+  const { clamp, levelFromS, fsrsR, fsrsNext, fsrsDays, LEVEL_FROM_S, RELEARN_GAPS, SRS_DAILY_CAP, Q4_RATE, Q4_MIN, Q4_MAX, Q5_DAILY_CAP,
     NEW_STEPS, NEW_DEFAULT, NEW_MIN, NEW_MAX, RECENT_MAX } = bind();
   const rnd = mulberry32(SEED);
   // the registry's order (words, grammar, kanji, kana, drills): a sort keeps it for ties, as in the app. A bank hands out
@@ -95,11 +95,10 @@ function simulate(bind, L, bulk) {
   }
   const recent = [];   // state.recent: the last RECENT_MAX answers, 1 = right
 
-  // tierOf: three stars and under, or on the 1/3/7 ladder, follow FSRS dates; four and five stars are queues
+  // tierOf: three stars and under, or on the 1/3/7 ladder, follow FSRS dates; four stars are a queue, five stars capped dates
   const tierOf = (r) => (!r ? 'new' : typeof r.rl === 'number' || r.b <= 3 ? 'srs' : r.b === 4 ? 'q4' : 'q5');
   const byDue = (a, b) => (a.r.due - b.r.due) || (a.r.b - b.r.b);
   const byLast = (a, b) => a.r.last - b.r.last;   // the longest-waiting first; a notebook entry's date is its item's last answer
-  const share = (len, rate) => (len ? clamp(Math.round(len * rate), QUEUE_MIN, QUEUE_MAX) : 0);
 
   // splitNew: n new items shared by what each bank has left (largest remainder); a bank short of items passes its slots on
   function splitNew(n) {
@@ -144,13 +143,16 @@ function simulate(bind, L, bulk) {
   const stat = { questions: [], fresh: [], book: [], finished: 0 };
   for (let t = 1; t <= DAYS; t++) {
     // computeDailyPlan: three stars and under that are due — the missed items on the 1/3/7 ladder all, the others at most
-    // SRS_DAILY_CAP, the most overdue first; four and five stars give a share each, the longest-waiting first
+    // SRS_DAILY_CAP, the most overdue first; four stars give a share, the longest-waiting first; five stars past their date,
+    // the most overdue first, at most Q5_DAILY_CAP
     const met = items.filter(it => it.r);
     const onLadder = (it) => typeof it.r.rl === 'number';   // the notebook holds exactly the items on the ladder
     const dueAll = met.filter(it => tierOf(it.r) === 'srs' && it.r.due <= t && it.r.last !== t).sort(byDue);
     const due = dueAll.filter(onLadder).concat(dueAll.filter(it => !onLadder(it)).slice(0, SRS_DAILY_CAP));
-    const queue = (tier) => { const q = met.filter(it => tierOf(it.r) === tier && it.r.last !== t).sort(byLast); return q.slice(0, share(q.length, QUEUE_RATE[tier])); };
-    const q4 = queue('q4'); const q5 = queue('q5');
+    const waiting = (tier) => met.filter(it => tierOf(it.r) === tier && it.r.last !== t);
+    const w4 = waiting('q4').sort(byLast);
+    const q4 = w4.slice(0, w4.length ? clamp(Math.round(w4.length * Q4_RATE), Q4_MIN, Q4_MAX) : 0);
+    const q5 = waiting('q5').filter(it => it.r.due <= t).sort(byDue).slice(0, Q5_DAILY_CAP);   // five stars on their dates (2026-11-11)
     const book = met.filter(onLadder);
     const fresh = splitNew(newCountToday(book.length));
     const drill = bank.c.list.slice(bank.c.met, bank.c.met + 1);
