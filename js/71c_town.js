@@ -4,7 +4,7 @@
 // 小春 (a young hairdresser with a salon in town, #/town along the yard to the right) and ムギ (a shiba who collects old records, on the
 // beach, #/beach, along the yard to the left; home: where they are to be found). Both knew the grandmother who left the hero
 // the house (STORY).
-// Each comes knocking at 書房's front door once (one at a time: the next not before NPC.gap later, and 書房 opened again): 小春 after the first set done, ムギ a few minutes after her (the user's call). The door
+// Each comes knocking at 書房's front door once (one at a time: the next not before NPC.gap later, and 書房 opened again): 小春 a minute after the opening, whatever was done meanwhile (2026-11-11; she came after the first set), ムギ a few minutes after her (the user's calls). The door
 // shakes, コンコン; tapped, the hero goes and opens it, they say hello and give a present — 小春 the full-length mirror (the face and
 // the hair are changed in front of it), ムギ the gramophone with its two records (one bought before: what was paid comes back).
 // state.met: { id: when they came (ms; an older save's day) }. After that they are on the beach, a tap for a word. Lines: [Japanese ({漢字|かな}), 中文]
@@ -22,7 +22,7 @@ const MUGI_ART = `<ellipse cy="-2" rx="36" ry="6" fill="#2b1c12" fill-opacity=".
   <ellipse cx="-20" cy="-74" rx="5" ry="2.8" fill="#f2a3a0" fill-opacity=".55"/><ellipse cx="20" cy="-74" rx="5" ry="2.8" fill="#f2a3a0" fill-opacity=".55"/>`;
 const NPCS = {
   koharu: { name: '小春', role: '美容師', gift: 'fullMirror', home: 'town', at: { X: -328, Y: 130 },   // in her salon's doorway
-    due: () => kotoSum(state.koto.sets) > 0 || Object.keys(state.koto.daySets).length > 0,
+    due: () => Date.now() - state.storyAt >= NPC.after.ms,   // storyAt 0 (seen before it was kept): at once
     hello: () => [
       ['こんにちは！{町|まち}で{美容室|びようしつ}をやっている、{小春|こはる}です。', '你好！我是在鎮上開美容院的小春。'],
       ['おばあちゃんの{髪|かみ}は、いつも{私|わたし}が{切|き}っていたんですよ。', '你外婆的頭髮，一直都是我幫她剪的喔。'],
@@ -49,7 +49,7 @@ const met = (id) => Boolean(state.met && state.met[id]);   // a neighbour has co
 const NPC = (() => {
   // who is at the door now: the first not met whose time has come, none for a while after someone came (the user: one a day
   // was too slow — ムギ never came the day 小春 did)
-  const gap = { ms: 3 * 60 * 1000 };
+  const gap = { ms: 3 * 60 * 1000 }, after = { ms: 60 * 1000 };   // after: 小春, from the opening's end
   const lastCame = () => Math.max(0, ...Object.values(state.met || {}).map((v) => (typeof v === 'number' ? v : Date.parse(v) || 0)));
   function visitor() {
     if (Date.now() - lastCame() < gap.ms) return null;
@@ -70,15 +70,20 @@ const NPC = (() => {
       });
     } catch (e) { /* no sound */ }
   }
-  // 書房 open with someone at the door: コンコン by it (three times, a few seconds apart), its sign kept in sight, a word the first time
+  // 書房 open with someone at the door: コンコン by it (three times, a few seconds apart), its sign kept in sight, a word the first
+  // time. 小春's minute not up yet: looked at again when it is, so she knocks while the hero just sits in 書房
+  let soon = 0;
   function check() {
     const st = document.querySelector('#view .study[data-room="study"]'), id = st && !STORY.due() && visitor();   // the opening first (STORY)
     if (!st) return;
     ROOM.knock(st, Boolean(id));
+    clearTimeout(soon);
+    if (!id && !met('koharu') && !STORY.due()) soon = setTimeout(check, Math.max(0, state.storyAt + after.ms - Date.now()) + 50);
     if (!id || st._knock) return;
     st._knock = true; let n = 0;
     const tap = () => {
       if (!st.isConnected || !visitor() || TALK.on()) return;
+      if (modalOpen()) { setTimeout(tap, 2000); return; }   // a dialog open (picking a start): once it is closed
       knockSound(); const k = st.querySelector('.knock'); if (k) { k.classList.remove('on'); void k.offsetWidth; k.classList.add('on'); }
       if (!n) toast('コンコン……有人在敲門。點大門去開門看看。', 3600);
       if (++n < 3) setTimeout(tap, 7000);
@@ -104,14 +109,14 @@ const NPC = (() => {
     saveState();
   }
   // a new player stays in (2026-11-10, the user) until ムギ has come by with the gramophone: at the front door the hero says why —
-  // first a little practice (小春 comes after the first set), then, 小春 met, a dog heard outside (ムギ, NPC.gap later)
+  // first a little practice (小春 comes a minute after the opening), then, 小春 met, a dog heard outside (ムギ, NPC.gap later)
   const housebound = () => !met('mugi');
   function stayIn(st) {
     const lines = met('koharu') ? [['あれ？ そとで いぬの こえが する……。', '咦？外面好像有狗叫聲……'], ['', '（好像有誰要來找我。在家裡再練幾題，等一下吧。）']]
       : [['まずは れんしゅう！', '先來練習！'], ['', '（外面的路還不熟。先坐到書桌前，點筆記本做一點今日練習，熟悉一下題目吧。）']];
     TALK.open(st, 'hero', lines);
   }
-  return { visitor, check, visit, face, art, gap, housebound, stayIn };
+  return { visitor, check, visit, face, art, gap, after, housebound, stayIn };
 })();
 // the town's events (test, 2026-11-09; docs/superpowers/specs/2026-11-09-town-events-design.md): the people of events.js (TOWN)
 // where their hours put them, and the next event of the course. An event opens with the course (2026-11-10: no days between
@@ -312,7 +317,7 @@ const STORY = (() => {
   function close() {
     if (!el) return;
     el.classList.add('out'); const e = el; el = null; setTimeout(() => e.remove(), 400);
-    state.storyV = V; saveState(); NPC.check();
+    state.storyV = V; state.storyAt = Date.now(); saveState(); NPC.check();
   }
   const due = () => (state.storyV || 0) < V;
   function open() {

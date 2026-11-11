@@ -130,6 +130,30 @@ def test_sizes_word_in_the_middle_glyphs_big_order_meaning_by_its_sentence(b):
     assert r['order'] == {'found': True, 'first': 'q-sub order-sub', 'outside': False}, r
     assert r['tail'], r
 
+# 2026-11-11, the user: a unit's 講義 was too much at once on a phone — bigger type, a page each (概要, each section's explanation
+# and its examples, 重點整理 with 我的標記), swiped sideways; a redraw stays on the page
+def test_a_units_lesson_is_pages_swiped_sideways(b):
+    js = "(async () => { " + FRESH + """ state.unitMarks = {}; const wait = (ms) => new Promise(r => setTimeout(r, ms));
+      location.hash = '#/course/m2'; route(); await wait(150); window.scrollTo(0, 0); const deck = () => document.querySelector('#view .lesson-deck'), track = () => deck().querySelector('.lp-track');
+      const L = DATA.LESSONS.m2, want = 1 + L.sections.length + L.sections.filter(s => (s.ex || []).length).length + 1;
+      const first = { pages: track().children.length, want, h3: deck().querySelectorAll('h3').length, count: deck().querySelector('.lp-count').textContent, prev: deck().querySelector('[data-dir="-1"]').disabled,
+        font: parseFloat(getComputedStyle(deck().querySelector('.lp-page p')).fontSize), wide: document.documentElement.scrollWidth <= innerWidth };
+      track().scrollTo({ left: track().clientWidth * 2 }); await wait(400); const swiped = deck().querySelector('.lp-count').textContent;
+      route(); await wait(50); const kept = [deck().querySelector('.lp-count').textContent, Math.round(track().scrollLeft / track().clientWidth)];
+      track().scrollTo({ left: 99999 }); await wait(400); const end = track().lastElementChild;
+      end.querySelector('[data-act="mark-unit"][data-lv="5"]').click(); await wait(50);
+      const last = { count: deck().querySelector('.lp-count').textContent, next: deck().querySelector('[data-dir="1"]').disabled, start: !!end.querySelector('[data-act="start-unit"]'), um: state.unitMarks.m2,
+        same: deck().querySelector('.lp-count').textContent, wide: document.documentElement.scrollWidth <= innerWidth };
+      ACTIONS['mark-unit']({ dataset: { unit: 'm2', lv: '0' } });
+      location.hash = '#/course/intro'; route(); await wait(150); const intro = { mark: !!deck().querySelector('[data-act="mark-unit"]'), h3: deck().querySelectorAll('h3').length };
+      return JSON.stringify({ first, swiped, kept, last, intro }); })()"""
+    r = json.loads(ev(b, js, [("metrics", (375, 667))]))
+    f = r['first']
+    assert f['pages'] == f['want'] and f['h3'] == 3 and f['count'] == f'1 / {f["want"]}' and f['prev'] and f['font'] >= 17 and f['wide'], r
+    assert r['swiped'].startswith('3 / ') and r['kept'][0].startswith('3 / ') and r['kept'][1] == 2, r   # a redraw stays on the page
+    assert r['last']['count'] == f'{f["want"]} / {f["want"]}' and r['last']['next'] and r['last']['start'] and r['last']['um'] == 5 and r['last']['wide'], r
+    assert r['intro'] == {'mark': False, 'h3': 13}, r   # 第 0 週: no 我的標記
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

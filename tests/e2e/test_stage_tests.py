@@ -160,10 +160,10 @@ PLAY_TEST = """const playTest = (miss) => { const wrong = []; const n = SESSION.
 # listening and reading keep their own rule; the units, lessons, stage and week move on
 def test_a_pass_marks_four_stars_with_its_side_effects(b):
     js = "(() => { " + RESET + """const t = todayStr(); const out = {};
-      const items = stagesUpTo('p1').flatMap(s => stageItems(s.id)); const v5 = stageItems('p1').find(x => x.kind === 'v'); markKnown(v5.key, false);   // five stars already: left alone
+      const items = stagesUpTo('p1').flatMap(s => stageItems(s.id)); const v5 = stageItems('p1').find(x => x.kind === 'v'); markItem(v5.key, 5, false);   // five stars already: left alone
       const n = passMarkTargets('p1', new Set()).length; const changed = markPassedStage('p1', new Set());
       const core = items.filter(x => !isLR(x) && x.key !== v5.key).map(x => state.srs[x.key]);
-      Object.assign(out, { n, changed, core: core.length, four: core.every(r => r && r.b === 4), lrUntouched: items.filter(isLR).every(x => !state.srs[x.key]), known: [state.srs[v5.key].known, state.srs[v5.key].b],
+      Object.assign(out, { n, changed, core: core.length, four: core.every(r => r && r.b === 4), lrUntouched: items.filter(isLR).every(x => !state.srs[x.key]), known: [state.srs[v5.key].mark, state.srs[v5.key].b],
         dueOk: core.every(r => r && daysBetween(t, r.due) >= 9 && daysBetween(t, r.due) <= 11), lastSet: core.every(r => r && r.last === t),
         units: state.completedUnits.slice(), cur: state.currentUnit, stage: state.stage, intro: state.introSeen, kana: state.kanaKnown, lessons: state.lessonSeen.filter(k => k.startsWith('m1:')).length > 0, n4Open: pastFirstLevel() });
       renderCourse(document.getElementById('view')); const banner = document.querySelector('#view .banner');
@@ -171,18 +171,18 @@ def test_a_pass_marks_four_stars_with_its_side_effects(b):
       out.again = passMarkTargets('p1', new Set()).length;   // nothing left below the levels
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['n'] > 500 and r['changed'] == r['n'] == r['core'] and r['four'] and r['lrUntouched'] and r['dueOk'] and r['known'] == [1, 6], r
+    assert r['n'] > 500 and r['changed'] == r['n'] == r['core'] and r['four'] and r['lrUntouched'] and r['dueOk'] and r['known'] == [5, 6], r
     assert r['lastSet'], r
     assert r['units'] == ['m0', 'm1', 'm2', 'm3', 'm4', 'm5', 'm6'] and r['cur'] == 'm7' and r['stage'] == 'main' and r['intro'] and r['kana'] and r['lessons'] and r['n4Open'] and r['banner'], r
     assert r['again'] == 0, r
 
 def test_a_pass_never_downgrades(b):
-    js = "(() => { " + RESET + """const v = stageItems('pre').find(x => x.kind === 'v'); markKnown(v.key, false); state.currentUnit = 'm9';
-      const changed = markPassedStage('p1', new Set()); const n = Object.entries(state.srs).filter(([k, x]) => !x.known && !/^[lr]:/.test(k)).length;
-      const out = { changed, n, known: state.srs[v.key].known, b: state.srs[v.key].b, cur: state.currentUnit };
+    js = "(() => { " + RESET + """const v = stageItems('pre').find(x => x.kind === 'v'); markItem(v.key, 5, false); state.currentUnit = 'm9';
+      const changed = markPassedStage('p1', new Set()); const n = Object.entries(state.srs).filter(([k, x]) => !x.mark && !/^[lr]:/.test(k)).length;
+      const out = { changed, n, known: state.srs[v.key].mark, b: state.srs[v.key].b, cur: state.currentUnit };
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['known'] == 1 and r['b'] == 6 and r['cur'] == 'm9' and r['changed'] == r['n'], r
+    assert r['known'] == 5 and r['b'] == 6 and r['cur'] == 'm9' and r['changed'] == r['n'], r
 
 def test_a_p3_pass_moves_on_to_n3_a_p5_pass_finishes_the_course_and_undo_restores(b):   # 1.0.33: N3's phases 4 and 5 follow N4
     js = "(() => { " + RESET + "state.stageTests = { p3: [{ date: todayStr(), correct: 40, total: 40, passed: true }] }; const before = " + SNAP + """;
@@ -334,6 +334,45 @@ def test_course_page_counts_its_stages_and_units_and_opens_an_n3_stage(b):   # 1
       return JSON.stringify({ sub, open }); })()"""
     r = json.loads(ev(b, js, [("eval", "state.stage = 'main'; state.currentUnit = 'm20'; state.stageTests = {}; saveState(); true")] + COURSE))
     assert r['sub'].startswith('整體完成度 ') and r['open'] == [False, False, False, False, True, False], r   # m20 is in phase 4
+
+# 2026-11-11, the user: 我學過一些 lets each pick the level to be tested on (入門／N5／N4／N3); a start test failed offers one below
+def test_i_have_learned_some_picks_the_level_and_a_fail_offers_one_below(b):
+    js = "(() => { " + RESET + PLAY_TEST + """ state.stageTests = {}; state.startChosen = false; closeModal(); ACTIONS['start-test']();
+      const btns = [...document.querySelectorAll('.modal [data-act="start-test-at"]')].map(e => e.dataset.stage + ' ' + e.querySelector('b').textContent);
+      document.querySelector('.modal [data-act="start-test-at"][data-stage="p3"]').click();
+      const began = { modal: modalOpen(), title: SESSION.title, start: SESSION.test.start, chosen: state.startChosen, stage: state.stage };
+      let k = 0; playTest(() => k++ >= 20); const v = document.getElementById('view'), down = v.querySelector('[data-act="start-test-at"]');
+      const fail = { below: down && [down.dataset.stage, down.textContent], again: Boolean(v.querySelector('[data-act="stage-again"]')) };
+      down.click(); const n5 = { title: SESSION.title, start: SESSION.test.start };
+      SESSION = null; startSession('stage', { stage: 'p1' }); k = 0; playTest(() => k++ >= 20);   // from 課程: no 改考
+      const course = Boolean(document.querySelector('#view [data-act="start-test-at"]')); SESSION = null;
+      return JSON.stringify({ btns, began, fail, n5, course }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['btns'] == ['pre 入門', 'p1 N5', 'p3 N4', 'p5 N3'], r
+    assert r['began'] == {'modal': False, 'title': '第三階段：N4 進階與總複習・階段測驗', 'start': True, 'chosen': True, 'stage': 'pre'}, r
+    assert r['fail'] == {'below': ['p1', '改考N5'], 'again': True} and r['n5'] == {'title': '第一階段：N5 文法・階段測驗', 'start': True} and not r['course'], r
+
+# 2026-11-11, the user: a unit page's 0★／2★／5★ (it was 標記為已完成): only up, and the unit done; 0★ gives back the records
+# from before the mark, except one answered since; a stage pass after a mark is not taken back
+def test_a_units_mark_switch_sets_two_or_five_stars_and_zero_puts_them_back(b):
+    js = "(() => { " + RESET + """ state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.unitMarks = {}; const t = todayStr();
+      const items = unitItems('m2'), [a, c] = items;
+      state.srs[a.key] = { b: 4, s: 10, d: 5, due: addDays(t, 5), n: 3, ok: 3, ng: 0, st: 3, last: addDays(t, -5), lapse: 0, intro: '2026-10-01' }; const before = JSON.stringify(state.srs[a.key]);
+      location.hash = '#/course/m2'; route();
+      const sw = () => [...document.querySelector('#view [data-act="mark-unit"]').closest('.seg').children].map(e => (e.getAttribute('aria-pressed') === 'true' ? e.dataset.lv : '')).join('');   // the progress card's (the lesson's last page has one too)
+      const click = (lv) => document.querySelector(`#view [data-act="mark-unit"][data-lv="${lv}"]`).click();
+      const off = sw();
+      click(2); const two = { sw: sw(), rest: items.slice(1).every(g => state.srs[g.key] && state.srs[g.key].b === 2 && state.srs[g.key].mark === 2), a: [state.srs[a.key].b, state.srs[a.key].due === addDays(t, 5)], done: state.completedUnits.includes('m2'), um: state.unitMarks.m2 };
+      click(5); const five = { sw: sw(), all: items.every(g => state.srs[g.key].b >= 5), aPre: JSON.stringify(state.srs[a.key].pre) === before };
+      srsAnswer(c.key, true);   // answered since the mark: kept
+      click(0); const zero = { sw: sw(), a: JSON.stringify(state.srs[a.key]) === before, newAgain: items.slice(2).every(g => !state.srs[g.key]), c: [state.srs[c.key].b >= 5, state.srs[c.key].mark || null], done: state.completedUnits.includes('m2'), um: state.unitMarks.m2 || null };
+      click(2); markPassedStage('p1', new Set()); location.hash = '#/course/m2'; route(); click(0); const pass = items.slice(2).every(g => state.srs[g.key] && state.srs[g.key].b === 4);
+      return JSON.stringify({ off, two, five, zero, pass }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['off'] == '0' and r['two'] == {'sw': '2', 'rest': True, 'a': [4, True], 'done': True, 'um': 2}, r   # four stars stay four, their day too
+    assert r['five'] == {'sw': '5', 'all': True, 'aPre': True}, r   # 2★ → 5★ starts from the record before the marks
+    assert r['zero'] == {'sw': '0', 'a': True, 'newAgain': True, 'c': [True, None], 'done': False, 'um': None}, r
+    assert r['pass'], r   # the pass's four stars stay
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

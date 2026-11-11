@@ -209,6 +209,7 @@ function defaultState() {
     settings: defaultSettings(),
     currentUnit: 'm1',
     completedUnits: [],
+    unitMarks: {},          // 2026-11-11: 我的標記 a unit's page set: { unit id: 2 | 5 } (0★: not here), see 'mark-unit'
     srs: {},
     customGrammar: [],      // AI-generated or user-added grammar items
     customExam: [],
@@ -235,6 +236,7 @@ function defaultState() {
     musicOff: false,        // test (2026-11-09): the gramophone stopped by hand
     met: {},                // test (2026-11-09): the neighbours who have come by (NPCS): { id: the day }
     storyV: 0,              // test (2026-11-09): the version of the opening (STORY.V) seen, 0 none
+    storyAt: 0,             // 2026-11-11: when the opening was closed (ms; 0 before it, or seen before this was kept): 小春 knocks a minute on
     town: { done: {}, seen: {}, stops: {} },   // test (2026-11-09): the town's events (TOWNEV): done { id: day }, people met { id: 1 }, bus stops opened { id: 1 }
     placed: {},             // where owned things stand in 書房: { id: { w: 'F', x, y, r } | { w: 'L'|'R', u, v } }; not here = in the storage box
     wear: {},               // what the hero wears, by part: { head, face, neck, back, body }
@@ -293,7 +295,8 @@ function normalizeState(s) {
   if (!courseLevels().includes(out.settings.examLevel)) out.settings.examLevel = DEFAULT_LEVEL;
   delete out.preDoneDismissed; delete out.preFinished;
   delete out.lastSnapshot;   // 1.0.47: the daily snapshots are gone
-  ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt', 'stageTests'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
+  ['srs', 'dailyLogs', 'questionHistory', 'unitAiNotes', 'statsFmt', 'stageTests', 'unitMarks'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });
+  for (const k in out.srs) { const r = out.srs[k]; if (r && r.known) { r.mark = 5; delete r.known; } }   // 2026-11-11: 我會了 is 我的標記's five stars
   ['customGrammar', 'customExam', 'hidden', 'mistakes', 'examHistory', 'completedUnits', 'recent', 'notices', 'lessonSeen'].forEach(k => { if (!Array.isArray(out[k])) out[k] = []; });
   // 1.2.0: 言靈 and the things from 古道具屋 (ids this build does not know are kept: a later one may sell them)
   const kt = out.koto && typeof out.koto === 'object' && !Array.isArray(out.koto) ? out.koto : {}, obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
@@ -303,7 +306,7 @@ function normalizeState(s) {
   if (typeof out.resetAt !== 'string') out.resetAt = '';   // 1.9.1: when 重設所有進度 was last pressed (the cloud's guard lets that one shrink through)
   ['owned', 'placed', 'wear', 'look', 'lampsOff', 'met'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)
   if (typeof out.house !== 'string') out.house = '';
-  if (typeof out.record !== 'string') out.record = ''; out.musicOff = out.musicOff === true; out.storyV = Number(out.storyV) || (out.storySeen === true ? 1 : 0); delete out.storySeen;   // the four-page opening was 1   // an id this build does not know is kept: the cottage is drawn meanwhile
+  if (typeof out.record !== 'string') out.record = ''; out.musicOff = out.musicOff === true; out.storyV = Number(out.storyV) || (out.storySeen === true ? 1 : 0); delete out.storySeen; out.storyAt = Number(out.storyAt) || 0;   // the four-page opening was 1   // an id this build does not know is kept: the cottage is drawn meanwhile
   // 1.2.0: 羽織 and 地球儀 are gone and their purchases with them, and 書房's umbrella (the user's calls; the only ids not
   // kept: what was paid comes back). Every time: sync merges owned as a union
   delete out.owned.haori; if (out.wear.body === 'haori') delete out.wear.body;
@@ -747,7 +750,7 @@ function srsAnswer(key, correct, opt = {}) {
   fsrsNext(r, g, elapsed);
   if (isNew && g === 3 && key.startsWith('v:')) r.s = Math.min(r.s, 1);   // a new word's first check is tomorrow, then FSRS takes over
   r.n++;
-  if (g > 1) { r.ok++; r.st++; } else { r.ng++; r.st = 0; if (before >= 2) r.lapse = (r.lapse || 0) + 1; delete r.known; }   // a miss ends the 我會了 vouch: back to the normal rules
+  if (g > 1) { r.ok++; r.st++; } else { r.ng++; r.st = 0; if (before >= 2) r.lapse = (r.lapse || 0) + 1; delete r.mark; delete r.pre; }   // a miss ends 我的標記: back to the normal rules
   r.b = g === 1 ? Math.min(levelFromS(r.s), 1) : levelFromS(r.s);
   // four stars answered right go up by memory strength like any other item (after a long wait in the queue that usually
   // makes five); a 入門 item clearly right (not a flashcard's 模糊) while 已熟練 leaves the queues: five stars, and a word
@@ -793,27 +796,41 @@ function srsDots(b, from = null) {
   const was = from === null ? lit : Math.max(0, Math.min(5, from));
   return `<span class="dots" aria-label="熟練度 ${lit}/5">${[0, 1, 2, 3, 4].map(i => `<i class="${i < lit ? (i >= was ? 'on up' : 'on') : ''}"></i>`).join('')}</span>`;
 }
-// 「我會了」: the learner vouches for a word. It goes to five stars at once (已熟練 once its 假名拼字 has been right) and comes
-// back for a check in about six weeks; answering it wrong later drops the vouch and the ordinary rules apply again. 取消
-// puts it at the 熟悉 threshold.
-function markKnown(key, save = true) {
+// 我的標記 (2026-11-11, the user: 0★／2★／5★ on the word list and a unit's page; 我會了 is five): the learner puts an item at two
+// or five stars by hand. Only up: an item already that strong keeps its stars and its schedule. r.mark: the stars set (2 or 5;
+// a miss ends it); r.pre: the record before the mark ('new': there was none), so 0★ puts it back while it has not been
+// answered since. Five stars come back for a check in about six weeks and leave the notebook; two come back in a few days.
+const MARK_S = { 2: LEVEL_FROM_S[1], 5: 45 };
+const markFresh = (r) => Boolean(r && r.pre !== undefined && (r.n || 0) === (r.pre === 'new' ? 0 : r.pre.n || 0));   // marked, not answered since
+function markItem(key, lv, save = true) {
   const t = todayStr();
+  if (markFresh(state.srs[key])) unmarkItem(key, false);   // a mark changed starts from the record before it (5★ → 2★ comes down)
   let r = state.srs[key];
-  if (!r) r = state.srs[key] = { b: 0, due: t, n: 0, ok: 0, ng: 0, st: 0, last: null, lapse: 0, intro: t, f: {} };
+  const pre = r ? deepClone(r) : 'new';
+  if (r) { delete pre.mark; delete pre.pre; }
+  else { r = state.srs[key] = { b: 0, due: t, n: 0, ok: 0, ng: 0, st: 0, last: null, lapse: 0, intro: t }; if (key.startsWith('v:')) r.f = {}; }
   ensureFsrs(r);
-  r.s = Math.max(r.s || 0, 45); r.d = Math.min(r.d || 5, 4); r.b = levelFromS(r.s); r.known = 1;
-  if (!r.lrn) r.lrn = t;
-  r.due = addDays(t, fsrsDays(r.s, key)); r.last = t;
-  state.mistakes.forEach(m => { if (m.key === key && !m.mastered) { m.mastered = true; m.last = t; } });   // 我會了 clears it from the notebook
+  const up = r.s < MARK_S[lv];
+  if (up) {
+    r.s = MARK_S[lv]; r.b = levelFromS(r.s); if (lv === 5) r.d = Math.min(r.d, 4);
+    if (r.b >= SRS_LEARNED && !r.lrn) r.lrn = t;
+    r.due = addDays(t, fsrsDays(r.s, key)); r.last = t;
+  }
+  r.mark = lv; r.pre = pre;
+  if (lv === 5) state.mistakes.forEach(m => { if (m.key === key && !m.mastered) { m.mastered = true; m.last = t; } });   // five stars clear it from the notebook
   if (save) saveState();
-  return r;
+  return up;   // false: it was that strong already
 }
-function unmarkKnown(key) {
-  const r = state.srs[key]; if (!r) return null;
-  delete r.known; delete r.out; r.s = Math.min(r.s || 0, LEVEL_FROM_S[SRS_LEARNED - 1]); r.b = levelFromS(r.s);   // an 入門 word that left comes back
-  r.due = addDays(todayStr(), fsrsDays(r.s, key));
-  saveState();
-  return r;
+// 0★: a mark not answered since gives the record before it back (none: the item is new again); one answered since keeps its
+// answers and only loses the mark. A 我會了 from before 我的標記 (no r.pre) goes back to 熟悉, as its 取消熟練 did.
+function unmarkItem(key, save = true) {
+  const r = state.srs[key]; if (!r || !r.mark) return;
+  if (markFresh(r)) { if (r.pre === 'new') delete state.srs[key]; else state.srs[key] = r.pre; }
+  else {
+    if (r.pre === undefined) { delete r.out; r.s = Math.min(r.s || 0, LEVEL_FROM_S[SRS_LEARNED - 1]); r.b = levelFromS(r.s); r.due = addDays(todayStr(), fsrsDays(r.s, key)); }   // an 入門 word that left comes back
+    delete r.mark; delete r.pre;
+  }
+  if (save) saveState();
 }
 // 已熟練: five stars, and for a word with a 假名拼字 question its spelling right once — however it got to five stars (answers,
 // a stage pass, 我會了). Anything else (a word with no spelling question, a custom card, grammar, kana, kanji…) is 已熟練 at

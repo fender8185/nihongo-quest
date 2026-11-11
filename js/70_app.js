@@ -369,7 +369,7 @@ const ACTIONS = {
   'start-zero': () => chooseStart('zero'),
   'start-kana': () => chooseStart('kana'),
   'start-basics': () => chooseStart('basics'),
-  'start-test': () => { chooseStart('zero'); startSession('stage', { stage: 'pre' }); },
+  'start-test': () => openModal('考哪一級？', startTestPickerHtml(), { width: 440 }),   // 2026-11-11: it was 入門's only
   'kana-known': () => { state.kanaKnown = true; saveState(); DAILY_CACHE = null; toast('入門單字從今天開始'); route(); },
   'kana-practice': () => startSession('kana'),
   glossary: (el) => { const h = glossaryHtml(el.dataset.term); if (h) openModal('這是什麼？', h, { width: 480, noFocus: true }); }

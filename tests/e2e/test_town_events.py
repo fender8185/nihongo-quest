@@ -592,7 +592,7 @@ def test_a_new_player_stays_in_until_mugi_has_brought_the_gramophone(b):
       const look = async () => { location.hash = '#/today'; document.getElementById('view').innerHTML = ''; route(); await wait(600); };
       const tryOut = async () => { TALK.close(); document.querySelector('#view [data-thing="door"]').click(); let t = null;
         for (let i = 0; i < 70 && !t && location.hash === '#/today'; i++) { await wait(80); t = document.querySelector('.talk'); } return { hash: location.hash, said: t ? t.textContent : '' }; };
-      state.met = {}; state.koto.sets = {}; state.koto.daySets = {}; await look(); const fresh = await tryOut();
+      state.met = {}; state.storyAt = Date.now(); await look(); const fresh = await tryOut();
       state.met = { koharu: Date.now() - 60000 }; await look(); const waiting = await tryOut();
       state.met = { koharu: Date.now() - 86400000, mugi: Date.now() - 86400000 }; await look(); TALK.close(); document.querySelector('#view [data-thing="door"]').click();
       for (let i = 0; i < 50 && location.hash === '#/today'; i++) await wait(100);

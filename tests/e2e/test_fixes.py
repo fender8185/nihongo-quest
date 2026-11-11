@@ -1293,7 +1293,7 @@ def test_a_linked_mistake_leaves_when_its_ladder_is_walked_and_an_unlinked_one_a
       delete state.srs[m0.key].rl; onCorrectForMistake({ key: m0.key }); out.linkedMastered = m0.mastered;   // ladder walked (or a legacy entry with none): leaves
       onCorrectForMistake({ mistakeId: u.id }); onCorrectForMistake({ mistakeId: u.id }); out.unlinkedSameDay = !u.mastered;
       u.okDays = [addDays(t, -1)]; onCorrectForMistake({ mistakeId: u.id }); out.unlinkedTwoDays = u.mastered;
-      const m1 = state.mistakes[1]; state.srs[m1.key].b = 1; markKnown(m1.key); out.knownMasters = m1.mastered;
+      const m1 = state.mistakes[1]; state.srs[m1.key].b = 1; markItem(m1.key, 5); out.knownMasters = m1.mastered;
       return JSON.stringify(out); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", MIST_SEED), ("eval", js)], timeout=45)
     r = json.loads(out[-1])

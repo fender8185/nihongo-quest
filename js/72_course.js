@@ -173,26 +173,54 @@ function glossaryHtml(p) {
 function posChip(p, fallback) {
   return GLOSSARY[p] ? `<button type="button" class="chip chip-link" data-act="glossary" data-term="${esc(p)}" title="這是什麼？">${esc(posLabel(p, fallback))}</button>` : `<span class="chip">${esc(posLabel(p, fallback))}</span>`;
 }
+// 講義 as pages (2026-11-11, the user: a whole unit at once was too much to read on a phone): 概要 (formula and overview), each
+// section's explanation and then its examples, then 重點整理 with 我的標記 and 練習本單元 — bigger type, swiped sideways
+// (scroll-snap) or turned with ‹ › and the arrow keys. The page a unit was left on is kept while the app is open (a redraw, 我的標記 for one, stays on it).
+const LESSON_PAGE = {};
 function lessonHtml(uid) {
   const L = DATA.LESSONS[uid];
-  if (!L) return '<div class="empty">這個單元還沒有講義。</div>';
-  return lessonHtmlFrom(L);
+  if (!L) return '<div class="card"><div class="empty">這個單元還沒有講義。</div></div>';
+  const pages = [];
+  if (L.formula || L.overview) pages.push(`<div class="lp-title">這個單元</div>${L.formula ? `<div class="panel jp lp-formula">${bracketRuby(L.formula)}</div>` : ''}${L.overview ? `<p>${bracketRuby(L.overview)}</p>` : ''}`);
+  (L.sections || []).forEach(s => {
+    pages.push(`<h3>${bracketRuby(s.h)}</h3>
+      ${s.rule ? `<div class="rule jp">${bracketRuby(s.rule)}</div>` : ''}
+      <ul>${(s.points || []).map(p => `<li>${bracketRuby(p)}</li>`).join('')}</ul>
+      ${s.kana ? kanaGridHtml() : ''}`);
+    if ((s.ex || []).length) pages.push(`<div class="lp-title">例句・${bracketRuby(s.h)}</div>
+      ${s.ex.map(e => `<div class="example"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(e.jp)}" aria-label="朗讀">${icon('speaker')}</button><div><div class="jp">${furi(e.jp)}</div><div class="zh">${esc(e.zh)}</div></div></div>`).join('')}`);
+  });
+  pages.push(`<div class="lp-title">重點整理</div>${L.tip ? `<div class="tipbox">${bracketRuby(L.tip)}</div>` : ''}
+    ${uid === 'm0' ? '' : `<div class="lp-mark"><span>看完了，這個單元你覺得</span>${markSwitchHtml(state.unitMarks[uid] || 0, `data-act="mark-unit" data-unit="${uid}"`)}</div>`}
+    <div class="row-wrap mt-4"><button type="button" class="btn btn-primary" data-act="start-unit" data-unit="${uid}">練習本單元</button></div>`);
+  return `<div class="lesson-stack"><div class="card lesson lesson-deck" data-unit="${uid}" tabindex="0" aria-roledescription="翻頁講義">
+    <div class="lp-head"><span class="lp-dots">${pages.length <= 12 ? pages.map(() => '<i></i>').join('') : ''}</span><span class="lp-count num"></span></div>
+    <div class="lp-track">${pages.map((h, i) => `<section class="lp-page" aria-label="第 ${i + 1} 頁，共 ${pages.length} 頁">${h}</section>`).join('')}</div>
+    <div class="lp-nav"><button type="button" class="btn btn-ghost btn-sm" data-act="lesson-page" data-dir="-1">‹ 上一頁</button><span class="hint">左右滑動翻頁</span><button type="button" class="btn btn-sm" data-act="lesson-page" data-dir="1">下一頁 ›</button></div>
+  </div></div>`;
 }
-function lessonHtmlFrom(L) {
-  const sections = (L.sections || []).map(s => `
-    <h3>${bracketRuby(s.h)}</h3>
-    ${s.rule ? `<div class="rule jp">${bracketRuby(s.rule)}</div>` : ''}
-    <ul>${(s.points || []).map(p => `<li>${bracketRuby(p)}</li>`).join('')}</ul>
-    ${s.kana ? kanaGridHtml() : ''}
-    ${(s.ex || []).map(e => `<div class="example"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(e.jp)}" aria-label="朗讀">${icon('speaker')}</button><div><div class="jp">${furi(e.jp)}</div><div class="zh">${esc(e.zh)}</div></div></div>`).join('')}
-  `).join('');
-  return `<div class="lesson">
-    ${L.formula ? `<div class="panel jp small">${bracketRuby(L.formula)}</div>` : ''}
-    ${L.overview ? `<p class="dim mt-3">${bracketRuby(L.overview)}</p>` : ''}
-    ${sections}
-    ${L.tip ? `<div class="tipbox mt-4"><b>重點整理：</b>${bracketRuby(L.tip)}</div>` : ''}
-  </div>`;
+// after the page is drawn: back to the page this unit was left on; the count, the dots, ‹ › and the height follow the page shown
+function lessonDeckMount(view, uid) {
+  const deck = view.querySelector('.lesson-deck'); if (!deck) return;
+  const track = deck.querySelector('.lp-track'), pages = [...track.children], last = pages.length - 1;
+  const [prev, next] = deck.querySelectorAll('[data-act="lesson-page"]'), dots = [...deck.querySelectorAll('.lp-dots i')];
+  const at = () => Math.max(0, Math.min(last, Math.round(track.scrollLeft / Math.max(1, track.clientWidth))));
+  let cur = -1;
+  const show = (i) => {
+    const turned = cur >= 0 && i !== cur; cur = i; LESSON_PAGE[uid] = i;
+    deck.querySelector('.lp-count').textContent = `${i + 1} / ${pages.length}`;
+    dots.forEach((d, k) => d.classList.toggle('on', k === i)); prev.disabled = i === 0; next.disabled = i === last;
+    track.style.height = `${pages[i].offsetHeight}px`;
+    if (turned && deck.getBoundingClientRect().top < 0) scrollBelowTopbar(deck);   // turned at the foot of a long page: to the top of the next
+  };
+  track.scrollLeft = Math.min(LESSON_PAGE[uid] || 0, last) * track.clientWidth;
+  show(at());
+  let raf = 0;
+  track.addEventListener('scroll', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { if (at() !== cur) show(at()); }); }, { passive: true });
+  deck.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); turnLessonPage(deck, e.key === 'ArrowRight' ? 1 : -1); } });
+  window.addEventListener('resize', () => { if (deck.isConnected && cur >= 0) track.style.height = `${pages[cur].offsetHeight}px`; });
 }
+function turnLessonPage(deck, dir) { const track = deck.querySelector('.lp-track'); track.scrollBy({ left: dir * track.clientWidth, behavior: 'smooth' }); }
 
 const TYPE_LABEL = { choice: '填空', meaning: '句意', order: '排序', conj: '動詞變化', adj: '形容詞變化' };
 function itemPreview(g) {
@@ -224,8 +252,8 @@ function renderUnit(view, uid, tab) {
     }).join('');
     body = `<div class="card"><div class="card-head"><div class="card-title">本單元題目（${items.length}）</div><span class="small muted">熟練度 ●●●○○ 以上算熟悉</span></div><div class="list">${rows || '<div class="empty">沒有題目</div>'}</div></div>`;
   } else {
-    body = `<div class="card">${lessonHtml(uid)}</div>
-      <div class="card">
+    body = `${lessonHtml(uid)}
+      <div class="card mt-4">
         <div class="card-head"><div class="card-title">AI 補充說明</div>${aiNote ? '<button type="button" class="btn btn-sm btn-ghost" data-act="ai-note-clear" data-unit="' + uid + '">清除</button>' : ''}</div>
         <div class="row-wrap"><input class="input grow" id="aiNoteQ" placeholder="想多了解什麼？例如：為什麼乗る用「に」？（可留空）" /><button type="button" class="btn" data-act="ai-note" data-unit="${uid}">請 AI 補充</button></div>
         <div id="aiNoteBox" class="mt-3">${aiNote ? md(aiNote) : (aiReady() ? '' : '<div class="hint">登入後可以請 AI 補充重點（設定 › 資料 › 雲端同步）。</div>')}</div>
@@ -244,7 +272,7 @@ function renderUnit(view, uid, tab) {
       <div class="row">${unitBarHtml(s, 'grow')}<span class="small num muted">${s.pct}%</span></div>
       <div class="row between mt-2 small">
         <span class="muted legs">${unitLegendHtml(s)}${legacy ? `<span class="leg">舊版累計作答 ${legacy.seen} 題</span>` : ''}</span>
-        ${intro ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="toggle-done" data-unit="${uid}">${s.done ? '取消完成標記' : '標記為已完成'}</button>`}
+        ${intro ? '' : `<span class="row nowrap"><span class="muted">我的標記</span>${markSwitchHtml(state.unitMarks[uid] || 0, `data-act="mark-unit" data-unit="${uid}"`)}</span>`}
       </div>
       ${aiReady() && !intro ? `<div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="ai-unit-items" data-unit="${uid}">${icon('spark')}用 AI 為本單元多出 5 題</button></div>` : ''}
     </div>
@@ -253,6 +281,7 @@ function renderUnit(view, uid, tab) {
       <button type="button" aria-pressed="${tab === 'items'}" data-act="nav" data-route="#/course/${uid}?tab=items">題目與熟練度</button>
     </div>
     ${body}`;
+  if (tab !== 'items') lessonDeckMount(view, uid);
 }
 
 function levelPickerHtml() {
@@ -286,13 +315,13 @@ function levelPickerHtml() {
 }
 // 「我已有基礎」: no Chinese shown by default (it stays adjustable in 設定); new items follow the recent answers, as for everyone
 // 起點三選一: 從零開始 (入門: kana first) / 已會假名 (main course, kana never scheduled as new) / 已有 N5 基礎 (plus the 我已有基礎 settings)
-function chooseStart(kind) {
+function chooseStart(kind, quiet = false) {
   state.stage = kind === 'zero' ? 'pre' : 'main';
   state.kanaKnown = kind !== 'zero';
   if (kind === 'basics') applyExperienced();
   state.startChosen = true;
   saveState(); DAILY_CACHE = null; closeModal(true);
-  toast(kind === 'zero' ? '從假名開始。點書房桌上的筆記本開始練習。' : kind === 'kana' ? '從第 1 週開始' : '已套用「我已有基礎」設定');
+  if (!quiet) toast(kind === 'zero' ? '從假名開始。點書房桌上的筆記本開始練習。' : kind === 'kana' ? '從第 1 週開始' : '已套用「我已有基礎」設定');
   route();
 }
 function startButtonsHtml(small = true) {
@@ -311,16 +340,23 @@ function applyStartUnit(unit, markPrev, experienced = false) {
 }
 
 Object.assign(ACTIONS, {
+  'lesson-page': (el) => turnLessonPage(el.closest('.lesson-deck'), Number(el.dataset.dir)),
   'set-current': (el) => { state.currentUnit = el.dataset.unit; saveState(); toast(`目前單元：${unitById(el.dataset.unit).weeks}`); route(); },
   'course-shelf': (el) => {   // a book on 課程's shelf: its stage opens below and comes into view
     const d = document.querySelector(`#view details.stage-card[data-stage="${el.dataset.stage}"]`); if (!d) return;
     d.open = true; courseOpen[el.dataset.stage] = true; scrollBelowTopbar(d);
   },
-  'toggle-done': (el) => {
-    const id = el.dataset.unit;
-    if (state.completedUnits.includes(id)) state.completedUnits = state.completedUnits.filter(x => x !== id);
-    else state.completedUnits.push(id);
-    saveState(); route();
+  // 我的標記 on a unit's page (2026-11-11, the user; it was 標記為已完成): 2★／5★ its questions up to that many stars and the
+  // unit done; 0★ the questions back to before the mark (ones answered since keep their answers) and the unit not done
+  'mark-unit': (el) => {
+    const id = el.dataset.unit, lv = Number(el.dataset.lv);
+    if ((state.unitMarks[id] || 0) === lv) return;
+    unitItems(id).forEach(g => { if (lv) markItem(g.key, lv, false); else unmarkItem(g.key, false); });
+    if (lv) { state.unitMarks[id] = lv; if (!state.completedUnits.includes(id)) state.completedUnits.push(id); }
+    else { delete state.unitMarks[id]; state.completedUnits = state.completedUnits.filter(x => x !== id); }
+    DAILY_CACHE = null; saveState();
+    toast(lv ? `這個單元的題目標成 ${lv}★（已經更熟的照舊）${lv === 5 ? '，之後排進五顆的複習' : '，過幾天開始複習'}` : '已取消標記：題目回到標記前，標記後答過的照舊');
+    route();
   },
   'open-level': () => openModal('依程度選擇起點', levelPickerHtml(), { width: 520 }),
   'duo-preview': () => {

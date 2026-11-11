@@ -145,6 +145,12 @@ h1, h2, h3, h4 { margin: 0; line-height: 1.35; }
 .seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; background: var(--bg-sunken); border: 1px solid var(--line); flex-wrap: wrap; }
 .seg button { border: 0; background: transparent; color: var(--fg-2); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; }
 .seg button[aria-pressed="true"] { background: var(--bg-elev); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.2); font-weight: 500; }
+/* 我的標記 (2026-11-11): 0★／2★／5★, small enough for a word-list row; 我學過一些's level buttons */
+.seg.mark3 { flex-wrap: nowrap; vertical-align: middle; }
+.seg.mark3 button { padding: 3px 8px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.seg.mark3 button[aria-pressed="true"]:not([data-lv="0"]) { color: var(--accent); }
+.btn.start-lv { justify-content: flex-start; gap: 12px; text-align: left; margin-bottom: 8px; }
+.btn.start-lv b { min-width: 34px; }
 .switch { position: relative; display: inline-flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
 .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .switch .track { width: 38px; height: 22px; border-radius: 99px; background: var(--line-2); position: relative; transition: background .15s; flex: none; }
@@ -1199,6 +1205,33 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .unit-row > .ribbon { position: absolute; top: -1px; right: 10px; width: 14px; height: 26px; fill: color-mix(in srgb, var(--book) var(--cover-keep), var(--cover-shade)); }
 .stage-state { flex: none; font-size: 13px; }
 .lesson h3 { font-size: 16px; margin: 18px 0 6px; }
+/* 講義 as pages (2026-11-11): a stack of sheets, one page in view, swiped sideways; bigger type than the old one-scroll lesson */
+.lesson-stack { position: relative; isolation: isolate; margin-bottom: 22px; }
+.lesson-stack::before, .lesson-stack::after { content: ''; position: absolute; inset: 0; z-index: 0; border-radius: 14px; background: var(--bg-elev); border: 1px solid var(--line); }
+.lesson-stack::before { transform: translateY(7px) scaleX(.97); opacity: .85; }
+.lesson-stack::after { transform: translateY(14px) scaleX(.94); opacity: .55; }
+.lesson-deck { position: relative; z-index: 1; font-size: 16.5px; line-height: 1.8; outline: none; }
+.lp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.lp-dots { display: flex; flex-wrap: wrap; gap: 5px; }
+.lp-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--line-2); transition: background .2s, transform .2s; }
+.lp-dots i.on { background: var(--accent); transform: scale(1.25); }
+.lp-count { font-size: 13px; color: var(--fg-3); }
+.lp-track { display: flex; align-items: flex-start; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; transition: height .25s ease; }
+.lp-track::-webkit-scrollbar { display: none; }
+.lp-page { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; padding: 0 2px 4px; }
+.lp-title { font-size: 13px; font-weight: 700; letter-spacing: .08em; color: var(--fg-3); margin-bottom: 10px; }
+.lesson-deck h3 { font-size: 20px; margin: 0 0 10px; }
+.lesson-deck .rule { font-size: 15px; }
+.lesson-deck li { color: var(--fg); margin: 8px 0; }
+.lesson-deck .example .jp { font-size: 19px; }
+.lesson-deck .example .zh { font-size: 14px; }
+.lesson-deck .lp-formula { font-size: 16px; line-height: 1.8; }
+.lesson-deck .tipbox { font-size: 16px; line-height: 1.8; }
+.lp-mark { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 18px; font-size: 15px; color: var(--fg-2); }
+.lp-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.lp-nav .btn:disabled { opacity: .35; cursor: default; }
+@media (min-width: 761px) { .lp-nav .hint { visibility: hidden; } }
+@media (max-width: 760px) { .lesson-deck { font-size: 17px; } }
 .lesson .rule { display: inline-block; font-size: 13px; color: var(--fg-2); background: var(--bg-sunken); border: 1px solid var(--line); padding: 4px 10px; border-radius: 8px; margin: 2px 0 8px; }
 .lesson ul { margin: 6px 0 10px; padding-left: 20px; }
 .lesson li { margin: 4px 0; color: var(--fg-2); }

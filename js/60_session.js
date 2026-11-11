@@ -534,7 +534,7 @@ function startSession(mode, opt = {}) {
     mode, title: opt.title || MODE_TITLE[mode] || '練習', entries, idx: 0, meta,
     stats: { correct: 0, wrong: 0, newCount: 0 }, results: [], startedAt: Date.now(), lastFmt: '', opt,
     ringFrom: ringPct(dayProgress()),   // today's ring before this set: the summary's ring fills on from here (1.0.41)
-    test: mode === 'stage' ? { stage: opt.stage } : null
+    test: mode === 'stage' ? { stage: opt.stage, start: Boolean(opt.start) } : null   // start: taken from 我學過一些
   };
   prepareEntry(0);
   go('#/practice');

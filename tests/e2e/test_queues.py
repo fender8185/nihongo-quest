@@ -57,13 +57,13 @@ def test_pre_items_leave_after_a_five_star_right_answer(b):
     assert r['word'] is True and r['pre'] == 1 and r['pre4'] is True and r['n5'] is False, r
 
 # 1.0.21: an 入門 word with a spelling question leaves for good only once it is 已熟練 (five stars and spelled) and is
-# answered right again; a flashcard's right answer before that keeps it; 取消熟練 brings one that left back (M10)
+# answered right again; a flashcard's right answer before that keeps it; 0★ on a 我會了 from before 我的標記 brings one that left back (M10)
 def test_a_pre_word_leaves_only_once_mastered(b):
     js = "(() => { " + FRESH + REC + """ const p = REG.vocab.find(x => x.builtin && x.lv === 'PRE_N5' && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 2 && x.r.length <= 8).key; const o = () => (state.srs[p].out === undefined ? null : state.srs[p].out);
       state.srs[p] = rec(6, { f: {} }); srsAnswer(p, true, { grade: 'good' }); const flash = o();
       state.srs[p].last = addDays(t, -30); srsAnswer(p, true); recordFormat(state.srs[p], 'v-spell', true); const stays = o(); const spelled = srsLevelLabel(state.srs[p], p);   // answerCurrent's order: schedule, then format
       state.srs[p].last = addDays(t, -30); srsAnswer(p, true); const leaves = o();
-      unmarkKnown(p); const unmark = o();
+      state.srs[p].mark = 5; unmarkItem(p); const unmark = o();
       return JSON.stringify({ flash, stays, spelled, leaves, unmark }); })()"""
     r = json.loads(ev(b, js))
     assert r == {'flash': None, 'stays': None, 'spelled': '已熟練', 'leaves': 1, 'unmark': None}, r

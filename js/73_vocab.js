@@ -72,6 +72,11 @@ function stackBarHtml(g) { return segBarHtml(g.total, [['mastered', g.mastered],
 function unitBarHtml(s, cls, anim) { return segBarHtml(s.total, [['mastered', s.ok3], ['learned', s.ok1], ['seen', s.seen0]], cls, anim); }
 // 熟練 = answered right 3+ times, 熟悉 = answered right at least once, 初識 = seen but never right yet
 function unitLegendHtml(s) { return `<span class="leg"><i class="seg-dot mastered"></i>熟練 ${s.ok3}</span><span class="leg"><i class="seg-dot learned"></i>熟悉 ${s.ok1}</span><span class="leg"><i class="seg-dot seen"></i>初識 ${s.seen0}</span><span class="leg">共 ${s.total} 題</span>`; }
+// 我的標記 (2026-11-11, the user): 0★／2★／5★, a word's on the word list, a unit's questions on its page (markItem, unmarkItem)
+function markSwitchHtml(lv, data) {
+  const tips = { 0: '不會：取消標記，回到標記前', 2: '有點會：設成兩顆，過幾天複習', 5: '會了：設成五顆，之後排進五顆的複習' };
+  return `<span class="seg mark3" role="group" aria-label="我的標記">${[0, 2, 5].map(n => `<button type="button" aria-pressed="${lv === n}" title="${tips[n]}" ${data} data-lv="${n}">${n}★</button>`).join('')}</span>`;
+}
 function vocabSessionCount(filter) { const items = buildVocabQueue(filter, 20); return items.length + encoreEstimate(items); }
 // 五十音 coloured by how well each kana is known, one table per script: a phone shows one at a time (平假名｜片假名
 // switch, kanaScript), a wide screen both side by side. A tap reads the kana; the ▶ in front of a row practises that row of that script.
@@ -181,7 +186,7 @@ function renderVocab(view, tab, params) {
       ${vocabExamples(v).map((e, i) => `<div class="example ${i ? 'mt-2' : 'mt-3'}" style="text-align:left"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="${i ? 'speak' : 'flash-speak'}" data-mode="ex" data-text="${esc(exampleSpeech(e.ex, v))}" aria-label="朗讀例句">${icon('speaker')}</button><div><div class="jp">${exampleJpHtml(e.ex, v)}</div><div class="zh">${esc(e.exZh || '')}</div></div></div>`).join('')}
       <div id="flashAiBox"></div>` : '';
     card = `<div class="card">
-      <div class="row between small muted"><span>${F.idx + 1} / ${F.queue.length}・${r ? srsLevelLabel(r, v.key) : '新卡'}</span><span>${r ? srsDots(r.b) : '<span class="chip chip-accent">新</span>'}${r && (r.known || srsLevelLabel(r, v.key) === '已熟練') ? '' : ` <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="直接標成五顆，之後排進五顆的複習">我會了</button>`}</span></div>
+      <div class="row between small muted"><span>${F.idx + 1} / ${F.queue.length}・${r ? srsLevelLabel(r, v.key) : '新卡'}</span><span>${r ? srsDots(r.b) : '<span class="chip chip-accent">新</span>'}${r && (r.mark === 5 || srsLevelLabel(r, v.key) === '已熟練') ? '' : ` <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="直接標成五顆，之後排進五顆的複習">我會了</button>`}</span></div>
       <div class="flash">
         <div class="word jp">${esc(jaPlain(v.w))}</div>
         ${back}
@@ -237,17 +242,16 @@ function vocabListFiltered(params) {
 }
 let LAST_BULK_KNOWN = null;   // { keys, prev } of the last 整批我會了, so it can be undone exactly
 function vocabListResultsHtml(params, list = vocabListFiltered(params)) {
-  const notKnown = list.filter(v => !(state.srs[v.key] && state.srs[v.key].known)).length;
+  const notKnown = list.filter(v => !(state.srs[v.key] && state.srs[v.key].mark === 5)).length;
   const shown = list.slice(0, 300);
   const rows = shown.map(v => {
     const r = state.srs[v.key];
     return `<tr>
       <td><div class="jp" style="font-size:16px">${esc(jaPlain(v.w))}</div><div class="tiny muted jp">${esc(v.r && v.r !== v.w ? v.r : '')}</div></td>
       <td><div>${esc(v.m)}</div><div class="tiny muted">${esc(`${lvLabel(v.lv)}・${posLabel(v.p)}`)}</div></td>
-      <td class="nowrap small">${r ? `${srsDots(r.b)}<div class="tiny muted">${dueLabel(r, v.key).replace('複習', '')}</div>` : '<span class="muted">未學</span>'}</td>
-      <td class="nowrap" style="text-align:right">
+      <td class="nowrap small">${r ? `${srsDots(r.b)}<div class="tiny muted">${dueLabel(r, v.key).replace('複習', '')}</div>` : '<span class="muted">未學</span>'}<div class="mt-1">${markSwitchHtml((r && r.mark) || 0, `data-act="mark-word" data-key="${esc(v.key)}"`)}</div></td>
+      <td style="text-align:right">
         <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(jaPlain(v.w))}" data-reading="${esc(v.r && !HAS_KANJI.test(v.r) && v.r !== jaPlain(v.w) ? v.r : '')}" aria-label="發音">${icon('speaker')}</button>
-        ${r && r.known ? `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-unknown" data-key="${esc(v.key)}" title="取消「我會了」，回到正常排程">取消熟練</button>` : (r && srsLevelLabel(r, v.key) === '已熟練' ? '' : `<button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known" data-key="${esc(v.key)}" title="這個字已經會了：直接標成五顆，之後排進五顆的複習">我會了</button>`)}
         <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-remove" data-key="${esc(v.key)}">隱藏</button>
       </td></tr>`;
   }).join('');
@@ -322,20 +326,26 @@ Object.assign(ACTIONS, {
   'vocab-filter': (el) => { const q = (document.getElementById('vocabSearch') || {}).value || ''; const c = currentRoute().params.c; go(`#/vocab/list?lv=${el.dataset.lv}&q=${encodeURIComponent(q)}${c ? `&c=${encodeURIComponent(c)}` : ''}`); },
   'vocab-known': (el) => {
     const v = REG.byKey.get(el.dataset.key); if (!v) return;
-    markKnown(v.key);
+    markItem(v.key, 5);
     toast(`「${jaPlain(v.w)}」已標成五顆，之後會排進五顆的複習`);
     if (SESSION && document.body.classList.contains('practicing')) renderPractice(); else route();
   },
-  'vocab-unknown': (el) => {
+  // 我的標記 on the word list (2026-11-11): 0★ back to before the mark, 2★／5★ up to that many stars
+  'mark-word': (el) => {
     const v = REG.byKey.get(el.dataset.key); if (!v) return;
-    unmarkKnown(v.key); toast(`「${jaPlain(v.w)}」回到熟悉，照正常排程複習`);
-    if (SESSION && document.body.classList.contains('practicing')) renderPractice(); else route();
+    const lv = Number(el.dataset.lv), r = state.srs[v.key], w = jaPlain(v.w);
+    if (((r && r.mark) || 0) === lv) return;
+    if (!lv) {
+      const how = r.pre === undefined ? '回到熟悉，照正常排程複習' : markFresh(r) ? '回到標記前' : '取消標記，留著答過的紀錄';
+      unmarkItem(v.key); toast(`「${w}」${how}`);
+    } else toast(`「${w}」標成 ${lv}★${markItem(v.key, lv) ? (lv === 5 ? '，之後排進五顆的複習' : '，過幾天複習') : '（已經比這更熟，星星照舊）'}`);
+    route();
   },
-  // 整批我會了: every word in the current table selection that is not vouched for yet; the previous records are kept for 復原
+  // 整批我會了: every word in the current table selection not at 5★ yet; the previous records are kept for 復原
   'vocab-known-all': () => {
-    const keys = vocabListFiltered(currentRoute().params).filter(v => !(state.srs[v.key] && state.srs[v.key].known)).map(v => v.key);
+    const keys = vocabListFiltered(currentRoute().params).filter(v => !(state.srs[v.key] && state.srs[v.key].mark === 5)).map(v => v.key);
     if (!keys.length) return;
-    const prev = {}; keys.forEach(k => { prev[k] = state.srs[k] ? JSON.parse(JSON.stringify(state.srs[k])) : null; markKnown(k, false); });
+    const prev = {}; keys.forEach(k => { prev[k] = state.srs[k] ? JSON.parse(JSON.stringify(state.srs[k])) : null; markItem(k, 5, false); });
     saveState(); LAST_BULK_KNOWN = { keys, prev };
     toast(`已把 ${keys.length} 個字標成五顆，之後會排進五顆的複習`); route();
   },
@@ -347,7 +357,7 @@ Object.assign(ACTIONS, {
   // 我會了 on the new-word preview card: vouch for the word and drop it (and any encore) from this session
   'preview-known': () => {
     const e = currentEntry(); if (!e || !e.preview || e.previewDone || !e.item || e.item.kind !== 'v') return;
-    const v = e.item; markKnown(v.key);
+    const v = e.item; markItem(v.key, 5);
     SESSION.entries = SESSION.entries.filter((x, i) => i !== SESSION.idx && !(x.item && x.item.key === v.key));
     toast(`「${jaPlain(v.w)}」已標成五顆，之後會排進五顆的複習`);
     renderPractice(); window.scrollTo({ top: 0 });

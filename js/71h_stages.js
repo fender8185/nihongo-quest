@@ -86,8 +86,9 @@ function renderStageSummary(view) {
   const wrong = s.results.filter(x => !x.ok);
   const wrongList = wrong.map(x => `<div class="list-item"><div class="grow"><div class="jp">${furi(tidyPrompt(x.q.mistakePrompt || ''))}</div><div class="small muted">正確：<span class="jp">${esc(jaPlain(x.q.options[x.q.answer].text))}</span>・你選：<span class="jp">${esc(jaPlain(x.q.options[x.chosen].text))}</span></div></div></div>`).join('');
   const title = !r ? '未完成，不計紀錄' : r.passed ? `${r.correct}／${r.total}・通過` : `${r.correct}／${r.total}・未通過（需 ${need} 題）`;
+  const below = T.start && r && !r.passed && startTestBelow(T.stage);   // a start test failed: one level down
   const buttons = r && r.passed ? '<button type="button" class="btn btn-primary" data-act="close-summary">完成</button>'
-    : `<button type="button" class="btn btn-primary" data-act="stage-again">再考一次</button><button type="button" class="btn" data-act="stage-practice">去練這個階段</button><button type="button" class="btn btn-ghost" data-act="close-summary">回課程頁</button>`;
+    : `${below ? `<button type="button" class="btn btn-primary" data-act="start-test-at" data-stage="${below.id}">改考${below.id === 'pre' ? '入門' : esc(below.lv)}</button>` : ''}<button type="button" class="btn ${below ? '' : 'btn-primary'}" data-act="stage-again">再考一次</button><button type="button" class="btn" data-act="stage-practice">去練這個階段</button><button type="button" class="btn btn-ghost" data-act="close-summary">回課程頁</button>`;
   // passed: what was marked and where the course is now (the pass moved it on), with 復原 while the mark can still be undone
   const cu = unitById(state.currentUnit);
   const range = T.stage === 'pre' ? '入門' : `${esc(st ? st.title.split('：')[0] : '')}以前、`;   // 入門 has no stage before it
@@ -106,9 +107,21 @@ function renderStageSummary(view) {
     </div>
     ${wrong.length ? `<div class="card"><div class="card-head"><div class="card-title">這次答錯的題目</div><span class="chip">${wrong.length}</span></div><div class="list">${wrongList}</div></div>` : ''}`;
 }
+// 我學過一些 (2026-11-11, the user: each picks the level to be tested on): 入門, N5, N4 or N3 — the stage test that ends it
+const START_TESTS = () => STAGES.filter(s => s.id === 'pre' || s.lv);
+function startTestPickerHtml() {
+  return `<p class="small muted">選你覺得自己有的程度，做那一級的測驗：${STAGE_TEST_SIZE} 題、不計時、答對八成通過。通過就把那一級和之前的內容設成四顆，從下一階段開始；沒通過可以改考低一級。</p>
+    <div class="list mt-3">${START_TESTS().map(s => `<button type="button" class="btn start-lv" data-act="start-test-at" data-stage="${s.id}"><b>${s.id === 'pre' ? '入門' : esc(s.lv)}</b><span class="small muted">${esc(s.id === 'pre' ? s.sub : s.title)}</span></button>`).join('')}</div>`;
+}
+// the level below a start test's, for 改考低一級 (none below 入門)
+function startTestBelow(id) { const l = START_TESTS(), i = l.findIndex(s => s.id === id); return i > 0 ? l[i - 1] : null; }
 Object.assign(ACTIONS, {
   'stage-test': (el) => startSession('stage', { stage: el.dataset.stage }),
-  'stage-again': () => { const id = SESSION && SESSION.test ? SESSION.test.stage : null; if (!id) return; SESSION = null; startSession('stage', { stage: id }); },
+  'start-test-at': (el) => {
+    if (!state.startChosen) chooseStart('zero', true); else closeModal(true);
+    SESSION = null; startSession('stage', { stage: el.dataset.stage, start: true });
+  },
+  'stage-again': () => { const T = SESSION && SESSION.test; if (!T) return; SESSION = null; startSession('stage', { stage: T.stage, start: T.start }); },
   'stage-practice': () => {
     const id = SESSION && SESSION.test ? SESSION.test.stage : null; if (!id) return;
     SESSION = null; document.body.classList.remove('practicing');
@@ -156,6 +169,7 @@ function bulkApply(targets, snap) {
       if (key.startsWith('v:')) r.f = {};
     }
     ensureFsrs(r);
+    delete r.mark; delete r.pre;   // the pass is newer than a 我的標記 below four stars: 0★ no longer takes it back
     r.s = Math.max(r.s || 0, LEVEL_FROM_S[3]);
     r.b = levelFromS(r.s);
     if (!r.lrn) r.lrn = t;

@@ -1226,6 +1226,19 @@ def test_a_neighbour_knocks_brings_a_present_and_lives_on_the_beach(b):
     assert r['after'] == {'visitor': None, 'knock': False, 'doorOut': True} and r['next'] == 'mugi', r   # not straight after; ムギ a few minutes after 小春
     assert r['npcs'] == [] and r['town'] == ['town', ['koharu']] and r['chat'].startswith('小春') and not r['take'], r   # in her salon in town once met: a word, no present
 
+# 2026-11-11, the user: 小春 knocks a minute after the opening, whatever was done meanwhile (she came after the first set), and
+# while the hero just sits in 書房
+def test_koharu_knocks_a_minute_after_the_opening_with_nothing_done(b):
+    js = "(async () => { " + FRESH + """ TOWN.EVENTS = []; state.met = {}; state.koto.sets = {}; state.koto.daySets = {}; state.storyV = 0; state.storyAt = 0; saveState();
+      const wait = (ms) => new Promise(q => setTimeout(q, ms)); NPC.after.ms = 1500; """ + GO_ROOM + """
+      let story = null; for (let i = 0; i < 60 && !story; i++) { await wait(50); story = document.querySelector('.story'); }
+      story.querySelector('[data-story="skip"]').click(); const at = Math.abs(Date.now() - state.storyAt) < 3000;
+      await wait(400); const early = [NPC.visitor(), !!document.querySelector('#view .knock')];
+      await wait(1700); const later = [NPC.visitor(), !!document.querySelector('#view .knock'), document.querySelector('#view [data-thing="door"]').classList.contains('knocking')];
+      NPC.after.ms = 60000; return JSON.stringify({ at, early, later }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'at': True, 'early': [None, False], 'later': ['koharu', True, True]}, r
+
 def test_mugi_gives_back_what_a_bought_gramophone_cost(b):
     js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); state.storyV = 9; state.koto.listen = { '2026-11-08': 2 }; state.met = { koharu: '2026-11-01' }; state.owned.gramophone = { paid: 100, on: '2026-11-01' }; saveState();
       """ + GO_ROOM + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('#view .study'), k0 = kotoBalance();
@@ -1233,7 +1246,7 @@ def test_mugi_gives_back_what_a_bought_gramophone_cost(b):
       for (let i = 0; i < 6 && !talk.querySelector('[data-talk="take"]'); i++) { talk.click(); await wait(30); }
       talk.querySelector('[data-talk="take"]').click(); const zh = talk.querySelector('.talk-zh').textContent;
       state.koto.listen = {}; state.met = { koharu: Date.now() - 60000 }; const soon = NPC.visitor(); state.met = { koharu: Date.now() - NPC.gap.ms - 1000 }; const due = NPC.visitor();
-      state.met = {}; state.koto.sets = {}; const none = NPC.visitor();
+      state.met = {}; state.storyAt = Date.now(); const none = NPC.visitor();
       return JSON.stringify({ back: kotoBalance() - k0, zh, placed: !!state.placed.gramophone, on: !state.musicOff, soon, due, none }); })()"""
     r = json.loads(ev(b, js))
     assert r['soon'] is None and r['due'] == 'mugi' and r['none'] is None, r   # ムギ three minutes after 小春, listening or not
@@ -1249,7 +1262,7 @@ def test_the_opening_tells_of_the_grandmothers_house_once(b):
       return JSON.stringify({ pages, letter, knockBefore, after, again, norm: [normalizeState({}).storyV, normalizeState({ storySeen: true }).storyV, 'storySeen' in normalizeState({ storySeen: true })] }); })()"""
     r = json.loads(ev(b, js))
     assert r['pages'] == ['0', '1', '2', '3', '4', '5'] and r['letter'] and not r['knockBefore'], r   # six pages, the letter among them; no knock under it
-    assert r['after'] == {'seen': 2, 'gone': True, 'knock': True} and not r['again'] and r['norm'] == [0, 1, False], r   # once; then 小春 knocks; the old four-page one seen: this one still shows
+    assert r['after'] == {'seen': 2, 'gone': True, 'knock': False} and not r['again'] and r['norm'] == [0, 1, False], r   # once; 小春 knocks a minute on (test_koharu_knocks_…); the old four-page one seen: this one still shows
 
 def test_the_grandmothers_diary_opens_a_page_more_for_each_stage_passed(b):
     js = "(async () => { " + FRESH + """ state.stageTests = {}; saveState(); """ + GO_ROOM + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)), st = () => document.querySelector('#view .study');
