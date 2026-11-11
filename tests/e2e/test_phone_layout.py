@@ -160,6 +160,14 @@ def test_a_units_lesson_has_its_own_screen_of_equal_pages(b):
     assert r['back'] == {'hash': '#/course/m2', 'body': False, 'open': '翻開講義', 'chip': '翻完過'}, r   # read to the end: it opens at its start again
     assert r['atEnd'] == {'count': True, 'gift': None} and r['intro'] == {'mark': False, 'h3': 13}, r   # opened at its end is not read through
 
+# 2026-11-11, the user: a phone shows no 1–4 on the answers (they are keyboard keys); a computer keeps them
+def test_touch_screens_hide_the_answers_number_keys(b):
+    js = """(() => { const rules = [...document.styleSheets].flatMap(sh => { try { return [...sh.cssRules]; } catch (e) { return []; } });
+      const touch = rules.filter(r => r.media && /hover: none/.test(r.media.mediaText) && /pointer: coarse/.test(r.media.mediaText)).map(r => r.cssText).join(' ');
+      return JSON.stringify({ opt: /\.opt \.kbd/.test(touch), pick: /\.opt-pick \.kbd/.test(touch), none: /display: none/.test(touch) }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'opt': True, 'pick': True, 'none': True}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

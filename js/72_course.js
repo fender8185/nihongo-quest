@@ -241,7 +241,7 @@ function renderLessonReader(view, uid, at) {
     const end = i === pages.length - 1; cur = i;
     if (end) delete LESSON_AT[uid]; else LESSON_AT[uid] = first(i);
     rd.querySelector('.rd-count').textContent = `${i + 1} / ${pages.length}`; rd.querySelector('.rd-bar i').style.width = `${(i + 1) / pages.length * 100}%`;
-    if (end && turned && !state.koto.found['book-' + uid]) { state.koto.found['book-' + uid] = BOOK_GIFT; saveState(); toast(`這本講義翻完了！+${BOOK_GIFT} 言靈（每本第一次）`, 3200); }
+    if (end && turned && !state.koto.found['book-' + uid]) { state.koto.found['book-' + uid] = BOOK_GIFT; saveState(); setTimeout(() => bookCoins(rd, BOOK_GIFT), 380); }   // once the page has settled
   };
   const toBlock = (b) => { let i = 0; pages.forEach((pg, k) => { if (first(k) <= b) i = k; }); track.scrollLeft = i * track.clientWidth; show(i, false); };
   const again = () => { if (!rd.isConnected) return; const b = first(cur); flow(); toBlock(b); };
@@ -263,6 +263,7 @@ function renderLessonReader(view, uid, at) {
     drag = null; track.classList.remove('dragging'); track.scrollTo({ left: i * track.clientWidth, behavior: 'smooth' });
   };
   track.addEventListener('pointerup', drop); track.addEventListener('pointercancel', drop);
+  ['touchend', 'pointerup'].forEach((t) => track.addEventListener(t, () => sfxReady(), { passive: true }));   // the sound woken inside a swipe, so the last page's 叮 can play (iOS)
   const onKey = (e) => {
     if (!rd.isConnected) { document.removeEventListener('keydown', onKey); window.removeEventListener('resize', onSize); return; }
     if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !modalOpen()) { e.preventDefault(); turnLessonPage(rd, e.key === 'ArrowRight' ? 1 : -1); }
@@ -270,6 +271,35 @@ function renderLessonReader(view, uid, at) {
   const onSize = () => { clearTimeout(resized); resized = setTimeout(again, 150); };
   document.addEventListener('keydown', onKey); window.addEventListener('resize', onSize);
   if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(again);   // the web font changes the lines' lengths
+}
+// a book read through (2026-11-11, the user: no words, the 言靈 seen and heard): a ring of light at its 完, n glowing あ burst out
+// and fly up into a +n badge at the top, which counts up and bounces as each lands with a rising 叮 (as the witch's into the 言靈
+// button); motion reduced: the badge with its number
+function bookCoins(rd, n) {
+  if (!rd.isConnected) return;
+  const fin = rd.querySelector('.rd-page:last-child .lp-fin'), r = (fin || rd).getBoundingClientRect(), at = [r.left + r.width / 2, r.top + r.height / 2];
+  const pop = document.createElement('div'); pop.className = 'koto-pop book'; pop.setAttribute('role', 'status'); pop.setAttribute('aria-label', `言靈 +${n}`);
+  pop.innerHTML = `${kotoIcon()}<b>+0</b>`; document.body.appendChild(pop); setTimeout(() => pop.remove(), 3600);
+  const num = pop.querySelector('b');
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) { num.textContent = `+${n}`; playSfx('coin'); return; }
+  const go = ([x, y], s) => `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) scale(${s.toFixed(2)})`;
+  const ring = document.createElement('i'); ring.className = 'koto-burst'; ring.style.left = `${at[0]}px`; ring.style.top = `${at[1]}px`; document.body.appendChild(ring); setTimeout(() => ring.remove(), 600);
+  let got = 0;
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI / 2 + (i - (n - 1) / 2) * 0.9, spot = [at[0] + Math.cos(a) * 34, at[1] + Math.sin(a) * 26];
+    const c = document.createElement('i'); c.className = 'koto-coin'; c.innerHTML = kotoIcon(); c.style.opacity = '0'; document.body.appendChild(c);
+    c.animate([{ transform: go(at, 0.3), opacity: 0 }, { transform: go(spot, 1.15), opacity: 1 }], { duration: 420, delay: 60 + i * 40, easing: 'cubic-bezier(.2, .8, .3, 1)', fill: 'forwards' });
+    setTimeout(() => {   // up into the badge along a curve, faster as it goes
+      const t = pop.querySelector('.koto-i').getBoundingClientRect(), to = [t.left + t.width / 2, t.top + t.height / 2], via = [(spot[0] + to[0]) / 2 + (i - 1) * 24, Math.min(spot[1], to[1]) + 60];
+      const path = Array.from({ length: 13 }, (_, j) => { const s = j / 12, u = 1 - s;
+        return { transform: go([u * u * spot[0] + 2 * u * s * via[0] + s * s * to[0], u * u * spot[1] + 2 * u * s * via[1] + s * s * to[1]], 1.15 - 0.35 * s), opacity: 1 }; });
+      c.getAnimations().forEach((x) => x.cancel());
+      c.animate(path, { duration: 620, easing: 'cubic-bezier(.45, 0, .8, .6)', fill: 'forwards' }).onfinish = () => {
+        c.remove(); got++; num.textContent = `+${got}`;
+        num.classList.remove('bump'); void num.offsetWidth; num.classList.add('bump'); playSfx('coin', got - 1);
+      };
+    }, 700 + i * 160);
+  }
 }
 function turnLessonPage(rd, dir) { const t = rd.querySelector('.rd-track'); t.scrollBy({ left: dir * t.clientWidth, behavior: 'smooth' }); }
 
