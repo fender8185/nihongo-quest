@@ -459,6 +459,22 @@ def test_the_hero_walks_round_a_table_and_a_tap_on_one_sends_him_beside_it(b):
       return JSON.stringify({ there, through, steps: seen.length > 5, tapped: inside([yh.X, yh.Y]) }); })()"""))
     assert r == {'there': [9.5, 12], 'through': False, 'steps': True, 'tapped': False}, r   # round the table and its chairs, not over them; a tap on it: beside it
 
+# ---- the ground underfoot (2026-11-11, the user: he walked straight at everything and never knew where the paths were) ----
+def test_the_hero_crosses_the_road_at_the_crossing_and_keeps_to_the_paths(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); const out = {};
+      const walk = async (place, from, to, free) => { await go(place, 12); [yh.X, yh.Y] = from; yHeroPlace(y()); const seen = []; let on = true;
+        const watch = () => { if (!on) return; seen.push([yh.X, yh.Y]); requestAnimationFrame(watch); }; requestAnimationFrame(watch);
+        await new Promise((q) => yHeroWalk(y(), to, q, free)); on = false; return seen; };
+      let seen = await walk('street', [-300, 125], [-300, 40]);   // over the road from the far pavement to the near one
+      out.jaywalk = seen.some(([X, Y]) => Y > STREET.road[0] + 2 && Y < STREET.road[1] - 2 && (X < 320 || X > 430)); out.across = Math.round(yh.Y);
+      seen = await walk('street', [-300, 40], [-300, 44]); out.short = seen.every(([X]) => Math.abs(X + 300) < 2);   // along the pavement: straight
+      seen = await walk('park', [-300, 60], [PARK_PATH, 222], true);   // the way up to the town: by the steps
+      const steps = (Y) => { const [c, hw] = stripAt(WALK_GROUND.park.ways[0], Y); return [c - hw, c + hw]; };
+      out.steps = seen.filter(([, Y]) => Y > 140).every(([X, Y]) => X >= steps(Y)[0] - 2 && X <= steps(Y)[1] + 2);
+      out.yard = yRoute('yard', [0, 214], [-200, 20]).length > 2 && yRoute('yard', [-300, 100], [300, 100]).length === 2;   // down the path, then over the lawn; a hop across: straight
+      return JSON.stringify(out); })()"""))
+    assert r == {'jaywalk': False, 'across': 40, 'short': True, 'steps': True, 'yard': True}, r
+
 def test_a_bench_is_drawn_over_the_hero_behind_it_and_under_him_in_front(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); await go('park', 12);
       const z = (el) => Number(getComputedStyle(el).zIndex), bench = [...y().querySelectorAll('.land.prop')].find((e) => e.style.zIndex === '250'), h = y().querySelector('.yhero');

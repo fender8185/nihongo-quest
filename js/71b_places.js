@@ -82,8 +82,71 @@ function yCross(b, p, q) {   // does the way from p to q go through the inside o
   }
   return t1 - t0 > 1e-6;
 }
+// the ground underfoot out of doors (2026-11-11, the user: he walked straight at everything and never knew where the paths
+// were): what a px of it costs him — a path, the pavement or the crossing 1, the lawn or the sand more (off), the road a lot (he
+// goes over at the crossing), past the place's own ground (up beyond its top, out past its sides: only on his way in or out)
+// more again. He takes the cheapest way: a short hop still cuts over the lawn, a long one keeps to the path. ways: strips like
+// LANE ({Y0, Y1, at}) or [X0, X1, Y0, Y1]; roads and crossings [X0, X1, Y0, Y1]. The town is all pavement: as before
+const WALK_ROAD = 25, WALK_OUT = 6;
+const BUS_ROAD = { off: 1, roads: [[-1e4, 1e4, -1e4, 46]] };   // the bus stops' places: the road along the front (busRoad)
+const WALK_GROUND = {
+  yard: { off: 2.2, ways: [LANE] },
+  street: { off: 1, ways: [STREET_LANE], roads: [[-1e4, 1e4, ...STREET.road]], cross: [[330, 420, ...STREET.road]] },
+  beach: { off: 1.8, ways: [[380, 620, 56, 78]] },   // the boardwalk along to the yard
+  harbor: { off: 1, ways: [{ Y0: 238, Y1: 116, at: (t) => [HARBOR_PATH + 16 * t, 18 + 14 * t] }] },   // the sandy path down from the beach (on to the quay)
+  park: { off: 1, ways: [{ Y0: 330, Y1: 120, at: (t) => [PARK_PATH + 32 * t, 40] }] },   // the stone steps up to the town (on to the square)
+  station: BUS_ROAD, sento: BUS_ROAD, shrine: BUS_ROAD, castle: BUS_ROAD
+};
+// the cheapest way over that ground (A* on a 12 × 6 px grid, then pulled straight wherever a straight line costs no more); null:
+// no way found
+function yGroundRoute(place, gr, p, goal, bs, lim) {
+  const inR = (r, X, Y) => X >= r[0] && X <= r[1] && Y >= r[2] && Y <= r[3];
+  const onWay = (X, Y) => (gr.ways || []).some((w) => { if (Array.isArray(w)) return inR(w, X, Y); if (Y < Math.min(w.Y0, w.Y1) || Y > Math.max(w.Y0, w.Y1)) return false; const [c, hw] = stripAt(w, Y); return Math.abs(X - c) <= hw; });
+  const cost = (X, Y) => {
+    if (bs.some((b) => yIn(b, [X, Y]))) return Infinity;
+    if ((gr.cross || []).some((r) => inR(r, X, Y)) || onWay(X, Y)) return 1;
+    if ((gr.roads || []).some((r) => inR(r, X, Y))) return WALK_ROAD;
+    return Math.abs(X) <= lim && Y >= 12 && Y <= walkTop(place, X) ? gr.off : WALK_OUT;
+  };
+  const seg = (a, b) => {   // a straight line's cost, a sample every 4 px
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.ceil(L / 4)); let c = 0;
+    for (let i = 0; i < n; i++) { const t = (i + 0.5) / n, k = cost(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t); if (k === Infinity) return Infinity; c += k; }
+    return c * L / n;
+  };
+  if (seg(p, goal) <= Math.hypot(goal[0] - p[0], goal[1] - p[1]) + 0.01) return [p, goal];   // all path or pavement, nothing in the way
+  const G = 12, H = 6, top = Math.max(WALK_TOP[place] || 214, ...(gr.ways || []).map((w) => (Array.isArray(w) ? w[3] : Math.max(w.Y0, w.Y1))));
+  const x0 = Math.floor((Math.min(-lim, p[0], goal[0]) - G) / G) * G, y0 = Math.floor((Math.min(0, p[1], goal[1]) - H) / H) * H;
+  const nx = Math.ceil((Math.max(lim, p[0], goal[0]) + G - x0) / G) + 1, ny = Math.ceil((Math.max(top, p[1], goal[1]) + H - y0) / H) + 1, N = nx * ny;
+  const C = new Float32Array(N); for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) C[j * nx + i] = cost(x0 + i * G, y0 + j * H);
+  const cell = (q) => Math.min(ny - 1, Math.max(0, Math.round((q[1] - y0) / H))) * nx + Math.min(nx - 1, Math.max(0, Math.round((q[0] - x0) / G)));
+  const at = (k) => [x0 + (k % nx) * G, y0 + Math.floor(k / nx) * H];
+  const fin = (c) => (c === Infinity ? WALK_OUT : c), s = cell(p), e = cell(goal); C[s] = fin(cost(...p)); C[e] = fin(cost(...goal));   // where he stands and where he goes are never in the way
+  const g = new Float64Array(N).fill(Infinity), from = new Int32Array(N).fill(-1), shut = new Uint8Array(N), heap = [];
+  const h = (k) => { const q = at(k); return Math.hypot(q[0] - goal[0], q[1] - goal[1]); };
+  const push = (f, k) => { heap.push([f, k]); for (let i = heap.length - 1; i > 0;) { const u = (i - 1) >> 1; if (heap[u][0] <= heap[i][0]) break; [heap[u], heap[i]] = [heap[i], heap[u]]; i = u; } };
+  const pop = () => { const top0 = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; for (let i = 0; ;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top0; };
+  const D = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]].map(([a, b]) => [a, b, Math.hypot(a * G, b * H)]);
+  g[s] = 0; push(h(s), s);
+  while (heap.length) {
+    const [, k] = pop(); if (shut[k]) continue; shut[k] = 1; if (k === e) break;
+    const i = k % nx, j = (k - i) / nx;
+    for (const [a, b, d] of D) {
+      const ii = i + a, jj = j + b; if (ii < 0 || jj < 0 || ii >= nx || jj >= ny) continue;
+      const kk = jj * nx + ii; if (shut[kk] || C[kk] === Infinity) continue;
+      const v = g[k] + d * (C[k] + C[kk]) / 2; if (v < g[kk]) { g[kk] = v; from[kk] = k; push(v + h(kk), kk); }
+    }
+  }
+  if (g[e] === Infinity) return null;
+  const cells = []; for (let k = e; k !== -1; k = from[k]) cells.unshift(k);
+  const P = [p].concat(cells.slice(1, -1).map(at), [goal]), cum = [0];   // the cost so far along the grid's way (a step cutting a corner of a thing: as the grid had it)
+  for (let i = 1; i < P.length; i++) { const c = seg(P[i - 1], P[i]); cum.push(cum[i - 1] + (c < Infinity ? c : g[cells[Math.min(i, cells.length - 1)]] - g[cells[i - 1]])); }
+  const short = (i, j) => { const c = seg(P[i], P[j]); return c < Infinity && c <= (cum[j] - cum[i]) * 1.05 + 1; };   // a straight line costing next to nothing more: taken
+  const out = [p]; for (let i = 0; i < P.length - 1;) { let j = i + 1; while (j + 1 < P.length && short(i, j + 1)) j++; out.push(P[j]); i = j; }
+  return out;
+}
 // the way from p to the goal round what stands between (the corners of the things, a little apart from them, as stepping stones;
-// the shortest), the goal moved off a thing to its nearest free side. free: on the way out of the place (no top, the goal kept)
+// the shortest), the goal moved off a thing to its nearest free side; out of doors over the ground's cheapest way (WALK_GROUND).
+// free: on the way out of the place (no top, the goal kept)
 function yRoute(place, p0, goal0, free) {
   const iso = INDOOR.includes(place), cv = iso ? (q) => isoUV(q[0], q[1]) : (q) => q, back = iso ? (q) => isoXY(q[0], q[1]) : (q) => q;   // a room: on its floor
   const [mx, my] = iso ? [0.45, 0.45] : [12, 5], lim = ycam.YW / 2 - 20, p = cv(p0);
@@ -95,6 +158,8 @@ function yRoute(place, p0, goal0, free) {
     const best = c.filter(ok).sort((u, v) => Math.hypot(u[0] - goal[0], u[1] - goal[1]) - Math.hypot(v[0] - goal[0], v[1] - goal[1]))[0];
     goal = best || p;
   }
+  const gr = !iso && p[1] > -900 && WALK_GROUND[place];   // (yFree asks from far below, for the goal alone)
+  const ground = gr && yGroundRoute(place, gr, p, goal, bs, lim); if (ground) return [p0].concat(ground.slice(1));
   const clear = (u, v) => !bs.some((b) => yCross(b, u, v));
   if (clear(p, goal)) return [p0, back(goal)];
   const n = [p, goal].concat(bs.flatMap((b) => [[b[0], b[2]], [b[1], b[2]], [b[0], b[3]], [b[1], b[3]]]).filter(ok));
