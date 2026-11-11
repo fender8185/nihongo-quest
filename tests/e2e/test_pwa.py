@@ -79,7 +79,7 @@ def test_a_new_version_puts_itself_on_untouched_at_once_else_at_a_calm_page_chan
     site = tempfile.mkdtemp(prefix="nq-update-")
     shutil.copytree(ROOT, site, dirs_exist_ok=True, ignore=shutil.ignore_patterns(".git", ".venv", "tests", "curriculum", "docs", "scripts", "supabase", "music", "*.md"))
     port = PORT + 7
-    srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"], cwd=site, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(port), "--bind", "127.0.0.1"], cwd=site, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
         time.sleep(0.8)
         url = f"http://127.0.0.1:{port}/"
@@ -109,7 +109,7 @@ def test_a_new_version_puts_itself_on_untouched_at_once_else_at_a_calm_page_chan
 
 
 if __name__ == "__main__":
-    srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
     tests = [test_first_visit_does_not_reload_itself, test_app_renders_while_auth_session_restore_hangs, test_app_renders_and_sync_is_off_when_client_creation_throws, test_data_lives_in_its_own_versioned_file_and_is_precached, test_the_page_is_precached_as_the_folder_only,
              test_a_clip_cached_under_the_supabase_address_answers_for_its_r2_address, test_a_cached_clip_is_found_by_its_address_whatever_it_varies_on,

@@ -28,7 +28,7 @@ JS = r"""(() => { const out = {}; const KANA = /[ぁ-ゖァ-ヺ]/; const KANJI =
     else if (x && typeof x === 'object') Object.keys(x).forEach(k => walk(x[k], path ? path + '.' + k : k));
   };
   walk(DATA, ''); return JSON.stringify(out); })()"""
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(port), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(0.8)
 try:
     with Browser() as b:

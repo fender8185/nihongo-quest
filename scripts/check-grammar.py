@@ -37,7 +37,7 @@ if isinstance(raw, dict):   # a unit file: find its unit in the outlines
     cands = raw.get('items') or []
 else:
     cands = raw
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(port), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(0.8)
 JS = """((cands, X) => { const bad = [], warn = []; const norm = (s) => String(s || '').replace(/[\\s　]/g, '');
   if (X && !DATA.UNITS.some(u => u.id === X.unit.id)) {   // the unit file's unit and phase, numbered on from data.js's as the merge does

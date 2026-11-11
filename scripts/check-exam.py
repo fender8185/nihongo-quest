@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(ROOT, "tests", "e2e"))
 from cdp import Browser
 path = sys.argv[1]; port = int(sys.argv[2]) if len(sys.argv) > 2 else 8813
 cands = json.load(open(path, encoding='utf-8'))
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(port), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(0.8)
 JS = r"""((cands) => { const bad = [], warn = []; const seen = new Set(); const have = new Set(DATA.EXAM.map(x => x.id));
   const idx = (L) => ALL_LEVELS.indexOf(L); const LV = new Map();   // a word's lowest level, as check-listen-read.py

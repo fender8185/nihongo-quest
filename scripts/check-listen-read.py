@@ -17,7 +17,7 @@ cands = json.load(open(path, encoding='utf-8'))
 OUTLINE = {}   # units of the curriculum outlines (m19… for N3) → their level, so items can be checked before the units are merged
 for f in glob.glob(os.path.join(ROOT, 'curriculum', 'n[0-9].json')):
     o = json.load(open(f, encoding='utf-8')); OUTLINE.update({u['id']: o['level'] for u in o.get('units', [])})
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(port), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(0.8)
 JS = r"""((c, OUTLINE) => { const problems = [], warnings = [];
   const idx = (L) => ALL_LEVELS.indexOf(L); const LV = new Map();   // a word's lowest level

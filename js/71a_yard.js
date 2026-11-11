@@ -1,0 +1,736 @@
+'use strict';
+// 院子: the yard's things, the yard and the scenes outside (renderOutside) (out of 71_today.js, 2026-11-11)
+// ---------- the yard's things (1.2.0): drawn facing us in the hero's units (feet at 0, x round 0), scaled with distance like
+// him (yScale) and darker by night like him. box: their drawing's [x, y, width, height]; glow: [x, y, r] of a light by night ----------
+const YARD = (() => {
+  const SHADE = (rx, ry = 6) => `<ellipse rx="${rx}" ry="${ry}" fill="#2b1c12" fill-opacity=".16"/>`;
+  const ART = {
+    telescope: { box: [-62, -146, 124, 152], draw: () => `${SHADE(34)}<path d="M0 -84 L4 -3" stroke="#6f4c33" stroke-width="5" stroke-linecap="round"/><path d="M0 -84 L-32 0 M0 -84 L30 0" fill="none" stroke="#8f6444" stroke-width="5.4" stroke-linecap="round"/>
+      <circle cy="-87" r="6.4" fill="#3a3d4c"/><g transform="translate(0 -92) rotate(-28)"><rect x="-56" y="-6" width="12" height="12" rx="2.4" fill="#3a3d4c"/><rect x="-46" y="-10" width="80" height="20" rx="4" fill="#f2efe8"/><rect x="32" y="-12" width="14" height="24" rx="3" fill="#5a68d8"/>
+      <rect x="-12" y="-11" width="6" height="22" fill="#5a68d8" fill-opacity=".85"/><rect x="-4" y="-18" width="22" height="7" rx="2" fill="#d8d3c8"/><path d="M-40 -5 H28" stroke="#fff" stroke-opacity=".6" stroke-width="2.4" stroke-linecap="round"/></g>` },
+    stonelantern: { box: [-42, -146, 84, 152], glow: [0, -93, 34], draw: () => `${SHADE(30, 5.5)}<path d="M-26 0 L-22 -12 H22 L26 0 Z" fill="#9c988e"/><path d="M-8 -12 L-7 -70 H7 L8 -12 Z" fill="#aaa69c"/><rect x="-10" y="-46" width="20" height="5" rx="2" fill="#9c988e"/>
+      <path d="M-24 -70 L-18 -80 H18 L24 -70 Z" fill="#9c988e"/><rect x="-17" y="-106" width="34" height="26" rx="2" fill="#aaa69c"/><rect x="-9" y="-101" width="18" height="16" rx="1.5" style="fill:color-mix(in srgb,#4a4842 calc(var(--day,1)*100%),#ffd27a)"/>
+      <path d="M-38 -104 Q-20 -110 -12 -120 H12 Q20 -110 38 -104 Q41 -100 36 -100 H-36 Q-41 -100 -38 -104 Z" fill="#8c887e"/><rect x="-6" y="-124" width="12" height="4.4" rx="1.6" fill="#9c988e"/><path d="M0 -137 C-6 -133 -7 -127 -4 -123 H4 C7 -127 6 -133 0 -137 Z" fill="#8c887e"/>
+      <g fill="#7f9a5a" fill-opacity=".75"><circle cx="-20" cy="-3" r="2.6"/><circle cx="-15" cy="-2" r="2"/><circle cx="18" cy="-74" r="2.2"/><circle cx="-30" cy="-102" r="2.4"/></g>` },
+    engawa: { box: [-104, -72, 208, 78], draw: () => `${SHADE(96, 7)}<rect x="-80" y="-40" width="7" height="34" fill="#7a5638"/><rect x="73" y="-40" width="7" height="34" fill="#7a5638"/>
+      <rect x="-92" y="-38" width="8" height="38" rx="1.5" fill="#9c7048"/><rect x="84" y="-38" width="8" height="38" rx="1.5" fill="#9c7048"/>
+      <path d="M-100 -46 L-90 -52 H90 L100 -46 Z" fill="#c9996a"/><rect x="-100" y="-46" width="200" height="8" fill="#a77a4c"/><path d="M-60 -51 L-64 -46 M-20 -51 L-21 -46 M20 -51 L21 -46 M60 -51 L64 -46" stroke="#9c7048" stroke-width="1.2"/>
+      <path d="M-58 -52 H58 L62 -46 V-31 Q0 -28 -62 -31 V-46 Z" fill="#c8453d"/><path d="M-58 -52 H58 L62 -46 H-62 Z" fill="#d85a50"/>
+      <ellipse cx="36" cy="-52.6" rx="9" ry="2.2" fill="#d8cdb6"/><path d="M30 -62 h12 l-1.6 9 h-8.8 Z" fill="#ece5d3"/><path d="M33 -59 h6" stroke="#5f7a3a" stroke-width="1.6"/><path d="M34 -66 q-2 -4 0 -7 M38.4 -66 q2 -4 0 -7" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width="1.4" stroke-linecap="round"/>` },
+    tanuki: { box: [-54, -126, 108, 132], draw: () => `${SHADE(34)}<ellipse cx="-14" cy="-4" rx="11" ry="6" fill="#6f5139"/><ellipse cx="18" cy="-4" rx="11" ry="6" fill="#6f5139"/>
+      <path d="M-30 -10 C-36 -40 -26 -66 2 -68 C30 -66 40 -40 34 -10 Q2 0 -30 -10 Z" fill="#8a6848"/><ellipse cx="2" cy="-30" rx="22" ry="21" fill="#ead9b8"/>
+      <ellipse cx="-26" cy="-44" rx="7" ry="12" transform="rotate(22 -26 -44)" fill="#7d5d40"/><path d="M38 -40 c-6 0 -9 6 -9 12 c0 7 4 11 9 11 c5 0 9 -4 9 -11 c0 -6 -3 -12 -9 -12 Z" fill="#d9c49a"/><rect x="35.4" y="-46" width="5.2" height="7" rx="1.4" fill="#cbb487"/><path d="M33 -30 h10" stroke="#b5532f" stroke-width="2"/><ellipse cx="29" cy="-46" rx="7" ry="12" transform="rotate(-24 29 -46)" fill="#7d5d40"/>
+      <circle cx="2" cy="-80" r="22" fill="#8a6848"/><ellipse cx="2" cy="-73" rx="11" ry="8" fill="#ead9b8"/><ellipse cx="-8" cy="-84" rx="6.4" ry="5.4" fill="#5a4030"/><ellipse cx="12" cy="-84" rx="6.4" ry="5.4" fill="#5a4030"/>
+      <circle cx="-8" cy="-84" r="2.8" fill="#fff"/><circle cx="12" cy="-84" r="2.8" fill="#fff"/><circle cx="-7.4" cy="-84" r="1.5" fill="#2a2730"/><circle cx="12.6" cy="-84" r="1.5" fill="#2a2730"/><ellipse cx="2" cy="-77" rx="3.4" ry="2.4" fill="#2a2730"/>
+      <path d="M-2 -70 Q2 -67 6 -70" fill="none" stroke="#5a4030" stroke-width="1.4" stroke-linecap="round"/><ellipse cx="-12" cy="-72" rx="3.6" ry="2" fill="#f2a3a0" fill-opacity=".6"/><ellipse cx="16" cy="-72" rx="3.6" ry="2" fill="#f2a3a0" fill-opacity=".6"/>
+      <path d="M-30 -96 L2 -120 L34 -96 Q2 -90 -30 -96 Z" fill="#d8b366"/><path d="M-16 -104 L2 -118 M18 -104 L2 -118 M2 -94 V-118" stroke="#b9954f" stroke-width="1"/>` },
+    pond: { box: [-132, -50, 264, 56], draw: () => `<ellipse cy="-19" rx="124" ry="27" fill="#8c887e"/>${[[-118, -22, 12, 7], [-96, -38, 14, 6], [-62, -45, 13, 5], [-20, -47, 15, 5], [24, -47, 13, 5], [66, -44, 14, 5], [100, -37, 13, 6], [118, -21, 12, 7], [96, -4, 15, 7], [52, 2, 16, 6], [4, 4, 17, 6], [-46, 3, 16, 6], [-92, -5, 15, 7]].map(([x, y, rx, ry], i) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${i % 2 ? '#a3a097' : '#b4b0a6'}"/>`).join('')}
+      <ellipse cy="-20" rx="106" ry="20" fill="#4f8fb8"/><ellipse cx="-24" cy="-26" rx="58" ry="7" fill="#fff" fill-opacity=".14"/>
+      <g transform="translate(0 -20) scale(1 .19)"><g class="koi k1"><path d="M66 0 c-6 -6 -18 -6 -24 0 c6 6 18 6 24 0 Z M42 0 l-9 -6 v12 Z" fill="#f08a3c"/><circle cx="58" cy="-2" r="2.6" fill="#fff"/></g><g class="koi k2"><path d="M-36 0 c6 -6 18 -6 24 0 c-6 6 -18 6 -24 0 Z M-12 0 l9 -6 v12 Z" fill="#f6f1e8"/><circle cx="-26" cy="1" r="3.4" fill="#e0574b"/></g></g>
+      <path d="M44 -24 a10 4.6 0 1 0 1.6 -1.2 L38 -24 Z" fill="#5f9a4a"/><path d="M-70 -14 a8 3.6 0 1 0 1.4 -1 L-76 -14 Z" fill="#6aa653"/>` }
+  };
+  // the ware as it stands in the yard: a button the size of its drawing, its feet at (p.x, p.y), drawn in order of distance
+  function el(id, p, sel) {
+    const a = ART[id], it = WARE.get(id); if (!a || !it) return '';
+    const [x0, y0, w, h] = a.box, k = yScale(p.y);
+    const glow = a.glow ? `<i class="glow" style="left:${a.glow[0] - x0 - a.glow[2]}px;top:${a.glow[1] - y0 - a.glow[2]}px;width:${2 * a.glow[2]}px;height:${2 * a.glow[2]}px"></i>` : '';
+    return `<button type="button" class="yware${sel ? ' sel' : ''}${a.glow && lampOff(id) ? ' off' : ''}" data-act="yard-ware" data-ware="${id}" aria-label="${esc(it.name)}" style="width:${w}px;height:${h}px;margin-left:${x0}px;bottom:${-(y0 + h)}px;transform-origin:${-x0}px ${-y0}px;transform:translate(${p.x}px,${-p.y}px) scale(${k.toFixed(3)});z-index:${300 - Math.round(p.y)}"><svg class="art" viewBox="${a.box.join(' ')}" aria-hidden="true">${a.draw()}</svg>${glow}</button>`;
+  }
+  const thumb = (id) => (ART[id] ? `<svg class="thumb" viewBox="${ART[id].box.join(' ')}" aria-hidden="true">${ART[id].draw()}</svg>` : '');
+  return { ART, el, thumb };
+})();
+// the yard's world (1.2.0): the ground 1200px wide (wider on a screen wider than that), its middle the house's; the camera: x,
+// how far right of the world's middle the screen's middle is (0 on a screen as wide as the world), kept while the app runs
+const YARD_HALF = 600;   // where yard wares may stand: within the middle 1200px, the same on every screen
+const yardWorldW = () => Math.max(2 * YARD_HALF, document.documentElement.clientWidth || window.innerWidth || 0);
+const ycam = { x: 0, W: 0, YW: 2 * YARD_HALF, z: 1 };   // W: how much of the world the screen shows; z: how large it is drawn (yardZoom)
+let ypan = null, ycoast = 0;   // a finger looking along the yard; its fling
+const yCamMax = () => Math.max(0, (ycam.YW - ycam.W) / 2);
+function yCamTo(yard, x, give = 0) {   // the camera there (give: how much of a pull past an end a finger gets)
+  const m = yCamMax();
+  ycam.x = x < -m ? -m - (-m - x) * give : x > m ? m + (x - m) * give : x;
+  const w = yard.querySelector('.yworld'); if (w) w.style.transform = `translate3d(${(-ycam.x * ycam.z).toFixed(1)}px,0,0)${ycam.z !== 1 ? ` scale(${ycam.z})` : ''}`;
+  // no CSS variable here: one set on the yard every frame of a long walk began the hero's steps again on an iPhone (his legs
+  // stopped, 1.2.1); the zoom into the door reads the camera when it starts (sceneGo)
+}
+function yardLayout(yard) {   // the world as wide as it should be on this screen, the hill's shop sign with it, the camera inside
+  const sky = yard.querySelector('.sky'), w = yard.querySelector('.yworld'); if (!sky || !w) return;
+  const sw = sky.clientWidth || window.innerWidth;
+  ycam.z = Math.round(yardZoom(yard, sw, sky.clientHeight || window.innerHeight) * 1000) / 1000; yard.style.setProperty('--yz', ycam.z);
+  ycam.W = sw / ycam.z; ycam.YW = Math.max(2 * YARD_HALF, ycam.W);
+  w.style.width = `${ycam.YW}px`; w.style.marginLeft = `${-ycam.YW / 2}px`;
+  const k = ycam.YW / 1200, sb = yard.querySelector('.shop-btn');   // the hill scales up on a very wide screen
+  w.querySelectorAll('.land.prop[data-box]').forEach((q) => { const [x0, b0, pw, ph] = q.dataset.box.split(' ').map(Number); Object.assign(q.style, { left: `${x0 * k}px`, bottom: `${b0 * k}px`, width: `${pw * k}px`, height: `${ph * k}px` }); });   // the things' own layers, as the land
+  if (sb) { sb.style.left = `calc(50% - ${Math.round(118 * k)}px)`; sb.style.bottom = `${Math.round(346 * k - 6)}px`; }
+  yCamTo(yard, ycam.x);
+}
+// a screen held upright (2026-11-10, the user: less sky and bigger people on a phone): the place drawn larger, its ground along
+// the bottom of the screen and the sky left as it is; a room (食堂, 居酒屋) a little smaller instead, more of it in sight
+function yardZoom(yard, w, h) {
+  if (!w || !h || h < w * 1.2) return 1;
+  return yard.classList.contains('indoor') ? 0.75 : Math.max(1, Math.min(1.6, h / 540));
+}
+// the camera with the hero on the move (2026-11-10, the user: keep him nearer the middle — at the edge of the middle half the
+// screen kept sliding along and he walked into its side): it eases after a point a little ahead of him the way he walks, so he is a
+// little behind the middle with more in sight where he is going, the point coming back to him as he nears where he goes; when he
+// stops it glides over till he is in the middle (yCamSettle). A swipe leaves the camera be till he is sent somewhere again (free)
+const YCAM = { t: 0, x: 0, lead: 0, aim: null, free: false };
+function yFollow(yard) {
+  if (ypan || YCAM.free || !yCamMax()) return;
+  cancelAnimationFrame(ycoast);   // a glide to him under way gives way
+  const now = performance.now(), dt = YCAM.t && now - YCAM.t < 100 ? (now - YCAM.t) / 1000 : 0, vx = dt ? (yh.X - YCAM.x) / dt : 0;
+  YCAM.t = now; YCAM.x = yh.X; if (!dt) { YCAM.aim = null; return; }
+  const L = ycam.W * 0.12, near = Math.min(1, (yh.rem === undefined ? 9 : yh.rem / (yh.v || 170)) / 0.7), want = Math.max(-L, Math.min(L, vx * 0.3)) * near * near * (3 - 2 * near);   // the look-ahead fades out over his last 0.7 s, so little is left to make up when he stops (2026-11-10, the user: the swing back was too strong)
+  YCAM.lead += (want - YCAM.lead) * (1 - Math.exp(-dt / (Math.abs(want) < Math.abs(YCAM.lead) ? 0.12 : 0.35)));
+  const T = yh.X + YCAM.lead, vT = YCAM.aim === null ? vx : (T - YCAM.aim) / dt; YCAM.aim = T;   // where it should be and how fast that moves
+  const step = (T + vT * 0.15 - ycam.x) * (1 - Math.exp(-dt / 0.15)), most = 1500 * dt;   // led by as much as the easing falls behind: on the mark, and on it as he stops
+  yCamTo(yard, ycam.x + Math.max(-most, Math.min(most, step)));
+}
+function yCamSettle(yard) {   // a soft glide, slow in and slow out (the way left is short, so it is soon done)
+  YCAM.t = 0; YCAM.lead = 0; YCAM.aim = null;
+  if (ypan || YCAM.free || !yCamMax()) return;
+  cancelAnimationFrame(ycoast);
+  const x0 = ycam.x, gap = Math.abs(yh.X - x0); if (gap < 0.5) return;
+  const ms = Math.min(900, 420 + gap * 6), t0 = performance.now();
+  const step = (now) => {
+    if (!yard.isConnected || ypan || YCAM.free) return;
+    const k = Math.max(0, Math.min(1, (now - t0) / ms));
+    yCamTo(yard, x0 + (yh.X - x0) * (1 - Math.cos(Math.PI * k)) / 2);   // after him if he moves on his seat
+    if (k < 1) ycoast = requestAnimationFrame(step);
+  };
+  ycoast = requestAnimationFrame(step);
+}
+// where a yard ware may stand: on the lawn (whole within the middle 1200px; y 14–196 px up), off the path from the door (LANE),
+// the house front, the mailbox and the way out at the path's end, and clear of the others (their ground:
+// width × scale across, depth × scale deep)
+// test (2026-11-09): the path from the door winds down the lawn and off the bottom of the screen (LANE), out to the main road
+// with the bus stop — a place of its own (#/street; the user: no road by the house, it felt like the town moving in), its own
+// path coming down from the yard (STREET_LANE). Each is a strip from Y0 to Y1 px up: at(t) its middle and half width t of the
+// way along. The land is drawn 370 high, y down from its top
+const LANE = { Y0: 220, Y1: -4, at: (t) => [22 * Math.sin(Math.PI * 1.5 * t) - 6 * t, 10 + 24 * t] };
+const STREET_LANE = { Y0: 226, Y1: 128, at: (t) => [-44 + 16 * Math.sin(Math.PI * t), 5 + 13 * t] };
+const STREET = { walk: [116, 134], road: [48, 116], near: [32, 48] };   // the far pavement, the road, the near pavement (Y px up)
+const stripAt = (k, Y) => k.at(Math.max(0, Math.min(1, (Y - k.Y0) / (k.Y1 - k.Y0))));
+function stripD(k, n) {
+  const pt = (i, side) => { const t = i / n, [c, w] = k.at(t), Y = k.Y0 + (k.Y1 - k.Y0) * t; return `${(600 + c + side * w).toFixed(1)} ${(370 - Y).toFixed(1)}`; };
+  const L = [], R = []; for (let i = 0; i <= n; i++) { L.push(pt(i, -1)); R.unshift(pt(i, 1)); }
+  return `M${L.join(' L')} L${R.join(' L')} Z`;
+}
+function yardFits(id, p) {
+  const a = YARD.ART[id], it = WARE.get(id); if (!a || !it || p.y < 14 || p.y > 196) return false;
+  const k = yScale(p.y), hw = it.ground[0] * k / 2, hd = it.ground[1] * k;
+  if (Math.abs(p.x) + hw > YARD_HALF - 10) return false;
+  if ([LANE].some((k) => [p.y, p.y + hd].some((Y) => { const [c, w] = stripAt(k, Y); return Math.abs(p.x - c) < hw + w + 4; }))) return false;   // off the path and the road
+  const over = (x0, x1, y0, y1) => p.x + hw > x0 && p.x - hw < x1 && p.y + hd > y0 && p.y - hd < y1;
+  if (over(-95, 95, 186, 999) || over(20, 92, 136, 230) || over(-60, 10, -10, 26) || over(-YARD_HALF, -YARD_HALF + 90, 30, 120) || over(YARD_HALF - 90, YARD_HALF, 30, 120)) return false;   // the house, the mailbox, the ways out (the path's end, the edges)
+  return yardPlaced().every((o) => { if (o.id === id) return true; const t = yScale(o.p.y); return Math.abs(p.x - o.p.x) >= hw + o.it.ground[0] * t / 2 || Math.abs(p.y - o.p.y) >= hd + o.it.ground[1] * t; });
+}
+function yardPlaced() { return Object.keys(state.placed).filter((id) => owns(id) && WARE.has(id) && WARE.get(id).kind === 'yard' && state.placed[id].w === 'Y').map((id) => ({ id, it: WARE.get(id), p: state.placed[id] })); }
+function yardSpot(id) {   // where a ware taken out of the box goes: the free spot nearest the lower middle of the screen
+  const c = [];
+  for (let y = 20; y <= 190; y += 10) for (let x = -YARD_HALF; x <= YARD_HALF; x += 10) c.push({ x, y, d: Math.hypot(x - ycam.x, (y - 70) * 1.4) });
+  c.sort((a, b) => a.d - b.d);
+  const hit = c.find((q) => yardFits(id, q));
+  return hit ? { x: hit.x, y: hit.y } : null;
+}
+const yardWaresHtml = () => yardPlaced().map((o) => YARD.el(o.id, o.p, yed.on && yed.sel === o.id)).join('');
+const yardSig = () => yardPlaced().map((o) => `${o.id}:${o.p.x},${o.p.y}`).join('|');
+// 擺設 in the yard (1.2.0), as in 書房: pick a ware, drag it or tap the lawn to move it, 收起 puts it in the yard's box
+const yed = { on: false, sel: null, drag: null };
+function yeditHtml() {
+  const box = WARES.filter((it) => it.kind === 'yard' && owns(it.id) && !(state.placed[it.id] && state.placed[it.id].w === 'Y'));
+  // the houses (test, 2026-11-09): once one is bought, the cottage and each house bought sit at the front of the box; a tap puts it up
+  const houses = WARES.some((it) => it.kind === 'house' && owns(it.id)) ? [{ id: '', name: '小屋' }].concat(WARES.filter((it) => it.kind === 'house' && owns(it.id) && HOUSE_ART[it.id])) : [];
+  const now = state.house && owns(state.house) && HOUSE_ART[state.house] ? state.house : '';
+  const houseIt = (h) => `<button type="button" class="tray-it tray-house" data-act="yard-house" data-id="${h.id}" aria-pressed="${h.id === now}"><svg class="house-thumb" viewBox="0 0 140 130" aria-hidden="true">${HOUSE_ART[h.id || 'cottage']}</svg><span>${esc(h.name)}</span></button>`;
+  return `<div class="edit-top"><span class="edit-hint">${yed.sel ? '拖曳搬動，拖到上面收起來' : houses.length ? '點房子換外觀；其他東西拖出來擺' : '拖曳搬動；收納箱的東西拖出來擺'}</span><button type="button" class="btn btn-primary btn-sm" data-act="yard-edit-done">完成</button></div>
+    <div class="edit-tray" aria-label="院子的收納箱">${houses.map(houseIt).join('')}${box.length ? stacks(box).map(({ it, n, name }) => `<button type="button" class="tray-it" data-act="yard-edit-take" data-id="${it.id}">${YARD.thumb(it.id)}<span>${esc(name)}</span>${n > 1 ? `<b class="tray-n">×${n}</b>` : ''}</button>`).join('') : houses.length ? '' : '<div class="tray-empty">收納箱是空的。古道具屋的「戶外」有望遠鏡、石燈籠……</div>'}</div>`;
+}
+function yselHtml() {   // the picked ware's tools, over it in the world
+  const o = yed.sel && yardPlaced().find((q) => q.id === yed.sel), a = o && YARD.ART[o.id];
+  return o ? `<div class="edit-sel" style="left:calc(50% + ${o.p.x}px);bottom:${Math.round(o.p.y + -a.box[1] * yScale(o.p.y) + 8)}px"><button type="button" data-act="yard-edit-put">收起</button></div>` : '';
+}
+function yardDraw(yard) {   // the wares and the 擺設 bar drawn again; the hero and the sky stay as they are
+  yard.classList.toggle('edit', yed.on);
+  const w = yard.querySelector('.ywares'); w.innerHTML = yardWaresHtml(); w.dataset.sig = yardSig();
+  yard.querySelector('.yedit').innerHTML = yed.on ? yeditHtml() : '';
+  yard.querySelector('.ysel').innerHTML = yed.on ? yselHtml() : '';
+  if (yed.on) fitThumbs(yard.querySelector('.yedit'));
+}
+function yardEdit(yard, cmd, id) {
+  if (!yard) return;
+  if (cmd === 'on') { yed.on = true; yed.sel = null; }
+  else if (cmd === 'done') { yed.on = false; yed.sel = null; }
+  else if (cmd === 'pick') yed.sel = id;
+  else if (cmd === 'take') {
+    const p = yardSpot(id);
+    if (!p) { toast('院子放不下了，先收起別的東西再試試'); return; }
+    state.placed[id] = Object.assign({ w: 'Y' }, p); yed.sel = id; saveState();
+  } else if (cmd === 'put' && yed.sel) { delete state.placed[yed.sel]; yed.sel = null; saveState(); }
+  else if (cmd === 'house') {   // the yard's house in this look (id '' the cottage), at once
+    if (id && !(WARE.has(id) && owns(id) && HOUSE_ART[id])) return;
+    state.house = id; saveState();
+    yard.querySelector('.house > svg').innerHTML = houseArt(); yard.dataset.house = state.house;
+  }
+  yardDraw(yard);
+}
+const yardPoint = (yard, e) => { const r = yard.querySelector('.yworld').getBoundingClientRect(); return { x: (e.clientX - (r.left + r.width / 2)) / ycam.z, y: (r.bottom - e.clientY) / ycam.z }; };   // in the world
+const snap2 = (v) => Math.round(v / 2) * 2;
+function yardMoveTo(yard, id, p) {   // the picked ware to a spot, if it can stand there
+  const q = { w: 'Y', x: snap2(p.x), y: snap2(p.y) };
+  if (!yardFits(id, q)) { toast('這裡放不下'); return; }
+  state.placed[id] = q; saveState(); yardDraw(yard);
+}
+// a drag in 擺設: a ware on the lawn follows the finger (red where it cannot stand) and stays where it is let go, or goes back; one
+// held in the box up top comes out with a downward pull (a sideways swipe scrolls the box); let go over the box, a ware goes in.
+// Near a side of the screen the camera goes along.
+function yardDragStart(yard, e) {
+  if (!yed.on || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  const t = e.target.closest('.yedit .tray-it');
+  if (t && t.classList.contains('tray-house')) return;   // a house is only tapped
+  if (t) { yed.drag = { id: t.dataset.id, b: null, from: null, off: { x: 0, y: 0 }, x0: e.clientX, y0: e.clientY, moved: false, to: null, fromBox: true, box: false }; return; }
+  const b = e.target.closest('.yware'); if (!b) return;
+  const id = b.dataset.ware, p = state.placed[id], at = yardPoint(yard, e);
+  yed.drag = { id, b, from: p, off: { x: at.x - p.x, y: at.y - p.y }, x0: e.clientX, y0: e.clientY, moved: false, to: null, fromBox: false, box: false };
+  try { b.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
+}
+function yardDragMove(yard, e) {
+  const d = yed.drag; if (!d) return;
+  if (!d.moved) {
+    const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
+    if (Math.hypot(dx, dy) < 6) return;
+    if (d.fromBox && e.pointerType !== 'mouse' && Math.abs(dx) > Math.abs(dy)) { yed.drag = null; return; }   // sideways: the box scrolls
+    d.moved = true;
+    if (d.fromBox) {   // the ware out of the box, under the finger
+      const w = yard.querySelector('.ywares'); w.insertAdjacentHTML('beforeend', YARD.el(d.id, { x: 0, y: 100 })); d.b = w.lastElementChild; d.b.classList.add('new');
+      try { yard.setPointerCapture(e.pointerId); } catch (err) { /* not capturable */ }
+    } else yed.sel = d.id;
+    yard.classList.add('dragging');
+  }
+  d.cx = e.clientX; d.cy = e.clientY;
+  yardDragAt(yard, d);
+  yEdgePan(yard);
+}
+function yardDragAt(yard, d) {   // the dragged ware where the finger is now (also as the camera moves under it)
+  const tray = yard.querySelector('.yedit .edit-tray'), tr = tray && tray.getBoundingClientRect(), hint = yard.querySelector('.yedit .edit-hint');
+  d.box = Boolean(tr && d.cy <= tr.bottom && d.cx >= tr.left && d.cx <= tr.right);
+  if (tray) tray.classList.toggle('drop', d.box && !d.fromBox);
+  const say = d.box && !d.fromBox ? '放開就收起來' : '拖到想放的地方放開'; if (hint && hint.textContent !== say) hint.textContent = say;
+  d.b.style.visibility = d.box ? 'hidden' : '';
+  if (d.box) { d.to = null; return; }
+  const at = yardPoint(yard, { clientX: d.cx, clientY: d.cy }), q = { w: 'Y', x: snap2(at.x - d.off.x), y: snap2(at.y - d.off.y) }, ok = yardFits(d.id, q);
+  d.to = ok ? q : null;
+  d.b.style.transform = `translate(${q.x}px,${-q.y}px) scale(${yScale(q.y).toFixed(3)})`; if (!d.fromBox) d.b.style.zIndex = String(300 - Math.round(q.y));
+  d.b.classList.toggle('bad', !ok);
+}
+let yEdgeT = 0;
+function yEdgePan(yard) {   // a ware held near a side of the screen: the camera goes that way, the ware with the finger
+  cancelAnimationFrame(yEdgeT);
+  const d = yed.drag; if (!d || !d.moved || d.box || !yCamMax()) return;
+  const r = yard.getBoundingClientRect(), dir = d.cx < r.left + 44 ? -1 : d.cx > r.right - 44 ? 1 : 0;
+  if (!dir) return;
+  const step = () => {
+    const dd = yed.drag; if (dd !== d || !yard.isConnected) return;
+    const x0 = ycam.x; yCamTo(yard, ycam.x + dir * 7); if (ycam.x === x0) return;
+    yardDragAt(yard, d); yEdgeT = requestAnimationFrame(step);
+  };
+  yEdgeT = requestAnimationFrame(step);
+}
+function yardDragEnd(yard) {
+  const d = yed.drag; yed.drag = null; cancelAnimationFrame(yEdgeT); if (!d || !d.moved) return;
+  yard.classList.remove('dragging'); yard._noClick = true; setTimeout(() => { yard._noClick = false; }, 0);   // the click that ends a drag is no tap
+  if (d.box) { if (!d.fromBox) { delete state.placed[d.id]; if (yed.sel === d.id) yed.sel = null; saveState(); } }
+  else if (d.to) { state.placed[d.id] = d.to; yed.sel = d.id; saveState(); }
+  else if (d.fromBox) toast('這裡放不下');
+  yardDraw(yard);
+}
+// 觀星 (test, 2026-11-09): the telescope's eyepiece over the sky, one constellation at a time with its Japanese name (its reading,
+// its Chinese name), ‹ › to the next, the lines drawn in each time. By day the stars are faint and it says so.
+const SCOPE = (() => {
+  const SKIES = [
+    { ja: '北斗七星', kana: 'ほくとしちせい', zh: '北斗七星（大熊座的一部分）', s: [[40, 70], [62, 66], [80, 76], [98, 88], [104, 116], [136, 124], [148, 100]], l: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 3]] },
+    { ja: 'オリオン座', kana: 'オリオンざ', zh: '獵戶座：紅色的參宿四、藍白色的參宿七', s: [[72, 54, 5, '#ffb08a'], [128, 62], [90, 102], [100, 98], [110, 94], [80, 148], [130, 142, 5, '#cfe2ff']], l: [[0, 2], [1, 4], [2, 3], [3, 4], [2, 5], [4, 6], [0, 1]] },
+    { ja: 'カシオペア座', kana: 'カシオペアざ', zh: '仙后座：天上的 W', s: [[40, 80], [70, 110], [98, 86], [126, 112], [158, 82]], l: [[0, 1], [1, 2], [2, 3], [3, 4]] },
+    { ja: '夏の大三角', kana: 'なつのだいさんかく', zh: '夏季大三角：織女星（ベガ）、天津四（デネブ）、牛郎星（アルタイル）', s: [[78, 56, 5], [148, 74, 4.4], [102, 150, 4.6]], l: [[0, 1], [1, 2], [2, 0]] },
+    { ja: 'さそり座', kana: 'さそりざ', zh: '天蠍座：心臟是紅色的心宿二', s: [[150, 44], [158, 62], [150, 80], [128, 84, 5, '#ff9a7a'], [116, 98], [108, 116], [100, 134], [88, 146], [70, 150], [56, 142], [52, 126], [62, 116]], l: [[0, 1], [1, 2], [1, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [10, 11]] },
+    { ja: 'はくちょう座', kana: 'はくちょうざ', zh: '天鵝座：張開翅膀的天鵝', s: [[100, 40, 4.6], [100, 86], [100, 124], [100, 162], [54, 72], [76, 80], [124, 92], [148, 100]], l: [[0, 1], [1, 2], [2, 3], [4, 5], [5, 1], [1, 6], [6, 7]] }
+  ];
+  const rnd = ((n) => () => { n = (n * 9301 + 49297) % 233280; return n / 233280; })(7);
+  const DUST = Array.from({ length: 80 }, () => [Math.round(rnd() * 200), Math.round(rnd() * 200), (0.4 + rnd() * 0.9).toFixed(2), (rnd() * 4).toFixed(2)]);
+  let i = 0;
+  function sky(day) {
+    const k = SKIES[i];
+    const lines = k.l.map(([a, b]) => { const p = k.s[a], q = k.s[b], len = Math.hypot(q[0] - p[0], q[1] - p[1]).toFixed(1); return `<path class="sc-line" d="M${p[0]} ${p[1]} L${q[0]} ${q[1]}" style="--len:${len}"/>`; }).join('');
+    const stars = k.s.map(([x, y, r = 3.4, c = '#fffbe8'], j) => `<circle class="sc-star" cx="${x}" cy="${y}" r="${r}" fill="${c}" style="--w:-${(j * 0.7).toFixed(1)}s"/>`).join('');
+    return `<svg class="sc-sky${day ? ' day' : ''}" viewBox="0 0 200 200" aria-hidden="true"><defs><clipPath id="scClip"><circle cx="100" cy="100" r="100"/></clipPath><radialGradient id="scVig"><stop offset=".72" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".7"/></radialGradient></defs>
+      <g clip-path="url(#scClip)"><rect width="200" height="200" class="sc-bg"/>${DUST.map(([x, y, r, w]) => `<circle class="sc-dust" cx="${x}" cy="${y}" r="${r}" style="--w:-${w}s"/>`).join('')}
+      <path class="sc-meteor" d="M150 20 L120 44"/>${lines}${stars}<rect width="200" height="200" fill="url(#scVig)"/></g></svg>`;
+  }
+  function draw(el) {
+    const day = sceneClock(lightHour()).day >= 0.5, k = SKIES[i];
+    el.querySelector('.sc-view').innerHTML = sky(day);
+    el.querySelector('.sc-name').innerHTML = `<ruby>${esc(k.ja)}<rt>${esc(k.kana)}</rt></ruby>`;
+    el.querySelector('.sc-zh').textContent = k.zh;
+    el.querySelector('.sc-note').textContent = day ? '白天太亮，星星很淡；晚上再來看會清楚很多。' : `${i + 1} / ${SKIES.length}`;
+  }
+  function open(yard) {
+    if (!yard || yard.querySelector('.scope')) return;
+    const el = document.createElement('div');
+    el.className = 'scope'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', '望遠鏡');
+    el.innerHTML = `<div class="sc-ring"><div class="sc-view"></div></div><div class="sc-name"></div><div class="sc-zh"></div><div class="sc-note"></div>
+      <div class="sc-btns"><button type="button" class="btn btn-sm" data-sc="-1" aria-label="上一個">‹</button><button type="button" class="btn btn-primary btn-sm" data-sc="x">收起望遠鏡</button><button type="button" class="btn btn-sm" data-sc="1" aria-label="下一個">›</button></div>`;
+    const close = () => { el.remove(); document.removeEventListener('keydown', key); };
+    const step = (d) => { i = (i + d + SKIES.length) % SKIES.length; draw(el); };
+    const key = (e) => { if (e.key === 'Escape') close(); else if (e.key === 'ArrowLeft') step(-1); else if (e.key === 'ArrowRight') step(1); };
+    el.addEventListener('click', (e) => { const b = e.target.closest('[data-sc]'); if (b) { if (b.dataset.sc === 'x') close(); else step(Number(b.dataset.sc)); } else if (e.target === el) close(); });
+    el.addEventListener('pointerdown', (e) => e.stopPropagation());
+    document.addEventListener('keydown', key);
+    yard.appendChild(el); draw(el);
+  }
+  return { open, SKIES };
+})();
+// test (2026-11-09): the gramophone plays a record while 書房 or the bedroom is open and it stands in either (state.record: the one
+// on it, '' the first; state.musicOff: stopped by hand). Made up here and played by Web Audio, so there is nothing to fetch: a
+// tune (mel: notes in eighths, name:length, - a rest), a chord a bar (its first note an octave down for the bass), a music-box
+// arpeggio over it (arp: the chord's notes, a step each), a soft pad and the gramophone's warm filter — clean, no crackle (the user's call).
+// RECORDS: the house's own (own); one sold later is had once bought (owns)
+const MUSIC = (() => {
+  const RECORDS = [
+    { id: 'engawa', own: true, file: 'music/engawa-1.m4a', name: '縁側の午後', kana: 'えんがわのごご', zh: '簷廊的午後', style: '電鋼琴・音樂盒', color: '#e3907f', bpm: 76, bar: 8, lead: 'keys', arp: [0, 2, 1, 2, 3, 2, 1, 2],
+      chords: ['F3 A3 C4 E4', 'G3 B3 D4 E4', 'E3 G3 B3 D4', 'A3 C4 E4 G4', 'D3 F3 A3 C4', 'G3 B3 D4 F4', 'C3 E3 G3 B3', 'C3 E3 G3 D4'],
+      mel: 'A4:2 G4 A4 C5:2 E5:2 | D5:3 C5 D5:2 G4:2 | E5:2 D5 E5 G5:2 E5:2 | D5:3 C5 A4:4 | C5:2 D5 C5 A4:2 G4:2 | A4:2 C5:2 D5:2 G4:2 | E5:4 D5:2 C5:2 | C5:6 -:2 |'
+        + 'A4:2 G4 A4 C5:2 E5:2 | D5:3 C5 D5:2 G5:2 | E5:2 G5 A5 G5:2 E5:2 | D5:3 E5 C5:4 | A5:2 G5 E5 D5:2 C5:2 | D5:2 E5:2 G5:2 D5:2 | E5:3 D5 C5:2 A4:2 | C5:8' },
+    { id: 'yozakura', own: true, file: 'music/yozakura-1.m4a', name: '夜桜', kana: 'よざくら', zh: '夜裡的櫻花', style: '琴・音樂盒', color: '#8b6aa8', bpm: 66, bar: 6, lead: 'koto', arp: [0, 1, 2, 1, 2, 1],
+      chords: ['A3 C4 E4', 'A#3 D4 F4 A4', 'D3 F3 A3', 'E3 A3 D4', 'A3 C4 E4', 'F3 A3 C4 E4', 'D3 F3 A3 C4', 'A3 C4 E4'],
+      mel: 'E5:2 D5 E5 A5:2 | F5:3 E5 D5:2 | E5:2 F5 E5 D5:2 | A#4:2 A4:4 | A4:2 D5:2 E5:2 | F5:2 E5 F5 A5:2 | F5:2 E5:2 D5:2 | E5:6 |'
+        + 'E5:2 D5 E5 A5:2 | A#5:3 A5 F5:2 | E5:2 F5 E5 D5:2 | A#4:2 A4:4 | A5:2 A#5 A5 F5:2 | E5:4 F5:2 | E5:2 D5:2 A#4:2 | A4:6' }
+  ];
+  const NOTE = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
+  const hz = (n) => { const m = /^([A-G]#?)(\d)$/.exec(n); return 440 * Math.pow(2, ((+m[2] + 1) * 12 + NOTE[m[1]] - 69) / 12); };
+  const have = () => RECORDS.filter((r) => r.own || owns(r.id));
+  const current = () => have().find((r) => r.id === state.record) || have()[0];
+  // a record as notes to play: [step, instrument, Hz, length in steps, volume], and its length in steps
+  function score(rec) {
+    const ev = []; let t = 0;
+    rec.mel.split(/[\s|]+/).filter(Boolean).forEach((w) => { const [n, l] = w.split(':'), len = +(l || 1); if (n !== '-') ev.push([t, rec.lead, hz(n), len, rec.lead === 'koto' ? 0.45 : 0.16]); t += len; });
+    const bars = Math.round(t / rec.bar);
+    for (let b = 0; b < bars; b++) {
+      const ch = rec.chords[b % rec.chords.length].split(' ').map(hz), s0 = b * rec.bar;
+      ev.push([s0, 'bass', ch[0] / 2, rec.bar, 0.13]);
+      if (rec.bar === 8) ev.push([s0 + 4, 'bass', ch[0] / 2, 4, 0.08]);
+      ev.push([s0, 'pad', ch, rec.bar, 0.018]);
+      rec.arp.forEach((k, i) => ev.push([s0 + i, 'box', ch[k % ch.length] * 2, 2, i ? 0.035 : 0.045]));
+    }
+    return { ev, len: bars * rec.bar };
+  }
+  // two ways to play (test, 2026-11-09): a record's file (file: the music below rendered once by scripts/render-music.py, served
+  // with the site, kept by the service worker like the clips) through a looping <audio> — smooth, and iOS plays it as it plays
+  // any media; or, when the file cannot be had (offline before it was ever fetched), the music made here and now (synth)
+  let ctx = null, out = null, bus = null, timer = 0, play = null, wake = null, kept = {}, player = null, fadeT = 0;
+  const VOL = 0.8, blobs = {};   // blobs: a record's file as a blob: URL, fetched once a session
+  function chain(c) {   // the synth's way out: a warm filter, a small room's echo
+    ctx = c;
+    out = ctx.createGain(); out.connect(ctx.destination);
+    const warm = ctx.createBiquadFilter(); warm.type = 'lowpass'; warm.frequency.value = 5200; warm.Q.value = 0.4; warm.connect(out);
+    bus = ctx.createGain(); bus.gain.value = 0.9; bus.connect(warm);
+    const rv = ctx.createConvolver(), sr = ctx.sampleRate, ir = ctx.createBuffer(2, Math.floor(sr * 2.2), sr);
+    for (let c2 = 0; c2 < 2; c2++) { const d = ir.getChannelData(c2); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
+    rv.buffer = ir; const wet = ctx.createGain(); wet.gain.value = 0.22; bus.connect(rv); rv.connect(wet); wet.connect(warm);
+  }
+  function build() { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false; chain(new AC()); out.gain.value = 0; return true; }
+  function koto(f) {   // a plucked string (Karplus–Strong), made once a pitch
+    const k = Math.round(f); if (kept[k]) return kept[k];
+    const sr = ctx.sampleRate, b = ctx.createBuffer(1, Math.floor(sr * 2.4), sr), d = b.getChannelData(0), N = Math.max(2, Math.round(sr / f));
+    for (let i = 0; i < N; i++) d[i] = (Math.random() * 2 - 1) * 0.8;
+    for (let i = N; i < d.length; i++) d[i] = 0.4985 * (d[i - N] + (i - N - 1 >= 0 ? d[i - N - 1] : 0));
+    return (kept[k] = b);
+  }
+  function env(at, vol, attack, len) {   // a gain that swells in and dies away
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + attack); g.gain.exponentialRampToValueAtTime(0.0001, at + attack + len); g.connect(bus); return g;
+  }
+  function osc(type, f, at, end, to) { const o = ctx.createOscillator(); o.type = type; o.frequency.value = f; o.connect(to); o.start(at); o.stop(end); return o; }
+  function note(at, inst, f, steps, vol, step) {
+    const len = steps * step;
+    if (inst === 'koto') { const s = ctx.createBufferSource(); s.buffer = koto(f); const g = env(at, vol, 0.004, Math.max(1.6, len + 0.8)); s.connect(g); s.start(at); s.stop(at + 2.4); }
+    else if (inst === 'keys') { const g = env(at, vol, 0.006, len + 1.1), g2 = env(at, vol * 0.22, 0.004, 0.35); osc('sine', f, at, at + len + 1.3, g); osc('triangle', f, at, at + len + 1.3, env(at, vol * 0.3, 0.006, len * 0.6 + 0.3)); osc('sine', f * 3, at, at + 0.5, g2); }
+    else if (inst === 'box') { osc('sine', f, at, at + 1.6, env(at, vol, 0.003, 1.4)); osc('sine', f * 4.2, at, at + 0.4, env(at, vol * 0.18, 0.002, 0.3)); }
+    else if (inst === 'bass') osc('sine', f, at, at + len + 0.4, env(at, vol, 0.02, Math.min(len, 2.2)));
+    else if (inst === 'pad') {
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(env(at, vol, 0.7, len + 0.3));
+      f.forEach((h) => { osc('triangle', h * 1.003, at, at + len + 1.1, lp); osc('triangle', h * 0.997, at, at + len + 1.1, lp); });
+    }
+  }
+  function startSynth(rec) {   // from its first bar, a step ahead
+    if (!ctx && !build()) return;
+    const sc = score(rec), step = 60 / rec.bpm / 2;
+    Object.assign(play, { sc, step, i: 0, t: ctx.currentTime + 0.15 });
+    clearInterval(timer);
+    timer = setInterval(() => {
+      if (!play || play.mode !== 'synth' || ctx.state !== 'running') return;
+      if (play.t < ctx.currentTime) play.t = ctx.currentTime + 0.05;   // fallen behind (the timer held up, the phone asleep): on from now, never a heap of notes at once
+      while (play.t < ctx.currentTime + 0.3) {
+        const k = play.i % play.sc.len;
+        play.sc.ev.forEach((e) => { if (e[0] === k) note(play.t, e[1], e[2], e[3], e[4], play.step); });
+        play.i++; play.t += play.step;
+        if (k === play.sc.len - 1) play.t += play.step * 2;   // a breath before it comes round again
+      }
+    }, 60);
+    ctx.resume().catch(() => {}); fade(VOL, 1.2);
+  }
+  const fade = (v, s) => { const t = ctx.currentTime; out.gain.cancelScheduledValues(t); out.gain.setValueAtTime(out.gain.value, t); out.gain.linearRampToValueAtTime(v, t + s); };
+  function fadeFile(v, s) {   // the player's volume to v (an iPhone keeps it at 1: there it only starts and stops)
+    clearInterval(fadeT); const from = player.volume, t0 = performance.now();
+    fadeT = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / (s * 1000)); try { player.volume = from + (v - from) * k; } catch (e) { /* read-only */ } if (k >= 1) clearInterval(fadeT); }, 50);
+  }
+  const playFile = () => { const pr = player.play(); if (pr && pr.catch) pr.catch(() => {}); };   // refused before a first tap: wake tries again
+  function startFile(rec, p) {
+    if (!player) { player = new Audio(); player.loop = true; player.preload = 'auto'; player.setAttribute('playsinline', ''); }
+    const go = () => {
+      if (play !== p) return;
+      if (player.dataset.id !== rec.id) { player.src = blobs[rec.id]; player.dataset.id = rec.id; }   // the same record again: on from where it stopped
+      try { player.volume = 0; } catch (e) { /* read-only */ }
+      playFile(); fadeFile(VOL, 1.2);
+    };
+    if (blobs[rec.id]) { go(); return; }
+    fetch(rec.file).then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then((b) => { blobs[rec.id] = URL.createObjectURL(b); go(); })
+      .catch(() => { if (play !== p) return; p.mode = 'synth'; startSynth(rec); });   // no file to be had: made here instead
+  }
+  function start(rec) { play = { id: rec.id, mode: rec.file ? 'file' : 'synth' }; if (play.mode === 'file') startFile(rec, play); else startSynth(rec); }
+  function halt() {   // stopped: the file paused where it is, the synth's timer stopped and its sound asleep
+    if (!play) return;
+    if (play.mode === 'file') { clearInterval(fadeT); player.pause(); } else { clearInterval(timer); timer = 0; if (ctx) ctx.suspend().catch(() => {}); }
+    play = null;
+  }
+  // whether it should play now: in 書房 or the bedroom (#/, #/today, #/bedroom), the gramophone set out, not stopped, the page in sight
+  function wanted() {
+    const r = currentRoute().name;
+    return (r === 'today' || r === 'bedroom') && Boolean(state.placed && state.placed.gramophone && owns('gramophone')) && !state.musicOff && !document.hidden && Boolean(current());
+  }
+  function sync() { try { tune(); } catch (e) { console.error(e); } }   // music never breaks a page
+  function tune() {
+    const on = wanted();
+    document.querySelectorAll('.study').forEach((st) => st.classList.toggle('music', on));
+    if (!on) {
+      if (!play) return;
+      if (document.hidden) { halt(); return; }
+      const p = play; if (p.mode === 'file') fadeFile(0, 0.5); else fade(0, 0.5);
+      setTimeout(() => { if (play === p && !wanted()) halt(); }, 600);
+      return;
+    }
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older Safari */ }
+    const rec = current();
+    if (!play || play.id !== rec.id) { halt(); start(rec); }
+    else if (play.mode === 'file') { if (player.paused) playFile(); fadeFile(VOL, 0.6); }   // back before it had stopped
+    else { ctx.resume().catch(() => {}); fade(VOL, 1.2); }
+    if (!wake) {   // a browser lets sound start only from a tap or a key: the first one wakes it
+      // iOS: Web Audio stays silent (the ring switch) until a media element has played — the user heard the records only after a
+      // saved clip: the shared player plays its silence from this tap too, and the page asks for a playback session
+      wake = () => {
+        if (!play || !wanted()) return;
+        if (play.mode === 'file') { if (player.paused && player.src) playFile(); return; }
+        if (ctx && ctx.state !== 'running') { try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older Safari */ } unlockTtsPlayer(); ctx.resume().catch(() => {}); }
+      };
+      ['pointerdown', 'keydown'].forEach((t) => document.addEventListener(t, wake, true));
+    }
+  }
+  // a record as a file (scripts/render-music.py): the music made here, rendered offline twice round with the second kept — its
+  // start carries the first's echoes, so it loops on without a seam — at peak, as 16-bit stereo WAV in base64
+  async function render(id, peak = 0.5) {
+    const rec = RECORDS.find((r) => r.id === id), sc = score(rec), step = 60 / rec.bpm / 2, L = (sc.len + 2) * step, sr = 44100, n = Math.round(L * sr);
+    const was = [ctx, out, bus, kept], oc = new OfflineAudioContext(2, n * 2, sr);
+    kept = {}; chain(oc); out.gain.value = 1;
+    for (let k = 0; k < 2; k++) sc.ev.forEach((e) => note(k * L + e[0] * step, e[1], e[2], e[3], e[4], step));
+    const buf = await oc.startRendering(); [ctx, out, bus, kept] = was;
+    const ch = [0, 1].map((c) => buf.getChannelData(c).subarray(n, 2 * n));
+    let top = 0; ch.forEach((d) => { for (let i = 0; i < d.length; i++) top = Math.max(top, Math.abs(d[i])); });
+    const g = peak / (top || 1), bytes = new Uint8Array(44 + n * 4), v = new DataView(bytes.buffer), str = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+    str(0, 'RIFF'); v.setUint32(4, 36 + n * 4, true); str(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 2, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * 4, true); v.setUint16(32, 4, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, n * 4, true);
+    for (let i = 0; i < n; i++) for (let c = 0; c < 2; c++) v.setInt16(44 + (i * 2 + c) * 2, Math.max(-32767, Math.min(32767, Math.round(ch[c][i] * g * 32767))), true);
+    let b64 = ''; for (let i = 0; i < bytes.length; i += 0x8000) b64 += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return { seconds: L, top, b64: btoa(b64) };
+  }
+  document.addEventListener('visibilitychange', () => sync());
+  saveHooks.push(() => sync());   // set out or put away, stopped or another record (here or from another device)
+  // the gramophone tapped: its records, the one playing marked; a tap puts one on, 停下來 lifts the needle
+  const disc = (r, on) => `<svg class="rec-disc${on ? ' on' : ''}" viewBox="-24 -24 48 48" aria-hidden="true"><circle r="23" fill="#1f1c22"/><circle r="18" fill="none" stroke="#fff" stroke-opacity=".08" stroke-width="1"/><circle r="13.5" fill="none" stroke="#fff" stroke-opacity=".08" stroke-width="1"/><path d="M-15 -12 A19 19 0 0 1 -4 -18.6" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="1.6" stroke-linecap="round"/><circle r="8" fill="${r.color}"/><circle r="1.4" fill="#1f1c22"/></svg>`;
+  function body() {
+    const now = !state.musicOff && current();
+    return `<div class="rec-list">${have().map((r) => `<button type="button" class="rec${now && now.id === r.id ? ' on' : ''}" data-act="music-rec" data-id="${r.id}">${disc(r, now && now.id === r.id)}
+      <span class="rec-text"><ruby class="rec-name">${esc(r.name)}<rt>${esc(r.kana)}</rt></ruby><span class="muted small">${esc(r.zh)}・${esc(r.style)}</span></span>${now && now.id === r.id ? '<span class="rec-now">播放中</span>' : ''}</button>`).join('')}</div>
+      <div class="row-wrap mt-3"><button type="button" class="btn btn-sm" data-act="music-stop">${state.musicOff ? '放下唱針' : '停下來'}</button></div>`;
+  }
+  function pick() { openModal('留聲機', body(), { width: 420, noFocus: true }); }
+  function redo() { saveState(); const b = document.getElementById('modalBody'); if (b) b.innerHTML = body(); }
+  const put = (id) => { state.record = id; state.musicOff = false; redo(); };
+  const pause = () => { state.musicOff = !state.musicOff; redo(); };
+  return { RECORDS, sync, pick, put, pause, render, playing: () => Boolean(play) && wanted(), mode: () => play && play.mode };
+})();
+// outside 擺設 a tap on a ware sends the hero to stand beside it, facing it; at the telescope they look into it (test: 觀星)
+function yardUse(yard, id) {
+  const o = yardPlaced().find((q) => q.id === id); if (!yard || !o) return;
+  const side = yh.X <= o.p.x ? -1 : 1, gx = o.p.x + side * (o.it.ground[0] * yScale(o.p.y) / 2 + 16);
+  yHeroWalk(yard, [gx, Math.max(12, o.p.y - 4)], () => {
+    const el = yard.querySelector('.yhero'); if (!el) return;
+    yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard);   // turned to it
+    if (id === 'telescope') { el.classList.add('look'); setTimeout(() => { el.classList.remove('look'); if (yard.isConnected) SCOPE.open(yard); }, 700); }
+    if (id === 'pond') { el.classList.add('crouch'); setTimeout(() => el.classList.remove('crouch'), 1500); pondStir(yard, side); }
+    if (YARD.ART[id] && YARD.ART[id].glow) {   // a lamp (test, 2026-11-09): switched on or off
+      if (lampOff(id)) delete state.lampsOff[id]; else state.lampsOff[id] = true; saveState();
+      const b = yard.querySelector(`.yware[data-ware="${id}"]`); if (b) b.classList.toggle('off', lampOff(id));
+    }
+  });
+}
+// the pond (test, 2026-11-09): the hero crouches at its edge and dips a hand in — rings spread from there, and a koi leaps out
+// across and splashes back in with rings of its own
+function pondStir(yard, side) {
+  const svg = yard.querySelector('.yware[data-ware="pond"] svg.art'); if (!svg) return;
+  const old = svg.querySelector('.stir'); if (old) old.remove();
+  const rings = (x, y, w) => [0, 0.35, 0.7].map((d) => `<ellipse class="rip" cx="${x}" cy="${y}" rx="6" ry="1.6" style="--w:${(w + d).toFixed(2)}s"/>`).join('');
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('class', 'stir'); g.setAttribute('transform', side > 0 ? 'scale(-1 1)' : '');
+  g.innerHTML = `${rings(-74, -18, 0)}${rings(-14, -22, 1.05)}${rings(26, -20, 1.75)}
+    <g class="leap"><path d="M10 0 c-5 -5 -15 -5 -20 0 c5 5 15 5 20 0 Z M-10 0 l-8 -5 v10 Z" fill="#f08a3c"/><circle cx="4" cy="-1.6" r="2.2" fill="#fff"/></g>
+    ${[[-18, -24, -3, -9], [-12, -24, 2, -11], [22, -22, -2, -10], [28, -22, 4, -8]].map(([x, y, dx, dy], i) => `<circle class="spl" cx="${x}" cy="${y}" r="1.6" style="--dx:${dx}px;--dy:${dy}px;--w:${i < 2 ? 0.95 : 1.7}s"/>`).join('')}`;
+  svg.appendChild(g); svg.closest('.yware').classList.add('stirred');
+  setTimeout(() => { g.remove(); if (!svg.querySelector('.stir')) svg.closest('.yware').classList.remove('stirred'); }, 3600);
+}
+function renderOutside(view, place = 'yard') {
+  sceneTick();
+  const pct = ringPct(dayProgress());
+  const yard = view.querySelector('.yard');
+  if (yard && (yard.dataset.house !== (state.house || '') || yard.dataset.place !== place || (yard.dataset.sig !== TOWNEV.sig(place) && !TALK.on()))) { yard.remove(); }   // the house changed (another device), the other place, or who is about (TOWNEV): drawn anew
+  else if (yard) {   // a redraw: new stars fade in, the motion carries on; the yard's things again only if they moved (sync, another device)
+    yardLevel(yard, pct);
+    const w = yard.querySelector('.ywares'); if (w && !yed.on && w.dataset.sig !== yardSig()) { w.innerHTML = yardWaresHtml(); w.dataset.sig = yardSig(); }
+    if (place === 'yard') yWitch(yard);
+    return;
+  }
+  yed.on = false; yed.sel = null; yed.drag = null; ypan = null; Object.assign(YCAM, { t: 0, lead: 0, free: false });   // a yard drawn anew opens out of 擺設
+  cancelAnimationFrame(yh.raf); yh.climb = null; yh.s = 0; yh.z = 0; if (yh.use) { [yh.X, yh.Y] = yh.use.up; yh.use = null; }   // drawn anew: up off whatever he sat on
+  if (yPlace !== place) {   // the other place's spot (test: the main road)
+    yPlace = place;
+    try { const q = (JSON.parse(localStorage.getItem('nq_hero') || '{}') || {})[place]; if (q && Number.isFinite(q.X) && Number.isFinite(q.Y)) { yh.X = q.X; yh.Y = q.Y; } else if (place === 'street') { yh.X = BUS.X - 70; yh.Y = 124; } } catch (e) { /* no storage */ }
+  }
+  const a = yh.arrive && yh.arrive.to === place ? yh.arrive : null, bus = a && BUS_PLACES.includes(a.from) && BUS_PLACES.includes(place) && BUS_IN[place];
+  const way = a && (WAYS[`${a.from}>${place}`] || (bus && { in: bus })), come = way ? way.in() : null; yh.arrive = null; TALK.close();   // by the bus: off at its stop
+  if (come) { [yh.X, yh.Y] = come[0]; yh.back = place === 'yard'; }
+  if (!come) { if (INDOOR.includes(place)) [yh.X, yh.Y] = isoClamp([yh.X, yh.Y]); else yh.Y = Math.min(yh.Y, walkTop(place)); [yh.X, yh.Y] = yFree(place, [yh.X, yh.Y]); }   // where he was kept: on the ground (a room: its floor), not on a building nor in a thing
+  view.innerHTML = yardHtml(pct, place);
+  const y = view.querySelector('.yard');
+  y.dataset.house = state.house || ''; y.dataset.sig = TOWNEV.sig(place);
+  ycam.x = yh.fromDoor ? 0 : yh.X; yardLayout(y);   // the camera on the hero (at the door, coming out)
+  if (PLACE_LOOK[place] !== undefined && !yh.fromDoor) { const m = Math.max(0, ycam.W / 2 - 70); yCamTo(y, Math.max(yh.X - m, Math.min(yh.X + m, PLACE_LOOK[place]))); }   // as near its sight as keeps him on the screen
+  const ro = new ResizeObserver(() => { if (!y.isConnected) { ro.disconnect(); return; } yardLayout(y); });
+  ro.observe(y.querySelector('.sky'));
+  if (yh.fromDoor && place === 'yard') { yh.fromDoor = false; yh.X = 0; yh.Y = 214; yh.back = false; yHeroPlace(y); setTimeout(() => yHeroWalk(y, [8, 150]), 260); }   // out of the door, onto the lawn (below the 進屋 tag)
+  else if (come && place === 'yard' && a && YARD_FAR[a.from]) {   // home from the beach or the town: up the far path, then in over the lawn
+    const h = y.querySelector('.yhero'); h.classList.add('out'); yHeroPlace(y);
+    setTimeout(() => yFar(y, a.from, true, () => { [yh.X, yh.Y] = yToward(come[1], come[0], 110); yh.back = false; yHeroPlace(y); h.classList.remove('out'); yHeroWalk(y, come[1]); }), 120);   // in a few steps from where the far path left off
+  } else if (come) { yHeroPlace(y); setTimeout(() => yHeroWalk(y, come[1]), 200); }   // in along the path
+  else yHeroPlace(y);
+  if (place === 'yard') yWitch(y);
+  const yel = y.querySelector('.yhero');   // idling now and then while left be
+  HERO.idle(yel, () => !yh.climb && !yh.use && !document.hidden && !yel.matches('.walk, .run, .out, .hop, .wave, .spin, .cheer, .reach, .crouch, .look, .bow'), true);
+  y.addEventListener('pointerdown', (e) => { y._at = yardPoint(y, e); if (!y.classList.contains('dressing')) { yardDragStart(y, e); yPanStart(y, e); } });   // _at: which seat a tap on a row of them meant
+  y.addEventListener('pointermove', (e) => { yardDragMove(y, e); yPanMove(y, e); });
+  y.addEventListener('pointerup', (e) => { yardDragEnd(y); yPanEnd(y, e); }); y.addEventListener('pointercancel', (e) => { yardDragEnd(y); yPanEnd(y, e); });
+  y.addEventListener('click', (e) => {   // a tap on the lawn: the hero walks there (in 擺設: the picked ware goes there)
+    if (yh.far && !e.target.closest('.yard-tools')) { yh.far(); return; }   // on the long way down: there at once
+    if (y._noClick || y.classList.contains('dressing') || e.target.closest('button, .hero, a, .dress')) return;
+    const at = yardPoint(y, e);
+    if (yed.on) { if (yed.sel) yardMoveTo(y, yed.sel, at); return; }
+    if (!INDOOR.includes(place) && (at.y < 4 || at.y > 222)) return;
+    yHeroWalk(y, [at.x, at.y]);   // in a room: onto its floor
+  });
+  let swallow = false;   // the buttons up top while they rest: a first tap only brings them back (as in 書房)
+  y.addEventListener('pointerdown', (e) => { swallow = y.classList.contains('quiet') && !!e.target.closest('.yard-tools'); }, true);
+  y.addEventListener('click', (e) => { if (swallow) { swallow = false; e.stopPropagation(); e.preventDefault(); } }, true);
+  let restT = 0;   // the signs: in sight when the yard opens and after a touch, out of sight 4 s later (a tap on a thing still works)
+  const wake = () => { y.classList.remove('quiet'); clearTimeout(restT); restT = setTimeout(() => { if (y.isConnected) y.classList.add('quiet'); }, 4000); };
+  y._wake = wake;   // the witch's 言靈 keep the 言靈 button up while they fly in
+  y.addEventListener('pointerdown', wake); y.addEventListener('pointerup', wake);
+  y.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' && !e.buttons) wake(); });   // a mouse over the yard
+  wake();
+}
+function kotoButtons(root) {   // the 言靈 button up top (書房, the yard) with the balance now
+  root.querySelectorAll('.study-koto').forEach((kb) => { kb.querySelector('span').textContent = kotoBalance(); kb.setAttribute('aria-label', `言靈 ${kotoBalance()}，到古道具屋`); });
+}
+// a swipe on the yard (1.2.0): one finger anywhere but on a button (a ware outside 擺設 too) looks along the yard; let go
+// moving, it coasts on; pulled past an end, it springs back
+function yPanStart(yard, e) {
+  if (yed.drag || !yCamMax() || (e.pointerType === 'mouse' && e.button !== 0) || e.target.closest('.yard-tools, .yedit, .dress, .yhero, .talk, a') || (e.target.closest('button') && !e.target.closest('.yworld')) || (yed.on && e.target.closest('.yware'))) return;   // a finger on someone or something in the scene may still swipe (2026-11-10, the user: swipes went dead in the rooms)
+  cancelAnimationFrame(ycoast); yard.querySelector('.yworld').classList.remove('glide');
+  ypan = { id: e.pointerId, x0: e.clientX, y0: e.clientY, c0: ycam.x, on: false, hist: [] };
+}
+const YSWIPE = 1.8;   // test (2026-11-09; the user: less swiping out of doors): the view goes this much further than the finger, and coasts as much faster
+function yPanMove(yard, e) {
+  if (!ypan || e.pointerId !== ypan.id) return;
+  const dx = e.clientX - ypan.x0, dy = e.clientY - ypan.y0;
+  if (!ypan.on) {
+    if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy)) return;
+    ypan.on = true; YCAM.free = true; try { yard.setPointerCapture(e.pointerId); } catch (err) { /* a pointer the page did not see go down */ }
+  }
+  yCamTo(yard, ypan.c0 - dx * YSWIPE, 0.3);
+  ypan.hist.push([performance.now(), e.clientX]); if (ypan.hist.length > 8) ypan.hist.shift();
+}
+function yPanEnd(yard, e) {
+  if (!ypan || e.pointerId !== ypan.id) return;
+  const p = ypan; ypan = null; if (!p.on) return;
+  yard._noClick = true; setTimeout(() => { yard._noClick = false; }, 0);   // the click that ends a swipe is no tap
+  const m = yCamMax(), w = yard.querySelector('.yworld');
+  if (Math.abs(ycam.x) > m) { w.classList.add('glide'); yCamTo(yard, Math.max(-m, Math.min(m, ycam.x))); setTimeout(() => w.classList.remove('glide'), 380); return; }
+  const now = performance.now(), h = p.hist.filter((q) => now - q[0] < 100);
+  if (h.length < 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  let v = YSWIPE * (h[0][1] - h[h.length - 1][1]) / Math.max(16, h[h.length - 1][0] - h[0][0]), t0 = now;   // px a ms
+  if (Math.abs(v) < 0.1) return;
+  const step = (t) => {
+    const dt = Math.min(50, t - t0); t0 = t;
+    const x0 = ycam.x; yCamTo(yard, ycam.x + v * dt); v *= Math.pow(0.94, dt / 16);
+    if (yard.isConnected && ycam.x !== x0 && Math.abs(v) > 0.02) ycoast = requestAnimationFrame(step);
+  };
+  ycoast = requestAnimationFrame(step);
+}
+function yardLevel(yard, pct) {
+  kotoButtons(yard);
+  const f = pct / 100;
+  yard.style.setProperty('--f', f);
+  yard.classList.toggle('full', pct >= 100);
+  yard.querySelectorAll('.st').forEach(el => el.classList.toggle('on', Number(el.dataset.t) <= f));
+  mailboxLevel();
+}
+// the sky's layout, the same every day (a fixed seed): each star carries the share of the list that lights it — six faint ones
+// from the start, the rest by 80%, the seven of the constellation at 100%; fireflies and flowers spread along the yard's whole
+// width (1.2.0: 1200px, a phone sees a third of it at a time)
+const SKY = (() => {
+  let a = 20261106;
+  const rnd = () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };   // mulberry32
+  const r2 = (x) => Math.round(x * 100) / 100;
+  const stars = Array.from({ length: 72 }, (_, i) => ({ x: r2(rnd() * 100), y: r2(rnd() * 100), s: r2(rnd() < 0.12 ? 2.2 + rnd() * 0.6 : 1 + rnd() * 1.1), t: i < 6 ? 0 : r2(0.8 * (i - 5) / 66), d: r2(2 + rnd() * 3.5), w: r2(rnd() * 5) }));
+  [[60, 15], [66, 13], [72, 16], [77, 21], [75, 28], [83, 30], [85, 23]].forEach(([x, y], i) => stars.push({ x, y, s: 2.6, t: 1, d: 3, w: i * 0.4, dip: true }));
+  const flies = Array.from({ length: 30 }, () => ({ x: r2(4 + rnd() * 92), y: Math.round(rnd() * 160), dx: Math.round(rnd() * 60 - 30), dy: Math.round(rnd() * 30 - 15), d: r2(5 + rnd() * 5), w: r2(rnd() * 6) }));
+  const flowers = Array.from({ length: 40 }, () => ({ x: r2(3 + rnd() * 94), y: Math.round(150 + rnd() * 56), c: ['#ff9ec4', '#ffffff', '#ffd166', '#c9a7ff', '#ff8a8a'][Math.floor(rnd() * 5)], d: r2(2.5 + rnd() * 2), w: r2(rnd() * 3) }));
+  // faint ones (2026-11-10, the user: night was too dark): there every night, small and dim, a third of them twinkling slowly
+  const faint = Array.from({ length: 78 }, (_, i) => `<circle cx="${r2(rnd() * 100)}%" cy="${r2(rnd() * 72)}%" r="${r2(0.5 + rnd() * 0.7)}"${i % 3 ? '' : ' class="tw"'}/>`);
+  return { stars, flies, flowers, faint: `<svg class="faint" aria-hidden="true"><g>${faint.filter((c) => !c.includes('tw')).join('')}</g><g class="tw">${faint.filter((c) => c.includes('tw')).join('')}</g></svg>` };
+})();
+// 古道具屋 on its hill (1.2.0): an old wooden shop, a tiled roof with turned-up eaves, a 古 noren, a paper lantern, a pot and
+// a box outside, 福爺 at the door; by night the lantern and the doorway glow, so do the lamps on the path
+const HILL = 'M320 600 V356 C370 340 412 304 446 276 C460 264 470 252 482 250 C494 248 506 256 520 268 C552 296 594 326 646 350';
+const SHOP_ART = `<circle class="s-glow" cx="0" cy="-18" r="48" fill="url(#shopGlow)"/><path class="s-ground" d="M-36 2 Q0 -4 36 2 L36 5 L-36 5 Z"/>
+  <rect class="s-wall" x="-20" y="-25" width="40" height="26"/><path class="s-beam" d="M-20 -25 H20 V-22 H-20 Z M-20 -12 H-13 V-10 H-20 Z M13 -12 H20 V-10 H13 Z"/>
+  <rect class="s-open" x="-12" y="-20" width="24" height="21"/><path class="s-noren" d="M-13 -21 H13 V-9 H8.9 V-12 H4.3 V-9 H0.1 V-12 H-4.3 V-9 H-8.6 V-12 H-13 Z"/><text class="s-ko" x="0" y="-13.4" text-anchor="middle">古</text>
+  <path class="s-roof" d="M-29 -21 Q-25 -22 -22 -25 L-14 -36 H14 L22 -25 Q25 -22 29 -21 Z"/><path class="s-rim" d="M-29 -21 Q-25 -22 -22 -25 L-14 -36 H14 L22 -25 Q25 -22 29 -21"/><path class="s-tile" d="M-17 -32 H17 M-20 -28 H20"/>
+  <rect class="s-sign" x="-9" y="-35" width="18" height="6" rx=".8"/><line class="s-cord" x1="23" y1="-22" x2="23" y2="-18.5"/><ellipse class="s-paper" cx="23" cy="-14" rx="3.3" ry="4.4"/><path class="s-band" d="M19.9 -15.6 H26.1 M19.9 -12.4 H26.1"/>
+  <path class="s-pot" d="M-27 1 C-30 -2 -30 -7 -27 -9 H-23 C-20 -7 -20 -2 -23 1 Z"/><rect class="s-pot-rim" x="-27.6" y="-10.4" width="5.2" height="1.6" rx=".6"/><rect class="s-box" x="21" y="-5" width="9" height="6"/><rect class="s-box2" x="22.5" y="-9" width="6" height="4"/>
+  <g class="s-owl"><ellipse cx="-16" cy="-3.6" rx="3.2" ry="3.8"/><path d="M-18.6 -6.6 L-18 -8.6 L-16.6 -7 M-13.4 -6.6 L-14 -8.6 L-15.4 -7"/><circle class="s-owl-eye" cx="-17.2" cy="-4.6" r=".9"/><circle class="s-owl-eye" cx="-14.8" cy="-4.6" r=".9"/></g>`;
+// the house in the yard: the cottage, or a look bought at 古道具屋 (1.2.0: 蘑菇屋), drawn in the same 140 × 130 box with its
+// windows, chimney and door where the cottage has them (the lights by night, the smoke and 進屋 stay where they are)
+const hc = (c, n) => `class="hc" style="--c:${c};--n:${n}"`, hs = (c, n) => `class="hs" style="--c:${c};--n:${n}"`;
+const hcx = (cls, c, n, more = '') => `class="hc ${cls}" style="--c:${c};--n:${n};${more}"`, hsx = (cls, c, n, more = '') => `class="hs ${cls}" style="--c:${c};--n:${n};${more}"`;   // with a class of its own (a moving part, 2026-11-10)   // a part of a house: its colour by day, by night
+const HOUSE_ART = {
+  // 2026-11-10 (the user: a box with a triangle on it): a brick chimney, the roof in shingles with its fascia, clapboard walls with
+  // corner boards on a stone footing, the shade under the eaves; windows framed, with sills, shutters and boxes of flowers; the door
+  // framed and panelled under a little gabled canopy, a lamp beside it lit by night, a mat; bushes at the corners; two stone steps
+  // down to the lawn, where the path begins (it ran into the door): each a light tread over a shaded riser, a shadow on the grass
+  // under them, so they read as standing out in front of the house (a flat grey shape looked like a lump under the door)
+  cottage: `<rect class="chim" x="92" y="30" width="12" height="30"/><path class="brick" d="M92 36 H104 M92 42 H104 M92 48 H104 M92 54 H104 M98 30 V36 M95 36 V42 M101 36 V42 M98 42 V48 M95 48 V54 M101 48 V54 M98 54 V60"/><rect class="roof" x="89" y="27" width="18" height="5" rx="1"/>
+    <rect class="wall" x="22" y="66" width="96" height="64"/><path class="siding" d="M22 77 H118 M22 85 H118 M22 93 H118 M22 101 H118 M22 109 H118 M22 117 H118"/><path class="eave" d="M22 66 H118 V72 H22 Z"/>
+    <rect class="trim" x="22" y="66" width="4" height="60"/><rect class="trim" x="114" y="66" width="4" height="60"/><rect class="stone" x="20" y="124" width="100" height="6"/><path class="brick" d="M34 124 V130 M52 124 V130 M88 124 V130 M106 124 V130"/>
+    <path class="roof" d="M10 72 L70 20 L130 72 Z"/><path class="shingle" d="M24 60 H116 M36 50 H104 M47 40 H93 M58 31 H82 M40 60 v-4 M56 60 v-4 M72 60 v-4 M88 60 v-4 M104 60 v-4 M48 50 v-4 M64 50 v-4 M80 50 v-4 M96 50 v-4 M58 40 v-4 M74 40 v-4 M86 40 v-4 M68 31 v-3"/><path class="fascia" d="M9 73 L70 19.5 L131 73"/><path class="rim" d="M10 72 L70 20 L130 72 M89 27 H107"/>
+    <circle class="trim" cx="70" cy="52" r="7.6"/><circle class="pane" cx="70" cy="52" r="6"/><path class="mull" d="M70 46 V58 M64 52 H76"/>
+    <rect class="shutter" x="27.5" y="81" width="5.5" height="20" rx="1"/><rect class="shutter" x="53" y="81" width="5.5" height="20" rx="1"/><rect class="shutter" x="81.5" y="81" width="5.5" height="20" rx="1"/><rect class="shutter" x="107" y="81" width="5.5" height="20" rx="1"/><path class="slat" d="M28.5 85 h3.5 M28.5 89 h3.5 M28.5 93 h3.5 M28.5 97 h3.5 M54 85 h3.5 M54 89 h3.5 M54 93 h3.5 M54 97 h3.5 M82.5 85 h3.5 M82.5 89 h3.5 M82.5 93 h3.5 M82.5 97 h3.5 M108 85 h3.5 M108 89 h3.5 M108 93 h3.5 M108 97 h3.5"/>
+    <rect class="trim" x="32.5" y="80.5" width="21" height="21" rx="2.5"/><rect class="trim" x="86.5" y="80.5" width="21" height="21" rx="2.5"/>
+    <rect class="pane" x="34" y="82" width="18" height="18" rx="2"/><rect class="pane" x="88" y="82" width="18" height="18" rx="2"/>
+    <path class="mull" d="M43 82 V100 M34 91 H52 M97 82 V100 M88 91 H106"/>
+    <rect class="trim" x="31" y="100.5" width="24" height="2.6" rx="1"/><rect class="trim" x="85" y="100.5" width="24" height="2.6" rx="1"/>
+    <rect class="fbox" x="32" y="103" width="22" height="5" rx="1"/><rect class="fbox" x="86" y="103" width="22" height="5" rx="1"/>${[[35, '#e86f5e'], [39, '#f2c94c'], [43, '#e58fa8'], [47, '#ffffff'], [51, '#e86f5e'], [89, '#f2c94c'], [93, '#e58fa8'], [97, '#e86f5e'], [101, '#ffffff'], [105, '#f2c94c']].map(([x, c], k) => `<circle class="leafy" cx="${x + 1}" cy="${102.6 - (k % 2)}" r="2.2"/><circle class="flower" cx="${x}" cy="${101.4 - (k % 2) * 1.2}" r="1.5" style="fill:${c}"/>`).join('')}
+    <path class="roof" d="M53 101 L70 91.5 L87 101 Z"/><path class="rim" d="M53 101 L70 91.5 L87 101"/><path class="trim" d="M58.5 130 V108.2 a11.5 11.5 0 0 1 23 0 V130 Z"/>
+    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><path class="panel" d="M64.5 126 V112 h11 V126 Z M64.5 118 h11"/><circle class="knob" cx="75.5" cy="120" r="1.3"/>
+    <circle class="lampglow" cx="88.5" cy="111" r="9"/><path class="trim" d="M86 105 h5 v2.4 h-5 Z"/><path class="lamp" d="M86.2 107.4 h4.6 l-.9 5.6 h-2.8 Z"/>
+    <circle class="bush" cx="20" cy="125" r="7"/><circle class="bush" cx="28" cy="128" r="5"/><circle class="bush" cx="120" cy="125" r="7"/><circle class="bush" cx="112" cy="128" r="5"/>
+    <ellipse class="stepshade" cx="70" cy="139.6" rx="25" ry="2.6"/><path class="tread" d="M57.5 129.6 H82.5 L84.2 131.8 H55.8 Z"/><path class="riser" d="M55.8 131.8 H84.2 V134.2 H55.8 Z"/><path class="tread" d="M53.5 134.2 H86.5 L88.6 136.8 H51.4 Z"/><path class="riser" d="M51.4 136.8 H88.6 V139.4 H51.4 Z"/>
+    <path class="sill" d="M59 130 H81"/><rect class="mat" x="63" y="130.2" width="14" height="1.6" rx=".8"/>`,
+  mushroomhouse: `<rect class="m-pipe" x="94" y="9" width="7" height="20" rx="1.5"/><rect class="m-pipe" x="92.5" y="7" width="10" height="4" rx="1"/>
+    <path class="m-stem" d="M30 130 C20 114 22 90 38 72 H102 C118 90 120 114 110 130 Z"/><path class="m-shade" d="M38 72 H102 C104 75 106 78 108 81 C84 87 56 87 32 81 C34 78 36 75 38 72 Z"/>
+    <path class="m-gill" d="M12 72 C40 85 100 85 128 72 C100 80 40 80 12 72 Z"/>
+    <path class="m-cap" d="M6 72 C4 34 36 11 70 11 C104 11 136 34 134 72 C110 80 30 80 6 72 Z"/><path class="rim" d="M6 72 C4 34 36 11 70 11 C104 11 136 34 134 72"/>
+    <circle class="m-dot" cx="36" cy="38" r="8"/><circle class="m-dot" cx="64" cy="24" r="5.5"/><circle class="m-dot" cx="102" cy="40" r="8.5"/><circle class="m-dot" cx="20" cy="60" r="5"/>
+    <circle class="m-dot" cx="120" cy="61" r="5.5"/><circle class="m-dot" cx="88" cy="22" r="4"/><circle class="m-dot" cx="50" cy="60" r="4.2"/><circle class="m-dot" cx="94" cy="62" r="4.6"/>
+    <circle class="pane" cx="70" cy="48" r="6"/><path class="mull" d="M70 42 V54 M64 48 H76"/>
+    <circle class="pane" cx="45" cy="96" r="8"/><circle class="pane" cx="95" cy="96" r="8"/><path class="mull" d="M45 88 V104 M37 96 H53 M95 88 V104 M87 96 H103"/>
+    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/>
+    <path class="m-grass" d="M26 130 q2 -7 4 0 q2 -5 4 0 M106 130 q2 -6 4 0 q2 -7 4 0"/>`,
+  // test (2026-11-09): 薑餅屋, 樹墩屋, 茶壺屋 and, sold for Halloween, 南瓜屋 — each part coloured by day and by night (hc／hs)
+  gingerhouse: `<rect ${hc('#b8584a', '#1e1424')} x="92" y="30" width="12" height="30"/><rect ${hc('#fffaf2', '#4a4668')} x="90" y="27" width="16" height="5" rx="2.5"/>
+    <rect ${hc('#c98a4f', '#20161c')} x="20" y="66" width="100" height="64" rx="2"/>
+    <path ${hc('#a8653c', '#1a1220')} d="M8 72 L70 20 L132 72 Z"/><path ${hs('#fffaf2', '#4a4668')} stroke-width="5" d="M8 72 L70 20 L132 72"/>
+    <path ${hc('#fffaf2', '#4a4668')} d="M6 69 H134 V74 H6 Z${[14, 26, 38, 50, 62, 74, 86, 98, 110, 122].map((x, i) => ` M${x} 73 v${i % 2 ? 4 : 7} a3 3 0 0 0 6 0 v-${i % 2 ? 4 : 7} Z`).join('')}"/>
+    ${[[44, 52, '#f27fa6', '#3a1a34'], [70, 36, '#7cc47a', '#16301e'], [96, 52, '#f4c542', '#3a3016'], [58, 61, '#6fa8e8', '#18244a'], [84, 62, '#f27fa6', '#3a1a34']].map(([x, y, c, n]) => `<path ${hc(c, n)} d="M${x - 4.5} ${y + 2} a4.5 4.5 0 0 1 9 0 Z"/>`).join('')}
+    <circle class="pane" cx="70" cy="50" r="6"/><path class="mull" d="M70 44 V56 M64 50 H76"/><circle ${hs('#fffaf2', '#4a4668')} stroke-width="2.4" cx="70" cy="50" r="7.4"/>
+    <rect class="pane" x="34" y="82" width="18" height="18" rx="2"/><rect class="pane" x="88" y="82" width="18" height="18" rx="2"/><path class="mull" d="M43 82 V100 M34 91 H52 M97 82 V100 M88 91 H106"/>
+    <rect ${hs('#fffaf2', '#4a4668')} stroke-width="2.4" x="32.5" y="80.5" width="21" height="21" rx="3"/><rect ${hs('#fffaf2', '#4a4668')} stroke-width="2.4" x="86.5" y="80.5" width="21" height="21" rx="3"/>
+    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/><path ${hs('#fffaf2', '#4a4668')} stroke-width="2.4" d="M59 130 V108 a11 11 0 0 1 22 0 V130"/>
+    <path ${hs('#fffaf2', '#4a4668')} stroke-width="3" d="M88 130 V113 a4 4 0 0 1 8 0"/><path ${hs('#d8463c', '#3a1a2a')} stroke-width="3" stroke-dasharray="2.4 2.4" d="M88 130 V113 a4 4 0 0 1 8 0"/>
+    ${[[28, 122, '#7cc47a', '#16301e'], [40, 124, '#f4c542', '#3a3016'], [104, 124, '#f27fa6', '#3a1a34'], [114, 121, '#6fa8e8', '#18244a']].map(([x, y, c, n]) => `<circle ${hc(c, n)} cx="${x}" cy="${y}" r="2.6"/>`).join('')}`,
+  stumphouse: `<rect ${hc('#a39d94', '#14152e')} x="92" y="18" width="10" height="26"/><rect ${hc('#8a847b', '#101126')} x="90" y="15" width="14" height="4" rx="1"/>
+    <path ${hc('#9a6a42', '#1a1426')} d="M22 130 C18 112 23 84 24 42 H116 C117 84 122 112 118 130 Z M26 118 C18 123 10 128 2 130 H30 Z M114 118 C122 123 130 128 138 130 H110 Z"/>
+    <path ${hs('#7a4f30', '#0e0c1e')} stroke-width="1.6" d="M34 58 C32 80 34 100 32 122 M54 62 C53 72 55 82 54 92 M108 56 C110 78 108 100 110 124 M86 104 V126"/>
+    <ellipse ${hc('#e8c690', '#2a2238')} cx="70" cy="42" rx="46" ry="10"/><g ${hs('#c99c62', '#1c1730')} stroke-width="1.3"><ellipse cx="70" cy="42" rx="34" ry="7"/><ellipse cx="70" cy="42" rx="22" ry="4.6"/><ellipse cx="70" cy="42" rx="10" ry="2"/></g>
+    <g ${hc('#7fb069', '#12241e')}><ellipse cx="30" cy="48" rx="9" ry="4"/><ellipse cx="50" cy="51" rx="7" ry="3.2"/><ellipse cx="110" cy="48" rx="8" ry="4"/><ellipse cx="26" cy="126" rx="7" ry="3.4"/></g>
+    <path ${hs('#5f8f4a', '#12241e')} stroke-width="2" d="M58 42 C58 36 58 32 57 28"/><path ${hc('#7fb069', '#12241e')} d="M57 30 C50 22 42 25 44 29 C48 32 53 32 57 30 Z M57 28 C61 19 71 18 71 22 C68 28 62 29 57 28 Z"/>
+    <circle class="pane" cx="70" cy="62" r="6"/><path class="mull" d="M70 56 V68 M64 62 H76"/>
+    <circle class="pane" cx="45" cy="96" r="8"/><circle class="pane" cx="95" cy="96" r="8"/><path class="mull" d="M45 88 V104 M37 96 H53 M95 88 V104 M87 96 H103"/>
+    <circle ${hs('#e8c690', '#2a2238')} stroke-width="2" cx="45" cy="96" r="9.4"/><circle ${hs('#e8c690', '#2a2238')} stroke-width="2" cx="95" cy="96" r="9.4"/>
+    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/><path ${hs('#e8c690', '#2a2238')} stroke-width="2" d="M59.5 130 V108 a10.5 10.5 0 0 1 21 0 V130"/>
+    <rect ${hc('#f3e6d0', '#1a1830')} x="124" y="123" width="4" height="7" rx="1.5"/><path ${hc('#d4473a', '#2a1838')} d="M119 124 C119 116 133 116 133 124 Z"/><circle ${hc('#fff8ec', '#4a3c66')} cx="124" cy="120" r="1.2"/>`,
+  teapothouse: `<rect ${hc('#5e7f9c', '#141a36')} x="92" y="22" width="8" height="26" rx="2"/><rect ${hc('#4d6a84', '#10142c')} x="90" y="19" width="12" height="4" rx="1.5"/>
+    <path ${hs('#6fa3b8', '#151a36')} stroke-width="9" d="M118 72 C142 72 142 118 114 116"/>
+    <path ${hc('#9fd0de', '#18203e')} d="M26 98 C14 92 10 80 4 66 L12 62 C17 72 23 80 32 85 Z"/><ellipse ${hc('#6fa3b8', '#151a36')} cx="8" cy="64" rx="5" ry="2.6" transform="rotate(-28 8 64)"/>
+    <path ${hc('#9fd0de', '#18203e')} d="M70 50 C110 50 128 70 128 94 C128 112 118 124 108 130 H32 C22 124 12 112 12 94 C12 70 30 50 70 50 Z"/>
+    <rect ${hc('#6fa3b8', '#151a36')} x="34" y="126" width="72" height="4" rx="2"/>
+    <path ${hs('#fffaf2', '#3a4268')} stroke-width="4" d="M16 80 C40 72 100 72 124 80"/>${[30, 50, 90, 110].map((x) => `<circle ${hc('#f08bb0', '#3a1a34')} cx="${x}" cy="${x === 30 || x === 110 ? 77.5 : 75}" r="1.8"/>`).join('')}
+    <path ${hc('#7fb6c8', '#141a38')} d="M34 54 C36 38 104 38 106 54 Z"/><rect ${hc('#6fa3b8', '#151a36')} x="30" y="52" width="80" height="5" rx="2.5"/><circle ${hc('#f2c14e', '#3a3016')} cx="70" cy="36" r="6"/>
+    <circle class="pane" cx="70" cy="47" r="5"/><path class="mull" d="M70 42 V52 M65 47 H75"/>
+    <circle class="pane" cx="45" cy="98" r="8"/><circle class="pane" cx="95" cy="98" r="8"/><path class="mull" d="M45 90 V106 M37 98 H53 M95 90 V106 M87 98 H103"/>
+    <circle ${hs('#fffaf2', '#3a4268')} stroke-width="2" cx="45" cy="98" r="9.4"/><circle ${hs('#fffaf2', '#3a4268')} stroke-width="2" cx="95" cy="98" r="9.4"/>
+    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/>
+    ${[[26, 110], [114, 110]].map(([x, y]) => `<g ${hc('#f08bb0', '#3a1a34')}>${[[0, -2.6], [2.5, -0.8], [1.5, 2.1], [-1.5, 2.1], [-2.5, -0.8]].map(([dx, dy]) => `<circle cx="${x + dx}" cy="${y + dy}" r="1.6"/>`).join('')}</g><circle ${hc('#f4c542', '#3a3016')} cx="${x}" cy="${y}" r="1.3"/>`).join('')}`,
+  pumpkinhouse: `<rect ${hc('#5b4636', '#120e1e')} x="93" y="22" width="8" height="24" rx="2"/><rect ${hc('#4a382a', '#0e0b18')} x="91" y="19" width="12" height="4" rx="1.5"/>
+    <ellipse ${hc('#e8792a', '#2a1626')} cx="38" cy="92" rx="32" ry="38"/><ellipse ${hc('#e8792a', '#2a1626')} cx="102" cy="92" rx="32" ry="38"/>
+    <ellipse ${hc('#f5913a', '#33192a')} cx="70" cy="88" rx="36" ry="42"/>
+    <path ${hs('#d0661f', '#1a0e1c')} stroke-width="1.6" d="M50 52 C42 72 42 110 52 128 M90 52 C98 72 98 110 88 128 M18 70 C12 88 14 110 22 124 M122 70 C128 88 126 110 118 124"/>
+    <path ${hc('#6a8a3c', '#14221a')} d="M66 48 C64 40 66 32 72 28 L76 31 C72 35 71 41 73 48 Z"/><path ${hc('#7fb069', '#12241e')} d="M74 36 C82 28 94 30 96 36 C88 40 80 40 74 36 Z"/>
+    <path ${hs('#6a8a3c', '#14221a')} stroke-width="1.4" d="M65 44 C57 40 56 32 62 32 C66 32 66 37 62 37"/>
+    <circle class="pane" cx="70" cy="60" r="5"/><path class="mull" d="M70 55 V65 M65 60 H75"/>
+    <path class="pane" d="M35 100 L45 84 L55 100 Z"/><path class="pane" d="M85 100 L95 84 L105 100 Z"/>
+    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><circle class="knob" cx="75" cy="120" r="1.3"/>`
+};
+const houseArt = () => HOUSE_ART[state.house && owns(state.house) && HOUSE_ART[state.house] ? state.house : 'cottage'];
+// the hero out in the yard (1.2.0): the same drawing, smaller the further up the lawn (X: px from the middle, Y: px up from the
+// bottom, the ground running from the bottom to the house at 218px). Walks where you tap, to the mailbox, the house and the path.
+const yh = { X: 0, Y: 186, back: false, flip: false, turn: false, raf: 0, fromDoor: false, climb: null, s: 0, z: 0, use: null, far: null };   // far: on the long way down (yFar): there at once   // z: his layer when set (sat on a thing), use: sat on / riding it ({ up: where he gets off })   // climb, s: on the way up to 古道具屋, and his scale there
+try { const h = JSON.parse(localStorage.getItem('nq_hero') || 'null'); if (h && h.yard && Number.isFinite(h.yard.X) && Number.isFinite(h.yard.Y)) Object.assign(yh, { X: h.yard.X, Y: h.yard.Y }); } catch (e) { /* first time out */ }
+let yPlace = 'yard';   // the yard or the main road (#/street): where the hero is out, each its own spot in nq_hero
+function yHeroSave() { try { const h = JSON.parse(localStorage.getItem('nq_hero') || '{}') || {}; const [X, Y] = yh.use ? yh.use.up : [yh.X, yh.Y]; h[yPlace] = { X: Math.round(X), Y: Math.round(Y) }; localStorage.setItem('nq_hero', JSON.stringify(h)); } catch (e) { /* no storage */ } }
+const yScale = (Y) => (INDOOR.includes(yPlace) ? ISO.k : 0.19 + 0.31 * Math.max(0, Math.min(1, (212 - Y) / 198)));   // in a room (seen at 45°) one size anywhere
+function yHeroHtml() { return `<div class="hero yhero" data-act="hero-hop" aria-label="主角">${HERO.svg({ wear: state.wear, look: state.look })}</div>`; }
+function yHeroRedraw(yard) { const el = yard.querySelector('.yhero'); if (el) el.innerHTML = HERO.svg({ wear: state.wear, look: state.look }); }   // dressed anew
+function yHeroHold(yard) {   // the dressing room opens: the hero stops where they are
+  cancelAnimationFrame(yh.raf); yh.climb = null; yh.s = 0; yard.classList.remove('climbing');
+  const el = yard.querySelector('.yhero'); if (!el) return;
+  el.classList.remove('walk', 'run', 'climb'); yClimbLook(el, 0); HERO.still(el); yHeroPlace(yard); yHeroSave();
+}
+function yHeroPlace(yard) {
+  const el = yard.querySelector('.yhero'); if (!el) return;
+  el.style.transform = `translate(${yh.X.toFixed(1)}px,${(-yh.Y).toFixed(1)}px) scale(${(yh.s || yScale(yh.Y)).toFixed(3)})`;
+  el.classList.toggle('back', yh.back); el.classList.toggle('turn', yh.turn); el.classList.toggle('flip', yh.flip); el.style.zIndex = yh.climb === 'hill' ? '' : String(yh.z || (INDOOR.includes(yPlace) ? isoZ(...isoUV(yh.X, yh.Y)) : 300 - Math.round(yh.Y)));
+  if (el.matches('.walk, .run')) yFollow(yard);   // on the move: the camera goes along
+}
+// up the hill path: outlined about a pixel on the screen however small he gets (s: his scale; none: off the path). Set on his
+// drawing, and only when the width changes, never as a CSS variable round him (his legs would begin again each time on an iPhone)
+function yClimbLook(h, s) {
+  const svg = h && h.querySelector('svg'); if (!svg) return;
+  const px = s ? Math.round(1.3 / s * 2) / 2 : 0; if (svg._outline === px) return; svg._outline = px;
+  svg.style.filter = px ? `brightness(calc(.8 + .2 * var(--day))) drop-shadow(0 0 ${px}px rgba(255, 255, 255, .95)) drop-shadow(0 0 ${px * 2}px rgba(255, 238, 200, calc(.3 + .45 * (1 - var(--day)))))` : '';
+}

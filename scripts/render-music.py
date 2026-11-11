@@ -18,7 +18,7 @@ def free_port():
         s.bind(("127.0.0.1", 0)); return s.getsockname()[1]
 
 port = free_port()
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(port), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 try:
     time.sleep(0.8)
     with Browser() as b:

@@ -59,7 +59,7 @@ wait "${pids[@]}"
 fail=0
 for t in "${e2e[@]}"; do
   n="$(basename "$t")"; rc="$(cat "$tmp/$n.rc" 2>/dev/null || echo 1)"; echo "$n: $(tail -1 "$tmp/$n.log")"
-  if [ "$rc" != "0" ]; then fail=1; grep -E "^(FAIL|not ok)" "$tmp/$n.log" | head -5; fi
+  if [ "$rc" != "0" ]; then fail=1; grep -E "^(FAIL|not ok)" "$tmp/$n.log" | head -5 || true; fi   # a file that dies without a FAIL line (a hang, a crash) must not end the report here
 done
 rm -rf "$tmp"; [ "$fail" = "0" ] || exit 1
 echo ALL_OK

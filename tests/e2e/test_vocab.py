@@ -1030,7 +1030,7 @@ def test_the_picture_question_asks_for_the_word_with_same_group_options_and_neve
 TESTS += [test_a_pictured_word_shows_its_picture_on_its_first_look_and_others_do_not, test_the_picture_question_asks_for_the_word_with_same_group_options_and_never_a_word_that_also_fits]
 
 if __name__ == "__main__":
-    srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
     only = sys.argv[1:]
     failed = 0

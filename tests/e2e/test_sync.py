@@ -288,7 +288,7 @@ def test_a_word_this_copy_does_not_know_survives_a_conflict_merge(b):
     assert out[-1] == '{"cloud":true,"note":true,"local":true}', out[-1]
 
 if __name__ == "__main__":
-    srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
     tests = [test_without_config_sync_is_off, test_first_sync_on_fresh_device_takes_cloud_even_if_local_newer,
              test_save_pushes_after_debounce_without_secrets, test_logout_during_debounce_cancels_push,

@@ -8,7 +8,7 @@ PORT = 8791
 URL = f"http://127.0.0.1:{PORT}/"
 
 def serve():
-    p = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT,
+    p = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8); return p
 

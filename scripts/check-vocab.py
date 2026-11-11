@@ -20,7 +20,7 @@ withWords = json.load(open(args[wi + 1]))['words'] if wi >= 0 else []
 if wi >= 0: del args[wi:wi + 2]
 path = args[0]; port = int(args[1]) if len(args) > 1 else 8812
 cands = json.load(open(path))
-srv = subprocess.Popen([sys.executable, "-m", "http.server", str(port), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(port), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 time.sleep(0.8)
 JS = r"""((c, withWords) => { const problems = [], warnings = [];
   const POS = ['n', 'v5', 'v1', 'vs', 'vk', 'i', 'na', 'adv', 'conj', 'pron', 'q', 'cnt', 'exp'];
