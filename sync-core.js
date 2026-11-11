@@ -181,6 +181,10 @@
     if (older.today || newer.today) out.today = mergeToday(older.today, newer.today);
     if (older.koto || newer.koto) out.koto = mergeKoto(older.koto, newer.koto);
     if (older.owned || newer.owned) out.owned = Object.assign({}, older.owned, newer.owned);   // each thing bought once, paid once
+    if (older.mail || newer.mail) {   // the mailbox (2026-11-11): a letter come or read on either device, for good
+      const o = older.mail || {}, n = newer.mail || {};
+      out.mail = { got: Object.assign({}, o.got, n.got), read: Object.assign({}, o.read, n.read) };
+    }
     if (older.town || newer.town) {   // the town's events done, people met, bus stops opened: once on either device, for good
       const o = older.town || {}, n = newer.town || {};
       out.town = Object.assign({}, n, { done: Object.assign({}, o.done, n.done), seen: Object.assign({}, o.seen, n.seen), stops: Object.assign({}, o.stops, n.stops) });

@@ -1195,7 +1195,13 @@ function nextQuestion() {
 function exitPractice() {
   stopSpeaking();
   const answered = SESSION ? SESSION.results.length : 0;
-  if (SESSION && answered > 0 && SESSION.idx < SESSION.entries.length) { SESSION.quit = true; SESSION.idx = SESSION.entries.length; renderPractice(); return; }   // 結束 early: no 言靈 for the set
+  if (SESSION && answered > 0 && SESSION.idx < SESSION.entries.length) {   // 結束 early: no 言靈 for the set
+    // asked first (2026-11-11, the user): the answers so far are kept either way
+    const left = SESSION.entries.length - SESSION.idx;
+    if (!confirm(SESSION.test ? `階段測驗還有 ${left} 題。現在離開，這次測驗不會留下紀錄。確定要離開嗎？`
+      : `這組還有 ${left} 題沒做。現在結束的話，已經答的 ${answered} 題會照樣記錄，但這組不會得到言靈。確定要結束嗎？`)) return;
+    SESSION.quit = true; SESSION.idx = SESSION.entries.length; renderPractice(); return;
+  }
   SESSION = null;
   document.body.classList.remove('practicing');
   go(lastMainRoute || '#/today');

@@ -1669,7 +1669,7 @@ def test_phone_pages_do_not_repeat_the_topbar_title_but_keep_distinct_ones(b):
 # ---- 2026-10-28: the install hint ----
 def test_install_hint_shows_in_a_browser_tab_with_steps_per_platform_and_goes_away_once_dismissed(b):
     # test build: the hint is a letter in the mailbox by the house (its 知道了 puts it away for good)
-    js = """(() => { localStorage.removeItem('nq_install_hint'); state.introSeen = true; state.storyV = 9; saveState(); const show = () => { localStorage.removeItem('nq_letters'); location.hash = '#/outside'; route(); openLetters('install'); return document.querySelector('.modal .letter[data-letter=install]'); };   /* a phone's or a computer's own mailbox */
+    js = """(() => { localStorage.removeItem('nq_install_hint'); state.introSeen = true; state.storyV = 9; saveState(); const show = () => { state.mail = { got: {}, read: {} }; location.hash = '#/outside'; route(); openLetters('install'); return document.querySelector('.modal .letter[data-letter=install]'); };   /* a phone's or a computer's own mailbox */
       INSTALL_FORCE = { platform: 'ios', safari: true }; const ios = show(); const iosBtns = ios ? [...ios.querySelectorAll('[data-act]')].map(b => b.dataset.act) : null;
       ACTIONS['install-how'](); const modal = document.querySelector('.modal'); const guide = modal ? modal.textContent : ''; closeModal(true);
       const iosGuide = /加入主畫面/.test(guide) && /分享/.test(guide) && /進度是分開的/.test(guide) && !/⋮/.test(guide) && /Brave/.test(guide);
@@ -1969,30 +1969,37 @@ def test_the_mail_hint_waits_while_the_player_stays_in(b):
 # 2026-11-10 (the user): a letter read stays in the mailbox, marked read; the welcome is 渚's, about grandmother's house; 古道具屋
 # opens — and 福爺 writes — once 20 言靈 have been earned
 def test_letters_stay_in_the_mailbox_once_read_and_the_welcome_is_nagisas(b):
-    js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); state.met = { koharu: 1, mugi: 1 }; saveState();
+    js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); state.met = { koharu: 1, mugi: 1 }; state.mail = null; saveState();
       const rows = () => [...document.querySelectorAll('#modalBody .letter-row')].map((r) => [r.dataset.id, r.classList.contains('unread') ? 'new' : 'read', r.textContent.includes('新') ? '新' : r.textContent.includes('已讀') ? '已讀' : '']);
       const ids = letters().map((l) => l.id), unread0 = mailCount(); openLetters(); const before = rows();
       document.querySelector('#modalBody .letter-row[data-id=room]').click(); const card = document.querySelector('#modalBody .letter[data-letter=room]');
       const welcome = { from: letters().find((l) => l.id === 'room').from, face: !!card.querySelector('.letter-from svg'), says: ['外婆', '院子', '小鎮', '公車', '書桌'].every((w) => card.textContent.includes(w)), sign: card.textContent.includes('渚') };
       const unread1 = mailCount(); document.querySelector('#modalBody [data-act=letter-done]').click(); const after = rows(); closeModal();
-      localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); localStorage.setItem('nq_letter_room', '2026-11-01'); const old = { ids: letters().map((l) => l.id), unread: mailCount() };
-      return JSON.stringify({ ids, unread0, before, welcome, unread1, after, old }); })()"""
+      localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); localStorage.setItem('nq_letter_room', '2026-11-01');
+      state.mail = null; state.dailyLogs['2026-10-25'] = state.dailyLogs['2026-10-25'] || { v: 1 }; const old = { ids: letters().map((l) => l.id), unread: mailCount() };
+      /* 2026-11-11: a progress that started over on a device whose mailbox had read that letter: the letter is new again */
+      localStorage.setItem('nq_letters', JSON.stringify({ got: { room: '2026-11-01' }, read: { room: '2026-11-01' } })); state.mail = null; state.srs = {}; state.dailyLogs = {};
+      const fresh = { ids: letters().map((l) => l.id), unread: mailCount(), kept: !!state.mail };
+      return JSON.stringify({ ids, unread0, before, welcome, unread1, after, old, fresh }); })()"""
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
     assert r['ids'] == ['room'] and r['unread0'] == 1 and r['before'] == [['room', 'new', '新']], r
     assert r['welcome'] == {'from': 'nagisa', 'face': True, 'says': True, 'sign': True}, r
     assert r['unread1'] == 0 and r['after'] == [['room', 'read', '已讀']], r   # opened: read, and still there
     assert r['old'] == {'ids': ['room'], 'unread': 0}, r   # put away before (知道了): there, read
+    assert r['fresh'] == {'ids': ['room'], 'unread': 1, 'kept': True}, r   # the mailbox is the progress's: a new progress has its letters unread
 
 def test_the_old_shop_opens_and_fuku_writes_once_20_koto_are_earned(b):
     js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); state.met = { koharu: 1, mugi: 1 }; state.koto.gift = 0; state.owned = {}; saveState();
       const wait = (ms) => new Promise(r => setTimeout(r, ms)), said = []; toast = (m) => said.push(m);
       const out = async () => { location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); await wait(500); };
-      await out(); const shut = { letter: letters().some((l) => l.id === 'opening'), open: shopOpen() }; document.querySelector('.yard .shop-btn').click(); await wait(800); shut.hash = location.hash; shut.said = said.join(' ');
-      state.koto.gift = 20; saveState(); await out(); const open = { letter: letters().some((l) => l.id === 'opening'), unread: letters().find((l) => l.id === 'opening') && mailCount() >= 1, open: shopOpen() };
+      localStorage.removeItem('nq_fog_lifted'); state.mail = null;
+      await out(); const shut = { letter: letters().some((l) => l.id === 'opening'), open: shopOpen(), fog: !!document.querySelector('.yard .shop-fog:not(.lift)'), btn: !!document.querySelector('.yard .shop-btn'), shop: !!document.querySelector('.yard .mtn .s-ground') };
+      state.koto.gift = 20; saveState(); await out(); const open = { letter: letters().some((l) => l.id === 'opening'), unread: letters().find((l) => l.id === 'opening') && mailCount() >= 1, open: shopOpen(), lifting: !!document.querySelector('.yard .shop-fog.lift'), btn: !!document.querySelector('.yard .shop-btn') };
+      await out(); open.fogAfter = !!document.querySelector('.yard .shop-fog');
       return JSON.stringify({ shut, open }); })()"""
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
-    assert r['shut']['letter'] is False and r['shut']['open'] is False and r['shut']['hash'] == '#/outside' and '準備' in r['shut']['said'], r
-    assert r['open'] == {'letter': True, 'unread': True, 'open': True}, r
+    assert r['shut'] == {'letter': False, 'open': False, 'fog': True, 'btn': False, 'shop': False}, r   # under fog: nothing to see or tap
+    assert r['open'] == {'letter': True, 'unread': True, 'open': True, 'lifting': True, 'btn': True, 'fogAfter': False}, r   # the fog lifts once
 
 def test_mailbox_letters_show_on_the_door_and_the_hint_comes_once(b):
     js = """(async () => { """ + LEARNER + """ localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); state.met = { koharu: 1, mugi: 1 };   /* out of the door: the neighbours have been */
@@ -2005,7 +2012,7 @@ def test_mailbox_letters_show_on_the_door_and_the_hint_comes_once(b):
       openLetters('room'); document.querySelector('.letter[data-letter=room] [data-act=letter-done]').click();
       const after = { left: mailCount(), list: !!document.querySelector('#modalBody .letter-row[data-id=room].read'), flag: document.querySelector('#view .mailbox').classList.contains('has'), kept: letters().some(l => l.id === 'room') };
       await enter(); const quiet = door();
-      closeModal(); state.startChosen = false; state.srs = {}; localStorage.clear(); saveState(); await enter(); const newbie = { hint: document.querySelector('.mail-hint').classList.contains('on'), door: door() };
+      closeModal(); state.startChosen = false; state.srs = {}; state.mail = null; localStorage.clear(); saveState(); await enter(); const newbie = { hint: document.querySelector('.mail-hint').classList.contains('on'), door: door() };
       return JSON.stringify({ first, second, out, after, quiet, newbie }); })()"""
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
     assert r['first'] == {'ids': ['room'], 'door': ['出門・1 封信', True], 'hint': True, 'seen': ['room']}, r['first']

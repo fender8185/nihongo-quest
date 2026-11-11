@@ -2,12 +2,20 @@
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.8.2';   // keep equal to the version in sw.js CACHE ('nq-v1.4.2'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.9.0';   // keep equal to the version in sw.js CACHE ('nq-v1.4.2'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個版本一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（通常最後一位加一；1.1.0 是書房改版），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.9.0', date: '2026-11-11', items: [
+    '單字有圖了：419 個看得見的東西（食物、家裡的東西、動物、交通、建築和店……）第一次出現時，字的上面有一張小圖；學過以後偶爾會出「看圖選字」：看圖選日文，錯的選項不會是長得很像的東西。',
+    '信箱跟著進度走：收到哪些信、讀過哪些，跟進度存在一起，也跟著雲端同步；換一份新的進度時，信也是新的。',
+    '古道具屋開張前，山上籠罩著濃霧，看不到也去不了；存到 20 言靈時福爺寄信來，霧也跟著散開。',
+    '練習做到一半按 ✕ 會先問一次：已經答的題目照樣記錄，但這組不會得到言靈。',
+    'app 的檔案重新整理：程式、課程資料、N3 和圖片各自分開，以後更新只會下載有變的部分。',
+    '版本紀錄變短：1.0 那幾十個版本收成幾段重點，放在「更早的版本」裡。'
+  ] },
   { v: '1.8.2', date: '2026-11-11', items: [
     '保護進度：這台裝置上的進度讀不出來時（例如網路斷了一下、課程資料沒載到），app 會停下來請你重新整理，不會再換成一份全新的進度；曾經有學習紀錄的裝置，也不會再把空白的進度上傳、蓋掉雲端的進度。雲端另外會保留被取代的舊版本，萬一出事可以找回。'
   ] },
@@ -219,6 +227,7 @@ function defaultState() {
     koto: { daySets: {}, days: [], listen: {}, mail: {}, found: {}, sets: {}, gift: 0 },   // 言靈 (1.2.0), see kotoBalance
     owned: {},              // things bought at 古道具屋: { id: { paid, on } }
     lampsOff: {},           // test (2026-11-09): the lamps switched off by a tap ({ id: true }: desk, chest, nightTable, or a ware's id)
+    mail: null,             // 2026-11-11: the mailbox, with the progress: { got: { id: day }, read: { id: day } } (null: not set up yet, see letterBox)
     record: '',             // test (2026-11-09): the record on the gramophone (MUSIC.RECORDS; '' the first)
     musicOff: false,        // test (2026-11-09): the gramophone stopped by hand
     met: {},                // test (2026-11-09): the neighbours who have come by (NPCS): { id: the day }
@@ -287,6 +296,7 @@ function normalizeState(s) {
   const kt = out.koto && typeof out.koto === 'object' && !Array.isArray(out.koto) ? out.koto : {}, obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
   out.koto = { daySets: obj(kt.daySets), days: Array.isArray(kt.days) ? kt.days : [], listen: obj(kt.listen), mail: obj(kt.mail), found: obj(kt.found), sets: obj(kt.sets), gift: Number(kt.gift) || 0 };
   const tw = obj(out.town); out.town = { done: obj(tw.done), seen: obj(tw.seen), stops: obj(tw.stops) };
+  out.mail = out.mail && typeof out.mail === 'object' && !Array.isArray(out.mail) ? { got: obj(out.mail.got), read: obj(out.mail.read) } : null;
   ['owned', 'placed', 'wear', 'look', 'lampsOff', 'met'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)
   if (typeof out.house !== 'string') out.house = '';
   if (typeof out.record !== 'string') out.record = ''; out.musicOff = out.musicOff === true; out.storyV = Number(out.storyV) || (out.storySeen === true ? 1 : 0); delete out.storySeen;   // the four-page opening was 1   // an id this build does not know is kept: the cottage is drawn meanwhile
@@ -934,7 +944,7 @@ function kotoBalance() { return kotoEarned() - Object.values(state.owned).reduce
 // or has his letter's 言靈 finds it open
 const SHOP_OPEN_AT = 20;
 const shopOpen = () => kotoEarned() >= SHOP_OPEN_AT || Boolean(state.koto.mail.opening) || Object.values(state.owned).some((o) => o && Number(o.paid) > 0);
-const shopShut = () => toast(`山上的古道具屋還在準備開張。存到 ${SHOP_OPEN_AT} 言靈，福爺就會寫信來。`, 3600);
+const shopShut = () => toast(`山上還籠罩著濃霧。存到 ${SHOP_OPEN_AT} 言靈，霧就會散開，福爺也會寫信來。`, 3600);
 // the set that just ended, once (renderSummary keeps it on the session): what it gave for the set and for the day's list done,
 // each as much as the day's cap left (full: the cap was reached, so some or all of it was not given)
 function earnKoto(s) {

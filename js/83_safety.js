@@ -64,19 +64,32 @@ Object.assign(ACTIONS, {
 // ---------- the mailbox (1.1.0): what the 今日 page said on banners, as letters in the mailbox by the house ----------
 // A letter comes when its time does — the site move (on the old address), 渚's welcome to grandmother's house, 第 0 週 for a
 // beginner, 加到主畫面 on a phone's browser, 福爺's when 古道具屋 opens, the notices kept in the state — and stays (2026-11-10, the
-// user): read or not, in the mailbox for good (nq_letters: got, read; this device's). Inside, the door's tag counts the unread and
+// user): read or not, in the mailbox for good (state.mail: got, read — with the progress since 2026-11-11, so a progress that starts
+// over has an empty mailbox; before, this device's nq_letters). Inside, the door's tag counts the unread and
 // its dot glows; a letter this device has not been told about yet brings the 「外面信箱有新信」 hint once. Opened: the list, 新 on
 // the unread; a tap reads one (read from then on).
 function storedFlag(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+// the day this progress began: its first day of practice or the first item it met ('' none yet)
+function progressSince() {
+  const days = Object.keys(state.dailyLogs || {}).concat(Object.values(state.srs || {}).map((r) => r && r.intro).filter((d) => typeof d === 'string'));
+  return days.length ? days.sort()[0] : '';
+}
 function letterBox() {
-  let b = null; try { b = JSON.parse(localStorage.getItem('nq_letters') || 'null'); } catch (e) { /* none */ }
-  if (!b || !b.got) {   // before 2026-11-10 a letter put away (知道了) went: it is here, read
-    b = { got: {}, read: {} };
-    [['room', 'nq_letter_room'], ['opening', 'nq_letter_opening'], ['install', 'nq_install_hint']].forEach(([id, k]) => { const v = storedFlag(k); if (v) { b.got[id] = v; b.read[id] = v; } });
+  if (state.mail) return state.mail;
+  // set up once: the letters this device kept (nq_letters; before 2026-11-10 a letter put away with 知道了 went: here, read)
+  // come along only when this progress was there when they came — never into a progress that started over (2026-11-11, the
+  // user: a new progress found its letters already read)
+  let d = null; try { d = JSON.parse(localStorage.getItem('nq_letters') || 'null'); } catch (e) { /* none */ }
+  if (!d || !d.got) {
+    d = { got: {}, read: {} };
+    [['room', 'nq_letter_room'], ['opening', 'nq_letter_opening'], ['install', 'nq_install_hint']].forEach(([id, k]) => { const v = storedFlag(k); if (v) { d.got[id] = v; d.read[id] = v; } });
   }
+  const since = progressSince(), b = { got: {}, read: {} };
+  if (since) Object.keys(d.got).forEach((id) => { if (d.got[id] >= since) { b.got[id] = d.got[id]; if (d.read[id]) b.read[id] = d.read[id]; } });
+  state.mail = b;
   return b;
 }
-function letterBoxSave(b) { try { localStorage.setItem('nq_letters', JSON.stringify(b)); } catch (e) { /* this device keeps nothing */ } }
+function letterBoxSave(b) { state.mail = b; saveState(); }
 function letterKinds() {   // every letter there is: when it comes (due), when it is no longer wanted (gone)
   const n = Object.keys(state.srs).length, info = installInfo(), got = Boolean(state.koto.mail.opening);
   return [
@@ -102,7 +115,7 @@ function letterKinds() {   // every letter there is: when it comes (due), when i
   ].concat((state.notices || []).map((x) => ({ id: 'notice:' + x.id, due: () => true, title: '通知', body: x.lines.map(esc).join('<br>') })));
 }
 function letters() {   // the letters in the mailbox, each with read (newest first; one that comes now is kept from now on)
-  const b = letterBox(); let changed = !storedFlag('nq_letters');
+  const set = Boolean(state.mail), b = letterBox(); let changed = !set;
   const out = letterKinds().filter((l) => !(l.gone && l.gone()) && (b.got[l.id] || (l.due() && (b.got[l.id] = todayStr(), changed = true))));
   if (changed) letterBoxSave(b);
   return out.map((l) => Object.assign(l, { got: b.got[l.id], read: Boolean(b.read[l.id]) })).sort((x, y) => (y.got || '').localeCompare(x.got || ''));

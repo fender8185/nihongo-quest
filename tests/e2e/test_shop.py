@@ -38,10 +38,13 @@ def test_a_finished_daily_set_gives_one_koto(b):
 def test_quitting_a_set_early_gives_nothing(b):
     js = "(() => { " + FRESH + """ startSession('daily', { size: 8 }); let n = 0;
       while (n < 3) { const e = currentEntry(); if (e.preview && !e.previewDone) { dismissPreview(); continue; } answerCurrent(e.q.answer); nextQuestion(); n++; }
-      exitPractice(); const gain = SESSION.koto;
-      return JSON.stringify({ gain, bal: kotoBalance(), line: !!document.querySelector('#view .koto-gain') }); })()"""
+      const asked = []; confirm = (m) => { asked.push(m); return false; }; exitPractice();   /* 取消: back to the question, nothing lost */
+      const stayed = { quit: !!SESSION.quit, kept: SESSION.results.length, said: asked[0] || '' };
+      confirm = (m) => { asked.push(m); return true; }; exitPractice(); const gain = SESSION.koto;
+      return JSON.stringify({ gain, bal: kotoBalance(), line: !!document.querySelector('#view .koto-gain'), stayed, asked: asked.length }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'gain': {'set': 0, 'day': 0, 'full': False, 'dayNow': False}, 'bal': 0, 'line': False}, r
+    assert r['stayed']['quit'] is False and r['stayed']['kept'] == 3 and '已經答的 3 題會照樣記錄' in r['stayed']['said'] and '言靈' in r['stayed']['said'] and r['asked'] == 2, r
+    assert {k: r[k] for k in ('gain', 'bal', 'line')} == {'gain': {'set': 0, 'day': 0, 'full': False, 'dayNow': False}, 'bal': 0, 'line': False}, r
 
 def test_other_practice_gives_no_set_koto(b):
     js = "(() => { " + FRESH + " startSession('unit', { unit: 'm1', size: 6 }); const gain = " + PLAY + """;
@@ -771,7 +774,7 @@ def test_a_tap_on_the_shop_runs_the_hero_up_the_hill_path(b):
     assert r['hash'] == '#/shop' and r['saved'] == {'X': -60, 'Y': 214}, r   # next time out he stands at the foot of the path
 
 def test_the_yards_signs_rest_wake_and_say_their_names_on_a_tap(b):
-    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();
+    js = "(async () => { " + FRESH + """ localStorage.removeItem('nq_hero'); state.koto.gift = 20; saveState(); localStorage.setItem('nq_fog_lifted', '1');   /* 古道具屋 open: under fog before (2026-11-11) */ location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route();
       const y = document.querySelector('.yard'), tag = (sel) => y.querySelector(sel + ' .tag'), shown = (sel) => getComputedStyle(tag(sel)).opacity === '1';
       const signs = ['.enter', '.mbox', '.shop-btn'].map(sel => !!tag(sel).querySelector('svg') && tag(sel).querySelector('.tag-name').offsetWidth === 0);
       const words = ['.enter', '.shop-btn'].map(sel => tag(sel).textContent), mail = mailCount() > 0, red = y.querySelector('.mbox').classList.contains('mail');
@@ -984,7 +987,7 @@ def test_walking_across_the_screen_he_does_not_keep_turning_round(b):
 def test_a_long_yard_walk_or_the_climb_sets_no_css_variable_round_the_hero_each_frame(b):
     # 1.2.1: on an iPhone his legs stopped on long walks out in the yard: the camera following him set a CSS variable on the whole
     # yard every frame (and the climb one on him), and every change round him began his steps again there
-    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + POINTER + """ location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); await wait(500);
+    js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); state.koto.gift = 20; saveState(); localStorage.setItem('nq_fog_lifted', '1');   /* 古道具屋 open: under fog before (2026-11-11) */ " + POINTER + """ location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); await wait(500);
       const y = document.querySelector('.yard'), h = y.querySelector('.yhero'), set = CSSStyleDeclaration.prototype.setProperty, seen = [];
       CSSStyleDeclaration.prototype.setProperty = function (k, v, p) { if (String(k).startsWith('--')) seen.push(k); return set.call(this, k, v, p); };
       yHeroWalk(y, [520, 100]); await wait(1400); const walk = { calls: seen.length, cam: Math.round(ycam.x) }; seen.length = 0;

@@ -202,3 +202,11 @@ test('a packed state opens to the same state, a tenth of the size or less; a pla
   const plain = { v: 3, srs: { a: 1 } };
   assert.equal(await C.unpackState(plain), plain); assert.equal(await C.unpackState(null), null);
 });
+
+test('mergeStates keeps a letter come or read on either device (the mailbox lives with the progress since 2026-11-11)', () => {
+  const a = { v: 3, updatedAt: '2026-11-11T01:00:00.000Z', mail: { got: { room: '2026-11-01' }, read: { room: '2026-11-02' } } };
+  const b = { v: 3, updatedAt: '2026-11-11T02:00:00.000Z', mail: { got: { room: '2026-11-01', opening: '2026-11-10' }, read: {} } };
+  const m = C.mergeStates(a, b);
+  assert.deepEqual(m.mail, { got: { room: '2026-11-01', opening: '2026-11-10' }, read: { room: '2026-11-02' } });
+  assert.equal(C.mergeStates({ v: 3 }, { v: 3 }).mail, undefined);
+});

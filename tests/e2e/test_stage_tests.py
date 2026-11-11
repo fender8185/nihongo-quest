@@ -142,7 +142,7 @@ def test_stage_test_fail_offers_retry_and_practice(b):
 def test_leaving_a_stage_test_leaves_no_trace(b):
     js = """(() => { state.stageTests = {}; const log0 = JSON.parse(JSON.stringify(logEntry())); startSession('stage', { stage: 'p3' });
       for (let i = 0; i < 5; i++) { const e = currentEntry(); answerCurrent(e.q.answer); nextQuestion(); }
-      exitPractice(); const unfinished = document.getElementById('view').textContent.includes('未完成，不計紀錄'); exitPractice();
+      confirm = () => true; exitPractice(); const unfinished = document.getElementById('view').textContent.includes('未完成，不計紀錄'); exitPractice();
       return JSON.stringify({ tests: Object.keys(state.stageTests).length, x: (logEntry().kX || 0) - (log0.kX || 0), unfinished, session: SESSION === null }); })()"""
     r = json.loads(ev(b, js))
     assert r == {'tests': 0, 'x': 0, 'unfinished': True, 'session': True}, r

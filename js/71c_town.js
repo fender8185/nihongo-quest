@@ -625,6 +625,17 @@ function townHtml() {
 // みなと漁港 (test, 2026-11-10; the map joined up): below the beach, along the street's left — the harbour's quay, boats bobbing at
 // their moorings, a breakwater out to a red lighthouse (its light swinging round by night), the fishermen's hut, crates, floats
 // and a net drying, gulls; a sandy path comes down from the beach at the back on the left
+// 古道具屋 before it opens (2026-11-11, the user): a thick fog lies over the top of the hill and hides it, and nothing there can be
+// tapped; at 20 言靈 福爺's letter comes and the fog lifts, slowly, the first time the yard is seen after (nq_fog_lifted)
+function shopFog() {
+  const open = shopOpen();
+  let lift = false;
+  try { if (!open) localStorage.removeItem('nq_fog_lifted'); else if (!localStorage.getItem('nq_fog_lifted')) { lift = true; localStorage.setItem('nq_fog_lifted', todayStr()); } } catch (e) { /* no lift then */ }
+  if (open && !lift) return '';
+  const puffs = [[476, 250, 74, 36], [506, 262, 82, 30], [450, 270, 62, 26], [524, 238, 58, 28], [488, 226, 66, 28], [546, 276, 62, 22], [428, 248, 50, 24], [508, 292, 74, 22], [470, 300, 60, 18]];
+  return `<defs><radialGradient id="fogPuff"><stop class="fg0" offset="0"/><stop class="fg1" offset=".55"/><stop class="fg2" offset="1"/></radialGradient></defs>
+    <g class="shop-fog${lift ? ' lift' : ''}" aria-hidden="true">${puffs.map(([cx, cy, rx, ry], i) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="url(#fogPuff)" style="--i:${i}"/>`).join('')}</g>`;
+}
 function harborHtml() {
   const F = 236, px = 600 + HARBOR_PATH;
   const boat = (x, y, c, k) => `<g class="fx-bob" style="animation-delay:-${k * 0.8}s;animation-duration:${2.6 + k * 0.4}s"><path d="M${x - 60} ${y} h120 l-14 20 h-92 Z" ${hc(c, '#2a2c50')}/><rect x="${x - 14}" y="${y - 26}" width="34" height="26" rx="2" ${hc('#f4f3ee', '#4a4c72')}/><rect x="${x - 8}" y="${y - 20}" width="10" height="9" ${hc('#9fc6d6', '#ffe2a0')}/><path d="M${x + 30} ${y} V${y - 50}" ${hs('#6e4f3a', '#2c2440')} stroke-width="3"/><path d="M${x + 30} ${y - 48} l20 10" ${hs('#d0453c', '#5a2030')} stroke-width="3"/></g>`;
@@ -1435,8 +1446,8 @@ function yardHtml(pct, place = 'yard') {
         <path class="m-far" d="M520 600 V340 C560 330 600 314 640 304 C670 296 700 294 730 298 C770 306 810 328 860 342 V600 Z"/>
         <path class="m-main" d="${HILL} V600 Z"/><path class="m-shade" d="M482 250 C494 248 506 256 520 268 C552 296 594 326 646 350 V372 C590 340 548 306 516 280 C502 268 492 258 482 250 Z"/><path class="m-rim" d="${HILL}"/>
         <path class="m-path" d="M540 342 L514 326 L546 306 L506 290 L526 272 L490 260"/>
-        ${[[514, 326], [546, 306], [506, 290], [526, 272]].map(([x, y]) => `<circle class="p-lamp" cx="${x}" cy="${y}" r="1.4"/>`).join('')}
-        <g transform="translate(482 254) scale(.8)">${SHOP_ART}</g>
+        ${shopOpen() ? `${[[514, 326], [546, 306], [506, 290], [526, 272]].map(([x, y]) => `<circle class="p-lamp" cx="${x}" cy="${y}" r="1.4"/>`).join('')}
+        <g transform="translate(482 254) scale(.8)">${SHOP_ART}</g>` : ''}${shopFog()}
       </svg>
       <svg class="land yard-land" viewBox="0 0 1200 370" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
         <g class="yard-shore">
@@ -1486,7 +1497,7 @@ function yardHtml(pct, place = 'yard') {
         </svg>
         <button type="button" class="thing mbox${mail ? ' mail' : ''}" data-act="mailbox" aria-label="${mailWords(mail)}"><span class="tag">${ySign('mail', mailWords(mail))}</span></button>
       </div>
-      <button type="button" class="thing shop-btn" data-act="yard-shop" aria-label="古道具屋" style="left:calc(50% - 118px);bottom:340px"><span class="tag">${ySign('shop', '古道具屋')}</span></button>`}
+      ${shopOpen() ? `<button type="button" class="thing shop-btn" data-act="yard-shop" aria-label="古道具屋" style="left:calc(50% - 118px);bottom:340px"><span class="tag">${ySign('shop', '古道具屋')}</span></button>` : ''}`}
       ${useBtnsHtml(place)}
       <i class="cloudshade" aria-hidden="true"></i><i class="cloudshade c2" aria-hidden="true"></i>
       <div class="flies">${SKY.flies.map(q => `<i style="left:${q.x}%;top:${q.y}px;--dx:${q.dx}px;--dy:${q.dy}px;--d:${q.d}s;--w:-${q.w}s"></i>`).join('')}</div>
