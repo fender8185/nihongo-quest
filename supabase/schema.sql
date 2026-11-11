@@ -45,3 +45,4 @@ revoke all on function public.ai_take() from public, anon;
 grant execute on function public.ai_take() to authenticated;
 
 -- The copies a progress row replaces (1.8.2): see progress-history.sql, run once after this file.
+-- The cloud refuses to shrink a progress (1.9.1): see progress-guard.sql, run once after this file.

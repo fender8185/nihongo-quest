@@ -24,6 +24,9 @@ const Sync = {
     } catch (e) { console.warn('supabase client not created', e); this.client = null; }
     this.meta = (await Store.get('meta')) || {};
     this.meta = Object.assign({ deviceId: uid('dev'), userId: null, pendingSync: false, lastSyncedAt: null, lastPulledUpdatedAt: null, everSynced: false }, this.meta);
+    // 1.9.1: a device that synced before and holds progress now counts as having had it from the start, not only after its next
+    // sync under this version (an upgraded device was not covered by the empty-progress guard until then)
+    if (this.meta.everSynced && !SyncCore.isEmptyProgress(state)) this.meta.hadProgress = true;
     await Store.set('meta', this.meta);
     if (!this.bound) {
       this.bound = true;
@@ -132,7 +135,7 @@ const Sync = {
       const base = this.meta.everSynced ? this.meta.lastPulledUpdatedAt : null;
       if (base) {
         const { data, error } = await this.client.from('progress').update(payload).eq('user_id', session.user.id).eq('updated_at', base).select('updated_at');
-        if (error) throw error;
+        if (error) { if (await this.refusedShrink(error, session)) return; throw error; }
         if (!data || !data.length) {
           this.conflicted = true;
           if (final) { this.lastError = '雲端資料與本機不一致，請按「立即同步」'; this.setStatus('error'); return; }
@@ -142,7 +145,7 @@ const Sync = {
         }
       } else {
         const { error } = await this.client.from('progress').upsert(payload);
-        if (error) throw error;
+        if (error) { if (await this.refusedShrink(error, session)) return; throw error; }
       }
       this.conflicted = false; this.allowEmpty = false;
       Object.assign(this.meta, { pendingSync: false, lastSyncedAt: new Date().toISOString(), lastPulledUpdatedAt: payload.updated_at, everSynced: true, hadProgress: !SyncCore.isEmptyProgress(state) });
@@ -151,6 +154,19 @@ const Sync = {
     } catch (e) {
       this.lastError = (e && e.message) || String(e); this.setStatus('error');
     }
+  },
+
+  // 1.9.1: the cloud refuses a progress with far fewer records than the one it holds (supabase/progress-guard.sql), whatever the
+  // app's version. Then the two are merged record by record — the merge only grows — and that goes up instead
+  async refusedShrink(error, session) {
+    if (!error || !(error.code === '23514' || /progress shrink/.test(String(error.hint || error.message || '')))) return false;
+    const { data: row, error: e2 } = await this.client.from('progress').select('state, updated_at').eq('user_id', session.user.id).maybeSingle();
+    if (e2 || !row || !row.state) return false;
+    row.state = await SyncCore.unpackState(row.state);
+    await this.applyCloud({ state: SyncCore.mergeStates(state, row.state), updated_at: row.updated_at }, true);
+    this.meta.pendingSync = true; await Store.set('meta', this.meta);
+    this.schedulePush();
+    return true;
   },
 
   async pull(opts) {

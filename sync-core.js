@@ -209,7 +209,8 @@
   function fromB64(b64) { const s = atob(b64), u8 = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u8[i] = s.charCodeAt(i); return u8; }
   async function packState(state) {
     const gz = await streamBytes(new TextEncoder().encode(JSON.stringify(state)), new CompressionStream('gzip'));
-    return { nqz: 1, gz: toB64(gz) };
+    // n and resetAt stay readable outside the gzip: the cloud's guard counts the records of a packed state too (1.9.1)
+    return { nqz: 1, gz: toB64(gz), n: Object.keys((state && state.srs) || {}).length, resetAt: (state && state.resetAt) || '' };
   }
   async function unpackState(s) {
     if (!isPacked(s)) return s;

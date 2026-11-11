@@ -2,12 +2,15 @@
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.9.0';   // keep equal to the version in sw.js CACHE ('nq-v1.4.2'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.9.1';   // keep equal to the version in sw.js CACHE ('nq-v1.4.2'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個版本一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（通常最後一位加一；1.1.0 是書房改版），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.9.1', date: '2026-11-11', items: [
+    '再加強保護進度：剛更新的裝置一打開就受到保護，不用等第一次同步；雲端也會拒絕把進度大量縮水的上傳（例如還沒更新的舊版 app 出錯時），遇到時 app 會把兩邊的紀錄逐題合併再上傳，不會少任何一題。'
+  ] },
   { v: '1.9.0', date: '2026-11-11', items: [
     '單字有圖了：419 個看得見的東西（食物、家裡的東西、動物、交通、建築和店……）第一次出現時，字的上面有一張小圖；學過以後偶爾會出「看圖選字」：看圖選日文，錯的選項不會是長得很像的東西。',
     '信箱跟著進度走：收到哪些信、讀過哪些，跟進度存在一起，也跟著雲端同步；換一份新的進度時，信也是新的。',
@@ -297,6 +300,7 @@ function normalizeState(s) {
   out.koto = { daySets: obj(kt.daySets), days: Array.isArray(kt.days) ? kt.days : [], listen: obj(kt.listen), mail: obj(kt.mail), found: obj(kt.found), sets: obj(kt.sets), gift: Number(kt.gift) || 0 };
   const tw = obj(out.town); out.town = { done: obj(tw.done), seen: obj(tw.seen), stops: obj(tw.stops) };
   out.mail = out.mail && typeof out.mail === 'object' && !Array.isArray(out.mail) ? { got: obj(out.mail.got), read: obj(out.mail.read) } : null;
+  if (typeof out.resetAt !== 'string') out.resetAt = '';   // 1.9.1: when 重設所有進度 was last pressed (the cloud's guard lets that one shrink through)
   ['owned', 'placed', 'wear', 'look', 'lampsOff', 'met'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)
   if (typeof out.house !== 'string') out.house = '';
   if (typeof out.record !== 'string') out.record = ''; out.musicOff = out.musicOff === true; out.storyV = Number(out.storyV) || (out.storySeen === true ? 1 : 0); delete out.storySeen;   // the four-page opening was 1   // an id this build does not know is kept: the cottage is drawn meanwhile

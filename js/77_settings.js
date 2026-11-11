@@ -180,6 +180,7 @@ Object.assign(ACTIONS, {
     state = normalizeState(defaultState());   // 書房's own things laid out again (1.2.0)
     state.ttsConfig = keep.ttsConfig; state.settings.theme = keep.theme;
     Sync.allowEmpty = true;   // the one empty progress the cloud takes (1.8.2)
+    state.resetAt = new Date().toISOString();   // and the mark the cloud's guard lets through (1.9.1, supabase/progress-guard.sql)
     saveState(); buildRegistry();
     SESSION = null; FLASH = null; EXAM = null;
     closeModal(); toast('已重設'); go('#/today');

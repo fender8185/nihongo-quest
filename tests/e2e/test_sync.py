@@ -11,6 +11,11 @@ READY = "typeof state === 'object' && !!state.updatedAt && typeof Sync === 'obje
 FAKE = """
 window.__fake = (function () {
   let session = null, row = null; const listeners = [], calls = [];
+  // supabase/progress-guard.sql (1.9.1), when guard is on: a change that would leave fewer than half of 10 or more records is refused
+  const recs = (s) => (s && s.nqz ? Number(s.n) || 0 : Object.keys((s && s.srs) || {}).length);
+  const refused = (p) => { if (!api.guard || !row) return null; const was = recs(row.state), now = recs(p.state);
+    const reset = !!(p.state && p.state.resetAt) && p.state.resetAt !== (row.state && row.state.resetAt);
+    return was >= 10 && now * 2 < was && !reset ? { code: '23514', message: `refused: this would replace ${was} learning records with ${now}`, hint: 'progress shrink' } : null; };
   const client = {
     auth: {
       onAuthStateChange(cb) { listeners.push(cb); return { data: { subscription: { unsubscribe() {} } } }; },
@@ -24,18 +29,20 @@ window.__fake = (function () {
       select(cols) { calls.push(['select', cols]); return { eq() { return { async maybeSingle() {
         if (!row) return { data: null, error: null };
         const d = {}; String(cols).split(',').map(c => c.trim()).forEach(c => { d[c] = row[c]; }); return { data: d, error: null }; } }; } }; },
-      async upsert(p) { calls.push(['upsert', p]); row = p; return { error: null }; },
+      async upsert(p) { const no = refused(p); calls.push([no ? 'upsert-refused' : 'upsert', p]); if (no) return { error: no }; row = p; return { error: null }; },
       // conditional write: UPDATE ... WHERE user_id = ? AND updated_at = ? RETURNING updated_at (same instant, any spelling)
       update(p) { return { eq(k1, v1) { return { eq(k2, v2) { return { async select() {
         const hit = row && row[k1] === v1 && new Date(row[k2]).getTime() === new Date(v2).getTime();
+        const no = hit && refused(p); if (no) { calls.push(['update-refused', p]); return { data: null, error: no }; }
         calls.push([hit ? 'update' : 'update-miss', p]);
         if (hit) { row = Object.assign({}, row, p); return { data: [{ updated_at: row.updated_at }], error: null }; }
         return { data: [], error: null }; } }; } }; } }; },
       delete() { return { async eq() { row = null; calls.push(['delete']); return { error: null }; } }; }
     }; }
   };
-  return { client, calls, setRow(r) { row = r; }, getRow() { return row; },
+  const api = { client, calls, guard: false, setRow(r) { row = r; }, getRow() { return row; },
     login(email, id) { session = { user: { id: id || 'u1', email } }; listeners.forEach(cb => cb('SIGNED_IN', session)); } };
+  return api;
 })(); true"""
 
 def boot(b, extra=()):
@@ -188,6 +195,40 @@ def test_an_empty_progress_never_replaces_the_clouds_and_only_a_reset_does(b):
     assert out[-3] == '{"writes":0,"cloud":1,"back":true}', out   # nothing written; this device took the cloud's progress back
     assert out[-1] == '{"cloud":0,"allow":false}', out   # a reset does go up, once
 
+# 1.9.1 (2026-11-11): what else could still roll a learner back, each run against the cloud's rules
+
+# a device just updated, synced before under a version that kept no hadProgress: it counts its progress at once, so an empty
+# progress it might come to never goes up
+def test_an_upgraded_device_counts_its_progress_at_once(b):
+    rec = "{ 'v:n5a-001': { b: 3, due: '2026-12-01', n: 4, ok: 4, ng: 0, last: '2026-11-01' } }"
+    out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE),
+        ("eval", "state.srs = " + rec + "; saveState(); Store.set('meta', { deviceId: 'dev_old', userId: 'u1', everSynced: true, pendingSync: false, lastPulledUpdatedAt: '2026-11-10T00:00:00.000Z' }).then(() => true)"),
+        ("eval", "__fake.setRow({ user_id: 'u1', state: { v: 3, updatedAt: '2026-11-10T00:00:00.000Z', srs: " + rec + " }, updated_at: '2026-11-10T00:00:00.000Z' }); true"),
+        ("eval", "new Promise(r => setTimeout(r, 50)).then(() => Sync.init({ client: __fake.client })).then(() => JSON.stringify({ had: Sync.meta.hadProgress }))"),
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
+        ("eval", "__fake.calls.length = 0; state = normalizeState(defaultState()); saveState(); Sync.push(); true"),
+        ("wait", "Sync.status === 'idle' && __fake.calls.some(c => c[0] === 'select')"),
+        ("eval", "JSON.stringify({ writes: __fake.calls.filter(c => /update|upsert/.test(c[0])).length, cloud: Object.keys(__fake.getRow().state.srs).length, back: !!state.srs['v:n5a-001'] })")])
+    assert out[-4] == '{"had":true}', out
+    assert out[-1] == '{"writes":0,"cloud":1,"back":true}', out
+
+# a copy of the app without the guard sends a much smaller progress: the cloud refuses it, and the app merges the two record by
+# record and sends the merge, which has both sides' records
+def test_a_refused_shrink_is_merged_with_the_cloud_and_the_merge_goes_up(b):
+    many = "Object.fromEntries(Array.from({ length: 12 }, (_, i) => ['v:n5a-1' + String(i).padStart(2, '0'), { b: 2, due: '2026-12-01', n: 2, ok: 2, ng: 0, last: '2026-11-01' }]))"
+    out = boot(b, [
+        ("eval", f"__fake.guard = true; __fake.setRow({{ user_id: 'u1', state: {{ v: 3, updatedAt: '2026-11-10T00:00:00.000Z', srs: {many} }}, updated_at: '2026-11-10T00:00:00.000Z' }}); __fake.login('a@b.c'); true"),
+        ("wait", "Sync.status === 'idle' && Object.keys(state.srs).length === 12"),
+        ("eval", "__fake.calls.length = 0; state.srs = { 'v:n5a-001': { b: 1, due: '2026-11-12', n: 1, ok: 1, ng: 0, last: '2026-11-11' } }; saveState(); Sync.push(); true"),
+        ("wait", "__fake.calls.some(c => c[0] === 'update' || c[0] === 'upsert') && Sync.status === 'idle'"),
+        ("eval", "JSON.stringify({ refused: __fake.calls.filter(c => /refused/.test(c[0])).length, cloud: Object.keys(__fake.getRow().state.srs).length, local: Object.keys(state.srs).length })"),
+        # 重設所有進度 still goes up: it carries a new resetAt
+        ("eval", "__fake.calls.length = 0; Sync.allowEmpty = true; state = normalizeState(defaultState()); state.resetAt = new Date().toISOString(); saveState(); Sync.push(); true"),
+        ("wait", "__fake.calls.some(c => c[0] === 'update' || c[0] === 'upsert')"),
+        ("eval", "JSON.stringify({ cloud: Object.keys(__fake.getRow().state.srs || {}).length })")])
+    assert out[-3] == '{"refused":1,"cloud":13,"local":13}', out   # refused once; the merge (12 + 1) went up
+    assert out[-1] == '{"cloud":0}', out
+
 def test_stale_device_does_not_overwrite_progress_made_elsewhere(b):
     out = boot(b, [
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
@@ -327,7 +368,8 @@ if __name__ == "__main__":
              test_manual_push_with_null_updated_at_still_sends_a_timestamp,
              test_push_uses_a_conditional_update_once_the_device_has_synced, test_stale_device_does_not_overwrite_progress_made_elsewhere, test_cloud_changed_elsewhere_is_adopted_even_when_its_clock_is_behind,
              test_row_deleted_elsewhere_is_recreated_without_looping, test_conflict_during_a_session_waits_and_never_overwrites_the_cloud, test_a_pull_downloads_the_progress_only_when_the_cloud_changed, test_a_practice_set_goes_up_once_at_its_end_or_when_the_app_is_hidden, test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge, test_conflict_merge_redoes_todays_list_from_the_merged_progress,
-             test_old_snapshots_are_deleted_and_no_new_ones_are_taken, test_a_packed_cloud_row_is_opened_and_adopted, test_an_empty_progress_never_replaces_the_clouds_and_only_a_reset_does]
+             test_old_snapshots_are_deleted_and_no_new_ones_are_taken, test_a_packed_cloud_row_is_opened_and_adopted, test_an_empty_progress_never_replaces_the_clouds_and_only_a_reset_does,
+             test_an_upgraded_device_counts_its_progress_at_once, test_a_refused_shrink_is_merged_with_the_cloud_and_the_merge_goes_up]
     failed = 0
     try:
         for t in tests:
