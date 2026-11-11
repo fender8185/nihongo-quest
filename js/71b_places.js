@@ -202,7 +202,7 @@ const PLACE_USE = {
   street: [
     { id: 'vend', name: '自動販賣機', box: [388, 158, 438, 236], kind: 'do', go: [-187, 126], back: 1, pose: 'reach', say: 'ガコン！', fx: 'vend', fxc: 'buy' },
     { id: 'post', name: '郵筒', box: [745, 174, 775, 236], kind: 'do', go: [160, 126], back: 1, pose: 'reach', say: 'ポトン', fx: 'post', fxc: 'buy' },
-    { id: 'mirror', name: 'カーブミラー', box: [484, 136, 516, 236], kind: 'do', go: [-100, 126], back: 1, pose: 'look', say: 'あ、映ってる！', mirror: 1 }],
+    { id: 'mirror', name: 'カーブミラー', box: [484, 136, 516, 236], kind: 'do', go: [-100, 126], back: 1, pose: 'look', say: 'あ、映ってる！', fx: 'cmirror', fxc: 'shine', ms: 1400, mirror: 1 }],
   beach: [
     { id: 'crab', name: '螃蟹', box: [540, 262, 650, 298], kind: 'do', go: [-20, 72], pose: 'crouch', say: 'チョキチョキ', fx: 'crab', fxc: 'pinch', ms: 2600 },
     { id: 'castle', name: '沙堡', box: [350, 262, 420, 320], kind: 'do', go: [-214, 46], pose: 'crouch', say: '✨', fx: 'castle', fxc: 'cheer' },

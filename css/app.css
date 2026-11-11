@@ -1733,3 +1733,29 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .confetti { position: fixed; inset: 0; z-index: 70; pointer-events: none; overflow: hidden; }
 .confetti i { position: absolute; width: 8px; height: 11px; margin: -5px 0 0 -4px; border-radius: 2px; }
 @keyframes kotoSpin { from { transform: scale(.4) rotate(-40deg); opacity: 0; } 60% { transform: scale(1.18) rotate(6deg); opacity: 1; } }
+/* 2026-11-11 polish: street, harbor, town */
+.sky .land .fx-hubspin { transform-box: fill-box; transform-origin: center; animation: sbHubSpin .5s linear infinite; } @keyframes sbHubSpin { to { transform: rotate(360deg); } }   /* the truck's hubs, the bike's spokes */
+/* the drinks machine: a button blinks, a can drops into the tray, the flap swings; the postbox: its lip lifts and a letter
+   slides in (no more squashing either whole); the curve mirror tips on its clamp as a glint runs over the glass */
+.sky .land :is([data-fx="vend"], [data-fx="post"]).buy { animation: none; }
+.sky .land [data-fx="vend"].buy .vpick { animation: sbPick 1.6s step-end; } @keyframes sbPick { 0%, 10%, 20%, 100% { opacity: 1; } 5%, 15% { opacity: .1; } }
+.sky .land [data-fx="vend"].buy .vcan { animation: sbCan 1.6s ease-in forwards; } @keyframes sbCan { 0%, 22% { opacity: 0; transform: translateY(-3.6px); } 24% { opacity: 1; transform: translateY(-3.6px); } 34% { transform: translateY(0); } 40% { transform: translateY(-1.2px); } 46%, 100% { opacity: 1; transform: translateY(0); } }
+.sky .land [data-fx="vend"].buy .vflap { transform-box: fill-box; transform-origin: 50% 0; animation: sbFlap 1.6s ease-out; } @keyframes sbFlap { 0%, 30% { transform: none; } 38%, 70% { transform: scaleY(.4); } 82%, 100% { transform: none; } }
+.sky .land [data-fx="post"].buy .plip { transform-box: fill-box; transform-origin: 50% 100%; animation: sbLip 1.6s ease-in-out; } @keyframes sbLip { 0%, 100% { transform: none; } 14%, 52% { transform: translateY(-1.6px); } }
+.sky .land [data-fx="post"].buy .pletter { animation: sbLetter 1.6s ease-in forwards; } @keyframes sbLetter { 0% { opacity: 0; transform: translateY(-6px); } 14% { opacity: 1; transform: translateY(-5px); } 40% { opacity: 1; transform: translateY(1px); } 54%, 100% { opacity: 0; transform: translateY(6px); } }
+.sky .land [data-fx="cmirror"].shine { transform-box: fill-box; transform-origin: 50% 100%; animation: sbTip 1.4s ease-in-out; } @keyframes sbTip { 25% { transform: rotate(-5deg); } 55% { transform: rotate(3deg); } 80% { transform: rotate(-1deg); } }
+.sky .land [data-fx="cmirror"].shine .mshine { animation: sbShine 1.4s ease-in-out; } @keyframes sbShine { 0%, 30% { opacity: 0; transform: translate(-6px, -6px); } 50% { opacity: .95; } 75%, 100% { opacity: 0; transform: translate(6px, 6px); } }
+/* the harbour: gulls' wings beat from their shoulders, the net stirs in the wind; the fish flop one after another; the gull on
+   the bollard beats its wing as it flies off; the cat shuts its eyes, tilts its head and swishes its tail (no squash) */
+.sky .land .fx-wing.gullwing { transform-origin: 50% 100%; } .sky .land .hctail { transform-origin: 0 100%; }
+.sky .land .fx-netwave { transform-box: fill-box; transform-origin: 50% 0; animation: hbNetWave 4.4s ease-in-out infinite alternate; } @keyframes hbNetWave { from { transform: skewX(-1deg) scaleY(1); } to { transform: skewX(1deg) scaleY(.97); } }
+.sky .land [data-fx="fish"].flop path { animation: none; } .sky .land [data-fx="fish"].flop .hfish { transform-box: fill-box; transform-origin: 50% 100%; animation: fxFlop .16s ease-in-out 10 alternate; }
+.sky .land [data-fx="gull"].flown .gwing { transform-box: fill-box; transform-origin: 85% 40%; animation: hbGullFlap .16s ease-in-out infinite alternate; } @keyframes hbGullFlap { to { transform: rotate(-40deg) scaleY(1.2); } }
+.sky .land [data-fx="hcat"].purr { animation: none; } .sky .land [data-fx="hcat"] :is(.hceo, .hcec) { transition: opacity .2s; } .sky .land [data-fx="hcat"].purr .hceo { opacity: 0; } .sky .land [data-fx="hcat"].purr .hcec { opacity: 1; }
+.sky .land [data-fx="hcat"].purr .hchead { transform-box: fill-box; transform-origin: 50% 90%; animation: hbCatTilt 2.6s ease-in-out; } @keyframes hbCatTilt { 15%, 80% { transform: rotate(-8deg); } }
+.sky .land [data-fx="hcat"].purr .fx-sway { animation-duration: .5s !important; }
+/* the town: the barber pole's stripes turn up it; rung, the wind chimes' clappers swing and their strips flutter */
+.sky .land .fx-barberpole { animation: twBarber 1.8s linear infinite; } @keyframes twBarber { to { transform: translateY(-12px); } }
+.sky .land [data-fx="chimes"] .zz { transform-box: fill-box; transform-origin: 50% 0; } .sky .land [data-fx="chimes"].jingle .zz { animation: twClapper .12s ease-in-out infinite alternate; } @keyframes twClapper { from { transform: rotate(-22deg); } to { transform: rotate(22deg); } }
+.sky .land [data-fx="chimes"].jingle .tz { transform-box: fill-box; transform-origin: 50% 0; animation: twStrip .18s ease-in-out infinite alternate; } @keyframes twStrip { from { transform: skewX(-12deg) rotate(6deg); } to { transform: skewX(10deg) rotate(-8deg); } }
+@media (prefers-reduced-motion: reduce) { .sky .land :is(.fx-hubspin, .fx-netwave, .fx-barberpole) { animation: none; } .sky .land [data-fx] :is(.vpick, .vcan, .vflap, .plip, .pletter, .mshine, .hfish, .gwing, .hchead, .zz, .tz) { animation: none !important; } }
