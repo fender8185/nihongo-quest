@@ -444,8 +444,22 @@ def test_week0_page_is_a_unit_page(b):
       location.hash = '#/course'; route(); const row = document.querySelector('.unit-row[data-route="#/course/intro"]');
       return JSON.stringify({ intro, seen, lesson, rowBar: Boolean(row && row.querySelector('.bar.stack')), rowCur: Boolean(row && row.querySelector('.chip-accent')) }); })()"""
     r = json.loads(ev(b, js))
-    page = {'start': True, 'setCur': False, 'tabs': 2, 'toc': 15, 'done': False}   # 2026-11-11: the parts of 講義 (its own screen), 13 sections
+    page = {'start': True, 'setCur': False, 'tabs': 2, 'toc': 15, 'done': True}   # 2026-11-11: the parts of 講義 (its own screen), 13 sections; 我的標記 as any unit
     assert r == {'intro': page, 'seen': True, 'lesson': page, 'rowBar': True, 'rowCur': False}, r
+
+# 2026-11-11, the user: 第 0 週 can be marked like any unit — 5★ puts its items at five stars and the unit done, and in 入門
+# with the kana and the 入門 words seen, 入門 is then ready to end by itself; 0★ gives the records back
+def test_week0_takes_my_mark_like_any_unit(b):
+    js = """(() => { const keep = JSON.stringify(state.srs); const units = state.completedUnits.slice(); state.srs = {}; state.completedUnits = []; state.unitMarks = {};
+      state.stage = 'pre'; state.kanaKnown = true; const t = todayStr();
+      REG.vocab.filter(v => v.lv === 'PRE_N5').forEach(v => { state.srs[v.key] = { b: 2, s: 3, d: 5, due: addDays(t, 3), n: 1, ok: 1, ng: 0, st: 1, last: t, lapse: 0, intro: t }; });
+      saveState(); location.hash = '#/course/intro'; route(); const items = unitItems('m0'); const out = { items: items.length, before: preDone() };
+      document.querySelector('#view [data-act="mark-unit"][data-lv="2"]').click(); document.querySelector('#view [data-act="mark-unit"][data-lv="5"]').click();
+      out.five = items.every(g => state.srs[g.key].mark === 5 && state.srs[g.key].b >= 5); out.done = state.completedUnits.includes('m0'); out.ready = preDone(); out.now = document.querySelector('#view [data-act="mark-unit"]').dataset.now;
+      document.querySelector('#view [data-act="mark-unit"][data-lv="0"]').click(); out.back = items.every(g => !state.srs[g.key]); out.undone = !state.completedUnits.includes('m0');
+      state.srs = JSON.parse(keep); state.completedUnits = units; state.unitMarks = {}; saveState(); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'items': r['items'], 'before': False, 'five': True, 'done': True, 'ready': True, 'now': '5', 'back': True, 'undone': True} and r['items'] > 0, r
 
 
 def test_main_accounts_never_get_week0_items_unless_pending(b):

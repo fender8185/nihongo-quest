@@ -353,7 +353,7 @@ function renderUnit(view, uid, tab) {
       <div class="row">${unitBarHtml(s, 'grow')}<span class="small num muted">${s.pct}%</span></div>
       <div class="row between mt-2 small">
         <span class="muted legs">${unitLegendHtml(s)}${legacy ? `<span class="leg">舊版累計作答 ${legacy.seen} 題</span>` : ''}</span>
-        ${intro ? '' : `<span class="row nowrap"><span class="muted">我的標記</span>${markButtonHtml(state.unitMarks[uid] || 0, `data-act="mark-unit" data-unit="${uid}"`)}</span>`}
+        <span class="row nowrap"><span class="muted">我的標記</span>${markButtonHtml(state.unitMarks[uid] || 0, `data-act="mark-unit" data-unit="${uid}"`)}</span>
       </div>
       ${aiReady() && !intro ? `<div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="ai-unit-items" data-unit="${uid}">${icon('spark')}用 AI 為本單元多出 5 題</button></div>` : ''}
     </div>
@@ -426,7 +426,8 @@ Object.assign(ACTIONS, {
     d.open = true; courseOpen[el.dataset.stage] = true; scrollBelowTopbar(d);
   },
   // 我的標記 on a unit's page (2026-11-11, the user; it was 標記為已完成): 2★／5★ its questions up to that many stars and the
-  // unit done; 0★ the questions back to before the mark (ones answered since keep their answers) and the unit not done
+  // unit done; 0★ the questions back to before the mark (ones answered since keep their answers) and the unit not done.
+  // 第 0 週 has it too (2026-11-11, the user): its items count as seen, so 入門 may then end by itself (finishPreIfReady)
   'mark-unit': (el) => {
     const id = el.dataset.unit, lv = Number(el.dataset.lv);
     if ((state.unitMarks[id] || 0) === lv) return;

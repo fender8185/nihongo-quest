@@ -32,7 +32,7 @@ function kanaGateOpen() { return state.kanaKnown === true || REG.kana.filter(x =
 function preWordsLeft() { let n = 0; for (const v of REG.vocab) if (v.lv === 'PRE_N5' && !state.srs[v.key]) n++; return n; }
 function introLeft() { let n = 0; for (const g of REG.grammar) if (g.u === 'm0' && !state.srs[g.key]) n++; return n; }   // 第 0 週 items not seen yet
 // 第 0 週 is done once all its items have been seen (in 入門 or from its page): the course row reads 完成 and the day logs it.
-// Its page has no 標記為已完成: completion is automatic or by the 入門 test.
+// Or by the 入門 test, or by 我的標記 on its page (2★／5★, 2026-11-11).
 function completeIntro() {
   if (state.completedUnits.includes('m0')) return;
   state.completedUnits.push('m0'); noteUnitDone('m0');
