@@ -170,6 +170,24 @@ def test_push_uses_a_conditional_update_once_the_device_has_synced(b):
     ])
     assert out[-1] == '["upsert","update"]', out[-1]
 
+# 1.8.2 (2026-11-11): a device whose progress went empty (it could not read its own and started over) once sent the empty
+# progress up over the cloud's, and every device then took it. An empty progress never goes over a cloud that has some: the device
+# takes the cloud's. Only 重設所有進度 sends an empty one on purpose.
+def test_an_empty_progress_never_replaces_the_clouds_and_only_a_reset_does(b):
+    rec = "{ 'v:n5a-001': { b: 3, due: '2026-12-01', n: 4, ok: 4, ng: 0, last: '2026-11-01' } }"
+    out = boot(b, [
+        ("eval", f"__fake.setRow({{ user_id: 'u1', state: {{ v: 3, updatedAt: '2026-11-10T00:00:00.000Z', srs: {rec} }}, updated_at: '2026-11-10T00:00:00.000Z' }}); __fake.login('a@b.c'); true"),
+        ("wait", "Sync.status === 'idle' && !!state.srs['v:n5a-001']"),
+        ("eval", "__fake.calls.length = 0; state = normalizeState(defaultState()); saveState(); Sync.push(); true"),   # this device lost its progress
+        ("wait", "Sync.status === 'idle' && __fake.calls.some(c => c[0] === 'select')"),
+        ("eval", "JSON.stringify({ writes: __fake.calls.filter(c => c[0] === 'update' || c[0] === 'upsert').length, cloud: Object.keys(__fake.getRow().state.srs || {}).length, back: !!state.srs['v:n5a-001'] })"),
+        ("eval", "__fake.calls.length = 0; Sync.allowEmpty = true; state = normalizeState(defaultState()); saveState(); Sync.push(); true"),   # 重設所有進度
+        ("wait", "__fake.calls.some(c => c[0] === 'update' || c[0] === 'upsert')"),
+        ("eval", "JSON.stringify({ cloud: Object.keys(__fake.getRow().state.srs || {}).length, allow: !!Sync.allowEmpty })"),
+    ])
+    assert out[-3] == '{"writes":0,"cloud":1,"back":true}', out   # nothing written; this device took the cloud's progress back
+    assert out[-1] == '{"cloud":0,"allow":false}', out   # a reset does go up, once
+
 def test_stale_device_does_not_overwrite_progress_made_elsewhere(b):
     out = boot(b, [
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
@@ -309,7 +327,7 @@ if __name__ == "__main__":
              test_manual_push_with_null_updated_at_still_sends_a_timestamp,
              test_push_uses_a_conditional_update_once_the_device_has_synced, test_stale_device_does_not_overwrite_progress_made_elsewhere, test_cloud_changed_elsewhere_is_adopted_even_when_its_clock_is_behind,
              test_row_deleted_elsewhere_is_recreated_without_looping, test_conflict_during_a_session_waits_and_never_overwrites_the_cloud, test_a_pull_downloads_the_progress_only_when_the_cloud_changed, test_a_practice_set_goes_up_once_at_its_end_or_when_the_app_is_hidden, test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge, test_conflict_merge_redoes_todays_list_from_the_merged_progress,
-             test_old_snapshots_are_deleted_and_no_new_ones_are_taken, test_a_packed_cloud_row_is_opened_and_adopted]
+             test_old_snapshots_are_deleted_and_no_new_ones_are_taken, test_a_packed_cloud_row_is_opened_and_adopted, test_an_empty_progress_never_replaces_the_clouds_and_only_a_reset_does]
     failed = 0
     try:
         for t in tests:

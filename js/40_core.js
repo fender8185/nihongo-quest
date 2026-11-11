@@ -2,12 +2,15 @@
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.8.1';   // keep equal to the version in sw.js CACHE ('nq-v1.4.2'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.8.2';   // keep equal to the version in sw.js CACHE ('nq-v1.4.2'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個版本一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（通常最後一位加一；1.1.0 是書房改版），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.8.2', date: '2026-11-11', items: [
+    '保護進度：這台裝置上的進度讀不出來時（例如網路斷了一下、課程資料沒載到），app 會停下來請你重新整理，不會再換成一份全新的進度；曾經有學習紀錄的裝置，也不會再把空白的進度上傳、蓋掉雲端的進度。雲端另外會保留被取代的舊版本，萬一出事可以找回。'
+  ] },
   { v: '1.8.1', date: '2026-11-11', items: [
     '作答畫面的字大小重新整理：單字和漢字題的字放大，手機上放在畫面中間；選項只有一兩個字時（比字形的漢字、假名、羅馬拼音）改成大字的 2×2 方格；句子最後一行不會只剩「す。」；閱讀題的問題不再比短文大；排序題的中文移到句子正上方；答題後的說明只用三種字級，比較整齊。',
     '漢字讀音題答完的說明先講題目問的那個詞，再說這個字在詞裡怎麼讀，例詞一個一行，不會再看起來像答案變成別的字。',
@@ -358,16 +361,20 @@ function normalizeState(s) {
   return out;
 }
 
+// 1.8.2 (2026-11-11): progress that is on this device but cannot be read (the course data did not load, a fault in this
+// version) is never replaced by a fresh start: the app stops instead (init), saves nothing and syncs nothing, so neither this
+// copy nor the cloud's is lost. On 2026-11-11 a fresh start saved here went up and replaced a learner's whole progress.
+let STATE_UNREADABLE = null;
 async function loadState() {
   const stored = await Store.get('state');
   if (stored) {
-    try { state = normalizeState(stored); return 'loaded'; } catch (e) { console.warn('stored state invalid', e); }
+    try { state = normalizeState(stored); return 'loaded'; } catch (e) { console.warn('stored state invalid', e); STATE_UNREADABLE = e; return 'unreadable'; }
   }
   let raw = null;
   try { raw = localStorage.getItem(STORE_KEY); } catch (e) { storageOk = false; }
   if (raw) {
     // first run of this version: copy into IndexedDB, keep the localStorage copy as a safety net
-    try { state = normalizeState(JSON.parse(raw)); await Store.set('state', state); return 'migrated'; } catch (e) { console.warn('state parse failed', e); }
+    try { state = normalizeState(JSON.parse(raw)); await Store.set('state', state); return 'migrated'; } catch (e) { console.warn('state parse failed', e); STATE_UNREADABLE = e; return 'unreadable'; }
   }
   let legacyRaw = null;
   try { legacyRaw = localStorage.getItem(LEGACY_KEY); } catch (e) { /* ignore */ }
@@ -376,7 +383,7 @@ async function loadState() {
       state = normalizeState(migrateLegacy(JSON.parse(legacyRaw)));
       saveState();
       return 'migrated';
-    } catch (e) { console.warn('legacy migration failed', e); }
+    } catch (e) { console.warn('legacy migration failed', e); STATE_UNREADABLE = e; return 'unreadable'; }
   }
   state = normalizeState(defaultState());   // currentUnit is m1: everyone starts at week 1 unless they pick another start in 課程; 書房's own things laid out
   saveState();

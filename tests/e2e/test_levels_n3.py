@@ -3,7 +3,7 @@ folder whose data.js is the real one plus a small fake N3 level (three words, tw
 items in a fourth phase, a theme), so everything computed while the page loads sees N3 the way the real batches will."""
 import json, os, shutil, subprocess, sys, tempfile, time
 sys.path.insert(0, os.path.dirname(__file__))
-from cdp import Browser
+from cdp import Browser, idb_get
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PORT = 8803
 URL = f"http://127.0.0.1:{PORT}/"
@@ -158,6 +158,24 @@ def test_n3_exam_records_ai_items_formal_mode_passages_and_seen_order(b):   # fi
     assert r['rec'] == {'lang': 60, 'read': 60, 'lr': None, 'li': 0}, r   # N3 keeps 言語知識 and 読解 apart; lrScore120 is N5/N4's
     assert r['ai'] == {'resp': True, 'scene': False}, r   # N3's 即時応答 is S3-M5; S3-M4 is 発話表現, not an AI item
     assert r['qs'] == 3 and r['first'], r   # a passage keeps its three questions; one of them answered wrong ranks it first
+
+# 1.8.2: data.js came but a level's own file (data-n3.js) did not: the app stops before it reads or saves any progress, the same as
+# when no course data came, so a half-loaded course never starts over or syncs
+def test_a_missing_level_data_file_stops_the_app_before_anything_is_saved(b):
+    tmp = tempfile.mkdtemp(prefix='nq-nolevel-'); port = PORT + 40
+    for name in os.listdir(ROOT):
+        if name in ('.git', '.venv', 'node_modules') or (name.startswith('data-n') and name.endswith('.js')): continue
+        os.symlink(os.path.join(ROOT, name), os.path.join(tmp, name))
+    for name in os.listdir(ROOT):
+        if name.startswith('data-n') and name.endswith('.js'): open(os.path.join(tmp, name), 'w', encoding='utf-8').write('DATA_MORE({});\n')
+    srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(port), "--bind", "127.0.0.1"], cwd=tmp, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        time.sleep(0.8)
+        out = b.run([("nav", f"http://127.0.0.1:{port}/"), ("wait", "document.body.textContent.includes('現在沒辦法開始')"),
+                     ("eval", "new Promise(r => setTimeout(r, 600)).then(() => document.body.textContent.includes('沒有載完整'))"), ("eval", idb_get("state"))])
+    finally:
+        srv.terminate(); shutil.rmtree(tmp, ignore_errors=True)
+    assert out[-2] is True and out[-1] is None, out   # said why; nothing saved
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

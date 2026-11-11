@@ -10,8 +10,19 @@ function checkDayRollover() {
   if (!SESSION && !EXAM) route();
 }
 
+// the app cannot start safely (1.8.2): it says so and offers a reload; nothing is saved or synced
+function stopApp(why) {
+  const view = document.getElementById('view') || document.body;
+  view.innerHTML = `<div class="card" style="max-width:460px;margin:12vh auto;padding:22px 20px"><h2 style="margin:0 0 8px;font-size:20px">現在沒辦法開始</h2>
+    <p style="margin:0 0 6px">${esc(why)}</p><p class="small muted" style="margin:0 0 16px">你的進度沒有被改動，也沒有上傳。請重新整理；一直這樣的話，先不要清除瀏覽資料，截這個畫面告訴我們。</p>
+    <button type="button" class="btn btn-primary" onclick="location.reload()">重新整理</button>
+    <p class="tiny muted" style="margin:14px 0 0;word-break:break-all">${esc(APP_VERSION)}${STATE_UNREADABLE ? ' · ' + esc(String((STATE_UNREADABLE && STATE_UNREADABLE.message) || STATE_UNREADABLE)) : ''}</p></div>`;
+}
 async function init() {
-  await loadState();
+  if (typeof DATA !== 'object' || !DATA || !Array.isArray(DATA.UNITS) || !Array.isArray(DATA.VOCAB)) { stopApp('課程資料沒有載到（可能是網路斷了一下）。'); return; }
+  // a level's own data file (data-n3.js) missing: every unit has its lesson only when every file came
+  if (DATA.UNITS.some(u => !DATA.LESSONS || !DATA.LESSONS[u.id])) { stopApp('課程資料沒有載完整（可能是網路斷了一下）。'); return; }
+  if (await loadState() === 'unreadable') { stopApp('讀取這台裝置上的進度時出了問題。'); return; }
   Sync.onChange = renderSyncChip;
   buildRegistry();
   applyTheme();

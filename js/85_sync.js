@@ -54,7 +54,7 @@ const Sync = {
     }
     // sync bookkeeping belongs to one account: a different user on this device starts as "never synced"
     if (this.meta.userId !== session.user.id) {
-      Object.assign(this.meta, { userId: session.user.id, everSynced: false, pendingSync: false, lastSyncedAt: null, lastPulledUpdatedAt: null });
+      Object.assign(this.meta, { userId: session.user.id, everSynced: false, hadProgress: false, pendingSync: false, lastSyncedAt: null, lastPulledUpdatedAt: null });
       Store.set('meta', this.meta);
     }
     if (!had) { this.setStatus('idle'); this.pull(); }   // TOKEN_REFRESHED etc. keep whatever status we are in
@@ -120,6 +120,14 @@ const Sync = {
     this.setStatus('syncing');
     try {
       if (!state.updatedAt) state.updatedAt = new Date().toISOString();   // e.g. right after the localStorage migration
+      // 1.8.2: a device that had progress and now has none (it lost its own) never sends the empty one over a cloud that has
+      // some: it takes the cloud's instead. Only 重設所有進度 sends an empty one on purpose (allowEmpty). meta.hadProgress: the
+      // last progress this device sent or took was not empty
+      if (SyncCore.isEmptyProgress(state) && this.meta.hadProgress && !this.allowEmpty) {
+        const { data: row, error: rowError } = await this.client.from('progress').select('state, updated_at').eq('user_id', session.user.id).maybeSingle();
+        if (rowError) throw rowError;
+        if (row && !SyncCore.isEmptyProgress(row.state)) { await this.applyCloud(row); this.lastError = null; this.setStatus('idle'); return; }
+      }
       const payload = Object.assign({ user_id: session.user.id }, SyncCore.buildPushPayload(SyncCore.stripSecrets(state), this.meta.deviceId));
       const base = this.meta.everSynced ? this.meta.lastPulledUpdatedAt : null;
       if (base) {
@@ -136,8 +144,8 @@ const Sync = {
         const { error } = await this.client.from('progress').upsert(payload);
         if (error) throw error;
       }
-      this.conflicted = false;
-      Object.assign(this.meta, { pendingSync: false, lastSyncedAt: new Date().toISOString(), lastPulledUpdatedAt: payload.updated_at, everSynced: true });
+      this.conflicted = false; this.allowEmpty = false;
+      Object.assign(this.meta, { pendingSync: false, lastSyncedAt: new Date().toISOString(), lastPulledUpdatedAt: payload.updated_at, everSynced: true, hadProgress: !SyncCore.isEmptyProgress(state) });
       await Store.set('meta', this.meta);
       this.lastError = null; this.setStatus('idle');
     } catch (e) {
@@ -190,7 +198,7 @@ const Sync = {
       if (conflict && state.today.plan) makeTodayPlan();
       await Store.set('state', state);   // not saveState(): that would echo the pull straight back to the cloud
       this.conflicted = false;
-      Object.assign(this.meta, { pendingSync: false, lastSyncedAt: new Date().toISOString(), lastPulledUpdatedAt: data.updated_at, everSynced: true });
+      Object.assign(this.meta, { pendingSync: false, lastSyncedAt: new Date().toISOString(), lastPulledUpdatedAt: data.updated_at, everSynced: true, hadProgress: !SyncCore.isEmptyProgress(state) });
       await Store.set('meta', this.meta);
       applyTheme(); applyFurigana();
       audioPrefetchSoon();   // progress made on another device changes today's plan

@@ -43,3 +43,5 @@ end $$;
 
 revoke all on function public.ai_take() from public, anon;
 grant execute on function public.ai_take() to authenticated;
+
+-- The copies a progress row replaces (1.8.2): see progress-history.sql, run once after this file.
