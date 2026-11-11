@@ -819,18 +819,27 @@ def test_n4_words_open_once_n5_words_kanji_and_units_are_done(b):
     r = json.loads(ev(b, js))
     assert r['left'] > 0 and r['closed'] and r['wordsOnly'] is False and r['open'], r
 
-def test_bulk_i_know_marks_the_filtered_words_and_can_be_undone(b):
+# 整批標記 (2026-11-11, the user: 2★ and 5★, as each word's own button): 2★ takes the words not marked and under two stars,
+# 5★ every word not at 5★ yet (the 2★ ones too); 復原 gives back the records from before the last one
+def test_bulk_marks_take_the_filtered_words_to_two_or_five_stars_and_can_be_undone(b):
     js = """(() => { const theme = vocabThemes().find(g => g.c && REG.vocab.filter(v => v.builtin && vocabTheme(v) === g.c && !state.srs[v.key]).length >= 3).c;
-      const words = REG.vocab.filter(v => v.builtin && vocabTheme(v) === theme); const snapshot = JSON.stringify(words.map(v => state.srs[v.key] || null));
-      const todo = words.filter(v => !(state.srs[v.key] && state.srs[v.key].mark === 5)).length;
+      const words = REG.vocab.filter(v => v.builtin && vocabTheme(v) === theme); const snap = () => JSON.stringify(words.map(v => state.srs[v.key] || null)); const keep = JSON.stringify(state.srs);
+      const strong = words.find(v => !state.srs[v.key]); state.srs[strong.key] = { b: 3, s: 7, d: 5, due: addDays(todayStr(), 5), n: 4, ok: 4, ng: 0, st: 4, last: todayStr(), lapse: 0, intro: todayStr() };   // three stars already: 2★ leaves it
+      const want2 = words.filter(v => !state.srs[v.key] || (!state.srs[v.key].mark && state.srs[v.key].b < 2)).map(v => v.key); const snap0 = snap();
       history.replaceState(null, '', '#/vocab/list?c=' + encodeURIComponent(theme)); renderVocabList(document.getElementById('view'), { c: theme });
-      const btn = document.querySelector('[data-act=vocab-known-all]'); const out = { btn: !!btn, count: btn ? Number(btn.dataset.n) : 0, todo };
-      ACTIONS['vocab-known-all'](); out.known = words.filter(v => state.srs[v.key] && state.srs[v.key].mark === 5).length; out.total = words.length;
-      out.undoBtn = !!document.querySelector('[data-act=vocab-known-undo]');
-      ACTIONS['vocab-known-undo'](); out.restored = JSON.stringify(words.map(v => state.srs[v.key] || null)) === snapshot; out.undoGone = !document.querySelector('[data-act=vocab-known-undo]');
+      const btn = (lv) => document.querySelector(`[data-act=vocab-mark-all][data-lv="${lv}"]`); const undo = () => document.querySelector('[data-act=vocab-mark-undo]');
+      const out = { n2: Number(btn(2).dataset.n), want2: want2.length };
+      ACTIONS['vocab-mark-all'](btn(2)); out.two = want2.every(k => state.srs[k].mark === 2 && state.srs[k].b === 2); out.strongLeft = !state.srs[strong.key].mark;
+      out.says2 = (undo() && undo().previousElementSibling.textContent) || ''; out.no2 = !btn(2);
+      ACTIONS['vocab-mark-undo'](); out.back0 = snap() === snap0;
+      ACTIONS['vocab-mark-all'](btn(2)); const snap2 = snap(); out.n5 = Number(btn(5).dataset.n); out.total = words.length;
+      ACTIONS['vocab-mark-all'](btn(5)); out.five = words.every(v => state.srs[v.key].mark === 5); out.no5 = !btn(5);
+      ACTIONS['vocab-mark-undo'](); out.back2 = snap() === snap2; out.undoGone = !undo();
+      state.srs = JSON.parse(keep); saveState();
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['btn'] and r['count'] == r['todo'] and r['known'] == r['total'] and r['undoBtn'] and r['restored'] and r['undoGone'], r
+    assert r['n2'] == r['want2'] > 0 and r['two'] and r['strongLeft'] and r['says2'] == f"已把 {r['want2']} 個字標成 2★" and r['no2'] and r['back0'], r
+    assert r['n5'] == r['total'] and r['five'] and r['no5'] and r['back2'] and r['undoGone'], r
 
 def test_preview_card_has_i_know_which_skips_the_word_and_its_encore(b):
     js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && x.r && !/[一-龯]/.test(x.r) && x.r.length >= 2 && x.r.length <= 8); const others = REG.vocab.filter(x => x.builtin && x.key !== v.key).slice(0, 3);
@@ -866,7 +875,7 @@ def test_vocab_search_filters_live_on_input_and_preserves_focus(b):
     r = json.loads(ev(b, js))
     assert r['rows0'] > r['rows1'] >= 1 and r['sameEl'] is True and r['caret'] == 2 and 'q=食べ' in r['hash'], r
 
-TESTS += [test_n4_words_open_once_n5_words_kanji_and_units_are_done, test_bulk_i_know_marks_the_filtered_words_and_can_be_undone, test_preview_card_has_i_know_which_skips_the_word_and_its_encore, test_experienced_shortcut_in_the_level_picker_turns_chinese_off, test_vocab_search_filters_live_on_input_and_preserves_focus]
+TESTS += [test_n4_words_open_once_n5_words_kanji_and_units_are_done, test_bulk_marks_take_the_filtered_words_to_two_or_five_stars_and_can_be_undone, test_preview_card_has_i_know_which_skips_the_word_and_its_encore, test_experienced_shortcut_in_the_level_picker_turns_chinese_off, test_vocab_search_filters_live_on_input_and_preserves_focus]
 
 # ---- 1.0.27: no 字表 button; a theme card opens its word table wherever its own buttons are not ----
 MAIN = "state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storyV = 9; state.startChosen = true; state.currentUnit = 'm1'; saveState(); DAILY_CACHE = null;"

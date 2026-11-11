@@ -242,9 +242,12 @@ function vocabListFiltered(params) {
   if (q) list = list.filter(v => [v.w, v.r, v.m].some(x => String(x || '').toLowerCase().includes(q)));
   return list;
 }
-let LAST_BULK_KNOWN = null;   // { keys, prev } of the last 整批我會了, so it can be undone exactly
+let LAST_WORDS_MARK = null;   // { keys, prev, lv } of the last 整批標記, so it can be undone exactly
+// 整批標記 (2026-11-11, the user: the word list's bulk button by stars too; it was 這 N 個字我都會了, five stars): 2★ takes the
+// listed words not marked and under two stars, 5★ the listed words not marked 5★ yet — a mark only raises, as each word's own button
+function bulkMarkTargets(list, lv) { return list.filter(v => { const r = state.srs[v.key]; return lv === 5 ? !(r && r.mark === 5) : !(r && (r.mark || r.b >= 2)); }); }
 function vocabListResultsHtml(params, list = vocabListFiltered(params)) {
-  const notKnown = list.filter(v => !(state.srs[v.key] && state.srs[v.key].mark === 5)).length;
+  const n2 = bulkMarkTargets(list, 2).length, n5 = bulkMarkTargets(list, 5).length;
   const shown = list.slice(0, 300);
   const rows = shown.map(v => {
     const r = state.srs[v.key];
@@ -258,9 +261,10 @@ function vocabListResultsHtml(params, list = vocabListFiltered(params)) {
       </td></tr>`;
   }).join('');
   return `<div class="row-wrap mb-3">
-      ${notKnown ? `<button type="button" class="btn btn-sm" data-act="vocab-known-all" data-n="${notKnown}" title="把目前列出的字全部標成五顆，之後排進五顆的複習；答錯就回到正常排程">這 ${notKnown} 個字我都會了</button>` : ''}
-      ${LAST_BULK_KNOWN ? `<span class="small muted">已把 ${LAST_BULK_KNOWN.keys.length} 個字標成我會了</span><button type="button" class="btn btn-sm btn-ghost" data-act="vocab-known-undo">復原</button>` : ''}
-      <span class="hint">已經會的字可以整批標記，之後只會偶爾確認一次。</span>
+      ${n2 ? `<button type="button" class="btn btn-sm" data-act="vocab-mark-all" data-lv="2" data-n="${n2}" title="把目前列出、還不到兩顆的字全部標成 2★，過幾天開始複習">全部標 2★（${n2} 個）</button>` : ''}
+      ${n5 ? `<button type="button" class="btn btn-sm" data-act="vocab-mark-all" data-lv="5" data-n="${n5}" title="把目前列出的字全部標成 5★，之後只偶爾確認；答錯就回到正常排程">全部標 5★（${n5} 個）</button>` : ''}
+      ${LAST_WORDS_MARK ? `<span class="small muted">已把 ${LAST_WORDS_MARK.keys.length} 個字標成 ${LAST_WORDS_MARK.lv}★</span><button type="button" class="btn btn-sm btn-ghost" data-act="vocab-mark-undo">復原</button>` : ''}
+      <span class="hint">看過的字標 2★，過幾天複習；已經會的標 5★，之後只會偶爾確認。</span>
     </div>
     <div class="table-wrap"><table class="table"><thead><tr><th>單字</th><th>意思</th><th>熟練度</th><th></th></tr></thead><tbody>${rows || '<tr><td colspan="4" class="empty">沒有符合的單字</td></tr>'}</tbody></table></div>
     ${list.length > shown.length ? `<p class="hint mt-2">只顯示前 ${shown.length} 筆，請用搜尋縮小範圍。</p>` : ''}`;
@@ -343,18 +347,19 @@ Object.assign(ACTIONS, {
     } else toast(`「${w}」標成 ${lv}★${markItem(v.key, lv) ? (lv === 5 ? '，之後排進五顆的複習' : '，過幾天複習') : '（已經比這更熟，星星照舊）'}`);
     route();
   },
-  // 整批我會了: every word in the current table selection not at 5★ yet; the previous records are kept for 復原
-  'vocab-known-all': () => {
-    const keys = vocabListFiltered(currentRoute().params).filter(v => !(state.srs[v.key] && state.srs[v.key].mark === 5)).map(v => v.key);
+  // 整批標記: the words in the current table selection that 2★／5★ would raise (bulkMarkTargets); the previous records are kept for 復原
+  'vocab-mark-all': (el) => {
+    const lv = Number(el.dataset.lv) === 2 ? 2 : 5;
+    const keys = bulkMarkTargets(vocabListFiltered(currentRoute().params), lv).map(v => v.key);
     if (!keys.length) return;
-    const prev = {}; keys.forEach(k => { prev[k] = state.srs[k] ? JSON.parse(JSON.stringify(state.srs[k])) : null; markItem(k, 5, false); });
-    saveState(); LAST_BULK_KNOWN = { keys, prev };
-    toast(`已把 ${keys.length} 個字標成五顆，之後會排進五顆的複習`); route();
+    const prev = {}; keys.forEach(k => { prev[k] = state.srs[k] ? JSON.parse(JSON.stringify(state.srs[k])) : null; markItem(k, lv, false); });
+    saveState(); LAST_WORDS_MARK = { keys, prev, lv };
+    toast(`已把 ${keys.length} 個字標成 ${lv}★${lv === 5 ? '，之後會排進五顆的複習' : '，過幾天開始複習'}`); route();
   },
-  'vocab-known-undo': () => {
-    if (!LAST_BULK_KNOWN) return;
-    Object.entries(LAST_BULK_KNOWN.prev).forEach(([k, r]) => { if (r) state.srs[k] = r; else delete state.srs[k]; });
-    const n = LAST_BULK_KNOWN.keys.length; LAST_BULK_KNOWN = null; saveState(); toast(`已復原 ${n} 個字的紀錄`); route();
+  'vocab-mark-undo': () => {
+    if (!LAST_WORDS_MARK) return;
+    Object.entries(LAST_WORDS_MARK.prev).forEach(([k, r]) => { if (r) state.srs[k] = r; else delete state.srs[k]; });
+    const n = LAST_WORDS_MARK.keys.length; LAST_WORDS_MARK = null; saveState(); toast(`已復原 ${n} 個字的紀錄`); route();
   },
   // 我會了 on the new-word preview card: vouch for the word and drop it (and any encore) from this session
   'preview-known': () => {

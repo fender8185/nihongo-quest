@@ -211,11 +211,12 @@ def test_only_a_pass_marks_and_it_counts_what_is_left(b):
     assert r['fail'] == {'passed': False, 'same': True, 'undo': False, 'says': False, 'again': True}, r
     assert r['pass']['passed'] and r['pass']['marked'] == r['pass']['left'] and r['pass']['says'], r
 
-# 這 N 個字我都會了: five stars each, due where FSRS puts them (not spread: five stars wait in their queue)
+# 全部標 5★ (was 這 N 個字我都會了): five stars each, due where FSRS puts them (not spread: since 2026-11-11 five stars come on
+# their dates, at most Q5_DAILY_CAP a day, so a crowded day waits for places)
 def test_vocab_known_all_sets_five_stars(b):
     js = """(() => { const t = todayStr(); const keep = JSON.stringify(state.srs); state.srs = {}; location.hash = '#/vocab/list?lv=PRE_N5'; route();
-      ACTIONS['vocab-known-all'](); const recs = Object.values(state.srs); const days = recs.map(r => daysBetween(t, r.due));
-      state.srs = JSON.parse(keep); LAST_BULK_KNOWN = null; saveState(); return JSON.stringify({ n: recs.length, b: [...new Set(recs.map(r => r.b))], min: Math.min(...days), max: Math.max(...days) }); })()"""
+      ACTIONS['vocab-mark-all']({ dataset: { lv: '5' } }); const recs = Object.values(state.srs); const days = recs.map(r => daysBetween(t, r.due));
+      state.srs = JSON.parse(keep); LAST_WORDS_MARK = null; saveState(); return JSON.stringify({ n: recs.length, b: [...new Set(recs.map(r => r.b))], min: Math.min(...days), max: Math.max(...days) }); })()"""
     r = json.loads(ev(b, js))
     assert r['n'] > 0 and r['b'] == [6] and 43 <= r['min'] and r['max'] <= 47, r   # fsrsDays(45): 45 days ± 5%
 
