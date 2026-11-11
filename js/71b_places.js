@@ -197,7 +197,7 @@ const PLACE_USE = {
     { id: 'fountain', name: '飲水台', box: [842, 246, 880, 298], kind: 'do', go: [261, 62], back: 1, pose: 'reach', say: 'ゴクゴク', fx: 'fountain', fxc: 'spout' },
     { id: 'pigeons', name: '鴿子', box: [540, 322, 624, 346], kind: 'do', go: [-80, 40], pose: 'wave', fx: 'pigeons', fxc: 'flown', ms: 6000 },
     { id: 'jizo', name: '地藏', box: [108, 176, 160, 236], kind: 'do', go: [-466, 122], back: 1, pose: 'bow', say: 'ペコリ' },
-    { id: 'clock', name: '時鐘', box: [784, 92, 824, 210], kind: 'do', go: [204, 124], back: 1, pose: 'look', toast: () => { const h = sceneHour(); return `公園的時鐘：${Math.floor(h)} 點 ${String(Math.floor((h % 1) * 60)).padStart(2, '0')} 分`; } },
+    { id: 'clock', name: '時鐘', box: [784, 92, 824, 210], kind: 'do', go: [204, 124], back: 1, pose: 'look', fx: 'clock', fxc: 'glint', ms: 1400, toast: () => { const h = sceneHour(); return `公園的時鐘：${Math.floor(h)} 點 ${String(Math.floor((h % 1) * 60)).padStart(2, '0')} 分`; } },
     { id: 'tulips', name: '鬱金香', box: [638, 210, 782, 236], kind: 'do', go: [70, 124], back: 1, pose: 'look', say: 'いい香り' }],
   street: [
     { id: 'vend', name: '自動販賣機', box: [388, 158, 438, 236], kind: 'do', go: [-187, 126], back: 1, pose: 'reach', say: 'ガコン！', fx: 'vend', fxc: 'buy' },
