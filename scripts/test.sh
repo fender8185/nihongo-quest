@@ -2,7 +2,7 @@
 # Runs every automated check: syntax, unit tests, headless-Chrome e2e.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-node --check sw.js && node --check sync-core.js && node --check data.js && node --check events.js && node --check pics.js
+node --check sw.js && node --check sync-core.js && node --check data.js && node --check data-n3.js && node --check events.js && node --check pics.js
 # every built-in grammar item names the lesson section it belongs to (-1 = none; the practice card is skipped for those)
 node scripts/data-file.js --check   # one entry per line, so grep finds an item (node scripts/data-file.js puts it back)
 node -e "const D=require('./scripts/data-file').load();const bad=D.GRAMMAR.filter(g=>!Number.isInteger(g.sec)||g.sec<-1||g.sec>=(D.LESSONS[g.u]||{sections:[]}).sections.length);if(bad.length){console.log('grammar items without a valid sec:',bad.slice(0,5).map(g=>g.id).join(' '),bad.length);process.exit(1)}"
@@ -14,6 +14,9 @@ for f in $(grep -oE '(src|href)="\./[^"]+"' index.html | sed -E 's/^(src|href)="
 # the data file version must agree in index.html (<script src>), sw.js (PRECACHE) and data.js (header)
 dv="$(grep -o 'data.js?v=[0-9]*' index.html | tr -d -c 0-9)"
 [ "$dv" = "$(grep -o 'data.js?v=[0-9]*' sw.js | tr -d -c 0-9)" ] && [ "$dv" = "$(grep -o 'DATA_VERSION [0-9]*' data.js | tr -d -c 0-9)" ] || { echo "data.js version differs between index.html, sw.js and data.js"; exit 1; }
+# the N3 data file (2026-11-11): the same, with DATA_N3_VERSION
+d3="$(grep -o 'data-n3.js?v=[0-9]*' index.html | tr -d -c 0-9)"
+[ -n "$d3" ] && [ "$d3" = "$(grep -o 'data-n3.js?v=[0-9]*' sw.js | tr -d -c 0-9)" ] && [ "$d3" = "$(grep -o 'DATA_N3_VERSION [0-9]*' data-n3.js | tr -d -c 0-9)" ] || { echo "data-n3.js version differs between index.html, sw.js and data-n3.js"; exit 1; }
 # the town's events (events.js): its version agrees in index.html, sw.js and its header; the checker passes (kanji marked, levels, grammar, people)
 ev="$(grep -o 'events.js?v=[0-9]*' index.html | tr -d -c 0-9)"
 [ "$ev" = "$(grep -o 'events.js?v=[0-9]*' sw.js | tr -d -c 0-9)" ] && [ "$ev" = "$(grep -o 'EVENTS_VERSION [0-9]*' events.js | tr -d -c 0-9)" ] || { echo "events.js version differs between index.html, sw.js and events.js"; exit 1; }
@@ -43,6 +46,9 @@ if git rev-parse --verify -q origin/main >/dev/null 2>&1; then
   fi
   if ! git diff --quiet origin/main -- data.js; then
     [ "$(git show origin/main:data.js 2>/dev/null | grep -o 'DATA_VERSION [0-9]*')" != "$(grep -o 'DATA_VERSION [0-9]*' data.js)" ] || { echo "data.js changed since origin/main but its DATA_VERSION is unchanged"; exit 1; }
+  fi
+  if git cat-file -e origin/main:data-n3.js 2>/dev/null && ! git diff --quiet origin/main -- data-n3.js; then
+    [ "$(git show origin/main:data-n3.js | grep -o 'DATA_N3_VERSION [0-9]*')" != "$(grep -o 'DATA_N3_VERSION [0-9]*' data-n3.js)" ] || { echo "data-n3.js changed since origin/main but its DATA_N3_VERSION is unchanged"; exit 1; }
   fi
 fi
 # e2e files run in parallel, three at a time (E2E_JOBS=n changes it; each starts its own http.server port and headless Chrome); results are printed per file

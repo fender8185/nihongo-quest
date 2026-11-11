@@ -15,8 +15,11 @@ def ev(b, js, pre=()):
 def fake_site():
     tmp = tempfile.mkdtemp(prefix='nq-n3-')
     for name in os.listdir(ROOT):
-        if name in ('data.js', '.git', '.venv', 'node_modules'): continue
+        if name in ('data.js', '.git', '.venv', 'node_modules') or (name.startswith('data-n') and name.endswith('.js')): continue
         os.symlink(os.path.join(ROOT, name), os.path.join(tmp, name))
+        # a level's own data file (data-n3.js, 2026-11-11) is left empty here: the fake level below is all the N3 this site has
+    for name in os.listdir(ROOT):
+        if name.startswith('data-n') and name.endswith('.js'): open(os.path.join(tmp, name), 'w', encoding='utf-8').write('DATA_MORE({});\n')
     src = open(os.path.join(ROOT, 'data.js'), encoding='utf-8').read(); at = src.index('const DATA = ')
     D = json.loads(src[at + len('const DATA = '):].rstrip().rstrip(';'))
     # the fake level stands in for any real N3 content (1.0.33 merges it batch by batch), so the counts below are the fake's

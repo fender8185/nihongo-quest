@@ -42,6 +42,16 @@ def test_data_lives_in_its_own_versioned_file_and_is_precached(b):
     assert r['data'] and r['tag'] and r['tag'].startswith('./data.js?v=') and r['inline'], r
     assert any(u.endswith(r['tag'][1:]) for u in r['urls']), r
 
+# 2026-11-11: N3 has a data file of its own, loaded after data.js; its items come after the others in every list, as before
+def test_the_n3_data_has_its_own_versioned_file_and_follows_the_rest(b):
+    js = """navigator.serviceWorker.ready.then(() => caches.keys()).then(ks => caches.open(ks.find(k => k.startsWith('nq-v'))).then(c => c.keys()))
+      .then(reqs => { const tag = (document.querySelector('script[src*="data-n3.js"]') || {}).getAttribute ? document.querySelector('script[src*="data-n3.js"]').getAttribute('src') : null;
+        const after = ['VOCAB', 'GRAMMAR', 'EXAM', 'LISTEN', 'READ', 'KANJI'].every(k => { const v = DATA[k]; const first = v.findIndex(x => x.lv === 'N3'); return first > 0 && v.slice(first).every(x => x.lv === 'N3') && !v.slice(0, first).some(x => x.lv === 'N3'); });
+        return JSON.stringify({ tag, cached: reqs.some(r => r.url.endsWith(tag ? tag.slice(1) : '#')), after, lessons: DATA.UNITS.filter(u => u.lv === 'N3').every(u => DATA.LESSONS[u.id]) }); })"""
+    out = b.run([("nav", URL), ("wait", READY), ("wait", "!!navigator.serviceWorker.controller"), ("eval", js)])
+    r = __import__('json').loads(out[-1])
+    assert r['tag'] and r['tag'].startswith('./data-n3.js?v=') and r['cached'] and r['after'] and r['lessons'], r
+
 def test_the_page_is_precached_as_the_folder_only(b):
     # 1.0.39: Cloudflare answers /index.html with a redirect, and a redirected response cannot answer a navigation offline
     js = """navigator.serviceWorker.ready.then(() => caches.keys()).then(ks => caches.open(ks.find(k => k.startsWith('nq-v'))).then(c => c.keys()))
@@ -111,7 +121,7 @@ def test_a_new_version_puts_itself_on_untouched_at_once_else_at_a_calm_page_chan
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)
-    tests = [test_first_visit_does_not_reload_itself, test_app_renders_while_auth_session_restore_hangs, test_app_renders_and_sync_is_off_when_client_creation_throws, test_data_lives_in_its_own_versioned_file_and_is_precached, test_the_page_is_precached_as_the_folder_only,
+    tests = [test_first_visit_does_not_reload_itself, test_app_renders_while_auth_session_restore_hangs, test_app_renders_and_sync_is_off_when_client_creation_throws, test_data_lives_in_its_own_versioned_file_and_is_precached, test_the_n3_data_has_its_own_versioned_file_and_follows_the_rest, test_the_page_is_precached_as_the_folder_only,
              test_a_clip_cached_under_the_supabase_address_answers_for_its_r2_address, test_a_cached_clip_is_found_by_its_address_whatever_it_varies_on,
              test_a_new_version_puts_itself_on_untouched_at_once_else_at_a_calm_page_change]
     failed = 0

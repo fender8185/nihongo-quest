@@ -21,7 +21,7 @@ function loadSources(dir) {
   }
   return out;
 }
-function loadData(repoDir) { return new Function(fs.readFileSync(path.join(repoDir, 'data.js'), 'utf8') + ';return DATA;')(); }
+function loadData(repoDir) { return require('../data-file').load(path.join(repoDir, 'data.js')); }   // data.js and the level files (data-n3.js) together
 // The outline is a plan against the app as it was before the outline's own words went in: the gap batches (n5g, n4g, 1.0.31)
 // and the level batches (n3a…, later n2a…, n1a…) keep counting as outline words, not as words the app already had
 const OUTLINE_BATCH = /^(n[54]g|n[321][a-z])-\d{3}$/;
