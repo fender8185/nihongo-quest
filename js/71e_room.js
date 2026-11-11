@@ -1792,26 +1792,32 @@ const DECOR = (() => {
   // a round thing seen the same from every side, mirrored when turned (bb draws it upright facing the camera)
   const upright = (x, y, z, r, inner) => bb(x, y, z, r ? `<g transform="scale(-1 1)">${inner}</g>` : inner);
   const MINCHO = `font-family="'Hiragino Mincho ProN', 'Noto Serif JP', 'Noto Serif CJK JP', serif"`, MARU = `font-family="'Hiragino Maru Gothic ProN', 'Hiragino Sans', 'Noto Sans JP', sans-serif"`;
-  // a shelf that stands out from its wall (drawn in the room, not in the wall's plane)
+  // a shelf that stands out from its wall (drawn in the room, not in the wall's plane); 2026-11-11 (the user: finer): a grain
+  // line along the plank, the pot rimmed and shaded, the leaves lit, the jar's lid knobbed and its glass glinting, the frame's
+  // picture with a sun and a glint
   function wallShelf(p) {
     const d = 0.32, z0 = p.v - 0.3, z1 = p.v - 0.22, a = p.u - 0.66, b = p.u + 0.66;
     const at = (t, dd = d / 2) => (p.w === 'L' ? [dd, p.u + t, z1] : [p.u + t, dd, z1]);
     const plank = p.w === 'L' ? box(C.oak, 0, a, z0, d, b, z1, { t: C.oakTop, x: C.oakDk, hlv: true }) : box(C.oak, a, 0, z0, b, d, z1, { t: C.oakTop, x: C.oakDk, hlv: true });
     const brace = (t) => (p.w === 'L' ? `<path ${F(C.oakDk, 'y', [0.1, p.u + t, z0 - 0.2])} d="${poly([[0, p.u + t, z0], [d - 0.04, p.u + t, z0], [0, p.u + t, z0 - 0.32]])}"/>` : `<path ${F(C.oakDk, 'x', [p.u + t, 0.1, z0 - 0.2])} d="${poly([[p.u + t, 0, z0], [p.u + t, d - 0.04, z0], [p.u + t, 0, z0 - 0.32]])}"/>`);
     const on = (t, inner) => bb(...at(t), inner);
-    return brace(-0.48) + brace(0.48) + plank
-      + on(-0.4, `<ellipse rx="6" ry="2.4" fill="#2b1c12" fill-opacity=".14"/><path ${F(C.pot, 'y', at(-0.4))} d="M-5 -1 L-4 -9 H4 L5 -1 Z"/><g ${F(C.leaf, 'y', at(-0.4))}><circle cx="-3" cy="-12" r="3.6"/><circle cx="2.6" cy="-13.4" r="3.8"/><circle cy="-16" r="3.2"/></g>`)
-      + on(-0.05, `<rect x="-4.6" y="-13" width="9.2" height="13" rx="2" fill="#cfe6ee" fill-opacity=".7" stroke="#e8f4f8" stroke-width=".8"/><g fill="#f08bb0"><circle cx="-1.6" cy="-3" r="1.6"/><circle cx="1.8" cy="-4.6" r="1.6" fill="#f4d06a"/><circle cx="-.6" cy="-6.6" r="1.6" fill="#8fd0a8"/></g><rect x="-5" y="-15" width="10" height="2.6" rx="1" fill="#c8553f"/>`)
-      + on(0.36, `<path d="M-6 0 L-5 -13 H5 L6 0 Z" ${F(C.walnut, 'y', at(0.36))}/><rect x="-3.6" y="-11" width="7.2" height="8.6" fill="#f2e9d6"/><path d="M-3.6 -4 L-1 -7 L1.2 -5 L3.6 -8 V-2.4 H-3.6 Z" fill="#8fbf8a"/>`);
+    const zm = (z0 + z1) / 2, grain = `<path class="ln" stroke="#a87a50" stroke-opacity=".55" stroke-width=".8" d="${line(p.w === 'L' ? [[d, a + 0.1, zm], [d, b - 0.1, zm]] : [[a + 0.1, d, zm], [b - 0.1, d, zm]])}"/>`;
+    return brace(-0.48) + brace(0.48) + plank + grain
+      + on(-0.4, `<ellipse rx="6" ry="2.4" fill="#2b1c12" fill-opacity=".14"/><path ${F(C.pot, 'y', at(-0.4))} d="M-5 -1 L-4 -9 H4 L5 -1 Z"/><path d="M1.6 -9 H4 L5 -1 H2.4 Z" fill="#2b1c12" fill-opacity=".1"/><g ${F(C.leaf, 'y', at(-0.4))}><circle cx="-3" cy="-12" r="3.6"/><circle cx="2.6" cy="-13.4" r="3.8"/><circle cy="-16" r="3.2"/></g><g fill="#fff" fill-opacity=".18"><circle cx="-4.2" cy="-13.2" r="1.3"/><circle cx="1.4" cy="-15" r="1.4"/><circle cx="-1" cy="-17.4" r="1.1"/></g><rect x="-5.3" y="-9.8" width="10.6" height="2.2" rx=".7" ${F('#c4704f', 'y', at(-0.4))}/>`)
+      + on(-0.05, `<rect x="-4.6" y="-13" width="9.2" height="13" rx="2" fill="#cfe6ee" fill-opacity=".7" stroke="#e8f4f8" stroke-width=".8"/><g fill="#f08bb0"><circle cx="-1.6" cy="-3" r="1.6"/><circle cx="1.8" cy="-4.6" r="1.6" fill="#f4d06a"/><circle cx="-.6" cy="-6.6" r="1.6" fill="#8fd0a8"/></g><path d="M-3.1 -11.4 V-2.6" stroke="#fff" stroke-opacity=".75" stroke-width=".8" stroke-linecap="round"/><rect x="-5" y="-15" width="10" height="2.6" rx="1" fill="#c8553f"/><rect x="-1.5" y="-16.8" width="3" height="2" rx=".7" fill="#a8402f"/>`)
+      + on(0.36, `<path d="M-6 0 L-5 -13 H5 L6 0 Z" ${F(C.walnut, 'y', at(0.36))}/><rect x="-3.6" y="-11" width="7.2" height="8.6" fill="#f2e9d6"/><circle cx="1.8" cy="-8.6" r="1" fill="#f2c94c"/><path d="M-3.6 -4 L-1 -7 L1.2 -5 L3.6 -8 V-2.4 H-3.6 Z" fill="#8fbf8a"/><path d="M-3 -10.4 L-1.2 -8.4" stroke="#fff" stroke-opacity=".6" stroke-width=".6" stroke-linecap="round"/>`);
   }
-  // the peg rail (a tote bag, a scarf): the rail on the wall, the pegs and what hangs on them stood out from it
+  // the peg rail (a tote bag, a scarf): the rail on the wall, the pegs and what hangs on them stood out from it; 2026-11-11 (the
+  // user: finer): the rail lit along its top and screwed on, the pegs lit, the bag shaded on its right with stitched hems and
+  // tabs where the handles join, the scarf's knit in ridges with its back tail in shade
   function pegRail(p) {
     const face = p.w === 'L' ? 'L' : 'y', pt3 = (lx, lz, d = 0.2) => (p.w === 'L' ? [d, p.u - lx, p.v + lz] : [p.u + lx, d, p.v + lz]), z = 0.55;
-    const rail = onWall(p, (k) => `<rect x="-.8" y="-.65" width="1.6" height=".16" rx=".03" ${k.F(C.walnut)}/>`, 0.03);
+    const rail = onWall(p, (k) => `<rect x="-.8" y="-.65" width="1.6" height=".16" rx=".03" ${k.F(C.walnut)}/><path d="M-.78 -.635 H.78" stroke="#fff" stroke-opacity=".22" stroke-width=".015"/><circle cx="-.72" cy="-.57" r=".02" ${k.F('#5e3f2a')}/><circle cx=".72" cy="-.57" r=".02" ${k.F('#5e3f2a')}/>`, 0.03);
     let s = rail;
-    [0.5, 0, -0.5].forEach((lx) => { s += bb(...pt3(lx, z - 0.02, 0.1), `<circle r="2.6" ${F(C.oakDk, face, pt3(lx, z, 0.1))}/>`); });
-    s += bb(...pt3(0.5, z - 0.02), `<path d="M-7 18 C-7 6 -3 0 0 0 C3 0 7 6 7 18" fill="none" stroke-width="2" ${FS('#b8925a', face, pt3(0.5, z - 0.5))}/><rect x="-13" y="16" width="26" height="30" rx="3" ${F('#e8d3a8', face, pt3(0.5, z - 1))}/><rect x="-13" y="33" width="26" height="5" ${F('#c95f4c', face, pt3(0.5, z - 1.2))}/><path d="M-13 19 V43" class="hl"/>`);
-    s += bb(...pt3(-0.5, z - 0.02), `<path d="M-6 0 Q0 4 6 0 L5 44 L-1 44 L0 7 L-4 40 L-9 40 Z" ${F('#d0675a', face, pt3(-0.5, z - 1))}/><path d="M-1 44 V48 M1.5 44 V48 M4 44 V48 M-9 40 V44 M-6.5 40 V44 M-4 40 V44" stroke-width="1.2" ${FS('#d0675a', face, pt3(-0.5, z - 1.5))}/>`);
+    [0.5, 0, -0.5].forEach((lx) => { s += bb(...pt3(lx, z - 0.02, 0.1), `<circle r="2.6" ${F(C.oakDk, face, pt3(lx, z, 0.1))}/><circle cx="-.8" cy="-.8" r=".9" fill="#fff" fill-opacity=".3"/>`); });
+    s += bb(...pt3(0.5, z - 0.02), `<path d="M-7 18 C-7 6 -3 0 0 0 C3 0 7 6 7 18" fill="none" stroke-width="2" ${FS('#b8925a', face, pt3(0.5, z - 0.5))}/><rect x="-13" y="16" width="26" height="30" rx="3" ${F('#e8d3a8', face, pt3(0.5, z - 1))}/><rect x="-13" y="33" width="26" height="5" ${F('#c95f4c', face, pt3(0.5, z - 1.2))}/><path d="M-12.6 33.6 H12.6" stroke="#fff" stroke-opacity=".25" stroke-width=".7"/>
+      <path d="M5 16 H10 a3 3 0 0 1 3 3 V43 a3 3 0 0 1 -3 3 H5 Z" fill="#2b1c12" fill-opacity=".08"/><path d="M-11.6 20.2 H11.6 M-11.6 43.6 H11.6" fill="none" stroke-width=".7" stroke-dasharray="1.6 1.2" ${FS('#a88a5c', face, pt3(0.5, z - 1))}/><g ${F('#b8925a', face, pt3(0.5, z - 0.6))}><rect x="-8.6" y="14.4" width="3.2" height="4.2" rx=".6"/><rect x="5.4" y="14.4" width="3.2" height="4.2" rx=".6"/></g><path d="M-13 19 V43" class="hl"/>`);
+    s += bb(...pt3(-0.5, z - 0.02), `<path d="M-6 0 Q0 4 6 0 L5 44 L-1 44 L0 7 L-4 40 L-9 40 Z" ${F('#d0675a', face, pt3(-0.5, z - 1))}/><path d="M-6 0 Q-3 3 0 7 L-4 40 L-9 40 Z" fill="#2b1c12" fill-opacity=".1"/><path d="M0 12 H5.6 M-.1 18 H5.5 M-.3 24 H5.4 M-.4 30 H5.3 M-.6 36 H5.2 M-.7 42 H5.1 M-6.9 12 H-.6 M-7.35 18 H-1.3 M-7.8 24 H-2.1 M-8.25 30 H-2.8 M-8.7 36 H-3.5" stroke="#a84a40" stroke-opacity=".45" stroke-width=".8"/><path d="M-1 44 V48 M1.5 44 V48 M4 44 V48 M-9 40 V44 M-6.5 40 V44 M-4 40 V44" stroke-width="1.2" ${FS('#d0675a', face, pt3(-0.5, z - 1.5))}/>`);
     return s;
   }
   // a wall lamp (test, roomV 8): a round brass plate on the wall, an arm out from it and up, a cloth shade lit from inside by
@@ -1824,20 +1830,37 @@ const DECOR = (() => {
     return s + bb(...pt3(0, -0.02, 0.55), `<circle r="3" ${F(brass, face, pt3(0, 0, 0.55))}/><ellipse cy="-2" rx="6" ry="3" fill="#fff4d8" class="night-only"/>
       <path d="M-16 0 L16 0 L10 -22 L-10 -22 Z" style="fill:color-mix(in srgb,#e9d4ad calc(var(--day)*100%),#ffd27a)"/><path d="M-16 0 Q0 4 16 0" fill="none" stroke="#b8925a" stroke-width="1.6"/><path d="M-10 -22 H10" stroke="#b8925a" stroke-width="1.4"/><path d="M-10 -22 L-16 0" class="hl"/>`);
   }
+  // 2026-11-11 (the user: finer): every wall ware got the small parts it has — frames mitred at the corners with a lit top edge
+  // and a dark lip, prints shaded and clouded, the kana chart's cells written in and its corner curling, the masks, fans and
+  // glass lit by the room by night, the clock's minute marks, the mirror's bevel and sheen, the scroll's hanging strips
   const WALL = {
-    fujiPrint: (k) => `<rect x="-.64" y="-.545" width="1.4" height="1.25" fill="#2b1c12" fill-opacity=".14"/><rect x="-.7" y="-.625" width="1.4" height="1.25" ${k.F(C.walnut)}/><rect x="-.6" y="-.525" width="1.2" height="1.05" ${k.F('#f4ead8')}/>
-      <circle cx=".33" cy="-.205" r=".15" ${k.F('#e0614f')}/><path d="M-.6 .525 L-.05 -.125 L.05 -.125 L.6 .525 Z" ${k.F('#6f8fb8')}/>
-      <path d="M-.05 -.125 L-.26 .155 Q-.12 .095 -.04 .175 Q.06 .075 .12 .155 Q.2 .095 .26 .155 L.05 -.125 Z" fill="#fff"/><path d="M-.6 .365 Q0 .205 .6 .385 V.525 H-.6 Z" ${k.F('#9fbf93')}/>`,
+    fujiPrint: (k) => `<rect x="-.64" y="-.545" width="1.4" height="1.25" fill="#2b1c12" fill-opacity=".14"/><rect x="-.7" y="-.625" width="1.4" height="1.25" ${k.F(C.walnut)}/><path d="M-.69 -.613 H.69" stroke="#fff" stroke-opacity=".2" stroke-width=".02"/>
+      <path d="M-.7 -.625 L-.6 -.525 M.7 -.625 L.6 -.525 M-.7 .625 L-.6 .525 M.7 .625 L.6 .525" stroke-width=".012" ${k.FS('#6e4a31')}/><rect x="-.6" y="-.525" width="1.2" height="1.05" ${k.F('#f4ead8')}/>
+      <circle cx=".33" cy="-.205" r=".15" ${k.F('#e0614f')}/><path d="M-.6 .525 L-.05 -.125 L.05 -.125 L.6 .525 Z" ${k.F('#6f8fb8')}/><path d="M.05 -.125 L.6 .525 H.24 Z" fill="#2b1c12" fill-opacity=".12"/>
+      <path d="M-.05 -.125 L-.26 .155 Q-.12 .095 -.04 .175 Q.06 .075 .12 .155 Q.2 .095 .26 .155 L.05 -.125 Z" fill="#fff"/><path d="M.05 -.125 L.26 .155 Q.2 .095 .12 .155 Q.08 .1 .06 .04 Z" fill="#2b1c12" fill-opacity=".08"/>
+      <path d="M-.38 .25 q.1 -.05 .2 0 t.2 0 M.16 .05 q.06 -.03 .12 0 t.12 0" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width=".028" stroke-linecap="round"/>
+      <path d="M-.6 .365 Q0 .205 .6 .385 V.525 H-.6 Z" ${k.F('#9fbf93')}/><path d="M-.6 .45 Q-.2 .37 .2 .45 T.6 .44 V.525 H-.6 Z" ${k.F('#87aa7c')}/><rect x="-.54" y="-.47" width=".06" height=".1" ${k.F('#d0453c')}/>
+      <rect x="-.6" y="-.525" width="1.2" height="1.05" fill="none" stroke-width=".02" ${k.FS('#6e4a31')}/>`,
     kanaChart: (k) => {
-      let cells = '';
-      for (let r = 0; r < 4; r++) for (let c = 0; c < 5; c++) cells += `<rect x="${q2(-0.635 + c * 0.26)}" y="${q2(-0.455 + r * 0.36)}" width=".2" height=".26" rx=".03" ${k.F(['#efb3aa', '#f4d28e', '#b2d3ad', '#b3c9e6', '#d3bde3'][c])}/>`;
+      let cells = '', ink = '';
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 5; c++) {
+        const x = -0.635 + c * 0.26, y = -0.455 + r * 0.36;
+        cells += `<rect x="${q2(x)}" y="${q2(y)}" width=".2" height=".26" rx=".03" ${k.F(['#efb3aa', '#f4d28e', '#b2d3ad', '#b3c9e6', '#d3bde3'][c])}/>`;
+        ink += (r + c) % 2 ? `M${q2(x + 0.05)} ${q2(y + 0.08)} h.1 M${q2(x + 0.1)} ${q2(y + 0.04)} q-.03 .12 .03 .18 M${q2(x + 0.05)} ${q2(y + 0.18)} q.06 -.08 .1 .02 ` : `M${q2(x + 0.06)} ${q2(y + 0.05)} q.02 .12 -.01 .17 M${q2(x + 0.1)} ${q2(y + 0.09)} q.05 -.02 .05 .06 q0 .08 -.07 .08 `;
+      }
       return `<rect x="-.715" y="-.995" width="1.55" height="2.15" fill="#2b1c12" fill-opacity=".12"/><rect x="-.775" y="-1.075" width="1.55" height="2.15" ${k.F('#fbf6ea')}/><rect x="-.775" y="-1.075" width="1.55" height=".44" ${k.F(C.red)}/>
-        <text x="0" y="-.765" font-size=".23" font-weight="700" text-anchor="middle" fill="#fff">あいうえお</text>${cells}<circle cx="0" cy="-1.015" r=".05" fill="#5a68d8"/>`;
+        <path d="M-.7 -.668 H.7" stroke="#fff" stroke-opacity=".45" stroke-width=".012"/><path d="M-.775 .27 H.775 M0 -.635 V1.075" stroke="#2b1c12" stroke-opacity=".05" stroke-width=".012"/>
+        <text x="0" y="-.765" font-size=".23" font-weight="700" text-anchor="middle" fill="#fff">あいうえお</text>${cells}<path d="${ink}" fill="none" stroke-opacity=".5" stroke-width=".018" stroke-linecap="round" ${k.FS(C.ink)}/>
+        <path d="M.775 .9 V1.075 H.6 Z" ${k.F(C.wall)}/><path d="M.775 .9 V1.075 H.6 Z" fill="#2b1c12" fill-opacity=".12"/><path d="M.775 .9 L.6 1.075 Q.65 .95 .775 .9 Z" ${k.F('#e6dcc6')}/>
+        <ellipse cx=".02" cy="-.995" rx=".055" ry=".03" fill="#2b1c12" fill-opacity=".2"/><circle cx="0" cy="-1.015" r=".05" fill="#5a68d8"/><circle cx="-.016" cy="-1.032" r=".016" fill="#fff" fill-opacity=".6"/>`;
     },
-    nightPicture: (k) => `<rect x="-.59" y="-.47" width="1.3" height="1.1" fill="#2b1c12" fill-opacity=".13"/><rect x="-.65" y="-.55" width="1.3" height="1.1" ${k.F(C.walnut)}/><rect x="-.56" y="-.46" width="1.12" height=".92" ${k.F('#34437a')}/>
-      <circle cx=".26" cy="-.19" r=".16" fill="#f6e7a8"/><circle cx=".33" cy="-.24" r=".14" ${k.F('#34437a')}/>
+    nightPicture: (k) => `<rect x="-.59" y="-.47" width="1.3" height="1.1" fill="#2b1c12" fill-opacity=".13"/><rect x="-.65" y="-.55" width="1.3" height="1.1" ${k.F(C.walnut)}/><path d="M-.64 -.538 H.64" stroke="#fff" stroke-opacity=".2" stroke-width=".02"/>
+      <path d="M-.65 -.55 L-.56 -.46 M.65 -.55 L.56 -.46 M-.65 .55 L-.56 .46 M.65 .55 L.56 .46" stroke-width=".012" ${k.FS('#6e4a31')}/><rect x="-.56" y="-.46" width="1.12" height=".92" ${k.F('#34437a')}/>
+      <circle cx=".26" cy="-.19" r=".2" fill="#f6e7a8" fill-opacity=".12"/><circle cx=".26" cy="-.19" r=".16" fill="#f6e7a8"/><circle cx=".33" cy="-.24" r=".14" ${k.F('#34437a')}/>
       ${[[-0.38, 0.3], [-0.12, 0.5], [-0.46, 0.62], [0.02, 0.26], [0.4, 0.66]].map(([dx, dz]) => `<circle cx="${dx}" cy="${q2(-0.55 + dz)}" r=".028" fill="#fff"/>`).join('')}
-      <path d="M-.56 .23 Q-.25 .07 .05 .22 T.56 .19 V.46 H-.56 Z" ${k.F('#26335f')}/>`,
+      <g fill="#fff" fill-opacity=".6">${[[-0.26, -0.3], [0.08, -0.36], [-0.04, 0.02], [0.48, -0.06], [-0.3, -0.04]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".014"/>`).join('')}</g><path d="M-.2 -.28 v.08 M-.24 -.24 h.08" stroke="#fff" stroke-width=".012" stroke-linecap="round"/>
+      <path d="M-.56 .23 Q-.25 .07 .05 .22 T.56 .19 V.46 H-.56 Z" ${k.F('#26335f')}/><path d="M-.56 .34 Q-.1 .24 .3 .34 T.56 .33 V.46 H-.56 Z" ${k.F('#1f2b52')}/>
+      <rect x="-.56" y="-.46" width="1.12" height=".92" fill="none" stroke-width=".02" ${k.FS('#5e3f2a')}/>`,
     cuckoo: (k) => {
       let ticks = '';
       for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6, l = i % 3 ? 0.035 : 0.07; ticks += `M${(Math.sin(a) * 0.25).toFixed(3)} ${(-0.05 - Math.cos(a) * 0.25).toFixed(3)} L${(Math.sin(a) * (0.25 - l)).toFixed(3)} ${(-0.05 - Math.cos(a) * (0.25 - l)).toFixed(3)} `; }
@@ -1851,58 +1874,89 @@ const DECOR = (() => {
         <path d="M0 .4 V.78 M-.16 .4 V.92 M.16 .4 V.7" stroke="#8a6a3a" stroke-width=".02"/>
         <circle cy=".82" r=".07" ${k.F('#d9b04a')}/><ellipse cx="-.16" cy=".98" rx=".055" ry=".11" ${k.F('#6e4a33')}/><ellipse cx=".16" cy=".76" rx=".055" ry=".11" ${k.F('#6e4a33')}/>`;
     },
-    kitsune: () => `<path d="M0 .32 C-.17 .3 -.23 .12 -.23 -.04 L-.23 -.32 L-.12 -.19 C-.05 -.22 .05 -.22 .12 -.19 L.23 -.32 L.23 -.04 C.23 .12 .17 .3 0 .32 Z" fill="#2b1c12" fill-opacity=".12" transform="translate(.03 .04)"/>
-      <path d="M0 .32 C-.17 .3 -.23 .12 -.23 -.04 L-.23 -.32 L-.12 -.19 C-.05 -.22 .05 -.22 .12 -.19 L.23 -.32 L.23 -.04 C.23 .12 .17 .3 0 .32 Z" style="fill:color-mix(in srgb,#fbf7ef calc(var(--day)*100%),#a8a9cc)"/>
-      <path d="M-.21 -.27 L-.14 -.19 L-.21 -.11 Z M.21 -.27 L.14 -.19 L.21 -.11 Z" fill="#d0453c"/>
-      <path d="M-.16 0 Q-.1 -.07 -.03 -.01 M.03 -.01 Q.1 -.07 .16 0" fill="none" stroke="#d0453c" stroke-width=".04" stroke-linecap="round"/>
-      <path d="M0 -.17 L-.035 -.11 L0 -.06 L.035 -.11 Z" fill="#d0453c"/><path d="M-.12 .1 Q-.06 .13 -.03 .1 M.03 .1 Q.06 .13 .12 .1" fill="none" stroke="#e6c25a" stroke-width=".02"/>
+    kitsune: (k) => `<path d="M0 .32 C-.17 .3 -.23 .12 -.23 -.04 L-.23 -.32 L-.12 -.19 C-.05 -.22 .05 -.22 .12 -.19 L.23 -.32 L.23 -.04 C.23 .12 .17 .3 0 .32 Z" fill="#2b1c12" fill-opacity=".12" transform="translate(.03 .04)"/>
+      <path d="M0 .32 C-.17 .3 -.23 .12 -.23 -.04 L-.23 -.32 L-.12 -.19 C-.05 -.22 .05 -.22 .12 -.19 L.23 -.32 L.23 -.04 C.23 .12 .17 .3 0 .32 Z" style="fill:color-mix(in srgb,#fbf7ef calc(var(--day)*100%),#a8a9cc)" stroke="#2b1c12" stroke-opacity=".18" stroke-width=".008"/>
+      <path d="M0 .32 C.17 .3 .23 .12 .23 -.04 L.23 -.32 L.17 -.25 L.17 -.04 C.17 .12 .12 .26 0 .32 Z" fill="#2b1c12" fill-opacity=".07"/><path d="M-.18 -.1 C-.19 0 -.17 .1 -.12 .18" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width=".02" stroke-linecap="round"/>
+      <path d="M-.21 -.27 L-.14 -.19 L-.21 -.11 Z M.21 -.27 L.14 -.19 L.21 -.11 Z" ${k.F('#d0453c')}/><path d="M-.205 -.235 L-.165 -.19 L-.205 -.145 Z M.205 -.235 L.165 -.19 L.205 -.145 Z" ${k.F('#f08a8a')}/>
+      <path d="M-.16 0 Q-.1 -.07 -.03 -.01 M.03 -.01 Q.1 -.07 .16 0" fill="none" stroke-width=".04" stroke-linecap="round" ${k.FS('#d0453c')}/><path d="M-.15 .016 Q-.1 -.03 -.04 .01 M.04 .01 Q.1 -.03 .15 .016" fill="none" stroke="#2a2730" stroke-opacity=".6" stroke-width=".012" stroke-linecap="round"/>
+      <path d="M0 -.17 L-.035 -.11 L0 -.06 L.035 -.11 Z" ${k.F('#d0453c')}/><path d="M-.12 .1 Q-.06 .13 -.03 .1 M.03 .1 Q.06 .13 .12 .1" fill="none" stroke="#e6c25a" stroke-width=".02"/>
+      <ellipse cx="-.13" cy=".05" rx=".04" ry=".022" fill="#f08a8a" fill-opacity=".4"/><ellipse cx=".13" cy=".05" rx=".04" ry=".022" fill="#f08a8a" fill-opacity=".4"/>
+      <path d="M-.12 .17 l-.07 -.015 M-.12 .2 l-.07 .012 M.12 .17 l.07 -.015 M.12 .2 l.07 .012" stroke="#2a2730" stroke-opacity=".45" stroke-width=".008" stroke-linecap="round"/>
       <circle cy=".19" r=".022" fill="#2a2730"/><path d="M-.05 .24 Q0 .27 .05 .24" fill="none" stroke="#2a2730" stroke-width=".015"/>
-      <path d="M-.23 -.04 Q-.3 -.2 -.12 -.4 M.23 -.04 Q.3 -.2 .12 -.4" fill="none" stroke="#c8553f" stroke-width=".015"/>`,
+      <path d="M-.23 -.04 Q-.3 -.2 -.12 -.4 M.23 -.04 Q.3 -.2 .12 -.4" fill="none" stroke="#c8553f" stroke-width=".015"/><path d="M-.12 -.4 L-.08 -.44 M.12 -.4 L.08 -.44" stroke="#c8553f" stroke-width=".02" stroke-linecap="round"/>`,
     chalkboard: (k) => `<rect x="-.56" y="-.46" width="1.2" height="1" rx=".04" fill="#2b1c12" fill-opacity=".14"/>
-      <rect x="-.6" y="-.5" width="1.2" height="1" rx=".04" ${k.F(C.walnut)}/><rect x="-.52" y="-.42" width="1.04" height=".82" ${k.F('#3d5a4a')}/>
+      <rect x="-.6" y="-.5" width="1.2" height="1" rx=".04" ${k.F(C.walnut)}/><path d="M-.58 -.488 H.58" stroke="#fff" stroke-opacity=".2" stroke-width=".02"/><path d="M-.6 -.5 L-.52 -.42 M.6 -.5 L.52 -.42" stroke-width=".012" ${k.FS('#6e4a31')}/><rect x="-.52" y="-.42" width="1.04" height=".82" ${k.F('#3d5a4a')}/>
+      <path d="M.06 -.33 Q.26 -.39 .44 -.3" fill="none" stroke="#fff" stroke-opacity=".07" stroke-width=".09" stroke-linecap="round"/><ellipse cx="-.3" cy=".3" rx=".16" ry=".05" fill="#fff" fill-opacity=".05"/>
       <text x="-.44" y="-.2" font-size=".13" fill="#fff" fill-opacity=".7" ${MARU}>きょうの ことば</text>
       <text x="0" y=".13" font-size=".24" font-weight="700" text-anchor="middle" fill="#fff" fill-opacity=".9" ${MARU}>がんばろう</text>
       <path d="M-.36 .22 Q0 .28 .36 .2" fill="none" stroke="#f2d27a" stroke-opacity=".8" stroke-width=".02"/>
-      <rect x="-.58" y=".4" width="1.16" height=".09" ${k.F(C.oakDk)}/><rect x=".18" y=".365" width=".16" height=".04" rx=".015" fill="#fff"/><rect x="-.3" y=".37" width=".12" height=".035" rx=".015" fill="#f4b6b0"/>`,
+      <rect x="-.52" y="-.42" width="1.04" height=".82" fill="none" stroke-width=".02" ${k.FS('#2f4639')}/>
+      <rect x="-.58" y=".4" width="1.16" height=".09" ${k.F(C.oakDk)}/><path d="M-.56 .405 H.56" stroke="#fff" stroke-opacity=".22" stroke-width=".012" stroke-dasharray=".02 .035"/><rect x=".18" y=".365" width=".16" height=".04" rx=".015" fill="#fff"/><rect x="-.3" y=".37" width=".12" height=".035" rx=".015" fill="#f4b6b0"/>`,
     scroll: (k) => `<path d="M-.26 -1.28 L0 -1.44 L.26 -1.28" fill="none" stroke="#6e4a33" stroke-width=".02"/><circle cy="-1.45" r=".03" fill="#8a6a4a"/>
       <rect x="-.38" y="-1.22" width=".84" height="2.44" fill="#2b1c12" fill-opacity=".12"/>
       <rect x="-.42" y="-1.26" width=".84" height="2.44" ${k.F('#8aa0b4')}/><rect x="-.42" y="-1.26" width=".84" height=".2" ${k.F('#6f879c')}/><rect x="-.42" y=".98" width=".84" height=".2" ${k.F('#6f879c')}/>
-      <rect x="-.3" y="-1.02" width=".6" height="1.96" ${k.F('#f6efdf')}/>
+      <rect x="-.3" y="-1.02" width=".6" height="1.96" ${k.F('#f6efdf')}/><rect x="-.3" y="-1.02" width=".6" height=".035" ${k.F('#c9a46a')}/><rect x="-.3" y=".905" width=".6" height=".035" ${k.F('#c9a46a')}/>
       ${[...'継続は力なり'].map((ch, i) => `<text x="0" y="${q2(-0.72 + i * 0.31)}" font-size=".26" text-anchor="middle" fill="#26232c" ${MINCHO}>${ch}</text>`).join('')}
       <rect x=".1" y=".8" width=".09" height=".09" fill="#d0453c"/>
-      <rect x="-.46" y="-1.3" width=".92" height=".06" rx=".03" ${k.F(C.walnut)}/><rect x="-.5" y="1.18" width="1" height=".09" rx=".045" ${k.F(C.walnut)}/><circle cx="-.5" cy="1.225" r=".06" ${k.F('#3a2a1f')}/><circle cx=".5" cy="1.225" r=".06" ${k.F('#3a2a1f')}/>`,
+      <rect x="-.25" y="-1.25" width=".065" height=".5" ${k.F('#6f879c')}/><rect x=".185" y="-1.25" width=".065" height=".5" ${k.F('#6f879c')}/><path d="M-.25 -.765 H-.185 M.185 -.765 H.25" stroke-width=".014" ${k.FS('#e3d29c')}/>
+      <rect x="-.46" y="-1.3" width=".92" height=".06" rx=".03" ${k.F(C.walnut)}/><rect x="-.5" y="1.18" width="1" height=".09" rx=".045" ${k.F(C.walnut)}/><path d="M-.44 1.2 H.44" stroke="#fff" stroke-opacity=".22" stroke-width=".015" stroke-linecap="round"/><circle cx="-.5" cy="1.225" r=".06" ${k.F('#3a2a1f')}/><circle cx=".5" cy="1.225" r=".06" ${k.F('#3a2a1f')}/>`,
     japanmap: (k) => `<rect x="-.66" y="-.46" width="1.4" height="1" fill="#2b1c12" fill-opacity=".12"/>
       <rect x="-.7" y="-.5" width="1.4" height="1" ${k.F('#f3ead6')}/><rect x="-.64" y="-.44" width="1.28" height=".88" ${k.F('#cfe3ea')}/>
+      <path d="M-.64 -.14 H.64 M-.64 .16 H.64 M-.32 -.44 V.44 M0 -.44 V.44 M.32 -.44 V.44" stroke="#fff" stroke-opacity=".2" stroke-width=".006"/><rect x="-.64" y="-.44" width="1.28" height=".88" fill="none" stroke-width=".012" ${k.FS('#9bbac6')}/>
       <g ${k.F('#bfd49a')}><path d="M.3 -.34 C.36 -.4 .48 -.38 .5 -.3 C.5 -.22 .42 -.2 .36 -.22 C.3 -.24 .26 -.28 .3 -.34 Z"/>
         <path d="M.31 -.14 C.36 -.06 .33 .03 .24 .07 C.14 .11 .03 .13 -.08 .15 C-.18 .17 -.27 .21 -.33 .2 C-.36 .16 -.31 .12 -.24 .1 C-.14 .07 -.04 .05 .06 .01 C.15 -.03 .21 -.09 .25 -.17 Z"/>
         <path d="M-.24 .23 C-.19 .21 -.13 .22 -.12 .26 C-.15 .29 -.22 .29 -.24 .23 Z"/><path d="M-.42 .21 C-.36 .2 -.31 .24 -.32 .3 C-.34 .35 -.4 .35 -.43 .3 C-.45 .26 -.45 .23 -.42 .21 Z"/>
         <circle cx="-.52" cy=".39" r=".018"/><circle cx="-.56" cy=".42" r=".014"/></g>
+      <path d="M.27 -.12 C.3 -.06 .28 .01 .21 .05 M.06 .03 C-.04 .07 -.16 .1 -.28 .15" fill="none" stroke-width=".012" stroke-linecap="round" ${k.FS('#a3bb7c')}/>
       <circle cx=".2" cy=".05" r=".035" fill="#e0574c"/><circle cx="-.05" cy=".12" r=".028" fill="#5262e8"/><circle cx=".4" cy="-.3" r=".028" fill="#3f8a46"/>
       <path d="M.2 .05 L.32 .2 M-.05 .12 L-.02 .3" stroke="#3a3328" stroke-width=".01" stroke-dasharray=".03 .02"/>
-      <text x=".2" y=".29" font-size=".08" fill="#3a3328" ${MARU}>とうきょう</text><text x="-.16" y=".38" font-size=".08" fill="#3a3328" ${MARU}>きょうと</text>`,
-    furin: (k) => `<path d="M0 -.6 V-.22" stroke="#6e4a33" stroke-width=".015"/><circle cy="-.6" r=".025" fill="#8a6a4a"/>
-      <path d="M-.17 -.02 C-.17 -.27 .17 -.27 .17 -.02 Z" fill="#d7edf6" fill-opacity=".85" stroke="#eef8fb" stroke-width=".02"/>
-      <path d="M-.12 -.12 q.04 -.05 .08 0 q-.04 .05 -.08 0 Z M.04 -.08 l.04 -.03 v.06 Z" fill="#e0574c"/><path d="M-.17 -.02 H.17" stroke="#e0574c" stroke-width=".02"/>
+      <text x=".2" y=".29" font-size=".08" fill="#3a3328" ${MARU}>とうきょう</text><text x="-.16" y=".38" font-size=".08" fill="#3a3328" ${MARU}>きょうと</text>
+      <circle cx="-.6" cy="-.46" r=".03" ${k.F('#e0574c')}/><circle cx=".6" cy="-.46" r=".03" ${k.F('#e0574c')}/><circle cx="-.61" cy="-.47" r=".01" fill="#fff" fill-opacity=".6"/><circle cx=".59" cy="-.47" r=".01" fill="#fff" fill-opacity=".6"/>`,
+    furin: (k) => `<path d="M0 -.6 V-.22" stroke="#6e4a33" stroke-width=".015"/><circle cy="-.6" r=".025" fill="#8a6a4a"/><ellipse cy="-.245" rx=".035" ry=".018" ${k.F('#9fb7c3')}/>
+      <path d="M-.17 -.02 C-.17 -.27 .17 -.27 .17 -.02 Z" ${k.F('#d7edf6')} fill-opacity=".85" stroke="#eef8fb" stroke-width=".02"/>
+      <rect x="-.025" y="-.075" width=".05" height=".06" rx=".015" ${k.F('#9cbfd0')}/><path d="M-.14 -.05 q.035 -.02 .07 0 t.07 0 t.07 0 t.07 0" fill="none" stroke-width=".012" ${k.FS('#7fb2d2')}/>
+      <path d="M-.12 -.12 q.04 -.05 .08 0 q-.04 .05 -.08 0 Z M.04 -.08 l.04 -.03 v.06 Z" ${k.F('#e0574c')}/><circle cx="-.1" cy="-.125" r=".008" fill="#2a2730"/>
+      <ellipse cy="-.02" rx=".17" ry=".026" ${k.F('#bcd8e4')}/><path d="M-.17 -.02 H.17" stroke-width=".02" ${k.FS('#e0574c')}/>
       <path d="M-.12 -.18 Q-.08 -.24 0 -.25" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width=".025" stroke-linecap="round"/>
-      <path d="M0 -.02 V.18" stroke="#6e4a33" stroke-width=".012"/><rect x="-.06" y=".18" width=".12" height=".42" rx=".01" ${k.F('#cfd8f0')}/><rect x="-.06" y=".18" width=".12" height=".05" fill="#e0574c"/>`,
+      <path d="M0 -.02 V.18" stroke="#6e4a33" stroke-width=".012"/><rect x="-.06" y=".18" width=".12" height=".42" rx=".01" ${k.F('#cfd8f0')}/><rect x=".01" y=".18" width=".05" height=".42" fill="#2b1c12" fill-opacity=".07"/><rect x="-.06" y=".18" width=".12" height=".05" ${k.F('#e0574c')}/>
+      <path d="M-.012 .3 q.012 .03 0 .07 M.008 .42 l-.02 .05 M-.01 .52 h.02" fill="none" stroke-opacity=".45" stroke-width=".012" stroke-linecap="round" ${k.FS(C.ink)}/>`,
     ukiyoe: (k) => `<rect x="-.76" y="-.66" width="1.6" height="1.4" fill="#2b1c12" fill-opacity=".13"/>
-      <rect x="-.8" y="-.7" width="1.6" height="1.4" ${k.F(C.walnut)}/><rect x="-.72" y="-.62" width="1.44" height="1.24" ${k.F('#f1e6cc')}/>
-      <path d="M.12 .26 L.34 .02 L.56 .26 Z" ${k.F('#6f84a3')}/><path d="M.27 .1 L.34 .02 L.41 .1 L.37 .12 L.34 .09 L.31 .12 Z" fill="#fff"/>
+      <rect x="-.8" y="-.7" width="1.6" height="1.4" ${k.F(C.walnut)}/><path d="M-.79 -.688 H.79" stroke="#fff" stroke-opacity=".2" stroke-width=".02"/><path d="M-.8 -.7 L-.72 -.62 M.8 -.7 L.72 -.62 M-.8 .7 L-.72 .62 M.8 .7 L.72 .62" stroke-width=".012" ${k.FS('#6e4a31')}/><rect x="-.72" y="-.62" width="1.44" height="1.24" ${k.F('#f1e6cc')}/>
+      <path d="M.12 .26 L.34 .02 L.56 .26 Z" ${k.F('#6f84a3')}/><path d="M.34 .02 L.56 .26 H.42 Z" fill="#2b1c12" fill-opacity=".1"/><path d="M.27 .1 L.34 .02 L.41 .1 L.37 .12 L.34 .09 L.31 .12 Z" fill="#fff"/>
       <path d="M-.72 .62 V.06 C-.62 -.24 -.44 -.46 -.16 -.5 C.08 -.53 .2 -.4 .12 -.3 C.04 -.22 -.1 -.27 -.1 -.18 C-.06 -.05 .2 .06 .72 .14 V.62 Z" ${k.F('#2f4f86')}/>
       <path d="M-.6 .62 V.18 C-.5 -.08 -.34 -.3 -.14 -.34 C-.04 -.35 .02 -.32 .02 -.28 C-.06 -.24 -.22 -.26 -.24 -.12 C-.24 .06 .1 .22 .72 .3 V.62 Z" ${k.F('#6f9cc7')}/>
+      <path d="M-.66 .5 C-.56 .2 -.44 0 -.3 -.16 M-.5 .56 C-.4 .3 -.3 .14 -.2 .02" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width=".018" stroke-linecap="round"/>
       <path d="M-.4 -.36 q.04 -.06 .08 0 q.04 -.06 .08 0 q.04 -.06 .08 0 q.04 -.06 .08 0 M-.52 -.2 q.04 -.05 .07 0 q.04 -.05 .07 0" fill="none" stroke="#fff" stroke-width=".035" stroke-linecap="round"/>
+      <g fill="#fff">${[[0.04, -0.46, 0.022], [0.1, -0.4, 0.016], [0.16, -0.44, 0.014], [0.0, -0.52, 0.016], [0.13, -0.33, 0.012], [-0.06, -0.55, 0.012]].map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`).join('')}</g>
       <path d="M-.72 .44 Q-.4 .36 -.1 .46 T.72 .42" fill="none" stroke="#fff" stroke-opacity=".7" stroke-width=".03"/>
-      <rect x="-.64" y="-.56" width=".08" height=".2" fill="#d0453c"/>`,
-    uchiwa: (k) => `<g transform="rotate(-20 -.1 .4)"><rect x="-.13" y=".02" width=".06" height=".5" rx=".02" ${k.F('#c9a46a')}/><circle cx="-.1" cy="-.2" r=".3" ${k.F('#fbf6ec')}/><path d="M-.4 -.2 A.3 .3 0 0 1 .2 -.2 Z" fill="#d0453c"/><path d="M-.18 -.06 q.06 -.04 .12 0 q-.06 .04 -.12 0 Z M-.06 -.06 l.05 -.04 v.08 Z" fill="#e88a3a"/></g>
-      <g transform="rotate(22 .1 .4)"><rect x=".07" y=".02" width=".06" height=".5" rx=".02" ${k.F('#c9a46a')}/><circle cx=".1" cy="-.22" r=".3" ${k.F('#3f5f94')}/><path d="M-.14 -.14 q.06 -.06 .12 0 q.06 -.06 .12 0 q.06 -.06 .12 0 M-.12 -.28 q.06 -.06 .12 0 q.06 -.06 .12 0 q.06 -.06 .12 0" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width=".025"/></g>`,
-    mirror: (k) => `<circle cx=".04" cy=".06" r=".5" fill="#2b1c12" fill-opacity=".13"/><circle r=".5" ${k.F(C.walnut)}/><circle r=".42" ${k.F('#cfdde4')}/>
-      <path d="M-.28 -.06 L-.06 -.3 M-.22 .08 L.08 -.24" stroke="#fff" stroke-opacity=".7" stroke-width=".05" stroke-linecap="round"/>
+      <rect x="-.64" y="-.56" width=".08" height=".2" fill="#d0453c"/><path d="M-.62 -.53 V-.39" stroke="#fff" stroke-opacity=".6" stroke-width=".01"/>
+      <rect x="-.72" y="-.62" width="1.44" height="1.24" fill="none" stroke-width=".02" ${k.FS('#6e4a31')}/>`,
+    uchiwa: (k) => {
+      const ribs = (cx, cy) => Array.from({ length: 9 }, (_, i) => { const a = Math.PI * (1.1 + i * 0.1); return `M${cx} ${q2(cy + 0.24)} L${(cx + Math.cos(a) * 0.285).toFixed(3)} ${(cy + Math.sin(a) * 0.285).toFixed(3)}`; }).join(' ');
+      return `<g transform="rotate(-20 -.1 .4)"><rect x="-.13" y=".02" width=".06" height=".5" rx=".02" ${k.F('#c9a46a')}/><path d="M-.13 .22 H-.07 M-.13 .38 H-.07" stroke-width=".012" ${k.FS('#a07f4c')}/><path d="M-.118 .1 V.5" stroke="#fff" stroke-opacity=".3" stroke-width=".012"/><rect x="-.135" y=".48" width=".07" height=".045" rx=".015" ${k.F('#3a2a1f')}/>
+          <circle cx="-.1" cy="-.2" r=".3" ${k.F('#fbf6ec')}/><path d="M-.4 -.2 A.3 .3 0 0 1 .2 -.2 Z" ${k.F('#d0453c')}/><path d="${ribs(-0.1, -0.2)}" stroke="#2b1c12" stroke-opacity=".1" stroke-width=".008"/>
+          <path d="M-.24 .0 q.04 -.02 .08 0 t.08 0 M-.06 .06 q.03 -.015 .06 0" fill="none" stroke-width=".012" ${k.FS('#8fc3e4')}/>
+          <path d="M-.18 -.06 q.06 -.04 .12 0 q-.06 .04 -.12 0 Z M-.06 -.06 l.05 -.04 v.08 Z" ${k.F('#e88a3a')}/><circle cx="-.155" cy="-.065" r=".008" fill="#2a2730"/>
+          <circle cx="-.1" cy="-.2" r=".295" fill="none" stroke-width=".016" ${k.FS('#c9a46a')}/><path d="M-.15 .1 L-.1 .03 L-.05 .1 Z" ${k.F('#b08a54')}/></g>
+        <g transform="rotate(22 .1 .4)"><rect x=".07" y=".02" width=".06" height=".5" rx=".02" ${k.F('#c9a46a')}/><path d="M.07 .22 H.13 M.07 .38 H.13" stroke-width=".012" ${k.FS('#a07f4c')}/><path d="M.082 .1 V.5" stroke="#fff" stroke-opacity=".3" stroke-width=".012"/><rect x=".065" y=".48" width=".07" height=".045" rx=".015" ${k.F('#3a2a1f')}/>
+          <circle cx=".1" cy="-.22" r=".3" ${k.F('#3f5f94')}/><path d="${ribs(0.1, -0.22)}" stroke="#fff" stroke-opacity=".12" stroke-width=".008"/>
+          <path d="M-.14 -.14 q.06 -.06 .12 0 q.06 -.06 .12 0 q.06 -.06 .12 0 M-.12 -.28 q.06 -.06 .12 0 q.06 -.06 .12 0 q.06 -.06 .12 0" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width=".025"/><path d="M-.06 -.06 q.06 -.05 .12 0 q.06 -.05 .12 0" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width=".018"/>
+          <circle cx=".1" cy="-.22" r=".295" fill="none" stroke-width=".016" ${k.FS('#2c4774')}/><path d="M.05 .1 L.1 .03 L.15 .1 Z" ${k.F('#b08a54')}/></g>`;
+    },
+    mirror: (k) => `<circle cx=".04" cy=".06" r=".5" fill="#2b1c12" fill-opacity=".13"/><circle r=".5" ${k.F(C.walnut)}/>
+      <path d="M-.33 .33 A.47 .47 0 0 1 -.42 -.21 M.12 -.455 A.47 .47 0 0 1 .43 .19" fill="none" stroke-width=".012" ${k.FS('#76503a')}/><path d="M-.47 -.12 A.485 .485 0 0 1 .12 -.47" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width=".022" stroke-linecap="round"/>
+      <circle r=".445" ${k.F('#6c4930')}/><circle r=".42" ${k.F('#cfdde4')}/><path d="M-.4 .12 A.42 .42 0 0 1 .12 -.4 A.52 .52 0 0 0 -.4 .12 Z" fill="#fff" fill-opacity=".2"/>
+      <path d="M-.28 -.06 L-.06 -.3 M-.22 .08 L.08 -.24" stroke="#fff" stroke-opacity=".7" stroke-width=".05" stroke-linecap="round"/><path d="M.2 .14 L.27 .07" stroke="#fff" stroke-opacity=".45" stroke-width=".03" stroke-linecap="round"/>
       <path d="M.06 .42 A.42 .42 0 0 1 .42 .06" fill="none" stroke="#9fb3bf" stroke-opacity=".5" stroke-width=".06"/>`,
     clock: (k) => {
       const r = 0.62;
       let ticks = '';
       for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6, l = i % 3 ? 0.08 : 0.15; ticks += `M${(Math.sin(a) * (r - 0.12)).toFixed(3)} ${(-Math.cos(a) * (r - 0.12)).toFixed(3)} L${(Math.sin(a) * (r - 0.12 - l)).toFixed(3)} ${(-Math.cos(a) * (r - 0.12 - l)).toFixed(3)} `; }
-      return `<circle cx=".05" cy=".07" r="${r + 0.02}" fill="#2b1c12" fill-opacity=".14"/><circle r="${r}" ${k.F(C.walnut)}/><circle r="${q2(r - 0.08)}" ${k.F(C.paper)}/><path class="ln" stroke-width="1.1" ${k.FS(C.ink)} d="${ticks}"/>`;
+      return `<circle cx=".05" cy=".07" r="${r + 0.02}" fill="#2b1c12" fill-opacity=".14"/><circle r="${r}" ${k.F(C.walnut)}/><circle r="${q2(r - 0.035)}" fill="none" stroke-width=".012" ${k.FS('#a87a52')}/>
+        <path d="M-.58 -.155 A.6 .6 0 0 1 .155 -.58" fill="none" stroke="#fff" stroke-opacity=".24" stroke-width=".022" stroke-linecap="round"/><circle r="${q2(r - 0.07)}" ${k.F('#6c4930')}/>
+        <circle r="${q2(r - 0.08)}" ${k.F(C.paper)}/><path d="M-.54 .04 A.54 .54 0 0 1 .04 -.54 A.6 .6 0 0 0 -.54 .04 Z" fill="#2b1c12" fill-opacity=".1"/>
+        <circle r=".51" fill="none" stroke-width=".022" stroke-dasharray=".006 .0474" stroke-opacity=".5" ${k.FS(C.ink)}/><path class="ln" stroke-width="1.1" ${k.FS(C.ink)} d="${ticks}"/>
+        <rect x="-.08" y=".17" width=".16" height=".04" rx=".012" ${k.F('#b8925a')}/>`;
     }
   };
   // the floor wares: (x, y) the middle of the footprint, r turned a quarter; L lights a point of it (by default its middle, 0.6 up)
@@ -2180,7 +2234,8 @@ const DECOR = (() => {
   const crate = (x, y, it, r) => { const [w, d] = r ? [it.fp[1], it.fp[0]] : it.fp; return shadow(x - w / 2 - 0.05, y - d / 2 - 0.05, x + w / 2 + 0.15, y + d / 2 + 0.15, 0.7) + box(C.oak, x - w / 2, y - d / 2, 0, x + w / 2, y + d / 2, 0.6, { t: C.oakTop, x: C.oakDk, hlv: true }); };
   const FLAT = { fujiPrint: 0.08, kanaChart: 0.05, nightPicture: 0.05 };   // 書房's own pictures: as close to the wall as they always hung
   // a string of lights on its own (dragged in 擺設, or in the storage box): the wire and its bulbs, unlit (in 書房 the bulbs are an overlay)
-  const garland = (len, p) => wireArt(len, p) + bulbsAt(len, p).map((q) => bb(...q, '<ellipse cy="1.6" rx="2.2" ry="2.8" fill="#fffaf0" stroke="#8a7a60" stroke-width=".6"/>')).join('');
+  // 2026-11-11 (the user: finer): each bulb in its socket, its filament inside, shaded on one side
+  const garland = (len, p) => wireArt(len, p) + bulbsAt(len, p).map((q) => bb(...q, '<ellipse cy="1.6" rx="2.2" ry="2.8" fill="#fffaf0" stroke="#8a7a60" stroke-width=".6"/><path d="M.9 -.8 A2.2 2.8 0 0 1 0 4.4 A2.6 3.2 0 0 0 .9 -.8 Z" fill="#2b1c12" fill-opacity=".08"/><path d="M-.6 2.8 V1.4 l.6 -.7 l.6 .7 V2.8" fill="none" stroke="#b4a284" stroke-width=".35"/><rect x="-1.3" y="-1.9" width="2.6" height="1.6" rx=".5" fill="#4a4038"/>')).join('');
   function wall(id, p) { const it = WARE.get(id); if (it && it.garland) return garland(it.size[0], p); if (id === 'board' || id === 'calendar') return own[id](p); if (it && it.win) return own.window(p, it.bare); if (id === 'wallshelf') return wallShelf(p); if (id === 'pegRail') return pegRail(p); if (it && it.light) return sconce(p); const f = WALL[id]; return !f ? '' : FLAT[id] ? onWall(p, f, FLAT[id], true) : onWall(p, f); }
   function floor(id, p) { const it = WARE.get(id), f = FLOOR[id]; return f ? f(p.x, p.y, p.r || 0, it) : own[id] ? own[id](p.x, p.y) : crate(p.x, p.y, it, p.r); }
   // on its own (the page sets the view box round it once it is drawn, fitThumbs): a wall ware on the right wall, one on the floor
