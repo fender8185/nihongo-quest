@@ -586,10 +586,33 @@ function townHtml() {
     </g>`;
   };
   const lamp = (x) => `<rect x="${x - 2}" y="${TOWN_FOOT - 96}" width="4" height="96" ${hc('#4a4a55', '#1c1d3c')}/><circle cx="${x}" cy="${TOWN_FOOT - 100}" r="8" ${hc('#f2efe4', '#ffe2a0')}/><circle cx="${x}" cy="${TOWN_FOOT - 100}" r="16" fill="#ffd98a" style="opacity:calc((1 - var(--day, 1)) * .22)"/>`;
-  // 2026-11-10: wires over the street from two tall poles, bunting between the lamps, のぼり by three shops, a cat asleep on the
-  // bakery's awning, steam from its chimney; on the left a hedge and the way along from the yard
+  // 2026-11-10: のぼり by three shops, a cat asleep on the bakery's awning, steam from its chimney; on the left a hedge and the
+  // way along from the yard. 2026-11-11 (the user): no poles or wires over the street; the bunting hangs under each shop's eaves
   const nobori = (x, c, words, k) => `<path d="M${x} ${TOWN_FOOT} V${TOWN_FOOT - 120}" ${hs('#8a8f99', '#3a3d66')} stroke-width="2.4"/><path d="M${x + 1} ${TOWN_FOOT - 118} h18 v78 h-18 Z" ${hcx('fx-flag', c, '#3a3456', `animation-delay:-${k * 0.5}s`)}/>${vText(x + 10, TOWN_FOOT - 113, words, 10, `font-weight="700" fill="#fff" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif"`)}`;
-  const flags = Array.from({ length: 23 }, (_, k) => { const x = 150 + k * 40, t = (x - 130) / 930, y = -24 + 50 * t * (1 - t) * 2; return `<path class="fx-sway" style="animation-delay:-${(k * 0.37) % 3}s;animation-duration:${2.4 + (k % 3) * 0.5}s" d="M${x} ${y} l12 0 l-6 12 Z" fill="${['#d0574b', '#e6c23a', '#3f7ac8', '#4f7a4a'][k % 4]}" fill-opacity=".9"/>`; }).join('');
+  const bunting = ([x, w, h], j) => {
+    const y = TOWN_FOOT - h - 61, x0 = x + 2, x1 = x + w - 2, n = Math.floor((x1 - x0) / 20), sag = 7;
+    return `<path d="M${x0} ${y} Q${(x0 + x1) / 2} ${y + 2 * sag} ${x1} ${y}" fill="none" ${hs('#6a6a74', '#2a2c50')} stroke-width="1"/>${Array.from({ length: n }, (_, k) => { const t = (k + 0.5) / n, fx = x0 + (x1 - x0) * t, fy = y + 4 * sag * t * (1 - t), m = j * 3 + k; return `<path class="fx-sway" style="animation-delay:-${(m * 0.37) % 3}s;animation-duration:${2.4 + (m % 3) * 0.5}s" d="M${(fx - 4.5).toFixed(1)} ${fy.toFixed(1)} h9 l-4.5 9 Z" fill="${['#d0574b', '#e6c23a', '#3f7ac8', '#4f7a4a'][m % 4]}" fill-opacity=".9"/>`; }).join('')}`;
+  };
+  // the cat (2026-11-11, the user: finer): a cream-and-ginger tabby curled up asleep on the awning's right end, eyes shut, its
+  // tail hanging over the front and swaying; its sides rise and fall. Drawn about (0, 0) at its middle on the awning's top
+  const catC = ['#f2ebdc', '#5a5a6a'], catG = ['#e0a462', '#4e4a5e'], catS = ['#b9773e', '#3e3a4e'], catIn = ['#ecaaa4', '#6a5a70'], catInk = ['#4a3a2c', '#24243a'];
+  const awnCat = `<g transform="translate(426 ${TOWN_FOOT - 74})"><ellipse cx="2" cy=".6" rx="17" ry="1.6" fill="#2b1c12" fill-opacity=".14"/>
+    <g data-fx="awncat"><g class="fx-sway" style="animation-duration:2.6s"><path d="M13 -3 C19 -2 20.5 5 18 10.5 C16.6 14 17 17.5 19.6 19" fill="none" ${hs(...catC)} stroke-width="3.2" stroke-linecap="round"/><path d="M17.3 13.5 C16.8 15.8 17.4 17.8 19.6 19" fill="none" ${hs(...catG)} stroke-width="3.2" stroke-linecap="round"/></g>
+    <g class="fx-breathe">
+      <path d="M-8 0 C-10 -7 -5 -14 3 -14.5 C11 -15 16.5 -10 16.5 -3 Q16.5 0 14 0 Z" ${hc(...catC)}/>
+      <path d="M3 -14.5 C11 -15 16.5 -10 16.5 -3 C13 -5 10 -8 7 -9 C5 -10 3.5 -12 3 -14.5 Z" ${hc(...catG)}/>
+      <path d="M8 -13.8 q1.5 2.5 .5 4.5 M11.6 -12.6 q1.2 2.2 0 4 M14.4 -10.2 q.8 2 -.4 3.4" fill="none" ${hs(...catS)} stroke-width="1.1" stroke-linecap="round"/>
+      <path d="M-6 0 C-2 -3.5 9 -3.5 14 0 Z" fill="#2b1c12" fill-opacity=".08"/><path d="M-8 0 C-10 -7 -5 -14 3 -14.5 C11 -15 16.5 -10 16.5 -3 Q16.5 0 14 0" fill="none" stroke="#2b1c12" stroke-opacity=".22" stroke-width=".7"/>
+      <ellipse cx="-5.4" cy="-1" rx="3.2" ry="1.8" ${hc('#fbf7ee', '#64647a')}/><ellipse cx="-.6" cy="-.9" rx="3" ry="1.7" ${hc('#fbf7ee', '#64647a')}/>
+      <path d="M-18.6 -10.5 L-17.8 -19.5 Q-17.5 -20.5 -16.6 -19.8 L-12.4 -15.1 Z M-9.6 -15.1 L-5.4 -19.8 Q-4.5 -20.5 -4.2 -19.5 L-3.4 -10.5 Z" ${hc(...catC)} stroke="#2b1c12" stroke-opacity=".22" stroke-width=".7"/>
+      <path d="M-17.4 -12.6 L-16.9 -17.6 L-14 -14.6 Z M-8 -14.6 L-5.1 -17.6 L-4.6 -12.6 Z" ${hc(...catIn)}/>
+      <path d="M-19 -7 C-19 -12.5 -15.5 -15.5 -11 -15.5 C-6.5 -15.5 -3 -12.5 -3 -7.5 C-3 -3.5 -6.5 -1.6 -11 -1.6 C-15.5 -1.6 -19 -3.5 -19 -7 Z" ${hc(...catC)} stroke="#2b1c12" stroke-opacity=".22" stroke-width=".7"/>
+      <path d="M-15.6 -14.6 C-13 -15.7 -9 -15.7 -6.4 -14.6 C-8 -12.6 -10 -11.9 -11 -11.9 C-12 -11.9 -14 -12.6 -15.6 -14.6 Z" ${hc(...catG)}/><path d="M-11 -15.4 v2.4" ${hs(...catS)} stroke-width=".9" stroke-linecap="round"/>
+      <ellipse cx="-16" cy="-5" rx="1.7" ry="1" fill="#f0a0a0" fill-opacity=".45"/><ellipse cx="-6" cy="-5" rx="1.7" ry="1" fill="#f0a0a0" fill-opacity=".45"/>
+      <path d="M-15.2 -8.4 q1.5 1.5 3 0 M-9.8 -8.4 q1.5 1.5 3 0 M-12.6 -3.9 q.8 .8 1.6 0 q.8 .8 1.6 0" fill="none" ${hs(...catInk)} stroke-width=".9" stroke-linecap="round"/>
+      <path d="M-11.9 -5.5 h1.8 l-.9 1 Z" ${hc('#d98080', '#5a4a60')}/>
+      <path d="M-17.4 -5.4 l-5 -1 M-17.4 -4.4 l-5 .8 M-4.6 -5.4 l5 -1 M-4.6 -4.4 l5 .8" ${hs('#8a7a66', '#4a4a62')} stroke-width=".45"/>
+    </g></g></g>`;
   // 2026-11-10 (the user: a hillside shopping street, like the hill outside our house): behind the row the hill climbs to the
   // left, our house small on its top far up on the left. A village up it (the two straight slanting rows looked off): houses of
   // different sizes stepped along the slope at uneven spots, a low stone wall under some, trees between ([x, ground, w, h])
@@ -606,14 +629,12 @@ function townHtml() {
       ${roofs}
       ${trees}
       <rect class="near" x="-20" y="150" width="1240" height="220"/>
-      ${[130, 1060].map((x) => `<rect x="${x - 5}" y="-80" width="10" height="${TOWN_FOOT + 80}" ${hc('#8d8a84', '#24254a')}/><rect x="${x - 26}" y="-66" width="52" height="5" ${hc('#6f6c66', '#1c1d3e')}/>`).join('')}
-      ${[-62, -46].map((wy) => `<path class="wire" d="M-20 ${wy + 8} Q60 ${wy + 30} 130 ${wy} Q595 ${wy + 80} 1060 ${wy} Q1140 ${wy + 30} 1220 ${wy + 8}"/>`).join('')}
-      <g class="fx-peck"><ellipse cx="420" cy="-26" rx="5" ry="4" ${hc('#7a5a3e', '#1a1b36')}/><circle cx="424" cy="-29" r="2.6" ${hc('#7a5a3e', '#1a1b36')}/></g>
       ${TOWN_SHOPS.map(shop).join('')}${[300, 600, 878, 1180].map(lamp).join('')}${[300, 600, 878, 1180].map((x) => lightPool(x, TOWN_FOOT + 6, 70)).join('')}
-      <path d="M130 -24 Q595 26 1060 -24" fill="none" ${hs('#6a6a74', '#2a2c50')} stroke-width="1.2"/>${flags}
+      ${TOWN_SHOPS.map(bunting).join('')}
+      <g class="fx-peck"><ellipse cx="540" cy="8" rx="5" ry="4" ${hc('#7a5a3e', '#1a1b36')}/><circle cx="544" cy="5" r="2.6" ${hc('#7a5a3e', '#1a1b36')}/></g>
       ${nobori(446, '#d0574b', '焼きたて', 0)}${nobori(735, '#6e4f3a', '珈琲', 1)}${nobori(1036, '#8a2f2a', '焼き鳥', 2)}
       <rect x="418" y="${TOWN_FOOT - 112 - 66 - 34}" width="12" height="22" ${hc('#8a6a52', '#1c1d3c')}/>${[0, 1, 2].map((k) => `<g transform="translate(424 ${TOWN_FOOT - 112 - 66 - 40})"><ellipse rx="10" ry="7" ${hcx('fx-steam', '#ffffff', '#9a9ec8', `animation-delay:-${k * 1.5}s`)}/></g>`).join('')}
-      <g transform="translate(62 0)"><g class="fx-bob" data-fx="awncat" style="animation-duration:3.6s"><path d="M362 ${TOWN_FOOT - 112 + 38} q-2 -15 15 -17 q17 -1 17 13 q0 4 -2 4 Z" ${hc('#e9e2d0', '#5a5a6a')}/><path d="M379 ${TOWN_FOOT - 112 + 22} l3 -7 l4 7 Z M387 ${TOWN_FOOT - 112 + 23} l4 -6 l2 8 Z" ${hc('#e9e2d0', '#5a5a6a')}/><path d="M362 ${TOWN_FOOT - 112 + 38} q-12 4 -16 14" ${hs('#e9e2d0', '#5a5a6a')} stroke-width="4"/></g></g>
+      ${awnCat}
       ${[0, 34, 68, 102].map((dx) => `<circle cx="${dx}" cy="${TOWN_FOOT - 26}" r="24" ${hc('#5a9e4d', '#0f1a30')}/>`).join('')}<rect x="-20" y="${TOWN_FOOT - 26}" width="150" height="26" ${hc('#4f8a44', '#0c162a')}/>
       <rect class="pave" x="-20" y="${TOWN_FOOT}" width="1240" height="${370 - TOWN_FOOT}"/><path class="rline" d="M-20 ${TOWN_FOOT + 1} H1220" style="stroke-dasharray:none;opacity:.5"/>
       ${Array.from({ length: 30 }, (_, j) => `<path class="seam" d="M${j * 44 - 20} ${TOWN_FOOT + 40 + (j % 3) * 30} h26"/>`).join('')}
@@ -706,7 +727,6 @@ function parkHtml() {
       <rect x="800" y="${F - 120}" width="8" height="120" ${hc('#5a5a64', '#1c1d3c')}/><circle cx="804" cy="${F - 132}" r="18" ${hc('#fbf7ec', '#fff0c0')}/><circle cx="804" cy="${F - 132}" r="18" fill="none" ${hs('#3a3a44', '#3a3a44')} stroke-width="3"/>${clockHands(804, F - 132, 16)}<circle class="glow" cx="804" cy="${F - 132}" r="60" fill="url(#glw)"/>${lightPool(804, F + 8, 90)}${streetLamp(1030, F + 2, 116)}
       <rect x="114" y="${F - 12}" width="40" height="12" ${hc('#a9a497', '#2c2e4c')}/><path d="M120 ${F - 12} Q120 ${F - 52} 134 ${F - 54} Q148 ${F - 52} 148 ${F - 12} Z" ${hc('#b4ad9e', '#3a3c5e')}/><path d="M122 ${F - 32} Q134 ${F - 22} 146 ${F - 32} L144 ${F - 24} Q134 ${F - 16} 124 ${F - 24} Z" ${hc('#d0453c', '#5a2030')}/>
       ${[[880, -60], [1000, -20], [1100, -80], [60, -40], [160, -90], [700, 20]].map(([x, y], k) => leaf(x, y, k)).join('')}
-      <path d="M700 ${F + 4} Q720 -40 760 -230" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="1"/><g class="fx-sway" style="animation-duration:3s;transform-origin:760px -230px"><path d="M744 -262 h32 v30 h-32 Z" ${hc('#f2c94c', '#5a5030')}/><path d="M744 -262 l32 30 M776 -262 l-32 30" stroke="#d0453c" stroke-width="1.6"/><path d="M760 -232 q-8 16 4 30 q-10 14 2 28" fill="none" stroke="#e58fa8" stroke-width="2"/></g>
       <rect x="-20" y="${F}" width="1240" height="134" ${hc('#d9c7a2', '#2a2846')}/>${Array.from({ length: 22 }, (_, j) => `<path d="M${j * 56} ${F + 30 + (j % 3) * 28} q6 -6 12 0" ${hs('#c2ad84', '#22203e')} stroke-width="2"/>`).join('')}
       <g data-fx="pigeons">${pigeonArt(560, F + 100, 0)}${pigeonArt(596, F + 106, 1)}</g>
       ${Array.from({ length: 9 }, (_, k) => `<path d="M${646 + k * 16} ${F - 2} v-12" stroke="#4f7a4a" stroke-width="1.6"/><path d="M${642 + k * 16} ${F - 20} q4 -6 8 0 v5 h-8 Z" ${hc(['#e86f5e', '#f2c94c', '#e58fa8'][k % 3], '#3a2c48')}/>`).join('')}

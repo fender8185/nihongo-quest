@@ -927,6 +927,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .land .fx-car { animation: fxCar 19s linear infinite; } @keyframes fxCar { 0% { transform: translateX(-300px); } 50%, 100% { transform: translateX(1500px); } }
 .sky .land .fx-train { animation: fxTrain 21s linear infinite; } @keyframes fxTrain { 0%, 30% { transform: translateX(1500px); } 70%, 100% { transform: translateX(-1300px); } }
 .sky .land .fx-bob { transform-box: fill-box; transform-origin: 50% 100%; animation: fxBob 2.4s ease-in-out infinite alternate; } @keyframes fxBob { from { transform: rotate(-3deg) translateY(0); } to { transform: rotate(3deg) translateY(-1.5px); } }
+.sky .land .fx-breathe { transform-box: fill-box; transform-origin: 50% 100%; animation: fxBreathe 3.4s ease-in-out infinite; } @keyframes fxBreathe { 50% { transform: scale(1.015, 1.05); } }
 .sky .land .fx-peck { transform-box: fill-box; transform-origin: 30% 80%; animation: fxPeck 1.8s ease-in-out infinite; } @keyframes fxPeck { 0%, 60%, 100% { transform: rotate(0); } 70%, 90% { transform: rotate(28deg); } }
 .sky .land .fx-sway { transform-box: fill-box; transform-origin: 50% 0; animation: fxSway 3.2s ease-in-out infinite alternate; } @keyframes fxSway { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
 .sky .land .fx-flag { transform-box: fill-box; transform-origin: 0 50%; animation: fxFlag 1.6s ease-in-out infinite alternate; } @keyframes fxFlag { from { transform: skewY(-4deg) scaleX(.94); } to { transform: skewY(4deg) scaleX(1); } }
@@ -950,7 +951,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .land .fx-sail { animation: fxSail 70s linear infinite; } @keyframes fxSail { from { transform: translateX(-200px); } to { transform: translateX(1300px); } }
 .sky .land .fx-tvpic { animation: fxTv 3s linear infinite; } @keyframes fxTv { to { transform: translateX(-2.16px); } }   /* in the wall's own units (×31) */
 .sky .land .fx-tuft { transform-box: fill-box; transform-origin: 50% 100%; animation: fxTuft 3s ease-in-out infinite alternate; } @keyframes fxTuft { from { transform: skewX(-7deg); } to { transform: skewX(7deg); } }
-@media (prefers-reduced-motion: reduce) { .sky .land :is(.fx-sweep, .fx-car, .fx-train, .fx-bob, .fx-peck, .fx-sway, .fx-flag, .fx-smoke, .fx-steam, .fx-fall, .fx-ripple, .fx-blink, .fx-scroll, .fx-fly, .fx-wing, .fx-gull, .fx-beam, .fx-boom, .fx-fan, .fx-crab, .fx-legs, .fx-swim, .fx-tuft, .fx-spin, .fx-sail) { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .sky .land :is(.fx-sweep, .fx-car, .fx-train, .fx-bob, .fx-breathe, .fx-peck, .fx-sway, .fx-flag, .fx-smoke, .fx-steam, .fx-fall, .fx-ripple, .fx-blink, .fx-scroll, .fx-fly, .fx-wing, .fx-gull, .fx-beam, .fx-boom, .fx-fan, .fx-crab, .fx-legs, .fx-swim, .fx-tuft, .fx-spin, .fx-sail) { animation: none; } }
 .sky .land .seam { fill: none; stroke: color-mix(in srgb, #b4ad9e calc(var(--md, var(--day, 1)) * 100%), #1c1d3e); stroke-width: 2; stroke-linecap: round; }
 .yard .hero.bench .bob { animation: none; transform: translateY(-13px); } .yard .hero.bench .h-shadow { display: none; }   /* the hips on the seat (40 up), the thighs coming at us (the legs short) */
 .yard .hero.bench .legs { transform-box: view-box; transform-origin: 2px -27px; transform: scaleY(.55); }
