@@ -1760,3 +1760,34 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .room svg.art g.joy:has(.leafy) { animation: none; }
 .room svg.art g.joy .leafy { transform-box: fill-box; transform-origin: 50% 100%; animation: plantJoy .7s ease-in-out 1.6s 2; }
 @media (prefers-reduced-motion: reduce) { .room svg.art g.joy .leafy { animation: none; } }
+/* 2026-11-11 polish: park, beach */
+/* the park: the panda's spring bends as he rocks it and its head nods along; a swing's shadow follows its seat on a ride; a shine
+   runs down the slide while he slides down it; the park clock's red second hand ticks, and a gleam runs round its rim when he looks
+   at it (glint); the drinking fountain's jet leaps up, drops fall into the basin and rings spread on its water (spout) */
+.sky .land .pspring { transform-box: fill-box; transform-origin: 50% 100%; }
+.sky .land.prop:has([data-fx="panda"].ride-rock) .pspring { animation: pandaSpring .8s ease-in-out infinite alternate; } @keyframes pandaSpring { from { transform: skewX(6deg); } to { transform: skewX(-6deg); } }
+.sky .land [data-fx="panda"] .phead { transform-box: fill-box; transform-origin: 30% 95%; } .sky .land [data-fx="panda"].ride-rock .phead { animation: pandaNod .8s ease-in-out -.2s infinite alternate; } @keyframes pandaNod { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
+.sky .land .sw-shade { transform-box: fill-box; transform-origin: 50% 50%; }
+.sky .land [data-fx="swing0"].ride-swing ~ .sw-shade.s0, .sky .land [data-fx="swing1"].ride-swing ~ .sw-shade.s1 { animation: swingShade 1.5s infinite alternate; }
+@keyframes swingShade { 0% { transform: translateX(20px) scaleX(.8); animation-timing-function: ease-in; } 50% { transform: none; animation-timing-function: ease-out; } 100% { transform: translateX(-20px) scaleX(.8); } }
+.sky .land .slide-shine { opacity: 0; } .yard:has(.yhero.sliding.bench) .land .slide-shine { animation: slideShine .7s linear infinite; } @keyframes slideShine { from { stroke-dashoffset: 10; opacity: .7; } to { stroke-dashoffset: -100; opacity: .7; } }
+.sky .land .psec { transform-box: view-box; animation: clockSec 60s steps(60) infinite; } @keyframes clockSec { to { transform: rotate(360deg); } }
+.sky .land [data-fx="clock"] .pshine { opacity: 0; transform-box: view-box; } .sky .land [data-fx="clock"].glint .pshine { animation: clockGlint 1.3s ease-in-out; }
+@keyframes clockGlint { 0% { opacity: 0; transform: rotate(-60deg); } 25%, 70% { opacity: .9; } 100% { opacity: 0; transform: rotate(250deg); } }
+.sky .land [data-fx="fountain"].spout { transform: none; } .sky .land [data-fx="fountain"] .jet { transform-box: fill-box; transform-origin: 0 100%; }
+.sky .land [data-fx="fountain"].spout .jet { animation: fountainJet 1.8s ease-out; } @keyframes fountainJet { 0% { transform: none; } 14%, 78% { transform: scale(1.1, 2.3); } 100% { transform: none; } }
+.sky .land [data-fx="fountain"] :is(.drop, .rip) { opacity: 0; transform-box: fill-box; transform-origin: center; }
+.sky .land [data-fx="fountain"].spout .drop { animation: fountainDrop .42s ease-in .25s infinite; } @keyframes fountainDrop { 0% { opacity: .95; transform: none; } 100% { opacity: .2; transform: translate(-.4px, 5px); } }
+.sky .land [data-fx="fountain"].spout .rip { animation: fountainRip .6s ease-out .3s infinite; } @keyframes fountainRip { 0% { opacity: .9; transform: scale(.4); } 100% { opacity: 0; transform: scale(1.6); } }
+/* the beach: on a pinch the crab raises its claws, snips with each claw's finger and pops its eyes up (its walk stops, as before);
+   a shell or the starfish picked up lifts and turns as it goes; cheering at the sandcastle sand trickles down its towers */
+.sky .land [data-fx="crab"].pinch .claws { animation: none; transform: translateY(-2.5px); } .sky .land [data-fx="crab"] :is(.claws, .eyes) { transition: transform .2s ease-out; }
+.sky .land [data-fx="crab"].pinch .eyes { transform: translateY(-1.6px); } .sky .land [data-fx="crab"] .nip { transform-box: fill-box; } .sky .land [data-fx="crab"] .nip.l { transform-origin: 0 100%; } .sky .land [data-fx="crab"] .nip.r { transform-origin: 100% 100%; }
+.sky .land [data-fx="crab"].pinch .nip.l { animation: crabNipL .18s ease-in-out infinite alternate; } @keyframes crabNipL { from { transform: rotate(24deg); } to { transform: rotate(-4deg); } }
+.sky .land [data-fx="crab"].pinch .nip.r { animation: crabNipR .18s ease-in-out infinite alternate; } @keyframes crabNipR { from { transform: rotate(-24deg); } to { transform: rotate(4deg); } }
+.sky .land :is([data-fx="star"], [data-fx="shell"]) { transform-box: fill-box; transform-origin: 50% 50%; }
+.sky .land [data-fx="star"].gone { transform: translateY(-9px) rotate(40deg) scale(.9); transition: opacity .45s .2s, transform .6s cubic-bezier(.3, 1.3, .5, 1); }
+.sky .land [data-fx="shell"].gone { transform: translateY(-8px) rotate(-28deg) scale(.9); transition: opacity .45s .2s, transform .6s cubic-bezier(.3, 1.3, .5, 1); }
+.sky .land [data-fx="castle"] .grain { opacity: 0; } .sky .land [data-fx="castle"].cheer .grain { animation: castleGrain .7s ease-in infinite; } @keyframes castleGrain { 0% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translate(.6px, 15px); } }
+@media (prefers-reduced-motion: reduce) { .sky .land :is(.pspring, .phead, .sw-shade, .slide-shine, .psec, .pshine, .jet, .drop, .rip, .claws, .eyes, .nip, .grain) { animation: none !important; transition: none !important; }
+  .sky .land [data-fx="fountain"].spout .jet { transform: scale(1.1, 2.3); } .sky .land :is([data-fx="star"], [data-fx="shell"]).gone { transition: none; } }
