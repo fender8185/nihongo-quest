@@ -1010,7 +1010,7 @@ def test_a_pictured_word_shows_its_picture_on_its_first_look_and_others_do_not(b
 
 def test_the_picture_question_asks_for_the_word_with_same_group_options_and_never_a_word_that_also_fits(b):
     js = """(() => { const out = { fmts: [], bad: [], same: 0, n: 0 };
-      for (const w of Object.keys(PICS)) { const v = REG.vocab.find(x => picKey(x) === w); state.srs[v.key] = { b: 2, due: todayStr(), n: 2, ok: 2, ng: 0, s: 3, d: 5, f: {} };
+      for (const w of Object.keys(PICS)) { const v = REG.vocab.find(x => jaPlain(x.w) === w && picKey(x) === w);   /* the word itself, not another word for it (王 for 王様) */ state.srs[v.key] = { b: 2, due: todayStr(), n: 2, ok: 2, ng: 0, s: 3, d: 5, f: {} };
         out.fmts.push(vocabFormats(v).some(([f]) => f === 'v-pic'));
         for (let i = 0; i < 6; i++) { const q = makeVocabQuestion(v, { forceFmt: 'v-pic', kana: false });
           const ws = q.options.map(o => jaPlain(o.text)); out.n++;
@@ -1028,6 +1028,18 @@ def test_the_picture_question_asks_for_the_word_with_same_group_options_and_neve
     assert r['card']['pic'] and r['card']['glyph'] and r['card']['label'].endswith('看圖選字'), r
 
 TESTS += [test_a_pictured_word_shows_its_picture_on_its_first_look_and_others_do_not, test_the_picture_question_asks_for_the_word_with_same_group_options_and_never_a_word_that_also_fits]
+
+def test_another_word_shows_the_same_drawing_and_look_alikes_are_never_each_others_options(b):
+    js = """(() => { const w = (x) => REG.vocab.find(v => jaPlain(v.w) === x && picKey(v)); const out = { same: [picKey(w('自動車')), picKey(w('オートバイ'))], bad: [] };
+      for (const [x, never] of [['川', ['池', '湖', '海', '波', '泉', '港', '島']], ['ラーメン', ['うどん', 'スープ', '味噌汁', '鍋']], ['車', ['自動車', 'タクシー', 'トラック']], ['鉛筆', ['ペン', 'ボールペン', '万年筆', '筆']]]) {
+        const v = w(x); state.srs[v.key] = { b: 2, due: todayStr(), n: 2, ok: 2, ng: 0, s: 3, d: 5, f: {} };
+        for (let i = 0; i < 15; i++) { const q = makeVocabQuestion(v, { forceFmt: 'v-pic', kana: false }); const ws = q.options.map(o => jaPlain(o.text)); if (ws.some(o => never.includes(o))) out.bad.push(x + ':' + ws.join('/')); } }
+      out.aliasDrawn = Object.values(PIC_SAME).every(k => PICS[k]); out.n = Object.keys(PICS).length;
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['same'] == ['車', 'バイク'] and r['bad'] == [] and r['aliasDrawn'] and r['n'] >= 400, r
+
+TESTS += [test_another_word_shows_the_same_drawing_and_look_alikes_are_never_each_others_options]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

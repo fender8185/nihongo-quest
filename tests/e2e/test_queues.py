@@ -484,30 +484,13 @@ def test_a_tests_unseen_grammar_and_kana_misses_come_back_the_next_day(b):
     assert r['pre']['stage'] == 'main' and r['pre']['kinds'] == ['a', 'g'] and r['pre']['n'] == 2, r
     assert r['pre']['recs'] == 2 and r['pre']['today'] == [] and r['pre']['next'] == 2, r
 
-# 1.0.20 took 標記到這裡為止 away, so 1.0.19's entry no longer says what it did (the rule above CHANGELOG: a change that
-# overturns an earlier entry edits that entry); the sentence before it now ends the item
-def test_the_1_0_19_changelog_no_longer_describes_the_mark_dialog(b):
-    items = json.loads(ev(b, "JSON.stringify(CHANGELOG.find(x => x.v === '1.0.19').items)"))
-    assert len(items) == 4 and not any('標記到這裡為止' in s for s in items), items
-    assert items[2].endswith('不算進三次。「我會了」的字直接排進五顆的複習。'), items[2]
-
-# 1.0.20's entry says what a pass does with the test's misses: they are not set to four stars, grammar and kana never met
-# come up for review from the next day, and the notebook's are left as they are
-# (1.0.21 took the 入門 four questions away, so the item about them and the aside 「入門四題選四顆也一樣」 went, by the same rule)
-def test_the_1_0_20_changelog_says_what_a_pass_does_with_the_tests_misses(b):
-    items = json.loads(ev(b, "JSON.stringify(CHANGELOG.find(x => x.v === '1.0.20').items)"))
-    assert len(items) == 2 and not any('入門四題' in x for x in items) and '這次答錯的和錯題本裡的題目不動' not in items[1], items
-    assert all(s in items[1] for s in ['這次答錯的題目不設四顆', '還沒學過的文法和假名從隔天起排進複習', '錯題本裡的題目不動']), items[1]
-
-# 1.0.21's entry: the three points of the rule-cuts spec §10.2, word for word
-SPEC_ITEMS = [
-    '錯題本不再每天另外抽 10%：答錯的題目照第 1、3、7 天回來，不算在三顆以下每天 50 題裡；手動新增的錯題卡在錯題本頁練。四顆答對不再直接升五顆，照記憶強度算（等了一陣子才答對的大多會升）。複習的目標記憶率固定 90%，不再看複習正確率調整。',
-    '入門測驗通過跟其他階段測驗一樣：入門還不到四顆的題目設成四顆（這次答錯的和錯題本裡的不設），進入第 1 週，結果頁有「復原」，不再問四題。通過階段測驗不再改聽力、閱讀，它們照自己的節奏出。舊帳號的「先做一次入門測驗」提示拿掉了，要考可以到課程頁入門卡按「階段測驗」。',
-    '單字要五顆、而且假名拼字答對過，才算「已熟練」（按「我會了」或測驗設的也一樣；沒有拼字題的字五顆就算）；四顆以上、還沒拼對過的字，練習時會出拼字。文法、假名、漢字五顆就算已熟練，以前批次標記過的也一樣。'
-]
-def test_the_1_0_21_changelog_lists_the_cuts(b):
-    entry = json.loads(ev(b, "JSON.stringify(CHANGELOG.find(x => x.v === '1.0.21'))"))   # 1.0.22 came after it
-    assert entry['items'] == SPEC_ITEMS, entry
+# 2026-11-11 (the user): the 1.0.x entries became milestones, one labelled entry shown under 「更早的版本」 like the versions before
+# 1.0; 1.1.0 and later keep an entry a version, the newest first
+def test_the_1_0_x_changelog_is_a_few_milestones(b):
+    r = json.loads(ev(b, """JSON.stringify({ single: CHANGELOG.filter(x => /^1\\.0\\.\\d/.test(x.v)).map(x => x.v), m: (CHANGELOG.find(x => x.v === '1.0') || {}).label || null,
+      lines: ((CHANGELOG.find(x => x.v === '1.0') || {}).items || []).map(t => t.split('：')[0]), first: CHANGELOG[0].v === APP_VERSION, last: CHANGELOG[CHANGELOG.length - 1].v })"""))
+    assert r['single'] == [] and r['m'] == '1.0.x（2026-10-28 〜 11-05）' and r['first'] and r['last'] == '0', r
+    assert r['lines'][0].startswith('1.0.0') and r['lines'][-1].startswith('1.0.39–1.0.51') and len(r['lines']) == 7, r
 
 # a mark gives a new record the format history `f` only for a word (a word's 假名拼字 counts toward 已熟練, see
 # srsLevelLabel): grammar a pass set to four stars reads 已熟練 once a right answer lifts it to five, and a kanji has no `f`

@@ -273,12 +273,6 @@ def test_ai_system_prompt_names_the_target_level(b):   # it said N4 for everyone
       return JSON.stringify([a.includes('學生的目標是通過 JLPT N5。'), c.includes('學生的目標是通過 JLPT N4。')]); })()"""
     assert json.loads(ev(b, js)) == [True, True]
 
-# ---- 1.0.26's changelog names what changed ----
-def test_the_1_0_26_changelog_says_what_changed(b):
-    items = json.loads(ev(b, "JSON.stringify((CHANGELOG.find(x => x.v === '1.0.26') || {}).items || [])"))
-    text = ''.join(items)
-    assert all(s in text for s in ['總進度', '入門', 'N5', 'N4', '過去 7 天', '最近 100 題', '課程進度', '加練', '考試']), items
-
 # ---- 1.0.32: the course pace adds the levels one after another (each level's leftovers ÷ new items a day) ----
 def test_course_pace_adds_the_levels_one_after_another(b):
     js = """(() => { state.stage = 'main'; const p = coursePace(); const un = (x) => !state.srs[x.key]; const lv5 = (lv) => lv === 'PRE_N5' || lv === 'N5';

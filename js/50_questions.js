@@ -295,23 +295,41 @@ function speechAvailable() {
 
 // a word that has a 假名拼字 question: a reading in kana of 2–8 characters
 function canSpell(v) { return Boolean(v && v.r && !HAS_KANJI.test(v.r) && v.r.length >= 2 && v.r.length <= 8); }
-// a word's picture (pics.js): by the word as written, for the reading PIC_READ names where two items share it (魚)
+// a word's picture (pics.js): by the word as written, for the reading PIC_READ names where two items share it (魚); another
+// word for a drawn thing (PIC_SAME: 自動車 → 車) shows that drawing
 function picKey(v) {
   if (typeof PICS !== 'object' || !v || !v.w) return '';
   const k = jaPlain(v.w);
-  return PICS[k] && (typeof PIC_READ !== 'object' || !PIC_READ[k] || PIC_READ[k] === v.r) ? k : '';
+  if (typeof PIC_READ === 'object' && PIC_READ[k] && PIC_READ[k] !== v.r) return '';
+  const same = typeof PIC_SAME === 'object' ? PIC_SAME[k] : '';
+  return PICS[k] ? k : same && PICS[same] ? same : '';
+}
+// the words whose pictures look like this word's (PIC_NEAR's groups it is in), the word itself included
+let PIC_NEAR_OF = null;
+function picNear(w) {
+  if (!PIC_NEAR_OF) {
+    PIC_NEAR_OF = new Map();
+    (typeof PIC_NEAR === 'object' ? PIC_NEAR : []).forEach((g) => g.forEach((x) => { const s = PIC_NEAR_OF.get(x) || new Set([x]); g.forEach((y) => s.add(y)); PIC_NEAR_OF.set(x, s); }));
+  }
+  return PIC_NEAR_OF.get(w) || new Set([w]);
 }
 // the picture as markup: on its round backdrop (disc: false leaves that out, for a scene in the town that has its own ground)
 function picSvg(key, cls = '', opt = {}) {
   if (typeof PICS !== 'object' || !PICS[key]) return '';
   return `<svg class="pic ${cls}" viewBox="0 0 100 100" role="img" aria-label="圖">${opt.disc === false ? '' : '<circle class="pd" cx="50" cy="50" r="47"/>'}${PICS[key]}</svg>`;
 }
-// not a wrong option of 看圖選字: a word that names what any picture shows (食べ物 for おにぎり, 動物 for 犬)
-const PIC_GENERIC = new Set(['動物', '食べ物', '飲み物', '果物', '野菜', '乗り物', '物', 'もの', '品物', '料理', '食事', 'ご飯', 'お菓子', '花', '木', '道具', '家具', '服', '洋服', '虫', '建物', 'ペット']);
+// not a wrong option of 看圖選字: a word that names what any picture shows (食べ物 for おにぎり, 動物 for 犬); words with a drawing
+// of their own (ご飯, 花, 木, 虫) are kept apart from their look-alikes by PIC_NEAR instead
+const PIC_GENERIC = new Set(['動物', '食べ物', '飲み物', '果物', '野菜', '乗り物', '物', 'もの', '品物', '料理', '食事', 'お菓子', '道具', '家具', '服', '洋服', '衣服', '建物', 'ペット',
+  '店', '場所', '所', '町', '人', '生き物', '植物', '自然', '景色', '風景', '天気', '商品', '製品', '機械', '食品', '食料']);
 function picOptions(v, zh = {}, kana = {}) {
-  const pool = vocabPeers(v).filter(x => x.p === v.p && !PIC_GENERIC.has(jaPlain(x.w)) && !zhOverlap(x.m, v.m) && x.r !== v.r && jaPlain(x.w) !== jaPlain(v.w));
-  // the same group first (傘 with 時計, 鍵, 本), so the picture has to be looked at
-  const scored = pool.map(x => ({ x, s: (x.c === v.c ? 3 : 0) + (x.lv === v.lv ? 1 : 0) + Math.random() * 1.5 })).sort((a, b) => b.s - a.s);
+  // never a word whose picture looks like this one (川 for a pond), nor one that shows the same drawing (車 for 自動車)
+  const key = picKey(v), near = new Set([...picNear(jaPlain(v.w)), ...picNear(key)]);
+  const pool = vocabPeers(v).filter(x => x.p === v.p && !PIC_GENERIC.has(jaPlain(x.w)) && !near.has(jaPlain(x.w)) && !(key && picKey(x) === key)
+    && !zhOverlap(x.m, v.m) && x.r !== v.r && jaPlain(x.w) !== jaPlain(v.w));
+  // the same group first (傘 with 時計, 鍵, 本), so the picture has to be looked at, and things with a picture of their own before
+  // other words of the group (交番 with ホテル and 食堂, not 外 or 北)
+  const scored = pool.map(x => ({ x, s: (x.c === v.c ? 3 : 0) + (picKey(x) ? 2 : 0) + (x.lv === v.lv ? 1 : 0) + Math.random() * 1.5 })).sort((a, b) => b.s - a.s);
   const out = [];
   for (const { x } of scored) { if (!out.includes(x.w)) { out.push(x.w); zh[x.w] = x.m; kana[x.w] = x.r; } if (out.length === 3) break; }
   return out.length === 3 ? out : null;
