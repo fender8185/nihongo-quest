@@ -1469,6 +1469,18 @@ def test_a_kanji_question_reads_its_example_word_once_answered(b):
     assert set(r) == {'k-meaning', 'k-read', 'k-shape'}, r
     assert all(x['word'] and x['said'] == [x['word']] for x in r.values()), r
 
+# 2026-11-11: a 讀音 question about 祖父 explained 父 first (「父：父親」) and ran the examples together; the word asked comes
+# first now, with the reading 父 has in it, and the other examples one to a line
+def test_a_kanji_reading_note_starts_with_the_word_asked(b):
+    js = """(() => { const k = REG.kanji.find(x => x.k === '父'); let q = null;
+      for (let i = 0; i < 80 && !(q && q.fmt === 'k-read' && q.askedEx[0] === '祖父'); i++) q = makeKanjiQuestion(k);
+      return JSON.stringify({ why: q.why.split('\\n'), reads: [kanjiReadingIn(k, '父親', 'ちちおや'), kanjiReadingIn(REG.kanji.find(x => x.k === '本'), '三本', 'さんぼん')] }); })()"""
+    r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)])[-1])
+    w = r['why']
+    assert w[0].startswith('**祖父**（そふ）：') and w[1] == '- 「父」在這裡讀「ふ」（音讀）' and w[2] == '- 「父」的意思：父親', r
+    assert [x for x in w if x.startswith('- 例：')] == ['- 例：父（ちち）：（自己的）父親', '- 例：父親（ちちおや）：父親'], r   # 祖父 is not listed again
+    assert r['reads'] == [{'r': 'ちち', 'kind': '訓讀'}, None], r   # a changed sound (ぼん) names no reading
+
 # 1.0.22: one option longer than 14 characters made only itself smaller; now all four share its size
 def test_options_of_one_question_share_one_font_size(b):
     js = """(() => { const g = REG.grammar.find(x => (x.t || 'choice') === 'choice'); startSession('items', { items: [g] }); const e = currentEntry(); e.previewDone = true;

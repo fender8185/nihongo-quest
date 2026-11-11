@@ -4754,12 +4754,27 @@ function kanjiReadingsLine(k) {
   const kun = (k.kun || []).map(r => r.replace(/\((.+)\)/, '（$1）'));
   return `<div style="line-height:1.7">${[(k.on || []).length ? part('音', k.on) : '', kun.length ? part('訓', kun) : ''].filter(Boolean).join('　　')}</div>`;
 }
-function kanjiWhy(k, withReadings = true) {
-  const lines = k.m === k.k ? [] : [`**${k.k}**：${k.m}`];
+// which of the kanji's readings an example word uses (祖父 そふ: フ, 音讀); null when none or more than one fits, or the sound
+// changes (三本 さんぼん)
+function kanjiReadingIn(k, w, r) {
+  const at = w.startsWith(k.k) ? 'start' : w.endsWith(k.k) ? 'end' : 'mid';
+  const fits = (x) => Boolean(x) && (at === 'start' ? r.startsWith(x) : at === 'end' ? r.endsWith(x) : r.includes(x));
+  const hits = (k.on || []).map(x => ({ r: kataToHira(x), kind: '音讀' })).concat((k.kun || []).map(x => ({ r: x.replace(/\(.*\)/, ''), kind: '訓讀' }))).filter(h => fits(h.r));
+  return hits.length === 1 ? hits[0] : null;
+}
+// asked: the example word a 讀音 question was about ([w, r, m]); it comes first, so the note answers the question before it
+// turns to the kanji, and the other examples follow one to a line
+function kanjiWhy(k, withReadings = true, asked = null) {
+  const lines = [];
+  if (asked) {
+    const [w, r, m] = asked; const used = kanjiReadingIn(k, w, r);
+    lines.push(`**${w}**（${r}）${m ? `：${m}` : ''}`);
+    if (used) lines.push(`- 「${k.k}」在這裡讀「${used.r}」（${used.kind}）`);
+    if (k.m !== k.k) lines.push(`- 「${k.k}」的意思：${k.m}`);
+  } else if (k.m !== k.k) lines.push(`**${k.k}**：${k.m}`);
   if (withReadings && (k.on || []).length) lines.push(`- 音讀：${k.on.join('・')}`);
   if (withReadings && (k.kun || []).length) lines.push(`- 訓讀：${kunText(k)}`);
-  const ex = (k.ex || []).map(([w, r, m]) => `${w}（${r}）${m}`).join('；');
-  if (ex) lines.push(`- 例：${ex}`);
+  (k.ex || []).filter(x => !asked || x[0] !== asked[0]).forEach(([w, r, m]) => lines.push(`- 例：${w}（${r}）${m ? `：${m}` : ''}`));
   return lines.join('\n');
 }
 function kanjiPeers(k) { const top = shownTop(k.lv); return REG.kanji.filter(x => x.key !== k.key && levelUpTo(x.lv, top)); }
@@ -4824,7 +4839,7 @@ function makeKanjiQuestion(k, ctx = {}) {
       q.stemHtml = `<span class="uline">${esc(w)}</span>`; q.stemClass = 'word';
       q.noFuri = true;
       q.subHtml = `<span class="small muted">${esc(m || '')}</span>${b <= 0 ? `<div class="row-wrap mt-2" style="justify-content:center">${kanjiReadingsHtml(k)}</div>` : ''}`;
-      q.speakWord = r;
+      q.speakWord = r; q.askedEx = [w, r, m];
       finalizeOptions(q, r, vars, true);
       q.answerText = r;
       return true;
@@ -4834,7 +4849,7 @@ function makeKanjiQuestion(k, ctx = {}) {
   const fmt = weightedPick(pairs, ctx.avoidFmt);
   if (!build(fmt) && !order.some(f => f !== fmt && build(f))) return null;
   // readings already on screen are left out of the explanation
-  q.why = kanjiWhy(k, q.fmt === 'k-read' && b > 0);
+  q.why = kanjiWhy(k, q.fmt === 'k-read' && b > 0, q.fmt === 'k-read' ? q.askedEx : null);
   return q;
 }
 
