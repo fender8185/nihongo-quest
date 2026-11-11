@@ -1755,3 +1755,8 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .sky .land [data-fx="scat"].purr .ear { transform-box: fill-box; transform-origin: 30% 100%; animation: catEar .16s ease-in-out .4s 6 alternate; } @keyframes catEar { to { transform: rotate(-20deg); } }
 .sky .land [data-fx="scat"].purr .ctail { animation: catCurl .36s ease-in-out 7 alternate; } @keyframes catCurl { to { transform: rotate(18deg); } }
 @media (prefers-reduced-motion: reduce) { .sky .land :is(.fx-flick) { animation: none; } .sky .land [data-fx] :is(.suzu, .tassel, .glint, .bib, .ema, .tbody, .tlamp, .chead, .ear, .ctail) { animation: none !important; } }
+/* 2026-11-11 polish: wares floor, rug */
+/* a pot plant from 古道具屋 watered (盆栽, 仙人掌, 竹子): its pot stays put and only the plant sways, from its base */
+.room svg.art g.joy:has(.leafy) { animation: none; }
+.room svg.art g.joy .leafy { transform-box: fill-box; transform-origin: 50% 100%; animation: plantJoy .7s ease-in-out 1.6s 2; }
+@media (prefers-reduced-motion: reduce) { .room svg.art g.joy .leafy { animation: none; } }

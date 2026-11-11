@@ -1942,10 +1942,13 @@ const DECOR = (() => {
       s += bb(x + 0.45, y - 0.3, 0.8, `<ellipse rx="5" ry="1.8" fill="#2b1c12" fill-opacity=".12"/><path ${L('#f3efe6', 1)} d="M-4 -1 L-4.5 -9 H4.5 L4 -1 Z"/><ellipse cy="-9" rx="4.5" ry="1.5" fill="#7a9a5a"/>`);
       return s + cushion(x - 0.45, y + 0.97, x + 0.45, y + 1.4, '#4f6aa8', '#6079b4') + cushion(x + 0.97, y - 0.45, x + 1.4, y + 0.45, '#4f6aa8', '#6079b4');
     },
-    loungeRug: (x, y) => {   // a kilim in front of the sofa: a border, a row of diamonds
-      const w = 2.2, d = 1.4, a = [x, y, 0];
+    loungeRug: (x, y) => {   // a kilim in front of the sofa: a border, a row of diamonds (2026-11-11, the user: finer: fringe on its ends, inside its footprint, and a zigzag woven along each long side)
+      const w = 2.12, d = 1.4, a = [x, y, 0];
+      let fr = ''; for (let v = y - d + 0.1; v < y + d - 0.06; v += 0.07) fr += `M${q2(x - 2.2)} ${q2(v)} H${q2(x - w + 0.04)} M${q2(x + w - 0.04)} ${q2(v)} H${q2(x + 2.2)} `;
+      const zig = (zy) => `M${q2(x - w + 0.36)} ${q2(zy)}` + Array.from({ length: Math.floor((2 * w - 0.72) / 0.08) }, (_, i) => ` l.08 ${i % 2 ? 0.06 : -0.06}`).join('');
       return `<g transform="${onZ(0.015)}"><rect x="${q2(x - w + 0.05)}" y="${q2(y - d + 0.06)}" width="${2 * w}" height="${2 * d}" rx=".18" fill="#2b1c12" fill-opacity=".08"/>
-        <rect x="${q2(x - w)}" y="${q2(y - d)}" width="${2 * w}" height="${2 * d}" rx=".18" ${F('#dccab0', 't', a)}/>
+        <path d="${fr}" stroke-width=".025" stroke-linecap="round" ${FS('#e9dcc4', 't', a)}/><rect x="${q2(x - w)}" y="${q2(y - d)}" width="${2 * w}" height="${2 * d}" rx=".18" ${F('#dccab0', 't', a)}/>
+        <path d="${zig(y - d + 0.33)} ${zig(y + d - 0.33)}" fill="none" stroke-width=".03" stroke-linejoin="round" ${FS('#b0574a', 't', a)}/>
         <rect x="${q2(x - w + 0.2)}" y="${q2(y - d + 0.2)}" width="${q2(2 * w - 0.4)}" height="${q2(2 * d - 0.4)}" rx=".1" fill="none" stroke-width=".08" ${FS('#9a6f4c', 't', a)}/>
         <path d="M${q2(x - w + 0.4)} ${q2(y - d + 0.45)} H${q2(x + w - 0.4)} M${q2(x - w + 0.4)} ${q2(y + d - 0.45)} H${q2(x + w - 0.4)}" stroke-width=".04" ${FS('#9a6f4c', 't', a)}/>
         ${[-1.2, -0.4, 0.4, 1.2].map((dx, i) => `<path d="M${q2(x + dx - 0.25)} ${y} l.25 -.35 l.25 .35 l-.25 .35 Z" ${F(i % 2 ? '#5f88b2' : '#b0574a', 't', a)}/>`).join('')}</g>`;
@@ -2007,20 +2010,25 @@ const DECOR = (() => {
       s += bb(x + 0.6, y + 0.05, h, `<path ${L('#5f88b2', h + 0.2)} d="M-3.5 0 C-6 -4 -5 -9 -2 -11 V-14 H2 V-11 C5 -9 6 -4 3.5 0 Z"/><path d="M0 -14 C-1 -20 1 -24 0 -28" stroke="#4f8a4c" stroke-width="1.2" fill="none"/><circle cy="-29" r="2.8" fill="#f08bb0"/>`);
       return s + box('#c8553f', x + 0.05, y + 0.1, h, x + 0.35, y + 0.35, h + 0.15, { t: '#d86a5a' });
     },
-    gramophone: (x, y, r) => {
-      const h = 1.1, L = lit(x, y + 0.3);
+    gramophone: (x, y, r) => {   // 2026-11-11 (the user: finer): the lid's seam, the panels sunk in (shade above, light below), a brass crank; grooves on the record and its spindle; the horn's seams and the bell's lit rim; the tone arm's pivot and sound box
+      const h = 1.1, L = lit(x, y + 0.3), rc = [q2(x - 0.06), q2(y + 0.06)];
       let s = shadow(x - 0.5, y - 0.5, x + 0.62, y + 0.62, 0.75);
       s += box(C.walnut, x - 0.42, y - 0.42, 0, x + 0.42, y + 0.42, h, { t: '#a87a52', x: '#74503a', hlv: true });
       s += qY('#6e4a33', y + 0.425, x - 0.3, x + 0.3, 0.22, 0.86, 'y') + qX('#6a4630', x + 0.425, y - 0.3, y + 0.3, 0.22, 0.86, 'x');
-      s += `<g transform="${onZ(h + 0.006)}"><circle cx="${q2(x - 0.06)}" cy="${q2(y + 0.06)}" r=".31" fill="#2a2730"/><circle cx="${q2(x - 0.06)}" cy="${q2(y + 0.06)}" r=".22" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width=".02"/><circle cx="${q2(x - 0.06)}" cy="${q2(y + 0.06)}" r=".07" fill="#d0574a"/></g>`;
-      s += upright(x + 0.2, y - 0.2, h, r, `<path d="M0 0 V-9 Q0 -15 -5 -19" fill="none" stroke-width="3" stroke-linecap="round" ${FS('#b88a3e', 'y', [x, y, h + 0.3])}/>
+      s += `<path class="ln" stroke="#2b1c12" stroke-opacity=".3" stroke-width="1.2" d="${line([[x - 0.3, y + 0.427, 0.86], [x + 0.3, y + 0.427, 0.86]])} ${line([[x + 0.427, y + 0.3, 0.86], [x + 0.427, y - 0.3, 0.86]])} ${line([[x - 0.42, y + 0.427, h - 0.12], [x + 0.427, y + 0.427, h - 0.12], [x + 0.427, y - 0.42, h - 0.12]])}"/>`;
+      s += `<path class="ln" stroke="#fff" stroke-opacity=".16" stroke-width="1" d="${line([[x - 0.3, y + 0.427, 0.22], [x + 0.3, y + 0.427, 0.22]])} ${line([[x + 0.427, y + 0.3, 0.22], [x + 0.427, y - 0.3, 0.22]])}"/>`;
+      s += bb(x + 0.425, y + 0.04, 0.58, `<ellipse rx="1.7" ry="2.2" transform="skewY(-26.6)" ${F('#b88a3e', 'x', [x + 0.43, y, 0.58])}/><path d="M0 0 l2.8 1.4 V-5.6" fill="none" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" ${FS('#c99a48', 'x', [x + 0.5, y, 0.6])}/><path d="M2.8 -5.6 l2.6 1.3" stroke-width="2.3" stroke-linecap="round" ${FS('#4f3627', 'x', [x + 0.5, y, 0.75])}/>`);
+      s += `<g transform="${onZ(h + 0.006)}"><circle cx="${rc[0]}" cy="${rc[1]}" r=".31" fill="#2a2730"/><circle cx="${rc[0]}" cy="${rc[1]}" r=".22" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width=".02"/><g fill="none" stroke="#fff" stroke-opacity=".08" stroke-width=".012"><circle cx="${rc[0]}" cy="${rc[1]}" r=".27"/><circle cx="${rc[0]}" cy="${rc[1]}" r=".17"/><circle cx="${rc[0]}" cy="${rc[1]}" r=".12"/></g><path d="M${q2(rc[0] - 0.2)} ${q2(rc[1] - 0.12)} A.24 .24 0 0 1 ${q2(rc[0] + 0.04)} ${q2(rc[1] - 0.23)}" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width=".03" stroke-linecap="round"/><circle cx="${rc[0]}" cy="${rc[1]}" r=".07" fill="#d0574a"/><circle cx="${rc[0]}" cy="${rc[1]}" r=".015" fill="#e8e4dc"/></g>`;
+      s += upright(x + 0.2, y - 0.2, h, r, `<path d="M0 0 V-9 Q0 -15 -5 -19" fill="none" stroke-width="3" stroke-linecap="round" ${FS('#b88a3e', 'y', [x, y, h + 0.3])}/><circle r="2.4" ${F('#8a6a3a', 't', [x, y, h])}/>
         <path ${L('#e2b252', h + 1.2)} d="M-5 -19 C-11 -26 -18 -41 -21 -58 C-5 -67 15 -61 25 -47 C9 -43 -2 -33 -5 -19 Z"/>
+        <path d="M-5.6 -20 C-9 -28 -11 -35 -10.4 -41 M-4.4 -20 C-2 -30 2 -38 5.6 -44.6" fill="none" stroke="#8a5f20" stroke-opacity=".38" stroke-width=".8"/>
         <ellipse cx="2" cy="-53" rx="23" ry="9.5" transform="rotate(-24 2 -53)" ${L('#a3742c', h + 1.4)}/><ellipse cx="2" cy="-53" rx="15" ry="5.6" transform="rotate(-24 2 -53)" fill="#3a2a1a" fill-opacity=".4"/>
+        <ellipse cx="2" cy="-53" rx="22.4" ry="9" transform="rotate(-24 2 -53)" fill="none" stroke="#f6d488" stroke-opacity=".55" stroke-width=".9"/>
         <path d="M-17 -38 C-15 -48 -8 -56 4 -59" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1.6" stroke-linecap="round"/>
-        <path d="M-2 -2 L-16 4" stroke="#5c5d68" stroke-width="2.2" stroke-linecap="round"/>`);
+        <path d="M-2 -2 L-16 4" stroke="#5c5d68" stroke-width="2.2" stroke-linecap="round"/><circle cx="-2" cy="-2" r="2.1" fill="#4a4b55"/><circle cx="-16.4" cy="4.2" r="2.6" fill="#8d8f99"/><circle cx="-16.4" cy="4.2" r="1" fill="#4a4b55"/><path d="M-17.8 2.6 a2 2 0 0 1 2.4 -.4" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width=".5"/>`);
       return s;
     },
-    goldfish: (x, y, r) => {
+    goldfish: (x, y, r) => {   // 2026-11-11 (the user: finer): gravel and a sprig of weed on the bowl's floor, two bubbles, the fish with eyes
       const h = 1.5, L = lit(x, y + 0.3);
       let s = shadow(x - 0.42, y - 0.42, x + 0.5, y + 0.5, 0.7);
       [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => { s += box(C.oakDk, x + a * 0.26 - 0.04, y + b * 0.26 - 0.04, 0, x + a * 0.26 + 0.04, y + b * 0.26 + 0.04, h - 0.1, { hl: false }); });
@@ -2029,103 +2037,169 @@ const DECOR = (() => {
         <circle cy="-15" r="16" fill="#cfe9f3" fill-opacity=".45" stroke="#e8f6fb" stroke-width="1.2"/>
         <path d="M-15 -12 Q0 -6 15 -12 A16 16 0 0 1 -15 -12 Z" style="fill:color-mix(in srgb,#8fcbe0 calc(var(--day)*100%),#3b5c8a)" fill-opacity=".85"/>
         <path d="M-15 -14 Q0 -8 15 -14" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1"/>
-        <g class="fish"><path d="M-6 -9 q4 -3 8 0 q-4 3 -8 0 Z M2 -9 l3 -2.4 v4.8 Z" fill="#f07a3a"/><path d="M4 -4 q-4 -2.6 -7 0 q3 2.6 7 0 Z M-3 -4 l-2.6 -2 v4 Z" fill="#f4a03c"/></g>
+        <path d="M-6.4 -1.2 C-7.6 -4 -5.4 -6 -7 -9.4 M-6.6 -4.4 C-8.6 -5 -9.4 -6.6 -9.2 -7.6 M-6.2 -6.6 C-4.6 -7.6 -4.2 -9 -4.4 -10" fill="none" stroke="#4f8a4c" stroke-opacity=".85" stroke-width="1.1" stroke-linecap="round"/>
+        <g fill-opacity=".9"><ellipse cx="-3.4" cy="-.6" rx="1.4" ry=".8" fill="#e8dcc4"/><ellipse cx="-.6" cy="-.2" rx="1.2" ry=".7" fill="#c98f6d"/><ellipse cx="1.8" cy="-.7" rx="1.3" ry=".8" fill="#9fb0a8"/><ellipse cx="4.4" cy="-.4" rx="1.1" ry=".7" fill="#e8dcc4"/><ellipse cx="-5.6" cy="-.2" rx="1" ry=".6" fill="#b7a27e"/></g>
+        <g class="fish"><path d="M-6 -9 q4 -3 8 0 q-4 3 -8 0 Z M2 -9 l3 -2.4 v4.8 Z" fill="#f07a3a"/><path d="M4 -4 q-4 -2.6 -7 0 q3 2.6 7 0 Z M-3 -4 l-2.6 -2 v4 Z" fill="#f4a03c"/><path d="M-1.6 -10.6 q1.4 -1.6 2.6 -.6 M1 -5.4 q-1.2 -1.4 -2.4 -.4" fill="none" stroke="#e05f28" stroke-width=".7"/><circle cx="-4.4" cy="-9.4" r=".55" fill="#2a2730"/><circle cx="2.7" cy="-4.4" r=".5" fill="#2a2730"/></g>
+        <g fill="none" stroke="#fff" stroke-opacity=".7" stroke-width=".5"><circle cx="-7.6" cy="-11.4" r=".8"/><circle cx="-8.4" cy="-14" r=".55"/></g>
         <ellipse cy="-29" rx="9.5" ry="2.6" fill="none" stroke="#e8f6fb" stroke-width="1.4"/>
         <path d="M-10 -24 A13 13 0 0 1 -4 -29" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="2" stroke-linecap="round"/>`);
       return s;
     },
-    bonsai: (x, y, r) => {
-      const L = lit(x, y);
+    bonsai: (x, y, r) => {   // 2026-11-11 (the user: finer): a glazed tray with a lip, moss and a pebble on the soil; a trunk that flares at its roots and tapers, a branch up to each pad; the pads cloud-edged, shaded beneath, lit along their tops
+      const L = lit(x, y), z = 0.28;
       let s = shadow(x - 0.42, y - 0.36, x + 0.5, y + 0.46, 0.7);
-      s += box('#4f5f78', x - 0.36, y - 0.26, 0, x + 0.36, y + 0.26, 0.28, { t: '#6b5440', x: '#43516a', hlv: true });
-      s += upright(x, y, 0.28, r, `<path d="M0 0 C-2 -6 3 -10 1 -16 C-1 -21 -8 -22 -11 -27 M1 -16 C5 -19 11 -20 14 -25" fill="none" stroke-width="3.4" stroke-linecap="round" ${FS('#6d4c35', 'y', [x, y, 0.8])}/>
-        <g ${L('#4f8a4c', 1)}><ellipse cx="-13" cy="-30" rx="11" ry="5"/><ellipse cx="14" cy="-28" rx="10" ry="4.6"/><ellipse cx="1" cy="-38" rx="12" ry="5.4"/></g>
-        <g fill="#7fb36d" fill-opacity=".7"><ellipse cx="-14" cy="-32" rx="7" ry="2.4"/><ellipse cx="13" cy="-30" rx="6" ry="2.2"/><ellipse cx="0" cy="-40.5" rx="7.5" ry="2.6"/></g>`);
+      s += box('#4f5f78', x - 0.34, y - 0.24, 0, x + 0.34, y + 0.24, z - 0.06, { t: false, x: '#43516a', hlv: true });
+      s += `<path class="ln" stroke="#2b1c12" stroke-opacity=".22" stroke-width="1.4" d="${line([[x - 0.34, y + 0.243, z - 0.07], [x + 0.343, y + 0.243, z - 0.07], [x + 0.343, y - 0.24, z - 0.07]])}"/>`;
+      s += box('#56688a', x - 0.36, y - 0.26, z - 0.07, x + 0.36, y + 0.26, z, { t: '#62749a', x: '#4a5a78', hlv: true }) + qZ('#6b5440', z + 0.002, x - 0.31, x + 0.31, y - 0.21, y + 0.21);
+      s += `<g transform="${onZ(z + 0.004)}"><g ${F('#5b8547', 't', [x, y, z])}><ellipse cx="${q2(x - 0.05)}" cy="${q2(y + 0.02)}" rx=".14" ry=".1"/><ellipse cx="${q2(x - 0.18)}" cy="${q2(y + 0.1)}" rx=".07" ry=".05"/><ellipse cx="${q2(x + 0.12)}" cy="${q2(y - 0.09)}" rx=".06" ry=".04"/></g><path d="M${q2(x - 0.12)} ${q2(y)} h.01 M${q2(x - 0.02)} ${q2(y + 0.06)} h.01 M${q2(x + 0.03)} ${q2(y - 0.03)} h.01" stroke="#a6c77a" stroke-opacity=".7" stroke-width=".03" stroke-linecap="round"/><ellipse cx="${q2(x + 0.2)}" cy="${q2(y + 0.1)}" rx=".05" ry=".04" ${F('#b9b3a6', 't', [x, y, z])}/></g>`;
+      // a pad of needles: a cloud edge of n bumps over a flatter underside
+      const pad = (cx, cy, rx, ry, n) => { let d = `M${cx - rx} ${cy}`; for (let k = 1; k <= n; k++) { const t = Math.PI * (1 - k / n); d += ` A${q2(rx / n * 1.25)} ${q2(rx / n * 1.05)} 0 0 1 ${q2(cx + rx * Math.cos(t))} ${q2(cy - ry * 0.78 * Math.sin(t))}`; } return d + ` A${rx} ${q2(ry * 0.8)} 0 0 1 ${cx - rx} ${cy} Z`; };
+      const pads = [[-13, -30, 11, 5, 4], [14, -28, 10, 4.6, 4], [1, -38, 12, 5.4, 5]];
+      s += upright(x, y, z, r, `<g class="leafy"><path ${L('#6d4c35', 0.6)} d="M-5.5 0.6 C-3 -.6 -2.4 -2.4 -2.2 -5 L2.6 -5 C2.6 -2.4 3.6 -.6 6 0.6 Z"/>
+        <path d="M0 0 C-2 -6 3 -10 1 -16" fill="none" stroke-width="4.6" stroke-linecap="round" ${FS('#6d4c35', 'y', [x, y, 0.6])}/>
+        <path d="M1 -16 C-1 -21 -8 -22 -11 -27 M1 -16 C5 -19 11 -20 14 -25 M1 -16 C2 -22 0 -28 1 -33" fill="none" stroke-width="2.6" stroke-linecap="round" ${FS('#6d4c35', 'y', [x, y, 0.9])}/>
+        <path d="M-1.2 -1 C-2.8 -6 1.8 -10 -0.2 -15 M-1 -20 C-4 -22 -7 -23 -9 -26" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width=".9" stroke-linecap="round"/><path d="M1.6 -4 l-1.6 1.4 M0.6 -9 l1.8 -1" stroke="#2b1c12" stroke-opacity=".3" stroke-width=".7" stroke-linecap="round"/>
+        ${pads.map(([cx, cy, rx, ry]) => `<ellipse cx="${cx}" cy="${q2(cy + ry * 0.3)}" rx="${q2(rx * 0.9)}" ry="${q2(ry * 0.72)}" ${L('#3d6e3c', 0.9)}/>`).join('')}
+        <g ${L('#4f8a4c', 1)}>${pads.map(([cx, cy, rx, ry, n]) => `<path d="${pad(cx, cy, rx, ry, n)}"/>`).join('')}</g>
+        <g fill="#7fb36d" fill-opacity=".75">${pads.map(([cx, cy, rx, ry, n]) => `<path d="${pad(cx, q2(cy - ry * 0.32), q2(rx * 0.66), q2(ry * 0.55), n - 1)}"/>`).join('')}</g>
+        <path d="${pads.map(([cx, cy, rx, ry]) => [-0.6, -0.2, 0.2, 0.6].map((f) => `M${q2(cx + rx * f)} ${q2(cy + ry * 0.35)} l.8 -1.4`).join(' ')).join(' ')}" stroke="#2f5a32" stroke-opacity=".45" stroke-width=".8" stroke-linecap="round"/></g>`);
       return s;
     },
     monstera: (x, y, r) => {
       const L = lit(x, y);
       let s = shadow(x - 0.5, y - 0.5, x + 0.62, y + 0.62, 0.7);
-      s += box('#eee6da', x - 0.32, y - 0.32, 0, x + 0.32, y + 0.32, 0.72, { t: '#5a3d28', x: '#ddd2c2', hlv: true });
-      const leaf = (tx, ty, rot, k, c) => `<g transform="translate(${tx} ${ty}) rotate(${rot}) scale(${k})"><path ${L(c, 1.6)} d="M0 0 C-14 -2 -22 -14 -18 -26 C-14 -36 -2 -38 0 -30 C2 -38 14 -36 18 -26 C22 -14 14 -2 0 0 Z"/><path d="M0 -2 V-28 M0 -10 L-12 -18 M0 -16 L-10 -26 M0 -10 L12 -18 M0 -16 L10 -26" stroke="#fff" stroke-opacity=".35" stroke-width="1"/><path d="M-17 -20 L-9 -17 M-15 -28 L-7 -22 M17 -20 L9 -17 M15 -28 L7 -22" stroke="#3c6e3f" stroke-width="1.6"/></g>`;
-      s += upright(x, y, 0.72, r, `<path d="M0 0 C-4 -20 -16 -30 -24 -40 M0 0 C2 -24 6 -40 8 -58 M0 0 C6 -16 18 -24 26 -30" fill="none" stroke="#3f7a42" stroke-width="2.2" stroke-linecap="round"/>
+      // 2026-11-11 (the user: finer): a cream pot with a lip and two faint rings; each leaf a real monstera's: heart-shaped from its
+      // stalk, cut in from the edge in three slits a side (the floor shows through), a vein down each piece between the cuts
+      const z = 0.72;
+      s += box('#eee6da', x - 0.3, y - 0.3, 0, x + 0.3, y + 0.3, z - 0.1, { t: false, x: '#ddd2c2', hlv: true });
+      s += `<path class="ln" stroke="#2b1c12" stroke-opacity=".09" stroke-width="1" d="${[0.2, 0.4].map((zz) => line([[x - 0.3, y + 0.303, zz], [x + 0.303, y + 0.303, zz], [x + 0.303, y - 0.3, zz]])).join(' ')}"/><path class="ln" stroke="#2b1c12" stroke-opacity=".2" stroke-width="1.4" d="${line([[x - 0.3, y + 0.303, z - 0.11], [x + 0.303, y + 0.303, z - 0.11], [x + 0.303, y - 0.3, z - 0.11]])}"/>`;
+      s += box('#eee6da', x - 0.33, y - 0.33, z - 0.11, x + 0.33, y + 0.33, z, { t: '#f5efe5', x: '#ddd2c2', hlv: true }) + qZ('#5a3d28', z + 0.002, x - 0.28, x + 0.28, y - 0.28, y + 0.28);
+      // one half of a leaf (x ≥ 0; the stalk at 0 0, the tip at 0 -38), mirrored for the other
+      const half = 'M-.6 -3 C2 0 6 1.4 10 .2 C13 -.8 15 -3 16 -5.4 L5.4 -4.6 L17 -8 C18.6 -10.6 19.6 -13 19.6 -15 L6 -10.8 L19.6 -17.6 C19.3 -20.6 18.4 -23.2 17 -25.2 L5.6 -18.6 L15.6 -27.6 C12.4 -32.6 6.4 -37 0 -38 L-.6 -38 Z';
+      const veins = 'M0 -2 V-36 M0 -3 Q6 -2.6 11 -2 M0 -6.5 L16 -11 M0 -14.5 L15 -20.2 M0 -23 L11 -30';
+      const leaf = (tx, ty, rot, k, c) => `<g transform="translate(${tx} ${ty}) rotate(${rot}) scale(${k})"><g ${L(c, 1.6)}><path d="${half}"/><path d="${half}" transform="scale(-1 1)"/></g>
+        <g fill="none" stroke="#fff" stroke-opacity=".26" stroke-width=".9" stroke-linecap="round"><path d="${veins}"/><path d="${veins}" transform="scale(-1 1)"/></g>
+        <path d="M-.6 -36 C-6 -35 -12 -31 -15 -27" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="1.2" stroke-linecap="round"/></g>`;
+      s += upright(x, y, z, r, `<path d="M0 0 C-4 -20 -16 -30 -24 -40 M0 0 C2 -24 6 -40 8 -58 M0 0 C6 -16 18 -24 26 -30" fill="none" stroke="#3f7a42" stroke-width="2.2" stroke-linecap="round"/>
+        <path d="M-.8 -2 C-4.6 -20 -15.6 -29.6 -23 -38.6 M-.6 -4 C1.2 -24 5 -40 7 -56" fill="none" stroke="#fff" stroke-opacity=".2" stroke-width=".7"/>
         ${leaf(-26, -36, -38, 1.05, C.leafDk)}${leaf(26, -26, 42, 1, C.leaf)}${leaf(8, -54, 6, 1.15, C.leaf)}${leaf(-6, -22, -10, 0.8, '#6aa864')}`);
       return s;
     },
     cactus: (x, y, r) => {
       const L = lit(x, y);
       let s = shadow(x - 0.32, y - 0.32, x + 0.4, y + 0.4, 0.7);
-      s += box(C.pot, x - 0.24, y - 0.24, 0, x + 0.24, y + 0.24, 0.42, { t: '#7a5236', x: '#c2714f', hlv: true });
-      s += upright(x, y, 0.42, r, `<rect x="-5.5" y="-46" width="11" height="46" rx="5.5" ${L('#7fae79', 1.2)}/>
+      // 2026-11-11 (the user: finer): a terracotta pot with a rolled rim, pebbles on the soil; ribs down the stem and arms, rows of
+      // little white spines, the shaded side, a five-petal flower on top
+      const z = 0.42;
+      s += box(C.pot, x - 0.22, y - 0.22, 0, x + 0.22, y + 0.22, z - 0.09, { t: false, x: '#c2714f', hlv: true });
+      s += `<path class="ln" stroke="#2b1c12" stroke-opacity=".22" stroke-width="1.4" d="${line([[x - 0.22, y + 0.223, z - 0.1], [x + 0.223, y + 0.223, z - 0.1], [x + 0.223, y - 0.22, z - 0.1]])}"/>`;
+      s += box(C.pot, x - 0.25, y - 0.25, z - 0.1, x + 0.25, y + 0.25, z, { t: '#e2977a', x: '#c97a58', hlv: true }) + qZ('#7a5236', z + 0.002, x - 0.2, x + 0.2, y - 0.2, y + 0.2);
+      s += `<g transform="${onZ(z + 0.004)}" ${F('#e8e0d0', 't', [x, y, z])}><ellipse cx="${q2(x - 0.12)}" cy="${q2(y + 0.1)}" rx=".05" ry=".035"/><ellipse cx="${q2(x + 0.13)}" cy="${q2(y - 0.06)}" rx=".04" ry=".03"/><ellipse cx="${q2(x + 0.06)}" cy="${q2(y + 0.14)}" rx=".035" ry=".03"/></g>`;
+      const spine = FS('#f6f1de', 'y', [x, y, 1.2]), spines = (pts) => `<path d="${pts.map(([px, py]) => `M${px} ${py} h.01`).join(' ')}" stroke-opacity=".85" stroke-width="1.1" stroke-linecap="round" ${spine}/><path d="${pts.map(([px, py]) => `M${q2(px - 0.9)} ${q2(py - 0.5)} L${px} ${py} L${q2(px + 0.9)} ${q2(py - 0.5)}`).join(' ')}" fill="none" stroke-opacity=".55" stroke-width=".35" ${spine}/>`;
+      const rows = []; [-3.6, -0.6, 2.4].forEach((sx, k) => { for (let sy = -41 + k * 2.4; sy < -3; sy += 7) rows.push([sx, sy]); });
+      s += upright(x, y, z, r, `<g class="leafy"><rect x="-5.5" y="-46" width="11" height="46" rx="5.5" ${L('#7fae79', 1.2)}/>
         <path d="M5 -22 H10 Q13 -22 13 -26 V-34 Q13 -38 16 -38 Q19 -38 19 -34 V-24 Q19 -16 11 -16 H5 Z" ${L('#77a671', 1, 'x')}/>
         <path d="M-5 -28 H-9 Q-12 -28 -12 -32 V-38 Q-12 -42 -14.5 -42 Q-17 -42 -17 -38 V-30 Q-17 -22 -10 -22 H-5 Z" ${L('#86b47f', 1)}/>
-        <path d="M-1.5 -42 V-4 M2 -42 V-4" stroke="#5d8c58" stroke-width=".8" stroke-opacity=".7"/>
-        <circle cx="0" cy="-47" r="2.6" fill="#f08bb0"/>`);
+        <path d="M2.4 -45.45 A5.5 5.5 0 0 1 5.5 -40.5 V-5.5 A5.5 5.5 0 0 1 2.4 -.55 Z M17 -37.6 Q19 -37 19 -34 V-24 Q19 -16 11 -16 H8 Q15 -18 16.2 -24 V-34 Q16.2 -36.6 17 -37.6 Z" fill="#2b1c12" fill-opacity=".09"/>
+        <path d="M-2.1 -44 V-2 M0.9 -44.5 V-2 M3.9 -43 V-2 M16 -36.5 V-23 M-14.5 -40.5 V-29" stroke="#4f7d4b" stroke-width=".7" stroke-opacity=".55"/>
+        <path d="M-4 -40 V-6 M-15.8 -39 V-31" stroke="#fff" stroke-opacity=".28" stroke-width="1" stroke-linecap="round"/>
+        ${spines(rows.concat([[17.6, -33], [17.6, -27], [14.6, -30], [-13.2, -37], [-16, -33]]))}
+        <g transform="translate(0 -47)">${[0, 72, 144, 216, 288].map((d) => `<ellipse cy="-1.7" rx="1.25" ry="1.9" transform="rotate(${d})" fill="#f08bb0"/>`).join('')}<path d="M-.9 -1.4 L0 -2.6 L.9 -1.4" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width=".4"/><circle r=".95" fill="#f6d36a"/></g></g>`);
       return s;
     },
     bamboo: (x, y, r) => {
       const L = lit(x, y);
       let s = shadow(x - 0.36, y - 0.36, x + 0.46, y + 0.46, 0.7);
-      s += box('#3b3f4f', x - 0.28, y - 0.28, 0, x + 0.28, y + 0.28, 0.55, { t: '#6b5440', x: '#32354a', hlv: true });
-      const stalk = (dx, top, c) => { let t = `<path d="M${dx} 0 L${dx * 1.6} ${top}" stroke-width="2.6" stroke-linecap="round" ${FS(c, 'y', [x, y, 1.6])}/>`; for (let z = -12; z > top; z -= 13) t += `<path d="M${dx + (dx * 0.6) * (z / top) - 2} ${z} h4" stroke="#55703f" stroke-width="1.4"/>`; return t; };
-      const leaves = (lx, ly, dir) => `<path d="M${lx} ${ly} q${dir * 9} -5 ${dir * 16} -2 q${-dir * 9} 4 ${-dir * 16} 2 Z M${lx} ${ly + 5} q${dir * 8} 1 ${dir * 14} 6 q${-dir * 9} -1 ${-dir * 14} -6 Z" ${L('#6fa55c', 2.2)}/>`;
-      s += upright(x, y, 0.55, r, stalk(-4, -96, '#8fb36a') + stalk(1, -112, '#9cc077') + stalk(5, -84, '#86ab62') + leaves(-6, -90, -1) + leaves(2, -104, 1) + leaves(8, -76, 1) + leaves(-5, -62, -1) + leaves(3, -50, 1));
+      // 2026-11-11 (the user: finer): a glazed pot with a lip and a sheen, pale pebbles on the soil; each cane lit down one side,
+      // its joints a dark ring under a pale one; each leaf with a midrib, the lower of a pair a shade darker
+      const z = 0.55;
+      s += box('#3b3f4f', x - 0.26, y - 0.26, 0, x + 0.26, y + 0.26, z - 0.1, { t: false, x: '#32354a', hlv: true });
+      s += `<path class="ln" stroke="#fff" stroke-opacity=".16" stroke-width="2" d="${line([[x - 0.17, y + 0.263, 0.06], [x - 0.17, y + 0.263, z - 0.16]])}"/><path class="ln" stroke="#2b1c12" stroke-opacity=".25" stroke-width="1.4" d="${line([[x - 0.26, y + 0.263, z - 0.11], [x + 0.263, y + 0.263, z - 0.11], [x + 0.263, y - 0.26, z - 0.11]])}"/>`;
+      s += box('#444a5c', x - 0.29, y - 0.29, z - 0.11, x + 0.29, y + 0.29, z, { t: '#525a70', x: '#383c4e', hlv: true }) + qZ('#6b5440', z + 0.002, x - 0.24, x + 0.24, y - 0.24, y + 0.24);
+      s += `<g transform="${onZ(z + 0.004)}" ${F('#ece6d8', 't', [x, y, z])}>${[[-0.14, 0.08, 0.055], [0.1, 0.13, 0.05], [0.15, -0.1, 0.045], [-0.05, -0.15, 0.04], [0.02, 0.02, 0.035]].map(([dx, dy, rr]) => `<ellipse cx="${q2(x + dx)}" cy="${q2(y + dy)}" rx="${rr}" ry="${q2(rr * 0.75)}"/>`).join('')}</g>`;
+      const stalk = (dx, top, c) => {
+        let t = `<path d="M${dx} 0 L${dx * 1.6} ${top}" stroke-width="2.6" stroke-linecap="round" ${FS(c, 'y', [x, y, 1.6])}/><path d="M${dx - 0.6} -2 L${q2(dx * 1.6 - 0.6)} ${top + 2}" stroke="#fff" stroke-opacity=".3" stroke-width=".7"/>`;
+        for (let zz = -12; zz > top; zz -= 13) { const nx = q2(dx + (dx * 0.6) * (zz / top)); t += `<path d="M${q2(nx - 1.9)} ${zz} h3.8" stroke="#55703f" stroke-width="1.5" stroke-linecap="round"/><path d="M${q2(nx - 1.4)} ${zz - 1.3} h2.8" stroke-opacity=".6" stroke-width=".6" ${FS('#e4f0c8', 'y', [x, y, 1.6])}/>`; }
+        return t;
+      };
+      const leaves = (lx, ly, dir) => `<path d="M${lx} ${ly} q${dir * 9} -5 ${dir * 16} -2 q${-dir * 9} 4 ${-dir * 16} 2 Z" ${L('#6fa55c', 2.2)}/><path d="M${lx} ${ly + 5} q${dir * 8} 1 ${dir * 14} 6 q${-dir * 9} -1 ${-dir * 14} -6 Z" ${L('#5f954f', 2.1)}/>
+        <path d="M${lx} ${ly} q${dir * 8} -2.6 ${dir * 15} -2 M${lx} ${ly + 5} q${dir * 7} 2 ${dir * 13} 5.6" fill="none" stroke="#e4f0c8" stroke-opacity=".45" stroke-width=".5"/>`;
+      s += upright(x, y, z, r, `<g class="leafy">${stalk(-4, -96, '#8fb36a') + stalk(1, -112, '#9cc077') + stalk(5, -84, '#86ab62') + leaves(-6, -90, -1) + leaves(2, -104, 1) + leaves(8, -76, 1) + leaves(-5, -62, -1) + leaves(3, -50, 1)}</g>`);
       return s;
     },
     floorlamp: (x, y, r) => {
       const L = lit(x, y);
       let s = shadow(x - 0.34, y - 0.34, x + 0.44, y + 0.44, 0.7);
-      s += `<g transform="${onZ(0.02)}"><circle cx="${x}" cy="${y}" r=".26" ${F('#3a3d4c', 't', [x, y, 0])}/></g>`;
-      s += upright(x, y, 0, r, `<rect x="-1.4" y="-128" width="2.8" height="128" ${L('#4a4e60', 1.6)}/>
-        <ellipse cy="-150" rx="32" ry="40" fill="url(#halo)" class="night-only" style="opacity:calc(.55 + .45 * var(--f))"/>
+      // 2026-11-11 (the user: finer): a weighted base with a rim and a dome, the pole lit down one side with a collar halfway, a
+      // pleated shade with a trim at top and bottom and its top open (warm inside by night), a pull chain with a bead; by day its
+      // halo as faint as the room's own lamps'
+      s += upright(x, y, 0, r, `<path d="M-14.7 -.8 A14.7 7.35 0 0 0 14.7 -.8 V-2.6 A14.7 7.35 0 0 1 -14.7 -2.6 Z" ${L('#30323f', 0.03)}/><ellipse cy="-2.6" rx="14.7" ry="7.35" ${F('#3a3d4c', 't', [x, y, 0.06])}/>
+        <path d="M-5.6 -3.4 Q-5 -7.6 0 -7.8 Q5 -7.6 5.6 -3.4 A5.6 2.4 0 0 1 -5.6 -3.4 Z" ${L('#4a4e60', 0.15)}/><path d="M-11 -4.4 A11.6 5.4 0 0 1 4 -9" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="1"/><path d="M-3.6 -5.4 Q-2.6 -7 0 -7.2" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width=".8" stroke-linecap="round"/>
+        <rect x="-1.4" y="-128" width="2.8" height="121" ${L('#4a4e60', 1.6)}/><path d="M-.6 -126 V-9" stroke="#fff" stroke-opacity=".22" stroke-width=".7"/>
+        <rect x="-2.2" y="-66" width="4.4" height="3.6" rx="1" ${L('#5b6074', 1.65)}/><path d="M-1.6 -65.2 h2.4" stroke="#fff" stroke-opacity=".3" stroke-width=".6"/>
+        <ellipse cy="-150" rx="32" ry="40" fill="url(#halo)" class="night-only" style="opacity:calc((.55 + .45 * var(--f)) * (1 - .7 * var(--day)))"/>
         <path d="M-16 -128 L-11 -156 H11 L16 -128 Z" style="fill:color-mix(in srgb,#f4ead2 calc(var(--day)*100%),#ffd27a)"/>
         <path d="M-16 -128 L-11 -156 H11 L16 -128 Z" fill="#000" fill-opacity=".05" class="day-only"/>
-        <ellipse cy="-128" rx="16" ry="4" style="fill:color-mix(in srgb,#e7dcc2 calc(var(--day)*100%),#fff1c4)"/>
-        <path d="M-13 -134 L-9.5 -152" stroke="#fff" stroke-opacity=".5" stroke-width="1.4"/>`);
+        <path d="${[1, 2, 3, 4, 5].map((k) => `M${q2(-11 + 22 * k / 6)} -155 L${q2(-16 + 32 * k / 6)} -129`).join(' ')}" stroke="#2b1c12" stroke-opacity=".06" stroke-width=".8"/><path d="M16 -128 L11 -156 H5 L8.6 -128 Z" fill="#2b1c12" fill-opacity=".05"/>
+        <ellipse cy="-156" rx="11" ry="2.6" style="fill:color-mix(in srgb,#ddd0b2 calc(var(--day)*100%),#fff1c4)"/><path d="M-11 -156 A11 2.6 0 0 0 11 -156" fill="none" stroke="#c9b48a" stroke-width="1"/>
+        <ellipse cy="-128" rx="16" ry="4" style="fill:color-mix(in srgb,#e7dcc2 calc(var(--day)*100%),#fff1c4)"/><path d="M-16 -128 A16 4 0 0 0 16 -128" fill="none" stroke="#c9b48a" stroke-width="1.3"/>
+        <path d="M-13 -134 L-9.5 -152" stroke="#fff" stroke-opacity=".5" stroke-width="1.4"/>
+        <path d="M6.4 -125 V-113.6" stroke="#a89464" stroke-width=".7" stroke-dasharray="1.1 .5"/><circle cx="6.4" cy="-112.4" r="1.3" ${L('#c9a24e', 2.8)}/>`);
       return s;
     },
-    andon: (x, y, r) => {
+    andon: (x, y, r) => {   // 2026-11-11 (the user: finer): the base cut away between its feet, a lattice of thin bars over the paper; by day its pool as faint as the room's own lamps'
       const h = 1.3, paper = 'style="fill:color-mix(in srgb,#f6eedb calc(var(--day)*100%),#ffd98a)"';
       let s = shadow(x - 0.4, y - 0.4, x + 0.5, y + 0.5, 0.7);
-      s += `<g class="night-only" style="opacity:calc(.5 + .5 * var(--f))"><g transform="${onZ(0.01)}"><ellipse cx="${x}" cy="${y}" rx="1.2" ry="1.2" fill="url(#pool)"/></g></g>`;
+      s += `<g class="night-only" style="opacity:calc((.5 + .5 * var(--f)) * (1 - .7 * var(--day)))"><g transform="${onZ(0.01)}"><ellipse cx="${x}" cy="${y}" rx="1.2" ry="1.2" fill="url(#pool)"/></g></g>`;
       s += box(C.walnut, x - 0.3, y - 0.3, 0, x + 0.3, y + 0.3, 0.12, { t: C.oak });
+      s += `<path d="${poly([[x - 0.22, y + 0.301, 0], [x + 0.22, y + 0.301, 0], [x + 0.22, y + 0.301, 0.05], [x - 0.22, y + 0.301, 0.05]])} ${poly([[x + 0.301, y - 0.22, 0], [x + 0.301, y + 0.22, 0], [x + 0.301, y + 0.22, 0.05], [x + 0.301, y - 0.22, 0.05]])}" fill="#2b1c12" fill-opacity=".38"/>`;
       s += `<path ${paper} d="${poly([[x - 0.27, y + 0.27, 0.12], [x + 0.27, y + 0.27, 0.12], [x + 0.27, y + 0.27, h], [x - 0.27, y + 0.27, h]])}"/><path ${paper} d="${poly([[x + 0.27, y - 0.27, 0.12], [x + 0.27, y + 0.27, 0.12], [x + 0.27, y + 0.27, h], [x + 0.27, y - 0.27, h]])}"/>`;
       s += `<path d="${poly([[x + 0.27, y - 0.27, 0.12], [x + 0.27, y + 0.27, 0.12], [x + 0.27, y + 0.27, h], [x + 0.27, y - 0.27, h]])}" fill="#000" fill-opacity=".08"/>`;
       s += `<path class="ln" stroke-width="1.6" ${FS(C.walnut, 'y', [x, y, 0.7])} d="${line([[x - 0.3, y + 0.3, 0.12], [x - 0.3, y + 0.3, h + 0.04]])} ${line([[x + 0.3, y + 0.3, 0.12], [x + 0.3, y + 0.3, h + 0.04]])} ${line([[x + 0.3, y - 0.3, 0.12], [x + 0.3, y - 0.3, h + 0.04]])} ${line([[x - 0.3, y + 0.3, 0.7], [x + 0.3, y + 0.3, 0.7], [x + 0.3, y - 0.3, 0.7]])}"/>`;
+      s += `<path class="ln" stroke-width=".8" stroke-opacity=".85" ${FS(C.walnut, 'y', [x, y, 0.7])} d="${line([[x, y + 0.272, 0.12], [x, y + 0.272, h]])} ${line([[x + 0.272, y, 0.12], [x + 0.272, y, h]])} ${[0.41, 0.99].map((zz) => line([[x - 0.27, y + 0.272, zz], [x + 0.272, y + 0.272, zz], [x + 0.272, y - 0.27, zz]])).join(' ')}"/>`;
       s += box(C.walnut, x - 0.32, y - 0.32, h, x + 0.32, y + 0.32, h + 0.08, { t: C.oak });
       return s;
     },
-    chabudai: (x, y, r) => {
-      const h = 0.62, top = `<g transform="${onZ(h)}"><circle cx="${x}" cy="${y}" r=".76" ${F(C.oakTop, 't', [x, y, h])}/><circle cx="${x}" cy="${y}" r=".62" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width=".03"/></g>`;
+    chabudai: (x, y, r) => {   // 2026-11-11 (the user: finer): grain on the top; the teapot's lid seam and sheen, tea in the cup and a glint on it
+      const m = (dx, dy) => `${q2(x + dx)} ${q2(y + dy)}`;
+      const h = 0.62, top = `<g transform="${onZ(h)}"><circle cx="${x}" cy="${y}" r=".76" ${F(C.oakTop, 't', [x, y, h])}/><circle cx="${x}" cy="${y}" r=".62" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width=".03"/><path d="M${m(-0.56, 0.26)} Q${m(-0.12, -0.12)} ${m(0.5, 0.08)} M${m(-0.42, 0.48)} Q${m(0.02, 0.22)} ${m(0.44, 0.42)} M${m(-0.48, -0.3)} Q${m(-0.04, -0.52)} ${m(0.36, -0.42)}" fill="none" stroke="#8a6a4a" stroke-opacity=".14" stroke-width=".02"/></g>`;
       let s = shadow(x - 0.8, y - 0.8, x + 0.9, y + 0.9, 0.75);
       [[-1, 0], [0, -1], [1, 0], [0, 1]].forEach(([a, b]) => { s += box(C.oakDk, x + a * 0.5 - 0.05, y + b * 0.5 - 0.05, 0, x + a * 0.5 + 0.05, y + b * 0.5 + 0.05, h - 0.06, { hl: false }); });
       s += `<path ${F(C.oak, 'y', [x, y + 0.7, h - 0.05])} d="M${pt(x - 0.76 * Math.SQRT1_2, y + 0.76 * Math.SQRT1_2, h)} A${(0.76 * S * Math.SQRT2).toFixed(1)} ${(0.76 * S * Math.SQRT1_2).toFixed(1)} 0 0 0 ${pt(x + 0.76 * Math.SQRT1_2, y - 0.76 * Math.SQRT1_2, h)} L${pt(x + 0.76 * Math.SQRT1_2, y - 0.76 * Math.SQRT1_2, h - 0.08)} A${(0.76 * S * Math.SQRT2).toFixed(1)} ${(0.76 * S * Math.SQRT1_2).toFixed(1)} 0 0 1 ${pt(x - 0.76 * Math.SQRT1_2, y + 0.76 * Math.SQRT1_2, h - 0.08)} Z"/>`;
       s += top;
-      s += upright(x - 0.15, y + 0.1, h, r, `<ellipse rx="9" ry="3" fill="#2b1c12" fill-opacity=".15"/><path ${F('#6f8a9c', 'y', [x, y, h + 0.3])} d="M-8 -1 C-10 -8 -8 -14 0 -15 C8 -14 10 -8 8 -1 Z"/><path d="M8 -9 Q14 -10 14 -15" fill="none" stroke="#5c7585" stroke-width="2"/><ellipse cy="-15" rx="5" ry="1.6" fill="#55707f"/><circle cy="-17" r="1.6" fill="#55707f"/>`);
-      s += upright(x + 0.3, y - 0.12, h, r, `<path ${F('#e9e1d2', 'y', [x, y, h + 0.2])} d="M-4 0 L-4.6 -7 H4.6 L4 0 Z"/><ellipse cy="-7" rx="4.6" ry="1.5" fill="#9bbf7a"/>`);
+      s += upright(x - 0.15, y + 0.1, h, r, `<ellipse rx="9" ry="3" fill="#2b1c12" fill-opacity=".15"/><path ${F('#6f8a9c', 'y', [x, y, h + 0.3])} d="M-8 -1 C-10 -8 -8 -14 0 -15 C8 -14 10 -8 8 -1 Z"/><path d="M8 -9 Q14 -10 14 -15" fill="none" stroke="#5c7585" stroke-width="2"/><ellipse cy="-15" rx="5" ry="1.6" fill="#55707f"/><circle cy="-17" r="1.6" fill="#55707f"/><path d="M-6 -12.6 Q0 -10.6 6 -12.6" fill="none" stroke="#2b1c12" stroke-opacity=".2" stroke-width=".7"/><path d="M-6.4 -3 C-7.4 -7 -5.6 -10.6 -2 -11.6" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="1.2" stroke-linecap="round"/>`);
+      s += upright(x + 0.3, y - 0.12, h, r, `<path ${F('#e9e1d2', 'y', [x, y, h + 0.2])} d="M-4 0 L-4.6 -7 H4.6 L4 0 Z"/><ellipse cy="-7" rx="4.6" ry="1.5" ${F('#e9e1d2', 't', [x, y, h + 0.2])}/><ellipse cy="-6.8" rx="3.8" ry="1.1" fill="#9bbf7a"/><path d="M-3 -1.4 L-3.4 -5.6" stroke="#fff" stroke-opacity=".45" stroke-width=".8" stroke-linecap="round"/>`);
       return s;
     },
-    zabuton: (x, y, r) => {
-      const h = 0.2, c = r ? '#c8553f' : '#4f6aa8';
+    zabuton: (x, y, r) => {   // 2026-11-11 (the user: finer): a plump cushion: the seam round its sides, the top rolling over at the edges and pulled in to the tuft in the middle, a tassel there and at the corners
+      const h = 0.2, c = r ? '#c8553f' : '#4f6aa8', i = 0.46, a = [x, y, h], gold = (z) => F('#e6c36a', 'y', [x, y + i, z]);
       let s = shadow(x - 0.52, y - 0.52, x + 0.62, y + 0.62, 0.6);
-      s += box(c, x - 0.46, y - 0.46, 0, x + 0.46, y + 0.46, h, { t: c, hlv: true });
-      s += `<g transform="${onZ(h + 0.004)}"><rect x="${q2(x - 0.4)}" y="${q2(y - 0.4)}" width=".8" height=".8" rx=".14" fill="#fff" fill-opacity=".08"/><circle cx="${x}" cy="${y}" r=".06" fill="#f2d27a"/><path d="M${q2(x - 0.1)} ${y} h.2 M${x} ${q2(y - 0.1)} v.2" stroke="#f2d27a" stroke-width=".03"/></g>`;
+      s += box(c, x - i, y - i, 0, x + i, y + i, h, { t: c, hlv: true });
+      s += `<path class="ln" stroke="#2b1c12" stroke-opacity=".2" stroke-width="1" d="${line([[x - i + 0.04, y + i + 0.004, h * 0.48], [x + i + 0.004, y + i + 0.004, h * 0.48], [x + i + 0.004, y - i + 0.04, h * 0.48]])}"/>`;
+      const m = (dx, dy) => `${q2(x + dx)} ${q2(y + dy)}`;
+      s += `<g transform="${onZ(h + 0.004)}"><rect x="${q2(x - 0.43)}" y="${q2(y - 0.43)}" width=".86" height=".86" rx=".12" fill="none" stroke="#2b1c12" stroke-opacity=".1" stroke-width=".05"/>
+        <rect x="${q2(x - 0.36)}" y="${q2(y - 0.36)}" width=".72" height=".72" rx=".24" fill="#fff" fill-opacity=".09"/><path d="M${q2(x - 0.4)} ${q2(y + 0.3)} Q${m(-0.4, -0.4)} ${m(0.3, -0.4)}" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width=".04" stroke-linecap="round"/>
+        <path d="M${m(-0.34, -0.34)} L${m(-0.06, -0.06)} M${m(0.34, -0.34)} L${m(0.06, -0.06)} M${m(-0.34, 0.34)} L${m(-0.06, 0.06)} M${m(0.34, 0.34)} L${m(0.06, 0.06)}" stroke="#2b1c12" stroke-opacity=".1" stroke-width=".035" stroke-linecap="round"/>
+        <circle cx="${x}" cy="${y}" r=".09" fill="#2b1c12" fill-opacity=".14"/><path d="M${m(-0.08, -0.05)} L${m(0.08, 0.05)} M${m(-0.08, 0.05)} L${m(0.08, -0.05)} M${m(0, -0.09)} V${q2(y + 0.09)}" stroke-width=".03" stroke-linecap="round" ${FS('#e6c36a', 't', a)}/><circle cx="${x}" cy="${y}" r=".035" ${F('#f2d27a', 't', a)}/></g>`;
+      s += [[x - i, y + i], [x + i, y + i], [x + i, y - i]].map(([cx, cy]) => bb(cx, cy, h * 0.6, `<path d="M-.9 0 Q0 -1.6 .9 0 L1.3 4.2 H-1.3 Z" ${gold(h * 0.4)}/><path d="M-.6 1.6 V4 M.6 1.6 V4" stroke="#2b1c12" stroke-opacity=".2" stroke-width=".4"/>`)).join('');
       return s;
     },
-    daruma: (x, y, r) => {
+    daruma: (x, y, r) => {   // 2026-11-11 (the user: finer): the shaded side, a nose, a moustache and the beard down the cheeks
       const L = lit(x, y), both = Object.values(state.stageTests || {}).some((a) => Array.isArray(a) && a.some((t) => t && t.passed));
       const eye = (cx, on) => `<circle cx="${cx}" cy="-37" r="4.4" fill="#fff"/>${on ? `<circle cx="${cx}" cy="-37" r="2.8" fill="#1f1d24"/>` : ''}`;
       let s = shadow(x - 0.42, y - 0.42, x + 0.5, y + 0.5, 0.7);
       s += upright(x, y, 0, r, `<g transform="scale(.78)"><ellipse rx="17" ry="5" fill="#2b1c12" fill-opacity=".14"/>
         <path ${L('#d4443a', 0.7)} d="M0 -58 C16 -58 24 -44 24 -28 C24 -10 14 0 0 0 C-14 0 -24 -10 -24 -28 C-24 -44 -16 -58 0 -58 Z"/>
+        <path d="M11 -55 C19 -51 24 -42 24 -28 C24 -10 14 0 0 0 C10 -3 18 -13 18.6 -28 C19 -40 16 -50 11 -55 Z" fill="#2b1c12" fill-opacity=".1"/>
         <path d="M-9 -54 C-16 -48 -20 -38 -19 -26" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="2.4" stroke-linecap="round"/>
         <path d="M0 -50 C10 -50 14 -42 14 -34 C14 -26 8 -22 0 -22 C-8 -22 -14 -26 -14 -34 C-14 -42 -10 -50 0 -50 Z" fill="#fbf3e2"/>
         ${eye(-6, true)}${eye(6, both)}
         <path d="M-7 -28 Q0 -24 7 -28 M-11 -44 q3 -2 6 0 M5 -44 q3 -2 6 0" fill="none" stroke="#1f1d24" stroke-width="1.4" stroke-linecap="round"/>
+        <path d="M-12.4 -34 q-.6 5 2.6 9 M12.4 -34 q.6 5 -2.6 9 M-5.6 -31 q2.8 1.2 5.6 -.4 q2.8 1.6 5.6 .4" fill="none" stroke="#1f1d24" stroke-width="1.1" stroke-linecap="round"/><path d="M-1.2 -33.4 q1.2 1 2.4 0" fill="none" stroke="#1f1d24" stroke-opacity=".6" stroke-width=".9" stroke-linecap="round"/>
         <path d="M-12 -14 Q0 -18 12 -14" fill="none" stroke="#e6c25a" stroke-width="2"/><text y="-6" font-size="7" font-weight="700" text-anchor="middle" fill="#f6dc8a" font-family="'Hiragino Mincho ProN', serif">合格</text></g>`);
       return s;
     },
-    manekineko: (x, y, r) => {
+    manekineko: (x, y, r) => {   // 2026-11-11 (the user: finer): the shaded side, whiskers, the bell's slot, a glint on the koban
       const L = lit(x, y);
       let s = shadow(x - 0.32, y - 0.32, x + 0.4, y + 0.4, 0.7);
       s += upright(x, y, 0, r, `<ellipse rx="13" ry="4" fill="#2b1c12" fill-opacity=".14"/>
@@ -2136,45 +2210,78 @@ const DECOR = (() => {
         <path d="M-6 -32 q2 -1.6 4 0 M2 -32 q2 -1.6 4 0" fill="none" stroke="#2a2730" stroke-width="1.2" stroke-linecap="round"/><path d="M-1 -28 l1 1 l1 -1" fill="none" stroke="#2a2730" stroke-width=".9"/>
         <path d="M-7 -24 Q0 -21 7 -24" fill="none" stroke="#d0453c" stroke-width="2.4"/><circle cy="-21" r="2.4" fill="#e6c25a"/>
         <ellipse cx="-3" cy="-11" rx="6" ry="7.5" fill="#e6c25a" stroke="#b98a28" stroke-width=".8"/><path d="M-6 -15 H0 M-6.4 -12 H0.4 M-6.4 -9 H0.4 M-6 -6 H0" stroke="#b98a28" stroke-width=".6"/>
-        <circle cx="-9" cy="-35" r="2.2" fill="#e88a3a" fill-opacity=".85"/><circle cx="7" cy="-38" r="1.6" fill="#3a3640" fill-opacity=".75"/>`);
+        <circle cx="-9" cy="-35" r="2.2" fill="#e88a3a" fill-opacity=".85"/><circle cx="7" cy="-38" r="1.6" fill="#3a3640" fill-opacity=".75"/>
+        <path d="M8 -26 C11.4 -21 13 -11 12 0 H7.6 C9 -9 9.2 -19 6.4 -25.4 Z" fill="#2b1c12" fill-opacity=".07"/>
+        <path d="M-7 -29.4 L-12.4 -30.6 M-7 -28 L-12.4 -27.6 M7 -29.4 L12 -30.4 M7 -28 L12 -27.6" stroke="#2a2730" stroke-opacity=".35" stroke-width=".5" stroke-linecap="round"/>
+        <path d="M-1.4 -20.6 H1.4 M0 -20.6 V-19" stroke="#8a6420" stroke-width=".6" stroke-linecap="round"/><path d="M-7 -14 Q-6.8 -16.6 -4.6 -17.4" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width=".9" stroke-linecap="round"/>`);
       return s;
     },
     guitar: (x, y, r) => {
       const L = lit(x, y);
       let s = shadow(x - 0.36, y - 0.32, x + 0.46, y + 0.4, 0.7);
-      s += upright(x, y, 0, r, `<path d="M-10 0 L-3 -24 M10 0 L3 -24 M-8 -8 H8" fill="none" stroke="#3a3640" stroke-width="2" stroke-linecap="round"/>
+      // 2026-11-11 (the user: finer): rubber feet on the stand; frets and a nut on the neck, tuning pegs on the head, a cream
+      // binding round the body, a rosette round the sound hole, a pickguard, the bridge's saddle
+      const body = 'M0 -48 C10 -48 13 -40 10 -33 C16 -29 18 -20 14 -12 C10 -4 4 -2 0 -2 C-4 -2 -10 -4 -14 -12 C-18 -20 -16 -29 -10 -33 C-13 -40 -10 -48 0 -48 Z';
+      const frets = [-88.5, -83.5, -79, -75, -71.4, -68, -65, -62.2, -59.6, -57.2, -55, -53, -51, -49.2];
+      s += upright(x, y, 0, r, `<path d="M-10 0 L-3 -24 M10 0 L3 -24 M-8 -8 H8" fill="none" stroke="#3a3640" stroke-width="2" stroke-linecap="round"/><path d="M-11.2 .2 h2.6 M8.6 .2 h2.6" stroke="#2a2730" stroke-width="1.6" stroke-linecap="round"/>
         <g transform="rotate(-8)"><rect x="-2.6" y="-92" width="5.2" height="52" rx="1.2" ${L('#6e4a33', 1.8)}/><path d="M-4 -104 H4 L3 -91 H-3 Z" ${L('#4f3627', 2.4)}/>
-        <path ${L('#d79a5a', 1)} d="M0 -48 C10 -48 13 -40 10 -33 C16 -29 18 -20 14 -12 C10 -4 4 -2 0 -2 C-4 -2 -10 -4 -14 -12 C-18 -20 -16 -29 -10 -33 C-13 -40 -10 -48 0 -48 Z"/>
-        <circle cy="-26" r="4.6" fill="#3a2a1f"/><rect x="-6" y="-12" width="12" height="2.6" rx="1" fill="#4f3627"/>
+        <path d="${frets.map((f) => `M-2.4 ${f} H2.4`).join(' ')}" stroke="#d9c9a8" stroke-opacity=".7" stroke-width=".45"/><rect x="-2.8" y="-92.4" width="5.6" height="1.1" rx=".4" ${L('#efe6d2', 2.3)}/>
+        <g ${L('#d8d2c4', 2.6)}>${[-101.4, -97.8, -94.2].map((py) => `<circle cx="-5.2" cy="${py}" r="1"/><circle cx="5.1" cy="${py}" r="1"/>`).join('')}</g><path d="M-1.6 -102.6 V-93 M1.6 -102.6 V-93" stroke="#2b1c12" stroke-opacity=".3" stroke-width=".5"/>
+        <path ${L('#d79a5a', 1)} d="${body}"/><path d="M8 -34 C14 -29 16 -20 12.6 -13 C9.6 -6.6 4.4 -3.6 0 -3.6" fill="none" stroke="#2b1c12" stroke-opacity=".12" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="${body}" fill="none" stroke-width=".8" ${FS('#f3e3c4', 'y', [x, y, 0.8])}/>
+        <path d="M3.6 -22.6 C7.6 -23 9.6 -19.6 8.6 -16.4 C7.4 -13.6 4.2 -14.4 3 -17.4 Z" fill="#4f3627" fill-opacity=".55"/>
+        <circle cy="-26" r="6.2" fill="none" stroke="#4f3627" stroke-opacity=".55" stroke-width=".8"/><circle cy="-26" r="5.4" fill="none" stroke-width=".5" ${FS('#f3e3c4', 'y', [x, y, 0.8])}/><circle cy="-26" r="4.6" fill="#3a2a1f"/>
+        <rect x="-6" y="-12" width="12" height="2.6" rx="1" fill="#4f3627"/><path d="M-4 -11.2 H4" stroke-width=".6" ${FS('#efe6d2', 'y', [x, y, 0.4])}/>
         <path d="M-1.2 -100 V-11 M1.2 -100 V-11" stroke="#f3eee2" stroke-width=".5" stroke-opacity=".8"/>
-        <path d="M-9 -40 C-12 -33 -12 -26 -9 -20" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.6" stroke-linecap="round"/></g>`);
+        <path d="M-9 -40 C-12 -33 -12 -26 -9 -20" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.6" stroke-linecap="round"/><path d="M-1.6 -90 V-44" stroke="#fff" stroke-opacity=".14" stroke-width=".6"/></g>`);
       return s;
     },
-    pumpkin: (x, y, r) => {   // 南瓜燈 (Halloween): a carved pumpkin, lit from inside by night
+    pumpkin: (x, y, r) => {   // 南瓜燈 (Halloween): a carved pumpkin, lit from inside by night (2026-11-11, the user: finer: a sheen down its left, the stem's cut end; by day its pool as faint as the room's own lamps')
       const L = lit(x, y), carve = 'style="fill:color-mix(in srgb,#5a2e12 calc(var(--day)*100%),#ffd36a)"';
       let s = shadow(x - 0.36, y - 0.36, x + 0.44, y + 0.44, 0.7);
-      s += `<g class="night-only" style="opacity:calc(.5 + .5 * var(--f))"><g transform="${onZ(0.01)}"><ellipse cx="${x}" cy="${y}" rx="1" ry="1" fill="url(#pool)"/></g></g>`;
+      s += `<g class="night-only" style="opacity:calc((.5 + .5 * var(--f)) * (1 - .7 * var(--day)))"><g transform="${onZ(0.01)}"><ellipse cx="${x}" cy="${y}" rx="1" ry="1" fill="url(#pool)"/></g></g>`;
       s += upright(x, y, 0, r, `<ellipse rx="15" ry="4" fill="#2b1c12" fill-opacity=".14"/><path ${L('#e8873a', 0.5)} d="M0 -1 C-11 -1 -18 -7 -18 -16 C-18 -25 -11 -31 0 -31 C11 -31 18 -25 18 -16 C18 -7 11 -1 0 -1 Z"/>
         <path d="M-7 -30 C-11 -23 -11 -9 -7 -2 M7 -30 C11 -23 11 -9 7 -2" fill="none" stroke="#c4621f" stroke-width="1.3" stroke-opacity=".7"/><path ${L('#5f7a3a', 1.1)} d="M-1.8 -30 Q-2.2 -36 1.4 -38.4 L3.4 -36.6 Q1.2 -34 1.8 -30 Z"/>
+        <path d="M-14 -23 C-16 -18 -16 -12 -13 -7" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="1.6" stroke-linecap="round"/><path d="M12 -27 C17 -22 17 -10 11 -4.4 C15 -9 15.4 -21 12 -27 Z" fill="#2b1c12" fill-opacity=".1"/><ellipse cx="2.4" cy="-37.6" rx="1.1" ry=".6" transform="rotate(-40 2.4 -37.6)" fill="#b9c48a"/>
         <path ${carve} d="M-9 -20 L-4.6 -20 L-6.8 -24.4 Z M4.6 -20 L9 -20 L6.8 -24.4 Z M-10 -12 Q0 -6 10 -12 L7.6 -12.4 L6 -10.2 L4 -12 L2 -10 L0 -12 L-2 -10 L-4 -12 L-6 -10.2 L-7.6 -12.4 Z"/>`);
       return s;
     },
-    rushmat: (x, y) => {
-      let rings = ''; for (let k = 0.86; k > 0.1; k -= 0.14) rings += `<circle cx="${x}" cy="${y}" r="${q2(k)}" fill="none" stroke="#9c7a4a" stroke-opacity=".35" stroke-width=".025"/>`;
-      return `<g transform="${onZ(0.012)}"><circle cx="${q2(x + 0.06)}" cy="${q2(y + 0.06)}" r="1.02" fill="#2b1c12" fill-opacity=".1"/><circle cx="${x}" cy="${y}" r="1" ${F('#d8bf8c', 't', [x, y, 0])}/>${rings}<circle cx="${x}" cy="${y}" r=".98" fill="none" stroke="#a9875a" stroke-width=".05"/></g>`;
+    rushmat: (x, y) => {   // 2026-11-11 (the user: finer): a coil of rush: its rings, a darker woven band, the stitches binding ring to ring (staggered), a bound rim with a pale lip, a knot in the middle
+      let rings = '', st = '';
+      for (let k = 0.86, n = 0; k > 0.1; k -= 0.12, n++) {
+        rings += `<circle cx="${x}" cy="${y}" r="${q2(k)}" fill="none" stroke="#9c7a4a" stroke-opacity=".32" stroke-width=".022"/>`;
+        const m = Math.round(k * 16);
+        for (let i = 0; i < m; i++) { const t = (i + (n % 2) * 0.5) / m * 2 * Math.PI, c = Math.cos(t), s2 = Math.sin(t); st += `M${q2(x + c * (k - 0.1))} ${q2(y + s2 * (k - 0.1))} L${q2(x + c * (k - 0.02))} ${q2(y + s2 * (k - 0.02))}`; }
+      }
+      return `<g transform="${onZ(0.012)}"><circle cx="${q2(x + 0.06)}" cy="${q2(y + 0.06)}" r="1.02" fill="#2b1c12" fill-opacity=".1"/><circle cx="${x}" cy="${y}" r="1" ${F('#d8bf8c', 't', [x, y, 0])}/>
+        <circle cx="${x}" cy="${y}" r=".68" fill="none" stroke="#8a6a3a" stroke-opacity=".16" stroke-width=".1"/><circle cx="${x}" cy="${y}" r=".32" fill="none" stroke="#8a6a3a" stroke-opacity=".12" stroke-width=".08"/>${rings}
+        <path d="${st}" stroke="#8c6a3c" stroke-opacity=".3" stroke-width=".022" stroke-linecap="round"/>
+        <circle cx="${x}" cy="${y}" r=".97" fill="none" stroke-width=".06" ${FS('#a9875a', 't', [x, y, 0])}/><circle cx="${x}" cy="${y}" r=".93" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width=".015"/>
+        <circle cx="${x}" cy="${y}" r=".06" ${F('#b8945e', 't', [x, y, 0])}/><circle cx="${q2(x - 0.015)}" cy="${q2(y - 0.015)}" r=".025" fill="#fff" fill-opacity=".3"/></g>`;
     },
     rug: (x, y, r, it) => {
-      const [w, d] = r ? [it.fp[1], it.fp[0]] : it.fp, x0 = q2(x - w / 2), y0 = q2(y - d / 2);
-      let waves = '';
-      for (let i = 0; i < Math.floor((w - 0.5) / 0.32); i++) for (const yy of [y0 + 0.22, q2(y0 + d - 0.22)]) waves += `<path d="M${q2(x0 + 0.25 + i * 0.32)} ${q2(yy + 0.08)} a.16 .16 0 0 1 .32 0" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width=".03"/>`;
-      return `<g transform="${onZ(0.012)}"><rect x="${q2(x0 + 0.06)}" y="${q2(y0 + 0.06)}" width="${w}" height="${d}" rx=".08" fill="#2b1c12" fill-opacity=".1"/><rect x="${x0}" y="${y0}" width="${w}" height="${d}" rx=".08" ${F('#3f5f94', 't', [x, y, 0])}/>
-        <rect x="${q2(x0 + 0.12)}" y="${q2(y0 + 0.12)}" width="${q2(w - 0.24)}" height="${q2(d - 0.24)}" rx=".05" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width=".035"/>${waves}
-        <rect x="${q2(x0 + 0.5)}" y="${q2(y0 + 0.5)}" width="${q2(w - 1)}" height="${q2(d - 1)}" rx=".04" fill="#fff" fill-opacity=".07"/></g>`;
+      // 2026-11-11 (the user: finer): white fringe on its short ends (inside its footprint), double-ringed waves, a dark bound edge,
+      // a plum-blossom crest in the middle
+      const [W, D] = r ? [it.fp[1], it.fp[0]] : it.fp, fx = W >= D ? 0.08 : 0, fy = W >= D ? 0 : 0.08, w = q2(W - 2 * fx), d = q2(D - 2 * fy), x0 = q2(x - w / 2), y0 = q2(y - d / 2);
+      let waves = '', fr = '';
+      for (let i = 0; i < Math.floor((w - 0.5) / 0.32); i++) for (const yy of [y0 + 0.22, q2(y0 + d - 0.22)]) waves += `M${q2(x0 + 0.25 + i * 0.32)} ${q2(yy + 0.08)} a.16 .16 0 0 1 .32 0 M${q2(x0 + 0.32 + i * 0.32)} ${q2(yy + 0.08)} a.09 .09 0 0 1 .18 0 `;
+      if (fx) for (let v = y0 + 0.06; v < y0 + d - 0.04; v += 0.06) fr += `M${q2(x0 - fx)} ${q2(v)} H${x0} M${q2(x0 + w)} ${q2(v)} H${q2(x0 + w + fx)} `;
+      else for (let u = x0 + 0.06; u < x0 + w - 0.04; u += 0.06) fr += `M${q2(u)} ${q2(y0 - fy)} V${y0} M${q2(u)} ${q2(y0 + d)} V${q2(y0 + d + fy)} `;
+      const crest = [0, 72, 144, 216, 288].map((a) => `<circle cx="${q2(x + 0.11 * Math.sin(a * Math.PI / 180))}" cy="${q2(y - 0.11 * Math.cos(a * Math.PI / 180))}" r=".065"/>`).join('');
+      return `<g transform="${onZ(0.012)}"><rect x="${q2(x0 + 0.06)}" y="${q2(y0 + 0.06)}" width="${w}" height="${d}" rx=".08" fill="#2b1c12" fill-opacity=".1"/>
+        <path d="${fr}" stroke-width=".022" stroke-linecap="round" ${FS('#efe9dc', 't', [x, y, 0])}/><rect x="${x0}" y="${y0}" width="${w}" height="${d}" rx=".08" ${F('#3f5f94', 't', [x, y, 0])}/>
+        <rect x="${q2(x0 + 0.015)}" y="${q2(y0 + 0.015)}" width="${q2(w - 0.03)}" height="${q2(d - 0.03)}" rx=".07" fill="none" stroke="#2b1c12" stroke-opacity=".2" stroke-width=".03"/>
+        <rect x="${q2(x0 + 0.12)}" y="${q2(y0 + 0.12)}" width="${q2(w - 0.24)}" height="${q2(d - 0.24)}" rx=".05" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width=".035"/><path d="${waves}" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width=".03"/>
+        <rect x="${q2(x0 + 0.5)}" y="${q2(y0 + 0.5)}" width="${q2(w - 1)}" height="${q2(d - 1)}" rx=".04" fill="#fff" fill-opacity=".07"/>
+        <g fill="#fff" fill-opacity=".42">${crest}<circle cx="${x}" cy="${y}" r=".035"/></g><circle cx="${x}" cy="${y}" r=".2" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width=".022"/></g>`;
     },
-    tatami: (x, y, r, it) => {
+    tatami: (x, y, r, it) => {   // 2026-11-11 (the user: finer): a pattern woven along each border, the rush's two-tone rows, the second mat catching the light differently, its edge rolled
       const [w, d] = r ? [it.fp[1], it.fp[0]] : it.fp, x0 = q2(x - w / 2), y0 = q2(y - d / 2), half = q2(w / 2);
-      const mat = (mx) => `<rect x="${mx}" y="${y0}" width="${half}" height="${d}" ${F('#cdbf86', 't', [x, y, 0])}/><path d="${Array.from({ length: Math.floor(d / 0.1) }, (_, i) => `M${q2(mx + 0.08)} ${q2(y0 + 0.05 + i * 0.1)} H${q2(mx + half - 0.08)}`).join(' ')}" stroke="#9c8f52" stroke-opacity=".28" stroke-width=".015"/><rect x="${mx}" y="${y0}" width=".07" height="${d}" fill="#3f4a3a"/><rect x="${q2(mx + half - 0.07)}" y="${y0}" width=".07" height="${d}" fill="#3f4a3a"/>`;
-      return `<g transform="${onZ(0.014)}"><rect x="${q2(x0 + 0.06)}" y="${q2(y0 + 0.06)}" width="${w}" height="${d}" fill="#2b1c12" fill-opacity=".12"/>${mat(x0)}${mat(q2(x0 + half))}</g>`;
+      const heri = (hx) => `<rect x="${hx}" y="${y0}" width=".07" height="${d}" fill="#3f4a3a"/><path d="M${q2(hx + 0.035)} ${q2(y0 + 0.04)} V${q2(y0 + d - 0.04)}" stroke="#e8e2c8" stroke-opacity=".3" stroke-width=".022" stroke-dasharray=".03 .05"/>`;
+      const mat = (mx, k) => `<rect x="${mx}" y="${y0}" width="${half}" height="${d}" ${F('#cdbf86', 't', [x, y, 0])}/><path d="${Array.from({ length: Math.floor(d / 0.1) }, (_, i) => `M${q2(mx + 0.08)} ${q2(y0 + 0.05 + i * 0.1)} H${q2(mx + half - 0.08)}`).join(' ')}" stroke="#9c8f52" stroke-opacity=".28" stroke-width=".015"/>
+        <path d="${Array.from({ length: Math.floor(d / 0.2) }, (_, i) => `M${q2(mx + 0.08)} ${q2(y0 + 0.1 + i * 0.2)} H${q2(mx + half - 0.08)}`).join(' ')}" stroke="#fff" stroke-opacity=".1" stroke-width=".02"/>${k ? `<rect x="${mx}" y="${y0}" width="${half}" height="${d}" fill="#fff" fill-opacity=".07"/>` : ''}
+        <path d="M${q2(mx + 0.07)} ${q2(y0 + d - 0.012)} H${q2(mx + half - 0.07)}" stroke="#2b1c12" stroke-opacity=".12" stroke-width=".025"/>${heri(mx)}${heri(q2(mx + half - 0.07))}`;
+      return `<g transform="${onZ(0.014)}"><rect x="${q2(x0 + 0.06)}" y="${q2(y0 + 0.06)}" width="${w}" height="${d}" fill="#2b1c12" fill-opacity=".12"/>${mat(x0, 0)}${mat(q2(x0 + half), 1)}</g>`;
     }
   };
   const crate = (x, y, it, r) => { const [w, d] = r ? [it.fp[1], it.fp[0]] : it.fp; return shadow(x - w / 2 - 0.05, y - d / 2 - 0.05, x + w / 2 + 0.15, y + d / 2 + 0.15, 0.7) + box(C.oak, x - w / 2, y - d / 2, 0, x + w / 2, y + d / 2, 0.6, { t: C.oakTop, x: C.oakDk, hlv: true }); };
