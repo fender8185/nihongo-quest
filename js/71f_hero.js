@@ -342,37 +342,50 @@ const HERO = (() => {
   const TORSO = 'M-13 -66 Q2 -67.6 17 -66 L26 -30 Q2 -25 -22 -30 Z', HEM = 'M-22 -30 Q2 -25 26 -30 L25.2 -34 Q2 -29 -21.2 -34 Z';
   const ROBE = 'M-13 -66 Q2 -67.6 17 -66 L30 -5 Q2 0 -26 -5 Z';   // a long robe's body, from the shoulders to the ankles
   const BELLY = '<ellipse cx="2" cy="-45" rx="10" ry="12" fill="#fbf6ee" fill-opacity=".92"/>';
+  // 2026-11-11 (the user: 古道具屋's wares finer too): the wares' fine detail inside their shapes — wSh a soft shade (dark and
+  // see-through, so it reads by day and by night alike), wHi a line of light, wLn a seam or rib in a colour lit as its fill (F/L at z)
+  const wSh = (d, o = 0.1) => `<path d="${d}" fill="#000" fill-opacity="${o}"/>`;
+  const wHi = (d, o = 0.25, w = 1.2) => `<path d="${d}" fill="none" stroke="#fff" stroke-opacity="${o}" stroke-width="${w}" stroke-linecap="round"/>`;
+  const sk = (F, c, z) => `style="stroke:${paint(F(c, z))}"`;   // a stroke lit as a fill is (the room's light is a style, never an attribute)
+  const wLn = (F, c, z, d, w = 1, o = 1, x = '') => `<path d="${d}" fill="none" ${sk(F, c, z)} stroke-width="${w}"${o < 1 ? ` stroke-opacity="${o}"` : ''} stroke-linecap="round"${x}/>`;
+  const stitch = (F, c, z, d, o = 0.6) => wLn(F, c, z, d, 0.55, o, ' stroke-dasharray="1.2 1.4"');   // a row of stitches in colour c
+  const knit = (xs, y0, y1, o = 0.16) => `<path d="${xs.map((x) => `M${q(x)} ${q(y0(x))} V${q(y1(x))}`).join(' ')}" stroke="#000" stroke-opacity="${o}" stroke-width=".6"/>`;   // knit ribs between two edges
+  const SWEATER_RIB = knit(Array.from({ length: 17 }, (_, i) => -19.4 + i * 2.8), (x) => -32.4 + 10 * ((x + 21.6) / 47.2) * (1 - (x + 21.6) / 47.2), (x) => -29.6 + 10 * ((x + 21.6) / 47.2) * (1 - (x + 21.6) / 47.2), 0.18);   // the sweater's ribbed hem
   const TOPS = {
     hoodie: { sleeve: 'long',
       front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path ${F(d, 0.8)} d="${HEM}"/><path ${F(d, 1)} d="M-10 -47 H14 L12 -38 H-8 Z"/><path d="M-1.4 -62 V-53 M5.4 -62 V-53" stroke="#e8ecff" stroke-width="1.3" stroke-linecap="round"/>`,
       collar: (F, c, d) => `<path ${F(d, 1.6)} d="M-13 -67 Q2 -57 17 -67 L15 -70 Q2 -61 -11 -70 Z"/>`,
       back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path ${F(d, 0.8)} d="${HEM}"/>`, over: (F, c, d) => `<path ${F(d, 1.5)} d="M-12 -67 Q2 -46 16 -67 Q2 -61 -12 -67 Z"/>` },
-    tee: { sleeve: 'short',
-      front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path ${F(d, 0.8)} d="${HEM}"/><path d="M-6 -66.4 Q2 -59 10 -66.4" fill="none" stroke="${d}" stroke-width="2"/>`,
-      back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path ${F(d, 0.8)} d="${HEM}"/><path d="M-5 -66.6 Q2 -64 9 -66.6" fill="none" stroke="${d}" stroke-width="1.8"/>` },
-    sweater: { sleeve: 'long', cuff: true,
-      front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path d="M-21.6 -31 Q2 -26 25.6 -31" fill="none" stroke="${d}" stroke-width="3.4" stroke-linecap="round"/><path d="M-4 -61 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 M8 -61 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3" fill="none" stroke="${d}" stroke-opacity=".6" stroke-width="1"/>`,
-      collar: (F, c, d) => `<path ${F(d, 1.6)} d="M-9 -68 Q2 -64.6 13 -68 L13.6 -63 Q2 -59.4 -9.6 -63 Z"/>`,
-      back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path d="M-21.6 -31 Q2 -26 25.6 -31" fill="none" stroke="${d}" stroke-width="3.4" stroke-linecap="round"/>` },
-    shirt: { sleeve: 'long', cuff: true, light: true,
-      front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path d="M2 -62 V-28" stroke="${d}" stroke-opacity=".6" stroke-width=".9"/>${[-56, -48, -40].map((y) => `<circle cx="3.6" cy="${y}" r="1" fill="${lt(c, 0.65)}"/>`).join('')}<path d="M-10 -55 h6 v6 h-6 Z" fill="none" stroke="${d}" stroke-opacity=".5" stroke-width=".9"/>`,
-      collar: (F, c) => `<path ${F(lt(c, 0.55), 1.6)} d="M-9 -67.4 L-1 -59 L2 -65 Z M13 -67.4 L5 -59 L2 -65 Z"/>`,
-      back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path d="M-13 -58 Q2 -55.6 17 -58" fill="none" stroke="${d}" stroke-opacity=".45" stroke-width="1"/>` },
+    tee: { sleeve: 'short',   // 2026-11-11 (finer): a stitched hem (the sleeves' too, in arm), the neck band lit
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path ${F(d, 0.8)} d="${HEM}"/>${stitch(F, d, 0.8, 'M-21.3 -32.9 Q2 -27.9 25.3 -32.9')}${wLn(F, d, 1.6, 'M-6 -66.4 Q2 -59 10 -66.4', 2)}`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path ${F(d, 0.8)} d="${HEM}"/>${stitch(F, d, 0.8, 'M-21.3 -32.9 Q2 -27.9 25.3 -32.9')}${wLn(F, d, 1.6, 'M-5 -66.6 Q2 -64 9 -66.6', 1.8)}` },
+    sweater: { sleeve: 'long', cuff: true,   // 2026-11-11 (finer): the cables twist (a second strand crossing the first), ribs on the hem and the collar
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/>${wLn(F, d, 0.8, 'M-21.6 -31 Q2 -26 25.6 -31', 3.4)}${SWEATER_RIB}<path d="M-4 -61 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 M8 -61 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3" fill="none" ${sk(F, d, 1.2)} stroke-opacity=".6" stroke-width="1"/><path d="M-1.8 -61 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 M10.2 -61 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3 l-2.2 3 l2.2 3" fill="none" ${sk(F, d, 1.2)} stroke-opacity=".3" stroke-width=".9"/>`,
+      collar: (F, c, d) => `<path ${F(d, 1.6)} d="M-9 -68 Q2 -64.6 13 -68 L13.6 -63 Q2 -59.4 -9.6 -63 Z"/>${knit([-7, -4.6, -2.2, 0.2, 2.6, 5, 7.4, 9.8, 12.2], (x) => -68 + 6.8 * ((x + 9) / 22) * (1 - (x + 9) / 22) + 0.6, (x) => -63 + 7.2 * ((x + 9.6) / 23.2) * (1 - (x + 9.6) / 23.2) - 0.6, 0.2)}`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/>${wLn(F, d, 0.8, 'M-21.6 -31 Q2 -26 25.6 -31', 3.4)}${SWEATER_RIB}` },
+    shirt: { sleeve: 'long', cuff: true, light: true,   // 2026-11-11 (finer): a placket band, buttons with a rim, the pocket's hem, the collar's shadow, a stitched hem; a pleat at the back
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path d="M2 -62 V-28" ${sk(F, d, 1.2)} stroke-opacity=".6" stroke-width=".9"/><path d="M5.2 -62 V-28" ${sk(F, d, 1.2)} stroke-opacity=".35" stroke-width=".7"/>${[-56, -48, -40].map((y) => `<circle cx="3.6" cy="${y}" r="1" fill="${lt(c, 0.65)}" ${sk(F, d, 1.2)} stroke-opacity=".5" stroke-width=".35"/>`).join('')}<path d="M-10 -55 h6 v6 h-6 Z" fill="none" ${sk(F, d, 1.2)} stroke-opacity=".5" stroke-width=".9"/><path d="M-10 -53.4 h6" ${sk(F, d, 1.2)} stroke-opacity=".35" stroke-width=".6"/>${stitch(F, d, 1.2, 'M-21.4 -31.6 Q2 -26.6 25.4 -31.6', 0.5)}`,
+      collar: (F, c) => `${wSh('M-9 -67.4 L-1 -59 L-.3 -57.4 L-8.8 -65.6 Z M13 -67.4 L5 -59 L4.3 -57.4 L12.8 -65.6 Z', 0.12)}<path ${F(lt(c, 0.55), 1.6)} d="M-9 -67.4 L-1 -59 L2 -65 Z M13 -67.4 L5 -59 L2 -65 Z"/>`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="${TORSO}"/><path d="M-13 -58 Q2 -55.6 17 -58" fill="none" ${sk(F, d, 1.2)} stroke-opacity=".45" stroke-width="1"/><path d="M2 -55.8 V-46" ${sk(F, d, 1.2)} stroke-opacity=".3" stroke-width=".7"/>${stitch(F, d, 1.2, 'M-21.4 -31.6 Q2 -26.6 25.4 -31.6', 0.5)}` },
     jinbei: { sleeve: 'wide',
-      front: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L22 -28 H-18 Z"/><path ${F(d, 1.3)} d="M15 -66 L-1 -42 L3 -41 L18 -63 Z"/><path d="M-6 -66 L2 -52 M-14 -42 l5 1.6 M-14 -40 l4 4" fill="none" stroke="${d}" stroke-width="1.2"/>${[[-8, -56], [-4, -46], [12, -50], [15, -38], [-12, -34]].map(([x, y]) => `<path d="M${x - 1.6} ${y} h3.2 M${x} ${y - 1.6} v3.2" stroke="${lt(c, 0.5)}" stroke-opacity=".7" stroke-width=".9"/>`).join('')}`,
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L22 -28 H-18 Z"/><path d="M-18 -30.6 H22 M-16.4 -28.2 L-16.8 -32.4 M20.4 -28.2 L20.8 -32.4" stroke="#000" stroke-opacity=".12" stroke-width=".8"/><path ${F(d, 1.3)} d="M15 -66 L-1 -42 L3 -41 L18 -63 Z"/>${stitch(F, lt(c, 0.5), 1.3, 'M15.8 -64.4 L.6 -41.8', 0.55)}<path d="M-6 -66 L2 -52 M-14 -42 l5 1.6 M-14 -40 l4 4" fill="none" ${sk(F, d, 1.2)} stroke-width="1.2"/>${[[-8, -56], [-4, -46], [12, -50], [15, -38], [-12, -34]].map(([x, y]) => `<path d="M${x - 1.6} ${y} h3.2 M${x} ${y - 1.6} v3.2" ${sk(F, lt(c, 0.5), 1.2)} stroke-opacity=".7" stroke-width=".9"/>`).join('')}`,   // 2026-11-11 (finer): a hem fold, side slits, the front panel's edge stitched
       collar: (F, c, d) => `<path ${F(d, 1.6)} d="M-7 -67 L2 -58 L11 -67 L8.4 -67 L2 -61 L-4.4 -67 Z"/>`,
-      back: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L22 -28 H-18 Z"/><path d="M2 -66 V-28" stroke="${d}" stroke-opacity=".4" stroke-width="1"/>` },
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L22 -28 H-18 Z"/><path d="M2 -66 V-28" ${sk(F, d, 1.2)} stroke-opacity=".4" stroke-width="1"/><path d="M-18 -30.6 H22 M-16.4 -28.2 L-16.8 -32.4 M20.4 -28.2 L20.8 -32.4" stroke="#000" stroke-opacity=".12" stroke-width=".8"/>` },
     cattop: { sleeve: 'long', paw: true,   // fur in the top's colour, a white belly, a red collar and a bell
-      front: (F, c) => `<path ${F(c, 1.2)} d="M-14 -66 Q2 -67.6 18 -66 L27 -29 Q2 -23 -23 -29 Z"/>${BELLY}`,
-      collar: () => '<path fill="#d0453c" d="M-12 -67 Q2 -61 16 -67 L15.6 -63.6 Q2 -57.6 -11.6 -63.6 Z"/><circle cx="2" cy="-59.4" r="2.6" fill="#e6c25a"/><path d="M.6 -59 h2.8" stroke="#9a7a2a" stroke-width=".7"/>',
-      back: (F, c, d) => `<path ${F(c, 1.2)} d="M-14 -66 Q2 -67.6 18 -66 L27 -29 Q2 -23 -23 -29 Z"/><path d="M-8 -58 q10 3.5 20 0 M-10 -49 q12 3.5 24 0 M-12 -40 q14 3.5 28 0" fill="none" stroke="${d}" stroke-width="1.8" stroke-linecap="round"/>`,
-      over: () => '<path fill="#d0453c" d="M-11 -67 Q2 -63 15 -67 L14.6 -64 Q2 -60 -10.6 -64 Z"/>' },
+      // 2026-11-11 (finer): the belly shaded underneath, toe beans on the paws (in arm); the collar and bell lit by the room, the collar
+      // stitched, the bell's slit and shine; the back's stripes lit
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="M-14 -66 Q2 -67.6 18 -66 L27 -29 Q2 -23 -23 -29 Z"/>${BELLY}${wSh('M-4.4 -35.8 A10 12 0 0 0 8.4 -35.8 Q2 -33.8 -4.4 -35.8 Z', 0.07)}`,
+      collar: (F) => `<path ${F('#d0453c', 1.6)} d="M-12 -67 Q2 -61 16 -67 L15.6 -63.6 Q2 -57.6 -11.6 -63.6 Z"/>${stitch(F, '#f2b0a8', 1.6, 'M-11.6 -65.1 Q2 -59.4 15.6 -65.1', 0.7)}<circle cx="2" cy="-59.4" r="2.6" ${F('#e6c25a', 1.7)}/><path d="M.6 -59 h2.8 M2 -59 V-57.2" stroke="#9a7a2a" stroke-width=".7"/><circle cx="1" cy="-60.6" r=".8" fill="#fff" fill-opacity=".7"/>`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="M-14 -66 Q2 -67.6 18 -66 L27 -29 Q2 -23 -23 -29 Z"/>${wLn(F, d, 1.2, 'M-8 -58 q10 3.5 20 0 M-10 -49 q12 3.5 24 0 M-12 -40 q14 3.5 28 0', 1.8)}`,
+      over: (F) => `<path ${F('#d0453c', 1.6)} d="M-11 -67 Q2 -63 15 -67 L14.6 -64 Q2 -60 -10.6 -64 Z"/>` },
     wizrobe: { sleeve: 'robe',   // 魔法師長袍 (Halloween): to the ankles, gold stars and hem, a belt with a little spell book at the hip
-      front: (F, c, d) => `<path ${F(c, 1.2)} d="${ROBE}"/><path d="M-26 -5 Q2 0 30 -5" fill="none" stroke="#e6c25a" stroke-width="2"/>${[[-6, -56, 1.8], [10, -58, 1.4], [8, -48, 1.6], [-4, -44, 1.4], [-12, -24, 2], [4, -16, 1.7], [20, -12, 1.5], [-18, -12, 1.5], [-4, -8, 1.3]].map((a) => star(...a)).join('')}
-        <path ${F(d, 1.3)} d="M-19 -40 Q2 -36 23 -40 V-35.6 Q2 -31.6 -19 -35.6 Z"/><rect x="0" y="-40.4" width="4.4" height="5.4" rx="1" fill="#e6c25a"/>
-        <g transform="rotate(-8 19 -28)"><rect x="14" y="-34" width="10" height="12" rx="1.2" fill="#6b3f2a"/><rect x="15" y="-33" width="8" height="10" rx=".8" fill="none" stroke="#e6c25a" stroke-width=".7"/>${star(19, -28, 2.4)}</g>`,
+      // 2026-11-11 (finer): the robe falls in soft folds (front and back), the belt's top edge catches the light, the buckle has its
+      // hole, the book its spine
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="${ROBE}"/><path d="M-12 -33 Q-14.4 -20 -17 -6 M8.4 -31.6 Q9.4 -18 10.4 -3 M19 -33 Q22.4 -20 25 -6" fill="none" stroke="#000" stroke-opacity=".1" stroke-width="1.1" stroke-linecap="round"/><path d="M-3.4 -58 Q-5 -50 -6.4 -41.4 M10.4 -56 Q11.6 -48 12.4 -41.4" fill="none" stroke="#000" stroke-opacity=".07" stroke-width="1" stroke-linecap="round"/><path d="M-26 -5 Q2 0 30 -5" fill="none" stroke="#e6c25a" stroke-width="2"/>${[[-6, -56, 1.8], [10, -58, 1.4], [8, -48, 1.6], [-4, -44, 1.4], [-12, -24, 2], [4, -16, 1.7], [20, -12, 1.5], [-18, -12, 1.5], [-4, -8, 1.3]].map((a) => star(...a)).join('')}
+        <path ${F(d, 1.3)} d="M-19 -40 Q2 -36 23 -40 V-35.6 Q2 -31.6 -19 -35.6 Z"/>${wHi('M-18.4 -39.3 Q2 -35.3 22.4 -39.3', 0.16, 0.7)}<rect x="0" y="-40.4" width="4.4" height="5.4" rx="1" fill="#e6c25a"/><rect x="1.3" y="-39.2" width="1.8" height="3" rx=".4" fill="#000" fill-opacity=".28"/>
+        <g transform="rotate(-8 19 -28)"><rect x="14" y="-34" width="10" height="12" rx="1.2" fill="#6b3f2a"/>${wSh('M15.2 -34 H16.6 V-22 H15.2 Q14 -22 14 -23.2 V-32.8 Q14 -34 15.2 -34 Z', 0.28)}<rect x="15" y="-33" width="8" height="10" rx=".8" fill="none" stroke="#e6c25a" stroke-width=".7"/>${star(19, -28, 2.4)}</g>`,
       collar: (F, c, d) => `<path ${F(d, 1.6)} d="M-8 -67 L2 -59 L12 -67 L10.6 -63.6 L2 -56 L-6.6 -63.6 Z"/><circle cx="2" cy="-57.6" r="1.8" fill="#e6c25a"/>`,
-      back: (F, c) => `<path ${F(c, 1.2)} d="${ROBE}"/><path d="M-26 -5 Q2 0 30 -5" fill="none" stroke="#e6c25a" stroke-width="2"/>${star(8, -40, 6)}<path d="M-6 -60 a7 7 0 1 0 6.4 10 a5.6 5.6 0 1 1 -6.4 -10 Z" fill="#e6c25a"/>` },
+      back: (F, c) => `<path ${F(c, 1.2)} d="${ROBE}"/><path d="M-11 -30 Q-13.6 -18 -16 -6 M14.6 -30 Q18 -18 21 -6 M3 -24 Q3.4 -14 3.8 -2" fill="none" stroke="#000" stroke-opacity=".08" stroke-width="1.1" stroke-linecap="round"/><path d="M-26 -5 Q2 0 30 -5" fill="none" stroke="#e6c25a" stroke-width="2"/>${star(8, -40, 6)}<path d="M-6 -60 a7 7 0 1 0 6.4 10 a5.6 5.6 0 1 1 -6.4 -10 Z" fill="#e6c25a"/>` },
     yukata: { sleeve: 'robe',   // 浴衣 (test, 2026-11-09: the town's 緣日; not sold, the festival's people wear it): to the ankles, a crossed collar, a wide light obi, little flowers
       front: (F, c, d) => `<path ${F(c, 1.2)} d="${ROBE}"/><path d="M-9 -66 L12 -40" fill="none" stroke="${d}" stroke-width="1.4"/>${[[-6, -58], [12, -52], [-12, -24], [10, -16], [18, -30], [-2, -12]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.8" fill="${lt(c, 0.75)}"/><circle cx="${x}" cy="${y}" r="1" fill="${d}"/>`).join('')}
         <path ${F(lt(c, 0.7), 1.3)} d="M-18 -43 Q2 -39 22 -43 V-34 Q2 -30 -18 -34 Z"/><path d="M-18 -38.6 Q2 -34.6 22 -38.6" fill="none" stroke="${d}" stroke-opacity=".5" stroke-width=".9"/>`,
@@ -411,12 +424,12 @@ const HERO = (() => {
   // turned out, so a pose turns it round the shoulder (the .arm group, in CSS)
   const SHOULDER = [13.5, -63.5];
   function arm(L, tp, top, topDk, skin, cls, s, dx = 0) {
-    const hand = tp.paw ? `<circle cy="27" r="4.8" ${L(top, 0.9)}/><circle cy="28.4" r="1.6" fill="#f2a8b8"/>` : `<circle cy="27" r="4.3" ${L(skin, 0.9)}/>`;
+    const hand = tp.paw ? `<circle cy="27" r="4.8" ${L(top, 0.9)}/><circle cy="28.4" r="1.6" fill="#f2a8b8"/><path d="M-2.1 25.6 h.01 M0 24.9 h.01 M2.1 25.6 h.01" stroke="#f2a8b8" stroke-width="1.3" stroke-linecap="round"/>` : `<circle cy="27" r="4.3" ${L(skin, 0.9)}/>`;   // 2026-11-11 (finer): the cat's paw has its toe beans
     const bare = `<rect x="-3.2" y="2" width="6.4" height="23" rx="3.2" ${L(skin, 1.2)}/>`;
     const sc = tp.sleeveColor || top, cuff = tp.cuff ? (tp.light ? lt(sc, 0.55) : dk(topDk, 0.85)) : topDk;
     const art = tp.sleeve === 'kimono' ? `<path class="kosode" ${L(sc, 1.3)} d="M-4.6 -2 Q0 -5 4.6 -2 L9.4 23 Q0 25.6 -9.4 23 Z"/><path d="M-9.4 23 Q0 25.6 9.4 23" fill="none" stroke="${dk(sc, 0.8)}" stroke-width="1"/>`
       : tp.sleeve === 'robe' ? `<path ${L(topDk, 1.3)} d="M-4.6 -2 Q0 -5 4.6 -2 L8.6 22 Q0 24 -8.6 22 Z"/><path d="M-8.6 22 Q0 24 8.6 22" fill="none" stroke="#e6c25a" stroke-width="1.4"/>`
-      : tp.sleeve === 'short' ? bare + `<path ${L(top, 1.4)} d="M-4.6 -2 Q0 -5 4.6 -2 L5 9 Q0 10.6 -5 9 Z"/>`
+      : tp.sleeve === 'short' ? bare + `<path ${L(top, 1.4)} d="M-4.6 -2 Q0 -5 4.6 -2 L5 9 Q0 10.6 -5 9 Z"/>${stitch(L, topDk, 1.4, 'M-4.8 7.4 Q0 9 4.8 7.4')}`   // the tee's (its stitched hem)
       : tp.sleeve === 'wide' ? bare + `<path ${L(topDk, 1.3)} d="M-4.6 -2 Q0 -5 4.6 -2 L7.4 15 Q0 16.6 -7.4 15 Z"/>`
       : `<path ${L(sc, 1.3)} d="M-4 -2 Q0 -4.5 4 -2 L4.4 21 Q0 22.6 -4.4 21 Z"/><path ${L(cuff, 1)} d="M-4.4 18.4 Q0 20 4.4 18.4 L4.5 21.6 Q0 23.2 -4.5 21.6 Z"/>`;
     return `<g class="arm ${cls}"><g transform="translate(${q(2 + s * SHOULDER[0] + dx)} ${SHOULDER[1]}) rotate(${-s * 26})">${art}${hand}</g></g>`;
@@ -435,28 +448,34 @@ const HERO = (() => {
   const HIPS = (F, c) => `<path ${F(c, 0.7)} d="M-17 -33 H21 L21.6 -22 H-17.6 Z"/>`;
   const BOTTOMS = {
     pants: { hips: HIPS, leg: (F, c, x) => `<rect x="${q(x - 5.5)}" y="-28" width="11" height="23" rx="4" ${F(c, 0.4)}/>` },
-    shorts: { hips: HIPS, leg: (F, c, x, skin) => `<rect x="${q(x - 4.8)}" y="-24" width="9.6" height="19" rx="4" ${F(skin, 0.3)}/><rect x="${q(x - 6)}" y="-28" width="12" height="10" rx="3" ${F(c, 0.5)}/>` },
-    wide: { hips: HIPS, leg: (F, c, x) => `<path ${F(c, 0.4)} d="M${q(x - 6)} -28 H${q(x + 6)} L${q(x + 7.6)} -5 Q${x} -3.6 ${q(x - 7.6)} -5 Z"/>` },
+    // 2026-11-11 (finer): the shorts' legs turned up at the hem, the wide trousers pressed with a crease, their hem shaded, the skirt's
+    // pleats in light and shade with a stitched hem
+    shorts: { hips: HIPS, leg: (F, c, x, skin) => `<rect x="${q(x - 4.8)}" y="-24" width="9.6" height="19" rx="4" ${F(skin, 0.3)}/><rect x="${q(x - 6)}" y="-28" width="12" height="10" rx="3" ${F(c, 0.5)}/><path d="M${q(x - 6)} -20.8 H${q(x + 6)}" stroke="#000" stroke-opacity=".2" stroke-width=".9"/>` },
+    wide: { hips: HIPS, leg: (F, c, x) => `<path ${F(c, 0.4)} d="M${q(x - 6)} -28 H${q(x + 6)} L${q(x + 7.6)} -5 Q${x} -3.6 ${q(x - 7.6)} -5 Z"/><path d="M${q(x + 0.6)} -26 L${q(x + 1)} -9" stroke="#000" stroke-opacity=".1" stroke-width=".8" stroke-linecap="round"/>${wSh(`M${q(x - 7.3)} -7.2 H${q(x + 7.3)} L${q(x + 7.6)} -5 Q${x} -3.6 ${q(x - 7.6)} -5 Z`, 0.12)}` },
     skirt: { leg: (F, c, x, skin) => `<rect x="${q(x - 4.8)}" y="-24" width="9.6" height="19" rx="4" ${F(skin, 0.3)}/>`,
-      over: (F, c, d) => `<path ${F(c, 0.7)} d="M-16 -36 H20 L26 -16 Q2 -12 -22 -16 Z"/><path d="M-8 -34 L-11 -15 M2 -34 V-13.4 M12 -34 L15 -15" stroke="${d}" stroke-opacity=".35" stroke-width="1"/>` },
+      over: (F, c, d) => `<path ${F(c, 0.7)} d="M-16 -36 H20 L26 -16 Q2 -12 -22 -16 Z"/>${wSh('M2 -34 H12 L15 -14.8 Q8.6 -14.1 2 -14 Z M-16 -36 H-8 V-34 L-11 -14.8 Q-16.6 -15.4 -22 -16 Z', 0.07)}<path d="M-8 -34 L-11 -15 M2 -34 V-13.4 M12 -34 L15 -15" ${sk(F, d, 0.7)} stroke-opacity=".35" stroke-width="1"/>${wHi('M-6.8 -33 L-9.6 -16.2 M3.2 -33 V-15.2 M13.2 -33 L15.8 -16.2', 0.14, 0.7)}${stitch(F, d, 0.7, 'M-21.4 -17.6 Q2 -13.6 25.4 -17.6', 0.5)}` },
     hakama: { leg: () => '',   // 緋袴 (the miko): wide and pleated over both legs to the ankles, tied in front; only the 草履 show
       over: (F, c, d) => `<path class="hakama" ${F(c, 0.7)} d="M-17 -38 Q2 -40 21 -38 L27 -6 Q2 -2 -23 -6 Z"/><path d="M-6 -36 L-10 -6 M2 -37 V-3.6 M10 -36 L14 -6" fill="none" stroke="${d}" stroke-opacity=".55" stroke-width="1"/><path d="M-16.6 -36 Q2 -33 20.6 -36" fill="none" stroke="${d}" stroke-width="2"/><path ${F(c, 0.72)} d="M2 -34.4 l-6.4 -3 v6 Z M2 -34.4 l6.4 -3 v6 Z"/><path d="M2 -34.4 l-3 7 M2 -34.4 l3 7" stroke="${c}" stroke-width="1.6" stroke-linecap="round"/>` },
     catpants: { hips: HIPS, leg: (F, c, x) => `<rect x="${q(x - 5.5)}" y="-28" width="11" height="22" rx="4" ${F(c, 0.4)}/>`,
-      foot: (F, c, x, d) => `<ellipse cx="${x}" cy="-4.4" rx="7" ry="4.4" ${F(c, 0.1)}/><path d="M${q(x - 2.8)} -5.6 v2.4 M${x} -6 v2.4 M${q(x + 2.8)} -5.6 v2.4" stroke="${d}" stroke-width=".9" stroke-linecap="round"/>`,
-      tail: (F, c, d, side) => (side ? `<path d="M2 -30 C2 -14 22 -16 25 -32 C26 -40 22 -46 18 -44" fill="none" stroke="${c}" stroke-width="5.4" stroke-linecap="round"/><path d="M20 -45.4 C19.4 -45.6 18.4 -44.8 18 -44" stroke="${d}" stroke-width="5.4" stroke-linecap="round"/>`
-        : `<path d="M18 -31 C32 -32 38 -46 33 -58" fill="none" stroke="${c}" stroke-width="5.4" stroke-linecap="round"/><path d="M34 -56.4 C33.8 -57.4 33.4 -58 33 -58" stroke="${d}" stroke-width="5.4" stroke-linecap="round"/>`) }
+      // 2026-11-11 (finer): a shine on the paws; the tail lit by the room like the rest of them, with two tabby rings
+      foot: (F, c, x, d) => `<ellipse cx="${x}" cy="-4.4" rx="7" ry="4.4" ${F(c, 0.1)}/><ellipse cx="${q(x - 1.8)}" cy="-6.6" rx="3" ry="1.2" fill="#fff" fill-opacity=".12"/><path d="M${q(x - 2.8)} -5.6 v2.4 M${x} -6 v2.4 M${q(x + 2.8)} -5.6 v2.4" ${sk(F, d, 0.1)} stroke-width=".9" stroke-linecap="round"/>`,
+      tail: (F, c, d, side) => { const k = sk(F, c, 0.8), kd = sk(F, d, 0.8);
+        return side ? `<path d="M2 -30 C2 -14 22 -16 25 -32 C26 -40 22 -46 18 -44" fill="none" ${k} stroke-width="5.4" stroke-linecap="round"/><path d="M19.7 -25.6 L23.3 -22.6 M21.9 -39.3 L26.3 -41.1" ${kd} stroke-width="2.2"/><path d="M20 -45.4 C19.4 -45.6 18.4 -44.8 18 -44" ${kd} stroke-width="5.4" stroke-linecap="round"/>`
+          : `<path d="M18 -31 C32 -32 38 -46 33 -58" fill="none" ${k} stroke-width="5.4" stroke-linecap="round"/><path d="M27.9 -37.9 L31.4 -34.5 M31.6 -44.3 L36.2 -42.9" ${kd} stroke-width="2.2"/><path d="M34 -56.4 C33.8 -57.4 33.4 -58 33 -58" ${kd} stroke-width="5.4" stroke-linecap="round"/>`; } }
   };
   // a head worn whole (猫の頭): it takes the place of the hero's own head, hair and face, in the fur of their top
-  const CAT_EYES = '<g class="eyes"><ellipse cx="-11" cy="-126" rx="5.4" ry="7" fill="#2a2730"/><ellipse cx="15" cy="-126" rx="5.4" ry="7" fill="#2a2730"/><circle cx="-9.4" cy="-128.6" r="1.9" fill="#fff"/><circle cx="16.6" cy="-128.6" r="1.9" fill="#fff"/></g>';
+  const CAT_EYES = '<g class="eyes"><ellipse cx="-11" cy="-126" rx="5.4" ry="7" fill="#2a2730"/><ellipse cx="15" cy="-126" rx="5.4" ry="7" fill="#2a2730"/><circle cx="-9.4" cy="-128.6" r="1.9" fill="#fff"/><circle cx="16.6" cy="-128.6" r="1.9" fill="#fff"/><circle cx="-12.6" cy="-123" r=".9" fill="#fff" fill-opacity=".7"/><circle cx="13.4" cy="-123" r=".9" fill="#fff" fill-opacity=".7"/></g>';
   const FULL = {
+    // 2026-11-11 (finer): a line of light up each ear and tufts in the pink, a shine on the brow, the chin rounding off into shade
+    // (under the nape from behind), a second catch-light in each eye
     cathead: (F, c, d) => {
-      const ear = (s) => `<path ${F(c, 4.3)} d="M${2 - 32 * s} -146 L${2 - 32 * s} -177 L${2 - 10 * s} -161 Z"/>`, pink = (s) => `<path fill="#f2a8b8" d="M${2 - 28 * s} -152 L${2 - 28 * s} -170 L${2 - 15 * s} -160.5 Z"/>`;
+      const ear = (s) => `<path ${F(c, 4.3)} d="M${2 - 32 * s} -146 L${2 - 32 * s} -177 L${2 - 10 * s} -161 Z"/>${wHi(`M${2 - 30.4 * s} -152 V-172`, 0.18, 1.1)}`, pink = (s) => `<path fill="#f2a8b8" d="M${2 - 28 * s} -152 L${2 - 28 * s} -170 L${2 - 15 * s} -160.5 Z"/><path d="M${2 - 26 * s} -156 l${2.6 * s} -5 M${2 - 23 * s} -155.6 l${1.2 * s} -4" stroke="#fff" stroke-opacity=".75" stroke-width=".9" stroke-linecap="round"/>`;
       const headPath = 'M-34 -128 C-36 -151 -21 -168 2 -168 C25 -168 40 -151 38 -128 C38 -108 24 -94 2 -94 C-20 -94 -34 -108 -34 -128 Z';
-      const stripes = `<path d="M-5 -166 l2 8 M2 -168 v9 M9 -166 l-2 8" fill="none" stroke="${d}" stroke-width="2.4" stroke-linecap="round"/>`;
-      return [ear(1) + ear(-1) + pink(1) + pink(-1) + `<path ${F(c, 4)} d="${headPath}"/>${stripes}<ellipse cx="2" cy="-110" rx="15" ry="10" fill="#fbf6ee"/>${CAT_EYES}
+      const stripes = `<path d="M-5 -166 l2 8 M2 -168 v9 M9 -166 l-2 8" fill="none" ${sk(F, d, 4)} stroke-width="2.4" stroke-linecap="round"/>`;
+      return [ear(1) + ear(-1) + pink(1) + pink(-1) + `<path ${F(c, 4)} d="${headPath}"/>${wSh('M-31 -116 C-27 -103 -14 -95.6 2 -95.6 C18 -95.6 31 -103 35 -116 C27 -106 16 -101 2 -101 C-12 -101 -23 -106 -31 -116 Z', 0.08)}<ellipse cx="-12" cy="-151" rx="7" ry="2.8" transform="rotate(-24 -12 -151)" fill="#fff" fill-opacity=".1"/>${stripes}<ellipse cx="2" cy="-110" rx="15" ry="10" fill="#fbf6ee"/>${CAT_EYES}
         <path d="M-1 -115.5 h6 l-3 3.6 Z" fill="#e8869a"/><path d="M2 -112 v2.2 M-3 -107.2 Q-.5 -104.6 2 -107.4 Q4.5 -104.6 7 -107.2" fill="none" stroke="#5a3a3a" stroke-width="1.3" stroke-linecap="round"/>
         <path d="M-12 -110 L-31 -113 M-12 -107 L-31 -105.5 M16 -110 L35 -113 M16 -107 L35 -105.5" stroke="#5a4a4a" stroke-opacity=".45" stroke-width="1"/><ellipse cx="-20" cy="-113" rx="4.4" ry="2.6" fill="#f2a0a0" fill-opacity=".55"/><ellipse cx="24" cy="-113" rx="4.4" ry="2.6" fill="#f2a0a0" fill-opacity=".55"/>`,
-        ear(1) + ear(-1) + `<path ${F(c, 4)} d="${headPath}"/><path d="M-14 -160 q16 6 32 0 M-18 -146 q20 6 40 0 M-16 -132 q18 6 36 0" fill="none" stroke="${d}" stroke-width="2.4" stroke-linecap="round"/>`];
+        ear(1) + ear(-1) + `<path ${F(c, 4)} d="${headPath}"/>${wSh('M-32 -117 C-29 -103 -16 -95.6 2 -95.6 C20 -95.6 33 -103 36 -117 C29 -106 17 -100.4 2 -100.4 C-13 -100.4 -25 -106 -32 -117 Z', 0.1)}<ellipse cx="-12" cy="-151" rx="7" ry="2.8" transform="rotate(-24 -12 -151)" fill="#fff" fill-opacity=".1"/><path d="M-14 -160 q16 6 32 0 M-18 -146 q20 6 40 0 M-16 -132 q18 6 36 0" fill="none" ${sk(F, d, 4)} stroke-width="2.4" stroke-linecap="round"/>`];
     }
   };
   // what is worn on the head comes in three kinds, and none of them ever cuts the hair:
@@ -469,42 +488,76 @@ const HERO = (() => {
   const ON_BODY = new Set(['scarf', 'bowtie', 'backpack']);   // drawn in the body's units, not on the head
   const tucked = (lk, id) => (HATS.has(id) && HAIRP.TOPS[lk.hairTop].under ? HAIRP.TOPS[lk.hairTop].name : '');   // what a hat tucks away
   // the things worn: [front, back] drawings by part, in the figure's own units; c and d are their top's colour and a shade of it
+  // the cat hood's fluffy edge (2026-11-11, finer): little arches of fur along the middle of its cream edge, bulging outward, both
+  // halves (made once)
+  const HOOD_FLUFF = (() => {
+    const P = [[40, -98], [43, -124], [34, -158], [2, -162]], at = (t) => [0, 1].map((k) => (1 - t) ** 3 * P[0][k] + 3 * (1 - t) ** 2 * t * P[1][k] + 3 * (1 - t) * t * t * P[2][k] + t ** 3 * P[3][k]);
+    let d = '';
+    for (let i = 0; i < 12; i++) {
+      const t = (i + 0.5) / 12, [x, y] = at(t), [x1, y1] = at(t + 0.02), [x0, y0] = at(t - 0.02), l = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / l, uy = (y1 - y0) / l;
+      d += `M${q(x - ux * 1.5)} ${q(y - uy * 1.5)} Q${q(x - uy * 1.6)} ${q(y + ux * 1.6)} ${q(x + ux * 1.5)} ${q(y + uy * 1.5)} `;
+      d += `M${q(4 - x + ux * 1.5)} ${q(y - uy * 1.5)} Q${q(4 - x + uy * 1.6)} ${q(y + ux * 1.6)} ${q(4 - x - ux * 1.5)} ${q(y + uy * 1.5)} `;
+    }
+    return d.trim();
+  })();
   const WEAR = {
     witchhat: (L, c, d) => {   // 魔法師帽 (Halloween): a wide brim, a tall crown bent over at the tip, a gold band, a star and a moon
-      const h = `<ellipse cx="2" cy="-150" rx="58" ry="11.5" ${L(d, 4.2)}/><path ${L(c, 4.4)} d="M-36 -152 C-30 -180 -14 -206 4 -222 C10 -228 20 -230 28 -222 C18 -220 13 -212 14 -200 C17 -184 32 -168 40 -152 Q2 -144 -36 -152 Z"/>
-        <path d="M-36 -152 Q2 -144 40 -152 L39 -160 Q2 -152 -35 -160 Z" fill="#e6c25a"/>${star(-2, -180, 5.6)}<path d="M15 -197 a6 6 0 1 0 4 10 a4.6 4.6 0 1 1 -4 -10 Z" fill="#e6c25a"/>`;
+      // 2026-11-11 (finer): the brim's front edge in the light, the crown standing in its own shadow on the brim, its far side shaded,
+      // a shine up its near side, creases where the tip bends over, the band's lower edge
+      const h = `<ellipse cx="2" cy="-150" rx="58" ry="11.5" ${L(d, 4.2)}/>${wHi('M-46 -144.6 Q2 -135 50 -144.6', 0.16, 1.2)}${wSh('M-38 -152.4 Q2 -140 42 -152.4 Z', 0.14)}<path ${L(c, 4.4)} d="M-36 -152 C-30 -180 -14 -206 4 -222 C10 -228 20 -230 28 -222 C18 -220 13 -212 14 -200 C17 -184 32 -168 40 -152 Q2 -144 -36 -152 Z"/>
+        ${wSh('M14 -200 C17 -184 32 -168 40 -152 Q36 -151 31.6 -150.4 C25 -168 15.6 -184 14 -200 Z', 0.1)}${wHi('M-25 -168 C-18 -184 -9 -198 1 -209', 0.16, 1.8)}<path d="M8.6 -213 Q4.6 -205 -3.4 -200.4 M7 -218.4 Q13 -223.4 21 -224.6" fill="none" stroke="#000" stroke-opacity=".13" stroke-width="1.1" stroke-linecap="round"/>
+        <path d="M-36 -152 Q2 -144 40 -152 L39 -160 Q2 -152 -35 -160 Z" fill="#e6c25a"/>${wSh('M-36 -152 Q2 -144 40 -152 L39.7 -154.2 Q2 -146.2 -35.7 -154.2 Z', 0.16)}${star(-2, -180, 5.6)}<path d="M15 -197 a6 6 0 1 0 4 10 a4.6 4.6 0 1 1 -4 -10 Z" fill="#e6c25a"/>`;
       return [h, h];
     },
     cathood: (L, c, d) => {   // 貓耳兜帽: a hood up round the face, a fluffy edge, ears on top; with 貓咪上衣 and 貓咪褲 a whole cat suit
-      const ears = both(`<path ${L(c, 4.4)} d="M-36 -164 L-30 -200 L-8 -183 Z"/>`), outer = 'M-48 -98 C-54 -128 -46 -166 -22 -180 C-10 -186 14 -186 26 -180 C50 -166 58 -128 52 -98';
-      return [ears + both('<path fill="#f2a8b8" d="M-30.4 -171 L-27.6 -192 L-14 -182.6 Z"/>') + `<path ${L(c, 4.3)} d="${outer} L40 -98 C43 -124 34 -158 2 -162 C-30 -158 -39 -124 -36 -98 Z"/>
-        <path ${L('#fbf6ee', 4.35)} d="M42.8 -98 C46 -126 36.6 -161 2 -165 C-32.6 -161 -42 -126 -38.8 -98 L-33.2 -98 C-36 -122 -27.4 -155 2 -159 C31.4 -155 40 -122 37.2 -98 Z"/>`,
-        ears + `<path ${L(c, 4.3)} d="${outer} Q2 -88 -48 -98 Z"/><path d="M2 -184 V-100" stroke="${d}" stroke-width="1.4" stroke-opacity=".6"/>`];
+      // 2026-11-11 (finer): a line of light up each ear and tufts in the pink, the hood shaded on its far side and lit on its near
+      // crown, the fluffy edge's fur picked out (HOOD_FLUFF); from behind its seam stitched
+      const ears = both(`<path ${L(c, 4.4)} d="M-36 -164 L-30 -200 L-8 -183 Z"/>${wHi('M-33.6 -167.6 L-29.8 -194.4', 0.2, 1.2)}`), outer = 'M-48 -98 C-54 -128 -46 -166 -22 -180 C-10 -186 14 -186 26 -180 C50 -166 58 -128 52 -98';
+      const fluff = `<path d="${HOOD_FLUFF}" fill="none" ${sk(L, '#d8cab2', 4.35)} stroke-width=".9" stroke-linecap="round"/>`;
+      return [ears + both('<path fill="#f2a8b8" d="M-30.4 -171 L-27.6 -192 L-14 -182.6 Z"/><path d="M-26 -175 l1 -5 M-22.6 -177.6 l.2 -3.8" stroke="#fff" stroke-opacity=".75" stroke-width=".9" stroke-linecap="round"/>') + `<path ${L(c, 4.3)} d="${outer} L40 -98 C43 -124 34 -158 2 -162 C-30 -158 -39 -124 -36 -98 Z"/>${wSh('M52 -98 C58 -128 50 -166 26 -180 C40 -164 46.4 -130 44 -98 Z', 0.08)}${wHi('M-40 -146 C-34 -162 -22 -174 -8 -179', 0.18, 1.6)}
+        <path ${L('#fbf6ee', 4.35)} d="M42.8 -98 C46 -126 36.6 -161 2 -165 C-32.6 -161 -42 -126 -38.8 -98 L-33.2 -98 C-36 -122 -27.4 -155 2 -159 C31.4 -155 40 -122 37.2 -98 Z"/>${fluff}`,
+        ears + `<path ${L(c, 4.3)} d="${outer} Q2 -88 -48 -98 Z"/>${wSh('M52 -98 C58 -128 50 -166 26 -180 C40 -164 46.4 -130 44 -98 Q48 -96.6 52 -98 Z', 0.08)}${wHi('M-42 -140 C-38 -160 -26 -174 -10 -180', 0.14, 1.6)}<path d="M2 -184 V-100" ${sk(L, d, 4.3)} stroke-width="1.4" stroke-opacity=".6"/>${stitch(L, '#ffffff', 4.3, 'M4.6 -182 V-101', 0.4)}`];
     },
     beanie: (L) => {   // pulled down over the crown to the fringe, a turned-up rib cuff, a pompom
+      // 2026-11-11 (finer): the cuff's shadow on the crown, its upper edge in the light and its lower in shade; the pompom's yarn knotted,
+      // shaded underneath, with a shine and a shadow on the crown
       const ribs = [-38, -28, -18, -8, 2, 12, 22, 32, 42].map((x) => { const u = (x - 2) / 48.5, w = 3 * (1 - u * u); return `M${x} ${q(-147.4 - w)} V${q(-138.6 + w)}`; }).join(' ');
       const cap = `<path ${L('#d9534a', 4.2)} d="M-44 -141 C-46 -171 -23 -185 2 -185 C27 -185 50 -171 48 -141 Z"/>${both('<path d="M-24 -151 C-23 -164 -16 -175 -5 -182 M-9 -152 C-8 -165 -5 -175 -1 -183" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="2.2" stroke-linecap="round"/>')}
-        <path ${L('#c2433b', 4.1)} d="M-46.5 -149 Q2 -155 50.5 -149 Q52.6 -143 50.5 -137 Q2 -131 -46.5 -137 Q-48.6 -143 -46.5 -149 Z"/><path d="${ribs}" stroke="#000" stroke-opacity=".12" stroke-width="1.6" stroke-linecap="round"/>
-        <circle cx="2" cy="-187" r="8.6" ${L('#f4efe6', 4.4)}/>`;
+        ${wSh('M-43 -146.4 Q2 -153 47 -146.4 L46.2 -151.8 Q2 -159.6 -42.2 -151.8 Z', 0.09)}<ellipse cx="2" cy="-179.4" rx="9.6" ry="2.4" fill="#000" fill-opacity=".1"/>
+        <path ${L('#c2433b', 4.1)} d="M-46.5 -149 Q2 -155 50.5 -149 Q52.6 -143 50.5 -137 Q2 -131 -46.5 -137 Q-48.6 -143 -46.5 -149 Z"/><path d="${ribs}" stroke="#000" stroke-opacity=".12" stroke-width="1.6" stroke-linecap="round"/>${wHi('M-45.4 -148.2 Q2 -154.2 49.4 -148.2', 0.2, 0.9)}${wSh('M-46.5 -137 Q2 -131 50.5 -137 L50.9 -139.4 Q2 -133.4 -46.9 -139.4 Z', 0.1)}
+        <circle cx="2" cy="-187" r="8.6" ${L('#f4efe6', 4.4)}/>${wSh('M-6.08 -184.06 A8.6 8.6 0 0 0 10.08 -184.06 Q2 -179.1 -6.08 -184.06 Z', 0.1)}<path d="M-2.4 -191.6 l1.2 1.8 M3.6 -192.6 l-.4 2.2 M7 -189.4 l-1.8 1 M-4.4 -186.4 l1.8 .4 M4.6 -184.6 l-1 -1.6 M.4 -186.6 l1.4 .8" stroke="#000" stroke-opacity=".1" stroke-width=".9" stroke-linecap="round"/><circle cx="-1.6" cy="-190.6" r="2.4" fill="#fff" fill-opacity=".45"/>`;
       return [cap, cap];
     },
     strawhat: (L) => {   // a wide brim at the top of the fringe, a crown that holds the hair, a red band
-      const h = `<ellipse cx="2" cy="-150" rx="60" ry="12.5" ${L('#e3c27a', 4.2)}/><ellipse cx="2" cy="-150" rx="60" ry="12.5" fill="none" stroke="#b9954f" stroke-width="1.2"/><ellipse cx="2" cy="-150" rx="49" ry="9" fill="none" stroke="#b9954f" stroke-opacity=".35" stroke-width="1"/>
-        <path ${L('#d8b366', 4.3)} d="M-31 -153.4 C-33 -190 37 -190 35 -153.4 Q2 -146.4 -31 -153.4 Z"/><path d="M-31 -160 Q2 -153 35 -160 V-153.4 Q2 -146.4 -31 -153.4 Z" fill="#d0453c"/>`;
+      // 2026-11-11 (finer): the straw woven round the brim and up the crown (its rim and rings lit by the room now), the brim's front
+      // edge in the light, the crown's shadow on the brim, a shine on the crown, the band lit with its edges in light and shade
+      const k = sk(L, '#b9954f', 4.2);
+      const h = `<ellipse cx="2" cy="-150" rx="60" ry="12.5" ${L('#e3c27a', 4.2)}/><ellipse cx="2" cy="-150" rx="60" ry="12.5" fill="none" ${k} stroke-width="1.2"/><ellipse cx="2" cy="-150" rx="55" ry="10.9" fill="none" ${k} stroke-opacity=".22" stroke-width=".8"/><ellipse cx="2" cy="-150" rx="49" ry="9" fill="none" ${k} stroke-opacity=".35" stroke-width="1"/><ellipse cx="2" cy="-150" rx="42" ry="7.4" fill="none" ${k} stroke-opacity=".22" stroke-width=".8"/>${wHi('M-48 -144.6 Q2 -132.8 52 -144.6', 0.25, 1)}${wSh('M-34 -153.4 Q2 -141 38 -153.4 Z', 0.12)}
+        <path ${L('#d8b366', 4.3)} d="M-31 -153.4 C-33 -190 37 -190 35 -153.4 Q2 -146.4 -31 -153.4 Z"/><path d="M-28.6 -164 Q2 -158 32.6 -164 M-23.4 -172 Q2 -167 27.4 -172 M-12 -178 Q2 -175.4 16 -178" fill="none" ${k} stroke-opacity=".4" stroke-width=".9"/>${wHi('M-22 -168 Q-14 -178 -2 -179.6', 0.3, 1.6)}<path d="M-31 -160 Q2 -153 35 -160 V-153.4 Q2 -146.4 -31 -153.4 Z" ${L('#d0453c', 4.3)}/>${wSh('M-31 -153.4 Q2 -146.4 35 -153.4 L35 -155.2 Q2 -148.2 -31 -155.2 Z', 0.15)}${wHi('M-30.4 -159.2 Q2 -152.2 34.4 -159.2', 0.22, 0.8)}`;
       return [h, h];
     },
-    catears: (L) => { const e = (x, s) => `<path ${L('#3d3a44', 4.3)} d="M${x - 11 * s} -152 L${x - 2 * s} -176 L${x + 10 * s} -154 Z"/>`; const band = `<path d="M-30 -146 C-24 -168 28 -168 34 -146" fill="none" stroke="#3d3a44" stroke-width="4"/>`; return [band + e(-12, 1) + e(16, -1) + `<path d="M-17 -156 L-13 -169 L-8 -157 Z M21 -156 L17 -169 L12 -157 Z" fill="#f2a8b8"/>`, band + e(-12, 1) + e(16, -1)]; },
-    hachimaki: (L) => { const band = `<path ${L('#f8f6f0', 4)} d="M-33 -142 Q2 -134 37 -142 V-132 Q2 -124 -33 -132 Z"/>`; return [band + `<circle cx="18" cy="-134" r="4.4" fill="#d0453c"/><text x="-12" y="-131.5" font-size="7.5" font-weight="700" fill="#d0453c" font-family="'Hiragino Mincho ProN', serif">必勝</text>`, band + `<path d="M2 -134 L-10 -112 L-2 -114 L4 -134 L14 -110 L20 -114 Z" ${L('#f2efe6', 3.8)}/>`]; },
+    catears: (L) => {   // 2026-11-11 (finer): the band lit by the room, with a line of light along it; a lit edge up each ear, tufts in the pink
+      const e = (x, s) => `<path ${L('#3d3a44', 4.3)} d="M${x - 11 * s} -152 L${x - 2 * s} -176 L${x + 10 * s} -154 Z"/>${wHi(`M${x - 9.2 * s} -153.8 L${x - 2.6 * s} -171.6`, 0.2, 1.1)}`;
+      const band = `<path d="M-30 -146 C-24 -168 28 -168 34 -146" fill="none" ${sk(L, '#3d3a44', 4.3)} stroke-width="4"/>${wHi('M-29 -147.4 C-23.4 -169 27.4 -169 33 -147.4', 0.18, 0.9)}`;
+      return [band + e(-12, 1) + e(16, -1) + `<path d="M-17 -156 L-13 -169 L-8 -157 Z M21 -156 L17 -169 L12 -157 Z" fill="#f2a8b8"/>` + both('<path d="M-14.6 -158.6 l.6 -4.6 M-11.6 -158 l-.6 -3.6" stroke="#fff" stroke-opacity=".7" stroke-width=".8" stroke-linecap="round"/>'), band + e(-12, 1) + e(16, -1)]; },
+    hachimaki: (L) => {   // 2026-11-11 (finer): the cloth's lower edge in shade and creased where it wraps round the head, the red disc lit; at the back a knot, its tails folded
+      const band = `<path ${L('#f8f6f0', 4)} d="M-33 -142 Q2 -134 37 -142 V-132 Q2 -124 -33 -132 Z"/>${wSh('M-33 -132 Q2 -124 37 -132 L37 -134.2 Q2 -126.2 -33 -134.2 Z', 0.08)}<path d="M-31.4 -140.6 l2.8 3.6 M-31.4 -136.4 l2 2.4 M35.4 -140.6 l-2.8 3.6 M35.4 -136.4 l-2 2.4" stroke="#000" stroke-opacity=".12" stroke-width=".8" stroke-linecap="round"/>`;
+      return [band + `<circle cx="18" cy="-134" r="4.4" ${L('#d0453c', 4.1)}/><text x="-12" y="-131.5" font-size="7.5" font-weight="700" fill="#d0453c" font-family="'Hiragino Mincho ProN', serif">必勝</text>`, band + `<path d="M2 -134 L-10 -112 L-2 -114 L4 -134 L14 -110 L20 -114 Z" ${L('#f2efe6', 3.8)}/><path d="M0 -130 L-6.6 -116 M6.4 -129 L14 -114.6" stroke="#000" stroke-opacity=".1" stroke-width=".8" stroke-linecap="round"/><ellipse cx="3" cy="-133.6" rx="4.6" ry="3.8" ${L('#f2efe6', 4.1)}/>${wSh('M-1.6 -133 Q3 -128 7.6 -133 Q3 -130.6 -1.6 -133 Z', 0.12)}`]; },
     beret: (L) => {   // perched on the crown, tipped down to the left, with a stalk
-      const b = `<g transform="translate(-1 -167) rotate(-8)"><ellipse rx="40" ry="12.5" ${L('#2f3b63', 4.3)}/><path d="M-35 5 Q0 15 35 5" fill="none" stroke="#24304f" stroke-width="3" stroke-linecap="round"/><path d="M-19 -7 Q-3 -12 15 -9" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="2.4" stroke-linecap="round"/><path d="M0 -12.4 q-.6 -4.6 2.6 -6.6" fill="none" stroke="#24304f" stroke-width="2.6" stroke-linecap="round"/></g>`;
+      // 2026-11-11 (finer): the felt rounds off into shade underneath, a second soft shine, the rim and the stalk lit (a shine on it)
+      const k = sk(L, '#24304f', 4.3);
+      const b = `<g transform="translate(-1 -167) rotate(-8)"><ellipse rx="40" ry="12.5" ${L('#2f3b63', 4.3)}/>${wSh('M-40 0 A40 12.5 0 0 0 40 0 Q0 9.4 -40 0 Z', 0.14)}<path d="M-35 5 Q0 15 35 5" fill="none" ${k} stroke-width="3" stroke-linecap="round"/><path d="M-19 -7 Q-3 -12 15 -9" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="2.4" stroke-linecap="round"/>${wHi('M-31 -3.4 Q-27 -6.4 -22 -7.8', 0.1, 1.6)}<path d="M0 -12.4 q-.6 -4.6 2.6 -6.6" fill="none" ${k} stroke-width="2.6" stroke-linecap="round"/>${wHi('M-.2 -13.6 q-.2 -2.6 1.4 -4', 0.2, 0.7)}</g>`;
       return [b, b];
     },
     gradcap: (L) => {   // a skull cap over the crown, the board on top, the tassel to the right
-      const c = `<path ${L('#26262e', 4.3)} d="M-42 -146 Q2 -136 46 -146 L42 -166 Q2 -173 -38 -166 Z"/><path ${L('#1d1d24', 4.4)} d="M-52 -175 L2 -160 L56 -175 V-172 L2 -157 L-52 -172 Z"/><path ${L('#33333d', 4.5)} d="M2 -190 L56 -175 L2 -160 L-52 -175 Z"/>
-        <circle cx="2" cy="-175" r="2.8" fill="#e6c25a"/><path d="M2 -175 L46 -170 V-150" fill="none" stroke="#e6c25a" stroke-width="1.8"/><path d="M43 -150 h6 l-1 9 h-4 Z" fill="#e6c25a"/>`;
+      // 2026-11-11 (finer): the board's far edges and the cap's lower edge catch the light, the button shines, the gold lit by the room;
+      // the tassel bound at its top and in strands
+      const c = `<path ${L('#26262e', 4.3)} d="M-42 -146 Q2 -136 46 -146 L42 -166 Q2 -173 -38 -166 Z"/>${wHi('M-39.4 -149.4 Q2 -140 43.4 -149.4', 0.08, 1)}<path ${L('#1d1d24', 4.4)} d="M-52 -175 L2 -160 L56 -175 V-172 L2 -157 L-52 -172 Z"/><path ${L('#33333d', 4.5)} d="M2 -190 L56 -175 L2 -160 L-52 -175 Z"/>${wHi('M-49.4 -175.2 L2 -189 L53.4 -175.2', 0.14, 0.9)}
+        <circle cx="2" cy="-175" r="2.8" ${L('#e6c25a', 4.6)}/><circle cx="1.1" cy="-176" r=".9" fill="#fff" fill-opacity=".55"/><path d="M2 -175 L46 -170 V-150" fill="none" ${sk(L, '#e6c25a', 4.5)} stroke-width="1.8"/><path d="M43 -150 h6 l-1 9 h-4 Z" ${L('#e6c25a', 4.3)}/><path d="M43.3 -149.2 h5.4" stroke="#000" stroke-opacity=".2" stroke-width="1.4"/><path d="M44.8 -147.4 v6.2 M46 -147.4 v6.4 M47.2 -147.4 v6.2" stroke="#000" stroke-opacity=".16" stroke-width=".5"/>`;
       return [c, c];
     },
-    glasses: () => [`<g fill="none" stroke="#3a3328" stroke-width="2"><circle cx="-10.5" cy="-117" r="8.6"/><circle cx="14.5" cy="-117" r="8.6"/><path d="M-1.9 -118 Q2 -120.6 5.9 -118 M-19.1 -118.6 L-33 -121.6 M23.1 -118.6 L37 -121.6"/></g><path d="M-15 -121.4 l4 -3 M10 -121.4 l4 -3" stroke="#fff" stroke-opacity=".7" stroke-width="1.4"/>`, `<path d="M-33 -122 L-26 -120 M37 -122 L30 -120" stroke="#3a3328" stroke-width="2"/>`],
+    // 2026-11-11 (finer): a faint sheen on the lenses, a second small glint low on each, the hinges
+    glasses: () => [`<circle cx="-10.5" cy="-117" r="7.8" fill="#fff" fill-opacity=".08"/><circle cx="14.5" cy="-117" r="7.8" fill="#fff" fill-opacity=".08"/><g fill="none" stroke="#3a3328" stroke-width="2"><circle cx="-10.5" cy="-117" r="8.6"/><circle cx="14.5" cy="-117" r="8.6"/><path d="M-1.9 -118 Q2 -120.6 5.9 -118 M-19.1 -118.6 L-33 -121.6 M23.1 -118.6 L37 -121.6"/></g><path d="M-15 -121.4 l4 -3 M10 -121.4 l4 -3" stroke="#fff" stroke-opacity=".7" stroke-width="1.4"/><path d="M-6.2 -112.2 l1.6 -1.2 M18.8 -112.2 l1.6 -1.2" stroke="#fff" stroke-opacity=".45" stroke-width="1" stroke-linecap="round"/><circle cx="-19.4" cy="-118.7" r="1.3" fill="#3a3328"/><circle cx="23.4" cy="-118.7" r="1.3" fill="#3a3328"/>`, `<path d="M-33 -122 L-26 -120 M37 -122 L30 -120" stroke="#3a3328" stroke-width="2"/>`],
     // the town's work (test, 2026-11-10): w is all that is worn, for a colour or a mark (w.cap, w.apron, w.mark, w.tie)
     nejiri: () => { const b = `<path class="nejiri" fill="#f6f3ec" d="M-34 -142 Q2 -134 38 -142 V-134.6 Q2 -126.6 -34 -134.6 Z"/><path d="${[-28, -19, -10, -1, 8, 17, 26].map((x) => `M${x} -140.4 l4 6.4`).join(' ')}" stroke="#3f4660" stroke-width="2" stroke-linecap="round"/>`;
       return [b + '<ellipse cx="34" cy="-138" rx="5.4" ry="4.4" fill="#f6f3ec"/><path d="M33 -139 l4 3 M38 -136 l9 5 M38 -139 l10 -2" stroke="#3f4660" stroke-width="1.8" stroke-linecap="round"/>', b]; },   // ねじり鉢巻: twisted, knotted at the side
@@ -524,9 +577,20 @@ const HERO = (() => {
     towel: () => { const t = '<path fill="#f8f6f0" d="M-12 -68.4 Q2 -62 16 -68.4 L17 -63 Q2 -56.6 -13 -63 Z"/>'; return [t + '<path fill="#f8f6f0" d="M-12 -64 L-13 -45 H-6 L-5.4 -62 Z M16 -64 L17 -45 H10 L9.4 -62 Z"/><path d="M-13 -48 h7 M10 -48 h7" stroke="#5a8ac8" stroke-width="1.4"/>', t]; },   // 銭湯の常連: a towel round the neck
     lanyard: (L, c, d, w = {}) => [`<path d="M-6 -66 L2 -53 L10 -66" fill="none" stroke="${w.strap || '#3f7ac8'}" stroke-width="1.4"/><rect x="-3" y="-54" width="10" height="13" rx="1.4" fill="#fbfaf6" stroke="#8a8f99" stroke-width=".8"/><rect x="-1.2" y="-51.6" width="6.4" height="3" fill="${w.strap || '#3f7ac8'}"/>`, ''],   // a name card (ガイド, 看護師)
     // on the body (test, 2026-11-09: the Q版 body), in the body's units
-    scarf: (L) => { const w = `<path ${L('#d0453c', 1.6)} d="M-12 -68 Q2 -61 16 -68 L16.4 -62 Q2 -55 -12.4 -62 Z"/>`; return [w + `<path ${L('#b93a33', 1.4)} d="M7 -61 L13 -61.6 L14.6 -46 L8.6 -45 Z"/><path d="M9 -46 v3.4 M11.6 -46.4 v3.4 M14 -46.6 v3.4" stroke="#b93a33" stroke-width="1.2"/>`, w + `<path ${L('#b93a33', 1.4)} d="M-6 -61 L0 -61 L-1 -46 L-7 -46.6 Z"/>`]; },
-    bowtie: () => [`<path d="M2 -61 L-5 -64.6 L-5 -57.4 Z M2 -61 L9 -64.6 L9 -57.4 Z" fill="#c8453d"/><circle cx="2" cy="-61" r="2" fill="#a63831"/>`, ''],
-    backpack: (L) => [`<path ${L('#e6a23c', 1.3)} d="M-15 -62 Q-21 -52 -18 -36 H-13 V-62 Z"/><path d="M-6 -66 Q-9 -55 -8 -42 M10 -66 Q13 -55 12 -42" fill="none" stroke="#b8792a" stroke-width="2.6" stroke-linecap="round"/>`, `<rect x="-12" y="-64" width="28" height="30" rx="7" ${L('#e6a23c', 1.3)}/><rect x="-7" y="-50" width="18" height="13" rx="3.6" ${L('#d48f2c', 1.1)}/><path d="M-5 -45 H9" stroke="#b8792a" stroke-width="1.2"/><path d="M-8 -64 Q2 -69 12 -64" fill="none" stroke="#b8792a" stroke-width="2.2"/>`],
+    // 2026-11-11 (finer): the scarf knitted in ribs, its wrap shaded along the lower edge, each end folded where it comes out and
+    // fringed (the back one too), all lit by the room; the bow tie lit, pleated, its knot with a shine; the backpack's straps lit, a zip
+    // round its top with a pull, its pocket stitched round with a pull on its zip, its far side shaded and a shine
+    scarf: (L) => {
+      const f = sk(L, '#b93a33', 1.4), rib = (d) => `<path d="${d}" stroke="#000" stroke-opacity=".13" stroke-width=".7"/>`;
+      const w = `<path ${L('#d0453c', 1.6)} d="M-12 -68 Q2 -61 16 -68 L16.4 -62 Q2 -55 -12.4 -62 Z"/>${wSh('M-12.4 -62 Q2 -55 16.4 -62 L16.3 -63.8 Q2 -56.8 -12.3 -63.8 Z', 0.1)}${rib('M-6 -65.2 V-60 M-1 -64.4 V-58.9 M5 -64.4 V-58.9 M10 -65.2 V-60')}`;
+      return [w + `<path ${L('#b93a33', 1.4)} d="M7 -61 L13 -61.6 L14.6 -46 L8.6 -45 Z"/>${rib('M9 -60.8 L10.6 -45.4 M11 -61 L12.6 -45.8')}${wSh('M7 -61 L13 -61.6 L13.24 -59.3 L7.24 -58.7 Z', 0.16)}<path d="M9 -46 v3.4 M11.6 -46.4 v3.4 M14 -46.6 v3.4" ${f} stroke-width="1.2"/>`,
+        w + `<path ${L('#b93a33', 1.4)} d="M-6 -61 L0 -61 L-1 -46 L-7 -46.6 Z"/>${rib('M-4 -61 L-5 -46.4 M-2 -61 L-3 -46.2')}${wSh('M-6 -61 L0 -61 L-.16 -58.6 L-6.16 -58.6 Z', 0.16)}<path d="M-6.2 -46.6 v3.4 M-4 -46.4 v3.4 M-1.8 -46.2 v3.4" ${f} stroke-width="1.2"/>`];
+    },
+    bowtie: (L) => [`<path d="M2 -61 L-5 -64.6 L-5 -57.4 Z M2 -61 L9 -64.6 L9 -57.4 Z" ${L('#c8453d', 1.7)}/><path d="M-4.4 -63.4 L-.4 -61.5 M-4.4 -58.6 L-.4 -60.5 M8.4 -63.4 L4.4 -61.5 M8.4 -58.6 L4.4 -60.5" stroke="#000" stroke-opacity=".2" stroke-width=".6" stroke-linecap="round"/><path d="M-4.6 -64.2 V-57.8 M8.6 -64.2 V-57.8" stroke="#000" stroke-opacity=".14" stroke-width=".8"/><circle cx="2" cy="-61" r="2" ${L('#a63831', 1.7)}/><circle cx="1.4" cy="-61.7" r=".7" fill="#fff" fill-opacity=".4"/>`, ''],
+    backpack: (L) => { const s = sk(L, '#b8792a', 1.4);
+      return [`<path ${L('#e6a23c', 1.3)} d="M-15 -62 Q-21 -52 -18 -36 H-13 V-62 Z"/><path d="M-6 -66 Q-9 -55 -8 -42 M10 -66 Q13 -55 12 -42" fill="none" ${s} stroke-width="2.6" stroke-linecap="round"/>`,
+        `<rect x="-12" y="-64" width="28" height="30" rx="7" ${L('#e6a23c', 1.3)}/>${wSh('M9 -64 Q16 -64 16 -57 V-41 Q16 -34 9 -34 Q13.4 -38 13.4 -49 Q13.4 -60 9 -64 Z', 0.1)}${wHi('M-9.4 -56 Q-9.2 -61.4 -4 -61.8', 0.3, 1.2)}<path d="M-10.2 -50 Q-10 -61.6 2 -61.8 Q14 -61.6 14.2 -50" fill="none" stroke="#000" stroke-opacity=".16" stroke-width=".8"/><rect x="13.4" y="-51.6" width="1.6" height="3.2" rx=".6" fill="#7a4e1c" fill-opacity=".8"/>
+        <rect x="-7" y="-50" width="18" height="13" rx="3.6" ${L('#d48f2c', 1.1)}/>${stitch(L, '#f6d48e', 1.1, 'M-3.2 -48.6 H7.2 Q9.6 -48.6 9.6 -46.2 V-40.8 Q9.6 -38.4 7.2 -38.4 H-3.2 Q-5.6 -38.4 -5.6 -40.8 V-46.2 Q-5.6 -48.6 -3.2 -48.6 Z', 0.75)}<path d="M-5 -45 H9" ${s} stroke-width="1.2"/><rect x="8.4" y="-45.4" width="1.6" height="3.2" rx=".6" fill="#7a4e1c" fill-opacity=".8"/><path d="M-8 -64 Q2 -69 12 -64" fill="none" ${s} stroke-width="2.2"/>`]; },
   };
   const day = (h) => `fill="${h}"`;
   const paint = (a) => (a.match(/fill[:=]"?([^";]+)/) || [])[1] || '#000';   // the colour a lit fill attribute paints
