@@ -750,7 +750,7 @@ function srsAnswer(key, correct, opt = {}) {
   fsrsNext(r, g, elapsed);
   if (isNew && g === 3 && key.startsWith('v:')) r.s = Math.min(r.s, 1);   // a new word's first check is tomorrow, then FSRS takes over
   r.n++;
-  if (g > 1) { r.ok++; r.st++; } else { r.ng++; r.st = 0; if (before >= 2) r.lapse = (r.lapse || 0) + 1; delete r.mark; delete r.pre; }   // a miss ends 我的標記: back to the normal rules
+  if (g > 1) { r.ok++; r.st++; } else { r.ng++; r.st = 0; if (before >= 2) r.lapse = (r.lapse || 0) + 1; delete r.mark; delete r.pre; delete r.markDay; }   // a miss ends 我的標記: back to the normal rules
   r.b = g === 1 ? Math.min(levelFromS(r.s), 1) : levelFromS(r.s);
   // four stars answered right go up by memory strength like any other item (after a long wait in the queue that usually
   // makes five); a 入門 item clearly right (not a flashcard's 模糊) while 已熟練 leaves the queues: five stars, and a word
@@ -807,7 +807,7 @@ function markItem(key, lv, save = true) {
   if (markFresh(state.srs[key])) unmarkItem(key, false);   // a mark changed starts from the record before it (5★ → 2★ comes down)
   let r = state.srs[key];
   const pre = r ? deepClone(r) : 'new';
-  if (r) { delete pre.mark; delete pre.pre; }
+  if (r) { delete pre.mark; delete pre.pre; delete pre.markDay; }
   else { r = state.srs[key] = { b: 0, due: t, n: 0, ok: 0, ng: 0, st: 0, last: null, lapse: 0, intro: t }; if (key.startsWith('v:')) r.f = {}; }
   ensureFsrs(r);
   const up = r.s < MARK_S[lv];
@@ -816,11 +816,13 @@ function markItem(key, lv, save = true) {
     if (r.b >= SRS_LEARNED && !r.lrn) r.lrn = t;
     r.due = addDays(t, fsrsDays(r.s, key)); r.last = t;
   }
-  r.mark = lv; r.pre = pre;
+  r.mark = lv; r.pre = pre; r.markDay = t;   // marked today: off today's list (markedToday)
   if (lv === 5) state.mistakes.forEach(m => { if (m.key === key && !m.mastered) { m.mastered = true; m.last = t; } });   // five stars clear it from the notebook
   if (save) saveState();
   return up;   // false: it was that strong already
 }
+// an item marked today (2★ or 5★, 2026-11-11, the user) has left today's list: the mark set its next day. 0★ puts it back.
+function markedToday(key) { const r = state.srs[key]; return Boolean(r && r.mark && r.markDay === todayStr()); }
 // 0★: a mark not answered since gives the record before it back (none: the item is new again); one answered since keeps its
 // answers and only loses the mark. A 我會了 from before 我的標記 (no r.pre) goes back to 熟悉, as its 取消熟練 did.
 function unmarkItem(key, save = true) {
@@ -828,7 +830,7 @@ function unmarkItem(key, save = true) {
   if (markFresh(r)) { if (r.pre === 'new') delete state.srs[key]; else state.srs[key] = r.pre; }
   else {
     if (r.pre === undefined) { delete r.out; r.s = Math.min(r.s || 0, LEVEL_FROM_S[SRS_LEARNED - 1]); r.b = levelFromS(r.s); r.due = addDays(todayStr(), fsrsDays(r.s, key)); }   // an 入門 word that left comes back
-    delete r.mark; delete r.pre;
+    delete r.mark; delete r.pre; delete r.markDay;
   }
   if (save) saveState();
 }

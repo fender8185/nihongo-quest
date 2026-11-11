@@ -329,8 +329,9 @@ function computeDailyPlan(size = SESSION_SIZE) {
 
 // 今天的清單: worked out the first time it is needed each day — again only when the start gets chosen or the stage changes
 // (入門 ↔ 正課) — and kept as keys in state.today.plan. Every later call rebuilds it from those keys minus what was answered
-// today, so the day's total never moves: a bulk mark, 我會了 or 前往下一單元 changes tomorrow's list, not today's (and
-// does not eat today's listening and reading). Items answered before a rebuild stay in it as `kept`.
+// today, so the day's total does not move for a stage pass's bulk mark or 前往下一單元: they change tomorrow's list, not today's
+// (and do not eat today's listening and reading). Items answered before a rebuild stay in it as `kept`. What is marked 2★ or
+// 5★ today (我的標記, 我會了) leaves it (markedToday): the day's total gets smaller, and 0★ brings the item back.
 const PLAN_LISTS = ['dueV', 'dueG', 'dueC', 'dueK', 'dueL', 'dueR', 'dueA', 'q4', 'q5', 'newV', 'newG', 'newC', 'newK', 'newL', 'newR', 'newA'];
 function planListKeys(plan) { return [...new Set(PLAN_LISTS.concat('kept').flatMap(n => plan.lists[n] || []))]; }
 function makeTodayPlan(size) {
@@ -357,7 +358,7 @@ function dailyPlan(size = SESSION_SIZE) {
   const p = state.today.plan;
   const out = { note: p.note, n: p.n, split: p.split, size };
   let remaining = 0;
-  PLAN_LISTS.forEach(n => { out[n] = (p.lists[n] || []).map(k => REG.byKey.get(k)).filter(x => x && !answeredToday(x.key)); remaining += out[n].length; });
+  PLAN_LISTS.forEach(n => { out[n] = (p.lists[n] || []).map(k => REG.byKey.get(k)).filter(x => x && !answeredToday(x.key) && !markedToday(x.key)); remaining += out[n].length; });
   out.relearnN = out.dueV.concat(out.dueG).filter(x => onLadder(x.key)).length;
   out.remaining = remaining;
   return out;
@@ -366,10 +367,10 @@ function dailyPlan(size = SESSION_SIZE) {
 // the day's share for that kind less what was introduced today
 function todayNewLeft(kind) { return Math.max(0, ((dailyPlan().split || {})[kind] || 0) - (state.today['new' + kind.toUpperCase()] || 0)); }
 // every key on today's list, answered or not (an item hidden or deleted since is left out, and so is a notebook card a
-// 1.0.20 list held: since 1.0.21 the notebook's own cards are practised on its page)
+// 1.0.20 list held: since 1.0.21 the notebook's own cards are practised on its page; so is one marked today before it was answered)
 function todayPlanKeys() {
   dailyPlan();
-  return planListKeys(state.today.plan).filter(k => REG.byKey.has(k));
+  return planListKeys(state.today.plan).filter(k => REG.byKey.has(k) && (answeredToday(k) || !markedToday(k)));
 }
 
 function interleave(vList, gList) {
@@ -530,6 +531,7 @@ function startSession(mode, opt = {}) {
     const shown = new Set(state.lessonSeen || []);
     entries.forEach(e => { const g = e.item; if (!g || g.kind !== 'g' || state.srs[g.key]) return; const k = lessonSecKey(g); if (!k || shown.has(k)) return; shown.add(k); e.preview = true; });
   }
+  if (mode !== 'stage') entries.forEach(e => { if (relearnCard(e.item)) e.preview = e.relearn = true; });
   SESSION = {
     mode, title: opt.title || MODE_TITLE[mode] || '練習', entries, idx: 0, meta,
     stats: { correct: 0, wrong: 0, newCount: 0 }, results: [], startedAt: Date.now(), lastFmt: '', opt,
@@ -554,6 +556,12 @@ function prepareEntry(i) {
   if (!e.q) { SESSION.entries.splice(i, 1); if (i < SESSION.entries.length) prepareEntry(i); }
 }
 
+// 常錯 (LEECH_LAPSES misses after it was learned) and missed again: its card comes back before it is asked (2026-11-11, the
+// user) — a word's preview card, a grammar item's lesson section — until it is answered right on its day (rl 0 → 1)
+function relearnCard(it) {
+  const r = it && state.srs[it.key];
+  return Boolean(r && r.leech && r.rl === 0 && (it.kind === 'v' || (it.kind === 'g' && lessonSecKey(it))));
+}
 // formats this item has already been asked in during the session (answered or queued ahead)
 function usedFormats(key) {
   return SESSION.entries.filter(x => x.q && x.item && x.item.key === key).map(x => x.q.fmt);
@@ -781,8 +789,8 @@ function previewHtml(e, pct) {
     </div>
     ${sessionNoteHtml()}
     <div class="q-card">
-      <div class="q-label"><span>新單字 · ${esc(lvLabel(v.lv))} · ${esc(vocabTheme(v))}</span><span class="chip chip-accent">新</span></div>
-      <div class="q-instr">先看一遍，接著會用幾種方式考這個字。</div>
+      <div class="q-label"><span>${e.relearn ? '常錯的字' : '新單字'} · ${esc(lvLabel(v.lv))} · ${esc(vocabTheme(v))}</span>${e.relearn ? '<span class="chip chip-bad">再看一次</span>' : '<span class="chip chip-accent">新</span>'}</div>
+      <div class="q-instr">${e.relearn ? '這個字錯過好幾次，先再看一遍，等一下再考。' : '先看一遍，接著會用幾種方式考這個字。'}</div>
       <div class="preview">
         ${picSvg(picKey(v))}
         <div class="word jp">${esc(jaPlain(v.w))}</div>
@@ -795,7 +803,7 @@ function previewHtml(e, pct) {
     <div class="pr-actions pr-next-sticky">
       <div class="left">
         <button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>
-        <button type="button" class="btn btn-sm btn-ghost" data-act="preview-known" title="這個字我已經會了：標成五顆、跳過它的題目，之後排進五顆的複習">我會了</button>
+        ${e.relearn ? '' : '<button type="button" class="btn btn-sm btn-ghost" data-act="preview-known" title="這個字我已經會了：標成五顆、跳過它的題目，之後排進五顆的複習">我會了</button>'}
       </div>
       <div class="right">${previewGoBtn()}</div>
     </div>`;
@@ -1114,7 +1122,7 @@ function answerCurrent(i) {
   if (e.requeued) {
     recordAction(q.kind === 'v' || q.kind === 'k' || q.kind === 'a' ? 'v' : q.kind === 'g' || q.kind === 'c' ? 'g' : 'q', null, q.kind === 'c' ? 'g' : q.kind);
     SESSION.stats[ok ? 'correct' : 'wrong']++;
-    SESSION.results.push({ key: q.key, ok, q, chosen: i, requeued: true, missed: e.missed });
+    SESSION.results.push({ key: q.key, ok, q, chosen: i, requeued: true, missed: e.missed, at: Date.now() });
     const wait = cheer(e, ok);
     saveState(); renderPractice(); speakAnswered(q, wait);
     return;
@@ -1155,7 +1163,7 @@ function answerCurrent(i) {
     if (!e.encore) retries.push(queueRetry(x.item, null, q));
   });
   if (e.undo) e.undo.retries = retries;
-  SESSION.results.push({ key: q.key, ok, q, chosen: i, missed: e.missed });
+  SESSION.results.push({ key: q.key, ok, q, chosen: i, missed: e.missed, at: Date.now() });   // at: setPace
   const wait = cheer(e, ok);
   saveState();
   renderPractice();
@@ -1241,7 +1249,7 @@ function renderSummary(view) {
       </div>
       ${harvestHtml(s, first)}
       ${gain.set || gain.day || gain.full ? `<div class="koto-gain${first ? ' pop' : ''}">${kotoIcon()}<span>言靈</span>${gain.set ? '<b>+1</b><span>做完一組</span>' : ''}${gain.set && gain.day ? '<i class="sep"></i>' : ''}${gain.day ? `<b>+${gain.day}</b><span>今日完成</span>` : ''}${gain.full ? '<span class="cap">今天作答的言靈拿滿了</span>' : ''}<span class="tot">共 <span class="num">${kotoBalance()}</span></span></div>` : ''}
-      ${dayDone ? '<div class="banner mt-4">今天的進度完成了。答對的題目會在幾天後再出現，答錯的明天再複習。</div>' : `<div class="hint mt-4">今天還有 ${prog.left} 題。</div>`}
+      ${dayDone ? '<div class="banner mt-4">今天的進度完成了。答對的題目會在幾天後再出現，答錯的明天再複習。</div>' : `<div class="hint mt-4">${leftText(prog.left, s)}</div>`}
       <div class="row-wrap mt-4">
         <button type="button" class="btn btn-primary" data-act="again">再練一組</button>
         ${wrongKeys.size ? '<button type="button" class="btn" data-act="retry-wrong">重練答錯的題目</button>' : ''}
@@ -1250,6 +1258,22 @@ function renderSummary(view) {
     </div>
     ${wrongKeys.size ? `<div class="card"><div class="card-head"><div class="card-title">這次答錯的題目</div><span class="chip">${wrongKeys.size}</span></div><div class="list">${wrongList}</div></div>` : ''}`;
   if (first) { playAnims(view); countUp(view); summaryReward(view, gain, allRight); }
+}
+// what is left of today's list in sets and minutes (2026-11-11, the user): sets cut as buildDailyQueue cuts them (a small tail
+// joins the set before it); minutes at this set's own pace — its time per item, encores, 再練一次 and cards included, each
+// answer's wait capped at PACE_GAP_MAX so a pause does not count — left out when the set answered fewer than five items
+const PACE_GAP_MAX = 90000;
+function setsLeft(n, size = SESSION_SIZE) { let sets = 0; while (n > 0) { n -= size; sets++; if (n > 0 && (n <= 5 || n < size / 4)) n = 0; } return sets; }
+function setPace(s) {
+  const items = new Set(s.results.filter(r => !r.requeued).map(r => r.key || r.q.mistakePrompt)).size; if (items < 5) return 0;
+  let ms = 0; let at = s.startedAt;
+  s.results.forEach(r => { if (r.at) { ms += Math.min(r.at - at, PACE_GAP_MAX); at = r.at; } });
+  return ms / items;
+}
+function minutesText(min) { const h = Math.floor(min / 60), m = min % 60; return h ? `${h} 小時${m ? ` ${m} 分鐘` : ''}` : `${m} 分鐘`; }
+function leftText(left, s) {
+  const pace = setPace(s); const min = pace ? Math.max(1, Math.round(left * pace / 60000)) : 0;
+  return `今天還有 ${left} 題，大約 ${setsLeft(left)} 組${min ? `、${minutesText(min)}` : ''}。`;
 }
 // 這組的收穫 (2026-11-10, the user: the summary should show what was won, and move): what rose to 熟悉 or 已熟練 in this set (the
 // chip a right answer showed, 1.0.50) and what was met for the first time — words, grammar points, kanji, kana; the chips pop in

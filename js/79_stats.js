@@ -349,8 +349,8 @@ function grammarPreviewHtml(e, pct) {
     </div>
     ${sessionNoteHtml()}
     <div class="q-card">
-      <div class="q-label"><span>新文法 · ${esc(u.short)}</span><span class="chip chip-accent">新</span></div>
-      <div class="q-instr">先看這一段講義，接下來的題目會考這裡的用法。</div>
+      <div class="q-label"><span>${e.relearn ? '常錯的文法' : '新文法'} · ${esc(u.short)}</span>${e.relearn ? '<span class="chip chip-bad">再看一次</span>' : '<span class="chip chip-accent">新</span>'}</div>
+      <div class="q-instr">${e.relearn ? '這一段的題目錯過好幾次，先再看一遍講義，等一下再考。' : '先看這一段講義，接下來的題目會考這裡的用法。'}</div>
       <div class="preview grammar">
         <div class="word">${bracketRuby(sec.h)}</div>
         ${sec.rule ? `<div class="rule jp mt-2">${bracketRuby(sec.rule)}</div>` : ''}

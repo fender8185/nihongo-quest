@@ -616,6 +616,67 @@ def test_pause_note_names_the_unit_the_learner_will_resume(b):
       """ + END + " return JSON.stringify({ at9: at9 === `先把 N5 的單字（還剩 38 個）學完，再開始${u('m9')}。`, at6: at6 === `先把 N5 的單字（還剩 38 個）學完，再開始${u('m7')}。`, t: [at9, at6] }); })()"
     r = json.loads(ev(b, js)); assert r['at9'] and r['at6'], r
 
+# ---- 2026-11-11: today's list after a mark, the 常錯 card, sets and minutes left ----
+# what is marked 2★ or 5★ today leaves today's list (the total gets smaller); 0★ brings it back; an item answered before
+# its mark stays counted as done
+def test_items_marked_today_leave_todays_list_and_zero_stars_bring_them_back(b):
+    js = "(() => { " + FRESH + """ delete state.today.plan; DAILY_CACHE = null;
+      const keysNow = () => PLAN_LISTS.flatMap(n => dailyPlan()[n]).map(x => x.key);
+      const p0 = dailyPlan(); const u = REG.byKey.get(p0.newG[0].key).u; const inUnit = new Set(unitItems(u).map(g => g.key));
+      const unitN = keysNow().filter(k => inUnit.has(k)).length; const total0 = dayProgress().total;
+      ACTIONS['mark-unit']({ dataset: { unit: u, lv: '5' } });
+      const five = { left: keysNow().filter(k => inUnit.has(k)).length, set: buildDailyQueue().items.filter(x => inUnit.has(x.key)).length, total: dayProgress().total };
+      const w = p0.newV[0]; ACTIONS['mark-word']({ dataset: { key: w.key, lv: '2' } });
+      const two = { w: keysNow().includes(w.key), total: dayProgress().total };
+      ACTIONS['mark-unit']({ dataset: { unit: u, lv: '0' } });
+      const zero = { back: keysNow().filter(k => inUnit.has(k)).length, total: dayProgress().total, w: keysNow().includes(w.key) };
+      const a = keysNow().find(k => k !== w.key && !inUnit.has(k)); srsAnswer(a, true); const before = dayProgress(); markItem(a, 5); const after = dayProgress();
+      return JSON.stringify({ unitN, total0, five, two, zero, done: [before.done, after.done, before.total, after.total] }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['unitN'] > 0 and r['five'] == {'left': 0, 'set': 0, 'total': r['total0'] - r['unitN']}, r
+    assert r['two'] == {'w': False, 'total': r['total0'] - r['unitN'] - 1}, r
+    assert r['zero'] == {'back': r['unitN'], 'total': r['total0'] - 1, 'w': False}, r   # the unit's items are back; the word keeps its 2★
+    assert r['done'][0] == r['done'][1] == 1 and r['done'][2] == r['done'][3], r
+
+# a 常錯 item just missed again (on the ladder at step 0) gets its card before it is asked: a word its preview card, a grammar
+# item its lesson section; not a plain ladder item, not a 常錯 one further up the ladder, never in a 階段測驗
+def test_a_leech_just_missed_gets_its_card_again_before_it_is_asked(b):
+    js = "(() => { " + FRESH + REC + """ const [w, w2, w3] = words.filter(v => v.m); const g = unitItems('m1').find(x => lessonSecKey(x));
+      const leech = { leech: true, lapse: 4, rl: 0, due: t };
+      state.srs[w.key] = rec(1, leech); state.srs[g.key] = rec(1, leech); state.srs[w2.key] = rec(1, { rl: 0, due: t }); state.srs[w3.key] = rec(1, Object.assign({}, leech, { rl: 1 }));
+      saveState(); startSession('items', { items: [w, g, w2, w3] });
+      const flags = Object.fromEntries(SESSION.entries.map(e => [e.item.key, Boolean(e.preview && e.relearn)]));
+      const look = (key) => { SESSION.idx = SESSION.entries.findIndex(e => e.item.key === key); route(); const v = document.getElementById('view');
+        return { label: v.querySelector('.q-label').textContent, known: Boolean(v.querySelector('[data-act=preview-known]')) }; };
+      const out = { flags, w: look(w.key), g: look(g.key) };
+      ACTIONS['preview-known'](); out.stillThere = SESSION.entries.some(e => e.item.key === g.key);
+      SESSION.idx = SESSION.entries.findIndex(e => e.item.key === w.key); ACTIONS['preview-known'](); out.wMark = state.srs[w.key].mark || null;
+      SESSION = null; document.body.classList.remove('practicing');
+      return JSON.stringify(Object.assign(out, { keys: [w.key, g.key, w2.key, w3.key] })); })()"""
+    r = json.loads(ev(b, js))
+    w, g, w2, w3 = r['keys']
+    assert r['flags'] == {w: True, g: True, w2: False, w3: False}, r
+    assert '常錯的字' in r['w']['label'] and '再看一次' in r['w']['label'] and not r['w']['known'], r   # no 我會了 on a word that keeps being missed
+    assert '常錯的文法' in r['g']['label'] and '再看一次' in r['g']['label'], r
+    assert r['stillThere'] and r['wMark'] is None, r
+
+# the summary says how many sets and minutes are left: sets cut like the day's sets (a small tail joins the one before), minutes
+# at this set's pace per item with a long pause counted as 90 s; no minutes after fewer than five items
+def test_the_summary_says_how_many_sets_and_minutes_are_left(b):
+    js = "(() => { " + FRESH + """ const res = (n, gapAt) => Array.from({ length: n }, (_, i) => ({ key: 'v:x' + i, ok: true, q: {}, at: 0 }));
+      const s = { startedAt: 1000, results: res(10) }; let at = 1000; s.results.forEach((r, i) => { at += i === 4 ? 600000 : 30000; r.at = at; });   // 30 s each, one 10-minute pause
+      const out = { sets: [20, 25, 26, 47, 3].map(n => setsLeft(n)), t47: leftText(47, s), t150: leftText(150, s), t200: leftText(200, s), few: leftText(47, { startedAt: 0, results: res(4) }) };
+      delete state.today.plan; DAILY_CACHE = null; startSession('daily', { size: 20 }); SESSION.startedAt = Date.now() - 300000;
+      SESSION.results = res(10).map((r, i) => Object.assign(r, { at: SESSION.startedAt + 30000 * (i + 1) })); SESSION.idx = SESSION.entries.length; route();
+      out.hint = (document.querySelector('#view .hint') || {}).textContent || ''; out.left = dayProgress().left;
+      SESSION = null; document.body.classList.remove('practicing');
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r['sets'] == [1, 1, 2, 3, 1], r
+    assert r['t47'] == '今天還有 47 題，大約 3 組、28 分鐘。' and r['t150'].endswith('、1 小時 30 分鐘。') and r['t200'].endswith('、2 小時。'), r   # 36 s an item
+    assert r['few'] == '今天還有 47 題，大約 3 組。', r
+    assert r['hint'].startswith(f"今天還有 {r['left']} 題，大約 ") and '分鐘' in r['hint'], r
+
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

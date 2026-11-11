@@ -169,7 +169,7 @@ function bulkApply(targets, snap) {
       if (key.startsWith('v:')) r.f = {};
     }
     ensureFsrs(r);
-    delete r.mark; delete r.pre;   // the pass is newer than a 我的標記 below four stars: 0★ no longer takes it back
+    delete r.mark; delete r.pre; delete r.markDay;   // the pass is newer than a 我的標記 below four stars: 0★ no longer takes it back
     r.s = Math.max(r.s || 0, LEVEL_FROM_S[3]);
     r.b = levelFromS(r.s);
     if (!r.lrn) r.lrn = t;

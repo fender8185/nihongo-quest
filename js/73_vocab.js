@@ -358,7 +358,7 @@ Object.assign(ACTIONS, {
   },
   // 我會了 on the new-word preview card: vouch for the word and drop it (and any encore) from this session
   'preview-known': () => {
-    const e = currentEntry(); if (!e || !e.preview || e.previewDone || !e.item || e.item.kind !== 'v') return;
+    const e = currentEntry(); if (!e || !e.preview || e.previewDone || e.relearn || !e.item || e.item.kind !== 'v') return;
     const v = e.item; markItem(v.key, 5);
     SESSION.entries = SESSION.entries.filter((x, i) => i !== SESSION.idx && !(x.item && x.item.key === v.key));
     toast(`「${jaPlain(v.w)}」已標成五顆，之後會排進五顆的複習`);
