@@ -289,101 +289,27 @@ const SCOPE = (() => {
   }
   return { open, SKIES };
 })();
-// test (2026-11-09): the gramophone plays a record while 書房 or the bedroom is open and it stands in either (state.record: the one
-// on it, '' the first; state.musicOff: stopped by hand). Made up here and played by Web Audio, so there is nothing to fetch: a
-// tune (mel: notes in eighths, name:length, - a rest), a chord a bar (its first note an octave down for the bass), a music-box
-// arpeggio over it (arp: the chord's notes, a step each), a soft pad and the gramophone's warm filter — clean, no crackle (the user's call).
+// the gramophone plays a record while 書房 or the bedroom is open and it stands in either (state.record: the one on it, '' the
+// first; state.musicOff: stopped by hand). A record is a file (music/<id>-<n>.m4a), fetched once and kept by the service worker
+// like the clips, played by a looping <audio>; its music is written in scripts/music-synth.js, which renders the file again
+// (scripts/render-music.py) when it changes. No file to be had (offline before it was ever fetched): quiet, tried again later.
 // RECORDS: the house's own (own); one sold later is had once bought (owns)
 const MUSIC = (() => {
   const RECORDS = [
-    { id: 'engawa', own: true, file: 'music/engawa-1.m4a', name: '縁側の午後', kana: 'えんがわのごご', zh: '簷廊的午後', style: '電鋼琴・音樂盒', color: '#e3907f', bpm: 76, bar: 8, lead: 'keys', arp: [0, 2, 1, 2, 3, 2, 1, 2],
-      chords: ['F3 A3 C4 E4', 'G3 B3 D4 E4', 'E3 G3 B3 D4', 'A3 C4 E4 G4', 'D3 F3 A3 C4', 'G3 B3 D4 F4', 'C3 E3 G3 B3', 'C3 E3 G3 D4'],
-      mel: 'A4:2 G4 A4 C5:2 E5:2 | D5:3 C5 D5:2 G4:2 | E5:2 D5 E5 G5:2 E5:2 | D5:3 C5 A4:4 | C5:2 D5 C5 A4:2 G4:2 | A4:2 C5:2 D5:2 G4:2 | E5:4 D5:2 C5:2 | C5:6 -:2 |'
-        + 'A4:2 G4 A4 C5:2 E5:2 | D5:3 C5 D5:2 G5:2 | E5:2 G5 A5 G5:2 E5:2 | D5:3 E5 C5:4 | A5:2 G5 E5 D5:2 C5:2 | D5:2 E5:2 G5:2 D5:2 | E5:3 D5 C5:2 A4:2 | C5:8' },
-    { id: 'yozakura', own: true, file: 'music/yozakura-1.m4a', name: '夜桜', kana: 'よざくら', zh: '夜裡的櫻花', style: '琴・音樂盒', color: '#8b6aa8', bpm: 66, bar: 6, lead: 'koto', arp: [0, 1, 2, 1, 2, 1],
-      chords: ['A3 C4 E4', 'A#3 D4 F4 A4', 'D3 F3 A3', 'E3 A3 D4', 'A3 C4 E4', 'F3 A3 C4 E4', 'D3 F3 A3 C4', 'A3 C4 E4'],
-      mel: 'E5:2 D5 E5 A5:2 | F5:3 E5 D5:2 | E5:2 F5 E5 D5:2 | A#4:2 A4:4 | A4:2 D5:2 E5:2 | F5:2 E5 F5 A5:2 | F5:2 E5:2 D5:2 | E5:6 |'
-        + 'E5:2 D5 E5 A5:2 | A#5:3 A5 F5:2 | E5:2 F5 E5 D5:2 | A#4:2 A4:4 | A5:2 A#5 A5 F5:2 | E5:4 F5:2 | E5:2 D5:2 A#4:2 | A4:6' }
+    { id: 'engawa', own: true, file: 'music/engawa-1.m4a', name: '縁側の午後', kana: 'えんがわのごご', zh: '簷廊的午後', style: '電鋼琴・音樂盒', color: '#e3907f' },
+    { id: 'yozakura', own: true, file: 'music/yozakura-1.m4a', name: '夜桜', kana: 'よざくら', zh: '夜裡的櫻花', style: '琴・音樂盒', color: '#8b6aa8' }
   ];
-  const NOTE = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
-  const hz = (n) => { const m = /^([A-G]#?)(\d)$/.exec(n); return 440 * Math.pow(2, ((+m[2] + 1) * 12 + NOTE[m[1]] - 69) / 12); };
   const have = () => RECORDS.filter((r) => r.own || owns(r.id));
   const current = () => have().find((r) => r.id === state.record) || have()[0];
-  // a record as notes to play: [step, instrument, Hz, length in steps, volume], and its length in steps
-  function score(rec) {
-    const ev = []; let t = 0;
-    rec.mel.split(/[\s|]+/).filter(Boolean).forEach((w) => { const [n, l] = w.split(':'), len = +(l || 1); if (n !== '-') ev.push([t, rec.lead, hz(n), len, rec.lead === 'koto' ? 0.45 : 0.16]); t += len; });
-    const bars = Math.round(t / rec.bar);
-    for (let b = 0; b < bars; b++) {
-      const ch = rec.chords[b % rec.chords.length].split(' ').map(hz), s0 = b * rec.bar;
-      ev.push([s0, 'bass', ch[0] / 2, rec.bar, 0.13]);
-      if (rec.bar === 8) ev.push([s0 + 4, 'bass', ch[0] / 2, 4, 0.08]);
-      ev.push([s0, 'pad', ch, rec.bar, 0.018]);
-      rec.arp.forEach((k, i) => ev.push([s0 + i, 'box', ch[k % ch.length] * 2, 2, i ? 0.035 : 0.045]));
-    }
-    return { ev, len: bars * rec.bar };
-  }
-  // two ways to play (test, 2026-11-09): a record's file (file: the music below rendered once by scripts/render-music.py, served
-  // with the site, kept by the service worker like the clips) through a looping <audio> — smooth, and iOS plays it as it plays
-  // any media; or, when the file cannot be had (offline before it was ever fetched), the music made here and now (synth)
-  let ctx = null, out = null, bus = null, timer = 0, play = null, wake = null, kept = {}, player = null, fadeT = 0;
+  let play = null, wake = null, player = null, fadeT = 0;
   const VOL = 0.8, blobs = {};   // blobs: a record's file as a blob: URL, fetched once a session
-  function chain(c) {   // the synth's way out: a warm filter, a small room's echo
-    ctx = c;
-    out = ctx.createGain(); out.connect(ctx.destination);
-    const warm = ctx.createBiquadFilter(); warm.type = 'lowpass'; warm.frequency.value = 5200; warm.Q.value = 0.4; warm.connect(out);
-    bus = ctx.createGain(); bus.gain.value = 0.9; bus.connect(warm);
-    const rv = ctx.createConvolver(), sr = ctx.sampleRate, ir = ctx.createBuffer(2, Math.floor(sr * 2.2), sr);
-    for (let c2 = 0; c2 < 2; c2++) { const d = ir.getChannelData(c2); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
-    rv.buffer = ir; const wet = ctx.createGain(); wet.gain.value = 0.22; bus.connect(rv); rv.connect(wet); wet.connect(warm);
-  }
-  function build() { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false; chain(new AC()); out.gain.value = 0; return true; }
-  function koto(f) {   // a plucked string (Karplus–Strong), made once a pitch
-    const k = Math.round(f); if (kept[k]) return kept[k];
-    const sr = ctx.sampleRate, b = ctx.createBuffer(1, Math.floor(sr * 2.4), sr), d = b.getChannelData(0), N = Math.max(2, Math.round(sr / f));
-    for (let i = 0; i < N; i++) d[i] = (Math.random() * 2 - 1) * 0.8;
-    for (let i = N; i < d.length; i++) d[i] = 0.4985 * (d[i - N] + (i - N - 1 >= 0 ? d[i - N - 1] : 0));
-    return (kept[k] = b);
-  }
-  function env(at, vol, attack, len) {   // a gain that swells in and dies away
-    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + attack); g.gain.exponentialRampToValueAtTime(0.0001, at + attack + len); g.connect(bus); return g;
-  }
-  function osc(type, f, at, end, to) { const o = ctx.createOscillator(); o.type = type; o.frequency.value = f; o.connect(to); o.start(at); o.stop(end); return o; }
-  function note(at, inst, f, steps, vol, step) {
-    const len = steps * step;
-    if (inst === 'koto') { const s = ctx.createBufferSource(); s.buffer = koto(f); const g = env(at, vol, 0.004, Math.max(1.6, len + 0.8)); s.connect(g); s.start(at); s.stop(at + 2.4); }
-    else if (inst === 'keys') { const g = env(at, vol, 0.006, len + 1.1), g2 = env(at, vol * 0.22, 0.004, 0.35); osc('sine', f, at, at + len + 1.3, g); osc('triangle', f, at, at + len + 1.3, env(at, vol * 0.3, 0.006, len * 0.6 + 0.3)); osc('sine', f * 3, at, at + 0.5, g2); }
-    else if (inst === 'box') { osc('sine', f, at, at + 1.6, env(at, vol, 0.003, 1.4)); osc('sine', f * 4.2, at, at + 0.4, env(at, vol * 0.18, 0.002, 0.3)); }
-    else if (inst === 'bass') osc('sine', f, at, at + len + 0.4, env(at, vol, 0.02, Math.min(len, 2.2)));
-    else if (inst === 'pad') {
-      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; lp.connect(env(at, vol, 0.7, len + 0.3));
-      f.forEach((h) => { osc('triangle', h * 1.003, at, at + len + 1.1, lp); osc('triangle', h * 0.997, at, at + len + 1.1, lp); });
-    }
-  }
-  function startSynth(rec) {   // from its first bar, a step ahead
-    if (!ctx && !build()) return;
-    const sc = score(rec), step = 60 / rec.bpm / 2;
-    Object.assign(play, { sc, step, i: 0, t: ctx.currentTime + 0.15 });
-    clearInterval(timer);
-    timer = setInterval(() => {
-      if (!play || play.mode !== 'synth' || ctx.state !== 'running') return;
-      if (play.t < ctx.currentTime) play.t = ctx.currentTime + 0.05;   // fallen behind (the timer held up, the phone asleep): on from now, never a heap of notes at once
-      while (play.t < ctx.currentTime + 0.3) {
-        const k = play.i % play.sc.len;
-        play.sc.ev.forEach((e) => { if (e[0] === k) note(play.t, e[1], e[2], e[3], e[4], play.step); });
-        play.i++; play.t += play.step;
-        if (k === play.sc.len - 1) play.t += play.step * 2;   // a breath before it comes round again
-      }
-    }, 60);
-    ctx.resume().catch(() => {}); fade(VOL, 1.2);
-  }
-  const fade = (v, s) => { const t = ctx.currentTime; out.gain.cancelScheduledValues(t); out.gain.setValueAtTime(out.gain.value, t); out.gain.linearRampToValueAtTime(v, t + s); };
   function fadeFile(v, s) {   // the player's volume to v (an iPhone keeps it at 1: there it only starts and stops)
     clearInterval(fadeT); const from = player.volume, t0 = performance.now();
     fadeT = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / (s * 1000)); try { player.volume = from + (v - from) * k; } catch (e) { /* read-only */ } if (k >= 1) clearInterval(fadeT); }, 50);
   }
   const playFile = () => { const pr = player.play(); if (pr && pr.catch) pr.catch(() => {}); };   // refused before a first tap: wake tries again
-  function startFile(rec, p) {
+  function start(rec) {
+    const p = play = { id: rec.id, mode: 'file' };
     if (!player) { player = new Audio(); player.loop = true; player.preload = 'auto'; player.setAttribute('playsinline', ''); }
     const go = () => {
       if (play !== p) return;
@@ -393,12 +319,11 @@ const MUSIC = (() => {
     };
     if (blobs[rec.id]) { go(); return; }
     fetch(rec.file).then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then((b) => { blobs[rec.id] = URL.createObjectURL(b); go(); })
-      .catch(() => { if (play !== p) return; p.mode = 'synth'; startSynth(rec); });   // no file to be had: made here instead
+      .catch(() => { if (play === p) play = null; });   // no file to be had: quiet; the next look at the room tries again
   }
-  function start(rec) { play = { id: rec.id, mode: rec.file ? 'file' : 'synth' }; if (play.mode === 'file') startFile(rec, play); else startSynth(rec); }
-  function halt() {   // stopped: the file paused where it is, the synth's timer stopped and its sound asleep
+  function halt() {   // stopped: the file paused where it is
     if (!play) return;
-    if (play.mode === 'file') { clearInterval(fadeT); player.pause(); } else { clearInterval(timer); timer = 0; if (ctx) ctx.suspend().catch(() => {}); }
+    clearInterval(fadeT); if (player) player.pause();
     play = null;
   }
   // whether it should play now: in 書房 or the bedroom (#/, #/today, #/bedroom), the gramophone set out, not stopped, the page in sight
@@ -413,42 +338,18 @@ const MUSIC = (() => {
     if (!on) {
       if (!play) return;
       if (document.hidden) { halt(); return; }
-      const p = play; if (p.mode === 'file') fadeFile(0, 0.5); else fade(0, 0.5);
+      const p = play; fadeFile(0, 0.5);
       setTimeout(() => { if (play === p && !wanted()) halt(); }, 600);
       return;
     }
     try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older Safari */ }
     const rec = current();
     if (!play || play.id !== rec.id) { halt(); start(rec); }
-    else if (play.mode === 'file') { if (player.paused) playFile(); fadeFile(VOL, 0.6); }   // back before it had stopped
-    else { ctx.resume().catch(() => {}); fade(VOL, 1.2); }
+    else { if (player.paused) playFile(); fadeFile(VOL, 0.6); }   // back before it had stopped
     if (!wake) {   // a browser lets sound start only from a tap or a key: the first one wakes it
-      // iOS: Web Audio stays silent (the ring switch) until a media element has played — the user heard the records only after a
-      // saved clip: the shared player plays its silence from this tap too, and the page asks for a playback session
-      wake = () => {
-        if (!play || !wanted()) return;
-        if (play.mode === 'file') { if (player.paused && player.src) playFile(); return; }
-        if (ctx && ctx.state !== 'running') { try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older Safari */ } unlockTtsPlayer(); ctx.resume().catch(() => {}); }
-      };
+      wake = () => { if (play && wanted() && player && player.paused && player.src) playFile(); };
       ['pointerdown', 'keydown'].forEach((t) => document.addEventListener(t, wake, true));
     }
-  }
-  // a record as a file (scripts/render-music.py): the music made here, rendered offline twice round with the second kept — its
-  // start carries the first's echoes, so it loops on without a seam — at peak, as 16-bit stereo WAV in base64
-  async function render(id, peak = 0.5) {
-    const rec = RECORDS.find((r) => r.id === id), sc = score(rec), step = 60 / rec.bpm / 2, L = (sc.len + 2) * step, sr = 44100, n = Math.round(L * sr);
-    const was = [ctx, out, bus, kept], oc = new OfflineAudioContext(2, n * 2, sr);
-    kept = {}; chain(oc); out.gain.value = 1;
-    for (let k = 0; k < 2; k++) sc.ev.forEach((e) => note(k * L + e[0] * step, e[1], e[2], e[3], e[4], step));
-    const buf = await oc.startRendering(); [ctx, out, bus, kept] = was;
-    const ch = [0, 1].map((c) => buf.getChannelData(c).subarray(n, 2 * n));
-    let top = 0; ch.forEach((d) => { for (let i = 0; i < d.length; i++) top = Math.max(top, Math.abs(d[i])); });
-    const g = peak / (top || 1), bytes = new Uint8Array(44 + n * 4), v = new DataView(bytes.buffer), str = (o, t) => [...t].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
-    str(0, 'RIFF'); v.setUint32(4, 36 + n * 4, true); str(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 2, true);
-    v.setUint32(24, sr, true); v.setUint32(28, sr * 4, true); v.setUint16(32, 4, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, n * 4, true);
-    for (let i = 0; i < n; i++) for (let c = 0; c < 2; c++) v.setInt16(44 + (i * 2 + c) * 2, Math.max(-32767, Math.min(32767, Math.round(ch[c][i] * g * 32767))), true);
-    let b64 = ''; for (let i = 0; i < bytes.length; i += 0x8000) b64 += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
-    return { seconds: L, top, b64: btoa(b64) };
   }
   document.addEventListener('visibilitychange', () => sync());
   saveHooks.push(() => sync());   // set out or put away, stopped or another record (here or from another device)
@@ -464,7 +365,7 @@ const MUSIC = (() => {
   function redo() { saveState(); const b = document.getElementById('modalBody'); if (b) b.innerHTML = body(); }
   const put = (id) => { state.record = id; state.musicOff = false; redo(); };
   const pause = () => { state.musicOff = !state.musicOff; redo(); };
-  return { RECORDS, sync, pick, put, pause, render, playing: () => Boolean(play) && wanted(), mode: () => play && play.mode };
+  return { RECORDS, sync, pick, put, pause, playing: () => Boolean(play) && wanted(), mode: () => play && play.mode };
 })();
 // outside 擺設 a tap on a ware sends the hero to stand beside it, facing it; at the telescope they look into it (test: 觀星)
 function yardUse(yard, id) {
