@@ -193,6 +193,26 @@
     return { state: state, updated_at: state.updatedAt, device_id: deviceId };
   }
 
+  // A progress row may hold its state packed, { nqz: 1, gz: '<gzip of the state's JSON, base64>' }: a tenth of the size, so a
+  // set's upload stays small as the records grow (2026-11-11). Every version from 1.8.x reads it; writing it comes once the
+  // phones that cannot read it are gone. Plain states (anything else) pass through.
+  function isPacked(s) { return Boolean(s && typeof s === 'object' && s.nqz === 1 && typeof s.gz === 'string'); }
+  async function streamBytes(bytes, stream) {
+    const out = await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer();
+    return new Uint8Array(out);
+  }
+  function toB64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
+  function fromB64(b64) { const s = atob(b64), u8 = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u8[i] = s.charCodeAt(i); return u8; }
+  async function packState(state) {
+    const gz = await streamBytes(new TextEncoder().encode(JSON.stringify(state)), new CompressionStream('gzip'));
+    return { nqz: 1, gz: toB64(gz) };
+  }
+  async function unpackState(s) {
+    if (!isPacked(s)) return s;
+    const raw = await streamBytes(fromB64(s.gz), new DecompressionStream('gzip'));
+    return JSON.parse(new TextDecoder().decode(raw));
+  }
+
   function normalizeEmail(s) { return String(s || '').trim().toLowerCase(); }
 
   // True when a state holds no learning progress worth protecting (fresh install or wiped account).
@@ -203,6 +223,6 @@
     return !(n(s.srs) || n(s.dailyLogs) || n(s.examHistory) || hasStageTests);
   }
 
-  const SyncCore = { stripSecrets, keepLocalSecrets, sameStamp, pullDecision, mergeStates, buildPushPayload, normalizeEmail, isEmptyProgress };
+  const SyncCore = { stripSecrets, keepLocalSecrets, sameStamp, pullDecision, mergeStates, buildPushPayload, normalizeEmail, isEmptyProgress, isPacked, packState, unpackState };
   if (typeof module !== 'undefined' && module.exports) module.exports = SyncCore; else root.SyncCore = SyncCore;
 })(typeof window !== 'undefined' ? window : globalThis);

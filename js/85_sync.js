@@ -160,6 +160,7 @@ const Sync = {
       const row = async (cols) => { const { data: d, error } = await this.client.from('progress').select(cols).eq('user_id', session.user.id).maybeSingle(); if (error) throw error; return d; };
       let data = this.meta.everSynced ? await row('updated_at') : null;
       if (!this.meta.everSynced || (data && !SyncCore.sameStamp(data.updated_at, this.meta.lastPulledUpdatedAt))) data = await row('state, updated_at');
+      if (data && data.state) data.state = await SyncCore.unpackState(data.state);   // a packed row (2026-11-11) opened before anything reads it
       const pick = SyncCore.pullDecision(this.meta, state, data);
       // a first sync adopts a cloud that has progress over whatever this device had: no copy is kept (1.0.47)
       if (pick === 'adopt' || pick === 'conflict') {

@@ -57,6 +57,16 @@ def test_first_sync_on_fresh_device_takes_cloud_even_if_local_newer(b):
     ])
     assert out[-1] == '{"goal":55,"key":"LOCALKEY","ever":true}', out[-1]
 
+# 2026-11-11: a progress row may hold its state packed (gzip, base64): it is opened before anything reads it
+def test_a_packed_cloud_row_is_opened_and_adopted(b):
+    out = boot(b, [
+        ("eval", "SyncCore.packState({ v: 3, updatedAt: '2000-01-01T00:00:00.000Z', settings: { loadCap: 55 }, srs: { 'v:n5a-001': { b: 3, due: '2026-12-01', n: 4, ok: 4, ng: 0 } }, ttsConfig: { engine: 'cloud', googleKey: '' } })"
+                 ".then(p => { __fake.setRow({ user_id: 'u1', state: p, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('a@b.c'); return SyncCore.isPacked(p); })"),
+        ("wait", "Sync.status === 'idle'"),
+        ("eval", "JSON.stringify({ goal: state.settings.loadCap, rec: state.srs['v:n5a-001'] && state.srs['v:n5a-001'].b, packedLeft: 'gz' in state, ever: Sync.meta.everSynced })"),
+    ])
+    assert out[-4] is True and out[-1] == '{"goal":55,"rec":3,"packedLeft":false,"ever":true}', out
+
 def test_save_pushes_after_debounce_without_secrets(b):
     out = boot(b, [
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
@@ -299,7 +309,7 @@ if __name__ == "__main__":
              test_manual_push_with_null_updated_at_still_sends_a_timestamp,
              test_push_uses_a_conditional_update_once_the_device_has_synced, test_stale_device_does_not_overwrite_progress_made_elsewhere, test_cloud_changed_elsewhere_is_adopted_even_when_its_clock_is_behind,
              test_row_deleted_elsewhere_is_recreated_without_looping, test_conflict_during_a_session_waits_and_never_overwrites_the_cloud, test_a_pull_downloads_the_progress_only_when_the_cloud_changed, test_a_practice_set_goes_up_once_at_its_end_or_when_the_app_is_hidden, test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge, test_conflict_merge_redoes_todays_list_from_the_merged_progress,
-             test_old_snapshots_are_deleted_and_no_new_ones_are_taken]
+             test_old_snapshots_are_deleted_and_no_new_ones_are_taken, test_a_packed_cloud_row_is_opened_and_adopted]
     failed = 0
     try:
         for t in tests:

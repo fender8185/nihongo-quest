@@ -191,3 +191,14 @@ test('mergeStates: the town events done, people met and bus stops opened on eith
   assert.deepEqual(m.town.stops, { station: 1 });
   assert.deepEqual(C.mergeStates({ updatedAt: '2026-11-10T10:00:00.000Z' }, b).town.done, { 'm0-2': '2026-11-10' }, 'an old save without town keeps the other side');
 });
+
+test('a packed state opens to the same state, a tenth of the size or less; a plain one passes through', async () => {
+  const big = { v: 3, updatedAt: '2026-11-11T01:00:00.000Z', srs: {} };
+  for (let i = 0; i < 3000; i++) big.srs['v:n5a-' + i] = { b: 3, due: '2026-12-02', n: 7, ok: 6, ng: 1, st: 1, last: '2026-11-20', lapse: 0, intro: '2026-10-30', s: 21.4, d: 5.12, f: { 'v-meaning': [2, 0], 'v-cloze': [2, 0] } };
+  const packed = await C.packState(big);
+  assert.equal(C.isPacked(packed), true); assert.equal(C.isPacked(big), false); assert.equal(C.isPacked(null), false);
+  assert.ok(JSON.stringify(packed).length * 10 <= JSON.stringify(big).length, `packed ${JSON.stringify(packed).length} of ${JSON.stringify(big).length}`);
+  assert.deepEqual(await C.unpackState(packed), big);
+  const plain = { v: 3, srs: { a: 1 } };
+  assert.equal(await C.unpackState(plain), plain); assert.equal(await C.unpackState(null), null);
+});
