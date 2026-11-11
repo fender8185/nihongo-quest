@@ -1791,3 +1791,28 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .sky .land [data-fx="castle"] .grain { opacity: 0; } .sky .land [data-fx="castle"].cheer .grain { animation: castleGrain .7s ease-in infinite; } @keyframes castleGrain { 0% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translate(.6px, 15px); } }
 @media (prefers-reduced-motion: reduce) { .sky .land :is(.pspring, .phead, .sw-shade, .slide-shine, .psec, .pshine, .jet, .drop, .rip, .claws, .eyes, .nip, .grain) { animation: none !important; transition: none !important; }
   .sky .land [data-fx="fountain"].spout .jet { transform: scale(1.1, 2.3); } .sky .land :is([data-fx="star"], [data-fx="shell"]).gone { transition: none; } }
+/* 2026-11-11 polish: shokudo, izakaya, yard */
+/* the yard's tree: its boughs the trunk's colour, the light on its clumps and leaves by day; shaken (1.6 s as before), the trunk stays: the crown sways on it, every other clump rustles, the lit leaves flicker */
+.sky .land .twig { fill: none; stroke: color-mix(in srgb, #6b4a2f calc(var(--md, var(--day, 1)) * 100%), #0b0c22); stroke-width: 2.6; stroke-linecap: round; transition: stroke 3s; }
+.sky .land [data-fx="ytree"] .crown-lit { fill: #fff; opacity: calc(.13 * var(--day, 1)); } .sky .land [data-fx="ytree"] .leaf-lit { fill: #fff; opacity: calc(.2 * var(--day, 1)); }
+.sky .land [data-fx="ytree"].shake { animation: none; }
+.sky .land [data-fx="ytree"].shake .crown-g { transform-box: fill-box; transform-origin: 50% 100%; animation: ytreeSway .16s ease-in-out 10 alternate; } @keyframes ytreeSway { from { transform: rotate(-2.6deg); } to { transform: rotate(2.6deg) translateY(-.6px); } }
+.sky .land [data-fx="ytree"].shake .crown > circle:nth-child(even) { transform-box: fill-box; transform-origin: 50% 50%; animation: ytreeLobe .12s ease-in-out 13 alternate; } @keyframes ytreeLobe { to { transform: translate(.8px, -.8px) scale(1.05); } }
+.sky .land [data-fx="ytree"].shake .leaf-lit { animation: ytreeFlick .16s steps(2) 10 alternate; } @keyframes ytreeFlick { to { opacity: calc(.5 * var(--day, 1)); } }
+/* the mailbox: the shade under its box and down its post, a sheen, the wood's grain, the knob on its lid (which opens with the lid) */
+.sky .mailbox .mb-tone { fill: rgba(0, 0, 0, .16); } .sky .mailbox .mb-sheen { fill: #fff; opacity: calc(.06 + .14 * var(--day, 1)); }
+.sky .mailbox .mb-grain { fill: none; stroke: rgba(0, 0, 0, .18); stroke-width: .7; stroke-linecap: round; } .sky .mailbox .mb-lidhl { fill: none; stroke: rgba(255, 255, 255, .3); stroke-width: .8; stroke-linecap: round; }
+.sky .mailbox .mb-knob { fill: color-mix(in srgb, #d7dde4 calc(var(--md, var(--day, 1)) * 100%), #4a4f80); }
+/* the rooms' things used (each as long as before): 招き猫's bell jingles and its head tilts as it beckons; the kitchen's noren parts; the
+   kamidana's streamers flutter; the bottles in the crates clink; the grill flares and its skewers sizzle; the top sake barrel rocks */
+.sky .land [data-fx="maneki"].beckon .bell { transform-box: fill-box; transform-origin: 50% 0; animation: manekiBell .14s ease-in-out 16 alternate; } @keyframes manekiBell { from { transform: rotate(-22deg); } to { transform: rotate(22deg); } }
+.sky .land [data-fx="maneki"].beckon .mhead { transform-box: fill-box; transform-origin: 50% 90%; animation: manekiTilt .56s ease-in-out 4 alternate; } @keyframes manekiTilt { to { transform: rotate(-7deg); } }
+.sky .land [data-fx="noren"].part .fx-sway { animation: norenPart .3s ease-out 0s 6 alternate !important; } .sky .land [data-fx="noren"].part .fx-sway + .fx-sway { animation-name: norenPart2 !important; }
+@keyframes norenPart { to { transform: rotate(16deg); } } @keyframes norenPart2 { to { transform: rotate(-16deg); } }
+.sky .land [data-fx="kamidana"].flutter .shide { transform-box: fill-box; transform-origin: 50% 0; animation: shideFlutter .18s ease-in-out 10 alternate; } .sky .land [data-fx="kamidana"].flutter .shide:nth-child(2) { animation-delay: -.09s; }
+@keyframes shideFlutter { from { transform: rotate(-10deg); } to { transform: rotate(10deg) scaleY(.94); } }
+.sky .land [data-fx="crates"].rattle .clink { transform-box: fill-box; transform-origin: 50% 100%; animation: cratesClink .1s steps(2) 18; } @keyframes cratesClink { 50% { transform: translateY(-1px) rotate(4deg); } }
+.sky .land [data-fx="grill"].flare .fx-blink { animation: grillFlare .15s steps(2) 0s 12 !important; } @keyframes grillFlare { 50% { opacity: 1; } }
+.sky .land [data-fx="grill"].flare .kushi { animation: grillSizzle .1s steps(2) 18; } @keyframes grillSizzle { 50% { transform: translateY(-.8px); } }
+.sky .land [data-fx="taru"].rock { transform-box: fill-box; transform-origin: 50% 100%; animation: taruRock .3s ease-in-out 6 alternate; } @keyframes taruRock { from { transform: rotate(-2.5deg); } to { transform: rotate(2.5deg); } }
+@media (prefers-reduced-motion: reduce) { .sky .land [data-fx="ytree"].shake :is(.crown-g, .crown > circle, .leaf-lit), .sky .land [data-fx="maneki"].beckon :is(.paw, .bell, .mhead), .sky .land [data-fx="noren"].part .fx-sway, .sky .land [data-fx="kamidana"].flutter .shide, .sky .land [data-fx="crates"].rattle .clink, .sky .land [data-fx="grill"].flare :is(.fx-blink, .kushi) { animation: none !important; } }

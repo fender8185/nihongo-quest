@@ -250,23 +250,24 @@ const PLACE_USE = {
     { id: 'gate', name: '城門', box: [200, 140, 320, 198], kind: 'do', go: [-300, 126], back: 1, pose: 'reach', say: 'コンコン' },
     { id: 'moat', name: '護城河', box: [600, 200, 1060, 234], kind: 'do', go: (tap) => [Math.max(0, Math.min(440, tap.x)), 126], back: 1, pose: 'look', say: 'クワッ' }],
   // the two rooms (seen at 45°): seats as [u, v, h, how he sits there] (bench: on a chair or a stool; kneel: on the tatami; back,
-  // turn, flip: which way he faces), things as everywhere (face: which way he turns to them)
+  // turn, flip: which way he faces), things as everywhere (face: which way he turns to them; 2026-11-11: the kitchen's noren parts, the
+  // kamidana's paper streamers flutter, the bottles in the crates clink, the grill flares, the top sake barrel rocks)
   shokudo: [
     ...SHOKUDO_TABLES.map(([u0, u1, v0, v1], i) => ({ id: 'table' + i, name: '桌子', box: isoBBox(u0, u1, v0, v1, 1.3, 1.5), kind: 'seat', say: 'いただきます！', seats: [[u0 + 0.8, v0 - 0.75, 0, 'bench turn flip'], [u1 - 0.8, v0 - 0.75, 0, 'bench turn flip']] })),
     ...SHOKUDO_TABLES.flatMap(([u0, u1, v0], i) => [u0 + 0.8, u1 - 0.8].map((u, j) => ({ id: `chair${i}${j}`, name: '椅子', box: isoBBox(u - 0.45, u + 0.45, v0 - 1.2, v0 - 0.3, 0, 2.1), kind: 'seat', say: 'いただきます！', seats: [[u, v0 - 0.75, 0, 'bench turn flip']] }))),
     ...[4, 6.5, 9, 11.5].map((u, i) => ({ id: 'stool' + i, name: '吧台座位', box: isoBBox(u - 0.48, u + 0.48, 2.9, 3.8, 0, 1.2), kind: 'seat', say: 'いただきます！', seats: [[u, 3.35, 0.2, 'bench back turn']] })),
     { id: 'maneki', name: '招財貓', box: isoBBox(2.1, 2.7, 1.7, 2.3, 1.95, 3.1), kind: 'do', go: isoXY(2.4, 3.4), face: 'back turn', pose: 'wave', say: '招福！', fx: 'maneki', fxc: 'beckon' },
     { id: 'tv', name: '電視', box: isoBBox(19, 21.4, 0, 0.1, 5.1, 6.7), kind: 'do', go: isoXY(20.2, 1.6), face: 'back turn', pose: 'look', say: 'あはは！' },
-    { id: 'kitchen', name: '廚房', box: isoBBox(16, 18.4, 0, 0.1, 0, 4.1), kind: 'do', go: isoXY(17.2, 1.4), face: 'back turn', pose: 'wave', say: 'ごちそうさまでした！' },
+    { id: 'kitchen', name: '廚房', box: isoBBox(16, 18.4, 0, 0.1, 0, 4.1), kind: 'do', go: isoXY(17.2, 1.4), face: 'back turn', pose: 'wave', say: 'ごちそうさまでした！', fx: 'noren', fxc: 'part' },
     { id: 'menu', name: '菜單', box: isoBBox(0, 0.1, 4.8, 10.4, 3.4, 6.2), kind: 'do', go: isoXY(1.5, 7.6), face: 'back turn flip', pose: 'look', toast: 'お品書き：カレー 500円・ラーメン 600円・からあげ定食 750円……' },
-    { id: 'kamidana', name: '神棚', box: isoBBox(0, 0.1, 1.4, 4.1, 6, 7.3), kind: 'do', go: isoXY(1.5, 2.7), face: 'back turn flip', pose: 'bow', say: 'パンパン 🙏' },
-    { id: 'crates', name: '啤酒箱', box: isoBBox(0.5, 1.9, 9.6, 11, 0, 1.9), kind: 'do', go: isoXY(2.7, 10.3), face: 'back turn flip', pose: 'reach', say: 'おもい…！' }],
+    { id: 'kamidana', name: '神棚', box: isoBBox(0, 0.1, 1.4, 4.1, 6, 7.3), kind: 'do', go: isoXY(1.5, 2.7), face: 'back turn flip', pose: 'bow', say: 'パンパン 🙏', fx: 'kamidana', fxc: 'flutter' },
+    { id: 'crates', name: '啤酒箱', box: isoBBox(0.5, 1.9, 9.6, 11, 0, 1.9), kind: 'do', go: isoXY(2.7, 10.3), face: 'back turn flip', pose: 'reach', say: 'おもい…！', fx: 'crates', fxc: 'rattle' }],
   izakaya: [
     ...[4, 6.5, 9, 11.5, 14].map((u, i) => ({ id: 'stool' + i, name: '吧台座位', box: isoBBox(u - 0.48, u + 0.48, 3.15, 4.05, 0, 1.2), kind: 'seat', say: 'とりあえずビール！', seats: [[u, 3.6, 0.2, 'bench back turn']] })),
     { id: 'chabudai', name: '矮桌', box: isoBBox(17, 19.8, 10.1, 12.4, 1.05, 1.3), kind: 'seat', say: 'かんぱい！', seats: [[17.6, 9.3, 0.6, 'kneel turn flip'], [19.2, 9.3, 0.6, 'kneel turn flip'], [17.6, 13.2, 0.6, 'kneel back turn'], [19.2, 13.2, 0.6, 'kneel back turn']] },
     ...[[17.6, 9.3, 'kneel turn flip'], [19.2, 9.3, 'kneel turn flip'], [17.6, 13.2, 'kneel back turn'], [19.2, 13.2, 'kneel back turn']].map(([u, v, how], i) => ({ id: 'zabuton' + i, name: '坐墊', box: isoBBox(u - 0.5, u + 0.5, v - 0.5, v + 0.5, 0.6, 1.3), kind: 'seat', say: 'かんぱい！', seats: [[u, v, 0.6, how]] })),
-    { id: 'grill', name: '烤爐', box: isoBBox(6, 9.4, 1.6, 2.1, 1.95, 3), kind: 'do', go: isoXY(7.7, 4.8), face: 'back turn', pose: 'look', say: 'いい匂い！' },
-    { id: 'taru', name: '酒樽', box: isoBBox(0.5, 1.7, 8.8, 11.3, 0, 2.4), kind: 'do', go: isoXY(2.6, 10.1), face: 'back turn flip', pose: 'reach', say: 'おもい…！' },
+    { id: 'grill', name: '烤爐', box: isoBBox(6, 9.4, 1.6, 2.1, 1.95, 3), kind: 'do', go: isoXY(7.7, 4.8), face: 'back turn', pose: 'look', say: 'いい匂い！', fx: 'grill', fxc: 'flare' },
+    { id: 'taru', name: '酒樽', box: isoBBox(0.5, 1.7, 8.8, 11.3, 0, 2.4), kind: 'do', go: isoXY(2.6, 10.1), face: 'back turn flip', pose: 'reach', say: 'おもい…！', fx: 'taru', fxc: 'rock' },
     { id: 'menu', name: '黑板', box: isoBBox(0, 0.1, 2.9, 8.7, 3.5, 6.5), kind: 'do', go: isoXY(1.4, 5.8), face: 'back turn flip', pose: 'look', toast: 'きょうのおすすめ：焼き鳥 1本 120円・からあげ 480円' }]
 };
 // the things tried once (2026-11-10, the user: calmer hints): their dot goes for good, on this device (localStorage nq_used)
