@@ -8,6 +8,8 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PORT = 8798
 URL = f"http://127.0.0.1:{PORT}/"
 READY = "typeof state === 'object' && !!state.updatedAt && typeof speakScript === 'function'"
+# the styles live in css/app.css (2026-11-11): a test that reads their text loads it first into window.__css
+CSS = ("eval", "fetch('./css/app.css').then(r => r.text()).then(t => { window.__css = t; return 1; })")
 
 # A fake synthesizer: utterances take `dur[text]` ms; `drop` texts are silently swallowed once (no start/end, like
 # Chrome and iOS Safari do when speak() lands while the previous utterance is winding down); `noEnd` texts never
@@ -1057,9 +1059,9 @@ def test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints(b):
       const after = { nextInStrip: !!document.querySelector('.pr-next > #btnNext'), stickyClass: !!document.querySelector('.pr-next-sticky'), tools: !!document.querySelector('.pr-actions [data-act=replay]'), enterHint: !!document.querySelector('#btnNext .kbd-hint'), hint: !!document.querySelector('.pr-actions .kbd-hint') };
       SESSION = null; document.body.classList.remove('practicing');
       location.hash = '#/stats'; route(); const th = [...document.querySelectorAll('th.col-left')].length; const td = [...document.querySelectorAll('td.col-left')].length;
-      const css = document.querySelector('style').textContent;
+      const css = window.__css;
       return JSON.stringify({ help: !!help, helpText: help ? help.textContent : '', ring: !!ring, before, after, th, td, hover: /hover: none/.test(css) && /kbd-hint/.test(css), safeTop: /body\\.practicing \\.content \\{[^}]*padding-top: calc\\(18px \\+ env\\(safe-area-inset-top/.test(css), noZoom: /maximum-scale=1/.test(document.querySelector('meta[name=viewport]').content) && /user-scalable=no/.test(document.querySelector('meta[name=viewport]').content) && /html \\{ touch-action: manipulation; overscroll-behavior: none/.test(css), noTail: /body\\.practicing \\.content \\{ padding-bottom: calc\\(12px \\+ env\\(safe-area-inset-bottom/.test(css) && /body\\.practicing \\.content:has\\(> \\.pr-next\\) \\{ padding-bottom: 0/.test(css) }); })()"""
-    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=60)
+    out = b.run([("nav", URL), ("wait", READY), CSS, ("eval", js)], timeout=60)
     r = json.loads(out[-1])
     assert r['help'] and 'SRS' in r['helpText'] and r['ring'], r   # 1.0.36: the help panel is a few plain sentences
     assert r['before'] == {'hint': True, 'next': False}, r['before']
@@ -1069,9 +1071,9 @@ def test_phone_layout_hooks_next_button_strip_ring_help_and_key_hints(b):
 def test_unit_legend_chips_exam_subject_rows_and_setting_hints(b):
     js = """(() => { location.hash = '#/course'; route(); const legs = [...document.querySelectorAll('.now-card .legs .leg')].map(x => x.textContent.trim());   /* 課程's 目前 card (test build) */
       location.hash = '#/exam'; route(); const subj = [...document.querySelectorAll('.exSubj')].map(x => x.closest('div').className);
-      const css = document.querySelector('style').textContent;
+      const css = window.__css;
       return JSON.stringify({ legs, subj, nowrap: /\\.leg \\{[^}]*nowrap/.test(css), hint: /\\.setting-row \\.hint \\{[^}]*11\\.5px/.test(css) }); })()"""
-    out = b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)
+    out = b.run([("nav", URL), ("wait", READY), CSS, ("eval", js)], timeout=30)
     r = json.loads(out[-1])
     assert r['legs'][0].startswith('已學 ') and r['legs'][0].endswith(' 題'), r['legs']   # 1.0.35: the 目前 card shows one count; the unit page keeps 熟練／熟悉／初識
     assert r['subj'] == ['mt-2', 'mt-2', 'mt-2'] and r['nowrap'] and r['hint'], r
@@ -1596,9 +1598,9 @@ def test_fullscreen_player_opens_from_the_today_card_and_comes_back_to_the_same_
       // opened from the vocab themes page instead: ✕ ends the player and goes back there
       const tbtn = (location.hash = '#/vocab/level?lv=N5', route(), document.querySelector('.theme-card [data-act=listen-theme-start]')); ACTIONS['listen-theme-start'](tbtn); route(); const fromThemes = document.body.classList.contains('immersive') && !!document.querySelector('[data-act=listen-close]');
       ACTIONS['listen-close'](); route(); const ended = LISTEN === null && location.hash === '#/vocab/level?lv=N5' && !document.body.classList.contains('immersive');
-      const css = document.querySelector('style').textContent; const landscape = /orientation: portrait\\) \\{\\s*body\\.immersive \\.main \\{ position: fixed/.test(css) && /\\.listen\\.full \\.flash \\{ height: 100%; display: flex; flex-direction: column/.test(css);
+      const css = window.__css; const landscape = /orientation: portrait\\) \\{\\s*body\\.immersive \\.main \\{ position: fixed/.test(css) && /\\.listen\\.full \\.flash \\{ height: 100%; display: flex; flex-direction: column/.test(css);
       localStorage.removeItem('nq_listen_pref'); return JSON.stringify({ full, ms, curTitle: cur ? cur.word + '　' + cur.meaning : null, back, fromThemes, ended, landscape }); })()"""
-    out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", FAKE_TTS), ("eval", js)], timeout=45)
+    out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", FAKE_TTS), CSS, ("eval", js)], timeout=45)
     r = json.loads(out[-1])
     f = r['full']; assert f['hash'] == '#/vocab/listen' and f['same'] and f['playing'] and f['idx'] == 2 and f['immersive'] and f['card'] and f['close'] and not f['exitBtn'] and f['head'], f
     assert f['topbarHidden'] and f['wordPx'] >= 28 and f['wordFills'], f   # sized to its column, never overflowing it
