@@ -995,6 +995,40 @@ TESTS += [test_a_theme_plays_a_card_for_each_kanji_its_words_use, test_without_s
           test_a_kanji_card_reads_its_example_and_then_the_kanjis_meaning, test_tapping_the_kanji_on_a_kanji_card_pauses_the_player_and_opens_the_kanji,
           test_every_kanji_card_fits_the_today_player_without_scrolling, test_a_kanji_card_fills_the_full_screen_player_and_stays_inside_it]
 
+# ---- 2026-11-11: words' pictures (pics.js) ----
+def test_a_pictured_word_shows_its_picture_on_its_first_look_and_others_do_not(b):
+    js = """(() => { const out = {};
+      for (const w of ['傘', '時間']) { const v = REG.vocab.find(x => x.builtin && jaPlain(x.w) === w && x.lv === 'N5'); delete state.srs[v.key];
+        startSession('items', { items: [v] }); const e = currentEntry(); e.preview = true; e.previewDone = false; e.autoPlayedPreview = true; renderPractice();
+        out[w] = !!document.querySelector('.preview svg.pic'); SESSION = null; }
+      document.body.classList.remove('practicing');
+      out.fishN3 = picKey(REG.vocab.find(x => x.id === 'n3l-007')); out.fishN5 = picKey(REG.vocab.find(x => x.id === 'n5a-156'));
+      out.keys = Object.keys(PICS).filter(k => !REG.vocab.some(v => picKey(v) === k));   // every drawing belongs to a word
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'傘': True, '時間': False, 'fishN3': '', 'fishN5': '魚', 'keys': []}, r   # 魚 is さかな only, not the N3 うお
+
+def test_the_picture_question_asks_for_the_word_with_same_group_options_and_never_a_word_that_also_fits(b):
+    js = """(() => { const out = { fmts: [], bad: [], same: 0, n: 0 };
+      for (const w of Object.keys(PICS)) { const v = REG.vocab.find(x => picKey(x) === w); state.srs[v.key] = { b: 2, due: todayStr(), n: 2, ok: 2, ng: 0, s: 3, d: 5, f: {} };
+        out.fmts.push(vocabFormats(v).some(([f]) => f === 'v-pic'));
+        for (let i = 0; i < 6; i++) { const q = makeVocabQuestion(v, { forceFmt: 'v-pic', kana: false });
+          const ws = q.options.map(o => jaPlain(o.text)); out.n++;
+          if (q.fmt !== 'v-pic' || !q.stemHtml.includes('<svg') || ws[q.answer] !== w || ws.some(x => PIC_GENERIC.has(x)) || ws.some((x, k) => k !== q.answer && zhOverlap(q.optZh[q.options[k].text] || '', v.m))) out.bad.push(w + ':' + ws.join('/'));
+          out.same += q.options.filter((o, k) => k !== q.answer && (REG.vocab.find(x => x.w === o.text) || {}).c === v.c).length; } }
+      const plain = REG.vocab.find(x => x.builtin && x.lv === 'N5' && !picKey(x) && x.p === 'n');
+      out.none = makeVocabQuestion(plain, { forceFmt: 'v-pic' }) === null && !vocabFormats(plain).some(([f]) => f === 'v-pic');
+      const umb = REG.vocab.find(x => picKey(x) === '傘'); const q = makeVocabQuestion(umb, { forceFmt: 'v-pic', kana: false });
+      startSession('items', { items: [umb] }); const e = currentEntry(); e.preview = false; e.q = q; renderPractice();
+      out.card = { pic: !!document.querySelector('.q-stem.picstem svg.pic'), glyph: !!document.querySelector('.opts.glyph') === q.options.every(o => jaPlain(o.text).length <= 2), label: q.label };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert all(r['fmts']) and r['bad'] == [] and r['none'], r
+    assert r['same'] >= r['n'] * 1.5, r   # most wrong options come from the word's own group
+    assert r['card']['pic'] and r['card']['glyph'] and r['card']['label'].endswith('看圖選字'), r
+
+TESTS += [test_a_pictured_word_shows_its_picture_on_its_first_look_and_others_do_not, test_the_picture_question_asks_for_the_word_with_same_group_options_and_never_a_word_that_also_fits]
+
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)

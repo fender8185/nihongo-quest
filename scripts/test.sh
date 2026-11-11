@@ -2,7 +2,7 @@
 # Runs every automated check: syntax, unit tests, headless-Chrome e2e.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-node --check sw.js && node --check sync-core.js && node --check data.js && node --check events.js
+node --check sw.js && node --check sync-core.js && node --check data.js && node --check events.js && node --check pics.js
 # every built-in grammar item names the lesson section it belongs to (-1 = none; the practice card is skipped for those)
 node scripts/data-file.js --check   # one entry per line, so grep finds an item (node scripts/data-file.js puts it back)
 node -e "const D=require('./scripts/data-file').load();const bad=D.GRAMMAR.filter(g=>!Number.isInteger(g.sec)||g.sec<-1||g.sec>=(D.LESSONS[g.u]||{sections:[]}).sections.length);if(bad.length){console.log('grammar items without a valid sec:',bad.slice(0,5).map(g=>g.id).join(' '),bad.length);process.exit(1)}"
@@ -15,12 +15,20 @@ dv="$(grep -o 'data.js?v=[0-9]*' index.html | tr -d -c 0-9)"
 # the town's events (events.js): its version agrees in index.html, sw.js and its header; the checker passes (kanji marked, levels, grammar, people)
 ev="$(grep -o 'events.js?v=[0-9]*' index.html | tr -d -c 0-9)"
 [ "$ev" = "$(grep -o 'events.js?v=[0-9]*' sw.js | tr -d -c 0-9)" ] && [ "$ev" = "$(grep -o 'EVENTS_VERSION [0-9]*' events.js | tr -d -c 0-9)" ] || { echo "events.js version differs between index.html, sw.js and events.js"; exit 1; }
+# the words' pictures (pics.js): its version agrees in index.html, sw.js and its header
+pv="$(grep -o 'pics.js?v=[0-9]*' index.html | tr -d -c 0-9)"
+[ -n "$pv" ] && [ "$pv" = "$(grep -o 'pics.js?v=[0-9]*' sw.js | tr -d -c 0-9)" ] && [ "$pv" = "$(grep -o 'PICS_VERSION [0-9]*' pics.js | tr -d -c 0-9)" ] || { echo "pics.js version differs between index.html, sw.js and pics.js"; exit 1; }
 node --test-reporter=tap tests/events.test.js | grep -E "^# (pass|fail)"
 node scripts/check-events.js | tail -1
 # events.js changed since the last push (main or test) ⇒ its version changed too, or phones keep the old copy (the service worker reuses ?v= files)
 for base in origin/main origin/test; do
   if git rev-parse --verify -q "$base" >/dev/null 2>&1 && git cat-file -e "$base:events.js" 2>/dev/null && ! git diff --quiet "$base" -- events.js; then
     [ "$(git show "$base:events.js" | grep -o 'EVENTS_VERSION [0-9]*')" != "$(grep -o 'EVENTS_VERSION [0-9]*' events.js)" ] || { echo "events.js changed since $base but its EVENTS_VERSION is unchanged"; exit 1; }
+  fi
+done
+for base in origin/main origin/test; do   # the same for pics.js
+  if git rev-parse --verify -q "$base" >/dev/null 2>&1 && git cat-file -e "$base:pics.js" 2>/dev/null && ! git diff --quiet "$base" -- pics.js; then
+    [ "$(git show "$base:pics.js" | grep -o 'PICS_VERSION [0-9]*')" != "$(grep -o 'PICS_VERSION [0-9]*' pics.js)" ] || { echo "pics.js changed since $base but its PICS_VERSION is unchanged"; exit 1; }
   fi
 done
 node --test-reporter=tap tests/sync-core.test.js | grep -E "^# (pass|fail)"   # tap: Node 23+ prints "ℹ pass" by default

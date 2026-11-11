@@ -14,6 +14,7 @@
 <script src="./config.js"></script>
 <script src="./data.js?v=25"></script>
 <script src="./events.js?v=41"></script>
+<script src="./pics.js?v=1"></script>
 <title>Nihongo Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -34,6 +35,7 @@
   --ruby: #a9a7c8;
   --shelf: #2b2a44; --wood: #5a4535; --wood-edge: #46362a; --label: #e6dcc4; --label-ink: #2f2a22; --label-ink-2: #5b5144; --gold: #c9a64f;
   --cover-keep: 76%; --cover-shade: #1c1e38; --note: #45412f; --paper: #d9d2c0;
+  --pic-disc: #3b3e6b; --pic-shadow: rgba(0,0,0,.3); --pic-steam: #8e8bb8;   /* a word's picture (pics.js): its round backdrop, ground shadow, steam */
   color-scheme: dark;
 }
 [data-theme="light"] {
@@ -49,6 +51,7 @@
   --ruby: #7a6d57;
   --shelf: #ece1cc; --wood: #c99a63; --wood-edge: #a87843; --label: #f6efdf; --label-ink: #3a3328; --label-ink-2: #6b604d; --gold: #ecc66a;
   --cover-keep: 100%; --cover-shade: #1c1e38; --note: #fdf2c8; --paper: #fffdf6;
+  --pic-disc: #efe3cd; --pic-shadow: rgba(90,60,30,.16); --pic-steam: #b4a891;
   color-scheme: light;
 }
 * { box-sizing: border-box; }
@@ -1329,7 +1332,7 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
   body.practicing .content > .q-card { flex: 1 0 auto; display: flex; flex-direction: column; }
   .q-card > :is(.opts, .spell, .order, .match) { margin-top: auto; }
   /* a word or a kanji on its own sits halfway down the room the options leave (a sentence stays at the top) */
-  .q-card > .q-stem:is(.word, .zhstem) { margin-top: auto; }
+  .q-card > .q-stem:is(.word, .zhstem, .picstem) { margin-top: auto; }
   .q-card > .opts { padding-top: 18px; }
   /* 1.0.43: the result rises from the bottom in a panel (renderPractice draws it on a phone only) while the options stay put:
      the page keeps its tool row as an inert ghost of the same height, and room under the page (--sheet-h, kept by sheetFit)
@@ -1459,6 +1462,13 @@ details.mrow .mbody { padding: 4px 0 14px; }
 .fb-sheet.rise .dots i.up { animation: dotUp .5s ease-out .6s backwards; }
 .preview { text-align: center; padding: 20px 10px 8px; }
 .preview .word { font-size: 44px; font-weight: 600; line-height: 1.5; }
+/* a word's picture (pics.js, 2026-11-11): above the word on its first look, and the stem of 看圖選字 */
+.pic { display: block; width: 100%; height: auto; }
+.pic .pd { fill: var(--pic-disc); } .pic .ps { fill: var(--pic-shadow); }
+.pic .ph { fill: none; stroke: #fff; stroke-opacity: .38; stroke-width: 2.6; stroke-linecap: round; }
+.pic .pst { fill: none; stroke: var(--pic-steam); stroke-width: 2.4; stroke-linecap: round; }
+.preview .pic { width: 120px; margin: 0 auto 2px; }
+.q-stem.picstem { padding: 2px 0; } .q-stem.picstem .pic { width: 190px; max-width: 60%; margin: 0 auto; }
 .preview .reading { font-size: 18px; color: var(--fg-3); }
 .preview .meaning { font-size: 22px; font-weight: 600; margin-top: 6px; }
 .preview .example { margin-top: 16px; text-align: left; padding: 12px 14px; border-radius: 12px; background: var(--bg-sunken); }
@@ -4069,6 +4079,28 @@ function speechAvailable() {
 
 // a word that has a 假名拼字 question: a reading in kana of 2–8 characters
 function canSpell(v) { return Boolean(v && v.r && !HAS_KANJI.test(v.r) && v.r.length >= 2 && v.r.length <= 8); }
+// a word's picture (pics.js): by the word as written, for the reading PIC_READ names where two items share it (魚)
+function picKey(v) {
+  if (typeof PICS !== 'object' || !v || !v.w) return '';
+  const k = jaPlain(v.w);
+  return PICS[k] && (typeof PIC_READ !== 'object' || !PIC_READ[k] || PIC_READ[k] === v.r) ? k : '';
+}
+// the picture as markup: on its round backdrop (disc: false leaves that out, for a scene in the town that has its own ground)
+function picSvg(key, cls = '', opt = {}) {
+  if (typeof PICS !== 'object' || !PICS[key]) return '';
+  return `<svg class="pic ${cls}" viewBox="0 0 100 100" role="img" aria-label="圖">${opt.disc === false ? '' : '<circle class="pd" cx="50" cy="50" r="47"/>'}${PICS[key]}</svg>`;
+}
+// not a wrong option of 看圖選字: a word that names what any picture shows (食べ物 for おにぎり, 動物 for 犬)
+const PIC_GENERIC = new Set(['動物', '食べ物', '飲み物', '果物', '野菜', '乗り物', '物', 'もの', '品物', '料理', '食事', 'ご飯', 'お菓子', '花', '木', '道具', '家具', '服', '洋服', '虫', '建物', 'ペット']);
+function picOptions(v, zh = {}, kana = {}) {
+  const pool = vocabPeers(v).filter(x => x.p === v.p && !PIC_GENERIC.has(jaPlain(x.w)) && !zhOverlap(x.m, v.m) && x.r !== v.r && jaPlain(x.w) !== jaPlain(v.w));
+  // the same group first (傘 with 時計, 鍵, 本), so the picture has to be looked at
+  const scored = pool.map(x => ({ x, s: (x.c === v.c ? 3 : 0) + (x.lv === v.lv ? 1 : 0) + Math.random() * 1.5 })).sort((a, b) => b.s - a.s);
+  const out = [];
+  for (const { x } of scored) { if (!out.includes(x.w)) { out.push(x.w); zh[x.w] = x.m; kana[x.w] = x.r; } if (out.length === 3) break; }
+  return out.length === 3 ? out : null;
+}
+
 function vocabFormats(v) {
   const rec = srsGet(v.key);
   const b = rec ? rec.b : -1;
@@ -4081,13 +4113,14 @@ function vocabFormats(v) {
     'v-kanji': Boolean(v.r && HAS_KANJI.test(v.w) && b >= 3),
     'v-listen': Boolean(v.m && speechAvailable()),
     'v-spell': canSpell(v),
-    'v-match': Boolean(v.m && matchPairs(v))
+    'v-match': Boolean(v.m && matchPairs(v)),
+    'v-pic': Boolean(picKey(v))
   };
   let weights;
   if (b < 0) weights = { 'v-meaning': 1 };
-  else if (b === 0) weights = { 'v-meaning': 3, 'v-listen': 1, 'v-recall': 1 };
-  else if (b <= 2) weights = { 'v-meaning': 2, 'v-recall': 2, 'v-cloze': 3, 'v-listen': 1, 'v-reading': 1, 'v-spell': 1, 'v-match': 1 };
-  else weights = { 'v-cloze': 3, 'v-recall': 2, 'v-reading': 2, 'v-kanji': 1.5, 'v-listen': 1.5, 'v-meaning': 1, 'v-spell': 1.5, 'v-match': 1.5 };
+  else if (b === 0) weights = { 'v-meaning': 3, 'v-listen': 1, 'v-recall': 1, 'v-pic': 1 };   // 看圖選字 now and then, for a word with a picture
+  else if (b <= 2) weights = { 'v-meaning': 2, 'v-recall': 2, 'v-cloze': 3, 'v-listen': 1, 'v-reading': 1, 'v-spell': 1, 'v-match': 1, 'v-pic': 1 };
+  else weights = { 'v-cloze': 3, 'v-recall': 2, 'v-reading': 2, 'v-kanji': 1.5, 'v-listen': 1.5, 'v-meaning': 1, 'v-spell': 1.5, 'v-match': 1.5, 'v-pic': 1 };
   // a format this word has not passed yet is asked first, so it is proven in several ways rather than one
   if (b >= 1) for (const f in weights) if (!rec.f || !rec.f[f] || rec.f[f][0] === 0) weights[f] *= 3;
   return Object.entries(weights).filter(([f]) => can[f]).map(([f, w]) => [f, w]);
@@ -4216,6 +4249,17 @@ function makeVocabQuestion(v0, ctx = {}) {
       finalizeOptions(q, v.w, opts, true);
       return true;
     }
+    if (f === 'v-pic') {   // 看圖選字: 中翻日 with the picture in place of the Chinese
+      const key = picKey(v); const opts = key && picOptions(v, zh, kana);
+      if (!opts) return false;
+      kana[v.w] = v.r;
+      q.fmt = f; q.label = `單字 · ${lvTag} · 看圖選字`;
+      q.instr = '這是什麼？';
+      q.stemHtml = picSvg(key); q.stemClass = 'picstem';
+      q.mistakePrompt = `「${v.m}」的日文`;
+      finalizeOptions(q, v.w, opts, true);
+      return true;
+    }
     if (f === 'v-reading') {
       const surface = info && info.form !== 'raw' ? info.surface : v.w;
       const reading = info && info.form !== 'raw' ? readingOfSurface(v, info) : v.r;
@@ -4302,7 +4346,7 @@ function makeVocabQuestion(v0, ctx = {}) {
   };
   const finish = () => {
     const want = ctx.kana === true || (ctx.kana === undefined && srsGet(v.key) && Math.random() < KANA_OPTION_RATE);
-    if (want && (q.fmt === 'v-recall' || q.fmt === 'v-cloze') && kanaOptionsDistinct(q)) q.kanaOptions = true;
+    if (want && (q.fmt === 'v-recall' || q.fmt === 'v-pic' || q.fmt === 'v-cloze') && kanaOptionsDistinct(q)) q.kanaOptions = true;
     return q;
   };
   // the mock exam asks for one specific format (漢字読み / 表記) and needs nothing else
@@ -5456,7 +5500,7 @@ function optionHtml(q, o) {
   if (!o.jp) return esc(o.text);
   if (q.kanaOptions && q.optKana && q.optKana[o.text]) return esc(q.optKana[o.text]);
   if (q.noFuriOptions) return esc(jaPlain(o.text));
-  if (q.fmt === 'v-recall' || q.fmt === 'v-reading') return q.ownRmap && q.item && o.text === jaPlain(q.item.w) ? furi(ownBracket(q.item)) : furi(o.text);   // a homograph card's answer reads its own way
+  if (q.fmt === 'v-recall' || q.fmt === 'v-pic' || q.fmt === 'v-reading') return q.ownRmap && q.item && o.text === jaPlain(q.item.w) ? furi(ownBracket(q.item)) : furi(o.text);   // a homograph card's answer reads its own way
   if (/\[[ぁ-ゖー]+\]/.test(o.text)) return furi(o.text);
   if (!q._rmap) {
     // one reading map for all options, so no option stands out by having (or lacking) furigana;
@@ -5644,6 +5688,7 @@ function previewHtml(e, pct) {
       <div class="q-label"><span>新單字 · ${esc(lvLabel(v.lv))} · ${esc(vocabTheme(v))}</span><span class="chip chip-accent">新</span></div>
       <div class="q-instr">先看一遍，接著會用幾種方式考這個字。</div>
       <div class="preview">
+        ${picSvg(picKey(v))}
         <div class="word jp">${esc(jaPlain(v.w))}</div>
         ${reading ? `<div class="reading jp">${esc(reading)}</div>` : ''}
         <div class="meaning">${esc(v.m)}</div>
@@ -6037,7 +6082,7 @@ function queueRetry(item, mistake, orig) {
 }
 function speakAnswered(q, wait = 0) {
   // a kanji question has no sentence: it reads its example word (the reading asked, or the first example's), as 發音 does
-  const text = q.fmt === 'v-meaning' || q.fmt === 'v-recall' || q.fmt === 'v-listen' || q.fmt === 'v-reading' || q.fmt === 'v-kanji' || (q.fmt && (q.fmt.startsWith('a-') || q.fmt.startsWith('k-'))) ? q.speakWord : q.fullJp;
+  const text = q.fmt === 'v-meaning' || q.fmt === 'v-recall' || q.fmt === 'v-pic' || q.fmt === 'v-listen' || q.fmt === 'v-reading' || q.fmt === 'v-kanji' || (q.fmt && (q.fmt.startsWith('a-') || q.fmt.startsWith('k-'))) ? q.speakWord : q.fullJp;
   if (!text) return;
   if (!wait) { speak(text, speakOpts(q, text)); return; }
   const e = currentEntry();
@@ -15391,7 +15436,7 @@ Object.assign(ACTIONS, {
    Learning analysis: pace, past week, weak points, question types, leeches
    ========================================================================== */
 const FMT_NAME = {
-  'v-meaning': '單字・看字選意思', 'v-recall': '單字・中翻日', 'v-cloze': '單字・例句填空', 'v-reading': '單字・漢字讀音', 'v-kanji': '單字・漢字寫法',
+  'v-meaning': '單字・看字選意思', 'v-recall': '單字・中翻日', 'v-pic': '單字・看圖選字', 'v-cloze': '單字・例句填空', 'v-reading': '單字・漢字讀音', 'v-kanji': '單字・漢字寫法',
   'v-listen': '單字・聽音選意思', 'v-spell': '單字・假名拼字', 'v-match': '單字・配對', 'v-sentence': '自訂句子', 'g-choice': '文法・填空', 'g-meaning': '文法・句意／用法', 'g-zh': '文法・句意拼貼', 'g-order': '文法・排序',
   'g-correct': '文法・選正確句', 'g-conj': '文法・動詞變化', 'g-adj': '文法・形容詞變化', 'g-identify': '文法・判斷動詞形', 'g-conj-type': '文法・動詞變化（拼寫）', 'g-adj-type': '文法・形容詞變化（拼寫）',   // g-correct (1.0.23), v-sentence (custom cards, 1.0.34): no longer asked, named for the answers given before
   'k-meaning': '漢字・意思', 'k-shape': '漢字・選字', 'k-read': '漢字・讀音', 'l-dialog': '聽力・對話', 'l-resp': '聽力・即時應答',
