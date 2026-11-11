@@ -1735,7 +1735,6 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 @keyframes kotoSpin { from { transform: scale(.4) rotate(-40deg); opacity: 0; } 60% { transform: scale(1.18) rotate(6deg); opacity: 1; } }
 /* 2026-11-11 polish: shrine, castle, station, sento */
 /* idle: the bath cat breathes in its sleep and its tail's tip twitches now and then */
-.sky .land .fx-doze { transform-box: fill-box; transform-origin: 50% 100%; animation: fxDoze 3.6s ease-in-out infinite; } @keyframes fxDoze { 50% { transform: scale(1.015, 1.05); } }
 .sky .land .fx-flick { transform-box: fill-box; transform-origin: 100% 80%; animation: fxFlick 6s ease-in-out infinite; } @keyframes fxFlick { 0%, 72%, 100% { transform: rotate(0); } 78% { transform: rotate(-12deg); } 84% { transform: rotate(5deg); } 90% { transform: rotate(-6deg); } }
 /* the bell rung: the rope swings (fxRing), the bell shakes on it and the tassel whips after */
 .sky .land [data-fx="bell"].ring .suzu { transform-box: fill-box; transform-origin: 50% 0; animation: bellJig .08s linear 24 alternate; } @keyframes bellJig { from { transform: rotate(-11deg); } to { transform: rotate(11deg); } }
@@ -1755,4 +1754,4 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .sky .land [data-fx="scat"].purr .chead { transform-box: fill-box; transform-origin: 20% 90%; animation: catNuzzle .32s ease-in-out 8 alternate; } @keyframes catNuzzle { to { transform: rotate(-9deg) translate(-.4px, -.8px); } }
 .sky .land [data-fx="scat"].purr .ear { transform-box: fill-box; transform-origin: 30% 100%; animation: catEar .16s ease-in-out .4s 6 alternate; } @keyframes catEar { to { transform: rotate(-20deg); } }
 .sky .land [data-fx="scat"].purr .ctail { animation: catCurl .36s ease-in-out 7 alternate; } @keyframes catCurl { to { transform: rotate(18deg); } }
-@media (prefers-reduced-motion: reduce) { .sky .land :is(.fx-doze, .fx-flick) { animation: none; } .sky .land [data-fx] :is(.suzu, .tassel, .glint, .bib, .ema, .tbody, .tlamp, .chead, .ear, .ctail) { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { .sky .land :is(.fx-flick) { animation: none; } .sky .land [data-fx] :is(.suzu, .tassel, .glint, .bib, .ema, .tbody, .tlamp, .chead, .ear, .ctail) { animation: none !important; } }
