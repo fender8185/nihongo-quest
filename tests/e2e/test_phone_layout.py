@@ -108,6 +108,28 @@ def test_desktop_layout_is_unchanged(b):
     r2 = json.loads(ev(b, js2, [("metrics", (1200, 900, False))]))
     assert r2 == {'sheet': False, 'inCard': True, 'ghost': False}, r2   # the result stays under the options
 
+def test_sizes_word_in_the_middle_glyphs_big_order_meaning_by_its_sentence(b):
+    """2026-11-11: a word alone sits halfway between the question and the options; options of one or two characters come big,
+    two by two; 排序's meaning sits right above its sentence; a sentence keeps its last kana with its 。."""
+    js = "(async () => { " + FRESH + VOCAB_Q + """ const e = currentEntry(); const out = {}; const box = (s) => document.querySelector(s).getBoundingClientRect();
+      const force = (pool, fmt, ok) => { for (const it of pool) { const q = makeQuestion(it, { forceFmt: fmt }); if (q && q.fmt === fmt && (!ok || ok(q))) { e.item = it; e.q = q; e.done = false; renderPractice(); return q; } } return null; };
+      force(REG.vocab, 'v-meaning', q => q.stemClass === 'word');
+      const ins = box('.q-instr'), st = box('.q-stem'), op = box('.q-card .opts');
+      out.word = { size: getComputedStyle(document.querySelector('.q-stem')).fontSize, off: Math.round((st.top + st.bottom) / 2 - (ins.bottom + op.top) / 2), glyph: !!document.querySelector('.opts.glyph') };
+      force(REG.kana, 'a-read');
+      const o = [...document.querySelectorAll('.opts.glyph .opt')].map(x => x.getBoundingClientRect());
+      out.kana = { n: o.length, rows: new Set(o.map(r => Math.round(r.top))).size, size: o.length ? getComputedStyle(document.querySelector('.opts.glyph .opt')).fontSize : '' };
+      const g = force(REG.grammar, 'g-order', q => q.zhText);
+      const ord = document.querySelector('.q-card .order');
+      out.order = { found: !!g, first: ord && ord.firstElementChild.className, outside: !!document.querySelector('.q-card > .q-sub') };
+      out.tail = keepTail(furi('静かにしてください。')).endsWith('<span class="nowrap">さい。</span>');
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("metrics", (390, 844))]))
+    assert r['word']['size'] == '44px' and abs(r['word']['off']) <= 30 and not r['word']['glyph'], r
+    assert r['kana'] == {'n': 4, 'rows': 2, 'size': '32px'}, r
+    assert r['order'] == {'found': True, 'first': 'q-sub order-sub', 'outside': False}, r
+    assert r['tail'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, "-m", "http.server", str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

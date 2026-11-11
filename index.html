@@ -1212,7 +1212,7 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .lesson ul { margin: 6px 0 10px; padding-left: 20px; }
 .lesson li { margin: 4px 0; color: var(--fg-2); }
 .example { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: var(--bg-sunken); border: 1px solid var(--line); margin: 8px 0; }
-.example .jp { font-size: 17px; line-height: 1.9; }
+.example .jp { font-size: 17px; line-height: 1.9; text-wrap: pretty; }
 .example .zh { font-size: 13px; color: var(--fg-3); }
 .kana-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin: 10px 0 14px; max-width: 420px; }
 .kana-cell { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--fg); font: inherit; cursor: pointer; }
@@ -1255,14 +1255,17 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .q-card { background: var(--bg-elev); border: 1px solid var(--line); border-radius: 16px; padding: 22px 22px 18px; box-shadow: var(--shadow); }
 .q-label { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--fg-3); margin-bottom: 10px; }
 .q-instr { font-size: 14px; color: var(--fg-2); margin-bottom: 10px; }
-.q-stem { font-size: 26px; line-height: 2.05; font-weight: 500; word-break: break-word; }
-.q-stem.word { font-size: 40px; line-height: 1.7; text-align: center; padding: 6px 0; }
+/* text-wrap: pretty keeps a sentence from ending on a line of its own 「す。」 */
+.q-stem { font-size: 26px; line-height: 2.05; font-weight: 500; word-break: break-word; text-wrap: pretty; }
+.q-stem.word { font-size: 52px; line-height: 1.7; text-align: center; padding: 6px 0; }
 .q-stem.zhstem { font-family: inherit; font-size: 24px; text-align: center; }
 .q-sub { margin-top: 6px; font-size: 14px; color: var(--fg-3); }
-.q-stem.word + .q-sub { text-align: center; }
+.q-stem:is(.word, .zhstem) + .q-sub { text-align: center; }
 .q-sub .toggle-zh { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; font-size: 13px; }
-@media (max-width: 600px) { .q-card { padding: 18px 16px 14px; } .q-stem { font-size: 21px; } .q-stem.word { font-size: 34px; } }
-.blank { display: inline-flex; align-items: center; justify-content: center; min-width: 3.2em; padding: 0 8px; margin: 0 3px; line-height: 1.5; border-radius: 8px; border: 1.5px dashed var(--accent-line); color: var(--accent); background: var(--accent-soft); font-size: .8em; vertical-align: middle; }
+/* a reading question sits under its passage and should not outshine it */
+.passage + .q-stem { font-size: 20px; font-weight: 400; line-height: 1.95; }
+@media (max-width: 600px) { .q-card { padding: 18px 16px 14px; } .q-stem { font-size: 20px; line-height: 1.9; } .q-stem.word { font-size: 44px; } .passage + .q-stem { font-size: 18px; } }
+.blank { display: inline-flex; align-items: center; justify-content: center; min-width: 3.2em; padding: 0 8px; margin: 0 3px; line-height: 1.5; border-radius: 8px; border: 1.5px dashed var(--accent-line); color: var(--accent); background: var(--accent-soft); font-size: .9em; vertical-align: middle; }
 .blank.filled { border-style: solid; color: var(--ok); border-color: var(--ok-line); background: var(--ok-soft); }
 .blank.star { min-width: 2.2em; }
 .uline { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 6px; text-decoration-color: var(--accent); }
@@ -1279,6 +1282,14 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .opt.wrong { border-color: var(--bad-line); background: var(--bad-soft); }
 .opt.wrong .kbd { border-color: var(--bad-line); color: var(--bad); }
 .opt.faded { opacity: .55; }
+/* Japanese options: a line tall enough for furigana, so options with and without it sit at the same height */
+.opt > .jp { line-height: 2.1; }
+/* options of one or two characters (百 目 日 白, ち ら き さ, ga gi): the shape is the question, so they are big, two by two */
+.opts.glyph { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.opts.glyph .opt { position: relative; flex-direction: column; justify-content: center; gap: 0; min-height: 76px; padding: 8px 12px; font-size: 32px; line-height: 1.3; text-align: center; }
+.opts.glyph .opt > .jp { line-height: 1.6; }
+.opts.glyph .opt .kbd { position: absolute; left: 10px; top: 10px; }
+.opts.glyph .opt-zh { margin-left: 0; max-width: 100%; text-align: center; }
 .opt-audio { padding: 6px 8px 6px 12px; gap: 8px; cursor: default; }
 .opt-play { flex: 1 1 auto; display: inline-flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 4px; border: 0; background: none; color: var(--accent); font-size: 16px; font-weight: 500; cursor: pointer; text-align: left; border-radius: 8px; }
 .opt-play:hover { background: var(--bg-hover); }
@@ -1292,12 +1303,14 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .feedback { margin-top: 16px; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg-sunken); }
 .feedback.ok { border-color: var(--ok-line); }
 .feedback.bad { border-color: var(--bad-line); }
-.fb-head { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 6px; }
+/* the result in three sizes: 17 the answer and the sentence, 15 the options and the note, 13 the small print */
+.fb-head { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; margin-bottom: 6px; }
 .fb-head svg { width: 20px; height: 20px; flex: none; }
 .fb-head.ok { color: var(--ok); } .fb-head.bad { color: var(--bad); }
-.fb-full { font-size: 18px; line-height: 2; margin: 4px 0; }
-.fb-why { color: var(--fg-2); font-size: 14px; }
-.fb-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 10px; font-size: 12px; color: var(--fg-3); }
+.fb-full { font-size: 17px; line-height: 2; margin: 4px 0; text-wrap: pretty; }
+.fb-why { color: var(--fg-2); font-size: 15px; }
+.fb-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 10px; font-size: 13px; color: var(--fg-3); }
+.fb-meta .chip { font-size: 13px; }
 .pr-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
 .pr-actions .left, .pr-actions .right { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 @media (hover: none) and (pointer: coarse) { .kbd-hint { display: none !important; } }   /* touch screens: no keyboard, no key hints */
@@ -1315,6 +1328,8 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
   body.practicing .content:has(> .q-card) { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
   body.practicing .content > .q-card { flex: 1 0 auto; display: flex; flex-direction: column; }
   .q-card > :is(.opts, .spell, .order, .match) { margin-top: auto; }
+  /* a word or a kanji on its own sits halfway down the room the options leave (a sentence stays at the top) */
+  .q-card > .q-stem:is(.word, .zhstem) { margin-top: auto; }
   .q-card > .opts { padding-top: 18px; }
   /* 1.0.43: the result rises from the bottom in a panel (renderPractice draws it on a phone only) while the options stay put:
      the page keeps its tool row as an inert ghost of the same height, and room under the page (--sheet-h, kept by sheetFit)
@@ -1335,7 +1350,7 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .fb-opt .fb-mark { flex: none; width: 1.1em; text-align: center; color: var(--fg-3); }
 .fb-opt.ok { color: var(--fg); } .fb-opt.ok .fb-mark { color: var(--ok); } .fb-opt.bad .fb-mark { color: var(--bad); }
 .fb-opt-zh { color: var(--fg-3); font-size: 13px; }
-.fb-you { margin-left: auto; flex: none; padding-left: 8px; font-size: 12px; color: var(--bad); }
+.fb-you { margin-left: auto; flex: none; padding-left: 8px; font-size: 13px; color: var(--bad); }
 .speak-big { display: inline-flex; align-items: center; gap: 10px; margin: 8px auto; padding: 14px 22px; border-radius: 99px; border: 1px solid var(--accent-line); background: var(--accent-soft); color: var(--accent); cursor: pointer; font-size: 16px; }
 .speak-big svg { width: 22px; height: 22px; }
 .speech-prog { max-width: 320px; margin: 2px auto 0; }
@@ -1353,7 +1368,8 @@ body.immersive .listen.full .lplay { width: 56px; height: 56px; } body.immersive
 .spell-tile:disabled { opacity: .25; cursor: default; }
 .conj-tile { width: auto; min-width: 52px; padding: 0 10px; }
 .conj-in { font-size: 24px; text-align: center; max-width: 320px; margin: 0 auto 10px; display: block; }
-.fb-diff { margin-top: 6px; font-size: 18px; } .fb-diff mark { background: var(--bad-line, rgba(229,72,77,.25)); color: var(--bad); border-radius: 4px; padding: 0 2px; }
+.fb-diff { margin-top: 6px; font-size: 17px; } .fb-diff mark { background: var(--bad-line, rgba(229,72,77,.25)); color: var(--bad); border-radius: 4px; padding: 0 2px; }
+.order-sub { margin: 0 0 4px; text-align: center; }
 .order-out { min-height: 48px; font-size: 22px; line-height: 2; padding: 6px 0 10px; border-bottom: 2px solid var(--line-2); margin: 0 auto 14px; max-width: 560px; text-align: center; }
 .order-out.ok { border-color: var(--ok); } .order-out.bad { border-color: var(--bad, #e5484d); }
 .order-slot { display: inline-block; min-width: 2.2em; margin: 0 3px; border-bottom: 2px solid var(--line-2); text-align: center; color: var(--fg-3); }
@@ -1487,7 +1503,8 @@ body.immersive .listen.full .flash .listen-reads .chip { font-size: 18px; } body
 
 /* ---------- ruby ---------- */
 ruby { ruby-position: over; ruby-align: center; }
-rt { font-size: .5em; color: var(--ruby); font-weight: 400; letter-spacing: .02em; user-select: none; }
+/* never smaller than 9px; no letter-spacing, so a long reading (しゅくだい over 宿題) pushes the words beside it no further than it must */
+rt { font-size: max(.5em, 9px); color: var(--ruby); font-weight: 400; user-select: none; }
 body.no-furi rt { visibility: hidden; }
 body.no-furi .keep-furi rt { visibility: visible; }
 body.furi-smart ruby.known rt { visibility: hidden; }
@@ -1498,7 +1515,7 @@ body.furi-smart ruby.known rt { visibility: hidden; }
 .kanji-tile:hover { border-color: var(--accent-line); }
 .kanji-tile.lv1 { background: var(--heat-1); } .kanji-tile.lv2 { background: var(--heat-2); } .kanji-tile.lv3 { background: var(--heat-3); color: #fff; } .kanji-tile.lv4 { background: var(--heat-4); color: #08130d; }
 .kanji-tile.big { width: 88px; height: 88px; font-size: 52px; cursor: default; flex: none; }
-.passage { font-size: 16px; line-height: 2; }
+.passage { font-size: 17px; line-height: 2; text-wrap: pretty; }
 .chart-tip { position: fixed; z-index: 80; pointer-events: none; background: var(--bg-elev); border: 1px solid var(--line-2); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--fg-2); box-shadow: var(--shadow); opacity: 0; transition: opacity .1s; }
 .chart-tip b { color: var(--fg); font-size: 14px; display: block; }
 .chart-tip.show { opacity: 1; }
@@ -5475,6 +5492,8 @@ function renderPractice() {
   const answered = e.done;
   const sheet = answered && phoneLayout();   // 1.0.43: a phone shows the result in a panel from the bottom
   const longOpts = q.options.some(o => jaPlain(o.text).length > 14);   // one long option makes all four smaller, so their sizes match
+  // four options of one or two characters (百 目 日 白, ち ら き さ, ga gi gu ge): big, two by two
+  const glyph = !q.audioOptions && q.options.length === 4 && (q.kind === 'a' ? q.options.every(o => jaPlain(o.text).length <= 4) : q.options.every(o => o.jp && jaPlain(o.text).length <= 2));
   const opts = q.options.map((o, i) => {
     let cls = 'opt';
     if (!o.jp) cls += ' zh';
@@ -5496,9 +5515,10 @@ function renderPractice() {
   const ladder = !rec || typeof rec.rl !== 'number' || e.requeued || e.encore || (e.srs && e.srs.isNew) ? ''
     : (e.srs ? !e.srs.reviewed : rec.due > todayStr()) ? '<span class="chip" title="還沒到這題的複習日：答對不算進第 1、3、7 天，到了那天照常複習">錯題</span>'
     : `<span class="chip" title="答錯過的題：第 1、3、7 天各複習一次，三次都對才離開錯題本">錯題複習 ${rec.rl + 1}/3</span>`;
-  let stem = q.stemHtml;
+  let stem = keepTail(q.stemHtml);
   if (answered && q.fillHtml) stem = stem.replace(/<span class="blank" data-blank>[\s\S]*?<!--\/blank-->/, `<span class="blank filled">${q.fillHtml}</span>`);
-  const custom = q.custom ? customInteractionHtml(e, answered) : '';
+  let custom = q.custom ? customInteractionHtml(e, answered) : '';
+  if (q.custom === 'g-order' && subParts.length) custom = custom.replace('<div class="order">', `<div class="order"><div class="q-sub order-sub">${subParts.join(' ')}</div>`);   // 排序: the meaning right above the sentence it explains
   const just = answered && e.justAnswered ? (e.chosen === q.answer ? ' just-ok' : ' just-bad') : ''; e.justAnswered = false;   // 1.0.41: only the draw right after the answer
   const tools = `
     <div class="pr-actions">
@@ -5523,8 +5543,8 @@ function renderPractice() {
       ${q.passageHtml ? `<div class="panel jp mb-3 passage">${q.passageHtml}</div>` : ''}
       ${stem ? `<div class="q-stem jp ${q.stemClass || ''}">${stem}</div>` : ''}
       ${answered && q.revealHtml && !sheet ? q.revealHtml : ''}
-      ${subParts.length ? `<div class="q-sub">${subParts.join(' ')}</div>` : ''}
-      ${custom || `<div class="opts ${q.wide ? 'wide' : ''}">${opts}</div>`}
+      ${subParts.length && q.custom !== 'g-order' ? `<div class="q-sub">${subParts.join(' ')}</div>` : ''}
+      ${custom || `<div class="opts${q.wide ? ' wide' : ''}${glyph ? ' glyph' : ''}">${opts}</div>`}
       ${answered && !sheet ? feedbackHtml(e) : ''}
     </div>
     ${sheet ? `${tools.replace('<div class="pr-actions">', '<div class="pr-actions pr-ghost" aria-hidden="true" inert>')}
@@ -5842,6 +5862,10 @@ function optAside(q, o) {
   const zh = q.optZh && q.optZh[o.text]; if (zh) return [zh, false];
   const ja = q.optJa && q.optJa[o.text]; return ja ? [ja, true] : ['', false];
 }
+// the last two kana of a sentence and its closing marks stay on one line, so it never ends on a line of just 「い。」
+// (text-wrap: pretty does that too, but Chrome skips a sentence whose blank holds furigana)
+function keepTail(html) { return String(html || '').replace(/([ぁ-ゖァ-ヺー]{2}[。、？！」）]+)$/, '<span class="nowrap">$1</span>'); }
+
 function feedbackHtml(e, sheet = false) {
   const q = e.q;
   const ok = e.chosen === q.answer;
@@ -5854,7 +5878,7 @@ function feedbackHtml(e, sheet = false) {
   const list = sheet && !q.custom && (!ok || q.options.some((o, i) => i !== q.answer && optAside(q, o)[0]));
   const chosen = list ? `<div class="fb-opts">${order.map(i => { const o = q.options[i]; const [zh, ja] = i !== q.answer ? optAside(q, o) : ['', false];
     return `<div class="fb-opt${i === q.answer ? ' ok' : i === e.chosen ? ' bad' : ''}"><span class="fb-mark">${i === q.answer ? '✓' : i === e.chosen ? '✗' : '・'}</span><span class="${optClass(o)}">${optionHtml(q, o)}</span>${zh ? `<span class="fb-opt-zh${ja ? ' jp' : ''}">（${esc(zh)}）</span>` : ''}${i === e.chosen && !ok ? '<span class="fb-you">你選的</span>' : ''}</div>`; }).join('')}</div>` : '';
-  const full = q.fullJp && (q.fmt.startsWith('g-') || q.fmt === 'v-cloze' || q.fmt === 'm-card') ? `<div class="fb-full jp">${q.kind === 'v' && q.exMarked && q.item && homographReadings(q.item).length ? exampleJpHtml(q.exMarked, q.item) : furi(q.fullJp)} <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak-full" title="朗讀">${icon('speaker')}</button></div>${q.zhText ? `<div class="small muted">${esc(q.zhText)}</div>` : ''}` : '';
+  const full = q.fullJp && (q.fmt.startsWith('g-') || q.fmt === 'v-cloze' || q.fmt === 'm-card') ? `<div class="fb-full jp">${q.kind === 'v' && q.exMarked && q.item && homographReadings(q.item).length ? exampleJpHtml(q.exMarked, q.item) : keepTail(furi(q.fullJp))} <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak-full" title="朗讀">${icon('speaker')}</button></div>${q.zhText ? `<div class="small muted">${esc(q.zhText)}</div>` : ''}` : '';
   // other vocabulary formats: the word's example sentence, with its own play button (so it is not buried in the note text);
   // 配對 has none: the sentence would be one word's of six
   const example = q.kind === 'v' && q.item && q.item.ex && q.fmt !== 'v-cloze' && q.fmt !== 'v-match' ? exampleHtml(q.item.ex, q.item.exZh, 'mt-2', q.item) : '';
