@@ -439,12 +439,12 @@ def test_week0_is_a_pseudo_unit_m0(b):
 
 def test_week0_page_is_a_unit_page(b):
     js = """(() => { const at = (h) => { location.hash = h; route(); const v = document.getElementById('view'); return { start: Boolean(v.querySelector('[data-act="start-unit"][data-unit="m0"]')), setCur: Boolean(v.querySelector('[data-act="set-current"]')),
-        tabs: v.querySelectorAll('.seg [data-route^="#/course/m0"]').length, h3: v.querySelectorAll('.lesson h3').length, done: Boolean(v.querySelector('[data-act="mark-unit"]')) }; };
+        tabs: v.querySelectorAll('.seg [data-route^="#/course/m0"]').length, toc: v.querySelectorAll('.toc-row[data-route^="#/course/intro/read"]').length, done: Boolean(v.querySelector('[data-act="mark-unit"]')) }; };
       state.introSeen = false; const intro = at('#/course/intro'); const seen = state.introSeen; const lesson = at('#/course/m0?tab=lesson');
       location.hash = '#/course'; route(); const row = document.querySelector('.unit-row[data-route="#/course/intro"]');
       return JSON.stringify({ intro, seen, lesson, rowBar: Boolean(row && row.querySelector('.bar.stack')), rowCur: Boolean(row && row.querySelector('.chip-accent')) }); })()"""
     r = json.loads(ev(b, js))
-    page = {'start': True, 'setCur': False, 'tabs': 2, 'h3': 13, 'done': False}
+    page = {'start': True, 'setCur': False, 'tabs': 2, 'toc': 15, 'done': False}   # 2026-11-11: the parts of 講義 (its own screen), 13 sections
     assert r == {'intro': page, 'seen': True, 'lesson': page, 'rowBar': True, 'rowCur': False}, r
 
 

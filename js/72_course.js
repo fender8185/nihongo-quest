@@ -43,10 +43,10 @@ function courseNowHtml() {
   return `<div class="card now-card" style="--book:${bookColor(stageIndex(currentStageId()))}">${ribbonSvg()}
     <div class="mb-2"><div class="label">目前單元・${esc(cur.lv)}</div><div class="card-title">${esc(cur.weeks)}・${esc(cur.title)}</div></div>
     <div class="row">${unitBarHtml(us, 'grow', true)}<span class="small num muted">${us.pct}%</span></div>
-    <div class="small muted mt-2 legs"><span class="leg">已學 ${us.ok3 + us.ok1 + us.seen0}／${us.total} 題</span>${us.due ? `<span class="leg">今天要複習 ${us.due} 題</span>` : ''}</div>
+    <div class="small muted mt-2 legs"><span class="leg">已學 ${us.seen}／${us.total} 題</span>${us.due ? `<span class="leg">今天要複習 ${us.due} 題</span>` : ''}</div>
     ${us.pct >= 85 && !us.done ? `<div class="banner mt-3"><div class="grow">這個單元已經很熟了，可以前往下一單元。</div><button type="button" class="btn btn-sm btn-primary" data-act="advance-unit">前往下一單元</button></div>` : ''}
     <div class="row-wrap mt-3">
-      <button type="button" class="btn btn-sm" data-act="nav" data-route="#/course/${cur.id}">看講義</button>
+      <button type="button" class="btn btn-sm" data-act="nav" data-route="#/course/${cur.id}/read">看講義</button>
       <button type="button" class="btn btn-sm" data-act="start-unit" data-unit="${cur.id}">練習本單元</button>
     </div>
   </div>`;
@@ -173,54 +173,105 @@ function glossaryHtml(p) {
 function posChip(p, fallback) {
   return GLOSSARY[p] ? `<button type="button" class="chip chip-link" data-act="glossary" data-term="${esc(p)}" title="這是什麼？">${esc(posLabel(p, fallback))}</button>` : `<span class="chip">${esc(posLabel(p, fallback))}</span>`;
 }
-// 講義 as pages (2026-11-11, the user: a whole unit at once was too much to read on a phone): 概要 (formula and overview), each
-// section's explanation and then its examples, then 重點整理 with 我的標記 and 練習本單元 — bigger type, swiped sideways
-// (scroll-snap) or turned with ‹ › and the arrow keys. The page a unit was left on is kept while the app is open (a redraw, 我的標記 for one, stays on it).
-const LESSON_PAGE = {};
-function lessonHtml(uid) {
+// 講義 (2026-11-11, the user: a whole unit at once was too much on a phone; then: a page of its own, its pages all one size, read like
+// a book): the unit page lists the parts (lessonTocHtml); #/course/<unit>/read shows them a page at a time (renderLessonReader). The
+// lesson flows into pages of the screen's size — each section from a new page, a heading never left at a page's foot, a block taller
+// than a page scrolling inside it — turned only by swiping (scroll-snap; a mouse drags, the arrow keys turn too); 重點整理 ends it.
+// Turning to the last page the first time gives BOOK_GIFT 言靈 (koto.found 'book-<unit>'). The place is kept while the app is open,
+// as the block its page begins with (another size flows it again); read to the end, the book opens at its start again.
+const LESSON_AT = {}, BOOK_GIFT = 3;
+const lessonRoute = (uid) => `#/course/${uid === 'm0' ? 'intro' : uid}`;
+function lessonTocHtml(uid) {
   const L = DATA.LESSONS[uid];
   if (!L) return '<div class="card"><div class="empty">這個單元還沒有講義。</div></div>';
-  const pages = [];
-  if (L.formula || L.overview) pages.push(`<div class="lp-title">這個單元</div>${L.formula ? `<div class="panel jp lp-formula">${bracketRuby(L.formula)}</div>` : ''}${L.overview ? `<p>${bracketRuby(L.overview)}</p>` : ''}`);
-  (L.sections || []).forEach(s => {
-    pages.push(`<h3>${bracketRuby(s.h)}</h3>
-      ${s.rule ? `<div class="rule jp">${bracketRuby(s.rule)}</div>` : ''}
-      <ul>${(s.points || []).map(p => `<li>${bracketRuby(p)}</li>`).join('')}</ul>
-      ${s.kana ? kanaGridHtml() : ''}`);
-    if ((s.ex || []).length) pages.push(`<div class="lp-title">例句・${bracketRuby(s.h)}</div>
-      ${s.ex.map(e => `<div class="example"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(e.jp)}" aria-label="朗讀">${icon('speaker')}</button><div><div class="jp">${furi(e.jp)}</div><div class="zh">${esc(e.zh)}</div></div></div>`).join('')}`);
+  const to = `${lessonRoute(uid)}/read`;
+  const row = (label, at) => `<div class="list-item toc-row" data-act="nav" data-route="${to}?s=${at}" role="button" tabindex="0"><div class="grow">${label}</div><span class="muted">›</span></div>`;
+  return `<div class="card"><div class="card-head"><div class="card-title">講義${state.koto.found['book-' + uid] ? ' <span class="chip chip-ok">翻完過</span>' : ''}</div><button type="button" class="btn btn-primary" data-act="nav" data-route="${to}">${uid in LESSON_AT ? '繼續看講義' : '翻開講義'}</button></div>
+    <div class="list">${L.formula || L.overview ? row('這個單元', 'top') : ''}${(L.sections || []).map((x, i) => row(`${i + 1}. ${bracketRuby(x.h)}`, i)).join('')}${row('重點整理', 'end')}</div></div>`;
+}
+// the lesson as blocks to flow into pages: page — begins a page; keep — goes along with the block after it; sec — where ?s= opens
+function lessonBlocks(uid, L) {
+  const out = [], add = (html, o = {}) => out.push(Object.assign({ html }, o));
+  if (L.formula || L.overview) {
+    add('<div class="lp-title">這個單元</div>', { page: true, keep: true, sec: 'top' });
+    if (L.formula) add(`<div class="panel jp lp-formula">${bracketRuby(L.formula)}</div>`);
+    if (L.overview) add(`<p>${bracketRuby(L.overview)}</p>`);
+  }
+  (L.sections || []).forEach((x, i) => {
+    add(`<div><h3>${bracketRuby(x.h)}</h3>${x.rule ? `<div class="rule jp">${bracketRuby(x.rule)}</div>` : ''}</div>`, { page: true, keep: true, sec: String(i) });
+    (x.points || []).forEach(p => add(`<ul><li>${bracketRuby(p)}</li></ul>`));
+    if (x.kana) add(kanaGridHtml());
+    if ((x.ex || []).length) {
+      add('<div class="lp-title lp-ex">例句</div>', { keep: true });
+      x.ex.forEach(e => add(`<div class="example"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(e.jp)}" aria-label="朗讀">${icon('speaker')}</button><div><div class="jp">${furi(e.jp)}</div><div class="zh">${esc(e.zh)}</div></div></div>`));
+    }
   });
-  pages.push(`<div class="lp-title">重點整理</div>${L.tip ? `<div class="tipbox">${bracketRuby(L.tip)}</div>` : ''}
-    ${uid === 'm0' ? '' : `<div class="lp-mark"><span>看完了，這個單元你覺得</span>${markSwitchHtml(state.unitMarks[uid] || 0, `data-act="mark-unit" data-unit="${uid}"`)}</div>`}
-    <div class="row-wrap mt-4"><button type="button" class="btn btn-primary" data-act="start-unit" data-unit="${uid}">練習本單元</button></div>`);
-  return `<div class="lesson-stack"><div class="card lesson lesson-deck" data-unit="${uid}" tabindex="0" aria-roledescription="翻頁講義">
-    <div class="lp-head"><span class="lp-dots">${pages.length <= 12 ? pages.map(() => '<i></i>').join('') : ''}</span><span class="lp-count num"></span></div>
-    <div class="lp-track">${pages.map((h, i) => `<section class="lp-page" aria-label="第 ${i + 1} 頁，共 ${pages.length} 頁">${h}</section>`).join('')}</div>
-    <div class="lp-nav"><button type="button" class="btn btn-ghost btn-sm" data-act="lesson-page" data-dir="-1">‹ 上一頁</button><span class="hint">左右滑動翻頁</span><button type="button" class="btn btn-sm" data-act="lesson-page" data-dir="1">下一頁 ›</button></div>
-  </div></div>`;
+  add('<div class="lp-title">重點整理</div>', { page: true, keep: true, sec: 'end' });
+  if (L.tip) add(`<div class="tipbox">${bracketRuby(L.tip)}</div>`);
+  add('<div class="lp-fin">— 完 —</div>');
+  return out;
 }
-// after the page is drawn: back to the page this unit was left on; the count, the dots, ‹ › and the height follow the page shown
-function lessonDeckMount(view, uid) {
-  const deck = view.querySelector('.lesson-deck'); if (!deck) return;
-  const track = deck.querySelector('.lp-track'), pages = [...track.children], last = pages.length - 1;
-  const [prev, next] = deck.querySelectorAll('[data-act="lesson-page"]'), dots = [...deck.querySelectorAll('.lp-dots i')];
-  const at = () => Math.max(0, Math.min(last, Math.round(track.scrollLeft / Math.max(1, track.clientWidth))));
-  let cur = -1;
-  const show = (i) => {
-    const turned = cur >= 0 && i !== cur; cur = i; LESSON_PAGE[uid] = i;
-    deck.querySelector('.lp-count').textContent = `${i + 1} / ${pages.length}`;
-    dots.forEach((d, k) => d.classList.toggle('on', k === i)); prev.disabled = i === 0; next.disabled = i === last;
-    track.style.height = `${pages[i].offsetHeight}px`;
-    if (turned && deck.getBoundingClientRect().top < 0) scrollBelowTopbar(deck);   // turned at the foot of a long page: to the top of the next
+function renderLessonReader(view, uid, at) {
+  const L = DATA.LESSONS[uid], u = uid === 'm0' ? INTRO_UNIT : unitById(uid);
+  if (!L || !u) { go(lessonRoute(uid)); return; }
+  if (uid === 'm0' && !state.introSeen) { state.introSeen = true; saveState(); }
+  view.innerHTML = `<div class="reader" data-unit="${uid}">
+    <div class="rd-top"><button type="button" class="btn btn-ghost btn-icon" data-act="nav" data-route="${lessonRoute(uid)}" aria-label="回單元頁">${icon('close')}</button>
+      <div class="grow rd-name"><div class="tiny muted">${esc(u.weeks)}・講義</div><div class="rd-title">${esc(u.title)}</div></div></div>
+    <div class="rd-track lesson"></div>
+    <div class="rd-foot"><div class="rd-bar"><i></i></div><span class="rd-count num"></span></div>
+  </div>`;
+  const rd = view.querySelector('.reader'), track = rd.querySelector('.rd-track'), blocks = lessonBlocks(uid, L);
+  let pages = [], cur = 0;
+  const toEl = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
+  const flow = () => {
+    track.innerHTML = ''; pages = []; let sheet = null;
+    const open = () => { const pg = document.createElement('section'); pg.className = 'rd-page'; sheet = document.createElement('div'); sheet.className = 'rd-sheet'; pg.appendChild(sheet); track.appendChild(pg); pages.push(pg); };
+    blocks.forEach((b, i) => {
+      if (!sheet || b.page) open();
+      const el = toEl(b.html); el.dataset.b = i; if (b.keep) el.dataset.keep = '1'; sheet.appendChild(el);
+      if (sheet.scrollHeight <= sheet.clientHeight + 1) return;
+      const moving = [el]; let p = el.previousElementSibling;
+      while (p && p.dataset.keep) { moving.unshift(p); p = p.previousElementSibling; }
+      if (p) { open(); moving.forEach(m => sheet.appendChild(m)); }   // nothing before them: taller than a page, it scrolls in its own
+    });
   };
-  track.scrollLeft = Math.min(LESSON_PAGE[uid] || 0, last) * track.clientWidth;
-  show(at());
-  let raf = 0;
-  track.addEventListener('scroll', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { if (at() !== cur) show(at()); }); }, { passive: true });
-  deck.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); turnLessonPage(deck, e.key === 'ArrowRight' ? 1 : -1); } });
-  window.addEventListener('resize', () => { if (deck.isConnected && cur >= 0) track.style.height = `${pages[cur].offsetHeight}px`; });
+  const first = (i) => Number(pages[i].querySelector('[data-b]').dataset.b);
+  const show = (i, turned) => {
+    const end = i === pages.length - 1; cur = i;
+    if (end) delete LESSON_AT[uid]; else LESSON_AT[uid] = first(i);
+    rd.querySelector('.rd-count').textContent = `${i + 1} / ${pages.length}`; rd.querySelector('.rd-bar i').style.width = `${(i + 1) / pages.length * 100}%`;
+    if (end && turned && !state.koto.found['book-' + uid]) { state.koto.found['book-' + uid] = BOOK_GIFT; saveState(); toast(`這本講義翻完了！+${BOOK_GIFT} 言靈（每本第一次）`, 3200); }
+  };
+  const toBlock = (b) => { let i = 0; pages.forEach((pg, k) => { if (first(k) <= b) i = k; }); track.scrollLeft = i * track.clientWidth; show(i, false); };
+  const again = () => { if (!rd.isConnected) return; const b = first(cur); flow(); toBlock(b); };
+  flow();
+  const from = at !== undefined ? blocks.findIndex(b => b.sec === at) : -1;
+  toBlock(from >= 0 ? from : LESSON_AT[uid] || 0);
+  if (at !== undefined) history.replaceState(null, '', `${lessonRoute(uid)}/read`);   // opened at a part: a redraw (我的標記) stays on the page reached
+  let raf = 0, resized = 0;
+  track.addEventListener('scroll', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { if (!rd.isConnected) return; const i = Math.max(0, Math.min(pages.length - 1, Math.round(track.scrollLeft / Math.max(1, track.clientWidth)))); if (i !== cur) show(i, true); }); }, { passive: true });
+  // a mouse drags the pages (a touch screen and a trackpad swipe them): a drag past 40 px turns one page
+  let drag = null;
+  track.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0 || e.target.closest('button')) return;
+    drag = { x: e.clientX, left: track.scrollLeft, from: cur }; track.classList.add('dragging'); try { track.setPointerCapture(e.pointerId); } catch (err) { /* not a live pointer */ }
+  });
+  track.addEventListener('pointermove', (e) => { if (drag) track.scrollLeft = drag.left - (e.clientX - drag.x); });
+  const drop = (e) => {
+    if (!drag) return; const dx = e.clientX - drag.x, i = Math.max(0, Math.min(pages.length - 1, drag.from + (dx < -40 ? 1 : dx > 40 ? -1 : 0)));
+    drag = null; track.classList.remove('dragging'); track.scrollTo({ left: i * track.clientWidth, behavior: 'smooth' });
+  };
+  track.addEventListener('pointerup', drop); track.addEventListener('pointercancel', drop);
+  const onKey = (e) => {
+    if (!rd.isConnected) { document.removeEventListener('keydown', onKey); window.removeEventListener('resize', onSize); return; }
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !modalOpen()) { e.preventDefault(); turnLessonPage(rd, e.key === 'ArrowRight' ? 1 : -1); }
+  };
+  const onSize = () => { clearTimeout(resized); resized = setTimeout(again, 150); };
+  document.addEventListener('keydown', onKey); window.addEventListener('resize', onSize);
+  if (document.fonts && document.fonts.status !== 'loaded') document.fonts.ready.then(again);   // the web font changes the lines' lengths
 }
-function turnLessonPage(deck, dir) { const track = deck.querySelector('.lp-track'); track.scrollBy({ left: dir * track.clientWidth, behavior: 'smooth' }); }
+function turnLessonPage(rd, dir) { const t = rd.querySelector('.rd-track'); t.scrollBy({ left: dir * t.clientWidth, behavior: 'smooth' }); }
 
 const TYPE_LABEL = { choice: '填空', meaning: '句意', order: '排序', conj: '動詞變化', adj: '形容詞變化' };
 function itemPreview(g) {
@@ -252,8 +303,8 @@ function renderUnit(view, uid, tab) {
     }).join('');
     body = `<div class="card"><div class="card-head"><div class="card-title">本單元題目（${items.length}）</div><span class="small muted">熟練度 ●●●○○ 以上算熟悉</span></div><div class="list">${rows || '<div class="empty">沒有題目</div>'}</div></div>`;
   } else {
-    body = `${lessonHtml(uid)}
-      <div class="card mt-4">
+    body = `${lessonTocHtml(uid)}
+      <div class="card">
         <div class="card-head"><div class="card-title">AI 補充說明</div>${aiNote ? '<button type="button" class="btn btn-sm btn-ghost" data-act="ai-note-clear" data-unit="' + uid + '">清除</button>' : ''}</div>
         <div class="row-wrap"><input class="input grow" id="aiNoteQ" placeholder="想多了解什麼？例如：為什麼乗る用「に」？（可留空）" /><button type="button" class="btn" data-act="ai-note" data-unit="${uid}">請 AI 補充</button></div>
         <div id="aiNoteBox" class="mt-3">${aiNote ? md(aiNote) : (aiReady() ? '' : '<div class="hint">登入後可以請 AI 補充重點（設定 › 資料 › 雲端同步）。</div>')}</div>
@@ -272,7 +323,7 @@ function renderUnit(view, uid, tab) {
       <div class="row">${unitBarHtml(s, 'grow')}<span class="small num muted">${s.pct}%</span></div>
       <div class="row between mt-2 small">
         <span class="muted legs">${unitLegendHtml(s)}${legacy ? `<span class="leg">舊版累計作答 ${legacy.seen} 題</span>` : ''}</span>
-        ${intro ? '' : `<span class="row nowrap"><span class="muted">我的標記</span>${markSwitchHtml(state.unitMarks[uid] || 0, `data-act="mark-unit" data-unit="${uid}"`)}</span>`}
+        ${intro ? '' : `<span class="row nowrap"><span class="muted">我的標記</span>${markButtonHtml(state.unitMarks[uid] || 0, `data-act="mark-unit" data-unit="${uid}"`)}</span>`}
       </div>
       ${aiReady() && !intro ? `<div class="row-wrap mt-2"><button type="button" class="btn btn-sm btn-ghost" data-act="ai-unit-items" data-unit="${uid}">${icon('spark')}用 AI 為本單元多出 5 題</button></div>` : ''}
     </div>
@@ -281,7 +332,6 @@ function renderUnit(view, uid, tab) {
       <button type="button" aria-pressed="${tab === 'items'}" data-act="nav" data-route="#/course/${uid}?tab=items">題目與熟練度</button>
     </div>
     ${body}`;
-  if (tab !== 'items') lessonDeckMount(view, uid);
 }
 
 function levelPickerHtml() {
@@ -340,7 +390,6 @@ function applyStartUnit(unit, markPrev, experienced = false) {
 }
 
 Object.assign(ACTIONS, {
-  'lesson-page': (el) => turnLessonPage(el.closest('.lesson-deck'), Number(el.dataset.dir)),
   'set-current': (el) => { state.currentUnit = el.dataset.unit; saveState(); toast(`目前單元：${unitById(el.dataset.unit).weeks}`); route(); },
   'course-shelf': (el) => {   // a book on 課程's shelf: its stage opens below and comes into view
     const d = document.querySelector(`#view details.stage-card[data-stage="${el.dataset.stage}"]`); if (!d) return;

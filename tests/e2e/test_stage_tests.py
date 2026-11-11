@@ -352,21 +352,21 @@ def test_i_have_learned_some_picks_the_level_and_a_fail_offers_one_below(b):
     assert r['began'] == {'modal': False, 'title': '第三階段：N4 進階與總複習・階段測驗', 'start': True, 'chosen': True, 'stage': 'pre'}, r
     assert r['fail'] == {'below': ['p1', '改考N5'], 'again': True} and r['n5'] == {'title': '第一階段：N5 文法・階段測驗', 'start': True} and not r['course'], r
 
-# 2026-11-11, the user: a unit page's 0★／2★／5★ (it was 標記為已完成): only up, and the unit done; 0★ gives back the records
+# 2026-11-11, the user: a unit page's 0★ → 2★ → 5★ button (it was 標記為已完成): only up, and the unit done; 0★ gives back the records
 # from before the mark, except one answered since; a stage pass after a mark is not taken back
 def test_a_units_mark_switch_sets_two_or_five_stars_and_zero_puts_them_back(b):
     js = "(() => { " + RESET + """ state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.unitMarks = {}; const t = todayStr();
       const items = unitItems('m2'), [a, c] = items;
       state.srs[a.key] = { b: 4, s: 10, d: 5, due: addDays(t, 5), n: 3, ok: 3, ng: 0, st: 3, last: addDays(t, -5), lapse: 0, intro: '2026-10-01' }; const before = JSON.stringify(state.srs[a.key]);
       location.hash = '#/course/m2'; route();
-      const sw = () => [...document.querySelector('#view [data-act="mark-unit"]').closest('.seg').children].map(e => (e.getAttribute('aria-pressed') === 'true' ? e.dataset.lv : '')).join('');   // the progress card's (the lesson's last page has one too)
-      const click = (lv) => document.querySelector(`#view [data-act="mark-unit"][data-lv="${lv}"]`).click();
+      const sw = () => document.querySelector('#view [data-act="mark-unit"]').dataset.now;   // one button going round 0★ → 2★ → 5★ → 0★
+      const click = (lv) => { const btn = document.querySelector('#view [data-act="mark-unit"]'); if (btn.dataset.lv !== String(lv)) throw new Error(`next is ${btn.dataset.lv}, not ${lv}`); btn.click(); };
       const off = sw();
       click(2); const two = { sw: sw(), rest: items.slice(1).every(g => state.srs[g.key] && state.srs[g.key].b === 2 && state.srs[g.key].mark === 2), a: [state.srs[a.key].b, state.srs[a.key].due === addDays(t, 5)], done: state.completedUnits.includes('m2'), um: state.unitMarks.m2 };
       click(5); const five = { sw: sw(), all: items.every(g => state.srs[g.key].b >= 5), aPre: JSON.stringify(state.srs[a.key].pre) === before };
       srsAnswer(c.key, true);   // answered since the mark: kept
       click(0); const zero = { sw: sw(), a: JSON.stringify(state.srs[a.key]) === before, newAgain: items.slice(2).every(g => !state.srs[g.key]), c: [state.srs[c.key].b >= 5, state.srs[c.key].mark || null], done: state.completedUnits.includes('m2'), um: state.unitMarks.m2 || null };
-      click(2); markPassedStage('p1', new Set()); location.hash = '#/course/m2'; route(); click(0); const pass = items.slice(2).every(g => state.srs[g.key] && state.srs[g.key].b === 4);
+      click(2); markPassedStage('p1', new Set()); ACTIONS['mark-unit']({ dataset: { unit: 'm2', lv: '0' } }); const pass = items.slice(2).every(g => state.srs[g.key] && state.srs[g.key].b === 4);
       return JSON.stringify({ off, two, five, zero, pass }); })()"""
     r = json.loads(ev(b, js))
     assert r['off'] == '0' and r['two'] == {'sw': '2', 'rest': True, 'a': [4, True], 'done': True, 'um': 2}, r   # four stars stay four, their day too

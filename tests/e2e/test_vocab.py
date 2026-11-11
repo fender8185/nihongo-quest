@@ -323,23 +323,24 @@ def test_example_sentences_have_play_buttons_on_preview_feedback_and_footer(b):
 
 TESTS += [test_example_sentences_have_play_buttons_on_preview_feedback_and_footer]
 
-# ---- 2026-10-26 (8): grammar progress bars in three segments ----
-def test_grammar_progress_bars_show_ok3_ok1_and_seen_segments(b):
-    js = """(() => { const gs = REG.grammar.filter(g => g.u === 'm1'); const rec = (ok) => ({ b: 2, due: '2099-01-01', n: ok + 1, ok, ng: ok ? 0 : 1, s: 3, d: 5 });
-      gs.slice(0, 4).forEach(g => { state.srs[g.key] = rec(3); }); gs.slice(4, 7).forEach(g => { state.srs[g.key] = rec(1); }); gs.slice(7, 9).forEach(g => { state.srs[g.key] = rec(0); });
+# ---- 2026-10-26 (8): grammar progress bars in three segments; 2026-11-11: by stars (熟練 five, 熟悉 three or more, 初識 met), so a
+# unit marked 5★ reads 熟練 (it counted right answers) ----
+def test_grammar_progress_bars_show_mastered_learned_and_seen_segments(b):
+    js = """(() => { const gs = REG.grammar.filter(g => g.u === 'm1'); const rec = (b) => ({ b, due: '2099-01-01', n: 1, ok: 0, ng: 1, s: 3, d: 5 });
+      gs.slice(0, 4).forEach(g => { state.srs[g.key] = rec(5); }); gs.slice(4, 7).forEach(g => { state.srs[g.key] = rec(3); }); gs.slice(7, 9).forEach(g => { state.srs[g.key] = rec(1); });
       const read = (el) => el ? [Number(el.dataset.mastered), Number(el.dataset.learned), Number(el.dataset.seen)] : null;
       location.hash = '#/course'; route(); const course = read(document.querySelector('.unit-row[data-route="#/course/m1"] .bar.stack'));
       location.hash = '#/course/m1'; route(); const unit = read(document.querySelector('.bar.stack')); const legend = document.body.textContent.includes('熟練 4');
       location.hash = '#/course'; route(); const today = read(document.querySelector('.now-card .bar.stack'));   // 課程's 目前 card (it was the 今日 card's 目前單元)
-      const st = unitStats('m1'); return JSON.stringify({ course, unit, today, legend, stats: [st.ok3, st.ok1, st.seen0] }); })()"""
+      const st = unitStats('m1'); return JSON.stringify({ course, unit, today, legend, stats: [st.mastered, st.learned - st.mastered, st.seen - st.learned] }); })()"""
     r = json.loads(ev(b, js))
     assert r['stats'] == [4, 3, 2] and r['course'] == [4, 3, 2] and r['unit'] == [4, 3, 2] and r['today'] == [4, 3, 2] and r['legend'], r
 
-TESTS += [test_grammar_progress_bars_show_ok3_ok1_and_seen_segments]
+TESTS += [test_grammar_progress_bars_show_mastered_learned_and_seen_segments]
 
 # ---- 2026-10-26 (9): 第 0 週 primer, new-user banner, glossary chips ----
 def test_intro_lesson_renders_with_kana_table_and_marks_itself_seen(b):
-    js = """(() => { location.hash = '#/course/intro'; route();
+    js = """(() => { location.hash = '#/course/intro/read'; route();   // 2026-11-11: 講義 has its own screen
       const h3 = document.querySelectorAll('.lesson h3').length, kana = document.querySelectorAll('.kana-grid [data-act=speak]').length;
       const text = document.querySelector('.lesson').textContent; location.hash = '#/course'; route();
       const card = document.querySelector('[data-route="#/course/intro"]');
@@ -742,23 +743,23 @@ def test_flashcard_i_know_is_not_offered_again_once_vouched(b):
     r = json.loads(ev(b, js))
     assert r == {'before': True, 'after': False, 'known': 5, 'label': '熟悉'}, r
 
-# 2026-11-11 (the user): the word list's 0★／2★／5★ (it was 我會了／取消熟練), to sort known from unknown in one pass; a 我會了
+# 2026-11-11 (the user): the word list's 0★ → 2★ → 5★ button (it was 我會了／取消熟練), to sort known from unknown in one pass; a 我會了
 # kept before it reads as 5★
 def test_word_list_marks_a_word_with_the_three_way_switch(b):
     js = """(() => { const v = REG.vocab.find(x => x.builtin && x.lv === 'N5' && x.r && !state.srs[x.key]);
       location.hash = '#/vocab/list?lv=N5&q=' + encodeURIComponent(v.r); route();
       const row = () => [...document.querySelectorAll('#view [data-act="mark-word"]')].filter(e => e.dataset.key === v.key);
-      const sw = () => row().map(e => (e.getAttribute('aria-pressed') === 'true' ? e.dataset.lv : '')).join('');
-      const click = (lv) => row().find(e => e.dataset.lv === lv).click();
+      const sw = () => row()[0].dataset.now + '>' + row()[0].dataset.lv + ' ' + row()[0].textContent;   // one button going round 0★ → 2★ → 5★ → 0★
+      const click = () => row()[0].click();
       const out = { n: row().length, off: sw(), old: document.querySelectorAll('#view [data-act="vocab-unknown"]').length };
-      click('2'); const r2 = state.srs[v.key]; out.two = [sw(), r2.b, r2.mark, r2.pre, daysBetween(todayStr(), r2.due) >= 2];
-      click('5'); out.five = [sw(), state.srs[v.key].b >= 5, state.srs[v.key].pre];
-      click('0'); out.zero = [sw(), state.srs[v.key] || null];
+      click(); const r2 = state.srs[v.key]; out.two = [sw(), r2.b, r2.mark, r2.pre, daysBetween(todayStr(), r2.due) >= 2];
+      click(); out.five = [sw(), state.srs[v.key].b >= 5, state.srs[v.key].pre];
+      click(); out.zero = [sw(), state.srs[v.key] || null];
       const s2 = normalizeState({ srs: { x: { b: 6, s: 45, known: 1 } } }); out.migrated = [s2.srs.x.mark, s2.srs.x.known || null];
       return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
-    assert r['n'] == 3 and r['off'] == '0' and r['old'] == 0, r
-    assert r['two'] == ['2', 2, 2, 'new', True] and r['five'] == ['5', True, 'new'] and r['zero'] == ['0', None], r   # 0★: new again, as before the marks
+    assert r['n'] == 1 and r['off'] == '0>2 0★' and r['old'] == 0, r
+    assert r['two'] == ['2>5 2★', 2, 2, 'new', True] and r['five'] == ['5>0 5★', True, 'new'] and r['zero'] == ['0>2 0★', None], r   # 0★: new again, as before the marks
     assert r['migrated'] == [5, None], r
 
 TESTS += [test_i_know_gives_five_stars_and_mastery_waits_for_the_spelling, test_i_know_this_word_button_is_on_the_word_list_not_after_an_answer, test_flashcard_i_know_is_not_offered_again_once_vouched,

@@ -68,14 +68,16 @@ function segBarHtml(total, segs, cls = 'mt-2', anim = false) {
   return `<div class="bar stack ${cls}" data-total="${total}" ${attrs}${anim ? ' data-anim' : ''} style="background-image:linear-gradient(to right, ${stops.join(', ')})"></div>`;
 }
 function stackBarHtml(g) { return segBarHtml(g.total, [['mastered', g.mastered], ['learned', g.learned - g.mastered], ['seen', g.seen - g.learned]]); }
-// grammar units: answered correctly 3+ times / answered correctly / seen but not yet right
-function unitBarHtml(s, cls, anim) { return segBarHtml(s.total, [['mastered', s.ok3], ['learned', s.ok1], ['seen', s.seen0]], cls, anim); }
-// 熟練 = answered right 3+ times, 熟悉 = answered right at least once, 初識 = seen but never right yet
-function unitLegendHtml(s) { return `<span class="leg"><i class="seg-dot mastered"></i>熟練 ${s.ok3}</span><span class="leg"><i class="seg-dot learned"></i>熟悉 ${s.ok1}</span><span class="leg"><i class="seg-dot seen"></i>初識 ${s.seen0}</span><span class="leg">共 ${s.total} 題</span>`; }
-// 我的標記 (2026-11-11, the user): 0★／2★／5★, a word's on the word list, a unit's questions on its page (markItem, unmarkItem)
-function markSwitchHtml(lv, data) {
-  const tips = { 0: '不會：取消標記，回到標記前', 2: '有點會：設成兩顆，過幾天複習', 5: '會了：設成五顆，之後排進五顆的複習' };
-  return `<span class="seg mark3" role="group" aria-label="我的標記">${[0, 2, 5].map(n => `<button type="button" aria-pressed="${lv === n}" title="${tips[n]}" ${data} data-lv="${n}">${n}★</button>`).join('')}</span>`;
+// a unit's questions by their stars, as a theme's words (2026-11-11, the user: a unit marked 5★ still read 初識 — it counted right
+// answers): 熟練 = 已熟練 (five stars), 熟悉 = three stars or more, 初識 = met, fewer than three
+function unitBarHtml(s, cls, anim) { return segBarHtml(s.total, [['mastered', s.mastered], ['learned', s.learned - s.mastered], ['seen', s.seen - s.learned]], cls, anim); }
+function unitLegendHtml(s) { return `<span class="leg"><i class="seg-dot mastered"></i>熟練 ${s.mastered}</span><span class="leg"><i class="seg-dot learned"></i>熟悉 ${s.learned - s.mastered}</span><span class="leg"><i class="seg-dot seen"></i>初識 ${s.seen - s.learned}</span><span class="leg">共 ${s.total} 題</span>`; }
+// 我的標記 (2026-11-11, the user): a word's on the word list, a unit's questions on its page (markItem, unmarkItem) — one button going
+// round 0★ → 2★ → 5★ → 0★ (0★: back to before the mark); data-lv is the step a tap goes to
+const MARK_NEXT = { 0: 2, 2: 5, 5: 0 };
+function markButtonHtml(lv, data) {
+  const n = MARK_NEXT[lv];
+  return `<button type="button" class="mark-btn" data-now="${lv}" ${data} data-lv="${n}" title="我的標記：${lv}★。點一下改成 ${n}★${n ? '' : '（回到標記前）'}" aria-label="我的標記 ${lv}★，點一下改成 ${n}★">${lv}★</button>`;
 }
 function vocabSessionCount(filter) { const items = buildVocabQueue(filter, 20); return items.length + encoreEstimate(items); }
 // 五十音 coloured by how well each kana is known, one table per script: a phone shows one at a time (平假名｜片假名
@@ -249,7 +251,7 @@ function vocabListResultsHtml(params, list = vocabListFiltered(params)) {
     return `<tr>
       <td><div class="jp" style="font-size:16px">${esc(jaPlain(v.w))}</div><div class="tiny muted jp">${esc(v.r && v.r !== v.w ? v.r : '')}</div></td>
       <td><div>${esc(v.m)}</div><div class="tiny muted">${esc(`${lvLabel(v.lv)}・${posLabel(v.p)}`)}</div></td>
-      <td class="nowrap small">${r ? `${srsDots(r.b)}<div class="tiny muted">${dueLabel(r, v.key).replace('複習', '')}</div>` : '<span class="muted">未學</span>'}<div class="mt-1">${markSwitchHtml((r && r.mark) || 0, `data-act="mark-word" data-key="${esc(v.key)}"`)}</div></td>
+      <td class="nowrap small">${r ? `${srsDots(r.b)}<div class="tiny muted">${dueLabel(r, v.key).replace('複習', '')}</div>` : '<span class="muted">未學</span>'}<div class="mt-1">${markButtonHtml((r && r.mark) || 0, `data-act="mark-word" data-key="${esc(v.key)}"`)}</div></td>
       <td style="text-align:right">
         <button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="speak" data-text="${esc(jaPlain(v.w))}" data-reading="${esc(v.r && !HAS_KANJI.test(v.r) && v.r !== jaPlain(v.w) ? v.r : '')}" aria-label="發音">${icon('speaker')}</button>
         <button type="button" class="btn btn-sm btn-ghost" data-act="vocab-remove" data-key="${esc(v.key)}">隱藏</button>

@@ -85,6 +85,7 @@ function route() {
   view.classList.toggle('fit', fit); document.body.classList.toggle('fit', fit); document.body.classList.toggle('scene', scene);
   document.body.classList.toggle('today', r.name === 'today' || r.name === 'bedroom'); document.body.classList.toggle('outside', r.name === 'outside' || OUT_PLACES.includes(r.name)); themeColor();
   document.body.classList.toggle('immersive', (r.name === 'mistakes' || r.name === 'vocab') && r.parts[1] === 'listen');
+  document.body.classList.toggle('reading', r.name === 'course' && r.parts[2] === 'read');   // 講義's own screen: the page under it stays put
   const tip = document.getElementById('chartTip');
   if (tip) tip.classList.remove('show');
   if (r.name !== 'practice') { document.body.classList.remove('practicing'); }
@@ -103,7 +104,10 @@ function route() {
     else if (r.name === 'bedroom') renderToday(view, 'bed');
     else if (r.name === 'outside') renderOutside(view);
     else if (OUT_PLACES.includes(r.name)) renderOutside(view, r.name);   // test: the main road with the bus stop, the beach
-    else if (r.name === 'course') { if (r.parts[1]) renderUnit(view, r.parts[1] === 'intro' ? 'm0' : r.parts[1], r.params.tab || 'lesson'); else renderCourse(view); }
+    else if (r.name === 'course') {
+      const uid = r.parts[1] === 'intro' ? 'm0' : r.parts[1];
+      if (uid && r.parts[2] === 'read') renderLessonReader(view, uid, r.params.s); else if (uid) renderUnit(view, uid, r.params.tab || 'lesson'); else renderCourse(view);
+    }
     else if (r.name === 'vocab') {
       if (!r.parts[1] || r.parts[1] === 'themes') { location.replace('#/vocab/level?lv=' + defaultVocabLevel()); return route(); }   // replace, so Back leaves the vocab page   // the vocab page opens on the learner's level; the old 主題 tab lives there too
       if (r.parts[1] === 'kanji') { location.replace('#/vocab/level?lv=' + (levels().includes(r.params.lv) ? r.params.lv : defaultVocabLevel())); return route(); }   // the old 漢字 tab: kanji sit on the level pages

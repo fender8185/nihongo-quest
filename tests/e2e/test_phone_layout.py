@@ -130,29 +130,35 @@ def test_sizes_word_in_the_middle_glyphs_big_order_meaning_by_its_sentence(b):
     assert r['order'] == {'found': True, 'first': 'q-sub order-sub', 'outside': False}, r
     assert r['tail'], r
 
-# 2026-11-11, the user: a unit's 講義 was too much at once on a phone — bigger type, a page each (概要, each section's explanation
-# and its examples, 重點整理 with 我的標記), swiped sideways; a redraw stays on the page
-def test_a_units_lesson_is_pages_swiped_sideways(b):
-    js = "(async () => { " + FRESH + """ state.unitMarks = {}; const wait = (ms) => new Promise(r => setTimeout(r, ms));
-      location.hash = '#/course/m2'; route(); await wait(150); window.scrollTo(0, 0); const deck = () => document.querySelector('#view .lesson-deck'), track = () => deck().querySelector('.lp-track');
-      const L = DATA.LESSONS.m2, want = 1 + L.sections.length + L.sections.filter(s => (s.ex || []).length).length + 1;
-      const first = { pages: track().children.length, want, h3: deck().querySelectorAll('h3').length, count: deck().querySelector('.lp-count').textContent, prev: deck().querySelector('[data-dir="-1"]').disabled,
-        font: parseFloat(getComputedStyle(deck().querySelector('.lp-page p')).fontSize), wide: document.documentElement.scrollWidth <= innerWidth };
-      track().scrollTo({ left: track().clientWidth * 2 }); await wait(400); const swiped = deck().querySelector('.lp-count').textContent;
-      route(); await wait(50); const kept = [deck().querySelector('.lp-count').textContent, Math.round(track().scrollLeft / track().clientWidth)];
-      track().scrollTo({ left: 99999 }); await wait(400); const end = track().lastElementChild;
-      end.querySelector('[data-act="mark-unit"][data-lv="5"]').click(); await wait(50);
-      const last = { count: deck().querySelector('.lp-count').textContent, next: deck().querySelector('[data-dir="1"]').disabled, start: !!end.querySelector('[data-act="start-unit"]'), um: state.unitMarks.m2,
-        same: deck().querySelector('.lp-count').textContent, wide: document.documentElement.scrollWidth <= innerWidth };
-      ACTIONS['mark-unit']({ dataset: { unit: 'm2', lv: '0' } });
-      location.hash = '#/course/intro'; route(); await wait(150); const intro = { mark: !!deck().querySelector('[data-act="mark-unit"]'), h3: deck().querySelectorAll('h3').length };
-      return JSON.stringify({ first, swiped, kept, last, intro }); })()"""
+# 2026-11-11, the user: a unit's 講義 was too much at once on a phone — then: a screen of its own, its pages all one size, read like a
+# book (no buttons: swiped; it simply ends). The unit page lists the parts; the lesson flows into pages of the screen's size (each
+# section from a new page); a part opens at its page; turning to the last page the first time gives 3 言靈, once a book
+def test_a_units_lesson_has_its_own_screen_of_equal_pages(b):
+    js = "(async () => { " + FRESH + """ delete LESSON_AT.m2; delete state.koto.found['book-m2']; const k0 = kotoBalance(), wait = (ms) => new Promise(r => setTimeout(r, ms));
+      location.hash = '#/course/m2'; route(); await wait(150); const v = document.getElementById('view');
+      const toc = { rows: v.querySelectorAll('.toc-row').length, open: v.querySelector('.card-head [data-route="#/course/m2/read"]').textContent, inline: v.querySelectorAll('.lesson h3').length };
+      v.querySelector('.toc-row[data-route$="?s=1"]').click(); await wait(200);
+      const rd = () => document.querySelector('#view .reader'), track = () => rd().querySelector('.rd-track'), sheets = () => [...rd().querySelectorAll('.rd-sheet')], count = () => rd().querySelector('.rd-count').textContent;
+      const sizes = new Set(sheets().map(e => e.clientHeight)), r = rd().getBoundingClientRect();
+      const opened = { hash: location.hash, count: count(), h3: rd().querySelectorAll('h3').length, buttons: rd().querySelectorAll('.rd-foot button, [data-act="lesson-page"]').length,
+        onPage: sheets()[Math.round(track().scrollLeft / track().clientWidth)].querySelector('h3').textContent.includes('な形容詞'),
+        sizes: sizes.size, overflow: sheets().filter(e => e.scrollHeight > e.clientHeight + 1).length, screen: [r.top, r.bottom === innerHeight], wide: document.documentElement.scrollWidth <= innerWidth,
+        font: parseFloat(getComputedStyle(rd().querySelector('.rd-sheet li')).fontSize), body: document.body.classList.contains('reading') };
+      track().scrollTo({ left: 99999 }); await wait(400); const last = sheets()[sheets().length - 1];
+      const end = { last: count().split(' / ')[0] === count().split(' / ')[1], fin: last.textContent.includes('完'), mark: !!last.querySelector('.mark-btn'), start: !!last.querySelector('[data-act="start-unit"]'), gift: state.koto.found['book-m2'], gain: kotoBalance() - k0 };
+      track().scrollTo({ left: 0 }); await wait(300); track().scrollTo({ left: 99999 }); await wait(400); end.again = kotoBalance() - k0;
+      rd().querySelector('[data-act="nav"]').click(); await wait(200); const back = { hash: location.hash, body: document.body.classList.contains('reading'), open: document.querySelector('#view .card-head [data-route="#/course/m2/read"]').textContent, chip: document.querySelector('#view .card-head .chip-ok').textContent };
+      delete state.koto.found['book-m2']; location.hash = '#/course/m2/read?s=end'; await wait(300); const atEnd = { count: count().split(' / ')[0] === count().split(' / ')[1], gift: state.koto.found['book-m2'] || null };
+      location.hash = '#/course/intro/read'; await wait(300); const intro = { mark: !!document.querySelector('#view .reader .mark-btn'), h3: document.querySelectorAll('#view .reader h3').length };
+      location.hash = '#/course'; await wait(100);
+      return JSON.stringify({ toc, opened, end, back, atEnd, intro }); })()"""
     r = json.loads(ev(b, js, [("metrics", (375, 667))]))
-    f = r['first']
-    assert f['pages'] == f['want'] and f['h3'] == 3 and f['count'] == f'1 / {f["want"]}' and f['prev'] and f['font'] >= 17 and f['wide'], r
-    assert r['swiped'].startswith('3 / ') and r['kept'][0].startswith('3 / ') and r['kept'][1] == 2, r   # a redraw stays on the page
-    assert r['last']['count'] == f'{f["want"]} / {f["want"]}' and r['last']['next'] and r['last']['start'] and r['last']['um'] == 5 and r['last']['wide'], r
-    assert r['intro'] == {'mark': False, 'h3': 13}, r   # 第 0 週: no 我的標記
+    assert r['toc'] == {'rows': 5, 'open': '翻開講義', 'inline': 0}, r   # 這個單元, three sections, 重點整理
+    o = r['opened']
+    assert o['hash'] == '#/course/m2/read' and o['onPage'] and o['h3'] == 3 and o['buttons'] == 0 and o['sizes'] == 1 and o['overflow'] == 0 and o['screen'] == [0, True] and o['wide'] and o['font'] >= 17 and o['body'], r
+    assert r['end'] == {'last': True, 'fin': True, 'mark': False, 'start': False, 'gift': 3, 'gain': 3, 'again': 3}, r   # once a book
+    assert r['back'] == {'hash': '#/course/m2', 'body': False, 'open': '翻開講義', 'chip': '翻完過'}, r   # read to the end: it opens at its start again
+    assert r['atEnd'] == {'count': True, 'gift': None} and r['intro'] == {'mark': False, 'h3': 13}, r   # opened at its end is not read through
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

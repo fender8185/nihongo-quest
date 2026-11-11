@@ -943,7 +943,8 @@ function streakStats() {
 // ---------- 言靈 (1.2.0): what studying earns, spent at 古道具屋 up the hill ----------
 // Answering: a set of 今日練習 played to its end (多學 sets too) gives 1, the day's list done gives 10 once a day, and the two
 // together give at most 20 a day. 聽一輪: every 5 minutes of listening without a pause gives 1, at most 30 a day. A letter may
-// bring some (福爺's opening letter: 10), so may a find (1.2.2: the Halloween witch, 100). What is kept are counts, never
+// bring some (福爺's opening letter: 10), so may a find (1.2.2: the Halloween witch, 100; a town event, 10; 2026-11-11: a unit's 講義
+// read to its last page the first time, 3). What is kept are counts, never
 // sums: sets and listens by day and by device (only that device adds to its own count, so sync keeps the larger), the bonus
 // days as a list, what each letter and each find brought (sync-core mergeKoto) — so nothing is counted twice or lost when two
 // devices meet, and a day's cap holds across devices.
@@ -1053,17 +1054,16 @@ function mistakePriority(a, b) { return (b.count || 1) - (a.count || 1) || mista
 function unitItems(uid) { return REG.grammar.filter(g => g.u === uid); }
 function unitStats(uid) {
   const items = unitItems(uid);
-  let score = 0; let seen = 0; let learned = 0; let due = 0; let ok3 = 0; let ok1 = 0; let seen0 = 0;
+  let score = 0; let seen = 0; let learned = 0; let mastered = 0; let due = 0;
   const t = todayStr();
   items.forEach(it => {
     const r = state.srs[it.key];
     if (r) {
-      seen++; score += Math.min(r.b, SRS_LEARNED); if (r.b >= SRS_LEARNED) learned++; if (isDueToday(it, t)) due++;
-      if ((r.ok || 0) >= 3) ok3++; else if ((r.ok || 0) >= 1) ok1++; else seen0++;
+      seen++; score += Math.min(r.b, SRS_LEARNED); if (r.b >= SRS_LEARNED) learned++; if (srsLevelLabel(r, it.key) === '已熟練') mastered++; if (isDueToday(it, t)) due++;
     }
   });
   const pct = items.length ? Math.round(score / (items.length * SRS_LEARNED) * 100) : 0;
-  return { total: items.length, seen, learned, due, pct, ok3, ok1, seen0, done: state.completedUnits.includes(uid) };
+  return { total: items.length, seen, learned, mastered, due, pct, done: state.completedUnits.includes(uid) };
 }
 function vocabStats() {
   const t = todayStr();
