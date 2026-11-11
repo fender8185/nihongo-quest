@@ -1733,3 +1733,26 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .confetti { position: fixed; inset: 0; z-index: 70; pointer-events: none; overflow: hidden; }
 .confetti i { position: absolute; width: 8px; height: 11px; margin: -5px 0 0 -4px; border-radius: 2px; }
 @keyframes kotoSpin { from { transform: scale(.4) rotate(-40deg); opacity: 0; } 60% { transform: scale(1.18) rotate(6deg); opacity: 1; } }
+/* 2026-11-11 polish: shrine, castle, station, sento */
+/* idle: the bath cat breathes in its sleep and its tail's tip twitches now and then */
+.sky .land .fx-doze { transform-box: fill-box; transform-origin: 50% 100%; animation: fxDoze 3.6s ease-in-out infinite; } @keyframes fxDoze { 50% { transform: scale(1.015, 1.05); } }
+.sky .land .fx-flick { transform-box: fill-box; transform-origin: 100% 80%; animation: fxFlick 6s ease-in-out infinite; } @keyframes fxFlick { 0%, 72%, 100% { transform: rotate(0); } 78% { transform: rotate(-12deg); } 84% { transform: rotate(5deg); } 90% { transform: rotate(-6deg); } }
+/* the bell rung: the rope swings (fxRing), the bell shakes on it and the tassel whips after */
+.sky .land [data-fx="bell"].ring .suzu { transform-box: fill-box; transform-origin: 50% 0; animation: bellJig .08s linear 24 alternate; } @keyframes bellJig { from { transform: rotate(-11deg); } to { transform: rotate(11deg); } }
+.sky .land [data-fx="bell"].ring .tassel { transform-box: fill-box; transform-origin: 50% 0; animation: bellTassel .32s ease-in-out .1s 6 alternate; } @keyframes bellTassel { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
+/* the fox bowed to: a breeze stirs its bib, the key in its mouth glints */
+.sky .land [data-fx="fox"] .glint { opacity: 0; transform-box: fill-box; transform-origin: center; }
+.sky .land [data-fx="fox"].bless .glint { animation: foxGlint 1.2s ease-out .35s; } @keyframes foxGlint { 0% { opacity: 0; transform: scale(.2) rotate(0); } 30% { opacity: 1; transform: scale(1.25) rotate(45deg); } 100% { opacity: 0; transform: scale(.5) rotate(90deg); } }
+.sky .land [data-fx="fox"].bless .bib { transform-box: fill-box; transform-origin: 50% 0; animation: foxBib .3s ease-in-out 6 alternate; } @keyframes foxBib { from { transform: skewX(0) scaleY(1); } to { transform: skewX(-10deg) scaleY(.93); } }
+/* a fortune drawn: the tied slips flutter (jingle), the ema clack on their cords */
+.sky .land [data-fx="kuji"].jingle .ema { transform-box: fill-box; transform-origin: 50% 0; animation: emaClack .14s ease-in-out 12 alternate; } @keyframes emaClack { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
+/* the taxi's horn: the body bounces on its springs (the wheels stay put), the headlight flashes */
+.sky .land [data-fx="taxi"].honk { animation: none; } .sky .land [data-fx="taxi"] .tlamp { opacity: 0; }
+.sky .land [data-fx="taxi"].honk .tbody { animation: taxiBob .2s ease-in-out 8 alternate; } @keyframes taxiBob { to { transform: translateY(-1.8px); } }
+.sky .land [data-fx="taxi"].honk .tlamp { animation: taxiFlash .4s linear 4; } @keyframes taxiFlash { 0%, 45% { opacity: 1; } 50%, 100% { opacity: 0; } }
+/* the bath cat stroked: it nuzzles up, an ear flicks, the tail curls round, it blushes (not squashed as a whole) */
+.sky .land [data-fx="scat"].purr { animation: none; } .sky .land [data-fx="scat"] .blush ellipse { transition: fill-opacity .5s; } .sky .land [data-fx="scat"].purr .blush ellipse { fill-opacity: .9; }
+.sky .land [data-fx="scat"].purr .chead { transform-box: fill-box; transform-origin: 20% 90%; animation: catNuzzle .32s ease-in-out 8 alternate; } @keyframes catNuzzle { to { transform: rotate(-9deg) translate(-.4px, -.8px); } }
+.sky .land [data-fx="scat"].purr .ear { transform-box: fill-box; transform-origin: 30% 100%; animation: catEar .16s ease-in-out .4s 6 alternate; } @keyframes catEar { to { transform: rotate(-20deg); } }
+.sky .land [data-fx="scat"].purr .ctail { animation: catCurl .36s ease-in-out 7 alternate; } @keyframes catCurl { to { transform: rotate(18deg); } }
+@media (prefers-reduced-motion: reduce) { .sky .land :is(.fx-doze, .fx-flick) { animation: none; } .sky .land [data-fx] :is(.suzu, .tassel, .glint, .bib, .ema, .tbody, .tlamp, .chead, .ear, .ctail) { animation: none !important; } }

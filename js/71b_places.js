@@ -237,9 +237,9 @@ const PLACE_USE = {
     { id: 'laundry', name: '投幣洗衣店', box: [992, 168, 1088, 232], kind: 'do', go: [440, 126], back: 1, pose: 'look', say: 'ぐるぐる…' }],
   shrine: [
     { id: 'bell', name: '鈴', box: [870, 140, 950, 236], kind: 'do', go: [310, 126], back: 1, pose: 'reach', say: 'カランカラン', then: 'パンパン 🙏', fx: 'bell', fxc: 'ring', ms: 2100 },
-    { id: 'kuji', name: '籤', box: [1076, 160, 1156, 236], kind: 'do', go: [515, 122], back: 1, pose: 'reach', fortune: 1 },
+    { id: 'kuji', name: '籤', box: [1076, 160, 1156, 236], kind: 'do', go: [515, 122], back: 1, pose: 'reach', fortune: 1, fx: 'kuji', fxc: 'jingle', ms: 2200 },
     { id: 'crow', name: '烏鴉', box: [220, 42, 266, 80], kind: 'do', go: [-350, 112], pose: 'look', say: 'カァー', fx: 'crow', fxc: 'flown', ms: 7000 },
-    { id: 'fox', name: '狐狸', box: [338, 166, 382, 236], kind: 'do', go: [-240, 120], back: 1, pose: 'bow', say: 'ペコリ' },
+    { id: 'fox', name: '狐狸', box: [338, 166, 382, 236], kind: 'do', go: [-240, 120], back: 1, pose: 'bow', say: 'ペコリ', fx: 'fox', fxc: 'bless', ms: 2000 },
     { id: 'kingyo', name: '金魚撈', box: [400, 144, 500, 236], kind: 'do', go: [-130, 126], back: 1, pose: 'crouch', say: 'とれた！🐟', when: () => TOWNEV.festival() },
     { id: 'yakisoba', name: '炒麵攤', box: [510, 144, 600, 236], kind: 'do', go: [-45, 126], back: 1, pose: 'reach', say: 'やきそば、おいしい！', when: () => TOWNEV.festival() },
     { id: 'wataame', name: '棉花糖攤', box: [610, 144, 700, 236], kind: 'do', go: [55, 126], back: 1, pose: 'reach', say: 'ふわふわ〜', when: () => TOWNEV.festival() }],
