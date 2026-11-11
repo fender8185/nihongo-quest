@@ -161,11 +161,17 @@ def test_pre_n5_words_and_kanji_are_tagged(b):
 def test_no_level_literals_outside_the_level_list(b):
     # 1.0.33 (spec §4.1, §10): every place that compares or lists levels reads levels() / courseLevels(), so N3 (then N2, N1)
     # data is recognised everywhere; only the list itself and lines marked level-literal-ok may name a level
-    src = open(os.path.join(ROOT, 'index.html'), encoding='utf-8').read().split('\n')
-    a = next(i for i, l in enumerate(src) if l.startswith('const CHANGELOG')); z = next(i for i in range(a, len(src)) if src[i].startswith('];'))
+    # the app's code: index.html and the js/ files it loads (split out on 2026-11-11); the changelog (js/40_core.js) is prose
     pat = re.compile(r"'N[1-5]',\s*null|[!=]==\s*'N[1-5]'|'(?:PRE_)?N[1-5]',\s*'N[1-5]'|/N[1-5]/\.test|[?:]\s*'N[1-5]'(?![\w-])|\|\|\s*'N[1-5]'")
-    hits = [f'{i + 1}: {l.strip()[:110]}' for i, l in enumerate(src) if not (a <= i <= z) and not l.lstrip().startswith('//')
-            and 'level-literal-ok' not in l and not re.match(r'\s*const (ALL_LEVELS|LEVELS|COURSE_LEVELS)\b', l) and pat.search(l)]
+    html = open(os.path.join(ROOT, 'index.html'), encoding='utf-8').read()
+    files = ['index.html'] + re.findall(r'<script src="\./(js/[^"]+)"', html)
+    assert len(files) > 10, files
+    hits = []
+    for f in files:
+        src = open(os.path.join(ROOT, f), encoding='utf-8').read().split('\n')
+        a = next((i for i, l in enumerate(src) if l.startswith('const CHANGELOG')), -1); z = next(i for i in range(a, len(src)) if src[i].startswith('];')) if a >= 0 else -1
+        hits += [f'{f}:{i + 1}: {l.strip()[:110]}' for i, l in enumerate(src) if not (a <= i <= z) and not l.lstrip().startswith('//')
+                 and 'level-literal-ok' not in l and not re.match(r'\s*const (ALL_LEVELS|LEVELS|COURSE_LEVELS)\b', l) and pat.search(l)]
     assert hits == [], hits
 
 # ---- fixes from the 1.0.6 whole-branch review ----

@@ -50,8 +50,14 @@ function grab(lines, name) {
   return end < lines.length ? lines.slice(at, end + 1).join('\n') : null;
 }
 // returns bind(): the lifted code (nothing in it reads the app's state)
+// the app's code: index.html and the scripts it loads from js/ (the code moved there on 2026-11-11); any other file is read alone
+function appLines(file) {
+  const text = fs.readFileSync(file, 'utf8');
+  const parts = [...text.matchAll(/<script src="\.\/(js\/[^"]+)"/g)].map(m => fs.readFileSync(path.join(path.dirname(file), m[1]), 'utf8'));
+  return [text].concat(parts).join('\n').split('\n');
+}
 function lift(file) {
-  const lines = fs.readFileSync(file, 'utf8').split('\n');
+  const lines = appLines(file);
   const names = CONSTANTS.concat(FUNCTIONS);
   const code = names.map(n => grab(lines, n));
   const missing = names.filter((n, i) => code[i] === null);

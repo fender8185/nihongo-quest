@@ -233,7 +233,7 @@ def test_settings_show_the_version_and_its_history(b):
 def APP_VERSION_IN_SW(r):
     import re
     sw = open(os.path.join(ROOT, "sw.js"), encoding="utf-8").read()
-    html = open(os.path.join(ROOT, "index.html"), encoding="utf-8").read()
+    html = open(os.path.join(ROOT, "js", "40_core.js"), encoding="utf-8").read()   # APP_VERSION's home since index.html was split (2026-11-11)
     cache = re.search(r"CACHE = 'nq-v([\d.]+)'", sw).group(1)
     ver = re.search(r"const APP_VERSION = '([\d.]+)'", html).group(1)
     return cache == ver and re.fullmatch(r"1\.\d+\.\d+", ver) and r['first'].startswith('v' + ver)   # 1.0.x since the former v100 (= 1.0.0); the newest group heads the list
