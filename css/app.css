@@ -1732,3 +1732,8 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .confetti { position: fixed; inset: 0; z-index: 70; pointer-events: none; overflow: hidden; }
 .confetti i { position: absolute; width: 8px; height: 11px; margin: -5px 0 0 -4px; border-radius: 2px; }
 @keyframes kotoSpin { from { transform: scale(.4) rotate(-40deg); opacity: 0; } 60% { transform: scale(1.18) rotate(6deg); opacity: 1; } }
+/* 2026-11-11 polish: wares floor, rug */
+/* a pot plant from 古道具屋 watered (盆栽, 仙人掌, 竹子): its pot stays put and only the plant sways, from its base */
+.room svg.art g.joy:has(.leafy) { animation: none; }
+.room svg.art g.joy .leafy { transform-box: fill-box; transform-origin: 50% 100%; animation: plantJoy .7s ease-in-out 1.6s 2; }
+@media (prefers-reduced-motion: reduce) { .room svg.art g.joy .leafy { animation: none; } }
