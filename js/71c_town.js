@@ -188,8 +188,9 @@ const TOWNEV = (() => {
   const sig = (place) => (place === 'town' ? TOWN_SHOPS.map((x) => shopState(x[6])).join() : place === 'shrine' ? String(isOpen('ennichi', now())) : '') + '|' + here(place).map((p) => p.id + (p.host ? '!' : '')).join();
   const festival = () => isOpen('ennichi', now());
   function castHtml(place) {
-    return here(place).map(({ id, spot, host }) => { const k = yScale(spot.Y) * (T().CAST[id].size || 1);
-      return `<button type="button" class="hero npc npc-${id}${host ? ' ev-host' : ''}${spot.sit ? ' bench' : ''}${spot.kneel ? ' kneel' : ''}${spot.pose ? ' ' + spot.pose : ''}" data-act="npc-talk" data-npc="${id}" aria-label="${esc(T().CAST[id].name)}" style="transform:translate(${spot.X.toFixed(1)}px,${(-spot.Y).toFixed(1)}px) scale(${k.toFixed(3)});z-index:${spot.u !== undefined ? isoZ(spot.u, spot.v + (spot.sit || spot.kneel ? 0.45 : 0)) : 300 - spot.Y}">${art(id, place)}${host ? '<i class="ev-mark" aria-hidden="true">！</i>' : ''}</button>`; }).join('');
+    return here(place).map(({ id, spot, host }) => { const size = T().CAST[id].size || 1, k = yScale(spot.Y) * size;
+      const roam = host || spot.sit || spot.kneel || INDOOR.includes(place) || spot.roam === 0 ? '0' : (spot.roam || [70, 18]).join(',');   // how far they stroll (TOWNLIFE): the one waiting, the seated, those in a room stay
+      return `<button type="button" class="hero npc npc-${id}${host ? ' ev-host' : ''}${spot.sit ? ' bench' : ''}${spot.kneel ? ' kneel' : ''}${spot.pose ? ' ' + spot.pose : ''}" data-act="npc-talk" data-npc="${id}" data-x="${spot.X}" data-y="${spot.Y}" data-k="${size}" data-roam="${roam}"${spot.run ? ' data-run="1"' : ''} aria-label="${esc(T().CAST[id].name)}" style="transform:translate(${spot.X.toFixed(1)}px,${(-spot.Y).toFixed(1)}px) scale(${k.toFixed(3)});z-index:${spot.u !== undefined ? isoZ(spot.u, spot.v + (spot.sit || spot.kneel ? 0.45 : 0)) : 300 - spot.Y}">${art(id, place)}${host ? '<i class="ev-mark" aria-hidden="true">！</i>' : ''}</button>`; }).join('');
   }
   // the way to the one waiting (2026-11-10: the map joined up all round — beach | yard | town over harbor | street | park, the two
   // shops off the town, the bus's stops off the street and one another): the next step on a shortest way there, a dot on its sign
@@ -215,9 +216,10 @@ const TOWNEV = (() => {
   function talk(el) {
     const id = el.dataset.npc, yard = el.closest('.yard'), p = yard && here(yard.dataset.place).find((x) => x.id === id);
     if (!p) { if (yard) { toast(`${T().CAST[id].name}已經離開了。`); route(); } return; }   // gone home since the place was drawn
-    const a = p.spot, side = yh.X <= a.X ? -1 : 1, w = p.host && waiting(now(), today()), e = w && w.ev;
+    const a = p.spot, w = p.host && waiting(now(), today()), e = w && w.ev;
     const ended = () => { finish(e.id); toast(`完成「${e.title}」・言靈 +10`, 3200); route(); };   // drawn anew: its shop open, the mark gone
-    const f = a.foot || [a.X, a.Y];   // beside their feet (up on a stool: the floor under it)
+    const at = TOWNLIFE.hold(id), moved = at && Math.hypot(at[0] - a.X, at[1] - a.Y) > 0.5;   // they stop where they are (strolling: not on their spot)
+    const f = moved ? at : a.foot || [a.X, a.Y], side = yh.X <= f[0] ? -1 : 1;   // beside their feet (up on a stool: the floor under it)
     yHeroWalk(yard, [f[0] + side * 76 * yScale(f[1]), f[1] + 2], () => {
       yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard);
       if (e) TALK.open(yard, id, e.lines, ended, null, { ev: true }); else TALK.open(yard, id, [chatLine(id)]);
@@ -489,7 +491,7 @@ const TALK = (() => {
     });
     root.appendChild(el); show();
   }
-  function close() { if (cur) { if (cur.spoke !== undefined) stopSpeaking(); cur.el.remove(); cur = null; } }   // what was being said stops with it
+  function close() { if (cur) { if (cur.spoke !== undefined) stopSpeaking(); cur.el.remove(); cur = null; } TOWNLIFE.release(); }   // what was being said stops with it; whoever was held strolls on
   return { open, close, on: () => Boolean(cur && cur.el.isConnected) };
 })();
 // every line the talks can read aloud, and whose it is: the generator makes each a clip in its speaker's voice (CAST_VOICE)

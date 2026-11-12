@@ -398,6 +398,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .bus-note { margin: 0; font-size: 13px; color: var(--fg-3); }
 @media (prefers-reduced-motion: reduce) { .sky .npc .ev-mark { animation: none; } }
 .sky .npc-mugi .mugi-tail { transform-box: fill-box; transform-origin: 0% 100%; animation: mugiWag .45s ease-in-out infinite alternate; }
+.sky .npc-mugi:is(.walk, .run) > svg { animation: mugiTrot .3s ease-in-out infinite alternate; } @keyframes mugiTrot { to { transform: translateY(-7px); } }   /* ムギ on the move (TOWNLIFE): a trot, he has no legs to swing */
 @keyframes mugiWag { from { transform: rotate(-10deg); } to { transform: rotate(12deg); } }
 /* test (2026-11-09): someone at the front door — コンコン by it; a few lines with a neighbour */
 .room .knock { position: absolute; pointer-events: none; display: flex; gap: 4px; white-space: nowrap; justify-content: center; align-items: center; }

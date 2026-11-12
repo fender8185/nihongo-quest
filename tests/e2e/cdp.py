@@ -102,6 +102,7 @@ class Browser:
                         raise RuntimeError(r["result"]["exceptionDetails"].get("exception", {}).get("description", "eval error"))
                     return r["result"]["result"].get("value")
                 await call("Page.enable")
+                await call("Page.addScriptToEvaluateOnNewDocument", {"source": "window.NQ_E2E = 1"})   # the app knows it is under test (TOWNLIFE: the town's people stand still)
                 for kind, arg in steps:
                     if kind == "inject":
                         await call("Page.addScriptToEvaluateOnNewDocument", {"source": arg})

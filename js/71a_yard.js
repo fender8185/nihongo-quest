@@ -504,6 +504,7 @@ function renderOutside(view, place = 'yard') {
   } else if (come) { yHeroPlace(y); setTimeout(() => yHeroWalk(y, come[1]), 200); }   // in along the path
   else yHeroPlace(y);
   if (place === 'yard') yWitch(y);
+  TOWNLIFE.start(y, place);   // the people about: strolling, fidgeting
   const yel = y.querySelector('.yhero');   // idling now and then while left be
   HERO.idle(yel, () => !yh.climb && !yh.use && !document.hidden && !yel.matches('.walk, .run, .out, .hop, .wave, .spin, .cheer, .reach, .crouch, .look, .bow'), true);
   y.addEventListener('pointerdown', (e) => { y._at = yardPoint(y, e); if (!y.classList.contains('dressing')) { yardDragStart(y, e); yPanStart(y, e); } });   // _at: which seat a tap on a row of them meant
@@ -752,7 +753,7 @@ function yHeroPlace(yard) {
   const el = yard.querySelector('.yhero'); if (!el) return;
   el.style.transform = `translate(${yh.X.toFixed(1)}px,${(-yh.Y).toFixed(1)}px) scale(${(yh.s || yScale(yh.Y)).toFixed(3)})`;
   el.classList.toggle('back', yh.back); el.classList.toggle('turn', yh.turn); el.classList.toggle('flip', yh.flip); el.style.zIndex = yh.climb === 'hill' ? '' : String(yh.z || (INDOOR.includes(yPlace) ? isoZ(...isoUV(yh.X, yh.Y)) : 300 - Math.round(yh.Y)));
-  if (el.matches('.walk, .run')) yFollow(yard);   // on the move: the camera goes along
+  if (el.matches('.walk, .run')) { yFollow(yard); TOWNLIFE.near(yard); }   // on the move: the camera goes along; those he comes near stop for him
 }
 // up the hill path: outlined about a pixel on the screen however small he gets (s: his scale; none: off the path). Set on his
 // drawing, and only when the width changes, never as a CSS variable round him (his legs would begin again each time on an iPhone)
