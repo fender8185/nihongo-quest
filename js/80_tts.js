@@ -123,8 +123,9 @@ const CAST_VOICE = {
 // ムギ (2026-11-12, the user, by ear): a boy's voice pitched up, a mascot's — a grown man saying ワン, or a real bark beside a
 // plain voice, broke the spell; her lines open with ワン！ and no longer end in it (events.js 42)
 // voices to try for someone before theirs changes (試聽角色聲音 lists them under their row): [voice, rate, pitch, what it is].
-// 2026-11-12, the user: 小春 sounded a little old — something thinner and softer
-const CAST_TRY = { koharu: [['Achernar', 1, 0, '柔和（Achernar，現在是千早的聲音）'], ['Erinome', 1.02, 0, '清亮（Erinome，沒人用）'], ['Leda', 1.04, 0, '年輕（Leda，現在是美玖的聲音）']] };
+// 2026-11-12, the user: 小春 sounded a little old — something thinner and softer (two sharing a voice is fine, or a pitch)
+const CAST_TRY = { koharu: [['Achernar', 1, 0, '柔和（Achernar，和千早同一個聲音）'], ['Erinome', 1.02, 0, '清亮（Erinome，沒人用）'], ['Leda', 1.04, 0, '年輕（Leda，和美玖同一個聲音）'],
+  ['Autonoe', 1.02, 2, '原本的聲音調高 2 個半音（Chirp 聽起來沒變的話，就是不支援調音高）'], ['Neural2-B', 1.02, 2, 'Neural2 B 女聲調高 2 個半音（一定會變高，但沒那麼自然）']] };
 const OLD_VOICE = /^(Neural2|Wavenet|Standard)-/;
 const CAST_WOMEN = new Set(['Achernar', 'Aoede', 'Autonoe', 'Callirrhoe', 'Despina', 'Erinome', 'Gacrux', 'Kore', 'Laomedeia', 'Leda', 'Pulcherrima', 'Sulafat', 'Vindemiatrix', 'Zephyr', 'Neural2-B', 'Wavenet-A', 'Wavenet-B', 'Standard-A', 'Standard-B']);
 const castOf = (opt) => opt.voice || CAST_VOICE[opt.cast];   // a voice being tried, else theirs

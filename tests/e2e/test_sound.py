@@ -110,7 +110,7 @@ def test_voices_to_try_are_listed_under_theirs_and_made_with_that_voice(b):
       fetchEngineBlob = realF; playUrl = realP;
       const p1 = await cloudAudioPath('x', 'f', { cast: 'koharu', line: 'はい。', voice: ['Achernar', 1, 0] }), p2 = await cloudAudioPath('x', 'f', { cast: 'koharu', line: 'はい。' });
       return JSON.stringify({ tries, asked, differ: p1 !== p2 }); })()"""))
-    assert r['tries'] == [['koharu', '0'], ['koharu', '1'], ['koharu', '2']], r
+    assert r['tries'] == [['koharu', str(k)] for k in range(5)], r
     assert r['asked'] == [['f', 'koharu', None], ['f', 'koharu', ['Achernar', 1, 0]]] and r['differ'], r
 
 def test_the_world_goes_quiet_while_japanese_is_read(b):
