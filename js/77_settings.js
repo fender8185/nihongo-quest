@@ -83,7 +83,7 @@ function settingsData() {
       : Sync.pendingEmail
         ? `<div class="setting-row"><div><div class="label">輸入驗證碼</div><div class="hint">登入信已寄到 <b>${esc(Sync.pendingEmail)}</b>。把信裡的 8 位數驗證碼輸入這裡（在 iPhone 主畫面 app 裡請用這個方式）；用電腦瀏覽器的話也可以直接點信裡的連結。</div></div>
           <div class="row-wrap"><input type="text" id="syncCode" placeholder="12345678" inputmode="numeric" autocomplete="one-time-code" maxlength="8" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-verify">登入</button><button type="button" class="btn btn-sm btn-ghost" data-act="sync-cancel-code">換一個 email</button></div></div>`
-        : `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">每個人的資料各自獨立。AI 設定（含 API 金鑰與位址）只留在這台裝置，不會上傳。第一次在新裝置登入時，若雲端已有進度，會以雲端為準，這台原本的進度不會保留。<br>用 Google 登入不用等信；Gmail 和之前收驗證碼的信箱一樣的話，是同一個帳號、同一份進度。</div></div>
+        : `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">每個人的資料各自獨立。AI 設定（含 API 金鑰與位址）只留在這台裝置，不會上傳。第一次在新裝置登入時，若雲端已有進度，會以雲端為準，這台原本的進度不會保留。<br>用 Google 登入不用等信；Gmail 和之前收驗證碼的信箱一樣的話，是同一個帳號、同一份進度。<br><b>Google 登入目前只開放給受邀的測試者</b>，其他人請先用下面的 email 登入。</div></div>
           <button type="button" class="btn btn-sm btn-primary" data-act="sync-google">${GOOGLE_G}用 Google 登入</button></div>
           <div class="setting-row"><div><div class="label">或用 email 登入</div><div class="hint">寄一封有 8 位數驗證碼的信。</div></div>
           <div class="row-wrap"><input type="email" id="syncEmail" placeholder="you@example.com" autocomplete="email" inputmode="email" /><button type="button" class="btn btn-sm" data-act="sync-login">寄送登入信</button></div></div>`;

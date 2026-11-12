@@ -2,12 +2,15 @@
 /* ==========================================================================
    Core: utilities, state, migration from v1, item registry, SRS, logs
    ========================================================================== */
-const APP_VERSION = '1.14.1';   // keep equal to the version in sw.js CACHE ('nq-v1.4.2'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
+const APP_VERSION = '1.14.2';   // keep equal to the version in sw.js CACHE ('nq-v1.4.2'); scripts/test.sh checks it. 1.0.0 = the former v100; before that the number alone (v4–v100)
 // newest first; shown under 設定 › 外觀 › 版本紀錄
 // 版本紀錄：給人看的。1.0.0 是「現在的樣子」的總整理，之後每個版本一組只寫變更；1.0 之前的過程壓成里程碑收在最後。
 // 版本號（APP_VERSION）每次推送都會變（通常最後一位加一；1.1.0 是書房改版），不必和紀錄一對一。label 有的話取代 v 顯示。
 // 規則：新改動若是推翻前一筆，就改前一筆的文字，不另外加一筆；中間修了又改的過程不寫。
 const CHANGELOG = [
+  { v: '1.14.2', date: '2026-11-12', items: [
+    '雲端同步可以用 Google 登入了：設定 › 資料 按「用 Google 登入」，不用再等驗證信。Gmail 和之前收驗證碼的信箱一樣的話，是同一個帳號、同一份進度。目前只開放給受邀的測試者，其他人請照常用 email 驗證碼登入。'
+  ] },
   { v: '1.14.1', date: '2026-11-12', items: [
     '陽菜在故事裡去了東京之後，就不會再出現在小鎮上，只有夏祭り、花祭り這些她的活動時會回來。花店門口沒有陽菜時由和子招呼，兩個人都不在時會寫「現在沒有人在顧店」。',
     '雲端同步上傳的進度先壓縮再送，大小約原本的十分之一，練完一組同步更快、也更省流量。',
