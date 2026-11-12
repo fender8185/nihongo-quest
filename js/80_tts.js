@@ -113,7 +113,7 @@ const CLOUD_ZH_VOICE = { languageCode: 'cmn-TW', name: 'cmn-TW-Wavenet-A' };   /
 // voice, the rate, the pitch and the SSML; the generator makes one for every line the talks can read (talkLines). Not made
 // yet: the device's voice reads it, a man's or a woman's as theirs ----
 const CAST_VOICE = {
-  hero: ['Aoede', 1], koharu: ['Leda', 1.04], mugi: ['Neural2-D', 1.1, 6], granny: ['Sulafat', 0.9],
+  hero: ['Despina', 1.04], koharu: ['Leda', 1.04], mugi: ['Neural2-D', 1.1, 6], granny: ['Sulafat', 0.9],
   kenta: ['Achird', 1], miku: ['Leda', 1.08], hina: ['Laomedeia', 1.02], kazuko: ['Gacrux', 0.95], lin: ['Despina', 1],
   tome: ['Pulcherrima', 1.04], go: ['Alnilam', 0.97], teppei: ['Algenib', 1], nagisa: ['Algieba', 0.94], taro: ['Puck', 1.06],
   harada: ['Iapetus', 1], kobayashi: ['Orus', 1], matsu: ['Callirrhoe', 0.92], genzo: ['Enceladus', 0.9], misaki: ['Vindemiatrix', 1],
@@ -123,8 +123,10 @@ const CAST_VOICE = {
 // ムギ (2026-11-12, the user, by ear): a boy's voice pitched up, a mascot's — a grown man saying ワン, or a real bark beside a
 // plain voice, broke the spell; her lines open with ワン！ and no longer end in it (events.js 42)
 // voices to try for someone before theirs changes (試聽角色聲音 lists them under their row): { who: [[voice, rate, pitch, what
-// it is]] }. None now: 小春 (2026-11-12, the user: she sounded a little old) took Leda, with 美玖 — two sharing a voice is fine
-const CAST_TRY = {};
+// it is]] }. 小春 (2026-11-12, the user: she sounded a little old) took Leda, with 美玖 — two sharing a voice is fine. The hero
+// (2026-11-12, the user: closer to 林美玲's) took her Despina, a little quicker so the two are told apart where they talk; the
+// three below sound near it, to choose from by ear
+const CAST_TRY = { hero: [['Vindemiatrix', 1, 0, '溫柔'], ['Erinome', 1.02, 0, '清亮'], ['Autonoe', 1.02, 0, '明亮']] };
 const OLD_VOICE = /^(Neural2|Wavenet|Standard)-/;
 const CAST_WOMEN = new Set(['Achernar', 'Aoede', 'Autonoe', 'Callirrhoe', 'Despina', 'Erinome', 'Gacrux', 'Kore', 'Laomedeia', 'Leda', 'Pulcherrima', 'Sulafat', 'Vindemiatrix', 'Zephyr', 'Neural2-B', 'Wavenet-A', 'Wavenet-B', 'Standard-A', 'Standard-B']);
 const castOf = (opt) => opt.voice || CAST_VOICE[opt.cast];   // a voice being tried, else theirs
