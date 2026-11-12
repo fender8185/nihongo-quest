@@ -152,7 +152,7 @@ def test_wearing_goes_on_and_off_and_shows_on_the_hero(b):
     js = "(async () => { " + FRESH + """ state.koto.gift = 30; saveState(); buyWare(WARE.get('beanie')); buyWare(WARE.get('strawhat'));
       const bought = state.wear.head || null; """ + GO_ROOM + """
       const wait = (ms) => new Promise(q => setTimeout(q, ms)), act = (sel) => document.querySelector(sel).click();
-      const dress = async (ids, keep) => { act('.study-tools [data-act="wardrobe"]'); act('[data-act="dress-tab"][data-tab="wear"]'); ids.forEach(id => act('[data-act="dress-wear"][data-id="' + id + '"]')); act(keep ? '[data-act="dress-done"]' : '[data-act="dress-cancel"]'); await wait(600); };
+      const dress = async (ids, keep) => { act('.study-tools [data-act="wardrobe"]'); act('[data-act="dress-tab"][data-tab="head"]'); ids.forEach(id => act('[data-act="dress-wear"][data-id="' + id + '"]')); act(keep ? '[data-act="dress-done"]' : '[data-act="dress-cancel"]'); await wait(600); };
       await dress(['beanie'], true); const worn = state.wear.head, has = document.querySelector('.study .room .hero').innerHTML.includes('cy="-187" r="8.6"');   /* the beanie's pompom (colours are lit, so not its hex) */
       await dress(['strawhat'], true); const now = state.wear.head;
       await dress(['strawhat'], false); const kept = state.wear.head;   /* taken off, then 取消: still on */
@@ -394,13 +394,13 @@ def test_the_dressing_room_zooms_in_and_keeps_or_drops_what_was_chosen(b):
       act('[data-act="dress-tab"][data-tab="features"]'); act('[data-act="dress-pick"][data-key="eyes"][data-val="big"]');
       act('[data-act="dress-pick"][data-key="beard"][data-val="goatee"]');   /* the beard is among the features */
       act('[data-act="dress-done"]'); await wait(650); act('.study-tools [data-act="wardrobe"]'); await wait(200);
-      act('[data-act="dress-tab"][data-tab="clothes"]'); act('[data-act="dress-pick"][data-key="top"][data-val="#d0574b"]');
+      act('[data-act="dress-tab"][data-tab="top"]'); act('[data-act="dress-pick"][data-key="top"][data-val="#d0574b"]');
       const pressed = document.querySelector('[data-act="dress-pick"][data-key="top"][data-val="#d0574b"]').getAttribute('aria-pressed');
       act('[data-act="dress-done"]'); await wait(650);
       const lk = HERO.norm(state.look), sig = st.dataset.sig === roomSig();
       return JSON.stringify({ open, mtabs, zoom: [head > small * 2, body < head], tried, dropped, pressed, kept: [lk.fringe, lk.sides, lk.hairBack, lk.hairColor, lk.eyes, lk.beard, lk.top], sig }); })()"""
     r = json.loads(ev_at(b, PHONE, js))
-    assert r['open'] == {'dressing': True, 'hidden': 'hidden', 'tabs': ['衣服', '穿戴'], 'title': '衣櫃'}, r   # the wardrobe: what is worn
+    assert r['open'] == {'dressing': True, 'hidden': 'hidden', 'tabs': ['頭部', '臉部', '頸部', '衣服', '褲子', '鞋子', '背部'], 'title': '衣櫃'}, r   # the wardrobe: what is worn, by part (2026-11-12)
     assert r['mtabs'] == [['臉型', '髮型', '五官'], '全身鏡'], r   # the mirror: the face, the hair, the features
     assert r['zoom'] == [True, True], r   # flown up to frame the head, all of them for clothes
     assert r['tried'] == {'copy': True, 'saved': 'bun'}, r   # a new hero's 丸子 (the default since 2026-11-10)
@@ -449,7 +449,7 @@ def test_a_hat_that_tucks_away_what_sits_on_top_says_so_in_the_shop_and_the_dres
       act('[data-act="dress-tab"][data-tab="hair"]'); const hair = note();
       act('[data-act="dress-pick"][data-key="hairTop"][data-val="ponytail"]'); const long = note();
       act('[data-act="dress-cancel"]'); await wait(600); act('.study-tools [data-act="wardrobe"]'); await wait(200);
-      act('[data-act="dress-tab"][data-tab="wear"]'); act('[data-act="dress-wear"][data-id="cathead"]'); const wear = note();
+      act('[data-act="dress-tab"][data-tab="head"]'); act('[data-act="dress-wear"][data-id="cathead"]'); const wear = note();
       act('[data-act="dress-done"]'); await wait(600); DRESS.open(st, 'mirror'); await wait(200);
       act('[data-act="dress-tab"][data-tab="features"]'); const cat = note();
       act('[data-act="dress-cancel"]'); await wait(600);
@@ -498,7 +498,7 @@ def test_the_shop_has_four_tabs_and_opens_on_the_last_one_used(b):
       return JSON.stringify({ tabs, seen, leak, back: document.querySelector('.shop-tabs [aria-selected="true"]').dataset.tab, stored: localStorage.getItem('nq_shop_tab') }); })()"""
     r = json.loads(ev(b, js))
     assert r['tabs'] == ['室內', '戶外', '穿搭', '限時'], r
-    assert r['seen']['in'] == ['家具擺飾', '地墊', '牆上', '唱片'] and r['seen']['out'] == ['戶外擺設', '房子外觀'] and r['seen']['wear'] == ['衣服褲子', '主角穿戴'], r
+    assert r['seen']['in'] == ['家具擺飾', '地墊', '牆上', '唱片'] and r['seen']['out'] == ['戶外擺設', '房子外觀'] and r['seen']['wear'] == ['頭部', '臉部', '頸部', '衣服', '褲子', '鞋子', '背部'], r   # 穿搭 by the wardrobe's parts (2026-11-12)
     assert r['seen']['outCards'] == ['telescope', 'stonelantern', 'engawa', 'tanuki', 'pond', 'mushroomhouse', 'gingerhouse', 'stumphouse', 'teapothouse'] and not r['leak'], r   # limited wares (南瓜屋 too) only under 限時
     assert r['back'] == 'out' and r['stored'] == 'out', r
 
@@ -649,16 +649,16 @@ def test_clothes_are_sold_put_on_in_the_dressing_room_and_dyed_in_the_heros_colo
       const bought = { owned: owns('tee'), style: HERO.norm(state.look).topStyle, msg: msg.includes('衣服') }; """ + GO_ROOM + """
       const wait = (ms) => new Promise(q => setTimeout(q, ms)), act = (sel) => document.querySelector(sel).click();
       act('.study-edit'); const box = [...document.querySelectorAll('.tray-it')].some(t => t.dataset.id === 'tee'); act('[data-act="room-edit-done"]');   /* clothes are no furniture */
-      act('.study-tools [data-act="wardrobe"]'); act('[data-act="dress-tab"][data-tab="clothes"]');
-      const offered = [...document.querySelectorAll('[data-act="dress-pick"][data-key="topStyle"]')].map(b => b.dataset.val), more = (document.querySelector('.dress-more') || {}).textContent || '', sold = WARES.filter(it => it.kind === 'clothes' && !owns(it.id) && forSale(it)).length;
+      act('.study-tools [data-act="wardrobe"]'); act('[data-act="dress-tab"][data-tab="top"]');
+      const offered = [...document.querySelectorAll('[data-act="dress-pick"][data-key="topStyle"]')].map(b => b.dataset.val), more = (document.querySelector('.dress-more') || {}).textContent || '', sold = WARES.filter(it => it.kind === 'clothes' && it.slot === 'top' && !owns(it.id) && forSale(it)).length;
       act('[data-act="dress-pick"][data-key="topStyle"][data-val="tee"]'); act('[data-act="dress-pick"][data-key="top"][data-val="#3f9a8c"]'); DRESS.pick('topStyle', 'sweater');   /* not bought: not put on */
       act('[data-act="dress-done"]'); await wait(600); const worn = HERO.norm(state.look);
       shopTab = 'wear'; location.hash = '#/shop'; route(); const card = document.querySelector('[data-ware="tee"] [data-act="clothes-wear"]'), label = card.textContent, clip = document.querySelector('[data-ware="tee"] .art svg').getAttribute('style');
       card.click(); const off = HERO.norm(state.look).topStyle;
-      return JSON.stringify({ bought, box, offered, more: sold >= 8 && more.includes(String(sold)), worn: [worn.topStyle, worn.top], label, clip, off }); })()"""
+      return JSON.stringify({ bought, box, offered, more: sold >= 4 && more.includes('「衣服」還有 ' + sold), worn: [worn.topStyle, worn.top], label, clip, off }); })()"""
     r = json.loads(ev(b, js))
     assert r['bought'] == {'owned': True, 'style': 'hoodie', 'msg': True} and r['box'] is False, r   # into the wardrobe, not put on, not in the storage box
-    assert r['offered'] == ['hoodie', 'tee'] and r['more'], r   # 帽T and what was bought; eight more at 古道具屋
+    assert r['offered'] == ['hoodie', 'tee'] and r['more'], r   # 帽T and what was bought; four more tops at 古道具屋
     assert r['worn'] == ['tee', '#3f9a8c'] and r['label'] == '脫下' and r['clip'] == 'overflow:hidden' and r['off'] == 'hoodie', r
 
 def test_a_cat_head_top_and_trousers_make_a_cat(b):
@@ -929,7 +929,7 @@ def test_the_yard_has_the_rooms_buttons_up_top_that_rest_and_its_own_dressing_ro
       const g = gear.getBoundingClientRect(); pe(gear, 'pointerdown', g.left + 5, g.top + 5, 1); pe(gear, 'pointerup', g.left + 5, g.top + 5, 1); gear.click(); const first = modalOpen();
       y.querySelector('[data-act="wardrobe"]').click(); await wait(100); const dressing = y.classList.contains('dressing') && !!y.querySelector('.dress .dress-hero');
       const shown = (sel) => getComputedStyle(y.querySelector('.dress .dress-hero ' + sel)).display, facing = [shown('.f-front'), shown('.f-back')];   /* facing us, not from behind */
-      document.querySelector('[data-act="dress-tab"][data-tab="wear"]').click(); document.querySelector('[data-act="dress-wear"][data-id="beanie"]').click(); document.querySelector('[data-act="dress-done"]').click(); await wait(650);
+      document.querySelector('[data-act="dress-tab"][data-tab="head"]').click(); document.querySelector('[data-act="dress-wear"][data-id="beanie"]').click(); document.querySelector('[data-act="dress-done"]').click(); await wait(650);
       return JSON.stringify({ acts, bal, quiet, faded, first, dressing, facing, worn: state.wear.head, hat: !!y.querySelector('.yhero svg [class*="beanie"], .yhero svg .w-beanie') || y.querySelector('.yhero').innerHTML.includes('beanie'), closed: !y.classList.contains('dressing') && !y.querySelector('.dress') }); })()"""
     r = json.loads(ev_at(b, PHONE, js))
     assert r['acts'] == ['koto-shop', 'wardrobe', 'yard-edit', 'settings'] and r['bal'] == '90', r   # 言靈, 衣櫃, 擺設, 設定
@@ -1320,6 +1320,70 @@ def test_the_close_up_of_a_thing_got_is_centred_on_a_phone(b):
       return JSON.stringify({ art: Math.round(a.left + a.width / 2 - innerWidth / 2), text: Math.round(t.left + t.width / 2 - innerWidth / 2), up: Math.round(a.top + a.height / 2 - innerHeight / 2) }); })()"""
     r = json.loads(b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", js)], timeout=60)[-1])
     assert r == {'art': 0, 'text': 0, 'up': 0}, r   # (2026-11-10, an iPhone) its burst wider than the phone had set it all off to the right
+
+# ---- 2026-11-12 (the user): the wardrobe and 古道具屋's 穿搭 by the hero's seven parts, three or more to buy for each ----
+def test_the_wardrobe_has_a_tab_for_each_of_the_seven_parts(b):
+    js = "(async () => { " + FRESH + """ state.koto.gift = 300; ['beanie', 'scarf', 'necktie', 'wings'].forEach(id => buyWare(WARE.get(id))); saveState(); """ + GO_ROOM + """
+      const wait = (ms) => new Promise(q => setTimeout(q, ms)), act = (sel) => document.querySelector(sel).click();
+      act('.study-tools [data-act="wardrobe"]'); await wait(650);
+      const bar = document.querySelector('.dress-tabs'), btns = [...bar.querySelectorAll('button')], fit = btns.every(t => t.getBoundingClientRect().right <= innerWidth - 8) && bar.scrollWidth <= bar.clientWidth;
+      const first = btns.find(t => t.getAttribute('aria-pressed') === 'true').dataset.tab, seen = {};
+      for (const t of btns) { t.click(); const body = document.querySelector('.dress-body');
+        seen[t.dataset.tab] = { worn: [...body.querySelectorAll('[data-act="dress-wear"]')].map(x => x.dataset.id), keys: [...new Set([...body.querySelectorAll('[data-act="dress-pick"]')].map(x => x.dataset.key))],
+          heads: [...body.querySelectorAll('.dress-sec h3')].map(h => h.textContent), shop: !!body.querySelector('[data-act="dress-shop"]'), text: (body.querySelector('.muted') || {}).textContent || '' }; }
+      act('[data-act="dress-tab"][data-tab="neck"]'); act('[data-act="dress-wear"][data-id="necktie"]'); act('[data-act="dress-tab"][data-tab="back"]'); act('[data-act="dress-wear"][data-id="wings"]');
+      act('[data-act="dress-done"]'); await wait(650);
+      return JSON.stringify({ tabs: btns.map(t => t.textContent), fit, first, seen, wear: state.wear, drawn: document.querySelector('.study .room .hero').innerHTML.includes('M0 -2 C-6 -8 -16 -10 -26 -9.6') }); })()"""
+    r = json.loads(ev_at(b, (375, 812), js))
+    assert r['tabs'] == ['頭部', '臉部', '頸部', '衣服', '褲子', '鞋子', '背部'] and r['fit'] and r['first'] == 'head', r   # all seven in sight on a 375 px phone; no 外衣
+    s = r['seen']
+    assert [s[k]['worn'] for k in ('head', 'face', 'neck', 'back')] == [['beanie'], [], ['scarf', 'necktie'], ['wings']], r   # each part what was bought for it
+    assert '古道具屋的「臉部」有圓框眼鏡、太陽眼鏡、狐狸面具' in s['face']['text'] and s['face']['shop'], r   # nothing there yet: what the shop has, and the way to it
+    assert [s[k]['keys'] for k in ('top', 'bottom', 'shoe')] == [['topStyle', 'top'], ['bottomStyle', 'bottom'], ['shoeStyle', 'shoe']] and s['shoe']['heads'] == ['款式', '顏色'], r   # the styles, then the colours
+    assert all(s[k]['keys'] == [] for k in ('head', 'face', 'neck', 'back')), r
+    assert r['wear'] == {'neck': 'necktie', 'back': 'wings'} and r['drawn'], r   # kept, and on the hero in the room
+
+def test_the_shops_wear_tab_is_the_seven_parts_each_with_three_wares_or_more(b):
+    js = "(async () => { " + FRESH + """ saveState(); shopTab = 'wear'; location.hash = '#/shop'; document.getElementById('view').innerHTML = ''; route(); await new Promise(q => setTimeout(q, 300));
+      const secs = [...document.querySelectorAll('#view .shop-sec')].map(s => [s.dataset.sec, s.querySelector('.shop-h').textContent, [...s.querySelectorAll('.shop-item[data-ware]')].map(c => c.dataset.ware)]);
+      const toWear = (it) => it.kind === 'wear' || it.kind === 'clothes', sold = Object.fromEntries(WEAR_SLOTS.map(([k]) => [k, WARES.filter(it => toWear(it) && it.slot === k && !it.limited && !it.gift).map(it => it.id)]));
+      const limited = WARES.filter(it => it.limited && toWear(it)).map(it => it.id), shown = secs.flatMap(s => s[2]);
+      return JSON.stringify({ secs: secs.map(s => s.slice(0, 2)), sold, same: secs.every(([k, , ids]) => JSON.stringify(ids) === JSON.stringify(sold[k])), leak: shown.filter(id => limited.includes(id)),
+        body: WARES.filter(it => it.slot === 'body').map(it => it.id), soon: !!document.querySelector('.shop-sec[data-sec="back"] .shop-item.soon') }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['secs'] == [['head', '頭部'], ['face', '臉部'], ['neck', '頸部'], ['top', '衣服'], ['bottom', '褲子'], ['shoe', '鞋子'], ['back', '背部']] and r['same'] and r['soon'], r
+    assert all(len(ids) >= 3 for ids in r['sold'].values()), r   # three or more to buy for each part, limited ones not counted
+    assert r['sold']['face'] == ['glasses', 'sunglasses', 'foxmask'] and r['sold']['neck'] == ['scarf', 'bowtie', 'necktie'] and r['sold']['shoe'] == ['geta', 'rainboots', 'bunnyslippers'] and r['sold']['back'] == ['backpack', 'randoseru', 'wings'], r
+    assert r['leak'] == [] and r['body'] == [], r   # 魔法師帽 and 長袍 only under 限時; nothing for the hero to wear as 外衣
+
+def test_each_new_ware_is_drawn_facing_us_and_from_behind_and_on_its_card(b):
+    js = """(() => { const svg = (o) => HERO.svg(o).replace(/ id="[a-z]+\\d+"|url\\(#[a-z]+\\d+\\)/g, ''), worn = { sunglasses: 'face', foxmask: 'face', necktie: 'neck', randoseru: 'back', wings: 'back' };
+      const views = [{ front: true }, { back: true }], plain = views.map(v => svg(Object.assign({ wear: {} }, v)).length);
+      const drawn = Object.fromEntries(Object.entries(worn).map(([id, slot]) => [id, views.map((v, i) => svg(Object.assign({ wear: { [slot]: id } }, v)).length - plain[i])]));
+      const leg = (s) => (s.match(/<g class="leg l">([\\s\\S]*?)<\\/g>/) || [])[1], shoe = (id, v) => leg(svg(Object.assign({ look: { shoeStyle: id } }, v)));
+      const shoes = Object.fromEntries(['geta', 'rainboots', 'bunnyslippers'].map(id => [id, [shoe(id, views[0]) !== shoe('sneaker', views[0]), shoe(id, views[1]) !== shoe('sneaker', views[1]), shoe(id, views[0]) !== shoe(id, views[1])]]));
+      const ids = Object.keys(worn).concat(Object.keys(shoes)), w = (id) => WARE.get(id);
+      return JSON.stringify({ drawn, shoes, cards: ids.filter(id => !/<path/.test(wareArt(w(id)))), kinds: ids.map(id => w(id).kind + ':' + w(id).slot), prices: ids.map(id => w(id).price),
+        keep: ['geta', 'rainboots', 'bunnyslippers', 'loafer', 'zori'].every(id => HERO.norm({ shoeStyle: id }).shoeStyle === id),
+        town: [HERO.svg({ wear: { neck: 'necktie', tie: '#4f6f9e' }, front: true }).includes('fill="#4f6f9e"'), HERO.svg({ wear: { neck: 'necktie' }, front: true }).includes('fill="#3f4660"'), HERO.svg({ wear: { body: 'apron', apron: '#4f7a4a' }, front: true }).includes('class="apron"')] }); })()"""
+    r = json.loads(ev(b, js))
+    assert all(f > 200 for f, _ in r['drawn'].values()) and all(k > 60 for i, (_, k) in r['drawn'].items() if i != 'necktie') and r['drawn']['necktie'][1] == 0, r   # each worn thing facing us and from behind (the sunglasses' temples; a tie is under the chin: nothing of it from behind)
+    assert all(v == [True, True, True] for v in r['shoes'].values()), r   # each shoe its own, facing us and from behind (the 木屐's strap, the rain boots' pull tab, the bunny's face and tail)
+    assert r['cards'] == [] and r['kinds'] == ['wear:face', 'wear:face', 'wear:neck', 'wear:back', 'wear:back', 'clothes:shoe', 'clothes:shoe', 'clothes:shoe'] and r['prices'] == [32, 40, 28, 58, 64, 36, 40, 44], r
+    assert r['keep'] and r['town'] == [True, True, True], r   # looks saved before still load; the town's ties keep their colours, their aprons stay
+
+def test_a_bought_shoe_style_is_offered_in_the_wardrobe_and_the_free_ones_always(b):
+    js = "(async () => { " + FRESH + """ state.koto.gift = 100; saveState(); const msg = buyWare(WARE.get('geta')); """ + GO_ROOM + """
+      const wait = (ms) => new Promise(q => setTimeout(q, ms)), act = (sel) => document.querySelector(sel).click();
+      act('.study-tools [data-act="wardrobe"]'); act('[data-act="dress-tab"][data-tab="shoe"]');
+      const shoes = [...document.querySelectorAll('[data-act="dress-pick"][data-key="shoeStyle"]')].map(b => b.dataset.val), more = (document.querySelector('.dress-more') || {}).textContent || '';
+      DRESS.pick('shoeStyle', 'rainboots'); act('[data-act="dress-pick"][data-key="shoeStyle"][data-val="geta"]'); DRESS.pick('shoeStyle', 'bunnyslippers');   /* not bought: not put on */
+      act('[data-act="dress-done"]'); await wait(650); const worn = HERO.norm(state.look).shoeStyle;
+      shopTab = 'wear'; location.hash = '#/shop'; route(); const card = document.querySelector('[data-ware="geta"] [data-act="clothes-wear"]'), label = card.textContent; card.click();
+      return JSON.stringify({ msg, shoes, more, worn, label, off: HERO.norm(state.look).shoeStyle }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['shoes'] == ['sneaker', 'boots', 'loafer', 'geta'] and '「鞋子」還有 2 樣' in r['more'] and '「鞋子」' in r['msg'], r   # 球鞋, 短靴, 皮鞋 everyone's; the 木屐 once bought
+    assert r['worn'] == 'geta' and r['label'] == '脫下' and r['off'] == 'sneaker', r   # the shop's card takes it off: back to 球鞋
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
