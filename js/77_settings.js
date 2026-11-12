@@ -165,7 +165,7 @@ Object.assign(ACTIONS, {
   'cast-preview': (el) => {
     const gk = ((document.getElementById('cloudGoogleKey') || {}).value || '').trim();
     if (!gk) { toast('先在上面貼上 Google Cloud API Key。'); return; }
-    castPreview(el.dataset.who, gk);
+    castPreview(el.dataset.who, gk, el.dataset.try || '');
   },
   'cloud-dl-all': (el) => cloudDownloadAll(el.dataset.kind || 'ja'),
   'cloud-dl-stop': () => { if (CLOUD_DL) CLOUD_DL.stop = true; },

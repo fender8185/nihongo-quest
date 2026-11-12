@@ -54,7 +54,7 @@ def test_every_thing_used_and_every_footstep_has_a_sound_to_be_had(b):
     r = json.loads(ev(b, """(async () => { const names = new Set();
       Object.keys(PLACE_USE).forEach((p) => PLACE_USE[p].forEach((t) => useSound(p, t).forEach((n) => n && names.add(n))));
       ['wood', 'grass', 'concrete', 'gravel', 'sand'].forEach((g) => names.add('steps-' + g));
-      ['coins', 'place', 'switch', 'drawer', 'door-open', 'pour', 'page', 'cloth', 'cushion', 'sit', 'mail', 'bus', 'bark', 'knock', 'splash', 'plop', 'crow', 'gull'].forEach((n) => names.add(n));
+      ['coins', 'place', 'switch', 'drawer', 'door-open', 'door-close', 'slide-door', 'pour', 'page', 'cloth', 'cushion', 'sit', 'mail', 'bus', 'knock', 'splash', 'plop', 'crow', 'gull'].forEach((n) => names.add(n));
       ['birds', 'insects', 'wind', 'waves', 'gulls', 'harbor', 'traffic', 'town', 'station', 'restaurant', 'izakaya', 'clock'].forEach((n) => names.add('amb-' + n));
       const missing = [];
       for (const n of [...names].sort()) { if (SND.SYNTH[n] && !['knock', 'spring'].includes(n)) continue; const r = await fetch('sounds/' + n + '-1.m4a', { method: 'HEAD' }); if (!r.ok) missing.push(n); }
@@ -75,7 +75,7 @@ def test_townsfolk_speak_in_their_own_voices(b):
 
 def test_each_voice_can_be_heard_before_the_generator_makes_them_all(b):
     r = json.loads(ev(b, """(async () => { openSettings('data'); await new Promise((q) => setTimeout(q, 200));
-      const rows = document.querySelectorAll('#castPreviewBox .cast-row').length, asked = [], played = [];
+      const rows = document.querySelectorAll('#castPreviewBox .cast-row:not(.cast-try)').length, asked = [], played = [];
       const realF = fetchEngineBlob, realP = playUrl;
       fetchEngineBlob = async (cfg, text, g, opt) => { asked.push([cfg.engine, cfg.googleKey, text, g, opt.cast, opt.line]); return new Blob([new Uint8Array(4000)], { type: 'audio/mpeg' }); };
       playUrl = async (url) => { played.push(url.slice(0, 5)); return true; };
@@ -88,17 +88,18 @@ def test_each_voice_can_be_heard_before_the_generator_makes_them_all(b):
     assert r['rows'] == r['voices'] == 29, r
     assert len(r['asked']) == 1 and r['asked'][0][:5] == ['google_tts', 'k123', 'いらっしゃいませ！', 'm', 'kenta'] and r['played'] == ['blob:', 'blob:'], r
 
-def test_mugis_wan_is_a_real_bark_between_the_pieces_her_voice_says(b):
-    r = json.loads(ev(b, """(async () => { const seq = [], realL = speakLine, realB = SND.bark;
-      speakLine = async (text, g, t, opt) => { seq.push(text); }; SND.bark = async () => { seq.push('🐕'); };
-      await speakAs('mugi', 'きみが{耳|みみ}で{日本語|にほんご}を{聞|き}いているって、{風|かぜ}のうわさで{聞|き}いたワン。これ、おばあちゃんの{蓄音機|ちくおんき}だワン！');
-      const two = seq.splice(0); await speakAs('mugi', 'わん！はじめまして、ムギだワン。'); const first = seq.splice(0);
-      await speakAs('koharu', '{湾|わん}が きれい。'); const other = seq.splice(0); speakLine = realL; SND.bark = realB;
-      const mugi = cloudAudioTexts().filter((x) => x.cast === 'mugi');
-      return JSON.stringify({ two, first, other, said: mugi.some((x) => /ワン|わん/.test(x.text)), pieces: castPieces('mugi', '{湾|わん}だワン') }); })()"""))
-    assert r['two'] == ['きみが耳で日本語を聞いているって、風のうわさで聞いた', '🐕', 'これ、おばあちゃんの蓄音機だ', '🐕'], r
-    assert r['first'] == ['🐕', 'はじめまして、ムギだ', '🐕'] and r['other'] == ['湾がきれい。'], r
-    assert not r['said'] and r['pieces'] == [{'line': '{湾|わん}だ'}, {'bark': True}], r   # no clip says ワン; a word read わん is no bark
+def test_mugis_voices_to_try_are_pitched_up_and_say_wan_themselves(b):
+    r = json.loads(ev(b, """(async () => { openSettings('data'); await new Promise((q) => setTimeout(q, 200));
+      const tries = [...document.querySelectorAll('#castPreviewBox .cast-try [data-act="cast-preview"]')].map((x) => [x.dataset.who, x.dataset.try]), sent = [];
+      const realF = window.fetch, realP = playUrl; playUrl = async () => true;
+      window.fetch = async (url, init) => { sent.push(JSON.parse(init.body)); return new Response(JSON.stringify({ audioContent: btoa('x'.repeat(4000)) }), { status: 200 }); };
+      document.getElementById('cloudGoogleKey').value = 'k';
+      for (const k of ['0', '2']) { document.querySelector(`[data-act="cast-preview"][data-who="mugi"][data-try="${k}"]`).click(); await new Promise((q) => setTimeout(q, 150)); }
+      window.fetch = realF; playUrl = realP;
+      const p1 = await cloudAudioPath('x', 'f', { cast: 'mugi', line: 'わん！', voice: ['Neural2-B', 1.08, 4] }), p2 = await cloudAudioPath('x', 'f', { cast: 'mugi', line: 'わん！' });
+      return JSON.stringify({ tries, sent: sent.map((q) => [q.voice.name, q.audioConfig.pitch || 0, q.audioConfig.speakingRate, /<prosody pitch="\\+3st">/.test(q.input.ssml), /ワン|わん/.test(q.input.ssml)]), differ: p1 !== p2 }); })()"""))
+    assert r['tries'] == [['mugi', '0'], ['mugi', '1'], ['mugi', '2']], r
+    assert r['sent'] == [['ja-JP-Neural2-B', 4, 1.08, False, True], ['ja-JP-Chirp3-HD-Erinome', 0, 1.08, True, True]] and r['differ'], r   # pitch by Google for Neural2, in the SSML for Chirp; her ワン said
 
 def test_the_world_goes_quiet_while_japanese_is_read(b):
     r = json.loads(ev(b, """(async () => { const seen = [];

@@ -450,7 +450,6 @@ const TALK = (() => {
       return;
     }
     const n = who(L.id), w = n.gift, gl = cur.ev ? glosses(L.ja) : [];
-    if (L.id === 'mugi' && cur.last !== 'mugi') SND.play('bark'); cur.last = L.id;   // ワン as ムギ starts
     cur.el.innerHTML = `<div class="talk-card"><div class="talk-face">${TOWNEV.face(L.id)}</div><div class="talk-body">
       <div class="talk-name">${esc(n.name)}<span>${esc(n.role)}</span></div>
       ${!L.ja ? `<p class="talk-zh">${esc(L.zh)}</p>` : `<p class="talk-ja" lang="ja">${ruby(L.ja)} ${say(L.ja, L.id)}</p>${gl.length ? `<p class="talk-gloss">${gl.map(esc).join('　')}</p>` : ''}

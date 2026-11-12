@@ -107,10 +107,11 @@ async function r2Put(path, blob, creds) {
 }
 function cloudAudioSsml(text, opt = {}) { return opt.reading ? `<speak><sub alias="${esc(opt.reading)}">${esc(text)}</sub></speak>` : ssmlReadings(text); }
 const CLOUD_ZH_VOICE = { languageCode: 'cmn-TW', name: 'cmn-TW-Wavenet-A' };   // meanings and translations (opt.lang === 'zh'): one Taiwanese Mandarin voice
-// ---- the townsfolk's own voices (2026-11-12): one of Google's Chirp 3 HD voices each, [voice, speaking rate]. A line they say
-// (opt.cast: who, opt.line: as written in events.js, its {漢字|かな} pinning the readings) is a clip under c/, named by the
-// voice, the rate and the SSML; the generator makes one for every line the talks can read (talkLines). Not made yet: the
-// device's voice reads it, a man's or a woman's as theirs ----
+// ---- the townsfolk's own voices (2026-11-12): [voice, speaking rate, pitch in semitones] each — one of Google's Chirp 3 HD
+// voices (its name alone; a pitch goes into the SSML) or an older one (Neural2-B …; a pitch Google sets itself). A line they
+// say (opt.cast: who, opt.line: as written in events.js, its {漢字|かな} pinning the readings) is a clip under c/, named by the
+// voice, the rate, the pitch and the SSML; the generator makes one for every line the talks can read (talkLines). Not made
+// yet: the device's voice reads it, a man's or a woman's as theirs ----
 const CAST_VOICE = {
   hero: ['Aoede', 1], koharu: ['Autonoe', 1.02], mugi: ['Fenrir', 1.05], granny: ['Sulafat', 0.9],
   kenta: ['Achird', 1], miku: ['Leda', 1.08], hina: ['Laomedeia', 1.02], kazuko: ['Gacrux', 0.95], lin: ['Despina', 1],
@@ -119,35 +120,33 @@ const CAST_VOICE = {
   nakamura: ['Schedar', 1], kenji: ['Zubenelgenubi', 1], suzuki: ['Rasalgethi', 1.02], alex: ['Umbriel', 1], chihaya: ['Achernar', 0.96],
   tatsu: ['Sadachbia', 1.06], takahashi: ['Sadaltager', 0.95], sophia: ['Zephyr', 1], nishimura: ['Kore', 1.04], sano: ['Charon', 1]
 };
-const CHIRP_WOMEN = new Set(['Achernar', 'Aoede', 'Autonoe', 'Callirrhoe', 'Despina', 'Erinome', 'Gacrux', 'Kore', 'Laomedeia', 'Leda', 'Pulcherrima', 'Sulafat', 'Vindemiatrix', 'Zephyr']);
-const castGender = (who) => (CAST_VOICE[who] ? (CHIRP_WOMEN.has(CAST_VOICE[who][0]) ? 'f' : 'm') : '');
+// ムギ's voice, to be chosen by ear (2026-11-12, the user: a grown man saying ワン broke the spell, and a real bark beside a
+// plain voice even more): a mascot's voice, pitched up, saying her ワン itself — each tried in 試聽角色聲音, the one picked
+// goes into CAST_VOICE
+const MUGI_TRY = [['Neural2-B', 1.08, 4, '可愛女聲（Neural2 B，音調 +4）'], ['Neural2-D', 1.1, 6, '少年聲（Neural2 D，音調 +6）'], ['Erinome', 1.08, 3, '年輕女聲（Chirp Erinome，音調 +3）']];
+const OLD_VOICE = /^(Neural2|Wavenet|Standard)-/;
+const CAST_WOMEN = new Set(['Achernar', 'Aoede', 'Autonoe', 'Callirrhoe', 'Despina', 'Erinome', 'Gacrux', 'Kore', 'Laomedeia', 'Leda', 'Pulcherrima', 'Sulafat', 'Vindemiatrix', 'Zephyr', 'Neural2-B', 'Wavenet-A', 'Wavenet-B', 'Standard-A', 'Standard-B']);
+const castOf = (opt) => opt.voice || CAST_VOICE[opt.cast];   // a voice being tried, else theirs
+const voiceGender = (v) => (CAST_WOMEN.has(v[0]) ? 'f' : 'm');
+const castGender = (who) => (CAST_VOICE[who] ? voiceGender(CAST_VOICE[who]) : '');
+const castVoiceName = (v) => (OLD_VOICE.test(v[0]) ? `ja-JP-${v[0]}` : `ja-JP-Chirp3-HD-${v[0]}`);
 const CAST_MARK = /\{([^|}]+)\|([^|}]+)(?:\|[^}]+)?\}/g;
 // a line to read: stage directions （…） out, the beginners' spaces between words closed up, its marks kept
 const castLine = (line) => ttsText(line).replace(/([^\x00-\x7f]|\}) (?=[^\x00-\x7f]|\{)/g, '$1');
-function castSsml(line) { return '<speak>' + castLine(line).split(/(\{[^}]+\})/).map((p) => { const m = /^\{([^|}]+)\|([^|}]+)/.exec(p); return m ? `<sub alias="${esc(m[2])}">${esc(m[1])}</sub>` : esc(p); }).join('') + '</speak>'; }
-// ムギ's わん／ワン (2026-11-12, the user: a man's voice saying ワン broke the spell): her lines are cut there, and each is a real
-// bark (SND.bark) between the pieces her voice says; the words on the screen keep it. Anyone else: the line whole
-const BARK_AT = /((?:わん|ワン)(?=[。！？!?…、」〜\s]|$))/;
-const castPause = /[。！？!?…、」〜\s]/g;
-function castPieces(who, line) {
-  const l = castLine(line);
-  if (who !== 'mugi') return [{ line: l }];
-  const out = [];
-  l.split(BARK_AT).forEach((p, i) => { if (i % 2) { out.push({ bark: true }); return; } const t = p.replace(/^[。！？!?…、」〜\s]+/, ''); if (t.replace(castPause, '')) out.push({ line: t }); });
-  return out;
+function castSsml(line, v) {
+  const body = castLine(line).split(/(\{[^}]+\})/).map((p) => { const m = /^\{([^|}]+)\|([^|}]+)/.exec(p); return m ? `<sub alias="${esc(m[2])}">${esc(m[1])}</sub>` : esc(p); }).join('');
+  return '<speak>' + (v && v[2] && !OLD_VOICE.test(v[0]) ? `<prosody pitch="+${v[2]}st">${body}</prosody>` : body) + '</speak>';
 }
-async function speakAs(who, line) {   // someone's line in their own voice (anyone else's: as any line)
-  if (!CAST_VOICE[who]) { const text = castLine(line).replace(CAST_MARK, '$1'); return text ? speak(text) : undefined; }
+function speakAs(who, line) {   // someone's line in their own voice (anyone else's: as any line)
+  const text = castLine(line).replace(CAST_MARK, '$1');
+  if (!text) return Promise.resolve();
+  if (!CAST_VOICE[who]) return speak(text);
   stopSpeaking();
-  const token = speechToken;
-  for (const p of castPieces(who, line)) {
-    if (token !== speechToken) return;
-    if (p.bark) await SND.bark(); else await speakLine(p.line.replace(CAST_MARK, '$1'), castGender(who), token, { cast: who, line: p.line });
-  }
+  return speakLine(text, castGender(who), speechToken, { cast: who, line });
 }
 async function cloudAudioPath(text, gender, opt = {}) {
   if (opt.cast) {
-    const [v, r] = CAST_VOICE[opt.cast], buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${CLOUD_AUDIO.set}|c|${v}|${r}|${castSsml(opt.line)}`));
+    const v = castOf(opt), buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${CLOUD_AUDIO.set}|c|${v[0]}|${v[1]}${v[2] ? '|' + v[2] : ''}|${castSsml(opt.line, v)}`));
     return `c/${[...new Uint8Array(buf)].slice(0, 16).map(b => b.toString(16).padStart(2, '0')).join('')}.mp3`;
   }
   const g = opt.lang === 'zh' ? 'zh' : gender === 'm' ? 'm' : 'f';
@@ -483,11 +482,11 @@ async function fetchEngineBlob(cfg, text, gender, opt = {}) {
   if (cfg.engine === 'google_tts') {
     const key = (cfg.googleKey || '').trim();
     if (!key) throw new Error('沒有 Google Cloud API Key');
-    const name = opt.cast ? `ja-JP-Chirp3-HD-${CAST_VOICE[opt.cast][0]}` : gender === 'm' ? cfg.googleVoiceM : cfg.googleVoice;
-    const req = opt.lang === 'zh' ? { input: { text: String(text) }, voice: CLOUD_ZH_VOICE } : { input: opt.plain ? { text: opt.plain } : { ssml: opt.cast ? castSsml(opt.line) : ssml }, voice: { languageCode: 'ja-JP', name } };   // plain: the generator's retry of a silent clip
+    const cv = opt.cast && castOf(opt), name = cv ? castVoiceName(cv) : gender === 'm' ? cfg.googleVoiceM : cfg.googleVoice;
+    const req = opt.lang === 'zh' ? { input: { text: String(text) }, voice: CLOUD_ZH_VOICE } : { input: opt.plain ? { text: opt.plain } : { ssml: cv ? castSsml(opt.line, cv) : ssml }, voice: { languageCode: 'ja-JP', name } };   // plain: the generator's retry of a silent clip
     const resp = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${encodeURIComponent(key)}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign(req, { audioConfig: { audioEncoding: 'MP3', speakingRate: opt.cast ? CAST_VOICE[opt.cast][1] : rate } }))
+      body: JSON.stringify(Object.assign(req, { audioConfig: Object.assign({ audioEncoding: 'MP3', speakingRate: cv ? cv[1] : rate }, cv && cv[2] && OLD_VOICE.test(cv[0]) ? { pitch: cv[2] } : {}) }))
     });
     if (!resp.ok) throw new Error(`Google TTS HTTP ${resp.status}${await errorDetail(resp)}`);
     const j = await resp.json();
@@ -670,7 +669,7 @@ function audioCollector() {
   const add = (raw, gender = '', reading = '') => { const text = ttsText(raw); if (!text) return; const g = gender === 'm' ? 'm' : 'f'; const k = `${g}|${reading}|${text}`; if (!seen.has(k)) seen.set(k, { text, gender: g, reading }); };
   const addZh = (raw) => { const text = String(raw || '').replace(/\s+/g, ' ').trim(); if (!text) return; const k = `zh||${text}`; if (!seen.has(k)) seen.set(k, { text, gender: '', reading: '', lang: 'zh' }); };
   const addScript = (sc) => scriptParts(sc).forEach(p => add(p.text, p.gender));
-  const addCast = (who, line) => CAST_VOICE[who] && castPieces(who, line).forEach((p) => { if (!p.line) return; const k = `c|${who}|${p.line}`; if (!seen.has(k)) seen.set(k, { text: p.line.replace(CAST_MARK, '$1'), gender: castGender(who), reading: '', cast: who, line: p.line }); });   // ムギ's: the pieces between her barks
+  const addCast = (who, line) => { const text = castLine(line).replace(CAST_MARK, '$1'); if (!text || !CAST_VOICE[who]) return; const k = `c|${who}|${line}`; if (!seen.has(k)) seen.set(k, { text, gender: castGender(who), reading: '', cast: who, line }); };
   const addQ = (q) => {
     if (!q) return;
     if (q.speakWord) add(q.speakWord, '', q.speakReading || '');
@@ -715,7 +714,7 @@ function cloudAudioTexts() {
   cloudMissList().forEach(m => c.add(m.text, m.gender, m.reading || ''));
   return c.list();
 }
-const clipOpt = (x) => ({ reading: x.reading || '', lang: x.lang || '', cast: x.cast, line: x.line });   // a listed clip as the player asks for it
+const clipOpt = (x) => ({ reading: x.reading || '', lang: x.lang || '', cast: x.cast, line: x.line, voice: x.voice });   // a listed clip as the player asks for it
 // the distinct file paths of a clip list, hashed a slice at a time so the page stays responsive
 async function clipPaths(list) {
   const out = [];
@@ -858,37 +857,33 @@ function cloudGenRender() { const box = document.getElementById('cloudGenBox'); 
 const CAST_PREVIEW = { blobs: {}, said: {}, busy: '' };
 const castSample = (who) => (talkLines().find((l) => l[0] === who) || [])[1] || '';
 function castPreviewHtml() {
+  const row = (id, k, name, sub, line) => { const key = `${id}|${k}`, said = CAST_PREVIEW.said[key];
+    return `<div class="list-item cast-row${k === '' ? '' : ' cast-try'}"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="cast-preview" data-who="${id}" data-try="${k}" aria-label="試聽${esc(name)}"${CAST_PREVIEW.busy === key ? ' disabled' : ''}>${CAST_PREVIEW.busy === key ? '…' : icon('speaker')}</button>
+      <div class="grow"><div><b>${esc(name)}</b> <span class="muted small">${esc(sub)}</span></div>${line ? `<div class="small muted jp">${esc(line)}</div>` : ''}${said ? `<div class="small ${said.bad ? 'bad' : 'muted'}">${esc(said.text)}</div>` : ''}</div></div>`; };
   return Object.keys(CAST_VOICE).map((id) => {
-    const p = id === 'hero' ? { name: '主角', role: '' } : NPCS[id] || TOWN.CAST[id] || { name: id, role: '' }, said = CAST_PREVIEW.said[id];
-    return `<div class="list-item cast-row"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="cast-preview" data-who="${id}" aria-label="試聽${esc(p.name)}"${CAST_PREVIEW.busy === id ? ' disabled' : ''}>${CAST_PREVIEW.busy === id ? '…' : icon('speaker')}</button>
-      <div class="grow"><div><b>${esc(p.name)}</b> <span class="muted small">${esc(p.role || '')}${p.role ? '・' : ''}${CAST_VOICE[id][0]}（${castGender(id) === 'f' ? '女聲' : '男聲'}）</span></div>
-      <div class="small muted jp">${esc(castLine(castSample(id)).replace(CAST_MARK, '$1'))}</div>${said ? `<div class="small ${said.bad ? 'bad' : 'muted'}">${esc(said.text)}</div>` : ''}</div></div>`;
+    const p = id === 'hero' ? { name: '主角', role: '' } : NPCS[id] || TOWN.CAST[id] || { name: id, role: '' }, v = CAST_VOICE[id];
+    const own = row(id, '', p.name, `${p.role || ''}${p.role ? '・' : ''}${v[0]}（${voiceGender(v) === 'f' ? '女聲' : '男聲'}）`, castLine(castSample(id)).replace(CAST_MARK, '$1'));
+    return own + (id === 'mugi' ? MUGI_TRY.map((t, k) => row(id, String(k), `ムギ候選 ${k + 1}`, t[3], '')).join('') : '');
   }).join('');
 }
 function castPreviewRender() { const box = document.getElementById('castPreviewBox'); if (box) box.innerHTML = castPreviewHtml(); }
-async function castPreview(who, key) {
+async function castPreview(who, key, k = '') {   // k: one of ムギ's voices to try (MUGI_TRY), '' their own
   stopSpeaking(); primeTtsPlayer(); const token = speechToken;   // inside the tap: the player kept awake while the line is made (iOS)
-  const pieces = castPieces(who, castSample(who)), made = (p) => CAST_PREVIEW.blobs[`${who}|${p.line}`];
-  const todo = pieces.filter((p) => p.line && !made(p));
-  if (todo.length) {
-    CAST_PREVIEW.busy = who; delete CAST_PREVIEW.said[who]; castPreviewRender();
-    const cfg = Object.assign({}, ttsConfig(), { engine: 'google_tts', googleKey: key });
-    for (const p of todo) {
-      try {
-        const got = await cloudGenBlob(cfg, { text: p.line.replace(CAST_MARK, '$1'), gender: castGender(who), reading: '', cast: who, line: p.line });
-        if (got.note) CAST_PREVIEW.said[who] = { text: got.note };
-        if (!got.blob) { CAST_PREVIEW.said[who] = { text: '生成的聲音是空的或靜音', bad: true }; break; }
-        CAST_PREVIEW.blobs[`${who}|${p.line}`] = got.blob;
-      } catch (e) { const msg = (e && e.message) || String(e); CAST_PREVIEW.said[who] = { text: msg + (ttsErrorHint(msg) ? `（${ttsErrorHint(msg)}）` : ''), bad: true }; break; }
-    }
-    CAST_PREVIEW.busy = ''; castPreviewRender();
-    if (pieces.some((p) => p.line && !made(p))) { stopSilence(); return; }
+  const id = `${who}|${k}`, v = k === '' ? null : MUGI_TRY[Number(k)].slice(0, 3);
+  let blob = CAST_PREVIEW.blobs[id];
+  if (!blob) {
+    const line = castSample(who), x = { text: castLine(line).replace(CAST_MARK, '$1'), gender: v ? voiceGender(v) : castGender(who), reading: '', cast: who, line, voice: v };
+    CAST_PREVIEW.busy = id; delete CAST_PREVIEW.said[id]; castPreviewRender();
+    try {
+      const got = await cloudGenBlob(Object.assign({}, ttsConfig(), { engine: 'google_tts', googleKey: key }), x);
+      blob = got.blob; if (got.note) CAST_PREVIEW.said[id] = { text: got.note };
+      if (!blob) CAST_PREVIEW.said[id] = { text: '生成的聲音是空的或靜音', bad: true };
+    } catch (e) { const msg = (e && e.message) || String(e); CAST_PREVIEW.said[id] = { text: msg + (ttsErrorHint(msg) ? `（${ttsErrorHint(msg)}）` : ''), bad: true }; }
+    CAST_PREVIEW.busy = ''; if (blob) CAST_PREVIEW.blobs[id] = blob; castPreviewRender();
+    if (!blob) { stopSilence(); return; }
   }
-  for (const p of pieces) {   // as speakAs plays it: ムギ's barks between her pieces
-    if (token !== speechToken) return;
-    if (p.bark) { await SND.bark(); continue; }
-    const url = URL.createObjectURL(made(p)); await playUrl(url, token, 1); setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
+  if (token !== speechToken) return;
+  const url = URL.createObjectURL(blob); await playUrl(url, token, 1); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 // Runs in the browser: the Google key (site-restricted, as set up) and the R2 key pair (this bucket only, r2 = { keyId,
 // secret }) are used for this run only — never stored, never synced, gone when the page closes. Clips go to R2 only

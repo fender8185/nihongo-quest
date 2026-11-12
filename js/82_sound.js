@@ -179,16 +179,6 @@ const SND = (() => {
     ['way', 'road', 'off'].forEach((k) => { const g = groundOf(place, k); if (g) names.add('steps-' + g); });
     names.forEach((n) => load(c, n));
   }
-  // ムギ's bark inside her lines (castPieces): part of what she says, so heard with 環境音 off too and never ducked; done as it ends
-  function bark() {
-    const c = audioCtx(); if (!c) return Promise.resolve();
-    return load(c, 'bark').then((b) => new Promise((done) => {
-      if (!b) { done(); return; }
-      const s = c.createBufferSource(), g = c.createGain(); s.buffer = b; g.gain.value = 0.6; s.connect(g); g.connect(c.destination);
-      s.onended = () => setTimeout(done, 140); s.start(c.currentTime + 0.02);
-      setTimeout(done, b.duration * 1000 + 700);   // a context not running never ends it
-    }));
-  }
   // ---- while Japanese is read aloud (speakLine): the world and the gramophone down, back up a moment after the last line ----
   function duck(on) {
     ducks = Math.max(0, ducks + (on ? 1 : -1));
@@ -202,7 +192,7 @@ const SND = (() => {
   document.addEventListener('visibilitychange', () => sync());
   saveHooks.push(() => sync());   // 環境音 switched, the gramophone stopped or started
   ['pointerdown', 'keydown'].forEach((t) => document.addEventListener(t, () => { if (state.settings.ambient && scene) ctx(); }, true));   // woken by the first tap (iOS)
-  return { play, use, step, groundOf, sync, duck, bark, SYNTH, scene: () => scene, layers: () => Object.keys(live).sort(), ducked: () => ducks };
+  return { play, use, step, groundOf, sync, duck, SYNTH, scene: () => scene, layers: () => Object.keys(live).sort(), ducked: () => ducks };
 })();
 // what a thing in a place sounds like as it is used, by place.id (a number at the id's end left off: the diner's tables): one
 // sound, or two (the second as the words after pop up); else by what it is (a bench, a ride), else nothing
