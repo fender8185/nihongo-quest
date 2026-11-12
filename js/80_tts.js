@@ -125,12 +125,25 @@ const CAST_MARK = /\{([^|}]+)\|([^|}]+)(?:\|[^}]+)?\}/g;
 // a line to read: stage directions （…） out, the beginners' spaces between words closed up, its marks kept
 const castLine = (line) => ttsText(line).replace(/([^\x00-\x7f]|\}) (?=[^\x00-\x7f]|\{)/g, '$1');
 function castSsml(line) { return '<speak>' + castLine(line).split(/(\{[^}]+\})/).map((p) => { const m = /^\{([^|}]+)\|([^|}]+)/.exec(p); return m ? `<sub alias="${esc(m[2])}">${esc(m[1])}</sub>` : esc(p); }).join('') + '</speak>'; }
-function speakAs(who, line) {   // someone's line in their own voice (anyone else's: as any line)
-  const text = castLine(line).replace(CAST_MARK, '$1');
-  if (!text) return Promise.resolve();
-  if (!CAST_VOICE[who]) return speak(text);
+// ムギ's わん／ワン (2026-11-12, the user: a man's voice saying ワン broke the spell): her lines are cut there, and each is a real
+// bark (SND.bark) between the pieces her voice says; the words on the screen keep it. Anyone else: the line whole
+const BARK_AT = /((?:わん|ワン)(?=[。！？!?…、」〜\s]|$))/;
+const castPause = /[。！？!?…、」〜\s]/g;
+function castPieces(who, line) {
+  const l = castLine(line);
+  if (who !== 'mugi') return [{ line: l }];
+  const out = [];
+  l.split(BARK_AT).forEach((p, i) => { if (i % 2) { out.push({ bark: true }); return; } const t = p.replace(/^[。！？!?…、」〜\s]+/, ''); if (t.replace(castPause, '')) out.push({ line: t }); });
+  return out;
+}
+async function speakAs(who, line) {   // someone's line in their own voice (anyone else's: as any line)
+  if (!CAST_VOICE[who]) { const text = castLine(line).replace(CAST_MARK, '$1'); return text ? speak(text) : undefined; }
   stopSpeaking();
-  return speakLine(text, castGender(who), speechToken, { cast: who, line });
+  const token = speechToken;
+  for (const p of castPieces(who, line)) {
+    if (token !== speechToken) return;
+    if (p.bark) await SND.bark(); else await speakLine(p.line.replace(CAST_MARK, '$1'), castGender(who), token, { cast: who, line: p.line });
+  }
 }
 async function cloudAudioPath(text, gender, opt = {}) {
   if (opt.cast) {
@@ -434,6 +447,7 @@ async function errorDetail(resp) {
 function ttsErrorHint(msg) {
   const m = String(msg || '');
   if (/not been used|is disabled|SERVICE_DISABLED/i.test(m)) return '這個專案尚未啟用 Cloud Text-to-Speech API：到 Google Cloud 的「API 和服務 › 程式庫」搜尋並啟用，再等一兩分鐘。';
+  if (/API keys are not supported/i.test(m)) return '這把金鑰不能用在 Google 的語音服務：AI Studio（Gemini）給的金鑰不行，請改用 Google Cloud Console › API 和服務 › 憑證 裡、生成音檔一直在用的那把。';
   if (/API key not valid|API_KEY_INVALID|invalid api key|Unauthorized|401/i.test(m)) return '金鑰無效：確認貼上的是完整的金鑰、前後沒有空白，而且是同一個專案建立的。';
   if (/referer|referrer|HTTP referrers/i.test(m)) return `金鑰的「網站」限制不符：限制要寫成 ${location.origin}/*，改完要等幾分鐘生效。`;
   if (/billing|BILLING/i.test(m)) return '專案還沒連結帳單帳戶：到 Google Cloud 的「帳單」把這個專案連結上去（免費額度內不會扣款）。';
@@ -656,7 +670,7 @@ function audioCollector() {
   const add = (raw, gender = '', reading = '') => { const text = ttsText(raw); if (!text) return; const g = gender === 'm' ? 'm' : 'f'; const k = `${g}|${reading}|${text}`; if (!seen.has(k)) seen.set(k, { text, gender: g, reading }); };
   const addZh = (raw) => { const text = String(raw || '').replace(/\s+/g, ' ').trim(); if (!text) return; const k = `zh||${text}`; if (!seen.has(k)) seen.set(k, { text, gender: '', reading: '', lang: 'zh' }); };
   const addScript = (sc) => scriptParts(sc).forEach(p => add(p.text, p.gender));
-  const addCast = (who, line) => { const text = castLine(line).replace(CAST_MARK, '$1'); if (!text || !CAST_VOICE[who]) return; const k = `c|${who}|${line}`; if (!seen.has(k)) seen.set(k, { text, gender: castGender(who), reading: '', cast: who, line }); };
+  const addCast = (who, line) => CAST_VOICE[who] && castPieces(who, line).forEach((p) => { if (!p.line) return; const k = `c|${who}|${p.line}`; if (!seen.has(k)) seen.set(k, { text: p.line.replace(CAST_MARK, '$1'), gender: castGender(who), reading: '', cast: who, line: p.line }); });   // ムギ's: the pieces between her barks
   const addQ = (q) => {
     if (!q) return;
     if (q.speakWord) add(q.speakWord, '', q.speakReading || '');
@@ -854,20 +868,27 @@ function castPreviewHtml() {
 function castPreviewRender() { const box = document.getElementById('castPreviewBox'); if (box) box.innerHTML = castPreviewHtml(); }
 async function castPreview(who, key) {
   stopSpeaking(); primeTtsPlayer(); const token = speechToken;   // inside the tap: the player kept awake while the line is made (iOS)
-  let blob = CAST_PREVIEW.blobs[who];
-  if (!blob) {
-    const line = castSample(who), x = { text: castLine(line).replace(CAST_MARK, '$1'), gender: castGender(who), reading: '', cast: who, line };
+  const pieces = castPieces(who, castSample(who)), made = (p) => CAST_PREVIEW.blobs[`${who}|${p.line}`];
+  const todo = pieces.filter((p) => p.line && !made(p));
+  if (todo.length) {
     CAST_PREVIEW.busy = who; delete CAST_PREVIEW.said[who]; castPreviewRender();
-    try {
-      const got = await cloudGenBlob(Object.assign({}, ttsConfig(), { engine: 'google_tts', googleKey: key }), x);
-      blob = got.blob; if (got.note) CAST_PREVIEW.said[who] = { text: got.note };
-      if (!blob) CAST_PREVIEW.said[who] = { text: '生成的聲音是空的或靜音', bad: true };
-    } catch (e) { const msg = (e && e.message) || String(e); CAST_PREVIEW.said[who] = { text: msg + (ttsErrorHint(msg) ? `（${ttsErrorHint(msg)}）` : ''), bad: true }; }
-    CAST_PREVIEW.busy = ''; if (blob) CAST_PREVIEW.blobs[who] = blob; castPreviewRender();
-    if (!blob) { stopSilence(); return; }
+    const cfg = Object.assign({}, ttsConfig(), { engine: 'google_tts', googleKey: key });
+    for (const p of todo) {
+      try {
+        const got = await cloudGenBlob(cfg, { text: p.line.replace(CAST_MARK, '$1'), gender: castGender(who), reading: '', cast: who, line: p.line });
+        if (got.note) CAST_PREVIEW.said[who] = { text: got.note };
+        if (!got.blob) { CAST_PREVIEW.said[who] = { text: '生成的聲音是空的或靜音', bad: true }; break; }
+        CAST_PREVIEW.blobs[`${who}|${p.line}`] = got.blob;
+      } catch (e) { const msg = (e && e.message) || String(e); CAST_PREVIEW.said[who] = { text: msg + (ttsErrorHint(msg) ? `（${ttsErrorHint(msg)}）` : ''), bad: true }; break; }
+    }
+    CAST_PREVIEW.busy = ''; castPreviewRender();
+    if (pieces.some((p) => p.line && !made(p))) { stopSilence(); return; }
   }
-  if (token !== speechToken) return;
-  const url = URL.createObjectURL(blob); await playUrl(url, token, 1); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  for (const p of pieces) {   // as speakAs plays it: ムギ's barks between her pieces
+    if (token !== speechToken) return;
+    if (p.bark) { await SND.bark(); continue; }
+    const url = URL.createObjectURL(made(p)); await playUrl(url, token, 1); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 }
 // Runs in the browser: the Google key (site-restricted, as set up) and the R2 key pair (this bucket only, r2 = { keyId,
 // secret }) are used for this run only — never stored, never synced, gone when the page closes. Clips go to R2 only

@@ -88,6 +88,18 @@ def test_each_voice_can_be_heard_before_the_generator_makes_them_all(b):
     assert r['rows'] == r['voices'] == 29, r
     assert len(r['asked']) == 1 and r['asked'][0][:5] == ['google_tts', 'k123', 'いらっしゃいませ！', 'm', 'kenta'] and r['played'] == ['blob:', 'blob:'], r
 
+def test_mugis_wan_is_a_real_bark_between_the_pieces_her_voice_says(b):
+    r = json.loads(ev(b, """(async () => { const seq = [], realL = speakLine, realB = SND.bark;
+      speakLine = async (text, g, t, opt) => { seq.push(text); }; SND.bark = async () => { seq.push('🐕'); };
+      await speakAs('mugi', 'きみが{耳|みみ}で{日本語|にほんご}を{聞|き}いているって、{風|かぜ}のうわさで{聞|き}いたワン。これ、おばあちゃんの{蓄音機|ちくおんき}だワン！');
+      const two = seq.splice(0); await speakAs('mugi', 'わん！はじめまして、ムギだワン。'); const first = seq.splice(0);
+      await speakAs('koharu', '{湾|わん}が きれい。'); const other = seq.splice(0); speakLine = realL; SND.bark = realB;
+      const mugi = cloudAudioTexts().filter((x) => x.cast === 'mugi');
+      return JSON.stringify({ two, first, other, said: mugi.some((x) => /ワン|わん/.test(x.text)), pieces: castPieces('mugi', '{湾|わん}だワン') }); })()"""))
+    assert r['two'] == ['きみが耳で日本語を聞いているって、風のうわさで聞いた', '🐕', 'これ、おばあちゃんの蓄音機だ', '🐕'], r
+    assert r['first'] == ['🐕', 'はじめまして、ムギだ', '🐕'] and r['other'] == ['湾がきれい。'], r
+    assert not r['said'] and r['pieces'] == [{'line': '{湾|わん}だ'}, {'bark': True}], r   # no clip says ワン; a word read わん is no bark
+
 def test_the_world_goes_quiet_while_japanese_is_read(b):
     r = json.loads(ev(b, """(async () => { const seen = [];
       const real = speakLineNow; speakLineNow = async () => { seen.push(SND.ducked()); await new Promise((q) => setTimeout(q, 50)); };
