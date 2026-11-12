@@ -675,6 +675,19 @@ def test_the_yards_left_is_the_shore_and_its_right_the_market(b):
       return JSON.stringify(sides); })()"""))
     assert r == {'shore': True, 'market': True, 'beach': True, 'town': True, 'sea': 166, 'shops': 166, 'went': '#/beach', 'came': [480, 214]}, r   # the signs where the beach and the town are seen; back from the town, in from there
 
+def test_hina_leaves_for_tokyo_and_comes_back_only_for_her_events(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.seen = { hina: 1, kazuko: 1 };
+      const at = (h) => TOWNEV.here('town').map((p) => p.id + (p.host ? '!' : '')).filter((x) => /hina|kazuko/.test(x));
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 14) }; const before = at(10);   /* a Saturday: both at the flowers */
+      state.town.done['m25-4'] = '2026-11-01'; const after = at(10);
+      fake([['h1', 'm1', 'hina', 'town']]); learn('m1', 1); const back = at(10);
+      fake([]); await go('town', 17); const shut = [!y().querySelector('.npc-hina'), !y().querySelector('.npc-kazuko')];
+      y().querySelector('.town-shop[data-shop="flowers"]').click(); await wait(100); const said = toastText();
+      await go('town', 10); y().querySelector('.town-shop[data-shop="flowers"]').click(); for (let i = 0; i < 40 && !document.querySelector('.talk-card'); i++) await wait(100);
+      const name = (document.querySelector('.talk-card .talk-name') || {}).textContent || '';
+      return JSON.stringify({ before, after, back, shut, said: said.includes('沒有人在顧店'), kazuko: name.includes('和子') }); })()"""))
+    assert r == {'before': ['hina', 'kazuko'], 'after': ['kazuko'], 'back': ['hina!', 'kazuko'], 'shut': [True, True], 'said': True, 'kazuko': True}, r   # in Tokyo after m25-4; back for her event; 和子 at the shop
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

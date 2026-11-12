@@ -78,6 +78,10 @@ function check(T, D, opts = {}) {
     });
   });
   if (used.size) { const lo = Math.min(...used), hi = Math.max(...used); for (let i = lo; i <= hi; i++) if (!used.has(i)) bad('gap', units[i], 'no events'); }
+  Object.entries(cast).forEach(([id, c]) => {   // away after an event that exists; helps at a shop someone keeps
+    if (c.away !== undefined && !ids.has(c.away)) bad('ref', `cast ${id}`, `away after no event ${c.away}`);
+    if (c.helps !== undefined && !Object.values(cast).some((o) => o.shop === c.helps)) bad('ref', `cast ${id}`, `helps at no shop ${c.helps}`);
+  });
   // a line's conditions (TOWNEV.chatLine, TOWNLIFE: CHATPICK.ok): each one known, and what it names there
   const PARTS = ['am', 'noon', 'pm', 'night'], FESTS = ['halloween'], WHEN = ['at', 'h', 'days', 'after', 'before', 'fresh', 'talks', 'look', 'fest', 'about'];
   const list = (v) => (Array.isArray(v) ? v : [v]);

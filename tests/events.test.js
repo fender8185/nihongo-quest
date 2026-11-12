@@ -129,3 +129,9 @@ test('every event can be met at one of the times the bed wakes to', () => {
   assert.deepEqual(kinds(check(town([ev()], { CAST: late, WAKE: [8, 12, 17, 20] }), DATA)), ['wake']);
   assert.deepEqual(check(town([ev()], { WAKE: [8, 12, 17, 20] }), DATA), []);
 });
+test('away after an event that exists; helps at a shop someone keeps', () => {
+  const cast = (o) => ({ CAST: { miku: Object.assign({ name: '美玖', hours: [[7, 20, 'town', 'bakeryIn']] }, o), kenta: { name: '健太', shop: 'bakery', hours: [[5, 21, 'town', 'bakery']] } } });
+  assert.deepEqual(check(town([ev()], cast({ away: 'e1', helps: 'bakery' })), DATA), []);
+  assert.deepEqual(kinds(check(town([ev()], cast({ away: 'zz' })), DATA)), ['ref']);
+  assert.deepEqual(kinds(check(town([ev()], cast({ helps: 'moon' })), DATA)), ['ref']);
+});

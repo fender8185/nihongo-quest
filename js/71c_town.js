@@ -175,7 +175,8 @@ const TOWNEV = (() => {
     const w = waiting(now(), today()), out = [];
     Object.keys(T().CAST).forEach((id) => {
       const host = w && w.ev.who === id && w.place === place, at = host ? { place, spot: w.spot } : whereIs(id, now(), today());
-      if (at && at.place === place && (host || seen(id)) && T().SPOTS[place] && T().SPOTS[place][at.spot]) out.push({ id, spot: T().SPOTS[place][at.spot], host });
+      const gone = !host && T().CAST[id].away && state.town.done[T().CAST[id].away];   // away from the town now (陽菜 in Tokyo): only back for an event of theirs
+      if (at && at.place === place && !gone && (host || seen(id)) && T().SPOTS[place] && T().SPOTS[place][at.spot]) out.push({ id, spot: T().SPOTS[place][at.spot], host });
     });
     return out;
   }
@@ -244,8 +245,9 @@ const TOWNEV = (() => {
     if (st === 'prep') { toast('這家店還在準備中，之後會開張。'); return; }
     if (st === 'closed') { const [f, t] = T().HOURS[shop]; toast(`${sign}：營業時間 ${f}:00–${t}:00，現在打烊了。`); return; }
     if (INDOOR.includes(shop)) { yGo(el, shop); return; }   // まんぷく食堂, 居酒屋とり吉: in through the door
-    const p = el.closest('.yard').querySelector(`.npc-${o}`);
-    if (p) talk(p); else toast(`${T().CAST[o].name}現在不在店裡。`);
+    const y = el.closest('.yard'), helper = Object.keys(T().CAST).find((id) => T().CAST[id].helps === shop && y.querySelector(`.npc-${id}`));
+    const p = y.querySelector(`.npc-${o}`) || (helper && y.querySelector(`.npc-${helper}`));   // its keeper, else who helps there (和子 at the flowers)
+    if (p) talk(p); else toast(T().CAST[o].away && state.town.done[T().CAST[o].away] ? `${sign}現在沒有人在顧店。` : `${T().CAST[o].name}現在不在店裡。`);
   }
   const api = { unitIdx, reachedIdx, started, studyDaysSince, due, opened, openN, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, chatCtx, chatMem, hop, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
   return api;

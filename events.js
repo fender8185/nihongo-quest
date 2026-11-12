@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 43 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 44 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -34,7 +34,9 @@ const TOWN = {
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they
   // have come by; size: smaller than the hero
-  // hours: [from, to, place, spot, days] — the first that fits now; days 'wd' weekdays, 'we' the weekend, none every day
+  // hours: [from, to, place, spot, days] — the first that fits now; days 'wd' weekdays, 'we' the weekend, none every day.
+  // away: gone from the town once that event is done, seen again only while an event of theirs waits (陽菜 to Tokyo, 2026-11-12,
+  // the user: till Tokyo is a place of its own); helps: who answers at that shop when its keeper is not there
   CAST: {
     koharu: { name: '小春', kana: 'こはる', role: '美容師', art: 'npc', shop: 'salon',
       bio: ['在小鎮開美容院「美容室こはる」，27 歲。開朗、愛聊八卦、很會照顧人，可是完全不會煮飯，晚餐都在外面吃。', '小時候外婆讓她剪頭髮，是她當美容師的開始。'],
@@ -51,7 +53,7 @@ const TOWN = {
     hina: { name: '日向 陽菜', kana: 'ひなた ひな', role: '花屋', shop: 'flowers', look: { face: 'chubby', skin: '#f3d1b5', cheeks: 'soft', fringe: 'airy', sides: 'wisps', hairBack: 'short', hairTop: 'ponytail', hairColor: '#6b4a32', eyes: 'sharp', eyeColor: '#3f7a52', brows: 'raised', mouth: 'grin', beard: 'none', topStyle: 'shirt', top: '#ecebe6', bottomStyle: 'skirt', bottom: '#3f4660', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { neck: 'bowtie' },
       bio: ['高中二年級，17 歲，放學後幫媽媽顧「ひなた花店」。急性子、直率、愛吐槽，其實很細心。', '說話是年輕人的常體。想去東京念設計，為這件事跟媽媽吵架。'],
       festa: { topStyle: 'yukata', top: '#3f4660' },   // the 緣日: a navy yukata
-      hours: [[16, 19, 'town', 'flowers', 'wd'], [9, 19, 'town', 'flowers', 'we'], [19, 23, 'shrine', 'ennichi2']] },
+      hours: [[16, 19, 'town', 'flowers', 'wd'], [9, 19, 'town', 'flowers', 'we'], [19, 23, 'shrine', 'ennichi2']], away: 'm25-4' },
     lin: { name: '林 美玲', kana: 'リン メイリン', role: '雑貨屋', shop: 'goods', look: { face: 'mochi', skin: '#e8bd98', cheeks: 'soft', fringe: 'sidepart', sides: 'tucked', hairBack: 'short', hairTop: 'sidelow', hairColor: '#2a2524', eyes: 'droopy', eyeColor: '#2a2730', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#3f9a8c', bottomStyle: 'wide', bottom: '#e9e2d0', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { face: 'glasses' },
       bio: ['雜貨店「雑貨りんりん」的老闆，43 歲，台灣人。十五年前嫁來這裡，長大以後才開始學日文。', '溫柔有耐心，最懂學日文的辛苦，偶爾會冒出一句中文。先生健二是漁夫。'],
       hours: [[9, 21, 'town', 'goods']] },
@@ -114,7 +116,7 @@ const TOWN = {
       hours: [[10, 16, 'station', 'plaza'], [19, 23, 'izakaya', 'seat3']] },
     kazuko: { name: '日向 和子', kana: 'ひなた かずこ', role: '花屋の店主', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'tucked', hairBack: 'short', hairTop: 'bun', hairColor: '#6b4a32', eyes: 'droopy', eyeColor: '#3f7a52', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#b8a27a', bottomStyle: 'skirt', bottom: '#4f7a4a', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { body: 'apron', apron: '#4f7a4a', mark: '花' },
       bio: ['陽菜的媽媽，48 歲，「ひなた花店」的老闆。溫和、說話是客氣的敬體。', '一個人撐起花店，捨不得女兒去東京。'],
-      hours: [[9, 16, 'town', 'flowers2']] },
+      hours: [[9, 16, 'town', 'flowers2']], helps: 'flowers' },
     sano: { name: '佐野', kana: 'さの', role: 'ホテル会社の社員', look: { face: 'pointed', skin: '#f3d1b5', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'sharp', eyeColor: '#2a2730', brows: 'straight', mouth: 'flat', beard: 'none', topStyle: 'jacket', top: '#2b2b33', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { neck: 'necktie', tie: '#d0574b' },
       bio: ['東京的飯店公司派來的員工，32 歲。說話很有禮貌，卻總是保持距離。', '負責說服鎮上的人接受度假飯店的計畫。'],
       hours: [[10, 17, 'town', 'street']] },
