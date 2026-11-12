@@ -25,3 +25,14 @@ order by t.taken_at;
 
 -- the letters there are now
 select id, title, sender, gift, who, starts_at, ends_at from public.mail order by created_at desc;
+
+-- what broke in the last 14 days (supabase/app-errors.sql): the same message together, newest first
+select left(message, 120) as message, kind, count(*) as reports, sum(times) as times, count(distinct device_id) as devices,
+       max(at) as last, min(version) as first_version, max(version) as last_version, (array_agg(place order by at desc))[1] as place
+from public.app_errors where at > now() - interval '14 days'
+group by left(message, 120), kind order by last desc;
+
+-- the latest reports in full (who, where, the stack)
+select e.at, e.version, e.site, e.place, e.kind, e.times, e.message, e.stack, e.agent, u.email
+from public.app_errors e left join auth.users u on u.id = e.user_id
+order by e.at desc limit 30;

@@ -12,6 +12,8 @@ function checkDayRollover() {
 
 // the app cannot start safely (1.8.2): it says so and offers a reload; nothing is saved or synced
 function stopApp(why) {
+  const err = typeof STATE_UNREADABLE !== 'undefined' && STATE_UNREADABLE;
+  if (typeof ErrorReport === 'object') ErrorReport.note('stop', why + (err ? ' · ' + ((err && err.message) || err) : ''), (err && err.stack) || '', true);   // sent at once (its file may be what did not load)
   const view = document.getElementById('view') || document.body;
   view.innerHTML = `<div class="card" style="max-width:460px;margin:12vh auto;padding:22px 20px"><h2 style="margin:0 0 8px;font-size:20px">現在沒辦法開始</h2>
     <p style="margin:0 0 6px">${esc(why)}</p><p class="small muted" style="margin:0 0 16px">你的進度沒有被改動，也沒有上傳。請重新整理；一直這樣的話，先不要清除瀏覽資料，截這個畫面告訴我們。</p>
