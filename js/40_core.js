@@ -291,6 +291,7 @@ function saveState() {
   saveHooks.forEach(h => { try { h(); } catch (e) { /* a sync hook must never break saving */ } });
 }
 
+function saveLocal() { if (!pendingWrite) pendingWrite = Promise.resolve().then(flushState); }   // on this device only (no upload): the next saveState takes it along
 async function flushState() {
   pendingWrite = null;
   const snapshot = state;
@@ -336,7 +337,8 @@ function normalizeState(s) {
   // 1.2.0: 言靈 and the things from 古道具屋 (ids this build does not know are kept: a later one may sell them)
   const kt = out.koto && typeof out.koto === 'object' && !Array.isArray(out.koto) ? out.koto : {}, obj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
   out.koto = { daySets: obj(kt.daySets), days: Array.isArray(kt.days) ? kt.days : [], listen: obj(kt.listen), mail: obj(kt.mail), found: obj(kt.found), sets: obj(kt.sets), gift: Number(kt.gift) || 0 };
-  const tw = obj(out.town); out.town = { done: obj(tw.done), seen: obj(tw.seen), stops: obj(tw.stops), talks: obj(tw.talks) };
+  const tw = obj(out.town), talks = {}; Object.entries(obj(tw.talks)).forEach(([id, n]) => { const k = Math.floor(Number(n)); if (k > 0) talks[id] = k; });
+  out.town = { done: obj(tw.done), seen: obj(tw.seen), stops: obj(tw.stops), talks };
   out.mail = out.mail && typeof out.mail === 'object' && !Array.isArray(out.mail) ? { got: obj(out.mail.got), read: obj(out.mail.read) } : null;
   if (typeof out.resetAt !== 'string') out.resetAt = '';   // 1.9.1: when 重設所有進度 was last pressed (the cloud's guard lets that one shrink through)
   ['owned', 'placed', 'wear', 'look', 'lampsOff', 'met'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)

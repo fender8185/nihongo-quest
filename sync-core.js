@@ -187,7 +187,7 @@
     }
     if (older.town || newer.town) {   // the town's events done, people met, bus stops opened: once on either device, for good
       const o = older.town || {}, n = newer.town || {};
-      const talks = Object.assign({}, o.talks); Object.entries(n.talks || {}).forEach(([id, k]) => { talks[id] = Math.max(Number(talks[id]) || 0, Number(k) || 0); });   // the chats with each: the more
+      const talks = {}; [o.talks, n.talks].forEach((t) => Object.entries(t || {}).forEach(([id, k]) => { talks[id] = Math.max(talks[id] || 0, Number(k) || 0); }));   // the chats with each: the more (as numbers)
       out.town = Object.assign({}, n, { done: Object.assign({}, o.done, n.done), seen: Object.assign({}, o.seen, n.seen), stops: Object.assign({}, o.stops, n.stops), talks });
     }
     out.updatedAt = new Date().toISOString();

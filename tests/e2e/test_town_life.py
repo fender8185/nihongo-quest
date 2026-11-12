@@ -156,6 +156,35 @@ def test_no_walking_off_while_a_talk_is_open(b):
       return JSON.stringify({ stayed, after: !y().querySelector('.npc-mugi') }); })()"""))
     assert r == {'stayed': True, 'after': True}, r
 
+# ---- the review's (2026-11-12) ----
+def test_tapping_one_on_the_way_to_a_talk_frees_both_and_the_words_go_on(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ TOWNLIFE.still = true; TOWN.MUTTER = { kenta: [['m0', 'よーし！', '好！']] };
+      TOWN.PAIRS = [[['koharu', 'lin'], 'm0', [['koharu', 'ねえねえ！', '']]]]; TOWNLIFE.gap = [99999, 99999]; await go('town', 10);
+      TOWNLIFE.still = false; TOWNLIFE.pair('koharu', 'lin'); await wait(300);
+      const mover = people().find((e) => e.matches('.walk, .run')), id = mover && mover.dataset.npc;
+      TOWNEV.talk(mover); for (let i = 0; i < 60 && !document.querySelector('.talk-card'); i++) await wait(100); TALK.close();
+      const other = id === 'koharu' ? 'lin' : 'koharu'; await new Promise((q) => yHeroWalk(y(), [(TOWNLIFE.at(id)[0] + TOWNLIFE.at(other)[0]) / 2, 30], q));   /* away from both: they wait for no one */
+      const p0 = [TOWNLIFE.at(id), TOWNLIFE.at(other)];
+      let moved = false; for (let i = 0; i < 100 && !moved; i++) { await wait(150); moved = [id, other].every((x, k) => Math.abs(TOWNLIFE.at(x)[0] - p0[k][0]) > 1); }
+      TOWNLIFE.say('kenta', 'よーし！'); const words = !!y().querySelector('.ysay');
+      return JSON.stringify({ mover: !!mover, moved, words, said: !!y().querySelector('.ysay[data-who="koharu"]') }); })()"""))
+    assert r == {'mover': True, 'moved': True, 'words': True, 'said': False}, r   # both stroll again; the pair's line never came
+
+def test_a_chat_is_kept_on_the_device_without_an_upload(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ TOWNLIFE.still = true; localStorage.removeItem('nq_chat'); await wait(50);
+      const t0 = state.updatedAt; TOWNEV.chatLine('kenta'); TOWNEV.chatLine('kenta');
+      state.look = Object.assign({}, state.look, { hairColor: '#123456' }); TOWNEV.chatLine('kenta');
+      const m = JSON.parse(localStorage.getItem('nq_chat')), keys = Object.keys(m.news || {}).concat(...Object.values(m.said || {}));
+      return JSON.stringify({ same: state.updatedAt === t0, talks: state.town.talks.kenta, short: keys.every((k) => k.length < 80), saw: m.saw.kenta.every((s) => /^L[0-9a-z]+$/.test(s)) }); })()"""))
+    assert r == {'same': True, 'talks': 3, 'short': True, 'saw': True}, r
+
+def test_a_long_line_wraps_inside_its_bubble(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ TOWNLIFE.still = true; await go('town', 10); TOWNLIFE.still = false;
+      TOWNLIFE.say('kenta', '{原田|はらだ}さん、{本官|ほんかん}の {時計|とけい}、{合|あ}って いますか！ もう いちど {聞|き}きます！', 4000); await wait(200);
+      const el = y().querySelector('.ysay'), b = el.getBoundingClientRect(), k = b.width / el.offsetWidth;
+      return JSON.stringify({ w: el.offsetWidth <= 200, inside: el.scrollWidth <= el.clientWidth + 1 }); })()"""))
+    assert r == {'w': True, 'inside': True}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

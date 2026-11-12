@@ -10,7 +10,7 @@
 const TOWNLIFE = (() => {
   let S = null;   // the scene: { yard, place, indoor, w: Map id → walker, raf, bt: the next words, t: timers, leaving, pairing }
   let coming = null;   // who walks in once the place is drawn anew (change): { place, ids }
-  const api = { still: Boolean(window.NQ_E2E || navigator.webdriver), gap: [8000, 15000] };
+  const api = { still: Boolean(window.NQ_E2E), gap: [8000, 15000] };
   const calm = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const rnd = (a, b) => a + Math.random() * (b - a);
   const alive = () => Boolean(S && S.yard.isConnected);
@@ -38,7 +38,11 @@ const TOWNLIFE = (() => {
   function later(w, ms) { clearTimeout(w.t); w.t = setTimeout(() => stroll(w), ms); }
   function stroll(w) {
     if (!alive()) { stop(); return; }
-    if (!w.roam) return;   // they stay (walked somewhere once: on arriving, to talk to someone)
+    if (!w.roam) {   // they stay; stopped on their way in (tapped, the hero near): on to their spot once free
+      if (Math.hypot(w.pos[0] - w.home[0], w.pos[1] - w.home[1]) < 2) return;
+      if (!free(w) || w.walk) later(w, rnd(2000, 4000)); else walk(w, w.home, null, { within: 3 });
+      return;
+    }
     if (!free(w) || w.walk || w.el.matches('[class*="idle-"]')) { later(w, rnd(2000, 4000)); return; }
     const [dx, dy] = w.roam, [hx, hy] = w.home, top = Math.max(walkTop(S.place, hx), hy);
     const goal = [hx + rnd(-dx, dx), Math.max(12, Math.min(top, hy + rnd(-dy, dy)))];
@@ -80,14 +84,16 @@ const TOWNLIFE = (() => {
     const old = S.yard.querySelector(`.ysay[data-who="${id}"]`); if (old) old.remove();
     const el = yBubble(S.yard, w.pos[0] + 600, 370 - w.pos[1] - 196 * yScale(w.pos[1]) * w.k, ruby(ja), ms);
     if (el) el.dataset.who = id;
+    if (!w.pairing) later(w, ms + rnd(500, 2000));   // the words stay over them: no stroll while they show
   };
   function chatter() {
     if (!alive()) { stop(); return; }
     S.bt = setTimeout(chatter, rnd(api.gap[0], api.gap[1]));
     if (api.still || document.hidden || talking() || S.leaving || S.pairing) return;
-    const idle = [...S.w.values()].filter((w) => !w.walk && !w.held);
+    const idle = [...S.w.values()].filter((w) => !w.walk && !w.held && !w.near);
     if (Math.random() < 1 / 3 && tryPair(idle)) return;
-    const can = idle.map((w) => { const x = TOWNEV.chatCtx(w.id); return [w, ((TOWN.MUTTER || {})[w.id] || []).filter((l) => sayable(w.id, l, x))]; }).filter(([, ls]) => ls.length);
+    const m = TOWNEV.chatMem();   // read once a tick
+    const can = idle.map((w) => { const x = TOWNEV.chatCtx(w.id, m); return [w, ((TOWN.MUTTER || {})[w.id] || []).filter((l) => sayable(w.id, l, x))]; }).filter(([, ls]) => ls.length);
     if (!can.length) return;
     const [w, ls] = can[Math.floor(Math.random() * can.length)];
     api.say(w.id, ls[Math.floor(Math.random() * ls.length)][1]);
@@ -104,11 +110,13 @@ const TOWNLIFE = (() => {
   function pair(a, b, lines) {
     const A = S.w.get(a), B = S.w.get(b); if (!A || !B) return;
     const s = S; s.pairing = true; [A, B].forEach((w) => { w.held = true; w.pairing = true; halt(w, false); clearTimeout(w.t); HERO.still(w.el); });
+    const end = () => { if (S !== s || !s.pairing) return; s.pairing = false; s.endPair = null; [A, B].forEach((w) => { w.held = false; w.pairing = false; later(w, rnd(2000, 5000)); }); };
+    s.endPair = end;   // one of them tapped on the way over: no talk, both free again (hold)
     const talk = () => {
-      if (S !== s || !alive()) return;
+      if (S !== s || !alive() || !s.pairing) return;
       turnTo(A, B.pos[0]); turnTo(B, A.pos[0]);
-      lines.forEach(([who, ja], i) => s.t.push(setTimeout(() => { if (S === s && alive() && !talking()) api.say(who, ja, 1900); }, i * 2000)));
-      s.t.push(setTimeout(() => { if (S !== s) return; s.pairing = false; [A, B].forEach((w) => { w.held = false; w.pairing = false; later(w, rnd(2000, 5000)); }); }, lines.length * 2000 + 400));
+      lines.forEach(([who, ja], i) => s.t.push(setTimeout(() => { if (S === s && alive() && s.pairing && !talking()) api.say(who, ja, 1900); }, i * 2000)));
+      s.t.push(setTimeout(end, lines.length * 2000 + 400));
     };
     const far = Math.hypot(A.pos[0] - B.pos[0], A.pos[1] - B.pos[1]) > 160, mover = far && !calm() && !api.still ? (A.roam ? A : B.roam ? B : null) : null;
     if (!mover) { talk(); return; }
@@ -134,29 +142,29 @@ const TOWNLIFE = (() => {
     if (!S || S.yard !== yard || S.indoor || api.still || calm()) { done(); return; }
     const now = TOWNEV.here(place), there = new Set(now.map((p) => p.id)), going = [...S.w.keys()].filter((id) => !there.has(id));
     const from = {}; now.forEach(({ id, spot }) => { const w = S.w.get(id); if (w && Math.hypot(spot.X - w.home[0], spot.Y - w.home[1]) > 1) from[id] = w.pos.slice(); });
-    coming = { place, ids: [...there].filter((id) => !S.w.has(id)), from };
+    coming = { place, ids: [...there].filter((id) => !S.w.has(id)), from, at: Date.now() };
     if (!going.length) { done(); return; }
     const s = S; s.leaving = true; let left = going.length, fin = false;
-    const end = () => { if (fin) return; fin = true; if (S === s) s.leaving = false; done(); };
+    const end = () => { if (fin) return; fin = true; if (S === s) s.leaving = false; if (s.yard.isConnected) done(); };   // gone elsewhere meanwhile: nothing to draw
     s.t.push(setTimeout(end, 4000));
     going.forEach((id) => {
-      const w = s.w.get(id); w.held = true; w.leaving = true; clearTimeout(w.t); halt(w, false);
+      const w = s.w.get(id); w.held = true; w.leaving = true; clearTimeout(w.t); halt(w, false); w.el.classList.remove('bench', 'kneel');   // up off the bench first
       walk(w, wayOut(id, place, w.pos), () => { w.el.classList.add('out'); if (--left === 0) s.t.push(setTimeout(end, 300)); }, { free: true, within: 3.4 });
     });
   };
   api.start = function start(yard, place) {
     stop();
     S = { yard, place, indoor: INDOOR.includes(place), w: new Map(), raf: 0, bt: 0, t: [], leaving: false, pairing: false };
-    const c = coming && coming.place === place && !S.indoor && !api.still && !calm() ? coming : { ids: [], from: {} }, walkIn = c.ids, moved = c.from; coming = null;
+    const c = coming && coming.place === place && Date.now() - coming.at < 8000 && !S.indoor && !api.still && !calm() ? coming : { ids: [], from: {} }, walkIn = c.ids, moved = c.from; coming = null;   // an old one (left meanwhile): none
     yard.querySelectorAll('.npc[data-npc]').forEach((el) => {
       const r = (el.dataset.roam || '0').split(',').map(Number), home = [Number(el.dataset.x), Number(el.dataset.y)];
       const w = { el, id: el.dataset.npc, home, pos: home.slice(), k: Number(el.dataset.k) || 1, roam: r.length === 2 ? r : null, run: el.dataset.run === '1',
         back: el.classList.contains('back'), turn: el.classList.contains('turn'), flip: el.classList.contains('flip'), held: false, near: false, waved: false, walk: null };
       S.w.set(w.id, w);
-      const seated = el.matches('.bench, .kneel') || (S.indoor && el.matches('.npc-go, .npc-teppei'));   // they nod, cook (CSS) already
-      if (!seated) HERO.idle(el, () => free(w) && !w.walk, true);
-      const was = moved[w.id];   // in from the way they come, or over from their last spot here
-      if (walkIn.includes(w.id) || was) { w.pos = was || wayIn(w.id, place, home); put(w); walk(w, home, () => later(w, rnd(4000, 8000)), { free: !was, within: 3.4 }); }
+      const seated = el.matches('.bench, .kneel'), busy = seated || (S.indoor && el.matches('.npc-go, .npc-teppei'));   // they nod, cook (CSS) already
+      if (!busy) HERO.idle(el, () => free(w) && !w.walk, true);
+      const was = moved[w.id];   // in from the way they come, or over from their last spot here (the seated: there already)
+      if ((walkIn.includes(w.id) || was) && !seated) { w.pos = was || wayIn(w.id, place, home); put(w); walk(w, home, () => later(w, rnd(4000, 8000)), { free: !was, within: 3.4 }); }
       else if (w.roam) later(w, rnd(1000, 5000));   // the first strolls soon, not all at once
     });
     S.bt = setTimeout(chatter, rnd(api.gap[0] / 2, api.gap[1] / 2));
@@ -165,6 +173,7 @@ const TOWNLIFE = (() => {
   // tapped: still where they are until the talk is over (TALK.close → release), or a while if it never opens (tapped elsewhere)
   api.hold = (id) => {
     const w = S && S.w.get(id); if (!w) return null;
+    if (w.pairing && S.endPair) S.endPair();
     w.held = true; halt(w); HERO.still(w.el);
     clearTimeout(w.ht); w.ht = setTimeout(() => { if (!talking() && !w.pairing && !w.leaving) w.held = false; }, 8000);
     return w.pos.slice();

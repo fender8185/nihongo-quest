@@ -205,11 +205,12 @@ const TOWNEV = (() => {
   // state.town.talks (synced, the larger count): the chats with each
   const HAIR = ['fringe', 'sides', 'hairBack', 'hairTop', 'hairColor'];
   const chatMem = () => { try { const m = JSON.parse(localStorage.getItem('nq_chat') || 'null'); return m && typeof m === 'object' ? m : {}; } catch (e) { return {}; } };
+  const hash = (s) => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };   // a look in a few letters
   function chatCtx(id, m = chatMem()) {
-    const at = whereIs(id, now(), today()), d = today(), sig = JSON.stringify([state.look, state.wear]), saw = (m.saw || {})[id];
-    const hair = (s) => { try { const lk = JSON.parse(s)[0] || {}; return HAIR.map((k) => lk[k]).join(); } catch (e) { return ''; } };
+    const at = whereIs(id, now(), today()), d = today(), lk = state.look || {}, sig = 'L' + hash(JSON.stringify([lk, state.wear])), hair = 'L' + hash(JSON.stringify(HAIR.map((k) => lk[k])));
+    const saw = Array.isArray((m.saw || {})[id]) ? m.saw[id] : [];   // [the look, the hair] they last saw (an older form: as if never seen)
     return { R: reachedIdx(), unitIdx, at: at ? at.place : '', h: now(), we: d.getDay() === 0 || d.getDay() === 6, done: state.town.done, day: dateStr(d), seen,
-      talks: (state.town.talks || {})[id] || 0, lookSig: sig, lookChanged: Boolean(saw) && saw !== sig, hairChanged: Boolean(saw) && hair(saw) !== hair(sig),
+      talks: Number((state.town.talks || {})[id]) || 0, lookSig: sig, hairSig: hair, lookChanged: Boolean(saw[0]) && saw[0] !== sig, hairChanged: Boolean(saw[1]) && saw[1] !== hair,
       wear: Object.values(state.wear || {}).concat(['topStyle', 'bottomStyle', 'shoeStyle'].map((k) => (state.look || {})[k])).filter((v) => typeof v === 'string'),
       fest: typeof saleOn === 'function' && saleOn('halloween', saleNow() || dateStr(d)) ? ['halloween'] : [] };   // 古道具屋's sale days, by the server's day when known
   }
@@ -217,9 +218,10 @@ const TOWNEV = (() => {
     const m = chatMem(), x = chatCtx(id, m), said = (m.said || {})[id] || [];
     const p = CHATPICK.pick(id, T().CHAT[id] || [], x, { said, news: m.news || {} });
     if (p && p.news) m.news = Object.assign({}, m.news, { [p.key]: 1 }); else if (p) m.said = Object.assign({}, m.said, { [id]: said.concat(p.key).slice(-5) });
-    m.saw = Object.assign({}, m.saw, { [id]: x.lookSig });
+    Object.keys(m.news || {}).forEach((k) => { const l = k.match(/@(L[0-9a-z]+)$/); if (l && l[1] !== x.lookSig) delete m.news[k]; });   // a look's news told for a look no longer worn: let go
+    m.saw = Object.assign({}, m.saw, { [id]: [x.lookSig, x.hairSig] });
     try { localStorage.setItem('nq_chat', JSON.stringify(m)); } catch (e) { /* no storage: they may say it again */ }
-    state.town.talks = Object.assign({}, state.town.talks, { [id]: x.talks + 1 }); saveState();
+    state.town.talks = Object.assign({}, state.town.talks, { [id]: x.talks + 1 }); saveLocal();   // kept here; the next save takes it to the cloud (no upload a chat)
     return p ? [p.line[1], p.line[2]] : ['……', '……'];
   }
   // a tap on someone: the hero walks over, turns to them, and their event if one waits on them here (done: its 言靈, the mark
@@ -244,7 +246,7 @@ const TOWNEV = (() => {
     const p = el.closest('.yard').querySelector(`.npc-${o}`);
     if (p) talk(p); else toast(`${T().CAST[o].name}現在不在店裡。`);
   }
-  const api = { unitIdx, reachedIdx, started, studyDaysSince, due, opened, openN, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, chatCtx, hop, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
+  const api = { unitIdx, reachedIdx, started, studyDaysSince, due, opened, openN, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, chatCtx, chatMem, hop, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
   return api;
 })();
 // the bed (test, 2026-11-10; the user's call): once the day's practice is done (書桌上的筆記本「今日完成」), a sleep there moves the
@@ -401,7 +403,7 @@ const DIARY = (() => {
   function tool(b) {
     const t = b.dataset.tool;
     if (t === 'meet') { Object.keys(TOWN.CAST).forEach((id) => { if (TOWN.CAST[id].art !== 'npc') state.town.seen[id] = 1; }); BUS_STOPS.forEach(([id]) => { state.town.stops[id] = 1; }); saveState(); toast('認識所有人、開通所有公車站了'); }
-    if (t === 'reset') { state.town = { done: {}, seen: {}, stops: {} }; Object.keys(state.koto.found).filter((k) => k.startsWith('ev-')).forEach((k) => delete state.koto.found[k]); saveState(); toast('小鎮事件從頭開始'); }
+    if (t === 'reset') { state.town = { done: {}, seen: {}, stops: {}, talks: {} }; try { localStorage.removeItem('nq_chat'); } catch (e) { /* none kept */ } Object.keys(state.koto.found).filter((k) => k.startsWith('ev-')).forEach((k) => delete state.koto.found[k]); saveState(); toast('小鎮事件從頭開始'); }
     if (t === 'hour') { TOWNEV.clock = b.dataset.h === 'now' ? null : { h: Number(b.dataset.h), day: new Date() }; if (b.dataset.h === 'now') { try { localStorage.removeItem('nq_wake'); } catch (e) { /* none kept */ } sceneTick(); } }   // 現在: a sleep's hours gone too
     show();
   }
@@ -502,7 +504,7 @@ const TALK = (() => {
     });
     root.appendChild(el); show();
   }
-  function close() { if (cur) { if (cur.spoke !== undefined) stopSpeaking(); cur.el.remove(); cur = null; } TOWNLIFE.release(); }   // what was being said stops with it; whoever was held strolls on
+  function close() { const was = Boolean(cur); if (cur) { if (cur.spoke !== undefined) stopSpeaking(); cur.el.remove(); cur = null; } TOWNLIFE.release(); if (was) setTimeout(() => { if (document.body.classList.contains('scene')) sceneMinute(); }, 0); }   // what was being said stops with it; whoever was held strolls on; the hour's changes kept back meanwhile, now
   return { open, close, on: () => Boolean(cur && cur.el.isConnected) };
 })();
 // every line the talks can read aloud, and whose it is: the generator makes each a clip in its speaker's voice (CAST_VOICE)
