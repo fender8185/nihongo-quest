@@ -16,6 +16,7 @@ window.__fake = (function () {
   const refused = (p) => { if (!api.guard || !row) return null; const was = recs(row.state), now = recs(p.state);
     const reset = !!(p.state && p.state.resetAt) && p.state.resetAt !== (row.state && row.state.resetAt);
     return was >= 10 && now * 2 < was && !reset ? { code: '23514', message: `refused: this would replace ${was} learning records with ${now}`, hint: 'progress shrink' } : null; };
+  const opened = async (p) => Object.assign({}, p, { state: await SyncCore.unpackState(p.state), wire: p.state });
   const client = {
     auth: {
       onAuthStateChange(cb) { listeners.push(cb); return { data: { subscription: { unsubscribe() {} } } }; },
@@ -29,13 +30,15 @@ window.__fake = (function () {
       select(cols) { calls.push(['select', cols]); return { eq() { return { async maybeSingle() {
         if (!row) return { data: null, error: null };
         const d = {}; String(cols).split(',').map(c => c.trim()).forEach(c => { d[c] = row[c]; }); return { data: d, error: null }; } }; } }; },
-      async upsert(p) { const no = refused(p); calls.push([no ? 'upsert-refused' : 'upsert', p]); if (no) return { error: no }; row = p; return { error: null }; },
+      // uploads are packed (1.14.0-test.2): the row keeps the state opened, so a test reads it as it is, and what went over the
+      // wire in wire (and in calls)
+      async upsert(p) { const no = refused(p); calls.push([no ? 'upsert-refused' : 'upsert', p]); if (no) return { error: no }; row = await opened(p); return { error: null }; },
       // conditional write: UPDATE ... WHERE user_id = ? AND updated_at = ? RETURNING updated_at (same instant, any spelling)
       update(p) { return { eq(k1, v1) { return { eq(k2, v2) { return { async select() {
         const hit = row && row[k1] === v1 && new Date(row[k2]).getTime() === new Date(v2).getTime();
         const no = hit && refused(p); if (no) { calls.push(['update-refused', p]); return { data: null, error: no }; }
         calls.push([hit ? 'update' : 'update-miss', p]);
-        if (hit) { row = Object.assign({}, row, p); return { data: [{ updated_at: row.updated_at }], error: null }; }
+        if (hit) { row = Object.assign({}, row, await opened(p)); return { data: [{ updated_at: row.updated_at }], error: null }; }
         return { data: [], error: null }; } }; } }; } }; },
       delete() { return { async eq() { row = null; calls.push(['delete']); return { error: null }; } }; }
     }; }
@@ -73,6 +76,60 @@ def test_a_packed_cloud_row_is_opened_and_adopted(b):
         ("eval", "JSON.stringify({ goal: state.settings.loadCap, rec: state.srs['v:n5a-001'] && state.srs['v:n5a-001'].b, packedLeft: 'gz' in state, ever: Sync.meta.everSynced })"),
     ])
     assert out[-4] is True and out[-1] == '{"goal":55,"rec":3,"packedLeft":false,"ever":true}', out
+
+# 1.14.0-test.2 (2026-11-12): uploads go packed, with what the database reads (n, resetAt, day, owned) outside the gzip
+def test_an_upload_goes_packed_with_its_counts_outside(b):
+    rec = "{ b: 3, due: '2026-12-01', n: 4, ok: 4, ng: 0, last: '2026-11-01' }"
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
+        ("eval", f"__fake.calls.length = 0; state.srs = {{ 'v:n5a-001': {rec}, 'v:n5a-002': {rec} }}; state.dailyLogs = {{ '2026-11-09': {{ new: 1 }}, '2026-11-11': {{ new: 2 }} }}; state.owned = {{ obake: {{ paid: 30 }} }}; state.settings.loadCap = 66; saveState(); true"),
+        ("wait", "__fake.getRow() && __fake.getRow().state.settings.loadCap === 66 && Sync.status === 'idle'"),
+        ("eval", "const w = __fake.getRow().wire; JSON.stringify({ packed: SyncCore.isPacked(w), n: w.n, day: w.day, owned: w.owned, resetAt: w.resetAt, outside: Object.keys(w).sort(), "
+                 "small: JSON.stringify(w).length < JSON.stringify(__fake.getRow().state).length, recs: Object.keys(__fake.getRow().state.srs).length, tts: __fake.getRow().state.ttsConfig })"),
+    ])
+    assert out[-1] == '{"packed":true,"n":2,"day":"2026-11-11","owned":{"obake":{"paid":30}},"resetAt":"","outside":["day","gz","n","nqz","owned","resetAt"],"small":true,"recs":2,"tts":null}', out[-1]
+
+# a browser without CompressionStream (Safari before 16.4) sends the progress plain
+def test_without_compression_the_upload_goes_plain(b):
+    out = b.run([("inject", "delete window.CompressionStream"), ("nav", URL), ("wait", READY), ("eval", FAKE),
+        ("eval", "new Promise(r => setTimeout(r, 50)).then(() => Sync.init({ client: __fake.client })).then(() => typeof CompressionStream)"),
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
+        ("eval", "state.settings.loadCap = 66; saveState(); true"),
+        ("wait", "__fake.getRow() && __fake.getRow().state.settings.loadCap === 66 && Sync.status === 'idle'"),
+        ("eval", "const w = __fake.getRow().wire; JSON.stringify({ packed: SyncCore.isPacked(w), goal: w.settings.loadCap, nqz: 'nqz' in w })")])
+    assert out[-4] == "undefined", out
+    assert out[-1] == '{"packed":false,"goal":66,"nqz":false}', out[-1]
+
+# an app before 1.9.0 that pulled a packed row took it for an empty progress and kept the pack in its own; updated, the app
+# opens it at start, keeps the pack's settings and adds what was answered since, and that goes up
+def test_a_pack_an_old_app_kept_is_opened_at_start(b):
+    rec = "{ b: 3, due: '2026-12-01', n: 4, ok: 4, ng: 0, last: '2026-11-01' }"
+    cloud = "{ v: 3, updatedAt: '2026-11-10T00:00:00.000Z', settings: { loadCap: 55 }, srs: { 'v:n5a-001': " + rec + " } }"
+    out = b.run([("nav", URL), ("wait", READY), ("eval", FAKE),
+        ("eval", "SyncCore.packState(" + cloud + ").then(p => { __fake.setRow({ user_id: 'u1', state: p, updated_at: '2026-11-10T00:00:00.000Z' });"
+                 "  state = normalizeState(JSON.parse(JSON.stringify(p))); state.srs['v:n5a-002'] = { b: 1, due: '2026-11-13', n: 1, ok: 1, ng: 0, last: '2026-11-12' };"
+                 "  state.updatedAt = '2026-11-12T00:00:00.000Z'; state.ttsConfig = { engine: 'cloud', googleKey: 'LOCALKEY' };"
+                 "  return Promise.all([Store.set('state', state), Store.set('meta', { deviceId: 'dev_old', userId: 'u1', everSynced: true, pendingSync: false, lastPulledUpdatedAt: '2026-11-10T00:00:00.000Z' })]); })"
+                 ".then(() => JSON.stringify({ kept: SyncCore.isPacked(state), goal: state.settings.loadCap }))"),
+        ("eval", "__fake.login('a@b.c'); Sync.init({ client: __fake.client }).then(() => JSON.stringify({ kept: 'gz' in state || 'n' in state, goal: state.settings.loadCap, recs: Object.keys(state.srs).sort(), key: state.ttsConfig.googleKey, had: Sync.meta.hadProgress }))"),   # a phone opens logged in
+        ("wait", "Sync.status === 'idle' && __fake.calls.some(c => c[0] === 'update')"),
+        ("eval", "JSON.stringify({ cloud: Object.keys(__fake.getRow().state.srs).sort(), goal: __fake.getRow().state.settings.loadCap, packed: SyncCore.isPacked(__fake.getRow().wire) })")])
+    assert out[-3] == '{"kept":true,"goal":100}', out   # what the old app left: the pack, and the default settings
+    assert out[-2] == '{"kept":false,"goal":55,"recs":["v:n5a-001","v:n5a-002"],"key":"LOCALKEY","had":true}', out
+    assert out[-1] == '{"cloud":["v:n5a-001","v:n5a-002"],"goal":55,"packed":true}', out   # the record answered since went up
+
+# 1.8.2's guard reads a packed cloud row too: a device that lost its progress takes the cloud's back and writes nothing
+def test_an_empty_progress_takes_a_packed_cloud_back(b):
+    rec = "{ 'v:n5a-001': { b: 3, due: '2026-12-01', n: 4, ok: 4, ng: 0, last: '2026-11-01' } }"
+    out = boot(b, [
+        ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle'"),
+        ("eval", f"state.srs = {rec}; saveState(); true"), ("wait", "Sync.status === 'idle' && SyncCore.isPacked(__fake.getRow().wire)"),
+        ("eval", f"SyncCore.packState({{ v: 3, updatedAt: state.updatedAt, srs: {rec} }}).then(p => {{ __fake.setRow(Object.assign({{}}, __fake.getRow(), {{ state: p }})); return true; }})"),   # the row as the database keeps it
+        ("eval", "__fake.calls.length = 0; state = normalizeState(defaultState()); saveState(); Sync.push(); true"),   # this device lost its progress
+        ("wait", "Sync.status === 'idle' && __fake.calls.some(c => c[0] === 'select')"),
+        ("eval", "JSON.stringify({ writes: __fake.calls.filter(c => /update|upsert/.test(c[0])).length, back: !!state.srs['v:n5a-001'], gz: 'gz' in state })"),
+    ])
+    assert out[-1] == '{"writes":0,"back":true,"gz":false}', out[-1]
 
 def test_save_pushes_after_debounce_without_secrets(b):
     out = boot(b, [
@@ -369,7 +426,9 @@ if __name__ == "__main__":
              test_push_uses_a_conditional_update_once_the_device_has_synced, test_stale_device_does_not_overwrite_progress_made_elsewhere, test_cloud_changed_elsewhere_is_adopted_even_when_its_clock_is_behind,
              test_row_deleted_elsewhere_is_recreated_without_looping, test_conflict_during_a_session_waits_and_never_overwrites_the_cloud, test_a_pull_downloads_the_progress_only_when_the_cloud_changed, test_a_practice_set_goes_up_once_at_its_end_or_when_the_app_is_hidden, test_conflict_merges_both_sides_record_by_record_and_uploads_the_merge, test_conflict_merge_redoes_todays_list_from_the_merged_progress,
              test_old_snapshots_are_deleted_and_no_new_ones_are_taken, test_a_packed_cloud_row_is_opened_and_adopted, test_an_empty_progress_never_replaces_the_clouds_and_only_a_reset_does,
-             test_an_upgraded_device_counts_its_progress_at_once, test_a_refused_shrink_is_merged_with_the_cloud_and_the_merge_goes_up]
+             test_an_upgraded_device_counts_its_progress_at_once, test_a_refused_shrink_is_merged_with_the_cloud_and_the_merge_goes_up,
+             test_an_upload_goes_packed_with_its_counts_outside, test_without_compression_the_upload_goes_plain,
+             test_a_pack_an_old_app_kept_is_opened_at_start, test_an_empty_progress_takes_a_packed_cloud_back]
     failed = 0
     try:
         for t in tests:

@@ -198,9 +198,9 @@
     return { state: state, updated_at: state.updatedAt, device_id: deviceId };
   }
 
-  // A progress row may hold its state packed, { nqz: 1, gz: '<gzip of the state's JSON, base64>' }: a tenth of the size, so a
-  // set's upload stays small as the records grow (2026-11-11). Every version from 1.8.x reads it; writing it comes once the
-  // phones that cannot read it are gone. Plain states (anything else) pass through.
+  // A progress row holds its state packed, { nqz: 1, gz: '<gzip of the state's JSON, base64>' }: a tenth of the size, so a
+  // set's upload stays small as the records grow. Every version from 1.9.0 reads it (2026-11-11); uploads are packed since
+  // 1.14.0-test.2 (2026-11-12). Plain states (anything else) pass through.
   function isPacked(s) { return Boolean(s && typeof s === 'object' && s.nqz === 1 && typeof s.gz === 'string'); }
   async function streamBytes(bytes, stream) {
     const out = await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer();
@@ -208,10 +208,16 @@
   }
   function toB64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
   function fromB64(b64) { const s = atob(b64), u8 = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u8[i] = s.charCodeAt(i); return u8; }
+  // the fields a packed state shows outside the gzip; an app before 1.9.0 that pulled a packed row kept them in its own progress
+  const PACK_KEYS = ['nqz', 'gz', 'n', 'day'];
+  function withoutPack(state) { const s = Object.assign({}, state); PACK_KEYS.forEach(k => { delete s[k]; }); return s; }
   async function packState(state) {
-    const gz = await streamBytes(new TextEncoder().encode(JSON.stringify(state)), new CompressionStream('gzip'));
-    // n and resetAt stay readable outside the gzip: the cloud's guard counts the records of a packed state too (1.9.1)
-    return { nqz: 1, gz: toB64(gz), n: Object.keys((state && state.srs) || {}).length, resetAt: (state && state.resetAt) || '' };
+    const s = withoutPack(state);
+    const gz = await streamBytes(new TextEncoder().encode(JSON.stringify(s)), new CompressionStream('gzip'));
+    // readable outside the gzip: n and resetAt for the cloud's guard (supabase/progress-guard.sql), day (the last day practised)
+    // and owned for supabase/admin-queries.sql
+    const days = Object.keys(s.dailyLogs || {}).sort();
+    return { nqz: 1, gz: toB64(gz), n: Object.keys(s.srs || {}).length, resetAt: s.resetAt || '', day: days[days.length - 1] || '', owned: s.owned || {} };
   }
   async function unpackState(s) {
     if (!isPacked(s)) return s;
@@ -229,6 +235,6 @@
     return !(n(s.srs) || n(s.dailyLogs) || n(s.examHistory) || hasStageTests);
   }
 
-  const SyncCore = { stripSecrets, keepLocalSecrets, sameStamp, pullDecision, mergeStates, buildPushPayload, normalizeEmail, isEmptyProgress, isPacked, packState, unpackState };
+  const SyncCore = { stripSecrets, keepLocalSecrets, sameStamp, pullDecision, mergeStates, buildPushPayload, normalizeEmail, isEmptyProgress, isPacked, withoutPack, packState, unpackState };
   if (typeof module !== 'undefined' && module.exports) module.exports = SyncCore; else root.SyncCore = SyncCore;
 })(typeof window !== 'undefined' ? window : globalThis);

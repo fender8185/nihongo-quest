@@ -24,6 +24,7 @@ const Sync = {
     } catch (e) { console.warn('supabase client not created', e); this.client = null; }
     this.meta = (await Store.get('meta')) || {};
     this.meta = Object.assign({ deviceId: uid('dev'), userId: null, pendingSync: false, lastSyncedAt: null, lastPulledUpdatedAt: null, everSynced: false }, this.meta);
+    if (SyncCore.isPacked(state)) await this.reopenOwnPack();
     // 1.9.1: a device that synced before and holds progress now counts as having had it from the start, not only after its next
     // sync under this version (an upgraded device was not covered by the empty-progress guard until then)
     if (this.meta.everSynced && !SyncCore.isEmptyProgress(state)) this.meta.hadProgress = true;
@@ -43,6 +44,26 @@ const Sync = {
       const res = await this.client.auth.getSession();
       this.applySession(res && res.data && res.data.session);
     } catch (e) { this.applySession(null); }
+  },
+
+  // An app before 1.9.0 that pulled a packed row (uploads are packed since 1.14.0-test.2) took it for an empty progress and kept
+  // the pack inside its own. Updated, this opens it again and adds what was answered since, so the phone shows its progress at
+  // once instead of after the cloud refuses its next upload (2026-11-12)
+  async reopenOwnPack() {
+    try {
+      const own = SyncCore.withoutPack(state), answered = !SyncCore.isEmptyProgress(own);
+      own.updatedAt = '';   // the pack wins everything but the records
+      state = normalizeState(SyncCore.keepLocalSecrets(SyncCore.mergeStates(await SyncCore.unpackState(state), own), state));
+      buildRegistry();
+      if (answered) { state.updatedAt = new Date().toISOString(); this.meta.pendingSync = true; }
+      await Store.set('state', state);
+      if (!modalOpen()) route();
+    } catch (e) { console.warn('own pack not opened', e); }
+  },
+
+  // packed for the cloud; a browser without CompressionStream (Safari before 16.4) sends it plain
+  async packed(s) {
+    try { return await SyncCore.packState(s); } catch (e) { return SyncCore.withoutPack(s); }
   },
 
   applySession(session) {
@@ -99,7 +120,8 @@ const Sync = {
     toast('已刪除雲端資料，本機進度仍保留');
   },
 
-  // The whole progress goes up each time (~230 KB mid-course, ~1 MB at the end of N3), so a practice set or exam sends it once
+  // The whole progress goes up each time (~230 KB mid-course, ~1 MB at the end of N3; packed a tenth of that since
+  // 1.14.0-test.2), so a practice set or exam sends it once
   // at its end (flushDeferred) instead of 2 s after every answer; the app going to the background sends it at once. (1.0.38)
   schedulePush() {
     if (!this.session || !this.client) return;
@@ -129,9 +151,11 @@ const Sync = {
       if (SyncCore.isEmptyProgress(state) && this.meta.hadProgress && !this.allowEmpty) {
         const { data: row, error: rowError } = await this.client.from('progress').select('state, updated_at').eq('user_id', session.user.id).maybeSingle();
         if (rowError) throw rowError;
+        if (row) row.state = await SyncCore.unpackState(row.state);
         if (row && !SyncCore.isEmptyProgress(row.state)) { await this.applyCloud(row); this.lastError = null; this.setStatus('idle'); return; }
       }
       const payload = Object.assign({ user_id: session.user.id }, SyncCore.buildPushPayload(SyncCore.stripSecrets(state), this.meta.deviceId));
+      payload.state = await this.packed(payload.state);
       const base = this.meta.everSynced ? this.meta.lastPulledUpdatedAt : null;
       if (base) {
         const { data, error } = await this.client.from('progress').update(payload).eq('user_id', session.user.id).eq('updated_at', base).select('updated_at');

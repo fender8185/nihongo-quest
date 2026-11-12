@@ -1,13 +1,14 @@
 -- Nihongo Quest: looking up the learners (2026-11-12). Paste one into the Supabase SQL Editor and run it; nothing here changes
 -- anything. Only learners who log in have a progress row here: one who never did keeps theirs on their own device (a letter to
 -- them goes by what their progress holds — mail.sql's who, e.g. {"owns": …}).
--- (Should progress ever be stored packed — sync-packing-plan, step 2 — state becomes {"nqz": 1, "gz": …} and these read only
--- the rows not yet packed.)
+-- Since 1.14.0-test.2 (2026-11-12) progress goes up packed: state is {"nqz": 1, "gz": …, "n", "resetAt", "day", "owned"}, the
+-- gzip unreadable here, so these read n (things learned), day (the last day practised) and owned outside it, or the plain
+-- fields of a row not packed yet.
 
 -- everyone, newest account first: when they joined, the last day they practised, how many things they have learned
 select u.email, u.created_at::date as joined,
-       (select max(k) from jsonb_object_keys(p.state->'dailyLogs') k) as last_day,
-       (select count(*) from jsonb_object_keys(p.state->'srs')) as learned
+       coalesce(nullif(p.state->>'day', ''), (select max(k) from jsonb_object_keys(p.state->'dailyLogs') k)) as last_day,
+       coalesce((p.state->>'n')::int, (select count(*)::int from jsonb_object_keys(p.state->'srs'))) as learned
 from auth.users u left join public.progress p on p.user_id = u.id
 order by u.created_at desc;
 
