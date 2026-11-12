@@ -68,6 +68,9 @@ function settingsLearn() {
     </details>`;
 }
 
+// Google's own G, as its sign-in buttons show it
+const GOOGLE_G = '<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true" style="flex:none;background:#fff;border-radius:50%;padding:1px"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+
 function settingsData() {
   let legacyExists = false;
   try { legacyExists = Boolean(localStorage.getItem(LEGACY_KEY)); } catch (e) { /* ignore */ }
@@ -80,8 +83,10 @@ function settingsData() {
       : Sync.pendingEmail
         ? `<div class="setting-row"><div><div class="label">輸入驗證碼</div><div class="hint">登入信已寄到 <b>${esc(Sync.pendingEmail)}</b>。把信裡的 8 位數驗證碼輸入這裡（在 iPhone 主畫面 app 裡請用這個方式）；用電腦瀏覽器的話也可以直接點信裡的連結。</div></div>
           <div class="row-wrap"><input type="text" id="syncCode" placeholder="12345678" inputmode="numeric" autocomplete="one-time-code" maxlength="8" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-verify">登入</button><button type="button" class="btn btn-sm btn-ghost" data-act="sync-cancel-code">換一個 email</button></div></div>`
-        : `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">每個人的資料各自獨立。AI 設定（含 API 金鑰與位址）只留在這台裝置，不會上傳。第一次在新裝置登入時，若雲端已有進度，會以雲端為準，這台原本的進度不會保留。</div></div>
-          <div class="row-wrap"><input type="email" id="syncEmail" placeholder="you@example.com" autocomplete="email" inputmode="email" /><button type="button" class="btn btn-sm btn-primary" data-act="sync-login">寄送登入信</button></div></div>`;
+        : `<div class="setting-row"><div><div class="label">雲端同步</div><div class="hint">每個人的資料各自獨立。AI 設定（含 API 金鑰與位址）只留在這台裝置，不會上傳。第一次在新裝置登入時，若雲端已有進度，會以雲端為準，這台原本的進度不會保留。<br>用 Google 登入不用等信；Gmail 和之前收驗證碼的信箱一樣的話，是同一個帳號、同一份進度。</div></div>
+          <button type="button" class="btn btn-sm btn-primary" data-act="sync-google">${GOOGLE_G}用 Google 登入</button></div>
+          <div class="setting-row"><div><div class="label">或用 email 登入</div><div class="hint">寄一封有 8 位數驗證碼的信。</div></div>
+          <div class="row-wrap"><input type="email" id="syncEmail" placeholder="you@example.com" autocomplete="email" inputmode="email" /><button type="button" class="btn btn-sm" data-act="sync-login">寄送登入信</button></div></div>`;
   // 重設所有進度 folds away, grey like the admin block under it, so it is hard to hit by accident (1.0.48)
   return `
     ${syncBlock}

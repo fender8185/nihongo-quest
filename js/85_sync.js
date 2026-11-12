@@ -39,11 +39,16 @@ const Sync = {
     }
     this.session = null; this.email = null;
     if (!this.client) { this.setStatus('off'); return; }
+    // back from Google (2026-11-12): ?code=, which the client trades for a login as it starts (PKCE) and takes out of the
+    // address, or ?error= when the learner cancelled there or the provider is off. Read before the client gets to it
+    const back = new URLSearchParams(location.search), arrived = back.has('code'), refused = back.get('error_description') || back.get('error');
     this.client.auth.onAuthStateChange((_evt, session) => this.applySession(session));
     try {
       const res = await this.client.auth.getSession();
       this.applySession(res && res.data && res.data.session);
     } catch (e) { this.applySession(null); }
+    if (refused) this.loginRefused(back.get('error'), refused);
+    else if (arrived && this.session) toast(`已登入 ${this.email || ''}`);
   },
 
   // An app before 1.9.0 that pulled a packed row (uploads are packed since 1.14.0-test.2) took it for an empty progress and kept
@@ -82,6 +87,22 @@ const Sync = {
       Store.set('meta', this.meta);
     }
     if (!had) { this.setStatus('idle'); this.pull(); }   // TOKEN_REFRESHED etc. keep whatever status we are in
+  },
+
+  // to Google's page and back to this address, where init() finishes the login (2026-11-12)
+  async signInGoogle() {
+    if (!this.client) { toast('尚未設定雲端同步'); return; }
+    const { error } = await this.client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
+    if (error) toast('無法開啟 Google 登入：' + error.message, 5000);
+  },
+
+  loginRefused(code, why) {
+    try {
+      const u = new URL(location.href);
+      ['error', 'error_code', 'error_description', 'state'].forEach(k => u.searchParams.delete(k));
+      history.replaceState(history.state, '', u.toString());
+    } catch (e) { /* the address stays */ }
+    toast(code === 'access_denied' ? '已取消 Google 登入' : '登入沒有完成：' + why, 6000);
   },
 
   pendingEmail: null,

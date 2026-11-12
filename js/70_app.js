@@ -236,6 +236,7 @@ function toggleFurigana() {
 // ---------- actions (event delegation) ----------
 const ACTIONS = {
   'sync-open': () => openSettings('data'),
+  'sync-google': () => Sync.signInGoogle(),
   'sync-login': async () => { const inp = document.getElementById('syncEmail'); await Sync.signIn(inp ? inp.value : ''); },
   'sync-verify': async () => { const inp = document.getElementById('syncCode'); await Sync.verifyCode(inp ? inp.value : ''); },
   'sync-cancel-code': () => { Sync.pendingEmail = null; if (modalOpen()) refreshSettings(); },

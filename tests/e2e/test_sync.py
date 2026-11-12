@@ -23,7 +23,8 @@ window.__fake = (function () {
       async getSession() { return { data: { session } } },
       async signInWithOtp({ email }) { calls.push(['otp', email]); return { error: null }; },
       async signOut() { session = null; listeners.forEach(cb => cb('SIGNED_OUT', null)); return { error: null }; },
-      async verifyOtp({ email, token, type }) { calls.push(['verify', email, token, type]); return { error: null }; }
+      async verifyOtp({ email, token, type }) { calls.push(['verify', email, token, type]); return { error: null }; },
+      async signInWithOAuth({ provider, options }) { calls.push(['oauth', provider, options && options.redirectTo]); return { data: {}, error: null }; }
     },
     from() { return {
       // only the columns asked for (1.0.38: a pull asks for updated_at first and downloads the state only when it moved)
