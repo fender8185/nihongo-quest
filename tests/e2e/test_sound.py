@@ -67,9 +67,10 @@ def test_townsfolk_speak_in_their_own_voices(b):
       const real = speakLine; speakLine = async (text, g, t, opt) => { heard.push([text, g, opt && opt.cast]); };
       speakAs('kenta', '{森|もり}です！ パン{屋|や|店}です。'); speakAs('granny', DIARY.said(DIARY.PAGES[0])); speakAs('nobody', 'はい。'); speakLine = real;
       const p = await cloudAudioPath('森です！パン屋です。', 'm', { cast: 'kenta', line: '{森|もり}です！ パン{屋|や|店}です。' });
-      return JSON.stringify({ unvoiced: who.filter((w) => !CAST_VOICE[w]), shared: voices.length - new Set(voices).size, heard: heard.map((h) => h.slice(1)), said: heard[0][0],
+      const silent = cloudAudioTexts().filter((x) => x.cast && !/[\\p{L}\\p{N}]/u.test(x.text)).length;
+      return JSON.stringify({ silent, unvoiced: who.filter((w) => !CAST_VOICE[w]), heard: heard.map((h) => h.slice(1)), said: heard[0][0],
         path: p.slice(0, 2), ssml: castSsml('{森|もり}です！ パン{屋|や|店}です。'), clips: cloudAudioTexts().filter((x) => x.cast).length >= lines.length * 0.9 }); })()"""))
-    assert r['unvoiced'] == [] and r['shared'] == 0, r   # everyone who speaks has a voice, no two the same
+    assert r['unvoiced'] == [] and r['silent'] == 0, r   # everyone who speaks has a voice (two may share one, the user); no clip for a silence
     assert r['heard'] == [['m', 'kenta'], ['f', 'granny'], ['', None]] and r['said'] == '森です！パン屋です。', r   # anyone else's line: as any line (speak)
     assert r['path'] == 'c/' and r['ssml'] == '<speak><sub alias="もり">森</sub>です！パン<sub alias="や">屋</sub>です。</speak>' and r['clips'], r
 
@@ -97,11 +98,11 @@ def test_mugi_speaks_in_a_pitched_up_boys_voice_opening_with_wan(b):
       const mugi = talkLines().filter((l) => l[0] === 'mugi').map((l) => l[1]);
       return JSON.stringify({ sent: sent.map((q) => [q.voice.name, q.audioConfig.pitch || 0, q.audioConfig.speakingRate]), opens: mugi.every((l) => /^ワン！|^……ワン。$/.test(l)),
         ends: mugi.filter((l) => /(ワン|わん)(?=[。！？!?…」]|\\s|$)/.test(l.replace(/^ワン！/, ''))) }); })()"""))
-    assert r['sent'] == [['ja-JP-Neural2-D', 6, 1.1], ['ja-JP-Chirp3-HD-Autonoe', 0, 1.02]], r   # her pitch set by Google; anyone on Chirp none
+    assert r['sent'] == [['ja-JP-Neural2-D', 6, 1.1], ['ja-JP-Chirp3-HD-Leda', 0, 1.04]], r   # her pitch set by Google; anyone on Chirp none
     assert r['opens'] and r['ends'] == ['……ワン。'], r   # every line of hers opens with ワン！ and none ends in it (but the one that is only a bark)
 
 def test_voices_to_try_are_listed_under_theirs_and_made_with_that_voice(b):
-    r = json.loads(ev(b, """(async () => { openSettings('data'); await new Promise((q) => setTimeout(q, 200));
+    r = json.loads(ev(b, """(async () => { CAST_TRY.koharu = [['Achernar', 1, 0, 'a'], ['Erinome', 1, 0, 'b']]; openSettings('data'); await new Promise((q) => setTimeout(q, 200));
       const tries = [...document.querySelectorAll('#castPreviewBox .cast-try [data-act="cast-preview"]')].map((x) => [x.dataset.who, x.dataset.try]), asked = [];
       const realF = fetchEngineBlob, realP = playUrl; playUrl = async () => true;
       fetchEngineBlob = async (cfg, text, g, opt) => { asked.push([g, opt.cast, opt.voice || null]); return new Blob([new Uint8Array(4000)], { type: 'audio/mpeg' }); };
@@ -110,7 +111,7 @@ def test_voices_to_try_are_listed_under_theirs_and_made_with_that_voice(b):
       fetchEngineBlob = realF; playUrl = realP;
       const p1 = await cloudAudioPath('x', 'f', { cast: 'koharu', line: 'はい。', voice: ['Achernar', 1, 0] }), p2 = await cloudAudioPath('x', 'f', { cast: 'koharu', line: 'はい。' });
       return JSON.stringify({ tries, asked, differ: p1 !== p2 }); })()"""))
-    assert r['tries'] == [['koharu', str(k)] for k in range(5)], r
+    assert r['tries'] == [['koharu', '0'], ['koharu', '1']], r
     assert r['asked'] == [['f', 'koharu', None], ['f', 'koharu', ['Achernar', 1, 0]]] and r['differ'], r
 
 def test_the_world_goes_quiet_while_japanese_is_read(b):

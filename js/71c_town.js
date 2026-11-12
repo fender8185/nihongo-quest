@@ -439,7 +439,7 @@ const TALK = (() => {
   const who = (id) => (id === 'hero' ? { name: '我', role: '' } : NPCS[id] || TOWN.CAST[id]);
   // a line as shown: { id, ja, zh, kind } or a reply choice { ask, opts }
   const line = (l) => (!cur.ev ? { id: cur.id, ja: l[0], zh: l[1], kind: l[2] } : Array.isArray(l) ? { id: l[0], ja: l[1], zh: l[2] } : l);
-  const say = (ja, id) => `<button type="button" class="talk-say" data-talk="say" data-ja="${esc(ja)}" data-who="${esc(id)}" aria-label="唸出來">${icon('speaker')}</button>`;   // in their own voice (speakAs)
+  const say = (ja, id) => (castSays(ja) ? `<button type="button" class="talk-say" data-talk="say" data-ja="${esc(ja)}" data-who="${esc(id)}" aria-label="唸出來">${icon('speaker')}</button>` : '');   // in their own voice (speakAs); a silence 「…………。」: none
   function show() {
     const L = cur.said || line(cur.lines[cur.i]);
     if (L.ask) {

@@ -113,7 +113,7 @@ const CLOUD_ZH_VOICE = { languageCode: 'cmn-TW', name: 'cmn-TW-Wavenet-A' };   /
 // voice, the rate, the pitch and the SSML; the generator makes one for every line the talks can read (talkLines). Not made
 // yet: the device's voice reads it, a man's or a woman's as theirs ----
 const CAST_VOICE = {
-  hero: ['Aoede', 1], koharu: ['Autonoe', 1.02], mugi: ['Neural2-D', 1.1, 6], granny: ['Sulafat', 0.9],
+  hero: ['Aoede', 1], koharu: ['Leda', 1.04], mugi: ['Neural2-D', 1.1, 6], granny: ['Sulafat', 0.9],
   kenta: ['Achird', 1], miku: ['Leda', 1.08], hina: ['Laomedeia', 1.02], kazuko: ['Gacrux', 0.95], lin: ['Despina', 1],
   tome: ['Pulcherrima', 1.04], go: ['Alnilam', 0.97], teppei: ['Algenib', 1], nagisa: ['Algieba', 0.94], taro: ['Puck', 1.06],
   harada: ['Iapetus', 1], kobayashi: ['Orus', 1], matsu: ['Callirrhoe', 0.92], genzo: ['Enceladus', 0.9], misaki: ['Vindemiatrix', 1],
@@ -122,10 +122,9 @@ const CAST_VOICE = {
 };
 // ムギ (2026-11-12, the user, by ear): a boy's voice pitched up, a mascot's — a grown man saying ワン, or a real bark beside a
 // plain voice, broke the spell; her lines open with ワン！ and no longer end in it (events.js 42)
-// voices to try for someone before theirs changes (試聽角色聲音 lists them under their row): [voice, rate, pitch, what it is].
-// 2026-11-12, the user: 小春 sounded a little old — something thinner and softer (two sharing a voice is fine, or a pitch)
-const CAST_TRY = { koharu: [['Achernar', 1, 0, '柔和（Achernar，和千早同一個聲音）'], ['Erinome', 1.02, 0, '清亮（Erinome，沒人用）'], ['Leda', 1.04, 0, '年輕（Leda，和美玖同一個聲音）'],
-  ['Autonoe', 1.02, 2, '原本的聲音調高 2 個半音（Chirp 聽起來沒變的話，就是不支援調音高）'], ['Neural2-B', 1.02, 2, 'Neural2 B 女聲調高 2 個半音（一定會變高，但沒那麼自然）']] };
+// voices to try for someone before theirs changes (試聽角色聲音 lists them under their row): { who: [[voice, rate, pitch, what
+// it is]] }. None now: 小春 (2026-11-12, the user: she sounded a little old) took Leda, with 美玖 — two sharing a voice is fine
+const CAST_TRY = {};
 const OLD_VOICE = /^(Neural2|Wavenet|Standard)-/;
 const CAST_WOMEN = new Set(['Achernar', 'Aoede', 'Autonoe', 'Callirrhoe', 'Despina', 'Erinome', 'Gacrux', 'Kore', 'Laomedeia', 'Leda', 'Pulcherrima', 'Sulafat', 'Vindemiatrix', 'Zephyr', 'Neural2-B', 'Wavenet-A', 'Wavenet-B', 'Standard-A', 'Standard-B']);
 const castOf = (opt) => opt.voice || CAST_VOICE[opt.cast];   // a voice being tried, else theirs
@@ -139,9 +138,10 @@ function castSsml(line, v) {
   const body = castLine(line).split(/(\{[^}]+\})/).map((p) => { const m = /^\{([^|}]+)\|([^|}]+)/.exec(p); return m ? `<sub alias="${esc(m[2])}">${esc(m[1])}</sub>` : esc(p); }).join('');
   return '<speak>' + (v && v[2] && !OLD_VOICE.test(v[0]) ? `<prosody pitch="+${v[2]}st">${body}</prosody>` : body) + '</speak>';
 }
+const castSays = (line) => /[\p{L}\p{N}]/u.test(castLine(line).replace(CAST_MARK, '$1'));   // anything to read: 佐野's 「…………。」 is a silence
 function speakAs(who, line) {   // someone's line in their own voice (anyone else's: as any line)
   const text = castLine(line).replace(CAST_MARK, '$1');
-  if (!text) return Promise.resolve();
+  if (!castSays(line)) return Promise.resolve();
   if (!CAST_VOICE[who]) return speak(text);
   stopSpeaking();
   return speakLine(text, castGender(who), speechToken, { cast: who, line });
@@ -671,7 +671,7 @@ function audioCollector() {
   const add = (raw, gender = '', reading = '') => { const text = ttsText(raw); if (!text) return; const g = gender === 'm' ? 'm' : 'f'; const k = `${g}|${reading}|${text}`; if (!seen.has(k)) seen.set(k, { text, gender: g, reading }); };
   const addZh = (raw) => { const text = String(raw || '').replace(/\s+/g, ' ').trim(); if (!text) return; const k = `zh||${text}`; if (!seen.has(k)) seen.set(k, { text, gender: '', reading: '', lang: 'zh' }); };
   const addScript = (sc) => scriptParts(sc).forEach(p => add(p.text, p.gender));
-  const addCast = (who, line) => { const text = castLine(line).replace(CAST_MARK, '$1'); if (!text || !CAST_VOICE[who]) return; const k = `c|${who}|${line}`; if (!seen.has(k)) seen.set(k, { text, gender: castGender(who), reading: '', cast: who, line }); };
+  const addCast = (who, line) => { const text = castLine(line).replace(CAST_MARK, '$1'); if (!castSays(line) || !CAST_VOICE[who]) return; const k = `c|${who}|${line}`; if (!seen.has(k)) seen.set(k, { text, gender: castGender(who), reading: '', cast: who, line }); };
   const addQ = (q) => {
     if (!q) return;
     if (q.speakWord) add(q.speakWord, '', q.speakReading || '');
