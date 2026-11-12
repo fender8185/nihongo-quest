@@ -1,5 +1,5 @@
 const test = require('node:test'); const assert = require('node:assert/strict');
-const { check, loadTown } = require('../scripts/check-events');
+const { check, loadTown, loadWares } = require('../scripts/check-events');
 
 // a tiny course: three N5 units, a word at each level, one grammar item in m3
 const DATA = {
@@ -73,7 +73,56 @@ test('no event waits on one that only happens at night (a daytime player would n
 });
 test('events.js itself passes against data.js', () => {
   const D = require('../scripts/data-file').load();
-  assert.deepEqual(check(loadTown(), D), []);
+  assert.deepEqual(check(loadTown(), D, { chatMin: 10, wares: loadWares() }), []);
+});
+// ---- 2026-11-12: the town comes alive (docs/superpowers/specs/2026-11-12-town-life-design.md) ----
+const said = (n, dots) => Array.from({ length: n }, (_, i) => ['miku', i < dots ? '……はい。' : 'はい。', '是。']);
+test('「……」 in at most 12% of the event lines people say, 10% of their chat', () => {
+  assert.deepEqual(kinds(check(town([ev({ lines: said(10, 2) })]), DATA)), ['ellipsis']);
+  assert.deepEqual(check(town([ev({ lines: said(10, 1) })]), DATA), []);
+  assert.deepEqual(check(town([ev({ lines: said(10, 1).concat([['hero', '……はい。', '是。'], ['hero', '……うん。', '嗯。']]) })]), DATA), []);   // the hero's own don't count
+  const chat = (dots) => ({ CHAT: { miku: Array.from({ length: 10 }, (_, i) => ['m1', i < dots ? '……うん。' : 'うん。', '嗯。']) } });
+  assert.deepEqual(kinds(check(town([ev()], chat(2)), DATA)), ['ellipsis']);
+  assert.deepEqual(check(town([ev()], chat(1)), DATA), []);
+});
+test('a line\'s conditions are known and name what is there', () => {
+  const w = (c) => kinds(check(town([ev()], { CHAT: { miku: [['m1', 'はい。', '是。', c]] } }), DATA, { wares: new Set(['catsuit']) }));
+  [{ at: 'moon' }, { h: 'dawn' }, { days: 'sun' }, { after: 'zz' }, { fresh: 'zz' }, { talks: 0 }, { about: 'nobody' }, { look: 'nothing' }, { fest: 'xmas' }, { mood: 1 }, 'x']
+    .forEach((c) => assert.deepEqual(w(c), ['when'], JSON.stringify(c)));
+  assert.deepEqual(w({ at: ['town', 'beach'], h: ['am', 'night'], days: 'we', after: 'e1', talks: 3, look: 'catsuit', fest: 'halloween', about: 'kenta' }), []);
+  assert.deepEqual(w({ look: 'any' }), []); assert.deepEqual(w({ look: 'hair' }), []);
+});
+test('everyone has ten things to say, two with no condition by their first event', () => {
+  const lines = (n, more) => Array.from({ length: n }, () => ['m1', 'うん。', '嗯。']).concat(more || []);
+  const plain = { CHAT: { miku: lines(10), kenta: lines(10) } }, o = { chatMin: 10 };
+  assert.deepEqual(check(town([ev()], plain), DATA, o), []);
+  assert.deepEqual(kinds(check(town([ev()], { CHAT: { miku: lines(9), kenta: lines(10) } }), DATA, o)), ['chat-min']);
+  const late = Array.from({ length: 10 }, () => ['m2', 'うん。', '嗯。']);   // 美玖 is met in m1: nothing she can say then
+  assert.deepEqual(kinds(check(town([ev()], { CHAT: { miku: late, kenta: lines(10) } }), DATA, o)), ['chat-min']);
+  const ruled = Array.from({ length: 10 }, () => ['m1', 'うん。', '嗯。', { h: 'am' }]);
+  assert.deepEqual(kinds(check(town([ev()], { CHAT: { miku: ruled, kenta: lines(10) } }), DATA, o)), ['chat-min']);
+  assert.deepEqual(kinds(check(town([ev()]), DATA)), []);   // asked for only with chatMin
+});
+test('two who talk to each other are somewhere together; their lines are checked', () => {
+  const pair = (p) => kinds(check(town([ev()], { PAIRS: [p] }), DATA));
+  assert.deepEqual(pair([['miku', 'kenta'], 'm1', [['miku', 'パパ！', '爸爸！'], ['kenta', 'おう！', '喔！']]]), []);
+  const apart = { miku: { name: '美玖', hours: [[7, 9, 'town', 'bakeryIn']] }, kenta: { name: '健太', hours: [[9, 21, 'town', 'bakery']] } };
+  assert.deepEqual(kinds(check(town([ev()], { CAST: apart, PAIRS: [[['miku', 'kenta'], 'm1', [['miku', 'パパ！', '爸爸！']]]] }), DATA)), ['pair']);
+  assert.deepEqual(pair([['miku', 'nobody'], 'm1', []]), ['pair']);
+  assert.deepEqual(pair([['miku', 'kenta'], 'm1', [['tome', 'はい。', '是。']]]), ['pair']);
+  assert.deepEqual(pair([['miku', 'kenta'], 'm1', [['miku', '花！', '花！']]]), ['bare-kanji']);
+});
+test('mutters are checked like chat', () => {
+  assert.deepEqual(kinds(check(town([ev()], { MUTTER: { miku: [['m1', '{経済|けいざい}。', '經濟。']] } }), DATA)), ['level']);
+  assert.deepEqual(kinds(check(town([ev()], { MUTTER: { ghost: [['m1', 'うん。', '嗯。']] } }), DATA)), ['ref']);
+});
+test('how far people stroll is 0 or [X, Y]', () => {
+  const sp = (roam) => kinds(check(town([ev()], { SPOTS: { town: { bakery: {}, bakeryIn: { roam } } } }), DATA));
+  assert.deepEqual(sp(0), []); assert.deepEqual(sp([30, 8]), []);
+  assert.deepEqual(sp([1]), ['roam']); assert.deepEqual(sp('x'), ['roam']);
+});
+test('the things to wear are read from 古道具屋', () => {
+  const w = loadWares(); assert.ok(w.has('catears') && w.has('wings') && w.has('geta') && !w.has('gramophone'));
 });
 test('every event can be met at one of the times the bed wakes to', () => {
   const late = { miku: { name: '美玖', hours: [[21, 23, 'town', 'bakeryIn']] }, kenta: CAST.kenta };
