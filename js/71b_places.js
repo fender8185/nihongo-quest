@@ -293,6 +293,15 @@ function yPop(yard, x, y, text) {
   const el = document.createElement('i'); el.className = 'ypop'; el.textContent = text; el.style.cssText = `left:calc(50% + ${x - 600}px);bottom:${370 - y}px`;
   w.appendChild(el); setTimeout(() => el.remove(), 1800);
 }
+// words over someone's head (TOWNLIFE: what they mutter, two talking; 2026-11-12): x, y in the land's units (the top of the head),
+// html marked with ruby already; on the screen ms, then fading
+function yBubble(yard, x, y, html, ms) {
+  const w = yard && yard.querySelector('.yworld'); if (!w) return null;
+  const el = document.createElement('i'); el.className = 'ysay'; el.lang = 'ja'; el.innerHTML = html;
+  el.style.cssText = `left:calc(50% + ${(x - 600).toFixed(0)}px);bottom:${(370 - y).toFixed(0)}px;--ms:${ms}ms`;
+  w.appendChild(el); setTimeout(() => el.remove(), ms + 350);
+  return el;
+}
 function yBurst(yard, [x0, y0, x1], colours) {
   const w = yard && yard.querySelector('.yworld'); if (!w) return;
   for (let i = 0; i < 12; i++) {

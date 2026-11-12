@@ -99,6 +99,63 @@ def test_chat_follows_the_hour_and_tells_news_once(b):
       return JSON.stringify({ first, next }); })()"""))
     assert r == {'first': 'ニュース', 'next': ['あさ', 'あさ', 'あさ']}, r   # news once; the night line not by day (the morning one again: nothing else)
 
+# ---- words over their heads, two talking, walking off and in (Task 2) ----
+def test_words_pop_up_over_someone_and_not_while_talking(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ TOWNLIFE.still = true; TOWN.MUTTER = { kenta: [['m0', 'よーし！', '好！']], lin: [['m0', 'ふふ。', '呵呵。']] }; TOWNLIFE.gap = [400, 500]; await go('town', 10);
+      TOWNLIFE.still = false; let el = null; for (let i = 0; i < 30 && !el; i++) { await wait(100); el = y().querySelector('.ysay'); }
+      const text = el && el.textContent; let gone = false; for (let i = 0; i < 50 && !gone; i++) { await wait(100); gone = !el.isConnected; }
+      TOWNEV.talk(people().find((e) => e.dataset.npc === 'lin')); for (let i = 0; i < 60 && !document.querySelector('.talk-card'); i++) await wait(100);
+      y().querySelectorAll('.ysay').forEach((e) => e.remove()); await wait(2000);
+      return JSON.stringify({ text, gone, quiet: !y().querySelector('.ysay') }); })()"""))
+    assert r['text'] in ('よーし！', 'ふふ。') and r['gone'] and r['quiet'], r
+
+def test_two_who_know_each_other_talk_one_walking_over(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ TOWNLIFE.still = true; TOWN.MUTTER = {};
+      TOWN.PAIRS = [[['koharu', 'lin'], 'm0', [['koharu', 'ねえねえ！', '欸欸！'], ['lin', 'はい、はい。', '好、好。'], ['koharu', 'えへへ。', '嘿嘿。']]]]; await go('town', 10);
+      TOWNLIFE.still = false; TOWNLIFE.pair('koharu', 'lin'); const said = [];
+      for (let i = 0; i < 120 && said.length < 3; i++) { await wait(100); y().querySelectorAll('.ysay').forEach((e) => { if (!e._seen) { e._seen = 1; said.push(e.textContent); } }); }
+      const a = TOWNLIFE.at('koharu'), c = TOWNLIFE.at('lin');
+      return JSON.stringify({ said, close: Math.hypot(a[0] - c[0], a[1] - c[1]) <= 160 }); })()"""))
+    assert r == {'said': ['ねえねえ！', 'はい、はい。', 'えへへ。'], 'close': True}, r   # 小春 at the salon, 林 at the far end of the street
+
+def test_at_the_hour_they_walk_off_and_who_comes_walks_in(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ TOWNLIFE.still = true; await go('beach', 17.99); TOWNLIFE.still = false;
+      const mugi = () => y().querySelector('.npc-mugi'), before = !!mugi(); const x0 = TOWNLIFE.at('mugi')[0];
+      TOWNEV.clock = { h: 18.01, day: new Date(2026, 10, 10) }; sceneMinute(); await wait(400);
+      const walking = mugi() && mugi().matches('.walk, .run'), x1 = TOWNLIFE.at('mugi') && TOWNLIFE.at('mugi')[0];
+      for (let i = 0; i < 60 && mugi(); i++) await wait(100);
+      const goneFromBeach = !mugi();
+      yh.arrive = null; location.hash = '#/town'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
+      const atCafeAlready = Math.abs(TOWNLIFE.at('mugi')[0] - +mugi().dataset.x) < 1;
+      return JSON.stringify({ before, walking, toward: x1 > x0, goneFromBeach, atCafeAlready }); })()"""))
+    assert r == {'before': True, 'walking': True, 'toward': True, 'goneFromBeach': True, 'atCafeAlready': True}, r   # off toward the yard (right); in town already when the hero comes
+
+def test_who_comes_while_the_hero_is_there_walks_in_from_the_way_they_come(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ TOWNLIFE.still = true; await go('town', 17.99); TOWNLIFE.still = false;
+      const had = !!y().querySelector('.npc-mugi');
+      TOWNEV.clock = { h: 18.01, day: new Date(2026, 10, 10) }; sceneMinute();
+      for (let i = 0; i < 60 && !(y() && y().querySelector('.npc-mugi')); i++) await wait(100);   /* 渚 walks off first (home at 18), then the town is drawn anew */
+      await wait(150); const m = y().querySelector('.npc-mugi'), x = TOWNLIFE.at('mugi')[0], home = +m.dataset.x, walking = m.matches('.walk, .run');
+      for (let i = 0; i < 80 && Math.abs(TOWNLIFE.at('mugi')[0] - home) > 1; i++) await wait(100);
+      return JSON.stringify({ had, from: x < home - 100, walking, there: Math.abs(TOWNLIFE.at('mugi')[0] - home) <= 1 }); })()"""))
+    assert r == {'had': False, 'from': True, 'walking': True, 'there': True}, r   # in from the yard's side (the left), as 渚 shuts her café and walks off
+
+def test_someone_moving_to_another_spot_here_walks_over(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ TOWNLIFE.still = true; state.town.seen.chihaya = 1; TOWN.CAST.chihaya.hours = [[9, 18, 'shrine', 'haiden'], [18, 23, 'shrine', 'ennichi']]; await go('shrine', 17.99); TOWNLIFE.still = false;
+      const x0 = TOWNLIFE.at('chihaya')[0]; TOWNEV.clock = { h: 18.01, day: new Date(2026, 10, 10) }; sceneMinute(); await wait(300);
+      const el = y().querySelector('.npc-chihaya'), home = +el.dataset.x, x1 = TOWNLIFE.at('chihaya')[0];
+      return JSON.stringify({ moved: home !== x0, startsWhereSheWas: Math.abs(x1 - x0) < 60, walking: el.matches('.walk, .run') }); })()"""))
+    assert r == {'moved': True, 'startsWhereSheWas': True, 'walking': True}, r   # 千早 (her hours made one after the other) from the hall to the fortune stall as the 緣日 opens
+
+def test_no_walking_off_while_a_talk_is_open(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ TOWNLIFE.still = true; await go('beach', 17.99); TOWNLIFE.still = false;
+      TOWNEV.talk(y().querySelector('.npc-mugi')); for (let i = 0; i < 60 && !document.querySelector('.talk-card'); i++) await wait(100);
+      TOWNEV.clock = { h: 18.01, day: new Date(2026, 10, 10) }; sceneMinute(); await wait(1500);
+      const stayed = !!y().querySelector('.npc-mugi') && !y().querySelector('.npc-mugi').matches('.walk, .run');
+      TALK.close(); sceneMinute(); for (let i = 0; i < 60 && y().querySelector('.npc-mugi'); i++) await wait(100);
+      return JSON.stringify({ stayed, after: !y().querySelector('.npc-mugi') }); })()"""))
+    assert r == {'stayed': True, 'after': True}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

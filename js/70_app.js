@@ -206,7 +206,7 @@ function sceneTick() {
 function sceneMinute() {
   sceneTick();
   const yd = document.querySelector('#view .yard');
-  if (yd && !TALK.on() && yd.dataset.sig !== TOWNEV.sig(yd.dataset.place)) route();
+  if (yd && !TALK.on() && yd.dataset.sig !== TOWNEV.sig(yd.dataset.place)) TOWNLIFE.change(yd, route);   // those leaving walk off first (TOWNLIFE)
 }
 setInterval(() => { if (document.body.classList.contains('scene')) sceneMinute(); }, 60000);   // the scenes move with the clock while one is open
 // back in the app after a while: the scenes catch up with the clock, and so do the pages' colours, except in the middle of questions
