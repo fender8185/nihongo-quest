@@ -88,18 +88,17 @@ def test_each_voice_can_be_heard_before_the_generator_makes_them_all(b):
     assert r['rows'] == r['voices'] == 29, r
     assert len(r['asked']) == 1 and r['asked'][0][:5] == ['google_tts', 'k123', 'いらっしゃいませ！', 'm', 'kenta'] and r['played'] == ['blob:', 'blob:'], r
 
-def test_mugis_voices_to_try_are_pitched_up_and_say_wan_themselves(b):
-    r = json.loads(ev(b, """(async () => { openSettings('data'); await new Promise((q) => setTimeout(q, 200));
-      const tries = [...document.querySelectorAll('#castPreviewBox .cast-try [data-act="cast-preview"]')].map((x) => [x.dataset.who, x.dataset.try]), sent = [];
-      const realF = window.fetch, realP = playUrl; playUrl = async () => true;
+def test_mugi_speaks_in_a_pitched_up_boys_voice_opening_with_wan(b):
+    r = json.loads(ev(b, """(async () => { const sent = [], realF = window.fetch;
       window.fetch = async (url, init) => { sent.push(JSON.parse(init.body)); return new Response(JSON.stringify({ audioContent: btoa('x'.repeat(4000)) }), { status: 200 }); };
-      document.getElementById('cloudGoogleKey').value = 'k';
-      for (const k of ['0', '2']) { document.querySelector(`[data-act="cast-preview"][data-who="mugi"][data-try="${k}"]`).click(); await new Promise((q) => setTimeout(q, 150)); }
-      window.fetch = realF; playUrl = realP;
-      const p1 = await cloudAudioPath('x', 'f', { cast: 'mugi', line: 'わん！', voice: ['Neural2-B', 1.08, 4] }), p2 = await cloudAudioPath('x', 'f', { cast: 'mugi', line: 'わん！' });
-      return JSON.stringify({ tries, sent: sent.map((q) => [q.voice.name, q.audioConfig.pitch || 0, q.audioConfig.speakingRate, /<prosody pitch="\\+3st">/.test(q.input.ssml), /ワン|わん/.test(q.input.ssml)]), differ: p1 !== p2 }); })()"""))
-    assert r['tries'] == [['mugi', '0'], ['mugi', '1'], ['mugi', '2']], r
-    assert r['sent'] == [['ja-JP-Neural2-B', 4, 1.08, False, True], ['ja-JP-Chirp3-HD-Erinome', 0, 1.08, True, True]] and r['differ'], r   # pitch by Google for Neural2, in the SSML for Chirp; her ワン said
+      const cfg = Object.assign({}, ttsConfig(), { engine: 'google_tts', googleKey: 'k' });
+      await fetchEngineBlob(cfg, 'x', 'm', { cast: 'mugi', line: 'ワン！{今日|きょう}は あたたかい。' }); await fetchEngineBlob(cfg, 'x', 'f', { cast: 'koharu', line: 'こんにちは！' });
+      window.fetch = realF;
+      const mugi = talkLines().filter((l) => l[0] === 'mugi').map((l) => l[1]);
+      return JSON.stringify({ sent: sent.map((q) => [q.voice.name, q.audioConfig.pitch || 0, q.audioConfig.speakingRate]), opens: mugi.every((l) => /^ワン！|^……ワン。$/.test(l)),
+        ends: mugi.filter((l) => /(ワン|わん)(?=[。！？!?…」]|\\s|$)/.test(l.replace(/^ワン！/, ''))) }); })()"""))
+    assert r['sent'] == [['ja-JP-Neural2-D', 6, 1.1], ['ja-JP-Chirp3-HD-Autonoe', 0, 1.02]], r   # her pitch set by Google; anyone on Chirp none
+    assert r['opens'] and r['ends'] == ['……ワン。'], r   # every line of hers opens with ワン！ and none ends in it (but the one that is only a bark)
 
 def test_the_world_goes_quiet_while_japanese_is_read(b):
     r = json.loads(ev(b, """(async () => { const seen = [];
