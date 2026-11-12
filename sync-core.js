@@ -51,7 +51,7 @@
   //   lists by id   (mistakes, custom cards, custom grammar/exam, exam history): union, the later copy's version
   //   id sets       (completedUnits, hidden, lessonSeen): union
   //   言靈          (koto): each count by day and device the larger, bonus days a union; owned (things bought): a union by id
-  //   town          (the town's events): done, seen, stops each a union by id
+  //   town          (the town's events): done, seen, stops each a union by id; talks (chats with each person) the larger count
   //   everything else (settings, currentUnit, today, placed, wear, …): from the copy saved later
   function stampOf(s) { return (s && typeof s.updatedAt === 'string') ? s.updatedAt : ''; }
   function pickRec(x, y) {
@@ -187,7 +187,8 @@
     }
     if (older.town || newer.town) {   // the town's events done, people met, bus stops opened: once on either device, for good
       const o = older.town || {}, n = newer.town || {};
-      out.town = Object.assign({}, n, { done: Object.assign({}, o.done, n.done), seen: Object.assign({}, o.seen, n.seen), stops: Object.assign({}, o.stops, n.stops) });
+      const talks = Object.assign({}, o.talks); Object.entries(n.talks || {}).forEach(([id, k]) => { talks[id] = Math.max(Number(talks[id]) || 0, Number(k) || 0); });   // the chats with each: the more
+      out.town = Object.assign({}, n, { done: Object.assign({}, o.done, n.done), seen: Object.assign({}, o.seen, n.seen), stops: Object.assign({}, o.stops, n.stops), talks });
     }
     out.updatedAt = new Date().toISOString();
     return out;

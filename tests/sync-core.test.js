@@ -191,6 +191,13 @@ test('mergeStates: the town events done, people met and bus stops opened on eith
   assert.deepEqual(m.town.stops, { station: 1 });
   assert.deepEqual(C.mergeStates({ updatedAt: '2026-11-10T10:00:00.000Z' }, b).town.done, { 'm0-2': '2026-11-10' }, 'an old save without town keeps the other side');
 });
+test('mergeStates: how often the hero chatted with each person keeps the larger count (2026-11-12)', () => {
+  const a = { updatedAt: '2026-11-12T10:00:00.000Z', town: { done: {}, seen: {}, stops: {}, talks: { kenta: 3, miku: 1 } } };
+  const b = { updatedAt: '2026-11-12T09:00:00.000Z', town: { done: {}, seen: {}, stops: {}, talks: { kenta: 5, tome: 2 } } };
+  assert.deepEqual(C.mergeStates(a, b).town.talks, { kenta: 5, miku: 1, tome: 2 });
+  assert.deepEqual(C.mergeStates(b, a).town.talks, { kenta: 5, miku: 1, tome: 2 });
+  assert.deepEqual(C.mergeStates({ updatedAt: '2026-11-12T10:00:00.000Z', town: { done: {} } }, b).town.talks, { kenta: 5, tome: 2 });
+});
 
 test('a packed state opens to the same state, a tenth of the size or less; a plain one passes through', async () => {
   const big = { v: 3, updatedAt: '2026-11-11T01:00:00.000Z', srs: {} };

@@ -205,11 +205,27 @@ const TOWNEV = (() => {
     while (q.length) { const at = q.shift(); for (const n of ADJ[at] || []) { if (n in first) continue; first[n] = first[at] || n; if (n === to) return first[n]; q.push(n); } }
     return null;
   }
-  // nothing on: a word of what they can say by the unit reached (小春, ムギ: their old words too)
+  // nothing on: a word by the unit reached, where they are and when, the story so far, how the hero looks, how often they have
+  // talked (CHATPICK, 2026-11-12). nq_chat (this device only): the last few each said, the news told, the look each last saw;
+  // state.town.talks (synced, the larger count): the chats with each
+  const HAIR = ['fringe', 'sides', 'hairBack', 'hairTop', 'hairColor'];
+  const chatMem = () => { try { const m = JSON.parse(localStorage.getItem('nq_chat') || 'null'); return m && typeof m === 'object' ? m : {}; } catch (e) { return {}; } };
+  function chatCtx(id, m = chatMem()) {
+    const at = whereIs(id, now(), today()), d = today(), sig = JSON.stringify([state.look, state.wear]), saw = (m.saw || {})[id];
+    const hair = (s) => { try { const lk = JSON.parse(s)[0] || {}; return HAIR.map((k) => lk[k]).join(); } catch (e) { return ''; } };
+    return { R: reachedIdx(), unitIdx, at: at ? at.place : '', h: now(), we: d.getDay() === 0 || d.getDay() === 6, done: state.town.done, day: dateStr(d), seen,
+      talks: (state.town.talks || {})[id] || 0, lookSig: sig, lookChanged: Boolean(saw) && saw !== sig, hairChanged: Boolean(saw) && hair(saw) !== hair(sig),
+      wear: Object.values(state.wear || {}).concat(['topStyle', 'bottomStyle', 'shoeStyle'].map((k) => (state.look || {})[k])).filter((v) => typeof v === 'string'),
+      fest: typeof saleOn === 'function' && saleOn('halloween', saleNow() || dateStr(d)) ? ['halloween'] : [] };   // 古道具屋's sale days, by the server's day when known
+  }
   function chatLine(id) {
-    const R = reachedIdx(), own = (T().CHAT[id] || []).filter((l) => unitIdx(l[0]) <= R).map((l) => [l[1], l[2]]);
-    const lines = own.concat(NPCS[id] ? NPCS[id].chat : []);
-    return lines[Math.floor(Math.random() * lines.length)] || ['……', '……'];
+    const m = chatMem(), x = chatCtx(id, m), said = (m.said || {})[id] || [];
+    const p = CHATPICK.pick(id, T().CHAT[id] || [], x, { said, news: m.news || {} });
+    if (p && p.news) m.news = Object.assign({}, m.news, { [p.key]: 1 }); else if (p) m.said = Object.assign({}, m.said, { [id]: said.concat(p.key).slice(-5) });
+    m.saw = Object.assign({}, m.saw, { [id]: x.lookSig });
+    try { localStorage.setItem('nq_chat', JSON.stringify(m)); } catch (e) { /* no storage: they may say it again */ }
+    state.town.talks = Object.assign({}, state.town.talks, { [id]: x.talks + 1 }); saveState();
+    return p ? [p.line[1], p.line[2]] : ['……', '……'];
   }
   // a tap on someone: the hero walks over, turns to them, and their event if one waits on them here (done: its 言靈, the mark
   // and the dots gone), else a word
@@ -233,7 +249,7 @@ const TOWNEV = (() => {
     const p = el.closest('.yard').querySelector(`.npc-${o}`);
     if (p) talk(p); else toast(`${T().CAST[o].name}現在不在店裡。`);
   }
-  const api = { unitIdx, reachedIdx, started, studyDaysSince, due, opened, openN, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, hop, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
+  const api = { unitIdx, reachedIdx, started, studyDaysSince, due, opened, openN, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, chatCtx, hop, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
   return api;
 })();
 // the bed (test, 2026-11-10; the user's call): once the day's practice is done (書桌上的筆記本「今日完成」), a sleep there moves the
@@ -497,7 +513,7 @@ const TALK = (() => {
 // every line the talks can read aloud, and whose it is: the generator makes each a clip in its speaker's voice (CAST_VOICE)
 function talkLines() {
   const out = [], add = (who, ja) => { if (ja) out.push([who, ja]); };
-  Object.keys(NPCS).forEach((id) => [...NPCS[id].hello(0), ...NPCS[id].hello(1), ...NPCS[id].chat].forEach((l) => add(id, l[0])));
+  Object.keys(NPCS).forEach((id) => [...NPCS[id].hello(0), ...NPCS[id].hello(1)].forEach((l) => add(id, l[0])));   // their chat is in TOWN.CHAT
   Object.keys(TOWN.CHAT).forEach((id) => TOWN.CHAT[id].forEach((l) => add(id, l[1])));
   TOWN.EVENTS.forEach((e) => e.lines.forEach((l) => (Array.isArray(l) ? add(l[0], l[1]) : (l.opts || []).forEach((o) => add('hero', o[0])))));
   Object.values(NPC.DOOR).forEach((ls) => ls.forEach((l) => add('hero', l[0])));

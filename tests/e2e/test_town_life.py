@@ -80,6 +80,25 @@ def test_reduced_motion_keeps_them_still(b):
       return JSON.stringify(people().every((el, k) => Math.abs(pos(el)[0] - p0[k][0]) < 0.5)); })()"""))
     assert r is True, r
 
+def test_a_chat_with_no_storage_still_opens_and_counts(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ TOWNLIFE.still = true; await go('town', 10);
+      const g = Storage.prototype.getItem, s = Storage.prototype.setItem;
+      Storage.prototype.getItem = function (k) { if (k === 'nq_chat') throw new Error('no'); return g.call(this, k); };
+      Storage.prototype.setItem = function (k, v) { if (k === 'nq_chat') throw new Error('no'); return s.call(this, k, v); };
+      TOWNEV.talk(people().find((e) => e.dataset.npc === 'kenta')); for (let i = 0; i < 60 && !document.querySelector('.talk-card'); i++) await wait(100);
+      Storage.prototype.getItem = g; Storage.prototype.setItem = s;
+      return JSON.stringify({ talked: !!document.querySelector('.talk-card .talk-ja'), talks: state.town.talks.kenta }); })()"""))
+    assert r == {'talked': True, 'talks': 1}, r
+
+def test_chat_follows_the_hour_and_tells_news_once(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ TOWNLIFE.still = true; localStorage.removeItem('nq_chat');
+      TOWN.CHAT.kenta = [['m0', 'あさ', '早'], ['m0', 'よる', '晚', { h: 'night' }], ['m0', 'ニュース', '新', { fresh: 'm0-1' }]];
+      state.town.done = { 'm0-1': dateStr(new Date(2026, 10, 9)) };
+      const say = () => TOWNEV.chatLine('kenta')[0];
+      TOWNEV.clock = { h: 9, day: new Date(2026, 10, 10) }; const first = say(), next = [say(), say(), say()];
+      return JSON.stringify({ first, next }); })()"""))
+    assert r == {'first': 'ニュース', 'next': ['あさ', 'あさ', 'あさ']}, r   # news once; the night line not by day (the morning one again: nothing else)
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

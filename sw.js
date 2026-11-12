@@ -31,6 +31,7 @@ const PRECACHE = [
   './js/71f_hero.js',
   './js/71g_shop.js',
   './js/71h_stages.js',
+  './js/71i_chat.js',
   './js/71j_life.js',
   './js/72_course.js',
   './js/73_vocab.js',

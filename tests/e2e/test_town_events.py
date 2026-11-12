@@ -74,7 +74,7 @@ def test_an_old_save_without_town_loads(b):
     js = """(() => { const s = JSON.parse(JSON.stringify(state)); delete s.town; const n = normalizeState(s);
       return JSON.stringify({ town: n.town }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'town': {'done': {}, 'seen': {}, 'stops': {}}}, r
+    assert r == {'town': {'done': {}, 'seen': {}, 'stops': {}, 'talks': {}}}, r
 
 # ---- the town: its shops, their hours, the people where their hours put them ----
 TOWN_AT = """const wait = (ms) => new Promise(q => setTimeout(q, ms)), y = () => document.querySelector('#view .yard');

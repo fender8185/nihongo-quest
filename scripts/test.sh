@@ -24,6 +24,7 @@ ev="$(grep -o 'events.js?v=[0-9]*' index.html | tr -d -c 0-9)"
 pv="$(grep -o 'pics.js?v=[0-9]*' index.html | tr -d -c 0-9)"
 [ -n "$pv" ] && [ "$pv" = "$(grep -o 'pics.js?v=[0-9]*' sw.js | tr -d -c 0-9)" ] && [ "$pv" = "$(grep -o 'PICS_VERSION [0-9]*' pics.js | tr -d -c 0-9)" ] || { echo "pics.js version differs between index.html, sw.js and pics.js"; exit 1; }
 node --test-reporter=tap tests/events.test.js | grep -E "^# (pass|fail)"
+node --test-reporter=tap tests/chat.test.js | grep -E "^# (pass|fail)"   # what the town's people say when tapped (CHATPICK)
 node scripts/check-events.js | tail -1
 # events.js changed since the last push (main or test) ⇒ its version changed too, or phones keep the old copy (the service worker reuses ?v= files)
 for base in origin/main origin/test; do
