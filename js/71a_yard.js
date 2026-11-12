@@ -359,31 +359,55 @@ const MUSIC = (() => {
     <circle cx="80" cy="60" r="38" fill="#1f1c22"/><circle cx="80" cy="60" r="30" fill="none" stroke="#fff" stroke-opacity=".1"/><circle cx="80" cy="60" r="22" fill="none" stroke="#fff" stroke-opacity=".1"/><circle cx="80" cy="60" r="12" fill="${r.color}"/><circle cx="80" cy="60" r="2" fill="#1f1c22"/>
     <rect x="6" y="10" width="62" height="100" rx="4" fill="${r.color}"/><rect x="64" y="10" width="4" height="100" fill="#000" fill-opacity=".12"/><text x="37" y="66" text-anchor="middle" font-size="${r.name.length > 4 ? 11 : 15}" fill="#fff" font-weight="700" lang="ja">${esc(r.name)}</text></svg>`;
   const current = () => have().find((r) => r.id === state.record) || have()[0];
-  let play = null, wake = null, player = null, fadeT = 0, gain = null;
-  const VOL = 0.8, blobs = {};   // blobs: a record's file as a blob: URL, fetched once a session
+  let play = null, wake = null, player = null, fadeT = 0, B = null, forceBuf = false;
+  const VOL = 0.8, blobs = {}, bufs = {}, stopped = {};   // blobs: a record's file as a blob: URL, fetched once a session; bufs, stopped: below
   const mvol = () => Math.min(1, Math.max(0, Number(state.settings.musicVol) || 0));   // 設定 › 音樂
   const level = (rec) => VOL * (rec.vol || 1) * mvol();
   let ducked = false;   // Japanese being read aloud (duck)
-  // an iPhone keeps an <audio>'s volume at 1: there the player goes out through Web Audio (gain), whose volume it obeys, so 設定 ›
-  // 音樂 and a reading's dip work there too (2026-11-12). Elsewhere the player's own volume, as before
-  function viaGain() {
-    if (gain || !fixedVol()) return;
-    try { const c = audioCtx(); if (!c || !c.createMediaElementSource) return; const g = c.createGain(); g.gain.value = 0; c.createMediaElementSource(player).connect(g); g.connect(c.destination); gain = g; } catch (e) { gain = null; }
-  }
+  // an iPhone keeps an <audio>'s volume at 1, and a Web Audio gain put after the <audio> did nothing there either (2026-11-12, the
+  // user: 音樂 would not go down, nor under the townsfolk's lines). There a record is decoded and played through Web Audio like
+  // 環境音 (B: its source and gain; bufs: the decoded one in use, ~30 MB for a minute and a half, so one at a time; stopped:
+  // where each stopped, to go on from there), so 設定 › 音樂 and the dip under spoken Japanese work there too. Elsewhere the
+  // <audio> and its own volume, as before
+  const mkPlayer = () => { if (!player) { player = new Audio(); player.loop = true; player.preload = 'auto'; player.setAttribute('playsinline', ''); } };
+  const buffered = () => { mkPlayer(); return forceBuf || fixedVol(); };
   function fadeFile(v, s) {   // the volume to v over s seconds
     clearInterval(fadeT);
-    if (gain) { const c = audioCtx(); if (c && c.state === 'running') gain.gain.setTargetAtTime(v, c.currentTime, Math.max(0.02, s / 3)); else if (c) { gain.gain.cancelScheduledValues(0); gain.gain.value = v; } return; }
+    if (play && play.mode === 'buffer') {
+      if (!B) return;
+      const g = B.gain.gain; if (B.c.state === 'running') g.setTargetAtTime(v, B.c.currentTime, Math.max(0.02, s / 3)); else { g.cancelScheduledValues(0); g.value = v; }   // asleep (before a tap): set as it is
+      return;
+    }
+    if (!player) return;
     const from = player.volume, t0 = performance.now();
     fadeT = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / (s * 1000)); try { player.volume = from + (v - from) * k; } catch (e) { /* read-only */ } if (k >= 1) clearInterval(fadeT); }, 50);
   }
   const playFile = () => { const pr = player.play(); if (pr && pr.catch) pr.catch(() => {}); };   // refused before a first tap: wake tries again
+  function startBuf(rec, p) {
+    const c = audioCtx(); if (!c) { play = null; return; }   // no Web Audio at all: quiet
+    if (!bufs[rec.id]) {
+      bufs[rec.id] = fetch(rec.file).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+        .then((a) => new Promise((ok, no) => c.decodeAudioData(a, ok, no)))   // the callback form: older Safari has no promise
+        .catch(() => { delete bufs[rec.id]; return null; });
+    }
+    bufs[rec.id].then((buf) => {
+      if (play !== p) return;
+      if (!buf) { play = null; return; }   // no file to be had: quiet; the next look tries again
+      Object.keys(bufs).forEach((k) => { if (k !== rec.id) delete bufs[k]; });
+      const g = c.createGain(); g.gain.value = 0; g.connect(c.destination);
+      const src = c.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(g);
+      const off = (stopped[rec.id] || 0) % buf.duration; src.start(0, off);
+      B = { id: rec.id, c, src, gain: g, t0: c.currentTime - off, dur: buf.duration };
+      fadeFile(level(rec) * (ducked ? 0.3 : 1), 1.2);
+    });
+  }
   function start(rec) {
     const p = play = { id: rec.id, mode: 'file' };
-    if (!player) { player = new Audio(); player.loop = true; player.preload = 'auto'; player.setAttribute('playsinline', ''); viaGain(); }
+    if (buffered()) { p.mode = 'buffer'; startBuf(rec, p); return; }
     const go = () => {
       if (play !== p) return;
       if (player.dataset.id !== rec.id) { player.src = blobs[rec.id]; player.dataset.id = rec.id; }   // the same record again: on from where it stopped
-      if (gain) { const c = audioCtx(); if (c) gain.gain.setValueAtTime(0, c.currentTime); } else { try { player.volume = 0; } catch (e) { /* read-only */ } }
+      try { player.volume = 0; } catch (e) { /* read-only */ }
       playFile(); fadeFile(level(rec) * (ducked ? 0.3 : 1), 1.2);
     };
     if (blobs[rec.id]) { go(); return; }
@@ -393,6 +417,7 @@ const MUSIC = (() => {
   function halt() {   // stopped: the file paused where it is
     if (!play) return;
     clearInterval(fadeT); if (player) player.pause();
+    if (B) { stopped[B.id] = (B.c.currentTime - B.t0) % B.dur; try { B.src.stop(); } catch (e) { /* not started */ } B.src.disconnect(); B.gain.disconnect(); B = null; }
     play = null;
   }
   // the record to play now, if any: in 書房 or the bedroom (#/, #/today, #/bedroom) the one on the gramophone — set out, not
@@ -418,9 +443,9 @@ const MUSIC = (() => {
     }
     try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older Safari */ }
     if (!play || play.id !== rec.id) { halt(); start(rec); }
-    else if (!ducked) { if (player.paused) playFile(); fadeFile(level(rec), 0.6); }   // back before it had stopped
+    else if (!ducked) { if (play.mode === 'file' && player.paused) playFile(); fadeFile(level(rec), 0.6); }   // back before it had stopped
     if (!wake) {   // a browser lets sound start only from a tap or a key: the first one wakes it
-      wake = () => { if (gain) audioCtx(); if (play && wanted() && !ducked && player && player.paused && player.src) playFile(); };   // through Web Audio: its context woken too (iOS)
+      wake = () => { if (play && play.mode === 'buffer') { audioCtx(); return; } if (play && wanted() && !ducked && player && player.paused && player.src) playFile(); };   // through Web Audio: its context woken (iOS)
       ['pointerdown', 'keydown'].forEach((t) => document.addEventListener(t, wake, true));
     }
   }
@@ -443,13 +468,13 @@ const MUSIC = (() => {
   function duck(on) {
     if (on === ducked) return; ducked = on;
     if (!play || !player) return;
-    if (!gain && fixedVol()) { if (on) player.pause(); else if (wanted()) playFile(); return; }   // no way to make it softer: a pause
+    if (play.mode === 'file' && fixedVol()) { if (on) player.pause(); else if (wanted()) playFile(); return; }   // no way to make it softer: a pause
     const rec = RECORDS.find((x) => x.id === play.id);
     fadeFile(level(rec) * (on ? 0.3 : 1), on ? 0.15 : 0.6);
   }
   // 設定 › 音樂 dragged: louder or softer at once (to none: it stops; back from none: it plays again)
   function volume() { const rec = play && RECORDS.find((x) => x.id === play.id); if (rec && player && mvol()) fadeFile(level(rec) * (ducked ? 0.3 : 1), 0.1); sync(); }
-  return { RECORDS, sync, pick, put, pause, duck, volume, sleeve, playing: () => Boolean(play) && Boolean(wanted()), wants: () => (wanted() || {}).id || '', mode: () => play && play.mode, level: () => (gain ? gain.gain.value : player ? player.volume : null) };
+  return { RECORDS, sync, pick, put, pause, duck, volume, sleeve, playing: () => Boolean(play) && Boolean(wanted()), wants: () => (wanted() || {}).id || '', mode: () => play && play.mode, level: () => (B ? B.gain.gain.value : player ? player.volume : null), bufferFor: (on) => { forceBuf = on; } };   // bufferFor: tests on a desktop, as on an iPhone
 })();
 // outside 擺設 a tap on a ware sends the hero to stand beside it, facing it; at the telescope they look into it (test: 觀星)
 function yardUse(yard, id) {

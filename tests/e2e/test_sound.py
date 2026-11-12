@@ -156,6 +156,26 @@ def test_the_world_goes_quiet_while_japanese_is_read(b):
       return JSON.stringify(seen); })()"""))
     assert r == [1, 0], r
 
+def test_on_an_iphone_a_record_plays_through_web_audio_and_obeys_the_volume_and_the_dip(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ state.town.seen = { nagisa: 1 }; TOWNLIFE.still = true; MUSIC.bufferFor(true); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; await at('#/town');
+      for (let i = 0; i < 40 && !(MUSIC.mode() === 'buffer' && MUSIC.level() > 0); i++) await wait(100);
+      const r3 = (v) => Math.round(v * 1000) / 1000, full = r3(MUSIC.level());
+      state.settings.musicVol = 0.5; MUSIC.volume(); await wait(400); const half = r3(MUSIC.level());
+      SND.duck(true); await wait(400); const dip = r3(MUSIC.level()); SND.duck(false); await wait(1200); const back = r3(MUSIC.level());
+      state.settings.musicVol = 0; MUSIC.volume(); await wait(800); const off = [MUSIC.wants(), MUSIC.playing()];
+      MUSIC.bufferFor(false);
+      return JSON.stringify({ wants: 'kissa', mode: 'buffer', full, half, dip, back, off }); })()"""))
+    assert r == {'wants': 'kissa', 'mode': 'buffer', 'full': 0.28, 'half': 0.14, 'dip': 0.042, 'back': 0.14, 'off': ['', False]}, r   # the café's jazz (vol .35 of .8)
+
+def test_a_talk_keeps_the_sounds_down_till_it_ends_or_the_page_changes(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ state.town.seen = { kenta: 1 }; TOWNLIFE.still = true; TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; await at('#/town');
+      speakAs = () => {};   /* no reading here: only the talk's own dip counted */
+      const before = SND.ducked(); TALK.open(document.querySelector('#view .yard'), 'kenta', [['おっ！', '喔！'], ['パン！', '麵包！']]); const during = SND.ducked();
+      TALK.close(); await wait(50); const after = SND.ducked();
+      TALK.open(document.querySelector('#view .yard'), 'kenta', [['おっ！', '喔！']]); await at('#/vocab');
+      return JSON.stringify({ before, during, after, left: [TALK.on(), SND.ducked()] }); })()"""))
+    assert r == {'before': 0, 'during': 1, 'after': 0, 'left': [False, 0]}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

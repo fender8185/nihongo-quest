@@ -493,6 +493,7 @@ const TALK = (() => {
     close();
     const el = document.createElement('div'); el.className = 'talk'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', who(id).name);
     cur = { el, id, lines, done, take, i: 0, ev: Boolean(opt.ev), zh: false, wrong: [], why: '', said: null };
+    SND.duck(true);   // the music and the world's sounds down for the whole talk, not only while a line is read (2026-11-12, the user)
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     el.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -504,7 +505,7 @@ const TALK = (() => {
     });
     root.appendChild(el); show();
   }
-  function close() { const was = Boolean(cur); if (cur) { if (cur.spoke !== undefined) stopSpeaking(); cur.el.remove(); cur = null; } TOWNLIFE.release(); if (was) setTimeout(() => { if (document.body.classList.contains('scene')) sceneMinute(); }, 0); }   // what was being said stops with it; whoever was held strolls on; the hour's changes kept back meanwhile, now
+  function close() { const was = Boolean(cur); if (cur) { if (cur.spoke !== undefined) stopSpeaking(); cur.el.remove(); cur = null; SND.duck(false); } TOWNLIFE.release(); if (was) setTimeout(() => { if (document.body.classList.contains('scene')) sceneMinute(); }, 0); }   // what was being said stops with it; whoever was held strolls on; the hour's changes kept back meanwhile, now
   return { open, close, on: () => Boolean(cur && cur.el.isConnected) };
 })();
 // every line the talks can read aloud, and whose it is: the generator makes each a clip in its speaker's voice (CAST_VOICE)

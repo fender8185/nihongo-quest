@@ -79,6 +79,7 @@ function renderNav(active) {
 function route() {
   const r = currentRoute();
   const view = document.getElementById('view');
+  if (r.name !== animRoute && typeof TALK !== 'undefined') TALK.close();   // another page: a talk left open there ends (and the sounds it kept down come back)
   const opened = r.name !== animRoute || animForce; animRoute = r.name; animForce = false;
   const scene = ['today', 'bedroom', 'outside'].includes(r.name) || OUT_PLACES.includes(r.name);   // 書房, the bedroom and the yard: whole screens, the clock's colours
   const fit = scene || r.name === 'listen';   // one screen each on a phone
