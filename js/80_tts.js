@@ -326,7 +326,8 @@ function audioCtx() {   // the one Web Audio context (answer sounds and 環境�
     return sfxCtx;
   } catch (e) { return null; }
 }
-function sfxReady() { return state.settings.sfx ? audioCtx() : null; }   // the answer sounds' context; null: off
+const SFX = { mute: false };   // the answer sounds are always on (2026-11-12, the user); mute: for the tests that want a reading at once
+function sfxReady() { return SFX.mute ? null : audioCtx(); }   // the answer sounds' context; null: off
 function playSfx(kind, step = 0) {
   if (!sfxReady()) return 0;
   try {

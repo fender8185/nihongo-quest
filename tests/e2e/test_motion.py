@@ -146,17 +146,17 @@ def test_the_reading_waits_for_the_sound_and_the_switch_turns_it_off(b):
       const next = () => { for (let g = 0; g < 30; g++) { const e = ready(); if (e.q.speakWord && e.q.fullJp && !e.q.audio) return e; answerCurrent(e.q.answer); nextQuestion(); } return null; };
       // what this card reads after the answer; earlier cards' auto-play timers are left to run out first
       const mine = async (e) => { await sleep(300); spoken.length = 0; const want = [e.q.speakWord, e.q.fullJp]; return () => spoken.filter(x => want.includes(x)).length; };
-      const defaults = defaultSettings().sfx; const row = settingsLearn().includes('data-key="sfx"');
+      const defaults = Boolean(sfxReady()); const row = settingsLearn().includes('答題音效');
       let e = next(); let n = await mine(e); answerCurrent(e.q.answer);
       const on = { now: n() }; await sleep(700); on.later = n();
       nextQuestion(); e = next(); n = await mine(e); answerCurrent(e.q.answer); nextQuestion(); await sleep(700);
       const gone = n();   // 下一題 before the sound ended: the old card's reading never comes
-      e = next(); state.settings.sfx = false; n = await mine(e); answerCurrent(e.q.answer);
+      e = next(); SFX.mute = true; n = await mine(e); answerCurrent(e.q.answer);
       const off = { now: n(), ms: playSfx('ok') };
       SESSION = null; document.body.classList.remove('practicing');
       return JSON.stringify({ defaults, row, on, gone, off }); })()"""
     r = json.loads(ev(b, js))
-    assert r['defaults'] is True and r['row'], r
+    assert r['defaults'] is True and not r['row'], r   # always on, nowhere in 設定 (2026-11-12)
     assert r['on'] == {'now': 0, 'later': 1}, r
     assert r['gone'] == 0, r
     assert r['off'] == {'now': 1, 'ms': 0}, r

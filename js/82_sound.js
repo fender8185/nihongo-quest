@@ -4,7 +4,7 @@
    background (by day and by night, easing between with the light) and now and then something in it (a crow at the shrine).
    The files are in sounds/ (CC0: sounds/SOURCES.md; scripts/make-sounds.py makes them), named by version like the records
    and kept by the service worker; a few are made here (SYNTH), and a file not to be had falls back to its SYNTH or stays quiet.
-   One Web Audio context with the answer sounds (audioCtx); off with 設定 › 環境音. While Japanese is read aloud (speakLine)
+   One Web Audio context with the answer sounds (audioCtx); as loud as 設定 › 環境音 (0: none). While Japanese is read aloud (speakLine)
    these and the gramophone (MUSIC.duck) go down, and come back after.
    ========================================================================== */
 const SND = (() => {
@@ -12,9 +12,10 @@ const SND = (() => {
   const FX_VOL = 0.32, STEP_VOL = 0.22, AMB_VOL = 0.9, DUCK = 0.3;
   let C = null, bus = null, amb = null, ducks = 0, unduckT = 0;
   const bufs = {};   // a file's name → the promise of its AudioBuffer (null: not to be had; asked again a minute later)
-  function ctx() { if (!state.settings.ambient) return null; const c = audioCtx(); if (c && c !== C) { C = c; bus = amb = null; } return c; }
+  const vol = () => Math.min(1, Math.max(0, Number(state.settings.ambientVol) || 0));   // 設定 › 環境音 (0: none)
+  function ctx() { if (!vol()) return null; const c = audioCtx(); if (c && c !== C) { C = c; bus = amb = null; } return c; }
   function out(c) {   // the way out: everything through bus (ducked), the backgrounds through amb on it
-    if (!bus) { bus = c.createGain(); bus.gain.value = ducks ? DUCK : 1; bus.connect(c.destination); amb = c.createGain(); amb.gain.value = AMB_VOL; amb.connect(bus); }
+    if (!bus) { bus = c.createGain(); bus.gain.value = vol() * (ducks ? DUCK : 1); bus.connect(c.destination); amb = c.createGain(); amb.gain.value = AMB_VOL; amb.connect(bus); }
     return bus;
   }
   // a loop's or a footstep file's length as made (s): a decoder that leaves the encoder's 2112 samples of lead-in at the start
@@ -76,7 +77,7 @@ const SND = (() => {
   // ---- footsteps: a step each time the legs swing (.42 s walking, .28 s running, as the css), from the ground's file of four ----
   let lastStep = 0, stepK = 0;
   function step(ground, run) {
-    if (!ground || !state.settings.ambient) return;
+    if (!ground || !vol()) return;
     const now = performance.now(), gap = run ? 280 : 420;
     if (now - lastStep > 900) { lastStep = now - gap / 2; return; }   // a walk begins: the first step half a swing in, as the leg comes down
     if (now - lastStep < gap) return;
@@ -184,15 +185,21 @@ const SND = (() => {
     ducks = Math.max(0, ducks + (on ? 1 : -1));
     clearTimeout(unduckT);
     const set = () => {
-      if (bus && C) bus.gain.setTargetAtTime(ducks ? DUCK : 1, C.currentTime, ducks ? 0.08 : 0.4);
+      if (bus && C) bus.gain.setTargetAtTime(vol() * (ducks ? DUCK : 1), C.currentTime, ducks ? 0.08 : 0.4);
       MUSIC.duck(Boolean(ducks));
     };
     if (ducks) set(); else unduckT = setTimeout(set, 500);
   }
   document.addEventListener('visibilitychange', () => sync());
   saveHooks.push(() => sync());   // 環境音 switched, the gramophone stopped or started
-  ['pointerdown', 'keydown'].forEach((t) => document.addEventListener(t, () => { if (state.settings.ambient && scene) ctx(); }, true));   // woken by the first tap (iOS)
-  return { play, use, step, groundOf, sync, duck, SYNTH, scene: () => scene, layers: () => Object.keys(live).sort(), ducked: () => ducks };
+  ['pointerdown', 'keydown'].forEach((t) => document.addEventListener(t, () => { if (vol() && scene) ctx(); }, true));   // woken by the first tap (iOS)
+  // 設定 › 環境音 dragged: louder or softer at once; to none or back from none, the place's sounds stop or start
+  function volume() {
+    const v = vol() * (ducks ? DUCK : 1);
+    if (bus && C) { if (C.state === 'running') bus.gain.setTargetAtTime(v, C.currentTime, 0.05); else { bus.gain.cancelScheduledValues(0); bus.gain.value = v; } }   // asleep (iOS before a tap): set as it is
+    sync();
+  }
+  return { play, use, step, groundOf, sync, duck, volume, SYNTH, scene: () => scene, layers: () => Object.keys(live).sort(), ducked: () => ducks, level: () => (bus ? bus.gain.value : null) };
 })();
 // what a thing in a place sounds like as it is used, by place.id (a number at the id's end left off: the diner's tables): one
 // sound, or two (the second as the words after pop up); else by what it is (a bench, a ride), else nothing

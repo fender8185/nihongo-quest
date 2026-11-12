@@ -219,9 +219,8 @@ function defaultSettings() {
     showZh: true,
     furigana: true,
     speechRate: 1.0,
-    sfx: true,               // 答題音效 (1.0.50)
-    ambient: true,           // 環境音: things tapped, footsteps, each place's background (2026-11-12, SND)
-    music: true,             // 音樂: the gramophone's records (2026-11-12, MUSIC)
+    ambientVol: 1,           // 環境音 0–1 (0: none): things tapped, footsteps, each place's background (SND; a switch until 2026-11-12, the user)
+    musicVol: 1,             // 音樂 0–1 (0: none): the gramophone's records (MUSIC; likewise). 答題音效 is always on since then (SFX)
     theme: 'clock',          // 跟著時間 | 永夜 'night' | 永晝 'day' (1.1.0; older saves: dark／auto, light — themeMode)
     examDate: '2027-07-04',
     examLevel: 'N4',         /* level-literal-ok: default */ // the JLPT level the exam date is for: 學習分析 and the exam countdown project against it (1.0.26)
@@ -324,6 +323,10 @@ function normalizeState(s) {
   // 1.0.25: neither are 每組練習題數 (SESSION_SIZE) and 出題順序 (words and grammar always mixed)
   ['sessionSize', 'order'].forEach(k => { delete out.settings[k]; });
   delete out.settings.includeImported;   // 1.0.34: 每日練習包含自訂字卡 went with the custom cards
+  // 2026-11-12: 環境音 and 音樂 are volumes (a switch off: none), 答題音效 always on
+  const vol = (k, was) => { const v = s && s.settings && s.settings[k]; out.settings[k] = typeof v === 'number' && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : s && s.settings && s.settings[was] === false ? 0 : 1; };
+  vol('ambientVol', 'ambient'); vol('musicVol', 'music');
+  ['sfx', 'ambient', 'music'].forEach(k => { delete out.settings[k]; });
   if (!courseLevels().includes(out.settings.examLevel)) out.settings.examLevel = DEFAULT_LEVEL;
   delete out.preDoneDismissed; delete out.preFinished;
   delete out.lastSnapshot;   // 1.0.47: the daily snapshots are gone

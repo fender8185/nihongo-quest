@@ -14,21 +14,35 @@ def ev(b, js, pre=()):
 
 # out of doors already (ムギ met), the gramophone set out
 FRESH = """state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storyV = 9; state.startChosen = true; state.met = { koharu: 1, mugi: 1 };
-  state.owned.gramophone = { paid: 0, on: '2026-11-01' }; state.settings.ambient = true; state.settings.music = true; state.musicOff = false; saveState();
+  state.owned.gramophone = { paid: 0, on: '2026-11-01' }; state.settings.ambientVol = 1; state.settings.musicVol = 1; state.musicOff = false; saveState();
   const wait = (ms) => new Promise((q) => setTimeout(q, ms)), at = async (h) => { location.hash = h; route(); await wait(250); };"""
 
-def test_settings_have_three_sound_switches_all_on_at_first(b):
+def test_settings_have_two_volumes_and_the_answer_sounds_are_always_on(b):
     r = json.loads(ev(b, """(async () => { openSettings('learn'); await new Promise((q) => setTimeout(q, 200));
       const labels = [...document.querySelectorAll('#modalBody .setting-row .label')].map((l) => l.textContent);
-      return JSON.stringify({ labels: labels.filter((l) => ['答題音效', '環境音', '音樂'].includes(l)), d: [defaultSettings().ambient, defaultSettings().music] }); })()"""))
-    assert r == {'labels': ['答題音效', '環境音', '音樂'], 'd': [True, True]}, r
+      const sliders = [...document.querySelectorAll('#modalBody input[type="range"][data-vol]')].map((e) => [e.dataset.key, e.value, e.parentNode.querySelector('.vol-val').textContent]);
+      const n = (o) => { const x = normalizeState({ settings: o }).settings; return [x.ambientVol, x.musicVol, 'sfx' in x, 'ambient' in x, 'music' in x]; };
+      return JSON.stringify({ labels: labels.filter((l) => ['答題音效', '環境音', '音樂'].includes(l)), sliders, d: [defaultSettings().ambientVol, defaultSettings().musicVol],
+        old: n({ ambient: false, music: true, sfx: false }), kept: n({ ambientVol: 0.35, musicVol: 7 }), sfx: Boolean(sfxReady()) }); })()"""))
+    assert r == {'labels': ['環境音', '音樂'], 'sliders': [['ambientVol', '1', '100%'], ['musicVol', '1', '100%']], 'd': [1, 1],
+                 'old': [0, 1, False, False, False], 'kept': [0.35, 1, False, False, False], 'sfx': True}, r   # a switch that was off: none; 答題音效 gone from 設定, always on
+
+def test_dragging_a_volume_is_heard_at_once_and_none_is_off(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ state.settings.theme = 'day'; await at('#/beach'); openSettings('learn'); await wait(200);
+      const slide = (k, v) => { const el = document.querySelector(`#modalBody input[data-key="${k}"]`); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); return el.parentNode.querySelector('.vol-val').textContent; };
+      const half = slide('ambientVol', '0.5'); await wait(400); const lvl = SND.level();
+      const none = slide('ambientVol', '0'); await wait(200); const scene0 = SND.scene();
+      slide('ambientVol', '0.8'); await wait(200); const back = SND.scene();
+      const el = document.querySelector('#modalBody input[data-key="musicVol"]'); el.value = '0'; el.dispatchEvent(new Event('change', { bubbles: true })); await wait(100);
+      return JSON.stringify({ half, lvl: lvl === null ? null : Math.round(lvl * 100) / 100, none, scene0, back, saved: state.settings.musicVol }); })()"""))
+    assert r == {'half': '50%', 'lvl': 0.5, 'none': '關', 'scene0': '', 'back': 'beach', 'saved': 0}, r
 
 def test_each_place_has_its_background_by_day_and_by_night(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ const out = {};
       for (const [k, theme, h] of [['beachDay', 'day', '#/beach'], ['beachNight', 'night', '#/beach'], ['yardNight', 'night', '#/outside'], ['izakaya', 'day', '#/izakaya'], ['shop', 'day', '#/shop'], ['practice', 'day', '#/stats']]) {
         state.settings.theme = theme; await at(h); out[k] = [SND.scene(), SND.layers()];
       }
-      state.settings.ambient = false; saveState(); await at('#/beach'); out.off = [SND.scene(), SND.layers()];
+      state.settings.ambientVol = 0; saveState(); await at('#/beach'); out.off = [SND.scene(), SND.layers()];
       return JSON.stringify(out); })()"""))
     assert r['beachDay'] == ['beach', ['gulls', 'waves']] and r['beachNight'] == ['beach', ['waves']], r
     assert r['yardNight'] == ['yard', ['insects', 'wind']] and r['izakaya'] == ['izakaya', ['izakaya']] and r['shop'] == ['shop', ['clock']], r
@@ -38,13 +52,13 @@ def test_the_room_hears_the_window_only_while_the_gramophone_is_quiet(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ state.settings.theme = 'day'; state.placed.gramophone = state.placed.gramophone || { w: 'F', x: 19.6, y: 0.6, r: 0 }; saveState();
       await at('#/today'); const playing = [MUSIC.wants(), SND.scene(), SND.layers()];
       state.musicOff = true; saveState(); await wait(100); const stopped = [MUSIC.wants(), SND.scene(), SND.layers()];
-      state.musicOff = false; state.settings.music = false; saveState(); await wait(100); const off = [MUSIC.wants(), SND.scene()];
+      state.musicOff = false; state.settings.musicVol = 0; saveState(); await wait(100); const off = [MUSIC.wants(), SND.scene()];
       return JSON.stringify({ playing, stopped, off }); })()"""))
     assert r['playing'] == ['engawa', '', []] and r['stopped'] == ['', 'room', ['birds']] and r['off'] == ['', 'room'], r
 
 def test_a_place_plays_its_own_record_and_the_shop_sells_the_others(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ await at('#/izakaya'); const izakaya = MUSIC.wants();
-      await at('#/beach'); const beach = MUSIC.wants(); state.settings.music = false; saveState(); await at('#/izakaya'); const off = MUSIC.wants();
+      await at('#/beach'); const beach = MUSIC.wants(); state.settings.musicVol = 0; saveState(); await at('#/izakaya'); const off = MUSIC.wants();
       const sold = WARES.filter((w) => w.kind === 'record').map((w) => w.id), recs = MUSIC.RECORDS.map((x) => x.id);
       return JSON.stringify({ izakaya, beach, off, sold, every: sold.every((id) => recs.includes(id)), files: MUSIC.RECORDS.every((x) => x.file === 'music/' + x.id + '-1.m4a') }); })()"""))
     assert r['izakaya'] == 'chochin' and r['beach'] == '' and r['off'] == '', r

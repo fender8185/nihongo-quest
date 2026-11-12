@@ -338,7 +338,7 @@ const SCOPE = (() => {
 // like the clips, played by a looping <audio>; its music is written in scripts/music-synth.js, which renders the file again
 // (scripts/render-music.py) when it changes. No file to be had (offline before it was ever fetched): quiet, tried again later.
 // RECORDS: the house's own (own); one sold in 古道具屋 (2026-11-12: a ware of kind 'record', the same id) is had once bought; a
-// place's own (place) plays by itself there (PLACE_REC), at its vol. 音樂 off (設定): none plays anywhere
+// place's own (place) plays by itself there (PLACE_REC), at its vol. 設定 › 音樂: how loud (0: none plays anywhere)
 const MUSIC = (() => {
   const RECORDS = [
     { id: 'engawa', own: true, file: 'music/engawa-1.m4a', name: '縁側の午後', kana: 'えんがわのごご', zh: '簷廊的午後', style: '電鋼琴・音樂盒', color: '#e3907f' },
@@ -359,22 +359,31 @@ const MUSIC = (() => {
     <circle cx="80" cy="60" r="38" fill="#1f1c22"/><circle cx="80" cy="60" r="30" fill="none" stroke="#fff" stroke-opacity=".1"/><circle cx="80" cy="60" r="22" fill="none" stroke="#fff" stroke-opacity=".1"/><circle cx="80" cy="60" r="12" fill="${r.color}"/><circle cx="80" cy="60" r="2" fill="#1f1c22"/>
     <rect x="6" y="10" width="62" height="100" rx="4" fill="${r.color}"/><rect x="64" y="10" width="4" height="100" fill="#000" fill-opacity=".12"/><text x="37" y="66" text-anchor="middle" font-size="${r.name.length > 4 ? 11 : 15}" fill="#fff" font-weight="700" lang="ja">${esc(r.name)}</text></svg>`;
   const current = () => have().find((r) => r.id === state.record) || have()[0];
-  let play = null, wake = null, player = null, fadeT = 0;
+  let play = null, wake = null, player = null, fadeT = 0, gain = null;
   const VOL = 0.8, blobs = {};   // blobs: a record's file as a blob: URL, fetched once a session
-  const level = (rec) => VOL * (rec.vol || 1);
+  const mvol = () => Math.min(1, Math.max(0, Number(state.settings.musicVol) || 0));   // 設定 › 音樂
+  const level = (rec) => VOL * (rec.vol || 1) * mvol();
   let ducked = false;   // Japanese being read aloud (duck)
-  function fadeFile(v, s) {   // the player's volume to v (an iPhone keeps it at 1: there it only starts and stops)
-    clearInterval(fadeT); const from = player.volume, t0 = performance.now();
+  // an iPhone keeps an <audio>'s volume at 1: there the player goes out through Web Audio (gain), whose volume it obeys, so 設定 ›
+  // 音樂 and a reading's dip work there too (2026-11-12). Elsewhere the player's own volume, as before
+  function viaGain() {
+    if (gain || !fixedVol()) return;
+    try { const c = audioCtx(); if (!c || !c.createMediaElementSource) return; const g = c.createGain(); g.gain.value = 0; c.createMediaElementSource(player).connect(g); g.connect(c.destination); gain = g; } catch (e) { gain = null; }
+  }
+  function fadeFile(v, s) {   // the volume to v over s seconds
+    clearInterval(fadeT);
+    if (gain) { const c = audioCtx(); if (c && c.state === 'running') gain.gain.setTargetAtTime(v, c.currentTime, Math.max(0.02, s / 3)); else if (c) { gain.gain.cancelScheduledValues(0); gain.gain.value = v; } return; }
+    const from = player.volume, t0 = performance.now();
     fadeT = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / (s * 1000)); try { player.volume = from + (v - from) * k; } catch (e) { /* read-only */ } if (k >= 1) clearInterval(fadeT); }, 50);
   }
   const playFile = () => { const pr = player.play(); if (pr && pr.catch) pr.catch(() => {}); };   // refused before a first tap: wake tries again
   function start(rec) {
     const p = play = { id: rec.id, mode: 'file' };
-    if (!player) { player = new Audio(); player.loop = true; player.preload = 'auto'; player.setAttribute('playsinline', ''); }
+    if (!player) { player = new Audio(); player.loop = true; player.preload = 'auto'; player.setAttribute('playsinline', ''); viaGain(); }
     const go = () => {
       if (play !== p) return;
       if (player.dataset.id !== rec.id) { player.src = blobs[rec.id]; player.dataset.id = rec.id; }   // the same record again: on from where it stopped
-      try { player.volume = 0; } catch (e) { /* read-only */ }
+      if (gain) { const c = audioCtx(); if (c) gain.gain.setValueAtTime(0, c.currentTime); } else { try { player.volume = 0; } catch (e) { /* read-only */ } }
       playFile(); fadeFile(level(rec) * (ducked ? 0.3 : 1), 1.2);
     };
     if (blobs[rec.id]) { go(); return; }
@@ -390,7 +399,7 @@ const MUSIC = (() => {
   // stopped — else a place's own (PLACE_REC); the page in sight, 音樂 on
   const inRoom = () => ['today', 'bedroom'].includes(currentRoute().name);
   function wanted() {
-    if (state.settings.music === false || document.hidden) return null;
+    if (!mvol() || document.hidden) return null;
     const r = currentRoute().name;
     if (inRoom()) return state.placed && state.placed.gramophone && owns('gramophone') && !state.musicOff ? current() || null : null;
     const id = PLACE_REC[r] && PLACE_REC[r]();
@@ -411,7 +420,7 @@ const MUSIC = (() => {
     if (!play || play.id !== rec.id) { halt(); start(rec); }
     else if (!ducked) { if (player.paused) playFile(); fadeFile(level(rec), 0.6); }   // back before it had stopped
     if (!wake) {   // a browser lets sound start only from a tap or a key: the first one wakes it
-      wake = () => { if (play && wanted() && !ducked && player && player.paused && player.src) playFile(); };
+      wake = () => { if (gain) audioCtx(); if (play && wanted() && !ducked && player && player.paused && player.src) playFile(); };   // through Web Audio: its context woken too (iOS)
       ['pointerdown', 'keydown'].forEach((t) => document.addEventListener(t, wake, true));
     }
   }
@@ -434,11 +443,13 @@ const MUSIC = (() => {
   function duck(on) {
     if (on === ducked) return; ducked = on;
     if (!play || !player) return;
-    if (fixedVol()) { if (on) player.pause(); else if (wanted()) playFile(); return; }
+    if (!gain && fixedVol()) { if (on) player.pause(); else if (wanted()) playFile(); return; }   // no way to make it softer: a pause
     const rec = RECORDS.find((x) => x.id === play.id);
     fadeFile(level(rec) * (on ? 0.3 : 1), on ? 0.15 : 0.6);
   }
-  return { RECORDS, sync, pick, put, pause, duck, sleeve, playing: () => Boolean(play) && Boolean(wanted()), wants: () => (wanted() || {}).id || '', mode: () => play && play.mode };
+  // 設定 › 音樂 dragged: louder or softer at once (to none: it stops; back from none: it plays again)
+  function volume() { const rec = play && RECORDS.find((x) => x.id === play.id); if (rec && player && mvol()) fadeFile(level(rec) * (ducked ? 0.3 : 1), 0.1); sync(); }
+  return { RECORDS, sync, pick, put, pause, duck, volume, sleeve, playing: () => Boolean(play) && Boolean(wanted()), wants: () => (wanted() || {}).id || '', mode: () => play && play.mode, level: () => (gain ? gain.gain.value : player ? player.volume : null) };
 })();
 // outside 擺設 a tap on a ware sends the hero to stand beside it, facing it; at the telescope they look into it (test: 觀星)
 function yardUse(yard, id) {

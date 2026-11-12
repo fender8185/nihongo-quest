@@ -24,6 +24,20 @@ function boolRow(key, label, hint) {
   return `<div class="setting-row"><div><div class="label">${label}</div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>
     <label class="switch"><input type="checkbox" ${state.settings[key] ? 'checked' : ''} data-change="setting" data-key="${key}" data-type="bool" /><span class="track"></span></label></div>`;
 }
+// a volume, 0–100 % (0: off), heard as it is dragged (setVol) and kept when let go (CHANGE_ACTIONS.setting)
+const volText = (v) => (v > 0 ? `${Math.round(v * 100)}%` : '關');
+function volRow(key, label, hint) {
+  const v = state.settings[key];
+  return `<div class="setting-row"><div><div class="label">${label}</div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>
+    <div class="row"><input type="range" min="0" max="1" step="0.05" value="${esc(v)}" data-change="setting" data-key="${key}" data-type="num" data-min="0" data-max="1" data-vol aria-label="${label}音量" style="width:160px" /><span class="vol-val small muted">${volText(v)}</span></div></div>`;
+}
+function setVol(el) {
+  const v = clamp(Number(el.value), 0, 1); if (!Number.isFinite(v)) return;
+  state.settings[el.dataset.key] = v;
+  const t = el.parentNode.querySelector('.vol-val'); if (t) t.textContent = volText(v);
+  if (el.dataset.key === 'ambientVol') SND.volume(); else MUSIC.volume();
+}
+document.addEventListener('input', (e) => { const el = e.target.closest && e.target.closest('input[data-vol]'); if (el) setVol(el); });
 function selRow(key, label, hint, options) {
   const cur = key === 'furiState' ? furiState() : key === 'theme' ? themeMode() : state.settings[key];
   return `<div class="setting-row"><div><div class="label">${label}</div>${hint ? `<div class="hint">${hint}</div>` : ''}</div>
@@ -36,9 +50,8 @@ function settingsLearn() {
     <div class="setting-row"><div><div class="label">考試</div><div class="hint">學習分析和模擬考頁會照這個級別和日期推估進度。</div></div>
       <div class="row"><select class="select" style="width:auto" data-change="setting" data-key="examLevel">${courseLevels().map(v => `<option value="${v}" ${s.examLevel === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
       <input class="input" type="date" style="width:auto" value="${esc(s.examDate)}" data-change="setting" data-key="examDate" data-type="date" /></div></div>
-    ${boolRow('sfx', '答題音效', '答對、答錯時響一聲。iPhone 開靜音時不會響，單字發音照常。')}
-    ${boolRow('ambient', '環境音', '點東西的聲音、腳步聲、每個地方的背景聲（海浪、蟲鳴…）。唸日文時會自動變小聲。')}
-    ${boolRow('music', '音樂', '留聲機放的唱片。唸日文時會變小聲（iPhone 上會先停一下）。')}
+    ${volRow('ambientVol', '環境音', '點東西的聲音、腳步聲、每個地方的背景聲（海浪、蟲鳴…）。唸日文時會自動變小聲。')}
+    ${volRow('musicVol', '音樂', '留聲機和店裡放的唱片。唸日文時會變小聲。')}
     <div class="setting-row"><div><div class="label">語速</div><div class="hint">目前 ${Number(s.speechRate).toFixed(2)} 倍</div></div>
       <div class="row"><input type="range" min="0.6" max="1.2" step="0.05" value="${esc(s.speechRate)}" data-change="setting" data-key="speechRate" data-type="num" data-min="0.6" data-max="1.2" style="width:160px" /><button type="button" class="btn btn-sm" data-act="tts-test">${icon('speaker')}試聽</button></div></div>
     <div id="audioPrefetchBox" class="small mt-2">${audioPrefetchHtml()}</div>
@@ -148,6 +161,7 @@ Object.assign(CHANGE_ACTIONS, {
     if (k === 'theme') { if (document.body.classList.contains('scene')) sceneTick(); else applyTheme(); }   // a scene behind the dialog changes too
     if (k === 'furigana') applyFurigana();
     if (k === 'speechRate') { const hint = el.closest('.setting-row').querySelector('.hint'); if (hint) hint.textContent = `目前 ${Number(v).toFixed(2)} 倍`; }
+    if (el.dataset.vol !== undefined) setVol(el);   // let go: the sound as set
     if (modalOpen()) settingsDirty = true; else route();
   },
 });
