@@ -26,7 +26,7 @@ const WARES = [
   { id: 'tatami', kind: 'rug', name: '榻榻米', price: 20, fp: [1.8, 1.8], desc: '兩張榻榻米，鋪在哪裡都可以。' },
   { id: 'clock', kind: 'wall', name: '掛鐘', price: 20, size: [1.3, 1.3], desc: '一座老掛鐘，跟著手機的時間走。', hands: { r: 0.62, dv: 0 } },
   { id: 'cuckoo', kind: 'wall', name: '鳩時計', price: 30, size: [1, 1.6], desc: '木頭做的鳩時計，指針也會走。', hands: { r: 0.3, dv: 0.05 } },
-  { id: 'kitsune', kind: 'wall', name: '狐狸面具', price: 10, size: [0.5, 0.7], desc: '祭典買的狐狸面具。' },
+  { id: 'kitsune', kind: 'wall', name: '狐狸面具掛飾', price: 10, size: [0.5, 0.7], desc: '祭典買的狐狸面具，掛在牆上。（戴在臉上的在「穿搭」的臉部。）' },   // 2026-11-12: named apart from the one worn (foxmask)
   { id: 'chalkboard', kind: 'wall', name: '小黑板', price: 12, size: [1.2, 1.1], desc: '寫著今天想記住的字。' },
   { id: 'scroll', kind: 'wall', name: '掛軸', price: 20, size: [0.9, 2.6], desc: '寫著「継続は力なり」：持續就是力量。' },
   { id: 'japanmap', kind: 'wall', name: '日本地圖', price: 18, size: [1.4, 1], desc: '標著幾個想去的地方。' },
