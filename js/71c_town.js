@@ -427,8 +427,9 @@ const DIARY = (() => {
 })();
 // a few lines with someone (test, 2026-11-09): their face, their name, a line in Japanese (furigana; said aloud as it comes, 🔊 again) and in Chinese;
 // a tap goes on. A present waits for 收下 (its thumbnail) — take(): it is theirs then — and done() once the last line is read.
-// A line with no Japanese is said in Chinese (林, now and then). The town's events (opt.ev, events.js) are several people's lines, the hero's among them ([who, ja, zh]); their Chinese folded
-// away under 中文 (open, it stays open for the rest of the talk); a word glossed ({漢字|かな|中文}) has its Chinese under the line;
+// A line with no Japanese is said in Chinese (林, now and then). Every line's Chinese is folded away under 中文 (open, it stays
+// open for the rest of the talk; 2026-11-12, the user: a word with anyone too, not only in the events). The town's events (opt.ev,
+// events.js) are several people's lines, the hero's among them ([who, ja, zh]); a word glossed ({漢字|かな|中文}) has its Chinese under the line;
 // at a reply choice ({ ask, opts: [[ja, right, zh | why wrong]] }) the hero picks what to say: a wrong one shakes and says why,
 // and can be tried again; the right one is said, and the talk goes on
 const TALK = (() => {
@@ -453,7 +454,7 @@ const TALK = (() => {
     cur.el.innerHTML = `<div class="talk-card"><div class="talk-face">${TOWNEV.face(L.id)}</div><div class="talk-body">
       <div class="talk-name">${esc(n.name)}<span>${esc(n.role)}</span></div>
       ${!L.ja ? `<p class="talk-zh">${esc(L.zh)}</p>` : `<p class="talk-ja" lang="ja">${ruby(L.ja)} ${say(L.ja, L.id)}</p>${gl.length ? `<p class="talk-gloss">${gl.map(esc).join('　')}</p>` : ''}
-      ${cur.ev ? `<p class="talk-zh${cur.zh ? '' : ' hide'}">${esc(L.zh)}</p>${cur.zh ? '' : '<button type="button" class="talk-zh-btn" data-talk="zh">中文</button>'}` : `<p class="talk-zh">${esc(L.zh)}</p>`}`}
+      <p class="talk-zh${cur.zh ? '' : ' hide'}">${esc(L.zh)}</p>${cur.zh ? '' : '<button type="button" class="talk-zh-btn" data-talk="zh">中文</button>'}`}
       ${L.kind === 'gift' ? `<div class="talk-gift">${DECOR.thumb(w)}<b>${esc(WARE.get(w).name)}</b><button type="button" class="btn btn-primary btn-sm" data-talk="take">收下</button></div>` : '<span class="talk-next" aria-hidden="true">▼</span>'}</div></div>`;
     if (L.kind === 'gift') fitThumbs(cur.el);
     const at = (cur.said ? 's' : '') + cur.i;   // a line new on the screen is said at once, in its speaker's voice (2026-11-12, the user); drawn again (中文): not again
