@@ -100,6 +100,19 @@ def test_mugi_speaks_in_a_pitched_up_boys_voice_opening_with_wan(b):
     assert r['sent'] == [['ja-JP-Neural2-D', 6, 1.1], ['ja-JP-Chirp3-HD-Autonoe', 0, 1.02]], r   # her pitch set by Google; anyone on Chirp none
     assert r['opens'] and r['ends'] == ['……ワン。'], r   # every line of hers opens with ワン！ and none ends in it (but the one that is only a bark)
 
+def test_voices_to_try_are_listed_under_theirs_and_made_with_that_voice(b):
+    r = json.loads(ev(b, """(async () => { openSettings('data'); await new Promise((q) => setTimeout(q, 200));
+      const tries = [...document.querySelectorAll('#castPreviewBox .cast-try [data-act="cast-preview"]')].map((x) => [x.dataset.who, x.dataset.try]), asked = [];
+      const realF = fetchEngineBlob, realP = playUrl; playUrl = async () => true;
+      fetchEngineBlob = async (cfg, text, g, opt) => { asked.push([g, opt.cast, opt.voice || null]); return new Blob([new Uint8Array(4000)], { type: 'audio/mpeg' }); };
+      document.getElementById('cloudGoogleKey').value = 'k';
+      for (const k of ['', '0']) { document.querySelector(`[data-act="cast-preview"][data-who="koharu"][data-try="${k}"]`).click(); await new Promise((q) => setTimeout(q, 150)); }
+      fetchEngineBlob = realF; playUrl = realP;
+      const p1 = await cloudAudioPath('x', 'f', { cast: 'koharu', line: 'はい。', voice: ['Achernar', 1, 0] }), p2 = await cloudAudioPath('x', 'f', { cast: 'koharu', line: 'はい。' });
+      return JSON.stringify({ tries, asked, differ: p1 !== p2 }); })()"""))
+    assert r['tries'] == [['koharu', '0'], ['koharu', '1'], ['koharu', '2']], r
+    assert r['asked'] == [['f', 'koharu', None], ['f', 'koharu', ['Achernar', 1, 0]]] and r['differ'], r
+
 def test_the_world_goes_quiet_while_japanese_is_read(b):
     r = json.loads(ev(b, """(async () => { const seen = [];
       const real = speakLineNow; speakLineNow = async () => { seen.push(SND.ducked()); await new Promise((q) => setTimeout(q, 50)); };

@@ -122,9 +122,12 @@ const CAST_VOICE = {
 };
 // ムギ (2026-11-12, the user, by ear): a boy's voice pitched up, a mascot's — a grown man saying ワン, or a real bark beside a
 // plain voice, broke the spell; her lines open with ワン！ and no longer end in it (events.js 42)
+// voices to try for someone before theirs changes (試聽角色聲音 lists them under their row): [voice, rate, pitch, what it is].
+// 2026-11-12, the user: 小春 sounded a little old — something thinner and softer
+const CAST_TRY = { koharu: [['Achernar', 1, 0, '柔和（Achernar，現在是千早的聲音）'], ['Erinome', 1.02, 0, '清亮（Erinome，沒人用）'], ['Leda', 1.04, 0, '年輕（Leda，現在是美玖的聲音）']] };
 const OLD_VOICE = /^(Neural2|Wavenet|Standard)-/;
 const CAST_WOMEN = new Set(['Achernar', 'Aoede', 'Autonoe', 'Callirrhoe', 'Despina', 'Erinome', 'Gacrux', 'Kore', 'Laomedeia', 'Leda', 'Pulcherrima', 'Sulafat', 'Vindemiatrix', 'Zephyr', 'Neural2-B', 'Wavenet-A', 'Wavenet-B', 'Standard-A', 'Standard-B']);
-const castOf = (opt) => CAST_VOICE[opt.cast];
+const castOf = (opt) => opt.voice || CAST_VOICE[opt.cast];   // a voice being tried, else theirs
 const voiceGender = (v) => (CAST_WOMEN.has(v[0]) ? 'f' : 'm');
 const castGender = (who) => (CAST_VOICE[who] ? voiceGender(CAST_VOICE[who]) : '');
 const castVoiceName = (v) => (OLD_VOICE.test(v[0]) ? `ja-JP-${v[0]}` : `ja-JP-Chirp3-HD-${v[0]}`);
@@ -712,7 +715,7 @@ function cloudAudioTexts() {
   cloudMissList().forEach(m => c.add(m.text, m.gender, m.reading || ''));
   return c.list();
 }
-const clipOpt = (x) => ({ reading: x.reading || '', lang: x.lang || '', cast: x.cast, line: x.line });   // a listed clip as the player asks for it
+const clipOpt = (x) => ({ reading: x.reading || '', lang: x.lang || '', cast: x.cast, line: x.line, voice: x.voice });   // a listed clip as the player asks for it
 // the distinct file paths of a clip list, hashed a slice at a time so the page stays responsive
 async function clipPaths(list) {
   const out = [];
@@ -855,26 +858,29 @@ function cloudGenRender() { const box = document.getElementById('cloudGenBox'); 
 const CAST_PREVIEW = { blobs: {}, said: {}, busy: '' };
 const castSample = (who) => (talkLines().find((l) => l[0] === who) || [])[1] || '';
 function castPreviewHtml() {
+  const row = (id, k, name, sub, line) => { const key = `${id}|${k}`, said = CAST_PREVIEW.said[key];
+    return `<div class="list-item cast-row${k === '' ? '' : ' cast-try'}"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="cast-preview" data-who="${id}" data-try="${k}" aria-label="試聽${esc(name)}"${CAST_PREVIEW.busy === key ? ' disabled' : ''}>${CAST_PREVIEW.busy === key ? '…' : icon('speaker')}</button>
+      <div class="grow"><div><b>${esc(name)}</b> <span class="muted small">${esc(sub)}</span></div>${line ? `<div class="small muted jp">${esc(line)}</div>` : ''}${said ? `<div class="small ${said.bad ? 'bad' : 'muted'}">${esc(said.text)}</div>` : ''}</div></div>`; };
   return Object.keys(CAST_VOICE).map((id) => {
-    const p = id === 'hero' ? { name: '主角', role: '' } : NPCS[id] || TOWN.CAST[id] || { name: id, role: '' }, v = CAST_VOICE[id], said = CAST_PREVIEW.said[id];
-    return `<div class="list-item cast-row"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="cast-preview" data-who="${id}" aria-label="試聽${esc(p.name)}"${CAST_PREVIEW.busy === id ? ' disabled' : ''}>${CAST_PREVIEW.busy === id ? '…' : icon('speaker')}</button>
-      <div class="grow"><div><b>${esc(p.name)}</b> <span class="muted small">${esc(p.role || '')}${p.role ? '・' : ''}${v[0]}${v[2] ? `（音調 +${v[2]}）` : ''}（${voiceGender(v) === 'f' ? '女聲' : '男聲'}）</span></div>
-      <div class="small muted jp">${esc(castLine(castSample(id)).replace(CAST_MARK, '$1'))}</div>${said ? `<div class="small ${said.bad ? 'bad' : 'muted'}">${esc(said.text)}</div>` : ''}</div></div>`;
+    const p = id === 'hero' ? { name: '主角', role: '' } : NPCS[id] || TOWN.CAST[id] || { name: id, role: '' }, v = CAST_VOICE[id];
+    return row(id, '', p.name, `${p.role || ''}${p.role ? '・' : ''}${v[0]}${v[2] ? `（音調 +${v[2]}）` : ''}（${voiceGender(v) === 'f' ? '女聲' : '男聲'}）`, castLine(castSample(id)).replace(CAST_MARK, '$1'))
+      + (CAST_TRY[id] || []).map((t, k) => row(id, String(k), `${p.name}候選 ${k + 1}`, t[3], '')).join('');
   }).join('');
 }
 function castPreviewRender() { const box = document.getElementById('castPreviewBox'); if (box) box.innerHTML = castPreviewHtml(); }
-async function castPreview(who, key) {
+async function castPreview(who, key, k = '') {   // k: one of the voices to try for them (CAST_TRY), '' their own
   stopSpeaking(); primeTtsPlayer(); const token = speechToken;   // inside the tap: the player kept awake while the line is made (iOS)
-  let blob = CAST_PREVIEW.blobs[who];
+  const id = `${who}|${k}`, v = k === '' ? undefined : CAST_TRY[who][Number(k)].slice(0, 3);
+  let blob = CAST_PREVIEW.blobs[id];
   if (!blob) {
-    const line = castSample(who), x = { text: castLine(line).replace(CAST_MARK, '$1'), gender: castGender(who), reading: '', cast: who, line };
-    CAST_PREVIEW.busy = who; delete CAST_PREVIEW.said[who]; castPreviewRender();
+    const line = castSample(who), x = { text: castLine(line).replace(CAST_MARK, '$1'), gender: v ? voiceGender(v) : castGender(who), reading: '', cast: who, line, voice: v };
+    CAST_PREVIEW.busy = id; delete CAST_PREVIEW.said[id]; castPreviewRender();
     try {
       const got = await cloudGenBlob(Object.assign({}, ttsConfig(), { engine: 'google_tts', googleKey: key }), x);
-      blob = got.blob; if (got.note) CAST_PREVIEW.said[who] = { text: got.note };
-      if (!blob) CAST_PREVIEW.said[who] = { text: '生成的聲音是空的或靜音', bad: true };
-    } catch (e) { const msg = (e && e.message) || String(e); CAST_PREVIEW.said[who] = { text: msg + (ttsErrorHint(msg) ? `（${ttsErrorHint(msg)}）` : ''), bad: true }; }
-    CAST_PREVIEW.busy = ''; if (blob) CAST_PREVIEW.blobs[who] = blob; castPreviewRender();
+      blob = got.blob; if (got.note) CAST_PREVIEW.said[id] = { text: got.note };
+      if (!blob) CAST_PREVIEW.said[id] = { text: '生成的聲音是空的或靜音', bad: true };
+    } catch (e) { const msg = (e && e.message) || String(e); CAST_PREVIEW.said[id] = { text: msg + (ttsErrorHint(msg) ? `（${ttsErrorHint(msg)}）` : ''), bad: true }; }
+    CAST_PREVIEW.busy = ''; if (blob) CAST_PREVIEW.blobs[id] = blob; castPreviewRender();
     if (!blob) { stopSilence(); return; }
   }
   if (token !== speechToken) return;
