@@ -164,7 +164,7 @@ const TOWNEV = (() => {
   // a shop: 'prep' until its keeper is met (準備中), then 'open' or 'closed' by its hours
   // (a shop one walks into opens its door the first time an event waits inside)
   const shopState = (shop) => { const o = ownerOf(shop), w = waiting(now(), today());
-    if (w && w.place === shop) return 'open';
+    if ((w && w.place === shop) || CRUISE.opens(shop)) return 'open';   // the cruise's passengers go round: its shops open for them
     return !o || !seen(o) ? 'prep' : isOpen(shop, now()) ? 'open' : 'closed'; };
   // what someone wears where they are: their festival clothes (festa) at the shrine while its 緣日 is on
   const look = (id, place, h = now()) => { const c = T().CAST[id]; return c.festa && place === 'shrine' && isOpen('ennichi', h) ? Object.assign({}, c.look, c.festa) : c.look; };
@@ -175,7 +175,7 @@ const TOWNEV = (() => {
     const w = waiting(now(), today()), out = [];
     Object.keys(T().CAST).forEach((id) => {
       const host = w && w.ev.who === id && w.place === place, at = host ? { place, spot: w.spot } : whereIs(id, now(), today());
-      const gone = !host && T().CAST[id].away && state.town.done[T().CAST[id].away];   // away from the town now (陽菜 in Tokyo): only back for an event of theirs
+      const gone = (!host && T().CAST[id].away && state.town.done[T().CAST[id].away]) || CRUISE.away(id);   // away from the town now (陽菜 in Tokyo): only back for an event of theirs; 高橋 out with the cruise's passengers
       if (at && at.place === place && !gone && (host || seen(id)) && T().SPOTS[place] && T().SPOTS[place][at.spot]) out.push({ id, spot: T().SPOTS[place][at.spot], host });
     });
     return out;
@@ -249,7 +249,7 @@ const TOWNEV = (() => {
     const p = y.querySelector(`.npc-${o}`) || (helper && y.querySelector(`.npc-${helper}`));   // its keeper, else who helps there (和子 at the flowers)
     if (p) talk(p); else toast(T().CAST[o].away && state.town.done[T().CAST[o].away] ? `${sign}現在沒有人在顧店。` : `${T().CAST[o].name}現在不在店裡。`);
   }
-  const api = { unitIdx, reachedIdx, started, studyDaysSince, due, opened, openN, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, chatCtx, chatMem, hop, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
+  const api = { unitIdx, reachedIdx, started, share, studyDaysSince, due, opened, openN, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, chatCtx, chatMem, hop, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
   return api;
 })();
 // the bed (test, 2026-11-10; the user's call): once the day's practice is done (書桌上的筆記本「今日完成」), a sleep there moves the
@@ -399,7 +399,7 @@ const DIARY = (() => {
     const byUnit = {}; TOWN.EVENTS.forEach((e) => { (byUnit[e.u] = byUnit[e.u] || []).push(e); });
     return `<section class="town-tools"><b>測試用（只在測試站）</b>
       <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="meet">認識所有人、開通所有公車站</button><button type="button" class="btn btn-sm" data-tool="reset">小鎮事件從頭開始</button></div>
-      <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="ship">郵輪：現在叫來（不看日子、時間、進度）</button><button type="button" class="btn btn-sm" data-tool="shipreset">郵輪：今天的從頭開始</button></div>
+      <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="ship">郵輪：現在叫來（下一趟，不看日子、進度）</button><button type="button" class="btn btn-sm" data-tool="shipreset">郵輪：從第 1 趟重來</button>${CRUISE.trips().slice(1).map((t, k) => `<button type="button" class="btn btn-sm" data-tool="shipto" data-trip="${t.id}">郵輪：跳到第 ${k + 2} 趟</button>`).join('')}</div>
       <div class="row-wrap mt-2">時間（只改小鎮；「現在」也清掉睡覺跳過的時間）：${hrs.map(([h, n]) => `<button type="button" class="btn btn-sm" data-tool="hour" data-h="${h}" aria-pressed="${String(h) === String(cur)}">${n}</button>`).join('')}</div>
       ${Object.entries(byUnit).map(([u, list]) => `<div class="tt-unit"><span>${esc(u)}</span>${list.map((e) => `<button type="button" class="tb-ev" data-try="${esc(e.id)}">${esc(e.title)}<small>${esc((TOWN.CAST[e.who] || {}).name || e.who)}・${esc(TOWNEV.PLACE_NAME[e.at] || e.at)}${e.when === 'night' ? '・晚上' : ''}</small></button>`).join('')}</div>`).join('')}
     </section>`;
@@ -408,8 +408,9 @@ const DIARY = (() => {
     const t = b.dataset.tool;
     if (t === 'meet') { Object.keys(TOWN.CAST).forEach((id) => { if (TOWN.CAST[id].art !== 'npc') state.town.seen[id] = 1; }); BUS_STOPS.forEach(([id]) => { state.town.stops[id] = 1; }); saveState(); toast('認識所有人、開通所有公車站了'); }
     if (t === 'reset') { state.town = { done: {}, seen: {}, stops: {}, talks: {} }; try { localStorage.removeItem('nq_chat'); } catch (e) { /* none kept */ } Object.keys(state.koto.found).filter((k) => k.startsWith('ev-')).forEach((k) => delete state.koto.found[k]); saveState(); toast('小鎮事件從頭開始'); }
-    if (t === 'ship') { CRUISE.force(); toast('郵輪在みなと漁港外的海上等你了（院子 → 海邊 → 往漁港）', 3600); }
-    if (t === 'shipreset') { CRUISE.reset(); toast('今天的郵輪從頭開始'); }
+    if (t === 'ship') { const x = CRUISE.force(); toast(x ? `第 ${CRUISE.trips().indexOf(x) + 1} 趟的郵輪在みなと漁港外的海上等你了（院子 → 海邊 → 往漁港）` : '郵輪的導覽都走完了', 3600); }
+    if (t === 'shipreset') { CRUISE.reset(); toast('郵輪從第 1 趟重來'); }
+    if (t === 'shipto') { CRUISE.skipTo(b.dataset.trip); toast('前面幾趟算走完了，郵輪在みなと漁港外的海上等你'); }
     if (t === 'hour') { TOWNEV.clock = b.dataset.h === 'now' ? null : { h: Number(b.dataset.h), day: new Date() }; if (b.dataset.h === 'now') { try { localStorage.removeItem('nq_wake'); } catch (e) { /* none kept */ } sceneTick(); } }   // 現在: a sleep's hours gone too
     show();
   }

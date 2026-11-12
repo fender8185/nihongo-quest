@@ -1,45 +1,58 @@
 'use strict';
 // ---------- the cruise ship (test, 2026-11-12; docs/superpowers/specs/2026-11-12-cruise-tour-design.md) ----------
-// The user: a big, grand liner far out at sea off みなと漁港; tapped, it races in and its passengers come down one by one — eight of
-// them, crowding together and all talking at once (七嘴八舌) — and the hero helps 高橋 show them round, a dozen stops or so, for
-// laughs; the first round written for the end of m2 (N5 第 3–4 週). Pay comes later (the user: the loop first).
-// TOWN.CRUISE (events.js) holds who they are and what is said; this draws the ship, moves them about and runs the stops.
-// When it comes: a ship day (Tuesday, Saturday) from 9 to 17 once the course is past the tour's unit (the very first any day); the
-// test site any day and hour, and its 町の手帳 calls it. Kept on this device only (nothing synced yet): nq_cruise
-// { day, step: the next stop (-1 out at sea), place: where the passengers are, done, ever: one has come in before, told, force }.
+// The user: a big, grand liner far out at sea off みなと漁港; tapped (a long one: asked first), it races in and its passengers come
+// down one by one, crowding together and all talking at once (七嘴八舌), and the hero helps 高橋 show them round. Once a unit
+// (TOWN.CRUISE.TRIPS: t1 = m1 round the whole town, t2 = m2 白鷺城 and the 居酒屋 …); the passengers a fixed group that only
+// grows, one more each trip. Pay comes later (the user: the loop first). TOWN.CRUISE (events.js) holds who they are and what is
+// said; this draws the ship, moves them about and runs the stops.
+// When: the trips in turn; one comes once the course is half through its unit (or past it), the one before is done — not the same
+// day (the test site: any day) — and t1's town event (meeting 高橋) is done; any hour (by night the ship is lit).
+// Kept with the progress (state.cruise, synced): done { trip: day }, on: the trip under way { trip, step: its next stop, place:
+// where the passengers are } — left halfway, the ship stays in and they wait there. On this device: nq_cruise_told (the day the
+// ship far out was told of), nq_cruise_force (the test site's 町の手帳 called that trip).
 const CRUISE = (() => {
   const C = () => (typeof TOWN !== 'undefined' && TOWN.CRUISE) || null;
-  const KEY = 'nq_cruise', PLACES = ['harbor', 'beach'];
+  const TOLD = 'nq_cruise_told', FORCE = 'nq_cruise_force';
+  try { localStorage.removeItem('nq_cruise'); } catch (e) { /* the first test build's: no longer used */ }
   const calm = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   const MARK = /\{([^|}]+)\|([^|}]+)(?:\|([^}]+))?\}/g;
   const ruby = (s) => esc(s).replace(MARK, '<ruby>$1<rt>$2</rt></ruby>');
+  const local = (k) => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+  const setLocal = (k, v) => { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) { /* no storage: this visit only */ } };
+  const day = () => dateStr(TOWNEV.today());
+  const cs = () => state.cruise;
 
-  // ---- today's ship ----
-  const mem = () => { try { const m = JSON.parse(localStorage.getItem(KEY) || 'null'); return m && typeof m === 'object' ? m : {}; } catch (e) { return {}; } };
-  const keep = (m) => { try { localStorage.setItem(KEY, JSON.stringify(m)); } catch (e) { /* no storage: this visit only */ } };
-  const today = () => dateStr(TOWNEV.today());
-  function tour() {
-    const m = mem(), d = today();
-    return m.day === d ? m : { day: d, step: -1, place: 'harbor', done: false, ever: Boolean(m.ever), told: '', force: '' };
+  // ---- the trips ----
+  const trips = () => C().TRIPS;
+  const tripIdx = (id) => trips().findIndex((t) => t.id === id);
+  const trip = (id) => trips()[tripIdx(id)] || null;
+  const unitI = (u) => TOWNEV.unitIdx(u);
+  const reached = (t) => { const i = unitI(t.u), R = TOWNEV.reachedIdx(); return R > i || (R === i && TOWNEV.share(t.u) >= 0.5); };   // half its unit learned, or past it
+  function waiting() {   // the trip whose ship lies off the harbour now (none under way)
+    if (!C() || cs().on) return null;
+    const t = trips().find((x) => !cs().done[x.id]); if (!t) return null;
+    if (local(FORCE) === t.id) return t;
+    if (t.needs && !state.town.done[t.needs]) return null;
+    if (!reached(t)) return null;
+    const k = tripIdx(t.id), prev = k > 0 ? trips()[k - 1] : null;
+    if (prev && cs().done[prev.id] === day() && !onTestSite()) return null;   // the next one comes another day
+    return t;
   }
-  const save = (t) => keep(Object.assign({}, t, { ever: Boolean(t.ever || t.step >= 0) }));
-  const past = () => TOWNEV.reachedIdx() > TOWNEV.unitIdx(C().u) || (state.completedUnits || []).includes(C().u);
-  function out() {   // out at sea or in, today
-    const t = tour(); if (!C() || t.done) return false;
-    if (t.step >= 0 || t.force === t.day) return true;
-    if (!past()) return false;
-    if (onTestSite()) return true;
-    const h = TOWNEV.now(), d = TOWNEV.today().getDay();
-    return h >= 9 && h < 17 && (!t.ever || d === 2 || d === 6);
-  }
-  const docked = () => out() && tour().step >= 0;
-  const stops = () => C().TOUR;
-  const needOk = (s) => { if (!s.need) return true; const w = TOWNEV.whereIs(s.need, TOWNEV.now(), TOWNEV.today()); return Boolean(w) && w.place === s.at; };   // ムギ on the beach
-  function nextStop(t) { const ts = stops(); for (let i = Math.max(0, t.step); i < ts.length; i++) if (needOk(ts[i])) return i; return ts.length - 1; }
-  const order = () => Object.keys(C().OFF);   // the passengers, in the order they come down
-  const person = (id) => (id === 'takahashi' ? TOWN.CAST.takahashi : (C() && C().PEOPLE[id]) || null);
+  const current = () => (C() && cs().on ? trip(cs().on.trip) : null);
+  const out = () => Boolean(current() || waiting());
+  const docked = () => Boolean(current());
+  const people = () => C().PEOPLE;
+  // the group on a trip: all who joined by then, in the order they come down (the newest last)
+  const party = (t) => { const k = tripIdx(t.id), P = people(); return Object.keys(P).filter((id) => tripIdx(P[id].from) <= k).sort((a, b) => tripIdx(P[a].from) - tripIdx(P[b].from)); };
+  const fits = (t) => (l) => unitI(l[0]) <= unitI(t.u);   // said by the trip's unit
+  const offLine = (t, id) => (C().OFF[id] || []).filter(fits(t)).pop();
+  const sayLines = (t, id) => (C().SAY[id] || []).filter(fits(t));
+  const person = (id) => (id === 'takahashi' ? TOWN.CAST.takahashi : (C() && people()[id]) || null);
+  const needOk = (s) => !s.need || TOWNEV.seen(s.need);   // ムギ: once he has come by
+  function nextStop(t, from) { const ss = t.stops; for (let i = Math.max(0, from); i < ss.length; i++) if (needOk(ss[i])) return i; return ss.length - 1; }
+  const placeName = (p) => TOWNEV.PLACE_NAME[p] || p;
 
   // ---- the ship (in the harbour's land, its units: y down) ----
   // docked along the quay behind the boats and 漁協, its stern clear of the lighthouse, its bow to the right; far out it is the same
@@ -110,14 +123,15 @@ const CRUISE = (() => {
     return `<g class="cruise-front"${on ? '' : ' style="opacity:0"'}>${LINES}<g class="cruise-ramp" transform="${rampT(on ? 1 : 0)}">${RAMP()}</g></g>`;
   }
   function callHtml() {   // harborHtml: the ship far out, to be tapped
-    if (!out() || docked()) return '';
+    if (!waiting()) return '';
     return `<button type="button" class="thing way-btn cruise-call" data-act="cruise-call" aria-label="豪華郵輪" style="margin-left:${FAR.x - 600 - 32}px;bottom:${370 - FAR.y + 2}px"><span class="tag">${ySign('wave', '豪華郵輪')}</span></button>`;
   }
 
-  // ---- the people about (高橋 with his flag, the passengers): drawn as the town's, moved here ----
-  let S = null;   // { yard, place, ppl: Map id → { el, id, pos, k, walk }, raf, t: timers, busy, ct, jt }
-  let lastPlace = '', pend = '';   // the place drawn before (they come along from there); the place they were led to (its stop begins)
+  // ---- the people about (高橋 with his flag, the passengers, townsfolk a stop brings out): drawn as the town's, moved here ----
+  let S = null;   // { yard, place, indoor, ppl: Map id → { el, id, pos, k, walk, z, seat }, extra: [els], raf, t: timers, busy, ct, jt }
+  let lastPlace = '', pend = '', carry = false;   // the place drawn before; the place they were led to (its stop begins); taken there by travel()
   const alive = () => Boolean(S && S.yard.isConnected);
+  const fresh = (yard, place) => ({ yard, place, indoor: INDOOR.includes(place), ppl: new Map(), extra: [], raf: 0, t: [], busy: false });
   const FLAG = `<g class="cr-flag"><path d="M34 -40 V-252" stroke="#6e4f3a" stroke-width="3.4" stroke-linecap="round"/><path d="M35.5 -252 h58 v38 h-58 Z" fill="#f08a3c"/><path d="M35.5 -252 h58 v6 h-58 Z" fill="#fff" fill-opacity=".3"/>`
     + `<text x="64.5" y="-227" text-anchor="middle" font-size="17" font-weight="800" fill="#fff" font-family="system-ui, sans-serif">みなと</text><circle cx="34" cy="-255" r="3.4" fill="#e6c23a"/></g>`;
   function el(id, [X, Y]) {
@@ -126,7 +140,7 @@ const CRUISE = (() => {
     let svg = HERO.svg({ look: c.look, wear: c.wear || {} });
     if (id === 'takahashi') svg = svg.replace(/<\/g><\/g><\/svg>$/, FLAG + '</g></g></svg>');
     b.innerHTML = svg;
-    const p = { el: b, id, pos: [X, Y], k: c.size || 1, walk: null, back: false, flip: false, turn: false };
+    const p = { el: b, id, pos: [X, Y], k: c.size || 1, walk: null, back: false, flip: false, turn: false, z: 0, seat: null };
     S.yard.querySelector('.yworld').appendChild(b); put(p); S.ppl.set(id, p);
     HERO.idle(b, () => alive() && !p.walk && !TALK.on(), true);
     return p;
@@ -134,10 +148,17 @@ const CRUISE = (() => {
   function put(p) {
     const [X, Y] = p.pos;
     p.el.style.transform = `translate(${X.toFixed(1)}px,${(-Y).toFixed(1)}px) scale(${(yScale(Y) * p.k).toFixed(3)})`;
-    p.el.style.zIndex = String(300 - Math.round(Y));
+    p.el.style.zIndex = String(p.z || (S.indoor ? isoZ(...isoUV(X, Y)) : 300 - Math.round(Y)));   // in a room: by where they stand on its floor
   }
   const face = (p) => { p.el.classList.toggle('back', p.back); p.el.classList.toggle('turn', p.turn); p.el.classList.toggle('flip', p.flip); };
-  const turnTo = (p, x) => { const dx = x - p.pos[0]; p.back = false; p.turn = Math.abs(dx) > 16; if (p.turn) p.flip = dx < 0; face(p); };
+  const turnTo = (p, x) => { if (p.seat) return; const dx = x - p.pos[0]; p.back = false; p.turn = Math.abs(dx) > 16; if (p.turn) p.flip = dx < 0; face(p); };
+  // sat down in a room's seat [u, v, h, how] (as the town's people sit: on a chair or a stool, kneeling on a cushion), up again
+  function sit(p, q) {
+    const [u, v, h, how] = q, f = how.split(' ');
+    p.seat = q; p.pos = isoXY(u, v, h); p.z = isoZ(u, v + 0.45); p.back = f.includes('back'); p.turn = f.includes('turn'); p.flip = f.includes('flip');
+    p.el.classList.add(f.includes('kneel') ? 'kneel' : 'bench'); face(p); put(p);
+  }
+  function stand(p) { if (!p.seat) return; p.pos = isoXY(p.seat[0], p.seat[1]); p.seat = null; p.z = 0; p.el.classList.remove('bench', 'kneel'); put(p); }
   // along the ground round what stands in the way (o.path: these points as they are — the gangway; o.free: off the ground's top);
   // o.v: px a second, o.delay: ms before setting off, o.done
   function walkTo(p, goal, o = {}) {
@@ -145,6 +166,7 @@ const CRUISE = (() => {
     clearTimeout(p.wt);
     const go = () => {
       if (!alive()) return;
+      stand(p);
       const pts = o.path || yRoute(S.place, p.pos, goal, o.free), seg = []; let len = 0;
       for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (d) { seg.push([pts[i - 1], pts[i], len, d]); len += d; } }
       if (len < 3 || calm()) { p.pos = pts[pts.length - 1].slice(); put(p); if (o.done) o.done(); return; }
@@ -183,55 +205,86 @@ const CRUISE = (() => {
   function chatter() {
     if (!alive()) return;
     S.ct = setTimeout(chatter, rnd(800, 1600));
-    if (TALK.on() || document.hidden || S.quiet || S.yard.querySelectorAll('.ysay.cr-say').length >= 3) return;
+    const t = current();
+    if (!t || TALK.on() || document.hidden || S.quiet || S.yard.querySelectorAll('.ysay.cr-say').length >= 3) return;
     const ids = [...S.ppl.keys()].filter((id) => id !== 'takahashi' || Math.random() < 0.3); if (!ids.length) return;
-    const id = pick(ids), ls = C().SAY[id] || []; if (ls.length) say(id, pick(ls)[0]);
+    const id = pick(ids), ls = sayLines(t, id); if (ls.length) say(id, pick(ls)[1]);
   }
-  // crowded together: now and then someone shuffles a step, then looks back at the hero
+  // crowded together: now and then someone shuffles a step, then looks back at the hero (not those sitting down)
   function jostle() {
     if (!alive()) return;
     S.jt = setTimeout(jostle, rnd(1400, 2800));
     if (TALK.on() || S.busy || calm()) return;
-    const idle = [...S.ppl.values()].filter((p) => !p.walk && p.id !== 'takahashi' && !p.away); if (!idle.length) return;
-    const p = pick(idle), [X, Y] = p.pos;
-    walkTo(p, [X + rnd(-14, 14), Math.max(14, Math.min(118, Y + rnd(-5, 5)))], { path: [p.pos, [X + rnd(-14, 14), Math.max(14, Math.min(118, Y + rnd(-5, 5)))]], v: 45, done: () => turnTo(p, yh.X) });
+    const idle = [...S.ppl.values()].filter((p) => !p.walk && !p.seat && p.id !== 'takahashi' && !p.away); if (!idle.length) return;
+    const p = pick(idle), [X, Y] = p.pos, to = S.indoor ? isoClamp([X + rnd(-14, 14), Y + rnd(-5, 5)], 1) : [X + rnd(-14, 14), Math.max(14, Math.min(walkTop(S.place, X), Y + rnd(-5, 5)))];
+    walkTo(p, to, { path: [p.pos, to], v: 45, done: () => turnTo(p, yh.X) });
   }
-  // where they crowd at a stop: two rows close together, the two newly-weds side by side, a different order each stop
-  const SLOTS = [[-48, 12], [-17, 15], [13, 13], [44, 10], [-60, -7], [-30, -5], [-1, -9], [29, -7]];
-  function slots(s, i) {
-    const units = [['umeko'], ['kaneda'], ['yoshimoto'], ['michiyama'], ['rina'], ['ken', 'ai'], ['yuta']], r = (i * 3) % units.length;
-    const ids = units.slice(r).concat(units.slice(0, r)).flat(), [cx, cy] = crowdAt(s), f = yScale(cy) / yScale(60), out = {};
-    ids.forEach((id, k) => { out[id] = [cx + SLOTS[k][0] * f + rnd(-4, 4), cy + SLOTS[k][1] + rnd(-2, 2)]; });
+  // where a stop puts them: its points in the hero's units (a room's floor [u, v] turned into them), 高橋 beside the hero, the crowd
+  // within a phone's view of him; two rows close together (three when many), the newly-weds side by side, a different order each stop
+  const heroAt = (s) => (s.room ? isoXY(...s.hero) : s.hero);
+  const guideAt = (s) => (s.room ? isoXY(s.hero[0] + 1.7, s.hero[1] - 0.5) : [s.hero[0] + 64, s.hero[1] + 6]);
+  const crowdAt = (s) => { if (s.room) return isoXY(...s.crowd); const dx = s.crowd[0] - s.hero[0]; return [s.hero[0] + Math.sign(dx) * Math.min(112, Math.abs(dx)), s.crowd[1]]; };
+  function grid(n) {
+    const rows = n <= 10 ? 2 : 3, per = Math.ceil(n / rows), out = [];
+    for (let i = 0; i < n; i++) { const r = Math.floor(i / per), c = i % per, cnt = Math.min(per, n - r * per); out.push([(c - (cnt - 1) / 2) * 32 + (r % 2 ? 12 : 0), (rows - 1 - r) * 13 - 6]); }
     return out;
   }
-  const guideAt = (s) => [s.hero[0] + 64, s.hero[1] + 6];
-  const crowdAt = (s) => { const dx = s.crowd[0] - s.hero[0]; return [s.hero[0] + Math.sign(dx) * Math.min(112, Math.abs(dx)), s.crowd[1]]; };   // within a phone's view of him
+  function slots(s, i, ids) {
+    const units = [];
+    ids.forEach((id) => { if (id === 'ai' && ids.includes('ken')) return; units.push(id === 'ken' && ids.includes('ai') ? ['ken', 'ai'] : [id]); });
+    const r = units.length ? (i * 3) % units.length : 0, order = units.slice(r).concat(units.slice(0, r)).flat();
+    const [cx, cy] = crowdAt(s), f = S.indoor ? 1 : yScale(cy) / yScale(60), g = grid(order.length), out = {};
+    order.forEach((id, k) => { const q = [cx + g[k][0] * f + rnd(-4, 4), cy + g[k][1] * (S.indoor ? 0.8 : 1) + rnd(-2, 2)]; out[id] = S.indoor ? isoClamp(q, 1) : q; });
+    return out;
+  }
+  // a room's seats free of its own people and of the passengers already sat down: [u, v, h, how] (PLACE_USE: chairs, stools, cushions)
+  function seats() {
+    const all = []; (PLACE_USE[S.place] || []).filter((t) => t.kind === 'seat').forEach((t) => t.seats.forEach((q) => { if (!all.some((x) => Math.hypot(x[0] - q[0], x[1] - q[1]) < 0.3)) all.push(q); }));
+    const taken = [...S.yard.querySelectorAll('.npc[data-npc], .cr-extra')].map(npcXY), sat = [...S.ppl.values()].filter((p) => p.seat).map((p) => p.seat);
+    return all.filter((q) => { const [X, Y] = isoXY(q[0], q[1], q[2]); return !sat.includes(q) && taken.every(([nx, ny]) => Math.hypot(nx - X, ny - Y) > 14); });
+  }
+  const facing = (s) => { const h = heroAt(s)[0], c = crowdAt(s)[0]; S.ppl.forEach((p) => { if (!p.walk) turnTo(p, p.id === 'takahashi' ? c : h); }); };
   // the camera over them all: between the crowd's far side and 高橋 (a phone shows some 250 of the land's px), gliding there
   function frameAll(s) {
     if (!alive() || !yCamMax()) return;
     const [cx] = crowdAt(s), g = guideAt(s)[0], w = S.yard.querySelector('.yworld');
     YCAM.free = true; w.classList.add('glide'); yCamTo(S.yard, (cx + Math.sign(cx - g) * 50 + g) / 2); setTimeout(() => w.classList.remove('glide'), 400);
   }
-  const facing = (s) => { S.ppl.forEach((p) => { if (!p.walk) turnTo(p, p.id === 'takahashi' ? crowdAt(s)[0] : s.hero[0]); }); };
+  // the townsfolk a stop has: about already (held where they are) or brought out for it, gone again at the next stop
+  function bringOut(s) {
+    S.extra.forEach((b) => b.remove()); S.extra = [];
+    Object.entries(s.cast || {}).forEach(([id, q]) => {
+      const c = TOWN.CAST[id]; if (!c) return;
+      const [X, Y] = s.room ? isoXY(...q) : q, here = S.yard.querySelector(`.npc[data-npc="${id}"]`);
+      if (here && !S.indoor) { TOWNLIFE.hold(id); return; }   // out of doors: where they are
+      if (here) { here.style.transform = `translate(${X.toFixed(1)}px,${(-Y).toFixed(1)}px) scale(${(yScale(Y) * (c.size || 1)).toFixed(3)})`; here.style.zIndex = String(isoZ(...isoUV(X, Y))); here.classList.remove('bench', 'kneel', 'back'); return; }   // in a room: over to them (トメ from her counter)
+      const b = document.createElement('div');
+      b.className = `hero npc npc-${id} cr-extra`; b.innerHTML = TOWNEV.art(id, S.place);
+      b.style.transform = `translate(${X.toFixed(1)}px,${(-Y).toFixed(1)}px) scale(${(yScale(Y) * (c.size || 1)).toFixed(3)})`;
+      b.style.zIndex = String(S.indoor ? isoZ(...isoUV(X, Y)) : 300 - Math.round(Y));
+      S.yard.querySelector('.yworld').appendChild(b); S.extra.push(b);
+    });
+  }
 
   // ---- the bar along the foot of the scene: which stop is next, and on ----
   function bar() {
     if (!alive()) return;
     let b = S.yard.querySelector('.cruise-bar');
-    const t = tour();
-    if (t.step < 0 || t.done) { if (b) b.remove(); return; }
+    const t = current();
+    if (!t) { if (b) b.remove(); return; }
     if (!b) { b = document.createElement('div'); b.className = 'cruise-bar'; b.setAttribute('role', 'status'); S.yard.appendChild(b); }
-    const ts = stops(), i = nextStop(t), s = ts[i], n = ts.length;
-    const go = s.at !== S.place ? (s.at === 'beach' ? '一起去海邊' : '回漁港') : i === n - 1 ? '送客人上船' : '下一站';
-    b.innerHTML = t.place !== S.place ? `<span class="cb-t">遊客在${esc(TOWNEV.PLACE_NAME[t.place] || t.place)}等你</span>`
+    const on = cs().on, i = nextStop(t, on.step), s = t.stops[i], n = t.stops.length;
+    const near = Boolean(WAYS[`${S.place}>${s.at}`]);
+    const go = s.at === S.place ? (s.bye ? '送客人上船' : '下一站') : !near && s.go === 'bus' ? `搭公車去${placeName(s.at)}` : `一起去${placeName(s.at)}`;
+    b.innerHTML = on.place !== S.place ? `<span class="cb-t">遊客在${esc(placeName(on.place))}等你</span>`
       : `<span class="cb-n">${i + 1}/${n}</span><span class="cb-t">${esc(s.title)}</span>${S.busy ? '<span class="cb-busy">導覽中…</span>' : `<button type="button" class="btn btn-primary btn-sm" data-act="cruise-next">${go} ▶</button>`}`;
   }
 
-  // ---- a stop: the hero and 高橋 to their places, the passengers crowding round (one lost elsewhere), the talk, the chatter ----
+  // ---- a stop: the hero and 高橋 to their places, the passengers crowding round (or sitting down; one lost elsewhere), the talk ----
   function run(i) {
     if (!alive() || S.busy) return;
-    const s = stops()[i], at = slots(s, i), sc = S;
-    S.busy = true; bar();
+    const t = current(), s = t.stops[i], ids = [...S.ppl.keys()].filter((id) => id !== 'takahashi'), at = slots(s, i, ids), sc = S;
+    S.busy = true; bar(); bringOut(s);
     let left = 1, fin = false;
     const there = () => { if (--left > 0 || fin) return; fin = true; setTimeout(begin, 250); };
     const begin = () => {
@@ -241,58 +294,89 @@ const CRUISE = (() => {
       if (s.need) TOWNLIFE.hold(s.need);   // ムギ stays put for his talk (let go as it closes)
       TALK.open(S.yard, 'takahashi', s.lines, () => end(i), null, { ev: true, onLine });
     };
-    left++; yHeroWalk(S.yard, s.hero, there);
+    left++; yHeroWalk(S.yard, heroAt(s), there);
     left++; walkTo(S.ppl.get('takahashi'), guideAt(s), { v: 120, done: there });
-    order().forEach((id, k) => {
+    const free = s.seat && S.indoor ? seats() : [];
+    ids.forEach((id, k) => {
       const p = S.ppl.get(id); if (!p) return;
       const lost = s.lost && s.lost[0] === id; p.away = lost;
-      left++; walkTo(p, lost ? s.lost[1] : at[id], { delay: k * 80 + rnd(0, 220), v: id === 'umeko' ? 160 : id === 'michiyama' ? 75 : rnd(88, 115), done: there });
+      if (s.seat && S.indoor && p.seat) return;   // sat down already
+      const q = s.seat && S.indoor ? free.shift() : null;
+      left++; walkTo(p, lost ? s.lost[1] : q ? isoXY(q[0], q[1]) : at[id], { delay: k * 80 + rnd(0, 220), v: id === 'umeko' ? 160 : id === 'michiyama' ? 75 : rnd(88, 115), done: () => { if (q) sit(p, q); there(); } });
     });
     there();
     S.t.push(setTimeout(() => { if (!fin) { left = 1; there(); } }, 5200));   // a walk cut short (the hero sent elsewhere): on after 5 s all the same
   }
   function onLine(L) {
     if (!alive() || !L) return;
-    if (L.id === 'all') order().forEach((id, k) => setTimeout(() => hop(id, 'cheer'), k * 60));
+    if (L.id === 'all') [...S.ppl.keys()].filter((id) => id !== 'takahashi').forEach((id, k) => setTimeout(() => hop(id, 'cheer'), k * 60));
     else if (S.ppl.has(L.id)) hop(L.id);
   }
   function end(i) {
     if (!alive()) return;
-    const s = stops()[i], t = tour();
-    t.step = i + 1; t.place = S.place; save(t);
-    if (s.lost) { const p = S.ppl.get(s.lost[0]); if (p) { p.away = false; walkTo(p, [crowdAt(s)[0] + rnd(-40, 40), s.crowd[1] + rnd(-8, 8)], { v: 160, done: () => turnTo(p, yh.X) }); } }
-    if (s.bye) { farewell(s); return; }
-    (s.after || []).forEach(([id, ja], k) => S.t.push(setTimeout(() => { if (id === 'all') order().forEach((q) => say(q, ja, 1800)); else say(id, ja); }, 300 + k * 650)));
+    const t = current(), s = t.stops[i], on = cs().on;
+    on.step = i + 1; on.place = S.place; saveState();
+    if (s.lost) { const p = S.ppl.get(s.lost[0]); if (p) { p.away = false; walkTo(p, [crowdAt(s)[0] + rnd(-40, 40), s.room ? crowdAt(s)[1] : s.crowd[1] + rnd(-8, 8)], { v: 160, done: () => turnTo(p, yh.X) }); } }
+    if (s.bye) { farewell(t, s); return; }
+    const ids = [...S.ppl.keys()].filter((id) => id !== 'takahashi');
+    (s.after || []).forEach(([id, ja], k) => S.t.push(setTimeout(() => { if (TALK.on()) return; if (id === 'all') ids.forEach((q) => say(q, ja, 1800)); else say(id, ja); }, 300 + k * 650)));   // not over the next talk
     S.busy = false; bar();
   }
-  // on to the next place, all together: everyone toward the way off, the hero leading (yGo); they come in behind him there
+  // on to the next stop: here, or next door all walking over together (the hero leading as yGo does), or further — by bus or on foot
+  // (travel: the screen fades, a line says how, and they are all there)
   function next() {
     if (!alive() || S.busy || TALK.on()) return;
-    const t = tour(); if (t.step < 0 || t.done || t.place !== S.place) return;
-    const i = nextStop(t), s = stops()[i];
+    const t = current(), on = cs().on; if (!t || on.place !== S.place) return;
+    const i = nextStop(t, on.step), s = t.stops[i];
     if (s.at === S.place) { run(i); return; }
-    const way = WAYS[`${S.place}>${s.at}`], btn = S.yard.querySelector(`[data-act="go-place"][data-to="${s.at}"]`);
-    if (!way || !btn) return;
+    const way = WAYS[`${S.place}>${s.at}`];
+    if (!way) { travel(s); return; }
     pend = s.at; S.busy = true; bar();
-    const o = way.out();
-    S.ppl.forEach((p) => walkTo(p, [o[0] + rnd(-36, 36), Math.min(118, o[1] + rnd(-6, 6))], { delay: rnd(100, 700), v: rnd(95, 125) }));
-    yGo(btn, s.at);
+    const o = way.out(), top = (x) => (S.indoor ? x : Math.min(walkTop(S.place, x[0]), x[1]));
+    S.ppl.forEach((p) => walkTo(p, S.indoor ? o : [o[0] + rnd(-36, 36), top([o[0], o[1] + rnd(-6, 6)])], { delay: rnd(100, 700), v: rnd(95, 125), free: true }));
+    const btn = S.yard.querySelector(`[data-act="go-place"][data-to="${s.at}"]`);
+    if (btn) { yGo(btn, s.at); return; }
+    const h = S.yard.querySelector('.yhero');   // a shop's door (食堂, 居酒屋), in or out
+    yHeroWalk(S.yard, o, () => { if (h) h.classList.add('out'); setTimeout(() => { yh.arrive = { from: yPlace, to: s.at }; go(PLACE_ROUTE[s.at]); }, 260); }, true);
+  }
+  function travel(s) {
+    const words = s.go === 'bus' ? `🚌 大家一起搭公車去${placeName(s.at)}` : `🚶 大家一起走去${placeName(s.at)}`;
+    const v = document.createElement('div'); v.className = 'cruise-travel'; v.innerHTML = `<span>${esc(words)}</span>`; document.body.appendChild(v);
+    pend = s.at; carry = true; S.busy = true; bar();
+    requestAnimationFrame(() => v.classList.add('on'));
+    const bus = s.go === 'bus' && BUS_AT[s.at], start = bus ? [bus.X - 60, Math.max(14, bus.Y + 20)] : heroAt(s);
+    setTimeout(() => {
+      try { const h = JSON.parse(localStorage.getItem('nq_hero') || '{}') || {}; h[s.at] = { X: Math.round(start[0]), Y: Math.round(start[1]) }; localStorage.setItem('nq_hero', JSON.stringify(h)); } catch (e) { /* no storage */ }
+      yh.arrive = null; yPlace = '';   // drawn anew there, where the bus or the walk brings him
+      go(PLACE_ROUTE[s.at]);
+      setTimeout(() => { v.classList.remove('on'); setTimeout(() => v.remove(), 600); }, 500);
+    }, calm() ? 200 : 1500);
   }
 
-  // ---- in: the ship tapped far out ----
+  // ---- in: the ship tapped far out (asked first: a long one), in it comes ----
   function tween(ms, step, done, ease = (u) => 1 - Math.pow(1 - u, 3)) {
     const sc = S, t0 = performance.now();
     if (calm()) { step(1); if (done) done(); return; }
     const f = (now) => { if (S !== sc || !alive()) return; const u = Math.min(1, (now - t0) / ms); step(ease(u)); if (u < 1) requestAnimationFrame(f); else if (done) done(); };
     requestAnimationFrame(f);
   }
-  function call(btn) {
-    if (!alive() || S.busy || S.place !== 'harbor') return;
-    const t = tour(); if (t.step >= 0 || !out()) return;
-    S.busy = true; btn.remove();
+  function call() {
+    const t = waiting(); if (!t || !alive() || S.busy) return;
+    const n = t.stops.length, k = tripIdx(t.id) + 1, asks = t.stops.reduce((a, s) => a + s.lines.filter((l) => !Array.isArray(l)).length, 0);
+    const join = t.join && people()[t.join];
+    openModal('豪華郵輪靠港了！', `<p>第 ${k} 趟導覽「${esc(t.title)}」：約 ${n} 站、${asks} 個回答，大約要 20–30 分鐘。</p>
+      ${join ? `<p>這一趟多了一位新團員：${esc(join.name)}（${esc(join.role)}）。</p>` : ''}
+      <p class="muted">中途可以離開，郵輪會一直停在港口，遊客在原地等你，下次從同一站繼續。</p>
+      <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="cruise-start">開始導覽</button></div>`, { width: 420 });
+  }
+  function start() {
+    closeModal();
+    const t = waiting(); if (!t || !alive() || S.busy || S.place !== 'harbor') return;
+    cs().on = { trip: t.id, step: 0, place: 'harbor' }; setLocal(FORCE, ''); saveState();   // in from now on, should the scene be drawn anew halfway
+    S.busy = true;
+    const y = S.yard, btn = y.querySelector('.cruise-call'), ship = y.querySelector('.cruise-ship'), front = y.querySelector('.cruise-front'), ramp = y.querySelector('.cruise-ramp');
+    if (btn) btn.remove();
     S.ct = setTimeout(chatter, 6000); S.jt = setTimeout(jostle, 8000);
-    t.step = 0; t.place = 'harbor'; save(t);   // in from now on, should the scene be drawn anew halfway
-    const y = S.yard, ship = y.querySelector('.cruise-ship'), front = y.querySelector('.cruise-front'), ramp = y.querySelector('.cruise-ramp');
     yHeroWalk(y, [FOOT_W[0] - 70, 108], () => { yh.back = true; yh.turn = false; yHeroPlace(y); });
     yPop(y, FAR.x, FAR.y - 34, 'ボーッ！');
     if (ship) ship.classList.add('sailing');
@@ -304,34 +388,34 @@ const CRUISE = (() => {
       if (ship) { ship.classList.remove('sailing', 'far'); ship.removeAttribute('transform'); }
       yPop(y, 770, -70, 'ボーーッ！');
       if (front) front.style.opacity = '';
-      tween(800, (u) => { if (ramp) ramp.setAttribute('transform', rampT(u)); }, comeOff);
+      tween(800, (u) => { if (ramp) ramp.setAttribute('transform', rampT(u)); }, () => comeOff(t));
     }, (u) => (u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2) * 0.35 + (1 - Math.pow(1 - u, 3)) * 0.65);
   }
-  // 高橋 hurries in with his flag; they come down the gangway one at a time, saying who they are, and crowd round him
-  function comeOff() {
+  // 高橋 hurries in with his flag; they come down the gangway one at a time, saying who they are (the newest last), and crowd round
+  function comeOff(t) {
     if (!alive()) return;
-    const s0 = stops()[0], at = slots(s0, 0), g = el('takahashi', [ycam.YW / 2 + 40, 52]);
+    const s0 = t.stops[0], ids = party(t), at = slots(s0, 0, ids), g = el('takahashi', [ycam.YW / 2 + 40, 52]);
     walkTo(g, guideAt(s0), { v: 150, free: true, done: () => { turnTo(g, FOOT_W[0]); say('takahashi', 'みなさん、こちらです〜！'); } });
-    order().forEach((id, k) => S.t.push(setTimeout(() => {
+    ids.forEach((id, k) => S.t.push(setTimeout(() => {
       if (!alive()) return;
       const p = el(id, DOOR_W.slice()); p.el.classList.add('cr-in');
       walkTo(p, FOOT_W, { path: [DOOR_W, FOOT_W], v: 70, done: () => {
-        const off = C().OFF[id]; if (off) say(id, off[0], 2600);
+        const off = offLine(t, id); if (off) say(id, off[1], 2600);
         const lost = s0.lost && s0.lost[0] === id; p.away = lost;
         walkTo(p, lost ? s0.lost[1] : at[id], { delay: 500, v: id === 'umeko' ? 160 : 100, done: () => turnTo(p, g.pos[0]) });
       } });
     }, 900 + k * 850)));
-    S.t.push(setTimeout(() => { if (!alive()) return; S.busy = false; run(0); }, 900 + order().length * 850 + 2600));
+    S.t.push(setTimeout(() => { if (!alive()) return; S.busy = false; run(nextStop(t, 0)); }, 900 + ids.length * 850 + 2600));
   }
   // seen off: up the gangway one at a time with a last word, the gangway in, a blast, the ship away to the right; 高橋 waves it off
-  function farewell(s) {
-    const y = S.yard, bye = Object.fromEntries((s.after || []).map(([id, ja]) => [id, ja]));
+  function farewell(t, s) {
+    const y = S.yard, bye = Object.fromEntries((s.after || []).map(([id, ja]) => [id, ja])), ids = [...S.ppl.keys()].filter((id) => id !== 'takahashi');
     S.quiet = true; bar();
-    order().forEach((id, k) => S.t.push(setTimeout(() => {
+    ids.forEach((id, k) => S.t.push(setTimeout(() => {
       const p = S.ppl.get(id); if (!p) return;
       walkTo(p, FOOT_W, { v: 120, done: () => { say(id, bye[id] || 'さようなら〜！', 2400); walkTo(p, DOOR_W, { path: [FOOT_W, DOOR_W], v: 60, delay: 300, done: () => { p.el.classList.add('cr-gone'); S.t.push(setTimeout(() => { p.el.remove(); S.ppl.delete(id); }, 450)); } }); } });
     }, k * 700)));
-    const after = order().length * 700 + 4200, g = S.ppl.get('takahashi');
+    const after = ids.length * 700 + 4200, g = S.ppl.get('takahashi');
     S.t.push(setTimeout(() => {
       if (!alive()) return;
       const ship = y.querySelector('.cruise-ship'), front = y.querySelector('.cruise-front'), ramp = y.querySelector('.cruise-ramp');
@@ -341,9 +425,9 @@ const CRUISE = (() => {
         if (g) { turnTo(g, 400); g.el.classList.add('wave'); setTimeout(() => g.el.classList.remove('wave'), 1200); say('takahashi', 'さようなら〜！', 2400); }
         if (ship) ship.classList.add('sailing');
         tween(4600, (u) => { if (ship) { ship.setAttribute('transform', `translate(${(900 * u).toFixed(1)} 0)`); ship.style.opacity = String(Math.min(1, (1 - u) * 4)); } }, () => {
-          const t = tour(); t.done = true; save(t);
+          cs().done[t.id] = day(); cs().on = null; setLocal(FORCE, ''); saveState();
           if (ship) ship.remove();
-          toast('郵輪開走了。導覽完成！謝謝你幫忙 🚢', 3600);
+          toast(`郵輪開走了。第 ${tripIdx(t.id) + 1} 趟導覽「${t.title}」完成！謝謝你幫忙 🚢`, 3600);
           if (g) S.t.push(setTimeout(() => { if (alive()) walkTo(g, [ycam.YW / 2 + 60, 50], { v: 120, free: true, done: () => { g.el.remove(); S.ppl.delete('takahashi'); } }); }, 1600));
           S.busy = false; S.quiet = false; bar();
         }, (u) => u * u);
@@ -358,68 +442,76 @@ const CRUISE = (() => {
     S.ppl.forEach((p) => clearTimeout(p.wt));
     S = null;
   }
-  // where they stand when a place is drawn and they are there already: the last stop done here, else the first one here
-  function rest(t, place) {
-    const ts = stops(); let i = -1;
-    for (let k = Math.min(t.step, ts.length) - 1; k >= 0; k--) if (ts[k].at === place) { i = k; break; }
-    if (i < 0) i = ts.findIndex((x) => x.at === place);
-    return i < 0 ? null : [ts[i], i];
+  // where they stand when a place is drawn and they are there already: the last stop done here, else the next one here, else the first
+  function rest(t, step, place) {
+    const ts = t.stops;
+    for (let k = Math.min(step, ts.length) - 1; k >= 0; k--) if (ts[k].at === place) return [ts[k], k];
+    const k = ts.findIndex((x, j) => j >= step && x.at === place);
+    return k >= 0 ? [ts[k], k] : [ts[0], 0];
   }
   function mount(yard, place) {
     const from = lastPlace; lastPlace = place;
     stop();
-    if (!C() || INDOOR.includes(place) || !out()) { pend = ''; return; }
-    const t = tour();
-    if (t.step < 0) {   // far out at sea: said once a day out and about, seen from the harbour
-      if (t.told !== t.day) { t.told = t.day; save(t); toast(place === 'harbor' ? '海上有一艘好大的郵輪！點它看看。' : '漁港外的海上，好像來了一艘好大的郵輪！', 3600); }
-      if (place === 'harbor') S = { yard, place, ppl: new Map(), raf: 0, t: [], busy: false };
+    const was = { pend, carry }; pend = ''; carry = false;
+    if (!C()) return;
+    if (waiting()) {   // far out at sea: said once a day out and about, seen from the harbour
+      if (local(TOLD) !== day()) { setLocal(TOLD, day()); toast(place === 'harbor' ? '海上有一艘好大的郵輪！點它看看。' : '漁港外的海上，好像來了一艘好大的郵輪！', 3600); }
+      if (place === 'harbor') S = fresh(yard, place);
       return;
     }
-    if (!PLACES.includes(place)) { pend = ''; return; }
-    S = { yard, place, ppl: new Map(), raf: 0, t: [], busy: false };
-    const follow = from && from !== place && from === t.place && PLACES.includes(from);   // come along with the hero
-    if (follow) { t.place = place; save(t); }
-    if (t.place === place) {
-      const r = rest(t, place), s = r ? r[0] : stops()[0], at = slots(s, r ? r[1] : 0);
-      if (follow) {   // in behind him by the way he came, then round him
-        const way = WAYS[`${from}>${place}`], in0 = way ? way.in()[0] : [0, 60];
-        const g = el('takahashi', [in0[0] + rnd(-20, 20), Math.min(118, in0[1])]);
-        walkTo(g, guideAt(s), { delay: 300, v: 130, free: true });
-        order().forEach((id, k) => { const p = el(id, [in0[0] + rnd(-30, 30), Math.min(118, in0[1] + rnd(-4, 4))]); p.el.classList.add('cr-in'); walkTo(p, at[id], { delay: 400 + k * 160, v: rnd(100, 130), free: true }); });
-        if (pend === place) { S.busy = true; S.t.push(setTimeout(() => { if (!alive()) return; S.busy = false; const i = nextStop(tour()); if (stops()[i].at === place) run(i); else bar(); }, 400 + order().length * 160 + 1600)); }
+    const t = current(); if (!t) return;
+    const on = cs().on;
+    S = fresh(yard, place);
+    const way = from && from !== place ? WAYS[`${from}>${place}`] : null;
+    const follow = (was.carry && was.pend === place) || (from === on.place && Boolean(way));   // taken there, or come along next door
+    if (follow) { on.place = place; saveLocal(); }
+    if (on.place === place) {
+      const [s, k] = rest(t, on.step, place), ids = party(t), at = slots(s, k, ids);
+      if (follow && !calm()) {   // in behind him: by the way he came, or round him where the bus or the walk brought him
+        const in0 = was.carry ? [yh.X, yh.Y] : way.in()[0], near = (d) => (S.indoor ? isoClamp([in0[0] + rnd(-d, d), in0[1] + rnd(-d / 4, d / 4)], 1) : [in0[0] + rnd(-d, d), Math.min(walkTop(place, in0[0]), in0[1] + rnd(-4, 4))]);
+        walkTo(el('takahashi', near(20)), guideAt(s), { delay: 300, v: 130, free: true });
+        ids.forEach((id, j) => { const p = el(id, near(30)); p.el.classList.add('cr-in'); walkTo(p, at[id], { delay: 400 + j * 160, v: rnd(100, 130), free: true }); });
       } else {
         el('takahashi', guideAt(s));
-        order().forEach((id) => el(id, at[id]));
+        const free = s.seat && S.indoor ? seats() : [];
+        ids.forEach((id) => { const p = el(id, at[id]), q = free.shift(); if (q) sit(p, q); });
         facing(s); setTimeout(() => frameAll(s), 60);
       }
+      if (follow && was.pend === place) {   // led here for the next stop: on to it once they are in
+        S.busy = true; S.t.push(setTimeout(() => { if (!alive()) return; S.busy = false; const i = nextStop(t, cs().on.step); if (t.stops[i].at === place) run(i); else bar(); }, calm() ? 300 : 400 + ids.length * 160 + 1600));
+      }
     }
-    pend = '';
     bar();
     S.ct = setTimeout(chatter, 1200); S.jt = setTimeout(jostle, 2000);
   }
   // a tap on one of them: a hop and a word (高橋, when the next stop waits: on to it)
   function who(b) {
-    const id = b.dataset.who, p = alive() && S.ppl.get(id); if (!p) return;
-    if (id === 'takahashi' && !S.busy && !TALK.on() && tour().place === S.place) { next(); return; }
+    const id = b.dataset.who, p = alive() && S.ppl.get(id), t = current(); if (!p || !t) return;
+    if (id === 'takahashi' && !S.busy && !TALK.on() && cs().on.place === S.place) { next(); return; }
     HERO.react(b);
-    const ls = C().SAY[id] || []; if (!ls.length) return;
-    const l = pick(ls); say(id, l[0], 2600); if (!TALK.on()) speakAs(id, l[0]);
+    const ls = sayLines(t, id); if (!ls.length) return;
+    const l = pick(ls); say(id, l[1], 2600); if (!TALK.on()) speakAs(id, l[1]);
   }
   // the talk card's face for one of them, or the passengers together ('all': three of them)
   function talkFace(id) {
-    if (id === 'all') return `<span class="cr-crowd">${['umeko', 'rina', 'yoshimoto'].map((k) => HERO.head(C().PEOPLE[k].look, 'bust')).join('')}</span>`;
+    if (id === 'all') return `<span class="cr-crowd">${['umeko', 'rina', 'yoshimoto'].map((k) => HERO.head(people()[k].look, 'bust')).join('')}</span>`;
     const c = person(id); return c ? HERO.head(c.look, 'bust') : '';
   }
-  const tag = (id) => (id === 'all' ? { name: 'みんな', role: '遊客們' } : C() && C().PEOPLE[id] ? C().PEOPLE[id] : null);   // TALK's name and role
-  // every line said aloud on the cruise, and whose (the generator makes each a clip in their voice)
-  function lines(add) {   // ('all', the passengers together: no voice of its own, read as any line)
-    const c = C(); if (!c) return; const say = (id, ja) => { if (id !== 'all') add(id, ja); };
-    Object.entries(c.OFF).forEach(([id, l]) => say(id, l[0]));
-    Object.entries(c.SAY).forEach(([id, ls]) => ls.forEach((l) => say(id, l[0])));
-    c.TOUR.forEach((s) => s.lines.forEach((l) => (Array.isArray(l) ? say(l[0], l[1]) : (l.opts || []).forEach((o) => say('hero', o[0])))));
+  const tag = (id) => (id === 'all' ? { name: 'みんな', role: '遊客們' } : C() && people()[id] ? people()[id] : null);   // TALK's name and role
+  // a town shop on the trip under way is open while they go round (its keeper brought out); 高橋 is with them, not at his desk
+  const opens = (shop) => { const t = current(); return Boolean(t) && t.stops.some((s) => s.shop === shop || s.at === shop); };
+  const away = (id) => id === 'takahashi' && docked();
+  // every line said aloud on the cruise, and whose (the generator makes each a clip in their voice; 'all': read as any line)
+  function lines(add) {
+    const c = C(); if (!c) return;
+    const sayIt = (id, ja) => { if (id !== 'all') add(id, ja); };
+    Object.entries(c.OFF).forEach(([id, ls]) => ls.forEach((l) => sayIt(id, l[1])));
+    Object.entries(c.SAY).forEach(([id, ls]) => ls.forEach((l) => sayIt(id, l[1])));
+    c.TRIPS.forEach((t) => t.stops.forEach((s) => s.lines.forEach((l) => (Array.isArray(l) ? sayIt(l[0], l[1]) : (l.opts || []).forEach((o) => sayIt('hero', o[0]))))));
   }
-  // the test site (町の手帳): the ship out there now, whatever the day, hour or course; today's begun again
-  function force() { const t = tour(); keep({ day: t.day, step: -1, place: 'harbor', done: false, ever: t.ever, told: '', force: t.day }); }
-  function reset() { const t = tour(); keep({ day: t.day, step: -1, place: 'harbor', done: false, ever: t.ever, told: '', force: '' }); }
-  return { out, docked, shipSvg, rampSvg, callHtml, mount, call: (b) => call(b), next: () => next(), who, face: talkFace, tag, lines, force, reset, tour, person };
+  // the test site (町の手帳): the next trip's ship out there now, whatever the day, hour or course; all begun again; on to a trip
+  function force() { const t = trips().find((x) => !cs().done[x.id]); if (!t) return null; cs().on = null; saveState(); setLocal(FORCE, t.id); setLocal(TOLD, ''); return t; }
+  function reset() { state.cruise = { done: {}, on: null }; saveState(); setLocal(FORCE, ''); setLocal(TOLD, ''); }
+  function skipTo(id) { const k = tripIdx(id); if (k < 0) return; state.cruise = { done: Object.fromEntries(trips().slice(0, k).map((t) => [t.id, '2000-01-01'])), on: null }; saveState(); setLocal(FORCE, id); setLocal(TOLD, ''); }
+  return { out, docked, waiting, current, shipSvg, rampSvg, callHtml, mount, call: () => call(), start: () => start(), next: () => next(), who, face: talkFace, tag, opens, away, lines, force, reset, skipTo, person, party, trips: () => trips() };
 })();

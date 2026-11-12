@@ -52,6 +52,7 @@
   //   id sets       (completedUnits, hidden, lessonSeen): union
   //   言靈          (koto): each count by day and device the larger, bonus days a union; owned (things bought): a union by id
   //   town          (the town's events): done, seen, stops each a union by id; talks (chats with each person) the larger count
+  //   cruise        (the cruise ship's trips): done a union; the one under way: the later trip, further on, unless done on either
   //   everything else (settings, currentUnit, today, placed, wear, …): from the copy saved later
   function stampOf(s) { return (s && typeof s.updatedAt === 'string') ? s.updatedAt : ''; }
   function pickRec(x, y) {
@@ -149,6 +150,11 @@
     return { daySets: maxByDay(o.daySets, n.daySets), days: [...new Set([...(o.days || []), ...(n.days || [])])], listen: maxByDay(o.listen, n.listen),
       mail: maxBy(o.mail, n.mail), found: maxBy(o.found, n.found), sets: maxBy(o.sets, n.sets), gift: Math.max(o.gift || 0, n.gift || 0) };
   }
+  function mergeCruise(olderC, newerC) {
+    const o = olderC || {}, n = newerC || {}, done = Object.assign({}, o.done, n.done), num = (x) => parseInt(String(x.trip).slice(1), 10) || 0;
+    const on = [n.on, o.on].filter((x) => x && typeof x === 'object' && !done[x.trip]).sort((x, y) => num(y) - num(x) || (y.step || 0) - (x.step || 0))[0] || null;
+    return { done, on };
+  }
   function mergeStates(a, b) {
     const [newer, older] = (stampOf(a) >= stampOf(b) ? [a, b] : [b, a]).map(clone);
     const out = Object.assign({}, older, newer);
@@ -190,6 +196,7 @@
       const talks = {}; [o.talks, n.talks].forEach((t) => Object.entries(t || {}).forEach(([id, k]) => { talks[id] = Math.max(talks[id] || 0, Number(k) || 0); }));   // the chats with each: the more (as numbers)
       out.town = Object.assign({}, n, { done: Object.assign({}, o.done, n.done), seen: Object.assign({}, o.seen, n.seen), stops: Object.assign({}, o.stops, n.stops), talks });
     }
+    if (older.cruise || newer.cruise) out.cruise = mergeCruise(older.cruise, newer.cruise);
     out.updatedAt = new Date().toISOString();
     return out;
   }

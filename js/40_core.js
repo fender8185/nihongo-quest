@@ -284,6 +284,7 @@ function defaultState() {
     met: {},                // test (2026-11-09): the neighbours who have come by (NPCS): { id: the day }
     storyV: 0,              // test (2026-11-09): the version of the opening (STORY.V) seen, 0 none
     storyAt: 0,             // 2026-11-11: when the opening was closed (ms; 0 before it, or seen before this was kept): 小春 knocks a minute on
+    cruise: { done: {}, on: null },   // test (2026-11-12): the cruise ship's trips (CRUISE): done { trip: day }; on: the one under way { trip, step: its next stop, place: where the passengers wait }
     town: { done: {}, seen: {}, stops: {}, talks: {} },   // test (2026-11-09): the town's events (TOWNEV): done { id: day }, people met { id: 1 }, bus stops opened { id: 1 }; talks { id: chats with them } (2026-11-12)
     placed: {},             // where owned things stand in 書房: { id: { w: 'F', x, y, r } | { w: 'L'|'R', u, v } }; not here = in the storage box
     wear: {},               // what the hero wears, by part: { head, face, neck, back, body }
@@ -355,6 +356,8 @@ function normalizeState(s) {
   out.koto = { daySets: obj(kt.daySets), days: Array.isArray(kt.days) ? kt.days : [], listen: obj(kt.listen), mail: obj(kt.mail), found: obj(kt.found), sets: obj(kt.sets), gift: Number(kt.gift) || 0 };
   const tw = obj(out.town), talks = {}; Object.entries(obj(tw.talks)).forEach(([id, n]) => { const k = Math.floor(Number(n)); if (k > 0) talks[id] = k; });
   out.town = { done: obj(tw.done), seen: obj(tw.seen), stops: obj(tw.stops), talks };
+  const cr = obj(out.cruise), on = cr.on && typeof cr.on === 'object' && typeof cr.on.trip === 'string' ? cr.on : null;
+  out.cruise = { done: obj(cr.done), on: on && !obj(cr.done)[on.trip] ? { trip: on.trip, step: Math.max(0, Math.floor(Number(on.step)) || 0), place: typeof on.place === 'string' ? on.place : 'harbor' } : null };
   out.mail = out.mail && typeof out.mail === 'object' && !Array.isArray(out.mail) ? { got: obj(out.mail.got), read: obj(out.mail.read) } : null;
   if (typeof out.resetAt !== 'string') out.resetAt = '';   // 1.9.1: when 重設所有進度 was last pressed (the cloud's guard lets that one shrink through)
   ['owned', 'placed', 'wear', 'look', 'lampsOff', 'met'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)

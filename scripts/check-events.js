@@ -82,32 +82,53 @@ function check(T, D, opts = {}) {
     talkLines(e.lines, e.u, where, who);
   });
   if (used.size) { const lo = Math.min(...used), hi = Math.max(...used); for (let i = lo; i <= hi; i++) if (!used.has(i)) bad('gap', units[i], 'no events'); }
-  // the cruise ship (CRUISE): its passengers, what they say (all at its unit), its stops one after another
+  // the cruise ship (CRUISE): its passengers (a group that only grows: each joins on a trip), what they say (by unit), its trips
+  // one a unit in order, each with 20 reply choices or more, said only by those aboard by then; from the harbour back to it
   const cr = T.CRUISE;
-  if (cr && unitIdx(cr.u) < 0) bad('ref', 'cruise', `no unit ${cr.u}`);
-  else if (cr) {
-    const people = cr.PEOPLE || {}, u = cr.u;
-    const sayer = (id, where) => { if (id !== 'hero' && id !== 'all' && !cast[id] && !people[id]) bad('ref', where, `no one called ${id}`); };
-    text(cr.ship || '', u, 'cruise ship');
-    Object.keys(people).forEach((id) => {
+  if (cr) {
+    const people = cr.PEOPLE || {}, trips = cr.TRIPS || [], tIdx = (id) => trips.findIndex((t) => t.id === id);
+    text(cr.ship || '', 'm1', 'cruise ship');
+    Object.entries(people).forEach(([id, p]) => {
       if (cast[id]) bad('cruise', `cruise ${id}`, 'a passenger with a town person\'s id');
+      if (tIdx(p.from) < 0) bad('cruise', `cruise ${id}`, `joins on no trip ${p.from}`);
       if (!(cr.OFF || {})[id]) bad('cruise', `cruise ${id}`, 'never comes off the ship (OFF)');
     });
-    Object.entries(cr.OFF || {}).forEach(([id, l]) => { if (!people[id]) bad('ref', `cruise off ${id}`, 'not a passenger'); text(l[0], u, `cruise off ${id}`); });
-    Object.entries(cr.SAY || {}).forEach(([id, ls]) => ls.forEach((l, i) => { sayer(id, `cruise say ${id}#${i}`); text(l[0], u, `cruise say ${id}#${i}`); }));
-    const stops = new Set();
-    (cr.TOUR || []).forEach((t) => {
-      const where = `cruise ${t.id}`;
-      if (stops.has(t.id)) bad('ref', where, 'the same id twice'); stops.add(t.id);
-      if (!places.includes(t.at)) bad('ref', where, `no place ${t.at}`);
-      ['hero', 'crowd'].forEach((k) => { if (!Array.isArray(t[k]) || t[k].length !== 2 || !t[k].every(Number.isFinite)) bad('cruise', where, `${k} is [X, Y]`); });
-      if (t.lost && (!people[t.lost[0]] || !Array.isArray(t.lost[1]))) bad('cruise', where, 'lost is [a passenger, [X, Y]]');
-      if (t.need !== undefined && !cast[t.need]) bad('ref', where, `needs no one called ${t.need}`);
-      talkLines(t.lines, u, where, sayer);
-      (t.after || []).forEach(([id, ja], i) => { sayer(id, `${where}.after${i}`); text(ja, u, `${where}.after${i}`); });
+    const said = (kind, id, ls) => (ls || []).forEach((l, i) => { const at = `cruise ${kind} ${id}#${i}`; if (unitIdx(l[0]) < 0) bad('ref', at, `no unit ${l[0]}`); else text(l[1], l[0], at); });
+    Object.entries(cr.OFF || {}).forEach(([id, ls]) => {
+      if (!people[id]) { bad('ref', `cruise off ${id}`, 'not a passenger'); return; }
+      said('off', id, ls);
+      const t = trips[tIdx(people[id].from)];
+      if (t && !ls.some((l) => unitIdx(l[0]) <= unitIdx(t.u))) bad('cruise', `cruise off ${id}`, 'nothing to say coming off on their first trip');
     });
-    const tour = cr.TOUR || [];
-    if (tour.length && (tour[0].at !== 'harbor' || tour[tour.length - 1].at !== 'harbor' || !tour[tour.length - 1].bye)) bad('cruise', 'cruise', 'the tour begins at the harbour and ends there, seeing them off (bye)');
+    Object.entries(cr.SAY || {}).forEach(([id, ls]) => { if (id !== 'takahashi' && !people[id]) bad('ref', `cruise say ${id}`, 'not a passenger'); said('say', id, ls); });
+    let lastU = -1; const tids = new Set();
+    trips.forEach((t, k) => {
+      const where = `cruise ${t.id}`, u = t.u;
+      if (tids.has(t.id)) bad('ref', where, 'the same id twice'); tids.add(t.id);
+      if (unitIdx(u) < 0) { bad('ref', where, `no unit ${u}`); return; }
+      if (unitIdx(u) <= lastU) bad('cruise', where, 'the trips go on unit by unit'); lastU = unitIdx(u);
+      if (t.needs && !ids.has(t.needs)) bad('ref', where, `needs no event ${t.needs}`);
+      if (t.join && (!people[t.join] || people[t.join].from !== t.id)) bad('cruise', where, `${t.join} does not join on it`);
+      const aboard = (id) => Boolean(people[id]) && tIdx(people[id].from) <= k;
+      const sayer = (id, at) => { if (id === 'hero' || id === 'all' || cast[id]) return; if (!people[id]) bad('ref', at, `no one called ${id}`); else if (!aboard(id)) bad('cruise', at, `${id} joins on a later trip`); };
+      const stops = t.stops || [], sids = new Set(); let asks = 0;
+      stops.forEach((s) => {
+        const sw = `${where}.${s.id}`;
+        if (sids.has(s.id)) bad('ref', sw, 'the same id twice'); sids.add(s.id);
+        if (!places.includes(s.at) && s.at !== 'yard') bad('ref', sw, `no place ${s.at}`);   // the hero's own yard too
+        ['hero', 'crowd'].forEach((q) => { if (!Array.isArray(s[q]) || s[q].length !== 2 || !s[q].every(Number.isFinite)) bad('cruise', sw, `${q} is [X, Y] (a room: [u, v])`); });
+        if (s.lost && (!aboard(s.lost[0]) || !Array.isArray(s.lost[1]))) bad('cruise', sw, 'lost is [a passenger aboard, [X, Y]]');
+        if (s.need !== undefined && !cast[s.need]) bad('ref', sw, `needs no one called ${s.need}`);
+        Object.keys(s.cast || {}).forEach((id) => { if (!cast[id]) bad('ref', sw, `no one called ${id} to bring out`); });
+        if (s.go !== undefined && !['bus', 'walk'].includes(s.go)) bad('cruise', sw, `go is bus or walk, not ${s.go}`);
+        if (s.seat && !s.room) bad('cruise', sw, 'they sit down in a room only');
+        talkLines(s.lines, u, sw, sayer);
+        asks += (s.lines || []).filter((l) => !Array.isArray(l)).length;
+        (s.after || []).forEach(([id, ja], i) => { sayer(id, `${sw}.after${i}`); text(ja, u, `${sw}.after${i}`); });
+      });
+      if (asks < 20) bad('cruise', where, `${asks} reply choices: at least 20`);
+      if (stops.length && (stops[0].at !== 'harbor' || stops[stops.length - 1].at !== 'harbor' || !stops[stops.length - 1].bye)) bad('cruise', where, 'a trip begins at the harbour and ends there, seeing them off (bye)');
+    });
   }
   Object.entries(cast).forEach(([id, c]) => {   // away after an event that exists; helps at a shop someone keeps
     if (c.away !== undefined && !ids.has(c.away)) bad('ref', `cast ${id}`, `away after no event ${c.away}`);

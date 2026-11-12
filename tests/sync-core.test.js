@@ -230,3 +230,14 @@ test('mergeStates keeps a letter come or read on either device (the mailbox live
   assert.deepEqual(m.mail, { got: { room: '2026-11-01', opening: '2026-11-10' }, read: { room: '2026-11-02' } });
   assert.equal(C.mergeStates({ v: 3 }, { v: 3 }).mail, undefined);
 });
+
+test('mergeStates: the cruise trips done on either device are kept; the one under way is the later trip, further on, unless done (2026-11-12)', () => {
+  const a = { v: 3, updatedAt: '2026-11-12T01:00:00.000Z', cruise: { done: { t1: '2026-11-10' }, on: { trip: 't2', step: 4, place: 'castle' } } };
+  const b = { v: 3, updatedAt: '2026-11-12T02:00:00.000Z', cruise: { done: {}, on: { trip: 't1', step: 9, place: 'town' } } };
+  assert.deepEqual(C.mergeStates(a, b).cruise, { done: { t1: '2026-11-10' }, on: { trip: 't2', step: 4, place: 'castle' } });   // t1 done on a: b's t1 under way goes
+  const c = { v: 3, updatedAt: '2026-11-12T03:00:00.000Z', cruise: { done: { t1: '2026-11-10' }, on: { trip: 't2', step: 7, place: 'izakaya' } } };
+  assert.deepEqual(C.mergeStates(a, c).cruise.on, { trip: 't2', step: 7, place: 'izakaya' });   // the same trip: the further one
+  const d = { v: 3, updatedAt: '2026-11-12T04:00:00.000Z', cruise: { done: { t1: '2026-11-10', t2: '2026-11-12' }, on: null } };
+  assert.deepEqual(C.mergeStates(a, d).cruise, { done: { t1: '2026-11-10', t2: '2026-11-12' }, on: null });
+  assert.equal(C.mergeStates({ v: 3 }, { v: 3 }).cruise, undefined);
+});

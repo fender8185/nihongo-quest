@@ -120,7 +120,7 @@ const CAST_VOICE = {
   nakamura: ['Schedar', 1], kenji: ['Zubenelgenubi', 1], suzuki: ['Rasalgethi', 1.02], alex: ['Umbriel', 1], chihaya: ['Achernar', 0.96],
   tatsu: ['Sadachbia', 1.06], takahashi: ['Sadaltager', 0.95], sophia: ['Zephyr', 1], nishimura: ['Kore', 1.04], sano: ['Charon', 1],
   // the cruise's passengers (CRUISE, test 2026-11-12)
-  kaneda: ['Fenrir', 0.96], umeko: ['Callirrhoe', 1.1], yuta: ['Autonoe', 1.08, 3], rina: ['Aoede', 1.06], yoshimoto: ['Charon', 1.06], ken: ['Orus', 1.02], ai: ['Erinome', 1.02], michiyama: ['Schedar', 0.96]
+  kaneda: ['Fenrir', 0.96], umeko: ['Callirrhoe', 1.1], yuta: ['Autonoe', 1.08, 3], rina: ['Aoede', 1.06], yoshimoto: ['Charon', 1.06], ken: ['Orus', 1.02], ai: ['Erinome', 1.02], michiyama: ['Schedar', 0.96], mike: ['Puck', 1]
 };
 // ムギ (2026-11-12, the user, by ear): a boy's voice pitched up, a mascot's — a grown man saying ワン, or a real bark beside a
 // plain voice, broke the spell; her lines open with ワン！ and no longer end in it (events.js 42)
