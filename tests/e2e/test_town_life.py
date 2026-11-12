@@ -185,6 +185,16 @@ def test_a_long_line_wraps_inside_its_bubble(b):
       return JSON.stringify({ w: el.offsetWidth <= 200, inside: el.scrollWidth <= el.clientWidth + 1 }); })()"""))
     assert r == {'w': True, 'inside': True}, r
 
+def test_tapping_someone_wakes_the_voice_player_inside_the_tap_and_it_rests_after(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ TOWNLIFE.still = true; await go('town', 10);
+      const a = getTtsPlayer(), said = []; let paused = 0; a.play = () => Promise.resolve(); a.pause = () => { paused++; };   /* headless Chrome lets nothing play without a real tap */
+      const real = speakAs; speakAs = (who, line) => { said.push([who, a.dataset.silent === '1']); return Promise.resolve(); };
+      TOWNEV.talk(people().find((e) => e.dataset.npc === 'kenta')); const primed = a.dataset.silent === '1';
+      for (let i = 0; i < 60 && !document.querySelector('.talk-card'); i++) await wait(100);
+      const p0 = paused; TALK.close(); const rest = paused > p0; speakAs = real; delete a.play; delete a.pause;
+      return JSON.stringify({ primed, said, rest }); })()"""))
+    assert r == {'primed': True, 'said': [['kenta', True]], 'rest': True}, r   # still awake when their first line comes, after the walk over
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

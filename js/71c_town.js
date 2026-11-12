@@ -229,6 +229,7 @@ const TOWNEV = (() => {
   function talk(el) {
     const id = el.dataset.npc, yard = el.closest('.yard'), p = yard && here(yard.dataset.place).find((x) => x.id === id);
     if (!p) { if (yard) { toast(`${T().CAST[id].name}已經離開了。`); route(); } return; }   // gone home since the place was drawn
+    primeTtsPlayer(); setTimeout(() => { if (!TALK.on()) stopSilence(); }, 6000);   // still inside the tap: the voice player kept awake through the walk over, or an iPhone refuses their first line (2026-11-12, the user: 小春 said nothing) — no talk after all: let go
     const a = p.spot, w = p.host && waiting(now(), today()), e = w && w.ev;
     const ended = () => { finish(e.id); toast(`完成「${e.title}」・言靈 +10`, 3200); route(); };   // drawn anew: its shop open, the mark gone
     const at = TOWNLIFE.hold(id), moved = at && Math.hypot(at[0] - a.X, at[1] - a.Y) > 0.5;   // they stop where they are (strolling: not on their spot)
@@ -463,7 +464,7 @@ const TALK = (() => {
         <div class="talk-name">我<span>${esc(L.ask)}</span></div>
         <div class="talk-opts">${L.opts.map((o, k) => `<div class="talk-opt${cur.wrong.includes(k) ? ' wrong' : ''}" data-pick="${k}"><button type="button" class="talk-pick" lang="ja">${ruby(o[0])}</button>${say(o[0], 'hero')}</div>`).join('')}</div>
         ${cur.why ? `<p class="talk-why">${esc(cur.why)}</p>` : ''}</div></div>`;
-      return;
+      stopSilence(); return;   // the hero picks: nothing read meanwhile
     }
     const n = who(L.id), w = n.gift, gl = cur.ev ? glosses(L.ja) : [];
     cur.el.innerHTML = `<div class="talk-card"><div class="talk-face">${TOWNEV.face(L.id)}</div><div class="talk-body">
@@ -474,6 +475,7 @@ const TALK = (() => {
     if (L.kind === 'gift') fitThumbs(cur.el);
     const at = (cur.said ? 's' : '') + cur.i;   // a line new on the screen is said at once, in its speaker's voice (2026-11-12, the user); drawn again (中文): not again
     if (L.ja && cur.spoke !== at) { cur.spoke = at; speakAs(L.id, L.ja); }
+    if (!L.ja || !castSays(L.ja)) stopSilence();   // nothing to read here: the player kept awake for it rests
   }
   function pick(k) {
     const L = line(cur.lines[cur.i]), o = L.opts[k]; if (!o || cur.wrong.includes(k)) return;
@@ -496,7 +498,7 @@ const TALK = (() => {
     SND.duck(true);   // the music and the world's sounds down for the whole talk, not only while a line is read (2026-11-12, the user)
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     el.addEventListener('click', (e) => {
-      e.stopPropagation();
+      e.stopPropagation(); primeTtsPlayer();   // inside the tap: the next line (or 🔊) is let play while its clip is fetched (iOS)
       const sayBtn = e.target.closest('[data-talk="say"]'); if (sayBtn) { speakAs(sayBtn.dataset.who, sayBtn.dataset.ja); return; }
       if (e.target.closest('[data-talk="zh"]')) { cur.zh = true; show(); return; }
       const p = e.target.closest('[data-pick]'); if (p) { pick(Number(p.dataset.pick)); return; }
@@ -505,7 +507,7 @@ const TALK = (() => {
     });
     root.appendChild(el); show();
   }
-  function close() { const was = Boolean(cur); if (cur) { if (cur.spoke !== undefined) stopSpeaking(); cur.el.remove(); cur = null; SND.duck(false); } TOWNLIFE.release(); if (was) setTimeout(() => { if (document.body.classList.contains('scene')) sceneMinute(); }, 0); }   // what was being said stops with it; whoever was held strolls on; the hour's changes kept back meanwhile, now
+  function close() { const was = Boolean(cur); if (cur) { if (cur.spoke !== undefined) stopSpeaking(); stopSilence(); cur.el.remove(); cur = null; SND.duck(false); } TOWNLIFE.release(); if (was) setTimeout(() => { if (document.body.classList.contains('scene')) sceneMinute(); }, 0); }   // what was being said stops with it; whoever was held strolls on; the hour's changes kept back meanwhile, now
   return { open, close, on: () => Boolean(cur && cur.el.isConnected) };
 })();
 // every line the talks can read aloud, and whose it is: the generator makes each a clip in its speaker's voice (CAST_VOICE)

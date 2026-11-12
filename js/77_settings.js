@@ -9,10 +9,15 @@ let settingsDirty = false;
 function openSettings(tab) {
   settingsTab = SETTINGS_TABS.some(t => t[0] === tab) ? tab : (settingsTab || 'learn');
   openModal('設定', settingsHtml(), { width: 680, noFocus: true });
+  swBuild();
+}
+// the test site's build after the version (its service worker's cache, nq-v1.13.0-test.3 → 測試版 3), to tell which one a phone runs
+function swBuild() {
+  try { if (!window.caches) return; caches.keys().then((ks) => { const k = ks.filter((x) => /^nq-v/.test(x)).sort().pop() || '', m = k.match(/-test\.(\d+)$/); if (m) document.querySelectorAll('.sw-build').forEach((el) => { el.textContent = `（測試版 ${m[1]}）`; }); }).catch(() => {}); } catch (e) { /* none */ }
 }
 function refreshSettings() {
   const b = document.getElementById('modalBody');
-  if (b) b.innerHTML = settingsHtml();
+  if (b) { b.innerHTML = settingsHtml(); swBuild(); }
 }
 function settingsHtml() {
   const tabs = `<div class="seg mb-4" role="tablist">${SETTINGS_TABS.map(([k, l]) => `<button type="button" aria-pressed="${settingsTab === k}" data-act="settings-tab" data-tab="${k}">${l}</button>`).join('')}</div>`;
@@ -115,7 +120,7 @@ function settingsLook() {
       <summary>怎麼安裝成 app？</summary>
       ${installGuideHtml()}
     </details>
-    <p class="hint mt-3">版本 ${APP_VERSION}</p>
+    <p class="hint mt-3">版本 ${APP_VERSION}<span class="sw-build"></span></p>
     <p class="hint mt-2">單字、漢字、文法點的 JLPT 等級參考 Jonathan Waller 的 JLPT Resources（tanos.co.uk，CC BY）。</p>
     <details class="disclose mt-2">
       <summary>版本紀錄</summary>
