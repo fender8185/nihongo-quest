@@ -67,7 +67,7 @@ async function init() {
   audioPrefetchSoon();   // 離線語音: a few seconds after opening, and again whenever the network comes back
   window.addEventListener('online', () => audioPrefetchSoon(1000));
   // cloud sync starts after first paint: restoring an expired session can block on the network for a long time offline
-  Sync.init().catch((e) => { console.warn('sync init failed', e); Sync.client = null; Sync.setStatus('off'); });
+  Sync.init().then(() => MAILROOM.fetch()).catch((e) => { console.warn('sync init failed', e); Sync.client = null; Sync.setStatus('off'); });   // then the letters sent from the dashboard
 }
 
 // a new version (1.4.1; the user: 直接換上): its service worker takes over as soon as it is installed (sw.js skipWaiting), and

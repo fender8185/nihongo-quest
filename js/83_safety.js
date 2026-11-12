@@ -112,8 +112,73 @@ function letterKinds() {   // every letter there is: when it comes (due), when i
       <p class="letter-sign">古道具屋　福爺</p>`,
       acts: got ? `<span class="letter-got">${kotoIcon()}已收下 ${LETTER_GIFT.opening} 言靈</span><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/shop">去古道具屋</button>`
         : `<button type="button" class="btn btn-sm btn-primary" data-act="letter-gift" data-id="opening">${kotoIcon()}收下 ${LETTER_GIFT.opening} 言靈</button>` }
-  ].concat((state.notices || []).map((x) => ({ id: 'notice:' + x.id, due: () => true, title: '通知', body: x.lines.map(esc).join('<br>') })));
+  ].concat((state.notices || []).map((x) => ({ id: 'notice:' + x.id, due: () => true, title: '通知', body: x.lines.map(esc).join('<br>') })), MAILROOM.letters());
 }
+// ---------- letters sent from the dashboard (2026-11-12, the user: sending a letter must never take a new version) ----------
+// supabase/mail.sql: a row of public.mail is a letter. The app reads the rows (on opening and on coming back; kept in nq_mail_rows
+// for offline), and each device decides from its own progress whether one is for it (who), so a learner never logged in gets
+// them too; a row deleted takes its letter back. Its gift (言靈, or a ware of 古道具屋) is taken once for the progress
+// (state.mail.taken), and noted in public.mail_taken for a learner logged in, so who took what can be looked up.
+const MAILROOM = (() => {
+  let rows = null, asked = 0;
+  const kept = () => { if (!rows) { try { rows = JSON.parse(localStorage.getItem('nq_mail_rows') || '[]'); } catch (e) { rows = []; } if (!Array.isArray(rows)) rows = []; } return rows; };
+  async function fetchRows(now) {   // now: whatever the last asking (else once a minute at most)
+    if (!Sync.client || (!now && Date.now() - asked < 60000)) return;
+    asked = Date.now();
+    try {
+      const { data, error } = await Sync.client.from('mail').select('id,title,body,sender,gift,who,starts_at,ends_at');
+      if (error || !Array.isArray(data)) return;   // no table yet, or offline: the rows kept
+      const was = mailCount(); rows = data;
+      try { localStorage.setItem('nq_mail_rows', JSON.stringify(data)); } catch (e) { /* this visit only */ }
+      if (mailCount() !== was && ['today', 'outside'].includes(currentRoute().name) && calmForUpdate()) route();   // its hint and the mailbox's flag
+    } catch (e) { /* offline */ }
+  }
+  // who a letter is for: an object's rules all hold (a rule this version does not know: not for it, yet). The rules:
+  // everyone: true · accountBefore: a moment (logged in, the account made before it) · practicedBy / practicedSince: a day
+  // ('YYYY-MM-DD'; some day of practice on or before it / on or after it) · practicedIn: [from, to] · owns / lacks: a ware's id ·
+  // users: [account ids] · some: [rules] (any of them) · every: [rules] (all of them)
+  function isFor(w) {
+    if (!w || typeof w !== 'object' || Array.isArray(w)) return false;
+    const u = Sync.session && Sync.session.user, days = Object.values(state.dailyLogs || {}).filter((e) => e && ['vocabCount', 'grammarCount', 'quizCount', 'bonusCount', 'minutes'].some((k) => Number(e[k]) > 0)).map((e) => e.date);
+    const RULE = {
+      everyone: (v) => v === true, some: (v) => Array.isArray(v) && v.some(isFor), every: (v) => Array.isArray(v) && v.every(isFor),
+      accountBefore: (v) => Boolean(u && u.created_at && Date.parse(u.created_at) < Date.parse(v)),
+      practicedBy: (v) => days.some((d) => d <= v), practicedSince: (v) => days.some((d) => d >= v), practicedIn: (v) => Array.isArray(v) && days.some((d) => d >= v[0] && d <= v[1]),
+      owns: (v) => owns(v), lacks: (v) => !owns(v), users: (v) => Boolean(u && Array.isArray(v) && v.includes(u.id))
+    };
+    const keys = Object.keys(w); return keys.length > 0 && keys.every((k) => RULE[k] && RULE[k](w[k]));
+  }
+  const open = (r) => { const t = Date.now(); return !(r.starts_at && Date.parse(r.starts_at) > t) && !(r.ends_at && Date.parse(r.ends_at) < t); };
+  // its words: plain text, a blank line between paragraphs; one starting with —— is the signature
+  const bodyHtml = (s) => String(s || '').split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean).map((p) => (p.startsWith('——') ? `<p class="letter-sign">${esc(p.slice(2).trim())}</p>` : `<p>${esc(p).replace(/\n/g, '<br>')}</p>`)).join('');
+  const taken = (id) => Boolean(state.mail && state.mail.taken && state.mail.taken[id]);
+  const WHERE = { record: '點書房的留聲機就能換上', wear: '收進衣櫃了', clothes: '收進衣櫃了', yard: '收在院子的收納箱，到院子按「擺設」拿出來擺', house: '在古道具屋的卡片上就能換上' };   // where a ware given goes
+  function acts(id, g) {
+    if (!g || typeof g !== 'object') return '';
+    if (Number(g.koto) > 0) return taken(id) ? `<span class="letter-got">${kotoIcon()}已收下 ${Number(g.koto)} 言靈</span>` : `<button type="button" class="btn btn-sm btn-primary" data-act="letter-gift" data-id="${esc(id)}">${kotoIcon()}收下 ${Number(g.koto)} 言靈</button>`;
+    if (!g.ware) return '';
+    if (!WARE.has(g.ware)) return '<span class="letter-got">更新 App 之後才能收下</span>';   // a ware this version does not know yet: the letter waits
+    const it = WARE.get(g.ware);
+    if (taken(id)) return `<span class="letter-got">已收下${esc(it.name)}</span>`;
+    if (owns(g.ware)) return `<span class="letter-got">你已經有${esc(it.name)}了</span>`;
+    return `<button type="button" class="btn btn-sm btn-primary" data-act="letter-gift" data-id="${esc(id)}">收下${esc(it.name)}</button>`;
+  }
+  const letters = () => kept().filter((r) => r && typeof r.id === 'string' && r.title).map((r) => {
+    const id = 'mail:' + r.id;
+    return { id, from: r.sender || undefined, due: () => open(r) && isFor(r.who), title: String(r.title), body: bodyHtml(r.body), acts: acts(id, r.gift) };
+  });
+  function take(id) {   // its gift, once for the progress; the account's taking noted on the server
+    const r = kept().find((x) => 'mail:' + x.id === id), g = r && r.gift; if (!g || taken(id)) return false;
+    if (Number(g.koto) > 0) { state.koto.mail[id] = Number(g.koto); kotoPop(Number(g.koto)); }
+    else if (g.ware && WARE.has(g.ware) && !owns(g.ware)) { const it = WARE.get(g.ware); state.owned[g.ware] = { paid: 0, on: todayStr(), gift: id }; gotItem(g.ware, WHERE[it.kind] || '收在收納箱，到書房按「擺設」拿出來擺'); }
+    else return false;
+    const b = letterBox(); b.taken = Object.assign({}, b.taken, { [id]: todayStr() }); letterBoxSave(b);
+    if (Sync.client && Sync.session) Sync.client.from('mail_taken').insert({ user_id: Sync.session.user.id, mail_id: r.id }).then(() => {}, () => {});   // taken on another device first: already there
+    return true;
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) fetchRows(); });
+  return { fetch: fetchRows, letters, take, isFor, bodyHtml };
+})();
 function letters() {   // the letters in the mailbox, each with read (newest first; one that comes now is kept from now on)
   const set = Boolean(state.mail), b = letterBox(); let changed = !set;
   const out = letterKinds().filter((l) => !(l.gone && l.gone()) && (b.got[l.id] || (l.due() && (b.got[l.id] = todayStr(), changed = true))));
@@ -123,6 +188,7 @@ function letters() {   // the letters in the mailbox, each with read (newest fir
 function letterRead(id) { const b = letterBox(); if (!b.read[id]) { b.read[id] = todayStr(); letterBoxSave(b); } }
 function mailCount() { return letters().filter((l) => !l.read).length; }   // the unread
 function takeLetterGift(id) {
+  if (id.startsWith('mail:')) { if (MAILROOM.take(id)) kotoButtons(document.getElementById('view')); return; }   // one sent from the dashboard
   const n = LETTER_GIFT[id]; if (!n || state.koto.mail[id]) return;
   state.koto.mail[id] = n; saveState(); kotoPop(n);
   kotoButtons(document.getElementById('view'));   // the 言靈 button up top, if it is under the letters
@@ -135,15 +201,16 @@ function newMail() {   // the unread letters this device has not been told about
 }
 // who wrote a letter (1.2.0): their face in its top right corner (福爺; 渚 since 2026-11-10; the app's own letters have none)
 const LETTER_FROM = { fuku: ['福爺', () => fukuSvg()], nagisa: ['渚', () => TOWNEV.face('nagisa')] };
+const letterFrom = (id) => LETTER_FROM[id] || ((NPCS[id] || TOWN.CAST[id]) ? [(NPCS[id] || TOWN.CAST[id]).name, () => TOWNEV.face(id)] : null);   // anyone of the town (a letter from the dashboard)
 const LETTER_GIFT = { opening: 10 };   // 言靈 that come with a letter
 let letterOpen = null;   // the letter read in the mailbox now (none: the list)
 function lettersHtml() {
   const all = letters(), l = letterOpen && all.find((x) => x.id === letterOpen);
   if (!l) return `<div class="letter-list">${all.map((x) => `<button type="button" class="letter-row ${x.read ? 'read' : 'unread'}" data-act="letter-open" data-id="${esc(x.id)}">
-      <span class="lr-face">${x.from && LETTER_FROM[x.from] ? LETTER_FROM[x.from][1]() : icon('mail')}</span><span class="lr-title">${esc(x.title)}<small>${esc(x.from && LETTER_FROM[x.from] ? LETTER_FROM[x.from][0] : 'Nihongo Quest')}${x.got && x.got.length === 10 ? '・' + esc(x.got.slice(5).replace('-', '/')) : ''}</small></span>
+      <span class="lr-face">${x.from && letterFrom(x.from) ? letterFrom(x.from)[1]() : icon('mail')}</span><span class="lr-title">${esc(x.title)}<small>${esc(x.from && letterFrom(x.from) ? letterFrom(x.from)[0] : 'Nihongo Quest')}${x.got && x.got.length === 10 ? '・' + esc(x.got.slice(5).replace('-', '/')) : ''}</small></span>
       <span class="lr-state">${x.read ? '已讀' : '新'}</span></button>`).join('')}</div>`;
   return `<div class="letters"><div class="letter${l.from ? ' from' : ''}" data-letter="${esc(l.id)}">
-      ${l.from && LETTER_FROM[l.from] ? `<div class="letter-from" title="${LETTER_FROM[l.from][0]}" aria-label="寄件者：${LETTER_FROM[l.from][0]}">${LETTER_FROM[l.from][1]()}</div>` : ''}
+      ${l.from && letterFrom(l.from) ? `<div class="letter-from" title="${letterFrom(l.from)[0]}" aria-label="寄件者：${letterFrom(l.from)[0]}">${letterFrom(l.from)[1]()}</div>` : ''}
       <div class="letter-title">${esc(l.title)}</div>
       <div class="letter-body">${l.body}</div>
       <div class="row-wrap mt-3">${l.acts || ''}<button type="button" class="btn btn-sm" data-act="letter-done" data-id="${esc(l.id)}">‹ 回信箱</button></div>
