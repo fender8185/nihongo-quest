@@ -123,7 +123,14 @@ const WARES = [
   { id: 'desk', kind: 'floor', starter: true, fixed: true, turn: false, h: 3.2, name: '書桌和椅子', fp: [3.8, 3.7], at: { w: 'F', x: 5.5, y: 1.85, r: 0 }, drawn: { w: 'F', x: 3.3, y: 1.85, r: 0 }, desc: '' },
   { id: 'chest', kind: 'floor', starter: true, fixed: true, turn: false, h: 4.3, name: '抽屜櫃', fp: [2.4, 1.7], at: { w: 'F', x: 12.5, y: 0.85, r: 0 }, drawn: { w: 'F', x: 8.45, y: 0.85, r: 0 }, desc: '' },
   { id: 'board', kind: 'wall', starter: true, fixed: true, name: '軟木板', size: [2.4, 2.3], at: { w: 'R', u: 12.5, v: 5.5 }, drawn: { w: 'R', u: 8.45, v: 5.5 }, desc: '' },
-  { id: 'calendar', kind: 'wall', starter: true, fixed: true, name: '日曆', size: [1.6, 2.7], at: { w: 'R', u: 14.7, v: 5.75 }, drawn: { w: 'R', u: 10.65, v: 5.75 }, desc: '' }
+  { id: 'calendar', kind: 'wall', starter: true, fixed: true, name: '日曆', size: [1.6, 2.7], at: { w: 'R', u: 14.7, v: 5.75 }, drawn: { w: 'R', u: 10.65, v: 5.75 }, desc: '' },
+  // records for the gramophone (2026-11-12): bought, one is on its list (MUSIC.RECORDS, the same id)
+  { id: 'harukaze', kind: 'record', name: '唱片〈春風〉', price: 60, desc: '音樂盒和笛子，像春天的風一樣輕快。點書房的留聲機就能換上。' },
+  { id: 'matsuri', kind: 'record', name: '唱片〈夏祭り〉', price: 60, desc: '笛子和太鼓，夏天祭典的熱鬧。神社有祭典的時候也聽得到。' },
+  { id: 'tsukimi', kind: 'record', name: '唱片〈月見〉', price: 60, desc: '琴和笛子，安靜的秋夜賞月。' },
+  { id: 'yukiasa', kind: 'record', name: '唱片〈雪の朝〉', price: 60, desc: '鋼琴和音樂盒，下過雪的早晨，安安靜靜的。' },
+  { id: 'kissa', kind: 'record', name: '唱片〈喫茶しずく〉', price: 80, desc: '小鎮咖啡館「しずく」常放的爵士鋼琴。' },
+  { id: 'obake', kind: 'record', limited: 'halloween', name: '唱片〈おばけの夜〉', price: 66, desc: '有點可怕又有點可愛的萬聖節之夜。' }
 ];
 const WARE = new Map(WARES.map((w) => [w.id, w]));
 const WEAR_SLOTS = [['head', '頭'], ['face', '臉'], ['neck', '脖子'], ['back', '背'], ['body', '外衣']];

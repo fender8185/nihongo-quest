@@ -99,9 +99,16 @@ const WALK_GROUND = {
 };
 // the cheapest way over that ground (A* on a 12 × 6 px grid, then pulled straight wherever a straight line costs no more); null:
 // no way found
+const yInR = (r, X, Y) => X >= r[0] && X <= r[1] && Y >= r[2] && Y <= r[3];
+const yOnWay = (gr, X, Y) => (gr.ways || []).some((w) => { if (Array.isArray(w)) return yInR(w, X, Y); if (Y < Math.min(w.Y0, w.Y1) || Y > Math.max(w.Y0, w.Y1)) return false; const [c, hw] = stripAt(w, Y); return Math.abs(X - c) <= hw; });
+// what is underfoot at X, Y (2026-11-12, for the footsteps): 'way' (a path, the pavement, the crossing), 'road', or 'off' (the lawn, the sand)
+function yGroundAt(place, X, Y) {
+  const gr = WALK_GROUND[place]; if (!gr) return 'off';
+  if ((gr.cross || []).some((r) => yInR(r, X, Y)) || yOnWay(gr, X, Y)) return 'way';
+  return (gr.roads || []).some((r) => yInR(r, X, Y)) ? 'road' : 'off';
+}
 function yGroundRoute(place, gr, p, goal, bs, lim) {
-  const inR = (r, X, Y) => X >= r[0] && X <= r[1] && Y >= r[2] && Y <= r[3];
-  const onWay = (X, Y) => (gr.ways || []).some((w) => { if (Array.isArray(w)) return inR(w, X, Y); if (Y < Math.min(w.Y0, w.Y1) || Y > Math.max(w.Y0, w.Y1)) return false; const [c, hw] = stripAt(w, Y); return Math.abs(X - c) <= hw; });
+  const inR = yInR, onWay = (X, Y) => yOnWay(gr, X, Y);
   const cost = (X, Y) => {
     if (bs.some((b) => yIn(b, [X, Y]))) return Infinity;
     if ((gr.cross || []).some((r) => inR(r, X, Y)) || onWay(X, Y)) return 1;
@@ -300,7 +307,7 @@ function ySeat(yard, t, [u, v, h, how]) {
   const el = yard.querySelector('.yhero'); if (!el) return;
   const f = how.split(' ');
   yh.use = { up: [yh.X, yh.Y] }; [yh.X, yh.Y] = isoXY(u, v, h); yh.z = isoZ(u, v + 0.45);   // over his seat, under the table before it
-  yh.back = f.includes('back'); yh.turn = f.includes('turn'); yh.flip = f.includes('flip'); el.classList.add(f.includes('kneel') ? 'kneel' : 'bench'); yHeroPlace(yard);
+  yh.back = f.includes('back'); yh.turn = f.includes('turn'); yh.flip = f.includes('flip'); el.classList.add(f.includes('kneel') ? 'kneel' : 'bench'); yHeroPlace(yard); SND.use(yPlace, t);
   if (t.say) yPop(yard, yh.X + 600, 370 - yh.Y - 190 * ISO.k, t.say);
 }
 function sceneUse(el) {
@@ -327,7 +334,7 @@ function ySit(yard, t, X) {
   const h = yard.querySelector('.yhero'); if (!h) return;
   const s = yScale(t.dep);
   yh.use = { up: [yh.X, yh.Y] }; yh.X = X; yh.s = s; yh.Y = t.top - 40 * s; yh.z = t.z || 300 - t.dep - 1;
-  yh.back = false; yh.flip = false; yh.turn = false; h.classList.add('bench'); yHeroPlace(yard);
+  yh.back = false; yh.flip = false; yh.turn = false; h.classList.add('bench'); yHeroPlace(yard); SND.use(yPlace, t);
   if (t.say) yPop(yard, X + 600, 370 - yh.Y - 185 * s, t.say);   // over his head
   if (t.kind !== 'ride') return;
   const part = yard.querySelector(`.land [data-fx="${t.fx}"]`), svg = h.querySelector('svg');
@@ -355,6 +362,7 @@ function ySlide(yard) {
     const [pts, v, cls, face] = legs[i], seg = []; let len = 0;
     for (let k = 1; k < pts.length; k++) { const d = Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]); if (d) { seg.push([pts[k - 1], pts[k], len, d]); len += d; } }
     h.classList.remove('walk', 'bench', 'run'); h.classList.add(cls, 'sliding'); Object.assign(yh, { back: false, flip: false, turn: false }, face);
+    if (i === 1) SND.use(yPlace, { id: 'slide', kind: 'slide' });   // down the chute
     const t0 = performance.now();
     const step = (now) => {
       if (!yard.isConnected || !yh.use) return;
@@ -374,6 +382,7 @@ function yDo(yard, t) {
   yHeroPlace(yard);
   if (t.out) { h.classList.add('out'); setTimeout(() => { if (!yard.isConnected) return; h.classList.remove('out'); yh.back = false; yHeroPlace(yard); if (t.then) yPop(yard, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), t.then); }, t.out); return; }   // in and out again
   if (t.pose) { h.classList.remove(t.pose); void h.offsetWidth; h.classList.add(t.pose); setTimeout(() => h.classList.remove(t.pose), 1500); }
+  SND.use(yPlace, t);
   const part = t.fx && yard.querySelector(`.land [data-fx="${t.fx}"]`);
   if (part) { part.classList.remove(t.fxc); void part.getBoundingClientRect(); part.classList.add(t.fxc); clearTimeout(part._fxT); part._fxT = setTimeout(() => part.classList.remove(t.fxc), t.ms || 1800); }
   let say = t.say;
@@ -407,6 +416,7 @@ function yHeroWalk(yard, to, done, free) {   // free: on the way out of the plac
     const d = Math.min(len, (now - t0) / 1000 * v), q = seg.find((x) => d <= x[2] + x[3]) || seg[seg.length - 1], t = Math.min(1, (d - q[2]) / q[3]);
     if (q !== on) { on = q; face(q); }   // round a corner: turned the new way
     yh.X = q[0][0] + (q[1][0] - q[0][0]) * t; yh.Y = q[0][1] + (q[1][1] - q[0][1]) * t; yh.rem = len - d; yHeroPlace(yard);
+    SND.step(SND.groundOf(yPlace, yGroundAt(yPlace, yh.X, yh.Y)), v > 260);   // his footsteps, by what is underfoot
     if (d < len) { yh.raf = requestAnimationFrame(step); return; }
     el.classList.remove('walk', 'run'); yh.rem = undefined; yCamSettle(yard); yHeroSave(); if (done) done();
   };
@@ -433,9 +443,9 @@ function yClimb(el) {
       const d = Math.min(len, (now - t0) / 1000 * v), q = seg.find((x) => d <= x[2] + x[3]) || seg[seg.length - 1], t = (d - q[2]) / q[3];
       const dx = q[1][0] - q[0][0], dy = q[1][1] - q[0][1];
       yh.X = q[0][0] + dx * t; yh.Y = q[0][1] + dy * t; yh.back = dy > 0; if (Math.abs(dx) > 0.5) yh.flip = dx < 0; yh.turn = Math.abs(dx) > 0.5 * Math.abs(dy);
-      yh.s = s0 + (s1 - s0) * d / len; yClimbLook(h, yh.s); yHeroPlace(yard);
+      yh.s = s0 + (s1 - s0) * d / len; yClimbLook(h, yh.s); yHeroPlace(yard); SND.step('gravel', true);
       if (d < len) { yh.raf = requestAnimationFrame(step); return; }
-      h.classList.add('out'); keep(); setTimeout(() => go('#/shop'), 280);   // in at the door
+      h.classList.add('out'); keep(); SND.play('slide-door'); setTimeout(() => go('#/shop'), 280);   // in at the door (its glass door slid open)
     };
     yh.raf = requestAnimationFrame(step);
   });

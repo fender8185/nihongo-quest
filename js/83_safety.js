@@ -165,7 +165,7 @@ function mailboxLevel() {
 }
 Object.assign(ACTIONS, {
   mailbox: (el) => yUse(el, [52, 146], () => {   // the hero walks over (1.2.0); its door drops open, then the letters
-    const box = el.closest('.mailbox');
+    const box = el.closest('.mailbox'); SND.play('mail');
     if (!box || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { openLetters(); return; }
     box.classList.add('open'); setTimeout(openLetters, 320); setTimeout(() => box.classList.remove('open'), 900);
   }),

@@ -498,7 +498,7 @@ def test_the_shop_has_four_tabs_and_opens_on_the_last_one_used(b):
       return JSON.stringify({ tabs, seen, leak, back: document.querySelector('.shop-tabs [aria-selected="true"]').dataset.tab, stored: localStorage.getItem('nq_shop_tab') }); })()"""
     r = json.loads(ev(b, js))
     assert r['tabs'] == ['室內', '戶外', '穿搭', '限時'], r
-    assert r['seen']['in'] == ['家具擺飾', '地墊', '牆上'] and r['seen']['out'] == ['戶外擺設', '房子外觀'] and r['seen']['wear'] == ['衣服褲子', '主角穿戴'], r
+    assert r['seen']['in'] == ['家具擺飾', '地墊', '牆上', '唱片'] and r['seen']['out'] == ['戶外擺設', '房子外觀'] and r['seen']['wear'] == ['衣服褲子', '主角穿戴'], r
     assert r['seen']['outCards'] == ['telescope', 'stonelantern', 'engawa', 'tanuki', 'pond', 'mushroomhouse', 'gingerhouse', 'stumphouse', 'teapothouse'] and not r['leak'], r   # limited wares (南瓜屋 too) only under 限時
     assert r['back'] == 'out' and r['stored'] == 'out', r
 
@@ -515,11 +515,11 @@ def test_limited_sales_go_by_the_servers_day_not_the_phones(b):
       return JSON.stringify({ edges, real: /^\\d{4}-\\d{2}-\\d{2}$/.test(real), on, last: last.head, off, offline, bought, preview: preview.cards }); })()"""
     r = json.loads(ev(b, js))
     assert r['edges'] == [False, True, True, False] and r['real'], r   # ten days either side of Halloween, both ends in
-    assert r['on'] == {'head': ['萬聖節限定 · 賣到 11/10（還有 3 天）'], 'cards': ['witchhat', 'wizrobe', 'pumpkinhouse', 'pumpkin'], 'note': None, 'dot': True}, r
+    assert r['on'] == {'head': ['萬聖節限定 · 賣到 11/10（還有 3 天）'], 'cards': ['witchhat', 'wizrobe', 'pumpkinhouse', 'pumpkin', 'obake'], 'note': None, 'dot': True}, r
     assert r['last'] == ['萬聖節限定 · 賣到 11/10（今天最後一天）'], r
     assert r['off'] == {'head': [], 'cards': [], 'note': '現在沒有限時商品。下一檔：萬聖節 10/21–11/10', 'dot': False}, r
     assert r['offline'] == '限時商品要連上網路才看得到。' and r['bought'] is None, r
-    assert r['preview'] == ['witchhat', 'wizrobe', 'pumpkinhouse', 'pumpkin'], r   # the test site can look whatever the day
+    assert r['preview'] == ['witchhat', 'wizrobe', 'pumpkinhouse', 'pumpkin', 'obake'], r   # the test site can look whatever the day
 
 def test_the_halloween_wares_are_a_hat_a_robe_and_a_pumpkin_that_glows(b):
     js = """(() => { const robe = HERO.svg({ look: { topStyle: 'wizrobe', top: '#e58fa8' } }), p = WARE.get('pumpkin');

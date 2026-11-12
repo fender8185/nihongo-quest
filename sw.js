@@ -1,5 +1,5 @@
 /* Nihongo Quest service worker: versioned app-shell cache, cache-first for same-origin GETs. */
-const CACHE = 'nq-v1.11.0';
+const CACHE = 'nq-v1.11.0-test.1';
 const AUDIO_CACHE = 'nq-audio';   // 雲端音檔 heard so far, and the gramophone's records: kept across releases
 // A clip's two addresses: R2, where the app fetches it since 1.0.29, and the Supabase bucket R2 is a copy of, which the
 // app falls back to and which every clip cached before 1.0.29 is filed under
@@ -41,6 +41,7 @@ const PRECACHE = [
   './js/79_stats.js',
   './js/80_tts.js',
   './js/81_ai.js',
+  './js/82_sound.js',
   './js/83_safety.js',
   './js/84_store.js',
   './js/85_sync.js',
@@ -94,7 +95,7 @@ self.addEventListener('fetch', (event) => {
     }));
     return;
   }
-  if (url.origin === self.location.origin && url.pathname.includes('/music/')) {   // the gramophone's records (test): named by version, kept like the clips
+  if (url.origin === self.location.origin && /\/(music|sounds)\//.test(url.pathname)) {   // the gramophone's records and 環境音's files: named by version, kept like the clips
     event.respondWith(caches.open(AUDIO_CACHE).then(async (cache) => {
       const hit = await cache.match(req); if (hit) return hit;
       const res = await fetch(req);

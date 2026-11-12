@@ -209,7 +209,7 @@ function yardEdit(yard, cmd, id) {
   else if (cmd === 'take') {
     const p = yardSpot(id);
     if (!p) { toast('院子放不下了，先收起別的東西再試試'); return; }
-    state.placed[id] = Object.assign({ w: 'Y' }, p); yed.sel = id; saveState();
+    state.placed[id] = Object.assign({ w: 'Y' }, p); yed.sel = id; saveState(); SND.play('place');
   } else if (cmd === 'put' && yed.sel) { delete state.placed[yed.sel]; yed.sel = null; saveState(); }
   else if (cmd === 'house') {   // the yard's house in this look (id '' the cottage), at once
     if (id && !(WARE.has(id) && owns(id) && HOUSE_ART[id])) return;
@@ -284,7 +284,7 @@ function yardDragEnd(yard) {
   const d = yed.drag; yed.drag = null; cancelAnimationFrame(yEdgeT); if (!d || !d.moved) return;
   yard.classList.remove('dragging'); yard._noClick = true; setTimeout(() => { yard._noClick = false; }, 0);   // the click that ends a drag is no tap
   if (d.box) { if (!d.fromBox) { delete state.placed[d.id]; if (yed.sel === d.id) yed.sel = null; saveState(); } }
-  else if (d.to) { state.placed[d.id] = d.to; yed.sel = d.id; saveState(); }
+  else if (d.to) { state.placed[d.id] = d.to; yed.sel = d.id; saveState(); SND.play('place'); }
   else if (d.fromBox) toast('這裡放不下');
   yardDraw(yard);
 }
@@ -337,16 +337,32 @@ const SCOPE = (() => {
 // first; state.musicOff: stopped by hand). A record is a file (music/<id>-<n>.m4a), fetched once and kept by the service worker
 // like the clips, played by a looping <audio>; its music is written in scripts/music-synth.js, which renders the file again
 // (scripts/render-music.py) when it changes. No file to be had (offline before it was ever fetched): quiet, tried again later.
-// RECORDS: the house's own (own); one sold later is had once bought (owns)
+// RECORDS: the house's own (own); one sold in 古道具屋 (2026-11-12: a ware of kind 'record', the same id) is had once bought; a
+// place's own (place) plays by itself there (PLACE_REC), at its vol. 音樂 off (設定): none plays anywhere
 const MUSIC = (() => {
   const RECORDS = [
     { id: 'engawa', own: true, file: 'music/engawa-1.m4a', name: '縁側の午後', kana: 'えんがわのごご', zh: '簷廊的午後', style: '電鋼琴・音樂盒', color: '#e3907f' },
-    { id: 'yozakura', own: true, file: 'music/yozakura-1.m4a', name: '夜桜', kana: 'よざくら', zh: '夜裡的櫻花', style: '琴・音樂盒', color: '#8b6aa8' }
+    { id: 'yozakura', own: true, file: 'music/yozakura-1.m4a', name: '夜桜', kana: 'よざくら', zh: '夜裡的櫻花', style: '琴・音樂盒', color: '#8b6aa8' },
+    { id: 'harukaze', file: 'music/harukaze-1.m4a', name: '春風', kana: 'はるかぜ', zh: '春天的風', style: '音樂盒・笛', color: '#f2a7bb' },
+    { id: 'matsuri', file: 'music/matsuri-1.m4a', name: '夏祭り', kana: 'なつまつり', zh: '夏日祭典', style: '笛・太鼓', color: '#e0703a', vol: 0.6 },
+    { id: 'tsukimi', file: 'music/tsukimi-1.m4a', name: '月見', kana: 'つきみ', zh: '賞月', style: '琴・笛', color: '#d9b45a' },
+    { id: 'yukiasa', file: 'music/yukiasa-1.m4a', name: '雪の朝', kana: 'ゆきのあさ', zh: '下雪的早晨', style: '鋼琴・音樂盒', color: '#8fb4d8' },
+    { id: 'kissa', file: 'music/kissa-1.m4a', name: '喫茶しずく', kana: 'きっさしずく', zh: 'しずく咖啡館', style: '爵士鋼琴・低音提琴', color: '#8a5a3a', vol: 0.35 },
+    { id: 'obake', file: 'music/obake-1.m4a', name: 'おばけの夜', kana: 'おばけのよる', zh: '妖怪之夜', style: '音樂盒・撥弦', color: '#7a4ab0' },
+    { id: 'chochin', place: 'izakaya', file: 'music/chochin-1.m4a', name: '赤ちょうちん', kana: 'あかちょうちん', zh: '紅燈籠', style: '三味線・笛', color: '#c8463a', vol: 0.45 }
   ];
-  const have = () => RECORDS.filter((r) => r.own || owns(r.id));
+  // the record a place plays by itself: the izakaya's own, the café's jazz out of its door while it is open, the festival's at the shrine
+  const PLACE_REC = { izakaya: () => 'chochin', town: () => (TOWNEV.shopState('cafe') === 'open' ? 'kissa' : ''), shrine: () => (TOWNEV.festival() ? 'matsuri' : '') };
+  const have = () => RECORDS.filter((r) => !r.place && (r.own || owns(r.id)));
+  // a record sold in 古道具屋, as its card shows it: half out of its sleeve, its name on the sleeve
+  const sleeve = (r) => `<svg class="rec-sleeve" viewBox="0 0 120 120" aria-hidden="true">
+    <circle cx="80" cy="60" r="38" fill="#1f1c22"/><circle cx="80" cy="60" r="30" fill="none" stroke="#fff" stroke-opacity=".1"/><circle cx="80" cy="60" r="22" fill="none" stroke="#fff" stroke-opacity=".1"/><circle cx="80" cy="60" r="12" fill="${r.color}"/><circle cx="80" cy="60" r="2" fill="#1f1c22"/>
+    <rect x="6" y="10" width="62" height="100" rx="4" fill="${r.color}"/><rect x="64" y="10" width="4" height="100" fill="#000" fill-opacity=".12"/><text x="37" y="66" text-anchor="middle" font-size="${r.name.length > 4 ? 11 : 15}" fill="#fff" font-weight="700" lang="ja">${esc(r.name)}</text></svg>`;
   const current = () => have().find((r) => r.id === state.record) || have()[0];
   let play = null, wake = null, player = null, fadeT = 0;
   const VOL = 0.8, blobs = {};   // blobs: a record's file as a blob: URL, fetched once a session
+  const level = (rec) => VOL * (rec.vol || 1);
+  let ducked = false;   // Japanese being read aloud (duck)
   function fadeFile(v, s) {   // the player's volume to v (an iPhone keeps it at 1: there it only starts and stops)
     clearInterval(fadeT); const from = player.volume, t0 = performance.now();
     fadeT = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / (s * 1000)); try { player.volume = from + (v - from) * k; } catch (e) { /* read-only */ } if (k >= 1) clearInterval(fadeT); }, 50);
@@ -359,7 +375,7 @@ const MUSIC = (() => {
       if (play !== p) return;
       if (player.dataset.id !== rec.id) { player.src = blobs[rec.id]; player.dataset.id = rec.id; }   // the same record again: on from where it stopped
       try { player.volume = 0; } catch (e) { /* read-only */ }
-      playFile(); fadeFile(VOL, 1.2);
+      playFile(); fadeFile(level(rec) * (ducked ? 0.3 : 1), 1.2);
     };
     if (blobs[rec.id]) { go(); return; }
     fetch(rec.file).then((r) => { if (!r.ok) throw new Error(r.status); return r.blob(); }).then((b) => { blobs[rec.id] = URL.createObjectURL(b); go(); })
@@ -370,16 +386,21 @@ const MUSIC = (() => {
     clearInterval(fadeT); if (player) player.pause();
     play = null;
   }
-  // whether it should play now: in 書房 or the bedroom (#/, #/today, #/bedroom), the gramophone set out, not stopped, the page in sight
+  // the record to play now, if any: in 書房 or the bedroom (#/, #/today, #/bedroom) the one on the gramophone — set out, not
+  // stopped — else a place's own (PLACE_REC); the page in sight, 音樂 on
+  const inRoom = () => ['today', 'bedroom'].includes(currentRoute().name);
   function wanted() {
+    if (state.settings.music === false || document.hidden) return null;
     const r = currentRoute().name;
-    return (r === 'today' || r === 'bedroom') && Boolean(state.placed && state.placed.gramophone && owns('gramophone')) && !state.musicOff && !document.hidden && Boolean(current());
+    if (inRoom()) return state.placed && state.placed.gramophone && owns('gramophone') && !state.musicOff ? current() || null : null;
+    const id = PLACE_REC[r] && PLACE_REC[r]();
+    return (id && RECORDS.find((x) => x.id === id)) || null;
   }
   function sync() { try { tune(); } catch (e) { console.error(e); } }   // music never breaks a page
   function tune() {
-    const on = wanted();
-    document.querySelectorAll('.study').forEach((st) => st.classList.toggle('music', on));
-    if (!on) {
+    const rec = wanted();
+    document.querySelectorAll('.study').forEach((st) => st.classList.toggle('music', Boolean(rec) && inRoom()));
+    if (!rec) {
       if (!play) return;
       if (document.hidden) { halt(); return; }
       const p = play; fadeFile(0, 0.5);
@@ -387,11 +408,10 @@ const MUSIC = (() => {
       return;
     }
     try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older Safari */ }
-    const rec = current();
     if (!play || play.id !== rec.id) { halt(); start(rec); }
-    else { if (player.paused) playFile(); fadeFile(VOL, 0.6); }   // back before it had stopped
+    else if (!ducked) { if (player.paused) playFile(); fadeFile(level(rec), 0.6); }   // back before it had stopped
     if (!wake) {   // a browser lets sound start only from a tap or a key: the first one wakes it
-      wake = () => { if (play && wanted() && player && player.paused && player.src) playFile(); };
+      wake = () => { if (play && wanted() && !ducked && player && player.paused && player.src) playFile(); };
       ['pointerdown', 'keydown'].forEach((t) => document.addEventListener(t, wake, true));
     }
   }
@@ -407,9 +427,18 @@ const MUSIC = (() => {
   }
   function pick() { openModal('留聲機', body(), { width: 420, noFocus: true }); }
   function redo() { saveState(); const b = document.getElementById('modalBody'); if (b) b.innerHTML = body(); }
-  const put = (id) => { state.record = id; state.musicOff = false; redo(); };
-  const pause = () => { state.musicOff = !state.musicOff; redo(); };
-  return { RECORDS, sync, pick, put, pause, playing: () => Boolean(play) && wanted(), mode: () => play && play.mode };
+  const put = (id) => { const was = !state.musicOff && current(); state.record = id; state.musicOff = false; redo(); if (!was || was.id !== id) SND.play('needle'); };
+  const pause = () => { state.musicOff = !state.musicOff; redo(); if (!state.musicOff) SND.play('needle'); };
+  // while Japanese is read aloud (SND.duck): down to a third, back after; an iPhone keeps the volume at 1, so there it pauses
+  const fixedVol = () => { try { const v = player.volume; player.volume = v > 0.5 ? v - 0.1 : v + 0.1; const moved = Math.abs(player.volume - v) > 0.05; player.volume = v; return !moved; } catch (e) { return true; } };
+  function duck(on) {
+    if (on === ducked) return; ducked = on;
+    if (!play || !player) return;
+    if (fixedVol()) { if (on) player.pause(); else if (wanted()) playFile(); return; }
+    const rec = RECORDS.find((x) => x.id === play.id);
+    fadeFile(level(rec) * (on ? 0.3 : 1), on ? 0.15 : 0.6);
+  }
+  return { RECORDS, sync, pick, put, pause, duck, sleeve, playing: () => Boolean(play) && Boolean(wanted()), wants: () => (wanted() || {}).id || '', mode: () => play && play.mode };
 })();
 // outside 擺設 a tap on a ware sends the hero to stand beside it, facing it; at the telescope they look into it (test: 觀星)
 function yardUse(yard, id) {
@@ -419,9 +448,9 @@ function yardUse(yard, id) {
     const el = yard.querySelector('.yhero'); if (!el) return;
     yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard);   // turned to it
     if (id === 'telescope') { el.classList.add('look'); setTimeout(() => { el.classList.remove('look'); if (yard.isConnected) SCOPE.open(yard); }, 700); }
-    if (id === 'pond') { el.classList.add('crouch'); setTimeout(() => el.classList.remove('crouch'), 1500); pondStir(yard, side); }
+    if (id === 'pond') { el.classList.add('crouch'); setTimeout(() => el.classList.remove('crouch'), 1500); pondStir(yard, side); SND.play('splash', { vol: 0.6 }); SND.play('plop', { delay: 1.1 }); }
     if (YARD.ART[id] && YARD.ART[id].glow) {   // a lamp (test, 2026-11-09): switched on or off
-      if (lampOff(id)) delete state.lampsOff[id]; else state.lampsOff[id] = true; saveState();
+      if (lampOff(id)) delete state.lampsOff[id]; else state.lampsOff[id] = true; saveState(); SND.play('switch');
       const b = yard.querySelector(`.yware[data-ware="${id}"]`); if (b) b.classList.toggle('off', lampOff(id));
     }
   });

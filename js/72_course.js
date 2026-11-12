@@ -238,7 +238,7 @@ function renderLessonReader(view, uid, at) {
   };
   const first = (i) => Number(pages[i].querySelector('[data-b]').dataset.b);
   const show = (i, turned) => {
-    const end = i === pages.length - 1; cur = i;
+    const end = i === pages.length - 1; if (turned && i !== cur) SND.play('page', { vol: 0.7 }); cur = i;
     if (end) delete LESSON_AT[uid]; else LESSON_AT[uid] = first(i);
     rd.querySelector('.rd-count').textContent = `${i + 1} / ${pages.length}`; rd.querySelector('.rd-bar i').style.width = `${(i + 1) / pages.length * 100}%`;
     if (end && turned && !state.koto.found['book-' + uid]) { state.koto.found['book-' + uid] = BOOK_GIFT; saveState(); setTimeout(() => bookCoins(rd, BOOK_GIFT), 380); }   // once the page has settled

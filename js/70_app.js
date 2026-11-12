@@ -90,7 +90,7 @@ function route() {
   if (tip) tip.classList.remove('show');
   if (r.name !== 'practice') { document.body.classList.remove('practicing'); }
   if (LISTEN && !(r.name === 'listen' || ((r.name === 'mistakes' || r.name === 'vocab') && r.parts[1] === 'listen'))) listenStop(true);   // leaving the pages that host the player ends it
-  MUSIC.sync();   // the gramophone plays in 書房 and the bedroom only
+  MUSIC.sync(); SND.sync();   // the gramophone plays in 書房 and the bedroom only; each place its own background (環境音)
   STORY.drop();
   if (r.name === 'practice') { renderPractice(); return; }
   if (r.name === 'exam' && r.parts[1] === 'run') { renderExamRunner(); return; }
@@ -248,7 +248,7 @@ const ACTIONS = {
   'study-go': (el) => ROOM.use(el, () => ROOM.enter(el)),
   'study-drawer': (el) => ROOM.use(el, () => ROOM.pull(el)),
   'study-door': (el) => (el.dataset.thing === 'door' && NPC.visitor() ? ROOM.use(el, () => NPC.visit(el.closest('.study')), { x: 1.65, y: 5.95, look: 'L', act: 'look' }) : ROOM.use(el, () => ROOM.door(el))),   // out to the yard, or to the other room (1.3.0); someone knocking: open to them (test)
-  'enter-house': (el) => yUse(el, [0, 214], () => { ROOM.heroIn(); sceneGo('#/today', 'entering'); }),   // the hero walks to the door first (1.2.0)
+  'enter-house': (el) => yUse(el, [0, 214], () => { ROOM.heroIn(); SND.play('door-close', { delay: 0.3 }); sceneGo('#/today', 'entering'); }),   // the hero walks to the door first (1.2.0)
   'yard-shop': (el) => yClimb(el),
   'bus-stop': (el) => busSit(el),   // test: the hero sits on the bench
   'scene-use': (el) => sceneUse(el),   // a thing in a place: the hero walks over and uses it (PLACE_USE)

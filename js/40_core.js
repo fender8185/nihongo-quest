@@ -205,6 +205,8 @@ function defaultSettings() {
     furigana: true,
     speechRate: 1.0,
     sfx: true,               // 答題音效 (1.0.50)
+    ambient: true,           // 環境音: things tapped, footsteps, each place's background (2026-11-12, SND)
+    music: true,             // 音樂: the gramophone's records (2026-11-12, MUSIC)
     theme: 'clock',          // 跟著時間 | 永夜 'night' | 永晝 'day' (1.1.0; older saves: dark／auto, light — themeMode)
     examDate: '2027-07-04',
     examLevel: 'N4',         /* level-literal-ok: default */ // the JLPT level the exam date is for: 學習分析 and the exam countdown project against it (1.0.26)

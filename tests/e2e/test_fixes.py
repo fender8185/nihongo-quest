@@ -1898,7 +1898,7 @@ def test_the_old_address_says_the_site_moved_and_data_settings_have_no_backup_fi
 # 1.0.48: 重設所有進度 sits folded and grey above the admin block, its button hidden until opened
 def test_reset_all_is_folded_away_at_the_bottom_of_data(b):
     js = """(() => { openSettings('data'); const btn = document.querySelector('.modal [data-act=reset-all]'); const box = btn && btn.closest('details');
-      const sums = [...document.querySelectorAll('.modal details > summary')].map(s => s.textContent);
+      const sums = [...document.querySelectorAll('.modal details:not(details details) > summary')].map(s => s.textContent);   // the folds at the bottom, not the one inside 管理者
       const out = { inFold: !!box, shut: box ? !box.open : null, hidden: btn ? !btn.checkVisibility() : null, grey: box ? box.querySelector('summary').classList.contains('muted') : null, sums: sums.slice(-2), cloud: box ? box.textContent.includes('雲端') : null };
       box.open = true; out.shown = btn.checkVisibility(); closeModal(true); return JSON.stringify(out); })()"""
     out = b.run([("nav", URL), ("wait", READY), ("eval", js)])

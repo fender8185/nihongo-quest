@@ -37,6 +37,8 @@ function settingsLearn() {
       <div class="row"><select class="select" style="width:auto" data-change="setting" data-key="examLevel">${courseLevels().map(v => `<option value="${v}" ${s.examLevel === v ? 'selected' : ''}>${v}</option>`).join('')}</select>
       <input class="input" type="date" style="width:auto" value="${esc(s.examDate)}" data-change="setting" data-key="examDate" data-type="date" /></div></div>
     ${boolRow('sfx', '答題音效', '答對、答錯時響一聲。iPhone 開靜音時不會響，單字發音照常。')}
+    ${boolRow('ambient', '環境音', '點東西的聲音、腳步聲、每個地方的背景聲（海浪、蟲鳴…）。唸日文時會自動變小聲。')}
+    ${boolRow('music', '音樂', '留聲機放的唱片。唸日文時會變小聲（iPhone 上會先停一下）。')}
     <div class="setting-row"><div><div class="label">語速</div><div class="hint">目前 ${Number(s.speechRate).toFixed(2)} 倍</div></div>
       <div class="row"><input type="range" min="0.6" max="1.2" step="0.05" value="${esc(s.speechRate)}" data-change="setting" data-key="speechRate" data-type="num" data-min="0.6" data-max="1.2" style="width:160px" /><button type="button" class="btn btn-sm" data-act="tts-test">${icon('speaker')}試聽</button></div></div>
     <div id="audioPrefetchBox" class="small mt-2">${audioPrefetchHtml()}</div>
@@ -76,10 +78,13 @@ function settingsData() {
       <div class="row-wrap mt-3"><button type="button" class="btn btn-sm btn-danger" data-act="reset-all">重設所有進度</button></div>
     </details>
     <details class="mt-2"><summary class="small muted" style="cursor:pointer">管理者：生成雲端音檔</summary>
-      <div class="hint mt-2">把全部教材句子生成一次並上傳到 Cloudflare R2 的 nihongo-audio；日文用 Google 的 Neural2 聲音，中文（單字意思、例句與文法的翻譯、漢字字義）用 Google 的台灣華語聲音，給「聽一輪」用。三把金鑰只在這一次執行中使用：不儲存、不同步、關掉頁面就消失；R2 金鑰只能讀寫這一個 bucket。已存在的檔案會略過，可以中斷再續跑。</div>
+      <div class="hint mt-2">把全部教材句子生成一次並上傳到 Cloudflare R2 的 nihongo-audio；日文用 Google 的 Neural2 聲音，中文（單字意思、例句與文法的翻譯、漢字字義）用 Google 的台灣華語聲音，給「聽一輪」用；小鎮上的人（對話、外婆的日記）每人一個 Google Chirp 3 HD 聲音。三把金鑰只在這一次執行中使用：不儲存、不同步、關掉頁面就消失；R2 金鑰只能讀寫這一個 bucket。已存在的檔案會略過，可以中斷再續跑。</div>
       <div class="field mt-3"><label>Google Cloud API Key</label><input class="input" type="password" autocomplete="off" id="cloudGoogleKey" value="${esc(ttsConfig().googleKey || '')}" /></div>
       <div class="field mt-3"><label>R2 Access Key ID</label><input class="input" type="text" autocomplete="off" id="cloudR2KeyId" /></div>
       <div class="field mt-3"><label>R2 Secret Access Key</label><input class="input" type="password" autocomplete="off" id="cloudR2Secret" /></div>
+      <details class="mt-3"><summary class="small" style="cursor:pointer">試聽角色聲音（只用上面的 Google 金鑰，不上傳）</summary>
+        <div class="hint mt-2">每個角色唸他說的第一句。點了才生成那一句，聽過的這次開著頁面再點不用重新生成。覺得哪個人的聲音不對，先換掉再整批生成。</div>
+        <div id="castPreviewBox" class="mt-2">${castPreviewHtml()}</div></details>
       <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="cloud-gen-start">開始生成</button><button type="button" class="btn" data-act="cloud-gen-stop">停止</button></div>
       <div id="cloudGenBox" class="small mt-2">${cloudGenHtml()}</div>
     </details>`;
@@ -157,6 +162,11 @@ Object.assign(ACTIONS, {
     cloudGenStart(gk, r2);
   },
   'cloud-gen-stop': () => { if (CLOUD_GEN) CLOUD_GEN.stop = true; },
+  'cast-preview': (el) => {
+    const gk = ((document.getElementById('cloudGoogleKey') || {}).value || '').trim();
+    if (!gk) { toast('先在上面貼上 Google Cloud API Key。'); return; }
+    castPreview(el.dataset.who, gk);
+  },
   'cloud-dl-all': (el) => cloudDownloadAll(el.dataset.kind || 'ja'),
   'cloud-dl-stop': () => { if (CLOUD_DL) CLOUD_DL.stop = true; },
   'legacy-reimport': () => {

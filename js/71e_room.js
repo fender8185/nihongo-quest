@@ -724,7 +724,7 @@ const ROOM = (() => {
     const st = el.closest('.study');
     if (busy) return;
     if (!st || reduced()) { go('#/mistakes'); return; }
-    st.classList.add('drawer-pull');
+    st.classList.add('drawer-pull'); SND.play('drawer');
     walk(st, el, '#/mistakes', 340);
   }
   // a door: it swings open, then where it leads — the yard (出門), or the other room (1.3.0), where the hero comes in by its door
@@ -737,7 +737,7 @@ const ROOM = (() => {
     if (d.to === '#/outside') yh.fromDoor = true;
     if (pair) { const sp = SPOTS[pair[1]]; heroPos[pair[0]] = { x: sp.x + 0.3, y: sp.y, back: false, flip: false, pose: '' }; heroSave(); }   // he comes in just inside the other room's door
     if (!st || reduced()) { go(d.to); return; }
-    st.classList.add('fx-door');
+    st.classList.add('fx-door'); SND.play('door-open');
     const fx = st.querySelector(`.fx-door[data-door="${d.id}"]`), g = fx.querySelector('.leaf'), [ox, oy] = g.dataset.o.split(' ').map(Number), t0 = performance.now();
     fx.classList.add('on');
     const turn = (now) => {
@@ -1059,7 +1059,7 @@ const ROOM = (() => {
     else if (cmd === 'take') {
       const it = WARE.get(id), p = it && freeSpot(it);
       if (!p) { toast('這附近放不下了，換個地方再試試'); return; }
-      state.placed[id] = p; ed.sel = id; saveState();
+      state.placed[id] = p; ed.sel = id; saveState(); SND.play('place');
     } else if (cmd === 'turn' && o) {
       const p = Object.assign({}, o.p, { r: o.p.r ? 0 : 1 });
       if (!fits(o.it, p)) { toast('旁邊太擠了，轉不過來'); return; }
@@ -1216,7 +1216,7 @@ const ROOM = (() => {
       if (Math.abs(sx) > 0.2 * Math.abs(sy)) hero.flip = sx < 0;
       if (Math.abs(sx) > 0.6 * Math.abs(sy)) hero.turn = true; else if (Math.abs(sx) < 0.3 * Math.abs(sy)) hero.turn = false;   // across (the room's own lines run so): a little turned; straight up or down: square on (a gap between, so no flicker)
       let rem = 0, at = [hero.x, hero.y]; for (const q of w.pts) { rem += Math.hypot(q[0] - at[0], q[1] - at[1]); at = q; }   // how far he still goes
-      heroPlace(st); follow(st, sx, hero.lead ? 9 : rem / w.v);
+      heroPlace(st); follow(st, sx, hero.lead ? 9 : rem / w.v); SND.step(SND.groundOf('room', 'off'), w.v > 8);   // his footsteps on the floorboards
     }
     if (w.pts.length || hero.lead) { hero.raf = requestAnimationFrame((t) => heroStep(st, t)); return; }
     hero.walk = null; grid = null; el.classList.remove('walk', 'run'); el.innerHTML = heroArt(); heroSave();   // lit where it stopped
@@ -1244,9 +1244,10 @@ const ROOM = (() => {
   function heroAt(st, sp) {   // at a thing's spot, facing it, doing its bit (sit stays; the rest pass)
     const el = st.querySelector('.hero');
     hero.x = sp.x; hero.y = sp.y; heroLook(sp.look); hero.pose = SEATED.includes(sp.act) ? sp.act : ''; hero.out = sp.out || null; hero.seat = sp.seat || null;
-    heroPlace(st); heroSave();
+    heroPlace(st); heroSave(); SND.play(ACT_SND[sp.act]);
     if (el && !SEATED.includes(sp.act)) { el.classList.add(sp.act); if (sp.act !== 'out') setTimeout(() => el.classList.remove(sp.act), 900); }
   }
+  const ACT_SND = { sit: 'sit', sofa: 'cushion', kneel: 'cushion', sleep: 'cloth' };   // sat down, lain down (環境音)
   const POSE_MS = { sit: 300, sofa: 300, kneel: 300, sleep: 300, reach: 340, crouch: 340, look: 300, out: 60 };
   // a thing tapped: the hero walks to it and does its bit, then the thing's own way into its page; tapped again on the way: straight in
   let namedT = 0;
@@ -1285,7 +1286,7 @@ const ROOM = (() => {
     const f = o.it.kind === 'wall' ? null : wareFootprint(o.it, o.p);
     const [x, y, look] = f ? [[o.p.x, f[3] + 0.5, 'R'], [f[2] + 0.5, o.p.y, 'L']].find(ok) || [o.p.x, f[3] + 0.5, 'R']
       : [1.2, 1.7, 2.4].map((d) => (o.p.w === 'L' ? [d, o.p.u, 'L'] : [o.p.u, d, 'R'])).find(ok) || (o.p.w === 'L' ? [1.2, o.p.u, 'L'] : [o.p.u, 1.2, 'R']);
-    use(el, () => { if (o.it.act === 'music') MUSIC.pick(el.closest('.study')); else if (o.it.act === 'wardrobe') DRESS.open(el.closest('.study')); else if (o.it.act === 'mirror') DRESS.open(el.closest('.study'), 'mirror', o.it.name === '矮櫃' ? '梳妝鏡' : o.it.name); else if (o.it.act === 'diary') DIARY.open(); else if (o.it.act === 'water') water(el.closest('.study'), o, look); }, { x, y, look, act: 'reach' });
+    use(el, () => { SND.play({ diary: 'page', wardrobe: 'cloth' }[o.it.act]); if (o.it.act === 'music') MUSIC.pick(el.closest('.study')); else if (o.it.act === 'wardrobe') DRESS.open(el.closest('.study')); else if (o.it.act === 'mirror') DRESS.open(el.closest('.study'), 'mirror', o.it.name === '矮櫃' ? '梳妝鏡' : o.it.name); else if (o.it.act === 'diary') DIARY.open(); else if (o.it.act === 'water') water(el.closest('.study'), o, look); }, { x, y, look, act: 'reach' });
   }
   // the gramophone playing (test, 2026-11-09): notes rise from its horn (shown while .study.music)
   function gramoTune() {
@@ -1309,6 +1310,7 @@ const ROOM = (() => {
   // watering a plant (test, 2026-11-09): a can over it from the hero's side tips, drops fall on it, it sways, a few sparkles
   function water(st, o, look) {
     if (!st) return;
+    SND.play('pour');
     const [x, y] = P(o.p.x, o.p.y, (o.it.h || 2) * 0.8), flip = look === 'L';   // the hero to its right (L): the can comes from there
     const el = document.createElement('div');
     el.className = 'watering'; el.style.cssText = `${vbPct(x - 70, y - 64)};${vbSize(140, 100)}`;
@@ -1675,7 +1677,7 @@ const ROOM = (() => {
       if (d.box) {
         if (d.o.it.fixed) toast('只能搬，不能收');
         else if (!d.fromBox) { delete state.placed[d.o.id]; if (ed.sel === d.o.id) ed.sel = null; saveState(); }
-      } else if (d.to) { state.placed[d.o.id] = d.to; ed.sel = d.o.id; saveState(); }
+      } else if (d.to) { state.placed[d.o.id] = d.to; ed.sel = d.o.id; saveState(); SND.play('place'); }
       else if (d.fromBox) toast('那裡放不下');
       redraw(st);
     }
@@ -1719,7 +1721,7 @@ const ROOM = (() => {
         e.stopPropagation(); e.preventDefault();
         const o = placedWares().find((q) => q.id === ed.sel); if (!o) return;
         const p = spotUnder(o.it, roomPoint(st, e), [0, 0], o.p);
-        if (fits(o.it, p)) { state.placed[o.id] = p; saveState(); redraw(st); } else toast('那裡放不下');
+        if (fits(o.it, p)) { state.placed[o.id] = p; saveState(); SND.play('place'); redraw(st); } else toast('那裡放不下');
         return;
       }
     }, true);

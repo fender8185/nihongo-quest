@@ -57,19 +57,7 @@ const NPC = (() => {
   }
   const art = (id) => (id === 'mugi' ? `<svg viewBox="-60 -200 120 210" aria-hidden="true">${MUGI_ART}</svg>` : HERO.svg({ look: KOHARU_LOOK }));
   const face = (id) => (id === 'mugi' ? `<svg viewBox="-44 -132 88 88" aria-hidden="true">${MUGI_ART}</svg>` : HERO.head(KOHARU_LOOK, 'bust'));
-  // the knock (WebAudio, as the answer sounds; off with them): two dull taps on wood
-  function knockSound() {
-    const c = sfxReady(); if (!c) return;
-    try {
-      const t0 = c.currentTime + 0.02;
-      [0, 0.2].forEach((d) => {
-        const o = c.createOscillator(), g = c.createGain(); o.type = 'sine';
-        o.frequency.setValueAtTime(190, t0 + d); o.frequency.exponentialRampToValueAtTime(80, t0 + d + 0.1);
-        g.gain.setValueAtTime(0.0001, t0 + d); g.gain.exponentialRampToValueAtTime(0.4, t0 + d + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t0 + d + 0.14);
-        o.connect(g); g.connect(c.destination); o.start(t0 + d); o.stop(t0 + d + 0.16);
-      });
-    } catch (e) { /* no sound */ }
-  }
+  const knockSound = () => SND.play('knock');   // コンコン (環境音: its file, made in SND should it be missing)
   // 書房 open with someone at the door: コンコン by it (three times, a few seconds apart), its sign kept in sight, a word the first
   // time. 小春's minute not up yet: looked at again when it is, so she knocks while the hero just sits in 書房
   let soon = 0;
@@ -111,12 +99,10 @@ const NPC = (() => {
   // a new player stays in (2026-11-10, the user) until ムギ has come by with the gramophone: at the front door the hero says why —
   // first a little practice (小春 comes a minute after the opening), then, 小春 met, a dog heard outside (ムギ, NPC.gap later)
   const housebound = () => !met('mugi');
-  function stayIn(st) {
-    const lines = met('koharu') ? [['あれ？ そとで いぬの こえが する……。', '咦？外面好像有狗叫聲……'], ['', '（好像有誰要來找我。在家裡再練幾題，等一下吧。）']]
-      : [['まずは れんしゅう！', '先來練習！'], ['', '（外面的路還不熟。先坐到書桌前，點筆記本做一點今日練習，熟悉一下題目吧。）']];
-    TALK.open(st, 'hero', lines);
-  }
-  return { visitor, check, visit, face, art, gap, after, housebound, stayIn };
+  const DOOR = { dog: [['あれ？ そとで いぬの こえが する……。', '咦？外面好像有狗叫聲……'], ['', '（好像有誰要來找我。在家裡再練幾題，等一下吧。）']],
+    first: [['まずは れんしゅう！', '先來練習！'], ['', '（外面的路還不熟。先坐到書桌前，點筆記本做一點今日練習，熟悉一下題目吧。）']] };
+  function stayIn(st) { TALK.open(st, 'hero', met('koharu') ? DOOR.dog : DOOR.first); }
+  return { visitor, check, visit, face, art, gap, after, housebound, stayIn, DOOR };
 })();
 // the town's events (test, 2026-11-09; docs/superpowers/specs/2026-11-09-town-events-design.md): the people of events.js (TOWN)
 // where their hours put them, and the next event of the course. An event opens with the course (2026-11-10: no days between
@@ -409,14 +395,15 @@ const DIARY = (() => {
   function show() {
     if (tab === 'town') { const n = people().length; el.innerHTML = `<div class="diary-book">${tabs()}${townBook()}<div class="diary-nav"><button type="button" class="btn btn-sm" data-diary="-1"${tp ? '' : ' disabled'}>‹ 上一頁</button><button type="button" class="btn btn-sm" data-diary="x">闔上</button><button type="button" class="btn btn-sm" data-diary="1"${tp < n ? '' : ' disabled'}>下一頁 ›</button></div></div>`; return; }
     const p = PAGES[at], ok = open(at);
-    el.innerHTML = `<div class="diary-book">${tabs()}<div class="diary-head"><span>おばあちゃんの{日記|にっき}</span><span>${at + 1} / ${PAGES.length}</span></div>
+    el.innerHTML = `<div class="diary-book">${tabs()}<div class="diary-head"><span>おばあちゃんの{日記|にっき}${ok ? `<button type="button" class="talk-say" data-diary-say aria-label="唸出來">${icon('speaker')}</button>` : ''}</span><span>${at + 1} / ${PAGES.length}</span></div>
       <div class="diary-page${ok ? '' : ' locked'}" lang="ja">${p.ja.split('\n').map((l) => `<p>${ok ? ruby(l) : esc(plain(l))}</p>`).join('')}</div>
       ${ok ? `<details class="diary-zh"><summary>看中文</summary><p>${esc(p.zh)}</p></details>` : `<p class="diary-lock">還讀不懂。${p.last ? '通過所有階段測驗' : `通過「${esc(STAGES[need(at) - 1].title)}」的階段測驗`}，就讀得懂這一頁。</p>`}
       <div class="diary-nav"><button type="button" class="btn btn-sm" data-diary="-1"${at ? '' : ' disabled'}>‹ 上一頁</button><button type="button" class="btn btn-sm" data-diary="x">闔上</button><button type="button" class="btn btn-sm" data-diary="1"${at < PAGES.length - 1 ? '' : ' disabled'}>下一頁 ›</button></div></div>`
       .replace('おばあちゃんの{日記|にっき}', 'おばあちゃんの<ruby>日記<rt>にっき</rt></ruby>');
   }
   function close() { if (el) { el.remove(); el = null; } }
-  function turn(d) { if (tab === 'town') tp = Math.max(0, Math.min(people().length, tp + d)); else at = Math.max(0, Math.min(PAGES.length - 1, at + d)); show(); }
+  function turn(d) { if (tab === 'town') tp = Math.max(0, Math.min(people().length, tp + d)); else at = Math.max(0, Math.min(PAGES.length - 1, at + d)); SND.play('page', { vol: 0.7 }); show(); }
+  const said = (p) => p.ja.replace(/\n/g, '');   // a page read aloud, in her voice (2026-11-12)
   function openBook(which = 'g', who) {
     close(); tab = which; if (who) tp = people().indexOf(who) + 1; at = Math.max(0, PAGES.findIndex((_, k) => !open(k)) - 1); if (at < 0 || PAGES.every((_, k) => open(k))) at = PAGES.length - 1;   // at the last page read
     el = document.createElement('div'); el.className = 'diary'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', '外婆的日記');
@@ -428,6 +415,7 @@ const DIARY = (() => {
       e.stopPropagation(); const b = e.target.closest('[data-diary]'), r = e.target.closest('[data-replay]');
       const tr = e.target.closest('[data-try]'), tl = e.target.closest('[data-tool]');
       if (tl) { tool(tl); return; }
+      if (e.target.closest('[data-diary-say]')) { speakAs('granny', said(PAGES[at])); return; }
       if (r || tr) { const ev = TOWN.EVENTS.find((x) => x.id === (r || tr).dataset[r ? 'replay' : 'try']); close(); if (ev) TALK.open(document.body, ev.who, ev.lines, () => openBook('town'), null, { ev: true }); return; }
       const po = e.target.closest('[data-page-of]'); if (po) { tp = people().indexOf(po.dataset.pageOf) + 1; show(); return; }
       if (b) { const d = b.dataset.diary; if (d === 'x') close(); else if (d.startsWith('tab-')) { tab = d.slice(4); show(); } else turn(Number(d)); }
@@ -435,7 +423,7 @@ const DIARY = (() => {
     });
     document.body.appendChild(el); show();
   }
-  return { PAGES, open: openBook, close, readable: open, passed };
+  return { PAGES, open: openBook, close, readable: open, passed, said };
 })();
 // a few lines with someone (test, 2026-11-09): their face, their name, a line in Japanese (furigana; 🔊 reads it) and in Chinese;
 // a tap goes on. A present waits for 收下 (its thumbnail) — take(): it is theirs then — and done() once the last line is read.
@@ -451,20 +439,21 @@ const TALK = (() => {
   const who = (id) => (id === 'hero' ? { name: '我', role: '' } : NPCS[id] || TOWN.CAST[id]);
   // a line as shown: { id, ja, zh, kind } or a reply choice { ask, opts }
   const line = (l) => (!cur.ev ? { id: cur.id, ja: l[0], zh: l[1], kind: l[2] } : Array.isArray(l) ? { id: l[0], ja: l[1], zh: l[2] } : l);
-  const say = (ja) => `<button type="button" class="talk-say" data-talk="say" data-ja="${esc(plain(ja))}" aria-label="唸出來">${icon('speaker')}</button>`;
+  const say = (ja, id) => `<button type="button" class="talk-say" data-talk="say" data-ja="${esc(ja)}" data-who="${esc(id)}" aria-label="唸出來">${icon('speaker')}</button>`;   // in their own voice (speakAs)
   function show() {
     const L = cur.said || line(cur.lines[cur.i]);
     if (L.ask) {
       cur.el.innerHTML = `<div class="talk-card asking"><div class="talk-face">${TOWNEV.face('hero')}</div><div class="talk-body">
         <div class="talk-name">我<span>${esc(L.ask)}</span></div>
-        <div class="talk-opts">${L.opts.map((o, k) => `<div class="talk-opt${cur.wrong.includes(k) ? ' wrong' : ''}" data-pick="${k}"><button type="button" class="talk-pick" lang="ja">${ruby(o[0])}</button>${say(o[0])}</div>`).join('')}</div>
+        <div class="talk-opts">${L.opts.map((o, k) => `<div class="talk-opt${cur.wrong.includes(k) ? ' wrong' : ''}" data-pick="${k}"><button type="button" class="talk-pick" lang="ja">${ruby(o[0])}</button>${say(o[0], 'hero')}</div>`).join('')}</div>
         ${cur.why ? `<p class="talk-why">${esc(cur.why)}</p>` : ''}</div></div>`;
       return;
     }
     const n = who(L.id), w = n.gift, gl = cur.ev ? glosses(L.ja) : [];
+    if (L.id === 'mugi' && cur.last !== 'mugi') SND.play('bark'); cur.last = L.id;   // ワン as ムギ starts
     cur.el.innerHTML = `<div class="talk-card"><div class="talk-face">${TOWNEV.face(L.id)}</div><div class="talk-body">
       <div class="talk-name">${esc(n.name)}<span>${esc(n.role)}</span></div>
-      ${!L.ja ? `<p class="talk-zh">${esc(L.zh)}</p>` : `<p class="talk-ja" lang="ja">${ruby(L.ja)} ${say(L.ja)}</p>${gl.length ? `<p class="talk-gloss">${gl.map(esc).join('　')}</p>` : ''}
+      ${!L.ja ? `<p class="talk-zh">${esc(L.zh)}</p>` : `<p class="talk-ja" lang="ja">${ruby(L.ja)} ${say(L.ja, L.id)}</p>${gl.length ? `<p class="talk-gloss">${gl.map(esc).join('　')}</p>` : ''}
       ${cur.ev ? `<p class="talk-zh${cur.zh ? '' : ' hide'}">${esc(L.zh)}</p>${cur.zh ? '' : '<button type="button" class="talk-zh-btn" data-talk="zh">中文</button>'}` : `<p class="talk-zh">${esc(L.zh)}</p>`}`}
       ${L.kind === 'gift' ? `<div class="talk-gift">${DECOR.thumb(w)}<b>${esc(WARE.get(w).name)}</b><button type="button" class="btn btn-primary btn-sm" data-talk="take">收下</button></div>` : '<span class="talk-next" aria-hidden="true">▼</span>'}</div></div>`;
     if (L.kind === 'gift') fitThumbs(cur.el);
@@ -490,7 +479,7 @@ const TALK = (() => {
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     el.addEventListener('click', (e) => {
       e.stopPropagation();
-      const sayBtn = e.target.closest('[data-talk="say"]'); if (sayBtn) { speak(sayBtn.dataset.ja); return; }
+      const sayBtn = e.target.closest('[data-talk="say"]'); if (sayBtn) { speakAs(sayBtn.dataset.who, sayBtn.dataset.ja); return; }
       if (e.target.closest('[data-talk="zh"]')) { cur.zh = true; show(); return; }
       const p = e.target.closest('[data-pick]'); if (p) { pick(Number(p.dataset.pick)); return; }
       if (!cur.ev && cur.lines[cur.i][2] === 'gift' && !e.target.closest('[data-talk="take"]')) return;   // the present waits for 收下
@@ -501,6 +490,16 @@ const TALK = (() => {
   function close() { if (cur) { cur.el.remove(); cur = null; } }
   return { open, close, on: () => Boolean(cur && cur.el.isConnected) };
 })();
+// every line the talks can read aloud, and whose it is: the generator makes each a clip in its speaker's voice (CAST_VOICE)
+function talkLines() {
+  const out = [], add = (who, ja) => { if (ja) out.push([who, ja]); };
+  Object.keys(NPCS).forEach((id) => [...NPCS[id].hello(0), ...NPCS[id].hello(1), ...NPCS[id].chat].forEach((l) => add(id, l[0])));
+  Object.keys(TOWN.CHAT).forEach((id) => TOWN.CHAT[id].forEach((l) => add(id, l[1])));
+  TOWN.EVENTS.forEach((e) => e.lines.forEach((l) => (Array.isArray(l) ? add(l[0], l[1]) : (l.opts || []).forEach((o) => add('hero', o[0])))));
+  Object.values(NPC.DOOR).forEach((ls) => ls.forEach((l) => add('hero', l[0])));
+  DIARY.PAGES.forEach((p) => add('granny', DIARY.said(p)));
+  return out;
+}
 // the beach (test, 2026-11-09), along the yard to the left: the sea to the horizon, an island, glints, waves washing in on wet
 // sand, the beach; ムギ's mat under a parasol with his record player, ムギ on it once he has come by
 const BEACH_PROP = [-120, -214, 240, 222];
@@ -1745,7 +1744,7 @@ function busBoard(yard) {
 function busRide(yard, to) {   // on, away, and off at the other stop
   const h = yard.querySelector('.yhero'), bus = yard.querySelector('.bus');
   if (h) { h.classList.remove('bench'); h.classList.add('out'); }
-  if (bus) bus.classList.add('go');
+  if (bus) bus.classList.add('go'); SND.play('bus');
   setTimeout(() => { yh.arrive = { from: yPlace, to }; go(PLACE_ROUTE[to]); }, 700);
 }
 // 駅前 (test, 2026-11-09), the bus's first stop: みなと駅 with its clock and ticket machines, the 交番 beside it with its red lamp, a
