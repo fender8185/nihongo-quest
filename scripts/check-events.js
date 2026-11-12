@@ -45,6 +45,19 @@ function check(T, D, opts = {}) {
     }
   }
   const who = (id, where) => { if (id !== 'hero' && !cast[id]) bad('ref', where, `no one called ${id}`); };
+  // a talk's lines ([who, Japanese, Chinese]) and reply choices ({ ask, opts, pt }), written for unit u
+  function talkLines(ls, u, where, sayer) {
+    (ls || []).forEach((l, i) => {
+      const at = `${where}#${i}`;
+      if (Array.isArray(l)) { sayer(l[0], at); text(l[1], u, at); return; }
+      const pu = /^m\d+$/.test(l.pt) ? l.pt : gUnit[l.pt];
+      if (!pu) bad('ref', at, `no grammar ${l.pt}`);
+      else if (unitIdx(pu) > unitIdx(u)) bad('grammar', at, `${l.pt} is ${pu}, after ${u}`);
+      const opts = l.opts || [];
+      if (!opts.some(o => o[1]) || !opts.some(o => !o[1])) bad('choice', at, 'needs a right answer and a wrong one');
+      opts.forEach((o) => { if (!o[1] && !o[2]) bad('choice', at, `no reason why ${o[0]} is wrong`); text(o[0], u, at); });
+    });
+  }
   const spots = T.SPOTS || {};
   Object.entries(cast).forEach(([id, c]) => (c.hours || []).forEach(([, , place, spot]) => {   // everyone's hours put them on a spot that is drawn
     if (!places.includes(place)) bad('ref', `cast ${id}`, `no place ${place} drawn yet`);
@@ -66,18 +79,36 @@ function check(T, D, opts = {}) {
     const before = e.after && (T.EVENTS || []).find(x => x.id === e.after);
     if (e.after && !before) bad('ref', where, `no event ${e.after} before it`);
     else if (before && before.when === 'night') bad('night-chain', where, `follows ${e.after}, which only happens at night`);
-    (e.lines || []).forEach((l, i) => {
-      const at = `${where}#${i}`;
-      if (Array.isArray(l)) { who(l[0], at); text(l[1], e.u, at); return; }
-      const pu = /^m\d+$/.test(l.pt) ? l.pt : gUnit[l.pt];
-      if (!pu) bad('ref', at, `no grammar ${l.pt}`);
-      else if (unitIdx(pu) > unitIdx(e.u)) bad('grammar', at, `${l.pt} is ${pu}, after ${e.u}`);
-      const opts = l.opts || [];
-      if (!opts.some(o => o[1]) || !opts.some(o => !o[1])) bad('choice', at, 'needs a right answer and a wrong one');
-      opts.forEach((o) => { if (!o[1] && !o[2]) bad('choice', at, `no reason why ${o[0]} is wrong`); text(o[0], e.u, at); });
-    });
+    talkLines(e.lines, e.u, where, who);
   });
   if (used.size) { const lo = Math.min(...used), hi = Math.max(...used); for (let i = lo; i <= hi; i++) if (!used.has(i)) bad('gap', units[i], 'no events'); }
+  // the cruise ship (CRUISE): its passengers, what they say (all at its unit), its stops one after another
+  const cr = T.CRUISE;
+  if (cr && unitIdx(cr.u) < 0) bad('ref', 'cruise', `no unit ${cr.u}`);
+  else if (cr) {
+    const people = cr.PEOPLE || {}, u = cr.u;
+    const sayer = (id, where) => { if (id !== 'hero' && id !== 'all' && !cast[id] && !people[id]) bad('ref', where, `no one called ${id}`); };
+    text(cr.ship || '', u, 'cruise ship');
+    Object.keys(people).forEach((id) => {
+      if (cast[id]) bad('cruise', `cruise ${id}`, 'a passenger with a town person\'s id');
+      if (!(cr.OFF || {})[id]) bad('cruise', `cruise ${id}`, 'never comes off the ship (OFF)');
+    });
+    Object.entries(cr.OFF || {}).forEach(([id, l]) => { if (!people[id]) bad('ref', `cruise off ${id}`, 'not a passenger'); text(l[0], u, `cruise off ${id}`); });
+    Object.entries(cr.SAY || {}).forEach(([id, ls]) => ls.forEach((l, i) => { sayer(id, `cruise say ${id}#${i}`); text(l[0], u, `cruise say ${id}#${i}`); }));
+    const stops = new Set();
+    (cr.TOUR || []).forEach((t) => {
+      const where = `cruise ${t.id}`;
+      if (stops.has(t.id)) bad('ref', where, 'the same id twice'); stops.add(t.id);
+      if (!places.includes(t.at)) bad('ref', where, `no place ${t.at}`);
+      ['hero', 'crowd'].forEach((k) => { if (!Array.isArray(t[k]) || t[k].length !== 2 || !t[k].every(Number.isFinite)) bad('cruise', where, `${k} is [X, Y]`); });
+      if (t.lost && (!people[t.lost[0]] || !Array.isArray(t.lost[1]))) bad('cruise', where, 'lost is [a passenger, [X, Y]]');
+      if (t.need !== undefined && !cast[t.need]) bad('ref', where, `needs no one called ${t.need}`);
+      talkLines(t.lines, u, where, sayer);
+      (t.after || []).forEach(([id, ja], i) => { sayer(id, `${where}.after${i}`); text(ja, u, `${where}.after${i}`); });
+    });
+    const tour = cr.TOUR || [];
+    if (tour.length && (tour[0].at !== 'harbor' || tour[tour.length - 1].at !== 'harbor' || !tour[tour.length - 1].bye)) bad('cruise', 'cruise', 'the tour begins at the harbour and ends there, seeing them off (bye)');
+  }
   Object.entries(cast).forEach(([id, c]) => {   // away after an event that exists; helps at a shop someone keeps
     if (c.away !== undefined && !ids.has(c.away)) bad('ref', `cast ${id}`, `away after no event ${c.away}`);
     if (c.helps !== undefined && !Object.values(cast).some((o) => o.shop === c.helps)) bad('ref', `cast ${id}`, `helps at no shop ${c.helps}`);

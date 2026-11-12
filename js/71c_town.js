@@ -169,7 +169,7 @@ const TOWNEV = (() => {
   // what someone wears where they are: their festival clothes (festa) at the shrine while its 緣日 is on
   const look = (id, place, h = now()) => { const c = T().CAST[id]; return c.festa && place === 'shrine' && isOpen('ennichi', h) ? Object.assign({}, c.look, c.festa) : c.look; };
   const art = (id, place) => { const c = T().CAST[id]; return c.art === 'npc' ? NPC.art(id) : HERO.svg({ look: look(id, place), wear: c.wear || {} }); };
-  const face = (id) => { if (id === 'hero') return HERO.head(state.look, 'bust'); const c = T().CAST[id]; return c.art === 'npc' ? NPC.face(id) : HERO.head(c.look, 'bust'); };
+  const face = (id) => { if (id === 'hero') return HERO.head(state.look, 'bust'); const c = T().CAST[id]; if (!c) return CRUISE.face(id); return c.art === 'npc' ? NPC.face(id) : HERO.head(c.look, 'bust'); };   // not of the town: the cruise's
   // the people at a place now: those met, where their hours put them, and whoever an event there waits on (marked ！)
   function here(place) {
     const w = waiting(now(), today()), out = [];
@@ -399,6 +399,7 @@ const DIARY = (() => {
     const byUnit = {}; TOWN.EVENTS.forEach((e) => { (byUnit[e.u] = byUnit[e.u] || []).push(e); });
     return `<section class="town-tools"><b>測試用（只在測試站）</b>
       <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="meet">認識所有人、開通所有公車站</button><button type="button" class="btn btn-sm" data-tool="reset">小鎮事件從頭開始</button></div>
+      <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="ship">郵輪：現在叫來（不看日子、時間、進度）</button><button type="button" class="btn btn-sm" data-tool="shipreset">郵輪：今天的從頭開始</button></div>
       <div class="row-wrap mt-2">時間（只改小鎮；「現在」也清掉睡覺跳過的時間）：${hrs.map(([h, n]) => `<button type="button" class="btn btn-sm" data-tool="hour" data-h="${h}" aria-pressed="${String(h) === String(cur)}">${n}</button>`).join('')}</div>
       ${Object.entries(byUnit).map(([u, list]) => `<div class="tt-unit"><span>${esc(u)}</span>${list.map((e) => `<button type="button" class="tb-ev" data-try="${esc(e.id)}">${esc(e.title)}<small>${esc((TOWN.CAST[e.who] || {}).name || e.who)}・${esc(TOWNEV.PLACE_NAME[e.at] || e.at)}${e.when === 'night' ? '・晚上' : ''}</small></button>`).join('')}</div>`).join('')}
     </section>`;
@@ -407,6 +408,8 @@ const DIARY = (() => {
     const t = b.dataset.tool;
     if (t === 'meet') { Object.keys(TOWN.CAST).forEach((id) => { if (TOWN.CAST[id].art !== 'npc') state.town.seen[id] = 1; }); BUS_STOPS.forEach(([id]) => { state.town.stops[id] = 1; }); saveState(); toast('認識所有人、開通所有公車站了'); }
     if (t === 'reset') { state.town = { done: {}, seen: {}, stops: {}, talks: {} }; try { localStorage.removeItem('nq_chat'); } catch (e) { /* none kept */ } Object.keys(state.koto.found).filter((k) => k.startsWith('ev-')).forEach((k) => delete state.koto.found[k]); saveState(); toast('小鎮事件從頭開始'); }
+    if (t === 'ship') { CRUISE.force(); toast('郵輪在みなと漁港外的海上等你了（院子 → 海邊 → 往漁港）', 3600); }
+    if (t === 'shipreset') { CRUISE.reset(); toast('今天的郵輪從頭開始'); }
     if (t === 'hour') { TOWNEV.clock = b.dataset.h === 'now' ? null : { h: Number(b.dataset.h), day: new Date() }; if (b.dataset.h === 'now') { try { localStorage.removeItem('nq_wake'); } catch (e) { /* none kept */ } sceneTick(); } }   // 現在: a sleep's hours gone too
     show();
   }
@@ -454,8 +457,8 @@ const TALK = (() => {
   let cur = null;
   const MARK = /\{([^|}]+)\|([^|}]+)(?:\|([^}]+))?\}/g;
   const ruby = (s) => esc(s).replace(MARK, '<ruby>$1<rt>$2</rt></ruby>'), plain = (s) => s.replace(MARK, '$1');
-  const glosses = (s) => [...s.matchAll(MARK)].filter((m) => m[3]).map((m) => `${m[1]}（${m[2]}）${m[3]}`);
-  const who = (id) => (id === 'hero' ? { name: '我', role: '' } : NPCS[id] || TOWN.CAST[id]);
+  const glosses = (s) => [...new Set([...s.matchAll(MARK)].filter((m) => m[3]).map((m) => `${m[1]}（${m[2]}）${m[3]}`))];   // a word twice in a line: noted once
+  const who = (id) => (id === 'hero' ? { name: '我', role: '' } : NPCS[id] || TOWN.CAST[id] || CRUISE.tag(id));   // the cruise's passengers too (CRUISE)
   // a line as shown: { id, ja, zh, kind } or a reply choice { ask, opts }
   const line = (l) => (!cur.ev ? { id: cur.id, ja: l[0], zh: l[1], kind: l[2] } : Array.isArray(l) ? { id: l[0], ja: l[1], zh: l[2] } : l);
   const say = (ja, id) => (castSays(ja) ? `<button type="button" class="talk-say" data-talk="say" data-ja="${esc(ja)}" data-who="${esc(id)}" aria-label="唸出來">${icon('speaker')}</button>` : '');   // in their own voice (speakAs); a silence 「…………。」: none
@@ -476,7 +479,7 @@ const TALK = (() => {
       ${L.kind === 'gift' ? `<div class="talk-gift">${DECOR.thumb(w)}<b>${esc(WARE.get(w).name)}</b><button type="button" class="btn btn-primary btn-sm" data-talk="take">收下</button></div>` : '<span class="talk-next" aria-hidden="true">▼</span>'}</div></div>`;
     if (L.kind === 'gift') fitThumbs(cur.el);
     const at = (cur.said ? 's' : '') + cur.i;   // a line new on the screen is said at once, in its speaker's voice (2026-11-12, the user); drawn again (中文): not again
-    if (L.ja && cur.spoke !== at) { cur.spoke = at; speakAs(L.id, L.ja); }
+    if (L.ja && cur.spoke !== at) { cur.spoke = at; speakAs(L.id, L.ja); if (cur.onLine) cur.onLine(L); }   // onLine: whoever says it moves (CRUISE)
     if (!L.ja || !castSays(L.ja)) stopSilence();   // nothing to read here: the player kept awake for it rests
   }
   function pick(k) {
@@ -496,7 +499,7 @@ const TALK = (() => {
   function open(root, id, lines, done, take, opt = {}) {
     close();
     const el = document.createElement('div'); el.className = 'talk'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', who(id).name);
-    cur = { el, id, lines, done, take, i: 0, ev: Boolean(opt.ev), zh: false, wrong: [], why: '', said: null };
+    cur = { el, id, lines, done, take, i: 0, ev: Boolean(opt.ev), zh: false, wrong: [], why: '', said: null, onLine: opt.onLine };
     SND.duck(true);   // the music and the world's sounds down for the whole talk, not only while a line is read (2026-11-12, the user)
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     el.addEventListener('click', (e) => {
@@ -520,6 +523,7 @@ function talkLines() {
   TOWN.EVENTS.forEach((e) => e.lines.forEach((l) => (Array.isArray(l) ? add(l[0], l[1]) : (l.opts || []).forEach((o) => add('hero', o[0])))));
   Object.values(NPC.DOOR).forEach((ls) => ls.forEach((l) => add('hero', l[0])));
   DIARY.PAGES.forEach((p) => add('granny', DIARY.said(p)));
+  CRUISE.lines(add);
   return out;
 }
 // the beach (test, 2026-11-09), along the yard to the left: the sea to the horizon, an island, glints, waves washing in on wet
@@ -882,6 +886,7 @@ function harborHtml() {
       <path d="M532 -4 Q533.6 -13.6 550 -20 Q566.4 -13.6 568 -4 Z" ${hc('#d0453c', '#5a2030')}/><path d="M538 -7 Q541 -13 549 -16.6" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="1.4" stroke-linecap="round"/><path d="M532 -4 H568" ${hs('#a8352e', '#3a1828')} stroke-width="1.4"/><circle cx="550" cy="-22" r="2.4" ${hc('#3a4254', '#1c2240')}/><path d="M550 -24.4 V-27" ${hs('#3a4254', '#1c2240')} stroke-width="1"/>
       <defs><linearGradient id="hbBeam"><stop offset="0" stop-color="#fff6cc" stop-opacity=".9"/><stop offset="1" stop-color="#fff6cc" stop-opacity="0"/></linearGradient></defs>
       <path class="glow fx-sweep" d="M550 6 L820 -50 L820 62 Z" fill="url(#hbBeam)" style="transform-origin:550px 6px;opacity:calc((1 - var(--day)) * .6)"/>
+      ${CRUISE.shipSvg()}
       ${moonGlitter(600, 150, 232)}
       ${boat(180, 196, '#3f7ac8', 0)}${boat(470, 208, '#d0574b', 1)}${boat(760, 192, '#4f7a4a', 2)}
       <path d="M-20 ${F} V128 C80 122 200 126 300 140 C330 170 340 210 360 ${F} Z" ${hc('#ecdcb0', '#2c2b46')}/><path d="M${px - 18} 132 L${px + 18} 132 L${px + 44} ${F} H${px - 16} Z" ${hc('#d9c79a', '#24243e')}/>
@@ -905,6 +910,7 @@ function harborHtml() {
       ${[380, 520, 700, 860, 1040].map((x, k) => `<g transform="translate(${x} ${F - 3})"><path d="M-12 0 q6 -5 12 0 q6 -5 12 0" fill="none" ${hsx('fx-ripple', '#ffffff', '#5a6aa0', `animation-delay:-${k * 0.8}s`)} stroke-width="1.6"/></g>`).join('')}
       <rect class="pave" x="-20" y="${F}" width="1240" height="134" style="fill:color-mix(in srgb, #cfcac0 calc(var(--day) * 100%), #262848)"/><path d="M-20 ${F + 2} H1220" ${hs('#9a958a', '#1c1d3e')} stroke-width="4"/>
       ${[300, 560, 820].map((x) => `<rect x="${x - 9}" y="${F + 11}" width="18" height="3" rx="1" ${hc('#3a3a44', '#16172e')}/><path d="M${x - 6} ${F + 11.4} Q${x - 4.6} ${F + 7} ${x - 5.6} ${F + 3.4} H${x + 5.6} Q${x + 4.6} ${F + 7} ${x + 6} ${F + 11.4} Z" ${hc('#4a4a55', '#1c1d3c')}/><path d="M${x - 8.6} ${F + 4} Q${x - 8.6} ${F - 0.2} ${x} ${F - 0.2} Q${x + 8.6} ${F - 0.2} ${x + 8.6} ${F + 4} Z" ${hc('#4a4a55', '#1c1d3c')}/><path d="M${x - 8.4} ${F + 4} H${x + 8.4}" stroke="#000" stroke-opacity=".25" stroke-width="1"/><path d="M${x - 3.4} ${F + 10.4} Q${x - 2.8} ${F + 7.4} ${x - 3.6} ${F + 5} M${x - 5.6} ${F + 2} q2.6 -1.4 5.2 -1.4" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="1.1" stroke-linecap="round"/>`).join('')}
+      ${CRUISE.rampSvg()}
       ${streetLamp(150, F + 6, 120)}${streetLamp(1140, F + 6, 120)}
       <path d="M600 ${F + 56} a18 8 0 1 0 1 0 a12 5 0 1 0 1 0 a6.5 2.8 0 1 0 1 0 M604 ${F + 71.8} q10 1.6 18 -1.4 q4 -1.6 6.4 -.2" fill="none" ${hs('#c9b48a', '#4a4466')} stroke-width="3"/><path d="M600 ${F + 56} a18 8 0 1 0 1 0 a12 5 0 1 0 1 0 a6.5 2.8 0 1 0 1 0 M604 ${F + 71.8} q10 1.6 18 -1.4" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="1.3" stroke-dasharray="1.6 2.4"/><path d="M584 ${F + 66} q16 9 34 0" fill="none" stroke="#2b1c12" stroke-opacity=".12" stroke-width="1.4"/>
       ${gull(300, -120, 0)}${gull(620, -60, 1)}${gull(860, -180, 2)}
@@ -916,7 +922,7 @@ function harborHtml() {
       + `<g data-fx="hcat"><g transform="translate(476 ${F + 52})">${harborCat}</g></g>`, null, [372, F + 2, 500, F + 58])}${landProp(78, crate(1090, F + 34, '#e6a23c'), null, [1086, F + 30, 1134, F + 60])}
     ${landProp(76, `<path d="M790 ${F + 50} q10 6 22 2.6 q12 -3.6 26 3.4 q6 2.6 12 0" fill="none" ${hs('#c9b48a', '#4a4466')} stroke-width="1.4"/>` + [[800, F + 40], [822, F + 48], [842, F + 38]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="9" ${hc('#f08a3a', '#5a3a2a')}/><path d="${crescentD(x, y, 9, -20, 160)}" fill="#2b1c12" fill-opacity=".14"/><path d="M${x - 9} ${y + 0.6} Q${x} ${y + 3.6} ${x + 9} ${y + 0.6}" fill="none" ${hs('#c86a24', '#3a2a20')} stroke-width="1.4"/><ellipse cx="${x - 3.4}" cy="${y - 4}" rx="2.8" ry="1.7" transform="rotate(-30 ${x - 3.4} ${y - 4})" fill="#fff" fill-opacity=".5"/><circle cx="${x}" cy="${y - 10}" r="1.6" fill="none" ${hs('#8a6a4a', '#3a2c40')} stroke-width="1"/>`).join(''), null, [788, F + 26, 854, F + 60])}
     ${yHeroHtml()}
-    ${TOWNEV.castHtml('harbor')}
+    ${TOWNEV.castHtml('harbor')}${CRUISE.callHtml()}
     <button type="button" class="thing way-btn" data-act="go-place" data-to="beach" aria-label="往海邊" style="margin-left:${HARBOR_PATH - 32}px;bottom:186px"><span class="tag">${ySign('wave', '往海邊')}</span></button>
     <button type="button" class="thing way-btn" data-act="go-place" data-to="street" aria-label="往大馬路" style="margin-left:${YARD_HALF - 72}px;bottom:70px"><span class="tag">${ySign('bus', '往大馬路')}</span></button>
     <div class="ysel"></div>`;

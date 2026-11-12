@@ -541,6 +541,7 @@ function renderOutside(view, place = 'yard') {
   else yHeroPlace(y);
   if (place === 'yard') yWitch(y);
   TOWNLIFE.start(y, place);   // the people about: strolling, fidgeting
+  CRUISE.mount(y, place);   // the cruise ship's passengers and 高橋, the ship far out (CRUISE)
   const yel = y.querySelector('.yhero');   // idling now and then while left be
   HERO.idle(yel, () => !yh.climb && !yh.use && !document.hidden && !yel.matches('.walk, .run, .out, .hop, .wave, .spin, .cheer, .reach, .crouch, .look, .bow'), true);
   y.addEventListener('pointerdown', (e) => { y._at = yardPoint(y, e); if (!y.classList.contains('dressing')) { yardDragStart(y, e); yPanStart(y, e); } });   // _at: which seat a tap on a row of them meant
