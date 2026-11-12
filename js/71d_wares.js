@@ -3,9 +3,9 @@
 // ---------- 古道具屋's wares (1.2.0) ----------
 // kind: 'floor' stands on 書房's floor (fp: its footprint w × d in room units, turned by r; h: about how tall), 'rug' lies flat (other things may stand
 // on it), 'wall' hangs on the left (L, x = 0) or right (R, y = 0) wall (size: w × h, u along the wall, v the height of its middle),
-// 'wear' is worn by the hero (slot), 'clothes' a style of top or trousers they put on in their own colours (slot: top, bottom). A
-// ware bought goes into the storage box (a wear or clothes into the wardrobe); at: where one of 書房's own (starter) is laid out
-// at first.
+// 'wear' is worn by the hero (slot), 'clothes' a style of top, trousers or shoes they put on in their own colours (slot: top,
+// bottom, shoe; the ware's id is the style's). A ware bought goes into the storage box (a wear or clothes into the wardrobe); at:
+// where one of 書房's own (starter) is laid out at first.
 const WARES = [
   // test (2026-11-09): presents from the neighbours (gift: who brings it; home: where it is set out when there is room), not sold
   { id: 'gramophone', kind: 'floor', h: 2.7, name: '留聲機', price: 100, fp: [1, 1], desc: '老唱機，放著黑膠唱片會一直播輕音樂。點它換唱片或停下來。', act: 'music', gift: 'mugi', home: { w: 'F', x: 19.6, y: 0.6, r: 0 } },
@@ -53,9 +53,16 @@ const WARES = [
   { id: 'beret', kind: 'wear', slot: 'head', name: '貝雷帽', price: 36, desc: '有點文青的貝雷帽。' },
   { id: 'gradcap', kind: 'wear', slot: 'head', name: '學士帽', price: 150, desc: '學成的證明。' },
   { id: 'glasses', kind: 'wear', slot: 'face', name: '圓框眼鏡', price: 30, desc: '圓圓的眼鏡，看起來很會讀書。' },
+  // 2026-11-12 (the user: at least three to buy for each part): 太陽眼鏡 and 狐狸面具 for the face, 領帶 (the townsfolk's) for the
+  // neck, ランドセル and 小翅膀 for the back; three shoes below
+  { id: 'sunglasses', kind: 'wear', slot: 'face', name: '太陽眼鏡', price: 32, desc: '黑黑的鏡片，戴上去很酷。' },
+  { id: 'foxmask', kind: 'wear', slot: 'face', name: '狐狸面具', price: 40, desc: '祭典的白狐狸面具，像小孩子一樣斜斜地戴在頭的一邊。' },
   { id: 'scarf', kind: 'wear', slot: 'neck', name: '圍巾', price: 36, desc: '紅色的長圍巾。' },
   { id: 'bowtie', kind: 'wear', slot: 'neck', name: '領結', price: 27, desc: '正式場合用的小領結。' },
+  { id: 'necktie', kind: 'wear', slot: 'neck', name: '領帶', price: 28, desc: '深藍色的斜紋領帶，配襯衫最好看。' },
   { id: 'backpack', kind: 'wear', slot: 'back', name: '背包', price: 54, desc: '出門用的小背包。' },
+  { id: 'randoseru', kind: 'wear', slot: 'back', name: 'ランドセル', price: 58, desc: '日本小學生背的紅色書包，方方正正，有金色的扣環。' },
+  { id: 'wings', kind: 'wear', slot: 'back', name: '小翅膀', price: 64, desc: '小小的白色翅膀，一片一片的羽毛。' },
   { id: 'cathead', kind: 'wear', slot: 'head', name: '貓咪頭套', price: 90, desc: '整顆貓咪頭，毛色跟著上衣的顏色。配貓咪上衣和貓咪褲，就變成一隻貓。' },
   { id: 'cathood', kind: 'wear', slot: 'head', name: '貓耳兜帽', price: 60, desc: '有貓耳朵的兜帽，臉旁一圈毛毛，顏色跟著上衣。配貓咪上衣和貓咪褲，就是一整件貓咪布偶裝。' },
   // clothes (1.2.0): a style of top or trousers, dyed in the hero's own colours (look.top, look.bottom) and chosen in the
@@ -69,6 +76,10 @@ const WARES = [
   { id: 'wide', kind: 'clothes', slot: 'bottom', name: '寬褲', price: 42, desc: '寬鬆的寬褲，走起路來很舒服。' },
   { id: 'skirt', kind: 'clothes', slot: 'bottom', name: '裙子', price: 36, desc: '及膝的 A 字裙。' },
   { id: 'catpants', kind: 'clothes', slot: 'bottom', name: '貓咪褲', price: 60, desc: '有尾巴的貓咪褲，腳是肉球。' },
+  // shoes (2026-11-12, the user): 球鞋, 短靴 and 皮鞋 stay everyone's; these are sold, in the hero's shoe colour
+  { id: 'geta', kind: 'clothes', slot: 'shoe', name: '木屐', price: 36, desc: '木頭的木屐，鼻緒的顏色在衣櫃自己配。走起來喀啦喀啦。' },
+  { id: 'rainboots', kind: 'clothes', slot: 'shoe', name: '雨靴', price: 40, desc: '亮晶晶的長雨靴，顏色在衣櫃自己配。下雨天也想出門。' },
+  { id: 'bunnyslippers', kind: 'clothes', slot: 'shoe', name: '兔子拖鞋', price: 44, desc: '毛茸茸的兔子拖鞋，兩隻長耳朵，後面有尾巴。顏色在衣櫃自己配。' },
   // limited (1.2.0): sold under 限時 only while their sale is on (SALES); once bought, theirs like any other
   { id: 'witchhat', kind: 'wear', slot: 'head', limited: 'halloween', name: '魔法師帽', price: 66, desc: '尖尖的魔法師帽，帽尖彎彎的，顏色跟著上衣，有金色的星星和月亮。' },
   { id: 'wizrobe', kind: 'clothes', slot: 'top', limited: 'halloween', name: '魔法師長袍', price: 90, desc: '長到腳踝的長袍，滿是金色星星，腰上掛著一本小魔法書。顏色在衣櫃自己配。' },
@@ -133,5 +144,9 @@ const WARES = [
   { id: 'obake', kind: 'record', limited: 'halloween', name: '唱片〈おばけの夜〉', price: 66, desc: '有點可怕又有點可愛的萬聖節之夜。' }
 ];
 const WARE = new Map(WARES.map((w) => [w.id, w]));
-const WEAR_SLOTS = [['head', '頭'], ['face', '臉'], ['neck', '脖子'], ['back', '背'], ['body', '外衣']];
+// the hero's seven parts, in the wardrobe's tabs and 古道具屋's 穿搭 (2026-11-12, the user: this order): what is worn there (kind
+// 'wear') on the head, the face, the neck and the back; a style (kind 'clothes') of top, trousers and shoes, its key in the look
+// STYLE_OF. 外衣 (body) is no longer the hero's: nothing to wear there, the town's aprons only
+const WEAR_SLOTS = [['head', '頭部'], ['face', '臉部'], ['neck', '頸部'], ['top', '衣服'], ['bottom', '褲子'], ['shoe', '鞋子'], ['back', '背部']];
+const STYLE_OF = { top: 'topStyle', bottom: 'bottomStyle', shoe: 'shoeStyle' };
 const owns = (id) => Boolean(state.owned[id]) || Boolean(WARE.has(id) && WARE.get(id).starter);   // bought, or 書房's own

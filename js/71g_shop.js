@@ -24,8 +24,11 @@ function fukuSvg() {
     <path d="M30 60 Q45 68 60 60 L56 70 Q45 74 34 70 Z" fill="#3f4479"/><text x="45" y="69" font-size="7" font-weight="700" text-anchor="middle" fill="#fff" font-family="'Hiragino Mincho ProN', serif">古</text></svg>`;
 }
 // the shop's tabs (1.2.0): for 書房, for the yard, to wear, and what is sold for a while only. The last one used comes back.
-const SHOP_TABS = [['in', '室內', [['floor', '家具擺飾'], ['rug', '地墊'], ['wall', '牆上'], ['record', '唱片']]], ['out', '戶外', [['yard', '戶外擺設'], ['house', '房子外觀']]], ['wear', '穿搭', [['clothes', '衣服褲子'], ['wear', '主角穿戴']]], ['sale', '限時']];
+// 穿搭's sections are the hero's seven parts, as the wardrobe's tabs (WEAR_SLOTS; 2026-11-12, the user), the others by kind
+const SHOP_TABS = [['in', '室內', [['floor', '家具擺飾'], ['rug', '地墊'], ['wall', '牆上'], ['record', '唱片']]], ['out', '戶外', [['yard', '戶外擺設'], ['house', '房子外觀']]], ['wear', '穿搭', WEAR_SLOTS], ['sale', '限時']];
+const inSec = (it, k) => (it.kind === 'wear' || it.kind === 'clothes' ? it.slot === k : it.kind === k);   // a ware under a section: by part, or by kind
 let shopTab = (() => { try { const t = localStorage.getItem('nq_shop_tab'); return SHOP_TABS.some(([k]) => k === t) ? t : 'in'; } catch (e) { return 'in'; } })();
+let shopFocus = '';   // a part's section to open 古道具屋 at (from the wardrobe's 去看看), once
 // limited sales (1.2.0): month-day, both ends in, every year. A ware joins one with limited: its key; it is shown under 限時
 // only, and only while the sale is on; once bought it is theirs like any other.
 const SALES = { halloween: { name: '萬聖節', from: '10-21', to: '11-10' } };
@@ -80,7 +83,8 @@ function saleHtml(day, live, grid) {   // 限時: the sales on now with their wa
     return `<section class="shop-sec"><h2 class="shop-h">${x.name}限定 · 賣到 ${mdText(x.to)}（${when}）</h2>${grid(WARES.filter((it) => it.limited === k))}</section>`;
   }).join('');
 }
-const styleKey = (it) => (it.slot === 'top' ? 'topStyle' : 'bottomStyle'), styleOn = (it) => HERO.norm(state.look)[styleKey(it)] === it.id;
+const styleKey = (it) => STYLE_OF[it.slot], styleOn = (it) => HERO.norm(state.look)[styleKey(it)] === it.id;
+const partName = (slot) => (WEAR_SLOTS.find(([s]) => s === slot) || [slot, ''])[1];   // 頭部, 衣服, 鞋子…: the wardrobe's tab for a part
 // a hat over what sits on top of their head (呆毛, 丸子, 雙丸子): it is tucked away while the hat is on (1.2.1)
 function hatSwapNote(id, look) {
   const t = HERO.tucked(look, id);
@@ -106,7 +110,11 @@ function warePeek(id) {   // a ware big: its picture, its words, the tile's own 
   openModal(it.name, `<div class="ware-peek">${shopCardHtml(it, kotoBalance()).replace('class="card shop-item', 'class="shop-item big')}</div>`, { width: 380, noFocus: true });
   fitThumbs(document.getElementById('modalBody'));
 }
-const SOON = '<div class="card shop-item soon"><div class="art"><svg viewBox="0 0 80 80"><g fill="none" stroke="currentColor" stroke-opacity=".45" stroke-width="2" stroke-linejoin="round"><path d="M16 34 L40 24 L64 34 L40 44 Z"/><path d="M16 34 V56 L40 66 V44 M64 34 V56 L40 66"/></g></svg></div><div class="nm">福爺還在找</div><div class="ds">之後會有更多老東西。</div></div>';   // the last card under 主角穿戴
+const SOON = '<div class="card shop-item soon"><div class="art"><svg viewBox="0 0 80 80"><g fill="none" stroke="currentColor" stroke-opacity=".45" stroke-width="2" stroke-linejoin="round"><path d="M16 34 L40 24 L64 34 L40 44 Z"/><path d="M16 34 V56 L40 66 V44 M64 34 V56 L40 66"/></g></svg></div><div class="nm">福爺還在找</div><div class="ds">之後會有更多老東西。</div></div>';   // the last card of 穿搭 (under 背部)
+function shopScrollTo(view, k) {   // a part's section, just under the tabs held up top
+  const s = view.querySelector(`.shop-sec[data-sec="${k}"]`), tabs = view.querySelector('.shop-tabs'); if (!s || !tabs) return;
+  window.scrollTo(0, s.getBoundingClientRect().top + window.scrollY - (parseFloat(getComputedStyle(tabs).top) || 0) - tabs.offsetHeight - 6);
+}
 function renderShop(view) {
   const bal = kotoBalance(), night = sceneClock(lightHour()).day < 0.5;
   const day = saleNow(), live = Object.keys(SALES).filter((k) => salePreview() || saleOn(k, day));
@@ -118,11 +126,12 @@ function renderShop(view) {
       <div class="counter"></div><div class="purse">${kotoIcon()}言靈 <b>${bal}</b></div></div>
     <div class="page-head shop-head"><div><div class="page-title">古道具屋</div><div class="page-sub">山上的老店，老闆福爺不收錢，只收言靈。</div></div></div>
     <div class="shop-tabs" role="tablist">${SHOP_TABS.map(([k, name]) => `<button type="button" role="tab" data-act="shop-tab" data-tab="${k}" aria-selected="${shopTab === k}">${name}${k === 'sale' && live.length ? '<i class="dot" aria-label="特賣中"></i>' : ''}</button>`).join('')}</div>
-    ${shopTab === 'sale' ? saleHtml(day, live, grid) : SHOP_TABS.find(([k]) => k === shopTab)[2].map(([k, name]) => `<section class="shop-sec"><h2 class="shop-h">${name}</h2>${grid(WARES.filter((it) => it.kind === k && !it.starter && !it.limited && !it.gift), k === 'wear' ? SOON : '')}</section>`).join('')}
+    ${shopTab === 'sale' ? saleHtml(day, live, grid) : SHOP_TABS.find(([k]) => k === shopTab)[2].map(([k, name], i, all) => `<section class="shop-sec" data-sec="${k}"><h2 class="shop-h">${name}</h2>${grid(WARES.filter((it) => inSec(it, k) && !it.starter && !it.limited && !it.gift), shopTab === 'wear' && i === all.length - 1 ? SOON : '')}</section>`).join('')}
     ${onTestSite() && shopTab === 'sale' ? `<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="sale-preview">測試用：${salePreview() ? '關掉限時預覽，照日期來' : '不看日期，顯示限時商品'}</button></div>` : ''}
     ${onTestSite() ? '<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="koto-gift">測試用：+100 言靈</button><button type="button" class="btn btn-sm" data-act="koto-gift" data-n="1000">測試用：+1000 言靈</button><button type="button" class="btn btn-sm" data-act="witch-again">測試用：巫婆再飛一次</button></div>' : ''}
     <svg class="defs-only" width="0" height="0" aria-hidden="true">${DECOR.DEFS}</svg>`;
   fitThumbs(view);
+  if (shopFocus) { const k = shopFocus; shopFocus = ''; requestAnimationFrame(() => shopScrollTo(view, k)); }
 }
 // the dressing room (1.2.0): 書房's 衣櫃 button zooms in on the hero to choose how they look (HERO.OPTS) and what they wear.
 // A copy of them flies from where they stand to the stage — their head for the face's tabs, all of them for clothes — while the
@@ -130,8 +139,9 @@ function renderShop(view) {
 // back; either way the copy flies back to its place and the room zooms out.
 const DRESS = (() => {
   // test (2026-11-09): two of them — the wardrobe (the button up top, the wardrobe in the bedroom) for what is worn, the full-length
-  // mirror for the face, the hair and the features (the beard among them)
-  const MODES = { wear: { title: '衣櫃', tabs: [['clothes', '衣服', 'body'], ['wear', '穿戴', 'body']] }, mirror: { title: '全身鏡', tabs: [['face', '臉型', 'head'], ['hair', '髮型', 'head'], ['features', '五官', 'head']] } };
+  // mirror for the face, the hair and the features (the beard among them). The wardrobe's tabs are the hero's seven parts
+  // (2026-11-12, the user: 衣服 and 穿戴 split up; WEAR_SLOTS), all of them in sight
+  const MODES = { wear: { title: '衣櫃', tabs: WEAR_SLOTS.map(([slot, name]) => [slot, name, 'body']) }, mirror: { title: '全身鏡', tabs: [['face', '臉型', 'head'], ['hair', '髮型', 'head'], ['features', '五官', 'head']] } };
   let d = null;   // open: { st, mode, look, wear, tab, back, from }
   const TABS_OF = () => MODES[d.mode].tabs;
   const box = () => (d && d.st.isConnected ? d.st.querySelector('.dress') : null);
@@ -154,30 +164,33 @@ const DRESS = (() => {
   const sec = (title, inner) => `<section class="dress-sec"><h3>${title}</h3>${inner}</section>`;
   const HAIR4 = ['fringe', 'sides', 'hairBack', 'hairTop'];
   // what the copy does not show because of what is on the head: a whole head hides the face and hair (the face's tabs); a hat that
-  // cannot sit on their hairstyle wears its own (髮型, 穿戴)
+  // cannot sit on their hairstyle wears its own (髮型, the wardrobe's 頭部)
   function note() {
     const it = d.wear.head && WARE.get(d.wear.head); if (!it) return '';
     const swap = hatSwapNote(it.id, d.look);
-    const say = HERO.whole(it.id) ? (kind() === 'head' ? `戴著${it.name}，看不到臉和頭髮。` : '') : swap && (d.tab === 'hair' || d.tab === 'wear') ? it.name + swap : '';
+    const say = HERO.whole(it.id) ? (kind() === 'head' ? `戴著${it.name}，看不到臉和頭髮。` : '') : swap && (d.tab === 'hair' || (d.mode === 'wear' && d.tab === 'head')) ? it.name + swap : '';
     return say ? `<p class="dress-note">${esc(say)}</p>` : '';
   }
-  // the styles of tops, trousers and shoes they have (帽T and 長褲 and what was bought; every shoe), each on the hero in their colours
-  const have = (key, v) => key === 'shoeStyle' || v === HERO.LOOK0[key] || owns(v);
+  // the styles of tops, trousers and shoes they have (帽T, 長褲 and every shoe not sold — 球鞋, 短靴, 皮鞋 — and what was bought), each
+  // on the hero in their colours
+  const have = (key, v) => v === HERO.LOOK0[key] || owns(v) || (key === 'shoeStyle' && !WARE.has(v));
   const styles = (key) => `<div class="dress-opts">${HERO.OPTS[key].filter(([v]) => have(key, v)).map(([v, name]) => `<button type="button" class="dress-opt" data-act="dress-pick" data-key="${key}" data-val="${v}" aria-pressed="${d.look[key] === v}">${HERO.clothes(v, d.look)}<span>${name}</span></button>`).join('')}</div>`;
-  function body() { return note() + parts(); }
+  function body() { return note() + (d.mode === 'wear' ? part(d.tab) : parts()); }
   function parts() {
     if (d.tab === 'face') return sec('臉型', opts('face', 'head')) + sec('膚色', sws('skin')) + sec('臉頰', opts('cheeks', 'face'));
     if (d.tab === 'hair') return sec('瀏海', opts('fringe', 'head')) + sec('兩側', opts('sides', 'bust')) + sec('後面', opts('hairBack', 'back')) + sec('造型', opts('hairTop', 'back')) + sec('髮色', sws('hairColor'));   // 1.2.1: hair in parts
-    if (d.tab === 'features') return sec('眼睛', opts('eyes', 'face')) + sec('眼睛顏色', sws('eyeColor')) + sec('眉毛', opts('brows', 'face')) + sec('嘴巴', opts('mouth', 'face')) + sec('鬍子', opts('beard', 'face'));
-    if (d.tab === 'clothes') {
-      const more = WARES.filter((it) => it.kind === 'clothes' && !owns(it.id) && forSale(it)).length;   // a limited one only while its sale is on
-      return sec('上衣', styles('topStyle')) + sec('上衣顏色', sws('top')) + sec('褲子', styles('bottomStyle')) + sec('褲子顏色', sws('bottom')) + sec('鞋子', styles('shoeStyle')) + sec('鞋子顏色', sws('shoe'))
-        + (more ? `<p class="dress-more">古道具屋還有 ${more} 件衣服褲子<button type="button" class="btn btn-sm" data-act="dress-shop">去看看</button></p>` : '');
-    }
-    // what was bought at 古道具屋, by part: a tap puts it on or takes it off
-    const got = WARES.filter((it) => it.kind === 'wear' && owns(it.id));
-    const rows = WEAR_SLOTS.map(([slot, name]) => { const list = got.filter((it) => it.slot === slot); return list.length ? `<div class="dress-wear"><div class="slot">${name}</div><div class="list">${list.map((it) => `<button type="button" class="wr-it${d.wear[slot] === it.id ? ' on' : ''}" data-act="dress-wear" data-id="${it.id}" aria-pressed="${d.wear[slot] === it.id}">${HERO.thumb(it.id, d.look)}<span>${esc(it.name)}</span></button>`).join('')}</div></div>` : ''; }).join('');
-    return rows || '<p class="muted mt-3">還沒有可以穿戴的東西。古道具屋的「主角穿戴」有帽子、眼鏡、圍巾、背包……</p><div class="row-wrap mt-3"><button type="button" class="btn btn-sm" data-act="dress-shop">去古道具屋</button></div>';
+    return sec('眼睛', opts('eyes', 'face')) + sec('眼睛顏色', sws('eyeColor')) + sec('眉毛', opts('brows', 'face')) + sec('嘴巴', opts('mouth', 'face')) + sec('鬍子', opts('beard', 'face'));
+  }
+  // one of the wardrobe's parts (2026-11-12, the user): for 衣服, 褲子 and 鞋子 the styles they have and the colours (the part's own
+  // palette, its key the part's); for the others what was bought at 古道具屋 for it, a tap putting it on or taking it off. Then
+  // 古道具屋's that part, when it has more (a limited one only while its sale is on)
+  function part(slot) {
+    const name = partName(slot), sold = WARES.filter((it) => (it.kind === 'wear' || it.kind === 'clothes') && it.slot === slot && !it.gift && forSale(it));
+    const more = sold.filter((it) => !owns(it.id)).length, nudge = more ? `<p class="dress-more">古道具屋的「${name}」還有 ${more} 樣<button type="button" class="btn btn-sm" data-act="dress-shop">去看看</button></p>` : '';
+    if (STYLE_OF[slot]) return sec('款式', styles(STYLE_OF[slot])) + sec('顏色', sws(slot)) + nudge;
+    const got = WARES.filter((it) => it.kind === 'wear' && it.slot === slot && owns(it.id));
+    if (!got.length) return `<p class="muted mt-3">還沒有${name}的東西。${sold.length ? `古道具屋的「${name}」有${sold.slice(0, 3).map((it) => esc(it.name)).join('、')}……` : ''}</p><div class="row-wrap mt-3"><button type="button" class="btn btn-sm" data-act="dress-shop">去古道具屋</button></div>`;
+    return `<div class="dress-wear"><div class="list">${got.map((it) => `<button type="button" class="wr-it${d.wear[slot] === it.id ? ' on' : ''}" data-act="dress-wear" data-id="${it.id}" aria-pressed="${d.wear[slot] === it.id}">${HERO.thumb(it.id, d.look)}<span>${esc(it.name)}</span></button>`).join('')}</div></div>${nudge}`;
   }
   const copy = () => HERO.svg({ look: d.look, wear: d.wear });
   function open(st, mode = 'wear', title = '') {   // title: the thing it opened from (a mirror's own name)
@@ -195,7 +208,7 @@ const DRESS = (() => {
       <div class="hero dress-hero" data-act="dress-turn" aria-label="主角（點一下轉身）">${copy()}</div>
       <div class="dress-bar"><button type="button" data-act="dress-cancel">取消</button><span class="t">${esc(d.title)}</span><button type="button" class="ok" data-act="dress-done">完成</button></div>
       <div class="dress-tools"><button type="button" data-act="dress-random" aria-label="隨機" title="隨機">${icon('dice')}</button><button type="button" data-act="dress-turn" aria-label="轉身" title="轉身">${icon('turn')}</button></div>
-      <div class="dress-panel"><div class="dress-tabs" role="tablist">${tabs()}</div><div class="dress-body">${body()}</div></div>
+      <div class="dress-panel"><div class="dress-tabs${TABS_OF().length > 4 ? ' many' : ''}" role="tablist">${tabs()}</div><div class="dress-body">${body()}</div></div>
     </div>`);
     const dr = box(), cp = dr.querySelector('.dress-hero');
     put(cp, from); void dr.offsetWidth;   // the copy starts where they stand
@@ -217,7 +230,7 @@ const DRESS = (() => {
     reframe();
   }
   function pick(key, val) {
-    if (!box() || !HERO.OPTS[key] || !HERO.OPTS[key].some(([v]) => v === val) || ((key === 'topStyle' || key === 'bottomStyle') && !have(key, val))) return;
+    if (!box() || !HERO.OPTS[key] || !HERO.OPTS[key].some(([v]) => v === val) || (Object.values(STYLE_OF).includes(key) && !have(key, val))) return;
     d.look[key] = val; redraw(true);
   }
   function wear(id) { const it = WARE.get(id); if (!box() || !it || it.kind !== 'wear' || !owns(id)) return; d.wear[it.slot] = d.wear[it.slot] === id ? null : id; redraw(true); reframe(); }
@@ -247,7 +260,12 @@ const DRESS = (() => {
     st.classList.add('undressing'); st.classList.remove('dressing'); dr.classList.remove('on'); put(cp, from);   // back to where they stand
     setTimeout(() => { dr.remove(); st.classList.remove('undressing'); }, 520);
   }
-  function shop() { if (!d) return; if (!shopOpen()) { shopShut(); return; } state.look = Object.assign({}, d.look); state.wear = Object.assign({}, d.wear); saveState(); d = null; window.removeEventListener('resize', reframe); go('#/shop'); }   // off to buy something: what was chosen is kept
+  function shop() {   // off to buy something: what was chosen is kept; 古道具屋 opens at 穿搭, at the part they were on
+    if (!d) return; if (!shopOpen()) { shopShut(); return; }
+    state.look = Object.assign({}, d.look); state.wear = Object.assign({}, d.wear); saveState();
+    if (d.mode === 'wear') { shopTab = 'wear'; shopFocus = d.tab; try { localStorage.setItem('nq_shop_tab', shopTab); } catch (e) { /* no storage */ } }
+    d = null; window.removeEventListener('resize', reframe); go('#/shop');
+  }
   return { open, close, tab, pick, wear, random, turn, shop };
 })();
 // a purchase: paid once, then put away (1.2.0): a thing into the storage box, to be set out in 擺設; a wear into the wardrobe
@@ -255,7 +273,7 @@ function buyWare(it) {
   state.owned[it.id] = { paid: it.price, on: todayStr() }; SND.play('coins');
   if (it.kind === 'house') state.house = it.id;   // the yard's house becomes it at once
   saveState();
-  return it.kind === 'house' ? '，院子的房子換好了' : it.kind === 'record' ? '放在留聲機旁了，點書房的留聲機就能換上' : it.kind === 'wear' ? '收進衣櫃了，按書房右上角的衣櫃就能穿上' : it.kind === 'clothes' ? '收進衣櫃了，按書房右上角的衣櫃，在「衣服」換上' : it.kind === 'yard' ? '收在院子的收納箱，到院子按「擺設」拿出來擺' : '收在收納箱，到書房按「擺設」拿出來擺';
+  return it.kind === 'house' ? '，院子的房子換好了' : it.kind === 'record' ? '放在留聲機旁了，點書房的留聲機就能換上' : it.kind === 'wear' ? `收進衣櫃了，按書房右上角的衣櫃，在「${partName(it.slot)}」穿上` : it.kind === 'clothes' ? `收進衣櫃了，按書房右上角的衣櫃，在「${partName(it.slot)}」換上` : it.kind === 'yard' ? '收在院子的收納箱，到院子按「擺設」拿出來擺' : '收在收納箱，到書房按「擺設」拿出來擺';
 }
 Object.assign(ACTIONS, {
   'room-edit': (el) => ROOM.edit(el, 'on'),
@@ -275,7 +293,7 @@ Object.assign(ACTIONS, {
     const it = WARE.get(el.dataset.id);
     if (!it || owns(it.id) || it.gift) return;
     if (kotoBalance() < it.price) { fukuSay('short'); return; }
-    saleCheck(it, () => openModal(`買下${it.name}？`, `<p>用 <b>${it.price}</b> 言靈買下「${esc(it.name)}」。${it.kind === 'wear' ? '買了之後按書房右上角的衣櫃就能穿上或脫下。' : it.kind === 'clothes' ? '買了之後按書房右上角的衣櫃，在「衣服」換上，顏色照你配的。' : it.kind === 'house' ? '買了院子的房子馬上換成它；想換回原本的小屋，在這張卡片上切換。' : it.kind === 'yard' ? '買了會先收在院子的收納箱，到院子按「擺設」拿出來擺。' : it.kind === 'record' ? '買了之後點書房的留聲機就能換上這張唱片。' : '買了會先收在收納箱，到書房按「擺設」拿出來擺。'}</p>
+    saleCheck(it, () => openModal(`買下${it.name}？`, `<p>用 <b>${it.price}</b> 言靈買下「${esc(it.name)}」。${it.kind === 'wear' ? `買了之後按書房右上角的衣櫃，在「${partName(it.slot)}」穿上或脫下。` : it.kind === 'clothes' ? `買了之後按書房右上角的衣櫃，在「${partName(it.slot)}」換上，顏色照你配的。` : it.kind === 'house' ? '買了院子的房子馬上換成它；想換回原本的小屋，在這張卡片上切換。' : it.kind === 'yard' ? '買了會先收在院子的收納箱，到院子按「擺設」拿出來擺。' : it.kind === 'record' ? '買了之後點書房的留聲機就能換上這張唱片。' : '買了會先收在收納箱，到書房按「擺設」拿出來擺。'}</p>
       <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="ware-buy-ok" data-id="${it.id}">買下</button><button type="button" class="btn" data-act="close-modal">再想想</button></div>`, { width: 380 }));
   },
   'ware-buy-ok': (el) => {
@@ -295,7 +313,7 @@ Object.assign(ACTIONS, {
     if (!it || !owns(it.id) || it.kind !== 'house') return;
     state.house = state.house === it.id ? '' : it.id; saveState(); route();
   },
-  'clothes-wear': (el) => {   // 古道具屋's card: on, or back to everyone's 帽T／長褲
+  'clothes-wear': (el) => {   // 古道具屋's card: on, or back to everyone's 帽T／長褲／球鞋
     const it = WARE.get(el.dataset.id);
     if (!it || !owns(it.id) || it.kind !== 'clothes') return;
     state.look = Object.assign({}, state.look, { [styleKey(it)]: styleOn(it) ? HERO.LOOK0[styleKey(it)] : it.id });

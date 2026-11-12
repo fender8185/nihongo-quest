@@ -758,6 +758,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .dress-tabs { flex: none; display: flex; gap: 6px; overflow-x: auto; padding: 12px 12px 6px; scrollbar-width: none; }
 .dress-tabs button { flex: none; padding: 7px 13px; border: 0; border-radius: 99px; font: inherit; font-size: 13px; font-weight: 600; color: var(--fg-2); background: var(--bg-elev-2); cursor: pointer; }
 .dress-tabs button[aria-pressed="true"] { color: var(--accent-fg); background: var(--accent); }
+.dress-tabs.many { gap: 4px; } .dress-tabs.many button { flex: 1 0 40px; padding: 7px 4px; }   /* the wardrobe's seven parts share the row (2026-11-12): all in sight on a 375 px phone; narrower, the row scrolls */
 .dress-body { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 0 12px calc(14px + env(safe-area-inset-bottom, 0px)); }
 .dress-sec h3 { margin: 12px 2px 7px; font-size: 12.5px; font-weight: 700; color: var(--fg-2); }
 .dress-opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
@@ -767,7 +768,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .dress-sws { display: flex; flex-wrap: wrap; gap: 10px; padding: 2px 2px 4px; }
 .dress-sw { width: 34px; height: 34px; padding: 0; border: 0; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .14); cursor: pointer; }
 .dress-sw[aria-pressed="true"] { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .14), 0 0 0 2px var(--bg-elev), 0 0 0 4px var(--accent); }
-.dress-wear { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; } .dress-wear .slot { flex: none; width: 40px; padding-top: 22px; font-size: 12.5px; font-weight: 700; color: var(--fg-2); }
+.dress-wear { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0 6px; }
 .dress-wear .list { display: flex; flex-wrap: wrap; gap: 8px; }
 .dress-note { margin: 12px 2px 0; padding: 8px 10px; border-radius: 9px; font-size: 12.5px; line-height: 1.5; color: var(--fg-2); background: var(--bg-sunken); }
 .dress-more { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 14px 2px 4px; font-size: 13px; color: var(--fg-2); }
