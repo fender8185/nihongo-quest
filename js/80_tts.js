@@ -42,7 +42,7 @@ async function fetchCloudClip(path) {
   let last = null;
   for (const base of cloudAudioBases()) {
     const url = `${base}/${path}`;
-    try { last = { resp: await fetch(url), url }; if (last.resp.ok) return last; } catch (e) { last = { error: e }; }
+    try { last = { resp: await fetch(url, { cache: 'no-cache' }), url }; if (last.resp.ok) return last; } catch (e) { last = { error: e }; }   // no-cache: a 404 the browser keeps (4 h, Cloudflare's) asked again; the service worker keeps the clips
   }
   if (last.error) throw last.error;
   return last;

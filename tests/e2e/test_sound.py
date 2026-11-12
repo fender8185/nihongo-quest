@@ -156,16 +156,15 @@ def test_the_world_goes_quiet_while_japanese_is_read(b):
       return JSON.stringify(seen); })()"""))
     assert r == [1, 0], r
 
-def test_on_an_iphone_a_record_plays_through_web_audio_and_obeys_the_volume_and_the_dip(b):
-    r = json.loads(ev(b, "(async () => { " + FRESH + """ state.town.seen = { nagisa: 1 }; TOWNLIFE.still = true; MUSIC.bufferFor(true); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; await at('#/town');
+def test_a_record_plays_through_web_audio_and_obeys_the_volume_and_the_dip(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ state.town.seen = { nagisa: 1 }; TOWNLIFE.still = true; TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; await at('#/town');
       for (let i = 0; i < 40 && !(MUSIC.mode() === 'buffer' && MUSIC.level() > 0); i++) await wait(100);
-      const r3 = (v) => Math.round(v * 1000) / 1000, full = r3(MUSIC.level());
+      const r3 = (v) => Math.round(v * 1000) / 1000, full = r3(MUSIC.level()), wants = MUSIC.wants(), mode = MUSIC.mode(), how = MUSIC.how();
       state.settings.musicVol = 0.5; MUSIC.volume(); await wait(400); const half = r3(MUSIC.level());
       SND.duck(true); await wait(400); const dip = r3(MUSIC.level()); SND.duck(false); await wait(1200); const back = r3(MUSIC.level());
       state.settings.musicVol = 0; MUSIC.volume(); await wait(800); const off = [MUSIC.wants(), MUSIC.playing()];
-      MUSIC.bufferFor(false);
-      return JSON.stringify({ wants: 'kissa', mode: 'buffer', full, half, dip, back, off }); })()"""))
-    assert r == {'wants': 'kissa', 'mode': 'buffer', 'full': 0.28, 'half': 0.14, 'dip': 0.042, 'back': 0.14, 'off': ['', False]}, r   # the café's jazz (vol .35 of .8)
+      return JSON.stringify({ wants, mode, how: how.startsWith('Web Audio'), full, half, dip, back, off }); })()"""))
+    assert r == {'wants': 'kissa', 'mode': 'buffer', 'how': True, 'full': 0.28, 'half': 0.14, 'dip': 0.042, 'back': 0.14, 'off': ['', False]}, r   # the café's jazz (vol .35 of .8), on every device alike (2026-11-12)
 
 def test_a_talk_keeps_the_sounds_down_till_it_ends_or_the_page_changes(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ state.town.seen = { kenta: 1 }; TOWNLIFE.still = true; TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; await at('#/town');
@@ -175,6 +174,14 @@ def test_a_talk_keeps_the_sounds_down_till_it_ends_or_the_page_changes(b):
       TALK.open(document.querySelector('#view .yard'), 'kenta', [['おっ！', '喔！']]); await at('#/vocab');
       return JSON.stringify({ before, during, after, left: [TALK.on(), SND.ducked()] }); })()"""))
     assert r == {'before': 0, 'during': 1, 'after': 0, 'left': [False, 0]}, r
+
+def test_a_clip_is_asked_for_past_the_browsers_cache(b):
+    r = json.loads(ev(b, """(async () => { const seen = [], f = window.fetch;
+      window.fetch = async (u, init) => { seen.push((init || {}).cache || ''); return new Response('', { status: 404 }); };
+      await fetchCloudClip('c/x.mp3'); window.fetch = f;
+      const sw = await (await f('sw.js')).text();
+      return JSON.stringify({ seen, sw: sw.includes("fetch(req, { cache: 'no-store' })") }); })()"""))
+    assert r == {'seen': ['no-cache', 'no-cache'], 'sw': True}, r   # a 404 Cloudflare lets browsers keep 4 hours is asked again (2026-11-12)
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

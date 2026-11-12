@@ -13,7 +13,7 @@ function openSettings(tab) {
 }
 // the test site's build after the version (its service worker's cache, nq-v1.13.0-test.3 → 測試版 3), to tell which one a phone runs
 function swBuild() {
-  try { if (!window.caches) return; caches.keys().then((ks) => { const k = ks.filter((x) => /^nq-v/.test(x)).sort().pop() || '', m = k.match(/-test\.(\d+)$/); if (m) document.querySelectorAll('.sw-build').forEach((el) => { el.textContent = `（測試版 ${m[1]}）`; }); }).catch(() => {}); } catch (e) { /* none */ }
+  try { if (!window.caches) return; caches.keys().then((ks) => { const k = ks.filter((x) => /^nq-v/.test(x)).sort().pop() || '', m = k.match(/-test\.(\d+)$/); if (m) document.querySelectorAll('.sw-build').forEach((el) => { el.textContent = `（測試版 ${m[1]}・音樂 ${MUSIC.how()}・音量 ${Math.round((MUSIC.level() || 0) * 100)}%）`; }); }).catch(() => {}); } catch (e) { /* none */ }   // and how the music plays, to see on a phone
 }
 function refreshSettings() {
   const b = document.getElementById('modalBody');
@@ -41,6 +41,7 @@ function setVol(el) {
   state.settings[el.dataset.key] = v;
   const t = el.parentNode.querySelector('.vol-val'); if (t) t.textContent = volText(v);
   if (el.dataset.key === 'ambientVol') SND.volume(); else MUSIC.volume();
+  clearTimeout(setVol.t); setVol.t = setTimeout(swBuild, 400);   // the test site's line: the volume as it is now
 }
 document.addEventListener('input', (e) => { const el = e.target.closest && e.target.closest('input[data-vol]'); if (el) setVol(el); });
 function selRow(key, label, hint, options) {

@@ -1173,7 +1173,7 @@ def test_the_gramophone_plays_a_record_and_its_records_change(b):
       location.hash = '#/stats'; await wait(300); const away = MUSIC.playing();
       return JSON.stringify({ first, open, recs, put, stopped, again, away, saved: [normalizeState({ record: 3, musicOff: 'x' }).record, normalizeState({}).musicOff] }); })()"""
     r = json.loads(ev(b, js))
-    assert r['first'] == {'playing': True, 'shown': True, 'notes': True, 'file': 'file'} and r['open'], r   # on from the start, from its file, notes from its horn
+    assert r['first'] == {'playing': True, 'shown': True, 'notes': True, 'file': 'buffer'} and r['open'], r   # on from the start, its file decoded (Web Audio since 2026-11-12), notes from its horn
     assert r['recs'] == [['engawa', True], ['yozakura', False]] and r['put'] == ['yozakura', True, True], r
     assert r['stopped'] == [True, False, False] and r['again'] and not r['away'], r   # stopped by hand; only in the rooms
     assert r['saved'] == ['', False], r

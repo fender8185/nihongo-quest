@@ -359,18 +359,18 @@ const MUSIC = (() => {
     <circle cx="80" cy="60" r="38" fill="#1f1c22"/><circle cx="80" cy="60" r="30" fill="none" stroke="#fff" stroke-opacity=".1"/><circle cx="80" cy="60" r="22" fill="none" stroke="#fff" stroke-opacity=".1"/><circle cx="80" cy="60" r="12" fill="${r.color}"/><circle cx="80" cy="60" r="2" fill="#1f1c22"/>
     <rect x="6" y="10" width="62" height="100" rx="4" fill="${r.color}"/><rect x="64" y="10" width="4" height="100" fill="#000" fill-opacity=".12"/><text x="37" y="66" text-anchor="middle" font-size="${r.name.length > 4 ? 11 : 15}" fill="#fff" font-weight="700" lang="ja">${esc(r.name)}</text></svg>`;
   const current = () => have().find((r) => r.id === state.record) || have()[0];
-  let play = null, wake = null, player = null, fadeT = 0, B = null, forceBuf = false;
+  let play = null, wake = null, player = null, fadeT = 0, B = null;
   const VOL = 0.8, blobs = {}, bufs = {}, stopped = {};   // blobs: a record's file as a blob: URL, fetched once a session; bufs, stopped: below
   const mvol = () => Math.min(1, Math.max(0, Number(state.settings.musicVol) || 0));   // 設定 › 音樂
   const level = (rec) => VOL * (rec.vol || 1) * mvol();
   let ducked = false;   // Japanese being read aloud (duck)
-  // an iPhone keeps an <audio>'s volume at 1, and a Web Audio gain put after the <audio> did nothing there either (2026-11-12, the
-  // user: 音樂 would not go down, nor under the townsfolk's lines). There a record is decoded and played through Web Audio like
-  // 環境音 (B: its source and gain; bufs: the decoded one in use, ~30 MB for a minute and a half, so one at a time; stopped:
-  // where each stopped, to go on from there), so 設定 › 音樂 and the dip under spoken Japanese work there too. Elsewhere the
-  // <audio> and its own volume, as before
+  // an iPhone keeps an <audio>'s volume at 1, a Web Audio gain put after the <audio> did nothing there, and telling an iPhone by
+  // its <audio> failed too (2026-11-12, the user: 音樂 would not go down). So a record is decoded and played through Web Audio,
+  // like 環境音, wherever there is Web Audio (B: its source and gain; bufs: the decoded one in use, ~30 MB for a minute and a
+  // half, so one at a time; stopped: where each stopped, to go on from there): 設定 › 音樂 and the dip under spoken Japanese
+  // work everywhere alike. No Web Audio: the <audio> and its own volume
   const mkPlayer = () => { if (!player) { player = new Audio(); player.loop = true; player.preload = 'auto'; player.setAttribute('playsinline', ''); } };
-  const buffered = () => { mkPlayer(); return forceBuf || fixedVol(); };
+  const buffered = () => { mkPlayer(); return Boolean(window.AudioContext || window.webkitAudioContext); };
   function fadeFile(v, s) {   // the volume to v over s seconds
     clearInterval(fadeT);
     if (play && play.mode === 'buffer') {
@@ -474,7 +474,7 @@ const MUSIC = (() => {
   }
   // 設定 › 音樂 dragged: louder or softer at once (to none: it stops; back from none: it plays again)
   function volume() { const rec = play && RECORDS.find((x) => x.id === play.id); if (rec && player && mvol()) fadeFile(level(rec) * (ducked ? 0.3 : 1), 0.1); sync(); }
-  return { RECORDS, sync, pick, put, pause, duck, volume, sleeve, playing: () => Boolean(play) && Boolean(wanted()), wants: () => (wanted() || {}).id || '', mode: () => play && play.mode, level: () => (B ? B.gain.gain.value : player ? player.volume : null), bufferFor: (on) => { forceBuf = on; } };   // bufferFor: tests on a desktop, as on an iPhone
+  return { RECORDS, sync, pick, put, pause, duck, volume, sleeve, playing: () => Boolean(play) && Boolean(wanted()), wants: () => (wanted() || {}).id || '', mode: () => play && play.mode, level: () => (B ? B.gain.gain.value : player ? player.volume : null), how: () => (B ? `Web Audio・${B.c.state}` : play ? (play.mode === 'buffer' ? '解碼中' : '<audio>') : '沒在播') };   // how: for the test site's 設定
 })();
 // outside 擺設 a tap on a ware sends the hero to stand beside it, facing it; at the telescope they look into it (test: 觀星)
 function yardUse(yard, id) {

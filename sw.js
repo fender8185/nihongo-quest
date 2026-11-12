@@ -1,5 +1,5 @@
 /* Nihongo Quest service worker: versioned app-shell cache, cache-first for same-origin GETs. */
-const CACHE = 'nq-v1.13.0-test.3';
+const CACHE = 'nq-v1.13.0-test.4';
 const AUDIO_CACHE = 'nq-audio';   // 雲端音檔 heard so far, and the gramophone's records: kept across releases
 // A clip's two addresses: R2, where the app fetches it since 1.0.29, and the Supabase bucket R2 is a copy of, which the
 // app falls back to and which every clip cached before 1.0.29 is filed under
@@ -91,7 +91,7 @@ self.addEventListener('fetch', (event) => {
       const match = (key) => cache.match(key, { ignoreVary: true });   // by address alone: R2 answers "Vary: Origin"
       const hit = (await match(req)) || (r2 && await match(AUDIO_SUPABASE + req.url.slice(AUDIO_HOST.length)));
       if (hit) return hit;
-      const res = await fetch(req);
+      const res = await fetch(req, { cache: 'no-store' });   // past the browser's own cache: Cloudflare marks a 404 good for 4 hours, so a clip asked for before it was made stayed missing that long (2026-11-12)
       if (res && res.ok) cache.put(req, res.clone());
       return res;
     }));
