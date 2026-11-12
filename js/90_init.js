@@ -77,7 +77,7 @@ async function init() {
 let swUpdated = false, touchedYet = false, reloadPage = () => location.reload();
 function calmForUpdate() {
   const r = currentRoute();
-  if (r.name === 'practice' || (r.name === 'exam' && r.parts[1] === 'run') || LISTEN || modalOpen()) return false;
+  if (r.name === 'practice' || (r.name === 'exam' && r.parts[1] === 'run') || LISTEN || modalOpen() || (CLOUD_GEN && CLOUD_GEN.running)) return false;   // nor while the generator runs
   return !document.querySelector('.dress.on, .talk, .story, .diary, .scope, .study.edit, .yard.edit');
 }
 function updateIfCalm(now) {
