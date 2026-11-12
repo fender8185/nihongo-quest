@@ -7,7 +7,8 @@
 // Each comes knocking at 書房's front door once (one at a time: the next not before NPC.gap later, and 書房 opened again): 小春 a minute after the opening, whatever was done meanwhile (2026-11-11; she came after the first set), ムギ a few minutes after her (the user's calls). The door
 // shakes, コンコン; tapped, the hero goes and opens it, they say hello and give a present — 小春 the full-length mirror (the face and
 // the hair are changed in front of it), ムギ the gramophone with its two records (one bought before: what was paid comes back).
-// state.met: { id: when they came (ms; an older save's day) }. After that they are on the beach, a tap for a word. Lines: [Japanese ({漢字|かな}), 中文]
+// state.met: { id: when they came (ms; an older save's day) }. After that they are about the town, a tap for a word (TOWN.CHAT, as
+// everyone's since 2026-11-12). Lines: [Japanese ({漢字|かな}), 中文]
 const KOHARU_LOOK = { face: 'oval', skin: '#f8dcc8', cheeks: 'blush', fringe: 'sidepart', sides: 'wave', hairBack: 'wavy', hairTop: 'none', hairColor: '#8a4a2e', eyes: 'chibi', eyeColor: '#5a3a28', brows: 'soft', mouth: 'grin', beard: 'none', topStyle: 'shirt', top: '#e9e2d0', bottomStyle: 'skirt', bottom: '#e58fa8', shoeStyle: 'loafer', shoe: '#6e4f3a' };
 const MUGI_ART = `<ellipse cy="-2" rx="36" ry="6" fill="#2b1c12" fill-opacity=".16"/>
   <g class="mugi-tail"><path d="M24 -30 C44 -34 48 -58 34 -64 C24 -68 18 -58 26 -54 C34 -50 30 -40 20 -40 Z" fill="#d9894a"/><path d="M30 -58 C36 -54 34 -46 28 -44" fill="none" stroke="#fbf1e2" stroke-width="5" stroke-linecap="round"/></g>
@@ -28,10 +29,7 @@ const NPCS = {
       ['おばあちゃんの{髪|かみ}は、いつも{私|わたし}が{切|き}っていたんですよ。', '你外婆的頭髮，一直都是我幫她剪的喔。'],
       ['お{孫|まご}さんが{来|き}たって{聞|き}いて……これ、おばあちゃんから{預|あず}かっていたものです。', '聽說她的孫兒搬來了……這是外婆寄放在我這裡的東西。', 'gift'],
       ['{全身鏡|ぜんしんきょう}です。{髪型|かみがた}も{顔|かお}の{雰囲気|ふんいき}も、いつでも{変|か}えられますよ。', '是全身鏡喔。髮型和臉的感覺，隨時都能換。'],
-      ['{町|まち}に{来|き}たら、お{店|みせ}に{寄|よ}ってくださいね！', '來鎮上的話，到店裡坐坐喔！']],
-    chat: [['{今日|きょう}も{勉強|べんきょう}おつかれさま！', '今天也辛苦了！'], ['{波|なみ}の{音|おと}を{聞|き}くと、{落|お}ち{着|つ}くんだ。', '聽著海浪的聲音，心情就會平靜下來。'],
-      ['{鏡|かがみ}、{使|つか}ってる？{新|あたら}しい{髪型|かみがた}も{似合|にあ}うと{思|おも}うよ。', '鏡子有在用嗎？我覺得新髮型也會很適合你。'], ['{今日|きょう}は{風|かぜ}が{気持|きも}ちいいね。', '今天的風好舒服呢。'],
-      ['おばあちゃん、いつもお{孫|まご}さんの{話|はなし}ばかりしていましたよ。', '你外婆啊，總是在說孫兒的事呢。'], ['{子|こ}どものころ、おばあちゃんの{髪|かみ}を{切|き}らせてもらったのが、{私|わたし}の{始|はじ}まりなんです。', '小時候外婆讓我幫她剪頭髮，那就是我當美容師的開始。']] },
+      ['{町|まち}に{来|き}たら、お{店|みせ}に{寄|よ}ってくださいね！', '來鎮上的話，到店裡坐坐喔！']] },
   mugi: { name: 'ムギ', role: '柴犬', gift: 'gramophone', home: 'beach', at: { X: -170, Y: 58 },
     due: () => met('koharu'),   // after 小春 (and NPC.gap), the user's call
     hello: (paid) => [
@@ -40,10 +38,7 @@ const NPCS = {
       ['ワン！きみが{耳|みみ}で{日本語|にほんご}を{聞|き}いているって、{風|かぜ}のうわさで{聞|き}いた。これ、おばあちゃんの{蓄音機|ちくおんき}だ！', '汪！聽風說你在用耳朵聽日文。這是你外婆的留聲機！', 'gift'],
       paid ? ['ワン！あれ、もう{持|も}ってる？じゃあ、お{金|かね}は{返|かえ}す。レコードも{二枚|にまい}どうぞ。', `汪！咦，你已經有了？那 ${paid} 言靈還你。兩張唱片也請收下。`]
         : ['ワン！{蓄音機|ちくおんき}とレコード{二枚|にまい}だ。〈{縁側|えんがわ}の{午後|ごご}〉と〈{夜桜|よざくら}〉。', '汪！留聲機和兩張唱片：〈縁側の午後〉和〈夜桜〉。'],
-      ['ワン！いつも{海辺|うみべ}にいる。{新|あたら}しいレコードが{入|はい}ったら{教|おし}える。またね！', '汪！我都在海邊。有新唱片的話告訴你，再見！']],
-    chat: [['ワン！{今日|きょう}のおすすめは〈{夜桜|よざくら}〉だ。', '汪！今天推薦〈夜桜〉。'], ['ワン！レコードの{音|おと}は、あったかい。', '汪！唱片的聲音很溫暖。'],
-      ['ワン！しっぽが{勝手|かって}に{揺|ゆ}れる。', '汪！尾巴自己搖起來了。'], ['ワン！{波|なみ}の{音|おと}も、いい{音楽|おんがく}だ。', '汪！海浪的聲音也是很棒的音樂。'],
-      ['ワン！おばあちゃんは、{夕方|ゆうがた}になるとここで〈{夜桜|よざくら}〉をかけた。', '汪！你外婆每到傍晚，就會在這裡放〈夜桜〉。'], ['ワン！おばあちゃん、{手紙|てがみ}を{書|か}く{練習|れんしゅう}をしてた。だれに{書|か}いてたのかな。', '汪！你外婆以前在練習寫信喔。不知道是要寫給誰呢。']] }
+      ['ワン！いつも{海辺|うみべ}にいる。{新|あたら}しいレコードが{入|はい}ったら{教|おし}える。またね！', '汪！我都在海邊。有新唱片的話告訴你，再見！']] }
 };
 const met = (id) => Boolean(state.met && state.met[id]);   // a neighbour has come by
 const NPC = (() => {

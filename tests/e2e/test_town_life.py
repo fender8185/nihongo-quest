@@ -101,7 +101,7 @@ def test_chat_follows_the_hour_and_tells_news_once(b):
 
 # ---- words over their heads, two talking, walking off and in (Task 2) ----
 def test_words_pop_up_over_someone_and_not_while_talking(b):
-    r = json.loads(ev(b, "(async () => { " + FRESH + """ TOWNLIFE.still = true; TOWN.MUTTER = { kenta: [['m0', 'よーし！', '好！']], lin: [['m0', 'ふふ。', '呵呵。']] }; TOWNLIFE.gap = [400, 500]; await go('town', 10);
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ TOWNLIFE.still = true; TOWN.MUTTER = { kenta: [['m0', 'よーし！', '好！']], lin: [['m0', 'ふふ。', '呵呵。']] }; TOWN.PAIRS = []; TOWNLIFE.gap = [400, 500]; await go('town', 10);
       TOWNLIFE.still = false; let el = null; for (let i = 0; i < 30 && !el; i++) { await wait(100); el = y().querySelector('.ysay'); }
       const text = el && el.textContent; let gone = false; for (let i = 0; i < 50 && !gone; i++) { await wait(100); gone = !el.isConnected; }
       TOWNEV.talk(people().find((e) => e.dataset.npc === 'lin')); for (let i = 0; i < 60 && !document.querySelector('.talk-card'); i++) await wait(100);
