@@ -425,7 +425,7 @@ const DIARY = (() => {
   }
   return { PAGES, open: openBook, close, readable: open, passed, said };
 })();
-// a few lines with someone (test, 2026-11-09): their face, their name, a line in Japanese (furigana; 🔊 reads it) and in Chinese;
+// a few lines with someone (test, 2026-11-09): their face, their name, a line in Japanese (furigana; said aloud as it comes, 🔊 again) and in Chinese;
 // a tap goes on. A present waits for 收下 (its thumbnail) — take(): it is theirs then — and done() once the last line is read.
 // A line with no Japanese is said in Chinese (林, now and then). The town's events (opt.ev, events.js) are several people's lines, the hero's among them ([who, ja, zh]); their Chinese folded
 // away under 中文 (open, it stays open for the rest of the talk); a word glossed ({漢字|かな|中文}) has its Chinese under the line;
@@ -456,6 +456,8 @@ const TALK = (() => {
       ${cur.ev ? `<p class="talk-zh${cur.zh ? '' : ' hide'}">${esc(L.zh)}</p>${cur.zh ? '' : '<button type="button" class="talk-zh-btn" data-talk="zh">中文</button>'}` : `<p class="talk-zh">${esc(L.zh)}</p>`}`}
       ${L.kind === 'gift' ? `<div class="talk-gift">${DECOR.thumb(w)}<b>${esc(WARE.get(w).name)}</b><button type="button" class="btn btn-primary btn-sm" data-talk="take">收下</button></div>` : '<span class="talk-next" aria-hidden="true">▼</span>'}</div></div>`;
     if (L.kind === 'gift') fitThumbs(cur.el);
+    const at = (cur.said ? 's' : '') + cur.i;   // a line new on the screen is said at once, in its speaker's voice (2026-11-12, the user); drawn again (中文): not again
+    if (L.ja && cur.spoke !== at) { cur.spoke = at; speakAs(L.id, L.ja); }
   }
   function pick(k) {
     const L = line(cur.lines[cur.i]), o = L.opts[k]; if (!o || cur.wrong.includes(k)) return;
@@ -486,7 +488,7 @@ const TALK = (() => {
     });
     root.appendChild(el); show();
   }
-  function close() { if (cur) { cur.el.remove(); cur = null; } }
+  function close() { if (cur) { if (cur.spoke !== undefined) stopSpeaking(); cur.el.remove(); cur = null; } }   // what was being said stops with it
   return { open, close, on: () => Boolean(cur && cur.el.isConnected) };
 })();
 // every line the talks can read aloud, and whose it is: the generator makes each a clip in its speaker's voice (CAST_VOICE)

@@ -779,7 +779,7 @@ def test_r2_listing_follows_pages_and_an_upload_carries_the_signed_headers(b):
     r = json.loads(b.run([("nav", URL), ("wait", READY), ("eval", js)], timeout=30)[-1])
     assert r['have'] == ['f/aaa.mp3', 'f/bbb.mp3', 'zh/ccc.mp3'], r
     qs = [parse_qs(urlsplit(u).query) for u in r['lists']]
-    assert [(q['prefix'][0], q.get('continuation-token', [None])[0]) for q in qs] == [('v1/f/', None), ('v1/f/', 'tok/1+='), ('v1/m/', None), ('v1/zh/', None)], r['lists']
+    assert [(q['prefix'][0], q.get('continuation-token', [None])[0]) for q in qs] == [('v1/f/', None), ('v1/f/', 'tok/1+='), ('v1/m/', None), ('v1/zh/', None), ('v1/c/', None)], r['lists']   # c: the townsfolk's (1.12.1)
     assert all(u.startswith(R2_TEST + '?') and q['list-type'] == ['2'] and q['max-keys'] == ['1000'] for u, q in zip(r['lists'], qs)), r['lists']
     assert 'continuation-token=tok%2F1%2B%3D' in r['lists'][1], r['lists']   # a + left as is would reach R2 as a space
     p = r['put']; h = p['headers']

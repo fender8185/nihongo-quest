@@ -88,7 +88,7 @@ async function r2Fetch(method, url, creds, init = {}) {
 // the clip paths (f|m|zh/<hash>.mp3) already in the R2 bucket: ListObjectsV2, 1000 keys a page
 async function r2ListExisting(creds) {
   const have = new Set();
-  for (const g of ['f', 'm', 'zh']) {
+  for (const g of ['f', 'm', 'zh', 'c']) {   // c: the townsfolk's (missed until 1.12.1, so every run made them all again)
     let token = '';
     do {
       const r = await r2Fetch('GET', `${CLOUD_AUDIO.r2}?list-type=2&max-keys=1000&prefix=${rfc3986(`${CLOUD_AUDIO.set}/${g}/`)}${token ? `&continuation-token=${rfc3986(token)}` : ''}`, creds);

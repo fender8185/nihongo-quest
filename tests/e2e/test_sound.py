@@ -114,6 +114,27 @@ def test_voices_to_try_are_listed_under_theirs_and_made_with_that_voice(b):
     assert r['tries'] == [['koharu', '0'], ['koharu', '1']], r
     assert r['asked'] == [['f', 'koharu', None], ['f', 'koharu', ['Achernar', 1, 0]]] and r['differ'], r
 
+def test_a_talk_says_each_new_line_at_once(b):
+    r = json.loads(ev(b, """(async () => { const said = [], realS = speakAs, realX = stopSpeaking; let stopped = 0;
+      speakAs = (who, ja) => { said.push([who, ja]); return Promise.resolve(); }; stopSpeaking = () => { stopped++; };
+      const lines = [['kenta', 'いらっしゃいませ！', '歡迎光臨！'], { ask: '回答', opts: [['はじめまして。', 1, '初次見面。'], ['おやすみなさい。', 0, '晚安。']] }, ['kenta', '…………。', '…………。'], ['kenta', '{森|もり}です！', '我姓森！']];
+      TALK.open(document.body, 'kenta', lines, null, null, { ev: true }); const t = () => document.querySelector('.talk');
+      const steps = [said.length]; t().querySelector('[data-talk="zh"]').click(); steps.push(said.length);   // 中文 shown: not said again
+      t().click(); steps.push(said.length);   // the reply choice: nothing said yet
+      t().querySelector('[data-pick="1"]').click(); steps.push(said.length); t().querySelector('[data-pick="0"]').click(); steps.push(said.length);
+      t().click(); t().click(); steps.push(said.length); const s0 = stopped; t().click();   // past the silence; the last line, then closed
+      speakAs = realS; stopSpeaking = realX;
+      return JSON.stringify({ said, steps, stopped: stopped - s0, open: !!t() }); })()"""))
+    assert r['said'] == [['kenta', 'いらっしゃいませ！'], ['hero', 'はじめまして。'], ['kenta', '…………。'], ['kenta', '{森|もり}です！']], r
+    assert r['steps'] == [1, 1, 1, 1, 2, 4] and r['stopped'] >= 1 and not r['open'], r   # the silence goes to speakAs, which says nothing
+
+def test_the_generator_knows_the_townsfolks_clips_already_made(b):
+    r = json.loads(ev(b, """(async () => { const asked = [], real = r2Fetch;
+      r2Fetch = async (m, url) => { const p = decodeURIComponent(/prefix=([^&]*)/.exec(url)[1]); asked.push(p); return new Response(`<r><Key>${p}x.mp3</Key><IsTruncated>false</IsTruncated></r>`, { status: 200 }); };
+      const have = await r2ListExisting({}); r2Fetch = real;
+      return JSON.stringify({ asked, c: have.has('c/x.mp3') }); })()"""))
+    assert r == {'asked': ['v1/f/', 'v1/m/', 'v1/zh/', 'v1/c/'], 'c': True}, r
+
 def test_the_world_goes_quiet_while_japanese_is_read(b):
     r = json.loads(ev(b, """(async () => { const seen = [];
       const real = speakLineNow; speakLineNow = async () => { seen.push(SND.ducked()); await new Promise((q) => setTimeout(q, 50)); };
