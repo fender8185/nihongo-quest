@@ -1051,7 +1051,7 @@ def test_the_picture_question_asks_for_the_word_with_same_group_options_and_neve
       out.none = makeVocabQuestion(plain, { forceFmt: 'v-pic' }) === null && !vocabFormats(plain).some(([f]) => f === 'v-pic');
       const umb = REG.vocab.find(x => picKey(x) === '傘'); const q = makeVocabQuestion(umb, { forceFmt: 'v-pic', kana: false });
       startSession('items', { items: [umb] }); const e = currentEntry(); e.preview = false; e.q = q; renderPractice();
-      out.card = { pic: !!document.querySelector('.q-stem.picstem svg.pic'), glyph: !!document.querySelector('.opts.glyph') === q.options.every(o => jaPlain(o.text).length <= 2), label: q.label };
+      out.card = { pic: !!document.querySelector('.q-stem.picstem svg.pic'), glyph: !!document.querySelector('.opts.glyph') === q.options.every(o => jaPlain(o.text).length === 1), label: q.label };
       SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
     r = json.loads(ev(b, js))
     assert all(r['fmts']) and r['bad'] == [] and r['none'], r

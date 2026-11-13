@@ -668,8 +668,9 @@ function renderPractice() {
   const answered = e.done;
   const sheet = answered && phoneLayout();   // 1.0.43: a phone shows the result in a panel from the bottom
   const longOpts = q.options.some(o => jaPlain(o.text).length > 14);   // one long option makes all four smaller, so their sizes match
-  // four options of one or two characters (百 目 日 白, ち ら き さ, ga gi gu ge): big, two by two
-  const glyph = !q.audioOptions && q.options.length === 4 && (q.kind === 'a' ? q.options.every(o => jaPlain(o.text).length <= 4) : q.options.every(o => o.jp && jaPlain(o.text).length <= 2));
+  // four 50音 options (ち ら き さ, ga gi gu ge) or four single characters (百 目 日 白): big, two by two. Not two-character words
+  // (2026-11-13, the user): 今年 色 玄関 毎週 came two by two while other 例句填空 came in four rows; one kind of question, one look
+  const glyph = !q.audioOptions && q.options.length === 4 && (q.kind === 'a' ? q.options.every(o => jaPlain(o.text).length <= 4) : q.options.every(o => o.jp && jaPlain(o.text).length === 1));
   const opts = q.options.map((o, i) => {
     let cls = 'opt';
     if (!o.jp) cls += ' zh';

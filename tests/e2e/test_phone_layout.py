@@ -109,13 +109,17 @@ def test_desktop_layout_is_unchanged(b):
     assert r2 == {'sheet': False, 'inCard': True, 'ghost': False}, r2   # the result stays under the options
 
 def test_sizes_word_in_the_middle_glyphs_big_order_meaning_by_its_sentence(b):
-    """2026-11-11: a word alone sits halfway between the question and the options; options of one or two characters come big,
-    two by two; 排序's meaning sits right above its sentence; a sentence keeps its last kana with its 。."""
+    """2026-11-11: a word alone sits halfway between the question and the options; 50音 options and single characters come big,
+    two by two (not two-character words, 2026-11-13); 排序's meaning sits right above its sentence; a sentence keeps its last kana with its 。."""
     js = "(async () => { " + FRESH + VOCAB_Q + """ const e = currentEntry(); const out = {}; const box = (s) => document.querySelector(s).getBoundingClientRect();
       const force = (pool, fmt, ok) => { for (const it of pool) { const q = makeQuestion(it, { forceFmt: fmt }); if (q && q.fmt === fmt && (!ok || ok(q))) { e.item = it; e.q = q; e.done = false; renderPractice(); return q; } } return null; };
       force(REG.vocab, 'v-meaning', q => q.stemClass === 'word');
       const ins = box('.q-instr'), st = box('.q-stem'), op = box('.q-card .opts');
       out.word = { size: getComputedStyle(document.querySelector('.q-stem')).fontSize, off: Math.round((st.top + st.bottom) / 2 - (ins.bottom + op.top) / 2), glyph: !!document.querySelector('.opts.glyph') };
+      const two = force(REG.vocab, 'v-cloze', q => q.options.every(o => jaPlain(o.text).length === 2));   // 2026-11-13: two-character words keep four rows
+      out.two = { found: !!two, glyph: !!document.querySelector('.opts.glyph'), rows: new Set([...document.querySelectorAll('.q-card .opt')].map(x => Math.round(x.getBoundingClientRect().top))).size };
+      const one = force(REG.vocab, 'v-cloze', q => q.options.every(o => jaPlain(o.text).length === 1) && q.options.every(o => o.jp));
+      out.one = !!one && !!document.querySelector('.opts.glyph');
       force(REG.kana, 'a-read');
       const o = [...document.querySelectorAll('.opts.glyph .opt')].map(x => x.getBoundingClientRect());
       out.kana = { n: o.length, rows: new Set(o.map(r => Math.round(r.top))).size, size: o.length ? getComputedStyle(document.querySelector('.opts.glyph .opt')).fontSize : '' };
@@ -127,6 +131,7 @@ def test_sizes_word_in_the_middle_glyphs_big_order_meaning_by_its_sentence(b):
     r = json.loads(ev(b, js, [("metrics", (390, 844))]))
     assert r['word']['size'] == '44px' and abs(r['word']['off']) <= 30 and not r['word']['glyph'], r
     assert r['kana'] == {'n': 4, 'rows': 2, 'size': '32px'}, r
+    assert r['two'] == {'found': True, 'glyph': False, 'rows': 4} and r['one'], r
     assert r['order'] == {'found': True, 'first': 'q-sub order-sub', 'outside': False}, r
     assert r['tail'], r
 
