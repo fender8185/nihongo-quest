@@ -20,6 +20,7 @@ const YEN = (() => {
       + (t ? (t === 1 ? '' : DIG[t]) + 'じゅう' : '') + (o ? (o === 4 ? 'よ' : DIG[o]) : '') + 'えん';
   }
   const priceMark = (n) => `{${yenStr(n)}円|${reading(n)}}`;   // as a line has it: shown with its reading, read out so
+  const priceTag = (n) => `<span class="mc-price"><small>${reading(n)}</small><b>${yenStr(n)}円</b></span>`;   // on a menu: the reading on a line of its own, both to the right (2026-11-13, the user: a ruby centred the number under it, askew)
   const item = (m, id) => ((M()[m] || {}).items || []).find((x) => x[0] === id) || null;
   const day = () => dateStr(TOWNEV.today());
   // the order as said: the hero's (the menu's own, else 「…を ください。」), then the keeper's with the price in it
@@ -57,15 +58,14 @@ const YEN = (() => {
   let at = null, zh = false;   // the menu open: { yard, t: the thing tapped, m: its menu }; its Chinese shown
   function open(yard, t) { if (!M()[t.buy]) return; at = { yard, t, m: t.buy }; zh = false; show(); }
   function show() {
-    const mu = M()[at.m], bal = yenBalance(), none = yenEarned() <= 0, book = state.purse.book, eats = mu.items.some((it) => LIMIT[opt(it).k]);
+    const mu = M()[at.m], bal = yenBalance(), none = yenEarned() <= 0, book = state.purse.book;   // how many more today not shown (the user: found out by having them)
     const row = (it) => {
-      if (!known(it)) { const v = word(it); return `<div class="mc-item locked"><span class="mc-pic">${pic(it)}</span><span class="mc-name">？？？</span><span class="mc-price">${ruby(priceMark(it[3]))}</span><span class="mc-lock" lang="zh-Hant">學會「${esc(v ? v.r || jaPlain(v.w) : '')}」這個字，就能點</span></div>`; }
+      if (!known(it)) { const v = word(it); return `<div class="mc-item locked"><span class="mc-pic">${pic(it)}</span><span class="mc-name">？？？</span>${priceTag(it[3])}<span class="mc-lock" lang="zh-Hant">學會「${esc(v ? v.r || jaPlain(v.w) : '')}」這個字，就能點</span></div>`; }
       const full = left(opt(it).k) <= 0;
       return `<button type="button" class="mc-item${full ? ' full' : ''}" data-act="yen-buy" data-item="${it[0]}"${!none && bal >= it[3] ? '' : ' disabled'}><span class="mc-pic">${pic(it)}</span>
-        <span class="mc-name">${ruby(it[1])}${book[it[0]] ? '<i class="mc-had" title="美食手帳裡有了">済</i>' : ''}</span><span class="mc-price">${ruby(priceMark(it[3]))}</span><span class="mc-zh" lang="zh-Hant">${esc(it[2])}</span></button>`;
+        <span class="mc-name">${ruby(it[1])}${book[it[0]] ? '<i class="mc-had" title="美食手帳裡有了">済</i>' : ''}</span>${priceTag(it[3])}<span class="mc-zh" lang="zh-Hant">${esc(it[2])}</span></button>`;
     };
     openModal(plain(mu.title), `<div class="menu-card${zh ? ' zh' : ''}" lang="ja">
-      ${eats ? `<p class="mc-today" lang="zh-Hant">今天還能吃 ${Math.max(0, left('f'))} 樣、喝 ${Math.max(0, left('d'))} 杯</p>` : ''}
       <div class="mc-list">${mu.items.map(row).join('')}</div>
       <div class="mc-foot"><span class="mc-purse">${yenIcon()}錢包 ${yenStr(Math.max(0, bal))} 円</span><button type="button" class="btn btn-sm" data-act="yen-zh">${zh ? '收起中文' : '中文'}</button></div>
       ${none ? '<p class="mc-none">錢包裡還沒有円。帶一趟郵輪導覽，就能拿到導遊費。</p>' : ''}</div>`, { width: 380, noFocus: true });
@@ -110,7 +110,7 @@ const YEN = (() => {
   // the face as it is had (2026-11-13, the user): its own eyes and mouth swapped for these, drawn over the face close-up (its box
   // 111.5 × 100; the eyes' middles at 31.8 / 79.2, 40 down; the mouth's at 55.75, 65) — drool: star eyes, the mouth open and a
   // drop running; chew: happy ^ ^ eyes, the mouth working (ω); bliss: heart eyes and a big smile — rosy cheeks all along
-  const EYE = { star: (x) => `<g transform="translate(${x} 40)"><path d="M0 -12 L3.2 -3.2 L12 0 L3.2 3.2 L0 12 L-3.2 3.2 L-12 0 L-3.2 -3.2 Z" fill="#ffd34a" stroke="#f0a020" stroke-width="1.4" stroke-linejoin="round"/><circle cx="-2.6" cy="-2.6" r="1.8" fill="#fff"/></g>`,
+  const EYE = { star: (x) => `<g transform="translate(${x} 40)"><g class="es-twinkle"><path d="M0 -12 L3.2 -3.2 L12 0 L3.2 3.2 L0 12 L-3.2 3.2 L-12 0 L-3.2 -3.2 Z" fill="#ffd34a" stroke="#f0a020" stroke-width="1.4" stroke-linejoin="round"/><circle cx="-2.6" cy="-2.6" r="1.8" fill="#fff"/></g></g>`,
     happy: (x) => `<path d="M${x - 8} 43 Q${x} 33 ${x + 8} 43" fill="none" stroke="#2a2730" stroke-width="3.2" stroke-linecap="round"/>`,
     heart: (x) => `<g transform="translate(${x} 41) scale(.62)"><path d="M0 14 C-9 7 -16 2 -16 -5 C-16 -10 -12 -13 -8 -13 C-4.6 -13 -2 -11 0 -8 C2 -11 4.6 -13 8 -13 C12 -13 16 -10 16 -5 C16 2 9 7 0 14 Z" fill="#f2557a"/><ellipse cx="-7" cy="-6" rx="3" ry="2" fill="#fff" fill-opacity=".7"/></g>` };
   const MOOD = {
@@ -128,7 +128,7 @@ const YEN = (() => {
       <div class="es-row"><div class="es-face" data-mood="drool">${HERO.head(state.look, 'face')}<svg class="es-mood" viewBox="0 0 111.5 100" aria-hidden="true">${BLUSH}${Object.entries(MOOD).map(([k, m]) => `<g class="m-${k}">${m}</g>`).join('')}</svg><span class="es-hearts" aria-hidden="true"></span></div>
         <div class="es-food"><svg class="pic es-pic" viewBox="0 0 100 100" aria-hidden="true"><defs><mask id="${id}"><rect width="100" height="100" fill="#fff"/>${drink ? '' : bites.map(([x, y, r], k) => `<g class="es-bite" data-k="${k}" fill="#000"><circle cx="${x}" cy="${y}" r="${r}"/>${[-1, 0, 1].map((j) => `<circle cx="${(x + j * r * 0.62).toFixed(1)}" cy="${(y + r * (j ? 0.78 : 0.95)).toFixed(1)}" r="${(r * 0.42).toFixed(1)}"/>`).join('')}</g>`).join('')}</mask></defs><circle class="pd" cx="50" cy="50" r="47"/>${o.dish ? `<g class="es-dish">${draw}</g>` : ''}<g class="es-g" mask="url(#${id})">${draw}</g></svg><i class="es-word" aria-hidden="true"></i><span class="es-crumbs" aria-hidden="true"></span></div></div>
       <div class="es-bubble"><p class="es-say" lang="ja"></p><p class="es-zh" hidden></p></div>
-      <div class="es-foot"><span class="es-left">今天還能吃 ${Math.max(0, left('f'))} 樣、喝 ${Math.max(0, left('d'))} 杯</span><button type="button" class="btn btn-sm es-zh-btn" hidden>中文</button></div>
+      <div class="es-foot"><button type="button" class="btn btn-sm es-zh-btn" hidden>中文</button></div>
       <button type="button" class="btn btn-primary es-ok" lang="ja" hidden>▶</button></div>`;
     document.body.appendChild(el);
     const mood = (m) => { el.querySelector('.es-face').dataset.mood = m; };

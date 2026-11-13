@@ -39,7 +39,7 @@ def test_a_can_from_the_machine_costs_its_price_and_goes_into_the_book(b):
       document.querySelector('[data-act="yen-zh"]').click(); const zh1 = document.querySelector('.menu-card').classList.contains('zh');
       document.querySelector('.mc-item[data-item="ocha"]').click(); await wait(300);
       return JSON.stringify({ price, zh0, zh1, talk: !!document.querySelector('.talk-card'), modal: !!document.querySelector('.mc-item'), bal: yenBalance(), book: Object.keys(state.purse.book) }); })()"""))
-    assert r['price'] == '130円ひゃくさんじゅうえん' and not r['zh0'] and r['zh1'], r   # the price read out above it; the Chinese on a tap
+    assert r['price'] == 'ひゃくさんじゅうえん130円' and not r['zh0'] and r['zh1'], r   # the price read out above it; the Chinese on a tap
     assert not r['talk'] and not r['modal'] and r['bal'] == 4870 and r['book'] == ['ocha'], r   # a machine: no talk
 
 def test_at_the_shokudo_he_orders_in_japanese_tome_says_the_price_and_he_sits_down_to_it(b):
@@ -48,12 +48,12 @@ def test_at_the_shokudo_he_orders_in_japanese_tome_says_the_price_and_he_sits_do
       const who = document.querySelector('.talk-name').firstChild.textContent, said = await talk(); await wait(300);
       await wait(1700); const es = document.querySelector('.eat-scene'), look = [], first = es.querySelector('.es-face').dataset.mood;
       while (es.querySelector('.es-face').dataset.mood === 'drool') { look.push(es.querySelector('.es-say').textContent); es.querySelector('.es-ok').click(); await wait(60); }   // how good it looks, then いただきます
-      const screen = es && { mood: es.querySelector('.es-face').dataset.mood, name: es.querySelector('.es-name').textContent, done: es.classList.contains('done'), bites: es.querySelectorAll('.es-bite.on').length, ok: !es.querySelector('.es-ok').hidden, left: es.querySelector('.es-left').textContent };
+      const screen = es && { mood: es.querySelector('.es-face').dataset.mood, name: es.querySelector('.es-name').textContent, done: es.classList.contains('done'), bites: es.querySelectorAll('.es-bite.on').length, ok: !es.querySelector('.es-ok').hidden, left: !!es.querySelector('.es-left') };
       const rave = []; while (document.querySelector('.eat-scene')) { rave.push(document.querySelector('.es-say').textContent); document.querySelector('.es-ok').click(); await wait(60); } await wait(400);
       return JSON.stringify({ who, said, bal: yenBalance(), sat: !!yh.use, book: state.purse.book.curry || '', screen, rave, first, look, looks: TOWN.MENU.shokudo.items[0][4].look.map((l) => l[0].replace(/\{([^|}]+)\|[^}]+\}/g, '$1')), says: TOWN.MENU.shokudo.items[0][4].say.map((l) => l[0].replace(/\{([^|}]+)\|[^}]+\}/g, '$1')), gone: !document.querySelector('.eat-scene'), stamp: !!document.querySelector('.yen-stamp'), today: state.purse.today }); })()"""))
     assert r['said'] == ['カレーを ください。', 'はいよ！ 500円ごひゃくえんね。'], r
     assert r['bal'] == 4500 and r['sat'] and r['book'], r
-    assert r['screen'] == {'name': 'カレー', 'done': True, 'bites': 6, 'ok': True, 'left': '今天還能吃 1 樣、喝 1 杯', 'mood': 'bliss'}, r   # had on a screen of its own: bitten till gone
+    assert r['screen'] == {'name': 'カレー', 'done': True, 'bites': 6, 'ok': True, 'left': False, 'mood': 'bliss'}, r   # had on a screen of its own: bitten till gone
     assert r['first'] == 'drool' and [x.replace(' ', '') for x in r['look']] == [x.replace(' ', '') for x in r['looks']], r   # star-eyed, how good it looks first
     assert [x.replace(' ', '') for x in r['rave']] == [x.replace(' ', '') for x in r['says']], r   # then he goes on about it, a line a tap
     assert r['gone'] and r['stamp'] and r['today']['f'] == 1 and r['today']['d'] == 0, r   # the first カレー: stamped
@@ -77,12 +77,12 @@ def test_two_foods_and_a_drink_a_day_then_he_is_full(b):
     r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ await go('shokudo');
       const buy = async (id) => { use('menu'); await wait(100); document.querySelector(`.mc-item[data-item="${id}"]`).click(); await wait(100); const said = await talk(); await wait(1700); while (document.querySelector('.eat-scene')) { document.querySelector('.es-ok').click(); await wait(40); } return said; };
       await buy('onigiri'); await buy('miso'); const bal = yenBalance();
-      use('menu'); await wait(100); const banner = document.querySelector('.mc-today').textContent, full = document.querySelector('.mc-item[data-item="curry"]').classList.contains('full');
+      use('menu'); await wait(100); const banner = !!document.querySelector('.mc-today'), full = document.querySelector('.mc-item[data-item="curry"]').classList.contains('full');
       document.querySelector('.mc-item[data-item="curry"]').click(); await wait(100); const said = await talk(), after = yenBalance();
       await go('street'); use('vend'); await wait(100); document.querySelector('.mc-item[data-item="ocha"]').click(); await wait(1700); const es = document.querySelector('.eat-scene'); const drink = es && es.classList.contains('drink'); while (document.querySelector('.eat-scene')) { document.querySelector('.es-ok').click(); await wait(40); }
       use('vend'); await wait(100); document.querySelector('.mc-item[data-item="water"]').click(); await wait(100); const said2 = await talk();
       return JSON.stringify({ bal, banner, full, said, after, drink, said2, end: yenBalance(), today: state.purse.today }); })()"""))
-    assert r['bal'] == 5000 - 150 - 100 and r['banner'] == '今天還能吃 0 樣、喝 1 杯' and r['full'], r
+    assert r['bal'] == 5000 - 150 - 100 and not r['banner'] and r['full'], r   # how many more today not shown (the user), the rest marked 吃不下了
     assert r['said'] == ['まだ おなかが いっぱいです。', 'また あした どうぞ！'] and r['after'] == r['bal'], r   # full: nothing paid
     assert r['drink'] and r['said2'] == ['もう のめません。'] and r['today']['f'] == 2 and r['today']['d'] == 1, r   # one drink, then no more
     assert r['end'] == r['bal'] - 130, r
