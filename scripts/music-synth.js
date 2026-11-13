@@ -115,7 +115,24 @@ window.MUSIC_SYNTH = (() => {
       comp: { inst: 'shamisen', vol: 0.08, roll: 0.05, pats: form('A B A', { A: rep(8, []), B: rep(8, [[2, 1], [6, 1]]) }) },
       parts: [{ inst: 'flute', vol: 0.055, mel: form('A B A', {
         A: '-:8 | -:4 F5:2 E5:2 | -:8 | -:4 B4 C5 B4:2 | -:8 | -:6 E5 F5 | -:8 | -:4 C5 B4 A4:2',
-        B: 'A5:4 F5:2 E5:2 | E5:6 C5:2 | F5:3 E5 C5:2 A4:2 | E5:6 -:2 | C5:2 E5:2 F5:2 A5:2 | A5:3 F5 E5:4 | F5:3 E5 C5:2 B4:2 | B4:6 -:2' }) }] }
+        B: 'A5:4 F5:2 E5:2 | E5:6 C5:2 | F5:3 E5 C5:2 A4:2 | E5:6 -:2 | C5:2 E5:2 F5:2 A5:2 | A5:3 F5 E5:4 | F5:3 E5 C5:2 B4:2 | B4:6 -:2' }) }] },
+    // みなと案内: the cruise tour's own (2026-11-13, the user: the tour wanted music) — a sightseeing stroll in F, lightly swung: a
+    // bright flute over pizzicato on the off beats, a walking bass, brushes and a soft ride; A A' B A'', the music box answering
+    // the flute in A', the last bar settling home and back into the first
+    minato: { bpm: 120, peak: 0.42, bar: 8, tail: 0, swing: 0.15, lead: 'flute', leadVol: 0.1, bass: false, pad: 0.008, walk: 0.06,
+      chords: form('A A2 B A3', {
+        A: ['F3 A3 C4 E4', 'D3 F3 A3 C4', 'G3 A#3 D4 F4', 'C3 E3 G3 A#3', 'F3 A3 C4 E4', 'A3 C4 E4 G4', 'A#3 D4 F4 A4', 'C3 E3 G3 A#3'],
+        A2: ['F3 A3 C4 E4', 'D3 F3 A3 C4', 'G3 A#3 D4 F4', 'C3 E3 G3 A#3', 'F3 A3 C4 E4', 'A3 C4 E4 G4', 'G3 A#3 D4 F4', 'F3 A3 C4 E4'],
+        B: ['A#3 D4 F4 A4', 'C3 E3 G3 C4', 'A3 C4 E4 G4', 'D3 F3 A3 C4', 'G3 A#3 D4 F4', 'C3 E3 G3 A#3', 'D3 F#3 A3 C4', 'C3 E3 G3 A#3'],
+        A3: ['F3 A3 C4 E4', 'D3 F3 A3 C4', 'G3 A#3 D4 F4', 'C3 E3 G3 A#3', 'F3 A3 C4 E4', 'A3 C4 E4 G4', 'C3 E3 G3 A#3', 'F3 A3 C4 E4'] }),
+      mel: form('A A2 B A3', {
+        A: 'C5 F5 A5:2 G5 F5 A5:2 | D6:3 C6 A5:4 | A#5 A5 G5 F5 G5:2 A#5:2 | A5:2 G5 F5 E5:2 C5:2 | C5 F5 A5:2 G5 F5 A5:2 | C6:3 A5 E5:2 G5:2 | F5 G5 A5 A#5 D6:2 C6 A#5 | A5:2 G5:2 -:2 C5 E5',
+        A2: 'C5 F5 A5:2 G5 F5 A5:2 | D6:3 C6 A5:4 | A#5 A5 G5 F5 G5:2 A#5:2 | A5:2 G5 F5 E5:2 C5:2 | C5 F5 A5:2 G5 F5 A5:2 | C6:3 A5 E5:2 G5:2 | A#5 A5 G5 A#5 E5:2 G5:2 | F5:2 A5 C6 F6:2 -:2',
+        B: 'D6:2 C6 A#5 F5:4 | E5 G5 C6 E6 D6:2 C6:2 | C6:2 A5 E5 A5:4 | F5 A5 D6 F6 E6:2 D6:2 | D6:2 A#5 G5 A#5:2 D6:2 | C6:2 A#5 G5 E5:4 | A5 C6 D6 C6 A5:2 F#5:2 | G5:2 A#5:2 C6 A#5 G5 E5',
+        A3: 'C5 F5 A5:2 G5 F5 A5:2 | D6:3 C6 A5:4 | A#5 A5 G5 F5 G5:2 A#5:2 | A5:2 G5 F5 E5:2 C5:2 | C5 F5 A5:2 G5 F5 A5:2 | C6:3 A5 E5:2 G5:2 | A#5 A5 G5 A#5 E5:2 G5:2 | F5:2 C5 A4 F4:2 -:2' }),
+      comp: { inst: 'pizz', vol: 0.06, pats: rep(8, [[2, 1], [6, 1]]) },
+      drums: [{ inst: 'brush', vol: 0.05, pats: ['....x.......x...'] }, { inst: 'ride', f: 2400, vol: 0.02, pats: ['x.x.x.x.x.x.x.x.'] }],
+      parts: [{ inst: 'box', vol: 0.05, mel: '-:64 | -:8 | -:4 F6 E6 C6 A5 | -:8 | -:6 C6 E6 | -:8 | -:4 E6 C6 A5 G5 | -:8 | -:8' }] }
   };
   const NOTE = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
   const hz = (n) => { const m = /^([A-G]#?)(\d)$/.exec(n); return 440 * Math.pow(2, ((+m[2] + 1) * 12 + NOTE[m[1]] - 69) / 12); };

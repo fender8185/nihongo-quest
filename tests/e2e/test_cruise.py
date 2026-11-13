@@ -120,6 +120,46 @@ def test_takahashi_is_met_early_and_his_castle_desk_is_empty_while_he_is_out_wit
       return JSON.stringify({ before, after: !!y().querySelector('.npc[data-npc=takahashi]') }); })()"""))
     assert r == {'before': True, 'after': False}, r
 
+def test_together_they_speak_as_one_quick_retort_a_laugh_is_a_laugh_and_a_cry_is_not_read(b):
+    # 2026-11-13, the user: one even voice reading みんな's さむい and あはは, or 吉本's いたい, sounded like a robot
+    r = json.loads(ev(b, """(async () => { const asked = [], fx = [], realE = engineBlob, realF = window.fetch;
+      engineBlob = async (text, g, opt) => { asked.push(opt && opt.cast); return null; };
+      window.fetch = async (url) => { fx.push(String(url)); return new Response(new Uint8Array(10), { status: 404 }); };
+      const cfg = ttsConfig; ttsConfig = () => Object.assign({}, cfg(), { engine: 'cloud' });
+      await speakAs('all', 'さむっ！'); const chorus = asked.splice(0);
+      await speakAs('all', 'あはは！'); await speakAs('yoshimoto', 'いたい！ いたい！ カニが…！', 'ouch');
+      engineBlob = realE; window.fetch = realF; ttsConfig = cfg;
+      const listed = []; CRUISE.lines((who, ja) => listed.push([who, ja]));
+      const of = (ja) => listed.filter((l) => l[1] === ja).map((l) => l[0]);
+      const sam = TOWN.CRUISE.TRIPS[0].stops.flatMap((s) => s.lines).find((l) => Array.isArray(l) && l[0] === 'all' && l[1] === 'さむっ！');
+      return JSON.stringify({ chorus, others: asked, fx: fx.map((u) => u.replace(/^.*\//, '')), samu: of('さむっ！'), laugh: of('あはは！'), ouch: of('いたい！ いたい！ カニが…！'),
+        snd: sam[3], all: listed.some((l) => l[0] === 'all') }); })()"""))
+    five = ['kaneda', 'umeko', 'rina', 'yoshimoto', 'ken']
+    assert r['chorus'] == five + [None] and r['others'] == [], r   # five of them at once (no clips here: then as any line); the laugh and the cry: no voice
+    assert r['fx'] == ['laugh-1.m4a', 'ouch-1.m4a'], r
+    assert sorted(set(r['samu'])) == sorted(five) and r['laugh'] == [] and r['ouch'] == [] and not r['all'], r   # the generator makes each chorus voice's clip, no laugh or cry
+    assert r['snd'] == {'snd': 'brr'}, r   # a cold gust under it
+
+def test_the_tour_has_its_own_music_where_the_passengers_are_and_the_ship_its_horn(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ const played = [], realP = SND.play; SND.play = (n, o) => { played.push(n); };
+      await call(); SND.play = realP;
+      const at = (r) => CRUISE.tune(r), on = state.cruise.on;
+      const here = at('harbor'), there = at('town'); on.place = 'izakaya'; const iz = at('izakaya'); on.place = 'harbor';
+      const rec = MUSIC.RECORDS.find((x) => x.id === 'minato');
+      return JSON.stringify({ here, there, iz, horn: played.filter((n) => n === 'shiphorn').length, steps: played.includes('steps-wood'), rec: rec && [rec.place, rec.file], mine: MUSIC.have ? null : 0 }); })()"""))
+    assert r['here'] == 'minato' and r['there'] == '' and r['iz'] == '', r   # with them, not elsewhere; the 居酒屋 keeps its own
+    assert r['horn'] == 2 and r['steps'] and r['rec'] == ['cruise', 'music/minato-1.m4a'], r   # far out and as it docks; down the gangway
+
+def test_on_the_main_road_they_keep_to_the_pavement_and_a_bus_pulls_in_at_the_stop(b):
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ await call();
+      await drive(() => state.cruise.on && state.cruise.on.step >= 18, 120000);
+      await until(() => document.querySelector('[data-act=cruise-next]')); document.querySelector('[data-act=cruise-next]').click();
+      await until(() => document.querySelector('.talk-card')); await wait(400);
+      const XY = (e) => { const m = /translate\\(([-\\d.]+)px,\\s*([-\\d.]+)px\\)/.exec(e.style.transform); return [+m[1], -m[2]]; };
+      const ys = [...document.querySelectorAll('#view .tourist')].map((e) => XY(e)[1]);
+      return JSON.stringify({ place: y().dataset.place, step: state.cruise.on.step, bus: !!y().querySelector('.cr-bus'), road: ys.filter((Y) => Y > STREET.road[0] && Y < STREET.road[1]).length }); })()"""))
+    assert r['place'] == 'street' and r['bus'] and r['road'] == 0, r   # the far pavement (Y 116–134), not the road
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
 if __name__ == "__main__":

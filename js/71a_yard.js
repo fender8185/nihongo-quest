@@ -349,9 +349,11 @@ const MUSIC = (() => {
     { id: 'yukiasa', file: 'music/yukiasa-1.m4a', name: '雪の朝', kana: 'ゆきのあさ', zh: '下雪的早晨', style: '鋼琴・音樂盒', color: '#8fb4d8' },
     { id: 'kissa', file: 'music/kissa-1.m4a', name: '喫茶しずく', kana: 'きっさしずく', zh: 'しずく咖啡館', style: '爵士鋼琴・低音提琴', color: '#8a5a3a', vol: 0.35 },
     { id: 'obake', file: 'music/obake-1.m4a', name: 'おばけの夜', kana: 'おばけのよる', zh: '妖怪之夜', style: '音樂盒・撥弦', color: '#7a4ab0' },
-    { id: 'chochin', place: 'izakaya', file: 'music/chochin-1.m4a', name: '赤ちょうちん', kana: 'あかちょうちん', zh: '紅燈籠', style: '三味線・笛', color: '#c8463a', vol: 0.45 }
+    { id: 'chochin', place: 'izakaya', file: 'music/chochin-1.m4a', name: '赤ちょうちん', kana: 'あかちょうちん', zh: '紅燈籠', style: '三味線・笛', color: '#c8463a', vol: 0.45 },
+    { id: 'minato', place: 'cruise', file: 'music/minato-1.m4a', name: 'みなと案内', kana: 'みなとあんない', zh: '港町導覽', style: '笛・撥弦・低音提琴', color: '#3f7ac8', vol: 0.55 }
   ];
-  // the record a place plays by itself: the izakaya's own, the café's jazz out of its door while it is open, the festival's at the shrine
+  // the record a place plays by itself: the izakaya's own, the café's jazz out of its door while it is open, the festival's at the shrine;
+  // and where the cruise's passengers are while a trip is under way, its own (CRUISE.tune, 2026-11-13: the user missed music on the tour)
   const PLACE_REC = { izakaya: () => 'chochin', town: () => (TOWNEV.shopState('cafe') === 'open' ? 'kissa' : ''), shrine: () => (TOWNEV.festival() ? 'matsuri' : '') };
   const have = () => RECORDS.filter((r) => !r.place && (r.own || owns(r.id)));
   // a record sold in 古道具屋, as its card shows it: half out of its sleeve, its name on the sleeve
@@ -427,7 +429,7 @@ const MUSIC = (() => {
     if (!mvol() || document.hidden) return null;
     const r = currentRoute().name;
     if (inRoom()) return state.placed && state.placed.gramophone && owns('gramophone') && !state.musicOff ? current() || null : null;
-    const id = PLACE_REC[r] && PLACE_REC[r]();
+    const id = (typeof CRUISE !== 'undefined' && CRUISE.tune(r === 'outside' ? 'yard' : r)) || (PLACE_REC[r] && PLACE_REC[r]());
     return (id && RECORDS.find((x) => x.id === id)) || null;
   }
   function sync() { try { tune(); } catch (e) { console.error(e); } }   // music never breaks a page

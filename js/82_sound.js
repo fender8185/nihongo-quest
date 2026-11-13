@@ -57,7 +57,11 @@ const SND = (() => {
     chime: (c, to, v) => [[784, 0], [988, 0.32], [1175, 0.64], [1568, 0.96]].forEach(([f, at]) => { tone(c, to, f, at, 1.1, 0.12 * v); tone(c, to, f * 2.76, at, 0.4, 0.02 * v); }),   // ピンポンパンポーン
     bike: (c, to, v) => [0, 0.16].forEach((at) => [2900, 4150].forEach((f, k) => tone(c, to, f, at, 0.5, (k ? 0.04 : 0.09) * v))),   // a bicycle's bell
     needle: (c, to, v) => { noise(c, to, 0, 0.05, 0.6 * v, 900, 0, 0.8); [0.12, 0.3, 0.41, 0.6].forEach((at) => noise(c, to, at, 0.015, 0.25 * v, 2600, 0, 2)); },   // the needle set down
-    knock: (c, to, v) => [0, 0.2].forEach((at) => tone(c, to, 190, at, 0.14, 0.9 * v, 'sine', 80))   // two dull taps on wood (the knock before its file, 1.4.0)
+    knock: (c, to, v) => [0, 0.2].forEach((at) => tone(c, to, 190, at, 0.14, 0.9 * v, 'sine', 80)),   // two dull taps on wood (the knock before its file, 1.4.0)
+    // the cruise (2026-11-13): a cold gust after 吉本's pun (ヒュ〜, under みんな's さむっ！), the newly-weds' ポワン, a camera's カシャ
+    brr: (c, to, v) => { noise(c, to, 0, 1.5, 0.55 * v, 1700, 420, 4); noise(c, to, 0.1, 1.2, 0.25 * v, 900, 300, 2); tone(c, to, 1500, 0.05, 1.3, 0.035 * v, 'sine', 640); },
+    heart: (c, to, v) => { tone(c, to, 660, 0, 0.32, 0.12 * v, 'sine', 990); tone(c, to, 880, 0.16, 0.5, 0.1 * v, 'sine', 1320); SYNTH.sparkle(c, to, 0.6 * v); },
+    shutter: (c, to, v) => { noise(c, to, 0, 0.035, 0.7 * v, 3200, 0, 1.5); noise(c, to, 0.09, 0.05, 0.5 * v, 2200, 0, 1.5); }
   };
   // one sound now (or after delay s): its file, else its SYNTH; vol, rate, a slice [offset, length] of the file
   function play(name, o = {}) {

@@ -15,6 +15,13 @@ const MARK = /\{([^|}]+)\|([^|}]+)(?:\|([^}]+))?\}/g;
 
 function loadTown(file = FILE) { return new Function(fs.readFileSync(file, 'utf8') + '\n;return TOWN;')(); }
 
+// what a cruise line may sound with (snd: SND's — made in js/82_sound.js or a file in sounds/) or say instead of being read out
+// (cry: VOICE_FX in js/80_tts.js)
+const ROOT = path.join(__dirname, '..');
+const SOUNDS = new Set([...fs.readdirSync(path.join(ROOT, 'sounds')).map((f) => (/^(.+)-\d+\.m4a$/.exec(f) || [])[1]).filter(Boolean),
+  ...[...fs.readFileSync(path.join(ROOT, 'js', '82_sound.js'), 'utf8').matchAll(/^ {4}(\w+): \(c, to, v\)/gm)].map((m) => m[1])]);
+const CRIES = new Set([...((/const VOICE_FX = \{([^}]*)\}/.exec(fs.readFileSync(path.join(ROOT, 'js', '80_tts.js'), 'utf8')) || ['', ''])[1]).matchAll(/(\w+):/g)].map((m) => m[1]));
+
 // what the hero can wear (古道具屋's wear and clothes): a chat line may be about one (when.look)
 function loadWares(file = path.join(__dirname, '..', 'js', '71d_wares.js')) {
   return new Set([...fs.readFileSync(file, 'utf8').matchAll(/\{ id: '([a-zA-Z0-9]+)', kind: '(?:wear|clothes)'/g)].map((m) => m[1]));
@@ -121,8 +128,18 @@ function check(T, D, opts = {}) {
         if (s.need !== undefined && !cast[s.need]) bad('ref', sw, `needs no one called ${s.need}`);
         Object.keys(s.cast || {}).forEach((id) => { if (!cast[id]) bad('ref', sw, `no one called ${id} to bring out`); });
         if (s.go !== undefined && !['bus', 'walk'].includes(s.go)) bad('cruise', sw, `go is bus or walk, not ${s.go}`);
+        if (s.guide !== undefined && (!Array.isArray(s.guide) || s.guide.length !== 2)) bad('cruise', sw, 'guide is [X, Y] (a room: [u, v])');
+        if (s.bus !== undefined && (s.at !== 'street' || !Number.isFinite(s.bus))) bad('cruise', sw, 'a bus pulls in on the street only, at an X');
         if (s.seat && !s.room) bad('cruise', sw, 'they sit down in a room only');
         talkLines(s.lines, u, sw, sayer);
+        (s.lines || []).forEach((l, i) => {
+          if (!Array.isArray(l) || l[3] === undefined) return;
+          const o = l[3], at = `${sw}#${i}`;
+          if (!o || typeof o !== 'object' || Object.keys(o).some((x) => !['snd', 'cry', 'move'].includes(x))) { bad('cruise', at, 'a line\'s fourth is { snd, cry, move }'); return; }
+          if (o.move !== undefined && (!Array.isArray(o.move) || !aboard(o.move[0]) || !Array.isArray(o.move[1]))) bad('cruise', at, 'move is [a passenger aboard, [X, Y]]');
+          if (o.snd !== undefined && !SOUNDS.has(o.snd)) bad('ref', at, `no sound ${o.snd}`);
+          if (o.cry !== undefined && !CRIES.has(o.cry)) bad('ref', at, `no cry ${o.cry}`);
+        });
         asks += (s.lines || []).filter((l) => !Array.isArray(l)).length;
         (s.after || []).forEach(([id, ja], i) => { sayer(id, `${sw}.after${i}`); text(ja, u, `${sw}.after${i}`); });
       });

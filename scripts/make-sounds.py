@@ -117,6 +117,9 @@ FREESOUND = {
     813355: ('bulkmoerls', "813/813355_17511816-hq.mp3"),  # 1min Clock Ticking - CC0
     840192: ('pierreluclandry', "840/840192_14540612-hq.mp3"),  # Turning a page in a book
     843246: ('nicotep', "843/843246_7529214-hq.mp3"),  # Venise_small_Boat_Lapping_water
+    352374: ('Kinoton', "352/352374_2247456-hq.mp3"),  # Cruise Ship Horn, 3x
+    383207: ('Kinoton', "383/383207_2247456-hq.mp3"),  # Sitcom Laughter 9x, Small Audience
+    362335: ('balloonhead', "362/362335_2188-hq.mp3"),  # Ow.wav
 }
 
 def http_get(url, referer=None):
@@ -395,6 +398,11 @@ ONESHOTS = {
     "bus": dict(parts=[("fs454420", 3.7, 6.2, 0.0), ("fs520753", 0.35, 0.95, 1.6, -3)], hp=40, fin=0.06, fout=0.5),
     "dishes": dict(parts=[("fs193060", 1.30, 2.12)], hp=100, fout=0.15),
     "cheers": dict(parts=[("fs754317", 1.06, 1.68)], hp=150, fout=0.15),
+    # the cruise (2026-11-13): the liner's horn as it comes in and leaves (its last blast and the harbour's echo after it); the
+    # passengers' laugh (みんな's あはは, a laugh not read aloud); a man's yelp (a cry not read aloud)
+    "shiphorn": dict(parts=[("fs352374", 12.0, 19.5)], hp=50, end_db=-45, fout=1.6),
+    "laugh": dict(parts=[("fs383207", 10.7, 14.4)], hp=100, fout=0.6),
+    "ouch": dict(parts=[("fs362335", 0.0, 0.64)], hp=100, fout=0.12),   # 吉本 pinched by the crab
 }
 
 

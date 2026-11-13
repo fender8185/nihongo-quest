@@ -57,7 +57,7 @@ const CRUISE = (() => {
   // ---- the ship (in the harbour's land, its units: y down) ----
   // docked along the quay behind the boats and 漁協, its stern clear of the lighthouse, its bow to the right; far out it is the same
   // drawing a twelfth the size on the horizon on the left (FAR), and it comes in from there
-  const ANCHOR = [885, 226], FAR = { x: 215, y: 119, s: 0.085 }, HINGE = [842, 184], FOOT = [792, 248];
+  const ANCHOR = [885, 226], FAR = { x: 215, y: 119, s: 0.085 }, HINGE = [842, 184], FOOT = [890, 248];   // the gangway down to the right, clear of the boats
   const DOOR_W = [HINGE[0] - 600, 370 - HINGE[1] + 2], FOOT_W = [FOOT[0] - 600, 370 - FOOT[1]];   // the same in the hero's units
   const xf = (ax, ay, s) => `translate(${(ax - s * ANCHOR[0]).toFixed(1)} ${(ay - s * ANCHOR[1]).toFixed(1)}) scale(${s.toFixed(4)})`;
   const rampT = (u) => `translate(${HINGE[0]} ${HINGE[1]}) scale(${Math.max(0.001, u).toFixed(3)}) translate(${-HINGE[0]} ${-HINGE[1]})`;
@@ -93,8 +93,8 @@ const CRUISE = (() => {
       <g class="cs-smoke">${[[776, -66, 6], [770, -80, 8], [778, -96, 10], [768, -114, 12]].map(([x, y, r], i) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" fill-opacity="${(0.5 - i * 0.1).toFixed(2)}"/>`).join('')}</g>
       ${decks.map(([d, k]) => deck(d, k)).join('')}
       <path d="M898 28 V12 Q898 6 904 6 H1022 Q1040 8 1046 28 Z" ${W}/><path d="M906 11 H1030 L1036 20 H906 Z" ${hc('#22355c', '#ffd98a')}/><path d="M1046 28 L1062 18 V24 Z" ${Wd}/>
-      ${parasol(612, 98, '#d0453c')}${parasol(632, 74, '#3f7ac8')}${parasol(652, 50, '#e6c23a')}${parasol(680, 28, '#d0453c')}
-      <path d="M686 28 C660 22 662 6 684 6 C706 6 706 -10 686 -12" fill="none" ${hs('#e6c23a', '#5a4a3a')} stroke-width="5" stroke-linecap="round"/><path d="M688 -12 V28" ${hs('#6a6a74', '#2a2c50')} stroke-width="2"/>
+      ${parasol(609, 122, '#d0453c')}${parasol(626, 98, '#3f7ac8')}${parasol(646, 74, '#e6c23a')}${parasol(718, 28, '#d0453c')}
+      <path d="M686 50 C660 44 662 28 684 28 C706 28 706 12 686 10" fill="none" ${hs('#e6c23a', '#5a4a3a')} stroke-width="5" stroke-linecap="round"/><path d="M688 10 V50" ${hs('#6a6a74', '#2a2c50')} stroke-width="2"/>
       ${boats}
       <path d="M580 148 L1150 146 L1198 128 Q1186 176 1158 226 L604 226 Q588 214 584 190 Z" ${W}/>
       <path d="M580 148 L1150 146 L1198 128 L1196 136 L1150 152 L581 154 Z" ${dk}/><path d="M582 150.6 L1150 148.6 L1196 131" fill="none" ${gold} stroke-width="1.6"/>
@@ -219,21 +219,22 @@ const CRUISE = (() => {
     const p = pick(idle), [X, Y] = p.pos, to = S.indoor ? isoClamp([X + rnd(-14, 14), Y + rnd(-5, 5)], 1) : [X + rnd(-14, 14), Math.max(14, Math.min(walkTop(S.place, X), Y + rnd(-5, 5)))];
     walkTo(p, to, { path: [p.pos, to], v: 45, done: () => turnTo(p, yh.X) });
   }
-  // where a stop puts them: its points in the hero's units (a room's floor [u, v] turned into them), 高橋 beside the hero, the crowd
-  // within a phone's view of him; two rows close together (three when many), the newly-weds side by side, a different order each stop
+  // where a stop puts them: its points in the hero's units (a room's floor [u, v] turned into them), 高橋 beside the hero on the side
+  // away from the crowd (or where the stop says: guide), the crowd within a phone's view of him; two rows close together (three when
+  // many, or on a narrow pavement: rows), the newly-weds side by side, a different order each stop
   const heroAt = (s) => (s.room ? isoXY(...s.hero) : s.hero);
-  const guideAt = (s) => (s.room ? isoXY(s.hero[0] + 1.7, s.hero[1] - 0.5) : [s.hero[0] + 64, s.hero[1] + 6]);
+  const guideAt = (s) => (s.guide ? (s.room ? isoXY(...s.guide) : s.guide) : s.room ? isoXY(s.hero[0] + 1.7, s.hero[1] - 0.5) : [s.hero[0] - Math.sign(s.crowd[0] - s.hero[0] || -1) * 64, s.hero[1] + 6]);
   const crowdAt = (s) => { if (s.room) return isoXY(...s.crowd); const dx = s.crowd[0] - s.hero[0]; return [s.hero[0] + Math.sign(dx) * Math.min(112, Math.abs(dx)), s.crowd[1]]; };
-  function grid(n) {
-    const rows = n <= 10 ? 2 : 3, per = Math.ceil(n / rows), out = [];
-    for (let i = 0; i < n; i++) { const r = Math.floor(i / per), c = i % per, cnt = Math.min(per, n - r * per); out.push([(c - (cnt - 1) / 2) * 32 + (r % 2 ? 12 : 0), (rows - 1 - r) * 13 - 6]); }
+  function grid(n, tight) {
+    const rows = tight || n > 10 ? 3 : 2, dy = tight ? 6 : 13, per = Math.ceil(n / rows), out = [];
+    for (let i = 0; i < n; i++) { const r = Math.floor(i / per), c = i % per, cnt = Math.min(per, n - r * per); out.push([(c - (cnt - 1) / 2) * 32 + (r % 2 ? 12 : 0), (rows - 1 - r) * dy - (rows - 1) * dy / 2]); }
     return out;
   }
   function slots(s, i, ids) {
     const units = [];
     ids.forEach((id) => { if (id === 'ai' && ids.includes('ken')) return; units.push(id === 'ken' && ids.includes('ai') ? ['ken', 'ai'] : [id]); });
     const r = units.length ? (i * 3) % units.length : 0, order = units.slice(r).concat(units.slice(0, r)).flat();
-    const [cx, cy] = crowdAt(s), f = S.indoor ? 1 : yScale(cy) / yScale(60), g = grid(order.length), out = {};
+    const [cx, cy] = crowdAt(s), f = S.indoor ? 1 : yScale(cy) / yScale(60), g = grid(order.length, s.rows === 3), out = {};
     order.forEach((id, k) => { const q = [cx + g[k][0] * f + rnd(-4, 4), cy + g[k][1] * (S.indoor ? 0.8 : 1) + rnd(-2, 2)]; out[id] = S.indoor ? isoClamp(q, 1) : q; });
     return out;
   }
@@ -248,7 +249,7 @@ const CRUISE = (() => {
   function frameAll(s) {
     if (!alive() || !yCamMax()) return;
     const [cx] = crowdAt(s), g = guideAt(s)[0], w = S.yard.querySelector('.yworld');
-    YCAM.free = true; w.classList.add('glide'); yCamTo(S.yard, (cx + Math.sign(cx - g) * 50 + g) / 2); setTimeout(() => w.classList.remove('glide'), 400);
+    YCAM.free = true; w.classList.add('glide'); yCamTo(S.yard, s.cam !== undefined ? s.cam : (cx + Math.sign(cx - g) * 50 + g) / 2); setTimeout(() => w.classList.remove('glide'), 400);   // cam: where a stop wants it
   }
   // the townsfolk a stop has: about already (held where they are) or brought out for it, gone again at the next stop
   function bringOut(s) {
@@ -256,7 +257,7 @@ const CRUISE = (() => {
     Object.entries(s.cast || {}).forEach(([id, q]) => {
       const c = TOWN.CAST[id]; if (!c) return;
       const [X, Y] = s.room ? isoXY(...q) : q, here = S.yard.querySelector(`.npc[data-npc="${id}"]`);
-      if (here && !S.indoor) { TOWNLIFE.hold(id); return; }   // out of doors: where they are
+      if (here && !S.indoor) { TOWNLIFE.bring(id, [X, Y]); return; }   // out of doors: over to their spot for it (a keeper in front of their shop)
       if (here) { here.style.transform = `translate(${X.toFixed(1)}px,${(-Y).toFixed(1)}px) scale(${(yScale(Y) * (c.size || 1)).toFixed(3)})`; here.style.zIndex = String(isoZ(...isoUV(X, Y))); here.classList.remove('bench', 'kneel', 'back'); return; }   // in a room: over to them (トメ from her counter)
       const b = document.createElement('div');
       b.className = `hero npc npc-${id} cr-extra`; b.innerHTML = TOWNEV.art(id, S.place);
@@ -284,7 +285,7 @@ const CRUISE = (() => {
   function run(i) {
     if (!alive() || S.busy) return;
     const t = current(), s = t.stops[i], ids = [...S.ppl.keys()].filter((id) => id !== 'takahashi'), at = slots(s, i, ids), sc = S;
-    S.busy = true; bar(); bringOut(s);
+    S.busy = true; bar(); bringOut(s); busIn(s);
     let left = 1, fin = false;
     const there = () => { if (--left > 0 || fin) return; fin = true; setTimeout(begin, 250); };
     const begin = () => {
@@ -305,10 +306,22 @@ const CRUISE = (() => {
       left++; walkTo(p, lost ? s.lost[1] : q ? isoXY(q[0], q[1]) : at[id], { delay: k * 80 + rnd(0, 220), v: id === 'umeko' ? 160 : id === 'michiyama' ? 75 : rnd(88, 115), done: () => { if (q) sit(p, q); there(); } });
     });
     there();
-    S.t.push(setTimeout(() => { if (!fin) { left = 1; there(); } }, 5200));   // a walk cut short (the hero sent elsewhere): on after 5 s all the same
+    const late = (n) => { if (fin || S !== sc) return; if (n < 12 && [...sc.ppl.values()].some((p) => p.walk && !p.away)) { sc.t.push(setTimeout(() => late(n + 1), 400)); return; } left = 1; there(); };
+    S.t.push(setTimeout(() => late(0), 5200));   // a walk cut short (the hero sent elsewhere): on after 5 s all the same — those still on their way (a long way over) waited for a few seconds more
   }
+  // a stop's bus (bus: the X it stops at): in along the road as the stop begins, away as it ends — someone behind it is aboard
+  function busIn(s) {
+    if (s.bus === undefined || S.yard.querySelector('.bus')) return;
+    const lane = BUS_LANE[S.place] ?? 92, k = yScale(lane) * 2.1, b = document.createElement('div');
+    b.className = 'bus cr-bus'; b.setAttribute('aria-hidden', 'true');
+    b.style.cssText = `margin-left:${Math.round(s.bus)}px;bottom:${lane}px;z-index:${300 - lane};--k:${k.toFixed(3)}`;
+    b.innerHTML = `<svg viewBox="-140 -126 280 140">${BUS_ART}</svg>`;
+    S.yard.querySelector('.yworld').appendChild(b); requestAnimationFrame(() => b.classList.add('in')); SND.play('bus');
+  }
+  function busOut() { const b = alive() && S.yard.querySelector('.cr-bus'); if (!b) return; b.classList.add('go'); SND.play('bus', { vol: 0.6 }); setTimeout(() => b.remove(), 900); }
   function onLine(L) {
     if (!alive() || !L) return;
+    if (L.move) { const p = S.ppl.get(L.move[0]); if (p) walkTo(p, L.move[1], { v: 90, done: () => turnTo(p, yh.X) }); }   // over somewhere as they say it (道山 onto the bus)
     if (L.id === 'all') [...S.ppl.keys()].filter((id) => id !== 'takahashi').forEach((id, k) => setTimeout(() => hop(id, 'cheer'), k * 60));
     else if (S.ppl.has(L.id)) hop(L.id);
   }
@@ -316,6 +329,7 @@ const CRUISE = (() => {
     if (!alive()) return;
     const t = current(), s = t.stops[i], on = cs().on;
     on.step = i + 1; on.place = S.place; saveState();
+    if (s.bus !== undefined) busOut();
     if (s.lost) { const p = S.ppl.get(s.lost[0]); if (p) { p.away = false; walkTo(p, [crowdAt(s)[0] + rnd(-40, 40), s.room ? crowdAt(s)[1] : s.crowd[1] + rnd(-8, 8)], { v: 160, done: () => turnTo(p, yh.X) }); } }
     if (s.bye) { farewell(t, s); return; }
     const ids = [...S.ppl.keys()].filter((id) => id !== 'takahashi');
@@ -378,7 +392,7 @@ const CRUISE = (() => {
     if (btn) btn.remove();
     S.ct = setTimeout(chatter, 6000); S.jt = setTimeout(jostle, 8000);
     yHeroWalk(y, [FOOT_W[0] - 70, 108], () => { yh.back = true; yh.turn = false; yHeroPlace(y); });
-    yPop(y, FAR.x, FAR.y - 34, 'ボーッ！');
+    yPop(y, FAR.x, FAR.y - 34, 'ボーッ！'); SND.play('shiphorn', { vol: 0.45 });
     if (ship) ship.classList.add('sailing');
     tween(3800, (u) => {   // nearer and nearer: larger as it comes (the scale grows by a ratio, the place moves on evenly)
       if (!ship) return;
@@ -386,11 +400,13 @@ const CRUISE = (() => {
       ship.setAttribute('transform', xf(ax, ay, s));
     }, () => {
       if (ship) { ship.classList.remove('sailing', 'far'); ship.removeAttribute('transform'); }
-      yPop(y, 770, -70, 'ボーーッ！');
+      yPop(y, 770, -70, 'ボーーッ！'); SND.play('shiphorn', { vol: 0.8 });
       if (front) front.style.opacity = '';
       tween(800, (u) => { if (ramp) ramp.setAttribute('transform', rampT(u)); }, () => comeOff(t));
     }, (u) => (u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2) * 0.35 + (1 - Math.pow(1 - u, 3)) * 0.65);
   }
+  // three steps on the gangway's boards, someone going down or up it
+  const treads = () => [0, 1, 2].forEach((i) => setTimeout(() => SND.play('steps-wood', { vol: 0.6, rate: 0.95 + Math.random() * 0.1, slice: [((i + Math.floor(Math.random() * 4)) % 4) * 0.5, 0.45] }), i * 330));
   // 高橋 hurries in with his flag; they come down the gangway one at a time, saying who they are (the newest last), and crowd round
   function comeOff(t) {
     if (!alive()) return;
@@ -398,7 +414,7 @@ const CRUISE = (() => {
     walkTo(g, guideAt(s0), { v: 150, free: true, done: () => { turnTo(g, FOOT_W[0]); say('takahashi', 'みなさん、こちらです〜！'); } });
     ids.forEach((id, k) => S.t.push(setTimeout(() => {
       if (!alive()) return;
-      const p = el(id, DOOR_W.slice()); p.el.classList.add('cr-in');
+      const p = el(id, DOOR_W.slice()); p.el.classList.add('cr-in'); treads();
       walkTo(p, FOOT_W, { path: [DOOR_W, FOOT_W], v: 70, done: () => {
         const off = offLine(t, id); if (off) say(id, off[1], 2600);
         const lost = s0.lost && s0.lost[0] === id; p.away = lost;
@@ -413,7 +429,7 @@ const CRUISE = (() => {
     S.quiet = true; bar();
     ids.forEach((id, k) => S.t.push(setTimeout(() => {
       const p = S.ppl.get(id); if (!p) return;
-      walkTo(p, FOOT_W, { v: 120, done: () => { say(id, bye[id] || 'さようなら〜！', 2400); walkTo(p, DOOR_W, { path: [FOOT_W, DOOR_W], v: 60, delay: 300, done: () => { p.el.classList.add('cr-gone'); S.t.push(setTimeout(() => { p.el.remove(); S.ppl.delete(id); }, 450)); } }); } });
+      walkTo(p, FOOT_W, { v: 120, done: () => { say(id, bye[id] || 'さようなら〜！', 2400); treads(); walkTo(p, DOOR_W, { path: [FOOT_W, DOOR_W], v: 60, delay: 300, done: () => { p.el.classList.add('cr-gone'); S.t.push(setTimeout(() => { p.el.remove(); S.ppl.delete(id); }, 450)); } }); } });
     }, k * 700)));
     const after = ids.length * 700 + 4200, g = S.ppl.get('takahashi');
     S.t.push(setTimeout(() => {
@@ -421,13 +437,13 @@ const CRUISE = (() => {
       const ship = y.querySelector('.cruise-ship'), front = y.querySelector('.cruise-front'), ramp = y.querySelector('.cruise-ramp');
       tween(700, (u) => { if (ramp) ramp.setAttribute('transform', rampT(1 - u)); }, () => {
         if (front) front.style.opacity = '0';
-        yPop(y, 770, -70, 'ボーーッ！');
+        yPop(y, 770, -70, 'ボーーッ！'); SND.play('shiphorn', { vol: 0.8 });
         if (g) { turnTo(g, 400); g.el.classList.add('wave'); setTimeout(() => g.el.classList.remove('wave'), 1200); say('takahashi', 'さようなら〜！', 2400); }
         if (ship) ship.classList.add('sailing');
         tween(4600, (u) => { if (ship) { ship.setAttribute('transform', `translate(${(900 * u).toFixed(1)} 0)`); ship.style.opacity = String(Math.min(1, (1 - u) * 4)); } }, () => {
           cs().done[t.id] = day(); cs().on = null; setLocal(FORCE, ''); saveState();
           if (ship) ship.remove();
-          toast(`郵輪開走了。第 ${tripIdx(t.id) + 1} 趟導覽「${t.title}」完成！謝謝你幫忙 🚢`, 3600);
+          toast(`郵輪開走了。第 ${tripIdx(t.id) + 1} 趟導覽「${t.title}」完成！謝謝你幫忙 🚢`, 3600); playSfx('fanfare');
           if (g) S.t.push(setTimeout(() => { if (alive()) walkTo(g, [ycam.YW / 2 + 60, 50], { v: 120, free: true, done: () => { g.el.remove(); S.ppl.delete('takahashi'); } }); }, 1600));
           S.busy = false; S.quiet = false; bar();
         }, (u) => u * u);
@@ -464,7 +480,7 @@ const CRUISE = (() => {
     S = fresh(yard, place);
     const way = from && from !== place ? WAYS[`${from}>${place}`] : null;
     const follow = (was.carry && was.pend === place) || (from === on.place && Boolean(way));   // taken there, or come along next door
-    if (follow) { on.place = place; saveLocal(); }
+    if (follow) { on.place = place; saveLocal(); MUSIC.sync(); }   // the tour's music along with them (route synced it before they were here)
     if (on.place === place) {
       const [s, k] = rest(t, on.step, place), ids = party(t), at = slots(s, k, ids);
       if (follow && !calm()) {   // in behind him: by the way he came, or round him where the bus or the walk brought him
@@ -501,17 +517,26 @@ const CRUISE = (() => {
   // a town shop on the trip under way is open while they go round (its keeper brought out); 高橋 is with them, not at his desk
   const opens = (shop) => { const t = current(); return Boolean(t) && t.stops.some((s) => s.shop === shop || s.at === shop); };
   const away = (id) => id === 'takahashi' && docked();
-  // every line said aloud on the cruise, and whose (the generator makes each a clip in their voice; 'all': read as any line)
+  // every line said aloud on the cruise, and whose (the generator makes each a clip in their voice): みんな's by each of the chorus
+  // (speakChorus says it with them all at once; 2026-11-13, the user: one voice for a crowd was awkward) — a laugh is a laugh and a
+  // line with a cry is not read (VOICE_FX), so neither is made
+  const chorus = ['kaneda', 'umeko', 'rina', 'yoshimoto', 'ken'];
   function lines(add) {
     const c = C(); if (!c) return;
-    const sayIt = (id, ja) => { if (id !== 'all') add(id, ja); };
+    const sayIt = (id, ja, o) => {
+      if (o && o.cry) return;
+      if (id !== 'all') { add(id, ja); return; }
+      if (!LAUGH.test(castLine(ja).replace(CAST_MARK, '$1'))) chorus.forEach((w) => add(w, ja));
+    };
     Object.entries(c.OFF).forEach(([id, ls]) => ls.forEach((l) => sayIt(id, l[1])));
     Object.entries(c.SAY).forEach(([id, ls]) => ls.forEach((l) => sayIt(id, l[1])));
-    c.TRIPS.forEach((t) => t.stops.forEach((s) => s.lines.forEach((l) => (Array.isArray(l) ? sayIt(l[0], l[1]) : (l.opts || []).forEach((o) => sayIt('hero', o[0]))))));
+    c.TRIPS.forEach((t) => t.stops.forEach((s) => s.lines.forEach((l) => (Array.isArray(l) ? sayIt(l[0], l[1], l[3]) : (l.opts || []).forEach((o) => sayIt('hero', o[0]))))));
   }
+  // the record that plays where the passengers are while a trip is under way (MUSIC: みなと案内), the 居酒屋 keeping its own
+  const tune = (place) => { const on = C() && cs().on; return on && on.place === place && place !== 'izakaya' ? 'minato' : ''; };
   // the test site (町の手帳): the next trip's ship out there now, whatever the day, hour or course; all begun again; on to a trip
   function force() { const t = trips().find((x) => !cs().done[x.id]); if (!t) return null; cs().on = null; saveState(); setLocal(FORCE, t.id); setLocal(TOLD, ''); return t; }
   function reset() { state.cruise = { done: {}, on: null }; saveState(); setLocal(FORCE, ''); setLocal(TOLD, ''); }
   function skipTo(id) { const k = tripIdx(id); if (k < 0) return; state.cruise = { done: Object.fromEntries(trips().slice(0, k).map((t) => [t.id, '2000-01-01'])), on: null }; saveState(); setLocal(FORCE, id); setLocal(TOLD, ''); }
-  return { out, docked, waiting, current, shipSvg, rampSvg, callHtml, mount, call: () => call(), start: () => start(), next: () => next(), who, face: talkFace, tag, opens, away, lines, force, reset, skipTo, person, party, trips: () => trips() };
+  return { out, docked, waiting, current, shipSvg, rampSvg, callHtml, mount, call: () => call(), start: () => start(), next: () => next(), who, face: talkFace, tag, opens, away, lines, chorus, tune, force, reset, skipTo, person, party, trips: () => trips() };
 })();

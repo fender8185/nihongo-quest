@@ -460,9 +460,10 @@ const TALK = (() => {
   const ruby = (s) => esc(s).replace(MARK, '<ruby>$1<rt>$2</rt></ruby>'), plain = (s) => s.replace(MARK, '$1');
   const glosses = (s) => [...new Set([...s.matchAll(MARK)].filter((m) => m[3]).map((m) => `${m[1]}（${m[2]}）${m[3]}`))];   // a word twice in a line: noted once
   const who = (id) => (id === 'hero' ? { name: '我', role: '' } : NPCS[id] || TOWN.CAST[id] || CRUISE.tag(id));   // the cruise's passengers too (CRUISE)
-  // a line as shown: { id, ja, zh, kind } or a reply choice { ask, opts }
-  const line = (l) => (!cur.ev ? { id: cur.id, ja: l[0], zh: l[1], kind: l[2] } : Array.isArray(l) ? { id: l[0], ja: l[1], zh: l[2] } : l);
-  const say = (ja, id) => (castSays(ja) ? `<button type="button" class="talk-say" data-talk="say" data-ja="${esc(ja)}" data-who="${esc(id)}" aria-label="唸出來">${icon('speaker')}</button>` : '');   // in their own voice (speakAs); a silence 「…………。」: none
+  // a line as shown: { id, ja, zh, kind } or a reply choice { ask, opts }; an event's line may have a sound as it shows (snd: SND's),
+  // a cry said instead of reading it out (cry: VOICE_FX's) and someone moving as it is said (move, for onLine; 2026-11-13, the cruise)
+  const line = (l) => (!cur.ev ? { id: cur.id, ja: l[0], zh: l[1], kind: l[2] } : Array.isArray(l) ? Object.assign({}, l[3], { id: l[0], ja: l[1], zh: l[2] }) : l);
+  const say = (ja, id, cry) => (castSays(ja) ? `<button type="button" class="talk-say" data-talk="say" data-ja="${esc(ja)}" data-who="${esc(id)}"${cry ? ` data-cry="${esc(cry)}"` : ''} aria-label="唸出來">${icon('speaker')}</button>` : '');   // in their own voice (speakAs); a silence 「…………。」: none
   function show() {
     const L = cur.said || line(cur.lines[cur.i]);
     if (L.ask) {
@@ -475,12 +476,12 @@ const TALK = (() => {
     const n = who(L.id), w = n.gift, gl = cur.ev ? glosses(L.ja) : [];
     cur.el.innerHTML = `<div class="talk-card"><div class="talk-face">${TOWNEV.face(L.id)}</div><div class="talk-body">
       <div class="talk-name">${esc(n.name)}<span>${esc(n.role)}</span></div>
-      ${!L.ja ? `<p class="talk-zh">${esc(L.zh)}</p>` : `<p class="talk-ja" lang="ja">${ruby(L.ja)} ${say(L.ja, L.id)}</p>${gl.length ? `<p class="talk-gloss">${gl.map(esc).join('　')}</p>` : ''}
+      ${!L.ja ? `<p class="talk-zh">${esc(L.zh)}</p>` : `<p class="talk-ja" lang="ja">${ruby(L.ja)} ${say(L.ja, L.id, L.cry)}</p>${gl.length ? `<p class="talk-gloss">${gl.map(esc).join('　')}</p>` : ''}
       <p class="talk-zh${cur.zh ? '' : ' hide'}">${esc(L.zh)}</p>${cur.zh ? '' : '<button type="button" class="talk-zh-btn" data-talk="zh">中文</button>'}`}
       ${L.kind === 'gift' ? `<div class="talk-gift">${DECOR.thumb(w)}<b>${esc(WARE.get(w).name)}</b><button type="button" class="btn btn-primary btn-sm" data-talk="take">收下</button></div>` : '<span class="talk-next" aria-hidden="true">▼</span>'}</div></div>`;
     if (L.kind === 'gift') fitThumbs(cur.el);
     const at = (cur.said ? 's' : '') + cur.i;   // a line new on the screen is said at once, in its speaker's voice (2026-11-12, the user); drawn again (中文): not again
-    if (L.ja && cur.spoke !== at) { cur.spoke = at; speakAs(L.id, L.ja); if (cur.onLine) cur.onLine(L); }   // onLine: whoever says it moves (CRUISE)
+    if (L.ja && cur.spoke !== at) { cur.spoke = at; speakAs(L.id, L.ja, L.cry); if (L.snd) SND.play(L.snd); if (cur.onLine) cur.onLine(L); }   // onLine: whoever says it moves (CRUISE)
     if (!L.ja || !castSays(L.ja)) stopSilence();   // nothing to read here: the player kept awake for it rests
   }
   function pick(k) {
@@ -505,7 +506,7 @@ const TALK = (() => {
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     el.addEventListener('click', (e) => {
       e.stopPropagation(); primeTtsPlayer();   // inside the tap: the next line (or 🔊) is let play while its clip is fetched (iOS)
-      const sayBtn = e.target.closest('[data-talk="say"]'); if (sayBtn) { speakAs(sayBtn.dataset.who, sayBtn.dataset.ja); return; }
+      const sayBtn = e.target.closest('[data-talk="say"]'); if (sayBtn) { speakAs(sayBtn.dataset.who, sayBtn.dataset.ja, sayBtn.dataset.cry); return; }
       if (e.target.closest('[data-talk="zh"]')) { cur.zh = true; show(); return; }
       const p = e.target.closest('[data-pick]'); if (p) { pick(Number(p.dataset.pick)); return; }
       if (!cur.ev && cur.lines[cur.i][2] === 'gift' && !e.target.closest('[data-talk="take"]')) return;   // the present waits for 收下

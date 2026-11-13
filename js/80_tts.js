@@ -120,7 +120,7 @@ const CAST_VOICE = {
   nakamura: ['Schedar', 1], kenji: ['Zubenelgenubi', 1], suzuki: ['Rasalgethi', 1.02], alex: ['Umbriel', 1], chihaya: ['Achernar', 0.96],
   tatsu: ['Sadachbia', 1.06], takahashi: ['Sadaltager', 0.95], sophia: ['Zephyr', 1], nishimura: ['Kore', 1.04], sano: ['Charon', 1],
   // the cruise's passengers (CRUISE, test 2026-11-12)
-  kaneda: ['Fenrir', 0.96], umeko: ['Callirrhoe', 1.1], yuta: ['Autonoe', 1.08, 3], rina: ['Aoede', 1.06], yoshimoto: ['Charon', 1.06], ken: ['Orus', 1.02], ai: ['Erinome', 1.02], michiyama: ['Schedar', 0.96], mike: ['Puck', 1]
+  kaneda: ['Rasalgethi', 0.92], umeko: ['Callirrhoe', 1.1], yuta: ['Autonoe', 1.08, 3], rina: ['Aoede', 1.06], yoshimoto: ['Charon', 1.06], ken: ['Orus', 1.02], ai: ['Erinome', 1.02], michiyama: ['Schedar', 0.96], mike: ['Puck', 1]
 };
 // ムギ (2026-11-12, the user, by ear): a boy's voice pitched up, a mascot's — a grown man saying ワン, or a real bark beside a
 // plain voice, broke the spell; her lines open with ワン！ and no longer end in it (events.js 42)
@@ -128,7 +128,9 @@ const CAST_VOICE = {
 // it is]] }. 小春 (2026-11-12, the user: she sounded a little old) took Leda, with 美玖 — two sharing a voice is fine. The hero
 // (2026-11-12, the user: closer to 林美玲's) took her Despina, a little quicker so the two are told apart where they talk; the
 // three below sound near it, to choose from by ear
-const CAST_TRY = { hero: [['Vindemiatrix', 1, 0, '溫柔'], ['Erinome', 1.02, 0, '清亮'], ['Autonoe', 1.02, 0, '明亮']] };
+// 金田 (2026-11-13, the user: 社長 sounded like a student, Fenrir) took Rasalgethi, slower; three older men's voices to try
+const CAST_TRY = { hero: [['Vindemiatrix', 1, 0, '溫柔'], ['Erinome', 1.02, 0, '清亮'], ['Autonoe', 1.02, 0, '明亮']],
+  kaneda: [['Algenib', 0.9, 0, '粗獷'], ['Enceladus', 0.92, 0, '低沉'], ['Alnilam', 0.94, 0, '有力']] };
 const OLD_VOICE = /^(Neural2|Wavenet|Standard)-/;
 const CAST_WOMEN = new Set(['Achernar', 'Aoede', 'Autonoe', 'Callirrhoe', 'Despina', 'Erinome', 'Gacrux', 'Kore', 'Laomedeia', 'Leda', 'Pulcherrima', 'Sulafat', 'Vindemiatrix', 'Zephyr', 'Neural2-B', 'Wavenet-A', 'Wavenet-B', 'Standard-A', 'Standard-B']);
 const castOf = (opt) => opt.voice || CAST_VOICE[opt.cast];   // a voice being tried, else theirs
@@ -143,12 +145,57 @@ function castSsml(line, v) {
   return '<speak>' + (v && v[2] && !OLD_VOICE.test(v[0]) ? `<prosody pitch="+${v[2]}st">${body}</prosody>` : body) + '</speak>';
 }
 const castSays = (line) => /[\p{L}\p{N}]/u.test(castLine(line).replace(CAST_MARK, '$1'));   // anything to read: 佐野's 「…………。」 is a silence
-function speakAs(who, line) {   // someone's line in their own voice (anyone else's: as any line)
+function speakAs(who, line, cry) {   // someone's line in their own voice (anyone else's: as any line); cry: a sound instead (VOICE_FX)
   const text = castLine(line).replace(CAST_MARK, '$1');
+  if (cry) return voiceFx(cry);
   if (!castSays(line)) return Promise.resolve();
+  if (who === 'all' && typeof CRUISE !== 'undefined') return LAUGH.test(text) ? voiceFx('laugh') : speakChorus(CRUISE.chorus, line);   // the cruise's passengers together
   if (!CAST_VOICE[who]) return speak(text);
   stopSpeaking();
   return speakLine(text, castGender(who), speechToken, { cast: who, line });
+}
+// what a crowd says or does that a voice reading it out does badly (2026-11-13, the user: one even voice reading みんな's
+// 「さむい！」 and 「あはは！」, or 吉本's 「いたい！」, sounded like a robot): a laugh is a laugh (laugh-1.m4a, a small audience),
+// a cry a cry (ouch: a man's yelp) — VOICE_FX, as loud as the voices, not 環境音 — and the rest is said by several of them at
+// once (speakChorus: CRUISE.chorus, each one's clip of it a moment apart, so it lands as one quick retort)
+const LAUGH = /^[あわはふへほっ]*[はふ][あわはふへほっ]*[!！。…〜ー]*$/;
+const VOICE_FX = { laugh: 'sounds/laugh-1.m4a', ouch: 'sounds/ouch-1.m4a' };
+const voiceBufs = {};
+let voiceSrc = [], voiceEnd = null;
+function voiceStop() { voiceSrc.forEach((s) => { try { s.stop(); } catch (e) { /* not started */ } }); voiceSrc = []; if (voiceEnd) { const f = voiceEnd; voiceEnd = null; f(); } }
+// buffers played together through Web Audio (a chorus, a laugh): t0 offsets, gains, rates; resolves as the last one ends
+function voicePlay(c, list, token) {
+  return new Promise((ok) => {
+    let end = 0;
+    list.forEach(({ b, at, gain, rate }) => {
+      const s = c.createBufferSource(), g = c.createGain(); s.buffer = b; s.playbackRate.value = rate; g.gain.value = gain;
+      s.connect(g); g.connect(c.destination); const t = c.currentTime + 0.03 + at; s.start(t); voiceSrc.push(s); end = Math.max(end, at + b.duration / rate);
+    });
+    const tm = setTimeout(() => { if (voiceEnd === fin) voiceEnd = null; ok(); }, end * 1000 + 120), fin = () => { clearTimeout(tm); ok(); };
+    voiceEnd = fin;
+    if (token !== speechToken) voiceStop();
+  });
+}
+const decode = (c, a) => new Promise((ok, no) => c.decodeAudioData(a, ok, no));   // the callback form: older Safari has no promise
+async function voiceFx(name) {
+  stopSpeaking(); const token = speechToken, c = audioCtx(); if (!c || !VOICE_FX[name]) return;
+  if (!voiceBufs[name]) voiceBufs[name] = fetch(VOICE_FX[name]).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }).then((a) => decode(c, a)).catch(() => { delete voiceBufs[name]; return null; });
+  const b = await voiceBufs[name]; if (!b || token !== speechToken) return;
+  SND.duck(true);
+  try { await voicePlay(c, [{ b, at: 0, gain: 0.9, rate: 1 }], token); } finally { SND.duck(false); }
+}
+async function speakChorus(whos, line) {
+  const text = castLine(line).replace(CAST_MARK, '$1');
+  stopSpeaking(); const token = speechToken, c = audioCtx(), cfg = ttsConfig();
+  if (!c || !cfg.engine || cfg.engine === 'browser_neural') return speakLine(text, '', token);
+  SND.duck(true);
+  try {
+    const bufs = (await Promise.all(whos.map((w) => engineBlob(text, castGender(w), { cast: w, line }).then((b) => (b ? b.arrayBuffer() : null)).then((a) => (a ? decode(c, a) : null)).catch(() => null)))).filter(Boolean);
+    if (token !== speechToken) return;
+    if (!bufs.length) { await speakLineNow(text, '', token); return; }
+    const rate = speechRate(), n = bufs.length;
+    await voicePlay(c, bufs.map((b, k) => ({ b, at: k * 0.06 + Math.random() * 0.04, gain: (n > 1 ? 1.5 / n : 1) * (0.85 + Math.random() * 0.3), rate: rate * (0.97 + Math.random() * 0.08) })), token);
+  } finally { SND.duck(false); }
 }
 async function cloudAudioPath(text, gender, opt = {}) {
   if (opt.cast) {
@@ -358,6 +405,7 @@ function playSfx(kind, step = 0) {
 
 function stopSpeaking() {
   speechToken++;
+  voiceStop();   // a chorus or a laugh (speakChorus, voiceFx)
   try {
     if ('speechSynthesis' in window && (window.speechSynthesis.speaking || window.speechSynthesis.pending)) {
       window.speechSynthesis.cancel();

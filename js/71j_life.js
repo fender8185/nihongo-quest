@@ -178,6 +178,12 @@ const TOWNLIFE = (() => {
     clearTimeout(w.ht); w.ht = setTimeout(() => { if (!talking() && !w.pairing && !w.leaving) w.held = false; }, 8000);
     return w.pos.slice();
   };
+  // brought over to a spot and held there (CRUISE: a shopkeeper out in front of their shop for a stop of the tour)
+  api.bring = (id, to) => {
+    const w = S && S.w.get(id); if (!w || !api.hold(id)) return false;
+    if (!w.el.matches('.bench, .kneel')) walk(w, to, () => turnTo(w, yh.X), { within: 1.6 });
+    return true;
+  };
   api.release = () => { if (S) S.w.forEach((w) => { if (!w.pairing && !w.leaving) w.held = false; }); };
   // the hero has moved: those within 120 px stop and turn to him (a wave the first time this visit); the rest carry on
   api.near = (yard) => {
