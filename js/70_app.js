@@ -139,10 +139,10 @@ function route() {
 }
 
 // ---------- modal ----------
-function openModal(title, bodyHtml, opt = {}) {
+function openModal(title, bodyHtml, opt = {}) {   // opt.head: more in the title's row, kept in sight while the body scrolls
   const root = document.getElementById('modalRoot');
   root.innerHTML = `<div class="modal-back" data-act="modal-back"><div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}" style="${opt.width ? `width:min(${opt.width}px,100%)` : ''}">
-    <div class="modal-head"><div class="modal-title">${esc(title)}</div><button type="button" class="btn btn-ghost btn-icon" data-act="close-modal" aria-label="關閉">${icon('close')}</button></div>
+    <div class="modal-head"><div class="modal-title">${esc(title)}</div>${opt.head || ''}<button type="button" class="btn btn-ghost btn-icon" data-act="close-modal" aria-label="關閉">${icon('close')}</button></div>
     <div class="modal-body" id="modalBody">${bodyHtml}</div>
     <div class="modal-foot"><button type="button" class="btn" data-act="close-modal">關閉</button></div></div></div>`;
   document.body.style.overflow = 'hidden';

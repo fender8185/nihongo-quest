@@ -204,20 +204,35 @@ const CRUISE = (() => {
     });
     if (S && !S.raf && [...S.ppl.values()].some((p) => p.walk)) S.raf = requestAnimationFrame(frame);
   }
-  // words over a head (a passenger's, 高橋's)
-  function say(id, ja, ms = 2300) {
+  // words over a head (a passenger's, 高橋's), kept on the screen and raised over any other bubble they would cover; o.wait: a stop's lines after it, held back while as many as
+  // room() are up (2026-11-13, the user: on a phone four at once piled into one unreadable heap); o.all: everyone the same at once
+  const room = () => (S.yard.clientWidth < 560 ? 2 : 3);
+  function say(id, ja, ms = 2300, o = {}) {
     const p = alive() && S.ppl.get(id); if (!p || !ja) return;
     const old = S.yard.querySelector(`.ysay[data-who="cr-${id}"]`); if (old) old.remove();
+    if (o.wait !== undefined) S.hold = Date.now() + ms;   // the idle chatter keeps out of their way meanwhile
+    if (o.wait !== undefined && S.yard.querySelectorAll('.ysay.cr-say').length >= room()) { if (o.wait < 8) S.t.push(setTimeout(() => { if (!TALK.on()) say(id, ja, ms, { wait: o.wait + 1 }); }, 700)); return; }
     const b = yBubble(S.yard, p.pos[0] + 600, 370 - p.pos[1] - 196 * yScale(p.pos[1]) * p.k, ruby(ja), ms);
-    if (b) { b.dataset.who = 'cr-' + id; b.classList.add('cr-say'); }
+    if (b) { b.dataset.who = 'cr-' + id; b.classList.add('cr-say'); if (!o.all) clear(b); }
+  }
+  function clear(b) {   // in from the screen's edge (its tail still to the speaker), then up over the bubble it overlaps
+    const z = (typeof ycam === 'object' && ycam.z) || 1, r = b.getBoundingClientRect(), Y = S.yard.getBoundingClientRect(), cx = (r.left + r.right) / 2, half = b.offsetWidth * z / 2;   // its middle: the same at any point of its pop
+    const dx = cx - half < Y.left + 6 ? (Y.left + 6 - cx + half) / z : cx + half > Y.right - 6 ? (Y.right - 6 - cx - half) / z : 0;
+    if (dx) { b.style.marginLeft = `${dx.toFixed(0)}px`; b.style.setProperty('--dx', `${dx.toFixed(0)}px`); }
+    const box = (e) => { const w = e.offsetWidth, l = e.offsetLeft - w / 2; return [l, e.offsetTop, l + w, e.offsetTop + e.offsetHeight]; };
+    for (let n = 0; n < 4; n++) {
+      const [l, t, r, btm] = box(b), hit = [...S.yard.querySelectorAll('.ysay')].filter((e) => e !== b).map(box).find(([L, T, R, B]) => L < r && l < R && T < btm && t < B);
+      if (!hit) return;
+      b.style.bottom = `${(parseFloat(b.style.bottom) + btm - hit[1] + 6).toFixed(0)}px`;
+    }
   }
   function hop(id, k = 'hop') { const p = alive() && S.ppl.get(id); if (!p || p.walk || calm()) return; p.el.classList.remove('hop', 'cheer'); void p.el.offsetWidth; p.el.classList.add(k); setTimeout(() => p.el.classList.remove(k), k === 'cheer' ? 900 : 520); }
-  // all talking at once: someone says something every second or so (three bubbles at most), never over a talk
+  // all talking at once: someone says something every second or so (three bubbles at most, two on a phone), never over a talk
   function chatter() {
     if (!alive()) return;
     S.ct = setTimeout(chatter, rnd(800, 1600));
     const t = current();
-    if (!t || TALK.on() || document.hidden || S.quiet || S.yard.querySelectorAll('.ysay.cr-say').length >= 3) return;
+    if (!t || TALK.on() || document.hidden || S.quiet || Date.now() < (S.hold || 0) || S.yard.querySelectorAll('.ysay.cr-say').length >= room()) return;
     const ids = [...S.ppl.keys()].filter((id) => id !== 'takahashi' || Math.random() < 0.3); if (!ids.length) return;
     const id = pick(ids), ls = sayLines(t, id); if (ls.length) say(id, pick(ls)[1]);
   }
@@ -371,7 +386,7 @@ const CRUISE = (() => {
     if (s.lost) { const p = S.ppl.get(s.lost[0]); if (p) { p.away = false; walkTo(p, [crowdAt(s)[0] + rnd(-40, 40), s.room ? crowdAt(s)[1] : s.crowd[1] + rnd(-8, 8)], { v: 160, done: () => turnTo(p, yh.X) }); } }
     if (s.bye) { farewell(t, s); return; }
     const ids = [...S.ppl.keys()].filter((id) => id !== 'takahashi');
-    (s.after || []).forEach(([id, ja], k) => S.t.push(setTimeout(() => { if (TALK.on()) return; if (id === 'all') ids.forEach((q) => say(q, ja, 1800)); else say(id, ja); }, 300 + k * 650)));   // not over the next talk
+    (s.after || []).forEach(([id, ja], k) => S.t.push(setTimeout(() => { if (TALK.on()) return; if (id === 'all') ids.forEach((q) => say(q, ja, 1800, { all: true })); else say(id, ja, undefined, { wait: 0 }); }, 300 + k * 650)));   // not over the next talk
     if (s.seat && S.indoor) { S.meal = Date.now() + 5000; S.t.push(setTimeout(() => { if (alive()) bar(); }, 5050)); }   // they eat a while: tapped, each has a word at the table
     S.busy = false; bar();
   }

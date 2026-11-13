@@ -67,10 +67,12 @@ const YEN = (() => {
       return `<button type="button" class="mc-item${full ? ' full' : ''}" data-act="yen-buy" data-item="${it[0]}" data-k="${opt(it).k || ''}"${!none && bal >= it[3] ? '' : ' disabled'}><span class="mc-pic">${pic(it)}</span>
         <span class="mc-name">${ruby(it[1])}${book[it[0]] ? '<i class="mc-had" title="美食手帳裡有了">済</i>' : ''}</span>${priceTag(it[3])}<span class="mc-zh" lang="zh-Hant">${esc(it[2])}</span></button>`;
     };
+    // the wallet and 中文 up in the title's row, in sight while choosing (2026-11-13, the user: cut in half at the foot on a phone);
+    // 中文 faint and small — the menu is the learner's level, read in Japanese
     openModal(plain(mu.title), `<div class="menu-card${zh ? ' zh' : ''}" lang="ja">
-      <div class="mc-list">${mu.items.map(row).join('')}</div>
-      <div class="mc-foot"><span class="mc-purse">${yenIcon()}錢包 ${yenStr(Math.max(0, bal))} 円</span><button type="button" class="btn btn-sm" data-act="yen-zh">${zh ? '收起中文' : '中文'}</button></div>
-      ${none ? '<p class="mc-none">錢包裡還沒有円。帶一趟郵輪導覽，就能拿到導遊費。</p>' : ''}</div>`, { width: 380, noFocus: true });
+      ${none ? '<p class="mc-none">錢包裡還沒有円。帶一趟郵輪導覽，就能拿到導遊費。</p>' : ''}
+      <div class="mc-list">${mu.items.map(row).join('')}</div></div>`, { width: 380, noFocus: true,
+      head: `<div class="mc-top"><span class="mc-purse">${yenIcon()}${yenStr(Math.max(0, bal))} 円</span><button type="button" class="zh-btn" data-act="yen-zh" aria-pressed="${zh}">${zh ? '收起中文' : '中文'}</button></div>` });
   }
   function toggleZh() { if (!at) return; zh = !zh; show(); }
 
@@ -134,7 +136,7 @@ const YEN = (() => {
       <div class="es-row"><div class="es-face" data-mood="drool">${HERO.head(state.look, 'face')}<svg class="es-mood" viewBox="0 0 111.5 100" aria-hidden="true">${BLUSH}${Object.entries(MOOD).map(([k, m]) => `<g class="m-${k}">${m}</g>`).join('')}</svg><span class="es-hearts" aria-hidden="true"></span></div>
         <div class="es-food"><svg class="pic es-pic" viewBox="0 0 100 100" aria-hidden="true"><defs><mask id="${id}"><rect width="100" height="100" fill="#fff"/>${drink ? '' : bites.map(([x, y, r], k) => `<g class="es-bite" data-k="${k}" fill="#000"><circle cx="${x}" cy="${y}" r="${r}"/>${[-1, 0, 1].map((j) => `<circle cx="${(x + j * r * 0.62).toFixed(1)}" cy="${(y + r * (j ? 0.78 : 0.95)).toFixed(1)}" r="${(r * 0.42).toFixed(1)}"/>`).join('')}</g>`).join('')}</mask></defs><circle class="pd" cx="50" cy="50" r="47"/>${o.dish ? `<g class="es-dish">${draw}</g>` : ''}<g class="es-g" mask="url(#${id})">${draw}</g></svg><i class="es-word" aria-hidden="true"></i><span class="es-crumbs" aria-hidden="true"></span></div></div>
       <div class="es-bubble"><p class="es-say" lang="ja"></p><p class="es-zh" hidden></p></div>
-      <div class="es-foot"><button type="button" class="btn btn-sm es-zh-btn" hidden>中文</button></div>
+      <div class="es-foot"><button type="button" class="zh-btn es-zh-btn" hidden>中文</button></div>
       <button type="button" class="btn btn-primary es-ok" lang="ja" hidden>▶</button></div>`;
     document.body.appendChild(el);
     const mood = (m) => { el.querySelector('.es-face').dataset.mood = m; };
@@ -188,10 +190,12 @@ const YEN = (() => {
   }
 
   // ---- 美食手帳 (a page of 町の手帳): each menu, what has been had (the day first had) and what not yet ----
+  // its pages: a menu each, those of the same name (shop: the 緣日's stalls, 2026-11-13, the user) together on one
+  const pages = () => { const by = new Map(); Object.values(M()).forEach((mu) => { const n = mu.shop || mu.title; by.set(n, (by.get(n) || []).concat(mu.items)); }); return [...by]; };
   function book() {
     const b = state.purse.book, all = Object.values(M()).flatMap((mu) => mu.items), had = all.filter((it) => b[it[0]]).length;
     return `<div class="food-book"><p class="fb-count">吃過、用過 ${had} / ${all.length} 樣・一共花了 ${yenStr(yenSpent())} 円</p>
-      ${Object.values(M()).map((mu) => `<section class="fb-menu"><h4 lang="ja">${ruby(mu.shop || mu.title)}</h4><div class="fb-items">${mu.items.map((it) => `<div class="fb-item${b[it[0]] ? ' had' : ''}">
+      ${pages().map(([name, items]) => `<section class="fb-menu"><h4 lang="ja">${ruby(name)}</h4><div class="fb-items">${items.map((it) => `<div class="fb-item${b[it[0]] ? ' had' : ''}">
         <span class="fb-pic">${b[it[0]] ? pic(it) : ''}</span><span class="fb-name" lang="ja">${ruby(it[1])}</span><small>${esc(it[2])}・${yenStr(it[3])} 円</small>${b[it[0]] ? `<i class="fb-stamp" aria-label="${esc(b[it[0]])}">済</i><small class="fb-day">${esc(b[it[0]])}</small>` : ''}</div>`).join('')}</div></section>`).join('')}
       <p class="muted small">在鎮上點販賣機、麵包、菜單、黑板、牛奶機、澡堂、籤筒就能買。第一次買的會蓋上章。</p></div>`;
   }

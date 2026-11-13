@@ -90,8 +90,12 @@ def test_two_foods_and_a_drink_a_day_then_he_is_full(b):
 def test_the_food_book_shows_what_has_been_had(b):
     r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ state.purse.book = { melonpan: '2026-11-11', ocha: '2026-11-12' }; saveState(); await go('town');
       DIARY.open('food'); await wait(50); const t = document.querySelector('.diary');
-      return JSON.stringify({ tab: !!t.querySelector('[data-diary="tab-food"]'), count: t.querySelector('.fb-count').textContent, had: [...t.querySelectorAll('.fb-item.had .fb-name')].map((x) => x.textContent) }); })()"""))
+      const pages = [...t.querySelectorAll('.fb-menu')].map((x) => [x.querySelector('h4').textContent, x.querySelectorAll('.fb-item').length]);
+      return JSON.stringify({ tab: !!t.querySelector('[data-diary="tab-food"]'), count: t.querySelector('.fb-count').textContent, had: [...t.querySelectorAll('.fb-item.had .fb-name')].map((x) => x.textContent), pages,
+        stalls: SHRINE_STALLS.filter(([id]) => TOWN.MENU[id]).reduce((n, [id]) => n + TOWN.MENU[id].items.length, 0) }); })()"""))
     assert r['tab'] and r['count'].startswith('吃過、用過 2 / ') and sorted(r['had']) == sorted(['お茶ちゃ', 'メロンパン']), r
+    fair = [p for p in r['pages'] if p[0].startswith('縁日')]
+    assert len(fair) == 1 and fair[0][1] == r['stalls'] == 13 and not any(p[0] in ('やきそば', 'たこやき', 'りんごあめ') for p in r['pages']), r   # the stalls: one page (2026-11-13, the user)
 
 def test_prices_are_read_out_with_their_sound_changes(b):
     r = json.loads(ev(b, "JSON.stringify([100, 120, 130, 150, 300, 480, 600, 750, 800, 1000, 3000, 8000, 104, 9999].map(YEN.reading))"))
@@ -171,10 +175,21 @@ def test_the_festival_has_seven_stalls_six_selling_something_to_eat(b):
       const l = []; YEN.lines((w, ja) => l.push(w));
       return JSON.stringify({ day, night, menus, cold, who, face, said, name, bal: yenBalance(), keepers: ['ojisan', 'obasan', 'oniisan'].map((k) => l.filter((w) => w === k).length), voiced: ['ojisan', 'obasan', 'oniisan'].every((k) => CAST_VOICE[k]) }); })()"""))
     assert r['day'] == 0 and len(r['night']) == 7 and r['menus'] == ['yakisoba', 'takoyaki', 'wataame', 'ringoame', 'kakigori', 'chocobanana'], r   # only at the festival; all but the goldfish sell something
-    assert r['cold'] == ['kakigori', 'ramune'], r   # shaved ice, and ラムネ to drink
+    assert r['cold'] == ['kakigori', 'ramune'], r   # shaved ice, and ラムネ to drink (レモン, すいか not learned: theirs locked)
     assert r['who'] == ['我', '屋台のおじさん'] and r['face'] and r['said'] == ['たこやきを ください。', 'まいど！ 500円ごひゃくえんだよ！'] and r['bal'] == 4500, r
     assert r['name'] == 'たこやき', r   # had on its own screen
-    assert r['keepers'] == [4, 6, 3] and r['voiced'], r   # each one's prices and 「また あした」 for the generator, in their own voices
+    assert r['keepers'] == [6, 8, 5] and r['voiced'], r   # each one's prices and 「また あした」 for the generator, in their own voices
+
+def test_a_stall_sells_more_each_thing_opened_by_its_word(b):
+    # 2026-11-13, the user: more at the shrine, a stall needn't sell one thing only — 牛くし・じゃがバター, いちご・ぶどうあめ,
+    # レモンの かき氷, ひやし すいか, each opened by a word of N5–N4
+    r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ learn('りんご', 'いちご');
+      TOWNEV.clock = { h: 20, day: new Date(2026, 10, 10) }; location.hash = '#/shrine'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
+      use('ringoame'); await wait(100); const open = menu().map(([i]) => i), locked = [...document.querySelectorAll('.mc-item.locked .mc-lock')].map((x) => x.textContent); closeModal();
+      const added = ['gyukushi', 'jagabata', 'ichigoame', 'budouame', 'lemonkori', 'suika'].map((id) => { const it = Object.values(TOWN.MENU).flatMap((m) => m.items).find((x) => x[0] === id); return it && [id, it[4].w, Boolean(PICS_TOWN[it[4].pic])]; });
+      return JSON.stringify({ open, locked, added }); })()"""))
+    assert r['open'] == ['ringoame', 'ichigoame'] and r['locked'] == ['學會「ぶどう」這個字，就能點'], r
+    assert r['added'] == [['gyukushi', '牛肉', True], ['jagabata', 'じゃがいも', True], ['ichigoame', 'いちご', True], ['budouame', 'ぶどう', True], ['lemonkori', 'レモン', True], ['suika', 'すいか', True]], r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
