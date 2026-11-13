@@ -400,6 +400,7 @@ const DIARY = (() => {
     return `<section class="town-tools"><b>測試用（只在測試站）</b>
       <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="meet">認識所有人、開通所有公車站</button><button type="button" class="btn btn-sm" data-tool="reset">小鎮事件從頭開始</button></div>
       <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="ship">郵輪：現在叫來（下一趟，不看日子、進度）</button><button type="button" class="btn btn-sm" data-tool="shipreset">郵輪：從第 1 趟重來</button><button type="button" class="btn btn-sm" data-tool="shipresult">郵輪：看結算畫面（不存）</button>${CRUISE.trips().slice(1).map((t, k) => `<button type="button" class="btn btn-sm" data-tool="shipto" data-trip="${t.id}">郵輪：跳到第 ${k + 2} 趟</button>`).join('')}</div>
+      <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="yen-gift">円：+10,000</button><button type="button" class="btn btn-sm" data-tool="yen-all">${YEN.allOpen() ? '菜單：恢復要先學單字' : '菜單：全部開放'}</button><button type="button" class="btn btn-sm" data-tool="yen-full">今天吃喝次數歸零</button></div>
       <div class="row-wrap mt-2">時間（只改小鎮；「現在」也清掉睡覺跳過的時間）：${hrs.map(([h, n]) => `<button type="button" class="btn btn-sm" data-tool="hour" data-h="${h}" aria-pressed="${String(h) === String(cur)}">${n}</button>`).join('')}</div>
       ${Object.entries(byUnit).map(([u, list]) => `<div class="tt-unit"><span>${esc(u)}</span>${list.map((e) => `<button type="button" class="tb-ev" data-try="${esc(e.id)}">${esc(e.title)}<small>${esc((TOWN.CAST[e.who] || {}).name || e.who)}・${esc(TOWNEV.PLACE_NAME[e.at] || e.at)}${e.when === 'night' ? '・晚上' : ''}</small></button>`).join('')}</div>`).join('')}
     </section>`;
@@ -411,6 +412,7 @@ const DIARY = (() => {
     if (t === 'ship') { const x = CRUISE.force(); toast(x ? `第 ${CRUISE.trips().indexOf(x) + 1} 趟的郵輪在みなと漁港外的海上等你了（院子 → 海邊 → 往漁港）` : '郵輪的導覽都走完了', 3600); }
     if (t === 'shipreset') { CRUISE.reset(); toast('郵輪從第 1 趟重來'); }
     if (t === 'shipresult') CRUISE.preview();
+    if (t.startsWith('yen-')) toast(YEN.tool(t.slice(4)));
     if (t === 'shipto') { CRUISE.skipTo(b.dataset.trip); toast('前面幾趟算走完了，郵輪在みなと漁港外的海上等你'); }
     if (t === 'hour') { TOWNEV.clock = b.dataset.h === 'now' ? null : { h: Number(b.dataset.h), day: new Date() }; if (b.dataset.h === 'now') { try { localStorage.removeItem('nq_wake'); } catch (e) { /* none kept */ } sceneTick(); } }   // 現在: a sleep's hours gone too
     show();

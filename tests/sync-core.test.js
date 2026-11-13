@@ -255,4 +255,6 @@ test('mergeStates: 円 spent is kept per device (each one only grows) and 美食
   const b = { v: 3, updatedAt: '2026-11-13T02:00:00.000Z', purse: { spent: { phone: 480 }, book: { ocha: '2026-11-11', bath: '2026-11-13' } } };
   assert.deepEqual(C.mergeStates(a, b).purse, { spent: { phone: 600, pad: 130 }, book: { curry: '2026-11-12', ocha: '2026-11-11', bath: '2026-11-13' } });
   assert.equal(C.mergeStates({ v: 3 }, { v: 3 }).purse, undefined);
+  const g = C.mergeStates({ v: 3, updatedAt: '2026-11-13T01:00:00.000Z', purse: { spent: {}, book: {}, gift: 20000 } }, { v: 3, updatedAt: '2026-11-13T02:00:00.000Z', purse: { spent: {}, book: {}, gift: 10000 } }).purse;
+  assert.equal(g.gift, 20000);   // the test site's 円 only grows
 });

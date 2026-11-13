@@ -205,6 +205,7 @@
       Object.entries(n.spent || {}).forEach(([d, v]) => { spent[d] = Math.max(Number(spent[d]) || 0, Number(v) || 0); });
       Object.entries(n.book || {}).forEach(([k, v]) => { if (!book[k] || v < book[k]) book[k] = v; });
       out.purse = { spent, book };
+      const gift = Math.max(Number(o.gift) || 0, Number(n.gift) || 0); if (gift) out.purse.gift = gift;   // the test site's 円: only grows
       const td = [o.today, n.today].filter((x) => x && x.day).sort((x, y) => (x.day < y.day ? 1 : -1));   // the day's foods and drinks: the later day's; the same day, the more of each
       if (td.length) out.purse.today = td.filter((x) => x.day === td[0].day).reduce((a, x) => ({ day: a.day, f: Math.max(a.f || 0, x.f || 0), d: Math.max(a.d || 0, x.d || 0) }));
     }

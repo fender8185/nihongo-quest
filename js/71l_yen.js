@@ -37,8 +37,10 @@ const YEN = (() => {
   // ---- what may be had: its word learned (or the course past its level), two foods and a drink a day ----
   const opt = (it) => it[4] || {};
   const word = (it) => { const w = opt(it).w; return w ? REG.vocab.find((v) => jaPlain(v.w) === w) || null : null; };
+  const ALL = 'nq_menu_all';   // the test site (町の手帳): every menu open on this device, words learned or not
+  const allOpen = () => { try { return onTestSite() && localStorage.getItem(ALL) === '1'; } catch (e) { return false; } };
   function known(it) {
-    const v = word(it); if (!v) return true;
+    const v = word(it); if (!v || allOpen()) return true;
     const L = courseLevels(), at = L.indexOf(curLevel());
     return Boolean(state.srs[v.key]) || (at >= 0 && L.indexOf(courseLevel(v.lv)) >= 0 && L.indexOf(courseLevel(v.lv)) < at);
   }
@@ -168,5 +170,12 @@ const YEN = (() => {
       <p class="muted small">在鎮上點販賣機、麵包、菜單、黑板、牛奶機、澡堂、籤筒就能買。第一次買的會蓋上章。</p></div>`;
   }
   const shown = () => yenEarned() > 0 || Object.keys(state.purse.book).length > 0;   // its tab: once there has been 円
-  return { open, buy, toggleZh, lines, book, shown, reading, priceMark, known, left };
+  // the test site's tools (町の手帳): 円 given, every menu open (or not), the day's foods and drinks back to none
+  function tool(t) {
+    if (t === 'gift') { state.purse.gift = (Number(state.purse.gift) || 0) + 10000; saveState(); kotoButtons(document); return `錢包 +10,000 円（現在 ${yenStr(yenBalance())} 円）`; }
+    if (t === 'all') { const on = !allOpen(); try { localStorage.setItem(ALL, on ? '1' : ''); } catch (e) { /* no storage */ } return on ? '菜單全部開放了（這台裝置，不用先學單字）' : '菜單恢復成要先學單字'; }
+    if (t === 'full') { delete state.purse.today; saveState(); return '今天吃喝的次數歸零了'; }
+    return '';
+  }
+  return { open, buy, toggleZh, lines, book, shown, reading, priceMark, known, left, tool, allOpen };
 })();

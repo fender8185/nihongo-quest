@@ -100,6 +100,16 @@ def test_buying_leaves_the_cruise_pay_and_lines_for_the_generator(b):
       return JSON.stringify({ n: l.length, tome: l.filter(([w]) => w === 'tome').length, hero: l.filter(([w]) => w === 'hero').length, all: talkLines().filter(([w, ja]) => w === 'teppei' && /へい！/.test(ja)).length }); })()"""))
     assert r['tome'] == 9 and r['all'] == 5, r   # each thing with a keeper: the hero's order and their price, and 「また あした どうぞ」
 
+def test_the_test_sites_tools_give_yen_open_every_menu_and_empty_the_stomach(b):
+    r = json.loads(ev(b, "(async () => { " + fresh(0) + """ await go('town');   // 127.0.0.1: the test site
+      DIARY.open('town'); await wait(50); const tool = (t) => document.querySelector(`.diary [data-tool="${t}"]`).click();
+      tool('yen-gift'); const bal = yenBalance(); tool('yen-all'); await wait(50); DIARY.close();
+      await go('shokudo'); use('menu'); await wait(100); const locked = document.querySelectorAll('.mc-item.locked').length; closeModal();
+      state.purse.today = { day: dateStr(TOWNEV.today()), f: 2, d: 1 }; saveState(); DIARY.open('town'); await wait(50); tool('yen-full'); const today = state.purse.today || null;
+      tool('yen-all'); const back = YEN.allOpen(); DIARY.close();
+      return JSON.stringify({ bal, locked, today, back }); })()"""))
+    assert r == {'bal': 10000, 'locked': 0, 'today': None, 'back': False}, r   # +10,000 円; ラーメン open too; the day's foods and drinks gone; back to words first
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
 if __name__ == "__main__":
