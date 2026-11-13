@@ -499,7 +499,7 @@ const TALK = (() => {
   }
   function pick(k) {
     const L = line(cur.lines[cur.i]), o = L.opts[k]; if (!o || cur.wrong.includes(k)) return;
-    if (!o[1]) { cur.wrong.push(k); cur.why = o[2] || ''; show(); const el = cur.el.querySelectorAll('.talk-opt')[k]; if (el) el.classList.add('shake'); playSfx('bad'); return; }
+    if (!o[1]) { cur.wrong.push(k); cur.why = o[2] || ''; show(); const el = cur.el.querySelector(`.talk-opt[data-pick="${k}"]`); if (el) el.classList.add('shake'); playSfx('bad'); return; }
     playSfx('good'); if (cur.onAnswer) cur.onAnswer(cur.i, cur.wrong.length); cur.said = { id: 'hero', ja: o[0], zh: o[2] || '' }; show();   // onAnswer: right after so many wrong ones (CRUISE's pay)
   }
   function next() {

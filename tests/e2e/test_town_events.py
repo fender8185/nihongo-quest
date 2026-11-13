@@ -173,11 +173,12 @@ def test_reply_choices_are_shown_in_an_order_of_their_own_which_stays_on_a_wrong
       for (let n = 0; n < 12; n++) {
         TALK.open(document.body, 'kenta', L, null, null, { ev: true }); await wait(10);
         const seq = () => [...document.querySelectorAll('.talk-opt')].map((o) => o.dataset.pick).join('');
-        const was = seq(); firsts.add(was[0]); document.querySelector('.talk-opt:not([data-pick="0"])').click(); await wait(10);
-        if (seq() !== was) kept = false; TALK.close();
+        const was = seq(), tried = document.querySelector('.talk-opt:not([data-pick="0"])'); firsts.add(was[0]); tried.click(); await wait(10);
+        const shook = [...document.querySelectorAll('.talk-opt.shake')].map((o) => o.dataset.pick).join('');
+        if (seq() !== was || shook !== tried.dataset.pick) kept = false; TALK.close();
       }
       return JSON.stringify({ firsts: [...firsts].length, kept }); })()"""))
-    assert r['firsts'] >= 2 and r['kept'], r   # the right one not always first; a wrong try leaves the order as it was
+    assert r['firsts'] >= 2 and r['kept'], r   # the right one not always first; a wrong try leaves the order as it was and shakes the one tried
 
 def test_the_right_reply_is_said_and_the_event_finishes_with_10_koto(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + TALK_EV + """
