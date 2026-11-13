@@ -121,7 +121,7 @@ def test_a_keeper_tapped_asks_order_or_chat(b):
       c.querySelector('[data-choose="0"]').click(); await wait(150); const opened = !!document.querySelector('.mc-item[data-item="curry"]'); closeModal();
       c = await tap(); c.querySelector('[data-choose="1"]').click(); await wait(150); const chat = document.querySelector('.talk-card'), talked = chat && chat.querySelector('[data-choose]') === null && chat.querySelector('.talk-name').firstChild.textContent;
       return JSON.stringify({ first, menu: opened, talked }); })()"""))
-    assert r['first']['ja'].startswith('いらっしゃい') and r['first']['picks'] == ['注文ちゅうもんする', 'おしゃべりする'], r   # in Japanese (the user)
+    assert r['first']['ja'].startswith('いらっしゃい') and r['first']['picks'] == ['ちゅうもんする', 'おしゃべりする'], r   # in Japanese (the user)
     assert r['menu'] and r['talked'] == '大山 トメ', r   # 點餐: her menu; 閒聊: a word as before
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]

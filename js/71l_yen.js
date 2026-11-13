@@ -203,7 +203,7 @@ const YEN = (() => {
     const place = yard.dataset.place, m = Object.keys(M()).find((k) => M()[k].keeper && M()[k].keeper[0] === id), t = m && (PLACE_USE[place] || []).find((q) => q.buy === m && (!q.when || q.when()));
     if (!t) return null;
     const mu = M()[m];
-    return { hello: mu.hello || ['いらっしゃい！', '歡迎光臨！'], label: m === 'bath' ? '{お風呂|おふろ}に {入|はい}る' : '{注文|ちゅうもん}する', go: () => open(yard, t) };   // in Japanese (the user)
+    return { hello: mu.hello || ['いらっしゃい！', '歡迎光臨！'], label: m === 'bath' ? 'おふろに はいる' : 'ちゅうもんする', go: () => open(yard, t) };   // in Japanese (the user), in kana: furigana in a button set it askew beside the other
   }
   return { open, buy, toggleZh, lines, book, shown, reading, priceMark, known, left, tool, allOpen, sells };
 })();
