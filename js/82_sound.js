@@ -99,22 +99,23 @@ const SND = (() => {
   };
   const groundOf = (place, kind) => { const g = GROUND[place]; return g ? g[kind] || g.off : ''; };
   // ---- each place's background: [layer, how loud by day, by night] (sounds/amb-<layer>-1.m4a, looping); room: through the window,
-  // only while the gramophone is quiet ----
+  // only while the gramophone is quiet. The insects at 4/10 of what they were (2026-11-13, the user: louder than everything else at
+  // night): their loop is the loudest to the ear of them all, high and unbroken ----
   const AMB = {
-    yard: [['wind', 0.5, 0.35], ['birds', 0.7, 0], ['insects', 0, 0.7]],
-    park: [['birds', 0.75, 0], ['wind', 0.25, 0.2], ['insects', 0, 0.6]],
-    street: [['traffic', 0.55, 0.3], ['birds', 0.2, 0], ['insects', 0, 0.3]],
+    yard: [['wind', 0.5, 0.35], ['birds', 0.7, 0], ['insects', 0, 0.28]],
+    park: [['birds', 0.75, 0], ['wind', 0.25, 0.2], ['insects', 0, 0.24]],
+    street: [['traffic', 0.55, 0.3], ['birds', 0.2, 0], ['insects', 0, 0.12]],
     beach: [['waves', 0.85, 0.75], ['gulls', 0.45, 0]],
     harbor: [['harbor', 0.8, 0.7], ['gulls', 0.4, 0]],
-    town: [['town', 0.6, 0.25], ['insects', 0, 0.3]],
+    town: [['town', 0.6, 0.25], ['insects', 0, 0.12]],
     station: [['station', 0.6, 0.35]],
-    sento: [['town', 0.35, 0.15], ['insects', 0, 0.4]],
-    shrine: [['wind', 0.5, 0.4], ['birds', 0.45, 0], ['insects', 0, 0.55]],
-    castle: [['wind', 0.5, 0.4], ['birds', 0.5, 0], ['insects', 0, 0.5]],
+    sento: [['town', 0.35, 0.15], ['insects', 0, 0.16]],
+    shrine: [['wind', 0.5, 0.4], ['birds', 0.45, 0], ['insects', 0, 0.22]],
+    castle: [['wind', 0.5, 0.4], ['birds', 0.5, 0], ['insects', 0, 0.2]],
     shokudo: [['restaurant', 0.6, 0.6]],
     izakaya: [['izakaya', 0.6, 0.6]],
     shop: [['clock', 0.5, 0.5]],
-    room: [['birds', 0.18, 0], ['insects', 0, 0.18]]
+    room: [['birds', 0.18, 0], ['insects', 0, 0.07]]
   };
   // now and then: [sound, seconds apart (least, most), how loud, 'day' | 'night' | '' (any time)]
   const NOW_AND_THEN = {
