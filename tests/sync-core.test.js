@@ -249,3 +249,10 @@ test('mergeStates: the cruise pay of either device is kept (the better of two fo
   assert.deepEqual(m.res, { t1: { yen: 5400, grade: 2 } });   // the better pay
   assert.deepEqual(m.on, { trip: 't2', step: 5, place: 'castle', score: { '1.2': 0, '2.1': 2, '4.3': 0 } });   // the replies of both, the newer copy's where both have one
 });
+
+test('mergeStates: 円 spent is kept per device (each one only grows) and 美食手帳 keeps everything had, on the day first had (2026-11-13)', () => {
+  const a = { v: 3, updatedAt: '2026-11-13T01:00:00.000Z', purse: { spent: { phone: 600, pad: 130 }, book: { curry: '2026-11-12', ocha: '2026-11-13' } } };
+  const b = { v: 3, updatedAt: '2026-11-13T02:00:00.000Z', purse: { spent: { phone: 480 }, book: { ocha: '2026-11-11', bath: '2026-11-13' } } };
+  assert.deepEqual(C.mergeStates(a, b).purse, { spent: { phone: 600, pad: 130 }, book: { curry: '2026-11-12', ocha: '2026-11-11', bath: '2026-11-13' } });
+  assert.equal(C.mergeStates({ v: 3 }, { v: 3 }).purse, undefined);
+});

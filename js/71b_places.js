@@ -207,7 +207,7 @@ const PLACE_USE = {
     { id: 'clock', name: '時鐘', box: [784, 92, 824, 210], kind: 'do', go: [204, 124], back: 1, pose: 'look', fx: 'clock', fxc: 'glint', ms: 1400, toast: () => { const h = sceneHour(); return `公園的時鐘：${Math.floor(h)} 點 ${String(Math.floor((h % 1) * 60)).padStart(2, '0')} 分`; } },
     { id: 'tulips', name: '鬱金香', box: [638, 210, 782, 236], kind: 'do', go: [70, 124], back: 1, pose: 'look', say: 'いい香り' }],
   street: [
-    { id: 'vend', name: '自動販賣機', box: [388, 158, 438, 236], kind: 'do', go: [-187, 126], back: 1, pose: 'reach', say: 'ガコン！', fx: 'vend', fxc: 'buy' },
+    { id: 'vend', name: '自動販賣機', box: [388, 158, 438, 236], kind: 'do', go: [-187, 126], back: 1, pose: 'reach', say: 'ガコン！', fx: 'vend', fxc: 'buy', buy: 'vend' },
     { id: 'post', name: '郵筒', box: [745, 174, 775, 236], kind: 'do', go: [160, 126], back: 1, pose: 'reach', say: 'ポトン', fx: 'post', fxc: 'buy' },
     { id: 'mirror', name: 'カーブミラー', box: [484, 136, 516, 236], kind: 'do', go: [-100, 126], back: 1, pose: 'look', say: 'あ、映ってる！', fx: 'cmirror', fxc: 'shine', ms: 1400, mirror: 1 }],
   beach: [
@@ -218,8 +218,8 @@ const PLACE_USE = {
     { id: 'shell', name: '貝殼', box: [456, 316, 484, 338], kind: 'do', go: [-130, 34], pose: 'crouch', say: 'きれいな貝！', fx: 'shell', fxc: 'gone', ms: 9000 },
     { id: 'sea', name: '海', box: [0, 222, 1060, 248], kind: 'do', go: (tap) => [Math.max(-560, Math.min(440, tap.x)), 116], back: 1, pose: 'crouch', say: 'パシャパシャ' }],
   town: [{ id: 'cat', name: '貓', box: [400, 128, 470, 180], kind: 'do', go: [-168, 122], back: 1, pose: 'wave', say: 'ニャー', fx: 'awncat', fxc: 'wake', ms: 2600 },
-    { id: 'bread', name: '麵包', box: [328, 188, 384, 212], kind: 'do', go: [-246, 122], back: 1, pose: 'look', say: 'おいしそう…', when: () => TOWNEV.shopState('bakery') === 'open' },
-    { id: 'board', name: '咖啡黑板', box: [648, 204, 682, 236], kind: 'do', go: [65, 122], back: 1, pose: 'look', toast: '喫茶しずく：本日の珈琲 400円・ケーキセット 700円', when: () => TOWNEV.shopState('cafe') === 'open' },
+    { id: 'bread', name: '麵包', box: [328, 188, 384, 212], kind: 'do', go: [-246, 122], back: 1, pose: 'look', say: 'おいしそう…', when: () => TOWNEV.shopState('bakery') === 'open', buy: 'bakery' },
+    { id: 'board', name: '咖啡黑板', box: [648, 204, 682, 236], kind: 'do', go: [65, 122], back: 1, pose: 'look', toast: '喫茶しずく：本日の珈琲 400円・ケーキセット 700円', when: () => TOWNEV.shopState('cafe') === 'open', buy: 'cafe' },
     { id: 'flowers', name: '花桶', box: [752, 206, 808, 236], kind: 'do', go: [176, 122], back: 1, pose: 'look', say: 'いい香り', when: () => TOWNEV.shopState('flowers') === 'open' },
     { id: 'chimes', name: '風鈴', box: [1064, 176, 1130, 212], kind: 'do', go: [496, 122], back: 1, pose: 'reach', say: 'チリンチリン', fx: 'chimes', fxc: 'jingle', ms: 2200, when: () => TOWNEV.shopState('goods') === 'open' }],
   harbor: [
@@ -229,7 +229,7 @@ const PLACE_USE = {
     { id: 'bollardR', name: '繫船柱', box: [806, 226, 834, 252], kind: 'sit', seats: [220], top: 134, dep: 120 },
     { id: 'fish', name: '魚箱', box: [378, 240, 458, 268], kind: 'do', go: [-180, 70], pose: 'look', say: 'ピチピチ！', fx: 'fish', fxc: 'flop', ms: 1800 }],
   station: [
-    { id: 'vend', name: '自動販賣機', box: [242, 164, 304, 236], kind: 'do', go: [-327, 122], back: 1, pose: 'reach', say: 'ガコン！', fx: 'svend', fxc: 'buy' },
+    { id: 'vend', name: '自動販賣機', box: [242, 164, 304, 236], kind: 'do', go: [-327, 122], back: 1, pose: 'reach', say: 'ガコン！', fx: 'svend', fxc: 'buy', buy: 'vend' },
     { id: 'benchL', name: '長椅', box: [220, 252, 310, 304], kind: 'sit', seats: [-355, -310], top: 90, dep: 66 },
     { id: 'benchR', name: '長椅', box: [760, 252, 850, 304], kind: 'sit', seats: [185, 225], top: 90, dep: 66 },
     { id: 'pigeons', name: '鴿子', box: [576, 292, 676, 316], kind: 'do', go: [30, 42], pose: 'wave', fx: 'spigeons', fxc: 'flown', ms: 6000 },
@@ -238,13 +238,13 @@ const PLACE_USE = {
     { id: 'board', name: '電子看板', box: [448, 104, 672, 138], kind: 'do', go: [60, 126], back: 1, pose: 'look', toast: () => { const h = Math.floor(sceneHour()); return `下一班電車：${h}:30 快速 みなと港・${h}:45 普通 白鷺`; } },
     { id: 'koban', name: '交番', box: [880, 140, 1006, 236], kind: 'do', go: [384, 126], back: 1, pose: 'wave', say: 'こんにちは！' }],
   sento: [
-    { id: 'milk', name: '牛奶販賣機', box: [158, 142, 224, 236], kind: 'do', go: [-409, 122], back: 1, pose: 'reach', say: 'ぷはー！', fx: 'milk', fxc: 'buy' },
+    { id: 'milk', name: '牛奶販賣機', box: [158, 142, 224, 236], kind: 'do', go: [-409, 122], back: 1, pose: 'reach', say: 'ぷはー！', fx: 'milk', fxc: 'buy', buy: 'milk' },
     { id: 'cat', name: '貓', box: [304, 254, 358, 288], kind: 'do', go: [-270, 50], pose: 'crouch', say: '♡', fx: 'scat', fxc: 'purr', ms: 2600 },
-    { id: 'bath', name: '泡澡', box: [474, 130, 688, 236], kind: 'do', go: [20, 126], back: 1, out: 2600, then: '♨ いい湯だった〜' },
+    { id: 'bath', name: '泡澡', box: [474, 130, 688, 236], kind: 'do', go: [20, 126], back: 1, out: 2600, then: '♨ いい湯だった〜', buy: 'bath' },
     { id: 'laundry', name: '投幣洗衣店', box: [992, 168, 1088, 232], kind: 'do', go: [440, 126], back: 1, pose: 'look', say: 'ぐるぐる…' }],
   shrine: [
     { id: 'bell', name: '鈴', box: [870, 140, 950, 236], kind: 'do', go: [310, 126], back: 1, pose: 'reach', say: 'カランカラン', then: 'パンパン 🙏', fx: 'bell', fxc: 'ring', ms: 2100 },
-    { id: 'kuji', name: '籤', box: [1076, 160, 1156, 236], kind: 'do', go: [515, 122], back: 1, pose: 'reach', fortune: 1, fx: 'kuji', fxc: 'jingle', ms: 2200 },
+    { id: 'kuji', name: '籤', box: [1076, 160, 1156, 236], kind: 'do', go: [515, 122], back: 1, pose: 'reach', fortune: 1, fx: 'kuji', fxc: 'jingle', ms: 2200, buy: 'kuji' },
     { id: 'crow', name: '烏鴉', box: [220, 42, 266, 80], kind: 'do', go: [-350, 112], pose: 'look', say: 'カァー', fx: 'crow', fxc: 'flown', ms: 7000 },
     { id: 'fox', name: '狐狸', box: [338, 166, 382, 236], kind: 'do', go: [-240, 120], back: 1, pose: 'bow', say: 'ペコリ', fx: 'fox', fxc: 'bless', ms: 2000 },
     { id: 'kingyo', name: '金魚撈', box: [400, 144, 500, 236], kind: 'do', go: [-130, 126], back: 1, pose: 'crouch', say: 'とれた！🐟', when: () => TOWNEV.festival() },
@@ -266,7 +266,7 @@ const PLACE_USE = {
     { id: 'maneki', name: '招財貓', box: isoBBox(2.1, 2.7, 1.7, 2.3, 1.95, 3.1), kind: 'do', go: isoXY(2.4, 3.4), face: 'back turn', pose: 'wave', say: '招福！', fx: 'maneki', fxc: 'beckon' },
     { id: 'tv', name: '電視', box: isoBBox(19, 21.4, 0, 0.1, 5.1, 6.7), kind: 'do', go: isoXY(20.2, 1.6), face: 'back turn', pose: 'look', say: 'あはは！' },
     { id: 'kitchen', name: '廚房', box: isoBBox(16, 18.4, 0, 0.1, 0, 4.1), kind: 'do', go: isoXY(17.2, 1.4), face: 'back turn', pose: 'wave', say: 'ごちそうさまでした！', fx: 'noren', fxc: 'part' },
-    { id: 'menu', name: '菜單', box: isoBBox(0, 0.1, 4.8, 10.4, 3.4, 6.2), kind: 'do', go: isoXY(1.5, 7.6), face: 'back turn flip', pose: 'look', toast: 'お品書き：カレー 500円・ラーメン 600円・からあげ定食 750円……' },
+    { id: 'menu', name: '菜單', box: isoBBox(0, 0.1, 4.8, 10.4, 3.4, 6.2), kind: 'do', go: isoXY(1.5, 7.6), face: 'back turn flip', pose: 'look', toast: 'お品書き：カレー 500円・ラーメン 600円・からあげ定食 750円……', buy: 'shokudo' },
     { id: 'kamidana', name: '神棚', box: isoBBox(0, 0.1, 1.4, 4.1, 6, 7.3), kind: 'do', go: isoXY(1.5, 2.7), face: 'back turn flip', pose: 'bow', say: 'パンパン 🙏', fx: 'kamidana', fxc: 'flutter' },
     { id: 'crates', name: '啤酒箱', box: isoBBox(0.5, 1.9, 9.6, 11, 0, 1.9), kind: 'do', go: isoXY(2.7, 10.3), face: 'back turn flip', pose: 'reach', say: 'おもい…！', fx: 'crates', fxc: 'rattle' }],
   izakaya: [
@@ -275,7 +275,7 @@ const PLACE_USE = {
     ...[[17.6, 9.3, 'kneel turn flip'], [19.2, 9.3, 'kneel turn flip'], [17.6, 13.2, 'kneel back turn'], [19.2, 13.2, 'kneel back turn']].map(([u, v, how], i) => ({ id: 'zabuton' + i, name: '坐墊', box: isoBBox(u - 0.5, u + 0.5, v - 0.5, v + 0.5, 0.6, 1.3), kind: 'seat', say: 'かんぱい！', seats: [[u, v, 0.6, how]] })),
     { id: 'grill', name: '烤爐', box: isoBBox(6, 9.4, 1.6, 2.1, 1.95, 3), kind: 'do', go: isoXY(7.7, 4.8), face: 'back turn', pose: 'look', say: 'いい匂い！', fx: 'grill', fxc: 'flare' },
     { id: 'taru', name: '酒樽', box: isoBBox(0.5, 1.7, 8.8, 11.3, 0, 2.4), kind: 'do', go: isoXY(2.6, 10.1), face: 'back turn flip', pose: 'reach', say: 'おもい…！', fx: 'taru', fxc: 'rock' },
-    { id: 'menu', name: '黑板', box: isoBBox(0, 0.1, 2.9, 8.7, 3.5, 6.5), kind: 'do', go: isoXY(1.4, 5.8), face: 'back turn flip', pose: 'look', toast: 'きょうのおすすめ：焼き鳥 1本 120円・からあげ 480円' }]
+    { id: 'menu', name: '黑板', box: isoBBox(0, 0.1, 2.9, 8.7, 3.5, 6.5), kind: 'do', go: isoXY(1.4, 5.8), face: 'back turn flip', pose: 'look', toast: 'きょうのおすすめ：焼き鳥 1本 120円・からあげ 480円', buy: 'izakaya' }]
 };
 // the things tried once (2026-11-10, the user: calmer hints): their dot goes for good, on this device (localStorage nq_used)
 const USED = (() => {
@@ -324,6 +324,11 @@ function sceneUse(el) {
   const t = (PLACE_USE[yard.dataset.place] || []).find((q) => q.id === el.dataset.use), [x0, y0, x1] = t ? t.box : [];
   if (!t || !yard.querySelector('.yhero')) return;
   USED.mark(yard.dataset.place, t.id); el.classList.add('tried');   // its dot goes
+  if (t.buy) { YEN.open(yard, t); return; }   // one with a menu: bought first, then had (YEN)
+  useThing(yard, t);
+}
+function useThing(yard, t) {   // the hero over to a thing of the place, and its doing
+  const [x0, y0, x1] = t.box;
   if (t.kind === 'sit' || t.kind === 'ride') {
     const taken = [...yard.querySelectorAll('.npc.bench')].map(npcAt), tap = yard._at ? yard._at.x : (x0 + x1) / 2 - 600;
     const seat = t.seats.filter((x) => taken.every((n) => !(Math.abs(n - x) < 30))).sort((a, b) => Math.abs(a - tap) - Math.abs(b - tap))[0];

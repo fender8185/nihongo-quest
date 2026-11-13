@@ -409,6 +409,59 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .cruise-bar { position: absolute; z-index: 40; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px 8px; max-width: calc(100% - 32px); padding: 8px 16px; border-radius: 18px; background: rgba(255, 255, 255, .95); color: #3a2c24; box-shadow: 0 4px 14px rgba(0, 0, 0, .22); font: 600 14px/1.2 system-ui, sans-serif; white-space: nowrap; }
 .cruise-bar .cb-n { color: #b0602a; font-weight: 800; font-variant-numeric: tabular-nums; } .cruise-bar .cb-t { overflow: hidden; text-overflow: ellipsis; } .cruise-bar .cb-busy { color: #8a7a6e; }
 .cruise-bar .cb-go { white-space: nowrap; color: #6a5a4e; } .cruise-bar .cb-go::before { content: '→ '; } .cruise-bar .cb-busy:empty { display: none; }   /* on by 高橋's 「！」 (2026-11-13) */
+/* a menu bought from with 円 (YEN, 2026-11-13): the names and prices in Japanese, the Chinese under them on a tap; had before: 済 */
+.menu-card .mc-list { display: grid; gap: 6px; }
+.mc-item { display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 0 10px; padding: 7px 12px 7px 8px; border: 1px solid #e6dac4; border-radius: 12px; font: inherit; text-align: left; color: #3a2c24; background: #fffdf6; cursor: pointer; }
+.mc-item:not(:disabled):hover { border-color: #c9a97a; } .mc-item:disabled { opacity: .5; cursor: default; }
+.mc-name { font-size: 17px; font-weight: 700; } .mc-price { font-size: 15px; font-weight: 700; color: #b0602a; font-variant-numeric: tabular-nums; }
+.mc-zh { display: none; grid-column: 2 / -1; font-size: 13px; color: #8a7a6e; } .menu-card.zh .mc-zh { display: block; }
+.mc-pic { grid-row: span 2; width: 52px; height: 52px; } .mc-pic .pic { width: 100%; height: 100%; }
+.mc-item.locked { opacity: .75; cursor: default; } .mc-item.locked .mc-pic { filter: grayscale(1) blur(2.5px); opacity: .55; } .mc-item.locked .mc-name { color: #a89a88; }
+.mc-lock { grid-column: 2 / -1; font-size: 12.5px; color: #8a7a6e; }
+.mc-item.full .mc-price::after { content: '吃不下了'; display: block; font-size: 11px; color: #8a7a6e; text-align: right; }
+.mc-today { margin: 0 0 8px; font-size: 13px; color: #6a5a4e; }
+.fb-pic { position: absolute; right: 4px; bottom: 4px; width: 34px; height: 34px; } .fb-pic .pic { width: 100%; height: 100%; } .fb-item.had { padding-right: 40px; } .fb-item.had .fb-stamp { right: 42px; }
+/* having it (2026-11-13): its picture big, bitten into (the bites are holes in a mask) or tipped up and drunk, the hero beside it */
+.eat-scene { position: fixed; inset: 0; z-index: 77; display: grid; place-items: center; padding: 16px; background: rgba(40, 24, 12, .5); animation: talkIn .25s ease-out; }
+.es-card { position: relative; width: min(340px, 100%); padding: 16px 16px 14px; border-radius: 20px; text-align: center; background: radial-gradient(120% 80% at 50% 30%, #fff8e8, #f4e2c4); color: #3a2c24; box-shadow: 0 14px 40px rgba(0, 0, 0, .3); }
+.es-name { margin: 0; font-size: 22px; font-weight: 800; }
+.es-row { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 6px; }
+.es-face { position: relative; width: 148px; height: 133px; flex: none; border-radius: 50%; overflow: visible; } .es-face > svg { width: 100%; height: 100%; border-radius: 50%; background: #fbf3e2; }
+.es-face.chew > svg { animation: esChew .45s ease-in-out; } @keyframes esChew { 0%, 100% { transform: none; } 30% { transform: scale(1.03, .96) translateY(2px); } 65% { transform: scale(.98, 1.03); } }
+.es-star { position: absolute; top: 40%; width: 26%; aspect-ratio: 1; margin: -13% 0 0 -13%; opacity: 0; transform: scale(.4); transition: opacity .3s, transform .3s; pointer-events: none; } .es-star svg { width: 100%; height: 100%; display: block; }
+.es-star.l { left: 28.5%; } .es-star.r { left: 71%; }
+.eat-scene .es-face .es-star { opacity: .95; transform: scale(1); animation: esTwinkle 1.2s ease-in-out infinite; } .es-star.r { animation-delay: -.6s !important; }
+@keyframes esTwinkle { 50% { transform: scale(.75) rotate(25deg); } }
+.es-hearts { position: absolute; inset: 0; pointer-events: none; } .es-hearts i { position: absolute; bottom: 30%; width: 22px; height: 20px; animation: esHeart 1.5s ease-out forwards; } .es-hearts svg { width: 100%; height: 100%; display: block; }
+@keyframes esHeart { 0% { opacity: 0; transform: translate(0, 0) scale(.5); } 20% { opacity: 1; transform: translate(0, -10px) scale(1); } 100% { opacity: 0; transform: translate(var(--dx), -80px) scale(.9); } }
+.es-food { position: relative; width: 148px; height: 148px; flex: none; } .es-pic { width: 100%; height: 100%; overflow: visible; }
+.es-dish { filter: brightness(0) invert(1) sepia(.25) brightness(.98) drop-shadow(0 1px 1px rgba(90, 60, 30, .18)); }   /* a clean cream dish */   /* a dish left pale under what is eaten off it */
+.es-bite { transform: scale(0); transform-box: fill-box; transform-origin: center; transition: transform .18s cubic-bezier(.3, 1.6, .5, 1); } .es-bite.on { transform: scale(1); }
+.es-g { transition: opacity .6s, transform .5s; transform-box: view-box; transform-origin: 50% 80%; } .es-g.gone { opacity: 0; transform: scale(.85); }
+.eat-scene.drink .es-g.sip { animation: esSip .8s ease-in-out; } @keyframes esSip { 0%, 100% { transform: none; } 45% { transform: rotate(-22deg) translateY(-6px); } }
+.es-word { position: absolute; left: 50%; top: 4%; white-space: nowrap; font: 800 22px/1 'Hiragino Maru Gothic ProN', sans-serif; font-style: normal; color: #b0602a; transform: translateX(-50%); opacity: 0; pointer-events: none; }
+.es-word.on { animation: esWord .7s ease-out; } @keyframes esWord { 0% { opacity: 0; transform: translate(-50%, 8px) scale(.8); } 30% { opacity: 1; transform: translate(-50%, 0) scale(1.1); } 100% { opacity: 0; transform: translate(-50%, -14px) scale(1); } }
+.es-bubble { position: relative; margin: 10px 0 0; padding: 10px 14px; border-radius: 16px; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .08); }
+.es-bubble::before { content: ''; position: absolute; left: 26%; top: -8px; border: 8px solid transparent; border-top: 0; border-bottom-color: #fff; }
+.es-bubble.pop { animation: kotoBump .3s ease-out; } .es-say { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.9; } .es-zh { margin: 2px 0 0; font-size: 13px; color: #8a7a6e; }
+.es-foot { display: flex; justify-content: space-between; align-items: center; margin: 8px 0 10px; } .es-left { font-size: 13px; color: #8a6a52; } .es-zh-btn[hidden], .es-ok[hidden] { display: none; } .es-ok { width: 100%; }
+.es-crumbs { position: absolute; inset: 0; pointer-events: none; } .es-crumbs i { position: absolute; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: #d9a05b; animation: esCrumb .65s ease-out forwards; }
+@keyframes esCrumb { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .eat-scene, .es-bite, .es-g, .es-star, .es-face.chew > svg, .es-hearts i, .es-bubble.pop { animation: none; transition: none; } }
+.mc-had { margin-left: 6px; padding: 0 4px; border: 1.5px solid #c8392f; border-radius: 50%; font-style: normal; font-size: 11px; color: #c8392f; vertical-align: 3px; }
+.mc-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; } .mc-purse { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-variant-numeric: tabular-nums; } .mc-purse .yen-i { width: 20px; height: 20px; }
+.mc-none { margin: 8px 0 0; font-size: 13px; color: #8a7a6e; }
+.yen-stamp { position: fixed; z-index: 76; top: calc(64px + env(safe-area-inset-top, 0px)); left: 50%; display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 16px; border-radius: 14px; background: #fffaf0; color: #3a2c24; box-shadow: 0 6px 20px rgba(0, 0, 0, .25); transform: translateX(-50%); transition: opacity .4s; }
+.yen-stamp b { font-size: 13px; color: #8a6a52; } .yen-stamp span { font-size: 16px; font-weight: 700; }
+.yen-stamp i { display: grid; place-items: center; width: 34px; height: 34px; border: 3px solid #c8392f; border-radius: 50%; font: 900 17px/1 'Hiragino Mincho ProN', 'Noto Serif JP', serif; color: #c8392f; transform: rotate(-12deg); animation: crrStamp .34s cubic-bezier(.3, 1.6, .5, 1) .15s backwards; }
+.yen-stamp.off { opacity: 0; }
+.food-book .fb-count { margin: 0 0 10px; font-size: 14px; color: #6a5a4e; } .fb-menu h4 { margin: 12px 0 6px; font-size: 15px; color: #7a5a3a; }
+.fb-items { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+.fb-item { position: relative; display: grid; gap: 1px; padding: 7px 9px; border: 1px dashed #d9ccb4; border-radius: 10px; color: #a89a88; }
+.fb-item.had { border-style: solid; border-color: #e6dac4; color: #3a2c24; background: #fffdf6; } .fb-name { font-size: 14px; font-weight: 700; } .fb-item small { font-size: 11px; }
+.fb-stamp { position: absolute; right: 6px; top: 6px; display: grid; place-items: center; width: 24px; height: 24px; border: 2px solid #c8392f; border-radius: 50%; font: 900 12px/1 'Hiragino Mincho ProN', 'Noto Serif JP', serif; font-style: normal; color: #c8392f; transform: rotate(-12deg); opacity: .85; }
+.fb-day { color: #8a7a6e; }
+@media (prefers-reduced-motion: reduce) { .yen-stamp i { animation: none; } }
 /* the trip's results (2026-11-13): the numbers tick up one after another, then the grade is stamped on with a thump */
 .cr-result { position: fixed; inset: 0; z-index: 75; display: grid; place-items: center; padding: 16px; background: rgba(12, 10, 24, .45); animation: talkIn .25s ease-out; }
 .crr-card { position: relative; width: min(360px, 100%); padding: 18px 18px 16px; border-radius: 18px; background: #fffaf0; color: #3a2c24; box-shadow: 0 14px 40px rgba(0, 0, 0, .3); font-variant-numeric: tabular-nums; }

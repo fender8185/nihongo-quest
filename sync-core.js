@@ -200,6 +200,14 @@
       out.town = Object.assign({}, n, { done: Object.assign({}, o.done, n.done), seen: Object.assign({}, o.seen, n.seen), stops: Object.assign({}, o.stops, n.stops), talks });
     }
     if (older.cruise || newer.cruise) out.cruise = mergeCruise(older.cruise, newer.cruise);
+    if (older.purse || newer.purse) {   // 円 spent: each device's sum only grows (the larger kept); 美食手帳: everything had, on the day first had
+      const o = older.purse || {}, n = newer.purse || {}, spent = Object.assign({}, o.spent), book = Object.assign({}, o.book);
+      Object.entries(n.spent || {}).forEach(([d, v]) => { spent[d] = Math.max(Number(spent[d]) || 0, Number(v) || 0); });
+      Object.entries(n.book || {}).forEach(([k, v]) => { if (!book[k] || v < book[k]) book[k] = v; });
+      out.purse = { spent, book };
+      const td = [o.today, n.today].filter((x) => x && x.day).sort((x, y) => (x.day < y.day ? 1 : -1));   // the day's foods and drinks: the later day's; the same day, the more of each
+      if (td.length) out.purse.today = td.filter((x) => x.day === td[0].day).reduce((a, x) => ({ day: a.day, f: Math.max(a.f || 0, x.f || 0), d: Math.max(a.d || 0, x.d || 0) }));
+    }
     out.updatedAt = new Date().toISOString();
     return out;
   }

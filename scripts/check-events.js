@@ -27,7 +27,14 @@ function loadWares(file = path.join(__dirname, '..', 'js', '71d_wares.js')) {
   return new Set([...fs.readFileSync(file, 'utf8').matchAll(/\{ id: '([a-zA-Z0-9]+)', kind: '(?:wear|clothes)'/g)].map((m) => m[1]));
 }
 
-// opts: chatMin — the fewest chat lines each person has (two with no condition by their first event's unit); wares — loadWares()
+// the drawings there are (pics.js: the course's words, the town's own): a menu's thing is drawn
+function loadPics(file = path.join(__dirname, '..', 'pics.js')) {
+  const o = new Function(fs.readFileSync(file, 'utf8') + '\n;return { PICS, PICS_TOWN: typeof PICS_TOWN === "object" ? PICS_TOWN : {} };')();
+  return new Set([...Object.keys(o.PICS), ...Object.keys(o.PICS_TOWN)]);
+}
+
+// opts: chatMin — the fewest chat lines each person has (two with no condition by their first event's unit); wares — loadWares();
+// pics — loadPics()
 function check(T, D, opts = {}) {
   const out = [], bad = (kind, where, what) => out.push(`${kind}: ${where}: ${what}`);
   const units = ['m0'].concat(D.UNITS.map(u => u.id).filter(id => id !== 'm0'));
@@ -89,6 +96,25 @@ function check(T, D, opts = {}) {
     talkLines(e.lines, e.u, where, who);
   });
   if (used.size) { const lo = Math.min(...used), hi = Math.max(...used); for (let i = lo; i <= hi; i++) if (!used.has(i)) bad('gap', units[i], 'no events'); }
+  // what 円 buys (MENU): ids once, a price, the names and lines readable from the first unit, a keeper who is in the town and says it
+  const menuIds = new Set();
+  Object.entries(T.MENU || {}).forEach(([m, mu]) => {
+    const at = `menu ${m}`;
+    text(mu.title, 'm1', `${at} title`); ['have', 'done', 'order', 'shop'].forEach((k) => { if (mu[k] !== undefined) text(mu[k], 'm1', `${at} ${k}`); });
+    if (mu.keeper && (!cast[mu.keeper[0]] || !/\{P\}/.test(mu.keeper[1]) || !/\{Z\}/.test(mu.keeper[2] || ''))) bad('menu', at, 'keeper is [someone in the town, a line with {P}, its Chinese with {Z}]');
+    if (mu.keeper) text(mu.keeper[1].replace('{P}', ''), 'm1', `${at} keeper`);
+    (mu.items || []).forEach(([id, name, zh, price], i) => {
+      if (menuIds.has(id)) bad('menu', `${at}#${i}`, `${id} twice`); menuIds.add(id);
+      if (!Number.isInteger(price) || price <= 0 || price > 9999) bad('menu', `${at}.${id}`, 'a price in whole 円, under 10,000');
+      if (!zh) bad('menu', `${at}.${id}`, 'no Chinese'); text(name, 'm1', `${at}.${id}`);
+      const x = mu.items[i][4] || {};   // its kind, the word that opens it, its drawing
+      if (x.k !== undefined && !['f', 'd'].includes(x.k)) bad('menu', `${at}.${id}`, 'k is f (a food) or d (a drink)');
+      if (x.w !== undefined && !D.VOCAB.some((v) => v.w.replace(/\[[^\]]*\]/g, '') === x.w)) bad('menu', `${at}.${id}`, `no course word ${x.w}`);
+      if (opts.pics && !opts.pics.has(x.pic || x.w || '')) bad('menu', `${at}.${id}`, `no drawing ${x.pic || x.w}`);
+      (x.say || []).forEach(([ja, z], k) => { text(ja, 'm2', `${at}.${id} say${k}`); if (!z) bad('menu', `${at}.${id} say${k}`, 'no Chinese'); });   // said once had
+    });
+  });
+
   // the cruise ship (CRUISE): its passengers (a group that only grows: each joins on a trip), what they say (by unit), its trips
   // one a unit in order, each with 20 reply choices or more, said only by those aboard by then; from the harbour back to it
   const cr = T.CRUISE;
@@ -203,7 +229,7 @@ function check(T, D, opts = {}) {
 module.exports = { check, loadTown, loadWares, PLACES };
 
 if (require.main === module) {
-  const probs = check(loadTown(), require('./data-file').load(), { chatMin: 10, wares: loadWares() });
+  const probs = check(loadTown(), require('./data-file').load(), { chatMin: 10, wares: loadWares(), pics: loadPics() });
   probs.forEach(p => console.log(p));
   const T = loadTown();
   console.log(probs.length ? `${probs.length} problems` : `events ok: ${(T.EVENTS || []).length} events, ${Object.keys(T.CAST).length} people`);

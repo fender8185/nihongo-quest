@@ -355,7 +355,7 @@ const DIARY = (() => {
   const need = (k) => (PAGES[k].last ? STAGES.length : k);   // stages passed to read page k
   const open = (k) => k === 0 || passed() >= need(k);
   let el = null, at = 0, tab = 'g';
-  const tabs = () => `<div class="diary-tabs"><button type="button" data-diary="tab-g" aria-pressed="${tab === 'g'}">外婆的日記</button><button type="button" data-diary="tab-town" aria-pressed="${tab === 'town'}">町の手帳</button></div>`;
+  const tabs = () => `<div class="diary-tabs"><button type="button" data-diary="tab-g" aria-pressed="${tab === 'g'}">外婆的日記</button><button type="button" data-diary="tab-town" aria-pressed="${tab === 'town'}">町の手帳</button>${YEN.shown() ? `<button type="button" data-diary="tab-food" aria-pressed="${tab === 'food'}">美食手帳</button>` : ''}</div>`;   // 美食手帳 (YEN): once there has been 円
   // 町の手帳 (test, 2026-11-09; a page each since 2026-11-10, the user): a cover — who waits, everyone at a glance (a tap: their
   // page), the test site's tools — then a page a person, turned over (‹ ›, or a swipe): their face, name, who they are (a line more
   // for each event of theirs), and the talks had with them, each to be read through there or played again (no 言靈 the second
@@ -416,6 +416,7 @@ const DIARY = (() => {
     show();
   }
   function show() {
+    if (tab === 'food') { el.innerHTML = `<div class="diary-book">${tabs()}${YEN.book()}<div class="diary-nav"><button type="button" class="btn btn-sm" data-diary="x">闔上</button></div></div>`; return; }
     if (tab === 'town') { const n = people().length; el.innerHTML = `<div class="diary-book">${tabs()}${townBook()}<div class="diary-nav"><button type="button" class="btn btn-sm" data-diary="-1"${tp ? '' : ' disabled'}>‹ 上一頁</button><button type="button" class="btn btn-sm" data-diary="x">闔上</button><button type="button" class="btn btn-sm" data-diary="1"${tp < n ? '' : ' disabled'}>下一頁 ›</button></div></div>`; return; }
     const p = PAGES[at], ok = open(at);
     el.innerHTML = `<div class="diary-book">${tabs()}<div class="diary-head"><span>おばあちゃんの{日記|にっき}${ok ? `<button type="button" class="talk-say" data-diary-say aria-label="唸出來">${icon('speaker')}</button>` : ''}</span><span>${at + 1} / ${PAGES.length}</span></div>
@@ -529,7 +530,7 @@ function talkLines() {
   TOWN.EVENTS.forEach((e) => e.lines.forEach((l) => (Array.isArray(l) ? add(l[0], l[1]) : (l.opts || []).forEach((o) => add('hero', o[0])))));
   Object.values(NPC.DOOR).forEach((ls) => ls.forEach((l) => add('hero', l[0])));
   DIARY.PAGES.forEach((p) => add('granny', DIARY.said(p)));
-  CRUISE.lines(add);
+  CRUISE.lines(add); YEN.lines(add);   // the cruise's, buying with 円
   return out;
 }
 // the beach (test, 2026-11-09), along the yard to the left: the sea to the horizon, an island, glints, waves washing in on wet

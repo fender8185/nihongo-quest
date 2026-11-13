@@ -502,7 +502,12 @@ def test_someone_at_a_bench_sits_on_it_between_its_back_and_its_seat(b):
     assert r == {'sitting': 1, 'between': True}, r
 
 # ---- things to use in the places (round 4, 2026-11-10, the user: more things the hero can do something with) ----
-USE = """const use = async (id, ms) => { y().querySelector(`.use-btn[data-use="${id}"]`).click(); await wait(ms || 2600); };"""
+# a thing used; one sold (2026-11-13: the bath, おみくじ — YEN's menu) paid for first, from a wallet given the 円, its order talked through
+USE = """const use = async (id, ms) => { if (!yenEarned()) state.cruise.res = { t0: { yen: 9999 } };
+  const ws = new Set(Object.values(TOWN.MENU).flatMap((mu) => mu.items.map((it) => (it[4] || {}).w))); REG.vocab.forEach((v) => { if (ws.has(jaPlain(v.w)) && !state.srs[v.key]) state.srs[v.key] = { b: 3, due: todayStr(), n: 1, ok: 1, ng: 0, s: 1, d: 5, last: todayStr(), intro: todayStr() }; });   // its word learned
+  y().querySelector(`.use-btn[data-use="${id}"]`).click(); await wait(60);
+  const m = document.querySelector('button.mc-item:not(:disabled)'); if (m) { m.click(); await wait(60); while (document.querySelector('.talk-card')) { document.querySelector('.talk').click(); await wait(30); } }
+  await wait(ms || 2600); };"""
 
 def test_the_swing_seats_the_hero_and_swings_with_him_and_a_walk_gets_him_off(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + USE + """ fake([]); await go('park', 15); await use('swing0');
