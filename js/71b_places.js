@@ -191,6 +191,12 @@ function yRoute(place, p0, goal0, free) {
 // does); when: there only then (an open shop, the festival); go may follow the tap ((tap) => [X, Y]: the words over him); mirror:
 // then into the look in front of a mirror (DRESS, as the full-length mirror)
 const KUJI = [['大吉', '一切都會很順利！'], ['中吉', '努力會有好結果。'], ['小吉', '小小的好事在等你。'], ['吉', '平平穩穩就是福。'], ['末吉', '慢慢來，會越來越好。']];
+// the 緣日's stalls along the shrine's approach (2026-11-13, the user: seven or eight, more to eat): [id, x of its left edge on the
+// land, awning, sign, name] — drawn 72 wide (shrineHtml), four before the sacred tree, two before the hall's left wing, one before
+// its right; each a thing of the place (PLACE_USE: a menu, but the goldfish)
+const SHRINE_STALLS = [['kingyo', 392, '#3f7ac8', '金魚すくい', '金魚撈'], ['yakisoba', 470, '#d0453c', 'やきそば', '炒麵攤'], ['takoyaki', 548, '#e8913a', 'たこやき', '章魚燒攤'],
+  ['wataame', 626, '#e58fa8', 'わたあめ', '棉花糖攤'], ['ringoame', 704, '#6aa850', 'りんごあめ', '蘋果糖攤'], ['kakigori', 782, '#4fb3c8', 'かき氷', '剉冰攤'],
+  ['chocobanana', 966, '#8a5ab8', 'チョコバナナ', '巧克力香蕉攤']];
 const PLACE_USE = {
   yard: [{ id: 'tree', name: '樹', box: [440, 70, 500, 150], kind: 'do', go: [-110, 208], back: 1, pose: 'reach', fx: 'ytree', fxc: 'shake', burst: ['#6f9a5a', '#8ab86e', '#5a8a4a'] },
     { id: 'fence', name: '柵欄', box: [694, 124, 778, 152], kind: 'do', go: [136, 210], back: 1, pose: 'look', say: 'いい眺め〜' }],
@@ -247,9 +253,9 @@ const PLACE_USE = {
     { id: 'kuji', name: '籤', box: [1076, 160, 1156, 236], kind: 'do', go: [515, 122], back: 1, pose: 'reach', fortune: 1, fx: 'kuji', fxc: 'jingle', ms: 2200, buy: 'kuji' },
     { id: 'crow', name: '烏鴉', box: [220, 42, 266, 80], kind: 'do', go: [-350, 112], pose: 'look', say: 'カァー', fx: 'crow', fxc: 'flown', ms: 7000 },
     { id: 'fox', name: '狐狸', box: [338, 166, 382, 236], kind: 'do', go: [-240, 120], back: 1, pose: 'bow', say: 'ペコリ', fx: 'fox', fxc: 'bless', ms: 2000 },
-    { id: 'kingyo', name: '金魚撈', box: [400, 144, 500, 236], kind: 'do', go: [-130, 126], back: 1, pose: 'crouch', say: 'とれた！🐟', when: () => TOWNEV.festival() },
-    { id: 'yakisoba', name: '炒麵攤', box: [510, 144, 600, 236], kind: 'do', go: [-45, 126], back: 1, pose: 'reach', say: 'やきそば、おいしい！', when: () => TOWNEV.festival() },
-    { id: 'wataame', name: '棉花糖攤', box: [610, 144, 700, 236], kind: 'do', go: [55, 126], back: 1, pose: 'reach', say: 'ふわふわ〜', when: () => TOWNEV.festival() }],
+    // the 緣日's stalls (SHRINE_STALLS): the goldfish to scoop; the rest, a menu each (YEN)
+    ...SHRINE_STALLS.map(([id, x, , , name]) => Object.assign({ id, name, box: [x, 144, x + 72, 236], kind: 'do', go: [x + 36 - 600, 126], back: 1, pose: 'reach', when: () => TOWNEV.festival() },
+      id === 'kingyo' ? { pose: 'crouch', say: 'とれた！🐟' } : { buy: id }))],
   castle: [
     { id: 'sakuraL', name: '櫻花', box: [0, 60, 130, 236], kind: 'do', go: [-520, 112], pose: 'reach', fx: 'sakuraL', fxc: 'shake', burst: ['#f7c6d2', '#f2b8c6', '#fbdde4'] },
     { id: 'sakuraR', name: '櫻花', box: [1080, 60, 1210, 236], kind: 'do', go: [520, 112], pose: 'reach', fx: 'sakuraR', fxc: 'shake', burst: ['#f7c6d2', '#f2b8c6', '#fbdde4'] },

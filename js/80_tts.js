@@ -122,7 +122,9 @@ const CAST_VOICE = {
   nakamura: ['Schedar', 1], kenji: ['Zubenelgenubi', 1], suzuki: ['Rasalgethi', 1.02], alex: ['Umbriel', 1], chihaya: ['Achernar', 0.96],
   tatsu: ['Sadachbia', 1.06], takahashi: ['Sadaltager', 0.95], sophia: ['Zephyr', 1], nishimura: ['Kore', 1.04], sano: ['Charon', 1],
   // the cruise's passengers (CRUISE, test 2026-11-12)
-  kaneda: ['Enceladus', 0.92], umeko: ['Callirrhoe', 1.1], yuta: ['Autonoe', 0.91, 0, 3], rina: ['Leda', 1.06], yoshimoto: ['Charon', 1.06], ken: ['Orus', 1.02], ai: ['Erinome', 1.02], michiyama: ['Schedar', 0.96], mike: ['Puck', 1]
+  kaneda: ['Enceladus', 0.92], umeko: ['Callirrhoe', 1.1], yuta: ['Autonoe', 0.91, 0, 3], rina: ['Leda', 1.06], yoshimoto: ['Charon', 1.06], ken: ['Orus', 1.02], ai: ['Erinome', 1.02], michiyama: ['Schedar', 0.96], mike: ['Puck', 1],
+  // the 緣日's stall keepers (YATAI, test 2026-11-13)
+  ojisan: ['Fenrir', 1.02], obasan: ['Aoede', 1.02], oniisan: ['Umbriel', 1.08]
 };
 // ムギ (2026-11-12, the user, by ear): a boy's voice pitched up, a mascot's — a grown man saying ワン, or a real bark beside a
 // plain voice, broke the spell; her lines open with ワン！ and no longer end in it (events.js 42)
@@ -921,7 +923,7 @@ function castPreviewHtml() {
     return `<div class="list-item cast-row${k === '' ? '' : ' cast-try'}"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="cast-preview" data-who="${id}" data-try="${k}" aria-label="試聽${esc(name)}"${CAST_PREVIEW.busy === key ? ' disabled' : ''}>${CAST_PREVIEW.busy === key ? '…' : icon('speaker')}</button>
       <div class="grow"><div><b>${esc(name)}</b> <span class="muted small">${esc(sub)}</span></div>${line ? `<div class="small muted jp">${esc(line)}</div>` : ''}${said ? `<div class="small ${said.bad ? 'bad' : 'muted'}">${esc(said.text)}</div>` : ''}</div></div>`; };
   return Object.keys(CAST_VOICE).map((id) => {
-    const p = id === 'hero' ? { name: '主角', role: '' } : NPCS[id] || TOWN.CAST[id] || CRUISE.person(id) || { name: id, role: '' }, v = CAST_VOICE[id];   // the cruise's passengers too
+    const p = id === 'hero' ? { name: '主角', role: '' } : NPCS[id] || TOWN.CAST[id] || CRUISE.person(id) || (TOWN.YATAI || {})[id] || { name: id, role: '' }, v = CAST_VOICE[id];   // the cruise's passengers, the 緣日's stall keepers too
     return row(id, '', p.name, `${p.role || ''}${p.role ? '・' : ''}${v[0]}${v[2] ? `（音調 +${v[2]}）` : ''}（${voiceGender(v) === 'f' ? '女聲' : '男聲'}）`, castLine(castSample(id)).replace(CAST_MARK, '$1'))
       + (CAST_TRY[id] || []).map((t, k) => row(id, String(k), `${p.name}候選 ${k + 1}`, t[3], '')).join('');
   }).join('');

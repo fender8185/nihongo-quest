@@ -146,6 +146,26 @@ def test_while_he_eats_the_back_button_keeps_the_page(b):
       return JSON.stringify({ up, kept, still, place, after: location.hash }); })()"""))
     assert r == {'up': True, 'kept': '#/street', 'still': True, 'place': 'street', 'after': '#/today'}, r
 
+def test_the_festival_has_seven_stalls_six_selling_something_to_eat(b):
+    # 2026-11-13, the user: seven or eight stalls at the 緣日, cotton candy, takoyaki and the like — more to eat
+    r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ learn('りんご', '氷', 'バナナ');
+      const at = async (h) => { TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; location.hash = '#/shrine'; document.getElementById('view').innerHTML = ''; route(); await wait(300); };
+      await at(12); const day = SHRINE_STALLS.filter(([id]) => y().querySelector(`.use-btn[data-use="${id}"]`)).length;
+      await at(20); const night = SHRINE_STALLS.filter(([id]) => y().querySelector(`.use-btn[data-use="${id}"]`)).map(([id]) => id), menus = night.filter((id) => TOWN.MENU[id]);
+      use('kakigori'); await wait(100); const cold = menu().map(([i]) => i); closeModal();
+      use('takoyaki'); await wait(100); document.querySelector('.mc-item[data-item="takoyaki"]').click(); await wait(100);
+      const who = [], said = []; let face = false;
+      while (document.querySelector('.talk-card')) { who.push(document.querySelector('.talk-name').firstChild.textContent); face = face || !!document.querySelector('.talk-card svg'); said.push(document.querySelector('.talk-ja').textContent.trim()); document.querySelector('.talk').click(); await wait(40); }
+      await wait(1700);
+      const es = document.querySelector('.eat-scene'), name = es && es.querySelector('.es-name').textContent; while (document.querySelector('.eat-scene')) { document.querySelector('.es-ok').click(); await wait(40); }
+      const l = []; YEN.lines((w, ja) => l.push(w));
+      return JSON.stringify({ day, night, menus, cold, who, face, said, name, bal: yenBalance(), keepers: ['ojisan', 'obasan', 'oniisan'].map((k) => l.filter((w) => w === k).length), voiced: ['ojisan', 'obasan', 'oniisan'].every((k) => CAST_VOICE[k]) }); })()"""))
+    assert r['day'] == 0 and len(r['night']) == 7 and r['menus'] == ['yakisoba', 'takoyaki', 'wataame', 'ringoame', 'kakigori', 'chocobanana'], r   # only at the festival; all but the goldfish sell something
+    assert r['cold'] == ['kakigori', 'ramune'], r   # shaved ice, and ラムネ to drink
+    assert r['who'] == ['我', '屋台のおじさん'] and r['face'] and r['said'] == ['たこやきを ください。', 'まいど！ 500円ごひゃくえんだよ！'] and r['bal'] == 4500, r
+    assert r['name'] == 'たこやき', r   # had on its own screen
+    assert r['keepers'] == [4, 6, 3] and r['voiced'], r   # each one's prices and 「また あした」 for the generator, in their own voices
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
 if __name__ == "__main__":

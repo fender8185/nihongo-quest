@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 52 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 53 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2372,6 +2372,13 @@ const TOWN = {
       ] }
     ]
   },
+  // the 緣日's stall keepers (2026-11-13, the user: seven or eight stalls, more to eat): one behind each counter, who says the price
+  // (MENU keeper) — not townsfolk with hours and chat; drawn in the talk as the town's people are, in their own voices (CAST_VOICE)
+  YATAI: {
+    ojisan: { name: '屋台のおじさん', kana: 'やたいのおじさん', role: '炒麵、章魚燒', look: { face: 'round', skin: '#e8bd98', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#4a4040', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'happi', top: '#d0453c', bottomStyle: 'shorts', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: { head: 'nejiri' } },
+    obasan: { name: '屋台のおばさん', kana: 'やたいのおばさん', role: '甜點', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#5a4038', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'happi', top: '#e58fa8', bottomStyle: 'wide', bottom: '#4f6f9e', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: {} },
+    oniisan: { name: '屋台のお兄さん', kana: 'やたいのおにいさん', role: '剉冰、彈珠汽水', look: { face: 'oval', skin: '#e8bd98', cheeks: 'none', fringe: 'spiky', sides: 'short', hairBack: 'short', hairTop: 'none', hairColor: '#c98a3a', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#3f9ac8', bottomStyle: 'shorts', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: { head: 'nejiri' } }
+  },
   // what the wallet's 円 buys (2026-11-13, the second round of the guide's pay): a menu a place's thing has (PLACE_USE buy) —
   // items [id, name as said, Chinese, price 円, { k: a food (f) or a drink (d) — two foods and a drink a day; w: the course's
   // word to have learned first (or the course past its level); pic: its drawing (PICS, PICS_TOWN; else w's); dish: bitten into with
@@ -2454,6 +2461,35 @@ const TOWN = {
       have: 'ぷはー！' },
     bath: { title: '{月|つき}の{湯|ゆ|澡堂}', keeper: ['matsu', '{P}です。ごゆっくり どうぞ。', '{Z}。請慢慢泡。'], hello: ['いらっしゃい。おふろですか。', '歡迎。要泡澡嗎？'], order: '{大人|おとな} {一人|ひとり}、おねがいします。', orderZh: '一位大人，麻煩你。',
       items: [['bath', '{入浴料|にゅうよくりょう|泡湯費}', '泡湯（大人一位）', 480, { k: 'b', w: 'お風呂', pic: 'お風呂' }]] },
-    kuji: { title: 'おみくじ', items: [['kuji', 'おみくじ', '求籤', 100, { k: 'o', pic: 'おみくじ' }]] }
+    kuji: { title: 'おみくじ', items: [['kuji', 'おみくじ', '求籤', 100, { k: 'o', pic: 'おみくじ' }]] },
+    // the 緣日's stalls (2026-11-13, the user): a thing to eat at each, a drink with the shaved ice; w only where the thing's own name
+    // is a course word (りんご, 氷, バナナ)
+    yakisoba: { title: 'やきそば', keeper: ['ojisan', 'まいど！ {P}だよ！', '謝謝惠顧！{Z}喔！'], items: [['yakisoba', 'やきそば', '炒麵', 500, { k: 'f', pic: 'やきそば', dish: true,
+        look: [['ソースの いい においが します！', '有醬汁的香味！'], ['てっぱんで じゅうじゅう…', '在鐵板上滋滋作響……']],
+        say: [['ソースが あまくて、ちょっと からい！', '醬汁甜甜的，有點辣！'], ['キャベツも シャキシャキです。', '高麗菜也脆脆的。'], ['お{祭|まつ|祭典}りの やきそばは とくべつです！', '祭典的炒麵就是特別！']] }]],
+      have: 'いい におい！' },
+    takoyaki: { title: 'たこやき', keeper: ['ojisan', 'まいど！ {P}だよ！', '謝謝惠顧！{Z}喔！'], items: [['takoyaki', 'たこやき', '章魚燒（六顆）', 500, { k: 'f', pic: 'たこやき', dish: true,
+        look: [['まるい たこやきが {六|むっ}つ！', '圓圓的章魚燒六顆！'], ['かつおぶしが ゆらゆら…！', '柴魚片晃呀晃……！']],
+        say: [['あつい！ なかが とろとろです！', '好燙！裡面軟綿綿的！'], ['なかの たこが おおきい！', '裡面的章魚好大塊！'], ['ソースと マヨネーズ、さいこうです！', '醬汁加美乃滋，最棒了！']] }]],
+      have: 'いい におい！' },
+    wataame: { title: 'わたあめ', keeper: ['obasan', 'はい、{P}ね。ありがとう！', '好的，{Z}喔。謝謝！'], items: [['wataame', 'わたあめ', '棉花糖', 400, { k: 'f', pic: 'わたあめ',
+        look: [['ピンクの くもです！', '是粉紅色的雲！'], ['こんなに おおきい！', '這麼大！']],
+        say: [['ふわっ…くちの なかで きえました！', '輕飄飄……在嘴裡消失了！'], ['あまい！ でも、すぐ なくなります。', '好甜！可是一下就沒了。'], ['{子|こ}どもの ころの {夢|ゆめ|夢想}です！', '是小時候的夢想！']] }]],
+      have: 'あまい におい！' },
+    ringoame: { title: 'りんごあめ', keeper: ['obasan', 'はい、{P}ね。ありがとう！', '好的，{Z}喔。謝謝！'], items: [['ringoame', 'りんごあめ', '蘋果糖', 400, { k: 'f', w: 'りんご', pic: 'りんごあめ',
+        look: [['まっかで ぴかぴか！', '紅通通、亮晶晶！'], ['あめの なかに りんごが あります！', '糖裡面有蘋果！']],
+        say: [['カリッ！ あめが かたいです！', '喀滋！糖好硬！'], ['なかの りんごは すっぱくて、あまい。', '裡面的蘋果酸酸甜甜。'], ['くちが まっかに なりました！', '嘴巴變得紅通通！']] }]],
+      have: 'きれい！' },
+    kakigori: { title: 'かき{氷|ごおり}', keeper: ['oniisan', 'はい、{P}です！ つめたいですよ！', '好的，{Z}！很冰喔！'], items: [['kakigori', 'いちごの かき{氷|ごおり}', '草莓剉冰', 400, { k: 'f', w: '氷', pic: 'かき氷',
+        look: [['しろい やまに、あかい シロップ！', '白色的山上淋著紅色糖漿！'], ['つめたい かぜが きます…', '吹來一陣涼風……']],
+        say: [['つめたい！ あたまが キーンと します！', '好冰！頭好痛（キーン）！'], ['いちごの シロップが あまいです。', '草莓糖漿好甜。'], ['なつの {味|あじ|味道}です！', '是夏天的味道！']] }],
+        ['ramune', 'ラムネ', '彈珠汽水', 200, { k: 'd', pic: 'ラムネ',
+        look: [['びんの なかに ビーだまが あります！', '瓶子裡有彈珠！'], ['ポン！ あきました！', '啵！打開了！']],
+        say: [['しゅわしゅわ！ つめたい！', '氣泡滋滋！好冰！'], ['ビーだまが カランと なりました。', '彈珠叮噹一聲。'], ['これが お{祭|まつ|祭典}りの のみものです！', '這就是祭典的飲料！']] }]],
+      have: 'つめたい！' },
+    chocobanana: { title: 'チョコバナナ', keeper: ['obasan', 'はい、{P}ね。ありがとう！', '好的，{Z}喔。謝謝！'], items: [['chocobanana', 'チョコバナナ', '巧克力香蕉', 300, { k: 'f', w: 'バナナ', pic: 'チョコバナナ',
+        look: [['チョコが つやつや！', '巧克力亮晶晶！'], ['カラフルな つぶつぶが かわいい！', '彩色的小顆粒好可愛！']],
+        say: [['チョコが あまくて、バナナが やわらかい！', '巧克力甜甜的，香蕉軟軟的！'], ['つぶつぶが カリカリです。', '小顆粒脆脆的。'], ['{一本|いっぽん}で しあわせです！', '一根就好幸福！']] }]],
+      have: 'かわいい！' }
   }
 };

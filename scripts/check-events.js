@@ -101,11 +101,15 @@ function check(T, D, opts = {}) {
   });
   if (used.size) { const lo = Math.min(...used), hi = Math.max(...used); for (let i = lo; i <= hi; i++) if (!used.has(i)) bad('gap', units[i], 'no events'); }
   // what 円 buys (MENU): ids once, a price, the names and lines readable from the first unit, a keeper who is in the town and says it
+  Object.entries(T.YATAI || {}).forEach(([id, v]) => {   // the 緣日's stall keepers: a name, a look, no one of the town's
+    if (cast[id]) bad('ref', `yatai ${id}`, 'a stall keeper with the id of someone in the town');
+    if (!v || !v.name || !v.look || typeof v.look !== 'object') bad('menu', `yatai ${id}`, 'a stall keeper has a name and a look');
+  });
   const menuIds = new Set();
   Object.entries(T.MENU || {}).forEach(([m, mu]) => {
     const at = `menu ${m}`;
     text(mu.title, 'm1', `${at} title`); ['have', 'done', 'order', 'shop'].forEach((k) => { if (mu[k] !== undefined) text(mu[k], 'm1', `${at} ${k}`); });
-    if (mu.keeper && (!cast[mu.keeper[0]] || !/\{P\}/.test(mu.keeper[1]) || !/\{Z\}/.test(mu.keeper[2] || ''))) bad('menu', at, 'keeper is [someone in the town, a line with {P}, its Chinese with {Z}]');
+    if (mu.keeper && (!(cast[mu.keeper[0]] || (T.YATAI || {})[mu.keeper[0]]) || !/\{P\}/.test(mu.keeper[1]) || !/\{Z\}/.test(mu.keeper[2] || ''))) bad('menu', at, 'keeper is [someone in the town or a stall keeper (YATAI), a line with {P}, its Chinese with {Z}]');
     if (mu.keeper) text(mu.keeper[1].replace('{P}', ''), 'm1', `${at} keeper`);
     if (mu.hello) { text(mu.hello[0], 'm1', `${at} hello`); if (!mu.keeper || !mu.hello[1]) bad('menu', at, 'hello is the keeper\'s [Japanese, Chinese]'); }
     (mu.items || []).forEach(([id, name, zh, price], i) => {

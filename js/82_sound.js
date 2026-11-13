@@ -216,7 +216,7 @@ const USE_SND = {
   'town.cat': 'meow', 'town.chimes': 'furin', 'harbor.cat': 'purr', 'harbor.gull': 'gull', 'harbor.fish': 'flop',
   'station.vend': 'can-drop', 'station.pigeons': 'wings', 'station.taxi': 'horn', 'station.gate': 'ic',
   'sento.milk': 'bottle', 'sento.cat': 'purr', 'sento.bath': 'bath', 'sento.laundry': 'washer',
-  'shrine.bell': ['suzu', 'clap'], 'shrine.kuji': 'kuji', 'shrine.crow': 'crow', 'shrine.fox': 'sparkle', 'shrine.kingyo': 'splash', 'shrine.yakisoba': 'sizzle',
+  'shrine.bell': ['suzu', 'clap'], 'shrine.kuji': 'kuji', 'shrine.crow': 'crow', 'shrine.fox': 'sparkle', 'shrine.kingyo': 'splash', 'shrine.yakisoba': 'sizzle', 'shrine.takoyaki': 'sizzle',
   'castle.sakuraL': 'rustle', 'castle.sakuraR': 'rustle', 'castle.gate': 'knock', 'castle.moat': 'duck',
   'shokudo.table': 'dishes', 'shokudo.chair': 'dishes', 'shokudo.stool': 'dishes', 'shokudo.maneki': 'sparkle', 'shokudo.tv': 'switch',
   'shokudo.kitchen': 'cloth', 'shokudo.kamidana': 'clap', 'shokudo.crates': 'bottles',
