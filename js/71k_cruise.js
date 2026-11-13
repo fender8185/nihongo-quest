@@ -321,7 +321,7 @@ const CRUISE = (() => {
       yh.flip = crowdAt(s)[0] < yh.X; yh.turn = true; yh.back = false; yHeroPlace(S.yard); facing(s); frameAll(s);
       S.yard.querySelectorAll('.ysay.cr-say').forEach((b) => b.remove());   // the chatter stops for the talk
       if (s.need) TOWNLIFE.hold(s.need);   // ムギ stays put for his talk (let go as it closes)
-      TALK.open(S.yard, 'takahashi', s.lines, () => end(i), null, { ev: true, onLine });
+      TALK.open(S.yard, 'takahashi', s.lines, () => end(i), null, { ev: true, onLine, onAnswer: (li, misses) => tally(i, li, misses) });
     };
     left++; yHeroWalk(S.yard, heroAt(s), there);
     left++; walkTo(S.ppl.get('takahashi'), guideAt(s), { v: 120, done: there });
@@ -411,12 +411,13 @@ const CRUISE = (() => {
     openModal('豪華郵輪靠港了！', `<p>第 ${k} 趟導覽「${esc(t.title)}」：約 ${n} 站、${asks} 個回答，大約要 20–30 分鐘。</p>
       ${join ? `<p>這一趟多了一位新團員：${esc(join.name)}（${esc(join.role)}）。</p>` : ''}
       <p class="muted">中途可以離開，郵輪會一直停在港口，遊客在原地等你，下次從同一站繼續。</p>
+      ${Object.keys(cs().done).length ? `<p class="muted small">你的導遊證：${esc(rankOf(Object.keys(cs().done).length))}（帶過 ${Object.keys(cs().done).length} 趟）</p>` : ''}
       <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="cruise-start">開始導覽</button></div>`, { width: 420 });
   }
   function start() {
     closeModal();
     const t = waiting(); if (!t || !alive() || S.busy || S.place !== 'harbor') return;
-    cs().on = { trip: t.id, step: 0, place: 'harbor' }; setLocal(FORCE, ''); saveState();   // in from now on, should the scene be drawn anew halfway
+    cs().on = { trip: t.id, step: 0, place: 'harbor', score: {} }; setLocal(FORCE, ''); saveState();   // in from now on, should the scene be drawn anew halfway
     S.busy = true;
     const y = S.yard, btn = y.querySelector('.cruise-call'), ship = y.querySelector('.cruise-ship'), front = y.querySelector('.cruise-front'), ramp = y.querySelector('.cruise-ramp');
     if (btn) btn.remove();
@@ -471,14 +472,68 @@ const CRUISE = (() => {
         if (g) { turnTo(g, 400); g.el.classList.add('wave'); setTimeout(() => g.el.classList.remove('wave'), 1200); say('takahashi', 'さようなら〜！', 2400); }
         if (ship) ship.classList.add('sailing');
         tween(4600, (u) => { if (ship) { ship.setAttribute('transform', `translate(${(900 * u).toFixed(1)} 0)`); ship.style.opacity = String(Math.min(1, (1 - u) * 4)); } }, () => {
+          const r = result(t, (cs().on || {}).score), before = yenBalance();
+          (cs().res = cs().res || {})[t.id] = { first: r.first, asks: r.asks, koto: r.koto, yen: r.yen, grade: r.grade, day: r.day }; state.koto.found['cruise-' + t.id] = r.koto;
           cs().done[t.id] = day(); cs().on = null; setLocal(FORCE, ''); saveState();
           if (ship) ship.remove();
-          toast(`郵輪開走了。第 ${tripIdx(t.id) + 1} 趟導覽「${t.title}」完成！謝謝你幫忙 🚢`, 3600); playSfx('fanfare');
+          results(t, r, before);
           if (g) S.t.push(setTimeout(() => { if (alive()) walkTo(g, [ycam.YW / 2 + 60, 50], { v: 120, free: true, done: () => { g.el.remove(); S.ppl.delete('takahashi'); } }); }, 1600));
           S.busy = false; S.quiet = false; bar();
         }, (u) => u * u);
       });
     }, after));
+  }
+
+  // ---- the guide's pay (2026-11-13, the user): each reply right at once 2 言靈, after one wrong 1, the last left 0; the trip's
+  // grade by the share right at once (E … S); its pay fixed by the course's level (N5 5,000 円, N4 7,000, N3 on 10,000) and 200 more
+  // a grade up from E. A reply counts once (on.score: 'stop.line' → misses), however often its stop is begun ----
+  const GRADES = [['E', 0], ['D', 0.3], ['C', 0.5], ['B', 0.7], ['A', 0.85], ['S', 0.95]];
+  const PAY = { N5: 5000, N4: 7000 };
+  const RANKS = [[15, '主任ガイド'], [8, 'ベテランガイド'], [3, 'ガイド'], [1, '見習いガイド']];   // the guide's licence by trips done
+  const rankOf = (n) => (RANKS.find(([k]) => n >= k) || [0, ''])[1];
+  function tally(i, li, misses) { const on = cs().on, k = `${i}.${li}`; if (!on) return; on.score = on.score || {}; if (!(k in on.score)) { on.score[k] = misses; saveLocal(); } }
+  function result(t, score) {
+    const v = Object.values(score || {}), asks = v.length, first = v.filter((m) => m === 0).length, koto = v.reduce((a, m) => a + (m === 0 ? 2 : m === 1 ? 1 : 0), 0);
+    const share = asks ? first / asks : 0, grade = GRADES.reduce((g, [, min], k) => (share >= min ? k : g), 0);
+    const lv = ((DATA.UNITS || []).find((u) => u.id === t.u) || {}).lv, base = PAY[lv] || 10000;
+    return { first, asks, koto, base, bonus: grade * 200, yen: base + grade * 200, grade, day: day() };
+  }
+  // the results, as the ship sails off: the replies, the 言靈 and the pay counting up, the grade stamped on; then (the first time)
+  // 高橋 hands over the wallet's first 円 and says what it is for
+  function results(t, r, before, demo) {
+    const done = Math.max(1, Object.keys(cs().done).length), rank = rankOf(done), up = rank !== rankOf(done - 1), g = GRADES[r.grade][0], el = document.createElement('div');
+    el.className = 'cr-result'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', '導覽結算');
+    el.innerHTML = `<div class="crr-card"><div class="crr-head"><b>導覽結算</b><span>第 ${tripIdx(t.id) + 1} 趟「${esc(t.title)}」</span></div>
+      <div class="crr-row"><span>一次就答對</span><b><i data-n="${r.first}">0</i> / ${r.asks}</b></div>
+      <div class="crr-row"><span>${kotoIcon()}言靈</span><b>+<i data-n="${r.koto}">0</i></b></div>
+      <div class="crr-row"><span>${yenIcon()}導遊費</span><b><i data-n="${r.base}" data-yen>0</i> 円</b></div>
+      ${r.bonus ? `<div class="crr-row"><span>評級加給（${g} 級）</span><b>+<i data-n="${r.bonus}" data-yen>0</i> 円</b></div>` : ''}
+      <div class="crr-row crr-sum"><span>錢包</span><b><i data-n="${before + r.yen}" data-from="${before}" data-yen>${yenStr(before)}</i> 円</b></div>
+      <div class="crr-stamp g${g}" aria-label="${g} 級導遊"><b>${g}</b><span>級ガイド</span></div>
+      <p class="crr-rank">導遊證：${esc(rank)}${up ? `　<em>${rankOf(done - 1) ? '升級！' : '拿到導遊證！'}</em>` : ''}</p>
+      <button type="button" class="btn btn-primary crr-ok">收下</button></div>`;
+    document.body.appendChild(el);
+    const nums = [...el.querySelectorAll('i[data-n]')], stamp = el.querySelector('.crr-stamp'), calmNow = calm();
+    const put = (x, n) => { x.textContent = x.dataset.yen !== undefined ? yenStr(n) : String(Math.round(n)); };
+    const thud = () => { stamp.classList.add('on'); el.querySelector('.crr-card').classList.add('thud'); playSfx('stamp'); setTimeout(() => playSfx('fanfare'), 380); };
+    if (calmNow) { nums.forEach((x) => put(x, Number(x.dataset.n))); stamp.classList.add('on', 'still'); }
+    else nums.forEach((x, k) => setTimeout(() => {   // one after another, ticking up
+      const to = Number(x.dataset.n), from = Number(x.dataset.from || 0), t0 = performance.now(), ms = 700; let ticks = 0;
+      const f = (now) => { const u = Math.min(1, (now - t0) / ms); put(x, from + (to - from) * (1 - Math.pow(1 - u, 3))); if (Math.floor(u * 6) > ticks) { ticks = Math.floor(u * 6); playSfx('coin', ticks); } if (u < 1) requestAnimationFrame(f); else if (k === nums.length - 1) setTimeout(thud, 250); };
+      requestAnimationFrame(f);
+    }, 350 + k * 800));
+    el.querySelector('.crr-ok').addEventListener('click', () => {
+      el.remove(); if (typeof kotoButtons === 'function') kotoButtons(document);
+      if (!before && !demo && alive()) TALK.open(S.yard, 'takahashi', [   // the wallet's first 円: what it is
+        ['takahashi', '{今日|きょう}は ありがとう。これは ガイドの お{礼|れい|謝禮}です。', '今天謝謝你。這是導遊的謝禮。'],
+        ['hero', '', '（拿到了円！點畫面上方的言靈數字，就能切換看錢包裡有多少円。之後可以在鎮上用円買吃的、喝的、去泡湯。）']], null, null, { ev: true });
+    });
+  }
+
+  // the test site (町の手帳): the results as a trip would show them — a sample of replies, nothing kept
+  function preview() {
+    const t = trips()[0], sc = Object.fromEntries(Array.from({ length: 24 }, (_, k) => [`1.${k}`, k < 20 ? 0 : k < 23 ? 1 : 2]));
+    results(t, result(t, sc), yenBalance(), true);
   }
 
   // ---- a place drawn anew ----
@@ -567,7 +622,7 @@ const CRUISE = (() => {
   const tune = (place) => { const on = C() && cs().on; return on && on.place === place && place !== 'izakaya' ? 'minato' : ''; };
   // the test site (町の手帳): the next trip's ship out there now, whatever the day, hour or course; all begun again; on to a trip
   function force() { const t = trips().find((x) => !cs().done[x.id]); if (!t) return null; cs().on = null; saveState(); setLocal(FORCE, t.id); setLocal(TOLD, ''); return t; }
-  function reset() { state.cruise = { done: {}, on: null }; saveState(); setLocal(FORCE, ''); setLocal(TOLD, ''); }
-  function skipTo(id) { const k = tripIdx(id); if (k < 0) return; state.cruise = { done: Object.fromEntries(trips().slice(0, k).map((t) => [t.id, '2000-01-01'])), on: null }; saveState(); setLocal(FORCE, id); setLocal(TOLD, ''); }
-  return { out, docked, waiting, current, shipSvg, rampSvg, callHtml, mount, call: () => call(), start: () => start(), next: () => next(), who, face: talkFace, tag, opens, away, lines, chorus, tune, force, reset, skipTo, person, party, trips: () => trips() };
+  function reset() { state.cruise = { done: {}, on: null, res: {} }; saveState(); setLocal(FORCE, ''); setLocal(TOLD, ''); }
+  function skipTo(id) { const k = tripIdx(id); if (k < 0) return; state.cruise = { done: Object.fromEntries(trips().slice(0, k).map((t) => [t.id, '2000-01-01'])), on: null, res: {} }; saveState(); setLocal(FORCE, id); setLocal(TOLD, ''); }
+  return { out, docked, waiting, current, shipSvg, rampSvg, callHtml, mount, call: () => call(), start: () => start(), next: () => next(), who, face: talkFace, tag, opens, away, lines, chorus, tune, result, rankOf, preview, force, reset, skipTo, person, party, trips: () => trips() };
 })();

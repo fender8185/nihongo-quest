@@ -932,7 +932,7 @@ def test_the_yard_has_the_rooms_buttons_up_top_that_rest_and_its_own_dressing_ro
       document.querySelector('[data-act="dress-tab"][data-tab="head"]').click(); document.querySelector('[data-act="dress-wear"][data-id="beanie"]').click(); document.querySelector('[data-act="dress-done"]').click(); await wait(650);
       return JSON.stringify({ acts, bal, quiet, faded, first, dressing, facing, worn: state.wear.head, hat: !!y.querySelector('.yhero svg [class*="beanie"], .yhero svg .w-beanie') || y.querySelector('.yhero').innerHTML.includes('beanie'), closed: !y.classList.contains('dressing') && !y.querySelector('.dress') }); })()"""
     r = json.loads(ev_at(b, PHONE, js))
-    assert r['acts'] == ['koto-shop', 'wardrobe', 'yard-edit', 'settings'] and r['bal'] == '90', r   # 言靈, 衣櫃, 擺設, 設定
+    assert r['acts'] == ['purse', 'wardrobe', 'yard-edit', 'settings'] and r['bal'] == '90', r   # 言靈 (tapped: 円 once there is any; 2026-11-13), 衣櫃, 擺設, 設定
     assert r['quiet'] and r['faded'] == '0' and r['first'] is False, r   # resting; a first tap only wakes them
     assert r['dressing'] and r['facing'] == ['inline', 'none'] and r['worn'] == 'beanie' and r['closed'], r
 

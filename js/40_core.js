@@ -284,7 +284,7 @@ function defaultState() {
     met: {},                // test (2026-11-09): the neighbours who have come by (NPCS): { id: the day }
     storyV: 0,              // test (2026-11-09): the version of the opening (STORY.V) seen, 0 none
     storyAt: 0,             // 2026-11-11: when the opening was closed (ms; 0 before it, or seen before this was kept): 小春 knocks a minute on
-    cruise: { done: {}, on: null },   // test (2026-11-12): the cruise ship's trips (CRUISE): done { trip: day }; on: the one under way { trip, step: its next stop, place: where the passengers wait }
+    cruise: { done: {}, on: null, res: {} },   // test (2026-11-12): the cruise ship's trips (CRUISE): done { trip: day }; on: the one under way { trip, step: its next stop, place: where the passengers wait, score: { 'stop.line': misses at each reply } }; res: each one done { first, asks, koto, yen, grade, day } (2026-11-13: the guide's pay, the wallet's 円)
     town: { done: {}, seen: {}, stops: {}, talks: {} },   // test (2026-11-09): the town's events (TOWNEV): done { id: day }, people met { id: 1 }, bus stops opened { id: 1 }; talks { id: chats with them } (2026-11-12)
     placed: {},             // where owned things stand in 書房: { id: { w: 'F', x, y, r } | { w: 'L'|'R', u, v } }; not here = in the storage box
     wear: {},               // what the hero wears, by part: { head, face, neck, back, body }
@@ -357,7 +357,9 @@ function normalizeState(s) {
   const tw = obj(out.town), talks = {}; Object.entries(obj(tw.talks)).forEach(([id, n]) => { const k = Math.floor(Number(n)); if (k > 0) talks[id] = k; });
   out.town = { done: obj(tw.done), seen: obj(tw.seen), stops: obj(tw.stops), talks };
   const cr = obj(out.cruise), on = cr.on && typeof cr.on === 'object' && typeof cr.on.trip === 'string' ? cr.on : null;
-  out.cruise = { done: obj(cr.done), on: on && !obj(cr.done)[on.trip] ? { trip: on.trip, step: Math.max(0, Math.floor(Number(on.step)) || 0), place: typeof on.place === 'string' ? on.place : 'harbor' } : null };
+  const num = (v) => Math.max(0, Math.floor(Number(v)) || 0), score = (sc) => Object.fromEntries(Object.entries(obj(sc)).filter(([k]) => /^\d+\.\d+$/.test(k)).map(([k, v]) => [k, num(v)]));
+  const res = Object.fromEntries(Object.entries(obj(cr.res)).filter(([, r]) => r && typeof r === 'object').map(([t, r]) => [t, { first: num(r.first), asks: num(r.asks), koto: num(r.koto), yen: num(r.yen), grade: num(r.grade), day: typeof r.day === 'string' ? r.day : '' }]));
+  out.cruise = { done: obj(cr.done), on: on && !obj(cr.done)[on.trip] ? { trip: on.trip, step: num(on.step), place: typeof on.place === 'string' ? on.place : 'harbor', score: score(on.score) } : null, res };
   out.mail = out.mail && typeof out.mail === 'object' && !Array.isArray(out.mail) ? { got: obj(out.mail.got), read: obj(out.mail.read) } : null;
   if (typeof out.resetAt !== 'string') out.resetAt = '';   // 1.9.1: when 重設所有進度 was last pressed (the cloud's guard lets that one shrink through)
   ['owned', 'placed', 'wear', 'look', 'lampsOff', 'met'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)
@@ -1072,6 +1074,18 @@ function kotoPop(n, words = '言靈') {
   const el = document.createElement('div'); el.className = 'koto-pop' + (n ? '' : ' full'); el.setAttribute('role', 'status');
   el.innerHTML = `${kotoIcon()}<span>${words}</span>${n ? `<b>+${n}</b>` : ''}`;
   document.body.appendChild(el); setTimeout(() => el.remove(), n ? 2600 : 4200);
+}
+// the wallet (2026-11-13): 円, earned guiding the cruise's passengers (state.cruise.res: each trip's pay) — later spent on things to
+// eat and do in town; as much as 9999万 (the user)
+const YEN_CAP = 99990000;
+const yenEarned = () => Object.values((state.cruise && state.cruise.res) || {}).reduce((a, r) => a + (Number(r.yen) || 0), 0);
+const yenBalance = () => Math.min(YEN_CAP, yenEarned());
+const yenStr = (n) => Math.round(n).toLocaleString('en-US');
+// a 100円 coin: silver, its rim milled, a cherry blossom and 100 on it (as kotoIcon: circles and paths, no gradient)
+function yenIcon(cls = '') {
+  return `<svg class="yen-i${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11.4" fill="#9aa1ab"/><circle cx="12" cy="12" r="10.2" fill="#d9dde3"/><circle cx="12" cy="12" r="10.2" fill="none" stroke="#b7bdc6" stroke-width=".9" stroke-dasharray=".7 .9"/><circle cx="12" cy="12" r="8.4" fill="#eceef2"/>`
+    + `<g fill="#b5bcc7">${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="12" cy="7.1" rx="1.5" ry="2.1" transform="rotate(${a} 12 9.6)"/>`).join('')}</g><circle cx="12" cy="9.6" r=".9" fill="#eceef2"/>`
+    + `<text x="12" y="18.2" text-anchor="middle" font-size="5.6" font-weight="800" fill="#6f7782" font-family="system-ui, sans-serif">100</text></svg>`;
 }
 // a glowing あ: the mark of 言靈 (circles, no gradient, so a copy in a hidden place never breaks the others)
 function kotoIcon(cls = '') {

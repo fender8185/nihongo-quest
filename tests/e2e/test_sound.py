@@ -134,7 +134,7 @@ def test_voices_to_try_are_listed_under_theirs_and_made_with_that_voice(b):
       fetchEngineBlob = realF; playUrl = realP;
       const p1 = await cloudAudioPath('x', 'f', { cast: 'koharu', line: 'はい。', voice: ['Achernar', 1, 0] }), p2 = await cloudAudioPath('x', 'f', { cast: 'koharu', line: 'はい。' });
       return JSON.stringify({ tries, asked, differ: p1 !== p2 }); })()"""))
-    assert r['tries'] == [['hero', '0'], ['hero', '1'], ['hero', '2'], ['koharu', '0'], ['koharu', '1']] + [['rina', k] for k in '012'], r   # the hero's own three (2026-11-12), the two put in here, リナ's (2026-11-13)
+    assert r['tries'] == [['hero', '0'], ['hero', '1'], ['hero', '2'], ['koharu', '0'], ['koharu', '1']], r   # the hero's own three to choose from (2026-11-12), then the two put in here
     assert r['asked'] == [['f', 'koharu', None], ['f', 'koharu', ['Achernar', 1, 0]]] and r['differ'], r
 
 def test_a_talk_says_each_new_line_at_once(b):

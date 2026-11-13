@@ -399,7 +399,7 @@ const DIARY = (() => {
     const byUnit = {}; TOWN.EVENTS.forEach((e) => { (byUnit[e.u] = byUnit[e.u] || []).push(e); });
     return `<section class="town-tools"><b>測試用（只在測試站）</b>
       <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="meet">認識所有人、開通所有公車站</button><button type="button" class="btn btn-sm" data-tool="reset">小鎮事件從頭開始</button></div>
-      <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="ship">郵輪：現在叫來（下一趟，不看日子、進度）</button><button type="button" class="btn btn-sm" data-tool="shipreset">郵輪：從第 1 趟重來</button>${CRUISE.trips().slice(1).map((t, k) => `<button type="button" class="btn btn-sm" data-tool="shipto" data-trip="${t.id}">郵輪：跳到第 ${k + 2} 趟</button>`).join('')}</div>
+      <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="ship">郵輪：現在叫來（下一趟，不看日子、進度）</button><button type="button" class="btn btn-sm" data-tool="shipreset">郵輪：從第 1 趟重來</button><button type="button" class="btn btn-sm" data-tool="shipresult">郵輪：看結算畫面（不存）</button>${CRUISE.trips().slice(1).map((t, k) => `<button type="button" class="btn btn-sm" data-tool="shipto" data-trip="${t.id}">郵輪：跳到第 ${k + 2} 趟</button>`).join('')}</div>
       <div class="row-wrap mt-2">時間（只改小鎮；「現在」也清掉睡覺跳過的時間）：${hrs.map(([h, n]) => `<button type="button" class="btn btn-sm" data-tool="hour" data-h="${h}" aria-pressed="${String(h) === String(cur)}">${n}</button>`).join('')}</div>
       ${Object.entries(byUnit).map(([u, list]) => `<div class="tt-unit"><span>${esc(u)}</span>${list.map((e) => `<button type="button" class="tb-ev" data-try="${esc(e.id)}">${esc(e.title)}<small>${esc((TOWN.CAST[e.who] || {}).name || e.who)}・${esc(TOWNEV.PLACE_NAME[e.at] || e.at)}${e.when === 'night' ? '・晚上' : ''}</small></button>`).join('')}</div>`).join('')}
     </section>`;
@@ -410,6 +410,7 @@ const DIARY = (() => {
     if (t === 'reset') { state.town = { done: {}, seen: {}, stops: {}, talks: {} }; try { localStorage.removeItem('nq_chat'); } catch (e) { /* none kept */ } Object.keys(state.koto.found).filter((k) => k.startsWith('ev-')).forEach((k) => delete state.koto.found[k]); saveState(); toast('小鎮事件從頭開始'); }
     if (t === 'ship') { const x = CRUISE.force(); toast(x ? `第 ${CRUISE.trips().indexOf(x) + 1} 趟的郵輪在みなと漁港外的海上等你了（院子 → 海邊 → 往漁港）` : '郵輪的導覽都走完了', 3600); }
     if (t === 'shipreset') { CRUISE.reset(); toast('郵輪從第 1 趟重來'); }
+    if (t === 'shipresult') CRUISE.preview();
     if (t === 'shipto') { CRUISE.skipTo(b.dataset.trip); toast('前面幾趟算走完了，郵輪在みなと漁港外的海上等你'); }
     if (t === 'hour') { TOWNEV.clock = b.dataset.h === 'now' ? null : { h: Number(b.dataset.h), day: new Date() }; if (b.dataset.h === 'now') { try { localStorage.removeItem('nq_wake'); } catch (e) { /* none kept */ } sceneTick(); } }   // 現在: a sleep's hours gone too
     show();
@@ -464,12 +465,15 @@ const TALK = (() => {
   // a cry said instead of reading it out (cry: VOICE_FX's) and someone moving as it is said (move, for onLine; 2026-11-13, the cruise)
   const line = (l) => (!cur.ev ? { id: cur.id, ja: l[0], zh: l[1], kind: l[2] } : Array.isArray(l) ? Object.assign({}, l[3], { id: l[0], ja: l[1], zh: l[2] }) : l);
   const say = (ja, id, cry) => (castSays(ja) ? `<button type="button" class="talk-say" data-talk="say" data-ja="${esc(ja)}" data-who="${esc(id)}"${cry ? ` data-cry="${esc(cry)}"` : ''} aria-label="唸出來">${icon('speaker')}</button>` : '');   // in their own voice (speakAs); a silence 「…………。」: none
+  // a reply choice's options in an order of their own (2026-11-13: events.js lists the right one first, all 385 of them), the
+  // same each time it is drawn again (a wrong one tried)
+  const order = (L) => cur.order[cur.i] || (cur.order[cur.i] = L.opts.map((o, k) => [k, Math.random()]).sort((a, b) => a[1] - b[1]).map((x) => x[0]));
   function show() {
     const L = cur.said || line(cur.lines[cur.i]);
     if (L.ask) {
       cur.el.innerHTML = `<div class="talk-card asking"><div class="talk-face">${TOWNEV.face('hero')}</div><div class="talk-body">
         <div class="talk-name">我<span>${esc(L.ask)}</span></div>
-        <div class="talk-opts">${L.opts.map((o, k) => `<div class="talk-opt${cur.wrong.includes(k) ? ' wrong' : ''}" data-pick="${k}"><button type="button" class="talk-pick" lang="ja">${ruby(o[0])}</button>${say(o[0], 'hero')}</div>`).join('')}</div>
+        <div class="talk-opts">${order(L).map((k) => { const o = L.opts[k]; return `<div class="talk-opt${cur.wrong.includes(k) ? ' wrong' : ''}" data-pick="${k}"><button type="button" class="talk-pick" lang="ja">${ruby(o[0])}</button>${say(o[0], 'hero')}</div>`; }).join('')}</div>
         ${cur.why ? `<p class="talk-why">${esc(cur.why)}</p>` : ''}</div></div>`;
       stopSilence(); return;   // the hero picks: nothing read meanwhile
     }
@@ -487,7 +491,7 @@ const TALK = (() => {
   function pick(k) {
     const L = line(cur.lines[cur.i]), o = L.opts[k]; if (!o || cur.wrong.includes(k)) return;
     if (!o[1]) { cur.wrong.push(k); cur.why = o[2] || ''; show(); const el = cur.el.querySelectorAll('.talk-opt')[k]; if (el) el.classList.add('shake'); playSfx('bad'); return; }
-    playSfx('good'); cur.said = { id: 'hero', ja: o[0], zh: o[2] || '' }; show();
+    playSfx('good'); if (cur.onAnswer) cur.onAnswer(cur.i, cur.wrong.length); cur.said = { id: 'hero', ja: o[0], zh: o[2] || '' }; show();   // onAnswer: right after so many wrong ones (CRUISE's pay)
   }
   function next() {
     if (!cur) return;
@@ -501,7 +505,7 @@ const TALK = (() => {
   function open(root, id, lines, done, take, opt = {}) {
     close();
     const el = document.createElement('div'); el.className = 'talk'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', who(id).name);
-    cur = { el, id, lines, done, take, i: 0, ev: Boolean(opt.ev), zh: false, wrong: [], why: '', said: null, onLine: opt.onLine };
+    cur = { el, id, lines, done, take, i: 0, ev: Boolean(opt.ev), zh: false, wrong: [], why: '', said: null, onLine: opt.onLine, onAnswer: opt.onAnswer, order: {} };
     SND.duck(true);   // the music and the world's sounds down for the whole talk, not only while a line is read (2026-11-12, the user)
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     el.addEventListener('click', (e) => {
@@ -2004,7 +2008,9 @@ function witchCatch(el) {
 // glows at the last, and +n rises beside it; the buttons are kept up meanwhile. The button put away (擺設, the dressing room):
 // the pop up top says it; motion reduced: no flight, the new count at once
 function witchCoins(yard, at, n) {
-  const kb = yard.querySelector('.yard-tools .study-koto'), num = kb && kb.querySelector('span'), wake = () => { if (yard._wake) yard._wake(); };
+  const kb = yard.querySelector('.yard-tools .study-koto'), wake = () => { if (yard._wake) yard._wake(); };
+  if (kb && kb.classList.contains('yen')) purseFill(kb, false);   // showing 円: 言靈 for the coins flying in
+  const num = kb && kb.querySelector('span');
   if (!num || !kb.getBoundingClientRect().width || getComputedStyle(kb).visibility !== 'visible') { setTimeout(() => kotoPop(n), 450); return; }
   const from = kotoBalance() - n;
   const end = () => {
@@ -2164,7 +2170,8 @@ function yardHtml(pct, place = 'yard') {
 }
 // the buttons up top in 書房 and the yard (1.2.0): 言靈 (to 古道具屋), 衣櫃, 擺設 (each place its own), 設定
 function sceneTools(editAct) {
-  return `<button type="button" class="study-koto" data-act="koto-shop" aria-label="言靈 ${kotoBalance()}，到古道具屋" title="古道具屋">${kotoIcon()}<span>${kotoBalance()}</span></button><button type="button" class="study-wear" data-act="wardrobe" aria-label="衣櫃" title="衣櫃">${icon('hanger')}</button><button type="button" class="study-edit${editAct === 'yard-edit' ? ' yard-edit' : ''}" data-act="${editAct}" aria-label="擺設" title="擺設">${icon('arrange')}</button><button type="button" class="study-gear" data-act="settings" aria-label="設定" title="設定">${icon('settings')}</button>`;
+  const pu = purseParts();
+  return `<button type="button" class="study-koto${pu.cls}" data-act="purse" aria-label="${pu.label}">${pu.html}</button><button type="button" class="study-wear" data-act="wardrobe" aria-label="衣櫃" title="衣櫃">${icon('hanger')}</button><button type="button" class="study-edit${editAct === 'yard-edit' ? ' yard-edit' : ''}" data-act="${editAct}" aria-label="擺設" title="擺設">${icon('arrange')}</button><button type="button" class="study-gear" data-act="settings" aria-label="設定" title="設定">${icon('settings')}</button>`;
 }
 // 書房 (1.1.0): an isometric room drawn much bigger than the screen, with the things you tap; on a phone the camera shows a part
 // of it round the hero and goes along with him as he walks (1.2.0: a drag on him leads him, a swipe looks round freely, two

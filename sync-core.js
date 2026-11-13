@@ -152,8 +152,11 @@
   }
   function mergeCruise(olderC, newerC) {
     const o = olderC || {}, n = newerC || {}, done = Object.assign({}, o.done, n.done), num = (x) => parseInt(String(x.trip).slice(1), 10) || 0;
-    const on = [n.on, o.on].filter((x) => x && typeof x === 'object' && !done[x.trip]).sort((x, y) => num(y) - num(x) || (y.step || 0) - (x.step || 0))[0] || null;
-    return { done, on };
+    let on = [n.on, o.on].filter((x) => x && typeof x === 'object' && !done[x.trip]).sort((x, y) => num(y) - num(x) || (y.step || 0) - (x.step || 0))[0] || null;
+    if (on) { const both = [n.on, o.on].filter((x) => x && x.trip === on.trip); on = Object.assign({}, on, { score: Object.assign({}, ...both.map((x) => x.score || {}).reverse()) }); }   // the replies answered on either device (both: the newer copy's)
+    const res = Object.assign({}, o.res);   // each trip's pay: once done, the better of two (finished on both)
+    Object.entries(n.res || {}).forEach(([t, r]) => { if (!res[t] || (Number(r && r.yen) || 0) >= (Number(res[t].yen) || 0)) res[t] = r; });
+    return { done, on, res };
   }
   function mergeStates(a, b) {
     const [newer, older] = (stampOf(a) >= stampOf(b) ? [a, b] : [b, a]).map(clone);

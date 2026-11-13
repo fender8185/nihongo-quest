@@ -122,7 +122,7 @@ const CAST_VOICE = {
   nakamura: ['Schedar', 1], kenji: ['Zubenelgenubi', 1], suzuki: ['Rasalgethi', 1.02], alex: ['Umbriel', 1], chihaya: ['Achernar', 0.96],
   tatsu: ['Sadachbia', 1.06], takahashi: ['Sadaltager', 0.95], sophia: ['Zephyr', 1], nishimura: ['Kore', 1.04], sano: ['Charon', 1],
   // the cruise's passengers (CRUISE, test 2026-11-12)
-  kaneda: ['Enceladus', 0.92], umeko: ['Callirrhoe', 1.1], yuta: ['Autonoe', 0.91, 0, 3], rina: ['Laomedeia', 1.06], yoshimoto: ['Charon', 1.06], ken: ['Orus', 1.02], ai: ['Erinome', 1.02], michiyama: ['Schedar', 0.96], mike: ['Puck', 1]
+  kaneda: ['Enceladus', 0.92], umeko: ['Callirrhoe', 1.1], yuta: ['Autonoe', 0.91, 0, 3], rina: ['Leda', 1.06], yoshimoto: ['Charon', 1.06], ken: ['Orus', 1.02], ai: ['Erinome', 1.02], michiyama: ['Schedar', 0.96], mike: ['Puck', 1]
 };
 // ムギ (2026-11-12, the user, by ear): a boy's voice pitched up, a mascot's — a grown man saying ワン, or a real bark beside a
 // plain voice, broke the spell; her lines open with ワン！ and no longer end in it (events.js 42)
@@ -131,9 +131,8 @@ const CAST_VOICE = {
 // (2026-11-12, the user: closer to 林美玲's) took her Despina, a little quicker so the two are told apart where they talk; the
 // three below sound near it, to choose from by ear
 // 金田 (2026-11-13, the user: 社長 sounded like a student, Fenrir) took Enceladus, slower (the user's pick of three by ear);
-// リナ (the user: the college student sounded too old, Aoede) took Laomedeia, with three more to try
-const CAST_TRY = { hero: [['Vindemiatrix', 1, 0, '溫柔'], ['Erinome', 1.02, 0, '清亮'], ['Autonoe', 1.02, 0, '明亮']],
-  rina: [['Leda', 1.06, 0, '年輕'], ['Zephyr', 1.06, 0, '明亮'], ['Achernar', 1.04, 0, '柔和']] };
+// リナ (the user: the college student sounded too old, Aoede) took Leda, younger (the user's pick of three by ear)
+const CAST_TRY = { hero: [['Vindemiatrix', 1, 0, '溫柔'], ['Erinome', 1.02, 0, '清亮'], ['Autonoe', 1.02, 0, '明亮']] };
 const OLD_VOICE = /^(Neural2|Wavenet|Standard)-/;
 const CAST_WOMEN = new Set(['Achernar', 'Aoede', 'Autonoe', 'Callirrhoe', 'Despina', 'Erinome', 'Gacrux', 'Kore', 'Laomedeia', 'Leda', 'Pulcherrima', 'Sulafat', 'Vindemiatrix', 'Zephyr', 'Neural2-B', 'Wavenet-A', 'Wavenet-B', 'Standard-A', 'Standard-B']);
 const castOf = (opt) => opt.voice || CAST_VOICE[opt.cast];   // a voice being tried, else theirs
@@ -390,6 +389,7 @@ function playSfx(kind, step = 0) {
     const notes = kind === 'bad' ? [[311, 0, 0.22, 0.09, 233]]   // [Hz, start s, length s, volume, slide to Hz]
       : kind === 'coin' ? [[1319 * Math.pow(2, clamp(step, 0, 12) / 12), 0, 0.1, 0.06]]   // a 言靈 into its button (1.2.2): a short 叮, a semitone up each
       : kind === 'fanfare' ? [[523, 0, 0.12, 0.09], [659, 0.1, 0.12, 0.09], [784, 0.2, 0.12, 0.09], [1047, 0.3, 0.45, 0.1]]   // 全對 or the day's list done (2026-11-10): do-mi-sol-do
+      : kind === 'stamp' ? [[150, 0, 0.18, 0.32, 52], [95, 0.01, 0.22, 0.2, 45]]   // a stamp thumped down (the cruise's grade, 2026-11-13)
       : (kind === 'up' ? [659, 831, 988] : [659, 988]).map((f, i, all) => [f * k, i * 0.075, i === all.length - 1 ? 0.28 : 0.12, 0.12]);
     notes.forEach(([f, at, len, vol, to]) => {
       const o = sfxCtx.createOscillator(), g = sfxCtx.createGain();

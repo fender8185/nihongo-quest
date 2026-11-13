@@ -58,16 +58,29 @@ def test_tapped_it_asks_first_then_comes_in_and_they_come_down_one_by_one(b):
       return JSON.stringify({ asked: /20.30 分鐘/.test(asked) && /中途可以離開/.test(asked), still, docked, early, all: people().sort(), on: state.cruise.on }); })()"""))
     assert r['asked'] and r['still'] and r['docked'] and 0 < r['early'] < 8, r   # asked first (等一下: still out there); then down in turn
     assert r['all'] == sorted(['takahashi', 'kaneda', 'umeko', 'yuta', 'rina', 'yoshimoto', 'ken', 'ai', 'michiyama']), r
-    assert r['on'] == {'trip': 't1', 'step': 0, 'place': 'harbor'}, r
+    assert r['on'] == {'trip': 't1', 'step': 0, 'place': 'harbor', 'score': {}}, r   # its replies tallied as they come (score)
 
 def test_trip_one_goes_right_round_the_town_into_the_shokudo_and_back(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ const errs = []; window.addEventListener('error', (e) => errs.push(String(e.message)));
       await call(); const d = await drive(() => !!state.cruise.done.t1, 150000);
-      await wait(300); await go('harbor');
-      return JSON.stringify(Object.assign(d, { done: state.cruise.done, on: state.cruise.on, ship: !!y().querySelector('.cruise-ship'), errs })); })()"""))
+      await wait(300); const box = document.querySelector('.cr-result'), res = state.cruise.res.t1;
+      const shown = box && { stamp: box.querySelector('.crr-stamp b').textContent, nums: [...box.querySelectorAll('i[data-n]')].map((x) => x.textContent), rank: box.querySelector('.crr-rank').textContent };
+      box.querySelector('.crr-ok').click(); await wait(200); const intro = (document.querySelector('.talk-card') || {}).textContent || '';
+      while (document.querySelector('.talk-card')) { document.querySelector('.talk').click(); await wait(30); }
+      const kb = () => document.querySelector('.yard-tools .study-koto'), koto = kb().textContent, act = kb().dataset.act;
+      kb().click(); const yen = { text: kb().querySelector('span').textContent, cls: kb().className }; kb().click(); const back = kb().querySelector('span').textContent;
+      await go('harbor');
+      return JSON.stringify(Object.assign(d, { done: state.cruise.done, on: state.cruise.on, ship: !!y().querySelector('.cruise-ship'), errs, res, found: state.koto.found['cruise-t1'],
+        shown, intro, koto, act, yen, back, kotoNow: kotoBalance(), bal: yenBalance(), asks: TOWN.CRUISE.TRIPS[0].stops.flatMap((s) => s.lines).filter((l) => !Array.isArray(l)).length })); })()"""))
     assert r['seen'] == titles(b, 0)[1:], r   # every stop after the first (that one begins by itself) on along the bar, ムギ's too
     assert r['places'] == ['beach', 'harbor', 'park', 'shokudo', 'street', 'town', 'yard'] and r['sat'] >= 4, r   # round the whole map; sat down in the 食堂
     assert list(r['done']) == ['t1'] and r['on'] is None and not r['ship'] and r['errs'] == [], r   # the next one comes another day (on the test site: at once)
+    res = r['res']   # each reply once: right at once 2 言靈, after one wrong 1, the last 0; N5's pay 5,000 円 and 200 a grade up
+    assert res['asks'] == r['asks'] and res['koto'] == r['found'] and res['yen'] == 5000 + 200 * res['grade'] and r['bal'] == res['yen'], r
+    assert r['shown']['stamp'] == 'EDCBAS'[res['grade']], r
+    assert r['shown']['nums'] == [str(res['first']), str(res['koto']), '5,000'] + (['{:,}'.format(200 * res['grade'])] if res['grade'] else []) + ['{:,}'.format(res['yen'])] and '見習いガイド' in r['shown']['rank'], r
+    assert 'お礼' in r['intro'], r   # the wallet's first 円: 高橋 says what it is
+    assert r['act'] == 'purse' and r['yen']['text'] == '{:,}'.format(res['yen']) and 'yen' in r['yen']['cls'] and r['back'] == str(r['kotoNow']), r   # 言靈 ↔ 円 up top
 
 def test_trip_two_brings_mike_by_bus_to_the_castle_and_into_the_izakaya(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ const errs = []; window.addEventListener('error', (e) => errs.push(String(e.message)));
@@ -108,7 +121,7 @@ def test_the_test_site_tools_call_the_next_one_and_begin_again(b):
       const t = CRUISE.force(); await go('harbor'); const forced = { trip: t.id, far: !!y().querySelector('.cruise-ship.far') };
       CRUISE.skipTo('t2'); const skipped = { done: Object.keys(state.cruise.done), waiting: CRUISE.waiting().id };
       CRUISE.reset(); return JSON.stringify({ forced, skipped, reset: state.cruise }); })()"""))
-    assert r == {'forced': {'trip': 't1', 'far': True}, 'skipped': {'done': ['t1'], 'waiting': 't2'}, 'reset': {'done': {}, 'on': None}}, r
+    assert r == {'forced': {'trip': 't1', 'far': True}, 'skipped': {'done': ['t1'], 'waiting': 't2'}, 'reset': {'done': {}, 'on': None, 'res': {}}}, r
 
 def test_takahashi_is_met_early_and_his_castle_desk_is_empty_while_he_is_out_with_them(b):
     r = json.loads(ev(b, """(async () => { const ev = TOWN.EVENTS, m1 = ev.filter((e) => e.u === 'm1').map((e) => e.id);
@@ -174,6 +187,16 @@ def test_at_the_table_they_eat_a_while_and_each_has_a_word_when_tapped(b):
     assert r['place'] == 'shokudo' and '用餐' in r['bar'] and not r['btn'], r
     assert r['word'] in r['eat'], r   # a word for the table
     assert r['later'], r   # on after five seconds
+
+def test_the_pay_goes_by_the_share_right_at_once_and_the_courses_level(b):
+    r = json.loads(ev(b, """(() => { const t1 = TOWN.CRUISE.TRIPS[0], sc = (n0, n1, n2) => Object.fromEntries([...Array(n0).fill(0), ...Array(n1).fill(1), ...Array(n2).fill(2)].map((m, k) => [`1.${k}`, m]));
+      const pick = (x) => [x.first, x.asks, x.koto, x.yen, x.grade];
+      return JSON.stringify({ all: pick(CRUISE.result(t1, sc(20, 0, 0))), most: pick(CRUISE.result(t1, sc(17, 2, 1))), half: pick(CRUISE.result(t1, sc(10, 5, 5))), none: pick(CRUISE.result(t1, sc(2, 4, 14))),
+        n4: CRUISE.result(Object.assign({}, t1, { u: DATA.UNITS.find((u) => u.lv === 'N4').id }), sc(20, 0, 0)).yen, n3: CRUISE.result(Object.assign({}, t1, { u: DATA.UNITS.find((u) => u.lv === 'N3').id }), sc(0, 0, 20)).yen,
+        ranks: [0, 1, 2, 3, 7, 8, 14, 15, 33].map(CRUISE.rankOf) }); })()"""))
+    assert r['all'] == [20, 20, 40, 6000, 5] and r['most'] == [17, 20, 36, 5800, 4] and r['half'] == [10, 20, 25, 5400, 2] and r['none'] == [2, 20, 8, 5000, 0], r   # S A C E
+    assert r['n4'] == 8000 and r['n3'] == 10000, r
+    assert r['ranks'] == ['', '見習いガイド', '見習いガイド', 'ガイド', 'ガイド', 'ベテランガイド', 'ベテランガイド', '主任ガイド', '主任ガイド'], r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 

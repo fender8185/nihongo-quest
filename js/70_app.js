@@ -256,6 +256,7 @@ const ACTIONS = {
   'scene-use': (el) => sceneUse(el),   // a thing in a place: the hero walks over and uses it (PLACE_USE)
   'go-place': (el) => yGo(el, el.dataset.to),   // test: to the main road, the beach, home to the yard
   'npc-talk': (el) => TOWNEV.talk(el),
+  'purse': () => purseToggle(),   // the button up top: 言靈 ↔ 円
   'cruise-call': () => CRUISE.call(),   // test: the cruise ship far out, tapped: asked first (a long one)
   'cruise-start': () => CRUISE.start(),   // …and in it comes
   'cruise-next': () => CRUISE.next(),   // the tour's next stop

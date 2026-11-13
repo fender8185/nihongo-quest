@@ -234,10 +234,18 @@ test('mergeStates keeps a letter come or read on either device (the mailbox live
 test('mergeStates: the cruise trips done on either device are kept; the one under way is the later trip, further on, unless done (2026-11-12)', () => {
   const a = { v: 3, updatedAt: '2026-11-12T01:00:00.000Z', cruise: { done: { t1: '2026-11-10' }, on: { trip: 't2', step: 4, place: 'castle' } } };
   const b = { v: 3, updatedAt: '2026-11-12T02:00:00.000Z', cruise: { done: {}, on: { trip: 't1', step: 9, place: 'town' } } };
-  assert.deepEqual(C.mergeStates(a, b).cruise, { done: { t1: '2026-11-10' }, on: { trip: 't2', step: 4, place: 'castle' } });   // t1 done on a: b's t1 under way goes
+  assert.deepEqual(C.mergeStates(a, b).cruise, { done: { t1: '2026-11-10' }, on: { trip: 't2', step: 4, place: 'castle', score: {} }, res: {} });   // t1 done on a: b's t1 under way goes
   const c = { v: 3, updatedAt: '2026-11-12T03:00:00.000Z', cruise: { done: { t1: '2026-11-10' }, on: { trip: 't2', step: 7, place: 'izakaya' } } };
-  assert.deepEqual(C.mergeStates(a, c).cruise.on, { trip: 't2', step: 7, place: 'izakaya' });   // the same trip: the further one
+  assert.deepEqual(C.mergeStates(a, c).cruise.on, { trip: 't2', step: 7, place: 'izakaya', score: {} });   // the same trip: the further one
   const d = { v: 3, updatedAt: '2026-11-12T04:00:00.000Z', cruise: { done: { t1: '2026-11-10', t2: '2026-11-12' }, on: null } };
-  assert.deepEqual(C.mergeStates(a, d).cruise, { done: { t1: '2026-11-10', t2: '2026-11-12' }, on: null });
+  assert.deepEqual(C.mergeStates(a, d).cruise, { done: { t1: '2026-11-10', t2: '2026-11-12' }, on: null, res: {} });
   assert.equal(C.mergeStates({ v: 3 }, { v: 3 }).cruise, undefined);
+});
+
+test('mergeStates: the cruise pay of either device is kept (the better of two for one trip); the replies of the trip under way are put together (2026-11-13)', () => {
+  const a = { v: 3, updatedAt: '2026-11-13T01:00:00.000Z', cruise: { done: { t1: '2026-11-10' }, on: { trip: 't2', step: 3, place: 'castle', score: { '1.2': 0, '2.1': 1 } }, res: { t1: { yen: 5400, grade: 2 } } } };
+  const b = { v: 3, updatedAt: '2026-11-13T02:00:00.000Z', cruise: { done: { t1: '2026-11-10' }, on: { trip: 't2', step: 5, place: 'castle', score: { '2.1': 2, '4.3': 0 } }, res: { t1: { yen: 5200, grade: 1 } } } };
+  const m = C.mergeStates(a, b).cruise;
+  assert.deepEqual(m.res, { t1: { yen: 5400, grade: 2 } });   // the better pay
+  assert.deepEqual(m.on, { trip: 't2', step: 5, place: 'castle', score: { '1.2': 0, '2.1': 2, '4.3': 0 } });   // the replies of both, the newer copy's where both have one
 });

@@ -146,7 +146,7 @@ TALK_EV = """fake([['a1', 'm1', 'kenta', 'town', { title: '試吃', lines: [['ke
   await go('town', 9); const k0 = kotoBalance(); y().querySelector('.npc-kenta').click();
   let t = null; for (let i = 0; i < 120 && !t; i++) { await wait(50); t = document.querySelector('.talk'); }
   const card = () => ({ name: t.querySelector('.talk-name') && t.querySelector('.talk-name').firstChild.textContent, ja: t.querySelector('.talk-ja') && t.querySelector('.talk-ja').textContent.trim(),
-    opts: [...t.querySelectorAll('.talk-opt')].map(o => o.className.includes('wrong') ? 'x' : '-').join(''), why: (t.querySelector('.talk-why') || {}).textContent || '' });"""
+    opts: [...t.querySelectorAll('.talk-opt')].sort((a, b) => a.dataset.pick - b.dataset.pick).map(o => o.className.includes('wrong') ? 'x' : '-').join(''), why: (t.querySelector('.talk-why') || {}).textContent || '' });"""
 
 def test_a_line_shows_its_gloss_and_folds_the_chinese(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + TALK_EV + """
@@ -159,15 +159,28 @@ def test_a_line_shows_its_gloss_and_folds_the_chinese(b):
 def test_a_wrong_reply_shakes_and_stays(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + TALK_EV + """
       t.click(); await wait(30); const ask = card(); t.click(); await wait(30); const tapped = card();
-      t.querySelectorAll('.talk-opt')[1].click(); await wait(30); const wrong = card();
+      t.querySelector('.talk-opt[data-pick="1"]').click(); await wait(30); const wrong = card();
       return JSON.stringify({ ask, tapped, wrong }); })()"""))
     assert r['ask']['opts'] == '--' and r['ask']['name'] == '我', r   # the hero's turn: two replies
     assert r['tapped']['opts'] == '--', r   # a tap beside them does not go on
     assert r['wrong']['opts'] == '-x' and r['wrong']['why'] == '不對喔', r
 
+def test_reply_choices_are_shown_in_an_order_of_their_own_which_stays_on_a_wrong_try(b):
+    # 2026-11-13: events.js lists the right reply first (all of them); shown as written, the first was always right
+    r = json.loads(ev(b, """(async () => { const wait = (ms) => new Promise(q => setTimeout(q, ms)), firsts = new Set(); let kept = true;
+      const L = [{ ask: '?', opts: [['あ', 1, 'a'], ['い', 0, 'i'], ['う', 0, 'u'], ['え', 0, 'e']], pt: 'm1' }];
+      for (let n = 0; n < 12; n++) {
+        TALK.open(document.body, 'kenta', L, null, null, { ev: true }); await wait(10);
+        const seq = () => [...document.querySelectorAll('.talk-opt')].map((o) => o.dataset.pick).join('');
+        const was = seq(); firsts.add(was[0]); document.querySelector('.talk-opt:not([data-pick="0"])').click(); await wait(10);
+        if (seq() !== was) kept = false; TALK.close();
+      }
+      return JSON.stringify({ firsts: [...firsts].length, kept }); })()"""))
+    assert r['firsts'] >= 2 and r['kept'], r   # the right one not always first; a wrong try leaves the order as it was
+
 def test_the_right_reply_is_said_and_the_event_finishes_with_10_koto(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + TALK_EV + """
-      t.click(); await wait(30); t.querySelectorAll('.talk-opt')[0].click(); await wait(30); const said = card();
+      t.click(); await wait(30); t.querySelector('.talk-opt[data-pick="0"]').click(); await wait(30); const said = card();
       t.click(); await wait(30); const next = card(); t.click(); await wait(400);
       return JSON.stringify({ said, next, open: !!document.querySelector('.talk'), done: !!state.town.done.a1, gain: kotoBalance() - k0, mark: !!y().querySelector('.ev-mark'), seen: state.town.seen }); })()"""))
     assert r['said']['name'] == '我' and r['said']['ja'] == 'はい。' and r['said']['opts'] == '', r
@@ -189,7 +202,7 @@ def test_every_written_event_plays_to_its_end(b):
         while (!ended && guard++ < 200) {
           const t = document.querySelector('.talk'); if (/[{}|]/.test(t.textContent)) bad.push(e.id + ': ' + t.textContent.slice(0, 40));
           const opts = t.querySelectorAll('.talk-opt'); if (opts.length) { const L = e.lines.find((l, i) => !Array.isArray(l) && t.querySelector('.talk-name span').textContent === l.ask);
-            opts[L.opts.findIndex((o) => o[1])].click(); } else t.click();
+            t.querySelector(`.talk-opt[data-pick="${L.opts.findIndex((o) => o[1])}"]`).click(); } else t.click();
         }
         if (!ended) bad.push(e.id + ': did not end');
       }
@@ -237,7 +250,7 @@ def test_mugi_hosts_nothing_before_he_has_knocked(b):
 
 def test_the_town_redraws_when_an_event_ends_and_when_the_hour_moves_on(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + TALK_EV + """
-      t.click(); await wait(30); t.querySelectorAll('.talk-opt')[0].click(); await wait(30); t.click(); await wait(30); t.click(); await wait(400);
+      t.click(); await wait(30); t.querySelector('.talk-opt[data-pick="0"]').click(); await wait(30); t.click(); await wait(30); t.click(); await wait(400);
       const shut = y().querySelector('.shop-front[data-shop="bakery"]').classList.contains('closed');
       TOWNEV.clock = { h: 23, day: new Date(2026, 10, 10) }; sceneMinute(); await wait(300);
       return JSON.stringify({ shut, kenta: !!y().querySelector('.npc-kenta'), place: y().dataset.place }); })()"""))
@@ -340,7 +353,7 @@ def test_the_test_site_notebook_meets_everyone_sets_the_hour_and_plays_any_event
       const seen = Object.keys(TOWN.CAST).filter(id => TOWN.CAST[id].art !== 'npc').every(id => state.town.seen[id]), stops = Object.keys(state.town.stops).sort();
       d().querySelector('[data-tool="hour"][data-h="20"]').click(); const h = TOWNEV.clock && TOWNEV.clock.h;
       d().querySelector('[data-try="m10-3"]').click(); await wait(50); const talk = document.querySelector('.talk .talk-name').textContent;
-      while (document.querySelector('.talk')) { const t = document.querySelector('.talk'), o = t.querySelectorAll('.talk-opt'); if (o.length) { const L = TOWN.EVENTS.find(e => e.id === 'm10-3').lines.find(l => !Array.isArray(l) && l.ask === t.querySelector('.talk-name span').textContent); o[L.opts.findIndex(x => x[1])].click(); } else t.click(); await wait(10); }
+      while (document.querySelector('.talk')) { const t = document.querySelector('.talk'), o = t.querySelectorAll('.talk-opt'); if (o.length) { const L = TOWN.EVENTS.find(e => e.id === 'm10-3').lines.find(l => !Array.isArray(l) && l.ask === t.querySelector('.talk-name span').textContent); t.querySelector(`.talk-opt[data-pick="${L.opts.findIndex(x => x[1])}"]`).click(); } else t.click(); await wait(10); }
       const after = { done: !!state.town.done['m10-3'], koto: kotoBalance() - k0, back: !!document.querySelector('.diary .town-tools') };
       d().querySelector('[data-tool="hour"][data-h="now"]').click();
       return JSON.stringify({ tools, listed, seen, stops, h, talk, after, real: TOWNEV.clock }); })()"""))

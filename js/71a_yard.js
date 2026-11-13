@@ -567,8 +567,20 @@ function renderOutside(view, place = 'yard') {
   y.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' && !e.buttons) wake(); });   // a mouse over the yard
   wake();
 }
-function kotoButtons(root) {   // the 言靈 button up top (書房, the yard) with the balance now
-  root.querySelectorAll('.study-koto').forEach((kb) => { kb.querySelector('span').textContent = kotoBalance(); kb.setAttribute('aria-label', `言靈 ${kotoBalance()}，到古道具屋`); });
+// the button up top (書房, the yard, the town's places): 言靈 — or, tapped once the wallet has 円 in it, how many 円 (2026-11-13,
+// the user: no longer the way to 古道具屋, which is up the hill); which of the two it shows is kept on this device
+const PURSE = 'nq_purse';
+const purseYen = () => { try { return yenEarned() > 0 && localStorage.getItem(PURSE) === 'yen'; } catch (e) { return false; } };
+function purseParts(yen = purseYen()) {
+  return { cls: yen ? ' yen' : '', html: `${yen ? yenIcon() : kotoIcon()}<span>${yen ? yenStr(yenBalance()) : kotoBalance()}</span>`,
+    label: yen ? `${yenStr(yenBalance())} 円，點一下看言靈` : `言靈 ${kotoBalance()}${yenEarned() > 0 ? '，點一下看円' : ''}` };
+}
+function purseFill(kb, yen = purseYen()) { const p = purseParts(yen); kb.classList.toggle('yen', yen); kb.innerHTML = p.html; kb.setAttribute('aria-label', p.label); }
+function kotoButtons(root) { root.querySelectorAll('.study-koto').forEach((kb) => purseFill(kb)); }   // with the balance now
+function purseToggle() {
+  const yen = yenEarned() > 0 && !purseYen();
+  if (yenEarned() > 0) { try { localStorage.setItem(PURSE, yen ? 'yen' : 'koto'); } catch (e) { /* no storage: this visit only */ } }
+  document.querySelectorAll('.study-koto').forEach((kb) => { purseFill(kb, yen); kb.classList.remove('bump'); void kb.offsetWidth; kb.classList.add('bump'); });
 }
 // a swipe on the yard (1.2.0): one finger anywhere but on a button (a ware outside 擺設 too) looks along the yard; let go
 // moving, it coasts on; pulled past an end, it springs back
