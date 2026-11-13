@@ -422,6 +422,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .mc-item.locked { opacity: .75; cursor: default; } .mc-item.locked .mc-pic { filter: grayscale(1) blur(2.5px); opacity: .55; } .mc-item.locked .mc-name { color: #a89a88; }
 .mc-lock { grid-column: 2 / -1; font-size: 12.5px; color: #8a7a6e; }
 .mc-item.full .mc-price::after { content: '吃不下了'; display: block; font-size: 11px; color: #8a7a6e; text-align: right; }
+.mc-item.full[data-k="d"] .mc-price::after { content: '喝不下了'; } .mc-item.full[data-k="b"] .mc-price::after { content: '今天泡過了'; } .mc-item.full[data-k="o"] .mc-price::after { content: '今天抽過了'; }   /* the bath and おみくじ: once a day */
 .fb-pic { position: absolute; right: 4px; bottom: 4px; width: 34px; height: 34px; } .fb-pic .pic { width: 100%; height: 100%; } .fb-item.had { padding-right: 40px; } .fb-item.had .fb-stamp { right: 42px; }
 /* having it (2026-11-13): its picture big, bitten into (the bites are holes in a mask) or tipped up and drunk, the hero beside it */
 .eat-scene { position: fixed; inset: 0; z-index: 77; display: grid; place-items: center; padding: 16px; background: rgba(40, 24, 12, .5); animation: talkIn .25s ease-out; }

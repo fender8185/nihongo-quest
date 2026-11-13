@@ -542,7 +542,7 @@ def test_the_festival_stalls_are_there_only_at_the_festival_and_the_bath_takes_h
       await go('shrine', 20); const night = !!y().querySelector('.use-btn[data-use="kingyo"]');
       await go('sento', 15); await use('bath', 1600); const inside = y().querySelector('.yhero').classList.contains('out'); await wait(2800);
       return JSON.stringify({ day, night, inside, back: !y().querySelector('.yhero').classList.contains('out'), words: [...y().querySelectorAll('.ypop')].map((e) => e.textContent) }); })()"""))
-    assert r == {'day': False, 'night': True, 'inside': True, 'back': True, 'words': ['♨ いい湯だった〜']}, r
+    assert r == {'day': False, 'night': True, 'inside': True, 'back': True, 'words': ['♨ いい湯だった〜', 'おなか すいた〜！']}, r   # out of the bath hungry (2026-11-13)
 
 # ---- 2026-11-10 (the user's go-ahead on the screen suggestions): calmer dots, the night, a sky of each place's own ----
 def test_a_things_dot_goes_once_it_has_been_tried_and_stays_gone(b):

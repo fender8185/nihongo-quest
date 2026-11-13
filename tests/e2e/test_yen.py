@@ -24,7 +24,7 @@ def fresh(yen):
   const use = (id) => {{ y().querySelector(`.use-btn[data-use="${{id}}"]`).click(); }};
   const menu = () => [...document.querySelectorAll('button.mc-item')].map((b) => [b.dataset.item, b.disabled]);
   const learn = (...ws) => {{ const t = todayStr(); REG.vocab.filter((v) => ws.includes(jaPlain(v.w))).forEach((v) => {{ state.srs[v.key] = {{ b: 3, due: addDays(t, 9), n: 4, ok: 4, ng: 0, s: 9, d: 5, last: addDays(t, -2), intro: addDays(t, -20), lrn: addDays(t, -2) }}; }}); saveState(); }};
-  learn('お茶', 'コーヒー', 'ジュース', '水', 'カレー', 'うどん', '牛丼', '魚', '定食', 'おにぎり', '味噌汁', 'お風呂', '牛乳', 'パン');   // ラーメン not
+  learn('お茶', 'コーヒー', 'ジュース', '水', 'カレー', 'うどん', '牛丼', '魚', '鶏肉', 'おにぎり', '味噌汁', 'お風呂', '牛乳', 'パン');   // ラーメン not (からあげ定食: 鶏肉)
   const talk = async () => {{ const said = []; while (document.querySelector('.talk-card')) {{ said.push(document.querySelector('.talk-ja').textContent.trim()); document.querySelector('.talk').click(); await wait(40); }} return said; }};"""
 
 def test_no_yen_yet_the_menu_shows_but_says_how_to_come_by_some(b):
@@ -123,6 +123,28 @@ def test_a_keeper_tapped_asks_order_or_chat(b):
       return JSON.stringify({ first, menu: opened, talked }); })()"""))
     assert r['first']['ja'].startswith('いらっしゃい') and r['first']['picks'] == ['ちゅうもんする', 'おしゃべりする'], r   # in Japanese (the user)
     assert r['menu'] and r['talked'] == '大山 トメ', r   # 點餐: her menu; 閒聊: a word as before
+
+def test_the_bath_and_omikuji_once_a_day_and_out_of_the_bath_he_is_hungry_again(b):
+    # 2026-11-13, the user: the bath and おみくじ once a day each; a bath makes him hungry — the day's foods and drinks begin anew
+    r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ state.purse.today = { day: dateStr(TOWNEV.today()), f: 2, d: 1 }; saveState();
+      const buy = async (id) => { document.querySelector(`.mc-item[data-item="${id}"]`).click(); await wait(100); return talk(); };
+      await go('sento'); use('bath'); await wait(100); await buy('bath'); await wait(300); const after = Object.assign({}, state.purse.today); await wait(4500);   // out of the bath again
+      use('bath'); await wait(100); const full = document.querySelector('.mc-item[data-item="bath"]').matches('.full[data-k="b"]'); const again = await buy('bath');
+      await go('shrine'); use('kuji'); await wait(100); await buy('kuji'); await wait(2500); use('kuji'); await wait(100); const kuji = await buy('kuji');
+      return JSON.stringify({ after, full, again, kuji, today: state.purse.today, bal: yenBalance() }); })()"""))
+    assert r['after']['f'] == 0 and r['after']['d'] == 0 and r['after']['b'] == 1, r   # full before; out of the bath, hungry
+    assert r['full'] and r['again'] == ['今日きょうは もう おふろに 入はいりました。', 'また あした どうぞ！'], r
+    assert r['kuji'] == ['今日きょうは もう ひきました。'] and r['today']['o'] == 1 and r['bal'] == 5000 - 480 - 100, r   # once each, paid once each
+
+def test_while_he_eats_the_back_button_keeps_the_page(b):
+    # 2026-11-13, the user: watched to the end — no going elsewhere while it is up
+    r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ await go('street'); use('vend'); await wait(100);
+      document.querySelector('.mc-item[data-item="ocha"]').click(); await wait(1700); const up = !!document.querySelector('.eat-scene');
+      location.hash = '#/today'; await wait(300); const kept = location.hash, still = !!document.querySelector('.eat-scene'), place = y() && y().dataset.place;
+      while (document.querySelector('.eat-scene')) { document.querySelector('.es-ok').click(); await wait(40); }
+      location.hash = '#/today'; await wait(300);
+      return JSON.stringify({ up, kept, still, place, after: location.hash }); })()"""))
+    assert r == {'up': True, 'kept': '#/street', 'still': True, 'place': 'street', 'after': '#/today'}, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 

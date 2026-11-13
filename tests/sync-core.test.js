@@ -258,3 +258,12 @@ test('mergeStates: 円 spent is kept per device (each one only grows) and 美食
   const g = C.mergeStates({ v: 3, updatedAt: '2026-11-13T01:00:00.000Z', purse: { spent: {}, book: {}, gift: 20000 } }, { v: 3, updatedAt: '2026-11-13T02:00:00.000Z', purse: { spent: {}, book: {}, gift: 10000 } }).purse;
   assert.equal(g.gift, 20000);   // the test site's 円 only grows
 });
+
+test('mergeStates: the day\'s foods and drinks — the later day\'s, the more of each, counted since the bath once either copy has had it', () => {
+  const at = (t, today) => ({ v: 3, updatedAt: `2026-11-13T0${t}:00:00.000Z`, purse: { spent: {}, book: {}, today } });
+  assert.deepEqual(C.mergeStates(at(1, { day: '2026-11-13', f: 2, d: 0 }), at(2, { day: '2026-11-13', f: 1, d: 1, o: 1 })).purse.today, { day: '2026-11-13', f: 2, d: 1, b: 0, o: 1 });
+  assert.deepEqual(C.mergeStates(at(1, { day: '2026-11-12', f: 2, d: 1 }), at(2, { day: '2026-11-13', f: 1, d: 0 })).purse.today, { day: '2026-11-13', f: 1, d: 0, b: 0, o: 0 });
+  // full, then out of the bath hungry on one device: the full copy (saved earlier or later) does not undo it
+  assert.deepEqual(C.mergeStates(at(1, { day: '2026-11-13', f: 2, d: 1 }), at(2, { day: '2026-11-13', f: 0, d: 0, b: 1 })).purse.today, { day: '2026-11-13', f: 0, d: 0, b: 1, o: 0 });
+  assert.deepEqual(C.mergeStates(at(2, { day: '2026-11-13', f: 2, d: 1 }), at(1, { day: '2026-11-13', f: 1, d: 0, b: 1 })).purse.today, { day: '2026-11-13', f: 1, d: 0, b: 1, o: 0 });
+});

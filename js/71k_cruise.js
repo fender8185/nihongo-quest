@@ -53,6 +53,16 @@ const CRUISE = (() => {
   const person = (id) => (id === 'takahashi' ? TOWN.CAST.takahashi : (C() && people()[id]) || null);
   const needOk = (s) => !s.need || TOWNEV.seen(s.need);   // ムギ: once he has come by
   function nextStop(t, from) { const ss = t.stops; for (let i = Math.max(0, from); i < ss.length; i++) if (needOk(ss[i])) return i; return ss.length - 1; }
+  // the trip under way, kept by its stops' ids (2026-11-13): stop, the next one's id (step, its place in the list, for an id no
+  // longer there and for sync-core); a reply's score under 'stop id.its number among the stop's replies' — a trip rewritten later
+  // (a stop added, a line moved) carries on from the same stop, each reply counted once all the same
+  const stepOf = (t, on) => { const k = on.stop ? t.stops.findIndex((s) => s.id === on.stop) : -1; return k >= 0 ? k : on.step; };
+  const askNo = (s, li) => s.lines.slice(0, li).filter((l) => !Array.isArray(l)).length;
+  function fix(t, on) {   // a trip begun on a test build before the ids: its step and scores by number, put by id
+    if (!on.stop && t.stops[on.step]) on.stop = t.stops[on.step].id;
+    const sc = on.score || {}, old = Object.keys(sc).filter((k) => /^\d+\.\d+$/.test(k)); if (!old.length) return;
+    old.forEach((k) => { const [i, li] = k.split('.').map(Number), s = t.stops[i], n = s && `${s.id}.${askNo(s, li)}`; if (n && !(n in sc)) sc[n] = sc[k]; delete sc[k]; });
+  }
   const placeName = (p) => TOWNEV.PLACE_NAME[p] || p;
 
   // ---- the ship (in the harbour's land, its units: y down) ----
@@ -294,7 +304,7 @@ const CRUISE = (() => {
     const t = current(), g = S.ppl.get('takahashi');
     if (!t) { if (b) b.remove(); if (g) mark(g, false); return; }
     if (!b) { b = document.createElement('div'); b.className = 'cruise-bar'; b.setAttribute('role', 'status'); S.yard.appendChild(b); }
-    const on = cs().on, i = nextStop(t, on.step), s = t.stops[i], n = t.stops.length, here = on.place === S.place;
+    const on = cs().on, i = nextStop(t, stepOf(t, on)), s = t.stops[i], n = t.stops.length, here = on.place === S.place;
     const near = Boolean(WAYS[`${S.place}>${s.at}`]), ready = here && !S.busy && !S.quiet && !eating();
     const go = s.at === S.place ? (s.bye ? '送客人上船' : '') : !near && s.go === 'bus' ? `搭公車去${placeName(s.at)}` : `一起去${placeName(s.at)}`;
     b.innerHTML = !here ? `<span class="cb-t">遊客在${esc(placeName(on.place))}等你</span>`
@@ -356,7 +366,7 @@ const CRUISE = (() => {
   function end(i) {
     if (!alive()) return;
     const t = current(), s = t.stops[i], on = cs().on;
-    on.step = i + 1; on.place = S.place; saveState();
+    on.step = i + 1; on.stop = (t.stops[i + 1] || {}).id || ''; on.place = S.place; saveState();
     if (s.bus !== undefined) busOut();
     if (s.lost) { const p = S.ppl.get(s.lost[0]); if (p) { p.away = false; walkTo(p, [crowdAt(s)[0] + rnd(-40, 40), s.room ? crowdAt(s)[1] : s.crowd[1] + rnd(-8, 8)], { v: 160, done: () => turnTo(p, yh.X) }); } }
     if (s.bye) { farewell(t, s); return; }
@@ -371,7 +381,7 @@ const CRUISE = (() => {
   function next() {
     if (!alive() || S.busy || TALK.on() || eating()) return;
     const t = current(), on = cs().on; if (!t || on.place !== S.place) return;
-    const i = nextStop(t, on.step), s = t.stops[i];
+    const i = nextStop(t, stepOf(t, on)), s = t.stops[i];
     if (s.at === S.place) { run(i); return; }
     const way = WAYS[`${S.place}>${s.at}`];
     if (!way) { travel(s); return; }
@@ -417,7 +427,7 @@ const CRUISE = (() => {
   function start() {
     closeModal();
     const t = waiting(); if (!t || !alive() || S.busy || S.place !== 'harbor') return;
-    cs().on = { trip: t.id, step: 0, place: 'harbor', score: {} }; setLocal(FORCE, ''); saveState();   // in from now on, should the scene be drawn anew halfway
+    cs().on = { trip: t.id, step: 0, stop: t.stops[0].id, place: 'harbor', score: {} }; setLocal(FORCE, ''); saveState();   // in from now on, should the scene be drawn anew halfway
     S.busy = true;
     const y = S.yard, btn = y.querySelector('.cruise-call'), ship = y.querySelector('.cruise-ship'), front = y.querySelector('.cruise-front'), ramp = y.querySelector('.cruise-ramp');
     if (btn) btn.remove();
@@ -472,11 +482,11 @@ const CRUISE = (() => {
         if (g) { turnTo(g, 400); g.el.classList.add('wave'); setTimeout(() => g.el.classList.remove('wave'), 1200); say('takahashi', 'さようなら〜！', 2400); }
         if (ship) ship.classList.add('sailing');
         tween(4600, (u) => { if (ship) { ship.setAttribute('transform', `translate(${(900 * u).toFixed(1)} 0)`); ship.style.opacity = String(Math.min(1, (1 - u) * 4)); } }, () => {
-          const r = result(t, (cs().on || {}).score), before = yenBalance();
+          const r = result(t, (cs().on || {}).score), before = yenBalance(), first = !Object.values(cs().res || {}).some((x) => x && x.yen > 0);   // first: no pay before this (not a wallet spent down to 0)
           (cs().res = cs().res || {})[t.id] = { first: r.first, asks: r.asks, koto: r.koto, yen: r.yen, grade: r.grade, day: r.day }; state.koto.found['cruise-' + t.id] = r.koto;
           cs().done[t.id] = day(); cs().on = null; setLocal(FORCE, ''); saveState();
           if (ship) ship.remove();
-          results(t, r, before);
+          results(t, r, before, { first });
           if (g) S.t.push(setTimeout(() => { if (alive()) walkTo(g, [ycam.YW / 2 + 60, 50], { v: 120, free: true, done: () => { g.el.remove(); S.ppl.delete('takahashi'); } }); }, 1600));
           S.busy = false; S.quiet = false; bar();
         }, (u) => u * u);
@@ -491,18 +501,19 @@ const CRUISE = (() => {
   const PAY = { N5: 5000, N4: 7000 };
   const RANKS = [[15, '主任ガイド'], [8, 'ベテランガイド'], [3, 'ガイド'], [1, '見習いガイド']];   // the guide's licence by trips done
   const rankOf = (n) => (RANKS.find(([k]) => n >= k) || [0, ''])[1];
-  function tally(i, li, misses) { const on = cs().on, k = `${i}.${li}`; if (!on) return; on.score = on.score || {}; if (!(k in on.score)) { on.score[k] = misses; saveLocal(); } }
+  function tally(i, li, misses) { const on = cs().on, s = on && (current() || { stops: [] }).stops[i]; if (!s) return; const k = `${s.id}.${askNo(s, li)}`; on.score = on.score || {}; if (!(k in on.score)) { on.score[k] = misses; saveLocal(); } }
   function result(t, score) {
     const v = Object.values(score || {}), asks = v.length, first = v.filter((m) => m === 0).length, koto = v.reduce((a, m) => a + (m === 0 ? 2 : m === 1 ? 1 : 0), 0);
     const share = asks ? first / asks : 0, grade = GRADES.reduce((g, [, min], k) => (share >= min ? k : g), 0);
     const lv = ((DATA.UNITS || []).find((u) => u.id === t.u) || {}).lv, base = PAY[lv] || 10000;
     return { first, asks, koto, base, bonus: grade * 200, yen: base + grade * 200, grade, day: day() };
   }
-  // the results, as the ship sails off: the replies, the 言靈 and the pay counting up, the grade stamped on; then (the first time)
-  // 高橋 hands over the wallet's first 円 and says what it is for
-  function results(t, r, before, demo) {
+  // the results, as the ship sails off: the replies, the 言靈 and the pay counting up, the grade stamped on; then (o.first: the
+  // first pay ever) 高橋 hands over the wallet's first 円 and says what it is for. Watched to the end (the user): no going elsewhere
+  // while it is up (route: data-at). o.demo: the test site's look at it
+  function results(t, r, before, o = {}) {
     const done = Math.max(1, Object.keys(cs().done).length), rank = rankOf(done), up = rank !== rankOf(done - 1), g = GRADES[r.grade][0], el = document.createElement('div');
-    el.className = 'cr-result'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', '導覽結算');
+    el.className = 'cr-result'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', '導覽結算'); el.dataset.at = location.hash;
     el.innerHTML = `<div class="crr-card"><div class="crr-head"><b>導覽結算</b><span>第 ${tripIdx(t.id) + 1} 趟「${esc(t.title)}」</span></div>
       <div class="crr-row"><span>一次就答對</span><b><i data-n="${r.first}">0</i> / ${r.asks}</b></div>
       <div class="crr-row"><span>${kotoIcon()}言靈</span><b>+<i data-n="${r.koto}">0</i></b></div>
@@ -524,16 +535,16 @@ const CRUISE = (() => {
     }, 350 + k * 800));
     el.querySelector('.crr-ok').addEventListener('click', () => {
       el.remove(); if (typeof kotoButtons === 'function') kotoButtons(document);
-      if (!before && !demo && alive()) TALK.open(S.yard, 'takahashi', [   // the wallet's first 円: what it is
+      if (o.first && !o.demo && alive()) TALK.open(S.yard, 'takahashi', [   // the wallet's first 円: what it is
         ['takahashi', '{今日|きょう}は ありがとう。これは ガイドの お{礼|れい|謝禮}です。', '今天謝謝你。這是導遊的謝禮。'],
-        ['hero', '', '（拿到了円！點畫面上方的言靈數字，就能切換看錢包裡有多少円。之後可以在鎮上用円買吃的、喝的、去泡湯。）']], null, null, { ev: true });
+        ['hero', '', '（拿到了円！點畫面上方的言靈數字，就能切換看錢包裡有多少円。鎮上的販賣機、麵包店、食堂都有菜單，學會菜單上的單字就能用円買來吃、喝，也能去泡湯、抽籤。）']], null, null, { ev: true });
     });
   }
 
   // the test site (町の手帳): the results as a trip would show them — a sample of replies, nothing kept
   function preview() {
     const t = trips()[0], sc = Object.fromEntries(Array.from({ length: 24 }, (_, k) => [`1.${k}`, k < 20 ? 0 : k < 23 ? 1 : 2]));
-    results(t, result(t, sc), yenBalance(), true);
+    results(t, result(t, sc), yenBalance(), { demo: true });
   }
 
   // ---- a place drawn anew ----
@@ -561,13 +572,13 @@ const CRUISE = (() => {
       return;
     }
     const t = current(); if (!t) return;
-    const on = cs().on;
+    const on = cs().on; fix(t, on);
     S = fresh(yard, place);
     const way = from && from !== place ? WAYS[`${from}>${place}`] : null;
     const follow = (was.carry && was.pend === place) || (from === on.place && Boolean(way));   // taken there, or come along next door
     if (follow) { on.place = place; saveLocal(); MUSIC.sync(); }   // the tour's music along with them (route synced it before they were here)
     if (on.place === place) {
-      const [s, k] = rest(t, on.step, place), ids = party(t), at = slots(s, k, ids); S.home = S.indoor ? null : crowdAt(s);
+      const [s, k] = rest(t, stepOf(t, on), place), ids = party(t), at = slots(s, k, ids); S.home = S.indoor ? null : crowdAt(s);
       if (follow && !calm()) {   // in behind him: by the way he came, or round him where the bus or the walk brought him
         const in0 = was.carry ? [yh.X, yh.Y] : way.in()[0], near = (d) => (S.indoor ? isoClamp([in0[0] + rnd(-d, d), in0[1] + rnd(-d / 4, d / 4)], 1) : [in0[0] + rnd(-d, d), Math.min(walkTop(place, in0[0]), in0[1] + rnd(-4, 4))]);
         walkTo(el('takahashi', near(20)), guideAt(s), { delay: 300, v: 130, free: true });
@@ -579,7 +590,7 @@ const CRUISE = (() => {
         facing(s); setTimeout(() => frameAll(s), 60);
       }
       if (follow && was.pend === place) {   // led here for the next stop: on to it once they are in
-        S.busy = true; S.t.push(setTimeout(() => { if (!alive()) return; S.busy = false; const i = nextStop(t, cs().on.step); if (t.stops[i].at === place) run(i); else bar(); }, calm() ? 300 : 400 + ids.length * 160 + 1600));
+        S.busy = true; S.t.push(setTimeout(() => { if (!alive()) return; S.busy = false; const i = nextStop(t, stepOf(t, cs().on)); if (t.stops[i].at === place) run(i); else bar(); }, calm() ? 300 : 400 + ids.length * 160 + 1600));
       }
     }
     bar();
@@ -599,9 +610,16 @@ const CRUISE = (() => {
     const c = person(id); return c ? HERO.head(c.look, 'bust') : '';
   }
   const tag = (id) => (id === 'all' ? { name: 'みんな', role: '遊客們' } : C() && people()[id] ? people()[id] : null);   // TALK's name and role
-  // a town shop on the trip under way is open while they go round (its keeper brought out); 高橋 is with them, not at his desk
-  const opens = (shop) => { const t = current(); return Boolean(t) && t.stops.some((s) => s.shop === shop || s.at === shop); };
-  const away = (id) => id === 'takahashi' && docked();
+  // a shop of the trip under way is open for them (its keeper brought out) while they are where its stop is, or on their way into
+  // it next (the 食堂's door from the town) — not all the days a trip is left halfway, nor at night when they are elsewhere
+  const opens = (shop) => {
+    const t = current(); if (!t) return false;
+    const on = cs().on, next = t.stops[nextStop(t, stepOf(t, on))];
+    return t.stops.some((s) => (s.shop === shop || s.at === shop) && s.at === on.place) || Boolean(next && next.at === shop);
+  };
+  // 高橋 is with the passengers, not at his desk — but an event of his waiting there comes first (2026-11-13: a trip left halfway
+  // kept his story from going on), unless they are there with him
+  const away = (id, place, host) => id === 'takahashi' && docked() && (!host || cs().on.place === place);
   // every line said aloud on the cruise, and whose (the generator makes each a clip in their voice): みんな's by each of the chorus
   // (speakChorus says it with them all at once; 2026-11-13, the user: one voice for a crowd was awkward) — a laugh is a laugh and a
   // line with a cry is not read (VOICE_FX), so neither is made

@@ -77,6 +77,9 @@ function renderNav(active) {
 }
 
 function route() {
+  // something had (YEN) or a trip's results (CRUISE) is watched to the end (2026-11-13, the user): the back button keeps the page
+  const held = document.querySelector('.eat-scene[data-at], .cr-result[data-at]');
+  if (held && location.hash !== held.dataset.at) { history.replaceState(null, '', location.pathname + location.search + held.dataset.at); return; }
   const r = currentRoute();
   const view = document.getElementById('view');
   if (r.name !== animRoute && typeof TALK !== 'undefined') TALK.close();   // another page: a talk left open there ends (and the sounds it kept down come back)

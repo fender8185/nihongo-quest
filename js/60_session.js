@@ -104,6 +104,11 @@ function themeRank(c) { const i = themeOrder().indexOf(c); return i < 0 ? themeO
 // worth of new words (THEME_LANE_DAYS × 8); then it moves to the back of the order and the next theme
 // with unintroduced words takes the lane, so a big theme (生活 has 148 words) cannot occupy a lane for a month.
 const THEME_LANE_DAYS = 3;
+// Words pulled up in their theme's lane (2026-11-13, the user: the town's menus open with them, YEN): each sorted as though its id
+// came just after the one named — 食べ物, 飲み物 and the 食堂's dishes right after ジュース, so the first round of 飲食 (24 words)
+// teaches them rather than its second or third; the ids stay (records keep them), only the order changes
+const LANE_PULL = { after: 'n5b-057', ids: ['n5b-062', 'n5b-063', 'n5e-005', 'n5e-002', 'n5e-001', 'p5a-003', 'p5a-001', 'p5a-002', 'n5d-004', 'n5e-006'] };
+const laneId = (v) => { const k = LANE_PULL.ids.indexOf(v.id); return k < 0 ? v.id : `${LANE_PULL.after}+${String(k).padStart(2, '0')}`; };
 function laneOrder() {
   const lane = state.themeLane && Array.isArray(state.themeLane.order) ? state.themeLane : (state.themeLane = { order: [], count: {} });
   if (!lane.count || typeof lane.count !== 'object') lane.count = {};
@@ -141,7 +146,8 @@ function newVocabCandidates(pool, anyLevel) {
   // in the main course the PRE_N5 words not yet seen form a lane of their own beside the two theme lanes (never a block of easy words first)
   const preLane = lv === 'PRE_N5' ? [] : fresh.filter(v => v.lv === 'PRE_N5').sort(byTheme);
   const inLane = (v) => (v.lv === lv && th.includes(vocabTheme(v))) || preLane.includes(v);
-  const lanes = (preLane.length ? [preLane] : []).concat(th.map(c => fresh.filter(v => v.lv === lv && vocabTheme(v) === c).sort(byId)));
+  const byLane = (a, b) => laneId(a).localeCompare(laneId(b));   // id order, a few pulled up (LANE_PULL)
+  const lanes = (preLane.length ? [preLane] : []).concat(th.map(c => fresh.filter(v => v.lv === lv && vocabTheme(v) === c).sort(byLane)));
   const rest = fresh.filter(v => !inLane(v))
     .sort((a, b) => lvRank(a) - lvRank(b) || byTheme(a, b));
   const built = [];

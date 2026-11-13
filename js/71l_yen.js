@@ -26,16 +26,18 @@ const YEN = (() => {
   // the order as said: the hero's (the menu's own, else 「…を ください。」), then the keeper's with the price in it
   const order = (mu, it) => [mu.order || `${it[1]}を ください。`, mu.orderZh || `請給我${it[2]}。`];
   const price = (mu, it) => [mu.keeper[1].replace('{P}', priceMark(it[3])), mu.keeper[2].replace('{Z}', `${yenStr(it[3])} 日圓`)];
-  // full for the day: what the hero says, what the keeper says back
-  const FULL = { f: ['まだ おなかが いっぱいです。', '肚子還好飽。'], d: ['もう のめません。', '已經喝不下了。'] }, AGAIN = ['また あした どうぞ！', '明天再來吧！'];
+  // full for the day: what the hero says, what the keeper says back (the bath and おみくじ: once a day, 2026-11-13 the user)
+  const FULL = { f: ['まだ おなかが いっぱいです。', '肚子還好飽。'], d: ['もう のめません。', '已經喝不下了。'],
+    b: ['{今日|きょう}は もう おふろに {入|はい}りました。', '今天已經泡過澡了。'], o: ['{今日|きょう}は もう ひきました。', '今天已經抽過了。'] }, AGAIN = ['また あした どうぞ！', '明天再來吧！'];
   const EAT = { start: ['いただきます！', '我開動了！'], end: ['ごちそうさまでした！', '我吃飽了，謝謝招待！'] };
   // every line said aloud buying something (the generator makes each a clip in the voice of who says it)
   function lines(add) {
     Object.values(M()).forEach((mu) => { if (mu.keeper) { mu.items.forEach((it) => { add('hero', order(mu, it)[0]); add(mu.keeper[0], price(mu, it)[0]); }); add(mu.keeper[0], AGAIN[0]); if (mu.hello) add(mu.keeper[0], mu.hello[0]); } });
-    [FULL.f, FULL.d, EAT.start, EAT.end].forEach((l) => add('hero', l[0]));
+    [FULL.f, FULL.d, FULL.b, FULL.o, EAT.start, EAT.end].forEach((l) => add('hero', l[0]));
     Object.values(M()).forEach((mu) => mu.items.forEach((it) => [...((it[4] || {}).look || []), ...((it[4] || {}).say || [])].forEach((l) => add('hero', l[0]))));   // what he says about each before and once had
   }
-  // ---- what may be had: its word learned (or the course past its level), two foods and a drink a day ----
+  // ---- what may be had: its word learned (or the course past its level), two foods and a drink a day, the bath and おみくじ once
+  // (k: f, d, b, o); a bath makes him hungry again — the day's foods and drinks begin anew ----
   const opt = (it) => it[4] || {};
   const word = (it) => { const w = opt(it).w; return w ? REG.vocab.find((v) => jaPlain(v.w) === w) || null : null; };
   const ALL = 'nq_menu_all';   // the test site (町の手帳): every menu open on this device, words learned or not
@@ -45,8 +47,8 @@ const YEN = (() => {
     const L = courseLevels(), at = L.indexOf(curLevel());
     return Boolean(state.srs[v.key]) || (at >= 0 && L.indexOf(courseLevel(v.lv)) >= 0 && L.indexOf(courseLevel(v.lv)) < at);
   }
-  const LIMIT = { f: 2, d: 1 };
-  const today = () => { const t = state.purse.today; return t && t.day === day() ? t : { day: day(), f: 0, d: 0 }; };
+  const LIMIT = { f: 2, d: 1, b: 1, o: 1 }, HAD = { f: 1, d: 1 };   // HAD: had on a screen of its own (eat)
+  const today = () => { const t = state.purse.today; return t && t.day === day() ? t : { day: day(), f: 0, d: 0, b: 0, o: 0 }; };
   const left = (k) => (LIMIT[k] ? LIMIT[k] - (today()[k] || 0) : Infinity);
   // its drawing: the course's (PICS) or the town's own (PICS_TOWN), by its pic, else by its word
   function pic(it, cls = '') {
@@ -62,7 +64,7 @@ const YEN = (() => {
     const row = (it) => {
       if (!known(it)) { const v = word(it); return `<div class="mc-item locked"><span class="mc-pic">${pic(it)}</span><span class="mc-name">？？？</span>${priceTag(it[3])}<span class="mc-lock" lang="zh-Hant">學會「${esc(v ? v.r || jaPlain(v.w) : '')}」這個字，就能點</span></div>`; }
       const full = left(opt(it).k) <= 0;
-      return `<button type="button" class="mc-item${full ? ' full' : ''}" data-act="yen-buy" data-item="${it[0]}"${!none && bal >= it[3] ? '' : ' disabled'}><span class="mc-pic">${pic(it)}</span>
+      return `<button type="button" class="mc-item${full ? ' full' : ''}" data-act="yen-buy" data-item="${it[0]}" data-k="${opt(it).k || ''}"${!none && bal >= it[3] ? '' : ' disabled'}><span class="mc-pic">${pic(it)}</span>
         <span class="mc-name">${ruby(it[1])}${book[it[0]] ? '<i class="mc-had" title="美食手帳裡有了">済</i>' : ''}</span>${priceTag(it[3])}<span class="mc-zh" lang="zh-Hant">${esc(it[2])}</span></button>`;
     };
     openModal(plain(mu.title), `<div class="menu-card${zh ? ' zh' : ''}" lang="ja">
@@ -83,9 +85,13 @@ const YEN = (() => {
     }
     const p = state.purse, dev = kotoDevice(), first = !p.book[id], td = today();
     p.spent[dev] = (Number(p.spent[dev]) || 0) + it[3]; if (first) p.book[id] = day();
-    if (LIMIT[k]) p.today = Object.assign({}, td, { [k]: (td[k] || 0) + 1 });
+    if (LIMIT[k]) p.today = Object.assign({}, td, { [k]: (td[k] || 0) + 1 }, k === 'b' ? { f: 0, d: 0 } : {});   // out of the bath hungry
     saveState(); kotoButtons(document);
-    const then = () => { have(yard, t, mu); if (LIMIT[k]) setTimeout(() => eat(it, first), mu.sit ? 1500 : 1300); else if (first) setTimeout(() => stamp(it), 1000); };
+    const then = () => {
+      have(yard, t, mu);
+      if (HAD[k]) setTimeout(() => eat(it, first), mu.sit ? 1500 : 1300); else if (first) setTimeout(() => stamp(it), 1000);
+      if (k === 'b') setTimeout(() => { if (!yard.isConnected) return; yPop(yard, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), 'おなか すいた〜！'); toast('泡完澡，肚子又餓了。', 2600); }, (t.out || 0) + 1800);
+    };
     if (!mu.keeper) { SND.play('coins'); then(); return; }   // a machine, the おみくじ box
     const [o, oz] = order(mu, it), [pr, pz] = price(mu, it);
     TALK.open(yard, mu.keeper[0], [['hero', o, oz], [mu.keeper[0], pr, pz, { snd: 'coins' }]], then, null, { ev: true });
@@ -123,7 +129,7 @@ const YEN = (() => {
     const o = opt(it), drink = o.k === 'd', id = `esm${++eats}`, d = /<svg[^>]*><circle class="pd"[^>]*\/>(.*)<\/svg>$/s.exec(pic(it)), draw = d ? d[1] : '', el = document.createElement('div');
     const bites = [[74, 48, 9], [61, 40, 10], [47, 43, 10], [33, 50, 9], [57, 58, 11], [41, 61, 11]];   // round the food's top, then its middle: a round bite with teeth marks along its edge
     const looks = o.look || [], said = (o.say && o.say.length ? o.say : [['おいしかった！', '好好吃！']]);   // before having it (star-eyed), once had
-    el.className = `eat-scene${drink ? ' drink' : ''}${o.dish ? ' dish' : ''}`; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', drink ? '喝東西' : '吃東西');
+    el.className = `eat-scene${drink ? ' drink' : ''}${o.dish ? ' dish' : ''}`; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', drink ? '喝東西' : '吃東西'); el.dataset.at = location.hash;   // watched to the end: no going elsewhere meanwhile (route)
     el.innerHTML = `<div class="es-card"><p class="es-name" lang="ja">${ruby(it[1])}</p>
       <div class="es-row"><div class="es-face" data-mood="drool">${HERO.head(state.look, 'face')}<svg class="es-mood" viewBox="0 0 111.5 100" aria-hidden="true">${BLUSH}${Object.entries(MOOD).map(([k, m]) => `<g class="m-${k}">${m}</g>`).join('')}</svg><span class="es-hearts" aria-hidden="true"></span></div>
         <div class="es-food"><svg class="pic es-pic" viewBox="0 0 100 100" aria-hidden="true"><defs><mask id="${id}"><rect width="100" height="100" fill="#fff"/>${drink ? '' : bites.map(([x, y, r], k) => `<g class="es-bite" data-k="${k}" fill="#000"><circle cx="${x}" cy="${y}" r="${r}"/>${[-1, 0, 1].map((j) => `<circle cx="${(x + j * r * 0.62).toFixed(1)}" cy="${(y + r * (j ? 0.78 : 0.95)).toFixed(1)}" r="${(r * 0.42).toFixed(1)}"/>`).join('')}</g>`).join('')}</mask></defs><circle class="pd" cx="50" cy="50" r="47"/>${o.dish ? `<g class="es-dish">${draw}</g>` : ''}<g class="es-g" mask="url(#${id})">${draw}</g></svg><i class="es-word" aria-hidden="true"></i><span class="es-crumbs" aria-hidden="true"></span></div></div>

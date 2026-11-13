@@ -206,8 +206,13 @@
       Object.entries(n.book || {}).forEach(([k, v]) => { if (!book[k] || v < book[k]) book[k] = v; });
       out.purse = { spent, book };
       const gift = Math.max(Number(o.gift) || 0, Number(n.gift) || 0); if (gift) out.purse.gift = gift;   // the test site's 円: only grows
-      const td = [o.today, n.today].filter((x) => x && x.day).sort((x, y) => (x.day < y.day ? 1 : -1));   // the day's foods and drinks: the later day's; the same day, the more of each
-      if (td.length) out.purse.today = td.filter((x) => x.day === td[0].day).reduce((a, x) => ({ day: a.day, f: Math.max(a.f || 0, x.f || 0), d: Math.max(a.d || 0, x.d || 0) }));
+      // the day's foods, drinks, bath, おみくじ: the later day's; the same day, the more of each — the foods and drinks counted since the
+      // bath if either copy has had it (out of the bath the hero is hungry again: YEN)
+      const td = [o.today, n.today].filter((x) => x && x.day).sort((x, y) => (x.day < y.day ? 1 : -1));
+      if (td.length) {
+        const same = td.filter((x) => x.day === td[0].day), b = Math.max(...same.map((x) => x.b || 0)), since = same.filter((x) => (x.b || 0) === b);
+        out.purse.today = { day: td[0].day, f: Math.max(...since.map((x) => x.f || 0)), d: Math.max(...since.map((x) => x.d || 0)), b, o: Math.max(...same.map((x) => x.o || 0)) };
+      }
     }
     out.updatedAt = new Date().toISOString();
     return out;

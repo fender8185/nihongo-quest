@@ -94,6 +94,10 @@ function check(T, D, opts = {}) {
     if (e.after && !before) bad('ref', where, `no event ${e.after} before it`);
     else if (before && before.when === 'night') bad('night-chain', where, `follows ${e.after}, which only happens at night`);
     talkLines(e.lines, e.u, where, who);
+    if (e.met !== undefined) {   // the opening for one who has done another event first: { if, head, from }
+      if (!e.met || !(T.EVENTS || []).some((x) => x.id === e.met.if) || !Array.isArray(e.met.head) || !Number.isInteger(e.met.from) || e.met.from < 0 || e.met.from > e.lines.length) bad('ref', where, 'met is { if: an event, head: lines, from: how many of the lines it replaces }');
+      else talkLines(e.met.head, e.u, `${where} met`, who);
+    }
   });
   if (used.size) { const lo = Math.min(...used), hi = Math.max(...used); for (let i = lo; i <= hi; i++) if (!used.has(i)) bad('gap', units[i], 'no events'); }
   // what 円 buys (MENU): ids once, a price, the names and lines readable from the first unit, a keeper who is in the town and says it
@@ -109,7 +113,7 @@ function check(T, D, opts = {}) {
       if (!Number.isInteger(price) || price <= 0 || price > 9999) bad('menu', `${at}.${id}`, 'a price in whole 円, under 10,000');
       if (!zh) bad('menu', `${at}.${id}`, 'no Chinese'); text(name, 'm1', `${at}.${id}`);
       const x = mu.items[i][4] || {};   // its kind, the word that opens it, its drawing
-      if (x.k !== undefined && !['f', 'd'].includes(x.k)) bad('menu', `${at}.${id}`, 'k is f (a food) or d (a drink)');
+      if (x.k !== undefined && !['f', 'd', 'b', 'o'].includes(x.k)) bad('menu', `${at}.${id}`, 'k is f (a food), d (a drink), b (a bath) or o (おみくじ)');
       if (x.w !== undefined && !D.VOCAB.some((v) => v.w.replace(/\[[^\]]*\]/g, '') === x.w)) bad('menu', `${at}.${id}`, `no course word ${x.w}`);
       if (opts.pics && !opts.pics.has(x.pic || x.w || '')) bad('menu', `${at}.${id}`, `no drawing ${x.pic || x.w}`);
       ['look', 'say'].forEach((w) => (x[w] || []).forEach(([ja, z], k) => { text(ja, 'm2', `${at}.${id} ${w}${k}`); if (!z) bad('menu', `${at}.${id} ${w}${k}`, 'no Chinese'); }));   // said before, once had

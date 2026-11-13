@@ -170,12 +170,15 @@ const TOWNEV = (() => {
   const look = (id, place, h = now()) => { const c = T().CAST[id]; return c.festa && place === 'shrine' && isOpen('ennichi', h) ? Object.assign({}, c.look, c.festa) : c.look; };
   const art = (id, place) => { const c = T().CAST[id]; return c.art === 'npc' ? NPC.art(id) : HERO.svg({ look: look(id, place), wear: c.wear || {} }); };
   const face = (id) => { if (id === 'hero') return HERO.head(state.look, 'bust'); const c = T().CAST[id]; if (!c) return CRUISE.face(id); return c.art === 'npc' ? NPC.face(id) : HERO.head(c.look, 'bust'); };   // not of the town: the cruise's
+  // an event's lines as said to this learner: met — { if: an event, head: lines, from: k } — the opening for one who has done that
+  // event already, said in place of the first k lines (2026-11-13: m1-7 meets 高橋 for those who came to know him in m10-2 first)
+  const linesOf = (e) => (e.met && state.town.done[e.met.if] ? e.met.head.concat(e.lines.slice(e.met.from)) : e.lines);
   // the people at a place now: those met, where their hours put them, and whoever an event there waits on (marked ！)
   function here(place) {
     const w = waiting(now(), today()), out = [];
     Object.keys(T().CAST).forEach((id) => {
       const host = w && w.ev.who === id && w.place === place, at = host ? { place, spot: w.spot } : whereIs(id, now(), today());
-      const gone = (!host && T().CAST[id].away && state.town.done[T().CAST[id].away]) || CRUISE.away(id);   // away from the town now (陽菜 in Tokyo): only back for an event of theirs; 高橋 out with the cruise's passengers
+      const gone = (!host && T().CAST[id].away && state.town.done[T().CAST[id].away]) || CRUISE.away(id, place, host);   // away from the town now (陽菜 in Tokyo): only back for an event of theirs; 高橋 out with the cruise's passengers (an event of his waits for him)
       if (at && at.place === place && !gone && (host || seen(id)) && T().SPOTS[place] && T().SPOTS[place][at.spot]) out.push({ id, spot: T().SPOTS[place][at.spot], host });
     });
     return out;
@@ -238,7 +241,7 @@ const TOWNEV = (() => {
     yHeroWalk(yard, [f[0] + side * 76 * yScale(f[1]), f[1] + 2], () => {
       yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard);
       const sells = !e && YEN.sells(yard, id), chat = () => TALK.open(yard, id, [chatLine(id)]);   // one who sells something here (2026-11-13, the user): 點餐 or 閒聊
-      if (e) TALK.open(yard, id, e.lines, ended, null, { ev: true });
+      if (e) TALK.open(yard, id, linesOf(e), ended, null, { ev: true });
       else if (sells) TALK.open(yard, id, [[id, sells.hello[0], sells.hello[1], { pick: [[sells.label, sells.go], ['おしゃべりする', chat]] }]], null, null, { ev: true });
       else chat();
     });
@@ -252,7 +255,7 @@ const TOWNEV = (() => {
     const p = y.querySelector(`.npc-${o}`) || (helper && y.querySelector(`.npc-${helper}`));   // its keeper, else who helps there (和子 at the flowers)
     if (p) talk(p); else toast(T().CAST[o].away && state.town.done[T().CAST[o].away] ? `${sign}現在沒有人在顧店。` : `${T().CAST[o].name}現在不在店裡。`);
   }
-  const api = { unitIdx, reachedIdx, started, share, studyDaysSince, due, opened, openN, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, chatCtx, chatMem, hop, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
+  const api = { unitIdx, reachedIdx, started, share, linesOf, studyDaysSince, due, opened, openN, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, chatCtx, chatMem, hop, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
   return api;
 })();
 // the bed (test, 2026-11-10; the user's call): once the day's practice is done (書桌上的筆記本「今日完成」), a sleep there moves the
@@ -370,7 +373,7 @@ const DIARY = (() => {
   function logOf(e) {   // a talk as it went: each line by who said it, the hero's answers as picked
     const name = (w) => (w === 'hero' ? '我' : (TOWN.CAST[w] || {}).name || w);
     const row = (w, ja, zh) => `<li><b>${esc(name(w))}</b>${ja ? `<span lang="ja">${rubyEv(ja)}</span>` : ''}<small>${esc(zh || '')}</small></li>`;
-    return `<ol class="tb-lines">${(e.lines || []).map((l) => { if (Array.isArray(l)) return row(l[0], l[1], l[2]); const o = (l.opts || []).find((x) => x[1]); return o ? row('hero', o[0], o[2]) : ''; }).join('')}</ol>`;
+    return `<ol class="tb-lines">${TOWNEV.linesOf(e).map((l) => { if (Array.isArray(l)) return row(l[0], l[1], l[2]); const o = (l.opts || []).find((x) => x[1]); return o ? row('hero', o[0], o[2]) : ''; }).join('')}</ol>`;
   }
   function townCover() {
     const n = TOWNEV.openN();
@@ -445,7 +448,7 @@ const DIARY = (() => {
       const tr = e.target.closest('[data-try]'), tl = e.target.closest('[data-tool]');
       if (tl) { tool(tl); return; }
       if (e.target.closest('[data-diary-say]')) { speakAs('granny', said(PAGES[at])); return; }
-      if (r || tr) { const ev = TOWN.EVENTS.find((x) => x.id === (r || tr).dataset[r ? 'replay' : 'try']); close(); if (ev) TALK.open(document.body, ev.who, ev.lines, () => openBook('town'), null, { ev: true }); return; }
+      if (r || tr) { const ev = TOWN.EVENTS.find((x) => x.id === (r || tr).dataset[r ? 'replay' : 'try']); close(); if (ev) TALK.open(document.body, ev.who, TOWNEV.linesOf(ev), () => openBook('town'), null, { ev: true }); return; }
       const po = e.target.closest('[data-page-of]'); if (po) { tp = people().indexOf(po.dataset.pageOf) + 1; show(); return; }
       if (b) { const d = b.dataset.diary; if (d === 'x') close(); else if (d.startsWith('tab-')) { tab = d.slice(4); show(); } else turn(Number(d)); }
       else if (e.target === el) close();
@@ -533,7 +536,7 @@ function talkLines() {
   const out = [], add = (who, ja) => { if (ja) out.push([who, ja]); };
   Object.keys(NPCS).forEach((id) => [...NPCS[id].hello(0), ...NPCS[id].hello(1)].forEach((l) => add(id, l[0])));   // their chat is in TOWN.CHAT
   Object.keys(TOWN.CHAT).forEach((id) => TOWN.CHAT[id].forEach((l) => add(id, l[1])));
-  TOWN.EVENTS.forEach((e) => e.lines.forEach((l) => (Array.isArray(l) ? add(l[0], l[1]) : (l.opts || []).forEach((o) => add('hero', o[0])))));
+  TOWN.EVENTS.forEach((e) => e.lines.concat(e.met ? e.met.head : []).forEach((l) => (Array.isArray(l) ? add(l[0], l[1]) : (l.opts || []).forEach((o) => add('hero', o[0])))));   // met: the opening for one who knew them already
   Object.values(NPC.DOOR).forEach((ls) => ls.forEach((l) => add('hero', l[0])));
   DIARY.PAGES.forEach((p) => add('granny', DIARY.said(p)));
   CRUISE.lines(add); YEN.lines(add);   // the cruise's, buying with 円

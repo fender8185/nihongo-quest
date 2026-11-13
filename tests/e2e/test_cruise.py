@@ -58,7 +58,7 @@ def test_tapped_it_asks_first_then_comes_in_and_they_come_down_one_by_one(b):
       return JSON.stringify({ asked: /20.30 分鐘/.test(asked) && /中途可以離開/.test(asked), still, docked, early, all: people().sort(), on: state.cruise.on }); })()"""))
     assert r['asked'] and r['still'] and r['docked'] and 0 < r['early'] < 8, r   # asked first (等一下: still out there); then down in turn
     assert r['all'] == sorted(['takahashi', 'kaneda', 'umeko', 'yuta', 'rina', 'yoshimoto', 'ken', 'ai', 'michiyama']), r
-    assert r['on'] == {'trip': 't1', 'step': 0, 'place': 'harbor', 'score': {}}, r   # its replies tallied as they come (score)
+    assert r['on'] == {'trip': 't1', 'step': 0, 'stop': 'hello', 'place': 'harbor', 'score': {}}, r   # its replies tallied as they come (score); the next stop by its id too
 
 def test_trip_one_goes_right_round_the_town_into_the_shokudo_and_back(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ const errs = []; window.addEventListener('error', (e) => errs.push(String(e.message)));
@@ -132,6 +132,28 @@ def test_takahashi_is_met_early_and_his_castle_desk_is_empty_while_he_is_out_wit
       state.cruise.on = { trip: 't1', step: 3, place: 'harbor' }; saveState(); await go('castle');
       return JSON.stringify({ before, after: !!y().querySelector('.npc[data-npc=takahashi]') }); })()"""))
     assert r == {'before': True, 'after': False}, r
+    # 2026-11-13: an event of his waiting at the castle comes first — he is there for it while they wait elsewhere (not when
+    # they are at the castle with him)
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ state.town.seen = { takahashi: 1 }; TOWN.EVENTS = [{ id: 'x-taka', u: 'm1', who: 'takahashi', at: 'castle', title: 't', lines: [['takahashi', 'こんにちは。', '你好。']] }];
+      state.cruise.on = { trip: 't1', step: 3, place: 'harbor' }; saveState(); await go('castle'); const waits = !!y().querySelector('.npc[data-npc=takahashi]');
+      state.cruise.on = { trip: 't2', step: 2, place: 'castle' }; saveState(); await go('castle');
+      return JSON.stringify({ waits, with: !!y().querySelector('.npc[data-npc=takahashi]') }); })()"""))
+    assert r == {'waits': True, 'with': False}, r
+
+def test_the_trip_under_way_is_kept_by_its_stops_ids(b):
+    # 2026-11-13: a trip rewritten later (a stop added) carries on from the same stop; each reply counted once all the same;
+    # one begun before the ids (step and scores by number) is put by id; a shop on the way opens only where they are
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ const t1 = TOWN.CRUISE.TRIPS[0];
+      state.cruise.on = { trip: 't1', step: 3, place: 'harbor', score: { '1.5': 0, '3.9': 2 } }; saveState(); await go('harbor');
+      const moved = Object.assign({}, state.cruise.on); await until(() => !document.querySelector('.talk-card'));
+      t1.stops.splice(1, 0, Object.assign({}, t1.stops[1], { id: 'extra' }));   // a stop added before it
+      await go('harbor'); const bar = document.querySelector('.cruise-bar .cb-t').textContent;
+      const away = TOWNEV.shopState('shokudo'); state.cruise.on.place = 'shokudo'; const there = TOWNEV.shopState('shokudo');
+      return JSON.stringify({ stop: moved.stop, score: moved.score, bar, want: t1.stops[4].title, away, there }); })()"""))
+    s = r['score']
+    assert r['stop'] == 'cat' and sorted(s) == ['cat.0', 'ship.0'] and s['ship.0'] == 0 and s['cat.0'] == 2, r   # by id now
+    assert r['bar'] == r['want'], r   # still the same stop, a stop before it added
+    assert r['away'] != 'open' and r['there'] == 'open', r   # 10 o'clock, before the 食堂's hours: open only with them in it
 
 def test_together_they_speak_as_one_quick_retort_a_laugh_is_a_laugh_and_a_cry_is_not_read(b):
     # 2026-11-13, the user: one even voice reading みんな's さむい and あはは, or 吉本's いたい, sounded like a robot

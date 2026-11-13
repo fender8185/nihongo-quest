@@ -284,8 +284,8 @@ function defaultState() {
     met: {},                // test (2026-11-09): the neighbours who have come by (NPCS): { id: the day }
     storyV: 0,              // test (2026-11-09): the version of the opening (STORY.V) seen, 0 none
     storyAt: 0,             // 2026-11-11: when the opening was closed (ms; 0 before it, or seen before this was kept): 小春 knocks a minute on
-    cruise: { done: {}, on: null, res: {} },   // test (2026-11-12): the cruise ship's trips (CRUISE): done { trip: day }; on: the one under way { trip, step: its next stop, place: where the passengers wait, score: { 'stop.line': misses at each reply } }; res: each one done { first, asks, koto, yen, grade, day } (2026-11-13: the guide's pay, the wallet's 円)
-    purse: { spent: {}, book: {} },   // 円 spent (2026-11-13): spent { device: 円 so far on it }, book: 美食手帳 { thing: the day first had }, today: { day, f, d } foods and drinks had that day (two and one), gift: 円 given on the test site (町の手帳)
+    cruise: { done: {}, on: null, res: {} },   // test (2026-11-12): the cruise ship's trips (CRUISE): done { trip: day }; on: the one under way { trip, step: its next stop's place in the list, stop: its id, place: where the passengers wait, score: { 'stop id.reply': misses at each reply } }; res: each one done { first, asks, koto, yen, grade, day } (2026-11-13: the guide's pay, the wallet's 円)
+    purse: { spent: {}, book: {} },   // 円 spent (2026-11-13): spent { device: 円 so far on it }, book: 美食手帳 { thing: the day first had }, today: { day, f, d, b, o } foods, drinks, baths, おみくじ that day (two, one, one, one), gift: 円 given on the test site (町の手帳)
     town: { done: {}, seen: {}, stops: {}, talks: {} },   // test (2026-11-09): the town's events (TOWNEV): done { id: day }, people met { id: 1 }, bus stops opened { id: 1 }; talks { id: chats with them } (2026-11-12)
     placed: {},             // where owned things stand in 書房: { id: { w: 'F', x, y, r } | { w: 'L'|'R', u, v } }; not here = in the storage box
     wear: {},               // what the hero wears, by part: { head, face, neck, back, body }
@@ -358,13 +358,13 @@ function normalizeState(s) {
   const tw = obj(out.town), talks = {}; Object.entries(obj(tw.talks)).forEach(([id, n]) => { const k = Math.floor(Number(n)); if (k > 0) talks[id] = k; });
   out.town = { done: obj(tw.done), seen: obj(tw.seen), stops: obj(tw.stops), talks };
   const cr = obj(out.cruise), on = cr.on && typeof cr.on === 'object' && typeof cr.on.trip === 'string' ? cr.on : null;
-  const num = (v) => Math.max(0, Math.floor(Number(v)) || 0), score = (sc) => Object.fromEntries(Object.entries(obj(sc)).filter(([k]) => /^\d+\.\d+$/.test(k)).map(([k, v]) => [k, num(v)]));
+  const num = (v) => Math.max(0, Math.floor(Number(v)) || 0), score = (sc) => Object.fromEntries(Object.entries(obj(sc)).filter(([k]) => /^[\w-]+\.\d+$/.test(k)).map(([k, v]) => [k, num(v)]));
   const res = Object.fromEntries(Object.entries(obj(cr.res)).filter(([, r]) => r && typeof r === 'object').map(([t, r]) => [t, { first: num(r.first), asks: num(r.asks), koto: num(r.koto), yen: num(r.yen), grade: num(r.grade), day: typeof r.day === 'string' ? r.day : '' }]));
   const pu = obj(out.purse);
   out.purse = { spent: Object.fromEntries(Object.entries(obj(pu.spent)).map(([d, n]) => [d, num(n)])), book: Object.fromEntries(Object.entries(obj(pu.book)).filter(([, v]) => typeof v === 'string')) };
-  if (pu.today && typeof pu.today.day === 'string') out.purse.today = { day: pu.today.day, f: num(pu.today.f), d: num(pu.today.d) };
+  if (pu.today && typeof pu.today.day === 'string') out.purse.today = { day: pu.today.day, f: num(pu.today.f), d: num(pu.today.d), b: num(pu.today.b), o: num(pu.today.o) };   // b, o: the bath, おみくじ (once a day)
   if (num(pu.gift)) out.purse.gift = num(pu.gift);
-  out.cruise = { done: obj(cr.done), on: on && !obj(cr.done)[on.trip] ? { trip: on.trip, step: num(on.step), place: typeof on.place === 'string' ? on.place : 'harbor', score: score(on.score) } : null, res };
+  out.cruise = { done: obj(cr.done), on: on && !obj(cr.done)[on.trip] ? { trip: on.trip, step: num(on.step), stop: typeof on.stop === 'string' ? on.stop : '', place: typeof on.place === 'string' ? on.place : 'harbor', score: score(on.score) } : null, res };
   out.mail = out.mail && typeof out.mail === 'object' && !Array.isArray(out.mail) ? { got: obj(out.mail.got), read: obj(out.mail.read) } : null;
   if (typeof out.resetAt !== 'string') out.resetAt = '';   // 1.9.1: when 重設所有進度 was last pressed (the cloud's guard lets that one shrink through)
   ['owned', 'placed', 'wear', 'look', 'lampsOff', 'met'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)
