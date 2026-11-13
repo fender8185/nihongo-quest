@@ -130,6 +130,23 @@ def test_sizes_word_in_the_middle_glyphs_big_order_meaning_by_its_sentence(b):
     assert r['order'] == {'found': True, 'first': 'q-sub order-sub', 'outside': False}, r
     assert r['tail'], r
 
+# 2026-11-13, the user (a phone): in a filled blank the kanji sat lower than the kana around them — the blank was a flex box, so
+# each ruby became its own item centred with its furigana, its kanji pushed down; the kanji share the kana's line now, and the
+# box's words sit on the sentence's line
+def test_a_filled_blanks_kanji_sit_on_the_line_of_its_kana(b):
+    js = "(async () => { " + FRESH + VOCAB_Q + """ const e = currentEntry();
+      let q = null; for (const it of REG.vocab) { const c = makeQuestion(it, { forceFmt: 'v-cloze' }); if (c && c.fmt === 'v-cloze' && /^[ぁ-ん][^<]*<ruby>/.test(c.fillHtml || '')) { e.item = it; e.q = q = c; break; } }
+      e.done = false; renderPractice(); answerCurrent(q.answer);
+      const box = document.querySelector('.q-card .blank.filled'), ruby = box.querySelector('ruby'), kana = box.firstChild;
+      const rect = (node) => { const r = document.createRange(); r.selectNodeContents(node); return r.getBoundingClientRect(); };
+      const walk = document.createTreeWalker(document.querySelector('.q-card .q-stem'), NodeFilter.SHOW_TEXT); let before = null;   // the sentence's own words
+      while (walk.nextNode()) { const n = walk.currentNode; if (n.textContent.trim() && !n.parentElement.closest('.blank, rt, rp')) { before = n; break; } }
+      const out = { fill: q.fillHtml, kana: kana.nodeType === 3, kanaBottom: rect(kana).bottom, kanjiBottom: rect(ruby.firstChild).bottom, before: before && rect(before).bottom, text: before && before.textContent };
+      SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("metrics", (390, 844))]))
+    assert r['kana'] and abs(r['kanaBottom'] - r['kanjiBottom']) <= 1, r
+    assert r['before'] and abs(r['kanaBottom'] - r['before']) <= 2, r   # level with the sentence (its type is a little smaller)
+
 # 2026-11-11, the user: a unit's 講義 was too much at once on a phone — then: a screen of its own, its pages all one size, read like a
 # book (no buttons: swiped; it simply ends). The unit page lists the parts; the lesson flows into pages of the screen's size (each
 # section from a new page); a part opens at its page; turning to the last page the first time gives 3 言靈, once a book
