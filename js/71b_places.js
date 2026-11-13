@@ -192,11 +192,11 @@ function yRoute(place, p0, goal0, free) {
 // then into the look in front of a mirror (DRESS, as the full-length mirror)
 const KUJI = [['大吉', '一切都會很順利！'], ['中吉', '努力會有好結果。'], ['小吉', '小小的好事在等你。'], ['吉', '平平穩穩就是福。'], ['末吉', '慢慢來，會越來越好。']];
 // the 緣日's stalls along the shrine's approach (2026-11-13, the user: seven or eight, more to eat): [id, x of its left edge on the
-// land, awning, sign, name] — drawn 72 wide (shrineHtml), four before the sacred tree, two before the hall's left wing, one before
-// its right; each a thing of the place (PLACE_USE: a menu, but the goldfish)
-const SHRINE_STALLS = [['kingyo', 392, '#3f7ac8', '金魚すくい', '金魚撈'], ['yakisoba', 470, '#d0453c', 'やきそば', '炒麵攤'], ['takoyaki', 548, '#e8913a', 'たこやき', '章魚燒攤'],
-  ['wataame', 626, '#e58fa8', 'わたあめ', '棉花糖攤'], ['ringoame', 704, '#6aa850', 'りんごあめ', '蘋果糖攤'], ['kakigori', 782, '#4fb3c8', 'かき氷', '剉冰攤'],
-  ['chocobanana', 966, '#8a5ab8', 'チョコバナナ', '巧克力香蕉攤']];
+// land, awning, sign, name, who keeps it (TOWN.YATAI; a menu's keeper says its prices)] — drawn 72 wide (shrineHtml), four before
+// the sacred tree, two before the hall's left wing, one before its right; each a thing of the place (PLACE_USE: a menu, but the goldfish)
+const SHRINE_STALLS = [['kingyo', 392, '#3f7ac8', '金魚すくい', '金魚撈', 'ojiisan'], ['yakisoba', 470, '#d0453c', 'やきそば', '炒麵攤', 'ojisan'], ['takoyaki', 548, '#e8913a', 'たこやき', '章魚燒攤', 'tako'],
+  ['wataame', 626, '#e58fa8', 'わたあめ', '棉花糖攤', 'obasan'], ['ringoame', 704, '#6aa850', 'りんごあめ', '蘋果糖攤', 'obaasan'], ['kakigori', 782, '#4fb3c8', 'かき氷', '剉冰攤', 'oniisan'],
+  ['chocobanana', 966, '#8a5ab8', 'チョコバナナ', '巧克力香蕉攤', 'oneesan']];
 const PLACE_USE = {
   yard: [{ id: 'tree', name: '樹', box: [440, 70, 500, 150], kind: 'do', go: [-110, 208], back: 1, pose: 'reach', fx: 'ytree', fxc: 'shake', burst: ['#6f9a5a', '#8ab86e', '#5a8a4a'] },
     { id: 'fence', name: '柵欄', box: [694, 124, 778, 152], kind: 'do', go: [136, 210], back: 1, pose: 'look', say: 'いい眺め〜' }],
@@ -255,7 +255,7 @@ const PLACE_USE = {
     { id: 'fox', name: '狐狸', box: [338, 166, 382, 236], kind: 'do', go: [-240, 120], back: 1, pose: 'bow', say: 'ペコリ', fx: 'fox', fxc: 'bless', ms: 2000 },
     // the 緣日's stalls (SHRINE_STALLS): the goldfish to scoop; the rest, a menu each (YEN)
     ...SHRINE_STALLS.map(([id, x, , , name]) => Object.assign({ id, name, box: [x, 144, x + 72, 236], kind: 'do', go: [x + 36 - 600, 126], back: 1, pose: 'reach', when: () => TOWNEV.festival() },
-      id === 'kingyo' ? { pose: 'crouch', say: 'とれた！🐟' } : { buy: id }))],
+      id === 'kingyo' ? { pose: 'crouch', say: 'とれた！🐟', keeper: 'ojiisan' } : { buy: id }))],
   castle: [
     { id: 'sakuraL', name: '櫻花', box: [0, 60, 130, 236], kind: 'do', go: [-520, 112], pose: 'reach', fx: 'sakuraL', fxc: 'shake', burst: ['#f7c6d2', '#f2b8c6', '#fbdde4'] },
     { id: 'sakuraR', name: '櫻花', box: [1080, 60, 1210, 236], kind: 'do', go: [520, 112], pose: 'reach', fx: 'sakuraR', fxc: 'shake', burst: ['#f7c6d2', '#f2b8c6', '#fbdde4'] },
@@ -409,6 +409,7 @@ function yDo(yard, t) {
   if (t.fortune) { const [a, b] = KUJI[Math.floor(Math.random() * KUJI.length)]; say = a; toast(`おみくじ：${a}・${b}`, 3600); }
   if (say) yPop(yard, cx, y0 - 4, say);
   if (t.then) setTimeout(() => yPop(yard, cx, y0 - 4, t.then), 1200);
+  if (t.keeper) setTimeout(() => { const v = (TOWN.YATAI || {})[t.keeper]; if (!yard.isConnected || !v || !v.scoop) return; yBubble(yard, cx, y0 - 2, esc(v.scoop[0]), 2600); speakAs(t.keeper, v.scoop[0]); }, 1300);   // the one who keeps it says a word
   if (t.toast) toast(typeof t.toast === 'function' ? t.toast() : t.toast, 4600);
   if (t.mirror) setTimeout(() => { if (yard.isConnected && !yard.classList.contains('dressing')) DRESS.open(yard, 'mirror', t.name); }, 1300);
   if (t.burst) yBurst(yard, t.box, t.burst);

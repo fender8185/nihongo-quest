@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 55 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 56 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2372,12 +2372,19 @@ const TOWN = {
       ] }
     ]
   },
-  // the 緣日's stall keepers (2026-11-13, the user: seven or eight stalls, more to eat): one behind each counter, who says the price
-  // (MENU keeper) — not townsfolk with hours and chat; drawn in the talk as the town's people are, in their own voices (CAST_VOICE)
+  // the 緣日's stall keepers (2026-11-13, the user: seven or eight stalls, more to eat): one behind each counter (SHRINE_STALLS),
+  // who says the price (MENU keeper) — not townsfolk with hours and chat; drawn there and in the talk as the town's people are, in
+  // their own voices (CAST_VOICE). Later the same day (the user: someone at every stall): seven, one a stall; scoop: what the
+  // goldfish's old man says when one is caught
   YATAI: {
-    ojisan: { name: '屋台のおじさん', kana: 'やたいのおじさん', role: '炒麵、章魚燒', look: { face: 'round', skin: '#e8bd98', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#4a4040', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'happi', top: '#d0453c', bottomStyle: 'shorts', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: { head: 'nejiri' } },
-    obasan: { name: '屋台のおばさん', kana: 'やたいのおばさん', role: '甜點', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#5a4038', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'happi', top: '#e58fa8', bottomStyle: 'wide', bottom: '#4f6f9e', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: {} },
-    oniisan: { name: '屋台のお兄さん', kana: 'やたいのおにいさん', role: '剉冰、彈珠汽水', look: { face: 'oval', skin: '#e8bd98', cheeks: 'none', fringe: 'spiky', sides: 'short', hairBack: 'short', hairTop: 'none', hairColor: '#c98a3a', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#3f9ac8', bottomStyle: 'shorts', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: { head: 'nejiri' } }
+    ojisan: { name: 'やきそば屋のおじさん', kana: 'やきそばやのおじさん', role: '炒麵、牛肉串、奶油馬鈴薯', look: { face: 'round', skin: '#e8bd98', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'happi', top: '#d0574b', bottomStyle: 'shorts', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: { head: 'nejiri' } },
+    tako: { name: 'たこやき屋のお兄さん', kana: 'たこやきやのおにいさん', role: '章魚燒', look: { face: 'pointed', skin: '#d39f78', cheeks: 'none', fringe: 'choppy', sides: 'short', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'sharp', eyeColor: '#2a2730', brows: 'straight', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#d9a43a', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: {} },
+    obasan: { name: 'わたあめ屋のおばさん', kana: 'わたあめやのおばさん', role: '棉花糖', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#3b2f2a', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'happi', top: '#e58fa8', bottomStyle: 'wide', bottom: '#4f6f9e', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: {} },
+    obaasan: { name: 'りんごあめ屋のおばあさん', kana: 'りんごあめやのおばあさん', role: '蘋果糖、草莓和葡萄糖葫蘆', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'kappogi', top: '#e9e2d0', bottomStyle: 'wide', bottom: '#4f7a4a', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: {} },
+    oniisan: { name: 'かき氷屋のお兄さん', kana: 'かきごおりやのおにいさん', role: '剉冰、冰西瓜、彈珠汽水', look: { face: 'oval', skin: '#e8bd98', cheeks: 'none', fringe: 'spiky', sides: 'short', hairBack: 'short', hairTop: 'none', hairColor: '#c9a25a', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#3f9a8c', bottomStyle: 'shorts', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: { head: 'nejiri' } },
+    oneesan: { name: 'チョコバナナ屋のお姉さん', kana: 'チョコバナナやのおねえさん', role: '巧克力香蕉', look: { face: 'mochi', skin: '#f8dcc8', cheeks: 'blush', fringe: 'round', sides: 'chin', hairBack: 'short', hairTop: 'ponytail', hairColor: '#8a4a2e', eyes: 'kira', eyeColor: '#5a3a28', brows: 'soft', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#5a68d8', bottomStyle: 'shorts', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: {} },
+    ojiisan: { name: '金魚すくいのおじいさん', kana: 'きんぎょすくいのおじいさん', role: '金魚撈', look: { face: 'oval', skin: '#e8bd98', cheeks: 'none', fringe: 'none', sides: 'short', hairBack: 'short', hairTop: 'none', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'smile', beard: 'mustache', topStyle: 'jinbei', top: '#4f6f9e', bottomStyle: 'shorts', bottom: '#2b2b33', shoeStyle: 'geta', shoe: '#6e4f3a' }, wear: { face: 'glasses' },
+      scoop: ['おっ、じょうずだね！', '喔，撈得真好！'] }
   },
   // what the wallet's 円 buys (2026-11-13, the second round of the guide's pay): a menu a place's thing has (PLACE_USE buy) —
   // items [id, name as said, Chinese, price 円, { k: a food (f) or a drink (d) — two foods and a drink a day; w: the course's
@@ -2479,7 +2486,7 @@ const TOWN = {
         look: [['ホクホクの じゃがいもに バター！', '鬆軟的馬鈴薯配奶油！'], ['バターが とろとろです…', '奶油軟綿綿地化開……']],
         say: [['あつい！ でも、おいしい！', '好燙！可是好好吃！'], ['バターと しおが すごく あいます。', '奶油跟鹽超搭。'], ['じゃがいもは えらいです！', '馬鈴薯真了不起！']] }]],
       have: 'いい におい！' },
-    takoyaki: { title: 'たこやき', shop: '{縁日|えんにち|廟會}の {屋台|やたい|攤位}', keeper: ['ojisan', 'まいど！ {P}だよ！', '謝謝惠顧！{Z}喔！'], items: [['takoyaki', 'たこやき', '章魚燒（六顆）', 500, { k: 'f', pic: 'たこやき', dish: true,
+    takoyaki: { title: 'たこやき', shop: '{縁日|えんにち|廟會}の {屋台|やたい|攤位}', keeper: ['tako', 'はい、{P}です！ あついですよ！', '好的，{Z}！很燙喔！'], items: [['takoyaki', 'たこやき', '章魚燒（六顆）', 500, { k: 'f', pic: 'たこやき', dish: true,
         look: [['まるい たこやきが {六|むっ}つ！', '圓圓的章魚燒六顆！'], ['かつおぶしが ゆらゆら…！', '柴魚片晃呀晃……！']],
         say: [['あつい！ なかが とろとろです！', '好燙！裡面軟綿綿的！'], ['なかの たこが おおきい！', '裡面的章魚好大塊！'], ['ソースと マヨネーズ、さいこうです！', '醬汁加美乃滋，最棒了！']] }]],
       have: 'いい におい！' },
@@ -2487,7 +2494,7 @@ const TOWN = {
         look: [['ピンクの くもです！', '是粉紅色的雲！'], ['こんなに おおきい！', '這麼大！']],
         say: [['ふわっ…くちの なかで きえました！', '輕飄飄……在嘴裡消失了！'], ['あまい！ でも、すぐ なくなります。', '好甜！可是一下就沒了。'], ['{子|こ}どもの ころの {夢|ゆめ|夢想}です！', '是小時候的夢想！']] }]],
       have: 'あまい におい！' },
-    ringoame: { title: 'りんごあめ', shop: '{縁日|えんにち|廟會}の {屋台|やたい|攤位}', keeper: ['obasan', 'はい、{P}ね。ありがとう！', '好的，{Z}喔。謝謝！'], items: [['ringoame', 'りんごあめ', '蘋果糖', 400, { k: 'f', w: 'りんご', pic: 'りんごあめ',
+    ringoame: { title: 'りんごあめ', shop: '{縁日|えんにち|廟會}の {屋台|やたい|攤位}', keeper: ['obaasan', 'はい、{P}ですよ。 ありがとうね。', '好的，{Z}喔。謝謝你呀。'], items: [['ringoame', 'りんごあめ', '蘋果糖', 400, { k: 'f', w: 'りんご', pic: 'りんごあめ',
         look: [['まっかで ぴかぴか！', '紅通通、亮晶晶！'], ['あめの なかに りんごが あります！', '糖裡面有蘋果！']],
         say: [['カリッ！ あめが かたいです！', '喀滋！糖好硬！'], ['なかの りんごは すっぱくて、あまい。', '裡面的蘋果酸酸甜甜。'], ['くちが まっかに なりました！', '嘴巴變得紅通通！']] }],
         ['ichigoame', 'いちごあめ', '草莓糖葫蘆', 300, { k: 'f', w: 'いちご', pic: 'いちごあめ',
@@ -2510,7 +2517,7 @@ const TOWN = {
         look: [['びんの なかに ビーだまが あります！', '瓶子裡有彈珠！'], ['ポン！ あきました！', '啵！打開了！']],
         say: [['しゅわしゅわ！ つめたい！', '氣泡滋滋！好冰！'], ['ビーだまが カランと なりました。', '彈珠叮噹一聲。'], ['これが お{祭|まつ|祭典}りの のみものです！', '這就是祭典的飲料！']] }]],
       have: 'つめたい！' },
-    chocobanana: { title: 'チョコバナナ', shop: '{縁日|えんにち|廟會}の {屋台|やたい|攤位}', keeper: ['obasan', 'はい、{P}ね。ありがとう！', '好的，{Z}喔。謝謝！'], items: [['chocobanana', 'チョコバナナ', '巧克力香蕉', 300, { k: 'f', w: 'バナナ', pic: 'チョコバナナ',
+    chocobanana: { title: 'チョコバナナ', shop: '{縁日|えんにち|廟會}の {屋台|やたい|攤位}', keeper: ['oneesan', 'ありがとう！ {P}です！', '謝謝！{Z}！'], items: [['chocobanana', 'チョコバナナ', '巧克力香蕉', 300, { k: 'f', w: 'バナナ', pic: 'チョコバナナ',
         look: [['チョコが つやつや！', '巧克力亮晶晶！'], ['カラフルな つぶつぶが かわいい！', '彩色的小顆粒好可愛！']],
         say: [['チョコが あまくて、バナナが やわらかい！', '巧克力甜甜的，香蕉軟軟的！'], ['つぶつぶが カリカリです。', '小顆粒脆脆的。'], ['{一本|いっぽん}で しあわせです！', '一根就好幸福！']] }]],
       have: 'かわいい！' }

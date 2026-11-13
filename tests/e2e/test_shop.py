@@ -98,16 +98,16 @@ def test_a_set_past_the_days_cap_gives_nothing_and_says_so(b):
     assert r['gain'] == {'set': 0, 'day': 0, 'full': True, 'dayNow': False} and r['bal'] == 20, r
     assert r['line'] == 'あ言靈今天作答的言靈拿滿了共20', r
 
-def test_fukuyas_opening_letter_brings_10_koto_once_with_his_face_and_no_rules(b):
+def test_fukuyas_opening_letter_brings_10_koto_once_with_his_seal_and_no_rules(b):
     js = """(() => { state.koto.gift = (Number(state.koto.gift) || 0) + 20; const l = letters().find(x => x.id === 'opening'); if (!l) return 'none';   /* 20 earned: 古道具屋 opens */
       const bal0 = kotoBalance(); openLetters('opening'); const card = () => document.querySelector('#modalBody [data-letter="opening"]');
-      const face = !!card().querySelector('.letter-from svg'), stamp = getComputedStyle(card(), '::before').display, rules = /做完一組|\\+1|\\+10|一組|掛鐘|擺設|衣櫃/.test(card().textContent), learn = card().textContent.includes('吸收一分知識');
+      const face = card().style.getPropertyValue('--hanko') === "'福爺'" && getComputedStyle(card().querySelector('.letter-sign'), '::after').content === '"福爺"', stamp = !!card().querySelector('.ltr-env .ltr-stamp') && !card().classList.contains('pcard'), rules = /做完一組|\\+1|\\+10|一組|掛鐘|擺設|衣櫃/.test(card().textContent), learn = card().textContent.includes('吸收一分知識');
       card().querySelector('[data-act="letter-gift"]').click(); const gain = kotoBalance() - bal0, got = !!card().querySelector('.letter-got'), shop = !!card().querySelector('[data-route="#/shop"]');
       takeLetterGift('opening'); const again = kotoBalance() - bal0 - gain;   /* another device took it as well: once */
       card().querySelector('[data-act="letter-done"]').click();
       return JSON.stringify({ title: l.title, from: l.from, face, stamp, rules, learn, gain, got, shop, again, kept: letters().some(x => x.id === 'opening'), unread: !letters().find(x => x.id === 'opening').read, mail: state.koto.mail }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'title': '古道具屋開張了', 'from': 'fuku', 'face': True, 'stamp': 'none', 'rules': False, 'learn': True, 'gain': 10, 'got': True, 'shop': True, 'again': 0, 'kept': True, 'unread': False, 'mail': {'opening': 10}}, r   # no rules, no wares, no how-to
+    assert r == {'title': '古道具屋開張了', 'from': 'fuku', 'face': True, 'stamp': True, 'rules': False, 'learn': True, 'gain': 10, 'got': True, 'shop': True, 'again': 0, 'kept': True, 'unread': False, 'mail': {'opening': 10}}, r   # no rules, no wares, no how-to
 
 def test_putting_the_opening_letter_away_still_takes_its_koto(b):
     js = """(() => { state.koto.gift = (Number(state.koto.gift) || 0) + 20; const bal0 = kotoBalance(); openLetters('opening'); document.querySelector('#modalBody [data-letter="opening"] [data-act="letter-done"]').click();

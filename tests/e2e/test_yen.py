@@ -173,12 +173,15 @@ def test_the_festival_has_seven_stalls_six_selling_something_to_eat(b):
       await wait(1700);
       const es = document.querySelector('.eat-scene'), name = es && es.querySelector('.es-name').textContent; while (document.querySelector('.eat-scene')) { document.querySelector('.es-ok').click(); await wait(40); }
       const l = []; YEN.lines((w, ja) => l.push(w));
-      return JSON.stringify({ day, night, menus, cold, who, face, said, name, bal: yenBalance(), keepers: ['ojisan', 'obasan', 'oniisan'].map((k) => l.filter((w) => w === k).length), voiced: ['ojisan', 'obasan', 'oniisan'].every((k) => CAST_VOICE[k]) }); })()"""))
+      const ids = SHRINE_STALLS.map((st) => st[5]), drawn = [...y().querySelectorAll('.land .stall-keeper')].map((g) => g.dataset.keeper), all = []; talkLines().forEach(([w]) => all.push(w));
+      const sells = SHRINE_STALLS.filter(([id]) => TOWN.MENU[id]).every(([id, , , , , k]) => TOWN.MENU[id].keeper[0] === k);
+      return JSON.stringify({ day, night, menus, cold, who, face, said, name, bal: yenBalance(), keepers: ids.map((k) => l.filter((w) => w === k).length), drawn, ids, sells, scoop: all.filter((w) => w === 'ojiisan').length, voiced: ids.every((k) => CAST_VOICE[k] && TOWN.YATAI[k]) }); })()"""))
     assert r['day'] == 0 and len(r['night']) == 7 and r['menus'] == ['yakisoba', 'takoyaki', 'wataame', 'ringoame', 'kakigori', 'chocobanana'], r   # only at the festival; all but the goldfish sell something
     assert r['cold'] == ['kakigori', 'ramune'], r   # shaved ice, and ラムネ to drink (レモン, すいか not learned: theirs locked)
-    assert r['who'] == ['我', '屋台のおじさん'] and r['face'] and r['said'] == ['たこやきを ください。', 'まいど！ 500円ごひゃくえんだよ！'] and r['bal'] == 4500, r
+    assert r['who'] == ['我', 'たこやき屋のお兄さん'] and r['face'] and r['said'] == ['たこやきを ください。', 'はい、500円ごひゃくえんです！ あついですよ！'] and r['bal'] == 4500, r
     assert r['name'] == 'たこやき', r   # had on its own screen
-    assert r['keepers'] == [6, 8, 5] and r['voiced'], r   # each one's prices and 「また あした」 for the generator, in their own voices
+    assert r['keepers'] == [0, 4, 2, 2, 4, 5, 2] and r['scoop'] == 1 and r['voiced'], r   # each one's prices and 「また あした」 for the generator, in their own voices; the goldfish's old man his word
+    assert r['drawn'] == r['ids'] and len(set(r['ids'])) == 7 and r['sells'], r   # someone behind every counter (2026-11-13, the user), the one who says its prices
 
 def test_a_stall_sells_more_each_thing_opened_by_its_word(b):
     # 2026-11-13, the user: more at the shrine, a stall needn't sell one thing only — 牛くし・じゃがバター, いちご・ぶどうあめ,

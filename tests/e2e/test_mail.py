@@ -32,7 +32,7 @@ def test_the_halloween_record_comes_to_whoever_was_here_by_11_11(b):
 def test_a_letter_with_a_record_is_taken_once_and_the_gramophone_has_it(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ day('2026-11-05'); await rows([HALLOWEEN]); const bal = kotoBalance();
       openLetters('mail:halloween-2026-record'); const m = () => document.getElementById('modalBody');
-      const look = { from: !!m().querySelector('.letter-from'), sign: m().querySelector('.letter-sign').textContent, paras: m().querySelectorAll('.letter-body p').length, btn: m().querySelector('[data-act="letter-gift"]').textContent };
+      const look = { from: m().querySelector('.letter').style.getPropertyValue('--hanko') === "'ムギ'", sign: m().querySelector('.letter-sign').textContent, paras: m().querySelectorAll('.letter-body p').length, btn: m().querySelector('[data-act="letter-gift"]').textContent };
       m().querySelector('[data-act="letter-gift"]').click(); await new Promise((q) => setTimeout(q, 100));
       const after = { owned: state.owned.obake, taken: Object.keys(state.mail.taken), got: m().querySelector('.letter-got').textContent, records: MUSIC.RECORDS.filter((x) => !x.place && (x.own || owns(x.id))).map((x) => x.id), bal: kotoBalance() - bal };
       document.querySelectorAll('.got').forEach((g) => g.remove()); takeLetterGift('mail:halloween-2026-record');

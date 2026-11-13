@@ -93,7 +93,7 @@ function letterBoxSave(b) { state.mail = b; saveState(); }
 function letterKinds() {   // every letter there is: when it comes (due), when it is no longer wanted (gone)
   const n = Object.keys(state.srs).length, info = installInfo(), got = Boolean(state.koto.mail.opening);
   return [
-    { id: 'moved', due: () => onOldSite(), gone: () => !onOldSite(), title: '網站搬家了', body: '新網址是 nihongoquest.app。在新網址用同一個 Email 登入雲端同步，進度就會接上；還沒登入過的，先在這裡登入一次（設定 › 資料）。加到主畫面的，新網址要重新加一次。',
+    { id: 'moved', card: true, due: () => onOldSite(), gone: () => !onOldSite(), title: '網站搬家了', body: '新網址是 nihongoquest.app。在新網址用同一個 Email 登入雲端同步，進度就會接上；還沒登入過的，先在這裡登入一次（設定 › 資料）。加到主畫面的，新網址要重新加一次。',
       acts: `<a class="btn btn-sm btn-primary" href="${NEW_SITE_URL}#/today" target="_blank" rel="noopener">打開新網址</a>` },
     { id: 'room', from: 'nagisa', due: () => true, title: '歡迎回到外婆的家', body: `<p>你好。我是渚，你外婆從小到大的朋友，在鎮上開一間小小的咖啡店「喫茶しずく」。</p>
       <p>聽說你搬進了她的家。這個家裡的東西，都是她留給你的：</p><ul>
@@ -102,9 +102,9 @@ function letterKinds() {   // every letter there is: when it comes (due), when i
       <li>臥房可以休息，衣櫃和鏡子可以換個樣子。做完當天的練習，還能在床上睡到想去的時間。</li>
       <li>門外有院子和海邊，往右是小鎮，坐公車還能去更遠的地方。鎮上的人會慢慢認識你，用你學到的日文跟你說話。</li></ul>
       <p>不用急，一天一點就好。你外婆總說：話要慢慢說，才會說進心裡。</p><p class="letter-sign">喫茶しずく　渚</p>` },
-    { id: 'intro', due: () => (state.startChosen || n) && !state.introSeen && n < 40, title: '先看「第 0 週」', body: '假名和最基本的句型都在「第 0 週」，開始之前看一遍會輕鬆很多。',
+    { id: 'intro', card: true, due: () => (state.startChosen || n) && !state.introSeen && n < 40, title: '先看「第 0 週」', body: '假名和最基本的句型都在「第 0 週」，開始之前看一遍會輕鬆很多。',
       acts: '<button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/course/intro">去看</button>' },
-    { id: 'install', due: () => !info.standalone && info.touch, gone: () => info.standalone, title: '加到主畫面', body: '加到主畫面會更好用：全螢幕、打開就是書房、離線也能練。',
+    { id: 'install', card: true, due: () => !info.standalone && info.touch, gone: () => info.standalone, title: '加到主畫面', body: '加到主畫面會更好用：全螢幕、打開就是書房、離線也能練。',
       acts: info.canPrompt ? '<button type="button" class="btn btn-sm btn-primary" data-act="install-prompt">安裝</button>' : '<button type="button" class="btn btn-sm btn-primary" data-act="install-how">怎麼做</button>' },
     { id: 'opening', from: 'fuku', due: () => shopOpen(), title: '古道具屋開張了', body: `<p>你好，我是住在門外左邊山上的福爺。山上的古道具屋今天開張了，小店不收錢，只收「言靈」。</p>
       <p>日本人相信，話語裡住著靈魂。你每多吸收一分知識，就可能有言靈悄悄聚到你身邊來。</p>
@@ -112,7 +112,7 @@ function letterKinds() {   // every letter there is: when it comes (due), when i
       <p class="letter-sign">古道具屋　福爺</p>`,
       acts: got ? `<span class="letter-got">${kotoIcon()}已收下 ${LETTER_GIFT.opening} 言靈</span><button type="button" class="btn btn-sm btn-primary" data-act="nav" data-route="#/shop">去古道具屋</button>`
         : `<button type="button" class="btn btn-sm btn-primary" data-act="letter-gift" data-id="opening">${kotoIcon()}收下 ${LETTER_GIFT.opening} 言靈</button>` }
-  ].concat((state.notices || []).map((x) => ({ id: 'notice:' + x.id, due: () => true, title: '通知', body: x.lines.map(esc).join('<br>') })), MAILROOM.letters());
+  ].concat((state.notices || []).map((x) => ({ id: 'notice:' + x.id, card: true, due: () => true, title: '通知', body: x.lines.map(esc).join('<br>') })), MAILROOM.letters());
 }
 // ---------- letters sent from the dashboard (2026-11-12, the user: sending a letter must never take a new version) ----------
 // supabase/mail.sql: a row of public.mail is a letter. The app reads the rows (on opening and on coming back; kept in nq_mail_rows
@@ -199,20 +199,38 @@ function newMail() {   // the unread letters this device has not been told about
   if (!state.startChosen && !Object.keys(state.srs).length) return [];
   const seen = mailSeen(); return letters().filter((l) => !l.read).map((l) => l.id).filter((id) => !seen.includes(id));
 }
-// who wrote a letter (1.2.0): their face in its top right corner (福爺; 渚 since 2026-11-10; the app's own letters have none)
+// who wrote a letter (1.2.0): their face on its envelope in the mailbox (福爺; 渚 since 2026-11-10; the app's own letters have none)
 const LETTER_FROM = { fuku: ['福爺', () => fukuSvg()], nagisa: ['渚', () => TOWNEV.face('nagisa')] };
 const letterFrom = (id) => LETTER_FROM[id] || ((NPCS[id] || TOWN.CAST[id]) ? [(NPCS[id] || TOWN.CAST[id]).name, () => TOWNEV.face(id)] : null);   // anyone of the town (a letter from the dashboard)
 const LETTER_GIFT = { opening: 10 };   // 言靈 that come with a letter
 let letterOpen = null;   // the letter read in the mailbox now (none: the list)
-function lettersHtml() {
+// the paper (2026-11-13, the user's pick): a letter is a sheet drawn out of its envelope — the red 〒 boxes, a 110 円 stamp, みなと's
+// postmark on the day it came (in 令和 years), a small picture of the season in the corner, the writer's seal by the signature; a
+// short one from the app itself (card) a picture postcard. Lit as under a desk lamp by night, as the books are
+const zipBoxes = () => '<span class="ltr-zip" aria-hidden="true">〒<i></i><i></i><i></i><em>-</em><i></i><i></i><i></i><i></i></span>';
+const postmark = (d) => { const [y, m, dd] = String(d || todayStr()).split('-').map(Number); return `みなと<br>${y - 2018}.${m}.${dd}`; };
+function seasonArt(d) {   // the corner of the sheet: 桜 in spring, 朝顔 in summer, 紅葉 in autumn, 椿 and snow in winter
+  const m = Number(String(d || todayStr()).slice(5, 7)), leaf = (x, y, r, c, a) => `<path transform="translate(${x} ${y}) rotate(${a}) scale(${r})" d="M0 -10 l2.2 5 5-2.2-1.4 5 5 .7-4.2 3.6 2.8 4.2-5-.7-.7 5-3.7-3.5-3.7 3.5-.7-5-5 .7 2.8-4.2-4.2-3.6 5-.7-1.4-5 5 2.2z" fill="${c}"/>`;
+  const flower = (x, y, r, c, mid) => `<g transform="translate(${x} ${y})">${[0, 72, 144, 216, 288].map((a) => `<ellipse cx="0" cy="${-r * 0.55}" rx="${r * 0.42}" ry="${r * 0.55}" transform="rotate(${a})" fill="${c}"/>`).join('')}<circle r="${r * 0.22}" fill="${mid}"/></g>`;
+  const art = m >= 3 && m <= 5 ? flower(22, 18, 11, '#f4b6c4', '#e0607e') + flower(42, 26, 7, '#f8cbd5', '#e0607e') + '<ellipse cx="50" cy="12" rx="2.4" ry="1.6" fill="#f4b6c4" transform="rotate(30 50 12)"/>'
+    : m >= 6 && m <= 8 ? '<path d="M14 32 q-6 -10 4 -16" fill="none" stroke="#5a9a4a" stroke-width="1.4"/><path d="M8 26 q6 -2 8 4 q-6 3 -8 -4z" fill="#6aa850"/>' + `<circle cx="26" cy="18" r="11" fill="#5a78d8"/><circle cx="26" cy="18" r="4" fill="#fff"/>${[0, 72, 144, 216, 288].map((a) => `<path d="M26 18 L26 8" stroke="#dfe6fb" stroke-width="1.2" transform="rotate(${a} 26 18)"/>`).join('')}<circle cx="46" cy="26" r="7" fill="#b06ad0"/><circle cx="46" cy="26" r="2.6" fill="#fff"/>`
+    : m >= 9 && m <= 11 ? leaf(24, 18, 1.15, '#d8653a', -10) + leaf(44, 24, 0.75, '#e8a23a', 20) + '<path d="M24 26 v10" stroke="#8a4a2a" stroke-width="1.2"/>'
+    : flower(22, 20, 12, '#c8392f', '#f2cf3c') + `<g stroke="#9cc4e4" stroke-width="1.3" stroke-linecap="round">${[0, 60, 120].map((a) => `<path d="M46 6 v14" transform="rotate(${a} 46 13)"/>`).join('')}</g>`;
+  return `<svg class="ltr-art" viewBox="0 0 60 40" aria-hidden="true">${art}</svg>`;
+}
+const POSTCARD_PIC = '<svg class="pc-pic" viewBox="0 0 120 64" aria-hidden="true"><rect width="120" height="64" fill="#9fd0e8"/><circle cx="96" cy="15" r="7" fill="#ffe9a8"/><path d="M0 40 Q30 34 60 40 T120 38 V64 H0Z" fill="#4f9ac8"/><path d="M0 48 Q40 42 80 50 T120 48 V64 H0Z" fill="#3f7ab0"/><path d="M6 41 Q24 18 46 26 Q60 30 66 41 Z" fill="#6aa850"/><rect x="26" y="23" width="14" height="10" fill="#f4ead6"/><path d="M24 24 L33 16 L42 24 Z" fill="#c8453a"/><rect x="31" y="27" width="4" height="6" fill="#7a5a3a"/><path d="M84 44 h14 l-2 4 h-10z" fill="#f4ead6"/><path d="M90 44 v-9 l6 7z" fill="#fff"/></svg>';
+const hankoOf = (name) => String(name || '').replace(/['"\\<>&]/g, '').slice(0, 2);   // the seal: the first two letters of the name
+function lettersHtml(drawn) {   // drawn: just opened (the sheet comes up out of its envelope)
   const all = letters(), l = letterOpen && all.find((x) => x.id === letterOpen);
-  if (!l) return `<div class="letter-list">${all.map((x) => `<button type="button" class="letter-row ${x.read ? 'read' : 'unread'}" data-act="letter-open" data-id="${esc(x.id)}">
-      <span class="lr-face">${x.from && letterFrom(x.from) ? letterFrom(x.from)[1]() : icon('mail')}</span><span class="lr-title">${esc(x.title)}<small>${esc(x.from && letterFrom(x.from) ? letterFrom(x.from)[0] : 'Nihongo Quest')}${x.got && x.got.length === 10 ? '・' + esc(x.got.slice(5).replace('-', '/')) : ''}</small></span>
+  if (!l) return `<div class="letter-list">${all.map((x) => `<button type="button" class="letter-row ${x.read ? 'read' : 'unread'}${x.card ? ' pcard' : ''}" data-act="letter-open" data-id="${esc(x.id)}">
+      <span class="lr-face">${x.from && letterFrom(x.from) ? letterFrom(x.from)[1]() : x.card ? POSTCARD_PIC : icon('mail')}</span><span class="lr-title">${esc(x.title)}<small>${esc(x.from && letterFrom(x.from) ? letterFrom(x.from)[0] : 'Nihongo Quest')}${x.got && x.got.length === 10 ? '・' + esc(x.got.slice(5).replace('-', '/')) : ''}</small></span>
       <span class="lr-state">${x.read ? '已讀' : '新'}</span></button>`).join('')}</div>`;
-  return `<div class="letters"><div class="letter${l.from ? ' from' : ''}" data-letter="${esc(l.id)}">
-      ${l.from && letterFrom(l.from) ? `<div class="letter-from" title="${letterFrom(l.from)[0]}" aria-label="寄件者：${letterFrom(l.from)[0]}">${letterFrom(l.from)[1]()}</div>` : ''}
-      <div class="letter-title">${esc(l.title)}</div>
-      <div class="letter-body">${l.body}</div>
+  const who = l.from && letterFrom(l.from), seal = who ? ` style="--hanko:'${hankoOf(who[0])}'"` : '';
+  const words = `<div class="letter-title">${esc(l.title)}</div><div class="letter-body">${l.body}</div>`;
+  const paper = l.card ? `<div class="pc"><div class="pc-top"><span class="pc-stamp">郵便<br>はがき</span>${zipBoxes()}</div>${POSTCARD_PIC}${words}</div>`
+    : `<div class="ltr-sheet">${seasonArt(l.got)}${words}</div><div class="ltr-env" aria-hidden="true">${zipBoxes()}<span class="ltr-stamp"><b>110</b></span><span class="ltr-pm">${postmark(l.got)}</span><span class="ltr-to">あなたへ</span><span class="ltr-from">${esc(who ? who[0] : '')}</span></div>`;
+  return `<div class="letters"><div class="letter${l.card ? ' pcard' : ''}${who ? ' from' : ''}${drawn ? ' drawn' : ''}" data-letter="${esc(l.id)}"${seal}>
+      ${paper}
       <div class="row-wrap mt-3">${l.acts || ''}<button type="button" class="btn btn-sm" data-act="letter-done" data-id="${esc(l.id)}">‹ 回信箱</button></div>
     </div></div>`;
 }
@@ -221,7 +239,7 @@ function openLetters(id) {   // the mailbox: its list, or (id) that letter (read
   if (!all.length) { toast('信箱是空的'); return; }
   markMailSeen(all.map((l) => l.id));
   letterOpen = id && all.some((l) => l.id === id) ? id : null; if (letterOpen) letterRead(letterOpen);
-  openModal('信箱', lettersHtml(), { width: 460, noFocus: true });
+  openModal('信箱', lettersHtml(true), { width: 460, noFocus: true });
   mailboxLevel();
 }
 // the yard's mailbox follows the letters in place: the flag, the tag
@@ -240,7 +258,7 @@ Object.assign(ACTIONS, {
     takeLetterGift(el.dataset.id);
     if (document.getElementById('modalBody')) document.getElementById('modalBody').innerHTML = lettersHtml();
   },
-  'letter-open': (el) => { letterOpen = el.dataset.id; letterRead(letterOpen); document.getElementById('modalBody').innerHTML = lettersHtml(); mailboxLevel(); },
+  'letter-open': (el) => { letterOpen = el.dataset.id; letterRead(letterOpen); document.getElementById('modalBody').innerHTML = lettersHtml(true); mailboxLevel(); },
   'letter-done': (el) => {   // ‹ 回信箱: back to the list, the letter kept (read)
     const id = el.dataset.id;
     takeLetterGift(id);   // put away before taking it: it is taken all the same

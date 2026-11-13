@@ -361,7 +361,10 @@ const DIARY = (() => {
   const need = (k) => (PAGES[k].last ? STAGES.length : k);   // stages passed to read page k
   const open = (k) => k === 0 || passed() >= need(k);
   let el = null, at = 0, tab = 'g';
-  const tabs = () => `<div class="diary-tabs"><button type="button" data-diary="tab-g" aria-pressed="${tab === 'g'}">外婆的日記</button><button type="button" data-diary="tab-town" aria-pressed="${tab === 'town'}">町の手帳</button>${YEN.shown() ? `<button type="button" data-diary="tab-food" aria-pressed="${tab === 'food'}">美食手帳</button>` : ''}</div>`;   // 美食手帳 (YEN): once there has been 円
+  // the books' index stickers down the right edge (2026-11-13, the user's picks: her diary washi with a stab binding, 町の手帳 a kraft
+  // grid notebook with an elastic band; both lit as under a desk lamp by night)
+  const tabs = () => `<div class="diary-tabs"><button type="button" data-diary="tab-g" aria-pressed="${tab === 'g'}" aria-label="外婆的日記">日記</button><button type="button" data-diary="tab-town" aria-pressed="${tab === 'town'}">町の手帳</button>${YEN.shown() ? `<button type="button" data-diary="tab-food" aria-pressed="${tab === 'food'}">美食手帳</button>` : ''}</div>`;   // 美食手帳 (YEN): once there has been 円
+  const book = (body) => `<div class="diary-book ${tab === 'g' ? 'bk-g' : 'bk-note'}">${tabs()}<div class="bk-page">${body}</div></div>`;
   // 町の手帳 (test, 2026-11-09; a page each since 2026-11-10, the user): a cover — who waits, everyone at a glance (a tap: their
   // page), the test site's tools — then a page a person, turned over (‹ ›, or a swipe): their face, name, who they are (a line more
   // for each event of theirs), and the talks had with them, each to be read through there or played again (no 言靈 the second
@@ -424,13 +427,13 @@ const DIARY = (() => {
     show();
   }
   function show() {
-    if (tab === 'food') { el.innerHTML = `<div class="diary-book">${tabs()}${YEN.book()}<div class="diary-nav"><button type="button" class="btn btn-sm" data-diary="x">闔上</button></div></div>`; return; }
-    if (tab === 'town') { const n = people().length; el.innerHTML = `<div class="diary-book">${tabs()}${townBook()}<div class="diary-nav"><button type="button" class="btn btn-sm" data-diary="-1"${tp ? '' : ' disabled'}>‹ 上一頁</button><button type="button" class="btn btn-sm" data-diary="x">闔上</button><button type="button" class="btn btn-sm" data-diary="1"${tp < n ? '' : ' disabled'}>下一頁 ›</button></div></div>`; return; }
+    if (tab === 'food') { el.innerHTML = book(`${YEN.book()}<div class="diary-nav"><button type="button" class="btn btn-sm" data-diary="x">闔上</button></div>`); return; }
+    if (tab === 'town') { const n = people().length; el.innerHTML = book(`${townBook()}<div class="diary-nav"><button type="button" class="btn btn-sm" data-diary="-1"${tp ? '' : ' disabled'}>‹ 上一頁</button><button type="button" class="btn btn-sm" data-diary="x">闔上</button><button type="button" class="btn btn-sm" data-diary="1"${tp < n ? '' : ' disabled'}>下一頁 ›</button></div>`); return; }
     const p = PAGES[at], ok = open(at);
-    el.innerHTML = `<div class="diary-book">${tabs()}<div class="diary-head"><span>おばあちゃんの{日記|にっき}${ok ? `<button type="button" class="talk-say" data-diary-say aria-label="唸出來">${icon('speaker')}</button>` : ''}</span><span>${at + 1} / ${PAGES.length}</span></div>
+    el.innerHTML = book(`<div class="diary-head"><span>おばあちゃんの{日記|にっき}${ok ? `<button type="button" class="talk-say" data-diary-say aria-label="唸出來">${icon('speaker')}</button>` : ''}</span><span>${at + 1} / ${PAGES.length}</span></div>
       <div class="diary-page${ok ? '' : ' locked'}" lang="ja">${p.ja.split('\n').map((l) => `<p>${ok ? ruby(l) : esc(plain(l))}</p>`).join('')}</div>
       ${ok ? `<details class="diary-zh"><summary>看中文</summary><p>${esc(p.zh)}</p></details>` : `<p class="diary-lock">還讀不懂。${p.last ? '通過所有階段測驗' : `通過「${esc(STAGES[need(at) - 1].title)}」的階段測驗`}，就讀得懂這一頁。</p>`}
-      <div class="diary-nav"><button type="button" class="btn btn-sm" data-diary="-1"${at ? '' : ' disabled'}>‹ 上一頁</button><button type="button" class="btn btn-sm" data-diary="x">闔上</button><button type="button" class="btn btn-sm" data-diary="1"${at < PAGES.length - 1 ? '' : ' disabled'}>下一頁 ›</button></div></div>`
+      <div class="diary-nav"><button type="button" class="btn btn-sm" data-diary="-1"${at ? '' : ' disabled'}>‹ 上一頁</button><button type="button" class="btn btn-sm" data-diary="x">闔上</button><button type="button" class="btn btn-sm" data-diary="1"${at < PAGES.length - 1 ? '' : ' disabled'}>下一頁 ›</button></div>`)
       .replace('おばあちゃんの{日記|にっき}', 'おばあちゃんの<ruby>日記<rt>にっき</rt></ruby>');
   }
   function close() { if (el) { el.remove(); el = null; } }
@@ -540,6 +543,7 @@ function talkLines() {
   Object.values(NPC.DOOR).forEach((ls) => ls.forEach((l) => add('hero', l[0])));
   DIARY.PAGES.forEach((p) => add('granny', DIARY.said(p)));
   CRUISE.lines(add); YEN.lines(add);   // the cruise's, buying with 円
+  Object.keys(TOWN.YATAI || {}).forEach((id) => { if (TOWN.YATAI[id].scoop) add(id, TOWN.YATAI[id].scoop[0]); });   // the goldfish's old man
   return out;
 }
 // the beach (test, 2026-11-09), along the yard to the left: the sea to the horizon, an island, glints, waves washing in on wet
@@ -1608,11 +1612,17 @@ function shrineHtml() {
   // and what each sells laid out under its sign — goldfish in a blue tub, noodles on the griddle, cotton candy in bright bags.
   // 2026-11-13 (the user: seven or eight stalls, more to eat): narrower, seven of them along the approach — four before the sacred
   // tree, two before the hall's left wing, one before its right (the bell between kept clear); a long name in smaller letters
-  const stall = (x, w, aw, sign, goods) => `<g><rect x="${x}" y="${F - 70}" width="${w}" height="70" ${hc('#c58a54', '#3a2c40')}/><path d="M${x} ${F - 70} h${w} v6 h${-w} Z" fill="#2b1c12" fill-opacity=".16"/>
-    <path d="M${x + 1} ${F - 70} h4 v70 h-4 Z M${x + w - 5} ${F - 70} h4 v70 h-4 Z" ${hc('#8a5a30', '#2a2440')}/><path d="M${x - 6} ${F - 70} h${w + 12} l-8 -22 h${-w + 4} Z" ${hc(aw, '#5a2030')}/>
+  // Later the same day (the user: someone at every stall): its keeper (TOWN.YATAI) behind the counter, head and shoulders over
+  // the things laid out, under the awning — the sign moved up onto the awning to make room, lit as the stall is
+  const keeper = (id, cx, k) => { const v = (TOWN.YATAI || {})[id], z = 0.3, feet = F - 21; if (!v) return '';
+    const lit = (h) => `style="fill:color-mix(in srgb, ${h} calc(70% + 30% * var(--day, 1)), #3a2c40)"`;
+    return `<g class="stall-keeper" data-keeper="${id}" style="--k:${k}">${HERO.svg({ look: v.look, wear: v.wear || {}, front: true, box: '-60 -205 120 180', L: lit })
+      .replace('<svg ', `<svg x="${(cx - 60 * z).toFixed(1)}" y="${(feet - 205 * z).toFixed(1)}" width="${(120 * z).toFixed(1)}" height="${(180 * z).toFixed(1)}" `)}</g>`; };
+  const stall = (x, w, aw, sign, goods, who, k) => `<g><rect x="${x}" y="${F - 70}" width="${w}" height="70" ${hc('#c58a54', '#3a2c40')}/><path d="M${x} ${F - 70} h${w} v6 h${-w} Z" fill="#2b1c12" fill-opacity=".16"/>
+    ${keeper(who, x + w / 2, k)}<path d="M${x + 1} ${F - 70} h4 v70 h-4 Z M${x + w - 5} ${F - 70} h4 v70 h-4 Z" ${hc('#8a5a30', '#2a2440')}/><path d="M${x - 6} ${F - 70} h${w + 12} l-8 -22 h${-w + 4} Z" ${hc(aw, '#5a2030')}/>
     <path d="${Array.from({ length: Math.ceil(w / 24) }, (_, k) => { const a = k / (w / 12) * 2, b = Math.min(1, a + 12 / w); return `M${(x + 2 + (w - 4) * a).toFixed(1)} ${F - 92} H${(x + 2 + (w - 4) * b).toFixed(1)} L${(x - 6 + (w + 12) * b).toFixed(1)} ${F - 70} H${(x - 6 + (w + 12) * a).toFixed(1)} Z`; }).join(' ')}" fill="#fff" fill-opacity=".3" style="opacity:calc(.45 + .55 * var(--day))"/>
-    ${Array.from({ length: Math.floor(w / 18) }, (_, k) => `<path d="M${x - 4 + k * 18} ${F - 70} q9 8 18 0" ${hc(aw, '#5a2030')}/>`).join('')}<path d="M${x - 6} ${F - 70.6} h${w + 12}" stroke="#2b1c12" stroke-opacity=".18" stroke-width="1.2"/><rect x="${x + 10}" y="${F - 64}" width="${w - 20}" height="18" rx="2" ${hc('#fbf7ec', '#e8dcb4')}/>
-    <text x="${x + w / 2}" y="${F - 50}" text-anchor="middle" font-size="${Math.min(12, (w - 22) / [...sign].length).toFixed(1)}" font-weight="700" ${hc('#8a2f2a', '#8a2f2a')} font-family="system-ui, sans-serif">${sign}</text>${goods}<rect x="${x + 4}" y="${F - 28.5}" width="${w - 8}" height="3" rx="1" ${hc('#a8743f', '#4a3a40')}/><rect x="${x + 6}" y="${F - 26}" width="${w - 12}" height="10" ${hc('#efe6d6', '#ffe2a0')}/>
+    ${Array.from({ length: Math.floor(w / 18) }, (_, k) => `<path d="M${x - 4 + k * 18} ${F - 70} q9 8 18 0" ${hc(aw, '#5a2030')}/>`).join('')}<path d="M${x - 6} ${F - 70.6} h${w + 12}" stroke="#2b1c12" stroke-opacity=".18" stroke-width="1.2"/><rect x="${x + 6}" y="${F - 89}" width="${w - 12}" height="15" rx="2" ${hc('#fbf7ec', '#e8dcb4')}/>
+    <text x="${x + w / 2}" y="${F - 77.6}" text-anchor="middle" font-size="${Math.min(11, (w - 16) / [...sign].length).toFixed(1)}" font-weight="700" ${hc('#8a2f2a', '#8a2f2a')} font-family="system-ui, sans-serif">${sign}</text>${goods}<rect x="${x + 4}" y="${F - 28.5}" width="${w - 8}" height="3" rx="1" ${hc('#a8743f', '#4a3a40')}/><rect x="${x + 6}" y="${F - 26}" width="${w - 12}" height="10" ${hc('#efe6d6', '#ffe2a0')}/>
     <path d="M${x + w / 3} ${F - 14} V${F} M${x + w * 2 / 3} ${F - 14} V${F}" ${hs('#a8743f', '#2a2440')} stroke-width="1.2"/><path d="M${x + 6} ${F - 16} h${w - 12} v2 h${-w + 12} Z" fill="#2b1c12" fill-opacity=".12"/></g>`;
   const fish = (x, y, k) => `<path d="M${x} ${y} q3 -2.2 6 0 q-3 2.2 -6 0 Z M${x} ${y} l-2.6 -1.8 v3.6 Z" ${hc(k ? '#e8592e' : '#f2f0ea', '#ff8a4a')} transform="rotate(${(k * 37) % 40 - 20} ${x + 3} ${y})"/>`;
   const goods = {
@@ -1678,7 +1688,7 @@ function shrineHtml() {
         <path d="M1160 ${F - 54} h40" ${hs('#6e4f3a', '#2c2440')} stroke-width="2"/><path d="M1160 ${F - 54} h40" ${hs('#9a7a5a', '#4a3c5a')} stroke-width="1" stroke-dasharray="2 2"/>${[1166, 1176, 1186, 1196].map((x, k) => `<g ${hcx('fx-sway', '#ffffff', '#8a8cae', `animation-delay:-${k * 0.4}s;animation-duration:2.2s`)}><circle cx="${x}" cy="${F - 53.4}" r="1.8"/><path d="M${x - 1.6} ${F - 52} h3.2 v8 h-3.2 Z"/><path d="M${x - 1.6} ${F - 48} h3.2 M${x - 1.6} ${F - 52} h3.2" stroke="#2b1c12" stroke-opacity=".16" stroke-width=".7"/></g>`).join('')}</g>
       <path d="M672 ${F} L700 ${F - 92}" ${hs('#c9a06a', '#3a2c40')} stroke-width="3"/><path d="M664 ${F} q4 -18 10 -26 q4 12 8 26 Z" ${hc('#b9a070', '#2a2440')}/><path d="M667.6 ${F - 1} q2.4 -12 6 -22 M672 ${F - 1} q1 -12 2.4 -21 M676.4 ${F - 1} q-.6 -10 -1.6 -18" fill="none" ${hs('#d8c08a', '#3a3450')} stroke-width=".9"/><path d="M670.6 ${F - 21} l7.4 2.4" ${hs('#8a5a30', '#1c1838')} stroke-width="2"/><path d="M675 ${F} q-1 -12 -1 -24 q4 12 7 24 Z" fill="#2b1c12" fill-opacity=".1"/>${[[600, '#d9533a'], [612, '#e8913a'], [624, '#e6c23a'], [606, '#c8453a'], [618, '#d9533a']].map(([x, c], k) => `<ellipse cx="${x}" cy="${F - 3 - (k > 2 ? 5 : 0)}" rx="7" ry="3.4" ${hc(c, '#5a3a3a')}/>`).join('')}
       ${[[180, -120, '#d9533a'], [420, -60, '#e8913a'], [520, -140, '#e6c23a'], [760, -90, '#d9533a'], [880, -150, '#e8913a'], [1040, -60, '#e6c23a'], [300, -20, '#d9533a']].map(([x, y, c], k) => leaf(x, y, k, c)).join('')}
-      ${fest ? `<g class="ennichi">${boom(240, -260, 0, '#ff9a5a')}${boom(520, -320, 1.4, '#ffd166')}${boom(860, -280, 2.8, '#7fd1ff')}${chochin(280, 700)}${chochin(704, 856)}${STALLS.map(([id, x, aw, sign]) => stall(x, 72, aw, sign, goods[id](x, 72))).join('')}</g>` : ''}
+      ${fest ? `<g class="ennichi">${boom(240, -260, 0, '#ff9a5a')}${boom(520, -320, 1.4, '#ffd166')}${boom(860, -280, 2.8, '#7fd1ff')}${chochin(280, 700)}${chochin(704, 856)}${STALLS.map(([id, x, aw, sign, , who], k) => stall(x, 72, aw, sign, goods[id](x, 72), who, k)).join('')}</g>` : ''}
       <rect class="pave" x="-20" y="${F}" width="1240" height="90" style="fill:color-mix(in srgb, #d8cfbd calc(var(--day) * 100%), #2a2a48)"/>
       ${Array.from({ length: 24 }, (_, j) => `<rect x="${60 + j * 48}" y="${F + 18 + (j % 2) * 26}" width="34" height="16" rx="3" ${hc('#c9c4b8', '#3a3c5e')}/>`).join('')}
       ${busRoad()}

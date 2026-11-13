@@ -1973,7 +1973,7 @@ def test_letters_stay_in_the_mailbox_once_read_and_the_welcome_is_nagisas(b):
       const rows = () => [...document.querySelectorAll('#modalBody .letter-row')].map((r) => [r.dataset.id, r.classList.contains('unread') ? 'new' : 'read', r.textContent.includes('新') ? '新' : r.textContent.includes('已讀') ? '已讀' : '']);
       const ids = letters().map((l) => l.id), unread0 = mailCount(); openLetters(); const before = rows();
       document.querySelector('#modalBody .letter-row[data-id=room]').click(); const card = document.querySelector('#modalBody .letter[data-letter=room]');
-      const welcome = { from: letters().find((l) => l.id === 'room').from, face: !!card.querySelector('.letter-from svg'), says: ['外婆', '院子', '小鎮', '公車', '書桌'].every((w) => card.textContent.includes(w)), sign: card.textContent.includes('渚') };
+      const welcome = { from: letters().find((l) => l.id === 'room').from, face: card.style.getPropertyValue('--hanko') === "'渚'" && !!document.querySelector('#modalBody .ltr-env'), says: ['外婆', '院子', '小鎮', '公車', '書桌'].every((w) => card.textContent.includes(w)), sign: card.textContent.includes('渚') };
       const unread1 = mailCount(); document.querySelector('#modalBody [data-act=letter-done]').click(); const after = rows(); closeModal();
       localStorage.clear(); localStorage.setItem('nq_room_moved', '1'); localStorage.setItem('nq_letter_room', '2026-11-01');
       state.mail = null; state.dailyLogs['2026-10-25'] = state.dailyLogs['2026-10-25'] || { v: 1 }; const old = { ids: letters().map((l) => l.id), unread: mailCount() };

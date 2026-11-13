@@ -196,7 +196,7 @@ const YEN = (() => {
     const b = state.purse.book, all = Object.values(M()).flatMap((mu) => mu.items), had = all.filter((it) => b[it[0]]).length;
     return `<div class="food-book"><p class="fb-count">吃過、用過 ${had} / ${all.length} 樣・一共花了 ${yenStr(yenSpent())} 円</p>
       ${pages().map(([name, items]) => `<section class="fb-menu"><h4 lang="ja">${ruby(name)}</h4><div class="fb-items">${items.map((it) => `<div class="fb-item${b[it[0]] ? ' had' : ''}">
-        <span class="fb-pic">${b[it[0]] ? pic(it) : ''}</span><span class="fb-name" lang="ja">${ruby(it[1])}</span><small>${esc(it[2])}・${yenStr(it[3])} 円</small>${b[it[0]] ? `<i class="fb-stamp" aria-label="${esc(b[it[0]])}">済</i><small class="fb-day">${esc(b[it[0]])}</small>` : ''}</div>`).join('')}</div></section>`).join('')}
+        <span class="fb-pic">${b[it[0]] ? pic(it) : ''}</span><span class="fb-name" lang="ja">${ruby(it[1])}</span><small>${esc(it[2])}</small><small>${yenStr(it[3])} 円</small>${b[it[0]] ? `<i class="fb-stamp" aria-label="${esc(b[it[0]])}">済</i><small class="fb-day">${esc(String(b[it[0]]).slice(5).replace('-', '/'))}</small>` : ''}</div>`).join('')}</div></section>`).join('')}
       <p class="muted small">在鎮上點販賣機、麵包、菜單、黑板、牛奶機、澡堂、籤筒就能買。第一次買的會蓋上章。</p></div>`;
   }
   const shown = () => yenEarned() > 0 || Object.keys(state.purse.book).length > 0;   // its tab: once there has been 円
