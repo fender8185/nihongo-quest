@@ -401,7 +401,7 @@ ONESHOTS = {
     # the cruise (2026-11-13): the liner's horn as it comes in and leaves (its last blast and the harbour's echo after it); the
     # passengers' laugh (みんな's あはは, a laugh not read aloud); a man's yelp (a cry not read aloud)
     "shiphorn": dict(parts=[("fs352374", 12.0, 19.5)], hp=50, end_db=-45, fout=1.6),
-    "laugh": dict(parts=[("fs383207", 10.7, 14.4)], hp=100, fout=0.6),
+    "laugh": dict(parts=[("fs383207", 10.7, 12.75)], hp=100, fout=0.45, ver=2),   # 2: ends after the big laugh (the user: its tail was awkward)
     "ouch": dict(parts=[("fs362335", 0.0, 0.64)], hp=100, fout=0.12),   # 吉本 pinched by the crab
 }
 
@@ -617,7 +617,7 @@ def main():
             continue
         print(name)
         x = fn(cache, name)
-        write_m4a(x, os.path.join(out_dir, f"{name}-1.m4a"), rate)
+        write_m4a(x, os.path.join(out_dir, f"{name}-{ONESHOTS.get(name, {}).get('ver', 1)}.m4a"), rate)   # ver: a new name when a file changes
 
 
 if __name__ == "__main__":

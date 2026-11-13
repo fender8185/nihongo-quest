@@ -87,6 +87,15 @@ def test_townsfolk_speak_in_their_own_voices(b):
     assert r['unvoiced'] == [] and r['silent'] == 0, r   # everyone who speaks has a voice (two may share one, the user); no clip for a silence
     assert r['heard'] == [['m', 'kenta'], ['f', 'granny'], ['', None]] and r['said'] == '森です！パン屋です。', r   # anyone else's line: as any line (speak)
     assert r['path'] == 'c/' and r['ssml'] == '<speak><sub alias="もり">森</sub>です！パン<sub alias="や">屋</sub>です。</speak>' and r['clips'], r
+    r = json.loads(ev(b, "JSON.stringify(Object.entries(CAST_VOICE).concat(Object.entries(CAST_TRY).flatMap(([w, ts]) => ts.map((t) => [w, t]))).filter(([w, v]) => v[2] && !OLD_VOICE.test(v[0])))"))
+    assert r == [], r   # no pitch on a Chirp 3 HD voice: ゆうた's +3 in the SSML came out broken, a sound a second (2026-11-13, the user)
+    r = json.loads(ev(b, """(async () => { const got = [], realE = engineBlob, realP = playUrl, cfg = ttsConfig;
+      ttsConfig = () => Object.assign({}, cfg(), { engine: 'cloud' }); engineBlob = async () => new Blob([new Uint8Array(10)], { type: 'audio/mpeg' });
+      playUrl = async (url, token, rate, keep) => { got.push([+rate.toFixed(3), keep]); return true; };
+      await speakAs('yuta', 'おなかが すきました！'); await speakAs('koharu', 'こんにちは！');
+      engineBlob = realE; playUrl = realP; ttsConfig = cfg;
+      return JSON.stringify({ got, rate: speechRate(), yuta: CAST_VOICE.yuta }); })()"""))
+    assert r['got'] == [[round(r['rate'] * 2 ** 0.25, 3), False], [r['rate'], True]] and r['yuta'][1] < 1, r   # ゆうた: made slower, played 3 semitones up (faster and higher together); 小春 as made
 
 def test_each_voice_can_be_heard_before_the_generator_makes_them_all(b):
     r = json.loads(ev(b, """(async () => { openSettings('data'); await new Promise((q) => setTimeout(q, 200));
@@ -125,7 +134,7 @@ def test_voices_to_try_are_listed_under_theirs_and_made_with_that_voice(b):
       fetchEngineBlob = realF; playUrl = realP;
       const p1 = await cloudAudioPath('x', 'f', { cast: 'koharu', line: 'はい。', voice: ['Achernar', 1, 0] }), p2 = await cloudAudioPath('x', 'f', { cast: 'koharu', line: 'はい。' });
       return JSON.stringify({ tries, asked, differ: p1 !== p2 }); })()"""))
-    assert r['tries'] == [['hero', '0'], ['hero', '1'], ['hero', '2'], ['koharu', '0'], ['koharu', '1'], ['kaneda', '0'], ['kaneda', '1'], ['kaneda', '2']], r   # the hero's own three (2026-11-12), the two put in here, 金田's three (2026-11-13)
+    assert r['tries'] == [['hero', '0'], ['hero', '1'], ['hero', '2'], ['koharu', '0'], ['koharu', '1']] + [['rina', k] for k in '012'], r   # the hero's own three (2026-11-12), the two put in here, リナ's (2026-11-13)
     assert r['asked'] == [['f', 'koharu', None], ['f', 'koharu', ['Achernar', 1, 0]]] and r['differ'], r
 
 def test_a_talk_says_each_new_line_at_once(b):

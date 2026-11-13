@@ -31,7 +31,7 @@ FRESH = """state.stage = 'main'; state.kanaKnown = true; state.introSeen = true;
       if (y()) places.add(y().dataset.place); sat = Math.max(sat, document.querySelectorAll('#view .tourist.bench, #view .tourist.kneel').length);
       const card = document.querySelector('.talk-card');
       if (card) { if (card.classList.contains('asking')) { const o = card.querySelector('.talk-opt:not(.wrong) .talk-pick'); if (o) o.click(); } else document.querySelector('.talk').click(); await wait(15); continue; }
-      const b = document.querySelector('[data-act=cruise-next]'); if (b) { seen.push(document.querySelector('.cruise-bar .cb-t').textContent); b.click(); await wait(40); continue; }
+      const b = document.querySelector('#view .cr-takahashi .ev-mark'); if (b) { seen.push(document.querySelector('.cruise-bar .cb-t').textContent); b.closest('.tourist').click(); await wait(40); continue; }   // 高橋's 「！」
       await wait(60); }
     return { seen, places: [...places].sort(), sat }; };
   const call = async () => { await go('harbor'); document.querySelector('.cruise-call').click(); await wait(100); document.querySelector('[data-act=cruise-start]').click(); await until(() => document.querySelector('.talk-card')); };"""
@@ -82,7 +82,7 @@ def test_trip_two_brings_mike_by_bus_to_the_castle_and_into_the_izakaya(b):
 
 def test_left_halfway_they_wait_where_they_are_even_after_a_reload(b):
     out = b.run([("nav", URL), ("wait", READY), ("eval", "(async () => { " + FRESH + """ await call();
-      await drive(() => state.cruise.on && state.cruise.on.place === 'town', 80000); await until(() => document.querySelector('[data-act=cruise-next]'));
+      await drive(() => state.cruise.on && state.cruise.on.place === 'town', 80000); await until(() => document.querySelector('#view .cr-takahashi .ev-mark'));
       return JSON.stringify(state.cruise.on); })()"""), ("nav", URL), ("wait", READY), ("eval", """(async () => {
       const wait = (ms) => new Promise(q => setTimeout(q, ms)), y = () => document.querySelector('#view .yard'), people = () => document.querySelectorAll('#view .tourist').length;
       const go = async (place) => { location.hash = '#/' + place; document.getElementById('view').innerHTML = ''; route(); await wait(300); };
@@ -92,11 +92,11 @@ def test_left_halfway_they_wait_where_they_are_even_after_a_reload(b):
     was, r = json.loads(out[-2]), json.loads(out[-1])
     assert was['trip'] == 't1' and was['place'] == 'town' and r['on'] == was, r   # kept with the progress
     assert r['harbor'] == {'ship': True, 'people': 0, 'bar': '遊客在小鎮等你'}, r   # the ship still in; they wait in town
-    assert r['town']['people'] == 9 and '▶' in r['town']['bar'], r
+    assert r['town']['people'] == 9 and '「！」' in r['town']['bar'], r   # on by 高橋's 「！」
 
 def test_off_next_door_they_come_along_off_further_they_stay(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ await call(); await drive(() => state.cruise.on.step >= 1, 20000);
-      await until(() => document.querySelector('[data-act=cruise-next]'));
+      await until(() => document.querySelector('#view .cr-takahashi .ev-mark'));
       await go('beach'); await wait(200); const beach = { people: people().length, place: state.cruise.on.place };
       await go('castle'); const castle = { people: people().length, bar: (y().querySelector('.cruise-bar') || {}).textContent || '' };
       return JSON.stringify({ beach, castle, place: state.cruise.on.place }); })()"""))
@@ -136,7 +136,7 @@ def test_together_they_speak_as_one_quick_retort_a_laugh_is_a_laugh_and_a_cry_is
         snd: sam[3], all: listed.some((l) => l[0] === 'all') }); })()"""))
     five = ['kaneda', 'umeko', 'rina', 'yoshimoto', 'ken']
     assert r['chorus'] == five + [None] and r['others'] == [], r   # five of them at once (no clips here: then as any line); the laugh and the cry: no voice
-    assert r['fx'] == ['laugh-1.m4a', 'ouch-1.m4a'], r
+    assert r['fx'] == ['laugh-2.m4a', 'ouch-1.m4a'], r
     assert sorted(set(r['samu'])) == sorted(five) and r['laugh'] == [] and r['ouch'] == [] and not r['all'], r   # the generator makes each chorus voice's clip, no laugh or cry
     assert r['snd'] == {'snd': 'brr'}, r   # a cold gust under it
 
@@ -153,12 +153,27 @@ def test_the_tour_has_its_own_music_where_the_passengers_are_and_the_ship_its_ho
 def test_on_the_main_road_they_keep_to_the_pavement_and_a_bus_pulls_in_at_the_stop(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ await call();
       await drive(() => state.cruise.on && state.cruise.on.step >= 18, 120000);
-      await until(() => document.querySelector('[data-act=cruise-next]')); document.querySelector('[data-act=cruise-next]').click();
+      await until(() => document.querySelector('#view .cr-takahashi .ev-mark')); document.querySelector('#view .cr-takahashi .ev-mark').closest('.tourist').click();
       await until(() => document.querySelector('.talk-card')); await wait(400);
       const XY = (e) => { const m = /translate\\(([-\\d.]+)px,\\s*([-\\d.]+)px\\)/.exec(e.style.transform); return [+m[1], -m[2]]; };
       const ys = [...document.querySelectorAll('#view .tourist')].map((e) => XY(e)[1]);
       return JSON.stringify({ place: y().dataset.place, step: state.cruise.on.step, bus: !!y().querySelector('.cr-bus'), road: ys.filter((Y) => Y > STREET.road[0] && Y < STREET.road[1]).length }); })()"""))
     assert r['place'] == 'street' and r['bus'] and r['road'] == 0, r   # the far pavement (Y 116–134), not the road
+
+def test_at_the_table_they_eat_a_while_and_each_has_a_word_when_tapped(b):
+    # 2026-11-13, the user: sat down and spread out they could each be talked to; 下一站 shows 用餐中 for five seconds
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ await call();
+      await drive(() => state.cruise.on && state.cruise.on.step >= 14 && !document.querySelector('.talk-card'), 120000);
+      await wait(200); const bar = document.querySelector('.cruise-bar').textContent, btn = !!document.querySelector('#view .cr-takahashi .ev-mark');
+      const sat = document.querySelector('#view .tourist.bench:not(.cr-takahashi)'), id = sat && sat.dataset.who;
+      const realS = speakAs, heard = []; speakAs = (w, l) => { heard.push([w, l]); return Promise.resolve(); };
+      sat.click(); await wait(100); speakAs = realS;
+      const word = heard[0] && heard[0][1], eat = (TOWN.CRUISE.EAT[id] || []).map((l) => l[1]);
+      await wait(5200); const later = !!document.querySelector('#view .cr-takahashi .ev-mark');
+      return JSON.stringify({ place: y().dataset.place, bar, btn, id, word, eat, later }); })()"""))
+    assert r['place'] == 'shokudo' and '用餐' in r['bar'] and not r['btn'], r
+    assert r['word'] in r['eat'], r   # a word for the table
+    assert r['later'], r   # on after five seconds
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 

@@ -108,7 +108,9 @@ async function r2Put(path, blob, creds) {
 function cloudAudioSsml(text, opt = {}) { return opt.reading ? `<speak><sub alias="${esc(opt.reading)}">${esc(text)}</sub></speak>` : ssmlReadings(text); }
 const CLOUD_ZH_VOICE = { languageCode: 'cmn-TW', name: 'cmn-TW-Wavenet-A' };   // meanings and translations (opt.lang === 'zh'): one Taiwanese Mandarin voice
 // ---- the townsfolk's own voices (2026-11-12): [voice, speaking rate, pitch in semitones] each — one of Google's Chirp 3 HD
-// voices (its name alone; a pitch goes into the SSML) or an older one (Neural2-B …; a pitch Google sets itself). A line they
+// voices (its name alone, no pitch: 2026-11-13, ゆうた's +3 put in the SSML now and then came out broken, a sound a second) or an
+// older one (Neural2-B …; a pitch Google sets itself); and a shift in semitones made as the clip plays (4th: faster and higher
+// together, no pitch kept — the clip made that much slower — so ゆうた still sounds a child, the user's ear). A line they
 // say (opt.cast: who, opt.line: as written in events.js, its {漢字|かな} pinning the readings) is a clip under c/, named by the
 // voice, the rate, the pitch and the SSML; the generator makes one for every line the talks can read (talkLines). Not made
 // yet: the device's voice reads it, a man's or a woman's as theirs ----
@@ -120,7 +122,7 @@ const CAST_VOICE = {
   nakamura: ['Schedar', 1], kenji: ['Zubenelgenubi', 1], suzuki: ['Rasalgethi', 1.02], alex: ['Umbriel', 1], chihaya: ['Achernar', 0.96],
   tatsu: ['Sadachbia', 1.06], takahashi: ['Sadaltager', 0.95], sophia: ['Zephyr', 1], nishimura: ['Kore', 1.04], sano: ['Charon', 1],
   // the cruise's passengers (CRUISE, test 2026-11-12)
-  kaneda: ['Rasalgethi', 0.92], umeko: ['Callirrhoe', 1.1], yuta: ['Autonoe', 1.08, 3], rina: ['Aoede', 1.06], yoshimoto: ['Charon', 1.06], ken: ['Orus', 1.02], ai: ['Erinome', 1.02], michiyama: ['Schedar', 0.96], mike: ['Puck', 1]
+  kaneda: ['Enceladus', 0.92], umeko: ['Callirrhoe', 1.1], yuta: ['Autonoe', 0.91, 0, 3], rina: ['Laomedeia', 1.06], yoshimoto: ['Charon', 1.06], ken: ['Orus', 1.02], ai: ['Erinome', 1.02], michiyama: ['Schedar', 0.96], mike: ['Puck', 1]
 };
 // ムギ (2026-11-12, the user, by ear): a boy's voice pitched up, a mascot's — a grown man saying ワン, or a real bark beside a
 // plain voice, broke the spell; her lines open with ワン！ and no longer end in it (events.js 42)
@@ -128,12 +130,14 @@ const CAST_VOICE = {
 // it is]] }. 小春 (2026-11-12, the user: she sounded a little old) took Leda, with 美玖 — two sharing a voice is fine. The hero
 // (2026-11-12, the user: closer to 林美玲's) took her Despina, a little quicker so the two are told apart where they talk; the
 // three below sound near it, to choose from by ear
-// 金田 (2026-11-13, the user: 社長 sounded like a student, Fenrir) took Rasalgethi, slower; three older men's voices to try
+// 金田 (2026-11-13, the user: 社長 sounded like a student, Fenrir) took Enceladus, slower (the user's pick of three by ear);
+// リナ (the user: the college student sounded too old, Aoede) took Laomedeia, with three more to try
 const CAST_TRY = { hero: [['Vindemiatrix', 1, 0, '溫柔'], ['Erinome', 1.02, 0, '清亮'], ['Autonoe', 1.02, 0, '明亮']],
-  kaneda: [['Algenib', 0.9, 0, '粗獷'], ['Enceladus', 0.92, 0, '低沉'], ['Alnilam', 0.94, 0, '有力']] };
+  rina: [['Leda', 1.06, 0, '年輕'], ['Zephyr', 1.06, 0, '明亮'], ['Achernar', 1.04, 0, '柔和']] };
 const OLD_VOICE = /^(Neural2|Wavenet|Standard)-/;
 const CAST_WOMEN = new Set(['Achernar', 'Aoede', 'Autonoe', 'Callirrhoe', 'Despina', 'Erinome', 'Gacrux', 'Kore', 'Laomedeia', 'Leda', 'Pulcherrima', 'Sulafat', 'Vindemiatrix', 'Zephyr', 'Neural2-B', 'Wavenet-A', 'Wavenet-B', 'Standard-A', 'Standard-B']);
 const castOf = (opt) => opt.voice || CAST_VOICE[opt.cast];   // a voice being tried, else theirs
+const castShift = (opt) => { const v = opt && opt.cast && castOf(opt); return v && v[3] ? Math.pow(2, v[3] / 12) : 1; };   // played this much faster and higher
 const voiceGender = (v) => (CAST_WOMEN.has(v[0]) ? 'f' : 'm');
 const castGender = (who) => (CAST_VOICE[who] ? voiceGender(CAST_VOICE[who]) : '');
 const castVoiceName = (v) => (OLD_VOICE.test(v[0]) ? `ja-JP-${v[0]}` : `ja-JP-Chirp3-HD-${v[0]}`);
@@ -142,7 +146,7 @@ const CAST_MARK = /\{([^|}]+)\|([^|}]+)(?:\|[^}]+)?\}/g;
 const castLine = (line) => ttsText(line).replace(/([^\x00-\x7f]|\}) (?=[^\x00-\x7f]|\{)/g, '$1');
 function castSsml(line, v) {
   const body = castLine(line).split(/(\{[^}]+\})/).map((p) => { const m = /^\{([^|}]+)\|([^|}]+)/.exec(p); return m ? `<sub alias="${esc(m[2])}">${esc(m[1])}</sub>` : esc(p); }).join('');
-  return '<speak>' + (v && v[2] && !OLD_VOICE.test(v[0]) ? `<prosody pitch="+${v[2]}st">${body}</prosody>` : body) + '</speak>';
+  return `<speak>${body}</speak>`;   // a pitch: an older voice's only, set by Google (audioConfig)
 }
 const castSays = (line) => /[\p{L}\p{N}]/u.test(castLine(line).replace(CAST_MARK, '$1'));   // anything to read: 佐野's 「…………。」 is a silence
 function speakAs(who, line, cry) {   // someone's line in their own voice (anyone else's: as any line); cry: a sound instead (VOICE_FX)
@@ -155,11 +159,11 @@ function speakAs(who, line, cry) {   // someone's line in their own voice (anyon
   return speakLine(text, castGender(who), speechToken, { cast: who, line });
 }
 // what a crowd says or does that a voice reading it out does badly (2026-11-13, the user: one even voice reading みんな's
-// 「さむい！」 and 「あはは！」, or 吉本's 「いたい！」, sounded like a robot): a laugh is a laugh (laugh-1.m4a, a small audience),
+// 「さむい！」 and 「あはは！」, or 吉本's 「いたい！」, sounded like a robot): a laugh is a laugh (laugh-2.m4a, a small audience, ended after its peak),
 // a cry a cry (ouch: a man's yelp) — VOICE_FX, as loud as the voices, not 環境音 — and the rest is said by several of them at
 // once (speakChorus: CRUISE.chorus, each one's clip of it a moment apart, so it lands as one quick retort)
 const LAUGH = /^[あわはふへほっ]*[はふ][あわはふへほっ]*[!！。…〜ー]*$/;
-const VOICE_FX = { laugh: 'sounds/laugh-1.m4a', ouch: 'sounds/ouch-1.m4a' };
+const VOICE_FX = { laugh: 'sounds/laugh-2.m4a', ouch: 'sounds/ouch-1.m4a' };
 const voiceBufs = {};
 let voiceSrc = [], voiceEnd = null;
 function voiceStop() { voiceSrc.forEach((s) => { try { s.stop(); } catch (e) { /* not started */ } }); voiceSrc = []; if (voiceEnd) { const f = voiceEnd; voiceEnd = null; f(); } }
@@ -190,11 +194,11 @@ async function speakChorus(whos, line) {
   if (!c || !cfg.engine || cfg.engine === 'browser_neural') return speakLine(text, '', token);
   SND.duck(true);
   try {
-    const bufs = (await Promise.all(whos.map((w) => engineBlob(text, castGender(w), { cast: w, line }).then((b) => (b ? b.arrayBuffer() : null)).then((a) => (a ? decode(c, a) : null)).catch(() => null)))).filter(Boolean);
+    const bufs = (await Promise.all(whos.map((w) => engineBlob(text, castGender(w), { cast: w, line }).then((b) => (b ? b.arrayBuffer() : null)).then((a) => (a ? decode(c, a) : null)).then((b) => (b ? { b, w } : null)).catch(() => null)))).filter(Boolean);
     if (token !== speechToken) return;
     if (!bufs.length) { await speakLineNow(text, '', token); return; }
     const rate = speechRate(), n = bufs.length;
-    await voicePlay(c, bufs.map((b, k) => ({ b, at: k * 0.06 + Math.random() * 0.04, gain: (n > 1 ? 1.5 / n : 1) * (0.85 + Math.random() * 0.3), rate: rate * (0.97 + Math.random() * 0.08) })), token);
+    await voicePlay(c, bufs.map(({ b, w }, k) => ({ b, at: k * 0.06 + Math.random() * 0.04, gain: (n > 1 ? 1.5 / n : 1) * (0.85 + Math.random() * 0.3), rate: rate * castShift({ cast: w }) * (0.97 + Math.random() * 0.08) })), token);
   } finally { SND.duck(false); }
 }
 async function cloudAudioPath(text, gender, opt = {}) {
@@ -584,7 +588,7 @@ async function fetchEngineBlob(cfg, text, gender, opt = {}) {
   return null;
 }
 
-function playUrl(url, token, rate = 1) {
+function playUrl(url, token, rate = 1, keepPitch = true) {
   return new Promise(resolve => {
     if (token !== speechToken) { resolve(true); return; }
     const a = getTtsPlayer();
@@ -605,7 +609,7 @@ function playUrl(url, token, rate = 1) {
     playRefused = false;
     try { a.pause(); } catch (e) { /* ignore */ }
     a.src = url; a.loop = false; delete a.dataset.silent;
-    a.playbackRate = rate;
+    a.playbackRate = rate; a.preservesPitch = a.webkitPreservesPitch = a.mozPreservesPitch = keepPitch;   // a shifted voice: higher as it is faster
     currentAudio = a;
     const p = a.play();
     if (p && p.catch) p.catch(e => { playRefused = !!e && e.name === 'NotAllowedError'; done(false, e && e.name); });
@@ -673,7 +677,7 @@ async function speakLineNow(text, gender, token, opt) {
       if (token !== speechToken) return;
       if (blob) {
         const url = URL.createObjectURL(blob);
-        const ok = await playUrl(url, token, cfg.engine === 'deepgram' || cfg.engine === 'cloud' ? (speechRate()) : 1);
+        const sh = castShift(opt), ok = await playUrl(url, token, (cfg.engine === 'deepgram' || cfg.engine === 'cloud' ? speechRate() : 1) * sh, sh === 1);
         setTimeout(() => URL.revokeObjectURL(url), 1000);
         if (ok) return true;
         if (playRefused && document.hidden) return false;   // refused in the background (screen locked): the browser voice would be refused too, so the caller stops instead of skipping
@@ -938,7 +942,7 @@ async function castPreview(who, key, k = '') {   // k: one of the voices to try 
     if (!blob) { stopSilence(); return; }
   }
   if (token !== speechToken) return;
-  const url = URL.createObjectURL(blob); await playUrl(url, token, 1); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const sh = castShift({ cast: who, voice: v }), url = URL.createObjectURL(blob); await playUrl(url, token, sh, sh === 1); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 // Runs in the browser: the Google key (site-restricted, as set up) and the R2 key pair (this bucket only, r2 = { keyId,
 // secret }) are used for this run only — never stored, never synced, gone when the page closes. Clips go to R2 only

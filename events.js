@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 47 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 48 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -1971,6 +1971,18 @@ const TOWN = {
       michiyama: [['m1', 'あれ？ ここは どこですか？', '咦？這裡是哪裡？'], ['m1', '{地図|ちず}が わかりません…', '看不懂地圖……'], ['m1', 'みなさん、どこ？', '大家在哪～？'], ['m1', '{右|みぎ}ですか？ {左|ひだり}ですか？', '右邊？左邊？'], ['m2', '{地図|ちず}が むずかしかったです…', '地圖好難……']],
       mike: [['m2', 'サムライ！', '武士！'], ['m2', 'ニンジャは どこですか？', '忍者在哪裡？'], ['m2', 'わたしの {日本語|にほんご}、まだ {上手|じょうず}じゃないです。', '我的日文還不好。'], ['m2', 'すごい！ かっこいい！', '好厲害！好帥！']],
       takahashi: [['m1', 'みなさん、こちらです！', '各位，這邊請！'], ['m1', '{旗|はた|旗子}は ここです！', '旗子在這裡～！'], ['m1', 'はい、こちら！', '來，這邊～！']]
+    },
+    // at the table (2026-11-13, the user: sat down and spread out, each can be talked to): what one says tapped while eating
+    EAT: {
+      umeko: [['m1', 'おいしいです！ …トイレは どこですか？', '好好吃！……廁所在哪裡？'], ['m2', 'この お{茶|ちゃ}、あついです。でも、おいしい！', '這茶好燙。不過好好喝！']],
+      kaneda: [['m1', 'ここは わたしが {払|はら|付錢}います！', '這裡我來付！'], ['m2', 'おいしかった！ この お{店|みせ}、いくらですか？', '好好吃！這家店多少錢？']],
+      yuta: [['m1', 'もう ひとつ {食|た}べます！', '我要再吃一個！'], ['m1', 'ごはん、おかわり！', '飯，再來一碗！']],
+      rina: [['m1', 'この ごはん、かわいい！ {写真|しゃしん}を とります！', '這個飯好可愛！我要拍照！'], ['m2', 'やきとり、かわいかったです！', '烤雞肉串好可愛！']],
+      yoshimoto: [['m1', 'パンダが パンを {食|た}べました！', '熊貓（パンダ）吃了麵包（パン）！'], ['m2', 'からあげは からい？ いいえ、からく ないです！ からあげだけに！', '炸雞（からあげ）辣（からい）嗎？不，不辣！因為是炸雞嘛！']],
+      ken: [['m1', '{愛|あい}ちゃん、おいしい？', '小愛，好吃嗎？'], ['m1', '{愛|あい}ちゃん、はい、どうぞ。', '小愛，來，請用。']],
+      ai: [['m1', 'おいしいね、{健|けん}くん♡', '好好吃喔，阿健♡'], ['m1', '{健|けん}くんの ごはんも おいしいですか♡', '阿健的飯也好吃嗎♡']],
+      michiyama: [['m1', 'すみません、わたしの {席|せき|座位}は どこですか？', '不好意思，我的座位在哪裡？'], ['m1', 'あれ？ わたしの はしは？', '咦？我的筷子呢？']],
+      mike: [['m2', 'やきとり、おいしいです！ サムライも {食|た}べましたか。', '烤雞肉串好好吃！武士也吃過嗎？'], ['m2', 'はしは むずかしいです…', '筷子好難用……']]
     },
     TRIPS: [
       { id: 't1', u: 'm1', title: '環島一周', needs: 'm1-7', stops: [

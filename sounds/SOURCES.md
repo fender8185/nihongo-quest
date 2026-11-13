@@ -67,7 +67,7 @@ The `-1` in each name is a version: change it whenever a file's content changes.
 | dishes-1.m4a | [Dishes.wav](https://freesound.org/people/Nomadyag/sounds/193060/) | Nomadyag | CC0 1.0 | 1.3-2.12 s; high-pass 100 Hz, trimmed, faded to silence, peak -3 dBFS |
 | cheers-1.m4a | [glass_cheers](https://freesound.org/people/KenneysGarage/sounds/754317/) | KenneysGarage | CC0 1.0 | 1.06-1.68 s; high-pass 150 Hz, trimmed, faded to silence, peak -3 dBFS |
 | shiphorn-1.m4a | [Cruise Ship Horn, 3x](https://freesound.org/people/Kinoton/sounds/352374/) | Kinoton | CC0 1.0 | 12-19.5 s (the last blast and its echo); high-pass 50 Hz, trimmed, fade-out 1.6 s, peak -3 dBFS |
-| laugh-1.m4a | [Sitcom Laughter 9x, Small Audience](https://freesound.org/people/Kinoton/sounds/383207/) | Kinoton | CC0 1.0 | 10.7-14.4 s (the third laugh); high-pass 100 Hz, trimmed, fade-out 0.6 s, peak -3 dBFS |
+| laugh-2.m4a | [Sitcom Laughter 9x, Small Audience](https://freesound.org/people/Kinoton/sounds/383207/) | Kinoton | CC0 1.0 | 10.7-12.75 s (the third laugh, ended after its peak); high-pass 100 Hz, trimmed, fade-out 0.45 s, peak -3 dBFS |
 | ouch-1.m4a | [Ow.wav](https://freesound.org/people/balloonhead/sounds/362335/) | balloonhead | CC0 1.0 | 0-0.64 s; high-pass 100 Hz, trimmed, faded to silence, peak -3 dBFS |
 | amb-birds-1.m4a | [Outdoor ambience near a forest with birdsong (Midlands, England)](https://freesound.org/people/zoozio/sounds/727609/) | zoozio | CC0 1.0 | 0.5-41 s |
 |  | [Japanese bush warbler (uguisu) in a city ambiance](https://freesound.org/people/warukunai/sounds/524526/) | warukunai | CC0 1.0 | call 11.85-12.6 s laid at 9 s, band-pass 1200-7000 Hz |

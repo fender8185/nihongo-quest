@@ -108,6 +108,7 @@ function check(T, D, opts = {}) {
       if (t && !ls.some((l) => unitIdx(l[0]) <= unitIdx(t.u))) bad('cruise', `cruise off ${id}`, 'nothing to say coming off on their first trip');
     });
     Object.entries(cr.SAY || {}).forEach(([id, ls]) => { if (id !== 'takahashi' && !people[id]) bad('ref', `cruise say ${id}`, 'not a passenger'); said('say', id, ls); });
+    Object.entries(cr.EAT || {}).forEach(([id, ls]) => { if (!people[id]) bad('ref', `cruise eat ${id}`, 'not a passenger'); said('eat', id, ls); });   // tapped at the table
     let lastU = -1; const tids = new Set();
     trips.forEach((t, k) => {
       const where = `cruise ${t.id}`, u = t.u;

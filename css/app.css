@@ -406,9 +406,9 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .tourist.cr-in > svg { animation: crIn .5s ease-out; } @keyframes crIn { from { opacity: 0; } }
 .sky .tourist.cr-gone { opacity: 0; transition: opacity .4s; }
 .sky .tourist.flip .cr-flag text { transform: scaleX(-1); transform-box: fill-box; transform-origin: center; }   /* 高橋 turned left: the flag's word still reads the right way */
-.cruise-bar { position: absolute; z-index: 40; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; max-width: calc(100% - 32px); padding: 6px 6px 6px 14px; border-radius: 999px; background: rgba(255, 255, 255, .95); color: #3a2c24; box-shadow: 0 4px 14px rgba(0, 0, 0, .22); font: 600 14px/1.2 system-ui, sans-serif; white-space: nowrap; }
-.cruise-bar .cb-n { color: #b0602a; font-weight: 800; font-variant-numeric: tabular-nums; } .cruise-bar .cb-t { overflow: hidden; text-overflow: ellipsis; } .cruise-bar .cb-busy { padding-right: 8px; color: #8a7a6e; }
-.cruise-bar > .cb-t:only-child { padding-right: 8px; }
+.cruise-bar { position: absolute; z-index: 40; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px 8px; max-width: calc(100% - 32px); padding: 8px 16px; border-radius: 18px; background: rgba(255, 255, 255, .95); color: #3a2c24; box-shadow: 0 4px 14px rgba(0, 0, 0, .22); font: 600 14px/1.2 system-ui, sans-serif; white-space: nowrap; }
+.cruise-bar .cb-n { color: #b0602a; font-weight: 800; font-variant-numeric: tabular-nums; } .cruise-bar .cb-t { overflow: hidden; text-overflow: ellipsis; } .cruise-bar .cb-busy { color: #8a7a6e; }
+.cruise-bar .cb-go { white-space: nowrap; color: #6a5a4e; } .cruise-bar .cb-go::before { content: '→ '; } .cruise-bar .cb-busy:empty { display: none; }   /* on by 高橋's 「！」 (2026-11-13) */
 .yard:has(> .talk) .cruise-bar { visibility: hidden; }
 .cruise-travel { position: fixed; z-index: 70; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(24, 28, 46, .92); color: #fff; font: 700 20px/1.4 system-ui, sans-serif; text-align: center; opacity: 0; transition: opacity .5s; pointer-events: none; }   /* on to a place further off (a bus ride, a walk): the screen fades, a line says how */
 .cruise-travel.on { opacity: 1; pointer-events: auto; }
