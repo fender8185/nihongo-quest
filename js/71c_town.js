@@ -237,7 +237,10 @@ const TOWNEV = (() => {
     const f = moved ? at : a.foot || [a.X, a.Y], side = yh.X <= f[0] ? -1 : 1;   // beside their feet (up on a stool: the floor under it)
     yHeroWalk(yard, [f[0] + side * 76 * yScale(f[1]), f[1] + 2], () => {
       yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard);
-      if (e) TALK.open(yard, id, e.lines, ended, null, { ev: true }); else TALK.open(yard, id, [chatLine(id)]);
+      const sells = !e && YEN.sells(yard, id), chat = () => TALK.open(yard, id, [chatLine(id)]);   // one who sells something here (2026-11-13, the user): 點餐 or 閒聊
+      if (e) TALK.open(yard, id, e.lines, ended, null, { ev: true });
+      else if (sells) TALK.open(yard, id, [[id, sells.hello[0], sells.hello[1], { pick: [[sells.label, sells.go], ['おしゃべりする', chat]] }]], null, null, { ev: true });
+      else chat();
     });
   }
   function shopTap(el) {   // a shop front: its keeper if they are here, else what the door says
@@ -485,7 +488,7 @@ const TALK = (() => {
       <div class="talk-name">${esc(n.name)}<span>${esc(n.role)}</span></div>
       ${!L.ja ? `<p class="talk-zh">${esc(L.zh)}</p>` : `<p class="talk-ja" lang="ja">${ruby(L.ja)} ${say(L.ja, L.id, L.cry)}</p>${gl.length ? `<p class="talk-gloss">${gl.map(esc).join('　')}</p>` : ''}
       <p class="talk-zh${cur.zh ? '' : ' hide'}">${esc(L.zh)}</p>${cur.zh ? '' : '<button type="button" class="talk-zh-btn" data-talk="zh">中文</button>'}`}
-      ${L.kind === 'gift' ? `<div class="talk-gift">${DECOR.thumb(w)}<b>${esc(WARE.get(w).name)}</b><button type="button" class="btn btn-primary btn-sm" data-talk="take">收下</button></div>` : '<span class="talk-next" aria-hidden="true">▼</span>'}</div></div>`;
+      ${L.pick ? `<div class="talk-picks">${L.pick.map(([t], k) => `<button type="button" class="btn btn-sm${k ? '' : ' btn-primary'}" data-choose="${k}" lang="ja">${ruby(t)}</button>`).join('')}</div>` : L.kind === 'gift' ? `<div class="talk-gift">${DECOR.thumb(w)}<b>${esc(WARE.get(w).name)}</b><button type="button" class="btn btn-primary btn-sm" data-talk="take">收下</button></div>` : '<span class="talk-next" aria-hidden="true">▼</span>'}</div></div>`;
     if (L.kind === 'gift') fitThumbs(cur.el);
     const at = (cur.said ? 's' : '') + cur.i;   // a line new on the screen is said at once, in its speaker's voice (2026-11-12, the user); drawn again (中文): not again
     if (L.ja && cur.spoke !== at) { cur.spoke = at; speakAs(L.id, L.ja, L.cry); if (L.snd) SND.play(L.snd); if (cur.onLine) cur.onLine(L); }   // onLine: whoever says it moves (CRUISE)
@@ -498,7 +501,7 @@ const TALK = (() => {
   }
   function next() {
     if (!cur) return;
-    if (!cur.said && line(cur.lines[cur.i]).ask) return;   // the hero has to pick
+    if (!cur.said && (line(cur.lines[cur.i]).ask || line(cur.lines[cur.i]).pick)) return;   // the hero has to pick
     if (cur.said) cur.said = null;
     if (!cur.ev && cur.lines[cur.i][2] === 'gift' && cur.take) { cur.take(); cur.take = null; }
     cur.wrong = []; cur.why = '';
@@ -514,6 +517,7 @@ const TALK = (() => {
     el.addEventListener('click', (e) => {
       e.stopPropagation(); primeTtsPlayer();   // inside the tap: the next line (or 🔊) is let play while its clip is fetched (iOS)
       const sayBtn = e.target.closest('[data-talk="say"]'); if (sayBtn) { speakAs(sayBtn.dataset.who, sayBtn.dataset.ja, sayBtn.dataset.cry); return; }
+      const ch = e.target.closest('[data-choose]'); if (ch) { const then = line(cur.lines[cur.i]).pick[Number(ch.dataset.choose)][1]; close(); then(); return; }   // a choice (pick): on from there
       if (e.target.closest('[data-talk="zh"]')) { cur.zh = true; show(); return; }
       const p = e.target.closest('[data-pick]'); if (p) { pick(Number(p.dataset.pick)); return; }
       if (!cur.ev && cur.lines[cur.i][2] === 'gift' && !e.target.closest('[data-talk="take"]')) return;   // the present waits for 收下

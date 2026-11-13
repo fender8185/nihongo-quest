@@ -712,7 +712,7 @@ const HERO = (() => {
     const face = (t) => {
       ex = t ? [EX[0], EX[1] - t * 0.5] : EX;
       const s = by(t * 0.3, `<path ${L(skin, 2.4)} d="${FACE[lk.face]}"/><g clip-path="url(#fc${n})">${BEARD[lk.beard](L(lk.hairColor, 2.2))}</g>`)
-        + by(t, `<g transform="${CHEEK}">${CHEEKS[lk.cheeks]}</g>${MOUTH[lk.mouth](['#a9714d', '#76492f'].includes(skin) ? '#3a1d14' : LIP)}<g class="eyes">${SHADES.has(wear.face) ? '' : EYES[lk.eyes](lk.eyeColor)}</g>${both(`<path d="${BROWS[lk.brows][0]}" fill="none" stroke="${dk(lk.hairColor, 0.8)}" stroke-width="${BROWS[lk.brows][1]}" stroke-linecap="round"/>`)}${W('face', atop ? 2 : 0)}`);
+        + by(t, `<g transform="${CHEEK}">${CHEEKS[lk.cheeks]}</g><g class="mouth">${MOUTH[lk.mouth](['#a9714d', '#76492f'].includes(skin) ? '#3a1d14' : LIP)}</g><g class="eyes">${SHADES.has(wear.face) ? '' : EYES[lk.eyes](lk.eyeColor)}</g>${both(`<path d="${BROWS[lk.brows][0]}" fill="none" stroke="${dk(lk.hairColor, 0.8)}" stroke-width="${BROWS[lk.brows][1]}" stroke-linecap="round"/>`)}${W('face', atop ? 2 : 0)}`);
       ex = EX; return s;
     };
     const shade = (t) => by(t * 0.45, `<g opacity=".13" transform="translate(0 2.4)" clip-path="url(#fc${n})">${hairOf.front('fill="#3a2016"')}</g>`);   // the fringe's shadow on the forehead

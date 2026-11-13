@@ -46,12 +46,15 @@ def test_at_the_shokudo_he_orders_in_japanese_tome_says_the_price_and_he_sits_do
     r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ await go('shokudo'); use('menu'); await wait(100);
       document.querySelector('.mc-item[data-item="curry"]').click(); await wait(100);
       const who = document.querySelector('.talk-name').firstChild.textContent, said = await talk(); await wait(300);
-      await wait(1700); const es = document.querySelector('.eat-scene'), screen = es && { name: es.querySelector('.es-name').textContent, done: es.classList.contains('done'), bites: es.querySelectorAll('.es-bite.on').length, ok: !es.querySelector('.es-ok').hidden, left: es.querySelector('.es-left').textContent };
+      await wait(1700); const es = document.querySelector('.eat-scene'), look = [], first = es.querySelector('.es-face').dataset.mood;
+      while (es.querySelector('.es-face').dataset.mood === 'drool') { look.push(es.querySelector('.es-say').textContent); es.querySelector('.es-ok').click(); await wait(60); }   // how good it looks, then いただきます
+      const screen = es && { mood: es.querySelector('.es-face').dataset.mood, name: es.querySelector('.es-name').textContent, done: es.classList.contains('done'), bites: es.querySelectorAll('.es-bite.on').length, ok: !es.querySelector('.es-ok').hidden, left: es.querySelector('.es-left').textContent };
       const rave = []; while (document.querySelector('.eat-scene')) { rave.push(document.querySelector('.es-say').textContent); document.querySelector('.es-ok').click(); await wait(60); } await wait(400);
-      return JSON.stringify({ who, said, bal: yenBalance(), sat: !!yh.use, book: state.purse.book.curry || '', screen, rave, says: TOWN.MENU.shokudo.items[0][4].say.map((l) => l[0].replace(/\{([^|}]+)\|[^}]+\}/g, '$1')), gone: !document.querySelector('.eat-scene'), stamp: !!document.querySelector('.yen-stamp'), today: state.purse.today }); })()"""))
+      return JSON.stringify({ who, said, bal: yenBalance(), sat: !!yh.use, book: state.purse.book.curry || '', screen, rave, first, look, looks: TOWN.MENU.shokudo.items[0][4].look.map((l) => l[0].replace(/\{([^|}]+)\|[^}]+\}/g, '$1')), says: TOWN.MENU.shokudo.items[0][4].say.map((l) => l[0].replace(/\{([^|}]+)\|[^}]+\}/g, '$1')), gone: !document.querySelector('.eat-scene'), stamp: !!document.querySelector('.yen-stamp'), today: state.purse.today }); })()"""))
     assert r['said'] == ['カレーを ください。', 'はいよ！ 500円ごひゃくえんね。'], r
     assert r['bal'] == 4500 and r['sat'] and r['book'], r
-    assert r['screen'] == {'name': 'カレー', 'done': True, 'bites': 6, 'ok': True, 'left': '今天還能吃 1 樣、喝 1 杯'}, r   # had on a screen of its own: bitten till gone
+    assert r['screen'] == {'name': 'カレー', 'done': True, 'bites': 6, 'ok': True, 'left': '今天還能吃 1 樣、喝 1 杯', 'mood': 'bliss'}, r   # had on a screen of its own: bitten till gone
+    assert r['first'] == 'drool' and [x.replace(' ', '') for x in r['look']] == [x.replace(' ', '') for x in r['looks']], r   # star-eyed, how good it looks first
     assert [x.replace(' ', '') for x in r['rave']] == [x.replace(' ', '') for x in r['says']], r   # then he goes on about it, a line a tap
     assert r['gone'] and r['stamp'] and r['today']['f'] == 1 and r['today']['d'] == 0, r   # the first カレー: stamped
 
@@ -98,7 +101,7 @@ def test_prices_are_read_out_with_their_sound_changes(b):
 def test_buying_leaves_the_cruise_pay_and_lines_for_the_generator(b):
     r = json.loads(ev(b, """(() => { const l = []; YEN.lines((w, ja) => l.push([w, ja]));
       return JSON.stringify({ n: l.length, tome: l.filter(([w]) => w === 'tome').length, hero: l.filter(([w]) => w === 'hero').length, all: talkLines().filter(([w, ja]) => w === 'teppei' && /へい！/.test(ja)).length }); })()"""))
-    assert r['tome'] == 9 and r['all'] == 5, r   # each thing with a keeper: the hero's order and their price, and 「また あした どうぞ」
+    assert r['tome'] == 10 and r['all'] == 5, r   # each thing with a keeper: the hero's order and their price, 「また あした どうぞ」 and their greeting
 
 def test_the_test_sites_tools_give_yen_open_every_menu_and_empty_the_stomach(b):
     r = json.loads(ev(b, "(async () => { " + fresh(0) + """ await go('town');   // 127.0.0.1: the test site
@@ -109,6 +112,17 @@ def test_the_test_sites_tools_give_yen_open_every_menu_and_empty_the_stomach(b):
       tool('yen-all'); const back = YEN.allOpen(); DIARY.close();
       return JSON.stringify({ bal, locked, today, back }); })()"""))
     assert r == {'bal': 10000, 'locked': 0, 'today': None, 'back': False}, r   # +10,000 円; ラーメン open too; the day's foods and drinks gone; back to words first
+
+def test_a_keeper_tapped_asks_order_or_chat(b):
+    # 2026-11-13, the user: food bought from the one who sells it; one with words of their own now asks 點餐 or 閒聊
+    r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ state.town.seen = { tome: 1 }; saveState(); await go('shokudo');   // トメ met
+      const tap = async () => { y().querySelector('.npc[data-npc="tome"]').click(); await wait(300); return document.querySelector('.talk-card'); };
+      let c = await tap(); const first = { ja: c.querySelector('.talk-ja').textContent.trim(), picks: [...c.querySelectorAll('[data-choose]')].map((x) => x.textContent) };
+      c.querySelector('[data-choose="0"]').click(); await wait(150); const opened = !!document.querySelector('.mc-item[data-item="curry"]'); closeModal();
+      c = await tap(); c.querySelector('[data-choose="1"]').click(); await wait(150); const chat = document.querySelector('.talk-card'), talked = chat && chat.querySelector('[data-choose]') === null && chat.querySelector('.talk-name').firstChild.textContent;
+      return JSON.stringify({ first, menu: opened, talked }); })()"""))
+    assert r['first']['ja'].startswith('いらっしゃい') and r['first']['picks'] == ['注文ちゅうもんする', 'おしゃべりする'], r   # in Japanese (the user)
+    assert r['menu'] and r['talked'] == '大山 トメ', r   # 點餐: her menu; 閒聊: a word as before
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 

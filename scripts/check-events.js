@@ -103,6 +103,7 @@ function check(T, D, opts = {}) {
     text(mu.title, 'm1', `${at} title`); ['have', 'done', 'order', 'shop'].forEach((k) => { if (mu[k] !== undefined) text(mu[k], 'm1', `${at} ${k}`); });
     if (mu.keeper && (!cast[mu.keeper[0]] || !/\{P\}/.test(mu.keeper[1]) || !/\{Z\}/.test(mu.keeper[2] || ''))) bad('menu', at, 'keeper is [someone in the town, a line with {P}, its Chinese with {Z}]');
     if (mu.keeper) text(mu.keeper[1].replace('{P}', ''), 'm1', `${at} keeper`);
+    if (mu.hello) { text(mu.hello[0], 'm1', `${at} hello`); if (!mu.keeper || !mu.hello[1]) bad('menu', at, 'hello is the keeper\'s [Japanese, Chinese]'); }
     (mu.items || []).forEach(([id, name, zh, price], i) => {
       if (menuIds.has(id)) bad('menu', `${at}#${i}`, `${id} twice`); menuIds.add(id);
       if (!Number.isInteger(price) || price <= 0 || price > 9999) bad('menu', `${at}.${id}`, 'a price in whole 円, under 10,000');
@@ -111,7 +112,7 @@ function check(T, D, opts = {}) {
       if (x.k !== undefined && !['f', 'd'].includes(x.k)) bad('menu', `${at}.${id}`, 'k is f (a food) or d (a drink)');
       if (x.w !== undefined && !D.VOCAB.some((v) => v.w.replace(/\[[^\]]*\]/g, '') === x.w)) bad('menu', `${at}.${id}`, `no course word ${x.w}`);
       if (opts.pics && !opts.pics.has(x.pic || x.w || '')) bad('menu', `${at}.${id}`, `no drawing ${x.pic || x.w}`);
-      (x.say || []).forEach(([ja, z], k) => { text(ja, 'm2', `${at}.${id} say${k}`); if (!z) bad('menu', `${at}.${id} say${k}`, 'no Chinese'); });   // said once had
+      ['look', 'say'].forEach((w) => (x[w] || []).forEach(([ja, z], k) => { text(ja, 'm2', `${at}.${id} ${w}${k}`); if (!z) bad('menu', `${at}.${id} ${w}${k}`, 'no Chinese'); }));   // said before, once had
     });
   });
 

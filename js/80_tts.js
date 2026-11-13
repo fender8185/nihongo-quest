@@ -390,6 +390,7 @@ function playSfx(kind, step = 0) {
       : kind === 'coin' ? [[1319 * Math.pow(2, clamp(step, 0, 12) / 12), 0, 0.1, 0.06]]   // a 言靈 into its button (1.2.2): a short 叮, a semitone up each
       : kind === 'fanfare' ? [[523, 0, 0.12, 0.09], [659, 0.1, 0.12, 0.09], [784, 0.2, 0.12, 0.09], [1047, 0.3, 0.45, 0.1]]   // 全對 or the day's list done (2026-11-10): do-mi-sol-do
       : kind === 'stamp' ? [[150, 0, 0.18, 0.32, 52], [95, 0.01, 0.22, 0.2, 45]]   // a stamp thumped down (the cruise's grade, 2026-11-13)
+      : kind === 'yum' ? [[880, 0, 0.09, 0.08], [1109, 0.07, 0.09, 0.08], [1319, 0.14, 0.09, 0.08], [1760, 0.21, 0.32, 0.09]]   // all eaten up (YEN, 2026-11-13): a quick happy run up
       : (kind === 'up' ? [659, 831, 988] : [659, 988]).map((f, i, all) => [f * k, i * 0.075, i === all.length - 1 ? 0.28 : 0.12, 0.12]);
     notes.forEach(([f, at, len, vol, to]) => {
       const o = sfxCtx.createOscillator(), g = sfxCtx.createGain();

@@ -86,6 +86,7 @@ def test_a_chat_with_no_storage_still_opens_and_counts(b):
       Storage.prototype.getItem = function (k) { if (k === 'nq_chat') throw new Error('no'); return g.call(this, k); };
       Storage.prototype.setItem = function (k, v) { if (k === 'nq_chat') throw new Error('no'); return s.call(this, k, v); };
       TOWNEV.talk(people().find((e) => e.dataset.npc === 'kenta')); for (let i = 0; i < 60 && !document.querySelector('.talk-card'); i++) await wait(100);
+      const chat = document.querySelector('.talk [data-choose="1"]'); if (chat) { chat.click(); await wait(50); }   // the baker sells bread (2026-11-13): おしゃべり, not ちゅうもん
       Storage.prototype.getItem = g; Storage.prototype.setItem = s;
       return JSON.stringify({ talked: !!document.querySelector('.talk-card .talk-ja'), talks: state.town.talks.kenta }); })()"""))
     assert r == {'talked': True, 'talks': 1}, r

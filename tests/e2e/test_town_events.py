@@ -116,6 +116,7 @@ def test_someone_with_nothing_on_says_a_word_of_the_units_reached(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.seen.kenta = 1;
       TOWN.CHAT.kenta = [['m0', 'いらっしゃい！', '歡迎光臨！'], ['m9', 'まだだよ。', '還沒。']]; await go('town', 9);
       y().querySelector('.npc-kenta').click(); let t = null; for (let i = 0; i < 120 && !t; i++) { await wait(50); t = document.querySelector('.talk'); }
+      const chat = t.querySelector('[data-choose="1"]'); if (chat) { chat.click(); await wait(50); t = document.querySelector('.talk'); }   // the baker sells bread (2026-11-13): おしゃべり, not ちゅうもん
       return JSON.stringify({ name: t.querySelector('.talk-name').textContent, ja: t.querySelector('.talk-ja').textContent.trim() }); })()"""))
     assert r['name'].startswith('森 健太') and r['ja'] == 'いらっしゃい！', r
 
