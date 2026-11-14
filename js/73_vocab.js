@@ -361,12 +361,12 @@ Object.assign(ACTIONS, {
     Object.entries(LAST_WORDS_MARK.prev).forEach(([k, r]) => { if (r) state.srs[k] = r; else delete state.srs[k]; });
     const n = LAST_WORDS_MARK.keys.length; LAST_WORDS_MARK = null; saveState(); toast(`已復原 ${n} 個字的紀錄`); route();
   },
-  // 我會了 on the new-word preview card: vouch for the word and drop it (and any encore) from this session
+  // 我會了 on the new-word (or new-kana) preview card: vouch for it and drop it (and any encore) from this session
   'preview-known': () => {
-    const e = currentEntry(); if (!e || !e.preview || e.previewDone || e.relearn || !e.item || e.item.kind !== 'v') return;
+    const e = currentEntry(); if (!e || !e.preview || e.previewDone || e.relearn || !e.item || (e.item.kind !== 'v' && e.item.kind !== 'a')) return;
     const v = e.item; markItem(v.key, 5);
     SESSION.entries = SESSION.entries.filter((x, i) => i !== SESSION.idx && !(x.item && x.item.key === v.key));
-    toast(`「${jaPlain(v.w)}」已標成五顆，之後會排進五顆的複習`);
+    toast(`「${v.kind === 'a' ? v.ch : jaPlain(v.w)}」已標成五顆，之後會排進五顆的複習`);
     renderPractice(); window.scrollTo({ top: 0 });
   },
   'vocab-remove': (el) => {

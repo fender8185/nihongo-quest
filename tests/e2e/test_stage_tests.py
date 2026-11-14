@@ -226,7 +226,7 @@ def test_stage_test_kana_read_question_does_not_speak_the_answer(b):
       const q = makeQuestion(it, { choiceOnly: true }); const plain = makeQuestion(it, {});
       if (keep) state.srs[it.key] = keep; return JSON.stringify({ fmt: q.fmt, audio: q.audio || '', plainAudio: plain.audio || '' }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'fmt': 'a-read', 'audio': '', 'plainAudio': 'あ'}, r
+    assert r == {'fmt': 'a-read', 'audio': '', 'plainAudio': ''}, r   # 2026-11-14: never spoken before the answer (the new-kana card teaches the sound)
 
 # listening and reading keep their own rule (3 a day, 30／90／180 days): a pass neither targets them nor changes a record
 def test_a_pass_leaves_listening_and_reading_alone(b):

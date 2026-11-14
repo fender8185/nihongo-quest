@@ -833,7 +833,7 @@ function makeGrammarQuestion(g, ctx = {}) {
 }
 
 // ---------- 假名辨識 (kind a) ----------
-// First look: 看字選音 (the character is shown and spoken, like a preview). Afterwards 聽音選字 2 : 看字選音 1 : 平片對照 1.
+// First question (after the new-kana card): 看字選音. Afterwards 聽音選字 2 : 看字選音 1 : 平片對照 1.
 function makeKanaQuestion(item, ctx = {}) {
   const rec = srsGet(item.key);
   const b = rec ? rec.b : -1;
@@ -856,8 +856,7 @@ function makeKanaQuestion(item, ctx = {}) {
     shuffle(all).forEach(r => { if (wrongs.length < 3 && r !== item.roma && !wrongs.includes(r)) wrongs.push(r); });
     q.fmt = 'a-read'; q.instr = '這個假名怎麼讀？';
     q.stemHtml = `<span class="kanji-big jp">${esc(item.ch)}</span>`; q.stemClass = 'word';
-    finalizeOptions(q, item.roma, wrongs, false);
-    if (!ctx.choiceOnly) q.audio = item.ch;   // spoken once when shown: the first look teaches the sound (not in a 階段測驗: the sound is the answer)
+    finalizeOptions(q, item.roma, wrongs, false);   // not spoken when shown (2026-11-14): the new-kana card teaches the sound, and here it is the answer
   } else if (fmt === 'a-sound') {
     q.fmt = 'a-sound'; q.instr = '聽到的是哪一個？';
     q.stemHtml = playButton('再聽一次');

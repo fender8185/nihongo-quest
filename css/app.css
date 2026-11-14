@@ -1702,6 +1702,11 @@ details.mrow .mbody { padding: 4px 0 14px; }
 .preview .reading { font-size: 18px; color: var(--fg-3); }
 .preview .meaning { font-size: 22px; font-weight: 600; margin-top: 6px; }
 .preview .example { margin-top: 16px; text-align: left; padding: 12px 14px; border-radius: 12px; background: var(--bg-sunken); }
+/* a new kana's card (2026-11-14): big character, its romaji, where it came from, its other script, look-alikes */
+.kana-preview .word { font-size: 72px; line-height: 1.3; }
+.kana-preview .reading { font-size: 22px; font-weight: 600; color: var(--fg-2); }
+.kana-preview .kp-origin { margin: 10px auto 4px; padding: 6px 12px; display: inline-block; border-radius: 10px; background: var(--bg-sunken); font-size: 15px; }
+.kana-preview .kp-row { margin-top: 6px; font-size: 15px; } .kana-preview .kp-row .jp { font-size: 20px; }
 .flash { text-align: center; padding: 28px 18px; }
 .flash .word { font-size: 46px; font-weight: 600; line-height: 1.6; }
 .flash .reading { font-size: 18px; color: var(--fg-3); }

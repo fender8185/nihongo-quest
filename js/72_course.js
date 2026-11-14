@@ -120,17 +120,40 @@ const KATA = { あ: 'ア', い: 'イ', う: 'ウ', え: 'エ', お: 'オ', か: 
 const DAKUTEN_ROWS = [['が', 'ぎ', 'ぐ', 'げ', 'ご'], ['ざ', 'じ', 'ず', 'ぜ', 'ぞ'], ['だ', 'ぢ', 'づ', 'で', 'ど'], ['ば', 'び', 'ぶ', 'べ', 'ぼ'], ['ぱ', 'ぴ', 'ぷ', 'ぺ', 'ぽ']];
 Object.assign(KANA_ROMAJI, { が: 'ga', ぎ: 'gi', ぐ: 'gu', げ: 'ge', ご: 'go', ざ: 'za', じ: 'ji', ず: 'zu', ぜ: 'ze', ぞ: 'zo', だ: 'da', ぢ: 'ji', づ: 'zu', で: 'de', ど: 'do', ば: 'ba', び: 'bi', ぶ: 'bu', べ: 'be', ぼ: 'bo', ぱ: 'pa', ぴ: 'pi', ぷ: 'pu', ぺ: 'pe', ぽ: 'po' });
 Object.assign(KATA, { が: 'ガ', ぎ: 'ギ', ぐ: 'グ', げ: 'ゲ', ご: 'ゴ', ざ: 'ザ', じ: 'ジ', ず: 'ズ', ぜ: 'ゼ', ぞ: 'ゾ', だ: 'ダ', ぢ: 'ヂ', づ: 'ヅ', で: 'デ', ど: 'ド', ば: 'バ', び: 'ビ', ぶ: 'ブ', べ: 'ベ', ぼ: 'ボ', ぱ: 'パ', ぴ: 'ピ', ぷ: 'プ', ぺ: 'ペ', ぽ: 'ポ' });
-// 假名辨識 items (kind a): every row gives its 5 hiragana then their 5 katakana; the 11 清音 rows first, then 濁音・半濁音
+// 假名辨識 items (kind a), in the order new ones come (2026-11-14, the user's tester: a week of kana before any word was dull):
+// hiragana first — 清音, then 濁音・半濁音 — and katakana after, as 入門's words are all in hiragana; each group row by row
 function kanaItems() {
-  const out = []; let order = 0;
+  const groups = { hira: [[], []], kata: [[], []] };
   const rows = KANA_ROWS.map(r => [r, true]).concat(DAKUTEN_ROWS.map(r => [r, false]));
   rows.forEach(([row, seion], ri) => {
-    const cells = row.filter(Boolean);
-    cells.forEach(h => out.push({ key: 'a:' + h, kind: 'a', id: 'a-' + h, ch: h, script: 'hira', roma: KANA_ROMAJI[h], pair: KATA[h], row: ri, seion, order: order++, builtin: true }));
-    cells.forEach(h => { const k = KATA[h]; out.push({ key: 'a:' + k, kind: 'a', id: 'a-' + k, ch: k, script: 'kata', roma: KANA_ROMAJI[h], pair: h, row: ri, seion, order: order++, builtin: true }); });
+    const cells = row.filter(Boolean), g = seion ? 0 : 1;
+    cells.forEach(h => groups.hira[g].push({ key: 'a:' + h, kind: 'a', id: 'a-' + h, ch: h, script: 'hira', roma: KANA_ROMAJI[h], pair: KATA[h], row: ri, seion, builtin: true }));
+    cells.forEach(h => { const k = KATA[h]; groups.kata[g].push({ key: 'a:' + k, kind: 'a', id: 'a-' + k, ch: k, script: 'kata', roma: KANA_ROMAJI[h], pair: h, row: ri, seion, builtin: true }); });
   });
-  return out;
+  return groups.hira[0].concat(groups.hira[1], groups.kata[0], groups.kata[1]).map((x, order) => Object.assign(x, { order }));
 }
+// where each kana came from, for the new-kana card: hiragana from a kanji written in 草書, katakana from a part of one. Written
+// the way Taiwan writes them (曾、禰、與、禮、無、爾); ン's source is disputed
+const KANA_ORIGIN = {
+  あ: '安', い: '以', う: '宇', え: '衣', お: '於', か: '加', き: '幾', く: '久', け: '計', こ: '己', さ: '左', し: '之', す: '寸', せ: '世', そ: '曾',
+  た: '太', ち: '知', つ: '川', て: '天', と: '止', な: '奈', に: '仁', ぬ: '奴', ね: '禰', の: '乃', は: '波', ひ: '比', ふ: '不', へ: '部', ほ: '保',
+  ま: '末', み: '美', む: '武', め: '女', も: '毛', や: '也', ゆ: '由', よ: '與', ら: '良', り: '利', る: '留', れ: '禮', ろ: '呂', わ: '和', を: '遠', ん: '無',
+  ア: '阿', イ: '伊', ウ: '宇', エ: '江', オ: '於', カ: '加', キ: '幾', ク: '久', ケ: '介', コ: '己', サ: '散', シ: '之', ス: '須', セ: '世', ソ: '曾',
+  タ: '多', チ: '千', ツ: '川', テ: '天', ト: '止', ナ: '奈', ニ: '仁', ヌ: '奴', ネ: '禰', ノ: '乃', ハ: '八', ヒ: '比', フ: '不', ヘ: '部', ホ: '保',
+  マ: '末', ミ: '三', ム: '牟', メ: '女', モ: '毛', ヤ: '也', ユ: '由', ヨ: '與', ラ: '良', リ: '利', ル: '流', レ: '禮', ロ: '呂', ワ: '和', ヲ: '乎', ン: '爾'
+};
+// the card's line about it: where it came from, or (濁音・半濁音) the plain kana it marks
+function kanaOriginText(item) {
+  if (!item.seion) {
+    const h = item.script === 'hira' ? item.ch : item.pair, base = DAKUTEN_OF[h]; if (!base) return '';
+    return `「${item.script === 'hira' ? base : KATA[base]}」加上「${'ぱぴぷぺぽ'.includes(h) ? '゜' : '゛'}」：${KANA_ROMAJI[base]} → ${item.roma}`;
+  }
+  const k = KANA_ORIGIN[item.ch]; if (!k) return '';
+  return item.ch === 'ン' ? `一說取自「${k}」的一部分` : item.script === 'hira' ? `來自「${k}」的草書` : `取自「${k}」的一部分`;
+}
+// each 濁音・半濁音 hiragana's plain kana (が → か, ぱ → は)
+const DAKUTEN_OF = {};
+DAKUTEN_ROWS.forEach((row, ri) => { const plain = KANA_ROWS.find(r => r[0] === 'かさたはは'[ri]); row.forEach((d, i) => { DAKUTEN_OF[d] = plain[i]; }); });
 // look-alike groups for distractors (same script); a group lists hiragana or katakana, never mixed
 const KANA_LOOKALIKE = [['あ', 'お', 'ぬ', 'め'], ['さ', 'き', 'ち', 'ら'], ['ね', 'れ', 'わ'], ['は', 'ほ', 'ま'], ['る', 'ろ'], ['い', 'り'], ['く', 'へ'], ['な', 'た'], ['シ', 'ツ'], ['ソ', 'ン'], ['ク', 'タ', 'ケ'], ['ウ', 'ワ', 'フ'], ['コ', 'ユ'], ['ア', 'マ'], ['チ', 'テ'], ['ス', 'ヌ'], ['ロ', 'コ'], ['ナ', 'メ']];
 function kanaLookalikes(item) {

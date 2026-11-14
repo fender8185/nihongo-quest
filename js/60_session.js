@@ -27,8 +27,9 @@ function courseLevels() { return levels().filter(L => L !== 'PRE_N5'); }
 function refreshLevels() { LEVELS_NOW = null; THEME_ORDER_NOW = null; UNIT_LV.clear(); }
 function lvRank(x) { const i = ALL_LEVELS.indexOf(x.lv); return i < 0 ? 1 : i; }
 function inPreStage() { return state.stage === 'pre'; }
-// 入門: PRE_N5 words start once the 92 清音 have all been seen, or when the learner says they already know kana
-function kanaGateOpen() { return state.kanaKnown === true || REG.kana.filter(x => x.seion).every(x => state.srs[x.key]); }
+// 入門: PRE_N5 words start once the 46 hiragana 清音 have all been seen (2026-11-14; it was all 92 清音, katakana too, though
+// no 入門 word is written in katakana), or when the learner says they already know kana
+function kanaGateOpen() { return state.kanaKnown === true || REG.kana.filter(x => x.seion && x.script === 'hira').every(x => state.srs[x.key]); }
 function preWordsLeft() { let n = 0; for (const v of REG.vocab) if (v.lv === 'PRE_N5' && !state.srs[v.key]) n++; return n; }
 function introLeft() { let n = 0; for (const g of REG.grammar) if (g.u === 'm0' && !state.srs[g.key]) n++; return n; }   // 第 0 週 items not seen yet
 // 第 0 週 is done once all its items have been seen (in 入門 or from its page): the course row reads 完成 and the day logs it.
@@ -50,7 +51,8 @@ function finishPreIfReady() {
   DAILY_CACHE = null; saveState();
   return true;
 }
-function preDone() { return REG.vocab.some(v => v.lv === 'PRE_N5') && preWordsLeft() === 0 && kanaGateOpen() && introLeft() === 0; }
+// every kana seen too (2026-11-14): the main course brings no new kana, and katakana now come after the gate
+function preDone() { return REG.vocab.some(v => v.lv === 'PRE_N5') && preWordsLeft() === 0 && kanaGateOpen() && introLeft() === 0 && (state.kanaKnown === true || REG.kana.every(x => state.srs[x.key])); }
 // 每一級封死 (1.0.32, spec §4.2): new words, kanji and grammar come from one course level at a time, the lowest one with
 // something still unseen; reviews follow the record (computeDailyPlan's scope). In the main course 入門 words count as N5.
 function courseLevel(lv) { return lv === 'PRE_N5' ? courseLevels()[0] : lv; }
@@ -532,8 +534,8 @@ function startSession(mode, opt = {}) {
     toast(mode === 'mistakes' ? '錯題本目前是空的。' : '現在沒有需要練習的題目，明天再來，或到課程頁預習下一單元。');
     return false;
   }
-  // a word seen for the first time is shown on a preview card before its question
-  if (mode !== 'mistakes' && mode !== 'stage') entries.forEach(e => { if (e.item && e.item.kind === 'v' && !state.srs[e.item.key]) e.preview = true; });
+  // a word or a kana (2026-11-14: it was asked before it was ever shown) seen for the first time is shown on a preview card before its question
+  if (mode !== 'mistakes' && mode !== 'stage') entries.forEach(e => { if (e.item && (e.item.kind === 'v' || e.item.kind === 'a') && !state.srs[e.item.key]) e.preview = true; });
   // the first new question from a lesson section the learner has not been shown yet gets that section's card first (daily and unit practice); each section once
   if (mode === 'daily' || mode === 'unit') {
     const shown = new Set(state.lessonSeen || []);
@@ -658,7 +660,7 @@ function renderPractice() {
   const pct = Math.round(sessionCount().before / Math.max(1, sessionCount().total) * 100);
   if (e.preview && !e.previewDone) {
     view.innerHTML = previewHtml(e, pct);
-    if (!e.autoPlayedPreview) { e.autoPlayedPreview = true; if (e.item.kind === 'v') setTimeout(() => speak(q.speakWord || jaPlain(e.item.w), speakOpts(q, q.speakWord)), 150); }
+    if (!e.autoPlayedPreview) { e.autoPlayedPreview = true; if (e.item.kind === 'v' || e.item.kind === 'a') setTimeout(() => speak(q.speakWord || jaPlain(e.item.w), speakOpts(q, q.speakWord)), 150); }
     return;
   }
   const showZh = q.zhText && (state.settings.showZh || q.forceZh || e.zhShown);
@@ -788,6 +790,7 @@ function prCountHtml() {
 function sessionNoteHtml(answered = false) { return SESSION.idx === 0 && !answered && SESSION.meta && SESSION.meta.note ? `<div class="plan-note">${esc(SESSION.meta.note)}</div>` : ''; }
 function previewHtml(e, pct) {
   if (e.item.kind === 'g') return grammarPreviewHtml(e, pct);
+  if (e.item.kind === 'a') return kanaPreviewHtml(e, pct);
   const v = e.item;
   const reading = v.r && v.r !== jaPlain(v.w) ? v.r : '';
   return `
@@ -813,6 +816,37 @@ function previewHtml(e, pct) {
       <div class="left">
         <button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>
         ${e.relearn ? '' : '<button type="button" class="btn btn-sm btn-ghost" data-act="preview-known" title="這個字我已經會了：標成五顆、跳過它的題目，之後排進五顆的複習">我會了</button>'}
+      </div>
+      <div class="right">${previewGoBtn()}</div>
+    </div>`;
+}
+
+// a new kana (2026-11-14): the character, its sound, where it came from, its other script and the ones it is mixed up with
+function kanaPreviewHtml(e, pct) {
+  const a = e.item, other = a.script === 'hira' ? '片假名' : '平假名', origin = kanaOriginText(a);
+  const looks = KANA_LOOKALIKE.filter(g => g.includes(a.ch)).flat().filter((c, i, all) => c !== a.ch && all.indexOf(c) === i);
+  return `
+    <div class="pr-top">
+      <button type="button" class="btn btn-ghost btn-icon" data-act="exit-practice" title="結束練習（Esc）" aria-label="結束練習">${icon('close')}</button>
+      ${prBarHtml(pct)}
+      ${prCountHtml()}
+    </div>
+    ${sessionNoteHtml()}
+    <div class="q-card">
+      <div class="q-label"><span>新假名 · ${a.script === 'hira' ? '平假名' : '片假名'}</span><span class="chip chip-accent">新</span></div>
+      <div class="q-instr">先看一遍、聽一次，等一下會考。</div>
+      <div class="preview kana-preview">
+        <div class="word jp">${esc(a.ch)}</div>
+        <div class="reading">${esc(a.roma)}</div>
+        ${origin ? `<div class="kp-origin">${esc(origin)}</div>` : ''}
+        <div class="kp-row"><span class="muted">${other}</span> <span class="jp">${esc(a.pair)}</span></div>
+        ${looks.length ? `<div class="kp-row"><span class="muted">別跟這幾個搞混</span> <span class="jp">${looks.map(esc).join('　')}</span></div>` : ''}
+      </div>
+    </div>
+    <div class="pr-actions pr-next-sticky">
+      <div class="left">
+        <button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>
+        <button type="button" class="btn btn-sm btn-ghost" data-act="preview-known" title="這個假名我已經會了：標成五顆、跳過它的題目，之後排進五顆的複習">我會了</button>
       </div>
       <div class="right">${previewGoBtn()}</div>
     </div>`;
