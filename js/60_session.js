@@ -847,6 +847,7 @@ function kanaPreviewHtml(e, pct) {
     <div class="pr-actions pr-next-sticky">
       <div class="left">
         <button type="button" class="btn btn-sm btn-ghost" data-act="replay" title="播放（R）">${icon('speaker')}<span>發音</span></button>
+        <button type="button" class="btn btn-sm btn-ghost" data-act="kana-write" data-ch="${esc(a.ch)}" title="照筆順寫寫看">✎<span>寫寫看</span></button>
         <button type="button" class="btn btn-sm btn-ghost" data-act="preview-known" title="這個假名我已經會了：標成五顆、跳過它的題目，之後排進五顆的複習">我會了</button>
       </div>
       <div class="right">${previewGoBtn()}</div>

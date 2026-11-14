@@ -2,7 +2,7 @@
 # Runs every automated check: syntax, unit tests, headless-Chrome e2e.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-node --check sw.js && node --check sync-core.js && node --check data.js && node --check data-n3.js && node --check events.js && node --check pics.js
+node --check sw.js && node --check sync-core.js && node --check data.js && node --check data-n3.js && node --check events.js && node --check pics.js && node --check kana-strokes.js
 # every built-in grammar item names the lesson section it belongs to (-1 = none; the practice card is skipped for those)
 node scripts/data-file.js --check   # one entry per line, so grep finds an item (node scripts/data-file.js puts it back)
 node -e "const D=require('./scripts/data-file').load();const bad=D.GRAMMAR.filter(g=>!Number.isInteger(g.sec)||g.sec<-1||g.sec>=(D.LESSONS[g.u]||{sections:[]}).sections.length);if(bad.length){console.log('grammar items without a valid sec:',bad.slice(0,5).map(g=>g.id).join(' '),bad.length);process.exit(1)}"
@@ -23,6 +23,9 @@ ev="$(grep -o 'events.js?v=[0-9]*' index.html | tr -d -c 0-9)"
 # the words' pictures (pics.js): its version agrees in index.html, sw.js and its header
 pv="$(grep -o 'pics.js?v=[0-9]*' index.html | tr -d -c 0-9)"
 [ -n "$pv" ] && [ "$pv" = "$(grep -o 'pics.js?v=[0-9]*' sw.js | tr -d -c 0-9)" ] && [ "$pv" = "$(grep -o 'PICS_VERSION [0-9]*' pics.js | tr -d -c 0-9)" ] || { echo "pics.js version differs between index.html, sw.js and pics.js"; exit 1; }
+# the kana strokes (kana-strokes.js, KanjiVG's): its version agrees in index.html, sw.js and its header
+kv="$(grep -o 'kana-strokes.js?v=[0-9]*' index.html | tr -d -c 0-9)"
+[ -n "$kv" ] && [ "$kv" = "$(grep -o 'kana-strokes.js?v=[0-9]*' sw.js | tr -d -c 0-9)" ] && [ "$kv" = "$(grep -o 'KANA_STROKES_VERSION [0-9]*' kana-strokes.js | tr -d -c 0-9)" ] || { echo "kana-strokes.js version differs between index.html, sw.js and kana-strokes.js"; exit 1; }
 node --test-reporter=tap tests/events.test.js | grep -E "^# (pass|fail)"
 node --test-reporter=tap tests/chat.test.js | grep -E "^# (pass|fail)"   # what the town's people say when tapped (CHATPICK)
 node scripts/check-events.js | tail -1

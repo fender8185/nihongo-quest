@@ -388,6 +388,7 @@ const ACTIONS = {
   'start-test': () => openModal('考哪一級？', startTestPickerHtml(), { width: 440 }),   // 2026-11-11: it was 入門's only
   'kana-known': () => { state.kanaKnown = true; saveState(); DAILY_CACHE = null; toast('入門單字從今天開始'); route(); },
   'kana-practice': () => startSession('kana'),
+  'kana-write': (el) => WRITE.open(el.dataset.ch),   // a new kana's card: write it (2026-11-14)
   glossary: (el) => { const h = glossaryHtml(el.dataset.term); if (h) openModal('這是什麼？', h, { width: 480, noFocus: true }); }
 };
 function handleClick(ev) {

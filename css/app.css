@@ -2121,3 +2121,21 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .tp-opt:hover:not(:disabled) { border-color: #c8322a; } .tp-opt.bad { opacity: .5; border-style: dashed; text-decoration: line-through; } .tp-opt.ok { border-color: #3f9a8c; background: #e6f4ec; font-weight: 700; } .tp-opt.shake { animation: talkShake .35s; }
 .tp-react { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; font-size: 14px; color: #8a2a24; background: #fbe4dc; }
 .tp-done { margin-top: 10px; } .tp-note { margin: 0; padding: 8px 12px; border-radius: 10px; font-size: 14px; background: #e6f4ec; color: #22504a; }
+/* ---- 寫寫看 (2026-11-14, 新手第一週 stage 5): a kana written stroke by stroke on a blackboard ---- */
+.cls-write .cls-card { background: #2e5343; color: #f4f1e6; border: 8px solid #7a5a3a; }
+.cls-write .cls-x { background: rgba(255, 255, 255, .12); color: #f4f1e6; }
+.wr-head { display: flex; align-items: center; gap: 10px; padding-right: 40px; } .wr-head b { font-size: 30px; } .wr-head span { font-size: 14px; opacity: .75; }
+.cls-write .tp-say { color: #f4f1e6; background: rgba(255, 255, 255, .12); }
+.wr-board { display: flex; justify-content: center; margin-top: 8px; }
+.wr-pad { width: min(78vw, 340px); aspect-ratio: 1; touch-action: none; cursor: crosshair; border-radius: 10px; background: #34604e; }
+.wr-pad .wr-grid { stroke: #f4f1e6; stroke-opacity: .16; stroke-width: .5; stroke-dasharray: 2 2; fill: none; } .wr-pad .wr-frame { fill: none; stroke: #f4f1e6; stroke-opacity: .22; stroke-width: .6; }
+.wr-pad .wr-model { fill: none; stroke: #f4f1e6; stroke-opacity: .2; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; } .wr-pad .wr-model.due { stroke-opacity: .34; } .wr-pad .wr-model.done { stroke-opacity: 0; }
+.wr-pad .wr-num { font-size: 7px; font-weight: 700; fill: #f4f1e6; fill-opacity: .45; } .wr-pad .wr-num.due { fill: #f6e08a; fill-opacity: 1; font-size: 8.5px; }
+.wr-pad :is(.wr-chalk, .wr-live, .wr-show) { fill: none; stroke: #fbf8ee; stroke-width: 4.6; stroke-linecap: round; stroke-linejoin: round; } .wr-pad .wr-show { stroke: #f6e08a; }
+.wr-pad .wr-rub { fill: none; stroke: #f08a8a; stroke-width: 4; stroke-linecap: round; stroke-linejoin: round; animation: wrRub .65s ease-out forwards; } @keyframes wrRub { 60% { opacity: .8; } to { opacity: 0; } }
+.wr-say { min-height: 1.5em; margin: 8px 0 0; text-align: center; font-size: 14px; } .wr-say.bad { color: #f6b0a0; } .wr-say.ok { color: #f6e08a; font-weight: 700; }
+.wr-btns { display: flex; justify-content: center; gap: 8px; margin-top: 8px; } .wr-btns .btn { background: rgba(255, 255, 255, .1); color: #f4f1e6; border-color: rgba(244, 241, 230, .35); }
+.wr-credit { margin: 8px 0 0; text-align: center; font-size: 10.5px; opacity: .5; }
+.cls-write .wr-hori { margin-top: 10px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .1); } .cls-write .wr-hori span { color: #d8e6dc; }
+.cb-tab.cb-write { margin-left: auto; border-color: #f6e08a; color: #f6e08a; }
+@media (prefers-reduced-motion: reduce) { .wr-pad .wr-rub { animation: none; opacity: .5; } }

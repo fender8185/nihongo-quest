@@ -143,6 +143,37 @@ def test_the_generator_has_the_classroom_lines(b):
       hori: ls.some(([w]) => w === 'hori'), maria: ls.some(([w, l]) => w === 'maria' && l === 'サンバ！') }); })()"""))
     assert r == {'chen': True, 'karuta': True, 'hori': True, 'maria': True}, r
 
+# ---- 寫寫看 (stage 5): KanjiVG's strokes, written one at a time ----
+def test_every_kana_has_its_strokes_in_order(b):
+    r = json.loads(ev(b, """JSON.stringify({ all: REG.kana.every((x) => WRITE.has(x.ch)), n: Object.keys(KANA_STROKES).length,
+      counts: ['あ', 'い', 'か', 'き', 'ぬ', 'ア', 'カ', 'キ', 'ン', 'ぱ', 'ガ'].map((c) => KANA_STROKES[c].length) })"""))
+    assert r == {'all': True, 'n': 142, 'counts': [3, 2, 3, 4, 2, 2, 2, 3, 2, 4, 4]}, r
+
+def test_writing_a_kana_stroke_by_stroke(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ window.speak = () => Promise.resolve();
+      const say = () => document.querySelector('.wr-say').textContent;
+      WRITE.open('あ'); let S = WRITE.state(); const out = {};
+      WRITE.stroke(S.model[0].pts.slice().reverse()); out.back = say(); WRITE.stroke(S.model[2].pts); out.later = say(); WRITE.stroke([[5, 100], [10, 95], [12, 98]]); out.no = say();
+      out.i0 = WRITE.state().i; await wait(50); out.shown = Boolean(document.querySelector('.wr-show'));   // three misses: its stroke drawn for them
+      WRITE.stroke(S.model[0].pts); out.i1 = WRITE.state().i; WRITE.stroke(S.model[1].pts.map(([x, y]) => [x + 3, y - 2])); out.i2 = WRITE.state().i;   // near enough
+      WRITE.stroke(S.model[2].pts); out.done = say(); out.hana = Boolean(document.querySelector('.wr-hana')); out.koto = state.koto.found['play-' + todayStr()];
+      CLASS.close(); WRITE.open('あ'); S = WRITE.state(); S.model.forEach((m) => WRITE.stroke(m.pts)); out.clean = Boolean(document.querySelector('.wr-hana')); out.again = state.koto.found['play-' + todayStr()]; CLASS.close();
+      return JSON.stringify(out); })()"""))
+    assert '方向反了' in r['back'] and '第 3 筆' in r['later'] and '先寫第 1 筆' in r['later'] and '第 1 筆是這樣寫的' in r['no'] and r['i0'] == 0 and r['shown'], r
+    assert (r['i1'], r['i2']) == (1, 2) and '寫好了' in r['done'] and not r['hana'] and r['koto'] == 1, r
+    assert r['clean'] and r['again'] == 1, r   # no misses: a はなまる; the same kana again today gives nothing more
+
+def test_the_board_and_a_new_kana_card_open_the_pad(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ REG.kana.slice(0, 7).forEach((x) => { state.srs[x.key] = rec(); }); window.speak = () => Promise.resolve();
+      location.hash = '#/kyoshitsu'; route(); await wait(100); CLASS.board(document.querySelector('.yard'));
+      document.querySelector('[data-write]').click(); const first = WRITE.state().ch, list = WRITE.state().list.join('');
+      document.querySelector('[data-w="prev"]').click(); const prev = WRITE.state().ch; CLASS.close();
+      const it = REG.byKey.get('a:さ'); delete state.srs[it.key]; startSession('items', { items: [it, REG.byKey.get('a:し')] }); renderPractice();
+      document.querySelector('[data-act="kana-write"]').click(); const card = WRITE.state().ch; CLASS.close(); exitPractice && exitPractice();
+      openSettings('look'); const credit = document.body.textContent.includes('KanjiVG'); closeModal(true);
+      return JSON.stringify({ first, list, prev, card, credit }); })()"""))
+    assert r['list'] == 'あいうえおかき' and r['first'] == 'き' and r['prev'] == 'か' and r['card'] == 'さ' and r['credit'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -128,6 +128,7 @@ function settingsLook() {
     </details>
     <p class="hint mt-3">版本 ${APP_VERSION}<span class="sw-build"></span></p>
     <p class="hint mt-2">單字、漢字、文法點的 JLPT 等級參考 Jonathan Waller 的 JLPT Resources（tanos.co.uk，CC BY）。</p>
+    <p class="hint mt-2">假名的筆順資料來自 KanjiVG（kanjivg.tagaini.net，© Ulrich Apel，CC BY-SA 3.0）；用它做成的筆順檔（kana-strokes.js）以同樣授權提供。</p>
     <details class="disclose mt-2">
       <summary>版本紀錄</summary>
       <ul class="changelog small dim mt-2">${changelogItems(CHANGELOG.filter(c => !c.label))}</ul>

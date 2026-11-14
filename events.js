@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 61 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 62 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -1119,7 +1119,7 @@ const TOWN = {
       ['chen', 'いたい！ マリアさん、つよい！', '好痛！瑪莉亞小姐，力氣好大！', { cry: 'ouch' }],
       ['maria', 'あいうえお、しってる？', '你知道あいうえお嗎？'],
       ['maria', 'あ！ い！ う！ え！ お！', '啊！伊！嗚！欸！喔！（瑪莉亞邊唸邊扭腰）'],
-      { ask: '瑪莉亞比出「あ」的嘴形：哪一個是「あ」？', opts: [['あ', 1, '對！あ念 a。'], ['お', 0, '這是「お」（o）。あ和お長得很像，看右邊的筆畫。'], ['め', 0, '這是「め」（me）。']], pt: 'm0' },
+      { ask: '瑪莉亞比出「あ」的嘴形：哪一個是「あ」？', opts: [['あ です。', 1, '對！あ念 a。'], ['お です。', 0, '這是「お」（o）。あ和お長得很像，看右邊的筆畫。'], ['め です。', 0, '這是「め」（me）。']], pt: 'm0' },
       ['maria', 'すごい！ ブラボー！', '好厲害！太棒了！', { snd: 'clap' }],
       ['chen', '', '（用中文）講桌上那台收音機，按下去大家會一起唱五十音。瑪莉亞每次都把它唱成森巴。']] },
     { id: 'k3', u: 'm0', kana: 10, who: 'chen', at: 'kyoshitsu', after: 'k2', title: 'とめ・はね・はらい', lines: [['hori', 'ふむ。', '嗯。'],
@@ -1140,7 +1140,7 @@ const TOWN = {
       ['chen', 'はい！', '有！（陳用力拍下一張牌）', { snd: 'place' }],
       ['lin', 'チェンさん、それは「む」です。', '陳同學，那是「む」。'],
       ['chen', 'えっ！', '欸？！'],
-      { ask: '換你了：「す」是哪一張？', opts: [['す', 1, '對！す念 su。'], ['む', 0, '這是「む」（mu），陳剛剛拍的就是這張。'], ['お', 0, '這是「お」（o）。']], pt: 'm0' },
+      { ask: '換你了：「す」是哪一張？', opts: [['す です。', 1, '對！す念 su。'], ['む です。', 0, '這是「む」（mu），陳剛剛拍的就是這張。'], ['お です。', 0, '這是「お」（o）。']], pt: 'm0' },
       ['lin', 'せいかい！', '答對了！'],
       ['chen', '', '（用中文）……剛剛是熱身。熱身而已。下次我不會手下留情。'],
       ['lin', '', '（用中文）かるた隨時都可以玩，牌上只會出你學過的假名。贏了有言靈喔。']],
@@ -1177,7 +1177,7 @@ const TOWN = {
       ['hori', 'か、き、く、け、こ。', '咖、key、哭、kay、扣。（堀老師用演歌的唱腔，每個音都轉三圈）'],
       ['chen', 'さしすせそ、イェー！', '撒西蘇誰搜，耶！（陳用饒舌的節奏唱）'],
       ['lin', 'じゃあ、つぎは あなた！', '那麼，下一個換你！'],
-      { ask: '接著唱：「や、ゆ、……」', opts: [['よ！', 1, 'や、ゆ、よ！や行只有三個。'], ['ゆ！', 0, '「ゆ」剛剛唱過了。'], ['や！', 0, '「や」是第一個，已經唱過了。']], pt: 'm0' },
+      { ask: '接著唱：「や、ゆ、……」', opts: [['や、ゆ、よ！', 1, 'や、ゆ、よ！や行只有三個。'], ['や、ゆ、ゆ！', 0, '「ゆ」剛剛唱過了。'], ['や、ゆ、や！', 0, '「や」是第一個，已經唱過了。']], pt: 'm0' },
       ['maria', 'ブラボー！', '太棒了！', { snd: 'clap' }],
       ['hori', 'ひゃくてん。', '一百分。'],
       ['chen', '', '（用中文）……堀老師，你是給你自己打一百分吧？'],
@@ -1222,7 +1222,7 @@ const TOWN = {
       ['wang', 'シェイシェイ！ …あ、どういたしまして！', '謝謝！……啊，是不客氣！']] },
     { id: 'cn4', u: 'm0', kana: 25, who: 'wang', at: 'chinatown', after: 'cn3', title: 'パンダくんの ひみつ', lines: [['wang', 'パンダくん、がんばれ！', '熊貓君，加油！（熊貓吉祥物在發傳單）'],
       ['chen', '', '（用中文）熊貓君每天都在這裡發傳單。聽說裡面是個老爺爺。'],
-      ['wang', 'あっ！', '啊！（熊貓君在台階上滑了一跤）'],
+      ['wang', 'あっ！ あぶない！', '啊！危險！（熊貓君在台階上滑了一跤）'],
       ['hori', 'とめ、はね、はらい…', '頓筆、勾筆、撇筆……（頭套掉了，裡面是堀老師）'],
       ['chen', 'ほりせんせい！？', '堀老師！？'],
       ['hori', 'ひみつ です。', '這是秘密。'],
