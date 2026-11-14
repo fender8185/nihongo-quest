@@ -24,7 +24,8 @@ const CHATPICK = (() => {
     return true;
   }
   const isNews = (c) => Boolean(c && (c.fresh || c.look || c.fest));
-  // a line as remembered: by whom and what; a look's for the look it was said to, a festival's for the year
+  // a line as remembered: by whom and what; a look's for the look it was said to, a festival's for the year (its talk ends on the
+  // day itself, festTalk: Christmas's never runs into January)
   const key = (id, l, x) => { const c = l[3] || {}; return `${id}|${l[1] || l[2]}${c.look ? '@' + x.lookSig : ''}${c.fest ? '@' + x.day.slice(0, 4) : ''}`; };
   // mem: { said: the last keys said, news: { key: 1 } told } — not changed here (the caller keeps it)
   function pick(id, lines, x, mem, rnd = Math.random) {

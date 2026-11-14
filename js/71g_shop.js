@@ -43,6 +43,9 @@ function saleSpan(key, day) {   // [first, last] day (YYYY-MM-DD) of the sale ne
   return [iso(at - FEST_SPAN * 864e5), iso(at + FEST_SPAN * 864e5)];
 }
 const saleOn = (key, day) => { const sp = saleSpan(key, day); return !!sp && day >= sp[0] && day <= sp[1]; };
+// what is said of a festival (2026-11-14): in its run-up and on the day itself only — no 「メリークリスマス」 in January, no トリック・オア・
+// トリート in November, though its wares, the snow and the hats stay on to the span's end
+const festTalk = (key, day) => { const sp = saleSpan(key, day); return !!sp && day >= sp[0] && day <= new Date(Date.parse(sp[0]) + FEST_SPAN * 864e5).toISOString().slice(0, 10); };
 const nextSpan = (key, day) => { const sp = saleSpan(key, day); return sp && day > sp[1] ? saleSpan(key, `${Number(day.slice(0, 4)) + 1}-${SALES[key].day}`) : sp; };   // on now or the next
 // the test site: a festival as if on whatever the day (nq_sale_preview: its key, or '1' for all of them)
 const salePreview = (key) => { try { const p = onTestSite() && localStorage.getItem('nq_sale_preview'); return p === '1' || (!!key && p === key); } catch (e) { return false; } };

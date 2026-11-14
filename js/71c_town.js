@@ -218,7 +218,7 @@ const TOWNEV = (() => {
     return { R: reachedIdx(), unitIdx, at: at ? at.place : '', h: now(), we: d.getDay() === 0 || d.getDay() === 6, done: state.town.done, day: dateStr(d), seen,
       talks: Number((state.town.talks || {})[id]) || 0, lookSig: sig, hairSig: hair, lookChanged: Boolean(saw[0]) && saw[0] !== sig, hairChanged: Boolean(saw[1]) && saw[1] !== hair,
       wear: Object.values(state.wear || {}).concat(['topStyle', 'bottomStyle', 'shoeStyle'].map((k) => (state.look || {})[k])).filter((v) => typeof v === 'string'),
-      fest: typeof saleOn === 'function' ? Object.keys(SALES).filter((k) => salePreview(k) || saleOn(k, saleNow() || dateStr(d))) : [] };   // the festivals on (古道具屋's sale days), by the server's day when known
+      fest: typeof saleOn === 'function' ? Object.keys(SALES).filter((k) => salePreview(k) || festTalk(k, saleNow() || dateStr(d))) : [] };   // the festivals talked of (their run-up and the day), by the server's day when known
   }
   function chatLine(id) {
     const m = chatMem(), x = chatCtx(id, m), said = (m.said || {})[id] || [];

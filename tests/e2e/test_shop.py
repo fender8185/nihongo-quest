@@ -665,11 +665,14 @@ def test_christmas_snows_outside_puts_the_town_in_santa_hats_and_gives_everyone_
       saleDay = { day: '2026-12-20', at: Date.now(), ask: null, failed: false }; const xmasHat = TOWNEV.wearOf({ head: 'cap' }).head, kenta = TOWNEV.art('kenta', 'town');
       saleDay = { day: '2026-11-20', at: Date.now(), ask: null, failed: false }; const plain = TOWNEV.wearOf({ head: 'cap' }).head, none = TOWNEV.wearOf(undefined);
       const halloween = Object.keys(TOWN.CHAT).filter(id => TOWN.CHAT[id].some(l => l[3] && l[3].fest === 'halloween')), christmas = Object.keys(TOWN.CHAT).filter(id => TOWN.CHAT[id].some(l => l[3] && l[3].fest === 'christmas'));
-      return JSON.stringify({ snow, xmasHat, hatDrawn: kenta.includes('cx="58" cy="-157"'), plain, none, halloween, christmas }); })()"""
+      const said = (day) => (saleDay = { day, at: Date.now(), ask: null, failed: false }, TOWNEV.chatCtx('kenta').fest.join());   // what the chat goes by
+      const talk = ['2026-10-17', '2026-10-31', '2026-11-01', '2026-11-14', '2026-12-11', '2026-12-25', '2026-12-26', '2027-01-03'].map(said);
+      return JSON.stringify({ snow, xmasHat, hatDrawn: kenta.includes('cx="58" cy="-157"'), plain, none, halloween, christmas, talk }); })()"""
     r = json.loads(ev(b, js))
     assert r['snow']['yard'] > 30 and r['snow']['town'] > 30 and r['snow']['beach'] > 30 and r['snow']['shokudo'] == 0 and r['snow']['nov'] == 0, r   # outside only, Christmas only
     assert r['xmasHat'] == 'santahat' and r['hatDrawn'] and r['plain'] == 'cap' and r['none'] == {}, r
     assert len(r['halloween']) == 27 and sorted(r['christmas']) == sorted(r['halloween']), r   # everyone with a Halloween line has a Christmas one
+    assert r['talk'] == ['halloween', 'halloween', '', '', 'christmas', 'christmas', '', ''], r   # festival lines in the run-up and on the day only, not after it (the wares and the snow stay on)
 
 # her 100 言靈 seen: ten あ burst out where she slipped, then fly into the 言靈 button up top, which counts up 10 a coin; +100
 # beside it at the end; the buttons stay up meanwhile. In 擺設 (the buttons put away) the pop up top says it instead
