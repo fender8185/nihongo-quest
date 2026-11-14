@@ -1699,15 +1699,96 @@ function shrineHtml() {
     ${busPoleHtml('shrine')}
     <div class="ysel"></div>`;
 }
+// ---- the keep, after 姫路城 (2026-11-14, the user: 「白鷺城太醜了」, the stacked boxes with rows of windows looked like an office
+// block): white plaster with few windows (black lattices, bell-topped 華頭窓 at the top, 狭間 loopholes along the bottom), dark roofs
+// with white-mortared tiles and upturned eaves, gables alternating up the tiers (a pair of 千鳥破風, a 唐破風, a pair, a 唐破風,
+// the 入母屋破風 on top), grey shachihoko, on curved stone walls (扇の勾配) of uneven stones; a small keep in three tiers before it
+// on the left. Lit up by night: the plaster pale, the windows dark ----
+const CASTLE_ROOF = (() => {
+  const TILE = ['#56606f', '#262c48'], EDGE = ['#3e4758', '#1c2040'], WALL = ['#f7f5ef', '#e4ddca'], SHADE = ['#e6e1d6', '#cfc7b2'];
+  const f = (v) => +v.toFixed(1);
+  // a hipped roof (front on): its eave from x−e to x+e at y, turned up at the tips, its top (t wide each side) at yt; white mortar
+  // lines down the tiles; id: its own clip
+  function hip(x, y, e, yt, t, id, o = {}) {
+    const L = x - e, R = x + e, tip = 7, d = `M${L - 9} ${y - tip} Q${L + 6} ${y + 1} ${L + 34} ${y + 1} H${R - 34} Q${R - 6} ${y + 1} ${R + 9} ${y - tip} C${R - 16} ${y - tip - 4} ${x + t + 16} ${yt + 8} ${x + t} ${yt} H${x - t} C${x - t - 16} ${yt + 8} ${L + 16} ${y - tip - 4} ${L - 9} ${y - tip} Z`;
+    let s = `<path d="M${x - e + 24} ${y + 1} H${x + e - 24} V${y + 6} H${x - e + 24} Z" fill="#2b1c12" fill-opacity=".14"/>`;   // its shadow on the wall under it (the wall: 24 in from the eave)
+    s += `<defs><clipPath id="kr-${id}"><path d="${d}"/></clipPath></defs><path d="${d}" ${hc(...TILE)}/>`;
+    s += `<g clip-path="url(#kr-${id})"><path d="${Array.from({ length: Math.ceil((2 * e + 20) / 6) }, (_, k) => { const xx = L - 10 + k * 6, lean = (xx - x) * 0.08; return `M${f(xx - lean)} ${yt} L${f(xx)} ${y + 2}`; }).join(' ')}" ${hs('#dfe3ea', '#4a5274')} stroke-width=".9" stroke-opacity=".55"/>
+      <path d="M${L - 12} ${y - 2} H${R + 12} V${y + 2} H${L - 12} Z" ${hc(...EDGE)}/></g>`;
+    s += `<path d="M${L - 9} ${y - tip} Q${L + 6} ${y + 1} ${L + 34} ${y + 1} H${R - 34} Q${R - 6} ${y + 1} ${R + 9} ${y - tip}" fill="none" ${hs('#f6f3ec', '#8a8eaa')} stroke-width="1.2" stroke-opacity=".8"/>`;   // the eave's white edge
+    if (o.ridge) s += ridge(x, yt, t, o.ridge, o.shachi);
+    return s;
+  }
+  // the top: the roof's ridge across, a shachihoko at each end (tail up, grey tile as on 姫路城, not gold)
+  function ridge(x, yt, t, w, shachi) {
+    const h = w > 60 ? 6 : 5;
+    let s = `<path d="M${x - t + 4} ${yt + 1} L${x - w} ${yt - h} H${x + w} L${x + t - 4} ${yt + 1} Z" ${hc(...TILE)}/><rect x="${x - w - 2}" y="${yt - h - 4}" width="${2 * w + 4}" height="5" rx="1.5" ${hc(...EDGE)}/><path d="M${x - w} ${yt - h - 4} H${x + w}" ${hs('#9aa2b4', '#3a4262')} stroke-width="1"/>`;
+    if (shachi) s += [-1, 1].map((k) => { const sx = x + k * (w + 1);
+      return `<g transform="translate(${sx} ${yt - h - 4}) scale(${k * 1.15} 1.15)"><path d="M0 0 C-1 -6 3 -9 6 -10 C3 -12 2 -16 5 -19 C6 -15 9 -13 11 -14 C9 -11 7 -9 7 -6 C7 -3 5 0 3 0 Z" ${hc('#4a5468', '#22284a')}/><circle cx="2.4" cy="-5" r=".9" fill="#f6f3ec"/></g>`; }).join('');
+    return s;
+  }
+  // 千鳥破風: a little triangular gable on a roof's slope (its foot at y), white within dark bargeboards, a 懸魚 under the apex
+  const chidori = (x, y, w) => { const h = w * 0.82;
+    return `<path d="M${x - w - 6} ${y + 2} L${x} ${y - h - 6} L${x + w + 6} ${y + 2} Z" ${hc(...TILE)}/><path d="M${x - w} ${y} L${x} ${y - h} L${x + w} ${y} Z" ${hc(...WALL)}/><path d="M${x + w * 0.12} ${y - h * 0.88} L${x + w} ${y} H${x + w * 0.4} Z" ${hc(...SHADE)} opacity=".5"/>
+      <path d="M${x - w - 6} ${y + 2} L${x} ${y - h - 6} L${x + w + 6} ${y + 2}" fill="none" ${hs('#f6f3ec', '#8a8eaa')} stroke-width="1"/><path d="M${x - 2.4} ${y - h + 2} h4.8 l-2.4 6 Z" ${hc('#c9c4b4', '#6a6e8e')}/>`; };
+  // 唐破風: the curved, bell-hipped gable (its foot at y), white within a dark band
+  const kara = (x, y, w, h) => { const c = (k) => `M${x - w - k} ${y} C${x - w * 0.55} ${y} ${x - w * 0.5} ${y - h - k} ${x} ${y - h - k} C${x + w * 0.5} ${y - h - k} ${x + w * 0.55} ${y} ${x + w + k} ${y}`;
+    return `<path d="${c(6)} Z" ${hc(...TILE)}/><path d="${c(0)} Z" ${hc(...WALL)}/><path d="${c(6)}" fill="none" ${hs('#f6f3ec', '#8a8eaa')} stroke-width="1"/><path d="M${x - 2.4} ${y - h + 2} h4.8 l-2.4 5 Z" ${hc('#c9c4b4', '#6a6e8e')}/>`; };
+  // 入母屋破風: the top roof's big gable facing out, its face plastered and lined
+  const irimoya = (x, y, w) => { const h = w * 0.78;
+    return `<path d="M${x - w - 7} ${y + 2} L${x} ${y - h - 6} L${x + w + 7} ${y + 2} Z" ${hc(...TILE)}/><path d="M${x - w} ${y} L${x} ${y - h} L${x + w} ${y} Z" ${hc(...WALL)}/><path d="M${x - w * 0.62} ${y - h * 0.38} H${x + w * 0.62}" ${hs('#c9c4b4', '#8a8eaa')} stroke-width="1"/>
+      <path d="M${x - w - 7} ${y + 2} L${x} ${y - h - 6} L${x + w + 7} ${y + 2}" fill="none" ${hs('#f6f3ec', '#8a8eaa')} stroke-width="1"/><path d="M${x - 3} ${y - h + 2} h6 l-3 7 Z" ${hc('#c9c4b4', '#6a6e8e')}/>`; };
+  return { hip, ridge, chidori, kara, irimoya, WALL, SHADE };
+})();
+function himeji() {
+  const { hip, chidori, kara, irimoya, WALL, SHADE } = CASTLE_ROOF;
+  let seed = 11;
+  const rnd = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  // the stone walls: uneven stones in rows, lighter on the left, a darker run down the right
+  function stones(id, d, x0, x1, y0, y1) {
+    let s = `<defs><clipPath id="ks-${id}"><path d="${d}"/></clipPath></defs><path d="${d}" ${hc('#bdb4a2', '#3a3a58')}/><g clip-path="url(#ks-${id})">`;
+    for (let y = y0, r = 0; y < y1; r++) { const h = 9 + Math.round(rnd() * 5); let x = x0 - rnd() * 20;
+      while (x < x1) { const w = 16 + Math.round(rnd() * 18), tone = rnd(); s += `<rect x="${x.toFixed(1)}" y="${y}" width="${w}" height="${h}" rx="2.4" ${tone < 0.3 ? hc('#c6bdab', '#40405e') : tone < 0.6 ? hc('#b3aa97', '#36365a') : hc('#bdb4a2', '#3a3a58')} ${hs('#968d7b', '#2a2a46')} stroke-width="1.1"/>`; x += w; }
+      y += h; }
+    return s + `<rect x="${(x0 + x1) / 2}" y="${y0}" width="${(x1 - x0) / 2}" height="${y1 - y0}" fill="#2b1c12" fill-opacity=".08"/></g><path d="${d.split(' Z')[0]}" fill="none" ${hs('#d8d0be', '#4a4a6a')} stroke-width="1.4" stroke-opacity=".7"/>`;
+  }
+  // a tier's plastered wall, shaded down its right; its windows: lattices (black, white bars), 華頭窓, 狭間 (triangles and squares)
+  const wall = (x, half, y0, y1) => `<rect x="${x - half}" y="${y0}" width="${half * 2}" height="${y1 - y0}" ${hc(...WALL)}/><rect x="${x + half * 0.72}" y="${y0}" width="${half * 0.28}" height="${y1 - y0}" ${hc(...SHADE)}/>`;
+  const lattice = (x, y, w, h) => `<rect x="${x - w / 2 - 1.5}" y="${y - 1.5}" width="${w + 3}" height="${h + 3}" ${hc('#c9c4b4', '#a8a090')}/><rect x="${x - w / 2}" y="${y}" width="${w}" height="${h}" ${hc('#2f3038', '#22243a')}/><path d="${Array.from({ length: Math.max(2, Math.round(w / 4) - 1) }, (_, k) => `M${(x - w / 2 + (k + 1) * w / Math.max(3, Math.round(w / 4))).toFixed(1)} ${y} v${h}`).join(' ')}" ${hs('#dcd7ca', '#6a6e8e')} stroke-width="1"/>`;
+  const katou = (x, y, w, h) => { const d = `M${x - w / 2} ${y + h} V${y + h * 0.42} C${x - w / 2} ${y + h * 0.1} ${x - w * 0.16} ${y + h * 0.16} ${x} ${y} C${x + w * 0.16} ${y + h * 0.16} ${x + w / 2} ${y + h * 0.1} ${x + w / 2} ${y + h * 0.42} V${y + h} Z`;
+    return `<path d="${d}" ${hc('#2f3038', '#22243a')} ${hs('#4a5468', '#2a3150')} stroke-width="2.4"/><path d="M${x - w / 6} ${y + h * 0.25} V${y + h} M${x + w / 6} ${y + h * 0.25} V${y + h}" ${hs('#dcd7ca', '#6a6e8e')} stroke-width="1"/>`; };
+  const sama = (x0, x1, y) => { let s = ''; for (let x = x0, k = 0; x <= x1; x += 21, k++) s += k % 2 ? `<rect x="${x - 2.6}" y="${y - 2.6}" width="5.2" height="5.2" ${hc('#3a3a44', '#26283e')}/>` : `<path d="M${x - 3.2} ${y + 2.6} L${x} ${y - 3} L${x + 3.2} ${y + 2.6} Z" ${hc('#3a3a44', '#26283e')}/>`; return s; };
+  const row = (x, half, y, w, h, n) => Array.from({ length: n }, (_, k) => lattice(x - half + (k + 0.5) * (2 * half / n), y, w, h)).join('');
+  // ---- the main keep (大天守): five tiers on the high wall; walls first, then the roofs from the top down (each before the tier under it)
+  const X = 880;
+  let main = stones('m', 'M640 198 C690 188 724 140 732 70 H1028 C1036 140 1070 188 1120 198 Z', 630, 1130, 68, 200);
+  main += wall(X, 50, -156, -118) + [-28, 0, 28].map((dx) => katou(X + dx, -146, 13, 18)).join('');
+  main += wall(X, 68, -112, -84) + row(X, 68, -104, 14, 10, 2);
+  main += wall(X, 90, -76, -46) + row(X, 90, -66, 15, 11, 3);
+  main += wall(X, 114, -34, 2) + row(X, 114, -22, 16, 11, 4);
+  main += wall(X, 140, 16, 70) + row(X, 140, 34, 18, 13, 5) + sama(X - 126, X + 126, 60);
+  main += hip(X, -150, 68, -170, 40, 'm5', { ridge: 46, shachi: true }) + irimoya(X, -156, 28);
+  main += hip(X, -108, 86, -124, 54, 'm4') + kara(X, -112, 26, 15);
+  main += hip(X, -70, 110, -88, 74, 'm3') + chidori(X - 46, -74, 22) + chidori(X + 46, -74, 22);
+  main += hip(X, -28, 136, -48, 96, 'm2') + kara(X, -32, 38, 21);
+  main += hip(X, 22, 164, 0, 120, 'm1') + chidori(X - 78, 18, 32) + chidori(X + 78, 18, 32);
+  // ---- the small keep (小天守) before it on the left, on a lower wall of its own
+  const x = 697;
+  let small = stones('s', 'M548 198 C592 190 616 152 622 116 H772 C778 152 792 188 816 198 Z', 540, 820, 114, 200);
+  small += wall(x, 34, 4, 32) + [-12, 12].map((dx) => katou(x + dx, 10, 10, 14)).join('');
+  small += wall(x, 46, 40, 68) + row(x, 46, 50, 13, 10, 2);
+  small += wall(x, 60, 76, 116) + row(x, 60, 86, 14, 11, 3) + sama(x - 50, x + 50, 108);
+  small += hip(x, 8, 50, -10, 26, 's3', { ridge: 30, shachi: true }) + irimoya(x, 4, 16);
+  small += hip(x, 44, 64, 28, 38, 's2') + kara(x, 40, 22, 12);
+  small += hip(x, 80, 82, 62, 50, 's1') + chidori(x, 76, 22);
+  return `<g transform="translate(880 198) scale(1.2) translate(-880 -198)"><g class="keep">${main}</g><g class="keep-s">${small}</g></g>`;   // 1.2: as high as the keep it replaced
+}
 // 白鷺城 (test, 2026-11-09), the end of the bus line: the white keep in tiers on its stone walls, the gate, old pines, the
 // guides' booth (案内所) and its board of the castle's story
 function castleHtml() {
   const F = 236, cx = 880;
-  // 2026-11-10: the white keep in five tiers on its curved stone walls, rising high — gables, gold shachihoko, lit up by night —
-  // the moat before it with ripples, the gate and its bridge, sakura shedding petals, a banner flapping by the guides' booth
-  const roof = (y, half, d) => `<path d="M${cx - half - 30} ${y + d} Q${cx - half - 8} ${y + d - 2} ${cx - half + 6} ${y + d - 10} L${cx - half + 24} ${y} H${cx + half - 24} L${cx + half - 6} ${y + d - 10} Q${cx + half + 8} ${y + d - 2} ${cx + half + 30} ${y + d} Z" ${hc('#4f5a6e', '#2a3150')}/><path d="M${cx - half - 26} ${y + d} H${cx + half + 26}" ${hs('#f6f3ec', '#cfc8b4')} stroke-width="2"/>${[0.35, 0.65].map((f) => `<path d="M${cx - half + 24 - 18 * f} ${y + d * f} H${cx + half - 24 + 18 * f}" ${hs('#66728a', '#3a4262')} stroke-width="1.2"/>`).join('')}`;
-  const tier = (y, half, h, rows) => `<rect x="${cx - half}" y="${y}" width="${half * 2}" height="${h}" ${hc('#f6f3ec', '#e2dac6')}/>${Array.from({ length: rows }, (_, r) => Array.from({ length: Math.floor(half * 2 / 30) }, (_, k) => `<rect ${hc('#3b3b44', '#ffd98a')} x="${cx - half + 10 + k * 30}" y="${y + 10 + r * 18}" width="12" height="9"/>`).join('')).join('')}`;
-  const gable = (y, w) => `<path d="M${cx - w} ${y} L${cx} ${y - w * 0.62} L${cx + w} ${y} Z" ${hc('#4f5a6e', '#2a3150')}/><path d="M${cx - w + 10} ${y - 2} L${cx} ${y - w * 0.62 + 8} L${cx + w - 10} ${y - 2} Z" ${hc('#f6f3ec', '#e2dac6')}/>`;
+  // 2026-11-10: the moat before the keep with ripples, the gate and its bridge, sakura shedding petals, a banner flapping by the
+  // guides' booth; the keep itself: himeji()
   // 2026-11-11 (the user: finer): the cherries' crowns in deeper pink where they overlap and below, a few pale clusters on top
   const sakura = (x, s) => `<path d="M${x} ${F} V${F - 60 * s} M${x} ${F - 40 * s} l${-26 * s} ${-30 * s} M${x} ${F - 50 * s} l${24 * s} ${-28 * s}" ${hs('#6b4a2f', '#1c1428')} stroke-width="${7 * s}"/><path d="M${x - 2 * s} ${F - 4} V${F - 58 * s}" stroke="#fff" stroke-opacity=".12" stroke-width="${2 * s}"/><g ${hc('#f2b8c6', '#5a3a52')}>${[[0, -96, 46], [-36, -78, 34], [36, -80, 34], [-14, -122, 30], [20, -118, 30]].map(([dx, dy, r]) => `<circle cx="${x + dx * s}" cy="${F + dy * s}" r="${r * s}"/>`).join('')}</g>
     <g fill="#b04a6a" fill-opacity=".1">${[[-32, -66, 24], [34, -68, 24], [0, -76, 30], [-10, -108, 16], [18, -106, 16]].map(([dx, dy, r]) => `<circle cx="${x + dx * s}" cy="${F + dy * s}" r="${r * s}"/>`).join('')}</g><g fill="#fff" fill-opacity=".3">${[[-20, -128, 6], [12, -132, 5], [-44, -90, 5], [40, -96, 6], [-4, -110, 4], [24, -92, 4]].map(([dx, dy, r]) => `<circle cx="${x + dx * s}" cy="${F + dy * s}" r="${r * s}"/>`).join('')}</g>`;
@@ -1718,22 +1799,13 @@ function castleHtml() {
     <path d="M${x - 1 * s} ${F - 6} C${x - 2 * s} ${F - 20 * s} ${x + 4 * s} ${F - 30 * s} ${x + 2 * s} ${F - 40 * s} M${x + 2.6 * s} ${F - 14 * s} l${1.6 * s} ${-6 * s}" fill="none" stroke="#2b1c12" stroke-opacity=".2" stroke-width="${1.6 * s}"/>
     ${[[0, -78, 44], [-24, -60, 34], [26, -58, 32], [0, -100, 28]].map(([dx, dy, r]) => { const cx = x + dx * s, cy = F + dy * s, rx = r * s, ry = r * 0.42 * s; return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" ${hc('#3f6a48', '#0c1428')}/><path d="M${cx - rx} ${cy} Q${cx} ${cy + ry * 1.4} ${cx + rx} ${cy} Q${cx} ${cy + ry * 0.4} ${cx - rx} ${cy} Z" fill="#14261a" fill-opacity=".22"/><path d="M${(cx - rx * 0.72).toFixed(1)} ${(cy - ry * 0.3).toFixed(1)} Q${cx} ${(cy - ry * 1.12).toFixed(1)} ${(cx + rx * 0.72).toFixed(1)} ${(cy - ry * 0.3).toFixed(1)}" fill="none" ${hs('#5f8a5a', '#1a2a40')} stroke-width="${2.4 * s}"/><path d="${[-0.45, -0.1, 0.25, 0.55].map((f) => `M${(cx + rx * f).toFixed(1)} ${(cy - ry * 0.55).toFixed(1)} l${(1.6 * s).toFixed(1)} ${(-2.4 * s).toFixed(1)}`).join(' ')}" ${hs('#7aa070', '#22324a')} stroke-width="${1.1 * s}"/>`; }).join('')}`;
   return `<svg class="land tall castle-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
-      <defs><clipPath id="cWall"><path d="M600 198 C650 186 690 140 706 64 H1054 C1070 140 1110 186 1160 198 Z"/></clipPath></defs>
       <path class="far" d="M0 122 C120 100 240 104 360 118 S560 96 700 110 S900 126 1020 104 S1150 100 1200 110 V370 H0 Z"/>
       <ellipse class="glow" cx="${cx}" cy="-40" rx="320" ry="260" fill="url(#glw)"/>
-      <path d="M600 198 C650 186 690 140 706 64 H1054 C1070 140 1110 186 1160 198 Z" ${hc('#b4ab98', '#3a3a58')}/>
-      <g clip-path="url(#cWall)">${Array.from({ length: 10 }, (_, r) => Array.from({ length: 18 }, (_, k) => `<rect x="${600 + k * 34 - (r % 2) * 17}" y="${64 + r * 14}" width="34" height="14" fill="none" ${hs('#958c7a', '#2a2a46')} stroke-width="1.2"/>`).join('')).join('')}</g>
-      ${tier(0, 156, 64, 3)}${roof(-14, 170, 22)}<path d="M${cx - 44} 8 C${cx - 24} 8 ${cx - 16} -12 ${cx} -14 C${cx + 16} -12 ${cx + 24} 8 ${cx + 44} 8" ${hs('#4f5a6e', '#2a3150')} stroke-width="8"/>
-      ${tier(-70, 128, 56, 2)}${gable(-60, 52)}${roof(-86, 140, 20)}
-      ${tier(-128, 96, 44, 2)}${gable(-120, 40)}${roof(-142, 108, 18)}
-      ${tier(-176, 66, 36, 1)}${roof(-190, 78, 16)}
-      ${tier(-218, 44, 30, 1)}${roof(-236, 56, 20)}<rect x="${cx - 48}" y="-242" width="96" height="8" rx="3" ${hc('#3a4254', '#1c2240')}/>
-      ${[-46, 46].map((d) => `<path d="M${cx + d - 6} -242 q${d > 0 ? 10 : -10} -14 ${d > 0 ? 2 : -2} -22 q${d > 0 ? 8 : -8} 4 ${d > 0 ? 8 : -8} 14 Z" fill="#e6c25a"/>`).join('')}
+      ${himeji()}
       <rect x="-20" y="198" width="1240" height="38" ${hc('#6a9ab8', '#141a3a')}/><path d="M-20 199 H1220" ${hs('#8a8476', '#2a2a46')} stroke-width="3"/>
       ${[[120, 214], [420, 222], [700, 212], [980, 224], [1140, 214]].map(([x, y], k) => `<g transform="translate(${x} ${y})"><ellipse  rx="18" ry="4" fill="none" ${hsx('fx-ripple', '#ffffff', '#5a6aa0', `animation-delay:-${k * 0.7}s`)} stroke-width="1.6"/></g>`).join('')}
       ${[[640, 0], [690, 1]].map(([x, k]) => `<g class="fx-swim" style="animation-delay:-${k * 1.2}s"><g transform="translate(${x} 222)"><path d="M-14 0 q0 -10 14 -10 q12 0 16 -6 q-4 10 -2 16 Z" ${hc('#fbfaf6', '#9a9ec8')}/><path d="M10 -6 q-2 -14 4 -20" fill="none" ${hs('#fbfaf6', '#9a9ec8')} stroke-width="3.4" stroke-linecap="round"/><path d="M14 -26 l6 2 l-6 2" ${hc('#e6883a', '#5a4a3a')}/><ellipse cx="2" cy="1" rx="18" ry="2" fill="#fff" fill-opacity=".3"/></g></g>`).join('')}
-      <rect x="150" y="70" width="220" height="80" ${hc('#f6f3ec', '#e2dac6')}/><path d="M150 84.4 Q260 62.4 370 84.4 V90 Q260 68 150 90 Z" fill="#2b1c12" fill-opacity=".08"/><path d="M130 76 Q260 52 390 76 L380 86 Q260 64 140 86 Z" ${hc('#4f5a6e', '#2a3150')}/>
-      <path d="M135 81 Q260 58 385 81" fill="none" ${hs('#66728a', '#3a4262')} stroke-width="1.2"/><path d="M140 86 Q260 64 380 86" fill="none" ${hs('#f6f3ec', '#cfc8b4')} stroke-width="1.6"/>
+      <rect x="150" y="70" width="220" height="80" ${hc('#f6f3ec', '#e2dac6')}/><path d="M150 84.4 Q260 62.4 370 84.4 V90 Q260 68 150 90 Z" fill="#2b1c12" fill-opacity=".08"/>${CASTLE_ROOF.hip(260, 86, 132, 64, 92, 'gr', { ridge: 72, shachi: true })}
       ${[176, 220, 300, 344].map((x) => `<rect x="${x - 8}" y="94" width="16" height="13" ${hc('#dcd5c6', '#cfc8b4')}/><rect ${hc('#3b3b44', '#ffd98a')} x="${x - 6}" y="96" width="12" height="9"/><path d="M${x - 2} 96 v9 M${x + 2} 96 v9" ${hs('#e8e2d4', '#3a3a58')} stroke-width="1.2"/>`).join('')}
       <rect x="150" y="150" width="50" height="48" ${hc('#b4ab98', '#3a3a58')}/><rect x="320" y="150" width="50" height="48" ${hc('#b4ab98', '#3a3a58')}/>${[150, 320].map((b) => `<path d="M${b} 162 h50 M${b} 174 h50 M${b} 186 h50 M${b + 18} 150 v12 M${b + 34} 162 v12 M${b + 14} 174 v12 M${b + 30} 186 v12" ${hs('#958c7a', '#2a2a46')} stroke-width="1.2"/><path d="M${b} 150 h50 v3 h-50 Z" fill="#2b1c12" fill-opacity=".12"/>`).join('')}
       <rect x="200" y="140" width="120" height="58" ${hc('#5a3b28', '#2a2440')}/><path d="${[215, 230, 245, 275, 290, 305].map((x) => `M${x} 140 V198`).join(' ')}" stroke="#2b1c12" stroke-opacity=".2" stroke-width="1"/><path d="M200 140 h120 v4 h-120 Z" fill="#2b1c12" fill-opacity=".2"/>
