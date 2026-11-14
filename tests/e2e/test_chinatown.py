@@ -32,10 +32,10 @@ def test_chinatown_events_go_by_the_kana_seen_one_after_another(b):
     r = json.loads(ev(b, "(() => { " + BEGIN + """
       const cn = () => TOWNEV.due().map((e) => e.id).filter((id) => id.startsWith('cn'));
       const out = { first: cn() }; state.town.done.cn1 = todayStr(); out.second = cn();
-      state.town.done.cn2 = todayStr(); out.third = cn(); REG.kana.slice(0, 15).forEach((x) => { state.srs[x.key] = rec(); }); out.at15 = cn();
+      state.town.done.cn2 = todayStr(); out.third = cn(); state.town.done.cnw = todayStr(); REG.kana.slice(0, 15).forEach((x) => { state.srs[x.key] = rec(); }); out.at15 = cn();
       out.hosts = TOWN.EVENTS.filter((e) => e.at === 'chinatown').every((e) => TOWNEV.slots(e).length > 0);
       return JSON.stringify(out); })()"""))
-    assert r == {'first': ['cn1'], 'second': ['cn2'], 'third': [], 'at15': ['cn3'], 'hosts': True}, r
+    assert r == {'first': ['cn1'], 'second': ['cn2'], 'third': ['cnw'], 'at15': ['cn3'], 'hosts': True}, r   # 陳's バイト、しない？ (cnw, 2026-11-14) at 5 kana, between
 
 def test_a_trap_read_the_chinese_way_says_what_happens_and_the_right_one_gives_one(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """

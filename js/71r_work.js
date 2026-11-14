@@ -47,8 +47,22 @@ const WORK = (() => {
     const d = day(), res = W().res; if (!res[d]) { res[d] = { place: job, done: 0, score: {} }; saveState(); }
     const s = S = { job, day: d };
     const ctx = { yard, n: N, job, done: res[d].done, right: (k, misses) => right(s, k, misses), finish: (extra) => finish(s, extra), on: () => S === s };
-    if (JOBS[job]) JOBS[job].run(ctx);
+    const run = () => { if (S === s && JOBS[job]) JOBS[job].run(ctx); };
+    const first = (TOWN.WORK.first || {})[job], before = Object.entries(res).some(([k, r]) => k !== d && r.place === job);   // the keeper's word the first time
+    if (first && !before && !res[d].done) TALK.open(yard, PLACES[job].who, first, run, null, { ev: true }); else run();
     return true;
+  }
+  // the job a person takes beginners on for, where they are now, once its kana are seen (today taken elsewhere or closed: still
+  // offered, and はたらく says why not)
+  const offer = (id, place) => { const job = Object.keys(PLACES).find((j) => PLACES[j].who === id && PLACES[j].place === place); return job && kanaOk(PLACES[job].kana) ? job : null; };
+  const hello = (id) => (TOWN.WORK.hello || {})[id] || ['いらっしゃい！', '歡迎光臨！'];
+  // the 求人看板 by the way into 大通り: the four jobs, where, the kana each needs (✓ those open to this learner), the hours, today's
+  function board() {
+    const t = today(), rows = Object.entries(PLACES).map(([job, P]) => { const ok = kanaOk(P.kana);
+      return `<li class="wk-job${ok ? ' ok' : ''}" data-job="${job}"><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span><span>${ok ? '✓ 可以做' : `學 ${P.kana} 個假名`}</span></li>`; }).join('');
+    const now = t ? (fin(t) ? `今天在「${esc((PLACES[t.place] || {}).name || '')}」的班打完了。` : `今天在「${esc((PLACES[t.place] || {}).name || '')}」打工中（${t.done}／${N}）。`) : '今天還沒打工。一天只能選一個地方打一班。';
+    CLASS.card('wk-board', '求人看板', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button><div class="wk-bhead"><b lang="ja">アルバイト ぼしゅう</b><span>求人看板</span></div>
+      <ul class="wk-jobs">${rows}</ul><p class="wk-today">${now}</p><p class="wk-note">大通り的店 10 點到 19 點；包包子在牌樓外的「福明」，王老闆在的時候。點老闆，選「はたらく」。</p>`, () => {});
   }
   // a task done (misses: the tries wrong first): counted once, on the day the shift began
   function right(s, k, misses) {
@@ -99,6 +113,6 @@ const WORK = (() => {
       <p class="wk-note">一天只能在一個地方打一班。中華街的店：大通り 10 點到 19 點；包包子要王老闆在攤子。</p></div>`;
   }
   const register = (job, def) => { JOBS[job] = def; };
-  const lines = (add) => Object.values(JOBS).forEach((j) => j.lines && j.lines(add));
-  return { N, PLACES, can, start, register, pay, rank, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S };
+  const lines = (add) => { Object.entries(TOWN.WORK.hello || {}).forEach(([id, l]) => add(id, l[0])); Object.values(TOWN.WORK.first || {}).forEach((ls) => ls.forEach((l) => add(l[0], l[1]))); Object.values(JOBS).forEach((j) => j.lines && j.lines(add)); };
+  return { N, PLACES, can, start, register, pay, rank, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, board };
 })();

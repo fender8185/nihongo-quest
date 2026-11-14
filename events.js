@@ -33,7 +33,7 @@ const TOWN = {
     station: { taxi: { X: -430, Y: 96, roam: [45, 10] }, gate: { X: -60, Y: 120, roam: [30, 8] }, koban: { X: 330, Y: 112, roam: [30, 8] }, plaza: { X: -355, Y: 74, sit: 1 }, stop: { X: 470, Y: 80, roam: [40, 10] } },
     // 日本語教室 (2026-11-14), at 45° as the 食堂: the teacher by the blackboard, the chairs behind the two tables (facing us), the tatami
     chinatown: { stand: { X: -30, Y: 118, roam: [20, 6] }, stand2: { X: 70, Y: 112, roam: [30, 8] } },   // 中華街 (2026-11-14): 王 at his stand, 陳 helping at lunch
-    chinadori: {},   // 大通り (2026-11-14): its keepers stand at their shops (WORK)
+    chinadori: { ranran: { X: -66, Y: 132, roam: [8, 4] }, fuku: { X: -44, Y: 222, roam: [6, 3] }, rairai: { X: 66, Y: 132, roam: [8, 4] } },   // 大通り (2026-11-14): its keepers at their shops (WORK)
     kyoshitsu: { teach: { u: 4.6, v: 3.6 }, desk1: { u: 5.6, v: 5.85, sit: 1, pose: 'turn flip' }, desk2: { u: 13, v: 5.85, sit: 1, pose: 'turn flip' }, desk3: { u: 16.6, v: 5.85, sit: 1, pose: 'turn flip' }, tatami: { u: 19.4, v: 12.4, h: 0.5, kneel: 1, pose: 'turn flip' } }
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they
@@ -139,6 +139,16 @@ const TOWN = {
     wang: { name: '王 福明', kana: 'ワン フーミン', role: '豬肉包店「福明」的老闆', look: { face: 'round', skin: '#e8bd98', cheeks: 'soft', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b3a3a', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'mustache', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { body: 'apron', apron: '#c8453a', mark: '福' },
       bio: ['中華街豬肉包店「福明」的老闆，58 歲，華僑第三代。在日本出生長大，中文只會「你好、謝謝、好吃」三句，但每次都講得超大聲。', '店裡的豬肉包是爺爺傳下來的配方。陳中午在他店裡打工。'],
       hours: [[10, 20, 'chinatown', 'stand']] },
+    // 中華街大通り (2026-11-14): the keepers who take on a beginner for a shift (WORK) — 周 at らんらん, 張 at ふく, 黄 at らいらいけん
+    zhou: { name: '周 美蘭', kana: 'シュウ メイラン', role: 'おみやげ屋「らんらん」的老闆娘', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'droopy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#d0574b', bottomStyle: 'skirt', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#6e4f3a' },
+      bio: ['周美蘭，74 歲，大通り上おみやげ屋「らんらん」的老闆娘，店名是她最喜歡的貓熊的名字。', '說話慢條斯理，可是殺價從來沒輸過。'],
+      hours: [[10, 19, 'chinadori', 'ranran']] },
+    zhang: { name: '張 偉', kana: 'チョウ ウェイ', role: '中華食材店「ふく」的店長', look: { face: 'oval', skin: '#e8bd98', cheeks: 'none', fringe: 'sidepart', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'flat', beard: 'none', topStyle: 'shirt', top: '#ecebe6', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: { body: 'apron', apron: '#4f7a4a', mark: '福' },
+      bio: ['張偉，41 歲，中華食材店「ふく」的店長。', '貨架上每一格都有標籤，一格都不能放錯——放錯了他會默默地拿回來，再看你一眼。'],
+      hours: [[10, 19, 'chinadori', 'fuku']] },
+    huang: { name: '黄 大龍', kana: 'コウ ダイリュウ', role: '出前的中華料理店「らいらいけん」的老闆', look: { face: 'round', skin: '#d39f78', cheeks: 'soft', fringe: 'spiky', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'big', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: { head: 'chefcap' },
+      bio: ['黄大龍，50 歲，「らいらいけん」的老闆兼主廚，外送一份都不能晚。', '永遠在趕時間，口頭禪是「はやく！はやく！」，自己的拉麵卻總是放到冷掉才吃。'],
+      hours: [[10, 19, 'chinadori', 'rairai']] },
     granny: { name: 'おばあちゃん', kana: 'おばあちゃん', role: '外婆（信）', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#b8a27a', bottomStyle: 'skirt', bottom: '#6e4f3a', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { face: 'glasses' },
       bio: ['你的外婆。在海邊的小屋住了一輩子，鎮上每個人都記得她。', '她留給渚一封信，要等你會說日文才交給你。'],
       hours: [] }
@@ -149,6 +159,40 @@ const TOWN = {
   // changed since they last saw the hero or a thing worn, fest 'halloween', about: someone the hero has met. fresh, look and fest
   // are news: said first, once. How each of them talks: docs/town-voices.md
   CHAT: {
+    // 中華街大通り (2026-11-14): 周 — slow, kind, and never loses a haggle; 張 — few words, everything in its place; 黄 — in a hurry
+    zhou: [
+      ['m0', 'いらっしゃい…。ゆっくり みてね。', '歡迎光臨……慢慢看喔。'],
+      ['m0', 'らんらんは パンダの なまえよ。', '「らんらん」是貓熊的名字喔。'],
+      ['m0', 'これ、かわいいでしょう。', '這個很可愛吧。'],
+      ['m0', 'たかい？ …じゃあ、すこし だけね。', '太貴？……那就便宜一點點吧。'],
+      ['m0', 'おちゃ、のむ？', '要喝茶嗎？'],
+      ['m0', 'わたしの むすこ？ よこはまに いるの。', '我兒子？他在橫濱。'],
+      ['m0', 'パンダの おにんぎょう、いちばん にんきよ。', '貓熊玩偶最受歡迎喔。'],
+      ['m0', 'あさは、おきゃくさんが すくないの。', '早上客人比較少。'],
+      ['m0', 'あら、おしゃれね。', '哎呀，你很時髦呢。'],
+      ['m0', 'また きてね。', '要再來喔。']],
+    zhang: [
+      ['m0', '…いらっしゃい。', '……歡迎光臨。'],
+      ['m0', 'ここは、ここ。そこは、そこ。', '這個放這裡。那個放那裡。'],
+      ['m0', 'ラベルを よく みて。', '標籤要看清楚。'],
+      ['m0', '…それは、ちがう。', '……那個，不對。'],
+      ['m0', 'きょうも、きれいです。', '今天也很整齊。'],
+      ['m0', 'しいたけは、ここ。', '香菇放這裡。'],
+      ['m0', '…ラベルが まがって いる。', '……標籤歪了。'],
+      ['m0', 'あさ、にもつが きます。', '早上貨會進來。'],
+      ['m0', 'はるさめ、やすいです。', '冬粉很便宜。'],
+      ['m0', '…また どうぞ。', '……歡迎再來。']],
+    huang: [
+      ['m0', 'はやく！ はやく！', '快！快！'],
+      ['m0', 'らいらいけんの ラーメン、おいしいよ！', 'らいらいけん的拉麵很好吃喔！'],
+      ['m0', 'でまえ、いっぱい！ いそがしい！', '外送好多！好忙！'],
+      ['m0', 'あっ、ラーメンが のびた！', '啊，拉麵泡軟了！'],
+      ['m0', 'きみ、あしは はやい？', '你腳程快嗎？'],
+      ['m0', 'おかもち、おもいよ！', '外送箱很重喔！'],
+      ['m0', 'ぎょうざ、やけた！ はやく！', '煎餃好了！快！'],
+      ['m0', 'こはくさんと とうかさん、おとくいさん！', 'こはく和とうか是老主顧！'],
+      ['m0', 'ちょっと やすみ…… いや、はやく！', '休息一下……不行，快！'],
+      ['m0', 'また きて！ はやく きて！', '再來！快點來！']],
     // 中華街 (2026-11-14): 王 — loud, warm, his three words of Chinese every time
     wang: [
       ['m0', 'ニーハオ！ ニーハオ！', '你好！你好！'],
@@ -1213,7 +1257,13 @@ const TOWN = {
       { ask: '陳問你：信的日文是？', opts: [['{手紙|てがみ|信}です。', 1, '是手紙。'], ['トイレットペーパーです。', 0, '這是衛生紙……你跟陳犯了一樣的錯。'], ['{切手|きって|郵票}です。', 0, '「切手」是郵票。']], pt: 'm0' },
       ['wang', 'せいかい！ シェイシェイ！', '答對了！謝謝！'],
       ['chen', '', '（用中文）……老闆，答對的時候不用說謝謝啦。']] },
-    { id: 'cn3', u: 'm0', kana: 15, who: 'wang', at: 'chinatown', after: 'cn2', title: 'ししまい', lines: [['wang', 'ししまいが きます！', '舞獅來了！'],
+    { id: 'cnw', u: 'm0', kana: 5, who: 'chen', at: 'chinatown', after: 'cn2', title: 'バイト、しない？', lines: [['chen', 'ねえ、バイト しない？', '欸，要不要打工？'],
+      ['chen', '', '（用中文）我中午在王老闆這邊打工。牌樓後面是大通り，那邊的店都在找打工的人。'],
+      ['chen', '', '（用中文）入口有一塊求人看板。學了 5 個假名，就能去食材店「ふく」幫忙整理貨架；學越多，能做的工作越多。'],
+      { ask: '陳問你：「バイト、しない？」', opts: [['はい、します！', 1, '好，我要做！'], ['いいえ、たべます！', 0, '「たべます」是吃……你是不是又在想豬肉包。'], ['はい、ねます！', 0, '「ねます」是睡覺。打工不能睡覺啦！']], pt: 'm0' },
+      ['chen', 'がんばって！', '加油！'],
+      ['chen', '', '（用中文）對了，一天只能在一個地方打一班喔。錢不多，但是可以買包子吃！']] },
+    { id: 'cn3', u: 'm0', kana: 15, who: 'wang', at: 'chinatown', after: 'cnw', title: 'ししまい', lines: [['wang', 'ししまいが きます！', '舞獅來了！'],
       ['chen', '', '（用中文）在日本，被獅子咬頭會變聰明、帶來好運。頭伸過去！'],
       ['hero', 'えっ？', '欸？'],
       ['wang', 'がぶっ！', '咬！（獅子一口咬住你的頭）', { snd: 'clap' }],
@@ -2612,6 +2662,15 @@ const TOWN = {
   // who says the price (MENU keeper) — not townsfolk with hours and chat; drawn there and in the talk as the town's people are, in
   // their own voices (CAST_VOICE). Later the same day (the user: someone at every stall): seven, one a stall; scoop: what the
   // goldfish's old man says when one is caught
+  // 中華街の打工 (2026-11-14, WORK): what each keeper says when one comes by to work, and their opening the first time
+  WORK: {
+    hello: { zhang: ['…いらっしゃい。はたらく？', '……歡迎光臨。要來打工嗎？'], zhou: ['あら、いらっしゃい。てつだって くれる？', '哎呀，歡迎光臨。要來幫忙嗎？'],
+      huang: ['はやく！ でまえ、てつだって！', '快！來幫忙外送！'], wang: ['ニーハオ！ ぶたまん、つくる？', '你好！要來包豬肉包嗎？'] },
+    first: {
+      shelf: [['zhang', 'たなの ラベルと、はこの ラベル。おなじ ところへ。', '貨架上的標籤和箱子上的標籤，一樣的放一起。'], ['zhang', '…まちがえたら、もう いちど。', '……放錯了，就再放一次。']],
+      counter: [['zhou', 'おきゃくさんが いったものを わたしてね。', '客人說要什麼，就拿給他喔。'], ['zhou', '「いらっしゃいませ」「ありがとうございました」、げんきよく ね。', '「歡迎光臨」「謝謝光臨」，要有精神喔。']],
+      deliver: [['huang', 'この おみせへ！ かんばんを よく みて！', '送到這家店！看清楚招牌！'], ['huang', 'はやく かえって きたら、チップ！', '早點回來，有小費！']],
+      buns: [['wang', 'ぶたまんは こころ！', '豬肉包就是心！'], ['chen', '', '（用中文）王老闆說什麼就做什麼。他會先說日文，不懂就看圖。']] } },
   YATAI: {
     ryuho: { name: '龍鳳飯店の店長', kana: 'りゅうほうはんてんの てんちょう', role: '中華料理店', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'smile', beard: 'none', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'chefcap' } },   // 中華街 (2026-11-14)
     ojisan: { name: 'やきそば屋のおじさん', kana: 'やきそばやのおじさん', role: '炒麵、牛肉串、奶油馬鈴薯', look: { face: 'round', skin: '#e8bd98', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'happi', top: '#d0574b', bottomStyle: 'shorts', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: { head: 'nejiri' } },

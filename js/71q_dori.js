@@ -162,6 +162,6 @@ PLACE_USE.chinadori = (() => {
   const SAY = { ranran: 'パンダが いっぱい！', fuku: 'いろいろ ある…！', toka: 'おちゃの におい…', rairai: 'ラーメンの におい…！', kuriya: 'あまい におい…！', kohaku: 'きらきら…！' };
   const bp = 392, bx = (L) => Math.round(600 - L * bp / K), by = (V) => Math.round(-60 + bp * (1 - V / K));
   return DORI.SHOPS.map((s) => Object.assign({ id: s.id, name: `${s.sign}（${s.name}）`, box: box(s), kind: 'do', go: DORI.door(s.id), say: SAY[s.id] }, s.id === 'kuriya' ? { fx: 'kuri', fxc: 'puff', ms: 2400 } : {}))
-    .concat([{ id: 'board', name: '求人看板', box: [bx(106), by(64), bx(78), by(0)], kind: 'do', go: [-70, 34], back: 1, pose: 'look', say: 'アルバイト…？', toast: '求人看板：大通り的店在找打工的人。' },
+    .concat([{ id: 'board', name: '求人看板', box: [bx(106), by(64), bx(78), by(0)], kind: 'do', go: [-70, 34], back: 1, pose: 'look', say: 'アルバイト…？', open: () => WORK.board() },
       { id: 'hourai', name: 'ほうらい（中華料理店）', box: [Math.round(600 - 110 * DORI.END / K), Math.round(-60 + DORI.END * (1 - 200 / K)), Math.round(600 + 110 * DORI.END / K), Math.round(-60 + DORI.END)], kind: 'do', go: [0, DORI.FAR], back: 1, pose: 'look', say: 'おおきい おみせ…！' }]);
 })();
