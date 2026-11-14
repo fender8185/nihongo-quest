@@ -127,9 +127,11 @@ const Sync = {
     if (modalOpen()) refreshSettings();
   },
 
+  // this device only (2026-11-14): Supabase's own default is every device of the account, so 登出 on the phone or the test site
+  // ended the computer's login too (the user: the computer kept being logged out; its session was gone from auth.sessions)
   async signOut() {
     if (this.timer) { clearTimeout(this.timer); this.timer = null; }
-    if (this.client) { try { await this.client.auth.signOut(); } catch (e) { /* ignore */ } }
+    if (this.client) { try { await this.client.auth.signOut({ scope: 'local' }); } catch (e) { /* ignore */ } }
     this.applySession(null);
   },
 

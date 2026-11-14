@@ -22,7 +22,7 @@ window.__fake = (function () {
       onAuthStateChange(cb) { listeners.push(cb); return { data: { subscription: { unsubscribe() {} } } }; },
       async getSession() { return { data: { session } } },
       async signInWithOtp({ email }) { calls.push(['otp', email]); return { error: null }; },
-      async signOut() { session = null; listeners.forEach(cb => cb('SIGNED_OUT', null)); return { error: null }; },
+      async signOut(o) { calls.push(['signOut', o && o.scope]); session = null; listeners.forEach(cb => cb('SIGNED_OUT', null)); return { error: null }; },
       async verifyOtp({ email, token, type }) { calls.push(['verify', email, token, type]); return { error: null }; },
       async signInWithOAuth({ provider, options }) { calls.push(['oauth', provider, options && options.redirectTo]); return { data: {}, error: null }; }
     },
@@ -175,13 +175,13 @@ def test_switching_account_resets_device_binding_and_adopts_new_cloud(b):
     out = boot(b, [
         ("eval", "__fake.login('a@b.c'); true"), ("wait", "Sync.status === 'idle' && Sync.meta.everSynced"),
         ("eval", "JSON.stringify({ uid: Sync.meta.userId, ever: Sync.meta.everSynced })"),
-        ("eval", "Sync.signOut().then(() => JSON.stringify({ st: Sync.status, pend: Sync.meta.pendingSync }))"),
+        ("eval", "Sync.signOut().then(() => JSON.stringify({ st: Sync.status, pend: Sync.meta.pendingSync, scope: __fake.calls.filter(c => c[0] === 'signOut').map(c => c[1]) }))"),
         ("eval", "__fake.setRow({ user_id: 'u2', state: { v: 3, updatedAt: '2000-01-01T00:00:00.000Z', settings: { loadCap: 77 } }, updated_at: '2000-01-01T00:00:00.000Z' }); __fake.login('b@c.d', 'u2'); true"),
         ("wait", "Sync.status === 'idle' && Sync.meta.userId === 'u2'"),
         ("eval", "JSON.stringify({ goal: state.settings.loadCap, uid: Sync.meta.userId, ever: Sync.meta.everSynced, key: state.ttsConfig.googleKey })"),
     ])
     assert out[-4] == '{"uid":"u1","ever":true}', out[-4]
-    assert out[-3] == '{"st":"off","pend":false}', out[-3]
+    assert out[-3] == '{"st":"off","pend":false,"scope":["local"]}', out[-3]   # 2026-11-14: this device only, not every device of the account
     assert out[-1] == '{"goal":77,"uid":"u2","ever":true,"key":"LOCALKEY"}', out[-1]
 
 def test_pull_runs_after_exam_is_finished_but_still_on_result_screen(b):
