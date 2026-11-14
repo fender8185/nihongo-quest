@@ -45,6 +45,18 @@ def test_on_a_phone_the_castle_is_seen_whole_off_the_bus_and_when_its_keep_is_ta
     assert r['back'] == {'on': False, 'z': r['off']['cam'], 'walked': False}, r   # a tap: back, and he does not walk off
     assert r2 == {'on': False, 'z': 1}, r2   # a wide screen: it fits as it is
 
+def test_on_a_phone_the_shrines_hall_is_seen_whole_too(b):
+    # 2026-11-14, the user liked the castle's: off the bus at 稲荷神社, or its hall's roof tapped, the camera draws back to the whole 拝殿
+    js = "(async () => { " + FRESH + """ state.town.stops = { shrine: 1 }; saveState();
+      await go('street', 12); yh.arrive = { to: 'shrine', from: 'street' }; location.hash = '#/shrine'; document.getElementById('view').innerHTML = ''; route(); await wait(400);
+      const off = YWIDE.on; await wait(2700); const after = YWIDE.on;
+      useThing(y(), PLACE_USE.shrine.find((t) => t.id === 'haiden')); let n = 0; while (!YWIDE.on && n++ < 60) await wait(100);
+      const z = +((y().querySelector('.yworld').style.transform.match(/scale\\(([\\d.]+)\\)/) || [0, 1])[1]);
+      return JSON.stringify({ off, after, tapped: YWIDE.on, z, cam: ycam.z }); })()"""
+    r = json.loads(b.run([("metrics", (390, 760)), ("nav", URL), ("wait", READY), ("eval", js)])[-1])
+    b.run([("metrics", (1200, 900, False)), ("nav", URL), ("wait", READY)])
+    assert r['off'] and not r['after'] and r['tapped'] and r['z'] < 0.85 < 1 < r['cam'], r
+
 def test_people_stand_still_in_headless_chrome(b):
     r = ev(b, "TOWNLIFE.still")
     assert r is True, r

@@ -250,6 +250,7 @@ const PLACE_USE = {
     { id: 'laundry', name: '投幣洗衣店', box: [992, 168, 1088, 232], kind: 'do', go: [440, 126], back: 1, pose: 'look', say: 'ぐるぐる…' }],
   shrine: [
     { id: 'bell', name: '鈴', box: [870, 140, 950, 236], kind: 'do', go: [310, 126], back: 1, pose: 'reach', say: 'カランカラン', then: 'パンパン 🙏', fx: 'bell', fxc: 'ring', ms: 2100 },
+    { id: 'haiden', name: '拝殿', box: [690, 40, 1130, 136], kind: 'do', go: [310, 122], back: 1, pose: 'look', wide: 'りっぱ…！' },   // its roof looked up at: the hall seen whole (yWide; 2026-11-14)
     { id: 'kuji', name: '籤', box: [1076, 160, 1156, 236], kind: 'do', go: [515, 122], back: 1, pose: 'reach', fortune: 1, fx: 'kuji', fxc: 'jingle', ms: 2200, buy: 'kuji' },
     { id: 'crow', name: '烏鴉', box: [220, 42, 266, 80], kind: 'do', go: [-350, 112], pose: 'look', say: 'カァー', fx: 'crow', fxc: 'flown', ms: 7000 },
     { id: 'fox', name: '狐狸', box: [338, 166, 382, 236], kind: 'do', go: [-240, 120], back: 1, pose: 'bow', say: 'ペコリ', fx: 'fox', fxc: 'bless', ms: 2000 },
