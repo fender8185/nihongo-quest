@@ -171,6 +171,7 @@ function yWide(yard, [x0, x1, top], ms = 3600) {
 // a screen held upright (2026-11-10, the user: less sky and bigger people on a phone): the place drawn larger, its ground along
 // the bottom of the screen and the sky left as it is; a room (食堂, 居酒屋) a little smaller instead, more of it in sight
 function yardZoom(yard, w, h) {
+  if (yard.classList.contains('chinadori') && w && h) return Math.max(1, Math.min(1.7, h / 520));   // 中華街大通り (DORI): one screen, the street filling it, a wide one's too
   if (!w || !h || h < w * 1.2) return 1;
   return yard.classList.contains('indoor') ? 0.75 : Math.max(1, Math.min(1.6, h / 540));
 }

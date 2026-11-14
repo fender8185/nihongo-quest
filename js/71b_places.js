@@ -288,7 +288,7 @@ const PLACE_USE = {
   // 王's steamers (a free 豚まん a day) and his menu, 龍鳳飯店's door (its menu), the panda, the lion's head, the gate
   chinatown: [
     { id: 'post', name: '郵筒', box: [22, 150, 64, 236], kind: 'do', go: [-556, 122], back: 1, pose: 'look', say: 'てがみ…？', open: (y) => CHINA.trap(y, 'post') },
-    { id: 'gate', name: '牌樓', box: [84, -40, 396, 100], kind: 'do', go: [-360, 124], back: 1, pose: 'look', say: 'ちゅうかがい！', fx: 'gate', fxc: 'shake' },
+    { id: 'gate', name: '牌樓', box: [84, -40, 396, 100], kind: 'do', go: [-360, 124], back: 1, open: (y) => yGo(y.querySelector('.use-btn[data-use="gate"]') || y, 'chinadori') },   // walked through into 大通り (2026-11-14, the user: it shook, for no reason; now it is a way in)
     { id: 'notice', name: '公告', box: [396, 140, 446, 236], kind: 'do', go: [-179, 122], back: 1, pose: 'look', say: 'おしらせ…？', open: (y) => CHINA.trap(y, 'notice') },
     { id: 'shirt', name: 'T恤', box: [446, 136, 494, 236], kind: 'do', go: [-130, 122], back: 1, pose: 'reach', say: 'だいじょうぶ…？', fx: 'shirt', fxc: 'shake', open: (y) => CHINA.trap(y, 'shirt') },
     { id: 'seiro', name: '蒸籠', box: [506, 130, 572, 236], kind: 'do', go: [-61, 122], back: 1, pose: 'look', say: 'いい におい…！', open: (y) => CHINA.taste(y, (PLACE_USE.chinatown || []).find((q) => q.id === 'seiro')) },

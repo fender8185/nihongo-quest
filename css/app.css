@@ -2081,6 +2081,10 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .cb-col { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .cb-k { display: flex; flex-direction: column; align-items: center; justify-content: center; aspect-ratio: 1 / 1.15; padding: 0; border: 0; border-radius: 6px; font: inherit; font-size: clamp(16px, 4.6vw, 24px); line-height: 1.1; color: #f4f1e6; background: none; cursor: pointer; }
 .cb-k small { font-size: 9px; opacity: .6; } .cb-k.off { opacity: .22; font-size: 14px; cursor: default; } .cb-k.cb-empty { visibility: hidden; }
+/* 中華街大通り (2026-11-14): the chestnut pan's steam rising, puffing when tapped */
+.sky .land [data-fx="kuri"] .dr-steam { animation: drSteam 2.4s ease-out infinite; opacity: 0; } .sky .land [data-fx="kuri"].puff .dr-steam { animation-duration: .9s; }
+@keyframes drSteam { 0% { opacity: 0; transform: translateY(4px); } 30% { opacity: .9; } 100% { opacity: 0; transform: translateY(-10px); } }
+@media (prefers-reduced-motion: reduce) { .sky .land [data-fx="kuri"] .dr-steam { animation: none; opacity: .6; } }
 .cb-k.cb-wrote { position: relative; } .cb-k.cb-wrote::after { content: '✓'; position: absolute; top: 0; right: 1px; font-size: 10px; line-height: 1; color: #f6e08a; }
 .cb-k:not(.off):hover { background: rgba(255, 255, 255, .1); } .cb-k.pop { animation: iconPop .35s cubic-bezier(.3, 1.6, .6, 1); }
 .cb-note { margin: 10px 0 0; font-size: 13px; opacity: .75; text-align: center; }

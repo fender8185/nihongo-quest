@@ -128,7 +128,7 @@ const TOWNEV = (() => {
   function due() {
     const done = state.town.done;
     const can = (id) => { const c = T().CAST[id]; return Boolean(c) && (c.art !== 'npc' || met(id)); };   // 小春, ムギ: once they have knocked
-    const reach = (place) => { const p = place === 'oku' ? 'shrine' : place === 'kyoshitsu' ? 'kominkan' : place; return !BUS_STOPS.some((x) => x[0] === p) || busOpen(p); };   // out by bus: once its stop is open (奥社: up from 稲荷神社's; 日本語教室: in 公民館)
+    const reach = (place) => { const p = place === 'oku' ? 'shrine' : place === 'kyoshitsu' ? 'kominkan' : place === 'chinadori' ? 'chinatown' : place; return !BUS_STOPS.some((x) => x[0] === p) || busOpen(p); };   // out by bus: once its stop is open (奥社: up from 稲荷神社's; 日本語教室: in 公民館)
     return T().EVENTS.filter((e) => !done[e.id] && (!e.after || done[e.after]) && opened(e) && can(e.who) && reach(e.at));
   }
   const inside = (h, [from, to]) => (from <= to ? h >= from && h < to : h >= from || h < to);
@@ -189,7 +189,7 @@ const TOWNEV = (() => {
   const linesOf = (e) => (e.met && state.town.done[e.met.if] ? e.met.head.concat(e.lines.slice(e.met.from)) : e.lines);
   // the people at a place now: those met, where their hours put them, and whoever an event there waits on (marked ！); in the
   // 日本語教室 and 中華街 everyone there, met or not (a class one walks into, a street of stalls)
-  const SEEN_UNMET = ['kyoshitsu', 'chinatown'];
+  const SEEN_UNMET = ['kyoshitsu', 'chinatown', 'chinadori'];
   function here(place) {
     const out = [];
     Object.keys(T().CAST).forEach((id) => {
@@ -200,7 +200,7 @@ const TOWNEV = (() => {
     return out;
   }
   // what a place shows of the town now (its shops' doors, who stands where, the mark): drawn anew when it changes
-  const sig = (place) => (place === 'town' ? TOWN_SHOPS.map((x) => shopState(x[6])).join() : place === 'shrine' ? String(isOpen('ennichi', now())) : '') + '|' + here(place).map((p) => p.id + (p.host ? '!' : '')).join();
+  const sig = (place) => (place === 'town' ? TOWN_SHOPS.map((x) => shopState(x[6])).join() : place === 'shrine' ? String(isOpen('ennichi', now())) : place === 'chinadori' ? String(isOpen('dori', now())) : '') + '|' + here(place).map((p) => p.id + (p.host ? '!' : '')).join();
   const festival = () => isOpen('ennichi', now());
   function castHtml(place) {
     return here(place).map(({ id, spot, host }) => { const size = T().CAST[id].size || 1, k = yScale(spot.Y) * size;
@@ -215,6 +215,7 @@ const TOWNEV = (() => {
   STOPS.forEach((p) => { ADJ[p] = ['street'].concat(STOPS.filter((q) => q !== p)); });
   ADJ.shrine.push('oku'); ADJ.oku = ['shrine'];   // up the 千本鳥居 on foot (2026-11-14)
   ADJ.kominkan.push('kyoshitsu'); ADJ.kyoshitsu = ['kominkan'];   // 公民館's door to its 日本語教室 (2026-11-14)
+  ADJ.chinatown.push('chinadori'); ADJ.chinadori = ['chinatown'];   // through 中華街's 牌樓 into 大通り (2026-11-14)
   const PLACE_NAME = { yard: '院子', town: '小鎮', beach: '海邊', street: '公車站', harbor: 'みなと漁港', park: 'ひだまり公園', shokudo: 'まんぷく食堂', izakaya: '居酒屋とり吉', station: '駅前', sento: '月の湯', shrine: '稲荷神社', castle: '白鷺城', oku: '稲荷山・奥社', kominkan: '公民館', kyoshitsu: '日本語教室', chinatown: '中華街', chinadori: '中華街大通り' };
   function hop(from, to) {
     if (from === to || !ADJ[from]) return null;
@@ -1537,6 +1538,9 @@ const WAYS = {
   // 公民館 ↔ its 日本語教室 (2026-11-14): in by the glass doors, into the room by its door on the left wall
   'kominkan>kyoshitsu': { out: () => [10, 128], in: () => [isoXY(...ISO.door), isoXY(...ISO.in)] },
   'kyoshitsu>kominkan': { out: () => isoXY(...ISO.door), in: () => [[10, 128], [10, 98]] },
+  // 中華街's 牌樓 ↔ 大通り (2026-11-14): in under the gate and out of sight; into the street from the screen's foot, up its middle
+  'chinatown>chinadori': { out: () => [-360, 150], in: () => [[0, -24], [0, 46]] },
+  'chinadori>chinatown': { out: () => [0, 12], in: () => [[-360, 150], [-350, 106]] },
   'town>park': { out: () => [180, 4], in: () => [[PARK_PATH, 214], [PARK_PATH - 20, 104]] },
   'park>town': { out: () => [PARK_PATH, 222], in: () => [[180, 6], [180, 50]] }
 };
