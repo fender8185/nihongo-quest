@@ -131,7 +131,52 @@ const JOBS = (() => {
     const s = say('counter'); [s.miss, s.end, ...s.ok].forEach((l) => add(s.who, l[0]));
   }
 
+  // ---- 外送 (らいらいけん, 黄さん): a slip with a shop's name in kana; the hero carries the 岡持ち down 大通り to the shop whose sign
+  // says it (tap it), then back to らいらいけん for the next (tap it). Only shops whose sign's kana are all seen (at 30 kana: ふく,
+  // とうか, こはく), never the same twice running. The wrong shop: うちじゃ ないよ！ and a miss. Ten delivered: a tip by the time from
+  // the first slip — ≤ 90 s 30 円, ≤ 150 s 20, ≤ 240 s 10. Gone from 大通り: the slip put away, the count kept for today ----
+  const tip = (sec) => (sec <= 90 ? 30 : sec <= 150 ? 20 : sec <= 240 ? 10 : 0);
+  function deliverMake(seen = kanaSeenSet()) {
+    const to = DORI.SHOPS.filter((s) => s.id !== 'rairai' && [...s.sign].every((c) => seen.has(c))).map((s) => s.id), out = [];
+    for (let k = 0; k < N; k++) out.push(pick(to.length > 1 ? to.filter((x) => x !== out[k - 1]) : to));
+    return out;
+  }
+  let D = null;   // the round under way: { ctx, list, k, to, miss, back, t0, iv }
+  const popAt = (yard, id, l) => { const t = (PLACE_USE.chinadori || []).find((q) => q.id === id); if (t && yard) yPop(yard, (t.box[0] + t.box[2]) / 2, t.box[1] - 4, l[0]); };
+  function slip() {
+    if (!D) return;
+    let el = document.querySelector('.wk-slip'); if (!el) { el = document.createElement('div'); el.className = 'wk-slip'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+    const sec = Math.round((Date.now() - D.t0) / 1000);
+    el.innerHTML = `<i class="wk-oka-i" aria-hidden="true"></i><span>${D.back ? 'もどる' : 'とどけさき'}</span><b lang="ja">${esc(D.back ? 'らいらいけん' : DORI.shop(D.to).sign)}</b><span class="wk-sn">${Math.min(D.k + 1, N)}／${N}</span><span class="wk-st">${sec} 秒</span>`;
+    const h = document.querySelector('.yhero'); if (h && !h.classList.contains('wk-carry')) { h.classList.add('wk-carry'); if (!h.querySelector('.wk-oka')) h.insertAdjacentHTML('beforeend', '<i class="wk-oka" aria-hidden="true"></i>'); }
+  }
+  function putAway() {
+    if (D) clearInterval(D.iv);
+    const el = document.querySelector('.wk-slip'); if (el) el.remove();
+    document.querySelectorAll('.yhero.wk-carry').forEach((h) => { h.classList.remove('wk-carry'); const o = h.querySelector('.wk-oka'); if (o) o.remove(); });
+    D = null;
+  }
+  function deliverRun(ctx) {
+    putAway();
+    D = { ctx, list: deliverMake(), k: ctx.done, miss: 0, back: false, t0: Date.now() }; D.to = D.list[D.k];
+    D.iv = setInterval(() => { if (!D) return; if (location.hash !== '#/chinadori' || !ctx.on()) { putAway(); return; } slip(); }, 500);
+    slip(); const s = say('deliver'); speakAs(s.who, DORI.shop(D.to).sign + s.go[0]);
+  }
+  // a shop tapped on 大通り (its PLACE_USE open, the hero at its door): true if the round took it
+  function deliverAt(yard, id) {
+    if (!D) return false;
+    const s = say('deliver');
+    if (D.back) { if (id === 'rairai') { D.back = false; D.to = D.list[D.k]; D.miss = 0; slip(); speakAs(s.who, s.back[0]); setTimeout(() => { if (D) speakAs(s.who, DORI.shop(D.to).sign + s.go[0]); }, 1100); } else popAt(yard, id, ['らいらいけんに もどって！']); return true; }
+    if (id === 'rairai') { popAt(yard, id, s.wait); speakAs(s.who, s.wait[0]); return true; }
+    if (id !== D.to) { D.miss++; playSfx('bad'); popAt(yard, id, s.miss); return true; }
+    D.ctx.right(D.k, D.miss); playSfx('good'); popAt(yard, id, s.thanks); D.k++;
+    if (D.k >= N) { const ctx = D.ctx, t = tip((Date.now() - D.t0) / 1000); putAway(); speakAs(s.who, s.end[0]); setTimeout(() => ctx.finish({ tip: t }), 300); return true; }
+    D.back = true; slip(); return true;
+  }
+  function deliverLines(add) { const s = say('deliver'); DORI.SHOPS.forEach((x) => add(s.who, x.sign + s.go[0])); [s.back, s.wait, s.end].forEach((l) => add(s.who, l[0])); }
+
   WORK.register('shelf', { run: shelfRun, lines: shelfLines });
+  WORK.register('deliver', { run: deliverRun, lines: deliverLines });
   WORK.register('counter', { run: counterRun, lines: counterLines });
-  return { shelf: { make: shelfMake, run: shelfRun }, counter: { make: counterMake, run: counterRun, now: () => C, sayer } };
+  return { shelf: { make: shelfMake, run: shelfRun }, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, deliver: { make: deliverMake, at: deliverAt, tip, state: () => D, on: () => Boolean(D) } };
 })();

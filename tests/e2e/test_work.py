@@ -187,6 +187,40 @@ def test_the_generator_has_the_counter_lines(b):
       return JSON.stringify([sayer('かさ') + ':かさを ください。', sayer('かさ') + ':かさを ふたつ ください。', 'hero:いらっしゃいませ！', 'hero:ありがとうございました！', 'hero:さんびゃくえんです。', 'kaneda:これ、いくらですか。'].filter((x) => !all.includes(x))); })()"""))
     assert r == [], r
 
+# ---- 外送 (らいらいけん, 黄さん): a slip with a shop's name; walk to the shop with that sign, back for the next ----
+DELIVER = """const go = async () => { location.hash = '#/chinadori'; route(); await wait(300); earlier('deliver'); WORK.start(yard(), 'deliver'); await wait(300); };"""
+
+def test_delivery_goes_only_to_readable_shops(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(30);
+      const runs = Array.from({ length: 6 }, () => JOBS.deliver.make()), all = runs.flat();
+      return JSON.stringify({ to: [...new Set(all)].sort(), n: runs.every((t) => t.length === 10), twice: runs.some((t) => t.some((x, i) => i && t[i - 1] === x)) }); })()"""))
+    assert r == {'to': ['fuku', 'kohaku', 'toka'], 'n': True, 'twice': False}, r
+
+def test_a_wrong_shop_says_not_here_and_counts_a_miss(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + DELIVER + """ kana(46); window.speakAs = () => Promise.resolve(); await go();
+      const D = JOBS.deliver.state(), out = { slip: document.querySelector('.wk-slip').textContent.includes(DORI.shop(D.to).sign) };
+      const wrong = DORI.SHOPS.find((s) => s.id !== D.to && s.id !== 'rairai').id; JOBS.deliver.at(yard(), wrong); await wait(100);
+      out.said = document.body.textContent.includes('うちじゃ ないよ'); out.miss = JOBS.deliver.state().miss;
+      JOBS.deliver.at(yard(), D.to); await wait(100); out.score = state.work.res['2026-11-10'].score; out.back = document.querySelector('.wk-slip').textContent.includes('らいらいけん');
+      JOBS.deliver.at(yard(), 'rairai'); out.next = JOBS.deliver.state().k; out.carry = Boolean(document.querySelector('.yhero.wk-carry'));
+      return JSON.stringify(out); })()"""))
+    assert r == {'slip': True, 'said': True, 'miss': 1, 'score': {'0': 1}, 'back': True, 'next': 1, 'carry': True}, r
+
+def test_a_delivery_shift_pays_a_tip(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + DELIVER + """ kana(46); window.speakAs = () => Promise.resolve(); await go();
+      for (let k = 0; k < 10; k++) { JOBS.deliver.at(yard(), JOBS.deliver.state().to); if (k < 9) JOBS.deliver.at(yard(), 'rairai'); }
+      for (let i = 0; i < 30 && !document.querySelector('.wk-result'); i++) await wait(100); const t = state.work.res['2026-11-10'];
+      return JSON.stringify({ yen: t.yen, tip: t.tip, tips: [80, 120, 200, 300].map((s) => JOBS.deliver.tip(s)), slip: Boolean(document.querySelector('.wk-slip')) }); })()"""))
+    assert r == {'yen': 180, 'tip': 30, 'tips': [30, 20, 10, 0], 'slip': False}, r
+
+def test_the_slip_bar_leaves_the_signs_tappable_on_a_phone(b):
+    r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + SHELF + DELIVER + """ kana(46); await go();
+      const s = document.querySelector('.wk-slip').getBoundingClientRect(), hit = (q) => !(q.right < s.left || q.left > s.right || q.bottom < s.top || q.top > s.bottom);
+      const over = [...document.querySelectorAll('.use-btn')].filter((u) => hit(u.getBoundingClientRect())).map((u) => u.dataset.use);
+      location.hash = '#/chinatown'; route(); await wait(400); const gone = !document.querySelector('.wk-slip');
+      return JSON.stringify({ over, inside: s.left >= 0 && s.right <= innerWidth, gone }); })()""")])[-1])
+    assert r == {'over': [], 'inside': True, 'gone': True}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

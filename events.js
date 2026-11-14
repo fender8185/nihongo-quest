@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 65 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 66 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2674,6 +2674,7 @@ const TOWN = {
     // what each says during a shift: a miss, a right one now and then, the end
     say: {
       shelf: { who: 'zhang', miss: ['ちがう！', '不對！'], ok: [['よし。', '好。'], ['…うん。', '……嗯。'], ['きれい。', '很整齊。']], end: ['…おつかれさま。たすかった。', '……辛苦了。幫了大忙。'] },
+      deliver: { who: 'huang', go: ['へ！ はやく！', '！快！'], back: ['おかえり！ つぎ！', '回來了！下一份！'], wait: ['はやく とどけて！', '快送去！'], thanks: ['ありがとう！', '謝謝！'], miss: ['うちじゃ ないよ！', '不是我們家啦！'], end: ['はやい！ たすかった！', '好快！幫了大忙！'] },
       counter: { who: 'zhou', miss: ['それじゃ ないわよ。', '不是那個喔。'], ok: [['じょうず、じょうず。', '很好很好。'], ['いいわね。', '不錯喔。']], end: ['ありがとう。たすかったわ。', '謝謝，幫了大忙。'] } },
     // らんらん's goods on the counter: [name in kana, its drawing (PICS / PICS_TOWN), price ≤ 1,000 円] — offered once every kana of the name is seen
     goods: [['かさ', '傘', 500], ['すし', '寿司', 800], ['いす', '椅子', 1000], ['こけし', 'こけし', 600], ['とけい', '時計', 900], ['はし', '箸', 200], ['ほん', '本', 700],
