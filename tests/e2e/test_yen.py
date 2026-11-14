@@ -73,16 +73,28 @@ def test_every_food_and_drink_is_had_its_own_way_through_a_whole_meal(b):
       }
       host.remove(); const where = Object.fromEntries(Object.keys(TOWN.MENU).map((m) => [m, YEN.where(m)]));
       return JSON.stringify({ n: items.length, bad, ways, where, bgs: EATSCENE.BG }); })()"""))
-    assert r['n'] == 41 and not r['bad'], r
+    assert r['n'] == 44 and not r['bad'], r   # 41, and 稲荷山の茶屋's three (2026-11-14)
     wh = r['where']   # each where it is had: its own backdrop (2026-11-14, the user)
     assert (wh['shokudo'], wh['izakaya'], wh['cafe'], wh['milk'], wh['vend'], wh['bakery']) == ('shokudo', 'izakaya', 'cafe', 'sento', 'street', 'bakery'), wh
-    assert all(wh[m] == 'fair' for m in ('yakisoba', 'takoyaki', 'wataame', 'ringoame', 'chocobanana')) and set(wh.values()) <= set(r['bgs']), wh
+    assert all(wh[m] == 'fair' for m in ('yakisoba', 'takoyaki', 'wataame', 'ringoame', 'chocobanana')) and wh['chaya'] == 'chaya' and set(wh.values()) <= set(r['bgs']), wh
     w = r['ways']
     assert set(w) == {'spoon', 'chop', 'fork', 'pick', 'kushi', 'bite', 'straw', 'tip', 'cup'}, w
-    assert {'curry', 'kakigori', 'jagabata'} <= set(w['spoon']) and {'ramen', 'udon', 'gyudon', 'sakana', 'yakisoba'} <= set(w['chop']), w
+    assert {'curry', 'kakigori', 'jagabata'} <= set(w['spoon']) and {'ramen', 'udon', 'gyudon', 'sakana', 'yakisoba', 'inari', 'kitsune'} <= set(w['chop']), w
     assert w['fork'] == ['cake'] and w['pick'] == ['takoyaki'] and set(w['straw']) == {'soda', 'juice'}, w
-    assert {'cola', 'coffee', 'water', 'ramune', 'milk', 'oolong'} <= set(w['tip']) and set(w['cup']) == {'kohi', 'ocha', 'miso'}, w
+    assert {'cola', 'coffee', 'water', 'ramune', 'milk', 'oolong'} <= set(w['tip']) and set(w['cup']) == {'kohi', 'ocha', 'miso', 'amazake'}, w
     assert set(w['kushi']) == {'yakitori', 'gyukushi', 'ichigoame', 'budouame'} and {'melonpan', 'onigiri', 'ringoame', 'suika', 'wataame'} <= set(w['bite']), w
+
+def test_the_tea_house_at_the_oku_sells_inari_kitsune_udon_and_amazake_by_day(b):
+    # 2026-11-14: 稲荷山の茶屋 at the top of the 千本鳥居, 9–17; had before the hills under its red parasol
+    r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ state.town.stops = { shrine: 1 }; saveState(); await go('oku');
+      const btn = !!y().querySelector('.use-btn[data-use="chaya"]'); use('chaya'); await wait(100); const items = menu();
+      document.querySelector('.mc-item[data-item="inari"]').click(); await wait(100); const said = await talk(); await wait(1700);
+      const es = document.querySelector('.eat-scene'), bg = es && es.querySelector('.es-face').dataset.bg; while (document.querySelector('.eat-scene')) { document.querySelector('.es-ok').click(); await wait(40); }
+      TOWNEV.clock = { h: 20, day: new Date(2026, 10, 10) }; location.hash = '#/oku'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
+      return JSON.stringify({ btn, items, said, bg, bal: yenBalance(), night: !!y().querySelector('.use-btn[data-use="chaya"]') }); })()"""))
+    assert r['btn'] and [i for i, _ in r['items']] == ['inari', 'kitsune', 'amazake'] and not any(d for _, d in r['items']), r
+    assert r['said'][0].startswith('いなり') and r['said'][1].startswith('はい、300円') and r['bg'] == 'chaya' and r['bal'] == 4700, r
+    assert not r['night'], r   # shut by night
 
 def test_short_of_yen_a_thing_cannot_be_had_and_the_bath_takes_its_fee(b):
     r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ state.purse.spent = { other: 4600 }; saveState(); await go('shokudo'); use('menu'); await wait(100);

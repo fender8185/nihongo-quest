@@ -653,7 +653,7 @@ function renderOutside(view, place = 'yard') {
   else if (come && place === 'yard' && a && YARD_FAR[a.from]) {   // home from the beach or the town: up the far path, then in over the lawn
     const h = y.querySelector('.yhero'); h.classList.add('out'); yHeroPlace(y);
     setTimeout(() => yFar(y, a.from, true, () => { [yh.X, yh.Y] = yToward(come[1], come[0], 110); yh.back = false; yHeroPlace(y); h.classList.remove('out'); yHeroWalk(y, come[1]); }), 120);   // in a few steps from where the far path left off
-  } else if (come) { yHeroPlace(y); setTimeout(() => yHeroWalk(y, come[1]), 200); if (PLACE_WIDE[place]) yWide(y, PLACE_WIDE[place], 2400); }   // in along the path; off the bus at a sight too big for the screen: it whole first
+  } else if (come) { yHeroPlace(y); setTimeout(() => yHeroWalk(y, come[1]), 200); if (PLACE_WIDE[place] && bus) yWide(y, PLACE_WIDE[place], 2400); }   // in along the path; off the bus at a sight too big for the screen: it whole first (not walking back down from 奥社)
   else yHeroPlace(y);
   if (place === 'yard') yWitch(y);
   ySnow(y, place);

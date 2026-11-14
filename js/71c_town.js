@@ -124,7 +124,7 @@ const TOWNEV = (() => {
   function due() {
     const done = state.town.done;
     const can = (id) => { const c = T().CAST[id]; return Boolean(c) && (c.art !== 'npc' || met(id)); };   // 小春, ムギ: once they have knocked
-    const reach = (place) => !BUS_STOPS.some((x) => x[0] === place) || Boolean(state.town.stops[place]);   // out by bus: once its stop is open
+    const reach = (place) => { const p = place === 'oku' ? 'shrine' : place; return !BUS_STOPS.some((x) => x[0] === p) || Boolean(state.town.stops[p]); };   // out by bus: once its stop is open (奥社: up from 稲荷神社's)
     return T().EVENTS.filter((e) => !done[e.id] && (!e.after || done[e.after]) && opened(e) && can(e.who) && reach(e.at));
   }
   const inside = (h, [from, to]) => (from <= to ? h >= from && h < to : h >= from || h < to);
@@ -199,7 +199,8 @@ const TOWNEV = (() => {
   const ADJ = { yard: ['beach', 'town', 'street'], beach: ['yard', 'harbor'], town: ['yard', 'park', 'shokudo', 'izakaya'], street: ['yard', 'harbor', 'park'].concat(STOPS),
     harbor: ['beach', 'street'], park: ['town', 'street'], shokudo: ['town'], izakaya: ['town'] };
   STOPS.forEach((p) => { ADJ[p] = ['street'].concat(STOPS.filter((q) => q !== p)); });
-  const PLACE_NAME = { yard: '院子', town: '小鎮', beach: '海邊', street: '公車站', harbor: 'みなと漁港', park: 'ひだまり公園', shokudo: 'まんぷく食堂', izakaya: '居酒屋とり吉', station: '駅前', sento: '月の湯', shrine: '稲荷神社', castle: '白鷺城' };
+  ADJ.shrine.push('oku'); ADJ.oku = ['shrine'];   // up the 千本鳥居 on foot (2026-11-14)
+  const PLACE_NAME = { yard: '院子', town: '小鎮', beach: '海邊', street: '公車站', harbor: 'みなと漁港', park: 'ひだまり公園', shokudo: 'まんぷく食堂', izakaya: '居酒屋とり吉', station: '駅前', sento: '月の湯', shrine: '稲荷神社', castle: '白鷺城', oku: '稲荷山・奥社' };
   function hop(from, to) {
     if (from === to || !ADJ[from]) return null;
     const first = { [from]: null }, q = [from];   // breadth first: the first step of the way each place was reached by
@@ -1486,7 +1487,7 @@ function streetHtml() {
 // between the places out of doors (test, 2026-11-09): the yard's path down to the main road, the yard's left edge along to the
 // beach. The hero walks to the way out (out), fades, and the other place opens with him coming in (in: where he appears, where
 // he walks to; yh.arrive)
-const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', harbor: '#/harbor', park: '#/park', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento', shrine: '#/shrine', castle: '#/castle' };
+const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', harbor: '#/harbor', park: '#/park', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento', shrine: '#/shrine', castle: '#/castle', oku: '#/oku' };
 // where a place's sight stands, for the camera to look at on the way in (2026-11-10: 白鷺城 was off the screen of a phone)
 const PLACE_LOOK = { castle: 280, shokudo: 130 };
 // a sight too big for a phone's screen, seen whole (yWide): [x0, x1, top] in the land's units — 白鷺城's keeps, their walls to the
@@ -1514,6 +1515,9 @@ const WAYS = {
   'park>street': { out: () => [-YARD_HALF, 40], in: () => [[YARD_HALF, 40], [YARD_HALF - 90, 40]] },
   'beach>harbor': { out: () => [-420, 4], in: () => [[HARBOR_PATH, 214], [HARBOR_PATH + 20, 104]] },
   'harbor>beach': { out: () => [HARBOR_PATH, 222], in: () => [[-420, 6], [-400, 50]] },
+  // 稲荷神社 ↔ 奥社 through the 千本鳥居 (2026-11-14): into the tunnel's mouth under the great torii, out of its other end on the hill
+  'shrine>oku': { out: () => [SHRINE_TUNNEL, 150], in: () => [[OKU_TUNNEL, 148], [OKU_TUNNEL + 60, 100]] },
+  'oku>shrine': { out: () => [OKU_TUNNEL, 150], in: () => [[SHRINE_TUNNEL, 148], [SHRINE_TUNNEL + 100, 104]] },
   'town>park': { out: () => [180, 4], in: () => [[PARK_PATH, 214], [PARK_PATH - 20, 104]] },
   'park>town': { out: () => [PARK_PATH, 222], in: () => [[180, 6], [180, 50]] }
 };
@@ -1577,6 +1581,50 @@ function busStopHtml() {
   return `<div class="busstop" aria-hidden="true" style="width:${w}px;height:${h}px;margin-left:${x0}px;bottom:${-(y0 + h)}px;transform-origin:${-x0}px ${-y0}px;transform:translate(${BUS.X}px,${-BUS.Y}px) scale(${k.toFixed(3)});z-index:${300 - BUS.Y}"><svg viewBox="${BUS_BOX.join(' ')}">${SHELTER_ART()}</svg></div>
     <button type="button" class="thing bus-btn" data-act="bus-stop" aria-label="公車站" style="margin-left:${Math.round(BUS.X - 130 * k)}px;bottom:${BUS.Y}px;width:${Math.round(290 * k)}px;height:${Math.round(240 * k)}px"><span class="tag">${ySign('bus', '公車站')}</span></button>`;
 }
+// the cedars (2026-11-14, the user: the shrine looked perfunctory — they were stacked triangles): five tiers each with a ragged
+// hem of needles, the far half of each in shade, the trunk showing between the lowest tiers
+function cedarArt(x, base, h, w, near) {
+  const c = near ? ['#3d6447', '#0c1428'] : ['#6c8c68', '#141c34'], d = near ? ['#2e5038', '#090f20'] : ['#5a7a58', '#10182c'];
+  let t = `<path d="M${x - w * 0.06} ${base} L${x - w * 0.04} ${base - h * 0.62} H${x + w * 0.04} L${x + w * 0.06} ${base} Z" ${hc(near ? '#5a3a24' : '#7a5a40', '#0b0c22')}/>`;
+  for (let k = 0; k < 5; k++) {
+    const top = base - h + k * h * 0.15, bot = base - h * 0.62 + k * h * 0.11, hw = w * (0.2 + k * 0.14), n = 5 + k;
+    const hem = Array.from({ length: n }, (_, i) => { const x1 = x - hw + (i + 1) * (2 * hw / n), xm = x1 - hw / n; return `L${xm.toFixed(1)} ${(bot - 7 - (i % 2) * 3).toFixed(1)} L${x1.toFixed(1)} ${bot.toFixed(1)}`; }).join(' ');
+    t += `<path d="M${x} ${top} L${(x - hw).toFixed(1)} ${bot.toFixed(1)} ${hem} Z" ${hc(...c)}/><path d="M${x} ${top} L${(x + hw).toFixed(1)} ${bot.toFixed(1)} L${(x + hw * 0.25).toFixed(1)} ${(bot - 5).toFixed(1)} Z" ${hc(...d)}/>`;
+  }
+  return t;
+}
+// the 千本鳥居 (2026-11-14, the user: no depth, plainly one torii copied along a line, the first not on the same path as the rest):
+// the approach goes in under the great torii and up the hill through them — some sixty, close-set as they stand, seen a little from
+// the side; each further one smaller and nearer the last (as far things are), paler into the haze, a few years older or newer, a
+// donor's name down the near ones; the path under them in their shade, their far end lost in the bushes under the sacred tree
+function senbonArt(F) {
+  let seed = 7;
+  const rnd = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const mix = (a, b, f) => { const p = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)); const A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * f).toString(16).padStart(2, '0')).join(''); };
+  const f = (v) => v.toFixed(1), P = (pts) => pts.map((q) => `${f(q[0])} ${f(q[1])}`).join(' L');
+  const N0 = [190, F - 12], C = [352, 206], NF = [498, 110], W0 = 80, H0 = 72, FORE = 0.6;
+  const at = (u) => [0, 1].map((i) => (1 - u) ** 2 * N0[i] + 2 * u * (1 - u) * C[i] + u * u * NF[i]);
+  const T = [{ k: 1, hj: 1, age: 0.2 }];
+  for (let z = 1; z < 4.3;) { z += 0.042 + rnd() * 0.02; T.push({ k: 1 / z, hj: 1 + (rnd() - 0.5) * 0.04, age: rnd() }); }
+  const kmin = T[T.length - 1].k;
+  T.forEach((t) => { [t.x, t.y] = at((1 - t.k) / (1 - kmin)); });
+  const edge = (side) => T.map((t) => [t.x + side * (W0 * t.k * FORE / 2 + 7 * t.k), t.y - (side > 0 ? 3 * t.k : 0)]), le = edge(-1), re = edge(1);
+  let s = `<path d="M96 ${F} L${P(le)} L${P(re.slice().reverse())} L254 ${F} Z" ${hc('#c9bfae', '#2a2c4c')}/><path d="M96 ${F} L${P(le)}" fill="none" ${hs('#a89e8c', '#24264a')} stroke-width="1.4"/>`;
+  s += `<path d="M${P(le)} L${P(re.slice().reverse())} Z" fill="#3a1e1a" fill-opacity=".22"/>`;
+  // far to near: the far pillar (up the slope a little), the beams, the near pillar over them
+  for (let i = T.length - 1; i >= 0; i--) {
+    const t = T[i], k = t.k, hz = Math.min(0.6, (1 - k) * 0.7);
+    const shu = [mix(mix('#d6452f', '#b8442c', t.age * 0.4), '#c4d0c6', hz), mix('#5a2030', '#22264a', hz * 0.7)], shuD = [mix('#a8321f', '#c4d0c6', hz), mix('#461a28', '#22264a', hz * 0.7)], ink = [mix('#2b2b33', '#c4d0c6', hz * 0.9), mix('#141428', '#22264a', hz * 0.5)];
+    const w = W0 * k * FORE, h = H0 * k * t.hj, pw = Math.max(1.3, 6.6 * k), L = t.x - w / 2, R = t.x + w / 2, b = t.y, tp = b - h;
+    [[R, b - 3 * k], [L, b]].forEach(([px, pb], j) => {
+      s += `<rect x="${f(px - pw / 2)}" y="${f(tp)}" width="${f(pw)}" height="${f(pb - tp)}" ${hc(...(j ? shu : shuD))}/><rect x="${f(px - pw / 2 - 0.5 * k)}" y="${f(pb - 7 * k)}" width="${f(pw + k)}" height="${f(7 * k)}" ${hc(...ink)}/>`;
+      if (j && k > 0.42) s += `<path d="M${f(px)} ${f(tp + 18 * k)} v${f(10 * k)} M${f(px)} ${f(tp + 31 * k)} v${f(6 * k)} M${f(px)} ${f(tp + 40 * k)} v${f(9 * k)}" ${hs(...ink)} stroke-width="${f(Math.max(0.6, 1.4 * k))}" stroke-opacity=".75"/>`;
+    });
+    s += `<rect x="${f(L - 5 * k)}" y="${f(tp + 11 * k)}" width="${f(w + 10 * k)}" height="${f(3.6 * k)}" ${hc(...shu)}/><rect x="${f(L - 6 * k)}" y="${f(tp - 3.4 * k)}" width="${f(w + 12 * k)}" height="${f(3.4 * k)}" ${hc(...shuD)}/>`;
+    s += `<path d="M${f(L - 11 * k)} ${f(tp - 9.6 * k)} Q${f(L - 4 * k)} ${f(tp - 4.6 * k)} ${f(L + 5 * k)} ${f(tp - 4.6 * k)} H${f(R - 5 * k)} Q${f(R + 4 * k)} ${f(tp - 4.6 * k)} ${f(R + 11 * k)} ${f(tp - 9.6 * k)} L${f(R + 10 * k)} ${f(tp - 6 * k)} Q${f(R + 4 * k)} ${f(tp - 1.8 * k)} ${f(R - 5 * k)} ${f(tp - 2 * k)} H${f(L + 5 * k)} Q${f(L - 4 * k)} ${f(tp - 1.8 * k)} ${f(L - 10 * k)} ${f(tp - 6 * k)} Z" ${hc(...ink)}/>`;
+  }
+  return s + [[520, 108, 30], [552, 116, 24], [494, 100, 20], [472, 128, 15]].map(([x, y, r]) => `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 0.62}" ${hc('#5a7a58', '#10182c')}/><ellipse cx="${x - r * 0.2}" cy="${y - r * 0.24}" rx="${r * 0.6}" ry="${r * 0.3}" ${hc('#7a9a74', '#18223a')}/>`).join('');
+}
 // 稲荷神社 (test, 2026-11-09), up the bus line on the hill: a red torii, a stone path with lanterns, two stone foxes, the hall
 // with its rope and bell, the ema board and the omikuji box. From 18 to 22 its 緣日: a row of stalls under paper lanterns — 金魚すくい,
 // やきそば, わたあめ — and the people in yukata (TOWNEV.look)
@@ -1585,18 +1633,7 @@ function shrineHtml() {
   // 2026-11-10: a grove of tall cedars, a tunnel of red torii up the hill, the great torii in front, the sacred tree with its rope,
   // the hall's sweeping copper roof, its bell and rope, foxes in red bibs, leaves drifting down; by night at the 緣日 the lanterns
   // sway over the stalls and fireworks open over the trees
-  // the cedars (2026-11-14, the user: the shrine looked perfunctory — they were stacked triangles): five tiers each with a ragged
-  // hem of needles, the far half of each in shade, the trunk showing between the lowest tiers
-  const cedar = (x, base, h, w, near) => {
-    const c = near ? ['#3d6447', '#0c1428'] : ['#6c8c68', '#141c34'], d = near ? ['#2e5038', '#090f20'] : ['#5a7a58', '#10182c'];
-    let t = `<path d="M${x - w * 0.06} ${base} L${x - w * 0.04} ${base - h * 0.62} H${x + w * 0.04} L${x + w * 0.06} ${base} Z" ${hc(near ? '#5a3a24' : '#7a5a40', '#0b0c22')}/>`;
-    for (let k = 0; k < 5; k++) {
-      const top = base - h + k * h * 0.15, bot = base - h * 0.62 + k * h * 0.11, hw = w * (0.2 + k * 0.14), n = 5 + k;
-      const hem = Array.from({ length: n }, (_, i) => { const x1 = x - hw + (i + 1) * (2 * hw / n), xm = x1 - hw / n; return `L${xm.toFixed(1)} ${(bot - 7 - (i % 2) * 3).toFixed(1)} L${x1.toFixed(1)} ${bot.toFixed(1)}`; }).join(' ');
-      t += `<path d="M${x} ${top} L${(x - hw).toFixed(1)} ${bot.toFixed(1)} ${hem} Z" ${hc(...c)}/><path d="M${x} ${top} L${(x + hw).toFixed(1)} ${bot.toFixed(1)} L${(x + hw * 0.25).toFixed(1)} ${(bot - 5).toFixed(1)} Z" ${hc(...d)}/>`;
-    }
-    return t;
-  };
+  const cedar = cedarArt;
   const SHU = ['#d6452f', '#5a2030'], SHU_D = ['#b23624', '#461a28'], INK = ['#2b2b33', '#141428'];
   const MINCHO = 'font-family="\'Hiragino Mincho ProN\', \'Noto Serif JP\', serif"';
   // the great 稲荷鳥居 (2026-11-14, finer): pillars on black feet (根巻) under black rings (台輪), the shimaki, the black kasagi
@@ -1724,42 +1761,10 @@ function shrineHtml() {
       ${[866, 954].map((x, k) => `<path d="M${x} 158 l4 7 l-4 7 l4 7" fill="none" ${hsx('fx-sway', '#ffffff', '#8a8cae', `animation-delay:-${k * 0.6}s;animation-duration:2.6s`)} stroke-width="2.2"/>`).join('')}`;
     return h;
   };
-  // the 千本鳥居 (2026-11-14, the user: no depth, plainly one torii copied along a line, the first not on the same path as the rest):
-  // the approach goes in under the great torii and up the hill through them — some sixty, close-set as they stand, seen a little from
-  // the side; each further one smaller and nearer the last (as far things are), paler into the haze, a few years older or newer, a
-  // donor's name down the near ones; the path under them in their shade, their far end lost in the bushes under the sacred tree
-  const senbon = () => {
-    let seed = 7;
-    const rnd = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-    const mix = (a, b, f) => { const p = (c) => [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)); const A = p(a), B = p(b); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * f).toString(16).padStart(2, '0')).join(''); };
-    const f = (v) => v.toFixed(1), P = (pts) => pts.map((q) => `${f(q[0])} ${f(q[1])}`).join(' L');
-    const N0 = [190, F - 12], C = [352, 206], NF = [498, 110], W0 = 80, H0 = 72, FORE = 0.6;
-    const at = (u) => [0, 1].map((i) => (1 - u) ** 2 * N0[i] + 2 * u * (1 - u) * C[i] + u * u * NF[i]);
-    const T = [{ k: 1, hj: 1, age: 0.2 }];
-    for (let z = 1; z < 4.3;) { z += 0.042 + rnd() * 0.02; T.push({ k: 1 / z, hj: 1 + (rnd() - 0.5) * 0.04, age: rnd() }); }
-    const kmin = T[T.length - 1].k;
-    T.forEach((t) => { [t.x, t.y] = at((1 - t.k) / (1 - kmin)); });
-    const edge = (side) => T.map((t) => [t.x + side * (W0 * t.k * FORE / 2 + 7 * t.k), t.y - (side > 0 ? 3 * t.k : 0)]), le = edge(-1), re = edge(1);
-    let s = `<path d="M96 ${F} L${P(le)} L${P(re.slice().reverse())} L254 ${F} Z" ${hc('#c9bfae', '#2a2c4c')}/><path d="M96 ${F} L${P(le)}" fill="none" ${hs('#a89e8c', '#24264a')} stroke-width="1.4"/>`;
-    s += `<path d="M${P(le)} L${P(re.slice().reverse())} Z" fill="#3a1e1a" fill-opacity=".22"/>`;
-    // far to near: the far pillar (up the slope a little), the beams, the near pillar over them
-    for (let i = T.length - 1; i >= 0; i--) {
-      const t = T[i], k = t.k, hz = Math.min(0.6, (1 - k) * 0.7);
-      const shu = [mix(mix('#d6452f', '#b8442c', t.age * 0.4), '#c4d0c6', hz), mix('#5a2030', '#22264a', hz * 0.7)], shuD = [mix('#a8321f', '#c4d0c6', hz), mix('#461a28', '#22264a', hz * 0.7)], ink = [mix('#2b2b33', '#c4d0c6', hz * 0.9), mix('#141428', '#22264a', hz * 0.5)];
-      const w = W0 * k * FORE, h = H0 * k * t.hj, pw = Math.max(1.3, 6.6 * k), L = t.x - w / 2, R = t.x + w / 2, b = t.y, tp = b - h;
-      [[R, b - 3 * k], [L, b]].forEach(([px, pb], j) => {
-        s += `<rect x="${f(px - pw / 2)}" y="${f(tp)}" width="${f(pw)}" height="${f(pb - tp)}" ${hc(...(j ? shu : shuD))}/><rect x="${f(px - pw / 2 - 0.5 * k)}" y="${f(pb - 7 * k)}" width="${f(pw + k)}" height="${f(7 * k)}" ${hc(...ink)}/>`;
-        if (j && k > 0.42) s += `<path d="M${f(px)} ${f(tp + 18 * k)} v${f(10 * k)} M${f(px)} ${f(tp + 31 * k)} v${f(6 * k)} M${f(px)} ${f(tp + 40 * k)} v${f(9 * k)}" ${hs(...ink)} stroke-width="${f(Math.max(0.6, 1.4 * k))}" stroke-opacity=".75"/>`;
-      });
-      s += `<rect x="${f(L - 5 * k)}" y="${f(tp + 11 * k)}" width="${f(w + 10 * k)}" height="${f(3.6 * k)}" ${hc(...shu)}/><rect x="${f(L - 6 * k)}" y="${f(tp - 3.4 * k)}" width="${f(w + 12 * k)}" height="${f(3.4 * k)}" ${hc(...shuD)}/>`;
-      s += `<path d="M${f(L - 11 * k)} ${f(tp - 9.6 * k)} Q${f(L - 4 * k)} ${f(tp - 4.6 * k)} ${f(L + 5 * k)} ${f(tp - 4.6 * k)} H${f(R - 5 * k)} Q${f(R + 4 * k)} ${f(tp - 4.6 * k)} ${f(R + 11 * k)} ${f(tp - 9.6 * k)} L${f(R + 10 * k)} ${f(tp - 6 * k)} Q${f(R + 4 * k)} ${f(tp - 1.8 * k)} ${f(R - 5 * k)} ${f(tp - 2 * k)} H${f(L + 5 * k)} Q${f(L - 4 * k)} ${f(tp - 1.8 * k)} ${f(L - 10 * k)} ${f(tp - 6 * k)} Z" ${hc(...ink)}/>`;
-    }
-    return s + [[520, 108, 30], [552, 116, 24], [494, 100, 20], [472, 128, 15]].map(([x, y, r]) => `<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r * 0.62}" ${hc('#5a7a58', '#10182c')}/><ellipse cx="${x - r * 0.2}" cy="${y - r * 0.24}" rx="${r * 0.6}" ry="${r * 0.3}" ${hc('#7a9a74', '#18223a')}/>`).join('');
-  };
   return `<svg class="land tall shrine-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
       <path class="far" d="M0 122 C120 100 240 104 360 118 S560 96 700 110 S900 126 1020 104 S1150 100 1200 110 V370 H0 Z"/>
       ${[[40, 236, 380, 90], [150, 230, 330, 80], [280, 120, 300, 80], [420, 110, 260, 70], [700, 150, 300, 80], [1000, 236, 400, 96], [1130, 236, 360, 90]].map(([x, b, h, w]) => cedar(x, b, h, w, false)).join('')}
-      ${senbon()}
+      ${senbonArt(F)}
       ${cedar(-10, 236, 460, 110, true)}${cedar(1210, 236, 480, 120, true)}
       ${sacredTree()}
       ${haiden()}
@@ -1793,6 +1798,77 @@ function shrineHtml() {
     </svg>
     ${yHeroHtml()}
     ${busPoleHtml('shrine')}
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="oku" aria-label="往稲荷山・奥社" style="margin-left:${SHRINE_TUNNEL - 32}px;bottom:150px"><span class="tag">${ySign('torii', '往奥社')}</span></button>
+    <div class="ysel"></div>`;
+}
+// 稲荷山・奥社 (test, 2026-11-14, the user: the 千本鳥居 make one want to walk in — join a map to their end): up through the
+// tunnel from 稲荷神社, out at the top of the hill. Its tunnel comes in from the left (稲荷神社's, turned about); the 奥社奉拝所, a
+// small vermilion hall under a copper roof with a 唐破風 over its door; a rack of white fox-faced ema; おもかる石 (lift the stone on
+// the lantern: lighter than you thought and the wish comes true); お塚, old stones with little offered torii heaped before them; the
+// tea house (茶屋, 9–17: いなり寿司, きつねうどん, 甘酒; its keeper behind the counter, shutters drawn when shut) with a bench under a red
+// parasol; at the right a fence on the edge and the town far below with the sea beyond, its lights by night
+const OKU_TUNNEL = -380;   // the tunnel's mouth (X) at the top; 稲荷神社's at the foot: SHRINE_TUNNEL
+const SHRINE_TUNNEL = -410;
+function okuHtml() {
+  const F = 236, SHU = ['#d6452f', '#5a2030'], SHU_D = ['#b23624', '#461a28'], CU = ['#6fa08c', '#1a2a3a'], CU_D = ['#4f8270', '#122034'], GOLD = ['#d9b04a', '#a88a4a'];
+  const STONE = ['#a9a497', '#2c2e4c'], STONE_L = ['#c3bdb0', '#3a3c5e'], WOOD = ['#8a5a36', '#2a2040'], NIGHT = 'style="opacity:calc(1 - var(--md, var(--day, 1)))"';
+  const open = TOWNEV.isOpen('chaya', (TOWNEV.clock && TOWNEV.clock.h) ?? sceneHour());
+  // the town far below, through the gap in the trees: fields and roofs, the castle, the sea; its windows lit by night
+  const view = `<path d="M930 160 C1010 152 1110 156 1200 150 V236 H930 Z" ${hc('#c4d2c0', '#1e2440')}/><path d="M930 160 C1010 152 1110 156 1200 150 V146 H930 Z" ${hc('#9cc4dc', '#1a2850')}/>
+    ${[[948, 196], [972, 204], [996, 190], [1020, 210], [1046, 196], [1072, 214], [1150, 192], [1174, 206], [1188, 186], [962, 222], [1004, 226], [1160, 224]].map(([x, y], k) => `<rect x="${x}" y="${y}" width="${9 + (k % 3) * 2}" height="6" ${hc(['#e8e0d0', '#d8c8b0', '#c9d2dc'][k % 3], '#2a2c4c')}/><path d="M${x - 1} ${y} L${x + 4.5 + (k % 3)} ${y - 4} L${x + 10 + (k % 3) * 2} ${y} Z" ${hc(['#8a5a4a', '#5a6a8a', '#7a4a3a'][k % 3], '#1c1e3a')}/>`).join('')}
+    <g transform="translate(1110 186) scale(.22)">${CASTLE_ROOF.hip(0, 20, 60, 6, 40, 'okv1')}${CASTLE_ROOF.hip(0, -8, 44, -22, 26, 'okv2', { ridge: 28 })}<rect x="-40" y="20" width="80" height="34" ${hc(...CASTLE_ROOF.WALL)}/></g>
+    <g ${NIGHT}>${[[952, 199], [1000, 193], [1024, 213], [1076, 217], [1153, 195], [1178, 209], [966, 225], [1112, 196]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.6" fill="#ffd98a"/>`).join('')}</g>`;
+  // 奥社奉拝所: the small hall (centre 480)
+  const X = 480;
+  const hall = `<rect x="360" y="220" width="240" height="16" ${hc('#b4ad9e', '#2a2c48')}/><path d="M360 220 h240 v3 h-240 Z" ${hc('#c9c4b8', '#34365a')}/>
+    <rect x="380" y="150" width="200" height="70" ${hc(...SHU)}/>${[[390, 430], [530, 570]].map(([a, b]) => `<rect x="${a}" y="160" width="${b - a}" height="24" ${hc('#2e3a36', '#ffd98a')}/><path d="${Array.from({ length: Math.floor((b - a) / 4) }, (_, k) => `M${a + 2 + k * 4} 160 v24`).join(' ')}" ${hs('#5f9a84', '#c8a050')} stroke-width="2"/><rect x="${a}" y="190" width="${b - a}" height="26" ${hc('#f4efe4', '#3e3656')}/>`).join('')}
+    <rect x="442" y="156" width="76" height="64" ${hc('#3a2418', '#1c1430')}/><rect x="455" y="198" width="50" height="20" ${hc('#8a5a30', '#2a2440')}/><path d="M459 202 h42 v5 h-42 Z" ${hc('#5a3b28', '#1c1838')}/>
+    ${[384, 436, 524, 576].map((x) => `<rect x="${x - 5}" y="150" width="10" height="70" ${hc(...SHU)}/><rect x="${x + 2}" y="150" width="3" height="70" ${hc(...SHU_D)}/>`).join('')}<rect x="374" y="148" width="212" height="7" ${hc(...SHU)}/>
+    <path d="M440 162 Q480 172 520 162" fill="none" ${hs('#e8d8a8', '#6a6450')} stroke-width="6"/>${[456, 504].map((x) => `<path d="M${x} 167 l3 5 l-3 5 l3 5" fill="none" ${hs('#ffffff', '#8a8cae')} stroke-width="1.8"/>`).join('')}
+    <path d="M344 144 Q356 152 380 152 H580 Q604 152 616 144 C590 140 566 128 552 112 H408 C394 128 370 140 344 144 Z" ${hc(...CU)}/><path d="M346 146 Q357 154 380 154 H580 Q603 154 614 146 L615 150 Q604 158 580 158 H380 Q356 158 345 150 Z" ${hc(...CU_D)}/>
+    <path d="M${X - 48} 152 C${X - 26} 152 ${X - 20} 128 ${X} 128 C${X + 20} 128 ${X + 26} 152 ${X + 48} 152 L${X + 48} 157 C${X + 24} 157 ${X + 18} 135 ${X} 135 C${X - 18} 135 ${X - 24} 157 ${X - 48} 157 Z" ${hc(...CU_D)}/><path d="M${X - 40} 156 C${X - 22} 156 ${X - 16} 135 ${X} 135 C${X + 16} 135 ${X + 22} 156 ${X + 40} 156 Z" ${hc(...SHU)}/>
+    <rect x="${X - 14}" y="139" width="28" height="13" rx="1" ${hc('#2b2b33', '#141428')}/><text x="${X}" y="149.4" text-anchor="middle" font-size="9" font-weight="700" fill="#e2bc56" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif">奥社</text>
+    <rect x="404" y="104" width="152" height="9" rx="2" ${hc(...CU_D)}/>${[[404, -1], [556, 1]].map(([x, k]) => `<path d="M${x} 113 V102 Q${x} 96 ${x + 7 * k} 94 L${x + 5 * k} 102 V113 Z" ${hc(...CU_D)}/>`).join('')}`;
+  // the fox ema on their rack (they clack when looked at: .jingle .ema)
+  const foxEma = (cx, cy, k) => `<g class="ema" style="animation-delay:-${(k * 0.07).toFixed(2)}s"><path d="M${cx} ${cy - 16} V${cy - 12}" ${hs('#d0453c', '#6a3040')} stroke-width=".9"/><path d="M${cx - 10} ${cy - 6} L${cx - 8} ${cy - 13} L${cx - 3} ${cy - 8} H${cx + 3} L${cx + 8} ${cy - 13} L${cx + 10} ${cy - 6} Q${cx + 10} ${cy + 3} ${cx} ${cy + 10} Q${cx - 10} ${cy + 3} ${cx - 10} ${cy - 6} Z" ${hc('#f6f1e6', '#d8d0bc')}/>
+    <path d="M${cx - 7} ${cy - 3} l3.6 1.4 M${cx + 7} ${cy - 3} l-3.6 1.4 M${cx} ${cy - 7} v2.4" ${hs('#d0453c', '#7a3040')} stroke-width="1.2" stroke-linecap="round"/><path d="M${cx - 2} ${cy + 3} h${3 + (k % 3)} M${cx - 2} ${cy + 5.4} h${2 + ((k + 1) % 3)}" stroke="#3b2a1c" stroke-opacity=".5" stroke-width=".8"/></g>`;
+  const ema = `<g data-fx="okuema"><path d="M614 ${F} V${F - 84} M690 ${F} V${F - 84}" ${hs(...WOOD)} stroke-width="4"/><path d="M608 ${F - 84} L652 ${F - 96} L696 ${F - 84} Z" ${hc('#5a3b28', '#221c38')}/><path d="M614 ${F - 70} H690 M614 ${F - 42} H690" ${hs(...WOOD)} stroke-width="2.4"/>
+    ${[[628, F - 56], [652, F - 56], [676, F - 56], [628, F - 28], [652, F - 28], [676, F - 28]].map(([x, y], k) => foxEma(x, y, k)).join('')}</g>`;
+  // おもかる石: two stone lanterns, the ball on the right one lifted when tried (.lift .stone)
+  const lamp = (x, ball) => `<path d="M${x - 11} ${F} v-5 h22 v5 Z" ${hc(...STONE)}/><path d="M${x - 4} ${F - 5} L${x - 3} ${F - 34} H${x + 3} L${x + 4} ${F - 5} Z" ${hc(...STONE_L)}/><rect x="${x - 9}" y="${F - 48}" width="18" height="14" rx="1" ${hc(...STONE_L)}/><rect x="${x - 5}" y="${F - 46}" width="10" height="9" ${hc('#5a5a64', '#ffd27a')}/>
+    <path d="M${x - 14} ${F - 48} Q${x - 9} ${F - 49} ${x - 7} ${F - 53} L${x} ${F - 59} L${x + 7} ${F - 53} Q${x + 9} ${F - 49} ${x + 14} ${F - 48} Z" ${hc(...STONE)}/>${ball ? `<g class="stone"><circle cx="${x}" cy="${F - 66}" r="7.4" ${hc(...STONE_L)}/><path d="M${x - 4} ${F - 70} q3 -3 7 -1" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.4"/></g>` : `<circle cx="${x}" cy="${F - 62}" r="3" ${hc(...STONE)}/>`}<circle class="glow" cx="${x}" cy="${F - 42}" r="24" fill="url(#glw)"/>`;
+  const omokaru = `<g data-fx="omokaru">${lamp(712, false)}${lamp(748, true)}<rect x="722" y="${F - 30}" width="16" height="24" rx="1" ${hc('#efe6d6', '#3a3b62')}/>${vText(730, F - 28.6, 'おもかる', 4.6, `font-weight="700" ${hc('#3b2a1c', '#c9c4e8')}`)}</g>`;
+  // お塚: old stones on the slope behind, little offered torii heaped before them, a pair of tiny foxes
+  const miniTorii = (x, y, s, c) => `<path d="M${x - 4 * s} ${y} V${y - 9 * s} M${x + 4 * s} ${y} V${y - 9 * s}" ${hs(c, '#4a2030')} stroke-width="${(1.4 * s).toFixed(1)}"/><path d="M${x - 6 * s} ${y - 9.6 * s} Q${x} ${y - 11 * s} ${x + 6 * s} ${y - 9.6 * s}" ${hs('#2b2b33', '#141428')} stroke-width="${(1.6 * s).toFixed(1)}" fill="none"/><path d="M${x - 5 * s} ${y - 7 * s} H${x + 5 * s}" ${hs(c, '#4a2030')} stroke-width="${(1 * s).toFixed(1)}"/>`;
+  const otsuka = `${[[786, F - 40, 20, 52], [826, F - 46, 24, 62], [866, F - 38, 18, 46]].map(([x, b, w, h]) => `<path d="M${x - w / 2} ${b} V${b - h + w / 2} Q${x - w / 2} ${b - h} ${x} ${b - h} Q${x + w / 2} ${b - h} ${x + w / 2} ${b - h + w / 2} V${b} Z" ${hc('#9a958a', '#2a2c4c')}/><path d="M${x} ${b - h + 10} v${h - 18}" stroke="#2b1c12" stroke-opacity=".3" stroke-width="2"/><path d="M${x + w / 2 - 4} ${b - h + 6} V${b}" stroke="#2b1c12" stroke-opacity=".12" stroke-width="4"/>`).join('')}
+    ${Array.from({ length: 22 }, (_, k) => { const x = 772 + (k * 37) % 108, y = F - 30 - (k % 4) * 4; return miniTorii(x, y, 0.8 + (k % 3) * 0.25, ['#d6452f', '#e0583a', '#c83a28'][k % 3]); }).join('')}
+    ${[790, 862].map((x, k) => `<g transform="translate(${x} ${F - 26}) scale(${k ? -0.42 : 0.42} .42)"><path d="M-6 9 C-12 4 -12 -8 -7 -14 L-4 -15 C-8 -8 -6 0 -2 4 Z M-8 10 C-10 -2 -7 -11 -2 -15 L4 -15 C7 -10 9 -2 9 10 Z M-3 -15 C-4 -21 -1 -25 2.5 -25.5 L4.6 -35 L7.6 -23.6 C9 -22 12 -21 14 -19 L7 -16 C5 -14 1 -13 -3 -15 Z" ${hc('#f6f1e6', '#8a8cae')}/><path d="M-4.6 -14.6 Q2 -10.6 8.6 -15 L6.6 -5 Q2 -2 -2.6 -5.6 Z" ${hc(...SHU)}/></g>`).join('')}`;
+  // the tea house: its roof of tiles, the noren over the counter (shutters when shut), its keeper, the menu slips, a red lantern
+  const keeper = () => { const v = (TOWN.YATAI || {}).chaya, z = 0.32, cx = 962, feet = F - 26; if (!v) return '';
+    return HERO.svg({ look: v.look, wear: TOWNEV.wearOf(v.wear), front: true, box: '-60 -205 120 180' }).replace('<svg ', `<svg x="${(cx - 60 * z).toFixed(1)}" y="${(feet - 205 * z).toFixed(1)}" width="${(120 * z).toFixed(1)}" height="${(180 * z).toFixed(1)}" `); };
+  const chaya = `<rect x="900" y="152" width="140" height="84" ${hc('#c9a06a', '#3a2c40')}/><path d="M900 152 h140 v4 h-140 Z" fill="#2b1c12" fill-opacity=".16"/>
+    <rect x="910" y="160" width="120" height="44" ${hc('#3a2418', '#2a1c30')}/>${open ? `${keeper()}${[[1004, 'いなり'], [1014, 'うどん'], [1024, 'あまざけ']].map(([x, w]) => `<rect x="${x - 4}" y="164" width="8" height="${w.length * 6 + 4}" ${hc('#fbf7ec', '#e8dcb4')}/>${vText(x, 165.6, w, 5.4, 'fill="#3b2a1c"')}`).join('')}` : `<path d="${Array.from({ length: 12 }, (_, k) => `M${912 + k * 10} 160 v44`).join(' ')}" ${hs('#8a5a36', '#2a2040')} stroke-width="9"/><path d="${Array.from({ length: 12 }, (_, k) => `M${916.6 + k * 10} 160 v44`).join(' ')}" stroke="#2b1c12" stroke-opacity=".25" stroke-width="1"/>`}
+    <rect x="904" y="200" width="132" height="7" ${hc('#a8743f', '#2e2438')}/><rect x="908" y="207" width="124" height="29" ${hc('#b98a5a', '#2a2440')}/><path d="M908 220 h124" stroke="#2b1c12" stroke-opacity=".15"/>
+    ${open ? `<path d="M916 160 h108 v18 h-108 Z" ${hc('#2f4a7a', '#1e2a50')}/><path d="M952 160 v18 M988 160 v18" stroke="#fff" stroke-opacity=".5" stroke-width="1.4"/><text x="970" y="173.6" text-anchor="middle" font-size="11" font-weight="700" fill="#f6f1e6" font-family="'Hiragino Mincho ProN', 'Noto Serif JP', serif">茶屋</text>` : ''}
+    <path d="M886 154 Q900 158 916 156 H1024 Q1040 158 1054 154 L1040 128 H900 Z" ${hc('#4a4a52', '#1c1d34')}/><path d="${Array.from({ length: 22 }, (_, k) => `M${902 + k * 6.6} 129 L${893 + k * 7.4} 155`).join(' ')}" ${hs('#6a6a74', '#2a2c48')} stroke-width="1"/><rect x="896" y="124" width="148" height="6" rx="2" ${hc('#3a3a44', '#16182e')}/>
+    <path d="M1046 156 v4" stroke="#2b2b33" stroke-width="1"/><ellipse cx="1046" cy="170" rx="8" ry="10" ${hc('#e8592e', '#ff8a4a')}/><path d="M1038.6 165 q7.4 2 14.8 0 M1038.6 175 q7.4 2 14.8 0" fill="none" stroke="#a8302a" stroke-opacity=".5"/><text x="1046" y="173" text-anchor="middle" font-size="8" font-weight="700" fill="#2b1c12">茶</text><circle class="glow" cx="1046" cy="170" r="26" fill="url(#glw)"/>`;
+  const bench = `<path d="M1084 ${F - 24} V${F - 150}" ${hs('#6e4f3a', '#2c2440')} stroke-width="3"/><path d="M1018 ${F - 116} Q1084 ${F - 162} 1150 ${F - 116} Q1084 ${F - 128} 1018 ${F - 116} Z" ${hc('#c8323a', '#4a1828')}/><path d="${[-48, -24, 0, 24, 48].map((d) => `M1084 ${F - 150} L${1084 + d * 1.36} ${F - 120 + Math.abs(d) * 0.02}`).join(' ')}" stroke="#fff" stroke-opacity=".35" stroke-width="1"/><circle cx="1084" cy="${F - 152}" r="2.6" ${hc(...GOLD)}/>
+    <rect x="1046" y="${F - 30}" width="76" height="8" rx="1.5" ${hc('#c8323a', '#4a1828')}/><path d="M1046 ${F - 22} h76 v2 h-76 Z" fill="#2b1c12" fill-opacity=".25"/><path d="M1052 ${F - 20} V${F} M1116 ${F - 20} V${F} M1052 ${F - 8} H1116" ${hs(...WOOD)} stroke-width="3"/>`;
+  const fence = `<path d="${[1132, 1156, 1180].map((x) => `M${x} ${F} V${F - 46}`).join(' ')}" ${hs('#8a6a4a', '#2c2440')} stroke-width="5"/><path d="M1124 ${F - 40} H1200 M1124 ${F - 22} H1200" ${hs('#9a7a56', '#2e2a48')} stroke-width="4"/>`;
+  return `<svg class="land tall oku-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
+      <path class="far" d="M0 150 C140 122 280 136 400 118 S640 96 800 124 S1000 146 1200 132 V370 H0 Z"/>
+      ${view}
+      ${[[40, 236, 420, 100], [150, 214, 330, 84], [250, 206, 300, 80], [350, 200, 260, 70], [640, 212, 330, 86], [760, 208, 290, 78], [860, 216, 300, 80]].map(([x, b, h, w]) => cedarArt(x, b, h, w, false)).join('')}
+      <g>${Array.from({ length: 24 }, (_, k) => { const x = k * 40 + (k % 3) * 6, y = 196 - (k % 4) * 6, r = 26 + (k % 5) * 4; return `<circle cx="${x}" cy="${y}" r="${r}" ${hc(k % 2 ? '#5f8058' : '#557650', '#101a30')}/>`; }).join('')}</g><g fill="#fff" fill-opacity=".08" style="opacity:var(--md, var(--day, 1))">${Array.from({ length: 24 }, (_, k) => { const x = k * 40 + (k % 3) * 6, y = 196 - (k % 4) * 6, r = 26 + (k % 5) * 4; return `<ellipse cx="${x - r * 0.25}" cy="${y - r * 0.5}" rx="${r * 0.5}" ry="${r * 0.28}"/>`; }).join('')}</g>
+      <path d="M0 ${F} C200 214 600 206 900 214 C930 216 940 220 930 ${F} Z" ${hc('#7a9a6a', '#1a2438')}/>
+      <g transform="translate(410 0) scale(-1 1)">${senbonArt(F)}</g>
+      ${otsuka}${hall}${ema}${omokaru}${chaya}${bench}${fence}${cedarArt(-30, 236, 480, 116, true)}
+      <rect class="pave" x="-20" y="${F}" width="1240" height="140" style="fill:color-mix(in srgb, #d6c8a8 calc(var(--day) * 100%), #2a2a48)"/>
+      ${Array.from({ length: 30 }, (_, j) => `<ellipse cx="${(j * 83) % 1200}" cy="${F + 14 + (j * 29) % 110}" rx="${3 + (j % 3)}" ry="2" ${hc('#b9aa8a', '#3a3c5e')}/>`).join('')}
+    </svg>
+    ${yHeroHtml()}
+    ${TOWNEV.castHtml('oku')}
+    <button type="button" class="thing way-btn" data-act="go-place" data-to="shrine" aria-label="往稲荷神社" style="margin-left:${OKU_TUNNEL - 32}px;bottom:150px"><span class="tag">${ySign('torii', '往稲荷神社')}</span></button>
     <div class="ysel"></div>`;
 }
 // ---- the keep, after 姫路城 (2026-11-14, the user: 「白鷺城太醜了」, the stacked boxes with rows of windows looked like an office
@@ -2292,7 +2368,7 @@ function witchCoins(yard, at, n) {
 }
 // a place's own sky by day (2026-11-10, the user: every place had the same sky): its clouds (heights, sizes, pace), where the
 // plane is, and birds of its own — gulls over the sea, crows by the shrine and the castle — worked out from its name
-const SKY_LOCAL = { beach: 'gull', harbor: 'gull', shrine: 'crow', castle: 'crow' };
+const SKY_LOCAL = { beach: 'gull', harbor: 'gull', shrine: 'crow', castle: 'crow', oku: 'crow' };
 function placeSky(place) {
   if (place === 'yard') return { clouds: [[10, 1, 110, 20], [24, 0.7, 140, 80], [5, 0.85, 125, 55], [34, 0.6, 160, 120]], plane: [7, 20], fliers: [] };
   let a = [...place].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7);
@@ -2335,7 +2411,7 @@ function yardHtml(pct, place = 'yard') {
         <div class="birds"><div class="flock">${[[52, 14], [38, 6], [38, 22], [24, 0], [24, 28]].map(([x, y]) => `<i style="left:${x}px;top:${y}px"></i>`).join('')}</div></div>
       </div>
       <div class="yworld" style="width:${yw}px;margin-left:${-yw / 2}px">
-      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'harbor' ? harborHtml() : place === 'park' ? parkHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : place === 'shrine' ? shrineHtml() : place === 'castle' ? castleHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
+      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'harbor' ? harborHtml() : place === 'park' ? parkHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : place === 'shrine' ? shrineHtml() : place === 'castle' ? castleHtml() : place === 'oku' ? okuHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
         <defs><radialGradient id="shopGlow"><stop offset="0" stop-color="rgba(255,196,110,.55)"/><stop offset=".5" stop-color="rgba(255,196,110,.16)"/><stop offset="1" stop-color="rgba(255,196,110,0)"/></radialGradient></defs>
         <path class="m-far" d="M520 600 V340 C560 330 600 314 640 304 C670 296 700 294 730 298 C770 306 810 328 860 342 V600 Z"/>
         <path class="m-main" d="${HILL} V600 Z"/><path class="m-shade" d="M482 250 C494 248 506 256 520 268 C552 296 594 326 646 350 V372 C590 340 548 306 516 280 C502 268 492 258 482 250 Z"/><path class="m-rim" d="${HILL}"/>

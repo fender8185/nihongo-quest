@@ -70,7 +70,9 @@ const EATSCENE = (() => {
     pod: '<path d="M-8 6 C-6 0 6 -2 12 2 C10 8 -2 10 -8 6 Z" fill="#7fbf4a"/><circle cx="-2" cy="4.6" r="2.4" fill="#9fd468"/><circle cx="4" cy="3.6" r="2.4" fill="#9fd468"/>',
     takoyaki: '<circle cx="0" cy="0" r="9" fill="#d9944a"/><path d="M-8 -2 Q0 -9 8 -2 Q4 -6 0 -6 Q-4 -6 -8 -2 Z" fill="#5a2e18"/><path d="M-5 -4 l3 2 l3 -2 l3 2" stroke="#fff8e8" stroke-width="1.2" fill="none"/>',
     cake: '<rect x="-6" y="-14" width="11" height="10" rx="1.4" fill="#fffaf2"/><rect x="-6" y="-10" width="11" height="3" fill="#f4d27a"/><rect x="-6" y="-6" width="11" height="2" fill="#f4d27a"/>',
-    berry: '<path d="M-1 -4 C-8 -6 -8 -16 -1 -18 C6 -16 6 -6 -1 -4 Z" fill="#e0303a"/><path d="M-4 -17 l3 -3 l3 3" stroke="#4f8a3e" stroke-width="1.6" fill="none"/>'
+    berry: '<path d="M-1 -4 C-8 -6 -8 -16 -1 -18 C6 -16 6 -6 -1 -4 Z" fill="#e0303a"/><path d="M-4 -17 l3 -3 l3 3" stroke="#4f8a3e" stroke-width="1.6" fill="none"/>',
+    inari: '<path d="M-10 6 C-11 -3 -5 -8 1 -8 C8 -8 12 -2 10 6 C4 9 -4 9 -10 6 Z" fill="#c98a3a"/><path d="M-6 -3 C-3 -6 3 -6 7 -3" fill="none" stroke="#e6b066" stroke-width="1.6" stroke-linecap="round"/>',
+    age: '<path d="M-10 -1 L9 -5 L11 6 L-8 9 Z" fill="#d9a14a"/><path d="M-10 -1 L9 -5 L9.4 -3 L-9.6 1 Z" fill="#e8b860"/><path d="M-5 3 h.1 M2 1 h.1 M4 5 h.1" stroke="#b07a2a" stroke-width="1.6" stroke-linecap="round"/>'
   };
 
   // ======== the dishes: table(k, ms, uid) — k mouthfuls gone; dips — where the utensil goes for each; the utensil and what it carries ========
@@ -127,6 +129,15 @@ const EATSCENE = (() => {
     DISH.edamame = { way: 'chop', carry: ['pod', 'pod', 'pod'], dips: [[176, 300], [204, 298], [190, 304]],
       table: (k) => `${SHADOW(194, 344, 60, 8)}<ellipse cx="190" cy="298" rx="66" ry="18" fill="#f2efe6"/><ellipse cx="190" cy="300" rx="58" ry="14" fill="#e2ddd0"/>${[[150, 296, -10], [168, 290, 14], [190, 294, -4], [212, 290, 20], [228, 298, -14], [160, 304, 8], [182, 304, -18], [204, 304, 10], [222, 306, -6], [190, 286, 0]].slice(0, [10, 7, 4, 0][k]).map(([x, y, r]) => `<g transform="translate(${x} ${y}) rotate(${r})"><path d="M-12 2 C-9 -6 9 -7 13 0 C10 7 -6 8 -12 2 Z" fill="#7fbf4a"/><circle cx="-4" cy="0" r="3.4" fill="#9fd468"/><circle cx="4" cy="-1" r="3.4" fill="#9fd468"/></g>`).join('')}<path d="M124 298 A66 18 0 0 0 256 298 L248 322 Q190 340 132 322 Z" fill="#f2efe6"/><path d="M134 314 Q190 330 246 314" fill="none" stroke="#4f6f9e" stroke-width="2"/>` };
   })();
+  // 稲荷山の茶屋 (2026-11-14): いなり寿司 three on a board with pink ginger; きつねうどん under its sweet 油揚げ
+  (() => {
+    const POUCH = (x, y) => `<path d="M${x - 15} ${y + 8} C${x - 17} ${y - 6} ${x - 8} ${y - 14} ${x + 1} ${y - 14} C${x + 12} ${y - 14} ${x + 18} ${y - 4} ${x + 15} ${y + 8} C${x + 6} ${y + 12} ${x - 6} ${y + 12} ${x - 15} ${y + 8} Z" fill="#c98a3a"/><path d="M${x - 9} ${y - 7} C${x - 4} ${y - 11} ${x + 5} ${y - 11} ${x + 10} ${y - 7}" fill="none" stroke="#e6b066" stroke-width="2" stroke-linecap="round"/><path d="M${x - 6} ${y + 4} q6 2 12 0" fill="none" stroke="#9a6224" stroke-width="1.4"/>`;
+    DISH.inari = { way: 'chop', carry: ['inari', 'inari', 'inari'], dips: [[158, 296], [196, 292], [234, 296]],
+      table: (k) => `${SHADOW(196, 330, 90, 8)}<path d="M110 300 H282 L276 322 H116 Z" fill="#8a5a36"/><path d="M110 300 H282 V305 H110 Z" fill="#a8744a"/>${[[158, 296], [196, 292], [234, 296]].map(([x, y], i) => (i >= k ? POUCH(x, y) : '')).join('')}<path d="M258 300 q5 -7 10 -2 q-2 6 -10 2 Z M265 303 q5 -6 9 -1 q-2 5 -9 1 Z" fill="#f2a8b4"/>` };
+    const kb = BOWL('#8a2e24', '#f2efe6', '#e8c070');
+    DISH.kitsune = { way: 'chop', steam: STEAM_BOWL, carry: ['noodles', 'age', 'noodles'], noodle: ['#f8f3e3', 4], dips: [[176, 300], [206, 292], [180, 298]],
+      table: (k) => `${kb.back}${strands(k < 1 ? 6 : k < 3 ? 3 : 0, '#f8f3e3', 4.4, 140, 302)}${k < 2 ? '<path d="M178 296 L224 282 L236 300 L190 308 Z" fill="#d9a14a"/><path d="M178 296 L224 282 L225 285 L180 299 Z" fill="#e8b860"/><path d="M196 296 h.1 M210 292 h.1 M216 300 h.1" stroke="#b07a2a" stroke-width="2" stroke-linecap="round"/>' : ''}${[[150, 290], [244, 296], [160, 304], [236, 306]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.4" fill="#7fbf5a"/>`).join('')}${kb.front}` };
+  })();
   // ---- フォーク・つまようじ ----
   DISH.cake = { way: 'fork', carry: ['cake', 'cake', 'berry'], dips: [[159, 288], [185, 288], [198, 262]],
     table: (k) => { const L = [150, 176, 202][k], RX = 226;
@@ -179,6 +190,7 @@ const EATSCENE = (() => {
     oolong: ['tip', VESSEL.glass({ c: '#b8743a' })],
     soda: ['straw', VESSEL.straw({ c: '#5fd08a', straw: '#e0464a', ice: true })], juice: ['straw', VESSEL.straw({ c: '#f5a030', straw: '#3f9a8c' })],
     kohi: ['cup', VESSEL.cup({ body: '#f6f4ee', rim: '#fbfaf6', inner: '#e4ded2', c: '#5a3418', handle: true })], ocha: ['cup', VESSEL.cup({ body: '#a9845e', rim: '#c9a47a', inner: '#8a6a48', c: '#9cc46a' })],
+    amazake: ['cup', VESSEL.cup({ body: '#c9a06a', rim: '#e0c08a', inner: '#a8844e', c: '#f8f3e6', bits: '<circle cx="5" cy="-29.6" r="1.4" fill="#e8c070"/>' })],
     miso: ['cup', VESSEL.cup({ body: '#4a1e1a', rim: '#9a2e24', inner: '#6a2a22', c: '#c98a4a', bits: '<rect x="-7" y="-31" width="5" height="3" fill="#fbf8f0"/><path d="M3 -30 q3 -2 6 0" stroke="#3f6a3a" stroke-width="2" fill="none"/>' })]
   };
 
@@ -289,6 +301,12 @@ const EATSCENE = (() => {
         <path d="M-4 30 Q180 80 364 30" stroke="#2a2420" stroke-width="1.4" fill="none"/>${[14, 60, 104, 256, 300, 346].map((x, i) => { const u = x / 360, y = 30 + 50 * 4 * u * (1 - u) * 0.5 + 12; return lantern(x, y, 9, i % 2 ? '#fff4e0' : '#e04a4a'); }).join('')}`,
       front: '<path d="M0 268 H360 V420 H0 Z" fill="#c8323a"/><path d="M0 268 H360" stroke="#e0484e" stroke-width="4"/><g fill="#a8262e" opacity=".5">' + Array.from({ length: 40 }, (_, i) => `<circle cx="${(i * 97) % 360}" cy="${280 + (i * 53) % 136}" r="1.2"/>`).join('') + '</g>' }
   };
+    // 稲荷山の茶屋 (2026-11-14): the hills far off under the sky, cedars either side, vermilion torii down the slope, the red parasol overhead
+  BG.chaya = { back: () => `<rect width="360" height="268" ${dn('#bfe0f4', '#1b2050')}/>${stars}<path d="M0 214 C60 196 120 206 180 192 C240 180 300 198 360 188 V268 H0 Z" ${dn('#a9bfa8', '#24284e')}/><path d="M0 236 C80 224 160 232 240 220 C290 214 330 222 360 216 V268 H0 Z" ${dn('#8aa888', '#1c2244')}/>
+      ${[[18, 268, 150, 44], [56, 268, 110, 32], [334, 268, 160, 46], [298, 268, 100, 30]].map(([x, b, h, w]) => `<path d="M${x} ${b - h} L${x - w / 2} ${b} H${x + w / 2} Z" ${dn('#4f7a50', '#101a30')}/>`).join('')}
+      ${[[96, 232, 0.5], [118, 226, 0.4], [262, 228, 0.45]].map(([x, b, k]) => `<path d="M${x - 14 * k} ${b} V${b - 30 * k} M${x + 14 * k} ${b} V${b - 30 * k} M${x - 18 * k} ${b - 26 * k} H${x + 18 * k}" stroke="#d6452f" stroke-width="${(5 * k).toFixed(1)}"/><path d="M${x - 22 * k} ${b - 33 * k} Q${x} ${b - 36 * k} ${x + 22 * k} ${b - 33 * k}" stroke="#2b2b33" stroke-width="${(5 * k).toFixed(1)}" fill="none"/>`).join('')}
+      <path d="M-30 64 Q180 -40 390 64 Q180 30 -30 64 Z" fill="#c8323a"/><path d="M-30 64 Q180 30 390 64 L390 70 Q180 38 -30 70 Z" fill="#9a2430"/><path d="${[-150, -90, -30, 30, 90, 150].map((d) => `M180 -10 L${180 + d * 1.4} ${50 - Math.abs(d) * 0.02}`).join(' ')}" stroke="#fff" stroke-opacity=".3" stroke-width="1.6"/>`,
+    front: BG.fair.front };
   const OUTDOOR = ['street', 'bakery'];
   let uidN = 0;
   function mount(svg, it, picSvg, still, where) {   // still: motion reduced — drawn once, then once more at the end; where: a BG key

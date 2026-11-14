@@ -97,7 +97,7 @@ const SND = (() => {
   const GROUND = {
     yard: { way: 'gravel', off: 'grass' }, park: { way: 'concrete', off: 'gravel' }, beach: { way: 'wood', off: 'sand' }, harbor: { way: 'sand', off: 'concrete' },
     street: { off: 'concrete' }, town: { off: 'concrete' }, station: { off: 'concrete' }, sento: { off: 'concrete' },
-    shrine: { off: 'gravel' }, castle: { off: 'gravel' }, shokudo: { off: 'concrete' }, izakaya: { off: 'wood' }, room: { off: 'wood' }
+    shrine: { off: 'gravel' }, oku: { off: 'gravel' }, castle: { off: 'gravel' }, shokudo: { off: 'concrete' }, izakaya: { off: 'wood' }, room: { off: 'wood' }
   };
   const groundOf = (place, kind) => { const g = GROUND[place]; return g ? g[kind] || g.off : ''; };
   // ---- each place's background: [layer, how loud by day, by night] (sounds/amb-<layer>-1.m4a, looping); room: through the window,
@@ -113,6 +113,7 @@ const SND = (() => {
     station: [['station', 0.6, 0.35]],
     sento: [['town', 0.35, 0.15], ['insects', 0, 0.16]],
     shrine: [['wind', 0.5, 0.4], ['birds', 0.45, 0], ['insects', 0, 0.22]],
+    oku: [['wind', 0.6, 0.45], ['birds', 0.5, 0], ['insects', 0, 0.26]],   // the top of the hill: more wind, the birds of the wood
     castle: [['wind', 0.5, 0.4], ['birds', 0.5, 0], ['insects', 0, 0.2]],
     shokudo: [['restaurant', 0.6, 0.6]],
     izakaya: [['izakaya', 0.6, 0.6]],
@@ -121,7 +122,7 @@ const SND = (() => {
   };
   // now and then: [sound, seconds apart (least, most), how loud, 'day' | 'night' | '' (any time)]
   const NOW_AND_THEN = {
-    shrine: [['crow', 45, 100, 0.3, 'day']], park: [['crow', 90, 180, 0.15, 'day']], castle: [['crow', 80, 160, 0.2, 'day']],
+    shrine: [['crow', 45, 100, 0.3, 'day']], oku: [['crow', 60, 140, 0.25, 'day']], park: [['crow', 90, 180, 0.15, 'day']], castle: [['crow', 80, 160, 0.2, 'day']],
     beach: [['gull', 35, 80, 0.25, 'day']], harbor: [['gull', 30, 70, 0.25, 'day']],
     town: [['bike', 40, 90, 0.5, 'day']], street: [['piyo', 50, 110, 0.6, '']], station: [['chime', 70, 140, 0.5, '']]
   };
@@ -219,6 +220,7 @@ const USE_SND = {
   'town.cat': 'meow', 'town.chimes': 'furin', 'harbor.cat': 'purr', 'harbor.gull': 'gull', 'harbor.fish': 'flop',
   'station.vend': 'can-drop', 'station.pigeons': 'wings', 'station.taxi': 'horn', 'station.gate': 'ic',
   'sento.milk': 'bottle', 'sento.cat': 'purr', 'sento.bath': 'bath', 'sento.laundry': 'washer',
+  'oku.okusha': 'clap', 'oku.okuema': 'kuji', 'oku.omokaru': 'place', 'oku.chaya': 'dishes', 'oku.view': 'rustle',
   'shrine.bell': ['suzu', 'clap'], 'shrine.kuji': 'kuji', 'shrine.crow': 'crow', 'shrine.fox': 'sparkle', 'shrine.kingyo': 'splash', 'shrine.yakisoba': 'sizzle', 'shrine.takoyaki': 'sizzle',
   'castle.sakuraL': 'rustle', 'castle.sakuraR': 'rustle', 'castle.gate': 'knock', 'castle.moat': 'duck',
   'shokudo.table': 'dishes', 'shokudo.chair': 'dishes', 'shokudo.stool': 'dishes', 'shokudo.maneki': 'sparkle', 'shokudo.tv': 'switch',

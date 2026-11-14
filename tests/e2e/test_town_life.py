@@ -57,6 +57,21 @@ def test_on_a_phone_the_shrines_hall_is_seen_whole_too(b):
     b.run([("metrics", (1200, 900, False)), ("nav", URL), ("wait", READY)])
     assert r['off'] and not r['after'] and r['tapped'] and r['z'] < 0.85 < 1 < r['cam'], r
 
+def test_up_the_senbon_torii_to_the_oku_and_back_down(b):
+    # 2026-11-14, the user: the 千本鳥居 want walking into — 稲荷神社's tunnel leads up to 稲荷山・奥社, and back down
+    js = "(async () => { " + FRESH + """ state.town.stops = { shrine: 1 }; saveState(); await go('shrine', 12);
+      const way = (to) => y().querySelector(`.way-btn[data-to="${to}"]`), until = async (h) => { let n = 0; while (location.hash !== h && n++ < 120) await wait(100); await wait(2400); };   // there, and walked in
+      const up = !!way('oku'); way('oku').click(); await until('#/oku');
+      const at = { hash: location.hash, x: Math.round(yh.X), things: PLACE_USE.oku.map((t) => !!y().querySelector(`.use-btn[data-use="${t.id}"]`)), down: !!way('shrine'), name: TOWNEV.PLACE_NAME.oku };
+      const o = PLACE_USE.oku.find((t) => t.id === 'omokaru'), seen = new Set(); for (let i = 0; i < 40; i++) seen.add(o.pick()[0]);
+      way('shrine').click(); await until('#/shrine');
+      return JSON.stringify({ up, at, picks: [...seen].sort(), back: location.hash, x: Math.round(yh.X), wide: YWIDE.on }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['up'] and r['at']['hash'] == '#/oku' and r['at']['name'] == '稲荷山・奥社' and all(r['at']['things'][i] for i in (0, 1, 2, 4)) and r['at']['down'], r
+    assert abs(r['at']['x'] - (-380 + 60)) < 30, r   # out of the tunnel's top end, a few steps in
+    assert r['picks'] == ['おもい…！', 'かるい！'], r   # おもかる石: lighter or heavier than you thought
+    assert r['back'] == '#/shrine' and abs(r['x'] - (-410 + 100)) < 30 and not r['wide'], r   # down again at the tunnel's foot (no zoom-out: not off the bus)
+
 def test_people_stand_still_in_headless_chrome(b):
     r = ev(b, "TOWNLIFE.still")
     assert r is True, r

@@ -1944,7 +1944,7 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .sky .land [data-fx="fox"].bless .glint { animation: foxGlint 1.2s ease-out .35s; } @keyframes foxGlint { 0% { opacity: 0; transform: scale(.2) rotate(0); } 30% { opacity: 1; transform: scale(1.25) rotate(45deg); } 100% { opacity: 0; transform: scale(.5) rotate(90deg); } }
 .sky .land [data-fx="fox"].bless .bib { transform-box: fill-box; transform-origin: 50% 0; animation: foxBib .3s ease-in-out 6 alternate; } @keyframes foxBib { from { transform: skewX(0) scaleY(1); } to { transform: skewX(-10deg) scaleY(.93); } }
 /* a fortune drawn: the tied slips flutter (jingle), the ema clack on their cords */
-.sky .land [data-fx="kuji"].jingle .ema { transform-box: fill-box; transform-origin: 50% 0; animation: emaClack .14s ease-in-out 12 alternate; } @keyframes emaClack { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
+.sky .land :is([data-fx="kuji"], [data-fx="okuema"]).jingle .ema { transform-box: fill-box; transform-origin: 50% 0; animation: emaClack .14s ease-in-out 12 alternate; } @keyframes emaClack { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
 /* the taxi's horn: the body bounces on its springs (the wheels stay put), the headlight flashes */
 .sky .land [data-fx="taxi"].honk { animation: none; } .sky .land [data-fx="taxi"] .tlamp { opacity: 0; }
 .sky .land [data-fx="taxi"].honk .tbody { animation: taxiBob .2s ease-in-out 8 alternate; } @keyframes taxiBob { to { transform: translateY(-1.8px); } }
@@ -2046,3 +2046,6 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .sky .yware.stirred .lily { transform-box: fill-box; transform-origin: center; animation: lilyBob 1.1s ease-in-out .5s 2; } .sky .yware.stirred .lily.l1 { animation-delay: 1.5s; }   /* the pond: its lily pads rock as the rings reach them */
 @keyframes lilyBob { 30% { transform: translateY(1.4px) rotate(-5deg); } 70% { transform: translateY(-.6px) rotate(3deg); } }
 @media (prefers-reduced-motion: reduce) { .sky .yware.stirred .lily { animation: none; } }
+/* おもかる石 (奥社, 2026-11-14): the ball on the lantern lifted off and set down again */
+.sky .land [data-fx="omokaru"].lift .stone { transform-box: fill-box; transform-origin: 50% 100%; animation: okuLift 1.6s ease-in-out; } @keyframes okuLift { 0%, 100% { transform: none; } 30%, 62% { transform: translateY(-9px) rotate(-4deg); } 46% { transform: translateY(-11px) rotate(3deg); } }
+@media (prefers-reduced-motion: reduce) { .sky .land [data-fx="omokaru"].lift .stone { animation: none; } }

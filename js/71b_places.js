@@ -48,7 +48,7 @@ function isoZ(u, v) {
 INDOOR.forEach((pl) => Object.values(TOWN.SPOTS[pl] || {}).forEach((sp) => { if (sp.u !== undefined) { [sp.X, sp.Y] = isoXY(sp.u, sp.v, sp.h || 0); sp.foot = isoXY(sp.u, sp.v); } }));
 // how far up each place the hero walks (Y px up): the ground in front of its buildings, never up onto them (2026-11-10, the user);
 // the yard up to its house, the main road to its far pavement, a room to its floor
-const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128 };
+const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128, oku: 124 };
 const walkTop = (place, X) => (place === 'yard' && X !== undefined ? Math.round(214 - Math.max(0, Math.abs(X) - 300) * 0.22) : WALK_TOP[place] || 214);   // the yard: a hilltop, lower towards its sides — not out over the edge
 // what stands in the way in each place (2026-11-10, the user: he walked about as if every place were flat ground): the ground the
 // things there stand on, [X0, X1, Y0, Y1] in his units — benches, crates, tables and stools, the sandbox, the beach's grassy bank
@@ -257,6 +257,15 @@ const PLACE_USE = {
     // the 緣日's stalls (SHRINE_STALLS): the goldfish to scoop; the rest, a menu each (YEN)
     ...SHRINE_STALLS.map(([id, x, , , name]) => Object.assign({ id, name, box: [x, 144, x + 72, 236], kind: 'do', go: [x + 36 - 600, 126], back: 1, pose: 'reach', when: () => TOWNEV.festival() },
       id === 'kingyo' ? { pose: 'crouch', say: 'とれた！🐟', keeper: 'ojiisan' } : { buy: id }))],
+  // 稲荷山・奥社 (2026-11-14): its hall prayed at, its fox ema, おもかる石 (lighter than you thought: the wish comes true), the tea
+  // house's menu (9–17), the town far below over the fence
+  oku: [
+    { id: 'okusha', name: '奥社', box: [400, 104, 560, 236], kind: 'do', go: [-120, 122], back: 1, pose: 'bow', say: 'パンパン 🙏', then: 'ねがいが かないますように…' },
+    { id: 'okuema', name: '狐狸繪馬', box: [608, 140, 696, 236], kind: 'do', go: [52, 122], back: 1, pose: 'look', say: 'きつねの かおの えまだ！', fx: 'okuema', fxc: 'jingle', ms: 2200 },
+    { id: 'omokaru', name: 'おもかる石', box: [700, 160, 762, 236], kind: 'do', go: [130, 122], back: 1, pose: 'reach', fx: 'omokaru', fxc: 'lift', ms: 1800,
+      pick: () => (Math.random() < 0.5 ? ['かるい！', 'おもかる石：比想像中輕——願望會實現！'] : ['おもい…！', 'おもかる石：比想像中重——再加把勁吧。']) },
+    { id: 'chaya', name: '茶屋', box: [900, 124, 1044, 236], kind: 'do', go: [370, 122], back: 1, pose: 'look', buy: 'chaya', when: () => TOWNEV.isOpen('chaya', (TOWNEV.clock && TOWNEV.clock.h) ?? sceneHour()) },
+    { id: 'view', name: '眺望', box: [1124, 120, 1200, 236], kind: 'do', go: [560, 118], back: 1, pose: 'look', say: 'まちが ぜんぶ みえる！' }],
   castle: [
     { id: 'sakuraL', name: '櫻花', box: [0, 60, 130, 236], kind: 'do', go: [-520, 112], pose: 'reach', fx: 'sakuraL', fxc: 'shake', burst: ['#f7c6d2', '#f2b8c6', '#fbdde4'] },
     { id: 'sakuraR', name: '櫻花', box: [1080, 60, 1210, 236], kind: 'do', go: [520, 112], pose: 'reach', fx: 'sakuraR', fxc: 'shake', burst: ['#f7c6d2', '#f2b8c6', '#fbdde4'] },
@@ -409,6 +418,7 @@ function yDo(yard, t) {
   if (part) { part.classList.remove(t.fxc); void part.getBoundingClientRect(); part.classList.add(t.fxc); clearTimeout(part._fxT); part._fxT = setTimeout(() => part.classList.remove(t.fxc), t.ms || 1800); }
   let say = t.say;
   if (t.fortune) { const [a, b] = KUJI[Math.floor(Math.random() * KUJI.length)]; say = a; toast(`おみくじ：${a}・${b}`, 3600); }
+  if (t.pick) { const [a, b] = t.pick(); say = a; toast(b, 3600); }   // the thing's say and what it means, drawn each time (おもかる石)
   if (say) yPop(yard, cx, y0 - 4, say);
   if (t.then) setTimeout(() => yPop(yard, cx, y0 - 4, t.then), 1200);
   if (t.keeper) setTimeout(() => { const v = (TOWN.YATAI || {})[t.keeper]; if (!yard.isConnected || !v || !v.scoop) return; yBubble(yard, cx, y0 - 2, esc(v.scoop[0]), 2600); speakAs(t.keeper, v.scoop[0]); }, 1300);   // the one who keeps it says a word
