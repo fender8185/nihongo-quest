@@ -284,29 +284,65 @@ def test_the_slip_bar_leaves_the_signs_tappable_on_a_phone(b):
       return JSON.stringify({ over, inside: s.left >= 0 && s.right <= innerWidth, gone }); })()""")])[-1])
     assert r == {'over': [], 'inside': True, 'gone': True}, r
 
-# ---- 包包子 (福明, 王 and 陳): 王's word for each step, a picture beside it till it is known; the filling heard ----
+# ---- 包包子 (福明, 王): 2026-11-15, the user — a close-up of the hero making the bun; six cells of hiragana, a kana said, tap it: the
+# bun one step on, that cell a new kana, the next said; thirty taps = five buns; all right in time, five buns in the steamer ----
 BUNS = """const make = async () => { location.hash = '#/chinatown'; route(); await wait(300); earlier('buns'); WORK.start(yard(), 'buns'); await wait(300); };
-  const doStep = async () => { const s = JOBS.buns.now(); document.querySelector(`.wk-act[data-step="${s}"]`).click(); await wait(420); };"""
+  const idle = async () => { for (let i = 0; i < 60 && JOBS.buns.now() && JOBS.buns.now().wait; i++) await wait(50); };
+  const tap = async (right) => { await idle(); const n = JOBS.buns.now(), keys = [...document.querySelectorAll('.wk-key')];
+    (right ? keys.find((x) => x.dataset.k === n.target) : keys.find((x) => x.dataset.k !== n.target)).click(); await wait(40); };
+  const step = () => Number(document.querySelector('.wk-closeup').dataset.step), basic = new Set(REG.kana.slice(0, 46).map((x) => x.ch));"""
 
-def test_buns_steps_in_order_with_the_filling_heard(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const runs = Array.from({ length: 4 }, () => JOBS.buns.make()).flat();
-      return JSON.stringify({ n: runs.length, order: runs.every((x) => x.length === 5 && x[0] === 'kone' && x[1] === 'marume' && ['niku', 'an'].includes(x[2]) && x[3] === 'tsutsumu' && x[4] === 'musu'),
-        both: new Set(runs.map((x) => x[2])).size }); })()"""))
-    assert r == {'n': 40, 'order': True, 'both': 2}, r
+def test_the_bun_board_says_a_kana_on_it(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); window.__said = []; window.speak = (t) => { __said.push(t); return Promise.resolve(); }; window.speakAs = () => Promise.resolve();
+      await make(); const n = JOBS.buns.now(), keys = [...document.querySelectorAll('.wk-key')].map((x) => x.dataset.k);
+      return JSON.stringify({ six: keys.length === 6 && new Set(keys).size === 6, on: keys.includes(n.target), said: __said[__said.length - 1] === n.target, basic: keys.every((c) => basic.has(c)),
+        twins: keys.includes('お') && keys.includes('を'), step: step(), steamer: document.querySelectorAll('.wk-steamer .wk-done').length }); })()"""))
+    assert r == {'six': True, 'on': True, 'said': True, 'basic': True, 'twins': False, 'step': 0, 'steamer': 0}, r
 
-def test_the_pictures_go_after_three_right(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); window.speakAs = () => Promise.resolve(); state.work.seenSteps = { kone: 3 }; await make();
-      const out = { first: Boolean(document.querySelector('.wk-inst .wk-pic')), acts: [...document.querySelectorAll('.wk-act')].map((x) => x.dataset.step).sort().join(',') };
-      await doStep(); out.second = Boolean(document.querySelector('.wk-inst .wk-pic')); out.counted = state.work.seenSteps.marume ?? null;
+def test_a_right_tap_moves_the_bun_and_swaps_the_cell(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); window.__said = []; window.speak = (t) => { __said.push(t); return Promise.resolve(); }; window.speakAs = () => Promise.resolve();
+      await make(); const t = JOBS.buns.now().target, at = [...document.querySelectorAll('.wk-key')].findIndex((x) => x.dataset.k === t);
+      await tap(true); const keys = [...document.querySelectorAll('.wk-key')].map((x) => x.dataset.k), n = JOBS.buns.now();
+      return JSON.stringify({ step: step(), swapped: keys[at] !== t, six: new Set(keys).size === 6, next: n.target !== t && keys.includes(n.target) && __said[__said.length - 1] === n.target, tap: n.tap }); })()"""))
+    assert r == {'step': 1, 'swapped': True, 'six': True, 'next': True, 'tap': 1}, r
+
+def test_a_miss_sets_the_bun_askew_and_twice_lights_the_cell(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
+      await make(); const t = JOBS.buns.now().target; await tap(false); const out = { step: step(), askew: document.querySelector('.wk-closeup').classList.contains('flaw'), hint: Boolean(document.querySelector('.wk-key.wk-hint')) };
+      await tap(false); out.lit = document.querySelector('.wk-key.wk-hint').dataset.k === t; out.same = JOBS.buns.now().target === t;
       return JSON.stringify(out); })()"""))
-    assert r == {'first': False, 'acts': 'an,kone,marume,musu,niku,tsutsumu', 'second': True, 'counted': None}, r   # marume shows its picture; counted once answered
+    assert r == {'step': 0, 'askew': True, 'hint': False, 'lit': True, 'same': True}, r
 
-def test_a_bun_shift_pays(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); window.speakAs = () => Promise.resolve(); await make();
-      for (let i = 0; i < 200; i++) { if (!JOBS.buns.now()) break; await doStep(); }
-      for (let i = 0; i < 50 && !document.querySelector('.wk-result'); i++) await wait(100); const t = state.work.res['2026-11-10'];
-      return JSON.stringify({ yen: t.yen, grade: t.grade, seen: state.work.seenSteps.kone }); })()"""))
-    assert r == {'yen': 150, 'grade': 'S', 'seen': 10}, r
+def test_three_taps_are_one_task_and_thirty_pay(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
+      await make(); const day = () => state.work.res['2026-11-10']; await tap(true); await tap(true); const out = { two: day().done }; await tap(true); out.three = day().done;
+      for (let i = 3; i < 30; i++) await tap(true);
+      for (let i = 0; i < 60 && !document.querySelector('.wk-result'); i++) await wait(100);
+      return JSON.stringify(Object.assign(out, { done: day().done, yen: day().yen, grade: day().grade })); })()"""))
+    assert r == {'two': 0, 'three': 1, 'done': 10, 'yen': 150, 'grade': 'S'}, r
+
+def test_a_shift_resumed_starts_at_its_tap(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
+      state.work.res['2026-11-10'] = { place: 'buns', done: 5, score: { 0: 0, 1: 0, 2: 1, 3: 0, 4: 1 } }; await make();
+      return JSON.stringify({ tap: JOBS.buns.now().tap, step: step(), askew: document.querySelector('.wk-closeup').classList.contains('flaw'), steamer: document.querySelectorAll('.wk-steamer .wk-done').length,
+        shiny: document.querySelectorAll('.wk-steamer .wk-done.ok').length, clock: getComputedStyle(document.querySelector('.wk-clock')).display === 'none' }); })()"""))
+    assert r == {'tap': 15, 'step': 3, 'askew': True, 'steamer': 2, 'shiny': 1, 'clock': True}, r
+
+def test_all_right_in_time_fills_the_steamer(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
+      await make(); for (let i = 0; i < 30; i++) await tap(true); await wait(300);
+      return JSON.stringify({ gold: document.querySelector('.wk-buns .cls-card').classList.contains('wk-shine-all'), buns: document.querySelectorAll('.wk-steamer .wk-done.ok').length,
+        said: document.querySelector('.wk-say').textContent.includes('てんさい') }); })()"""))
+    assert r == {'gold': True, 'buns': 5, 'said': True}, r
+
+def test_a_miss_or_the_clock_keeps_the_steamer_plain(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
+      await make(); await tap(false); for (let i = 0; i < 30; i++) await tap(true); await wait(300); const out = { missGold: document.querySelector('.wk-buns .cls-card').classList.contains('wk-shine-all') };
+      document.querySelectorAll('.wk-result').forEach((x) => x.remove()); CLASS.close(); delete state.work.res['2026-11-10'];
+      const now = Date.now; await make(); Date.now = () => now() + 121000; await wait(400); out.out = document.querySelector('.wk-clock').classList.contains('out');
+      for (let i = 0; i < 30; i++) await tap(true); await wait(300); out.lateGold = document.querySelector('.wk-buns .cls-card').classList.contains('wk-shine-all'); Date.now = now;
+      return JSON.stringify(out); })()"""))
+    assert r == {'missGold': False, 'out': True, 'lateGold': False}, r
 
 def test_buns_only_while_wang_is_there(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(46); TOWNEV.clock = { h: 21, day: new Date(2026, 10, 10) }; const night = WORK.can('buns');
@@ -315,9 +351,9 @@ def test_buns_only_while_wang_is_there(b):
 
 def test_the_bun_card_fits_a_phone(b):
     r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); await make(); await wait(200);
-      const c = document.querySelector('.wk-buns .cls-card').getBoundingClientRect(), acts = [...document.querySelectorAll('.wk-act')].map((x) => x.getBoundingClientRect());
-      return JSON.stringify({ bottom: c.bottom <= innerHeight + 1, side: c.left >= 0 && c.right <= innerWidth + 1, acts: acts.length === 6 && acts.every((q) => q.width >= 44 && q.height >= 44) }); })()""")])[-1])
-    assert r == {'bottom': True, 'side': True, 'acts': True}, r
+      const card = document.querySelector('.wk-buns .cls-card'), keys = [...document.querySelectorAll('.wk-key')].map((x) => x.getBoundingClientRect()), c = card.getBoundingClientRect();
+      return JSON.stringify({ fits: card.scrollHeight <= card.clientHeight + 1 && c.bottom <= innerHeight + 1, side: c.left >= 0 && c.right <= innerWidth + 1, keys: keys.length === 6 && keys.every((q) => q.width >= 60 && q.height >= 48) }); })()""")])[-1])
+    assert r == {'fits': True, 'side': True, 'keys': True}, r
 
 # ---- the final review's findings (2026-11-15) ----
 def test_a_shift_closed_at_its_last_moment_is_still_paid(b):
@@ -340,11 +376,12 @@ def test_one_who_knows_kana_already_can_do_every_job(b):
     assert r == {'shelf': True, 'counter': True, 'deliver': True, 'slip': True, 'errs': []}, r
 
 def test_a_card_shut_and_opened_again_follows_the_new_one(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + """ kana(46); earlier('buns'); window.speakAs = () => Promise.resolve();
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); earlier('buns'); window.speak = () => Promise.resolve(); window.speakAs = () => new Promise((ok) => setTimeout(ok, 400));
       location.hash = '#/chinatown'; route(); await wait(300); WORK.start(yard(), 'buns'); await wait(300);
-      document.querySelector('.wk-act[data-step="kone"]').click(); CLASS.close(); WORK.start(yard(), 'buns'); await wait(700);   // the old one's next step was due in 300 ms
-      return JSON.stringify({ now: JOBS.buns.now(), shown: document.querySelector('.wk-inst b').textContent }); })()"""))
-    assert r == {'now': 'kone', 'shown': 'こねて！'}, r
+      for (let i = 0; i < 6; i++) await tap(true);   // a bun done: 王's word, then the next — due after the card is shut
+      CLASS.close(); WORK.start(yard(), 'buns'); await wait(1200);
+      return JSON.stringify({ tap: JOBS.buns.now().tap, step: step(), steamer: document.querySelectorAll('.wk-steamer .wk-done').length, cards: document.querySelectorAll('.wk-buns').length }); })()"""))
+    assert r == {'tap': 6, 'step': 0, 'steamer': 1, 'cards': 1}, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
