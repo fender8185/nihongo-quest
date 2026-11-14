@@ -7,7 +7,7 @@ const FMT_NAME = {
   'v-listen': '單字・聽音選意思', 'v-spell': '單字・假名拼字', 'v-match': '單字・配對', 'v-sentence': '自訂句子', 'g-choice': '文法・填空', 'g-meaning': '文法・句意／用法', 'g-zh': '文法・句意拼貼', 'g-order': '文法・排序',
   'g-correct': '文法・選正確句', 'g-conj': '文法・動詞變化', 'g-adj': '文法・形容詞變化', 'g-identify': '文法・判斷動詞形', 'g-conj-type': '文法・動詞變化（拼寫）', 'g-adj-type': '文法・形容詞變化（拼寫）',   // g-correct (1.0.23), v-sentence (custom cards, 1.0.34): no longer asked, named for the answers given before
   'k-meaning': '漢字・意思', 'k-shape': '漢字・選字', 'k-read': '漢字・讀音', 'l-dialog': '聽力・對話', 'l-resp': '聽力・即時應答',
-  'l-scene': '聽力・情境表達', 'r-passage': '閱讀', 'm-card': '錯題卡', 'a-read': '假名・看字選音', 'a-sound': '假名・聽音選字', 'a-pair': '假名・平片對照'
+  'l-scene': '聽力・情境表達', 'r-passage': '閱讀', 'm-card': '錯題卡', 'a-read': '假名・看字選音', 'a-sound': '假名・聽音選字', 'a-pair': '假名・平片對照', 'a-word': '假名・讀讀看'
 };
 const KIND_NAME = { v: '單字', g: '文法', k: '漢字', a: '假名', l: '聽力', r: '閱讀' };
 function lvLabel(lv) { return lv === 'PRE_N5' ? '入門' : lv; }

@@ -611,6 +611,7 @@ function readingMapFrom(text) {
   return map;
 }
 function optionHtml(q, o) {
+  if (q.picOptions) return picSvg(o.text, 'opt-pic');   // 讀讀看: the options are pictures
   if (!o.jp) return esc(o.text);
   if (q.kanaOptions && q.optKana && q.optKana[o.text]) return esc(q.optKana[o.text]);
   if (q.noFuriOptions) return esc(jaPlain(o.text));
@@ -672,7 +673,7 @@ function renderPractice() {
   const longOpts = q.options.some(o => jaPlain(o.text).length > 14);   // one long option makes all four smaller, so their sizes match
   // four 50音 options (ち ら き さ, ga gi gu ge) or four single characters (百 目 日 白): big, two by two. Not two-character words
   // (2026-11-13, the user): 今年 色 玄関 毎週 came two by two while other 例句填空 came in four rows; one kind of question, one look
-  const glyph = !q.audioOptions && q.options.length === 4 && (q.kind === 'a' ? q.options.every(o => jaPlain(o.text).length <= 4) : q.options.every(o => o.jp && jaPlain(o.text).length === 1));
+  const glyph = !q.audioOptions && q.options.length === 4 && (q.picOptions || (q.kind === 'a' ? q.options.every(o => jaPlain(o.text).length <= 4) : q.options.every(o => o.jp && jaPlain(o.text).length === 1)));
   const opts = q.options.map((o, i) => {
     let cls = 'opt';
     if (!o.jp) cls += ' zh';
@@ -1114,7 +1115,7 @@ function feedbackHtml(e, sheet = false) {
     <div class="feedback ${ok ? 'ok' : 'bad'}">
       <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>' + (e.combo >= 3 ? `<span class="chip chip-accent combo">連對 ${e.combo}</span>` : '')
         : e.missed && e.missed.length ? icon('cross') + `<span>配錯了：<span class="jp">${esc(e.missed.map(x => x.label).join('、'))}</span></span>`   // 配對: the words paired wrong
-        : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
+        : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp || q.picOptions ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
       ${chosen}${sheet && q.revealHtml ? q.revealHtml : ''}${diff}${full}${example}
       ${why ? `<div class="fb-why mt-2">${md(why)}</div>` : ''}
       <div class="fb-meta">${q.point && q.kind === 'g' ? `<span class="chip">考點：${esc(q.point)}</span>` : ''}${srsInfo}${mistake}${slip}${mNote}</div>

@@ -544,6 +544,24 @@ def test_a_new_kana_gets_its_card_first_with_where_it_came_from(b):
     assert r['ga'] == '「カ」加上「゛」：ka → ga' and r['n'] == '一說取自「爾」的一部分' and r['ka'] == '取自「加」的一部分' and r['all'], r
     assert r['marked'] == 6 and not r['left'], r   # 五顆 = b 6 (as 單字表's 標成五顆)
 
+def test_read_a_word_with_the_kana_seen_and_pick_its_picture(b):
+    # 2026-11-14 讀讀看: いぬ once あ〜な are known; never before; four pictures, none alike; the wrong ones say what they are
+    js = """(() => { const t = todayStr(); const mark = (c) => { state.srs['a:' + c] = { b: 2, due: addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -1) }; };
+      const nu = REG.byKey.get('a:ぬ'); 'あいうえおかきくけこさしすせそたちつてと'.split('').forEach(mark); const before = kanaWordCands(REG.byKey.get('a:か')).map(v => kanaWordText(v, 'hira'));
+      const noNu = kanaWordCands(nu).length; 'なにぬねの'.split('').forEach(mark); const words = kanaWordCands(nu).map(v => kanaWordText(v, 'hira'));
+      const qs = []; for (let i = 0; i < 30; i++) { const q = makeQuestion(nu, { forceFmt: 'a-word' }); qs.push(q); }
+      const q = qs[0]; const keys = q.options.map(o => o.text);
+      const bad = qs.filter(x => x.fmt !== 'a-word' || x.options.length !== 4 || new Set(x.options.map(o => o.text)).size !== 4 || !x.answerText.includes('ぬ')
+        || x.options.some((o, i) => i !== x.answer && picNear(o.text).has(x.options[x.answer].text))).length;
+      const kata = makeQuestion(REG.byKey.get('a:ネ'), { forceFmt: 'a-word' }).fmt;   // no katakana seen: back to 看字選音
+      startSession('items', { items: [nu] }); const e = currentEntry(); e.q = q; renderPractice(); const v = document.getElementById('view');
+      const out = { before, noNu, inu: words.includes('いぬ'), bad, kata, pics: v.querySelectorAll('.opts.glyph .opt .opt-pic').length, stem: v.querySelector('.q-card').textContent.includes(q.answerText) };
+      answerCurrent((q.answer + 1) % 4); out.head = Boolean(document.querySelector('.fb-head .opt-pic')); out.why = q.why; out.label = FMT_NAME['a-word'];
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js, [("eval", PRE_STATE)]))
+    assert 'かお' in r['before'] and 'いぬ' not in r['before'] and r['noNu'] == 0 and r['inu'] and r['bad'] == 0 and r['kata'] == 'a-read', r
+    assert r['pics'] == 4 and r['stem'] and r['head'] and r['why'].startswith('「') and r['label'] == '假名・讀讀看', r
+
 def test_finishing_pre_logs_week0_as_a_completed_unit(b):
     js = """(() => { const t = todayStr(); const mark = (it) => { state.srs[it.key] = { b: 2, due: addDays(t, 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(t, -1) }; };
       REG.vocab.filter(v => v.builtin && v.lv === 'PRE_N5').forEach(mark); REG.kana.forEach(mark); REG.grammar.filter(g => g.u === 'm0').forEach(mark);

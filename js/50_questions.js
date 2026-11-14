@@ -833,14 +833,63 @@ function makeGrammarQuestion(g, ctx = {}) {
 }
 
 // ---------- 假名辨識 (kind a) ----------
-// First question (after the new-kana card): 看字選音. Afterwards 聽音選字 2 : 看字選音 1 : 平片對照 1.
+// 讀讀看 (2026-11-14): a word with a picture, written only in kana the learner has seen and holding this one — いぬ once あ〜な
+// are known — read and matched to its picture. Hiragana items read hiragana readings, katakana items katakana words; small
+// kana and ー are not taught as kana, so a word with them waits
+const KANA_WORD_LV = () => ALL_LEVELS.slice(0, 3);   // 入門 to N4: everyday things
+function kanaWordText(v, script) {
+  const t = script === 'hira' ? v.r : jaPlain(v.w);
+  return t && (script === 'hira' ? /^[ぁ-ゖ]+$/ : /^[ァ-ヺ]+$/).test(t) && !/[ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮヵヶ]/.test(t) ? t : '';
+}
+let KANA_WORD_POOL = null;   // [REG.vocab it was made from, the words]: made again when the registry is
+function kanaWordPool() {
+  if (!KANA_WORD_POOL || KANA_WORD_POOL[0] !== REG.vocab) KANA_WORD_POOL = [REG.vocab, REG.vocab.filter(v => v.builtin && KANA_WORD_LV().includes(v.lv) && picKey(v) && !PIC_GENERIC.has(jaPlain(v.w)))];
+  return KANA_WORD_POOL[1];
+}
+function kanaWordCands(item) {
+  const seen = (c) => Boolean(state.srs['a:' + c]);
+  return kanaWordPool().filter(v => { const t = kanaWordText(v, item.script); return t && t.includes(item.ch) && [...t].every(seen); });
+}
+// three other pictures: not one that looks like it, nor the same drawing; words holding the same kana first, so knowing that
+// one kana alone does not pick the picture
+function kanaWordWrongs(v, item) {
+  const key = picKey(v), near = new Set([...picNear(jaPlain(v.w)), ...picNear(key)]), keys = new Set([key]);
+  const ok = (x) => { const k = picKey(x); return !keys.has(k) && !near.has(jaPlain(x.w)) && !near.has(k) && !zhOverlap(x.m, v.m); };
+  const out = [], pool = kanaWordPool();
+  const take = (x) => { if (out.length < 3 && ok(x)) { out.push(x); keys.add(picKey(x)); } };
+  shuffle(pool.filter(x => (kanaWordText(x, item.script) || '').includes(item.ch))).forEach(take);
+  shuffle(pool).forEach(take);
+  return out.length === 3 ? out : null;
+}
+// First question (after the new-kana card): 看字選音. Afterwards 聽音選字 2 : 看字選音 1 : 平片對照 1, and 讀讀看 2 when a word can be read.
 function makeKanaQuestion(item, ctx = {}) {
   const rec = srsGet(item.key);
   const b = rec ? rec.b : -1;
   let fmt = ctx.forceFmt;
   if (!fmt) {
     if (b < 0) fmt = 'a-read';
-    else { const bag = (speechAvailable() ? ['a-sound', 'a-sound', 'a-read', 'a-pair'] : ['a-read', 'a-pair']).filter(f => f !== ctx.avoidFmt); fmt = bag[Math.floor(Math.random() * bag.length)] || 'a-read'; }   // 聽音選字 only when something can play it
+    else {
+      const bag = (speechAvailable() ? ['a-sound', 'a-sound', 'a-read', 'a-pair'] : ['a-read', 'a-pair']).concat(kanaWordCands(item).length ? ['a-word', 'a-word'] : []);   // 聽音選字 only when something can play it
+      const left = bag.filter(f => f !== ctx.avoidFmt && !(ctx.avoidFmts || []).includes(f)); fmt = left[Math.floor(Math.random() * left.length)] || 'a-read';
+    }
+  }
+  if (fmt === 'a-word') {
+    const v = shuffle(kanaWordCands(item))[0], wrongs = v && kanaWordWrongs(v, item);
+    if (!wrongs) fmt = 'a-read';
+    else {
+      const t = kanaWordText(v, item.script), q = baseQ(item);
+      q.cat = '假名'; q.lv = 'PRE_N5'; q.point = '假名辨識'; q.label = `假名 · 讀讀看`;
+      q.fmt = 'a-word'; q.instr = '讀讀看，是哪一個？';
+      q.stemHtml = `<span class="kanji-big jp">${esc(t)}</span>`; q.stemClass = 'word';
+      finalizeOptions(q, picKey(v), wrongs.map(picKey), false);
+      q.picOptions = true;
+      q.optJa = {}; wrongs.forEach(x => { q.optJa[picKey(x)] = kanaWordText(x, item.script) || x.r; });   // after answering, the wrong pictures say what they are
+      q.answerText = t;
+      q.speakWord = t;
+      q.why = `「${t}」${jaPlain(v.w) !== t ? `寫成「${jaPlain(v.w)}」，` : ''}是「${v.m}」。`;
+      q.mistakePrompt = `讀讀看「${t}」`;
+      return q;
+    }
   }
   const other = item.script === 'hira' ? '片假名' : '平假名';
   const q = baseQ(item);

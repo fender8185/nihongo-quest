@@ -1523,6 +1523,8 @@ body.reading { overflow: hidden; }
 .opts.glyph .opt > .jp { line-height: 1.6; }
 .opts.glyph .opt .kbd { position: absolute; left: 10px; top: 10px; }
 .opts.glyph .opt-zh { margin-left: 0; max-width: 100%; text-align: center; }
+/* 讀讀看 (2026-11-14): four pictures to pick from; one inside the 答錯了 line and the phone panel's list, small */
+.opt .opt-pic { width: 76px; height: 76px; } .fb-head .opt-pic, .fb-opt .opt-pic { display: inline-block; width: 26px; height: 26px; vertical-align: -7px; }
 .opt-audio { padding: 6px 8px 6px 12px; gap: 8px; cursor: default; }
 .opt-play { flex: 1 1 auto; display: inline-flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 4px; border: 0; background: none; color: var(--accent); font-size: 16px; font-weight: 500; cursor: pointer; text-align: left; border-radius: 8px; }
 .opt-play:hover { background: var(--bg-hover); }
