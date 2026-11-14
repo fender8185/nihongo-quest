@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 67 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 68 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2667,7 +2667,7 @@ const TOWN = {
     hello: { zhang: ['…いらっしゃい。はたらく？', '……歡迎光臨。要來打工嗎？'], zhou: ['あら、いらっしゃい。てつだって くれる？', '哎呀，歡迎光臨。要來幫忙嗎？'],
       huang: ['はやく！ でまえ、てつだって！', '快！來幫忙外送！'], wang: ['ニーハオ！ ぶたまん、つくる？', '你好！要來包豬肉包嗎？'] },
     first: {
-      shelf: [['zhang', 'たなの ラベルと、はこの ラベル。おなじ ところへ。', '貨架上的標籤和箱子上的標籤，一樣的放一起。'], ['zhang', '…まちがえたら、もう いちど。', '……放錯了，就再放一次。']],
+      shelf: [['zhang', 'きいて。おなじ ところへ。', '聽我念，放到一樣的格子。'], ['zhang', '…まちがえたら、もう いちど。', '……放錯了，就再放一次。']],
       counter: [['zhou', 'おきゃくさんが いったものを わたしてね。', '客人說要什麼，就拿給他喔。'], ['zhou', '「いらっしゃいませ」「ありがとうございました」、げんきよく ね。', '「歡迎光臨」「謝謝光臨」，要有精神喔。']],
       deliver: [['huang', 'この おみせへ！ かんばんを よく みて！', '送到這家店！看清楚招牌！'], ['huang', 'はやく かえって きたら、チップ！', '早點回來，有小費！']],
       buns: [['wang', 'ぶたまんは こころ！', '豬肉包就是心！'], ['chen', '', '（用中文）王老闆說什麼就做什麼。他會先說日文，不懂就看圖。']] },

@@ -61,7 +61,7 @@ def test_the_keeper_says_how_the_first_time(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(46); stub('shelf', true); location.hash = '#/chinadori'; route(); await wait(200); window.__ctx = null;
       WORK.start(yard(), 'shelf'); await wait(300); const t = document.querySelector('.talk');
       return JSON.stringify({ talk: Boolean(t), ran: Boolean(window.__ctx), text: t ? t.textContent : '' }); })()"""))
-    assert r['talk'] and not r['ran'] and 'ラベル' in r['text'], r
+    assert r['talk'] and not r['ran'] and 'きいて' in r['text'], r
 
 def test_pay_grade_and_licence(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """
@@ -126,6 +126,27 @@ def test_shelf_labels_come_from_what_is_seen(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + """ kana(5);
       const t = JOBS.shelf.make(); return JSON.stringify({ n: t.length, all: [...new Set(t.flatMap((x) => [x.label, ...x.bins]))].sort().join(''), four: t.every((x) => x.bins.length === 4 && new Set(x.bins).size === 4 && x.bins.includes(x.label)) }); })()"""))
     assert r == {'n': 10, 'all': 'あいうえお', 'four': True}, r
+
+# 2026-11-15, the user: a label beside the same label is only two like shapes, nothing Japanese — the thing's label is heard, not
+# shown (🔊, tap to hear it again), printed once it is put away or after two misses
+def test_the_shelf_label_is_heard_not_read(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + """ kana(10); earlier('shelf'); window.__said = []; window.speak = (t) => { __said.push(t); return Promise.resolve(); }; window.speakAs = () => Promise.resolve();
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'shelf'); await wait(300);
+      const item = () => document.querySelector('.wk-item'), label = item().dataset.label, out = { hidden: !item().textContent.includes(label), ear: Boolean(item().querySelector('.wk-ear')) };
+      __said = []; item().querySelector('.wk-ear').click(); await wait(100); out.again = __said.includes(label);
+      const wrong = [...document.querySelectorAll('.wk-bin')].find((x) => x.dataset.label !== label); wrong.click(); await wait(100); out.oneMiss = !item().textContent.includes(label);
+      wrong.click(); await wait(100); out.twoMiss = item().textContent.includes(label);
+      document.querySelector(`.wk-bin[data-label="${label}"]`).click(); await wait(500); const next = item().dataset.label;
+      document.querySelector(`.wk-bin[data-label="${next}"]`).click(); await wait(60); out.shownOnRight = item().textContent.includes(next);
+      return JSON.stringify(out); })()"""))
+    assert r == {'hidden': True, 'ear': True, 'again': True, 'oneMiss': True, 'twoMiss': True, 'shownOnRight': True}, r
+
+# heard, a look-alike beside it is no trap at all — so the cells hold what sounds alike too (す／つ, し／ち …), of what is seen
+def test_shelf_cells_hold_sound_alikes(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + """ kana(46);
+      const ts = Array.from({ length: 40 }, () => JOBS.shelf.make()).flat(), of = (c) => ts.filter((t) => t.label === c);
+      return JSON.stringify({ su: of('す').every((t) => t.bins.includes('つ')), shi: of('し').every((t) => t.bins.includes('ち')), seen: of('す').length > 0 && of('し').length > 0 }); })()"""))
+    assert r == {'su': True, 'shi': True, 'seen': True}, r
 
 def test_shelf_mixes_words_once_learned(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + """ kana(46); words(['これ', 'それ', 'あれ', 'どれ', 'ここ']);

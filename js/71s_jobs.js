@@ -17,37 +17,46 @@ const JOBS = (() => {
     <div class="wk-who"><span class="kr-face">${TOWNEV.face(say(job).who)}</span><p class="wk-say"></p></div>`;
 
   // ---- 整理貨架 (ふく, 張さん): a box comes in, its things one at a time, each with a label; the shelf's four cells have labels too;
-  // tap the cell with the same. Labels: a seen kana each (look-alikes beside it on the shelf when seen); once four kana-only 入門
-  // words are learned, three to five of the ten are those words. Wrong: 張's ちがう！ and the thing stays; wrong twice, the right
-  // cell lights up ----
+  // tap the cell with the same. The thing's label is heard, not shown (2026-11-15, the user: a label beside the same label is only two
+  // like shapes) — a 🔊 blank, tapped to hear it again, printed once it is put away or after two misses. Labels: a seen kana each, the
+  // cells holding what sounds like it (KANA_SOUNDALIKE) and what looks like it, never one that sounds the same (お／を); once four
+  // kana-only 入門 words are learned, three to five of the ten are those words. Wrong: 張's ちがう！ and the thing stays; wrong
+  // twice, the right cell lights up ----
+  // kana a Taiwanese ear takes for each other (つ for す, ら for な …), and ones no ear can tell apart, never side by side
+  const KANA_SOUNDALIKE = [['す', 'つ'], ['し', 'ち'], ['し', 'ひ'], ['な', 'ら'], ['ぬ', 'る'], ['ね', 'れ'], ['の', 'ろ']];
+  const KANA_SAMESOUND = [['お', 'を'], ['じ', 'ぢ'], ['ず', 'づ']];
+  const kin = (groups, c) => groups.filter((g) => g.includes(c)).flat().filter((x, i, all) => x !== c && all.indexOf(x) === i);
+  const twin = (a, b) => KANA_SAMESOUND.some((g) => g.includes(a) && g.includes(b));
   function shelfMake(seen = [...WORK.kana()], ws = words()) {
     if (seen.length < 4) seen = REG.kana.slice(0, 5).map((x) => x.ch);   // never from nothing
     const nw = ws.length >= 4 ? 3 + Math.floor(Math.random() * 3) : 0;
     return shuffle(Array.from({ length: N }, (_, k) => {
       const pool = k < nw ? ws : seen, label = pick(pool);
-      const alike = k < nw ? [] : shuffle(KANA_LOOKALIKE.filter((g) => g.includes(label)).flat().filter((c, i, all) => c !== label && seen.includes(c) && all.indexOf(c) === i));
-      const rest = alike.concat(shuffle(pool.filter((c) => c !== label && !alike.includes(c))));
+      const alike = k < nw ? [] : [...new Set(shuffle(kin(KANA_SOUNDALIKE, label)).concat(shuffle(kin(KANA_LOOKALIKE, label))))].filter((c) => seen.includes(c));
+      const rest = alike.concat(shuffle(pool.filter((c) => c !== label && !alike.includes(c)))).filter((c) => !twin(c, label));
       return { label, bins: shuffle([label, ...rest.slice(0, 3)]) };
     }));
   }
   function shelfRun(ctx) {
     const tasks = shelfMake(); let k = ctx.done, miss = 0, busy = false;
+    const open = () => { const it = document.querySelector('.wk-item'); if (it) it.textContent = it.dataset.label; };   // the label printed
     const draw = () => {
       const t = tasks[k], card = document.querySelector('.wk-shelf .cls-card'); if (!card) return;
       card.querySelector('.wk-n').textContent = `${k + 1}／${N}`;
-      card.querySelector('.wk-box').innerHTML = `<span class="wk-item${t.label.length > 1 ? ' wd' : ''}" data-label="${esc(t.label)}" lang="ja">${esc(t.label)}</span>`;
+      card.querySelector('.wk-box').innerHTML = `<span class="wk-item${t.label.length > 1 ? ' wd' : ''}" data-label="${esc(t.label)}" lang="ja"><button type="button" class="wk-ear" aria-label="再聽一次">🔊</button></span>`;
       card.querySelector('.wk-bins').innerHTML = t.bins.map((l) => `<button type="button" class="wk-bin${l.length > 1 ? ' wd' : ''}" data-label="${esc(l)}" lang="ja"><span>${esc(l)}</span></button>`).join('');
       miss = 0; busy = false; speak(t.label);
     };
     CLASS.card('wk-shelf', '整理貨架', `${head('shelf', 'ふくの たな', k)}<div class="wk-box"></div><div class="wk-bins"></div>`, (e) => {
-      const b = e.target.closest('.wk-bin'); if (!b || busy || !ctx.on()) return;
-      const t = tasks[k];
+      if (busy || !ctx.on()) return;
+      const t = tasks[k]; if (e.target.closest('.wk-ear')) { speak(t.label); return; }
+      const b = e.target.closest('.wk-bin'); if (!b) return;
       if (b.dataset.label !== t.label) {   // the wrong cell: it shakes, 張 says so, the thing stays
         miss++; playSfx('bad'); b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); word('shelf', say('shelf').miss, 'bad');
-        if (miss >= 2) document.querySelectorAll('.wk-bin').forEach((x) => x.classList.toggle('wk-hint', x.dataset.label === t.label));
+        if (miss >= 2) { document.querySelectorAll('.wk-bin').forEach((x) => x.classList.toggle('wk-hint', x.dataset.label === t.label)); open(); }
         return;
       }
-      busy = true; ctx.right(k, miss); SND.play('place', { vol: 0.6 }); b.classList.add('wk-in');
+      busy = true; ctx.right(k, miss); SND.play('place', { vol: 0.6 }); b.classList.add('wk-in'); open();
       const item = document.querySelector('.wk-item'); if (item) item.classList.add('wk-gone');
       if (!miss && Math.random() < 0.3) word('shelf', pick(say('shelf').ok));
       k++;
