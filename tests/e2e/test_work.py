@@ -339,7 +339,7 @@ def test_one_who_knows_kana_already_can_do_every_job(b):
       out.shelf = JOBS.shelf.make().every((t) => t.label && t.bins.length === 4); out.counter = JOBS.counter.make().every((t) => t.good && t.goods.length === 4);
       out.waiter = WORK.can('waiter').ok;
       return JSON.stringify(Object.assign(out, { errs: __errs })); })()"""))
-    assert r == {'shelf': True, 'counter': True, 'waiter': True, 'errs': []}, r
+    assert r == {'shelf': True, 'counter': True, 'waiter': False, 'errs': []}, r   # 外場 still wants its 入門 words (spec §6; the final review)
 
 def test_a_card_shut_and_opened_again_follows_the_new_one(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); earlier('buns'); window.speak = () => Promise.resolve(); window.speakAs = () => new Promise((ok) => setTimeout(ok, 400));

@@ -626,7 +626,7 @@ function renderOutside(view, place = 'yard') {
   sceneTick();
   const pct = ringPct(dayProgress());
   const yard = view.querySelector('.yard');
-  if (yard && (yard.dataset.house !== (state.house || '') || (place === 'yard' && !yard.classList.contains('ground-' + yardGround())) || yard.dataset.place !== place || (yard.dataset.sig !== TOWNEV.sig(place) && !TALK.on()))) { yard.remove(); }   // the house changed (another device), the other place, or who is about (TOWNEV): drawn anew
+  if (yard && (yard.dataset.house !== (state.house || '') || (place === 'yard' && !yard.classList.contains('ground-' + yardGround())) || yard.dataset.place !== place || (yard.dataset.sig !== TOWNEV.sig(place) && !sceneHeld()))) { yard.remove(); }   // the house changed (another device), the other place, or who is about (TOWNEV): drawn anew
   else if (yard) {   // a redraw: new stars fade in, the motion carries on; the yard's things again only if they moved (sync, another device)
     yardLevel(yard, pct);
     const w = yard.querySelector('.ywares'); if (w && !yed.on && w.dataset.sig !== yardSig()) { w.innerHTML = yardWaresHtml(); w.dataset.sig = yardSig(); }

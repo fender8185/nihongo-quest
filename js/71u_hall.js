@@ -49,7 +49,7 @@ const HALL = (() => {
     c.el.style.zIndex = String(isoZ(c.u, c.v + (c.el.classList.contains('bench') ? 0.45 : 0)));
   }
   function mark(c) {
-    c.el.classList.toggle('need', NEED.includes(c.state));
+    c.el.classList.toggle('need', NEED.includes(c.state) || Boolean(c.pointing));
     const w = c.el.querySelector('.hl-want'); if (w) w.textContent = c.state === 'food' ? c.dish : ''; c.el.classList.toggle('want', c.state === 'food');
   }
   const pop = (c, text) => { const [X, Y] = isoXY(c.u, c.v); yPop(H.yard, X + 600, 370 - Y - (c.el.classList.contains('bench') ? 150 : 190) * ISO.k, text); };
@@ -151,11 +151,11 @@ const HALL = (() => {
     const cook = () => later(() => { huangPop(s.order[0]); c.state = 'food'; mark(c); later(() => { H.ready.push(c.id); readyMark(); speakAs('huang', s.ready[0]); huangPop(s.ready[0]); }, rnd(4000, 6000)); }, 1200);
     if (kind === 'call') {
       c.state = 'order'; mark(c);
-      if (knows('これ', 'それ', 'あれ')) { later(() => { if (!H.ask) ask('order', c); }, 600); return; }   // pointing at one of three: which is meant
+      if (knows('これ', 'それ', 'あれ')) { c.pointing = true; mark(c); later(() => { if (!H.ask && c.pointing) ask('order', c); }, 600); return; }   // pointing at one of three: which is meant (another question up: their 「！」 waits for the hero)
       c.dish = pick(RAIRAI.MENU)[0]; later(() => { speakAs(c.voice, s.cust.order[0]); pop(c, s.cust.order[0]); cook(); }, 700);
       return;
     }
-    if (kind === 'order') { c.dish = H.lastPick.split('：')[1]; cook(); return; }
+    if (kind === 'order') { c.pointing = false; mark(c); c.dish = H.lastPick.split('：')[1]; cook(); return; }
     if (kind === 'toilet') { pop(c, s.cust.thanks[0]); eat(c); return; }
     if (kind === 'thanks') { c.state = 'eat'; mark(c); later(() => leave(c), 2500); return; }
     if (kind === 'serve') {
@@ -192,18 +192,19 @@ const HALL = (() => {
       const i = Number(k.slice(5)), c = find((q) => q.table === i);
       if (!c) { const w = find((q) => q.state === 'wait'); if (w) ask('seat', w, i); return; }
       if (c.state === 'call') { ask('call', c); return; }
+      if (c.pointing) { ask('order', c); return; }
       if (c.state === 'ask') { ask('toilet', c); return; }
       if (c.state === 'drop') { speakAs('hero', s.me.serve[0]); heroPop(s.me.serve[0]); setTimeout(() => { if (live() && !H.ask && c.state === 'drop') ask('thanks', c); }, 700); return; }   // the chopsticks handed back: どうぞ, and their thanks
       if (c.state === 'food' && H.tray) ask(H.tray.for === c.id ? 'serve' : 'sorry', c);
     }
   }
-  const spotOf = (c) => (c.state === 'in' ? 'entry' : c.state === 'pay' ? 'register' : ['call', 'food', 'ask', 'drop'].includes(c.state) && c.table >= 0 ? 'table' + c.table : null);
+  const spotOf = (c) => (c.state === 'in' ? 'entry' : c.state === 'pay' ? 'register' : (['call', 'food', 'ask', 'drop'].includes(c.state) || c.pointing) && c.table >= 0 ? 'table' + c.table : null);
   function go(k) {   // walk over, then see what is wanted there
     const yard = H.yard, u = k.startsWith('table') ? RAIRAI.at.table(Number(k.slice(5))) : RAIRAI.at[k];
     yHeroWalk(yard, isoXY(...u), () => at(yard, k));
   }
   function tap(el) {
-    if (!live()) return; const c = H.cust.find((q) => q.id === el.dataset.c); if (!c) return;
+    if (!live() || H.ask) return; const c = H.cust.find((q) => q.id === el.dataset.c); if (!c) return;   // a question up: answered first
     if (c.state === 'wait') { heroPop('どこに しよう…'); toast('點一張空桌子，帶客人過去。', 2600); return; }
     const k = spotOf(c); if (k) go(k);
   }

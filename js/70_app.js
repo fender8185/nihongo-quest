@@ -207,10 +207,13 @@ function sceneTick() {
   applyTheme();   // a dialog opened over a scene is lit as the scene
 }
 // a minute on (or back in the app): the clock, and out and about the town as the hour has it — people gone home, shops shut (TOWNEV)
+// the scene kept as it is while a talk is open or a 外場 shift is going (2026-11-15, the final review: 20:00 drew らいらいけん anew
+// under a shift — 黄 gone, the customers with him — and it could not be finished; a shift begun before closing runs to its end)
+const sceneHeld = () => TALK.on() || (typeof HALL === 'object' && HALL.on());
 function sceneMinute() {
   sceneTick();
   const yd = document.querySelector('#view .yard');
-  if (yd && !TALK.on() && yd.dataset.sig !== TOWNEV.sig(yd.dataset.place)) TOWNLIFE.change(yd, route);   // those leaving walk off first (TOWNLIFE)
+  if (yd && !sceneHeld() && yd.dataset.sig !== TOWNEV.sig(yd.dataset.place)) TOWNLIFE.change(yd, route);   // those leaving walk off first (TOWNLIFE)
 }
 setInterval(() => { if (document.body.classList.contains('scene')) sceneMinute(); }, 60000);   // the scenes move with the clock while one is open
 // back in the app after a while: the scenes catch up with the clock, and so do the pages' colours, except in the middle of questions

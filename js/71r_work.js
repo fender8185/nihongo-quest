@@ -37,8 +37,9 @@ const WORK = (() => {
   const kana = () => (knowsAll() ? new Set(REG.kana.map((x) => x.ch)) : kanaSeenSet());
   const here = (job) => (job === 'buns' ? (TOWNEV.whereIs('wang', TOWNEV.now(), TOWNEV.today()) || {}).place === 'chinatown' : job === 'waiter' ? TOWNEV.isOpen('rairai', TOWNEV.now()) : TOWNEV.isOpen('dori', TOWNEV.now()));
   // the 入門 words a job needs learned first (外場: いらっしゃいませ, どうぞ, はい) — the ones not yet, for one still in 入門
-  const knows = (w) => knowsAll() || REG.vocab.some((v) => v.w === w && v.r === w && state.srs[v.key]);   // an 入門 word learned (or all, past 入門)
-  const wordsLeft = (job) => (knowsAll() ? [] : (PLACES[job].words || []).filter((w) => !REG.vocab.some((v) => v.w === w && v.r === w && state.srs[v.key])));
+  // an 入門 word learned (or all of them, past 入門 — not for knowing kana: those words come in 入門's own lessons; the final review)
+  const knows = (w) => !inPreStage() || REG.vocab.some((v) => v.w === w && v.r === w && state.srs[v.key]);
+  const wordsLeft = (job) => (PLACES[job].words || []).filter((w) => !knows(w));
   // may this job be started (or picked up again) now: its kana seen, today's workplace (if any) this one and not done, open
   function can(job) {
     const P = PLACES[job]; if (!P) return { ok: false, why: '' };

@@ -199,6 +199,27 @@ def test_without_their_words_none_of_them_come(b):
       return JSON.stringify([...kinds].sort()); })()""".replace("await drive_once();", "const n = now(), c = n.cust; if (n.ask) { await answer(true); continue; } if (c.some((x) => x.state === 'in')) { await goTo('entry'); continue; } if (c.some((x) => x.state === 'wait')) { const f = [0, 1, 2].find((t) => !c.some((x) => x.table === t)); if (f !== undefined) { await goTo('table' + f); continue; } } const cl = c.find((x) => x.state === 'call'); if (cl) { await goTo('table' + cl.table); continue; } if (n.tray) { await goTo('table' + c.find((x) => x.id === n.tray.for).table); continue; } if (n.ready.length) { await goTo('pass'); continue; } if (c.some((x) => x.state === 'pay')) { await goTo('register'); continue; } await wait(40);")))
     assert r == ['call', 'greet', 'pay', 'seat', 'serve'], r
 
+# ---- the final review's findings (2026-11-15) ----
+def test_an_order_crowded_out_by_another_question_still_comes(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('これ', 'それ', 'あれ'); await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
+      await until(() => cust('call')); HALL.spawn(); await until(() => now().cust.filter((c) => c.state === 'in').length);
+      await goTo('table0'); const a = ask(); [...document.querySelectorAll('.hl-opt')].find((x) => x.dataset.o === a.right).click(); HALL.at(yard(), 'entry'); const crowd = ask() && ask().kind; await wait(100); await answer(true);   // はい！, and at once the door's greeting
+      await wait(300); const mark = document.querySelector(`.cust[data-c="${now().cust[0].id}"]`).classList.contains('need'); await goTo('table0');
+      return JSON.stringify({ crowd, mark, kind: ask() && ask().kind }); })()"""))
+    assert r == {'crowd': 'greet', 'mark': True, 'kind': 'order'}, r
+
+def test_a_shift_going_at_closing_time_runs_to_its_end(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ TOWNEV.clock = { h: 19.95, day: new Date(2026, 10, 10) }; await start(); await until(() => cust('in')); await goTo('entry'); await answer(true);
+      TOWNEV.clock = { h: 20.05, day: new Date(2026, 10, 10) }; sceneMinute(); await wait(400); route(); await wait(400);
+      const out = { on: HALL.on(), custs: document.querySelectorAll('.yard .cust').length > 0 }; await drive(); await until(() => document.querySelector('.wk-result'));
+      out.yen = WORK.today().yen > 0; return JSON.stringify(out); })()"""))
+    assert r == {'on': True, 'custs': True, 'yen': True}, r
+
+def test_kana_known_in_nyumon_still_needs_the_words(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ state.kanaKnown = true; kana(0); const out = { can: WORK.can('waiter'), kore: WORK.knows('これ') };
+      state.stage = 'n5'; out.past = WORK.can('waiter').ok && WORK.knows('これ'); state.stage = 'pre'; return JSON.stringify(out); })()"""))
+    assert not r['can']['ok'] and 'いらっしゃいませ' in r['can']['why'] and r['kore'] is False and r['past'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
