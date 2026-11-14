@@ -48,12 +48,12 @@ def test_at_the_shokudo_he_orders_in_japanese_tome_says_the_price_and_he_sits_do
       const who = document.querySelector('.talk-name').firstChild.textContent, said = await talk(); await wait(300);
       await wait(1700); const es = document.querySelector('.eat-scene'), look = [], first = es.querySelector('.es-face').dataset.mood;
       while (es.querySelector('.es-face').dataset.mood === 'drool') { look.push(es.querySelector('.es-say').textContent); es.querySelector('.es-ok').click(); await wait(60); }   // how good it looks, then いただきます
-      const screen = es && { mood: es.querySelector('.es-face').dataset.mood, name: es.querySelector('.es-name').textContent, done: es.classList.contains('done'), taken: es.querySelector('.es-face').dataset.taken, scene: !!es.querySelector('.es-stage .es-bust svg') && !es.querySelector('.es-stage .arm'), ok: !es.querySelector('.es-ok').hidden, left: !!es.querySelector('.es-left') };
+      const screen = es && { mood: es.querySelector('.es-face').dataset.mood, name: es.querySelector('.es-name').textContent, done: es.classList.contains('done'), taken: es.querySelector('.es-face').dataset.taken, bg: es.querySelector('.es-face').dataset.bg, scene: !!es.querySelector('.es-stage .es-bust svg') && !es.querySelector('.es-stage .arm'), ok: !es.querySelector('.es-ok').hidden, left: !!es.querySelector('.es-left') };
       const rave = []; while (document.querySelector('.eat-scene')) { rave.push(document.querySelector('.es-say').textContent); document.querySelector('.es-ok').click(); await wait(60); } await wait(400);
       return JSON.stringify({ who, said, bal: yenBalance(), sat: !!yh.use, book: state.purse.book.curry || '', screen, rave, first, look, looks: TOWN.MENU.shokudo.items[0][4].look.map((l) => l[0].replace(/\{([^|}]+)\|[^}]+\}/g, '$1')), says: TOWN.MENU.shokudo.items[0][4].say.map((l) => l[0].replace(/\{([^|}]+)\|[^}]+\}/g, '$1')), gone: !document.querySelector('.eat-scene'), stamp: !!document.querySelector('.yen-stamp'), today: state.purse.today }); })()"""))
     assert r['said'] == ['カレーを ください。', 'はいよ！ 500円ごひゃくえんね。'], r
     assert r['bal'] == 4500 and r['sat'] and r['book'], r
-    assert r['screen'] == {'name': 'カレー', 'done': True, 'taken': '3', 'scene': True, 'ok': True, 'left': False, 'mood': 'bliss'}, r   # had on a screen of its own: across the table, three spoonfuls till gone (no arms)
+    assert r['screen'] == {'name': 'カレー', 'done': True, 'taken': '3', 'bg': 'shokudo', 'scene': True, 'ok': True, 'left': False, 'mood': 'bliss'}, r   # had on a screen of its own: across the table, three spoonfuls till gone (no arms)
     assert r['first'] == 'drool' and [x.replace(' ', '') for x in r['look']] == [x.replace(' ', '') for x in r['looks']], r   # star-eyed, how good it looks first
     assert [x.replace(' ', '') for x in r['rave']] == [x.replace(' ', '') for x in r['says']], r   # then he goes on about it, a line a tap
     assert r['gone'] and r['stamp'] and r['today']['f'] == 1 and r['today']['d'] == 0, r   # the first カレー: stamped
@@ -71,9 +71,12 @@ def test_every_food_and_drink_is_had_its_own_way_through_a_whole_meal(b):
         if (!moods.has('bliss') || !moods.has('drool')) bad.push(it[0] + ':moods');
         sc.stop();
       }
-      host.remove();
-      return JSON.stringify({ n: items.length, bad, ways }); })()"""))
+      host.remove(); const where = Object.fromEntries(Object.keys(TOWN.MENU).map((m) => [m, YEN.where(m)]));
+      return JSON.stringify({ n: items.length, bad, ways, where, bgs: EATSCENE.BG }); })()"""))
     assert r['n'] == 41 and not r['bad'], r
+    wh = r['where']   # each where it is had: its own backdrop (2026-11-14, the user)
+    assert (wh['shokudo'], wh['izakaya'], wh['cafe'], wh['milk'], wh['vend'], wh['bakery']) == ('shokudo', 'izakaya', 'cafe', 'sento', 'street', 'bakery'), wh
+    assert all(wh[m] == 'fair' for m in ('yakisoba', 'takoyaki', 'wataame', 'ringoame', 'chocobanana')) and set(wh.values()) <= set(r['bgs']), wh
     w = r['ways']
     assert set(w) == {'spoon', 'chop', 'fork', 'pick', 'kushi', 'bite', 'straw', 'tip', 'cup'}, w
     assert {'curry', 'kakigori', 'jagabata'} <= set(w['spoon']) and {'ramen', 'udon', 'gyudon', 'sakana', 'yakisoba'} <= set(w['chop']), w
@@ -167,11 +170,11 @@ def test_while_he_eats_the_back_button_keeps_the_page(b):
     # 2026-11-13, the user: watched to the end — no going elsewhere while it is up
     r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ await go('street'); use('vend'); await wait(100);
       document.querySelector('.mc-item[data-item="cola"]').click(); await wait(1700); const up = !!document.querySelector('.eat-scene');
-      location.hash = '#/today'; await wait(300); const kept = location.hash, still = !!document.querySelector('.eat-scene'), place = y() && y().dataset.place;
+      const bg = document.querySelector('.eat-scene .es-face').dataset.bg; location.hash = '#/today'; await wait(300); const kept = location.hash, still = !!document.querySelector('.eat-scene'), place = y() && y().dataset.place;
       while (document.querySelector('.eat-scene')) { document.querySelector('.es-ok').click(); await wait(40); }
       location.hash = '#/today'; await wait(300);
-      return JSON.stringify({ up, kept, still, place, after: location.hash }); })()"""))
-    assert r == {'up': True, 'kept': '#/street', 'still': True, 'place': 'street', 'after': '#/today'}, r
+      return JSON.stringify({ up, bg, kept, still, place, after: location.hash }); })()"""))
+    assert r == {'up': True, 'bg': 'street', 'kept': '#/street', 'still': True, 'place': 'street', 'after': '#/today'}, r   # a can from the machine: had in the street, not at the 食堂's table (2026-11-14, the user)
 
 def test_the_machine_sells_cola_in_a_can_and_the_tea_is_had_at_the_shokudo(b):
     # 2026-11-13, the user: a cup of hot tea did not look like a machine's — the tea to the 食堂, cola in the machine (learned first)

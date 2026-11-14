@@ -540,9 +540,10 @@ const ROOM = (() => {
     [[-40, -62, -14], [34, -70, 12], [-14, -92, -4], [16, -96, 6], [-48, -30, -24], [46, -36, 22], [2, -66, 0]].forEach(([lx, ly, rot], i) => {
       leaves += `<g transform="translate(${lx} ${ly}) rotate(${rot})"><path ${F(i % 2 ? C.leafDk : C.leaf, 'y', [x, y + 0.2, 2.6])} d="M0 16 C-16 12 -20 -6 -12 -16 C-6 -22 6 -22 12 -16 C20 -6 16 12 0 16 Z"/><path d="M0 14 V-16" stroke="#2f5a32" stroke-opacity=".45" stroke-width="1.2"/><path d="M-12 -4 l6 2 M12 -4 l-6 2 M-13 6 l7 1 M13 6 l-7 1" stroke="#fff" stroke-opacity=".28" stroke-width="1.6"/></g>`;
     });
-    const stems = [[-40, -62], [34, -70], [-14, -92], [16, -96], [-48, -30], [46, -36], [2, -66]].map(([lx, ly]) => `M0 -40 Q${lx * 0.3} ${ly * 0.6} ${lx} ${ly + 14}`).join(' ');
+    // each leaf on its own stalk out of the soil (2026-11-14, the user: the stem was missing — they began 40 up, the leaves floated over the pot)
+    const stems = [[-40, -62], [34, -70], [-14, -92], [16, -96], [-48, -30], [46, -36], [2, -66]].map(([lx, ly]) => `M${(lx * 0.06).toFixed(1)} -1 Q${lx * 0.2} ${ly * 0.55} ${lx} ${ly + 14}`).join(' ');
     return shadow(x - 0.6, y - 0.6, x + 0.75, y + 0.75, 0.7) + box('#ece4d6', x - 0.42, y - 0.42, 0, x + 0.42, y + 0.42, 1.05, { t: '#5a3d28', hlv: true })
-      + bb(x, y, 1.05, `<path d="${stems}" fill="none" stroke="#3f7a42" stroke-width="2.2" stroke-linecap="round"/>${leaves}`);
+      + bb(x, y, 1.05, `<path d="${stems}" fill="none" stroke="#3f7a42" stroke-width="2.4" stroke-linecap="round"/>${leaves}`);
   }
 
   // ===== the bed (nothing to tap, in the bedroom since 1.3.0) against the right wall, the night table beside it with a reading

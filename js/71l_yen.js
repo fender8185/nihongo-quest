@@ -91,7 +91,7 @@ const YEN = (() => {
     saveState(); kotoButtons(document);
     const then = () => {
       have(yard, t, mu);
-      if (HAD[k]) setTimeout(() => eat(it, first), mu.sit ? 1500 : 1300); else if (first) setTimeout(() => stamp(it), 1000);
+      if (HAD[k]) setTimeout(() => eat(it, first, m), mu.sit ? 1500 : 1300); else if (first) setTimeout(() => stamp(it), 1000);
       if (k === 'b') setTimeout(() => { if (!yard.isConnected) return; yPop(yard, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), 'おなか すいた〜！'); toast('泡完澡，肚子又餓了。', 2600); }, (t.out || 0) + 1800);
     };
     if (!mu.keeper) { SND.play('coins'); then(); return; }   // a machine, the おみくじ box
@@ -115,7 +115,10 @@ const YEN = (() => {
   // thing itself, or the drink — coming up to the mouth, three mouthfuls with the dish going down. Star-eyed first (how good it
   // looks, a line a tap), いただきます and it is had, then he goes on about it (its say, a line a tap, read out, the Chinese on a
   // tap) and 「ごちそうさまでした！」; the first time, its stamp ----
-  function eat(it, first) {
+  // where it is had, for the scene's backdrop (EATSCENE BG): the menu's own place; a machine in the street or the station; the stalls
+  const WHERE = { shokudo: 'shokudo', izakaya: 'izakaya', cafe: 'cafe', milk: 'sento', vend: 'street', bakery: 'bakery' };
+  const where = (m) => WHERE[m] || (typeof SHRINE_STALLS !== 'undefined' && SHRINE_STALLS.some(([id]) => id === m) ? 'fair' : 'shokudo');
+  function eat(it, first, m) {
     const o = opt(it), drink = o.k === 'd', el = document.createElement('div');
     const looks = o.look || [], said = (o.say && o.say.length ? o.say : [['おいしかった！', '好好吃！']]);   // before having it (star-eyed), once had
     el.className = `eat-scene${drink ? ' drink' : ''}`; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', drink ? '喝東西' : '吃東西'); el.dataset.at = location.hash;   // watched to the end: no going elsewhere meanwhile (route)
@@ -125,7 +128,7 @@ const YEN = (() => {
       <div class="es-foot"><button type="button" class="zh-btn es-zh-btn" hidden>中文</button></div>
       <button type="button" class="btn btn-primary es-ok" lang="ja" hidden>▶</button></div>`;
     document.body.appendChild(el);
-    const scene = EATSCENE.mount(el.querySelector('.es-stage'), it, pic(it), calm());
+    const scene = EATSCENE.mount(el.querySelector('.es-stage'), it, pic(it), calm(), where(m));
     SND.play('sparkle'); setTimeout(() => { if (el.isConnected) SND.play('slurp'); }, 450);   // the stars come up, じゅるり
     const ok = el.querySelector('.es-ok'), zhB = el.querySelector('.es-zh-btn'), zhP = el.querySelector('.es-zh');
     // the hero's words: how good it looks (looks, star-eyed, a line a tap), いただきます and it is had, how good it was (said, a line a
@@ -183,5 +186,5 @@ const YEN = (() => {
     const mu = M()[m];
     return { hello: mu.hello || ['いらっしゃい！', '歡迎光臨！'], label: m === 'bath' ? 'おふろに はいる' : 'ちゅうもんする', go: () => open(yard, t) };   // in Japanese (the user), in kana: furigana in a button set it askew beside the other
   }
-  return { open, buy, toggleZh, lines, book, shown, reading, priceMark, known, left, tool, allOpen, sells, pic };
+  return { open, buy, toggleZh, lines, book, shown, reading, priceMark, known, left, tool, allOpen, sells, pic, where };
 })();

@@ -183,7 +183,7 @@ const EATSCENE = (() => {
   };
 
   // ======== a mouthful (or a sip) at ms into it: the pose, what is carried, the mood and the word ========
-  function plan(it, pic) {
+  function plan(it, pic, bg) {
     const id = it[0], d = DISH[id], dr = DRINK[id];
     if (dr) {   // a drink: up to the mouth and tipped (more each sip), or slid in to its straw
       const [way, v] = dr, REST = way === 'straw' ? [214, 330, 0] : [MX + 50, 330, 0];
@@ -217,7 +217,8 @@ const EATSCENE = (() => {
         tool: (p, st) => `<g transform="translate(${f1(p[0])} ${f1(p[1])}) rotate(${f1(p[2])}) scale(1.4) translate(${f1(-p[3])} 0)">${skewer(KUSHI[id], st.taken)}</g>` };
     }
     const REST = [MX - 50 + 60, 300, 0, 50, 70];
-    return { kind: 'bite', table: () => `${SHADOW(194, 326, 66, 18)}<ellipse cx="190" cy="318" rx="64" ry="20" fill="#fbf7ee"/><ellipse cx="190" cy="318" rx="54" ry="15" fill="none" stroke="#e8dcc4" stroke-width="1.4"/>`,
+    return { kind: 'bite', table: () => (OUTDOOR.includes(bg) ? `${SHADOW(196, 330, 62, 12)}<path d="M128 314 L240 300 L262 328 L146 344 Z" fill="#f4ead2"/><path d="M128 314 L262 328 M240 300 L146 344" stroke="#e2d4b4" stroke-width="1.2"/>`   // outdoors: on its paper
+        : `${SHADOW(194, 326, 66, 18)}<ellipse cx="190" cy="318" rx="64" ry="20" fill="#fbf7ee"/><ellipse cx="190" cy="318" rx="54" ry="15" fill="none" stroke="#e8dcc4" stroke-width="1.4"/>`),
       poses: (n) => { const [bx, by] = BITES[n]; return [[0, REST], [600, [MX + 40, MY + 56, -6, 50, 60]], [T.at, at(0, 2, -8, bx, by + 6)], [T.hold, at(0, 2, -8, bx, by + 6)], [1650, [MX + 34, MY + 50, -4, 50, 60]], [2200, REST]]; },
       tool: (p, st, uid) => `<g transform="translate(${f1(p[0])} ${f1(p[1])}) rotate(${f1(p[2])}) scale(1.05) translate(${f1(-p[3])} ${f1(-p[4])})">${bitten(pic, st.taken, uid)}</g>` };
   }
@@ -244,15 +245,59 @@ const EATSCENE = (() => {
   const heartsOf = (pl) => { const h = []; for (let n = 0; n < N; n++) { const w = START + n * BITE + (pl.kind === 'drink' ? 1900 : 2150); h.push([w, MX + 58, MY - 40], [w + 260, MX - 74, MY - 30]); } const e = START + N * BITE; h.push([e + 150, MX + 66, MY - 50], [e + 400, MX - 80, MY - 40], [e + 650, MX + 20, MY - 90]); return h; };
 
   // ======== the scene: drawn into an <svg> (360 × 420), its moving parts redrawn each frame ========
+  // ======== where it is had (2026-11-14, the user: the 食堂's wall and table looked odd at a vending machine): a backdrop behind the
+  // hero (0–268; mostly seen at the sides and over the head) and what the thing is set on (268–420). Outdoors goes by the time of
+  // day (body --day: 1 by day, 0 by night); indoors is lamp-lit alike ========
+  const dn = (a, b) => `style="fill:color-mix(in srgb,${a} calc(var(--day)*100%),${b})"`, NIGHT = 'style="opacity:calc(1 - var(--day))"';
+  const slats = (top, edge, line, ys) => `<path d="M0 268 H360 V420 H0 Z" fill="${top}"/><path d="M0 268 H360" stroke="${edge}" stroke-width="4"/><path d="${ys.map((y) => `M0 ${y} H360`).join(' ')}" stroke="${line}" stroke-width="2" opacity=".6"/>`;
+  const stars = `<g fill="#fff" ${NIGHT}>${[[30, 30], [92, 14], [300, 24], [338, 60], [262, 10], [16, 84], [348, 120]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 3 ? 1.2 : 1.8}"/>`).join('')}</g>`;
+  const lantern = (x, y, r, c) => `<g transform="translate(${x} ${y})"><circle r="${r * 1.9}" fill="#ffb24a" opacity=".22"/><ellipse rx="${r}" ry="${r * 1.2}" fill="${c}"/><path d="M${-r * 0.92} -${r * 0.4} Q0 -${r * 0.5} ${r * 0.92} -${r * 0.4} M-${r} 0 Q0 ${r * 0.1} ${r} 0 M${-r * 0.92} ${r * 0.4} Q0 ${r * 0.5} ${r * 0.92} ${r * 0.4}" stroke="#000" stroke-opacity=".25" fill="none"/><rect x="${-r * 0.5}" y="${-r * 1.32}" width="${r}" height="${r * 0.24}" fill="#2a2420"/><rect x="${-r * 0.5}" y="${r * 1.08}" width="${r}" height="${r * 0.24}" fill="#2a2420"/><ellipse cx="${-r * 0.35}" cy="${-r * 0.4}" rx="${r * 0.22}" ry="${r * 0.4}" fill="#fff" opacity=".3"/></g>`;
+  const BG = {
+    shokudo: { back: (uid) => `<defs><linearGradient id="ew${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6e7cf"/><stop offset="1" stop-color="#ead2ae"/></linearGradient></defs>
+        <rect width="360" height="420" fill="url(#ew${uid})"/><rect width="360" height="40" fill="#2f3a64" opacity=".9"/>${[40, 160, 280].map((x) => `<path d="M${x} 40 v-40" stroke="#fff" stroke-opacity=".25"/>`).join('')}`,
+      front: '<path d="M0 268 H360 V420 H0 Z" fill="#b98955"/><path d="M0 268 H360" stroke="#d4a874" stroke-width="3"/><path d="M0 300 H360 M0 346 H360 M0 392 H360" stroke="#a87a48" stroke-width="1" opacity=".5"/>' },
+    // 居酒屋: dark boards, menu tags (短冊) on the wall, 赤提灯 glowing, a dark counter
+    izakaya: { back: () => `<rect width="360" height="268" fill="#5a3a26"/><path d="${[30, 60, 90, 270, 300, 330].map((x) => `M${x} 0 V268`).join(' ')}" stroke="#432a1a" stroke-width="2"/><rect width="360" height="268" fill="#ffb060" opacity=".07"/>
+        <path d="M0 92 H360" stroke="#3a2416" stroke-width="5"/>${[6, 28, 50, 288, 310, 332].map((x, i) => `<rect x="${x}" y="98" width="18" height="${62 + (i % 2) * 10}" fill="#f6efe0"/><path d="M${x + 9} 106 v9 M${x + 9} 121 v13 M${x + 9} 140 v${8 + (i % 2) * 8}" stroke="#2a2420" stroke-width="2.4" stroke-linecap="round"/><rect x="${x + 4}" y="${150 + (i % 2) * 10}" width="10" height="4" fill="#c8323a"/>`).join('')}
+        ${lantern(34, 46, 17, '#d8303a')}${lantern(326, 46, 17, '#d8303a')}`,
+      front: '<path d="M0 268 H360 V420 H0 Z" fill="#7a4a2a"/><path d="M0 268 H360" stroke="#a8703f" stroke-width="4"/><path d="M0 314 C90 308 270 320 360 312 M0 366 C120 372 240 360 360 368" stroke="#5e3820" stroke-width="1.6" fill="none" opacity=".6"/>' },
+    // 喫茶しずく: green striped paper, a framed picture, a pendant lamp, a walnut table
+    cafe: { back: () => `<rect width="360" height="268" fill="#46604e"/><path d="${Array.from({ length: 20 }, (_, i) => `M${i * 18 + 9} 0 V268`).join(' ')}" stroke="#527060" stroke-width="3"/>
+        <rect x="12" y="78" width="56" height="68" fill="#c9a06a"/><rect x="18" y="84" width="44" height="56" fill="#bfe0f4"/><path d="M18 122 Q34 108 48 118 T62 114 V140 H18 Z" fill="#7fae6a"/><circle cx="50" cy="98" r="6" fill="#f6d27a"/>
+        <path d="M312 0 V34" stroke="#2a2420" stroke-width="2"/><circle cx="312" cy="62" r="34" fill="#ffd27a" opacity=".2"/><path d="M294 52 Q312 30 330 52 Z" fill="#e8b04a"/><path d="M294 52 H330" stroke="#c88a2a" stroke-width="2"/><ellipse cx="312" cy="56" rx="7" ry="5" fill="#fff6d0"/>`,
+      front: '<path d="M0 268 H360 V420 H0 Z" fill="#6e4a32"/><path d="M0 268 H360" stroke="#8e6446" stroke-width="4"/><path d="M0 320 C100 314 260 326 360 318 M0 380 C140 386 240 374 360 382" stroke="#5a3a26" stroke-width="1.6" fill="none" opacity=".6"/>' },
+    // 銭湯's 脱衣所 (the milk): numbered wooden lockers either side, a hinoki bench
+    sento: { back: () => `<rect width="360" height="268" fill="#f2ead8"/><path d="M0 34 H360" stroke="#c9a670" stroke-width="5"/>
+        ${[[0, 0], [276, 4]].map(([x0, n0]) => `<rect x="${x0}" y="48" width="84" height="220" fill="#b88a5c"/>${[0, 1].flatMap((c) => [0, 1, 2, 3].map((r) => { const x = x0 + 5 + c * 39, y = 54 + r * 53;
+          return `<rect x="${x}" y="${y}" width="35" height="48" rx="2" fill="#dcb682" stroke="#a87a4c" stroke-width="1.4"/><rect x="${x + 9}" y="${y + 6}" width="17" height="9" rx="1.4" fill="#fbf6ea"/><text x="${x + 17.5}" y="${y + 13.4}" font-size="7.4" text-anchor="middle" fill="#3a2c24" font-family="sans-serif">${n0 + r * 2 + c + 1}</text><circle cx="${x + 17.5}" cy="${y + 32}" r="3" fill="#c9a24a"/>`; })).join('')}`).join('')}`,
+      front: slats('#e6cc98', '#f2dcae', '#c9a670', [312, 358, 400]) },
+    // in the street by a vending machine (also the station's): the sky, roofs far off, a pole and its wires; the machine lit by night
+    street: { back: () => `<rect width="360" height="268" ${dn('#bfe0f4', '#1b2050')}/>${stars}
+        <path d="M0 268 V200 L30 186 L60 200 V180 H100 V268 Z M262 268 V196 L296 178 L330 196 V186 H360 V268 Z" ${dn('#9fb6c8', '#2a2f58')}/>
+        <rect x="334" y="0" width="10" height="268" ${dn('#8a8f98', '#3a3e58')}/><path d="M0 40 Q180 64 360 36 M0 52 Q180 78 360 48" stroke="#3a3e48" stroke-opacity=".45" stroke-width="1.4" fill="none"/>
+        <rect x="-10" y="88" width="88" height="186" rx="12" fill="#fff2b0" opacity=".18" ${NIGHT}/><rect x="-4" y="96" width="74" height="172" rx="4" fill="#d8303a"/><rect x="4" y="106" width="58" height="76" rx="2" ${dn('#eef6fa', '#fff6d0')}/>${[0, 1, 2].map((r) => [0, 1, 2, 3].map((c) => `<rect x="${9 + c * 13}" y="${112 + r * 24}" width="8" height="14" rx="2" fill="${['#e0464a', '#3f7ac8', '#f5a030', '#5fae6a'][(r + c) % 4]}"/><rect x="${10 + c * 13}" y="${128 + r * 24}" width="6" height="3" fill="#e0464a"/>`).join('')).join('')}
+        <rect x="46" y="190" width="14" height="22" rx="2" fill="#2a2420"/><rect x="8" y="228" width="50" height="18" rx="3" fill="#2a2420"/><g ${NIGHT}><rect x="4" y="106" width="58" height="76" fill="#fff6c0" opacity=".22"/></g>`,
+      front: slats('#a87a50', '#c49568', '#7e5634', [306, 350, 394]) },
+    // in front of 森のパン: its striped awning, the windows full of bread, a bench out front
+    bakery: { back: () => `<rect width="360" height="268" fill="#f3e6cc"/><path d="M0 0 H360 V40 ${Array.from({ length: 12 }, (_, i) => `Q${345 - i * 30} 56 ${330 - i * 30} 40`).join(' ')} Z" fill="#fbf6ea"/>${Array.from({ length: 6 }, (_, i) => `<path d="M${i * 60} 0 H${i * 60 + 30} V40 Q${i * 60 + 15} 56 ${i * 60} 40 Z" fill="#4f8a5a"/>`).join('')}
+        ${[6, 276].map((x) => `<rect x="${x}" y="88" width="78" height="164" rx="3" fill="#8a5a36"/><rect x="${x + 6}" y="94" width="66" height="152" fill="#fdf2dc"/>${[136, 192].map((y) => `<path d="M${x + 6} ${y} H${x + 72}" stroke="#c9a06a" stroke-width="3"/>`).join('')}
+          ${[[14, 128, 'm'], [36, 128, 'c'], [56, 128, 'm'], [16, 184, 'c'], [38, 184, 'l'], [24, 238, 'l'], [52, 238, 'm']].map(([dx, y, k]) => (k === 'm' ? `<ellipse cx="${x + dx}" cy="${y - 8}" rx="9" ry="7" fill="#f2c86a"/>` : k === 'c' ? `<path d="M${x + dx - 10} ${y - 4} Q${x + dx} ${y - 22} ${x + dx + 10} ${y - 4} Q${x + dx} ${y - 10} ${x + dx - 10} ${y - 4} Z" fill="#d99a4a"/>` : `<rect x="${x + dx - 11}" y="${y - 16}" width="22" height="14" rx="6" fill="#c98a4a"/>`)).join('')}<path d="M${x + 10} 100 L${x + 26} 240" stroke="#fff" stroke-opacity=".45" stroke-width="3"/>`).join('')}`,
+      front: slats('#b98a5a', '#d4a874', '#8e6440', [306, 350, 394]) },
+    // the 緣日: a string of lanterns over the stalls (red-and-white, indigo-and-white), a 縁台 under red felt
+    fair: { back: () => `<rect width="360" height="268" ${dn('#f6d2a0', '#22204a')}/>${stars}
+        ${[[0, '#d0453c'], [276, '#3f5aa8']].map(([x, c]) => `<rect x="${x}" y="170" width="84" height="98" fill="#6b4428"/><path d="M${x} 128 H${x + 84} V166 ${Array.from({ length: 6 }, (_, i) => `Q${x + 84 - i * 14 - 7} 178 ${x + 84 - (i + 1) * 14} 166`).join(' ')} Z" fill="#fbf6ea"/>${[0, 2, 4].map((i) => `<path d="M${x + i * 14} 128 H${x + i * 14 + 14} V166 Q${x + i * 14 + 7} 178 ${x + i * 14} 166 Z" fill="${c}"/>`).join('')}`).join('')}
+        <path d="M-4 30 Q180 80 364 30" stroke="#2a2420" stroke-width="1.4" fill="none"/>${[14, 60, 104, 256, 300, 346].map((x, i) => { const u = x / 360, y = 30 + 50 * 4 * u * (1 - u) * 0.5 + 12; return lantern(x, y, 9, i % 2 ? '#fff4e0' : '#e04a4a'); }).join('')}`,
+      front: '<path d="M0 268 H360 V420 H0 Z" fill="#c8323a"/><path d="M0 268 H360" stroke="#e0484e" stroke-width="4"/><g fill="#a8262e" opacity=".5">' + Array.from({ length: 40 }, (_, i) => `<circle cx="${(i * 97) % 360}" cy="${280 + (i * 53) % 136}" r="1.2"/>`).join('') + '</g>' }
+  };
+  const OUTDOOR = ['street', 'bakery'];
   let uidN = 0;
-  function mount(svg, it, picSvg, still) {   // still: motion reduced — drawn once, then once more at the end
+  function mount(svg, it, picSvg, still, where) {   // still: motion reduced — drawn once, then once more at the end; where: a BG key
     const uid = `e${++uidN}`, bust = heroArt(state.look), pic = (/<svg[^>]*>(?:<circle class="pd"[^>]*\/>)?([\s\S]*)<\/svg>$/.exec(picSvg || '') || [])[1] || '';
-    const pl = plan(it, pic), HEARTS = heartsOf(pl), more = [];
-    svg.innerHTML = `<defs><linearGradient id="ew${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6e7cf"/><stop offset="1" stop-color="#ead2ae"/></linearGradient></defs>
-      <rect width="360" height="420" fill="url(#ew${uid})"/><rect width="360" height="40" fill="#2f3a64" opacity=".9"/>${[40, 160, 280].map((x) => `<path d="M${x} 40 v-40" stroke="#fff" stroke-opacity=".25"/>`).join('')}
-      <g class="es-bust">${bust}</g><path d="M0 268 H360 V420 H0 Z" fill="#b98955"/><path d="M0 268 H360" stroke="#d4a874" stroke-width="3"/><path d="M0 300 H360 M0 346 H360 M0 392 H360" stroke="#a87a48" stroke-width="1" opacity=".5"/>
+    const bg = BG[where] ? where : 'shokudo', B = BG[bg], pl = plan(it, pic, bg), HEARTS = heartsOf(pl), more = [];
+    svg.innerHTML = `${B.back(uid)}<g class="es-bust">${bust}</g>${B.front}
       <g class="es-table"></g><g class="es-steam"></g><g class="es-tool"></g><g class="es-mood"></g><g class="es-fx"></g>`;
     const $ = (c) => svg.querySelector(c), box = svg.closest('.es-face');
+    if (box) box.dataset.bg = bg;
     let raf = 0, t0 = 0, phase = 'look', lastTaken = -1, onDone = null, heard = '';
     const idle0 = performance.now();
     function paint(st, ms) {
@@ -293,5 +338,5 @@ const EATSCENE = (() => {
     };
   }
   const way = (it) => (DRINK[it[0]] ? DRINK[it[0]][0] : DISH[it[0]] ? DISH[it[0]].way : KUSHI[it[0]] ? 'kushi' : 'bite');   // how a thing is had
-  return { mount, way, N, MEAL: START + N * BITE };
+  return { mount, way, N, MEAL: START + N * BITE, BG: Object.keys(BG) };
 })();
