@@ -385,6 +385,7 @@ function sceneUse(el) {
   const t = (PLACE_USE[yard.dataset.place] || []).find((q) => q.id === el.dataset.use), [x0, y0, x1] = t ? t.box : [];
   if (!t || !yard.querySelector('.yhero')) return;
   USED.mark(yard.dataset.place, t.id); el.classList.add('tried');   // its dot goes
+  if (t.open) { primeTtsPlayer(); audioCtx(); }   // the board, かるた, the radio, the books (2026-11-14, the user: the radio said nothing on an iPhone): sound woken inside the tap, played after the walk
   if (t.buy) { YEN.open(yard, t); return; }   // one with a menu: bought first, then had (YEN)
   useThing(yard, t);
 }

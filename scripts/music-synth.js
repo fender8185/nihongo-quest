@@ -92,6 +92,14 @@ window.MUSIC_SYNTH = (() => {
       drums: [{ inst: 'ride', f: 2400, vol: 0.04, pats: ['x...x.x.x...x.x.'] }, { inst: 'brush', vol: 0.06, pats: ['....x.......x...'] }, { inst: 'swish', vol: 0.02, pats: ['x...x...x...x...'] }] },
     // おばけの夜: spooky but cute — E minor, the music box tiptoeing with chromatic steps over a creeping plucked bass and
     // pizzicato offbeats; B moves to G major, the pizzicato takes the tune and the box rings above; A A' B A'
+    // あいうえおの うた (2026-11-14, the user: the classroom's radio could play an あいうえお song): our own tune — a well-known one is
+    // someone's — for the class to say a row of kana to, one a beat. A bar to count in, then two bars a row (its five kana on
+    // the first five beats, a little run after) for the eleven rows あ to ん, and a bar to end on; CLASS.song plays the bars of the
+    // rows learned (SONG_BARS in js/71n_class.js). Bright C major: keys, a music box, a soft snare on 2 and 4
+    aiueo: { bpm: 112, peak: 0.42, bar: 8, tail: 4, lead: 'keys', leadVol: 0.15, arp: [0, 1, 2, 3, 2, 1, 2, 3], arpVol: 0.8,
+      chords: ['G3 B3 D4 F4'].concat(...Array.from({ length: 11 }, (_, r) => (r % 2 ? ['F3 A3 C4 F4', 'G3 B3 D4 G4'] : ['C3 E3 G3 C4', 'G3 B3 D4 G4'])), ['C3 E3 G3 C4']),
+      mel: ['G4 A4 B4 D5 -:4'].concat(Array.from({ length: 11 }, (_, r) => (r % 2 ? 'F5:2 E5:2 D5:2 F5:2 | E5:2 -:2 G4 A4 B4 D5' : 'C5:2 D5:2 E5:2 C5:2 | G5:2 -:2 E5 D5 C5 D5')), ['C5:2 G4:2 C5:4']).join(' | '),
+      drums: [{ inst: 'brush', vol: 0.05, pats: ['....x.......x...'] }] },
     obake: { bpm: 96, peak: 0.73, bar: 8, tail: 0, lead: 'box', leadVol: 0.08, bass: false, pad: 0.008,
       chords: form('A A2 B A2', { A: ['E3 G3 B3 E4', 'E3 G3 B3 E4', 'A3 C4 E4', 'B3 D#4 F#4 A4', 'E3 G3 B3 E4', 'C4 E4 G4', 'A3 C4 E4', 'B3 D#4 F#4 A4'],
         A2: ['E3 G3 B3 E4', 'E3 G3 B3 E4', 'A3 C4 E4', 'B3 D#4 F#4 A4', 'E3 G3 B3 E4', 'C4 E4 G4', 'B3 D#4 F#4 A4', 'E3 G3 B3 E4'],

@@ -122,12 +122,16 @@ def test_the_board_the_song_and_a_picture_book(b):
       CLASS.board(document.querySelector('.yard')); const lit = [...document.querySelectorAll('.cb-k[data-say]')].map((k) => k.dataset.say);
       document.querySelector('[data-script="kata"]').click(); const kata = document.querySelectorAll('.cb-k[data-say]').length;
       const boardKoto = state.koto.found['play-' + todayStr()]; CLASS.close();
-      spoken.length = 0; CLASS.song(1); for (let i = 0; i < 80 && spoken.length < 5; i++) await wait(50); const sung = spoken.slice(0, 5).join('');
+      const plan = CLASS.songPlan([0, 1]), beat = 60 / 112, bar = 4 * beat;
+      const sung = plan.said.map((x) => x[3]).join(''), on = plan.said.map((x) => +(x[0] / beat).toFixed(2)).join(','), parts = plan.parts.map((p) => p.map((v) => +(v / bar).toFixed(2)));
+      window.engineBlob = () => Promise.resolve(null); CLASS.song(); for (let i = 0; i < 60 && document.querySelector('.sg-note').textContent; i++) await wait(50);
+      await wait(2600); const litNow = (document.querySelector('.sg-k.on') || {}).textContent || '', playing = document.querySelector('[data-fx="radio"]').classList.contains('playing'); CLASS.close();
       CLASS.close(); spoken.length = 0; CLASS.book(); const word = (document.querySelector('.bk-word') || {}).textContent || '';
       const readable = [...word].every((c) => state.srs['a:' + c]); CLASS.close();
-      return JSON.stringify({ lit: lit.length, kata, boardKoto, sung, readable, said: CLASS.clockSay()[0] }); })()"""))
+      return JSON.stringify({ lit: lit.length, kata, boardKoto, sung, on, parts, litK: litNow.charAt(0), playing, readable, said: CLASS.clockSay()[0] }); })()"""))
     assert r['lit'] == 10 and r['kata'] == 0 and r['boardKoto'] == 1, r
-    assert r['sung'] == 'かきくけこ', r
+    assert r['sung'] == 'あいうえおかきくけこ' and r['on'] == '4,5,6,7,8,12,13,14,15,16', r   # the rows learned, a kana a beat after the bar counted in
+    assert r['parts'] == [[0, 0, 1], [1, 1, 2], [3, 3, 2], [5, 23, 1.56]] and r['litK'] == 'あ' and r['playing'], r   # count-in, あ's bars, か's, the end
     assert r['readable'] and r['said'].startswith('いま、ごご いちじ'), r   # 13:00 on the town's clock: ごご いちじ
 
 def test_the_hall_is_shut_at_night(b):

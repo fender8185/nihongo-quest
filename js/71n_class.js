@@ -153,7 +153,7 @@ const CLASS = (() => {
   let el = null, timers = [], token = 0;
   const later = (fn, ms) => { const t = token; timers.push(setTimeout(() => { if (t === token && el) fn(); }, ms)); };
   const radio = (on) => { const r = document.querySelector('#view .land [data-fx="radio"]'); if (r) r.classList.toggle('playing', on); };   // the scene's radio plays while the class sings
-  function close() { token++; timers.forEach(clearTimeout); timers = []; stopSpeaking(); radio(false); if (el) { el.remove(); el = null; } }
+  function close() { token++; timers.forEach(clearTimeout); timers = []; stopSpeaking(); if (songSrc.length) stopSong(); radio(false); if (el) { el.remove(); el = null; } }
   function open(cls, label, html, onClick) {
     close();
     el = document.createElement('div'); el.className = 'cls ' + cls; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', label);
@@ -274,38 +274,75 @@ const CLASS = (() => {
     K.cur = '';
   }
 
-  // ---- the radio: the class sings a row of the kana learned, one by one, each lit as it is sung; every time someone gets it
-  // wrong and is told so ----
+  // ---- the radio: あいうえおの うた (2026-11-14, the user: the radio could play an あいうえお song) — its own tune (music/
+  // aiueo-1.m4a, scripts/music-synth.js), the class saying the rows learned to it, a kana a beat, each lit as it is said; at the
+  // end someone gets it wrong and is told so. The track and the kana's clips go through Web Audio on the beat (so an iPhone,
+  // past the tap by the time he is at the radio, still lets them through); with no Web Audio, or the track not to be had, the
+  // row is said kana by kana as before ----
   const SINGERS = ['lin', 'chen', 'maria', 'hori'];
   const GOOFS = [
-    { who: 'maria', at: 'end', ja: 'サンバ！', zh: '森巴！', back: ['chen', 'マリアさん、それ ちがう！', '瑪莉亞小姐，不是這樣啦！'] },
-    { who: 'hori', at: 'end', ja: 'うむ。', zh: '嗯。（堀老師最後一個音拖了十秒）', back: ['maria', 'ほりせんせい、ながい！', '堀老師，太長了啦！'] },
-    { who: 'chen', at: 'end', ja: 'イェー！', zh: '耶！（陳在最後加了一段饒舌）', back: ['lin', 'チェンさん、ラップは いりません。', '陳同學，不需要饒舌。'] }
+    { who: 'maria', ja: 'サンバ！', zh: '森巴！', back: ['chen', 'マリアさん、それ ちがう！', '瑪莉亞小姐，不是這樣啦！'] },
+    { who: 'hori', ja: 'うむ。', zh: '嗯。（堀老師最後一個音拖了十秒）', back: ['maria', 'ほりせんせい、ながい！', '堀老師，太長了啦！'] },
+    { who: 'chen', ja: 'イェー！', zh: '耶！（陳在最後加了一段饒舌）', back: ['lin', 'チェンさん、ラップは いりません。', '陳同學，不需要饒舌。'] }
   ];
-  function song(row) {
-    const s = seen(), rows = KANA_ROWS.map((r, i) => [i, r.filter(Boolean)]).filter(([, r]) => r.every((h) => s.has(h)));
-    const pickRow = row !== undefined ? row : rows.length ? rows[Math.floor(Math.random() * rows.length)][0] : 0;
-    const kana = KANA_ROWS[pickRow].filter(Boolean), goof = GOOFS[Math.floor(Math.random() * GOOFS.length)];
-    open('cls-song', '一起唱', `${xBtn}<div class="sg-head"><span class="sg-radio">📻</span><b>あいうえおの うた</b></div>
-      <div class="sg-row" lang="ja">${kana.map((h, i) => `<span class="sg-k" data-i="${i}">${h}<small>${KANA_ROMAJI[h]}</small></span>`).join('')}</div>
+  // the track's bars at 112 bpm: one to count in, two a row (あ … ん: its kana on the first five beats), one to end on
+  const SONG = { file: 'music/aiueo-1.m4a', beat: 60 / 112, bar: 240 / 112, vol: 0.55 };
+  let songBuf = null, songSrc = [];
+  const learnedRows = () => { const s = seen(), rows = KANA_ROWS.map((r, i) => [i, r.filter(Boolean)]).filter(([, r]) => r.every((h) => s.has(h))).map(([i]) => i); return rows.length ? rows : [0]; };
+  // what is played when: the track's pieces [when, from, how long] (s after the start) and each kana [when, row, k, kana]
+  function songPlan(rows) {
+    const { beat, bar } = SONG, parts = [[0, 0, bar]], said = [];
+    rows.forEach((r, j) => { const at = bar + j * 2 * bar; parts.push([at, bar + r * 2 * bar, 2 * bar]); KANA_ROWS[r].forEach((h, k) => { if (h) said.push([at + k * beat, r, k, h]); }); });
+    parts.push([bar + rows.length * 2 * bar, 23 * bar, bar + 1.2]);
+    return { parts, said, end: bar + rows.length * 2 * bar + bar };
+  }
+  function songHtml(rows) {
+    return `${xBtn}<div class="sg-head"><span class="sg-radio">📻</span><b>あいうえおの うた</b><span class="sg-rows">${rows.length} 行</span></div>
+      <div class="sg-row" lang="ja">${KANA_ROWS[rows[0]].map((h, i) => (h ? `<span class="sg-k" data-i="${i}">${h}<small>${KANA_ROMAJI[h]}</small></span>` : '')).join('')}</div>
+      <p class="sg-note">準備中……</p>
       <div class="sg-people">${SINGERS.map((id) => `<div class="sg-who" data-who="${id}"><span class="kr-face">${TOWNEV.face(id)}</span><em class="kr-say"></em></div>`).join('')}</div>
-      <div class="sg-btns"><button type="button" class="btn btn-sm" data-cls="again">再唱一次</button><button type="button" class="btn btn-sm" data-cls="other">換一行</button></div>`, (e) => {
-      if (e.target.closest('[data-cls="again"]')) song(pickRow);
-      else if (e.target.closest('[data-cls="other"]')) song((rows.length ? rows[(rows.findIndex(([i]) => i === pickRow) + 1) % rows.length][0] : (pickRow + 1) % KANA_ROWS.length));
-    });
+      <div class="sg-btns"><button type="button" class="btn btn-sm" data-cls="again">再唱一次</button></div>`;
+  }
+  const showRow = (r) => { const row = el && el.querySelector('.sg-row'); if (row) row.innerHTML = KANA_ROWS[r].map((h, i) => (h ? `<span class="sg-k" data-i="${i}">${h}<small>${KANA_ROMAJI[h]}</small></span>` : '')).join(''); };
+  const lightK = (k, n) => { if (!el) return; el.querySelectorAll('.sg-k').forEach((x) => x.classList.toggle('on', Number(x.dataset.i) === k)); el.querySelectorAll('.sg-who').forEach((w, j) => w.classList.toggle('sg-bob', (j + n) % 2 === 0)); };
+  const note = (t) => { const p = el && el.querySelector('.sg-note'); if (p) p.textContent = t; };
+  function stopSong() { songSrc.forEach((x) => { try { x.stop(); } catch (e) { /* not started */ } }); songSrc = []; SND.duck(false); }   // the world (and the gramophone: SND's duck) back up
+  function song(row) {
+    const rows = row !== undefined ? [row] : learnedRows(), goof = GOOFS[Math.floor(Math.random() * GOOFS.length)];
+    open('cls-song', '一起唱', songHtml(rows), (e) => { if (e.target.closest('[data-cls="again"]')) song(row); });
     SND.play('switch'); radio(true);
-    const sing = (i) => {
-      if (i >= kana.length) { endSong(goof); return; }
-      el.querySelectorAll('.sg-k').forEach((k) => k.classList.toggle('on', Number(k.dataset.i) === i));
-      el.querySelectorAll('.sg-who').forEach((w, k) => w.classList.toggle('sg-bob', (k + i) % 2 === 0));
-      const t = token; Promise.race([speak(kana[i]), new Promise((ok) => setTimeout(ok, 1400))]).then(() => { if (t === token) later(() => sing(i + 1), 160); });
-    };
-    later(() => sing(0), 600);
     if (firstToday('song')) playKoto(1, '一起唱了五十音');
+    const c = audioCtx(), t = token;
+    const said = (kana) => engineBlob(ttsText(kana)).then((b) => (b ? b.arrayBuffer() : null)).then((a) => (a ? c.decodeAudioData(a) : null)).catch(() => null);
+    const track = () => (songBuf ? Promise.resolve(songBuf) : fetch(SONG.file).then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(r.status))).then((a) => c.decodeAudioData(a)).then((b) => (songBuf = b)));
+    const plan = songPlan(rows);
+    if (!c) { sayRows(rows, goof); return; }
+    Promise.all([track(), Promise.all(plan.said.map(([, , , h]) => said(h)))]).then(([buf, clips]) => {
+      if (t !== token || !el) return;
+      const t0 = c.currentTime + 0.12, g = c.createGain(), gv = c.createGain(); g.gain.value = SONG.vol; gv.gain.value = 1; g.connect(c.destination); gv.connect(c.destination);
+      SND.duck(true); note('');   // the room and any record down while it plays
+      plan.parts.forEach(([at, from, len]) => { const x = c.createBufferSource(); x.buffer = buf; x.connect(g); x.start(t0 + at, from, Math.min(len, buf.duration - from)); songSrc.push(x); });
+      plan.said.forEach(([at, r, k], i) => { if (clips[i]) { const x = c.createBufferSource(); x.buffer = clips[i]; x.connect(gv); x.start(Math.max(t0, t0 + at - 0.05)); songSrc.push(x); } });
+      const ms = (at) => Math.max(0, (t0 + at - c.currentTime) * 1000);
+      let lastRow = -1;
+      plan.said.forEach(([at, r, k], n) => later(() => { if (r !== lastRow) { lastRow = r; showRow(r); } lightK(k, n); }, ms(at)));
+      later(() => { el.querySelectorAll('.sg-k').forEach((x) => x.classList.add('on')); endSong(goof); }, ms(plan.end));
+      later(() => { stopSong(); radio(false); }, ms(plan.end + 1.4));
+    }).catch(() => { if (t === token && el) sayRows(rows, goof); });   // no track: said as before
+  }
+  // the rows said kana by kana (no Web Audio, or no track)
+  function sayRows(rows, goof) {
+    note('');
+    const all = rows.flatMap((r) => KANA_ROWS[r].map((h, k) => [r, k, h]).filter((x) => x[2]));
+    const sing = (n) => {
+      if (n >= all.length) { endSong(goof); return; }
+      const [r, k, h] = all[n]; if (k === 0 || n === 0) showRow(r); lightK(k, n);
+      const t = token; Promise.race([speak(h), new Promise((ok) => setTimeout(ok, 1400))]).then(() => { if (t === token) later(() => sing(n + 1), 160); });
+    };
+    later(() => sing(0), 400);
   }
   function endSong(goof) {
-    el.querySelectorAll('.sg-k').forEach((k) => k.classList.add('on'));
-    const bubble = (id, words) => { const w = el.querySelector(`.sg-who[data-who="${id}"] .kr-say`); if (w) { w.textContent = words; w.classList.remove('on'); void w.offsetWidth; w.classList.add('on'); } };
+    const bubble = (id, words) => { const w = el && el.querySelector(`.sg-who[data-who="${id}"] .kr-say`); if (w) { w.textContent = words; w.classList.remove('on'); void w.offsetWidth; w.classList.add('on'); } };
     bubble(goof.who, goof.ja); speakAs(goof.who, goof.ja);
     later(() => { bubble(goof.back[0], goof.back[1]); speakAs(goof.back[0], goof.back[1]); toast(`${goof.zh}　→　${goof.back[2]}`, 3600); }, 1500);
   }
@@ -335,5 +372,5 @@ const CLASS = (() => {
     add('chen', 'かるた、まだ はやい！');
     WRITE.lines(add);
   }
-  return { board, karuta, song, book, clockSay, close, playKoto, lines, card: open, on: () => Boolean(el) };   // card: 中華街's 漢字陷阱 uses it too
+  return { board, karuta, song, songPlan, book, clockSay, close, playKoto, lines, card: open, on: () => Boolean(el) };   // card: 中華街's 漢字陷阱 uses it too
 })();

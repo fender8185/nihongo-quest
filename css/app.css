@@ -2139,3 +2139,4 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .cls-write .wr-hori { margin-top: 10px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .1); } .cls-write .wr-hori span { color: #d8e6dc; }
 .cb-tab.cb-write { margin-left: auto; border-color: #f6e08a; color: #f6e08a; }
 @media (prefers-reduced-motion: reduce) { .wr-pad .wr-rub { animation: none; opacity: .5; } }
+.sg-head .sg-rows { margin-left: 4px; font-size: 12px; color: var(--fg-3); } .sg-note { min-height: 1.2em; margin: -6px 0 0; text-align: center; font-size: 13px; color: var(--fg-3); }

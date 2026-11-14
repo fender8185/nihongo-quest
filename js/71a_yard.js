@@ -427,6 +427,7 @@ const MUSIC = (() => {
     { id: 'obake', file: 'music/obake-1.m4a', name: 'おばけの夜', kana: 'おばけのよる', zh: '妖怪之夜', style: '音樂盒・撥弦', color: '#7a4ab0' },
     { id: 'jingle', file: 'music/jingle-1.m4a', name: 'ジングルベル', kana: 'じんぐるべる', zh: '鈴兒響叮噹', style: '音樂盒・雪橇鈴・撥弦', color: '#c8453d', vol: 0.6 },   // out in six places at Christmas: under their sounds
     { id: 'chochin', place: 'izakaya', file: 'music/chochin-1.m4a', name: '赤ちょうちん', kana: 'あかちょうちん', zh: '紅燈籠', style: '三味線・笛', color: '#c8463a', vol: 0.45 },
+    { id: 'aiueo', place: 'kyoshitsu', file: 'music/aiueo-1.m4a', name: 'あいうえおの うた', kana: 'あいうえおのうた', zh: '五十音之歌', style: '電鋼琴・音樂盒', color: '#3f9a8c', vol: 0.6 },   // 日本語教室's radio (CLASS.song), 2026-11-14
     { id: 'minato', place: 'cruise', file: 'music/minato-1.m4a', name: 'みなと案内', kana: 'みなとあんない', zh: '港町導覽', style: '笛・撥弦・低音提琴', color: '#3f7ac8', vol: 0.55 }
   ];
   // the record a place plays by itself: the izakaya's own, the café's jazz out of its door while it is open, the festival's at the shrine;
