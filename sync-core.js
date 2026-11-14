@@ -158,6 +158,13 @@
     Object.entries(n.res || {}).forEach(([t, r]) => { if (!res[t] || (Number(r && r.yen) || 0) >= (Number(res[t].yen) || 0)) res[t] = r; });
     return { done, on, res };
   }
+  // 中華街の打工 (2026-11-14): one record a day — a shift done beats one under way, then the more 円, then the further on (two
+  // devices that worked different places that day keep the one)
+  function mergeWork(olderW, newerW) {
+    const o = olderW || {}, n = newerW || {}, res = Object.assign({}, o.res), fin = (r) => r && r.yen !== undefined && r.yen !== null;
+    Object.entries(n.res || {}).forEach(([d, r]) => { const h = res[d]; if (!h || (fin(r) && !fin(h)) || (fin(r) && fin(h) && (Number(r.yen) || 0) >= (Number(h.yen) || 0)) || (!fin(r) && !fin(h) && (Number(r.done) || 0) >= (Number(h.done) || 0))) res[d] = r; });
+    return { res };
+  }
   function mergeStates(a, b) {
     const [newer, older] = (stampOf(a) >= stampOf(b) ? [a, b] : [b, a]).map(clone);
     const out = Object.assign({}, older, newer);
@@ -201,6 +208,7 @@
       if (o.traps || n.traps) out.town.traps = Object.assign({}, o.traps, n.traps);   // 中華街's 漢字陷阱 seen through (2026-11-14): once on either device, for good
     }
     if (older.cruise || newer.cruise) out.cruise = mergeCruise(older.cruise, newer.cruise);
+    if (older.work || newer.work) out.work = mergeWork(older.work, newer.work);
     if (older.purse || newer.purse) {   // 円 spent: each device's sum only grows (the larger kept); 美食手帳: everything had, on the day first had
       const o = older.purse || {}, n = newer.purse || {}, spent = Object.assign({}, o.spent), book = Object.assign({}, o.book);
       Object.entries(n.spent || {}).forEach(([d, v]) => { spent[d] = Math.max(Number(spent[d]) || 0, Number(v) || 0); });

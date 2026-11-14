@@ -382,7 +382,7 @@ const DIARY = (() => {
   let el = null, at = 0, tab = 'g';
   // the books' index stickers down the right edge (2026-11-13, the user's picks: her diary washi with a stab binding, 町の手帳 a kraft
   // grid notebook with an elastic band; both lit as under a desk lamp by night)
-  const tabs = () => `<div class="diary-tabs"><button type="button" data-diary="tab-g" aria-pressed="${tab === 'g'}" aria-label="外婆的日記">日記</button><button type="button" data-diary="tab-town" aria-pressed="${tab === 'town'}">町の手帳</button>${YEN.shown() ? `<button type="button" data-diary="tab-food" aria-pressed="${tab === 'food'}">美食手帳</button>` : ''}</div>`;   // 美食手帳 (YEN): once there has been 円
+  const tabs = () => `<div class="diary-tabs"><button type="button" data-diary="tab-g" aria-pressed="${tab === 'g'}" aria-label="外婆的日記">日記</button><button type="button" data-diary="tab-town" aria-pressed="${tab === 'town'}">町の手帳</button>${YEN.shown() ? `<button type="button" data-diary="tab-food" aria-pressed="${tab === 'food'}">美食手帳</button>` : ''}${WORK.shown() ? `<button type="button" data-diary="tab-work" aria-pressed="${tab === 'work'}">打工證</button>` : ''}</div>`;   // 美食手帳 (YEN): once there has been 円
   const book = (body) => `<div class="diary-book ${tab === 'g' ? 'bk-g' : 'bk-note'}">${tabs()}<div class="bk-page">${body}</div></div>`;
   // 町の手帳 (test, 2026-11-09; a page each since 2026-11-10, the user): a cover — who waits, everyone at a glance (a tap: their
   // page), the test site's tools — then a page a person, turned over (‹ ›, or a swipe): their face, name, who they are (a line more
@@ -447,6 +447,7 @@ const DIARY = (() => {
   }
   function show() {
     if (tab === 'food') { el.innerHTML = book(`${YEN.book()}<div class="diary-nav"><button type="button" class="btn btn-sm" data-diary="x">闔上</button></div>`); return; }
+    if (tab === 'work') { el.innerHTML = book(`${WORK.book()}<div class="diary-nav"><button type="button" class="btn btn-sm" data-diary="x">闔上</button></div>`); return; }   // 中華街の打工's 打工證 (2026-11-14)
     if (tab === 'town') { const n = people().length; el.innerHTML = book(`${townBook()}<div class="diary-nav"><button type="button" class="btn btn-sm" data-diary="-1"${tp ? '' : ' disabled'}>‹ 上一頁</button><button type="button" class="btn btn-sm" data-diary="x">闔上</button><button type="button" class="btn btn-sm" data-diary="1"${tp < n ? '' : ' disabled'}>下一頁 ›</button></div>`); return; }
     const p = PAGES[at], ok = open(at);
     el.innerHTML = book(`<div class="diary-head"><span>おばあちゃんの{日記|にっき}${ok ? `<button type="button" class="talk-say" data-diary-say aria-label="唸出來">${icon('speaker')}</button>` : ''}</span><span>${at + 1} / ${PAGES.length}</span></div>

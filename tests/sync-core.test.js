@@ -274,3 +274,15 @@ test('mergeStates: 中華街\'s 漢字陷阱 seen through on either device are a
   assert.deepEqual(C.mergeStates(a, b).town.traps, { 手紙: '2026-11-14', 愛人: '2026-11-13' });
   assert.equal(C.mergeStates({ updatedAt: '2026-11-14T10:00:00.000Z', town: { done: {} } }, { updatedAt: '2026-11-14T09:00:00.000Z', town: { done: {} } }).town.traps, undefined);
 });
+
+test('mergeStates: the work of either device is kept, one record a day — finished beats unfinished, then more 円, then further on (2026-11-14)', () => {
+  const at = (h, work) => ({ v: 3, updatedAt: `2026-11-14T0${h}:00:00.000Z`, work });
+  const done = (place, yen) => ({ place, done: 10, score: {}, yen, grade: 'B', tip: 0 }), half = (place, n) => ({ place, done: n, score: {} });
+  const a = at(1, { res: { '2026-11-12': done('shelf', 120), '2026-11-13': half('shelf', 4), '2026-11-14': done('counter', 130) } });
+  const b = at(2, { res: { '2026-11-13': done('counter', 100), '2026-11-14': done('counter', 150), '2026-11-11': half('buns', 2) } });
+  assert.deepEqual(C.mergeStates(a, b).work.res, { '2026-11-11': half('buns', 2), '2026-11-12': done('shelf', 120), '2026-11-13': done('counter', 100), '2026-11-14': done('counter', 150) });
+  const c = at(3, { res: { '2026-11-13': half('deliver', 6) } }), d = at(4, { res: { '2026-11-13': half('shelf', 3) } });
+  assert.deepEqual(C.mergeStates(c, d).work.res, { '2026-11-13': half('deliver', 6) });   // both under way, different places: the further on
+  assert.deepEqual(C.mergeStates(d, c).work.res, { '2026-11-13': half('deliver', 6) });
+  assert.equal(C.mergeStates({ v: 3 }, { v: 3 }).work, undefined);
+});

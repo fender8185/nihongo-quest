@@ -322,6 +322,7 @@ function defaultState() {
     storyAt: 0,             // 2026-11-11: when the opening was closed (ms; 0 before it, or seen before this was kept): 小春 knocks a minute on
     cruise: { done: {}, on: null, res: {} },   // test (2026-11-12): the cruise ship's trips (CRUISE): done { trip: day }; on: the one under way { trip, step: its next stop's place in the list, stop: its id, place: where the passengers wait, score: { 'stop id.reply': misses at each reply } }; res: each one done { first, asks, koto, yen, grade, day } (2026-11-13: the guide's pay, the wallet's 円)
     purse: { spent: {}, book: {} },   // 円 spent (2026-11-13): spent { device: 円 so far on it }, book: 美食手帳 { thing: the day first had }, today: { day, f, d, b, o } foods, drinks, baths, おみくじ that day (two, one, one, one), gift: 円 given on the test site (町の手帳)
+    work: { res: {} },   // 中華街の打工 (test, 2026-11-14; WORK): res { day: { place (the job), done, score { task: misses }, yen, grade, tip } } — one a day; yen once the shift is done
     town: { done: {}, seen: {}, stops: {}, talks: {} },   // test (2026-11-09): the town's events (TOWNEV): done { id: day }, people met { id: 1 }, bus stops opened { id: 1 }; talks { id: chats with them } (2026-11-12)
     placed: {},             // where owned things stand in 書房: { id: { w: 'F', x, y, r } | { w: 'L'|'R', u, v } }; not here = in the storage box
     wear: {},               // what the hero wears, by part: { head, face, neck, back, body }
@@ -400,6 +401,9 @@ function normalizeState(s) {
   out.purse = { spent: Object.fromEntries(Object.entries(obj(pu.spent)).map(([d, n]) => [d, num(n)])), book: Object.fromEntries(Object.entries(obj(pu.book)).filter(([, v]) => typeof v === 'string')) };
   if (pu.today && typeof pu.today.day === 'string') out.purse.today = { day: pu.today.day, f: num(pu.today.f), d: num(pu.today.d), b: num(pu.today.b), o: num(pu.today.o) };   // b, o: the bath, おみくじ (once a day)
   if (num(pu.gift)) out.purse.gift = num(pu.gift);
+  const wk = obj(out.work);   // 中華街の打工 (2026-11-14): a record a day, as WORK keeps it
+  out.work = { res: Object.fromEntries(Object.entries(obj(wk.res)).filter(([d, r]) => /^\d{4}-\d\d-\d\d$/.test(d) && r && typeof r === 'object' && typeof r.place === 'string').map(([d, r]) => [d, Object.assign({ place: r.place, done: num(r.done), score: Object.fromEntries(Object.entries(obj(r.score)).map(([k, v]) => [k, num(v)])) },
+    r.yen !== undefined && r.yen !== null ? { yen: num(r.yen), grade: typeof r.grade === 'string' ? r.grade : 'E', tip: num(r.tip) } : {})])) };
   out.cruise = { done: obj(cr.done), on: on && !obj(cr.done)[on.trip] ? { trip: on.trip, step: num(on.step), stop: typeof on.stop === 'string' ? on.stop : '', place: typeof on.place === 'string' ? on.place : 'harbor', score: score(on.score) } : null, res };
   out.mail = out.mail && typeof out.mail === 'object' && !Array.isArray(out.mail) ? { got: obj(out.mail.got), read: obj(out.mail.read) } : null;
   if (typeof out.resetAt !== 'string') out.resetAt = '';   // 1.9.1: when 重設所有進度 was last pressed (the cloud's guard lets that one shrink through)
@@ -1124,7 +1128,8 @@ function kotoPop(n, words = '言靈') {
 // the wallet (2026-11-13): 円, earned guiding the cruise's passengers (state.cruise.res: each trip's pay) — later spent on things to
 // eat and do in town; as much as 9999万 (the user)
 const YEN_CAP = 99990000;
-const yenEarned = () => Object.values((state.cruise && state.cruise.res) || {}).reduce((a, r) => a + (Number(r.yen) || 0), 0) + ((state.purse && Number(state.purse.gift)) || 0);   // gift: the test site's
+const yenEarned = () => Object.values((state.cruise && state.cruise.res) || {}).reduce((a, r) => a + (Number(r.yen) || 0), 0) + ((state.purse && Number(state.purse.gift)) || 0)   // gift: the test site's
+  + Object.values((state.work && state.work.res) || {}).reduce((a, r) => a + (Number(r && r.yen) || 0), 0);   // 中華街の打工's pay (2026-11-14)
 const yenSpent = () => kotoSum(state.purse && state.purse.spent);   // each device's own sum (sync-core keeps the larger of each)
 const yenBalance = () => Math.min(YEN_CAP, yenEarned() - yenSpent());
 const yenStr = (n) => Math.round(n).toLocaleString('en-US');

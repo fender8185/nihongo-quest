@@ -483,6 +483,9 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .crr-card { position: relative; width: min(360px, 100%); padding: 18px 18px 16px; border-radius: 18px; background: #fffaf0; color: #3a2c24; box-shadow: 0 14px 40px rgba(0, 0, 0, .3); font-variant-numeric: tabular-nums; }
 .crr-card.thud { animation: crrThud .32s ease-out; }
 .crr-head { display: grid; gap: 2px; margin-bottom: 10px; } .crr-head b { font-size: 19px; } .crr-head span { font-size: 14px; color: #8a7a6e; }
+/* 中華街の打工 (2026-11-14): the 打工證 page in 町の手帳 */
+.wk-book { display: grid; gap: 12px; } .wk-card { display: grid; gap: 2px; justify-items: start; padding: 12px 14px; border: 1.5px dashed #a8946e; border-radius: 12px; background: rgba(255, 250, 236, .5); }
+.wk-title { font-size: 13px; color: #8a7a6e; } .wk-rank { font-size: 24px; } .wk-tbl { width: 100%; border-collapse: collapse; font-size: 14px; } .wk-tbl th, .wk-tbl td { padding: 5px 4px; border-bottom: 1px solid rgba(138, 122, 110, .3); text-align: left; } .wk-tbl th { font-size: 12px; color: #8a7a6e; font-weight: 600; } .wk-note { margin: 0; font-size: 12.5px; color: #8a7a6e; }
 .crr-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px dashed #e6d9c4; font-size: 15px; }
 .crr-row > span { display: inline-flex; align-items: center; gap: 6px; } .crr-row :is(.koto-i, .yen-i) { width: 20px; height: 20px; } .crr-row b { font-size: 18px; } .crr-row i { font-style: normal; }
 .crr-sum { border-bottom: 0; } .crr-sum b { font-size: 22px; color: #b0602a; }
