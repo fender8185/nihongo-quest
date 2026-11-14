@@ -147,6 +147,19 @@ def test_the_generator_has_the_classroom_lines(b):
       hori: ls.some(([w]) => w === 'hori'), maria: ls.some(([w, l]) => w === 'maria' && l === 'サンバ！') }); })()"""))
     assert r == {'chen': True, 'karuta': True, 'hori': True, 'maria': True}, r
 
+# 2026-11-14, the user: the radio played nothing — tapped in the room it was given the yard as the row to sing, and threw. Each
+# thing here tapped as a finger does (its button: the hero walks over, then it opens), not called straight
+def test_each_thing_in_the_classroom_opens_when_tapped(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(10); window.__errs = []; addEventListener('error', (e) => __errs.push(e.message)); window.speak = () => Promise.resolve();
+      location.hash = '#/kyoshitsu'; route(); await wait(200); const out = {};
+      for (const [id, cls] of [['board', 'cls-board'], ['karuta', 'cls-karuta'], ['radio', 'cls-song'], ['books', 'cls-book']]) {
+        CLASS.close(); document.querySelector(`.use-btn[data-use="${id}"]`).click();
+        for (let i = 0; i < 80 && !document.querySelector('.' + cls); i++) await wait(100);
+        out[id] = Boolean(document.querySelector('.' + cls));
+      }
+      CLASS.close(); return JSON.stringify(Object.assign(out, { errs: __errs })); })()"""))
+    assert r == {'board': True, 'karuta': True, 'radio': True, 'books': True, 'errs': []}, r
+
 # ---- 寫寫看 (stage 5): KanjiVG's strokes, written one at a time ----
 def test_every_kana_has_its_strokes_in_order(b):
     r = json.loads(ev(b, """JSON.stringify({ all: REG.kana.every((x) => WRITE.has(x.ch)), n: Object.keys(KANA_STROKES).length,

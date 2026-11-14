@@ -304,7 +304,7 @@ const PLACE_USE = {
   kyoshitsu: [
     { id: 'board', name: '黑板', box: isoBBox(3.5, 15.5, 0, 0.2, 2.4, 6.1), kind: 'do', go: isoXY(5.2, 3.7), face: 'back turn', pose: 'look', say: 'こくばん！', open: (y) => CLASS.board(y) },
     { id: 'karuta', name: 'かるた', box: isoBBox(15.4, 22, 10.2, 16, 0, 0.7), kind: 'do', go: isoXY(14.6, 12.8), face: 'turn', pose: 'look', say: 'かるた！', open: (y) => CLASS.karuta(y) },
-    { id: 'radio', name: '收音機', box: isoBBox(9.3, 10.6, 1.6, 2.2, 2.2, 2.9), kind: 'do', go: isoXY(10, 3.7), face: 'back turn', pose: 'reach', open: (y) => CLASS.song(y) },
+    { id: 'radio', name: '收音機', box: isoBBox(9.3, 10.6, 1.6, 2.2, 2.2, 2.9), kind: 'do', go: isoXY(10, 3.7), face: 'back turn', pose: 'reach', open: () => CLASS.song() },   // no row: the rows learned (2026-11-14: it was given the yard as its row, and broke)
     { id: 'books', name: '繪本', box: isoBBox(0, 0.9, 1.6, 5.8, 0, 1.7), kind: 'do', go: isoXY(1.9, 3.7), face: 'back turn flip', pose: 'look', say: 'えほん！', open: (y) => CLASS.book(y) },
     { id: 'clock', name: '時鐘', box: isoBBox(16.6, 17.8, 0, 0.1, 6.0, 7.2), kind: 'do', go: isoXY(17.2, 3.2), face: 'back turn', pose: 'look', pick: () => CLASS.clockSay() },
     { id: 'cranes', name: '千羽鶴', box: isoBBox(19.4, 21.2, 0, 0.3, 4.4, 7.6), kind: 'do', go: isoXY(20.2, 3), face: 'back turn', pose: 'look', say: 'きれい…', fx: 'cranes', fxc: 'flutter' },

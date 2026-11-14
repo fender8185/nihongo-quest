@@ -308,7 +308,7 @@ const CLASS = (() => {
   const note = (t) => { const p = el && el.querySelector('.sg-note'); if (p) p.textContent = t; };
   function stopSong() { songSrc.forEach((x) => { try { x.stop(); } catch (e) { /* not started */ } }); songSrc = []; SND.duck(false); }   // the world (and the gramophone: SND's duck) back up
   function song(row) {
-    const rows = row !== undefined ? [row] : learnedRows(), goof = GOOFS[Math.floor(Math.random() * GOOFS.length)];
+    const rows = Number.isInteger(row) && KANA_ROWS[row] ? [row] : learnedRows(), goof = GOOFS[Math.floor(Math.random() * GOOFS.length)];
     open('cls-song', '一起唱', songHtml(rows), (e) => { if (e.target.closest('[data-cls="again"]')) song(row); });
     SND.play('switch'); radio(true);
     if (firstToday('song')) playKoto(1, '一起唱了五十音');
