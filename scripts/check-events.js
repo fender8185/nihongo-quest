@@ -188,7 +188,7 @@ function check(T, D, opts = {}) {
     if (c.helps !== undefined && !Object.values(cast).some((o) => o.shop === c.helps)) bad('ref', `cast ${id}`, `helps at no shop ${c.helps}`);
   });
   // a line's conditions (TOWNEV.chatLine, TOWNLIFE: CHATPICK.ok): each one known, and what it names there
-  const PARTS = ['am', 'noon', 'pm', 'night'], FESTS = ['halloween'], WHEN = ['at', 'h', 'days', 'after', 'before', 'fresh', 'talks', 'look', 'fest', 'about'];
+  const PARTS = ['am', 'noon', 'pm', 'night'], FESTS = ['halloween', 'christmas'], WHEN = ['at', 'h', 'days', 'after', 'before', 'fresh', 'talks', 'look', 'fest', 'about'];
   const list = (v) => (Array.isArray(v) ? v : [v]);
   function when(c, where) {
     if (c === undefined) return;

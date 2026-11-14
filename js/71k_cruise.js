@@ -148,7 +148,7 @@ const CRUISE = (() => {
   function el(id, [X, Y]) {
     const c = person(id), b = document.createElement('button');
     b.type = 'button'; b.className = `hero npc tourist cr-${id}`; b.dataset.act = 'cruise-who'; b.dataset.who = id; b.setAttribute('aria-label', c.name);
-    let svg = HERO.svg({ look: c.look, wear: c.wear || {} });
+    let svg = HERO.svg({ look: c.look, wear: TOWNEV.wearOf(c.wear) });   // a Santa hat at Christmas too
     if (id === 'takahashi') svg = svg.replace(/<\/g><\/g><\/svg>$/, FLAG + '</g></g></svg>');
     b.innerHTML = svg;
     const p = { el: b, id, pos: [X, Y], k: c.size || 1, walk: null, back: false, flip: false, turn: false, z: 0, seat: null };

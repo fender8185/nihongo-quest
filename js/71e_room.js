@@ -1970,7 +1970,24 @@ const DECOR = (() => {
         <circle r="${q2(r - 0.08)}" ${k.F(C.paper)}/><path d="M-.54 .04 A.54 .54 0 0 1 .04 -.54 A.6 .6 0 0 0 -.54 .04 Z" fill="#2b1c12" fill-opacity=".1"/>
         <circle r=".51" fill="none" stroke-width=".022" stroke-dasharray=".006 .0474" stroke-opacity=".5" ${k.FS(C.ink)}/><path class="ln" stroke-width="1.1" ${k.FS(C.ink)} d="${ticks}"/>
         <rect x="-.08" y=".17" width=".16" height=".04" rx=".012" ${k.F('#b8925a')}/>`;
-    }
+    },
+    // Christmas (2026-11-14): 聖誕花圈, holly and fir woven in a ring, red berries and pine cones in it, a red bow at its foot
+    wreath: (k) => {
+      let g = '';
+      for (let i = 0; i < 26; i++) { const a = i * 360 / 26, rr = i % 2 ? 0.34 : 0.4, c = i % 3 ? '#3f7a3a' : '#2f5f2e'; g += `<ellipse cx="${q2(rr * Math.cos(a * Math.PI / 180))}" cy="${q2(rr * Math.sin(a * Math.PI / 180))}" rx=".11" ry=".05" transform="rotate(${q2(a + 70)} ${q2(rr * Math.cos(a * Math.PI / 180))} ${q2(rr * Math.sin(a * Math.PI / 180))})" ${k.F(c)}/>`; }
+      const berry = (a) => { const cx = q2(0.37 * Math.cos(a * Math.PI / 180)), cy = q2(0.37 * Math.sin(a * Math.PI / 180)); return `<circle cx="${cx}" cy="${cy}" r=".035" ${k.F('#d0303a')}/><circle cx="${q2(cx + 0.045)}" cy="${q2(cy + 0.02)}" r=".03" ${k.F('#d0303a')}/>`; };
+      const cone = (a) => `<ellipse cx="${q2(0.38 * Math.cos(a * Math.PI / 180))}" cy="${q2(0.38 * Math.sin(a * Math.PI / 180))}" rx=".05" ry=".07" ${k.F('#8a5a3a')}/>`;
+      return `<circle cx=".03" cy=".04" r=".46" fill="none" stroke="#2b1c12" stroke-opacity=".12" stroke-width=".14"/>${g}${[-150, -60, 20, 110].map(berry).join('')}${[-100, 60, 160].map(cone).join('')}
+        <path d="M0 .36 C-.2 .22 -.3 .4 -.2 .46 C-.12 .5 -.06 .44 0 .4 C.06 .44 .12 .5 .2 .46 C.3 .4 .2 .22 0 .36 Z" ${k.F('#d0453c')}/><path d="M-.03 .4 L-.12 .62 L-.06 .6 L-.03 .66 Z M.03 .4 L.12 .62 L.06 .6 L.03 .66 Z" ${k.F('#b8382f')}/><circle cy=".38" r=".045" ${k.F('#a8302a')}/><path d="M-.2 -.3 Q-.08 -.4 .08 -.4" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width=".02" stroke-linecap="round"/>`;
+    },
+    // 聖誕襪: three stockings on a garland of fir — red, green, white with red stripes — each with a white fur cuff, its foot out
+    // to the right, hung on a little loop
+    stockings: (k) => {
+      const sock = (cx, c, stripes) => `<g transform="translate(${cx} 0)"><path d="M0 -.48 V-.36" stroke="#6e4a33" stroke-width=".015"/><path d="M-.13 -.32 H.13 V.12 Q.13 .22 .24 .25 Q.36 .28 .36 .37 Q.36 .47 .2 .47 H.02 Q-.13 .47 -.13 .3 Z" ${k.F(c)}/>${stripes ? `<path d="M-.13 -.14 H.13 M-.13 .04 H.13 M-.06 .22 Q.06 .3 .2 .28" stroke-width=".06" ${k.FS('#d0453c')}/>` : ''}<path d="M.06 -.32 H.13 V.12 Q.13 .2 .2 .24 L.1 .3 Q.06 .1 .06 -.32 Z" fill="#2b1c12" fill-opacity=".1"/>
+        <rect x="-.17" y="-.4" width=".34" height=".13" rx=".05" ${k.F('#f7f3ec')}/><path d="M-.16 -.27 H.16" stroke="#2b1c12" stroke-opacity=".1" stroke-width=".015"/></g>`;
+      let g = ''; for (let i = 0; i < 15; i++) { const u = -0.82 + i * 0.117; g += `<ellipse cx="${q2(u)}" cy="${q2(-0.5 + 0.03 * Math.sin(i))}" rx=".09" ry=".04" transform="rotate(${i % 2 ? 20 : -20} ${q2(u)} -.5)" ${k.F(i % 2 ? '#3f7a3a' : '#2f5f2e')}/>`; }
+      return `<path d="M-.82 -.5 Q0 -.44 .82 -.5" fill="none" stroke="#2b1c12" stroke-opacity=".12" stroke-width=".05"/>${sock(-0.56, '#d0453c', false)}${sock(0, '#3f8a52', false)}${sock(0.56, '#f4efe6', true)}${g}<g ${k.F('#d0303a')}><circle cx="-.3" cy="-.47" r=".03"/><circle cx=".3" cy="-.49" r=".03"/></g>`;
+    },
   };
   // the floor wares: (x, y) the middle of the footprint, r turned a quarter; L lights a point of it (by default its middle, 0.6 up)
   const lit = (x, y) => (h, z = 0.6, f = 'y') => F(h, f, [x, y, z]);
@@ -2307,6 +2324,51 @@ const DECOR = (() => {
         <rect x="-6" y="-12" width="12" height="2.6" rx="1" fill="#4f3627"/><path d="M-4 -11.2 H4" stroke-width=".6" ${FS('#efe6d2', 'y', [x, y, 0.4])}/>
         <path d="M-1.2 -100 V-11 M1.2 -100 V-11" stroke="#f3eee2" stroke-width=".5" stroke-opacity=".8"/>
         <path d="M-9 -40 C-12 -33 -12 -26 -9 -20" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.6" stroke-linecap="round"/><path d="M-1.6 -90 V-44" stroke="#fff" stroke-opacity=".14" stroke-width=".6"/></g>`);
+      return s;
+    },
+    // ---- Christmas (2026-11-14, the user) ----
+    // 聖誕樹: a little fir in a red tub with a gold band, four tiers with scalloped hems lit on the left and shaded on the right, a
+    // string of lights looping round it (glass by day, glowing by night), baubles, a gold star on top (its halo by night)
+    xmastree: (x, y, r) => {
+      const L = lit(x, y), G = '#3f7a3a';
+      const tier = (b, t, w) => `<path ${L(G, (-b + 20) / 40)} d="M${-w} ${b} Q${q2(-w * 0.62)} ${b + 4} ${q2(-w * 0.45)} ${b} Q${q2(-w * 0.22)} ${b + 4} 0 ${b} Q${q2(w * 0.22)} ${b + 4} ${q2(w * 0.45)} ${b} Q${q2(w * 0.62)} ${b + 4} ${w} ${b} L3 ${t} H-3 Z"/><path d="M${q2(w * 0.12)} ${t + 2} L${q2(w * 0.86)} ${b - 1} Q${q2(w * 0.62)} ${b + 3.4} ${q2(w * 0.45)} ${b} Q${q2(w * 0.3)} ${b + 3} ${q2(w * 0.15)} ${b + 1} Z" fill="#2b1c12" fill-opacity=".13"/><path d="M${q2(-w * 0.3)} ${b - 3} L-2 ${t + 4}" stroke="#fff" stroke-opacity=".14" stroke-width="1.4" stroke-linecap="round"/>`;
+      const bulb = (bx, by, c) => `<circle cx="${bx}" cy="${by}" r="5" fill="url(#halo)" class="night-only" style="opacity:calc(.5 + .5 * var(--f))"/><circle cx="${bx}" cy="${by}" r="1.8" style="fill:color-mix(in srgb,${c} calc(var(--day)*60%),#fff7d6)"/>`;
+      const ball = (bx, by, c, rr = 3) => `<circle cx="${bx}" cy="${by}" r="${rr}" ${L(c, (-by) / 40)}/><circle cx="${q2(bx - rr * 0.35)}" cy="${q2(by - rr * 0.35)}" r="${q2(rr * 0.32)}" fill="#fff" fill-opacity=".6"/>`;
+      const lights = [[-22, -24, '#ffd36a'], [-8, -27, '#ff7a6a'], [8, -30, '#8fd0ff'], [21, -34, '#ffd36a'], [-17, -56, '#8fd0ff'], [-3, -59, '#ffd36a'], [11, -62, '#ff7a6a'], [-12, -86, '#ff7a6a'], [1, -89, '#8fd0ff'], [10, -93, '#ffd36a'], [-6, -114, '#ffd36a'], [4, -117, '#ff7a6a']];
+      let s = shadow(x - 0.62, y - 0.62, x + 0.74, y + 0.74, 0.75);
+      s += `<g class="night-only" style="opacity:calc((.5 + .5 * var(--f)) * (1 - .7 * var(--day)))"><g transform="${onZ(0.01)}"><ellipse cx="${x}" cy="${y}" rx="1.3" ry="1.3" fill="url(#pool)"/></g></g>`;
+      s += upright(x, y, 0, r, `<ellipse rx="16" ry="5" fill="#2b1c12" fill-opacity=".16"/><path ${L('#c8453d', 0.2)} d="M-11 0 L-13 -15 H13 L11 0 Z"/><path d="M5 -15 H13 L11 0 H5.6 Z" fill="#2b1c12" fill-opacity=".14"/><rect x="-13.4" y="-11" width="26.8" height="3.4" ${L('#e6c25a', 0.25)}/><rect x="-14" y="-17" width="28" height="3" rx="1" ${L('#a8352e', 0.4)}/>
+        <rect x="-2.6" y="-22" width="5.2" height="6" ${L('#6e4a33', 0.5)}/>
+        ${tier(-18, -64, 30)}${tier(-50, -96, 25)}${tier(-82, -122, 19)}${tier(-110, -142, 12)}
+        <path d="M-24 -23 Q0 -32 24 -36 M-19 -55 Q-2 -61 15 -64 M-14 -85 Q0 -90 12 -95 M-8 -113 Q0 -117 6 -119" fill="none" stroke="#2b2420" stroke-opacity=".45" stroke-width=".6"/>
+        ${lights.map(([bx, by, c]) => bulb(bx, by, c)).join('')}
+        ${ball(-14, -30, '#d0453c')}${ball(14, -42, '#e6c25a')}${ball(-2, -40, '#5a7fc8', 2.6)}${ball(-10, -64, '#e6c25a', 2.8)}${ball(10, -74, '#d0453c', 2.8)}${ball(-6, -98, '#5a7fc8', 2.4)}${ball(7, -104, '#d0453c', 2.4)}${ball(-2, -126, '#e6c25a', 2.2)}
+        <circle cx="0" cy="-147" r="11" fill="url(#halo)" class="night-only" style="opacity:calc(.6 + .4 * var(--f))"/><path d="M0 -156 L2.6 -150 L9 -149.6 L4 -145.4 L5.6 -139 L0 -142.6 L-5.6 -139 L-4 -145.4 L-9 -149.6 L-2.6 -150 Z" style="fill:color-mix(in srgb,#e6c25a calc(var(--day)*100%),#ffe680)"/><path d="M0 -156 L2.6 -150 L0 -147 Z M-9 -149.6 L-2.6 -150 L0 -147 Z" fill="#fff" fill-opacity=".35"/>`);
+      return s;
+    },
+    // 禮物堆: four presents (in the room, seen at its angle): a big red one with a gold ribbon round it, a green one on top of it, a
+    // blue one and a small gold one in front, a bow on each; turned, the pile the other way round
+    giftpile: (x, y, r) => {
+      const P = (dx, dy) => (r ? [x + dy, y + dx] : [x + dx, y + dy]);
+      const gift = (c, rb, dx0, dy0, z0, dx1, dy1, z1) => {
+        const [ax, ay] = P(dx0, dy0), [bx, by] = P(dx1, dy1), x0 = Math.min(ax, bx), x1 = Math.max(ax, bx), y0 = Math.min(ay, by), y1 = Math.max(ay, by), mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+        return box(c, x0, y0, z0, x1, y1, z1, { hlv: true }) + box(rb, mx - 0.035, y0 - 0.004, z0, mx + 0.035, y1 + 0.004, z1 + 0.004, { x: false, hl: false })
+          + box(rb, x0 - 0.004, my - 0.035, z0, x1 + 0.004, my + 0.035, z1 + 0.004, { y: false, hl: false })
+          + bb(mx, my, z1, `<path d="M0 0 C-7 -6 -9 -1 -6 1 C-4 2 -2 1 0 0 C2 1 4 2 6 1 C9 -1 7 -6 0 0 Z" ${F(rb, 't', [mx, my, z1 + 0.1])}/><circle r="1.6" ${F(rb, 't', [mx, my, z1 + 0.1])}/>`);
+      };
+      let s = shadow(x - 0.6, y - 0.6, x + 0.7, y + 0.7, 0.7);
+      return s + gift('#c8453d', '#e6c25a', -0.52, -0.5, 0, 0.14, 0.16, 0.52) + gift('#3f8a52', '#f4efe6', -0.4, -0.38, 0.52, -0.04, -0.02, 0.84)
+        + gift('#e6c25a', '#c8453d', -0.52, 0.22, 0, -0.18, 0.52, 0.24) + gift('#5a7fc8', '#f4efe6', 0.12, -0.1, 0, 0.52, 0.46, 0.36);
+    },
+    // 聖誕紅: a pot wrapped in gold foil (its folds), dark leaves round the rim, red bracts spread like a star in two rings with
+    // yellow buds in the middle, lit on the left
+    poinsettia: (x, y, r) => {
+      const L = lit(x, y), bract = (a, len, c, z) => `<path transform="translate(0 -36) rotate(${a}) scale(1 ${0.62})" ${L(c, z)} d="M0 0 C-4.6 -5 -4.6 -${len - 5} 0 -${len} C4.6 -${len - 5} 4.6 -5 0 0 Z"/>`;
+      let s = shadow(x - 0.34, y - 0.34, x + 0.44, y + 0.44, 0.7);
+      s += upright(x, y, 0, r, `<ellipse rx="12" ry="4" fill="#2b1c12" fill-opacity=".15"/><path ${L('#d9a43a', 0.25)} d="M-9 0 L-12 -19 Q-6 -22 0 -19 Q6 -22 12 -19 L9 0 Z"/><path d="M-6 -20 L-5 -1 M2 -20 L1.6 -1 M7 -20 L5.6 -1" stroke="#8a6420" stroke-opacity=".35" stroke-width=".8"/><path d="M4 -19.6 Q8 -21.4 12 -19 L9 0 H5 Z" fill="#2b1c12" fill-opacity=".12"/><path d="M-10.6 -16 L-8.6 -2" stroke="#fff" stroke-opacity=".4" stroke-width="1.2" stroke-linecap="round"/>
+        ${[-160, -120, -60, -20, 30, 150].map((a) => `<path transform="translate(0 -24) rotate(${a})" ${L('#2f5f2e', 0.7)} d="M0 0 C-4 -4 -4 -12 0 -15 C4 -12 4 -4 0 0 Z"/>`).join('')}
+        ${[-90, -18, 54, 126, 198].map((a) => bract(a, 20, '#c8302f', 0.9)).join('')}${[-54, 18, 90, 162, 234].map((a) => bract(a, 15, '#e0453c', 1)).join('')}
+        <g fill="#e6c25a"><circle cx="-1.6" cy="-36.6" r="1.4"/><circle cx="1.8" cy="-36" r="1.4"/><circle cx="0" cy="-34.4" r="1.4"/></g><path d="M-10 -40 Q-6 -44 -2 -45" fill="none" stroke="#fff" stroke-opacity=".3" stroke-width="1" stroke-linecap="round"/>`);
       return s;
     },
     pumpkin: (x, y, r) => {   // 南瓜燈 (Halloween): a carved pumpkin, lit from inside by night (2026-11-11, the user: finer: a sheen down its left, the stem's cut end; by day its pool as faint as the room's own lamps')

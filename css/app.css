@@ -322,6 +322,31 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 @keyframes witchHat { 0% { transform: none; } 25% { transform: translate(5px, 14px) rotate(30deg); } 50% { transform: translate(-3px, 34px) rotate(-25deg); } 75% { transform: translate(6px, 58px) rotate(25deg); opacity: 1; } 100% { transform: translate(0, 86px) rotate(-15deg); opacity: 0; } }
 @keyframes witchBroom { 0% { transform: none; } 18% { transform: translate(3px, -2px) rotate(-14deg); } 36% { transform: translate(8px, 2px) rotate(12deg); } 100% { transform: translate(110px, -48px) rotate(-10deg); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .sky .witch.fall { visibility: hidden; } }
+/* snow over every place outside at Christmas (2026-11-14, ySnow): above the world, under the buttons */
+.sky > .snow { position: absolute; inset: 0; z-index: 1000; pointer-events: none; overflow: hidden; }
+.sky > .snow i { position: absolute; top: -12px; width: var(--s); height: var(--s); border-radius: 50%; background: #fff; opacity: .88; box-shadow: 0 0 2px rgba(130, 150, 190, .55); animation: snowFall var(--d) linear var(--w) infinite; }
+@keyframes snowFall { 0% { transform: translate(0, -12px); } 50% { transform: translate(calc(var(--x) * .5 + 10px), 52vh); } 100% { transform: translate(var(--x), calc(100vh + 24px)); } }
+@media (prefers-reduced-motion: reduce) { .sky > .snow i { animation: none; top: var(--y); } }
+/* Santa (2026-11-14, yWitch at Christmas): the witch's way over the sky and back, a sleigh behind two reindeer as one moonlit
+   shape, the lead one's red nose aglow; tapped, three presents tumble out and he climbs away out of sight */
+.sky .santa { position: absolute; left: 0; top: 0; width: 50px; height: 18px; display: none; transform: translate(22vw, 15vh); animation: witchFly 60s linear infinite; }
+[data-theme="dark"] .sky .santa { display: block; }
+.sky .santa .w-bob { position: absolute; inset: 0; animation: witchBob 3.2s ease-in-out infinite alternate; }
+.sky .santa .w-fig { position: absolute; inset: 0; filter: drop-shadow(0 0 .6px rgba(222, 228, 255, .9)) drop-shadow(0 0 2.5px rgba(160, 172, 255, .4)); }
+.sky .santa svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; fill: #0f0c26; stroke: #0f0c26; stroke-width: 0; stroke-linecap: round; }
+.sky .santa .s-deer { animation: santaGallop .5s ease-in-out infinite alternate; transform-origin: 70% 50%; }
+@keyframes santaGallop { from { transform: translateY(-.6px); } to { transform: translateY(.6px); } }
+.sky .santa .s-nose { position: absolute; left: 49px; top: 3.3px; width: 2.2px; height: 2.2px; border-radius: 50%; background: #ff5a4a; box-shadow: 0 0 3px 1.4px rgba(255, 90, 74, .8); animation: santaNose 1.2s ease-in-out infinite alternate; }
+@keyframes santaNose { from { opacity: .6; } to { opacity: 1; } }
+.sky .santa .w-hit { position: absolute; left: 50%; top: 50%; width: 60px; height: 44px; margin: -22px 0 0 -30px; padding: 0; border: 0; border-radius: 50%; background: none; pointer-events: auto; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.sky .santa .s-gift { position: absolute; left: 12px; top: 8px; width: 4px; height: 4px; border-radius: .6px; opacity: 0; background: linear-gradient(90deg, transparent 40%, #ffe9a8 40% 60%, transparent 60%), linear-gradient(transparent 40%, #ffe9a8 40% 60%, transparent 60%), #d0453c; }
+.sky .santa .s-gift.g1 { left: 15px; background-color: #3f8a52; } .sky .santa .s-gift.g2 { left: 9px; background-color: #5a7fc8; }
+.sky .santa.gave .w-hit { pointer-events: none; }
+.sky .santa.gave .s-gift { animation: santaGift 2s cubic-bezier(.4, 0, 1, .7) forwards; } .sky .santa.gave .s-gift.g1 { animation-delay: .15s; } .sky .santa.gave .s-gift.g2 { animation-delay: .3s; }
+.sky .santa.gave .w-fig { animation: santaAway 2.4s ease-in .6s forwards; }
+@keyframes santaGift { 0% { opacity: 1; transform: none; } 100% { opacity: 1; transform: translate(-6px, 60vh) rotate(400deg); } }
+@keyframes santaAway { to { transform: translate(160px, -110px) scale(.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .sky .santa.gave { visibility: hidden; } .sky .santa .s-deer, .sky .santa .s-nose { animation: none; } }
 /* by day: clouds always (greyer at 0%, peach at dawn and dusk), birds from 75%, a rainbow at 100% */
 .sky .rainbow { position: absolute; left: 50%; bottom: 120px; width: 130vmin; height: 130vmin; margin-left: -65vmin; border-radius: 50%; transform: translateY(50%); opacity: 0; transition: opacity 3s;
   background: radial-gradient(closest-side, transparent 80%, rgba(255, 96, 96, .5) 81%, rgba(255, 168, 72, .5) 83%, rgba(255, 228, 92, .5) 85%, rgba(112, 208, 120, .5) 87%, rgba(88, 158, 238, .5) 89%, rgba(150, 110, 228, .5) 91%, transparent 92.5%); }
@@ -1103,6 +1128,12 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .yware { position: absolute; left: 50%; padding: 0; border: 0; background: none; cursor: pointer; pointer-events: auto; touch-action: none; }
 .sky .yware .art { width: 100%; height: 100%; display: block; overflow: visible; filter: brightness(calc(.45 + .55 * var(--day))) saturate(calc(.75 + .25 * var(--day))); }
 .sky .yware .glow { position: absolute; border-radius: 50%; pointer-events: none; background: radial-gradient(closest-side, rgba(255, 214, 130, .85), rgba(255, 190, 100, .3) 45%, transparent); opacity: calc(1 - var(--day)); transition: opacity 1.5s; }
+/* Christmas (2026-11-14): bulbs over a ware's drawing that the night does not dim, twinkling; off with the glow */
+.sky .yware .lights { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; opacity: calc(1 - var(--day)); transition: opacity 1.5s; }
+.sky .yware .lights .tw { animation: bulbTw 1.6s ease-in-out infinite alternate; } .sky .yware .lights .tw2 { animation: bulbTw 1.6s ease-in-out -.8s infinite alternate; }
+@keyframes bulbTw { from { fill-opacity: .12; } to { fill-opacity: .5; } }
+.sky .yware.off .lights { display: none; }
+@media (prefers-reduced-motion: reduce) { .sky .yware .lights .tw, .sky .yware .lights .tw2 { animation: none; } }
 .sky .yware.off .glow { display: none; } .sky .yware.off [style*="#ffd27a"] { fill: #4a4842 !important; }   /* a lamp switched off */
 /* 觀星 (test): the telescope's eyepiece over the dark, the constellation's name under it */
 .yard .scope { position: fixed; inset: 0; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px; background: rgba(4, 5, 18, .9); color: #f3f0e6; text-align: center; animation: scopeIn .35s ease-out; }

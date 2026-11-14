@@ -267,6 +267,7 @@ const ACTIONS = {
   'cruise-who': (el) => CRUISE.who(el),   // a passenger (or 高橋) tapped   // test: a word with a neighbour (the beach, the town)
   'town-shop': (el) => TOWNEV.shopTap(el),   // up the hill path to 古道具屋
   witch: (el) => witchCatch(el),   // the Halloween witch caught (1.2.2)
+  santa: (el) => santaCatch(el),   // Santa's presents (2026-11-14)
   'close-modal': () => closeModal(),
   'modal-back': (el, ev) => { if (ev.target === el) closeModal(); },
   'toggle-furi': () => toggleFurigana(),

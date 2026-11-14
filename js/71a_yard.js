@@ -2,6 +2,11 @@
 // 院子: the yard's things, the yard and the scenes outside (renderOutside) (out of 71_today.js, 2026-11-11)
 // ---------- the yard's things (1.2.0): drawn facing us in the hero's units (feet at 0, x round 0), scaled with distance like
 // him (yScale) and darker by night like him. box: their drawing's [x, y, width, height]; glow: [x, y, r] of a light by night ----------
+// the Christmas yard wares' bulbs (2026-11-14): the big tree's lights along its strings, the light-up reindeer's along its wire
+const q1 = (v) => Math.round(v * 10) / 10;
+const YARD_TREE_BULBS = [[-50.0, -26.3, '#ffd36a'], [-38.0, -30.7, '#ff7a6a'], [-26.0, -34.8, '#8fd0ff'], [-14.0, -38.6, '#9fe6a0'], [-2.0, -42.0, '#ffd36a'], [10.0, -44.9, '#ff7a6a'], [22.0, -47.3, '#8fd0ff'], [34.0, -49.3, '#9fe6a0'], [46.0, -51.1, '#ffd36a'], [-38.6, -90.2, '#ff7a6a'], [-27.9, -94.3, '#8fd0ff'], [-17.1, -98.2, '#9fe6a0'], [-6.4, -101.5, '#ffd36a'], [4.4, -104.3, '#ff7a6a'], [15.1, -106.5, '#8fd0ff'], [25.9, -108.1, '#9fe6a0'], [36.6, -109.4, '#ffd36a'], [-27.6, -144.2, '#ff7a6a'], [-18.7, -148.4, '#8fd0ff'], [-9.9, -152.0, '#9fe6a0'], [-1.0, -155.0, '#ffd36a'], [7.9, -157.2, '#ff7a6a'], [16.7, -158.6, '#8fd0ff'], [25.6, -159.6, '#9fe6a0'], [-13.8, -192.8, '#ffd36a'], [-5.2, -197.4, '#ff7a6a'], [3.2, -199.9, '#8fd0ff'], [11.8, -200.3, '#9fe6a0']];
+const YARD_DEER = 'M-30 -50 Q-28 -74 -2 -72 Q24 -74 30 -56 Q30 -48 22 -46 L22 0 M22 -46 L28 -2 M-24 -48 L-26 0 M-24 -48 L-18 -2 M-28 -64 Q-34 -80 -36 -92 M-36 -92 Q-48 -96 -52 -88 Q-50 -82 -40 -84 Q-36 -86 -36 -92 M-38 -96 L-32 -112 M-34 -106 L-26 -114 M-40 -96 L-46 -114 M-44 -108 L-52 -116 M30 -60 Q36 -66 34 -70 M-2 -72 Q-14 -50 -30 -50';
+const YARD_DEER_BULBS = [[-30, -50], [-26, -64], [-16, -71], [-4, -72], [8, -73], [20, -70], [28, -60], [26, -48], [22, -34], [22, -18], [22, -2], [25, -24], [27, -10], [-25, -34], [-26, -14], [-25, -2], [-21, -30], [-19, -12], [-31, -74], [-34, -84], [-36, -92], [-46, -94], [-51, -88], [-44, -83], [-33, -108], [-28, -113], [-44, -108], [-50, -115], [33, -67], [-14, -58], [-22, -52]];
 const YARD = (() => {
   const SHADE = (rx, ry = 6) => `<ellipse rx="${rx}" ry="${ry}" fill="#2b1c12" fill-opacity=".16"/>`;
   // 2026-11-11 (the user: finer): each thing in its own pencils, a few more shapes inside the same outline — the telescope's
@@ -71,14 +76,44 @@ const YARD = (() => {
       <g transform="translate(0 -20) scale(1 .19)"><g class="koi k1"><path d="M66 0 c-6 -6 -18 -6 -24 0 c6 6 18 6 24 0 Z M42 0 l-9 -6 v12 Z" fill="#f08a3c"/><circle cx="58" cy="-2" r="2.6" fill="#fff"/></g><g class="koi k2"><path d="M-36 0 c6 -6 18 -6 24 0 c-6 6 -18 6 -24 0 Z M-12 0 l9 -6 v12 Z" fill="#f6f1e8"/><circle cx="-26" cy="1" r="3.4" fill="#e0574b"/></g></g>
       <ellipse cx="-34" cy="-10" rx="10" ry="2.2" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width=".8"/><ellipse cx="74" cy="-15" rx="7" ry="1.6" fill="none" stroke="#fff" stroke-opacity=".18" stroke-width=".8"/>
       <g class="lily l1"><path d="M44 -24 a10 4.6 0 1 0 1.6 -1.2 L38 -24 Z" fill="#5f9a4a"/><path d="M53.2 -22.2 H61.7 M53.2 -22.2 L57.5 -18.8 M53.2 -22.2 L48.9 -18.8 M53.2 -22.2 L48.9 -25.6 M53.2 -22.2 L57.5 -25.6" stroke="#4a8238" stroke-width=".6"/><path d="M46.4 -24.8 Q52 -26.8 58 -26.2" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width=".8"/></g>
-      <g class="lily l2"><path d="M-70 -14 a8 3.6 0 1 0 1.4 -1 L-76 -14 Z" fill="#6aa653"/><path d="M-62.6 -12.6 H-55.8 M-62.6 -12.6 L-59.2 -9.95 M-62.6 -12.6 L-66 -9.95 M-62.6 -12.6 L-66 -15.25 M-62.6 -12.6 L-59.2 -15.25" stroke="#4f8a3e" stroke-width=".55"/></g>` }
+      <g class="lily l2"><path d="M-70 -14 a8 3.6 0 1 0 1.4 -1 L-76 -14 Z" fill="#6aa653"/><path d="M-62.6 -12.6 H-55.8 M-62.6 -12.6 L-59.2 -9.95 M-62.6 -12.6 L-66 -9.95 M-62.6 -12.6 L-66 -15.25 M-62.6 -12.6 L-59.2 -15.25" stroke="#4f8a3e" stroke-width=".55"/></g>` },
+    // ---- Christmas (2026-11-14, the user) ---- lights: bulbs over the drawing that the night does not dim (lit by night, glass by
+    // day), switched off with the glow
+    // 大聖誕樹: a tall fir on a little trunk, four tiers with snow along their hems, a string of lights round and round it, baubles,
+    // a gold star on top
+    bigtree: { box: [-68, -262, 136, 268], glow: [0, -130, 120], draw: () => {
+      const tier = (b, t, w, n) => `<path fill="#3f7a3a" d="M${-w} ${b} ${Array.from({ length: n }, (_, i) => `Q${q1(-w + (2 * i + 1) * w / n)} ${b + 7} ${q1(-w + (2 * i + 2) * w / n)} ${b}`).join(' ')} L5 ${t} H-5 Z"/><path fill="#2b1c12" fill-opacity=".14" d="M4 ${t + 2} L${w} ${b} Q${q1(w * 0.75)} ${b + 6} ${q1(w * 0.5)} ${b + 1} Q${q1(w * 0.25)} ${b + 6} 2 ${b + 2} Z"/><path d="M${q1(-w * 0.45)} ${b - 5} L-4 ${t + 8}" stroke="#fff" stroke-opacity=".14" stroke-width="2.4" stroke-linecap="round"/>
+        <path fill="#f4f7fb" d="M${-w - 1} ${b - 1} ${Array.from({ length: n }, (_, i) => `Q${q1(-w + (2 * i + 1) * w / n)} ${b + 7} ${q1(-w + (2 * i + 2) * w / n)} ${b}`).join(' ')} L${q1(w * 0.82)} ${b - 6} ${Array.from({ length: n }, (_, i) => `Q${q1(w * 0.82 - (2 * i + 1) * w * 0.82 / n)} ${b - 2} ${q1(w * 0.82 - (2 * i + 2) * w * 0.82 / n)} ${b - 6}`).join(' ')} Z"/>`;
+      const ball = (x, y, c, r = 4.4) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${c}"/><circle cx="${q1(x - r * 0.35)}" cy="${q1(y - r * 0.35)}" r="${q1(r * 0.32)}" fill="#fff" fill-opacity=".6"/>`;
+      return `${SHADE(56, 9)}<rect x="-7" y="-20" width="14" height="20" fill="#6e4a33"/><rect x="1" y="-20" width="6" height="20" fill="#2b1c12" fill-opacity=".14"/>
+        ${tier(-14, -112, 64, 8)}${tier(-78, -162, 52, 7)}${tier(-132, -208, 40, 6)}${tier(-180, -240, 26, 4)}
+        <path d="M-56 -24 Q0 -40 52 -52 M-44 -88 Q-2 -100 42 -110 M-32 -142 Q0 -152 30 -160 M-18 -190 Q0 -196 16 -200" fill="none" stroke="#2b2420" stroke-opacity=".4" stroke-width=".9"/>
+        ${YARD_TREE_BULBS.map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="2.8" fill="${c}" fill-opacity=".75"/>`).join('')}
+        ${ball(-30, -40, '#d0453c')}${ball(26, -60, '#e6c25a')}${ball(-4, -66, '#5a7fc8', 3.8)}${ball(-22, -104, '#e6c25a', 4)}${ball(18, -120, '#d0453c', 4)}${ball(-10, -150, '#5a7fc8', 3.6)}${ball(12, -170, '#d0453c', 3.4)}${ball(-4, -214, '#e6c25a', 3.2)}
+        <path d="M0 -262 L4.4 -252 L15 -251.4 L6.8 -244.4 L9.4 -234 L0 -240 L-9.4 -234 L-6.8 -244.4 L-15 -251.4 L-4.4 -252 Z" style="fill:color-mix(in srgb,#e6c25a calc(var(--day,1)*100%),#ffe680)"/><path d="M0 -262 L4.4 -252 L0 -247 Z M-15 -251.4 L-4.4 -252 L0 -247 Z" fill="#fff" fill-opacity=".35"/>`; },
+      lights: () => `${YARD_TREE_BULBS.map(([x, y, c], i) => `<circle cx="${x}" cy="${y}" r="7" fill="${c}" fill-opacity=".35" class="${i % 3 ? '' : 'tw'}"/><circle cx="${x}" cy="${y}" r="2.8" fill="#fff8dc"/>`).join('')}<circle cx="0" cy="-248" r="18" fill="#ffe680" fill-opacity=".35"/><path d="M0 -262 L4.4 -252 L15 -251.4 L6.8 -244.4 L9.4 -234 L0 -240 L-9.4 -234 L-6.8 -244.4 L-15 -251.4 L-4.4 -252 Z" fill="#ffe680"/>` },
+    // 雪人: three balls of snow shaded blue on the right, coal eyes, a smile and buttons, a carrot nose, a red scarf with its tails,
+    // twig arms, a tin bucket for a hat, a little snow round its foot
+    snowman: { box: [-46, -160, 92, 166], draw: () => `${SHADE(34, 6)}<ellipse cx="0" cy="-2" rx="34" ry="6" fill="#f4f7fb"/>
+      <circle cx="0" cy="-32" r="30" fill="#f4f7fb"/><path d="M12 -59 A30 30 0 0 1 12 -5 A34 34 0 0 0 12 -59 Z" fill="#9fb4d0" fill-opacity=".35"/><path d="M-22 -44 A26 26 0 0 1 -6 -58" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="0" cy="-80" r="22" fill="#f4f7fb"/><path d="M9 -99.6 A22 22 0 0 1 9 -60.4 A25 25 0 0 0 9 -99.6 Z" fill="#9fb4d0" fill-opacity=".35"/>
+      <circle cx="0" cy="-116" r="17" fill="#f4f7fb"/><path d="M7 -131.4 A17 17 0 0 1 7 -100.6 A19 19 0 0 0 7 -131.4 Z" fill="#9fb4d0" fill-opacity=".35"/>
+      <path d="M-24 -84 L-44 -102 M-38 -96 L-44 -94 M-38 -96 L-40 -106 M24 -84 L42 -104 M36 -97 L44 -98 M36 -97 L36 -107" stroke="#6e4a33" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+      <g fill="#2b2b33"><circle cx="-6" cy="-120" r="2.2"/><circle cx="6" cy="-120" r="2.2"/><circle cx="-7" cy="-109" r="1.3"/><circle cx="-3.6" cy="-106.6" r="1.3"/><circle cx="0" cy="-105.8" r="1.3"/><circle cx="3.6" cy="-106.6" r="1.3"/><circle cx="7" cy="-109" r="1.3"/><circle cx="0" cy="-82" r="2.4"/><circle cx="0" cy="-70" r="2.4"/><circle cx="0" cy="-38" r="2.6"/></g>
+      <path d="M0 -115 L16 -112 L0 -110 Z" fill="#e8792a"/><path d="M4 -113.4 L6 -112.4 M9 -112.6 L10 -111.8" stroke="#b8561a" stroke-width=".6"/>
+      <path d="M-16 -100 Q0 -92 16 -100 L16 -94 Q0 -86 -16 -94 Z" fill="#d0453c"/><path d="M6 -94 L10 -72 L16 -74 L13 -95 Z" fill="#b8382f"/><path d="M7 -78 h8 M8 -74 h7" stroke="#f4efe6" stroke-width="1.2"/><path d="M-14 -99 Q0 -91 14 -99" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="1"/>
+      <path d="M-15 -128 L-12 -148 H14 L17 -128 Z" fill="#8f98a6"/><path d="M6 -148 H14 L17 -128 H9 Z" fill="#2b1c12" fill-opacity=".14"/><rect x="-17" y="-131" width="36" height="4" rx="1.6" fill="#7a8290"/><path d="M-11 -144 L-13.4 -131" stroke="#fff" stroke-opacity=".4" stroke-width="1.4"/><path d="M-12 -147 Q1 -156 14 -147" fill="none" stroke="#5f6672" stroke-width="1"/>` },
+    // 燈飾麋鹿: a reindeer of white wire, standing and looking back over its shoulder, bulbs all along it — clear glass by day,
+    // twinkling gold by night
+    lightdeer: { box: [-58, -132, 116, 138], glow: [0, -66, 80], draw: () => `${SHADE(40, 6)}<path d="${YARD_DEER}" fill="none" stroke="#e9ecf2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="${YARD_DEER}" fill="none" stroke="#9aa3b2" stroke-opacity=".5" stroke-width=".7" stroke-linecap="round" stroke-linejoin="round" transform="translate(.8 .8)"/>${YARD_DEER_BULBS.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.1" fill="#fbf3d6"/>`).join('')}`,
+      lights: () => YARD_DEER_BULBS.map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="4.4" fill="#ffd27a" fill-opacity=".3" class="${i % 2 ? 'tw' : 'tw2'}"/><circle cx="${x}" cy="${y}" r="2.1" fill="#fff4c8"/>`).join('') }
   };
   // the ware as it stands in the yard: a button the size of its drawing, its feet at (p.x, p.y), drawn in order of distance
   function el(id, p, sel) {
     const a = ART[id], it = WARE.get(id); if (!a || !it) return '';
     const [x0, y0, w, h] = a.box, k = yScale(p.y);
     const glow = a.glow ? `<i class="glow" style="left:${a.glow[0] - x0 - a.glow[2]}px;top:${a.glow[1] - y0 - a.glow[2]}px;width:${2 * a.glow[2]}px;height:${2 * a.glow[2]}px"></i>` : '';
-    return `<button type="button" class="yware${sel ? ' sel' : ''}${a.glow && lampOff(id) ? ' off' : ''}" data-act="yard-ware" data-ware="${id}" aria-label="${esc(it.name)}" style="width:${w}px;height:${h}px;margin-left:${x0}px;bottom:${-(y0 + h)}px;transform-origin:${-x0}px ${-y0}px;transform:translate(${p.x}px,${-p.y}px) scale(${k.toFixed(3)});z-index:${300 - Math.round(p.y)}"><svg class="art" viewBox="${a.box.join(' ')}" aria-hidden="true">${a.draw()}</svg>${glow}</button>`;
+    return `<button type="button" class="yware${sel ? ' sel' : ''}${a.glow && lampOff(id) ? ' off' : ''}" data-act="yard-ware" data-ware="${id}" aria-label="${esc(it.name)}" style="width:${w}px;height:${h}px;margin-left:${x0}px;bottom:${-(y0 + h)}px;transform-origin:${-x0}px ${-y0}px;transform:translate(${p.x}px,${-p.y}px) scale(${k.toFixed(3)});z-index:${300 - Math.round(p.y)}"><svg class="art" viewBox="${a.box.join(' ')}" aria-hidden="true">${a.draw()}</svg>${a.lights ? `<svg class="lights" viewBox="${a.box.join(' ')}" aria-hidden="true">${a.lights()}</svg>` : ''}${glow}</button>`;
   }
   const thumb = (id) => (ART[id] ? `<svg class="thumb" viewBox="${ART[id].box.join(' ')}" aria-hidden="true">${ART[id].draw()}</svg>` : '');
   return { ART, el, thumb };
@@ -349,6 +384,7 @@ const MUSIC = (() => {
     { id: 'yukiasa', file: 'music/yukiasa-1.m4a', name: '雪の朝', kana: 'ゆきのあさ', zh: '下雪的早晨', style: '鋼琴・音樂盒', color: '#8fb4d8' },
     { id: 'kissa', file: 'music/kissa-1.m4a', name: '喫茶しずく', kana: 'きっさしずく', zh: 'しずく咖啡館', style: '爵士鋼琴・低音提琴', color: '#8a5a3a', vol: 0.35 },
     { id: 'obake', file: 'music/obake-1.m4a', name: 'おばけの夜', kana: 'おばけのよる', zh: '妖怪之夜', style: '音樂盒・撥弦', color: '#7a4ab0' },
+    { id: 'jingle', file: 'music/jingle-1.m4a', name: 'ジングルベル', kana: 'じんぐるべる', zh: '鈴兒響叮噹', style: '音樂盒・雪橇鈴・撥弦', color: '#c8453d' },
     { id: 'chochin', place: 'izakaya', file: 'music/chochin-1.m4a', name: '赤ちょうちん', kana: 'あかちょうちん', zh: '紅燈籠', style: '三味線・笛', color: '#c8463a', vol: 0.45 },
     { id: 'minato', place: 'cruise', file: 'music/minato-1.m4a', name: 'みなと案内', kana: 'みなとあんない', zh: '港町導覽', style: '笛・撥弦・低音提琴', color: '#3f7ac8', vol: 0.55 }
   ];
@@ -507,6 +543,16 @@ function pondStir(yard, side) {
   svg.appendChild(g); svg.closest('.yware').classList.add('stirred');
   setTimeout(() => { g.remove(); if (!svg.querySelector('.stir')) svg.closest('.yware').classList.remove('stirred'); }, 3600);
 }
+// Christmas (2026-11-14, the user: every place should feel like it): snow falls over every place outside while it is on — not in
+// a room. Flakes of a few sizes drifting down at their own speeds; motion reduced, they hang where they are
+function ySnow(yard, place) {
+  const on = festOn('christmas') && !INDOOR.includes(place), had = yard.querySelector('.sky > .snow');
+  if (!on) { if (had) had.remove(); return; }
+  if (had) return;
+  let r = 11; const rnd = () => ((r = (r * 9301 + 49297) % 233280) / 233280);
+  const flakes = Array.from({ length: 52 }, () => `<i style="left:${(rnd() * 100).toFixed(1)}%;--y:${(rnd() * 100).toFixed(1)}%;--s:${(1.6 + rnd() * 3.6).toFixed(1)}px;--d:${(7 + rnd() * 9).toFixed(1)}s;--w:-${(rnd() * 16).toFixed(1)}s;--x:${Math.round(rnd() * 50 - 25)}px"></i>`).join('');
+  yard.querySelector('.sky').insertAdjacentHTML('beforeend', `<div class="snow" aria-hidden="true">${flakes}</div>`);
+}
 function renderOutside(view, place = 'yard') {
   sceneTick();
   const pct = ringPct(dayProgress());
@@ -516,6 +562,7 @@ function renderOutside(view, place = 'yard') {
     yardLevel(yard, pct);
     const w = yard.querySelector('.ywares'); if (w && !yed.on && w.dataset.sig !== yardSig()) { w.innerHTML = yardWaresHtml(); w.dataset.sig = yardSig(); }
     if (place === 'yard') yWitch(yard);
+    ySnow(yard, place);
     return;
   }
   yed.on = false; yed.sel = null; yed.drag = null; ypan = null; Object.assign(YCAM, { t: 0, lead: 0, free: false });   // a yard drawn anew opens out of 擺設
@@ -542,6 +589,7 @@ function renderOutside(view, place = 'yard') {
   } else if (come) { yHeroPlace(y); setTimeout(() => yHeroWalk(y, come[1]), 200); }   // in along the path
   else yHeroPlace(y);
   if (place === 'yard') yWitch(y);
+  ySnow(y, place);
   TOWNLIFE.start(y, place);   // the people about: strolling, fidgeting
   CRUISE.mount(y, place);   // the cruise ship's passengers and 高橋, the ship far out (CRUISE)
   const yel = y.querySelector('.yhero');   // idling now and then while left be
@@ -783,7 +831,46 @@ const HOUSE_ART = {
     <path ${hs('#6a8a3c', '#14221a')} stroke-width="1.4" d="M65 44 C57 40 56 32 62 32 C66 32 66 37 62 37"/>
     <circle class="pane" cx="70" cy="60" r="5"/><path class="mull" d="M70 55 V65 M65 60 H75"/><circle ${hs('#fbcf96', '#5a2e2a')} stroke-width="1.4" cx="70" cy="60" r="5.7"/>
     <path class="pane" d="M35 100 L45 84 L55 100 Z"/><path class="pane" d="M85 100 L95 84 L105 100 Z"/><path ${hs('#fbcf96', '#5a2e2a')} stroke-width="1.5" d="M35 100 L45 84 L55 100 Z M85 100 L95 84 L105 100 Z"/>
-    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><path class="panel" d="M67 129 V100.4 M73 129 V100.4"/><path ${hs('#3a2a22', '#08091c')} stroke-width="1.6" d="M61.4 112 h4.4 M61.4 124 h4.4"/><circle class="knob" cx="75" cy="120" r="1.3"/><path ${hs('#fbcf96', '#5a2e2a')} stroke-width="1.8" d="M59.9 130 V108 a10.1 10.1 0 0 1 20.2 0 V130"/>`
+    <path class="door" d="M61 130 V108 a9 9 0 0 1 18 0 V130 Z"/><path class="panel" d="M67 129 V100.4 M73 129 V100.4"/><path ${hs('#3a2a22', '#08091c')} stroke-width="1.6" d="M61.4 112 h4.4 M61.4 124 h4.4"/><circle class="knob" cx="75" cy="120" r="1.3"/><path ${hs('#fbcf96', '#5a2e2a')} stroke-width="1.8" d="M59.9 130 V108 a10.1 10.1 0 0 1 20.2 0 V130"/>`,
+  // ---- Christmas (2026-11-14, the user: two houses) ----
+  // 雪屋: a かまくら, a dome of packed snow (its blocks faint, shaded blue round its right, moonlit by night), the doorway warm with
+  // candlelight by night under a straw rope with paper streamers, two little round ice windows, a stove pipe where the chimney is,
+  // snow heaped against its foot (within it: past its sides a heap would hang over the hill) and a snow lantern by the door
+  kamakura: `<ellipse fill="#2b1c12" fill-opacity=".1" cx="70" cy="130.4" rx="62" ry="2.6"/>
+    <rect ${hc('#7a7f88', '#14162c')} x="93" y="28" width="7" height="26" rx="1.4"/><rect ${hc('#646a74', '#101226')} x="91.6" y="26" width="9.8" height="4" rx="1.2"/><path d="M94.6 31 V52" stroke="#fff" stroke-opacity=".25" stroke-width="1"/>
+    <path ${hc('#f4f7fb', '#4a5384')} d="M10 130 C8 86 34 40 70 40 C106 40 132 86 130 130 Z"/><path ${hc('#dfe6f1', '#3a4270')} d="M130 130 C132 86 106 40 70 40 C96 46 116 82 114 130 Z"/>
+    <path ${hs('#c9d4e4', '#343c66')} stroke-width=".9" d="M14 112 C40 106 100 106 126 112 M18 94 C44 87 96 87 122 94 M28 76 C50 69 90 69 112 76 M42 59 C58 54 82 54 98 59 M40 112 V94 M70 106 V88 M100 112 V94 M52 92 V74 M88 92 V74 M64 72 V56 M80 72 V56"/>
+    <path fill="#fff" fill-opacity=".35" d="M22 100 C24 76 40 54 60 46 C44 58 32 76 28 100 Z"/>
+    <circle ${hc('#dfe6f1', '#3a4270')} cx="43" cy="91" r="8.4"/><circle class="pane" cx="43" cy="91" r="6.4"/><path class="mull" d="M43 84.6 V97.4"/>
+    <circle ${hc('#dfe6f1', '#3a4270')} cx="97" cy="91" r="8.4"/><circle class="pane" cx="97" cy="91" r="6.4"/><path class="mull" d="M97 84.6 V97.4"/>
+    <path ${hc('#e4ebf4', '#3e477a')} d="M54 130 V112 C54 100 61 94 70 94 C79 94 86 100 86 112 V130 Z"/>
+    <path class="pane" d="M58 130 V113 C58 104 63 99 70 99 C77 99 82 104 82 113 V130 Z"/><path fill="#2b1c12" fill-opacity=".18" d="M58 113 C58 104 63 99 70 99 C77 99 82 104 82 113 C78 107 74 105 70 105 C66 105 62 107 58 113 Z"/>
+    <path ${hc('#8a5a3a', '#2a1c26')} d="M65 130 V122 H75 V130 Z"/><ellipse cx="70" cy="121.6" rx="2.2" ry="1" fill="#f2c94c"/><path d="M70 121 Q68.6 118 70 116 Q71.4 118 70 121 Z" style="fill:color-mix(in srgb,#e8a33a calc(var(--day,1)*100%),#fff2a8)"/>
+    <path ${hs('#c9a25a', '#3a2a24')} stroke-width="2.2" d="M53 99 Q70 92 87 99"/><path ${hs('#a8843e', '#2c2020')} stroke-width=".7" d="M56 97.4 l1.4 2 M60 96 l1.4 2 M64 95 l1.4 2 M68 94.6 l1.4 2 M72 94.6 l1.4 2 M76 95 l1.4 2 M80 96 l1.4 2 M84 97.4 l1.4 2"/>
+    <path ${hc('#f8f6f0', '#5a6090')} d="M60.6 96.6 l1.6 3 l-1.6 1.6 l1.6 3 L59 101 l1.6 -1.6 Z M70 95 l1.6 3 l-1.6 1.6 l1.6 3 L68.4 99.4 l1.6 -1.6 Z M79.4 96.6 l1.6 3 l-1.6 1.6 l1.6 3 L77.8 101 l1.6 -1.6 Z"/>
+    <path ${hc('#ffffff', '#5c66a0')} d="M11 130.6 C16 121 26 122 32 127.6 C38 124 46 126 50 130.6 Z M90 130.6 C96 125 106 124 112 127.6 C120 121 126 122 129 130.6 Z"/>
+    <path ${hc('#f4f7fb', '#4a5384')} d="M100 130 C99 122 104 118 108 118 C112 118 117 122 116 130 Z"/><path class="pane" d="M105 125 H111 V129 H105 Z"/><path ${hc('#e4ebf4', '#3e477a')} d="M101 119 C103 114 113 114 115 119 Z"/>`,
+  // 雪中小木屋: a cabin of round logs (their ends at the corners, shaded along each underside) on a stone footing, a roof deep in
+  // snow with icicles along its eaves and a string of coloured lights glowing by night, windows framed with snow on their sills,
+  // a wreath on the door, a stone chimney capped with snow (no heaps at its corners: past the walls the hill falls away and they
+  // floated, 2026-11-14 the user)
+  logcabin: `<ellipse fill="#2b1c12" fill-opacity=".12" cx="70" cy="130.4" rx="58" ry="2.6"/>
+    <rect ${hc('#8a8478', '#181a30')} x="91" y="26" width="14" height="34"/><path ${hs('#6f6a60', '#101226')} stroke-width=".9" d="M91 33 H105 M91 40 H105 M91 47 H105 M91 54 H105 M98 26 V33 M95 33 V40 M101 33 V40 M98 40 V47 M95 47 V54 M101 47 V54"/><path ${hc('#f8fafd', '#4e5788')} d="M89 27 C89 21 107 21 107 27 L106 29 H90 Z"/>
+    <rect ${hc('#9c6a42', '#1e1a36')} x="22" y="64" width="96" height="62"/>
+    <path ${hs('#7a4e2e', '#120f26')} stroke-width="1.4" d="M22 71 H118 M22 78 H118 M22 85 H118 M22 92 H118 M22 99 H118 M22 106 H118 M22 113 H118 M22 120 H118"/><path ${hs('#b8875c', '#2a2440')} stroke-width=".8" d="M22 66 H118 M22 73 H118 M22 80 H118 M22 87 H118 M22 94 H118 M22 101 H118 M22 108 H118 M22 115 H118 M22 122 H118"/>
+    ${[67.5, 74.5, 81.5, 88.5, 95.5, 102.5, 109.5, 116.5, 123].map((y) => `<circle ${hc('#c8955f', '#2a2238')} cx="20.4" cy="${y}" r="3.4"/><circle ${hc('#c8955f', '#2a2238')} cx="119.6" cy="${y}" r="3.4"/><circle ${hs('#8a5a32', '#16122a')} stroke-width=".6" cx="20.4" cy="${y}" r="1.6"/><circle ${hs('#8a5a32', '#16122a')} stroke-width=".6" cx="119.6" cy="${y}" r="1.6"/>`).join('')}
+    <rect ${hc('#8f8b81', '#181a30')} x="18" y="124" width="104" height="6" rx="1"/>
+    <path ${hc('#6e4a33', '#16132c')} d="M8 74 L70 20 L132 74 L126 76 L70 28 L14 76 Z"/>
+    <path ${hc('#f8fafd', '#4e5788')} d="M6 73 C4 70 6 67 9 67 L70 14 L131 67 C134 67 136 70 134 73 C128 75 124 72 120 73 C114 75 110 72 104 74 L70 44 L36 74 C30 72 26 75 20 73 C16 72 12 75 6 73 Z"/><path ${hc('#e1e8f2', '#3e477a')} d="M70 14 L131 67 C134 67 136 70 134 73 C128 75 124 72 120 73 L70 28 Z"/>
+    <path fill="#fff" fill-opacity=".5" d="M14 66 L70 18 L66 23 L18 66 Z"/>
+    <path ${hc('#dceaf6', '#465080')} d="M20 74 l1.4 6 l1.4 -6 Z M34 74.6 l1.2 5 l1.2 -5 Z M50 74 l1.4 7 l1.4 -7 Z M88 74 l1.4 6.6 l1.4 -6.6 Z M104 74.4 l1.2 5 l1.2 -5 Z M117 74 l1.4 6 l1.4 -6 Z"/>
+    <circle cx="16.8" cy="71.4" r="4.2" fill="#ff6a5a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="16.8" cy="71.4" r="1.7" style="fill:color-mix(in srgb,#ff6a5a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="21.7" cy="67.3" r="4.2" fill="#ffd36a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="21.7" cy="67.3" r="1.7" style="fill:color-mix(in srgb,#ffd36a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="26.5" cy="63.1" r="4.2" fill="#7fc8ff" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="26.5" cy="63.1" r="1.7" style="fill:color-mix(in srgb,#7fc8ff calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="31.3" cy="58.9" r="4.2" fill="#8fe08a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="31.3" cy="58.9" r="1.7" style="fill:color-mix(in srgb,#8fe08a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="36.2" cy="54.8" r="4.2" fill="#ff6a5a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="36.2" cy="54.8" r="1.7" style="fill:color-mix(in srgb,#ff6a5a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="41.0" cy="50.6" r="4.2" fill="#ffd36a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="41.0" cy="50.6" r="1.7" style="fill:color-mix(in srgb,#ffd36a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="45.8" cy="46.4" r="4.2" fill="#7fc8ff" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="45.8" cy="46.4" r="1.7" style="fill:color-mix(in srgb,#7fc8ff calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="50.7" cy="42.3" r="4.2" fill="#8fe08a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="50.7" cy="42.3" r="1.7" style="fill:color-mix(in srgb,#8fe08a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="55.5" cy="38.1" r="4.2" fill="#ff6a5a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="55.5" cy="38.1" r="1.7" style="fill:color-mix(in srgb,#ff6a5a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="60.3" cy="33.9" r="4.2" fill="#ffd36a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="60.3" cy="33.9" r="1.7" style="fill:color-mix(in srgb,#ffd36a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="65.2" cy="29.8" r="4.2" fill="#7fc8ff" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="65.2" cy="29.8" r="1.7" style="fill:color-mix(in srgb,#7fc8ff calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="70.0" cy="25.6" r="4.2" fill="#8fe08a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="70.0" cy="25.6" r="1.7" style="fill:color-mix(in srgb,#8fe08a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="74.8" cy="29.8" r="4.2" fill="#ff6a5a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="74.8" cy="29.8" r="1.7" style="fill:color-mix(in srgb,#ff6a5a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="79.7" cy="33.9" r="4.2" fill="#ffd36a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="79.7" cy="33.9" r="1.7" style="fill:color-mix(in srgb,#ffd36a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="84.5" cy="38.1" r="4.2" fill="#7fc8ff" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="84.5" cy="38.1" r="1.7" style="fill:color-mix(in srgb,#7fc8ff calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="89.3" cy="42.3" r="4.2" fill="#8fe08a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="89.3" cy="42.3" r="1.7" style="fill:color-mix(in srgb,#8fe08a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="94.2" cy="46.4" r="4.2" fill="#ff6a5a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="94.2" cy="46.4" r="1.7" style="fill:color-mix(in srgb,#ff6a5a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="99.0" cy="50.6" r="4.2" fill="#ffd36a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="99.0" cy="50.6" r="1.7" style="fill:color-mix(in srgb,#ffd36a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="103.8" cy="54.8" r="4.2" fill="#7fc8ff" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="103.8" cy="54.8" r="1.7" style="fill:color-mix(in srgb,#7fc8ff calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="108.7" cy="58.9" r="4.2" fill="#8fe08a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="108.7" cy="58.9" r="1.7" style="fill:color-mix(in srgb,#8fe08a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="113.5" cy="63.1" r="4.2" fill="#ff6a5a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="113.5" cy="63.1" r="1.7" style="fill:color-mix(in srgb,#ff6a5a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="118.3" cy="67.3" r="4.2" fill="#ffd36a" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="118.3" cy="67.3" r="1.7" style="fill:color-mix(in srgb,#ffd36a calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/><circle cx="123.2" cy="71.4" r="4.2" fill="#7fc8ff" style="opacity:calc(.5 * (1 - var(--day, 1)))"/><circle cx="123.2" cy="71.4" r="1.7" style="fill:color-mix(in srgb,#7fc8ff calc(var(--md, var(--day, 1)) * 70%),#fff6d0)"/>
+    <rect ${hc('#6e4a33', '#16132c')} x="32" y="80" width="22" height="22" rx="1.5"/><rect class="pane" x="34.5" y="82.5" width="17" height="17" rx="1"/><path class="mull" d="M43 82.5 V99.5 M34.5 91 H51.5"/><path ${hc('#f8fafd', '#4e5788')} d="M31 101 C31 99 55 99 55 101 V104 H31 Z"/>
+    <rect ${hc('#6e4a33', '#16132c')} x="86" y="80" width="22" height="22" rx="1.5"/><rect class="pane" x="88.5" y="82.5" width="17" height="17" rx="1"/><path class="mull" d="M97 82.5 V99.5 M88.5 91 H105.5"/><path ${hc('#f8fafd', '#4e5788')} d="M85 101 C85 99 109 99 109 101 V104 H85 Z"/>
+    <circle ${hc('#6e4a33', '#16132c')} cx="70" cy="52" r="7.6"/><circle class="pane" cx="70" cy="52" r="5.8"/><path class="mull" d="M70 46.2 V57.8 M64.2 52 H75.8"/>
+    <path ${hc('#5a3a24', '#120f22')} d="M58.5 130 V106 H81.5 V130 Z"/><path class="door" d="M61 130 V108.4 H79 V130 Z"/><path ${hs('#5a3a24', '#120f22')} stroke-width=".8" d="M65.5 108.4 V130 M70 108.4 V130 M74.5 108.4 V130"/><circle class="knob" cx="76.4" cy="120" r="1.3"/>
+    <circle ${hs('#3f7a3a', '#162a26')} stroke-width="3.2" fill="none" cx="70" cy="115" r="4.6"/><path ${hc('#d0453c', '#5a2030')} d="M70 120 l-3 2.4 l.6 -3 Z M70 120 l3 2.4 l-.6 -3 Z"/><circle ${hc('#d0453c', '#5a2030')} cx="70" cy="119.6" r="1.1"/>
+`
 };
 const houseArt = () => HOUSE_ART[state.house && owns(state.house) && HOUSE_ART[state.house] ? state.house : 'cottage'];
 // the hero out in the yard (1.2.0): the same drawing, smaller the further up the lawn (X: px from the middle, Y: px up from the

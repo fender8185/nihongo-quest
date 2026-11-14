@@ -29,11 +29,23 @@ const SHOP_TABS = [['in', '室內', [['floor', '家具擺飾'], ['rug', '地墊'
 const inSec = (it, k) => (it.kind === 'wear' || it.kind === 'clothes' ? it.slot === k : it.kind === k);   // a ware under a section: by part, or by kind
 let shopTab = (() => { try { const t = localStorage.getItem('nq_shop_tab'); return SHOP_TABS.some(([k]) => k === t) ? t : 'in'; } catch (e) { return 'in'; } })();
 let shopFocus = '';   // a part's section to open 古道具屋 at (from the wardrobe's 去看看), once
-// limited sales (1.2.0): month-day, both ends in, every year. A ware joins one with limited: its key; it is shown under 限時
-// only, and only while the sale is on; once bought it is theirs like any other.
-const SALES = { halloween: { name: '萬聖節', from: '10-21', to: '11-10' } };
-const saleOn = (key, day) => { const s = SALES[key], md = day && day.slice(5); return !!(s && md && md >= s.from && md <= s.to); };
-const salePreview = () => { try { return onTestSite() && localStorage.getItem('nq_sale_preview') === '1'; } catch (e) { return false; } };   // test site: every sale as if on
+// limited sales (1.2.0): a festival's own, every year. A ware joins one with limited: its key; it is shown under 限時 only, and
+// only while the sale is on; once bought it is theirs like any other. 2026-11-14 (the user): every festival runs from 14 days
+// before its day to 14 days after, both ends in (Halloween 10/17–11/14, Christmas 12/11–1/8 over the new year), and so will any
+// added later; the town keeps it too (the sky's visitor, the snow, what the people wear and say: festOn)
+const SALES = { halloween: { name: '萬聖節', day: '10-31' }, christmas: { name: '聖誕節', day: '12-25' } };
+const FEST_SPAN = 14;
+function saleSpan(key, day) {   // [first, last] day (YYYY-MM-DD) of the sale nearest the day: this year's, last year's or next year's
+  const s = SALES[key]; if (!s || !day) return null;
+  const y = Number(day.slice(0, 4)), t = Date.parse(day), iso = (ms) => new Date(ms).toISOString().slice(0, 10);
+  const at = [y - 1, y, y + 1].map((yy) => Date.parse(`${yy}-${s.day}`)).reduce((a, b) => (Math.abs(b - t) < Math.abs(a - t) ? b : a));
+  return [iso(at - FEST_SPAN * 864e5), iso(at + FEST_SPAN * 864e5)];
+}
+const saleOn = (key, day) => { const sp = saleSpan(key, day); return !!sp && day >= sp[0] && day <= sp[1]; };
+const nextSpan = (key, day) => { const sp = saleSpan(key, day); return sp && day > sp[1] ? saleSpan(key, `${Number(day.slice(0, 4)) + 1}-${SALES[key].day}`) : sp; };   // on now or the next
+// the test site: a festival as if on whatever the day (nq_sale_preview: its key, or '1' for all of them)
+const salePreview = (key) => { try { const p = onTestSite() && localStorage.getItem('nq_sale_preview'); return p === '1' || (!!key && p === key); } catch (e) { return false; } };
+const festOn = (key) => salePreview(key) || saleOn(key, saleNow() || todayStr());   // the town's own festival look: by the server's day once known, else the device's
 // the day a sale goes by is the server's, never the phone's (its clock and time zone are anyone's to change): the site's own
 // answer carries a Date header, and that moment in Taipei (UTC+8, where the learners are) is the day. Kept 10 minutes; failed:
 // no answer (offline), asked again when 限時 is opened
@@ -65,22 +77,23 @@ function gotItem(id, where, then) {
   let gone = false; const close = () => { if (gone) return; gone = true; el.classList.add('out'); setTimeout(() => el.remove(), 260); if (then) then(); };
   el.addEventListener('click', close); setTimeout(close, 3200);
 }
-const forSale = (it) => !it.limited || salePreview() || saleOn(it.limited, saleNow());   // in the shop now (a limited one: by the server's day, when known)
+const forSale = (it) => !it.limited || salePreview(it.limited) || saleOn(it.limited, saleNow());   // in the shop now (a limited one: by the server's day, when known)
 // a limited ware is bought only on a day the server says its sale is on (asked again when the answer is old)
 function saleCheck(it, go) {
-  if (!it.limited || salePreview()) { go(); return; }
+  if (!it.limited || salePreview(it.limited)) { go(); return; }
   saleClock().then((day) => { if (saleOn(it.limited, day)) go(); else { toast(day ? '這個限時商品已經下架了' : '限時商品要連上網路才買得到'); route(); } });
 }
 const mdText = (md) => md.split('-').map(Number).join('/');
 function saleHtml(day, live, grid) {   // 限時: the sales on now with their wares, or when the next one is
   if (!live.length) {
     if (!day) return `<p class="shop-note">${saleDay.failed ? '限時商品要連上網路才看得到。' : '查看中…'}</p>`;
-    return `<p class="shop-note">現在沒有限時商品。下一檔：${Object.values(SALES).map((x) => `${x.name} ${mdText(x.from)}–${mdText(x.to)}`).join('、')}</p>`;
+    const next = Object.keys(SALES).map((k) => [k, nextSpan(k, day)]).sort((a, b) => (a[1][0] < b[1][0] ? -1 : 1));   // the soonest first
+    return `<p class="shop-note">現在沒有限時商品。下一檔：${next.map(([k, sp]) => `${SALES[k].name} ${mdText(sp[0].slice(5))}–${mdText(sp[1].slice(5))}`).join('、')}</p>`;
   }
   return live.map((k) => {
-    const x = SALES[k], left = day ? Math.round((Date.parse(`${day.slice(0, 4)}-${x.to}`) - Date.parse(day)) / 86400000) : null;
+    const x = SALES[k], sp = saleSpan(k, day || todayStr()), left = day ? Math.round((Date.parse(sp[1]) - Date.parse(day)) / 86400000) : null;
     const when = left === null || !saleOn(k, day) ? '測試預覽' : left > 0 ? `還有 ${left} 天` : '今天最後一天';
-    return `<section class="shop-sec"><h2 class="shop-h">${x.name}限定 · 賣到 ${mdText(x.to)}（${when}）</h2>${grid(WARES.filter((it) => it.limited === k))}</section>`;
+    return `<section class="shop-sec"><h2 class="shop-h">${x.name}限定 · 賣到 ${mdText(sp[1].slice(5))}（${when}）</h2>${grid(WARES.filter((it) => it.limited === k))}</section>`;
   }).join('');
 }
 const styleKey = (it) => STYLE_OF[it.slot], styleOn = (it) => HERO.norm(state.look)[styleKey(it)] === it.id;
@@ -117,7 +130,7 @@ function shopScrollTo(view, k) {   // a part's section, just under the tabs held
 }
 function renderShop(view) {
   const bal = kotoBalance(), night = sceneClock(lightHour()).day < 0.5;
-  const day = saleNow(), live = Object.keys(SALES).filter((k) => salePreview() || saleOn(k, day));
+  const day = saleNow(), live = Object.keys(SALES).filter((k) => salePreview(k) || saleOn(k, day));
   const grid = (list, extra = '') => `<div class="shop-grid">${list.map((it) => shopCardHtml(it, bal)).join('')}${extra}</div>`;
   if (!day && !saleDay.ask && !saleDay.failed) saleClock().then(() => { if (location.hash === '#/shop') route(); });   // the server's day: the 限時 dot, its wares
   document.getElementById('topTitle').textContent = '古道具屋';
@@ -127,8 +140,8 @@ function renderShop(view) {
     <div class="page-head shop-head"><div><div class="page-title">古道具屋</div><div class="page-sub">山上的老店，老闆福爺不收錢，只收言靈。</div></div></div>
     <div class="shop-tabs" role="tablist">${SHOP_TABS.map(([k, name]) => `<button type="button" role="tab" data-act="shop-tab" data-tab="${k}" aria-selected="${shopTab === k}">${name}${k === 'sale' && live.length ? '<i class="dot" aria-label="特賣中"></i>' : ''}</button>`).join('')}</div>
     ${shopTab === 'sale' ? saleHtml(day, live, grid) : SHOP_TABS.find(([k]) => k === shopTab)[2].map(([k, name], i, all) => `<section class="shop-sec" data-sec="${k}"><h2 class="shop-h">${name}</h2>${grid(WARES.filter((it) => inSec(it, k) && !it.starter && !it.limited && !it.gift), shopTab === 'wear' && i === all.length - 1 ? SOON : '')}</section>`).join('')}
-    ${onTestSite() && shopTab === 'sale' ? `<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="sale-preview">測試用：${salePreview() ? '關掉限時預覽，照日期來' : '不看日期，顯示限時商品'}</button></div>` : ''}
-    ${onTestSite() ? '<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="koto-gift">測試用：+100 言靈</button><button type="button" class="btn btn-sm" data-act="koto-gift" data-n="1000">測試用：+1000 言靈</button><button type="button" class="btn btn-sm" data-act="witch-again">測試用：巫婆再飛一次</button></div>' : ''}
+    ${onTestSite() && shopTab === 'sale' ? `<div class="row-wrap mt-4">${Object.keys(SALES).map((k) => `<button type="button" class="btn btn-sm" data-act="sale-preview" data-k="${k}" aria-pressed="${salePreview(k)}">測試用：預覽${SALES[k].name}</button>`).join('')}<button type="button" class="btn btn-sm" data-act="sale-preview" data-k="0">照日期來</button></div>` : ''}
+    ${onTestSite() ? '<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="koto-gift">測試用：+100 言靈</button><button type="button" class="btn btn-sm" data-act="koto-gift" data-n="1000">測試用：+1000 言靈</button><button type="button" class="btn btn-sm" data-act="witch-again">測試用：巫婆／聖誕老公公再飛一次</button></div>' : ''}
     <svg class="defs-only" width="0" height="0" aria-hidden="true">${DECOR.DEFS}</svg>`;
   fitThumbs(view);
   if (shopFocus) { const k = shopFocus; shopFocus = ''; requestAnimationFrame(() => shopScrollTo(view, k)); }
@@ -334,7 +347,7 @@ Object.assign(ACTIONS, {
     if (shopTab === 'sale' && saleDay.failed) saleDay.failed = false;   // asked again: perhaps back online
     route();
   },
-  'sale-preview': () => { try { localStorage.setItem('nq_sale_preview', salePreview() ? '0' : '1'); } catch (e) { /* no storage */ } route(); },
+  'sale-preview': (el) => { try { localStorage.setItem('nq_sale_preview', (el && el.dataset.k) || '0'); } catch (e) { /* no storage */ } route(); },   // test site: one festival as if on (2026-11-14: each its own), or by the day
   'yard-edit': (el) => yardEdit(el.closest('.yard'), 'on'),
   'yard-edit-done': (el) => yardEdit(el.closest('.yard'), 'done'),
   'yard-edit-take': (el) => yardEdit(el.closest('.yard'), 'take', el.dataset.id),
@@ -342,9 +355,9 @@ Object.assign(ACTIONS, {
   'yard-edit-put': (el) => yardEdit(el.closest('.yard'), 'put'),
   'yard-ware': (el) => { const y = el.closest('.yard'); if (y && y._noClick) return; if (yed.on) yardEdit(y, 'pick', el.dataset.ware); else yardUse(y, el.dataset.ware); },
   'koto-gift': (el) => { const n = Number(el && el.dataset.n) || 100; state.koto.gift = (Number(state.koto.gift) || 0) + n; saveState(); route(); toast(`測試用：多了 ${n} 言靈`); },
-  'witch-again': () => {   // test site (1.2.2): the Halloween witch flies again, her 100 言靈 with her
-    Object.keys(state.koto.found).filter((k) => k.startsWith('witch-')).forEach((k) => { delete state.koto.found[k]; });
-    saveState(); route(); toast('測試用：巫婆會再飛出來（晚上的院子）');
+  'witch-again': () => {   // test site (1.2.2): the Halloween witch (and Santa, 2026-11-14) fly again, their 100 言靈 with them
+    Object.keys(state.koto.found).filter((k) => k.startsWith('witch-') || k.startsWith('santa-')).forEach((k) => { delete state.koto.found[k]; });
+    saveState(); route(); toast('測試用：巫婆和聖誕老公公會再飛出來（晚上的院子，那個節日預覽或期間內）');
   }
 });
 

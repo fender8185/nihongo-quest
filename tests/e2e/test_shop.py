@@ -434,7 +434,7 @@ def test_a_hat_tucks_away_what_sits_on_top_and_old_looks_become_parts(b):
         odd: [odd.fringe, odd.sides, odd.skin, odd.eyes], fixed, counts: ['fringe', 'sides', 'hairBack', 'hairTop'].map(k => HERO.OPTS[k].length) }); })()"""
     r = json.loads(ev(b, js))
     assert r['cut'] is False and r['cat'] is True, r
-    assert r['tucks'] == {h: ['ahoge', 'bun', 'twinbuns'] for h in ['beanie', 'strawhat', 'beret', 'gradcap', 'cathood', 'witchhat']}, r   # a hat over what sits on top
+    assert r['tucks'] == {h: ['ahoge', 'bun', 'twinbuns'] for h in ['beanie', 'strawhat', 'beret', 'gradcap', 'cathood', 'witchhat', 'santahat']}, r   # a hat over what sits on top
     assert r['bun'] == [True, False, True] and r['tail'], r   # tucked under a beanie, not under 貓耳髮箍; a high tail stays
     assert r['old'] == ['short', 'short', 'short', 'bun'] and r['wavy'] == ['sidepart', 'wave', 'wavy'], r   # the old 丸子頭, 長捲髮
     assert r['odd'] == ['blunt', 'long', '#f3d1b5', 'big'] and r['fixed'] == {} and r['counts'] == [20, 16, 8, 13], r   # 後面 gained 清爽 (test, 2026-11-09)
@@ -504,22 +504,28 @@ def test_the_shop_has_four_tabs_and_opens_on_the_last_one_used(b):
 
 def test_limited_sales_go_by_the_servers_day_not_the_phones(b):
     js = "(async () => { " + FRESH + """ state.koto.gift = 100; saveState();
-      const edges = ['2026-10-20', '2026-10-21', '2026-11-10', '2026-11-11'].map(d => saleOn('halloween', d)), real = await saleClock();   /* this server's own Date header */
+      const edges = ['2026-10-16', '2026-10-17', '2026-11-14', '2026-11-15'].map(d => saleOn('halloween', d)), real = await saleClock();   /* this server's own Date header */
+      const xmas = ['2026-12-10', '2026-12-11', '2026-12-25', '2027-01-08', '2027-01-09', '2026-01-05'].map(d => saleOn('christmas', d));   /* over the new year; last Christmas's into January */
       const look = () => ({ head: [...document.querySelectorAll('#view .shop-h')].map(h => h.textContent), cards: [...document.querySelectorAll('#view .shop-item[data-ware]')].map(c => c.dataset.ware), note: (document.querySelector('#view .shop-note') || {}).textContent || null, dot: !!document.querySelector('.shop-tabs .dot') });
       const at = (day) => { saleDay = { day, at: Date.now(), ask: null, failed: false }; shopTab = 'sale'; location.hash = '#/shop'; route(); return look(); };
-      const on = at('2026-11-07'), last = at('2026-11-10'), off = at('2026-11-11');
+      const on = at('2026-11-07'), last = at('2026-11-14'), off = at('2026-11-15'), dec = at('2026-12-20'), jan = at('2027-01-08');
       saleDay = { day: null, at: 0, ask: null, failed: true }; route(); const offline = look().note;
       saleDay = { day: '2026-12-01', at: Date.now(), ask: null, failed: false };   /* whatever the phone says, the server says December */
       let bought = null; saleCheck(WARE.get('witchhat'), () => { bought = 'yes'; }); await new Promise(q => setTimeout(q, 50));
       localStorage.setItem('nq_sale_preview', '1'); const preview = at('2026-12-01');
-      return JSON.stringify({ edges, real: /^\\d{4}-\\d{2}-\\d{2}$/.test(real), on, last: last.head, off, offline, bought, preview: preview.cards }); })()"""
+      localStorage.setItem('nq_sale_preview', 'christmas'); const one = at('2026-09-01');
+      localStorage.setItem('nq_sale_preview', '0');
+      return JSON.stringify({ edges, xmas, real: /^\\d{4}-\\d{2}-\\d{2}$/.test(real), on, last: last.head, off, offline, bought, preview: preview.cards, dec: dec.head, jan: jan.head, one: one.head }); })()"""
     r = json.loads(ev(b, js))
-    assert r['edges'] == [False, True, True, False] and r['real'], r   # ten days either side of Halloween, both ends in
-    assert r['on'] == {'head': ['萬聖節限定 · 賣到 11/10（還有 3 天）'], 'cards': ['witchhat', 'wizrobe', 'pumpkinhouse', 'pumpkin', 'obake'], 'note': None, 'dot': True}, r
-    assert r['last'] == ['萬聖節限定 · 賣到 11/10（今天最後一天）'], r
-    assert r['off'] == {'head': [], 'cards': [], 'note': '現在沒有限時商品。下一檔：萬聖節 10/21–11/10', 'dot': False}, r
+    assert r['edges'] == [False, True, True, False] and r['real'], r   # 2026-11-14 (the user): 14 days either side of Halloween, both ends in
+    assert r['xmas'] == [False, True, True, True, False, True], r   # and of Christmas, over the new year
+    assert r['on'] == {'head': ['萬聖節限定 · 賣到 11/14（還有 7 天）'], 'cards': ['witchhat', 'wizrobe', 'pumpkinhouse', 'pumpkin', 'obake'], 'note': None, 'dot': True}, r
+    assert r['last'] == ['萬聖節限定 · 賣到 11/14（今天最後一天）'], r
+    assert r['off'] == {'head': [], 'cards': [], 'note': '現在沒有限時商品。下一檔：聖誕節 12/11–1/8、萬聖節 10/17–11/14', 'dot': False}, r
+    assert r['dec'] == ['聖誕節限定 · 賣到 1/8（還有 19 天）'] and r['jan'] == ['聖誕節限定 · 賣到 1/8（今天最後一天）'], r
     assert r['offline'] == '限時商品要連上網路才看得到。' and r['bought'] is None, r
-    assert r['preview'] == ['witchhat', 'wizrobe', 'pumpkinhouse', 'pumpkin', 'obake'], r   # the test site can look whatever the day
+    assert r['preview'] == ['witchhat', 'wizrobe', 'pumpkinhouse', 'pumpkin', 'obake'] + XMAS, r   # the test site can look whatever the day
+    assert r['one'] == ['聖誕節限定 · 賣到 1/8（測試預覽）'], r   # one festival previewed on its own (2026-11-14)
 
 def test_the_halloween_wares_are_a_hat_a_robe_and_a_pumpkin_that_glows(b):
     js = """(() => { const robe = HERO.svg({ look: { topStyle: 'wizrobe', top: '#e58fa8' } }), p = WARE.get('pumpkin');
@@ -530,6 +536,7 @@ def test_the_halloween_wares_are_a_hat_a_robe_and_a_pumpkin_that_glows(b):
 
 # the Halloween witch: far off in the yard's night sky while Halloween is on (the server's day), a tap drops her off her broom
 # for 100 言靈 once a Halloween. open(theme, day): the yard drawn anew under 永夜／永晝 on that server day
+XMAS = ['santahat', 'antlers', 'rednose', 'hollybell', 'santacoat', 'santapants', 'elfshoes', 'giftsack', 'xmastree', 'giftpile', 'poinsettia', 'wreath', 'stockings', 'bigtree', 'snowman', 'lightdeer', 'kamakura', 'logcabin', 'jingle']
 WITCH_OPEN = """const wait = (ms) => new Promise(q => setTimeout(q, ms));
   const open = (theme, day) => { state.settings.theme = theme; saveState(); saleDay = { day, at: Date.now(), ask: null, failed: false };
     location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); return document.querySelector('.yard .sky .night .witch'); };"""
@@ -543,7 +550,7 @@ def test_the_halloween_witch_flies_far_off_in_the_yards_night_sky(b):
       const out = { id, shown, size: [Math.round(r0.width), Math.round(r0.height)], moved: Math.abs(r1.left - r0.left) > 5, high: r1.bottom < innerHeight * 0.45,
         hit: getComputedStyle(hit).pointerEvents, tap: [Math.round(hr.width), Math.round(hr.height)], top: document.elementFromPoint(hr.left + hr.width / 2, hr.top + hr.height / 2) === hit };
       const day = open('day', '2026-11-07'); out.day = !!day && day.getClientRects().length > 0;
-      out.edges = ['2026-10-20', '2026-10-21', '2026-11-10', '2026-11-11'].map(d => !!open('night', d));
+      out.edges = ['2026-10-16', '2026-10-17', '2026-11-14', '2026-11-15'].map(d => !!open('night', d));   /* 2026-11-14: 14 days either side */
       return JSON.stringify(out); })()"""
     r = json.loads(ev_at(b, PHONE, js))
     assert r['id'] == 'witch-2026' and r['shown'], r
@@ -573,6 +580,59 @@ def test_a_tap_on_the_witch_drops_her_off_her_broom_for_100_koto_once(b):
     assert r['gone'] and not r['back'], r
     assert r['kept'] == {'witch-2026': 100} and r['junk'] == {}, r
     assert r['reset'] and r['there'] and r['synced'] and r['next'], r
+
+# ---- 2026-11-14 (the user): Christmas, 12/11–1/8 — a ware for each part worn (two for the head), the rooms', the yard's, two
+# houses and a record; Santa in the yard's night sky in the witch's place; snow over every place outside, the town in Santa hats ----
+def test_christmas_sells_one_for_each_part_two_hats_rooms_yard_houses_and_a_record(b):
+    js = """(() => { const xs = WARES.filter(w => w.limited === 'christmas'), parts = {};
+      xs.filter(w => w.slot).forEach(w => { parts[w.slot] = (parts[w.slot] || 0) + 1; });
+      const kinds = {}; xs.forEach(w => { kinds[w.kind] = (kinds[w.kind] || 0) + 1; });
+      const lk = HERO.norm({ topStyle: 'santacoat', bottomStyle: 'santapants', shoeStyle: 'elfshoes' });
+      return JSON.stringify({ ids: xs.map(w => w.id), parts, kinds, styles: [lk.topStyle, lk.bottomStyle, lk.shoeStyle], drawn: ['santahat', 'antlers', 'rednose', 'hollybell', 'giftsack'].every(id => HERO.slots.includes(id) && HERO.thumb(id, state.look).length > 200),
+        hat: HERO.tucked({ hairTop: 'bun' }, 'santahat'), lamps: [WARE.get('xmastree').light, YARD.ART.bigtree.glow, YARD.ART.lightdeer.glow].every(Boolean), lit: !!YARD.ART.bigtree.lights && !!YARD.ART.lightdeer.lights,
+        houses: ['kamakura', 'logcabin'].every(id => (HOUSE_ART[id] || '').includes('class="pane"')),   /* lit from inside by night */
+        room: ['xmastree', 'giftpile', 'poinsettia', 'wreath', 'stockings'].every(id => DECOR.thumb(id).length > 300), record: MUSIC.RECORDS.find(x => x.id === 'jingle') }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['ids'] == XMAS, r
+    assert r['parts'] == {'head': 2, 'face': 1, 'neck': 1, 'top': 1, 'bottom': 1, 'shoe': 1, 'back': 1}, r   # one for each part, two for the head
+    assert r['kinds'] == {'wear': 5, 'clothes': 3, 'floor': 3, 'wall': 2, 'yard': 3, 'house': 2, 'record': 1}, r
+    assert r['styles'] == ['santacoat', 'santapants', 'elfshoes'] and r['drawn'] and r['hat'] == '丸子', r   # styles the wardrobe knows; a hat tucks the bun away
+    assert r['lamps'] and r['lit'] and r['houses'] and r['room'], r   # the trees and the reindeer light up by night
+    assert r['record']['file'] == 'music/jingle-1.m4a' and os.path.exists(os.path.join(ROOT, 'music', 'jingle-1.m4a')), r
+
+SANTA_OPEN = WITCH_OPEN.replace(".night .witch')", ".night .santa')")
+
+def test_santa_flies_by_night_at_christmas_and_gives_100_koto_once(b):
+    js = "(async () => { " + FRESH + SANTA_OPEN + """
+      const w = open('night', '2026-12-20'), id = w && w.dataset.witch, shown = !!w && w.getClientRects().length > 0, bal0 = kotoBalance();
+      const out = { id, shown, witch: !!document.querySelector('.yard .witch'), nose: !!w.querySelector('.s-nose'), day: (() => { const d = open('day', '2026-12-20'); return !!d && d.getClientRects().length > 0; })() };
+      const n = open('night', '2026-12-20'); n.querySelector('.w-hit').click();
+      Object.assign(out, { gave: n.classList.contains('gave'), found: Object.assign({}, state.koto.found), add: kotoBalance() - bal0 });
+      n.querySelector('.w-hit').click(); out.again = kotoBalance() - bal0 - out.add;
+      await wait(3400); out.gone = !document.querySelector('.yard .santa'); out.back = !!open('night', '2026-12-20');
+      out.jan = !!open('night', '2027-01-05');   /* still this Christmas's, found */
+      out.halloween = [!!open('night', '2026-10-31'), !!document.querySelector('.yard .witch')];   /* the witch at Halloween, not Santa */
+      out.next = !!open('night', '2027-12-15');   /* next Christmas he comes again */
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert r['id'] == 'santa-2026' and r['shown'] and not r['witch'] and r['nose'] and r['day'] is False, r   # by night only, in the witch's place
+    assert r['gave'] and r['found'] == {'santa-2026': 100} and r['add'] == 100 and r['again'] == 0, r
+    assert r['gone'] and not r['back'] and not r['jan'], r   # once a Christmas (its year: the one it began in)
+    assert r['halloween'] == [False, True] and r['next'], r
+
+def test_christmas_snows_outside_puts_the_town_in_santa_hats_and_gives_everyone_a_line(b):
+    js = "(async () => { " + FRESH + """ const wait = (ms) => new Promise(q => setTimeout(q, ms));
+      const go = async (place, day) => { saleDay = { day, at: Date.now(), ask: null, failed: false }; location.hash = '#/' + place; document.getElementById('view').innerHTML = ''; route(); await wait(200);
+        return document.querySelectorAll('#view .yard .sky > .snow i').length; };
+      const snow = { yard: await go('outside', '2026-12-20'), town: await go('town', '2026-12-20'), beach: await go('beach', '2027-01-02'), shokudo: await go('shokudo', '2026-12-20'), nov: await go('outside', '2026-11-20') };
+      saleDay = { day: '2026-12-20', at: Date.now(), ask: null, failed: false }; const xmasHat = TOWNEV.wearOf({ head: 'cap' }).head, kenta = TOWNEV.art('kenta', 'town');
+      saleDay = { day: '2026-11-20', at: Date.now(), ask: null, failed: false }; const plain = TOWNEV.wearOf({ head: 'cap' }).head, none = TOWNEV.wearOf(undefined);
+      const halloween = Object.keys(TOWN.CHAT).filter(id => TOWN.CHAT[id].some(l => l[3] && l[3].fest === 'halloween')), christmas = Object.keys(TOWN.CHAT).filter(id => TOWN.CHAT[id].some(l => l[3] && l[3].fest === 'christmas'));
+      return JSON.stringify({ snow, xmasHat, hatDrawn: kenta.includes('cx="58" cy="-157"'), plain, none, halloween, christmas }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['snow']['yard'] > 30 and r['snow']['town'] > 30 and r['snow']['beach'] > 30 and r['snow']['shokudo'] == 0 and r['snow']['nov'] == 0, r   # outside only, Christmas only
+    assert r['xmasHat'] == 'santahat' and r['hatDrawn'] and r['plain'] == 'cap' and r['none'] == {}, r
+    assert len(r['halloween']) == 27 and sorted(r['christmas']) == sorted(r['halloween']), r   # everyone with a Halloween line has a Christmas one
 
 # her 100 言靈 seen: ten あ burst out where she slipped, then fly into the 言靈 button up top, which counts up 10 a coin; +100
 # beside it at the end; the buttons stay up meanwhile. In 擺設 (the buttons put away) the pop up top says it instead
@@ -1071,7 +1131,7 @@ def test_the_yards_box_holds_the_houses_bought_and_a_tap_puts_one_up(b):
     r = json.loads(ev(b, js))
     assert r['none'] == 0 and r['ids'] == ['', 'stumphouse', 'teapothouse'] and r['p0'] == '', r   # no house bought: no houses in the box; then the cottage and the two bought
     assert r['up'] == {'house': 'stumphouse', 'drawn': True, 'pressed': 'stumphouse', 'edit': True}, r   # a tap puts it up at once, still in 擺設
-    assert r['back'] == ['', True] and r['prices'] == [2000] * 5 and r['pumpkin'] == 'halloween', r
+    assert r['back'] == ['', True] and r['prices'] == [2000] * 7 and r['pumpkin'] == 'halloween', r   # 2026-11-14: and Christmas's two
 
 def test_the_same_things_lie_in_one_pile_in_the_box(b):
     js = "(() => { " + FRESH + """ ['sconce1', 'sconce2'].forEach(id => { delete state.placed[id]; }); saveState(); """ + GO_ROOM + """ document.querySelector('.study-edit').click(); const st = () => document.querySelector('.study');
@@ -1126,7 +1186,7 @@ def test_the_hero_sleeps_on_the_bed_and_waters_a_plant(b):
       const joy = !!st().querySelector('svg.art [data-o="w:bedPlant"].joy'), awake = !h().classList.contains('sleep'); await wait(3200);
       return JSON.stringify({ sleep, saved, can, joy, awake, gone: !st().querySelector('.watering'), plants: WARES.filter(w => w.act === 'water').map(w => w.id).sort() }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'sleep': True, 'saved': '', 'can': True, 'joy': True, 'awake': True, 'gone': True, 'plants': ['bamboo', 'bedPlant', 'bigPlant', 'bonsai', 'cactus']}, r
+    assert r == {'sleep': True, 'saved': '', 'can': True, 'joy': True, 'awake': True, 'gone': True, 'plants': ['bamboo', 'bedPlant', 'bigPlant', 'bonsai', 'cactus', 'poinsettia']}, r
 
 def test_the_full_length_mirror_stands_in_the_bedroom_and_the_wardrobe_rolls_clothes(b):
     js = "(async () => { " + FRESH + """ const old = normalizeState(Object.assign(JSON.parse(JSON.stringify(state)), { roomV: 8 }));   /* roomV 9 no longer sets it out: 小春 brings it */

@@ -106,6 +106,19 @@ window.MUSIC_SYNTH = (() => {
           A2: 'E2:2 G2:2 B2:2 G2:2 | E2:2 F#2:2 G2:2 G#2:2 | A2:2 C3:2 A2:2 A#2:2 | B2:2 A2:2 G2:2 F#2:2 | E2:2 G2:2 B2:2 G2:2 | C3:2 G2:2 E2:2 G2:2 | B2:2 A2:2 G2:2 F#2:2 | E2:2 -:2 E2:2 -:2',
           B: 'G2:2 D2:2 G2:2 D2:2 | D2:2 A2:2 F#2:2 A2:2 | G2:2 D2:2 G2:2 B2:2 | E2:2 G#2:2 B2:2 G#2:2 | A2:2 E2:2 A2:2 C3:2 | B2:2 F#2:2 B2:2 A2:2 | C3:2 G2:2 E2:2 G2:2 | B2:2 A2:2 G2:2 F#2:2' }) },
         { inst: 'pizz', vol: 0.3, mel: '-:128 | D5 B4 G4 B4 D5:2 B4:2 | C5 A4 F#4 A4 C5:2 A4:2 | B4 D5 G5 F#5 G5:2 D5:2 | G#4 B4 D5 E5 D5:2 B4:2 | C5 E5 A5 G5 E5:2 C5:2 | D#5 F#5 A5 G5 F#5:2 D#5:2 | C5 E5 G5 E5 C5:2 G4:2 | F#4 A4 B4 D#5 F#5:2 -:2' }] },
+    // ジングルベル (Christmas, 2026-11-14): "Jingle Bells" (James Lord Pierpont, 1857; long out of copyright) — the verse on the
+    // music box over pizzicato on the off beats and sleigh bells in quarters, then the chorus twice with the bells in eighths, the
+    // second time the box an octave up and the piano singing it below; G major, the last bar back home on G
+    jingle: { bpm: 116, peak: 0.59, bar: 8, tail: 0, lead: 'box', leadVol: 0.09, low: 'G2', bassVol: 0.7, pad: 0.008,
+      chords: form('A B B', { A: ['G3 B3 D4 G4', 'G3 B3 D4 G4', 'G3 B3 D4 G4', 'C4 E4 G4 C5', 'C4 E4 G4 C5', 'D4 F#4 A4 D5', 'D4 F#4 A4 C5', 'G3 B3 D4 G4', 'G3 B3 D4 G4', 'G3 B3 D4 G4', 'G3 B3 D4 G4', 'C4 E4 G4 C5', 'C4 E4 G4 C5', 'D4 F#4 A4 C5', 'D4 F#4 A4 C5', 'G3 B3 D4 G4'],
+        B: ['G3 B3 D4 G4', 'G3 B3 D4 G4', 'G3 B3 D4 G4', 'G3 B3 D4 G4', 'C4 E4 G4 C5', 'G3 B3 D4 G4', 'A3 C#4 E4 G4', 'D4 F#4 A4 C5', 'G3 B3 D4 G4', 'G3 B3 D4 G4', 'G3 B3 D4 G4', 'G3 B3 D4 G4', 'C4 E4 G4 C5', 'G3 B3 D4 G4', 'D4 F#4 A4 C5', 'G3 B3 D4 G4'] }),
+      mel: form('A B B2', {
+        A: 'D4:2 B4:2 A4:2 G4:2 | D4:6 D4 D4 | D4:2 B4:2 A4:2 G4:2 | E4:8 | E4:2 C5:2 B4:2 A4:2 | F#4:8 | D5:2 D5:2 C5:2 A4:2 | B4:8 | D4:2 B4:2 A4:2 G4:2 | D4:8 | D4:2 B4:2 A4:2 G4:2 | E4:6 E4:2 | E4:2 C5:2 B4:2 A4:2 | D5:2 D5:2 D5:2 D5:2 | E5:2 D5:2 C5:2 A4:2 | G4:6 -:2',
+        B: 'B4:2 B4:2 B4:4 | B4:2 B4:2 B4:4 | B4:2 D5:2 G4:3 A4 | B4:8 | C5:2 C5:2 C5:3 C5 | C5:2 B4:2 B4:2 B4 B4 | B4:2 A4:2 A4:2 B4:2 | A4:4 D5:4 | B4:2 B4:2 B4:4 | B4:2 B4:2 B4:4 | B4:2 D5:2 G4:3 A4 | B4:8 | C5:2 C5:2 C5:3 C5 | C5:2 B4:2 B4:2 B4 B4 | D5:2 D5:2 C5:2 A4:2 | G4:6 -:2',
+        B2: 'B5:2 B5:2 B5:4 | B5:2 B5:2 B5:4 | B5:2 D6:2 G5:3 A5 | B5:8 | C6:2 C6:2 C6:3 C6 | C6:2 B5:2 B5:2 B5 B5 | B5:2 A5:2 A5:2 B5:2 | A5:4 D6:4 | B5:2 B5:2 B5:4 | B5:2 B5:2 B5:4 | B5:2 D6:2 G5:3 A5 | B5:8 | C6:2 C6:2 C6:3 C6 | C6:2 B5:2 B5:2 B5 B5 | D6:2 D6:2 C6:2 A5:2 | G5:6 -:2' }),
+      comp: { inst: 'pizz', vol: 0.06, pats: rep(48, [[2, 1], [6, 1]]) },
+      parts: [{ inst: 'piano', vol: 0.05, mel: '-:256 | B4:2 B4:2 B4:4 | B4:2 B4:2 B4:4 | B4:2 D5:2 G4:3 A4 | B4:8 | C5:2 C5:2 C5:3 C5 | C5:2 B4:2 B4:2 B4 B4 | B4:2 A4:2 A4:2 B4:2 | A4:4 D5:4 | B4:2 B4:2 B4:4 | B4:2 B4:2 B4:4 | B4:2 D5:2 G4:3 A4 | B4:8 | C5:2 C5:2 C5:3 C5 | C5:2 B4:2 B4:2 B4 B4 | D5:2 D5:2 C5:2 A4:2 | G4:6 -:2' }],
+      drums: [{ inst: 'sleigh', f: 2600, vol: 0.05, pats: form('A B B', { A: rep(16, 'x...g...x...g...'), B: rep(16, 'o.x.x.x.o.x.x.x.') }) }] },
     // 赤ちょうちん: the izakaya's record, enka and min'yō — a shamisen in the yonanuki minor on A, a breathy flute answering
     // its phrases, a soft pad; B: the flute sings and the shamisen keeps the zun-chan; A B A
     chochin: { bpm: 76, peak: 0.65, bar: 8, tail: 0, lead: 'shamisen', leadVol: 0.26, low: 'D2', bassVol: 0.8, pad: 0.016,
@@ -310,6 +323,11 @@ window.MUSIC_SYNTH = (() => {
     swish(at, f, len, vol) {   // a brush stirred round the snare: a hiss that swells and fades over its length
       const g = quiet(out(-0.3)); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + len * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, at + len * 1.1);
       hiss(at, at + len * 1.15, filter('bandpass', 3000, 0.6, g));
+    },
+    sleigh(at, f, len, vol) {   // sleigh bells shaken (2026-11-14): a handful of little jingles a moment apart and the shake's hiss
+      const o = out(0.3);
+      [[1, 0, 0.6], [1.27, 0.006, 0.5], [1.61, 0.013, 0.45], [2.03, 0.004, 0.35], [2.44, 0.019, 0.3], [1.13, 0.024, 0.4]].forEach(([r, d, a]) => osc('sine', f * r, at + d, at + d + 0.35, fade(at + d, vol * a, 0.001, 0.16, o)));
+      hiss(at, at + 0.12, filter('highpass', 6000, 0, fade(at, vol * 0.8, 0.002, 0.07, o)));
     },
     ride(at, f, len, vol) {   // a ride cymbal played softly: an inharmonic ping and a little wash
       const o = out(0.35); [[1, 0.5], [1.47, 0.3], [2.09, 0.2]].forEach(([r, a]) => osc('sine', f * r, at, at + 0.7, fade(at, vol * a, 0.001, 0.5, o)));

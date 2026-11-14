@@ -25,10 +25,10 @@ const HERO = (() => {
     mouth: [['smile', '微笑'], ['grin', '開心'], ['cat', '貓嘴'], ['flat', '一字'], ['o', '圓嘴'], ['tongue', '吐舌']],
     beard: [['none', '無'], ['stubble', '鬍渣'], ['mustache', '八字鬍'], ['goatee', '山羊鬍'], ['full', '落腮鬍']],
     top: CLOTH,
-    topStyle: [['hoodie', '帽T'], ['tee', 'T恤'], ['sweater', '毛衣'], ['shirt', '襯衫'], ['jinbei', '甚平'], ['cattop', '貓咪上衣'], ['wizrobe', '魔法師長袍'], ['yukata', '浴衣']],
-    bottomStyle: [['pants', '長褲'], ['shorts', '短褲'], ['wide', '寬褲'], ['skirt', '裙子'], ['catpants', '貓咪褲']],
+    topStyle: [['hoodie', '帽T'], ['tee', 'T恤'], ['sweater', '毛衣'], ['shirt', '襯衫'], ['jinbei', '甚平'], ['cattop', '貓咪上衣'], ['wizrobe', '魔法師長袍'], ['yukata', '浴衣'], ['santacoat', '聖誕老人外套']],
+    bottomStyle: [['pants', '長褲'], ['shorts', '短褲'], ['wide', '寬褲'], ['skirt', '裙子'], ['catpants', '貓咪褲'], ['santapants', '聖誕老人褲']],
     bottom: CLOTH,
-    shoeStyle: [['sneaker', '球鞋'], ['boots', '短靴'], ['loafer', '皮鞋'], ['geta', '木屐'], ['rainboots', '雨靴'], ['bunnyslippers', '兔子拖鞋']],   // the first three everyone's; the rest sold (2026-11-12, the user)
+    shoeStyle: [['sneaker', '球鞋'], ['boots', '短靴'], ['loafer', '皮鞋'], ['geta', '木屐'], ['rainboots', '雨靴'], ['bunnyslippers', '兔子拖鞋'], ['elfshoes', '精靈鞋']],   // the first three everyone's; the rest sold (2026-11-12, the user)
     shoe: CLOTH
   };
   const ROLE_STYLES = { topStyle: ['hakui', 'samue', 'kappogi', 'chef', 'jacket', 'happi', 'vest'], bottomStyle: ['hakama'], shoeStyle: ['zori'] };   // the town's own, never sold
@@ -391,6 +391,17 @@ const HERO = (() => {
         <path ${F(lt(c, 0.7), 1.3)} d="M-18 -43 Q2 -39 22 -43 V-34 Q2 -30 -18 -34 Z"/><path d="M-18 -38.6 Q2 -34.6 22 -38.6" fill="none" stroke="${d}" stroke-opacity=".5" stroke-width=".9"/>`,
       collar: (F, c) => `<path ${F(lt(c, 0.85), 1.6)} d="M-8 -67 L5 -53 L12 -67 L9 -67 L5 -59 L-5 -67 Z"/>`,
       back: (F, c) => `<path ${F(c, 1.2)} d="${ROBE}"/><path ${F(lt(c, 0.7), 1.3)} d="M-18 -43 Q2 -39 22 -43 V-34 Q2 -30 -18 -34 Z"/><path ${F(lt(c, 0.7), 1.3)} d="M-7 -46 L2 -39 L11 -46 L11 -30 L2 -36 L-7 -30 Z"/>` },
+    // 聖誕老人外套 (Christmas, 2026-11-14): to the hips in the top's colour, white fur down the front, round the hem and the neck, a
+    // black belt with a gold buckle; the fur cuffs on the sleeves (fur, in arm). From behind the fur hem and the belt
+    santacoat: { sleeve: 'long', fur: true,
+      front: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L27 -23 Q2 -18 -23 -23 Z"/>${wSh('M17 -66 L27 -23 Q24 -22.2 20.4 -21.8 Q19.6 -46 13 -65.6 Z', 0.08)}
+        <path ${F('#f7f3ec', 1.25)} d="M-1.6 -64.4 Q2 -63 5.6 -64.4 L6.4 -20 Q2 -19.4 -2.4 -20 Z"/>${wSh('M3.6 -64 L5.6 -64.4 L6.4 -20 L4.4 -19.6 Z', 0.07)}
+        <path ${F('#f7f3ec', 1.2)} d="M-23.6 -27.8 Q2 -22.6 27.6 -27.8 Q28.6 -24.6 27.6 -21.4 Q2 -16 -23.6 -21.4 Q-24.6 -24.6 -23.6 -27.8 Z"/>${wSh('M-23.6 -21.4 Q2 -16 27.6 -21.4 L27.8 -22.8 Q2 -17.6 -23.8 -22.8 Z', 0.09)}
+        <path d="M-20 -26.4 l1.4 1.2 M-12 -25 l1 1.4 M-4 -24.2 l1.2 1.2 M8 -24.2 l1 1.4 M16 -25 l1.4 1.2 M23 -26.2 l1 1.2 M1 -58 l1.2 1 M3 -48 l-1 1.2 M1.4 -38 l1.2 1 M3.2 -30 l-1 1.2" stroke="#000" stroke-opacity=".08" stroke-width=".8" stroke-linecap="round"/>
+        <path ${F('#2b2b33', 1.3)} d="M-20 -43 Q2 -39 24 -43 V-37.4 Q2 -33.4 -20 -37.4 Z"/>${wHi('M-19.4 -42.3 Q2 -38.3 23.4 -42.3', 0.16, 0.6)}<rect x="-2" y="-43.4" width="8" height="7.6" rx="1.2" ${F('#e6c25a', 1.32)}/><rect x="-.2" y="-41.6" width="4.4" height="4" rx=".6" fill="#2b2b33"/><circle cx="-.6" cy="-42.2" r=".6" fill="#fff" fill-opacity=".6"/>`,
+      collar: (F) => `<path ${F('#f7f3ec', 1.6)} d="M-13.4 -68.2 Q-6 -71 2 -64.6 Q10 -71 17.4 -68.2 Q19 -64.6 16 -62 Q9 -63.6 2 -59.6 Q-5 -63.6 -12 -62 Q-15 -64.6 -13.4 -68.2 Z"/>${wSh('M-12 -62 Q-5 -63.6 2 -59.6 Q9 -63.6 16 -62 L15.6 -63.4 Q9 -65 2 -61.2 Q-5 -65 -11.6 -63.4 Z', 0.09)}`,
+      back: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L27 -23 Q2 -18 -23 -23 Z"/><path ${F('#f7f3ec', 1.2)} d="M-23.6 -27.8 Q2 -22.6 27.6 -27.8 Q28.6 -24.6 27.6 -21.4 Q2 -16 -23.6 -21.4 Q-24.6 -24.6 -23.6 -27.8 Z"/><path ${F('#2b2b33', 1.3)} d="M-20 -43 Q2 -39 24 -43 V-37.4 Q2 -33.4 -20 -37.4 Z"/><path d="M2 -64 V-44" stroke="${d}" stroke-opacity=".35" stroke-width="1"/>`,
+      over: (F) => `<path ${F('#f7f3ec', 1.6)} d="M-12 -68 Q2 -64 16 -68 L15.6 -63.6 Q2 -59.6 -11.6 -63.6 Z"/>` },
     // the town's work clothes (test, 2026-11-10, the user: who they are at a glance) — ROLE_STYLES, worn by the town's people only
     hakui: { sleeve: 'kimono',   // 巫女の白衣: white, a crossed collar edged in red, wide sleeves; tucked into the 緋袴
       front: (F, c, d) => `<path ${F(c, 1.2)} d="M-13 -66 Q2 -67.6 17 -66 L22 -34 Q2 -30 -18 -34 Z"/><path d="M-8 -66 L9 -40 M12 -66 L3 -52" fill="none" stroke="${d}" stroke-opacity=".55" stroke-width="1"/>`,
@@ -431,6 +442,7 @@ const HERO = (() => {
       : tp.sleeve === 'robe' ? `<path ${L(topDk, 1.3)} d="M-4.6 -2 Q0 -5 4.6 -2 L8.6 22 Q0 24 -8.6 22 Z"/><path d="M-8.6 22 Q0 24 8.6 22" fill="none" stroke="#e6c25a" stroke-width="1.4"/>`
       : tp.sleeve === 'short' ? bare + `<path ${L(top, 1.4)} d="M-4.6 -2 Q0 -5 4.6 -2 L5 9 Q0 10.6 -5 9 Z"/>${stitch(L, topDk, 1.4, 'M-4.8 7.4 Q0 9 4.8 7.4')}`   // the tee's (its stitched hem)
       : tp.sleeve === 'wide' ? bare + `<path ${L(topDk, 1.3)} d="M-4.6 -2 Q0 -5 4.6 -2 L7.4 15 Q0 16.6 -7.4 15 Z"/>`
+      : tp.fur ? `<path ${L(sc, 1.3)} d="M-4 -2 Q0 -4.5 4 -2 L4.4 19 Q0 20.6 -4.4 19 Z"/><path ${L('#f7f3ec', 1)} d="M-5.6 16.4 Q0 18.8 5.6 16.4 Q6.4 19.4 5.6 22.4 Q0 24.8 -5.6 22.4 Q-6.4 19.4 -5.6 16.4 Z"/>${wSh('M-5.6 22.4 Q0 24.8 5.6 22.4 L5.8 21.4 Q0 23.6 -5.8 21.4 Z', 0.1)}`   // 聖誕老人外套: a fat white fur cuff
       : `<path ${L(sc, 1.3)} d="M-4 -2 Q0 -4.5 4 -2 L4.4 21 Q0 22.6 -4.4 21 Z"/><path ${L(cuff, 1)} d="M-4.4 18.4 Q0 20 4.4 18.4 L4.5 21.6 Q0 23.2 -4.5 21.6 Z"/>`;
     return `<g class="arm ${cls}"><g transform="translate(${q(2 + s * SHOULDER[0] + dx)} ${SHOULDER[1]}) rotate(${-s * 26})">${art}${hand}</g></g>`;
   }
@@ -476,6 +488,13 @@ const HERO = (() => {
           <ellipse cx="${x}" cy="-4.4" rx=".8" ry=".55" ${F('#e8869a', 0.08)}/><path d="M${x} -3.9 v.7" stroke="#b46a74" stroke-width=".35" stroke-linecap="round"/><ellipse cx="${q(x - 4.3)}" cy="-4.2" rx="1.1" ry=".6" fill="#f4a0a8" fill-opacity=".55"/><ellipse cx="${q(x + 4.3)}" cy="-4.2" rx="1.1" ry=".6" fill="#f4a0a8" fill-opacity=".55"/>`}`;
     }
   };
+  // 精靈鞋 (Christmas, 2026-11-14): a soft pointed shoe whose toe curls up and over facing us, a little gold bell at its tip, a cuff
+  // of points round its top a shade darker; from behind the heel and the cuff, the curl's tip over them
+  SHOES.elfshoes = (F, c, x, s, b) => {
+    const d = dk(c, 0.78), cuff = `<path ${F(d, 0.2)} d="M${q(x - 6.4)} -10.6 h12.8 l-1.1 3 l-1.6 -1.6 l-1.6 2 l-1.6 -2 l-1.6 2 l-1.6 -2 l-1.6 2 l-1.6 -1.6 Z"/>`;
+    const curl = `<path d="M${q(x - 0.6)} -7.6 Q${q(x - 1.8)} -13.4 ${q(x + 1.6)} -15.4 Q${q(x + 4.8)} -16.6 ${q(x + 4.4)} -13.2 Q${q(x + 4)} -11.2 ${q(x + 2.2)} -11.8" fill="none" ${sk(F, c, 0.15)} stroke-width="2.6" stroke-linecap="round"/><circle cx="${q(x + 2.2)}" cy="-11.2" r="1.35" ${F('#e6c25a', 0.16)}/><circle cx="${q(x + 1.8)}" cy="-11.6" r=".45" fill="#fff" fill-opacity=".6"/>`;
+    return `${b ? curl : ''}<path ${F(c, 0.1)} d="M${q(x - 6.4)} -9 h12.8 v4.6 q0 4.4 -4.2 4.4 h-4.8 q-3.8 0 -3.8 -4.4 Z"/>${wSh(`M${q(x + 3.8)} -9 H${q(x + 6.4)} V-4.4 Q${q(x + 6.4)} 0 ${q(x + 2.2)} 0 Q${q(x + 4.4)} -2.4 ${q(x + 3.8)} -9 Z`, 0.12)}${cuff}${b ? '' : curl}<path ${F(dk(c, 0.6), 0.02)} d="M${q(x - 6.2)} -1.4 H${q(x + 6.2)} Q${q(x + 5.4)} 0 ${q(x + 2)} 0 H${q(x - 2.6)} Q${q(x - 5.6)} 0 ${q(x - 6.2)} -1.4 Z"/>`;
+  };
   SHOES.zori = (F, c, x) => `<path ${F('#f6f3ec', 0.1)} d="M${q(x - 5.6)} -10 h11.2 v5.6 q0 3.6 -4 3.6 h-3.6 q-3.6 0 -3.6 -3.6 Z"/><rect x="${q(x - 7)}" y="-2.2" width="14" height="2.6" rx="1.2" ${F(c, 0.05)}/><path d="M${x} -5.4 l-3.4 3.2 M${x} -5.4 l3.4 3.2" stroke="#8a2f2a" stroke-width="1.1" stroke-linecap="round"/>`;   // 草履: white tabi on a sandal (c)
   const HIPS = (F, c) => `<path ${F(c, 0.7)} d="M-17 -33 H21 L21.6 -22 H-17.6 Z"/>`;
   const BOTTOMS = {
@@ -486,6 +505,8 @@ const HERO = (() => {
     wide: { hips: HIPS, leg: (F, c, x) => `<path ${F(c, 0.4)} d="M${q(x - 6)} -28 H${q(x + 6)} L${q(x + 7.6)} -5 Q${x} -3.6 ${q(x - 7.6)} -5 Z"/><path d="M${q(x + 0.6)} -26 L${q(x + 1)} -9" stroke="#000" stroke-opacity=".1" stroke-width=".8" stroke-linecap="round"/>${wSh(`M${q(x - 7.3)} -7.2 H${q(x + 7.3)} L${q(x + 7.6)} -5 Q${x} -3.6 ${q(x - 7.6)} -5 Z`, 0.12)}` },
     skirt: { leg: (F, c, x, skin) => `<rect x="${q(x - 4.8)}" y="-24" width="9.6" height="19" rx="4" ${F(skin, 0.3)}/>`,
       over: (F, c, d) => `<path ${F(c, 0.7)} d="M-16 -36 H20 L26 -16 Q2 -12 -22 -16 Z"/>${wSh('M2 -34 H12 L15 -14.8 Q8.6 -14.1 2 -14 Z M-16 -36 H-8 V-34 L-11 -14.8 Q-16.6 -15.4 -22 -16 Z', 0.07)}<path d="M-8 -34 L-11 -15 M2 -34 V-13.4 M12 -34 L15 -15" ${sk(F, d, 0.7)} stroke-opacity=".35" stroke-width="1"/>${wHi('M-6.8 -33 L-9.6 -16.2 M3.2 -33 V-15.2 M13.2 -33 L15.8 -16.2', 0.14, 0.7)}${stitch(F, d, 0.7, 'M-21.4 -17.6 Q2 -13.6 25.4 -17.6', 0.5)}` },
+    // 聖誕老人褲 (Christmas, 2026-11-14): trousers in their colour with a band of white fur round each leg, just above a low shoe (a boot hides it)
+    santapants: { hips: HIPS, leg: (F, c, x) => `<rect x="${q(x - 5.5)}" y="-28" width="11" height="23" rx="4" ${F(c, 0.4)}/><path ${F('#f7f3ec', 0.3)} d="M${q(x - 6.6)} -16.4 Q${x} -15 ${q(x + 6.6)} -16.4 Q${q(x + 7.4)} -13.6 ${q(x + 6.6)} -10.8 Q${x} -9.4 ${q(x - 6.6)} -10.8 Q${q(x - 7.4)} -13.6 ${q(x - 6.6)} -16.4 Z"/>${wSh(`M${q(x - 6.6)} -10.8 Q${x} -9.4 ${q(x + 6.6)} -10.8 L${q(x + 6.8)} -11.8 Q${x} -10.4 ${q(x - 6.8)} -11.8 Z`, 0.1)}` },
     hakama: { leg: () => '',   // 緋袴 (the miko): wide and pleated over both legs to the ankles, tied in front; only the 草履 show
       over: (F, c, d) => `<path class="hakama" ${F(c, 0.7)} d="M-17 -38 Q2 -40 21 -38 L27 -6 Q2 -2 -23 -6 Z"/><path d="M-6 -36 L-10 -6 M2 -37 V-3.6 M10 -36 L14 -6" fill="none" stroke="${d}" stroke-opacity=".55" stroke-width="1"/><path d="M-16.6 -36 Q2 -33 20.6 -36" fill="none" stroke="${d}" stroke-width="2"/><path ${F(c, 0.72)} d="M2 -34.4 l-6.4 -3 v6 Z M2 -34.4 l6.4 -3 v6 Z"/><path d="M2 -34.4 l-3 7 M2 -34.4 l3 7" stroke="${c}" stroke-width="1.6" stroke-linecap="round"/>` },
     catpants: { hips: HIPS, leg: (F, c, x) => `<rect x="${q(x - 5.5)}" y="-28" width="11" height="22" rx="4" ${F(c, 0.4)}/>`,
@@ -515,13 +536,13 @@ const HERO = (() => {
   // - a hat (HATS): drawn big enough to cover the crown, so the fringe, the sides, the back and any tail stay as they are; what sits
   //   on top of the head (呆毛, 丸子, 雙丸子) is tucked under it while it is on (1.2.1: hats no longer swap the whole hairstyle)
   // - a whole head (FULL): takes the place of the head, hair and face; nothing is worn on the face
-  const HATS = new Set(['beanie', 'strawhat', 'beret', 'gradcap', 'cathood', 'witchhat', 'sankakukin', 'chefcap', 'bakerhat', 'cap']);
-  const HEAD_TOP = { witchhat: -232, bakerhat: -214 };   // how high a thing on the head reaches, where it stands above a hat's usual -196 (head units)
-  const ON_BODY = new Set(['scarf', 'bowtie', 'backpack', 'necktie', 'randoseru', 'wings']);   // drawn in the body's units, not on the head
+  const HATS = new Set(['beanie', 'strawhat', 'beret', 'gradcap', 'cathood', 'witchhat', 'sankakukin', 'chefcap', 'bakerhat', 'cap', 'santahat']);
+  const HEAD_TOP = { witchhat: -232, bakerhat: -214, santahat: -206, antlers: -198 };   // how high a thing on the head reaches, where it stands above a hat's usual -196 (head units)
+  const ON_BODY = new Set(['scarf', 'bowtie', 'backpack', 'necktie', 'randoseru', 'wings', 'hollybell', 'giftsack']);   // drawn in the body's units, not on the head
   const ON_HAIR = new Set(['foxmask']);   // worn on the face's part but over the hair and any hat (the fox mask, tilted on the side of the head): [front, back] go there, [2, 3] where the face's things go
   const SHADES = new Set(['sunglasses']);   // dark lenses: the eyes behind them are not drawn (a big eye's lashes would show round them)
-  const BACKS = new Set(['backpack', 'randoseru', 'wings']);   // shown from behind on their own (古道具屋, the wardrobe)
-  const THUMB_BOX = { wings: '-40 -82 84 56', foxmask: '2 -187 70 70', necktie: '-22 -76 48 42' };   // their own frames: what the usual would cut, or leave too small (the faint body or head cut at the frame)
+  const BACKS = new Set(['backpack', 'randoseru', 'wings', 'giftsack']);   // shown from behind on their own (古道具屋, the wardrobe)
+  const THUMB_BOX = { wings: '-40 -82 84 56', foxmask: '2 -187 70 70', necktie: '-22 -76 48 42', giftsack: '-38 -78 80 60', rednose: '-26 -138 56 52', hollybell: '-22 -76 48 30' };   // their own frames: what the usual would cut, or leave too small (the faint body or head cut at the frame)
   const tucked = (lk, id) => (HATS.has(id) && HAIRP.TOPS[lk.hairTop].under ? HAIRP.TOPS[lk.hairTop].name : '');   // what a hat tucks away
   // the things worn: [front, back] drawings by part, in the figure's own units; c and d are their top's colour and a shade of it
   // the cat hood's fluffy edge (2026-11-11, finer): little arches of fur along the middle of its cream edge, bulging outward, both
@@ -682,6 +703,48 @@ const HERO = (() => {
         <path ${L('#fbfbfd', 1.6)} d="M0 -2 C-6 -8 -16 -10 -26 -9.6 C-33 -9.4 -38.4 -7.6 -40.4 -4.8 Q-36 -1.4 -31 -3 Q-27.6 .8 -22.4 -.8 Q-19 2.6 -14 1 Q-10.4 4.2 -5.6 2.6 Q-2.6 4.4 -.4 4.6 Z"/>${wSh('M-40.4 -4.8 Q-36 -1.4 -31 -3 Q-27.6 .8 -22.4 -.8 Q-19 2.6 -14 1 Q-10.4 4.2 -5.6 2.6 Q-2.6 4.4 -.4 4.6 L-.5 6 Q-3 5.8 -5.8 4 Q-10.6 5.6 -14.2 2.4 Q-19.2 4 -22.6 .6 Q-27.8 2.2 -31.2 -1.6 Q-36.4 0 -40.4 -4.8 Z', 0.07)}
         ${wHi('M-3.6 -6.4 C-9.6 -9 -17.6 -10.2 -26 -9.8', 0.6, 1.1)}${under ? wSh(W1, 0.07) : ''}</g>`;
       return [both(one(true)), '', '', both(one(false))];   // from behind over the hair: they stand out from the back, long hair falls between them
+    },
+    // ---- Christmas (2026-11-14, the user: one for each part, two for the head) ----
+    // 聖誕帽: a soft red cap over the crown, its tip flopped over to the right with a white pompom, a fluffy white brim; the far side
+    // and the fold in shade, a line of light up the near side. From behind the tip falls the other way (mirrored)
+    santahat: (L) => {
+      const R = '#d0453c', W = '#f7f3ec';
+      const cap = `<path ${L(R, 4.3)} d="M-44 -146 C-45 -176 -22 -198 6 -199 C24 -199.6 38 -190 46 -176 L48 -146 Z"/>${wSh('M30 -193 C40 -186 46 -176 46 -176 L48 -146 H36 C38 -162 36 -180 30 -193 Z', 0.12)}${wHi('M-32 -160 C-30 -178 -16 -191 2 -194', 0.2, 2)}
+        <path ${L(R, 4.4)} d="M2 -199 C24 -206 50 -196 60 -174 C62.6 -168 62.6 -164 61 -160 L53 -163 C53 -176 44 -186 26 -188 C16 -189 8 -193 2 -199 Z"/>${wSh('M53 -163 C53 -176 44 -186 26 -188 C34 -184 40 -177 43 -168 Z', 0.16)}${wHi('M14 -201 C32 -204 48 -194 56 -179', 0.22, 1.4)}
+        <circle cx="58" cy="-157" r="8" ${L(W, 4.4)}/>${wSh('M50.6 -154 A8 8 0 0 0 65.4 -154 Q58 -149.6 50.6 -154 Z', 0.1)}<circle cx="55" cy="-160" r="2.4" fill="#fff" fill-opacity=".6"/>
+        <path ${L(W, 4.2)} d="M-47 -150 Q-44 -153.6 -40 -151.6 Q-36 -155.6 -31 -153 Q-26 -157 -20 -154.4 Q-14 -158 -8 -155.6 Q-2 -159 4 -156 Q10 -159 16 -155.6 Q22 -158 28 -154.4 Q34 -157 39 -153 Q44 -155.6 48 -151.6 Q52 -153.6 54 -150 Q56 -143 52.6 -137 Q48 -134 44 -136.4 Q38 -132.6 33 -135.4 Q27 -131.6 21 -134.4 Q15 -130.8 9 -133.4 Q3 -130.4 -3 -133.4 Q-9 -130.8 -15 -134.4 Q-21 -131.6 -27 -135.4 Q-32 -132.6 -38 -136.4 Q-42 -134 -46.6 -137 Q-50 -143 -47 -150 Z"/>
+        ${wSh('M-46.6 -137 Q-42 -134 -38 -136.4 Q-32 -132.6 -27 -135.4 Q-21 -131.6 -15 -134.4 Q-9 -130.8 -3 -133.4 Q3 -130.4 9 -133.4 Q15 -130.8 21 -134.4 Q27 -131.6 33 -135.4 Q38 -132.6 44 -136.4 Q48 -134 52.6 -137 L53.4 -140 Q2 -133 -47.4 -140 Z', 0.08)}${wHi('M-44 -149 Q2 -157.6 50 -149', 0.5, 1.2)}`;
+      return [cap, `<g transform="matrix(-1 0 0 1 4 0)">${cap}</g>`];
+    },
+    // 麋鹿角髮箍: a brown band over the head, two branching antlers (a line of light up each beam), a red bow at each foot with a little
+    // gold bell under it
+    antlers: (L) => {
+      const B = '#8a5a3a', k = sk(L, B, 4.4);
+      const horn = `<path d="M-15 -160 C-17 -170 -21 -180 -27 -191" fill="none" ${k} stroke-width="4.2" stroke-linecap="round"/><path d="M-18.6 -174 C-14.6 -179 -13 -185 -13.6 -191.4 M-23.4 -184 C-29.4 -186 -33.6 -184.4 -37.4 -180" fill="none" ${k} stroke-width="3.2" stroke-linecap="round"/>${wHi('M-15.4 -164 C-17 -171 -19.6 -178 -24 -186', 0.22, 1)}`;
+      const bow = `<path ${L('#d0453c', 4.3)} d="M-15 -158 L-22 -162.4 L-21.2 -153.6 Z M-15 -158 L-8 -162.4 L-8.8 -153.6 Z"/><circle cx="-15" cy="-158" r="1.7" ${L('#a8352e', 4.3)}/><circle cx="-15" cy="-153.4" r="2.2" ${L('#e6c25a', 4.2)}/><path d="M-16.2 -153 h2.4" stroke="#8a6a20" stroke-width=".5"/>`;
+      const band = `<path d="M-30 -146 C-24 -168 28 -168 34 -146" fill="none" ${sk(L, B, 4.3)} stroke-width="3.6"/>${wHi('M-29 -147.4 C-23.4 -169 27.4 -169 33 -147.4', 0.18, 0.8)}`;
+      return [band + both(horn + bow), band + both(horn)];
+    },
+    // 麋鹿紅鼻子: a round shiny red nose; by night it glows a little (the room's --day)
+    rednose: (L) => [`<circle cx="2" cy="-110.4" r="7" fill="#ff7466" style="opacity:calc(.45 * (1 - var(--day, 1)))"/><circle cx="2" cy="-110.4" r="3.9" ${L('#e2453a', 2.6)}/>${wSh('M-1.6 -109.2 A3.9 3.9 0 0 0 5.6 -109.2 Q2 -107.6 -1.6 -109.2 Z', 0.16)}<circle cx=".6" cy="-112" r="1.2" fill="#fff" fill-opacity=".75"/>`, ''],
+    // 聖誕鈴鐺: a green velvet band round the neck, a gold bell hanging from it (its slit and shine), two holly leaves and red berries
+    hollybell: (L) => {
+      const band = `<path ${L('#2f6b45', 1.6)} d="M-12 -68 Q2 -61 16 -68 L16.2 -64.6 Q2 -57.6 -12.2 -64.6 Z"/>${wHi('M-11.6 -67.2 Q2 -60.4 15.6 -67.2', 0.18, 0.7)}`;
+      const leaf = (d) => `<path ${L('#3f7a3a', 1.7)} d="${d}"/>`;
+      return [band + leaf('M1 -60.6 Q-3 -64 -9.4 -62.6 Q-7.4 -61.6 -8.4 -60 Q-5.8 -60.2 -5.6 -58.4 Q-3.6 -59.6 1 -60.6 Z') + leaf('M3 -60.6 Q7 -64 13.4 -62.6 Q11.4 -61.6 12.4 -60 Q9.8 -60.2 9.6 -58.4 Q7.6 -59.6 3 -60.6 Z')
+        + `<circle cx="2" cy="-56.6" r="3.4" ${L('#e6c25a', 1.7)}/>${wSh('M-1.2 -55.6 A3.4 3.4 0 0 0 5.2 -55.6 Q2 -54.2 -1.2 -55.6 Z', 0.16)}<path d="M.4 -55.4 h3.2 M2 -55.4 V-53.4" stroke="#8a6a20" stroke-width=".7" stroke-linecap="round"/><circle cx=".8" cy="-58" r=".9" fill="#fff" fill-opacity=".7"/>
+        <g ${L('#d0303a', 1.75)}><circle cx="-.6" cy="-61.8" r="1.4"/><circle cx="2" cy="-62.6" r="1.4"/><circle cx="4.6" cy="-61.8" r="1.4"/></g>`, `<path ${L('#2f6b45', 1.6)} d="M-12 -67 Q2 -63 16 -67 L16 -64 Q2 -60 -12 -64 Z"/>`];
+    },
+    // 禮物袋: a big burlap sack on the back, tied with a red cord over the near shoulder — behind the body a bulge of it, on the back
+    // the whole sack with its gathered neck and presents peeping out by the far shoulder, over the front the cord across the chest
+    giftsack: (L) => {
+      const S = '#cdb48a', D = '#a88d62', cord = sk(L, '#c8453d', 1.4);
+      return [`<path ${L(S, 1.3)} d="M-14 -63 Q-31 -60 -31 -45 Q-31 -31 -18 -29.4 H-13 Z"/>${wSh('M-31 -45 Q-31 -31 -18 -29.4 H-13 V-34 Q-24 -33 -27.4 -44 Z', 0.12)}${wHi('M-27.6 -52 Q-26 -58 -19 -60.4', 0.25, 1.2)}`,
+        `<path ${L(S, 1.3)} d="M-18 -66 Q-30 -60 -30 -44 Q-30 -24 2 -22 Q34 -24 34 -44 Q34 -60 22 -66 Q2 -70 -18 -66 Z"/>${wSh('M34 -44 Q34 -24 2 -22 Q-20 -23 -27 -32 Q-4 -27 14 -30 Q28 -33 31 -50 Z', 0.12)}
+        <path d="M-14 -56 Q-12 -44 -16 -32 M-2 -60 Q2 -46 -2 -28 M12 -58 Q16 -44 14 -28 M24 -56 Q28 -46 26 -34" fill="none" ${sk(L, D, 1.3)} stroke-opacity=".55" stroke-width=".8" stroke-linecap="round"/>${wHi('M-24 -52 Q-25 -60 -16 -63.6', 0.22, 1.3)}
+        <rect x="22" y="-70" width="10" height="9" rx="1" transform="rotate(14 27 -65)" ${L('#3f8a52', 1.35)}/><path d="M22.6 -65.6 L31.8 -63.4 M27.8 -69.6 L25.6 -60.4" stroke="#e6c25a" stroke-width="1.2" transform="rotate(14 27 -65)"/><rect x="14" y="-69" width="9" height="8" rx="1" transform="rotate(-10 18 -65)" ${L('#d0453c', 1.35)}/><path d="M14.4 -65 H22.6 M18.6 -68.8 V-61.2" stroke="#f4efe6" stroke-width="1.1" transform="rotate(-10 18 -65)"/>
+        <path ${L(D, 1.35)} d="M10 -64 Q22 -60 34 -64 L33 -60.6 Q22 -57 11 -60.6 Z"/><path d="M-16 -64 Q4 -54 24 -62" fill="none" ${cord} stroke-width="2"/><circle cx="24" cy="-62" r="1.8" ${L('#c8453d', 1.4)}/>`,
+        `<path d="M-9 -66 Q2 -52 18 -36" fill="none" ${cord} stroke-width="2.4" stroke-linecap="round"/>${wHi('M-8.4 -65.4 Q2.4 -52.4 17.4 -36.6', 0.2, 0.6)}`, ''];
     }
   };
   const day = (h) => `fill="${h}"`;
@@ -733,7 +796,7 @@ const HERO = (() => {
   const head = (look, crop) => (crop === 'back' ? svg({ look, back: true, box: onBody('-62 -200 128 132') }) : svg({ look, front: true, box: onBody(crop === 'face' ? '-27 -138 58 52' : crop === 'bust' ? '-62 -200 128 132' : '-58 -198 120 120') }));
   const isTop = (id) => TOPS[id] !== undefined;
   const clothes = (id, look) => (SHOES[id] ? svg({ look: Object.assign({}, look, { shoeStyle: id, bottomStyle: 'shorts' }), front: true, box: '-17 -23 38 27' })   // a shoe on bare legs (tall enough for the rain boots and the bunny's ears)
-    : svg({ look: Object.assign({}, look, isTop(id) ? { topStyle: id } : { bottomStyle: id }), front: true, box: isTop(id) ? '-34 -76 72 56' : '-30 -40 64 44' }));
+    : svg({ look: Object.assign({}, look, isTop(id) ? { topStyle: id } : { bottomStyle: id }), front: true, box: isTop(id) ? (id === 'santacoat' ? '-36 -77 76 62' : '-34 -76 72 56') : '-30 -40 64 44' }));   // the Santa coat reaches the hips
   // a thing worn, on its own (古道具屋, the wardrobe): drawn on a faint head and shoulders so it reads (what goes on the body, on a
   // faint body; what goes on the back from behind, with its straps or nothing else); a whole head on its own
   function thumb(id, look) {

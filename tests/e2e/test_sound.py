@@ -62,7 +62,7 @@ def test_a_place_plays_its_own_record_and_the_shop_sells_the_others(b):
       const sold = WARES.filter((w) => w.kind === 'record').map((w) => w.id), recs = MUSIC.RECORDS.map((x) => x.id);
       return JSON.stringify({ izakaya, beach, off, sold, every: sold.every((id) => recs.includes(id)), files: MUSIC.RECORDS.every((x) => x.file === 'music/' + x.id + '-1.m4a') }); })()"""))
     assert r['izakaya'] == 'chochin' and r['beach'] == '' and r['off'] == '', r
-    assert r['sold'] == ['harukaze', 'matsuri', 'tsukimi', 'yukiasa', 'kissa', 'obake'] and r['every'] and r['files'], r
+    assert r['sold'] == ['harukaze', 'matsuri', 'tsukimi', 'yukiasa', 'kissa', 'obake', 'jingle'] and r['every'] and r['files'], r   # 2026-11-14: Christmas's
 
 def test_every_thing_used_and_every_footstep_has_a_sound_to_be_had(b):
     r = json.loads(ev(b, """(async () => { const names = new Set();

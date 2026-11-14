@@ -143,7 +143,28 @@ const WARES = [
   { id: 'tsukimi', kind: 'record', name: '唱片〈月見〉', price: 60, desc: '琴和笛子，安靜的秋夜賞月。' },
   { id: 'yukiasa', kind: 'record', name: '唱片〈雪の朝〉', price: 60, desc: '鋼琴和音樂盒，下過雪的早晨，安安靜靜的。' },
   { id: 'kissa', kind: 'record', name: '唱片〈喫茶しずく〉', price: 80, desc: '小鎮咖啡館「しずく」常放的爵士鋼琴。' },
-  { id: 'obake', kind: 'record', limited: 'halloween', name: '唱片〈おばけの夜〉', price: 66, desc: '有點可怕又有點可愛的萬聖節之夜。' }
+  { id: 'obake', kind: 'record', limited: 'halloween', name: '唱片〈おばけの夜〉', price: 66, desc: '有點可怕又有點可愛的萬聖節之夜。' },
+  // Christmas (2026-11-14, the user: one for each part worn, two for the head, some for the yard and the rooms, two houses and a
+  // record), sold under 限時 from 12/11 to 1/8
+  { id: 'santahat', kind: 'wear', slot: 'head', limited: 'christmas', name: '聖誕帽', price: 66, desc: '紅色的聖誕帽，一圈白色毛毛，帽尖軟軟地垂到一邊，掛著一顆白絨球。' },
+  { id: 'antlers', kind: 'wear', slot: 'head', limited: 'christmas', name: '麋鹿角髮箍', price: 48, desc: '兩支咖啡色的麋鹿角，綁著紅色緞帶和小金鈴。' },
+  { id: 'rednose', kind: 'wear', slot: 'face', limited: 'christmas', name: '麋鹿紅鼻子', price: 20, desc: '圓圓亮亮的紅鼻子，戴上就是帶路的那隻麋鹿。' },
+  { id: 'hollybell', kind: 'wear', slot: 'neck', limited: 'christmas', name: '聖誕鈴鐺', price: 36, desc: '綠色絨布頸帶，掛著一顆金鈴鐺，旁邊兩片冬青葉和紅果子。' },
+  { id: 'santacoat', kind: 'clothes', slot: 'top', limited: 'christmas', name: '聖誕老人外套', price: 90, desc: '白色毛毛的衣襟和袖口，黑色腰帶配金色扣環。顏色在衣櫃自己配，紅色最像。' },
+  { id: 'santapants', kind: 'clothes', slot: 'bottom', limited: 'christmas', name: '聖誕老人褲', price: 60, desc: '褲管下面一圈白色毛毛。顏色在衣櫃自己配。' },
+  { id: 'elfshoes', kind: 'clothes', slot: 'shoe', limited: 'christmas', name: '精靈鞋', price: 48, desc: '鞋尖翹起來捲成一圈，掛著一顆小金鈴，走路叮叮噹噹。顏色在衣櫃自己配。' },
+  { id: 'giftsack', kind: 'wear', slot: 'back', limited: 'christmas', name: '禮物袋', price: 72, desc: '聖誕老公公的大布袋，綁著紅繩子，禮物都快滿出來了。' },
+  { id: 'xmastree', kind: 'floor', limited: 'christmas', h: 3.7, name: '聖誕樹', price: 66, fp: [1.3, 1.3], desc: '掛滿彩球的小樅樹，頂上一顆金星，晚上燈泡會亮起來。', light: { z: 2, r: 4.4 } },
+  { id: 'giftpile', kind: 'floor', limited: 'christmas', h: 1.1, name: '禮物堆', price: 30, fp: [1.1, 1.1], desc: '包得漂漂亮亮的禮物疊成一堆，不知道裡面是什麼。' },
+  { id: 'poinsettia', kind: 'floor', limited: 'christmas', h: 1.5, name: '聖誕紅', price: 18, fp: [0.7, 0.7], desc: '紅色的葉子像一顆顆星星，冬天最有氣氛的花。', act: 'water' },
+  { id: 'wreath', kind: 'wall', limited: 'christmas', name: '聖誕花圈', price: 24, size: [1.1, 1.1], desc: '冬青和松果編成的花圈，綁著紅色蝴蝶結。' },
+  { id: 'stockings', kind: 'wall', limited: 'christmas', name: '聖誕襪', price: 20, size: [1.7, 1.3], desc: '三隻聖誕襪掛成一排，等著裝禮物。' },
+  { id: 'bigtree', kind: 'yard', limited: 'christmas', name: '大聖誕樹', price: 90, ground: [116, 18], desc: '種在院子裡的大樅樹，燈泡一圈一圈繞到頂，晚上整棵亮起來。' },
+  { id: 'snowman', kind: 'yard', limited: 'christmas', name: '雪人', price: 30, ground: [64, 12], desc: '紅蘿蔔鼻子、紅圍巾，頭上倒扣一個水桶。' },
+  { id: 'lightdeer', kind: 'yard', limited: 'christmas', name: '燈飾麋鹿', price: 60, ground: [96, 14], desc: '金色燈泡串成的麋鹿，晚上一閃一閃的。' },
+  { id: 'kamakura', kind: 'house', limited: 'christmas', name: '雪屋', price: 2000, desc: '雪堆成的圓圓かまくら，門口掛著草繩，晚上裡面點著燭光，暖暖的。' },
+  { id: 'logcabin', kind: 'house', limited: 'christmas', name: '雪中小木屋', price: 2000, desc: '圓木搭的小屋，屋頂積著厚厚的雪，屋簷一圈彩色燈泡，門上掛著花圈，煙囪冒著煙。' },
+  { id: 'jingle', kind: 'record', limited: 'christmas', name: '唱片〈ジングルベル〉', price: 66, desc: '雪橇的鈴聲和音樂盒，叮叮噹噹的聖誕夜。' }
 ];
 const WARE = new Map(WARES.map((w) => [w.id, w]));
 // the hero's seven parts, in the wardrobe's tabs and 古道具屋's 穿搭 (2026-11-12, the user: this order): what is worn there (kind

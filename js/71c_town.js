@@ -168,7 +168,9 @@ const TOWNEV = (() => {
     return !o || !seen(o) ? 'prep' : isOpen(shop, now()) ? 'open' : 'closed'; };
   // what someone wears where they are: their festival clothes (festa) at the shrine while its 緣日 is on
   const look = (id, place, h = now()) => { const c = T().CAST[id]; return c.festa && place === 'shrine' && isOpen('ennichi', h) ? Object.assign({}, c.look, c.festa) : c.look; };
-  const art = (id, place) => { const c = T().CAST[id]; return c.art === 'npc' ? NPC.art(id) : HERO.svg({ look: look(id, place), wear: c.wear || {} }); };
+  // Christmas (2026-11-14, the user: the people of the shops in Santa hats): a Santa hat over whatever is on their head while it is on
+  const wearOf = (w) => (festOn('christmas') && !HERO.whole(w && w.head) ? Object.assign({}, w, { head: 'santahat' }) : w || {});
+  const art = (id, place) => { const c = T().CAST[id]; return c.art === 'npc' ? NPC.art(id) : HERO.svg({ look: look(id, place), wear: wearOf(c.wear) }); };
   const face = (id) => { if (id === 'hero') return HERO.head(state.look, 'bust'); const c = T().CAST[id], v = (T().YATAI || {})[id]; if (v) return HERO.head(v.look, 'bust'); if (!c) return CRUISE.face(id); return c.art === 'npc' ? NPC.face(id) : HERO.head(c.look, 'bust'); };   // not of the town: a stall keeper (YATAI), the cruise's
   // an event's lines as said to this learner: met — { if: an event, head: lines, from: k } — the opening for one who has done that
   // event already, said in place of the first k lines (2026-11-13: m1-7 meets 高橋 for those who came to know him in m10-2 first)
@@ -216,7 +218,7 @@ const TOWNEV = (() => {
     return { R: reachedIdx(), unitIdx, at: at ? at.place : '', h: now(), we: d.getDay() === 0 || d.getDay() === 6, done: state.town.done, day: dateStr(d), seen,
       talks: Number((state.town.talks || {})[id]) || 0, lookSig: sig, hairSig: hair, lookChanged: Boolean(saw[0]) && saw[0] !== sig, hairChanged: Boolean(saw[1]) && saw[1] !== hair,
       wear: Object.values(state.wear || {}).concat(['topStyle', 'bottomStyle', 'shoeStyle'].map((k) => (state.look || {})[k])).filter((v) => typeof v === 'string'),
-      fest: typeof saleOn === 'function' && saleOn('halloween', saleNow() || dateStr(d)) ? ['halloween'] : [] };   // 古道具屋's sale days, by the server's day when known
+      fest: typeof saleOn === 'function' ? Object.keys(SALES).filter((k) => salePreview(k) || saleOn(k, saleNow() || dateStr(d))) : [] };   // the festivals on (古道具屋's sale days), by the server's day when known
   }
   function chatLine(id) {
     const m = chatMem(), x = chatCtx(id, m), said = (m.said || {})[id] || [];
@@ -255,7 +257,7 @@ const TOWNEV = (() => {
     const p = y.querySelector(`.npc-${o}`) || (helper && y.querySelector(`.npc-${helper}`));   // its keeper, else who helps there (和子 at the flowers)
     if (p) talk(p); else toast(T().CAST[o].away && state.town.done[T().CAST[o].away] ? `${sign}現在沒有人在顧店。` : `${T().CAST[o].name}現在不在店裡。`);
   }
-  const api = { unitIdx, reachedIdx, started, share, linesOf, studyDaysSince, due, opened, openN, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, face, talk, shopTap, chatLine, chatCtx, chatMem, hop, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
+  const api = { unitIdx, reachedIdx, started, share, linesOf, studyDaysSince, due, opened, openN, waiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, wearOf, face, talk, shopTap, chatLine, chatCtx, chatMem, hop, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
   return api;
 })();
 // the bed (test, 2026-11-10; the user's call): once the day's practice is done (書桌上的筆記本「今日完成」), a sleep there moves the
@@ -1616,7 +1618,7 @@ function shrineHtml() {
   // the things laid out, under the awning — the sign moved up onto the awning to make room, lit as the stall is
   const keeper = (id, cx, k) => { const v = (TOWN.YATAI || {})[id], z = 0.3, feet = F - 21; if (!v) return '';
     const lit = (h) => `style="fill:color-mix(in srgb, ${h} calc(70% + 30% * var(--day, 1)), #3a2c40)"`;
-    return `<g class="stall-keeper" data-keeper="${id}" style="--k:${k}">${HERO.svg({ look: v.look, wear: v.wear || {}, front: true, box: '-60 -205 120 180', L: lit })
+    return `<g class="stall-keeper" data-keeper="${id}" style="--k:${k}">${HERO.svg({ look: v.look, wear: TOWNEV.wearOf(v.wear), front: true, box: '-60 -205 120 180', L: lit })
       .replace('<svg ', `<svg x="${(cx - 60 * z).toFixed(1)}" y="${(feet - 205 * z).toFixed(1)}" width="${(120 * z).toFixed(1)}" height="${(180 * z).toFixed(1)}" `)}</g>`; };
   const stall = (x, w, aw, sign, goods, who, k) => `<g><rect x="${x}" y="${F - 70}" width="${w}" height="70" ${hc('#c58a54', '#3a2c40')}/><path d="M${x} ${F - 70} h${w} v6 h${-w} Z" fill="#2b1c12" fill-opacity=".16"/>
     ${keeper(who, x + w / 2, k)}<path d="M${x + 1} ${F - 70} h4 v70 h-4 Z M${x + w - 5} ${F - 70} h4 v70 h-4 Z" ${hc('#8a5a30', '#2a2440')}/><path d="M${x - 6} ${F - 70} h${w + 12} l-8 -22 h${-w + 4} Z" ${hc(aw, '#5a2030')}/>
@@ -2019,16 +2021,39 @@ function witchHtml(id) {   // somewhere along her minute when the yard opens
     <div class="w-fig">${['broom', 'rider', 'hat'].map((p) => `<svg class="w-${p}" viewBox="0 0 28 20">${WITCH_ART[p]}</svg>`).join('')}</div>
     <button type="button" class="w-hit" data-act="witch" aria-label="巫婆"></button></div></div>`;
 }
-function yWitch(yard) {   // she joins the sky, or leaves it (caught on another device, Halloween over); the server's day asked if not known
+// 2026-11-14 (the user): at Christmas Santa takes her place — his sleigh behind two reindeer, the lead one's red nose aglow, over the
+// yard's night sky the same way; a tap and three presents tumble out of it for 100 言靈 and off he flies, once a Christmas
+const SANTA_GIFT = 100;
+const festId = (key, who, day) => `${who}-${(saleSpan(key, day) || [day])[0].slice(0, 4)}`;   // by the year the festival began (Christmas runs into January)
+const santaId = (day) => festId('christmas', 'santa', day);
+const SANTA_ART = (() => {   // facing right in a 56 × 20 box: the two reindeer and their reins, the sleigh with Santa and his sack
+  const deer = (x) => `<ellipse cx="${x}" cy="9" rx="4.4" ry="2.2"/><path d="M${x + 2.6} 8.2 L${x + 4.8} 4.8 L${x + 6} 5.6 L${x + 4.2} 9.4 Z"/><ellipse cx="${x + 6.2}" cy="4.6" rx="1.7" ry="1.15"/>`
+    + `<path d="M${x + 5.4} 3.8 L${x + 4.4} 1 M${x + 4.8} 2.2 L${x + 3.4} 1.4 M${x + 6} 3.6 L${x + 6.4} .8" fill="none" stroke-width=".7"/>`
+    + `<path d="M${x + 3} 10 L${x + 6.4} 12.6 M${x + 2.2} 10.6 L${x + 5} 13.6 M${x - 3} 10 L${x - 6.6} 11.4 M${x - 3.6} 9.4 L${x - 7.2} 9.8" fill="none" stroke-width=".9"/><path d="M${x - 4.2} 8.2 l-1.4 -1" fill="none" stroke-width=".8"/>`;
+  return {
+    deer: deer(36) + deer(48) + '<path d="M24.6 10.4 Q30 9 32.4 9.6 M40 9.6 Q42 9 44 9.4" fill="none" stroke-width=".5"/>',
+    sleigh: '<circle cx="9.6" cy="6.4" r="3.2"/><path d="M9.2 3.4 l.8 -1.2 l.8 1.2 Z"/><circle cx="14.6" cy="6.8" r="3.2"/><circle cx="16.6" cy="3.6" r="1.6"/><path d="M15.4 2.6 L18.2 2.4 L13.6 .4 Z"/><circle cx="13.2" cy=".6" r=".8"/>'
+      + '<path d="M7.6 8.4 H23.4 Q26.2 8.4 25.4 11.6 L24.4 14.6 H10.4 Q7.4 14.6 6.8 11.6 Z"/><path d="M4.4 17.2 H23.6 Q27 17.2 27.6 14.2 M11 14.6 V17.2 M21 14.6 V17.2" fill="none" stroke-width=".9"/>'
+  };
+})();
+function santaHtml(id) {
+  return `<div class="santa" data-witch="${id}" style="animation-delay:-${(Math.random() * 60).toFixed(1)}s"><div class="w-bob">
+    <div class="w-fig">${['sleigh', 'deer'].map((p) => `<svg class="s-${p}" viewBox="0 0 56 20">${SANTA_ART[p]}</svg>`).join('')}<i class="s-nose"></i></div>
+    ${[0, 1, 2].map((i) => `<i class="s-gift g${i}"></i>`).join('')}<button type="button" class="w-hit" data-act="santa" aria-label="聖誕老公公"></button></div></div>`;
+}
+function yWitch(yard) {   // the festival's visitor joins the sky, or leaves it (found on another device, the festival over); the server's day asked if not known
   const put = (day) => {
     if (!yard.isConnected) return;
-    const d = day || (salePreview() ? todayStr() : null), had = yard.querySelector('.witch');
-    const id = d && (salePreview() || saleOn('halloween', d)) && !state.koto.found[witchId(d)] ? witchId(d) : null;
-    if (had && !had.classList.contains('fall') && had.dataset.witch !== id) had.remove();
-    if (id && !yard.querySelector('.witch')) yard.querySelector('.sky .night').insertAdjacentHTML('beforeend', witchHtml(id));
+    const sky = yard.querySelector('.sky .night');
+    [['halloween', witchId, witchHtml, '.witch'], ['christmas', santaId, santaHtml, '.santa']].forEach(([key, idOf, html, sel]) => {
+      const d = day || (salePreview(key) ? todayStr() : null), had = yard.querySelector(sel);
+      const id = d && (salePreview(key) || saleOn(key, d)) && !state.koto.found[idOf(d)] ? idOf(d) : null;
+      if (had && !had.classList.contains('fall') && !had.classList.contains('gave') && had.dataset.witch !== id) had.remove();
+      if (id && sky && !yard.querySelector(sel)) sky.insertAdjacentHTML('beforeend', html(id));
+    });
   };
   const day = saleNow();
-  if (day || salePreview()) put(day); else saleClock().then(put);
+  if (day || salePreview('halloween') || salePreview('christmas')) put(day); else saleClock().then(put);
 }
 function witchCatch(el) {
   const w = el.closest('.witch'), yard = el.closest('.yard'), id = w && w.dataset.witch;
@@ -2040,6 +2065,17 @@ function witchCatch(el) {
   state.koto.found[id] = WITCH_GIFT; saveState(); sfxReady();   // the sound woken inside the tap, so the coins' 叮 can play later (iOS)
   const r = w.querySelector('.w-fig').getBoundingClientRect();
   witchCoins(yard, [r.left + r.width / 2, r.top + r.height / 2], WITCH_GIFT);
+}
+function santaCatch(el) {   // Santa tapped: held where he was, three presents tumble out, the bells ring, and he climbs away out of sight
+  const w = el.closest('.santa'), yard = el.closest('.yard'), id = w && w.dataset.witch;
+  if (!w || !id || w.classList.contains('gave')) return;
+  [w, w.querySelector('.w-bob')].forEach((x) => { const t = getComputedStyle(x).transform; x.style.animation = 'none'; x.style.transform = t === 'none' ? '' : t; });
+  w.classList.add('gave');
+  setTimeout(() => w.remove(), 3200);
+  if (state.koto.found[id] || !yard) return;
+  state.koto.found[id] = SANTA_GIFT; saveState(); sfxReady(); playSfx('up');
+  const r = w.querySelector('.w-fig').getBoundingClientRect();
+  witchCoins(yard, [r.left + r.width * 0.3, r.top + r.height / 2 + 10], SANTA_GIFT);
 }
 // her 言靈 seen (1.2.2): while she falls, a ring of light and ten あ burst out where she slipped; once she is behind the
 // hills they fly one by one into the 言靈 button up top, which bounces and counts up a tenth each (a rising 叮 with 答題音效 on),
