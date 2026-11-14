@@ -276,14 +276,15 @@ def test_the_bus_goes_to_a_stop_opened_and_back(b):
       y().querySelector('[data-act="bus-stop"]').click(); const bd2 = await board(); const back = [...bd2.querySelectorAll('[data-bus]')].filter(x => !x.disabled).map(x => x.dataset.bus);
       bd2.querySelector('[data-bus="street"]').click(); for (let i = 0; i < 120 && location.hash !== '#/street'; i++) await wait(50);
       return JSON.stringify({ stops, there, back, home: location.hash }); })()"""))
-    assert r['stops'] == [['station', False], ['sento', True], ['shrine', True], ['castle', True]], r
-    assert r['there'] == {'place': 'station', 'harada': True} and r['back'] == ['street'] and r['home'] == '#/street', r
+    assert r['stops'] == [['station', False], ['sento', True], ['shrine', True], ['castle', True], ['kominkan', False]], r   # 公民館: open from the first day (2026-11-14)
+    assert r['there'] == {'place': 'station', 'harada': True} and r['back'] == ['street', 'kominkan'] and r['home'] == '#/street', r
 
-def test_with_no_stop_open_the_bus_board_says_so(b):
+# 2026-11-14 (新手第一週): 公民館 is on the line from the first day, so a new learner has one stop open before meeting anyone
+def test_on_the_first_day_the_bus_goes_to_the_hall_only(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + BUS + """ fake([]); await go('street', 12);
       y().querySelector('[data-act="bus-stop"]').click(); const bd = await board();
-      return JSON.stringify({ open: [...bd.querySelectorAll('[data-bus]')].filter(x => !x.disabled).length, note: bd.textContent }); })()"""))
-    assert r['open'] == 0 and '還沒有開通' in r['note'], r
+      return JSON.stringify({ open: [...bd.querySelectorAll('[data-bus]')].filter(x => !x.disabled).map(x => x.dataset.bus), note: bd.textContent.includes('還沒有開通') }); })()"""))
+    assert r == {'open': ['kominkan'], 'note': False}, r
 
 def test_taro_waits_by_the_bus_stop_in_the_morning(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + TOWN_AT + """ fake([]); state.town.seen.taro = 1; await go('street', 9); const am = !!y().querySelector('.npc-taro');
@@ -344,7 +345,7 @@ def test_the_bus_goes_on_to_the_castle_and_its_guide(b):
       y().querySelector('[data-act="bus-stop"]').click(); const bd = await board(); const list = [...bd.querySelectorAll('[data-bus]')].filter(x => !x.disabled).map(x => x.dataset.bus);
       bd.querySelector('[data-bus="castle"]').click(); for (let i = 0; i < 120 && location.hash !== '#/castle'; i++) await wait(50); await wait(300);
       return JSON.stringify({ list, place: y().dataset.place, art: !!y().querySelector('.castle-land'), guide: !!y().querySelector('.npc-takahashi') }); })()"""))
-    assert r == {'list': ['street', 'castle'], 'place': 'castle', 'art': True, 'guide': True}, r
+    assert r == {'list': ['street', 'castle', 'kominkan'], 'place': 'castle', 'art': True, 'guide': True}, r
 
 # ---- the test site's tools in 町の手帳 (the user: try every stage's people on the test site) ----
 def test_the_test_site_notebook_meets_everyone_sets_the_hour_and_plays_any_event(b):
@@ -359,7 +360,7 @@ def test_the_test_site_notebook_meets_everyone_sets_the_hour_and_plays_any_event
       const after = { done: !!state.town.done['m10-3'], koto: kotoBalance() - k0, back: !!document.querySelector('.diary .town-tools') };
       d().querySelector('[data-tool="hour"][data-h="now"]').click();
       return JSON.stringify({ tools, listed, seen, stops, h, talk, after, real: TOWNEV.clock }); })()"""))
-    assert r['tools'] and r['listed'] >= 55 and r['seen'] and r['stops'] == ['castle', 'sento', 'shrine', 'station'], r
+    assert r['tools'] and r['listed'] >= 55 and r['seen'] and r['stops'] == ['castle', 'kominkan', 'sento', 'shrine', 'station'], r
     assert r['h'] == 20 and r['talk'].startswith('ソフィア'), r
     assert r['after'] == {'done': False, 'koto': 0, 'back': True} and r['real'] is None, r   # a try gives nothing and marks nothing done
 
@@ -434,7 +435,7 @@ def test_the_town_notebook_says_how_many_are_open_not_who_or_where(b):
 def test_a_weekend_of_sleeps_meets_every_event_open(b):
     r = json.loads(ev(b, "(() => { " + FRESH + """ state.currentUnit = 'm6'; learn('m6', 1); state.met = { koharu: 1, mugi: 1 };
       const run = (day) => { state.town = { done: {}, seen: {}, stops: {} }; let moved = true;
-        while (moved) { moved = false; for (const h of TOWN.WAKE) { let w; while ((w = TOWNEV.waiting(h, day))) { TOWNEV.finish(w.ev.id); moved = true; } } }
+        while (moved) { moved = false; for (const h of TOWN.WAKE) { let w; while ((w = TOWNEV.waiting(h, day) || TOWNEV.classWaiting(h, day))) { TOWNEV.finish(w.ev.id); moved = true; } } }   // 日本語教室's wait beside the town's (2026-11-14)
         return TOWN.EVENTS.filter((e) => TOWNEV.unitIdx(e.u) <= TOWNEV.unitIdx('m6') && !state.town.done[e.id]).map((e) => e.id); };
       return JSON.stringify({ sat: run(new Date(2026, 10, 14)), tue: run(new Date(2026, 10, 10)) }); })()"""))
     assert r == {'sat': [], 'tue': []}, r   # weekdays only practice; a weekend (or any day) of sleeps meets them all
@@ -647,7 +648,7 @@ def test_people_wear_what_their_work_calls_for(b):
     assert r['miko'] and r['festival'] == 'hakui' and r['taisho'] and r['sold'] is False, r   # the miko works the festival in her white and red; none of it in the wardrobe
 
 def test_a_new_hero_and_the_young_people_have_round_soft_faces(b):
-    r = json.loads(ev(b, """(() => { const n = HERO.norm(undefined), young = ['miku', 'hina', 'taro', 'kobayashi', 'misaki', 'alex', 'chihaya', 'sophia', 'nishimura', 'lin', 'go', 'kenta', 'nakamura'];
+    r = json.loads(ev(b, """(() => { const n = HERO.norm(undefined), young = ['miku', 'hina', 'taro', 'kobayashi', 'misaki', 'alex', 'chihaya', 'sophia', 'nishimura', 'lin', 'go', 'kenta', 'nakamura', 'chen', 'maria'];
       return JSON.stringify({ hero: ['face', 'cheeks', 'fringe', 'sides', 'hairBack', 'hairTop', 'hairColor', 'topStyle', 'top', 'bottomStyle', 'bottom', 'shoeStyle', 'shoe'].map((k) => n[k]),
         young: young.filter((id) => !['chubby', 'mochi', 'round'].includes(TOWN.CAST[id].look.face)),
         kira: Object.keys(TOWN.CAST).filter((id) => (TOWN.CAST[id].look || {}).eyes === 'kira').concat([KOHARU_LOOK, GRANNY_LOOK].filter((l) => l.eyes === 'kira').map(() => 'npc')) }); })()"""))

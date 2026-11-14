@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 59 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 60 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -6,11 +6,11 @@
    docs/superpowers/specs/2026-11-09-town-events-design.md. */
 const TOWN = {
   // the places index.html draws people in (a new one goes here when it is drawn: street, station, sento, shrine, castle)
-  PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park'],
+  PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park', 'kominkan', 'kyoshitsu'],
   // names of people, shops and places: no gloss needed
-  NAMES: ['美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ'],
+  NAMES: ['美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館'],
   // the shops' hours (the world's time: the phone's, or where a sleep moved it on; to < from runs past midnight)
-  HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 23], chaya: [9, 17] },
+  HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 23], chaya: [9, 17], kominkan: [9, 22] },
   // the hours a sleep in bed wakes to (早上, 中午, 傍晚, 晚上): every event's person is at its place at one of them, weekdays and weekends
   WAKE: [8, 12, 17, 20],
   // where people stand, by place: X along the land (0 the middle), Y up from the front. roam: how far they stroll about it either
@@ -30,7 +30,9 @@ const TOWN = {
     sento: { door: { X: -40, Y: 124, roam: [20, 4] }, bench: { X: -322, Y: 71, sit: 1 }, milk: { X: -360, Y: 112 } },
     harbor: { pier: { X: 120, Y: 96 }, hut: { X: 370, Y: 112 } },
     park: { slide: { X: -220, Y: 92, roam: [90, 22], run: 1 }, bench: { X: 405, Y: 57, sit: 1 } },
-    station: { taxi: { X: -430, Y: 96, roam: [45, 10] }, gate: { X: -60, Y: 120, roam: [30, 8] }, koban: { X: 330, Y: 112, roam: [30, 8] }, plaza: { X: -355, Y: 74, sit: 1 }, stop: { X: 470, Y: 80, roam: [40, 10] } }
+    station: { taxi: { X: -430, Y: 96, roam: [45, 10] }, gate: { X: -60, Y: 120, roam: [30, 8] }, koban: { X: 330, Y: 112, roam: [30, 8] }, plaza: { X: -355, Y: 74, sit: 1 }, stop: { X: 470, Y: 80, roam: [40, 10] } },
+    // 日本語教室 (2026-11-14), at 45° as the 食堂: the teacher by the blackboard, the chairs behind the two tables (facing us), the tatami
+    kyoshitsu: { teach: { u: 4.6, v: 3.6 }, desk1: { u: 5.6, v: 5.85, sit: 1, pose: 'turn flip' }, desk2: { u: 13, v: 5.85, sit: 1, pose: 'turn flip' }, desk3: { u: 16.6, v: 5.85, sit: 1, pose: 'turn flip' }, tatami: { u: 19.4, v: 12.4, h: 0.5, kneel: 1, pose: 'turn flip' } }
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they
   // have come by; size: smaller than the hero
@@ -55,8 +57,8 @@ const TOWN = {
       festa: { topStyle: 'yukata', top: '#3f4660' },   // the 緣日: a navy yukata
       hours: [[16, 19, 'town', 'flowers', 'wd'], [9, 19, 'town', 'flowers', 'we'], [19, 23, 'shrine', 'ennichi2']], away: 'm25-4' },
     lin: { name: '林 美玲', kana: 'リン メイリン', role: '雑貨屋', shop: 'goods', look: { face: 'mochi', skin: '#e8bd98', cheeks: 'soft', fringe: 'sidepart', sides: 'tucked', hairBack: 'short', hairTop: 'sidelow', hairColor: '#2a2524', eyes: 'droopy', eyeColor: '#2a2730', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#3f9a8c', bottomStyle: 'wide', bottom: '#e9e2d0', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { face: 'glasses' },
-      bio: ['雜貨店「雑貨りんりん」的老闆，43 歲，台灣人。十五年前嫁來這裡，長大以後才開始學日文。', '溫柔有耐心，最懂學日文的辛苦，偶爾會冒出一句中文。先生健二是漁夫。'],
-      hours: [[9, 21, 'town', 'goods']] },
+      bio: ['雜貨店「雑貨りんりん」的老闆，43 歲，台灣人。十五年前嫁來這裡，長大以後才開始學日文。', '溫柔有耐心，最懂學日文的辛苦，偶爾會冒出一句中文。先生健二是漁夫。', '每天晚上七點到九點，在公民館的日本語教室當志工老師。'],
+      hours: [[19, 21, 'kyoshitsu', 'teach'], [9, 21, 'town', 'goods']] },   // 2026-11-14: the evening class at 公民館
     tome: { name: '大山 トメ', kana: 'おおやま とめ', role: '食堂のおかみ', shop: 'shokudo', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'grin', beard: 'none', topStyle: 'kappogi', top: '#ecebe6', bottomStyle: 'skirt', bottom: '#6e4f3a', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { head: 'sankakukin' },
       bio: ['「まんぷく食堂」的老闆娘，72 歲。大嗓門，像媽媽一樣一直叫你多吃，會唸人。', '你外婆的老朋友兼牌友。說話是老太太的常體（〜だよ、〜しな）。'],
       hours: [[10, 21, 'shokudo', 'counter']] },
@@ -120,6 +122,17 @@ const TOWN = {
     sano: { name: '佐野', kana: 'さの', role: 'ホテル会社の社員', look: { face: 'pointed', skin: '#f3d1b5', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'sharp', eyeColor: '#2a2730', brows: 'straight', mouth: 'flat', beard: 'none', topStyle: 'jacket', top: '#2b2b33', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { neck: 'necktie', tie: '#d0574b' },
       bio: ['東京的飯店公司派來的員工，32 歲。說話很有禮貌，卻總是保持距離。', '負責說服鎮上的人接受度假飯店的計畫。'],
       hours: [[10, 17, 'town', 'street']] },
+    // 日本語教室's students (2026-11-14, 新手第一週): 陳 from Tainan on a working holiday (his name read チン, a microwave's ding —
+    // he wants チェン), マリア from Brazil, 堀先生 the calligrapher who helps and dozes off
+    chen: { name: '陳 宇翔', kana: 'チェン ユーシャン', role: '打工度假的台灣人', look: { face: 'mochi', skin: '#e8bd98', cheeks: 'none', fringe: 'spiky', sides: 'above', hairBack: 'short', hairTop: 'ahoge', hairColor: '#2a2524', eyes: 'big', eyeColor: '#2a2730', brows: 'raised', mouth: 'grin', beard: 'none', topStyle: 'tee', top: '#d0574b', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#ecebe6' },
+      bio: ['陳宇翔，24 歲，從台南來打工度假。大嗓門、超有自信，日文錯誤百出也不在乎。', '日文的「陳」念「チン」，跟微波爐熱好「叮」的那一聲一樣，所以他堅持大家叫他「チェン」。'],
+      hours: [[9, 21, 'kyoshitsu', 'desk1']] },
+    maria: { name: 'マリア・サントス', kana: 'マリア・サントス', role: '巴西來的媽媽', look: { face: 'round', skin: '#c98d64', cheeks: 'blush', fringe: 'swept', sides: 'wave', hairBack: 'wavy', hairTop: 'none', hairColor: '#3b2418', eyes: 'happy', eyeColor: '#5a3a28', brows: 'raised', mouth: 'grin', beard: 'none', topStyle: 'shirt', top: '#f2c94c', bottomStyle: 'skirt', bottom: '#3f9a8c', shoeStyle: 'sneaker', shoe: '#d0574b' },
+      bio: ['瑪莉亞，35 歲，從巴西來的媽媽，兒子盧卡斯在念小學。', '熱情又大聲，最愛唱歌跳舞，一激動就冒出葡萄牙文。'],
+      hours: [[10, 15, 'kyoshitsu', 'desk2'], [19, 21, 'kyoshitsu', 'desk2']] },
+    hori: { name: '堀 文蔵', kana: 'ほり ぶんぞう', role: '書法老師（志工）', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#d8d8dc', eyes: 'sleepy', eyeColor: '#2a2730', brows: 'thick', mouth: 'flat', beard: 'goatee', topStyle: 'samue', top: '#4a4a55', bottomStyle: 'wide', bottom: '#4a4a55', shoeStyle: 'zori', shoe: '#2b2b33' }, wear: { face: 'glasses' },
+      bio: ['堀文蔵，72 歲，退休的書法老師，在日本語教室當志工。', '對筆順和「とめ・はね・はらい」非常講究，上課講到一半常常睡著。'],
+      hours: [[9, 12, 'kyoshitsu', 'tatami'], [19, 21, 'kyoshitsu', 'desk3']] },
     granny: { name: 'おばあちゃん', kana: 'おばあちゃん', role: '外婆（信）', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#b8a27a', bottomStyle: 'skirt', bottom: '#6e4f3a', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { face: 'glasses' },
       bio: ['你的外婆。在海邊的小屋住了一輩子，鎮上每個人都記得她。', '她留給渚一封信，要等你會說日文才交給你。'],
       hours: [] }
@@ -130,6 +143,45 @@ const TOWN = {
   // changed since they last saw the hero or a thing worn, fest 'halloween', about: someone the hero has met. fresh, look and fest
   // are news: said first, once. How each of them talks: docs/town-voices.md
   CHAT: {
+    // 日本語教室 (2026-11-14): 陳 loud and sure of himself, Chinese whenever he likes; マリア bright, Portuguese when moved; 堀先生 few words
+    chen: [
+      ['m0', 'チェンです！ チンじゃ ないです！', '我是チェン！不是チン！'],
+      ['m0', '', '（用中文）黑板上的字，你學會一個就亮一個。全部亮起來超有成就感！'],
+      ['m0', 'かるた、しょうぶ！', 'かるた，來決勝負！'],
+      ['m0', 'にほんご、むずかしい！ でも、たのしい！', '日文好難！可是很好玩！'],
+      ['m0', '', '（用中文）我昨天跟店員說「ありがとう」，她跟我鞠了三次躬。我也回了三次。最後兩個人一直鞠躬。'],
+      ['m0', '', '（用中文）堀老師又睡著了。小聲一點。', { after: 'k3' }],
+      ['m0', '', '（用中文）片假名我還在學。ン 跟 ソ 到底差在哪啦！'],
+      ['m0', '', '（用中文）在日本最好用的一句：すみません。道歉、道謝、叫店員都能用。'],
+      ['m0', 'ラーメン、だいすき！', '我超愛拉麵！'],
+      ['m0', 'マリアさん、うた、じょうず！', '瑪莉亞小姐，唱歌好厲害！', { about: 'maria' }],
+      ['m0', 'ほりせんせい、ねて いますか。', '堀老師在睡覺嗎？', { about: 'hori' }],
+      ['m1', 'わたしは {学生|がくせい|學生}じゃ ないです。アルバイトです！', '我不是學生。我是打工的！']
+    ],
+    maria: [
+      ['m0', 'オラー！ こんにちは！', 'Olá！你好！（Olá 是葡萄牙文的「你好」）'],
+      ['m0', 'あいうえお！ サンバ！', '啊伊嗚欸喔！森巴！'],
+      ['m0', 'ルーカスは しょうがくせい です。', '盧卡斯是小學生。'],
+      ['m0', 'にほんの おかし、だいすき！', '我超愛日本的零食！'],
+      ['m0', 'オブリガーダ！ あ、ありがとう！', 'Obrigada！啊，是「謝謝」！'],
+      ['m0', 'ルーカスの せんせい、やさしい です。', '盧卡斯的老師很溫柔。'],
+      ['m0', 'ブラジルは いま なつ です！', '巴西現在是夏天！'],
+      ['m0', 'コーヒー、のみますか？', '要喝咖啡嗎？'],
+      ['m0', 'チェンさん、おもしろい！', '陳先生好有趣！', { about: 'chen' }],
+      ['m0', 'ほりせんせい、こわい。でも、やさしい。', '堀老師很可怕。可是很溫柔。', { about: 'hori' }]
+    ],
+    hori: [
+      ['m0', 'とめ、はね、はらい。', '頓筆、勾筆、撇筆。（寫字最基本的三個動作）'],
+      ['m0', 'じは、こころです。', '字就是心。'],
+      ['m0', 'ゆっくり、ていねいに。', '慢慢來，寫工整。'],
+      ['m0', 'ねむく ないです。', '我沒有想睡。'],
+      ['m0', 'わしの じ、きれいでしょう。', '我的字很漂亮吧。'],
+      ['m0', 'おちゃ、どうぞ。', '請喝茶。'],
+      ['m0', 'すみは、ゆっくり すります。', '墨，要慢慢磨。'],
+      ['m0', 'あさは、しょどう です。', '早上是書法時間。', { h: 'am' }],
+      ['m0', 'チェンくんの じ、おばけ。', '陳同學的字，妖怪。', { about: 'chen' }],
+      ['m0', 'マリアさんは、げんき。', '瑪莉亞小姐，很有精神。', { about: 'maria' }]
+    ],
     koharu: [
       ['m0', 'ねえねえ、その かみ！ いい かんじ！', '欸欸，那個頭髮！感覺不錯！'],
       ['m0', 'きょうの ばんごはん、また そと！', '今天的晚餐，又是外食！'],
@@ -257,6 +309,8 @@ const TOWN = {
       ['m2', 'クリスマス？ べつに。{店|みせ}の リース？ あれ、わたしが つくった けど。', '聖誕節？沒差啊。店裡的花圈？那是我做的啦，怎樣。', { fest: 'christmas', before: 'm25-4' }]
     ],
     lin: [
+      ['m0', 'では、はじめましょう！', '那麼，我們開始吧！', { at: 'kyoshitsu' }],
+      ['m0', '', '（用中文）在教室裡講中文沒關係。聽不懂就舉手，老師不會笑你。', { at: 'kyoshitsu' }],
       ['m0', 'いらっしゃいませ。ゆっくり どうぞ。', '歡迎光臨。請慢慢看。'],
       ['m0', 'だいじょうぶ、だいじょうぶ。ゆっくりで いいですよ。', '沒事、沒事。慢慢來就好喔。'],
       ['m0', '', '（用中文）想說中文的時候，就來店裡找我聊聊吧。'],
@@ -786,6 +840,9 @@ const TOWN = {
   },
   // words over their heads now and then (TOWNLIFE; not read out, no Chinese shown): as CHAT
   MUTTER: {
+    chen: [['m0', 'あいうえお、かきくけこ…', '啊伊嗚欸喔，咖key哭kay扣……'], ['m0', 'チェン！ チェン！', '陳！陳！']],
+    maria: [['m0', 'ラララ〜♪', '啦啦啦～♪'], ['m0', 'ルーカス、げんきかな。', '盧卡斯不知道好不好。']],
+    hori: [['m0', 'とめ、はね…', '頓筆、勾筆……'], ['m0', 'すう…', '（呼……）']],
     koharu: [
       ['m0', 'チョキ、チョキ。', '喀擦、喀擦。'],
       ['m0', 'ふんふん、ふーん。', '哼哼、哼～。'],
@@ -1016,12 +1073,106 @@ const TOWN = {
       ['lin', 'やっぱり！ わたしも{台湾人|たいわんじん|台灣人}です。', '果然！我也是台灣人。'], ['lin', '', '（用中文）我叫林美玲，十五年前嫁來這裡。叫我美玲就好！'],
       ['lin', '{主人|しゅじん|我先生}は{日本人|にほんじん|日本人}です。', '我先生是日本人。'],
       { ask: '告訴她：（我）外婆也是日本人。', opts: [['おばあちゃんも {日本人|にほんじん|日本人}です。', 1, '外婆也是日本人。'], ['おばあちゃんは {日本人|にほんじん|日本人}ですか。', 0, '這是在問「外婆是日本人嗎？」。'], ['おばあちゃんも {日本人|にほんじん|日本人}ではありません。', 0, '「ではありません」是「不是」。']], pt: 'm0' },
-      ['lin', 'そうですか。{日本語|にほんご|日語}、いっしょに がんばりましょう！', '這樣啊。日文，我們一起加油吧！'], ['lin', '', '（用中文）有不懂的就來店裡問我，用中文問也可以喔。']] },
+      ['lin', 'そうですか。{日本語|にほんご|日語}、いっしょに がんばりましょう！', '這樣啊。日文，我們一起加油吧！'], ['lin', '', '（用中文）有不懂的就來店裡問我，用中文問也可以喔。']],
+      met: { if: 'k4', from: 5, head: [['lin', 'いらっしゃいませ。あ！', '歡迎光臨。啊！'], ['lin', '', '（用中文）是你呀，教室的同學！這間雜貨店是我開的，白天我都在這裡。']] } },   // known to her from 日本語教室 (k4 done first)
     { id: 'm0-5', u: 'm0', who: 'mugi', at: 'beach', after: 'm0-1', title: 'ムギとメロンパン', lines: [['mugi', 'ワン！ くんくん。いい におい だ。', '汪！嗅嗅。好香喔。'], ['mugi', 'ワン！ それ、なんだ？', '汪！那是什麼？'],
       { ask: '麵包在你手上。回答ムギ：這是麵包。', opts: [['これは パンです。', 1, '這是麵包。'], ['それは パンです。', 0, '麵包在你手上、離你近：要用「これ」。'], ['あれは パンです。', 0, '「あれ」是離兩個人都遠的東西。']], pt: 'm0' },
       ['mugi', 'ワン！ パン！ ちょっと、ほしい。', '汪！麵包！有一點想要。'],
       { ask: '把麵包分給ムギ的時候說什麼？', opts: [['どうぞ。', 1, '請用。'], ['ください。', 0, '「ください」是「請給我」，跟別人要東西時說的。'], ['ただいま。', 0, '「ただいま」是回到家時說的「我回來了」。']], pt: 'm0' },
       ['mugi', 'ワン！ いただきます！', '汪！我開動了！'], ['mugi', 'ワン！ おいしい！ ごちそうさまでした！', '汪！好好吃！謝謝招待！']] },
+    // ---- 日本語教室 (2026-11-14, 新手第一週): open by the kana seen (kana: n — TOWNEV.opened), not by the course; one after another ----
+    { id: 'k1', u: 'm0', kana: 0, who: 'chen', at: 'kyoshitsu', title: 'チンじゃ ないです', lines: [['chen', 'あっ！ いらっしゃい！', '啊！歡迎！'],
+      ['chen', '', '（用中文）你也是台灣人吧？看你一臉「這是哪裡」的表情就知道了，我剛來的時候也是這樣！'],
+      ['chen', '', '（用中文）這裡是公民館的日本語教室，免費的！林老師每天晚上七點上課，其他時間我都在這裡自習。'],
+      ['chen', 'わたしは {陳|チェン}です。', '我是陳。'],
+      ['chen', '', '（用中文）重點來了：日本人看到「陳」都念「チン」——就是微波爐熱好「叮」的那一聲。', { snd: 'chime' }],
+      ['chen', 'チンじゃ ないです！ チェンです！', '不是チン！是チェン！'],
+      { ask: '跟陳打招呼。「はじめまして」是「初次見面」', opts: [['はじめまして、チェンさん。', 1, '初次見面，陳先生。'], ['はじめまして、チンさん。', 0, '他剛剛才說不要叫他チン……'], ['おやすみなさい、チェンさん。', 0, '「おやすみなさい」是睡前說的晚安。']], pt: 'm0' },
+      ['chen', 'よろしく！', '請多指教！'],
+      ['chen', '', '（用中文）看黑板！你學會一個假名，我就幫你寫上去。全部寫滿那天我們來慶祝！'],
+      ['chen', '', '（用中文）那邊榻榻米上是かるた，學幾個假名就來跟我比。先說好，我是台南かるた王。'],
+      ['hero', 'がんばります！', '我會加油的！']] },
+    { id: 'k2', u: 'm0', kana: 5, who: 'chen', at: 'kyoshitsu', after: 'k1', title: 'オラー！', lines: [['maria', 'オラー！', 'Olá！（葡萄牙文的「你好」）'],
+      ['chen', '', '（用中文）來了，教室最吵的人。'],
+      ['maria', 'マリアです！ ブラジルから きました！', '我是瑪莉亞！從巴西來的！'],
+      { ask: '回答瑪莉亞的「はじめまして！」', opts: [['はじめまして。よろしく おねがいします。', 1, '初次見面，請多指教。'], ['いただきます。', 0, '「いただきます」是開動前說的。'], ['さようなら。', 0, '「さようなら」是再見——才剛見面耶。']], pt: 'm0' },
+      ['maria', 'ハグ！', '抱抱！（瑪莉亞給了你一個大擁抱，順便也抱了陳）'],
+      ['chen', 'いたい！ マリアさん、つよい！', '好痛！瑪莉亞小姐，力氣好大！', { cry: 'ouch' }],
+      ['maria', 'あいうえお、しってる？', '你知道あいうえお嗎？'],
+      ['maria', 'あ！ い！ う！ え！ お！', '啊！伊！嗚！欸！喔！（瑪莉亞邊唸邊扭腰）'],
+      { ask: '瑪莉亞比出「あ」的嘴形：哪一個是「あ」？', opts: [['あ', 1, '對！あ念 a。'], ['お', 0, '這是「お」（o）。あ和お長得很像，看右邊的筆畫。'], ['め', 0, '這是「め」（me）。']], pt: 'm0' },
+      ['maria', 'すごい！ ブラボー！', '好厲害！太棒了！', { snd: 'clap' }],
+      ['chen', '', '（用中文）講桌上那台收音機，按下去大家會一起唱五十音。瑪莉亞每次都把它唱成森巴。']] },
+    { id: 'k3', u: 'm0', kana: 10, who: 'chen', at: 'kyoshitsu', after: 'k2', title: 'とめ・はね・はらい', lines: [['hori', 'ふむ。', '嗯。'],
+      ['chen', '', '（用中文）這位是堀老師，以前教書法，現在來當志工。超嚴格的。'],
+      ['hori', 'これは なんですか。', '這是什麼？（堀老師拿起陳的筆記本）'],
+      ['chen', 'あ です！', '是「あ」！'],
+      ['hori', 'おばけ ですか。', '是妖怪嗎？'],
+      ['chen', 'ちがいます！', '不是啦！'],
+      ['hori', 'とめ、はね、はらい！ じは、こころです。', '頓筆、勾筆、撇筆！字就是心。'],
+      { ask: '堀老師指著黑板上的「か」：「これは？」', opts: [['か です。', 1, '是「か」，念 ka。'], ['が です。', 0, '「が」多了兩點（濁音），念 ga。'], ['や です。', 0, '「や」念 ya，形狀不一樣喔。']], pt: 'm0' },
+      ['hori', 'よろしい。では、つぎは…', '很好。那麼，下一個是……'],
+      ['chen', '', '（用中文，小聲）……他睡著了。每次講到一半都這樣。'],
+      ['hero', 'しっ。', '噓。']] },
+    { id: 'k4', u: 'm0', kana: 15, who: 'chen', at: 'kyoshitsu', after: 'k3', title: 'かるた、しょうぶ！', lines: [['chen', 'かるた、しょうぶだ！', 'かるた，決勝負吧！'],
+      ['lin', '', '（用中文）啊，新同學！我是林美玲，教室的老師，也是台灣人。在這裡講中文沒關係，慢慢來。'],
+      ['lin', '', '（用中文）你們要玩かるた？好，老師來念。我念一個假名，你們搶那張牌。'],
+      ['lin', 'では…「す」！', '那麼……「す」！'],
+      ['chen', 'はい！', '有！（陳用力拍下一張牌）', { snd: 'place' }],
+      ['lin', 'チェンさん、それは「む」です。', '陳同學，那是「む」。'],
+      ['chen', 'えっ！', '欸？！'],
+      { ask: '換你了：「す」是哪一張？', opts: [['す', 1, '對！す念 su。'], ['む', 0, '這是「む」（mu），陳剛剛拍的就是這張。'], ['お', 0, '這是「お」（o）。']], pt: 'm0' },
+      ['lin', 'せいかい！', '答對了！'],
+      ['chen', '', '（用中文）……剛剛是熱身。熱身而已。下次我不會手下留情。'],
+      ['lin', '', '（用中文）かるた隨時都可以玩，牌上只會出你學過的假名。贏了有言靈喔。']],
+      met: { if: 'm0-4', from: 2, head: [['chen', 'かるた、しょうぶだ！', 'かるた，決勝負吧！'], ['lin', '', '（用中文）是你呀！原來你也來教室了。我每天晚上在這裡教日文。']] } },   // known to her from 雑貨りんりん (m0-4 done first)
+    { id: 'k5', u: 'm0', kana: 20, who: 'chen', at: 'kyoshitsu', after: 'k4', title: 'おかしい？', lines: [['chen', 'せんせい！ おかしい です！', '老師！很奇怪！（陳舉起一盒鳳梨酥）'],
+      ['lin', '…おかしい？ わたしが？', '……奇怪？我嗎？'],
+      ['chen', 'えっ、ちがいます！ これ、たいわんの おかし…', '欸，不是啦！這個，台灣的零食……'],
+      ['lin', '', '（用中文）噗，我就知道。「おかし」是零食，多一個「い」變成「おかしい」，是奇怪、好笑的意思。'],
+      ['maria', 'おかし！ おかしい！', '零食！好奇怪！（瑪莉亞笑到趴在桌上）', { cry: 'laugh' }],
+      { ask: '你想說「這是零食」：', opts: [['これは おかしです。', 1, '這是零食。'], ['これは おかしいです。', 0, '多了「い」，就變成「這很奇怪」了。'], ['これは おかしですか。', 0, '句尾加「か」就變成問句了。']], pt: 'm0' },
+      ['lin', 'パイナップルケーキ！ なつかしい！', '鳳梨酥！好懷念！'],
+      ['chen', '', '（用中文）……下次我要先查字典再開口。'],
+      ['hori', 'うまい。', '好吃。（堀老師不知道什麼時候醒了，已經在吃）']] },
+    { id: 'k6', u: 'm0', kana: 25, who: 'chen', at: 'kyoshitsu', after: 'k5', title: 'ポスターの ねこ', lines: [['maria', 'あっ！ ねこ！', '啊！貓！'],
+      ['chen', '', '（用中文）是公民館布告欄上「さがしています」的那隻貓！牠自己跑進來了！'],
+      ['hori', 'ねこが、ねの うえで ねて います。', '貓在「ね」的上面睡覺。（貓趴在かるた的「ね」牌上）'],
+      ['chen', 'さすが、ほりせんせい…', '不愧是堀老師……'],
+      { ask: '把貓抱起來，說牠是什麼：', opts: [['ねこです。', 1, '是貓。'], ['ぬこです。', 0, '「ぬ」和「ね」長得像，但念 nu。（「ぬこ」是網路上對貓的戲稱）'], ['れこです。', 0, '「れ」念 re。ね的右下角有一個小圈圈，れ沒有。']], pt: 'm0' },
+      ['lin', '', '（用中文）我打電話問了，主人說牠每天都偷跑來公民館。那就讓牠當教室的吉祥物吧！'],
+      ['maria', 'なまえは？', '名字呢？'],
+      ['chen', 'チン！', '叮！'],
+      ['hero', 'だめです。', '不行。']] },
+    { id: 'k7', u: 'm0', kana: 30, who: 'chen', at: 'kyoshitsu', after: 'k6', title: 'こんにちわ？', lines: [['chen', 'みて！ こくばん！', '你看！黑板！（陳在黑板上大大寫著「こんにちわ」）'],
+      ['lin', 'チェンさん、ちょっと…', '陳同學，等一下……'],
+      ['lin', '', '（用中文）打招呼的「こんにちは」最後那個字要寫「は」，雖然念 wa。'],
+      ['chen', 'でも、「わ」って よみます！', '可是它念「わ」啊！'],
+      ['lin', '', '（用中文）「こんにちは」原本是「今天呢……」的意思，最後的「は」是助詞。助詞的「は」都念 wa，「こんばんは」也一樣。'],
+      { ask: '幫陳把黑板上的字改對：', opts: [['こんにちは', 1, '對，最後寫「は」，念 wa。'], ['こんにちわ', 0, '這就是陳寫錯的版本。'], ['こんにちば', 0, '「ば」念 ba，多了兩點。']], pt: 'm0' },
+      ['chen', '', '（用中文）日文好詐……寫 ha 念 wa……'],
+      ['hori', 'じは、こころです。', '字就是心。'],
+      ['chen', '', '（用中文）堀老師，這句跟現在沒關係吧！']] },
+    { id: 'k8', u: 'm0', kana: 38, who: 'chen', at: 'kyoshitsu', after: 'k7', title: 'あいうえおの うた', lines: [['maria', 'うたの じかん！', '唱歌時間！'],
+      ['maria', 'あ、い、う、え、お！ サンバ！', '啊、伊、嗚、欸、喔！森巴！', { snd: 'cheers' }],
+      ['hori', 'か、き、く、け、こ。', '咖、key、哭、kay、扣。（堀老師用演歌的唱腔，每個音都轉三圈）'],
+      ['chen', 'さしすせそ、イェー！', '撒西蘇誰搜，耶！（陳用饒舌的節奏唱）'],
+      ['lin', 'じゃあ、つぎは あなた！', '那麼，下一個換你！'],
+      { ask: '接著唱：「や、ゆ、……」', opts: [['よ！', 1, 'や、ゆ、よ！や行只有三個。'], ['ゆ！', 0, '「ゆ」剛剛唱過了。'], ['や！', 0, '「や」是第一個，已經唱過了。']], pt: 'm0' },
+      ['maria', 'ブラボー！', '太棒了！', { snd: 'clap' }],
+      ['hori', 'ひゃくてん。', '一百分。'],
+      ['chen', '', '（用中文）……堀老師，你是給你自己打一百分吧？'],
+      ['hori', 'うむ。', '嗯。']] },
+    { id: 'k9', u: 'm0', kana: 46, who: 'chen', at: 'kyoshitsu', after: 'k8', title: 'ひらがな、そつぎょう！', lines: [['lin', 'みなさん！ ひらがな、ぜんぶ おわりました！', '各位！平假名全部學完了！'],
+      ['maria', 'やった！', '太好了！', { snd: 'cheers' }],
+      ['chen', 'ぶたまん です！ ちゅうかがいの！', '豬肉包！中華街的！（陳打開一大袋包子）'],
+      ['chen', '', '（用中文）我在中華街的包子店打工，老闆說畢業要慶祝，送了一大袋！'],
+      ['lin', '', '（用中文）恭喜你！從今天開始，練習會出單字和最基本的句子了。'],
+      { ask: '林老師問：「ひらがな、よめますか？」（平假名會讀了嗎？）', opts: [['はい、よめます！', 1, '是的，會讀了！'], ['いいえ、よめます！', 0, '「いいえ」是否定，後面卻說「會讀」，前後矛盾。'], ['はい、たべます！', 0, '「たべます」是「吃」……你是不是一直盯著包子。']], pt: 'm0' },
+      ['maria', 'つぎは カタカナ！', '下一個是片假名！'],
+      ['maria', 'マ、リ、ア！', '瑪、莉、亞！（瑪莉亞在黑板上用片假名寫自己的名字）'],
+      ['hori', 'カタカナも、とめ・はね・はらい。', '片假名也一樣，頓筆、勾筆、撇筆。'],
+      ['chen', '', '（用中文）下次帶你去中華街，我請你吃包子！']] },
     // ---- m1 助詞：は・が・を・に・で・へ・と ----
     { id: 'm1-1', u: 'm1', who: 'tome', at: 'shokudo', title: 'まんぷく食堂', lines: [['tome', 'いらっしゃい！ すきな{席|せき|座位}に すわりな。', '歡迎！隨便找位子坐。'], ['tome', 'おや、{見|み|看}ない{顔|かお|臉}だね。', '喲，生面孔呢。'],
       ['tome', 'なにを {食|た}べる？', '要吃什麼？'],

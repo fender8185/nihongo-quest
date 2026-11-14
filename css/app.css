@@ -2056,3 +2056,53 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 /* おもかる石 (奥社, 2026-11-14): the ball on the lantern lifted off and set down again */
 .sky .land [data-fx="omokaru"].lift .stone { transform-box: fill-box; transform-origin: 50% 100%; animation: okuLift 1.6s ease-in-out; } @keyframes okuLift { 0%, 100% { transform: none; } 30%, 62% { transform: translateY(-9px) rotate(-4deg); } 46% { transform: translateY(-11px) rotate(3deg); } }
 @media (prefers-reduced-motion: reduce) { .sky .land [data-fx="omokaru"].lift .stone { animation: none; } }
+/* ---- 公民館 and its 日本語教室 (2026-11-14, 新手第一週) ---- */
+.sky .land [data-fx="kcat"].purr .chead { transform-box: fill-box; transform-origin: 50% 90%; animation: kcatNuzzle .5s ease-in-out 3 alternate; } @keyframes kcatNuzzle { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
+.sky .land [data-fx="nobori"].flap .fx-sway { animation-duration: .35s !important; }
+.sky .land [data-fx="kbikes"].ring { animation: none !important; } .sky .land [data-fx="kbikes"].ring g g { animation: kbikeBell .12s ease-in-out 8 alternate; } @keyframes kbikeBell { to { transform: translateY(-1.6px); } }
+.sky .land [data-fx="cranes"].flutter { animation-duration: .4s !important; }
+.sky .land [data-fx="radio"] .rnotes { opacity: 0; transition: opacity .3s; } .sky .land [data-fx="radio"].playing .rnotes { opacity: 1; }
+.sky .land [data-fx="radio"].playing .rnote { animation: radioNote 1.2s ease-out infinite; } @keyframes radioNote { from { transform: translate(0, 4px); opacity: 0; } 30% { opacity: 1; } to { transform: translate(6px, -14px); opacity: 0; } }
+.sky .land [data-fx="radio"].playing .rbody { animation: radioBob .4s ease-in-out infinite alternate; } @keyframes radioBob { to { transform: translateY(-1px); } }
+@media (prefers-reduced-motion: reduce) { .sky .land [data-fx="radio"].playing :is(.rnote, .rbody), .sky .land [data-fx="kcat"].purr .chead, .sky .land [data-fx="kbikes"].ring g g { animation: none; } }
+/* a card over the classroom: the blackboard, かるた, the song, a picture book */
+.cls { position: fixed; inset: 0; z-index: 77; display: grid; place-items: center; padding: 16px; background: rgba(30, 24, 16, .5); animation: talkIn .25s ease-out; }
+.cls-card { position: relative; width: min(560px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 18px 16px 16px; border-radius: 18px; background: var(--bg-elev); color: var(--fg); box-shadow: 0 12px 40px rgba(0, 0, 0, .35); }
+.cls-x { position: absolute; top: 8px; right: 8px; width: 36px; height: 36px; border: 0; border-radius: 50%; font-size: 16px; color: var(--fg-2); background: var(--bg-sunken); cursor: pointer; z-index: 2; }
+.kr-face { display: block; width: 46px; height: 46px; border-radius: 50%; overflow: hidden; background: var(--bg-sunken); } .kr-face svg { width: 100%; height: 100%; }
+.kr-say { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, 4px); padding: 3px 9px; border-radius: 10px; font-style: normal; font-size: 13px; white-space: nowrap; color: #2b2b33; background: #fffdf6; box-shadow: 0 2px 6px rgba(0, 0, 0, .2); opacity: 0; pointer-events: none; }
+.kr-say.on { animation: krSay 1.8s ease-out forwards; } @keyframes krSay { 0% { opacity: 0; transform: translate(-50%, 8px); } 12%, 75% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -4px); } }
+/* the blackboard: green, chalk letters in columns from the right (あ行 first), a ？ for each not learned yet */
+.cls-board .cls-card { background: #2e5343; color: #f4f1e6; border: 8px solid #7a5a3a; }
+.cls-board .cls-x { background: rgba(255, 255, 255, .12); color: #f4f1e6; }
+.cb-head { display: flex; align-items: baseline; gap: 10px; padding-right: 40px; } .cb-head b { font-size: 20px; letter-spacing: .1em; } .cb-head span { font-size: 13px; opacity: .75; }
+.cb-tabs { display: flex; gap: 6px; margin: 10px 0; } .cb-tab { padding: 4px 12px; border: 1px solid rgba(244, 241, 230, .4); border-radius: 99px; font: inherit; font-size: 13px; color: inherit; background: none; cursor: pointer; } .cb-tab.on { background: rgba(244, 241, 230, .9); color: #2e5343; }
+.cb-board { display: flex; flex-direction: row-reverse; justify-content: space-between; gap: 2px; }
+.cb-col { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.cb-k { display: flex; flex-direction: column; align-items: center; justify-content: center; aspect-ratio: 1 / 1.15; padding: 0; border: 0; border-radius: 6px; font: inherit; font-size: clamp(16px, 4.6vw, 24px); line-height: 1.1; color: #f4f1e6; background: none; cursor: pointer; }
+.cb-k small { font-size: 9px; opacity: .6; } .cb-k.off { opacity: .22; font-size: 14px; cursor: default; } .cb-k.empty { visibility: hidden; }
+.cb-k:not(.off):hover { background: rgba(255, 255, 255, .1); } .cb-k.pop { animation: iconPop .35s cubic-bezier(.3, 1.6, .6, 1); }
+.cb-note { margin: 10px 0 0; font-size: 13px; opacity: .75; text-align: center; }
+/* かるた on a tatami: the call (📻 and the kana, its romaji as a hint), eight cards, the three players */
+.cls-karuta .cls-card { background: #e9e3c8; color: #2b2b33; }
+.kr-top { display: flex; justify-content: center; padding-right: 30px; } .kr-reader { display: flex; align-items: center; gap: 10px; padding: 6px 16px; border-radius: 99px; background: #fffdf6; box-shadow: 0 2px 6px rgba(0, 0, 0, .12); }
+.kr-radio { font-size: 22px; } .kr-call { min-width: 60px; font-size: 20px; font-weight: 700; text-align: center; } .kr-call.hint { color: #b8442c; }
+.kr-mat { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0; padding: 14px; border-radius: 10px; background: #c9c98e; box-shadow: inset 0 0 0 3px #2b2b33; }
+.kr-card { aspect-ratio: 3 / 4; border: 2px solid #d0453c; border-radius: 6px; font: inherit; font-size: clamp(26px, 8vw, 40px); color: #2b2b33; background: #fbf8f0; box-shadow: 0 2px 0 rgba(0, 0, 0, .18); cursor: pointer; transition: transform .25s, opacity .25s; }
+.kr-card:active { transform: scale(.94); } .kr-card.shake { animation: talkShake .35s; }
+.kr-card.got { opacity: .28; transform: scale(.88) rotate(-6deg); cursor: default; } .kr-card.by-hero { border-color: #3f9a8c; } .kr-card.by-chen { border-color: #d0574b; } .kr-card.by-maria { border-color: #e6c23a; }
+.kr-people { display: flex; justify-content: space-around; gap: 8px; } .kr-who { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 13px; transition: opacity .3s; }
+.kr-who i { font-style: normal; font-size: 18px; font-weight: 700; } .kr-who.out { opacity: .4; }
+.kr-note { margin: 10px 0 0; font-size: 13px; text-align: center; opacity: .7; }
+.kr-end { margin-top: 12px; text-align: center; } .kr-result { margin: 0; font-size: 17px; font-weight: 700; } .kr-line { display: flex; flex-direction: column; margin: 6px 0 10px; } .kr-line span { font-size: 13px; opacity: .7; }
+.kr-btns, .sg-btns, .bk-btns { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
+/* the song: the row being sung, each kana lit as it comes; the four singers bob */
+.sg-head { display: flex; align-items: center; gap: 8px; padding-right: 40px; } .sg-head b { font-size: 17px; } .sg-radio { font-size: 22px; }
+.sg-row { display: flex; justify-content: center; gap: 8px; margin: 18px 0; }
+.sg-k { display: flex; flex-direction: column; align-items: center; width: 54px; padding: 6px 0; border-radius: 10px; font-size: 32px; background: var(--bg-sunken); opacity: .45; transition: opacity .2s, transform .2s; }
+.sg-k small { font-size: 11px; color: var(--fg-3); } .sg-k.on { opacity: 1; transform: translateY(-4px); background: var(--bg-elev-2); }
+.sg-people { display: flex; justify-content: space-around; margin-top: 26px; } .sg-who { position: relative; transition: transform .2s; } .sg-who.bob { transform: translateY(-5px); }
+@media (prefers-reduced-motion: reduce) { .sg-who.bob, .sg-k.on { transform: none; } }
+/* a picture book's page; a word from someone */
+.bk-page { text-align: center; padding-top: 8px; } .bk-page .pic { width: 150px; margin: 0 auto; } .bk-word { margin-top: 6px; font-size: 36px; font-weight: 600; } .bk-zh { font-size: 15px; color: var(--fg-2); } .bk-note { margin: 8px 0 0; font-size: 13px; color: var(--fg-3); }
+.cn-who { display: flex; align-items: center; gap: 12px; padding-right: 36px; } .cn-who p { display: flex; flex-direction: column; margin: 0; } .cn-who span { font-size: 13px; color: var(--fg-2); }

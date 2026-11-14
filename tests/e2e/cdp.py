@@ -113,10 +113,11 @@ class Browser:
                             await asyncio.sleep(0.1)
                     elif kind == "eval":
                         out.append(await ev(arg))
-                    elif kind == "shot":   # ('shot', 'path.png'): full-page PNG at a 1000px-wide viewport
-                        await call("Emulation.setDeviceMetricsOverride", {"width": 1000, "height": 1400, "deviceScaleFactor": 1, "mobile": False})
+                    elif kind == "shot":   # ('shot', 'path.png'): full-page PNG at a 1000px-wide viewport; ('shot', ('path.png', w, h)): at that viewport
+                        path, w, h = (arg, 1000, 1400) if isinstance(arg, str) else arg
+                        await call("Emulation.setDeviceMetricsOverride", {"width": w, "height": h, "deviceScaleFactor": 1, "mobile": False})
                         r = await call("Page.captureScreenshot", {"format": "png", "captureBeyondViewport": True})
-                        import base64; open(arg, "wb").write(base64.b64decode(r["result"]["data"]))
+                        import base64; open(path, "wb").write(base64.b64decode(r["result"]["data"]))
                     elif kind == "metrics":   # ('metrics', (width, height[, mobile=True])): emulate that viewport from here on (it sticks for the Browser)
                         mobile = arg[2] if len(arg) > 2 else True
                         await call("Emulation.setDeviceMetricsOverride", {"width": arg[0], "height": arg[1], "deviceScaleFactor": 2 if mobile else 1, "mobile": mobile})

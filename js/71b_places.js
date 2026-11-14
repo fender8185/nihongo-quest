@@ -5,7 +5,7 @@
 // unit), the walls RH high, the back corner at (ox, oy) in the land's 1200 × 900 frame. The hero and the people stand in it at X,
 // Y like everywhere out (from the world's middle, up from the bottom), all one size (k) anywhere in it; they walk the floor round
 // the furniture (WALK_BLOCK in floor units), and who is drawn over whom goes by the furniture they stand before or behind (isoZ)
-const INDOOR = ['shokudo', 'izakaya'];
+const INDOOR = ['shokudo', 'izakaya', 'kyoshitsu'];   // 日本語教室 (2026-11-14) too
 const ISO = { U: 31, RW: 22, RD: 16, RH: 8, ox: 507, oy: -259, k: 0.64, door: [0.25, 13.4], in: [2.6, 13] };
 const isoPt = (u, v, h = 0) => [ISO.ox + (u - v) * ISO.U, ISO.oy + (u + v) * ISO.U / 2 - h * ISO.U];   // in the land's svg
 const isoXY = (u, v, h = 0) => { const [x, y] = isoPt(u, v, h); return [x - 600, 370 - y]; };   // in the hero's units
@@ -17,6 +17,11 @@ const isoBBox = (u0, u1, v0, v1, h0, h1) => { const ps = [u0, u1].flatMap((u) =>
 // another (past its +u or +v face, the two across each other on the screen) over it (2026-11-10: a long counter laid by its front
 // corner went over the stools before it)
 const SHOKUDO_TABLES = [[6.5, 9.5, 8, 9.8], [13, 16, 8, 9.8]];   // the shokudo's tables [u0, u1, v0, v1]; their chairs at u0 + 0.8 and u1 − 0.8, 0.75 short of v0
+// 日本語教室 (2026-11-14): its two long tables [u0, u1, v0, v1], the chairs on their far side (u, at v 5.85: whoever sits faces us),
+// the tatami corner [u0, u1, v0, v1]
+const KYO_TABLES = [[4.4, 10.4, 6.6, 8.0], [11.8, 17.8, 6.6, 8.0]];
+const KYO_CHAIRS = [5.6, 7.4, 9.2, 13, 14.8, 16.6];
+const KYO_TATAMI = [15.4, 22, 10.2, 16];
 let isoProps = [];
 const isoProp = (box, art, h = 2) => { isoProps.push({ box, h, z: 0 }); return `@@ISO${isoProps.length - 1}@@${art}@@/ISO@@`; };
 function isoLay(html) {
@@ -48,7 +53,7 @@ function isoZ(u, v) {
 INDOOR.forEach((pl) => Object.values(TOWN.SPOTS[pl] || {}).forEach((sp) => { if (sp.u !== undefined) { [sp.X, sp.Y] = isoXY(sp.u, sp.v, sp.h || 0); sp.foot = isoXY(sp.u, sp.v); } }));
 // how far up each place the hero walks (Y px up): the ground in front of its buildings, never up onto them (2026-11-10, the user);
 // the yard up to its house, the main road to its far pavement, a room to its floor
-const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128, oku: 124 };
+const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128, oku: 124, kominkan: 128, kyoshitsu: 128 };
 const walkTop = (place, X) => (place === 'yard' && X !== undefined ? Math.round(214 - Math.max(0, Math.abs(X) - 300) * 0.22) : WALK_TOP[place] || 214);   // the yard: a hilltop, lower towards its sides — not out over the edge
 // what stands in the way in each place (2026-11-10, the user: he walked about as if every place were flat ground): the ground the
 // things there stand on, [X0, X1, Y0, Y1] in his units — benches, crates, tables and stools, the sandbox, the beach's grassy bank
@@ -60,10 +65,13 @@ const WALK_BLOCK = {
   harbor: [[-222, -134, 78, 106], [488, 532, 76, 94], [188, 252, 74, 98]],
   station: [[-382, -288, 62, 80], [158, 252, 62, 80], [26, 120, 90, 106], [-492, -368, 106, 140]],
   sento: [[-352, -238, 60, 78]],
+  kominkan: [[296, 404, 100, 140]],   // the bike shelter
   // the two rooms (seen at 45°): [u0, u1, v0, v1] on the floor — the kitchen and the counter, the stools, the tables with their
   // chairs, the crates and the barrels, the tatami
   shokudo: [[0, 15, 0, 2.8], [3.4, 12.1, 2.8, 3.9], [5.9, 10.1, 6.6, 10], [12.4, 16.6, 6.6, 10], [0.4, 2.2, 9.4, 11.2]],
-  izakaya: [[0, 15.6, 0, 3.0], [3.4, 14.6, 3.0, 4.2], [14.4, 22, 7.2, 16], [0.3, 1.9, 8.6, 11.5], [13.7, 14.6, 10.8, 12.0]]
+  izakaya: [[0, 15.6, 0, 3.0], [3.4, 14.6, 3.0, 4.2], [14.4, 22, 7.2, 16], [0.3, 1.9, 8.6, 11.5], [13.7, 14.6, 10.8, 12.0]],
+  // 日本語教室: the teacher's desk, the two tables with their chairs, the tatami, the book shelf, the slipper rack, the plant
+  kyoshitsu: [[7.4, 11, 1.0, 2.8], [4.1, 10.7, 5.2, 8.3], [11.5, 18.1, 5.2, 8.3], [15.2, 22, 10, 16], [0, 1.1, 1.4, 6.0], [0, 0.9, 10.1, 11.9], [0.4, 1.8, 0.2, 1.6]]
 };
 function walkBlocks(place) {
   const b = (WALK_BLOCK[place] || []).slice();
@@ -266,6 +274,27 @@ const PLACE_USE = {
       pick: () => (Math.random() < 0.5 ? ['かるい！', 'おもかる石：比想像中輕——願望會實現！'] : ['おもい…！', 'おもかる石：比想像中重——再加把勁吧。']) },
     { id: 'chaya', name: '茶屋', box: [900, 124, 1044, 236], kind: 'do', go: [370, 122], back: 1, pose: 'look', buy: 'chaya', when: () => TOWNEV.isOpen('chaya', (TOWNEV.clock && TOWNEV.clock.h) ?? sceneHour()) },
     { id: 'view', name: '眺望', box: [1124, 120, 1200, 236], kind: 'do', go: [560, 118], back: 1, pose: 'look', say: 'まちが ぜんぶ みえる！' }],
+  // 公民館 (2026-11-14): the notice board, the lost cat under it (the one on the poster), the flower beds, the nobori, the bikes,
+  // the hall's clock (the time said in Japanese)
+  kominkan: [
+    { id: 'keiji', name: '布告欄', box: [128, 104, 296, 236], kind: 'do', go: [-390, 122], back: 1, pose: 'look', say: 'なにかな？',
+      toast: '布告欄：日本語教室（每天 19:00〜21:00，誰都可以來）・盆踊り練習・ラジオ体操・「さがしています：ねこ」' },
+    { id: 'neko', name: '貓', box: [254, 196, 290, 236], kind: 'do', go: [-318, 118], pose: 'crouch', say: 'ポスターの ねこだ！', fx: 'kcat', fxc: 'purr', toast: '布告欄上在找的貓……就坐在布告欄底下嘛！' },
+    { id: 'hana', name: '花圃', box: [340, 196, 508, 236], kind: 'do', go: [-176, 120], back: 1, pose: 'crouch', say: 'いい におい…', fx: 'flowers', fxc: 'shake' },
+    { id: 'nobori', name: '旗子', box: [504, 80, 540, 236], kind: 'do', go: [-78, 122], back: 1, pose: 'look', say: 'にほんご きょうしつ…！', fx: 'nobori', fxc: 'flap' },
+    { id: 'tokei', name: '時鐘', box: [584, 14, 636, 66], kind: 'do', go: [10, 122], back: 1, pose: 'look', pick: () => CLASS.clockSay() },
+    { id: 'jitensha', name: '腳踏車', box: [896, 160, 1010, 236], kind: 'do', go: [350, 120], back: 1, pose: 'reach', say: 'チリンチリン！', fx: 'kbikes', fxc: 'ring' }],
+  // 日本語教室: the blackboard (the 五十音 learned), かるた on the tatami, the radio cassette player (sing a row), the picture
+  // books, the clock, the paper cranes, the windows; the chairs to sit on
+  kyoshitsu: [
+    { id: 'board', name: '黑板', box: isoBBox(3.5, 15.5, 0, 0.2, 2.4, 6.1), kind: 'do', go: isoXY(5.2, 3.7), face: 'back turn', pose: 'look', say: 'こくばん！', open: (y) => CLASS.board(y) },
+    { id: 'karuta', name: 'かるた', box: isoBBox(15.4, 22, 10.2, 16, 0, 0.7), kind: 'do', go: isoXY(14.6, 12.8), face: 'turn', pose: 'look', say: 'かるた！', open: (y) => CLASS.karuta(y) },
+    { id: 'radio', name: '收音機', box: isoBBox(9.3, 10.6, 1.6, 2.2, 2.2, 2.9), kind: 'do', go: isoXY(10, 3.7), face: 'back turn', pose: 'reach', open: (y) => CLASS.song(y) },
+    { id: 'books', name: '繪本', box: isoBBox(0, 0.9, 1.6, 5.8, 0, 1.7), kind: 'do', go: isoXY(1.9, 3.7), face: 'back turn flip', pose: 'look', say: 'えほん！', open: (y) => CLASS.book(y) },
+    { id: 'clock', name: '時鐘', box: isoBBox(16.6, 17.8, 0, 0.1, 6.0, 7.2), kind: 'do', go: isoXY(17.2, 3.2), face: 'back turn', pose: 'look', pick: () => CLASS.clockSay() },
+    { id: 'cranes', name: '千羽鶴', box: isoBBox(19.4, 21.2, 0, 0.3, 4.4, 7.6), kind: 'do', go: isoXY(20.2, 3), face: 'back turn', pose: 'look', say: 'きれい…', fx: 'cranes', fxc: 'flutter' },
+    { id: 'window', name: '窗戶', box: isoBBox(0, 0.1, 1.4, 9.8, 2.7, 6.1), kind: 'do', go: isoXY(1.9, 8.2), face: 'back turn flip', pose: 'look', pick: () => (TOWNEV.now() >= 6 && TOWNEV.now() < 18 ? ['いい てんき！', ''] : ['ほしが きれい…', '']) },
+    ...KYO_TABLES.map(([u0, u1, v0, v1], i) => ({ id: 'table' + i, name: '桌子', box: isoBBox(u0, u1, v0, v1, 1.3, 1.5), kind: 'seat', say: 'よし、べんきょう！', seats: KYO_CHAIRS.filter((u) => u > u0 && u < u1).map((u) => [u, 5.85, 0, 'bench turn flip']) }))],
   castle: [
     { id: 'sakuraL', name: '櫻花', box: [0, 60, 130, 236], kind: 'do', go: [-520, 112], pose: 'reach', fx: 'sakuraL', fxc: 'shake', burst: ['#f7c6d2', '#f2b8c6', '#fbdde4'] },
     { id: 'sakuraR', name: '櫻花', box: [1080, 60, 1210, 236], kind: 'do', go: [520, 112], pose: 'reach', fx: 'sakuraR', fxc: 'shake', burst: ['#f7c6d2', '#f2b8c6', '#fbdde4'] },
@@ -418,7 +447,7 @@ function yDo(yard, t) {
   if (part) { part.classList.remove(t.fxc); void part.getBoundingClientRect(); part.classList.add(t.fxc); clearTimeout(part._fxT); part._fxT = setTimeout(() => part.classList.remove(t.fxc), t.ms || 1800); }
   let say = t.say;
   if (t.fortune) { const [a, b] = KUJI[Math.floor(Math.random() * KUJI.length)]; say = a; toast(`おみくじ：${a}・${b}`, 3600); }
-  if (t.pick) { const [a, b] = t.pick(); say = a; toast(b, 3600); }   // the thing's say and what it means, drawn each time (おもかる石)
+  if (t.pick) { const [a, b] = t.pick(); say = a; if (b) toast(b, 3600); }   // the thing's say and what it means, drawn each time (おもかる石)
   if (say) yPop(yard, cx, y0 - 4, say);
   if (t.then) setTimeout(() => yPop(yard, cx, y0 - 4, t.then), 1200);
   if (t.keeper) setTimeout(() => { const v = (TOWN.YATAI || {})[t.keeper]; if (!yard.isConnected || !v || !v.scoop) return; yBubble(yard, cx, y0 - 2, esc(v.scoop[0]), 2600); speakAs(t.keeper, v.scoop[0]); }, 1300);   // the one who keeps it says a word
@@ -426,6 +455,7 @@ function yDo(yard, t) {
   if (t.mirror) setTimeout(() => { if (yard.isConnected && !yard.classList.contains('dressing')) DRESS.open(yard, 'mirror', t.name); }, 1300);
   if (t.burst) yBurst(yard, t.box, t.burst);
   if (t.wide) { yPop(yard, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), t.wide); if (PLACE_WIDE[yPlace]) yWide(yard, PLACE_WIDE[yPlace]); }
+  if (t.open) setTimeout(() => { if (yard.isConnected) t.open(yard); }, say ? 900 : 300);   // something of its own once he is there (日本語教室: the board, かるた, the radio, the books)
 }
 // a spot off the things (where he was kept, a thing put down where he stands): the nearest free side
 const yFree = (place, q) => { const g = yRoute(place, [q[0], -999], q).pop(); return g[1] < -900 ? q : g; };

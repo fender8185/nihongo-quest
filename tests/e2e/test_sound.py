@@ -109,7 +109,7 @@ def test_each_voice_can_be_heard_before_the_generator_makes_them_all(b):
       document.querySelector('[data-act="cast-preview"][data-who="kenta"]').click(); await new Promise((q) => setTimeout(q, 150));   // heard again: not made again
       fetchEngineBlob = realF; playUrl = realP;
       return JSON.stringify({ rows, voices: Object.keys(CAST_VOICE).length, asked, played, sample: castSample('kenta') }); })()"""))
-    assert r['rows'] == r['voices'] == 46, r   # 29 townsfolk + the cruise's 9 passengers (2026-11-12) + the 緣日's 7 stall keepers (2026-11-13: one a stall) + 稲荷山の茶屋's keeper (2026-11-14)
+    assert r['rows'] == r['voices'] == 49, r   # 29 townsfolk + the cruise's 9 passengers (2026-11-12) + the 緣日's 7 stall keepers (2026-11-13: one a stall) + 稲荷山の茶屋's keeper + 日本語教室's 3 (2026-11-14)
     assert len(r['asked']) == 1 and r['asked'][0][:2] == ['google_tts', 'k123'] and r['asked'][0][3:] == ['m', 'kenta', r['sample']] and r['sample'].startswith('おっ、いらっしゃい') and r['played'] == ['blob:', 'blob:'], r   # 健太's first line (2026-11-12: his own greeting)
 
 def test_mugi_speaks_in_a_pitched_up_boys_voice_opening_with_wan(b):

@@ -97,7 +97,7 @@ const SND = (() => {
   const GROUND = {
     yard: { way: 'gravel', off: 'grass' }, park: { way: 'concrete', off: 'gravel' }, beach: { way: 'wood', off: 'sand' }, harbor: { way: 'sand', off: 'concrete' },
     street: { off: 'concrete' }, town: { off: 'concrete' }, station: { off: 'concrete' }, sento: { off: 'concrete' },
-    shrine: { off: 'gravel' }, oku: { off: 'gravel' }, castle: { off: 'gravel' }, shokudo: { off: 'concrete' }, izakaya: { off: 'wood' }, room: { off: 'wood' }
+    shrine: { off: 'gravel' }, oku: { off: 'gravel' }, castle: { off: 'gravel' }, shokudo: { off: 'concrete' }, izakaya: { off: 'wood' }, room: { off: 'wood' }, kominkan: { off: 'concrete' }, kyoshitsu: { off: 'wood' }
   };
   const groundOf = (place, kind) => { const g = GROUND[place]; return g ? g[kind] || g.off : ''; };
   // ---- each place's background: [layer, how loud by day, by night] (sounds/amb-<layer>-1.m4a, looping); room: through the window,
@@ -116,6 +116,8 @@ const SND = (() => {
     oku: [['wind', 0.6, 0.45], ['birds', 0.5, 0], ['insects', 0, 0.26]],   // the top of the hill: more wind, the birds of the wood
     castle: [['wind', 0.5, 0.4], ['birds', 0.5, 0], ['insects', 0, 0.2]],
     shokudo: [['restaurant', 0.6, 0.6]],
+    kominkan: [['town', 0.35, 0.15], ['birds', 0.3, 0], ['insects', 0, 0.16]],
+    kyoshitsu: [['clock', 0.45, 0.45]],   // 日本語教室 (2026-11-14): its wall clock ticking
     izakaya: [['izakaya', 0.6, 0.6]],
     shop: [['clock', 0.5, 0.5]],
     room: [['birds', 0.18, 0], ['insects', 0, 0.07]]
@@ -220,6 +222,8 @@ const USE_SND = {
   'town.cat': 'meow', 'town.chimes': 'furin', 'harbor.cat': 'purr', 'harbor.gull': 'gull', 'harbor.fish': 'flop',
   'station.vend': 'can-drop', 'station.pigeons': 'wings', 'station.taxi': 'horn', 'station.gate': 'ic',
   'sento.milk': 'bottle', 'sento.cat': 'purr', 'sento.bath': 'bath', 'sento.laundry': 'washer',
+  'kominkan.keiji': 'paper', 'kominkan.neko': 'meow', 'kominkan.hana': 'rustle', 'kominkan.nobori': 'cloth', 'kominkan.tokei': 'tick', 'kominkan.jitensha': 'bike',
+  'kyoshitsu.board': 'paper', 'kyoshitsu.karuta': 'paper', 'kyoshitsu.radio': 'switch', 'kyoshitsu.books': 'page', 'kyoshitsu.clock': 'tick', 'kyoshitsu.cranes': 'paper', 'kyoshitsu.window': 'rustle', 'kyoshitsu.table0': 'sit', 'kyoshitsu.table1': 'sit',
   'oku.okusha': 'clap', 'oku.okuema': 'kuji', 'oku.omokaru': 'place', 'oku.chaya': 'dishes', 'oku.view': 'rustle',
   'shrine.bell': ['suzu', 'clap'], 'shrine.kuji': 'kuji', 'shrine.crow': 'crow', 'shrine.fox': 'sparkle', 'shrine.kingyo': 'splash', 'shrine.yakisoba': 'sizzle', 'shrine.takoyaki': 'sizzle',
   'castle.sakuraL': 'rustle', 'castle.sakuraR': 'rustle', 'castle.gate': 'knock', 'castle.moat': 'duck',
