@@ -349,6 +349,20 @@ def test_a_card_shut_and_opened_again_follows_the_new_one(b):
       return JSON.stringify({ tap: JOBS.buns.now().tap, step: step(), steamer: document.querySelectorAll('.wk-steamer .wk-done').length, cards: document.querySelectorAll('.wk-buns').length }); })()"""))
     assert r == {'tap': 6, 'step': 0, 'steamer': 1, 'cards': 1}, r
 
+# ---- the test site's 無限次數 (2026-11-15, the user): shift after shift, any place, on this device; each kept with its pay ----
+def test_the_test_site_can_work_without_end(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(46); stub('shelf'); stub('counter', true); state.work.res['2026-01-02'] = { place: 'counter', done: 1, score: { 0: 0 } }; location.hash = '#/chinadori'; route(); await wait(200);
+      const shift = (job) => { WORK.start(yard(), job); for (let k = 0; k < 10; k++) __ctx.right(k, 0); __ctx.finish(); document.querySelectorAll('.wk-result').forEach((x) => x.remove()); };
+      const out = {}; shift('shelf'); out.limited = WORK.can('shelf').ok; out.earned = yenEarned();
+      out.msg = WORK.tool(); out.again = WORK.can('shelf').ok && WORK.can('counter').ok; shift('counter'); shift('shelf');
+      const res = state.work.res; out.keys = Object.keys(res).filter((k) => k.startsWith('2026-11-10')).sort(); out.paid = yenEarned() > out.earned * 2.5; out.shifts = WORK.shifts();
+      out.kept = Object.keys(normalizeState(JSON.parse(JSON.stringify(state))).work.res).filter((k) => k.startsWith('2026-11-10')).length;
+      out.off = WORK.tool(); out.limitedAgain = WORK.can('counter').ok;
+      return JSON.stringify(out); })()"""))
+    assert not r['limited'] and r['again'] and r['paid'] and not r['limitedAgain'], r
+    assert r['keys'] == ['2026-11-10', '2026-11-10#2', '2026-11-10#3'] and r['kept'] == 3 and r['shifts'] == 3, r
+    assert '無限' in r['msg'] and '一天' in r['off'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

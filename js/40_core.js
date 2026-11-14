@@ -402,7 +402,7 @@ function normalizeState(s) {
   if (pu.today && typeof pu.today.day === 'string') out.purse.today = { day: pu.today.day, f: num(pu.today.f), d: num(pu.today.d), b: num(pu.today.b), o: num(pu.today.o) };   // b, o: the bath, おみくじ (once a day)
   if (num(pu.gift)) out.purse.gift = num(pu.gift);
   const wk = obj(out.work);   // 中華街の打工 (2026-11-14): a record a day, as WORK keeps it
-  out.work = { res: Object.fromEntries(Object.entries(obj(wk.res)).filter(([d, r]) => /^\d{4}-\d\d-\d\d$/.test(d) && r && typeof r === 'object' && typeof r.place === 'string').map(([d, r]) => [d, Object.assign({ place: r.place, done: num(r.done), score: Object.fromEntries(Object.entries(obj(r.score)).map(([k, v]) => [k, num(v)])) },
+  out.work = { res: Object.fromEntries(Object.entries(obj(wk.res)).filter(([d, r]) => /^\d{4}-\d\d-\d\d(#\d+)?$/.test(d) && r && typeof r === 'object' && typeof r.place === 'string').map(([d, r]) => [d, Object.assign({ place: r.place, done: num(r.done), score: Object.fromEntries(Object.entries(obj(r.score)).map(([k, v]) => [k, num(v)])) },
     r.yen !== undefined && r.yen !== null ? { yen: num(r.yen), grade: typeof r.grade === 'string' ? r.grade : 'E', tip: num(r.tip) } : {})])) };
   if (wk.seenSteps && typeof wk.seenSteps === 'object') out.work.seenSteps = Object.fromEntries(Object.entries(wk.seenSteps).map(([k, v]) => [k, num(v)]));   // 包包子's steps answered right, each
   out.cruise = { done: obj(cr.done), on: on && !obj(cr.done)[on.trip] ? { trip: on.trip, step: num(on.step), stop: typeof on.stop === 'string' ? on.stop : '', place: typeof on.place === 'string' ? on.place : 'harbor', score: score(on.score) } : null, res };

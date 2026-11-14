@@ -46,16 +46,23 @@ const WORK = (() => {
     if (!kanaOk(P.kana)) return { ok: false, why: `再學 ${P.kana - seen()} 個假名就能來${P.name}。` };
     const left = wordsLeft(job); if (left.length) return { ok: false, why: `先學會入門的${left.map((w) => `「${w}」`).join('')}，就能來${P.name}。` };
     const t = today();
-    if (t && t.place !== job) return { ok: false, why: `今天已經在「${named(t.place).name}」打過工了。一天只能在一個地方打工，明天再來吧。` };
-    if (fin(t)) return { ok: false, why: '今天的班打完了，明天再來吧。' };
+    if (t && t.place !== job && !free()) return { ok: false, why: `今天已經在「${named(t.place).name}」打過工了。一天只能在一個地方打工，明天再來吧。` };
+    if (fin(t) && !free()) return { ok: false, why: '今天的班打完了，明天再來吧。' };
     if (!here(job)) return { ok: false, why: job === 'buns' ? '王老闆不在攤子（10 點到 20 點在）。' : job === 'waiter' ? 'らいらいけん 10 點到 20 點營業。' : '大通り的店 10 點到 19 點開門。' };
     return { ok: true };
   }
+  // the test site (町の手帳, 2026-11-15, the user): shift after shift, any place, on this device — today's record put aside under the
+  // day and a number (its pay kept with it) as the next begins
+  const FREE = 'nq_work_free';
+  const free = () => { try { return onTestSite() && localStorage.getItem(FREE) === '1'; } catch (e) { return false; } };
+  function tool() { const on = !free(); try { localStorage.setItem(FREE, on ? '1' : ''); } catch (e) { /* no storage */ } return on ? '打工無限次數（這台裝置）：打完一班可以再打，也可以換別家' : '打工恢復一天只能一個地方、一班'; }
+  function setAside(d) { const res = W().res; let n = 2; while (res[`${d}#${n}`]) n++; res[`${d}#${n}`] = res[d]; delete res[d]; }
   let S = null;   // the shift under way: { job, day }
   // a shift begun, or today's picked up where it was left; its runner given what it needs (ctx)
   function start(yard, job) {
     const c = can(job); if (!c.ok) { toast(c.why, 3600); return false; }
-    const d = day(), res = W().res; if (!res[d]) { res[d] = { place: job, done: 0, score: {} }; saveState(); }
+    const d = day(), res = W().res; if (free() && res[d] && (fin(res[d]) || res[d].place !== job)) setAside(d);
+    if (!res[d]) { res[d] = { place: job, done: 0, score: {} }; saveState(); }
     const s = S = { job, day: d };
     if (res[d].done >= N) { finish(s); return true; }   // all ten done but never paid (the card shut, the app gone, at the last moment): paid now
     const ctx = { yard, n: N, job, done: res[d].done, right: (k, misses) => right(s, k, misses), finish: (extra, ms) => finish(s, extra, ms), on: () => S === s };
@@ -128,5 +135,5 @@ const WORK = (() => {
   }
   const register = (job, def) => { JOBS[job] = def; };
   const lines = (add) => { Object.entries(TOWN.WORK.hello || {}).forEach(([id, l]) => add(id, l[0])); Object.values(TOWN.WORK.first || {}).forEach((ls) => ls.forEach((l) => add(l[0], l[1]))); Object.values(JOBS).forEach((j) => j.lines && j.lines(add)); };
-  return { N, PLACES, kana, knows, can, start, register, pay, rank, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, board };
+  return { N, PLACES, kana, knows, free, tool, can, start, register, pay, rank, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, board };
 })();
