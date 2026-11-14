@@ -221,6 +221,41 @@ def test_the_slip_bar_leaves_the_signs_tappable_on_a_phone(b):
       return JSON.stringify({ over, inside: s.left >= 0 && s.right <= innerWidth, gone }); })()""")])[-1])
     assert r == {'over': [], 'inside': True, 'gone': True}, r
 
+# ---- 包包子 (福明, 王 and 陳): 王's word for each step, a picture beside it till it is known; the filling heard ----
+BUNS = """const make = async () => { location.hash = '#/chinatown'; route(); await wait(300); earlier('buns'); WORK.start(yard(), 'buns'); await wait(300); };
+  const doStep = async () => { const s = JOBS.buns.now(); document.querySelector(`.wk-act[data-step="${s}"]`).click(); await wait(420); };"""
+
+def test_buns_steps_in_order_with_the_filling_heard(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const runs = Array.from({ length: 4 }, () => JOBS.buns.make()).flat();
+      return JSON.stringify({ n: runs.length, order: runs.every((x) => x.length === 5 && x[0] === 'kone' && x[1] === 'marume' && ['niku', 'an'].includes(x[2]) && x[3] === 'tsutsumu' && x[4] === 'musu'),
+        both: new Set(runs.map((x) => x[2])).size }); })()"""))
+    assert r == {'n': 40, 'order': True, 'both': 2}, r
+
+def test_the_pictures_go_after_three_right(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); window.speakAs = () => Promise.resolve(); state.work.seenSteps = { kone: 3 }; await make();
+      const out = { first: Boolean(document.querySelector('.wk-inst .wk-pic')), acts: [...document.querySelectorAll('.wk-act')].map((x) => x.dataset.step).sort().join(',') };
+      await doStep(); out.second = Boolean(document.querySelector('.wk-inst .wk-pic')); out.counted = state.work.seenSteps.marume ?? null;
+      return JSON.stringify(out); })()"""))
+    assert r == {'first': False, 'acts': 'an,kone,marume,musu,niku,tsutsumu', 'second': True, 'counted': None}, r   # marume shows its picture; counted once answered
+
+def test_a_bun_shift_pays(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); window.speakAs = () => Promise.resolve(); await make();
+      for (let i = 0; i < 200; i++) { if (!JOBS.buns.now()) break; await doStep(); }
+      for (let i = 0; i < 50 && !document.querySelector('.wk-result'); i++) await wait(100); const t = state.work.res['2026-11-10'];
+      return JSON.stringify({ yen: t.yen, grade: t.grade, seen: state.work.seenSteps.kone }); })()"""))
+    assert r == {'yen': 150, 'grade': 'S', 'seen': 10}, r
+
+def test_buns_only_while_wang_is_there(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(46); TOWNEV.clock = { h: 21, day: new Date(2026, 10, 10) }; const night = WORK.can('buns');
+      TOWNEV.clock = { h: 12, day: new Date(2026, 10, 10) }; return JSON.stringify({ night, noon: WORK.can('buns').ok }); })()"""))
+    assert not r['night']['ok'] and '王' in r['night']['why'] and r['noon'], r
+
+def test_the_bun_card_fits_a_phone(b):
+    r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); await make(); await wait(200);
+      const c = document.querySelector('.wk-buns .cls-card').getBoundingClientRect(), acts = [...document.querySelectorAll('.wk-act')].map((x) => x.getBoundingClientRect());
+      return JSON.stringify({ bottom: c.bottom <= innerHeight + 1, side: c.left >= 0 && c.right <= innerWidth + 1, acts: acts.length === 6 && acts.every((q) => q.width >= 44 && q.height >= 44) }); })()""")])[-1])
+    assert r == {'bottom': True, 'side': True, 'acts': True}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

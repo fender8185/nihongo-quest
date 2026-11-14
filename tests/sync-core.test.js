@@ -286,3 +286,9 @@ test('mergeStates: the work of either device is kept, one record a day — finis
   assert.deepEqual(C.mergeStates(d, c).work.res, { '2026-11-13': half('deliver', 6) });
   assert.equal(C.mergeStates({ v: 3 }, { v: 3 }).work, undefined);
 });
+
+test('mergeStates: the bun steps answered right are kept, the more of each (2026-11-14)', () => {
+  const a = { v: 3, updatedAt: '2026-11-14T01:00:00.000Z', work: { res: {}, seenSteps: { kone: 3, marume: 1 } } };
+  const b = { v: 3, updatedAt: '2026-11-14T02:00:00.000Z', work: { res: {}, seenSteps: { kone: 2, musu: 4 } } };
+  assert.deepEqual(C.mergeStates(a, b).work.seenSteps, { kone: 3, marume: 1, musu: 4 });
+});

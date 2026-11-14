@@ -506,6 +506,18 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .wk-good.held { box-shadow: 0 0 0 3px #e6b23c; } .wk-good.wk-bad, .wk-opt.wk-bad { animation: shake .3s ease; } .wk-good.wk-hint, .wk-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
 .wk-opts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; min-height: 0; } .wk-opt { font-size: 16px; }
 .wk-me { margin: 8px 0 0; min-height: 1.4em; text-align: center; display: grid; gap: 1px; } .wk-me b { font-size: 15px; color: #2f7a6a; } .wk-me span { font-size: 12px; opacity: .65; }
+/* 包包子: the bun as far as it has come and 王's word (its picture beside it till known); six pictures to choose from; a perfect bun
+   out of the steamer in a burst of gold, a perfect shift more of it */
+.wk-buns .cls-card { background: #fbf3e2; color: #2b2b33; border-bottom: 10px solid #2f7a6a; }
+.wk-bunrow { display: flex; align-items: center; gap: 12px; margin: 8px 0 10px; } .wk-bun { position: relative; width: 104px; height: 90px; flex: none; display: grid; place-items: center; border-radius: 12px; background: #e9dcc0; }
+.wk-bun svg { width: 92px; height: 80px; position: relative; z-index: 1; }
+.wk-bun.wk-shine::before { content: ''; position: absolute; inset: -30px; z-index: 0; background: repeating-conic-gradient(from 0deg, rgba(255, 214, 90, .85) 0 8deg, rgba(255, 214, 90, 0) 8deg 20deg); border-radius: 50%; animation: wkRays 1.1s ease-out forwards; }
+@keyframes wkRays { 0% { transform: scale(.3) rotate(0); opacity: 0; } 30% { opacity: 1; } 100% { transform: scale(1.15) rotate(40deg); opacity: 0; } }
+.wk-inst { margin: 0; display: grid; grid-template-columns: auto auto; align-items: center; gap: 2px 8px; } .wk-inst b { font-size: 24px; color: #a82828; } .wk-inst .wk-pic { width: 54px; height: 46px; grid-row: span 2; } .wk-inst span { font-size: 12.5px; opacity: .65; grid-column: 1; }
+.wk-acts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } .wk-act { display: grid; place-items: center; min-height: 64px; border: 0; border-radius: 10px; background: #f0e2c4; cursor: pointer; } .wk-actpic { width: 58px; height: 50px; }
+.wk-act.wk-bad { animation: shake .3s ease; } .wk-act.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
+.wk-buns .cls-card.wk-shine-all { animation: wkGold 1.6s ease-out; } @keyframes wkGold { 0%, 100% { box-shadow: 0 12px 40px rgba(0, 0, 0, .35); } 40% { box-shadow: 0 0 0 6px #f6e08a, 0 0 60px 20px rgba(255, 214, 90, .9); } }
+@media (prefers-reduced-motion: reduce) { .wk-bun.wk-shine::before { animation: none; opacity: .6; } .wk-buns .cls-card.wk-shine-all, .wk-act.wk-bad { animation: none; } }
 /* 外送: the slip at the top (where to, how many, the seconds), the 岡持ち in the hero's hand */
 .wk-slip { position: fixed; z-index: 70; top: calc(env(safe-area-inset-top, 0px) + 62px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 12px; background: #fffaf0; color: #3a2c24; box-shadow: 0 3px 10px rgba(0, 0, 0, .2); border-left: 6px solid #c8322a; font-size: 13px; white-space: nowrap; pointer-events: none; }
 .wk-slip b { font-size: 20px; color: #a82828; } .wk-slip .wk-sn, .wk-slip .wk-st { opacity: .7; font-variant-numeric: tabular-nums; }

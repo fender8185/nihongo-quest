@@ -163,7 +163,9 @@
   function mergeWork(olderW, newerW) {
     const o = olderW || {}, n = newerW || {}, res = Object.assign({}, o.res), fin = (r) => r && r.yen !== undefined && r.yen !== null;
     Object.entries(n.res || {}).forEach(([d, r]) => { const h = res[d]; if (!h || (fin(r) && !fin(h)) || (fin(r) && fin(h) && (Number(r.yen) || 0) >= (Number(h.yen) || 0)) || (!fin(r) && !fin(h) && (Number(r.done) || 0) >= (Number(h.done) || 0))) res[d] = r; });
-    return { res };
+    if (!o.seenSteps && !n.seenSteps) return { res };
+    const seenSteps = Object.assign({}, o.seenSteps); Object.entries(n.seenSteps || {}).forEach(([k, v]) => { seenSteps[k] = Math.max(Number(seenSteps[k]) || 0, Number(v) || 0); });   // 包包子's steps answered right: the more of each
+    return { res, seenSteps };
   }
   function mergeStates(a, b) {
     const [newer, older] = (stampOf(a) >= stampOf(b) ? [a, b] : [b, a]).map(clone);

@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 66 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 67 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2674,6 +2674,11 @@ const TOWN = {
     // what each says during a shift: a miss, a right one now and then, the end
     say: {
       shelf: { who: 'zhang', miss: ['ちがう！', '不對！'], ok: [['よし。', '好。'], ['…うん。', '……嗯。'], ['きれい。', '很整齊。']], end: ['…おつかれさま。たすかった。', '……辛苦了。幫了大忙。'] },
+      // 包包子: 王's word for each step, his over-the-top delight at a perfect one (the cooking-anime way the user asked for, 2026-11-14:
+      // the style only), a slip of 陳's now and then and 王's retort
+      buns: { who: 'wang', steps: { kone: ['こねて！', '揉麵團！'], marume: ['まるめて！', '搓圓！'], niku: ['にくを のせて！', '放肉餡！'], an: ['あんを のせて！', '放紅豆餡！'], tsutsumu: ['つつんで！', '包起來！'], musu: ['むして！', '蒸！'] },
+        miss: ['ちがう！', '不對！'], ok: [['いいぞ！', '好！'], ['うまい！', '漂亮！']], shine: [['かんぺきだ！', '完美！'], ['ひかって いる！', '在發光！'], ['これぞ ぶたまん！', '這才是豬肉包！']],
+        gag: [['chen', '', '（用中文）啊……我把紅豆餡包進肉包了。'], ['wang', 'チェンさん！ ちがう！', '陳！不對！']], all: ['きみは てんさいだ！', '你是天才！'], end: ['シェイシェイ！ ハオチー！', '謝謝！好吃！'] },
       deliver: { who: 'huang', go: ['へ！ はやく！', '！快！'], back: ['おかえり！ つぎ！', '回來了！下一份！'], wait: ['はやく とどけて！', '快送去！'], thanks: ['ありがとう！', '謝謝！'], miss: ['うちじゃ ないよ！', '不是我們家啦！'], end: ['はやい！ たすかった！', '好快！幫了大忙！'] },
       counter: { who: 'zhou', miss: ['それじゃ ないわよ。', '不是那個喔。'], ok: [['じょうず、じょうず。', '很好很好。'], ['いいわね。', '不錯喔。']], end: ['ありがとう。たすかったわ。', '謝謝，幫了大忙。'] } },
     // らんらん's goods on the counter: [name in kana, its drawing (PICS / PICS_TOWN), price ≤ 1,000 円] — offered once every kana of the name is seen

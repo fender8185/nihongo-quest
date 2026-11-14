@@ -175,8 +175,75 @@ const JOBS = (() => {
   }
   function deliverLines(add) { const s = say('deliver'); DORI.SHOPS.forEach((x) => add(s.who, x.sign + s.go[0])); [s.back, s.wait, s.end].forEach((l) => add(s.who, l[0])); }
 
+  // ---- 包包子 (福明, 王 and 陳): a bun is five steps — こねて, まるめて, にく or あん を のせて (the filling heard, not known before),
+  // つつんで, むして — 王 says each and the buttons are pictures only, shuffled each step; beside his word its picture till that word
+  // has been answered right three times (state.work.seenSteps, kept across devices), then the word alone. A bun's misses are its
+  // steps' together. A perfect one comes out of the steamer in a burst of gold and 王 beside himself (the user, 2026-11-14: 中華一番's
+  // style — over-the-top cooking — but nothing of that work's own); a shift without one miss, more of it at the end. Now and then
+  // 陳 at the next board slips up and 王 tells him so ----
+  const STEP_ART = {
+    kone: '<ellipse cx="30" cy="40" rx="18" ry="9" fill="#f4ead8"/><path d="M14 30 q4 -10 12 -6 v8 M46 30 q-4 -10 -12 -6 v8" fill="#f3d1b5" stroke="#c8a080" stroke-width="1.4"/><path d="M20 40 q10 -5 20 0" stroke="#d8c8a8" stroke-width="1.4" fill="none"/>',
+    marume: '<circle cx="30" cy="34" r="14" fill="#f4ead8" stroke="#d8c8a8" stroke-width="1.4"/><path d="M12 22 a20 20 0 0 1 36 0" fill="none" stroke="#c8322a" stroke-width="2.4"/><path d="M46 16 l2 7 l-7 -1" fill="none" stroke="#c8322a" stroke-width="2.4"/>',
+    niku: '<ellipse cx="30" cy="40" rx="20" ry="9" fill="#f4ead8"/><ellipse cx="30" cy="35" rx="10" ry="6" fill="#a8584a"/><circle cx="27" cy="34" r="1.6" fill="#d88a6a"/><circle cx="33" cy="36" r="1.4" fill="#5a8a4a"/>',
+    an: '<ellipse cx="30" cy="40" rx="20" ry="9" fill="#f4ead8"/><ellipse cx="30" cy="35" rx="10" ry="6" fill="#5a2a3a"/><circle cx="27" cy="34" r="1.4" fill="#7a3a4a"/>',
+    tsutsumu: '<path d="M14 42 Q14 22 30 18 Q46 22 46 42 Z" fill="#f4ead8" stroke="#d8c8a8" stroke-width="1.4"/><path d="M30 18 l-6 10 M30 18 l6 10 M30 18 v11 M30 18 l-11 7 M30 18 l11 7" stroke="#d8c8a8" stroke-width="1.2"/>',
+    musu: '<rect x="12" y="28" width="36" height="16" rx="3" fill="#c9a46e"/><path d="M12 33 h36 M12 39 h36" stroke="#a8834e" stroke-width="1.2"/><ellipse cx="30" cy="28" rx="19" ry="5" fill="#d9b98a"/><path d="M22 20 q3 -5 0 -10 M30 20 q3 -5 0 -10 M38 20 q3 -5 0 -10" stroke="#9aa4b0" stroke-width="2" fill="none" stroke-linecap="round"/>' };
+  const stepPic = (s, cls = 'wk-pic') => `<svg class="${cls}" viewBox="0 0 60 52" aria-hidden="true">${STEP_ART[s]}</svg>`;
+  // the bun as far as it has come: dough, a ball, the filling on it, wrapped, out of the steamer
+  const BUN_AT = ['<ellipse cx="30" cy="38" rx="18" ry="10" fill="#efe4cc"/>', STEP_ART.kone, STEP_ART.marume, null, STEP_ART.tsutsumu,
+    '<path d="M12 42 Q12 18 30 14 Q48 18 48 42 Z" fill="#fbf6ea" stroke="#e4d8c0" stroke-width="1.4"/><path d="M30 14 l-6 9 M30 14 l6 9 M30 14 v10" stroke="#e4d8c0" stroke-width="1.2"/>'];
+  const bunMake = () => Array.from({ length: N }, () => ['kone', 'marume', Math.random() < 0.5 ? 'niku' : 'an', 'tsutsumu', 'musu']);
+  let B = null;   // the step due now (for the tests): its key
+  function bunsRun(ctx) {
+    const buns = bunMake(), s = say('buns'), seen = () => state.work.seenSteps || (state.work.seenSteps = {}), gags = new Set(shuffle([2, 3, 4, 5, 6, 7]).slice(0, 1));
+    let k = ctx.done, i = 0, miss = 0, stepMiss = 0, busy = false, all = 0;
+    const el = (q) => document.querySelector('.wk-buns ' + q);
+    function show() {
+      const st = buns[k][i]; B = st; stepMiss = 0; busy = false; if (!el('.wk-acts')) return;
+      el('.wk-n').textContent = `${k + 1}／${N}`;
+      el('.wk-bun').innerHTML = `<svg viewBox="0 0 60 52" aria-hidden="true">${i === 3 ? STEP_ART[buns[k][2]] : BUN_AT[i]}</svg>`;
+      const [ja, zh] = s.steps[st], known = (seen()[st] || 0) >= 3;
+      el('.wk-inst').innerHTML = `<b lang="ja">${esc(ja)}</b>${known ? '' : `${stepPic(st)}<span>${esc(zh)}</span>`}`;
+      el('.wk-acts').innerHTML = shuffle(Object.keys(STEP_ART)).map((x) => `<button type="button" class="wk-act" data-step="${x}" aria-label="${esc(s.steps[x][1])}">${stepPic(x, 'wk-actpic')}</button>`).join('');
+      speakAs(s.who, ja);
+    }
+    function done() {
+      ctx.right(k, miss); if (!miss) all++;
+      const card = el('.wk-bun'), perfect = !miss;
+      if (card) { card.innerHTML = `<svg viewBox="0 0 60 52" aria-hidden="true">${BUN_AT[5]}</svg>`; if (perfect) { card.classList.remove('wk-shine'); void card.offsetWidth; card.classList.add('wk-shine'); } }
+      if (perfect) { playSfx('good'); word('buns', pick(s.shine), 'ok'); } else word('buns', pick(s.ok));
+      const gag = gags.has(k); k++; i = 0; miss = 0; busy = true;
+      setTimeout(() => {
+        if (!el('.wk-acts')) return;
+        if (k >= N) {
+          const best = all === N - ctx.done && ctx.done === 0;   // the whole shift without a miss, from its start
+          if (best) { const c = document.querySelector('.wk-buns .cls-card'); if (c) c.classList.add('wk-shine-all'); word('buns', s.all, 'ok'); }
+          else word('buns', s.end, 'ok');
+          setTimeout(() => { B = null; CLASS.close(); ctx.finish(); }, best ? 1600 : 800); return;
+        }
+        if (gag) { const [c, w] = s.gag; const p = el('.wk-say'); if (p) p.innerHTML = `<span>${esc(c[2])}</span>`; setTimeout(() => { word('buns', [w[1], w[2]], 'bad'); setTimeout(show, 1200); }, 1300); return; }
+        show();
+      }, perfect ? 1100 : 600);
+    }
+    CLASS.card('wk-buns', '包包子', `${head('buns', 'ふくめいの ちゅうぼう', k)}<div class="wk-bunrow"><div class="wk-bun"></div><p class="wk-inst"></p></div><div class="wk-acts"></div>`, (e) => {
+      const b = e.target.closest('.wk-act'); if (!b || busy || !ctx.on() || k >= N) return;
+      const st = buns[k][i];
+      if (b.dataset.step !== st) {
+        miss++; stepMiss++; playSfx('bad'); b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); word('buns', s.miss, 'bad');
+        if (stepMiss >= 2) document.querySelectorAll('.wk-act').forEach((x) => x.classList.toggle('wk-hint', x.dataset.step === st));
+        return;
+      }
+      busy = true; seen()[st] = (seen()[st] || 0) + 1; saveState(); SND.play('place', { vol: 0.5 }); i++;
+      if (i >= buns[k].length) { done(); return; }
+      setTimeout(show, 300);
+    });
+    show();
+  }
+  function bunsLines(add) { const s = say('buns'); Object.values(s.steps).concat([s.miss, s.all, s.end], s.ok, s.shine).forEach((l) => add(s.who, l[0])); add(s.gag[1][0], s.gag[1][1]); }
+
   WORK.register('shelf', { run: shelfRun, lines: shelfLines });
   WORK.register('deliver', { run: deliverRun, lines: deliverLines });
+  WORK.register('buns', { run: bunsRun, lines: bunsLines });
   WORK.register('counter', { run: counterRun, lines: counterLines });
-  return { shelf: { make: shelfMake, run: shelfRun }, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, deliver: { make: deliverMake, at: deliverAt, tip, state: () => D, on: () => Boolean(D) } };
+  return { shelf: { make: shelfMake, run: shelfRun }, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, deliver: { make: deliverMake, at: deliverAt, tip, state: () => D, on: () => Boolean(D) }, buns: { make: bunMake, run: bunsRun, now: () => B } };
 })();
