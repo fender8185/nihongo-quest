@@ -63,22 +63,28 @@ const JOBS = (() => {
   const shelfLines = (add) => { const s = say('shelf'); [s.miss, s.end, ...s.ok].forEach((l) => add(s.who, l[0])); };
 
   // ---- 站櫃 (らんらん, 周おばあさん): a customer comes to the counter (the cruise's passengers, out shopping, each in their own
-  // voice) after the hero's いらっしゃいませ, and asks for one of four things on it, said and shown in kana — only things whose
-  // name's kana are all seen. Once ふたつ is learned, now and then two of it (tap it twice); once いくら is, now and then one held up,
-  // これ、いくらですか — choose the reading of its tag. Handed over: ありがとうございました ----
+  // voice) after the hero's いらっしゃいませ, and asks for one of four things on it, labelled in kana — only things whose name's
+  // kana are all seen. The word asked for is heard, not shown (2026-11-15, the user: printed in the bubble too, it was only matching
+  // the same kana): a blank in the bubble, tapped to hear it again, filled in once handed over or after two misses. Once ふたつ is
+  // learned, now and then two of it (tap it twice). Prices are N5's numbers, past 入門 (the user): once いくら and 円 are learned,
+  // now and then one held up — its picture in the bubble — これ、いくらですか: choose the reading of its tag, a tag whose numbers are
+  // learned (百 and the digit before it, or 千). Handed over: ありがとうございました ----
   const CUST = ['kaneda', 'umeko', 'yuta', 'rina', 'yoshimoto', 'ken', 'ai', 'michiyama', 'mike'];
   const GOODS = () => TOWN.WORK.goods, PRICES = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
   const sayer = (name) => CUST[Math.max(0, GOODS().findIndex((g) => g[0] === name)) % CUST.length];   // each thing asked for by the same one, so the clips stay few
-  const learned = (r) => REG.vocab.some((v) => v.r === r && state.srs[v.key]);   // a word read so, learned (ふたつ, いくら)
+  const learned = (r, w) => REG.vocab.some((v) => v.r === r && (!w || v.w === w) && state.srs[v.key]);   // a word read so (and written so), learned
+  const DIGIT = [, , ['二', 'に'], ['三', 'さん'], ['四', 'よん'], ['五', 'ご'], ['六', 'ろく'], ['七', 'なな'], ['八', 'はち'], ['九', 'きゅう']];
+  const readable = (n) => (n === 1000 ? learned('せん', '千') : learned('ひゃく', '百') && (n === 100 || learned(DIGIT[n / 100][1], DIGIT[n / 100][0])));   // a tag whose numbers are learned
   const ME = { hi: ['いらっしゃいませ！', '歡迎光臨！'], bye: ['ありがとうございました！', '謝謝光臨！'] };
   const ask = (t) => (t.kind === 'price' ? ['これ、いくらですか。', '這個多少錢？'] : t.kind === 'two' ? [`${t.good[0]}を ふたつ ください。`, '請給我兩個。'] : [`${t.good[0]}を ください。`, '請給我這個。']);
   function counterMake(seen = WORK.kana()) {
     let can = GOODS().filter((g) => [...g[0]].every((c) => seen.has(c))); if (can.length < 4) can = GOODS().slice(0, 4);   // never too few to set out
-    const two = learned('ふたつ'), price = learned('いくら');
+    const two = learned('ふたつ'), tags = learned('いくら') && learned('えん', '円') ? PRICES.filter(readable) : [], priced = can.filter((g) => tags.includes(g[2]));
     return Array.from({ length: N }, () => {
-      const goods = shuffle(can).slice(0, 4), good = pick(goods), r = Math.random(), kind = price && r < 0.25 ? 'price' : two && r > 0.75 ? 'two' : 'name';
+      const r = Math.random(), kind = priced.length && r < 0.25 ? 'price' : two && r > 0.75 ? 'two' : 'name';
+      const good = pick(kind === 'price' ? priced : can), goods = shuffle([good, ...shuffle(can.filter((g) => g !== good)).slice(0, 3)]);
       const t = { kind, good, goods, who: kind === 'price' ? pick(CUST) : sayer(good[0]) };
-      if (kind === 'price') t.opts = shuffle([good[2], ...shuffle(PRICES.filter((p) => p !== good[2])).slice(0, 2)]);
+      if (kind === 'price') { const other = (a) => shuffle(a.filter((p) => p !== good[2])); t.opts = shuffle([good[2], ...other(tags).concat(other(PRICES.filter((p) => !tags.includes(p)))).slice(0, 2)]); }
       return t;
     });
   }
@@ -87,6 +93,9 @@ const JOBS = (() => {
   function counterRun(ctx) {
     const tasks = counterMake(), first = !Object.values(state.work.res).some((r) => r.place === 'counter' && r.yen !== undefined); let k = ctx.done, miss = 0, got = 0, busy = true;
     const el = (s) => document.querySelector('.wk-counter ' + s);
+    const bub = (open) => { const [ja, zh] = ask(C), w = C.good[0], line = C.kind === 'price' ? `<span class="wk-held">${goodPic(C.good[1])}</span>${esc(ja)}`
+      : open ? esc(ja) : `<button type="button" class="wk-ear" aria-label="再聽一次">🔊</button>${esc(ja.slice(w.length))}`;   // the word heard, not read, till handed over
+      el('.wk-bub').innerHTML = `<b lang="ja">${line}</b><span>${esc(zh)}</span>${C.kind === 'two' ? `<i class="wk-cnt">${got}／2</i>` : ''}`; };
     const me = (l) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${esc(l[0])}</b>${first ? `<span>${esc(l[1])}</span>` : ''}`; speakAs('hero', l[0]); };
     function show() {
       C = tasks[k]; miss = 0; got = 0; busy = true; if (!el('.wk-goods')) return;
@@ -96,17 +105,16 @@ const JOBS = (() => {
       me(ME.hi);
       setTimeout(() => {   // the customer asks
         if (!el('.wk-cust') || C !== tasks[k] || !ctx.on()) return;
-        const [ja, zh] = ask(C); el('.wk-bub').innerHTML = `<b lang="ja">${esc(ja)}</b><span>${esc(zh)}</span>${C.kind === 'two' ? '<i class="wk-cnt">0／2</i>' : ''}`;
-        el('.wk-cust').classList.add('on'); speakAs(C.who, ja); busy = false;
+        bub(false); el('.wk-cust').classList.add('on'); speakAs(C.who, ask(C)[0]); busy = false;
         if (C.kind === 'price') el('.wk-opts').innerHTML = C.opts.map((n) => `<button type="button" class="btn btn-sm wk-opt" data-n="${n}" lang="ja">${esc(YEN.reading(n))}</button>`).join('');
       }, 800);
     }
     function wrong(b) {
       miss++; playSfx('bad'); b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); word('counter', say('counter').miss, 'bad');
-      if (miss >= 2) document.querySelectorAll(C.kind === 'price' ? '.wk-opt' : '.wk-good').forEach((x) => x.classList.toggle('wk-hint', C.kind === 'price' ? Number(x.dataset.n) === C.good[2] : x.dataset.good === C.good[0]));
+      if (miss >= 2) { document.querySelectorAll(C.kind === 'price' ? '.wk-opt' : '.wk-good').forEach((x) => x.classList.toggle('wk-hint', C.kind === 'price' ? Number(x.dataset.n) === C.good[2] : x.dataset.good === C.good[0])); bub(true); }
     }
     function right() {
-      busy = true; ctx.right(k, miss); playSfx('good'); el('.wk-cust').classList.remove('on');
+      busy = true; ctx.right(k, miss); playSfx('good'); bub(true); el('.wk-cust').classList.remove('on');
       if (C.kind === 'price') me([`${YEN.reading(C.good[2])}です。`, `${C.good[2]} 日圓。`]);
       const live = () => el('.wk-cust') && (ctx.on() || k >= N), wait = C.kind === 'price' ? 1700 : 900;   // this run's card only
       setTimeout(() => { if (!live()) return; me(ME.bye); el('.wk-cust').classList.add('bye'); if (!miss && Math.random() < 0.25) word('counter', pick(say('counter').ok)); }, C.kind === 'price' ? 900 : 0);
@@ -120,6 +128,7 @@ const JOBS = (() => {
     }
     CLASS.card('wk-counter', '站櫃', `${head('counter', 'らんらん', k)}<div class="wk-cust"></div><div class="wk-goods"></div><div class="wk-opts"></div><p class="wk-me"></p>`, (e) => {
       if (busy || !ctx.on() || !C) return;
+      if (e.target.closest('.wk-ear')) { speakAs(C.who, ask(C)[0]); return; }
       const g = e.target.closest('.wk-good'), o = e.target.closest('.wk-opt');
       if (o && C.kind === 'price') { if (Number(o.dataset.n) === C.good[2]) right(); else wrong(o); return; }
       if (!g || C.kind === 'price') return;

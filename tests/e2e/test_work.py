@@ -152,6 +152,8 @@ def test_the_shelf_card_fits_a_phone(b):
 
 # ---- 站櫃 (らんらん, 周おばあさん): a customer says what they want; hand it over (two of it; or say its price) ----
 COUNTER = """const vocab = (r) => { const v = REG.vocab.find((x) => x.r === r && (x.lv === 'PRE_N5' || x.lv === 'N5')); state.srs[v.key] = rec(); };
+  const num = (w, r) => { const v = REG.vocab.find((x) => x.w === w && x.r === r); state.srs[v.key] = rec(); };   // a number word learned
+  const nums = () => [['一', 'いち'], ['二', 'に'], ['三', 'さん'], ['四', 'よん'], ['五', 'ご'], ['六', 'ろく'], ['七', 'なな'], ['八', 'はち'], ['九', 'きゅう'], ['百', 'ひゃく'], ['千', 'せん'], ['円', 'えん']].forEach(([w, r]) => num(w, r));
   const serve = async () => { const t = JOBS.counter.now(); if (t.kind === 'price') { document.querySelector(`.wk-opt[data-n="${t.good[2]}"]`).click(); }
     else { const g = document.querySelector(`.wk-good[data-good="${t.good[0]}"]`); g.click(); if (t.kind === 'two') { await wait(150); g.click(); } } await wait(900); };"""
 
@@ -162,13 +164,53 @@ def test_counter_offers_only_readable_goods(b):
     assert set(r['goods']) <= {'かさ', 'すし', 'いす', 'こけし'} and len(r['goods']) == 4 and r['kinds'] == ['name'] and r['four'], r
 
 def test_counter_asks_two_and_prices_once_learned(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + COUNTER + """ kana(46); vocab('ふたつ'); vocab('いくら');
+    r = json.loads(ev(b, "(async () => { " + BEGIN + COUNTER + """ kana(46); vocab('ふたつ'); vocab('いくら'); nums();
       const runs = Array.from({ length: 8 }, () => JOBS.counter.make()).flat(), price = runs.filter((t) => t.kind === 'price');
       return JSON.stringify({ kinds: [...new Set(runs.map((t) => t.kind))].sort(), opts: price.every((t) => t.opts.length === 3 && t.opts.includes(t.good[2]) && t.good[2] <= 1000) }); })()"""))
     assert r == {'kinds': ['name', 'price', 'two'], 'opts': True}, r
 
+# 2026-11-15, the user: prices are past 入門 — いくら is an 入門 word, but reading 三百円 needs N5's numbers; a price is asked only
+# when its tag can be read: いくら and 円 learned, 百 (and the digit before it), or 千
+def test_prices_wait_for_the_numbers_they_need(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + COUNTER + """ kana(46); vocab('いくら'); const runs = () => Array.from({ length: 8 }, () => JOBS.counter.make()).flat();
+      const out = { bare: runs().filter((t) => t.kind === 'price').length };
+      num('円', 'えん'); num('百', 'ひゃく'); num('三', 'さん'); const some = runs().filter((t) => t.kind === 'price');
+      return JSON.stringify(Object.assign(out, { some: some.length > 5, tags: [...new Set(some.map((t) => t.good[2]))].sort(), opts: some.every((t) => t.opts.length === 3 && t.opts.includes(t.good[2])) })); })()"""))
+    assert r == {'bare': 0, 'some': True, 'tags': [100, 300], 'opts': True}, r
+
+# 2026-11-15, the user: the thing asked for was printed in the bubble and on the counter both — matching the same kana, nothing
+# heard; now the word in the bubble is a blank to listen to (tap it to hear it again), shown once handed over or after two misses
+def test_the_customers_word_is_heard_not_read(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + COUNTER + """ kana(46); earlier('counter'); window.__said = []; window.speakAs = (w, l) => { __said.push(w + ':' + l); return Promise.resolve(); };
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter');
+      for (let i = 0; i < 30 && !document.querySelector('.wk-cust.on'); i++) await wait(100);
+      const t = JOBS.counter.now(), bub = () => document.querySelector('.wk-bub b').textContent, out = { kind: t.kind, hidden: !bub().includes(t.good[0]) };
+      __said = []; document.querySelector('.wk-bub .wk-ear').click(); await wait(100); out.again = __said.includes(t.who + ':' + t.good[0] + 'を ください。');
+      const wrong = [...document.querySelectorAll('.wk-good')].find((g) => g.dataset.good !== t.good[0]); wrong.click(); await wait(100); out.oneMiss = !bub().includes(t.good[0]);
+      wrong.click(); await wait(100); out.twoMiss = bub().includes(t.good[0]);
+      return JSON.stringify(out); })()"""))
+    assert r == {'kind': 'name', 'hidden': True, 'again': True, 'oneMiss': True, 'twoMiss': True}, r
+
+def test_the_word_shows_once_handed_over(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + COUNTER + """ kana(46); earlier('counter'); window.speakAs = () => Promise.resolve();
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter');
+      for (let i = 0; i < 30 && !document.querySelector('.wk-cust.on'); i++) await wait(100);
+      const t = JOBS.counter.now(); document.querySelector(`.wk-good[data-good="${t.good[0]}"]`).click(); await wait(100);
+      return JSON.stringify({ shown: document.querySelector('.wk-bub b').textContent.includes(t.good[0] + 'を ください') }); })()"""))
+    assert r == {'shown': True}, r
+
+# 2026-11-15, the user: 「これ、いくらですか」 with nothing to see what これ was (only a thin ring round it on the counter): the
+# customer holds it up — its picture in the bubble
+def test_a_price_asked_shows_the_thing_held_up(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + COUNTER + """ kana(46); vocab('いくら'); nums(); earlier('counter'); window.speakAs = () => Promise.resolve();
+      location.hash = '#/chinadori'; route(); await wait(300); const R = Math.random; Math.random = () => 0.1; WORK.start(yard(), 'counter'); Math.random = R;
+      for (let i = 0; i < 30 && !document.querySelector('.wk-cust.on'); i++) await wait(100);
+      const t = JOBS.counter.now(), held = document.querySelector('.wk-good.held');
+      return JSON.stringify({ kind: t.kind, pic: Boolean(document.querySelector('.wk-bub .wk-held svg.pic')), held: held && held.dataset.good === t.good[0] }); })()"""))
+    assert r == {'kind': 'price', 'pic': True, 'held': True}, r
+
 def test_a_counter_shift_pays(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + COUNTER + """ kana(46); vocab('ふたつ'); vocab('いくら'); earlier('counter'); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + COUNTER + """ kana(46); vocab('ふたつ'); vocab('いくら'); nums(); earlier('counter'); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
       location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter'); await wait(1200); const out = { card: Boolean(document.querySelector('.wk-counter')) };
       for (let k = 0; k < 10; k++) { for (let i = 0; i < 30 && !document.querySelector('.wk-cust.on'); i++) await wait(100); await serve(); }
       for (let i = 0; i < 40 && !document.querySelector('.wk-result'); i++) await wait(100); const t = state.work.res['2026-11-10'];
@@ -176,7 +218,7 @@ def test_a_counter_shift_pays(b):
     assert r == {'card': True, 'yen': 150, 'grade': 'S'}, r
 
 def test_the_counter_card_fits_a_phone(b):
-    r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + SHELF + COUNTER + """ kana(46); vocab('いくら'); earlier('counter');
+    r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + SHELF + COUNTER + """ kana(46); vocab('いくら'); nums(); earlier('counter');
       location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter'); await wait(1500);
       const c = document.querySelector('.wk-counter .cls-card').getBoundingClientRect(), goods = [...document.querySelectorAll('.wk-good')].map((x) => x.getBoundingClientRect());
       return JSON.stringify({ bottom: c.bottom <= innerHeight + 1, side: c.left >= 0 && c.right <= innerWidth + 1, goods: goods.length === 4 && goods.every((q) => q.width >= 60 && q.height >= 60) }); })()""")])[-1])
