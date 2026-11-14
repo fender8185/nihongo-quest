@@ -48,15 +48,38 @@ def test_at_the_shokudo_he_orders_in_japanese_tome_says_the_price_and_he_sits_do
       const who = document.querySelector('.talk-name').firstChild.textContent, said = await talk(); await wait(300);
       await wait(1700); const es = document.querySelector('.eat-scene'), look = [], first = es.querySelector('.es-face').dataset.mood;
       while (es.querySelector('.es-face').dataset.mood === 'drool') { look.push(es.querySelector('.es-say').textContent); es.querySelector('.es-ok').click(); await wait(60); }   // how good it looks, then いただきます
-      const screen = es && { mood: es.querySelector('.es-face').dataset.mood, name: es.querySelector('.es-name').textContent, done: es.classList.contains('done'), bites: es.querySelectorAll('.es-bite.on').length, ok: !es.querySelector('.es-ok').hidden, left: !!es.querySelector('.es-left') };
+      const screen = es && { mood: es.querySelector('.es-face').dataset.mood, name: es.querySelector('.es-name').textContent, done: es.classList.contains('done'), taken: es.querySelector('.es-face').dataset.taken, scene: !!es.querySelector('.es-stage .es-bust svg') && !es.querySelector('.es-stage .arm'), ok: !es.querySelector('.es-ok').hidden, left: !!es.querySelector('.es-left') };
       const rave = []; while (document.querySelector('.eat-scene')) { rave.push(document.querySelector('.es-say').textContent); document.querySelector('.es-ok').click(); await wait(60); } await wait(400);
       return JSON.stringify({ who, said, bal: yenBalance(), sat: !!yh.use, book: state.purse.book.curry || '', screen, rave, first, look, looks: TOWN.MENU.shokudo.items[0][4].look.map((l) => l[0].replace(/\{([^|}]+)\|[^}]+\}/g, '$1')), says: TOWN.MENU.shokudo.items[0][4].say.map((l) => l[0].replace(/\{([^|}]+)\|[^}]+\}/g, '$1')), gone: !document.querySelector('.eat-scene'), stamp: !!document.querySelector('.yen-stamp'), today: state.purse.today }); })()"""))
     assert r['said'] == ['カレーを ください。', 'はいよ！ 500円ごひゃくえんね。'], r
     assert r['bal'] == 4500 and r['sat'] and r['book'], r
-    assert r['screen'] == {'name': 'カレー', 'done': True, 'bites': 6, 'ok': True, 'left': False, 'mood': 'bliss'}, r   # had on a screen of its own: bitten till gone
+    assert r['screen'] == {'name': 'カレー', 'done': True, 'taken': '3', 'scene': True, 'ok': True, 'left': False, 'mood': 'bliss'}, r   # had on a screen of its own: across the table, three spoonfuls till gone (no arms)
     assert r['first'] == 'drool' and [x.replace(' ', '') for x in r['look']] == [x.replace(' ', '') for x in r['looks']], r   # star-eyed, how good it looks first
     assert [x.replace(' ', '') for x in r['rave']] == [x.replace(' ', '') for x in r['says']], r   # then he goes on about it, a line a tap
     assert r['gone'] and r['stamp'] and r['today']['f'] == 1 and r['today']['d'] == 0, r   # the first カレー: stamped
+
+def test_every_food_and_drink_is_had_its_own_way_through_a_whole_meal(b):
+    # 2026-11-14, the user: the 「七種吃法」 preview for every one — a spoon, chopsticks, a fork, a pick, a skewer, bitten, a straw, tipped up, a cup
+    r = json.loads(ev(b, "(async () => { " + fresh(5000) + """
+      const items = Object.values(TOWN.MENU).flatMap((mu) => mu.items).filter((it) => /^[fd]$/.test((it[4] || {}).k)), bad = [], ways = {};
+      const host = document.createElement('div'); host.className = 'es-face'; host.innerHTML = '<svg class="es-stage" viewBox="0 0 360 420"></svg>'; document.body.appendChild(host);
+      for (const it of items) {
+        const svg = host.querySelector('svg'), sc = EATSCENE.mount(svg, it, YEN.pic(it), true), w = EATSCENE.way(it); (ways[w] = ways[w] || []).push(it[0]);
+        const moods = new Set(), takens = [];
+        for (let ms = 0; ms <= EATSCENE.MEAL + 800; ms += 100) { sc.at(ms); moods.add(host.dataset.mood); takens.push(+host.dataset.taken); if (/NaN|undefined/.test(svg.innerHTML)) { bad.push(it[0] + '@' + ms); break; } }
+        if (takens[takens.length - 1] !== EATSCENE.N || takens.some((t, i) => i && t < takens[i - 1])) bad.push(it[0] + ':taken');
+        if (!moods.has('bliss') || !moods.has('drool')) bad.push(it[0] + ':moods');
+        sc.stop();
+      }
+      host.remove();
+      return JSON.stringify({ n: items.length, bad, ways }); })()"""))
+    assert r['n'] == 41 and not r['bad'], r
+    w = r['ways']
+    assert set(w) == {'spoon', 'chop', 'fork', 'pick', 'kushi', 'bite', 'straw', 'tip', 'cup'}, w
+    assert {'curry', 'kakigori', 'jagabata'} <= set(w['spoon']) and {'ramen', 'udon', 'gyudon', 'sakana', 'yakisoba'} <= set(w['chop']), w
+    assert w['fork'] == ['cake'] and w['pick'] == ['takoyaki'] and set(w['straw']) == {'soda', 'juice'}, w
+    assert {'cola', 'coffee', 'water', 'ramune', 'milk', 'oolong'} <= set(w['tip']) and set(w['cup']) == {'kohi', 'ocha', 'miso'}, w
+    assert set(w['kushi']) == {'yakitori', 'gyukushi', 'ichigoame', 'budouame'} and {'melonpan', 'onigiri', 'ringoame', 'suika', 'wataame'} <= set(w['bite']), w
 
 def test_short_of_yen_a_thing_cannot_be_had_and_the_bath_takes_its_fee(b):
     r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ state.purse.spent = { other: 4600 }; saveState(); await go('shokudo'); use('menu'); await wait(100);

@@ -452,35 +452,14 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .eat-scene { position: fixed; inset: 0; z-index: 77; display: grid; place-items: center; padding: 16px; background: rgba(40, 24, 12, .5); animation: talkIn .25s ease-out; }
 .es-card { position: relative; width: min(340px, 100%); padding: 16px 16px 14px; border-radius: 20px; text-align: center; background: radial-gradient(120% 80% at 50% 30%, #fff8e8, #f4e2c4); color: #3a2c24; box-shadow: 0 14px 40px rgba(0, 0, 0, .3); }
 .es-name { margin: 0; font-size: 22px; font-weight: 800; }
-.es-row { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 6px; }
-.es-face { position: relative; width: 148px; height: 133px; flex: none; border-radius: 50%; overflow: visible; } .es-face > svg:first-child { width: 100%; height: 100%; border-radius: 50%; background: #fbf3e2; }
-.es-face.chew > svg { animation: esChew .45s ease-in-out; } @keyframes esChew { 0%, 100% { transform: none; } 30% { transform: scale(1.03, .96) translateY(2px); } 65% { transform: scale(.98, 1.03); } }
-.es-mood { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; } .es-mood > g[class^="m-"] { display: none; }
-.es-face[data-mood] > svg:first-child :is(.eyes, .mouth) { opacity: 0; }   /* its own eyes and mouth give way to the mood's */
-.es-face[data-mood="drool"] .m-drool, .es-face[data-mood="chew"] .m-chew, .es-face[data-mood="bliss"] .m-bliss { display: inline; }
-.es-drip { transform-box: fill-box; transform-origin: 50% 0; animation: esDrip 1.6s cubic-bezier(.5, 0, .9, .5) infinite; }   /* the drool: grows at the lip, hangs, drops */
-@keyframes esDrip { 0% { transform: scale(.4, .2); opacity: 1; } 45% { transform: scale(1, 1); opacity: 1; } 70% { transform: translateY(2px) scale(1, 1.25); opacity: 1; } 100% { transform: translateY(16px) scale(.8, .9); opacity: 0; } }
-.es-twinkle { transform-box: fill-box; transform-origin: center; animation: esTwinkle .9s ease-in-out infinite; } .m-drool g:nth-of-type(2) .es-twinkle { animation-delay: -.45s; }   /* the stars in the eyes spin and shine */
-@keyframes esTwinkle { 0%, 100% { transform: rotate(0) scale(1); } 50% { transform: rotate(20deg) scale(1.22); } }
-.es-jaw { transform-box: fill-box; transform-origin: center; animation: esJaw .28s ease-in-out infinite alternate; } @keyframes esJaw { to { transform: scale(.75, 1.6); } }
-.m-bliss { transform-box: fill-box; }
-.es-hearts { position: absolute; inset: 0; pointer-events: none; } .es-hearts i { position: absolute; bottom: 30%; width: 22px; height: 20px; animation: esHeart 1.5s ease-out forwards; } .es-hearts svg { width: 100%; height: 100%; display: block; }
-@keyframes esHeart { 0% { opacity: 0; transform: translate(0, 0) scale(.5); } 20% { opacity: 1; transform: translate(0, -10px) scale(1); } 100% { opacity: 0; transform: translate(var(--dx), -80px) scale(.9); } }
-.es-food { position: relative; width: 148px; height: 148px; flex: none; } .es-pic { width: 100%; height: 100%; overflow: visible; }
-.es-dish { filter: brightness(0) invert(1) sepia(.25) brightness(.98) drop-shadow(0 1px 1px rgba(90, 60, 30, .18)); }   /* a clean cream dish */   /* a dish left pale under what is eaten off it */
-.es-bite { transform: scale(0); transform-box: fill-box; transform-origin: center; transition: transform .18s cubic-bezier(.3, 1.6, .5, 1); } .es-bite.on { transform: scale(1); }
-.es-g { transition: opacity .6s, transform .5s; transform-box: view-box; transform-origin: 50% 80%; } .es-g.gone { opacity: 0; transform: scale(.85); }
-.eat-scene.drink .es-g.sip { animation: esSip .8s ease-in-out; } @keyframes esSip { 0%, 100% { transform: none; } 45% { transform: rotate(-22deg) translateY(-6px); } }
-.es-word { position: absolute; left: 50%; top: 4%; white-space: nowrap; font: 800 22px/1 'Hiragino Maru Gothic ProN', sans-serif; font-style: normal; color: #b0602a; transform: translateX(-50%); opacity: 0; pointer-events: none; }
-.es-word.on { animation: esWord .7s ease-out; } @keyframes esWord { 0% { opacity: 0; transform: translate(-50%, 8px) scale(.8); } 30% { opacity: 1; transform: translate(-50%, 0) scale(1.1); } 100% { opacity: 0; transform: translate(-50%, -14px) scale(1); } }
+.es-face { margin: 8px auto 0; width: min(100%, 300px, calc((100dvh - 300px) * .857)); min-width: 200px; }   /* the close-up (EATSCENE, 360 × 420), short of the screen's height on a small phone */
+.es-stage { display: block; width: 100%; height: auto; border-radius: 14px; box-shadow: inset 0 0 0 1px rgba(90, 60, 30, .12); }
 .es-bubble { position: relative; margin: 10px 0 0; padding: 10px 14px; border-radius: 16px; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .08); }
 .es-bubble::before { content: ''; position: absolute; left: 26%; top: -8px; border: 8px solid transparent; border-top: 0; border-bottom-color: #fff; }
 .es-bubble.pop { animation: kotoBump .3s ease-out; } .es-say { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.9; } .es-zh { margin: 2px 0 0; font-size: 13px; color: #8a7a6e; }
 .es-foot { display: flex; justify-content: flex-end; align-items: center; margin: 6px 0 10px; } .es-zh-btn[hidden], .es-ok[hidden] { display: none; } .es-ok { width: 100%; }
 .es-card .zh-btn { color: #8a7a6e; border-color: #e0d2bc; }   /* the card's own beige, by day and by night */
-.es-crumbs { position: absolute; inset: 0; pointer-events: none; } .es-crumbs i { position: absolute; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: #d9a05b; animation: esCrumb .65s ease-out forwards; }
-@keyframes esCrumb { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .eat-scene, .es-bite, .es-g, .es-drip, .es-twinkle, .es-jaw, .es-face.chew > svg, .es-hearts i, .es-bubble.pop { animation: none; transition: none; } }
+@media (prefers-reduced-motion: reduce) { .eat-scene, .es-bubble.pop { animation: none; transition: none; } }
 .mc-had { margin-left: 6px; padding: 0 4px; border: 1.5px solid #c8392f; border-radius: 50%; font-style: normal; font-size: 11px; color: #c8392f; vertical-align: 3px; }
 .mc-top { margin-left: auto; display: flex; align-items: center; gap: 10px; } .mc-purse { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-variant-numeric: tabular-nums; } .mc-purse .yen-i { width: 20px; height: 20px; }
 .mc-none { margin: 0 0 8px; font-size: 13px; color: var(--fg-3); }

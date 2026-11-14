@@ -110,78 +110,46 @@ const YEN = (() => {
     const own = t.fx || t.out || t.fortune;
     useThing(yard, Object.assign({}, t, own ? { then: t.then || (mu.have !== t.say ? mu.have : undefined) } : { say: mu.have, toast: null }));
   }
-  // ---- had: a screen of its own (2026-11-13, the user) — the hero's face close up, stars in the eyes and hearts rising; beside it
-  // its picture, bitten into (もぐもぐ: bites with teeth marks; a dish stays, pale, under what is eaten) or tipped up and drunk
-  // (ごくごく); then the hero goes on about it (its say, a line a tap, read out, the Chinese on a tap) and 「ごちそうさまでした！」;
-  // the first time, its stamp ----
-  let eats = 0;
-  // the face as it is had (2026-11-13, the user): its own eyes and mouth swapped for these, drawn over the face close-up (its box
-  // 111.5 × 100; the eyes' middles at 31.8 / 79.2, 40 down; the mouth's at 55.75, 65) — drool: star eyes, the mouth open and a
-  // drop running; chew: happy ^ ^ eyes, the mouth working (ω); bliss: heart eyes and a big smile — rosy cheeks all along
-  const EYE = { star: (x) => `<g transform="translate(${x} 40)"><g class="es-twinkle"><path d="M0 -12 L3.2 -3.2 L12 0 L3.2 3.2 L0 12 L-3.2 3.2 L-12 0 L-3.2 -3.2 Z" fill="#ffd34a" stroke="#f0a020" stroke-width="1.4" stroke-linejoin="round"/><circle cx="-2.6" cy="-2.6" r="1.8" fill="#fff"/></g></g>`,
-    happy: (x) => `<path d="M${x - 8} 43 Q${x} 33 ${x + 8} 43" fill="none" stroke="#2a2730" stroke-width="3.2" stroke-linecap="round"/>`,
-    heart: (x) => `<g transform="translate(${x} 41) scale(.62)"><path d="M0 14 C-9 7 -16 2 -16 -5 C-16 -10 -12 -13 -8 -13 C-4.6 -13 -2 -11 0 -8 C2 -11 4.6 -13 8 -13 C12 -13 16 -10 16 -5 C16 2 9 7 0 14 Z" fill="#f2557a"/><ellipse cx="-7" cy="-6" rx="3" ry="2" fill="#fff" fill-opacity=".7"/></g>` };
-  const MOOD = {
-    drool: EYE.star(31.8) + EYE.star(79.2) + '<path d="M48 62 Q55.75 73 63.5 62 Z" fill="#7a2e22"/><path d="M51 67 Q55.75 72 60.5 67 Q55.75 64.5 51 67 Z" fill="#f08a96"/><path class="es-drip" d="M62.5 65 q2.6 6.4 0 9.6 q-2.6 -3.2 0 -9.6 Z" fill="#a9dcf2"/>',
-    chew: EYE.happy(31.8) + EYE.happy(79.2) + '<g class="es-jaw"><path d="M48 65 q3.9 4.2 7.75 0 q3.9 4.2 7.75 0" fill="none" stroke="#7a2e22" stroke-width="2.4" stroke-linecap="round"/></g>',
-    bliss: EYE.heart(31.8) + EYE.heart(79.2) + '<path d="M45 61 Q55.75 77 66.5 61 Z" fill="#7a2e22"/><path d="M49.5 67.5 Q55.75 73.5 62 67.5 Q55.75 64.5 49.5 67.5 Z" fill="#f08a96"/>' };
-  const BLUSH = '<ellipse cx="20" cy="70" rx="10" ry="5" fill="#f58aa0" fill-opacity=".45"/><ellipse cx="91.5" cy="70" rx="10" ry="5" fill="#f58aa0" fill-opacity=".45"/>';
-  const HEART = '<svg viewBox="0 0 20 18"><path d="M10 17 C4 12 0 9 0 5 C0 2 2.4 0 5 0 C7 0 8.6 1.2 10 3 C11.4 1.2 13 0 15 0 C17.6 0 20 2 20 5 C20 9 16 12 10 17 Z" fill="#f2708a"/></svg>';
+  // ---- had: a screen of its own (2026-11-13, the user) — since 2026-11-14 a close-up across the table (EATSCENE, the user's pick of
+  // the 「七種吃法」 preview): the hero's head and shoulders, the thing before him, only the spoon, chopsticks, fork, pick — or the
+  // thing itself, or the drink — coming up to the mouth, three mouthfuls with the dish going down. Star-eyed first (how good it
+  // looks, a line a tap), いただきます and it is had, then he goes on about it (its say, a line a tap, read out, the Chinese on a
+  // tap) and 「ごちそうさまでした！」; the first time, its stamp ----
   function eat(it, first) {
-    const o = opt(it), drink = o.k === 'd', id = `esm${++eats}`, d = /<svg[^>]*><circle class="pd"[^>]*\/>(.*)<\/svg>$/s.exec(pic(it)), draw = d ? d[1] : '', el = document.createElement('div');
-    const bites = [[74, 48, 9], [61, 40, 10], [47, 43, 10], [33, 50, 9], [57, 58, 11], [41, 61, 11]];   // round the food's top, then its middle: a round bite with teeth marks along its edge
+    const o = opt(it), drink = o.k === 'd', el = document.createElement('div');
     const looks = o.look || [], said = (o.say && o.say.length ? o.say : [['おいしかった！', '好好吃！']]);   // before having it (star-eyed), once had
-    el.className = `eat-scene${drink ? ' drink' : ''}${o.dish ? ' dish' : ''}`; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', drink ? '喝東西' : '吃東西'); el.dataset.at = location.hash;   // watched to the end: no going elsewhere meanwhile (route)
+    el.className = `eat-scene${drink ? ' drink' : ''}`; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', drink ? '喝東西' : '吃東西'); el.dataset.at = location.hash;   // watched to the end: no going elsewhere meanwhile (route)
     el.innerHTML = `<div class="es-card"><p class="es-name" lang="ja">${ruby(it[1])}</p>
-      <div class="es-row"><div class="es-face" data-mood="drool">${HERO.head(state.look, 'face')}<svg class="es-mood" viewBox="0 0 111.5 100" aria-hidden="true">${BLUSH}${Object.entries(MOOD).map(([k, m]) => `<g class="m-${k}">${m}</g>`).join('')}</svg><span class="es-hearts" aria-hidden="true"></span></div>
-        <div class="es-food"><svg class="pic es-pic" viewBox="0 0 100 100" aria-hidden="true"><defs><mask id="${id}"><rect width="100" height="100" fill="#fff"/>${drink ? '' : bites.map(([x, y, r], k) => `<g class="es-bite" data-k="${k}" fill="#000"><circle cx="${x}" cy="${y}" r="${r}"/>${[-1, 0, 1].map((j) => `<circle cx="${(x + j * r * 0.62).toFixed(1)}" cy="${(y + r * (j ? 0.78 : 0.95)).toFixed(1)}" r="${(r * 0.42).toFixed(1)}"/>`).join('')}</g>`).join('')}</mask></defs><circle class="pd" cx="50" cy="50" r="47"/>${o.dish ? `<g class="es-dish">${draw}</g>` : ''}<g class="es-g" mask="url(#${id})">${draw}</g></svg><i class="es-word" aria-hidden="true"></i><span class="es-crumbs" aria-hidden="true"></span></div></div>
+      <div class="es-face" data-mood="drool"><svg class="es-stage" viewBox="0 0 360 420" role="img" aria-label="${esc(plain(it[1]))}"></svg></div>
       <div class="es-bubble"><p class="es-say" lang="ja"></p><p class="es-zh" hidden></p></div>
       <div class="es-foot"><button type="button" class="zh-btn es-zh-btn" hidden>中文</button></div>
       <button type="button" class="btn btn-primary es-ok" lang="ja" hidden>▶</button></div>`;
     document.body.appendChild(el);
-    const mood = (m) => { el.querySelector('.es-face').dataset.mood = m; };
+    const scene = EATSCENE.mount(el.querySelector('.es-stage'), it, pic(it), calm());
     SND.play('sparkle'); setTimeout(() => { if (el.isConnected) SND.play('slurp'); }, 450);   // the stars come up, じゅるり
-    const face = el.querySelector('.es-face'), word = el.querySelector('.es-word'), g = el.querySelector('.es-g'), ok = el.querySelector('.es-ok'), zhB = el.querySelector('.es-zh-btn'), zhP = el.querySelector('.es-zh');
+    const ok = el.querySelector('.es-ok'), zhB = el.querySelector('.es-zh-btn'), zhP = el.querySelector('.es-zh');
     // the hero's words: how good it looks (looks, star-eyed, a line a tap), いただきます and it is had, how good it was (said, a line a
     // tap), ごちそうさまでした. phase: 'look' | 'eat' | 'said'; k: the line of it shown
     let phase = looks.length ? 'look' : 'eat', k = 0, zh = false;
     const show = (ja, z) => { el.querySelector('.es-say').innerHTML = ruby(ja); zhP.textContent = z || ''; zhP.hidden = !zh || !z; speakAs('hero', ja); el.querySelector('.es-bubble').classList.remove('pop'); void el.offsetWidth; el.querySelector('.es-bubble').classList.add('pop'); };
     const line = () => show(...(phase === 'look' ? looks : said)[k]);
     const button = (last, end) => { ok.hidden = false; zhB.hidden = false; ok.innerHTML = last ? ruby(end) : '▶'; };
-    const pop = (w) => { word.textContent = w; word.classList.remove('on'); void word.offsetWidth; word.classList.add('on'); };
-    const hearts = () => { const box = el.querySelector('.es-hearts'); for (let i = 0; i < 3; i++) setTimeout(() => { if (!el.isConnected) return; const h = document.createElement('i'); h.innerHTML = HEART; h.style.left = `${10 + Math.random() * 80}%`; h.style.setProperty('--dx', `${(Math.random() * 30 - 15).toFixed(0)}px`); box.appendChild(h); setTimeout(() => h.remove(), 1600); }, i * 220); };
-    const done = () => { el.classList.add('done'); mood('bliss'); hearts(); playSfx('yum'); phase = 'said'; k = 0; line(); button(said.length === 1, EAT.end[0]); };
+    const done = () => { if (!el.isConnected) return; el.classList.add('done'); playSfx('yum'); phase = 'said'; k = 0; line(); button(said.length === 1, EAT.end[0]); };
     const have = () => {   // いただきます！ and it is had
       phase = 'eat'; ok.hidden = true; show(...EAT.start);
-      if (calm()) { el.querySelectorAll('.es-bite').forEach((b) => b.classList.add('on')); g.classList.add('gone'); done(); return; }
-      const steps = drink ? 3 : bites.length;
-      for (let n = 0; n < steps; n++) setTimeout(() => {
-        if (!el.isConnected) return;
-        face.classList.remove('chew'); void face.offsetWidth; face.classList.add('chew'); mood('chew');
-        if (drink) { g.classList.remove('sip'); void g.getBoundingClientRect(); g.classList.add('sip'); pop('ごくごく'); SND.play('gulp', { vol: 0.8 }); }
-        else { el.querySelector(`.es-bite[data-k="${n}"]`).classList.add('on'); pop('もぐもぐ'); SND.play('chomp'); crumbs(el, bites[n]); }
-        if (n === 1 || n === steps - 1) hearts();
-        if (n === steps - 1) setTimeout(() => { if (!el.isConnected) return; g.classList.add('gone'); done(); }, 700);
-      }, 1100 + n * (drink ? 900 : 650));
+      if (calm()) { scene.finish(); done(); return; }
+      scene.eat(done);
     };
     if (phase === 'look') { line(); button(looks.length === 1, EAT.start[0]); } else have();
     zhB.addEventListener('click', () => { zh = !zh; zhP.hidden = !zh || !zhP.textContent; });
     ok.addEventListener('click', () => {
       if (phase === 'look') { if (k < looks.length - 1) { k += 1; line(); button(k === looks.length - 1, EAT.start[0]); } else have(); return; }   // how good it looks, then いただきます
-      if (phase === 'said' && k < said.length - 1) { k += 1; line(); hearts(); button(k === said.length - 1, EAT.end[0]); return; }   // on through how good it was
+      if (phase === 'said' && k < said.length - 1) { k += 1; line(); scene.hearts(); button(k === said.length - 1, EAT.end[0]); return; }   // on through how good it was
       if (phase !== 'said') return;
-      speakAs('hero', EAT.end[0]); el.remove(); if (first) setTimeout(() => stamp(it), 300);
+      speakAs('hero', EAT.end[0]); scene.stop(); el.remove(); if (first) setTimeout(() => stamp(it), 300);
     });
   }
   const calm = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function crumbs(el, [x, y]) {   // a few crumbs off where it was bitten
-    const box = el.querySelector('.es-crumbs');
-    for (let i = 0; i < 5; i++) {
-      const c = document.createElement('i'), a = Math.random() * Math.PI * 2, r = 18 + Math.random() * 22;
-      c.style.cssText = `left:${x}%;top:${y}%;--dx:${(Math.cos(a) * r).toFixed(1)}px;--dy:${(Math.sin(a) * r + 14).toFixed(1)}px`;
-      box.appendChild(c); setTimeout(() => c.remove(), 700);
-    }
-  }
   // the first of it: stamped into 美食手帳 up top, with a thump
   function stamp(it) {
     const el = document.createElement('div'); el.className = 'yen-stamp'; el.setAttribute('role', 'status');
@@ -215,5 +183,5 @@ const YEN = (() => {
     const mu = M()[m];
     return { hello: mu.hello || ['いらっしゃい！', '歡迎光臨！'], label: m === 'bath' ? 'おふろに はいる' : 'ちゅうもんする', go: () => open(yard, t) };   // in Japanese (the user), in kana: furigana in a button set it askew beside the other
   }
-  return { open, buy, toggleZh, lines, book, shown, reading, priceMark, known, left, tool, allOpen, sells };
+  return { open, buy, toggleZh, lines, book, shown, reading, priceMark, known, left, tool, allOpen, sells, pic };
 })();
