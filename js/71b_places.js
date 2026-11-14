@@ -54,7 +54,7 @@ INDOOR.forEach((pl) => Object.values(TOWN.SPOTS[pl] || {}).forEach((sp) => { if 
 // how far up each place the hero walks (Y px up): the ground in front of its buildings, never up onto them (2026-11-10, the user);
 // the yard up to its house, the main road to its far pavement, a room to its floor
 const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128, oku: 124, kominkan: 128, kyoshitsu: 128, chinatown: 128 };
-const walkTop = (place, X) => (place === 'yard' && X !== undefined ? Math.round(214 - Math.max(0, Math.abs(X) - 300) * 0.22) : WALK_TOP[place] || 214);   // the yard: a hilltop, lower towards its sides — not out over the edge
+const walkTop = (place, X) => (place === 'yard' && X !== undefined ? Math.round(214 - Math.max(0, Math.abs(X) - 300) * 0.22) : place === 'chinadori' ? (X === undefined ? DORI.FAR : DORI.top(X)) : WALK_TOP[place] || 214);   // 中華街大通り: its trapezoid (DORI)   // the yard: a hilltop, lower towards its sides — not out over the edge
 // what stands in the way in each place (2026-11-10, the user: he walked about as if every place were flat ground): the ground the
 // things there stand on, [X0, X1, Y0, Y1] in his units — benches, crates, tables and stools, the sandbox, the beach's grassy bank
 // either side of the boardwalk — and in the yard its wares and the mailbox. He goes round them (yRoute); a tap on one sends him to
@@ -482,11 +482,11 @@ function yHeroWalk(yard, to, done, free) {   // free: on the way out of the plac
   const el = yard.querySelector('.yhero'), lim = ycam.YW / 2 - 20;
   yh.climb = null; yh.s = 0; yard.classList.remove('climbing'); if (el) { el.classList.remove('climb'); yClimbLook(el, 0); }   // off the hill path, if he was on it
   HERO.still(el); if (el) el.classList.remove('bench');   // up off the bus stop's bench
-  const from = [yh.X, yh.Y], aim = INDOOR.includes(yPlace) ? (free ? to : isoClamp(to)) : [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(free ? 222 : walkTop(yPlace, Math.max(-lim, Math.min(lim, to[0]))), to[1]))];
+  const from = [yh.X, yh.Y], aim = INDOOR.includes(yPlace) ? (free ? to : isoClamp(to)) : yPlace === 'chinadori' && !free ? DORI.clamp(to) : [Math.max(-lim, Math.min(lim, to[0])), Math.max(12, Math.min(free ? 222 : walkTop(yPlace, Math.max(-lim, Math.min(lim, to[0]))), to[1]))];
   const pts = yRoute(yPlace, from, aim, free), goal = pts[pts.length - 1], seg = []; let len = 0;   // round what stands in the way
   for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); if (d) { seg.push([pts[i - 1], pts[i], len, d]); len += d; } }
   if (!el || len < 2 || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) { yh.X = goal[0]; yh.Y = goal[1]; if (el) yHeroPlace(yard); yHeroSave(); if (done) done(); return; }
-  const v = Math.max(170, len / 1.1); yh.v = v;   // px a second: a long way hurries, about a second at most
+  const v = Math.max(170, len / 1.1) * (yPlace === 'chinadori' ? Math.max(0.4, DORI.scale((from[1] + goal[1]) / 2) / 0.5) : 1); yh.v = v;   // px a second: a long way hurries, about a second at most; down 中華街大通り's length, slower the further in (a step there is short)
   const face = ([a, b]) => { const dx = b[0] - a[0], dy = b[1] - a[1]; yh.back = dy > 0; if (Math.abs(dx) > 1) yh.flip = dx < 0; yh.turn = Math.abs(dx) > 0.5 * Math.abs(dy); };   // across the lawn: a little turned
   let on = seg[0]; face(on);
   el.classList.remove('out'); el.classList.toggle('run', v > 260); el.classList.toggle('walk', v <= 260);

@@ -215,7 +215,7 @@ const TOWNEV = (() => {
   STOPS.forEach((p) => { ADJ[p] = ['street'].concat(STOPS.filter((q) => q !== p)); });
   ADJ.shrine.push('oku'); ADJ.oku = ['shrine'];   // up the 千本鳥居 on foot (2026-11-14)
   ADJ.kominkan.push('kyoshitsu'); ADJ.kyoshitsu = ['kominkan'];   // 公民館's door to its 日本語教室 (2026-11-14)
-  const PLACE_NAME = { yard: '院子', town: '小鎮', beach: '海邊', street: '公車站', harbor: 'みなと漁港', park: 'ひだまり公園', shokudo: 'まんぷく食堂', izakaya: '居酒屋とり吉', station: '駅前', sento: '月の湯', shrine: '稲荷神社', castle: '白鷺城', oku: '稲荷山・奥社', kominkan: '公民館', kyoshitsu: '日本語教室', chinatown: '中華街' };
+  const PLACE_NAME = { yard: '院子', town: '小鎮', beach: '海邊', street: '公車站', harbor: 'みなと漁港', park: 'ひだまり公園', shokudo: 'まんぷく食堂', izakaya: '居酒屋とり吉', station: '駅前', sento: '月の湯', shrine: '稲荷神社', castle: '白鷺城', oku: '稲荷山・奥社', kominkan: '公民館', kyoshitsu: '日本語教室', chinatown: '中華街', chinadori: '中華街大通り' };
   function hop(from, to) {
     if (from === to || !ADJ[from]) return null;
     const first = { [from]: null }, q = [from];   // breadth first: the first step of the way each place was reached by
@@ -1503,7 +1503,7 @@ function streetHtml() {
 // between the places out of doors (test, 2026-11-09): the yard's path down to the main road, the yard's left edge along to the
 // beach. The hero walks to the way out (out), fades, and the other place opens with him coming in (in: where he appears, where
 // he walks to; yh.arrive)
-const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', harbor: '#/harbor', park: '#/park', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento', shrine: '#/shrine', castle: '#/castle', oku: '#/oku', kominkan: '#/kominkan', kyoshitsu: '#/kyoshitsu', chinatown: '#/chinatown' };
+const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', harbor: '#/harbor', park: '#/park', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento', shrine: '#/shrine', castle: '#/castle', oku: '#/oku', kominkan: '#/kominkan', kyoshitsu: '#/kyoshitsu', chinatown: '#/chinatown', chinadori: '#/chinadori' };
 // where a place's sight stands, for the camera to look at on the way in (2026-11-10: 白鷺城 was off the screen of a phone)
 const PLACE_LOOK = { castle: 280, shokudo: 130 };
 // a sight too big for a phone's screen, seen whole (yWide): [x0, x1, top] in the land's units — 白鷺城's keeps, their walls to the
@@ -2436,7 +2436,7 @@ function yardHtml(pct, place = 'yard') {
         <div class="birds"><div class="flock">${[[52, 14], [38, 6], [38, 22], [24, 0], [24, 28]].map(([x, y]) => `<i style="left:${x}px;top:${y}px"></i>`).join('')}</div></div>
       </div>
       <div class="yworld" style="width:${yw}px;margin-left:${-yw / 2}px">
-      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'harbor' ? harborHtml() : place === 'park' ? parkHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : place === 'shrine' ? shrineHtml() : place === 'castle' ? castleHtml() : place === 'oku' ? okuHtml() : place === 'kominkan' ? kominkanHtml() : place === 'kyoshitsu' ? kyoshitsuHtml() : place === 'chinatown' ? chinatownHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
+      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'harbor' ? harborHtml() : place === 'park' ? parkHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : place === 'shrine' ? shrineHtml() : place === 'castle' ? castleHtml() : place === 'oku' ? okuHtml() : place === 'kominkan' ? kominkanHtml() : place === 'kyoshitsu' ? kyoshitsuHtml() : place === 'chinatown' ? chinatownHtml() : place === 'chinadori' ? chinadoriHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
         <defs><radialGradient id="shopGlow"><stop offset="0" stop-color="rgba(255,196,110,.55)"/><stop offset=".5" stop-color="rgba(255,196,110,.16)"/><stop offset="1" stop-color="rgba(255,196,110,0)"/></radialGradient></defs>
         <path class="m-far" d="M520 600 V340 C560 330 600 314 640 304 C670 296 700 294 730 298 C770 306 810 328 860 342 V600 Z"/>
         <path class="m-main" d="${HILL} V600 Z"/><path class="m-shade" d="M482 250 C494 248 506 256 520 268 C552 296 594 326 646 350 V372 C590 340 548 306 516 280 C502 268 492 258 482 250 Z"/><path class="m-rim" d="${HILL}"/>

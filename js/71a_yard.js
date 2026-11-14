@@ -127,7 +127,7 @@ const YARD_HALF = 600;   // where yard wares may stand: within the middle 1200px
 const yardWorldW = () => Math.max(2 * YARD_HALF, document.documentElement.clientWidth || window.innerWidth || 0);
 const ycam = { x: 0, W: 0, YW: 2 * YARD_HALF, z: 1 };   // W: how much of the world the screen shows; z: how large it is drawn (yardZoom)
 let ypan = null, ycoast = 0;   // a finger looking along the yard; its fling
-const yCamMax = () => Math.max(0, (ycam.YW - ycam.W) / 2);
+const yCamMax = () => (yPlace === 'chinadori' ? 0 : Math.max(0, (ycam.YW - ycam.W) / 2));   // 中華街大通り: one screen, seen down its length (DORI)
 function yCamTo(yard, x, give = 0) {   // the camera there (give: how much of a pull past an end a finger gets)
   const m = yCamMax();
   ycam.x = x < -m ? -m - (-m - x) * give : x > m ? m + (x - m) * give : x;
@@ -952,7 +952,7 @@ const yh = { X: 0, Y: 186, back: false, flip: false, turn: false, raf: 0, fromDo
 try { const h = JSON.parse(localStorage.getItem('nq_hero') || 'null'); if (h && h.yard && Number.isFinite(h.yard.X) && Number.isFinite(h.yard.Y)) Object.assign(yh, { X: h.yard.X, Y: h.yard.Y }); } catch (e) { /* first time out */ }
 let yPlace = 'yard';   // the yard or the main road (#/street): where the hero is out, each its own spot in nq_hero
 function yHeroSave() { try { const h = JSON.parse(localStorage.getItem('nq_hero') || '{}') || {}; const [X, Y] = yh.use ? yh.use.up : [yh.X, yh.Y]; h[yPlace] = { X: Math.round(X), Y: Math.round(Y) }; localStorage.setItem('nq_hero', JSON.stringify(h)); } catch (e) { /* no storage */ } }
-const yScale = (Y) => (INDOOR.includes(yPlace) ? ISO.k : 0.19 + 0.31 * Math.max(0, Math.min(1, (212 - Y) / 198)));   // in a room (seen at 45°) one size anywhere
+const yScale = (Y) => (INDOOR.includes(yPlace) ? ISO.k : yPlace === 'chinadori' ? DORI.scale(Y) : 0.19 + 0.31 * Math.max(0, Math.min(1, (212 - Y) / 198)));   // in a room (seen at 45°) one size anywhere; down 中華街大通り, smaller as it narrows (DORI)
 function yHeroHtml() { return `<div class="hero yhero" data-act="hero-hop" aria-label="主角">${HERO.svg({ wear: state.wear, look: state.look })}</div>`; }
 function yHeroRedraw(yard) { const el = yard.querySelector('.yhero'); if (el) el.innerHTML = HERO.svg({ wear: state.wear, look: state.look }); }   // dressed anew
 function yHeroHold(yard) {   // the dressing room opens: the hero stops where they are
