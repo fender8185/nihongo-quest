@@ -10,12 +10,14 @@
 const SND = (() => {
   const FILE = (n) => `sounds/${n}-1.m4a`;
   const FX_VOL = 0.32, STEP_VOL = 0.22, AMB_VOL = 0.9, DUCK = 0.3;
+  const TOP = 0.2;   // 環境音 at 100%: a fifth of what it was (2026-11-14, the user: the default was frightening)
   let C = null, bus = null, amb = null, ducks = 0, unduckT = 0;
   const bufs = {};   // a file's name → the promise of its AudioBuffer (null: not to be had; asked again a minute later)
   const vol = () => Math.min(1, Math.max(0, Number(state.settings.ambientVol) || 0));   // 設定 › 環境音 (0: none)
+  const gain = () => vol() * TOP * (ducks ? DUCK : 1);   // the whole of it: its setting, under Japanese read aloud
   function ctx() { if (!vol()) return null; const c = audioCtx(); if (c && c !== C) { C = c; bus = amb = null; } return c; }
   function out(c) {   // the way out: everything through bus (ducked), the backgrounds through amb on it
-    if (!bus) { bus = c.createGain(); bus.gain.value = vol() * (ducks ? DUCK : 1); bus.connect(c.destination); amb = c.createGain(); amb.gain.value = AMB_VOL; amb.connect(bus); }
+    if (!bus) { bus = c.createGain(); bus.gain.value = gain(); bus.connect(c.destination); amb = c.createGain(); amb.gain.value = AMB_VOL; amb.connect(bus); }
     return bus;
   }
   // a loop's or a footstep file's length as made (s): a decoder that leaves the encoder's 2112 samples of lead-in at the start
@@ -192,7 +194,7 @@ const SND = (() => {
     ducks = Math.max(0, ducks + (on ? 1 : -1));
     clearTimeout(unduckT);
     const set = () => {
-      if (bus && C) bus.gain.setTargetAtTime(vol() * (ducks ? DUCK : 1), C.currentTime, ducks ? 0.08 : 0.4);
+      if (bus && C) bus.gain.setTargetAtTime(gain(), C.currentTime, ducks ? 0.08 : 0.4);
       MUSIC.duck(Boolean(ducks));
     };
     if (ducks) set(); else unduckT = setTimeout(set, 500);
@@ -202,7 +204,7 @@ const SND = (() => {
   ['pointerdown', 'keydown'].forEach((t) => document.addEventListener(t, () => { if (vol() && scene) ctx(); }, true));   // woken by the first tap (iOS)
   // 設定 › 環境音 dragged: louder or softer at once; to none or back from none, the place's sounds stop or start
   function volume() {
-    const v = vol() * (ducks ? DUCK : 1);
+    const v = gain();
     if (bus && C) { if (C.state === 'running') bus.gain.setTargetAtTime(v, C.currentTime, 0.05); else { bus.gain.cancelScheduledValues(0); bus.gain.value = v; } }   // asleep (iOS before a tap): set as it is
     sync();
   }

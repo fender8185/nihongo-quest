@@ -106,7 +106,7 @@ const WARES = [
   { id: 'loungeRug', kind: 'rug', starter: true, since: 7, turn: false, name: '長地毯', fp: [4.4, 2.8], at: { w: 'F', x: 22.4, y: 3.3, r: 0 }, desc: '' },
   { id: 'lowShelf', kind: 'floor', starter: true, since: 7, turn: false, h: 2.4, name: '矮書架', fp: [1.1, 3.4], at: { w: 'F', x: 0.55, y: 12.6, r: 0 }, desc: '', act: 'diary' },
   { id: 'bedWindow', kind: 'wall', starter: true, since: 7, win: true, name: '臥房的窗', size: [4.7, 5.4], at: { w: 'R', u: 15.6, v: 6.6, rm: 'bed' }, desc: '' },
-  { id: 'wardrobe', kind: 'floor', starter: true, since: 7, turn: false, h: 6.2, name: '衣櫃', fp: [1.3, 2.6], at: { w: 'F', x: 0.65, y: 8.3, r: 0, rm: 'bed' }, desc: '', act: 'wardrobe' },
+  { id: 'wardrobe', kind: 'floor', starter: true, since: 7, faces: 'x', h: 6.2, name: '衣櫃', fp: [1.3, 2.6], at: { w: 'F', x: 0.65, y: 8.3, r: 0, rm: 'bed' }, desc: '', act: 'wardrobe' },
   { id: 'dresser', kind: 'floor', starter: true, since: 7, turn: false, h: 2.6, name: '矮櫃', fp: [2.4, 1.2], at: { w: 'F', x: 15.6, y: 0.6, r: 0, rm: 'bed' }, desc: '', act: 'mirror' },
   { id: 'bedPlant', kind: 'floor', starter: true, since: 7, turn: false, h: 3.7, name: '盆栽植物', fp: [0.84, 0.84], at: { w: 'F', x: 18.9, y: 0.8, r: 0, rm: 'bed' }, desc: '', act: 'water' },
   // test (since: 8): more windows (書房 one behind the sofa and one over the low shelf, the bedroom one by the corner) and wall
@@ -117,8 +117,10 @@ const WARES = [
   { id: 'sconce1', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'R', u: 9.4, v: 5.4 }, desc: '', light: { dz: 0.35, r: 4.4 } },
   { id: 'sconce2', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'R', u: 27.2, v: 5.4 }, desc: '', light: { dz: 0.35, r: 4.4 } },
   { id: 'sconce3', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'L', u: 16.6, v: 5.4 }, desc: '', light: { dz: 0.35, r: 4.4 } },
-  // test: a full-length mirror — the face, the hair and the features are changed in front of it; 小春's present (by 書房's front door, the user's call)
-  { id: 'fullMirror', kind: 'floor', gift: 'koharu', turn: false, h: 5, name: '全身鏡', fp: [0.6, 1.3], home: { w: 'F', x: 0.3, y: 3.25, r: 0 }, desc: '', act: 'mirror' },
+  // test: a full-length mirror — the face, the hair and the features are changed in front of it; 小春's present. It stood by
+  // 書房's front door (the user's call), then (2026-11-14, the user: tapped by mistake going out) along the same wall past the peg
+  // rail, before the window. faces: its front looks along +x unturned (the wardrobe's too); both turn since 2026-11-14 (the user)
+  { id: 'fullMirror', kind: 'floor', gift: 'koharu', faces: 'x', h: 5, name: '全身鏡', fp: [0.6, 1.3], home: { w: 'F', x: 0.3, y: 9.55, r: 0 }, desc: '', act: 'mirror' },
   { id: 'sconce4', kind: 'wall', starter: true, since: 8, name: '壁燈', size: [0.8, 1.1], at: { w: 'R', u: 11.8, v: 5.4, rm: 'bed' }, desc: '', light: { dz: 0.35, r: 4.4 } },
   // the string of lights along the tops of the walls, as four strings (1.2.0): hung end to end where it ran, three on the
   // right wall and one on the left, each moved or put away on its own; their bulbs light up one by one as the day's list fills.

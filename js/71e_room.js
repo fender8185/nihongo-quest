@@ -942,6 +942,12 @@ const ROOM = (() => {
     const fresh = (id) => Object.assign({}, WARE.get(id).at), fitsAt = (id, p) => inRoomOf(roomOf(p), () => fits(WARE.get(id), p, placed));
     WARES.filter((w) => w.starter && w.since === since && !placed[w.id]).forEach((w) => { if (fitsAt(w.id, fresh(w.id))) placed[w.id] = fresh(w.id); });
   }
+  // roomV 10 (2026-11-14, the user: tapped by mistake going out): the full-length mirror still where it was set out by 書房's front
+  // door goes to its new home along the same wall, when that is clear
+  function settle10(placed) {
+    const p = placed.fullMirror, it = WARE.get('fullMirror');
+    if (p && p.w === 'F' && !p.r && !p.rm && p.x === 0.3 && p.y === 3.25 && inRoomOf('study', () => fits(it, it.home, placed))) placed.fullMirror = Object.assign({}, it.home);
+  }
   function standingList() {   // the floor wares (a working thing in its parts), unsorted
     return placedWares().filter((o) => o.it.kind === 'floor').flatMap((o) => {
       if (!WORK[o.id]) return [{ id: 'w:' + o.id, fp: wareFootprint(o.it, o.p), ware: o }];
@@ -1062,6 +1068,9 @@ const ROOM = (() => {
       state.placed[id] = p; ed.sel = id; saveState(); SND.play('place');
     } else if (cmd === 'turn' && o) {
       const p = Object.assign({}, o.p, { r: o.p.r ? 0 : 1 });
+      // turned about its middle, a thing against a wall would stand into it (the wardrobe, the full-length mirror): pushed back in
+      const f = wareFootprint(o.it, p), q2r = (v) => Math.round(v * 100) / 100;
+      p.x = q2r(p.x - Math.min(0, f[0]) - Math.max(0, f[2] - RW)); p.y = q2r(p.y - Math.min(0, f[1]) - Math.max(0, f[3] - RD));
       if (!fits(o.it, p)) { toast('旁邊太擠了，轉不過來'); return; }
       state.placed[o.id] = p; saveState();
     } else if (cmd === 'put' && o && !o.it.fixed) { delete state.placed[o.id]; ed.sel = null; saveState(); }
@@ -1282,9 +1291,11 @@ const ROOM = (() => {
     if (o.it.act === 'kotatsu') { use(el, () => {}, { x: o.p.x - 1.18, y: o.p.y, look: 'X', act: 'kneel', from: [o.p.x - 1.9, o.p.y], out: [-0.72, 0] }); return; }
     const g = walkGrid(), ok = ([x, y]) => { const i = Math.floor(x / CELL), j = Math.floor(y / CELL); return i >= 0 && j >= 0 && i < GW && j < GH && !g[j * GW + i]; };
     if (o.it.act === 'kneel') { use(el, () => {}, kneelSpot(o, ok)); return; }
-    // a wall's (the round mirror): stood before it, facing the wall
-    const f = o.it.kind === 'wall' ? null : wareFootprint(o.it, o.p);
-    const [x, y, look] = f ? [[o.p.x, f[3] + 0.5, 'R'], [f[2] + 0.5, o.p.y, 'L']].find(ok) || [o.p.x, f[3] + 0.5, 'R']
+    // a wall's (the round mirror): stood before it, facing the wall. A floor one: on its +y side, else its +x side — the other
+    // way round for one whose front looks along +x (faces, unturned: the wardrobe, the full-length mirror), so it is stood before
+    const f = o.it.kind === 'wall' ? null : wareFootprint(o.it, o.p), sides = f && [[o.p.x, f[3] + 0.5, 'R'], [f[2] + 0.5, o.p.y, 'L']];
+    if (sides && o.it.faces === 'x' && !o.p.r) sides.reverse();
+    const [x, y, look] = f ? sides.find(ok) || sides[0]
       : [1.2, 1.7, 2.4].map((d) => (o.p.w === 'L' ? [d, o.p.u, 'L'] : [o.p.u, d, 'R'])).find(ok) || (o.p.w === 'L' ? [1.2, o.p.u, 'L'] : [o.p.u, 1.2, 'R']);
     use(el, () => { SND.play({ diary: 'page', wardrobe: 'cloth' }[o.it.act]); if (o.it.act === 'music') MUSIC.pick(el.closest('.study')); else if (o.it.act === 'wardrobe') DRESS.open(el.closest('.study')); else if (o.it.act === 'mirror') DRESS.open(el.closest('.study'), 'mirror', o.it.name === '矮櫃' ? '梳妝鏡' : o.it.name); else if (o.it.act === 'diary') DIARY.open(); else if (o.it.act === 'water') water(el.closest('.study'), o, look); }, { x, y, look, act: 'reach' });
   }
@@ -1777,7 +1788,7 @@ const ROOM = (() => {
   setRoom('study'); Object.assign(hero, heroPos.study || {});
   const kit = { S, P, pt, poly, line, onX, onY, onZ, F, FS, tone, box, qX, qY, qZ, shadow, bb, C, q2, r1, DEFS, VB, own, wireArt, bulbsAt };
   function hold() { heroHalt(); hero.going = null; hero.lead = null; }   // the dressing room opens: the hero stops where they are
-  return { html, level, mount, enter, pull, door, mark, out, kit, fits, moveOff, give, knock, guest, settle, settle8, settleNew, SPOTS, room: () => ROOMID, use, useWare, heroRedraw, heroIn, tapHero, hold, edit: (el, cmd, id) => editCmd(el.closest('.study'), cmd, id) };
+  return { html, level, mount, enter, pull, door, mark, out, kit, fits, moveOff, give, knock, guest, settle, settle8, settle10, settleNew, SPOTS, room: () => ROOMID, use, useWare, heroRedraw, heroIn, tapHero, hold, edit: (el, cmd, id) => editCmd(el.closest('.study'), cmd, id) };
 })();
 // ---------- 古道具屋's wares in 書房 (1.2.0): each one drawn with 書房's own pencils and light (ROOM.kit) ----------
 // DECOR.wall(id, p) draws a wall ware where it hangs, DECOR.floor(id, p) one standing or lying on the floor (p.r turns it a
@@ -2033,27 +2044,33 @@ const DECOR = (() => {
       s += box('#c95f4c', x0 + 0.25, y - 0.45, h, x1 - 0.15, y + 0.35, h + 0.45, { t: '#d8735f', hlv: true }) + bb(x1 - 0.14, y - 0.05, h + 0.22, `<circle r="4.4" fill="#3b3653" fill-opacity=".75"/><circle r="1.6" fill="#e6c36a"/>`);
       return s + bb(x, y1 - 0.5, h, `<path ${L(C.walnut, h + 0.3)} d="M-7 0 L-6 -15 H6 L7 0 Z"/><rect x="-4.4" y="-12.5" width="8.8" height="10" fill="#f2e9d6"/><circle cx="1.5" cy="-9" r="1.8" fill="#e8743a"/><path d="M-4.4 -5 L-1 -8 L2 -6 L4.4 -8.5 V-2.5 H-4.4 Z" fill="#8fbf8a"/>`);
     },
-    fullMirror: (x, y) => {   // a full-length mirror leaning on the left wall: a walnut frame on two little feet, the glass catching the light
-      const x0 = x - 0.3, x1 = x + 0.3, y0 = y - 0.65, y1 = y + 0.65, h = 5, a = [x1, y, 2.5];
-      let s = shadow(x0, y0 - 0.1, x1 + 0.35, y1 + 0.3, 0.75);
-      s += box(C.oakDk, x0 + 0.1, y0 + 0.05, 0, x1, y0 + 0.25, 0.18, { hl: false }) + box(C.oakDk, x0 + 0.1, y1 - 0.25, 0, x1, y1 - 0.05, 0.18, { hl: false });
-      s += box(C.walnut, x0 + 0.12, y0, 0.18, x0 + 0.34, y1, h, { t: C.oak, y: '#7a5438', x: C.walnut, hlv: true });
-      s += `<g transform="${onX(x0 + 0.345)}"><defs><linearGradient id="fmGlass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9f3f6"/><stop offset=".55" stop-color="#bcd6e0"/><stop offset="1" stop-color="#9fc0cf"/></linearGradient></defs>
-        <rect x="${q2(-y1 + 0.13)}" y="${q2(-h + 0.14)}" width="${q2(y1 - y0 - 0.26)}" height="${q2(h - 0.46)}" rx=".5" fill="url(#fmGlass)" style="opacity:calc(.55 + .45 * var(--day))"/>
-        <path d="M${q2(-y1 + 0.35)} ${q2(-h + 1.4)} L${q2(-y1 + 0.75)} ${q2(-h + 0.6)} M${q2(-y1 + 0.35)} ${q2(-h + 2.1)} L${q2(-y1 + 1.05)} ${q2(-h + 0.75)}" stroke="#fff" stroke-opacity=".7" stroke-width=".08" stroke-linecap="round"/>
-        <rect x="${q2(-y1 + 0.13)}" y="${q2(-h + 0.14)}" width="${q2(y1 - y0 - 0.26)}" height="${q2(h - 0.46)}" rx=".5" fill="none" stroke-width=".05" ${FS(C.oak, 'x', a)}/></g>`;
+    // the full-length mirror and the wardrobe turn (2026-11-14, the user): turned, they stand with their backs to the right wall,
+    // their fronts looking along +y (the glass and the doors drawn on that face, u = x, instead of u = -y)
+    fullMirror: (x, y, r) => {   // a full-length mirror leaning on the left wall: a walnut frame on two little feet, the glass catching the light
+      const h = 5, [x0, x1, y0, y1] = r ? [x - 0.65, x + 0.65, y - 0.3, y + 0.3] : [x - 0.3, x + 0.3, y - 0.65, y + 0.65];
+      const [u0, u1] = r ? [x0, x1] : [-y1, -y0], a = r ? [x, y1, 2.5] : [x1, y, 2.5], f = r ? 'y' : 'x';
+      let s = r ? shadow(x0 - 0.1, y0, x1 + 0.3, y1 + 0.35, 0.75) : shadow(x0, y0 - 0.1, x1 + 0.35, y1 + 0.3, 0.75);
+      s += r ? box(C.oakDk, x0 + 0.05, y0 + 0.1, 0, x0 + 0.25, y1, 0.18, { hl: false }) + box(C.oakDk, x1 - 0.25, y0 + 0.1, 0, x1 - 0.05, y1, 0.18, { hl: false })
+        : box(C.oakDk, x0 + 0.1, y0 + 0.05, 0, x1, y0 + 0.25, 0.18, { hl: false }) + box(C.oakDk, x0 + 0.1, y1 - 0.25, 0, x1, y1 - 0.05, 0.18, { hl: false });
+      s += r ? box(C.walnut, x0, y0 + 0.12, 0.18, x1, y0 + 0.34, h, { t: C.oak, x: '#7a5438', y: C.walnut, hlv: true })
+        : box(C.walnut, x0 + 0.12, y0, 0.18, x0 + 0.34, y1, h, { t: C.oak, y: '#7a5438', x: C.walnut, hlv: true });
+      s += `<g transform="${r ? onY(y0 + 0.345) : onX(x0 + 0.345)}"><defs><linearGradient id="fmGlass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e9f3f6"/><stop offset=".55" stop-color="#bcd6e0"/><stop offset="1" stop-color="#9fc0cf"/></linearGradient></defs>
+        <rect x="${q2(u0 + 0.13)}" y="${q2(-h + 0.14)}" width="${q2(u1 - u0 - 0.26)}" height="${q2(h - 0.46)}" rx=".5" fill="url(#fmGlass)" style="opacity:calc(.55 + .45 * var(--day))"/>
+        <path d="M${q2(u0 + 0.35)} ${q2(-h + 1.4)} L${q2(u0 + 0.75)} ${q2(-h + 0.6)} M${q2(u0 + 0.35)} ${q2(-h + 2.1)} L${q2(u0 + 1.05)} ${q2(-h + 0.75)}" stroke="#fff" stroke-opacity=".7" stroke-width=".08" stroke-linecap="round"/>
+        <rect x="${q2(u0 + 0.13)}" y="${q2(-h + 0.14)}" width="${q2(u1 - u0 - 0.26)}" height="${q2(h - 0.46)}" rx=".5" fill="none" stroke-width=".05" ${FS(C.oak, f, a)}/></g>`;
       return s;
     },
-    wardrobe: (x, y) => {   // a tall wardrobe against the left wall: a plinth, two doors with panels and knobs, a cornice, a hat box on top (tapped: 衣櫃)
-      const x0 = x - 0.65, x1 = x + 0.65, y0 = y - 1.3, y1 = y + 1.3, h = 6.2, a = (z) => [x1, y, z];
-      let s = shadow(x0, y0 - 0.1, x1 + 0.4, y1 + 0.35, 0.9);
+    wardrobe: (x, y, r) => {   // a tall wardrobe against the left wall: a plinth, two doors with panels and knobs, a cornice, a hat box on top (tapped: 衣櫃)
+      const h = 6.2, [x0, x1, y0, y1] = r ? [x - 1.3, x + 1.3, y - 0.65, y + 0.65] : [x - 0.65, x + 0.65, y - 1.3, y + 1.3];
+      const c = r ? x : -y, [p0, p1] = r ? [x0, x1] : [-y1, -y0], a = (z) => (r ? [x, y1, z] : [x1, y, z]), f = r ? 'y' : 'x';   // c, p0, p1: the doors' middle and ends along the face (u)
+      let s = r ? shadow(x0 - 0.1, y0, x1 + 0.35, y1 + 0.4, 0.9) : shadow(x0, y0 - 0.1, x1 + 0.4, y1 + 0.35, 0.9);
       s += box(C.oakDk, x0 + 0.05, y0 + 0.05, 0, x1 - 0.05, y1 - 0.05, 0.25, { hl: false });
-      s += box(C.oak, x0, y0, 0.25, x1, y1, h, { t: C.oakTop, y: C.oakDk, hlv: true });
-      s += `<g transform="${onX(x1 + 0.004)}"><path d="M${q2(-y)} ${q2(-h + 0.1)} V-.35" stroke="#5a3d28" stroke-opacity=".55" stroke-width=".035"/>
-        ${[[y0 + 0.18, y - 0.12], [y + 0.12, y1 - 0.18]].map(([p, q]) => `<rect x="${q2(-q)}" y="${q2(-h + 0.35)}" width="${q2(q - p)}" height="2.5" rx=".06" ${F(C.oakTop, 'x', a(4.6))}/><rect x="${q2(-q)}" y="-3.05" width="${q2(q - p)}" height="2.5" rx=".06" ${F(C.oakTop, 'x', a(1.8))}/>`).join('')}</g>`;
-      s += bb(x1 + 0.02, y - 0.16, 3.25, '<circle r="3" fill="#e6c36a"/>') + bb(x1 + 0.02, y + 0.16, 3.25, '<circle r="3" fill="#e6c36a"/>');
+      s += box(C.oak, x0, y0, 0.25, x1, y1, h, r ? { t: C.oakTop, x: C.oakDk, hlv: true } : { t: C.oakTop, y: C.oakDk, hlv: true });
+      s += `<g transform="${r ? onY(y1 + 0.004) : onX(x1 + 0.004)}"><path d="M${q2(c)} ${q2(-h + 0.1)} V-.35" stroke="#5a3d28" stroke-opacity=".55" stroke-width=".035"/>
+        ${[[p0 + 0.18, c - 0.12], [c + 0.12, p1 - 0.18]].map(([p, q]) => `<rect x="${q2(p)}" y="${q2(-h + 0.35)}" width="${q2(q - p)}" height="2.5" rx=".06" ${F(C.oakTop, f, a(4.6))}/><rect x="${q2(p)}" y="-3.05" width="${q2(q - p)}" height="2.5" rx=".06" ${F(C.oakTop, f, a(1.8))}/>`).join('')}</g>`;
+      s += [-0.16, 0.16].map((d) => (r ? bb(x + d, y1 + 0.02, 3.25, '<circle r="3" fill="#e6c36a"/>') : bb(x1 + 0.02, y + d, 3.25, '<circle r="3" fill="#e6c36a"/>'))).join('');
       s += box(C.walnut, x0 - 0.05, y0 - 0.05, h, x1 + 0.08, y1 + 0.08, h + 0.22, { t: C.oak, hlv: true });
-      return s + box('#d98463', x0 + 0.2, y0 + 0.3, h + 0.22, x1 - 0.15, y0 + 1.2, h + 0.72, { t: '#e9a07e', hlv: true });
+      return s + (r ? box('#d98463', x0 + 0.3, y0 + 0.2, h + 0.22, x0 + 1.2, y1 - 0.15, h + 0.72, { t: '#e9a07e', hlv: true }) : box('#d98463', x0 + 0.2, y0 + 0.3, h + 0.22, x1 - 0.15, y0 + 1.2, h + 0.72, { t: '#e9a07e', hlv: true }));
     },
     dresser: (x, y) => {   // a low cream chest of drawers against the right wall: a round mirror on a stand, a vase, a little box on top
       const x0 = x - 1.2, x1 = x + 1.2, y0 = y - 0.6, y1 = y + 0.6, h = 2.6, L = lit(x, y);

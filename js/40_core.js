@@ -402,6 +402,8 @@ function normalizeState(s) {
   if (out.roomV < 8) { delete out.placed.doorMat; ROOM.settle8(out.placed); out.roomV = 8; }
   // test (roomV 9): the full-length mirror stood by the wardrobe; it became 小春's present (NPCS), so nothing is set out now
   if (out.roomV < 9) out.roomV = 9;
+  // test (roomV 10): the full-length mirror by 書房's front door, where it was set out, moves along the wall past the peg rail
+  if (out.roomV < 10) { ROOM.settle10(out.placed); out.roomV = 10; }
   WARES.filter(w => w.fixed).forEach(w => { if (!out.placed[w.id]) out.placed[w.id] = Object.assign({}, w.at); });   // the working things are always somewhere
   if (!DATA.UNITS.some(u => u.id === out.currentUnit)) out.currentUnit = 'm1';
   if (out.stage !== 'pre' && out.stage !== 'main') out.stage = 'main';   // 入門階段 (1.0.6); accounts from before it are in the main course

@@ -35,7 +35,7 @@ def test_dragging_a_volume_is_heard_at_once_and_none_is_off(b):
       slide('ambientVol', '0.8'); await wait(200); const back = SND.scene();
       const el = document.querySelector('#modalBody input[data-key="musicVol"]'); el.value = '0'; el.dispatchEvent(new Event('change', { bubbles: true })); await wait(100);
       return JSON.stringify({ half, lvl: lvl === null ? null : Math.round(lvl * 100) / 100, none, scene0, back, saved: state.settings.musicVol }); })()"""))
-    assert r == {'half': '50%', 'lvl': 0.5, 'none': '關', 'scene0': '', 'back': 'beach', 'saved': 0}, r
+    assert r == {'half': '50%', 'lvl': 0.1, 'none': '關', 'scene0': '', 'back': 'beach', 'saved': 0}, r   # 100% is a fifth of what it was (2026-11-14)
 
 def test_each_place_has_its_background_by_day_and_by_night(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ const out = {};
