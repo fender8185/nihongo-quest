@@ -88,6 +88,7 @@ HALLT = """const yard = () => document.querySelector('.yard');
       if (n.tray) { await goTo('table' + c.find((x) => x.id === n.tray.for).table); continue; }
       if (n.ready.length) { await goTo('pass'); continue; }
       if (c.some((x) => x.state === 'pay')) { await goTo('register'); continue; }
+      const q = c.find((x) => x.state === 'ask' || x.state === 'drop'); if (q) { await goTo('table' + q.table); continue; }
       await wait(40); } };"""
 
 def test_waiter_needs_the_three_words(b):
@@ -148,6 +149,55 @@ def test_the_pick_panel_fits_a_phone(b):
       const bs = [...document.querySelectorAll('.hl-opt')].map((x) => x.getBoundingClientRect());
       return JSON.stringify({ n: bs.length, fit: bs.every((q) => q.left >= 0 && q.right <= innerWidth && q.bottom <= innerHeight && q.top >= 0 && q.height >= 44) }); })()""")])[-1])
     assert r == {'n': 3, 'fit': True}, r
+
+# ---- 外場's situations once their words are learned (spec §6 D): これ／それ／あれ, あそこ, どういたしまして, the time's greeting ----
+def test_order_by_where_it_is(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('これ', 'それ', 'あれ'); const seen = [];
+      for (let n = 0; n < 4; n++) { delete state.work.res['2026-11-10']; CLASS.close(); await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
+        await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => ask()); const a = ask(); seen.push([a.kind, a.word, a.right, a.opts.length]); await answer(true); await wait(200);
+        seen[n].push(now().cust[0].dish === a.right.split('：')[1]); }
+      return JSON.stringify(seen); })()"""))
+    where = {'これ': '桌上的菜單', 'それ': '你手上的推薦牌', 'あれ': '牆上的海報'}
+    assert all(k == 'order' and w in where and r_.startswith(where[w]) and n == 3 and dish for k, w, r_, n, dish in r), r
+
+def test_no_order_question_without_the_words(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
+      await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => cust('food')); return JSON.stringify({ ask: ask(), dish: Boolean(now().cust[0].dish) }); })()"""))
+    assert r == {'ask': None, 'dish': True}, r
+
+SERVED = """ const served = async (t) => { await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table' + t); await answer(true);
+    await until(() => cust('call')); await goTo('table' + t); await answer(true); await until(() => now().ready.length); await goTo('pass'); await goTo('table' + t); await answer(true); };"""
+
+def test_the_toilet_asked_from_a_far_table(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('あそこ'); HALL.force = { toilet: true }; await start(); await served(0);
+      await until(() => cust('ask')); const mark = document.querySelector('.cust').classList.contains('need'); await goTo('table0'); const a = ask(); const out = { mark, kind: a.kind, right: a.right, opts: a.opts.slice().sort() };
+      await answer(true); out.after = now().cust[0].state; return JSON.stringify(out); })()"""))
+    assert r['after'] in ('eat', 'leave', 'pay') and {k: r[k] for k in ('mark', 'kind', 'right', 'opts')} == {'mark': True, 'kind': 'toilet', 'right': 'あそこです。', 'opts': ['あそこです。', 'ここです。', 'そこです。']}, r
+
+def test_no_toilet_question_from_the_table_by_it(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('あそこ'); HALL.force = { toilet: true }; await start(); await served(1); const seen = new Set();
+      for (let i = 0; i < 40; i++) { now().cust.forEach((c) => seen.add(c.state)); await wait(20); }
+      return JSON.stringify({ asked: seen.has('ask'), on: seen.has('pay') || seen.has('leave') || seen.has('eat') }); })()"""))
+    assert r == {'asked': False, 'on': True}, r
+
+def test_dropped_chopsticks_handed_back(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('どういたしまして'); HALL.force = { drop: true }; await start(); const said = []; await served(1);
+      window.speakAs = (w, l) => { said.push(l); return Promise.resolve(); }; await until(() => cust('drop')); await goTo('table1'); await until(() => ask()); const a = ask();
+      return JSON.stringify({ kind: a.kind, right: a.right, heard: said.includes('ありがとう。'), gave: said.includes('どうぞ。') }); })()"""))
+    assert r == {'kind': 'thanks', 'right': 'どういたしまして。', 'heard': True, 'gave': True}, r
+
+def test_a_regular_greets_by_the_clock(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('おはようございます', 'こんにちは', 'こんばんは'); HALL.force = { regular: true }; const out = {};
+      for (const h of [10, 13, 18]) { TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; delete state.work.res['2026-11-10']; await start(); await until(() => cust('in')); await goTo('entry');
+        const a = ask(), c = now().cust[0]; out[h] = [a.kind, a.right, ['zhou', 'zhang', 'chen'].includes(c.voice)]; HALL.stop(); }
+      return JSON.stringify(out); })()"""))
+    assert r == {'10': ['hello', 'おはようございます。', True], '13': ['hello', 'こんにちは。', True], '18': ['hello', 'こんばんは。', True]}, r
+
+def test_without_their_words_none_of_them_come(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { toilet: true, drop: true, regular: true }; const kinds = new Set(); const orig = HALL.at;
+      await start(); for (let i = 0; i < 600 && now() && !now().over; i++) { if (ask()) kinds.add(ask().kind); await drive_once(); }
+      return JSON.stringify([...kinds].sort()); })()""".replace("await drive_once();", "const n = now(), c = n.cust; if (n.ask) { await answer(true); continue; } if (c.some((x) => x.state === 'in')) { await goTo('entry'); continue; } if (c.some((x) => x.state === 'wait')) { const f = [0, 1, 2].find((t) => !c.some((x) => x.table === t)); if (f !== undefined) { await goTo('table' + f); continue; } } const cl = c.find((x) => x.state === 'call'); if (cl) { await goTo('table' + cl.table); continue; } if (n.tray) { await goTo('table' + c.find((x) => x.id === n.tray.for).table); continue; } if (n.ready.length) { await goTo('pass'); continue; } if (c.some((x) => x.state === 'pay')) { await goTo('register'); continue; } await wait(40);")))
+    assert r == ['call', 'greet', 'pay', 'seat', 'serve'], r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

@@ -37,6 +37,7 @@ const WORK = (() => {
   const kana = () => (knowsAll() ? new Set(REG.kana.map((x) => x.ch)) : kanaSeenSet());
   const here = (job) => (job === 'buns' ? (TOWNEV.whereIs('wang', TOWNEV.now(), TOWNEV.today()) || {}).place === 'chinatown' : job === 'waiter' ? TOWNEV.isOpen('rairai', TOWNEV.now()) : TOWNEV.isOpen('dori', TOWNEV.now()));
   // the 入門 words a job needs learned first (外場: いらっしゃいませ, どうぞ, はい) — the ones not yet, for one still in 入門
+  const knows = (w) => knowsAll() || REG.vocab.some((v) => v.w === w && v.r === w && state.srs[v.key]);   // an 入門 word learned (or all, past 入門)
   const wordsLeft = (job) => (knowsAll() ? [] : (PLACES[job].words || []).filter((w) => !REG.vocab.some((v) => v.w === w && v.r === w && state.srs[v.key])));
   // may this job be started (or picked up again) now: its kana seen, today's workplace (if any) this one and not done, open
   function can(job) {
@@ -126,5 +127,5 @@ const WORK = (() => {
   }
   const register = (job, def) => { JOBS[job] = def; };
   const lines = (add) => { Object.entries(TOWN.WORK.hello || {}).forEach(([id, l]) => add(id, l[0])); Object.values(TOWN.WORK.first || {}).forEach((ls) => ls.forEach((l) => add(l[0], l[1]))); Object.values(JOBS).forEach((j) => j.lines && j.lines(add)); };
-  return { N, PLACES, kana, can, start, register, pay, rank, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, board };
+  return { N, PLACES, kana, knows, can, start, register, pay, rank, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, board };
 })();

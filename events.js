@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 71 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 72 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2683,11 +2683,16 @@ const TOWN = {
       // 外場 (2026-11-15, らいらいけん): what the hero says to each (me) and the wrong ones offered beside it (not); what the customers
       // say (cust); 黄's from the kitchen
       waiter: { who: 'huang', ready: ['できたよ！', '做好了！'], order: ['はいよ！', '好嘞！'], end: ['おつかれ！ たすかった！', '辛苦了！幫了大忙！'],
-        me: { greet: ['いらっしゃいませ！', '歡迎光臨！'], seat: ['こちらへ どうぞ。', '這邊請。'], call: ['はい！', '來了！'], serve: ['どうぞ。', '請用。'], sorry: ['すみません！', '對不起！'], pay: ['ありがとうございました！', '謝謝光臨！'] },
+        me: { toilet: ['あそこです。', '在那裡（遠處）。'], thanks: ['どういたしまして。', '不客氣。'], greet: ['いらっしゃいませ！', '歡迎光臨！'], seat: ['こちらへ どうぞ。', '這邊請。'], call: ['はい！', '來了！'], serve: ['どうぞ。', '請用。'], sorry: ['すみません！', '對不起！'], pay: ['ありがとうございました！', '謝謝光臨！'] },
         not: { greet: [['ありがとうございました！', '謝謝光臨！'], ['いただきます！', '開動了！'], ['すみません！', '對不起！']], seat: [['そちらへ どうぞ。', '那邊請（你那邊）。'], ['あちらへ どうぞ。', '那邊請（遠處）。']],
           call: [['いいえ。', '不是。'], ['どうぞ。', '請。']], serve: [['ください。', '請給我。'], ['すみません！', '對不起！']], sorry: [['どうぞ。', '請用。'], ['はい！', '來了！']],
-          pay: [['いらっしゃいませ！', '歡迎光臨！'], ['いただきます！', '開動了！']] },
-        cust: { call: ['すみません！', '不好意思！'], order: ['これを ください。', '請給我這個。'], wrong: ['ちがいます。', '不是喔。'], pay: ['ごちそうさまでした。', '謝謝招待。'], eat: ['いただきます！', '開動了！'], yum: ['おいしい！', '好吃！'] } },
+          pay: [['いらっしゃいませ！', '歡迎光臨！'], ['いただきます！', '開動了！']], toilet: [['ここです。', '在這裡。'], ['そこです。', '在那裡（你那邊）。']],
+          thanks: [['いただきます！', '開動了！'], ['いらっしゃいませ！', '歡迎光臨！'], ['ちがいます。', '不是。']] },
+        cust: { call: ['すみません！', '不好意思！'], order: ['これを ください。', '請給我這個。'], wrong: ['ちがいます。', '不是喔。'], pay: ['ごちそうさまでした。', '謝謝招待。'], eat: ['いただきます！', '開動了！'], yum: ['おいしい！', '好吃！'],
+          toilet: ['おてあらいは どこですか。', '洗手間在哪裡？'], thanks: ['ありがとう。', '謝謝。'],
+          point: { これ: ['これを ください。', '請給我這個（我這邊的）。'], それ: ['それを ください。', '請給我那個（你那邊的）。'], あれ: ['あれを ください。', '請給我那個（遠處的）。'] } },
+        // the regulars' greeting by the clock (before 11, till 17, after), answered in kind
+        hello: [['おはようございます。', '早安。'], ['こんにちは。', '你好（白天）。'], ['こんばんは。', '晚上好。']], regulars: ['zhou', 'zhang', 'chen'] },
       counter: { who: 'zhou', miss: ['それじゃ ないわよ。', '不是那個喔。'], ok: [['じょうず、じょうず。', '很好很好。'], ['いいわね。', '不錯喔。']], end: ['ありがとう。たすかったわ。', '謝謝，幫了大忙。'] } },
     // らんらん's goods on the counter: [name in kana, its drawing (PICS / PICS_TOWN), price ≤ 1,000 円] — offered once every kana of the name is seen
     goods: [['かさ', '傘', 500], ['すし', '寿司', 800], ['いす', '椅子', 1000], ['こけし', 'こけし', 600], ['とけい', '時計', 900], ['はし', '箸', 200], ['ほん', '本', 700],

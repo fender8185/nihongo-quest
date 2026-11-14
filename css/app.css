@@ -413,6 +413,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .hl-pick { position: absolute; z-index: 60; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); transform: translateX(-50%); width: min(520px, calc(100% - 24px)); padding: 10px 12px 12px; border-radius: 16px; background: rgba(251, 243, 226, .97); color: #2b2b33; box-shadow: 0 8px 28px rgba(0, 0, 0, .3); border-top: 6px solid #c8322a; }
 .hl-q { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 14px; color: #6e4a30; } .hl-ear { flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 2px 0 #d8c8a8; font-size: 19px; cursor: pointer; }
 .hl-opts { display: grid; gap: 8px; } .hl-opt { min-height: 48px; border: 0; border-radius: 12px; background: #fff; box-shadow: 0 3px 0 #d8c8a8; font: inherit; font-size: 19px; font-weight: 700; color: #2b2b33; cursor: pointer; }
+.hl-where .hl-opt { display: grid; gap: 1px; padding: 6px 10px; } .hl-where .hl-opt small { font-size: 12px; font-weight: 400; color: #8a7a6e; }
 .hl-opt.wk-bad { animation: shake .3s ease; } .hl-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
 @media (prefers-reduced-motion: reduce) { .hl-opt.wk-bad { animation: none; } }
 .sky .npc svg { width: 100%; height: 100%; overflow: visible; filter: brightness(calc(.64 + .36 * var(--day))) saturate(calc(.8 + .2 * var(--day))); }
