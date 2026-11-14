@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 63 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 64 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2670,7 +2670,10 @@ const TOWN = {
       shelf: [['zhang', 'たなの ラベルと、はこの ラベル。おなじ ところへ。', '貨架上的標籤和箱子上的標籤，一樣的放一起。'], ['zhang', '…まちがえたら、もう いちど。', '……放錯了，就再放一次。']],
       counter: [['zhou', 'おきゃくさんが いったものを わたしてね。', '客人說要什麼，就拿給他喔。'], ['zhou', '「いらっしゃいませ」「ありがとうございました」、げんきよく ね。', '「歡迎光臨」「謝謝光臨」，要有精神喔。']],
       deliver: [['huang', 'この おみせへ！ かんばんを よく みて！', '送到這家店！看清楚招牌！'], ['huang', 'はやく かえって きたら、チップ！', '早點回來，有小費！']],
-      buns: [['wang', 'ぶたまんは こころ！', '豬肉包就是心！'], ['chen', '', '（用中文）王老闆說什麼就做什麼。他會先說日文，不懂就看圖。']] } },
+      buns: [['wang', 'ぶたまんは こころ！', '豬肉包就是心！'], ['chen', '', '（用中文）王老闆說什麼就做什麼。他會先說日文，不懂就看圖。']] },
+    // what each says during a shift: a miss, a right one now and then, the end
+    say: {
+      shelf: { who: 'zhang', miss: ['ちがう！', '不對！'], ok: [['よし。', '好。'], ['…うん。', '……嗯。'], ['きれい。', '很整齊。']], end: ['…おつかれさま。たすかった。', '……辛苦了。幫了大忙。'] } } },
   YATAI: {
     ryuho: { name: '龍鳳飯店の店長', kana: 'りゅうほうはんてんの てんちょう', role: '中華料理店', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'smile', beard: 'none', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'chefcap' } },   // 中華街 (2026-11-14)
     ojisan: { name: 'やきそば屋のおじさん', kana: 'やきそばやのおじさん', role: '炒麵、牛肉串、奶油馬鈴薯', look: { face: 'round', skin: '#e8bd98', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'happi', top: '#d0574b', bottomStyle: 'shorts', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: { head: 'nejiri' } },

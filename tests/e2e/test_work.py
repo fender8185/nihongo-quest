@@ -116,6 +116,40 @@ def test_the_generator_has_the_street_lines(b):
       return JSON.stringify(['zhang:…いらっしゃい。はたらく？', 'zhou:あら、いらっしゃい。てつだって くれる？', 'huang:はやく！ でまえ、てつだって！', 'zhang:ラベルを よく みて。', 'chen:ねえ、バイト しない？'].filter((x) => !all.includes(x))); })()"""))
     assert r == [], r
 
+# ---- 整理貨架 (ふく, 張さん): a box's things to the shelf's cells by their labels ----
+SHELF = """const earlier = (job) => { state.work.res['2026-01-01'] = { place: job, done: 1, score: { 0: 0 } }; };   // been there before: no first-day word
+  const words = (ws) => ws.forEach((w) => { const v = REG.vocab.find((x) => x.w === w && x.lv === 'PRE_N5'); state.srs[v.key] = rec(); });
+  const put = async (right) => { const item = document.querySelector('.wk-item').dataset.label, bins = [...document.querySelectorAll('.wk-bin')];
+    (right ? bins.find((x) => x.dataset.label === item) : bins.find((x) => x.dataset.label !== item)).click(); await wait(right ? 600 : 300); };"""
+
+def test_shelf_labels_come_from_what_is_seen(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + """ kana(5);
+      const t = JOBS.shelf.make(); return JSON.stringify({ n: t.length, all: [...new Set(t.flatMap((x) => [x.label, ...x.bins]))].sort().join(''), four: t.every((x) => x.bins.length === 4 && new Set(x.bins).size === 4 && x.bins.includes(x.label)) }); })()"""))
+    assert r == {'n': 10, 'all': 'あいうえお', 'four': True}, r
+
+def test_shelf_mixes_words_once_learned(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + """ kana(46); words(['これ', 'それ', 'あれ', 'どれ', 'ここ']);
+      const runs = Array.from({ length: 5 }, () => JOBS.shelf.make()), w = runs.flat().filter((x) => x.label.length > 1);
+      return JSON.stringify({ some: w.length > 0, most: runs.every((t) => t.filter((x) => x.label.length > 1).length <= 5), binsWords: w.every((x) => x.bins.every((y) => y.length > 1)),
+        known: w.every((x) => ['これ', 'それ', 'あれ', 'どれ', 'ここ'].includes(x.label)) }); })()"""))
+    assert r == {'some': True, 'most': True, 'binsWords': True, 'known': True}, r
+
+def test_a_shelf_shift_pays_and_grades(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + """ kana(10); earlier('shelf'); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'shelf'); await wait(300); const out = { card: Boolean(document.querySelector('.wk-shelf')) };
+      for (let k = 0; k < 9; k++) await put(true);
+      await put(false); out.miss = document.querySelector('.wk-say').textContent; await put(false); out.hint = Boolean(document.querySelector('.wk-bin.wk-hint')); await put(true);
+      for (let i = 0; i < 40 && !document.querySelector('.wk-result'); i++) await wait(100); const t = state.work.res['2026-11-10']; out.yen = t.yen; out.grade = t.grade; out.result = Boolean(document.querySelector('.wk-result'));
+      return JSON.stringify(out); })()"""))
+    assert r['card'] and 'ちがう' in r['miss'] and r['hint'] and r['yen'] == 130 and r['grade'] == 'A' and r['result'], r
+
+def test_the_shelf_card_fits_a_phone(b):
+    r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + SHELF + """ kana(10); earlier('shelf');
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'shelf'); await wait(400);
+      const c = document.querySelector('.wk-shelf .cls-card').getBoundingClientRect(), bins = [...document.querySelectorAll('.wk-bin')].map((x) => x.getBoundingClientRect());
+      return JSON.stringify({ bottom: c.bottom <= innerHeight + 1, side: c.left >= 0 && c.right <= innerWidth + 1, bins: bins.every((q) => q.width >= 60 && q.height >= 44) }); })()""")])[-1])
+    assert r == {'bottom': True, 'side': True, 'bins': True}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

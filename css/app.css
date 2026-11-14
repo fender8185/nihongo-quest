@@ -484,6 +484,19 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .crr-card.thud { animation: crrThud .32s ease-out; }
 .crr-head { display: grid; gap: 2px; margin-bottom: 10px; } .crr-head b { font-size: 19px; } .crr-head span { font-size: 14px; color: #8a7a6e; }
 /* 中華街の打工 (2026-11-14): the 打工證 page in 町の手帳 */
+/* a job's card (JOBS): the keeper's face and word on top; 整理貨架: the box, the shelf's four cells */
+.wk-head { display: flex; align-items: baseline; gap: 10px; padding-right: 40px; } .wk-head b { font-size: 20px; } .wk-n { font-size: 14px; opacity: .7; }
+.wk-who { display: flex; align-items: center; gap: 10px; margin-top: 8px; min-height: 52px; } .wk-who .kr-face { width: 46px; height: 46px; flex: none; }
+.wk-say { margin: 0; display: grid; gap: 1px; font-size: 15px; } .wk-say span { font-size: 12.5px; opacity: .7; } .wk-say.bad b { color: #c0392b; } .wk-say.ok b { color: #2f7a6a; }
+.wk-shelf .cls-card { background: #f6ecd8; color: #3a2c24; border-bottom: 10px solid #8a5a34; }
+.wk-box { display: grid; place-items: center; height: 104px; margin: 10px auto 12px; width: min(200px, 70%); border-radius: 8px; background: linear-gradient(#d9b98a, #c9a46e); box-shadow: inset 0 -6px 0 rgba(0, 0, 0, .08), 0 3px 0 #a8834e; }
+.wk-item { display: grid; place-items: center; min-width: 64px; height: 64px; padding: 0 10px; border-radius: 6px; background: #fffaf0; border: 2px solid #8a2a2a; font-size: 38px; font-weight: 700; line-height: 1; transition: transform .35s, opacity .35s; } .wk-item.wd { font-size: 26px; }
+.wk-item.wk-gone { transform: translateY(70px) scale(.6); opacity: 0; }
+.wk-bins { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; border-radius: 8px; background: #8a5a34; }
+.wk-bin { display: grid; place-items: center; min-height: 64px; border: 0; border-radius: 6px; background: #b8875a; box-shadow: inset 0 6px 10px rgba(0, 0, 0, .25); cursor: pointer; font: inherit; }
+.wk-bin span { padding: 3px 12px; border-radius: 4px; background: #fffaf0; color: #3a2c24; font-size: 26px; font-weight: 700; line-height: 1.2; } .wk-bin.wd span { font-size: 19px; }
+.wk-bin.wk-bad { animation: shake .3s ease; } .wk-bin.wk-hint { box-shadow: inset 0 6px 10px rgba(0, 0, 0, .25), 0 0 0 3px #f6e08a; } .wk-bin.wk-in { background: #9cc48a; }
+@media (prefers-reduced-motion: reduce) { .wk-item { transition: none; } .wk-bin.wk-bad { animation: none; } }
 .wk-board .cls-card { background: #fbf3e2; color: #2b2b33; border-top: 8px solid #c8322a; } .wk-bhead { display: grid; gap: 2px; padding-right: 40px; } .wk-bhead b { font-size: 21px; color: #a82828; } .wk-bhead span { font-size: 13px; color: #8a7a6e; }
 .wk-jobs { list-style: none; margin: 12px 0 8px; padding: 0; display: grid; gap: 6px; } .wk-job { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; background: rgba(138, 122, 110, .1); color: #8a7a6e; } .wk-job.ok { background: rgba(47, 122, 106, .12); color: #2b2b33; } .wk-job.ok span:last-child { color: #2f7a6a; font-weight: 700; } .wk-today { margin: 6px 0 4px; font-weight: 700; }
 .wk-book { display: grid; gap: 12px; } .wk-card { display: grid; gap: 2px; justify-items: start; padding: 12px 14px; border: 1.5px dashed #a8946e; border-radius: 12px; background: rgba(255, 250, 236, .5); }
