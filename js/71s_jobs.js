@@ -60,6 +60,78 @@ const JOBS = (() => {
   }
   const shelfLines = (add) => { const s = say('shelf'); [s.miss, s.end, ...s.ok].forEach((l) => add(s.who, l[0])); };
 
+  // ---- 站櫃 (らんらん, 周おばあさん): a customer comes to the counter (the cruise's passengers, out shopping, each in their own
+  // voice) after the hero's いらっしゃいませ, and asks for one of four things on it, said and shown in kana — only things whose
+  // name's kana are all seen. Once ふたつ is learned, now and then two of it (tap it twice); once いくら is, now and then one held up,
+  // これ、いくらですか — choose the reading of its tag. Handed over: ありがとうございました ----
+  const CUST = ['kaneda', 'umeko', 'yuta', 'rina', 'yoshimoto', 'ken', 'ai', 'michiyama', 'mike'];
+  const GOODS = () => TOWN.WORK.goods, PRICES = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
+  const sayer = (name) => CUST[Math.max(0, GOODS().findIndex((g) => g[0] === name)) % CUST.length];   // each thing asked for by the same one, so the clips stay few
+  const learned = (r) => REG.vocab.some((v) => v.r === r && state.srs[v.key]);   // a word read so, learned (ふたつ, いくら)
+  const ME = { hi: ['いらっしゃいませ！', '歡迎光臨！'], bye: ['ありがとうございました！', '謝謝光臨！'] };
+  const ask = (t) => (t.kind === 'price' ? ['これ、いくらですか。', '這個多少錢？'] : t.kind === 'two' ? [`${t.good[0]}を ふたつ ください。`, '請給我兩個。'] : [`${t.good[0]}を ください。`, '請給我這個。']);
+  function counterMake(seen = kanaSeenSet()) {
+    const can = GOODS().filter((g) => [...g[0]].every((c) => seen.has(c))), two = learned('ふたつ'), price = learned('いくら');
+    return Array.from({ length: N }, () => {
+      const goods = shuffle(can).slice(0, 4), good = pick(goods), r = Math.random(), kind = price && r < 0.25 ? 'price' : two && r > 0.75 ? 'two' : 'name';
+      const t = { kind, good, goods, who: kind === 'price' ? pick(CUST) : sayer(good[0]) };
+      if (kind === 'price') t.opts = shuffle([good[2], ...shuffle(PRICES.filter((p) => p !== good[2])).slice(0, 2)]);
+      return t;
+    });
+  }
+  let C = null;   // the customer at the counter now (its task)
+  const goodPic = (key) => { const d = (typeof PICS === 'object' && PICS[key]) || (typeof PICS_TOWN === 'object' && PICS_TOWN[key]); return d ? `<svg class="pic" viewBox="0 0 100 100" aria-hidden="true"><circle class="pd" cx="50" cy="50" r="47"/>${d}</svg>` : ''; };
+  function counterRun(ctx) {
+    const tasks = counterMake(), first = !Object.values(state.work.res).some((r) => r.place === 'counter' && r.yen !== undefined); let k = ctx.done, miss = 0, got = 0, busy = true;
+    const el = (s) => document.querySelector('.wk-counter ' + s);
+    const me = (l) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${esc(l[0])}</b>${first ? `<span>${esc(l[1])}</span>` : ''}`; speakAs('hero', l[0]); };
+    function show() {
+      C = tasks[k]; miss = 0; got = 0; busy = true; if (!el('.wk-goods')) return;
+      el('.wk-n').textContent = `${k + 1}／${N}`;
+      el('.wk-goods').innerHTML = C.goods.map((g) => `<button type="button" class="wk-good${C.kind === 'price' && g === C.good ? ' held' : ''}" data-good="${esc(g[0])}">${goodPic(g[1])}<b lang="ja">${esc(g[0])}</b><small>${g[2]}円</small></button>`).join('');
+      el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').innerHTML = `<span class="kr-face">${TOWNEV.face(C.who)}</span><p class="wk-bub"></p>`;
+      me(ME.hi);
+      setTimeout(() => {   // the customer asks
+        if (!el('.wk-cust') || C !== tasks[k]) return;
+        const [ja, zh] = ask(C); el('.wk-bub').innerHTML = `<b lang="ja">${esc(ja)}</b><span>${esc(zh)}</span>${C.kind === 'two' ? '<i class="wk-cnt">0／2</i>' : ''}`;
+        el('.wk-cust').classList.add('on'); speakAs(C.who, ja); busy = false;
+        if (C.kind === 'price') el('.wk-opts').innerHTML = C.opts.map((n) => `<button type="button" class="btn btn-sm wk-opt" data-n="${n}" lang="ja">${esc(YEN.reading(n))}</button>`).join('');
+      }, 800);
+    }
+    function wrong(b) {
+      miss++; playSfx('bad'); b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); word('counter', say('counter').miss, 'bad');
+      if (miss >= 2) document.querySelectorAll(C.kind === 'price' ? '.wk-opt' : '.wk-good').forEach((x) => x.classList.toggle('wk-hint', C.kind === 'price' ? Number(x.dataset.n) === C.good[2] : x.dataset.good === C.good[0]));
+    }
+    function right() {
+      busy = true; ctx.right(k, miss); playSfx('good'); el('.wk-cust').classList.remove('on');
+      if (C.kind === 'price') me([`${YEN.reading(C.good[2])}です。`, `${C.good[2]} 日圓。`]);
+      setTimeout(() => { if (!el('.wk-cust')) return; me(ME.bye); el('.wk-cust').classList.add('bye'); if (!miss && Math.random() < 0.25) word('counter', pick(say('counter').ok)); }, C.kind === 'price' ? 900 : 0);
+      k++;
+      setTimeout(() => {
+        if (!el('.wk-cust')) return;
+        if (k < N) { show(); return; }
+        word('counter', say('counter').end, 'ok'); setTimeout(() => { CLASS.close(); ctx.finish(); }, 700);
+      }, C.kind === 'price' ? 1700 : 900);
+    }
+    CLASS.card('wk-counter', '站櫃', `${head('counter', 'らんらん', k)}<div class="wk-cust"></div><div class="wk-goods"></div><div class="wk-opts"></div><p class="wk-me"></p>`, (e) => {
+      if (busy || !ctx.on() || !C) return;
+      const g = e.target.closest('.wk-good'), o = e.target.closest('.wk-opt');
+      if (o && C.kind === 'price') { if (Number(o.dataset.n) === C.good[2]) right(); else wrong(o); return; }
+      if (!g || C.kind === 'price') return;
+      if (g.dataset.good !== C.good[0]) { wrong(g); return; }
+      if (C.kind === 'two' && ++got < 2) { const c = el('.wk-cnt'); if (c) c.textContent = `${got}／2`; SND.play('place', { vol: 0.5 }); return; }
+      right();
+    });
+    show();
+  }
+  function counterLines(add) {
+    GOODS().forEach((g) => { add(sayer(g[0]), `${g[0]}を ください。`); add(sayer(g[0]), `${g[0]}を ふたつ ください。`); });
+    CUST.forEach((id) => add(id, 'これ、いくらですか。'));
+    [ME.hi, ME.bye, ...PRICES.map((n) => [`${YEN.reading(n)}です。`])].forEach((l) => add('hero', l[0]));
+    const s = say('counter'); [s.miss, s.end, ...s.ok].forEach((l) => add(s.who, l[0]));
+  }
+
   WORK.register('shelf', { run: shelfRun, lines: shelfLines });
-  return { shelf: { make: shelfMake, run: shelfRun } };
+  WORK.register('counter', { run: counterRun, lines: counterLines });
+  return { shelf: { make: shelfMake, run: shelfRun }, counter: { make: counterMake, run: counterRun, now: () => C, sayer } };
 })();

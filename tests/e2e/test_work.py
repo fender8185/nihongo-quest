@@ -150,6 +150,43 @@ def test_the_shelf_card_fits_a_phone(b):
       return JSON.stringify({ bottom: c.bottom <= innerHeight + 1, side: c.left >= 0 && c.right <= innerWidth + 1, bins: bins.every((q) => q.width >= 60 && q.height >= 44) }); })()""")])[-1])
     assert r == {'bottom': True, 'side': True, 'bins': True}, r
 
+# ---- 站櫃 (らんらん, 周おばあさん): a customer says what they want; hand it over (two of it; or say its price) ----
+COUNTER = """const vocab = (r) => { const v = REG.vocab.find((x) => x.r === r && (x.lv === 'PRE_N5' || x.lv === 'N5')); state.srs[v.key] = rec(); };
+  const serve = async () => { const t = JOBS.counter.now(); if (t.kind === 'price') { document.querySelector(`.wk-opt[data-n="${t.good[2]}"]`).click(); }
+    else { const g = document.querySelector(`.wk-good[data-good="${t.good[0]}"]`); g.click(); if (t.kind === 'two') { await wait(150); g.click(); } } await wait(900); };"""
+
+def test_counter_offers_only_readable_goods(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + COUNTER + """ kana(15);
+      const runs = Array.from({ length: 6 }, () => JOBS.counter.make()).flat();
+      return JSON.stringify({ goods: [...new Set(runs.flatMap((t) => t.goods.map((g) => g[0])))].sort(), kinds: [...new Set(runs.map((t) => t.kind))], four: runs.every((t) => t.goods.length === 4 && t.goods.some((g) => g[0] === t.good[0])) }); })()"""))
+    assert set(r['goods']) <= {'かさ', 'すし', 'いす', 'こけし'} and len(r['goods']) == 4 and r['kinds'] == ['name'] and r['four'], r
+
+def test_counter_asks_two_and_prices_once_learned(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + COUNTER + """ kana(46); vocab('ふたつ'); vocab('いくら');
+      const runs = Array.from({ length: 8 }, () => JOBS.counter.make()).flat(), price = runs.filter((t) => t.kind === 'price');
+      return JSON.stringify({ kinds: [...new Set(runs.map((t) => t.kind))].sort(), opts: price.every((t) => t.opts.length === 3 && t.opts.includes(t.good[2]) && t.good[2] <= 1000) }); })()"""))
+    assert r == {'kinds': ['name', 'price', 'two'], 'opts': True}, r
+
+def test_a_counter_shift_pays(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + COUNTER + """ kana(46); vocab('ふたつ'); vocab('いくら'); earlier('counter'); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter'); await wait(1200); const out = { card: Boolean(document.querySelector('.wk-counter')) };
+      for (let k = 0; k < 10; k++) { for (let i = 0; i < 30 && !document.querySelector('.wk-cust.on'); i++) await wait(100); await serve(); }
+      for (let i = 0; i < 40 && !document.querySelector('.wk-result'); i++) await wait(100); const t = state.work.res['2026-11-10'];
+      return JSON.stringify(Object.assign(out, { yen: t.yen, grade: t.grade })); })()"""))
+    assert r == {'card': True, 'yen': 150, 'grade': 'S'}, r
+
+def test_the_counter_card_fits_a_phone(b):
+    r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + SHELF + COUNTER + """ kana(46); vocab('いくら'); earlier('counter');
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter'); await wait(1500);
+      const c = document.querySelector('.wk-counter .cls-card').getBoundingClientRect(), goods = [...document.querySelectorAll('.wk-good')].map((x) => x.getBoundingClientRect());
+      return JSON.stringify({ bottom: c.bottom <= innerHeight + 1, side: c.left >= 0 && c.right <= innerWidth + 1, goods: goods.length === 4 && goods.every((q) => q.width >= 60 && q.height >= 60) }); })()""")])[-1])
+    assert r == {'bottom': True, 'side': True, 'goods': True}, r
+
+def test_the_generator_has_the_counter_lines(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const all = talkLines().map(([w, l]) => w + ':' + l), sayer = JOBS.counter.sayer;
+      return JSON.stringify([sayer('かさ') + ':かさを ください。', sayer('かさ') + ':かさを ふたつ ください。', 'hero:いらっしゃいませ！', 'hero:ありがとうございました！', 'hero:さんびゃくえんです。', 'kaneda:これ、いくらですか。'].filter((x) => !all.includes(x))); })()"""))
+    assert r == [], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
