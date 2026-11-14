@@ -260,6 +260,7 @@ const PLACE_USE = {
     { id: 'sakuraL', name: '櫻花', box: [0, 60, 130, 236], kind: 'do', go: [-520, 112], pose: 'reach', fx: 'sakuraL', fxc: 'shake', burst: ['#f7c6d2', '#f2b8c6', '#fbdde4'] },
     { id: 'sakuraR', name: '櫻花', box: [1080, 60, 1210, 236], kind: 'do', go: [520, 112], pose: 'reach', fx: 'sakuraR', fxc: 'shake', burst: ['#f7c6d2', '#f2b8c6', '#fbdde4'] },
     { id: 'board', name: '告示牌', box: [586, 166, 664, 236], kind: 'do', go: [25, 122], back: 1, pose: 'look', toast: '白鷺城：大約四百年前建的白色天守，遠看像白鷺展開翅膀，所以叫白鷺城。' },
+    { id: 'keep', name: '天守', box: [520, -250, 1070, 160], kind: 'do', go: [280, 122], back: 1, pose: 'look', wide: 'おおきい…！' },   // looked up at: seen whole (yWide; 2026-11-14), said over his head
     { id: 'gate', name: '城門', box: [200, 140, 320, 198], kind: 'do', go: [-300, 126], back: 1, pose: 'reach', say: 'コンコン' },
     { id: 'moat', name: '護城河', box: [600, 200, 1060, 234], kind: 'do', go: (tap) => [Math.max(0, Math.min(440, tap.x)), 126], back: 1, pose: 'look', say: 'クワッ' }],
   // the two rooms (seen at 45°): seats as [u, v, h, how he sits there] (bench: on a chair or a stool; kneel: on the tatami; back,
@@ -413,6 +414,7 @@ function yDo(yard, t) {
   if (t.toast) toast(typeof t.toast === 'function' ? t.toast() : t.toast, 4600);
   if (t.mirror) setTimeout(() => { if (yard.isConnected && !yard.classList.contains('dressing')) DRESS.open(yard, 'mirror', t.name); }, 1300);
   if (t.burst) yBurst(yard, t.box, t.burst);
+  if (t.wide) { yPop(yard, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), t.wide); if (PLACE_WIDE[yPlace]) yWide(yard, PLACE_WIDE[yPlace]); }
 }
 // a spot off the things (where he was kept, a thing put down where he stands): the nearest free side
 const yFree = (place, q) => { const g = yRoute(place, [q[0], -999], q).pop(); return g[1] < -900 ? q : g; };

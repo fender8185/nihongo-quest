@@ -23,6 +23,28 @@ FRESH = """state.stage = 'main'; state.kanaKnown = true; state.introSeen = true;
   const pos = (el) => { const m = el.style.transform.match(/translate\\(([-\\d.]+)px,\\s*([-\\d.]+)px\\)/); return [+m[1], -m[2]]; };
   const people = () => [...y().querySelectorAll('.npc[data-npc]')];"""
 
+def test_on_a_phone_the_castle_is_seen_whole_off_the_bus_and_when_its_keep_is_tapped(b):
+    # 2026-11-14, the user: on a phone the redrawn 白鷺城 could not be seen whole — the camera draws back (yWide) a while, then
+    # comes back to the hero; a tap on the scene meanwhile only brings it back. On a wide screen it fits: nothing happens
+    js = "(async () => { " + FRESH + """ state.town.stops = { castle: 1 }; saveState();
+      const tf = () => y().querySelector('.yworld').style.transform, z = (t) => +((t.match(/scale\\(([\\d.]+)\\)/) || [0, 1])[1]);
+      const keep = () => useThing(y(), PLACE_USE.castle.find((t) => t.id === 'keep'));
+      await go('street', 12); yh.arrive = { to: 'castle', from: 'street' }; location.hash = '#/castle'; document.getElementById('view').innerHTML = ''; route(); await wait(400);
+      const off = { on: YWIDE.on, z: z(tf()), cam: ycam.z }; await wait(2700); const after = { on: YWIDE.on, z: z(tf()) };
+      keep(); let n = 0; while (!YWIDE.on && n++ < 60) await wait(100); const tapped = { on: YWIDE.on, z: z(tf()) };
+      const sky = y().querySelector('.sky'), x0 = yh.X; sky.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); sky.click(); await wait(300);
+      const back = { on: YWIDE.on, z: z(tf()), walked: yh.X !== x0 };
+      return JSON.stringify({ off, after, tapped, back }); })()"""
+    r = json.loads(b.run([("metrics", (390, 760)), ("nav", URL), ("wait", READY), ("eval", js)])[-1])
+    wide = "(async () => { " + FRESH + """ state.town.stops = { castle: 1 }; saveState(); await go('castle', 12);
+      useThing(y(), PLACE_USE.castle.find((t) => t.id === 'keep')); await wait(3000); return JSON.stringify({ on: YWIDE.on, z: ycam.z }); })()"""
+    r2 = json.loads(b.run([("metrics", (1200, 900, False)), ("nav", URL), ("wait", READY), ("eval", wide)])[-1])
+    assert r['off']['on'] and r['off']['z'] < 0.6 < 1 < r['off']['cam'], r   # off the bus: the whole castle, drawn back from the phone's 1.4
+    assert not r['after']['on'] and r['after']['z'] == r['off']['cam'], r   # then back to the hero
+    assert r['tapped']['on'] and r['tapped']['z'] < 0.6, r   # its keep looked up at: whole again
+    assert r['back'] == {'on': False, 'z': r['off']['cam'], 'walked': False}, r   # a tap: back, and he does not walk off
+    assert r2 == {'on': False, 'z': 1}, r2   # a wide screen: it fits as it is
+
 def test_people_stand_still_in_headless_chrome(b):
     r = ev(b, "TOWNLIFE.still")
     assert r is True, r

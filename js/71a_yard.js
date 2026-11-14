@@ -131,7 +131,8 @@ const yCamMax = () => Math.max(0, (ycam.YW - ycam.W) / 2);
 function yCamTo(yard, x, give = 0) {   // the camera there (give: how much of a pull past an end a finger gets)
   const m = yCamMax();
   ycam.x = x < -m ? -m - (-m - x) * give : x > m ? m + (x - m) * give : x;
-  const w = yard.querySelector('.yworld'); if (w) w.style.transform = `translate3d(${(-ycam.x * ycam.z).toFixed(1)}px,0,0)${ycam.z !== 1 ? ` scale(${ycam.z})` : ''}`;
+  if (YWIDE.on && YWIDE.yard !== yard && YWIDE.back) YWIDE.back();   // gone elsewhere while drawn back: that ends it
+  const w = yard.querySelector('.yworld'); if (w && !YWIDE.on) w.style.transform = `translate3d(${(-ycam.x * ycam.z).toFixed(1)}px,0,0)${ycam.z !== 1 ? ` scale(${ycam.z})` : ''}`;   // drawn back (yWide): held till it ends
   // no CSS variable here: one set on the yard every frame of a long walk began the hero's steps again on an iPhone (his legs
   // stopped, 1.2.1); the zoom into the door reads the camera when it starts (sceneGo)
 }
@@ -145,6 +146,27 @@ function yardLayout(yard) {   // the world as wide as it should be on this scree
   w.querySelectorAll('.land.prop[data-box]').forEach((q) => { const [x0, b0, pw, ph] = q.dataset.box.split(' ').map(Number); Object.assign(q.style, { left: `${x0 * k}px`, bottom: `${b0 * k}px`, width: `${pw * k}px`, height: `${ph * k}px` }); });   // the things' own layers, as the land
   if (sb) { sb.style.left = `calc(50% - ${Math.round(118 * k)}px)`; sb.style.bottom = `${Math.round(346 * k - 6)}px`; }
   yCamTo(yard, ycam.x);
+}
+// a place's sight seen whole (2026-11-14, the user: 白鷺城 could not be seen whole on a phone): the camera drawn back till the
+// frame [x0, x1, top] (in the land's own units: 0–1200 across, its ground's foot at 370) fits the screen, held ms, then back to
+// the camera's own place (the hero, who may have walked on meanwhile); a tap brings it back sooner. Nothing where it fits already
+const YWIDE = { on: false, t: 0, back: null, yard: null };
+function yWide(yard, [x0, x1, top], ms = 3600) {
+  const sky = yard.querySelector('.sky'), w = yard.querySelector('.yworld'); if (!sky || !w || YWIDE.on) return false;
+  const k = ycam.YW / 1200, z = Math.min(sky.clientWidth / ((x1 - x0) * k + 32), (sky.clientHeight - 76) / ((370 - top) * k));   // the land is as wide as the world
+  if (!(z < ycam.z * 0.97)) return false;
+  const cx = ((x0 + x1) / 2 - 600) * k, half = sky.clientWidth / 2 / z, lim = Math.max(0, ycam.YW / 2 - half), x = Math.max(-lim, Math.min(lim, cx));   // no edge of the world in sight
+  YWIDE.on = true; YWIDE.yard = yard; w.style.transition = 'transform .9s cubic-bezier(.4, 0, .2, 1)'; yard.classList.add('wide');
+  w.style.transform = `translate3d(${(-x * z).toFixed(1)}px,0,0) scale(${z.toFixed(3)})`;
+  // a tap on the scene only brings it back (not a walk there nor a thing used); the buttons up top work as ever
+  const swallow = (e) => { e.stopPropagation(); e.preventDefault(); };
+  const tap = (e) => { if (e.target.closest('button, a, .yard-tools')) { back(); return; } swallow(e); back(); yard.addEventListener('click', swallow, { capture: true, once: true }); setTimeout(() => yard.removeEventListener('click', swallow, true), 600); };
+  const back = () => {
+    if (YWIDE.back !== back) return; YWIDE.on = false; YWIDE.back = null; clearTimeout(YWIDE.t); yard.removeEventListener('pointerdown', tap, true); yard.classList.remove('wide');
+    if (!yard.isConnected) return; yCamTo(yard, ycam.x); setTimeout(() => { if (!YWIDE.on) w.style.transition = ''; }, 950);
+  };
+  YWIDE.back = back; YWIDE.t = setTimeout(back, ms); yard.addEventListener('pointerdown', tap, true);
+  return true;
 }
 // a screen held upright (2026-11-10, the user: less sky and bigger people on a phone): the place drawn larger, its ground along
 // the bottom of the screen and the sky left as it is; a room (食堂, 居酒屋) a little smaller instead, more of it in sight
@@ -631,7 +653,7 @@ function renderOutside(view, place = 'yard') {
   else if (come && place === 'yard' && a && YARD_FAR[a.from]) {   // home from the beach or the town: up the far path, then in over the lawn
     const h = y.querySelector('.yhero'); h.classList.add('out'); yHeroPlace(y);
     setTimeout(() => yFar(y, a.from, true, () => { [yh.X, yh.Y] = yToward(come[1], come[0], 110); yh.back = false; yHeroPlace(y); h.classList.remove('out'); yHeroWalk(y, come[1]); }), 120);   // in a few steps from where the far path left off
-  } else if (come) { yHeroPlace(y); setTimeout(() => yHeroWalk(y, come[1]), 200); }   // in along the path
+  } else if (come) { yHeroPlace(y); setTimeout(() => yHeroWalk(y, come[1]), 200); if (PLACE_WIDE[place]) yWide(y, PLACE_WIDE[place], 2400); }   // in along the path; off the bus at a sight too big for the screen: it whole first
   else yHeroPlace(y);
   if (place === 'yard') yWitch(y);
   ySnow(y, place);
