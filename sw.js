@@ -43,6 +43,8 @@ const PRECACHE = [
   './js/71r_work.js',
   './js/71s_jobs.js',
   './js/71t_passers.js',
+  './js/71u_hall.js',
+  './js/71v_rairai.js',
   './js/72_course.js',
   './js/73_vocab.js',
   './js/74_mistakes.js',
@@ -64,7 +66,7 @@ const PRECACHE = [
   './config.js',
   './data.js?v=28',
   './data-n3.js?v=2',
-  './events.js?v=69',
+  './events.js?v=70',
   './pics.js?v=9',
   './kana-strokes.js?v=1'
 ];

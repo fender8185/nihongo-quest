@@ -48,7 +48,7 @@ def test_every_thing_on_the_street_answers_a_tap(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ window.__errs = window.__errs || []; window.addEventListener('error', (e) => __errs.push(String(e.message)));
       location.hash = '#/chinadori'; route(); await wait(300); const out = { uses: [...document.querySelectorAll('.use-btn')].map((u) => u.dataset.use).sort() };
       out.signs = Object.fromEntries([...document.querySelectorAll('.dr-sign')].map((g) => [g.dataset.sign, [...g.querySelectorAll('text')].map((t) => t.textContent).join('')]));
-      for (const id of out.uses) { document.querySelector(`.use-btn[data-use="${id}"]`).click(); await wait(1200); closeModal && closeModal(true); }
+      for (const id of out.uses.filter((u) => u !== 'rairai')) { document.querySelector(`.use-btn[data-use="${id}"]`).click(); await wait(1200); closeModal && closeModal(true); }   // らいらいけん: in through its door (test_rairai.py)
       return JSON.stringify(Object.assign(out, { errs: __errs })); })()"""))
     assert r['uses'] == sorted(['ranran', 'fuku', 'toka', 'rairai', 'kuriya', 'kohaku', 'board', 'hourai']), r
     assert r['signs'] == {'ranran': 'らんらん', 'fuku': 'ふく', 'toka': 'とうか', 'rairai': 'らいらいけん', 'kuriya': 'くりや', 'kohaku': 'こはく'}, r

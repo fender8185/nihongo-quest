@@ -5,7 +5,7 @@
 // unit), the walls RH high, the back corner at (ox, oy) in the land's 1200 × 900 frame. The hero and the people stand in it at X,
 // Y like everywhere out (from the world's middle, up from the bottom), all one size (k) anywhere in it; they walk the floor round
 // the furniture (WALK_BLOCK in floor units), and who is drawn over whom goes by the furniture they stand before or behind (isoZ)
-const INDOOR = ['shokudo', 'izakaya', 'kyoshitsu'];   // 日本語教室 (2026-11-14) too
+const INDOOR = ['shokudo', 'izakaya', 'kyoshitsu', 'rairai'];   // 日本語教室 (2026-11-14) and らいらいけん (2026-11-15) too
 const ISO = { U: 31, RW: 22, RD: 16, RH: 8, ox: 507, oy: -259, k: 0.64, door: [0.25, 13.4], in: [2.6, 13] };
 const isoPt = (u, v, h = 0) => [ISO.ox + (u - v) * ISO.U, ISO.oy + (u + v) * ISO.U / 2 - h * ISO.U];   // in the land's svg
 const isoXY = (u, v, h = 0) => { const [x, y] = isoPt(u, v, h); return [x - 600, 370 - y]; };   // in the hero's units
@@ -53,7 +53,7 @@ function isoZ(u, v) {
 INDOOR.forEach((pl) => Object.values(TOWN.SPOTS[pl] || {}).forEach((sp) => { if (sp.u !== undefined) { [sp.X, sp.Y] = isoXY(sp.u, sp.v, sp.h || 0); sp.foot = isoXY(sp.u, sp.v); } }));
 // how far up each place the hero walks (Y px up): the ground in front of its buildings, never up onto them (2026-11-10, the user);
 // the yard up to its house, the main road to its far pavement, a room to its floor
-const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128, oku: 124, kominkan: 128, kyoshitsu: 128, chinatown: 128 };
+const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128, oku: 124, kominkan: 128, kyoshitsu: 128, chinatown: 128, rairai: 128 };
 const walkTop = (place, X) => (place === 'yard' && X !== undefined ? Math.round(214 - Math.max(0, Math.abs(X) - 300) * 0.22) : place === 'chinadori' ? (X === undefined ? DORI.FAR : DORI.top(X)) : WALK_TOP[place] || 214);   // 中華街大通り: its trapezoid (DORI)   // the yard: a hilltop, lower towards its sides — not out over the edge
 // what stands in the way in each place (2026-11-10, the user: he walked about as if every place were flat ground): the ground the
 // things there stand on, [X0, X1, Y0, Y1] in his units — benches, crates, tables and stools, the sandbox, the beach's grassy bank
@@ -71,7 +71,9 @@ const WALK_BLOCK = {
   shokudo: [[0, 15, 0, 2.8], [3.4, 12.1, 2.8, 3.9], [5.9, 10.1, 6.6, 10], [12.4, 16.6, 6.6, 10], [0.4, 2.2, 9.4, 11.2]],
   izakaya: [[0, 15.6, 0, 3.0], [3.4, 14.6, 3.0, 4.2], [14.4, 22, 7.2, 16], [0.3, 1.9, 8.6, 11.5], [13.7, 14.6, 10.8, 12.0]],
   // 日本語教室: the teacher's desk, the two tables with their chairs, the tatami, the book shelf, the slipper rack, the plant
-  kyoshitsu: [[7.4, 11, 1.0, 2.8], [4.1, 10.7, 5.2, 8.3], [11.5, 18.1, 5.2, 8.3], [15.2, 22, 10, 16], [0, 1.1, 1.4, 6.0], [0, 0.9, 10.1, 11.9], [0.4, 1.8, 0.2, 1.6]]
+  kyoshitsu: [[7.4, 11, 1.0, 2.8], [4.1, 10.7, 5.2, 8.3], [11.5, 18.1, 5.2, 8.3], [15.2, 22, 10, 16], [0, 1.1, 1.4, 6.0], [0, 0.9, 10.1, 11.9], [0.4, 1.8, 0.2, 1.6]],
+  // らいらいけん: the pass (and the kitchen behind), the register, the tank, the plant; each round table with its stools behind it
+  rairai: [[0, 10.7, 0, 2.5], [1.0, 3.8, 8.6, 10.4], [11.0, 13.8, 0, 1.5], [0.6, 2.0, 0.4, 1.8], [8.6 - 2.2, 8.6 + 1.5, 7.4 - 2.2, 7.4 + 1.5], [15.2 - 2.2, 15.2 + 1.5, 5.6 - 2.2, 5.6 + 1.5], [14.6 - 2.2, 14.6 + 1.5, 11.8 - 2.2, 11.8 + 1.5]]
 };
 function walkBlocks(place) {
   const b = (WALK_BLOCK[place] || []).slice();

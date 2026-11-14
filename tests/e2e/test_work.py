@@ -25,10 +25,11 @@ BEGIN = """const rec = () => ({ b: 2, due: addDays(todayStr(), 9), n: 2, ok: 2, 
 
 def test_the_jobs_open_by_kana_seen(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ location.hash = '#/chinadori'; route(); await wait(200); const out = {};
-      for (const n of [4, 5, 14, 15, 29, 30, 45, 46]) { kana(n); out[n] = ['shelf', 'counter', 'deliver', 'buns'].filter((j) => WORK.can(j).ok).join(','); }
+      ['いらっしゃいませ', 'どうぞ', 'はい'].forEach((w) => { const v = REG.vocab.find((x) => x.w === w && x.lv === 'PRE_N5'); state.srs[v.key] = rec(); });
+      for (const n of [4, 5, 14, 15, 29, 30, 45, 46]) { kana(n); out[n] = ['shelf', 'counter', 'waiter', 'buns'].filter((j) => WORK.can(j).ok).join(','); }
       kana(4); out.why = WORK.can('shelf').why; state.kanaKnown = true; out.known = WORK.can('buns').ok;
       return JSON.stringify(out); })()"""))
-    assert (r['4'], r['5'], r['14'], r['15'], r['29'], r['30'], r['45'], r['46']) == ('', 'shelf', 'shelf', 'shelf,counter', 'shelf,counter', 'shelf,counter,deliver', 'shelf,counter,deliver', 'shelf,counter,deliver,buns'), r
+    assert (r['4'], r['5'], r['14'], r['15'], r['29'], r['30'], r['45'], r['46']) == ('', 'shelf', 'shelf', 'shelf,counter', 'shelf,counter', 'shelf,counter,waiter', 'shelf,counter,waiter', 'shelf,counter,waiter,buns'), r
     assert '再學 1 個假名' in r['why'] and r['known'], r
 
 def test_one_workplace_a_day_and_a_shift_left_halfway_waits(b):
@@ -101,8 +102,8 @@ def test_the_board_lists_the_four_jobs(b):
       const text = card.textContent; CLASS.close();
       state.work.res['2026-11-10'] = { place: 'counter', done: 4, score: {} }; WORK.board(yard()); const today = document.querySelector('.wk-board').textContent; CLASS.close();
       return JSON.stringify({ rows, text, today }); })()"""))
-    assert r['rows'] == [['shelf', True], ['counter', True], ['deliver', False], ['buns', False]], r
-    assert all(w in r['text'] for w in ['整理貨架', '站櫃', '外送', '包包子', '30', '46']) and '今天' in r['today'] and '站櫃' in r['today'], r
+    assert r['rows'] == [['shelf', True], ['counter', True], ['waiter', False], ['buns', False]], r
+    assert all(w in r['text'] for w in ['整理貨架', '站櫃', '外場', '包包子', '30', '46']) and '今天' in r['today'] and '站櫃' in r['today'], r
 
 def test_chen_asks_at_five_kana(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ const ids = () => TOWNEV.due().map((e) => e.id).filter((id) => id.startsWith('cn'));
@@ -113,7 +114,7 @@ def test_chen_asks_at_five_kana(b):
 
 def test_the_generator_has_the_street_lines(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ const all = talkLines().map(([w, l]) => w + ':' + l);
-      return JSON.stringify(['zhang:…いらっしゃい。はたらく？', 'zhou:あら、いらっしゃい。てつだって くれる？', 'huang:はやく！ でまえ、てつだって！', 'zhang:ラベルを よく みて。', 'chen:ねえ、バイト しない？'].filter((x) => !all.includes(x))); })()"""))
+      return JSON.stringify(['zhang:…いらっしゃい。はたらく？', 'zhou:あら、いらっしゃい。てつだって くれる？', 'huang:はやく！ おみせ、てつだって！', 'zhang:ラベルを よく みて。', 'chen:ねえ、バイト しない？'].filter((x) => !all.includes(x))); })()"""))
     assert r == [], r
 
 # ---- 整理貨架 (ふく, 張さん): a box's things to the shelf's cells by their labels ----
@@ -250,40 +251,6 @@ def test_the_generator_has_the_counter_lines(b):
       return JSON.stringify([sayer('かさ') + ':かさを ください。', sayer('かさ') + ':かさを ふたつ ください。', 'hero:いらっしゃいませ！', 'hero:ありがとうございました！', 'hero:さんびゃくえんです。', 'kaneda:これ、いくらですか。'].filter((x) => !all.includes(x))); })()"""))
     assert r == [], r
 
-# ---- 外送 (らいらいけん, 黄さん): a slip with a shop's name; walk to the shop with that sign, back for the next ----
-DELIVER = """const go = async () => { location.hash = '#/chinadori'; route(); await wait(300); earlier('deliver'); WORK.start(yard(), 'deliver'); await wait(300); };"""
-
-def test_delivery_goes_only_to_readable_shops(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(30);
-      const runs = Array.from({ length: 6 }, () => JOBS.deliver.make()), all = runs.flat();
-      return JSON.stringify({ to: [...new Set(all)].sort(), n: runs.every((t) => t.length === 10), twice: runs.some((t) => t.some((x, i) => i && t[i - 1] === x)) }); })()"""))
-    assert r == {'to': ['fuku', 'kohaku', 'toka'], 'n': True, 'twice': False}, r
-
-def test_a_wrong_shop_says_not_here_and_counts_a_miss(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + DELIVER + """ kana(46); window.speakAs = () => Promise.resolve(); await go();
-      const D = JOBS.deliver.state(), out = { slip: document.querySelector('.wk-slip').textContent.includes(DORI.shop(D.to).sign) };
-      const wrong = DORI.SHOPS.find((s) => s.id !== D.to && s.id !== 'rairai').id; JOBS.deliver.at(yard(), wrong); await wait(100);
-      out.said = document.body.textContent.includes('うちじゃ ないよ'); out.miss = JOBS.deliver.state().miss;
-      JOBS.deliver.at(yard(), D.to); await wait(100); out.score = state.work.res['2026-11-10'].score; out.back = document.querySelector('.wk-slip').textContent.includes('らいらいけん');
-      JOBS.deliver.at(yard(), 'rairai'); out.next = JOBS.deliver.state().k; out.carry = Boolean(document.querySelector('.yhero.wk-carry'));
-      return JSON.stringify(out); })()"""))
-    assert r == {'slip': True, 'said': True, 'miss': 1, 'score': {'0': 1}, 'back': True, 'next': 1, 'carry': True}, r
-
-def test_a_delivery_shift_pays_a_tip(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + DELIVER + """ kana(46); window.speakAs = () => Promise.resolve(); await go();
-      for (let k = 0; k < 10; k++) { JOBS.deliver.at(yard(), JOBS.deliver.state().to); if (k < 9) JOBS.deliver.at(yard(), 'rairai'); }
-      for (let i = 0; i < 30 && !document.querySelector('.wk-result'); i++) await wait(100); const t = state.work.res['2026-11-10'];
-      return JSON.stringify({ yen: t.yen, tip: t.tip, tips: [80, 120, 200, 300].map((s) => JOBS.deliver.tip(s)), slip: Boolean(document.querySelector('.wk-slip')) }); })()"""))
-    assert r == {'yen': 180, 'tip': 30, 'tips': [30, 20, 10, 0], 'slip': False}, r
-
-def test_the_slip_bar_leaves_the_signs_tappable_on_a_phone(b):
-    r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + SHELF + DELIVER + """ kana(46); await go();
-      const s = document.querySelector('.wk-slip').getBoundingClientRect(), hit = (q) => !(q.right < s.left || q.left > s.right || q.bottom < s.top || q.top > s.bottom);
-      const over = [...document.querySelectorAll('.use-btn')].filter((u) => hit(u.getBoundingClientRect())).map((u) => u.dataset.use);
-      location.hash = '#/chinatown'; route(); await wait(400); const gone = !document.querySelector('.wk-slip');
-      return JSON.stringify({ over, inside: s.left >= 0 && s.right <= innerWidth, gone }); })()""")])[-1])
-    assert r == {'over': [], 'inside': True, 'gone': True}, r
-
 # ---- 包包子 (福明, 王): 2026-11-15, the user — a close-up of the hero making the bun; six cells of hiragana, a kana said, tap it: the
 # bun one step on, that cell a new kana, the next said; thirty taps = five buns; all right in time, five buns in the steamer ----
 BUNS = """const make = async () => { location.hash = '#/chinatown'; route(); await wait(300); earlier('buns'); WORK.start(yard(), 'buns'); await wait(300); };
@@ -370,10 +337,9 @@ def test_one_who_knows_kana_already_can_do_every_job(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + """ kana(0); state.kanaKnown = true; window.__errs = []; window.addEventListener('error', (e) => __errs.push(String(e.message)));
       window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve(); const out = {};
       out.shelf = JOBS.shelf.make().every((t) => t.label && t.bins.length === 4); out.counter = JOBS.counter.make().every((t) => t.good && t.goods.length === 4);
-      out.deliver = JOBS.deliver.make().every((x) => DORI.shop(x)); location.hash = '#/chinadori'; route(); await wait(300); earlier('deliver'); WORK.start(yard(), 'deliver'); await wait(800);
-      out.slip = document.querySelector('.wk-slip').textContent.includes('とどけさき');
+      out.waiter = WORK.can('waiter').ok;
       return JSON.stringify(Object.assign(out, { errs: __errs })); })()"""))
-    assert r == {'shelf': True, 'counter': True, 'deliver': True, 'slip': True, 'errs': []}, r
+    assert r == {'shelf': True, 'counter': True, 'waiter': True, 'errs': []}, r
 
 def test_a_card_shut_and_opened_again_follows_the_new_one(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); earlier('buns'); window.speak = () => Promise.resolve(); window.speakAs = () => new Promise((ok) => setTimeout(ok, 400));

@@ -97,7 +97,7 @@ const SND = (() => {
   const GROUND = {
     yard: { way: 'gravel', off: 'grass' }, park: { way: 'concrete', off: 'gravel' }, beach: { way: 'wood', off: 'sand' }, harbor: { way: 'sand', off: 'concrete' },
     street: { off: 'concrete' }, town: { off: 'concrete' }, station: { off: 'concrete' }, sento: { off: 'concrete' },
-    shrine: { off: 'gravel' }, oku: { off: 'gravel' }, castle: { off: 'gravel' }, shokudo: { off: 'concrete' }, izakaya: { off: 'wood' }, room: { off: 'wood' }, kominkan: { off: 'concrete' }, kyoshitsu: { off: 'wood' }, chinatown: { off: 'concrete' }, chinadori: { off: 'concrete' }
+    shrine: { off: 'gravel' }, oku: { off: 'gravel' }, castle: { off: 'gravel' }, shokudo: { off: 'concrete' }, izakaya: { off: 'wood' }, room: { off: 'wood' }, kominkan: { off: 'concrete' }, kyoshitsu: { off: 'wood' }, rairai: { off: 'concrete' }, chinatown: { off: 'concrete' }, chinadori: { off: 'concrete' }
   };
   const groundOf = (place, kind) => { const g = GROUND[place]; return g ? g[kind] || g.off : ''; };
   // ---- each place's background: [layer, how loud by day, by night] (sounds/amb-<layer>-1.m4a, looping); room: through the window,
@@ -120,6 +120,7 @@ const SND = (() => {
     kyoshitsu: [['clock', 0.45, 0.45]],   // 日本語教室 (2026-11-14): its wall clock ticking
     chinatown: [['town', 0.6, 0.35], ['restaurant', 0.25, 0.25]],   // 中華街: a busy street, kitchens open onto it
     chinadori: [['town', 0.5, 0.3], ['restaurant', 0.3, 0.25]],   // 大通り (2026-11-14): its shops and kitchens either side
+    rairai: [['restaurant', 0.55, 0.45]],   // らいらいけん (2026-11-15): its kitchen and its tables
     izakaya: [['izakaya', 0.6, 0.6]],
     shop: [['clock', 0.5, 0.5]],
     room: [['birds', 0.18, 0], ['insects', 0, 0.07]]
@@ -225,6 +226,7 @@ const USE_SND = {
   'station.vend': 'can-drop', 'station.pigeons': 'wings', 'station.taxi': 'horn', 'station.gate': 'ic',
   'sento.milk': 'bottle', 'sento.cat': 'purr', 'sento.bath': 'bath', 'sento.laundry': 'washer',
   'chinatown.post': 'paper', 'chinatown.notice': 'paper', 'chinatown.shirt': 'cloth', 'chinatown.seiro': 'pour', 'chinatown.panda': 'cushion', 'chinatown.rmenu': 'paper', 'chinatown.yuka': 'place', 'chinatown.shishi': 'clap', 'chinatown.uranai': 'sparkle',
+  'rairai.pass': 'sizzle', 'rairai.register': 'suzu', 'rairai.table': 'dishes', 'rairai.menu': 'paper', 'rairai.poster': 'paper', 'rairai.tank': 'splash', 'rairai.toilet': 'door-close',
   'chinadori.ranran': 'suzu', 'chinadori.fuku': 'rustle', 'chinadori.toka': 'pour', 'chinadori.rairai': 'dishes', 'chinadori.kuriya': 'sizzle', 'chinadori.kohaku': 'furin', 'chinadori.board': 'paper',
   'kominkan.keiji': 'paper', 'kominkan.neko': 'meow', 'kominkan.hana': 'rustle', 'kominkan.nobori': 'cloth', 'kominkan.tokei': 'tick', 'kominkan.jitensha': 'bike',
   'kyoshitsu.board': 'paper', 'kyoshitsu.karuta': 'paper', 'kyoshitsu.radio': 'switch', 'kyoshitsu.books': 'page', 'kyoshitsu.clock': 'tick', 'kyoshitsu.cranes': 'paper', 'kyoshitsu.window': 'rustle', 'kyoshitsu.table0': 'sit', 'kyoshitsu.table1': 'sit',

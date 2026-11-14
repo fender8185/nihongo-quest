@@ -23,7 +23,7 @@ const DORI = (() => {
     { id: 'ranran', side: -1, y0: 12, y1: 172, L: 140, tall: 330, sign: 'らんらん', name: 'おみやげ屋', job: 'counter' },
     { id: 'fuku', side: -1, y0: 172, y1: 244, L: 130, tall: 290, sign: 'ふく', name: '中華食材店', job: 'shelf' },
     { id: 'toka', side: -1, y0: 244, y1: 284, L: 138, tall: 350, sign: 'とうか', name: '茶館' },
-    { id: 'rairai', side: 1, y0: 12, y1: 172, L: 136, tall: 340, sign: 'らいらいけん', name: '出前的中華料理店', job: 'deliver' },
+    { id: 'rairai', side: 1, y0: 12, y1: 172, L: 136, tall: 340, sign: 'らいらいけん', name: '中華料理店' },
     { id: 'kuriya', side: 1, y0: 172, y1: 244, L: 142, tall: 280, sign: 'くりや', name: '天津甘栗' },
     { id: 'kohaku', side: 1, y0: 244, y1: 280, L: 132, tall: 320, sign: 'こはく', name: '雜貨攤' }];
   const shop = (id) => SHOPS.find((s) => s.id === id);
@@ -161,8 +161,9 @@ PLACE_USE.chinadori = (() => {
     return [Math.round(Math.min(...xs)), Math.round(Math.min(...ys)), Math.round(Math.max(...xs)), Math.round(Math.max(...ys))]; };
   const SAY = { ranran: 'パンダが いっぱい！', fuku: 'いろいろ ある…！', toka: 'おちゃの におい…', rairai: 'ラーメンの におい…！', kuriya: 'あまい におい…！', kohaku: 'きらきら…！' };
   const bp = 392, bx = (L) => Math.round(600 - L * bp / K), by = (V) => Math.round(-60 + bp * (1 - V / K));
-  // while a 外送 round is under way (JOBS.deliver) a shop tapped is a delivery (or the way back): no word of its own then
-  return DORI.SHOPS.map((s) => Object.assign({ id: s.id, name: `${s.sign}（${s.name}）`, box: box(s), kind: 'do', go: DORI.door(s.id), pick: () => [JOBS.deliver.on() ? '' : SAY[s.id]], open: (y) => JOBS.deliver.at(y, s.id) }, s.id === 'kuriya' ? { fx: 'kuri', fxc: 'puff', ms: 2400 } : {}))
+  // らいらいけん (2026-11-15): in through its door (shut out of hours: said so at the door)
+  return DORI.SHOPS.map((s) => Object.assign({ id: s.id, name: `${s.sign}（${s.name}）`, box: box(s), kind: 'do', go: DORI.door(s.id), pick: () => [SAY[s.id]] },
+    s.id === 'kuriya' ? { fx: 'kuri', fxc: 'puff', ms: 2400 } : {}, s.id === 'rairai' ? { pick: () => [''], open: (y) => yGo(y.querySelector('.use-btn[data-use="rairai"]') || y, 'rairai') } : {}))
     .concat([{ id: 'board', name: '求人看板', box: [bx(106), by(64), bx(78), by(0)], kind: 'do', go: [-70, 34], back: 1, pose: 'look', say: 'アルバイト…？', open: () => WORK.board() },
       { id: 'hourai', name: 'ほうらい（中華料理店）', box: [Math.round(600 - 110 * DORI.END / K), Math.round(-60 + DORI.END * (1 - 200 / K)), Math.round(600 + 110 * DORI.END / K), Math.round(-60 + DORI.END)], kind: 'do', go: [0, DORI.FAR], back: 1, pose: 'look', say: 'おおきい おみせ…！' }]);
 })();
