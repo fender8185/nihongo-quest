@@ -184,11 +184,11 @@ const CLASS = (() => {
     return [`いま、${half} ${HOURS[n]} ごろ です。`, `現在大約${h < 12 ? '上午' : '下午'} ${n || 12} 點（${half} ${HOURS[n]}）。`];
   }
 
-  // ---- the blackboard: the 五十音 table in chalk, the kana seen written in (a tap says it), the rest a faint ？ ----
+  // ---- the blackboard: the 五十音 table in chalk, the kana seen written in (a tap says it; ✓ those written today), the rest a faint ？ ----
   function boardHtml(script) {
-    const s = seen(), n = KANA_ROWS.flat().filter((h) => h && s.has(char(h, script))).length;
+    const s = seen(), wrote = WRITE.today(), n = KANA_ROWS.flat().filter((h) => h && s.has(char(h, script))).length;
     const cols = KANA_ROWS.map((row) => `<div class="cb-col">${row.map((h) => { if (!h) return '<span class="cb-k cb-empty"></span>'; const c = char(h, script);
-      return s.has(c) ? `<button type="button" class="cb-k" data-say="${c}" lang="ja">${c}<small>${KANA_ROMAJI[h]}</small></button>` : '<span class="cb-k off">？</span>'; }).join('')}</div>`).join('');
+      return s.has(c) ? `<button type="button" class="cb-k${wrote.includes(c) ? ' cb-wrote' : ''}" data-say="${c}" lang="ja">${c}<small>${KANA_ROMAJI[h]}</small></button>` : '<span class="cb-k off">？</span>'; }).join('')}</div>`).join('');
     return `${xBtn}<div class="cb-head"><b>${script === 'kata' ? 'カタカナ' : 'ひらがな'}</b><span>學過 ${n}／46</span></div>
       <div class="cb-tabs"><button type="button" class="cb-tab${script === 'hira' ? ' on' : ''}" data-script="hira">平假名</button><button type="button" class="cb-tab${script === 'kata' ? ' on' : ''}" data-script="kata">片假名</button>${n ? '<button type="button" class="cb-tab cb-write" data-write="1">✎ 寫寫看</button>' : ''}</div>
       <div class="cb-board">${cols}</div><p class="cb-note">${n ? '點一個字，聽它怎麼念。' : '學會一個假名，它就會寫上來。'}</p>`;
@@ -197,7 +197,7 @@ const CLASS = (() => {
     let script = 'hira'; const s0 = seen;
     open('cls-board', '黑板', boardHtml(script), (e) => {
       const k = e.target.closest('[data-say]'), t = e.target.closest('[data-script]');
-      if (e.target.closest('[data-write]')) { const list = REG.kana.filter((x) => x.script === script && s0().has(x.ch)).map((x) => x.ch); if (list.length) WRITE.open(list[list.length - 1], list); return; }   // the last learned first
+      if (e.target.closest('[data-write]')) { const list = REG.kana.filter((x) => x.script === script && s0().has(x.ch)).map((x) => x.ch); if (list.length) WRITE.open(null, list); return; }   // in order, from the first not written today
       if (k) { speak(k.dataset.say); k.classList.remove('pop'); void k.offsetWidth; k.classList.add('pop'); }
       else if (t && t.dataset.script !== script) { script = t.dataset.script; el.querySelector('.cls-card').innerHTML = boardHtml(script); }
     });

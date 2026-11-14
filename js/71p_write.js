@@ -6,10 +6,13 @@
 // next is due; the wrong way round, or another stroke (a later one: the order), or nothing like it, and it is rubbed out with a
 // word why; three misses on one and its stroke is shown drawn. 看筆順 draws them all in order. All written: 堀先生's word, and
 // 1 言靈 for a kana the first time today (the classroom's 10 a day). Opened from the classroom's blackboard (the kana seen, ◀ ▶)
-// and from a new kana's card.
+// and from a new kana's card. From the board (2026-11-14, the user: a kana written well should give way to the next; it opened
+// on the last kana learned and stayed on it): the kana seen in 五十音 order from the first not yet written today; written with no
+// miss, the next comes on its own once 堀先生 has said his word; with misses, 再寫一次 or 下一個; the last one done, his word on
+// the lot (how many written this time, how many はなまる).
 const WRITE = (() => {
   const N = 24, NEAR = 12, NS = 'http://www.w3.org/2000/svg';
-  let S = null;   // { ch, list, i (the stroke due), miss (on it), misses (in all), live: points being drawn, model: [{ d, pts, len }] }
+  let S = null;   // { ch, list, run: { kana written this opening: no miss }, i (the stroke due), miss (on it), misses (in all), live: points being drawn, model: [{ d, pts, len }] }
   const f = (n) => n.toFixed(1);
   // a path's points at N even steps along it (a hidden path in the pad measures it)
   function along(d, svg) {
@@ -54,9 +57,13 @@ const WRITE = (() => {
     svg.querySelectorAll('.wr-model').forEach((p, k) => { p.classList.toggle('done', k < S.i); p.classList.toggle('due', k === S.i); });
     svg.querySelector('.wr-nums').innerHTML = S.model.map((m, k) => (k < S.i ? '' : `<text class="wr-num${k === S.i ? ' due' : ''}" x="${f(m.pts[0][0] - 6)}" y="${f(m.pts[0][1] - 3)}">${k + 1}</text>`)).join('');
   }
-  function start(ch, list) {
-    S = { ch, list: list && list.length ? list : [ch], i: 0, miss: 0, misses: 0, live: null, model: [] };
-    CLASS.card('cls-write', '寫寫看', html(), onClick);
+  // ch null: the first in the list not written today (all written: the first)
+  function start(ch, list, run) {
+    list = list && list.length ? list : [ch]; const w = today().done;
+    ch = ch || list.find((c) => !w.includes(c)) || list[0];
+    S = { ch, list, run: run || {}, i: 0, miss: 0, misses: 0, live: null, model: [] };
+    const card = document.querySelector('.cls-write .cls-card');   // already open: the next kana on the same board
+    if (card) card.innerHTML = html(); else CLASS.card('cls-write', '寫寫看', html(), onClick);
     const svg = pad(); S.model = (KANA_STROKES[ch] || []).map((d) => along(d, svg)); paint();
     svg.addEventListener('pointerdown', down); svg.addEventListener('pointermove', move); svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', () => { S.live = null; svg.querySelector('.wr-live').setAttribute('d', ''); });
     speak(ch);
@@ -99,29 +106,47 @@ const WRITE = (() => {
     }, n * 850));
     if (k !== undefined) word(`第 ${k + 1} 筆是這樣寫的，照著再寫一次。`);
   }
+  const HANA = ['よろしい。はなまる です。', '很好。給你一朵花圈。'], GOOD = ['よく できました。とめ、はね、はらい。', '寫得很好。頓筆、勾筆、撇筆。'],
+    ALL = ['ぜんぶ かけましたね。よく がんばりました。', '全部寫完了呢。很努力。'];
   function done() {
-    const clean = S.misses === 0, line = clean ? ['よろしい。はなまる です。', '很好。給你一朵花圈。'] : ['よく できました。とめ、はね、はらい。', '寫得很好。頓筆、勾筆、撇筆。'];
-    word(`寫好了！${clean ? '一次都沒寫錯！' : ''}`, 'ok'); playSfx('good');
+    const clean = S.misses === 0, at = S.list.indexOf(S.ch), next = S.list[at + 1], tok = S;
+    S.run[S.ch] = S.run[S.ch] || clean;
+    const all = !next && S.list.length > 1, wrote = Object.keys(S.run).length, hana = Object.values(S.run).filter(Boolean).length;
+    const line = all ? ALL : clean ? HANA : GOOD;
+    word(all ? `寫好了！這次寫了 ${wrote} 個字，はなまる ${hana} 朵。` : `寫好了！${clean ? '一次都沒寫錯！' : ''}`, 'ok'); playSfx('good');
     pad().insertAdjacentHTML('beforeend', clean ? '<g class="wr-hana"><circle cx="86" cy="22" r="13" fill="none" stroke="#f08a8a" stroke-width="2.4"/><path d="M78 22 q8 -10 16 0 q-8 10 -16 0" fill="none" stroke="#f08a8a" stroke-width="1.6"/></g>' : '');
     const card = document.querySelector('.cls-write .cls-card');
     if (card) card.insertAdjacentHTML('beforeend', `<div class="cn-who wr-hori"><span class="kr-face">${TOWNEV.face('hori')}</span><p><b lang="ja">${esc(line[0])}</b><span>${esc(line[1])}</span></p></div>`);
-    speakAs('hori', line[0]);
+    const btns = document.querySelector('.cls-write .wr-btns');
+    if (btns) btns.innerHTML = '<button type="button" class="btn btn-sm" data-w="clear">再寫一次</button>'
+      + (next ? '<button type="button" class="btn btn-sm wr-next" data-w="next">下一個 ▶</button>' : all ? `<button type="button" class="btn btn-sm" data-w="top">從「${esc(S.list[0])}」再寫一遍</button>` : '');
+    const said = speakAs('hori', line[0]), t0 = Date.now();
     if (firstToday(S.ch)) CLASS.playKoto(1, `寫了「${S.ch}」`);
+    // no miss and more to write: on to the next once he has said it (at least 1.5 s; his voice stuck: 4.5 s)
+    if (clean && next) {
+      const go = () => { if (S === tok && pad()) start(next, S.list, S.run); };
+      Promise.resolve(said).catch(() => {}).then(() => setTimeout(go, Math.max(300, 1500 - (Date.now() - t0)))); setTimeout(go, 4500);
+    }
   }
-  // 1 言靈 a kana the first time it is written today (this device)
+  // the kana written today (this device): 1 言靈 a kana the first time, the board's ✓, where the board's writing starts
+  function today() {
+    const t = todayStr(); try { const m = JSON.parse(localStorage.getItem('nq_write') || 'null'); if (m && m.day === t && Array.isArray(m.done)) return m; } catch (e) { /* none */ } return { day: t, done: [] };
+  }
   function firstToday(ch) {
-    try { const t = todayStr(), m = JSON.parse(localStorage.getItem('nq_write') || 'null'); const w = m && m.day === t ? m : { day: t, done: [] }; if (w.done.includes(ch)) return false; w.done.push(ch); localStorage.setItem('nq_write', JSON.stringify(w)); return true; } catch (e) { return false; }
+    const w = today(); if (w.done.includes(ch)) return false; w.done.push(ch);
+    try { localStorage.setItem('nq_write', JSON.stringify(w)); return true; } catch (e) { return false; }
   }
   function onClick(e) {
     const b = e.target.closest('[data-w]'); if (!b || !S) return;
     const w = b.dataset.w, at = S.list.indexOf(S.ch);
     if (w === 'say') speak(S.ch);
     else if (w === 'demo') show();
-    else if (w === 'clear') start(S.ch, S.list);
-    else if (w === 'prev' && at > 0) start(S.list[at - 1], S.list);
-    else if (w === 'next' && at < S.list.length - 1) start(S.list[at + 1], S.list);
+    else if (w === 'clear') start(S.ch, S.list, S.run);
+    else if (w === 'prev' && at > 0) start(S.list[at - 1], S.list, S.run);
+    else if (w === 'next' && at < S.list.length - 1) start(S.list[at + 1], S.list, S.run);
+    else if (w === 'top') start(S.list[0], S.list);
   }
-  // what is said here, for the generator (talkLines): 堀先生's two words
-  const lines = (add) => { add('hori', 'よろしい。はなまる です。'); add('hori', 'よく できました。とめ、はね、はらい。'); };
-  return { open: start, stroke, lines, has: (ch) => Boolean(KANA_STROKES[ch]), state: () => S };
+  // what is said here, for the generator (talkLines): 堀先生's three words
+  const lines = (add) => [HANA, GOOD, ALL].forEach((l) => add('hori', l[0]));
+  return { open: (ch, list) => start(ch, list), stroke, lines, has: (ch) => Boolean(KANA_STROKES[ch]), state: () => S, today: () => today().done };
 })();

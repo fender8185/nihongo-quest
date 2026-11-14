@@ -16,7 +16,7 @@ def ev(b, js, pre=()):
 BEGIN = """const rec = () => ({ b: 2, due: addDays(todayStr(), 9), n: 2, ok: 2, ng: 0, s: 4, d: 5, last: addDays(todayStr(), -1) });
   const kana = (n) => { Object.keys(state.srs).filter((k) => k.startsWith('a:')).forEach((k) => delete state.srs[k]); REG.kana.slice(0, n).forEach((x) => { state.srs[x.key] = rec(); }); };
   state.storyV = 99; state.startChosen = true; state.stage = 'pre'; state.kanaKnown = false; state.srs = {}; state.dailyLogs = {};
-  state.town = { done: {}, seen: {}, stops: {}, talks: {} }; state.koto.found = {}; localStorage.removeItem('nq_class'); localStorage.removeItem('nq_wake');
+  state.town = { done: {}, seen: {}, stops: {}, talks: {} }; state.koto.found = {}; localStorage.removeItem('nq_class'); localStorage.removeItem('nq_wake'); localStorage.removeItem('nq_write');
   TOWNEV.clock = { h: 13, day: new Date(2026, 10, 10) }; saveState(); DAILY_CACHE = null;
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));"""
 
@@ -184,12 +184,28 @@ def test_the_board_and_a_new_kana_card_open_the_pad(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ REG.kana.slice(0, 7).forEach((x) => { state.srs[x.key] = rec(); }); window.speak = () => Promise.resolve();
       location.hash = '#/kyoshitsu'; route(); await wait(100); CLASS.board(document.querySelector('.yard'));
       document.querySelector('[data-write]').click(); const first = WRITE.state().ch, list = WRITE.state().list.join('');
+      localStorage.setItem('nq_write', JSON.stringify({ day: todayStr(), done: ['あ', 'い'] })); CLASS.board(document.querySelector('.yard'));
+      const ticks = [...document.querySelectorAll('.cb-k.cb-wrote')].map((x) => x.dataset.say).join('');
+      document.querySelector('[data-write]').click(); const from = WRITE.state().ch;   // the first not written today
       document.querySelector('[data-w="prev"]').click(); const prev = WRITE.state().ch; CLASS.close();
       const it = REG.byKey.get('a:さ'); delete state.srs[it.key]; startSession('items', { items: [it, REG.byKey.get('a:し')] }); renderPractice();
       document.querySelector('[data-act="kana-write"]').click(); const card = WRITE.state().ch; CLASS.close(); exitPractice && exitPractice();
       openSettings('look'); const credit = document.body.textContent.includes('KanjiVG'); closeModal(true);
-      return JSON.stringify({ first, list, prev, card, credit }); })()"""))
-    assert r['list'] == 'あいうえおかき' and r['first'] == 'き' and r['prev'] == 'か' and r['card'] == 'さ' and r['credit'], r
+      return JSON.stringify({ first, list, ticks, from, prev, card, credit }); })()"""))
+    assert r['list'] == 'あいうえおかき' and r['first'] == 'あ' and r['ticks'] == 'あい' and r['from'] == 'う' and r['prev'] == 'い' and r['card'] == 'さ' and r['credit'], r
+
+def test_the_board_writes_on_through_the_kana(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ REG.kana.slice(0, 3).forEach((x) => { state.srs[x.key] = rec(); }); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
+      location.hash = '#/kyoshitsu'; route(); await wait(100); CLASS.board(document.querySelector('.yard')); document.querySelector('[data-write]').click();
+      const say = () => document.querySelector('.wr-say').textContent, btns = () => [...document.querySelectorAll('.wr-btns .btn')].map((x) => x.textContent).join('|');
+      const write = () => WRITE.state().model.forEach((m) => WRITE.stroke(m.pts)), out = {};
+      write(); out.a = WRITE.state().ch; await wait(1700); out.on = WRITE.state().ch;   // no miss: on to the next by itself
+      WRITE.stroke([[5, 100], [10, 95], [12, 98]]); write(); out.missBtns = btns(); await wait(1700); out.stay = WRITE.state().ch;   // a miss: it waits
+      document.querySelector('[data-w="next"]').click(); out.last = WRITE.state().ch; write(); out.end = say(); out.endBtns = btns();
+      out.cards = document.querySelectorAll('.cls-write').length;
+      CLASS.close(); return JSON.stringify(out); })()"""))
+    assert (r['a'], r['on'], r['stay'], r['last']) == ('あ', 'い', 'い', 'う') and r['cards'] == 1, r
+    assert r['missBtns'] == '再寫一次|下一個 ▶' and '這次寫了 3 個字' in r['end'] and 'はなまる 2 朵' in r['end'] and r['endBtns'] == '再寫一次|從「あ」再寫一遍', r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
