@@ -256,6 +256,33 @@ def test_the_bun_card_fits_a_phone(b):
       return JSON.stringify({ bottom: c.bottom <= innerHeight + 1, side: c.left >= 0 && c.right <= innerWidth + 1, acts: acts.length === 6 && acts.every((q) => q.width >= 44 && q.height >= 44) }); })()""")])[-1])
     assert r == {'bottom': True, 'side': True, 'acts': True}, r
 
+# ---- the final review's findings (2026-11-15) ----
+def test_a_shift_closed_at_its_last_moment_is_still_paid(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + """ kana(10); earlier('shelf'); window.__errs = []; window.addEventListener('error', (e) => __errs.push(String(e.message)));
+      window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve(); location.hash = '#/chinadori'; route(); await wait(300);
+      WORK.start(yard(), 'shelf'); await wait(300); for (let k = 0; k < 9; k++) await put(true);
+      const item = document.querySelector('.wk-item').dataset.label; document.querySelector(`.wk-bin[data-label="${item}"]`).click(); CLASS.close();   // the tenth, and the card shut at once
+      await wait(1500); document.querySelectorAll('.wk-result').forEach((x) => x.remove()); const t = state.work.res['2026-11-10'];
+      const again = WORK.start(yard(), 'shelf'); await wait(300);
+      return JSON.stringify({ yen: t.yen, again, errs: __errs }); })()"""))
+    assert r == {'yen': 150, 'again': False, 'errs': []}, r
+
+def test_one_who_knows_kana_already_can_do_every_job(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + """ kana(0); state.kanaKnown = true; window.__errs = []; window.addEventListener('error', (e) => __errs.push(String(e.message)));
+      window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve(); const out = {};
+      out.shelf = JOBS.shelf.make().every((t) => t.label && t.bins.length === 4); out.counter = JOBS.counter.make().every((t) => t.good && t.goods.length === 4);
+      out.deliver = JOBS.deliver.make().every((x) => DORI.shop(x)); location.hash = '#/chinadori'; route(); await wait(300); earlier('deliver'); WORK.start(yard(), 'deliver'); await wait(800);
+      out.slip = document.querySelector('.wk-slip').textContent.includes('とどけさき');
+      return JSON.stringify(Object.assign(out, { errs: __errs })); })()"""))
+    assert r == {'shelf': True, 'counter': True, 'deliver': True, 'slip': True, 'errs': []}, r
+
+def test_a_card_shut_and_opened_again_follows_the_new_one(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + """ kana(46); earlier('buns'); window.speakAs = () => Promise.resolve();
+      location.hash = '#/chinatown'; route(); await wait(300); WORK.start(yard(), 'buns'); await wait(300);
+      document.querySelector('.wk-act[data-step="kone"]').click(); CLASS.close(); WORK.start(yard(), 'buns'); await wait(700);   // the old one's next step was due in 300 ms
+      return JSON.stringify({ now: JOBS.buns.now(), shown: document.querySelector('.wk-inst b').textContent }); })()"""))
+    assert r == {'now': 'kone', 'shown': 'こねて！'}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

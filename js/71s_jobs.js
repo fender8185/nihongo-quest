@@ -20,7 +20,8 @@ const JOBS = (() => {
   // tap the cell with the same. Labels: a seen kana each (look-alikes beside it on the shelf when seen); once four kana-only 入門
   // words are learned, three to five of the ten are those words. Wrong: 張's ちがう！ and the thing stays; wrong twice, the right
   // cell lights up ----
-  function shelfMake(seen = [...kanaSeenSet()], ws = words()) {
+  function shelfMake(seen = [...WORK.kana()], ws = words()) {
+    if (seen.length < 4) seen = REG.kana.slice(0, 5).map((x) => x.ch);   // never from nothing
     const nw = ws.length >= 4 ? 3 + Math.floor(Math.random() * 3) : 0;
     return shuffle(Array.from({ length: N }, (_, k) => {
       const pool = k < nw ? ws : seen, label = pick(pool);
@@ -50,10 +51,11 @@ const JOBS = (() => {
       const item = document.querySelector('.wk-item'); if (item) item.classList.add('wk-gone');
       if (!miss && Math.random() < 0.3) word('shelf', pick(say('shelf').ok));
       k++;
-      setTimeout(() => {
+      if (k >= N) ctx.finish({}, 1100);   // paid now, the results after the goodbye (a card shut meanwhile: paid all the same)
+      setTimeout(() => {   // this run's card only (shut and opened again: the new one's own)
         if (!document.querySelector('.wk-shelf')) return;
-        if (k < N) { draw(); return; }
-        word('shelf', say('shelf').end, 'ok'); setTimeout(() => { CLASS.close(); ctx.finish(); }, 700);
+        if (k < N) { if (ctx.on()) draw(); return; }
+        word('shelf', say('shelf').end, 'ok'); setTimeout(() => { if (document.querySelector('.wk-shelf')) CLASS.close(); }, 700);
       }, 380);
     });
     draw();
@@ -70,8 +72,9 @@ const JOBS = (() => {
   const learned = (r) => REG.vocab.some((v) => v.r === r && state.srs[v.key]);   // a word read so, learned (ふたつ, いくら)
   const ME = { hi: ['いらっしゃいませ！', '歡迎光臨！'], bye: ['ありがとうございました！', '謝謝光臨！'] };
   const ask = (t) => (t.kind === 'price' ? ['これ、いくらですか。', '這個多少錢？'] : t.kind === 'two' ? [`${t.good[0]}を ふたつ ください。`, '請給我兩個。'] : [`${t.good[0]}を ください。`, '請給我這個。']);
-  function counterMake(seen = kanaSeenSet()) {
-    const can = GOODS().filter((g) => [...g[0]].every((c) => seen.has(c))), two = learned('ふたつ'), price = learned('いくら');
+  function counterMake(seen = WORK.kana()) {
+    let can = GOODS().filter((g) => [...g[0]].every((c) => seen.has(c))); if (can.length < 4) can = GOODS().slice(0, 4);   // never too few to set out
+    const two = learned('ふたつ'), price = learned('いくら');
     return Array.from({ length: N }, () => {
       const goods = shuffle(can).slice(0, 4), good = pick(goods), r = Math.random(), kind = price && r < 0.25 ? 'price' : two && r > 0.75 ? 'two' : 'name';
       const t = { kind, good, goods, who: kind === 'price' ? pick(CUST) : sayer(good[0]) };
@@ -92,7 +95,7 @@ const JOBS = (() => {
       el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').innerHTML = `<span class="kr-face">${TOWNEV.face(C.who)}</span><p class="wk-bub"></p>`;
       me(ME.hi);
       setTimeout(() => {   // the customer asks
-        if (!el('.wk-cust') || C !== tasks[k]) return;
+        if (!el('.wk-cust') || C !== tasks[k] || !ctx.on()) return;
         const [ja, zh] = ask(C); el('.wk-bub').innerHTML = `<b lang="ja">${esc(ja)}</b><span>${esc(zh)}</span>${C.kind === 'two' ? '<i class="wk-cnt">0／2</i>' : ''}`;
         el('.wk-cust').classList.add('on'); speakAs(C.who, ja); busy = false;
         if (C.kind === 'price') el('.wk-opts').innerHTML = C.opts.map((n) => `<button type="button" class="btn btn-sm wk-opt" data-n="${n}" lang="ja">${esc(YEN.reading(n))}</button>`).join('');
@@ -105,13 +108,15 @@ const JOBS = (() => {
     function right() {
       busy = true; ctx.right(k, miss); playSfx('good'); el('.wk-cust').classList.remove('on');
       if (C.kind === 'price') me([`${YEN.reading(C.good[2])}です。`, `${C.good[2]} 日圓。`]);
-      setTimeout(() => { if (!el('.wk-cust')) return; me(ME.bye); el('.wk-cust').classList.add('bye'); if (!miss && Math.random() < 0.25) word('counter', pick(say('counter').ok)); }, C.kind === 'price' ? 900 : 0);
+      const live = () => el('.wk-cust') && (ctx.on() || k >= N), wait = C.kind === 'price' ? 1700 : 900;   // this run's card only
+      setTimeout(() => { if (!live()) return; me(ME.bye); el('.wk-cust').classList.add('bye'); if (!miss && Math.random() < 0.25) word('counter', pick(say('counter').ok)); }, C.kind === 'price' ? 900 : 0);
       k++;
+      if (k >= N) ctx.finish({}, wait + 800);   // paid now, the results after the goodbye
       setTimeout(() => {
-        if (!el('.wk-cust')) return;
+        if (!live()) return;
         if (k < N) { show(); return; }
-        word('counter', say('counter').end, 'ok'); setTimeout(() => { CLASS.close(); ctx.finish(); }, 700);
-      }, C.kind === 'price' ? 1700 : 900);
+        word('counter', say('counter').end, 'ok'); setTimeout(() => { if (el('.wk-cust')) CLASS.close(); }, 700);
+      }, wait);
     }
     CLASS.card('wk-counter', '站櫃', `${head('counter', 'らんらん', k)}<div class="wk-cust"></div><div class="wk-goods"></div><div class="wk-opts"></div><p class="wk-me"></p>`, (e) => {
       if (busy || !ctx.on() || !C) return;
@@ -136,8 +141,9 @@ const JOBS = (() => {
   // とうか, こはく), never the same twice running. The wrong shop: うちじゃ ないよ！ and a miss. Ten delivered: a tip by the time from
   // the first slip — ≤ 90 s 30 円, ≤ 150 s 20, ≤ 240 s 10. Gone from 大通り: the slip put away, the count kept for today ----
   const tip = (sec) => (sec <= 90 ? 30 : sec <= 150 ? 20 : sec <= 240 ? 10 : 0);
-  function deliverMake(seen = kanaSeenSet()) {
-    const to = DORI.SHOPS.filter((s) => s.id !== 'rairai' && [...s.sign].every((c) => seen.has(c))).map((s) => s.id), out = [];
+  function deliverMake(seen = WORK.kana()) {
+    let to = DORI.SHOPS.filter((s) => s.id !== 'rairai' && [...s.sign].every((c) => seen.has(c))).map((s) => s.id), out = [];
+    if (!to.length) to = DORI.SHOPS.filter((s) => s.id !== 'rairai').map((s) => s.id);   // never nowhere to go
     for (let k = 0; k < N; k++) out.push(pick(to.length > 1 ? to.filter((x) => x !== out[k - 1]) : to));
     return out;
   }
@@ -170,7 +176,7 @@ const JOBS = (() => {
     if (id === 'rairai') { popAt(yard, id, s.wait); speakAs(s.who, s.wait[0]); return true; }
     if (id !== D.to) { D.miss++; playSfx('bad'); popAt(yard, id, s.miss); return true; }
     D.ctx.right(D.k, D.miss); playSfx('good'); popAt(yard, id, s.thanks); D.k++;
-    if (D.k >= N) { const ctx = D.ctx, t = tip((Date.now() - D.t0) / 1000); putAway(); speakAs(s.who, s.end[0]); setTimeout(() => ctx.finish({ tip: t }), 300); return true; }
+    if (D.k >= N) { const ctx = D.ctx, t = tip((Date.now() - D.t0) / 1000); putAway(); speakAs(s.who, s.end[0]); ctx.finish({ tip: t }, 300); return true; }
     D.back = true; slip(); return true;
   }
   function deliverLines(add) { const s = say('deliver'); DORI.SHOPS.forEach((x) => add(s.who, x.sign + s.go[0])); [s.back, s.wait, s.end].forEach((l) => add(s.who, l[0])); }
@@ -213,15 +219,16 @@ const JOBS = (() => {
       if (card) { card.innerHTML = `<svg viewBox="0 0 60 52" aria-hidden="true">${BUN_AT[5]}</svg>`; if (perfect) { card.classList.remove('wk-shine'); void card.offsetWidth; card.classList.add('wk-shine'); } }
       if (perfect) { playSfx('good'); word('buns', pick(s.shine), 'ok'); } else word('buns', pick(s.ok));
       const gag = gags.has(k); k++; i = 0; miss = 0; busy = true;
+      const live = () => el('.wk-acts') && (ctx.on() || k >= N), best = k >= N && all === N - ctx.done && ctx.done === 0;   // this run's card only; best: the whole shift without a miss, from its start
+      if (k >= N) { B = null; ctx.finish({}, (perfect ? 1100 : 600) + (best ? 1600 : 800)); }   // paid now, the results after the goodbye
       setTimeout(() => {
-        if (!el('.wk-acts')) return;
+        if (!live()) return;
         if (k >= N) {
-          const best = all === N - ctx.done && ctx.done === 0;   // the whole shift without a miss, from its start
           if (best) { const c = document.querySelector('.wk-buns .cls-card'); if (c) c.classList.add('wk-shine-all'); word('buns', s.all, 'ok'); }
           else word('buns', s.end, 'ok');
-          setTimeout(() => { B = null; CLASS.close(); ctx.finish(); }, best ? 1600 : 800); return;
+          setTimeout(() => { if (el('.wk-acts')) CLASS.close(); }, best ? 1600 : 800); return;
         }
-        if (gag) { const [c, w] = s.gag; const p = el('.wk-say'); if (p) p.innerHTML = `<span>${esc(c[2])}</span>`; setTimeout(() => { word('buns', [w[1], w[2]], 'bad'); setTimeout(show, 1200); }, 1300); return; }
+        if (gag) { const [c, w] = s.gag; const p = el('.wk-say'); if (p) p.innerHTML = `<span>${esc(c[2])}</span>`; setTimeout(() => { if (!live()) return; word('buns', [w[1], w[2]], 'bad'); setTimeout(() => { if (live()) show(); }, 1200); }, 1300); return; }
         show();
       }, perfect ? 1100 : 600);
     }
@@ -235,7 +242,7 @@ const JOBS = (() => {
       }
       busy = true; seen()[st] = (seen()[st] || 0) + 1; saveState(); SND.play('place', { vol: 0.5 }); i++;
       if (i >= buns[k].length) { done(); return; }
-      setTimeout(show, 300);
+      setTimeout(() => { if (ctx.on() && el('.wk-acts')) show(); }, 300);   // this run's card only
     });
     show();
   }

@@ -28,7 +28,11 @@ const WORK = (() => {
   const grade = (score) => { const v = Object.values(score || {}), share = v.filter((m) => m === 0).length / Math.max(N, v.length); return GRADES.find(([, min]) => share >= min - 1e-9)[0]; };
   const pay = (n, g, tip = 0) => { const base = (RANKS.find(([k]) => n >= k) || RANKS[RANKS.length - 1])[2], bonus = BONUS[g] || 0; return { base, bonus, tip, yen: base + bonus + tip }; };
   const seen = () => kanaSeenSet().size;
-  const kanaOk = (need) => state.kanaKnown === true || !inPreStage() || seen() >= need;
+  const knowsAll = () => state.kanaKnown === true || !inPreStage();
+  const kanaOk = (need) => knowsAll() || seen() >= need;
+  // the kana the jobs may use: those seen — or all of them for one who knew kana already or is past 入門 (2026-11-15, the final
+  // review: they had no kana seen, and three jobs drew from nothing)
+  const kana = () => (knowsAll() ? new Set(REG.kana.map((x) => x.ch)) : kanaSeenSet());
   const here = (job) => (job === 'buns' ? (TOWNEV.whereIs('wang', TOWNEV.now(), TOWNEV.today()) || {}).place === 'chinatown' : TOWNEV.isOpen('dori', TOWNEV.now()));
   // may this job be started (or picked up again) now: its kana seen, today's workplace (if any) this one and not done, open
   function can(job) {
@@ -46,7 +50,8 @@ const WORK = (() => {
     const c = can(job); if (!c.ok) { toast(c.why, 3600); return false; }
     const d = day(), res = W().res; if (!res[d]) { res[d] = { place: job, done: 0, score: {} }; saveState(); }
     const s = S = { job, day: d };
-    const ctx = { yard, n: N, job, done: res[d].done, right: (k, misses) => right(s, k, misses), finish: (extra) => finish(s, extra), on: () => S === s };
+    if (res[d].done >= N) { finish(s); return true; }   // all ten done but never paid (the card shut, the app gone, at the last moment): paid now
+    const ctx = { yard, n: N, job, done: res[d].done, right: (k, misses) => right(s, k, misses), finish: (extra, ms) => finish(s, extra, ms), on: () => S === s };
     const run = () => { if (S === s && JOBS[job]) JOBS[job].run(ctx); };
     const first = (TOWN.WORK.first || {})[job], before = Object.entries(res).some(([k, r]) => k !== d && r.place === job);   // the keeper's word the first time
     if (first && !before && !res[d].done) TALK.open(yard, PLACES[job].who, first, run, null, { ev: true }); else run();
@@ -70,13 +75,14 @@ const WORK = (() => {
     if (!(k in r.score)) r.score[k] = Math.max(0, Math.floor(misses) || 0);
     r.done = Math.max(r.done || 0, Object.keys(r.score).length); saveState();
   }
-  // the tenth done: graded, paid (extra.tip: 外送's), the results shown
-  function finish(s, extra = {}) {
+  // the tenth done: graded and paid at once (extra.tip: 外送's), the results shown ms later — the runner calls it at the tenth, not at
+  // the end of its card's goodbye, so a card shut then is paid all the same (2026-11-15, the final review)
+  function finish(s, extra = {}, ms = 0) {
     const r = W().res[s.day]; if (!r || fin(r)) return null;
     const before = yenBalance(), n = shifts() + 1, g = grade(r.score), p = pay(n, g, extra.tip || 0);
     Object.assign(r, { done: N, yen: p.yen, grade: g, tip: p.tip }); saveState();
     if (S === s) S = null;
-    results(s.job, r, p, before, n);
+    if (ms) setTimeout(() => results(s.job, r, p, before, n), ms); else results(s.job, r, p, before, n);
     return p;
   }
   // the results: the tasks right at once, the pay counting up, the grade stamped on, the 打工證 and whether it went up
@@ -114,5 +120,5 @@ const WORK = (() => {
   }
   const register = (job, def) => { JOBS[job] = def; };
   const lines = (add) => { Object.entries(TOWN.WORK.hello || {}).forEach(([id, l]) => add(id, l[0])); Object.values(TOWN.WORK.first || {}).forEach((ls) => ls.forEach((l) => add(l[0], l[1]))); Object.values(JOBS).forEach((j) => j.lines && j.lines(add)); };
-  return { N, PLACES, can, start, register, pay, rank, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, board };
+  return { N, PLACES, kana, can, start, register, pay, rank, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, board };
 })();
