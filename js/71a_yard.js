@@ -660,6 +660,7 @@ function renderOutside(view, place = 'yard') {
   if (place === 'yard') yWitch(y);
   ySnow(y, place);
   TOWNLIFE.start(y, place);   // the people about: strolling, fidgeting
+  PASSERS.start(y, place);   // passers-by in the town and 中華街, each a look made anew (2026-11-14)
   CRUISE.mount(y, place);   // the cruise ship's passengers and 高橋, the ship far out (CRUISE)
   const yel = y.querySelector('.yhero');   // idling now and then while left be
   HERO.idle(yel, () => !yh.climb && !yh.use && !document.hidden && !yel.matches('.walk, .run, .out, .hop, .wave, .spin, .cheer, .reach, .crouch, .look, .bow'), true);

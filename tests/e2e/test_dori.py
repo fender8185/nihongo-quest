@@ -69,6 +69,27 @@ def test_the_street_by_night(b):
       return JSON.stringify({ shut, glow: glow >= 25, day: document.querySelectorAll('.dr-shop .dr-shut').length }); })()"""))
     assert r == {'shut': 6, 'glow': True, 'day': 0}, r
 
+# ---- passers-by (2026-11-14, the user): in 商店街 (the town) and 中華街 and its 大通り, people walking past, each a look put together
+# afresh from everything there is to wear — later wares included as they come, the limited ones only in their season ----
+def test_passers_walk_by_each_a_new_look(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {};
+      for (const place of ['chinadori', 'chinatown', 'town']) { location.hash = '#/' + place; route(); await wait(300);
+        PASSERS.spawn(); PASSERS.spawn(); PASSERS.spawn(); await wait(200); const ps = [...document.querySelectorAll('.yard .passer')];
+        out[place] = { n: ps.length, walk: ps.every((p) => p.classList.contains('walk')), drawn: ps.every((p) => p.querySelector('svg')), looks: new Set(ps.map((p) => p.dataset.look)).size,
+          taps: ps.every((p) => getComputedStyle(p).pointerEvents === 'none') }; }
+      return JSON.stringify(out); })()"""))
+    for place in ('chinadori', 'chinatown', 'town'):
+        assert r[place] == {'n': 3, 'walk': True, 'drawn': True, 'looks': 3, 'taps': True}, (place, r)
+
+def test_passers_wear_everything_there_is(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """
+      const looks = Array.from({ length: 600 }, () => PASSERS.look()), worn = new Set(looks.flatMap((x) => Object.values(x.wear))), day = saleNow();
+      const wears = WARES.filter((w) => w.kind === 'wear'), on = (w) => !w.limited || Boolean(day && saleOn(w.limited, day));
+      const styles = new Set(looks.map((x) => x.look.topStyle)), sold = WARES.filter((w) => w.kind === 'clothes' && w.slot === 'top');
+      return JSON.stringify({ missing: wears.filter((w) => on(w) && !worn.has(w.id)).map((w) => w.id), offSeason: wears.filter((w) => !on(w) && worn.has(w.id)).map((w) => w.id),
+        tops: sold.filter((w) => on(w) && !styles.has(w.id)).map((w) => w.id), hair: new Set(looks.map((x) => x.look.fringe + x.look.hairBack)).size > 10 }); })()"""))
+    assert r == {'missing': [], 'offSeason': [], 'tops': [], 'hair': True}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
