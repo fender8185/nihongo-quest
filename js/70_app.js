@@ -258,7 +258,8 @@ const ACTIONS = {
   'bus-stop': (el) => busSit(el),   // test: the hero sits on the bench
   'scene-use': (el) => sceneUse(el),   // a thing in a place: the hero walks over and uses it (PLACE_USE)
   'go-place': (el) => yGo(el, el.dataset.to),   // test: to the main road, the beach, home to the yard
-  'npc-talk': (el) => TOWNEV.talk(el),
+  'npc-talk': (el) => (el.dataset.npc === 'huang' && typeof HALL === 'object' && HALL.on() ? HALL.goPass() : TOWNEV.talk(el)),   // 黄 on a 外場 shift: the dish at the pass
+  'hall-cust': (el) => HALL.tap(el),   // a customer in らいらいけん (外場, 2026-11-15)
   'purse': () => purseToggle(),   // the button up top: 言靈 ↔ 円
   'yen-buy': (el) => YEN.buy(el.dataset.item), 'yen-zh': () => YEN.toggleZh(),   // a menu (YEN): bought, its Chinese
   'cruise-call': () => CRUISE.call(),   // test: the cruise ship far out, tapped: asked first (a long one)
