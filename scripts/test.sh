@@ -40,8 +40,12 @@ done
 node --test-reporter=tap tests/sync-core.test.js | grep -E "^# (pass|fail)"   # tap: Node 23+ prints "ℹ pass" by default
 node --test-reporter=tap tests/curriculum.test.js | grep -E "^# (pass|fail)"   # the N3–N1 curriculum outline: sources, candidates, checker
 node scripts/curriculum/check-outline.js | tail -1   # the outline files themselves pass the checker (exit 1 on any problem)
-# a release must carry a new version: app files changed against origin/main ⇒ APP_VERSION differs; data.js changed ⇒ data version differs
-if git rev-parse --verify -q origin/main >/dev/null 2>&1; then
+# a release must carry a new version: app files changed against origin/main ⇒ APP_VERSION differs; data.js changed ⇒ data version differs.
+# A test build (sw.js CACHE 'nq-v1.16.1-test.N', pushed to `test` only) is no release: it keeps the version it was built on, so
+# these checks are skipped for it (2026-11-14, the user: the same test.sh on both branches, no failure to wave through)
+if grep -qE "CACHE = 'nq-v[0-9.]+-test\.[0-9]+'" sw.js; then
+  echo "test build $(grep -oE "nq-v[0-9.]+-test\.[0-9]+" sw.js | head -1): release version checks skipped"
+elif git rev-parse --verify -q origin/main >/dev/null 2>&1; then
   if ! git diff --quiet origin/main -- index.html sw.js sync-core.js js css; then   # APP_VERSION lives in js/40_core.js since 2026-11-11 (in index.html before)
     [ "$( (git show origin/main:js/40_core.js 2>/dev/null || git show origin/main:index.html) | grep -o "const APP_VERSION = '[0-9.]*'")" != "$(grep -o "const APP_VERSION = '[0-9.]*'" js/40_core.js)" ] || { echo "the app (index.html, js/, css/, sw.js, sync-core.js) changed since origin/main but APP_VERSION is unchanged"; exit 1; }
   fi
