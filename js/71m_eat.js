@@ -72,7 +72,9 @@ const EATSCENE = (() => {
     cake: '<rect x="-6" y="-14" width="11" height="10" rx="1.4" fill="#fffaf2"/><rect x="-6" y="-10" width="11" height="3" fill="#f4d27a"/><rect x="-6" y="-6" width="11" height="2" fill="#f4d27a"/>',
     berry: '<path d="M-1 -4 C-8 -6 -8 -16 -1 -18 C6 -16 6 -6 -1 -4 Z" fill="#e0303a"/><path d="M-4 -17 l3 -3 l3 3" stroke="#4f8a3e" stroke-width="1.6" fill="none"/>',
     inari: '<path d="M-10 6 C-11 -3 -5 -8 1 -8 C8 -8 12 -2 10 6 C4 9 -4 9 -10 6 Z" fill="#c98a3a"/><path d="M-6 -3 C-3 -6 3 -6 7 -3" fill="none" stroke="#e6b066" stroke-width="1.6" stroke-linecap="round"/>',
-    age: '<path d="M-10 -1 L9 -5 L11 6 L-8 9 Z" fill="#d9a14a"/><path d="M-10 -1 L9 -5 L9.4 -3 L-9.6 1 Z" fill="#e8b860"/><path d="M-5 3 h.1 M2 1 h.1 M4 5 h.1" stroke="#b07a2a" stroke-width="1.6" stroke-linecap="round"/>'
+    age: '<path d="M-10 -1 L9 -5 L11 6 L-8 9 Z" fill="#d9a14a"/><path d="M-10 -1 L9 -5 L9.4 -3 L-9.6 1 Z" fill="#e8b860"/><path d="M-5 3 h.1 M2 1 h.1 M4 5 h.1" stroke="#b07a2a" stroke-width="1.6" stroke-linecap="round"/>',
+    gyoza: '<path d="M-11 6 C-11 -3 -4 -7 1 -7 C7 -7 12 -2 11 6 Z" fill="#f4e2b8"/><path d="M-11 6 C-6 9 6 9 11 6 C8 4 -8 4 -11 6 Z" fill="#c97a2e"/><path d="M-6 -4 l2 3 M-1 -6 l1 3 M4 -6 l0 3 M8 -3 l-1 3" stroke="#e2cc98" stroke-width="1.2" stroke-linecap="round"/>',
+    shoronpo: '<path d="M-10 5 C-11 -3 -5 -9 0 -10 C5 -9 11 -3 10 5 C6 8 -6 8 -10 5 Z" fill="#fbf3e4"/><path d="M0 -10 C-2 -6 -4 -3 -6 1 M0 -10 V2 M0 -10 C2 -6 4 -3 6 1" fill="none" stroke="#e6d8be" stroke-width="1" stroke-linecap="round"/><circle cx="0" cy="-10" r="1.4" fill="#f4ead8"/>'
   };
 
   // ======== the dishes: table(k, ms, uid) — k mouthfuls gone; dips — where the utensil goes for each; the utensil and what it carries ========
@@ -147,6 +149,13 @@ const EATSCENE = (() => {
   DISH.takoyaki = { way: 'pick', steam: [[176, 280], [204, 276], [230, 282]], carry: ['takoyaki', 'takoyaki', 'takoyaki'], dips: [[160, 304], [204, 302], [226, 312]],
     table: (k) => `${SHADOW(194, 336, 80, 8)}${BOAT}${[[150, 306], [176, 302], [202, 304], [228, 306], [164, 318], [214, 318]].slice([0, 2, 4, 6][k]).map(([x, y]) => `<g transform="translate(${x} ${y})"><circle r="12" fill="#d9944a"/><path d="M-11 -2 Q0 -12 11 -2 Q6 -8 0 -8 Q-6 -8 -11 -2 Z" fill="#5a2e18"/><path d="M-7 -6 l3 3 l3 -3 l3 3 l3 -3" stroke="#fff8e8" stroke-width="1.4" fill="none"/><circle cx="-3" cy="-9" r="1" fill="#3f8a3a"/></g>`).join('')}` };
   // ---- くし: the skewer itself comes up, the piece at its tip pulled off at each bite, the bare stick left ----
+  // 中華街 (2026-11-14): 餃子 off their plate with chopsticks (the soy-vinegar dish beside), 小籠包 out of their steamer, 中華そば as the
+  // 食堂's ramen
+  DISH.gyoza = { way: 'chop', steam: STEAM_PLATE, carry: ['gyoza', 'gyoza', 'gyoza'], dips: [[170, 312], [204, 308], [236, 314]],
+    table: (k) => `${PLATE(196, 318, 104, 30)}${[[0, 0], [24, -3], [48, 0], [72, 3], [36, 10], [60, 12]].slice(0, [6, 4, 2, 0][k]).map(([x, y]) => `<g transform="translate(${150 + x} ${306 + y}) scale(1.5)">${PIECE.gyoza}</g>`).join('')}${SHADOW(92, 342, 22, 5)}<ellipse cx="88" cy="334" rx="22" ry="7" fill="#f8f9fb"/><ellipse cx="88" cy="334" rx="16" ry="4.6" fill="#7a4a2a"/>` };
+  DISH.shoronpo = { way: 'chop', steam: STEAM_BOWL, carry: ['shoronpo', 'shoronpo', 'shoronpo'], dips: [[164, 300], [196, 296], [226, 302]],
+    table: (k) => `${SHADOW(194, 346, 100, 10)}<path d="M92 300 V330 Q190 356 288 330 V300 Z" fill="#d6b06a"/><path d="M92 312 Q190 336 288 312 M92 322 Q190 346 288 322" fill="none" stroke="#c49a52" stroke-width="1.6"/><ellipse cx="190" cy="300" rx="98" ry="24" fill="#e8c886"/><ellipse cx="190" cy="302" rx="88" ry="19" fill="#f2e8d0"/>${[[150, 300], [184, 294], [218, 300], [168, 310], [204, 310]].slice(0, [5, 3, 2, 0][k]).map(([x, y]) => `<g transform="translate(${x} ${y}) scale(1.7)">${PIECE.shoronpo}</g>`).join('')}` };
+  DISH.chukasoba = DISH.ramen;
   const KUSHI = { yakitori: ['chicken', 'negi', 'chicken'], gyukushi: ['beef', 'beef', 'beef'], ichigoame: ['ichigo', 'ichigo', 'ichigo'], budouame: ['grape', 'grape', 'grape'] };
   const KX = [10, 31, 52];
   const KPIECE = {
@@ -190,6 +199,7 @@ const EATSCENE = (() => {
     oolong: ['tip', VESSEL.glass({ c: '#b8743a' })],
     soda: ['straw', VESSEL.straw({ c: '#5fd08a', straw: '#e0464a', ice: true })], juice: ['straw', VESSEL.straw({ c: '#f5a030', straw: '#3f9a8c' })],
     kohi: ['cup', VESSEL.cup({ body: '#f6f4ee', rim: '#fbfaf6', inner: '#e4ded2', c: '#5a3418', handle: true })], ocha: ['cup', VESSEL.cup({ body: '#a9845e', rim: '#c9a47a', inner: '#8a6a48', c: '#9cc46a' })],
+    jasmine: ['cup', VESSEL.cup({ body: '#f6f4ee', rim: '#fbfaf6', inner: '#e4ded2', c: '#d9c46a' })], tapioca: ['straw', VESSEL.straw({ c: '#c8a07a', straw: '#e86a8a' })],   // 中華街 (2026-11-14)
     amazake: ['cup', VESSEL.cup({ body: '#c9a06a', rim: '#e0c08a', inner: '#a8844e', c: '#f8f3e6', bits: '<circle cx="5" cy="-29.6" r="1.4" fill="#e8c070"/>' })],
     miso: ['cup', VESSEL.cup({ body: '#4a1e1a', rim: '#9a2e24', inner: '#6a2a22', c: '#c98a4a', bits: '<rect x="-7" y="-31" width="5" height="3" fill="#fbf8f0"/><path d="M3 -30 q3 -2 6 0" stroke="#3f6a3a" stroke-width="2" fill="none"/>' })]
   };
@@ -307,6 +317,12 @@ const EATSCENE = (() => {
       ${[[96, 232, 0.5], [118, 226, 0.4], [262, 228, 0.45]].map(([x, b, k]) => `<path d="M${x - 14 * k} ${b} V${b - 30 * k} M${x + 14 * k} ${b} V${b - 30 * k} M${x - 18 * k} ${b - 26 * k} H${x + 18 * k}" stroke="#d6452f" stroke-width="${(5 * k).toFixed(1)}"/><path d="M${x - 22 * k} ${b - 33 * k} Q${x} ${b - 36 * k} ${x + 22 * k} ${b - 33 * k}" stroke="#2b2b33" stroke-width="${(5 * k).toFixed(1)}" fill="none"/>`).join('')}
       <path d="M-30 64 Q180 -40 390 64 Q180 30 -30 64 Z" fill="#c8323a"/><path d="M-30 64 Q180 30 390 64 L390 70 Q180 38 -30 70 Z" fill="#9a2430"/><path d="${[-150, -90, -30, 30, 90, 150].map((d) => `M180 -10 L${180 + d * 1.4} ${50 - Math.abs(d) * 0.02}`).join(' ')}" stroke="#fff" stroke-opacity=".3" stroke-width="1.6"/>`,
     front: BG.fair.front };
+  // 中華街 (2026-11-14): a red wall with a round moon window of lattice, red lanterns either side, gold on the beam; a round table
+  // under a red cloth
+  BG.chinatown = { back: () => `<rect width="360" height="268" fill="#a8262e"/><rect width="360" height="30" fill="#2f7a5a"/><path d="M0 30 H360" stroke="#d9b04a" stroke-width="4"/>${Array.from({ length: 18 }, (_, i) => `<path d="M${i * 20 + 10} 34 l5 5 l-5 5 l-5 -5 Z" fill="#d9b04a" opacity=".7"/>`).join('')}
+      <circle cx="180" cy="150" r="96" fill="#d9b04a"/><circle cx="180" cy="150" r="88" fill="#f6e2b0"/><path d="M92 150 H268 M180 62 V238 M118 88 L242 212 M242 88 L118 212" stroke="#a8262e" stroke-width="5"/><circle cx="180" cy="150" r="30" fill="none" stroke="#a8262e" stroke-width="5"/>
+      ${lantern(32, 70, 18, '#d8303a')}${lantern(328, 70, 18, '#d8303a')}`,
+    front: '<path d="M0 268 H360 V420 H0 Z" fill="#c8323a"/><path d="M0 268 H360" stroke="#f6e08a" stroke-width="4"/><path d="M0 300 Q180 310 360 300 M0 360 Q180 370 360 360" stroke="#a8262e" stroke-width="2" fill="none" opacity=".6"/>' };
   const OUTDOOR = ['street', 'bakery'];
   let uidN = 0;
   function mount(svg, it, picSvg, still, where) {   // still: motion reduced — drawn once, then once more at the end; where: a BG key

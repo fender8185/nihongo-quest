@@ -116,7 +116,7 @@ const YEN = (() => {
   // looks, a line a tap), いただきます and it is had, then he goes on about it (its say, a line a tap, read out, the Chinese on a
   // tap) and 「ごちそうさまでした！」; the first time, its stamp ----
   // where it is had, for the scene's backdrop (EATSCENE BG): the menu's own place; a machine in the street or the station; the stalls
-  const WHERE = { shokudo: 'shokudo', izakaya: 'izakaya', cafe: 'cafe', milk: 'sento', vend: 'street', bakery: 'bakery', chaya: 'chaya' };
+  const WHERE = { shokudo: 'shokudo', izakaya: 'izakaya', cafe: 'cafe', milk: 'sento', vend: 'street', bakery: 'bakery', chaya: 'chaya', butaman: 'chinatown', ryuho: 'chinatown' };
   const where = (m) => WHERE[m] || (typeof SHRINE_STALLS !== 'undefined' && SHRINE_STALLS.some(([id]) => id === m) ? 'fair' : 'shokudo');
   function eat(it, first, m) {
     const o = opt(it), drink = o.k === 'd', el = document.createElement('div');
@@ -186,5 +186,11 @@ const YEN = (() => {
     const mu = M()[m];
     return { hello: mu.hello || ['いらっしゃい！', '歡迎光臨！'], label: m === 'bath' ? 'おふろに はいる' : 'ちゅうもんする', go: () => open(yard, t) };   // in Japanese (the user), in kana: furigana in a button set it askew beside the other
   }
-  return { open, buy, toggleZh, lines, book, shown, reading, priceMark, known, left, tool, allOpen, sells, pic, where };
+  // a free one (2026-11-14, 中華街's 試食): had as if bought — its stamp the first time — but no 円 spent and nothing counted for the day
+  function treat(yard, t, m, id) {
+    const mu = M()[m], it = item(m, id); if (!mu || !it) return;
+    const p = state.purse, first = !p.book[id]; if (first) { p.book[id] = day(); saveState(); }
+    have(yard, t, mu); setTimeout(() => eat(it, first, m), 1300);
+  }
+  return { open, buy, toggleZh, lines, book, shown, reading, priceMark, known, left, tool, allOpen, sells, pic, where, treat };
 })();

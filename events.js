@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 60 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 61 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -6,11 +6,11 @@
    docs/superpowers/specs/2026-11-09-town-events-design.md. */
 const TOWN = {
   // the places index.html draws people in (a new one goes here when it is drawn: street, station, sento, shrine, castle)
-  PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park', 'kominkan', 'kyoshitsu'],
+  PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park', 'kominkan', 'kyoshitsu', 'chinatown'],
   // names of people, shops and places: no gloss needed
-  NAMES: ['美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館'],
+  NAMES: ['美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街'],
   // the shops' hours (the world's time: the phone's, or where a sleep moved it on; to < from runs past midnight)
-  HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 23], chaya: [9, 17], kominkan: [9, 22] },
+  HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 23], chaya: [9, 17], kominkan: [9, 22], butaman: [10, 20], ryuho: [11, 21] },
   // the hours a sleep in bed wakes to (早上, 中午, 傍晚, 晚上): every event's person is at its place at one of them, weekdays and weekends
   WAKE: [8, 12, 17, 20],
   // where people stand, by place: X along the land (0 the middle), Y up from the front. roam: how far they stroll about it either
@@ -32,6 +32,7 @@ const TOWN = {
     park: { slide: { X: -220, Y: 92, roam: [90, 22], run: 1 }, bench: { X: 405, Y: 57, sit: 1 } },
     station: { taxi: { X: -430, Y: 96, roam: [45, 10] }, gate: { X: -60, Y: 120, roam: [30, 8] }, koban: { X: 330, Y: 112, roam: [30, 8] }, plaza: { X: -355, Y: 74, sit: 1 }, stop: { X: 470, Y: 80, roam: [40, 10] } },
     // 日本語教室 (2026-11-14), at 45° as the 食堂: the teacher by the blackboard, the chairs behind the two tables (facing us), the tatami
+    chinatown: { stand: { X: -30, Y: 118, roam: [20, 6] }, stand2: { X: 70, Y: 112, roam: [30, 8] } },   // 中華街 (2026-11-14): 王 at his stand, 陳 helping at lunch
     kyoshitsu: { teach: { u: 4.6, v: 3.6 }, desk1: { u: 5.6, v: 5.85, sit: 1, pose: 'turn flip' }, desk2: { u: 13, v: 5.85, sit: 1, pose: 'turn flip' }, desk3: { u: 16.6, v: 5.85, sit: 1, pose: 'turn flip' }, tatami: { u: 19.4, v: 12.4, h: 0.5, kneel: 1, pose: 'turn flip' } }
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they
@@ -126,13 +127,17 @@ const TOWN = {
     // he wants チェン), マリア from Brazil, 堀先生 the calligrapher who helps and dozes off
     chen: { name: '陳 宇翔', kana: 'チェン ユーシャン', role: '打工度假的台灣人', look: { face: 'mochi', skin: '#e8bd98', cheeks: 'none', fringe: 'spiky', sides: 'above', hairBack: 'short', hairTop: 'ahoge', hairColor: '#2a2524', eyes: 'big', eyeColor: '#2a2730', brows: 'raised', mouth: 'grin', beard: 'none', topStyle: 'tee', top: '#d0574b', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#ecebe6' },
       bio: ['陳宇翔，24 歲，從台南來打工度假。大嗓門、超有自信，日文錯誤百出也不在乎。', '日文的「陳」念「チン」，跟微波爐熱好「叮」的那一聲一樣，所以他堅持大家叫他「チェン」。'],
-      hours: [[9, 21, 'kyoshitsu', 'desk1']] },
+      hours: [[11, 15, 'chinatown', 'stand2'], [9, 21, 'kyoshitsu', 'desk1']] },   // lunch at 王's stand in 中華街
     maria: { name: 'マリア・サントス', kana: 'マリア・サントス', role: '巴西來的媽媽', look: { face: 'round', skin: '#c98d64', cheeks: 'blush', fringe: 'swept', sides: 'wave', hairBack: 'wavy', hairTop: 'none', hairColor: '#3b2418', eyes: 'happy', eyeColor: '#5a3a28', brows: 'raised', mouth: 'grin', beard: 'none', topStyle: 'shirt', top: '#f2c94c', bottomStyle: 'skirt', bottom: '#3f9a8c', shoeStyle: 'sneaker', shoe: '#d0574b' },
       bio: ['瑪莉亞，35 歲，從巴西來的媽媽，兒子盧卡斯在念小學。', '熱情又大聲，最愛唱歌跳舞，一激動就冒出葡萄牙文。'],
       hours: [[10, 15, 'kyoshitsu', 'desk2'], [19, 21, 'kyoshitsu', 'desk2']] },
     hori: { name: '堀 文蔵', kana: 'ほり ぶんぞう', role: '書法老師（志工）', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#d8d8dc', eyes: 'sleepy', eyeColor: '#2a2730', brows: 'thick', mouth: 'flat', beard: 'goatee', topStyle: 'samue', top: '#4a4a55', bottomStyle: 'wide', bottom: '#4a4a55', shoeStyle: 'zori', shoe: '#2b2b33' }, wear: { face: 'glasses' },
       bio: ['堀文蔵，72 歲，退休的書法老師，在日本語教室當志工。', '對筆順和「とめ・はね・はらい」非常講究，上課講到一半常常睡著。'],
       hours: [[9, 12, 'kyoshitsu', 'tatami'], [19, 21, 'kyoshitsu', 'desk3']] },
+    // 中華街 (2026-11-14): 王, who keeps 福明 — his grandfather's 豚まん; born here, three words of Chinese, all of them loud
+    wang: { name: '王 福明', kana: 'ワン フーミン', role: '豬肉包店「福明」的老闆', look: { face: 'round', skin: '#e8bd98', cheeks: 'soft', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#3b3a3a', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'mustache', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { body: 'apron', apron: '#c8453a', mark: '福' },
+      bio: ['中華街豬肉包店「福明」的老闆，58 歲，華僑第三代。在日本出生長大，中文只會「你好、謝謝、好吃」三句，但每次都講得超大聲。', '店裡的豬肉包是爺爺傳下來的配方。陳中午在他店裡打工。'],
+      hours: [[10, 20, 'chinatown', 'stand']] },
     granny: { name: 'おばあちゃん', kana: 'おばあちゃん', role: '外婆（信）', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#b8a27a', bottomStyle: 'skirt', bottom: '#6e4f3a', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { face: 'glasses' },
       bio: ['你的外婆。在海邊的小屋住了一輩子，鎮上每個人都記得她。', '她留給渚一封信，要等你會說日文才交給你。'],
       hours: [] }
@@ -143,6 +148,20 @@ const TOWN = {
   // changed since they last saw the hero or a thing worn, fest 'halloween', about: someone the hero has met. fresh, look and fest
   // are news: said first, once. How each of them talks: docs/town-voices.md
   CHAT: {
+    // 中華街 (2026-11-14): 王 — loud, warm, his three words of Chinese every time
+    wang: [
+      ['m0', 'ニーハオ！ ニーハオ！', '你好！你好！'],
+      ['m0', 'シェイシェイ！ ハオチー！', '謝謝！好吃！'],
+      ['m0', 'ちゅうごくごは、これで ぜんぶ です。', '我的中文就這三句。'],
+      ['m0', 'ぶたまん！ にくまんじゃ ない！', '是豬肉包！不是肉包！（關西叫「ぶたまん」）'],
+      ['m0', 'おじいちゃんの レシピです。', '這是我爺爺的食譜。'],
+      ['m0', 'からしは、ぶたまんの ともだち！', '黃芥末是豬肉包的好朋友！'],
+      ['m0', 'あつい うちに どうぞ！', '趁熱吃！'],
+      ['m0', 'パンダくんの なかの ひと？ しりません。', '熊貓君裡面的人？我不知道。'],
+      ['m0', 'チェンくん、よく はたらきます。たまに ねます。', '陳很認真工作。偶爾會睡著。', { about: 'chen' }],
+      ['m0', 'ニーハオ！ …あ、こんばんは！', '你好！……啊，晚安！', { h: 'night' }],
+      ['m1', 'まいあさ {五時|ごじ|五點}に おきます。', '我每天早上五點起床。']
+    ],
     // 日本語教室 (2026-11-14): 陳 loud and sure of himself, Chinese whenever he likes; マリア bright, Portuguese when moved; 堀先生 few words
     chen: [
       ['m0', 'チェンです！ チンじゃ ないです！', '我是チェン！不是チン！'],
@@ -1173,6 +1192,43 @@ const TOWN = {
       ['maria', 'マ、リ、ア！', '瑪、莉、亞！（瑪莉亞在黑板上用片假名寫自己的名字）'],
       ['hori', 'カタカナも、とめ・はね・はらい。', '片假名也一樣，頓筆、勾筆、撇筆。'],
       ['chen', '', '（用中文）下次帶你去中華街，我請你吃包子！']] },
+    // ---- 中華街 (2026-11-14, 新手第一週): as 日本語教室's, open by the kana seen; one after another ----
+    { id: 'cn1', u: 'm0', kana: 0, who: 'wang', at: 'chinatown', title: 'ニーハオ！', lines: [['wang', 'ニーハオ！ ニーハオ！', '你好！你好！（老闆用超大的聲音說中文）'],
+      ['wang', 'ちゅうかがいへ ようこそ！', '歡迎來到中華街！'],
+      ['wang', 'たいわんの ひと？ シェイシェイ！ ハオチー！', '台灣人？謝謝！好吃！'],
+      ['chen', '', '（用中文）老闆的中文就只會這三句。他是華僑第三代，在日本出生長大的。'],
+      { ask: '跟老闆打招呼。這裡是日本，用日文說「你好」：', opts: [['こんにちは！', 1, '你好！'], ['ニーハオ！', 0, '老闆很開心——可是你是來練日文的！'], ['さようなら！', 0, '才剛到就說再見？']], pt: 'm0' },
+      ['wang', 'ぶたまん、どうぞ！ ししょく です！', '豬肉包，請用！是試吃喔！'],
+      ['chen', '', '（用中文）這邊叫「ぶたまん」，東京那邊叫「にくまん」。千萬別在老闆面前說「にくまん」。'],
+      ['wang', 'ハオチー？', '好吃嗎？（老闆用中文問）'],
+      { ask: '回答「很好吃！」', opts: [['おいしいです！', 1, '很好吃！'], ['まずいです！', 0, '「まずい」是難吃……老闆的臉垮了。'], ['いただきます！', 0, '「いただきます」是開動前說的，你已經吃完了。']], pt: 'm0' },
+      ['wang', 'シェイシェイ！', '謝謝！'],
+      ['chen', '', '（用中文）蒸籠那邊每天可以試吃一個，老闆在的時候去拿！']] },
+    { id: 'cn2', u: 'm0', kana: 5, who: 'chen', at: 'chinatown', after: 'cn1', title: '漢字の わな', lines: [['chen', '', '（用中文）跟你說個丟臉的事。我剛來日本的時候，想寄信給我媽。'],
+      ['chen', '', '（用中文）郵局寫著「手紙」，我就去便利商店買了一大袋衛生紙……'],
+      ['wang', 'てがみは、レター！', '「手紙」是信！'],
+      ['chen', '', '（用中文）……對，就是信。漢字長得一樣，意思完全不一樣。我叫它「漢字陷阱」。'],
+      ['chen', '', '（用中文）中華街到處都是！郵筒、T恤、菜單、立牌……點點看，猜對有言靈。'],
+      { ask: '陳問你：信的日文是？', opts: [['{手紙|てがみ|信}です。', 1, '是手紙。'], ['トイレットペーパーです。', 0, '這是衛生紙……你跟陳犯了一樣的錯。'], ['{切手|きって|郵票}です。', 0, '「切手」是郵票。']], pt: 'm0' },
+      ['wang', 'せいかい！ シェイシェイ！', '答對了！謝謝！'],
+      ['chen', '', '（用中文）……老闆，答對的時候不用說謝謝啦。']] },
+    { id: 'cn3', u: 'm0', kana: 15, who: 'wang', at: 'chinatown', after: 'cn2', title: 'ししまい', lines: [['wang', 'ししまいが きます！', '舞獅來了！'],
+      ['chen', '', '（用中文）在日本，被獅子咬頭會變聰明、帶來好運。頭伸過去！'],
+      ['hero', 'えっ？', '欸？'],
+      ['wang', 'がぶっ！', '咬！（獅子一口咬住你的頭）', { snd: 'clap' }],
+      ['wang', 'おめでとう！ あたまが よく なります！', '恭喜！會變聰明喔！'],
+      ['chen', '', '（用中文）……我被咬過三次，日文還是沒有變好。'],
+      { ask: '跟老闆道謝：', opts: [['ありがとうございます！', 1, '謝謝！'], ['すみません。', 0, '「すみません」是不好意思、對不起。'], ['いってきます。', 0, '「いってきます」是出門時說的。']], pt: 'm0' },
+      ['wang', 'シェイシェイ！ …あ、どういたしまして！', '謝謝！……啊，是不客氣！']] },
+    { id: 'cn4', u: 'm0', kana: 25, who: 'wang', at: 'chinatown', after: 'cn3', title: 'パンダくんの ひみつ', lines: [['wang', 'パンダくん、がんばれ！', '熊貓君，加油！（熊貓吉祥物在發傳單）'],
+      ['chen', '', '（用中文）熊貓君每天都在這裡發傳單。聽說裡面是個老爺爺。'],
+      ['wang', 'あっ！', '啊！（熊貓君在台階上滑了一跤）'],
+      ['hori', 'とめ、はね、はらい…', '頓筆、勾筆、撇筆……（頭套掉了，裡面是堀老師）'],
+      ['chen', 'ほりせんせい！？', '堀老師！？'],
+      ['hori', 'ひみつ です。', '這是秘密。'],
+      { ask: '扶起堀老師，問他「沒事吧？」', opts: [['だいじょうぶですか。', 1, '沒事吧？'], ['だいじょうぶです。', 0, '少了「か」，就變成「我沒事」了。'], ['いただきます。', 0, '……現在不是吃飯的時候。']], pt: 'm0' },
+      ['hori', 'パンダは、こころです。', '熊貓就是心。'],
+      ['chen', '', '（用中文）……堀老師，這句真的跟現在沒關係。']] },
     // ---- m1 助詞：は・が・を・に・で・へ・と ----
     { id: 'm1-1', u: 'm1', who: 'tome', at: 'shokudo', title: 'まんぷく食堂', lines: [['tome', 'いらっしゃい！ すきな{席|せき|座位}に すわりな。', '歡迎！隨便找位子坐。'], ['tome', 'おや、{見|み|看}ない{顔|かお|臉}だね。', '喲，生面孔呢。'],
       ['tome', 'なにを {食|た}べる？', '要吃什麼？'],
@@ -2556,6 +2612,7 @@ const TOWN = {
   // their own voices (CAST_VOICE). Later the same day (the user: someone at every stall): seven, one a stall; scoop: what the
   // goldfish's old man says when one is caught
   YATAI: {
+    ryuho: { name: '龍鳳飯店の店長', kana: 'りゅうほうはんてんの てんちょう', role: '中華料理店', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'smile', beard: 'none', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'chefcap' } },   // 中華街 (2026-11-14)
     ojisan: { name: 'やきそば屋のおじさん', kana: 'やきそばやのおじさん', role: '炒麵、牛肉串、奶油馬鈴薯', look: { face: 'round', skin: '#e8bd98', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'happi', top: '#d0574b', bottomStyle: 'shorts', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: { head: 'nejiri' } },
     tako: { name: 'たこやき屋のお兄さん', kana: 'たこやきやのおにいさん', role: '章魚燒', look: { face: 'pointed', skin: '#d39f78', cheeks: 'none', fringe: 'choppy', sides: 'short', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'sharp', eyeColor: '#2a2730', brows: 'straight', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#d9a43a', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: {} },
     obasan: { name: 'わたあめ屋のおばさん', kana: 'わたあめやのおばさん', role: '棉花糖', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#3b2f2a', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'happi', top: '#e58fa8', bottomStyle: 'wide', bottom: '#4f6f9e', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: {} },
@@ -2698,6 +2755,32 @@ const TOWN = {
         say: [['しゅわしゅわ！ つめたい！', '氣泡滋滋！好冰！'], ['ビーだまが カランと なりました。', '彈珠叮噹一聲。'], ['これが お{祭|まつ|祭典}りの のみものです！', '這就是祭典的飲料！']] }]],
       have: 'つめたい！' },
     // 稲荷山の茶屋 (2026-11-14, the 奥社 at the top of the 千本鳥居): いなり寿司 (no course word: always), きつねうどん (its うどん), 甘酒
+    // 中華街 (2026-11-14): 王's stand (豚まん and what goes with it, a taste free a day) and 龍鳳飯店
+    butaman: { title: '{豚|ぶた|豬}まんの {福明|ふくめい}', shop: '{中華街|ちゅうかがい}の {福明|ふくめい}', keeper: ['wang', 'シェイシェイ！ {P}です！', '謝謝！{Z}！'], hello: ['ニーハオ！ いらっしゃい！', '你好！歡迎光臨！'],
+      items: [['butaman', '{豚|ぶた|豬}まん', '豬肉包', 250, { k: 'f', pic: '豚まん',
+        look: [['ほかほかの ゆげ…！', '熱騰騰的蒸氣……！'], ['おおきい！ てより おおきい！', '好大！比手還大！']],
+        say: [['かわが ふわふわ！', '皮好鬆軟！'], ['なかの おにくが じゅわっ！', '裡面的肉汁滿出來了！'], ['からしを つけると、もっと おいしい！', '沾黃芥末更好吃！']] }],
+        ['shoronpo', '{小籠包|しょうろんぽう|小籠包}', '小籠包（五個）', 500, { k: 'f', pic: '小籠包',
+        look: [['ちいさい ふくろ みたい！', '像小小的袋子！'], ['なかに スープが はいって います。', '裡面有湯汁喔。']],
+        say: [['あつい！ でも、おいしい！', '好燙！可是好好吃！'], ['スープが たくさん でました！', '湯汁流出好多！'], ['たいわんの あじ…なつかしい！', '台灣的味道……好懷念！']] }],
+        ['gomadango', 'ごまだんご', '芝麻球', 200, { k: 'f', pic: 'ごまだんご',
+        look: [['まるくて、きんいろ！', '圓圓的，金黃色！'], ['ごまが いっぱい ついて います。', '沾滿了芝麻。']],
+        say: [['そとは カリッ！', '外面脆脆的！'], ['なかは もちもち、あんこが あまい！', '裡面QQ的，紅豆餡甜甜的！'], ['もう ひとつ たべたい…', '還想再吃一個……']] }],
+        ['tapioca', 'タピオカミルクティー', '珍珠奶茶', 450, { k: 'd', pic: 'タピオカミルクティー',
+        look: [['くろい たまが いっぱい！', '好多黑色的珠子！'], ['ストローが ふといです！', '吸管好粗！']],
+        say: [['もちもち！', 'QQ的！'], ['あまくて、ミルクの あじ！', '甜甜的，有奶味！'], ['たいわんの ゆうめいな のみものです！', '是台灣有名的飲料！']] }]],
+      have: 'いい におい！' },
+    ryuho: { title: '{龍鳳|りゅうほう}{飯店|はんてん|中華料理店}', keeper: ['ryuho', 'はい、{P}です。', '好的，{Z}。'], hello: ['いらっしゃいませ。なにに しますか。', '歡迎光臨。要點什麼？'],
+      items: [['gyoza', '{餃子|ぎょうざ}', '煎餃（六個）', 400, { k: 'f', w: '餃子',
+        look: [['やきめが きれい！', '煎得好漂亮！'], ['すと しょうゆを まぜます。', '把醋和醬油混在一起。']],
+        say: [['パリッ！ じゅわっ！', '酥脆！多汁！'], ['にんにくの においが します。', '有大蒜的味道。'], ['ごはんが ほしく なります！', '好想配白飯！']] }],
+        ['chukasoba', '{中華|ちゅうか|中華}そば', '中華拉麵', 650, { k: 'f', w: 'ラーメン', pic: 'ラーメン',
+        look: [['スープが すきとおって います。', '湯頭好清澈。'], ['なるとが のって います！', '上面有魚板！']],
+        say: [['しょうゆの スープ、やさしい あじ。', '醬油湯頭，溫和的味道。'], ['めんが ちぢれて います！', '麵條捲捲的！'], ['むかしながらの あじです。', '是古早味。']] }],
+        ['jasmine', 'ジャスミン{茶|ちゃ}', '茉莉花茶', 200, { k: 'd', pic: 'お茶',
+        look: [['はなの いい においが します。', '有花的香味。']],
+        say: [['すっきり！', '好清爽！'], ['あぶらっぽい ものの あとに、ぴったり。', '吃完油膩的東西，喝這個剛好。']] }]],
+      have: 'いい におい！' },
     chaya: { title: '{茶屋|ちゃや|茶屋}', shop: '{稲荷山|いなりやま|稻荷山}の {茶屋|ちゃや|茶屋}', keeper: ['chaya', 'はい、{P}です。ゆっくり して いってね。', '好的，{Z}。慢慢坐喔。'], hello: ['いらっしゃい。{山|やま}の {上|うえ}まで、ごくろうさま。', '歡迎光臨。辛苦你爬上山了。'],
       items: [['inari', 'いなり{寿司|ずし|壽司}', '豆皮壽司（三個）', 300, { k: 'f', pic: 'いなり寿司',
         look: [['あまい おあげの においが します…', '有甜甜的豆皮香味……'], ['きつねさんの すきな ものです！', '是狐狸最喜歡的東西！']],

@@ -267,3 +267,10 @@ test('mergeStates: the day\'s foods and drinks — the later day\'s, the more of
   assert.deepEqual(C.mergeStates(at(1, { day: '2026-11-13', f: 2, d: 1 }), at(2, { day: '2026-11-13', f: 0, d: 0, b: 1 })).purse.today, { day: '2026-11-13', f: 0, d: 0, b: 1, o: 0 });
   assert.deepEqual(C.mergeStates(at(2, { day: '2026-11-13', f: 2, d: 1 }), at(1, { day: '2026-11-13', f: 1, d: 0, b: 1 })).purse.today, { day: '2026-11-13', f: 1, d: 0, b: 1, o: 0 });
 });
+
+test('mergeStates: 中華街\'s 漢字陷阱 seen through on either device are all kept (2026-11-14)', () => {
+  const a = { updatedAt: '2026-11-14T10:00:00.000Z', town: { done: {}, seen: {}, stops: {}, traps: { 手紙: '2026-11-14' } } };
+  const b = { updatedAt: '2026-11-14T09:00:00.000Z', town: { done: {}, seen: {}, stops: {}, traps: { 愛人: '2026-11-13' } } };
+  assert.deepEqual(C.mergeStates(a, b).town.traps, { 手紙: '2026-11-14', 愛人: '2026-11-13' });
+  assert.equal(C.mergeStates({ updatedAt: '2026-11-14T10:00:00.000Z', town: { done: {} } }, { updatedAt: '2026-11-14T09:00:00.000Z', town: { done: {} } }).town.traps, undefined);
+});

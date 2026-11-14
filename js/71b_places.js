@@ -53,7 +53,7 @@ function isoZ(u, v) {
 INDOOR.forEach((pl) => Object.values(TOWN.SPOTS[pl] || {}).forEach((sp) => { if (sp.u !== undefined) { [sp.X, sp.Y] = isoXY(sp.u, sp.v, sp.h || 0); sp.foot = isoXY(sp.u, sp.v); } }));
 // how far up each place the hero walks (Y px up): the ground in front of its buildings, never up onto them (2026-11-10, the user);
 // the yard up to its house, the main road to its far pavement, a room to its floor
-const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128, oku: 124, kominkan: 128, kyoshitsu: 128 };
+const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128, oku: 124, kominkan: 128, kyoshitsu: 128, chinatown: 128 };
 const walkTop = (place, X) => (place === 'yard' && X !== undefined ? Math.round(214 - Math.max(0, Math.abs(X) - 300) * 0.22) : WALK_TOP[place] || 214);   // the yard: a hilltop, lower towards its sides — not out over the edge
 // what stands in the way in each place (2026-11-10, the user: he walked about as if every place were flat ground): the ground the
 // things there stand on, [X0, X1, Y0, Y1] in his units — benches, crates, tables and stools, the sandbox, the beach's grassy bank
@@ -284,6 +284,21 @@ const PLACE_USE = {
     { id: 'nobori', name: '旗子', box: [504, 80, 540, 236], kind: 'do', go: [-78, 122], back: 1, pose: 'look', say: 'にほんご きょうしつ…！', fx: 'nobori', fxc: 'flap' },
     { id: 'tokei', name: '時鐘', box: [584, 14, 636, 66], kind: 'do', go: [10, 122], back: 1, pose: 'look', pick: () => CLASS.clockSay() },
     { id: 'jitensha', name: '腳踏車', box: [896, 160, 1010, 236], kind: 'do', go: [350, 120], back: 1, pose: 'reach', say: 'チリンチリン！', fx: 'kbikes', fxc: 'ring' }],
+  // 中華街 (2026-11-14): 漢字陷阱 on the pillar-box, the notice, the T-shirts, the menu easel, the wet-floor sign, the fortune booth;
+  // 王's steamers (a free 豚まん a day) and his menu, 龍鳳飯店's door (its menu), the panda, the lion's head, the gate
+  chinatown: [
+    { id: 'post', name: '郵筒', box: [22, 150, 64, 236], kind: 'do', go: [-556, 122], back: 1, pose: 'look', say: 'てがみ…？', open: (y) => CHINA.trap(y, 'post') },
+    { id: 'gate', name: '牌樓', box: [84, -40, 396, 100], kind: 'do', go: [-360, 124], back: 1, pose: 'look', say: 'ちゅうかがい！', fx: 'gate', fxc: 'shake' },
+    { id: 'notice', name: '公告', box: [396, 140, 446, 236], kind: 'do', go: [-179, 122], back: 1, pose: 'look', say: 'おしらせ…？', open: (y) => CHINA.trap(y, 'notice') },
+    { id: 'shirt', name: 'T恤', box: [446, 136, 494, 236], kind: 'do', go: [-130, 122], back: 1, pose: 'reach', say: 'だいじょうぶ…？', fx: 'shirt', fxc: 'shake', open: (y) => CHINA.trap(y, 'shirt') },
+    { id: 'seiro', name: '蒸籠', box: [506, 130, 572, 236], kind: 'do', go: [-61, 122], back: 1, pose: 'look', say: 'いい におい…！', open: (y) => CHINA.taste(y, (PLACE_USE.chinatown || []).find((q) => q.id === 'seiro')) },
+    { id: 'bmenu', name: '福明的菜單', box: [596, 160, 694, 236], kind: 'do', go: [45, 122], back: 1, pose: 'look', buy: 'butaman', when: () => TOWNEV.isOpen('butaman', TOWNEV.now()) },
+    { id: 'panda', name: '熊貓', box: [708, 150, 760, 236], kind: 'do', go: [100, 120], pose: 'wave', say: 'パンダくん！', fx: 'panda', fxc: 'hug' },
+    { id: 'rmenu', name: '菜單看板', box: [774, 160, 818, 236], kind: 'do', go: [196, 122], back: 1, pose: 'look', say: 'ゆ…？', open: (y) => CHINA.trap(y, 'menu') },
+    { id: 'ryuho', name: '龍鳳飯店', box: [846, 130, 938, 236], kind: 'do', go: [292, 122], back: 1, pose: 'look', buy: 'ryuho', when: () => TOWNEV.isOpen('ryuho', TOWNEV.now()) },
+    { id: 'yuka', name: '立牌', box: [938, 190, 964, 236], kind: 'do', go: [351, 120], back: 1, pose: 'crouch', say: 'ゆか…？', open: (y) => CHINA.trap(y, 'yuka') },
+    { id: 'shishi', name: '獅子頭', box: [978, 100, 1010, 140], kind: 'do', go: [394, 122], back: 1, pose: 'bow', say: 'がぶっ！', fx: 'shishi', fxc: 'bite', toast: '在日本，被獅子咬頭會帶來好運、變聰明。' },
+    { id: 'uranai', name: '占卜攤', box: [1004, 116, 1070, 236], kind: 'do', go: [436, 122], back: 1, pose: 'look', say: 'うらない…？', open: (y) => CHINA.trap(y, 'uranai') }],
   // 日本語教室: the blackboard (the 五十音 learned), かるた on the tatami, the radio cassette player (sing a row), the picture
   // books, the clock, the paper cranes, the windows; the chairs to sit on
   kyoshitsu: [

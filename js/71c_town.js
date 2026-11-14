@@ -146,13 +146,14 @@ const TOWNEV = (() => {
     const e = list.find((x) => x.when !== 'night' && home(x));
     return e && studyDaysSince(lastDone()) >= 2 ? { ev: e, place: e.at, spot: home(e) } : null;
   }
-  // 日本語教室's events (kana: n, 2026-11-14): one of them waits too, beside the town's, while its person is in the classroom —
-  // a beginner has the class's story and the town's going at once
-  function classWaiting(h = sceneHour(), day = sceneDate()) {
-    const e = due().find((x) => x.kana !== undefined), w = e && whereIs(e.who, h, day);
-    return w && w.place === e.at ? { ev: e, place: w.place, spot: w.spot } : null;
+  // 日本語教室's and 中華街's events (kana: n, 2026-11-14): the next of each place's waits too, beside the town's, while its person
+  // is there — a beginner has the class's story, the street's and the town's going at once (place: that place's only)
+  function classWaiting(h = sceneHour(), day = sceneDate(), place) {
+    const next = new Map(); due().forEach((e) => { if (e.kana !== undefined && !next.has(e.at)) next.set(e.at, e); });
+    for (const [at, e] of next) { if (place && at !== place) continue; const w = whereIs(e.who, h, day); if (w && w.place === at) return { ev: e, place: at, spot: w.spot }; }
+    return null;
   }
-  const waitingFor = (id, place) => [waiting(now(), today()), classWaiting(now(), today())].find((w) => w && w.ev.who === id && w.place === place) || null;
+  const waitingFor = (id, place) => [waiting(now(), today()), classWaiting(now(), today(), place)].find((w) => w && w.ev.who === id && w.place === place) || null;
   // the hours a sleep wakes to (TOWN.WAKE) at which an event's person is at its place, on the day one would wake
   const wakeDay = (h) => new Date(today().getTime() + (((h - now()) % 24 + 24) % 24 || 24) * 3600000);
   const slots = (e) => (T().WAKE || []).filter((h) => { const w = whereIs(e.who, h, wakeDay(h)); return Boolean(w) && w.place === e.at; });
@@ -187,13 +188,14 @@ const TOWNEV = (() => {
   // event already, said in place of the first k lines (2026-11-13: m1-7 meets 高橋 for those who came to know him in m10-2 first)
   const linesOf = (e) => (e.met && state.town.done[e.met.if] ? e.met.head.concat(e.lines.slice(e.met.from)) : e.lines);
   // the people at a place now: those met, where their hours put them, and whoever an event there waits on (marked ！); in the
-  // 日本語教室 everyone there, met or not (a class one walks into)
+  // 日本語教室 and 中華街 everyone there, met or not (a class one walks into, a street of stalls)
+  const SEEN_UNMET = ['kyoshitsu', 'chinatown'];
   function here(place) {
     const out = [];
     Object.keys(T().CAST).forEach((id) => {
       const w = waitingFor(id, place), host = Boolean(w), at = host ? { place, spot: w.spot } : whereIs(id, now(), today());
       const gone = (!host && T().CAST[id].away && state.town.done[T().CAST[id].away]) || CRUISE.away(id, place, host);   // away from the town now (陽菜 in Tokyo): only back for an event of theirs; 高橋 out with the cruise's passengers (an event of his waits for him)
-      if (at && at.place === place && !gone && (host || seen(id) || place === 'kyoshitsu') && T().SPOTS[place] && T().SPOTS[place][at.spot]) out.push({ id, spot: T().SPOTS[place][at.spot], host });
+      if (at && at.place === place && !gone && (host || seen(id) || SEEN_UNMET.includes(place)) && T().SPOTS[place] && T().SPOTS[place][at.spot]) out.push({ id, spot: T().SPOTS[place][at.spot], host });
     });
     return out;
   }
@@ -207,13 +209,13 @@ const TOWNEV = (() => {
   }
   // the way to the one waiting (2026-11-10: the map joined up all round — beach | yard | town over harbor | street | park, the two
   // shops off the town, the bus's stops off the street and one another): the next step on a shortest way there, a dot on its sign
-  const STOPS = ['station', 'sento', 'shrine', 'castle', 'kominkan'];
+  const STOPS = ['station', 'sento', 'shrine', 'castle', 'kominkan', 'chinatown'];
   const ADJ = { yard: ['beach', 'town', 'street'], beach: ['yard', 'harbor'], town: ['yard', 'park', 'shokudo', 'izakaya'], street: ['yard', 'harbor', 'park'].concat(STOPS),
     harbor: ['beach', 'street'], park: ['town', 'street'], shokudo: ['town'], izakaya: ['town'] };
   STOPS.forEach((p) => { ADJ[p] = ['street'].concat(STOPS.filter((q) => q !== p)); });
   ADJ.shrine.push('oku'); ADJ.oku = ['shrine'];   // up the 千本鳥居 on foot (2026-11-14)
   ADJ.kominkan.push('kyoshitsu'); ADJ.kyoshitsu = ['kominkan'];   // 公民館's door to its 日本語教室 (2026-11-14)
-  const PLACE_NAME = { yard: '院子', town: '小鎮', beach: '海邊', street: '公車站', harbor: 'みなと漁港', park: 'ひだまり公園', shokudo: 'まんぷく食堂', izakaya: '居酒屋とり吉', station: '駅前', sento: '月の湯', shrine: '稲荷神社', castle: '白鷺城', oku: '稲荷山・奥社', kominkan: '公民館', kyoshitsu: '日本語教室' };
+  const PLACE_NAME = { yard: '院子', town: '小鎮', beach: '海邊', street: '公車站', harbor: 'みなと漁港', park: 'ひだまり公園', shokudo: 'まんぷく食堂', izakaya: '居酒屋とり吉', station: '駅前', sento: '月の湯', shrine: '稲荷神社', castle: '白鷺城', oku: '稲荷山・奥社', kominkan: '公民館', kyoshitsu: '日本語教室', chinatown: '中華街' };
   function hop(from, to) {
     if (from === to || !ADJ[from]) return null;
     const first = { [from]: null }, q = [from];   // breadth first: the first step of the way each place was reached by
@@ -559,7 +561,7 @@ function talkLines() {
   TOWN.EVENTS.forEach((e) => e.lines.concat(e.met ? e.met.head : []).forEach((l) => (Array.isArray(l) ? add(l[0], l[1]) : (l.opts || []).forEach((o) => add('hero', o[0])))));   // met: the opening for one who knew them already
   Object.values(NPC.DOOR).forEach((ls) => ls.forEach((l) => add('hero', l[0])));
   DIARY.PAGES.forEach((p) => add('granny', DIARY.said(p)));
-  CRUISE.lines(add); YEN.lines(add); CLASS.lines(add);   // the cruise's, buying with 円, 日本語教室's かるた and singing
+  CRUISE.lines(add); YEN.lines(add); CLASS.lines(add); CHINA.lines(add);   // the cruise's, buying with 円, 日本語教室's かるた and singing
   Object.keys(TOWN.YATAI || {}).forEach((id) => { if (TOWN.YATAI[id].scoop) add(id, TOWN.YATAI[id].scoop[0]); });   // the goldfish's old man
   return out;
 }
@@ -1501,7 +1503,7 @@ function streetHtml() {
 // between the places out of doors (test, 2026-11-09): the yard's path down to the main road, the yard's left edge along to the
 // beach. The hero walks to the way out (out), fades, and the other place opens with him coming in (in: where he appears, where
 // he walks to; yh.arrive)
-const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', harbor: '#/harbor', park: '#/park', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento', shrine: '#/shrine', castle: '#/castle', oku: '#/oku', kominkan: '#/kominkan', kyoshitsu: '#/kyoshitsu' };
+const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', harbor: '#/harbor', park: '#/park', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento', shrine: '#/shrine', castle: '#/castle', oku: '#/oku', kominkan: '#/kominkan', kyoshitsu: '#/kyoshitsu', chinatown: '#/chinatown' };
 // where a place's sight stands, for the camera to look at on the way in (2026-11-10: 白鷺城 was off the screen of a phone)
 const PLACE_LOOK = { castle: 280, shokudo: 130 };
 // a sight too big for a phone's screen, seen whole (yWide): [x0, x1, top] in the land's units — 白鷺城's keeps, their walls to the
@@ -2033,14 +2035,14 @@ function castleHtml() {
 // the bus (test, 2026-11-09): sat on the bench, the bus comes in and its board shows the stops — 駅前, 月の湯, 稲荷神社, 白鷺城,
 // each opened by the event that first takes the hero there (TOWN events' opens); from a stop out there, home to the main road too.
 // Picked: the hero gets on, the bus pulls away, and the place opens with him getting off at its stop
-const BUS_STOPS = [['station', '駅前'], ['sento', '月の湯'], ['shrine', '稲荷神社'], ['castle', '白鷺城'], ['kominkan', '公民館（日本語教室）']];
+const BUS_STOPS = [['station', '駅前'], ['sento', '月の湯'], ['shrine', '稲荷神社'], ['castle', '白鷺城'], ['kominkan', '公民館（日本語教室）'], ['chinatown', '中華街']];
 // the stops open from the first day (2026-11-14, the user: 新手第一週 — no one has to be met first); the rest by a town event
-const BUS_OPEN = ['kominkan'];
+const BUS_OPEN = ['kominkan', 'chinatown'];
 const busOpen = (id) => id === 'street' || BUS_OPEN.includes(id) || Boolean(state.town.stops[id]);
-const BUS_AT = { street: BUS, station: { X: 470, Y: 56, seat: 0 }, sento: { X: 470, Y: 56, seat: 0 }, shrine: { X: 470, Y: 56, seat: 0 }, castle: { X: 470, Y: 56, seat: 0 }, kominkan: { X: 470, Y: 56, seat: 0 } };   // where each place's stop stands (out there: by the kerb)
-const BUS_LANE = { street: 92, station: 16, sento: 16, shrine: 16, castle: 16, kominkan: 16 };   // where the bus runs (Y): on the road in front of the stop (2026-11-10, the user)
+const BUS_AT = { street: BUS, station: { X: 470, Y: 56, seat: 0 }, sento: { X: 470, Y: 56, seat: 0 }, shrine: { X: 470, Y: 56, seat: 0 }, castle: { X: 470, Y: 56, seat: 0 }, kominkan: { X: 470, Y: 56, seat: 0 }, chinatown: { X: 470, Y: 56, seat: 0 } };   // where each place's stop stands (out there: by the kerb)
+const BUS_LANE = { street: 92, station: 16, sento: 16, shrine: 16, castle: 16, kominkan: 16, chinatown: 16 };   // where the bus runs (Y): on the road in front of the stop (2026-11-10, the user)
 const BUS_PLACES = ['street'].concat(BUS_STOPS.map((x) => x[0]));
-const BUS_IN = { street: () => [[BUS.X + 40, 122], [BUS.X - 60, 108]], station: () => [[440, 50], [360, 72]], sento: () => [[440, 50], [360, 72]], shrine: () => [[440, 50], [360, 72]], castle: () => [[440, 50], [360, 72]], kominkan: () => [[440, 50], [360, 72]] };   // getting off: where he steps down, where he walks to
+const BUS_IN = { street: () => [[BUS.X + 40, 122], [BUS.X - 60, 108]], station: () => [[440, 50], [360, 72]], sento: () => [[440, 50], [360, 72]], shrine: () => [[440, 50], [360, 72]], castle: () => [[440, 50], [360, 72]], kominkan: () => [[440, 50], [360, 72]], chinatown: () => [[440, 50], [360, 72]] };   // getting off: where he steps down, where he walks to
 const BUS_ART = `<rect x="-130" y="-104" width="260" height="96" rx="16" fill="#3f9a8c"/><rect x="-130" y="-56" width="260" height="10" fill="#f6f1e4"/>
   ${[-104, -60, -16, 28].map((x) => `<rect x="${x}" y="-94" width="38" height="30" rx="4" fill="#cfe6ec"/>`).join('')}<rect x="72" y="-94" width="34" height="80" rx="4" fill="#2f6f64"/><rect x="76" y="-90" width="26" height="40" rx="3" fill="#cfe6ec"/>
   <rect x="-122" y="-120" width="90" height="18" rx="4" fill="#2b2b33"/><text x="-77" y="-106" text-anchor="middle" font-size="12" font-weight="700" fill="#ffd27a" font-family="system-ui, sans-serif">みなと市バス</text>
@@ -2434,7 +2436,7 @@ function yardHtml(pct, place = 'yard') {
         <div class="birds"><div class="flock">${[[52, 14], [38, 6], [38, 22], [24, 0], [24, 28]].map(([x, y]) => `<i style="left:${x}px;top:${y}px"></i>`).join('')}</div></div>
       </div>
       <div class="yworld" style="width:${yw}px;margin-left:${-yw / 2}px">
-      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'harbor' ? harborHtml() : place === 'park' ? parkHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : place === 'shrine' ? shrineHtml() : place === 'castle' ? castleHtml() : place === 'oku' ? okuHtml() : place === 'kominkan' ? kominkanHtml() : place === 'kyoshitsu' ? kyoshitsuHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
+      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'harbor' ? harborHtml() : place === 'park' ? parkHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : place === 'shrine' ? shrineHtml() : place === 'castle' ? castleHtml() : place === 'oku' ? okuHtml() : place === 'kominkan' ? kominkanHtml() : place === 'kyoshitsu' ? kyoshitsuHtml() : place === 'chinatown' ? chinatownHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
         <defs><radialGradient id="shopGlow"><stop offset="0" stop-color="rgba(255,196,110,.55)"/><stop offset=".5" stop-color="rgba(255,196,110,.16)"/><stop offset="1" stop-color="rgba(255,196,110,0)"/></radialGradient></defs>
         <path class="m-far" d="M520 600 V340 C560 330 600 314 640 304 C670 296 700 294 730 298 C770 306 810 328 860 342 V600 Z"/>
         <path class="m-main" d="${HILL} V600 Z"/><path class="m-shade" d="M482 250 C494 248 506 256 520 268 C552 296 594 326 646 350 V372 C590 340 548 306 516 280 C502 268 492 258 482 250 Z"/><path class="m-rim" d="${HILL}"/>

@@ -187,7 +187,7 @@ const CLASS = (() => {
   // ---- the blackboard: the 五十音 table in chalk, the kana seen written in (a tap says it), the rest a faint ？ ----
   function boardHtml(script) {
     const s = seen(), n = KANA_ROWS.flat().filter((h) => h && s.has(char(h, script))).length;
-    const cols = KANA_ROWS.map((row) => `<div class="cb-col">${row.map((h) => { if (!h) return '<span class="cb-k empty"></span>'; const c = char(h, script);
+    const cols = KANA_ROWS.map((row) => `<div class="cb-col">${row.map((h) => { if (!h) return '<span class="cb-k cb-empty"></span>'; const c = char(h, script);
       return s.has(c) ? `<button type="button" class="cb-k" data-say="${c}" lang="ja">${c}<small>${KANA_ROMAJI[h]}</small></button>` : '<span class="cb-k off">？</span>'; }).join('')}</div>`).join('');
     return `${xBtn}<div class="cb-head"><b>${script === 'kata' ? 'カタカナ' : 'ひらがな'}</b><span>學過 ${n}／46</span></div>
       <div class="cb-tabs"><button type="button" class="cb-tab${script === 'hira' ? ' on' : ''}" data-script="hira">平假名</button><button type="button" class="cb-tab${script === 'kata' ? ' on' : ''}" data-script="kata">片假名</button></div>
@@ -226,7 +226,7 @@ const CLASS = (() => {
   function karutaHtml(end) {
     const s = K.score, who = (id) => `<div class="kr-who${K.out.has(id) ? ' out' : ''}" data-who="${id}"><span class="kr-face">${TOWNEV.face(id)}</span><b>${id === 'hero' ? '你' : RIVALS[id].name}</b><i>${s[id]}</i><em class="kr-say"></em></div>`;
     return `${xBtn}<div class="kr-top"><div class="kr-reader"><span class="kr-radio">📻</span><span class="kr-call">${end ? '' : K.cur ? '？' : '準備……'}</span></div></div>
-      <div class="kr-mat">${K.cards.map((k) => `<button type="button" class="kr-card${k.by ? ' got by-' + k.by : ''}" data-card="${k.c}" ${k.by ? 'disabled' : ''} lang="ja">${k.c}</button>`).join('')}</div>
+      <div class="kr-mat">${K.cards.map((k) => `<button type="button" class="kr-card${k.by ? ' kr-got by-' + k.by : ''}" data-card="${k.c}" ${k.by ? 'disabled' : ''} lang="ja">${k.c}</button>`).join('')}</div>
       <div class="kr-people">${who('hero')}${who('chen')}${who('maria')}</div>
       ${end ? `<div class="kr-end">${end}<div class="kr-btns"><button type="button" class="btn btn-primary" data-cls="again">再玩一次</button><button type="button" class="btn" data-cls="x">不玩了</button></div></div>` : '<p class="kr-note">聽念出來的假名，搶那張牌！</p>'}`;
   }
@@ -235,9 +235,9 @@ const CLASS = (() => {
     if (!K.left.length) { finish(); return; }
     K.cur = K.left.shift(); K.out = new Set(); K.busy = false; K.round++;
     el.querySelectorAll('.kr-who').forEach((w) => w.classList.remove('out'));
-    const call = el.querySelector('.kr-call'); call.textContent = '♪'; call.classList.remove('hint');
+    const call = el.querySelector('.kr-call'); call.textContent = '♪'; call.classList.remove('kr-hint');
     speak(K.cur); const round = K.round;
-    later(() => { if (K.round === round && !K.busy) { call.textContent = `${roma(K.cur)}`; call.classList.add('hint'); } }, 2600);   // the romaji, should the sound not be enough
+    later(() => { if (K.round === round && !K.busy) { call.textContent = `${roma(K.cur)}`; call.classList.add('kr-hint'); } }, 2600);   // the romaji, should the sound not be enough
     Object.entries(RIVALS).forEach(([id, r]) => later(() => { if (K.round !== round || K.busy || K.out.has(id)) return;
       const wrong = Math.random() < r.miss && K.cards.some((k) => !k.by && k.c !== K.cur);
       take(id, wrong ? shuffle(K.cards.filter((k) => !k.by && k.c !== K.cur))[0].c : K.cur); }, (r.fast[0] + Math.random() * (r.fast[1] - r.fast[0])) * K.slow));
@@ -258,8 +258,8 @@ const CLASS = (() => {
   }
   function reveal(id) {
     const k = K.cards.find((x) => x.c === K.cur); if (id) k.by = id;
-    const card = el.querySelector(`.kr-card[data-card="${K.cur}"]`); if (card && id) { card.classList.add('got', 'by-' + id); card.disabled = true; }
-    const call = el.querySelector('.kr-call'); call.textContent = `${K.cur}・${roma(K.cur)}`; call.classList.add('hint');
+    const card = el.querySelector(`.kr-card[data-card="${K.cur}"]`); if (card && id) { card.classList.add('kr-got', 'by-' + id); card.disabled = true; }   // kr-got: not .got (the full-screen 獲得 close-up's class; 2026-11-14 the user saw a taken card fill the screen)
+    const call = el.querySelector('.kr-call'); call.textContent = `${K.cur}・${roma(K.cur)}`; call.classList.add('kr-hint');
     el.querySelectorAll('.kr-who i').forEach((i) => { i.textContent = K.score[i.closest('.kr-who').dataset.who]; });
     if (!id) k.by = 'none';   // no one got it (all slapped wrong): it goes out of play
     later(next, still() ? 900 : 1500);
@@ -296,7 +296,7 @@ const CLASS = (() => {
     const sing = (i) => {
       if (i >= kana.length) { endSong(goof); return; }
       el.querySelectorAll('.sg-k').forEach((k) => k.classList.toggle('on', Number(k.dataset.i) === i));
-      el.querySelectorAll('.sg-who').forEach((w, k) => w.classList.toggle('bob', (k + i) % 2 === 0));
+      el.querySelectorAll('.sg-who').forEach((w, k) => w.classList.toggle('sg-bob', (k + i) % 2 === 0));
       const t = token; Promise.race([speak(kana[i]), new Promise((ok) => setTimeout(ok, 1400))]).then(() => { if (t === token) later(() => sing(i + 1), 160); });
     };
     later(() => sing(0), 600);
@@ -333,5 +333,5 @@ const CLASS = (() => {
     GOOFS.forEach((g) => { add(g.who, g.ja); add(g.back[0], g.back[1]); });
     add('chen', 'かるた、まだ はやい！');
   }
-  return { board, karuta, song, book, clockSay, close, playKoto, lines, on: () => Boolean(el) };
+  return { board, karuta, song, book, clockSay, close, playKoto, lines, card: open, on: () => Boolean(el) };   // card: 中華街's 漢字陷阱 uses it too
 })();

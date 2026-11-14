@@ -127,7 +127,8 @@ const CAST_VOICE = {
   ojisan: ['Fenrir', 1.02], obasan: ['Aoede', 1.02], oniisan: ['Umbriel', 1.08],
   tako: ['Achird', 1.06], obaasan: ['Gacrux', 0.9], oneesan: ['Laomedeia', 1.04], ojiisan: ['Iapetus', 0.88],   // later the same day: someone at every stall
   chaya: ['Sulafat', 0.98],   // 稲荷山の茶屋's keeper (2026-11-14)
-  chen: ['Fenrir', 1.1, 0, 1], maria: ['Aoede', 1.1], hori: ['Alnilam', 0.86, 0, -1]   // 日本語教室 (2026-11-14): voices the town has, said their own way
+  chen: ['Fenrir', 1.1, 0, 1], maria: ['Aoede', 1.1], hori: ['Alnilam', 0.86, 0, -1],   // 日本語教室 (2026-11-14): voices the town has, said their own way
+  wang: ['Algenib', 1.06, 0, 1], ryuho: ['Schedar', 0.98]   // 中華街 (2026-11-14)
 };
 // ムギ (2026-11-12, the user, by ear): a boy's voice pitched up, a mascot's — a grown man saying ワン, or a real bark beside a
 // plain voice, broke the spell; her lines open with ワン！ and no longer end in it (events.js 42)

@@ -73,15 +73,16 @@ def test_every_food_and_drink_is_had_its_own_way_through_a_whole_meal(b):
       }
       host.remove(); const where = Object.fromEntries(Object.keys(TOWN.MENU).map((m) => [m, YEN.where(m)]));
       return JSON.stringify({ n: items.length, bad, ways, where, bgs: EATSCENE.BG }); })()"""))
-    assert r['n'] == 44 and not r['bad'], r   # 41, and 稲荷山の茶屋's three (2026-11-14)
+    assert r['n'] == 51 and not r['bad'], r   # 41, 稲荷山の茶屋's three, 中華街's seven (2026-11-14: 福明's four, 龍鳳飯店's three)
     wh = r['where']   # each where it is had: its own backdrop (2026-11-14, the user)
     assert (wh['shokudo'], wh['izakaya'], wh['cafe'], wh['milk'], wh['vend'], wh['bakery']) == ('shokudo', 'izakaya', 'cafe', 'sento', 'street', 'bakery'), wh
     assert all(wh[m] == 'fair' for m in ('yakisoba', 'takoyaki', 'wataame', 'ringoame', 'chocobanana')) and wh['chaya'] == 'chaya' and set(wh.values()) <= set(r['bgs']), wh
     w = r['ways']
     assert set(w) == {'spoon', 'chop', 'fork', 'pick', 'kushi', 'bite', 'straw', 'tip', 'cup'}, w
     assert {'curry', 'kakigori', 'jagabata'} <= set(w['spoon']) and {'ramen', 'udon', 'gyudon', 'sakana', 'yakisoba', 'inari', 'kitsune'} <= set(w['chop']), w
-    assert w['fork'] == ['cake'] and w['pick'] == ['takoyaki'] and set(w['straw']) == {'soda', 'juice'}, w
-    assert {'cola', 'coffee', 'water', 'ramune', 'milk', 'oolong'} <= set(w['tip']) and set(w['cup']) == {'kohi', 'ocha', 'miso', 'amazake'}, w
+    assert w['fork'] == ['cake'] and w['pick'] == ['takoyaki'] and set(w['straw']) == {'soda', 'juice', 'tapioca'}, w   # 中華街 (2026-11-14): 珍珠奶茶 through its straw
+    assert {'cola', 'coffee', 'water', 'ramune', 'milk', 'oolong'} <= set(w['tip']) and set(w['cup']) == {'kohi', 'ocha', 'miso', 'amazake', 'jasmine'}, w
+    assert {'gyoza', 'shoronpo', 'chukasoba'} <= set(w['chop']) and {'butaman', 'gomadango'} <= set(w['bite']) and wh['butaman'] == wh['ryuho'] == 'chinatown', w
     assert set(w['kushi']) == {'yakitori', 'gyukushi', 'ichigoame', 'budouame'} and {'melonpan', 'onigiri', 'ringoame', 'suika', 'wataame'} <= set(w['bite']), w
 
 def test_the_tea_house_at_the_oku_sells_inari_kitsune_udon_and_amazake_by_day(b):
