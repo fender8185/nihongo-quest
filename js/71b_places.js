@@ -253,7 +253,7 @@ const PLACE_USE = {
     { id: 'haiden', name: '拝殿', box: [690, 40, 1130, 136], kind: 'do', go: [310, 122], back: 1, pose: 'look', wide: 'りっぱ…！' },   // its roof looked up at: the hall seen whole (yWide; 2026-11-14)
     { id: 'kuji', name: '籤', box: [1076, 160, 1156, 236], kind: 'do', go: [515, 122], back: 1, pose: 'reach', fortune: 1, fx: 'kuji', fxc: 'jingle', ms: 2200, buy: 'kuji' },
     { id: 'crow', name: '烏鴉', box: [220, 42, 266, 80], kind: 'do', go: [-350, 112], pose: 'look', say: 'カァー', fx: 'crow', fxc: 'flown', ms: 7000 },
-    { id: 'fox', name: '狐狸', box: [338, 166, 382, 236], kind: 'do', go: [-240, 120], back: 1, pose: 'bow', say: 'ペコリ', fx: 'fox', fxc: 'bless', ms: 2000 },
+    { id: 'fox', name: '狐狸', box: [798, 166, 842, 236], kind: 'do', go: [220, 122], back: 1, pose: 'bow', say: 'ペコリ', fx: 'fox', fxc: 'bless', ms: 2000, when: () => !TOWNEV.festival() },   // 2026-11-14 (the user: where they stood made no sense): the pair before the hall, facing each other across its approach; behind the stalls at the 緣日
     // the 緣日's stalls (SHRINE_STALLS): the goldfish to scoop; the rest, a menu each (YEN)
     ...SHRINE_STALLS.map(([id, x, , , name]) => Object.assign({ id, name, box: [x, 144, x + 72, 236], kind: 'do', go: [x + 36 - 600, 126], back: 1, pose: 'reach', when: () => TOWNEV.festival() },
       id === 'kingyo' ? { pose: 'crouch', say: 'とれた！🐟', keeper: 'ojiisan' } : { buy: id }))],

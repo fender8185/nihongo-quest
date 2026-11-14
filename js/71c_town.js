@@ -1629,7 +1629,7 @@ function shrineHtml() {
     <path d="M${x - 17} ${F - 68} Q${x - 12} ${F - 69} ${x - 10} ${F - 73} L${x} ${F - 81} L${x + 10} ${F - 73} Q${x + 12} ${F - 69} ${x + 17} ${F - 68} Z" ${hc(...stone)}/><path d="M${x} ${F - 81} L${x + 10} ${F - 73} Q${x + 12} ${F - 69} ${x + 17} ${F - 68} H${x} Z" ${shade}/>
     <path d="M${x - 15} ${F - 68.6} Q${x - 11} ${F - 69.6} ${x - 9.4} ${F - 72.6}" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="1.2"/><path d="M${x - 2} ${F - 81} h4 v-1.6 h-4 Z" ${hc(...stone)}/><circle cx="${x}" cy="${F - 84.6}" r="2.6" ${hc(...stoneL)}/>
     <circle class="glow" cx="${x}" cy="${F - 60}" r="34" fill="url(#glw)"/>`;
-  // the stone foxes (2026-11-11, finer): on a stone plinth, sat up with the bushy tail raised behind, ears pricked (red inside),
+  // the stone foxes (2026-11-11, finer; 2026-11-14 a pair before the hall, either side of its approach, facing each other): on a stone plinth, sat up with the bushy tail raised behind, ears pricked (red inside),
   // a narrow eye, a red bib tied round the neck; one holds the key in its mouth, the other the jewel. The left one bowed to: a
   // breeze stirs its bib and the key glints (bless)
   const foxC = ['#e9e2d0', '#4a4c6e'], foxR = ['#d0453c', '#5a2030'], gold = ['#d9b04a', '#a88a4a'], fine = 'stroke="#2b1c12" stroke-opacity=".22" stroke-width=".7"';
@@ -1772,7 +1772,7 @@ function shrineHtml() {
       <rect x="878" y="194" width="64" height="4" rx="1" ${hc('#6e4628', '#221c38')}/><path d="M880 209.5 H940" stroke="#2b1c12" stroke-opacity=".16" stroke-width="1"/><path d="M880 216 h60 v6 h-60 Z M930 198 h10 v24 h-10 Z" fill="#2b1c12" fill-opacity=".1"/>
       <path d="M881.4 214.6 v6 h6 M938.6 214.6 v6 h-6 M881.4 205 v-5.6 h6 M938.6 205 v-5.6 h-6" fill="none" ${hs('#d9b04a', '#a88a4a')} stroke-width="1.5"/><path d="M882 222 h8 v2 h-8 Z M930 222 h8 v2 h-8 Z" ${hc('#5a3b28', '#1c1838')}/><text x="910" y="218" text-anchor="middle" font-size="9" font-weight="700" ${hc('#efe6d6', '#c9c4e8')} font-family="serif">奉納</text>
       ${greatTorii()}${nobori(298)}${nobori(586)}
-      ${lantern(320)}${lantern(700)}${fox(360, false, true, ' data-fx="fox"')}${fox(560, true, false)}
+      ${lantern(320)}${lantern(700)}${fox(820, false, true, ' data-fx="fox"')}${fox(1000, true, false)}
       <g data-fx="crow"><g class="fx-peck" style="animation-duration:3.1s"><path d="M229 66 L217 71.6 L219.2 67 L215.6 64.4 L229 61.4 Z" ${hc('#24242c', '#0a0a18')}/>
         <path d="M226 64 C227 57.6 235 53.6 245 54 C251 54.3 255 57 254.5 62 C253.5 67.5 245 70.5 235 70 C230 69.7 226.8 67.2 226 64 Z" ${hc('#2b2b33', '#0c0c1c')}/><path d="M229.6 62.6 C233 57.6 241 56 248.6 58.6 C247 63.6 240.6 67 232.6 67 C230.6 66.3 229.6 64.8 229.6 62.6 Z" ${hc('#3a3e52', '#16182e')}/>
         <path d="M233 66.4 l-5 2.4 M237.4 66.4 l-5 2.8 M241.6 65.4 l-4.6 3" ${hs('#24242c', '#0a0a18')} stroke-width="1.1"/><path d="M234 57 C239 55.2 245 55.2 249.4 57" fill="none" stroke="#fff" stroke-opacity=".16" stroke-width="1.4" stroke-linecap="round"/>
