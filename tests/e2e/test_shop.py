@@ -164,7 +164,8 @@ def test_wearing_goes_on_and_off_and_shows_on_the_hero(b):
 def test_arrange_takes_out_moves_turns_and_puts_away(b):
     js = "(async () => { " + FRESH + """ state.owned.chabudai = { paid: 0, on: todayStr() }; saveState(); """ + GO_ROOM + """
       document.querySelector('.study-edit').click(); const st = () => document.querySelector('.study');
-      const tray = [...st().querySelectorAll('.tray-it')].map(x => x.dataset.id);
+      const tray = [...st().querySelectorAll('.tray-it')].map(x => x.dataset.id), tabs = [...st().querySelectorAll('.tray-tab')].map(t => [t.textContent, t.getAttribute('aria-selected')]);
+      st().querySelector('[data-act="room-tray-tab"][data-tab="wall"]').click(); const wall = [...st().querySelectorAll('.tray-it')].map(x => x.dataset.id); st().querySelector('[data-act="room-tray-tab"][data-tab="floor"]').click();
       st().querySelector('.tray-it[data-id="chabudai"]').click(); const p1 = Object.assign({}, state.placed.chabudai);
       const d = st().querySelector('.deco[data-ware="chabudai"]'), r = d.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height * 0.7;
       const pe = (el, type, px, py) => el.dispatchEvent(new PointerEvent(type, { clientX: px, clientY: py, pointerId: 9, pointerType: 'mouse', button: 0, buttons: type === 'pointerup' ? 0 : 1, bubbles: true }));
@@ -174,9 +175,9 @@ def test_arrange_takes_out_moves_turns_and_puts_away(b):
       const desk = ROOM.fits(WARE.get('chabudai'), { w: 'F', x: 3, y: 1, r: 0 });
       st().querySelector('[data-act="room-edit-put"]').click(); const gone = !state.placed.chabudai;
       st().querySelector('[data-act="room-edit-done"]').click();
-      return JSON.stringify({ tray, p1ok: ROOM.fits(WARE.get('chabudai'), p1), moved: p1.x !== p2.x || p1.y !== p2.y, turned: p3.r === 1, desk, gone, edit: !!document.querySelector('.study.edit') }); })()"""
+      return JSON.stringify({ tray, tabs, wall, p1ok: ROOM.fits(WARE.get('chabudai'), p1), moved: p1.x !== p2.x || p1.y !== p2.y, turned: p3.r === 1, desk, gone, edit: !!document.querySelector('.study.edit') }); })()"""
     r = json.loads(ev(b, js))
-    assert r == {'tray': ['chabudai', 'garland1'], 'p1ok': True, 'moved': True, 'turned': True, 'desk': False, 'gone': True, 'edit': False}, r
+    assert r == {'tray': ['chabudai'], 'tabs': [['家具1', 'true'], ['地墊', 'false'], ['牆上1', 'false']], 'wall': ['garland1'], 'p1ok': True, 'moved': True, 'turned': True, 'desk': False, 'gone': True, 'edit': False}, r
 
 def test_the_rooms_own_things_are_laid_out_and_can_be_put_away(b):
     js = "(() => { " + FRESH + """ const own = ['bed', 'nightTable', 'bigPlant', 'sageRug', 'bedRug', 'fujiPrint', 'kanaChart', 'nightPicture', 'pegRail', 'sofaWindow', 'shelfWindow', 'bedWindow2', 'sconce1', 'sconce2', 'sconce3', 'sconce4'];
@@ -498,8 +499,8 @@ def test_the_shop_has_four_tabs_and_opens_on_the_last_one_used(b):
       return JSON.stringify({ tabs, seen, leak, back: document.querySelector('.shop-tabs [aria-selected="true"]').dataset.tab, stored: localStorage.getItem('nq_shop_tab') }); })()"""
     r = json.loads(ev(b, js))
     assert r['tabs'] == ['室內', '戶外', '穿搭', '限時'], r
-    assert r['seen']['in'] == ['家具擺飾', '地墊', '牆上', '唱片'] and r['seen']['out'] == ['戶外擺設', '房子外觀', '地面'] and r['seen']['wear'] == ['頭部', '臉部', '頸部', '衣服', '褲子', '鞋子', '背部'], r   # 穿搭 by the wardrobe's parts (2026-11-12)
-    assert r['seen']['outCards'] == ['telescope', 'stonelantern', 'engawa', 'tanuki', 'pond', 'mushroomhouse', 'gingerhouse', 'stumphouse', 'teapothouse', 'snowfield'] and not r['leak'], r   # limited wares (南瓜屋 too) only under 限時
+    assert r['seen']['in'] == ['家具擺飾', '地墊', '牆上', '唱片'] and r['seen']['out'] == ['戶外擺設', '房子外觀'] and r['seen']['wear'] == ['頭部', '臉部', '頸部', '衣服', '褲子', '鞋子', '背部'], r   # 穿搭 by the wardrobe's parts (2026-11-12)
+    assert r['seen']['outCards'] == ['telescope', 'stonelantern', 'engawa', 'tanuki', 'pond', 'mushroomhouse', 'gingerhouse', 'stumphouse', 'teapothouse'] and not r['leak'], r   # limited wares (南瓜屋 too) only under 限時
     assert r['back'] == 'out' and r['stored'] == 'out', r
 
 def test_limited_sales_go_by_the_servers_day_not_the_phones(b):
@@ -523,7 +524,7 @@ def test_limited_sales_go_by_the_servers_day_not_the_phones(b):
     assert r['last'] == ['萬聖節限定 · 賣到 11/14（今天最後一天）'], r
     assert r['off'] == {'head': [], 'kinds': [], 'cards': [], 'note': '現在沒有限時商品。下一檔：聖誕節 12/11–1/8、萬聖節 10/17–11/14', 'dot': False}, r
     assert r['dec'] == ['聖誕節限定 · 賣到 1/8（還有 19 天）'] and r['jan'] == ['聖誕節限定 · 賣到 1/8（今天最後一天）'], r
-    assert r['decKinds'] == ['穿搭', '室內擺設', '戶外擺設', '房子外觀', '唱片'], r   # grouped like the other tabs (2026-11-14, the user)
+    assert r['decKinds'] == ['穿搭', '室內擺設', '戶外擺設', '房子外觀', '地面', '唱片'], r   # grouped like the other tabs (2026-11-14, the user)
     assert r['offline'] == '限時商品要連上網路才看得到。' and r['bought'] is None, r
     assert r['preview'] == ['witchhat', 'wizrobe', 'pumpkin', 'pumpkinhouse', 'obake'] + XMAS, r   # the test site can look whatever the day
     assert r['one'] == ['聖誕節限定 · 賣到 1/8（測試預覽）'], r   # one festival previewed on its own (2026-11-14)
@@ -537,7 +538,7 @@ def test_the_halloween_wares_are_a_hat_a_robe_and_a_pumpkin_that_glows(b):
 
 # the Halloween witch: far off in the yard's night sky while Halloween is on (the server's day), a tap drops her off her broom
 # for 100 言靈 once a Halloween. open(theme, day): the yard drawn anew under 永夜／永晝 on that server day
-XMAS = ['santahat', 'antlers', 'rednose', 'hollybell', 'santacoat', 'santapants', 'elfshoes', 'giftsack', 'giftpile', 'poinsettia', 'wreath', 'stockings', 'bigtree', 'snowman', 'lightdeer', 'kamakura', 'logcabin', 'jingle']   # in 限時's order: worn, rooms, yard, houses, record
+XMAS = ['santahat', 'antlers', 'rednose', 'hollybell', 'santacoat', 'santapants', 'elfshoes', 'giftsack', 'giftpile', 'poinsettia', 'wreath', 'stockings', 'bigtree', 'snowman', 'lightdeer', 'kamakura', 'logcabin', 'snowfield', 'jingle']   # in 限時's order: worn, rooms, yard, houses, record
 WITCH_OPEN = """const wait = (ms) => new Promise(q => setTimeout(q, ms));
   const open = (theme, day) => { state.settings.theme = theme; saveState(); saleDay = { day, at: Date.now(), ask: null, failed: false };
     location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); return document.querySelector('.yard .sky .night .witch'); };"""
@@ -596,7 +597,7 @@ def test_christmas_sells_one_for_each_part_two_hats_rooms_yard_houses_and_a_reco
     r = json.loads(ev(b, js))
     assert r['ids'] == XMAS, r
     assert r['parts'] == {'head': 2, 'face': 1, 'neck': 1, 'top': 1, 'bottom': 1, 'shoe': 1, 'back': 1}, r   # one for each part, two for the head
-    assert r['kinds'] == {'wear': 5, 'clothes': 3, 'floor': 2, 'wall': 2, 'yard': 3, 'house': 2, 'record': 1}, r
+    assert r['kinds'] == {'wear': 5, 'clothes': 3, 'floor': 2, 'wall': 2, 'yard': 3, 'house': 2, 'ground': 1, 'record': 1}, r   # 雪地: Christmas's (2026-11-14, the user)
     assert r['tree'] == [False, '聖誕樹'], r   # the Christmas tree stands in the yard, not the room (the user)
     assert r['styles'] == ['santacoat', 'santapants', 'elfshoes'] and r['drawn'] and r['hat'] == '丸子', r   # styles the wardrobe knows; a hat tucks the bun away
     assert r['lamps'] and r['lit'] and r['houses'] and r['room'], r   # the trees and the reindeer light up by night
@@ -626,14 +627,14 @@ def test_christmas_plays_in_the_six_places_and_the_snow_ground_is_laid_and_lifte
       state.koto.gift = 2500; saveState(); const it = WARE.get('snowfield'); const where = buyWare(it); await at('#/outside', '2026-11-20');
       const y = () => document.querySelector('#view .yard'), laid = y().classList.contains('ground-snowfield');
       ACTIONS['ground-wear']({ dataset: { id: 'snowfield' } }); await at('#/outside', '2026-11-20'); const lifted = [state.ground, y().classList.contains('ground-grass')];
-      yardEdit(y(), 'on'); const tray = [...y().querySelectorAll('[data-act="yard-ground"]')].map(e => e.dataset.id); yardEdit(y(), 'ground', 'snowfield'); const fromBox = [state.ground, y().classList.contains('ground-snowfield')]; yardEdit(y(), 'done');
+      yardEdit(y(), 'on'); yardEdit(y(), 'tray', 'ground'); const tray = [...y().querySelectorAll('[data-act="yard-ground"]')].map(e => e.dataset.id); yardEdit(y(), 'ground', 'snowfield'); const fromBox = [state.ground, y().classList.contains('ground-snowfield')]; yardEdit(y(), 'done');
       const street = (await at('#/street', '2026-11-20'), y().className.includes('ground-'));
       return JSON.stringify({ tunes, nov, where, laid, lifted, tray, fromBox, street, kind: [it.kind, it.price, !!it.limited] }); })()"""
     r = json.loads(ev(b, js))
     six = {h: 'jingle' for h in ['#/outside', '#/beach', '#/town', '#/street', '#/harbor', '#/park']}
     assert {h: r['tunes'][h] for h in six} == six and r['tunes']['#/izakaya'] == 'chochin' and r['tunes']['#/station'] == '' and r['tunes']['#/today'] == '', r   # the ring's six; a place's own elsewhere; the house plays only the gramophone
     assert r['nov'] == '', r   # not Christmas: the café's jazz only while it is open
-    assert r['kind'] == ['ground', 2000, False] and r['where'] == '，院子的地面換好了' and r['laid'], r
+    assert r['kind'] == ['ground', 2000, True] and r['where'] == '，院子的地面換好了' and r['laid'], r
     assert r['lifted'] == ['', True] and r['tray'] == ['', 'snowfield'] and r['fromBox'] == ['snowfield', True] and not r['street'], r   # the yard's own ground only
 
 SANTA_OPEN = WITCH_OPEN.replace(".night .witch')", ".night .santa')")
@@ -1158,14 +1159,15 @@ def test_roomV_8_takes_the_lights_down_and_lays_the_room_out_again(b):
 def test_the_yards_box_holds_the_houses_bought_and_a_tap_puts_one_up(b):
     js = "(async () => { " + FRESH + """ const go = () => { location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); document.querySelector('.yard-edit').click(); };
       go(); const none = document.querySelectorAll('.yard .tray-house').length;
-      ['stumphouse', 'teapothouse'].forEach(id => { state.owned[id] = { paid: 2000, on: todayStr() }; }); saveState(); go();
+      ['stumphouse', 'teapothouse'].forEach(id => { state.owned[id] = { paid: 2000, on: todayStr() }; }); saveState(); go(); const tabs = [...document.querySelectorAll('.yard .tray-tab')].map(t => t.dataset.tab); yardEdit(document.querySelector('#view .yard'), 'tray', 'house');   /* the houses under their own tab (2026-11-14) */
       const ids = [...document.querySelectorAll('.yard .tray-house')].map(e => e.dataset.id), pressed = () => document.querySelector('.yard .tray-house[aria-pressed="true"]').dataset.id;
       const p0 = pressed(); document.querySelector('.yard .tray-house[data-id="stumphouse"]').click();
       const up = { house: state.house, drawn: (() => { const t = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); t.innerHTML = HOUSE_ART.stumphouse; return document.querySelector('.yard .house svg').innerHTML === t.innerHTML; })(), pressed: pressed(), edit: !!document.querySelector('.yard.edit') };
       document.querySelector('.yard .tray-house[data-id=""]').click();
-      return JSON.stringify({ none, ids, p0, up, back: [state.house, !!document.querySelector('.yard .house .chim')], prices: WARES.filter(w => w.kind === 'house').map(w => w.price), pumpkin: WARE.get('pumpkinhouse').limited }); })()"""
+      return JSON.stringify({ none, tabs, ids, p0, up, back: [state.house, !!document.querySelector('.yard .house .chim')], prices: WARES.filter(w => w.kind === 'house').map(w => w.price), pumpkin: WARE.get('pumpkinhouse').limited }); })()"""
     r = json.loads(ev(b, js))
     assert r['none'] == 0 and r['ids'] == ['', 'stumphouse', 'teapothouse'] and r['p0'] == '', r   # no house bought: no houses in the box; then the cottage and the two bought
+    assert r['tabs'] == ['yard', 'house'], r   # 擺設 and 房子 (2026-11-14: the box in tabs)
     assert r['up'] == {'house': 'stumphouse', 'drawn': True, 'pressed': 'stumphouse', 'edit': True}, r   # a tap puts it up at once, still in 擺設
     assert r['back'] == ['', True] and r['prices'] == [2000] * 7 and r['pumpkin'] == 'halloween', r   # 2026-11-14: and Christmas's two
 

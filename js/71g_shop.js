@@ -26,6 +26,7 @@ function fukuSvg() {
 // the shop's tabs (1.2.0): for 書房, for the yard, to wear, and what is sold for a while only. The last one used comes back.
 // 穿搭's sections are the hero's seven parts, as the wardrobe's tabs (WEAR_SLOTS; 2026-11-12, the user), the others by kind
 const SHOP_TABS = [['in', '室內', [['floor', '家具擺飾'], ['rug', '地墊'], ['wall', '牆上'], ['record', '唱片']]], ['out', '戶外', [['yard', '戶外擺設'], ['house', '房子外觀'], ['ground', '地面']]], ['wear', '穿搭', WEAR_SLOTS], ['sale', '限時']];
+// (a section with nothing sold all year is left out: 地面's 雪地 is Christmas's, 2026-11-14)
 const inSec = (it, k) => (it.kind === 'wear' || it.kind === 'clothes' ? it.slot === k : it.kind === k);   // a ware under a section: by part, or by kind
 let shopTab = (() => { try { const t = localStorage.getItem('nq_shop_tab'); return SHOP_TABS.some(([k]) => k === t) ? t : 'in'; } catch (e) { return 'in'; } })();
 let shopFocus = '';   // a part's section to open 古道具屋 at (from the wardrobe's 去看看), once
@@ -144,7 +145,8 @@ function renderShop(view) {
       <div class="counter"></div><div class="purse">${kotoIcon()}言靈 <b>${bal}</b></div></div>
     <div class="page-head shop-head"><div><div class="page-title">古道具屋</div><div class="page-sub">山上的老店，老闆福爺不收錢，只收言靈。</div></div></div>
     <div class="shop-tabs" role="tablist">${SHOP_TABS.map(([k, name]) => `<button type="button" role="tab" data-act="shop-tab" data-tab="${k}" aria-selected="${shopTab === k}">${name}${k === 'sale' && live.length ? '<i class="dot" aria-label="特賣中"></i>' : ''}</button>`).join('')}</div>
-    ${shopTab === 'sale' ? saleHtml(day, live, grid) : SHOP_TABS.find(([k]) => k === shopTab)[2].map(([k, name], i, all) => `<section class="shop-sec" data-sec="${k}"><h2 class="shop-h">${name}</h2>${grid(WARES.filter((it) => inSec(it, k) && !it.starter && !it.limited && !it.gift), shopTab === 'wear' && i === all.length - 1 ? SOON : '')}</section>`).join('')}
+    ${shopTab === 'sale' ? saleHtml(day, live, grid) : SHOP_TABS.find(([k]) => k === shopTab)[2].map(([k, name], i, all) => { const list = WARES.filter((it) => inSec(it, k) && !it.starter && !it.limited && !it.gift), more = shopTab === 'wear' && i === all.length - 1 ? SOON : '';
+      return list.length || more ? `<section class="shop-sec" data-sec="${k}"><h2 class="shop-h">${name}</h2>${grid(list, more)}</section>` : ''; }).join('')}
     ${onTestSite() && shopTab === 'sale' ? `<div class="row-wrap mt-4">${Object.keys(SALES).map((k) => `<button type="button" class="btn btn-sm" data-act="sale-preview" data-k="${k}" aria-pressed="${salePreview(k)}">測試用：預覽${SALES[k].name}</button>`).join('')}<button type="button" class="btn btn-sm" data-act="sale-preview" data-k="0">照日期來</button></div>` : ''}
     ${onTestSite() ? '<div class="row-wrap mt-4"><button type="button" class="btn btn-sm" data-act="koto-gift">測試用：+100 言靈</button><button type="button" class="btn btn-sm" data-act="koto-gift" data-n="1000">測試用：+1000 言靈</button><button type="button" class="btn btn-sm" data-act="witch-again">測試用：巫婆／聖誕老公公再飛一次</button></div>' : ''}
     <svg class="defs-only" width="0" height="0" aria-hidden="true">${DECOR.DEFS}</svg>`;
@@ -303,6 +305,7 @@ Object.assign(ACTIONS, {
   'lamp-toggle': (el) => { const id = el.dataset.lamp; if (lampOff(id)) delete state.lampsOff[id]; else state.lampsOff[id] = true; SND.play('switch'); saveState(); route(); },
   'room-edit-done': (el) => ROOM.edit(el, 'done'),
   'room-edit-take': (el) => ROOM.edit(el, 'take', el.dataset.id),
+  'room-tray-tab': (el) => ROOM.edit(el, 'tray', el.dataset.tab),   // the storage box's tabs (2026-11-14)
   'room-edit-turn': (el) => ROOM.edit(el, 'turn'),
   'room-edit-put': (el) => ROOM.edit(el, 'put'),
   'fuku-talk': () => fukuSay('idle'),
@@ -362,6 +365,7 @@ Object.assign(ACTIONS, {
   'yard-edit': (el) => yardEdit(el.closest('.yard'), 'on'),
   'yard-edit-done': (el) => yardEdit(el.closest('.yard'), 'done'),
   'yard-edit-take': (el) => yardEdit(el.closest('.yard'), 'take', el.dataset.id),
+  'yard-tray-tab': (el) => yardEdit(el.closest('.yard'), 'tray', el.dataset.tab),
   'yard-house': (el) => yardEdit(el.closest('.yard'), 'house', el.dataset.id),
   'yard-ground': (el) => yardEdit(el.closest('.yard'), 'ground', el.dataset.id),
   'yard-edit-put': (el) => yardEdit(el.closest('.yard'), 'put'),

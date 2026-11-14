@@ -218,7 +218,9 @@ function yardSpot(id) {   // where a ware taken out of the box goes: the free sp
 const yardWaresHtml = () => yardPlaced().map((o) => YARD.el(o.id, o.p, yed.on && yed.sel === o.id)).join('');
 const yardSig = () => yardPlaced().map((o) => `${o.id}:${o.p.x},${o.p.y}`).join('|');
 // 擺設 in the yard (1.2.0), as in 書房: pick a ware, drag it or tap the lawn to move it, 收起 puts it in the yard's box
-const yed = { on: false, sel: null, drag: null };
+const yed = { on: false, sel: null, drag: null, tab: 'yard' };
+// a storage box's tabs (2026-11-14, the room's and the yard's): [key, name, how many it holds], the one open, its action
+const trayTabs = (tabs, open, act) => `<div class="tray-tabs" role="tablist">${tabs.map(([k, name, n]) => `<button type="button" class="tray-tab" role="tab" data-act="${act}" data-tab="${k}" aria-selected="${k === open}">${name}${n ? `<b>${n}</b>` : ''}</button>`).join('')}</div>`;
 function yeditHtml() {
   const box = WARES.filter((it) => it.kind === 'yard' && owns(it.id) && !(state.placed[it.id] && state.placed[it.id].w === 'Y'));
   // the houses (test, 2026-11-09): once one is bought, the cottage and each house bought sit at the front of the box; a tap puts it up
@@ -228,8 +230,15 @@ function yeditHtml() {
   const grounds = WARES.some((it) => it.kind === 'ground' && owns(it.id)) ? [{ id: '', name: '草地' }].concat(WARES.filter((it) => it.kind === 'ground' && owns(it.id))) : [];
   const groundIt = (g) => `<button type="button" class="tray-it tray-house" data-act="yard-ground" data-id="${g.id}" aria-pressed="${(g.id || 'grass') === yardGround()}">${groundThumb(g.id || 'grass')}<span>${esc(g.name)}</span></button>`;
   const houseIt = (h) => `<button type="button" class="tray-it tray-house" data-act="yard-house" data-id="${h.id}" aria-pressed="${h.id === now}"><svg class="house-thumb" viewBox="0 0 140 130" aria-hidden="true">${HOUSE_ART[h.id || 'cottage']}</svg><span>${esc(h.name)}</span></button>`;
-  return `<div class="edit-top"><span class="edit-hint">${yed.sel ? '拖曳搬動，拖到上面收起來' : houses.length ? '點房子換外觀；其他東西拖出來擺' : '拖曳搬動；收納箱的東西拖出來擺'}</span><button type="button" class="btn btn-primary btn-sm" data-act="yard-edit-done">完成</button></div>
-    <div class="edit-tray" aria-label="院子的收納箱">${houses.map(houseIt).join('')}${grounds.map(groundIt).join('')}${box.length ? stacks(box).map(({ it, n, name }) => `<button type="button" class="tray-it" data-act="yard-edit-take" data-id="${it.id}">${YARD.thumb(it.id)}<span>${esc(name)}</span>${n > 1 ? `<b class="tray-n">×${n}</b>` : ''}</button>`).join('') : houses.length ? '' : '<div class="tray-empty">收納箱是空的。古道具屋的「戶外」有望遠鏡、石燈籠……</div>'}</div>`;
+  // in tabs (2026-11-14, the user: not everything at once): 擺設, and 房子／地面 once one is bought
+  const tabs = [['yard', '擺設', stacks(box).length]].concat(houses.length ? [['house', '房子', houses.length]] : [], grounds.length ? [['ground', '地面', grounds.length]] : []);
+  if (!tabs.some(([k]) => k === yed.tab)) yed.tab = 'yard';
+  const row = yed.tab === 'house' ? houses.map(houseIt).join('') : yed.tab === 'ground' ? grounds.map(groundIt).join('')
+    : box.length ? stacks(box).map(({ it, n, name }) => `<button type="button" class="tray-it" data-act="yard-edit-take" data-id="${it.id}">${YARD.thumb(it.id)}<span>${esc(name)}</span>${n > 1 ? `<b class="tray-n">×${n}</b>` : ''}</button>`).join('')
+    : `<div class="tray-empty">${tabs.length > 1 ? '「擺設」沒有收著的東西。' : '收納箱是空的。古道具屋的「戶外」有望遠鏡、石燈籠……'}</div>`;
+  const hint = yed.sel ? '拖曳搬動，拖到上面收起來' : yed.tab === 'house' ? '點房子換外觀' : yed.tab === 'ground' ? '點一下換地面' : '拖曳搬動；收納箱的東西拖出來擺';
+  return `<div class="edit-top"><span class="edit-hint">${hint}</span><button type="button" class="btn btn-primary btn-sm" data-act="yard-edit-done">完成</button></div>
+    <div class="edit-tray" aria-label="院子的收納箱">${tabs.length > 1 ? trayTabs(tabs, yed.tab, 'yard-tray-tab') : ''}<div class="tray-row">${row}</div></div>`;
 }
 function yselHtml() {   // the picked ware's tools, over it in the world
   const o = yed.sel && yardPlaced().find((q) => q.id === yed.sel), a = o && YARD.ART[o.id];
@@ -247,11 +256,12 @@ function yardEdit(yard, cmd, id) {
   if (cmd === 'on') { yed.on = true; yed.sel = null; }
   else if (cmd === 'done') { yed.on = false; yed.sel = null; }
   else if (cmd === 'pick') yed.sel = id;
+  else if (cmd === 'tray') yed.tab = id;   // a tab of the box
   else if (cmd === 'take') {
     const p = yardSpot(id);
     if (!p) { toast('院子放不下了，先收起別的東西再試試'); return; }
     state.placed[id] = Object.assign({ w: 'Y' }, p); yed.sel = id; saveState(); SND.play('place');
-  } else if (cmd === 'put' && yed.sel) { delete state.placed[yed.sel]; yed.sel = null; saveState(); }
+  } else if (cmd === 'put' && yed.sel) { delete state.placed[yed.sel]; yed.sel = null; yed.tab = 'yard'; saveState(); }   // the box open where it went
   else if (cmd === 'ground') {   // the yard's ground (id '' the grass): the yard drawn anew in it (2026-11-14)
     if (id && !(WARE.has(id) && owns(id) && WARE.get(id).kind === 'ground')) return;
     state.ground = id; saveState(); ['grass'].concat(WARES.filter((it) => it.kind === 'ground').map((it) => it.id)).forEach((g) => yard.classList.toggle('ground-' + g, g === yardGround()));
@@ -327,7 +337,7 @@ function yEdgePan(yard) {   // a ware held near a side of the screen: the camera
 function yardDragEnd(yard) {
   const d = yed.drag; yed.drag = null; cancelAnimationFrame(yEdgeT); if (!d || !d.moved) return;
   yard.classList.remove('dragging'); yard._noClick = true; setTimeout(() => { yard._noClick = false; }, 0);   // the click that ends a drag is no tap
-  if (d.box) { if (!d.fromBox) { delete state.placed[d.id]; if (yed.sel === d.id) yed.sel = null; saveState(); } }
+  if (d.box) { if (!d.fromBox) { delete state.placed[d.id]; if (yed.sel === d.id) yed.sel = null; yed.tab = 'yard'; saveState(); } }
   else if (d.to) { state.placed[d.id] = d.to; yed.sel = d.id; saveState(); SND.play('place'); }
   else if (d.fromBox) toast('這裡放不下');
   yardDraw(yard);

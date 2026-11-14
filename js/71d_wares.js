@@ -46,9 +46,6 @@ const WARES = [
   { id: 'gingerhouse', kind: 'house', name: '薑餅屋', price: 2000, desc: '餅乾牆、巧克力屋頂，屋簷滴著糖霜，屋頂黏著軟糖，門邊插一根拐杖糖。' },
   { id: 'stumphouse', kind: 'house', name: '樹墩屋', price: 2000, desc: '老樹墩挖成的家，頂上有年輪和一株小芽，青苔、樹根，門口長了一朵小蘑菇。' },
   { id: 'teapothouse', kind: 'house', name: '茶壺屋', price: 2000, desc: '圓滾滾的水藍色茶壺，壺蓋上開一扇小窗，壺嘴、把手都在，身上畫著小花。' },
-  // the yard's ground (2026-11-14, the user: a category of its own to change the lawn): bought, the yard's grass becomes it at once;
-  // its card puts it on or back to the grass (state.ground)
-  { id: 'snowfield', kind: 'ground', name: '雪地', price: 2000, desc: '院子整片蓋上白白的雪：小路踩出一條雪痕，草叢和兩邊的山坡都變白。買了院子就換成它，也可以換回草地。' },
   { id: 'beanie', kind: 'wear', slot: 'head', name: '毛帽', price: 30, desc: '軟軟的毛線帽。' },
   { id: 'strawhat', kind: 'wear', slot: 'head', name: '草帽', price: 42, desc: '夏天出門戴的草帽。' },
   { id: 'catears', kind: 'wear', slot: 'head', name: '貓耳髮箍', price: 48, desc: '戴上就變成貓。' },
@@ -166,6 +163,9 @@ const WARES = [
   { id: 'lightdeer', kind: 'yard', limited: 'christmas', name: '燈飾麋鹿', price: 60, ground: [96, 14], desc: '金色燈泡串成的麋鹿，晚上一閃一閃的。' },
   { id: 'kamakura', kind: 'house', limited: 'christmas', name: '雪屋', price: 2000, desc: '雪堆成的圓圓かまくら，門口掛著草繩，晚上裡面點著燭光，暖暖的。' },
   { id: 'logcabin', kind: 'house', limited: 'christmas', name: '雪中小木屋', price: 2000, desc: '圓木搭的小屋，屋頂積著厚厚的雪，屋簷一圈彩色燈泡，門上掛著花圈，煙囪冒著煙。' },
+  // the yard's ground (2026-11-14, the user: a category of its own to change the lawn — 雪地 first, then Christmas's only): bought,
+  // the yard's grass becomes it at once; its card and the yard's box put it on or back to the grass (state.ground)
+  { id: 'snowfield', kind: 'ground', limited: 'christmas', name: '雪地', price: 2000, desc: '院子整片蓋上白白的雪：小路踩出一條雪痕，草叢和兩邊的山坡都變白。買了院子就換成它，也可以換回草地。' },
   { id: 'jingle', kind: 'record', limited: 'christmas', name: '唱片〈ジングルベル〉', price: 66, desc: '雪橇的鈴聲和音樂盒，叮叮噹噹的聖誕夜。' }
 ];
 const WARE = new Map(WARES.map((w) => [w.id, w]));

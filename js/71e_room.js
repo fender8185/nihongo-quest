@@ -999,10 +999,14 @@ const ROOM = (() => {
     const [x, y] = r ? P(...wallPt(o.p, o.p.u, under ? r[1] : r[3])) : [(b[0] + b[2]) / 2, b[1]];
     return `<div class="edit-sel${under ? ' under' : ''}" style="${vbPct(x, y)}">${o.it.kind !== 'wall' && o.it.turn !== false ? '<button type="button" data-act="room-edit-turn">轉向</button>' : ''}${o.it.fixed ? '<span class="sel-note">只能搬，不能收</span>' : '<button type="button" data-act="room-edit-put">收起</button>'}</div>`;
   }
+  // the storage box in tabs (2026-11-14, the user: not everything at once): 家具, 地墊, 牆上, each with how many it holds
+  const TRAY_TABS = [['floor', '家具'], ['rug', '地墊'], ['wall', '牆上']];
   function editHtml() {   // the 擺設 bar and the storage box (shown by .study.edit)
-    const box = stacks(WARES.filter((it) => forRoom(it) && !it.fixed && owns(it.id) && !state.placed[it.id]));
+    const all = WARES.filter((it) => forRoom(it) && !it.fixed && owns(it.id) && !state.placed[it.id]), of = (k) => all.filter((it) => it.kind === k);
+    if (!ed.tab || !TRAY_TABS.some(([k]) => k === ed.tab)) ed.tab = (TRAY_TABS.find(([k]) => of(k).length) || TRAY_TABS[0])[0];
+    const box = stacks(of(ed.tab)), name = TRAY_TABS.find(([k]) => k === ed.tab)[1];
     return `<div class="edit-top"><span class="edit-hint">${ed.sel ? '拖曳搬動，拖到下面收起來' : '拖曳搬動；收納箱的東西拖出來擺'}</span><button type="button" class="btn btn-primary btn-sm" data-act="room-edit-done">完成</button></div>
-      <div class="edit-tray" aria-label="收納箱">${box.length ? box.map(({ it, n, name }) => `<button type="button" class="tray-it" data-act="room-edit-take" data-id="${it.id}">${DECOR.thumb(it.id)}<span>${esc(name)}</span>${n > 1 ? `<b class="tray-n">×${n}</b>` : ''}</button>`).join('') : '<div class="tray-empty">收納箱是空的。到古道具屋買東西，或把書房裡的東西拖到這裡收起來。</div>'}</div>`;
+      <div class="edit-tray" aria-label="收納箱">${all.length ? trayTabs(TRAY_TABS.map(([k, n]) => [k, n, stacks(of(k)).length]), ed.tab, 'room-tray-tab') : ''}<div class="tray-row">${box.length ? box.map(({ it, n, name: nm }) => `<button type="button" class="tray-it" data-act="room-edit-take" data-id="${it.id}">${DECOR.thumb(it.id)}<span>${esc(nm)}</span>${n > 1 ? `<b class="tray-n">×${n}</b>` : ''}</button>`).join('') : `<div class="tray-empty">${all.length ? `「${name}」沒有收著的東西。` : '收納箱是空的。到古道具屋買東西，或把書房裡的東西拖到這裡收起來。'}</div>`}</div></div>`;
   }
   // a free spot for a ware taken out of the box: in view, nearest the middle (a wall ware) or the lower middle (a floor one)
   // a neighbour's present (NPC): where it belongs (home) when there is room, else somewhere in sight in that room, else the box
@@ -1062,6 +1066,7 @@ const ROOM = (() => {
     const o = ed.sel && placedWares().find((q) => q.id === ed.sel);
     if (cmd === 'on') { ed.on = true; ed.sel = null; }
     else if (cmd === 'done') { ed.on = false; ed.sel = null; }
+    else if (cmd === 'tray') ed.tab = id;   // a tab of the storage box
     else if (cmd === 'take') {
       const it = WARE.get(id), p = it && freeSpot(it);
       if (!p) { toast('這附近放不下了，換個地方再試試'); return; }
@@ -1073,7 +1078,7 @@ const ROOM = (() => {
       p.x = q2r(p.x - Math.min(0, f[0]) - Math.max(0, f[2] - RW)); p.y = q2r(p.y - Math.min(0, f[1]) - Math.max(0, f[3] - RD));
       if (!fits(o.it, p)) { toast('旁邊太擠了，轉不過來'); return; }
       state.placed[o.id] = p; saveState();
-    } else if (cmd === 'put' && o && !o.it.fixed) { delete state.placed[o.id]; ed.sel = null; saveState(); }
+    } else if (cmd === 'put' && o && !o.it.fixed) { delete state.placed[o.id]; ed.sel = null; ed.tab = o.it.kind; saveState(); }   // the box open on its tab, where it went
     redraw(st);
   }
   // ===== the hero: stands in the room in a box of its own over the drawing (walking never repaints the room), walks round the
@@ -1687,7 +1692,7 @@ const ROOM = (() => {
       swallow = true;
       if (d.box) {
         if (d.o.it.fixed) toast('只能搬，不能收');
-        else if (!d.fromBox) { delete state.placed[d.o.id]; if (ed.sel === d.o.id) ed.sel = null; saveState(); }
+        else if (!d.fromBox) { delete state.placed[d.o.id]; if (ed.sel === d.o.id) ed.sel = null; ed.tab = d.o.it.kind; saveState(); }
       } else if (d.to) { state.placed[d.o.id] = d.to; ed.sel = d.o.id; saveState(); SND.play('place'); }
       else if (d.fromBox) toast('那裡放不下');
       redraw(st);

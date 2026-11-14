@@ -956,13 +956,19 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .edit-sel button { padding: 7px 12px; border: 0; border-radius: 99px; font: inherit; font-size: 13px; font-weight: 600; color: #fff; background: rgba(20, 22, 44, .86); box-shadow: 0 4px 12px rgba(0, 0, 0, .25); cursor: pointer; }
 .edit-top { position: absolute; z-index: 3; top: calc(10px + env(safe-area-inset-top, 0px)); left: 12px; right: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .edit-hint { padding: 7px 11px; border-radius: 99px; font-size: 12.5px; color: #fff; background: rgba(20, 22, 44, .78); }
-.edit-tray { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; display: flex; gap: 8px; overflow-x: auto; padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); background: rgba(20, 22, 44, .82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.edit-tray { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; padding: 8px 12px calc(10px + env(safe-area-inset-bottom, 0px)); background: rgba(20, 22, 44, .82); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .tray-it { flex: none; width: 74px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 0; border-radius: 10px; font: inherit; font-size: 11.5px; color: #fff; background: rgba(255, 255, 255, .1); cursor: pointer; --day: 1; --f: 1; --lit: 1; }
 .tray-it svg { width: 50px; height: 50px; overflow: visible; }
 .tray-it { position: relative; } .tray-it .tray-n { position: absolute; right: 5px; top: 4px; min-width: 22px; padding: 1px 5px; border-radius: 10px; font-size: 11px; font-weight: 700; line-height: 1.5; color: #3b3428; background: #ffd27a; }   /* a pile: how many */
 .tray-house[aria-pressed="true"] { background: rgba(255, 255, 255, .26); box-shadow: inset 0 0 0 2px #ffd27a; }   /* the house up now */
 .tray-empty { padding: 10px 4px; font-size: 13px; color: rgba(255, 255, 255, .85); }
-.edit-tray { touch-action: pan-x; transition: background-color .15s, box-shadow .15s; }   /* sideways the box scrolls; up and down a ware is pulled out (1.2.0) */
+.edit-tray { touch-action: pan-x; transition: background-color .15s, box-shadow .15s; }
+.edit-tray .tray-row { display: flex; gap: 8px; overflow-x: auto; touch-action: pan-x; }
+/* the storage box's tabs (2026-11-14, the user: not everything at once): small chips over its row, each with how many it holds */
+.tray-tabs { display: flex; gap: 6px; margin-bottom: 7px; }
+.tray-tab { display: inline-flex; align-items: center; gap: 5px; padding: 3px 11px; border: 0; border-radius: 99px; font: inherit; font-size: 12px; color: rgba(255, 255, 255, .82); background: rgba(255, 255, 255, .12); cursor: pointer; }
+.tray-tab b { min-width: 16px; padding: 0 4px; border-radius: 8px; font-size: 10.5px; line-height: 1.5; text-align: center; color: inherit; background: rgba(255, 255, 255, .16); }
+.tray-tab[aria-selected="true"] { color: #2a2c44; font-weight: 700; background: rgba(255, 255, 255, .94); } .tray-tab[aria-selected="true"] b { background: rgba(42, 44, 68, .12); }   /* sideways the box scrolls; up and down a ware is pulled out (1.2.0) */
 .edit-tray.drop { background: rgba(70, 86, 210, .9); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .85); }   /* a ware held over it goes in */
 .edit-tray.no-drop { box-shadow: inset 0 0 0 2px #e0524b; }
 .study-gear { width: 40px; height: 40px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 12px; cursor: pointer;
