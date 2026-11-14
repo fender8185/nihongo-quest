@@ -25,7 +25,7 @@ function fukuSvg() {
 }
 // the shop's tabs (1.2.0): for 書房, for the yard, to wear, and what is sold for a while only. The last one used comes back.
 // 穿搭's sections are the hero's seven parts, as the wardrobe's tabs (WEAR_SLOTS; 2026-11-12, the user), the others by kind
-const SHOP_TABS = [['in', '室內', [['floor', '家具擺飾'], ['rug', '地墊'], ['wall', '牆上'], ['record', '唱片']]], ['out', '戶外', [['yard', '戶外擺設'], ['house', '房子外觀']]], ['wear', '穿搭', WEAR_SLOTS], ['sale', '限時']];
+const SHOP_TABS = [['in', '室內', [['floor', '家具擺飾'], ['rug', '地墊'], ['wall', '牆上'], ['record', '唱片']]], ['out', '戶外', [['yard', '戶外擺設'], ['house', '房子外觀'], ['ground', '地面']]], ['wear', '穿搭', WEAR_SLOTS], ['sale', '限時']];
 const inSec = (it, k) => (it.kind === 'wear' || it.kind === 'clothes' ? it.slot === k : it.kind === k);   // a ware under a section: by part, or by kind
 let shopTab = (() => { try { const t = localStorage.getItem('nq_shop_tab'); return SHOP_TABS.some(([k]) => k === t) ? t : 'in'; } catch (e) { return 'in'; } })();
 let shopFocus = '';   // a part's section to open 古道具屋 at (from the wardrobe's 去看看), once
@@ -62,7 +62,7 @@ function saleClock() {
 }
 const saleNow = () => (saleDay.day && Date.now() - saleDay.at < 600000 ? saleDay.day : null);
 // a ware's picture on its card and when it is got (GOT): clothes in the hero's own colours
-const wareArt = (it) => (it.kind === 'wear' ? HERO.thumb(it.id, state.look) : it.kind === 'clothes' ? HERO.clothes(it.id, HERO.norm(state.look)) : it.kind === 'yard' ? YARD.thumb(it.id) : it.kind === 'house' ? `<svg class="house-thumb" viewBox="0 0 140 130" aria-hidden="true">${HOUSE_ART[it.id]}</svg>` : it.kind === 'record' ? MUSIC.sleeve(MUSIC.RECORDS.find((r) => r.id === it.id)) : DECOR.thumb(it.id));
+const wareArt = (it) => (it.kind === 'wear' ? HERO.thumb(it.id, state.look) : it.kind === 'clothes' ? HERO.clothes(it.id, HERO.norm(state.look)) : it.kind === 'yard' ? YARD.thumb(it.id) : it.kind === 'house' ? `<svg class="house-thumb" viewBox="0 0 140 130" aria-hidden="true">${HOUSE_ART[it.id]}</svg>` : it.kind === 'ground' ? groundThumb(it.id) : it.kind === 'record' ? MUSIC.sleeve(MUSIC.RECORDS.find((r) => r.id === it.id)) : DECOR.thumb(it.id));
 // something new got (test, 2026-11-09: the user wanted a close-up and effects): the screen dims, the thing comes up big in the
 // middle on a turning burst of light with sparkles, 「獲得」 and its name and where it went; a tap (or 3.2 s) and it is gone
 function gotItem(id, where, then) {
@@ -84,6 +84,9 @@ function saleCheck(it, go) {
   saleClock().then((day) => { if (saleOn(it.limited, day)) go(); else { toast(day ? '這個限時商品已經下架了' : '限時商品要連上網路才買得到'); route(); } });
 }
 const mdText = (md) => md.split('-').map(Number).join('/');
+// a festival's wares under 限時, grouped (2026-11-14, the user): what is worn by part (head first), then the rooms', the yard's,
+// the houses, the records
+const SALE_KINDS = [['穿搭', (it) => it.kind === 'wear' || it.kind === 'clothes'], ['室內擺設', (it) => ['floor', 'rug', 'wall'].includes(it.kind)], ['戶外擺設', (it) => it.kind === 'yard'], ['房子外觀', (it) => it.kind === 'house'], ['地面', (it) => it.kind === 'ground'], ['唱片', (it) => it.kind === 'record']];
 function saleHtml(day, live, grid) {   // 限時: the sales on now with their wares, or when the next one is
   if (!live.length) {
     if (!day) return `<p class="shop-note">${saleDay.failed ? '限時商品要連上網路才看得到。' : '查看中…'}</p>`;
@@ -93,7 +96,8 @@ function saleHtml(day, live, grid) {   // 限時: the sales on now with their wa
   return live.map((k) => {
     const x = SALES[k], sp = saleSpan(k, day || todayStr()), left = day ? Math.round((Date.parse(sp[1]) - Date.parse(day)) / 86400000) : null;
     const when = left === null || !saleOn(k, day) ? '測試預覽' : left > 0 ? `還有 ${left} 天` : '今天最後一天';
-    return `<section class="shop-sec"><h2 class="shop-h">${x.name}限定 · 賣到 ${mdText(sp[1].slice(5))}（${when}）</h2>${grid(WARES.filter((it) => it.limited === k))}</section>`;
+    const list = WARES.filter((it) => it.limited === k);   // by kind, as the other tabs (2026-11-14, the user: too many at once otherwise)
+    return `<section class="shop-sec"><h2 class="shop-h">${x.name}限定 · 賣到 ${mdText(sp[1].slice(5))}（${when}）</h2>${SALE_KINDS.map(([name, f]) => { const l = list.filter(f); return l.length ? `<h3 class="shop-h3">${name}</h3>${grid(l)}` : ''; }).join('')}</section>`;
   }).join('');
 }
 const styleKey = (it) => STYLE_OF[it.slot], styleOn = (it) => HERO.norm(state.look)[styleKey(it)] === it.id;
@@ -109,6 +113,7 @@ function shopCardHtml(it, bal) {
   if (owned && it.kind === 'wear') act = `<button type="button" class="btn btn-sm" data-act="ware-wear" data-id="${it.id}">${state.wear[it.slot] === it.id ? '脫下' : '穿上'}</button>`;
   else if (owned && it.kind === 'clothes') act = `<button type="button" class="btn btn-sm" data-act="clothes-wear" data-id="${it.id}">${styleOn(it) ? '脫下' : '換上'}</button>`;
   else if (owned && it.kind === 'house') act = `<button type="button" class="btn btn-sm" data-act="house-wear" data-id="${it.id}">${state.house === it.id ? '換回小屋' : '換上'}</button>`;
+  else if (owned && it.kind === 'ground') act = `<button type="button" class="btn btn-sm" data-act="ground-wear" data-id="${it.id}">${state.ground === it.id ? '換回草地' : '換上'}</button>`;
   else if (owned) act = `<span class="chip">${it.kind === 'record' ? '在留聲機' : state.placed[it.id] ? (it.kind === 'yard' ? '在院子' : '在書房') : '在收納箱'}</span>`;
   else if (short > 0) act = `<button type="button" class="btn btn-sm btn-muted" data-act="ware-short" aria-disabled="true">還差 ${short}</button>`;
   else act = `<button type="button" class="btn btn-sm btn-primary" data-act="ware-buy" data-id="${it.id}">買下</button>`;
@@ -285,8 +290,9 @@ const DRESS = (() => {
 function buyWare(it) {
   state.owned[it.id] = { paid: it.price, on: todayStr() }; SND.play('coins');
   if (it.kind === 'house') state.house = it.id;   // the yard's house becomes it at once
+  if (it.kind === 'ground') state.ground = it.id;   // and its ground (2026-11-14)
   saveState();
-  return it.kind === 'house' ? '，院子的房子換好了' : it.kind === 'record' ? '放在留聲機旁了，點書房的留聲機就能換上' : it.kind === 'wear' ? `收進衣櫃了，按書房右上角的衣櫃，在「${partName(it.slot)}」穿上` : it.kind === 'clothes' ? `收進衣櫃了，按書房右上角的衣櫃，在「${partName(it.slot)}」換上` : it.kind === 'yard' ? '收在院子的收納箱，到院子按「擺設」拿出來擺' : '收在收納箱，到書房按「擺設」拿出來擺';
+  return it.kind === 'house' ? '，院子的房子換好了' : it.kind === 'ground' ? '，院子的地面換好了' : it.kind === 'record' ? '放在留聲機旁了，點書房的留聲機就能換上' : it.kind === 'wear' ? `收進衣櫃了，按書房右上角的衣櫃，在「${partName(it.slot)}」穿上` : it.kind === 'clothes' ? `收進衣櫃了，按書房右上角的衣櫃，在「${partName(it.slot)}」換上` : it.kind === 'yard' ? '收在院子的收納箱，到院子按「擺設」拿出來擺' : '收在收納箱，到書房按「擺設」拿出來擺';
 }
 Object.assign(ACTIONS, {
   'room-edit': (el) => ROOM.edit(el, 'on'),
@@ -306,7 +312,7 @@ Object.assign(ACTIONS, {
     const it = WARE.get(el.dataset.id);
     if (!it || owns(it.id) || it.gift) return;
     if (kotoBalance() < it.price) { fukuSay('short'); return; }
-    saleCheck(it, () => openModal(`買下${it.name}？`, `<p>用 <b>${it.price}</b> 言靈買下「${esc(it.name)}」。${it.kind === 'wear' ? `買了之後按書房右上角的衣櫃，在「${partName(it.slot)}」穿上或脫下。` : it.kind === 'clothes' ? `買了之後按書房右上角的衣櫃，在「${partName(it.slot)}」換上，顏色照你配的。` : it.kind === 'house' ? '買了院子的房子馬上換成它；想換回原本的小屋，在這張卡片上切換。' : it.kind === 'yard' ? '買了會先收在院子的收納箱，到院子按「擺設」拿出來擺。' : it.kind === 'record' ? '買了之後點書房的留聲機就能換上這張唱片。' : '買了會先收在收納箱，到書房按「擺設」拿出來擺。'}</p>
+    saleCheck(it, () => openModal(`買下${it.name}？`, `<p>用 <b>${it.price}</b> 言靈買下「${esc(it.name)}」。${it.kind === 'wear' ? `買了之後按書房右上角的衣櫃，在「${partName(it.slot)}」穿上或脫下。` : it.kind === 'clothes' ? `買了之後按書房右上角的衣櫃，在「${partName(it.slot)}」換上，顏色照你配的。` : it.kind === 'house' ? '買了院子的房子馬上換成它；想換回原本的小屋，在這張卡片上切換。' : it.kind === 'ground' ? '買了院子的地面馬上換成它；想換回草地，在這張卡片或院子的擺設裡切換。' : it.kind === 'yard' ? '買了會先收在院子的收納箱，到院子按「擺設」拿出來擺。' : it.kind === 'record' ? '買了之後點書房的留聲機就能換上這張唱片。' : '買了會先收在收納箱，到書房按「擺設」拿出來擺。'}</p>
       <div class="row-wrap mt-3"><button type="button" class="btn btn-primary" data-act="ware-buy-ok" data-id="${it.id}">買下</button><button type="button" class="btn" data-act="close-modal">再想想</button></div>`, { width: 380 }));
   },
   'ware-buy-ok': (el) => {
@@ -325,6 +331,11 @@ Object.assign(ACTIONS, {
     const it = WARE.get(el.dataset.id);
     if (!it || !owns(it.id) || it.kind !== 'house') return;
     state.house = state.house === it.id ? '' : it.id; saveState(); route();
+  },
+  'ground-wear': (el) => {   // 古道具屋's card: the yard's ground in this one, or back to the grass (2026-11-14)
+    const it = WARE.get(el.dataset.id);
+    if (!it || !owns(it.id) || it.kind !== 'ground') return;
+    state.ground = state.ground === it.id ? '' : it.id; saveState(); route();
   },
   'clothes-wear': (el) => {   // 古道具屋's card: on, or back to everyone's 帽T／長褲／球鞋
     const it = WARE.get(el.dataset.id);
@@ -352,6 +363,7 @@ Object.assign(ACTIONS, {
   'yard-edit-done': (el) => yardEdit(el.closest('.yard'), 'done'),
   'yard-edit-take': (el) => yardEdit(el.closest('.yard'), 'take', el.dataset.id),
   'yard-house': (el) => yardEdit(el.closest('.yard'), 'house', el.dataset.id),
+  'yard-ground': (el) => yardEdit(el.closest('.yard'), 'ground', el.dataset.id),
   'yard-edit-put': (el) => yardEdit(el.closest('.yard'), 'put'),
   'yard-ware': (el) => { const y = el.closest('.yard'); if (y && y._noClick) return; if (yed.on) yardEdit(y, 'pick', el.dataset.ware); else yardUse(y, el.dataset.ware); },
   'koto-gift': (el) => { const n = Number(el && el.dataset.n) || 100; state.koto.gift = (Number(state.koto.gift) || 0) + n; saveState(); route(); toast(`測試用：多了 ${n} 言靈`); },

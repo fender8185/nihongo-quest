@@ -2145,7 +2145,7 @@ function yardHtml(pct, place = 'yard') {
   // a round clump of leaves (2026-11-11, the user: finer): the shade along its underside, the light on its upper left (crescents inside it)
   const under = ([x, y, r]) => `M${x - 0.97 * r} ${y + 0.25 * r} A${r} ${r} 0 0 0 ${x + 0.97 * r} ${y + 0.25 * r} A${0.97 * r} ${0.5 * r} 0 0 1 ${x - 0.97 * r} ${y + 0.25 * r} Z`;
   const lit = ([x, y, r]) => { const R = r * 0.92; return `M${(x - 0.8 * R).toFixed(1)} ${(y - 0.05 * R).toFixed(1)} A${(0.7 * R).toFixed(1)} ${(0.7 * R).toFixed(1)} 0 0 1 ${(x + 0.1 * R).toFixed(1)} ${(y - 0.84 * R).toFixed(1)} A${(1.3 * R).toFixed(1)} ${(1.3 * R).toFixed(1)} 0 0 0 ${(x - 0.8 * R).toFixed(1)} ${(y - 0.05 * R).toFixed(1)} Z`; };
-  return `<div class="yard${street ? ' away ' + place : ''}${INDOOR.includes(place) ? ' indoor' : ''}${pct >= 100 ? ' full' : ''}" data-anim data-place="${place}" style="--f:${f}">
+  return `<div class="yard${street ? ' away ' + place : ''}${INDOOR.includes(place) ? ' indoor' : ''}${pct >= 100 ? ' full' : ''}${street ? '' : ' ground-' + yardGround()}" data-anim data-place="${place}" style="--f:${f}">
     <div class="sky" aria-hidden="true">
       <i class="tint t-grey"></i><i class="tint t-blue"></i><i class="tint t-warm"></i>
       <i class="sun"></i>
@@ -2184,14 +2184,14 @@ function yardHtml(pct, place = 'yard') {
         </g>
         <path class="far" d="M190 154 C230 144 262 128 300 116 C340 106 390 98 440 106 S540 90 640 104 S860 124 960 108 C1000 100 1040 98 1080 104 V370 H190 Z"/>
         <g class="yard-market">
-          <path d="M940 160 C1010 128 1100 102 1220 92 V370 H940 Z" ${hc('#9dbb8e', '#141a36')}/>
+          <path d="M940 160 C1010 128 1100 102 1220 92 V370 H940 Z" ${hcx('lawn', '#9dbb8e', '#141a36')}/>
           ${[[1004, 146, 14], [1028, 138, 17], [1046, 147, 13], [1062, 128, 15], [1080, 140, 18], [1098, 121, 14], [1104, 134, 16], [1122, 147, 13], [1132, 115, 17], [1146, 128, 14], [1160, 109, 15], [1168, 140, 16], [1182, 120, 14], [1196, 104, 17], [1200, 133, 13], [1150, 152, 15]].sort((p, q) => p[1] - q[1]).map(([x, g, w], k) => { const h = Math.round(w * 0.7); return `<rect x="${x - w / 2}" y="${g - h}" width="${w}" height="${h}" ${hc(k % 3 ? '#efe4d2' : '#e6dccb', '#1e2042')}/><rect x="${x - w / 2}" y="${g - h}" width="${w}" height="1.8" fill="#2b1c12" fill-opacity=".16"/><rect x="${x + w / 2 - 5.2}" y="${g - h * 0.55}" width="3" height="${(h * 0.55).toFixed(1)}" ${hc('#8a6a52', '#15163a')}/>${k % 4 === 1 ? '' : `<rect x="${x - w / 2 + 2.4}" y="${g - h + 3.4}" width="3.4" height="2.8" ${hc('#c9dbe4', '#262a52')}/>`}<path d="M${x - w / 2 - 2} ${g - h + 1} L${x} ${g - h - w * 0.4} L${x + w / 2 + 2} ${g - h + 1} Z" ${hc(['#8a5a44', '#5f6f8a', '#6f5a7a', '#8a2f2a'][(k * 3) % 4], '#15163a')}/><path d="M${x} ${g - h - w * 0.4} L${x + w / 2 + 2} ${g - h + 1} H${x} Z" fill="#2b1c12" fill-opacity=".15"/>${k % 4 === 1 ? `<rect class="lit" x="${x - 3}" y="${g - h + 3}" width="5" height="4"/>` : ''}`; }).join('')}
           <path d="M1060 112 Q1110 100 1170 92" fill="none" ${hs('#6a6a74', '#2a2c50')} stroke-width=".8"/>${[1072, 1094, 1116, 1138, 1160].map((x, k) => `<path d="M${x} ${108 - k * 3} l3 0 l-1.5 3 Z" fill="${['#d0574b', '#e6c23a', '#3f7ac8'][k % 3]}"/>`).join('')}
         </g>
-        <path d="M-20 158 C60 156 150 154 230 164 C270 170 300 186 318 214 V370 H-20 Z" ${hc('#a6bd96', '#161c38')}/>
-        <path d="M1220 120 C1150 124 1060 140 990 162 C950 176 920 196 900 222 V370 H1220 Z" ${hc('#a6bd96', '#161c38')}/>
-        <path d="M74 214 L40 202 L118 190 L64 178 L150 168 L120 158" fill="none" ${hs('#e3cf9e', '#3a3858')} stroke-width="3.4" stroke-linejoin="round"/>
-        <path d="M1128 216 L1166 200 L1084 188 L1146 174 L1066 164 L1100 152" fill="none" ${hs('#cfc8b8', '#3a3858')} stroke-width="3.4" stroke-linejoin="round"/>
+        <path d="M-20 158 C60 156 150 154 230 164 C270 170 300 186 318 214 V370 H-20 Z" ${hcx('lawn', '#a6bd96', '#161c38')}/>
+        <path d="M1220 120 C1150 124 1060 140 990 162 C950 176 920 196 900 222 V370 H1220 Z" ${hcx('lawn', '#a6bd96', '#161c38')}/>
+        <path d="M74 214 L40 202 L118 190 L64 178 L150 168 L120 158" fill="none" ${hsx('trail', '#e3cf9e', '#3a3858')} stroke-width="3.4" stroke-linejoin="round"/>
+        <path d="M1128 216 L1166 200 L1084 188 L1146 174 L1066 164 L1100 152" fill="none" ${hsx('trail', '#cfc8b8', '#3a3858')} stroke-width="3.4" stroke-linejoin="round"/>
         <path class="near" d="${ground} V370 H0 Z"/><path class="ridge" d="${ground}"/>
         <path class="lane" d="${stripD(LANE, 24)}"/>${lightPool(600, 156, 70, 14)}
         ${[[240, 250, 1], [330, 300, 1.3], [420, 214, .9], [470, 340, 1.4], [520, 262, 1], [690, 236, 1], [740, 318, 1.3], [800, 200, .8], [880, 280, 1.2], [960, 236, 1], [1020, 330, 1.4], [300, 196, .8], [1080, 268, 1.1], [150, 300, 1.3]].map(([x, y, k], i) => `<path d="M${x - 6 * k} ${y} q${2 * k} ${-8 * k} ${1 * k} ${-14 * k} q${3 * k} ${6 * k} ${4 * k} ${12 * k} q${2 * k} ${-9 * k} ${6 * k} ${-12 * k} q${-1 * k} ${8 * k} ${1 * k} ${14 * k} Z" ${hcx('fx-tuft', '#6e9a5c', '#0e1630', `animation-delay:-${(i * 0.7) % 3}s`)}/>`).join('')}

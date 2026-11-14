@@ -2327,25 +2327,6 @@ const DECOR = (() => {
       return s;
     },
     // ---- Christmas (2026-11-14, the user) ----
-    // 聖誕樹: a little fir in a red tub with a gold band, four tiers with scalloped hems lit on the left and shaded on the right, a
-    // string of lights looping round it (glass by day, glowing by night), baubles, a gold star on top (its halo by night)
-    xmastree: (x, y, r) => {
-      const L = lit(x, y), G = '#3f7a3a';
-      const tier = (b, t, w) => `<path ${L(G, (-b + 20) / 40)} d="M${-w} ${b} Q${q2(-w * 0.62)} ${b + 4} ${q2(-w * 0.45)} ${b} Q${q2(-w * 0.22)} ${b + 4} 0 ${b} Q${q2(w * 0.22)} ${b + 4} ${q2(w * 0.45)} ${b} Q${q2(w * 0.62)} ${b + 4} ${w} ${b} L3 ${t} H-3 Z"/><path d="M${q2(w * 0.12)} ${t + 2} L${q2(w * 0.86)} ${b - 1} Q${q2(w * 0.62)} ${b + 3.4} ${q2(w * 0.45)} ${b} Q${q2(w * 0.3)} ${b + 3} ${q2(w * 0.15)} ${b + 1} Z" fill="#2b1c12" fill-opacity=".13"/><path d="M${q2(-w * 0.3)} ${b - 3} L-2 ${t + 4}" stroke="#fff" stroke-opacity=".14" stroke-width="1.4" stroke-linecap="round"/>`;
-      const bulb = (bx, by, c) => `<circle cx="${bx}" cy="${by}" r="5" fill="url(#halo)" class="night-only" style="opacity:calc(.5 + .5 * var(--f))"/><circle cx="${bx}" cy="${by}" r="1.8" style="fill:color-mix(in srgb,${c} calc(var(--day)*60%),#fff7d6)"/>`;
-      const ball = (bx, by, c, rr = 3) => `<circle cx="${bx}" cy="${by}" r="${rr}" ${L(c, (-by) / 40)}/><circle cx="${q2(bx - rr * 0.35)}" cy="${q2(by - rr * 0.35)}" r="${q2(rr * 0.32)}" fill="#fff" fill-opacity=".6"/>`;
-      const lights = [[-22, -24, '#ffd36a'], [-8, -27, '#ff7a6a'], [8, -30, '#8fd0ff'], [21, -34, '#ffd36a'], [-17, -56, '#8fd0ff'], [-3, -59, '#ffd36a'], [11, -62, '#ff7a6a'], [-12, -86, '#ff7a6a'], [1, -89, '#8fd0ff'], [10, -93, '#ffd36a'], [-6, -114, '#ffd36a'], [4, -117, '#ff7a6a']];
-      let s = shadow(x - 0.62, y - 0.62, x + 0.74, y + 0.74, 0.75);
-      s += `<g class="night-only" style="opacity:calc((.5 + .5 * var(--f)) * (1 - .7 * var(--day)))"><g transform="${onZ(0.01)}"><ellipse cx="${x}" cy="${y}" rx="1.3" ry="1.3" fill="url(#pool)"/></g></g>`;
-      s += upright(x, y, 0, r, `<ellipse rx="16" ry="5" fill="#2b1c12" fill-opacity=".16"/><path ${L('#c8453d', 0.2)} d="M-11 0 L-13 -15 H13 L11 0 Z"/><path d="M5 -15 H13 L11 0 H5.6 Z" fill="#2b1c12" fill-opacity=".14"/><rect x="-13.4" y="-11" width="26.8" height="3.4" ${L('#e6c25a', 0.25)}/><rect x="-14" y="-17" width="28" height="3" rx="1" ${L('#a8352e', 0.4)}/>
-        <rect x="-2.6" y="-22" width="5.2" height="6" ${L('#6e4a33', 0.5)}/>
-        ${tier(-18, -64, 30)}${tier(-50, -96, 25)}${tier(-82, -122, 19)}${tier(-110, -142, 12)}
-        <path d="M-24 -23 Q0 -32 24 -36 M-19 -55 Q-2 -61 15 -64 M-14 -85 Q0 -90 12 -95 M-8 -113 Q0 -117 6 -119" fill="none" stroke="#2b2420" stroke-opacity=".45" stroke-width=".6"/>
-        ${lights.map(([bx, by, c]) => bulb(bx, by, c)).join('')}
-        ${ball(-14, -30, '#d0453c')}${ball(14, -42, '#e6c25a')}${ball(-2, -40, '#5a7fc8', 2.6)}${ball(-10, -64, '#e6c25a', 2.8)}${ball(10, -74, '#d0453c', 2.8)}${ball(-6, -98, '#5a7fc8', 2.4)}${ball(7, -104, '#d0453c', 2.4)}${ball(-2, -126, '#e6c25a', 2.2)}
-        <circle cx="0" cy="-147" r="11" fill="url(#halo)" class="night-only" style="opacity:calc(.6 + .4 * var(--f))"/><path d="M0 -156 L2.6 -150 L9 -149.6 L4 -145.4 L5.6 -139 L0 -142.6 L-5.6 -139 L-4 -145.4 L-9 -149.6 L-2.6 -150 Z" style="fill:color-mix(in srgb,#e6c25a calc(var(--day)*100%),#ffe680)"/><path d="M0 -156 L2.6 -150 L0 -147 Z M-9 -149.6 L-2.6 -150 L0 -147 Z" fill="#fff" fill-opacity=".35"/>`);
-      return s;
-    },
     // 禮物堆: four presents (in the room, seen at its angle): a big red one with a gold ribbon round it, a green one on top of it, a
     // blue one and a small gold one in front, a bow on each; turned, the pile the other way round
     giftpile: (x, y, r) => {

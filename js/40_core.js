@@ -388,11 +388,14 @@ function normalizeState(s) {
   if (typeof out.resetAt !== 'string') out.resetAt = '';   // 1.9.1: when 重設所有進度 was last pressed (the cloud's guard lets that one shrink through)
   ['owned', 'placed', 'wear', 'look', 'lampsOff', 'met'].forEach(k => { if (!out[k] || typeof out[k] !== 'object' || Array.isArray(out[k])) out[k] = {}; });   // look: how the hero looks (HERO.norm fills the rest)
   if (typeof out.house !== 'string') out.house = '';
+  if (typeof out.ground !== 'string') out.ground = '';   // the yard's ground: '' the grass, or a ground ware's id (2026-11-14)
   if (typeof out.record !== 'string') out.record = ''; out.musicOff = out.musicOff === true; out.storyV = Number(out.storyV) || (out.storySeen === true ? 1 : 0); delete out.storySeen; out.storyAt = Number(out.storyAt) || 0;   // the four-page opening was 1   // an id this build does not know is kept: the cottage is drawn meanwhile
   // 1.2.0: 羽織 and 地球儀 are gone and their purchases with them, and 書房's umbrella (the user's calls; the only ids not
   // kept: what was paid comes back). Every time: sync merges owned as a union
   delete out.owned.haori; if (out.wear.body === 'haori') delete out.wear.body;
   delete out.owned.globe; delete out.placed.globe; delete out.placed.umbrella;
+  // test (2026-11-14): the room's Christmas tree went out to the yard (the user) — one bought on the test site is the yard's
+  if (out.owned.xmastree) { if (!out.owned.bigtree) out.owned.bigtree = out.owned.xmastree; delete out.owned.xmastree; } delete out.placed.xmastree;
   // 1.2.0: 書房's own furniture and pictures became wares (moved, put away): laid out where they always stood, once
   if ((out.roomV || 0) < 2) { WARES.filter(w => w.starter).forEach(w => { if (!out.placed[w.id]) out.placed[w.id] = Object.assign({}, w.at); }); out.roomV = 2; }
   // 1.2.0 (roomV 3): the string of lights became four strings, hung where it ran; the desk and the window moved right

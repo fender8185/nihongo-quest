@@ -79,7 +79,7 @@ const YARD = (() => {
       <g class="lily l2"><path d="M-70 -14 a8 3.6 0 1 0 1.4 -1 L-76 -14 Z" fill="#6aa653"/><path d="M-62.6 -12.6 H-55.8 M-62.6 -12.6 L-59.2 -9.95 M-62.6 -12.6 L-66 -9.95 M-62.6 -12.6 L-66 -15.25 M-62.6 -12.6 L-59.2 -15.25" stroke="#4f8a3e" stroke-width=".55"/></g>` },
     // ---- Christmas (2026-11-14, the user) ---- lights: bulbs over the drawing that the night does not dim (lit by night, glass by
     // day), switched off with the glow
-    // 大聖誕樹: a tall fir on a little trunk, four tiers with snow along their hems, a string of lights round and round it, baubles,
+    // 聖誕樹 (the room's tree came out here, 2026-11-14, the user): a tall fir on a little trunk, four tiers with snow along their hems, a string of lights round and round it, baubles,
     // a gold star on top
     bigtree: { box: [-68, -262, 136, 268], glow: [0, -130, 120], draw: () => {
       const tier = (b, t, w, n) => `<path fill="#3f7a3a" d="M${-w} ${b} ${Array.from({ length: n }, (_, i) => `Q${q1(-w + (2 * i + 1) * w / n)} ${b + 7} ${q1(-w + (2 * i + 2) * w / n)} ${b}`).join(' ')} L5 ${t} H-5 Z"/><path fill="#2b1c12" fill-opacity=".14" d="M4 ${t + 2} L${w} ${b} Q${q1(w * 0.75)} ${b + 6} ${q1(w * 0.5)} ${b + 1} Q${q1(w * 0.25)} ${b + 6} 2 ${b + 2} Z"/><path d="M${q1(-w * 0.45)} ${b - 5} L-4 ${t + 8}" stroke="#fff" stroke-opacity=".14" stroke-width="2.4" stroke-linecap="round"/>
@@ -90,19 +90,22 @@ const YARD = (() => {
         <path d="M-56 -24 Q0 -40 52 -52 M-44 -88 Q-2 -100 42 -110 M-32 -142 Q0 -152 30 -160 M-18 -190 Q0 -196 16 -200" fill="none" stroke="#2b2420" stroke-opacity=".4" stroke-width=".9"/>
         ${YARD_TREE_BULBS.map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="2.8" fill="${c}" fill-opacity=".75"/>`).join('')}
         ${ball(-30, -40, '#d0453c')}${ball(26, -60, '#e6c25a')}${ball(-4, -66, '#5a7fc8', 3.8)}${ball(-22, -104, '#e6c25a', 4)}${ball(18, -120, '#d0453c', 4)}${ball(-10, -150, '#5a7fc8', 3.6)}${ball(12, -170, '#d0453c', 3.4)}${ball(-4, -214, '#e6c25a', 3.2)}
-        <path d="M0 -262 L4.4 -252 L15 -251.4 L6.8 -244.4 L9.4 -234 L0 -240 L-9.4 -234 L-6.8 -244.4 L-15 -251.4 L-4.4 -252 Z" style="fill:color-mix(in srgb,#e6c25a calc(var(--day,1)*100%),#ffe680)"/><path d="M0 -262 L4.4 -252 L0 -247 Z M-15 -251.4 L-4.4 -252 L0 -247 Z" fill="#fff" fill-opacity=".35"/>`; },
+        <g class="st-star"><path d="M0 -262 L4.4 -252 L15 -251.4 L6.8 -244.4 L9.4 -234 L0 -240 L-9.4 -234 L-6.8 -244.4 L-15 -251.4 L-4.4 -252 Z" style="fill:color-mix(in srgb,#e6c25a calc(var(--day,1)*100%),#ffe680)"/><path d="M0 -262 L4.4 -252 L0 -247 Z M-15 -251.4 L-4.4 -252 L0 -247 Z" fill="#fff" fill-opacity=".35"/></g>`; },
       lights: () => `${YARD_TREE_BULBS.map(([x, y, c], i) => `<circle cx="${x}" cy="${y}" r="7" fill="${c}" fill-opacity=".35" class="${i % 3 ? '' : 'tw'}"/><circle cx="${x}" cy="${y}" r="2.8" fill="#fff8dc"/>`).join('')}<circle cx="0" cy="-248" r="18" fill="#ffe680" fill-opacity=".35"/><path d="M0 -262 L4.4 -252 L15 -251.4 L6.8 -244.4 L9.4 -234 L0 -240 L-9.4 -234 L-6.8 -244.4 L-15 -251.4 L-4.4 -252 Z" fill="#ffe680"/>` },
-    // 雪人: three balls of snow shaded blue on the right, coal eyes, a smile and buttons, a carrot nose, a red scarf with its tails,
-    // twig arms, a tin bucket for a hat, a little snow round its foot
-    snowman: { box: [-46, -160, 92, 166], draw: () => `${SHADE(34, 6)}<ellipse cx="0" cy="-2" rx="34" ry="6" fill="#f4f7fb"/>
-      <circle cx="0" cy="-32" r="30" fill="#f4f7fb"/><path d="M12 -59 A30 30 0 0 1 12 -5 A34 34 0 0 0 12 -59 Z" fill="#9fb4d0" fill-opacity=".35"/><path d="M-22 -44 A26 26 0 0 1 -6 -58" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="0" cy="-80" r="22" fill="#f4f7fb"/><path d="M9 -99.6 A22 22 0 0 1 9 -60.4 A25 25 0 0 0 9 -99.6 Z" fill="#9fb4d0" fill-opacity=".35"/>
-      <circle cx="0" cy="-116" r="17" fill="#f4f7fb"/><path d="M7 -131.4 A17 17 0 0 1 7 -100.6 A19 19 0 0 0 7 -131.4 Z" fill="#9fb4d0" fill-opacity=".35"/>
-      <path d="M-24 -84 L-44 -102 M-38 -96 L-44 -94 M-38 -96 L-40 -106 M24 -84 L42 -104 M36 -97 L44 -98 M36 -97 L36 -107" stroke="#6e4a33" stroke-width="2.6" stroke-linecap="round" fill="none"/>
-      <g fill="#2b2b33"><circle cx="-6" cy="-120" r="2.2"/><circle cx="6" cy="-120" r="2.2"/><circle cx="-7" cy="-109" r="1.3"/><circle cx="-3.6" cy="-106.6" r="1.3"/><circle cx="0" cy="-105.8" r="1.3"/><circle cx="3.6" cy="-106.6" r="1.3"/><circle cx="7" cy="-109" r="1.3"/><circle cx="0" cy="-82" r="2.4"/><circle cx="0" cy="-70" r="2.4"/><circle cx="0" cy="-38" r="2.6"/></g>
-      <path d="M0 -115 L16 -112 L0 -110 Z" fill="#e8792a"/><path d="M4 -113.4 L6 -112.4 M9 -112.6 L10 -111.8" stroke="#b8561a" stroke-width=".6"/>
-      <path d="M-16 -100 Q0 -92 16 -100 L16 -94 Q0 -86 -16 -94 Z" fill="#d0453c"/><path d="M6 -94 L10 -72 L16 -74 L13 -95 Z" fill="#b8382f"/><path d="M7 -78 h8 M8 -74 h7" stroke="#f4efe6" stroke-width="1.2"/><path d="M-14 -99 Q0 -91 14 -99" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="1"/>
-      <path d="M-15 -128 L-12 -148 H14 L17 -128 Z" fill="#8f98a6"/><path d="M6 -148 H14 L17 -128 H9 Z" fill="#2b1c12" fill-opacity=".14"/><rect x="-17" y="-131" width="36" height="4" rx="1.6" fill="#7a8290"/><path d="M-11 -144 L-13.4 -131" stroke="#fff" stroke-opacity=".4" stroke-width="1.4"/><path d="M-12 -147 Q1 -156 14 -147" fill="none" stroke="#5f6672" stroke-width="1"/>` },
+    // 雪人: a chubby snowman (2026-11-14, the user: 肥肥胖胖) — a big round belly, a plump middle and a round head, shaded blue
+    // round the right, rosy cheeks, coal eyes with a glint and a smile, a carrot nose, a red scarf with its tails, twig arms, a tin
+    // bucket for a hat (its own group: it hops when he is patted), a little snow round his foot
+    snowman: { box: [-62, -176, 124, 182], draw: () => `${SHADE(44, 7)}<ellipse cx="0" cy="-2" rx="44" ry="7" fill="#f4f7fb"/>
+      <g class="sm-all"><g class="sm-body"><ellipse cx="0" cy="-36" rx="42" ry="35" fill="#f4f7fb"/><path d="M16 -68.6 C40 -62 50 -38 38 -16 C30 -4 18 -1 6 -1 C26 -8 36 -24 34 -40 C32 -54 26 -64 16 -68.6 Z" fill="#9fb4d0" fill-opacity=".35"/><path d="M-30 -50 C-26 -60 -16 -66 -6 -68" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/>
+      <ellipse cx="0" cy="-88" rx="31" ry="25" fill="#f4f7fb"/><path d="M12 -111.6 C30 -106 38 -92 32 -76 C28 -68 20 -64 12 -63.4 C24 -70 28 -82 26 -92 C24 -102 18 -108 12 -111.6 Z" fill="#9fb4d0" fill-opacity=".35"/>
+      <ellipse cx="0" cy="-128" rx="23" ry="20.5" fill="#f4f7fb"/><path d="M8 -147.6 C22 -144 28 -132 25 -120 C22 -112 16 -108.6 9 -108.2 C17 -114 20 -122 19 -130 C18 -138 14 -144 8 -147.6 Z" fill="#9fb4d0" fill-opacity=".35"/><path d="M-15 -138 C-12 -144 -6 -147 0 -148" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+      <ellipse cx="-12.6" cy="-122" rx="4.4" ry="2.8" fill="#f2a0a0" fill-opacity=".7"/><ellipse cx="12.6" cy="-122" rx="4.4" ry="2.8" fill="#f2a0a0" fill-opacity=".7"/>
+      <g fill="#2b2b33"><ellipse cx="-7.6" cy="-132" rx="2.8" ry="3.2"/><ellipse cx="7.6" cy="-132" rx="2.8" ry="3.2"/><circle cx="-8" cy="-116.4" r="1.4"/><circle cx="-4.2" cy="-114" r="1.4"/><circle cx="0" cy="-113.2" r="1.4"/><circle cx="4.2" cy="-114" r="1.4"/><circle cx="8" cy="-116.4" r="1.4"/><circle cx="0" cy="-90" r="2.8"/><circle cx="0" cy="-77" r="2.8"/><circle cx="0" cy="-44" r="3"/><circle cx="0" cy="-28" r="3"/></g>
+      <circle cx="-6.8" cy="-133.2" r="1" fill="#fff"/><circle cx="8.4" cy="-133.2" r="1" fill="#fff"/>
+      <path d="M0 -126.4 L17 -123.2 L0 -121 Z" fill="#e8792a"/><path d="M4 -124.8 L6 -123.8 M9 -124 L10 -123.2" stroke="#b8561a" stroke-width=".6"/>
+      <path d="M-28 -92 L-50 -112 M-43 -106 L-50 -104 M-43 -106 L-46 -117 M28 -92 L48 -114 M41 -107 L50 -108 M41 -107 L41 -118" stroke="#6e4a33" stroke-width="2.8" stroke-linecap="round" fill="none"/>
+      <path d="M-21 -110 Q0 -100 21 -110 L21 -103 Q0 -93 -21 -103 Z" fill="#d0453c"/><path d="M8 -103 L13 -78 L20 -80 L16 -104 Z" fill="#b8382f"/><path d="M9 -84 h9 M10 -80 h8" stroke="#f4efe6" stroke-width="1.3"/><path d="M-19 -109 Q0 -100 19 -109" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="1"/></g>
+      <g class="sm-hat"><path d="M-17 -144 L-14 -166 H14 L17 -144 Z" fill="#8f98a6"/><path d="M6 -166 H14 L17 -144 H9 Z" fill="#2b1c12" fill-opacity=".14"/><rect x="-19" y="-147" width="40" height="4.4" rx="1.8" fill="#7a8290"/><path d="M-12 -162 L-14.6 -147" stroke="#fff" stroke-opacity=".4" stroke-width="1.4"/><path d="M-13 -165 Q1 -175 14 -165" fill="none" stroke="#5f6672" stroke-width="1"/></g></g>` },
     // 燈飾麋鹿: a reindeer of white wire, standing and looking back over its shoulder, bulbs all along it — clear glass by day,
     // twinkling gold by night
     lightdeer: { box: [-58, -132, 116, 138], glow: [0, -66, 80], draw: () => `${SHADE(40, 6)}<path d="${YARD_DEER}" fill="none" stroke="#e9ecf2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="${YARD_DEER}" fill="none" stroke="#9aa3b2" stroke-opacity=".5" stroke-width=".7" stroke-linecap="round" stroke-linejoin="round" transform="translate(.8 .8)"/>${YARD_DEER_BULBS.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.1" fill="#fbf3d6"/>`).join('')}`,
@@ -221,9 +224,12 @@ function yeditHtml() {
   // the houses (test, 2026-11-09): once one is bought, the cottage and each house bought sit at the front of the box; a tap puts it up
   const houses = WARES.some((it) => it.kind === 'house' && owns(it.id)) ? [{ id: '', name: '小屋' }].concat(WARES.filter((it) => it.kind === 'house' && owns(it.id) && HOUSE_ART[it.id])) : [];
   const now = state.house && owns(state.house) && HOUSE_ART[state.house] ? state.house : '';
+  // the grounds (2026-11-14): once one is bought, the grass and each ground bought, after the houses; a tap lays it
+  const grounds = WARES.some((it) => it.kind === 'ground' && owns(it.id)) ? [{ id: '', name: '草地' }].concat(WARES.filter((it) => it.kind === 'ground' && owns(it.id))) : [];
+  const groundIt = (g) => `<button type="button" class="tray-it tray-house" data-act="yard-ground" data-id="${g.id}" aria-pressed="${(g.id || 'grass') === yardGround()}">${groundThumb(g.id || 'grass')}<span>${esc(g.name)}</span></button>`;
   const houseIt = (h) => `<button type="button" class="tray-it tray-house" data-act="yard-house" data-id="${h.id}" aria-pressed="${h.id === now}"><svg class="house-thumb" viewBox="0 0 140 130" aria-hidden="true">${HOUSE_ART[h.id || 'cottage']}</svg><span>${esc(h.name)}</span></button>`;
   return `<div class="edit-top"><span class="edit-hint">${yed.sel ? '拖曳搬動，拖到上面收起來' : houses.length ? '點房子換外觀；其他東西拖出來擺' : '拖曳搬動；收納箱的東西拖出來擺'}</span><button type="button" class="btn btn-primary btn-sm" data-act="yard-edit-done">完成</button></div>
-    <div class="edit-tray" aria-label="院子的收納箱">${houses.map(houseIt).join('')}${box.length ? stacks(box).map(({ it, n, name }) => `<button type="button" class="tray-it" data-act="yard-edit-take" data-id="${it.id}">${YARD.thumb(it.id)}<span>${esc(name)}</span>${n > 1 ? `<b class="tray-n">×${n}</b>` : ''}</button>`).join('') : houses.length ? '' : '<div class="tray-empty">收納箱是空的。古道具屋的「戶外」有望遠鏡、石燈籠……</div>'}</div>`;
+    <div class="edit-tray" aria-label="院子的收納箱">${houses.map(houseIt).join('')}${grounds.map(groundIt).join('')}${box.length ? stacks(box).map(({ it, n, name }) => `<button type="button" class="tray-it" data-act="yard-edit-take" data-id="${it.id}">${YARD.thumb(it.id)}<span>${esc(name)}</span>${n > 1 ? `<b class="tray-n">×${n}</b>` : ''}</button>`).join('') : houses.length ? '' : '<div class="tray-empty">收納箱是空的。古道具屋的「戶外」有望遠鏡、石燈籠……</div>'}</div>`;
 }
 function yselHtml() {   // the picked ware's tools, over it in the world
   const o = yed.sel && yardPlaced().find((q) => q.id === yed.sel), a = o && YARD.ART[o.id];
@@ -246,7 +252,10 @@ function yardEdit(yard, cmd, id) {
     if (!p) { toast('院子放不下了，先收起別的東西再試試'); return; }
     state.placed[id] = Object.assign({ w: 'Y' }, p); yed.sel = id; saveState(); SND.play('place');
   } else if (cmd === 'put' && yed.sel) { delete state.placed[yed.sel]; yed.sel = null; saveState(); }
-  else if (cmd === 'house') {   // the yard's house in this look (id '' the cottage), at once
+  else if (cmd === 'ground') {   // the yard's ground (id '' the grass): the yard drawn anew in it (2026-11-14)
+    if (id && !(WARE.has(id) && owns(id) && WARE.get(id).kind === 'ground')) return;
+    state.ground = id; saveState(); ['grass'].concat(WARES.filter((it) => it.kind === 'ground').map((it) => it.id)).forEach((g) => yard.classList.toggle('ground-' + g, g === yardGround()));
+  } else if (cmd === 'house') {   // the yard's house in this look (id '' the cottage), at once
     if (id && !(WARE.has(id) && owns(id) && HOUSE_ART[id])) return;
     state.house = id; saveState();
     yard.querySelector('.house > svg').innerHTML = houseArt(); yard.dataset.house = state.house;
@@ -384,12 +393,15 @@ const MUSIC = (() => {
     { id: 'yukiasa', file: 'music/yukiasa-1.m4a', name: '雪の朝', kana: 'ゆきのあさ', zh: '下雪的早晨', style: '鋼琴・音樂盒', color: '#8fb4d8' },
     { id: 'kissa', file: 'music/kissa-1.m4a', name: '喫茶しずく', kana: 'きっさしずく', zh: 'しずく咖啡館', style: '爵士鋼琴・低音提琴', color: '#8a5a3a', vol: 0.35 },
     { id: 'obake', file: 'music/obake-1.m4a', name: 'おばけの夜', kana: 'おばけのよる', zh: '妖怪之夜', style: '音樂盒・撥弦', color: '#7a4ab0' },
-    { id: 'jingle', file: 'music/jingle-1.m4a', name: 'ジングルベル', kana: 'じんぐるべる', zh: '鈴兒響叮噹', style: '音樂盒・雪橇鈴・撥弦', color: '#c8453d' },
+    { id: 'jingle', file: 'music/jingle-1.m4a', name: 'ジングルベル', kana: 'じんぐるべる', zh: '鈴兒響叮噹', style: '音樂盒・雪橇鈴・撥弦', color: '#c8453d', vol: 0.6 },   // out in six places at Christmas: under their sounds
     { id: 'chochin', place: 'izakaya', file: 'music/chochin-1.m4a', name: '赤ちょうちん', kana: 'あかちょうちん', zh: '紅燈籠', style: '三味線・笛', color: '#c8463a', vol: 0.45 },
     { id: 'minato', place: 'cruise', file: 'music/minato-1.m4a', name: 'みなと案内', kana: 'みなとあんない', zh: '港町導覽', style: '笛・撥弦・低音提琴', color: '#3f7ac8', vol: 0.55 }
   ];
   // the record a place plays by itself: the izakaya's own, the café's jazz out of its door while it is open, the festival's at the shrine;
   // and where the cruise's passengers are while a trip is under way, its own (CRUISE.tune, 2026-11-13: the user missed music on the tour)
+  // Christmas (2026-11-14, the user): the six places of the ring (the yard, the beach, the town, the bus stop, the harbor, the park)
+  // play ジングルベル while it is on, over their own; in the house only once it is bought, on the gramophone
+  const XMAS_PLACES = ['outside', 'beach', 'town', 'street', 'harbor', 'park'];
   const PLACE_REC = { izakaya: () => 'chochin', town: () => (TOWNEV.shopState('cafe') === 'open' ? 'kissa' : ''), shrine: () => (TOWNEV.festival() ? 'matsuri' : '') };
   const have = () => RECORDS.filter((r) => !r.place && (r.own || owns(r.id)));
   // a record sold in 古道具屋, as its card shows it: half out of its sleeve, its name on the sleeve
@@ -465,7 +477,7 @@ const MUSIC = (() => {
     if (!mvol() || document.hidden) return null;
     const r = currentRoute().name;
     if (inRoom()) return state.placed && state.placed.gramophone && owns('gramophone') && !state.musicOff ? current() || null : null;
-    const id = (typeof CRUISE !== 'undefined' && CRUISE.tune(r === 'outside' ? 'yard' : r)) || (PLACE_REC[r] && PLACE_REC[r]());
+    const id = (typeof CRUISE !== 'undefined' && CRUISE.tune(r === 'outside' ? 'yard' : r)) || (XMAS_PLACES.includes(r) && festOn('christmas') ? 'jingle' : '') || (PLACE_REC[r] && PLACE_REC[r]());
     return (id && RECORDS.find((x) => x.id === id)) || null;
   }
   function sync() { try { tune(); } catch (e) { console.error(e); } }   // music never breaks a page
@@ -523,11 +535,34 @@ function yardUse(yard, id) {
     yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard);   // turned to it
     if (id === 'telescope') { el.classList.add('look'); setTimeout(() => { el.classList.remove('look'); if (yard.isConnected) SCOPE.open(yard); }, 700); }
     if (id === 'pond') { el.classList.add('crouch'); setTimeout(() => el.classList.remove('crouch'), 1500); pondStir(yard, side); SND.play('splash', { vol: 0.6 }); SND.play('plop', { delay: 1.1 }); }
+    // Christmas (2026-11-14, the user: something to do with them): the snowman patted — he squashes and bounces, his bucket hops,
+    // a puff of snow, 「つめたい！」; the tree looked up at — its lights twinkle fast and show by day too, the star shines, gold
+    // sparkles drift down, 「きれい！」 (switched back on if off: it is not switched by a tap)
+    if (id === 'snowman' || id === 'bigtree') {
+      const b = yard.querySelector(`.yware[data-ware="${id}"]`), k = yScale(o.p.y), top = o.p.y - YARD.ART[id].box[1] * k, man = id === 'snowman';
+      el.classList.add(man ? 'reach' : 'look'); setTimeout(() => el.classList.remove('reach', 'look'), 1400);
+      if (!man && lampOff(id)) { delete state.lampsOff[id]; saveState(); }
+      if (b) { b.classList.remove('poke', 'off'); void b.offsetWidth; b.classList.add('poke'); setTimeout(() => b.classList.remove('poke'), 1700); }
+      yPuff(yard, [o.p.x, man ? top - 30 * k : top - 20 * k], man ? ['#ffffff', '#eef4fb', '#dfe8f4'] : ['#ffe680', '#ffd36a', '#fff6c8', '#ff9a8a'], man ? 12 : 16);
+      yBubble(yard, 600 + yh.X, 370 - (yh.Y + 210 * yScale(yh.Y)), man ? 'つめたい！' : 'きれい！', 1800);
+      SND.play(man ? 'cushion' : 'sparkle');
+      return;
+    }
     if (YARD.ART[id] && YARD.ART[id].glow) {   // a lamp (test, 2026-11-09): switched on or off
       if (lampOff(id)) delete state.lampsOff[id]; else state.lampsOff[id] = true; saveState(); SND.play('switch');
       const b = yard.querySelector(`.yware[data-ware="${id}"]`); if (b) b.classList.toggle('off', lampOff(id));
     }
   });
+}
+// little round bits flung up from a point (x from the middle, y up from the bottom) and drifting down: snow off the snowman,
+// sparkles off the Christmas tree (2026-11-14)
+function yPuff(yard, [x, y], colours, n) {
+  const w = yard && yard.querySelector('.yworld'); if (!w) return;
+  for (let i = 0; i < n; i++) {
+    const el = document.createElement('i'); el.className = 'ypuff';
+    el.style.cssText = `left:calc(50% + ${x.toFixed(0)}px);bottom:${y.toFixed(0)}px;--c:${colours[i % colours.length]};--dx:${(Math.random() * 100 - 50).toFixed(0)}px;--dy:${(18 + Math.random() * 34).toFixed(0)}px;--w:${(i * 0.03).toFixed(2)}s`;
+    w.appendChild(el); setTimeout(() => el.remove(), 2000);
+  }
 }
 // the pond (test, 2026-11-09): the hero crouches at its edge and dips a hand in — rings spread from there, and a koi leaps out
 // across and splashes back in with rings of its own
@@ -557,7 +592,7 @@ function renderOutside(view, place = 'yard') {
   sceneTick();
   const pct = ringPct(dayProgress());
   const yard = view.querySelector('.yard');
-  if (yard && (yard.dataset.house !== (state.house || '') || yard.dataset.place !== place || (yard.dataset.sig !== TOWNEV.sig(place) && !TALK.on()))) { yard.remove(); }   // the house changed (another device), the other place, or who is about (TOWNEV): drawn anew
+  if (yard && (yard.dataset.house !== (state.house || '') || (place === 'yard' && !yard.classList.contains('ground-' + yardGround())) || yard.dataset.place !== place || (yard.dataset.sig !== TOWNEV.sig(place) && !TALK.on()))) { yard.remove(); }   // the house changed (another device), the other place, or who is about (TOWNEV): drawn anew
   else if (yard) {   // a redraw: new stars fade in, the motion carries on; the yard's things again only if they moved (sync, another device)
     yardLevel(yard, pct);
     const w = yard.querySelector('.ywares'); if (w && !yed.on && w.dataset.sig !== yardSig()) { w.innerHTML = yardWaresHtml(); w.dataset.sig = yardSig(); }
@@ -873,6 +908,11 @@ const HOUSE_ART = {
 `
 };
 const houseArt = () => HOUSE_ART[state.house && owns(state.house) && HOUSE_ART[state.house] ? state.house : 'cottage'];
+// a ground's picture (古道具屋's card, the yard's box): a slope of it with the path up to a little house (2026-11-14)
+const GROUND_LOOK = { grass: ['#8fc486', '#5a9e4d', '#e8d6a8', '#6e9a5c'], snowfield: ['#e9eff7', '#f6f9fc', '#cfd9e8', '#dfe8f2'] };
+const groundThumb = (id) => { const [far, near, lane, tuft] = GROUND_LOOK[id] || GROUND_LOOK.grass;
+  return `<svg class="house-thumb ground-thumb" viewBox="0 0 140 130" aria-hidden="true"><rect width="140" height="130" fill="#cfe3f2"/><path d="M0 66 C30 52 60 50 90 56 C110 60 126 58 140 52 V130 H0 Z" fill="${far}"/><path d="M0 84 C40 74 100 72 140 82 V130 H0 Z" fill="${near}"/><path d="M62 130 C64 112 70 96 72 80 L78 80 C78 96 84 112 92 130 Z" fill="${lane}"/>${[[22, 104], [40, 118], [108, 102], [122, 120], [30, 92]].map(([x, y]) => `<path d="M${x - 5} ${y} q2 -6 1 -10 q3 4 4 9 q2 -6 5 -9 q-1 6 1 10 Z" fill="${tuft}"/>`).join('')}<rect x="60" y="62" width="30" height="20" fill="#f1e3c6"/><path d="M56 64 L75 50 L94 64 Z" fill="${id === 'snowfield' ? '#f6f9fc' : '#b4543c'}"/><rect x="71" y="70" width="8" height="12" fill="#7a4b2e"/></svg>`; };
+const yardGround = () => (state.ground && owns(state.ground) && WARE.has(state.ground) ? state.ground : 'grass');   // the yard's ground: a ground ware worn, else the grass (2026-11-14)
 // the hero out in the yard (1.2.0): the same drawing, smaller the further up the lawn (X: px from the middle, Y: px up from the
 // bottom, the ground running from the bottom to the house at 218px). Walks where you tap, to the mailbox, the house and the path.
 const yh = { X: 0, Y: 186, back: false, flip: false, turn: false, raf: 0, fromDoor: false, climb: null, s: 0, z: 0, use: null, far: null };   // far: on the long way down (yFar): there at once   // z: his layer when set (sat on a thing), use: sat on / riding it ({ up: where he gets off })   // climb, s: on the way up to 古道具屋, and his scale there

@@ -634,6 +634,15 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .talk-next { position: absolute; right: 14px; bottom: 8px; font-size: 11px; color: var(--fg-3); animation: talkNext 1s ease-in-out infinite alternate; } @keyframes talkNext { to { transform: translateY(3px); } }
 .sky .way-btn { position: absolute; left: 50%; width: 64px; height: 44px; margin-left: -32px; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; } .sky .way-btn .tag { top: -8px; }
 .sky .land .lane { fill: color-mix(in srgb, rgba(232, 214, 168, .95) calc(var(--md, var(--day, 1)) * 100%), rgba(150, 160, 230, .07)); }
+/* the yard's ground (2026-11-14, a ware of kind ground): 雪地 — the lawn, the hills either side and the far slope white (blue in shade,
+   moonlit by night), the path a trodden track, the tufts and the side trails snowed over, no flowers */
+.yard.ground-snowfield .yard-land .near { fill: color-mix(in srgb, color-mix(in srgb, #f4f8fc calc(var(--f) * 100%), #e2e8f0) calc(var(--md, var(--day, 1)) * 100%), #2e3666); }
+.yard.ground-snowfield .yard-land .far { fill: color-mix(in srgb, color-mix(in srgb, #e6edf6 calc(var(--f) * 100%), #d6dde8) calc(var(--md, var(--day, 1)) * 100%), #252c58); }
+.yard.ground-snowfield .yard-land .lane { fill: color-mix(in srgb, rgba(200, 211, 228, .95) calc(var(--md, var(--day, 1)) * 100%), rgba(150, 160, 230, .14)); }
+.yard.ground-snowfield .yard-land .lawn { --c: #eaf0f7 !important; --n: #29305e !important; }
+.yard.ground-snowfield .yard-land .trail { --c: #c9d3e3 !important; --n: #3a3f6a !important; }
+.yard.ground-snowfield .yard-land .fx-tuft { --c: #dde6f1 !important; --n: #2a3262 !important; }
+.yard.ground-snowfield .flowers { display: none; }
 .sky .house { position: absolute; left: 50%; bottom: 218px; width: 140px; height: 130px; margin-left: -70px; transform: scale(1.15); transform-origin: 50% 100%; }
 .sky .house > svg { position: absolute; inset: 0; overflow: visible; }
 .sky .house :is(.wall, .chim, .roof, .pane, .door) { transition: fill 3s, opacity 1.5s; } .sky .house :is(.rim, .mull) { transition: stroke 3s; }
@@ -1133,6 +1142,20 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .yware .lights .tw { animation: bulbTw 1.6s ease-in-out infinite alternate; } .sky .yware .lights .tw2 { animation: bulbTw 1.6s ease-in-out -.8s infinite alternate; }
 @keyframes bulbTw { from { fill-opacity: .12; } to { fill-opacity: .5; } }
 .sky .yware.off .lights { display: none; }
+/* the snowman patted, the tree looked up at (2026-11-14, yardUse): he squashes and bounces with his bucket hopping; the tree's lights
+   show by day too and twinkle fast, its star shines; bits of snow or sparkles drift off (yPuff) */
+.sky .yware.poke .sm-all { transform-box: fill-box; transform-origin: 50% 100%; animation: smWobble .9s ease-out; }
+.sky .yware.poke .sm-hat { transform-box: fill-box; transform-origin: 50% 100%; animation: smHat 1s ease-out; }
+@keyframes smWobble { 0% { transform: none; } 18% { transform: scale(1.08, .9); } 40% { transform: scale(.95, 1.07); } 62% { transform: scale(1.03, .97) rotate(-2deg); } 82% { transform: rotate(1.5deg); } 100% { transform: none; } }
+@keyframes smHat { 0%, 14% { transform: none; } 40% { transform: translateY(-18px) rotate(-14deg); } 64% { transform: rotate(7deg); } 82% { transform: rotate(-3deg); } 100% { transform: none; } }
+.sky .yware.poke[data-ware="bigtree"] .art { transform-origin: 50% 100%; animation: treeShake .7s ease-in-out; }
+@keyframes treeShake { 25% { transform: rotate(-1.4deg); } 60% { transform: rotate(1deg); } }
+.sky .yware.poke .lights { opacity: max(calc(1 - var(--day)), .9); transition-duration: .2s; } .sky .yware.poke .lights :is(.tw, .tw2) { animation-duration: .22s; }
+.sky .yware.poke .st-star { transform-box: fill-box; transform-origin: 50% 50%; animation: stStar 1.3s ease-out; }
+@keyframes stStar { 0% { transform: none; } 30% { transform: scale(1.55) rotate(20deg); filter: drop-shadow(0 0 6px #ffe680); } 100% { transform: none; } }
+.sky .ypuff { position: absolute; z-index: 2990; width: 5px; height: 5px; margin-left: -2.5px; border-radius: 50%; background: var(--c); box-shadow: 0 0 3px var(--c); pointer-events: none; opacity: 0; animation: yPuff 1.5s ease-out var(--w) forwards; }
+@keyframes yPuff { 0% { opacity: 1; transform: none; } 30% { opacity: 1; transform: translate(calc(var(--dx) * .5), calc(var(--dy) * -1)); } 100% { opacity: 0; transform: translate(var(--dx), 46px); } }
+@media (prefers-reduced-motion: reduce) { .sky .yware.poke :is(.sm-all, .sm-hat, .st-star), .sky .yware.poke[data-ware="bigtree"] .art { animation: none; } .sky .ypuff { display: none; } }
 @media (prefers-reduced-motion: reduce) { .sky .yware .lights .tw, .sky .yware .lights .tw2 { animation: none; } }
 .sky .yware.off .glow { display: none; } .sky .yware.off [style*="#ffd27a"] { fill: #4a4842 !important; }   /* a lamp switched off */
 /* 觀星 (test): the telescope's eyepiece over the dark, the constellation's name under it */
@@ -1861,6 +1884,7 @@ details.disclose[open] > summary::before { transform: rotate(90deg); }
 .shop-tabs .dot { position: absolute; top: 3px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: #e0524b; box-shadow: 0 0 0 2px var(--bg-elev); }
 .shop-note { margin: 18px 2px; font-size: 14px; color: var(--fg-2); }
 .shop-sec { margin-top: 18px; } .shop-h { margin: 0 0 10px; font-size: 15px; font-weight: 700; color: var(--fg-2); letter-spacing: .04em; }
+.shop-h3 { display: flex; align-items: center; gap: 8px; margin: 14px 0 8px; font-size: 13px; font-weight: 700; color: var(--fg-3); letter-spacing: .04em; } .shop-h3::after { content: ""; flex: 1; height: 1px; background: var(--line); }   /* a festival's kinds under 限時 (2026-11-14) */
 .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
 @media (min-width: 900px) { .shop-grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; } }
 .shop-item { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 6px 6px 8px; }

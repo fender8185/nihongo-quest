@@ -498,15 +498,15 @@ def test_the_shop_has_four_tabs_and_opens_on_the_last_one_used(b):
       return JSON.stringify({ tabs, seen, leak, back: document.querySelector('.shop-tabs [aria-selected="true"]').dataset.tab, stored: localStorage.getItem('nq_shop_tab') }); })()"""
     r = json.loads(ev(b, js))
     assert r['tabs'] == ['室內', '戶外', '穿搭', '限時'], r
-    assert r['seen']['in'] == ['家具擺飾', '地墊', '牆上', '唱片'] and r['seen']['out'] == ['戶外擺設', '房子外觀'] and r['seen']['wear'] == ['頭部', '臉部', '頸部', '衣服', '褲子', '鞋子', '背部'], r   # 穿搭 by the wardrobe's parts (2026-11-12)
-    assert r['seen']['outCards'] == ['telescope', 'stonelantern', 'engawa', 'tanuki', 'pond', 'mushroomhouse', 'gingerhouse', 'stumphouse', 'teapothouse'] and not r['leak'], r   # limited wares (南瓜屋 too) only under 限時
+    assert r['seen']['in'] == ['家具擺飾', '地墊', '牆上', '唱片'] and r['seen']['out'] == ['戶外擺設', '房子外觀', '地面'] and r['seen']['wear'] == ['頭部', '臉部', '頸部', '衣服', '褲子', '鞋子', '背部'], r   # 穿搭 by the wardrobe's parts (2026-11-12)
+    assert r['seen']['outCards'] == ['telescope', 'stonelantern', 'engawa', 'tanuki', 'pond', 'mushroomhouse', 'gingerhouse', 'stumphouse', 'teapothouse', 'snowfield'] and not r['leak'], r   # limited wares (南瓜屋 too) only under 限時
     assert r['back'] == 'out' and r['stored'] == 'out', r
 
 def test_limited_sales_go_by_the_servers_day_not_the_phones(b):
     js = "(async () => { " + FRESH + """ state.koto.gift = 100; saveState();
       const edges = ['2026-10-16', '2026-10-17', '2026-11-14', '2026-11-15'].map(d => saleOn('halloween', d)), real = await saleClock();   /* this server's own Date header */
       const xmas = ['2026-12-10', '2026-12-11', '2026-12-25', '2027-01-08', '2027-01-09', '2026-01-05'].map(d => saleOn('christmas', d));   /* over the new year; last Christmas's into January */
-      const look = () => ({ head: [...document.querySelectorAll('#view .shop-h')].map(h => h.textContent), cards: [...document.querySelectorAll('#view .shop-item[data-ware]')].map(c => c.dataset.ware), note: (document.querySelector('#view .shop-note') || {}).textContent || null, dot: !!document.querySelector('.shop-tabs .dot') });
+      const look = () => ({ head: [...document.querySelectorAll('#view .shop-h')].map(h => h.textContent), kinds: [...document.querySelectorAll('#view .shop-h3')].map(h => h.textContent), cards: [...document.querySelectorAll('#view .shop-item[data-ware]')].map(c => c.dataset.ware), note: (document.querySelector('#view .shop-note') || {}).textContent || null, dot: !!document.querySelector('.shop-tabs .dot') });
       const at = (day) => { saleDay = { day, at: Date.now(), ask: null, failed: false }; shopTab = 'sale'; location.hash = '#/shop'; route(); return look(); };
       const on = at('2026-11-07'), last = at('2026-11-14'), off = at('2026-11-15'), dec = at('2026-12-20'), jan = at('2027-01-08');
       saleDay = { day: null, at: 0, ask: null, failed: true }; route(); const offline = look().note;
@@ -515,16 +515,17 @@ def test_limited_sales_go_by_the_servers_day_not_the_phones(b):
       localStorage.setItem('nq_sale_preview', '1'); const preview = at('2026-12-01');
       localStorage.setItem('nq_sale_preview', 'christmas'); const one = at('2026-09-01');
       localStorage.setItem('nq_sale_preview', '0');
-      return JSON.stringify({ edges, xmas, real: /^\\d{4}-\\d{2}-\\d{2}$/.test(real), on, last: last.head, off, offline, bought, preview: preview.cards, dec: dec.head, jan: jan.head, one: one.head }); })()"""
+      return JSON.stringify({ edges, xmas, real: /^\\d{4}-\\d{2}-\\d{2}$/.test(real), on, last: last.head, off, offline, bought, preview: preview.cards, dec: dec.head, decKinds: dec.kinds, jan: jan.head, one: one.head }); })()"""
     r = json.loads(ev(b, js))
     assert r['edges'] == [False, True, True, False] and r['real'], r   # 2026-11-14 (the user): 14 days either side of Halloween, both ends in
     assert r['xmas'] == [False, True, True, True, False, True], r   # and of Christmas, over the new year
-    assert r['on'] == {'head': ['萬聖節限定 · 賣到 11/14（還有 7 天）'], 'cards': ['witchhat', 'wizrobe', 'pumpkinhouse', 'pumpkin', 'obake'], 'note': None, 'dot': True}, r
+    assert r['on'] == {'head': ['萬聖節限定 · 賣到 11/14（還有 7 天）'], 'kinds': ['穿搭', '室內擺設', '房子外觀', '唱片'], 'cards': ['witchhat', 'wizrobe', 'pumpkin', 'pumpkinhouse', 'obake'], 'note': None, 'dot': True}, r   # by kind (2026-11-14): worn, rooms, yard, houses, records
     assert r['last'] == ['萬聖節限定 · 賣到 11/14（今天最後一天）'], r
-    assert r['off'] == {'head': [], 'cards': [], 'note': '現在沒有限時商品。下一檔：聖誕節 12/11–1/8、萬聖節 10/17–11/14', 'dot': False}, r
+    assert r['off'] == {'head': [], 'kinds': [], 'cards': [], 'note': '現在沒有限時商品。下一檔：聖誕節 12/11–1/8、萬聖節 10/17–11/14', 'dot': False}, r
     assert r['dec'] == ['聖誕節限定 · 賣到 1/8（還有 19 天）'] and r['jan'] == ['聖誕節限定 · 賣到 1/8（今天最後一天）'], r
+    assert r['decKinds'] == ['穿搭', '室內擺設', '戶外擺設', '房子外觀', '唱片'], r   # grouped like the other tabs (2026-11-14, the user)
     assert r['offline'] == '限時商品要連上網路才看得到。' and r['bought'] is None, r
-    assert r['preview'] == ['witchhat', 'wizrobe', 'pumpkinhouse', 'pumpkin', 'obake'] + XMAS, r   # the test site can look whatever the day
+    assert r['preview'] == ['witchhat', 'wizrobe', 'pumpkin', 'pumpkinhouse', 'obake'] + XMAS, r   # the test site can look whatever the day
     assert r['one'] == ['聖誕節限定 · 賣到 1/8（測試預覽）'], r   # one festival previewed on its own (2026-11-14)
 
 def test_the_halloween_wares_are_a_hat_a_robe_and_a_pumpkin_that_glows(b):
@@ -536,7 +537,7 @@ def test_the_halloween_wares_are_a_hat_a_robe_and_a_pumpkin_that_glows(b):
 
 # the Halloween witch: far off in the yard's night sky while Halloween is on (the server's day), a tap drops her off her broom
 # for 100 言靈 once a Halloween. open(theme, day): the yard drawn anew under 永夜／永晝 on that server day
-XMAS = ['santahat', 'antlers', 'rednose', 'hollybell', 'santacoat', 'santapants', 'elfshoes', 'giftsack', 'xmastree', 'giftpile', 'poinsettia', 'wreath', 'stockings', 'bigtree', 'snowman', 'lightdeer', 'kamakura', 'logcabin', 'jingle']
+XMAS = ['santahat', 'antlers', 'rednose', 'hollybell', 'santacoat', 'santapants', 'elfshoes', 'giftsack', 'giftpile', 'poinsettia', 'wreath', 'stockings', 'bigtree', 'snowman', 'lightdeer', 'kamakura', 'logcabin', 'jingle']   # in 限時's order: worn, rooms, yard, houses, record
 WITCH_OPEN = """const wait = (ms) => new Promise(q => setTimeout(q, ms));
   const open = (theme, day) => { state.settings.theme = theme; saveState(); saleDay = { day, at: Date.now(), ask: null, failed: false };
     location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); return document.querySelector('.yard .sky .night .witch'); };"""
@@ -589,16 +590,51 @@ def test_christmas_sells_one_for_each_part_two_hats_rooms_yard_houses_and_a_reco
       const kinds = {}; xs.forEach(w => { kinds[w.kind] = (kinds[w.kind] || 0) + 1; });
       const lk = HERO.norm({ topStyle: 'santacoat', bottomStyle: 'santapants', shoeStyle: 'elfshoes' });
       return JSON.stringify({ ids: xs.map(w => w.id), parts, kinds, styles: [lk.topStyle, lk.bottomStyle, lk.shoeStyle], drawn: ['santahat', 'antlers', 'rednose', 'hollybell', 'giftsack'].every(id => HERO.slots.includes(id) && HERO.thumb(id, state.look).length > 200),
-        hat: HERO.tucked({ hairTop: 'bun' }, 'santahat'), lamps: [WARE.get('xmastree').light, YARD.ART.bigtree.glow, YARD.ART.lightdeer.glow].every(Boolean), lit: !!YARD.ART.bigtree.lights && !!YARD.ART.lightdeer.lights,
+        hat: HERO.tucked({ hairTop: 'bun' }, 'santahat'), lamps: [YARD.ART.bigtree.glow, YARD.ART.lightdeer.glow].every(Boolean), tree: [WARE.has('xmastree'), WARE.get('bigtree').name], lit: !!YARD.ART.bigtree.lights && !!YARD.ART.lightdeer.lights,
         houses: ['kamakura', 'logcabin'].every(id => (HOUSE_ART[id] || '').includes('class="pane"')),   /* lit from inside by night */
-        room: ['xmastree', 'giftpile', 'poinsettia', 'wreath', 'stockings'].every(id => DECOR.thumb(id).length > 300), record: MUSIC.RECORDS.find(x => x.id === 'jingle') }); })()"""
+        room: ['giftpile', 'poinsettia', 'wreath', 'stockings'].every(id => DECOR.thumb(id).length > 300), record: MUSIC.RECORDS.find(x => x.id === 'jingle') }); })()"""
     r = json.loads(ev(b, js))
     assert r['ids'] == XMAS, r
     assert r['parts'] == {'head': 2, 'face': 1, 'neck': 1, 'top': 1, 'bottom': 1, 'shoe': 1, 'back': 1}, r   # one for each part, two for the head
-    assert r['kinds'] == {'wear': 5, 'clothes': 3, 'floor': 3, 'wall': 2, 'yard': 3, 'house': 2, 'record': 1}, r
+    assert r['kinds'] == {'wear': 5, 'clothes': 3, 'floor': 2, 'wall': 2, 'yard': 3, 'house': 2, 'record': 1}, r
+    assert r['tree'] == [False, '聖誕樹'], r   # the Christmas tree stands in the yard, not the room (the user)
     assert r['styles'] == ['santacoat', 'santapants', 'elfshoes'] and r['drawn'] and r['hat'] == '丸子', r   # styles the wardrobe knows; a hat tucks the bun away
     assert r['lamps'] and r['lit'] and r['houses'] and r['room'], r   # the trees and the reindeer light up by night
     assert r['record']['file'] == 'music/jingle-1.m4a' and os.path.exists(os.path.join(ROOT, 'music', 'jingle-1.m4a')), r
+
+def test_the_snowman_bounces_when_patted_and_the_tree_sparkles(b):
+    js = "(async () => { " + FRESH + """ const wait = (ms) => new Promise(q => setTimeout(q, ms));
+      Object.assign(state.owned, { snowman: { paid: 0, on: todayStr() }, bigtree: { paid: 0, on: todayStr() } }); state.placed.snowman = { w: 'Y', x: 90, y: 60 }; state.placed.bigtree = { w: 'Y', x: -110, y: 110 };
+      state.lampsOff = { bigtree: true }; saveState(); const mm = window.matchMedia; window.matchMedia = (q) => (/reduced-motion/.test(q) ? { matches: false } : mm.call(window, q));
+      location.hash = '#/outside'; document.getElementById('view').innerHTML = ''; route(); await wait(300); const y = document.querySelector('#view .yard');
+      const tap = async (id) => { yardUse(y, id); for (let i = 0; i < 80 && !y.querySelector('.yware[data-ware="' + id + '"].poke'); i++) await wait(50);
+        const w = y.querySelector('.yware[data-ware="' + id + '"]'); return { poke: w.classList.contains('poke'), say: [...y.querySelectorAll('.ysay')].map(e => e.textContent).pop() || null, bits: y.querySelectorAll('.ypuff').length, off: lampOff(id) }; };
+      const man = await tap('snowman'); await wait(1800); const tree = await tap('bigtree'); window.matchMedia = mm;
+      return JSON.stringify({ man, tree, parts: !!y.querySelector('.yware[data-ware="snowman"] .sm-hat') && !!y.querySelector('.yware[data-ware="bigtree"] .st-star') }); })()"""
+    r = json.loads(ev_at(b, PHONE, js))
+    assert r['man'] == {'poke': True, 'say': 'つめたい！', 'bits': 12, 'off': False}, r   # patted: he bounces, snow puffs off him
+    assert r['tree'] == {'poke': True, 'say': 'きれい！', 'bits': 16, 'off': False}, r   # looked up at: it sparkles, its lights back on
+    assert r['parts'], r
+
+# 2026-11-14 (the user): the six places of the ring play ジングルベル at Christmas (in the house only once bought); the yard's ground
+# is a ware of its own kind (地面), the first 雪地 at 2000 — bought it is laid at once, its card and the yard's box switch it back
+def test_christmas_plays_in_the_six_places_and_the_snow_ground_is_laid_and_lifted(b):
+    js = "(async () => { " + FRESH + """ const wait = (ms) => new Promise(q => setTimeout(q, ms));
+      const at = async (hash, day) => { saleDay = { day, at: Date.now(), ask: null, failed: false }; location.hash = hash; document.getElementById('view').innerHTML = ''; route(); await wait(150); return MUSIC.wants(); };
+      const tunes = {}; for (const h of ['#/outside', '#/beach', '#/town', '#/street', '#/harbor', '#/park', '#/station', '#/izakaya', '#/today']) tunes[h] = await at(h, '2026-12-20');
+      const nov = await at('#/town', '2026-11-20');
+      state.koto.gift = 2500; saveState(); const it = WARE.get('snowfield'); const where = buyWare(it); await at('#/outside', '2026-11-20');
+      const y = () => document.querySelector('#view .yard'), laid = y().classList.contains('ground-snowfield');
+      ACTIONS['ground-wear']({ dataset: { id: 'snowfield' } }); await at('#/outside', '2026-11-20'); const lifted = [state.ground, y().classList.contains('ground-grass')];
+      yardEdit(y(), 'on'); const tray = [...y().querySelectorAll('[data-act="yard-ground"]')].map(e => e.dataset.id); yardEdit(y(), 'ground', 'snowfield'); const fromBox = [state.ground, y().classList.contains('ground-snowfield')]; yardEdit(y(), 'done');
+      const street = (await at('#/street', '2026-11-20'), y().className.includes('ground-'));
+      return JSON.stringify({ tunes, nov, where, laid, lifted, tray, fromBox, street, kind: [it.kind, it.price, !!it.limited] }); })()"""
+    r = json.loads(ev(b, js))
+    six = {h: 'jingle' for h in ['#/outside', '#/beach', '#/town', '#/street', '#/harbor', '#/park']}
+    assert {h: r['tunes'][h] for h in six} == six and r['tunes']['#/izakaya'] == 'chochin' and r['tunes']['#/station'] == '' and r['tunes']['#/today'] == '', r   # the ring's six; a place's own elsewhere; the house plays only the gramophone
+    assert r['nov'] == '', r   # not Christmas: the café's jazz only while it is open
+    assert r['kind'] == ['ground', 2000, False] and r['where'] == '，院子的地面換好了' and r['laid'], r
+    assert r['lifted'] == ['', True] and r['tray'] == ['', 'snowfield'] and r['fromBox'] == ['snowfield', True] and not r['street'], r   # the yard's own ground only
 
 SANTA_OPEN = WITCH_OPEN.replace(".night .witch')", ".night .santa')")
 
