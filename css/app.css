@@ -409,8 +409,9 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .cust:not(.need) .hl-mark { display: none; }
 .sky .cust .hl-want { display: none; position: absolute; left: 50%; top: -10%; transform: translateX(-50%); padding: 6px 14px; border-radius: 18px; background: #fffaf0; color: #a8241c; font-style: normal; font-weight: 700; font-size: 30px; white-space: nowrap; box-shadow: 0 3px 0 rgba(0, 0, 0, .15); }
 .sky .cust.want .hl-want { display: block; }
-.sky .yhero .hl-tray { position: absolute; left: 50%; bottom: 46%; transform: translateX(-10%); padding: 2px 8px; border-radius: 12px; background: #fbf8f0; border: 2px solid #d9b04a; color: #a8241c; font-weight: 700; font-size: 26px; white-space: nowrap; pointer-events: none; }
-.hl-pick { position: absolute; z-index: 60; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); transform: translateX(-50%); width: min(520px, calc(100% - 24px)); padding: 10px 12px 12px; border-radius: 16px; background: rgba(251, 243, 226, .97); color: #2b2b33; box-shadow: 0 8px 28px rgba(0, 0, 0, .3); border-top: 6px solid #c8322a; }
+.sky .yhero .hl-tray { position: absolute; left: 50%; bottom: 40%; width: 96px; height: 84px; transform: translateX(-14%); background: radial-gradient(ellipse 48% 15% at 50% 86%, #8a5a36 0 90%, transparent 100%); pointer-events: none; --pic-shadow: transparent; --pic-steam: #c9bda6; }
+.sky .yhero .hl-tray .pic { display: block; width: 100%; height: 100%; }
+.hl-pick { position: absolute; z-index: 60; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); transform: translateX(-50%); width: min(520px, calc(100% - 24px)); padding: 14px 12px 12px; border-radius: 16px; overflow: hidden; background: rgba(251, 243, 226, .97); color: #2b2b33; box-shadow: 0 8px 28px rgba(0, 0, 0, .3); --pc: #4fae5a; --pic-shadow: rgba(90, 60, 30, .16); --pic-steam: #b4a891; }
 .hl-q { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 14px; color: #6e4a30; } .hl-ear { flex: none; width: 40px; height: 40px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 2px 0 #d8c8a8; font-size: 19px; cursor: pointer; }
 .hl-opts { display: grid; gap: 8px; } .hl-opt { min-height: 48px; border: 0; border-radius: 12px; background: #fff; box-shadow: 0 3px 0 #d8c8a8; font: inherit; font-size: 19px; font-weight: 700; color: #2b2b33; cursor: pointer; }
 .hl-where .hl-opt { display: grid; gap: 1px; padding: 6px 10px; } .hl-where .hl-opt small { font-size: 12px; font-weight: 400; color: #8a7a6e; }
@@ -419,7 +420,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 /* 外場 2.0 (2026-11-15): patience — a ring round the 「！」 (a small face in it while the dish is on its way), green → amber → red; 💦/💢/♪ by the head; cross: a fidget now and then; the HUD up top */
 .sky .cust { --pc: #4fae5a; } .sky .cust[data-mood="meh"] { --pc: #f0a92a; } .sky .cust[data-mood="mad"] { --pc: #e0402f; }
 .sky .cust .hl-pat { display: none; position: absolute; left: 50%; top: calc(-14% - 20px); width: 104px; height: 104px; margin-left: -52px; pointer-events: none; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .25)); }
-.sky .cust.pat .hl-pat { display: block; }
+.sky .cust.pat .hl-pat { display: block; } .sky .cust.asked .hl-pat, .sky .cust.asked .hl-mark { display: none; }
 .sky .cust .hl-pat::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--pc) calc(var(--p, 1) * 360deg), rgba(60, 40, 30, .25) 0); -webkit-mask: radial-gradient(circle, transparent 34px, #000 35px); mask: radial-gradient(circle, transparent 34px, #000 35px); }
 .sky .cust.pat:not(.need) .hl-pat::after { content: '🙂'; position: absolute; inset: 20px; display: grid; place-items: center; border-radius: 50%; background: #fffaf0; font-size: 34px; line-height: 1; box-shadow: 0 3px 0 rgba(0, 0, 0, .15); }
 .sky .cust.pat:not(.need)[data-mood="meh"] .hl-pat::after { content: '😐'; } .sky .cust.pat:not(.need)[data-mood="mad"] .hl-pat::after { content: '😠'; }
@@ -439,6 +440,26 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .hl-ring { position: absolute; z-index: 40; font-style: normal; font-size: 36px; line-height: 1; pointer-events: none; transform: translateX(-50%); animation: hlRing .45s ease-in-out infinite; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .25)); }
 @keyframes hlRing { 0%, 100% { transform: translateX(-50%) rotate(-14deg); } 50% { transform: translateX(-50%) rotate(14deg); } }
 @media (prefers-reduced-motion: reduce) { .sky .hl-ring { animation: none; } }
+/* 外場 2.0 §4: the room lifted over the panel (the hero and the one asked kept in sight); the panel: their patience along its top, who
+   is talking (their face as it is now), the three things to say as the hero's speech bubbles (a row on a wide screen) */
+.yard[data-place="rairai"] .sky .yworld { bottom: var(--hl-lift, 0px); transition: bottom .35s cubic-bezier(.3, .7, .4, 1); }
+.hl-pick .hl-bar { position: absolute; left: 0; top: 0; height: 6px; width: calc(var(--p, 1) * 100%); background: var(--pc); transition: width .2s linear, background-color .3s; }
+.hl-pick[data-mood="meh"] { --pc: #f0a92a; } .hl-pick[data-mood="mad"] { --pc: #e0402f; } .hl-pick.hl-nobar { border-top: 6px solid #c8322a; padding-top: 8px; } .hl-pick.hl-nobar .hl-bar { display: none; }
+.hl-top { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; } .hl-top .hl-q { flex: 1; margin: 0; }
+.hl-face { flex: none; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; overflow: hidden; background: #f4e6cc; box-shadow: inset 0 0 0 2px #e8d4b0; } .hl-face svg { width: 100%; height: 100%; } .hl-tel { font-size: 26px; }
+.hl-opts:not(.hl-dishes):not(.hl-where) .hl-opt { border-radius: 16px 16px 16px 5px; }
+@media (min-width: 640px) { .hl-pick { width: min(660px, calc(100% - 24px)); } .hl-opts:not(.hl-dishes) { grid-template-columns: repeat(3, 1fr); } .hl-opts:not(.hl-dishes) .hl-opt { padding: 8px 10px; font-size: 17px; } }
+/* the words heard: sound bars in the bubble over the speaker till answered */
+.sky .ysay .hl-wave { display: inline-flex; align-items: center; gap: 2px; height: 14px; padding: 1px 2px; vertical-align: middle; }
+.sky .ysay .hl-wave i { display: block; width: 3px; height: 100%; border-radius: 2px; background: #c8322a; animation: hlWave .8s ease-in-out infinite; }
+.sky .ysay .hl-wave i:nth-child(2) { animation-delay: -.16s; } .sky .ysay .hl-wave i:nth-child(3) { animation-delay: -.32s; } .sky .ysay .hl-wave i:nth-child(4) { animation-delay: -.48s; } .sky .ysay .hl-wave i:nth-child(5) { animation-delay: -.64s; }
+@keyframes hlWave { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+/* a dish on a table (steaming; an empty plate once eaten) */
+.sky .hl-plate { position: absolute; width: 60px; height: 60px; margin-left: -30px; pointer-events: none; --pic-shadow: rgba(90, 60, 30, .16); --pic-steam: #b4a891; } .sky .hl-plate .pic { display: block; width: 100%; height: 100%; }
+/* the results: each group's face and the words they said, tapped to hear again */
+.crr-groups { display: grid; gap: 5px; max-height: 26vh; margin: 8px 0 2px; overflow: auto; } .crr-g { display: flex; align-items: flex-start; gap: 6px; } .crr-face { flex: none; font-size: 20px; line-height: 1.4; }
+.crr-says { display: flex; flex-wrap: wrap; gap: 4px; } .crr-say { padding: 3px 8px; border: 0; border-radius: 10px; background: #f4e6cc; color: #3a2c24; font: inherit; font-size: 13px; cursor: pointer; } .crr-says em { color: #9a8a7e; }
+@media (prefers-reduced-motion: reduce) { .sky .ysay .hl-wave i { animation: none; } .yard[data-place="rairai"] .sky .yworld { transition: none; } }
 .sky .npc svg { width: 100%; height: 100%; overflow: visible; filter: brightness(calc(.64 + .36 * var(--day))) saturate(calc(.8 + .2 * var(--day))); }
 .sky .npc .ev-mark { position: absolute; left: 50%; top: -14%; width: 64px; height: 64px; margin-left: -32px; display: grid; place-items: center; border-radius: 50%; font-style: normal; font-weight: 900; font-size: 44px; line-height: 1; color: #fff; background: #f0883e; box-shadow: 0 4px 0 #c45f1e, 0 0 0 6px rgba(255, 255, 255, .85); animation: evMark 1.1s ease-in-out infinite alternate; pointer-events: none; }   /* scaled with the person (×.2–.5) */
 @keyframes evMark { from { transform: translateY(0); } to { transform: translateY(-14px); } }

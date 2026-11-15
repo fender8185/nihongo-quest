@@ -100,11 +100,11 @@ const WORK = (() => {
     const before = yenBalance(), n = shifts() + 1, g = grade(r.score, s.job), p = Object.assign(pay(n, g, extra.tip || 0), { tipName: extra.tipName });
     Object.assign(r, { done: nOf(s.job), yen: p.yen, grade: g, tip: p.tip }); saveState();
     if (S === s) S = null;
-    if (ms) setTimeout(() => results(s.job, r, p, before, n), ms); else results(s.job, r, p, before, n);
+    if (ms) setTimeout(() => results(s.job, r, p, before, n, extra.html), ms); else results(s.job, r, p, before, n, extra.html);
     return p;
   }
   // the results: the tasks right at once, the pay counting up, the grade stamped on, the 打工證 and whether it went up
-  function results(job, r, p, before, n) {
+  function results(job, r, p, before, n, more = '') {   // more: the job's own lines under the pay (外場: each group, their words to hear again)
     const first = Object.values(r.score).filter((m) => m === 0).length, all = nOf(job), rk = rank(n), up = rk !== rank(n - 1), g = r.grade, el = document.createElement('div');
     el.className = 'cr-result wk-result'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', '打工結算'); el.dataset.at = location.hash;
     el.innerHTML = `<div class="crr-card"><div class="crr-head"><b>打工結算</b><span>${esc(named(job).name)}・${esc(named(job).at)}</span></div>
@@ -112,7 +112,7 @@ const WORK = (() => {
       <div class="crr-row"><span>${yenIcon()}底薪</span><b><i data-n="${p.base}" data-yen>0</i> 円</b></div>
       ${p.bonus ? `<div class="crr-row"><span>評級加給（${g} 級）</span><b>+<i data-n="${p.bonus}" data-yen>0</i> 円</b></div>` : ''}
       ${p.tip ? `<div class="crr-row"><span>${esc(p.tipName || '小費')}</span><b>+<i data-n="${p.tip}" data-yen>0</i> 円</b></div>` : ''}
-      <div class="crr-row crr-sum"><span>錢包</span><b><i data-n="${before + p.yen}" data-from="${before}" data-yen>${yenStr(before)}</i> 円</b></div>
+      <div class="crr-row crr-sum"><span>錢包</span><b><i data-n="${before + p.yen}" data-from="${before}" data-yen>${yenStr(before)}</i> 円</b></div>${more}
       <div class="crr-stamp g${g}" aria-label="${g} 級"><b>${g}</b><span>級バイト</span></div>
       <p class="crr-rank">打工證：${esc(rk)}${up ? `　<em>${rank(n - 1) ? '升級！' : '拿到打工證！'}</em>` : ''}</p>
       <button type="button" class="btn btn-primary crr-ok">收下</button></div>`;
@@ -126,6 +126,7 @@ const WORK = (() => {
       requestAnimationFrame(f);
     }, 300 + k * 650));
     el.querySelector('.crr-ok').addEventListener('click', () => { el.remove(); if (typeof kotoButtons === 'function') kotoButtons(document); });
+    el.addEventListener('click', (e) => { const b = e.target.closest('[data-say]'); if (b) { primeTtsPlayer(); speakAs(b.dataset.who, b.dataset.say); } });   // a line heard again
   }
   // 町の手帳's 打工證 page: the rank, the shifts done (how many more to the next), each workplace's shifts and best grade
   function book() {

@@ -322,6 +322,44 @@ def test_a_phone_left_ringing_costs_a_star(b):
       await until(() => !now().phone); await wait(100); return JSON.stringify({ stars: now().stars, huang: said.includes('でんわ！'), icon: Boolean(document.querySelector('.hl-ring')), hud: document.querySelector('.hl-hud .hl-stars').textContent }); })()"""))
     assert r == {'stars': 2, 'huang': True, 'icon': False, 'hud': '★★☆'}, r
 
+# ---- 外場 2.0 §4: the look — the room lifted over the panel, who is talking and their patience, heard words as sound bars,
+# dishes drawn on the tray and the table, each group in the results ----
+LIFTED = """ HALL.force = { solo: true }; await start(); await until(() => cust('in')); await goTo('entry'); await answer(true);
+      yHeroWalk(yard(), isoXY(...RAIRAI.at.table(2))); await still(); HALL.at(yard(), 'table2'); await wait(700);
+      const pk = document.querySelector('.hl-pick').getBoundingClientRect(), hero = document.querySelector('.yhero').getBoundingClientRect(), cu = document.querySelector('.yard .cust').getBoundingClientRect();
+      return JSON.stringify({ kind: ask().kind, hero: hero.bottom - 12 <= pk.top, cust: cu.bottom - 12 <= pk.top, fit: pk.top >= 0 && pk.bottom <= innerHeight && pk.left >= 0 && pk.right <= innerWidth }); })()"""
+
+def test_the_panel_leaves_the_hero_in_sight_on_a_phone(b):
+    r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + HALLT + LIFTED)])[-1])
+    assert r == {'kind': 'seat', 'hero': True, 'cust': True, 'fit': True}, r
+
+def test_the_panel_leaves_the_hero_in_sight_on_a_desk(b):
+    r = json.loads(b.run([("metrics", (1280, 800, False)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + HALLT + LIFTED)])[-1])
+    assert r == {'kind': 'seat', 'hero': True, 'cust': True, 'fit': True}, r
+
+def test_heard_words_come_as_sound_bars_first(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
+      await until(() => cust('call')); await goTo('table0'); await wait(100); const says = () => [...document.querySelectorAll('.yard .ysay')].map((x) => x.textContent).join('|');
+      const bub = document.querySelector('.yard .ysay .hl-wave'), out = { wave: Boolean(bub), hidden: !says().includes('すみません！'), face: Boolean(document.querySelector('.hl-pick .hl-face svg')),
+        bar: Math.abs(Number(document.querySelector('.hl-pick').style.getPropertyValue('--p')) - now().cust[0].p) < 0.05 };
+      await answer(true); await wait(700); out.gone = !bub.isConnected; out.said = says().includes('すみません！'); return JSON.stringify(out); })()"""))
+    assert r == {'wave': True, 'hidden': True, 'face': True, 'bar': True, 'gone': True, 'said': True}, r
+
+def test_dishes_drawn_on_the_tray_and_the_table(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
+      await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => ask()); await answer(true); await until(() => now().ready.length); await goTo('pass'); await answer(true);
+      const out = { tray: Boolean(document.querySelector('.yhero .hl-tray svg.pic')) }; await goTo('table0'); [...document.querySelectorAll('.hl-opt')].find((x) => x.dataset.o === ask().right).click();   // served: at once (the meal goes fast here)
+      const pl = () => document.querySelector('.yard .hl-plate[data-t="0"]'); out.plate = Boolean(pl() && pl().querySelector('svg.pic')) && !pl().classList.contains('empty'); out.off = !document.querySelector('.yhero .hl-tray');
+      await until(() => cust('pay')); out.empty = Boolean(pl()) && pl().classList.contains('empty'); return JSON.stringify(out); })()"""))
+    assert r == {'tray': True, 'plate': True, 'off': True, 'empty': True}, r
+
+def test_results_list_each_group(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await drive(); await until(() => document.querySelector('.wk-result')); await wait(3500);
+      const gs = [...document.querySelectorAll('.wk-result .crr-g')], heard = []; window.speakAs = (w, l) => { heard.push(l); return Promise.resolve(); };
+      const say = document.querySelector('.wk-result .crr-say'); if (say) say.click();
+      return JSON.stringify({ n: gs.length, faces: gs.map((g) => g.querySelector('.crr-face').textContent).join(''), says: gs.every((g) => g.querySelector('.crr-say')), heard: heard.length === 1 && heard[0] === (say && say.dataset.say) }); })()"""))
+    assert r == {'n': 6, 'faces': '😊😊😊😊😊😊', 'says': True, 'heard': True}, r
+
 def test_kana_known_in_nyumon_still_needs_the_words(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ state.kanaKnown = true; kana(0); const out = { can: WORK.can('waiter'), kore: WORK.knows('これ') };
       state.stage = 'n5'; out.past = WORK.can('waiter').ok && WORK.knows('これ'); state.stage = 'pre'; return JSON.stringify(out); })()"""))
