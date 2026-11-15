@@ -282,7 +282,7 @@ def test_osusume_is_the_board_in_hand(b):
     assert r == {'kind': 'osusume', 'right': 'これです。', 'opts': ['あれです。', 'これです。', 'それです。'], 'dish': True, 'that': True}, r
 
 def test_water_asked_once_the_word_is_known(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ state.stage = 'n5'; HALL.force = { solo: true, water: true, order: 'dish', have: false, osusume: false, great: false, toilet: false, drop: false, price: false, bye: false, phone: false, regular: false };
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + LEARN + """ learn('みず', '水'); HALL.force = { solo: true, water: true, order: 'dish' };
       await start(); """ + THROUGH_CALL + """ await answer(true); await until(() => now().cust[0].q === 'water'); await goTo('table0'); const a = ask(), out = { kind: a.kind, right: a.right, line: a.line };
       await answer(true); out.q = now().cust[0].q; out.state = now().cust[0].state; return JSON.stringify(out); })()"""))
     assert r == {'kind': 'water', 'right': 'はい、どうぞ。', 'line': 'おみず ください。', 'q': None, 'state': 'food'}, r
@@ -359,6 +359,32 @@ def test_results_list_each_group(b):
       const say = document.querySelector('.wk-result .crr-say'); if (say) say.click();
       return JSON.stringify({ n: gs.length, faces: gs.map((g) => g.querySelector('.crr-face').textContent).join(''), says: gs.every((g) => g.querySelector('.crr-say')), heard: heard.length === 1 && heard[0] === (say && say.dataset.say) }); })()"""))
     assert r == {'n': 6, 'faces': '😊😊😊😊😊😊', 'says': True, 'heard': True}, r
+
+# ---- the final review's findings (外場 2.0, 2026-11-15) ----
+def test_n5_words_only_once_learned_past_nyumon(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ state.stage = 'n5'; HALL.force = { solo: true, water: true, order: 'dish', have: false, osusume: false, great: false, toilet: false, drop: false, price: false, bye: false, phone: false, regular: false };
+      await start(); """ + SPOKEN + """ await until(() => cust('in')); HALL.pat = 0.05; await until(() => now().cust[0].mood === 'mad'); HALL.pat = 1000; said.length = 0;
+      await goTo('entry'); const late = said.includes('おそい！') ? 'おそい！' : said.includes('ちょっと！') ? 'ちょっと！' : said.join(); await answer(true); await until(() => ask()); await answer(true);
+      await goTo('table0'); await answer(true); await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => ask()); await answer(true);
+      const qs = new Set(); for (let i = 0; i < 40; i++) { if (now().cust[0].q) qs.add(now().cust[0].q); await wait(20); }
+      said.length = 0; HALL.pat = 0.02; await until(() => now().cust[0].state === 'out');
+      return JSON.stringify({ water: qs.has('water'), still: said.includes('まだですか。'), late, out: said.includes('もう いいです！') ? 'もう' : said.includes('いいです！') ? 'いいです' : said.join() }); })()"""))
+    assert r == {'water': False, 'still': False, 'late': 'ちょっと！', 'out': 'いいです'}, r
+
+def test_the_room_stays_lifted_from_call_to_order_on_a_phone(b):
+    r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true, order: 'dish' }; await start(); HALL.pace = 1;
+      const long = async (f) => { for (let i = 0; i < 300 && !f(); i++) await wait(50); return f(); };
+      await long(() => cust('in')); await goTo('entry'); await answer(true); yHeroWalk(yard(), isoXY(...RAIRAI.at.table(2))); await still(); HALL.at(yard(), 'table2'); await answer(true);
+      await long(() => cust('call')); HALL.at(yard(), 'table2'); await wait(600); const low = () => document.querySelector('.yhero').getBoundingClientRect().bottom - 12 <= document.querySelector('.hl-pick').getBoundingClientRect().top;
+      const out = { call: ask().kind, first: low() }; [...document.querySelectorAll('.hl-opt')].find((x) => x.dataset.o === ask().right).click(); await long(() => ask()); await wait(900);
+      Object.assign(out, { then: ask().kind, second: low() }); return JSON.stringify(out); })()""")])[-1])
+    assert r == {'call': 'call', 'first': True, 'then': 'dish', 'second': True}, r
+
+def test_the_hud_leaves_the_purse_be_on_a_phone(b):
+    r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + HALLT + """ await start(); await drive(); await wait(100);
+      document.querySelectorAll('.wk-result').forEach((x) => x.remove()); const hud = document.querySelector('.hl-hud'), tools = document.querySelector('.yard-tools');
+      return JSON.stringify({ streak: Boolean(hud.querySelector('.hl-streak')), clear: !tools || hud.getBoundingClientRect().right <= tools.getBoundingClientRect().left || hud.getBoundingClientRect().top >= tools.getBoundingClientRect().bottom }); })()""")])[-1])
+    assert r == {'streak': True, 'clear': True}, r
 
 def test_kana_known_in_nyumon_still_needs_the_words(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ state.kanaKnown = true; kana(0); const out = { can: WORK.can('waiter'), kore: WORK.knows('これ') };

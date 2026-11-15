@@ -433,6 +433,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 @keyframes hlFume { 0%, 76%, 100% { transform: none; } 80% { transform: translateX(-3px); } 85% { transform: translateX(3px); } 90% { transform: translateX(-2px); } 95% { transform: translateX(1px); } }
 .hl-hud { position: absolute; z-index: 55; left: 12px; top: calc(env(safe-area-inset-top, 0px) + 10px); display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-radius: 999px; background: rgba(43, 27, 20, .84); color: #fbf3e2; font-size: 14px; white-space: nowrap; box-shadow: 0 3px 10px rgba(0, 0, 0, .25); pointer-events: none; }
 .hl-hud .hl-stars { color: #f6c945; letter-spacing: 1px; font-size: 17px; } .hl-hud .hl-streak { color: #ffd88a; font-weight: 700; }
+@media (max-width: 599px) { .hl-hud { top: calc(env(safe-area-inset-top, 0px) + 58px); } }   /* a phone: under the top buttons (the purse, the wardrobe…), not over them */
 @media (prefers-reduced-motion: reduce) { .sky .cust .hl-emo, .sky .cust[data-mood="mad"] > svg { animation: none; } }
 /* the dishes picked by their pictures (the order by name: its name under it; the pass: a number only); the phone ringing at the register */
 .hl-dishes { grid-template-columns: repeat(3, 1fr); } .hl-dishes .hl-opt { display: grid; justify-items: center; align-content: center; gap: 2px; padding: 6px 4px; }

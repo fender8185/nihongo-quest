@@ -50,8 +50,9 @@ const HALL = (() => {
   const SIMPLE = { call: 'call', sorry: 'wrong', pay: 'pay', toilet: 'toilet', thanks: 'thanks', water: 'water', osusume: 'osusume', great: 'great', bye: 'bye' };
   const FAR = [0, 2];   // the tables far from the toilet door (asked from these only: あそこ, nothing in between)
   const DISHES = () => RAIRAI.MENU.map((m) => m[0]), PRICE = (d) => (RAIRAI.MENU.find((m) => m[0] === d) || [])[1];
-  const knows = (...ws) => ws.every((w) => WORK.knows(w));
-  // a word read so (and written so) learned — the numbers for a price said (as the counter's: 百 and its digit; 十 and 五 for the 50s)
+  const knows = (...ws) => ws.every((w) => WORK.knows(w));   // 入門's words (past 入門: all of them)
+  // a word read so (and written so) learned: N5's words the hall uses (水, まだ, もう, 遅い — learned, whatever the stage: the final
+  // review) and the numbers for a price said (as the counter's: 百 and its digit; 十 and 五 for the 50s)
   const learned = (r, w) => REG.vocab.some((v) => v.r === r && (!w || v.w === w) && state.srs[v.key]);
   const DIGIT = { 3: ['さん', '三'], 4: ['よん', '四'], 6: ['ろく', '六'], 7: ['なな', '七'] };
   const readable = (n) => Boolean(DIGIT[Math.floor(n / 100)]) && learned('ひゃく', '百') && learned(...DIGIT[Math.floor(n / 100)]) && (n % 100 === 0 || (learned('じゅう', '十') && learned('ご', '五')));
@@ -124,7 +125,7 @@ const HALL = (() => {
   const hit = (c, d) => { if (!here(c)) return; c.p = Math.max(0, Math.min(1, c.p + d)); feel(c); };
   function grumble(c) {   // kept waiting: called again, then cross; the dish slow: まだですか (once まだ is known), else the clock ticks
     if (H.ask && H.ask.c === c) return;   // their question up: the face says it
-    const s = L(), line = c.state === 'food' && !c.q ? (knows('まだ') ? s.cust.still : null) : c.mood === 'mad' ? s.cust.hey : s.cust.again;
+    const s = L(), line = c.state === 'food' && !c.q ? (learned('まだ') ? s.cust.still : null) : c.mood === 'mad' ? s.cust.hey : s.cust.again;
     if (line) { speakAs(c.voice, line[0]); pop(c, line[0]); } else SND.play('tick', { vol: 0.4 });
   }
   function storm(c) {   // patience gone: up and out, the door banged, a star off the shop, the group marked 3
@@ -132,7 +133,7 @@ const HALL = (() => {
     if (H.ask && H.ask.c === c) { H.ask = null; panel(); }
     if (H.tray && H.tray.for === c.id) { H.tray = null; carry(false); }
     H.ready = H.ready.filter((id) => id !== c.id); readyMark();
-    const line = knows('もう') ? s.cust.out : s.cust.out0; speakAs(c.voice, line[0]); pop(c, line[0]);
+    const line = learned('もう') ? s.cust.out : s.cust.out0; speakAs(c.voice, line[0]); pop(c, line[0]);
     if (c.table >= 0) plate(c.table, null);
     H.stars = Math.max(0, H.stars - 1); c.q = null; c.state = 'out'; c.table = -1; mark(c);
     walk(c, path, () => { SND.play('door-close', { vol: 0.6 }); gone(c); });
@@ -220,7 +221,7 @@ const HALL = (() => {
     const own = !c.caller && !['sorry', 'pass'].includes(kind);   // the customer's own word to the hero (not 黄's, not the phone's)
     if (own && c.mood === 'mad' && !c.sorried) { c.after = { kind, table }; kind = 'late'; }   // cross: their complaint first
     const s = L(); let right, opts, line = SIMPLE[kind] ? s.cust[SIMPLE[kind]] : null, word = '', who = c.voice;
-    if (kind === 'late') { line = knows('おそい') ? s.cust.slow : s.cust.hey; right = s.me.sorry; opts = shuffle([right, ...s.not.sorry]).map((o) => o[0]); }
+    if (kind === 'late') { line = learned('おそい', '遅い') ? s.cust.slow : s.cust.hey; right = s.me.sorry; opts = shuffle([right, ...s.not.sorry]).map((o) => o[0]); }
     else if (kind === 'hello') { line = s.hello[hour()]; right = line; opts = s.hello.map((l) => l[0]); }
     else if (kind === 'order') {   // これ by the customer (the table's menu), それ by the hero (the board in his hand), あれ across the room (the poster)
       const near = pick(DISHES().filter((d) => d !== 'マーボーどうふ' && d !== H.board));
@@ -249,7 +250,7 @@ const HALL = (() => {
     const old = H.yard.querySelector('.hl-pick'); if (old) old.remove();
     H.yard.querySelectorAll('.hl-heard').forEach((x) => { if (!H.ask || x !== H.ask.bub) x.remove(); });   // the sound bars go with their question
     H.cust.forEach((x) => x.el.classList.toggle('asked', Boolean(H.ask) && H.ask.c === x));   // the one answered: no 「！」 or ring over the words (the panel has them)
-    const a = H.ask; if (!a) { const h = H; setTimeout(() => { if (H === h && !H.ask) lift(); }, 450); return; }   // down again (unless the next question is straight up)
+    const a = H.ask; if (!a) { const h = H; setTimeout(() => { if (H === h && !H.ask) lift(); }, 900); return; }   // down again, unless the next question follows (they come within 700 ms)
     const el = document.createElement('div'); el.className = 'hl-pick';
     const own = !a.c.caller && a.who !== 'huang';
     if (own) { el.style.setProperty('--p', a.c.p.toFixed(3)); el.dataset.mood = a.c.mood; } else el.classList.add('hl-nobar');
@@ -265,7 +266,7 @@ const HALL = (() => {
   }
   // the room lifted while the panel is up, so the hero and the one asked (黄 at the pass) stay above it; down again when it goes
   function lift() {
-    const y = H.yard, el = y.querySelector('.hl-pick'), was = parseFloat(y.style.getPropertyValue('--hl-lift')) || 0;
+    const y = H.yard, el = y.querySelector('.hl-pick'), w = y.querySelector('.yworld'), was = w ? parseFloat(getComputedStyle(w).bottom) || 0 : 0;   // where the room is now, mid-glide too
     if (!el || !H.ask) { y.style.setProperty('--hl-lift', '0px'); return; }
     const who = [y.querySelector('.yhero'), H.ask.c.el, H.ask.who === 'huang' && y.querySelector('.npc[data-npc="huang"]')].filter(Boolean);
     const low = Math.max(...who.map((x) => x.getBoundingClientRect().bottom)) + was;   // where they would be with the room down
@@ -329,12 +330,12 @@ const HALL = (() => {
   // 黄 at it: はいよ！; perhaps water asked for meanwhile; then its name called and the bell
   function cook(c) {
     const s = L(); c.state = 'food'; mark(c); huangPop(s.order[0]);
-    if (c.reqs < 2 && knows('みず') && may('water', 0.3)) later(() => { if (here(c) && c.state === 'food' && !c.q) want(c, 'water'); }, rnd(1500, 3000));
+    if (c.reqs < 2 && learned('みず', '水') && may('water', 0.3)) later(() => { if (here(c) && c.state === 'food' && !c.q) want(c, 'water'); }, rnd(1500, 3000));
     later(() => { if (!here(c) || c.state !== 'food') return; H.ready.push(c.id); readyMark(); SND.play('ding', { vol: 0.7 }); speakAs('huang', s.up[c.dish][0]); huangPop('🔔'); }, rnd(5000, 7000));
   }
   // eating: いただきます; perhaps one thing wanted on the way (the toilet from a far table, a word of praise, water, the chopsticks
   // dropped); おいしい; off to pay
-  const EAT = [['toilet', (c) => FAR.includes(c.table) && knows('あそこ'), 0.4], ['great', () => knows('とても', 'おいしい'), 0.4], ['water', () => knows('みず'), 0.3], ['drop', () => knows('どういたしまして'), 0.25]];
+  const EAT = [['toilet', (c) => FAR.includes(c.table) && knows('あそこ'), 0.4], ['great', () => knows('とても', 'おいしい'), 0.4], ['water', () => learned('みず', '水'), 0.3], ['drop', () => knows('どういたしまして'), 0.25]];
   function eat(c) {
     const s = L(); c.state = 'eat'; mark(c);
     later(() => { if (!here(c)) return; pop(c, s.cust.eat[0]);
