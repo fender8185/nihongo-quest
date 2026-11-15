@@ -75,7 +75,7 @@ def test_an_old_delivery_record_still_shows(b):
 # ---- 外場 (HALL): customers come in, sit, call, eat, pay; the hero goes to them and picks what to say ----
 HALLT = """const yard = () => document.querySelector('.yard');
   const start = async (fresh) => { word('いらっしゃいませ', 'どうぞ', 'はい'); if (!fresh) state.work.res['2026-01-01'] = { place: 'waiter', done: 1, score: { 0: 0 }, yen: 100, grade: 'S' };
-    window.speakAs = () => Promise.resolve(); HALL.pace = 0.02; await into(); WORK.start(yard(), 'waiter'); await wait(300); };
+    window.speakAs = () => Promise.resolve(); HALL.pace = 0.02; HALL.pat = 1000; await into(); WORK.start(yard(), 'waiter'); await wait(300); };
   const now = () => HALL.now(), ask = () => now().ask, goTo = async (k) => { HALL.at(yard(), k); await wait(120); };
   const answer = async (right) => { const a = ask(); [...document.querySelectorAll('.hl-opt')].find((x) => (x.dataset.o === a.right) === right).click(); await wait(150); };
   const until = async (f) => { for (let i = 0; i < 100 && !f(); i++) await wait(50); return f(); };
@@ -103,9 +103,9 @@ def test_a_customer_comes_in_and_is_greeted(b):
       const el = document.querySelector('.yard .cust'), out = { mark: Boolean(el && el.querySelector('.hl-mark')) && el.classList.contains('need') };
       await goTo('entry'); const a = ask(); out.kind = a.kind; out.opts = a.opts.length === 3 && a.opts.includes('いらっしゃいませ！'); out.panel = document.querySelectorAll('.hl-pick .hl-opt').length;
       await answer(false); out.still = Boolean(ask()) && WORK.today().done === 0; await answer(false); out.hint = document.querySelector('.hl-opt.wk-hint').dataset.o;
-      await answer(true); out.done = WORK.today().done; out.state = now().cust[0].state; out.gone = !document.querySelector('.hl-pick'); out.score = WORK.today().score[0];
+      await answer(true); out.done = WORK.today().done; out.state = now().cust[0].state; out.gone = !document.querySelector('.hl-pick'); out.p = now().cust[0].p < 0.8;
       return JSON.stringify(out); })()"""))
-    assert r == {'mark': True, 'kind': 'greet', 'opts': True, 'panel': 3, 'still': True, 'hint': 'いらっしゃいませ！', 'done': 1, 'state': 'wait', 'gone': True, 'score': 2}, r
+    assert r == {'mark': True, 'kind': 'greet', 'opts': True, 'panel': 3, 'still': True, 'hint': 'いらっしゃいませ！', 'done': 0, 'state': 'wait', 'gone': True, 'p': True}, r
 
 def test_one_customer_from_the_door_to_the_register(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await until(() => cust('in')); const kinds = [];
@@ -113,29 +113,35 @@ def test_one_customer_from_the_door_to_the_register(b):
       await goTo('entry'); await take(); await goTo('table0'); await take();
       await until(() => cust('call')); const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); }; await goTo('table0'); const heard = said.slice(); await take();
       await until(() => now().ready.length); await goTo('pass'); const tray = Boolean(now().tray) && Boolean(document.querySelector('.yhero .hl-tray'));
-      await goTo('table0'); await take(); await until(() => cust('pay')); await goTo('register'); await take();
-      return JSON.stringify({ kinds, heard: heard.some((x) => x.endsWith(':すみません！')), tray, done: WORK.today().done, carry: Boolean(document.querySelector('.yhero .hl-tray')) }); })()"""))
-    assert r == {'kinds': ['greet', 'seat', 'call', 'serve', 'pay'], 'heard': True, 'tray': True, 'done': 5, 'carry': False}, r
+      await goTo('table0'); await take(); await until(() => cust('pay')); await goTo('register'); await take(); await wait(100);
+      return JSON.stringify({ kinds, heard: heard.some((x) => x.endsWith(':すみません！')), tray, done: WORK.today().done, score: WORK.today().score[0], carry: Boolean(document.querySelector('.yhero .hl-tray')),
+        hud: document.querySelector('.hl-hud b').textContent }); })()"""))
+    assert r == {'kinds': ['greet', 'seat', 'call', 'serve', 'pay'], 'heard': True, 'tray': True, 'done': 1, 'score': 0, 'carry': False, 'hud': '第 2／6 組'}, r
 
 def test_a_dish_to_the_wrong_table(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await until(() => cust('in')); HALL.spawn();
       for (const t of [0, 1]) { await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table' + t); await answer(true); }
       await until(() => now().cust.filter((c) => c.state === 'call').length === 2); await goTo('table0'); await answer(true); await goTo('table1'); await answer(true);
       await until(() => now().ready.length === 2); await goTo('pass'); const to = now().cust.find((c) => c.id === now().tray.for).table, other = to === 0 ? 1 : 0;
-      await goTo('table' + other); const a = ask(), out = { kind: a.kind, right: a.right }; await answer(true); out.still = Boolean(now().tray); out.miss = WORK.today().score[WORK.today().done - 1];
+      const p0 = now().cust.find((c) => c.table === other).p; await goTo('table' + other); const a = ask(), out = { kind: a.kind, right: a.right, miss: now().cust.find((c) => c.table === other).p < p0 - 0.05 ? 1 : 0 }; await answer(true); out.still = Boolean(now().tray);
       await goTo('table' + to); out.serve = ask().kind; return JSON.stringify(out); })()"""))
     assert r == {'kind': 'sorry', 'right': 'すみません！', 'still': True, 'miss': 1, 'serve': 'serve'}, r
 
-def test_ten_answers_pay(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await drive(); await until(() => document.querySelector('.wk-result'));
-      const t = WORK.today(); return JSON.stringify({ done: t.done, yen: t.yen, grade: t.grade, result: Boolean(document.querySelector('.wk-result')), over: now() ? now().over : null }); })()"""))
-    assert r == {'done': 10, 'yen': 150, 'grade': 'S', 'result': True, 'over': True}, r
+def test_six_groups_make_a_shift(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await drive(); await until(() => document.querySelector('.wk-result')); await wait(3500);
+      const t = WORK.today(), res = document.querySelector('.wk-result').textContent; return JSON.stringify({ done: t.done, yen: t.yen, grade: t.grade, over: now() ? now().over : null,
+        happy: res.includes('滿意的客人') && res.includes('6 / 6'), red: res.includes('店長紅包') }); })()"""))
+    assert r == {'done': 6, 'yen': 180, 'grade': 'S', 'over': True, 'happy': True, 'red': True}, r
+
+SERVED = """ const served = async (t) => { await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table' + t); await answer(true);
+    await until(() => cust('call')); await goTo('table' + t); await answer(true); await until(() => now().ready.length); await goTo('pass'); await goTo('table' + t); await answer(true); };"""
 
 def test_leaving_mid_shift_and_back_picks_up(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ await start(); await served(0); await until(() => cust('pay')); await goTo('register'); await answer(true);
+      await until(() => cust('in')); await goTo('entry'); await answer(true);
       location.hash = '#/chinadori'; route(); await wait(400); const out = { off: !HALL.on(), custs: document.querySelectorAll('.cust').length };
-      await into(); WORK.start(yard(), 'waiter'); await wait(300); out.k = now().k; out.on = HALL.on(); return JSON.stringify(out); })()"""))
-    assert r == {'off': True, 'custs': 0, 'k': 2, 'on': True}, r
+      await into(); WORK.start(yard(), 'waiter'); await wait(300); out.k = now().k; out.on = HALL.on(); out.hud = document.querySelector('.hl-hud b').textContent; return JSON.stringify(out); })()"""))
+    assert r == {'off': True, 'custs': 0, 'k': 1, 'on': True, 'hud': '第 2／6 組'}, r
 
 def test_huang_tapped_on_a_shift_hands_over_the_dish(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
@@ -164,9 +170,6 @@ def test_no_order_question_without_the_words(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
       await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => cust('food')); return JSON.stringify({ ask: ask(), dish: Boolean(now().cust[0].dish) }); })()"""))
     assert r == {'ask': None, 'dish': True}, r
-
-SERVED = """ const served = async (t) => { await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table' + t); await answer(true);
-    await until(() => cust('call')); await goTo('table' + t); await answer(true); await until(() => now().ready.length); await goTo('pass'); await goTo('table' + t); await answer(true); };"""
 
 def test_the_toilet_asked_from_a_far_table(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('あそこ'); HALL.force = { toilet: true }; await start(); await served(0);
@@ -214,6 +217,43 @@ def test_a_shift_going_at_closing_time_runs_to_its_end(b):
       const out = { on: HALL.on(), custs: document.querySelectorAll('.yard .cust').length > 0 }; await drive(); await until(() => document.querySelector('.wk-result'));
       out.yen = WORK.today().yen > 0; return JSON.stringify(out); })()"""))
     assert r == {'on': True, 'custs': True, 'yen': True}, r
+
+# ---- 外場 2.0 (docs/superpowers/specs/2026-11-15-hall-rush-design.md): patience, moods, walk-outs, six groups ----
+SPOKEN = """ const said = []; window.speakAs = (w, l) => { said.push(l); return Promise.resolve(); };
+  const el = () => document.querySelector(`.yard .cust[data-c="${now().cust[0].id}"]`); """
+
+def test_patience_drains_and_the_face_changes(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); """ + SPOKEN + """ await until(() => cust('in')); const moods = [], ps = [], mouths = new Set();
+      HALL.pat = 0.06; for (let i = 0; i < 200 && now().cust[0].mood !== 'mad'; i++) { const m = el().dataset.mood; if (moods[moods.length - 1] !== m) moods.push(m); ps.push(Number(el().style.getPropertyValue('--p'))); mouths.add(el().querySelector('.mouth').innerHTML); await wait(20); }
+      HALL.pat = 1000; await wait(60); moods.push(el().dataset.mood); mouths.add(el().querySelector('.mouth').innerHTML);
+      return JSON.stringify({ moods: [...new Set(moods)], fell: ps[ps.length - 1] < ps[0], faces: mouths.size >= 2, said: said.filter((l) => ['あの、すみません！', 'ちょっと！'].includes(l)),
+        emo: el().querySelector('.hl-emo').textContent, ring: getComputedStyle(el().querySelector('.hl-pat')).display !== 'none' }); })()"""))
+    assert r == {'moods': ['ok', 'meh', 'mad'], 'fell': True, 'faces': True, 'said': ['あの、すみません！', 'ちょっと！'], 'emo': '💢', 'ring': True}, r
+
+def test_a_mad_customer_wants_an_apology_first(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); """ + SPOKEN + """ await until(() => cust('in'));
+      HALL.pat = 0.06; await until(() => now().cust[0].mood === 'mad'); HALL.pat = 1000; const p0 = now().cust[0].p; said.length = 0;
+      await goTo('entry'); const a = ask(), out = { kind: a.kind, right: a.right, heard: said[0] }; await answer(true); out.p = now().cust[0].p > p0 + 0.2;
+      await until(() => ask()); out.then = ask().kind; return JSON.stringify(out); })()"""))
+    assert r == {'kind': 'late', 'right': 'すみません！', 'heard': 'ちょっと！', 'p': True, 'then': 'greet'}, r
+
+def test_a_customer_storms_out_at_zero(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); """ + SPOKEN + """ await until(() => cust('in')); await goTo('entry'); const id = now().cust[0].id, out = { open: ask().kind };
+      HALL.pat = 0.02; await until(() => !now().cust.some((c) => c.id === id && c.state !== 'out')); HALL.pat = 1000;
+      Object.assign(out, { ask: ask(), panel: Boolean(document.querySelector('.hl-pick')), stars: now().stars, score: WORK.today().score[0], said: said.includes('いいです！'), hud: document.querySelector('.hl-hud .hl-stars').textContent });
+      await until(() => !document.querySelector(`.cust[data-c="${id}"]`)); out.gone = !document.querySelector(`.cust[data-c="${id}"]`); return JSON.stringify(out); })()"""))
+    assert r == {'open': 'greet', 'ask': None, 'panel': False, 'stars': 2, 'score': 3, 'said': True, 'hud': '★★☆', 'gone': True}, r
+
+def test_wrong_answers_cost_patience(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await until(() => cust('in')); await goTo('entry'); const p0 = now().cust[0].p;
+      await answer(false); const p1 = now().cust[0].p; await answer(true); const p2 = now().cust[0].p; return JSON.stringify({ miss: p0 - p1 > 0.15, back: p2 > p1 }); })()"""))
+    assert r == {'miss': True, 'back': True}, r
+
+def test_a_waiter_score_is_the_mood_at_the_door(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ return JSON.stringify({ n: WORK.nOf('waiter'), shelf: WORK.nOf('shelf'),
+      a: WORK.grade({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 1 }, 'waiter'), s: WORK.grade({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }, 'waiter'), b: WORK.grade({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 3 }, 'waiter'),
+      shelfB: WORK.grade({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 1, 9: 1 }) }); })()"""))
+    assert r == {'n': 6, 'shelf': 10, 'a': 'A', 's': 'S', 'b': 'B', 'shelfB': 'B'}, r
 
 def test_kana_known_in_nyumon_still_needs_the_words(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ state.kanaKnown = true; kana(0); const out = { can: WORK.can('waiter'), kore: WORK.knows('これ') };

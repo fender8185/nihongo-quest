@@ -3,7 +3,7 @@
 // The user: a beginner should have somewhere to earn a little 円 — a second way beside the cruise's guide, the two unrelated; at
 // most one workplace a day (later places too: 商店街's shops and others, 中華街 the first and lowest); the pay a tenth of what I
 // first put (2026-11-14: too much). Four workplaces, each opening by the kana seen (5, 15, 30, 46): 整理貨架 at ふく, 站櫃 at
-// らんらん, 外場 in らいらいけん (2026-11-15: in place of 外送), 包包子 at 福明 with 王. A shift is ten tasks; one left halfway waits for its day, at that place
+// らんらん, 外場 in らいらいけん (2026-11-15: in place of 外送), 包包子 at 福明 with 王. A shift is ten tasks (the 外場 six groups); one left halfway waits for its day, at that place
 // only; the day is the town's day it began. Graded by the share right at once (as the cruise's guide), paid by the 打工證 (the
 // shifts done: 1 新人 100 円, 5 アルバイト 120, 15 ベテラン 150, 30 バイトリーダー 200) and the grade (S 50 … C 10), a tip on
 // top where a job gives one; 円 only. Each job's runner registers itself (WORK.register) and drives the shift through its ctx: right(task, misses) as
@@ -13,7 +13,9 @@ const WORK = (() => {
   const PLACES = {
     shelf: { place: 'chinadori', shop: 'fuku', who: 'zhang', kana: 5, name: '整理貨架', at: 'ふく' },
     counter: { place: 'chinadori', shop: 'ranran', who: 'zhou', kana: 15, name: '站櫃', at: 'らんらん' },
-    waiter: { place: 'rairai', shop: 'rairai', who: 'huang', kana: 30, words: ['いらっしゃいませ', 'どうぞ', 'はい'], name: '外場', at: 'らいらいけん' },
+    // 外場 2.0 (2026-11-15, docs/superpowers/specs/2026-11-15-hall-rush-design.md §2): a shift is six groups, each scored by its mood
+    // at the door (0 pleased … 3 stormed out), graded with part credit for the not quite pleased
+    waiter: { place: 'rairai', shop: 'rairai', who: 'huang', kana: 30, words: ['いらっしゃいませ', 'どうぞ', 'はい'], name: '外場', at: 'らいらいけん', n: 6, credit: [1, 0.6, 0.3, 0], unit: '滿意的客人' },
     buns: { place: 'chinatown', shop: 'seiro', who: 'wang', kana: 46, name: '包包子', at: '福明' } };
   const GONE = { deliver: { name: '外送', at: 'らいらいけん' } };   // a workplace no more (外送, cut 2026-11-15): its old records still read
   const named = (job) => PLACES[job] || GONE[job] || { name: job, at: '' };
@@ -27,7 +29,9 @@ const WORK = (() => {
   const today = () => W().res[day()] || null;
   const shifts = () => Object.values(W().res).filter(fin).length;
   const rank = (n) => (RANKS.find(([k]) => n >= k) || [0, ''])[1];
-  const grade = (score) => { const v = Object.values(score || {}), share = v.filter((m) => m === 0).length / Math.max(N, v.length); return GRADES.find(([, min]) => share >= min - 1e-9)[0]; };
+  const nOf = (job) => (PLACES[job] && PLACES[job].n) || N;   // the tasks in a shift of this job (10, the 外場's six groups)
+  const grade = (score, job) => { const v = Object.values(score || {}), cr = PLACES[job] && PLACES[job].credit, got = (m) => (cr ? cr[Math.min(m, cr.length - 1)] : m === 0 ? 1 : 0);
+    const share = v.reduce((a, m) => a + got(m), 0) / Math.max(nOf(job), v.length); return GRADES.find(([, min]) => share >= min - 1e-9)[0]; };
   const pay = (n, g, tip = 0) => { const base = (RANKS.find(([k]) => n >= k) || RANKS[RANKS.length - 1])[2], bonus = BONUS[g] || 0; return { base, bonus, tip, yen: base + bonus + tip }; };
   const seen = () => kanaSeenSet().size;
   const knowsAll = () => state.kanaKnown === true || !inPreStage();
@@ -64,8 +68,8 @@ const WORK = (() => {
     const d = day(), res = W().res; if (free() && res[d] && (fin(res[d]) || res[d].place !== job)) setAside(d);
     if (!res[d]) { res[d] = { place: job, done: 0, score: {} }; saveState(); }
     const s = S = { job, day: d };
-    if (res[d].done >= N) { finish(s); return true; }   // all ten done but never paid (the card shut, the app gone, at the last moment): paid now
-    const ctx = { yard, n: N, job, done: res[d].done, right: (k, misses) => right(s, k, misses), finish: (extra, ms) => finish(s, extra, ms), on: () => S === s };
+    if (res[d].done >= nOf(job)) { finish(s); return true; }   // all done but never paid (the card shut, the app gone, at the last moment): paid now
+    const ctx = { yard, n: nOf(job), job, done: res[d].done, right: (k, misses) => right(s, k, misses), finish: (extra, ms) => finish(s, extra, ms), on: () => S === s };
     const run = () => { if (S === s && JOBS[job]) JOBS[job].run(ctx); };
     const first = (TOWN.WORK.first || {})[job], before = Object.entries(res).some(([k, r]) => k !== d && r.place === job);   // the keeper's word the first time
     if (first && !before && !res[d].done) TALK.open(yard, PLACES[job].who, first, run, null, { ev: true }); else run();
@@ -79,7 +83,7 @@ const WORK = (() => {
   function board() {
     const t = today(), rows = Object.entries(PLACES).map(([job, P]) => { const ok = kanaOk(P.kana);
       return `<li class="wk-job${ok ? ' ok' : ''}" data-job="${job}"><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span><span>${ok ? '✓ 可以做' : `學 ${P.kana} 個假名`}</span></li>`; }).join('');
-    const now = t ? (fin(t) ? `今天在「${esc(named(t.place).name)}」的班打完了。` : `今天在「${esc(named(t.place).name)}」打工中（${t.done}／${N}）。`) : '今天還沒打工。一天只能選一個地方打一班。';
+    const now = t ? (fin(t) ? `今天在「${esc(named(t.place).name)}」的班打完了。` : `今天在「${esc(named(t.place).name)}」打工中（${t.done}／${nOf(t.place)}）。`) : '今天還沒打工。一天只能選一個地方打一班。';
     CLASS.card('wk-board', '求人看板', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button><div class="wk-bhead"><b lang="ja">アルバイト ぼしゅう</b><span>求人看板</span></div>
       <ul class="wk-jobs">${rows}</ul><p class="wk-today">${now}</p><p class="wk-note">大通り的店 10 點到 19 點；外場在らいらいけん店裡（10 點到 20 點）；包包子在牌樓外的「福明」，王老闆在的時候。點老闆，選「はたらく」。</p>`, () => {});
   }
@@ -89,25 +93,25 @@ const WORK = (() => {
     if (!(k in r.score)) r.score[k] = Math.max(0, Math.floor(misses) || 0);
     r.done = Math.max(r.done || 0, Object.keys(r.score).length); saveState();
   }
-  // the tenth done: graded and paid at once (extra.tip: 外送's), the results shown ms later — the runner calls it at the tenth, not at
+  // the last done: graded and paid at once (extra.tip: on top — 外場's 店長紅包, named by extra.tipName), the results shown ms later — the runner calls it at the tenth, not at
   // the end of its card's goodbye, so a card shut then is paid all the same (2026-11-15, the final review)
   function finish(s, extra = {}, ms = 0) {
     const r = W().res[s.day]; if (!r || fin(r)) return null;
-    const before = yenBalance(), n = shifts() + 1, g = grade(r.score), p = pay(n, g, extra.tip || 0);
-    Object.assign(r, { done: N, yen: p.yen, grade: g, tip: p.tip }); saveState();
+    const before = yenBalance(), n = shifts() + 1, g = grade(r.score, s.job), p = Object.assign(pay(n, g, extra.tip || 0), { tipName: extra.tipName });
+    Object.assign(r, { done: nOf(s.job), yen: p.yen, grade: g, tip: p.tip }); saveState();
     if (S === s) S = null;
     if (ms) setTimeout(() => results(s.job, r, p, before, n), ms); else results(s.job, r, p, before, n);
     return p;
   }
   // the results: the tasks right at once, the pay counting up, the grade stamped on, the 打工證 and whether it went up
   function results(job, r, p, before, n) {
-    const first = Object.values(r.score).filter((m) => m === 0).length, rk = rank(n), up = rk !== rank(n - 1), g = r.grade, el = document.createElement('div');
+    const first = Object.values(r.score).filter((m) => m === 0).length, all = nOf(job), rk = rank(n), up = rk !== rank(n - 1), g = r.grade, el = document.createElement('div');
     el.className = 'cr-result wk-result'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', '打工結算'); el.dataset.at = location.hash;
     el.innerHTML = `<div class="crr-card"><div class="crr-head"><b>打工結算</b><span>${esc(named(job).name)}・${esc(named(job).at)}</span></div>
-      <div class="crr-row"><span>一次就做對</span><b><i data-n="${first}">0</i> / ${N}</b></div>
+      <div class="crr-row"><span>${esc((PLACES[job] && PLACES[job].unit) || '一次就做對')}</span><b><i data-n="${first}">0</i> / ${all}</b></div>
       <div class="crr-row"><span>${yenIcon()}底薪</span><b><i data-n="${p.base}" data-yen>0</i> 円</b></div>
       ${p.bonus ? `<div class="crr-row"><span>評級加給（${g} 級）</span><b>+<i data-n="${p.bonus}" data-yen>0</i> 円</b></div>` : ''}
-      ${p.tip ? `<div class="crr-row"><span>小費</span><b>+<i data-n="${p.tip}" data-yen>0</i> 円</b></div>` : ''}
+      ${p.tip ? `<div class="crr-row"><span>${esc(p.tipName || '小費')}</span><b>+<i data-n="${p.tip}" data-yen>0</i> 円</b></div>` : ''}
       <div class="crr-row crr-sum"><span>錢包</span><b><i data-n="${before + p.yen}" data-from="${before}" data-yen>${yenStr(before)}</i> 円</b></div>
       <div class="crr-stamp g${g}" aria-label="${g} 級"><b>${g}</b><span>級バイト</span></div>
       <p class="crr-rank">打工證：${esc(rk)}${up ? `　<em>${rank(n - 1) ? '升級！' : '拿到打工證！'}</em>` : ''}</p>
@@ -135,5 +139,5 @@ const WORK = (() => {
   }
   const register = (job, def) => { JOBS[job] = def; };
   const lines = (add) => { Object.entries(TOWN.WORK.hello || {}).forEach(([id, l]) => add(id, l[0])); Object.values(TOWN.WORK.first || {}).forEach((ls) => ls.forEach((l) => add(l[0], l[1]))); Object.values(JOBS).forEach((j) => j.lines && j.lines(add)); };
-  return { N, PLACES, kana, knows, free, tool, can, start, register, pay, rank, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, board };
+  return { N, nOf, PLACES, kana, knows, free, tool, can, start, register, pay, rank, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, board };
 })();

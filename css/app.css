@@ -416,6 +416,23 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .hl-where .hl-opt { display: grid; gap: 1px; padding: 6px 10px; } .hl-where .hl-opt small { font-size: 12px; font-weight: 400; color: #8a7a6e; }
 .hl-opt.wk-bad { animation: shake .3s ease; } .hl-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
 @media (prefers-reduced-motion: reduce) { .hl-opt.wk-bad { animation: none; } }
+/* 外場 2.0 (2026-11-15): patience — a ring round the 「！」 (a small face in it while the dish is on its way), green → amber → red; 💦/💢/♪ by the head; cross: a fidget now and then; the HUD up top */
+.sky .cust { --pc: #4fae5a; } .sky .cust[data-mood="meh"] { --pc: #f0a92a; } .sky .cust[data-mood="mad"] { --pc: #e0402f; }
+.sky .cust .hl-pat { display: none; position: absolute; left: 50%; top: calc(-14% - 20px); width: 104px; height: 104px; margin-left: -52px; pointer-events: none; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .25)); }
+.sky .cust.pat .hl-pat { display: block; }
+.sky .cust .hl-pat::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--pc) calc(var(--p, 1) * 360deg), rgba(60, 40, 30, .25) 0); -webkit-mask: radial-gradient(circle, transparent 34px, #000 35px); mask: radial-gradient(circle, transparent 34px, #000 35px); }
+.sky .cust.pat:not(.need) .hl-pat::after { content: '🙂'; position: absolute; inset: 20px; display: grid; place-items: center; border-radius: 50%; background: #fffaf0; font-size: 34px; line-height: 1; box-shadow: 0 3px 0 rgba(0, 0, 0, .15); }
+.sky .cust.pat:not(.need)[data-mood="meh"] .hl-pat::after { content: '😐'; } .sky .cust.pat:not(.need)[data-mood="mad"] .hl-pat::after { content: '😠'; }
+.sky .cust.want .hl-want { top: calc(-14% - 70px); }
+.sky .cust[data-mood="mad"] .hl-mark { background: #e0402f; box-shadow: 0 4px 0 #a8241c; }
+.sky .cust .hl-emo { position: absolute; left: 68%; top: 6%; font-style: normal; font-size: 40px; line-height: 1; pointer-events: none; animation: hlEmo .9s ease-in-out infinite alternate; }
+.sky .cust .hl-emo:empty { display: none; }
+@keyframes hlEmo { from { transform: translateY(0) scale(1); } to { transform: translateY(-6px) scale(1.08); } }
+.sky .cust[data-mood="mad"] > svg { animation: hlFume 2.2s ease-in-out infinite; }
+@keyframes hlFume { 0%, 76%, 100% { transform: none; } 80% { transform: translateX(-3px); } 85% { transform: translateX(3px); } 90% { transform: translateX(-2px); } 95% { transform: translateX(1px); } }
+.hl-hud { position: absolute; z-index: 55; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 10px); transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-radius: 999px; background: rgba(43, 27, 20, .84); color: #fbf3e2; font-size: 14px; white-space: nowrap; box-shadow: 0 3px 10px rgba(0, 0, 0, .25); pointer-events: none; }
+.hl-hud .hl-stars { color: #f6c945; letter-spacing: 1px; font-size: 17px; } .hl-hud .hl-streak { color: #ffd88a; font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .sky .cust .hl-emo, .sky .cust[data-mood="mad"] > svg { animation: none; } }
 .sky .npc svg { width: 100%; height: 100%; overflow: visible; filter: brightness(calc(.64 + .36 * var(--day))) saturate(calc(.8 + .2 * var(--day))); }
 .sky .npc .ev-mark { position: absolute; left: 50%; top: -14%; width: 64px; height: 64px; margin-left: -32px; display: grid; place-items: center; border-radius: 50%; font-style: normal; font-weight: 900; font-size: 44px; line-height: 1; color: #fff; background: #f0883e; box-shadow: 0 4px 0 #c45f1e, 0 0 0 6px rgba(255, 255, 255, .85); animation: evMark 1.1s ease-in-out infinite alternate; pointer-events: none; }   /* scaled with the person (×.2–.5) */
 @keyframes evMark { from { transform: translateY(0); } to { transform: translateY(-14px); } }

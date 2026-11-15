@@ -95,7 +95,8 @@ const HERO = (() => {
     }
   };
   // the brows (the left one; the right mirrors it): [path, width], in a shade of the hair
-  const BROWS = { soft: ['M-15 -128 Q-10.5 -130.8 -6 -128.8', 1.8], straight: ['M-15 -129 H-6', 2], thick: ['M-15.4 -127.8 Q-10.5 -131.6 -5.6 -129', 3.2], worried: ['M-15 -128 Q-10 -128.4 -6 -131.2', 1.8], raised: ['M-15.2 -130.8 Q-10.5 -131.6 -6 -128.4', 1.7] };
+  const BROWS = { soft: ['M-15 -128 Q-10.5 -130.8 -6 -128.8', 1.8], straight: ['M-15 -129 H-6', 2], thick: ['M-15.4 -127.8 Q-10.5 -131.6 -5.6 -129', 3.2], worried: ['M-15 -128 Q-10 -128.4 -6 -131.2', 1.8], raised: ['M-15.2 -130.8 Q-10.5 -131.6 -6 -128.4', 1.7],
+    angry: ['M-15.2 -131.6 Q-10.5 -130.6 -5.6 -127', 2.2] };   // not offered in the maker: a cross face (外場's customers kept waiting, 2026-11-15)
   const MOUTH = {   // c: the line's colour (darker on the darkest skin, so the mouth still reads)
     smile: (c) => `<path d="M-1.6 -104.6 Q2 -101.4 5.6 -104.6" fill="none" stroke="${c}" stroke-width="1.6" stroke-linecap="round"/>`,
     grin: () => '<path d="M-2.6 -105.4 Q2 -104.6 6.6 -105.4 Q6 -99.4 2 -99.4 Q-2 -99.4 -2.6 -105.4 Z" fill="#6b2c2c"/><path d="M-.6 -101.2 Q2 -102.8 4.6 -101.2 Q3.8 -99.6 2 -99.6 Q.2 -99.6 -.6 -101.2 Z" fill="#e8838a"/>',

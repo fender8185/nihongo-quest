@@ -5,8 +5,7 @@
 // not on a card: customers come in by the door (a few at a time, no more than the shift's answers left can take), a 「！」 over
 // whoever wants the hero. Tap them (or the table, the pass, the register, 黄): the hero walks there, the customer says their word
 // — heard, its text shown once answered — and three things to say come up at the foot of the screen; the right one moves them on,
-// a wrong one is a miss (two, and the right one lights). Each answer one of the shift's ten (WORK's ctx), no clock, nobody leaves
-// in a huff. A customer: in at the door (いらっしゃいませ) → to a free table the hero stands at (こちらへ どうぞ) → sits, calls
+// a wrong one is a miss (two, and the right one lights). A customer: in at the door (いらっしゃいませ) → to a free table the hero stands at (こちらへ どうぞ) → sits, calls
 // (すみません！ → はい！) and orders off the table's menu → 黄's できたよ！ at the pass, the dish taken → to their table (どうぞ;
 // the wrong table: ちがいます → すみません) → eats → to the register (ごちそうさまでした → ありがとうございました) → out.
 // Their looks put together anew (PASSERS.look), their voices the cruise's passengers' (the hair a man's for a man's voice).
@@ -14,28 +13,42 @@
 // customer, the おすすめ board in the hero's hand, the poster across the room — the one meant picked; おてあらいは どこですか from a
 // table far from the toilet door (あそこです); chopsticks dropped and handed back (どうぞ → ありがとう → どういたしまして); a regular
 // (周おばあさん, 張さん, 陳) in at the door with the time's greeting, answered in kind. Each at most once a shift.
+// 外場 2.0 (2026-11-15, the user: too rough — it should feel like you really must answer, customers changing if kept waiting, Japanese
+// and tension wherever they are; docs/superpowers/specs/2026-11-15-hall-rush-design.md): each customer's patience wears down while
+// they wait on the hero (a ring round their 「！」), their face going from pleased to put out (💦) to cross (💢), calling again
+// (あの、すみません！) and cross (ちょっと！) as it goes; a wrong answer costs some, a quick right one gives some back; a cross one
+// wants an apology first (おそい！/ちょっと！ → すみません！); at none they storm out (もう いいです！), the door banged, a star off
+// the shop. A shift is six groups (WORK's ctx), each marked as it leaves by its mood; the stars left are 黄's 紅包.
 const HALL = (() => {
-  const api = { pace: 1, force: null };   // the waits' scale (the tests run them fast); force: { toilet, drop, regular } for the tests
+  const api = { pace: 1, pat: 1, force: null };   // the waits' scale and patience's (the tests run them fast or calm); force: { toilet, drop, regular, solo } for the tests
   const VOICES = ['kaneda', 'umeko', 'yuta', 'rina', 'yoshimoto', 'ken', 'ai', 'michiyama', 'mike'];
   const MALE_HAIR = ['短髮', '刺蝟頭', '旁分呆毛', '中分'];
   const MAX = 3, rnd = (a, b) => a + Math.random() * (b - a), pick = (a) => a[Math.floor(Math.random() * a.length)];
   const L = () => TOWN.WORK.say.waiter;
-  // what each customer still wants of the hero by where they are: no more come in than the shift's answers left can take
-  const LEFT = { in: 5, wait: 4, walk: 3, sit: 3, call: 3, order: 2, food: 2, ask: 2, eat: 1, drop: 2, leave: 1, pay: 1, out: 0 };
   const NEED = ['in', 'wait', 'call', 'pay', 'ask', 'drop'];   // a 「！」 over them
-  // the way to each table's seat from the door side, round the furniture (and back again to the register)
+  // patience (spec §1): how fast each state wears it down (the dish on its way: half as fast; walking, sitting down, eating: not at
+  // all), how long a whole one lasts (s), the moods by what is left, their faces and signs, a group's mark as it leaves (3: stormed out)
+  const DRAIN = { in: 1, wait: 1, call: 1, order: 1, food: 0.5, ask: 1, drop: 1, pay: 1 };
+  const PAT = () => (inPreStage() ? 60 : 45) * api.pat;
+  const MOOD = (p) => (p >= 0.6 ? 'ok' : p >= 0.3 ? 'meh' : 'mad');
+  const FACE = { ok: {}, meh: { mouth: 'flat', brows: 'worried' }, mad: { eyes: 'sharp', brows: 'angry', mouth: 'o' } };
+  const EMO = { ok: '', meh: '💦', mad: '💢' }, SCORE = { ok: 0, meh: 1, mad: 2 };
+  const WRONG = 0.2, RIGHT = 0.05, QUICK = 0.15, QUICK_MS = 5000, SORRY = 0.25, STARS = 3;
+  // the way to each table's seat from the door side, round the furniture (and back again to the register, or out of the door)
   const VIA = [[[5.0, 4.0]], [[5.0, 3.0], [12.2, 3.0]], [[11.0, 9.3], [13.45, 9.3]]];
   const toSeat = (i) => [[5.0, 12.4], ...VIA[i], RAIRAI.seat(i)], fromSeat = (i) => [...VIA[i].slice().reverse(), [5.0, 11.4], RAIRAI.pay];
+  const exitPath = (c) => (c.table >= 0 && c.state !== 'walk' ? [...VIA[c.table].slice().reverse(), [5.0, 12.4], RAIRAI.door] : ['walk', 'leave'].includes(c.state) ? [[5.0, 12.4], RAIRAI.door] : [RAIRAI.door]);
   const CLINE = { call: 'call', sorry: 'wrong', pay: 'pay', toilet: 'toilet', thanks: 'thanks' };   // what the customer says first (the rest is seen)
   const FAR = [0, 2];   // the tables far from the toilet door (asked from these only: あそこ, nothing in between)
   const knows = (...ws) => ws.every((w) => WORK.knows(w));
   const once = (what, chance) => { if (H.once[what]) return false; const f = api.force && api.force[what]; if (f === false || !(f || Math.random() < chance)) return false; H.once[what] = true; return true; };
   const HINT = { greet: '客人進門了。', seat: '帶客人到這張桌子。', serve: '把菜端上桌。' };
-  let H = null, seq = 0;   // the shift under way: { ctx, yard, k, cust, ask, tray, ready, timers, raf, at, over }
+  let H = null, seq = 0;   // the shift under way: { ctx, yard, k (groups gone), cust, ask, tray, ready, timers, raf, at, over, stars, streak }
   const N = () => H.ctx.n;
   const live = () => Boolean(H) && H.yard.isConnected && H.ctx.on();
   const later = (fn, ms) => { const h = H; h.timers.push(setTimeout(() => { if (H === h && live()) fn(); }, ms * api.pace)); };
   const free = (i) => !H.cust.some((c) => c.table === i);
+  const here = (c) => Boolean(H) && H.cust.includes(c) && !c.stormed;   // still theirs to see to (not stormed out, not gone)
   // ---- the people ----
   function person() {
     const voice = pick(VOICES.filter((v) => !H.cust.some((c) => c.voice === v))) || pick(VOICES), { look, wear } = PASSERS.look();
@@ -49,16 +62,58 @@ const HALL = (() => {
     c.el.style.zIndex = String(isoZ(c.u, c.v + (c.el.classList.contains('bench') ? 0.45 : 0)));
   }
   function mark(c) {
-    c.el.classList.toggle('need', NEED.includes(c.state) || Boolean(c.pointing));
+    c.el.classList.toggle('need', NEED.includes(c.state) || Boolean(c.pointing)); c.el.classList.toggle('pat', Boolean(DRAIN[c.state]) && !H.over);
     const w = c.el.querySelector('.hl-want'); if (w) w.textContent = c.state === 'food' ? c.dish : ''; c.el.classList.toggle('want', c.state === 'food');
   }
   const pop = (c, text) => { const [X, Y] = isoXY(c.u, c.v); yPop(H.yard, X + 600, 370 - Y - (c.el.classList.contains('bench') ? 150 : 190) * ISO.k, text); };
   const heroPop = (text) => yPop(H.yard, yh.X + 600, 370 - yh.Y - 190 * ISO.k, text);
   const huangPop = (text) => { const [X, Y] = isoXY(6.9, 0.85); yPop(H.yard, X + 600, 370 - Y - 190 * ISO.k, text); };
+  // ---- patience: worn down while waiting on the hero, shown on the face, a ring and a sign; at none, out they go ----
+  function face(c) {
+    const old = c.el.querySelector(':scope > svg'); if (old) old.outerHTML = HERO.svg({ look: Object.assign({}, c.look, FACE[c.mood]), wear: c.wear });
+    c.el.dataset.mood = c.mood; emo(c);
+  }
+  function emo(c, now) {   // the sign by their head: 💦 or 💢 by the mood; a ♪ a moment on a quick answer
+    const e = c.el.querySelector('.hl-emo'); if (!e) return; clearTimeout(c.emoT);
+    e.textContent = now || EMO[c.mood]; if (now) c.emoT = setTimeout(() => { if (c.el.isConnected) e.textContent = EMO[c.mood]; }, 1400);
+  }
+  function feel(c) {
+    c.el.style.setProperty('--p', c.p.toFixed(3));
+    if (c.p <= 0) { storm(c); return; }
+    const m = MOOD(c.p); if (m === c.mood) return;
+    const worse = SCORE[m] > SCORE[c.mood]; c.mood = m; face(c);
+    if (worse) grumble(c);
+  }
+  const hit = (c, d) => { if (!here(c)) return; c.p = Math.max(0, Math.min(1, c.p + d)); feel(c); };
+  function grumble(c) {   // kept waiting: called again, then cross; the dish slow: まだですか (once まだ is known), else the clock ticks
+    if (H.ask && H.ask.c === c) return;   // their question up: the face says it
+    const s = L(), line = c.state === 'food' ? (knows('まだ') ? s.cust.still : null) : c.mood === 'mad' ? s.cust.hey : s.cust.again;
+    if (line) { speakAs(c.voice, line[0]); pop(c, line[0]); } else SND.play('tick', { vol: 0.4 });
+  }
+  function storm(c) {   // patience gone: up and out, the door banged, a star off the shop, the group marked 3
+    const s = L(), path = exitPath(c); c.stormed = true; c.mood = 'mad'; face(c);
+    if (H.ask && H.ask.c === c) { H.ask = null; panel(); }
+    if (H.tray && H.tray.for === c.id) { H.tray = null; carry(false); }
+    H.ready = H.ready.filter((id) => id !== c.id); readyMark();
+    const line = knows('もう') ? s.cust.out : s.cust.out0; speakAs(c.voice, line[0]); pop(c, line[0]);
+    H.stars = Math.max(0, H.stars - 1); c.pointing = false; c.state = 'out'; c.table = -1; mark(c);
+    walk(c, path, () => { SND.play('door-close', { vol: 0.6 }); gone(c); });
+    done(c, 3);
+  }
+  function done(c, n) {   // a group gone: marked (0 pleased … 3 stormed out), one of the shift's six
+    H.ctx.right(H.k, n); H.k++; H.streak = n === 0 ? H.streak + 1 : 0; hud();
+    if (H.k >= N()) end();
+  }
+  function hud() {   // at the top: the group now, the shop's stars, the pleased ones in a row
+    let el = H.yard.querySelector('.hl-hud'); if (!el) { el = document.createElement('div'); el.className = 'hl-hud'; H.yard.appendChild(el); }
+    const n = N();
+    el.innerHTML = `<b>第 ${Math.min(H.k + 1, n)}／${n} 組</b><span class="hl-stars" aria-label="店的評價 ${H.stars} 顆星">${'★'.repeat(H.stars)}${'☆'.repeat(STARS - H.stars)}</span>${H.streak >= 2 ? `<span class="hl-streak">連續滿意 ×${H.streak}</span>` : ''}`;
+  }
   function walk(c, pts, done) { c.path = pts.slice(); c.then = done; c.el.classList.remove('bench'); c.el.classList.add('walk'); }
   function frame(now) {
     if (!H) return; if (!H.yard.isConnected) { stop(); return; }
     const dt = H.at ? Math.min(0.1, (now - H.at) / 1000) : 0; H.at = now;
+    if (dt) H.cust.slice().forEach((c) => { const r = DRAIN[c.state]; if (r && !H.over && !c.stormed) { c.p = Math.max(0, c.p - r * dt / PAT()); feel(c); } });   // drawn frames only: a hidden page waits
     H.cust.slice().forEach((c) => {
       if (!c.path || !c.path.length) return;
       const [tu, tv] = c.path[0], du = tu - c.u, dv = tv - c.v, d = Math.hypot(du, dv), step = 2.6 * dt / api.pace;
@@ -76,18 +131,19 @@ const HALL = (() => {
   }
   function spawn() {
     if (!live() || H.over) return null;
-    const c = Object.assign({ id: 'c' + (++seq), state: 'in', u: RAIRAI.door[0], v: RAIRAI.door[1], table: -1, dish: '' }, regular() || person());
+    const c = Object.assign({ id: 'c' + (++seq), state: 'in', u: RAIRAI.door[0], v: RAIRAI.door[1], table: -1, dish: '', p: 1, mood: 'ok' }, regular() || person());
     const el = document.createElement('button'); el.type = 'button'; el.className = 'hero npc cust'; el.dataset.act = 'hall-cust'; el.dataset.c = c.id; el.setAttribute('aria-label', '客人');
-    el.innerHTML = `${HERO.svg({ look: c.look, wear: c.wear })}<i class="ev-mark hl-mark" aria-hidden="true">！</i><i class="hl-want" lang="ja" aria-hidden="true"></i>`;
+    el.innerHTML = `${HERO.svg({ look: c.look, wear: c.wear })}<i class="hl-pat" aria-hidden="true"></i><i class="ev-mark hl-mark" aria-hidden="true">！</i><i class="hl-emo" aria-hidden="true"></i><i class="hl-want" lang="ja" aria-hidden="true"></i>`;
+    el.dataset.mood = 'ok'; el.style.setProperty('--p', '1');
     H.yard.querySelector('.yworld').appendChild(el); c.el = el; H.cust.push(c); put(c); mark(c);
     SND.play('suzu', { vol: 0.5 }); walk(c, [RAIRAI.wait], null);
     return c;
   }
-  function more() {   // another in now and then, while tables and answers are left for them
-    if (!live() || H.over) return;
-    const pending = H.cust.reduce((n, c) => n + LEFT[c.state], 0), tables = [0, 1, 2].filter(free).length, waiting = H.cust.filter((c) => c.state === 'in' || c.state === 'wait').length;
-    if (H.cust.length < MAX && N() - H.k > pending && tables > waiting) spawn();
-    later(more, rnd(6000, 9000));
+  function more() {   // another in now and then, while groups are left and a table is free for each one waiting
+    if (!live() || H.over || (api.force && api.force.solo)) return;   // solo: the tests' one customer
+    const inn = H.cust.filter((c) => c.state !== 'out'), tables = [0, 1, 2].filter(free).length, waiting = inn.filter((c) => c.state === 'in' || c.state === 'wait').length;
+    if (inn.length < MAX && N() - H.k - inn.length > 0 && tables > waiting) spawn();
+    later(more, rnd(4000, 8000));
   }
   // ---- the hero's dish from the pass ----
   function carry(on) {
@@ -103,16 +159,19 @@ const HALL = (() => {
   // ---- a question: what the hero says ----
   const hour = () => { const h = TOWNEV.now(); return h < 11 ? 0 : h < 17 ? 1 : 2; };   // おはようございます, こんにちは, こんばんは
   function ask(kind, c, table) {
+    if (c.mood === 'mad' && !c.sorried && kind !== 'sorry') { c.after = { kind, table }; kind = 'late'; }   // cross: their complaint first
     const s = L(); let right, opts, line = CLINE[kind] ? s.cust[CLINE[kind]] : null, word = '';
-    if (kind === 'hello') { line = s.hello[hour()]; right = line; opts = s.hello.map((l) => l[0]); }
+    if (kind === 'late') { line = knows('おそい') ? s.cust.slow : s.cust.hey; right = s.me.sorry; opts = shuffle([right, ...s.not.sorry]).map((o) => o[0]); }
+    else if (kind === 'hello') { line = s.hello[hour()]; right = line; opts = s.hello.map((l) => l[0]); }
     else if (kind === 'order') {   // これ by the customer (the table's menu), それ by the hero (the board in his hand), あれ across the room (the poster)
       const dishes = RAIRAI.MENU.map((m) => m[0]).filter((d) => d !== 'マーボーどうふ'), near = pick(dishes), hand = pick(dishes.filter((d) => d !== near));
       const where = { これ: `桌上的菜單：${near}`, それ: `你手上的推薦牌：${hand}`, あれ: '牆上的海報：マーボーどうふ' };
       word = pick(['これ', 'それ', 'あれ']); line = s.cust.point[word]; right = [where[word]]; opts = [where.これ, where.それ, where.あれ];
       heroPop(`おすすめ：${hand}`);
     } else { right = s.me[kind]; opts = shuffle([right, ...shuffle(s.not[kind]).slice(0, 2)]).map((o) => o[0]); }
-    H.ask = { kind, c, table, word, right: right[0], opts, line, miss: kind === 'sorry' ? 1 : 0, wrong: 0 };
+    H.ask = { kind, c, table, word, right: right[0], opts, line, wrong: 0, t0: performance.now() };
     if (line) { speakAs(c.voice, line[0]); pop(c, '🔊'); }
+    if (kind === 'sorry') hit(c, -WRONG / 2);   // a dish set before the wrong one: put out
     panel();
   }
   function panel() {
@@ -126,18 +185,22 @@ const HALL = (() => {
     H.yard.appendChild(el);
   }
   function choose(b) {
-    const a = H.ask; if (!a || !live()) return; const said = b.dataset.o;
+    const a = H.ask; if (!a || !live()) return; const said = b.dataset.o, c = a.c;
     if (a.kind !== 'order') { speakAs('hero', said); heroPop(said); }
-    if (said !== a.right) {   // a miss: a shake, a 「？」 from them; two, the right one lights
-      a.miss++; a.wrong++; playSfx('bad'); b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); pop(a.c, '？');
+    if (said !== a.right) {   // a miss: a shake, a 「？」 from them, some of their patience; two, the right one lights
+      a.wrong++; playSfx('bad'); b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); pop(c, '？');
+      hit(c, -WRONG); if (H.ask !== a) return;   // that was the last of it: gone
       if (a.wrong >= 2) H.yard.querySelectorAll('.hl-opt').forEach((x) => x.classList.toggle('wk-hint', x.dataset.o === a.right));
       return;
     }
     playSfx('good'); H.ask = null; H.lastPick = said; panel();
-    if (a.line) setTimeout(() => { if (H && H.yard.isConnected) pop(a.c, a.line[0]); }, 500);   // what they said, in print now
-    H.ctx.right(H.k, a.miss); H.k++;
+    if (a.line) setTimeout(() => { if (H && H.yard.isConnected) pop(c, a.line[0]); }, 500);   // what they said, in print now
+    const quick = performance.now() - a.t0 <= QUICK_MS; hit(c, quick ? QUICK : RIGHT); if (quick && here(c)) emo(c, '♪');
+    if (a.kind === 'late') {   // sorry said: a little better, and what they wanted comes next
+      c.sorried = true; hit(c, SORRY); const f = c.after; c.after = null;
+      later(() => { if (!H.ask && here(c) && f) ask(f.kind, c, f.table); }, 600); return;
+    }
     next(a);
-    if (H.k >= N()) end();
   }
   // ---- what follows each right answer ----
   function next({ kind, c, table }) {
@@ -145,14 +208,14 @@ const HALL = (() => {
     if (kind === 'greet' || kind === 'hello') { c.state = 'wait'; mark(c); return; }
     if (kind === 'seat') {
       c.state = 'walk'; c.table = table; mark(c);
-      walk(c, toSeat(table), () => { c.state = 'sit'; c.el.classList.add('bench'); put(c); mark(c); later(() => { c.state = 'call'; mark(c); speakAs(c.voice, s.cust.call[0]); pop(c, '！'); }, rnd(2500, 4500)); });
+      walk(c, toSeat(table), () => { c.state = 'sit'; c.el.classList.add('bench'); put(c); mark(c); later(() => { if (!here(c)) return; c.state = 'call'; mark(c); speakAs(c.voice, s.cust.call[0]); pop(c, '！'); }, rnd(2500, 4500)); });
       return;
     }
-    const cook = () => later(() => { huangPop(s.order[0]); c.state = 'food'; mark(c); later(() => { H.ready.push(c.id); readyMark(); speakAs('huang', s.ready[0]); huangPop(s.ready[0]); }, rnd(4000, 6000)); }, 1200);
+    const cook = () => later(() => { if (!here(c)) return; huangPop(s.order[0]); c.state = 'food'; mark(c); later(() => { if (!here(c)) return; H.ready.push(c.id); readyMark(); speakAs('huang', s.ready[0]); huangPop(s.ready[0]); }, rnd(4000, 6000)); }, 1200);
     if (kind === 'call') {
       c.state = 'order'; mark(c);
       if (knows('これ', 'それ', 'あれ')) { c.pointing = true; mark(c); later(() => { if (!H.ask && c.pointing) ask('order', c); }, 600); return; }   // pointing at one of three: which is meant (another question up: their 「！」 waits for the hero)
-      c.dish = pick(RAIRAI.MENU)[0]; later(() => { speakAs(c.voice, s.cust.order[0]); pop(c, s.cust.order[0]); cook(); }, 700);
+      c.dish = pick(RAIRAI.MENU)[0]; later(() => { if (!here(c)) return; speakAs(c.voice, s.cust.order[0]); pop(c, s.cust.order[0]); cook(); }, 700);
       return;
     }
     if (kind === 'order') { c.pointing = false; mark(c); c.dish = H.lastPick.split('：')[1]; cook(); return; }
@@ -163,20 +226,21 @@ const HALL = (() => {
       if (FAR.includes(c.table) && knows('あそこ') && once('toilet', 0.25)) { c.state = 'ask'; mark(c); later(() => { speakAs(c.voice, s.cust.call[0]); pop(c, '！'); }, 400); return; }   // first: where is it?
       eat(c); return;
     }
-    if (kind === 'pay') { c.state = 'out'; mark(c); walk(c, [RAIRAI.door], () => gone(c)); }
+    if (kind === 'pay') { c.state = 'out'; mark(c); walk(c, [RAIRAI.door], () => gone(c)); done(c, SCORE[c.mood]); }
   }
   function eat(c) {   // いただきます, then おいしい (or the chopsticks dropped on the way), then off to pay
     const s = L(); c.state = 'eat'; mark(c);
-    later(() => { pop(c, s.cust.eat[0]);
-      if (knows('どういたしまして') && once('drop', 0.2)) { later(() => { c.state = 'drop'; mark(c); pop(c, 'あっ！'); SND.play('dishes', { vol: 0.4 }); }, 1500); return; }
-      later(() => { pop(c, s.cust.yum[0]); later(() => leave(c), 2500); }, 2500); }, 600);
+    later(() => { if (!here(c)) return; pop(c, s.cust.eat[0]);
+      if (knows('どういたしまして') && once('drop', 0.2)) { later(() => { if (!here(c)) return; c.state = 'drop'; mark(c); pop(c, 'あっ！'); SND.play('dishes', { vol: 0.4 }); }, 1500); return; }
+      later(() => { if (!here(c)) return; pop(c, s.cust.yum[0]); later(() => leave(c), 2500); }, 2500); }, 600);
   }
-  function leave(c) { const t = c.table; c.state = 'leave'; c.table = -1; mark(c); walk(c, fromSeat(t), () => { c.state = 'pay'; mark(c); }); }
+  function leave(c) { if (!here(c) || c.state === 'leave') return; const t = c.table; c.state = 'leave'; c.table = -1; mark(c); walk(c, fromSeat(t), () => { c.state = 'pay'; mark(c); }); }
   function gone(c) { c.el.remove(); if (H) H.cust = H.cust.filter((x) => x !== c); }
   function end() {
-    const s = L(); H.over = true; H.ctx.finish({}, 1800); carry(false); H.ready = []; readyMark();
+    const s = L(); H.over = true; H.ctx.finish({ tip: H.stars * 10, tipName: '店長紅包' }, 1800); carry(false); H.ready = []; readyMark();
+    if (H.ask) { H.ask = null; panel(); }
     setTimeout(() => { if (!H || !H.yard.isConnected) return; speakAs('huang', s.end[0]); huangPop(s.end[0]); }, 700);
-    H.cust.forEach((c) => { c.state = 'out'; mark(c); walk(c, [[5.0, 12.4], RAIRAI.door], () => gone(c)); });
+    H.cust.forEach((c) => { if (c.state === 'out') return; const path = exitPath(c); c.state = 'out'; c.table = -1; mark(c); walk(c, path, () => gone(c)); });
   }
   // ---- the hero sent somewhere (a customer, 黄, a table…) ----
   function at(yard, k) {
@@ -210,15 +274,15 @@ const HALL = (() => {
   }
   function stop() {
     if (!H) return; H.timers.forEach(clearTimeout); cancelAnimationFrame(H.raf);
-    if (H.yard.isConnected) { H.cust.forEach((c) => c.el.remove()); const p = H.yard.querySelector('.hl-pick'); if (p) p.remove(); H.tray = { dish: '' }; carry(false); H.ready = []; readyMark(); }
+    if (H.yard.isConnected) { H.cust.forEach((c) => c.el.remove()); H.yard.querySelectorAll('.hl-pick, .hl-hud').forEach((x) => x.remove()); H.tray = { dish: '' }; carry(false); H.ready = []; readyMark(); }
     H = null;
   }
   function run(ctx) {
     stop();
     const yard = document.querySelector('.yard'); if (!yard || yard.dataset.place !== 'rairai') return;
-    H = { ctx, yard, k: ctx.done, cust: [], ask: null, tray: null, ready: [], timers: [], raf: 0, at: 0, over: false, once: {}, lastPick: '' };
-    H.raf = requestAnimationFrame(frame);
-    spawn(); later(more, 5000);
+    H = { ctx, yard, k: ctx.done, cust: [], ask: null, tray: null, ready: [], timers: [], raf: 0, at: 0, over: false, once: {}, lastPick: '', stars: STARS, streak: 0 };
+    H.raf = requestAnimationFrame(frame); hud();
+    spawn(); later(more, 3000);
   }
   function lines(add) {
     const s = L(), said = Object.values(s.cust).flatMap((l) => (Array.isArray(l) ? [l] : Object.values(l)));
@@ -230,6 +294,6 @@ const HALL = (() => {
   WORK.register('waiter', { run, lines });
   return Object.assign(api, { run, at, tap, lines, stop, spawn: () => (H ? spawn() : null),
     on: () => live() && !H.over, goPass: () => { if (live()) go('pass'); },
-    now: () => (H ? { k: H.k, over: H.over, ask: H.ask && { kind: H.ask.kind, word: H.ask.word, right: H.ask.right, opts: H.ask.opts.slice() }, tray: H.tray && Object.assign({}, H.tray), ready: H.ready.slice(),
-      cust: H.cust.map((c) => ({ id: c.id, state: c.state, table: c.table, dish: c.dish, voice: c.voice })) } : null) });
+    now: () => (H ? { k: H.k, over: H.over, stars: H.stars, streak: H.streak, ask: H.ask && { kind: H.ask.kind, word: H.ask.word, right: H.ask.right, opts: H.ask.opts.slice() }, tray: H.tray && Object.assign({}, H.tray), ready: H.ready.slice(),
+      cust: H.cust.map((c) => ({ id: c.id, state: c.state, table: c.table, dish: c.dish, voice: c.voice, p: c.p, mood: c.mood })) } : null) });
 })();

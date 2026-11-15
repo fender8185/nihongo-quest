@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 72 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 73 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2670,7 +2670,8 @@ const TOWN = {
     first: {
       shelf: [['zhang', 'きいて。おなじ ところへ。', '聽我念，放到一樣的格子。'], ['zhang', '…まちがえたら、もう いちど。', '……放錯了，就再放一次。']],
       counter: [['zhou', 'おきゃくさんが いったものを わたしてね。', '客人說要什麼，就拿給他喔。'], ['zhou', '「いらっしゃいませ」「ありがとうございました」、げんきよく ね。', '「歡迎光臨」「謝謝光臨」，要有精神喔。']],
-      waiter: [['huang', 'おきゃくさんが きたら、すぐ いって！', '客人來了就馬上過去！'], ['huang', '', '（用中文）頭上有「！」的客人就是在等你。點他走過去，聽他說什麼，選你要回的那句。端菜、帶位、結帳都靠你了！']],
+      waiter: [['huang', 'おきゃくさんが きたら、すぐ いって！', '客人來了就馬上過去！'], ['huang', '', '（用中文）頭上有「！」的客人就是在等你。點他走過去，聽他說什麼，選你要回的那句。端菜、帶位、結帳都靠你了！'],
+        ['huang', 'おきゃくさんを またせないで！', '（用中文）客人頭上那圈是他的耐心，越等越少，臉也會越來越臭。空了他就走人，店裡的星星也會少一顆。今天招呼 6 組客人，答得又快又對，他們才會開心地走！']],
       buns: [['wang', 'ぶたまんは こころ！', '豬肉包就是心！'], ['chen', '', '（用中文）聽到哪個音就按哪個字，按對包子就往下包一步。三十下五顆包子，兩分鐘內全對，王老闆會很激動。']] },
     // what each says during a shift: a miss, a right one now and then, the end
     say: {
@@ -2690,6 +2691,8 @@ const TOWN = {
           thanks: [['いただきます！', '開動了！'], ['いらっしゃいませ！', '歡迎光臨！'], ['ちがいます。', '不是。']] },
         cust: { call: ['すみません！', '不好意思！'], order: ['これを ください。', '請給我這個。'], wrong: ['ちがいます。', '不是喔。'], pay: ['ごちそうさまでした。', '謝謝招待。'], eat: ['いただきます！', '開動了！'], yum: ['おいしい！', '好吃！'],
           toilet: ['おてあらいは どこですか。', '洗手間在哪裡？'], thanks: ['ありがとう。', '謝謝。'],
+          // kept waiting (外場 2.0): calling again, then cross; the dish slow (まだ known); a mad one's word first (おそい known, else ちょっと); stormed out (もう known)
+          again: ['あの、すみません！', '那個，不好意思！'], hey: ['ちょっと！', '喂！'], still: ['まだですか。', '還沒好嗎？'], slow: ['おそい！', '好慢！'], out: ['もう いいです！', '算了，不用了！'], out0: ['いいです！', '不用了！'],
           point: { これ: ['これを ください。', '請給我這個（我這邊的）。'], それ: ['それを ください。', '請給我那個（你那邊的）。'], あれ: ['あれを ください。', '請給我那個（遠處的）。'] } },
         // the regulars' greeting by the clock (before 11, till 17, after), answered in kind
         hello: [['おはようございます。', '早安。'], ['こんにちは。', '你好（白天）。'], ['こんばんは。', '晚上好。']], regulars: ['zhou', 'zhang', 'chen'] },
