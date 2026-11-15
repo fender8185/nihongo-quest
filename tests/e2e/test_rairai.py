@@ -80,15 +80,15 @@ HALLT = """const yard = () => document.querySelector('.yard');
   const answer = async (right) => { const a = ask(); [...document.querySelectorAll('.hl-opt')].find((x) => (x.dataset.o === a.right) === right).click(); await wait(150); };
   const until = async (f) => { for (let i = 0; i < 100 && !f(); i++) await wait(50); return f(); };
   const cust = (st) => now().cust.find((c) => c.state === st);
-  const drive = async () => { for (let i = 0; i < 600 && now() && !now().over; i++) { const n = now(), c = n.cust;
-      if (n.ask) { await answer(true); continue; }
+  const kinds = new Set(), drive = async () => { for (let i = 0; i < 900 && now() && !now().over; i++) { const n = now(), c = n.cust;
+      if (n.ask) { kinds.add(n.ask.kind); await answer(true); continue; }
+      if (n.phone) { await goTo('register'); continue; }
       if (c.some((x) => x.state === 'in')) { await goTo('entry'); continue; }
       if (c.some((x) => x.state === 'wait')) { const free = [0, 1, 2].find((t) => !c.some((x) => x.table === t)); if (free !== undefined) { await goTo('table' + free); continue; } }
-      const call = c.find((x) => x.state === 'call'); if (call) { await goTo('table' + call.table); continue; }
-      if (n.tray) { await goTo('table' + c.find((x) => x.id === n.tray.for).table); continue; }
+      const q = c.find((x) => x.spot && x.spot.startsWith('table') && (x.q || x.state === 'call' || x.state === 'drop')); if (q) { await goTo(q.spot); continue; }
+      if (n.tray) { const t = c.find((x) => x.id === n.tray.for); if (t) { await goTo('table' + t.table); continue; } }
       if (n.ready.length) { await goTo('pass'); continue; }
       if (c.some((x) => x.state === 'pay')) { await goTo('register'); continue; }
-      const q = c.find((x) => x.state === 'ask' || x.state === 'drop'); if (q) { await goTo('table' + q.table); continue; }
       await wait(40); } };"""
 
 def test_waiter_needs_the_three_words(b):
@@ -108,21 +108,21 @@ def test_a_customer_comes_in_and_is_greeted(b):
     assert r == {'mark': True, 'kind': 'greet', 'opts': True, 'panel': 3, 'still': True, 'hint': 'いらっしゃいませ！', 'done': 0, 'state': 'wait', 'gone': True, 'p': True}, r
 
 def test_one_customer_from_the_door_to_the_register(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await until(() => cust('in')); const kinds = [];
-      const take = async () => { kinds.push(ask().kind); await answer(true); };
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await until(() => cust('in')); const seen = [];
+      const take = async () => { seen.push(ask().kind); await answer(true); };
       await goTo('entry'); await take(); await goTo('table0'); await take();
       await until(() => cust('call')); const said = []; window.speakAs = (w, l) => { said.push(w + ':' + l); return Promise.resolve(); }; await goTo('table0'); const heard = said.slice(); await take();
-      await until(() => now().ready.length); await goTo('pass'); const tray = Boolean(now().tray) && Boolean(document.querySelector('.yhero .hl-tray'));
+      await until(() => ask()); await take(); await until(() => now().ready.length); await goTo('pass'); await take(); const tray = Boolean(now().tray) && Boolean(document.querySelector('.yhero .hl-tray'));
       await goTo('table0'); await take(); await until(() => cust('pay')); await goTo('register'); await take(); await wait(100);
-      return JSON.stringify({ kinds, heard: heard.some((x) => x.endsWith(':すみません！')), tray, done: WORK.today().done, score: WORK.today().score[0], carry: Boolean(document.querySelector('.yhero .hl-tray')),
+      return JSON.stringify({ kinds: seen, heard: heard.some((x) => x.endsWith(':すみません！')), tray, done: WORK.today().done, score: WORK.today().score[0], carry: Boolean(document.querySelector('.yhero .hl-tray')),
         hud: document.querySelector('.hl-hud b').textContent }); })()"""))
-    assert r == {'kinds': ['greet', 'seat', 'call', 'serve', 'pay'], 'heard': True, 'tray': True, 'done': 1, 'score': 0, 'carry': False, 'hud': '第 2／6 組'}, r
+    assert r == {'kinds': ['greet', 'seat', 'call', 'dish', 'pass', 'serve', 'pay'], 'heard': True, 'tray': True, 'done': 1, 'score': 0, 'carry': False, 'hud': '第 2／6 組'}, r
 
 def test_a_dish_to_the_wrong_table(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await until(() => cust('in')); HALL.spawn();
       for (const t of [0, 1]) { await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table' + t); await answer(true); }
-      await until(() => now().cust.filter((c) => c.state === 'call').length === 2); await goTo('table0'); await answer(true); await goTo('table1'); await answer(true);
-      await until(() => now().ready.length === 2); await goTo('pass'); const to = now().cust.find((c) => c.id === now().tray.for).table, other = to === 0 ? 1 : 0;
+      await until(() => now().cust.filter((c) => c.state === 'call').length === 2); for (const t of [0, 1]) { await goTo('table' + t); await answer(true); await until(() => ask()); await answer(true); }
+      await until(() => now().ready.length === 2); await goTo('pass'); await answer(true); const to = now().cust.find((c) => c.id === now().tray.for).table, other = to === 0 ? 1 : 0;
       const p0 = now().cust.find((c) => c.table === other).p; await goTo('table' + other); const a = ask(), out = { kind: a.kind, right: a.right, miss: now().cust.find((c) => c.table === other).p < p0 - 0.05 ? 1 : 0 }; await answer(true); out.still = Boolean(now().tray);
       await goTo('table' + to); out.serve = ask().kind; return JSON.stringify(out); })()"""))
     assert r == {'kind': 'sorry', 'right': 'すみません！', 'still': True, 'miss': 1, 'serve': 'serve'}, r
@@ -134,7 +134,8 @@ def test_six_groups_make_a_shift(b):
     assert r == {'done': 6, 'yen': 180, 'grade': 'S', 'over': True, 'happy': True, 'red': True}, r
 
 SERVED = """ const served = async (t) => { await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table' + t); await answer(true);
-    await until(() => cust('call')); await goTo('table' + t); await answer(true); await until(() => now().ready.length); await goTo('pass'); await goTo('table' + t); await answer(true); };"""
+    await until(() => cust('call')); await goTo('table' + t); await answer(true); await until(() => ask()); await answer(true);
+    await until(() => now().ready.length); await goTo('pass'); await answer(true); await goTo('table' + t); await answer(true); };"""
 
 def test_leaving_mid_shift_and_back_picks_up(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ await start(); await served(0); await until(() => cust('pay')); await goTo('register'); await answer(true);
@@ -145,9 +146,9 @@ def test_leaving_mid_shift_and_back_picks_up(b):
 
 def test_huang_tapped_on_a_shift_hands_over_the_dish(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
-      await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => now().ready.length);
+      await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => ask()); await answer(true); await until(() => now().ready.length);
       const mark = Boolean(document.querySelector('.npc[data-npc="huang"] .hl-mark')); document.querySelector('.npc[data-npc="huang"]').click();
-      await until(() => now().tray); return JSON.stringify({ mark, tray: Boolean(now().tray), talk: Boolean(document.querySelector('.talk')) }); })()"""))
+      await until(() => ask()); await answer(true); await until(() => now().tray); return JSON.stringify({ mark, tray: Boolean(now().tray), talk: Boolean(document.querySelector('.talk')) }); })()"""))
     assert r == {'mark': True, 'tray': True, 'talk': False}, r
 
 def test_the_pick_panel_fits_a_phone(b):
@@ -158,7 +159,7 @@ def test_the_pick_panel_fits_a_phone(b):
 
 # ---- 外場's situations once their words are learned (spec §6 D): これ／それ／あれ, あそこ, どういたしまして, the time's greeting ----
 def test_order_by_where_it_is(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('これ', 'それ', 'あれ'); const seen = [];
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('これ', 'それ', 'あれ'); HALL.force = { order: 'order' }; const seen = [];
       for (let n = 0; n < 4; n++) { delete state.work.res['2026-11-10']; CLASS.close(); await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
         await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => ask()); const a = ask(); seen.push([a.kind, a.word, a.right, a.opts.length]); await answer(true); await wait(200);
         seen[n].push(now().cust[0].dish === a.right.split('：')[1]); }
@@ -166,21 +167,31 @@ def test_order_by_where_it_is(b):
     where = {'これ': '桌上的菜單', 'それ': '你手上的推薦牌', 'あれ': '牆上的海報'}
     assert all(k == 'order' and w in where and r_.startswith(where[w]) and n == 3 and dish for k, w, r_, n, dish in r), r
 
-def test_no_order_question_without_the_words(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
-      await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => cust('food')); return JSON.stringify({ ask: ask(), dish: Boolean(now().cust[0].dish) }); })()"""))
-    assert r == {'ask': None, 'dish': True}, r
+def test_order_by_the_dish_heard(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); """ + SPOKEN + """ await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
+      await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => ask()); const a = ask(), out = { kind: a.kind, n: new Set(a.opts).size, heard: said.includes(a.right + 'を ください。'),
+        pics: document.querySelectorAll('.hl-pick .hl-opt svg.pic').length, names: [...document.querySelectorAll('.hl-pick .hl-opt span')].map((x) => x.textContent).sort().join() === a.opts.slice().sort().join() };
+      await answer(true); out.dish = now().cust[0].dish === a.right; out.state = now().cust[0].state; return JSON.stringify(out); })()"""))
+    assert r == {'kind': 'dish', 'n': 3, 'heard': True, 'pics': 3, 'names': True, 'dish': True, 'state': 'food'}, r
+
+def test_the_pass_plate_by_name(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); """ + SPOKEN + """ await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
+      await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => ask()); await answer(true); await until(() => now().ready.length); const dish = now().cust[0].dish, out = { called: said.includes(dish + '、あがり！') };
+      await goTo('pass'); const a = ask(); Object.assign(out, { kind: a.kind, right: a.right === dish, n: new Set(a.opts).size, pics: document.querySelectorAll('.hl-pick .hl-opt svg.pic').length,
+        noname: !a.opts.some((o) => document.querySelector('.hl-pick .hl-opts').textContent.includes(o)) });
+      const p0 = now().cust[0].p; await answer(false); out.cost = now().cust[0].p < p0 - 0.1; await answer(true); out.tray = Boolean(now().tray) && now().tray.dish === dish; return JSON.stringify(out); })()"""))
+    assert r == {'called': True, 'kind': 'pass', 'right': True, 'n': 3, 'pics': 3, 'noname': True, 'cost': True, 'tray': True}, r
 
 def test_the_toilet_asked_from_a_far_table(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('あそこ'); HALL.force = { toilet: true }; await start(); await served(0);
-      await until(() => cust('ask')); const mark = document.querySelector('.cust').classList.contains('need'); await goTo('table0'); const a = ask(); const out = { mark, kind: a.kind, right: a.right, opts: a.opts.slice().sort() };
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('あそこ'); HALL.force = { toilet: true, solo: true }; await start(); await served(0);
+      await until(() => now().cust[0].q === 'toilet'); const mark = document.querySelector('.cust').classList.contains('need'); await goTo('table0'); const a = ask(); const out = { mark, kind: a.kind, right: a.right, opts: a.opts.slice().sort() };
       await answer(true); out.after = now().cust[0].state; return JSON.stringify(out); })()"""))
     assert r['after'] in ('eat', 'leave', 'pay') and {k: r[k] for k in ('mark', 'kind', 'right', 'opts')} == {'mark': True, 'kind': 'toilet', 'right': 'あそこです。', 'opts': ['あそこです。', 'ここです。', 'そこです。']}, r
 
 def test_no_toilet_question_from_the_table_by_it(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('あそこ'); HALL.force = { toilet: true }; await start(); await served(1); const seen = new Set();
-      for (let i = 0; i < 40; i++) { now().cust.forEach((c) => seen.add(c.state)); await wait(20); }
-      return JSON.stringify({ asked: seen.has('ask'), on: seen.has('pay') || seen.has('leave') || seen.has('eat') }); })()"""))
+      for (let i = 0; i < 40; i++) { now().cust.forEach((c) => { seen.add(c.state); if (c.q) seen.add('q:' + c.q); }); await wait(20); }
+      return JSON.stringify({ asked: seen.has('q:toilet'), on: seen.has('pay') || seen.has('leave') || seen.has('eat') }); })()"""))
     assert r == {'asked': False, 'on': True}, r
 
 def test_dropped_chopsticks_handed_back(b):
@@ -197,14 +208,13 @@ def test_a_regular_greets_by_the_clock(b):
     assert r == {'10': ['hello', 'おはようございます。', True], '13': ['hello', 'こんにちは。', True], '18': ['hello', 'こんばんは。', True]}, r
 
 def test_without_their_words_none_of_them_come(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { toilet: true, drop: true, regular: true }; const kinds = new Set(); const orig = HALL.at;
-      await start(); for (let i = 0; i < 600 && now() && !now().over; i++) { if (ask()) kinds.add(ask().kind); await drive_once(); }
-      return JSON.stringify([...kinds].sort()); })()""".replace("await drive_once();", "const n = now(), c = n.cust; if (n.ask) { await answer(true); continue; } if (c.some((x) => x.state === 'in')) { await goTo('entry'); continue; } if (c.some((x) => x.state === 'wait')) { const f = [0, 1, 2].find((t) => !c.some((x) => x.table === t)); if (f !== undefined) { await goTo('table' + f); continue; } } const cl = c.find((x) => x.state === 'call'); if (cl) { await goTo('table' + cl.table); continue; } if (n.tray) { await goTo('table' + c.find((x) => x.id === n.tray.for).table); continue; } if (n.ready.length) { await goTo('pass'); continue; } if (c.some((x) => x.state === 'pay')) { await goTo('register'); continue; } await wait(40);")))
-    assert r == ['call', 'greet', 'pay', 'seat', 'serve'], r
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { toilet: true, drop: true, regular: true, water: true, have: true, osusume: true, great: true, price: true, bye: true, phone: true };
+      await start(); await drive(); return JSON.stringify([...kinds].sort()); })()"""))
+    assert r == ['call', 'dish', 'greet', 'pass', 'pay', 'seat', 'serve'], r
 
 # ---- the final review's findings (2026-11-15) ----
 def test_an_order_crowded_out_by_another_question_still_comes(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('これ', 'それ', 'あれ'); await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('これ', 'それ', 'あれ'); HALL.force = { order: 'order' }; await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
       await until(() => cust('call')); HALL.spawn(); await until(() => now().cust.filter((c) => c.state === 'in').length);
       await goTo('table0'); const a = ask(); [...document.querySelectorAll('.hl-opt')].find((x) => x.dataset.o === a.right).click(); HALL.at(yard(), 'entry'); const crowd = ask() && ask().kind; await wait(100); await answer(true);   // はい！, and at once the door's greeting
       await wait(300); const mark = document.querySelector(`.cust[data-c="${now().cust[0].id}"]`).classList.contains('need'); await goTo('table0');
@@ -254,6 +264,63 @@ def test_a_waiter_score_is_the_mood_at_the_door(b):
       a: WORK.grade({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 1 }, 'waiter'), s: WORK.grade({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }, 'waiter'), b: WORK.grade({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 3 }, 'waiter'),
       shelfB: WORK.grade({ 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 1, 9: 1 }) }); })()"""))
     assert r == {'n': 6, 'shelf': 10, 'a': 'A', 's': 'S', 'b': 'B', 'shelfB': 'B'}, r
+
+# ---- 外場 2.0 §3: Japanese at every spot, each once its words are learned ----
+THROUGH_CALL = """ await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true); await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => ask()); """
+LEARN = """ const learn = (r, w) => { const v = REG.vocab.find((x) => x.r === r && (!w || x.w === w)); state.srs[v.key] = rec(); }; """
+
+def test_have_on_and_off_the_menu(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('ある', 'ちょっと', 'すみません'); HALL.force = { solo: true, have: true }; await start(); """ + THROUGH_CALL + """
+      const a = ask(), asked = a.line.split('、')[0], on = RAIRAI.MENU.some((m) => m[0] === asked), out = { kind: a.kind, right: a.right === (on ? 'はい、あります。' : 'すみません、ちょっと…。'), n: a.opts.length };
+      await answer(true); await until(() => ask()); const o = ask(); out.then = o.kind; out.same = on ? o.right === asked : o.right !== asked; return JSON.stringify(out); })()"""))
+    assert r == {'kind': 'have', 'right': True, 'n': 3, 'then': 'dish', 'same': True}, r
+
+def test_osusume_is_the_board_in_hand(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('どれ', 'これ', 'それ'); HALL.force = { solo: true, osusume: true }; await start(); """ + SPOKEN + THROUGH_CALL + """
+      const a = ask(), out = { kind: a.kind, right: a.right, opts: a.opts.slice().sort() }; await answer(true); await until(() => cust('food'));
+      out.dish = now().cust[0].dish === now().board; out.that = said.includes('じゃあ、それを ください。'); return JSON.stringify(out); })()"""))
+    assert r == {'kind': 'osusume', 'right': 'これです。', 'opts': ['あれです。', 'これです。', 'それです。'], 'dish': True, 'that': True}, r
+
+def test_water_asked_once_the_word_is_known(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ state.stage = 'n5'; HALL.force = { solo: true, water: true, order: 'dish', have: false, osusume: false, great: false, toilet: false, drop: false, price: false, bye: false, phone: false, regular: false };
+      await start(); """ + THROUGH_CALL + """ await answer(true); await until(() => now().cust[0].q === 'water'); await goTo('table0'); const a = ask(), out = { kind: a.kind, right: a.right, line: a.line };
+      await answer(true); out.q = now().cust[0].q; out.state = now().cust[0].state; return JSON.stringify(out); })()"""))
+    assert r == {'kind': 'water', 'right': 'はい、どうぞ。', 'line': 'おみず ください。', 'q': None, 'state': 'food'}, r
+
+def test_the_compliment_is_thanked(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('とても', 'おいしい'); HALL.force = { solo: true, great: true }; await start(); await served(0);
+      await until(() => now().cust[0].q === 'great'); await goTo('table0'); const a = ask(), out = { kind: a.kind, right: a.right, line: a.line }; await answer(true); out.q = now().cust[0].q; return JSON.stringify(out); })()"""))
+    assert r == {'kind': 'great', 'right': 'ありがとうございます！', 'line': 'とても おいしいです！', 'q': None}, r
+
+def test_price_asked_once_numbers_are_known(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + LEARN + """ learn('いくら'); learn('えん', '円'); learn('ひゃく', '百'); learn('じゅう', '十'); learn('ご', '五'); learn('さん', '三'); learn('よん', '四'); learn('ろく', '六'); learn('なな', '七');
+      HALL.force = { solo: true, price: true }; await start(); await served(0); await until(() => cust('pay')); const dish = now().cust[0].dish; await goTo('register'); const a = ask();
+      const out = { kind: a.kind, line: a.line, right: a.right === TOWN.WORK.say.waiter.me.price[RAIRAI.MENU.find((m) => m[0] === dish)[1]][0], n: new Set(a.opts).size };
+      await answer(true); await until(() => ask()); out.then = ask().kind; return JSON.stringify(out); })()"""))
+    assert r == {'kind': 'price', 'line': 'いくらですか。', 'right': True, 'n': 3, 'then': 'pay'}, r
+
+def test_no_price_without_the_numbers(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + LEARN + """ learn('いくら'); learn('えん', '円'); HALL.force = { solo: true, price: true }; await start(); await served(0); await until(() => cust('pay'));
+      await goTo('register'); return JSON.stringify({ kind: ask().kind }); })()"""))
+    assert r == {'kind': 'pay'}, r
+
+def test_a_regular_says_goodbye(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('おはようございます', 'こんにちは', 'こんばんは', 'さようなら'); HALL.force = { solo: true, regular: true, bye: true }; await start(); await served(0);
+      await until(() => cust('pay')); await goTo('register'); await answer(true); await until(() => ask()); const a = ask(), out = { kind: a.kind, right: a.right, line: a.line };
+      await answer(true); await wait(100); out.done = WORK.today().done; return JSON.stringify(out); })()"""))
+    assert r == {'kind': 'bye', 'right': 'さようなら！', 'line': 'さようなら！', 'done': 1}, r
+
+def test_the_phone_rings_and_is_answered(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('もしもし', 'そうです', 'ちがいます'); HALL.force = { solo: true, phone: true }; await start(); await until(() => now().phone);
+      const out = { icon: Boolean(document.querySelector('.hl-ring')) }; await goTo('register'); let a = ask(); Object.assign(out, { kind: a.kind, right: a.right, quiet: !document.querySelector('.hl-ring') });
+      await answer(true); await until(() => ask()); a = ask(); out.two = a.kind; out.match = a.right === (a.line === 'すしやですか。' ? 'いいえ、ちがいます。' : 'はい、そうです。');
+      await answer(true); await wait(100); Object.assign(out, { over: !ask() && !now().phone, stars: now().stars }); return JSON.stringify(out); })()"""))
+    assert r == {'icon': True, 'kind': 'phone', 'right': 'もしもし。', 'quiet': True, 'two': 'phone2', 'match': True, 'over': True, 'stars': 3}, r
+
+def test_a_phone_left_ringing_costs_a_star(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('もしもし', 'そうです', 'ちがいます'); HALL.force = { solo: true, phone: true }; await start(); """ + SPOKEN + """ await until(() => now().phone);
+      await until(() => !now().phone); await wait(100); return JSON.stringify({ stars: now().stars, huang: said.includes('でんわ！'), icon: Boolean(document.querySelector('.hl-ring')), hud: document.querySelector('.hl-hud .hl-stars').textContent }); })()"""))
+    assert r == {'stars': 2, 'huang': True, 'icon': False, 'hud': '★★☆'}, r
 
 def test_kana_known_in_nyumon_still_needs_the_words(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ state.kanaKnown = true; kana(0); const out = { can: WORK.can('waiter'), kore: WORK.knows('これ') };

@@ -65,7 +65,9 @@ const SND = (() => {
     heart: (c, to, v) => { tone(c, to, 660, 0, 0.32, 0.12 * v, 'sine', 990); tone(c, to, 880, 0.16, 0.5, 0.1 * v, 'sine', 1320); SYNTH.sparkle(c, to, 0.6 * v); },
     shutter: (c, to, v) => { noise(c, to, 0, 0.035, 0.7 * v, 3200, 0, 1.5); noise(c, to, 0.09, 0.05, 0.5 * v, 2200, 0, 1.5); },
     slurp: (c, to, v) => { noise(c, to, 0, 0.28, 0.3 * v, 600, 1900, 3); tone(c, to, 620, 0.04, 0.3, 0.06 * v, 'sine', 300); },   // じゅるり (YEN's star-eyed face)
-    chomp: (c, to, v) => { noise(c, to, 0, 0.07, 0.6 * v, 1400, 600, 1.2); noise(c, to, 0.09, 0.05, 0.35 * v, 2200, 900, 1.5); tone(c, to, 140, 0, 0.09, 0.2 * v, 'sine', 90); }   // a bite (YEN's もぐもぐ)
+    chomp: (c, to, v) => { noise(c, to, 0, 0.07, 0.6 * v, 1400, 600, 1.2); noise(c, to, 0.09, 0.05, 0.35 * v, 2200, 900, 1.5); tone(c, to, 140, 0, 0.09, 0.2 * v, 'sine', 90); },   // a bite (YEN's もぐもぐ)
+    ding: (c, to, v) => { tone(c, to, 1760, 0, 1.3, 0.14 * v); tone(c, to, 4858, 0, 0.45, 0.025 * v); },   // the bell on らいらいけん's pass: a dish up (外場 2.0)
+    ring: (c, to, v) => { for (let i = 0; i < 18; i++) tone(c, to, i % 2 ? 1320 : 1580, i * 0.045, 0.045, 0.045 * v, 'square'); }   // the shop's phone, a trill (外場 2.0)
   };
   // one sound now (or after delay s): its file, else its SYNTH; vol, rate, a slice [offset, length] of the file
   function play(name, o = {}) {

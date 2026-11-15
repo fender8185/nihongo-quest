@@ -13,6 +13,8 @@ const RAIRAI = {
   at: { pass: [6.9, 3.3], register: [2.4, 7.8], entry: [3.4, 12.4], table: (i) => [RAIRAI.TABLES[i][0] + 2.0, RAIRAI.TABLES[i][1] + 1.0] },
   seat: (i) => [RAIRAI.TABLES[i][0] - 1.15, RAIRAI.TABLES[i][1] - 1.15], door: [1.0, 13.4], wait: [1.8, 12.9], pay: [2.4, 11.2],
   MENU: [['ぎょうざ', 400], ['ラーメン', 700], ['チャーハン', 650], ['しゅうまい', 450], ['はるまき', 350], ['マーボーどうふ', 750]],
+  PIC: { ぎょうざ: '餃子', ラーメン: 'ラーメン', チャーハン: 'チャーハン', しゅうまい: 'しゅうまい', はるまき: 'はるまき', マーボーどうふ: 'マーボーどうふ' },   // each dish's drawing (PICS, PICS_TOWN)
+  dish: (name, cls = '') => { const k = RAIRAI.PIC[name], d = k && ((typeof PICS === 'object' && PICS[k]) || (typeof PICS_TOWN === 'object' && PICS_TOWN[k])); return d ? `<svg class="pic${cls ? ' ' + cls : ''}" viewBox="0 0 100 100" aria-hidden="true">${d}</svg>` : ''; },
 };
 RAIRAI.STOOLS = RAIRAI.TABLES.flatMap(([u, v]) => [[u - 1.15, v - 1.15], [u - 1.75, v + 0.35], [u + 0.35, v - 1.75]]);
 

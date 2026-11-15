@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 73 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 74 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2683,17 +2683,33 @@ const TOWN = {
         all: ['きみは てんさいだ！', '你是天才！'], end: ['シェイシェイ！ ハオチー！', '謝謝！好吃！'] },
       // 外場 (2026-11-15, らいらいけん): what the hero says to each (me) and the wrong ones offered beside it (not); what the customers
       // say (cust); 黄's from the kitchen
-      waiter: { who: 'huang', ready: ['できたよ！', '做好了！'], order: ['はいよ！', '好嘞！'], end: ['おつかれ！ たすかった！', '辛苦了！幫了大忙！'],
-        me: { toilet: ['あそこです。', '在那裡（遠處）。'], thanks: ['どういたしまして。', '不客氣。'], greet: ['いらっしゃいませ！', '歡迎光臨！'], seat: ['こちらへ どうぞ。', '這邊請。'], call: ['はい！', '來了！'], serve: ['どうぞ。', '請用。'], sorry: ['すみません！', '對不起！'], pay: ['ありがとうございました！', '謝謝光臨！'] },
+      // 外場 (HALL): what 黄 says (a dish up, called by its name: 外場 2.0; the phone left ringing), the hero's answers (me) among
+      // the ones not meant (not), what the customers say (cust) — calling, ordering by a dish's name or pointing, asking (はい、
+      // あります or すみません、ちょっと… by whether it is on the menu), the おすすめ in the hero's hand, water, a word of praise, the price
+      // (the hero says it: price), goodbye (regulars), cross words — and a caller on the phone (call)
+      waiter: { who: 'huang', order: ['はいよ！', '好嘞！'], end: ['おつかれ！ たすかった！', '辛苦了！幫了大忙！'], phone: ['でんわ！', '電話啦！'],
+        up: { ぎょうざ: ['ぎょうざ、あがり！', '煎餃好了！'], ラーメン: ['ラーメン、あがり！', '拉麵好了！'], チャーハン: ['チャーハン、あがり！', '炒飯好了！'], しゅうまい: ['しゅうまい、あがり！', '燒賣好了！'], はるまき: ['はるまき、あがり！', '春捲好了！'], マーボーどうふ: ['マーボーどうふ、あがり！', '麻婆豆腐好了！'] },
+        me: { toilet: ['あそこです。', '在那裡（遠處）。'], thanks: ['どういたしまして。', '不客氣。'], greet: ['いらっしゃいませ！', '歡迎光臨！'], seat: ['こちらへ どうぞ。', '這邊請。'], call: ['はい！', '來了！'], serve: ['どうぞ。', '請用。'], sorry: ['すみません！', '對不起！'], pay: ['ありがとうございました！', '謝謝光臨！'],
+          water: ['はい、どうぞ。', '好的，請用。'], have: ['はい、あります。', '有的。'], none: ['すみません、ちょっと…。', '不好意思，這個沒有……'], osusume: ['これです。', '這個（我手上的）。'], great: ['ありがとうございます！', '謝謝！'], bye: ['さようなら！', '再見！'],
+          phone: ['もしもし。', '喂？'], yes: ['はい、そうです。', '是的，沒錯。'], no: ['いいえ、ちがいます。', '不是喔。'],
+          price: { 350: ['さんびゃくごじゅうえんです。', '350 日圓。'], 400: ['よんひゃくえんです。', '400 日圓。'], 450: ['よんひゃくごじゅうえんです。', '450 日圓。'], 650: ['ろっぴゃくごじゅうえんです。', '650 日圓。'], 700: ['ななひゃくえんです。', '700 日圓。'], 750: ['ななひゃくごじゅうえんです。', '750 日圓。'] } },
         not: { greet: [['ありがとうございました！', '謝謝光臨！'], ['いただきます！', '開動了！'], ['すみません！', '對不起！']], seat: [['そちらへ どうぞ。', '那邊請（你那邊）。'], ['あちらへ どうぞ。', '那邊請（遠處）。']],
           call: [['いいえ。', '不是。'], ['どうぞ。', '請。']], serve: [['ください。', '請給我。'], ['すみません！', '對不起！']], sorry: [['どうぞ。', '請用。'], ['はい！', '來了！']],
           pay: [['いらっしゃいませ！', '歡迎光臨！'], ['いただきます！', '開動了！']], toilet: [['ここです。', '在這裡。'], ['そこです。', '在那裡（你那邊）。']],
-          thanks: [['いただきます！', '開動了！'], ['いらっしゃいませ！', '歡迎光臨！'], ['ちがいます。', '不是。']] },
-        cust: { call: ['すみません！', '不好意思！'], order: ['これを ください。', '請給我這個。'], wrong: ['ちがいます。', '不是喔。'], pay: ['ごちそうさまでした。', '謝謝招待。'], eat: ['いただきます！', '開動了！'], yum: ['おいしい！', '好吃！'],
+          thanks: [['いただきます！', '開動了！'], ['いらっしゃいませ！', '歡迎光臨！'], ['ちがいます。', '不是。']],
+          water: [['いいえ、ちがいます。', '不是喔。'], ['どういたしまして。', '不客氣。']], have: [['いいえ、ちがいます。', '不是喔。']], osusume: [['それです。', '那個（你那邊的）。'], ['あれです。', '那個（遠處的）。']],
+          great: [['いただきます！', '開動了！'], ['どういたしまして。', '不客氣。']], bye: [['おやすみなさい。', '晚安。'], ['いってきます。', '我出門了。']],
+          phone: [['いらっしゃいませ！', '歡迎光臨！'], ['こんにちは。', '你好。']], answer: [['どういたしまして。', '不客氣。']] },
+        cust: { call: ['すみません！', '不好意思！'], wrong: ['ちがいます。', '不是喔。'], pay: ['ごちそうさまでした。', '謝謝招待。'], eat: ['いただきます！', '開動了！'], yum: ['おいしい！', '好吃！'],
           toilet: ['おてあらいは どこですか。', '洗手間在哪裡？'], thanks: ['ありがとう。', '謝謝。'],
           // kept waiting (外場 2.0): calling again, then cross; the dish slow (まだ known); a mad one's word first (おそい known, else ちょっと); stormed out (もう known)
           again: ['あの、すみません！', '那個，不好意思！'], hey: ['ちょっと！', '喂！'], still: ['まだですか。', '還沒好嗎？'], slow: ['おそい！', '好慢！'], out: ['もう いいです！', '算了，不用了！'], out0: ['いいです！', '不用了！'],
-          point: { これ: ['これを ください。', '請給我這個（我這邊的）。'], それ: ['それを ください。', '請給我那個（你那邊的）。'], あれ: ['あれを ください。', '請給我那個（遠處的）。'] } },
+          water: ['おみず ください。', '請給我水。'], osusume: ['おすすめは どれですか。', '推薦哪一道？'], that: ['じゃあ、それを ください。', '那就給我那個。'], great: ['とても おいしいです！', '非常好吃！'], price: ['いくらですか。', '多少錢？'], bye: ['さようなら！', '再見！'],
+          point: { これ: ['これを ください。', '請給我這個（我這邊的）。'], それ: ['それを ください。', '請給我那個（你那邊的）。'], あれ: ['あれを ください。', '請給我那個（遠處的）。'] },
+          dish: { ぎょうざ: ['ぎょうざを ください。', '請給我煎餃。'], ラーメン: ['ラーメンを ください。', '請給我拉麵。'], チャーハン: ['チャーハンを ください。', '請給我炒飯。'], しゅうまい: ['しゅうまいを ください。', '請給我燒賣。'], はるまき: ['はるまきを ください。', '請給我春捲。'], マーボーどうふ: ['マーボーどうふを ください。', '請給我麻婆豆腐。'] },
+          have: { ぎょうざ: ['ぎょうざ、ありますか。', '有煎餃嗎？'], ラーメン: ['ラーメン、ありますか。', '有拉麵嗎？'], チャーハン: ['チャーハン、ありますか。', '有炒飯嗎？'], すし: ['すし、ありますか。', '有壽司嗎？'], カレー: ['カレー、ありますか。', '有咖哩嗎？'], ピザ: ['ピザ、ありますか。', '有披薩嗎？'] } },
+        // the caller on the phone: this shop, or a wrong number (the sushi shop)
+        call: { right: ['らいらいけんですか。', '請問是來來軒嗎？'], wrong: ['すしやですか。', '請問是壽司店嗎？'] },
         // the regulars' greeting by the clock (before 11, till 17, after), answered in kind
         hello: [['おはようございます。', '早安。'], ['こんにちは。', '你好（白天）。'], ['こんばんは。', '晚上好。']], regulars: ['zhou', 'zhang', 'chen'] },
       counter: { who: 'zhou', miss: ['それじゃ ないわよ。', '不是那個喔。'], ok: [['じょうず、じょうず。', '很好很好。'], ['いいわね。', '不錯喔。']], end: ['ありがとう。たすかったわ。', '謝謝，幫了大忙。'] } },
