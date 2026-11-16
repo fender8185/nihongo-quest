@@ -417,16 +417,17 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .hl-where .hl-opt { display: grid; gap: 1px; padding: 6px 10px; } .hl-where .hl-opt small { font-size: 12px; font-weight: 400; color: #8a7a6e; }
 .hl-opt.wk-bad { animation: shake .3s ease; } .hl-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
 @media (prefers-reduced-motion: reduce) { .hl-opt.wk-bad { animation: none; } }
-/* 外場 2.0 (2026-11-15): patience — a ring round the 「！」 (a small face in it while the dish is on its way), green → amber → red; 💦/💢/♪ by the head; cross: a fidget now and then; the HUD up top */
+/* 外場 2.0 (2026-11-15): patience — a countdown bar over the head (2026-11-16, the user; their face at its left), green → amber → red, there
+   while they are answered too, the 「！」 over it; 💦/💢/♪ by the head; cross: a fidget now and then; the HUD up top */
 .sky .cust { --pc: #4fae5a; } .sky .cust[data-mood="meh"] { --pc: #f0a92a; } .sky .cust[data-mood="mad"] { --pc: #e0402f; }
-.sky .cust .hl-pat { display: none; position: absolute; left: 50%; top: calc(-14% - 20px); width: 104px; height: 104px; margin-left: -52px; pointer-events: none; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .25)); }
-.sky .cust.pat .hl-pat { display: block; } .sky .cust.asked .hl-pat, .sky .cust.asked .hl-mark { display: none; }
-.sky .cust .hl-pat::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(var(--pc) calc(var(--p, 1) * 360deg), rgba(60, 40, 30, .25) 0); -webkit-mask: radial-gradient(circle, transparent 34px, #000 35px); mask: radial-gradient(circle, transparent 34px, #000 35px); }
-.sky .cust.pat:not(.need) .hl-pat::after { content: '🙂'; position: absolute; inset: 20px; display: grid; place-items: center; border-radius: 50%; background: #fffaf0; font-size: 34px; line-height: 1; box-shadow: 0 3px 0 rgba(0, 0, 0, .15); }
-.sky .cust.pat:not(.need)[data-mood="meh"] .hl-pat::after { content: '😐'; } .sky .cust.pat:not(.need)[data-mood="mad"] .hl-pat::after { content: '😠'; }
-.sky .cust.want .hl-want { top: calc(-14% - 70px); }
+.sky .cust .hl-pat { display: none; position: absolute; left: 50%; top: -16px; width: 170px; height: 42px; margin-left: -85px; border-radius: 21px; background: rgba(43, 27, 20, .85); box-shadow: 0 0 0 4px rgba(255, 255, 255, .9), 0 4px 0 4px rgba(0, 0, 0, .18); pointer-events: none; }
+.sky .cust.pat .hl-pat { display: block; } .sky .cust.asked .hl-mark { display: none; }
+.sky .cust .hl-pat::before { content: ''; position: absolute; left: 44px; top: 11px; height: 20px; width: calc(114px * var(--p, 1)); border-radius: 10px; background: var(--pc); transition: background-color .3s; }
+.sky .cust .hl-pat::after { content: '🙂'; position: absolute; left: 4px; top: 3px; width: 36px; height: 36px; display: grid; place-items: center; font-size: 30px; line-height: 1; }
+.sky .cust[data-mood="meh"] .hl-pat::after { content: '😐'; } .sky .cust[data-mood="mad"] .hl-pat::after { content: '😠'; }
+.sky .cust.pat .hl-mark { top: -86px; } .sky .cust.want .hl-want { top: -72px; } .sky .cust.want:is(.need, .asked) .hl-want { display: none; }   /* over the countdown (its top 216 over the feet: BAR in the hall's code, 226, a little over it) */
 .sky .cust[data-mood="mad"] .hl-mark { background: #e0402f; box-shadow: 0 4px 0 #a8241c; }
-.sky .cust .hl-emo { position: absolute; left: 68%; top: 6%; font-style: normal; font-size: 40px; line-height: 1; pointer-events: none; animation: hlEmo .9s ease-in-out infinite alternate; }
+.sky .cust .hl-emo { position: absolute; left: 68%; top: 16%; font-style: normal; font-size: 40px; line-height: 1; pointer-events: none; animation: hlEmo .9s ease-in-out infinite alternate; }
 .sky .cust .hl-emo:empty { display: none; }
 @keyframes hlEmo { from { transform: translateY(0) scale(1); } to { transform: translateY(-6px) scale(1.08); } }
 .sky .cust[data-mood="mad"] > svg { animation: hlFume 2.2s ease-in-out infinite; }
@@ -441,16 +442,16 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .sky .hl-ring { position: absolute; z-index: 40; font-style: normal; font-size: 36px; line-height: 1; pointer-events: none; transform: translateX(-50%); animation: hlRing .45s ease-in-out infinite; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .25)); }
 @keyframes hlRing { 0%, 100% { transform: translateX(-50%) rotate(-14deg); } 50% { transform: translateX(-50%) rotate(14deg); } }
 @media (prefers-reduced-motion: reduce) { .sky .hl-ring { animation: none; } }
-/* 外場 2.0 §4: the room lifted over the panel (the hero and the one asked kept in sight); the panel: their patience along its top, who
+/* 外場 2.0 §4: the room lifted over the panel (the hero and the one asked kept in sight); the panel: who
    is talking (their face as it is now), the three things to say as the hero's speech bubbles (a row on a wide screen) */
 .yard[data-place="rairai"] .sky .yworld { bottom: var(--hl-lift, 0px); transition: bottom .35s cubic-bezier(.3, .7, .4, 1); }
-.hl-pick .hl-bar { position: absolute; left: 0; top: 0; height: 6px; width: calc(var(--p, 1) * 100%); background: var(--pc); transition: width .2s linear, background-color .3s; }
-.hl-pick[data-mood="meh"] { --pc: #f0a92a; } .hl-pick[data-mood="mad"] { --pc: #e0402f; } .hl-pick.hl-nobar { border-top: 6px solid #c8322a; padding-top: 8px; } .hl-pick.hl-nobar .hl-bar { display: none; }
+.hl-pick { border-top: 6px solid #c8322a; padding-top: 8px; }   /* the shop's red along its top (their countdown is over their head) */
 .hl-top { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; } .hl-top .hl-q { flex: 1; margin: 0; }
 .hl-face { flex: none; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; overflow: hidden; background: #f4e6cc; box-shadow: inset 0 0 0 2px #e8d4b0; } .hl-face svg { width: 100%; height: 100%; } .hl-tel { font-size: 26px; }
 .hl-opts:not(.hl-dishes):not(.hl-where) .hl-opt { border-radius: 16px 16px 16px 5px; }
 @media (min-width: 640px) { .hl-pick { width: min(660px, calc(100% - 24px)); } .hl-opts:not(.hl-dishes) { grid-template-columns: repeat(3, 1fr); } .hl-opts:not(.hl-dishes) .hl-opt { padding: 8px 10px; font-size: 17px; } }
 /* the words heard: sound bars in the bubble over the speaker till answered */
+.sky .ysay.hl-heard { animation: hlHeard .3s ease-out both; } @keyframes hlHeard { from { opacity: 0; transform: translate(-50%, 6px) scale(.8); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }   /* up at once and staying while asked (the 60 s bubble's own fade-in took 5 s) */
 .sky .ysay .hl-wave { display: inline-flex; align-items: center; gap: 2px; height: 14px; padding: 1px 2px; vertical-align: middle; }
 .sky .ysay .hl-wave i { display: block; width: 3px; height: 100%; border-radius: 2px; background: #c8322a; animation: hlWave .8s ease-in-out infinite; }
 .sky .ysay .hl-wave i:nth-child(2) { animation-delay: -.16s; } .sky .ysay .hl-wave i:nth-child(3) { animation-delay: -.32s; } .sky .ysay .hl-wave i:nth-child(4) { animation-delay: -.48s; } .sky .ysay .hl-wave i:nth-child(5) { animation-delay: -.64s; }
