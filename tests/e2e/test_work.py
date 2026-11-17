@@ -172,6 +172,14 @@ def test_a_shelf_shift_pays_and_grades(b):
       return JSON.stringify(out); })()"""))
     assert r['card'] and 'ちがう' in r['miss'] and r['hint'] and r['yen'] == 130 and r['grade'] == 'A' and r['result'], r
 
+# a new version (each push) waits while a job's card is up (2026-11-17: the page reloaded itself mid-shift, like a crash)
+def test_no_new_version_put_on_while_a_job_card_is_up(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + """ kana(10); earlier('shelf'); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'shelf'); await wait(300);
+      const n = () => window.__re || 0; reloadPage = () => { window.__re = n() + 1; }; swUpdated = true; const out = { card: Boolean(document.querySelector('.wk-shelf')) };
+      updateIfCalm(); out.up = n(); CLASS.close(); updateIfCalm(); out.shut = n(); return JSON.stringify(out); })()"""))
+    assert r == {'card': True, 'up': 0, 'shut': 1}, r
+
 def test_the_shelf_card_fits_a_phone(b):
     r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + SHELF + """ kana(10); earlier('shelf');
       location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'shelf'); await wait(400);

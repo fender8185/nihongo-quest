@@ -131,7 +131,7 @@ const HALL = (() => {
     e.textContent = now || EMO[c.mood]; if (now) c.emoT = setTimeout(() => { if (c.el.isConnected) e.textContent = EMO[c.mood]; }, 1400);
   }
   function feel(c) {
-    c.el.style.setProperty('--p', c.p.toFixed(3));
+    const v = c.p.toFixed(3); if (v !== c.pv) { c.pv = v; c.el.querySelector('.hl-pat').style.setProperty('--p', v); }   // on the bar alone: on the whole drawing every shape in it was restyled each frame (a phone stuttered, 2026-11-17)
     if (c.p <= 0) { storm(c); return; }
     const m = MOOD(c.p); if (m === c.mood) return;
     const worse = SCORE[m] > SCORE[c.mood]; c.mood = m; face(c);
@@ -188,7 +188,7 @@ const HALL = (() => {
     const self = o.table >= 0, c = Object.assign({ id: 'c' + (++seq), state: 'in', u: RAIRAI.door[0], v: RAIRAI.door[1], table: -1, dish: '', p: 1, mood: 'ok', q: null, reqs: 0, said: [] }, (!self && !o.full && regular()) || person());
     const el = document.createElement('button'); el.type = 'button'; el.className = 'hero npc cust'; el.dataset.act = 'hall-cust'; el.dataset.c = c.id; el.setAttribute('aria-label', '客人');
     el.innerHTML = `${HERO.svg({ look: c.look, wear: c.wear })}<i class="hl-pat" aria-hidden="true"></i><i class="ev-mark hl-mark" aria-hidden="true">！</i><i class="hl-emo" aria-hidden="true"></i><i class="hl-want" lang="ja" aria-hidden="true"></i>`;
-    el.dataset.mood = 'ok'; el.style.setProperty('--p', '1');
+    el.dataset.mood = 'ok'; el.querySelector('.hl-pat').style.setProperty('--p', '1');
     H.yard.querySelector('.yworld').appendChild(el); c.el = el; H.cust.push(c);
     if (self) { c.state = 'walk'; c.table = o.table; plate(o.table, null); } else c.asks = !c.regular && doorWords() && (Boolean(o.full) || may('door', 0.4, 6));   // すみません、いいですか。
     put(c); mark(c); SND.play('suzu', { vol: 0.5 });

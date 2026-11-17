@@ -75,12 +75,14 @@ async function init() {
 // a new version (1.4.1; the user: 直接換上): its service worker takes over as soon as it is installed (sw.js skipWaiting), and
 // the page goes over to it by itself — at once when the app has only just opened and nothing has been touched, else at the
 // next calm moment: a page change or the app back from the background, while nothing is under way (a practice set, an exam,
-// 聽一輪 playing, the dressing room, 擺設, a dialog, a talk, the opening, the diary). The reloaded page says so once
+// 聽一輪 playing, the dressing room, 擺設, a dialog, a talk, the opening, the diary, a 打工 shift — 外場's or a card's: 2026-11-17, the user
+// thought it crashed). The reloaded page says so once
 let swUpdated = false, touchedYet = false, reloadPage = () => location.reload();
 function calmForUpdate() {
   const r = currentRoute();
   if (r.name === 'practice' || (r.name === 'exam' && r.parts[1] === 'run') || LISTEN || modalOpen() || (CLOUD_GEN && CLOUD_GEN.running)) return false;   // nor while the generator runs
-  return !document.querySelector('.dress.on, .talk, .story, .diary, .scope, .study.edit, .yard.edit');
+  if (HALL.on()) return false;   // 外場 under way (the other jobs are cards: .cls)
+  return !document.querySelector('.dress.on, .talk, .story, .diary, .scope, .study.edit, .yard.edit, .cls');
 }
 function updateIfCalm(now) {
   if (!swUpdated || !(now || calmForUpdate())) return;

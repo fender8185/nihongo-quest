@@ -121,7 +121,7 @@ def test_one_customer_from_the_door_to_the_register(b):
 def test_a_dish_to_the_wrong_table(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await until(() => cust('in')); HALL.spawn();
       for (const t of [0, 1]) { await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table' + t); await answer(true); }
-      await until(() => now().cust.filter((c) => c.state === 'call').length === 2); for (const t of [0, 1]) { await goTo('table' + t); await answer(true); await until(() => ask()); await answer(true); }
+      await until(() => now().cust.filter((c) => c.state === 'call').length === 2); for (const t of [0, 1]) { HALL.force.dish = ['ラーメン', 'ぎょうざ'][t]; await goTo('table' + t); await answer(true); await until(() => ask()); await answer(true); }   // two dishes: the same one goes to either table
       await until(() => now().ready.length === 2); await goTo('pass'); await answer(true); const to = now().cust.find((c) => c.id === now().tray.for).table, other = to === 0 ? 1 : 0;
       const p0 = now().cust.find((c) => c.table === other).p; await goTo('table' + other); const a = ask(), out = { kind: a.kind, right: a.right, miss: now().cust.find((c) => c.table === other).p < p0 - 0.05 ? 1 : 0 }; await answer(true); out.still = Boolean(now().tray);
       await goTo('table' + to); out.serve = ask().kind; return JSON.stringify(out); })()"""))
@@ -235,12 +235,21 @@ SPOKEN = """ const said = []; window.speakAs = (w, l) => { said.push(l); return 
   const el = () => document.querySelector(`.yard .cust[data-c="${now().cust[0].id}"]`); """
 
 def test_patience_drains_and_the_face_changes(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); """ + SPOKEN + """ await until(() => cust('in')); const moods = [], ps = [], mouths = new Set();
-      HALL.pat = 0.06; for (let i = 0; i < 200 && now().cust[0].mood !== 'mad'; i++) { const m = el().dataset.mood; if (moods[moods.length - 1] !== m) moods.push(m); ps.push(Number(el().style.getPropertyValue('--p'))); mouths.add(el().querySelector('.mouth').innerHTML); await wait(20); }
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); """ + SPOKEN + """ await until(() => cust('in')); const moods = [], ps = [], mouths = new Set(), whole = new Set();
+      HALL.pat = 0.06; for (let i = 0; i < 200 && now().cust[0].mood !== 'mad'; i++) { const m = el().dataset.mood; if (moods[moods.length - 1] !== m) moods.push(m); ps.push(Number(el().querySelector('.hl-pat').style.getPropertyValue('--p'))); whole.add(el().style.getPropertyValue('--p')); mouths.add(el().querySelector('.mouth').innerHTML); await wait(20); }
       HALL.pat = 1000; await wait(60); moods.push(el().dataset.mood); mouths.add(el().querySelector('.mouth').innerHTML);
       return JSON.stringify({ moods: [...new Set(moods)], fell: ps[ps.length - 1] < ps[0], faces: mouths.size >= 2, said: said.filter((l) => ['あの、すみません！', 'ちょっと！'].includes(l)),
-        emo: el().querySelector('.hl-emo').textContent, ring: getComputedStyle(el().querySelector('.hl-pat')).display !== 'none' }); })()"""))
-    assert r == {'moods': ['ok', 'meh', 'mad'], 'fell': True, 'faces': True, 'said': ['あの、すみません！', 'ちょっと！'], 'emo': '💢', 'ring': True}, r
+        emo: el().querySelector('.hl-emo').textContent, ring: getComputedStyle(el().querySelector('.hl-pat')).display !== 'none', whole: [...whole] }); })()"""))
+    assert r == {'moods': ['ok', 'meh', 'mad'], 'fell': True, 'faces': True, 'said': ['あの、すみません！', 'ちょっと！'], 'emo': '💢', 'ring': True, 'whole': ['']}, r   # whole: the countdown's value on its bar alone, not on the whole drawing (a restyle of every shape in it each frame: a phone stutters)
+
+# a new version (each push) reloads the page at a calm moment: never mid-shift (2026-11-17, the user: playing, it seemed to crash —
+# back from another app or through a door, the page reloaded itself)
+def test_no_new_version_put_on_mid_shift(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); await until(() => cust('in'));
+      const n = () => window.__re || 0; reloadPage = () => { window.__re = n() + 1; }; swUpdated = true; const out = {};
+      updateIfCalm(); out.mid = n(); document.dispatchEvent(new Event('visibilitychange')); out.back = n();
+      location.hash = '#/chinadori'; route(); await wait(300); out.left = n(); return JSON.stringify(out); })()"""))
+    assert r == {'mid': 0, 'back': 0, 'left': 1}, r
 
 def test_a_mad_customer_wants_an_apology_first(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); """ + SPOKEN + """ await until(() => cust('in'));
@@ -342,7 +351,7 @@ def test_heard_words_come_as_sound_bars_first(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
       await until(() => cust('call')); await goTo('table0'); await wait(100); const says = () => [...document.querySelectorAll('.yard .ysay')].map((x) => x.textContent).join('|');
       const bub = document.querySelector('.yard .ysay .hl-wave'), out = { wave: Boolean(bub), hidden: !says().includes('すみません！'), face: Boolean(document.querySelector('.hl-pick .hl-face svg')),
-        bar: Math.abs(Number(document.querySelector('.yard .cust').style.getPropertyValue('--p')) - now().cust[0].p) < 0.05 };
+        bar: Math.abs(Number(document.querySelector('.yard .cust .hl-pat').style.getPropertyValue('--p')) - now().cust[0].p) < 0.05 };
       await answer(true); await wait(700); out.gone = !bub.isConnected; out.said = says().includes('すみません！'); return JSON.stringify(out); })()"""))
     assert r == {'wave': True, 'hidden': True, 'face': True, 'bar': True, 'gone': True, 'said': True}, r
 
