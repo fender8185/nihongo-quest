@@ -69,7 +69,8 @@ const WORK = (() => {
     if (!res[d]) { res[d] = { place: job, done: 0, score: {} }; saveState(); }
     const s = S = { job, day: d };
     if (res[d].done >= nOf(job)) { finish(s); return true; }   // all done but never paid (the card shut, the app gone, at the last moment): paid now
-    const ctx = { yard, n: nOf(job), job, done: res[d].done, right: (k, misses) => right(s, k, misses), finish: (extra, ms) => finish(s, extra, ms), on: () => S === s };
+    const ctx = { yard, n: nOf(job), job, done: res[d].done, right: (k, misses) => right(s, k, misses), finish: (extra, ms) => finish(s, extra, ms), on: () => S === s,
+      kept: Object.assign({}, res[d].keep), keep: (o) => { const r = W().res[d]; if (S === s && r && !fin(r)) { r.keep = o; saveState(); } } };   // keep: what the runner needs back after a break (外場's stars, its once-a-shift things), till paid
     const run = () => { if (S === s && JOBS[job]) JOBS[job].run(ctx); };
     const first = (TOWN.WORK.first || {})[job], before = Object.entries(res).some(([k, r]) => k !== d && r.place === job);   // the keeper's word the first time
     if (first && !before && !res[d].done) TALK.open(yard, PLACES[job].who, first, run, null, { ev: true }); else run();
@@ -82,7 +83,8 @@ const WORK = (() => {
   // the 求人看板 by the way into 大通り: the four jobs, where, the kana each needs (✓ those open to this learner), the hours, today's
   function board() {
     const t = today(), rows = Object.entries(PLACES).map(([job, P]) => { const ok = kanaOk(P.kana);
-      return `<li class="wk-job${ok ? ' ok' : ''}" data-job="${job}"><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span><span>${ok ? '✓ 可以做' : `學 ${P.kana} 個假名`}</span></li>`; }).join('');
+      const left = ok ? wordsLeft(job) : [], go = ok && !left.length;   // the kana seen, the 入門 words still to learn (外場)
+      return `<li class="wk-job${go ? ' ok' : ''}" data-job="${job}"><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span><span>${go ? '✓ 可以做' : ok ? `再學 ${left.length} 個入門單字` : `學 ${P.kana} 個假名`}</span></li>`; }).join('');
     const now = t ? (fin(t) ? `今天在「${esc(named(t.place).name)}」的班打完了。` : `今天在「${esc(named(t.place).name)}」打工中（${t.done}／${nOf(t.place)}）。`) : '今天還沒打工。一天只能選一個地方打一班。';
     CLASS.card('wk-board', '求人看板', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button><div class="wk-bhead"><b lang="ja">アルバイト ぼしゅう</b><span>求人看板</span></div>
       <ul class="wk-jobs">${rows}</ul><p class="wk-today">${now}</p><p class="wk-note">大通り的店 10 點到 19 點；外場在らいらいけん店裡（10 點到 20 點）；包包子在牌樓外的「福明」，王老闆在的時候。點老闆，選「はたらく」。</p>`, () => {});
@@ -98,7 +100,7 @@ const WORK = (() => {
   function finish(s, extra = {}, ms = 0) {
     const r = W().res[s.day]; if (!r || fin(r)) return null;
     const before = yenBalance(), n = shifts() + 1, g = grade(r.score, s.job), p = Object.assign(pay(n, g, extra.tip || 0), { tipName: extra.tipName });
-    Object.assign(r, { done: nOf(s.job), yen: p.yen, grade: g, tip: p.tip }); saveState();
+    Object.assign(r, { done: nOf(s.job), yen: p.yen, grade: g, tip: p.tip }); delete r.keep; saveState();
     if (S === s) S = null;
     if (ms) setTimeout(() => results(s.job, r, p, before, n, extra.html), ms); else results(s.job, r, p, before, n, extra.html);
     return p;

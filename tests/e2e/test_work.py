@@ -105,6 +105,13 @@ def test_the_board_lists_the_four_jobs(b):
     assert r['rows'] == [['shelf', True], ['counter', True], ['waiter', False], ['buns', False]], r
     assert all(w in r['text'] for w in ['整理貨架', '站櫃', '外場', '包包子', '30', '46']) and '今天' in r['today'] and '站櫃' in r['today'], r
 
+def test_the_board_names_the_words_still_needed(b):   # 外場's kana seen, its three 入門 words not: not ✓ yet, the words said
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(30); location.hash = '#/chinadori'; route(); await wait(300);
+      const row = () => document.querySelector('.wk-job[data-job="waiter"]'); WORK.board(yard()); await wait(100); const out = { ok: row().classList.contains('ok'), text: row().textContent }; CLASS.close();
+      ['いらっしゃいませ', 'どうぞ', 'はい'].forEach((w) => { const v = REG.vocab.find((x) => x.w === w && x.lv === 'PRE_N5'); state.srs[v.key] = rec(); });
+      WORK.board(yard()); await wait(100); out.then = row().classList.contains('ok'); CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['ok'] is False and '3 個入門單字' in r['text'] and '可以做' not in r['text'] and r['then'] is True, r
+
 def test_chen_asks_at_five_kana(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ const ids = () => TOWNEV.due().map((e) => e.id).filter((id) => id.startsWith('cn'));
       state.town.done = { cn1: '2026-11-01' }; kana(5); const before = ids();
@@ -184,6 +191,11 @@ def test_counter_offers_only_readable_goods(b):
       const runs = Array.from({ length: 6 }, () => JOBS.counter.make()).flat();
       return JSON.stringify({ goods: [...new Set(runs.flatMap((t) => t.goods.map((g) => g[0])))].sort(), kinds: [...new Set(runs.map((t) => t.kind))], four: runs.every((t) => t.goods.length === 4 && t.goods.some((g) => g[0] === t.good[0])) }); })()"""))
     assert set(r['goods']) <= {'かさ', 'すし', 'いす', 'こけし'} and len(r['goods']) == 4 and r['kinds'] == ['name'] and r['four'], r
+
+def test_counter_offers_a_good_with_a_small_kana(b):   # せっけん: its っ read as the つ seen
+    r = json.loads(ev(b, "(async () => { " + BEGIN + COUNTER + """ kana(46);
+      const runs = Array.from({ length: 10 }, () => JOBS.counter.make()).flat(); return JSON.stringify({ soap: runs.some((t) => t.goods.some((g) => g[0] === 'せっけん')) }); })()"""))
+    assert r == {'soap': True}, r
 
 def test_counter_asks_two_and_prices_once_learned(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + COUNTER + """ kana(46); vocab('ふたつ'); vocab('いくら'); nums();

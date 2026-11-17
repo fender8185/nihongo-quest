@@ -137,6 +137,8 @@ SERVED = """ const served = async (t) => { await until(() => cust('in')); await 
     await until(() => cust('call')); await goTo('table' + t); await answer(true); await until(() => ask()); await answer(true);
     await until(() => now().ready.length); await goTo('pass'); await answer(true); await goTo('table' + t); await answer(true); };"""
 
+LEARN = """ const learn = (r, w) => { const v = REG.vocab.find((x) => x.r === r && (!w || x.w === w)); state.srs[v.key] = rec(); }; """
+
 def test_leaving_mid_shift_and_back_picks_up(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ await start(); await served(0); await until(() => cust('pay')); await goTo('register'); await answer(true);
       await until(() => cust('in')); await goTo('entry'); await answer(true);
@@ -183,7 +185,7 @@ def test_the_pass_plate_by_name(b):
     assert r == {'called': True, 'kind': 'pass', 'right': True, 'n': 3, 'pics': 3, 'noname': True, 'cost': True, 'tray': True}, r
 
 def test_the_toilet_asked_from_a_far_table(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('あそこ'); HALL.force = { toilet: true, solo: true }; await start(); await served(0);
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + LEARN + """ word('あそこ'); learn('おてあらい', 'お手洗い'); HALL.force = { toilet: true, solo: true }; await start(); await served(0);
       await until(() => now().cust[0].q === 'toilet'); const mark = document.querySelector('.cust').classList.contains('need'); await goTo('table0'); const a = ask(); const out = { mark, kind: a.kind, right: a.right, opts: a.opts.slice().sort() };
       await answer(true); out.after = now().cust[0].state; return JSON.stringify(out); })()"""))
     assert r['after'] in ('eat', 'leave', 'pay') and {k: r[k] for k in ('mark', 'kind', 'right', 'opts')} == {'mark': True, 'kind': 'toilet', 'right': 'あそこです。', 'opts': ['あそこです。', 'ここです。', 'そこです。']}, r
@@ -243,9 +245,9 @@ def test_patience_drains_and_the_face_changes(b):
 def test_a_mad_customer_wants_an_apology_first(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); """ + SPOKEN + """ await until(() => cust('in'));
       HALL.pat = 0.06; await until(() => now().cust[0].mood === 'mad'); HALL.pat = 1000; const p0 = now().cust[0].p; said.length = 0;
-      await goTo('entry'); const a = ask(), out = { kind: a.kind, right: a.right, heard: said[0] }; await answer(true); out.p = now().cust[0].p > p0 + 0.2;
+      await goTo('entry'); const a = ask(), out = { kind: a.kind, right: a.right, heard: said[0], hai: a.opts.includes('はい！') }; await answer(true); out.p = now().cust[0].p > p0 + 0.2;
       await until(() => ask()); out.then = ask().kind; return JSON.stringify(out); })()"""))
-    assert r == {'kind': 'late', 'right': 'すみません！', 'heard': 'ちょっと！', 'p': True, 'then': 'greet'}, r
+    assert r == {'kind': 'late', 'right': 'すみません！', 'heard': 'ちょっと！', 'hai': False, 'p': True, 'then': 'greet'}, r   # はい！ answers a ちょっと！ too: not offered
 
 def test_a_customer_storms_out_at_zero(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); """ + SPOKEN + """ await until(() => cust('in')); await goTo('entry'); const id = now().cust[0].id, out = { open: ask().kind };
@@ -267,7 +269,6 @@ def test_a_waiter_score_is_the_mood_at_the_door(b):
 
 # ---- 外場 2.0 §3: Japanese at every spot, each once its words are learned ----
 THROUGH_CALL = """ await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true); await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => ask()); """
-LEARN = """ const learn = (r, w) => { const v = REG.vocab.find((x) => x.r === r && (!w || x.w === w)); state.srs[v.key] = rec(); }; """
 
 def test_have_on_and_off_the_menu(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('ある', 'ちょっと', 'すみません'); HALL.force = { solo: true, have: true }; await start(); """ + THROUGH_CALL + """
@@ -445,7 +446,64 @@ def test_no_full_house_without_its_words(b):
       await wait(900); return JSON.stringify({ n: now().cust.length, door: now().cust.some((c) => c.state === 'in') }); })()"""))
     assert r == {'n': 3, 'door': False}, r
 
-TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
+# ---- 2026-11-17 review: a table being shown kept from walk-ins, the door's answer by the tables as they are, the phone answered
+# while another question is up, a hidden page, stars kept over a break, the same dish to either table, the toilet's word ----
+def test_a_table_being_shown_is_not_taken(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ await start(); await until(() => cust('in')); await goTo('entry'); await answer(true);
+      const w = cust('wait').id; HALL.force = Object.assign({}, HALL.force, { self: true }); const R = Math.random; Math.random = () => 0;   // walk-ins: to the first free table
+      await goTo('table0'); const kind = ask().kind; let taken = false; for (let i = 0; i < 30; i++) { taken = taken || now().cust.some((c) => c.id !== w && c.table === 0); await wait(30); }
+      Math.random = R; await answer(true); const ts = now().cust.filter((c) => c.table >= 0).map((c) => c.table);
+      return JSON.stringify({ kind, taken, mine: now().cust.find((c) => c.id === w).table, twice: ts.length !== new Set(ts).size }); })()"""))
+    assert r == {'kind': 'seat', 'taken': False, 'mine': 0, 'twice': False}, r
+
+def test_the_door_answer_follows_a_table_freed(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('すみません', 'いい', 'ちょっと'); HALL.force = { door: true, order: 'dish', toilet: false, great: false, water: false, drop: false, phone: false }; await start();
+      for (const t of [0, 1, 2]) { await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table' + t); await answer(true); }
+      const at0 = () => now().cust.find((c) => c.table === 0); await until(() => at0().state === 'call'); await goTo('table0'); await answer(true); await until(() => ask()); await answer(true);
+      await until(() => now().ready.length); await goTo('pass'); await answer(true); HALL.pace = 0.25; await goTo('table0'); await answer(true);   // eating, slowly
+      await until(() => cust('in')); await goTo('entry'); const before = ask().right, id = cust('in').id;
+      await until(() => !now().cust.some((c) => c.table === 0)); [...document.querySelectorAll('.hl-opt')].find((x) => x.dataset.o === 'はい、どうぞ。').click(); await wait(150);
+      return JSON.stringify({ before, closed: !ask(), state: now().cust.find((c) => c.id === id).state }); })()"""))
+    assert r == {'before': 'すみません、ちょっと…。', 'closed': True, 'state': 'wait'}, r
+
+def test_an_answered_phone_waits_its_turn(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('もしもし', 'そうです', 'ちがいます'); HALL.force = { solo: true, phone: false }; await start(); await served(0);
+      await until(() => cust('pay')); HALL.ring(); await until(() => now().phone); await goTo('register');
+      const a = ask(); [...document.querySelectorAll('.hl-opt')].find((x) => x.dataset.o === a.right).click(); HALL.at(yard(), 'register');   // もしもし, and at once the one waiting to pay
+      const k = ask() && ask().kind; await wait(100); await answer(true); await until(() => ask()); const two = ask() && ask().kind; if (two) await answer(true);
+      await wait(600); return JSON.stringify({ k, two, stars: now().stars }); })()"""))
+    assert r == {'k': 'pay', 'two': 'phone2', 'stars': 3}, r
+
+def test_a_hidden_page_keeps_the_phone_ringing(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('もしもし', 'そうです', 'ちがいます'); HALL.force = { solo: true, phone: false }; await start();
+      let hid = true; Object.defineProperty(document, 'hidden', { configurable: true, get: () => hid }); HALL.ring(); await wait(900);
+      const out = { ringing: now().phone, stars: now().stars }; hid = false; await until(() => !now().phone); out.after = now().stars; return JSON.stringify(out); })()"""))
+    assert r == {'ringing': True, 'stars': 3, 'after': 2}, r
+
+def test_stars_lost_stay_lost_after_a_break(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('もしもし', 'そうです', 'ちがいます'); HALL.force = { solo: true, phone: false }; await start();
+      HALL.ring(); await until(() => now().phone); await until(() => !now().phone); const lost = now().stars;
+      location.hash = '#/chinadori'; route(); await wait(400); await into(); WORK.start(yard(), 'waiter'); await wait(300);
+      return JSON.stringify({ lost, back: now().stars, hud: document.querySelector('.hl-hud .hl-stars').textContent }); })()"""))
+    assert r == {'lost': 2, 'back': 2, 'hud': '★★☆'}, r
+
+def test_the_same_dish_goes_to_either_table(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { order: 'dish', dish: 'ぎょうざ', toilet: false, great: false, water: false, drop: false, phone: false }; await start();
+      const seat = async (t) => { await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table' + t); await answer(true); const id = now().cust.find((c) => c.table === t).id;
+        await until(() => now().cust.find((c) => c.id === id).state === 'call'); await goTo('table' + t); await answer(true); await until(() => ask()); await answer(true); return id; };
+      const a = await seat(0); await until(() => now().ready.includes(a)); await goTo('pass'); await answer(true);   // A's ぎょうざ in hand
+      HALL.pace = 0.3; const bb = await seat(1); await goTo('table1'); const kind = ask() && ask().kind; await answer(true);   // B's not up yet: A's set before B
+      HALL.pace = 0.02; await until(() => now().ready.includes(a)); await goTo('pass'); await answer(true); await goTo('table0'); const kind2 = ask() && ask().kind; await answer(true);
+      const st = (id) => now().cust.find((c) => c.id === id); return JSON.stringify({ kind, kind2, a: Boolean(st(a)) && st(a).state !== 'food', b: Boolean(st(bb)) && st(bb).state !== 'food' }); })()"""))
+    assert r == {'kind': 'serve', 'kind2': 'serve', 'a': True, 'b': True}, r
+
+def test_no_toilet_question_without_its_word(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('あそこ'); HALL.force = { toilet: true, solo: true }; await start(); await served(0); const seen = new Set();
+      for (let i = 0; i < 40; i++) { now().cust.forEach((c) => { seen.add(c.state); if (c.q) seen.add('q:' + c.q); }); await wait(20); }
+      return JSON.stringify({ asked: seen.has('q:toilet'), on: seen.has('pay') || seen.has('leave') || seen.has('eat') }); })()"""))
+    assert r == {'asked': False, 'on': True}, r
+
+TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     time.sleep(0.8)

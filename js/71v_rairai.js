@@ -4,7 +4,7 @@
 // between the tables and the register. Seen at 45° as the 食堂 (ISO): the kitchen's pass along the right wall with 黄 behind it
 // (the wok's fire through the hatch, the shop's name over it), red paper menu strips beside, the goldfish tank, the toilet door at
 // the far end (おてあらい); three round tables with red cloths and lazy susans, their stools; the register by the door with its
-// 招き猫; the おすすめ poster and a latticed window on the left wall; lanterns. Open 10–20 (TOWN.HOURS.rairai).
+// 招き猫; the にんき poster (the おすすめ is the board in the hero's hand, 外場) and a latticed window on the left wall; lanterns. Open 10–20 (TOWN.HOURS.rairai).
 const RAIRAI = {
   TABLES: [[8.6, 7.4], [15.2, 5.6], [14.6, 11.8]],   // the round tables' middles (u, v)
   R: 1.35,   // their cloths' radius
@@ -40,7 +40,7 @@ function rairaiHtml() {
     ${iOnV(0.02, hatch + sign + strips + wc)}
     ${frameR(19.3, 20.9, 4.1, '#5a1a14')}
     ${iOnL(`<rect x="-10.6" y="-5.8" width="3.6" height="2.8" fill="#bfe0f0" class="hc" style="--c:#bfe0f0;--n:#1c2448"/><path d="${[0.6, 1.2, 1.8, 2.4, 3.0].map((d) => `M${f(-10.6 + d)} -5.8 v2.8`).join(' ')} M-10.6 -4.4 h3.6" stroke="#a8241c" stroke-width=".08"/><rect x="-10.6" y="-5.8" width="3.6" height="2.8" fill="none" stroke="#5a1a14" stroke-width=".14"/>
-      <rect x="-6.4" y="-6.2" width="2.8" height="3.4" fill="#fbf3e2" stroke="#a8241c" stroke-width=".08"/><text x="-5" y="-5.78" text-anchor="middle" font-size=".34" font-weight="700" fill="#c8322a" ${SERIF}>おすすめ</text>
+      <rect x="-6.4" y="-6.2" width="2.8" height="3.4" fill="#fbf3e2" stroke="#a8241c" stroke-width=".08"/><text x="-5" y="-5.78" text-anchor="middle" font-size=".34" font-weight="700" fill="#c8322a" ${SERIF}>にんき！</text>
       <ellipse cx="-5" cy="-4.15" rx="1" ry=".55" fill="#fbf8f0" stroke="#d9d0bf" stroke-width=".04"/><ellipse cx="-5" cy="-4.25" rx=".75" ry=".36" fill="#c8452a"/><rect x="-5.35" y="-4.42" width=".22" height=".18" fill="#f4ead8"/><rect x="-4.85" y="-4.32" width=".2" height=".16" fill="#f4ead8"/><circle cx="-4.75" cy="-4.45" r=".05" fill="#5a8a4a"/>
       <text x="-5" y="-3.12" text-anchor="middle" font-size=".26" font-weight="700" fill="#3b2a1c">マーボーどうふ</text>
       <g transform="rotate(45 -11.2 -5)"><rect x="-11.55" y="-5.35" width=".7" height=".7" fill="#c8322a"/></g><text x="-11.2" y="-4.86" text-anchor="middle" font-size=".42" font-weight="700" fill="#f6d47a" transform="rotate(180 -11.2 -5)" ${SERIF}>福</text>`, 0.02)}
@@ -85,7 +85,7 @@ PLACE_USE.rairai = (() => {
     Object.assign({ id: 'register', name: '收銀台', box: isoBBox(r0, r1, s0, s1, 0, 2.8), kind: 'do', pose: 'look' }, work('register', 'まねきねこ！')),
     ...RAIRAI.TABLES.map(([u, v], i) => Object.assign({ id: 'table' + i, name: '圓桌', box: isoBBox(u - RAIRAI.R, u + RAIRAI.R, v - RAIRAI.R, v + RAIRAI.R, 0, 1.5), kind: 'do', face: 'back turn flip', pose: 'look' }, work('table' + i, 'まるい テーブル！'))),
     { id: 'menu', name: '菜單', box: isoBBox(11.3, 17.4, 0, 0.1, 3.4, 6.3), kind: 'do', go: isoXY(14.2, 2.4), face: 'back turn', pose: 'look', pick: () => ['ぎょうざ、ラーメン…', '牆上的菜單：ぎょうざ（煎餃）、ラーメン（拉麵）、チャーハン（炒飯）、しゅうまい（燒賣）、はるまき（春捲）、マーボーどうふ（麻婆豆腐）。'] },
-    { id: 'poster', name: 'おすすめ', box: isoBBox(0, 0.1, 3.6, 6.4, 2.8, 6.2), kind: 'do', go: isoXY(2.4, 5.0), face: 'back turn flip', pose: 'look', pick: () => ['おすすめ！', '「おすすめ」是店家推薦：今天推薦麻婆豆腐。'] },
+    { id: 'poster', name: 'にんき', box: isoBBox(0, 0.1, 3.6, 6.4, 2.8, 6.2), kind: 'do', go: isoXY(2.4, 5.0), face: 'back turn flip', pose: 'look', pick: () => ['マーボーどうふ！', '「にんき」是人氣：店裡最受歡迎的麻婆豆腐。'] },
     { id: 'toilet', name: 'おてあらい', box: isoBBox(19.3, 20.9, 0, 0.2, 0, 4.8), kind: 'do', go: isoXY(20.1, 2.0), face: 'back turn', pose: 'look', pick: () => ['おてあらい…', '「おてあらい」是洗手間。'] },
     { id: 'tank', name: '魚缸', box: isoBBox(k0, k1, m0, m1, 0, 2.5), kind: 'do', go: isoXY(12.4, 2.6), face: 'back turn', pose: 'look', say: 'きんぎょ！', fx: 'fish', fxc: 'flutter' }];
 })();

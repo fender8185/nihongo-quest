@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 75 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 76 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -142,12 +142,12 @@ const TOWN = {
       hours: [[10, 20, 'chinatown', 'stand']] },
     // 中華街大通り (2026-11-14): the keepers who take on a beginner for a shift (WORK) — 周 at らんらん, 張 at ふく, 黄 at らいらいけん
     zhou: { name: '周 美蘭', kana: 'シュウ メイラン', role: 'おみやげ屋「らんらん」的老闆娘', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'droopy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#d0574b', bottomStyle: 'skirt', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#6e4f3a' },
-      bio: ['周美蘭，74 歲，大通り上おみやげ屋「らんらん」的老闆娘，店名是她最喜歡的貓熊的名字。', '說話慢條斯理，可是殺價從來沒輸過。'],
+      bio: ['周美蘭，74 歲，大通り上的おみやげ屋「らんらん」的老闆娘，店名是她最喜歡的貓熊的名字。', '說話慢條斯理，可是殺價從來沒輸過。'],
       hours: [[10, 19, 'chinadori', 'ranran']] },
     zhang: { name: '張 偉', kana: 'チョウ ウェイ', role: '中華食材店「ふく」的店長', look: { face: 'oval', skin: '#e8bd98', cheeks: 'none', fringe: 'sidepart', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'flat', beard: 'none', topStyle: 'shirt', top: '#ecebe6', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: { body: 'apron', apron: '#4f7a4a', mark: '福' },
       bio: ['張偉，41 歲，中華食材店「ふく」的店長。', '貨架上每一格都有標籤，一格都不能放錯——放錯了他會默默地拿回來，再看你一眼。'],
       hours: [[10, 19, 'chinadori', 'fuku']] },
-    huang: { name: '黄 大龍', kana: 'コウ ダイリュウ', role: '出前的中華料理店「らいらいけん」的老闆', look: { face: 'round', skin: '#d39f78', cheeks: 'soft', fringe: 'spiky', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'big', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: { head: 'chefcap' },
+    huang: { name: '黄 大龍', kana: 'コウ ダイリュウ', role: '中華料理店「らいらいけん」的老闆兼主廚', look: { face: 'round', skin: '#d39f78', cheeks: 'soft', fringe: 'spiky', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'big', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: { head: 'chefcap' },
       bio: ['黄大龍，50 歲，「らいらいけん」的老闆兼主廚，出菜一道都不能慢。', '永遠在趕時間，口頭禪是「はやく！はやく！」，自己的拉麵卻總是放到冷掉才吃。'],
       hours: [[10, 20, 'rairai', 'pass']] },   // 2026-11-15: in his kitchen, at the pass (らいらいけん walked into)
     granny: { name: 'おばあちゃん', kana: 'おばあちゃん', role: '外婆（信）', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#b8a27a', bottomStyle: 'skirt', bottom: '#6e4f3a', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { face: 'glasses' },
@@ -174,7 +174,7 @@ const TOWN = {
       ['m0', 'また きてね。', '要再來喔。']],
     zhang: [
       ['m0', '…いらっしゃい。', '……歡迎光臨。'],
-      ['m0', 'ここは、ここ。そこは、そこ。', '這個放這裡。那個放那裡。'],
+      ['m0', 'これは ここ。それは そこ。', '這個放這裡。那個放那裡。'],
       ['m0', 'ラベルを よく みて。', '標籤要看清楚。'],
       ['m0', '…それは、ちがう。', '……那個，不對。'],
       ['m0', 'きょうも、きれいです。', '今天也很整齊。'],
@@ -191,7 +191,7 @@ const TOWN = {
       ['m0', 'きみ、ホールを てつだって！', '你來幫忙外場！'],
       ['m0', 'チャーハン、あつあつ！', '炒飯熱騰騰！'],
       ['m0', 'ぎょうざ、やけた！ はやく！', '煎餃好了！快！'],
-      ['m0', 'こはくさんと とうかさん、おとくいさん！', 'こはく和とうか是老主顧！'],
+      ['m0', 'しゅうさんと ちょうさん、おとくいさん！', '周奶奶和張店長都是老主顧！'],
       ['m0', 'ちょっと やすみ…… いや、はやく！', '休息一下……不行，快！'],
       ['m0', 'また きて！ はやく きて！', '再來！快點來！']],
     // 中華街 (2026-11-14): 王 — loud, warm, his three words of Chinese every time
@@ -2669,10 +2669,10 @@ const TOWN = {
       huang: ['はやく！ おみせ、てつだって！', '快！來幫忙顧店！'], wang: ['ニーハオ！ ぶたまん、つくる？', '你好！要來包豬肉包嗎？'] },
     first: {
       shelf: [['zhang', 'きいて。おなじ ところへ。', '聽我念，放到一樣的格子。'], ['zhang', '…まちがえたら、もう いちど。', '……放錯了，就再放一次。']],
-      counter: [['zhou', 'おきゃくさんが いったものを わたしてね。', '客人說要什麼，就拿給他喔。'], ['zhou', '「いらっしゃいませ」「ありがとうございました」、げんきよく ね。', '「歡迎光臨」「謝謝光臨」，要有精神喔。']],
+      counter: [['zhou', 'おきゃくさんが いった ものを わたしてね。', '客人說要什麼，就拿給他喔。'], ['zhou', '「いらっしゃいませ」「ありがとうございました」、げんきよく ね。', '「歡迎光臨」「謝謝光臨」，要有精神喔。']],
       waiter: [['huang', 'おきゃくさんが きたら、すぐ いって！', '客人來了就馬上過去！'], ['huang', '', '（用中文）頭上有「！」的客人就是在等你。點他走過去，聽他說什麼，選你要回的那句。端菜、帶位、結帳都靠你了！'],
-        ['huang', 'おきゃくさんを またせないで！', '（用中文）客人頭上那條是他的耐心，越等越短，臉也會越來越臭。沒了他就走人，店裡的星星也會少一顆。桌子都坐滿時還有人進門，要先跟他道歉、請他等。今天招呼 6 組客人，答得又快又對，他們才會開心地走！']],
-      buns: [['wang', 'ぶたまんは こころ！', '豬肉包就是心！'], ['chen', '', '（用中文）聽到哪個音就按哪個字，按對包子就往下包一步。三十下五顆包子，兩分鐘內全對，王老闆會很激動。']] },
+        ['huang', 'おきゃくさんを またせないで！', '別讓客人等！'], ['huang', '', '（用中文）客人頭上那條是他的耐心，越等越短，臉也會越來越臭。沒了他就走人，店裡的星星也會少一顆。桌子都坐滿時還有人進門，要先跟他道歉、請他等。今天招呼 6 組客人，答得又快又對，他們才會開心地走！']],
+      buns: [['wang', 'ぶたまんは こころ！', '豬肉包就是心！'], ['chen', '', '（用中文）聽到哪個音就按哪個字，按對包子就往下包一步。按三十下、包好五顆包子，兩分鐘內全部按對，王老闆會很激動。']] },
     // what each says during a shift: a miss, a right one now and then, the end
     say: {
       shelf: { who: 'zhang', miss: ['ちがう！', '不對！'], ok: [['よし。', '好。'], ['…うん。', '……嗯。'], ['きれい。', '很整齊。']], end: ['…おつかれさま。たすかった。', '……辛苦了。幫了大忙。'] },
@@ -2687,7 +2687,7 @@ const TOWN = {
       // the ones not meant (not), what the customers say (cust) — calling, ordering by a dish's name or pointing, asking (はい、
       // あります or すみません、ちょっと… by whether it is on the menu), the おすすめ in the hero's hand, water, a word of praise, the price
       // (the hero says it: price), goodbye (regulars), cross words — and a caller on the phone (call)
-      waiter: { who: 'huang', order: ['はいよ！', '好嘞！'], end: ['おつかれ！ たすかった！', '辛苦了！幫了大忙！'], phone: ['でんわ！', '電話啦！'],
+      waiter: { who: 'huang', order: ['はいよ！', '好喔！'], end: ['おつかれ！ たすかった！', '辛苦了！幫了大忙！'], phone: ['でんわ！', '電話啦！'],
         up: { ぎょうざ: ['ぎょうざ、あがり！', '煎餃好了！'], ラーメン: ['ラーメン、あがり！', '拉麵好了！'], チャーハン: ['チャーハン、あがり！', '炒飯好了！'], しゅうまい: ['しゅうまい、あがり！', '燒賣好了！'], はるまき: ['はるまき、あがり！', '春捲好了！'], マーボーどうふ: ['マーボーどうふ、あがり！', '麻婆豆腐好了！'] },
         me: { toilet: ['あそこです。', '在那裡（遠處）。'], thanks: ['どういたしまして。', '不客氣。'], greet: ['いらっしゃいませ！', '歡迎光臨！'], seat: ['こちらへ どうぞ。', '這邊請。'], call: ['はい！', '來了！'], serve: ['どうぞ。', '請用。'], sorry: ['すみません！', '對不起！'], pay: ['ありがとうございました！', '謝謝光臨！'],
           water: ['はい、どうぞ。', '好的，請用。'], have: ['はい、あります。', '有的。'], none: ['すみません、ちょっと…。', '不好意思，這個沒有……'], osusume: ['これです。', '這個（我手上的）。'], great: ['ありがとうございます！', '謝謝！'], bye: ['さようなら！', '再見！'],
@@ -2702,7 +2702,8 @@ const TOWN = {
           water: [['いいえ、ちがいます。', '不是喔。'], ['どういたしまして。', '不客氣。']], have: [['いいえ、ちがいます。', '不是喔。']], osusume: [['それです。', '那個（你那邊的）。'], ['あれです。', '那個（遠處的）。']],
           great: [['いただきます！', '開動了！'], ['どういたしまして。', '不客氣。']], bye: [['おやすみなさい。', '晚安。'], ['いってきます。', '我出門了。']],
           phone: [['いらっしゃいませ！', '歡迎光臨！'], ['こんにちは。', '你好。']], answer: [['どういたしまして。', '不客氣。']],
-          door: [['いただきます！', '開動了！'], ['どういたしまして。', '不客氣。'], ['さようなら！', '再見！']] },
+          door: [['いただきます！', '開動了！'], ['どういたしまして。', '不客氣。'], ['さようなら！', '再見！']],
+          late: [['どうぞ。', '請用。'], ['いただきます！', '開動了！']] },   // a cross ちょっと！: はい！ would answer it too (2026-11-17)
         cust: { call: ['すみません！', '不好意思！'], wrong: ['ちがいます。', '不是喔。'], pay: ['ごちそうさまでした。', '謝謝招待。'], eat: ['いただきます！', '開動了！'], yum: ['おいしい！', '好吃！'],
           toilet: ['おてあらいは どこですか。', '洗手間在哪裡？'], thanks: ['ありがとう。', '謝謝。'],
           // kept waiting (外場 2.0): calling again, then cross; the dish slow (まだ known); a mad one's word first (おそい known, else ちょっと); stormed out (もう known)
@@ -2713,7 +2714,7 @@ const TOWN = {
           dish: { ぎょうざ: ['ぎょうざを ください。', '請給我煎餃。'], ラーメン: ['ラーメンを ください。', '請給我拉麵。'], チャーハン: ['チャーハンを ください。', '請給我炒飯。'], しゅうまい: ['しゅうまいを ください。', '請給我燒賣。'], はるまき: ['はるまきを ください。', '請給我春捲。'], マーボーどうふ: ['マーボーどうふを ください。', '請給我麻婆豆腐。'] },
           have: { ぎょうざ: ['ぎょうざ、ありますか。', '有煎餃嗎？'], ラーメン: ['ラーメン、ありますか。', '有拉麵嗎？'], チャーハン: ['チャーハン、ありますか。', '有炒飯嗎？'], すし: ['すし、ありますか。', '有壽司嗎？'], カレー: ['カレー、ありますか。', '有咖哩嗎？'], ピザ: ['ピザ、ありますか。', '有披薩嗎？'] } },
         // the caller on the phone: this shop, or a wrong number (the sushi shop)
-        call: { right: ['らいらいけんですか。', '請問是來來軒嗎？'], wrong: ['すしやですか。', '請問是壽司店嗎？'] },
+        call: { right: ['らいらいけんですか。', '請問是らいらいけん嗎？'], wrong: ['すしやですか。', '請問是壽司店嗎？'] },
         // the regulars' greeting by the clock (before 11, till 17, after), answered in kind
         hello: [['おはようございます。', '早安。'], ['こんにちは。', '你好（白天）。'], ['こんばんは。', '晚上好。']], regulars: ['zhou', 'zhang', 'chen'] },
       counter: { who: 'zhou', miss: ['それじゃ ないわよ。', '不是那個喔。'], ok: [['じょうず、じょうず。', '很好很好。'], ['いいわね。', '不錯喔。']], end: ['ありがとう。たすかったわ。', '謝謝，幫了大忙。'] } },
