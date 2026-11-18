@@ -536,6 +536,13 @@ def test_no_toilet_question_without_its_word(b):
       return JSON.stringify({ asked: seen.has('q:toilet'), on: seen.has('pay') || seen.has('leave') || seen.has('eat') }); })()"""))
     assert r == {'asked': False, 'on': True}, r
 
+# 2026-11-18, the user: the jobs wanted a little music — らいらいけん while the 外場's floor runs, gone at the shift's end
+def test_the_hall_plays_its_music_while_the_floor_runs(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ state.settings.musicVol = 1; await into(); const out = { before: MUSIC.wants() };
+      await start(); out.on = [MUSIC.wants(), MUSIC.playing()]; await drive(); await wait(300); out.over = [MUSIC.wants(), MUSIC.playing()];
+      return JSON.stringify(out); })()"""))
+    assert r == {'before': '', 'on': ['rairai', True], 'over': ['', False]}, r
+
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

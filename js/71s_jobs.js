@@ -7,11 +7,14 @@ const JOBS = (() => {
   const N = 10, pick = (a) => a[Math.floor(Math.random() * a.length)];
   const say = (job) => TOWN.WORK.say[job];
   const words = () => REG.vocab.filter((v) => v.lv === 'PRE_N5' && v.w === v.r && /^[ぁ-ゖァ-ヺー]+$/.test(v.w) && state.srs[v.key]).map((v) => v.w);
-  // the keeper's word at the top of the card, said in their voice
+  // the keeper's word at the top of the card, said in their voice (ends as it is said)
   function word(job, [ja, zh], cls = '') {
     const p = document.querySelector('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${esc(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); }
-    speakAs(say(job).who, ja);
+    return speakAs(say(job).who, ja);
   }
+  // a line said to its end, then on (2026-11-18, the user: in the jobs out on the street the next customer cut the voices off —
+  // each line stops the one before): once p (a line being said, or none) is over — at least min ms, at most max (a clip that never ends)
+  const said = (p, min = 0, max = 5000) => Promise.all([Promise.race([Promise.resolve(p).catch(() => {}), sleep(max)]), sleep(min)]);
   const head = (job, title, k) => `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
     <div class="wk-head"><b lang="ja">${title}</b><span class="wk-n">${Math.min(k + 1, N)}／${N}</span></div>
     <div class="wk-who"><span class="kr-face">${TOWNEV.face(say(job).who)}</span><p class="wk-say"></p></div>`;
@@ -58,14 +61,14 @@ const JOBS = (() => {
       }
       busy = true; ctx.right(k, miss); SND.play('place', { vol: 0.6 }); b.classList.add('wk-in'); open();
       const item = document.querySelector('.wk-item'); if (item) item.classList.add('wk-gone');
-      if (!miss && Math.random() < 0.3) word('shelf', pick(say('shelf').ok));
+      const praise = !miss && Math.random() < 0.3 ? word('shelf', pick(say('shelf').ok)) : null;
       k++;
-      if (k >= N) ctx.finish({}, 1100);   // paid now, the results after the goodbye (a card shut meanwhile: paid all the same)
-      setTimeout(() => {   // this run's card only (shut and opened again: the new one's own)
-        if (!document.querySelector('.wk-shelf')) return;
-        if (k < N) { if (ctx.on()) draw(); return; }
-        word('shelf', say('shelf').end, 'ok'); setTimeout(() => { if (document.querySelector('.wk-shelf')) CLASS.close(); }, 700);
-      }, 380);
+      const bye = said(praise, 380).then(() => {   // 張's word to its end, then the next thing; this run's card only (shut and opened again: the new one's own)
+        if (!document.querySelector('.wk-shelf')) return null;
+        if (k < N) { if (ctx.on()) draw(); return null; }
+        return said(word('shelf', say('shelf').end, 'ok'), 700).then(() => { if (document.querySelector('.wk-shelf')) CLASS.close(); });
+      });
+      if (k >= N) ctx.finish({}, bye);   // paid now, the results after the goodbye (a card shut meanwhile: paid all the same)
     });
     draw();
   }
@@ -106,18 +109,17 @@ const JOBS = (() => {
     const bub = (open) => { const [ja, zh] = ask(C), w = C.good[0], line = C.kind === 'price' ? `<span class="wk-held">${goodPic(C.good[1])}</span>${esc(ja)}`
       : open ? esc(ja) : `<button type="button" class="wk-ear" aria-label="再聽一次">🔊</button>${esc(ja.slice(w.length))}`;   // the word heard, not read, till handed over
       el('.wk-bub').innerHTML = `<b lang="ja">${line}</b><span>${esc(zh)}</span>${C.kind === 'two' ? `<i class="wk-cnt">${got}／2</i>` : ''}`; };
-    const me = (l) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${esc(l[0])}</b>${first ? `<span>${esc(l[1])}</span>` : ''}`; speakAs('hero', l[0]); };
+    const me = (l) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${esc(l[0])}</b>${first ? `<span>${esc(l[1])}</span>` : ''}`; return speakAs('hero', l[0]); };
     function show() {
       C = tasks[k]; miss = 0; got = 0; busy = true; if (!el('.wk-goods')) return;
       el('.wk-n').textContent = `${k + 1}／${N}`;
       el('.wk-goods').innerHTML = C.goods.map((g) => `<button type="button" class="wk-good${C.kind === 'price' && g === C.good ? ' held' : ''}" data-good="${esc(g[0])}">${goodPic(g[1])}<b lang="ja">${esc(g[0])}</b><small>${g[2]}円</small></button>`).join('');
       el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').innerHTML = `<span class="kr-face">${TOWNEV.face(C.who)}</span><p class="wk-bub"></p>`;
-      me(ME.hi);
-      setTimeout(() => {   // the customer asks
+      said(me(ME.hi), 800).then(() => {   // the customer asks, once いらっしゃいませ is said
         if (!el('.wk-cust') || C !== tasks[k] || !ctx.on()) return;
         bub(false); el('.wk-cust').classList.add('on'); speakAs(C.who, ask(C)[0]); busy = false;
         if (C.kind === 'price') el('.wk-opts').innerHTML = C.opts.map((n) => `<button type="button" class="btn btn-sm wk-opt" data-n="${n}" lang="ja">${esc(YEN.reading(n))}</button>`).join('');
-      }, 800);
+      });
     }
     function wrong(b) {
       miss++; playSfx('bad'); b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); word('counter', say('counter').miss, 'bad');
@@ -125,16 +127,20 @@ const JOBS = (() => {
     }
     function right() {
       busy = true; ctx.right(k, miss); playSfx('good'); bub(true); el('.wk-cust').classList.remove('on');
-      if (C.kind === 'price') me([`${YEN.reading(C.good[2])}です。`, `${C.good[2]} 日圓。`]);
-      const live = () => el('.wk-cust') && (ctx.on() || k >= N), wait = C.kind === 'price' ? 1700 : 900;   // this run's card only
-      setTimeout(() => { if (!live()) return; me(ME.bye); el('.wk-cust').classList.add('bye'); if (!miss && Math.random() < 0.25) word('counter', pick(say('counter').ok)); }, C.kind === 'price' ? 900 : 0);
+      const t = C, praise = !miss && Math.random() < 0.25, live = () => el('.wk-cust') && (ctx.on() || k >= N);   // this run's card only
       k++;
-      if (k >= N) ctx.finish({}, wait + 800);   // paid now, the results after the goodbye
-      setTimeout(() => {
+      // each line to its end before the next: the price, ありがとうございました, now and then 周's word, then the next customer — or
+      // 周's thanks and the card shut
+      const bye = (async () => {
+        if (t.kind === 'price') await said(me([`${YEN.reading(t.good[2])}です。`, `${t.good[2]} 日圓。`]), 900);
+        if (!live()) return;
+        el('.wk-cust').classList.add('bye'); await said(me(ME.bye), 900);
+        if (praise && live()) await said(word('counter', pick(say('counter').ok)));
         if (!live()) return;
         if (k < N) { show(); return; }
-        word('counter', say('counter').end, 'ok'); setTimeout(() => { if (el('.wk-cust')) CLASS.close(); }, 700);
-      }, wait);
+        await said(word('counter', say('counter').end, 'ok'), 700); if (el('.wk-cust')) CLASS.close();
+      })();
+      if (k >= N) ctx.finish({}, bye);   // paid now, the results after the goodbye
     }
     CLASS.card('wk-counter', '站櫃', `${head('counter', 'らんらん', k)}<div class="wk-cust"></div><div class="wk-goods"></div><div class="wk-opts"></div><p class="wk-me"></p>`, (e) => {
       if (busy || !ctx.on() || !C) return;
@@ -216,12 +222,12 @@ const JOBS = (() => {
     function ask() { const last = target; target = pick(board.filter((c) => c !== last)); miss = 0; now(); speak(target); }
     function end() {
       const best = fresh && !wrong && Date.now() - t0 <= LIMIT * 1000;   // from the shift's start, all thirty right, inside the clock
-      ctx.finish({}, best ? 2600 : 1600);   // paid now, the results after the goodbye
-      setTimeout(() => {
-        if (!mine()) return;
-        if (best) { const c = el('.cls-card') || document.querySelector('.wk-buns .cls-card'); if (c) c.classList.add('wk-shine-all'); word('buns', s.all, 'ok'); } else word('buns', s.end, 'ok');
-        setTimeout(() => { if (mine()) CLASS.close(); }, best ? 1600 : 900);
-      }, 200);
+      const bye = sleep(200).then(() => {   // 王's word to its end, then the card shut
+        if (!mine()) return null;
+        if (best) { const c = el('.cls-card') || document.querySelector('.wk-buns .cls-card'); if (c) c.classList.add('wk-shine-all'); }
+        return said(word('buns', best ? s.all : s.end, 'ok'), best ? 1600 : 900).then(() => { if (mine()) CLASS.close(); });
+      });
+      ctx.finish({}, bye);   // paid now, the results after the goodbye
     }
     function right(b) {
       SND.play('place', { vol: 0.5 }); tap++; trioMiss += miss;

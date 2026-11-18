@@ -369,6 +369,47 @@ def test_a_card_shut_and_opened_again_follows_the_new_one(b):
       return JSON.stringify({ tap: JOBS.buns.now().tap, step: step(), steamer: document.querySelectorAll('.wk-steamer .wk-done').length, cards: document.querySelectorAll('.wk-buns').length }); })()"""))
     assert r == {'tap': 6, 'step': 0, 'steamer': 1, 'cards': 1}, r
 
+# ---- each line said to its end (2026-11-18, the user: in the jobs out on the street the voices were cut off by the next customer —
+# each line stops the one before): the next customer, the next thing, the card shut, only once the line before is over ----
+TALK = """window.__cut = []; let talking = null;   // a line cut short by the next one (or by the card shut)
+  const says = (ms) => (w, l) => { if (talking) __cut.push(talking); const me = talking = w + ':' + l; return new Promise((ok) => setTimeout(() => { if (talking === me) talking = null; ok(); }, ms)); };
+  const talk = (asMs, kanaMs) => { window.speakAs = says(asMs); window.speak = (t) => says(kanaMs)('', t); window.stopSpeaking = () => { if (talking) __cut.push(talking + '（停）'); talking = null; }; };
+  const hush = async () => { for (let i = 0; i < 80 && talking; i++) await wait(50); };
+  const upTo = (job, n) => { state.work.res['2026-11-10'] = { place: job, done: n, score: Object.fromEntries(Array.from({ length: n }, (_, k) => [k, 0])) }; };"""
+
+def test_the_shelf_says_each_line_to_its_end(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + TALK + """ kana(10); earlier('shelf'); talk(700, 400); upTo('shelf', 8);
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'shelf'); const R = Math.random; Math.random = () => 0.1;   // 張's word after each
+      for (let k = 0; k < 2; k++) { await hush(); const item = document.querySelector('.wk-item').dataset.label; document.querySelector(`.wk-bin[data-label="${item}"]`).click(); await wait(200); }
+      for (let i = 0; i < 60 && !document.querySelector('.wk-result'); i++) await wait(100); Math.random = R;
+      return JSON.stringify({ cut: __cut, shut: !document.querySelector('.wk-shelf'), paid: state.work.res['2026-11-10'].yen > 0 }); })()"""))
+    assert r == {'cut': [], 'shut': True, 'paid': True}, r
+
+def test_the_counter_says_each_line_to_its_end(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + COUNTER + TALK + """ kana(46); earlier('counter'); talk(700, 400); upTo('counter', 8);
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter'); const R = Math.random; Math.random = () => 0.1;   // 周's word after each
+      for (let k = 0; k < 2; k++) { for (let i = 0; i < 60 && !document.querySelector('.wk-cust.on'); i++) await wait(100); await hush();
+        const t = JOBS.counter.now(); document.querySelector(`.wk-good[data-good="${t.good[0]}"]`).click(); await wait(200); }
+      for (let i = 0; i < 80 && !document.querySelector('.wk-result'); i++) await wait(100); Math.random = R;
+      return JSON.stringify({ cut: __cut, shut: !document.querySelector('.wk-counter'), paid: state.work.res['2026-11-10'].yen > 0 }); })()"""))
+    assert r == {'cut': [], 'shut': True, 'paid': True}, r
+
+def test_the_bun_keepers_last_word_is_said_to_its_end(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + TALK + """ kana(46); talk(1500, 300); upTo('buns', 9); await make();
+      for (let i = 0; i < 3; i++) { await hush(); await tap(true); }
+      for (let i = 0; i < 80 && !document.querySelector('.wk-result'); i++) await wait(100);
+      return JSON.stringify({ cut: __cut, shut: !document.querySelector('.wk-buns'), paid: state.work.res['2026-11-10'].yen > 0 }); })()"""))
+    assert r == {'cut': [], 'shut': True, 'paid': True}, r
+
+# 2026-11-18, the user: the jobs wanted a little music — 中華街の しごと while a street job's card is up, gone with the card
+def test_a_street_job_plays_its_music_while_its_card_is_up(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + """ kana(10); earlier('shelf'); state.settings.musicVol = 1; window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
+      location.hash = '#/chinadori'; route(); await wait(300); const out = { before: MUSIC.wants() };
+      WORK.start(yard(), 'shelf'); await wait(300); out.on = [MUSIC.wants(), MUSIC.playing()];
+      CLASS.close(); await wait(800); out.shut = [MUSIC.wants(), MUSIC.playing()];
+      return JSON.stringify(out); })()"""))
+    assert r == {'before': '', 'on': ['chukagai', True], 'shut': ['', False]}, r
+
 # ---- the test site's 無限次數 (2026-11-15, the user): shift after shift, any place, on this device; each kept with its pay ----
 def test_the_test_site_can_work_without_end(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(46); stub('shelf'); stub('counter', true); state.work.res['2026-01-02'] = { place: 'counter', done: 1, score: { 0: 0 } }; location.hash = '#/chinadori'; route(); await wait(200);

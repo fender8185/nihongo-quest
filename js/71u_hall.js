@@ -404,7 +404,7 @@ const HALL = (() => {
   function leave(c) { if (!here(c) || c.state !== 'eat' || c.q) return; const t = c.table; c.state = 'leave'; c.table = -1; mark(c); marks(); plate(t, ''); walk(c, fromSeat(t), () => { c.state = 'pay'; mark(c); }); }
   function gone(c) { c.el.remove(); if (H) H.cust = H.cust.filter((x) => x !== c); }
   function end() {
-    const s = L(); H.over = true;
+    const s = L(); H.over = true; MUSIC.sync();   // the floor's music off (WORK.tune)
     const groups = H.log.length ? `<div class="crr-groups" aria-label="每組客人">${H.log.map((g) => `<div class="crr-g"><span class="crr-face">${FACES[g.n]}</span><span class="crr-says">${g.said.map((l) => `<button type="button" class="crr-say" data-who="${esc(g.voice)}" data-say="${esc(l[0])}" lang="ja">🔊 ${esc(l[0])}</button>`).join('') || '<em>…</em>'}</span></div>`).join('')}</div>` : '';
     H.ctx.finish({ tip: H.stars * 10, tipName: '店長紅包', html: groups }, 1800); carry(false); H.ready = []; readyMark(); H.phone = null; ringMark();
     if (H.ask) { H.ask = null; panel(); }
@@ -453,7 +453,7 @@ const HALL = (() => {
   function stop() {
     if (!H) return; H.timers.forEach(clearTimeout); cancelAnimationFrame(H.raf);
     if (H.yard.isConnected) { H.cust.forEach((c) => c.el.remove()); H.yard.querySelectorAll('.hl-pick, .hl-hud, .hl-ring, .hl-plate, .hl-heard, .hl-tmark').forEach((x) => x.remove()); H.yard.style.setProperty('--hl-lift', '0px'); H.tray = { dish: '' }; carry(false); H.ready = []; readyMark(); }
-    H = null;
+    H = null; MUSIC.sync();
   }
   function run(ctx) {
     stop();
@@ -461,7 +461,7 @@ const HALL = (() => {
     const kept = ctx.kept || {};
     H = { ctx, yard, k: ctx.done, cust: [], ask: null, tray: null, ready: [], timers: [], raf: 0, at: 0, over: false, used: Object.assign({}, kept.used), lastPick: '', stars: Number.isFinite(kept.stars) ? kept.stars : STARS, streak: 0, phone: null, log: [],
       board: pick(DISHES().filter((d) => d !== 'マーボーどうふ')) };   // today's おすすめ on the board in the hero's hand (the poster's is マーボーどうふ)
-    H.raf = requestAnimationFrame(frame); hud();
+    H.raf = requestAnimationFrame(frame); hud(); MUSIC.sync();   // the floor's music on (WORK.tune)
     spawn(); later(more, rnd(5000, 8000));
     if (knows('もしもし', 'ちがいます') && doorWords() && may('phone', 0.7, 1)) later(ring, rnd(20000, 50000));
   }

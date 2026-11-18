@@ -153,7 +153,39 @@ window.MUSIC_SYNTH = (() => {
         A3: 'C5 F5 A5:2 G5 F5 A5:2 | D6:3 C6 A5:4 | A#5 A5 G5 F5 G5:2 A#5:2 | A5:2 G5 F5 E5:2 C5:2 | C5 F5 A5:2 G5 F5 A5:2 | C6:3 A5 E5:2 G5:2 | A#5 A5 G5 A#5 E5:2 G5:2 | F5:2 C5 A4 F4:2 -:2' }),
       comp: { inst: 'pizz', vol: 0.06, pats: rep(8, [[2, 1], [6, 1]]) },
       drums: [{ inst: 'brush', vol: 0.05, pats: ['....x.......x...'] }, { inst: 'ride', f: 2400, vol: 0.02, pats: ['x.x.x.x.x.x.x.x.'] }],
-      parts: [{ inst: 'box', vol: 0.05, mel: '-:64 | -:8 | -:4 F6 E6 C6 A5 | -:8 | -:6 C6 E6 | -:8 | -:4 E6 C6 A5 G5 | -:8 | -:8' }] }
+      parts: [{ inst: 'box', vol: 0.05, mel: '-:64 | -:8 | -:4 F6 E6 C6 A5 | -:8 | -:6 C6 E6 | -:8 | -:4 E6 C6 A5 G5 | -:8 | -:8' }] },
+    // 中華街の しごと (2026-11-18, the user: the jobs wanted a little music): the three jobs out on 中華街's street — busy and bright,
+    // in the G gong pentatonic (G A B D E): a dizi with its grace notes over a yangqin's running eighths, a woodblock on the beat,
+    // small cymbals at each section's top and the little gong's rising "tai" at its end; A A' B A', the B in E minor's colour with
+    // the yangqin taking the tune and the dizi answering it, its last bar a run back into the top
+    chukagai: { bpm: 132, peak: 0.42, bar: 8, tail: 0, lead: 'dizi', leadVol: 0.085, low: 'D2', bassVol: 0.55, pad: 0.007, wet: 0.16, arpInst: 'yangqin', arpOct: 2, arpVol: 2,
+      chords: form('A A B A', { A: ['G3 B3 D4 E4', 'E3 G3 B3 D4', 'C3 G3 D4 E4', 'D3 A3 D4 E4', 'G3 B3 D4 E4', 'E3 G3 B3 D4', 'D3 A3 D4 E4', 'G3 B3 D4 E4'],
+        B: ['E3 G3 B3 D4', 'E3 G3 B3 D4', 'A3 C4 E4 G4', 'D3 A3 D4 E4', 'C3 G3 D4 E4', 'D3 A3 D4 E4', 'E3 G3 B3 D4', 'D3 A3 D4 E4'] }),
+      arps: form('A A B A', { A: rep(8, [0, 2, 1, 3, 0, 2, 1, 3]), B: rep(8, [0, -1, -1, -1, 2, -1, -1, -1]) }),
+      mel: form('A A2 B A2', {
+        A: 'A5:0.25 G5:1.75 A5 G5 E5 D5 E5:2 | G5 A5 B5 A5 G5:2 E5:2 | D5:2 E5 G5 A5:2 G5 E5 | E5:0.25 D5:5.75 -:2 | A5:0.25 G5:1.75 A5 G5 E5 D5 E5:2 | G5 A5 B5 D6 B5:2 A5:2 | G5 E5 D5 E5 G5:2 A5 B5 | A5:0.25 G5:5.75 -:2',
+        A2: 'A5:0.25 G5:1.75 A5 G5 E5 D5 E5:2 | G5 A5 B5 A5 G5:2 E5:2 | D5:2 E5 G5 A5:2 G5 E5 | E5:0.25 D5:5.75 -:2 | A5:0.25 G5:1.75 A5 G5 E5 D5 E5:2 | G5 A5 B5 D6 E6:2 D6:2 | B5 A5 G5 A5 B5 D6 B5 A5 | A5:0.25 G5:5.75 -:2',
+        B: '-:8 | -:6 B5 D6 | E6:8 | -:8 | -:8 | -:6 E6 D6 | B5:8 | -:4 D6 B5 A5 B5' }),
+      parts: [{ inst: 'yangqin', vol: 0.32, mel: '-:128 | E5 G5 A5 B5 A5 G5 E5:2 | D5 E5 G5 E5 D5 B4 D5:2 | E5 G5 A5 B5 D6 B5 A5:2 | G5 A5 B5 A5 D5:4 | E5 G5 E5 D5 B4 D5 E5:2 | D5 E5 G5 A5 B5:4 | A5 G5 E5 G5 A5 B5 A5 G5 | E5:2 D5:2 -:4' }],
+      drums: [{ inst: 'muyu', f: 1150, vol: 0.07, pats: form('A A B A', { A: ['o...x...x...x...', 'o...x...x...x...', 'o...x...x...x...', 'o...x...x.x.x.x.', 'o...x...x...x...', 'o...x...x...x...', 'o...x...x...x...', 'o...x...x.x.x.x.'],
+          B: ['o.....x.....x...', 'o.....x.....x...', 'o.....x.....x...', 'o...x...x...x...', 'o.....x.....x...', 'o.....x.....x...', 'o.....x.....x...', 'x.x.x.x.x.x.o.o.'] }) },
+        { inst: 'bo', f: 1900, vol: 0.035, pats: form('A', { A: ['x...............'].concat(rep(7, '................')) }) },
+        { inst: 'luo', f: 560, vol: 0.05, pats: form('A', { A: rep(7, '................').concat(['........x.......']) }) }] },
+    // らいらいけん (2026-11-18): the 外場's own — a Chinese restaurant at lunch, unhurried under the customers' voices, in the D gong
+    // pentatonic (D E F# A B): an erhu sliding onto its longer notes over a pipa plucking the off beats, the guzheng rolling up a
+    // chord every other bar and answering the erhu in B, a woodblock; A A' B A'
+    rairai: { bpm: 104, peak: 0.4, bar: 8, tail: 0, lead: 'erhu', leadVol: 0.05, low: 'D2', bassVol: 0.6, pad: 0.009, arpInst: 'koto', arpOct: 2, arpVol: 4, arpLen: 3,
+      chords: form('A A2 B A2', { A: ['D3 A3 D4 F#4', 'B2 F#3 B3 D4', 'G2 D3 G3 B3', 'A2 E3 A3 C#4', 'D3 A3 D4 F#4', 'B2 F#3 B3 D4', 'A2 E3 A3 C#4', 'D3 A3 D4 F#4'],
+        A2: ['D3 A3 D4 F#4', 'B2 F#3 B3 D4', 'G2 D3 G3 B3', 'A2 E3 A3 C#4', 'D3 A3 D4 F#4', 'B2 F#3 B3 D4', 'A2 E3 A3 C#4', 'D3 A3 D4 F#4'],
+        B: ['G2 D3 G3 B3', 'A2 E3 A3 C#4', 'F#2 C#3 F#3 A3', 'B2 F#3 B3 D4', 'G2 D3 G3 B3', 'A2 E3 A3 C#4', 'B2 F#3 B3 D4', 'A2 E3 A3 C#4'] }),
+      arps: [[0, 1, 2, 3, -1, -1, -1, -1], [-1, -1, -1, -1, -1, -1, -1, -1]],
+      mel: form('A A2 B A2', {
+        A: 'A4:2 B4 D5 E5:3 D5 | B4:2 A4 B4 F#4:4 | E4:2 F#4 A4 B4:2 D5 B4 | A4:6 -:2 | A4:2 B4 D5 E5:2 F#5 E5 | D5:2 B4 D5 F#4:4 | E4 F#4 A4 B4 A4:2 F#4 E4 | D4:6 -:2',
+        A2: 'A4:2 B4 D5 E5:3 D5 | B4:2 A4 B4 F#4:4 | E4:2 F#4 A4 B4:2 D5 B4 | A4:6 -:2 | A5:2 B5 A5 F#5:2 E5 D5 | E5:2 F#5 E5 B4:4 | A4 B4 D5 E5 F#5:2 E5 D5 | D5:6 -:2',
+        B: 'B4:3 D5 E5:2 F#5:2 | E5:4 -:4 | F#5:3 E5 D5:2 B4:2 | B4:4 -:4 | D5:3 E5 F#5:2 A5:2 | B5:2 A5 F#5 E5:4 | D5:2 B4 A4 B4:2 D5 B4 | A4:4 -:4' }),
+      comp: { inst: 'pipa', vol: 0.07, roll: 0.025, pats: rep(8, [[2, 1], [6, 1]]) },
+      parts: [{ inst: 'koto', vol: 0.4, mel: '-:128 | -:8 | -:4 A5 F#5 E5 D5 | -:8 | -:4 F#5 D5 B4 A4 | -:8 | -:8 | -:8 | -:4 E5 D5 B4 A4' }],
+      drums: [{ inst: 'muyu', f: 980, vol: 0.06, pats: form('A A2 B A2', { A: rep(8, 'o.......x.....g.'), A2: rep(8, 'o.......x.....g.'), B: rep(8, 'o.......x...x...') }) }] }
   };
   const NOTE = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
   const hz = (n) => { const m = /^([A-G]#?)(\d)$/.exec(n); return 440 * Math.pow(2, ((+m[2] + 1) * 12 + NOTE[m[1]] - 69) / 12); };
@@ -269,7 +301,8 @@ window.MUSIC_SYNTH = (() => {
   }
   // a bamboo flute: a breathy tone that scoops up onto its note and wavers once held (flute: soft, shakuhachi-like; fue: shinobue)
   const WIND = { flute: { harm: [1, 0.22, 0.07, 0.03], att: 0.07, rel: 0.2, vib: 5, dep: 0.0045, air: 0.35, scoop: 0.985, pan: -0.15 },
-    fue: { harm: [1, 0.32, 0.12, 0.05], att: 0.03, rel: 0.12, vib: 6, dep: 0.006, air: 0.2, scoop: 0.98, pan: -0.1 } };
+    fue: { harm: [1, 0.32, 0.12, 0.05], att: 0.03, rel: 0.12, vib: 6, dep: 0.006, air: 0.2, scoop: 0.98, pan: -0.1 },
+    dizi: { harm: [1, 0.5, 0.22, 0.14, 0.09, 0.06, 0.04, 0.03], att: 0.025, rel: 0.1, vib: 5.8, dep: 0.007, air: 0.18, scoop: 0.988, pan: -0.1 } };   // its membrane's buzz: the upper harmonics (2026-11-18)
   function blow(at, f, len, vol, w) {
     const o = out(w.pan), off = at + Math.max(len, 0.14), end = at + Math.max(len, w.att + 0.02) + w.rel + 0.05, t = ctx.createOscillator(), lfo = ctx.createOscillator(), d = quiet(t.frequency), b = quiet(o);
     t.setPeriodicWave(wave(w.harm)); t.frequency.setValueAtTime(f * w.scoop, at); t.frequency.exponentialRampToValueAtTime(f, at + 0.06);
@@ -340,6 +373,43 @@ window.MUSIC_SYNTH = (() => {
     ride(at, f, len, vol) {   // a ride cymbal played softly: an inharmonic ping and a little wash
       const o = out(0.35); [[1, 0.5], [1.47, 0.3], [2.09, 0.2]].forEach(([r, a]) => osc('sine', f * r, at, at + 0.7, fade(at, vol * a, 0.001, 0.5, o)));
       hiss(at, at + 0.9, filter('highpass', 3500, 0, fade(at, vol, 0.002, 0.6, o)));
+    },
+    // 中華街's (2026-11-18): the dizi (WIND), the yangqin, the erhu, the pipa, the woodblock, the small cymbals and the little gong
+    dizi: (at, f, len, vol) => blow(at, f, len, vol, WIND.dizi),
+    yangqin(at, f, len, vol) {   // a yangqin: a pair of strings struck by a bamboo hammer, a hair apart in pitch, bright and ringing on
+      const o = out(0.2);
+      [[1, 0.6], [1.004, 0.45]].forEach(([r, a]) => { const p = pluck(f * r, 1.1, 0.92, 0.15), s = ctx.createBufferSource(); s.buffer = p.b; s.playbackRate.value = p.rate;
+        s.connect(fade(at, vol * a, 0.002, Math.min(1.4, len + 0.9), filter('lowpass', 5200, 0, o))); s.start(at); s.stop(at + 1.6); });
+      hiss(at, at + 0.03, filter('bandpass', 3500, 1.5, fade(at, vol * 0.3, 0.001, 0.015, o)));
+    },
+    erhu(at, f, len, vol) {   // an erhu: a bowed string's buzz through its snakeskin's nasal ring, sliding up onto a longer note, a
+      // wide vibrato once held, and the bow's hair
+      const o = out(-0.1), end = at + Math.max(len, 0.08) + 0.3, t = ctx.createOscillator(), lfo = ctx.createOscillator(), d = quiet(t.frequency), slide = len > 0.4;
+      t.type = 'sawtooth'; t.frequency.setValueAtTime(f * (slide ? 0.94 : 0.99), at); t.frequency.exponentialRampToValueAtTime(f, at + (slide ? 0.12 : 0.03));
+      lfo.frequency.value = 5.5; d.gain.setValueAtTime(0, at); d.gain.setValueAtTime(0, at + 0.18); d.gain.linearRampToValueAtTime(f * 0.012, at + 0.6); lfo.connect(d);
+      const nose = filter('peaking', 1100, 1.6, filter('lowpass', 2800, 0.5, hold(at, vol, 0.07, len, 0.16, o))); nose.gain.value = 7;
+      t.connect(nose); [t, lfo].forEach((x) => { x.start(at); x.stop(end); });
+      hiss(at, end, filter('bandpass', 3000, 0.8, hold(at, vol * 0.08, 0.05, len, 0.1, o)));
+    },
+    pipa(at, f, len, vol) {   // a pipa: a bright pluck with a quick, woody decay
+      const o = out(0.2), p = pluck(f, 0.45, 0.8, 0.35), s = ctx.createBufferSource(); s.buffer = p.b; s.playbackRate.value = p.rate;
+      s.connect(fade(at, vol, 0.002, Math.min(0.9, len + 0.4), filter('lowpass', 3200, 0, o))); s.start(at); s.stop(at + 1.2);
+      hiss(at, at + 0.03, filter('bandpass', 2400, 1.2, fade(at, vol * 0.4, 0.001, 0.02, o)));
+    },
+    muyu(at, f, len, vol) {   // a woodblock: a hollow wooden tock, its pitch dropping a little as it dies
+      const o = out(-0.2), s = osc('sine', f, at, at + 0.15, fade(at, vol, 0.001, 0.06, o));
+      s.frequency.setValueAtTime(f * 1.15, at); s.frequency.exponentialRampToValueAtTime(f, at + 0.015);
+      osc('sine', f * 2.7, at, at + 0.06, fade(at, vol * 0.25, 0.001, 0.02, o));
+      hiss(at, at + 0.02, filter('bandpass', f * 2, 2, fade(at, vol * 0.8, 0.001, 0.01, o)));
+    },
+    bo(at, f, len, vol) {   // small cymbals clashed: a bright splash and a few inharmonic rings
+      const o = out(0.3); [[1, 0.4], [1.37, 0.3], [1.93, 0.25], [2.71, 0.2]].forEach(([r, a]) => osc('sine', f * r, at, at + 0.9, fade(at, vol * a, 0.001, 0.6, o)));
+      hiss(at, at + 0.8, filter('highpass', 5000, 0, fade(at, vol * 1.2, 0.002, 0.5, o)));
+    },
+    luo(at, f, len, vol) {   // the little opera gong (xiaoluo): its "tai", a bright ring that rises as it sounds (FM)
+      const o = out(0.1), d = Math.min(1.2, Math.max(0.4, len)), c = osc('sine', f, at, at + d + 0.2, fade(at, vol, 0.002, d, o)), m = quiet(c.frequency);
+      c.frequency.setValueAtTime(f, at); c.frequency.exponentialRampToValueAtTime(f * 1.12, at + 0.25);
+      m.gain.setValueAtTime(f * 0.8, at); m.gain.exponentialRampToValueAtTime(f * 0.05, at + d); osc('sine', f * 1.48, at, at + d + 0.2, m);
     }
   };
   // a record as a file: rendered offline twice round with the second kept — its start carries the first's echoes, so it loops

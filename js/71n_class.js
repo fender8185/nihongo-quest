@@ -153,14 +153,14 @@ const CLASS = (() => {
   let el = null, timers = [], token = 0;
   const later = (fn, ms) => { const t = token; timers.push(setTimeout(() => { if (t === token && el) fn(); }, ms)); };
   const radio = (on) => { const r = document.querySelector('#view .land [data-fx="radio"]'); if (r) r.classList.toggle('playing', on); };   // the scene's radio plays while the class sings
-  function close() { token++; timers.forEach(clearTimeout); timers = []; stopSpeaking(); if (songSrc.length) stopSong(); radio(false); if (el) { el.remove(); el = null; } }
+  function close() { token++; timers.forEach(clearTimeout); timers = []; stopSpeaking(); if (songSrc.length) stopSong(); radio(false); if (el) { el.remove(); el = null; MUSIC.sync(); } }   // a job's card shut: its music off (WORK.tune)
   function open(cls, label, html, onClick) {
     close();
     el = document.createElement('div'); el.className = 'cls ' + cls; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', label);
     el.innerHTML = `<div class="cls-card">${html}</div>`;
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     el.addEventListener('click', (e) => { e.stopPropagation(); primeTtsPlayer(); if (e.target === el || e.target.closest('[data-cls="x"]')) { close(); return; } onClick(e); });
-    document.body.appendChild(el);
+    document.body.appendChild(el); MUSIC.sync();   // a job's card: its music on (WORK.tune)
   }
   const xBtn = '<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>';
   // 言靈 from the classroom: at most 10 a day all told (koto.found 'play-<day>': the day's count, the larger kept when devices meet)

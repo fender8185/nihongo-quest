@@ -429,7 +429,10 @@ const MUSIC = (() => {
     { id: 'jingle', file: 'music/jingle-1.m4a', name: 'ジングルベル', kana: 'じんぐるべる', zh: '鈴兒響叮噹', style: '音樂盒・雪橇鈴・撥弦', color: '#c8453d', vol: 0.6 },   // out in six places at Christmas: under their sounds
     { id: 'chochin', place: 'izakaya', file: 'music/chochin-1.m4a', name: '赤ちょうちん', kana: 'あかちょうちん', zh: '紅燈籠', style: '三味線・笛', color: '#c8463a', vol: 0.45 },
     { id: 'aiueo', place: 'kyoshitsu', file: 'music/aiueo-1.m4a', name: 'あいうえおの うた', kana: 'あいうえおのうた', zh: '五十音之歌', style: '電鋼琴・音樂盒', color: '#3f9a8c', vol: 0.6 },   // 日本語教室's radio (CLASS.song), 2026-11-14
-    { id: 'minato', place: 'cruise', file: 'music/minato-1.m4a', name: 'みなと案内', kana: 'みなとあんない', zh: '港町導覽', style: '笛・撥弦・低音提琴', color: '#3f7ac8', vol: 0.55 }
+    { id: 'minato', place: 'cruise', file: 'music/minato-1.m4a', name: 'みなと案内', kana: 'みなとあんない', zh: '港町導覽', style: '笛・撥弦・低音提琴', color: '#3f7ac8', vol: 0.55 },
+    // 中華街の打工's (2026-11-18, the user: the jobs wanted a little music): while a shift runs (WORK.tune), under its voices
+    { id: 'chukagai', place: 'work', file: 'music/chukagai-1.m4a', name: '中華街の しごと', kana: 'ちゅうかがいのしごと', zh: '中華街打工', style: '笛子・揚琴・木魚', color: '#d0453a', vol: 0.5 },
+    { id: 'rairai', place: 'work', file: 'music/rairai-1.m4a', name: 'らいらいけん', kana: 'らいらいけん', zh: '來來軒', style: '二胡・琵琶・古箏', color: '#c8763a', vol: 0.7 }
   ];
   // the record a place plays by itself: the izakaya's own, the café's jazz out of its door while it is open, the festival's at the shrine;
   // and where the cruise's passengers are while a trip is under way, its own (CRUISE.tune, 2026-11-13: the user missed music on the tour)
@@ -511,7 +514,7 @@ const MUSIC = (() => {
     if (!mvol() || document.hidden) return null;
     const r = currentRoute().name;
     if (inRoom()) return state.placed && state.placed.gramophone && owns('gramophone') && !state.musicOff ? current() || null : null;
-    const id = (typeof CRUISE !== 'undefined' && CRUISE.tune(r === 'outside' ? 'yard' : r)) || (XMAS_PLACES.includes(r) && festOn('christmas') ? 'jingle' : '') || (PLACE_REC[r] && PLACE_REC[r]());
+    const id = (typeof WORK !== 'undefined' && WORK.tune()) || (typeof CRUISE !== 'undefined' && CRUISE.tune(r === 'outside' ? 'yard' : r)) || (XMAS_PLACES.includes(r) && festOn('christmas') ? 'jingle' : '') || (PLACE_REC[r] && PLACE_REC[r]());
     return (id && RECORDS.find((x) => x.id === id)) || null;
   }
   function sync() { try { tune(); } catch (e) { console.error(e); } }   // music never breaks a page

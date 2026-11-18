@@ -11,12 +11,12 @@
 const WORK = (() => {
   const N = 10;
   const PLACES = {
-    shelf: { place: 'chinadori', shop: 'fuku', who: 'zhang', kana: 5, name: '整理貨架', at: 'ふく' },
-    counter: { place: 'chinadori', shop: 'ranran', who: 'zhou', kana: 15, name: '站櫃', at: 'らんらん' },
+    shelf: { place: 'chinadori', shop: 'fuku', who: 'zhang', kana: 5, name: '整理貨架', at: 'ふく', tune: 'chukagai' },
+    counter: { place: 'chinadori', shop: 'ranran', who: 'zhou', kana: 15, name: '站櫃', at: 'らんらん', tune: 'chukagai' },
     // 外場 2.0 (2026-11-15, docs/superpowers/specs/2026-11-15-hall-rush-design.md §2): a shift is six groups, each scored by its mood
     // at the door (0 pleased … 3 stormed out), graded with part credit for the not quite pleased
-    waiter: { place: 'rairai', shop: 'rairai', who: 'huang', kana: 30, words: ['いらっしゃいませ', 'どうぞ', 'はい'], name: '外場', at: 'らいらいけん', n: 6, credit: [1, 0.6, 0.3, 0], unit: '滿意的客人' },
-    buns: { place: 'chinatown', shop: 'seiro', who: 'wang', kana: 46, name: '包包子', at: '福明' } };
+    waiter: { place: 'rairai', shop: 'rairai', who: 'huang', kana: 30, words: ['いらっしゃいませ', 'どうぞ', 'はい'], name: '外場', at: 'らいらいけん', n: 6, credit: [1, 0.6, 0.3, 0], unit: '滿意的客人', tune: 'rairai' },
+    buns: { place: 'chinatown', shop: 'seiro', who: 'wang', kana: 46, name: '包包子', at: '福明', tune: 'chukagai' } };
   const GONE = { deliver: { name: '外送', at: 'らいらいけん' } };   // a workplace no more (外送, cut 2026-11-15): its old records still read
   const named = (job) => PLACES[job] || GONE[job] || { name: job, at: '' };
   const RANKS = [[30, 'バイトリーダー', 200], [15, 'ベテラン', 150], [5, 'アルバイト', 120], [1, '新人', 100]];
@@ -95,14 +95,16 @@ const WORK = (() => {
     if (!(k in r.score)) r.score[k] = Math.max(0, Math.floor(misses) || 0);
     r.done = Math.max(r.done || 0, Object.keys(r.score).length); saveState();
   }
-  // the last done: graded and paid at once (extra.tip: on top — 外場's 店長紅包, named by extra.tipName), the results shown ms later — the runner calls it at the tenth, not at
-  // the end of its card's goodbye, so a card shut then is paid all the same (2026-11-15, the final review)
+  // the last done: graded and paid at once (extra.tip: on top — 外場's 店長紅包, named by extra.tipName), the results shown ms later
+  // (or once ms, a promise, is kept: the goodbye said) — the runner calls it at the tenth, not at the end of its card's goodbye,
+  // so a card shut then is paid all the same (2026-11-15, the final review)
   function finish(s, extra = {}, ms = 0) {
     const r = W().res[s.day]; if (!r || fin(r)) return null;
     const before = yenBalance(), n = shifts() + 1, g = grade(r.score, s.job), p = Object.assign(pay(n, g, extra.tip || 0), { tipName: extra.tipName });
     Object.assign(r, { done: nOf(s.job), yen: p.yen, grade: g, tip: p.tip }); delete r.keep; saveState();
     if (S === s) S = null;
-    if (ms) setTimeout(() => results(s.job, r, p, before, n, extra.html), ms); else results(s.job, r, p, before, n, extra.html);
+    const show = () => results(s.job, r, p, before, n, extra.html);
+    if (ms && ms.then) ms.then(show, show); else if (ms) setTimeout(show, ms); else show();
     return p;
   }
   // the results: the tasks right at once, the pay counting up, the grade stamped on, the 打工證 and whether it went up
@@ -141,6 +143,10 @@ const WORK = (() => {
       <p class="wk-note">一天只能在一個地方打一班。中華街的店：大通り 10 點到 19 點；らいらいけん 10 點到 20 點；包包子要王老闆在攤子。</p></div>`;
   }
   const register = (job, def) => { JOBS[job] = def; };
+  // the music while a shift is under way and in sight (MUSIC.RECORDS: tune; 2026-11-18, the user: the jobs wanted a little music):
+  // a job's card up (to its goodbye), or the 外場's floor running (to 黄's おつかれ) — MUSIC.sync() as either opens or shuts
+  const tune = () => { const job = Object.keys(PLACES).find((j) => document.querySelector('.cls.wk-' + j)) || (typeof HALL === 'object' && HALL.on() ? 'waiter' : '');
+    return job ? PLACES[job].tune : ''; };
   const lines = (add) => { Object.entries(TOWN.WORK.hello || {}).forEach(([id, l]) => add(id, l[0])); Object.values(TOWN.WORK.first || {}).forEach((ls) => ls.forEach((l) => add(l[0], l[1]))); Object.values(JOBS).forEach((j) => j.lines && j.lines(add)); };
-  return { N, nOf, PLACES, kana, knows, free, tool, can, start, register, pay, rank, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, board };
+  return { N, nOf, PLACES, kana, knows, free, tool, can, start, register, pay, rank, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, board, tune };
 })();
