@@ -31,13 +31,15 @@
 // down at a free table by themselves (すみません！ from there); and more than one word at the door — some ask すみません、いいですか。:
 // a table free, はい、どうぞ。; all three taken (four groups in at most), a full house: すみません、ちょっと…。 (sorry), じゃあ、まちます。,
 // and they wait by the door, patient (TOLD) and with no 「！」 till a table is free.
+// 2026-11-18 (the user): once they are seen to at the door, the 「！」 moves on to the free tables (tapped as the table is) — no
+// 「點一張空桌子」 line any more.
 const HALL = (() => {
   const api = { pace: 1, pat: 1, force: null };   // the waits' scale and patience's (the tests run them fast or calm); force: { toilet, drop, regular, solo, water, have, osusume, great, price, bye, phone, order, door, self } for the tests
   const VOICES = ['kaneda', 'umeko', 'yuta', 'rina', 'yoshimoto', 'ken', 'ai', 'michiyama', 'mike'];
   const MALE_HAIR = ['短髮', '刺蝟頭', '旁分呆毛', '中分'];
   const MAX = 4, rnd = (a, b) => a + Math.random() * (b - a), pick = (a) => a[Math.floor(Math.random() * a.length)];
   const L = () => TOWN.WORK.say.waiter;
-  const NEED = ['in', 'wait', 'call', 'pay', 'drop'];   // a 「！」 over them (and over one with something to ask: c.q)
+  const NEED = ['in', 'call', 'pay', 'drop'];   // a 「！」 over them (and over one with something to ask: c.q); one waiting to be shown to a table: over the free tables (tableMarks)
   // patience (spec §1): how fast each state wears it down (the dish on its way: half as fast; walking, sitting down, eating: not at
   // all — save with something to ask), how long a whole one lasts (s), the moods by what is left, their faces and signs, a group's
   // mark as it leaves (3: stormed out)
@@ -46,7 +48,7 @@ const HALL = (() => {
   const MOOD = (p) => (p >= 0.6 ? 'ok' : p >= 0.3 ? 'meh' : 'mad');
   const FACE = { ok: {}, meh: { mouth: 'flat', brows: 'worried' }, mad: { eyes: 'sharp', brows: 'angry', mouth: 'o' } };
   const EMO = { ok: '', meh: '💦', mad: '💢' }, SCORE = { ok: 0, meh: 1, mad: 2 };
-  const WRONG = 0.2, RIGHT = 0.05, QUICK = 0.15, QUICK_MS = 5000, SORRY = 0.25, STARS = 3, RING_MS = 20000, TOLD = 0.4, BAR = 226, MARK = 72;   // TOLD: told to wait (a full house), how fast it wears down; BAR: the countdown's top over their feet (words go over it; css .hl-pat), MARK: the 「！」 over it
+  const WRONG = 0.2, RIGHT = 0.05, QUICK = 0.15, QUICK_MS = 5000, SORRY = 0.25, STARS = 3, RING_MS = 20000, TOLD = 0.4, BAR = 226, MARK = 72, T_MARK = 3.2;   // TOLD: told to wait (a full house), how fast it wears down; BAR: the countdown's top over their feet (words go over it; css .hl-pat), MARK: the 「！」 over it; T_MARK: a free table's 「！」, how high over the floor
   // the way to each table's seat from the door side, round the furniture (and back again to the register, or out of the door)
   const VIA = [[[5.0, 4.0]], [[5.0, 3.0], [12.2, 3.0]], [[11.0, 9.3], [13.45, 9.3]]];
   const toSeat = (i) => [[5.0, 12.4], ...VIA[i], RAIRAI.seat(i)], fromSeat = (i) => [...VIA[i].slice().reverse(), [5.0, 11.4], RAIRAI.pay];
@@ -79,7 +81,8 @@ const HALL = (() => {
   const here = (c) => Boolean(H) && H.cust.includes(c) && !c.stormed;   // still theirs to see to (not stormed out, not gone; never the caller)
   // a table for them: more free than those waiting before them (in the order they came); none, and nothing to do for one waiting
   const roomFor = (c) => { const i = H.cust.indexOf(c); return [0, 1, 2].filter(free).length > H.cust.slice(0, i < 0 ? H.cust.length : i).filter((x) => x.state === 'wait').length; };
-  const need = (c) => (NEED.includes(c.state) && !(c.state === 'wait' && !roomFor(c))) || Boolean(c.q);
+  const need = (c) => NEED.includes(c.state) || Boolean(c.q);
+  const toShow = () => H.cust.some((c) => c.state === 'wait' && roomFor(c) && !(H.ask && H.ask.c === c));   // someone at the door a table is free for (not the one being shown now)
   const rate = (c) => (c.q ? 1 : c.state === 'wait' && c.told && !roomFor(c) ? TOLD : DRAIN[c.state] || 0);
   const doorWords = () => knows('すみません', 'いい', 'ちょっと');   // すみません、いいですか。 at the door, and the full house's すみません、ちょっと…。
   const marks = () => H.cust.forEach((x) => { if (x.state === 'wait') mark(x); });   // a table taken or freed: who waiting has one now
@@ -98,6 +101,18 @@ const HALL = (() => {
   function mark(c) {
     c.el.classList.toggle('need', need(c)); c.el.classList.toggle('pat', rate(c) > 0 && !H.over);
     const w = c.el.querySelector('.hl-want'); if (w) w.textContent = c.state === 'food' ? c.dish : ''; c.el.classList.toggle('want', c.state === 'food');
+    tableMarks();
+  }
+  function tableMarks() {   // the 「！」 over each free table while someone waits to be shown to one: a tap on it is a tap on the table
+    const w = H.yard.querySelector('.yworld'); if (!w) return; const on = !H.over && toShow();
+    [0, 1, 2].forEach((i) => {
+      let el = w.querySelector(`.hl-tmark[data-use="table${i}"]`); const want = on && free(i) && !shown(i);
+      if (want && !el) {
+        const [u, v] = RAIRAI.TABLES[i], [X, Y] = isoXY(u, v, T_MARK); el = document.createElement('button'); el.type = 'button'; el.className = 'hl-tmark'; el.dataset.act = 'scene-use'; el.dataset.use = 'table' + i;
+        el.setAttribute('aria-label', '帶位到這張桌子'); el.innerHTML = '<b aria-hidden="true">！</b>'; el.style.cssText = `left:calc(50% + ${X.toFixed(0)}px);bottom:${Y.toFixed(0)}px;transform:scale(${ISO.k})`; w.appendChild(el);
+      }
+      if (!want && el) el.remove();
+    });
   }
   const over = (c) => {   // words over their head: over the countdown (as high sitting as standing), and over the 「！」 when it shows
     const e = c.el, has = (k) => Boolean(e) && e.classList.contains(k), asked = Boolean(H && H.ask && H.ask.c === c);
@@ -272,7 +287,7 @@ const HALL = (() => {
   function panel() {
     const old = H.yard.querySelector('.hl-pick'); if (old) old.remove();
     H.yard.querySelectorAll('.hl-heard').forEach((x) => { if (!H.ask || x !== H.ask.bub) x.remove(); });   // the sound bars go with their question
-    H.cust.forEach((x) => x.el.classList.toggle('asked', Boolean(H.ask) && H.ask.c === x));   // the one answered: no 「！」 over the words (their countdown stays)
+    H.cust.forEach((x) => x.el.classList.toggle('asked', Boolean(H.ask) && H.ask.c === x)); tableMarks();   // the one answered: no 「！」 over the words (their countdown stays); the one being shown to a table: none over the tables
     const a = H.ask; if (!a) { const h = H; setTimeout(() => { if (H === h && !H.ask) lift(); }, 900); return; }   // down again, unless the next question follows (they come within 700 ms)
     const el = document.createElement('div'); el.className = 'hl-pick';
     const face = a.who === 'huang' ? HERO.head(TOWN.CAST.huang.look, 'bust') : a.c.caller ? '<span class="hl-tel">📞</span>' : HERO.head(Object.assign({}, a.c.look, FACE[a.c.mood]), 'bust');
@@ -424,12 +439,12 @@ const HALL = (() => {
   }
   function tap(el) {
     if (!live() || H.ask) return; const c = H.cust.find((q) => q.id === el.dataset.c); if (!c) return;   // a question up: answered first
-    if (c.state === 'wait') { heroPop(roomFor(c) ? 'どこに しよう…' : '…'); toast(roomFor(c) ? '點一張空桌子，帶客人過去。' : '桌子都坐滿了，等有空桌再帶位。', 2600); return; }
+    if (c.state === 'wait') { if (roomFor(c)) heroPop('どこに しよう…'); else { heroPop('…'); toast('桌子都坐滿了，等有空桌再帶位。', 2600); } return; }   // a table free: its 「！」 says where
     const k = spotOf(c); if (k) go(k);
   }
   function stop() {
     if (!H) return; H.timers.forEach(clearTimeout); cancelAnimationFrame(H.raf);
-    if (H.yard.isConnected) { H.cust.forEach((c) => c.el.remove()); H.yard.querySelectorAll('.hl-pick, .hl-hud, .hl-ring, .hl-plate, .hl-heard').forEach((x) => x.remove()); H.yard.style.setProperty('--hl-lift', '0px'); H.tray = { dish: '' }; carry(false); H.ready = []; readyMark(); }
+    if (H.yard.isConnected) { H.cust.forEach((c) => c.el.remove()); H.yard.querySelectorAll('.hl-pick, .hl-hud, .hl-ring, .hl-plate, .hl-heard, .hl-tmark').forEach((x) => x.remove()); H.yard.style.setProperty('--hl-lift', '0px'); H.tray = { dish: '' }; carry(false); H.ready = []; readyMark(); }
     H = null;
   }
   function run(ctx) {

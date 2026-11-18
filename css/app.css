@@ -458,6 +458,10 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 @keyframes hlWave { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
 /* a dish on a table (steaming; an empty plate once eaten) */
 .sky .hl-plate { position: absolute; width: 60px; height: 60px; margin-left: -30px; pointer-events: none; --pic-shadow: rgba(90, 60, 30, .16); --pic-steam: #b4a891; } .sky .hl-plate .pic { display: block; width: 100%; height: 100%; }
+/* a free table's 「！」 while someone at the door waits to be shown to one (2026-11-18, the user): the customers' mark, as big, tapped as the table */
+.sky .hl-tmark { position: absolute; z-index: 3000; width: 64px; height: 64px; margin-left: -32px; padding: 0; border: 0; background: none; font: inherit; transform-origin: 50% 100%; cursor: pointer; pointer-events: auto; }
+.sky .hl-tmark b { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; font-weight: 900; font-size: 44px; line-height: 1; color: #fff; background: #f0883e; box-shadow: 0 4px 0 #c45f1e, 0 0 0 6px rgba(255, 255, 255, .85); animation: evMark 1.1s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) { .sky .hl-tmark b { animation: none; } }
 /* the results: each group's face and the words they said, tapped to hear again */
 .crr-groups { display: grid; gap: 5px; max-height: 26vh; margin: 8px 0 2px; overflow: auto; } .crr-g { display: flex; align-items: flex-start; gap: 6px; } .crr-face { flex: none; font-size: 20px; line-height: 1.4; }
 .crr-says { display: flex; flex-wrap: wrap; gap: 4px; } .crr-say { padding: 3px 8px; border: 0; border-radius: 10px; background: #f4e6cc; color: #3a2c24; font: inherit; font-size: 13px; cursor: pointer; } .crr-says em { color: #9a8a7e; }

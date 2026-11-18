@@ -427,19 +427,31 @@ def test_one_at_the_door_at_a_time(b):
       return JSON.stringify({ most, all, door }); })()"""))
     assert r == {'most': 1, 'all': 1, 'door': 1}, r
 
+# 2026-11-18 (the user): greeted at the door, the 「！」 moves on to the free tables (no 「點一張空桌子」 line); a mark taken there
+def test_the_mark_moves_on_to_a_free_table(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); await until(() => cust('in'));
+      const tm = () => [...document.querySelectorAll('.yard .hl-tmark')].map((x) => x.dataset.use).sort(), el = () => document.querySelector('.yard .cust');
+      const out = { before: tm() }; await goTo('entry'); await answer(true);
+      Object.assign(out, { tables: tm(), cust: el().classList.contains('need') });
+      document.getElementById('toast').textContent = ''; HALL.tap(el()); out.toast = document.getElementById('toast').textContent;
+      document.querySelector('.yard .hl-tmark[data-use="table1"]').click(); await until(() => ask()); out.seat = [ask().kind, now().cust[0].state]; out.asked = tm();
+      await answer(true); out.after = tm(); await until(() => now().cust[0].table === 1); out.at = now().cust[0].table;
+      return JSON.stringify(out); })()"""))
+    assert r == {'before': [], 'tables': ['table0', 'table1', 'table2'], 'cust': False, 'toast': '', 'seat': ['seat', 'wait'], 'asked': [], 'after': [], 'at': 1}, r
+
 def test_a_full_house_is_apologised_for(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('すみません', 'いい', 'ちょっと'); HALL.force = { door: true }; await start(); """ + SPOKEN + """ const out = {};
       for (const t of [0, 1, 2]) { await until(() => now().cust.some((c) => c.state === 'in')); await goTo('entry'); if (!t) out.free = [ask().kind, ask().right, ask().line]; await answer(true); await goTo('table' + t); await answer(true); }
       await until(() => now().cust.some((c) => c.state === 'in')); const id = now().cust.find((c) => c.state === 'in').id, me = () => now().cust.find((c) => c.id === id), mel = () => document.querySelector(`.cust[data-c="${id}"]`);
       await goTo('entry'); const a = ask(); out.full = [a.kind, a.right, a.opts.includes('はい、どうぞ。'), a.line]; const p0 = me().p; await answer(false); out.miss = me().p < p0 - 0.15;
-      said.length = 0; await answer(true); await wait(300); Object.assign(out, { state: me().state, said: said.includes('じゃあ、まちます。'), mark: mel().classList.contains('need') });
+      said.length = 0; await answer(true); await wait(300); Object.assign(out, { state: me().state, said: said.includes('じゃあ、まちます。'), mark: mel().classList.contains('need') || Boolean(document.querySelector('.yard .hl-tmark')) });
       const t0 = now().cust.find((c) => c.table === 0), w0 = me().p, c0 = t0.p; HALL.pat = 0.05; await wait(300); HALL.pat = 1000;
       out.slow = (w0 - me().p) < 0.6 * (c0 - now().cust.find((c) => c.id === t0.id).p);
       await goTo('table0'); await answer(true); await until(() => ask()); await answer(true); await until(() => now().ready.length); await goTo('pass'); await answer(true); await goTo('table0'); await answer(true);
-      await until(() => !now().cust.some((c) => c.table === 0)); await wait(100); out.back = mel().classList.contains('need'); await goTo('table0'); out.seat = ask() && ask().kind;
+      await until(() => !now().cust.some((c) => c.table === 0)); await wait(100); out.back = [mel().classList.contains('need'), [...document.querySelectorAll('.yard .hl-tmark')].map((x) => x.dataset.use)]; await goTo('table0'); out.seat = ask() && ask().kind;
       return JSON.stringify(out); })()"""))
     assert r == {'free': ['door', 'はい、どうぞ。', 'すみません、いいですか。'], 'full': ['door', 'すみません、ちょっと…。', True, 'すみません、いいですか。'], 'miss': True,
-                 'state': 'wait', 'said': True, 'mark': False, 'slow': True, 'back': True, 'seat': 'seat'}, r
+                 'state': 'wait', 'said': True, 'mark': False, 'slow': True, 'back': [False, ['table0']], 'seat': 'seat'}, r
 
 def test_the_dish_waited_for_steps_aside_for_words(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true, order: 'dish' }; await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
