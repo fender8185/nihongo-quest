@@ -14,15 +14,19 @@
 // the shop. A shift is six groups (WORK's ctx), each marked as it leaves by its mood; the stars left are 黄's 紅包.
 // A customer, and a word of Japanese at every turn: in at the door (いらっしゃいませ; a regular — 周おばあさん, 張さん, 陳 — with
 // the time's greeting, answered in kind) → to a free table the hero stands at (こちらへ どうぞ) → sits and calls (すみません！ →
-// はい！) → perhaps asks first (「ぎょうざ、ありますか」: はい、あります, or すみません、ちょっと… for what the wall's menu has not;
+// はい！) → perhaps asks first (「ぎょうざ、ありますか」: はい、あります, or すみません、ありません for what the wall's menu has not;
 // 「おすすめは どれですか」: これです, the board in the hero's hand, and that is what they have) → orders, by the dish's name heard
 // (its picture picked) or by これ／それ／あれ (the table's menu, the hero's board, the poster) → perhaps おみず ください while it
-// cooks → 黄 calls it up by name (「ぎょうざ、あがり！」, the bell), the plate he called picked off the pass → to their table (どうぞ;
+// cooks → 黄 calls it up by name (「ぎょうざ、あがり！」, the bell), the plate he called picked off the pass → to their table (おまたせしました;
 // the wrong table: ちがいます → すみません) → eats, and perhaps: おてあらいは どこですか (from a table far from it: あそこです),
-// とても おいしいです！ (ありがとうございます), water, the chopsticks dropped (どうぞ → ありがとう → どういたしまして) → to the
+// とても おいしいです！ (ありがとうございます), water, the chopsticks dropped (どうぞ → ありがとう → ごゆっくり どうぞ) → to the
 // register (いくらですか, its price said, once the numbers are learned; ごちそうさまでした → ありがとうございました; a regular's
-// さようなら) → out. Now and then the phone rings at the register (もしもし; らいらいけんですか → はい、そうです, or a wrong number,
-// すしやですか → いいえ、ちがいます); left ringing, a star off. Each of these only once its words are learned (WORK.knows).
+// じゃあ、また きますね → また きて くださいね) → out. Now and then the phone rings at the register (はい、らいらいけんです; もしもし。
+// いまから いっても いいですか → はい、どうぞ, or a full house's すみません、ちょっと…, or a wrong number, すしやさんですか →
+// いいえ、ちがいます); left ringing, a star off. Each of these only once its words are learned (WORK.knows).
+// 2026-11-18 (the user: the lines natural, a little past 入門 is fine): those answers as a shop's (they were the textbook's: どうぞ,
+// どういたしまして, さようなら, もしもし); one asking at the door welcomed first (いらっしゃいませ, then their question); a cross one
+// at their table, once apologised to, orders (no second すみません！ → はい！).
 // The look (spec §4): the words heard come as sound bars over the speaker, in print once answered; the panel shows who is talking
 // (their face as it is now), and the room lifts so the hero and they stay above it; the dishes drawn —
 // on the cards, the pass, the hero's tray, the table (steaming, then an empty plate); each group in the results, their words to hear again.
@@ -276,7 +280,7 @@ const HALL = (() => {
     } else if (kind === 'price') {   // いくらですか: the dish's price, said
       line = s.cust.price; right = s.me.price[PRICE(c.dish)]; opts = three(PRICE(c.dish), prices()).map((n) => s.me.price[n][0]);
     } else if (kind === 'phone') { line = null; right = s.me.phone; opts = shuffle([right, ...s.not.phone]).map((o) => o[0]); }
-    else if (kind === 'phone2') { line = c.wrong ? s.call.wrong : s.call.right; right = c.wrong ? s.me.no : s.me.yes; opts = shuffle([s.me.yes, s.me.no, ...s.not.answer]).map((o) => o[0]); }
+    else if (kind === 'phone2') { line = c.wrong ? s.call.wrong : s.call.right; right = c.wrong ? s.me.no : roomFor(c) ? s.me.come : s.me.full; opts = shuffle([s.me.come, s.me.full, s.me.no]).map((o) => o[0]); }   // may they come now: a table free, or a full house
     else { right = s.me[kind]; opts = shuffle([right, ...shuffle(s.not[kind]).slice(0, 2)]).map((o) => o[0]); }
     if (kind === 'osusume') heroPop(`おすすめ：${H.board}`);
     H.ask = { kind, c, table, word, who, right: right[0], opts, line, wrong: 0, t0: performance.now() };
@@ -310,7 +314,7 @@ const HALL = (() => {
   }
   function choose(b) {
     const a = H.ask; if (!a || !live()) return; const said = b.dataset.o, c = a.c;
-    if (a.kind === 'door') a.right = (roomFor(c) ? L().me.come : L().me.full)[0];   // a table freed while it was up: はい、どうぞ。 now
+    if (a.kind === 'door' || (a.kind === 'phone2' && !c.wrong)) a.right = (roomFor(c) ? L().me.come : L().me.full)[0];   // a table freed while it was up: はい、どうぞ。 now
     if (!['order', 'dish', 'pass'].includes(a.kind)) { speakAs('hero', said); heroPop(said); }
     if (said !== a.right) {   // a miss: a shake, a 「？」 from them, some of their patience; two, the right one lights
       a.wrong++; playSfx('bad'); b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); if (a.who === 'huang') huangPop('？'); else pop(c, '？');
@@ -323,7 +327,7 @@ const HALL = (() => {
     const quick = performance.now() - a.t0 <= QUICK_MS; hit(c, quick ? QUICK : RIGHT); if (quick && here(c)) emo(c, '♪');
     if (a.kind === 'late') {   // sorry said: a little better, and what they wanted comes next
       c.sorried = true; hit(c, SORRY); const f = c.after; c.after = null;
-      later(() => { if (!H.ask && here(c) && f && (f.kind !== 'seat' || free(f.table))) ask(f.kind, c, f.table); }, 600); return;
+      later(() => { if (!H.ask && here(c) && f && (f.kind !== 'seat' || free(f.table))) { if (f.kind === 'call') next({ kind: 'call', c }); else ask(f.kind, c, f.table); } }, 600); return;   // called them over: the apology was the answer, on to the order
     }
     next(a);
   }
@@ -350,7 +354,7 @@ const HALL = (() => {
     }
     if (kind === 'call') {   // はい！: first perhaps a question about the menu, then the order
       c.state = 'order';
-      const pre = shuffle([knows('ある', 'ちょっと', 'すみません') && 'have', knows('どれ', 'これ', 'それ') && 'osusume'].filter(Boolean)).find((k) => may(k, 0.35));
+      const pre = shuffle([knows('ある', 'すみません') && 'have', knows('どれ', 'これ', 'それ') && 'osusume'].filter(Boolean)).find((k) => may(k, 0.35));
       const f = api.force && api.force.order, k = pre || f || (knows('これ', 'それ', 'あれ') && Math.random() < 0.5 ? 'order' : 'dish');
       c.q = k; mark(c); soon(c, k); return;
     }
@@ -366,7 +370,7 @@ const HALL = (() => {
     if (kind === 'serve') { if (H.tray.for !== c.id) handOver(c, H.tray.for); H.tray = null; carry(false); plate(c.table, c.dish); eat(c); return; }
     if (kind === 'price') { later(() => { if (!H.ask && here(c) && c.state === 'pay') ask('pay', c); }, 400); return; }
     if (kind === 'pay') {
-      if (c.regular && knows('さようなら') && may('bye', 1, 3)) { c.q = 'bye'; soon(c, 'bye', 400); return; }   // a regular's さようなら first
+      if (c.regular && knows('ください') && may('bye', 1, 3)) { c.q = 'bye'; soon(c, 'bye', 400); return; }   // a regular's じゃあ、また きますね first
       out(c); return;
     }
     if (kind === 'bye') { c.q = null; out(c); return; }
@@ -387,7 +391,7 @@ const HALL = (() => {
   }
   // eating: いただきます; perhaps one thing wanted on the way (the toilet from a far table, a word of praise, water, the chopsticks
   // dropped); おいしい; off to pay
-  const EAT = [['toilet', (c) => FAR.includes(c.table) && knows('あそこ') && learned('おてあらい', 'お手洗い'), 0.4], ['great', () => knows('とても', 'おいしい'), 0.4], ['water', () => learned('みず', '水'), 0.3], ['drop', () => knows('どういたしまして'), 0.25]];
+  const EAT = [['toilet', (c) => FAR.includes(c.table) && knows('あそこ') && learned('おてあらい', 'お手洗い'), 0.4], ['great', () => knows('とても', 'おいしい'), 0.4], ['water', () => learned('みず', '水'), 0.3], ['drop', () => knows('ありがとうございます'), 0.25]];
   function eat(c) {
     const s = L(); c.state = 'eat'; mark(c);
     later(() => { if (!here(c)) return; pop(c, s.cust.eat[0]);
@@ -411,7 +415,11 @@ const HALL = (() => {
   function at(yard, k) {
     if (!live() || H.over || H.ask) return;
     const find = (f) => H.cust.find(f), s = L();
-    if (k === 'entry') { const c = find((q) => q.state === 'in'); if (c) ask(c.regular ? 'hello' : c.asks ? 'door' : 'greet', c); return; }
+    if (k === 'entry') {
+      const c = find((q) => q.state === 'in'); if (!c) return;
+      if (c.asks && !c.welcomed) { c.welcomed = true; speakAs('hero', s.me.greet[0]); heroPop(s.me.greet[0]); later(() => { if (!H.ask && here(c) && c.state === 'in') ask('door', c); }, 1500); return; }   // いらっしゃいませ, and then they ask
+      ask(c.regular ? 'hello' : c.asks ? 'door' : 'greet', c); return;
+    }
     if (k === 'register') {
       if (H.phone && !H.phone.picked) { H.phone.picked = true; ringMark(); ask('phone', H.phone); return; }   // the phone first: it stops
       const c = find((q) => q.state === 'pay'); if (!c) return;
@@ -428,7 +436,7 @@ const HALL = (() => {
       if (!c) { const w = find((q) => q.state === 'wait'); if (w) ask('seat', w, i); return; }
       if (c.state === 'call') { ask('call', c); return; }
       if (c.q) { ask(c.q, c); return; }
-      if (c.state === 'drop') { speakAs('hero', s.me.serve[0]); heroPop(s.me.serve[0]); setTimeout(() => { if (live() && !H.ask && c.state === 'drop') ask('thanks', c); }, 700); return; }   // the chopsticks handed back: どうぞ, and their thanks
+      if (c.state === 'drop') { speakAs('hero', s.me.hand[0]); heroPop(s.me.hand[0]); setTimeout(() => { if (live() && !H.ask && c.state === 'drop') ask('thanks', c); }, 700); return; }   // the chopsticks handed back: どうぞ, and their thanks
       if (c.state === 'food' && H.tray) ask(H.tray.for === c.id || H.tray.dish === c.dish ? 'serve' : 'sorry', c);   // the same dish ordered here too: theirs as well
     }
   }
@@ -455,7 +463,7 @@ const HALL = (() => {
       board: pick(DISHES().filter((d) => d !== 'マーボーどうふ')) };   // today's おすすめ on the board in the hero's hand (the poster's is マーボーどうふ)
     H.raf = requestAnimationFrame(frame); hud();
     spawn(); later(more, rnd(5000, 8000));
-    if (knows('もしもし', 'そうです', 'ちがいます') && may('phone', 0.7, 1)) later(ring, rnd(20000, 50000));
+    if (knows('もしもし', 'ちがいます') && doorWords() && may('phone', 0.7, 1)) later(ring, rnd(20000, 50000));
   }
   function lines(add) {
     const s = L(), flat = (x) => (Array.isArray(x) ? (typeof x[0] === 'string' ? [x] : x.flatMap(flat)) : x && typeof x === 'object' ? Object.values(x).flatMap(flat) : []);

@@ -197,10 +197,10 @@ def test_no_toilet_question_from_the_table_by_it(b):
     assert r == {'asked': False, 'on': True}, r
 
 def test_dropped_chopsticks_handed_back(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('どういたしまして'); HALL.force = { drop: true }; await start(); const said = []; await served(1);
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('ありがとうございます'); HALL.force = { drop: true }; await start(); const said = []; await served(1);
       window.speakAs = (w, l) => { said.push(l); return Promise.resolve(); }; await until(() => cust('drop')); await goTo('table1'); await until(() => ask()); const a = ask();
       return JSON.stringify({ kind: a.kind, right: a.right, heard: said.includes('ありがとう。'), gave: said.includes('どうぞ。') }); })()"""))
-    assert r == {'kind': 'thanks', 'right': 'どういたしまして。', 'heard': True, 'gave': True}, r
+    assert r == {'kind': 'thanks', 'right': 'ごゆっくり どうぞ。', 'heard': True, 'gave': True}, r
 
 def test_a_regular_greets_by_the_clock(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('おはようございます', 'こんにちは', 'こんばんは'); HALL.force = { regular: true }; const out = {};
@@ -280,8 +280,8 @@ def test_a_waiter_score_is_the_mood_at_the_door(b):
 THROUGH_CALL = """ await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true); await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => ask()); """
 
 def test_have_on_and_off_the_menu(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('ある', 'ちょっと', 'すみません'); HALL.force = { solo: true, have: true }; await start(); """ + THROUGH_CALL + """
-      const a = ask(), asked = a.line.split('、')[0], on = RAIRAI.MENU.some((m) => m[0] === asked), out = { kind: a.kind, right: a.right === (on ? 'はい、あります。' : 'すみません、ちょっと…。'), n: a.opts.length };
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('ある', 'すみません'); HALL.force = { solo: true, have: true }; await start(); """ + THROUGH_CALL + """
+      const a = ask(), asked = a.line.split('、')[0], on = RAIRAI.MENU.some((m) => m[0] === asked), out = { kind: a.kind, right: a.right === (on ? 'はい、あります。' : 'すみません、ありません。'), n: a.opts.length };
       await answer(true); await until(() => ask()); const o = ask(); out.then = o.kind; out.same = on ? o.right === asked : o.right !== asked; return JSON.stringify(out); })()"""))
     assert r == {'kind': 'have', 'right': True, 'n': 3, 'then': 'dish', 'same': True}, r
 
@@ -315,20 +315,20 @@ def test_no_price_without_the_numbers(b):
     assert r == {'kind': 'pay'}, r
 
 def test_a_regular_says_goodbye(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('おはようございます', 'こんにちは', 'こんばんは', 'さようなら'); HALL.force = { solo: true, regular: true, bye: true }; await start(); await served(0);
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('おはようございます', 'こんにちは', 'こんばんは', 'ください'); HALL.force = { solo: true, regular: true, bye: true }; await start(); await served(0);
       await until(() => cust('pay')); await goTo('register'); await answer(true); await until(() => ask()); const a = ask(), out = { kind: a.kind, right: a.right, line: a.line };
       await answer(true); await wait(100); out.done = WORK.today().done; return JSON.stringify(out); })()"""))
-    assert r == {'kind': 'bye', 'right': 'さようなら！', 'line': 'さようなら！', 'done': 1}, r
+    assert r == {'kind': 'bye', 'right': 'また きて くださいね！', 'line': 'じゃあ、また きますね。', 'done': 1}, r
 
 def test_the_phone_rings_and_is_answered(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('もしもし', 'そうです', 'ちがいます'); HALL.force = { solo: true, phone: true }; await start(); await until(() => now().phone);
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('もしもし', 'ちがいます', 'すみません', 'いい', 'ちょっと'); HALL.force = { solo: true, phone: true }; await start(); await until(() => now().phone);
       const out = { icon: Boolean(document.querySelector('.hl-ring')) }; await goTo('register'); let a = ask(); Object.assign(out, { kind: a.kind, right: a.right, quiet: !document.querySelector('.hl-ring') });
-      await answer(true); await until(() => ask()); a = ask(); out.two = a.kind; out.match = a.right === (a.line === 'すしやですか。' ? 'いいえ、ちがいます。' : 'はい、そうです。');
+      await answer(true); await until(() => ask()); a = ask(); out.two = a.kind; out.match = a.right === (a.line === 'もしもし？ すしやさんですか。' ? 'いいえ、ちがいます。' : 'はい、どうぞ。'); out.opts = a.opts.slice().sort();
       await answer(true); await wait(100); Object.assign(out, { over: !ask() && !now().phone, stars: now().stars }); return JSON.stringify(out); })()"""))
-    assert r == {'icon': True, 'kind': 'phone', 'right': 'もしもし。', 'quiet': True, 'two': 'phone2', 'match': True, 'over': True, 'stars': 3}, r
+    assert r == {'icon': True, 'kind': 'phone', 'right': 'はい、らいらいけんです。', 'quiet': True, 'two': 'phone2', 'match': True, 'opts': ['いいえ、ちがいます。', 'すみません、ちょっと…。', 'はい、どうぞ。'], 'over': True, 'stars': 3}, r
 
 def test_a_phone_left_ringing_costs_a_star(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('もしもし', 'そうです', 'ちがいます'); HALL.force = { solo: true, phone: true }; await start(); """ + SPOKEN + """ await until(() => now().phone);
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('もしもし', 'ちがいます', 'すみません', 'いい', 'ちょっと'); HALL.force = { solo: true, phone: true }; await start(); """ + SPOKEN + """ await until(() => now().phone);
       await until(() => !now().phone); await wait(100); return JSON.stringify({ stars: now().stars, huang: said.includes('でんわ！'), icon: Boolean(document.querySelector('.hl-ring')), hud: document.querySelector('.hl-hud .hl-stars').textContent }); })()"""))
     assert r == {'stars': 2, 'huang': True, 'icon': False, 'hud': '★★☆'}, r
 
@@ -371,6 +371,18 @@ def test_results_list_each_group(b):
     assert r == {'n': 6, 'faces': '😊😊😊😊😊😊', 'says': True, 'heard': True}, r
 
 # ---- the final review's findings (外場 2.0, 2026-11-15) ----
+# 2026-11-18 (the user: make the lines natural, a little past 入門 is fine)
+def test_a_cross_caller_orders_straight_after_the_apology(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true, order: 'dish' }; await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
+      await until(() => cust('call')); HALL.pat = 0.06; await until(() => now().cust[0].mood === 'mad'); HALL.pat = 1000;
+      await goTo('table0'); const out = { kind: ask().kind }; await answer(true); await until(() => ask()); out.then = ask().kind; out.state = now().cust[0].state; return JSON.stringify(out); })()"""))
+    assert r == {'kind': 'late', 'then': 'dish', 'state': 'order'}, r
+
+def test_one_asking_at_the_door_is_welcomed_first(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('すみません', 'いい', 'ちょっと'); HALL.force = { solo: true, door: true }; await start(); """ + SPOKEN + """ await until(() => cust('in')); said.length = 0;
+      await goTo('entry'); await until(() => ask()); return JSON.stringify({ kind: ask().kind, said: said.slice(0, 2) }); })()"""))
+    assert r == {'kind': 'door', 'said': ['いらっしゃいませ！', 'すみません、いいですか。']}, r
+
 def test_n5_words_only_once_learned_past_nyumon(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ state.stage = 'n5'; HALL.force = { solo: true, water: true, order: 'dish', have: false, osusume: false, great: false, toilet: false, drop: false, price: false, bye: false, phone: false, regular: false };
       await start(); """ + SPOKEN + """ await until(() => cust('in')); HALL.pat = 0.05; await until(() => now().cust[0].mood === 'mad'); HALL.pat = 1000; said.length = 0;
@@ -482,27 +494,27 @@ def test_the_door_answer_follows_a_table_freed(b):
       for (const t of [0, 1, 2]) { await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table' + t); await answer(true); }
       const at0 = () => now().cust.find((c) => c.table === 0); await until(() => at0().state === 'call'); await goTo('table0'); await answer(true); await until(() => ask()); await answer(true);
       await until(() => now().ready.length); await goTo('pass'); await answer(true); HALL.pace = 0.25; await goTo('table0'); await answer(true);   // eating, slowly
-      await until(() => cust('in')); await goTo('entry'); const before = ask().right, id = cust('in').id;
+      await until(() => cust('in')); await goTo('entry'); await until(() => ask()); const before = ask().right, id = cust('in').id;   // welcomed first (いらっしゃいませ), then asked
       await until(() => !now().cust.some((c) => c.table === 0)); [...document.querySelectorAll('.hl-opt')].find((x) => x.dataset.o === 'はい、どうぞ。').click(); await wait(150);
       return JSON.stringify({ before, closed: !ask(), state: now().cust.find((c) => c.id === id).state }); })()"""))
     assert r == {'before': 'すみません、ちょっと…。', 'closed': True, 'state': 'wait'}, r
 
 def test_an_answered_phone_waits_its_turn(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('もしもし', 'そうです', 'ちがいます'); HALL.force = { solo: true, phone: false }; await start(); await served(0);
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + SERVED + """ word('もしもし', 'ちがいます', 'すみません', 'いい', 'ちょっと'); HALL.force = { solo: true, phone: false }; await start(); await served(0);
       await until(() => cust('pay')); HALL.ring(); await until(() => now().phone); await goTo('register');
-      const a = ask(); [...document.querySelectorAll('.hl-opt')].find((x) => x.dataset.o === a.right).click(); HALL.at(yard(), 'register');   // もしもし, and at once the one waiting to pay
+      const a = ask(); [...document.querySelectorAll('.hl-opt')].find((x) => x.dataset.o === a.right).click(); HALL.at(yard(), 'register');   // はい、らいらいけんです, and at once the one waiting to pay
       const k = ask() && ask().kind; await wait(100); await answer(true); await until(() => ask()); const two = ask() && ask().kind; if (two) await answer(true);
       await wait(600); return JSON.stringify({ k, two, stars: now().stars }); })()"""))
     assert r == {'k': 'pay', 'two': 'phone2', 'stars': 3}, r
 
 def test_a_hidden_page_keeps_the_phone_ringing(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('もしもし', 'そうです', 'ちがいます'); HALL.force = { solo: true, phone: false }; await start();
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('もしもし', 'ちがいます', 'すみません', 'いい', 'ちょっと'); HALL.force = { solo: true, phone: false }; await start();
       let hid = true; Object.defineProperty(document, 'hidden', { configurable: true, get: () => hid }); HALL.ring(); await wait(900);
       const out = { ringing: now().phone, stars: now().stars }; hid = false; await until(() => !now().phone); out.after = now().stars; return JSON.stringify(out); })()"""))
     assert r == {'ringing': True, 'stars': 3, 'after': 2}, r
 
 def test_stars_lost_stay_lost_after_a_break(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('もしもし', 'そうです', 'ちがいます'); HALL.force = { solo: true, phone: false }; await start();
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('もしもし', 'ちがいます', 'すみません', 'いい', 'ちょっと'); HALL.force = { solo: true, phone: false }; await start();
       HALL.ring(); await until(() => now().phone); await until(() => !now().phone); const lost = now().stars;
       location.hash = '#/chinadori'; route(); await wait(400); await into(); WORK.start(yard(), 'waiter'); await wait(300);
       return JSON.stringify({ lost, back: now().stars, hud: document.querySelector('.hl-hud .hl-stars').textContent }); })()"""))
