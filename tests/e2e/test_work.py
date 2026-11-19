@@ -191,7 +191,7 @@ def test_the_shelf_card_fits_a_phone(b):
 COUNTER = """const vocab = (r) => { const v = REG.vocab.find((x) => x.r === r && (x.lv === 'PRE_N5' || x.lv === 'N5')); state.srs[v.key] = rec(); };
   const num = (w, r) => { const v = REG.vocab.find((x) => x.w === w && x.r === r); state.srs[v.key] = rec(); };   // a number word learned
   const nums = () => [['一', 'いち'], ['二', 'に'], ['三', 'さん'], ['四', 'よん'], ['五', 'ご'], ['六', 'ろく'], ['七', 'なな'], ['八', 'はち'], ['九', 'きゅう'], ['百', 'ひゃく'], ['千', 'せん'], ['円', 'えん']].forEach(([w, r]) => num(w, r));
-  const serve = async () => { const t = JOBS.counter.now(); if (t.kind === 'price') { document.querySelector(`.wk-opt[data-n="${t.good[2]}"]`).click(); }
+  const serve = async () => { const t = JOBS.counter.now(); if (t.kind === 'price') { for (const p of t.parts) { document.querySelector(`.wk-tile[data-p="${p}"]`).click(); await wait(60); } }
     else { const g = document.querySelector(`.wk-good[data-good="${t.good[0]}"]`); g.click(); if (t.kind === 'two') { await wait(150); g.click(); } } await wait(900); };"""
 
 def test_counter_offers_only_readable_goods(b):
@@ -208,8 +208,11 @@ def test_counter_offers_a_good_with_a_small_kana(b):   # せっけん: its っ r
 def test_counter_asks_two_and_prices_once_learned(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + COUNTER + """ kana(46); vocab('ふたつ'); vocab('いくら'); nums();
       const runs = Array.from({ length: 8 }, () => JOBS.counter.make()).flat(), price = runs.filter((t) => t.kind === 'price');
-      return JSON.stringify({ kinds: [...new Set(runs.map((t) => t.kind))].sort(), opts: price.every((t) => t.opts.length === 3 && t.opts.includes(t.good[2]) && t.good[2] <= 1000) }); })()"""))
-    assert r == {'kinds': ['name', 'price', 'two'], 'opts': True}, r
+      const hy = price.filter((t) => t.good[2] !== 100 && t.good[2] !== 1000);
+      return JSON.stringify({ kinds: [...new Set(runs.map((t) => t.kind))].sort(), spell: price.every((t) => t.parts.join('') === YEN.reading(t.good[2]) && t.parts.every((p) => t.tiles.includes(p)) && new Set(t.tiles).size === t.tiles.length && t.good[2] <= 1000),
+        sounds: hy.length > 0 && hy.every((t) => ['ひゃく', 'びゃく', 'ぴゃく'].every((p) => t.tiles.includes(p))),
+        cuts: ['ろっ', 'ろく', 'ぴゃく'].every((p) => (JOBS.counter.spell(600).tiles).includes(p)) && JOBS.counter.spell(800).tiles.includes('はち') && JOBS.counter.spell(100).tiles.includes('いち') }); })()"""))
+    assert r == {'kinds': ['name', 'price', 'two'], 'spell': True, 'sounds': True, 'cuts': True}, r   # ひゃく as it sounds after each digit; ろく beside ろっ, はち beside はっ, いち before a bare ひゃく
 
 # 2026-11-15, the user: prices are past 入門 — いくら is an 入門 word, but reading 三百円 needs N5's numbers; a price is asked only
 # when its tag can be read: いくら and 円 learned, 百 (and the digit before it), or 千
@@ -217,8 +220,39 @@ def test_prices_wait_for_the_numbers_they_need(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + COUNTER + """ kana(46); vocab('いくら'); const runs = () => Array.from({ length: 8 }, () => JOBS.counter.make()).flat();
       const out = { bare: runs().filter((t) => t.kind === 'price').length };
       num('円', 'えん'); num('百', 'ひゃく'); num('三', 'さん'); const some = runs().filter((t) => t.kind === 'price');
-      return JSON.stringify(Object.assign(out, { some: some.length > 5, tags: [...new Set(some.map((t) => t.good[2]))].sort(), opts: some.every((t) => t.opts.length === 3 && t.opts.includes(t.good[2])) })); })()"""))
-    assert r == {'bare': 0, 'some': True, 'tags': [100, 300], 'opts': True}, r
+      return JSON.stringify(Object.assign(out, { some: some.length > 5, tags: [...new Set(some.map((t) => t.good[2]))].sort(), spell: some.every((t) => t.parts.join('') === YEN.reading(t.good[2])) })); })()"""))
+    assert r == {'bare': 0, 'some': True, 'tags': [100, 300], 'spell': True}, r
+
+# 2026-11-19, the user: a price chosen from three readings only matched — now it is spelled: its pieces (the digit, ひゃく as it
+# sounds after it, えん) tapped in order among ひゃく's other sounds and a digit beside; a wrong one a miss, two and the next lights
+def test_a_price_is_spelled_with_tiles(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + COUNTER + """ kana(46); vocab('いくら'); nums(); earlier('counter'); window.__said = []; window.speakAs = (w, l) => { __said.push(w + ':' + l); return Promise.resolve(); };
+      location.hash = '#/chinadori'; route(); await wait(300); const R = Math.random; Math.random = () => 0.1; WORK.start(yard(), 'counter'); Math.random = R;
+      for (let i = 0; i < 30 && !document.querySelector('.wk-cust.on'); i++) await wait(100);
+      const t = JOBS.counter.now(), tile = (p) => document.querySelector(`.wk-tile[data-p="${p}"]`), out = { kind: t.kind, slots: document.querySelectorAll('.wk-spell i').length === t.parts.length };
+      const bad = [...document.querySelectorAll('.wk-tile')].find((x) => !t.parts.includes(x.dataset.p)); bad.click(); await wait(100); bad.click(); await wait(100);
+      out.hint = tile(t.parts[0]).classList.contains('wk-hint');
+      tile(t.parts[0]).click(); await wait(100); out.used = tile(t.parts[0]).disabled; out.built = document.querySelector('.wk-spell').textContent === t.parts[0];
+      for (const p of t.parts.slice(1)) { tile(p).click(); await wait(100); }
+      await wait(300); out.said = __said.includes('hero:' + YEN.reading(t.good[2]) + 'です。'); out.misses = WORK.today().score[0];
+      return JSON.stringify(out); })()"""))
+    assert r == {'kind': 'price', 'slots': True, 'hint': True, 'used': True, 'built': True, 'said': True, 'misses': 2}, r
+
+# 2026-11-19, the user: a shift should begin with how it is played and what it asks of you, then はい／いいえ — はたらく opens the
+# rules card; はい begins the shift, いいえ leaves it be; the keepers' first word keeps only what they say in Japanese
+def test_working_starts_with_the_rules_and_a_yes(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(46); stub('shelf'); location.hash = '#/chinadori'; route(); await wait(300); window.__ctx = null;
+      document.querySelector('.npc[data-npc="zhang"]').click(); for (let i = 0; i < 60 && !document.querySelector('.talk-picks button'); i++) await wait(100); await wait(300);
+      [...document.querySelectorAll('.talk-picks button')].find((x) => x.textContent.trim() === 'はたらく').click();
+      for (let i = 0; i < 30 && !document.querySelector('.wk-rules'); i++) await wait(100);
+      const card = document.querySelector('.wk-rules'), text = card ? card.textContent : '', btn = (a) => document.querySelector(`.wk-rules [data-rules="${a}"]`);
+      const out = { card: Boolean(card), ran: Boolean(window.__ctx), name: text.includes('整理貨架'), how: text.includes('玩法'), uses: text.includes('需要的能力'), pay: text.includes('100 円'), yes: btn('yes') && btn('yes').textContent.includes('はい'), no: btn('no') && btn('no').textContent.includes('いいえ') };
+      btn('no').click(); await wait(300); Object.assign(out, { gone: !document.querySelector('.wk-rules'), ranNo: Boolean(window.__ctx), day: WORK.today() });
+      WORK.intro(yard(), 'shelf'); await wait(200); btn('yes').click(); await wait(300); Object.assign(out, { ranYes: Boolean(window.__ctx), shut: !document.querySelector('.wk-rules') });
+      kana(4); WORK.intro(yard(), 'shelf'); await wait(200); out.closed = !document.querySelector('.wk-rules');   // not open to this learner: why, and no card
+      out.zhOnly = Object.values(TOWN.WORK.first).flat().filter((l) => !l[1]).length;
+      return JSON.stringify(out); })()"""))
+    assert r == {'card': True, 'ran': False, 'name': True, 'how': True, 'uses': True, 'pay': True, 'yes': True, 'no': True, 'gone': True, 'ranNo': False, 'day': None, 'ranYes': True, 'shut': True, 'closed': True, 'zhOnly': 0}, r
 
 # 2026-11-15, the user: the thing asked for was printed in the bubble and on the counter both — matching the same kana, nothing
 # heard; now the word in the bubble is a blank to listen to (tap it to hear it again), shown once handed over or after two misses

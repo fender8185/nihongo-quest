@@ -79,8 +79,9 @@ const JOBS = (() => {
   // kana are all seen. The word asked for is heard, not shown (2026-11-15, the user: printed in the bubble too, it was only matching
   // the same kana): a blank in the bubble, tapped to hear it again, filled in once handed over or after two misses. Once ふたつ is
   // learned, now and then two of it (tap it twice). Prices are N5's numbers, past 入門 (the user): once いくら and 円 are learned,
-  // now and then one held up — its picture in the bubble — これ、いくらですか: choose the reading of its tag, a tag whose numbers are
-  // learned (百 and the digit before it, or 千). Handed over: ありがとうございました ----
+  // now and then one held up — its picture in the bubble — これ、いくらですか: its tag's reading spelled in pieces (2026-11-19, the
+  // user: spelled, not picked from three), a tag whose numbers are learned (百 and the digit before it, or 千). Handed over:
+  // ありがとうございました ----
   const CUST = ['kaneda', 'umeko', 'yuta', 'rina', 'yoshimoto', 'ken', 'ai', 'michiyama', 'mike'];
   const GOODS = () => TOWN.WORK.goods, PRICES = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
   const sayer = (name) => CUST[Math.max(0, GOODS().findIndex((g) => g[0] === name)) % CUST.length];   // each thing asked for by the same one, so the clips stay few
@@ -89,6 +90,14 @@ const JOBS = (() => {
   const readable = (n) => (n === 1000 ? learned('せん', '千') : learned('ひゃく', '百') && (n === 100 || learned(DIGIT[n / 100][1], DIGIT[n / 100][0])));   // a tag whose numbers are learned
   const ME = { hi: ['いらっしゃいませ！', '歡迎光臨！'], bye: ['ありがとうございました！', '謝謝光臨！'] };
   const ask = (t) => (t.kind === 'price' ? ['これ、いくらですか。', '這個多少錢？'] : t.kind === 'two' ? [`${t.good[0]}を ふたつ ください。`, '請給我兩個。'] : [`${t.good[0]}を ください。`, '請給我這個。']);
+  // a price in pieces: the digit, ひゃく as it sounds after it (さんびゃく, ろっぴゃく, はっぴゃく), えん; the tiles those, ひゃく's
+  // other sounds and a digit beside (ろく by ろっ, はち by はっ, いち before a bare ひゃく or せん, else another digit)
+  const PIECE = { 2: 'に', 3: 'さん', 4: 'よん', 5: 'ご', 6: 'ろっ', 7: 'なな', 8: 'はっ', 9: 'きゅう' }, HYAKU = { 3: 'びゃく', 6: 'ぴゃく', 8: 'ぴゃく' };
+  function spell(n) {
+    const d = n / 100, parts = n === 1000 ? ['せん', 'えん'] : d === 1 ? ['ひゃく', 'えん'] : [PIECE[d], HYAKU[d] || 'ひゃく', 'えん'];
+    const near = n === 1000 ? ['いち', 'ひゃく', 'ぜん'] : d === 1 ? ['いち', 'びゃく', 'ぴゃく'] : ['ひゃく', 'びゃく', 'ぴゃく', { 6: 'ろく', 8: 'はち' }[d] || pick(Object.values(PIECE).filter((x) => x !== PIECE[d] && !['ろっ', 'はっ'].includes(x)))];
+    return { parts, tiles: shuffle([...new Set([...parts, ...near])]) };
+  }
   function counterMake(seen = WORK.kana()) {
     const big = { っ: 'つ', ゃ: 'や', ゅ: 'ゆ', ょ: 'よ' };   // a small kana read as the one seen (せっけん)
     let can = GOODS().filter((g) => [...g[0]].every((c) => seen.has(big[c] || c))); if (can.length < 4) can = GOODS().slice(0, 4);   // never too few to set out
@@ -97,33 +106,38 @@ const JOBS = (() => {
       const r = Math.random(), kind = priced.length && r < 0.25 ? 'price' : two && r > 0.75 ? 'two' : 'name';
       const good = pick(kind === 'price' ? priced : can), goods = shuffle([good, ...shuffle(can.filter((g) => g !== good)).slice(0, 3)]);
       const t = { kind, good, goods, who: kind === 'price' ? pick(CUST) : sayer(good[0]) };
-      if (kind === 'price') { const other = (a) => shuffle(a.filter((p) => p !== good[2])); t.opts = shuffle([good[2], ...other(tags).concat(other(PRICES.filter((p) => !tags.includes(p)))).slice(0, 2)]); }
+      if (kind === 'price') Object.assign(t, spell(good[2]));
       return t;
     });
   }
   let C = null;   // the customer at the counter now (its task)
   const goodPic = (key) => { const d = (typeof PICS === 'object' && PICS[key]) || (typeof PICS_TOWN === 'object' && PICS_TOWN[key]); return d ? `<svg class="pic" viewBox="0 0 100 100" aria-hidden="true"><circle class="pd" cx="50" cy="50" r="47"/>${d}</svg>` : ''; };
   function counterRun(ctx) {
-    const tasks = counterMake(), first = !Object.values(state.work.res).some((r) => r.place === 'counter' && r.yen !== undefined); let k = ctx.done, miss = 0, got = 0, busy = true;
+    const tasks = counterMake(), first = !Object.values(state.work.res).some((r) => r.place === 'counter' && r.yen !== undefined); let k = ctx.done, miss = 0, got = 0, at = 0, busy = true;   // at: the price's pieces tapped so far
     const el = (s) => document.querySelector('.wk-counter ' + s);
     const bub = (open) => { const [ja, zh] = ask(C), w = C.good[0], line = C.kind === 'price' ? `<span class="wk-held">${goodPic(C.good[1])}</span>${esc(ja)}`
       : open ? esc(ja) : `<button type="button" class="wk-ear" aria-label="再聽一次">🔊</button>${esc(ja.slice(w.length))}`;   // the word heard, not read, till handed over
       el('.wk-bub').innerHTML = `<b lang="ja">${line}</b><span>${esc(zh)}</span>${C.kind === 'two' ? `<i class="wk-cnt">${got}／2</i>` : ''}`; };
     const me = (l) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${esc(l[0])}</b>${first ? `<span>${esc(l[1])}</span>` : ''}`; return speakAs('hero', l[0]); };
     function show() {
-      C = tasks[k]; miss = 0; got = 0; busy = true; if (!el('.wk-goods')) return;
+      C = tasks[k]; miss = 0; got = 0; at = 0; busy = true; if (!el('.wk-goods')) return;
       el('.wk-n').textContent = `${k + 1}／${N}`;
       el('.wk-goods').innerHTML = C.goods.map((g) => `<button type="button" class="wk-good${C.kind === 'price' && g === C.good ? ' held' : ''}" data-good="${esc(g[0])}">${goodPic(g[1])}<b lang="ja">${esc(g[0])}</b><small>${g[2]}円</small></button>`).join('');
       el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').innerHTML = `<span class="kr-face">${TOWNEV.face(C.who)}</span><p class="wk-bub"></p>`;
       said(me(ME.hi), 800).then(() => {   // the customer asks, once いらっしゃいませ is said
         if (!el('.wk-cust') || C !== tasks[k] || !ctx.on()) return;
         bub(false); el('.wk-cust').classList.add('on'); speakAs(C.who, ask(C)[0]); busy = false;
-        if (C.kind === 'price') el('.wk-opts').innerHTML = C.opts.map((n) => `<button type="button" class="btn btn-sm wk-opt" data-n="${n}" lang="ja">${esc(YEN.reading(n))}</button>`).join('');
+        if (C.kind === 'price') el('.wk-opts').innerHTML = `<p class="wk-spell" lang="ja"></p>${C.tiles.map((p) => `<button type="button" class="btn btn-sm wk-opt wk-tile" data-p="${esc(p)}" lang="ja">${esc(p)}</button>`).join('')}`, built();
       });
+    }
+    // the price as tapped so far, a blank for each piece to come; after two misses the next piece lights
+    function built() {
+      const p = el('.wk-spell'); if (!p) return; p.innerHTML = C.parts.map((x, i) => (i < at ? `<b>${esc(x)}</b>` : '<i></i>')).join('');
+      if (miss >= 2) document.querySelectorAll('.wk-tile').forEach((x) => x.classList.toggle('wk-hint', at < C.parts.length && x.dataset.p === C.parts[at]));
     }
     function wrong(b) {
       miss++; playSfx('bad'); b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); word('counter', say('counter').miss, 'bad');
-      if (miss >= 2) { document.querySelectorAll(C.kind === 'price' ? '.wk-opt' : '.wk-good').forEach((x) => x.classList.toggle('wk-hint', C.kind === 'price' ? Number(x.dataset.n) === C.good[2] : x.dataset.good === C.good[0])); bub(true); }
+      if (miss >= 2) { if (C.kind === 'price') built(); else document.querySelectorAll('.wk-good').forEach((x) => x.classList.toggle('wk-hint', x.dataset.good === C.good[0])); bub(true); }
     }
     function right() {
       busy = true; ctx.right(k, miss); playSfx('good'); bub(true); el('.wk-cust').classList.remove('on');
@@ -145,8 +159,9 @@ const JOBS = (() => {
     CLASS.card('wk-counter', '站櫃', `${head('counter', 'らんらん', k)}<div class="wk-cust"></div><div class="wk-goods"></div><div class="wk-opts"></div><p class="wk-me"></p>`, (e) => {
       if (busy || !ctx.on() || !C) return;
       if (e.target.closest('.wk-ear')) { speakAs(C.who, ask(C)[0]); return; }
-      const g = e.target.closest('.wk-good'), o = e.target.closest('.wk-opt');
-      if (o && C.kind === 'price') { if (Number(o.dataset.n) === C.good[2]) right(); else wrong(o); return; }
+      const g = e.target.closest('.wk-good'), o = e.target.closest('.wk-tile');
+      if (o && C.kind === 'price') { if (o.disabled) return; if (o.dataset.p !== C.parts[at]) { wrong(o); return; }   // the next piece, or a miss
+        at++; o.disabled = true; built(); if (at < C.parts.length) SND.play('place', { vol: 0.5 }); else right(); return; }
       if (!g || C.kind === 'price') return;
       if (g.dataset.good !== C.good[0]) { wrong(g); return; }
       if (C.kind === 'two' && ++got < 2) { const c = el('.wk-cnt'); if (c) c.textContent = `${got}／2`; SND.play('place', { vol: 0.5 }); return; }
@@ -269,5 +284,5 @@ const JOBS = (() => {
   WORK.register('shelf', { run: shelfRun, lines: shelfLines });
   WORK.register('buns', { run: bunsRun, lines: bunsLines });
   WORK.register('counter', { run: counterRun, lines: counterLines });
-  return { shelf: { make: shelfMake, run: shelfRun }, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, buns: { run: bunsRun, now: () => BN } };
+  return { shelf: { make: shelfMake, run: shelfRun }, counter: { make: counterMake, run: counterRun, now: () => C, sayer, spell }, buns: { run: bunsRun, now: () => BN } };
 })();

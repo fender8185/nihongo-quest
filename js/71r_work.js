@@ -76,6 +76,27 @@ const WORK = (() => {
     if (first && !before && !res[d].done) TALK.open(yard, PLACES[job].who, first, run, null, { ev: true }); else run();
     return true;
   }
+  // before a shift (2026-11-19, the user: a job should first say how it is played and what it asks of you, then はい／いいえ): the
+  // rules card — how it goes, the abilities it takes, how long a shift is and the pay — はい to begin (start), いいえ to leave it.
+  // はたらく opens it; the keepers' first word (TOWN.WORK.first) keeps only what they say in Japanese, the rules being here
+  const RULES = {
+    shelf: { how: ['張さん會念出貨物的名字——只念，不給你看字。', '把貨物放進貼著一樣假名的格子；放錯就再放一次。'], uses: ['聽假名', '認假名'], n: '一班 10 件貨' },
+    counter: { how: ['客人用日文說要買什麼（用聽的），從櫃台上把那樣東西拿給他。', '學過「ふたつ」：有客人會要兩個。', '學過「いくら」「円」和數字：有客人會問價錢，用字卡拼出價格的念法。'], uses: ['聽單字', '假名', '數字的念法'], n: '一班 10 位客人' },
+    waiter: { how: ['有「！」的就是在等你：客人頭上，或要帶位時的空桌子。點它走過去。', '聽客人說什麼，從下面三句選你要回的那句。帶位、點菜、端菜、結帳都靠你。', '客人頭上那條是耐心，越等越短；沒了客人就走人，店裡少一顆星。客滿時有人進門，先道歉請他等。'], uses: ['聽力', '招呼和店裡的會話', 'これ・それ・あれ'], n: '一班 6 組客人' },
+    buns: { how: ['聽到哪個音，就在假名板上按哪個字；按對了包子就往下包一步。', '按 30 下、包好 5 顆包子。兩分鐘內全部按對，王老闆會很激動。'], uses: ['聽假名', '46 個假名'], n: '一班 5 顆包子' } };
+  function intro(yard, job) {
+    const c = can(job); if (!c.ok) { toast(c.why, 3600); return false; }
+    const P = PLACES[job], R = RULES[job], t = today(), back = t && t.place === job && !fin(t) ? t.done : 0, n = shifts() + 1, p = pay(n, 'E');
+    CLASS.card('wk-rules', P.name, `<div class="wk-rhead"><span class="kr-face">${TOWNEV.face(P.who)}</span><p><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span></p></div>
+      <h4>玩法</h4><ul class="wk-how">${R.how.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
+      <h4>需要的能力</h4><p class="wk-uses">${R.uses.map((u) => `<span lang="ja">${esc(u)}</span>`).join('')}</p>
+      <p class="wk-pay">${esc(R.n)}・底薪 ${p.base} 円（${esc(rank(n))}）＋評級加給最多 50 円${job === 'waiter' ? '＋店長紅包' : ''}</p>
+      ${back ? `<p class="wk-back">今天做到 ${back}／${nOf(job)}，按「はい」接著做。</p>` : ''}
+      <p class="wk-ask"><b lang="ja">はたらきますか？</b><span>要開始打工嗎？</span></p>
+      <div class="wk-yn"><button type="button" class="btn btn-primary" data-rules="yes" lang="ja">はい</button><button type="button" class="btn" data-rules="no" lang="ja">いいえ</button></div>`,
+    (e) => { const b = e.target.closest('[data-rules]'); if (!b) return; CLASS.close(); if (b.dataset.rules === 'yes') start(yard, job); });
+    return true;
+  }
   // the job a person takes beginners on for, where they are now, once its kana are seen (today taken elsewhere or closed: still
   // offered, and はたらく says why not)
   const offer = (id, place) => { const job = Object.keys(PLACES).find((j) => PLACES[j].who === id && PLACES[j].place === place); return job && kanaOk(PLACES[job].kana) ? job : null; };
@@ -148,5 +169,5 @@ const WORK = (() => {
   const tune = () => { const job = Object.keys(PLACES).find((j) => document.querySelector('.cls.wk-' + j)) || (typeof HALL === 'object' && HALL.on() ? 'waiter' : '');
     return job ? PLACES[job].tune : ''; };
   const lines = (add) => { Object.entries(TOWN.WORK.hello || {}).forEach(([id, l]) => add(id, l[0])); Object.values(TOWN.WORK.first || {}).forEach((ls) => ls.forEach((l) => add(l[0], l[1]))); Object.values(JOBS).forEach((j) => j.lines && j.lines(add)); };
-  return { N, nOf, PLACES, kana, knows, free, tool, can, start, register, pay, rank, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, board, tune };
+  return { N, nOf, PLACES, kana, knows, free, tool, can, start, intro, register, pay, rank, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, board, tune };
 })();

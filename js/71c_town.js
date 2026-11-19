@@ -260,7 +260,7 @@ const TOWNEV = (() => {
     yHeroWalk(yard, [f[0] + side * 76 * yScale(f[1]), f[1] + 2], () => {
       yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard);
       const sells = !e && YEN.sells(yard, id), chat = () => TALK.open(yard, id, [chatLine(id)]);   // one who sells something here (2026-11-13, the user): 點餐 or 閒聊
-      const job = !e && WORK.offer(id, yard.dataset.place), work = job && ['はたらく', () => WORK.start(yard, job)];   // one who takes on a beginner for a shift (中華街の打工, 2026-11-14)
+      const job = !e && WORK.offer(id, yard.dataset.place), work = job && ['はたらく', () => WORK.intro(yard, job)];   // the rules first, はい to begin (2026-11-19)   // one who takes on a beginner for a shift (中華街の打工, 2026-11-14)
       if (e) TALK.open(yard, id, linesOf(e), ended, null, { ev: true });
       else if (sells || work) { const hi = sells ? sells.hello : WORK.hello(id); TALK.open(yard, id, [[id, hi[0], hi[1], { pick: [sells && [sells.label, sells.go], work, ['おしゃべりする', chat]].filter(Boolean) }]], null, null, { ev: true }); }
       else chat();

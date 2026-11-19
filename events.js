@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 78 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 79 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2670,9 +2670,9 @@ const TOWN = {
     first: {
       shelf: [['zhang', 'きいて。おなじ ところへ。', '聽我念，放到一樣的格子。'], ['zhang', '…まちがえたら、もう いちど。', '……放錯了，就再放一次。']],
       counter: [['zhou', 'おきゃくさんが いった ものを わたしてね。', '客人說要什麼，就拿給他喔。'], ['zhou', '「いらっしゃいませ」「ありがとうございました」、げんきよく ね。', '「歡迎光臨」「謝謝光臨」，要有精神喔。']],
-      waiter: [['huang', 'おきゃくさんが きたら、すぐ いって！', '客人來了就馬上過去！'], ['huang', '', '（用中文）有「！」的就是在等你：客人頭上，或是要帶位時的空桌子。點它走過去，聽客人說什麼，選你要回的那句。端菜、帶位、結帳都靠你了！'],
-        ['huang', 'おきゃくさんを またせないで！', '別讓客人等！'], ['huang', '', '（用中文）客人頭上那條是他的耐心，越等越短，臉也會越來越臭。沒了他就走人，店裡的星星也會少一顆。桌子都坐滿時還有人進門，要先跟他道歉、請他等。今天招呼 6 組客人，答得又快又對，他們才會開心地走！']],
-      buns: [['wang', 'ぶたまんは こころ！', '豬肉包就是心！'], ['chen', '', '（用中文）聽到哪個音就按哪個字，按對包子就往下包一步。按三十下、包好五顆包子，兩分鐘內全部按對，王老闆會很激動。']] },
+      // 2026-11-19: the rules in Chinese went to the rules card before a shift (WORK.intro); what they say in Japanese stays
+      waiter: [['huang', 'おきゃくさんが きたら、すぐ いって！', '客人來了就馬上過去！'], ['huang', 'おきゃくさんを またせないで！', '別讓客人等！']],
+      buns: [['wang', 'ぶたまんは こころ！', '豬肉包就是心！']] },
     // what each says during a shift: a miss, a right one now and then, the end
     say: {
       shelf: { who: 'zhang', miss: ['ちがう！', '不對！'], ok: [['よし。', '好。'], ['…うん。', '……嗯。'], ['きれい。', '很整齊。']], end: ['…おつかれさま。たすかった。', '……辛苦了。幫了大忙。'] },
