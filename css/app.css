@@ -738,14 +738,9 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .talk-why { margin: 8px 0 0; font-size: 13px; color: var(--bad, #c0503a); }
 .talk-next { position: absolute; right: 14px; bottom: 8px; font-size: 11px; color: var(--fg-3); animation: talkNext 1s ease-in-out infinite alternate; } @keyframes talkNext { to { transform: translateY(3px); } }
 .sky .way-btn { position: absolute; left: 50%; width: 64px; height: 44px; margin-left: -32px; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; } .sky .way-btn .tag { top: -8px; }
-/* ways one might not find (yWayEdge, 2026-11-19): named always; slid in to the screen's edge while the spot is off it, an arrow its way */
+/* ways one might not find (yWayEdge, 2026-11-19): named always; one near a side slid in to stay whole */
 .sky .way-edge { z-index: 9000; } .sky .way-edge .tag { padding-right: 12px; transform: translate(calc(-50% + var(--nx, 0px)), calc(-50% + var(--ny, 0px))); } .sky .way-edge .tag-name { display: inline; }
 .sky .way-edge:active .tag { transform: translate(calc(-50% + var(--nx, 0px)), calc(-50% + var(--ny, 0px))) scale(.94); }
-.sky .way-edge[data-off] .tag::before { position: absolute; top: 50%; font-size: 18px; font-weight: 700; line-height: 1; color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, .5); transform: translateY(-50%); animation: wayNudge 1.2s ease-in-out infinite; }
-.sky .way-edge[data-off="l"] .tag::before { content: '◀'; right: 100%; margin-right: 3px; --wd: -3px; } .sky .way-edge[data-off="r"] .tag::before { content: '▶'; left: 100%; margin-left: 3px; --wd: 3px; }
-.sky .way-edge[data-off="t"] .tag::before { content: '▲'; left: 50%; top: auto; bottom: 100%; margin-bottom: 2px; transform: translateX(-50%); animation: none; }
-@keyframes wayNudge { 50% { translate: var(--wd, 0) 0; } }
-@media (prefers-reduced-motion: reduce) { .sky .way-edge[data-off] .tag::before { animation: none; } }
 .sky .land .lane { fill: color-mix(in srgb, rgba(232, 214, 168, .95) calc(var(--md, var(--day, 1)) * 100%), rgba(150, 160, 230, .07)); }
 /* the yard's ground (2026-11-14, a ware of kind ground): 雪地 — the lawn, the hills either side and the far slope white (blue in shade,
    moonlit by night), the path a trodden track, the tufts and the side trails snowed over, no flowers */

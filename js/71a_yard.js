@@ -138,9 +138,9 @@ function yCamTo(yard, x, give = 0) {   // the camera there (give: how much of a 
   // stopped, 1.2.1); the zoom into the door reads the camera when it starts (sceneGo)
 }
 // ways one might not find (2026-11-19, the user: in 中華街 and らいらいけん nothing said where to tap to go on): 中華街's 牌樓
-// (往大通り), らいらいけん's door on 大通り, the room's way out (way-edge) — named always, and while the spot is off the screen
-// the sign slid in to its edge (--nx, --ny on the button, not the yard: see above), an arrow the way it is (data-off: l, r, t);
-// one near a side, its spot in sight: only slid in to stay whole
+// (往大通り), らいらいけん's door on 大通り, the room's way out (way-edge) — named always; one near a side, its spot in sight, slid
+// in to stay whole (--nx, --ny on the button, not the yard: see above); one whose spot is off the screen stays there (the user,
+// 2026-11-19: no sign at the edge pointing to it from afar)
 function yWayEdge(yard) {
   const sky = yard.querySelector('.sky'); if (!sky) return;
   const z = ycam.z, W = sky.clientWidth, H = sky.clientHeight;
@@ -148,9 +148,7 @@ function yWayEdge(yard) {
     const t = b.querySelector('.tag'), tw = Number(b.dataset.tw) || (t && t.offsetWidth) || 0; if (!tw) return; b.dataset.tw = tw;
     const X = (parseFloat(b.style.marginLeft) + 32 - ycam.x) * z, Y = (parseFloat(b.style.bottom) + 52) * z;   // the tag's middle: from the screen's middle, over its foot
     const lim = W / 2 - (tw / 2 + 18) * z, top = H - 72 - 17 * z;   // clear of the screen's sides (the arrow beside it) and of the buttons up top
-    const nx = Math.abs(X) > lim ? Math.round((Math.sign(X) * lim - X) / z) : 0, ny = Y > top ? Math.round((Y - top) / z) : 0;
-    const off = X < 8 - W / 2 ? 'l' : X > W / 2 - 8 ? 'r' : ny ? 't' : '';   // the arrow only for a spot out of sight (one near a side: only slid in)
-    if ((b.dataset.off || '') !== off) b.dataset.off = off;
+    const seen = Math.abs(X) <= W / 2 - 8, nx = seen && Math.abs(X) > lim ? Math.round((Math.sign(X) * lim - X) / z) : 0, ny = seen && Y > top ? Math.round((Y - top) / z) : 0;
     if (b.style.getPropertyValue('--nx') !== `${nx}px`) b.style.setProperty('--nx', `${nx}px`);
     if (b.style.getPropertyValue('--ny') !== `${ny}px`) b.style.setProperty('--ny', `${ny}px`);
   });

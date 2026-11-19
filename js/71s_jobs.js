@@ -98,12 +98,15 @@ const JOBS = (() => {
     const near = n === 1000 ? ['いち', 'ひゃく', 'ぜん'] : d === 1 ? ['いち', 'びゃく', 'ぴゃく'] : ['ひゃく', 'びゃく', 'ぴゃく', { 6: 'ろく', 8: 'はち' }[d] || pick(Object.values(PIECE).filter((x) => x !== PIECE[d] && !['ろっ', 'はっ'].includes(x)))];
     return { parts, tiles: shuffle([...new Set([...parts, ...near])]) };
   }
+  // the test site only (2026-11-19, the user had never met a price): every customer asks one, whatever is learned
+  const PRICED = 'nq_work_price', allPriced = () => { try { return onTestSite() && localStorage.getItem(PRICED) === '1'; } catch (e) { return false; } };
+  function priceTool() { const on = !allPriced(); try { localStorage.setItem(PRICED, on ? '1' : ''); } catch (e) { /* no storage */ } return on ? '站櫃：每位客人都問價錢（這台裝置，不看學過沒）' : '站櫃：價格題恢復要先學過いくら、円和價格上的數字'; }
   function counterMake(seen = WORK.kana()) {
     const big = { っ: 'つ', ゃ: 'や', ゅ: 'ゆ', ょ: 'よ' };   // a small kana read as the one seen (せっけん)
     let can = GOODS().filter((g) => [...g[0]].every((c) => seen.has(big[c] || c))); if (can.length < 4) can = GOODS().slice(0, 4);   // never too few to set out
-    const two = learned('ふたつ'), tags = learned('いくら') && learned('えん', '円') ? PRICES.filter(readable) : [], priced = can.filter((g) => tags.includes(g[2]));
+    const all = allPriced(), two = learned('ふたつ'), tags = all ? PRICES : learned('いくら') && learned('えん', '円') ? PRICES.filter(readable) : [], priced = can.filter((g) => tags.includes(g[2]));
     return Array.from({ length: N }, () => {
-      const r = Math.random(), kind = priced.length && r < 0.25 ? 'price' : two && r > 0.75 ? 'two' : 'name';
+      const r = Math.random(), kind = priced.length && (all || r < 0.25) ? 'price' : two && r > 0.75 ? 'two' : 'name';
       const good = pick(kind === 'price' ? priced : can), goods = shuffle([good, ...shuffle(can.filter((g) => g !== good)).slice(0, 3)]);
       const t = { kind, good, goods, who: kind === 'price' ? pick(CUST) : sayer(good[0]) };
       if (kind === 'price') Object.assign(t, spell(good[2]));
@@ -286,5 +289,5 @@ const JOBS = (() => {
   WORK.register('shelf', { run: shelfRun, lines: shelfLines });
   WORK.register('buns', { run: bunsRun, lines: bunsLines });
   WORK.register('counter', { run: counterRun, lines: counterLines });
-  return { shelf: { make: shelfMake, run: shelfRun }, counter: { make: counterMake, run: counterRun, now: () => C, sayer, spell }, buns: { run: bunsRun, now: () => BN } };
+  return { shelf: { make: shelfMake, run: shelfRun }, counter: { make: counterMake, run: counterRun, now: () => C, sayer, spell, allPriced, priceTool }, buns: { run: bunsRun, now: () => BN } };
 })();

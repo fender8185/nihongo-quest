@@ -285,6 +285,16 @@ def test_a_price_asked_shows_the_thing_held_up(b):
       return JSON.stringify({ kind: t.kind, pic: Boolean(document.querySelector('.wk-bub .wk-held svg.pic')), held: held && held.dataset.good === t.good[0], goods: document.querySelectorAll('.wk-good').length, tag: held && held.textContent.includes(t.good[2] + '円') }); })()"""))
     assert r == {'kind': 'price', 'pic': True, 'held': True, 'goods': 1, 'tag': True}, r   # 2026-11-19, the user: the thing known, only it on the counter (no four to choose from), its tag on it
 
+# the test site's switch (2026-11-19, the user had never met a price): every customer asks one, nothing learned needed
+def test_the_test_site_can_ask_only_prices(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(46);
+      const kinds = () => [...new Set(JOBS.counter.make().map((t) => t.kind))].sort().join(), out = { before: kinds() };
+      out.on = JOBS.counter.priceTool(); out.all = kinds(); out.parts = JOBS.counter.make().every((t) => t.parts.join('') === YEN.reading(t.good[2]));
+      out.off = JOBS.counter.priceTool(); out.after = kinds();
+      return JSON.stringify(out); })()"""))
+    assert [r['before'], r['all'], r['after'], r['parts']] == ['name', 'price', 'name', True], r
+    assert '問價錢' in r['on'] and '恢復' in r['off'], r
+
 def test_a_counter_shift_pays(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + COUNTER + """ kana(46); vocab('ふたつ'); vocab('いくら'); nums(); earlier('counter'); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
       location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter'); await wait(1200); const out = { card: Boolean(document.querySelector('.wk-counter')) };

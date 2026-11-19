@@ -66,16 +66,16 @@ def test_the_street_fits_a_phone(b):
 def test_the_ways_on_are_signed_and_on_the_screen(b):
     r = json.loads(b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + """ window.__errs = window.__errs || []; window.addEventListener('error', (e) => __errs.push(String(e.message)));
       const sign = (to) => { const w = document.querySelector(`.way-btn[data-to="${to}"]`); if (!w) return null; const t = w.querySelector('.tag'), q = t.getBoundingClientRect(), n = t.querySelector('.tag-name');
-        return { name: n && getComputedStyle(n).display !== 'none' ? n.textContent : '', inside: q.left >= 0 && q.right <= innerWidth && q.top >= 0 && q.bottom <= innerHeight, off: w.dataset.off || '' }; };
+        return { name: n && getComputedStyle(n).display !== 'none' ? n.textContent : '', inside: q.left >= 0 && q.right <= innerWidth && q.top >= 0 && q.bottom <= innerHeight, slid: w.style.getPropertyValue('--nx') || '0px' }; };
       const go = async (to, place) => { document.querySelector(`.way-btn[data-to="${to}"]`).click(); for (let i = 0; i < 80 && yPlace !== place; i++) await wait(100); await wait(500); return yPlace; };
       const out = {}; location.hash = '#/chinatown'; route(); await wait(600);
       out.china = sign('chinadori'); out.dori = await go('chinadori', 'chinadori');
       out.door = sign('rairai'); out.rairai = await go('rairai', 'rairai');
       out.at = sign('chinadori'); yCamTo(document.querySelector('.yard'), yCamMax()); await wait(300); out.out = sign('chinadori'); out.back = await go('chinadori', 'chinadori');   // in by that door: in sight; the camera over to the room's far side: at the edge
       return JSON.stringify(Object.assign(out, { errs: __errs })); })()""")])[-1])
-    assert r['china'] == {'name': '往大通り', 'inside': True, 'off': 'l'}, r   # the gate off to the left on a phone: its sign at the left edge
-    assert r['door'] == {'name': 'らいらいけん', 'inside': True, 'off': ''}, r   # the door in sight: the sign at it
-    assert r['at'] == {'name': '出去', 'inside': True, 'off': ''} and r['out'] == {'name': '出去', 'inside': True, 'off': 'l'}, r   # the room's door off the screen: its sign at the left edge
+    assert r['china'] == {'name': '往大通り', 'inside': False, 'slid': '0px'}, r   # the gate off to the left on a phone: its sign stays there (2026-11-19, the user: no arrow from afar)
+    assert r['door']['name'] == 'らいらいけん' and r['door']['inside'], r   # the door in sight: the sign at it
+    assert r['at']['name'] == '出去' and r['at']['inside'] and r['out'] == {'name': '出去', 'inside': False, 'slid': '0px'}, r   # in by that door: in sight; the camera over to the far side: the sign at the door
     assert [r['dori'], r['rairai'], r['back'], r['errs']] == ['chinadori', 'rairai', 'chinadori', []], r
 
 def test_the_street_by_night(b):
