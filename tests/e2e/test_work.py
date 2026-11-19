@@ -139,7 +139,7 @@ def test_no_new_version_put_on_while_a_job_card_is_up(b):
 # ---- 站櫃 (らんらん, 周おばあさん): a customer says what they want; hand it over (two of it) ----
 COUNTER = """const vocab = (r) => { const v = REG.vocab.find((x) => x.r === r && (x.lv === 'PRE_N5' || x.lv === 'N5')); state.srs[v.key] = rec(); };
   const num = (w, r) => { const v = REG.vocab.find((x) => x.w === w && x.r === r); state.srs[v.key] = rec(); };   // a number word learned
-  const nums = () => [['一', 'いち'], ['二', 'に'], ['三', 'さん'], ['四', 'よん'], ['五', 'ご'], ['六', 'ろく'], ['七', 'なな'], ['八', 'はち'], ['九', 'きゅう'], ['百', 'ひゃく'], ['千', 'せん'], ['円', 'えん']].forEach(([w, r]) => num(w, r));
+  const nums = () => [['一', 'いち'], ['二', 'に'], ['三', 'さん'], ['四', 'よん'], ['五', 'ご'], ['六', 'ろく'], ['七', 'なな'], ['八', 'はち'], ['九', 'きゅう'], ['十', 'じゅう'], ['百', 'ひゃく'], ['千', 'せん'], ['円', 'えん']].forEach(([w, r]) => num(w, r));
   const serve = async () => { const t = JOBS.counter.now(), g = document.querySelector(`.wk-good[data-good="${t.good[0]}"]`); g.click(); if (t.kind === 'two') { await wait(150); g.click(); } await wait(900); };"""
 
 def test_counter_offers_only_readable_goods(b):
@@ -226,8 +226,9 @@ def test_the_counter_card_fits_a_phone(b):
     r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + HELP + COUNTER + """ kana(46); vocab('いくら'); nums(); earlier('counter');
       location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter'); await wait(1500);
       const c = document.querySelector('.wk-counter .cls-card').getBoundingClientRect(), goods = [...document.querySelectorAll('.wk-good')].map((x) => x.getBoundingClientRect());
-      return JSON.stringify({ bottom: c.bottom <= innerHeight + 1, side: c.left >= 0 && c.right <= innerWidth + 1, goods: goods.length === 4 && goods.every((q) => q.width >= 60 && q.height >= 60) }); })()""")])[-1])
-    assert r == {'bottom': True, 'side': True, 'goods': True}, r
+      return JSON.stringify({ bottom: c.bottom <= innerHeight + 1, side: c.left >= 0 && c.right <= innerWidth + 1, goods: goods.length === 4 && goods.every((q) => q.width >= 60 && q.height >= 60),
+        tags: document.querySelectorAll('.wk-counter .wk-good small').length }); })()""")])[-1])
+    assert r == {'bottom': True, 'side': True, 'goods': True, 'tags': 0}, r   # no prices at the counter (2026-11-20, the user: those are 收銀's)
 
 def test_the_generator_has_the_counter_lines(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ const all = talkLines().map(([w, l]) => w + ':' + l), sayer = JOBS.counter.sayer;
@@ -235,39 +236,43 @@ def test_the_generator_has_the_counter_lines(b):
     assert r == [], r
 
 # ---- 收銀 (ふく, 張さん): 2026-11-19, the user — 張's tasks to 包包子, his shop the money: a thing's price, then two (or one of it
-# twice) and three summed, spelled in pieces; open once いくら, 円 and the numbers are learned ----
+# twice) summed, spelled in pieces; open once いくら, 円 and the numbers are learned. 2026-11-20, the user: prices to the yen (tens
+# and ones), never three things (that is reckoning) ----
 TILL = """const tiles = () => [...document.querySelectorAll('.wk-till .wk-tile')];
   const ready = async () => { for (let i = 0; i < 60 && !(tiles().length && !tiles().some((x) => x.disabled)); i++) await wait(100); };   // the next customer's pieces up
   const pay = async () => { const t = JOBS.till.now(); for (const p of t.parts) { tiles().find((x) => x.dataset.p === p && !x.disabled).click(); await wait(60); } await wait(900); };"""
 
 def test_the_till_opens_once_the_numbers_are_learned(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + COUNTER + """ kana(46); const out = { bare: WORK.can('till') }; vocab('いくら');
-      [['円', 'えん'], ['百', 'ひゃく'], ['千', 'せん'], ['二', 'に'], ['三', 'さん'], ['四', 'よん'], ['五', 'ご'], ['六', 'ろく'], ['七', 'なな'], ['八', 'はち']].forEach(([w, r]) => num(w, r));
+      [['円', 'えん'], ['十', 'じゅう'], ['百', 'ひゃく'], ['千', 'せん'], ['二', 'に'], ['三', 'さん'], ['四', 'よん'], ['五', 'ご'], ['六', 'ろく'], ['七', 'なな'], ['八', 'はち']].forEach(([w, r]) => num(w, r));
       out.one = WORK.can('till'); num('九', 'きゅう'); out.all = WORK.can('till').ok;
       return JSON.stringify(out); })()"""))
     assert not r['bare']['ok'] and '「いくら」' in r['bare']['why'] and '「九」' in r['bare']['why'], r
     assert not r['one']['ok'] and r['one']['why'] == '先學會「九」，就能來收銀。' and r['all'], r
 
-def test_a_till_shift_goes_one_two_three(b):
+def test_a_till_shift_is_four_of_one_then_six_of_two(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + COUNTER + """ kana(46); vocab('ふたつ'); const runs = Array.from({ length: 30 }, () => JOBS.till.make()), all = runs.flat();
       return JSON.stringify({ many: [...new Set(runs.map((t) => t.map((x) => x.things.length).join('')))], kinds: [...new Set(all.map((t) => t.kind))].sort(),
         sums: all.every((t) => t.sum === t.things.reduce((a, g) => a + g[2], 0) && t.parts.join('') === YEN.reading(t.sum)),
         twice: all.filter((t) => t.kind === 'two').every((t) => t.things.length === 2 && t.things[0] === t.things[1]),
         apart: all.filter((t) => t.kind === 'sum').every((t) => new Set(t.things).size === t.things.length) }); })()"""))
-    assert r == {'many': ['1112222333'], 'kinds': ['one', 'sum', 'two'], 'sums': True, 'twice': True, 'apart': True}, r
+    assert r == {'many': ['1111222222'], 'kinds': ['one', 'sum', 'two'], 'sums': True, 'twice': True, 'apart': True}, r
 
-# the pieces: the thousands (せん, に＋せん, さん＋ぜん), the hundreds (さんびゃく, ろっぴゃく, はっぴゃく), えん — among ひゃく's other sounds,
-# せん／ぜん, ろく by ろっ, はち by はっ, いち before a bare ひゃく or せん
+# the pieces: the thousands (せん, に＋せん, さん＋ぜん), the hundreds (さんびゃく, ろっぴゃく, はっぴゃく), the tens (はち＋じゅう), the ones
+# (4: よ), えん — among ひゃく's other sounds, せん／ぜん, ろく by ろっ, はち by はっ (はっ by はち), いち before a bare ひゃく, せん or じゅう; every
+# price and sum ふく's shelves come to, and none of those sums ends in a 4, 7 or 9
 def test_every_sum_is_spelled_with_its_sound_changes(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const sp = JOBS.till.spell, ns = Array.from({ length: 40 }, (_, i) => (i + 1) * 100), has = (n, ...ps) => ps.every((p) => sp(n).tiles.includes(p));
-      const bad = ns.filter((n) => { const t = sp(n), near = new Set(t.tiles.filter((x) => !t.parts.includes(x))); return t.parts.join('') !== YEN.reading(n) || t.tiles.length !== t.parts.length + near.size || t.tiles.length > 9 || !t.parts.every((p) => t.tiles.includes(p)); });
-      return JSON.stringify({ bad, parts: [1700, 3200, 2200, 600].map((n) => sp(n).parts.join('|')),
-        near: [has(600, 'ろっ', 'ろく', 'ぴゃく', 'ひゃく', 'びゃく'), has(800, 'はち'), has(100, 'いち'), has(1000, 'いち', 'ぜん'), has(3200, 'せん'), has(1700, 'ぜん')] }); })()"""))
-    assert r == {'bad': [], 'parts': ['せん|なな|ひゃく|えん', 'さん|ぜん|に|ひゃく|えん', 'に|せん|に|ひゃく|えん', 'ろっ|ぴゃく|えん'], 'near': [True] * 6}, r
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const sp = JOBS.till.spell, has = (n, ...ps) => ps.every((p) => sp(n).tiles.includes(p)), ps = TOWN.WORK.fuku.map((g) => g[2]);
+      const ns = [...new Set([...Array.from({ length: 40 }, (_, i) => (i + 1) * 100), ...Array.from({ length: 99 }, (_, i) => i + 1), ...ps, ...ps.flatMap((a) => ps.map((c) => a + c))])];
+      const bad = ns.filter((n) => { const t = sp(n), near = t.tiles.filter((x) => !t.parts.includes(x)); return t.parts.join('') !== YEN.reading(n) || new Set(near).size !== near.length || t.tiles.length > 12 || !t.parts.every((p) => t.tiles.includes(p)); });
+      return JSON.stringify({ bad, parts: [1700, 3200, 600, 198, 2360, 14].map((n) => sp(n).parts.join('|')), ones: [...new Set(ps.flatMap((a) => ps.map((c) => (a + c) % 10)))].sort(),
+        near: [has(600, 'ろっ', 'ろく', 'ぴゃく', 'ひゃく', 'びゃく'), has(800, 'はち'), has(100, 'いち'), has(1000, 'いち', 'ぜん'), has(3200, 'せん'), has(1700, 'ぜん'), has(10, 'いち'), has(180, 'はっ', 'いち'), has(4, 'よん')] }); })()"""))
+    assert r == {'bad': [], 'parts': ['せん|なな|ひゃく|えん', 'さん|ぜん|に|ひゃく|えん', 'ろっ|ぴゃく|えん', 'ひゃく|きゅう|じゅう|はち|えん', 'に|せん|さん|びゃく|ろく|じゅう|えん', 'じゅう|よ|えん'],
+                 'ones': [0, 3, 5, 6, 8], 'near': [True] * 9}, r
 
 def test_a_sum_is_spelled_piece_by_piece(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + COUNTER + TILL + """ kana(46); vocab('いくら'); nums(); earlier('till'); window.__said = []; window.speakAs = (w, l) => { __said.push(w + ':' + l); return Promise.resolve(); };
-      state.work.res['2026-11-10'] = { place: 'till', done: 7, score: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 } };   // the eighth customer: three things
+      state.work.res['2026-11-10'] = { place: 'till', done: 7, score: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 } };   // the eighth customer: two things
       location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'till'); await ready();
       const t = JOBS.till.now(), out = { kind: t.kind, things: document.querySelectorAll('.wk-till .wk-goods .wk-good').length, tags: [...document.querySelectorAll('.wk-till .wk-good small')].reduce((a, x) => a + parseInt(x.textContent, 10), 0) === t.sum,
         asked: document.querySelector('.wk-till .wk-bub').textContent.includes('ぜんぶで いくらですか'), slots: document.querySelectorAll('.wk-till .wk-spell i').length === t.parts.length };
@@ -276,7 +281,7 @@ def test_a_sum_is_spelled_piece_by_piece(b):
       for (const p of t.parts) { tiles().find((x) => x.dataset.p === p && !x.disabled).click(); await wait(60); }
       await wait(400); out.said = __said.includes('hero:ぜんぶで ' + YEN.reading(t.sum) + 'です。'); out.misses = WORK.today().score[7];
       return JSON.stringify(out); })()"""))
-    assert r == {'kind': 'sum', 'things': 3, 'tags': True, 'asked': True, 'slots': True, 'hint': True, 'said': True, 'misses': 2}, r
+    assert r == {'kind': 'sum', 'things': 2, 'tags': True, 'asked': True, 'slots': True, 'hint': True, 'said': True, 'misses': 2}, r
 
 def test_a_till_shift_pays(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + COUNTER + TILL + """ kana(46); vocab('ふたつ'); vocab('いくら'); nums(); earlier('till'); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
@@ -286,7 +291,7 @@ def test_a_till_shift_pays(b):
       return JSON.stringify(Object.assign(out, { yen: t.yen, grade: t.grade, place: t.place })); })()"""))
     assert r == {'card': True, 'yen': 150, 'grade': 'S', 'place': 'till'}, r
 
-# the till's customers wait as long as their things take: 25 s for one, 35 for two, 45 for three; at none they go, the sum shown whole
+# the till's customers wait as long as their things take: 30 s for one, 45 for two; at none they go, the sum shown whole
 def test_a_till_customer_out_of_patience_goes(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + COUNTER + TILL + """ kana(46); vocab('いくら'); nums(); earlier('till'); window.__said = []; window.speakAs = (w, l) => { __said.push(w + ':' + l); return Promise.resolve(); };
       location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'till'); await ready();
@@ -301,11 +306,12 @@ def test_a_till_customer_out_of_patience_goes(b):
 
 def test_the_till_card_fits_a_phone(b):
     r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + HELP + COUNTER + TILL + """ kana(46); vocab('いくら'); nums(); earlier('till');
-      state.work.res['2026-11-10'] = { place: 'till', done: 9, score: Object.fromEntries(Array.from({ length: 9 }, (_, k) => [k, 0])) };   // three things, the most pieces
+      state.work.res['2026-11-10'] = { place: 'till', done: 9, score: Object.fromEntries(Array.from({ length: 9 }, (_, k) => [k, 0])) };   // two things
+      TOWN.WORK.fuku = [['こめ', '米', 1480], ['ぎょうざ', '餃子', 880]];   // 2,360: the most pieces
       location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'till'); await ready(); await wait(300);
       const c = document.querySelector('.wk-till .cls-card'), q = c.getBoundingClientRect(), ts = tiles().map((x) => x.getBoundingClientRect());
-      return JSON.stringify({ bottom: q.bottom <= innerHeight + 1, side: q.left >= 0 && q.right <= innerWidth + 1, tiles: ts.every((t) => t.height >= 36 && t.right <= q.right && t.bottom <= innerHeight) }); })()""")])[-1])
-    assert r == {'bottom': True, 'side': True, 'tiles': True}, r
+      return JSON.stringify({ n: ts.length, bottom: q.bottom <= innerHeight + 1, side: q.left >= 0 && q.right <= innerWidth + 1, tiles: ts.every((t) => t.height >= 36 && t.right <= q.right && t.bottom <= innerHeight) }); })()""")])[-1])
+    assert r == {'n': 12, 'bottom': True, 'side': True, 'tiles': True}, r
 
 # the test site's switch (2026-11-19, the user had never met a price): 收銀 open whatever is learned
 def test_the_test_site_can_open_the_till(b):
@@ -316,11 +322,11 @@ def test_the_test_site_can_open_the_till(b):
 
 def test_the_generator_has_the_till_lines(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ const all = talkLines().map(([w, l]) => w + ':' + l);
-      return JSON.stringify(['kaneda:これ、いくらですか。', 'kaneda:ぜんぶで いくらですか。', 'mike:これを ふたつ ください。', 'hero:はっぴゃくえんです。', 'hero:ぜんぶで せんななひゃくえんです。',
-        'hero:ぜんぶで さんぜんにひゃくえんです。', 'zhang:…ゆっくりで いい。まちがえないで。', 'zhang:よし。'].filter((x) => !all.includes(x))); })()"""))
+      return JSON.stringify(['kaneda:これ、いくらですか。', 'kaneda:ぜんぶで いくらですか。', 'mike:これを ふたつ ください。', 'hero:きゅうじゅうはちえんです。', 'hero:ぜんぶで にせんさんびゃくろくじゅうえんです。',
+        'hero:ぜんぶで ひゃくきゅうじゅうろくえんです。', 'zhang:…ゆっくりで いい。まちがえないで。', 'zhang:よし。'].filter((x) => !all.includes(x))); })()"""))
     assert r == [], r
 
-# ---- 包包子 (福明, 王): 2026-11-15, the user — a close-up of the hero making the bun; six cells of hiragana, a kana said, tap it: the
+# ---- 包包子 (福明, 王): 2026-11-15, the user — a close-up of the hero making the bun; six cells of kana, a kana said, tap it: the
 # bun one step on, that cell a new kana, the next said; thirty taps = five buns; all right in time, five buns in the steamer ----
 BUNS = """const make = async () => { location.hash = '#/chinatown'; route(); await wait(300); earlier('buns'); WORK.start(yard(), 'buns'); await wait(300); };
   const idle = async () => { for (let i = 0; i < 60 && JOBS.buns.now() && JOBS.buns.now().wait; i++) await wait(50); };
@@ -359,10 +365,10 @@ def test_three_taps_are_one_task_and_thirty_pay(b):
 
 def test_a_shift_resumed_starts_at_its_tap(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + BUNS + """ kana(46); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
-      state.work.res['2026-11-10'] = { place: 'buns', done: 5, score: { 0: 0, 1: 0, 2: 1, 3: 0, 4: 1 } }; await make();
+      state.work.res['2026-11-10'] = { place: 'buns', done: 7, score: { 0: 0, 1: 0, 2: 1, 3: 0, 4: 3, 5: 3, 6: 1 } }; await make();   // a perfect bun, an askew one, a late one, half of one
       return JSON.stringify({ tap: JOBS.buns.now().tap, step: step(), askew: document.querySelector('.wk-closeup').classList.contains('flaw'), steamer: document.querySelectorAll('.wk-steamer .wk-done').length,
-        shiny: document.querySelectorAll('.wk-steamer .wk-done.ok').length, clock: getComputedStyle(document.querySelector('.wk-clock')).display !== 'none' }); })()"""))
-    assert r == {'tap': 15, 'step': 3, 'askew': True, 'steamer': 2, 'shiny': 1, 'clock': True}, r
+        shiny: document.querySelectorAll('.wk-steamer .wk-done.ok').length, ugly: document.querySelectorAll('.wk-steamer .wk-done.ugly').length, clock: getComputedStyle(document.querySelector('.wk-clock')).display !== 'none' }); })()"""))
+    assert r == {'tap': 21, 'step': 3, 'askew': True, 'steamer': 3, 'shiny': 1, 'ugly': 1, 'clock': True}, r
 
 def test_all_right_in_time_fills_the_steamer(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + BUNS + """ kana(46); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
@@ -378,19 +384,21 @@ def test_a_miss_keeps_the_steamer_plain(b):
     assert r == {'gold': False}, r
 
 # 2026-11-19, the user: every job timed, as 外場 is — each bun on its own clock (the bar by the 🔊, from its first step): out, the
-# bun goes into the steamer askew, the rest of its tasks lost, 王's おそい！, and the next bun is begun; no gold for that shift
-def test_a_bun_past_its_clock_goes_in_askew_and_the_next_begins(b):
+# rest of its tasks lost, 王's おそい！, the bun a sorry lump on the board (2026-11-20, the user: an ugly bun for one not finished)
+# that goes into the steamer so, and the next bun is begun; no gold for that shift
+def test_a_bun_past_its_clock_goes_in_ugly_and_the_next_begins(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + BUNS + """ kana(46); window.speak = () => Promise.resolve(); window.__said = []; window.speakAs = (w, l) => { __said.push(w + ':' + l); return Promise.resolve(); };
       await make(); const bar = () => parseFloat(document.querySelector('.wk-clock').style.getPropertyValue('--p'));
       await tap(true); await tap(true); await wait(400); const out = { running: bar() < 1 && bar() > 0.9 };
       JOBS.pat.scale = 0.01; for (let i = 0; i < 40 && JOBS.buns.now() && JOBS.buns.now().tap < 6; i++) await wait(50); JOBS.pat.scale = 1;
-      Object.assign(out, { tap: JOBS.buns.now().tap, score: Object.assign({}, WORK.today().score), said: __said.includes('wang:おそい！'), steamer: document.querySelectorAll('.wk-steamer .wk-done').length,
-        shiny: document.querySelectorAll('.wk-steamer .wk-done.ok').length, step: step(), red: document.querySelector('.wk-clock').dataset.mood === 'mad' });
-      await idle(); await wait(300); out.fresh = bar() > 0.95 && document.querySelector('.wk-clock').dataset.mood === 'ok';
+      Object.assign(out, { tap: JOBS.buns.now().tap, score: Object.assign({}, WORK.today().score), said: __said.includes('wang:おそい！'), lump: JOBS.buns.now().lump && document.querySelector('.wk-closeup').classList.contains('lump'),
+        steamer: document.querySelectorAll('.wk-steamer .wk-done').length, red: document.querySelector('.wk-clock').dataset.mood === 'mad' });
+      await idle(); await wait(300); Object.assign(out, { fresh: bar() > 0.95 && document.querySelector('.wk-clock').dataset.mood === 'ok', step: step(), board: !document.querySelector('.wk-closeup').classList.contains('lump'),
+        ugly: document.querySelectorAll('.wk-steamer .wk-done.ugly').length, after: document.querySelectorAll('.wk-steamer .wk-done').length });
       for (let i = 6; i < 30; i++) await tap(true); await wait(300);
       Object.assign(out, { gold: document.querySelector('.wk-buns .cls-card').classList.contains('wk-shine-all'), grade: WORK.today().grade });
       return JSON.stringify(out); })()"""))
-    assert r == {'running': True, 'tap': 6, 'score': {'0': 3, '1': 3}, 'said': True, 'steamer': 1, 'shiny': 0, 'step': 0, 'red': True, 'fresh': True, 'gold': False, 'grade': 'B'}, r
+    assert r == {'running': True, 'tap': 6, 'score': {'0': 3, '1': 3}, 'said': True, 'lump': True, 'steamer': 0, 'red': True, 'fresh': True, 'step': 0, 'board': True, 'ugly': 1, 'after': 1, 'gold': False, 'grade': 'B'}, r
 
 def test_buns_only_while_wang_is_there(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(46); TOWNEV.clock = { h: 21, day: new Date(2026, 10, 10) }; const night = WORK.can('buns');
@@ -413,18 +421,17 @@ def test_buns_open_at_five_kana_on_a_board_of_four(b):
       return JSON.stringify(Object.assign(out, { errs: __errs })); })()"""))
     assert r == {'can': True, 'four': True, 'still': True, 'six': 6, 'errs': []}, r
 
-# 張's labels that were words: once four kana-only 入門 words are learned, now and then (never twice running) a word is said and the
-# board is four word cards for it; tapped, the kana board as it was
-def test_a_word_step_puts_up_four_word_cards(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + BUNS + """ kana(46); const ws = ['これ', 'それ', 'あれ', 'どれ', 'ここ']; words(ws);
+# 2026-11-20, the user: 包包子 back to kana only (張's words that came in with test.31 out again), hiragana and katakana both — the
+# board from every 清音 seen, a kana never beside its other script (あ／ア sound the same), never a word, however many are learned
+def test_the_bun_board_has_hiragana_and_katakana_and_no_words(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + BUNS + """ REG.kana.filter((x) => x.seion).forEach((x) => { state.srs[x.key] = rec(); }); words(['これ', 'それ', 'あれ', 'どれ', 'ここ']);
       window.__said = []; window.speak = (t) => { __said.push(t); return Promise.resolve(); }; window.speakAs = () => Promise.resolve();
-      await make(); let n = JOBS.buns.now();
-      for (let i = 0; i < 29 && !n.cards; i++) { await tap(true); await idle(); n = JOBS.buns.now(); }
-      const keys = [...document.querySelectorAll('.wk-key')].map((x) => x.dataset.k), before = n.board.join(), out = { cards: Boolean(n.cards), four: keys.length === 4 && keys.includes(n.target) && keys.every((k) => ws.includes(k)),
-        said: __said[__said.length - 1] === n.target, wide: document.querySelector('.wk-keys').classList.contains('words') };
-      await tap(true); await idle(); const m = JOBS.buns.now(); out.back = !m.cards && m.board.join() === before && document.querySelectorAll('.wk-key').length === 6;
-      return JSON.stringify(out); })()"""))
-    assert r == {'cards': True, 'four': True, 'said': True, 'wide': True, 'back': True}, r
+      const kata = (c) => c >= 'ァ' && c <= 'ヶ', hira = (c) => (kata(c) ? String.fromCharCode(c.charCodeAt(0) - 0x60) : c), boards = [];
+      await make(); for (let i = 0; i < 24; i++) { await idle(); boards.push([...document.querySelectorAll('.wk-key')].map((x) => x.dataset.k)); await tap(true); }
+      const all = boards.flat();
+      return JSON.stringify({ six: boards.every((k) => k.length === 6), kata: all.some(kata), hira: all.some((c) => !kata(c)), kana: all.every((c) => c.length === 1),
+        apart: boards.every((k) => new Set(k.map(hira)).size === 6 && !(k.map(hira).includes('お') && k.map(hira).includes('を'))), saidKata: __said.some(kata), words: __said.filter((t) => t.length > 1) }); })()"""))
+    assert r == {'six': True, 'kata': True, 'hira': True, 'kana': True, 'apart': True, 'saidKata': True, 'words': []}, r
 
 # ---- the final review's findings (2026-11-15) ----
 def test_a_shift_closed_at_its_last_moment_is_still_paid(b):

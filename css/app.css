@@ -580,12 +580,13 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 /* a price spelled (2026-11-19): the pieces tapped so far, a blank for each to come; a tile used: greyed */
 /* 收銀 (2026-11-19): the customer's things on the counter, one to three with their tags; the sum spelled in pieces */
 .wk-till .cls-card { background: #f4f1e2; color: #2b2b33; border-bottom: 10px solid #2f6a4a; }
-.wk-goods.n1 { grid-template-columns: minmax(0, 160px); justify-content: center; } .wk-goods.n3 { grid-template-columns: repeat(3, 1fr); }
+.wk-goods.n1 { grid-template-columns: minmax(0, 160px); justify-content: center; }
 span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-weight: 700; color: #c8322a; }
 .wk-spell { flex-basis: 100%; display: flex; justify-content: center; align-items: flex-end; gap: 4px; min-height: 34px; margin: 0 0 4px; font-size: 20px; font-weight: 700; }
 .wk-spell b { padding: 1px 6px; border-radius: 8px; background: #fff3d6; color: #6a3a1c; } .wk-spell i { width: 40px; height: 28px; border-bottom: 3px solid #c9b48a; }
 .wk-spell b:last-of-type { animation: wk-pop .25s ease-out; } @keyframes wk-pop { from { transform: scale(.7); } }
 .wk-tile { min-height: 42px; min-width: 52px; padding: 0 12px; font-size: 18px; } .wk-tile:disabled { opacity: .35; }
+.wk-till .wk-opts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); } .wk-till .wk-spell { grid-column: 1 / -1; } .wk-till .wk-tile { min-width: 0; padding: 0 4px; }   /* up to twelve: three rows of four */
 .wk-me { margin: 8px 0 0; min-height: 1.4em; text-align: center; display: grid; gap: 1px; } .wk-me b { font-size: 15px; color: #2f7a6a; } .wk-me span { font-size: 12px; opacity: .65; }
 /* 包包子: the bun as far as it has come and 王's word (its picture beside it till known); six pictures to choose from; a perfect bun
    out of the steamer in a burst of gold, a perfect shift more of it */
@@ -594,16 +595,17 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .wk-closeup.wk-shine::before { content: ''; position: absolute; inset: -40%; z-index: 0; background: repeating-conic-gradient(from 0deg, rgba(255, 214, 90, .7) 0 8deg, rgba(255, 214, 90, 0) 8deg 20deg); animation: wkRays 1.1s ease-out forwards; pointer-events: none; }
 .wk-closeup svg { position: relative; z-index: 1; } .wk-hand.go { animation: wkPress .28s ease-out; transform-box: fill-box; transform-origin: center; } @keyframes wkPress { 40% { transform: translate(-14px, 14px) scale(.9); } }
 .wk-steamer .wk-done.ok { filter: drop-shadow(0 0 3px #f6e08a); }
+.wk-closeup.lump .wk-bunnow { animation: wkSlump .5s ease-out; transform-box: fill-box; transform-origin: 50% 100%; } @keyframes wkSlump { from { transform: scaleY(1.3); } 55% { transform: scale(1.1, .82); } }   /* a bun out of time sags */
 .wk-krow { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; } .wk-krow .wk-ear { flex: none; width: 42px; height: 42px; min-width: 0; margin: 0; padding: 0; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 2px 0 #d8c8a8; font-size: 20px; } .wk-clock { flex: 1; height: 10px; border-radius: 5px; background: #e6d6b8; overflow: hidden; }
 /* the clocks (2026-11-19, every job timed as 外場 is): a bun's by the 🔊, a customer's under them — --p what is left, coloured by 外場's moods */
 .wk-clock, .wk-cust { --pc: #4fae5a; } .wk-clock[data-mood="meh"], .wk-cust[data-mood="meh"] { --pc: #f0a92a; } .wk-clock[data-mood="mad"], .wk-cust[data-mood="mad"] { --pc: #e0402f; }
 .wk-clock i, .wk-pat i { display: block; height: 100%; width: calc(100% * var(--p, 1)); background: var(--pc); transition: background-color .3s; }
 .wk-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; } .wk-key { min-height: 56px; border: 0; border-radius: 12px; background: #fff; box-shadow: 0 3px 0 #d8c8a8; font: inherit; font-size: 30px; font-weight: 700; color: #2b2b33; cursor: pointer; }
-.wk-keys.four, .wk-keys.words { grid-template-columns: repeat(2, 1fr); } .wk-keys.words .wk-key { font-size: 24px; }   /* under twelve kana seen; a word step's four cards */
+.wk-keys.four { grid-template-columns: repeat(2, 1fr); }   /* under twelve kana seen */
 .wk-key:active { transform: translateY(2px); box-shadow: 0 1px 0 #d8c8a8; } .wk-key.wk-bad { animation: shake .3s ease; } .wk-key.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); }
 @keyframes wkRays { 0% { transform: scale(.3) rotate(0); opacity: 0; } 30% { opacity: 1; } 100% { transform: scale(1.15) rotate(40deg); opacity: 0; } }
 .wk-buns .cls-card.wk-shine-all { animation: wkGold 1.6s ease-out; } @keyframes wkGold { 0%, 100% { box-shadow: 0 12px 40px rgba(0, 0, 0, .35); } 40% { box-shadow: 0 0 0 6px #f6e08a, 0 0 60px 20px rgba(255, 214, 90, .9); } }
-@media (prefers-reduced-motion: reduce) { .wk-closeup.wk-shine::before { animation: none; opacity: .6; } .wk-buns .cls-card.wk-shine-all, .wk-key.wk-bad, .wk-hand.go { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .wk-closeup.wk-shine::before { animation: none; opacity: .6; } .wk-buns .cls-card.wk-shine-all, .wk-key.wk-bad, .wk-hand.go, .wk-closeup.lump .wk-bunnow { animation: none; } }
 @media (prefers-reduced-motion: reduce) { .wk-cust { transition: none; } .wk-grr { animation: none; } .wk-good.wk-bad, .wk-opt.wk-bad { animation: none; } }
 .wk-board .cls-card { background: #fbf3e2; color: #2b2b33; border-top: 8px solid #c8322a; } .wk-bhead { display: grid; gap: 2px; padding-right: 40px; } .wk-bhead b { font-size: 21px; color: #a82828; } .wk-bhead span { font-size: 13px; color: #8a7a6e; }
 .wk-jobs { list-style: none; margin: 12px 0 8px; padding: 0; display: grid; gap: 6px; } .wk-job { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; background: rgba(138, 122, 110, .1); color: #8a7a6e; } .wk-job.ok { background: rgba(47, 122, 106, .12); color: #2b2b33; } .wk-job.ok span:last-child { color: #2f7a6a; font-weight: 700; } .wk-today { margin: 6px 0 4px; font-weight: 700; }

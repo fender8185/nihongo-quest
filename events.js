@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 82 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 83 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2724,11 +2724,10 @@ const TOWN = {
     goods: [['かさ', '傘', 500], ['すし', '寿司', 800], ['いす', '椅子', 1000], ['こけし', 'こけし', 600], ['とけい', '時計', 900], ['はし', '箸', 200], ['ほん', '本', 700],
       ['ぼうし', '帽子', 400], ['くつ', '靴', 900], ['かばん', 'かばん', 800], ['かぎ', '鍵', 300], ['ちず', '地図', 200], ['かがみ', '鏡', 600], ['はさみ', 'はさみ', 300],
       ['さら', '皿', 400], ['なべ', '鍋', 1000], ['せっけん', '石けん', 100], ['ふで', '筆', 500], ['あめ', '飴', 100], ['パンダ', 'パンダ', 700]],
-    // ふく's shelves (收銀, 2026-11-19): [name, its drawing (PICS), price] — hundreds, one bag of rice past a thousand, so three of them
-    // can come to さんぜん
-    fuku: [['たまご', '卵', 300], ['とうふ', '豆腐', 100], ['しょうゆ', '醤油', 400], ['ぎゅうにゅう', '牛乳', 200], ['おちゃ', 'お茶', 200], ['こめ', '米', 1500],
-      ['さとう', '砂糖', 300], ['しお', '塩', 100], ['にく', '肉', 900], ['さかな', '魚', 600], ['みかん', 'みかん', 400], ['バナナ', 'バナナ', 200],
-      ['ラーメン', 'ラーメン', 500], ['しゅうまい', 'しゅうまい', 700], ['はるまき', 'はるまき', 600], ['ぎょうざ', '餃子', 800]] },
+    // ふく's shelves (收銀, 2026-11-19): [name, its drawing (PICS), price] — one bag of rice past a thousand
+    fuku: [['たまご', '卵', 248], ['とうふ', '豆腐', 98], ['しょうゆ', '醤油', 328], ['ぎゅうにゅう', '牛乳', 218], ['おちゃ', 'お茶', 150], ['こめ', '米', 1480],
+      ['さとう', '砂糖', 198], ['しお', '塩', 105], ['にく', '肉', 680], ['さかな', '魚', 450], ['みかん', 'みかん', 380], ['バナナ', 'バナナ', 158],
+      ['ラーメン', 'ラーメン', 498], ['しゅうまい', 'しゅうまい', 645], ['はるまき', 'はるまき', 398], ['ぎょうざ', '餃子', 880]] },   // to the yen (2026-11-20): ones only 0, 5, 8 — two summed never end in 4 (よえん), 7 or 9
   YATAI: {
     ryuho: { name: '龍鳳飯店の店長', kana: 'りゅうほうはんてんの てんちょう', role: '中華料理店', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'smile', beard: 'none', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'chefcap' } },   // 中華街 (2026-11-14)
     ojisan: { name: 'やきそば屋のおじさん', kana: 'やきそばやのおじさん', role: '炒麵、牛肉串、奶油馬鈴薯', look: { face: 'round', skin: '#e8bd98', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'happi', top: '#d0574b', bottomStyle: 'shorts', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: { head: 'nejiri' } },
