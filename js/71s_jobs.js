@@ -122,7 +122,9 @@ const JOBS = (() => {
     function show() {
       C = tasks[k]; miss = 0; got = 0; at = 0; busy = true; if (!el('.wk-goods')) return;
       el('.wk-n').textContent = `${k + 1}／${N}`;
-      el('.wk-goods').innerHTML = C.goods.map((g) => `<button type="button" class="wk-good${C.kind === 'price' && g === C.good ? ' held' : ''}" data-good="${esc(g[0])}">${goodPic(g[1])}<b lang="ja">${esc(g[0])}</b><small>${g[2]}円</small></button>`).join('');
+      const one = C.kind === 'price';   // its price asked: only the thing held up on the counter, its tag on it (2026-11-19, the user: it is known, no four to choose from)
+      el('.wk-goods').classList.toggle('one', one);
+      el('.wk-goods').innerHTML = (one ? [C.good] : C.goods).map((g) => `<button type="button" class="wk-good${one ? ' held' : ''}" data-good="${esc(g[0])}">${goodPic(g[1])}<b lang="ja">${esc(g[0])}</b><small>${g[2]}円</small></button>`).join('');
       el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').innerHTML = `<span class="kr-face">${TOWNEV.face(C.who)}</span><p class="wk-bub"></p>`;
       said(me(ME.hi), 800).then(() => {   // the customer asks, once いらっしゃいませ is said
         if (!el('.wk-cust') || C !== tasks[k] || !ctx.on()) return;

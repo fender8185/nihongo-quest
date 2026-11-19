@@ -282,8 +282,8 @@ def test_a_price_asked_shows_the_thing_held_up(b):
       location.hash = '#/chinadori'; route(); await wait(300); const R = Math.random; Math.random = () => 0.1; WORK.start(yard(), 'counter'); Math.random = R;
       for (let i = 0; i < 30 && !document.querySelector('.wk-cust.on'); i++) await wait(100);
       const t = JOBS.counter.now(), held = document.querySelector('.wk-good.held');
-      return JSON.stringify({ kind: t.kind, pic: Boolean(document.querySelector('.wk-bub .wk-held svg.pic')), held: held && held.dataset.good === t.good[0] }); })()"""))
-    assert r == {'kind': 'price', 'pic': True, 'held': True}, r
+      return JSON.stringify({ kind: t.kind, pic: Boolean(document.querySelector('.wk-bub .wk-held svg.pic')), held: held && held.dataset.good === t.good[0], goods: document.querySelectorAll('.wk-good').length, tag: held && held.textContent.includes(t.good[2] + '円') }); })()"""))
+    assert r == {'kind': 'price', 'pic': True, 'held': True, 'goods': 1, 'tag': True}, r   # 2026-11-19, the user: the thing known, only it on the counter (no four to choose from), its tag on it
 
 def test_a_counter_shift_pays(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + COUNTER + """ kana(46); vocab('ふたつ'); vocab('いくら'); nums(); earlier('counter'); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
