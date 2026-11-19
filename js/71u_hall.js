@@ -16,7 +16,7 @@
 // the time's greeting, answered in kind) → to a free table the hero stands at (こちらへ どうぞ) → sits and calls (すみません！ →
 // はい！) → perhaps asks first (「ぎょうざ、ありますか」: はい、あります, or すみません、ありません for what the wall's menu has not;
 // 「おすすめは どれですか」: これです, the board in the hero's hand, and that is what they have) → orders, by the dish's name heard
-// (its picture picked) or by これ／それ／あれ (the table's menu, the hero's board, the poster) → perhaps おみず ください while it
+// (its picture picked) or by これ／それ／あれ (the menu in their hands, the hero's board, the poster) → perhaps おみず ください while it
 // cooks → 黄 calls it up by name (「ぎょうざ、あがり！」, the bell), the plate he called picked off the pass → to their table (おまたせしました;
 // the wrong table: ちがいます → すみません) → eats, and perhaps: おてあらいは どこですか (from a table far from it: あそこです),
 // とても おいしいです！ (ありがとうございます), water, the chopsticks dropped (どうぞ → ありがとう → ごゆっくり どうぞ) → to the
@@ -261,15 +261,14 @@ const HALL = (() => {
   function ask(kind, c, table) {
     const own = !c.caller && !['sorry', 'pass'].includes(kind);   // the customer's own word to the hero (not 黄's, not the phone's)
     if (own && c.mood === 'mad' && !c.sorried) { c.after = { kind, table }; kind = 'late'; }   // cross: their complaint first
-    const s = L(); let right, opts, line = SIMPLE[kind] ? s.cust[SIMPLE[kind]] : null, word = '', who = c.voice;
+    const s = L(); let right, opts, line = SIMPLE[kind] ? s.cust[SIMPLE[kind]] : null, word = '', who = c.voice, near = '';
     if (kind === 'late') { line = learned('おそい', '遅い') ? s.cust.slow : s.cust.hey; right = s.me.sorry; opts = shuffle([right, ...s.not.late]).map((o) => o[0]); }
     else if (kind === 'hello') { line = s.hello[hour()]; right = line; opts = s.hello.map((l) => l[0]); }
     else if (kind === 'door') { line = s.cust.may; right = roomFor(c) ? s.me.come : s.me.full; opts = shuffle([s.me.come, s.me.full, pick(s.not.door)]).map((o) => o[0]); }   // a table for them, or a full house
-    else if (kind === 'order') {   // これ by the customer (the table's menu), それ by the hero (the board in his hand), あれ across the room (the poster)
-      const near = pick(DISHES().filter((d) => d !== 'マーボーどうふ' && d !== H.board));
-      const where = { これ: `桌上的菜單：${near}`, それ: `你手上的推薦牌：${H.board}`, あれ: '牆上的海報：マーボーどうふ' };
+    else if (kind === 'order') {   // これ by the customer (the menu in their hands), それ by the hero (the board in his), あれ across the room (the poster): all three drawn while it is up (props)
+      near = pick(DISHES().filter((d) => d !== 'マーボーどうふ' && d !== H.board));
+      const where = { これ: `客人手上的菜單：${near}`, それ: `你手上的推薦牌：${H.board}`, あれ: '牆上的海報：マーボーどうふ' };
       word = pick(['これ', 'それ', 'あれ']); line = s.cust.point[word]; right = [where[word]]; opts = [where.これ, where.それ, where.あれ];
-      heroPop(`おすすめ：${H.board}`);
     } else if (kind === 'dish') {   // a dish by its name: its picture (and its name) picked
       const d = c.want || (api.force && api.force.dish) || pick(DISHES()); line = s.cust.dish[d]; right = [d]; opts = three(d, DISHES());
     } else if (kind === 'pass') {   // 黄 calls one up by its name: the plate picked (pictures only)
@@ -282,8 +281,7 @@ const HALL = (() => {
     } else if (kind === 'phone') { line = null; right = s.me.phone; opts = shuffle([right, ...s.not.phone]).map((o) => o[0]); }
     else if (kind === 'phone2') { line = c.wrong ? s.call.wrong : s.call.right; right = c.wrong ? s.me.no : roomFor(c) ? s.me.come : s.me.full; opts = shuffle([s.me.come, s.me.full, s.me.no]).map((o) => o[0]); }   // may they come now: a table free, or a full house
     else { right = s.me[kind]; opts = shuffle([right, ...shuffle(s.not[kind]).slice(0, 2)]).map((o) => o[0]); }
-    if (kind === 'osusume') heroPop(`おすすめ：${H.board}`);
-    H.ask = { kind, c, table, word, who, right: right[0], opts, line, wrong: 0, t0: performance.now() };
+    H.ask = { kind, c, table, word, who, near, right: right[0], opts, line, wrong: 0, t0: performance.now() };
     if (line) { speakAs(who, line[0]); H.ask.bub = bubble(who === 'huang' ? null : c, WAVE, 60000); if (H.ask.bub) H.ask.bub.classList.add('hl-heard'); }
     if (kind === 'sorry') hit(c, -WRONG / 2);   // a dish set before the wrong one: put out
     panel();
@@ -291,7 +289,7 @@ const HALL = (() => {
   function panel() {
     const old = H.yard.querySelector('.hl-pick'); if (old) old.remove();
     H.yard.querySelectorAll('.hl-heard').forEach((x) => { if (!H.ask || x !== H.ask.bub) x.remove(); });   // the sound bars go with their question
-    H.cust.forEach((x) => x.el.classList.toggle('asked', Boolean(H.ask) && H.ask.c === x)); tableMarks();   // the one answered: no 「！」 over the words (their countdown stays); the one being shown to a table: none over the tables
+    H.cust.forEach((x) => x.el.classList.toggle('asked', Boolean(H.ask) && H.ask.c === x)); tableMarks(); props();   // the one answered: no 「！」 over the words (their countdown stays); the one being shown to a table: none over the tables
     const a = H.ask; if (!a) { const h = H; setTimeout(() => { if (H === h && !H.ask) lift(); }, 900); return; }   // down again, unless the next question follows (they come within 700 ms)
     const el = document.createElement('div'); el.className = 'hl-pick';
     const face = a.who === 'huang' ? HERO.head(TOWN.CAST.huang.look, 'bust') : a.c.caller ? '<span class="hl-tel">📞</span>' : HERO.head(Object.assign({}, a.c.look, FACE[a.c.mood]), 'bust');
@@ -303,6 +301,16 @@ const HALL = (() => {
     el.addEventListener('pointerdown', (e) => e.stopPropagation());
     el.addEventListener('click', (e) => { e.stopPropagation(); primeTtsPlayer(); if (e.target.closest('.hl-ear')) { speakAs(a.who, a.line[0]); return; } const b = e.target.closest('.hl-opt'); if (b) choose(b); });
     H.yard.appendChild(el); lift();
+  }
+  // what これ／それ／あれ point at, held up while it is asked (the user, 2026-11-19: nothing on screen showed the table's menu or the
+  // hero's board): the menu in the customer's hands (これ to them), the おすすめ board in the hero's (それ to them; これ to him, asked
+  // おすすめは どれですか); the poster's on the wall
+  function props() {
+    H.yard.querySelectorAll('.hl-menu, .hl-board').forEach((x) => x.remove());
+    const a = H.ask, h = H.yard.querySelector('.yhero'); if (!a || !['order', 'osusume'].includes(a.kind)) return;
+    const card = (cls, top, dish) => `<span class="${cls}" aria-hidden="true"><b lang="ja">${top}</b>${RAIRAI.dish(dish)}<i lang="ja">${esc(dish)}</i></span>`;
+    if (h) h.insertAdjacentHTML('beforeend', card('hl-board', 'おすすめ', H.board));
+    if (a.kind === 'order') a.c.el.insertAdjacentHTML('beforeend', card('hl-menu', 'メニュー', a.near));
   }
   // the room lifted while the panel is up, so the hero and the one asked (黄 at the pass) stay above it; down again when it goes
   function lift() {
@@ -452,7 +460,7 @@ const HALL = (() => {
   }
   function stop() {
     if (!H) return; H.timers.forEach(clearTimeout); cancelAnimationFrame(H.raf);
-    if (H.yard.isConnected) { H.cust.forEach((c) => c.el.remove()); H.yard.querySelectorAll('.hl-pick, .hl-hud, .hl-ring, .hl-plate, .hl-heard, .hl-tmark').forEach((x) => x.remove()); H.yard.style.setProperty('--hl-lift', '0px'); H.tray = { dish: '' }; carry(false); H.ready = []; readyMark(); }
+    if (H.yard.isConnected) { H.cust.forEach((c) => c.el.remove()); H.yard.querySelectorAll('.hl-pick, .hl-hud, .hl-ring, .hl-plate, .hl-heard, .hl-tmark, .hl-board').forEach((x) => x.remove()); H.yard.style.setProperty('--hl-lift', '0px'); H.tray = { dish: '' }; carry(false); H.ready = []; readyMark(); }
     H = null; MUSIC.sync();
   }
   function run(ctx) {

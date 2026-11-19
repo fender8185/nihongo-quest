@@ -163,11 +163,13 @@ def test_the_pick_panel_fits_a_phone(b):
 def test_order_by_where_it_is(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('これ', 'それ', 'あれ'); HALL.force = { order: 'order' }; const seen = [];
       for (let n = 0; n < 4; n++) { delete state.work.res['2026-11-10']; CLASS.close(); await start(); await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
-        await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => ask()); const a = ask(); seen.push([a.kind, a.word, a.right, a.opts.length]); await answer(true); await wait(200);
-        seen[n].push(now().cust[0].dish === a.right.split('：')[1]); }
+        await until(() => cust('call')); await goTo('table0'); await answer(true); await until(() => ask()); const a = ask(), txt = (q) => (document.querySelector(q) || {}).textContent || '';
+        seen.push([a.kind, a.word, a.right, a.opts.length, a.opts.map((o) => o.split('：')[1]), txt('.cust .hl-menu'), txt('.yhero .hl-board')]); await answer(true); await wait(200);
+        seen[n].push(now().cust[0].dish === a.right.split('：')[1], !document.querySelector('.hl-menu, .hl-board')); }
       return JSON.stringify(seen); })()"""))
-    where = {'これ': '桌上的菜單', 'それ': '你手上的推薦牌', 'あれ': '牆上的海報'}
-    assert all(k == 'order' and w in where and r_.startswith(where[w]) and n == 3 and dish for k, w, r_, n, dish in r), r
+    where = {'これ': '客人手上的菜單', 'それ': '你手上的推薦牌', 'あれ': '牆上的海報'}   # これ by the customer (the menu in their hands), それ by the hero (the board in his), あれ the wall
+    assert all(k == 'order' and w in where and r_.startswith(where[w]) and n == 3 and dish for k, w, r_, n, _, _, _, dish, _ in r), r
+    assert all(near in menu and board in held and 'おすすめ' in held and gone for _, _, _, _, (near, board, _), menu, held, _, gone in r), r   # both drawn while it is asked, gone once answered
 
 def test_order_by_the_dish_heard(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ HALL.force = { solo: true }; await start(); """ + SPOKEN + """ await until(() => cust('in')); await goTo('entry'); await answer(true); await goTo('table0'); await answer(true);
@@ -287,9 +289,10 @@ def test_have_on_and_off_the_menu(b):
 
 def test_osusume_is_the_board_in_hand(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + """ word('どれ', 'これ', 'それ'); HALL.force = { solo: true, osusume: true }; await start(); """ + SPOKEN + THROUGH_CALL + """
-      const a = ask(), out = { kind: a.kind, right: a.right, opts: a.opts.slice().sort() }; await answer(true); await until(() => cust('food'));
-      out.dish = now().cust[0].dish === now().board; out.that = said.includes('じゃあ、それを ください。'); return JSON.stringify(out); })()"""))
-    assert r == {'kind': 'osusume', 'right': 'これです。', 'opts': ['あれです。', 'これです。', 'それです。'], 'dish': True, 'that': True}, r
+      const a = ask(), b = document.querySelector('.yhero .hl-board'), out = { kind: a.kind, right: a.right, opts: a.opts.slice().sort(), board: Boolean(b) && b.textContent.includes(now().board), menu: Boolean(document.querySelector('.hl-menu')) };
+      await answer(true); await until(() => cust('food'));
+      out.dish = now().cust[0].dish === now().board; out.that = said.includes('じゃあ、それを ください。'); out.gone = !document.querySelector('.hl-board'); return JSON.stringify(out); })()"""))
+    assert r == {'kind': 'osusume', 'right': 'これです。', 'opts': ['あれです。', 'これです。', 'それです。'], 'board': True, 'menu': False, 'dish': True, 'that': True, 'gone': True}, r
 
 def test_water_asked_once_the_word_is_known(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + LEARN + """ learn('みず', '水'); HALL.force = { solo: true, water: true, order: 'dish' };
