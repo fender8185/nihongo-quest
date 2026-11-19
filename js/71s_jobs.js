@@ -190,13 +190,16 @@ const JOBS = (() => {
   // sound again; the same one missed twice, its cell lights. 120 seconds on the clock from a shift's start, never cut short: all
   // thirty right inside it, the five buns shine together and 王 is beside himself (中華一番's style, 2026-11-14); a bun of six
   // without a miss, かんぺきだ！ as it comes out. The cells: never two that sound the same (お／を); half the time a new one sounds
-  // or looks like one there ----
+  // or looks like one there. 2026-11-19 (the user: 張's tasks to 包包子, 張 to the money): the first job now, at five kana seen —
+  // the board four cells of those while under twelve are seen, six after; and once four kana-only 入門 words are learned, a step in
+  // three or so is a word said, the board four word cards for it (張's labels that were words) ----
   const BUN_STEPS = ['こねる', 'のばす', 'のせる', 'つつむ', 'ならべる', 'むす'], TAPS = 30, PER = TAPS / N, LIMIT = 120;
-  const bunPool = () => { const seen = WORK.kana(), all = REG.kana.slice(0, 46).map((x) => x.ch), p = all.filter((c) => seen.has(c)); return p.length >= 12 ? p : all; };
-  function boardNew(board, pool) {   // a kana for a cell: not on the board, no twin of one there; half the time kin of one there
-    const free = pool.filter((c) => !board.includes(c) && !board.some((x) => twin(x, c)));
+  const bunPool = () => { const seen = WORK.kana(), all = REG.kana.slice(0, 46).map((x) => x.ch), p = all.filter((c) => seen.has(c)); return p.length >= 5 ? p : all.slice(0, 5); };
+  const bunCells = (pool) => (pool.length >= 12 ? 6 : 4);
+  function boardNew(board, pool, was) {   // a kana for a cell (was: the one it held): not on the board, no twin of one there; half the time kin of one there
+    const out = pool.filter((c) => !board.includes(c)), free = out.filter((c) => !board.some((x) => twin(x, c)));
     const near = free.filter((c) => board.some((x) => kin(KANA_SOUNDALIKE, x).includes(c) || kin(KANA_LOOKALIKE, x).includes(c)));
-    return pick(near.length && Math.random() < 0.5 ? near : free);
+    return near.length && Math.random() < 0.5 ? pick(near) : free.length ? pick(free) : out.length ? pick(out) : was;   // a pool too small for a twin-free one: as it is
   }
   // the bun at step n (0 flour … 5 in the steamer's ring, 6 steamed), askew when missed; drawn round (0, 0), ~60 wide
   function bunArt(n, flaw) {
@@ -216,16 +219,16 @@ const JOBS = (() => {
     const vb = svg.getAttribute('viewBox').split(' ').map(Number); svg.querySelectorAll('.arm').forEach((x) => x.remove());
     return svg.outerHTML.replace('<svg ', `<svg x="105" y="6" width="150" height="${(vb[3] * 150 / vb[2]).toFixed(1)}" `);
   };
-  let BN = null, bunRun = 0;   // the board now (for the tests): { target, board, tap, wait }; the run whose card is up
+  let BN = null, bunRun = 0;   // the board now (for the tests): { target, board, cards, tap, wait }; the run whose card is up
   function bunsRun(ctx) {
     const run = ++bunRun, mine = () => run === bunRun && Boolean(document.querySelector('.wk-buns .wk-keys'));   // this run's card only (shut and opened again: the new run's)
-    const s = say('buns'), pool = bunPool(), fresh = ctx.done === 0, t0 = Date.now(), bust = bunBust(), score = (WORK.today() || {}).score || {};
-    let tap = ctx.done * PER, board = [], target = null, miss = 0, bunMiss = 0, trioMiss = 0, wrong = 0, busy = false, clock = 0;
+    const s = say('buns'), pool = bunPool(), fresh = ctx.done === 0, t0 = Date.now(), bust = bunBust(), score = (WORK.today() || {}).score || {}, ws = words();
+    let tap = ctx.done * PER, board = [], cards = null, said1 = false, target = null, miss = 0, bunMiss = 0, trioMiss = 0, wrong = 0, busy = false, clock = 0;   // cards: a word step's four; said1: the last step was one
     const made = Array.from({ length: Math.floor(tap / BUN_STEPS.length) }, (_, b) => !score[2 * b] && !score[2 * b + 1]);   // buns done before: perfect if their two tasks were
     if (tap % BUN_STEPS.length) bunMiss = score[tap / PER - 1] || 0;   // half a bun done: askew if its first three were missed
     const el = (q) => document.querySelector('.wk-buns ' + q), live = () => mine() && ctx.on();
     const quiet = ([ja, zh], cls = '') => { const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${esc(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } };
-    const now = () => { BN = { target, board: board.slice(), tap, wait: busy }; };
+    const now = () => { BN = { target, board: board.slice(), cards: cards && cards.slice(), tap, wait: busy }; };
     function art() {
       const c = el('.wk-closeup'); if (!c) return;
       const n = tap % BUN_STEPS.length, flaw = bunMiss > 0, spots = [[-26, 4], [0, 4], [26, 4], [-13, -12], [13, -12]];
@@ -238,8 +241,15 @@ const JOBS = (() => {
           ${made.map((ok, b) => `<g class="wk-done${ok ? ' ok' : ''}" transform="translate(${spots[b][0]} ${spots[b][1]}) scale(.42)">${bunArt(6, !ok)}</g>`).join('')}</g>
         <g transform="translate(54 156)"><ellipse cx="0" cy="8" rx="30" ry="9" fill="#8a5a34"/><ellipse cx="0" cy="2" rx="30" ry="10" fill="#f0e2c4" stroke="#8a5a34" stroke-width="2"/><ellipse cx="0" cy="1" rx="20" ry="5" fill="#fbf8f1"/></g></svg>`;
     }
-    function keys() { const k = el('.wk-keys'); if (k) k.innerHTML = board.map((c) => `<button type="button" class="wk-key" data-k="${esc(c)}" lang="ja">${esc(c)}</button>`).join(''); }
-    function ask() { const last = target; target = pick(board.filter((c) => c !== last)); miss = 0; now(); speak(target); }
+    function keys() { const k = el('.wk-keys'); if (!k) return; k.className = 'wk-keys' + (cards ? ' words' : board.length < 6 ? ' four' : '');
+      k.innerHTML = (cards || board).map((c) => `<button type="button" class="wk-key" data-k="${esc(c)}" lang="ja">${esc(c)}</button>`).join(''); }
+    // the next sound: a kana on the board, not the last one — or, words learned, now and then (never twice running) a word, its four cards up
+    function ask() {
+      const last = target, word = ws.length >= 4 && !said1 && last && Math.random() < 1 / 3; said1 = Boolean(word);
+      if (word) { target = pick(ws); cards = shuffle([target, ...shuffle(ws.filter((w) => w !== target)).slice(0, 3)]); }
+      else { cards = null; target = pick(board.filter((c) => c !== last)); }
+      miss = 0; keys(); now(); speak(target);
+    }
     function end() {
       const best = fresh && !wrong && Date.now() - t0 <= LIMIT * 1000;   // from the shift's start, all thirty right, inside the clock
       const bye = sleep(200).then(() => {   // 王's word to its end, then the card shut
@@ -253,7 +263,8 @@ const JOBS = (() => {
       SND.play('place', { vol: 0.5 }); tap++; trioMiss += miss;
       const h = el('.wk-hand'); if (h) { h.classList.remove('go'); void h.getBoundingClientRect(); h.classList.add('go'); }
       if (tap % PER === 0) { ctx.right(tap / PER - 1, trioMiss); trioMiss = 0; }
-      board[board.indexOf(target)] = boardNew(board, pool); keys();
+      if (!cards) { const i = board.indexOf(target); board[i] = boardNew(board, pool, target); }   // a word's cards: the board as it was
+      cards = null; keys();
       const n = el('.wk-n'); if (n) n.textContent = `${Math.min(tap + 1, TAPS)}／${TAPS}`;
       if (tap % BUN_STEPS.length) { art(); ask(); return; }
       // a bun done: out of the steamer, into it with the rest; 王's word, then the next sound
@@ -276,7 +287,7 @@ const JOBS = (() => {
       setTimeout(() => { if (live() && target) speak(target); }, 350);
     });
     const n = el('.wk-n'); if (n) n.textContent = `${tap + 1}／${TAPS}`;
-    while (board.length < 6) board.push(boardNew(board, pool));
+    while (board.length < bunCells(pool)) board.push(boardNew(board, pool));
     art(); keys(); ask();
     if (fresh) clock = setInterval(() => {   // the clock: a bar running down; past it, grey — never a stop
       const c = el('.wk-clock'); if (!c || !mine() || !ctx.on()) { clearInterval(clock); return; }

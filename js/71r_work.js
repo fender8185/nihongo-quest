@@ -2,8 +2,8 @@
 // ---------- 中華街の打工 (2026-11-14; docs/superpowers/specs/2026-11-14-chinatown-work-design.md §4–§7) ----------
 // The user: a beginner should have somewhere to earn a little 円 — a second way beside the cruise's guide, the two unrelated; at
 // most one workplace a day (later places too: 商店街's shops and others, 中華街 the first and lowest); the pay a tenth of what I
-// first put (2026-11-14: too much). Four workplaces, each opening by the kana seen (5, 15, 30, 46): 整理貨架 at ふく, 站櫃 at
-// らんらん, 外場 in らいらいけん (2026-11-15: in place of 外送), 包包子 at 福明 with 王. A shift is ten tasks (the 外場 six groups); one left halfway waits for its day, at that place
+// first put (2026-11-14: too much). Four workplaces, each opening by the kana seen: 包包子 at 福明 with 王 (5; 46 till
+// 2026-11-19), 整理貨架 at ふく (5), 站櫃 at らんらん (15), 外場 in らいらいけん (30; 2026-11-15: in place of 外送). A shift is ten tasks (the 外場 six groups); one left halfway waits for its day, at that place
 // only; the day is the town's day it began. Graded by the share right at once (as the cruise's guide), paid by the 打工證 (the
 // shifts done: 1 新人 100 円, 5 アルバイト 120, 15 ベテラン 150, 30 バイトリーダー 200) and the grade (S 50 … C 10), a tip on
 // top where a job gives one; 円 only. Each job's runner registers itself (WORK.register) and drives the shift through its ctx: right(task, misses) as
@@ -11,12 +11,12 @@
 const WORK = (() => {
   const N = 10;
   const PLACES = {
+    buns: { place: 'chinatown', shop: 'seiro', who: 'wang', kana: 5, name: '包包子', at: '福明', tune: 'chukagai' },   // 5 (was 46): the first job (2026-11-19)
     shelf: { place: 'chinadori', shop: 'fuku', who: 'zhang', kana: 5, name: '整理貨架', at: 'ふく', tune: 'chukagai' },
     counter: { place: 'chinadori', shop: 'ranran', who: 'zhou', kana: 15, name: '站櫃', at: 'らんらん', tune: 'chukagai' },
     // 外場 2.0 (2026-11-15, docs/superpowers/specs/2026-11-15-hall-rush-design.md §2): a shift is six groups, each scored by its mood
     // at the door (0 pleased … 3 stormed out), graded with part credit for the not quite pleased
-    waiter: { place: 'rairai', shop: 'rairai', who: 'huang', kana: 30, words: ['いらっしゃいませ', 'どうぞ', 'はい'], name: '外場', at: 'らいらいけん', n: 6, credit: [1, 0.6, 0.3, 0], unit: '滿意的客人', tune: 'rairai' },
-    buns: { place: 'chinatown', shop: 'seiro', who: 'wang', kana: 46, name: '包包子', at: '福明', tune: 'chukagai' } };
+    waiter: { place: 'rairai', shop: 'rairai', who: 'huang', kana: 30, words: ['いらっしゃいませ', 'どうぞ', 'はい'], name: '外場', at: 'らいらいけん', n: 6, credit: [1, 0.6, 0.3, 0], unit: '滿意的客人', tune: 'rairai' } };
   const GONE = { deliver: { name: '外送', at: 'らいらいけん' } };   // a workplace no more (外送, cut 2026-11-15): its old records still read
   const named = (job) => PLACES[job] || GONE[job] || { name: job, at: '' };
   const RANKS = [[30, 'バイトリーダー', 200], [15, 'ベテラン', 150], [5, 'アルバイト', 120], [1, '新人', 100]];
@@ -83,7 +83,7 @@ const WORK = (() => {
     shelf: { how: ['張さん會念出貨物的名字——只念，不給你看字。', '把貨物放進貼著一樣假名的格子；放錯就再放一次。'], uses: ['聽假名', '認假名'], n: '一班 10 件貨' },
     counter: { how: ['客人用日文說要買什麼（用聽的），從櫃台上把那樣東西拿給他。', '學過「ふたつ」：有客人會要兩個。', '學過「いくら」「円」和數字：有客人會問價錢，用字卡拼出價格的念法。'], uses: ['聽單字', '假名', '數字的念法'], n: '一班 10 位客人' },
     waiter: { how: ['有「！」的就是在等你：客人頭上，或要帶位時的空桌子。點它走過去。', '聽客人說什麼，從下面三句選你要回的那句。帶位、點菜、端菜、結帳都靠你。', '客人頭上那條是耐心，越等越短；沒了客人就走人，店裡少一顆星。客滿時有人進門，先道歉請他等。'], uses: ['聽力', '招呼和店裡的會話', 'これ・それ・あれ'], n: '一班 6 組客人' },
-    buns: { how: ['聽到哪個音，就在假名板上按哪個字；按對了包子就往下包一步。', '按 30 下、包好 5 顆包子。兩分鐘內全部按對，王老闆會很激動。'], uses: ['聽假名', '46 個假名'], n: '一班 5 顆包子' } };
+    buns: { how: ['聽到哪個音，就在假名板上按哪個字；按對了包子就往下包一步。假名板上是你學過的假名，發音像、字形像的會放在一起。', '學過 4 個以上只用假名寫的入門單字：有時王老闆念的是一個單字，板子換成 4 張單字卡，點對的那張。', '按 30 下、包好 5 顆包子。兩分鐘內全部按對，王老闆會很激動。'], uses: ['聽假名', '認假名', '聽入門單字'], n: '一班 5 顆包子' } };
   function intro(yard, job) {
     const c = can(job); if (!c.ok) { toast(c.why, 3600); return false; }
     const P = PLACES[job], R = RULES[job], t = today(), back = t && t.place === job && !fin(t) ? t.done : 0, n = shifts() + 1, p = pay(n, 'E');

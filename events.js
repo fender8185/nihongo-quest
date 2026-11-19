@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 79 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 80 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -1259,8 +1259,8 @@ const TOWN = {
       ['wang', 'せいかい！ シェイシェイ！', '答對了！謝謝！'],
       ['chen', '', '（用中文）……老闆，答對的時候不用說謝謝啦。']] },
     { id: 'cnw', u: 'm0', kana: 5, who: 'chen', at: 'chinatown', after: 'cn2', title: 'バイト、しない？', lines: [['chen', 'ねえ、バイト しない？', '欸，要不要打工？'],
-      ['chen', '', '（用中文）我中午在王老闆這邊打工。牌樓後面是大通り，那邊的店都在找打工的人。'],
-      ['chen', '', '（用中文）入口有一塊求人看板。學了 5 個假名，就能去食材店「ふく」幫忙整理貨架；學越多，能做的工作越多。'],
+      ['chen', '', '（用中文）我中午在王老闆這邊打工。學了 5 個假名，你也能來這裡跟王老闆包包子。'],
+      ['chen', '', '（用中文）牌樓後面是大通り，那邊的店也在找打工的人，入口有一塊求人看板。學越多，能做的工作越多。'],
       { ask: '陳問你：「バイト、しない？」', opts: [['はい、します！', 1, '好，我要做！'], ['いいえ、たべます！', 0, '「たべます」是吃……你是不是又在想豬肉包。'], ['はい、ねます！', 0, '「ねます」是睡覺。打工不能睡覺啦！']], pt: 'm0' },
       ['chen', 'がんばって！', '加油！'],
       ['chen', '', '（用中文）對了，一天只能在一個地方打一班喔。錢不多，但是可以買包子吃！']] },

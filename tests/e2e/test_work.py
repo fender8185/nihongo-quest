@@ -26,10 +26,10 @@ BEGIN = """const rec = () => ({ b: 2, due: addDays(todayStr(), 9), n: 2, ok: 2, 
 def test_the_jobs_open_by_kana_seen(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ location.hash = '#/chinadori'; route(); await wait(200); const out = {};
       ['いらっしゃいませ', 'どうぞ', 'はい'].forEach((w) => { const v = REG.vocab.find((x) => x.w === w && x.lv === 'PRE_N5'); state.srs[v.key] = rec(); });
-      for (const n of [4, 5, 14, 15, 29, 30, 45, 46]) { kana(n); out[n] = ['shelf', 'counter', 'waiter', 'buns'].filter((j) => WORK.can(j).ok).join(','); }
+      for (const n of [4, 5, 14, 15, 29, 30, 45, 46]) { kana(n); out[n] = ['buns', 'shelf', 'counter', 'waiter'].filter((j) => WORK.can(j).ok).join(','); }
       kana(4); out.why = WORK.can('shelf').why; state.kanaKnown = true; out.known = WORK.can('buns').ok;
       return JSON.stringify(out); })()"""))
-    assert (r['4'], r['5'], r['14'], r['15'], r['29'], r['30'], r['45'], r['46']) == ('', 'shelf', 'shelf', 'shelf,counter', 'shelf,counter', 'shelf,counter,waiter', 'shelf,counter,waiter', 'shelf,counter,waiter,buns'), r
+    assert (r['4'], r['5'], r['14'], r['15'], r['29'], r['30'], r['45'], r['46']) == ('', 'buns,shelf', 'buns,shelf', 'buns,shelf,counter', 'buns,shelf,counter', 'buns,shelf,counter,waiter', 'buns,shelf,counter,waiter', 'buns,shelf,counter,waiter'), r   # 包包子 the first (2026-11-19)
     assert '再學 1 個假名' in r['why'] and r['known'], r
 
 def test_one_workplace_a_day_and_a_shift_left_halfway_waits(b):
@@ -91,7 +91,7 @@ def test_the_owners_offer_work_when_it_is_open(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + PICKS + """ state.town.done = { cn1: '2026-11-01', cn2: '2026-11-01', cnw: '2026-11-01', cn3: '2026-11-01', cn4: '2026-11-01' };
       kana(4); location.hash = '#/chinadori'; route(); await wait(400); const out = { four: await picks('zhang') };
       kana(5); route(); await wait(400); out.five = await picks('zhang');
-      kana(46); location.hash = '#/chinatown'; route(); await wait(400); out.wang = await picks('wang');
+      location.hash = '#/chinatown'; route(); await wait(400); out.wang = await picks('wang');   // five kana: 包包子 the first job (2026-11-19)
       return JSON.stringify(out); })()"""))
     assert 'はたらく' not in r['four'] and 'はたらく' in r['five'] and 'おしゃべりする' in r['five'], r
     assert 'はたらく' in r['wang'] and 'ちゅうもんする' in r['wang'], r
@@ -102,8 +102,8 @@ def test_the_board_lists_the_four_jobs(b):
       const text = card.textContent; CLASS.close();
       state.work.res['2026-11-10'] = { place: 'counter', done: 4, score: {} }; WORK.board(yard()); const today = document.querySelector('.wk-board').textContent; CLASS.close();
       return JSON.stringify({ rows, text, today }); })()"""))
-    assert r['rows'] == [['shelf', True], ['counter', True], ['waiter', False], ['buns', False]], r
-    assert all(w in r['text'] for w in ['整理貨架', '站櫃', '外場', '包包子', '30', '46']) and '今天' in r['today'] and '站櫃' in r['today'], r
+    assert r['rows'] == [['buns', True], ['shelf', True], ['counter', True], ['waiter', False]], r
+    assert all(w in r['text'] for w in ['整理貨架', '站櫃', '外場', '包包子', '30']) and '今天' in r['today'] and '站櫃' in r['today'], r
 
 def test_the_board_names_the_words_still_needed(b):   # 外場's kana seen, its three 入門 words not: not ✓ yet, the words said
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(30); location.hash = '#/chinadori'; route(); await wait(300);
@@ -385,6 +385,29 @@ def test_the_bun_card_fits_a_phone(b):
       const card = document.querySelector('.wk-buns .cls-card'), keys = [...document.querySelectorAll('.wk-key')].map((x) => x.getBoundingClientRect()), c = card.getBoundingClientRect();
       return JSON.stringify({ fits: card.scrollHeight <= card.clientHeight + 1 && c.bottom <= innerHeight + 1, side: c.left >= 0 && c.right <= innerWidth + 1, keys: keys.length === 6 && keys.every((q) => q.width >= 60 && q.height >= 48) }); })()""")])[-1])
     assert r == {'fits': True, 'side': True, 'keys': True}, r
+
+# 2026-11-19, the user: 張's tasks to 包包子 — the first job, at five kana seen: four cells of those while under twelve are seen
+def test_buns_open_at_five_kana_on_a_board_of_four(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(5); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve(); window.__errs = []; window.addEventListener('error', (e) => __errs.push(String(e.message)));
+      const out = { can: WORK.can('buns').ok }, keys = () => [...document.querySelectorAll('.wk-key')].map((x) => x.dataset.k), mine = (ks) => ks.length === 4 && new Set(ks).size === 4 && ks.every((c) => 'あいうえお'.includes(c));
+      await make(); out.four = mine(keys()) && document.querySelector('.wk-keys').classList.contains('four');
+      for (let i = 0; i < 12; i++) await tap(true); out.still = mine(keys()) && JOBS.buns.now().tap === 12;
+      CLASS.close(); delete state.work.res['2026-11-10']; kana(12); await make(); out.six = keys().length;
+      return JSON.stringify(Object.assign(out, { errs: __errs })); })()"""))
+    assert r == {'can': True, 'four': True, 'still': True, 'six': 6, 'errs': []}, r
+
+# 張's labels that were words: once four kana-only 入門 words are learned, now and then (never twice running) a word is said and the
+# board is four word cards for it; tapped, the kana board as it was
+def test_a_word_step_puts_up_four_word_cards(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + SHELF + BUNS + """ kana(46); const ws = ['これ', 'それ', 'あれ', 'どれ', 'ここ']; words(ws);
+      window.__said = []; window.speak = (t) => { __said.push(t); return Promise.resolve(); }; window.speakAs = () => Promise.resolve();
+      await make(); let n = JOBS.buns.now();
+      for (let i = 0; i < 29 && !n.cards; i++) { await tap(true); await idle(); n = JOBS.buns.now(); }
+      const keys = [...document.querySelectorAll('.wk-key')].map((x) => x.dataset.k), before = n.board.join(), out = { cards: Boolean(n.cards), four: keys.length === 4 && keys.includes(n.target) && keys.every((k) => ws.includes(k)),
+        said: __said[__said.length - 1] === n.target, wide: document.querySelector('.wk-keys').classList.contains('words') };
+      await tap(true); await idle(); const m = JOBS.buns.now(); out.back = !m.cards && m.board.join() === before && document.querySelectorAll('.wk-key').length === 6;
+      return JSON.stringify(out); })()"""))
+    assert r == {'cards': True, 'four': True, 'said': True, 'wide': True, 'back': True}, r
 
 # ---- the final review's findings (2026-11-15) ----
 def test_a_shift_closed_at_its_last_moment_is_still_paid(b):
