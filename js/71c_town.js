@@ -1126,7 +1126,7 @@ function parkHtml() {
 // the two shops one can walk into (2026-11-10: seen at 45° like 書房, ISO): drawn in the 1200 × 900 frame of a room's land.
 // In a room: the hero, the people there now, the way out by its door (on the left wall)
 const indoorRest = (place, to = 'town') => { const [dx, dy] = isoXY(0, ISO.door[1], 4.9); return `${yHeroHtml()}${TOWNEV.castHtml(place)}
-    <button type="button" class="thing way-btn" data-act="go-place" data-to="${to}" aria-label="出去" style="margin-left:${Math.round(dx) - 32}px;bottom:${Math.round(dy)}px"><span class="tag">${ySign('today', '出去')}</span></button>
+    <button type="button" class="thing way-btn${place === 'rairai' ? ' way-edge' : ''}" data-act="go-place" data-to="${to}" aria-label="出去" style="margin-left:${Math.round(dx) - 32}px;bottom:${Math.round(dy)}px"><span class="tag">${ySign('today', '出去')}</span></button>
     <div class="ysel"></div>`; };
 // drawing in the room: a point, a face, a box (its two faces toward us and its top, shaded as 書房's light falls), flat things on
 // the left wall (p = −v, q = −h), on a wall or face across at v (p = u, q = −h), on a level at height h (p = u, q = v); a round

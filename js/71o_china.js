@@ -92,6 +92,7 @@ function chinatownHtml() {
     </svg>
     ${yHeroHtml()}
     ${busPoleHtml('chinatown')}
+    <button type="button" class="thing way-btn way-edge" data-act="go-place" data-to="chinadori" aria-label="往大通り" style="margin-left:-392px;bottom:64px"><span class="tag">${ySign('shop', '往大通り')}</span></button>
     <div class="ysel"></div>`;
 }
 

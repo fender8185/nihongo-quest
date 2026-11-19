@@ -133,8 +133,27 @@ function yCamTo(yard, x, give = 0) {   // the camera there (give: how much of a 
   ycam.x = x < -m ? -m - (-m - x) * give : x > m ? m + (x - m) * give : x;
   if (YWIDE.on && YWIDE.yard !== yard && YWIDE.back) YWIDE.back();   // gone elsewhere while drawn back: that ends it
   const w = yard.querySelector('.yworld'); if (w && !YWIDE.on) w.style.transform = `translate3d(${(-ycam.x * ycam.z).toFixed(1)}px,0,0)${ycam.z !== 1 ? ` scale(${ycam.z})` : ''}`;   // drawn back (yWide): held till it ends
+  if (w && !YWIDE.on) yWayEdge(yard);
   // no CSS variable here: one set on the yard every frame of a long walk began the hero's steps again on an iPhone (his legs
   // stopped, 1.2.1); the zoom into the door reads the camera when it starts (sceneGo)
+}
+// ways one might not find (2026-11-19, the user: in 中華街 and らいらいけん nothing said where to tap to go on): 中華街's 牌樓
+// (往大通り), らいらいけん's door on 大通り, the room's way out (way-edge) — named always, and while the spot is off the screen
+// the sign slid in to its edge (--nx, --ny on the button, not the yard: see above), an arrow the way it is (data-off: l, r, t);
+// one near a side, its spot in sight: only slid in to stay whole
+function yWayEdge(yard) {
+  const sky = yard.querySelector('.sky'); if (!sky) return;
+  const z = ycam.z, W = sky.clientWidth, H = sky.clientHeight;
+  yard.querySelectorAll('.way-edge').forEach((b) => {
+    const t = b.querySelector('.tag'), tw = Number(b.dataset.tw) || (t && t.offsetWidth) || 0; if (!tw) return; b.dataset.tw = tw;
+    const X = (parseFloat(b.style.marginLeft) + 32 - ycam.x) * z, Y = (parseFloat(b.style.bottom) + 52) * z;   // the tag's middle: from the screen's middle, over its foot
+    const lim = W / 2 - (tw / 2 + 18) * z, top = H - 72 - 17 * z;   // clear of the screen's sides (the arrow beside it) and of the buttons up top
+    const nx = Math.abs(X) > lim ? Math.round((Math.sign(X) * lim - X) / z) : 0, ny = Y > top ? Math.round((Y - top) / z) : 0;
+    const off = X < 8 - W / 2 ? 'l' : X > W / 2 - 8 ? 'r' : ny ? 't' : '';   // the arrow only for a spot out of sight (one near a side: only slid in)
+    if ((b.dataset.off || '') !== off) b.dataset.off = off;
+    if (b.style.getPropertyValue('--nx') !== `${nx}px`) b.style.setProperty('--nx', `${nx}px`);
+    if (b.style.getPropertyValue('--ny') !== `${ny}px`) b.style.setProperty('--ny', `${ny}px`);
+  });
 }
 function yardLayout(yard) {   // the world as wide as it should be on this screen, the hill's shop sign with it, the camera inside
   const sky = yard.querySelector('.sky'), w = yard.querySelector('.yworld'); if (!sky || !w) return;

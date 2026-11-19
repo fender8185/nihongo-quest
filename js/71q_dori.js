@@ -150,6 +150,7 @@ function chinadoriHtml() {
     ${yHeroHtml()}
     ${TOWNEV.castHtml('chinadori')}
     <button type="button" class="thing way-btn" data-act="go-place" data-to="chinatown" aria-label="回中華街" style="margin-left:-32px;bottom:2px"><span class="tag">${ySign('back', '回中華街')}</span></button>
+    ${(([x, y]) => `<button type="button" class="thing way-btn way-edge" data-act="go-place" data-to="rairai" aria-label="進らいらいけん" style="margin-left:${Math.round(x) - 32}px;bottom:${Math.round(y) + 60}px"><span class="tag">${ySign('door', 'らいらいけん')}</span></button>`)(DORI.door('rairai'))}
     <div class="ysel"></div>`;
 }
 
