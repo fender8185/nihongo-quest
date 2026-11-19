@@ -21,7 +21,7 @@ const DORI = (() => {
   // so each block's end shows), how tall
   const SHOPS = [
     { id: 'ranran', side: -1, y0: 12, y1: 172, L: 140, tall: 330, sign: 'らんらん', name: 'おみやげ屋', job: 'counter' },
-    { id: 'fuku', side: -1, y0: 172, y1: 244, L: 130, tall: 290, sign: 'ふく', name: '中華食材店', job: 'shelf' },
+    { id: 'fuku', side: -1, y0: 172, y1: 244, L: 130, tall: 290, sign: 'ふく', name: '中華食材店', job: 'till' },
     { id: 'toka', side: -1, y0: 244, y1: 284, L: 138, tall: 350, sign: 'とうか', name: '茶館' },
     { id: 'rairai', side: 1, y0: 12, y1: 172, L: 136, tall: 340, sign: 'らいらいけん', name: '中華料理店' },
     { id: 'kuriya', side: 1, y0: 172, y1: 244, L: 142, tall: 280, sign: 'くりや', name: '天津甘栗' },

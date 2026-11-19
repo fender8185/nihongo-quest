@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 80 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 81 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2668,14 +2668,14 @@ const TOWN = {
     hello: { zhang: ['…いらっしゃい。はたらく？', '……歡迎光臨。要來打工嗎？'], zhou: ['あら、いらっしゃい。てつだって くれる？', '哎呀，歡迎光臨。要來幫忙嗎？'],
       huang: ['はやく！ おみせ、てつだって！', '快！來幫忙顧店！'], wang: ['ニーハオ！ ぶたまん、つくる？', '你好！要來包豬肉包嗎？'] },
     first: {
-      shelf: [['zhang', 'きいて。おなじ ところへ。', '聽我念，放到一樣的格子。'], ['zhang', '…まちがえたら、もう いちど。', '……放錯了，就再放一次。']],
+      till: [['zhang', '…ゆっくりで いい。まちがえないで。', '……慢慢來沒關係。別算錯。']],   // 收銀 (2026-11-19, in place of 整理貨架)
       counter: [['zhou', 'おきゃくさんが いった ものを わたしてね。', '客人說要什麼，就拿給他喔。'], ['zhou', '「いらっしゃいませ」「ありがとうございました」、げんきよく ね。', '「歡迎光臨」「謝謝光臨」，要有精神喔。']],
       // 2026-11-19: the rules in Chinese went to the rules card before a shift (WORK.intro); what they say in Japanese stays
       waiter: [['huang', 'おきゃくさんが きたら、すぐ いって！', '客人來了就馬上過去！'], ['huang', 'おきゃくさんを またせないで！', '別讓客人等！']],
       buns: [['wang', 'ぶたまんは こころ！', '豬肉包就是心！']] },
     // what each says during a shift: a miss, a right one now and then, the end
     say: {
-      shelf: { who: 'zhang', miss: ['ちがう！', '不對！'], ok: [['よし。', '好。'], ['…うん。', '……嗯。'], ['きれい。', '很整齊。']], end: ['…おつかれさま。たすかった。', '……辛苦了。幫了大忙。'] },
+      till: { who: 'zhang', miss: ['ちがう！', '不對！'], ok: [['よし。', '好。'], ['…うん。', '……嗯。']], end: ['…おつかれさま。たすかった。', '……辛苦了。幫了大忙。'] },
       // 包包子 (2026-11-15: a kana board, the bun a step on with each right tap): 王's ちがう！ in print, his over-the-top delight at a
       // perfect bun (the cooking-anime way the user asked for, 2026-11-14: the style only), and at a whole shift right in time
       buns: { who: 'wang',
@@ -2723,7 +2723,12 @@ const TOWN = {
     // らんらん's goods on the counter: [name in kana, its drawing (PICS / PICS_TOWN), price ≤ 1,000 円] — offered once every kana of the name is seen
     goods: [['かさ', '傘', 500], ['すし', '寿司', 800], ['いす', '椅子', 1000], ['こけし', 'こけし', 600], ['とけい', '時計', 900], ['はし', '箸', 200], ['ほん', '本', 700],
       ['ぼうし', '帽子', 400], ['くつ', '靴', 900], ['かばん', 'かばん', 800], ['かぎ', '鍵', 300], ['ちず', '地図', 200], ['かがみ', '鏡', 600], ['はさみ', 'はさみ', 300],
-      ['さら', '皿', 400], ['なべ', '鍋', 1000], ['せっけん', '石けん', 100], ['ふで', '筆', 500], ['あめ', '飴', 100], ['パンダ', 'パンダ', 700]] },
+      ['さら', '皿', 400], ['なべ', '鍋', 1000], ['せっけん', '石けん', 100], ['ふで', '筆', 500], ['あめ', '飴', 100], ['パンダ', 'パンダ', 700]],
+    // ふく's shelves (收銀, 2026-11-19): [name, its drawing (PICS), price] — hundreds, one bag of rice past a thousand, so three of them
+    // can come to さんぜん
+    fuku: [['たまご', '卵', 300], ['とうふ', '豆腐', 100], ['しょうゆ', '醤油', 400], ['ぎゅうにゅう', '牛乳', 200], ['おちゃ', 'お茶', 200], ['こめ', '米', 1500],
+      ['さとう', '砂糖', 300], ['しお', '塩', 100], ['にく', '肉', 900], ['さかな', '魚', 600], ['みかん', 'みかん', 400], ['バナナ', 'バナナ', 200],
+      ['ラーメン', 'ラーメン', 500], ['しゅうまい', 'しゅうまい', 700], ['はるまき', 'はるまき', 600], ['ぎょうざ', '餃子', 800]] },
   YATAI: {
     ryuho: { name: '龍鳳飯店の店長', kana: 'りゅうほうはんてんの てんちょう', role: '中華料理店', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'smile', beard: 'none', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'chefcap' } },   // 中華街 (2026-11-14)
     ojisan: { name: 'やきそば屋のおじさん', kana: 'やきそばやのおじさん', role: '炒麵、牛肉串、奶油馬鈴薯', look: { face: 'round', skin: '#e8bd98', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'happi', top: '#d0574b', bottomStyle: 'shorts', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: { head: 'nejiri' } },

@@ -2,8 +2,10 @@
 // ---------- 中華街の打工 (2026-11-14; docs/superpowers/specs/2026-11-14-chinatown-work-design.md §4–§7) ----------
 // The user: a beginner should have somewhere to earn a little 円 — a second way beside the cruise's guide, the two unrelated; at
 // most one workplace a day (later places too: 商店街's shops and others, 中華街 the first and lowest); the pay a tenth of what I
-// first put (2026-11-14: too much). Four workplaces, each opening by the kana seen: 包包子 at 福明 with 王 (5; 46 till
-// 2026-11-19), 整理貨架 at ふく (5), 站櫃 at らんらん (15), 外場 in らいらいけん (30; 2026-11-15: in place of 外送). A shift is ten tasks (the 外場 six groups); one left halfway waits for its day, at that place
+// first put (2026-11-14: too much). Four workplaces, a step up each (2026-11-19, the user: a clearer difficulty from job to job):
+// 包包子 at 福明 with 王 (5 kana seen; kana and kana words heard), 站櫃 at らんらん (15; words heard), 外場 in らいらいけん (30 and
+// three 入門 words; the talk; 2026-11-15: in place of 外送), 收銀 at ふく (N5's numbers learned; sums reckoned and read out —
+// 2026-11-19, in place of 整理貨架). A shift is ten tasks (the 外場 six groups); one left halfway waits for its day, at that place
 // only; the day is the town's day it began. Graded by the share right at once (as the cruise's guide), paid by the 打工證 (the
 // shifts done: 1 新人 100 円, 5 アルバイト 120, 15 ベテラン 150, 30 バイトリーダー 200) and the grade (S 50 … C 10), a tip on
 // top where a job gives one; 円 only. Each job's runner registers itself (WORK.register) and drives the shift through its ctx: right(task, misses) as
@@ -12,12 +14,13 @@ const WORK = (() => {
   const N = 10;
   const PLACES = {
     buns: { place: 'chinatown', shop: 'seiro', who: 'wang', kana: 5, name: '包包子', at: '福明', tune: 'chukagai' },   // 5 (was 46): the first job (2026-11-19)
-    shelf: { place: 'chinadori', shop: 'fuku', who: 'zhang', kana: 5, name: '整理貨架', at: 'ふく', tune: 'chukagai' },
     counter: { place: 'chinadori', shop: 'ranran', who: 'zhou', kana: 15, name: '站櫃', at: 'らんらん', tune: 'chukagai' },
     // 外場 2.0 (2026-11-15, docs/superpowers/specs/2026-11-15-hall-rush-design.md §2): a shift is six groups, each scored by its mood
     // at the door (0 pleased … 3 stormed out), graded with part credit for the not quite pleased
-    waiter: { place: 'rairai', shop: 'rairai', who: 'huang', kana: 30, words: ['いらっしゃいませ', 'どうぞ', 'はい'], name: '外場', at: 'らいらいけん', n: 6, credit: [1, 0.6, 0.3, 0], unit: '滿意的客人', tune: 'rairai' } };
-  const GONE = { deliver: { name: '外送', at: 'らいらいけん' } };   // a workplace no more (外送, cut 2026-11-15): its old records still read
+    waiter: { place: 'rairai', shop: 'rairai', who: 'huang', kana: 30, words: ['いらっしゃいませ', 'どうぞ', 'はい'], name: '外場', at: 'らいらいけん', n: 6, credit: [1, 0.6, 0.3, 0], unit: '滿意的客人', tune: 'rairai' },
+    till: { place: 'chinadori', shop: 'fuku', who: 'zhang', kana: 46, need: '學「いくら」「円」和數字', name: '收銀', at: 'ふく', tune: 'chukagai' } };   // need: its words (JOBS' left), named
+  // a workplace no more (外送, cut 2026-11-15; 整理貨架, 2026-11-19): its old records still read
+  const GONE = { deliver: { name: '外送', at: 'らいらいけん' }, shelf: { name: '整理貨架', at: 'ふく' } };
   const named = (job) => PLACES[job] || GONE[job] || { name: job, at: '' };
   const RANKS = [[30, 'バイトリーダー', 200], [15, 'ベテラン', 150], [5, 'アルバイト', 120], [1, '新人', 100]];
   const BONUS = { S: 50, A: 30, B: 20, C: 10, D: 0, E: 0 };
@@ -44,11 +47,13 @@ const WORK = (() => {
   // an 入門 word learned (or all of them, past 入門 — not for knowing kana: those words come in 入門's own lessons; the final review)
   const knows = (w) => !inPreStage() || REG.vocab.some((v) => v.w === w && v.r === w && state.srs[v.key]);
   const wordsLeft = (job) => (PLACES[job].words || []).filter((w) => !knows(w));
+  const needs = (job) => (JOBS[job] && JOBS[job].left ? JOBS[job].left() : []);   // 收銀's numbers (and いくら, 円) still to learn
   // may this job be started (or picked up again) now: its kana seen, today's workplace (if any) this one and not done, open
   function can(job) {
     const P = PLACES[job]; if (!P) return { ok: false, why: '' };
     if (!kanaOk(P.kana)) return { ok: false, why: `再學 ${P.kana - seen()} 個假名就能來${P.name}。` };
     const left = wordsLeft(job); if (left.length) return { ok: false, why: `先學會入門的${left.map((w) => `「${w}」`).join('')}，就能來${P.name}。` };
+    const more = needs(job); if (more.length) return { ok: false, why: `先學會${more.map((w) => `「${w}」`).join('')}，就能來${P.name}。` };
     const t = today();
     if (t && t.place !== job && !free()) return { ok: false, why: `今天已經在「${named(t.place).name}」打過工了。一天只能在一個地方打工，明天再來吧。` };
     if (fin(t) && !free()) return { ok: false, why: '今天的班打完了，明天再來吧。' };
@@ -80,10 +85,10 @@ const WORK = (() => {
   // rules card — how it goes, the abilities it takes, how long a shift is and the pay — はい to begin (start), いいえ to leave it.
   // はたらく opens it; the keepers' first word (TOWN.WORK.first) keeps only what they say in Japanese, the rules being here
   const RULES = {
-    shelf: { how: ['張さん會念出貨物的名字——只念，不給你看字。', '把貨物放進貼著一樣假名的格子；放錯就再放一次。'], uses: ['聽假名', '認假名'], n: '一班 10 件貨' },
-    counter: { how: ['客人用日文說要買什麼（用聽的），從櫃台上把那樣東西拿給他。', '學過「ふたつ」：有客人會要兩個。', '學過「いくら」「円」和數字：有客人會問價錢，用字卡拼出價格的念法。'], uses: ['聽單字', '假名', '數字的念法'], n: '一班 10 位客人' },
+    counter: { how: ['客人用日文說要買什麼（用聽的），從櫃台上把那樣東西拿給他。', '學過「ふたつ」：有客人會要兩個，就拿兩次。'], uses: ['聽單字', '假名'], n: '一班 10 位客人' },
     waiter: { how: ['有「！」的就是在等你：客人頭上，或要帶位時的空桌子。點它走過去。', '聽客人說什麼，從下面三句選你要回的那句。帶位、點菜、端菜、結帳都靠你。', '客人頭上那條是耐心，越等越短；沒了客人就走人，店裡少一顆星。客滿時有人進門，先道歉請他等。'], uses: ['聽力', '招呼和店裡的會話', 'これ・それ・あれ'], n: '一班 6 組客人' },
-    buns: { how: ['聽到哪個音，就在假名板上按哪個字；按對了包子就往下包一步。假名板上是你學過的假名，發音像、字形像的會放在一起。', '學過 4 個以上只用假名寫的入門單字：有時王老闆念的是一個單字，板子換成 4 張單字卡，點對的那張。', '按 30 下、包好 5 顆包子。兩分鐘內全部按對，王老闆會很激動。'], uses: ['聽假名', '認假名', '聽入門單字'], n: '一班 5 顆包子' } };
+    buns: { how: ['聽到哪個音，就在假名板上按哪個字；按對了包子就往下包一步。假名板上是你學過的假名，發音像、字形像的會放在一起。', '學過 4 個以上只用假名寫的入門單字：有時王老闆念的是一個單字，板子換成 4 張單字卡，點對的那張。', '按 30 下、包好 5 顆包子。兩分鐘內全部按對，王老闆會很激動。'], uses: ['聽假名', '認假名', '聽入門單字'], n: '一班 5 顆包子' },
+    till: { how: ['客人把要買的東西放上櫃台，每樣都有價格牌。只有一樣就問「これ、いくらですか。」，用字卡依序拼出價格的念法，例如 はっ｜ぴゃく｜えん。', '兩樣以上（或同一樣要「ふたつ」）就問「ぜんぶで いくらですか。」：自己加起來，拼出全部的錢，例如 800＋900 → せん｜なな｜ひゃく｜えん。', '越後面的客人買越多樣，最後三樣。按錯一塊算一次失誤，錯兩次下一塊會亮。'], uses: ['數字的念法', 'ひゃく・せん 的音變', '心算加法'], n: '一班 10 位客人' } };
   function intro(yard, job) {
     const c = can(job); if (!c.ok) { toast(c.why, 3600); return false; }
     const P = PLACES[job], R = RULES[job], t = today(), back = t && t.place === job && !fin(t) ? t.done : 0, n = shifts() + 1, p = pay(n, 'E');
@@ -101,11 +106,11 @@ const WORK = (() => {
   // offered, and はたらく says why not)
   const offer = (id, place) => { const job = Object.keys(PLACES).find((j) => PLACES[j].who === id && PLACES[j].place === place); return job && kanaOk(PLACES[job].kana) ? job : null; };
   const hello = (id) => (TOWN.WORK.hello || {})[id] || ['いらっしゃい！', '歡迎光臨！'];
-  // the 求人看板 by the way into 大通り: the four jobs, where, the kana each needs (✓ those open to this learner), the hours, today's
+  // the 求人看板 by the way into 大通り: the four jobs, where, what each needs (✓ those open to this learner), the hours, today's
   function board() {
     const t = today(), rows = Object.entries(PLACES).map(([job, P]) => { const ok = kanaOk(P.kana);
-      const left = ok ? wordsLeft(job) : [], go = ok && !left.length;   // the kana seen, the 入門 words still to learn (外場)
-      return `<li class="wk-job${go ? ' ok' : ''}" data-job="${job}"><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span><span>${go ? '✓ 可以做' : ok ? `再學 ${left.length} 個入門單字` : `學 ${P.kana} 個假名`}</span></li>`; }).join('');
+      const left = ok ? wordsLeft(job) : [], more = needs(job).length, go = ok && !left.length && !more;   // the kana seen, the 入門 words (外場) and numbers (收銀) still to learn
+      return `<li class="wk-job${go ? ' ok' : ''}" data-job="${job}"><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span><span>${go ? '✓ 可以做' : more ? P.need : ok ? `再學 ${left.length} 個入門單字` : `學 ${P.kana} 個假名`}</span></li>`; }).join('');
     const now = t ? (fin(t) ? `今天在「${esc(named(t.place).name)}」的班打完了。` : `今天在「${esc(named(t.place).name)}」打工中（${t.done}／${nOf(t.place)}）。`) : '今天還沒打工。一天只能選一個地方打一班。';
     CLASS.card('wk-board', '求人看板', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button><div class="wk-bhead"><b lang="ja">アルバイト ぼしゅう</b><span>求人看板</span></div>
       <ul class="wk-jobs">${rows}</ul><p class="wk-today">${now}</p><p class="wk-note">大通り的店 10 點到 19 點；外場在らいらいけん店裡（10 點到 20 點）；包包子在牌樓外的「福明」，王老闆在的時候。點老闆，選「はたらく」。</p>`, () => {});
