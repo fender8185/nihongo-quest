@@ -204,6 +204,24 @@ def test_a_counter_shift_pays(b):
       return JSON.stringify(Object.assign(out, { yen: t.yen, grade: t.grade })); })()"""))
     assert r == {'card': True, 'yen': 150, 'grade': 'S'}, r
 
+# 2026-11-19, the user: every job timed, as 外場 is — a customer's patience under them (20 s at the counter), from their asking;
+# a wrong thing handed costs some; 💦 あの、すみません！ then 💢 ちょっと！ (外場's words, in their voice); at none, いいです！ and
+# off they go, the thing they wanted lit, the task lost (3), the next customer up
+def test_a_counter_customer_out_of_patience_goes(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + COUNTER + """ kana(46); earlier('counter'); window.__said = []; window.speakAs = (w, l) => { __said.push(w + ':' + l); return Promise.resolve(); };
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter');
+      for (let i = 0; i < 30 && !document.querySelector('.wk-cust.on'); i++) await wait(100);
+      const t = JOBS.counter.now(), bar = () => parseFloat(document.querySelector('.wk-counter .wk-pat').style.getPropertyValue('--p')), cust = () => document.querySelector('.wk-counter .wk-cust');
+      const out = { full: bar() > 0.95 }; [...document.querySelectorAll('.wk-good')].find((g) => g.dataset.good !== t.good[0]).click(); await wait(100); out.cost = bar() < 0.82;
+      let moods = new Set(); JOBS.pat.scale = 0.02; for (let i = 0; i < 80 && !(0 in WORK.today().score); i++) { moods.add(cust().dataset.mood); await wait(25); } JOBS.pat.scale = 1;
+      Object.assign(out, { moods: [...moods].filter(Boolean).sort(), sign: cust().querySelector('.wk-emo').textContent, score: WORK.today().score[0],
+        again: __said.includes(t.who + ':あの、すみません！'), hey: __said.includes(t.who + ':ちょっと！'), out: __said.some((x) => x === t.who + ':いいです！' || x === t.who + ':もう いいです！'),
+        lit: (document.querySelector('.wk-good.wk-hint') || {}).dataset.good === t.good[0] });
+      for (let i = 0; i < 40 && JOBS.counter.now() === t; i++) await wait(100); for (let i = 0; i < 30 && !document.querySelector('.wk-cust.on'); i++) await wait(100);
+      Object.assign(out, { next: document.querySelector('.wk-counter .wk-n').textContent, fresh: bar() > 0.95 && !cust().dataset.mood });
+      return JSON.stringify(out); })()"""))
+    assert r == {'full': True, 'cost': True, 'moods': ['mad', 'meh'], 'sign': '💢', 'score': 3, 'again': True, 'hey': True, 'out': True, 'lit': True, 'next': '2／10', 'fresh': True}, r
+
 def test_the_counter_card_fits_a_phone(b):
     r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + HELP + COUNTER + """ kana(46); vocab('いくら'); nums(); earlier('counter');
       location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter'); await wait(1500);
@@ -268,6 +286,19 @@ def test_a_till_shift_pays(b):
       return JSON.stringify(Object.assign(out, { yen: t.yen, grade: t.grade, place: t.place })); })()"""))
     assert r == {'card': True, 'yen': 150, 'grade': 'S', 'place': 'till'}, r
 
+# the till's customers wait as long as their things take: 25 s for one, 35 for two, 45 for three; at none they go, the sum shown whole
+def test_a_till_customer_out_of_patience_goes(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + COUNTER + TILL + """ kana(46); vocab('いくら'); nums(); earlier('till'); window.__said = []; window.speakAs = (w, l) => { __said.push(w + ':' + l); return Promise.resolve(); };
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'till'); await ready();
+      const t = JOBS.till.now(), bar = () => parseFloat(document.querySelector('.wk-till .wk-pat').style.getPropertyValue('--p'));
+      const bad = tiles().find((x) => !t.parts.includes(x.dataset.p)); bad.click(); await wait(100); const out = { cost: bar() < 0.91 && bar() > 0.85 };
+      JOBS.pat.scale = 0.02; for (let i = 0; i < 80 && !(0 in WORK.today().score); i++) await wait(25); JOBS.pat.scale = 1;
+      Object.assign(out, { score: WORK.today().score[0], out: __said.some((x) => x === t.who + ':いいです！' || x === t.who + ':もう いいです！'),
+        whole: [...document.querySelectorAll('.wk-till .wk-spell b')].map((x) => x.textContent).join('') === YEN.reading(t.sum), shut: tiles().every((x) => x.disabled) });
+      await ready(); out.next = document.querySelector('.wk-till .wk-n').textContent;
+      return JSON.stringify(out); })()"""))
+    assert r == {'cost': True, 'score': 3, 'out': True, 'whole': True, 'shut': True, 'next': '2／10'}, r
+
 def test_the_till_card_fits_a_phone(b):
     r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + HELP + COUNTER + TILL + """ kana(46); vocab('いくら'); nums(); earlier('till');
       state.work.res['2026-11-10'] = { place: 'till', done: 9, score: Object.fromEntries(Array.from({ length: 9 }, (_, k) => [k, 0])) };   // three things, the most pieces
@@ -330,7 +361,7 @@ def test_a_shift_resumed_starts_at_its_tap(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + BUNS + """ kana(46); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
       state.work.res['2026-11-10'] = { place: 'buns', done: 5, score: { 0: 0, 1: 0, 2: 1, 3: 0, 4: 1 } }; await make();
       return JSON.stringify({ tap: JOBS.buns.now().tap, step: step(), askew: document.querySelector('.wk-closeup').classList.contains('flaw'), steamer: document.querySelectorAll('.wk-steamer .wk-done').length,
-        shiny: document.querySelectorAll('.wk-steamer .wk-done.ok').length, clock: getComputedStyle(document.querySelector('.wk-clock')).display === 'none' }); })()"""))
+        shiny: document.querySelectorAll('.wk-steamer .wk-done.ok').length, clock: getComputedStyle(document.querySelector('.wk-clock')).display !== 'none' }); })()"""))
     assert r == {'tap': 15, 'step': 3, 'askew': True, 'steamer': 2, 'shiny': 1, 'clock': True}, r
 
 def test_all_right_in_time_fills_the_steamer(b):
@@ -340,14 +371,26 @@ def test_all_right_in_time_fills_the_steamer(b):
         said: document.querySelector('.wk-say').textContent.includes('てんさい') }); })()"""))
     assert r == {'gold': True, 'buns': 5, 'said': True}, r
 
-def test_a_miss_or_the_clock_keeps_the_steamer_plain(b):
+def test_a_miss_keeps_the_steamer_plain(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + BUNS + """ kana(46); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
-      await make(); await tap(false); for (let i = 0; i < 30; i++) await tap(true); await wait(300); const out = { missGold: document.querySelector('.wk-buns .cls-card').classList.contains('wk-shine-all') };
-      document.querySelectorAll('.wk-result').forEach((x) => x.remove()); CLASS.close(); delete state.work.res['2026-11-10'];
-      const now = Date.now; await make(); Date.now = () => now() + 121000; await wait(400); out.out = document.querySelector('.wk-clock').classList.contains('out');
-      for (let i = 0; i < 30; i++) await tap(true); await wait(300); out.lateGold = document.querySelector('.wk-buns .cls-card').classList.contains('wk-shine-all'); Date.now = now;
+      await make(); await tap(false); for (let i = 0; i < 30; i++) await tap(true); await wait(300);
+      return JSON.stringify({ gold: document.querySelector('.wk-buns .cls-card').classList.contains('wk-shine-all') }); })()"""))
+    assert r == {'gold': False}, r
+
+# 2026-11-19, the user: every job timed, as 外場 is — each bun on its own clock (the bar by the 🔊, from its first step): out, the
+# bun goes into the steamer askew, the rest of its tasks lost, 王's おそい！, and the next bun is begun; no gold for that shift
+def test_a_bun_past_its_clock_goes_in_askew_and_the_next_begins(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + BUNS + """ kana(46); window.speak = () => Promise.resolve(); window.__said = []; window.speakAs = (w, l) => { __said.push(w + ':' + l); return Promise.resolve(); };
+      await make(); const bar = () => parseFloat(document.querySelector('.wk-clock').style.getPropertyValue('--p'));
+      await tap(true); await tap(true); await wait(400); const out = { running: bar() < 1 && bar() > 0.9 };
+      JOBS.pat.scale = 0.01; for (let i = 0; i < 40 && JOBS.buns.now() && JOBS.buns.now().tap < 6; i++) await wait(50); JOBS.pat.scale = 1;
+      Object.assign(out, { tap: JOBS.buns.now().tap, score: Object.assign({}, WORK.today().score), said: __said.includes('wang:おそい！'), steamer: document.querySelectorAll('.wk-steamer .wk-done').length,
+        shiny: document.querySelectorAll('.wk-steamer .wk-done.ok').length, step: step(), red: document.querySelector('.wk-clock').dataset.mood === 'mad' });
+      await idle(); await wait(300); out.fresh = bar() > 0.95 && document.querySelector('.wk-clock').dataset.mood === 'ok';
+      for (let i = 6; i < 30; i++) await tap(true); await wait(300);
+      Object.assign(out, { gold: document.querySelector('.wk-buns .cls-card').classList.contains('wk-shine-all'), grade: WORK.today().grade });
       return JSON.stringify(out); })()"""))
-    assert r == {'missGold': False, 'out': True, 'lateGold': False}, r
+    assert r == {'running': True, 'tap': 6, 'score': {'0': 3, '1': 3}, 'said': True, 'steamer': 1, 'shiny': 0, 'step': 0, 'red': True, 'fresh': True, 'gold': False, 'grade': 'B'}, r
 
 def test_buns_only_while_wang_is_there(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(46); TOWNEV.clock = { h: 21, day: new Date(2026, 10, 10) }; const night = WORK.can('buns');

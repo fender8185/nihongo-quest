@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 81 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 82 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2680,7 +2680,7 @@ const TOWN = {
       // perfect bun (the cooking-anime way the user asked for, 2026-11-14: the style only), and at a whole shift right in time
       buns: { who: 'wang',
         miss: ['ちがう！', '不對！'], ok: [['いいぞ！', '好！'], ['うまい！', '漂亮！']], shine: [['かんぺきだ！', '完美！'], ['ひかって いる！', '在發光！'], ['これぞ ぶたまん！', '這才是豬肉包！']],
-        all: ['きみは てんさいだ！', '你是天才！'], end: ['シェイシェイ！ ハオチー！', '謝謝！好吃！'] },
+        all: ['きみは てんさいだ！', '你是天才！'], end: ['シェイシェイ！ ハオチー！', '謝謝！好吃！'], late: ['おそい！', '太慢了！'] },   // late: a bun past its clock (2026-11-19)
       // 外場 (2026-11-15, らいらいけん): what the hero says to each (me) and the wrong ones offered beside it (not); what the customers
       // say (cust); 黄's from the kitchen
       // 外場 (HALL): what 黄 says (a dish up, called by its name: 外場 2.0; the phone left ringing), the hero's answers (me) among

@@ -48,10 +48,43 @@ const JOBS = (() => {
       return { kind, good, goods, who: sayer(good[0]) };
     });
   }
+  // ---- the clock (2026-11-19, the user: every job timed, as 外場 is): a bar wearing down while the hero is waited on — held while
+  // the lines between are said, and on a hidden page — coloured by what is left (外場's moods); at none, out(). PAT.scale: the
+  // tests run it fast. A customer's (站櫃, 收銀): their 🙂 → 💦 (あの、すみません！) → 💢 (ちょっと！) as it goes, 外場's words in
+  // their voices; a miss costs some; at none they go (もう いいです！, いいです！ till もう is learned), the task lost (3, as 外場's
+  // stormed out) ----
+  const PAT = { scale: 1 }, MOOD = (p) => (p >= 0.6 ? 'ok' : p >= 0.3 ? 'meh' : 'mad'), EMO = { ok: '', meh: '💦', mad: '💢' };
+  function clock(secs, alive, paint, out) {
+    let p = 1, held = true, over = false, last = Date.now();
+    const set = (v) => { if (over) return; p = Math.max(0, Math.min(1, v)); paint(p, MOOD(p)); if (!p) { stop(); out(); } };
+    const tick = setInterval(() => {
+      const t = Date.now(), dt = Math.min(0.25, (t - last) / 1000); last = t;   // a throttled tab's long gaps: no leap
+      if (!alive()) { stop(); return; }
+      if (!held && !document.hidden) set(p - dt / (secs * PAT.scale));
+    }, 100);
+    function stop() { over = true; clearInterval(tick); }
+    paint(1, 'ok');
+    return { go: () => { held = false; last = Date.now(); }, hit: (d) => set(p - d), stop, p: () => p };
+  }
+  const CROSS = () => TOWN.WORK.say.waiter.cust;   // 外場's customers' words, already in these nine voices
+  function patience(job, who, secs, alive, out) {
+    const c = () => document.querySelector(`.wk-${job} .wk-cust`); let mood = 'ok';
+    return clock(secs, alive, (p, m) => {
+      const e = c(); if (!e) return; const bar = e.querySelector('.wk-pat'); if (bar) bar.style.setProperty('--p', p.toFixed(3));
+      if (m === mood) return; mood = m; e.dataset.mood = m; const s = e.querySelector('.wk-emo'); if (s) s.textContent = EMO[m];
+      if (m === 'ok' || !p) return;
+      const l = m === 'mad' ? CROSS().hey : CROSS().again, g = document.createElement('b'); speakAs(who, l[0]);   // called again, then cross
+      e.querySelectorAll('.wk-grr').forEach((x) => x.remove()); g.className = 'wk-grr'; g.lang = 'ja'; g.textContent = l[0]; e.appendChild(g); setTimeout(() => g.remove(), 2300);
+    }, () => out(learned('もう') ? CROSS().out : CROSS().out0));
+  }
+  const custHtml = (who) => `<span class="kr-face">${TOWNEV.face(who)}</span><i class="wk-emo"></i><p class="wk-bub"></p><span class="wk-pat"><i></i></span>`;
+  const COUNTER_SECS = 20, TILL_SECS = [0, 25, 35, 45];   // a customer's patience (s): 站櫃's one; 收銀's by the things bought
+  const MISS_COST = { counter: 0.2, till: 0.1 };   // of a whole patience: the wrong thing handed, a wrong piece said
+
   let C = null;   // the customer at the counter now (its task)
-  const goodPic = (key) => { const d = (typeof PICS === 'object' && PICS[key]) || (typeof PICS_TOWN === 'object' && PICS_TOWN[key]); return d ? `<svg class="pic" viewBox="0 0 100 100" aria-hidden="true"><circle class="pd" cx="50" cy="50" r="47"/>${d}</svg>` : ''; };
+  const goodPic =(key) => { const d = (typeof PICS === 'object' && PICS[key]) || (typeof PICS_TOWN === 'object' && PICS_TOWN[key]); return d ? `<svg class="pic" viewBox="0 0 100 100" aria-hidden="true"><circle class="pd" cx="50" cy="50" r="47"/>${d}</svg>` : ''; };
   function counterRun(ctx) {
-    const tasks = counterMake(), first = !Object.values(state.work.res).some((r) => r.place === 'counter' && r.yen !== undefined); let k = ctx.done, miss = 0, got = 0, busy = true;
+    const tasks = counterMake(), first = !Object.values(state.work.res).some((r) => r.place === 'counter' && r.yen !== undefined); let k = ctx.done, miss = 0, got = 0, busy = true, P = null;   // P: the customer's patience
     const el = (s) => document.querySelector('.wk-counter ' + s);
     const bub = (open) => { const [ja, zh] = ask(C), w = C.good[0], line = open ? esc(ja) : `<button type="button" class="wk-ear" aria-label="再聽一次">🔊</button>${esc(ja.slice(w.length))}`;   // the word heard, not read, till handed over
       el('.wk-bub').innerHTML = `<b lang="ja">${line}</b><span>${esc(zh)}</span>${C.kind === 'two' ? `<i class="wk-cnt">${got}／2</i>` : ''}`; };
@@ -60,30 +93,41 @@ const JOBS = (() => {
       C = tasks[k]; miss = 0; got = 0; busy = true; if (!el('.wk-goods')) return;
       el('.wk-n').textContent = `${k + 1}／${N}`;
       el('.wk-goods').innerHTML = C.goods.map((g) => `<button type="button" class="wk-good" data-good="${esc(g[0])}">${goodPic(g[1])}<b lang="ja">${esc(g[0])}</b><small>${g[2]}円</small></button>`).join('');
-      el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').innerHTML = `<span class="kr-face">${TOWNEV.face(C.who)}</span><p class="wk-bub"></p>`;
-      said(me(ME.hi), 800).then(() => {   // the customer asks, once いらっしゃいませ is said
+      el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').removeAttribute('data-mood'); el('.wk-cust').innerHTML = custHtml(C.who);
+      const t = C; P = patience('counter', t.who, COUNTER_SECS, () => Boolean(el('.wk-cust')) && C === t && ctx.on(), gone);
+      said(me(ME.hi), 800).then(() => {   // the customer asks, once いらっしゃいませ is said; their patience from then
         if (!el('.wk-cust') || C !== tasks[k] || !ctx.on()) return;
-        bub(false); el('.wk-cust').classList.add('on'); speakAs(C.who, ask(C)[0]); busy = false;
+        bub(false); el('.wk-cust').classList.add('on'); speakAs(C.who, ask(C)[0]); busy = false; P.go();
       });
     }
     function wrong(b) {
       miss++; playSfx('bad'); b.classList.remove('wk-bad'); void b.offsetWidth; b.classList.add('wk-bad'); word('counter', say('counter').miss, 'bad');
       if (miss >= 2) { document.querySelectorAll('.wk-good').forEach((x) => x.classList.toggle('wk-hint', x.dataset.good === C.good[0])); bub(true); }
+      P.hit(MISS_COST.counter);
     }
-    function right() {
-      busy = true; ctx.right(k, miss); playSfx('good'); bub(true); el('.wk-cust').classList.remove('on');
-      const praise = !miss && Math.random() < 0.25, live = () => el('.wk-cust') && (ctx.on() || k >= N);   // this run's card only
+    // the customer gone (to the next one, or 周's thanks and the card shut once every line is said)
+    function next(lines, praise) {
+      const live = () => el('.wk-cust') && (ctx.on() || k >= N);   // this run's card only
       k++;
-      // each line to its end before the next: ありがとうございました, now and then 周's word, then the next customer — or 周's
-      // thanks and the card shut
       const bye = (async () => {
-        el('.wk-cust').classList.add('bye'); await said(me(ME.bye), 900);
-        if (praise && live()) await said(word('counter', pick(say('counter').ok)));
+        await lines(live); if (!live()) return;
+        if (praise) await said(word('counter', pick(say('counter').ok)));
         if (!live()) return;
         if (k < N) { show(); return; }
         await said(word('counter', say('counter').end, 'ok'), 700); if (el('.wk-cust')) CLASS.close();
       })();
       if (k >= N) ctx.finish({}, bye);   // paid now, the results after the goodbye
+    }
+    function right() {
+      busy = true; P.stop(); ctx.right(k, miss); playSfx('good'); bub(true); el('.wk-cust').classList.remove('on');
+      // each line to its end before the next: ありがとうございました, now and then 周's word
+      next(async () => { el('.wk-cust').classList.add('bye'); await said(me(ME.bye), 900); }, !miss && Math.random() < 0.25);
+    }
+    function gone(line) {   // patience out: もう いいです！ and off they go, the thing they wanted lit; the task lost
+      busy = true; ctx.right(k, 3); playSfx('bad'); const t = C;
+      el('.wk-bub').innerHTML = `<b lang="ja">${esc(line[0])}</b><span>${esc(line[1])}</span>`;
+      document.querySelectorAll('.wk-good').forEach((x) => x.classList.toggle('wk-hint', x.dataset.good === t.good[0]));
+      next(async (live) => { await said(speakAs(t.who, line[0]), 1200); if (live()) { el('.wk-cust').classList.add('bye'); await sleep(450); } }, false);
     }
     CLASS.card('wk-counter', '站櫃', `${head('counter', 'らんらん', k)}<div class="wk-cust"></div><div class="wk-goods"></div><div class="wk-opts"></div><p class="wk-me"></p>`, (e) => {
       if (busy || !ctx.on() || !C) return;
@@ -137,17 +181,18 @@ const JOBS = (() => {
   }
   let T = null;   // the customer at the till now (its task)
   function tillRun(ctx) {
-    const tasks = tillMake(), first = !Object.values(state.work.res).some((r) => r.place === 'till' && r.yen !== undefined); let k = ctx.done, miss = 0, at = 0, busy = true;   // at: the pieces tapped so far
+    const tasks = tillMake(), first = !Object.values(state.work.res).some((r) => r.place === 'till' && r.yen !== undefined); let k = ctx.done, miss = 0, at = 0, busy = true, P = null;   // at: the pieces tapped so far; P: the customer's patience
     const el = (s) => document.querySelector('.wk-till ' + s);
     const me = (l) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${esc(l[0])}</b>${first ? `<span>${esc(l[1])}</span>` : ''}`; return speakAs('hero', l[0]); };
     function show() {
       T = tasks[k]; miss = 0; at = 0; busy = true; if (!el('.wk-goods')) return;
       el('.wk-n').textContent = `${k + 1}／${N}`; el('.wk-goods').className = `wk-goods n${T.things.length}`;
       el('.wk-goods').innerHTML = T.things.map((g) => `<span class="wk-good">${goodPic(g[1])}<b lang="ja">${esc(g[0])}</b><small>${g[2]}円</small></span>`).join('');
-      el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').innerHTML = `<span class="kr-face">${TOWNEV.face(T.who)}</span><p class="wk-bub"></p>`;
-      said(me(ME.hi), 800).then(() => {   // the customer asks, once いらっしゃいませ is said; then the pieces
+      el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').removeAttribute('data-mood'); el('.wk-cust').innerHTML = custHtml(T.who);
+      const t = T; P = patience('till', t.who, TILL_SECS[t.things.length], () => Boolean(el('.wk-cust')) && T === t && ctx.on(), gone);
+      said(me(ME.hi), 800).then(() => {   // the customer asks, once いらっしゃいませ is said; then the pieces, and their patience
         if (!el('.wk-cust') || T !== tasks[k] || !ctx.on()) return;
-        const [ja, zh] = tillAsk(T); el('.wk-bub').innerHTML = `<b lang="ja">${esc(ja)}</b><span>${esc(zh)}</span>`; el('.wk-cust').classList.add('on'); speakAs(T.who, ja); busy = false;
+        const [ja, zh] = tillAsk(T); el('.wk-bub').innerHTML = `<b lang="ja">${esc(ja)}</b><span>${esc(zh)}</span>`; el('.wk-cust').classList.add('on'); speakAs(T.who, ja); busy = false; P.go();
         el('.wk-opts').innerHTML = `<p class="wk-spell" lang="ja"></p>${T.tiles.map((p) => `<button type="button" class="btn btn-sm wk-opt wk-tile" data-p="${esc(p)}" lang="ja">${esc(p)}</button>`).join('')}`; built();
       });
     }
@@ -156,27 +201,35 @@ const JOBS = (() => {
       const p = el('.wk-spell'); if (!p) return; p.innerHTML = T.parts.map((x, i) => (i < at ? `<b>${esc(x)}</b>` : '<i></i>')).join('');
       if (miss >= 2) document.querySelectorAll('.wk-till .wk-tile').forEach((x) => x.classList.toggle('wk-hint', at < T.parts.length && !x.disabled && x.dataset.p === T.parts[at]));
     }
-    function right() {
-      busy = true; ctx.right(k, miss); playSfx('good'); el('.wk-cust').classList.remove('on');
-      const t = T, praise = !miss && Math.random() < 0.3, live = () => el('.wk-cust') && (ctx.on() || k >= N);   // this run's card only
+    // the customer gone (to the next one, or 張's おつかれさま and the card shut once every line is said)
+    function next(lines, praise) {
+      const live = () => el('.wk-cust') && (ctx.on() || k >= N);   // this run's card only
       k++;
-      // each line to its end before the next: the sum, ありがとうございました, now and then 張's word, then the next customer — or 張's
-      // おつかれさま and the card shut
       const bye = (async () => {
-        await said(me(tillSay(t)), 900); if (!live()) return;
-        el('.wk-cust').classList.add('bye'); await said(me(ME.bye), 900);
-        if (praise && live()) await said(word('till', pick(say('till').ok)));
+        await lines(live); if (!live()) return;
+        if (praise) await said(word('till', pick(say('till').ok)));
         if (!live()) return;
         if (k < N) { show(); return; }
         await said(word('till', say('till').end, 'ok'), 700); if (el('.wk-cust')) CLASS.close();
       })();
       if (k >= N) ctx.finish({}, bye);   // paid now, the results after the goodbye
     }
+    function right() {
+      busy = true; P.stop(); ctx.right(k, miss); playSfx('good'); el('.wk-cust').classList.remove('on'); const t = T;
+      // each line to its end before the next: the sum, ありがとうございました, now and then 張's word
+      next(async (live) => { await said(me(tillSay(t)), 900); if (!live()) return; el('.wk-cust').classList.add('bye'); await said(me(ME.bye), 900); }, !miss && Math.random() < 0.3);
+    }
+    function gone(line) {   // patience out: もう いいです！ and off they go, the sum shown whole; the task lost
+      busy = true; ctx.right(k, 3); playSfx('bad'); const t = T; at = t.parts.length; built();
+      document.querySelectorAll('.wk-till .wk-tile').forEach((x) => { x.disabled = true; x.classList.remove('wk-hint'); });
+      el('.wk-bub').innerHTML = `<b lang="ja">${esc(line[0])}</b><span>${esc(line[1])}</span>`;
+      next(async (live) => { await said(speakAs(t.who, line[0]), 1400); if (live()) { el('.wk-cust').classList.add('bye'); await sleep(450); } }, false);
+    }
     CLASS.card('wk-till', '收銀', `${head('till', 'ふくの レジ', k)}<div class="wk-cust"></div><div class="wk-goods"></div><div class="wk-opts"></div><p class="wk-me"></p>`, (e) => {
       if (busy || !ctx.on() || !T) return;
       const o = e.target.closest('.wk-tile'); if (!o || o.disabled) return;
       if (o.dataset.p !== T.parts[at]) {   // not the next piece: a miss
-        miss++; playSfx('bad'); o.classList.remove('wk-bad'); void o.offsetWidth; o.classList.add('wk-bad'); word('till', say('till').miss, 'bad'); if (miss >= 2) built(); return;
+        miss++; playSfx('bad'); o.classList.remove('wk-bad'); void o.offsetWidth; o.classList.add('wk-bad'); word('till', say('till').miss, 'bad'); if (miss >= 2) built(); P.hit(MISS_COST.till); return;
       }
       at++; o.disabled = true; built(); if (at < T.parts.length) SND.play('place', { vol: 0.5 }); else right();
     });
@@ -196,13 +249,14 @@ const JOBS = (() => {
   // a new kana and the next is said at once. Six steps a bun (BUN_STEPS, their words in small print only), thirty taps = five buns;
   // every three taps one of the shift's ten (ctx.right with their misses), so leaving halfway, coming back, the grade and the pay
   // are as ever. A miss: the cell shakes, 王's ちがう！ in print (no voice over the kana), the bun goes askew (it stays so), the
-  // sound again; the same one missed twice, its cell lights. 120 seconds on the clock from a shift's start, never cut short: all
-  // thirty right inside it, the five buns shine together and 王 is beside himself (中華一番's style, 2026-11-14); a bun of six
-  // without a miss, かんぺきだ！ as it comes out. The cells: never two that sound the same (お／を); half the time a new one sounds
+  // sound again; the same one missed twice, its cell lights. All thirty right (and no bun late), the five buns shine together and
+  // 王 is beside himself (中華一番's style, 2026-11-14); a bun of six without a miss, かんぺきだ！ as it comes out. 2026-11-19 (the
+  // user: every job timed, as 外場 is): each bun on its own clock (BUN_SECS, the bar by the 🔊; it was a soft 120 s for the shift,
+  // the gold only) — out, it goes into the steamer as it is (askew), its tasks lost, 王's おそい！, and the next bun is begun. The cells: never two that sound the same (お／を); half the time a new one sounds
   // or looks like one there. 2026-11-19 (the user: 張's tasks to 包包子, 張 to the money): the first job now, at five kana seen —
   // the board four cells of those while under twelve are seen, six after; and once four kana-only 入門 words are learned, a step in
   // three or so is a word said, the board four word cards for it (張's labels that were words) ----
-  const BUN_STEPS = ['こねる', 'のばす', 'のせる', 'つつむ', 'ならべる', 'むす'], TAPS = 30, PER = TAPS / N, LIMIT = 120;
+  const BUN_STEPS = ['こねる', 'のばす', 'のせる', 'つつむ', 'ならべる', 'むす'], TAPS = 30, PER = TAPS / N, BUN_SECS = 30;
   const bunPool = () => { const seen = WORK.kana(), all = REG.kana.slice(0, 46).map((x) => x.ch), p = all.filter((c) => seen.has(c)); return p.length >= 5 ? p : all.slice(0, 5); };
   const bunCells = (pool) => (pool.length >= 12 ? 6 : 4);
   function boardNew(board, pool, was) {   // a kana for a cell (was: the one it held): not on the board, no twin of one there; half the time kin of one there
@@ -231,8 +285,8 @@ const JOBS = (() => {
   let BN = null, bunRun = 0;   // the board now (for the tests): { target, board, cards, tap, wait }; the run whose card is up
   function bunsRun(ctx) {
     const run = ++bunRun, mine = () => run === bunRun && Boolean(document.querySelector('.wk-buns .wk-keys'));   // this run's card only (shut and opened again: the new run's)
-    const s = say('buns'), pool = bunPool(), fresh = ctx.done === 0, t0 = Date.now(), bust = bunBust(), score = (WORK.today() || {}).score || {}, ws = words();
-    let tap = ctx.done * PER, board = [], cards = null, said1 = false, target = null, miss = 0, bunMiss = 0, trioMiss = 0, wrong = 0, busy = false, clock = 0;   // cards: a word step's four; said1: the last step was one
+    const s = say('buns'), pool = bunPool(), fresh = ctx.done === 0, bust = bunBust(), score = (WORK.today() || {}).score || {}, ws = words();
+    let tap = ctx.done * PER, board = [], cards = null, said1 = false, target = null, miss = 0, bunMiss = 0, trioMiss = 0, wrong = 0, late = 0, busy = false, Q = null;   // cards: a word step's four; said1: the last step was one; late: buns past their clock; Q: this bun's clock
     const made = Array.from({ length: Math.floor(tap / BUN_STEPS.length) }, (_, b) => !score[2 * b] && !score[2 * b + 1]);   // buns done before: perfect if their two tasks were
     if (tap % BUN_STEPS.length) bunMiss = score[tap / PER - 1] || 0;   // half a bun done: askew if its first three were missed
     const el = (q) => document.querySelector('.wk-buns ' + q), live = () => mine() && ctx.on();
@@ -258,9 +312,20 @@ const JOBS = (() => {
       if (word) { target = pick(ws); cards = shuffle([target, ...shuffle(ws.filter((w) => w !== target)).slice(0, 3)]); }
       else { cards = null; target = pick(board.filter((c) => c !== last)); }
       miss = 0; keys(); now(); speak(target);
+      if (!Q) Q = clock(BUN_SECS, live, (p, m) => { const c = el('.wk-clock'); if (c) { c.style.setProperty('--p', p.toFixed(3)); c.dataset.mood = m; } }, out);   // a bun begun (or a shift taken up again): its clock
+      Q.go();
+    }
+    // the bun's clock out: into the steamer as it is, askew, the rest of its tasks lost; 王's おそい！, then the next bun
+    function out() {
+      Q = null; late++; busy = true; const last = (Math.floor(tap / BUN_STEPS.length) + 1) * BUN_STEPS.length;
+      for (let i = Math.floor(tap / PER); i < last / PER; i++) ctx.right(i, 3);
+      tap = last; trioMiss = 0; bunMiss = 0; made.push(false); target = null; cards = null; keys(); now(); art(); playSfx('bad'); quiet(s.late, 'bad');
+      const n = el('.wk-n'); if (n) n.textContent = `${Math.min(tap + 1, TAPS)}／${TAPS}`;
+      if (tap >= TAPS) { BN = null; end(); return; }
+      said(speakAs(s.who, s.late[0]), 900).then(() => { if (!live()) return; busy = false; ask(); });
     }
     function end() {
-      const best = fresh && !wrong && Date.now() - t0 <= LIMIT * 1000;   // from the shift's start, all thirty right, inside the clock
+      const best = fresh && !wrong && !late;   // from the shift's start, all thirty right, no bun late
       const bye = sleep(200).then(() => {   // 王's word to its end, then the card shut
         if (!mine()) return null;
         if (best) { const c = el('.cls-card') || document.querySelector('.wk-buns .cls-card'); if (c) c.classList.add('wk-shine-all'); }
@@ -277,6 +342,7 @@ const JOBS = (() => {
       const n = el('.wk-n'); if (n) n.textContent = `${Math.min(tap + 1, TAPS)}／${TAPS}`;
       if (tap % BUN_STEPS.length) { art(); ask(); return; }
       // a bun done: out of the steamer, into it with the rest; 王's word, then the next sound
+      if (Q) { Q.stop(); Q = null; }
       made.push(!bunMiss); const perfect = !bunMiss; bunMiss = 0; busy = true; target = null; now(); art();
       const c = el('.wk-closeup'); if (c && perfect) { c.classList.remove('wk-shine'); void c.offsetWidth; c.classList.add('wk-shine'); }
       if (tap >= TAPS) { BN = null; if (perfect) quiet(pick(s.shine), 'ok'); end(); return; }
@@ -286,7 +352,7 @@ const JOBS = (() => {
         .then(() => new Promise((ok) => setTimeout(ok, 250))).then(() => { if (!live()) return; busy = false; ask(); });
     }
     CLASS.card('wk-buns', '包包子', `${head('buns', 'ふくめい', ctx.done)}<div class="wk-closeup" data-step="0"></div>
-      <div class="wk-krow"><button type="button" class="wk-ear" aria-label="再聽一次">🔊</button><div class="wk-clock"${fresh ? '' : ' hidden'}><i></i></div></div><div class="wk-keys"></div>`, (e) => {
+      <div class="wk-krow"><button type="button" class="wk-ear" aria-label="再聽一次">🔊</button><div class="wk-clock"><i></i></div></div><div class="wk-keys"></div>`, (e) => {
       if (busy || !ctx.on() || !target) return;
       if (e.target.closest('.wk-ear')) { speak(target); return; }
       const b = e.target.closest('.wk-key'); if (!b) return;
@@ -298,16 +364,11 @@ const JOBS = (() => {
     const n = el('.wk-n'); if (n) n.textContent = `${tap + 1}／${TAPS}`;
     while (board.length < bunCells(pool)) board.push(boardNew(board, pool));
     art(); keys(); ask();
-    if (fresh) clock = setInterval(() => {   // the clock: a bar running down; past it, grey — never a stop
-      const c = el('.wk-clock'); if (!c || !mine() || !ctx.on()) { clearInterval(clock); return; }
-      const left = Math.max(0, 1 - (Date.now() - t0) / (LIMIT * 1000)); c.querySelector('i').style.width = `${(left * 100).toFixed(1)}%`; c.classList.toggle('out', !left);
-      if (tap >= TAPS) clearInterval(clock);
-    }, 200);
   }
-  function bunsLines(add) { const s = say('buns'); [s.all, s.end].concat(s.ok, s.shine).forEach((l) => add(s.who, l[0])); }
+  function bunsLines(add) { const s = say('buns'); [s.all, s.end, s.late].concat(s.ok, s.shine).forEach((l) => add(s.who, l[0])); }
 
   WORK.register('buns', { run: bunsRun, lines: bunsLines });
   WORK.register('counter', { run: counterRun, lines: counterLines });
   WORK.register('till', { run: tillRun, lines: tillLines, left: tillLeft });
-  return { counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN } };
+  return { pat: PAT, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN } };
 })();
