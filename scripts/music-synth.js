@@ -171,6 +171,20 @@ window.MUSIC_SYNTH = (() => {
           B: ['o.....x.....x...', 'o.....x.....x...', 'o.....x.....x...', 'o...x...x...x...', 'o.....x.....x...', 'o.....x.....x...', 'o.....x.....x...', 'x.x.x.x.x.x.o.o.'] }) },
         { inst: 'bo', f: 1900, vol: 0.035, pats: form('A', { A: ['x...............'].concat(rep(7, '................')) }) },
         { inst: 'luo', f: 560, vol: 0.05, pats: form('A', { A: rep(7, '................').concat(['........x.......']) }) }] },
+    // 駅前の しごと (2026-11-20): the four jobs at みなと駅 — bright and on the move, straight eighths, D major (I IV ii V iii vi ii V,
+    // not the cruise's ii–V round in F): a piano carrying the tune, plucked strings on the off beats, a walking bass, brushes on two
+    // and four and a ride ticking, a glockenspiel answering at each half's end; A A' B A', the B rising through IV V iii vi
+    ekimae: { bpm: 132, peak: 0.42, bar: 8, tail: 0, lead: 'piano', leadVol: 0.1, bass: false, pad: 0.006, walk: 0.055, wet: 0.14,
+      chords: form('A A2 B A2', { A: ['D3 F#3 A3 C#4', 'G3 B3 D4 F#4', 'E3 G3 B3 D4', 'A2 C#3 E3 G3', 'F#3 A3 C#4 E4', 'B2 D3 F#3 A3', 'E3 G3 B3 D4', 'A2 C#3 E3 G3'],
+        A2: ['D3 F#3 A3 C#4', 'G3 B3 D4 F#4', 'E3 G3 B3 D4', 'A2 C#3 E3 G3', 'F#3 A3 C#4 E4', 'B2 D3 F#3 A3', 'E3 G3 B3 D4', 'D3 F#3 A3 C#4'],
+        B: ['G3 B3 D4 F#4', 'A3 C#4 E4 G4', 'F#3 A3 C#4 E4', 'B2 D3 F#3 A3', 'G3 B3 D4 F#4', 'A3 C#4 E4 G4', 'B2 D3 F#3 A3', 'A2 C#3 E3 G3'] }),
+      mel: form('A A2 B A2', {
+        A: 'F#5:2 A5 D6 C#6:2 A5:2 | B5:3 A5 G5:2 B5:2 | G5:2 E5 G5 B5:2 A5:2 | A5:6 -:2 | F#5:2 A5 C#6 E6:2 C#6:2 | D6:3 B5 F#5:2 D6:2 | B5 A5 G5 B5 E6:2 D6 C#6 | A5:6 -:2',
+        A2: 'F#5:2 A5 D6 C#6:2 A5:2 | B5:3 A5 G5:2 B5:2 | G5:2 E5 G5 B5:2 A5:2 | A5:6 -:2 | F#5:2 A5 C#6 E6:2 C#6:2 | D6:3 B5 F#5:2 D6:2 | G5 A5 B5 G5 E5:2 F#5 E5 | D5:6 -:2',
+        B: 'D6:3 B5 G5:2 B5:2 | C#6:3 A5 E5:2 A5:2 | C#6:2 A5 F#5 E5:2 F#5:2 | D5:6 -:2 | B5:2 D6 B5 G5:2 D6:2 | E6:2 C#6 A5 E6:2 C#6:2 | D6:2 B5 F#5 D6:2 B5:2 | C#6:2 A5:2 G5:2 E5:2' }),
+      comp: { inst: 'pizz', vol: 0.055, pats: rep(8, [[1, 1], [3, 1], [5, 1], [7, 1]]) },
+      parts: [{ inst: 'box', vol: 0.06, mel: form('A A B A', { A: '-:24 | -:6 A6 D7 | -:24 | -:6 C#7 A6', B: '-:64' }) }],
+      drums: [{ inst: 'brush', vol: 0.05, pats: ['....x.......x...'] }, { inst: 'ride', f: 2600, vol: 0.018, pats: ['x...x...x...x...'] }] },
     // らいらいけん (2026-11-18): the 外場's own — a Chinese restaurant at lunch, unhurried under the customers' voices, in the D gong
     // pentatonic (D E F# A B): an erhu sliding onto its longer notes over a pipa plucking the off beats, the guzheng rolling up a
     // chord every other bar and answering the erhu in B, a woodblock; A A' B A'

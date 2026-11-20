@@ -449,7 +449,8 @@ const MUSIC = (() => {
     { id: 'minato', place: 'cruise', file: 'music/minato-1.m4a', name: 'みなと案内', kana: 'みなとあんない', zh: '港町導覽', style: '笛・撥弦・低音提琴', color: '#3f7ac8', vol: 0.55 },
     // 中華街の打工's (2026-11-18, the user: the jobs wanted a little music): while a shift runs (WORK.tune), under its voices
     { id: 'chukagai', place: 'work', file: 'music/chukagai-1.m4a', name: '中華街の しごと', kana: 'ちゅうかがいのしごと', zh: '中華街打工', style: '笛子・揚琴・木魚', color: '#d0453a', vol: 0.5 },
-    { id: 'rairai', place: 'work', file: 'music/rairai-1.m4a', name: 'らいらいけん', kana: 'らいらいけん', zh: '來來軒', style: '二胡・琵琶・古箏', color: '#c8763a', vol: 0.7 }
+    { id: 'rairai', place: 'work', file: 'music/rairai-1.m4a', name: 'らいらいけん', kana: 'らいらいけん', zh: '來來軒', style: '二胡・琵琶・古箏', color: '#c8763a', vol: 0.7 },
+    { id: 'ekimae', place: 'work', file: 'music/ekimae-1.m4a', name: '駅前の しごと', kana: 'えきまえのしごと', zh: '駅前打工', style: '鋼琴・撥弦・鐵琴', color: '#3f9a8c', vol: 0.5 }   // the four jobs at みなと駅 (2026-11-20)
   ];
   // the record a place plays by itself: the izakaya's own, the café's jazz out of its door while it is open, the festival's at the shrine;
   // and where the cruise's passengers are while a trip is under way, its own (CRUISE.tune, 2026-11-13: the user missed music on the tour)
