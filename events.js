@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 86 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 87 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2685,12 +2685,13 @@ const TOWN = {
   // goldfish's old man says when one is caught
   // 中華街の打工 (2026-11-14, WORK): what each keeper says when one comes by to work, and their opening the first time
   WORK: {
-    hello: { haru: ['いらっしゃい！ てつだって くれるかい？', '歡迎！要來幫忙嗎？'], zhang: ['…いらっしゃい。はたらく？', '……歡迎光臨。要來打工嗎？'], zhou: ['あら、いらっしゃい。てつだって くれる？', '哎呀，歡迎光臨。要來幫忙嗎？'],
+    hello: { harada: ['いらっしゃいませ。おや、アルバイトの かたですか。', '歡迎光臨。哦，是來打工的人嗎？'], haru: ['いらっしゃい！ てつだって くれるかい？', '歡迎！要來幫忙嗎？'], zhang: ['…いらっしゃい。はたらく？', '……歡迎光臨。要來打工嗎？'], zhou: ['あら、いらっしゃい。てつだって くれる？', '哎呀，歡迎光臨。要來幫忙嗎？'],
       huang: ['はやく！ おみせ、てつだって！', '快！來幫忙顧店！'], wang: ['ニーハオ！ ぶたまん、つくる？', '你好！要來包豬肉包嗎？'] },
     // the hero's yes to it, one of the choices under it (2026-11-20, the user: picked as a reply in the talk, not a blue button)
-    yes: { haru: ['はい、てつだいます！', '好，我來幫忙！'], zhang: ['はい、はたらきます。', '好，我來打工。'], zhou: ['はい、てつだいます。', '好，我來幫忙。'], huang: ['はい、いま いきます！', '好，馬上來！'], wang: ['はい、つくります！', '好，我來包！'] },
+    yes: { harada: ['はい、よろしく おねがいします。', '是的，請多指教。'], haru: ['はい、てつだいます！', '好，我來幫忙！'], zhang: ['はい、はたらきます。', '好，我來打工。'], zhou: ['はい、てつだいます。', '好，我來幫忙。'], huang: ['はい、いま いきます！', '好，馬上來！'], wang: ['はい、つくります！', '好，我來包！'] },
     first: {
       bento: [['haru', 'でんしゃは まって くれないよ！ はやく わたしてね！', '電車可不會等人喔！要快點遞給客人喔！']],   // 駅前 (2026-11-20)
+      window: [['harada', 'お{客|きゃく}さまを {待|ま}たせないで ください。', '請不要讓客人久等。'], ['harada', 'こたえは ぜんぶ、まどの {上|うえ}に あります。', '答案全都在窗口上面。']],
       till: [['zhang', '…ゆっくりで いい。まちがえないで。', '……慢慢來沒關係。別算錯。']],   // 收銀 (2026-11-19, in place of 整理貨架)
       counter: [['zhou', 'おきゃくさんが いった ものを わたしてね。', '客人說要什麼，就拿給他喔。'], ['zhou', '「いらっしゃいませ」「ありがとうございました」、げんきよく ね。', '「歡迎光臨」「謝謝光臨」，要有精神喔。']],
       // 2026-11-19: the rules in Chinese went to the rules card before a shift (WORK.intro); what they say in Japanese stays
@@ -2701,6 +2702,10 @@ const TOWN = {
       // 駅弁 (2026-11-20, ハル): a train in, its bell, a word now and then, a train gone with someone unserved, the end (all: every
       // passenger served at once); yes／no: the hero's answer to an ask put right; usual: what 中村's いつもの is (m2: the tea hot);
       // the passengers' (cust) and the hero's (me) few words
+      // きっぷ売り場 (2026-11-20, 原田): right (now and then), a miss, the end (all: everyone right at once); the hero's greeting, their thanks
+      window: { who: 'harada', ok: [['{正確|せいかく|準確}です。', '準確。'], ['よろしい。', '很好。']], miss: ['ちがいます。', '不對。'],
+        end: ['おつかれさまでした。{本日|ほんじつ|今天}も {定刻|ていこく|準點}です。', '辛苦了。今天也一切準點。'], all: ['{一秒|いちびょう|一秒}も くるいません。おみごとです。', '一秒都不差。了不起。'],
+        me: { hi: ['いらっしゃいませ。', '歡迎光臨。'] }, cust: { thanks: ['ありがとうございます。', '謝謝。'] } },
       bento: { who: 'haru', train: ['きたよ！', '車來了！'], bell: ['もう でるよ！', '要開了喔！'], ok: [['いいね！', '不錯！'], ['はやいね！', '真快！'], ['じょうずだね！', '很厲害喔！']],
         gone: ['いっちゃったね。つぎは がんばろう！', '開走了。下一班加油！'], end: ['おつかれさん！ たすかったよ！', '辛苦了！幫了大忙！'], all: ['あんた、さいのうが あるね！', '你很有天分喔！'],
         yes: ['あるよ！', '有喔！'], no: ['ないよ！', '沒有喔！'],
@@ -2784,6 +2789,13 @@ const TOWN = {
         ['おにぎり、ありますか。', '有飯糰嗎？', 'onigiri', null, 2], ['お{弁当|べんとう}、ありますか。', '有便當嗎？', 'bento', null, 1], ['{水|みず}、ありますか。', '有水嗎？', 'water', null, 2]],
       why: [['{寒|さむ}いので', '好冷，所以', 'tea', 1], ['{時間|じかん}が ないので', '沒時間了，所以', 'onigiri', 2], ['のどが かわいたので', '口好渴，所以', 'water', 1], ['{子|こ}どもが いるので', '帶著小孩，所以', 'juice', 2]],
       usual: 'いつもの、お{願|ねが}いします。', usualZh: '老樣子，麻煩了。', usualItems: [['onigiri', 2], ['tea', 1]]
+    },
+    // きっぷ売り場 (2026-11-20, spec §5): what people ask at the window ({S}: a station, as LINE writes it; {s}: its name in 中文 as
+    // written) and the hero's answers ({P}: a price, {T}: a time, {K}: a track — marked with their readings)
+    window: {
+      q: { fare: ['{S}まで いくらですか。', '到{s}多少錢？'], next: ['つぎの {S}{行|ゆ}きは {何時|なんじ}ですか。', '下一班往{s}的車幾點？'], track: ['{S}{行|ゆ}きは {何番線|なんばんせん}ですか。', '往{s}的車在幾號月台？'],
+        stop: ['この {快速|かいそく|快速}は {S}に {止|と}まりますか。', '這班快速車會停{s}嗎？'], buy: ['{S}まで、{大人|おとな} {一枚|いちまい} ください。', '到{s}，大人一張。'], buy2: ['{S}まで、{大人|おとな} {一枚|いちまい}と {子|こ}ども {一枚|いちまい} ください。', '到{s}，大人一張、小孩一張。'] },
+      a: { fare: ['{P}です。', '{p} 日圓。'], next: ['{T}です。', '{t}。'], track: ['{K}です。', '{k}號月台。'], yes: ['はい、{止|と}まります。', '會，有停。'], no: ['いいえ、{止|と}まりません。', '不會，不停。'], sum: ['ぜんぶで {P}です。', '全部 {p} 日圓。'] }
     }
   },
   YATAI: {

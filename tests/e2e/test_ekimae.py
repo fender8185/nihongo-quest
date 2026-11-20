@@ -166,6 +166,53 @@ def test_bento_resume(b):
       const out = { done, t: BENTO_RUN.now().t, wins: BENTO_RUN.now().wins.length }; CLASS.close(); JOBS.pat.scale = 1; return JSON.stringify(out); })()"""))
     assert r == {'done': 3, 't': 1, 'wins': 3}, r
 
+# ---- きっぷ売り場 (spec §5) ----
+# the readings said: the hour (7 しちじ, 9 くじ, 14 じゅうよじ), the minutes (ふん／ぷん; 10 じゅっぷん)
+def test_window_time_readings(b):
+    r = json.loads(ev(b, "JSON.stringify({ m: [2, 10, 17, 25, 32, 40, 47, 55, 1, 6, 8].map(MADO.minKana), h: [7, 9, 14, 20].map((h) => MADO.HK[h]), mark: MADO.timeMark(10, 25) })"))
+    assert r['m'] == ['にふん', 'じゅっぷん', 'じゅうななふん', 'にじゅうごふん', 'さんじゅうにふん', 'よんじゅっぷん', 'よんじゅうななふん', 'ごじゅうごふん', 'いっぷん', 'ろっぷん', 'はっぷん'], r
+    assert r['h'] == ['しちじ', 'くじ', 'じゅうよじ', 'にじゅうじ'] and r['mark'] == '{10時25分|じゅうじにじゅうごふん}', r
+
+# every answer is a thing on the wall: the fare to the station (its neighbours' the wrong ones), the next train that way by the
+# clock (the other way's and the one after the wrong ones), the track, whether the 快速 stops, the sum for the tickets
+def test_window_answers_come_from_the_wall(b):
+    r = json.loads(ev(b, """JSON.stringify(['fare:kawaguchi', 'fare:shirasagi', 'next:shirasagi', 'next:minatoko', 'track:minatoko', 'stop:hanada', 'stop:kawaguchi', 'buy:okawa:1', 'buy:minatoko:0'].map((x) => { const [kind, to, kid] = x.split(':'), t = MADO.ask(kind, to, 10, 24, kid === '1');
+      return [t.q[0], t.opts[t.right][0], t.opts.length, new Set(t.opts.map((o) => o[0])).size]; }))"""))
+    want = [['{川口|かわぐち}まで いくらですか。', '{170円|ひゃくななじゅうえん}です。'], ['{白鷺|しらさぎ}まで いくらですか。', '{310円|さんびゃくじゅうえん}です。'],
+            ['つぎの {白鷺|しらさぎ}{行|ゆ}きは {何時|なんじ}ですか。', '{10時25分|じゅうじにじゅうごふん}です。'], ['つぎの みなと{港|こう}{行|ゆ}きは {何時|なんじ}ですか。', '{10時32分|じゅうじさんじゅうにふん}です。'],
+            ['みなと{港|こう}{行|ゆ}きは {何番線|なんばんせん}ですか。', '{二番線|にばんせん}です。'], ['この {快速|かいそく|快速}は {花田|はなだ}に {止|と}まりますか。', 'いいえ、{止|と}まりません。'],
+            ['この {快速|かいそく|快速}は {川口|かわぐち}に {止|と}まりますか。', 'はい、{止|と}まります。'], ['{大川|おおかわ}まで、{大人|おとな} {一枚|いちまい}と {子|こ}ども {一枚|いちまい} ください。', 'ぜんぶで {390円|さんびゃくきゅうじゅうえん}です。'],
+            ['みなと{港|こう}まで、{大人|おとな} {一枚|いちまい} ください。', '{140円|ひゃくよんじゅうえん}です。']]
+    assert [x[:2] for x in r] == want, r
+    assert all(x[2] == x[3] and x[2] >= 2 for x in r), r   # the replies all different
+
+# ten people in a shift: the first plain (fares), every kind in it; a shift driven by hand, all right at once, paid 140 + S 50 + 2%
+WIN_HELP = """ window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve(); s(); reg(); state.currentUnit = 'm2';
+  state.work.res['2026-10-21'] = { place: 'window', done: 10, score: {}, yen: 1, grade: 'C' };
+  const card = () => document.querySelector('.wk-window'), click = (q) => { const e = card() && card().querySelector(q); if (e) e.click(); return Boolean(e); };"""
+
+def test_window_shift_by_hand(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + WIN_HELP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      const kinds = MADO.make(10, 24).map((t) => t.kind); WORK.start(yard(), 'window'); const out = { kinds };
+      for (let n = 0; n < 10; n++) { for (let i = 0; i < 200 && !(MADO_RUN.now() && MADO_RUN.now().phase === 'ask' && MADO_RUN.now().k === n); i++) await wait(30);
+        const t = MADO_RUN.now().task; if (t.kind === 'buy') { click(`.md-st[data-st="${t.to}"]`); await wait(80); } click(`.md-opt[data-o="${t.right}"]`); await wait(60); }
+      for (let i = 0; i < 300 && WORK.today().yen === undefined; i++) await wait(30);
+      const x = WORK.today(); out.score = Object.values(x.score); out.yen = x.yen; document.querySelectorAll('.wk-result').forEach((e) => e.remove()); CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['kinds'][:2] == ['fare', 'fare'] and set(r['kinds']) == {'fare', 'next', 'track', 'stop', 'buy'}, r
+    assert r['score'] == [0] * 10 and r['yen'] == 194, r
+
+# a wrong station tapped for tickets, a wrong reply: misses; two and the right one lights; a shift left after three resumes at the fourth
+def test_window_misses_and_resume(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + WIN_HELP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      WORK.start(yard(), 'window'); const out = {}, at = (n) => MADO_RUN.now() && MADO_RUN.now().phase === 'ask' && MADO_RUN.now().k === n;
+      for (let i = 0; i < 200 && !at(0); i++) await wait(30); let t = MADO_RUN.now().task; const bad = [0, 1, 2].filter((i) => i !== t.right && i < t.opts.length);
+      click(`.md-opt[data-o="${bad[0]}"]`); await wait(60); click(`.md-opt[data-o="${bad[1] === undefined ? bad[0] : bad[1]}"]`); await wait(60); out.lit = card().querySelector('.md-opt.wk-hint').dataset.o === String(t.right);
+      click(`.md-opt[data-o="${t.right}"]`); for (const n of [1, 2]) { for (let i = 0; i < 200 && !at(n); i++) await wait(30); t = MADO_RUN.now().task; if (t.kind === 'buy') { click(`.md-st[data-st="${t.to}"]`); await wait(80); } click(`.md-opt[data-o="${t.right}"]`); }
+      await wait(200); CLASS.close(); await wait(100); out.score = WORK.today().score;
+      WORK.start(yard(), 'window'); for (let i = 0; i < 200 && !(MADO_RUN.now() && MADO_RUN.now().phase === 'ask'); i++) await wait(30); out.k = MADO_RUN.now().k; CLASS.close();
+      return JSON.stringify(out); })()"""))
+    assert r['lit'] and r['score'] == {'0': 2, '1': 0, '2': 0} and r['k'] == 3, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
