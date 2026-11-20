@@ -82,12 +82,17 @@ function markButtonHtml(lv, data) {
 function vocabSessionCount(filter) { const items = buildVocabQueue(filter, 20); return items.length + encoreEstimate(items); }
 // 五十音 coloured by how well each kana is known, one table per script: a phone shows one at a time (平假名｜片假名
 // switch, kanaScript), a wide screen both side by side. A tap reads the kana; the ▶ in front of a row practises that row of that script.
+// 我的標記 (2026-11-20, the user: as on a unit's page and the word list): a row of one script at its end, the whole script under
+// it, each showing the mark all its kana share (0★ when they differ); see 'mark-kana'
 let kanaScript = 'hira';
+const kanaKeys = (rows, script) => rows.flat().filter(Boolean).map(h => 'a:' + (script === 'hira' ? h : KATA[h])).filter(k => REG.byKey.has(k));
+const kanaMark = (keys) => (keys.length ? Math.min(...keys.map(k => (state.srs[k] && state.srs[k].mark) || 0)) : 0);
 function kanaHeatGridHtml() {
   const heat = (ch) => { const r = state.srs['a:' + ch]; return !r ? 0 : r.b <= 1 ? 1 : r.b === 2 ? 2 : r.b <= 4 ? 3 : 4; };
-  const rows = KANA_ROWS.concat(DAKUTEN_ROWS);
+  const rows = KANA_ROWS.concat(DAKUTEN_ROWS), mark = (script, which, keys) => markButtonHtml(kanaMark(keys), `data-act="mark-kana" data-rows="${which}" data-script="${script}"`).replace('class="mark-btn"', 'class="mark-btn mark-sm"');
   const cell = (h, ch) => `<button type="button" class="kana-cell heat-${heat(ch)}" data-act="speak" data-text="${ch}" data-ch="${ch}" aria-label="${ch} ${KANA_ROMAJI[h]}"><span class="jp hira">${ch}</span><span class="roma">${KANA_ROMAJI[h]}</span></button>`;
-  const table = (script, title) => `<div class="kana-table" data-script="${script}"><div class="kana-table-title">${title}</div><div class="kana-heat">${rows.map((row, i) => `<div class="kana-heat-row"><button type="button" class="kana-row-btn" data-act="kana-row" data-row="${i}" data-script="${script}" title="練這一行">▶</button>${row.map(h => h ? cell(h, script === 'hira' ? h : KATA[h]) : '<span class="kana-cell empty"></span>').join('')}</div>`).join('')}</div></div>`;
+  const table = (script, title) => `<div class="kana-table" data-script="${script}"><div class="kana-table-title">${title}</div><div class="kana-heat">${rows.map((row, i) => `<div class="kana-heat-row"><button type="button" class="kana-row-btn" data-act="kana-row" data-row="${i}" data-script="${script}" title="練這一行">▶</button>${row.map(h => h ? cell(h, script === 'hira' ? h : KATA[h]) : '<span class="kana-cell empty"></span>').join('')}${mark(script, i, kanaKeys([row], script))}</div>`).join('')}</div>
+    <div class="kana-all small"><span class="muted">${title}全部</span>${mark(script, 'all', kanaKeys(rows, script))}</div></div>`;
   const seg = `<div class="seg kana-script-seg">${[['hira', '平假名'], ['kata', '片假名']].map(([k, l]) => `<button type="button" aria-pressed="${kanaScript === k}" data-act="kana-script" data-script="${k}">${l}</button>`).join('')}</div>`;
   return `<div class="kana-pair" data-show="${kanaScript}">${seg}${table('hira', '平假名')}${table('kata', '片假名')}</div>`;
 }

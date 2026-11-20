@@ -39,13 +39,13 @@ function isoLay(html) {
 // (yardLayout): an iPhone kept a whole-screen layer for every bench and table and went slow (2026-11-10)
 const propSvg = ([x0, y0, x1, y1], z) => { const w = x1 - x0, h = y1 - y0; return `<svg class="land prop" viewBox="${x0} ${y0} ${w} ${h}" data-box="${x0} ${370 - y1} ${w} ${h}" aria-hidden="true" style="left:${x0}px;bottom:${370 - y1}px;width:${w}px;height:${h}px;overflow:visible;z-index:${z}">`; };
 // someone at floor point (u, v) — sat or kneeling: the front of their seat — over what they stand in front of (past its +u or +v
-// face), under what they stand behind
-function isoZ(u, v) {
+// face), under what they stand behind; on: how high they are (kneeling on the 日本語教室's tatami: over its platform, not under it)
+function isoZ(u, v, on = 0) {
   const x = isoPt(u, v)[0], d = Math.round(Math.max(0, Math.min(38, u + v)) / 38 * 8);
   let z = 990 + d, cap = Infinity;
-  isoProps.forEach(({ box: [u0, u1, v0, v1], z: pz }) => {
+  isoProps.forEach(({ box: [u0, u1, v0, v1], z: pz, h }) => {
     if (x < isoPt(u0, v1)[0] - 36 || x > isoPt(u1, v0)[0] + 36) return;   // not across it on the screen
-    if (u >= u1 || v >= v1) z = Math.max(z, pz + 1 + d); else cap = Math.min(cap, pz - 1);
+    if (u >= u1 || v >= v1 || (on > 0 && h <= on && u > u0 && v > v0)) z = Math.max(z, pz + 1 + d); else cap = Math.min(cap, pz - 1);
   });
   return Math.min(z, cap);
 }
@@ -305,10 +305,10 @@ const PLACE_USE = {
   // 日本語教室: the blackboard (the 五十音 learned), かるた on the tatami, the radio cassette player (sing a row), the picture
   // books, the clock, the paper cranes, the windows; the chairs to sit on
   kyoshitsu: [
-    { id: 'board', name: '黑板', box: isoBBox(3.5, 15.5, 0, 0.2, 2.4, 6.1), kind: 'do', go: isoXY(5.2, 3.7), face: 'back turn', pose: 'look', say: 'こくばん！', open: (y) => CLASS.board(y) },
-    { id: 'karuta', name: 'かるた', box: isoBBox(15.4, 22, 10.2, 16, 0, 0.7), kind: 'do', go: isoXY(14.6, 12.8), face: 'turn', pose: 'look', say: 'かるた！', open: (y) => CLASS.karuta(y) },
-    { id: 'radio', name: '收音機', box: isoBBox(9.3, 10.6, 1.6, 2.2, 2.2, 2.9), kind: 'do', go: isoXY(10, 3.7), face: 'back turn', pose: 'reach', open: () => CLASS.song() },   // no row: the rows learned (2026-11-14: it was given the yard as its row, and broke)
-    { id: 'books', name: '繪本', box: isoBBox(0, 0.9, 1.6, 5.8, 0, 1.7), kind: 'do', go: isoXY(1.9, 3.7), face: 'back turn flip', pose: 'look', say: 'えほん！', open: (y) => CLASS.book(y) },
+    { id: 'board', name: '黑板', box: isoBBox(3.5, 15.5, 0, 0.2, 2.4, 6.1), kind: 'do', sign: 'practice', signAt: [30, 42], go: isoXY(5.2, 3.7), face: 'back turn', pose: 'look', say: 'こくばん！', open: (y) => CLASS.board(y) },
+    { id: 'karuta', name: 'かるた', box: isoBBox(15.4, 22, 10.2, 16, 0, 0.7), kind: 'do', sign: 'word', go: isoXY(14.6, 12.8), face: 'turn', pose: 'look', say: 'かるた！', open: (y) => CLASS.karuta(y) },
+    { id: 'radio', name: '收音機', box: isoBBox(9.3, 10.6, 1.6, 2.2, 2.2, 2.9), kind: 'do', sign: 'note', go: isoXY(10, 3.7), face: 'back turn', pose: 'reach', open: () => CLASS.song() },   // no row: the rows learned (2026-11-14: it was given the yard as its row, and broke)
+    { id: 'books', name: '繪本', box: isoBBox(0, 0.9, 1.6, 5.8, 0, 1.7), kind: 'do', sign: 'course', go: isoXY(1.9, 3.7), face: 'back turn flip', pose: 'look', say: 'えほん！', open: (y) => CLASS.book(y) },
     { id: 'clock', name: '時鐘', box: isoBBox(16.6, 17.8, 0, 0.1, 6.0, 7.2), kind: 'do', go: isoXY(17.2, 3.2), face: 'back turn', pose: 'look', pick: () => CLASS.clockSay() },
     { id: 'cranes', name: '千羽鶴', box: isoBBox(19.4, 21.2, 0, 0.3, 4.4, 7.6), kind: 'do', go: isoXY(20.2, 3), face: 'back turn', pose: 'look', say: 'きれい…', fx: 'cranes', fxc: 'flutter' },
     { id: 'window', name: '窗戶', box: isoBBox(0, 0.1, 1.4, 9.8, 2.7, 6.1), kind: 'do', go: isoXY(1.9, 8.2), face: 'back turn flip', pose: 'look', pick: () => (TOWNEV.now() >= 6 && TOWNEV.now() < 18 ? ['いい てんき！', ''] : ['ほしが きれい…', '']) },
@@ -341,7 +341,9 @@ const PLACE_USE = {
     { id: 'taru', name: '酒樽', box: isoBBox(0.5, 1.7, 8.8, 11.3, 0, 2.4), kind: 'do', go: isoXY(2.6, 10.1), face: 'back turn flip', pose: 'reach', say: 'おもい…！', fx: 'taru', fxc: 'rock' },
     { id: 'menu', name: '黑板', box: isoBBox(0, 0.1, 2.9, 8.7, 3.5, 6.5), kind: 'do', go: isoXY(1.4, 5.8), face: 'back turn flip', pose: 'look', toast: 'きょうのおすすめ：焼き鳥 1本 120円・からあげ 480円', buy: 'izakaya' }]
 };
-// the things tried once (2026-11-10, the user: calmer hints): their dot goes for good, on this device (localStorage nq_used)
+// the things tried once (2026-11-10, the user: calmer hints): their dot goes for good, on this device (localStorage nq_used); one
+// with a sign (sign: an icon's name — 日本語教室's board, かるた, radio, books, clock; 2026-11-20, the user: as in 書房, so all can
+// see what there is to use) wears it as 書房's things do, tried or not, named a moment when tapped, resting with the yard's signs
 const USED = (() => {
   let seen = null;
   const all = () => { if (!seen) { try { seen = JSON.parse(localStorage.getItem('nq_used') || '{}') || {}; } catch (e) { seen = {}; } } return seen; };
@@ -350,7 +352,7 @@ const USED = (() => {
     mark(place, id) { const s = all(), k = `${place}.${id}`; if (s[k]) return; s[k] = 1; try { localStorage.setItem('nq_used', JSON.stringify(s)); } catch (e) { /* no storage: this visit only */ } }
   };
 })();
-const useBtnsHtml = (place) => (PLACE_USE[place] || []).filter((t) => !t.when || t.when()).map((t) => { const [x0, y0, x1, y1] = t.box; return `<button type="button" class="use-btn${USED.has(place, t.id) ? ' tried' : ''}" data-act="scene-use" data-use="${t.id}" aria-label="${t.name}" style="margin-left:${x0 - 600}px;bottom:${370 - y1}px;width:${x1 - x0}px;height:${y1 - y0}px;z-index:${INDOOR.includes(place) ? 1 : Math.round(150 - (370 - y1) / 4)}"></button>`; }).join('');
+const useBtnsHtml = (place) => (PLACE_USE[place] || []).filter((t) => !t.when || t.when()).map((t) => { const [x0, y0, x1, y1] = t.box; return `<button type="button" class="use-btn${t.sign ? ' thing signed' : ''}${USED.has(place, t.id) ? ' tried' : ''}" data-act="scene-use" data-use="${t.id}" aria-label="${t.name}" style="margin-left:${x0 - 600}px;bottom:${370 - y1}px;width:${x1 - x0}px;height:${y1 - y0}px;z-index:${INDOOR.includes(place) ? 1 : Math.round(150 - (370 - y1) / 4)}${t.signAt ? `;--tx:${t.signAt[0]}%;--ty:${t.signAt[1]}%` : ''}">${t.sign ? `<span class="tag">${ySign(t.sign, t.name)}</span>` : ''}</button>`; }).join('');
 // words popping up over a thing (x, y in the land's units), a burst of petals or leaves off a tree
 function yPop(yard, x, y, text) {
   const w = yard && yard.querySelector('.yworld'); if (!w) return;
@@ -379,7 +381,7 @@ const npcXY = (el) => { const m = /translate\((-?[\d.]+)px,\s*(-?[\d.]+)px/.exec
 function ySeat(yard, t, [u, v, h, how]) {
   const el = yard.querySelector('.yhero'); if (!el) return;
   const f = how.split(' ');
-  yh.use = { up: [yh.X, yh.Y] }; [yh.X, yh.Y] = isoXY(u, v, h); yh.z = isoZ(u, v + 0.45);   // over his seat, under the table before it
+  yh.use = { up: [yh.X, yh.Y] }; [yh.X, yh.Y] = isoXY(u, v, h); yh.z = isoZ(u, v + 0.45, h);   // over his seat, under the table before it
   yh.back = f.includes('back'); yh.turn = f.includes('turn'); yh.flip = f.includes('flip'); el.classList.add(f.includes('kneel') ? 'kneel' : 'bench'); yHeroPlace(yard); SND.use(yPlace, t);
   if (t.say) yPop(yard, yh.X + 600, 370 - yh.Y - 190 * ISO.k, t.say);
 }
@@ -388,6 +390,7 @@ function sceneUse(el) {
   const t = (PLACE_USE[yard.dataset.place] || []).find((q) => q.id === el.dataset.use), [x0, y0, x1] = t ? t.box : [];
   if (!t || !yard.querySelector('.yhero')) return;
   USED.mark(yard.dataset.place, t.id); el.classList.add('tried');   // its dot goes
+  if (t.sign) yNamed(el);   // its sign: named a moment
   if (t.open) { primeTtsPlayer(); audioCtx(); }   // the board, かるた, the radio, the books (2026-11-14, the user: the radio said nothing on an iPhone): sound woken inside the tap, played after the walk
   if (t.buy) { YEN.open(yard, t); return; }   // one with a menu: bought first, then had (YEN)
   useThing(yard, t);

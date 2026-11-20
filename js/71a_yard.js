@@ -698,8 +698,9 @@ function renderOutside(view, place = 'yard') {
   let swallow = false;   // the buttons up top while they rest: a first tap only brings them back (as in 書房)
   y.addEventListener('pointerdown', (e) => { swallow = y.classList.contains('quiet') && !!e.target.closest('.yard-tools'); }, true);
   y.addEventListener('click', (e) => { if (swallow) { swallow = false; e.stopPropagation(); e.preventDefault(); } }, true);
-  let restT = 0;   // the signs: in sight when the yard opens and after a touch, out of sight 4 s later (a tap on a thing still works)
-  const wake = () => { y.classList.remove('quiet'); clearTimeout(restT); restT = setTimeout(() => { if (y.isConnected) y.classList.add('quiet'); }, 4000); };
+  let restT = 0;   // the signs: in sight when the yard opens and after a touch, out of sight 4 s later (a tap on a thing still works); 日本語教室's
+  const rest = place === 'kyoshitsu' ? 12000 : 4000;   // things to use a good while longer (2026-11-20, the user: so all can see what is there)
+  const wake = () => { y.classList.remove('quiet'); clearTimeout(restT); restT = setTimeout(() => { if (y.isConnected) y.classList.add('quiet'); }, rest); };
   y._wake = wake;   // the witch's 言靈 keep the 言靈 button up while they fly in
   y.addEventListener('pointerdown', wake); y.addEventListener('pointerup', wake);
   y.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse' && !e.buttons) wake(); });   // a mouse over the yard

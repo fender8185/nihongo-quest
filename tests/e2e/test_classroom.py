@@ -77,6 +77,33 @@ def test_the_first_classroom_event_plays_with_the_chinese_shown_in_nyumon(b):
       return JSON.stringify({ zhShown, done, koto, folded }); })()"""))
     assert r == {'zhShown': True, 'done': True, 'koto': 10, 'folded': True}, r
 
+# 2026-11-20, the user: a man teacher sometimes stuck in the bottom right — 堀先生 kneeling at the かるた (mornings) was drawn under
+# the tatami's platform, only the top of his head showing
+def test_hori_kneels_on_the_tatami_not_under_it(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """
+      TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; location.hash = '#/kyoshitsu'; route(); await wait(200);
+      const h = document.querySelector('#view .npc-hori'), t = isoProps.find((p) => p.box[0] === KYO_TATAMI[0] && p.box[2] === KYO_TATAMI[2]);
+      return JSON.stringify({ kneel: h.classList.contains('kneel'), over: Number(h.style.zIndex) > t.z }); })()"""))
+    assert r == {'kneel': True, 'over': True}, r
+
+# 2026-11-20, the user: the classroom's things want a little sign each, as in 書房, up a good while, so all can see what is there
+# to use: the board, かるた, the radio and the books wear one (not the clock: the user), a tap names it, tried it stays, resting 12 s on
+def test_the_classroom_things_wear_signs(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ location.hash = '#/kyoshitsu'; route(); await wait(300);
+      const signs = () => [...document.querySelectorAll('#view .use-btn.signed')].map((x) => x.dataset.use + ':' + (x.querySelector('.tag svg') ? 1 : 0) + x.querySelector('.tag-name').textContent).sort();
+      const out = { signs: signs(), dots: document.querySelectorAll('#view .use-btn:not(.signed)').length > 0 };
+      document.querySelector('#view .use-btn[data-use="books"]').click(); await wait(300); out.named = document.querySelector('#view .use-btn[data-use="books"]').classList.contains('named');
+      await wait(4800); out.kept = signs().length; out.quiet = document.querySelector('.yard').classList.contains('quiet'); return JSON.stringify(out); })()"""))
+    assert r == {'signs': ['board:1黑板', 'books:1繪本', 'karuta:1かるた', 'radio:1收音機'], 'dots': True, 'named': True, 'kept': 4, 'quiet': False}, r
+
+# 2026-11-20, the user: the radio's song sounded off — each kana's clip has its own silence before and after; cut away, the kana
+# starts on its beat
+def test_a_song_kana_starts_on_its_beat(b):
+    r = json.loads(ev(b, """(() => { const sr = 24000, buf = new AudioBuffer({ length: sr * 0.7, sampleRate: sr }), d = buf.getChannelData(0);
+      for (let i = sr * 0.2; i < sr * 0.5; i++) d[i] = 0.5 * Math.sin(i / 8); const [from, len] = CLASS.voiced(buf);
+      return JSON.stringify({ from: from > 0.18 && from <= 0.2, len: len > 0.29 && len < 0.36 }); })()"""))
+    assert r == {'from': True, 'len': True}, r
+
 def test_lin_greets_one_she_knows_from_the_classroom(b):
     r = json.loads(ev(b, "(() => { " + BEGIN + """
       const m04 = TOWN.EVENTS.find((e) => e.id === 'm0-4'), k4 = TOWN.EVENTS.find((e) => e.id === 'k4');

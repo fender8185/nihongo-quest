@@ -44,6 +44,17 @@ Object.assign(ACTIONS, {
   'start-kanji': () => startSession('kanji'),
   'start-kanji-level': (el) => startSession('kanji', { lv: el.dataset.lv }),
   'kana-row': (el) => startSession('kana', { row: Number(el.dataset.row), script: el.dataset.script }),
+  'mark-kana': (el) => {   // 我的標記 on a 五十音 row or a whole script (2★／5★ up, 0★ back to before the mark), the box redrawn in place
+    const rows = KANA_ROWS.concat(DAKUTEN_ROWS), script = el.dataset.script === 'kata' ? 'kata' : 'hira', all = el.dataset.rows === 'all', lv = Number(el.dataset.lv);
+    const keys = kanaKeys(all ? rows : [rows[Number(el.dataset.rows)]], script); if (!keys.length) return;
+    keys.forEach(k => { if (lv) markItem(k, lv, false); else unmarkItem(k, false); });
+    DAILY_CACHE = null; saveState();
+    const what = all ? `${script === 'hira' ? '平假名' : '片假名'}全部` : `${REG.byKey.get(keys[0]).ch} 這一行`;
+    toast(lv ? `${what}標成 ${lv}★（已經更熟的照舊）${lv === 5 ? '，之後排進五顆的複習' : '，過幾天開始複習'}` : `${what}取消標記：回到標記前，標記後答過的照舊`);
+    const box = el.closest('.kana-box'); if (!box) { route(); return; }
+    box.querySelector('.kana-pair').outerHTML = kanaHeatGridHtml();
+    const k = levelStats('PRE_N5').kana, sum = box.querySelector('summary'); if (sum) sum.textContent = `五十音（已認得 ${k.seen}／${k.total}）`;
+  },
   'kana-script': (el) => {   // switched in place: re-rendering would fold the 五十音 box again on a phone
     kanaScript = el.dataset.script === 'kata' ? 'kata' : 'hira';
     const pair = el.closest('.kana-pair'); if (!pair) return;

@@ -359,6 +359,20 @@ def test_kana_heat_grid(b):
     assert r['spoken'] == ['し', 'ヲ'], r
     assert r['kataRow'] == ['サ', 'シ', 'ス', 'セ', 'ソ'] and r['hiraRow'] == ['さ', 'し', 'す', 'せ', 'そ'], r
 
+# 2026-11-20, the user: 我的標記 on the 五十音 as on a unit's page and the word list — a row of one script, or the whole script,
+# cycled 0★ → 2★ → 5★ → 0★; the box stays open (redrawn in place) and the row shows the mark its kana share
+def test_kana_rows_and_scripts_take_my_marks(b):
+    js = """(() => { state.srs = {}; location.hash = '#/vocab/level?lv=PRE_N5'; route(); const box = document.querySelector('.kana-box'); box.open = true;
+      const btn = (script, row) => document.querySelector(`.kana-box .kana-table[data-script="${script}"] [data-act="mark-kana"][data-rows="${row}"]`);
+      const out = { rows: box.querySelectorAll('.kana-table[data-script="hira"] [data-act="mark-kana"]').length, start: btn('hira', 1).dataset.now };
+      btn('hira', 1).click(); out.two = ['か', 'き', 'く', 'け', 'こ'].map((c) => state.srs['a:' + c].mark); out.kata = Boolean(state.srs['a:カ']); out.now = btn('hira', 1).dataset.now; out.open = document.querySelector('.kana-box').open;
+      btn('hira', 1).click(); out.five = state.srs['a:こ'].mark; btn('hira', 1).click(); out.back = Boolean(state.srs['a:か']);
+      btn('kata', 'all').click(); btn('kata', 'all').click(); out.all = REG.kana.filter((k) => /[ァ-ヶ]/.test(k.ch)).every((k) => state.srs[k.key] && state.srs[k.key].mark === 5); out.allNow = btn('kata', 'all').dataset.now;
+      out.hira = REG.kana.some((k) => /[ぁ-ゖ]/.test(k.ch) && state.srs[k.key]); out.rowNow = btn('kata', 3).dataset.now;
+      return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'rows': 17, 'start': '0', 'two': [2] * 5, 'kata': False, 'now': '2', 'open': True, 'five': 5, 'back': False, 'all': True, 'allNow': '5', 'hira': False, 'rowNow': '5'}, r
+
 KANA_SHOWN = "[...box.querySelectorAll('.kana-table')].filter(t => t.offsetParent !== null).map(t => t.dataset.script)"
 
 def test_kana_chart_shows_one_script_on_a_phone_and_both_side_by_side_on_a_wide_screen(b):

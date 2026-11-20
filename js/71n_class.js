@@ -306,6 +306,13 @@ const CLASS = (() => {
   const showRow = (r) => { const row = el && el.querySelector('.sg-row'); if (row) row.innerHTML = KANA_ROWS[r].map((h, i) => (h ? `<span class="sg-k" data-i="${i}">${h}<small>${KANA_ROMAJI[h]}</small></span>` : '')).join(''); };
   const lightK = (k, n) => { if (!el) return; el.querySelectorAll('.sg-k').forEach((x) => x.classList.toggle('on', Number(x.dataset.i) === k)); el.querySelectorAll('.sg-who').forEach((w, j) => w.classList.toggle('sg-bob', (j + n) % 2 === 0)); };
   const note = (t) => { const p = el && el.querySelector('.sg-note'); if (p) p.textContent = t; };
+  // a kana's clip without the silence before and after it (2026-11-20, the user: the radio's song sounded off — the clips came in
+  // late, by their own silence, and ran on into the next): [from, how long] in s, from just before the sound to just after it
+  function voiced(b) {
+    const d = b.getChannelData(0); let peak = 0; for (let i = 0; i < d.length; i++) peak = Math.max(peak, Math.abs(d[i]));
+    const lim = peak * 0.03; let a = 0, z = d.length - 1; while (a < z && Math.abs(d[a]) < lim) a++; while (z > a && Math.abs(d[z]) < lim) z--;
+    const from = Math.max(0, a / b.sampleRate - 0.015); return [from, (z + 1) / b.sampleRate - from + 0.03];
+  }
   function stopSong() { songSrc.forEach((x) => { try { x.stop(); } catch (e) { /* not started */ } }); songSrc = []; SND.duck(false); }   // the world (and the gramophone: SND's duck) back up
   function song(row) {
     const rows = Number.isInteger(row) && KANA_ROWS[row] ? [row] : learnedRows(), goof = GOOFS[Math.floor(Math.random() * GOOFS.length)];
@@ -322,7 +329,10 @@ const CLASS = (() => {
       const t0 = c.currentTime + 0.12, g = c.createGain(), gv = c.createGain(); g.gain.value = SONG.vol; gv.gain.value = 1; g.connect(c.destination); gv.connect(c.destination);
       SND.duck(true); note('');   // the room and any record down while it plays
       plan.parts.forEach(([at, from, len]) => { const x = c.createBufferSource(); x.buffer = buf; x.connect(g); x.start(t0 + at, from, Math.min(len, buf.duration - from)); songSrc.push(x); });
-      plan.said.forEach(([at, r, k], i) => { if (clips[i]) { const x = c.createBufferSource(); x.buffer = clips[i]; x.connect(gv); x.start(Math.max(t0, t0 + at - 0.05)); songSrc.push(x); } });
+      plan.said.forEach(([at], i) => {   // each kana on its beat, the sound itself (voiced), and done before the next: faded out within it
+        const b = clips[i]; if (!b) return; const [from, len] = voiced(b), dur = Math.min(len, SONG.beat * 0.92), s = t0 + at, x = c.createBufferSource(), e = c.createGain();
+        x.buffer = b; x.connect(e); e.connect(gv); e.gain.setValueAtTime(1, s + Math.max(0, dur - 0.06)); e.gain.linearRampToValueAtTime(0, s + dur); x.start(s, from, dur); songSrc.push(x); });
+      g.gain.setValueAtTime(SONG.vol, t0 + SONG.bar - 0.2); g.gain.linearRampToValueAtTime(SONG.vol * 0.7, t0 + SONG.bar); g.gain.setValueAtTime(SONG.vol * 0.7, t0 + plan.end - SONG.bar); g.gain.linearRampToValueAtTime(SONG.vol, t0 + plan.end - SONG.bar + 0.3);   // the tune a little under the voices while they say the rows
       const ms = (at) => Math.max(0, (t0 + at - c.currentTime) * 1000);
       let lastRow = -1;
       plan.said.forEach(([at, r, k], n) => later(() => { if (r !== lastRow) { lastRow = r; showRow(r); } lightK(k, n); }, ms(at)));
@@ -372,5 +382,5 @@ const CLASS = (() => {
     add('chen', 'かるた、まだ はやい！');
     WRITE.lines(add);
   }
-  return { board, karuta, song, songPlan, book, clockSay, close, playKoto, lines, card: open, on: () => Boolean(el) };   // card: 中華街's 漢字陷阱 uses it too
+  return { board, karuta, song, songPlan, voiced, book, clockSay, close, playKoto, lines, card: open, on: () => Boolean(el) };   // card: 中華街's 漢字陷阱 uses it too
 })();
