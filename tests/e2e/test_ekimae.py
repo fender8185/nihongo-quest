@@ -213,6 +213,61 @@ def test_window_misses_and_resume(b):
       return JSON.stringify(out); })()"""))
     assert r['lit'] and r['score'] == {'0': 2, '1': 0, '2': 0} and r['k'] == 3, r
 
+# ---- 落とし物 (spec §7) ----
+# a thing described by two of its looks joined with くて／で (茶色, 緑: で); the 中に line with あります (m3) or 入って います (m4)
+def test_lost_descriptions(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const d = (o) => LOST.describe(o); const out = [d({ kind: 'wallet', color: 'black', dim: 'small' }), d({ kind: 'bag', color: 'brown', dim: 'big' }), d({ kind: 'umbrella', color: 'red', dim: 'long' }),
+      d({ kind: 'glasses', color: 'black', dim: 'round' }), d({ kind: 'hat', color: 'white', dim: 'old' }), d({ kind: 'book', color: 'green', dim: 'small' })];
+      state.currentUnit = 'm3'; out.push(LOST.inside(['card', 'photo'])); state.currentUnit = 'm4'; out.push(LOST.inside(['card', 'photo'])); return JSON.stringify(out); })()"""))
+    assert r == ['{黒|くろ}くて、{小|ちい}さい {財布|さいふ}です。', '{茶色|ちゃいろ}で、{大|おお}きい かばんです。', '{赤|あか}くて、{長|なが}い {傘|かさ}です。', '{丸|まる}くて、{黒|くろ}い {眼鏡|めがね}です。',
+                 '{白|しろ}くて、{古|ふる}い {帽子|ぼうし}です。', '{緑|みどり}で、{小|ちい}さい {本|ほん}です。', '{中|なか}に カードと {写真|しゃしん}が あります。', '{中|なか}に カードと {写真|しゃしん}が {入|はい}って います。'], r
+
+# a shift's ten: each a different thing; four on the counter of its kind, the colour and the other look crossed — one right (a twin:
+# two that look so, the inside tells), or none (ありません); each wrong one shares a look with what was asked for
+def test_lost_candidates_need_both_looks(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ state.currentUnit = 'm4'; const out = { bad: [], kinds: [], types: {} };
+      for (let n = 0; n < 30; n++) { const ts = LOST.make(); out.kinds.push(new Set(ts.map((t) => t.kind)).size);
+        ts.forEach((t) => { out.types[t.type] = (out.types[t.type] || 0) + 1; const same = (c) => c.color === t.color && c.dim === t.dim, match = t.cands.filter(same);
+          if (t.cands.length !== 4 || t.cands.some((c) => c.kind !== t.kind)) out.bad.push('four ' + t.kind);
+          if (t.type === 'plain' && match.length !== 1) out.bad.push('plain ' + match.length);
+          if (t.type === 'twin' && (match.length !== 2 || match[0].inside.join() === match[1].inside.join() || !match.some((c) => c.inside.join() === t.inside.join()))) out.bad.push('twin');
+          if ((t.type === 'none' || t.type === 'gag') && match.length) out.bad.push('none');
+          if (t.cands.some((c) => !same(c) && c.color !== t.color && c.dim !== t.dim)) out.bad.push('far'); }); }
+      return JSON.stringify(out); })()"""))
+    assert not r['bad'] and set(r['kinds']) == {10}, r
+    assert r['types'].get('twin', 0) > 0 and r['types'].get('none', 0) > 0 and r['types'].get('plain', 0) > 150, r
+
+LOST_HELP = """ window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve(); window.voiceFx = () => Promise.resolve(); s(); reg(); state.currentUnit = 'm4';
+  state.work.res['2026-10-22'] = { place: 'lost', done: 10, score: {}, yen: 1, grade: 'C' };
+  const card = () => document.querySelector('.wk-lost'), click = (q) => { const e = card() && card().querySelector(q); if (e) e.click(); return Boolean(e); };
+  const at = (n) => LOST_RUN.now() && LOST_RUN.now().k === n;
+  async function solve(n) {
+    for (let i = 0; i < 200 && !(at(n) && LOST_RUN.now().phase === 'ask'); i++) await wait(30); const t = LOST_RUN.now().task;
+    click(`.lf-q[data-o="${t.qRight}"]`); for (let i = 0; i < 200 && LOST_RUN.now().phase !== 'find'; i++) await wait(30);
+    if (t.type === 'none') { click('.lf-none'); return; } if (t.type === 'gag') { click('.lf-gag'); return; }
+    const c = t.cands.findIndex((x) => x.color === t.color && x.dim === t.dim && x.inside.join() === t.inside.join()); click(`.lf-cand[data-c="${c}"]`); await wait(40); click('.lf-give');
+  }"""
+
+def test_lost_shift_by_hand(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + LOST_HELP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      WORK.start(yard(), 'lost'); for (let n = 0; n < 10; n++) await solve(n);
+      for (let i = 0; i < 300 && WORK.today().yen === undefined; i++) await wait(30);
+      const x = WORK.today(), out = { score: Object.values(x.score), yen: x.yen }; document.querySelectorAll('.wk-result').forEach((e) => e.remove()); CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['score'] == [0] * 10 and r['yen'] == 214, r   # 160 + S 50, 2% more
+
+# the wrong one handed over, ありません when it is there: misses; a shift left after three resumes at the fourth
+def test_lost_misses_and_resume(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + LOST_HELP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      const realMake = LOST.make; LOST.make = () => { const ts = realMake(); ts[0] = LOST.task('wallet', 'plain'); return ts; };
+      WORK.start(yard(), 'lost'); for (let i = 0; i < 200 && !(at(0) && LOST_RUN.now().phase === 'ask'); i++) await wait(30); let t = LOST_RUN.now().task;
+      click(`.lf-q[data-o="${(t.qRight + 1) % 3}"]`); await wait(60); click(`.lf-q[data-o="${t.qRight}"]`); for (let i = 0; i < 200 && LOST_RUN.now().phase !== 'find'; i++) await wait(30);
+      const wrong = t.cands.findIndex((x) => !(x.color === t.color && x.dim === t.dim)); click(`.lf-cand[data-c="${wrong}"]`); await wait(40); click('.lf-give'); await wait(80);
+      click('.lf-none'); await wait(80); const c = t.cands.findIndex((x) => x.color === t.color && x.dim === t.dim); click(`.lf-cand[data-c="${c}"]`); await wait(40); click('.lf-give');
+      await solve(1); await solve(2); await wait(200); LOST.make = realMake; CLASS.close(); await wait(100); const score = WORK.today().score;
+      WORK.start(yard(), 'lost'); for (let i = 0; i < 200 && !(LOST_RUN.now() && LOST_RUN.now().phase === 'ask'); i++) await wait(30); const k = LOST_RUN.now().k; CLASS.close();
+      return JSON.stringify({ score, k }); })()"""))
+    assert r['score'] == {'0': 3, '1': 0, '2': 0} and r['k'] == 3, r   # the question, the wrong wallet, ありません: three misses
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

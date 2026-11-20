@@ -661,6 +661,19 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 @keyframes mdPrint { from { transform: translateY(-14px); opacity: 0; } }
 .md-opts { display: grid; gap: 6px; margin-top: 8px; } .md-opt { min-height: 44px; font-size: 17px; text-align: left; justify-content: flex-start; } .md-opt small { display: block; font-size: 12px; color: #8a7a6e; } .md-opt.md-right { box-shadow: 0 0 0 2px #3f9a6a; }
 .md-opt.wk-bad { animation: shake .3s ease; } .md-opt.wk-hint { box-shadow: 0 0 0 3px #f6e08a, 0 0 12px 2px rgba(246, 224, 138, .8); } .md-tip { margin: 0; font-size: 14px; color: #5a6a7a; }
+/* 落とし物 (2026-11-20): the 交番 — its shelf of lost things behind the counter, whoever came in, the questions, the four on the
+   counter (the one picked up, its inside), これですか／ありません */
+.wk-lost .cls-card { background: #f1efe8; color: #2b2b33; border-bottom: 10px solid #2b3350; }
+.lf-room { position: relative; margin: 6px -6px 6px; border-radius: 12px; overflow: hidden; background: #e8e4da; } .lf-shelf { display: block; width: 100%; height: auto; opacity: .9; }
+.lf-counter { position: relative; margin-top: -36px; padding: 8px 8px 10px; background: linear-gradient(#a8774a, #8a5e3a); box-shadow: inset 0 4px 0 #d9b48a; } .lf-counter .wk-cust { margin: 0; }
+.lf-counter .kr-face { position: relative; } .lf-onhead { position: absolute; left: 50%; top: -9%; width: 54%; transform: translateX(-50%) rotate(-8deg); }
+.lf-qs, .lf-acts { display: grid; gap: 6px; margin-top: 8px; } .lf-q { min-height: 44px; font-size: 17px; text-align: left; justify-content: flex-start; } .lf-q small { display: block; font-size: 12px; color: #8a7a6e; }
+.lf-q.wk-bad, .lf-cand.wk-bad, .lf-none.wk-bad { animation: shake .3s ease; }
+.lf-cands { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; } .lf-cands:empty { display: none; }
+.lf-cand { position: relative; display: grid; justify-items: center; gap: 2px; padding: 6px 2px; border: 0; border-radius: 10px; background: #fbf7ec; box-shadow: 0 2px 0 #d8c8a8; cursor: pointer; transition: transform .2s; }
+.lf-cand svg { width: 100%; height: auto; max-width: 78px; } .lf-cand.sel { transform: translateY(-6px); box-shadow: 0 0 0 3px #3f9a8c, 0 6px 12px rgba(0, 0, 0, .15); }
+.lf-in { display: flex; gap: 2px; justify-content: center; } .lf-in .pic { width: 24px; height: 24px; }
+.lf-acts .btn { min-height: 44px; font-size: 17px; }
 .wk-lock { margin: 10px 0 4px; padding: 8px 10px; border-radius: 10px; background: #fde4cf; color: #8a3a1a; font-size: 14px; line-height: 1.5; }
 .wk-board .cls-card { background: #fbf3e2; color: #2b2b33; border-top: 8px solid #c8322a; } .wk-bhead { display: grid; gap: 2px; padding-right: 40px; } .wk-bhead b { font-size: 21px; color: #a82828; } .wk-bhead span { font-size: 13px; color: #8a7a6e; }
 .wk-jobs { list-style: none; margin: 12px 0 8px; padding: 0; display: grid; gap: 6px; } .wk-job { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: rgba(138, 122, 110, .1); color: #6a5a4e; } .wk-job.ok { background: rgba(47, 122, 106, .12); color: #2b2b33; }
