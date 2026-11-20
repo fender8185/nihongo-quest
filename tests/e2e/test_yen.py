@@ -160,12 +160,14 @@ def test_a_keeper_tapped_asks_order_or_chat(b):
     # 2026-11-13, the user: food bought from the one who sells it; one with words of their own now asks 點餐 or 閒聊
     r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ state.town.seen = { tome: 1 }; saveState(); await go('shokudo');   // トメ met
       const tap = async () => { y().querySelector('.npc[data-npc="tome"]').click(); await wait(300); return document.querySelector('.talk-card'); };
-      let c = await tap(); const first = { ja: c.querySelector('.talk-ja').textContent.trim(), picks: [...c.querySelectorAll('[data-choose]')].map((x) => x.textContent) };
-      c.querySelector('[data-choose="0"]').click(); await wait(150); const opened = !!document.querySelector('.mc-item[data-item="curry"]'); closeModal();
-      c = await tap(); c.querySelector('[data-choose="1"]').click(); await wait(150); const chat = document.querySelector('.talk-card'), talked = chat && chat.querySelector('[data-choose]') === null && chat.querySelector('.talk-name').firstChild.textContent;
-      return JSON.stringify({ first, menu: opened, talked }); })()"""))
-    assert r['first']['ja'].startswith('いらっしゃい') and r['first']['picks'] == ['ちゅうもんする', 'おしゃべりする'], r   # in Japanese (the user)
-    assert r['menu'] and r['talked'] == '大山 トメ', r   # 點餐: her menu; 閒聊: a word as before
+      let c = await tap(); const first = { ja: c.querySelector('.talk-ja').textContent.trim(), picks: [...c.querySelectorAll('[data-choose]')].map((x) => x.dataset.go + ':' + x.textContent.trim()), blue: c.querySelectorAll('.btn-primary').length };
+      c.querySelector('[data-go="order"]').click(); await wait(150); const said = document.querySelector('.talk-card .talk-ja').textContent.trim(), early = !!document.querySelector('.mc-item');
+      document.querySelector('.talk').click(); await wait(150); const opened = !!document.querySelector('.mc-item[data-item="curry"]'); closeModal();
+      c = await tap(); c.querySelector('[data-go="chat"]').click(); await wait(150); document.querySelector('.talk').click(); await wait(150);
+      const chat = document.querySelector('.talk-card'), talked = chat && chat.querySelector('[data-choose]') === null && chat.querySelector('.talk-name').firstChild.textContent;
+      return JSON.stringify({ first, said: said.startsWith('メニュー、みせて ください。') && !early, menu: opened, talked }); })()"""))
+    assert r['first']['ja'].startswith('いらっしゃい') and r['first']['picks'] == ['order:メニュー、みせて ください。', 'chat:ちょっと よっただけです。'] and r['first']['blue'] == 0, r   # in Japanese (the user); a reply picked, no blue (2026-11-20)
+    assert r['said'] and r['menu'] and r['talked'] == '大山 トメ', r   # 點餐: the hero asks, a tap, her menu; 閒聊: a word as before
 
 def test_the_bath_and_omikuji_once_a_day_and_out_of_the_bath_he_is_hungry_again(b):
     # 2026-11-13, the user: the bath and おみくじ once a day each; a bath makes him hungry — the day's foods and drinks begin anew

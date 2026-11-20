@@ -260,12 +260,16 @@ const TOWNEV = (() => {
     yHeroWalk(yard, [f[0] + side * 76 * yScale(f[1]), f[1] + 2], () => {
       yh.flip = side > 0; yh.back = false; yh.turn = true; yHeroPlace(yard);
       const sells = !e && YEN.sells(yard, id), chat = () => TALK.open(yard, id, [chatLine(id)]);   // one who sells something here (2026-11-13, the user): 點餐 or 閒聊
-      const job = !e && WORK.offer(id, yard.dataset.place), work = job && ['はたらく', () => WORK.intro(yard, job)];   // the rules first, はい to begin (2026-11-19)   // one who takes on a beginner for a shift (中華街の打工, 2026-11-14)
+      const job = !e && WORK.offer(id, yard.dataset.place);   // one who takes on a beginner for a shift (中華街の打工, 2026-11-14): the rules first, はい to begin (2026-11-19)
+      // their greeting, and what the hero says back picked as a reply is (2026-11-20, the user: no blue button, the talk goes on
+      // from the line picked): ordering, working (yes to their はたらく？ — or asked for, after a shop's greeting), or just a word
+      const pick = [sells && [...sells.ask, sells.go, 'order'], job && [...WORK.ask(id, !sells), () => WORK.intro(yard, job), 'work'], [...DROP_BY, chat, 'chat']].filter(Boolean);
       if (e) TALK.open(yard, id, linesOf(e), ended, null, { ev: true });
-      else if (sells || work) { const hi = sells ? sells.hello : WORK.hello(id); TALK.open(yard, id, [[id, hi[0], hi[1], { pick: [sells && [sells.label, sells.go], work, ['おしゃべりする', chat]].filter(Boolean) }]], null, null, { ev: true }); }
+      else if (pick.length > 1) { const hi = sells ? sells.hello : WORK.hello(id); TALK.open(yard, id, [[id, hi[0], hi[1], { pick }]], null, null, { ev: true }); }
       else chat();
     });
   }
+  const DROP_BY = ['ちょっと よっただけです。', '只是順道過來看看。'];   // the hero's word for a chat with one who sells or takes on (their pick)
   function shopTap(el) {   // a shop front: its keeper if they are here, else what the door says
     const shop = el.dataset.shop, st = shopState(shop), o = ownerOf(shop), sign = (TOWN_SHOPS.find((x) => x[6] === shop) || [])[5] || '';
     if (st === 'prep') { toast('這家店還在準備中，之後會開張。'); return; }
@@ -275,7 +279,7 @@ const TOWNEV = (() => {
     const p = y.querySelector(`.npc-${o}`) || (helper && y.querySelector(`.npc-${helper}`));   // its keeper, else who helps there (和子 at the flowers)
     if (p) talk(p); else toast(T().CAST[o].away && state.town.done[T().CAST[o].away] ? `${sign}現在沒有人在顧店。` : `${T().CAST[o].name}現在不在店裡。`);
   }
-  const api = { unitIdx, reachedIdx, started, share, linesOf, studyDaysSince, due, opened, openN, waiting, classWaiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, wearOf, face, talk, shopTap, chatLine, chatCtx, chatMem, hop, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
+  const api = { DROP_BY, unitIdx, reachedIdx, started, share, linesOf, studyDaysSince, due, opened, openN, waiting, classWaiting, whereIs, isOpen, finish, clock: null, shopState, castHtml, here, art, wearOf, face, talk, shopTap, chatLine, chatCtx, chatMem, hop, PLACE_NAME, sig, seen, look, festival, slots, calls, when, now, today };
   return api;
 })();
 // the bed (test, 2026-11-10; the user's call): once the day's practice is done (書桌上的筆記本「今日完成」), a sleep there moves the
@@ -429,7 +433,7 @@ const DIARY = (() => {
     return `<section class="town-tools"><b>測試用（只在測試站）</b>
       <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="meet">認識所有人、開通所有公車站</button><button type="button" class="btn btn-sm" data-tool="reset">小鎮事件從頭開始</button></div>
       <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="ship">郵輪：現在叫來（下一趟，不看日子、進度）</button><button type="button" class="btn btn-sm" data-tool="shipreset">郵輪：從第 1 趟重來</button><button type="button" class="btn btn-sm" data-tool="shipresult">郵輪：看結算畫面（不存）</button>${CRUISE.trips().slice(1).map((t, k) => `<button type="button" class="btn btn-sm" data-tool="shipto" data-trip="${t.id}">郵輪：跳到第 ${k + 2} 趟</button>`).join('')}</div>
-      <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="yen-gift">円：+10,000</button><button type="button" class="btn btn-sm" data-tool="work-free">${WORK.free() ? '打工：恢復一天一次' : '打工：無限次數'}</button><button type="button" class="btn btn-sm" data-tool="work-nums">${JOBS.till.allNums() ? '收銀：恢復要先學數字' : '收銀：不看學過沒'}</button><button type="button" class="btn btn-sm" data-tool="yen-all">${YEN.allOpen() ? '菜單：恢復要先學單字' : '菜單：全部開放'}</button><button type="button" class="btn btn-sm" data-tool="yen-full">今天吃喝次數歸零</button></div>
+      <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="yen-gift">円：+10,000</button><button type="button" class="btn btn-sm" data-tool="work-free">${WORK.free() ? '打工：恢復一天一次' : '打工：無限次數'}</button><button type="button" class="btn btn-sm" data-tool="work-nums">${JOBS.till.allNums() ? '收銀：恢復要先學過' : '收銀：不看學過沒'}</button><button type="button" class="btn btn-sm" data-tool="yen-all">${YEN.allOpen() ? '菜單：恢復要先學單字' : '菜單：全部開放'}</button><button type="button" class="btn btn-sm" data-tool="yen-full">今天吃喝次數歸零</button></div>
       <div class="row-wrap mt-2">時間（只改小鎮；「現在」也清掉睡覺跳過的時間）：${hrs.map(([h, n]) => `<button type="button" class="btn btn-sm" data-tool="hour" data-h="${h}" aria-pressed="${String(h) === String(cur)}">${n}</button>`).join('')}</div>
       ${Object.entries(byUnit).map(([u, list]) => `<div class="tt-unit"><span>${esc(u)}</span>${list.map((e) => `<button type="button" class="tb-ev" data-try="${esc(e.id)}">${esc(e.title)}<small>${esc((TOWN.CAST[e.who] || {}).name || e.who)}・${esc(TOWNEV.PLACE_NAME[e.at] || e.at)}${e.when === 'night' ? '・晚上' : ''}</small></button>`).join('')}</div>`).join('')}
     </section>`;
@@ -489,7 +493,8 @@ const DIARY = (() => {
 // open for the rest of the talk; 2026-11-12, the user: a word with anyone too, not only in the events). The town's events (opt.ev,
 // events.js) are several people's lines, the hero's among them ([who, ja, zh]); a word glossed ({漢字|かな|中文}) has its Chinese under the line;
 // at a reply choice ({ ask, opts: [[ja, right, zh | why wrong]] }) the hero picks what to say: a wrong one shakes and says why,
-// and can be tried again; the right one is said, and the talk goes on
+// and can be tried again; the right one is said, and the talk goes on. A choice of where to go ({ pick: [[ja, zh, then, go]] }, a
+// keeper's 點餐／打工／閒聊) looks the same, each its own way on: the hero says the one picked, and a tap goes there
 const TALK = (() => {
   let cur = null;
   const MARK = /\{([^|}]+)\|([^|}]+)(?:\|([^}]+))?\}/g;
@@ -517,7 +522,7 @@ const TALK = (() => {
       <div class="talk-name">${esc(n.name)}<span>${esc(n.role)}</span></div>
       ${!L.ja ? `<p class="talk-zh">${esc(L.zh)}</p>` : `<p class="talk-ja" lang="ja">${ruby(L.ja)} ${say(L.ja, L.id, L.cry)}</p>${gl.length ? `<p class="talk-gloss">${gl.map(esc).join('　')}</p>` : ''}
       <p class="talk-zh${cur.zh ? '' : ' hide'}">${esc(L.zh)}</p>${cur.zh ? '' : '<button type="button" class="zh-btn" data-talk="zh">中文</button>'}`}
-      ${L.pick ? `<div class="talk-picks">${L.pick.map(([t], k) => `<button type="button" class="btn btn-sm${k ? '' : ' btn-primary'}" data-choose="${k}" lang="ja"><span>${ruby(t)}</span></button>`).join('')}</div>` : L.kind === 'gift' ? `<div class="talk-gift">${DECOR.thumb(w)}<b>${esc(WARE.get(w).name)}</b><button type="button" class="btn btn-primary btn-sm" data-talk="take">收下</button></div>` : '<span class="talk-next" aria-hidden="true">▼</span>'}</div></div>`;
+      ${L.pick ? `<div class="talk-opts">${L.pick.map(([ja, zh, , go], k) => `<div class="talk-opt"><button type="button" class="talk-pick" data-choose="${k}" data-go="${esc(go || '')}" lang="ja">${ja.split(' ').map((w) => `<span class="talk-nw">${ruby(w)}</span>`).join(' ')}${cur.zh ? `<small>${esc(zh)}</small>` : ''}</button>${say(ja, 'hero')}</div>`).join('')}</div>` : L.kind === 'gift' ? `<div class="talk-gift">${DECOR.thumb(w)}<b>${esc(WARE.get(w).name)}</b><button type="button" class="btn btn-primary btn-sm" data-talk="take">收下</button></div>` : '<span class="talk-next" aria-hidden="true">▼</span>'}</div></div>`;
     if (L.kind === 'gift') fitThumbs(cur.el);
     const at = (cur.said ? 's' : '') + cur.i;   // a line new on the screen is said at once, in its speaker's voice (2026-11-12, the user); drawn again (中文): not again
     if (L.ja && cur.spoke !== at) { cur.spoke = at; speakAs(L.id, L.ja, L.cry); if (L.snd) SND.play(L.snd); if (cur.onLine) cur.onLine(L); }   // onLine: whoever says it moves (CRUISE)
@@ -531,6 +536,7 @@ const TALK = (() => {
   function next() {
     if (!cur) return;
     if (!cur.said && (line(cur.lines[cur.i]).ask || line(cur.lines[cur.i]).pick)) return;   // the hero has to pick
+    if (cur.said && cur.said.then) { const then = cur.said.then; close(); then(); return; }   // a choice (pick) said: on from there
     if (cur.said) cur.said = null;
     if (!cur.ev && cur.lines[cur.i][2] === 'gift' && cur.take) { cur.take(); cur.take = null; }
     cur.wrong = []; cur.why = '';
@@ -547,7 +553,7 @@ const TALK = (() => {
     el.addEventListener('click', (e) => {
       e.stopPropagation(); primeTtsPlayer();   // inside the tap: the next line (or 🔊) is let play while its clip is fetched (iOS)
       const sayBtn = e.target.closest('[data-talk="say"]'); if (sayBtn) { speakAs(sayBtn.dataset.who, sayBtn.dataset.ja, sayBtn.dataset.cry); return; }
-      const ch = e.target.closest('[data-choose]'); if (ch) { const then = line(cur.lines[cur.i]).pick[Number(ch.dataset.choose)][1]; close(); then(); return; }   // a choice (pick): on from there
+      const ch = e.target.closest('[data-choose]'); if (ch) { const [ja, zh, then] = line(cur.lines[cur.i]).pick[Number(ch.dataset.choose)]; cur.said = { id: 'hero', ja, zh, then }; show(); return; }   // a choice (pick): the hero says it, a tap on
       if (e.target.closest('[data-talk="zh"]')) { cur.zh = true; show(); return; }
       const p = e.target.closest('[data-pick]'); if (p) { pick(Number(p.dataset.pick)); return; }
       if (!cur.ev && cur.lines[cur.i][2] === 'gift' && !e.target.closest('[data-talk="take"]')) return;   // the present waits for 收下
@@ -566,7 +572,7 @@ function talkLines() {
   TOWN.EVENTS.forEach((e) => e.lines.concat(e.met ? e.met.head : []).forEach((l) => (Array.isArray(l) ? add(l[0], l[1]) : (l.opts || []).forEach((o) => add('hero', o[0])))));   // met: the opening for one who knew them already
   Object.values(NPC.DOOR).forEach((ls) => ls.forEach((l) => add('hero', l[0])));
   DIARY.PAGES.forEach((p) => add('granny', DIARY.said(p)));
-  CRUISE.lines(add); YEN.lines(add); CLASS.lines(add); CHINA.lines(add); WORK.lines(add);   // the cruise's, buying with 円, 日本語教室's かるた and singing
+  add('hero', TOWNEV.DROP_BY[0]); CRUISE.lines(add); YEN.lines(add); CLASS.lines(add); CHINA.lines(add); WORK.lines(add);   // the cruise's, buying with 円, 日本語教室's かるた and singing
   Object.keys(TOWN.YATAI || {}).forEach((id) => { if (TOWN.YATAI[id].scoop) add(id, TOWN.YATAI[id].scoop[0]); });   // the goldfish's old man
   return out;
 }

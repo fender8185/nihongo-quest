@@ -78,7 +78,7 @@ const JOBS = (() => {
     }, () => out(learned('もう') ? CROSS().out : CROSS().out0));
   }
   const custHtml = (who) => `<span class="kr-face">${TOWNEV.face(who)}</span><i class="wk-emo"></i><p class="wk-bub"></p><span class="wk-pat"><i></i></span>`;
-  const COUNTER_SECS = 20, TILL_SECS = [0, 30, 45];   // a customer's patience (s): 站櫃's one; 收銀's by the things bought
+  const COUNTER_SECS = 5, TILL_SECS = [0, 30, 45];   // a customer's patience (s): 站櫃's one (5, 2026-11-20: 20 was too long), from the end of their asking; 收銀's by the things bought
   const MISS_COST = { counter: 0.2, till: 0.1 };   // of a whole patience: the wrong thing handed, a wrong piece said
 
   let C = null;   // the customer at the counter now (its task)
@@ -86,7 +86,7 @@ const JOBS = (() => {
   function counterRun(ctx) {
     const tasks = counterMake(), first = !Object.values(state.work.res).some((r) => r.place === 'counter' && r.yen !== undefined); let k = ctx.done, miss = 0, got = 0, busy = true, P = null;   // P: the customer's patience
     const el = (s) => document.querySelector('.wk-counter ' + s);
-    const bub = (open) => { const [ja, zh] = ask(C), w = C.good[0], line = open ? esc(ja) : `<button type="button" class="wk-ear" aria-label="再聽一次">🔊</button>${esc(ja.slice(w.length))}`;   // the word heard, not read, till handed over
+    const bub = (open) => { const [ja, zh] = ask(C), w = C.good[0], line = open ? esc(ja) : `<button type="button" class="wk-ear" aria-label="再聽一次">${icon('speaker')}</button>${esc(ja.slice(w.length))}`;   // the word heard, not read, till handed over
       el('.wk-bub').innerHTML = `<b lang="ja">${line}</b><span>${esc(zh)}</span>${C.kind === 'two' ? `<i class="wk-cnt">${got}／2</i>` : ''}`; };
     const me = (l) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${esc(l[0])}</b>${first ? `<span>${esc(l[1])}</span>` : ''}`; return speakAs('hero', l[0]); };
     function show() {
@@ -95,9 +95,9 @@ const JOBS = (() => {
       el('.wk-goods').innerHTML = C.goods.map((g) => `<button type="button" class="wk-good" data-good="${esc(g[0])}">${goodPic(g[1])}<b lang="ja">${esc(g[0])}</b></button>`).join('');
       el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').removeAttribute('data-mood'); el('.wk-cust').innerHTML = custHtml(C.who);
       const t = C; P = patience('counter', t.who, COUNTER_SECS, () => Boolean(el('.wk-cust')) && C === t && ctx.on(), gone);
-      said(me(ME.hi), 800).then(() => {   // the customer asks, once いらっしゃいませ is said; their patience from then
+      said(me(ME.hi), 800).then(() => {   // the customer asks, once いらっしゃいませ is said; their patience once they have said it (5 s: none of it lost to the asking)
         if (!el('.wk-cust') || C !== tasks[k] || !ctx.on()) return;
-        bub(false); el('.wk-cust').classList.add('on'); speakAs(C.who, ask(C)[0]); busy = false; P.go();
+        bub(false); el('.wk-cust').classList.add('on'); busy = false; const q = P; said(speakAs(C.who, ask(C)[0])).then(() => q.go());
       });
     }
     function wrong(b) {
@@ -171,9 +171,9 @@ const JOBS = (() => {
     return { parts, tiles: shuffle([...parts, ...near]) };
   }
   const TILL_WORDS = [['いくら'], ['えん', '円'], ['じゅう', '十'], ['ひゃく', '百'], ['せん', '千'], ...DIGIT.slice(2).map(([w, r]) => [r, w])];
-  // the test site only (2026-11-19, the user had never met a price): 收銀 open, whatever is learned
+  // the test site only (2026-11-19, the user had never met a price): 收銀 open, whatever is learned — kana too (WORK's open; 2026-11-20)
   const NUMS = 'nq_work_nums', allNums = () => { try { return onTestSite() && localStorage.getItem(NUMS) === '1'; } catch (e) { return false; } };
-  function numsTool() { const on = !allNums(); try { localStorage.setItem(NUMS, on ? '1' : ''); } catch (e) { /* no storage */ } return on ? '收銀：不看學過沒（這台裝置），沒學數字也能做' : '收銀：恢復要先學過いくら、円和數字'; }
+  function numsTool() { const on = !allNums(); try { localStorage.setItem(NUMS, on ? '1' : ''); } catch (e) { /* no storage */ } return on ? '收銀：不看學過沒（這台裝置），沒學數字、假名不夠也能做' : '收銀：恢復要先學過いくら、円、數字和假名'; }
   const tillLeft = () => (allNums() ? [] : TILL_WORDS.filter(([r, w]) => !learned(r, w)).map(([r, w]) => w || r));   // the words still to learn
   const tillAsk = (t) => (t.kind === 'one' ? ['これ、いくらですか。', '這個多少錢？'] : t.kind === 'two' ? ['これを ふたつ ください。', '這個請給我兩個。'] : ['ぜんぶで いくらですか。', '全部多少錢？']);
   const tillSay = (t) => (t.kind === 'one' ? [`${YEN.reading(t.sum)}です。`, `${t.sum} 日圓。`] : [`ぜんぶで ${YEN.reading(t.sum)}です。`, `全部 ${t.sum} 日圓。`]);
@@ -257,12 +257,12 @@ const JOBS = (() => {
   // are as ever. A miss: the cell shakes, 王's ちがう！ in print (no voice over the kana), the bun goes askew (it stays so), the
   // sound again; the same one missed twice, its cell lights. All thirty right (and no bun late), the five buns shine together and
   // 王 is beside himself (中華一番's style, 2026-11-14); a bun of six without a miss, かんぺきだ！ as it comes out. 2026-11-19 (the
-  // user: every job timed, as 外場 is): each bun on its own clock (BUN_SECS, the bar by the 🔊) — out, 王's おそい！, the bun left
+  // user: every job timed, as 外場 is): each bun on its own clock (BUN_SECS, the bar by the speaker; 15 s, 2026-11-20: 30 was too long) — out, 王's おそい！, the bun left
   // a sorry lump (2026-11-20, the user: an ugly bun for one not finished) that goes into the steamer so, its tasks lost, and the
   // next is begun. The cells: never two that sound the same (お／を, あ／ア); half the time a new one sounds or looks like one
   // there. The first job, at five kana seen (2026-11-19): four cells while under twelve are seen, six after; hiragana and katakana
   // both, as seen (2026-11-20, the user — 張's words that came in with test.31 went out again: kana only) ----
-  const BUN_STEPS = ['こねる', 'のばす', 'のせる', 'つつむ', 'ならべる', 'むす'], TAPS = 30, PER = TAPS / N, BUN_SECS = 30;
+  const BUN_STEPS = ['こねる', 'のばす', 'のせる', 'つつむ', 'ならべる', 'むす'], TAPS = 30, PER = TAPS / N, BUN_SECS = 15;
   const bunPool = () => { const seen = WORK.kana(), all = REG.kana.filter((x) => x.seion).map((x) => x.ch), p = all.filter((c) => seen.has(c)); return p.length >= 5 ? p : all.slice(0, 5); };   // 清音 of both scripts
   const bunCells = (pool) => (pool.length >= 12 ? 6 : 4);
   function boardNew(board, pool, was) {   // a kana for a cell (was: the one it held): not on the board, no twin of one there; half the time kin of one there
@@ -363,7 +363,7 @@ const JOBS = (() => {
         .then(() => new Promise((ok) => setTimeout(ok, 250))).then(() => { if (!live()) return; busy = false; ask(); });
     }
     CLASS.card('wk-buns', '包包子', `${head('buns', 'ふくめい', ctx.done)}<div class="wk-closeup" data-step="0"></div>
-      <div class="wk-krow"><button type="button" class="wk-ear" aria-label="再聽一次">🔊</button><div class="wk-clock"><i></i></div></div><div class="wk-keys"></div>`, (e) => {
+      <div class="wk-krow"><button type="button" class="wk-ear" aria-label="再聽一次">${icon('speaker')}</button><div class="wk-clock"><i></i></div></div><div class="wk-keys"></div>`, (e) => {
       if (busy || !ctx.on() || !target) return;
       if (e.target.closest('.wk-ear')) { speak(target); return; }
       const b = e.target.closest('.wk-key'); if (!b) return;
@@ -380,6 +380,6 @@ const JOBS = (() => {
 
   WORK.register('buns', { run: bunsRun, lines: bunsLines });
   WORK.register('counter', { run: counterRun, lines: counterLines });
-  WORK.register('till', { run: tillRun, lines: tillLines, left: tillLeft });
+  WORK.register('till', { run: tillRun, lines: tillLines, left: tillLeft, open: allNums });
   return { pat: PAT, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN } };
 })();

@@ -84,8 +84,10 @@ def test_the_pay_goes_into_the_wallet(b):
     assert r['got'] == 130 and r['card'] and '打工證' in r['text'] and '新人' in r['text'], r   # 9 of 10 at once: A, +30 on 新人's 100
     assert r['tab'] and '新人' in r['book'] and '1 班' in r['book'], r
 
+# a keeper's choices (2026-11-20, the user: no blue button — picked as a reply in the talk): what the hero would say, each where it goes
 PICKS = """const picks = async (id) => { document.querySelector(`.npc[data-npc="${id}"]`).click(); for (let i = 0; i < 60 && !document.querySelector('.talk'); i++) await wait(100); await wait(300);
-    const b = [...document.querySelectorAll('.talk-picks button')].map((x) => x.textContent.trim()); TALK.close && TALK.close(); document.querySelectorAll('.talk').forEach((x) => x.remove()); return b; };"""
+    const t = document.querySelector('.talk'), b = t ? [...t.querySelectorAll('[data-choose]')].map((x) => { const zh = x.querySelector('small'); return x.dataset.go + ':' + x.textContent.replace(zh ? zh.textContent : '', '').trim() + (zh ? '／' + zh.textContent : ''); }) : [];
+    if (t && t.querySelector('.btn-primary')) b.push('blue'); TALK.close && TALK.close(); document.querySelectorAll('.talk').forEach((x) => x.remove()); return b; };"""
 
 def test_the_owners_offer_work_when_it_is_open(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + PICKS + """ state.town.done = { cn1: '2026-11-01', cn2: '2026-11-01', cnw: '2026-11-01', cn3: '2026-11-01', cn4: '2026-11-01' };
@@ -93,8 +95,15 @@ def test_the_owners_offer_work_when_it_is_open(b):
       kana(15); route(); await wait(400); out.five = await picks('zhou'); kana(5);
       location.hash = '#/chinatown'; route(); await wait(400); out.wang = await picks('wang');   // five kana: 包包子 the first job (2026-11-19)
       return JSON.stringify(out); })()"""))
-    assert 'はたらく' not in r['four'] and 'はたらく' in r['five'] and 'おしゃべりする' in r['five'], r
-    assert 'はたらく' in r['wang'] and 'ちゅうもんする' in r['wang'], r
+    assert r['four'] == [], r   # only a chat: straight into it, no choice
+    assert r['five'] == ['work:はい、てつだいます。／好，我來幫忙。', 'chat:ちょっと よっただけです。／只是順道過來看看。'], r   # yes to her てつだって くれる？ (in 入門: the Chinese shown under each)
+    assert [x.split('／')[0] for x in r['wang']] == ['order:メニュー、みせて ください。', 'work:アルバイト、させて ください。', 'chat:ちょっと よっただけです。'], r   # his shop's greeting: work asked for
+
+def test_the_generator_has_the_choices(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const all = talkLines().map(([w, l]) => w + ':' + l);
+      return JSON.stringify(['ちょっと よっただけです。', 'メニュー、みせて ください。', 'はい、おねがいします。', 'アルバイト、させて ください。', 'はい、はたらきます。', 'はい、てつだいます。', 'はい、いま いきます！', 'はい、つくります！']
+        .map((l) => 'hero:' + l).filter((x) => !all.includes(x))); })()"""))
+    assert r == [], r
 
 def test_the_board_lists_the_four_jobs(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(15); location.hash = '#/chinadori'; route(); await wait(300);
@@ -163,17 +172,19 @@ def test_counter_asks_two_once_learned_and_never_a_price(b):
 # rules card; はい begins the shift, いいえ leaves it be; the keepers' first word keeps only what they say in Japanese
 def test_working_starts_with_the_rules_and_a_yes(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(46); stub('counter'); location.hash = '#/chinadori'; route(); await wait(300); window.__ctx = null;
-      document.querySelector('.npc[data-npc="zhou"]').click(); for (let i = 0; i < 60 && !document.querySelector('.talk-picks button'); i++) await wait(100); await wait(300);
-      [...document.querySelectorAll('.talk-picks button')].find((x) => x.textContent.trim() === 'はたらく').click();
+      document.querySelector('.npc[data-npc="zhou"]').click(); for (let i = 0; i < 60 && !document.querySelector('.talk [data-go="work"]'); i++) await wait(100); await wait(300);
+      document.querySelector('.talk [data-go="work"]').click(); await wait(200);   // the hero says it; a tap on
+      const said = document.querySelector('.talk .talk-ja').textContent.trim(), early = Boolean(document.querySelector('.wk-rules')); document.querySelector('.talk').click();
       for (let i = 0; i < 30 && !document.querySelector('.wk-rules'); i++) await wait(100);
       const card = document.querySelector('.wk-rules'), text = card ? card.textContent : '', btn = (a) => document.querySelector(`.wk-rules [data-rules="${a}"]`);
-      const out = { card: Boolean(card), ran: Boolean(window.__ctx), name: text.includes('站櫃'), how: text.includes('玩法'), uses: text.includes('需要的能力'), pay: text.includes('100 円'), yes: btn('yes') && btn('yes').textContent.includes('はい'), no: btn('no') && btn('no').textContent.includes('いいえ') };
+      const out = { said: said.startsWith('はい、てつだいます。') && !early, card: Boolean(card), ran: Boolean(window.__ctx), name: text.includes('站櫃'), how: text.includes('玩法'), uses: text.includes('需要的能力'), pay: text.includes('100 円'), secs: text.includes('5 秒'),
+        yes: btn('yes') && btn('yes').textContent.includes('はい'), no: btn('no') && btn('no').textContent.includes('いいえ'), blue: card.querySelectorAll('.btn-primary').length };
       btn('no').click(); await wait(300); Object.assign(out, { gone: !document.querySelector('.wk-rules'), ranNo: Boolean(window.__ctx), day: WORK.today() });
       WORK.intro(yard(), 'counter'); await wait(200); btn('yes').click(); await wait(300); Object.assign(out, { ranYes: Boolean(window.__ctx), shut: !document.querySelector('.wk-rules') });
       kana(4); WORK.intro(yard(), 'counter'); await wait(200); out.closed = !document.querySelector('.wk-rules');   // not open to this learner: why, and no card
       out.zhOnly = Object.values(TOWN.WORK.first).flat().filter((l) => !l[1]).length;
       return JSON.stringify(out); })()"""))
-    assert r == {'card': True, 'ran': False, 'name': True, 'how': True, 'uses': True, 'pay': True, 'yes': True, 'no': True, 'gone': True, 'ranNo': False, 'day': None, 'ranYes': True, 'shut': True, 'closed': True, 'zhOnly': 0}, r
+    assert r == {'said': True, 'card': True, 'ran': False, 'name': True, 'how': True, 'uses': True, 'pay': True, 'secs': True, 'yes': True, 'no': True, 'blue': 0, 'gone': True, 'ranNo': False, 'day': None, 'ranYes': True, 'shut': True, 'closed': True, 'zhOnly': 0}, r
 
 # 2026-11-15, the user: the thing asked for was printed in the bubble and on the counter both — matching the same kana, nothing
 # heard; now the word in the bubble is a blank to listen to (tap it to hear it again), shown once handed over or after two misses
@@ -182,11 +193,22 @@ def test_the_customers_word_is_heard_not_read(b):
       location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter');
       for (let i = 0; i < 30 && !document.querySelector('.wk-cust.on'); i++) await wait(100);
       const t = JOBS.counter.now(), bub = () => document.querySelector('.wk-bub b').textContent, out = { kind: t.kind, hidden: !bub().includes(t.good[0]) };
+      out.icon = Boolean(document.querySelector('.wk-bub .wk-ear svg')) && !document.querySelector('.wk-bub').textContent.includes('🔊');   // the app's speaker, not 🔊 (2026-11-20)
       __said = []; document.querySelector('.wk-bub .wk-ear').click(); await wait(100); out.again = __said.includes(t.who + ':' + t.good[0] + 'を ください。');
       const wrong = [...document.querySelectorAll('.wk-good')].find((g) => g.dataset.good !== t.good[0]); wrong.click(); await wait(100); out.oneMiss = !bub().includes(t.good[0]);
       wrong.click(); await wait(100); out.twoMiss = bub().includes(t.good[0]);
       return JSON.stringify(out); })()"""))
-    assert r == {'kind': 'name', 'hidden': True, 'again': True, 'oneMiss': True, 'twoMiss': True}, r
+    assert r == {'kind': 'name', 'hidden': True, 'icon': True, 'again': True, 'oneMiss': True, 'twoMiss': True}, r
+
+# 2026-11-20, the user: 20 s was too long — 5, and from the end of their asking: none of it lost while the word is still being said
+def test_the_counter_clock_starts_once_the_customer_has_asked(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + COUNTER + """ kana(46); earlier('counter'); window.speakAs = (w, l) => (l.endsWith('ください。') ? wait(800) : Promise.resolve());
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter');
+      for (let i = 0; i < 30 && !document.querySelector('.wk-cust.on'); i++) await wait(100);
+      const bar = () => parseFloat(document.querySelector('.wk-counter .wk-pat').style.getPropertyValue('--p')); await wait(500); const out = { asking: bar() === 1 };
+      await wait(1300); out.after = bar() > 0.7 && bar() < 0.9;   // about a second of five gone
+      return JSON.stringify(out); })()"""))
+    assert r == {'asking': True, 'after': True}, r
 
 def test_the_word_shows_once_handed_over(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + COUNTER + """ kana(46); earlier('counter'); window.speakAs = () => Promise.resolve();
@@ -204,7 +226,7 @@ def test_a_counter_shift_pays(b):
       return JSON.stringify(Object.assign(out, { yen: t.yen, grade: t.grade })); })()"""))
     assert r == {'card': True, 'yen': 150, 'grade': 'S'}, r
 
-# 2026-11-19, the user: every job timed, as 外場 is — a customer's patience under them (20 s at the counter), from their asking;
+# 2026-11-19, the user: every job timed, as 外場 is — a customer's patience under them (5 s at the counter, 2026-11-20), from their asking;
 # a wrong thing handed costs some; 💦 あの、すみません！ then 💢 ちょっと！ (外場's words, in their voice); at none, いいです！ and
 # off they go, the thing they wanted lit, the task lost (3), the next customer up
 def test_a_counter_customer_out_of_patience_goes(b):
@@ -213,7 +235,7 @@ def test_a_counter_customer_out_of_patience_goes(b):
       for (let i = 0; i < 30 && !document.querySelector('.wk-cust.on'); i++) await wait(100);
       const t = JOBS.counter.now(), bar = () => parseFloat(document.querySelector('.wk-counter .wk-pat').style.getPropertyValue('--p')), cust = () => document.querySelector('.wk-counter .wk-cust');
       const out = { full: bar() > 0.95 }; [...document.querySelectorAll('.wk-good')].find((g) => g.dataset.good !== t.good[0]).click(); await wait(100); out.cost = bar() < 0.82;
-      let moods = new Set(); JOBS.pat.scale = 0.02; for (let i = 0; i < 80 && !(0 in WORK.today().score); i++) { moods.add(cust().dataset.mood); await wait(25); } JOBS.pat.scale = 1;
+      let moods = new Set(); JOBS.pat.scale = 0.08; for (let i = 0; i < 80 && !(0 in WORK.today().score); i++) { moods.add(cust().dataset.mood); await wait(25); } JOBS.pat.scale = 1;
       Object.assign(out, { moods: [...moods].filter(Boolean).sort(), sign: cust().querySelector('.wk-emo').textContent, score: WORK.today().score[0],
         again: __said.includes(t.who + ':あの、すみません！'), hey: __said.includes(t.who + ':ちょっと！'), out: __said.some((x) => x === t.who + ':いいです！' || x === t.who + ':もう いいです！'),
         lit: (document.querySelector('.wk-good.wk-hint') || {}).dataset.good === t.good[0] });
@@ -314,11 +336,12 @@ def test_the_till_card_fits_a_phone(b):
     assert r == {'n': 12, 'bottom': True, 'side': True, 'tiles': True}, r
 
 # the test site's switch (2026-11-19, the user had never met a price): 收銀 open whatever is learned
+# — the kana too (2026-11-20: on a device still in 入門, under 46 seen, 張 never offered it, the switch on or not)
 def test_the_test_site_can_open_the_till(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(46); const out = { before: WORK.can('till').ok };
-      out.on = JOBS.till.numsTool(); out.open = WORK.can('till').ok; out.off = JOBS.till.numsTool(); out.after = WORK.can('till').ok;
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(30); const out = { before: WORK.can('till').ok, offer0: WORK.offer('zhang', 'chinadori') };
+      out.on = JOBS.till.numsTool(); out.open = WORK.can('till').ok; out.offer = WORK.offer('zhang', 'chinadori'); out.off = JOBS.till.numsTool(); out.after = WORK.can('till').ok;
       return JSON.stringify(out); })()"""))
-    assert [r['before'], r['open'], r['after']] == [False, True, False] and '不看學過沒' in r['on'] and '恢復' in r['off'], r
+    assert [r['before'], r['offer0'], r['open'], r['offer'], r['after']] == [False, None, True, 'till', False] and '不看學過沒' in r['on'] and '恢復' in r['off'], r
 
 def test_the_generator_has_the_till_lines(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ const all = talkLines().map(([w, l]) => w + ':' + l);
@@ -383,7 +406,7 @@ def test_a_miss_keeps_the_steamer_plain(b):
       return JSON.stringify({ gold: document.querySelector('.wk-buns .cls-card').classList.contains('wk-shine-all') }); })()"""))
     assert r == {'gold': False}, r
 
-# 2026-11-19, the user: every job timed, as 外場 is — each bun on its own clock (the bar by the 🔊, from its first step): out, the
+# 2026-11-19, the user: every job timed, as 外場 is — each bun on its own clock (the bar by the speaker, from its first step; 15 s, 2026-11-20): out, the
 # rest of its tasks lost, 王's おそい！, the bun a sorry lump on the board (2026-11-20, the user: an ugly bun for one not finished)
 # that goes into the steamer so, and the next bun is begun; no gold for that shift
 def test_a_bun_past_its_clock_goes_in_ugly_and_the_next_begins(b):
@@ -408,8 +431,11 @@ def test_buns_only_while_wang_is_there(b):
 def test_the_bun_card_fits_a_phone(b):
     r = json.loads(b.run([("metrics", (360, 640)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + BEGIN + HELP + BUNS + """ kana(46); await make(); await wait(200);
       const card = document.querySelector('.wk-buns .cls-card'), keys = [...document.querySelectorAll('.wk-key')].map((x) => x.getBoundingClientRect()), c = card.getBoundingClientRect();
-      return JSON.stringify({ fits: card.scrollHeight <= card.clientHeight + 1 && c.bottom <= innerHeight + 1, side: c.left >= 0 && c.right <= innerWidth + 1, keys: keys.length === 6 && keys.every((q) => q.width >= 60 && q.height >= 48) }); })()""")])[-1])
-    assert r == {'fits': True, 'side': True, 'keys': True}, r
+      const ear = document.querySelector('.wk-krow .wk-ear'), svg = ear.querySelector('svg'), out = { fits: card.scrollHeight <= card.clientHeight + 1 && c.bottom <= innerHeight + 1, side: c.left >= 0 && c.right <= innerWidth + 1,
+        keys: keys.length === 6 && keys.every((q) => q.width >= 60 && q.height >= 48), ear: Boolean(svg) && !ear.textContent.includes('🔊') && svg.getBoundingClientRect().width >= 18 && ear.getBoundingClientRect().width >= 40 };   // the app's speaker, not 🔊 (2026-11-20, the user)
+      CLASS.close(); WORK.intro(yard(), 'buns'); await wait(200); const rules = document.querySelector('.wk-rules').textContent; out.rules = rules.includes('15 秒') && !rules.includes('🔊');
+      return JSON.stringify(out); })()""")])[-1])
+    assert r == {'fits': True, 'side': True, 'keys': True, 'ear': True, 'rules': True}, r
 
 # 2026-11-19, the user: 張's tasks to 包包子 — the first job, at five kana seen: four cells of those while under twelve are seen
 def test_buns_open_at_five_kana_on_a_board_of_four(b):

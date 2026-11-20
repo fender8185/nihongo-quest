@@ -33,7 +33,7 @@ const YEN = (() => {
   // every line said aloud buying something (the generator makes each a clip in the voice of who says it)
   function lines(add) {
     Object.values(M()).forEach((mu) => { if (mu.keeper) { mu.items.forEach((it) => { add('hero', order(mu, it)[0]); add(mu.keeper[0], price(mu, it)[0]); }); add(mu.keeper[0], AGAIN[0]); if (mu.hello) add(mu.keeper[0], mu.hello[0]); } });
-    [FULL.f, FULL.d, FULL.b, FULL.o, EAT.start, EAT.end].forEach((l) => add('hero', l[0]));
+    [FULL.f, FULL.d, FULL.b, FULL.o, EAT.start, EAT.end, ASK.menu, ASK.bath].forEach((l) => add('hero', l[0]));
     Object.values(M()).forEach((mu) => mu.items.forEach((it) => [...((it[4] || {}).look || []), ...((it[4] || {}).say || [])].forEach((l) => add('hero', l[0]))));   // what he says about each before and once had
   }
   // ---- what may be had: its word learned (or the course past its level), two foods and a drink a day, the bath and おみくじ once
@@ -180,11 +180,13 @@ const YEN = (() => {
   }
   // one who sells something where they are (2026-11-13, the user: bought from them, by a tap on them): their menu here — a thing
   // of the place with it (its doing as had) — their greeting, what to pick for it, and the menu opened
+  // what the hero says to it, a reply picked under their greeting (2026-11-20, the user): the menu asked for; the bath's おふろですか。 said yes to
+  const ASK = { menu: ['メニュー、みせて ください。', '請給我看菜單。'], bath: ['はい、おねがいします。', '好，麻煩你了。'] };
   function sells(yard, id) {
     const place = yard.dataset.place, m = Object.keys(M()).find((k) => M()[k].keeper && M()[k].keeper[0] === id), t = m && (PLACE_USE[place] || []).find((q) => q.buy === m && (!q.when || q.when()));
     if (!t) return null;
     const mu = M()[m];
-    return { hello: mu.hello || ['いらっしゃい！', '歡迎光臨！'], label: m === 'bath' ? 'おふろに はいる' : 'ちゅうもんする', go: () => open(yard, t) };   // in Japanese (the user), in kana: furigana in a button set it askew beside the other
+    return { hello: mu.hello || ['いらっしゃい！', '歡迎光臨！'], ask: ASK[m === 'bath' ? 'bath' : 'menu'], go: () => open(yard, t) };   // in Japanese (the user), in kana
   }
   // a free one (2026-11-14, 中華街's 試食): had as if bought — its stamp the first time — but no 円 spent and nothing counted for the day
   function treat(yard, t, m, id) {
