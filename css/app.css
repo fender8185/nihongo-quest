@@ -674,6 +674,17 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .lf-cand svg { width: 100%; height: auto; max-width: 78px; } .lf-cand.sel { transform: translateY(-6px); box-shadow: 0 0 0 3px #3f9a8c, 0 6px 12px rgba(0, 0, 0, .15); }
 .lf-in { display: flex; gap: 2px; justify-content: center; } .lf-in .pic { width: 24px; height: 24px; }
 .lf-acts .btn { min-height: 44px; font-size: 17px; }
+/* タクシー (2026-11-20): the passenger and the meter, the town's map with the taxi on it (its blinkers, the ring at a crossing), the
+   four choices, the fare */
+.wk-taxi .cls-card { background: #f4f1e6; color: #2b2b33; border-bottom: 10px solid #e6c23a; }
+.tx-top { display: flex; align-items: center; gap: 8px; margin: 6px 0; } .tx-face { width: 44px; flex: none; } .tx-bub { flex: 1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0; padding: 6px 10px; border-radius: 12px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .1); font-size: 15px; } .tx-bub span { display: block; width: 100%; font-size: 12px; color: #8a7a6e; }
+.tx-meter { display: grid; justify-items: center; padding: 4px 8px; border-radius: 8px; background: #1c1c22; color: #ff6a4a; font-family: system-ui, sans-serif; } .tx-meter span { font-size: 10px; color: #c9cdd4; } .tx-meter b { font-size: 18px; } .tx-meter i { font-style: normal; font-size: 10px; color: #c9cdd4; }
+.tx-mapbox { margin: 0 -6px; border-radius: 12px; overflow: hidden; } .tx-map { display: block; width: 100%; height: auto; }
+.tx-ground { fill: #cfd6c4; } .tx-block { fill: #e6e0d0; stroke: #c9c0aa; stroke-width: 1; } .tx-road { fill: #8d939c; } .tx-dash { stroke: #f4f1ea; stroke-width: 1.2; stroke-dasharray: 6 6; fill: none; } .tx-zebra { stroke: #f4f1ea; stroke-width: 2.4; fill: none; opacity: .8; }
+.tx-ring { fill: none; stroke: #ff9a2a; stroke-width: 3; opacity: 0; } .tx-ring.on { opacity: 1; animation: txRing linear forwards; stroke-dasharray: 107; } @keyframes txRing { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 107; } }
+.tx-blink { opacity: 0; } .tx-car.blink-l .tx-blink.l, .tx-car.blink-r .tx-blink.r { animation: txBlink .4s steps(2) infinite; } @keyframes txBlink { 50% { opacity: 1; } }
+.tx-ctl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; } .tx-go { min-height: 48px; font-size: 18px; } .tx-go.stop { background: #d0453c; color: #fff; } .tx-go.picked { box-shadow: 0 0 0 3px #f2c94c; } .tx-go:disabled { opacity: .45; }
+.tx-pays { display: grid; gap: 6px; margin-top: 8px; } .tx-pays:empty { display: none; } .tx-pay { min-height: 44px; font-size: 17px; } .tx-pay.wk-bad { animation: shake .3s ease; }
 .wk-lock { margin: 10px 0 4px; padding: 8px 10px; border-radius: 10px; background: #fde4cf; color: #8a3a1a; font-size: 14px; line-height: 1.5; }
 .wk-board .cls-card { background: #fbf3e2; color: #2b2b33; border-top: 8px solid #c8322a; } .wk-bhead { display: grid; gap: 2px; padding-right: 40px; } .wk-bhead b { font-size: 21px; color: #a82828; } .wk-bhead span { font-size: 13px; color: #8a7a6e; }
 .wk-jobs { list-style: none; margin: 12px 0 8px; padding: 0; display: grid; gap: 6px; } .wk-job { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: rgba(138, 122, 110, .1); color: #6a5a4e; } .wk-job.ok { background: rgba(47, 122, 106, .12); color: #2b2b33; }

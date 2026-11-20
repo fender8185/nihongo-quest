@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 88 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 89 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2685,12 +2685,13 @@ const TOWN = {
   // goldfish's old man says when one is caught
   // 中華街の打工 (2026-11-14, WORK): what each keeper says when one comes by to work, and their opening the first time
   WORK: {
-    hello: { kobayashi: ['こんにちは！ おてつだいで ありますか！', '你好！是來幫忙的嗎！'], harada: ['いらっしゃいませ。おや、アルバイトの かたですか。', '歡迎光臨。哦，是來打工的人嗎？'], haru: ['いらっしゃい！ てつだって くれるかい？', '歡迎！要來幫忙嗎？'], zhang: ['…いらっしゃい。はたらく？', '……歡迎光臨。要來打工嗎？'], zhou: ['あら、いらっしゃい。てつだって くれる？', '哎呀，歡迎光臨。要來幫忙嗎？'],
+    hello: { suzuki: ['おう！ のって いくかい？ …いや、きみは てつだいか！', '喔！要搭車嗎？……不對，你是來幫忙的吧！'], kobayashi: ['こんにちは！ おてつだいで ありますか！', '你好！是來幫忙的嗎！'], harada: ['いらっしゃいませ。おや、アルバイトの かたですか。', '歡迎光臨。哦，是來打工的人嗎？'], haru: ['いらっしゃい！ てつだって くれるかい？', '歡迎！要來幫忙嗎？'], zhang: ['…いらっしゃい。はたらく？', '……歡迎光臨。要來打工嗎？'], zhou: ['あら、いらっしゃい。てつだって くれる？', '哎呀，歡迎光臨。要來幫忙嗎？'],
       huang: ['はやく！ おみせ、てつだって！', '快！來幫忙顧店！'], wang: ['ニーハオ！ ぶたまん、つくる？', '你好！要來包豬肉包嗎？'] },
     // the hero's yes to it, one of the choices under it (2026-11-20, the user: picked as a reply in the talk, not a blue button)
-    yes: { kobayashi: ['はい、おねがいします！', '是，麻煩您了！'], harada: ['はい、よろしく おねがいします。', '是的，請多指教。'], haru: ['はい、てつだいます！', '好，我來幫忙！'], zhang: ['はい、はたらきます。', '好，我來打工。'], zhou: ['はい、てつだいます。', '好，我來幫忙。'], huang: ['はい、いま いきます！', '好，馬上來！'], wang: ['はい、つくります！', '好，我來包！'] },
+    yes: { suzuki: ['はい、おねがいします！', '是，麻煩您了！'], kobayashi: ['はい、おねがいします！', '是，麻煩您了！'], harada: ['はい、よろしく おねがいします。', '是的，請多指教。'], haru: ['はい、てつだいます！', '好，我來幫忙！'], zhang: ['はい、はたらきます。', '好，我來打工。'], zhou: ['はい、てつだいます。', '好，我來幫忙。'], huang: ['はい、いま いきます！', '好，馬上來！'], wang: ['はい、つくります！', '好，我來包！'] },
     first: {
       bento: [['haru', 'でんしゃは まって くれないよ！ はやく わたしてね！', '電車可不會等人喔！要快點遞給客人喔！']],   // 駅前 (2026-11-20)
+      taxi: [['suzuki', 'おれの となりで、{道|みち}を おしえて くれ！', '坐我旁邊，告訴我怎麼走！'], ['suzuki', '{右|みぎ}と {左|ひだり}は、くるまの むきで かんがえろよ！', '左右要照車子的方向想喔！']],
       lost: [['kobayashi', '{本官|ほんかん|本警察}と いっしょに、{落|お}とし{物|もの|失物}を さがしましょう！', '和本官一起找失物吧！']],
       window: [['harada', 'お{客|きゃく}さまを {待|ま}たせないで ください。', '請不要讓客人久等。'], ['harada', 'こたえは ぜんぶ、まどの {上|うえ}に あります。', '答案全都在窗口上面。']],
       till: [['zhang', '…ゆっくりで いい。まちがえないで。', '……慢慢來沒關係。別算錯。']],   // 收銀 (2026-11-19, in place of 整理貨架)
@@ -2703,6 +2704,17 @@ const TOWN = {
       // 駅弁 (2026-11-20, ハル): a train in, its bell, a word now and then, a train gone with someone unserved, the end (all: every
       // passenger served at once); yes／no: the hero's answer to an ask put right; usual: what 中村's いつもの is (m2: the tea hot);
       // the passengers' (cust) and the hero's (me) few words
+      // タクシー (2026-11-20, 鈴木): asking which way at a crossing, sorry for a wrong turn, straight on when nobody says, a cat, his
+      // talk on the way, the end (all: every ride right); the hero's words to him (go), the fare (pay); the passengers' (cust)
+      taxi: { who: 'suzuki', ask: ['どっちだ？', '往哪邊？'], wrong: ['おっと、すまん！', '哎呀，抱歉！'], on: ['まっすぐ {行|い}くぞ！', '直走囉！'], cat: ['おっと、ねこだ！', '哇，有貓！'],
+        chat: [['この {道|みち}は {夕方|ゆうがた} {混|こ|塞車}むんだ。', '這條路傍晚會塞。'], ['おれは この {町|まち}の {道|みち}なら ぜんぶ わかるぞ。', '這個鎮上的路我全都知道。'], ['からあげ{定食|ていしょく|套餐}、{食|た}べたく なって きた。', '突然好想吃炸雞定食。']],
+        end: ['いい ナビだった！ また たのむぞ！', '是個好導航！下次再拜託你！'], all: ['おれより {道|みち}を しってるな！', '你比我還認得路！'],
+        go: { left: ['{左|ひだり}です！', '左轉！'], straight: ['まっすぐです！', '直走！'], right: ['{右|みぎ}です！', '右轉！'], stop: ['ここで {止|と}めて ください！', '請停在這裡！'] }, pay: ['{P}です。', '{p} 日圓。'],
+        cust: { to: ['{X}まで お{願|ねが}いします。', '麻煩到{x}。'], straight: ['まっすぐ {行|い}って ください。', '請直走。'], dont: ['つぎの {角|かど}は {曲|ま}がらないで ください。', '下個轉角不要轉。'],
+          next: ['つぎの {角|かど}を {D}に {曲|ま}がって ください。', '下個轉角請{d}轉。'], second: ['{二|ふた}つ{目|め}の {角|かど}を {D}に {曲|ま}がって ください。', '第二個轉角請{d}轉。'],
+          fix: ['つぎの {角|かど}を {E}に… あ、すみません、{D}です！', '下個轉角往{e}……啊，抱歉，是{d}！'], fix2: ['{二|ふた}つ{目|め}の {角|かど}を {E}に… あ、すみません、{D}です！', '第二個轉角往{e}……啊，抱歉，是{d}！'],
+          stop: ['あの {X}の {前|まえ}で {止|と}めて ください。', '請停在那間{x}前面。'], wrong: ['あっ、ちがいます！', '啊，不對！'], here: ['ここじゃ ありません。', '不是這裡。'], far: ['{遠回|とおまわ}りですよ…。', '繞遠路了喔……'],
+          hurry: ['{急|いそ}いで ください！', '請快一點！'], price: ['いくらですか。', '多少錢？'], keep: ['おつりは いいです。', '不用找了。'], thanks: ['ありがとうございました。', '謝謝。'] } },
       // 落とし物 (2026-11-20, 小林): his greeting to each, four brought out, right now and then, a miss, the thing there after all, the end
       // (all: everyone helped at once), his own hat (on his head); the hero's (me) and the one who lost it (cust)
       lost: { who: 'kobayashi', hi: ['どうしましたか！', '怎麼了嗎！'], bring: ['ここに {四|よっ}つ あります！', '這裡有四個！'], ok: [['ありました！', '找到了！'], ['さすがで あります！', '真不愧是你！']],
@@ -2819,6 +2831,14 @@ const TOWN = {
       inside: { card: ['カード', 'カード'], money: ['お{金|かね}', 'お金'], photo: ['{写真|しゃしん}', '写真'], ticket: ['{切符|きっぷ}', '切符'], book: ['{本|ほん}', '本'], bento: ['お{弁当|べんとう}', 'お弁当'], cloth: ['ハンカチ', 'ハンカチ'], key: ['{鍵|かぎ}', '鍵'] },
       holds: { wallet: ['card', 'money', 'photo', 'ticket'], bag: ['book', 'bento', 'cloth', 'key'] },
       where: [['{電車|でんしゃ}に', '在電車上'], ['バスに', '在公車上'], ['{駅|えき}の ベンチに', '在車站的長椅上'], ['{公園|こうえん}に', '在公園']]
+    },
+    // タクシー (2026-11-20, spec §8): the town's crossings on 鈴木's map (c across 0–2, r down 0–3; the station below (1, 3)), a place at
+    // nine of them — [c, r, id, word, picture, which corner of the crossing it stands on: each block two at most, never one over the
+    // other]; the passengers of a shift in order (three tell the way, two only say where; 美咲 in a hurry to the hospital)
+    taxi: {
+      spots: [[0, 0, 'library', '{図書館|としょかん}', '図書館', 'se'], [1, 0, 'park', '{公園|こうえん}', '公園', 'se'], [1, 1, 'post', '{郵便局|ゆうびんきょく}', '郵便局', 'nw'], [2, 1, 'hospital', '{病院|びょういん}', '病院', 'nw'],
+        [0, 1, 'school', '{学校|がっこう}', '学校', 'se'], [1, 2, 'cafe', '{喫茶店|きっさてん}', '喫茶店', 'nw'], [2, 2, 'hotel', 'ホテル', 'ホテル', 'nw'], [0, 3, 'flowers', '{花屋|はなや}', '花屋', 'ne'], [2, 3, 'super', 'スーパー', 'スーパー', 'nw']],
+      riders: ['nishimura', 'sophia', 'misaki', 'kaneda', 'umeko']
     }
   },
   YATAI: {

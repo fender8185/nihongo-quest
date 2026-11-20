@@ -268,6 +268,59 @@ def test_lost_misses_and_resume(b):
       return JSON.stringify({ score, k }); })()"""))
     assert r['score'] == {'0': 3, '1': 0, '2': 0} and r['k'] == 3, r   # the question, the wrong wallet, ありません: three misses
 
+# ---- タクシー (spec §8) ----
+# left and right as the taxi faces (going down the map, 右 is the map's left); the shortest way; what a passenger says for it —
+# つぎの角, 二つ目の角 (the first crossing straight on), まっすぐ, あの〜の前で止めて
+def test_taxi_turns_and_instructions(b):
+    r = json.loads(ev(b, """JSON.stringify({ turns: [TAXI.turn(2, 'right'), TAXI.turn(0, 'left'), TAXI.turn(1, 'right'), TAXI.turn(3, 'straight')],
+      r1: TAXI.route([1, 2], 0, [2, 2]), r2: TAXI.route([1, 2], 0, [2, 1]), r3: TAXI.route([1, 2], 0, [1, 0]),
+      i1: TAXI.instructions(['right', 'stop'], 'hotel').map((x) => [x.at, x.line[0]]), i2: TAXI.instructions(['straight', 'right', 'stop'], 'cafe').map((x) => [x.at, x.line[0]]),
+      i3: TAXI.instructions(['straight', 'straight', 'stop'], 'school').map((x) => [x.at, x.line[0]]) })"""))
+    assert r['turns'] == [3, 3, 2, 3], r
+    assert r['r1'] == ['right', 'stop'] and r['r2'] == ['straight', 'right', 'stop'] and r['r3'] == ['straight', 'straight', 'stop'], r
+    assert r['i1'] == [[0, 'つぎの {角|かど}を {右|みぎ}に {曲|ま}がって ください。'], [1, 'あの ホテルの {前|まえ}で {止|と}めて ください。']], r
+    assert r['i2'] == [[0, '{二|ふた}つ{目|め}の {角|かど}を {右|みぎ}に {曲|ま}がって ください。'], [2, 'あの {喫茶店|きっさてん}の {前|まえ}で {止|と}めて ください。']], r
+    assert r['i3'] == [[0, 'まっすぐ {行|い}って ください。'], [2, 'あの {学校|がっこう}の {前|まえ}で {止|と}めて ください。']], r
+
+TAXI_HELP = """ window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve(); JOBS.pat.scale = 0.03; TAXI.tips = false; s(); reg(); state.currentUnit = 'm4';
+  state.work.res['2026-10-23'] = { place: 'taxi', done: 5, score: {}, yen: 1, grade: 'C' };
+  const card = () => document.querySelector('.wk-taxi'), click = (q) => { const e = card() && card().querySelector(q); if (e && !e.disabled) e.click(); return Boolean(e && !e.disabled); };
+  const now = () => TAXI_RUN.now();
+  async function choose() {   // the next right choice: the passenger's (told) or the way to where they go
+    const n = now(); const ch = n.ride.guided ? n.want : TAXI.route(n.at, n.h, TAXI.where(n.ride.to))[0]; click(`.tx-go[data-ch="${ch}"]`); }
+  async function ride(k) {
+    for (let i = 0; i < 400 && !(now() && now().k === k && now().phase === 'drive'); i++) await wait(20);
+    for (let i = 0; i < 2000 && now().k === k && now().phase === 'drive'; i++) { if (now().choosing) await choose(); await wait(15); }
+    for (let i = 0; i < 400 && !(now().k === k && now().phase === 'pay'); i++) await wait(20); click(`.tx-pay[data-o="${now().payRight}"]`);
+  }"""
+
+def test_taxi_shift_by_hand(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + TAXI_HELP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      const kinds = TAXI.make().map((x) => x.guided); WORK.start(yard(), 'taxi'); for (let k = 0; k < 5; k++) await ride(k);
+      for (let i = 0; i < 400 && WORK.today().yen === undefined; i++) await wait(20);
+      const x = WORK.today(), out = { kinds, score: Object.values(x.score), yen: x.yen }; document.querySelectorAll('.wk-result').forEach((e) => e.remove()); CLASS.close(); JOBS.pat.scale = 1; return JSON.stringify(out); })()"""))
+    assert r['kinds'] == [True, True, True, False, False], r
+    assert r['score'] == [0] * 5 and r['yen'] == 235, r   # 180 + S 50, 2% more; no おつり in the test
+
+# a wrong turn: the passenger stops it (a miss), the taxi stays, told again; nothing chosen at a crossing: straight on (a miss when
+# a turn was wanted); a shift left after two rides takes up at the third
+def test_taxi_wrong_turns_and_resume(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + TAXI_HELP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      const realMake = TAXI.make; TAXI.make = () => { const rs = realMake(); rs[0] = TAXI.ride('super', true, 'nishimura'); rs[1] = TAXI.ride('hotel', true, 'sophia', true); return rs; };
+      WORK.start(yard(), 'taxi'); const out = {};
+      for (let i = 0; i < 400 && !(now() && now().choosing); i++) await wait(20); out.want0 = now().want; click('.tx-go[data-ch="left"]'); await wait(200); out.still = now().at.join(); out.again = now().want;
+      for (let i = 0; i < 2000 && now().k === 0 && now().phase === 'drive'; i++) { if (now().choosing) await choose(); await wait(15); }
+      for (let i = 0; i < 400 && now().phase !== 'pay'; i++) await wait(20); click(`.tx-pay[data-o="${now().payRight}"]`);
+      for (let i = 0; i < 400 && !(now().k === 1 && now().choosing); i++) await wait(20); out.want1 = now().want; out.at1 = now().at.join();   // 二つ目: straight here, let it time out
+      for (let i = 0; i < 600 && now().k === 1 && now().at.join() === out.at1; i++) await wait(20);
+      for (let i = 0; i < 2000 && now().k === 1 && now().phase === 'drive'; i++) { if (now().choosing) await choose(); await wait(15); }
+      for (let i = 0; i < 400 && now().phase !== 'pay'; i++) await wait(20); click(`.tx-pay[data-o="${now().payRight}"]`); await wait(300);
+      TAXI.make = realMake; CLASS.close(); await wait(100); out.score = WORK.today().score;
+      WORK.start(yard(), 'taxi'); for (let i = 0; i < 400 && !(now() && now().phase === 'drive'); i++) await wait(20); out.k = now().k; CLASS.close(); JOBS.pat.scale = 1;
+      return JSON.stringify(out); })()"""))
+    assert r['want0'] == 'right' and r['still'] == '1,3' and r['again'] == 'right', r
+    assert r['want1'] == 'straight' and r['score'] == {'0': 1, '1': 0} and r['k'] == 2, r   # 二つ目's first crossing straight on by itself: no miss
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
