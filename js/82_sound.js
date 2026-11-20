@@ -67,7 +67,13 @@ const SND = (() => {
     slurp: (c, to, v) => { noise(c, to, 0, 0.28, 0.3 * v, 600, 1900, 3); tone(c, to, 620, 0.04, 0.3, 0.06 * v, 'sine', 300); },   // じゅるり (YEN's star-eyed face)
     chomp: (c, to, v) => { noise(c, to, 0, 0.07, 0.6 * v, 1400, 600, 1.2); noise(c, to, 0.09, 0.05, 0.35 * v, 2200, 900, 1.5); tone(c, to, 140, 0, 0.09, 0.2 * v, 'sine', 90); },   // a bite (YEN's もぐもぐ)
     ding: (c, to, v) => { tone(c, to, 1760, 0, 1.3, 0.14 * v); tone(c, to, 4858, 0, 0.45, 0.025 * v); },   // the bell on らいらいけん's pass: a dish up (外場 2.0)
-    ring: (c, to, v) => { for (let i = 0; i < 18; i++) tone(c, to, i % 2 ? 1320 : 1580, i * 0.045, 0.045, 0.045 * v, 'square'); }   // the shop's phone, a trill (外場 2.0)
+    ring: (c, to, v) => { for (let i = 0; i < 18; i++) tone(c, to, i % 2 ? 1320 : 1580, i * 0.045, 0.045, 0.045 * v, 'square'); },   // the shop's phone, a trill (外場 2.0)
+    // みなと駅のホーム (2026-11-20): a train coming in — the rumble growing, the brakes' long squeal at the end; going out — the
+    // motor winding up, the rumble fading; the doors' ピンポン (twice); the platform's bell, a little tune of our own
+    'train-in': (c, to, v) => { noise(c, to, 0, 5.6, 0.5 * v, 160, 90, 0.7); for (let k = 0; k < 10; k++) noise(c, to, 0.4 + k * (0.55 - k * 0.03), 0.07, 0.35 * v, 900, 0, 2); tone(c, to, 2900, 4.4, 1.3, 0.025 * v, 'sine', 2600); tone(c, to, 3480, 4.6, 1.1, 0.015 * v, 'sine', 3200); },
+    'train-out': (c, to, v) => { noise(c, to, 0, 5.6, 0.5 * v, 90, 220, 0.7); tone(c, to, 180, 0.2, 3.4, 0.03 * v, 'sawtooth', 620); for (let k = 0; k < 10; k++) noise(c, to, 0.6 + k * (0.32 + k * 0.02), 0.06, 0.3 * v, 900, 0, 2); },
+    'door-chime': (c, to, v) => [0, 0.5].forEach((at) => { tone(c, to, 1046, at, 0.36, 0.1 * v); tone(c, to, 784, at + 0.18, 0.5, 0.1 * v); }),
+    'dep-bell': (c, to, v) => [[784, 0], [988, 0.18], [1175, 0.36], [988, 0.54], [1319, 0.72], [1175, 0.9], [988, 1.08], [1175, 1.26], [1568, 1.5]].forEach(([f, at]) => { tone(c, to, f, at, 0.42, 0.08 * v, 'triangle'); tone(c, to, f * 2, at, 0.2, 0.015 * v); })
   };
   // one sound now (or after delay s): its file, else its SYNTH; vol, rate, a slice [offset, length] of the file
   function play(name, o = {}) {
@@ -99,7 +105,7 @@ const SND = (() => {
   const GROUND = {
     yard: { way: 'gravel', off: 'grass' }, park: { way: 'concrete', off: 'gravel' }, beach: { way: 'wood', off: 'sand' }, harbor: { way: 'sand', off: 'concrete' },
     street: { off: 'concrete' }, town: { off: 'concrete' }, station: { off: 'concrete' }, sento: { off: 'concrete' },
-    shrine: { off: 'gravel' }, oku: { off: 'gravel' }, castle: { off: 'gravel' }, shokudo: { off: 'concrete' }, izakaya: { off: 'wood' }, room: { off: 'wood' }, kominkan: { off: 'concrete' }, kyoshitsu: { off: 'wood' }, rairai: { off: 'concrete' }, chinatown: { off: 'concrete' }, chinadori: { off: 'concrete' }
+    shrine: { off: 'gravel' }, oku: { off: 'gravel' }, castle: { off: 'gravel' }, shokudo: { off: 'concrete' }, izakaya: { off: 'wood' }, room: { off: 'wood' }, kominkan: { off: 'concrete' }, kyoshitsu: { off: 'wood' }, rairai: { off: 'concrete' }, chinatown: { off: 'concrete' }, platform: { off: 'concrete' }, chinadori: { off: 'concrete' }
   };
   const groundOf = (place, kind) => { const g = GROUND[place]; return g ? g[kind] || g.off : ''; };
   // ---- each place's background: [layer, how loud by day, by night] (sounds/amb-<layer>-1.m4a, looping); room: through the window,
@@ -113,6 +119,7 @@ const SND = (() => {
     harbor: [['harbor', 0.8, 0.7], ['gulls', 0.4, 0]],
     town: [['town', 0.6, 0.25], ['insects', 0, 0.12]],
     station: [['station', 0.6, 0.35]],
+    platform: [['station', 0.45, 0.3], ['wind', 0.3, 0.25]],   // みなと駅のホーム (2026-11-20): up on the viaduct, the wind off the sea
     sento: [['town', 0.35, 0.15], ['insects', 0, 0.16]],
     shrine: [['wind', 0.5, 0.4], ['birds', 0.45, 0], ['insects', 0, 0.22]],
     oku: [['wind', 0.6, 0.45], ['birds', 0.5, 0], ['insects', 0, 0.26]],   // the top of the hill: more wind, the birds of the wood
@@ -225,7 +232,7 @@ const USE_SND = {
   'street.vend': 'can-drop', 'street.post': 'letter', 'street.mirror': 'sparkle',
   'beach.crab': 'pinch', 'beach.castle': 'sparkle', 'beach.star': 'splash', 'beach.shell': 'sparkle', 'beach.sea': 'splash',
   'town.cat': 'meow', 'town.chimes': 'furin', 'harbor.cat': 'purr', 'harbor.gull': 'gull', 'harbor.fish': 'flop',
-  'station.vend': 'can-drop', 'station.jobs': 'paper', 'station.pigeons': 'wings', 'station.taxi': 'horn', 'station.gate': 'ic',
+  'station.vend': 'can-drop', 'station.jobs': 'paper', 'platform.vend': 'can-drop', 'platform.bins': 'drawer', 'platform.wait': 'slide-door', 'platform.stall': 'paper', 'station.pigeons': 'wings', 'station.taxi': 'horn', 'station.gate': 'ic',
   'sento.milk': 'bottle', 'sento.cat': 'purr', 'sento.bath': 'bath', 'sento.laundry': 'washer',
   'chinatown.post': 'paper', 'chinatown.notice': 'paper', 'chinatown.shirt': 'cloth', 'chinatown.seiro': 'pour', 'chinatown.panda': 'cushion', 'chinatown.rmenu': 'paper', 'chinatown.yuka': 'place', 'chinatown.shishi': 'clap', 'chinatown.uranai': 'sparkle',
   'rairai.pass': 'sizzle', 'rairai.register': 'suzu', 'rairai.table': 'dishes', 'rairai.menu': 'paper', 'rairai.poster': 'paper', 'rairai.tank': 'splash', 'rairai.toilet': 'door-close',

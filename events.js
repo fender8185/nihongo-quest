@@ -35,7 +35,7 @@ const TOWN = {
     chinatown: { stand: { X: -30, Y: 118, roam: [20, 6] }, stand2: { X: 70, Y: 112, roam: [30, 8] } },   // 中華街 (2026-11-14): 王 at his stand, 陳 helping at lunch
     chinadori: { ranran: { X: -66, Y: 132, roam: [8, 4] }, fuku: { X: -44, Y: 222, roam: [6, 3] }, rairai: { X: 66, Y: 132, roam: [8, 4] } },   // 大通り (2026-11-14): its keepers at their shops (WORK)
     rairai: { pass: { u: 6.9, v: 0.85 } },   // らいらいけん (2026-11-15): 黄 behind the pass
-    platform: { stand: { X: -372, Y: 128, roam: [6, 3] } },   // みなと駅のホーム (2026-11-20): ハル behind her bento stall
+    platform: { stand: { X: -376, Y: 128, roam: [4, 2] } },   // みなと駅のホーム (2026-11-20): ハル behind her bento stall
     kyoshitsu: { teach: { u: 4.6, v: 3.6 }, desk1: { u: 5.6, v: 5.85, sit: 1, pose: 'turn flip' }, desk2: { u: 13, v: 5.85, sit: 1, pose: 'turn flip' }, desk3: { u: 16.6, v: 5.85, sit: 1, pose: 'turn flip' }, tatami: { u: 19.4, v: 12.4, h: 0.5, kneel: 1, pose: 'turn flip' } }
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they
@@ -152,7 +152,7 @@ const TOWN = {
       bio: ['黄大龍，50 歲，「らいらいけん」的老闆兼主廚，出菜一道都不能慢。', '永遠在趕時間，口頭禪是「はやく！はやく！」，自己的拉麵卻總是放到冷掉才吃。'],
       hours: [[10, 20, 'rairai', 'pass']] },   // 2026-11-15: in his kitchen, at the pass (らいらいけん walked into)
     // 駅前の打工 (2026-11-20): the bento seller on みなと駅's platform (駅弁の立ち売り)
-    haru: { name: '浜田 ハル', kana: 'はまだ はる', role: '駅弁屋「みなと弁当」', look: { face: 'round', skin: '#f0cdb0', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#b8b8bc', eyes: 'happy', eyeColor: '#3a2a20', brows: 'soft', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#2f5a8a', bottomStyle: 'wide', bottom: '#3f4660', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'hachimaki' },
+    haru: { name: '浜田 ハル', kana: 'はまだ はる', role: '駅弁屋「みなと弁当」', look: { face: 'round', skin: '#f0cdb0', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#3a2a20', brows: 'soft', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#2f5a8a', bottomStyle: 'wide', bottom: '#3f4660', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'hachimaki' },
       bio: ['みなと駅月台上便當攤「みなと弁当」的老闆娘，74 歲。在這個月台賣了五十年便當，嗓門大、手腳快、很疼人。', '口頭禪是「でんしゃは まって くれないよ！」。說話是老奶奶的常體。'],
       hours: [[7, 19, 'platform', 'stand']] },
     granny: { name: 'おばあちゃん', kana: 'おばあちゃん', role: '外婆（信）', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#b8a27a', bottomStyle: 'skirt', bottom: '#6e4f3a', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { face: 'glasses' },

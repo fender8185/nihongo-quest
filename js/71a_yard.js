@@ -682,6 +682,7 @@ function renderOutside(view, place = 'yard') {
   TOWNLIFE.start(y, place);   // the people about: strolling, fidgeting
   PASSERS.start(y, place);   // passers-by in the town and 中華街, each a look made anew (2026-11-14)
   CRUISE.mount(y, place);   // the cruise ship's passengers and 高橋, the ship far out (CRUISE)
+  PLATFORM.mount(y, place);   // みなと駅's trains in and out (2026-11-20)
   const yel = y.querySelector('.yhero');   // idling now and then while left be
   HERO.idle(yel, () => !yh.climb && !yh.use && !document.hidden && !yel.matches('.walk, .run, .out, .hop, .wave, .spin, .cheer, .reach, .crouch, .look, .bow'), true);
   y.addEventListener('pointerdown', (e) => { y._at = yardPoint(y, e); if (!y.classList.contains('dressing')) { yardDragStart(y, e); yPanStart(y, e); } });   // _at: which seat a tap on a row of them meant

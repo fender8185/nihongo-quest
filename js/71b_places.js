@@ -53,7 +53,7 @@ function isoZ(u, v, on = 0) {
 INDOOR.forEach((pl) => Object.values(TOWN.SPOTS[pl] || {}).forEach((sp) => { if (sp.u !== undefined) { [sp.X, sp.Y] = isoXY(sp.u, sp.v, sp.h || 0); sp.foot = isoXY(sp.u, sp.v); } }));
 // how far up each place the hero walks (Y px up): the ground in front of its buildings, never up onto them (2026-11-10, the user);
 // the yard up to its house, the main road to its far pavement, a room to its floor
-const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128, oku: 124, kominkan: 128, kyoshitsu: 128, chinatown: 128, rairai: 128 };
+const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128, oku: 124, kominkan: 128, kyoshitsu: 128, chinatown: 128, rairai: 128, platform: 128 };
 const walkTop = (place, X) => (place === 'yard' && X !== undefined ? Math.round(214 - Math.max(0, Math.abs(X) - 300) * 0.22) : place === 'chinadori' ? (X === undefined ? DORI.FAR : DORI.top(X)) : WALK_TOP[place] || 214);   // 中華街大通り: its trapezoid (DORI)   // the yard: a hilltop, lower towards its sides — not out over the edge
 // what stands in the way in each place (2026-11-10, the user: he walked about as if every place were flat ground): the ground the
 // things there stand on, [X0, X1, Y0, Y1] in his units — benches, crates, tables and stools, the sandbox, the beach's grassy bank
@@ -65,6 +65,8 @@ const WALK_BLOCK = {
   harbor: [[-222, -134, 78, 106], [488, 532, 76, 94], [188, 252, 74, 98]],
   station: [[-382, -288, 62, 80], [158, 252, 62, 80], [26, 120, 90, 106], [-492, -368, 106, 140]],
   sento: [[-352, -238, 60, 78]],
+  // みなと駅のホーム (2026-11-20): ハル's stall, the vending machine, the two benches, the bins, the waiting room, the stairs' housing
+  platform: [[-484, -296, 110, 140], [-272, -232, 118, 140], [-222, -128, 62, 80], [-112, -18, 62, 80], [-12, 34, 118, 140], [213, 367, 116, 140], [416, 570, 118, 140]],
   kominkan: [[296, 404, 100, 140]],   // the bike shelter
   // the two rooms (seen at 45°): [u0, u1, v0, v1] on the floor — the kitchen and the counter, the stools, the tables with their
   // chairs, the crates and the barrels, the tatami
@@ -250,10 +252,20 @@ const PLACE_USE = {
     { id: 'benchR', name: '長椅', box: [760, 252, 850, 304], kind: 'sit', seats: [185, 225], top: 90, dep: 66 },
     { id: 'pigeons', name: '鴿子', box: [576, 292, 676, 316], kind: 'do', go: [30, 42], pose: 'wave', fx: 'spigeons', fxc: 'flown', ms: 6000 },
     { id: 'taxi', name: '計程車', box: [110, 188, 232, 258], kind: 'do', go: [-400, 94], pose: 'wave', say: 'プップー', fx: 'taxi', fxc: 'honk' },
-    { id: 'gate', name: '剪票口', box: [480, 150, 640, 236], kind: 'do', go: [-20, 126], back: 1, pose: 'reach', say: 'ピッ' },
+    { id: 'gate', name: '剪票口', box: [480, 150, 640, 236], kind: 'do', go: [-20, 126], back: 1, pose: 'reach', say: 'ピッ', open: (y) => yGo(y.querySelector('.use-btn[data-use="gate"]') || y, 'platform') },   // through, up to the platform (2026-11-20)
     { id: 'board', name: '電子看板', box: [448, 104, 672, 138], kind: 'do', go: [60, 126], back: 1, pose: 'look', toast: () => { const h = Math.floor(sceneHour()); return `下一班電車：${h}:30 快速 みなと港・${h}:45 普通 白鷺`; } },
     { id: 'koban', name: '交番', box: [880, 140, 1006, 236], kind: 'do', go: [384, 126], back: 1, pose: 'wave', say: 'こんにちは！' },
     { id: 'jobs', name: '求人看板', box: [688, 114, 802, 178], kind: 'do', go: [145, 126], back: 1, pose: 'look', say: 'アルバイト…？', open: () => WORK.board('ekimae') }],   // 駅前's (2026-11-20), on the station's front
+  // みなと駅のホーム (2026-11-20, docs/superpowers/specs/2026-11-20-ekimae-work-design.md §3.4)
+  platform: [
+    { id: 'stall', name: '便當攤', box: [116, 104, 304, 254], kind: 'do', go: [-385, 104], back: 1, pose: 'look', say: 'いい におい…' },
+    { id: 'vend', name: '自動販賣機', box: [330, 168, 366, 240], kind: 'do', go: [-252, 112], back: 1, pose: 'reach', say: 'ガコン！', fx: 'pvend', fxc: 'buy', buy: 'vend' },
+    { id: 'benchL', name: '長椅', box: [380, 252, 470, 304], kind: 'sit', seats: [-195, -150], top: 90, dep: 66 },
+    { id: 'benchR', name: '長椅', box: [490, 252, 580, 304], kind: 'sit', seats: [-85, -40], top: 90, dep: 66 },
+    { id: 'bins', name: '垃圾桶', box: [588, 206, 634, 240], kind: 'do', go: [11, 112], back: 1, pose: 'look', toast: () => '垃圾桶，從左邊起：もえるゴミ（可燃）・かん、びん（罐、瓶）・ペットボトル（寶特瓶）' },
+    { id: 'sign', name: '駅名標', box: [628, 130, 792, 186], kind: 'do', go: [110, 108], back: 1, pose: 'look', say: 'みなと' },
+    { id: 'board', name: '發車標', box: [520, 30, 700, 68], kind: 'do', go: [10, 104], back: 1, pose: 'look', toast: () => EKI.next(Math.floor(sceneHour()), Math.floor((sceneHour() % 1) * 60), 2).map((x) => `${x.t} ${x.kind} ${EKI.name(x.to)}（${x.track}番線）`).join('・') },
+    { id: 'wait', name: '待合室', box: [815, 146, 965, 240], kind: 'do', go: [290, 112], back: 1, pose: 'look', say: 'あったかい…' }],
   sento: [
     { id: 'milk', name: '牛奶販賣機', box: [158, 142, 224, 236], kind: 'do', go: [-409, 122], back: 1, pose: 'reach', say: 'ぷはー！', fx: 'milk', fxc: 'buy', buy: 'milk' },
     { id: 'cat', name: '貓', box: [304, 254, 358, 288], kind: 'do', go: [-270, 50], pose: 'crouch', say: '♡', fx: 'scat', fxc: 'purr', ms: 2600 },

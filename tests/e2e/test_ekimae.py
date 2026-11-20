@@ -89,6 +89,26 @@ def test_the_station_board_runs_the_timetable(b):
       location.hash = '#/station'; route(); await wait(300); const t = document.querySelector('.station-land .fx-scroll text').textContent; localStorage.removeItem('nq_wake'); return JSON.stringify(t); })()"""))
     assert '10:25 快速 白鷺' in r and '10:32 普通 みなと港' in r, r
 
+# みなと駅のホーム (spec §3): through 駅前's 改札 up to the platform, down its stairs back; ハル at her stall by day only
+def test_platform_way_in_and_out(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ location.hash = '#/station'; route(); await wait(400); const out = {};
+      document.querySelector('.use-btn[data-use="gate"]').click(); for (let i = 0; i < 80 && location.hash !== '#/platform'; i++) await wait(100);
+      out.up = location.hash; await wait(500); out.haru = Boolean(document.querySelector('.npc-haru'));
+      document.querySelector('.way-btn[data-to="station"]').click(); for (let i = 0; i < 80 && location.hash !== '#/station'; i++) await wait(100); out.down = location.hash;
+      TOWNEV.clock = { h: 21, day: new Date(2026, 10, 10) }; location.hash = '#/platform'; route(); await wait(400); out.night = Boolean(document.querySelector('.npc-haru'));
+      return JSON.stringify(out); })()"""))
+    assert r == {'up': '#/platform', 'haru': True, 'down': '#/station', 'night': False}, r
+
+# a train in on 1番線 (to 白鷺, its LED says so), stopped with its doors open, then away; then one on 2番線 (to みなと港)
+def test_platform_trains_come_and_go(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ PLATFORM.speed = 12; location.hash = '#/platform'; route(); const out = { seen: [] };
+      for (let i = 0; i < 120; i++) { await wait(50); const n = PLATFORM.now(), g = document.querySelector('.pf-near'); const k = n ? n.track + n.phase + (n.phase === 'stop' ? (document.querySelector(`.pf-train[data-track="${n.track}"]`).classList.contains('open') ? '+open' : '') : '') : '-';
+        if (out.seen[out.seen.length - 1] !== k) out.seen.push(k); if (n && n.track === 1 && n.phase === 'stop') out.led = g.textContent.includes('白鷺'); }
+      PLATFORM.speed = 1; return JSON.stringify(out); })()"""))
+    s = r['seen']
+    assert '1in' in s and '1stop+open' in s and '1out' in s and '2in' in s and s.index('1in') < s.index('1stop+open') < s.index('1out') < s.index('2in'), r
+    assert r['led'], r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
