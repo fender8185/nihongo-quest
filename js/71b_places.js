@@ -253,7 +253,7 @@ const PLACE_USE = {
     { id: 'pigeons', name: '鴿子', box: [576, 292, 676, 316], kind: 'do', go: [30, 42], pose: 'wave', fx: 'spigeons', fxc: 'flown', ms: 6000 },
     { id: 'taxi', name: '計程車', box: [110, 188, 232, 258], kind: 'do', go: [-400, 94], pose: 'wave', say: 'プップー', fx: 'taxi', fxc: 'honk' },
     { id: 'gate', name: '剪票口', box: [480, 150, 640, 236], kind: 'do', go: [-20, 126], back: 1, pose: 'reach', say: 'ピッ', open: (y) => yGo(y.querySelector('.use-btn[data-use="gate"]') || y, 'platform') },   // through, up to the platform (2026-11-20)
-    { id: 'board', name: '電子看板', box: [448, 104, 672, 138], kind: 'do', go: [60, 126], back: 1, pose: 'look', toast: () => { const h = Math.floor(sceneHour()); return `下一班電車：${h}:30 快速 みなと港・${h}:45 普通 白鷺`; } },
+    { id: 'board', name: '電子看板', box: [448, 104, 672, 138], kind: 'do', go: [60, 126], back: 1, pose: 'look', toast: () => { const n = sceneHour(); return `下一班電車：${EKI.next(Math.floor(n), Math.floor((n % 1) * 60), 2).map((x) => `${x.t} ${x.kind} ${EKI.name(x.to)}`).join('・')}`; } },   // みなと線's timetable (2026-11-21)
     { id: 'koban', name: '交番', box: [880, 140, 1006, 236], kind: 'do', go: [384, 126], back: 1, pose: 'wave', say: 'こんにちは！' },
     { id: 'kenbai', name: '券売機', box: [328, 182, 438, 236], kind: 'do', go: [-217, 122], back: 1, pose: 'reach', open: (y) => RIDE.machine(y, 'minato') },   // the hero's tickets (2026-11-20)
     { id: 'jobs', name: '求人看板', box: [688, 114, 802, 178], kind: 'do', go: [145, 126], back: 1, pose: 'look', say: 'アルバイト…？', open: () => WORK.board('ekimae') }],   // 駅前's (2026-11-20), on the station's front

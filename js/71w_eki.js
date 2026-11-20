@@ -23,12 +23,12 @@ const EKI = (() => {
     return out;
   }
   const hm = (t) => `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
-  // the next n trains out of みなと at or after h:m (past the last of the day: the next morning's) — { t, h, m, kind, to, track }
+  // the next n trains out of みなと at or after h:m (past the last of the day, END past LAST: the next morning's) — { t, h, m, kind, to, track }
   function next(h, m, n = 4) {
-    const out = [], { FIRST, LAST, TIMES, TRACK } = E(); let t = Math.floor(h) * 60 + Math.floor(m);
+    const out = [], { FIRST, LAST, END, TIMES, TRACK } = E(); let t = Math.floor(h) * 60 + Math.floor(m);
     for (let k = 0; k < 2 * 24 * 60 && out.length < n; k++, t++) {
       const day = t % (24 * 60), H = Math.floor(day / 60), M = day % 60;
-      if (H < FIRST || H > LAST) continue;
+      if (H < FIRST || H > LAST || (H === LAST && M > END)) continue;
       TIMES.filter(([mm]) => mm === M).forEach(([, kind, to]) => { if (out.length < n) out.push({ t: hm(day), h: H, m: M, kind, to, track: TRACK[to] }); });
     }
     return out;

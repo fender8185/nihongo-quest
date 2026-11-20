@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 90 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 91 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2704,30 +2704,30 @@ const TOWN = {
       // 駅弁 (2026-11-20, ハル): a train in, its bell, a word now and then, a train gone with someone unserved, the end (all: every
       // passenger served at once); yes／no: the hero's answer to an ask put right; usual: what 中村's いつもの is (m2: the tea hot);
       // the passengers' (cust) and the hero's (me) few words
-      // タクシー (2026-11-20, 鈴木): asking which way at a crossing, sorry for a wrong turn, straight on when nobody says, a cat, his
+      // タクシー (2026-11-20, 鈴木): asking which way at a crossing, his guess where he was told not to turn (lean), sorry for a wrong turn, straight on when nobody says, a cat, his
       // talk on the way, the end (all: every ride right); the hero's words to him (go), the fare (pay); the passengers' (cust)
-      taxi: { who: 'suzuki', ask: ['どっちだ？', '往哪邊？'], wrong: ['おっと、すまん！', '哎呀，抱歉！'], on: ['まっすぐ {行|い}くぞ！', '直走囉！'], cat: ['おっと、ねこだ！', '哇，有貓！'],
+      taxi: { who: 'suzuki', ask: ['どっちだ？', '往哪邊？'], lean: ['つぎを {D}だな？', '下個路口{d}轉對吧？'], wrong: ['おっと、すまん！', '哎呀，抱歉！'], on: ['まっすぐ {行|い}くぞ！', '直走囉！'], cat: ['おっと、ねこだ！', '哇，有貓！'],
         chat: [['この {道|みち}は {夕方|ゆうがた} {混|こ|塞車}むんだ。', '這條路傍晚會塞。'], ['おれは この {町|まち}の {道|みち}なら ぜんぶ わかるぞ。', '這個鎮上的路我全都知道。'], ['からあげ{定食|ていしょく|套餐}、{食|た}べたく なって きた。', '突然好想吃炸雞定食。']],
         end: ['いい ナビだった！ また たのむぞ！', '是個好導航！下次再拜託你！'], all: ['おれより {道|みち}を しってるな！', '你比我還認得路！'],
         go: { left: ['{左|ひだり}です！', '左轉！'], straight: ['まっすぐです！', '直走！'], right: ['{右|みぎ}です！', '右轉！'], stop: ['ここで {止|と}めて ください！', '請停在這裡！'] }, pay: ['{P}です。', '{p} 日圓。'],
         cust: { to: ['{X}まで お{願|ねが}いします。', '麻煩到{x}。'], straight: ['まっすぐ {行|い}って ください。', '請直走。'], dont: ['つぎの {角|かど}は {曲|ま}がらないで ください。', '下個轉角不要轉。'],
           next: ['つぎの {角|かど}を {D}に {曲|ま}がって ください。', '下個轉角請{d}轉。'], second: ['{二|ふた}つ{目|め}の {角|かど}を {D}に {曲|ま}がって ください。', '第二個轉角請{d}轉。'],
           fix: ['つぎの {角|かど}を {E}に… あ、すみません、{D}です！', '下個轉角往{e}……啊，抱歉，是{d}！'], fix2: ['{二|ふた}つ{目|め}の {角|かど}を {E}に… あ、すみません、{D}です！', '第二個轉角往{e}……啊，抱歉，是{d}！'],
-          stop: ['あの {X}の {前|まえ}で {止|と}めて ください。', '請停在那間{x}前面。'], wrong: ['あっ、ちがいます！', '啊，不對！'], here: ['ここじゃ ありません。', '不是這裡。'], far: ['{遠回|とおまわ}りですよ…。', '繞遠路了喔……'],
+          stop: ['あの {X}の {前|まえ}で {止|と}めて ください。', '請停在那個{x}前面。'], wrong: ['あっ、ちがいます！', '啊，不對！'], here: ['ここじゃ ありません。', '不是這裡。'], far: ['{遠回|とおまわ|繞遠路}りですよ…。', '繞遠路了喔……'],
           hurry: ['{急|いそ}いで ください！', '請快一點！'], price: ['いくらですか。', '多少錢？'], keep: ['おつりは いいです。', '不用找了。'], thanks: ['ありがとうございました。', '謝謝。'] } },
       // 落とし物 (2026-11-20, 小林): his greeting to each, four brought out, right now and then, a miss, the thing there after all, the end
       // (all: everyone helped at once), his own hat (on his head); the hero's (me) and the one who lost it (cust)
-      lost: { who: 'kobayashi', hi: ['どうしましたか！', '怎麼了嗎！'], bring: ['ここに {四|よっ}つ あります！', '這裡有四個！'], ok: [['ありました！', '找到了！'], ['さすがで あります！', '真不愧是你！']],
+      lost: { who: 'kobayashi', hi: ['どうしましたか！', '怎麼了嗎！'], bring: ['ここに {四|よっ}つ あります！', '這裡有四個！'], twin: ['{同|おな}じのが {二|ふた}つ ありますね…。', '有兩個一樣的耶……。'], ok: [['ありました！', '找到了！'], ['さすがで あります！', '真不愧是你！']],
         miss: ['あれ？ ちがいましたか。', '咦？不對嗎？'], there: ['あ、ありますよ！', '啊，有喔！'], call: ['みつかったら、れんらくします！', '找到的話會聯絡您！'],
-        end: ['ごくろうさまで あります！', '辛苦了！'], all: ['{本官|ほんかん|本警察}より はやいで あります！', '比本官還快！'], hat: ['{本官|ほんかん|本警察}の {帽子|ぼうし}も ありません！ …あ、{頭|あたま}の {上|うえ}でした！', '本官的帽子也不見了！……啊，在頭上！'],
-        me: { which: ['どんな {K}ですか。', '是什麼樣的{k}？'], price: ['{K}は いくらですか。', '{k}多少錢？'], like: ['{K}が {好|す}きですか。', '你喜歡{k}嗎？'], give: ['これですか。', '是這個嗎？'], none: ['すみません、ありません。', '不好意思，沒有。'], gag: ['あの… {頭|あたま}の {上|うえ}に あります。', '那個……在您頭上。'] },
+        end: ['ごくろうさまで あります！', '辛苦了！'], all: ['さすがです！ {本官|ほんかん|本警察}より はやい！', '真不愧是你！比本官還快！'], head: ['あ！ {頭|あたま}の {上|うえ}に あります！', '啊！在您頭上！'], hat: ['{本官|ほんかん|本警察}の {帽子|ぼうし}も ありません！ …あ、{頭|あたま}の {上|うえ}でした！', '本官的帽子也不見了！……啊，在頭上！'],
+        me: { which: ['どんな {K}ですか。', '是什麼樣的{k}？'], inside: ['{中|なか}に {何|なに}が ありますか。', '裡面有什麼？'], price: ['{K}は いくらですか。', '{k}多少錢？'], like: ['{K}が {好|す}きですか。', '你喜歡{k}嗎？'], give: ['これですか。', '是這個嗎？'], none: ['すみません、ありません。', '不好意思，沒有。'], gag: ['あの… {頭|あたま}の {上|うえ}に あります。', '那個……在您頭上。'] },
         cust: { lost: ['すみません。{W}{K}を {忘|わす}れました。', '不好意思，我把{k}忘{w}了。'], yes: ['あっ、それです！ ありがとうございます！', '啊，就是那個！謝謝！'], no: ['いいえ、ちがいます。', '不，不是這個。'], sad: ['そうですか…。', '這樣啊……。'], gag: ['あっ、ほんとうだ！', '啊，真的耶！'] } },
       // きっぷ売り場 (2026-11-20, 原田): right (now and then), a miss, the end (all: everyone right at once); the hero's greeting, their thanks
       window: { who: 'harada', ok: [['{正確|せいかく|準確}です。', '準確。'], ['よろしい。', '很好。']], miss: ['ちがいます。', '不對。'],
         end: ['おつかれさまでした。{本日|ほんじつ|今天}も {定刻|ていこく|準點}です。', '辛苦了。今天也一切準點。'], all: ['{一秒|いちびょう|一秒}も くるいません。おみごとです。', '一秒都不差。了不起。'],
         me: { hi: ['いらっしゃいませ。', '歡迎光臨。'] }, cust: { thanks: ['ありがとうございます。', '謝謝。'] } },
       bento: { who: 'haru', train: ['きたよ！', '車來了！'], bell: ['もう でるよ！', '要開了喔！'], ok: [['いいね！', '不錯！'], ['はやいね！', '真快！'], ['じょうずだね！', '很厲害喔！']],
-        gone: ['いっちゃったね。つぎは がんばろう！', '開走了。下一班加油！'], end: ['おつかれさん！ たすかったよ！', '辛苦了！幫了大忙！'], all: ['あんた、さいのうが あるね！', '你很有天分喔！'],
+        gone: ['いっちゃったね。つぎは がんばろう！', '開走了。下一班加油！'], end: ['おつかれさん！ たすかったよ！', '辛苦了！幫了大忙！'], all: ['あんた、{才能|さいのう|天分}が あるね！', '你很有天分喔！'],
         yes: ['あるよ！', '有喔！'], no: ['ないよ！', '沒有喔！'],
         usual: ['{中村|なかむら}さんの「いつもの」は、おにぎり {二|ふた}つと お{茶|ちゃ} {一本|いっぽん}だよ！', '中村先生的「老樣子」是兩個飯糰、一瓶茶喔！'],
         usual2: ['{中村|なかむら}さんの「いつもの」は、おにぎり {二|ふた}つと あたたかい お{茶|ちゃ} {一本|いっぽん}だよ！', '中村先生的「老樣子」是兩個飯糰、一瓶熱茶喔！'],
@@ -2794,7 +2794,7 @@ const TOWN = {
     LINE: [['shirasagi', '{白鷺|しらさぎ}', 24, 1], ['okawa', '{大川|おおかわ}', 18, 0], ['hanada', '{花田|はなだ}', 13, 0], ['kawaguchi', '{川口|かわぐち}', 8, 1], ['minato', 'みなと', 3, 1], ['minatoko', 'みなと{港|こう}', 0, 1]],
     FARES: [[3, 140], [6, 170], [10, 220], [15, 260], [21, 310], [30, 350]],
     TIMES: [[2, '普通', 'minatoko'], [10, '普通', 'shirasagi'], [17, '快速', 'minatoko'], [25, '快速', 'shirasagi'], [32, '普通', 'minatoko'], [40, '普通', 'shirasagi'], [47, '快速', 'minatoko'], [55, '快速', 'shirasagi']],
-    FIRST: 6, LAST: 22, TRACK: { shirasagi: 1, minatoko: 2 },
+    FIRST: 6, LAST: 22, END: 40, TRACK: { shirasagi: 1, minatoko: 2 },   // the last train out at 22:40 (原田: 最終は 二十二時四十分)
     // 駅弁の立ち売り (2026-11-20, spec §4): the tray's goods [id, word, picture, counter (つ, 本, none), hot／cold (from m2, in place of
     // the one お茶), 中文]; two things asked for together (pairs: [id, n, id, n] — お茶 hot or cold from m2); an ask first (have:
     // [line, 中文, what of the tray it is (none: not sold here), what instead, how many]); from m6 a reason first (why: [reason, 中文,
@@ -2807,23 +2807,23 @@ const TOWN = {
         ['onigiri', 1, 'juice', 2], ['bento', 1, 'paper', 1], ['sand', 1, 'tea', 1], ['mikan', 2, 'tea', 1], ['bento', 3, 'tea', 3], ['onigiri', 2, 'water', 2]],
       have: [['ビール、ありますか。', '有啤酒嗎？', null, 'tea', 1], ['アイスクリーム、ありますか。', '有冰淇淋嗎？', null, 'juice', 1], ['コーヒー、ありますか。', '有咖啡嗎？', null, 'tea', 2],
         ['おにぎり、ありますか。', '有飯糰嗎？', 'onigiri', null, 2], ['お{弁当|べんとう}、ありますか。', '有便當嗎？', 'bento', null, 1], ['{水|みず}、ありますか。', '有水嗎？', 'water', null, 2]],
-      why: [['{寒|さむ}いので', '好冷，所以', 'tea', 1], ['{時間|じかん}が ないので', '沒時間了，所以', 'onigiri', 2], ['のどが かわいたので', '口好渴，所以', 'water', 1], ['{子|こ}どもが いるので', '帶著小孩，所以', 'juice', 2]],
+      why: [['{寒|さむ}いので', '好冷，所以要', 'tea_hot', 1], ['{暑|あつ}いので', '好熱，所以要', 'tea_cold', 2], ['{時間|じかん}が ないので', '沒時間了，所以要', 'onigiri', 2], ['のどが かわいたので', '口好渴，所以要', 'water', 1], ['{子|こ}どもが いるので', '帶著小孩，所以要', 'juice', 2]],   // the tea's said just お茶: the reason tells hot or cold
       usual: 'いつもの、お{願|ねが}いします。', usualZh: '老樣子，麻煩了。', usualItems: [['onigiri', 2], ['tea', 1]]
     },
     // きっぷ売り場 (2026-11-20, spec §5): what people ask at the window ({S}: a station, as LINE writes it; {s}: its name in 中文 as
     // written) and the hero's answers ({P}: a price, {T}: a time, {K}: a track — marked with their readings)
     window: {
       q: { fare: ['{S}まで いくらですか。', '到{s}多少錢？'], next: ['つぎの {S}{行|ゆ}きは {何時|なんじ}ですか。', '下一班往{s}的車幾點？'], track: ['{S}{行|ゆ}きは {何番線|なんばんせん}ですか。', '往{s}的車在幾號月台？'],
-        stop: ['この {快速|かいそく|快速}は {S}に {止|と}まりますか。', '這班快速車會停{s}嗎？'], buy: ['{S}まで、{大人|おとな} {一枚|いちまい} ください。', '到{s}，大人一張。'], buy2: ['{S}まで、{大人|おとな} {一枚|いちまい}と {子|こ}ども {一枚|いちまい} ください。', '到{s}，大人一張、小孩一張。'] },
+        stop: ['{白鷺|しらさぎ}{行|ゆ}きの {快速|かいそく|快速}は {S}に {止|と}まりますか。', '往白鷺的快速車會停{s}嗎？'], buy: ['{S}まで、{大人|おとな} {一枚|いちまい} ください。', '到{s}，大人一張。'], buy2: ['{S}まで、{大人|おとな} {一枚|いちまい}と {子|こ}ども {一枚|いちまい} ください。', '到{s}，大人一張、小孩一張。'] },
       a: { fare: ['{P}です。', '{p} 日圓。'], next: ['{T}です。', '{t}。'], track: ['{K}です。', '{k}號月台。'], yes: ['はい、{止|と}まります。', '會，有停。'], no: ['いいえ、{止|と}まりません。', '不會，不停。'], sum: ['ぜんぶで {P}です。', '全部 {p} 日圓。'] }
     },
-    // 落とし物 (2026-11-20, spec §7): the looks — a colour (an い-adjective, or a noun and の: 茶色, 緑) and each kind's other look —
+    // 落とし物 (2026-11-20, spec §7; the umbrella big (long) or small (folding): 短い傘 is not said, the review 2026-11-21): the looks — a colour (an い-adjective, or a noun and の: 茶色, 緑) and each kind's other look —
     // as said before a noun, joined (くて／で), in 中文; the kinds [word, 中文, its colours, its two other looks, who leaves it (each
     // their own, their voice), shape first]; what is in a wallet or a bag [word, picture]; where it was left (忘れました)
     lost: {
-      colors: { red: ['{赤|あか}い', '{赤|あか}くて', '紅'], blue: ['{青|あお}い', '{青|あお}くて', '藍'], black: ['{黒|くろ}い', '{黒|くろ}くて', '黑'], white: ['{白|しろ}い', '{白|しろ}くて', '白'], yellow: ['{黄色|きいろ}い', '{黄色|きいろ}くて', '黃'], brown: ['{茶色|ちゃいろ}の', '{茶色|ちゃいろ}で', '咖啡色'], green: ['{緑|みどり}の', '{緑|みどり}で', '綠'] },
-      dims: { big: ['{大|おお}きい', '{大|おお}きくて', '大'], small: ['{小|ちい}さい', '{小|ちい}さくて', '小'], long: ['{長|なが}い', '{長|なが}くて', '長'], short: ['{短|みじか}い', '{短|みじか}くて', '短'], new: ['{新|あたら}しい', '{新|あたら}しくて', '新'], old: ['{古|ふる}い', '{古|ふる}くて', '舊'], round: ['{丸|まる}い', '{丸|まる}くて', '圓'], square: ['{四角|しかく}い', '{四角|しかく}くて', '方'] },
-      kinds: { umbrella: ['{傘|かさ}', '傘', ['red', 'blue', 'black', 'white', 'yellow'], ['long', 'short'], 'umeko'], bag: ['かばん', '包包', ['black', 'white', 'red', 'brown'], ['big', 'small'], 'rina'],
+      colors: { red: ['{赤|あか}い', '{赤|あか}くて', '紅'], blue: ['{青|あお}い', '{青|あお}くて', '藍'], black: ['{黒|くろ}い', '{黒|くろ}くて', '黑'], white: ['{白|しろ}い', '{白|しろ}くて', '白'], yellow: ['{黄色|きいろ}い', '{黄色|きいろ}くて', '黃'], brown: ['{茶色|ちゃいろ}の', '{茶色|ちゃいろ}で', '咖啡'], green: ['{緑|みどり}の', '{緑|みどり}で', '綠'] },
+      dims: { big: ['{大|おお}きい', '{大|おお}きくて', '大'], small: ['{小|ちい}さい', '{小|ちい}さくて', '小'], new: ['{新|あたら}しい', '{新|あたら}しくて', '新'], old: ['{古|ふる}い', '{古|ふる}くて', '舊'], round: ['{丸|まる}い', '{丸|まる}くて', '圓形'], square: ['{四角|しかく}い', '{四角|しかく}くて', '方形'] },
+      kinds: { umbrella: ['{傘|かさ}', '傘', ['red', 'blue', 'black', 'white', 'yellow'], ['big', 'small'], 'umeko'], bag: ['かばん', '包包', ['black', 'white', 'red', 'brown'], ['big', 'small'], 'rina'],
         wallet: ['{財布|さいふ}', '錢包', ['black', 'red', 'brown', 'yellow'], ['big', 'small'], 'nakamura'], hat: ['{帽子|ぼうし}', '帽子', ['white', 'black', 'red', 'blue'], ['new', 'old'], 'yuta'],
         glasses: ['{眼鏡|めがね}', '眼鏡', ['black', 'red', 'blue'], ['round', 'square'], 'genzo', 1], key: ['{鍵|かぎ}', '鑰匙', ['red', 'blue', 'yellow', 'green'], ['big', 'small'], 'taro'],
         watch: ['{時計|とけい}', '手錶', ['white', 'black', 'blue', 'brown'], ['round', 'square'], 'alex', 1], camera: ['カメラ', '相機', ['black', 'white'], ['new', 'old'], 'nishimura'],
@@ -2836,17 +2836,17 @@ const TOWN = {
     // nine of them — [c, r, id, word, picture, which corner of the crossing it stands on: each block two at most, never one over the
     // other]; the passengers of a shift in order (three tell the way, two only say where; 美咲 in a hurry to the hospital)
     taxi: {
-      spots: [[0, 0, 'library', '{図書館|としょかん}', '図書館', 'se'], [1, 0, 'park', '{公園|こうえん}', '公園', 'se'], [1, 1, 'post', '{郵便局|ゆうびんきょく}', '郵便局', 'nw'], [2, 1, 'hospital', '{病院|びょういん}', '病院', 'nw'],
-        [0, 1, 'school', '{学校|がっこう}', '学校', 'se'], [1, 2, 'cafe', '{喫茶店|きっさてん}', '喫茶店', 'nw'], [2, 2, 'hotel', 'ホテル', 'ホテル', 'nw'], [0, 3, 'flowers', '{花屋|はなや}', '花屋', 'ne'], [2, 3, 'super', 'スーパー', 'スーパー', 'nw']],
+      spots: [[0, 0, 'library', '{図書館|としょかん}', '図書館', 'se', '圖書館'], [1, 0, 'park', '{公園|こうえん}', '公園', 'se', '公園'], [1, 1, 'post', '{郵便局|ゆうびんきょく}', '郵便局', 'nw', '郵局'], [2, 1, 'hospital', '{病院|びょういん}', '病院', 'nw', '醫院'],
+        [0, 1, 'school', '{学校|がっこう}', '学校', 'se', '學校'], [1, 2, 'cafe', '{喫茶店|きっさてん}', '喫茶店', 'nw', '咖啡廳'], [2, 2, 'hotel', 'ホテル', 'ホテル', 'nw', '飯店'], [0, 3, 'flowers', '{花屋|はなや}', '花屋', 'ne', '花店'], [2, 3, 'super', 'スーパー', 'スーパー', 'nw', '超市']],   // the last: its name in 中文
       riders: ['nishimura', 'sophia', 'misaki', 'kaneda', 'umeko']
     },
     // the hero's own rides (2026-11-20, spec §9): the ticket machine's screen; the announcements in the car ({S}: a station as LINE
     // writes it); 乗り越し精算 at the end ({P}: the rest to pay)
     ride: {
       pick: ['{行|い}き{先|さき}の {運賃|うんちん|車資}の ボタンを {押|お}して ください。', '請按目的地的票價按鈕。'], put: ['{P}です。お{金|かね}を {入|い}れて ください。', '{p} 日圓。請投錢。'],
-      take: ['きっぷを お{取|と}りください。', '請取票。'], short: ['お{金|かね}が たりません。', '錢不夠。'],
-      next: ['つぎは {S}、{S}です。', '下一站是{s}。'], end: ['{終点|しゅうてん|終點}、{S}です。お{忘|わす}れ{物|もの|遺忘的東西}の ないように ご{注意|ちゅうい|注意} ください。', '終點{s}到了。請注意不要遺忘隨身物品。'],
-      pay: ['{乗|の}り{越|こ}し {精算|せいさん|補票}：あと {P}', '補票：還要 {p} 日圓'], none: ['きっぷが ありません…。', '沒有車票……。']
+      take: ['きっぷを お{取|と|拿}りください。', '請取票。'], short: ['お{金|かね}が たりません。', '錢不夠。'],
+      next: ['つぎは {S}、{S}です。', '下一站是{s}。'], end: ['{終点|しゅうてん|終點}、{S}です。お{忘れ物|わすれもの|遺失物}の ないように ご{注意|ちゅうい|注意} ください。', '終點{s}到了。請注意不要遺忘隨身物品。'],
+      pay: ['{乗り越し精算|のりこしせいさん|補票}：あと {P}', '補票：還要 {p} 日圓'], none: ['きっぷが ありません…。', '沒有車票……。']
     }
   },
   YATAI: {

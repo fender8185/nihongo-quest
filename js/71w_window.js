@@ -14,7 +14,7 @@ const MADO = (() => {
   const HK = { 0: 'れいじ', 1: 'いちじ', 2: 'にじ', 3: 'さんじ', 4: 'よじ', 5: 'ごじ', 6: 'ろくじ', 7: 'しちじ', 8: 'はちじ', 9: 'くじ', 10: 'じゅうじ', 11: 'じゅういちじ', 12: 'じゅうにじ', 13: 'じゅうさんじ', 14: 'じゅうよじ', 15: 'じゅうごじ', 16: 'じゅうろくじ', 17: 'じゅうしちじ', 18: 'じゅうはちじ', 19: 'じゅうくじ', 20: 'にじゅうじ', 21: 'にじゅういちじ', 22: 'にじゅうにじ', 23: 'にじゅうさんじ' };
   const ONES = ['', 'いっぷん', 'にふん', 'さんぷん', 'よんぷん', 'ごふん', 'ろっぷん', 'ななふん', 'はっぷん', 'きゅうふん'], TENS = ['', 'じゅう', 'にじゅう', 'さんじゅう', 'よんじゅう', 'ごじゅう'];
   const minKana = (m) => (m % 10 ? TENS[Math.floor(m / 10)] + ONES[m % 10] : TENS[Math.floor(m / 10)].replace(/じゅう$/, 'じゅっぷん'));
-  const timeMark = (h, m) => (m ? `{${h}時${m}分|${HK[h]}${minKana(m)}}` : `{${h}時|${HK[h]}}`);
+  const timeMark = (h, m) => (m ? `{${h}時${m}分|${HK[h]} ${minKana(m)}}` : `{${h}時|${HK[h]}}`);   // the space: read as one, shown in two
   const trackMark = (n) => `{${['', '一', '二', '三'][n]}番線|${['', 'いち', 'に', 'さん'][n]}ばんせん}`;
   const fill = (tpl, o) => tpl.replace(/\{([SsPpTtKk])\}/g, (m, k) => (o[k] !== undefined ? o[k] : m));
   const st = (id) => ({ S: TOWN.EKI.LINE.find((x) => x[0] === id)[1], s: EKI.name(id) });
@@ -24,10 +24,10 @@ const MADO = (() => {
   const near = (n, k = 2) => [...new Set(EKI.line().filter((x) => x.id !== 'minato').map((x) => EKI.fare('minato', x.id)))].filter((v) => v !== n).sort((a, b) => Math.abs(a - n) - Math.abs(b - n)).slice(0, k);
   // one person's question at h:m, its replies and which is right (the replies shuffled)
   function ask(kind, to, h, m, kid = false) {
-    const t = { kind, to, h, m, kid, board: EKI.next(h, m, 4) }; let opts;
+    const t = { kind, to, h, m, kid, board: EKI.next(h, m + 1, 4) }; let opts;   // the next ones from the minute after (one going now is going)
     if (kind === 'fare') { const f = EKI.fare('minato', to); t.q = fill2(W().q.fare, to); opts = [priceA(f), ...near(f).map((v) => priceA(v))]; }
     else if (kind === 'next') {
-      const rows = EKI.next(h, m, 8), mine = rows.filter((x) => x.to === to), other = rows.find((x) => x.to !== to), at = (x) => answer('next', { T: timeMark(x.h, x.m), t: x.t });
+      const rows = EKI.next(h, m + 1, 8), mine = rows.filter((x) => x.to === to), other = rows.find((x) => x.to !== to), at = (x) => answer('next', { T: timeMark(x.h, x.m), t: x.t });
       t.q = fill2(W().q.next, to); opts = [at(mine[0]), at(other), at(mine[1])];
     } else if (kind === 'track') { const k = TOWN.EKI.TRACK[to]; t.q = fill2(W().q.track, to); opts = [k, 3 - k, 3].map((n) => answer('track', { K: trackMark(n), k: n })); }
     else if (kind === 'stop') { const yes = EKI.stops('快速', 'shirasagi').includes(to); t.q = fill2(W().q.stop, to); opts = [answer(yes ? 'yes' : 'no'), answer(yes ? 'no' : 'yes')]; }
@@ -61,12 +61,15 @@ const MADO = (() => {
 const MADO_RUN = (() => {
   const MARK = /\{([^|}]+)\|([^|}]+)(?:\|[^}]+)?\}/g, ruby = (s) => esc(s).replace(MARK, '<ruby>$1<rt>$2</rt></ruby>');
   let R = null, runs = 0;   // the one at the window now (the tests): { k, task, phase }
+  // a price, a time, a track as said, in kana alone (2026-11-21, the review: shown as 170円 they were matched to the board's digits, never read)
+  const NUMERIC = new Set(['fare', 'next', 'track', 'buy']), kanaOf = (s) => s.replace(MARK, '$2');
   const S = () => TOWN.WORK.say.window;
   // the wall over the window: the route and its fares (みなと: 現在地), a ● where the 快速 stops; the clock; the departure board
-  function chart(task, pickable) {
+  // the chart's names with their readings on the first shift; after it, the kanji alone (the names read, not matched)
+  function chart(task, pickable, first) {
     return `<div class="md-chart${pickable ? ' pick' : ''}"><i class="md-rail"></i>${EKI.line().map((x) => x.id === 'minato'
       ? `<div class="md-st here"><b class="md-dot">●</b><span class="md-nm" lang="ja">みなと</span><em>現在地</em></div>`
-      : `<button type="button" class="md-st" data-st="${x.id}"${pickable ? '' : ' tabindex="-1"'}><b class="md-dot${x.rapid ? '' : ' no'}">${x.rapid ? '●' : '○'}</b><span class="md-nm" lang="ja">${EKI.ruby(x.id)}</span><span class="md-f">${EKI.fare('minato', x.id)}</span><small>${EKI.fare('minato', x.id, true)}</small></button>`).join('')}</div>
+      : `<button type="button" class="md-st" data-st="${x.id}"${pickable ? '' : ' tabindex="-1"'}><b class="md-dot${x.rapid ? '' : ' no'}">${x.rapid ? '●' : '○'}</b><span class="md-nm" lang="ja">${first ? EKI.ruby(x.id) : esc(EKI.name(x.id))}</span><span class="md-f">${EKI.fare('minato', x.id)}</span><small>${EKI.fare('minato', x.id, true)}</small></button>`).join('')}</div>
       <p class="md-key"><span>● 快速も 止まる</span><span>上：大人　下：子ども（円）</span></p>`;
   }
   const clockSvg = (h, m) => { const a = (m / 60) * 360, b = ((h % 12) + m / 60) * 30; return `<svg viewBox="-20 -20 40 40" aria-hidden="true"><circle r="18" fill="#fbf7ec" stroke="#3b3b44" stroke-width="2"/>${Array.from({ length: 12 }, (_, i) => `<path d="M0 -15.5 V${i % 3 ? -13.6 : -12.6}" stroke="#3b2a1c" stroke-width="${i % 3 ? 0.8 : 1.4}" transform="rotate(${i * 30})"/>`).join('')}<path d="M0 0 V-9" stroke="#2b1c12" stroke-width="2.4" stroke-linecap="round" transform="rotate(${b})"/><path d="M0 2 V-14" stroke="#2b1c12" stroke-width="1.4" stroke-linecap="round" transform="rotate(${a})"/><circle r="1.6" fill="#c8453a"/></svg>`; };
@@ -84,12 +87,12 @@ const MADO_RUN = (() => {
     }
     function opts(on) {
       const o = el('.md-opts'); if (!o) return; const t = R.task;
-      o.innerHTML = on ? t.opts.map(([ja, zh], i) => `<button type="button" class="btn md-opt" data-o="${i}" lang="ja">${ruby(ja)}${first ? `<small>${esc(zh)}</small>` : ''}</button>`).join('') : t.kind === 'buy' && R.phase === 'ask' ? '<p class="md-tip">先在上面的路線圖點客人要去的站，印出車票。</p>' : '';
+      o.innerHTML = on ? t.opts.map(([ja, zh], i) => `<button type="button" class="btn md-opt" data-o="${i}" lang="ja">${NUMERIC.has(t.kind) ? esc(kanaOf(ja)) : ruby(ja)}${first ? `<small>${esc(zh)}</small>` : ''}</button>`).join('') : t.kind === 'buy' && R.phase === 'ask' ? '<p class="md-tip">先在上面的路線圖點客人要去的站，印出車票。</p>' : '';
     }
     function show() {
       const t = tasks[k]; R = { k, task: t, phase: 'hi', printed: t.kind !== 'buy' }; miss = 0; rep = 0;
       el('.wk-n').textContent = `${k + 1}／${MADO.N}`;
-      el('.md-wall').innerHTML = `${chart(t, t.kind === 'buy')}<div class="md-row">${board(t)}</div>`;
+      el('.md-wall').innerHTML = `${chart(t, t.kind === 'buy', first)}<div class="md-row">${board(t)}</div>`;
       const c = el('.wk-cust'); c.className = 'wk-cust'; c.removeAttribute('data-mood'); c.innerHTML = JOBS.custHtml(t.who); el('.md-ticket').innerHTML = ''; opts(false);
       const me0 = R; P = JOBS.patience('window', t.who, MADO.SECS, () => Boolean(el('.wk-cust')) && R === me0 && ctx.on(), gone);
       said(me(s.me.hi), 700).then(() => {

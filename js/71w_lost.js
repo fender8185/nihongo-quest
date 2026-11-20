@@ -9,7 +9,7 @@
 const LCOL = { red: ['#d0453c', '#a8322a'], blue: ['#3f6aa8', '#2c4e80'], black: ['#3a3a44', '#22222a'], white: ['#f4f1ea', '#cfc8b8'], yellow: ['#e6c23a', '#b8961e'], brown: ['#9a6a42', '#734c2c'], green: ['#4f8a5a', '#356640'] };
 const LART = {
   // a long umbrella lying across (furled, its tip right), or a folding one, short, in its strap
-  umbrella: (c, a) => { const [f, d] = LCOL[c]; return a.len === 'long'
+  umbrella: (c, a) => { const [f, d] = LCOL[c]; return a.size === 'big' || a.len === 'long'   // big: a long one; small: a folding one
     ? `<path d="M-26 -2 Q-30 -10 -24 -12 Q-20 -12 -20 -6 V-3" fill="none" stroke="#6e4f3a" stroke-width="3" stroke-linecap="round"/><path d="M-20 -6 L-14 -9 L22 -2 L28 0 L22 2 L-14 6 Z" fill="${f}"/><path d="M-14 -9 L22 -2 M-14 6 L22 2 M-8 -8 L-4 6 M2 -6 L6 4" stroke="${d}" stroke-width="1"/><path d="M28 0 h4" stroke="#8a8f99" stroke-width="1.6"/>${c === 'white' ? '<circle cx="0" cy="0" r="1.6" fill="#e58fa8"/><circle cx="10" cy="-1" r="1.4" fill="#e58fa8"/>' : ''}`
     : `<rect x="-14" y="-6" width="26" height="12" rx="5" fill="${f}"/><path d="M-10 -6 L-6 6 M-2 -6 L2 6 M6 -6 L9 6" stroke="${d}" stroke-width="1"/><rect x="-4" y="-7" width="5" height="14" rx="1" fill="${d}"/><rect x="-22" y="-3" width="8" height="6" rx="2" fill="#2b2b33"/><path d="M12 -1 h6" stroke="#8a8f99" stroke-width="1.6"/>`; },
   // a bag: big (a tote with two handles) or small (a pouch on a thin strap)
@@ -46,7 +46,7 @@ const LOST = (() => {
   // how it is said: the colour joined to the other look (or the shape first), then the thing
   const describe = (o) => { const c = L().colors[o.color], d = L().dims[o.dim], k = K(o.kind); return k[5] ? `${d[1]}、${c[0]} ${k[0]}です。` : `${c[1]}、${d[0]} ${k[0]}です。`; };
   const inside = (ids) => `{中|なか}に ${ids.map((i) => L().inside[i][0]).join('と ')}が ${knew() ? '{入|はい}って います' : 'あります'}。`;
-  const zhOf = (o) => `${L().colors[o.color][2]}色的、${L().dims[o.dim][2]}的${K(o.kind)[1]}。`;
+  const zhOf = (o) => `${L().colors[o.color][2]}色的${L().dims[o.dim][2]}${K(o.kind)[1]}`;   // 黑色的小錢包, 黑色的圓形眼鏡
   const two = (kind, not) => { const h = L().holds[kind]; if (!h) return []; for (let i = 0; i < 9; i++) { const p = shuffle(h.slice()).slice(0, 2); if (!not || p.slice().sort().join() !== not.slice().sort().join()) return p; } return h.slice(0, 2); };
   const fillK = (l, kind, w) => [l[0].replace('{K}', K(kind)[0]).replace('{W}', w ? w[0] + ' ' : ''), l[1].replace('{k}', K(kind)[1]).replace('{w}', w ? w[1] : '')];
   // one person's errand: what they left (its looks), where, the four brought out (type: plain — one is it; twin — two look so, the
@@ -63,6 +63,7 @@ const LOST = (() => {
     t.lost = fillK(S.cust.lost, kind, t.where); t.desc = describe(t); t.descZh = zhOf(t); t.in = type === 'twin' ? inside(t.inside) : '';
     const qs = [S.me.which, S.me.price, S.me.like].map((l) => fillK(l, kind)), order = shuffle([0, 1, 2]);
     t.qOpts = order.map((i) => qs[i]); t.qRight = order.indexOf(0);
+    if (type === 'twin') { const q2 = [S.me.inside, S.me.price, S.me.like].map((l) => fillK(l, kind)), o2 = shuffle([0, 1, 2]); t.q2Opts = o2.map((i) => q2[i]); t.q2Right = o2.indexOf(0); }   // two alike: what is in it, asked
     return t;
   }
   // a shift: ten people, each a different thing; a wallet or a bag a twin, one none (not the glasses), the glasses now and then 源三's
@@ -94,16 +95,17 @@ const LOST_RUN = (() => {
     const word = ([ja, zh], cls = '') => { const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(s.who, ja); };
     const me = ([ja, zh]) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`; return speakAs('hero', ja); };
     const said = (p, min = 0, max = 5000) => JOBS.said(p, min, max);
-    const heard = () => (R.phase === 'ask' ? R.task.lost[0] : `${R.task.desc}${R.task.in ? ' ' + R.task.in : ''}`);
+    const heard = () => (R.phase === 'ask' ? R.task.lost[0] : R.phase === 'ask2' ? R.task.desc : `${R.task.desc}${R.task.in ? ' ' + R.task.in : ''}`);
     function bub(open) {
       const t = R.task, b = el('.wk-cust .wk-bub'); if (!b) return;
-      const lines = R.phase === 'ask' ? [t.lost] : [t.lost, [t.desc + (t.in ? ' ' + t.in : ''), t.descZh]];
+      const lines = R.phase === 'ask' ? [t.lost] : R.phase === 'ask2' ? [t.lost, [t.desc, t.descZh]] : [t.lost, [t.desc + (t.in ? ' ' + t.in : ''), t.descZh]];
       b.innerHTML = `<button type="button" class="wk-ear lf-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? lines.map(([ja, zh]) => `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`).join('') : '<b class="bt-dots">……</b>'}`;
     }
     const tellAll = () => { const p = R.phase; R.phase = 'find'; bub(true); R.phase = p; };
     function stage() {
       const t = R.task, q = el('.lf-qs'), c = el('.lf-cands'), a = el('.lf-acts'); if (!q) return;
-      q.innerHTML = R.phase === 'ask' ? t.qOpts.map(([ja, zh], i) => `<button type="button" class="btn lf-q" data-o="${i}" lang="ja">${ruby(ja)}${first ? `<small>${esc(zh)}</small>` : ''}</button>`).join('') : '';
+      const qs = R.phase === 'ask' ? t.qOpts : R.phase === 'ask2' ? t.q2Opts : null;
+      q.innerHTML = qs ? qs.map(([ja, zh], i) => `<button type="button" class="btn lf-q" data-o="${i}" lang="ja">${ruby(ja)}${first ? `<small>${esc(zh)}</small>` : ''}</button>`).join('') : '';
       c.innerHTML = R.phase === 'find' || R.phase === 'done' ? t.cands.map((x, i) => `<button type="button" class="lf-cand${R.sel === i ? ' sel' : ''}" data-c="${i}" aria-label="候補 ${i + 1}">${art(x, 78, 62)}${R.sel === i && x.inside.length ? `<span class="lf-in">${x.inside.map(pic).join('')}</span>` : ''}</button>`).join('') : '';
       a.innerHTML = R.phase === 'find' ? `<button type="button" class="btn btn-primary lf-give" lang="ja"${R.sel === null ? ' disabled' : ''}>${ruby(s.me.give[0])}</button><button type="button" class="btn lf-none" lang="ja">${ruby(s.me.none[0])}</button>${t.type === 'gag' ? `<button type="button" class="btn lf-gag" lang="ja">${ruby(s.me.gag[0])}</button>` : ''}` : '';
     }
@@ -123,8 +125,17 @@ const LOST_RUN = (() => {
     // the right question asked: what it is like, then the four brought out (the clock from the end of the telling)
     async function asked() {
       const t = R.task, me0 = R; R.phase = 'tell'; stage(); await said(me(t.qOpts[t.qRight]), 500); if (!live() || R !== me0) return;
-      bub(false); await said(speakAs(t.who, t.desc)); if (t.in && live() && R === me0) await said(speakAs(t.who, t.in));
-      if (!live() || R !== me0) return; R.phase = 'find'; bub(miss >= 2); SND.play('drawer', { vol: 0.6 }); word(s.bring); stage(); if (!rep) P.go();
+      bub(false); await said(speakAs(t.who, t.desc)); if (!live() || R !== me0) return;
+      if (t.type === 'twin') { R.phase = 'ask2'; bub(miss >= 2); SND.play('drawer', { vol: 0.6 }); word(s.twin); stage(); return; }   // two alike on the counter: ask what is in it
+      found();
+    }
+    // two that look alike (a twin): what is in it asked, then told; the four out
+    async function asked2() {
+      const t = R.task, me0 = R; R.phase = 'tell'; stage(); await said(me(t.q2Opts[t.q2Right]), 500); if (!live() || R !== me0) return;
+      await said(speakAs(t.who, t.in)); if (!live() || R !== me0) return; found();
+    }
+    function found() {
+      const t = R.task; R.phase = 'find'; bub(miss >= 2); if (t.type !== 'twin') { SND.play('drawer', { vol: 0.6 }); word(s.bring); } stage(); if (!rep) P.go();
     }
     function next(lines) {
       const live2 = () => el('.lf-room') && (ctx.on() || k >= 10); k++;
@@ -151,7 +162,10 @@ const LOST_RUN = (() => {
     }
     function none() {
       const t = R.task;
-      if (t.type !== 'none') { wrong(el('.lf-none'), () => word(t.type === 'gag' ? s.miss : s.there, 'bad')); return; }
+      if (t.type === 'gag') {   // true enough: none of the four is his (2026-11-21, the review) — then 小林 sees them
+        done(async (live2) => { await said(me(s.me.none), 600); if (!live2()) return; await said(speakAs(t.who, s.cust.sad[0]), 600); if (!live2()) return; await said(word(s.head, 'ok'), 600); if (!live2()) return; await said(speakAs(t.who, s.cust.gag[0]), 600); voiceFx('laugh'); await sleep(900); if (live2()) el('.wk-cust').classList.add('bye'); }); return;
+      }
+      if (t.type !== 'none') { wrong(el('.lf-none'), () => word(s.there, 'bad')); return; }
       done(async (live2) => { await said(me(s.me.none), 600); if (!live2()) return; await said(speakAs(t.who, s.cust.sad[0]), 800); if (!live2()) return; await said(word(s.call), 600); if (live2()) el('.wk-cust').classList.add('bye'); });
     }
     function gag() {
@@ -164,8 +178,9 @@ const LOST_RUN = (() => {
       <div class="lf-room">${SHELF}<div class="lf-counter"><div class="wk-cust"></div></div></div>
       <div class="lf-qs"></div><div class="lf-cands"></div><div class="lf-acts"></div><p class="wk-me"></p>`, (e) => {
       if (!R || !live()) return;
-      if (e.target.closest('.lf-ear')) { if (R.phase === 'ask' || R.phase === 'find') { const q = P, r = rep = rep + 1; q.hold(); said(speakAs(R.task.who, heard())).then(() => { if (rep === r) { rep = 0; if (P === q && R.phase === 'find') q.go(); } }); } return; }
+      if (e.target.closest('.lf-ear')) { if (R.phase === 'ask' || R.phase === 'ask2' || R.phase === 'find') { const q = P, r = rep = rep + 1; q.hold(); said(speakAs(R.task.who, heard())).then(() => { if (rep === r) { rep = 0; if (P === q && R.phase === 'find') q.go(); } }); } return; }
       if (R.phase === 'ask') { const q = e.target.closest('.lf-q'); if (!q) return; if (Number(q.dataset.o) === R.task.qRight) asked(); else wrong(q, () => word(s.miss, 'bad')); return; }
+      if (R.phase === 'ask2') { const q = e.target.closest('.lf-q'); if (!q) return; if (Number(q.dataset.o) === R.task.q2Right) asked2(); else wrong(q, () => word(s.miss, 'bad')); return; }
       if (R.phase !== 'find') return;
       const c = e.target.closest('.lf-cand'); if (c) { R.sel = Number(c.dataset.c); SND.play('place', { vol: 0.45 }); stage(); return; }
       if (e.target.closest('.lf-give')) give(); else if (e.target.closest('.lf-none')) none(); else if (e.target.closest('.lf-gag')) gag();
@@ -183,8 +198,8 @@ const LOST_RUN = (() => {
       [s.cust.yes, s.cust.no, s.cust.sad].forEach((l) => say(who, l[0])); const X = TOWN.WORK.say.waiter.cust; [X.again, X.hey, X.out, X.out0].forEach((l) => say(who, l[0]));
     });
     ['genzo'].forEach((who) => { L.where.forEach((w) => say(who, s.cust.lost[0].replace('{K}', L.kinds.glasses[0]).replace('{W}', w[0] + ' '))); say(who, LOST.describe({ kind: 'glasses', color: 'black', dim: 'round' })); say(who, s.cust.gag[0]); });
-    [s.me.give, s.me.none, s.me.gag].forEach((l) => say('hero', l[0]));
-    [s.hi, s.bring, s.miss, s.there, s.call, s.end, s.all, s.hat, ...s.ok].forEach((l) => say(s.who, l[0]));
+    [s.me.give, s.me.none, s.me.gag, s.me.inside].forEach((l) => say('hero', l[0]));
+    [s.hi, s.bring, s.twin, s.miss, s.there, s.call, s.end, s.all, s.hat, s.head, ...s.ok].forEach((l) => say(s.who, l[0]));
   }
   return { run, lines, now: () => R };
 })();

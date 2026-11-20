@@ -25,12 +25,14 @@ const BENTO = (() => {
   function line(o) {
     if (o.kind === 'usual') return E().usual;
     if (o.kind === 'have') return o.ask[0];
-    const parts = o.items.map(([id, n]) => said(id, n)), body = parts.length === 1 ? `${parts[0]} ください。` : `${parts[0]}と、${parts[1]} ください。`;
+    const parts = o.items.map(([id, n]) => said(o.why && /^tea_/.test(id) ? 'tea' : id, n)), body = parts.length === 1 ? `${parts[0]} ください。` : `${parts[0]}と、${parts[1]} ください。`;
     return o.why ? `${o.why[0]}、${body}` : body;
   }
   // after an ask: there is (じゃあ、ふたつ ください。) or not (じゃあ、お茶を いっぽん ください。)
   const then = (o) => (o.has ? `じゃあ、${count(o.items[0][0], o.items[0][1])} ください。` : `じゃあ、${said(...o.items[0])} ください。`);
-  const zhOf = (o) => (o.kind === 'usual' ? E().usualZh : o.kind === 'have' ? o.ask[1] : (o.why ? o.why[1] : '') + o.items.map(([id, n]) => `${good(id)[5]} ${n} ${good(id)[3] === '本' ? '瓶' : good(id)[3] ? '個' : '份'}`).join('、'));
+  const unitZh = (id) => (good(id)[3] === '本' ? '瓶' : good(id)[3] ? '個' : '份');
+  const thenZh = (o) => { const [id, n] = o.items[0]; return o.has ? `那就給我 ${n} ${unitZh(id)}。` : `那就給我${good(id)[5]} ${n} ${unitZh(id)}。`; };
+  const zhOf = (o) => (o.kind === 'usual' ? E().usualZh : o.kind === 'have' ? o.ask[1] : (o.why ? o.why[1] : '') + o.items.map(([id, n]) => `${good(id)[5]} ${n} ${unitZh(id)}`).join('、'));
   // who says it: each line by the same one, so the clips stay few (中村: his いつもの)
   const CUST = ['nishimura', 'taro', 'misaki', 'kenta', 'sophia', 'alex', 'kaneda', 'umeko', 'rina', 'yoshimoto', 'ken', 'ai', 'michiyama', 'mike'];
   const sayer = (text) => { let h = 7; for (const c of text) h = (h * 31 + c.charCodeAt(0)) | 0; return CUST[Math.abs(h) % CUST.length]; };
@@ -39,7 +41,7 @@ const BENTO = (() => {
     const out = [];
     goodsOf(hc).forEach(([id, , , ctr]) => (ctr ? [1, 2, 3] : [1]).forEach((n) => out.push({ kind: 'order', items: [[id, n]] })));
     E().pairs.forEach(([a, na, b, nb]) => out.push({ kind: 'order', items: [[tea(a, hc, hot()), na], [tea(b, hc, hot()), nb]] }));
-    if (why) E().why.forEach(([w, wz, id, n]) => out.push({ kind: 'order', items: [[tea(id, hc), n]], why: [w, wz] }));
+    if (why) E().why.forEach(([w, wz, id, n]) => out.push({ kind: 'order', items: [[id, n]], why: [w, wz] }));   // the tea said just お茶: the reason tells which (寒いので → hot)
     return out;
   }
   const haveOf = (h, hc) => ({ kind: 'have', ask: h, has: Boolean(h[2]), items: [[tea(h[2] || h[3], hc), h[4]]] });
@@ -51,7 +53,7 @@ const BENTO = (() => {
       const t = [], used = new Set();
       for (let tries = 0; t.length < n && tries < 50; tries++) {
         const r = Math.random(), o = !usual && r < 0.15 ? usualOf(hc) : r < 0.32 ? haveOf(pick(E().have), hc) : Object.assign({}, pick(all));
-        o.line = line(o); o.who = o.kind === 'usual' ? 'nakamura' : sayer(o.line); if (o.kind === 'have') o.then = then(o);
+        o.line = line(o); o.who = o.kind === 'usual' ? 'nakamura' : sayer(o.line); if (o.kind === 'have') { o.then = then(o); o.thenZh = thenZh(o); }
         if (used.has(o.who)) continue; used.add(o.who); if (o.kind === 'usual') usual = true; t.push(o);
       }
       ts.push(t);
@@ -99,9 +101,14 @@ const BENTO_RUN = (() => {
     const base = (t) => BENTO.TRAINS.slice(0, t).reduce((a, n) => a + n, 0);
     let t = trains.findIndex((tr, ti) => tr.some((_, i) => !((base(ti) + i) in score))); if (t < 0) t = trains.length - 1;
     const fresh = ctx.done === 0; let missed = 0, lost = 0, clock = null, belled = false;
-    const word = ([ja, zh], cls = '') => { const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(s.who, ja); };
-    const me = ([ja, zh]) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`; return speakAs('hero', ja); };
     const said = (p, min = 0, max = 5000) => JOBS.said(p, min, max);
+    // one voice at a time (2026-11-21, the review: a window's すみません！ cut the order being heard): what is asked for and the hero's
+    // own words are said now (now); the calls, ハル's words, the thanks wait their turn after it (turn), dropped once 5 s stale
+    let voice = Promise.resolve(), gen = 0;
+    const now = (who, l) => { gen++; voice = said(speakAs(who, l), 0, 6000); return voice; };
+    const turn = (who, l) => { const g = gen, t0 = Date.now(); voice = voice.then(() => (live() && g === gen && Date.now() - t0 < 5000 ? said(speakAs(who, l), 0, 6000) : null)); return voice; };
+    const word = ([ja, zh], cls = '') => { const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return turn(s.who, ja); };
+    const me = ([ja, zh], wait = false) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`; return wait ? turn('hero', ja) : now('hero', ja); };
     // the order now for one at a window: what was asked (an ask put right: what followed)
     const lineOf = (x) => (x.o.kind === 'have' && x.asked ? x.o.then : x.o.line);
     function drawWin(x) {
@@ -114,7 +121,7 @@ const BENTO_RUN = (() => {
       const p = el('.bt-bub'), r = el('.bt-replies'); if (!p || !r) return; const x = B && B.sel;
       if (!x) { p.innerHTML = '<span class="bt-hint">點有「！」的車窗，聽乘客要什麼。</span>'; r.innerHTML = ''; return; }
       const open = x.state === 'done' || x.miss >= 2, l = lineOf(x);
-      p.innerHTML = `<span class="kr-face bt-who">${TOWNEV.face(x.o.who)}</span><button type="button" class="wk-ear bt-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(l)}</b><small>${esc(x.asked && x.o.kind === 'have' ? '' : BENTO.zhOf(x.o))}</small>` : '<b class="bt-dots">……</b>'}`;
+      p.innerHTML = `<span class="kr-face bt-who">${TOWNEV.face(x.o.who)}</span><button type="button" class="wk-ear bt-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(l)}</b><small>${esc(x.asked && x.o.kind === 'have' ? x.o.thenZh || '' : BENTO.zhOf(x.o))}</small>` : '<b class="bt-dots">……</b>'}`;
       r.innerHTML = x.o.kind === 'have' && !x.asked && x.state !== 'done' ? [['yes', TOWN.WORK.say.bento.me.yes], ['no', TOWN.WORK.say.bento.me.no]].map(([k, [ja]]) => `<button type="button" class="btn btn-sm bt-reply" data-r="${k}" lang="ja">${ruby(ja)}</button>`).join('') : '';
     }
     function hand() {
@@ -123,8 +130,8 @@ const BENTO_RUN = (() => {
       document.querySelectorAll('.wk-bento .bt-good').forEach((b) => { const n = B ? B.hand[b.dataset.g] || 0 : 0; b.querySelector('.bt-n').textContent = n ? `×${n}` : ''; b.classList.toggle('in', n > 0); });
       const give = el('.bt-give'); if (give) give.disabled = !(B && B.sel && B.sel.state === 'calling' && ids.length && !(B.sel.o.kind === 'have' && !B.sel.asked));
     }
-    const say = (x, l) => speakAs(x.o.who, l);
-    const hear = (x) => { x.heard = true; return say(x, lineOf(x)); };
+    const say = (x, l) => turn(x.o.who, l);
+    const hear = (x) => { x.heard = true; return now(x.o.who, lineOf(x)); };   // asked for: heard at once
     // a train in: the car slides in, stops; its windows open one by one, each calling; the clock runs till it goes
     async function arrive() {
       const tr = trains[t], todo = tr.map((o, i) => ({ o, k: base(t) + i })).filter(({ k }) => !(k in score));
@@ -175,14 +182,15 @@ const BENTO_RUN = (() => {
       const p = hear(x);
       if (x.o.kind === 'usual' && !usualTold()) { await said(p, 400); if (!live()) return; told(); word(BENTO.hotCold() ? s.usual2 : s.usual, 'ok'); const z = el('.wk-say span'); if (z) z.style.display = 'block'; }
     }
-    const USUAL = 'nq_bento_usual', usualTold = () => { try { return localStorage.getItem(USUAL) === '1'; } catch (e) { return true; } }, told = () => { try { localStorage.setItem(USUAL, '1'); } catch (e) { /* told again next time */ } };
+    // told what いつもの is: once with the one お茶 (m1), once more when it is hot tea (m2 on: the review, 2026-11-21)
+    const USUAL = () => (BENTO.hotCold() ? 'nq_bento_usual2' : 'nq_bento_usual'), usualTold = () => { try { return localStorage.getItem(USUAL()) === '1'; } catch (e) { return true; } }, told = () => { try { localStorage.setItem(USUAL(), '1'); } catch (e) { /* told again next time */ } };
     // the reply to an ask: right or not, the right one said (a miss when not: ハル's あるよ！／ないよ！), then what they want
     async function reply(k) {
-      const x = B.sel; if (!x || x.o.kind !== 'have' || x.asked) return;
-      if ((k === 'yes') !== x.o.has) { x.miss++; missed++; playSfx('bad'); word(x.o.has ? s.yes : s.no, 'bad'); await sleep(T(0.6)); }
+      const x = B.sel; if (!x || x.o.kind !== 'have' || x.asked || x.replying) return; x.replying = true;   // a double tap: once
+      const off = (k === 'yes') !== x.o.has; if (off) { x.miss++; missed++; playSfx('bad'); word(x.o.has ? s.yes : s.no, 'bad'); }
       x.asked = true; bubble(); hand();
-      await said(me(x.o.has ? s.me.yes : s.me.no), 300); if (!live()) return;
-      hear(x);
+      await said(me(x.o.has ? s.me.yes : s.me.no, off), 300); if (!live()) return;
+      x.heard = true; turn(x.o.who, lineOf(x));
     }
     // どうぞ: the hands against what they asked for — all of it and no more
     async function give() {
@@ -191,12 +199,12 @@ const BENTO_RUN = (() => {
       const ids = new Set([...Object.keys(want), ...Object.keys(B.hand).filter((id) => B.hand[id] > 0)]);
       if (![...ids].every((id) => (want[id] || 0) === (B.hand[id] || 0))) {
         x.miss++; missed++; playSfx('bad'); const w = el(`.bt-win[data-w="${x.w}"]`); if (w) { w.classList.remove('wk-bad'); void w.offsetWidth; w.classList.add('wk-bad'); }
-        bubble(); const k = x.k; await said(say(x, s.cust.wrong[0]), 500); if (live() && B.sel === x && x.state === 'calling' && x.k === k) say(x, lineOf(x));
+        bubble(); now(x.o.who, s.cust.wrong[0]); say(x, lineOf(x));   // ちがいます。 and what they wanted again, after it
         return;
       }
       x.state = 'done'; ctx.right(x.k, x.miss); score[x.k] = x.miss; playSfx('good'); B.hand = {}; drawWin(x); bubble(); hand();
-      me(s.me.give); setTimeout(() => { if (live()) { say(x, s.cust.thanks[0]); playSfx('coin', 2); } }, T(0.8));
-      if (!x.miss && Math.random() < 0.3) setTimeout(() => { if (live()) word(s.ok[Math.floor(Math.random() * s.ok.length)], 'ok'); }, T(1.6));
+      me(s.me.give); say(x, s.cust.thanks[0]).then(() => { if (live()) playSfx('coin', 2); });
+      if (!x.miss && Math.random() < 0.3) word(s.ok[Math.floor(Math.random() * s.ok.length)], 'ok');
       if (B.wins.every((y) => y.state === 'done')) { await sleep(T(1.8)); if (live() && B.phase === 'stop') { if (clock) clock.stop(); depart(); } }
     }
     const goods = BENTO.goods();
@@ -210,7 +218,7 @@ const BENTO_RUN = (() => {
       <div class="bt-box${goods.length > 8 ? ' nine' : ''}">${goods.map((g) => `<button type="button" class="bt-good" data-g="${g[0]}">${pic(g)}<b lang="ja">${ruby(g[1])}</b><i class="bt-n"></i></button>`).join('')}</div>
       <p class="wk-me"></p>`, (e) => {
       if (!B || !live()) return;
-      if (e.target.closest('.bt-ear')) { if (B.sel) hear(B.sel); return; }
+      if (e.target.closest('.bt-ear')) { if (B.sel) now(B.sel.o.who, lineOf(B.sel)); return; }
       if (B.phase !== 'stop') return;
       const w = e.target.closest('.bt-win'); if (w) { const x = B.wins.find((y) => y.w === Number(w.dataset.w)); if (x && x.state === 'calling') pickWin(x); return; }
       const r = e.target.closest('.bt-reply'); if (r) { reply(r.dataset.r); return; }

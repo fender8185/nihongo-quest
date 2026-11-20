@@ -171,7 +171,7 @@ def test_bento_resume(b):
 def test_window_time_readings(b):
     r = json.loads(ev(b, "JSON.stringify({ m: [2, 10, 17, 25, 32, 40, 47, 55, 1, 6, 8].map(MADO.minKana), h: [7, 9, 14, 20].map((h) => MADO.HK[h]), mark: MADO.timeMark(10, 25) })"))
     assert r['m'] == ['にふん', 'じゅっぷん', 'じゅうななふん', 'にじゅうごふん', 'さんじゅうにふん', 'よんじゅっぷん', 'よんじゅうななふん', 'ごじゅうごふん', 'いっぷん', 'ろっぷん', 'はっぷん'], r
-    assert r['h'] == ['しちじ', 'くじ', 'じゅうよじ', 'にじゅうじ'] and r['mark'] == '{10時25分|じゅうじにじゅうごふん}', r
+    assert r['h'] == ['しちじ', 'くじ', 'じゅうよじ', 'にじゅうじ'] and r['mark'] == '{10時25分|じゅうじ にじゅうごふん}', r
 
 # every answer is a thing on the wall: the fare to the station (its neighbours' the wrong ones), the next train that way by the
 # clock (the other way's and the one after the wrong ones), the track, whether the 快速 stops, the sum for the tickets
@@ -179,9 +179,9 @@ def test_window_answers_come_from_the_wall(b):
     r = json.loads(ev(b, """JSON.stringify(['fare:kawaguchi', 'fare:shirasagi', 'next:shirasagi', 'next:minatoko', 'track:minatoko', 'stop:hanada', 'stop:kawaguchi', 'buy:okawa:1', 'buy:minatoko:0'].map((x) => { const [kind, to, kid] = x.split(':'), t = MADO.ask(kind, to, 10, 24, kid === '1');
       return [t.q[0], t.opts[t.right][0], t.opts.length, new Set(t.opts.map((o) => o[0])).size]; }))"""))
     want = [['{川口|かわぐち}まで いくらですか。', '{170円|ひゃくななじゅうえん}です。'], ['{白鷺|しらさぎ}まで いくらですか。', '{310円|さんびゃくじゅうえん}です。'],
-            ['つぎの {白鷺|しらさぎ}{行|ゆ}きは {何時|なんじ}ですか。', '{10時25分|じゅうじにじゅうごふん}です。'], ['つぎの みなと{港|こう}{行|ゆ}きは {何時|なんじ}ですか。', '{10時32分|じゅうじさんじゅうにふん}です。'],
-            ['みなと{港|こう}{行|ゆ}きは {何番線|なんばんせん}ですか。', '{二番線|にばんせん}です。'], ['この {快速|かいそく|快速}は {花田|はなだ}に {止|と}まりますか。', 'いいえ、{止|と}まりません。'],
-            ['この {快速|かいそく|快速}は {川口|かわぐち}に {止|と}まりますか。', 'はい、{止|と}まります。'], ['{大川|おおかわ}まで、{大人|おとな} {一枚|いちまい}と {子|こ}ども {一枚|いちまい} ください。', 'ぜんぶで {390円|さんびゃくきゅうじゅうえん}です。'],
+            ['つぎの {白鷺|しらさぎ}{行|ゆ}きは {何時|なんじ}ですか。', '{10時25分|じゅうじ にじゅうごふん}です。'], ['つぎの みなと{港|こう}{行|ゆ}きは {何時|なんじ}ですか。', '{10時32分|じゅうじ さんじゅうにふん}です。'],
+            ['みなと{港|こう}{行|ゆ}きは {何番線|なんばんせん}ですか。', '{二番線|にばんせん}です。'], ['{白鷺|しらさぎ}{行|ゆ}きの {快速|かいそく|快速}は {花田|はなだ}に {止|と}まりますか。', 'いいえ、{止|と}まりません。'],
+            ['{白鷺|しらさぎ}{行|ゆ}きの {快速|かいそく|快速}は {川口|かわぐち}に {止|と}まりますか。', 'はい、{止|と}まります。'], ['{大川|おおかわ}まで、{大人|おとな} {一枚|いちまい}と {子|こ}ども {一枚|いちまい} ください。', 'ぜんぶで {390円|さんびゃくきゅうじゅうえん}です。'],
             ['みなと{港|こう}まで、{大人|おとな} {一枚|いちまい} ください。', '{140円|ひゃくよんじゅうえん}です。']]
     assert [x[:2] for x in r] == want, r
     assert all(x[2] == x[3] and x[2] >= 2 for x in r), r   # the replies all different
@@ -216,10 +216,10 @@ def test_window_misses_and_resume(b):
 # ---- 落とし物 (spec §7) ----
 # a thing described by two of its looks joined with くて／で (茶色, 緑: で); the 中に line with あります (m3) or 入って います (m4)
 def test_lost_descriptions(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const d = (o) => LOST.describe(o); const out = [d({ kind: 'wallet', color: 'black', dim: 'small' }), d({ kind: 'bag', color: 'brown', dim: 'big' }), d({ kind: 'umbrella', color: 'red', dim: 'long' }),
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const d = (o) => LOST.describe(o); const out = [d({ kind: 'wallet', color: 'black', dim: 'small' }), d({ kind: 'bag', color: 'brown', dim: 'big' }), d({ kind: 'umbrella', color: 'red', dim: 'big' }),
       d({ kind: 'glasses', color: 'black', dim: 'round' }), d({ kind: 'hat', color: 'white', dim: 'old' }), d({ kind: 'book', color: 'green', dim: 'small' })];
       state.currentUnit = 'm3'; out.push(LOST.inside(['card', 'photo'])); state.currentUnit = 'm4'; out.push(LOST.inside(['card', 'photo'])); return JSON.stringify(out); })()"""))
-    assert r == ['{黒|くろ}くて、{小|ちい}さい {財布|さいふ}です。', '{茶色|ちゃいろ}で、{大|おお}きい かばんです。', '{赤|あか}くて、{長|なが}い {傘|かさ}です。', '{丸|まる}くて、{黒|くろ}い {眼鏡|めがね}です。',
+    assert r == ['{黒|くろ}くて、{小|ちい}さい {財布|さいふ}です。', '{茶色|ちゃいろ}で、{大|おお}きい かばんです。', '{赤|あか}くて、{大|おお}きい {傘|かさ}です。', '{丸|まる}くて、{黒|くろ}い {眼鏡|めがね}です。',
                  '{白|しろ}くて、{古|ふる}い {帽子|ぼうし}です。', '{緑|みどり}で、{小|ちい}さい {本|ほん}です。', '{中|なか}に カードと {写真|しゃしん}が あります。', '{中|なか}に カードと {写真|しゃしん}が {入|はい}って います。'], r
 
 # a shift's ten: each a different thing; four on the counter of its kind, the colour and the other look crossed — one right (a twin:
@@ -243,7 +243,8 @@ LOST_HELP = """ window.speak = () => Promise.resolve(); window.speakAs = () => P
   const at = (n) => LOST_RUN.now() && LOST_RUN.now().k === n;
   async function solve(n) {
     for (let i = 0; i < 200 && !(at(n) && LOST_RUN.now().phase === 'ask'); i++) await wait(30); const t = LOST_RUN.now().task;
-    click(`.lf-q[data-o="${t.qRight}"]`); for (let i = 0; i < 200 && LOST_RUN.now().phase !== 'find'; i++) await wait(30);
+    click(`.lf-q[data-o="${t.qRight}"]`); for (let i = 0; i < 200 && !['find', 'ask2'].includes(LOST_RUN.now().phase); i++) await wait(30);
+    if (LOST_RUN.now().phase === 'ask2') { click(`.lf-q[data-o="${t.q2Right}"]`); for (let i = 0; i < 200 && LOST_RUN.now().phase !== 'find'; i++) await wait(30); }
     if (t.type === 'none') { click('.lf-none'); return; } if (t.type === 'gag') { click('.lf-gag'); return; }
     const c = t.cands.findIndex((x) => x.color === t.color && x.dim === t.dim && x.inside.join() === t.inside.join()); click(`.lf-cand[data-c="${c}"]`); await wait(40); click('.lf-give');
   }"""
@@ -357,6 +358,76 @@ def test_ride_short_ticket_and_back(b):
       out.here = document.querySelector('.kb-card').dataset.here; click('.kb-fare[data-f="310"]'); await wait(60); click('.kb-pay'); await wait(200); click('.kb-ride'); await arrive('#/platform');
       out.home = location.hash; out.left = yenBalance(); return JSON.stringify(out); })()"""))
     assert r['short'] and r['paid'] == 860 and r['here'] == 'shirasagi' and r['home'] == '#/platform' and r['left'] == 550, r
+
+# ---- the final review's findings (2026-11-21) ----
+# the last train 22:40 (原田's word); the next train counted from the minute after; the station's own board on the timetable
+def test_review_timetable_ends_and_next_minute(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const u = PLACE_USE.station.find((x) => x.id === 'board'); const real = (sceneHour() - wakeOff() + 24) % 24; localStorage.setItem('nq_wake', JSON.stringify({ day: todayStr(), off: ((10.4 - real) % 24 + 24) % 24 }));
+      const out = { late: EKI.next(22, 41, 1).map((x) => x.t), last: EKI.next(22, 30, 3).map((x) => x.t), board: u.toast() }; const t10 = MADO.ask('next', 'shirasagi', 10, 10); out.at10 = t10.opts.map((o) => o[0]); out.right = t10.right;
+      localStorage.removeItem('nq_wake'); out.at10r = out.at10[out.right]; return JSON.stringify(out); })()"""))
+    assert r['late'] == ['6:02'] and r['last'] == ['22:32', '22:40', '6:02'], r
+    assert '10:25' in r['board'] and '白鷺' in r['board'] and '10:30' not in r['board'], r
+    assert '10時25分' in r['at10r'], r
+
+# the ticket machine: お金を入れる twice takes the fare once
+def test_review_ticket_machine_charges_once(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + RIDE_HELP + """ location.hash = '#/station'; route(); await wait(300);
+      RIDE.machine(yard(), 'minato'); await wait(100); click('.kb-fare[data-f="310"]'); await wait(60); click('.kb-pay'); await wait(100); document.querySelector('.kb-pay').click(); await wait(200);
+      const out = { left: yenBalance() }; CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['left'] == 690, r
+
+# the window's numbers are read, not matched: the replies with a price or a time are in kana only
+def test_review_window_numbers_in_kana(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + WIN_HELP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      const realMake = MADO.make; MADO.make = (h, m) => { const t = realMake(h, m); t[0] = MADO.ask('next', 'shirasagi', h, m); t[0].who = 'nakamura'; t[1] = MADO.ask('fare', 'hanada', h, m); t[1].who = 'ai'; return t; };
+      WORK.start(yard(), 'window'); for (let i = 0; i < 200 && !(MADO_RUN.now() && MADO_RUN.now().phase === 'ask'); i++) await wait(30);
+      const a = [...card().querySelectorAll('.md-opt')].map((x) => x.textContent); click(`.md-opt[data-o="${MADO_RUN.now().task.right}"]`);
+      for (let i = 0; i < 200 && !(MADO_RUN.now() && MADO_RUN.now().k === 1 && MADO_RUN.now().phase === 'ask'); i++) await wait(30);
+      const f = [...card().querySelectorAll('.md-opt')].map((x) => x.textContent); MADO.make = realMake; CLASS.close(); return JSON.stringify({ a, f }); })()"""))
+    assert all(not any(c.isdigit() for c in t) for t in r['a'] + r['f']), r
+    assert any('じゅうじ' in t for t in r['a']) and any('ひゃく' in t for t in r['f']), r
+
+# a keeper whose job is not open yet still takes the reply, and says what is missing
+def test_review_keeper_says_what_is_missing(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ reg(); location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; const said = []; window.toast = (m) => said.push(m);
+      const out = { offer: WORK.offer('harada', 'station') }; WORK.intro(yard(), 'window'); out.said = said.join(' '); return JSON.stringify(out); })()"""))
+    assert r['offer'] == 'window' and '一人前' in r['said'], r
+
+# bento: a window's call waits for the order being heard (each line 600 ms; no すみません！ begins inside one)
+def test_review_bento_calls_wait_for_the_order(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + BENTO_HELP + """ const log = []; window.speakAs = (w, l) => { const t = performance.now(); log.push([Math.round(t), w, l]); return new Promise((ok) => setTimeout(ok, 600)); };
+      JOBS.pat.scale = 0.1; location.hash = '#/platform'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; WORK.start(yard(), 'bento');
+      for (let i = 0; i < 300 && !calling().length; i++) await wait(20); const w = calling()[0]; click(`.bt-win[data-w="${w}"]`); const t0 = performance.now(); await wait(2500);
+      const order = log.find((x) => x[0] >= t0 - 5 && x[2] !== 'すみません！'); const cut = log.filter((x) => order && x[0] > order[0] && x[0] < order[0] + 590);
+      CLASS.close(); JOBS.pat.scale = 1; return JSON.stringify({ order, cut }); })()"""))
+    assert r['order'] and r['cut'] == [], r
+
+# taxi: a shift's rides go on from where the last left off, so some turns come facing down or left the map — at least one in the
+# told rides; a crossing told 曲がらないで: 鈴木 guesses a turn, so letting it go is a miss
+def test_review_taxi_turns_face_every_way_and_dont_is_tested(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + TAXI_HELP + """ const out = { chained: true, reversed: 0 };
+      for (let n = 0; n < 30; n++) { const rs = TAXI.make(); rs.forEach((x, k) => { if (k && (x.from.join() !== rs[k - 1].end.join())) out.chained = false; });
+        if (rs.filter((x) => x.guided).some((x) => { let h = x.h0, p = x.from.slice(); return x.path.some((ch) => { if (ch === 'stop') return false; const turning = ch !== 'straight' && (h === 2 || h === 3); h = TAXI.turn(h, ch); p = TAXI.step(p, h); return turning; }); })) out.reversed++; }
+      location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; state.currentUnit = 'm5';
+      const realMake = TAXI.make; TAXI.make = () => { const rs = realMake(); rs[0] = TAXI.ride('cafe', true, 'nishimura'); return rs; };   // the station up to 喫茶店: one crossing straight on, then stop
+      WORK.start(yard(), 'taxi'); for (let i = 0; i < 400 && !(now() && now().lean); i++) await wait(20); out.line = (now().ride.lines[0] || {}).line; out.lean = now().lean;
+      for (let i = 0; i < 400 && now().k === 0 && now().at.join() === '1,3'; i++) await wait(20); for (let i = 0; i < 2000 && now().k === 0 && now().phase === 'drive'; i++) { if (now().choosing) await choose(); await wait(15); }
+      for (let i = 0; i < 400 && now().phase !== 'pay'; i++) await wait(20); out.miss = now().miss; TAXI.make = realMake; CLASS.close(); JOBS.pat.scale = 1; return JSON.stringify(out); })()"""))
+    assert r['chained'] and r['reversed'] >= 25, r
+    assert r['line'][0] == 'つぎの {角|かど}は {曲|ま}がらないで ください。' and r['lean'] in ('left', 'right') and r['miss'] == 1, r   # his guess taken once, then straight on
+
+# lost-and-found: 源三's glasses — ありません is true too (no miss); a twin needs 中に何がありますか asked; the Chinese reads well
+def test_review_lost_gag_twin_and_chinese(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + LOST_HELP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      const out = { zh: [LOST.zhOf({ kind: 'bag', color: 'brown', dim: 'big' }), LOST.zhOf({ kind: 'glasses', color: 'black', dim: 'round' })], umb: TOWN.EKI.lost.kinds.umbrella[3] };
+      const realMake = LOST.make; LOST.make = () => { const ts = realMake(); ts[0] = LOST.task('glasses', 'gag'); ts[1] = LOST.task('wallet', 'twin'); return ts; };
+      WORK.start(yard(), 'lost'); for (let i = 0; i < 200 && !(at(0) && LOST_RUN.now().phase === 'ask'); i++) await wait(30); let t = LOST_RUN.now().task;
+      click(`.lf-q[data-o="${t.qRight}"]`); for (let i = 0; i < 200 && LOST_RUN.now().phase !== 'find'; i++) await wait(30); click('.lf-none');
+      for (let i = 0; i < 200 && !(at(1) && LOST_RUN.now().phase === 'ask'); i++) await wait(30); t = LOST_RUN.now().task; click(`.lf-q[data-o="${t.qRight}"]`);
+      for (let i = 0; i < 200 && !['ask2', 'find'].includes(LOST_RUN.now().phase); i++) await wait(30); out.ask2 = LOST_RUN.now().phase; out.q2 = [...card().querySelectorAll('.lf-q')].map((x) => x.textContent).join('|');
+      out.score = WORK.today().score; LOST.make = realMake; CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['zh'] == ['咖啡色的大包包', '黑色的圓形眼鏡'] and r['umb'] == ['big', 'small'], r
+    assert r['score'].get('0') == 0 and r['ask2'] == 'ask2' and '何' in r['q2'], r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

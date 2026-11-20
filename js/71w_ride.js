@@ -36,6 +36,7 @@ const RIDE = (() => {
       if (e.target.closest('.kb-pay') && pick) {
         if (yenBalance() < pick) { playSfx('bad'); screen(L().short, 'bad'); toast(`錢包只有 ${yenStr(yenBalance())} 円。`, 2400); return; }
         spend(pick); keep({ from: here, fare: pick, day: todayStr() }); playSfx('coin', 3); SND.play('paper', { vol: 0.6 }); screen(L().take, 'ok');
+        pick = 0; document.querySelector('.kb-pay').disabled = true; document.querySelectorAll('.kb-fare.on').forEach((x) => x.classList.remove('on'));   // paid once (a second tap, nothing)
         const w = document.querySelector('.kb-wallet'); if (w) w.innerHTML = `${yenIcon()}${yenStr(yenBalance())} 円`;
         document.querySelector('.kb-slot').innerHTML = `<div class="kb-ticket"><span lang="ja">${ruby(st(here))} → ${pick}円区間</span><b>${pick}円</b><small>${todayStr()}・大人</small></div>${here === 'minato' ? '<p class="kb-tip">從剪票口上月台，點停著的電車就能上車。</p>' : `<button type="button" class="btn btn-primary kb-ride" lang="ja"><ruby>電車<rt>でんしゃ</rt></ruby>に <ruby>乗<rt>の</rt></ruby>る</button>`}`;
         return;

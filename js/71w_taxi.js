@@ -28,7 +28,7 @@ const TAXI = (() => {
   const SIDE = { right: ['{右|みぎ}', '右'], left: ['{左|ひだり}', '左'] };
   const fill = (l, o) => [l[0].replace('{X}', o.X || '').replace('{D}', o.D || '').replace('{E}', o.E || ''), l[1].replace('{x}', o.x || '').replace('{d}', o.d || '').replace('{e}', o.e || '')];
   const side = (ch) => ({ D: SIDE[ch][0], d: SIDE[ch][1], E: SIDE[ch === 'right' ? 'left' : 'right'][0], e: SIDE[ch === 'right' ? 'left' : 'right'][1] });
-  const placeOf = (id) => ({ X: spot(id)[3], x: spot(id)[3].replace(/\{([^|}]+)\|[^}]+\}/g, '$1') });
+  const placeOf = (id) => ({ X: spot(id)[3], x: spot(id)[6] || spot(id)[3].replace(/\{([^|}]+)\|[^}]+\}/g, '$1') });   // x: its name in 中文
   // what the passenger says for the way, each before the crossing (at) it is for: a turn after a crossing straight on is 二つ目;
   // crossings straight on to the end, まっすぐ once (from m5, a single one: 曲がらないで); a stop, あの〜の前で; fix: the first turn
   // said wrong and put right (sophia: 右… あ、すみません、左です！)
@@ -44,19 +44,34 @@ const TAXI = (() => {
     return out;
   }
   const dont = () => TOWNEV.reachedIdx() >= TOWNEV.unitIdx('m5');   // 曲がらないで from m5
-  function ride(to, guided, who, fix = false) {
-    const path = route(START, 0, where(to));
-    return { to, guided, who, fix, path, lines: guided ? instructions(path, to, { fix, dont: dont() }) : [], ask: fill(SAY().cust.to, placeOf(to)), urgent: who === 'misaki', best: path.length - 1 };
+  // where a way ends and which way the taxi faces then
+  const follow = (from, h0, path) => { let p = from.slice(), h = h0; path.forEach((ch) => { if (ch !== 'stop') { h = turn(h, ch); p = step(p, h); } }); return { end: p, h };};
+  // a turn made facing down or left on the map (右 is not the map's right then): what the job is for
+  const reversed = (from, h0, path) => { let h = h0; return path.some((ch) => { if (ch === 'stop') return false; const r = ch !== 'straight' && (h === 2 || h === 3); h = turn(h, ch); return r; }); };
+  // a ride from a crossing (the first from the station, facing up the map; the next from where the last let off, facing on)
+  function ride(to, guided, who, fix = false, from = START, h0 = 0) {
+    const path = route(from, h0, where(to)), f = follow(from, h0, path);
+    return { to, guided, who, fix, from: from.slice(), h0, end: f.end, h1: f.h, path, lines: guided ? instructions(path, to, { fix, dont: dont() }) : [], ask: fill(SAY().cust.to, placeOf(to)), urgent: who === 'misaki', best: path.length - 1 };
   }
-  // a shift: three told the way (one turn; a 二つ目 put right by sophia; 美咲 to the hospital in a hurry), two who only say where
+  // a shift: five rides one after another, each from where the last ended (2026-11-21, the review: from the station every turn was
+  // made facing up the map, so 右 was always the map's right) — three told the way (the first near; a 二つ目 put right by sophia;
+  // 美咲 to the hospital in a hurry), two who only say where; tried till a told ride turns facing down or left
   function make() {
-    const pick = (a) => a[Math.floor(Math.random() * a.length)], ids = T().spots.map((x) => x[2]).filter((id) => id !== 'hospital');
-    const by = (n, pred) => ids.filter((id) => { const p = route(START, 0, where(id)); return p.length === n && (!pred || pred(p)); });
-    const r0 = pick(by(2)), r1 = pick(by(3, (p) => p[0] === 'straight' && p[1] !== 'straight')), rest = ids.filter((id) => id !== r0 && id !== r1);
-    const [r3, r4] = shuffle(rest).slice(0, 2), w = T().riders;
-    return [ride(r0, true, w[0]), ride(r1, true, w[1], true), ride('hospital', true, w[2]), ride(r3, false, w[3]), ride(r4, false, w[4])];
+    const pick = (a) => a[Math.floor(Math.random() * a.length)], ids = T().spots.map((x) => x[2]), w = T().riders;
+    for (let tries = 0; ; tries++) {
+      const rides = [], at = () => (rides.length ? [rides[rides.length - 1].end, rides[rides.length - 1].h1] : [START, 0]);
+      const from = () => at()[0], head = () => at()[1], away = (id) => where(id).join() !== from().join();
+      const cands = (pred) => ids.filter((id) => id !== 'hospital' && away(id) && !rides.some((r) => r.to === id) && pred(route(from(), head(), where(id))));
+      const r0 = pick(cands((p) => p.length === 2)); rides.push(ride(r0, true, w[0], false, from(), head()));
+      const two = (p) => p.some((ch, i) => ch === 'straight' && (p[i + 1] === 'left' || p[i + 1] === 'right') && (i === 0 || p[i - 1] !== 'straight'));
+      const r1s = cands((p) => two(p) && reversed(from(), head(), p)), r1 = pick(r1s.length ? r1s : cands(two).length ? cands(two) : cands(() => true));
+      rides.push(ride(r1, true, w[1], true, from(), head()));
+      rides.push(ride('hospital', true, w[2], false, from(), head()));
+      [w[3], w[4]].forEach((who) => rides.push(ride(pick(cands(() => true)), false, who, false, from(), head())));
+      if (rides.slice(0, 3).some((r) => reversed(r.from, r.h0, r.path)) || tries >= 40) return rides;
+    }
   }
-  return { COLS, ROWS, START, on, turn, step, can, route, instructions, ride, make, spot, where, tips: true };
+  return { COLS, ROWS, START, on, turn, step, can, route, instructions, ride, make, spot, where, reversed, tips: true };
 })();
 
 // ---- the card: the passenger and their words (heard), the meter; the map with the taxi on it; 左 / まっすぐ / 右 / 止めて ----
@@ -92,7 +107,7 @@ const TAXI_RUN = (() => {
     const mine = ++runs, s = S(), rides = TAXI.make(), score = (WORK.today() || {}).score || {}, first = !Object.values(state.work.res).some((r) => r.place === 'taxi' && r.yen !== undefined);
     const T = (sec) => sec * 1000 * JOBS.pat.scale, el = (q) => document.querySelector('.wk-taxi ' + q), live = () => mine === runs && Boolean(el('.tx-map')) && ctx.on();
     let k = [0, 1, 2, 3, 4].find((i) => !(i in score)); if (k === undefined) k = 4;
-    let tip = 0, missed = 0, wait = null, chats = 0, cat = Math.random() < 0.25;   // cat: once a shift maybe, one runs across
+    let tip = (ctx.kept && ctx.kept.tip) || 0, missed = 0, wait = null, chats = 0, cat = Math.random() < 0.25;   // cat: once a shift maybe, one runs across; tip: kept over a break
     const word = ([ja, zh], cls = '') => { const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(s.who, ja); };
     const me = ([ja, zh]) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`; return speakAs('hero', ja); };
     const said = (p, min = 0, max = 5000) => JOBS.said(p, min, max);
@@ -126,62 +141,75 @@ const TAXI_RUN = (() => {
     async function arrive() {   // at a crossing: its choice now, or waited for
       if (!live()) return; R.waiting = true;
       if (R.choice) { apply(R.choice); return; }
-      ring(true); const r = R, my = wait = {};
+      ring(true); const r = R, my = wait = {}, at = R.i;
+      // told 曲がらないで here: 鈴木 has his own idea (a turn, blinking), so letting it go is not right (2026-11-21, the review)
+      const dontHere = R.ride.guided && (R.ride.lines.find((x) => x.at === R.i) || {}).line === s.cust.dont;
+      if (dontHere && !R.lean && R.leaned !== R.i) { R.lean = ['left', 'right'].filter((ch) => TAXI.can(R.at, R.h, ch))[Math.floor(Math.random() * 2)] || 'right';
+        Promise.resolve(R.saying).then(() => { if (live() && R === r && R.waiting && R.i === at) { const sd = R.lean === 'right' ? ['{右|みぎ}', '右'] : ['{左|ひだり}', '左']; word([s.lean[0].replace('{D}', sd[0]), s.lean[1].replace('{d}', sd[1])]); const c = el('.tx-car'); if (c) c.classList.add('blink-' + R.lean[0]); } }); }
       await sleep(T(R.ride.urgent ? 4 : 6)); if (!live() || R !== r || wait !== my || !R.waiting) return;
       if (R.choice) return;
+      if (R.lean && R.i === at) { const l = R.lean; R.lean = null; R.leaned = at; apply(l); return; }   // nothing said: he turns as he guessed (once: told so, he goes straight on)
       if (TAXI.can(R.at, R.h, 'straight')) { word(s.on); apply('straight'); } else { word(s.ask); arrive(); }
     }
-    function sayWay() { const l = R.ride.lines.find((x) => x.at === R.i); if (l) said(speakAs(R.ride.who, l.line[0]), 0, 4000); bub(); }
+    // the way at the next crossing, said by the passenger (kept: R.saying, for whatever must wait for it)
+    function sayWay() { const l = R.ride.lines.find((x) => x.at === R.i); if (l) R.saying = said(speakAs(R.ride.who, l.line[0]), 0, 5000); bub(); return R.saying; }
     function apply(ch) {
-      wait = null; R.waiting = false; ring(false); R.choice = null;
+      wait = null; R.waiting = false; ring(false); R.choice = null; const car0 = el('.tx-car'); if (car0) car0.classList.remove('blink-l', 'blink-r');
       const g = R.ride;
       if (g.guided && ch !== R.want) {   // the wrong way: stopped, told again
         R.miss++; missed++; playSfx('bad'); R.fare += 80; meter(); bub(); ctl();
-        said(speakAs(g.who, s.cust.wrong[0]), 400).then(() => live() && said(word(s.wrong), 300)).then(() => { if (!live()) return; const l = told(); speakAs(g.who, l[0]); arrive(); });
+        said(speakAs(g.who, s.cust.wrong[0]), 400).then(() => live() && said(word(s.wrong), 300)).then(() => { if (!live()) return; const l = told(); R.saying = said(speakAs(g.who, l[0]), 0, 5000); arrive(); });
         return;
       }
       if (ch === 'stop') {
         if (R.at[0] !== TAXI.where(g.to)[0] || R.at[1] !== TAXI.where(g.to)[1]) { R.miss++; missed++; playSfx('bad'); bub(); said(speakAs(g.who, s.cust.here[0]), 300).then(() => { if (live()) { speakAs(g.who, told()[0]); arrive(); } }); return; }
         me(s.go.stop); pay(); return;
       }
-      me(s.go[ch]);
-      R.h = TAXI.turn(R.h, ch); R.at = TAXI.step(R.at, R.h); R.i++; R.steps++; R.fare += 80; R.choosing = false; ctl();
+      // the hero's word first, then the passenger's way at the next crossing (2026-11-21, the review: each cut the other); 鈴木's
+      // talk and a cat only on a stretch with nothing to be told
+      const r = R, mine0 = said(me(s.go[ch]), 300, 2500);
+      R.h = TAXI.turn(R.h, ch); R.at = TAXI.step(R.at, R.h); R.i++; R.steps++; R.fare += 80; R.choosing = false; R.lean = null; ctl();
       if (g.guided) R.want = g.path[R.i];
-      else if (!R.far && R.steps > g.best + 2) { R.far = true; R.miss++; missed++; speakAs(g.who, s.cust.far[0]); }
-      if (g.guided) sayWay();
-      if (Math.random() < 0.18 && chats < 2) { chats++; setTimeout(() => { if (live()) word(s.chat[Math.floor(Math.random() * s.chat.length)]); }, T(0.5)); }
+      const far = !g.guided && !R.far && R.steps > g.best + 2; if (far) { R.far = true; R.miss++; missed++; }
+      const told2 = g.guided && g.lines.some((x) => x.at === R.i);
+      R.saying = mine0.then(() => { if (!live() || R !== r) return null; if (told2) return sayWay(); if (far) return said(speakAs(g.who, s.cust.far[0]), 0, 4000); return null; });
+      const quiet = !told2 && !far;
+      if (quiet && Math.random() < 0.18 && chats < 2) { chats++; R.saying.then(() => { if (live() && R === r) word(s.chat[Math.floor(Math.random() * s.chat.length)]); }); }
       const go = () => drive(xy(...R.at), R.h, T(1.6)).then(() => { meter(); arrive(); });
-      if (cat && R.steps === 2) { cat = false; word(s.cat); SND.play('meow', { vol: 0.6 }); setTimeout(() => { if (live()) go(); }, T(1.4)); } else go();
+      if (cat && quiet && R.steps >= 2) { cat = false; mine0.then(() => { if (!live()) return; word(s.cat); SND.play('meow', { vol: 0.6 }); setTimeout(() => { if (live()) go(); }, T(1.4)); }); } else go();
     }
     // the fare: read off the meter (three to pick from); right, their thanks (and maybe おつりは いいです), the next ride
     function pay() {
       R.phase = 'pay'; R.choosing = false; ctl(); const f = R.fare, opts = shuffle([f, f + 80, f - 80]); R.payRight = opts.indexOf(f);
-      el('.tx-pays').innerHTML = opts.map((v, i) => `<button type="button" class="btn tx-pay" data-o="${i}" lang="ja">${ruby(S().pay[0].replace('{P}', YEN.priceMark(v)))}</button>`).join('');
+      el('.tx-pays').innerHTML = opts.map((v, i) => `<button type="button" class="btn tx-pay" data-o="${i}" lang="ja">${esc(S().pay[0].replace('{P}', YEN.reading(v)))}</button>`).join('');   // in kana: the meter's digits read, not matched
       bub(); speakAs(R.ride.who, s.cust.price[0]);
     }
     async function paid() {
       const r = R; R.phase = 'done'; ctx.right(r.k, r.miss); el('.tx-pays').innerHTML = ''; playSfx('good'); bub();
-      const more = !r.miss && TAXI.tips && Math.random() < 0.5 ? 10 * (1 + Math.floor(Math.random() * 3)) : 0; tip += more;
+      const more = !r.miss && TAXI.tips && Math.random() < 0.5 ? 10 * (1 + Math.floor(Math.random() * 3)) : 0; tip += more; if (more) ctx.keep({ tip });
       const kk = k; k++;
       const bye = (async () => {
-        await said(me(S().pay.map((x, i) => (i ? x.replace('{p}', r.fare) : x.replace('{P}', YEN.priceMark(r.fare))))), 700); if (!live() && kk < 4) return;
+        await said(me(S().pay.map((x, i) => (i ? x.replace('{p}', r.fare) : x.replace('{P}', YEN.priceMark(r.fare))))), 700); if (!live()) return;   // shut: no more voices (paid all the same)
         if (more) { await said(speakAs(r.ride.who, s.cust.keep[0]), 600); playSfx('coin', 2); }
-        await said(speakAs(r.ride.who, s.cust.thanks[0]), 600); if (!live() && kk < 4) return;
+        await said(speakAs(r.ride.who, s.cust.thanks[0]), 600); if (!live()) return;
         if (k < 5) { begin(); return; }
         await said(word(!missed && ctx.done === 0 ? s.all : s.end, 'ok'), 800); if (el('.tx-map')) CLASS.close();
       })();
       if (k >= 5) ctx.finish({ tip, tipName: 'おつり' }, bye);
     }
-    // a ride: they get in at the station (where to), the taxi up to the first crossing
+    // a ride: the first gets in at the station (the taxi up to the first crossing); the next where the last got out, the taxi
+    // facing on as it stopped
     async function begin() {
-      const g = rides[k]; R = { k, ride: g, phase: 'board', at: TAXI.START.slice(), h: 0, i: 0, want: g.path[0], choosing: false, choice: null, fare: 500, steps: 0, miss: 0, far: false, pos: STATION.slice(), rot: 0 };
+      const g = rides[k], station = k === 0, pos = station ? STATION.slice() : xy(...g.from), rot = station ? 0 : g.h0 * 90;
+      R = { k, ride: g, phase: 'board', at: g.from.slice(), h: g.h0, i: 0, want: g.path[0], choosing: false, choice: null, fare: 500, steps: 0, miss: 0, far: false, pos, rot, lean: null, saying: null };
       const me0 = R; el('.wk-n').textContent = `${k + 1}／5`; el('.tx-face').innerHTML = TOWNEV.face(g.who); el('.tx-pays').innerHTML = ''; meter(); ctl();
-      const car = el('.tx-car'); if (car) car.setAttribute('transform', `translate(${STATION[0]} ${STATION[1]}) rotate(0)`);
+      const car = el('.tx-car'); if (car) car.setAttribute('transform', `translate(${pos[0]} ${pos[1]}) rotate(${rot})`);
       bub(); SND.play('door-close', { vol: 0.5 });
       await said(speakAs(g.who, g.ask[0]), 400); if (!live() || R !== me0) return;
       if (g.urgent) await said(speakAs(g.who, s.cust.hurry[0]), 300); if (!live() || R !== me0) return;
       R.phase = 'drive'; if (g.guided) sayWay(); else bub();
-      drive(xy(...R.at), 0, T(1.6)).then(() => arrive());
+      if (station) drive(xy(...R.at), 0, T(1.6)).then(() => arrive());
+      else { R.choosing = true; ctl(); arrive(); }
     }
     CLASS.card('wk-taxi', '計程車導航', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
       <div class="wk-head"><b lang="ja"><ruby>鈴木<rt>すずき</rt></ruby>タクシー</b><span class="wk-n"></span></div>
@@ -189,7 +217,11 @@ const TAXI_RUN = (() => {
       <div class="tx-top"><span class="kr-face tx-face"></span><p class="tx-bub"></p><div class="tx-meter"><span lang="ja"><ruby>料金<rt>りょうきん</rt></ruby></span><b></b><i>円</i></div></div>
       <div class="tx-mapbox">${mapSvg()}</div><div class="tx-ctl"></div><div class="tx-pays"></div><p class="wk-me"></p>`, (e) => {
       if (!R || !live()) return;
-      if (e.target.closest('.tx-ear')) { if (R.phase === 'pay') speakAs(R.ride.who, s.cust.price[0]); else speakAs(R.ride.who, told()[0]); return; }
+      if (e.target.closest('.tx-ear')) {   // heard again: the ring at a crossing waits for it (spec §2.3)
+        if (R.phase === 'pay') { speakAs(R.ride.who, s.cust.price[0]); return; }
+        const r = R, held = R.waiting; if (held) { wait = null; R.waiting = false; ring(false); }
+        R.saying = said(speakAs(R.ride.who, told()[0]), 0, 5000); if (held) R.saying.then(() => { if (live() && R === r && R.phase === 'drive' && !R.waiting) arrive(); }); return;
+      }
       const p = e.target.closest('.tx-pay'); if (p && R.phase === 'pay') { if (Number(p.dataset.o) === R.payRight) paid(); else { R.miss++; missed++; playSfx('bad'); p.classList.remove('wk-bad'); void p.offsetWidth; p.classList.add('wk-bad'); p.disabled = true; } return; }
       const b = e.target.closest('.tx-go'); if (!b || b.disabled || R.phase !== 'drive' || !R.choosing) return;
       SND.play('tick', { vol: 0.5 }); if (R.waiting) apply(b.dataset.ch); else { R.choice = b.dataset.ch; ctl(); }

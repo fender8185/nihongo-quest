@@ -178,13 +178,14 @@ const PLATFORM = (() => {
   }
   const walk = (p, to, done) => { p.to = to; p.done = done; p.el.classList.add('walk'); };
   const gone = (p) => { p.el.style.transition = 'opacity .5s'; p.el.style.opacity = '0'; setTimeout(() => { p.el.remove(); }, 600); people.splice(people.indexOf(p), 1); };
-  let raf = 0, at = 0;
+  let raf = 0, at = 0, home = null;   // home: the platform's yard (gone: the people too)
   function frame(now) {
+    if (!home || !home.isConnected) { clear(); return; }
     const dt = at ? Math.min(0.1, (now - at) / 1000) : 0; at = now;
     people.slice().forEach((p) => { if (!p.to) return; const dx = p.to[0] - p.pos[0], dy = p.to[1] - p.pos[1], d = Math.hypot(dx, dy), m = p.v * dt;
       if (d <= m) { p.pos = p.to.slice(); p.to = null; put(p, dx, dy); p.el.classList.remove('walk'); const f = p.done; p.done = null; if (f) f(); return; }
       p.pos[0] += dx / d * m; p.pos[1] += dy / d * m; put(p, dx, dy); });
-    raf = people.length ? requestAnimationFrame(frame) : 0; if (!raf) at = 0;
+    raf = people.some((p) => p.to) ? requestAnimationFrame(frame) : 0; if (!raf) at = 0;   // only while someone walks (2026-11-21, the review)
   }
   const go = () => { if (!raf) raf = requestAnimationFrame(frame); };
   const free = () => MARKS.filter((x) => !people.some((p) => p.mark === x));
@@ -201,6 +202,8 @@ const PLATFORM = (() => {
   }
   function clear() { people.splice(0).forEach((p) => p.el.remove()); cancelAnimationFrame(raf); raf = 0; at = 0; }
   const ms = (s) => (s * 1000) / api.speed;
+  // the trains' sounds under a card (駅弁's own bell, a ride): none (2026-11-21, the review: the platform's bell rang behind the bento's)
+  const play = (n, o) => { if (!document.querySelector('.cls')) SND.play(n, o); };
   const still = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   // a train standing with its doors open: a button over it to get on (PLACE_USE.platform board1 / board2: RIDE.board)
   function boardBtn(y, track, on) {
@@ -218,22 +221,22 @@ const PLATFORM = (() => {
     cur = { track, to: x.to, kind: x.kind, phase: 'in' };
     g.style.transition = 'none'; g.style.transform = `translateX(${from}px)`; void g.getBoundingClientRect();
     g.style.transition = still() ? 'none' : `transform ${ms(6) / 1000}s cubic-bezier(.12, .62, .3, 1)`; g.style.transform = 'translateX(0px)';
-    if (track === 1) SND.play('train-in'); else SND.play('train-in', { vol: 0.5 });
+    if (track === 1) play('train-in'); else play('train-in', { vol: 0.5 });
     await wait(6.2); if (!alive()) return;
-    cur.phase = 'stop'; SND.play('door-chime', { vol: track === 1 ? 1 : 0.5 }); g.classList.add('open'); boardBtn(y, track, true); if (track === 1 && !quiet()) board(y);
+    cur.phase = 'stop'; play('door-chime', { vol: track === 1 ? 1 : 0.5 }); g.classList.add('open'); boardBtn(y, track, true); if (track === 1 && !quiet()) board(y);
     await wait(9); if (!alive()) return;
-    SND.play('dep-bell', { vol: track === 1 ? 0.8 : 0.4 });
+    play('dep-bell', { vol: track === 1 ? 0.8 : 0.4 });
     await wait(4); if (!alive()) return;
-    SND.play('door-chime', { vol: track === 1 ? 1 : 0.5 }); g.classList.remove('open'); boardBtn(y, track, false);
+    play('door-chime', { vol: track === 1 ? 1 : 0.5 }); g.classList.remove('open'); boardBtn(y, track, false);
     await wait(1.4); if (!alive()) return;
     cur.phase = 'out'; g.style.transition = still() ? 'none' : `transform ${ms(6) / 1000}s cubic-bezier(.6, 0, .9, .6)`; g.style.transform = `translateX(${-from}px)`;
-    SND.play('train-out', { vol: track === 1 ? 1 : 0.5 });
+    play('train-out', { vol: track === 1 ? 1 : 0.5 });
     await wait(6.2); cur = null;
   }
   // the departure board again each minute
   function boardRows(y) { const b = y.querySelector('.pf-dep'); if (b) b.innerHTML = pfBoardRows(); }
   async function mount(y, place) {
-    const mine = ++run; cur = null; clear(); if (place !== 'platform') return;
+    const mine = ++run; cur = null; clear(); home = place === 'platform' ? y : null; if (place !== 'platform') return;
     const wait = (s) => new Promise((ok) => setTimeout(ok, ms(s))), alive = () => run === mine && y.isConnected;
     const tick = setInterval(() => { if (!alive()) { clearInterval(tick); return; } boardRows(y); }, 30000);
     if (!quiet()) { for (let i = 0; i < 2; i++) { const m = free()[i * 2], p = person(y, [m, WAIT_Y]); if (p) { p.mark = m; p.el.classList.add('back'); } } const more = setInterval(() => { if (!alive()) { clearInterval(more); return; } if (!cur || cur.phase !== 'stop') comeToWait(y); }, 9000); }
