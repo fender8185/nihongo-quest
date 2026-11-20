@@ -1,5 +1,5 @@
 /* Nihongo Quest service worker: versioned app-shell cache, cache-first for same-origin GETs. */
-const CACHE = 'nq-v1.19.0-test.1';
+const CACHE = 'nq-v1.19.0-test.2';
 const AUDIO_CACHE = 'nq-audio';   // 雲端音檔 heard so far, and the gramophone's records: kept across releases
 // A clip's two addresses: R2, where the app fetches it since 1.0.29, and the Supabase bucket R2 is a copy of, which the
 // app falls back to and which every clip cached before 1.0.29 is filed under
@@ -47,6 +47,7 @@ const PRECACHE = [
   './js/71v_rairai.js',
   './js/71w_eki.js',
   './js/71w_platform.js',
+  './js/71w_bento.js',
   './js/72_course.js',
   './js/73_vocab.js',
   './js/74_mistakes.js',
@@ -68,7 +69,7 @@ const PRECACHE = [
   './config.js',
   './data.js?v=28',
   './data-n3.js?v=2',
-  './events.js?v=85',
+  './events.js?v=86',
   './pics.js?v=10',
   './kana-strokes.js?v=1'
 ];

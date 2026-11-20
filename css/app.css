@@ -609,6 +609,36 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 /* みなと駅のホーム (2026-11-20): its trains' doors slide into the walls while a train stands with them open */
 .sky .land .pf-train { will-change: transform; } .sky .land .pf-train :is(.pf-dl, .pf-dr) { transition: transform .8s ease-in-out; }
 .sky .land .pf-train.open .pf-dl { transform: translateX(-21px); } .sky .land .pf-train.open .pf-dr { transform: translateX(21px); }
+/* 駅弁の立ち売り (2026-11-20): the car close up — it slides in, stops, goes; its windows open, someone leans out and calls (！),
+   the one picked ringed; the departure clock; what they said; the hands and どうぞ; the tray of goods */
+.wk-bento .cls-card { background: #f6efe0; color: #2b2b33; border-bottom: 10px solid #2f5a8a; }
+.bt-stage { position: relative; margin: 6px -6px 4px; overflow: hidden; border-radius: 12px; background: linear-gradient(#b9d4e0, #dfe9ee 60%); }
+.bt-car { position: relative; aspect-ratio: 360 / 150; transition: transform 1.2s cubic-bezier(.15, .65, .3, 1); }
+.bt-car[data-state="away"] { transform: translateX(110%); transition: none; } .bt-car[data-state="out"] { transform: translateX(-115%); transition-timing-function: cubic-bezier(.6, 0, .9, .5); }
+.bt-carsvg { display: block; width: 100%; height: auto; }
+.bt-win { position: absolute; top: 16%; width: 20%; height: 44%; padding: 0; border: 0; border-radius: 4px; overflow: visible; background: none; cursor: pointer; }
+.bt-in { position: absolute; inset: 0; border-radius: 3px; background: linear-gradient(#e6e1d4 0 55%, #5a7aa8 55% 72%, #e6e1d4 72%); }
+.bt-face { position: absolute; left: 50%; bottom: 4%; width: 78%; transform: translate(-50%, 30%) scale(.6); transition: transform .45s cubic-bezier(.2, .8, .3, 1.3); }
+.bt-face svg { display: block; width: 100%; height: auto; }
+.bt-win:not(.shut) .bt-face { transform: translate(-50%, 10%) scale(1); }
+.bt-glass { position: absolute; inset: 0; border-radius: 3px; background: linear-gradient(135deg, rgba(185, 212, 224, .92), rgba(160, 196, 212, .9) 60%, rgba(255, 255, 255, .7) 62%, rgba(185, 212, 224, .9) 70%); transition: transform .5s ease-in-out; transform-origin: bottom; }
+.bt-win:not(.shut) .bt-glass { transform: scaleY(.18); }
+.bt-call, .bt-tick { position: absolute; top: -14px; right: -6px; width: 24px; height: 24px; border-radius: 50%; display: none; place-items: center; font-style: normal; font-weight: 700; color: #fff; background: #d0453c; box-shadow: 0 2px 6px rgba(0, 0, 0, .25); }
+.bt-win.calling .bt-call { display: grid; animation: btCall 1s ease-in-out infinite; } @keyframes btCall { 50% { transform: translateY(-3px) scale(1.08); } }
+.bt-win.done .bt-tick { display: grid; background: #3f9a6a; } .bt-win.sel { box-shadow: 0 0 0 3px #f2c94c, 0 0 14px 2px rgba(242, 201, 76, .8); }
+.bt-win.lost .bt-face { filter: grayscale(.7); opacity: .6; } .bt-win.wk-bad { animation: shake .3s ease; }
+.bt-dep { position: absolute; bottom: 3px; right: 8px; display: flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 999px; font-size: 12px; background: rgba(28, 28, 34, .78); color: #ffae3a; }
+.bt-dep i { display: block; width: 90px; height: 7px; border-radius: 4px; background: rgba(255, 255, 255, .2); overflow: hidden; } .bt-dep b { display: block; height: 100%; width: calc(var(--p, 1) * 100%); background: #5fd07a; }
+.bt-dep.late { color: #ff6a4a; } .bt-dep.late b { background: #ff6a4a; animation: btBlink .5s steps(2) infinite; } @keyframes btBlink { 50% { opacity: .4; } }
+.bt-talk { display: grid; gap: 6px; min-height: 52px; } .bt-bub { display: flex; align-items: center; gap: 8px; margin: 0; padding: 6px 10px; border-radius: 12px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .1); }
+.bt-bub b { font-size: 17px; } .bt-bub small { display: block; color: #8a7a6e; font-size: 12px; } .bt-bub .bt-who { width: 34px; flex: none; } .bt-dots { letter-spacing: 3px; color: #a89a8a; } .bt-hint { color: #8a7a6e; font-size: 14px; }
+.bt-replies { display: flex; gap: 8px; flex-wrap: wrap; } .bt-reply { min-height: 40px; font-size: 15px; }
+.bt-handrow { display: flex; align-items: center; gap: 8px; margin: 8px 0; } .bt-hand { flex: 1; display: flex; flex-wrap: wrap; gap: 6px; min-height: 44px; align-items: center; } .bt-give { min-height: 44px; font-size: 17px; }
+.bt-empty { color: #a89a8a; font-size: 13px; }
+.bt-chip { display: flex; align-items: center; gap: 4px; padding: 3px 8px 3px 3px; border: 1px solid #d8c8a8; border-radius: 999px; background: #fffaf0; font-size: 13px; cursor: pointer; } .bt-chip .pic { width: 30px; height: 30px; } .bt-chip i { font-style: normal; font-weight: 700; color: #c8453a; }
+.bt-box { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 8px; border-radius: 12px; background: #b9875a; box-shadow: inset 0 0 0 3px #8a5e3a; } .bt-box.nine { grid-template-columns: repeat(3, 1fr); }
+.bt-good { position: relative; display: grid; justify-items: center; gap: 2px; min-height: 76px; padding: 6px 2px 4px; border: 0; border-radius: 10px; background: #f6efe0; font-size: 12px; cursor: pointer; } .bt-good .pic { width: 40px; height: 40px; }
+.bt-good.in { box-shadow: 0 0 0 2px #3f9a8c; } .bt-n { position: absolute; top: 2px; right: 4px; font-style: normal; font-weight: 700; color: #c8453a; font-size: 13px; }
 .wk-lock { margin: 10px 0 4px; padding: 8px 10px; border-radius: 10px; background: #fde4cf; color: #8a3a1a; font-size: 14px; line-height: 1.5; }
 .wk-board .cls-card { background: #fbf3e2; color: #2b2b33; border-top: 8px solid #c8322a; } .wk-bhead { display: grid; gap: 2px; padding-right: 40px; } .wk-bhead b { font-size: 21px; color: #a82828; } .wk-bhead span { font-size: 13px; color: #8a7a6e; }
 .wk-jobs { list-style: none; margin: 12px 0 8px; padding: 0; display: grid; gap: 6px; } .wk-job { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: rgba(138, 122, 110, .1); color: #6a5a4e; } .wk-job.ok { background: rgba(47, 122, 106, .12); color: #2b2b33; }

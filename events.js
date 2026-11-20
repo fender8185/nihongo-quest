@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 85 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 86 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2685,11 +2685,12 @@ const TOWN = {
   // goldfish's old man says when one is caught
   // 中華街の打工 (2026-11-14, WORK): what each keeper says when one comes by to work, and their opening the first time
   WORK: {
-    hello: { zhang: ['…いらっしゃい。はたらく？', '……歡迎光臨。要來打工嗎？'], zhou: ['あら、いらっしゃい。てつだって くれる？', '哎呀，歡迎光臨。要來幫忙嗎？'],
+    hello: { haru: ['いらっしゃい！ てつだって くれるかい？', '歡迎！要來幫忙嗎？'], zhang: ['…いらっしゃい。はたらく？', '……歡迎光臨。要來打工嗎？'], zhou: ['あら、いらっしゃい。てつだって くれる？', '哎呀，歡迎光臨。要來幫忙嗎？'],
       huang: ['はやく！ おみせ、てつだって！', '快！來幫忙顧店！'], wang: ['ニーハオ！ ぶたまん、つくる？', '你好！要來包豬肉包嗎？'] },
     // the hero's yes to it, one of the choices under it (2026-11-20, the user: picked as a reply in the talk, not a blue button)
-    yes: { zhang: ['はい、はたらきます。', '好，我來打工。'], zhou: ['はい、てつだいます。', '好，我來幫忙。'], huang: ['はい、いま いきます！', '好，馬上來！'], wang: ['はい、つくります！', '好，我來包！'] },
+    yes: { haru: ['はい、てつだいます！', '好，我來幫忙！'], zhang: ['はい、はたらきます。', '好，我來打工。'], zhou: ['はい、てつだいます。', '好，我來幫忙。'], huang: ['はい、いま いきます！', '好，馬上來！'], wang: ['はい、つくります！', '好，我來包！'] },
     first: {
+      bento: [['haru', 'でんしゃは まって くれないよ！ はやく わたしてね！', '電車可不會等人喔！要快點遞給客人喔！']],   // 駅前 (2026-11-20)
       till: [['zhang', '…ゆっくりで いい。まちがえないで。', '……慢慢來沒關係。別算錯。']],   // 收銀 (2026-11-19, in place of 整理貨架)
       counter: [['zhou', 'おきゃくさんが いった ものを わたしてね。', '客人說要什麼，就拿給他喔。'], ['zhou', '「いらっしゃいませ」「ありがとうございました」、げんきよく ね。', '「歡迎光臨」「謝謝光臨」，要有精神喔。']],
       // 2026-11-19: the rules in Chinese went to the rules card before a shift (WORK.intro); what they say in Japanese stays
@@ -2697,6 +2698,16 @@ const TOWN = {
       buns: [['wang', 'ぶたまんは こころ！', '豬肉包就是心！']] },
     // what each says during a shift: a miss, a right one now and then, the end
     say: {
+      // 駅弁 (2026-11-20, ハル): a train in, its bell, a word now and then, a train gone with someone unserved, the end (all: every
+      // passenger served at once); yes／no: the hero's answer to an ask put right; usual: what 中村's いつもの is (m2: the tea hot);
+      // the passengers' (cust) and the hero's (me) few words
+      bento: { who: 'haru', train: ['きたよ！', '車來了！'], bell: ['もう でるよ！', '要開了喔！'], ok: [['いいね！', '不錯！'], ['はやいね！', '真快！'], ['じょうずだね！', '很厲害喔！']],
+        gone: ['いっちゃったね。つぎは がんばろう！', '開走了。下一班加油！'], end: ['おつかれさん！ たすかったよ！', '辛苦了！幫了大忙！'], all: ['あんた、さいのうが あるね！', '你很有天分喔！'],
+        yes: ['あるよ！', '有喔！'], no: ['ないよ！', '沒有喔！'],
+        usual: ['{中村|なかむら}さんの「いつもの」は、おにぎり {二|ふた}つと お{茶|ちゃ} {一本|いっぽん}だよ！', '中村先生的「老樣子」是兩個飯糰、一瓶茶喔！'],
+        usual2: ['{中村|なかむら}さんの「いつもの」は、おにぎり {二|ふた}つと あたたかい お{茶|ちゃ} {一本|いっぽん}だよ！', '中村先生的「老樣子」是兩個飯糰、一瓶熱茶喔！'],
+        cust: { call: ['すみません！', '不好意思！'], thanks: ['ありがとう！', '謝謝！'], wrong: ['ちがいます。', '不對喔。'], hurry: ['はやく！', '快點！'] },
+        me: { give: ['はい、どうぞ！', '來，請拿好！'], yes: ['はい、あります。', '有的。'], no: ['すみません、ありません。', '不好意思，沒有。'] } },
       till: { who: 'zhang', miss: ['ちがう！', '不對！'], ok: [['よし。', '好。'], ['…うん。', '……嗯。']], end: ['…おつかれさま。たすかった。', '……辛苦了。幫了大忙。'] },
       // 包包子 (2026-11-15: a kana board, the bun a step on with each right tap): 王's ちがう！ in print, his over-the-top delight at a
       // perfect bun (the cooking-anime way the user asked for, 2026-11-14: the style only), and at a whole shift right in time
@@ -2758,7 +2769,22 @@ const TOWN = {
     LINE: [['shirasagi', '{白鷺|しらさぎ}', 24, 1], ['okawa', '{大川|おおかわ}', 18, 0], ['hanada', '{花田|はなだ}', 13, 0], ['kawaguchi', '{川口|かわぐち}', 8, 1], ['minato', 'みなと', 3, 1], ['minatoko', 'みなと{港|こう}', 0, 1]],
     FARES: [[3, 140], [6, 170], [10, 220], [15, 260], [21, 310], [30, 350]],
     TIMES: [[2, '普通', 'minatoko'], [10, '普通', 'shirasagi'], [17, '快速', 'minatoko'], [25, '快速', 'shirasagi'], [32, '普通', 'minatoko'], [40, '普通', 'shirasagi'], [47, '快速', 'minatoko'], [55, '快速', 'shirasagi']],
-    FIRST: 6, LAST: 22, TRACK: { shirasagi: 1, minatoko: 2 }
+    FIRST: 6, LAST: 22, TRACK: { shirasagi: 1, minatoko: 2 },
+    // 駅弁の立ち売り (2026-11-20, spec §4): the tray's goods [id, word, picture, counter (つ, 本, none), hot／cold (from m2, in place of
+    // the one お茶), 中文]; two things asked for together (pairs: [id, n, id, n] — お茶 hot or cold from m2); an ask first (have:
+    // [line, 中文, what of the tray it is (none: not sold here), what instead, how many]); from m6 a reason first (why: [reason, 中文,
+    // what, how many]); 中村's いつもの (おにぎり ふたつ, お茶 いっぽん)
+    bento: {
+      goods: [['bento', 'お{弁当|べんとう}', 'お弁当', 'つ', 0, '便當'], ['onigiri', 'おにぎり', 'おにぎり', 'つ', 0, '飯糰'], ['sand', 'サンドイッチ', 'サンドイッチ', 'つ', 0, '三明治'], ['mikan', 'みかん', 'みかん', 'つ', 0, '橘子'],
+        ['tea', 'お{茶|ちゃ}', 'bottle-tea', '本', 0, '茶'], ['tea_hot', 'あたたかい お{茶|ちゃ}', 'bottle-hot', '本', 'hot', '熱茶'], ['tea_cold', 'つめたい お{茶|ちゃ}', 'bottle-cold', '本', 'cold', '冷茶'],
+        ['water', '{水|みず}', '水', '本', 0, '水'], ['juice', 'ジュース', 'ジュース', '本', 0, '果汁'], ['paper', '{新聞|しんぶん}', '新聞', '', 0, '報紙']],
+      pairs: [['bento', 1, 'tea', 1], ['bento', 2, 'tea', 2], ['onigiri', 2, 'tea', 1], ['onigiri', 3, 'water', 1], ['sand', 1, 'juice', 1], ['sand', 2, 'tea', 2], ['bento', 1, 'water', 1], ['mikan', 3, 'juice', 1],
+        ['onigiri', 1, 'juice', 2], ['bento', 1, 'paper', 1], ['sand', 1, 'tea', 1], ['mikan', 2, 'tea', 1], ['bento', 3, 'tea', 3], ['onigiri', 2, 'water', 2]],
+      have: [['ビール、ありますか。', '有啤酒嗎？', null, 'tea', 1], ['アイスクリーム、ありますか。', '有冰淇淋嗎？', null, 'juice', 1], ['コーヒー、ありますか。', '有咖啡嗎？', null, 'tea', 2],
+        ['おにぎり、ありますか。', '有飯糰嗎？', 'onigiri', null, 2], ['お{弁当|べんとう}、ありますか。', '有便當嗎？', 'bento', null, 1], ['{水|みず}、ありますか。', '有水嗎？', 'water', null, 2]],
+      why: [['{寒|さむ}いので', '好冷，所以', 'tea', 1], ['{時間|じかん}が ないので', '沒時間了，所以', 'onigiri', 2], ['のどが かわいたので', '口好渴，所以', 'water', 1], ['{子|こ}どもが いるので', '帶著小孩，所以', 'juice', 2]],
+      usual: 'いつもの、お{願|ねが}いします。', usualZh: '老樣子，麻煩了。', usualItems: [['onigiri', 2], ['tea', 1]]
+    }
   },
   YATAI: {
     ryuho: { name: '龍鳳飯店の店長', kana: 'りゅうほうはんてんの てんちょう', role: '中華料理店', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'smile', beard: 'none', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'chefcap' } },   // 中華街 (2026-11-14)

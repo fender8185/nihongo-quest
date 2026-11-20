@@ -109,6 +109,63 @@ def test_platform_trains_come_and_go(b):
     assert '1in' in s and '1stop+open' in s and '1out' in s and '2in' in s and s.index('1in') < s.index('1stop+open') < s.index('1out') < s.index('2in'), r
     assert r['led'], r
 
+# ---- 駅弁の立ち売り (spec §4) ----
+# what a passenger wants follows the unit: one tea before m2, hot and cold after; one to three of a thing, at most two things; three
+# trains of 3, 3 and 4, nobody twice on a train
+def test_bento_orders_follow_the_unit(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const ids = (o) => o.items.map(([id]) => id), out = {};
+      state.currentUnit = 'm1'; out.goods1 = BENTO.goods().map((g) => g[0]); let a = []; for (let i = 0; i < 20; i++) a = a.concat(BENTO.make().flat());
+      state.currentUnit = 'm2'; out.goods2 = BENTO.goods().map((g) => g[0]); let c = [], trains = []; for (let i = 0; i < 20; i++) { const m = BENTO.make(); trains.push(m.map((t) => t.length).join()); c = c.concat(m.flat()); if (m.some((t) => new Set(t.map((o) => o.who)).size !== t.length)) out.twice = true; }
+      out.hot1 = a.some((o) => ids(o).some((x) => /tea_/.test(x))); out.plain2 = c.some((o) => ids(o).includes('tea')); out.hot2 = c.some((o) => ids(o).includes('tea_hot')) && c.some((o) => ids(o).includes('tea_cold'));
+      out.counts = [...new Set(c.flatMap((o) => o.items.map(([, n]) => n)))].sort(); out.most = Math.max(...c.map((o) => o.items.length)); out.trains = [...new Set(trains)];
+      out.lines = c.slice(0, 3).map((o) => o.line); return JSON.stringify(out); })()"""))
+    assert 'tea' in r['goods1'] and 'tea_hot' not in r['goods1'] and 'tea_hot' in r['goods2'] and 'tea_cold' in r['goods2'] and 'tea' not in r['goods2'], r
+    assert not r['hot1'] and not r['plain2'] and r['hot2'] and r['counts'] == [1, 2, 3] and r['most'] <= 2 and r['trains'] == ['3,3,4'] and not r.get('twice'), r
+
+def test_bento_counter_readings(b):
+    r = json.loads(ev(b, "JSON.stringify([1, 2, 3].map((n) => BENTO.said('tea', n)).concat([1, 2, 3].map((n) => BENTO.said('onigiri', n)), [BENTO.said('tea_hot', 2), BENTO.said('paper', 1)]))"))
+    assert r == ['お{茶|ちゃ}を {一本|いっぽん}', 'お{茶|ちゃ}を {二本|にほん}', 'お{茶|ちゃ}を {三本|さんぼん}', 'おにぎりを {一|ひと}つ', 'おにぎりを {二|ふた}つ', 'おにぎりを {三|みっ}つ', 'あたたかい お{茶|ちゃ}を {二本|にほん}', '{新聞|しんぶん}を'], r
+
+# a shift driven by hand: each train's windows served by tapping them, taking what they want and どうぞ — one wrong first on the
+# second train (a miss), one left unserved on the third (lost when it goes); ten tasks, paid for the job (120) and the grade
+BENTO_HELP = """ window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve(); JOBS.pat.scale = 0.03; s(); reg();
+  state.work.res['2026-10-20'] = { place: 'bento', done: 10, score: {}, yen: 1, grade: 'C' };   // been before: no first word
+  const card = () => document.querySelector('.wk-bento'), click = (q) => { const e = card() && card().querySelector(q); if (e) e.click(); return Boolean(e); };
+  const calling = () => [...document.querySelectorAll('.wk-bento .bt-win.calling')].map((x) => Number(x.dataset.w));
+  async function serve(w, wrong) {
+    click(`.bt-win[data-w="${w}"]`); await wait(60); const o = BENTO_RUN.now().wins.find((x) => x.w === w).o;
+    if (o.kind === 'have') { click(`.bt-reply[data-r="${o.has ? 'yes' : 'no'}"]`); await wait(80); }
+    const items = BENTO_RUN.now().wins.find((x) => x.w === w).o.items;
+    if (wrong) { click(`.bt-good[data-g="${items[0][0] === 'paper' ? 'water' : 'paper'}"]`); click('.bt-give'); await wait(60); click('.bt-hand [data-drop]'); }
+    for (const [id, n] of items) for (let i = 0; i < n; i++) click(`.bt-good[data-g="${id}"]`);
+    click('.bt-give'); await wait(60);
+  }"""
+
+def test_bento_shift_runs_three_trains(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + BENTO_HELP + """ location.hash = '#/platform'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      WORK.start(yard(), 'bento'); const out = { trains: [] };
+      for (let t = 0; t < 3; t++) {
+        for (let i = 0; i < 200 && !(BENTO_RUN.now() && BENTO_RUN.now().t === t && BENTO_RUN.now().phase === 'stop'); i++) await wait(30);
+        const want = BENTO_RUN.now().wins.length; out.trains.push(want); let served = 0;
+        for (let i = 0; i < 300 && served < (t === 2 ? want - 1 : want); i++) { const c = calling(); if (c.length) { await serve(c[0], t === 1 && served === 0); served++; } else await wait(30); }
+      }
+      for (let i = 0; i < 300 && WORK.today().yen === undefined; i++) await wait(30);
+      const r = WORK.today(); out.score = r.score; out.yen = r.yen; out.grade = r.grade; document.querySelectorAll('.wk-result').forEach((x) => x.remove()); CLASS.close(); JOBS.pat.scale = 1;
+      return JSON.stringify(out); })()"""))
+    v = sorted(r['score'].values())
+    assert r['trains'] == [3, 3, 4] and len(r['score']) == 10 and v == [0, 0, 0, 0, 0, 0, 0, 0, 1, 3], r
+    assert r['grade'] == 'B' and r['yen'] == 143, r   # 8 of 10 at once (B 20) on 120, 2% more for 中華街's 一人前
+
+# a shift left after the first train: taken up again at the second, its three passengers
+def test_bento_resume(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + BENTO_HELP + """ location.hash = '#/platform'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      WORK.start(yard(), 'bento'); for (let i = 0; i < 200 && !(BENTO_RUN.now() && BENTO_RUN.now().phase === 'stop'); i++) await wait(30);
+      let served = 0; for (let i = 0; i < 300 && served < 3; i++) { const c = calling(); if (c.length) { await serve(c[0]); served++; } else await wait(30); }
+      await wait(100); CLASS.close(); await wait(100); const done = WORK.today().done;
+      WORK.start(yard(), 'bento'); for (let i = 0; i < 200 && !(BENTO_RUN.now() && BENTO_RUN.now().phase === 'stop'); i++) await wait(30);
+      const out = { done, t: BENTO_RUN.now().t, wins: BENTO_RUN.now().wins.length }; CLASS.close(); JOBS.pat.scale = 1; return JSON.stringify(out); })()"""))
+    assert r == {'done': 3, 't': 1, 'wins': 3}, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
