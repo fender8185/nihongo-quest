@@ -255,6 +255,7 @@ const PLACE_USE = {
     { id: 'gate', name: '剪票口', box: [480, 150, 640, 236], kind: 'do', go: [-20, 126], back: 1, pose: 'reach', say: 'ピッ', open: (y) => yGo(y.querySelector('.use-btn[data-use="gate"]') || y, 'platform') },   // through, up to the platform (2026-11-20)
     { id: 'board', name: '電子看板', box: [448, 104, 672, 138], kind: 'do', go: [60, 126], back: 1, pose: 'look', toast: () => { const h = Math.floor(sceneHour()); return `下一班電車：${h}:30 快速 みなと港・${h}:45 普通 白鷺`; } },
     { id: 'koban', name: '交番', box: [880, 140, 1006, 236], kind: 'do', go: [384, 126], back: 1, pose: 'wave', say: 'こんにちは！' },
+    { id: 'kenbai', name: '券売機', box: [328, 182, 438, 236], kind: 'do', go: [-217, 122], back: 1, pose: 'reach', open: (y) => RIDE.machine(y, 'minato') },   // the hero's tickets (2026-11-20)
     { id: 'jobs', name: '求人看板', box: [688, 114, 802, 178], kind: 'do', go: [145, 126], back: 1, pose: 'look', say: 'アルバイト…？', open: () => WORK.board('ekimae') }],   // 駅前's (2026-11-20), on the station's front
   // みなと駅のホーム (2026-11-20, docs/superpowers/specs/2026-11-20-ekimae-work-design.md §3.4)
   platform: [
@@ -265,7 +266,10 @@ const PLACE_USE = {
     { id: 'bins', name: '垃圾桶', box: [588, 206, 634, 240], kind: 'do', go: [11, 112], back: 1, pose: 'look', toast: () => '垃圾桶，從左邊起：もえるゴミ（可燃）・かん、びん（罐、瓶）・ペットボトル（寶特瓶）' },
     { id: 'sign', name: '駅名標', box: [628, 130, 792, 186], kind: 'do', go: [110, 108], back: 1, pose: 'look', say: 'みなと' },
     { id: 'board', name: '發車標', box: [520, 30, 700, 68], kind: 'do', go: [10, 104], back: 1, pose: 'look', toast: () => EKI.next(Math.floor(sceneHour()), Math.floor((sceneHour() % 1) * 60), 2).map((x) => `${x.t} ${x.kind} ${EKI.name(x.to)}（${x.track}番線）`).join('・') },
-    { id: 'wait', name: '待合室', box: [815, 146, 965, 240], kind: 'do', go: [290, 112], back: 1, pose: 'look', say: 'あったかい…' }],
+    { id: 'wait', name: '待合室', box: [815, 146, 965, 240], kind: 'do', go: [290, 112], back: 1, pose: 'look', say: 'あったかい…' },
+    // a train stopped, its doors open (PLATFORM puts the button over it): aboard — 1番線 by its middle door, 2番線 round by the stairs
+    { id: 'board1', name: '搭車', box: [300, 96, 700, 224], kind: 'do', go: [-110, 126], back: 1, pose: 'reach', when: () => false, open: (y) => RIDE.board(y, 1) },
+    { id: 'board2', name: '搭車', box: [330, 106, 800, 206], kind: 'do', go: [493, 118], back: 1, pose: 'reach', when: () => false, open: (y) => RIDE.board(y, 2) }],
   sento: [
     { id: 'milk', name: '牛奶販賣機', box: [158, 142, 224, 236], kind: 'do', go: [-409, 122], back: 1, pose: 'reach', say: 'ぷはー！', fx: 'milk', fxc: 'buy', buy: 'milk' },
     { id: 'cat', name: '貓', box: [304, 254, 358, 288], kind: 'do', go: [-270, 50], pose: 'crouch', say: '♡', fx: 'scat', fxc: 'purr', ms: 2600 },

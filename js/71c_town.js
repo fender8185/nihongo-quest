@@ -574,7 +574,7 @@ function talkLines() {
   TOWN.EVENTS.forEach((e) => e.lines.concat(e.met ? e.met.head : []).forEach((l) => (Array.isArray(l) ? add(l[0], l[1]) : (l.opts || []).forEach((o) => add('hero', o[0])))));   // met: the opening for one who knew them already
   Object.values(NPC.DOOR).forEach((ls) => ls.forEach((l) => add('hero', l[0])));
   DIARY.PAGES.forEach((p) => add('granny', DIARY.said(p)));
-  add('hero', TOWNEV.DROP_BY[0]); CRUISE.lines(add); YEN.lines(add); CLASS.lines(add); CHINA.lines(add); WORK.lines(add);   // the cruise's, buying with 円, 日本語教室's かるた and singing
+  add('hero', TOWNEV.DROP_BY[0]); CRUISE.lines(add); YEN.lines(add); CLASS.lines(add); CHINA.lines(add); WORK.lines(add); RIDE.lines(add);   // the cruise's, buying with 円, 日本語教室's かるた and singing
   Object.keys(TOWN.YATAI || {}).forEach((id) => { if (TOWN.YATAI[id].scoop) add(id, TOWN.YATAI[id].scoop[0]); });   // the goldfish's old man
   return out;
 }
@@ -977,6 +977,7 @@ function harborHtml() {
     ${TOWNEV.castHtml('harbor')}${CRUISE.callHtml()}
     <button type="button" class="thing way-btn" data-act="go-place" data-to="beach" aria-label="往海邊" style="margin-left:${HARBOR_PATH - 32}px;bottom:186px"><span class="tag">${ySign('wave', '往海邊')}</span></button>
     <button type="button" class="thing way-btn" data-act="go-place" data-to="street" aria-label="往大馬路" style="margin-left:${YARD_HALF - 72}px;bottom:70px"><span class="tag">${ySign('bus', '往大馬路')}</span></button>
+    ${RIDE.signHtml('minatoko')}
     <div class="ysel"></div>`;
 }
 // ひだまり公園 (test, 2026-11-10; the map joined up): below the town, along the street's right — a park on the hillside: houses up
@@ -1558,6 +1559,8 @@ const WAYS = {
   // 駅前's 改札 ↔ the platform (2026-11-20): through the gate and up; down the stairs at the platform's right end
   'station>platform': { out: () => [-20, 126], in: () => [[493, 120], [430, 96]] },
   'platform>station': { out: () => [493, 122], in: () => [[-20, 126], [-20, 92]] },
+  // off a train (RIDE, 2026-11-20): in from the station's side of the place (白鷺城, みなと漁港), out of the car at みなと's platform
+  'train>castle': { in: () => [[-590, 100], [-510, 100]] }, 'train>harbor': { in: () => [[-590, 40], [-510, 40]] }, 'train>platform': { in: () => [[-110, 126], [-110, 96]] },
   'town>park': { out: () => [180, 4], in: () => [[PARK_PATH, 214], [PARK_PATH - 20, 104]] },
   'park>town': { out: () => [PARK_PATH, 222], in: () => [[180, 6], [180, 50]] }
 };
@@ -2052,6 +2055,7 @@ function castleHtml() {
     </svg>
     ${yHeroHtml()}
     ${busPoleHtml('castle')}
+    ${RIDE.signHtml('shirasagi')}
     <div class="ysel"></div>`;
 }
 // the bus (test, 2026-11-09): sat on the bench, the bus comes in and its board shows the stops — 駅前, 月の湯, 稲荷神社, 白鷺城,

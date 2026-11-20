@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 89 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 90 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2839,6 +2839,14 @@ const TOWN = {
       spots: [[0, 0, 'library', '{図書館|としょかん}', '図書館', 'se'], [1, 0, 'park', '{公園|こうえん}', '公園', 'se'], [1, 1, 'post', '{郵便局|ゆうびんきょく}', '郵便局', 'nw'], [2, 1, 'hospital', '{病院|びょういん}', '病院', 'nw'],
         [0, 1, 'school', '{学校|がっこう}', '学校', 'se'], [1, 2, 'cafe', '{喫茶店|きっさてん}', '喫茶店', 'nw'], [2, 2, 'hotel', 'ホテル', 'ホテル', 'nw'], [0, 3, 'flowers', '{花屋|はなや}', '花屋', 'ne'], [2, 3, 'super', 'スーパー', 'スーパー', 'nw']],
       riders: ['nishimura', 'sophia', 'misaki', 'kaneda', 'umeko']
+    },
+    // the hero's own rides (2026-11-20, spec §9): the ticket machine's screen; the announcements in the car ({S}: a station as LINE
+    // writes it); 乗り越し精算 at the end ({P}: the rest to pay)
+    ride: {
+      pick: ['{行|い}き{先|さき}の {運賃|うんちん|車資}の ボタンを {押|お}して ください。', '請按目的地的票價按鈕。'], put: ['{P}です。お{金|かね}を {入|い}れて ください。', '{p} 日圓。請投錢。'],
+      take: ['きっぷを お{取|と}りください。', '請取票。'], short: ['お{金|かね}が たりません。', '錢不夠。'],
+      next: ['つぎは {S}、{S}です。', '下一站是{s}。'], end: ['{終点|しゅうてん|終點}、{S}です。お{忘|わす}れ{物|もの|遺忘的東西}の ないように ご{注意|ちゅうい|注意} ください。', '終點{s}到了。請注意不要遺忘隨身物品。'],
+      pay: ['{乗|の}り{越|こ}し {精算|せいさん|補票}：あと {P}', '補票：還要 {p} 日圓'], none: ['きっぷが ありません…。', '沒有車票……。']
     }
   },
   YATAI: {

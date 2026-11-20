@@ -130,7 +130,8 @@ const CAST_VOICE = {
   chen: ['Fenrir', 1.1, 0, 1], maria: ['Aoede', 1.1], hori: ['Alnilam', 0.86, 0, -1],   // 日本語教室 (2026-11-14): voices the town has, said their own way
   wang: ['Algenib', 1.06, 0, 1], ryuho: ['Schedar', 0.98],   // 中華街 (2026-11-14)
   zhou: ['Pulcherrima', 0.9], zhang: ['Achird', 0.96], huang: ['Puck', 1.14],   // 中華街大通り's keepers (2026-11-14)
-  haru: ['Gacrux', 1.06]   // みなと駅のホーム's bento seller (2026-11-20): an old woman, quick
+  haru: ['Gacrux', 1.06],   // みなと駅のホーム's bento seller (2026-11-20): an old woman, quick
+  ann: ['Kore', 0.96]   // みなと線's announcements in the car (2026-11-20)
 };
 // ムギ (2026-11-12, the user, by ear): a boy's voice pitched up, a mascot's — a grown man saying ワン, or a real bark beside a
 // plain voice, broke the spell; her lines open with ワン！ and no longer end in it (events.js 42)
@@ -929,7 +930,7 @@ function castPreviewHtml() {
     return `<div class="list-item cast-row${k === '' ? '' : ' cast-try'}"><button type="button" class="btn btn-sm btn-ghost btn-icon" data-act="cast-preview" data-who="${id}" data-try="${k}" aria-label="試聽${esc(name)}"${CAST_PREVIEW.busy === key ? ' disabled' : ''}>${CAST_PREVIEW.busy === key ? '…' : icon('speaker')}</button>
       <div class="grow"><div><b>${esc(name)}</b> <span class="muted small">${esc(sub)}</span></div>${line ? `<div class="small muted jp">${esc(line)}</div>` : ''}${said ? `<div class="small ${said.bad ? 'bad' : 'muted'}">${esc(said.text)}</div>` : ''}</div></div>`; };
   return Object.keys(CAST_VOICE).map((id) => {
-    const p = id === 'hero' ? { name: '主角', role: '' } : NPCS[id] || TOWN.CAST[id] || CRUISE.person(id) || (TOWN.YATAI || {})[id] || { name: id, role: '' }, v = CAST_VOICE[id];   // the cruise's passengers, the 緣日's stall keepers too
+    const p = id === 'hero' ? { name: '主角', role: '' } : id === 'ann' ? { name: '車內廣播', role: 'みなと線' } : NPCS[id] || TOWN.CAST[id] || CRUISE.person(id) || (TOWN.YATAI || {})[id] || { name: id, role: '' }, v = CAST_VOICE[id];   // the cruise's passengers, the 緣日's stall keepers too
     return row(id, '', p.name, `${p.role || ''}${p.role ? '・' : ''}${v[0]}${v[2] ? `（音調 +${v[2]}）` : ''}（${voiceGender(v) === 'f' ? '女聲' : '男聲'}）`, castLine(castSample(id)).replace(CAST_MARK, '$1'))
       + (CAST_TRY[id] || []).map((t, k) => row(id, String(k), `${p.name}候選 ${k + 1}`, t[3], '')).join('');
   }).join('');

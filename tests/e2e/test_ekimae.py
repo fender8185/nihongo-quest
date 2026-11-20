@@ -321,6 +321,43 @@ def test_taxi_wrong_turns_and_resume(b):
     assert r['want0'] == 'right' and r['still'] == '1,3' and r['again'] == 'right', r
     assert r['want1'] == 'straight' and r['score'] == {'0': 1, '1': 0} and r['k'] == 2, r   # 二つ目's first crossing straight on by itself: no miss
 
+# ---- 券売機 and the train (spec §9) ----
+# arrive(to): off at the end of the line, walked in (a click on the way in would race his walk)
+RIDE_HELP = """ window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve(); RIDE.speed = 25; RIDE.keep(null); state.purse.gift = 1000; saveState();
+  const card = (c) => document.querySelector(c), click = (q) => { const e = document.querySelector(q); if (e && !e.disabled) e.click(); return Boolean(e && !e.disabled); };
+  async function arrive(to) { for (let i = 0; i < 400 && !(RIDE.now() && RIDE.now().phase === 'end'); i++) await wait(20); click('.rd-off'); for (let i = 0; i < 100 && location.hash !== to; i++) await wait(50); await wait(900); }"""
+
+# the fare pressed and the money in: a ticket (from みなと, 310) and 310 円 gone; too little money: none
+def test_ticket_machine_sells_by_fare(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + RIDE_HELP + """ location.hash = '#/station'; route(); await wait(300); const out = {};
+      RIDE.machine(yard(), 'minato'); await wait(100); out.fares = [...document.querySelectorAll('.kb-fare')].map((x) => Number(x.dataset.f));
+      click('.kb-fare[data-f="310"]'); await wait(60); click('.kb-pay'); await wait(300); out.ticket = RIDE.ticket(); out.left = yenBalance(); CLASS.close();
+      state.purse.gift = 0; state.purse.spent = {}; saveState(); RIDE.keep(null); RIDE.machine(yard(), 'minato'); await wait(100); click('.kb-fare[data-f="140"]'); await wait(60); click('.kb-pay'); await wait(300);
+      out.none = RIDE.ticket(); out.said = document.querySelector('.kb-screen').textContent; CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['fares'] == [140, 170, 220, 260, 310], r
+    assert r['ticket']['from'] == 'minato' and r['ticket']['fare'] == 310 and r['left'] == 690, r
+    assert r['none'] is None and 'たりません' in r['said'], r
+
+# aboard at みなと's platform: no ticket, no ride; with one, to 白鷺 by every stop (つぎは…), off at the castle, the ticket used up
+def test_ride_to_shirasagi(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + RIDE_HELP + """ location.hash = '#/platform'; route(); await wait(300); const out = { said: [] };
+      RIDE.board(yard(), 1); await wait(200); out.without = Boolean(RIDE.now());
+      RIDE.keep({ from: 'minato', fare: 310, day: todayStr() }); window.speakAs = (w, l) => { if (w === 'ann') out.said.push(l); return Promise.resolve(); };
+      RIDE.board(yard(), 1); await wait(100); out.to = RIDE.now() && RIDE.now().to; await arrive('#/castle');
+      out.at = location.hash; out.ticket = RIDE.ticket(); out.left = yenBalance(); return JSON.stringify(out); })()"""))
+    assert not r['without'] and r['to'] == 'shirasagi' and r['at'] == '#/castle' and r['ticket'] is None and r['left'] == 1000, r
+    assert [l for l in r['said'] if l.startswith('つぎは')] == ['つぎは {川口|かわぐち}、{川口|かわぐち}です。', 'つぎは {花田|はなだ}、{花田|はなだ}です。', 'つぎは {大川|おおかわ}、{大川|おおかわ}です。', 'つぎは {白鷺|しらさぎ}、{白鷺|しらさぎ}です。'], r
+
+# a ticket short of the end: the rest paid there (乗り越し精算: 170 to 白鷺's 310); back from 白鷺 by its station's sign, home to みなと's platform
+def test_ride_short_ticket_and_back(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + RIDE_HELP + """ location.hash = '#/platform'; route(); await wait(300); const out = {};
+      RIDE.keep({ from: 'minato', fare: 170, day: todayStr() }); RIDE.board(yard(), 1); for (let i = 0; i < 400 && !(RIDE.now() && RIDE.now().phase === 'end'); i++) await wait(20);
+      out.short = document.querySelector('.rd-card').textContent.includes('140'); await arrive('#/castle'); out.paid = yenBalance();
+      document.querySelector('.eki-btn[data-act="eki-sign"]').click(); for (let i = 0; i < 100 && !document.querySelector('.kb-card'); i++) await wait(50);
+      out.here = document.querySelector('.kb-card').dataset.here; click('.kb-fare[data-f="310"]'); await wait(60); click('.kb-pay'); await wait(200); click('.kb-ride'); await arrive('#/platform');
+      out.home = location.hash; out.left = yenBalance(); return JSON.stringify(out); })()"""))
+    assert r['short'] and r['paid'] == 860 and r['here'] == 'shirasagi' and r['home'] == '#/platform' and r['left'] == 550, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

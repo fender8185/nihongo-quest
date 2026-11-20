@@ -259,7 +259,8 @@ const ACTIONS = {
   'enter-house': (el) => yUse(el, [0, 214], () => { ROOM.heroIn(); SND.play('door-close', { delay: 0.3 }); sceneGo('#/today', 'entering'); }),   // the hero walks to the door first (1.2.0)
   'yard-shop': (el) => yClimb(el),
   'bus-stop': (el) => busSit(el),   // test: the hero sits on the bench
-  'scene-use': (el) => sceneUse(el),   // a thing in a place: the hero walks over and uses it (PLACE_USE)
+  'scene-use': (el) => sceneUse(el),
+  'eki-sign': (el) => RIDE.fromSign(el),   // 白鷺駅, みなと港駅: the ticket machine there, the ride home (2026-11-20)   // a thing in a place: the hero walks over and uses it (PLACE_USE)
   'go-place': (el) => yGo(el, el.dataset.to),   // test: to the main road, the beach, home to the yard
   'npc-talk': (el) => (el.dataset.npc === 'huang' && typeof HALL === 'object' && HALL.on() ? HALL.goPass() : TOWNEV.talk(el)),   // 黄 on a 外場 shift: the dish at the pass
   'hall-cust': (el) => HALL.tap(el),   // a customer in らいらいけん (外場, 2026-11-15)

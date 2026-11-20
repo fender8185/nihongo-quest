@@ -685,6 +685,22 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .tx-blink { opacity: 0; } .tx-car.blink-l .tx-blink.l, .tx-car.blink-r .tx-blink.r { animation: txBlink .4s steps(2) infinite; } @keyframes txBlink { 50% { opacity: 1; } }
 .tx-ctl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; } .tx-go { min-height: 48px; font-size: 18px; } .tx-go.stop { background: #d0453c; color: #fff; } .tx-go.picked { box-shadow: 0 0 0 3px #f2c94c; } .tx-go:disabled { opacity: .45; }
 .tx-pays { display: grid; gap: 6px; margin-top: 8px; } .tx-pays:empty { display: none; } .tx-pay { min-height: 44px; font-size: 17px; } .tx-pay.wk-bad { animation: shake .3s ease; }
+/* 券売機 and the ride (2026-11-20): the machine (its screen, a button a fare, the coin slot, the ticket out); inside the car (the
+   world going by the windows while it runs, the straps swaying, the LED over the door), the announcement, 降りる */
+.kb-card .cls-card, .rd-card .cls-card { background: #eef1ee; color: #2b2b33; border-bottom: 10px solid #3f9a8c; }
+.kb-machine { display: grid; gap: 8px; padding: 10px; border-radius: 12px; background: #d9604c; box-shadow: inset 0 0 0 3px #b8463a; }
+.kb-screen { display: grid; gap: 2px; margin: 0; padding: 8px 10px; border-radius: 8px; background: #cfe6ec; color: #1c2a3a; font-size: 15px; } .kb-screen span { font-size: 12px; color: #4a5a6a; } .kb-screen.bad { background: #fde4cf; color: #8a3a1a; } .kb-screen.ok { background: #d8f0dc; }
+.kb-fares { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; } .kb-fare { display: grid; justify-items: center; min-height: 48px; padding: 4px; border: 0; border-radius: 8px; background: #fbf7ec; font-size: 19px; font-weight: 700; color: #2b2b33; box-shadow: 0 3px 0 #b8b2a4; cursor: pointer; } .kb-fare small { font-size: 10px; font-weight: 400; color: #8a7a6e; } .kb-fare.on { box-shadow: 0 0 0 3px #f2c94c, 0 3px 0 #b8b2a4; }
+.kb-row { display: flex; gap: 8px; align-items: center; justify-content: space-between; } .kb-wallet { display: flex; align-items: center; gap: 4px; padding: 4px 10px; white-space: nowrap; border-radius: 999px; background: #fbf7ec; font-weight: 700; } .kb-pay { min-height: 44px; }
+.kb-slot { display: grid; gap: 6px; justify-items: center; } .kb-ticket { display: grid; justify-items: center; padding: 6px 14px; border-radius: 4px; background: #f6e7c0; box-shadow: 0 2px 6px rgba(0, 0, 0, .2); animation: mdPrint .7s ease-out; } .kb-ticket b { font-size: 18px; } .kb-ticket small { color: #8a7a6e; font-size: 11px; }
+.kb-tip { margin: 0; font-size: 13px; color: #fff; } .kb-ride { min-height: 44px; }
+.rd-box { position: relative; margin: 6px -6px; border-radius: 12px; overflow: hidden; } .rd-car { display: block; width: 100%; height: auto; }
+.rd-led { position: absolute; top: 6px; left: 50%; z-index: 1; transform: translateX(-50%); margin: 0; padding: 2px 12px; border-radius: 4px; background: #141418; color: #ffae3a; font-size: 15px; font-weight: 700; white-space: nowrap; } .rd-led small { font-size: 11px; color: #5fd07a; } .rd-led rt { font-size: 8px; color: #c9cdd4; }
+.rd-strip { animation: rdRun 7s linear infinite; } .rd-car.stop .rd-strip { animation-play-state: paused; } @keyframes rdRun { to { transform: translateX(-1080px); } }
+.rd-strap { transform-box: fill-box; transform-origin: 50% 0; animation: rdSway 2.4s ease-in-out infinite alternate; } .rd-car.stop .rd-strap { animation-duration: 6s; } @keyframes rdSway { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+.rd-ann { display: grid; gap: 2px; min-height: 48px; margin: 6px 0; padding: 6px 10px; border-radius: 10px; background: #fff; font-size: 15px; } .rd-ann span { font-size: 12px; color: #8a7a6e; }
+.rd-end { display: grid; gap: 6px; } .rd-pay { margin: 0; padding: 6px 10px; border-radius: 8px; background: #fde4cf; color: #8a3a1a; } .rd-pay small { display: block; font-size: 12px; } .rd-off { min-height: 48px; font-size: 18px; }
+@media (prefers-reduced-motion: reduce) { .rd-strip, .rd-strap { animation: none; } }
 .wk-lock { margin: 10px 0 4px; padding: 8px 10px; border-radius: 10px; background: #fde4cf; color: #8a3a1a; font-size: 14px; line-height: 1.5; }
 .wk-board .cls-card { background: #fbf3e2; color: #2b2b33; border-top: 8px solid #c8322a; } .wk-bhead { display: grid; gap: 2px; padding-right: 40px; } .wk-bhead b { font-size: 21px; color: #a82828; } .wk-bhead span { font-size: 13px; color: #8a7a6e; }
 .wk-jobs { list-style: none; margin: 12px 0 8px; padding: 0; display: grid; gap: 6px; } .wk-job { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: rgba(138, 122, 110, .1); color: #6a5a4e; } .wk-job.ok { background: rgba(47, 122, 106, .12); color: #2b2b33; }
@@ -824,7 +840,7 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 @keyframes talkShake { 25% { transform: translateX(-6px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
 .talk-why { margin: 8px 0 0; font-size: 13px; color: var(--bad, #c0503a); }
 .talk-next { position: absolute; right: 14px; bottom: 8px; font-size: 11px; color: var(--fg-3); animation: talkNext 1s ease-in-out infinite alternate; } @keyframes talkNext { to { transform: translateY(3px); } }
-.sky .way-btn { position: absolute; left: 50%; width: 64px; height: 44px; margin-left: -32px; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; } .sky .way-btn .tag { top: -8px; }
+.sky :is(.way-btn, .eki-btn) { position: absolute; left: 50%; width: 64px; height: 44px; margin-left: -32px; pointer-events: auto; padding: 0; border: 0; background: none; cursor: pointer; border-radius: 12px; } .sky .way-btn .tag { top: -8px; }
 /* ways one might not find (yWayEdge, 2026-11-19): named always; one near a side slid in to stay whole */
 .sky .way-edge { z-index: 9000; } .sky .way-edge .tag { padding-right: 12px; transform: translate(calc(-50% + var(--nx, 0px)), calc(-50% + var(--ny, 0px))); } .sky .way-edge .tag-name { display: inline; }
 .sky .way-edge:active .tag { transform: translate(calc(-50% + var(--nx, 0px)), calc(-50% + var(--ny, 0px))) scale(.94); }

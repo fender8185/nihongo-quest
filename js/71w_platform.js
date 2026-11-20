@@ -202,6 +202,14 @@ const PLATFORM = (() => {
   function clear() { people.splice(0).forEach((p) => p.el.remove()); cancelAnimationFrame(raf); raf = 0; at = 0; }
   const ms = (s) => (s * 1000) / api.speed;
   const still = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // a train standing with its doors open: a button over it to get on (PLACE_USE.platform board1 / board2: RIDE.board)
+  function boardBtn(y, track, on) {
+    y.querySelectorAll(`.pf-board[data-use="board${track}"]`).forEach((b) => b.remove()); if (!on) return;
+    const t = PLACE_USE.platform.find((x) => x.id === 'board' + track), w = y.querySelector('.yworld'); if (!t || !w) return; const [x0, y0, x1, y1] = t.box, b = document.createElement('button');
+    b.type = 'button'; b.className = 'use-btn thing signed pf-board'; b.dataset.act = 'scene-use'; b.dataset.use = 'board' + track; b.setAttribute('aria-label', '搭車');
+    b.style.cssText = `margin-left:${x0 - 600}px;bottom:${370 - y1}px;width:${x1 - x0}px;height:${y1 - y0}px;z-index:${Math.round(150 - (370 - y1) / 4)};--tx:50%;--ty:40%`;
+    b.innerHTML = `<span class="tag">${ySign('bus', track === 1 ? '搭車（往白鷺）' : '搭車（往みなと港）')}</span>`; w.appendChild(b);
+  }
   // one train's call: in (slowing), stopped with its doors open, its bell, doors shut, away
   async function call(y, mine, track, x) {
     const g = y.querySelector(`.pf-train[data-track="${track}"]`), alive = () => run === mine && y.isConnected; if (!g || !alive()) return;
@@ -212,11 +220,11 @@ const PLATFORM = (() => {
     g.style.transition = still() ? 'none' : `transform ${ms(6) / 1000}s cubic-bezier(.12, .62, .3, 1)`; g.style.transform = 'translateX(0px)';
     if (track === 1) SND.play('train-in'); else SND.play('train-in', { vol: 0.5 });
     await wait(6.2); if (!alive()) return;
-    cur.phase = 'stop'; SND.play('door-chime', { vol: track === 1 ? 1 : 0.5 }); g.classList.add('open'); if (track === 1 && !quiet()) board(y);
+    cur.phase = 'stop'; SND.play('door-chime', { vol: track === 1 ? 1 : 0.5 }); g.classList.add('open'); boardBtn(y, track, true); if (track === 1 && !quiet()) board(y);
     await wait(9); if (!alive()) return;
     SND.play('dep-bell', { vol: track === 1 ? 0.8 : 0.4 });
     await wait(4); if (!alive()) return;
-    SND.play('door-chime', { vol: track === 1 ? 1 : 0.5 }); g.classList.remove('open');
+    SND.play('door-chime', { vol: track === 1 ? 1 : 0.5 }); g.classList.remove('open'); boardBtn(y, track, false);
     await wait(1.4); if (!alive()) return;
     cur.phase = 'out'; g.style.transition = still() ? 'none' : `transform ${ms(6) / 1000}s cubic-bezier(.6, 0, .9, .6)`; g.style.transform = `translateX(${-from}px)`;
     SND.play('train-out', { vol: track === 1 ? 1 : 0.5 });
