@@ -2750,6 +2750,16 @@ const TOWN = {
     fuku: [['たまご', '卵', 248], ['とうふ', '豆腐', 98], ['しょうゆ', '醤油', 328], ['ぎゅうにゅう', '牛乳', 218], ['おちゃ', 'お茶', 150], ['こめ', '米', 1480],
       ['さとう', '砂糖', 198], ['しお', '塩', 105], ['にく', '肉', 680], ['さかな', '魚', 450], ['みかん', 'みかん', 380], ['バナナ', 'バナナ', 158],
       ['ラーメン', 'ラーメン', 498], ['しゅうまい', 'しゅうまい', 645], ['はるまき', 'はるまき', 398], ['ぎょうざ', '餃子', 880]] },   // to the yen (2026-11-20): ones only 0, 5, 8 — two summed never end in 4 (よえん), 7 or 9
+  // 駅前の打工 (2026-11-20, docs/superpowers/specs/2026-11-20-ekimae-work-design.md §6): みなと線, the town's local line end to end —
+  // [id, name, km along the line, 快速 stops there]; fares go by the distance between two stations (FARES: [up to km, 大人 円]; 子ども
+  // half, under 10 円 dropped). Each hour FIRST–LAST from みなと: [minute, 普通／快速, to] — 白鷺 on 1番線, みなと港 on 2番線
+  // (原田's chat: 白鷺行きの普通 at 十分 and 四十分, the last at 22:40)
+  EKI: {
+    LINE: [['shirasagi', '{白鷺|しらさぎ}', 24, 1], ['okawa', '{大川|おおかわ}', 18, 0], ['hanada', '{花田|はなだ}', 13, 0], ['kawaguchi', '{川口|かわぐち}', 8, 1], ['minato', 'みなと', 3, 1], ['minatoko', 'みなと{港|こう}', 0, 1]],
+    FARES: [[3, 140], [6, 170], [10, 220], [15, 260], [21, 310], [30, 350]],
+    TIMES: [[2, '普通', 'minatoko'], [10, '普通', 'shirasagi'], [17, '快速', 'minatoko'], [25, '快速', 'shirasagi'], [32, '普通', 'minatoko'], [40, '普通', 'shirasagi'], [47, '快速', 'minatoko'], [55, '快速', 'shirasagi']],
+    FIRST: 6, LAST: 22, TRACK: { shirasagi: 1, minatoko: 2 }
+  },
   YATAI: {
     ryuho: { name: '龍鳳飯店の店長', kana: 'りゅうほうはんてんの てんちょう', role: '中華料理店', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'smile', beard: 'none', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'chefcap' } },   // 中華街 (2026-11-14)
     ojisan: { name: 'やきそば屋のおじさん', kana: 'やきそばやのおじさん', role: '炒麵、牛肉串、奶油馬鈴薯', look: { face: 'round', skin: '#e8bd98', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'happy', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'happi', top: '#d0574b', bottomStyle: 'shorts', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#2b2b33' }, wear: { head: 'nejiri' } },

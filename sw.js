@@ -45,6 +45,7 @@ const PRECACHE = [
   './js/71t_passers.js',
   './js/71u_hall.js',
   './js/71v_rairai.js',
+  './js/71w_eki.js',
   './js/72_course.js',
   './js/73_vocab.js',
   './js/74_mistakes.js',

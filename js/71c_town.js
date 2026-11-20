@@ -2151,7 +2151,7 @@ function stationHtml() {
     <circle cx="${x + 8}" cy="${F + 64}" r="4" ${hc('#7a8098', '#2c2f52')}/><path d="M${x + 5} ${F + 66.6} q2.6 2 5.2 .4" fill="none" ${hs('#6aa890', '#34506a')} stroke-width="1.8"/><path d="M${x + 5.6} ${F + 68} q2.4 1 4.6 -.2" fill="none" ${hs('#9a7ab0', '#3a3a6a')} stroke-width="1.2"/>
     <circle cx="${x + 9.3}" cy="${F + 63}" r=".95" fill="#d0682a"/><circle cx="${x + 9.4}" cy="${F + 63}" r=".4" fill="#1c1c22"/><path d="M${x + 12} ${F + 64} l3 1" ${hs('#d0904a', '#3a3d66')} stroke-width="1.6"/><circle cx="${x + 11.8}" cy="${F + 63.5}" r=".7" fill="#fff" fill-opacity=".7"/>
     <path d="M${x - 1} ${F + 75.6} v2.2 M${x + 3} ${F + 75.6} v2.2" ${hs('#d06a5a', '#4a3a50')} stroke-width="1.2"/></g>`;
-  const hr = Math.floor(sceneHour()), board = `次の電車　${hr}:30 快速 みなと港　・　${hr}:45 普通 白鷺　・　`;   // the scene's hour (2026-11-10)
+  const now = sceneHour(), board = `次の電車　${EKI.next(Math.floor(now), Math.round((now % 1) * 60), 2).map((x) => `${x.t} ${x.kind} ${EKI.name(x.to)}`).join('　・　')}　・　`;   // the scene's hour (2026-11-10); みなと線's timetable (2026-11-20)
   return `<svg class="land tall station-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
       <defs><clipPath id="stLed"><rect x="452" y="${F - 124}" width="216" height="20" rx="2"/></clipPath></defs>
       ${tower(20, 120, 320, '#b9c3cc')}${tower(150, 90, 250, '#c9ccd2')}${tower(760, 130, 360, '#b4bec8')}${tower(900, 100, 280, '#c4c8ce')}${tower(1020, 150, 330, '#b9c3cc')}

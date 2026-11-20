@@ -72,6 +72,23 @@ def test_a_job_not_built_yet_is_not_offered(b):
       return JSON.stringify({ built, offers: """ + EKI + """.filter((j) => !built.includes(j)).map((j) => WORK.offer(WORK.PLACES[j].who, WORK.PLACES[j].place)) }); })()"""))
     assert all(o is None for o in r['offers']), r
 
+# みなと線 (spec §6): the next trains from みなと by the clock (the day's first after the last), fares by the distance (子ども half,
+# under 10 円 dropped), the 快速's stops
+def test_timetable_fares_and_stops(b):
+    r = json.loads(ev(b, """JSON.stringify({ at: EKI.next(10, 24, 4).map((x) => [x.t, x.kind, x.to, x.track]), late: EKI.next(22, 58, 1).map((x) => [x.t, x.to]),
+      fares: ['minatoko', 'kawaguchi', 'hanada', 'okawa', 'shirasagi'].map((s) => [EKI.fare('minato', s), EKI.fare('minato', s, true)]), back: EKI.fare('shirasagi', 'minato'), far: EKI.fare('shirasagi', 'minatoko'),
+      rapid: EKI.stops('快速', 'shirasagi'), local: EKI.stops('普通', 'shirasagi'), port: EKI.stops('快速', 'minatoko'), names: [EKI.name('hanada'), EKI.kana('hanada')] })"""))
+    assert r['at'] == [['10:25', '快速', 'shirasagi', 1], ['10:32', '普通', 'minatoko', 2], ['10:40', '普通', 'shirasagi', 1], ['10:47', '快速', 'minatoko', 2]], r
+    assert r['late'] == [['6:02', 'minatoko']], r
+    assert r['fares'] == [[140, 70], [170, 80], [220, 110], [260, 130], [310, 150]] and r['back'] == 310 and r['far'] == 350, r
+    assert r['rapid'] == ['kawaguchi', 'shirasagi'] and r['local'] == ['kawaguchi', 'hanada', 'okawa', 'shirasagi'] and r['port'] == ['minatoko'], r
+    assert r['names'] == ['花田', 'はなだ'], r
+
+def test_the_station_board_runs_the_timetable(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const real = (sceneHour() - wakeOff() + 24) % 24; localStorage.setItem('nq_wake', JSON.stringify({ day: todayStr(), off: ((10.4 - real) % 24 + 24) % 24 }));
+      location.hash = '#/station'; route(); await wait(300); const t = document.querySelector('.station-land .fx-scroll text').textContent; localStorage.removeItem('nq_wake'); return JSON.stringify(t); })()"""))
+    assert '10:25 快速 白鷺' in r and '10:32 普通 みなと港' in r, r
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

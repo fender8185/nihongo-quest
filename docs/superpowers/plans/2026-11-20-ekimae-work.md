@@ -18,7 +18,7 @@
 - No real railway names, departure melodies or brand marks; places are the town's own.
 - Laughs/cries/elongated shouts never read by TTS (SFX or a plain rewrite).
 - Pay: 駅弁 120, きっぷ売り場 140, 落とし物 160, タクシー 180; units m1, m2, m3, m4; area opens at 中華街打工證 一人前.
-- みなと線 fares from みなと: 白鷺 310/160, 大川 260/130, 花田 220/110, 川口 170/90, みなと港 140/70; 快速 stops 川口・白鷺・みなと港; 1番線 白鷺方面, 2番線 みなと港方面; timetable each hour 6–22: 白鷺行き 普通 :10 :40, 快速 :25 :55; みなと港行き 普通 :02 :32, 快速 :17 :47.
+- みなと線 fares from みなと: 白鷺 310/150, 大川 260/130, 花田 220/110, 川口 170/80, みなと港 140/70 (by km bands; child half, under 10 円 dropped); 快速 stops 川口・白鷺・みなと港; 1番線 白鷺方面, 2番線 みなと港方面; timetable each hour 6–22: 白鷺行き 普通 :10 :40, 快速 :25 :55; みなと港行き 普通 :02 :32, 快速 :17 :47.
 - Before each push: the job's e2e file, then one full `bash scripts/test.sh` (ALL_OK), screenshots at 390×844 and 1280×800 looked at by me.
 - Remind the user to press 生成 with the count of new voiced lines after each push.
 
