@@ -50,7 +50,7 @@ def test_every_thing_on_the_street_answers_a_tap(b):
       out.signs = Object.fromEntries([...document.querySelectorAll('.dr-sign')].map((g) => [g.dataset.sign, [...g.querySelectorAll('text')].map((t) => t.textContent).join('')]));
       for (const id of out.uses.filter((u) => u !== 'rairai')) { document.querySelector(`.use-btn[data-use="${id}"]`).click(); await wait(1200); closeModal && closeModal(true); }   // らいらいけん: in through its door (test_rairai.py)
       return JSON.stringify(Object.assign(out, { errs: __errs })); })()"""))
-    assert r['uses'] == sorted(['ranran', 'fuku', 'toka', 'rairai', 'kuriya', 'kohaku', 'board', 'hourai']), r
+    assert r['uses'] == sorted(['ranran', 'fuku', 'toka', 'rairai', 'kuriya', 'kohaku', 'hourai']), r   # the 求人看板 went out to the gate (2026-11-20)
     assert r['signs'] == {'ranran': 'らんらん', 'fuku': 'ふく', 'toka': 'とうか', 'rairai': 'らいらいけん', 'kuriya': 'くりや', 'kohaku': 'こはく'}, r
     assert r['errs'] == [], r
 
@@ -59,7 +59,7 @@ def test_the_street_fits_a_phone(b):
       location.hash = '#/chinadori'; route(); await wait(500);
       const off = [...document.querySelectorAll('.use-btn, .way-btn')].filter((u) => { const q = u.getBoundingClientRect(); return q.left < -1 || q.right > innerWidth + 1 || q.top < 0 || q.bottom > innerHeight + 1; }).map((u) => u.dataset.use || u.dataset.to);
       return JSON.stringify({ cam: yCamMax(), off, n: document.querySelectorAll('.use-btn').length }); })()""")])[-1])
-    assert r == {'cam': 0, 'off': [], 'n': 8}, r
+    assert r == {'cam': 0, 'off': [], 'n': 7}, r   # six shops and ほうらい (the 求人看板 out at the gate, 2026-11-20)
 
 # 2026-11-19 (the user: in 中華街 and らいらいけん, nothing said where to tap to go on): a named sign at 中華街's 牌樓 and at
 # らいらいけん's door, and the room's way out — each slid in to the screen's edge, an arrow its way, while its spot is off it

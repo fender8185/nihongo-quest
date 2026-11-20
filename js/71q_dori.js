@@ -59,12 +59,18 @@ function chinadoriHtml() {
     const sd = b.side, [wall, cloth, roof] = LOOK[b.id] || LOOK[b.look], L = b.L, tall = b.tall, a = DORI.pAt(b, 0), z = DORI.pAt(b, 1), at = (t) => DORI.pAt(b, t);
     const fr = (t0, t1, v0, v1, attrs, l = L) => along(sd, at(t0), at(t1), l, v0, v1, attrs);
     let g = facing(sd, a, L, L + 70, 0, tall, hc(wall, '#24264a')) + facing(sd, a, L, L + 70, 0, tall, 'fill="#1a1030" fill-opacity=".22"')   // its near end
+      + facing(sd, a, L, L + 70, 0, tall, 'fill="url(#drEnd)"') + facing(sd, a, L, L + 70, 150, 158, hc('#6a4228', '#1e1828'))
       + poly([P(sd, a, L - 16, tall), P(sd, a, L + 30, tall + 46), P(sd, a, L + 76, tall)], hc('#d8c8a8', '#202244'))   // the gable under the roof's end
       + fr(0, 1, 0, tall, hc(wall, '#2a2c48')) + fr(0, 1, 0, 8, hc('#a89a88', '#22243e'));   // the front, its plinth
     // the shop front, set back into the wall: dark inside, the far jamb catching the light, the counter standing out with goods on it
     g += fr(0.06, 0.94, 0, 112, hc('#3e2c22', '#14142a')) + facing(sd, at(0.94), L, L + 12, 0, 112, hc('#c8b898', '#2a2a46'))
       + fr(0.1, 0.9, 0, 40, hc('#8a5a34', '#2a2030'), L - 8) + level(sd, at(0.1), at(0.9), L - 8, L + 2, 40, hc('#b07a48', '#3a2a3a'))
       + [0.16, 0.34, 0.52, 0.7].map((t, i) => fr(t, t + 0.1, 40, 56 + (i % 2) * 8, hc(['#d0574b', '#e6b23c', '#3f9a8c', '#f2e8d4'][(i + (b.y0 | 0)) % 4], '#3a2a3a'), L - 5)).join('');
+    // 2026-11-20 (the user: 大通り looked flat): light and shade — a warm light inside, the wall under the awning and under the eaves
+    // in shadow, a beam between the floors standing out of it, the foot of the wall darker
+    g += fr(0.1, 0.9, 44, 108, 'fill="#ffb060" fill-opacity=".09"') + fr(0.06, 0.94, 88, 112, 'fill="#1a1030" fill-opacity=".22"')
+      + fr(0, 1, 146, 150, 'fill="#1a1030" fill-opacity=".14"') + fr(0, 1, 150, 158, hc('#8a5a34', '#2a2030'), L - 3) + facing(sd, a, L - 3, L, 150, 158, hc('#6a4228', '#1e1828'))
+      + fr(0, 1, tall - 34, tall, 'fill="#1a1030" fill-opacity=".16"') + fr(0, 1, 8, 22, 'fill="#1a1030" fill-opacity=".08"');
     if (!open && b.sign !== undefined) g += `<g class="dr-shut">${fr(0.06, 0.94, 0, 112, hc('#8f8f96', '#3a3c56'))}${[22, 44, 66, 88].map((v) => fr(0.06, 0.94, v, v + 2, hc('#6f6f78', '#2a2c48'))).join('')}</g>`;
     // upstairs: two windows, framed and latticed, the far side of each frame catching the light; lit by night
     [[0.14, 0.4], [0.58, 0.84]].forEach(([t0, t1]) => {
@@ -73,17 +79,24 @@ function chinadoriHtml() {
     });
     if (b.balcony) g += level(sd, at(0.08), at(0.92), L, L - 14, 150, hc('#c8b898', '#2a2a46')) + fr(0.08, 0.92, 144, 150, hc('#8a6a4a', '#2a2030'), L - 14)
       + Array.from({ length: 13 }, (_, i) => { const p = at(0.08 + 0.84 * i / 12); return line(P(sd, p, L - 14, 150), P(sd, p, L - 14, 166), 'stroke="#7a2a2a" stroke-width="1.1"'); }).join('') + line(P(sd, at(0.08), L - 14, 166), P(sd, at(0.92), L - 14, 166), 'stroke="#7a2a2a" stroke-width="1.6"');
-    if (sd < 0) g += fr(0, 1, 0, tall, SHADE);   // the left row: its fronts in shade
+    g += fr(0, 1, 0, tall, 'fill="url(#drFront)"') + (sd < 0 ? fr(0, 1, 0, tall, 'fill="#1a2040" fill-opacity=".2"') : fr(0, 1, 0, tall, 'fill="#ffcf80" fill-opacity=".07"'));   // lit above, darker below; the left row in shade, the right in the sun
     // the awning sloping out over the pavement in stripes, its fringe hanging from the edge
     g += Array.from({ length: 8 }, (_, i) => poly([P(sd, at(0.03 + 0.94 * i / 8), L, 126), P(sd, at(0.03 + 0.94 * (i + 1) / 8), L, 126), P(sd, at(0.03 + 0.94 * (i + 1) / 8), L - 28, 104), P(sd, at(0.03 + 0.94 * i / 8), L - 28, 104)], i % 2 ? hc('#f4ead8', '#3a3448') : hc(cloth, '#3a1e2a'))).join('')
-      + fr(0.03, 0.97, 96, 104, hc(cloth, '#3a1e2a'), L - 28) + fr(0.03, 0.97, 96, 98, 'fill="#000" fill-opacity=".18"', L - 28);
+      + fr(0.03, 0.97, 96, 104, hc(cloth, '#3a1e2a'), L - 28) + fr(0.03, 0.97, 96, 98, 'fill="#000" fill-opacity=".18"', L - 28)
+      + level(sd, at(0.03), at(0.97), L, L - 34, 5, 'fill="#1a1030" fill-opacity=".1"')   // its shadow on the pavement
+      + Array.from({ length: 8 }, (_, i) => poly([P(sd, at(0.03 + 0.94 * i / 8), L - 20, 110), P(sd, at(0.03 + 0.94 * (i + 1) / 8), L - 20, 110), P(sd, at(0.03 + 0.94 * (i + 1) / 8), L - 28, 104), P(sd, at(0.03 + 0.94 * i / 8), L - 28, 104)], 'fill="#1a1030" fill-opacity=".1"')).join('');   // its lower edge turning away
     // the roof from its eave up to the ridge, tiles running up it, the ridge gold and curled up at the near end
     g += poly([P(sd, a, L - 16, tall), P(sd, z, L - 16, tall), P(sd, z, L + 30, tall + 46), P(sd, a, L + 30, tall + 46)], hc(roof, '#1a2a36'))
       + Array.from({ length: 9 }, (_, i) => { const p = at((i + 0.5) / 9); return line(P(sd, p, L - 16, tall), P(sd, p, L + 30, tall + 46), 'stroke="#000" stroke-opacity=".18" stroke-width=".9"'); }).join('')
       + line(P(sd, a, L - 16, tall), P(sd, z, L - 16, tall), `stroke="#2a2a2a" stroke-opacity=".35" stroke-width="${f(2.4 * a / K)}"`)
       + line(P(sd, a, L + 30, tall + 46), P(sd, z, L + 30, tall + 46), `stroke="#d9b04a" stroke-width="${f(3 * a / K)}" stroke-linecap="round"`)
       + `<path d="M${P(sd, a, L + 30, tall + 46).map(f).join(' ')} q${f(-sd * 6 * a / K)} ${f(-4 * a / K)} ${f(-sd * 4 * a / K)} ${f(-12 * a / K)}" fill="none" stroke="#d9b04a" stroke-width="${f(2.6 * a / K)}" stroke-linecap="round"/>`
-      + `<path d="M${P(sd, a, L - 16, tall).map(f).join(' ')} q${f(-sd * 8 * a / K)} ${f(-2 * a / K)} ${f(-sd * 10 * a / K)} ${f(-12 * a / K)}" fill="none" stroke="${roof}" stroke-width="${f(3 * a / K)}" stroke-linecap="round"/>`;
+      + `<path d="M${P(sd, a, L - 16, tall).map(f).join(' ')} q${f(-sd * 8 * a / K)} ${f(-2 * a / K)} ${f(-sd * 10 * a / K)} ${f(-12 * a / K)}" fill="none" stroke="${roof}" stroke-width="${f(3 * a / K)}" stroke-linecap="round"/>`
+      + along(sd, a, z, L - 16, tall - 5, tall, hc('#7a3a2a', '#201420')) + facing(sd, a, L - 16, L, tall - 5, tall, hc('#5a2a20', '#181018'));   // the eave's edge, with some thickness
+    // further off, paler: the air between (the far blocks a little lost in it)
+    const o = Math.max(0, 0.42 * (1 - a / 320)) * (b.y0 < 0 ? 0 : 1);
+    if (o > 0.01) { const h = hc('#e4e9ee', '#1c1e3a') + ` fill-opacity="${o.toFixed(3)}"`;
+      g += facing(sd, a, L, L + 70, 0, tall, h) + fr(0, 1, 0, tall, h) + poly([P(sd, a, L - 16, tall), P(sd, z, L - 16, tall), P(sd, z, L + 30, tall + 46), P(sd, a, L + 30, tall + 46)], h) + poly([P(sd, a, L - 16, tall), P(sd, a, L + 30, tall + 46), P(sd, a, L + 76, tall)], h); }
     if (!b.sign) return g;
     // the sign hung out from the wall over the pavement, flat to the eye, a board with some thickness: red, a gold rim, its kana down
     // it — the further shops' higher up, so the three a side don't cover one another
@@ -109,6 +122,10 @@ function chinadoriHtml() {
   [-1, 1].forEach((sd) => { const p1 = sd > 0 ? CROSS : end;   // the pavements, their kerbs
     ground += along(sd, near, p1, WALK, 0, 5, hc('#a89c8a', '#20223c')) + level(sd, near, p1, WALK, 150, 5, hc('#c8bca8', '#24264a')); });
   ground += poly([P(-1, near, WALK, 0), P(-1, end, WALK, 0), P(-1, end, WALK - 36, 0), P(-1, near, WALK - 36, 0)], SHADE);
+  // 2026-11-20 (the user: flat): every other slab a shade darker, the street paler toward its end and darker at the front
+  const rows = [480, 430, 372, 324, 284, 250, 222, 198, 178, 162, 150], cols = [-110, -55, 0, 55, 110];
+  ground += rows.slice(0, -1).map((p0, i) => cols.slice(0, -1).map((l0, j) => ((i + j) % 2 ? poly([P(1, p0, l0, 0), P(1, p0, cols[j + 1], 0), P(1, rows[i + 1], cols[j + 1], 0), P(1, rows[i + 1], l0, 0)], 'fill="#5a4a3a" fill-opacity=".045"') : '')).join('')).join('')
+    + poly([P(-1, near, 520, 0), P(1, near, 520, 0), P(1, end, 520, 0), P(-1, end, 520, 0)], 'fill="url(#drGround)"');
   // a street lamp on the corner, where the right row stops and the side street goes off
   const [lx, ly] = P(1, CROSS - 4, WALK + 10, 5), [, lt] = P(1, CROSS - 4, WALK + 10, 230), lr = (CROSS - 4) / K;
   ground += `<path d="M${f(lx)} ${f(ly)} V${f(lt)}" stroke="#3a3a42" stroke-width="${f(5 * lr)}"/><path d="M${f(lx)} ${f(lt)} h${f(-14 * lr)}" stroke="#3a3a42" stroke-width="${f(3 * lr)}"/><circle class="glow" cx="${f(lx - 14 * lr)}" cy="${f(lt + 8 * lr)}" r="${f(30 * lr)}" fill="url(#glw)"/><ellipse cx="${f(lx - 14 * lr)}" cy="${f(lt + 8 * lr)}" rx="${f(8 * lr)}" ry="${f(9 * lr)}" ${hc('#f4ead8', '#ffd98a')}/>`;
@@ -125,7 +142,8 @@ function chinadoriHtml() {
     + [-80, 0, 80, 240, 360, 470].map((L) => `<circle cx="${f(R(L, 0)[0])}" cy="${f(R(0, 254)[1])}" r="${f(24 * rk)}" ${hc('#8fb4c8', '#ffd98a')} stroke="#7a5a3a" stroke-width="${f(3 * rk)}"/>`).join('')
     + poly([R(L0 - 16, 330), R(L1 + 16, 330), P(1, end - 18, L1 + 16, 372), P(1, end - 18, L0 - 16, 372)], hc('#3f6058', '#1a2a36'))
     + line(P(1, end - 18, L0 - 16, 372), P(1, end - 18, L1 + 16, 372), `stroke="#d9b04a" stroke-width="${f(3 * rk)}"`)
-    + Array.from({ length: 12 }, (_, i) => { const L = L0 + 30 + i * 56, [x, y] = R(L, 300), r = 9 * rk; return `<circle class="glow" cx="${f(x)}" cy="${f(y)}" r="${f(r * 2.6)}" fill="url(#glw)"/><ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(r)}" ry="${f(r * 0.9)}" ${hc('#d0302a', '#ff8a5a')}/>`; }).join('');
+    + Array.from({ length: 12 }, (_, i) => { const L = L0 + 30 + i * 56, [x, y] = R(L, 300), r = 9 * rk; return `<circle class="glow" cx="${f(x)}" cy="${f(y)}" r="${f(r * 2.6)}" fill="url(#glw)"/><ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(r)}" ry="${f(r * 0.9)}" ${hc('#d0302a', '#ff8a5a')}/>`; }).join('')
+    + poly([R(L0 - 16, 0), R(L1 + 16, 0), P(1, end - 18, L1 + 16, 372), P(1, end - 18, L0 - 16, 372)], hc('#e4e9ee', '#1c1e3a') + ' fill-opacity=".2"');   // far off: the air over it
   // the blocks, furthest first so the nearer cover them: the six shops; a seventh on the left up to the corner; the nearest either
   // side running toward the eye off the screen
   const blocks = DORI.SHOPS.map((s) => Object.assign({ balcony: s.id === 'ranran' || s.id === 'rairai' || s.id === 'kuriya' }, s))
@@ -140,12 +158,12 @@ function chinadoriHtml() {
     return `<path d="M${Array.from({ length: 13 }, (_, i) => at(i / 12).map(f).join(' ')).join(' L')}" fill="none" ${hs('#3b2a1c', '#14142a')} stroke-width="${f(1.2 * k)}"/>`
       + Array.from({ length: n }, (_, i) => { const [x, y] = at(0.18 + 0.64 * (i + 0.5) / n), r = 9 * k;
         return `<g class="fx-sway" style="animation-delay:-${((i + j * 3) * 0.37 % 3).toFixed(2)}s;animation-duration:${(3 + (i % 3) * 0.5).toFixed(1)}s"><circle class="glow" cx="${f(x)}" cy="${f(y + r * 1.4)}" r="${f(r * 2.6)}" fill="url(#glw)"/><path d="M${f(x)} ${f(y)} v${f(r * 0.5)}" stroke="#3b2a1c" stroke-width="${f(k)}"/><ellipse cx="${f(x)}" cy="${f(y + r * 1.4)}" rx="${f(r)}" ry="${f(r * 0.9)}" ${hc('#d0302a', '#ff8a5a')}/><rect x="${f(x - r * 0.5)}" y="${f(y + r * 0.4)}" width="${f(r)}" height="${f(r * 0.28)}" ${hc('#d9b04a', '#6a5a30')}/><rect x="${f(x - r * 0.5)}" y="${f(y + r * 2.2)}" width="${f(r)}" height="${f(r * 0.28)}" ${hc('#d9b04a', '#6a5a30')}/></g>`; }).join(''); }).join('');
-  // the 求人看板 by the way in: a standing board on the left of the street
-  const bp = 392, [bx0, by1] = P(-1, bp, 104, 0), [bx1] = P(-1, bp, 80, 0), by0 = P(-1, bp, 0, 62)[1];
-  const board = `<g class="dr-board"><path d="M${f(bx0 + 2)} ${f(by1)} L${f(bx0 + 4)} ${f(by0 + 6)} M${f(bx1 - 2)} ${f(by1)} L${f(bx1 - 4)} ${f(by0 + 6)}" stroke="#6a4a2a" stroke-width="2"/><rect x="${f(bx0)}" y="${f(by0)}" width="${f(bx1 - bx0)}" height="${f((by1 - by0) * 0.62)}" rx="1.5" ${hc('#f4ead8', '#3a3a52')} stroke="#8a2a2a" stroke-width="1.4"/>`
-    + `<text x="${f((bx0 + bx1) / 2)}" y="${f(by0 + (by1 - by0) * 0.22)}" text-anchor="middle" font-size="${f((bx1 - bx0) * 0.2)}" font-weight="700" fill="#a82828" ${SERIF}>求人</text>${[0.34, 0.44, 0.54].map((u) => `<path d="M${f(bx0 + 4)} ${f(by0 + (by1 - by0) * u)} H${f(bx1 - 4)}" stroke="#8a7a6a" stroke-width=".8"/>`).join('')}</g>`;
+  // (the 求人看板 that stood by the way in went out to the gate, 2026-11-20, the user)
+  const defs = `<defs><linearGradient id="drFront" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".1"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#1a1030" stop-opacity=".2"/></linearGradient>
+    <linearGradient id="drEnd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#1a1030" stop-opacity=".24"/></linearGradient>
+    <linearGradient id="drGround" gradientUnits="userSpaceOnUse" x1="0" y1="${f(-60 + end)}" x2="0" y2="${f(-60 + near)}"><stop offset="0" stop-color="#eef2f6" stop-opacity=".5"/><stop offset=".35" stop-color="#eef2f6" stop-opacity="0"/><stop offset=".7" stop-color="#2b1c12" stop-opacity="0"/><stop offset="1" stop-color="#2b1c12" stop-opacity=".14"/></linearGradient></defs>`;
   return `<svg class="land tall dori-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
-      ${ground}${across}${art}${strings}${board}
+      ${defs}${ground}${across}${art}${strings}
     </svg>
     ${yHeroHtml()}
     ${TOWNEV.castHtml('chinadori')}
@@ -154,17 +172,15 @@ function chinadoriHtml() {
     <div class="ysel"></div>`;
 }
 
-// ---- what can be tapped along the street: each shop (its sign and front), the 求人看板 by the way in, the restaurant at the end ----
+// ---- what can be tapped along the street: each shop (its sign and front), the restaurant at the end ----
 // Kept here, not with the other places' (71b_places.js), as their boxes are worked out from the street's own geometry
 PLACE_USE.chinadori = (() => {
   const { K } = DORI, box = (s) => { const a = DORI.pAt(s, 0.04), b = DORI.pAt(s, 0.96), x = (p, L) => 600 + s.side * L * p / K, y = (p, V) => -60 + p * (1 - V / K);
     const xs = [x(a, s.L), x(b, s.L), x(DORI.pAt(s, 0.8), s.L - 32)], ys = [y(a, 0), y(b, 0), y(DORI.pAt(s, 0.8), 300)];
     return [Math.round(Math.min(...xs)), Math.round(Math.min(...ys)), Math.round(Math.max(...xs)), Math.round(Math.max(...ys))]; };
   const SAY = { ranran: 'パンダが いっぱい！', fuku: 'いろいろ ある…！', toka: 'おちゃの におい…', rairai: 'ラーメンの におい…！', kuriya: 'あまい におい…！', kohaku: 'きらきら…！' };
-  const bp = 392, bx = (L) => Math.round(600 - L * bp / K), by = (V) => Math.round(-60 + bp * (1 - V / K));
   // らいらいけん (2026-11-15): in through its door (shut out of hours: said so at the door)
   return DORI.SHOPS.map((s) => Object.assign({ id: s.id, name: `${s.sign}（${s.name}）`, box: box(s), kind: 'do', go: DORI.door(s.id), pick: () => [SAY[s.id]] },
     s.id === 'kuriya' ? { fx: 'kuri', fxc: 'puff', ms: 2400 } : {}, s.id === 'rairai' ? { pick: () => [''], open: (y) => yGo(y.querySelector('.use-btn[data-use="rairai"]') || y, 'rairai') } : {}))
-    .concat([{ id: 'board', name: '求人看板', box: [bx(106), by(64), bx(78), by(0)], kind: 'do', go: [-70, 34], back: 1, pose: 'look', say: 'アルバイト…？', open: () => WORK.board() },
-      { id: 'hourai', name: 'ほうらい（中華料理店）', box: [Math.round(600 - 110 * DORI.END / K), Math.round(-60 + DORI.END * (1 - 200 / K)), Math.round(600 + 110 * DORI.END / K), Math.round(-60 + DORI.END)], kind: 'do', go: [0, DORI.FAR], back: 1, pose: 'look', say: 'おおきい おみせ…！' }]);
+    .concat([{ id: 'hourai', name: 'ほうらい（中華料理店）', box: [Math.round(600 - 110 * DORI.END / K), Math.round(-60 + DORI.END * (1 - 200 / K)), Math.round(600 + 110 * DORI.END / K), Math.round(-60 + DORI.END)], kind: 'do', go: [0, DORI.FAR], back: 1, pose: 'look', say: 'おおきい おみせ…！' }]);
 })();

@@ -127,13 +127,18 @@ def test_the_generator_has_the_choices(b):
         .map((l) => 'hero:' + l).filter((x) => !all.includes(x))); })()"""))
     assert r == [], r
 
+# 2026-11-20, the user: the board out on the outer street (by the gate, not in 大通り), and it says what each of the four jobs is
 def test_the_board_lists_the_four_jobs(b):
-    r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(15); location.hash = '#/chinadori'; route(); await wait(300);
-      WORK.board(yard()); await wait(100); const card = document.querySelector('.wk-board'), rows = [...card.querySelectorAll('.wk-job')].map((x) => [x.dataset.job, x.classList.contains('ok')]);
-      const text = card.textContent; CLASS.close();
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(15); location.hash = '#/chinadori'; route(); await wait(300); const inner = Boolean(document.querySelector('.use-btn[data-use="board"]'));
+      location.hash = '#/chinatown'; route(); await wait(300); const out = Boolean(document.querySelector('.use-btn[data-use="board"]')) && Boolean(document.querySelector('[data-fx="wkboard"]'));
+      document.querySelector('.use-btn[data-use="board"]').click(); for (let i = 0; i < 60 && !document.querySelector('.wk-board'); i++) await wait(100);
+      const card = document.querySelector('.wk-board'), rows = [...card.querySelectorAll('.wk-job')].map((x) => [x.dataset.job, x.classList.contains('ok')]);
+      const text = card.textContent, does = [...card.querySelectorAll('.wk-does')].filter((x) => x.textContent.length > 10).length; CLASS.close();
       state.work.res['2026-11-10'] = { place: 'counter', done: 4, score: {} }; WORK.board(yard()); const today = document.querySelector('.wk-board').textContent; CLASS.close();
-      return JSON.stringify({ rows, text, today }); })()"""))
+      return JSON.stringify({ inner, out, does, rows, text, today }); })()"""))
+    assert not r['inner'] and r['out'] and r['does'] == 4, r
     assert r['rows'] == [['buns', True], ['counter', True], ['waiter', False], ['till', False]], r
+    assert all(w in r['text'] for w in ['底薪 80 円', '底薪 60 円', '底薪 100 円', '中華街打工證：新人']), r
     assert all(w in r['text'] for w in ['包包子', '站櫃', '外場', '收銀', '30', '「いくら」「円」和數字']) and '今天' in r['today'] and '站櫃' in r['today'], r
 
 def test_the_board_names_the_words_still_needed(b):   # 外場's kana seen, its three 入門 words not: not ✓ yet, the words said

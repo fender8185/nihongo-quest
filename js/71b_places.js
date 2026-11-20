@@ -291,11 +291,12 @@ const PLACE_USE = {
   chinatown: [
     { id: 'post', name: '郵筒', box: [22, 150, 64, 236], kind: 'do', go: [-556, 122], back: 1, pose: 'look', say: 'てがみ…？', open: (y) => CHINA.trap(y, 'post') },
     { id: 'gate', name: '牌樓', box: [84, -40, 396, 100], kind: 'do', go: [-360, 124], back: 1, open: (y) => yGo(y.querySelector('.use-btn[data-use="gate"]') || y, 'chinadori') },   // walked through into 大通り (2026-11-14, the user: it shook, for no reason; now it is a way in)
+    { id: 'board', name: '求人看板', box: [126, 150, 176, 236], kind: 'do', go: [-449, 122], back: 1, pose: 'look', say: 'アルバイト…？', open: () => WORK.board() },   // out here, by the way in (2026-11-20, the user; it stood in 大通り)
     { id: 'notice', name: '公告', box: [396, 140, 446, 236], kind: 'do', go: [-179, 122], back: 1, pose: 'look', say: 'おしらせ…？', open: (y) => CHINA.trap(y, 'notice') },
     { id: 'shirt', name: 'T恤', box: [446, 136, 494, 236], kind: 'do', go: [-130, 122], back: 1, pose: 'reach', say: 'だいじょうぶ…？', fx: 'shirt', fxc: 'shake', open: (y) => CHINA.trap(y, 'shirt') },
     { id: 'seiro', name: '蒸籠', box: [506, 130, 572, 236], kind: 'do', go: [-61, 122], back: 1, pose: 'look', say: 'いい におい…！', open: (y) => CHINA.taste(y, (PLACE_USE.chinatown || []).find((q) => q.id === 'seiro')) },
     { id: 'bmenu', name: '福明的菜單', box: [596, 160, 694, 236], kind: 'do', go: [45, 122], back: 1, pose: 'look', buy: 'butaman', when: () => TOWNEV.isOpen('butaman', TOWNEV.now()) },
-    { id: 'panda', name: '熊貓', box: [708, 150, 760, 236], kind: 'do', go: [100, 120], pose: 'wave', say: 'パンダくん！', fx: 'panda', fxc: 'hug' },
+    { id: 'panda', name: '熊貓', box: [704, 142, 764, 236], kind: 'do', go: [100, 120], pose: 'wave', say: 'パンダくん！', fx: 'panda', fxc: 'hug' },
     { id: 'rmenu', name: '菜單看板', box: [774, 160, 818, 236], kind: 'do', go: [196, 122], back: 1, pose: 'look', say: 'ゆ…？', open: (y) => CHINA.trap(y, 'menu') },
     { id: 'ryuho', name: '龍鳳飯店', box: [846, 130, 938, 236], kind: 'do', go: [292, 122], back: 1, pose: 'look', buy: 'ryuho', when: () => TOWNEV.isOpen('ryuho', TOWNEV.now()) },
     { id: 'yuka', name: '立牌', box: [938, 190, 964, 236], kind: 'do', go: [351, 120], back: 1, pose: 'crouch', say: 'ゆか…？', open: (y) => CHINA.trap(y, 'yuka') },

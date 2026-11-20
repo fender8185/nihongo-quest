@@ -120,14 +120,21 @@ const WORK = (() => {
   // the hero's word for working, a reply picked in the talk (2026-11-20): yes to their はたらく？ (asked: their greeting was it), else asked for
   const ASK = ['アルバイト、させて ください。', '請讓我在這裡打工。'];
   const ask = (id, asked) => (asked && (TOWN.WORK.yes || {})[id]) || ASK;
-  // the 求人看板 by the way into 大通り: the four jobs, where, what each needs (✓ those open to this learner), the hours, today's
+  // the 求人看板 (2026-11-20, the user: on the outer street by the gate, and it should say what the four jobs are): each job — what it
+  // is, where and with whom, its pay, what it takes (✓ those open to this learner); the area's 打工證 and today's
+  const DOES = { buns: '聽王老闆念的假名，在假名板上按對的字，一步步把包子包好。', counter: '客人用日文說要什麼，從櫃台上找出來拿給他。',
+    waiter: '帶位、點菜、端菜、結帳：聽客人說的話，選一句回他。', till: '用字卡拼出價格和全部加起來的念法，念給客人聽。' };
+  const WHERE = { buns: '牌樓外・王老闆', counter: '大通り・周美蘭', waiter: '大通り盡頭・黄', till: '大通り・張偉' };
   function board() {
     const t = today(), rows = Object.entries(PLACES).map(([job, P]) => { const ok = opened(job);
       const left = ok ? wordsLeft(job) : [], more = needs(job).length, go = ok && !left.length && !more;   // the kana seen, the 入門 words (外場) and numbers (收銀) still to learn
-      return `<li class="wk-job${go ? ' ok' : ''}" data-job="${job}"><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span><span>${go ? '✓ 可以做' : more ? P.need : ok ? `再學 ${left.length} 個入門單字` : `學 ${P.kana} 個假名`}</span></li>`; }).join('');
+      return `<li class="wk-job${go ? ' ok' : ''}" data-job="${job}"><p class="wk-jtop"><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span><small>${esc(WHERE[job] || '')}</small><em>底薪 ${P.pay} 円</em></p>
+        <p class="wk-does">${esc(DOES[job] || '')}</p><p class="wk-need">${go ? '✓ 可以做' : more ? P.need : ok ? `再學 ${left.length} 個入門單字` : `學 ${P.kana} 個假名`}</p></li>`; }).join('');
     const now = t ? (fin(t) ? `今天在「${esc(named(t.place).name)}」的班打完了。` : `今天在「${esc(named(t.place).name)}」打工中（${t.done}／${nOf(t.place)}）。`) : '今天還沒打工。一天只能選一個地方打一班。';
-    CLASS.card('wk-board', '求人看板', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button><div class="wk-bhead"><b lang="ja">アルバイト ぼしゅう</b><span>求人看板</span></div>
-      <ul class="wk-jobs">${rows}</ul><p class="wk-today">${now}</p><p class="wk-note">大通り的店 10 點到 19 點；外場在らいらいけん店裡（10 點到 20 點）；包包子在牌樓外的「福明」，王老闆在的時候。點老闆，選要來打工的那句回話。</p>`, () => {});
+    const A = AREAS.chinatown, lv = level('chinatown'), js = jobsOf('chinatown'), next = A.ranks[lv + 1];
+    CLASS.card('wk-board', '求人看板', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button><div class="wk-bhead"><b lang="ja">アルバイト ぼしゅう</b><span>求人看板・中華街</span></div>
+      <ul class="wk-jobs">${rows}</ul><p class="wk-today">${now}</p>
+      <p class="wk-note">${esc(A.name)}打工證：${esc(A.ranks[lv])}${next ? `・四份都拿過 S 級就升「${esc(next)}」（${js.filter(hadS).length}／${js.length}），之後薪水 +${Math.round(RAISE * 100)}%` : ''}。大通り的店 10 點到 19 點；らいらいけん 10 點到 20 點；福明要王老闆在。點老闆，選要來打工的那句回話。</p>`, () => {});
   }
   // a task done (misses: the tries wrong first): counted once, on the day the shift began
   function right(s, k, misses) {
