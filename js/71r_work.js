@@ -18,13 +18,22 @@ const WORK = (() => {
     // 外場 2.0 (2026-11-15, docs/superpowers/specs/2026-11-15-hall-rush-design.md §2): a shift is six groups, each scored by its mood
     // at the door (0 pleased … 3 stormed out), graded with part credit for the not quite pleased
     waiter: { area: 'chinatown', pay: 100, place: 'rairai', shop: 'rairai', who: 'huang', kana: 30, words: ['いらっしゃいませ', 'どうぞ', 'はい'], name: '外場', at: 'らいらいけん', n: 6, credit: [1, 0.6, 0.3, 0], unit: '滿意的客人', tune: 'rairai' },
-    till: { area: 'chinatown', pay: 100, place: 'chinadori', shop: 'fuku', who: 'zhang', kana: 46, need: '學「いくら」「円」和數字', name: '收銀', at: 'ふく', tune: 'chukagai' } };   // need: its words (JOBS' left), named
+    till: { area: 'chinatown', pay: 100, place: 'chinadori', shop: 'fuku', who: 'zhang', kana: 46, need: '學「いくら」「円」和數字', name: '收銀', at: 'ふく', tune: 'chukagai' },   // need: its words (JOBS' left), named
+    // 駅前 (2026-11-20, docs/superpowers/specs/2026-11-20-ekimae-work-design.md): the N5 area, open once 中華街's card is 一人前; each
+    // job by the unit studied (course: that unit or past it), its keeper there (present) or its own hours
+    bento: { area: 'ekimae', pay: 120, place: 'platform', shop: 'bento', who: 'haru', course: 'm1', present: true, name: '賣便當', at: 'みなと弁当', tune: 'ekimae', shut: '浜田ハル 7 點到 19 點在月台的便當攤。' },
+    window: { area: 'ekimae', pay: 140, place: 'station', shop: 'window', who: 'harada', course: 'm2', hours: [7, 21], name: '售票窗口', at: 'きっぷうりば', tune: 'ekimae', shut: '售票窗口 7 點到 21 點。' },
+    lost: { area: 'ekimae', pay: 160, place: 'station', shop: 'koban', who: 'kobayashi', course: 'm3', hours: [8, 22], name: '失物招領', at: '駅前交番', tune: 'ekimae', shut: '交番的失物招領 8 點到 22 點。' },
+    taxi: { area: 'ekimae', pay: 180, place: 'station', shop: 'taxi', who: 'suzuki', course: 'm4', present: true, name: '計程車導航', at: '鈴木タクシー', n: 5, credit: [1, 0.6, 0.3, 0], unit: '順利載到的客人', tune: 'ekimae', shut: '鈴木 8–12 點、15–19 點在計程車招呼站（中午在食堂吃飯）。' } };
   // a workplace no more (外送, cut 2026-11-15; 整理貨架, 2026-11-19): its old records still read
   const GONE = { deliver: { name: '外送', at: 'らいらいけん' }, shelf: { name: '整理貨架', at: 'ふく' } };
   const named = (job) => PLACES[job] || GONE[job] || { name: job, at: '' };
   // 打工證, one an area (2026-11-20, the user: by area, 中華街's four jobs the first and lowest): 新人 till every job there has had
   // a shift graded S, then 一人前; each step up on any card 2% more on all the pay after it (the shift that takes it there: as it was)
-  const AREAS = { chinatown: { name: '中華街', ranks: ['新人', '一人前'] } };
+  // after: the area whose card must be at its top first (駅前 after 中華街: 2026-11-20, the user — 「全都 S 才會變成下一階段的打工人」);
+  // hours: what its board says of when
+  const AREAS = { chinatown: { name: '中華街', ranks: ['新人', '一人前'], hours: '大通り的店 10 點到 19 點；らいらいけん 10 點到 20 點；福明要王老闆在。' },
+    ekimae: { name: '駅前', ranks: ['新人', '一人前'], after: 'chinatown', hours: '便當攤 7–19 點（月台）；售票窗口 7–21 點；交番 8–22 點；計程車 8–12、15–19 點。' } };
   const RAISE = 0.02;
   const BONUS = { S: 50, A: 30, B: 20, C: 10, D: 0, E: 0 };
   const GRADES = [['S', 0.95], ['A', 0.85], ['B', 0.7], ['C', 0.5], ['D', 0.3], ['E', 0]];
@@ -49,11 +58,21 @@ const WORK = (() => {
   const kanaOk = (need) => knowsAll() || seen() >= need;
   // its kana seen — or the job's own switch on the test site says never mind (收銀's, 2026-11-20: on a device still in 入門 張 never
   // offered it, the switch skipping only the numbers)
-  const opened = (job) => kanaOk(PLACES[job].kana) || Boolean(JOBS[job] && JOBS[job].open && JOBS[job].open());
+  // 駅前's (2026-11-20): the area open (the card before it at its top) and the course at the job's unit — or the test site's switch
+  const EKI = 'nq_work_eki', ekiFree = () => { try { return onTestSite() && localStorage.getItem(EKI) === '1'; } catch (e) { return false; } };
+  function ekiTool() { const on = !ekiFree(); try { localStorage.setItem(EKI, on ? '1' : ''); } catch (e) { /* no storage */ } return on ? '駅前打工：不看條件（這台裝置），中華街還沒一人前、單元還沒到也能做' : '駅前打工：恢復要先拿到中華街「一人前」、學到那個單元'; }
+  const top = (area) => level(area) >= AREAS[area].ranks.length - 1;
+  const areaOpen = (area) => !AREAS[area].after || top(AREAS[area].after) || ekiFree();
+  const unitOk = (u) => ekiFree() || TOWNEV.reachedIdx() >= TOWNEV.unitIdx(u);
+  const unitName = (u) => { const x = DATA.UNITS.find((y) => y.id === u); return x ? x.short : u; };
+  const opened = (job) => { const P = PLACES[job]; if (P.course) return areaOpen(P.area) && unitOk(P.course);
+    return kanaOk(P.kana) || Boolean(JOBS[job] && JOBS[job].open && JOBS[job].open()); };
   // the kana the jobs may use: those seen — or all of them for one who knew kana already or is past 入門 (2026-11-15, the final
   // review: they had no kana seen, and three jobs drew from nothing)
   const kana = () => (knowsAll() ? new Set(REG.kana.map((x) => x.ch)) : kanaSeenSet());
-  const here = (job) => (job === 'buns' ? (TOWNEV.whereIs('wang', TOWNEV.now(), TOWNEV.today()) || {}).place === 'chinatown' : job === 'waiter' ? TOWNEV.isOpen('rairai', TOWNEV.now()) : TOWNEV.isOpen('dori', TOWNEV.now()));
+  const at = (P) => (TOWNEV.whereIs(P.who, TOWNEV.now(), TOWNEV.today()) || {}).place === P.place;   // its keeper there now
+  const inHours = ([a, b], h = TOWNEV.now()) => h >= a && h < b;
+  const here = (job) => { const P = PLACES[job]; return P.present ? at(P) : P.hours ? inHours(P.hours) : job === 'buns' ? (TOWNEV.whereIs('wang', TOWNEV.now(), TOWNEV.today()) || {}).place === 'chinatown' : job === 'waiter' ? TOWNEV.isOpen('rairai', TOWNEV.now()) : TOWNEV.isOpen('dori', TOWNEV.now()); };
   // the 入門 words a job needs learned first (外場: いらっしゃいませ, どうぞ, はい) — the ones not yet, for one still in 入門
   // an 入門 word learned (or all of them, past 入門 — not for knowing kana: those words come in 入門's own lessons; the final review)
   const knows = (w) => !inPreStage() || REG.vocab.some((v) => v.w === w && v.r === w && state.srs[v.key]);
@@ -62,13 +81,15 @@ const WORK = (() => {
   // may this job be started (or picked up again) now: its kana seen, today's workplace (if any) this one and not done, open
   function can(job) {
     const P = PLACES[job]; if (!P) return { ok: false, why: '' };
+    if (P.course && !areaOpen(P.area)) { const B = AREAS[AREAS[P.area].after]; return { ok: false, why: `先在${B.name}拿到打工證「${B.ranks[B.ranks.length - 1]}」（${B.name}的工作都拿過 S 級），${AREAS[P.area].name}的打工才會開放。` }; }
+    if (P.course && !unitOk(P.course)) return { ok: false, why: `學到「${unitName(P.course)}」單元就能來${P.name}。` };
     if (!opened(job)) return { ok: false, why: `再學 ${P.kana - seen()} 個假名就能來${P.name}。` };
     const left = wordsLeft(job); if (left.length) return { ok: false, why: `先學會入門的${left.map((w) => `「${w}」`).join('')}，就能來${P.name}。` };
     const more = needs(job); if (more.length) return { ok: false, why: `先學會${more.map((w) => `「${w}」`).join('')}，就能來${P.name}。` };
     const t = today();
     if (t && t.place !== job && !free()) return { ok: false, why: `今天已經在「${named(t.place).name}」打過工了。一天只能在一個地方打工，明天再來吧。` };
     if (fin(t) && !free()) return { ok: false, why: '今天的班打完了，明天再來吧。' };
-    if (!here(job)) return { ok: false, why: job === 'buns' ? '王老闆不在攤子（10 點到 20 點在）。' : job === 'waiter' ? 'らいらいけん 10 點到 20 點營業。' : '大通り的店 10 點到 19 點開門。' };
+    if (!here(job)) return { ok: false, why: P.shut || (job === 'buns' ? '王老闆不在攤子（10 點到 20 點在）。' : job === 'waiter' ? 'らいらいけん 10 點到 20 點營業。' : '大通り的店 10 點到 19 點開門。') };
     return { ok: true };
   }
   // the test site (町の手帳, 2026-11-15, the user): shift after shift, any place, on this device — today's record put aside under the
@@ -115,7 +136,7 @@ const WORK = (() => {
   }
   // the job a person takes beginners on for, where they are now, once its kana are seen (today taken elsewhere or closed: still
   // offered, and はたらく says why not)
-  const offer = (id, place) => { const job = Object.keys(PLACES).find((j) => PLACES[j].who === id && PLACES[j].place === place); return job && opened(job) ? job : null; };
+  const offer = (id, place) => { const job = Object.keys(PLACES).find((j) => PLACES[j].who === id && PLACES[j].place === place); return job && JOBS[job] && opened(job) ? job : null; };   // a job whose runner is in (駅前's came stage by stage)
   const hello = (id) => (TOWN.WORK.hello || {})[id] || ['いらっしゃい！', '歡迎光臨！'];
   // the hero's word for working, a reply picked in the talk (2026-11-20): yes to their はたらく？ (asked: their greeting was it), else asked for
   const ASK = ['アルバイト、させて ください。', '請讓我在這裡打工。'];
@@ -123,18 +144,25 @@ const WORK = (() => {
   // the 求人看板 (2026-11-20, the user: on the outer street by the gate, and it should say what the four jobs are): each job — what it
   // is, where and with whom, its pay, what it takes (✓ those open to this learner); the area's 打工證 and today's
   const DOES = { buns: '聽王老闆念的假名，在假名板上按對的字，一步步把包子包好。', counter: '客人用日文說要什麼，從櫃台上找出來拿給他。',
-    waiter: '帶位、點菜、端菜、結帳：聽客人說的話，選一句回他。', till: '用字卡拼出價格和全部加起來的念法，念給客人聽。' };
-  const WHERE = { buns: '牌樓外・王老闆', counter: '大通り・周美蘭', waiter: '大通り盡頭・黄', till: '大通り・張偉' };
-  function board() {
-    const t = today(), rows = Object.entries(PLACES).map(([job, P]) => { const ok = opened(job);
+    waiter: '帶位、點菜、端菜、結帳：聽客人說的話，選一句回他。', till: '用字卡拼出價格和全部加起來的念法，念給客人聽。',
+    bento: '電車停靠時，聽車窗裡的乘客要什麼、要幾個，在發車前遞給他。', window: '看運賃表和發車標，回答票價、下一班幾點、幾番線，也賣票。',
+    lost: '聽來找東西的人說它長什麼樣子，從失物架上找出對的那樣。', taxi: '坐在鈴木的副駕駛座，照乘客說的（右轉、直走、停在哪裡前面）在地圖上帶路。' };
+  const WHERE = { buns: '牌樓外・王老闆', counter: '大通り・周美蘭', waiter: '大通り盡頭・黄', till: '大通り・張偉', bento: 'ホーム・浜田ハル', window: '駅・原田', lost: '交番・小林巡查', taxi: 'タクシー乗り場・鈴木' };
+  // an area's 求人看板 (中華街's by its gate; 駅前's on the square, 2026-11-20): each of its jobs, what it takes; the card and today's
+  function board(area) {
+    if (!AREAS[area]) area = 'chinatown';   // called bare (or with the scene, as it was before areas)
+    const t = today(), A = AREAS[area], lv = level(area), js = jobsOf(area), next = A.ranks[lv + 1], shut = !areaOpen(area);
+    const rows = js.map((job) => { const P = PLACES[job], built = Boolean(JOBS[job]), ok = built && opened(job);
       const left = ok ? wordsLeft(job) : [], more = needs(job).length, go = ok && !left.length && !more;   // the kana seen, the 入門 words (外場) and numbers (收銀) still to learn
+      const need = go ? '✓ 可以做' : !built ? '準備中' : P.course ? (shut ? `先拿到${AREAS[A.after].name}打工證「一人前」` : `學到「${unitName(P.course)}」單元`) : more ? P.need : ok ? `再學 ${left.length} 個入門單字` : `學 ${P.kana} 個假名`;
       return `<li class="wk-job${go ? ' ok' : ''}" data-job="${job}"><p class="wk-jtop"><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span><small>${esc(WHERE[job] || '')}</small><em>底薪 ${P.pay} 円</em></p>
-        <p class="wk-does">${esc(DOES[job] || '')}</p><p class="wk-need">${go ? '✓ 可以做' : more ? P.need : ok ? `再學 ${left.length} 個入門單字` : `學 ${P.kana} 個假名`}</p></li>`; }).join('');
+        <p class="wk-does">${esc(DOES[job] || '')}</p><p class="wk-need">${esc(need)}</p></li>`; }).join('');
     const now = t ? (fin(t) ? `今天在「${esc(named(t.place).name)}」的班打完了。` : `今天在「${esc(named(t.place).name)}」打工中（${t.done}／${nOf(t.place)}）。`) : '今天還沒打工。一天只能選一個地方打一班。';
-    const A = AREAS.chinatown, lv = level('chinatown'), js = jobsOf('chinatown'), next = A.ranks[lv + 1];
-    CLASS.card('wk-board', '求人看板', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button><div class="wk-bhead"><b lang="ja">アルバイト ぼしゅう</b><span>求人看板・中華街</span></div>
+    const B = A.after && AREAS[A.after], title = area === 'chinatown' ? 'アルバイト ぼしゅう' : 'アルバイト<ruby>募集<rt>ぼしゅう</rt></ruby>';
+    CLASS.card('wk-board', '求人看板', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button><div class="wk-bhead"><b lang="ja">${title}</b><span>求人看板・${esc(A.name)}</span></div>
+      ${shut ? `<p class="wk-lock">先在${esc(B.name)}拿到打工證「${esc(B.ranks[B.ranks.length - 1])}」（${esc(B.name)}的工作都拿過 S 級），${esc(A.name)}的打工才會開放。</p>` : ''}
       <ul class="wk-jobs">${rows}</ul><p class="wk-today">${now}</p>
-      <p class="wk-note">${esc(A.name)}打工證：${esc(A.ranks[lv])}${next ? `・四份都拿過 S 級就升「${esc(next)}」（${js.filter(hadS).length}／${js.length}），之後薪水 +${Math.round(RAISE * 100)}%` : ''}。大通り的店 10 點到 19 點；らいらいけん 10 點到 20 點；福明要王老闆在。點老闆，選要來打工的那句回話。</p>`, () => {});
+      <p class="wk-note">${esc(A.name)}打工證：${esc(A.ranks[lv])}${next ? `・${js.length} 份都拿過 S 級就升「${esc(next)}」（${js.filter(hadS).length}／${js.length}），之後薪水 +${Math.round(RAISE * 100)}%` : ''}。${esc(A.hours)}點老闆，選要來打工的那句回話。</p>`, () => {});
   }
   // a task done (misses: the tries wrong first): counted once, on the day the shift began
   function right(s, k, misses) {
@@ -188,11 +216,12 @@ const WORK = (() => {
     const gone = Object.keys(GONE).filter((job) => all.some((r) => r.place === job));   // a workplace no more, while it has shifts to show
     const row = (job, P) => { const mine = all.filter((r) => r.place === job), best = GRADES.map(([g]) => g).find((g) => mine.some((r) => r.grade === g));
       return `<tr><td>${esc(P.name)}</td><td lang="ja">${esc(P.at)}</td><td>${P.pay ? `${P.pay} 円` : '—'}</td><td>${mine.length} 班</td><td${best === 'S' ? ' class="wk-s"' : ''}>${best || '—'}</td></tr>`; };
-    const cards = Object.entries(AREAS).map(([area, A]) => { const lv = level(area), js = jobsOf(area), next = A.ranks[lv + 1];
+    const shown = Object.keys(AREAS).filter((area) => !AREAS[area].after || areaOpen(area) || all.some((r) => PLACES[r.place] && PLACES[r.place].area === area));   // 駅前's card once it opens (or has shifts)
+    const cards = shown.map((area) => { const A = AREAS[area], lv = level(area), js = jobsOf(area), next = A.ranks[lv + 1];
       return `<div class="wk-card"><span class="wk-title">${esc(A.name)}打工證</span><b class="wk-rank" lang="ja">${esc(A.ranks[lv])}</b><span>${next ? `${js.length} 份工作都拿過 S 級就升「${esc(next)}」（${js.filter(hadS).length}／${js.length}）` : `升上來了：所有打工的薪水 +${Math.round(RAISE * 100)}%`}</span></div>
         <table class="wk-tbl"><thead><tr><th>工作</th><th>場所</th><th>底薪</th><th>打過</th><th>最好</th></tr></thead><tbody>${js.map((job) => row(job, PLACES[job])).join('')}${area === 'chinatown' ? gone.map((job) => row(job, GONE[job])).join('') : ''}</tbody></table>`; }).join('');
     return `<div class="wk-book">${cards}${CRUISE.card()}
-      <p class="wk-note">總共打過 ${n} 班${up ? `・打工證加給 +${Math.round(RAISE * 100 * up)}%` : ''}。一天只能在一個地方打一班。中華街的店：大通り 10 點到 19 點；らいらいけん 10 點到 20 點；包包子要王老闆在攤子。</p></div>`;
+      <p class="wk-note">總共打過 ${n} 班${up ? `・打工證加給 +${Math.round(RAISE * 100 * up)}%` : ''}。一天只能在一個地方打一班。${shown.map((area) => `${esc(AREAS[area].name)}：${esc(AREAS[area].hours)}`).join('')}</p></div>`;
   }
   const register = (job, def) => { JOBS[job] = def; };
   // the music while a shift is under way and in sight (MUSIC.RECORDS: tune; 2026-11-18, the user: the jobs wanted a little music):
@@ -200,5 +229,5 @@ const WORK = (() => {
   const tune = () => { const job = Object.keys(PLACES).find((j) => document.querySelector('.cls.wk-' + j)) || (typeof HALL === 'object' && HALL.on() ? 'waiter' : '');
     return job ? PLACES[job].tune : ''; };
   const lines = (add) => { Object.entries(TOWN.WORK.hello || {}).forEach(([id, l]) => add(id, l[0])); Object.values(TOWN.WORK.yes || {}).concat([ASK]).forEach((l) => add('hero', l[0])); Object.values(TOWN.WORK.first || {}).forEach((ls) => ls.forEach((l) => add(l[0], l[1]))); Object.values(JOBS).forEach((j) => j.lines && j.lines(add)); };
-  return { N, nOf, PLACES, AREAS, kana, knows, free, tool, can, start, intro, register, pay, level, title, ups, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, ask, board, tune };
+  return { N, nOf, PLACES, AREAS, kana, knows, free, tool, ekiTool, ekiOn: ekiFree, areaOpen, can, start, intro, register, has: (job) => Boolean(JOBS[job]), pay, level, title, ups, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, ask, board, tune };
 })();

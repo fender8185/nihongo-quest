@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 84 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 85 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -6,9 +6,9 @@
    docs/superpowers/specs/2026-11-09-town-events-design.md. */
 const TOWN = {
   // the places index.html draws people in (a new one goes here when it is drawn: street, station, sento, shrine, castle)
-  PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park', 'kominkan', 'kyoshitsu', 'chinatown', 'chinadori', 'rairai'],
+  PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park', 'kominkan', 'kyoshitsu', 'chinatown', 'chinadori', 'rairai', 'platform'],
   // names of people, shops and places: no gloss needed
-  NAMES: ['美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街'],
+  NAMES: ['浜田', 'ハル', '白鷺', '美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街'],
   // the shops' hours (the world's time: the phone's, or where a sleep moved it on; to < from runs past midnight)
   HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 23], chaya: [9, 17], kominkan: [9, 22], butaman: [10, 20], ryuho: [11, 21], dori: [10, 19], rairai: [10, 20] },
   // the hours a sleep in bed wakes to (早上, 中午, 傍晚, 晚上): every event's person is at its place at one of them, weekdays and weekends
@@ -35,6 +35,7 @@ const TOWN = {
     chinatown: { stand: { X: -30, Y: 118, roam: [20, 6] }, stand2: { X: 70, Y: 112, roam: [30, 8] } },   // 中華街 (2026-11-14): 王 at his stand, 陳 helping at lunch
     chinadori: { ranran: { X: -66, Y: 132, roam: [8, 4] }, fuku: { X: -44, Y: 222, roam: [6, 3] }, rairai: { X: 66, Y: 132, roam: [8, 4] } },   // 大通り (2026-11-14): its keepers at their shops (WORK)
     rairai: { pass: { u: 6.9, v: 0.85 } },   // らいらいけん (2026-11-15): 黄 behind the pass
+    platform: { stand: { X: -372, Y: 128, roam: [6, 3] } },   // みなと駅のホーム (2026-11-20): ハル behind her bento stall
     kyoshitsu: { teach: { u: 4.6, v: 3.6 }, desk1: { u: 5.6, v: 5.85, sit: 1, pose: 'turn flip' }, desk2: { u: 13, v: 5.85, sit: 1, pose: 'turn flip' }, desk3: { u: 16.6, v: 5.85, sit: 1, pose: 'turn flip' }, tatami: { u: 19.4, v: 12.4, h: 0.5, kneel: 1, pose: 'turn flip' } }
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they
@@ -150,6 +151,10 @@ const TOWN = {
     huang: { name: '黄 大龍', kana: 'コウ ダイリュウ', role: '中華料理店「らいらいけん」的老闆兼主廚', look: { face: 'round', skin: '#d39f78', cheeks: 'soft', fringe: 'spiky', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'big', eyeColor: '#2a2730', brows: 'thick', mouth: 'grin', beard: 'stubble', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'sneaker', shoe: '#ecebe6' }, wear: { head: 'chefcap' },
       bio: ['黄大龍，50 歲，「らいらいけん」的老闆兼主廚，出菜一道都不能慢。', '永遠在趕時間，口頭禪是「はやく！はやく！」，自己的拉麵卻總是放到冷掉才吃。'],
       hours: [[10, 20, 'rairai', 'pass']] },   // 2026-11-15: in his kitchen, at the pass (らいらいけん walked into)
+    // 駅前の打工 (2026-11-20): the bento seller on みなと駅's platform (駅弁の立ち売り)
+    haru: { name: '浜田 ハル', kana: 'はまだ はる', role: '駅弁屋「みなと弁当」', look: { face: 'round', skin: '#f0cdb0', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#b8b8bc', eyes: 'happy', eyeColor: '#3a2a20', brows: 'soft', mouth: 'grin', beard: 'none', topStyle: 'happi', top: '#2f5a8a', bottomStyle: 'wide', bottom: '#3f4660', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'hachimaki' },
+      bio: ['みなと駅月台上便當攤「みなと弁当」的老闆娘，74 歲。在這個月台賣了五十年便當，嗓門大、手腳快、很疼人。', '口頭禪是「でんしゃは まって くれないよ！」。說話是老奶奶的常體。'],
+      hours: [[7, 19, 'platform', 'stand']] },
     granny: { name: 'おばあちゃん', kana: 'おばあちゃん', role: '外婆（信）', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#b8a27a', bottomStyle: 'skirt', bottom: '#6e4f3a', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { face: 'glasses' },
       bio: ['你的外婆。在海邊的小屋住了一輩子，鎮上每個人都記得她。', '她留給渚一封信，要等你會說日文才交給你。'],
       hours: [] }
@@ -160,6 +165,21 @@ const TOWN = {
   // changed since they last saw the hero or a thing worn, fest 'halloween', about: someone the hero has met. fresh, look and fest
   // are news: said first, once. How each of them talks: docs/town-voices.md
   CHAT: {
+    // みなと駅のホーム (2026-11-20): ハル — loud, quick, kind; an old woman's plain speech; 五十 years of bentos on this platform
+    haru: [
+      ['m1', 'いらっしゃい！ みなと{弁当|べんとう}だよ！', '歡迎！みなと便當喔！'],
+      ['m1', 'お{弁当|べんとう}、ひとつ どうだい？ おいしいよ！', '便當來一個怎麼樣？很好吃喔！'],
+      ['m1', 'でんしゃは まって くれないよ！ はやく、はやく！', '電車可不會等人喔！快點快點！'],
+      ['m1', 'おはよう！ {朝|あさ}の お{弁当|べんとう}は できたてだよ！', '早！早上的便當是剛做好的喔！', { h: 'am' }],
+      ['m2', '{今日|きょう}の さかなは {大|おお}きいよ。{朝|あさ}、{港|みなと|港口}で {買|か}ったんだ。', '今天的魚很大喔。早上在港口買的。'],
+      ['m2', 'あたたかい お{茶|ちゃ}も あるよ。{寒|さむ}い {日|ひ}は これだね。', '也有熱茶喔。冷天就是要這個。'],
+      ['m2', 'もう すぐ おしまいだよ。また {明日|あした} おいで。', '快收攤了。明天再來喔。', { h: 'pm' }],
+      ['m4', 'この {駅|えき}で {五十年|ごじゅうねん|五十年}、お{弁当|べんとう}を {売|う}って いるんだよ。', '我在這個車站賣了五十年便當喔。'],
+      ['m4', '{原田|はらだ}さんの お{昼|ひる}は {毎日|まいにち} おにぎり {二|ふた}つ。ずっと おなじだよ。', '原田先生的午餐每天都是兩個飯糰。一直都一樣喔。', { about: 'harada' }],
+      ['m4', '{中村|なかむら}さんは いつも おにぎり {二|ふた}つと お{茶|ちゃ}。「いつもの」で わかるよ。', '中村先生總是兩個飯糰加茶。說「老樣子」我就懂了。', { about: 'nakamura' }],
+      ['m5', '{昔|むかし|以前}は {電車|でんしゃ}の {窓|まど}から お{弁当|べんとう}を {売|う}ったんだよ。いまも {売|う}って いるけどね！', '以前是從電車的窗戶賣便當的喔。現在也還在賣啦！'],
+      ['m6', '{雨|あめ}の {日|ひ}は お{客|きゃく}さんが {少|すく}ないから、{歌|うた}を {歌|うた}って {待|ま}つんだよ。', '下雨天客人少，所以我就唱著歌等。']
+    ],
     // 中華街大通り (2026-11-14): 周 — slow, kind, and never loses a haggle; 張 — few words, everything in its place; 黄 — in a hurry
     zhou: [
       ['m0', 'いらっしゃい…。ゆっくり みてね。', '歡迎光臨……慢慢看喔。'],
@@ -519,8 +539,8 @@ const TOWN = {
     ],
     harada: [
       ['m2', 'みなと{駅|えき}へ ようこそ。', '歡迎來到みなと站。'],
-      ['m2', '{電車|でんしゃ}は {毎時|まいじ|每小時} {十分|じゅっぷん|十分}と {四十分|よんじゅっぷん|四十分}に {出|で}ます。', '電車每小時的十分和四十分發車。'],
-      ['m7', '{市内|しない|市區}まで、{大人|おとな} {二百四十円|にひゃくよんじゅうえん|兩百四十日圓}。{十八分|じゅうはっぷん|十八分鐘}です。', '到市區，大人兩百四十日圓。十八分鐘。'],
+      ['m2', '{白鷺|しらさぎ}{行|ゆ}きの {普通|ふつう|普通車}は {毎時|まいじ|每小時} {十分|じゅっぷん|十分}と {四十分|よんじゅっぷん|四十分}に {出|で}ます。', '往白鷺的普通車每小時的十分和四十分發車。'],
+      ['m7', '{白鷺|しらさぎ}まで、{大人|おとな} {三百十円|さんびゃくじゅうえん|三百一十日圓}。{十八分|じゅうはっぷん|十八分鐘}です。', '到白鷺，大人三百一十日圓。十八分鐘。'],
       ['m7', 'まもなく {電車|でんしゃ}が {来|き|來}ます。{白線|はくせん|白線}の {内側|うちがわ|內側}へ どうぞ。', '電車即將進站。請退到白線內側。'],
       ['m7', 'おはようございます。{本日|ほんじつ|今天}も {定刻|ていこく|準點}です。', '早安。今天也一切準點。', { h: 'am' }],
       ['m7', 'わたくしの お{昼|ひる}は {十二時|じゅうにじ|十二點}{十五分|じゅうごふん|十五分}から {二十五分|にじゅうごふん|二十五分}まで。おにぎり {二|ふた}つです。', '我的午餐是十二點十五分到二十五分。兩個飯糰。', { h: 'noon' }],

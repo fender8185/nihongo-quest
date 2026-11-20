@@ -433,7 +433,7 @@ const DIARY = (() => {
     return `<section class="town-tools"><b>測試用（只在測試站）</b>
       <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="meet">認識所有人、開通所有公車站</button><button type="button" class="btn btn-sm" data-tool="reset">小鎮事件從頭開始</button></div>
       <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="ship">郵輪：現在叫來（下一趟，不看日子、進度）</button><button type="button" class="btn btn-sm" data-tool="shipreset">郵輪：從第 1 趟重來</button><button type="button" class="btn btn-sm" data-tool="shipresult">郵輪：看結算畫面（不存）</button>${CRUISE.trips().slice(1).map((t, k) => `<button type="button" class="btn btn-sm" data-tool="shipto" data-trip="${t.id}">郵輪：跳到第 ${k + 2} 趟</button>`).join('')}</div>
-      <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="yen-gift">円：+10,000</button><button type="button" class="btn btn-sm" data-tool="work-free">${WORK.free() ? '打工：恢復一天一次' : '打工：無限次數'}</button><button type="button" class="btn btn-sm" data-tool="work-nums">${JOBS.till.allNums() ? '收銀：恢復要先學過' : '收銀：不看學過沒'}</button><button type="button" class="btn btn-sm" data-tool="yen-all">${YEN.allOpen() ? '菜單：恢復要先學單字' : '菜單：全部開放'}</button><button type="button" class="btn btn-sm" data-tool="yen-full">今天吃喝次數歸零</button></div>
+      <div class="row-wrap mt-2"><button type="button" class="btn btn-sm" data-tool="yen-gift">円：+10,000</button><button type="button" class="btn btn-sm" data-tool="work-free">${WORK.free() ? '打工：恢復一天一次' : '打工：無限次數'}</button><button type="button" class="btn btn-sm" data-tool="work-eki">${WORK.ekiOn() ? '駅前打工：恢復要先有條件' : '駅前打工：不看條件'}</button><button type="button" class="btn btn-sm" data-tool="work-nums">${JOBS.till.allNums() ? '收銀：恢復要先學過' : '收銀：不看學過沒'}</button><button type="button" class="btn btn-sm" data-tool="yen-all">${YEN.allOpen() ? '菜單：恢復要先學單字' : '菜單：全部開放'}</button><button type="button" class="btn btn-sm" data-tool="yen-full">今天吃喝次數歸零</button></div>
       <div class="row-wrap mt-2">時間（只改小鎮；「現在」也清掉睡覺跳過的時間）：${hrs.map(([h, n]) => `<button type="button" class="btn btn-sm" data-tool="hour" data-h="${h}" aria-pressed="${String(h) === String(cur)}">${n}</button>`).join('')}</div>
       ${Object.entries(byUnit).map(([u, list]) => `<div class="tt-unit"><span>${esc(u)}</span>${list.map((e) => `<button type="button" class="tb-ev" data-try="${esc(e.id)}">${esc(e.title)}<small>${esc((TOWN.CAST[e.who] || {}).name || e.who)}・${esc(TOWNEV.PLACE_NAME[e.at] || e.at)}${e.when === 'night' ? '・晚上' : ''}</small></button>`).join('')}</div>`).join('')}
     </section>`;
@@ -448,6 +448,7 @@ const DIARY = (() => {
     if (t.startsWith('yen-')) toast(YEN.tool(t.slice(4)));
     if (t === 'work-free') toast(WORK.tool(), 3200);
     if (t === 'work-nums') toast(JOBS.till.numsTool(), 3200);
+    if (t === 'work-eki') toast(WORK.ekiTool(), 3600);
     if (t === 'shipto') { CRUISE.skipTo(b.dataset.trip); toast('前面幾趟算走完了，郵輪在みなと漁港外的海上等你'); }
     if (t === 'hour') { TOWNEV.clock = b.dataset.h === 'now' ? null : { h: Number(b.dataset.h), day: new Date() }; if (b.dataset.h === 'now') { try { localStorage.removeItem('nq_wake'); } catch (e) { /* none kept */ } sceneTick(); } }   // 現在: a sleep's hours gone too
     show();
@@ -2119,6 +2120,22 @@ const cityBike = (x, y, r, c) => { const s = r / 9, n = (v) => (v * s).toFixed(1
     <path d="M${P(10, -16)} L${P(9.4, -19.6)}" ${hs('#4a4a55', '#2a2c50')} stroke-width="${n(1.6)}"/><path d="M${P(5.6, -21)} h${n(8.6)} q0 ${n(2.4)} ${n(-3.6)} ${n(2.4)} h${n(-3)} Z" ${hc('#3a3a44', '#16172e')}/>
     <path d="M${P(22, -16)} l${n(2)} ${n(-6)} h${n(5)}" fill="none" ${hs('#4a4a55', '#2a2c50')} stroke-width="${n(1.8)}"/><path d="M${P(27.6, -22)} h${n(2)}" ${hs('#2b2b33', '#141428')} stroke-width="${n(2.6)}"/>
     <path d="M${P(27, -20)} h${n(8)} l${n(-1)} ${n(7)} h${n(-6)} Z M${P(27.6, -16.6)} h${n(7)} M${P(31, -20)} v${n(7)}" fill="none" ${hs('#9a968e', '#3a3d66')} stroke-width="${n(0.9)}"/></g>`; };
+// 駅前's 求人看板 (2026-11-20, docs/superpowers/specs/2026-11-20-ekimae-work-design.md §2.4): a cork board on the station's front
+// where its right window was — アルバイト募集 on a red band, four flyers pinned up (a bento, a ticket, a key on its tag, a taxi),
+// each a different paper, a little askew; by night the station's light on it
+function ekiBoard(F) {
+  const y = F - 122, pin = (x, py, c) => `<circle cx="${x}" cy="${py}" r="1.8" fill="${c}"/><circle cx="${x - 0.5}" cy="${py - 0.5}" r=".6" fill="#fff" fill-opacity=".7"/>`;
+  const flyer = (x, fy, w, h, r, paper, art) => `<g transform="rotate(${r} ${x + w / 2} ${fy})"><rect x="${x + 1}" y="${fy + 1.4}" width="${w}" height="${h}" fill="#2b1c12" fill-opacity=".18"/><rect x="${x}" y="${fy}" width="${w}" height="${h}" ${hc(paper, '#8a86a8')}/>${art}${pin(x + w / 2, fy + 2.4, '#d0453c')}</g>`;
+  const lines = (x, ly, n, w) => Array.from({ length: n }, (_, k) => `<path d="M${x} ${ly + k * 3.2} h${w - (k % 2) * 4}" stroke="#2b1c12" stroke-opacity=".35" stroke-width="1"/>`).join('');
+  return `<g data-fx="ekiboard"><rect x="688" y="${y}" width="114" height="64" rx="2" ${hc('#8a6a46', '#3a2c40')}/><rect x="692" y="${y + 4}" width="106" height="56" ${hc('#c9a06a', '#4a3c50')}/>
+    <path d="${Array.from({ length: 34 }, (_, k) => `M${694 + (k * 37) % 102} ${y + 8 + (k * 23) % 50} h1.2`).join(' ')}" stroke="#8a6a46" stroke-opacity=".5" stroke-width="1.2" stroke-linecap="round"/>
+    <rect x="692" y="${y + 4}" width="106" height="11" ${hc('#c8322a', '#5a2a3a')}/><text x="745" y="${y + 12.6}" text-anchor="middle" font-size="8.4" font-weight="700" ${hc('#ffffff', '#f2e6d8')} font-family="system-ui, sans-serif">アルバイト募集</text>
+    ${flyer(697, y + 19, 22, 30, -4, '#fbf7ec', `<rect x="701" y="${y + 25}" width="14" height="9" rx="1" fill="#c8453a"/><rect x="701" y="${y + 25}" width="14" height="3" fill="#2f5a8a"/><path d="M703 ${y + 31} h10" stroke="#f6e08a" stroke-width="1.2"/>${lines(700, y + 38, 3, 16)}`)}
+    ${flyer(722, y + 20, 22, 28, 3, '#f6e9a8', `<rect x="726" y="${y + 25}" width="14" height="8" rx="1" fill="#fff" stroke="#3f7a52" stroke-width="1"/><path d="M729 ${y + 28} h8 M729 ${y + 30.6} h5" stroke="#3f7a52" stroke-width=".8"/>${lines(725, y + 37, 3, 16)}`)}
+    ${flyer(747, y + 19, 22, 30, -2, '#f8d8de', `<circle cx="754" cy="${y + 29}" r="3.4" fill="none" stroke="#6a6a74" stroke-width="1.4"/><path d="M757 ${y + 29} h7 M762 ${y + 29} v2.4 M764 ${y + 29} v1.6" stroke="#6a6a74" stroke-width="1.4"/>${lines(750, y + 38, 3, 16)}`)}
+    ${flyer(772, y + 20, 22, 28, 5, '#dbe8f4', `<path d="M775 ${y + 32} v-3 q1 -2 3 -2 l2 -3 h6 l2 3 q2 0 3 2 v3 Z" fill="#f3d24a"/><circle cx="779" cy="${y + 32}" r="1.6" fill="#2b2b33"/><circle cx="787" cy="${y + 32}" r="1.6" fill="#2b2b33"/>${lines(775, y + 37, 3, 16)}`)}
+    <path d="M688 ${y + 64} h114" stroke="#2b1c12" stroke-opacity=".25" stroke-width="1.4"/></g>`;
+}
 function stationHtml() {
   const F = 236;
   // 2026-11-10 (the user: every place looked the same): city-like — buildings behind, a viaduct over the back with a train along it
@@ -2150,9 +2167,9 @@ function stationHtml() {
       <path d="${Array.from({ length: 12 }, (_, i) => { const a = i * Math.PI / 6, r0 = i % 3 ? 10.6 : 9.4; return `M${(360 + r0 * Math.sin(a)).toFixed(1)} ${(F - 150 - r0 * Math.cos(a)).toFixed(1)} L${(360 + 12.2 * Math.sin(a)).toFixed(1)} ${(F - 150 - 12.2 * Math.cos(a)).toFixed(1)}`; }).join(' ')}" stroke="#3b2a1c" stroke-opacity=".7" stroke-width="1.1"/><path d="M350 ${F - 158} a13 13 0 0 1 8 -5.4" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.4" stroke-linecap="round"/>${clockHands(360, F - 150, 13)}
       <path d="M470 ${F - 136} v6 M650 ${F - 136} v6" ${hs('#5a5f6a', '#2a2c4a')} stroke-width="2"/><rect x="446" y="${F - 130}" width="228" height="32" rx="4" ${hc('#5a5f6a', '#2a2c4a')}/><rect x="448" y="${F - 128}" width="224" height="28" rx="3" fill="#1c1c22"/>
       <g clip-path="url(#stLed)"><g class="fx-scroll"><text x="456" y="${F - 109}" font-size="13" font-weight="700" fill="#ffae3a" font-family="system-ui, sans-serif">${board}${board}</text></g></g><path d="M452 ${F - 120.5} h216 M452 ${F - 116.5} h216 M452 ${F - 112.5} h216" stroke="#1c1c22" stroke-opacity=".45" stroke-width=".9"/><circle cx="664" cy="${F - 124}" r="1.4" fill="#5fd07a"/>
-      <rect x="320" y="${F - 120}" width="110" height="60" ${hc('#cfe6ec', '#ffd98a')}/><rect x="690" y="${F - 120}" width="110" height="60" ${hc('#cfe6ec', '#ffd98a')}/>
+      <rect x="320" y="${F - 120}" width="110" height="60" ${hc('#cfe6ec', '#ffd98a')}/>${ekiBoard(F)}
       <g style="opacity:calc(.5 + .5 * var(--day))"><rect x="336" y="${F - 114}" width="30" height="42" fill="#7fb3d8"/><path d="M338 ${F - 80} L351 ${F - 100} L364 ${F - 80} Z" fill="#fbfaf6"/><path d="M336 ${F - 78} h30 v6 h-30 Z" fill="#4f8a5a"/><rect x="384" y="${F - 114}" width="30" height="42" fill="#f2b8c6"/><circle cx="399" cy="${F - 98}" r="8" fill="#fbfaf6"/><path d="M386 ${F - 80} q13 -8 26 0" fill="none" stroke="#c84a3a" stroke-width="2"/>
-      <rect x="708" y="${F - 114}" width="30" height="42" fill="#3f7ac8"/><path d="M710 ${F - 84} q14 -10 26 0" fill="none" stroke="#fbfaf6" stroke-width="2.4"/><circle cx="728" cy="${F - 102}" r="5" fill="#f2c94c"/></g>
+</g>
       <rect x="480" y="${F - 96}" width="160" height="96" ${hc('#6b7a8a', '#141632')}/>${[484, 524, 564, 604].map((x) => `<rect x="${x}" y="${F - 90}" width="34" height="90" ${hc('#cfe6ec', '#ffd98a')}/>`).join('')}${[500, 540, 580, 620].map((x) => `<rect x="${x - 3}" y="${F - 40}" width="6" height="30" fill="#8a96a8" fill-opacity=".55"/><rect x="${x - 10}" y="${F - 40}" width="20" height="5" rx="2" fill="#5a6a7a" fill-opacity=".5"/>`).join('')}
       <ellipse class="glow" cx="560" cy="${F - 30}" rx="220" ry="80" fill="url(#glw)"/>
       ${[330, 368, 406].map((x) => `<rect x="${x}" y="${F - 52}" width="30" height="52" rx="3" ${hc('#d9604c', '#4a2c40')}/><path d="M${x + 22} ${F - 52} h5 q3 0 3 3 v49 h-8 Z" fill="#2b1c12" fill-opacity=".1"/><rect x="${x + 5}" y="${F - 46}" width="20" height="12" rx="2" ${hc('#cfe6ec', '#5a66a8')}/><path d="M${x + 7} ${F - 44} h5 M${x + 7} ${F - 41} h8" stroke="#3f7ac8" stroke-opacity=".5" stroke-width="1"/>

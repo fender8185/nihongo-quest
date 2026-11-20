@@ -18,7 +18,7 @@
 - No real railway names, departure melodies or brand marks; places are the town's own.
 - Laughs/cries/elongated shouts never read by TTS (SFX or a plain rewrite).
 - Pay: 駅弁 120, きっぷ売り場 140, 落とし物 160, タクシー 180; units m1, m2, m3, m4; area opens at 中華街打工證 一人前.
-- みなと線 fares from みなと: 白鷺 310/160, 大川 260/130, 花田 220/110, 川口 170/90, みなと港 140/70; 快速 stops 川口・白鷺・みなと港; 1番線 白鷺方面, 2番線 みなと港方面; timetable each hour 6–22: 白鷺行き 普通 :05 :35, 快速 :20 :50; みなと港行き 普通 :12 :42, 快速 :27 :57.
+- みなと線 fares from みなと: 白鷺 310/160, 大川 260/130, 花田 220/110, 川口 170/90, みなと港 140/70; 快速 stops 川口・白鷺・みなと港; 1番線 白鷺方面, 2番線 みなと港方面; timetable each hour 6–22: 白鷺行き 普通 :10 :40, 快速 :25 :55; みなと港行き 普通 :02 :32, 快速 :17 :47.
 - Before each push: the job's e2e file, then one full `bash scripts/test.sh` (ALL_OK), screenshots at 390×844 and 1280×800 looked at by me.
 - Remind the user to press 生成 with the count of new voiced lines after each push.
 
@@ -57,7 +57,7 @@
 **Interfaces:**
 - Produces: `EKI.line() -> [{ id, name, kana, fare, child, rapid }]` (from みなと), `EKI.next(h, m, n = 4, from = 'minato') -> [{ t: 'HH:MM', kind: '普通'|'快速', to: id, track: 1|2 }]`, `EKI.fare(from, to, child) -> 円`, `EKI.stops(kind, to) -> [ids]`.
 
-- [ ] Test `test_timetable_next_trains`: at 10:24 → `[10:27 快速 minatoko 2, 10:35 普通 shirasagi 1, 10:42 普通 minatoko 2, 10:50 快速 shirasagi 1]`; at 22:58 → first is 6:05 next day; fare(minato, hanada, child) = 110; rapid to shirasagi stops [kawaguchi, shirasagi].
+- [ ] Test `test_timetable_next_trains`: at 10:24 → `[10:25 快速 shirasagi 1, 10:32 普通 minatoko 2, 10:40 普通 shirasagi 1, 10:47 快速 minatoko 2]`; at 22:58 → first is 6:05 next day; fare(minato, hanada, child) = 110; rapid to shirasagi stops [kawaguchi, shirasagi].
 - [ ] Implement, run, commit.
 
 ### Task 3: the ホーム scene (stage 1c)

@@ -225,7 +225,7 @@ const USE_SND = {
   'street.vend': 'can-drop', 'street.post': 'letter', 'street.mirror': 'sparkle',
   'beach.crab': 'pinch', 'beach.castle': 'sparkle', 'beach.star': 'splash', 'beach.shell': 'sparkle', 'beach.sea': 'splash',
   'town.cat': 'meow', 'town.chimes': 'furin', 'harbor.cat': 'purr', 'harbor.gull': 'gull', 'harbor.fish': 'flop',
-  'station.vend': 'can-drop', 'station.pigeons': 'wings', 'station.taxi': 'horn', 'station.gate': 'ic',
+  'station.vend': 'can-drop', 'station.jobs': 'paper', 'station.pigeons': 'wings', 'station.taxi': 'horn', 'station.gate': 'ic',
   'sento.milk': 'bottle', 'sento.cat': 'purr', 'sento.bath': 'bath', 'sento.laundry': 'washer',
   'chinatown.post': 'paper', 'chinatown.notice': 'paper', 'chinatown.shirt': 'cloth', 'chinatown.seiro': 'pour', 'chinatown.panda': 'cushion', 'chinatown.rmenu': 'paper', 'chinatown.yuka': 'place', 'chinatown.shishi': 'clap', 'chinatown.uranai': 'sparkle',
   'rairai.pass': 'sizzle', 'rairai.register': 'suzu', 'rairai.table': 'dishes', 'rairai.menu': 'paper', 'rairai.poster': 'paper', 'rairai.tank': 'splash', 'rairai.toilet': 'door-close',

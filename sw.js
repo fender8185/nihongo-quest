@@ -66,7 +66,7 @@ const PRECACHE = [
   './config.js',
   './data.js?v=28',
   './data-n3.js?v=2',
-  './events.js?v=84',
+  './events.js?v=85',
   './pics.js?v=10',
   './kana-strokes.js?v=1'
 ];
