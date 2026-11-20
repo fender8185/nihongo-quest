@@ -6,23 +6,26 @@
 // 包包子 at 福明 with 王 (5 kana seen; kana and kana words heard), 站櫃 at らんらん (15; words heard), 外場 in らいらいけん (30 and
 // three 入門 words; the talk; 2026-11-15: in place of 外送), 收銀 at ふく (N5's numbers learned; sums reckoned and read out —
 // 2026-11-19, in place of 整理貨架). A shift is ten tasks (the 外場 six groups); one left halfway waits for its day, at that place
-// only; the day is the town's day it began. Graded by the share right at once (as the cruise's guide), paid by the 打工證 (the
-// shifts done: 1 新人 100 円, 5 アルバイト 120, 15 ベテラン 150, 30 バイトリーダー 200) and the grade (S 50 … C 10), a tip on
-// top where a job gives one; 円 only. Each job's runner registers itself (WORK.register) and drives the shift through its ctx: right(task, misses) as
+// only; the day is the town's day it began. Graded by the share right at once (as the cruise's guide), paid by the job (2026-11-20,
+// the user: 站櫃 60 円, 包包子 80, 收銀 and 外場 100) and the grade (S 50 … C 10), a tip on top where a job gives one, and 2% more on
+// all of it for each step up an area's 打工證 (AREAS); 円 only. Each job's runner registers itself (WORK.register) and drives the shift through its ctx: right(task, misses) as
 // each is done, finish() at the tenth.
 const WORK = (() => {
   const N = 10;
   const PLACES = {
-    buns: { place: 'chinatown', shop: 'seiro', who: 'wang', kana: 5, name: '包包子', at: '福明', tune: 'chukagai' },   // 5 (was 46): the first job (2026-11-19)
-    counter: { place: 'chinadori', shop: 'ranran', who: 'zhou', kana: 15, name: '站櫃', at: 'らんらん', tune: 'chukagai' },
+    buns: { area: 'chinatown', pay: 80, place: 'chinatown', shop: 'seiro', who: 'wang', kana: 5, name: '包包子', at: '福明', tune: 'chukagai' },   // 5 (was 46): the first job (2026-11-19)
+    counter: { area: 'chinatown', pay: 60, place: 'chinadori', shop: 'ranran', who: 'zhou', kana: 15, name: '站櫃', at: 'らんらん', tune: 'chukagai' },
     // 外場 2.0 (2026-11-15, docs/superpowers/specs/2026-11-15-hall-rush-design.md §2): a shift is six groups, each scored by its mood
     // at the door (0 pleased … 3 stormed out), graded with part credit for the not quite pleased
-    waiter: { place: 'rairai', shop: 'rairai', who: 'huang', kana: 30, words: ['いらっしゃいませ', 'どうぞ', 'はい'], name: '外場', at: 'らいらいけん', n: 6, credit: [1, 0.6, 0.3, 0], unit: '滿意的客人', tune: 'rairai' },
-    till: { place: 'chinadori', shop: 'fuku', who: 'zhang', kana: 46, need: '學「いくら」「円」和數字', name: '收銀', at: 'ふく', tune: 'chukagai' } };   // need: its words (JOBS' left), named
+    waiter: { area: 'chinatown', pay: 100, place: 'rairai', shop: 'rairai', who: 'huang', kana: 30, words: ['いらっしゃいませ', 'どうぞ', 'はい'], name: '外場', at: 'らいらいけん', n: 6, credit: [1, 0.6, 0.3, 0], unit: '滿意的客人', tune: 'rairai' },
+    till: { area: 'chinatown', pay: 100, place: 'chinadori', shop: 'fuku', who: 'zhang', kana: 46, need: '學「いくら」「円」和數字', name: '收銀', at: 'ふく', tune: 'chukagai' } };   // need: its words (JOBS' left), named
   // a workplace no more (外送, cut 2026-11-15; 整理貨架, 2026-11-19): its old records still read
   const GONE = { deliver: { name: '外送', at: 'らいらいけん' }, shelf: { name: '整理貨架', at: 'ふく' } };
   const named = (job) => PLACES[job] || GONE[job] || { name: job, at: '' };
-  const RANKS = [[30, 'バイトリーダー', 200], [15, 'ベテラン', 150], [5, 'アルバイト', 120], [1, '新人', 100]];
+  // 打工證, one an area (2026-11-20, the user: by area, 中華街's four jobs the first and lowest): 新人 till every job there has had
+  // a shift graded S, then 一人前; each step up on any card 2% more on all the pay after it (the shift that takes it there: as it was)
+  const AREAS = { chinatown: { name: '中華街', ranks: ['新人', '一人前'] } };
+  const RAISE = 0.02;
   const BONUS = { S: 50, A: 30, B: 20, C: 10, D: 0, E: 0 };
   const GRADES = [['S', 0.95], ['A', 0.85], ['B', 0.7], ['C', 0.5], ['D', 0.3], ['E', 0]];
   const JOBS = {};
@@ -30,12 +33,17 @@ const WORK = (() => {
   const W = () => (state.work && state.work.res ? state.work : (state.work = { res: {} }));
   const fin = (r) => Boolean(r) && r.yen !== undefined;
   const today = () => W().res[day()] || null;
-  const shifts = () => Object.values(W().res).filter(fin).length;
-  const rank = (n) => (RANKS.find(([k]) => n >= k) || [0, ''])[1];
+  const shifts = () => Object.values(W().res).filter(fin).length;   // done anywhere: a record only (the pay no longer goes by it)
+  const jobsOf = (area) => Object.keys(PLACES).filter((j) => PLACES[j].area === area);
+  const hadS = (job) => Object.values(W().res).some((r) => fin(r) && r.place === job && r.grade === 'S');
+  const level = (area) => (jobsOf(area).every(hadS) ? AREAS[area].ranks.length - 1 : 0);   // the card's step (two so far: all S or not)
+  const title = (area) => AREAS[area].ranks[level(area)];
+  const ups = () => Object.keys(AREAS).reduce((a, k) => a + level(k), 0);   // steps up, every card: 2% each
   const nOf = (job) => (PLACES[job] && PLACES[job].n) || N;   // the tasks in a shift of this job (10, the 外場's six groups)
   const grade = (score, job) => { const v = Object.values(score || {}), cr = PLACES[job] && PLACES[job].credit, got = (m) => (cr ? cr[Math.min(m, cr.length - 1)] : m === 0 ? 1 : 0);
     const share = v.reduce((a, m) => a + got(m), 0) / Math.max(nOf(job), v.length); return GRADES.find(([, min]) => share >= min - 1e-9)[0]; };
-  const pay = (n, g, tip = 0) => { const base = (RANKS.find(([k]) => n >= k) || RANKS[RANKS.length - 1])[2], bonus = BONUS[g] || 0; return { base, bonus, tip, yen: base + bonus + tip }; };
+  const pay = (job, g, tip = 0, up = ups()) => { const base = (PLACES[job] || {}).pay || 0, bonus = BONUS[g] || 0, raise = Math.round((base + bonus + tip) * RAISE * up);
+    return { base, bonus, tip, raise, pct: Math.round(RAISE * 100 * up), yen: base + bonus + tip + raise }; };
   const seen = () => kanaSeenSet().size;
   const knowsAll = () => state.kanaKnown === true || !inPreStage();
   const kanaOk = (need) => knowsAll() || seen() >= need;
@@ -94,11 +102,11 @@ const WORK = (() => {
     till: { how: ['客人把要買的東西放上櫃台，每樣都有價格牌。只有一樣就問「これ、いくらですか。」，用字卡依序拼出價格的念法，例如 198円 → ひゃく｜きゅう｜じゅう｜はち｜えん。', '兩樣（或同一樣要「ふたつ」）就問「ぜんぶで いくらですか。」：自己加起來，拼出全部的錢，例如 248＋150 → さん｜びゃく｜きゅう｜じゅう｜はち｜えん。', '前 4 位買一樣，後 6 位買兩樣，不會更多。按錯一塊算一次失誤，錯兩次下一塊會亮。', '客人底下那條是耐心：買一樣 30 秒、兩樣 45 秒，按錯也會少一截；沒了客人就走人，這位算失敗。'], uses: ['數字的念法', 'ひゃく・せん 的音變', '兩個價錢相加'], n: '一班 10 位客人' } };
   function intro(yard, job) {
     const c = can(job); if (!c.ok) { toast(c.why, 3600); return false; }
-    const P = PLACES[job], R = RULES[job], t = today(), back = t && t.place === job && !fin(t) ? t.done : 0, n = shifts() + 1, p = pay(n, 'E');
+    const P = PLACES[job], R = RULES[job], t = today(), back = t && t.place === job && !fin(t) ? t.done : 0, p = pay(job, 'E');
     CLASS.card('wk-rules', P.name, `<div class="wk-rhead"><span class="kr-face">${TOWNEV.face(P.who)}</span><p><b>${esc(P.name)}</b><span lang="ja">${esc(P.at)}</span></p></div>
       <h4>玩法</h4><ul class="wk-how">${R.how.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
       <h4>需要的能力</h4><p class="wk-uses">${R.uses.map((u) => `<span lang="ja">${esc(u)}</span>`).join('')}</p>
-      <p class="wk-pay">${esc(R.n)}・底薪 ${p.base} 円（${esc(rank(n))}）＋評級加給最多 50 円${job === 'waiter' ? '＋店長紅包' : ''}</p>
+      <p class="wk-pay">${esc(R.n)}・底薪 ${p.base} 円＋評級加給最多 50 円${job === 'waiter' ? '＋店長紅包' : ''}${p.pct ? `・打工證加給 +${p.pct}%` : ''}</p>
       ${back ? `<p class="wk-back">今天做到 ${back}／${nOf(job)}，按「はい」接著做。</p>` : ''}
       <p class="wk-ask"><b lang="ja">はたらきますか？</b><span>要開始打工嗎？</span></p>
       <div class="wk-yn"><button type="button" class="btn" data-rules="yes" lang="ja">はい</button><button type="button" class="btn" data-rules="no" lang="ja">いいえ</button></div>`,
@@ -132,25 +140,27 @@ const WORK = (() => {
   // so a card shut then is paid all the same (2026-11-15, the final review)
   function finish(s, extra = {}, ms = 0) {
     const r = W().res[s.day]; if (!r || fin(r)) return null;
-    const before = yenBalance(), n = shifts() + 1, g = grade(r.score, s.job), p = Object.assign(pay(n, g, extra.tip || 0), { tipName: extra.tipName });
+    const area = PLACES[s.job].area, was = level(area), before = yenBalance(), g = grade(r.score, s.job), p = Object.assign(pay(s.job, g, extra.tip || 0), { tipName: extra.tipName });
     Object.assign(r, { done: nOf(s.job), yen: p.yen, grade: g, tip: p.tip }); delete r.keep; saveState();
     if (S === s) S = null;
-    const show = () => results(s.job, r, p, before, n, extra.html);
+    const show = () => results(s.job, r, p, before, level(area) > was, extra.html);
     if (ms && ms.then) ms.then(show, show); else if (ms) setTimeout(show, ms); else show();
     return p;
   }
-  // the results: the tasks right at once, the pay counting up, the grade stamped on, the 打工證 and whether it went up
-  function results(job, r, p, before, n, more = '') {   // more: the job's own lines under the pay (外場: each group, their words to hear again)
-    const first = Object.values(r.score).filter((m) => m === 0).length, all = nOf(job), rk = rank(n), up = rk !== rank(n - 1), g = r.grade, el = document.createElement('div');
+  // the results: the tasks right at once, the pay counting up, the grade stamped on, the area's 打工證 and whether it went up (up)
+  function results(job, r, p, before, up, more = '') {   // more: the job's own lines under the pay (外場: each group, their words to hear again)
+    const first = Object.values(r.score).filter((m) => m === 0).length, all = nOf(job), g = r.grade, el = document.createElement('div');
+    const area = PLACES[job].area, A = AREAS[area], js = jobsOf(area), lv = level(area), next = A.ranks[lv + 1];
     el.className = 'cr-result wk-result'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', '打工結算'); el.dataset.at = location.hash;
     el.innerHTML = `<div class="crr-card"><div class="crr-head"><b>打工結算</b><span>${esc(named(job).name)}・${esc(named(job).at)}</span></div>
       <div class="crr-row"><span>${esc((PLACES[job] && PLACES[job].unit) || '一次就做對')}</span><b><i data-n="${first}">0</i> / ${all}</b></div>
       <div class="crr-row"><span>${yenIcon()}底薪</span><b><i data-n="${p.base}" data-yen>0</i> 円</b></div>
       ${p.bonus ? `<div class="crr-row"><span>評級加給（${g} 級）</span><b>+<i data-n="${p.bonus}" data-yen>0</i> 円</b></div>` : ''}
       ${p.tip ? `<div class="crr-row"><span>${esc(p.tipName || '小費')}</span><b>+<i data-n="${p.tip}" data-yen>0</i> 円</b></div>` : ''}
+      ${p.raise ? `<div class="crr-row"><span>打工證加給（+${p.pct}%）</span><b>+<i data-n="${p.raise}" data-yen>0</i> 円</b></div>` : ''}
       <div class="crr-row crr-sum"><span>錢包</span><b><i data-n="${before + p.yen}" data-from="${before}" data-yen>${yenStr(before)}</i> 円</b></div>${more}
       <div class="crr-stamp g${g}" aria-label="${g} 級"><b>${g}</b><span>級バイト</span></div>
-      <p class="crr-rank">打工證：${esc(rk)}${up ? `　<em>${rank(n - 1) ? '升級！' : '拿到打工證！'}</em>` : ''}</p>
+      <p class="crr-rank">${esc(A.name)}打工證：${esc(A.ranks[lv])}${up ? `　<em>升級！之後的薪水 +${Math.round(RAISE * 100)}%</em>` : next ? `<small>${js.length} 份工作都拿過 S 級就升「${esc(next)}」（${js.filter(hadS).length}／${js.length}）</small>` : ''}</p>
       <button type="button" class="btn btn-primary crr-ok">收下</button></div>`;
     document.body.appendChild(el);
     const nums = [...el.querySelectorAll('i[data-n]')], stamp = el.querySelector('.crr-stamp'), put = (x, v) => { x.textContent = x.dataset.yen !== undefined ? yenStr(v) : String(Math.round(v)); };
@@ -164,15 +174,18 @@ const WORK = (() => {
     el.querySelector('.crr-ok').addEventListener('click', () => { el.remove(); if (typeof kotoButtons === 'function') kotoButtons(document); });
     el.addEventListener('click', (e) => { const b = e.target.closest('[data-say]'); if (b) { primeTtsPlayer(); speakAs(b.dataset.who, b.dataset.say); } });   // a line heard again
   }
-  // 町の手帳's 打工證 page: the rank, the shifts done (how many more to the next), each workplace's shifts and best grade
+  // 町の手帳's 打工證 page: a card an area — its step, how far to the next (the jobs with an S), each job's pay, shifts and best
+  // grade; the shifts done in all, as a record
   function book() {
-    const all = Object.values(W().res).filter(fin), n = all.length, next = RANKS.slice().reverse().find(([k]) => k > n);
+    const all = Object.values(W().res).filter(fin), n = all.length, up = ups();
     const gone = Object.keys(GONE).filter((job) => all.some((r) => r.place === job));   // a workplace no more, while it has shifts to show
-    const rows = Object.entries(PLACES).concat(gone.map((job) => [job, GONE[job]])).map(([job, P]) => { const mine = all.filter((r) => r.place === job), best = GRADES.map(([g]) => g).find((g) => mine.some((r) => r.grade === g));
-      return `<tr><td>${esc(P.name)}</td><td lang="ja">${esc(P.at)}</td><td>${mine.length} 班</td><td>${best || '—'}</td></tr>`; }).join('');
-    return `<div class="wk-book"><div class="wk-card"><span class="wk-title">打工證</span><b class="wk-rank" lang="ja">${esc(rank(n) || '—')}</b><span>打過 ${n} 班${next ? `・再 ${next[0] - n} 班升「${next[1]}」` : ''}</span></div>
-      <table class="wk-tbl"><thead><tr><th>工作</th><th>場所</th><th>打過</th><th>最好</th></tr></thead><tbody>${rows}</tbody></table>
-      <p class="wk-note">一天只能在一個地方打一班。中華街的店：大通り 10 點到 19 點；らいらいけん 10 點到 20 點；包包子要王老闆在攤子。</p></div>`;
+    const row = (job, P) => { const mine = all.filter((r) => r.place === job), best = GRADES.map(([g]) => g).find((g) => mine.some((r) => r.grade === g));
+      return `<tr><td>${esc(P.name)}</td><td lang="ja">${esc(P.at)}</td><td>${P.pay ? `${P.pay} 円` : '—'}</td><td>${mine.length} 班</td><td${best === 'S' ? ' class="wk-s"' : ''}>${best || '—'}</td></tr>`; };
+    const cards = Object.entries(AREAS).map(([area, A]) => { const lv = level(area), js = jobsOf(area), next = A.ranks[lv + 1];
+      return `<div class="wk-card"><span class="wk-title">${esc(A.name)}打工證</span><b class="wk-rank" lang="ja">${esc(A.ranks[lv])}</b><span>${next ? `${js.length} 份工作都拿過 S 級就升「${esc(next)}」（${js.filter(hadS).length}／${js.length}）` : `升上來了：所有打工的薪水 +${Math.round(RAISE * 100)}%`}</span></div>
+        <table class="wk-tbl"><thead><tr><th>工作</th><th>場所</th><th>底薪</th><th>打過</th><th>最好</th></tr></thead><tbody>${js.map((job) => row(job, PLACES[job])).join('')}${area === 'chinatown' ? gone.map((job) => row(job, GONE[job])).join('') : ''}</tbody></table>`; }).join('');
+    return `<div class="wk-book">${cards}
+      <p class="wk-note">總共打過 ${n} 班${up ? `・打工證加給 +${Math.round(RAISE * 100 * up)}%` : ''}。一天只能在一個地方打一班。中華街的店：大通り 10 點到 19 點；らいらいけん 10 點到 20 點；包包子要王老闆在攤子。</p></div>`;
   }
   const register = (job, def) => { JOBS[job] = def; };
   // the music while a shift is under way and in sight (MUSIC.RECORDS: tune; 2026-11-18, the user: the jobs wanted a little music):
@@ -180,5 +193,5 @@ const WORK = (() => {
   const tune = () => { const job = Object.keys(PLACES).find((j) => document.querySelector('.cls.wk-' + j)) || (typeof HALL === 'object' && HALL.on() ? 'waiter' : '');
     return job ? PLACES[job].tune : ''; };
   const lines = (add) => { Object.entries(TOWN.WORK.hello || {}).forEach(([id, l]) => add(id, l[0])); Object.values(TOWN.WORK.yes || {}).concat([ASK]).forEach((l) => add('hero', l[0])); Object.values(TOWN.WORK.first || {}).forEach((ls) => ls.forEach((l) => add(l[0], l[1]))); Object.values(JOBS).forEach((j) => j.lines && j.lines(add)); };
-  return { N, nOf, PLACES, kana, knows, free, tool, can, start, intro, register, pay, rank, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, ask, board, tune };
+  return { N, nOf, PLACES, AREAS, kana, knows, free, tool, can, start, intro, register, pay, level, title, ups, grade, shifts, today, book, shown: () => shifts() > 0, lines, on: () => S, offer, hello, ask, board, tune };
 })();

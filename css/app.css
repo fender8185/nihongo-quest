@@ -618,7 +618,8 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .crr-stamp b { font: 900 40px/1 'Hiragino Mincho ProN', 'Noto Serif JP', serif; } .crr-stamp span { font-size: 11px; font-weight: 800; letter-spacing: 1px; }
 .crr-stamp.gS { color: #c9971a; } .crr-stamp.gA { color: #c8392f; } .crr-stamp.gE, .crr-stamp.gD { color: #8a6a5a; }
 .crr-stamp.on { animation: crrStamp .34s cubic-bezier(.3, 1.6, .5, 1) forwards; } .crr-stamp.still { animation: none; opacity: .9; transform: rotate(-14deg); }
-.crr-rank { margin: 10px 0 12px; font-size: 14px; color: #6a5a4e; } .crr-rank em { font-style: normal; font-weight: 800; color: #b0602a; }
+.crr-rank { margin: 10px 0 12px; font-size: 14px; color: #6a5a4e; } .crr-rank em { font-style: normal; font-weight: 800; color: #b0602a; } .crr-rank small { display: block; margin-top: 2px; font-size: 12px; color: #8a7a6e; }
+.wk-tbl td.wk-s { font-weight: 800; color: #b0602a; }   /* a job's best an S: one of the four the 打工證 waits on (2026-11-20) */
 .crr-ok { width: 100%; }
 @keyframes crrStamp { from { opacity: 0; transform: rotate(-14deg) scale(2.6); } 60% { opacity: .95; transform: rotate(-14deg) scale(.92); } to { opacity: .9; transform: rotate(-14deg) scale(1); } }
 @keyframes crrThud { 0%, 100% { transform: none; } 30% { transform: translate(-3px, 2px); } 60% { transform: translate(2px, -1px); } }
