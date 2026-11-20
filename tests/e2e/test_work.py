@@ -415,7 +415,7 @@ def test_three_taps_are_one_task_and_thirty_pay(b):
 
 def test_a_shift_resumed_starts_at_its_tap(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + BUNS + """ kana(46); window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve();
-      state.work.res['2026-11-10'] = { place: 'buns', done: 7, score: { 0: 0, 1: 0, 2: 1, 3: 0, 4: 3, 5: 3, 6: 1 } }; await make();   // a perfect bun, an askew one, a late one, half of one
+      state.work.res['2026-11-10'] = { place: 'buns', done: 7, score: { 0: 0, 1: 0, 2: 1, 3: 3, 4: 9, 5: 9, 6: 1 } }; await make();   // a perfect bun, an askew one (three misses in its last three: finished, not late — the review, 2026-11-20), a late one (9), half of one
       return JSON.stringify({ tap: JOBS.buns.now().tap, step: step(), askew: document.querySelector('.wk-closeup').classList.contains('flaw'), steamer: document.querySelectorAll('.wk-steamer .wk-done').length,
         shiny: document.querySelectorAll('.wk-steamer .wk-done.ok').length, ugly: document.querySelectorAll('.wk-steamer .wk-done.ugly').length, clock: getComputedStyle(document.querySelector('.wk-clock')).display !== 'none' }); })()"""))
     assert r == {'tap': 21, 'step': 3, 'askew': True, 'steamer': 3, 'shiny': 1, 'ugly': 1, 'clock': True}, r
@@ -448,7 +448,7 @@ def test_a_bun_past_its_clock_goes_in_ugly_and_the_next_begins(b):
       for (let i = 6; i < 30; i++) await tap(true); await wait(300);
       Object.assign(out, { gold: document.querySelector('.wk-buns .cls-card').classList.contains('wk-shine-all'), grade: WORK.today().grade });
       return JSON.stringify(out); })()"""))
-    assert r == {'running': True, 'tap': 6, 'score': {'0': 3, '1': 3}, 'said': True, 'lump': True, 'steamer': 0, 'red': True, 'fresh': True, 'step': 0, 'board': True, 'ugly': 1, 'after': 1, 'gold': False, 'grade': 'B'}, r
+    assert r == {'running': True, 'tap': 6, 'score': {'0': 9, '1': 9}, 'said': True, 'lump': True, 'steamer': 0, 'red': True, 'fresh': True, 'step': 0, 'board': True, 'ugly': 1, 'after': 1, 'gold': False, 'grade': 'B'}, r
 
 def test_buns_only_while_wang_is_there(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(46); TOWNEV.clock = { h: 21, day: new Date(2026, 10, 10) }; const night = WORK.can('buns');
@@ -568,6 +568,40 @@ def test_the_test_site_can_work_without_end(b):
     assert not r['limited'] and r['again'] and r['paid'] and not r['limitedAgain'], r
     assert r['keys'] == ['2026-11-10', '2026-11-10#2', '2026-11-10#3'] and r['kept'] == 3 and r['shifts'] == 3, r
     assert '無限' in r['msg'] and '一天' in r['off'], r
+
+# 2026-11-20, the user: should the cruise and the jobs share a page? — the cruise's guide licence on the 打工證 page too, its tab up
+# once a trip is done (no shift needed), each trip with its grade and pay; the page plain paper
+def test_the_licence_page_has_the_cruise_guide_too(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ state.cruise = { done: { t1: '2026-11-08' }, on: null, res: { t1: { first: 18, asks: 20, koto: 38, base: 5000, bonus: 800, yen: 5800, grade: 4, day: '2026-11-08' } } }; saveState();
+      location.hash = '#/chinatown'; route(); await wait(300); DIARY.open('town'); await wait(100); const out = { tab: Boolean(document.querySelector('[data-diary="tab-work"]')) };
+      document.querySelector('[data-diary="tab-work"]').click(); await wait(100); const t = document.querySelector('.diary');
+      out.cards = [...t.querySelectorAll('.wk-card .wk-title')].map((x) => x.textContent); out.rank = t.querySelectorAll('.wk-card .wk-rank')[1].textContent;
+      out.row = [...t.querySelectorAll('.wk-tbl')[1].querySelectorAll('tbody td')].map((x) => x.textContent); out.grid = getComputedStyle(t.querySelector('.bk-page')).backgroundImage !== 'none'; DIARY.close(); return JSON.stringify(out); })()"""))
+    assert r == {'tab': True, 'cards': ['中華街打工證', '郵輪導覽ガイド證'], 'rank': '見習いガイド', 'row': ['1', '環島一周', 'A', '5,800 円'], 'grid': False}, r
+
+# the review (2026-11-20): the guide's rank by the trips done, as the cruise's own results count them — a trip with no pay kept
+# (an old build's, or skipped to on the test site) still counts, its grade and pay a dash
+def test_the_guide_card_counts_every_trip_done(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ state.cruise = { done: { t1: '2026-11-01', t2: '2026-11-02' }, on: null, res: { t2: { first: 20, asks: 20, koto: 40, base: 5000, bonus: 1000, yen: 6000, grade: 5, day: '2026-11-02' } } }; saveState();
+      location.hash = '#/chinatown'; route(); await wait(300); DIARY.open('work'); await wait(100); const t = document.querySelector('.diary');
+      const out = { next: t.querySelectorAll('.wk-card')[1].textContent.includes('再帶 1 趟'), rank: t.querySelectorAll('.wk-card .wk-rank')[1].textContent, rows: [...t.querySelectorAll('.wk-tbl')[1].querySelectorAll('tbody tr')].map((x) => [...x.children].map((c) => c.textContent).join('|')) }; DIARY.close(); return JSON.stringify(out); })()"""))
+    assert r['next'] and r['rank'] == '見習いガイド' and len(r['rows']) == 2 and r['rows'][0].endswith('|—|—') and r['rows'][1].endswith('|S|6,000 円'), r
+
+# the review (2026-11-20): a replay by the speaker at the counter is not the hero's time — the clock waits while it is said
+def test_a_replay_at_the_counter_holds_the_clock(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + COUNTER + """ kana(46); earlier('counter'); let slow = false; window.speakAs = (w, l) => (slow && l.endsWith('ください。') ? wait(1500) : Promise.resolve());
+      location.hash = '#/chinadori'; route(); await wait(300); WORK.start(yard(), 'counter');
+      for (let i = 0; i < 30 && !document.querySelector('.wk-cust.on'); i++) await wait(100);
+      const bar = () => parseFloat(document.querySelector('.wk-counter .wk-pat').style.getPropertyValue('--p')); await wait(300);
+      slow = true; document.querySelector('.wk-counter .wk-ear').click(); const b0 = bar(); await wait(1000); const out = { held: Math.abs(bar() - b0) < 0.03 };
+      await wait(1300); out.after = bar() < b0 - 0.08; return JSON.stringify(out); })()"""))
+    assert r == {'held': True, 'after': True}, r
+
+# the review (2026-11-20): a cell's new kana is weighed against the cells left, never a twin of one (い and イ); none to be had,
+# the cell keeps its kana
+def test_a_new_bun_cell_is_never_a_twin_of_another(b):
+    r = json.loads(ev(b, """JSON.stringify([JOBS.buns.boardNew(['あ', 'い', 'う', 'え'], ['あ', 'い', 'う', 'え', 'イ'], 'あ'), JOBS.buns.boardNew(['あ', 'い', 'う', 'え'], ['あ', 'い', 'う', 'え', 'ア'], 'あ')])"""))
+    assert r == ['あ', 'ア'], r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

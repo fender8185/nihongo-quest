@@ -299,7 +299,7 @@ const HALL = (() => {
     else if (kind === 'phone2') { line = c.wrong ? s.call.wrong : s.call.right; right = c.wrong ? s.me.no : roomFor(c) ? s.me.come : s.me.full; opts = shuffle([s.me.come, s.me.full, s.me.no]).map((o) => o[0]); }   // may they come now: a table free, or a full house
     else { right = s.me[kind]; opts = shuffle([right, ...shuffle(s.not[kind]).slice(0, 2)]).map((o) => o[0]); }
     H.ask = { kind, c, table, word, who, near, right: right[0], opts, line, wrong: 0, t0: performance.now() };
-    if (line) { const a = H.ask; voice(who, line[0], { first: true, ok: () => H.ask === a, go: () => { a.t0 = performance.now(); } }); H.ask.bub = bubble(who === 'huang' ? null : c, WAVE, 60000); if (H.ask.bub) H.ask.bub.classList.add('hl-heard'); }
+    if (line) { const a = H.ask; H.rest = H.rest.filter((x) => x.text !== line[0]); voice(who, line[0], { first: true, ok: () => H.ask === a, go: () => { a.t0 = performance.now(); } }); H.ask.bub = bubble(who === 'huang' ? null : c, WAVE, 60000); if (H.ask.bub) H.ask.bub.classList.add('hl-heard'); }
     if (kind === 'sorry') hit(c, -WRONG / 2);   // a dish set before the wrong one: put out
     panel();
   }

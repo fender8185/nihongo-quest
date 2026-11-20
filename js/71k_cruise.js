@@ -516,6 +516,16 @@ const CRUISE = (() => {
   const PAY = { N5: 5000, N4: 7000 };
   const RANKS = [[15, '主任ガイド'], [8, 'ベテランガイド'], [3, 'ガイド'], [1, '見習いガイド']];   // the guide's licence by trips done
   const rankOf = (n) => (RANKS.find(([k]) => n >= k) || [0, ''])[1];
+  // the guide's licence in the notebook, on 打工證's page beside the jobs' (2026-11-20, the user: the cruise and the jobs on one
+  // page?): its rank, the trips to the next, and each trip done with its grade and pay; none before the first trip
+  const guided = () => trips().some((t) => (cs().done || {})[t.id]);   // by the trips done, as the results count them (one with no pay kept still counts)
+  function card() {
+    const res = cs().res || {}, done = trips().filter((t) => (cs().done || {})[t.id]), n = done.length; if (!n) return '';
+    const next = RANKS.slice().reverse().find(([k]) => k > n);
+    return `<div class="wk-card"><span class="wk-title">郵輪導覽ガイド證</span><b class="wk-rank" lang="ja">${esc(rankOf(n))}</b><span>${next ? `再帶 ${next[0] - n} 趟升「${esc(next[1])}」` : '已經是最高級了'}</span></div>
+      <table class="wk-tbl"><thead><tr><th>趟</th><th>路線</th><th>評級</th><th>收入</th></tr></thead><tbody>${done.map((t) => { const r = res[t.id], g = r ? (GRADES[r.grade] || ['—'])[0] : '—';
+        return `<tr><td>${trips().indexOf(t) + 1}</td><td>${esc(t.title)}</td><td${g === 'S' ? ' class="wk-s"' : ''}>${g}</td><td>${r ? `${yenStr(r.yen || 0)} 円` : '—'}</td></tr>`; }).join('')}</tbody></table>`;
+  }
   function tally(i, li, misses) { const on = cs().on, s = on && (current() || { stops: [] }).stops[i]; if (!s) return; const k = `${s.id}.${askNo(s, li)}`; on.score = on.score || {}; if (!(k in on.score)) { on.score[k] = misses; saveLocal(); } }
   function result(t, score) {
     const v = Object.values(score || {}), asks = v.length, first = v.filter((m) => m === 0).length, koto = v.reduce((a, m) => a + (m === 0 ? 2 : m === 1 ? 1 : 0), 0);
@@ -657,5 +667,5 @@ const CRUISE = (() => {
   function force() { const t = trips().find((x) => !cs().done[x.id]); if (!t) return null; cs().on = null; saveState(); setLocal(FORCE, t.id); setLocal(TOLD, ''); return t; }
   function reset() { state.cruise = { done: {}, on: null, res: {} }; saveState(); setLocal(FORCE, ''); setLocal(TOLD, ''); }
   function skipTo(id) { const k = tripIdx(id); if (k < 0) return; state.cruise = { done: Object.fromEntries(trips().slice(0, k).map((t) => [t.id, '2000-01-01'])), on: null, res: {} }; saveState(); setLocal(FORCE, id); setLocal(TOLD, ''); }
-  return { out, docked, waiting, current, shipSvg, rampSvg, callHtml, mount, call: () => call(), start: () => start(), next: () => next(), who, face: talkFace, tag, opens, away, lines, chorus, tune, result, rankOf, preview, force, reset, skipTo, person, party, trips: () => trips() };
+  return { out, docked, waiting, current, shipSvg, rampSvg, callHtml, mount, call: () => call(), start: () => start(), next: () => next(), who, face: talkFace, tag, opens, away, lines, chorus, tune, result, rankOf, card, guided, preview, force, reset, skipTo, person, party, trips: () => trips() };
 })();

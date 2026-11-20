@@ -361,8 +361,8 @@ const CLASS = (() => {
   function book() {
     const s = seen(), pool = kanaWordPool(), can = pool.filter((v) => { const t = kanaWordText(v, 'hira'); return t && [...t].every((c) => s.has(c)); });
     const pick = () => { const list = can.length ? can : pool.filter((v) => kanaWordText(v, 'hira')); return list[Math.floor(Math.random() * list.length)]; };
-    const page = (v) => { const t = kanaWordText(v, 'hira') || v.r; return `${xBtn}<div class="bk-page">${picSvg(picKey(v))}<div class="bk-word" lang="ja">${esc(t)}</div><div class="bk-zh">${esc(v.m)}</div>
-      <p class="bk-note">${can.length ? '這本你讀得懂！' : '這本還有你沒學過的假名，先聽聽看。'}</p><div class="bk-btns"><button type="button" class="btn btn-sm" data-say="${esc(t)}">${icon('speaker')}<span>念出來</span></button><button type="button" class="btn btn-sm btn-primary" data-cls="next">下一頁</button></div></div>`; };
+    const page = (v) => { const t = kanaWordText(v, 'hira') || v.r; return `${xBtn}<div class="pb-page">${picSvg(picKey(v))}<div class="pb-word" lang="ja">${esc(t)}</div><div class="pb-zh">${esc(v.m)}</div>
+      <p class="pb-note">${can.length ? '這本你讀得懂！' : '這本還有你沒學過的假名，先聽聽看。'}</p><div class="pb-btns"><button type="button" class="btn btn-sm" data-say="${esc(t)}">${icon('speaker')}<span>念出來</span></button><button type="button" class="btn btn-sm btn-primary" data-cls="next">下一頁</button></div></div>`; };
     let v = pick(); if (!v) return;
     open('cls-book', '繪本', page(v), (e) => {
       const sb = e.target.closest('[data-say]'); if (sb) { speak(sb.dataset.say); return; }

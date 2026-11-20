@@ -64,7 +64,7 @@ const JOBS = (() => {
     }, 100);
     function stop() { over = true; clearInterval(tick); }
     paint(1, 'ok');
-    return { go: () => { held = false; last = Date.now(); }, hit: (d) => set(p - d), stop, p: () => p };
+    return { go: () => { held = false; last = Date.now(); }, hold: () => { held = true; }, hit: (d) => set(p - d), stop, p: () => p };
   }
   const CROSS = () => TOWN.WORK.say.waiter.cust;   // 外場's customers' words, already in these nine voices
   function patience(job, who, secs, alive, out) {
@@ -84,20 +84,20 @@ const JOBS = (() => {
   let C = null;   // the customer at the counter now (its task)
   const goodPic =(key) => { const d = (typeof PICS === 'object' && PICS[key]) || (typeof PICS_TOWN === 'object' && PICS_TOWN[key]); return d ? `<svg class="pic" viewBox="0 0 100 100" aria-hidden="true"><circle class="pd" cx="50" cy="50" r="47"/>${d}</svg>` : ''; };
   function counterRun(ctx) {
-    const tasks = counterMake(), first = !Object.values(state.work.res).some((r) => r.place === 'counter' && r.yen !== undefined); let k = ctx.done, miss = 0, got = 0, busy = true, P = null;   // P: the customer's patience
+    const tasks = counterMake(), first = !Object.values(state.work.res).some((r) => r.place === 'counter' && r.yen !== undefined); let k = ctx.done, miss = 0, got = 0, busy = true, P = null, rep = 0;   // P: the customer's patience; rep: a replay by the speaker under way (its number)
     const el = (s) => document.querySelector('.wk-counter ' + s);
     const bub = (open) => { const [ja, zh] = ask(C), w = C.good[0], line = open ? esc(ja) : `<button type="button" class="wk-ear" aria-label="再聽一次">${icon('speaker')}</button>${esc(ja.slice(w.length))}`;   // the word heard, not read, till handed over
       el('.wk-bub').innerHTML = `<b lang="ja">${line}</b><span>${esc(zh)}</span>${C.kind === 'two' ? `<i class="wk-cnt">${got}／2</i>` : ''}`; };
     const me = (l) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${esc(l[0])}</b>${first ? `<span>${esc(l[1])}</span>` : ''}`; return speakAs('hero', l[0]); };
     function show() {
-      C = tasks[k]; miss = 0; got = 0; busy = true; if (!el('.wk-goods')) return;
+      C = tasks[k]; miss = 0; got = 0; busy = true; rep = 0; if (!el('.wk-goods')) return;
       el('.wk-n').textContent = `${k + 1}／${N}`;
       el('.wk-goods').innerHTML = C.goods.map((g) => `<button type="button" class="wk-good" data-good="${esc(g[0])}">${goodPic(g[1])}<b lang="ja">${esc(g[0])}</b></button>`).join('');
       el('.wk-opts').innerHTML = ''; el('.wk-cust').className = 'wk-cust'; el('.wk-cust').removeAttribute('data-mood'); el('.wk-cust').innerHTML = custHtml(C.who);
       const t = C; P = patience('counter', t.who, COUNTER_SECS, () => Boolean(el('.wk-cust')) && C === t && ctx.on(), gone);
       said(me(ME.hi), 800).then(() => {   // the customer asks, once いらっしゃいませ is said; their patience once they have said it (5 s: none of it lost to the asking)
         if (!el('.wk-cust') || C !== tasks[k] || !ctx.on()) return;
-        bub(false); el('.wk-cust').classList.add('on'); busy = false; const q = P; said(speakAs(C.who, ask(C)[0])).then(() => q.go());
+        bub(false); el('.wk-cust').classList.add('on'); busy = false; const q = P; said(speakAs(C.who, ask(C)[0])).then(() => { if (!rep) q.go(); });
       });
     }
     function wrong(b) {
@@ -131,7 +131,7 @@ const JOBS = (() => {
     }
     CLASS.card('wk-counter', '站櫃', `${head('counter', 'らんらん', k)}<div class="wk-cust"></div><div class="wk-goods"></div><div class="wk-opts"></div><p class="wk-me"></p>`, (e) => {
       if (busy || !ctx.on() || !C) return;
-      if (e.target.closest('.wk-ear')) { speakAs(C.who, ask(C)[0]); return; }
+      if (e.target.closest('.wk-ear')) { const q = P, r = rep = rep + 1; q.hold(); said(speakAs(C.who, ask(C)[0])).then(() => { if (rep === r) { rep = 0; if (P === q) q.go(); } }); return; }   // said again: the clock waits for it (the review, 2026-11-20)
       const g = e.target.closest('.wk-good'); if (!g) return;
       if (g.dataset.good !== C.good[0]) { wrong(g); return; }
       if (C.kind === 'two' && ++got < 2) { const c = el('.wk-cnt'); if (c) c.textContent = `${got}／2`; SND.play('place', { vol: 0.5 }); return; }
@@ -263,12 +263,13 @@ const JOBS = (() => {
   // there. The first job, at five kana seen (2026-11-19): four cells while under twelve are seen, six after; hiragana and katakana
   // both, as seen (2026-11-20, the user — 張's words that came in with test.31 went out again: kana only) ----
   const BUN_STEPS = ['こねる', 'のばす', 'のせる', 'つつむ', 'ならべる', 'むす'], TAPS = 30, PER = TAPS / N, BUN_SECS = 15;
+  const LATE = 9;   // a task lost to a bun's clock: kept apart from misses (three in one three are a finished bun), so a shift resumed draws it ugly (the review, 2026-11-20)
   const bunPool = () => { const seen = WORK.kana(), all = REG.kana.filter((x) => x.seion).map((x) => x.ch), p = all.filter((c) => seen.has(c)); return p.length >= 5 ? p : all.slice(0, 5); };   // 清音 of both scripts
   const bunCells = (pool) => (pool.length >= 12 ? 6 : 4);
-  function boardNew(board, pool, was) {   // a kana for a cell (was: the one it held): not on the board, no twin of one there; half the time kin of one there
-    const out = pool.filter((c) => !board.includes(c)), free = out.filter((c) => !board.some((x) => twin(x, c)));
-    const near = free.filter((c) => board.some((x) => kin(KANA_SOUNDALIKE, hira(x)).includes(hira(c)) || kin(KANA_LOOKALIKE, x).includes(c)));
-    return near.length && Math.random() < 0.5 ? pick(near) : free.length ? pick(free) : out.length ? pick(out) : was;   // a pool too small for a twin-free one: as it is
+  function boardNew(board, pool, was) {   // a kana for a cell (was: the one it held): not on the board, no twin of one left there; half the time kin of one there
+    const rest = board.filter((x) => x !== was), out = pool.filter((c) => !board.includes(c)), free = out.filter((c) => !rest.some((x) => twin(x, c)));
+    const near = free.filter((c) => rest.some((x) => kin(KANA_SOUNDALIKE, hira(x)).includes(hira(c)) || kin(KANA_LOOKALIKE, x).includes(c)));
+    return near.length && Math.random() < 0.5 ? pick(near) : free.length ? pick(free) : was !== undefined ? was : out.length ? pick(out) : was;   // none twin-free: a cell keeps its kana; a new board from a pool too small, as it is
   }
   // the bun at step n (0 flour … 5 in the steamer's ring, 6 steamed), askew when missed; drawn round (0, 0), ~60 wide
   function bunArt(n, flaw) {
@@ -300,8 +301,8 @@ const JOBS = (() => {
     const run = ++bunRun, mine = () => run === bunRun && Boolean(document.querySelector('.wk-buns .wk-keys'));   // this run's card only (shut and opened again: the new run's)
     const s = say('buns'), pool = bunPool(), fresh = ctx.done === 0, bust = bunBust(), score = (WORK.today() || {}).score || {};
     let tap = ctx.done * PER, board = [], target = null, miss = 0, bunMiss = 0, trioMiss = 0, wrong = 0, late = 0, lump = false, busy = false, Q = null;   // late: buns past their clock; lump: one just so, on the board; Q: this bun's clock
-    // buns done before ('ok' perfect, 'flaw' askew, 'ugly' late): perfect if their two tasks were; late if the last was lost (3)
-    const made = Array.from({ length: Math.floor(tap / BUN_STEPS.length) }, (_, b) => (score[2 * b + 1] >= 3 ? 'ugly' : !score[2 * b] && !score[2 * b + 1] ? 'ok' : 'flaw'));
+    // buns done before ('ok' perfect, 'flaw' askew, 'ugly' late): perfect if their two tasks were; late if the last was lost (LATE)
+    const made = Array.from({ length: Math.floor(tap / BUN_STEPS.length) }, (_, b) => (score[2 * b + 1] >= LATE ? 'ugly' : !score[2 * b] && !score[2 * b + 1] ? 'ok' : 'flaw'));
     if (tap % BUN_STEPS.length) bunMiss = score[tap / PER - 1] || 0;   // half a bun done: askew if its first three were missed
     const el = (q) => document.querySelector('.wk-buns ' + q), live = () => mine() && ctx.on();
     const quiet = ([ja, zh], cls = '') => { const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${esc(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } };
@@ -330,7 +331,7 @@ const JOBS = (() => {
     // so, and the next bun (the last: left on the board, the shift over)
     function out() {
       Q = null; late++; busy = true; const last = (Math.floor(tap / BUN_STEPS.length) + 1) * BUN_STEPS.length;
-      for (let i = Math.floor(tap / PER); i < last / PER; i++) ctx.right(i, 3);
+      for (let i = Math.floor(tap / PER); i < last / PER; i++) ctx.right(i, LATE);
       tap = last; trioMiss = 0; bunMiss = 0; lump = true; target = null; keys(); now(); art(); playSfx('bad'); quiet(s.late, 'bad');
       const n = el('.wk-n'); if (n) n.textContent = `${Math.min(tap + 1, TAPS)}／${TAPS}`;
       if (tap >= TAPS) { BN = null; end(); return; }
@@ -348,7 +349,7 @@ const JOBS = (() => {
     function right(b) {
       SND.play('place', { vol: 0.5 }); tap++; trioMiss += miss;
       const h = el('.wk-hand'); if (h) { h.classList.remove('go'); void h.getBoundingClientRect(); h.classList.add('go'); }
-      if (tap % PER === 0) { ctx.right(tap / PER - 1, trioMiss); trioMiss = 0; }
+      if (tap % PER === 0) { ctx.right(tap / PER - 1, Math.min(trioMiss, LATE - 1)); trioMiss = 0; }
       const i = board.indexOf(target); board[i] = boardNew(board, pool, target); keys();
       const n = el('.wk-n'); if (n) n.textContent = `${Math.min(tap + 1, TAPS)}／${TAPS}`;
       if (tap % BUN_STEPS.length) { art(); ask(); return; }
@@ -381,5 +382,5 @@ const JOBS = (() => {
   WORK.register('buns', { run: bunsRun, lines: bunsLines });
   WORK.register('counter', { run: counterRun, lines: counterLines });
   WORK.register('till', { run: tillRun, lines: tillLines, left: tillLeft, open: allNums });
-  return { pat: PAT, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN } };
+  return { pat: PAT, counter: { make: counterMake, run: counterRun, now: () => C, sayer }, till: { make: tillMake, run: tillRun, now: () => T, spell, left: tillLeft, allNums, numsTool }, buns: { run: bunsRun, now: () => BN, boardNew } };
 })();

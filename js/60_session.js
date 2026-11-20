@@ -1381,8 +1381,9 @@ function countUp(root) {
   step(t0);
 }
 
-// the 開始作答 button under a word preview or a lesson-section card (Enter also dismisses it)
-function previewGoBtn() { return '<button type="button" class="btn btn-primary" data-act="preview-go" id="btnNext">開始作答 <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button>'; }
+// the 看完了 button under a word preview or a lesson-section card (Enter also dismisses it): the item's questions come a few later,
+// so it is looked over, not answered (2026-11-20, the user: it said 開始作答)
+function previewGoBtn() { return '<button type="button" class="btn btn-primary" data-act="preview-go" id="btnNext">看完了 <span class="kbd kbd-hint" style="background:transparent;border-color:currentColor;color:inherit">Enter</span></button>'; }
 
 // today's ring shows a percentage, never question counts (the button and 今天做了 carry those)
 function ringPct(prog) { return prog.total ? Math.round(prog.done / prog.total * 100) : 100; }

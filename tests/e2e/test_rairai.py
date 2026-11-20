@@ -564,6 +564,13 @@ def test_the_hero_answers_once_the_customer_is_done(b):
       out.after = said.filter((x) => x.startsWith('hero:')).slice(h0); return JSON.stringify(out); })()"""))
     assert r == {'early': 0, 'done': True, 'after': ['hero:はい、どうぞ。']}, r
 
+# the review (2026-11-20): 黄's dish called up while someone was talking, and called again at the pass before its turn came: said once
+def test_a_dish_called_twice_is_said_once(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + HALLT + LEARN + """ learn('みず', '水'); HALL.force = { solo: true, water: true, order: 'dish' };
+      await start(); HALL.pace = 0.1; """ + HELD + THROUGH_CALL + """ await toWater(); const up = 'huang:' + now().cust[0].dish + '、あがり！'; await until(() => now().ready.length);
+      await answer(true); await goTo('pass'); const out = { pass: ask() && ask().kind }; ends[held](); await wait(200); out.n = said.filter((x) => x === up).length; return JSON.stringify(out); })()"""))
+    assert r == {'pass': 'pass', 'n': 1}, r
+
 TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

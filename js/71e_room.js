@@ -1265,6 +1265,8 @@ const ROOM = (() => {
   const ACT_SND = { sit: 'sit', sofa: 'cushion', kneel: 'cushion', sleep: 'cloth' };   // sat down, lain down (環境音)
   const POSE_MS = { sit: 300, sofa: 300, kneel: 300, sleep: 300, reach: 340, crouch: 340, look: 300, out: 60 };
   // a thing tapped: the hero walks to it and does its bit, then the thing's own way into its page; tapped again on the way: straight in
+  // a ware with a badge as the room's things have (2026-11-20, the user: the low shelf holds 日記, 町の手帳, 美食手帳 and 打工證)
+  const WARE_SIGN = { diary: ['course', '日記・手帳'] };
   let namedT = 0;
   function named(st, el) {   // a tapped thing shows its words for a moment (they wait in its badge)
     const off = (t) => { t.classList.remove('named'); delete t.dataset.w; };
@@ -1274,7 +1276,7 @@ const ROOM = (() => {
   }
   function use(el, fn, spot) {
     const st = el.closest('.study'), id = el.dataset.thing || 'w:' + el.dataset.ware, sp = spot || (el.dataset.thing ? spotOf(el.dataset.thing) : null);
-    if (st && el.dataset.thing) named(st, el);
+    if (st && el.classList.contains('thing')) named(st, el);   // a thing's badge (the diary's shelf too: WARE_SIGN)
     if (!st || !sp || !st.querySelector('.hero') || ed.on) { fn(); return; }
     if (reduced() || hero.going === id) { heroHalt(); hero.going = null; heroAt(st, sp); fn(); return; }
     hero.going = id;
@@ -1435,7 +1437,7 @@ const ROOM = (() => {
         ${gramoTune()}
         ${THINGS.map(thing).join('')}
         ${ed.on ? '' : LAMPS.map((L) => { const [lx, ly] = P(...L.p); return `<button type="button" class="lamp-tap${lampOff(L.id) ? ' off' : ''}" data-act="lamp-toggle" data-lamp="${L.id}" style="${vbPct(lx - 24, ly - 24)};${vbSize(48, 48)}" aria-label="${lampOff(L.id) ? '開燈' : '關燈'}"></button>`; }).join('')}
-        ${ed.on ? '' : placedWares().filter((o) => o.it.act).map((o) => { const b = wareBox(o); return `<button type="button" class="ware-use" data-act="ware-use" data-ware="${o.id}" style="${vbPct(b[0], b[1])};${vbSize(b[2] - b[0], b[3] - b[1])}" aria-label="${esc(o.it.name)}：${{ music: '換唱片', sofa: '坐下', kotatsu: '坐下', kneel: '跪坐', diary: '外婆的日記', wardrobe: '衣櫃', bed: '睡覺', water: '澆水', mirror: '照鏡子' }[o.it.act] || ''}"></button>`; }).join('')}
+        ${ed.on ? '' : placedWares().filter((o) => o.it.act).map((o) => { const b = wareBox(o), sg = WARE_SIGN[o.it.act], tx = (b[0] + b[2]) / 2, ty = b[1] + 10; return `<button type="button" class="ware-use${sg ? ' thing' : ''}" data-act="ware-use" data-ware="${o.id}"${sg ? ` data-tag="${r1(tx)} ${r1(ty)}"` : ''} style="${vbPct(b[0], b[1])};${vbSize(b[2] - b[0], b[3] - b[1])}${sg ? `;--tx:50%;--ty:${((ty - b[1]) / (b[3] - b[1]) * 100).toFixed(1)}%` : ''}" aria-label="${esc(o.it.name)}：${{ music: '換唱片', sofa: '坐下', kotatsu: '坐下', kneel: '跪坐', diary: '外婆的日記', wardrobe: '衣櫃', bed: '睡覺', water: '澆水', mirror: '照鏡子' }[o.it.act] || ''}">${sg ? `<span class="tag">${icon(sg[0])}<span class="tag-name">${sg[1]}</span></span>` : ''}</button>`; }).join('')}
         ${ed.on ? `${decosHtml()}${selHtml()}<svg class="ghost" viewBox="${VB.join(' ')}" aria-hidden="true"><g></g></svg>` : ''}
       </div></div>
       ${ed.on ? editHtml() : ''}

@@ -542,7 +542,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .fb-item { position: relative; display: grid; justify-items: center; align-content: start; gap: 1px; text-align: center; color: var(--soft, #a89a88); }
 .fb-pic { display: grid; place-items: center; width: 58px; height: 58px; margin-bottom: 3px; border: 1.5px dashed var(--line-2, #d9ccb4); border-radius: 50%; } .fb-pic .pic { width: 46px; height: 46px; }
 .fb-item.had { color: var(--ink, #3a2c24); } .fb-item.had .fb-pic { border: 1.5px solid var(--rule, #e6dac4); background: var(--card, #fffdf6); }
-.fb-name { font-size: 13.5px; font-weight: 700; line-height: 1.35; } .fb-item small { font-size: 11px; line-height: 1.35; }
+.fb-name { font-size: 13.5px; font-weight: 700; line-height: 1.35; word-break: keep-all; } .fb-item small { font-size: 11px; line-height: 1.35; }
 .fb-stamp { position: absolute; left: calc(50% + 12px); top: -4px; display: grid; place-items: center; width: 28px; height: 28px; border: 2px solid #c8392f; border-radius: 50%; font: 900 14px/1 'Hiragino Mincho ProN', 'Noto Serif JP', serif; font-style: normal; color: #c8392f; background: rgba(255, 250, 240, .5); transform: rotate(-12deg); opacity: .88; }
 .fb-day { color: var(--soft, #8a7a6e); }
 @media (prefers-reduced-motion: reduce) { .yen-stamp i { animation: none; } }
@@ -681,6 +681,7 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .diary-book.bk-note::before { content: ''; position: absolute; top: 0; bottom: 0; right: 11px; width: 9px; background: #2b2d3a; box-shadow: inset 2px 0 0 rgba(255, 255, 255, .12), 0 0 3px rgba(0, 0, 0, .3); }   /* the elastic band */
 .bk-note .bk-page { --pp: color-mix(in srgb, #fbfaf5 calc(var(--day, 1) * 100%), #e5dbc2); --rule: color-mix(in srgb, #e1e6e3 calc(var(--day, 1) * 100%), #cdc4aa); padding: 14px 14px 12px; border-radius: 6px; background-color: var(--pp);
   background-image: linear-gradient(var(--rule) 1px, transparent 1px), linear-gradient(90deg, var(--rule) 1px, transparent 1px); background-size: 16px 16px; background-position: -1px -1px; }
+.bk-note .bk-page.bk-plain { background-image: none; box-shadow: inset 0 0 0 1px rgba(160, 130, 90, .18); }   /* 美食手帳 and 打工證: plain paper (2026-11-20, the user: the grid too busy behind them) */
 .diary-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--soft); margin-bottom: 10px; } .diary-head rt { font-size: 8px; }
 .diary-book .talk-say { color: #8a6a52; }
 .bk-g :is(.diary-head, .diary-page) { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif; }
@@ -2238,7 +2239,7 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .kr-who i { font-style: normal; font-size: 18px; font-weight: 700; } .kr-who.out { opacity: .4; }
 .kr-note { margin: 10px 0 0; font-size: 13px; text-align: center; opacity: .7; }
 .kr-end { margin-top: 12px; text-align: center; } .kr-result { margin: 0; font-size: 17px; font-weight: 700; } .kr-line { display: flex; flex-direction: column; margin: 6px 0 10px; } .kr-line span { font-size: 13px; opacity: .7; }
-.kr-btns, .sg-btns, .bk-btns { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
+.kr-btns, .sg-btns, .pb-btns { display: flex; justify-content: center; gap: 8px; margin-top: 10px; }
 /* the song: the row being sung, each kana lit as it comes; the four singers bob */
 .sg-head { display: flex; align-items: center; gap: 8px; padding-right: 40px; } .sg-head b { font-size: 17px; } .sg-radio { font-size: 22px; }
 .sg-row { display: flex; justify-content: center; gap: 8px; margin: 18px 0; }
@@ -2246,8 +2247,8 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .sg-k small { font-size: 11px; color: var(--fg-3); } .sg-k.on { opacity: 1; transform: translateY(-4px); background: var(--bg-elev-2); }
 .sg-people { display: flex; justify-content: space-around; margin-top: 26px; } .sg-who { position: relative; transition: transform .2s; } .sg-who.sg-bob { transform: translateY(-5px); }
 @media (prefers-reduced-motion: reduce) { .sg-who.sg-bob, .sg-k.on { transform: none; } }
-/* a picture book's page; a word from someone */
-.bk-page { text-align: center; padding-top: 8px; } .bk-page .pic { width: 150px; margin: 0 auto; } .bk-word { margin-top: 6px; font-size: 36px; font-weight: 600; } .bk-zh { font-size: 15px; color: var(--fg-2); } .bk-note { margin: 8px 0 0; font-size: 13px; color: var(--fg-3); }
+/* a picture book's page (pb-: the diary's notebook has .bk-page and .bk-note, 2026-11-20: these hit its 美食手帳); a word from someone */
+.pb-page { text-align: center; padding-top: 8px; } .pb-page .pic { width: 150px; margin: 0 auto; } .pb-word { margin-top: 6px; font-size: 36px; font-weight: 600; } .pb-zh { font-size: 15px; color: var(--fg-2); } .pb-note { margin: 8px 0 0; font-size: 13px; color: var(--fg-3); }
 .cn-who { display: flex; align-items: center; gap: 12px; padding-right: 36px; } .cn-who p { display: flex; flex-direction: column; margin: 0; } .cn-who span { font-size: 13px; color: var(--fg-2); }
 /* ---- みなと中華街 (2026-11-14, 新手第一週) ---- */
 .sky .land [data-fx="panda"].hug .pbody { animation: pandaHug .9s ease-in-out; } @keyframes pandaHug { 0%, 100% { transform: none; } 25% { transform: translateY(-10px) rotate(-6deg); } 50% { transform: translateY(0) rotate(6deg) scale(1.05); } 75% { transform: translateY(-5px) rotate(-3deg); } }

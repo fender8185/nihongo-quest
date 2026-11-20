@@ -153,7 +153,7 @@ def test_the_board_the_song_and_a_picture_book(b):
       const sung = plan.said.map((x) => x[3]).join(''), on = plan.said.map((x) => +(x[0] / beat).toFixed(2)).join(','), parts = plan.parts.map((p) => p.map((v) => +(v / bar).toFixed(2)));
       window.engineBlob = () => Promise.resolve(null); CLASS.song(); for (let i = 0; i < 60 && document.querySelector('.sg-note').textContent; i++) await wait(50);
       await wait(2600); const litNow = (document.querySelector('.sg-k.on') || {}).textContent || '', playing = document.querySelector('[data-fx="radio"]').classList.contains('playing'); CLASS.close();
-      CLASS.close(); spoken.length = 0; CLASS.book(); const word = (document.querySelector('.bk-word') || {}).textContent || '';
+      CLASS.close(); spoken.length = 0; CLASS.book(); const word = (document.querySelector('.pb-word') || {}).textContent || '';
       const readable = [...word].every((c) => state.srs['a:' + c]); CLASS.close();
       return JSON.stringify({ lit: lit.length, kata, boardKoto, sung, on, parts, litK: litNow.charAt(0), playing, readable, said: CLASS.clockSay()[0] }); })()"""))
     assert r['lit'] == 10 and r['kata'] == 0 and r['boardKoto'] == 1, r

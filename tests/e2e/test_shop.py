@@ -117,6 +117,14 @@ def test_putting_the_opening_letter_away_still_takes_its_koto(b):
 
 # ---- 古道具屋, 書房's wares, 擺設 ----
 GO_ROOM = "location.hash = '#/today'; document.getElementById('view').innerHTML = ''; route();"
+# 2026-11-20, the user: the low shelf holds 日記, 町の手帳, 美食手帳 and 打工證 now — a badge on it as on the room's other things
+def test_the_diary_shelf_wears_a_badge(b):
+    js = "(async () => { " + FRESH + GO_ROOM + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)); await wait(300);
+      const s = document.querySelector('#view .study .ware-use.thing'), out = { ware: s && s.dataset.ware, icon: Boolean(s && s.querySelector('.tag svg')), name: s && s.querySelector('.tag-name').textContent };
+      s.click(); await wait(100); out.named = s.classList.contains('named'); return JSON.stringify(out); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'ware': 'lowShelf', 'icon': True, 'name': '日記・手帳', 'named': True}, r
+
 def test_a_bought_clock_waits_in_the_storage_box_till_it_hangs(b):
     js = "(() => { " + FRESH + GO_ROOM + """ const now = () => ({ hands: !!document.querySelector('.study .clock-hands'), nail: document.querySelectorAll('.study svg.art circle[r=".055"]').length, placed: !!state.placed.clock });
       const before = now();
@@ -330,13 +338,13 @@ def test_the_things_wear_signs_with_the_days_ring_and_the_notebook_stays_plain(b
     js = "(async () => { " + FRESH + " state.mistakes = [{ key: 'v1' }, { key: 'v2' }, { key: 'v3', mastered: true }]; saveState(); " + GO_ROOM + POINTER + """ await wait(200);
       const st = document.querySelector('.study'); ROOM.level(st, 40);
       const things = [...st.querySelectorAll('.thing')].map(t => { const tag = t.querySelector('.tag'), name = tag.querySelector('.tag-name');
-        return [t.dataset.thing, !!tag.querySelector('svg:not(.ring)'), name ? getComputedStyle(name).display : 'no name', t.getAttribute('aria-label')]; });
+        return [t.dataset.thing || 'w:' + t.dataset.ware, !!tag.querySelector('svg:not(.ring)'), name ? getComputedStyle(name).display : 'no name', t.getAttribute('aria-label')]; });
       const fill = st.querySelector('[data-thing="notebook"] .ring .fill'), count = st.querySelector('[data-thing="drawer"] .count');
       return JSON.stringify({ things, ring: fill && fill.getAttribute('stroke-dasharray'), count: count && count.textContent }); })()"""
     r = json.loads(ev(b, js))
     got = {t[0]: t[1:] for t in r['things']}
     assert all(v[0] is True and v[1] == 'none' for v in got.values()), got   # every thing shows its sign, its words wait
-    assert {k: v[2] for k, v in got.items() if k != 'door'} == {'bdoor': '臥房', 'shelf': '課程', 'cards': '單字', 'notebook': '今日練習 40%', 'phones': '聽一輪 0/5 分鐘', 'drawer': '錯題本', 'board': '學習分析', 'calendar': '模擬考'}, got
+    assert {k: v[2] for k, v in got.items() if k != 'door'} == {'bdoor': '臥房', 'shelf': '課程', 'cards': '單字', 'notebook': '今日練習 40%', 'phones': '聽一輪 0/5 分鐘', 'drawer': '錯題本', 'board': '學習分析', 'calendar': '模擬考', 'w:lowShelf': '矮書架：外婆的日記'}, got   # the diary's shelf too (2026-11-20)
     assert got['door'][2].startswith('出門'), got   # the words are still there for a screen reader
     assert (r['ring'], r['count']) == ('40 100', None), r   # two in the notebook, nothing on it asking for a tap (聽一輪 is the one to push)
 
@@ -1101,7 +1109,7 @@ def test_a_long_yard_walk_or_the_climb_sets_no_css_variable_round_the_hero_each_
 # ---- 1.3.0: the bedroom, a room of its own beyond a door in 書房's left wall ----
 def test_the_bedroom_is_a_room_of_its_own_through_a_door(b):
     js = "(async () => { " + FRESH + " localStorage.removeItem('nq_hero'); " + GO_ROOM + """ const wait = (ms) => new Promise(q => setTimeout(q, ms)); await wait(300);
-      const st = () => document.querySelector('#view .study'), things = () => [...st().querySelectorAll('.thing')].map(t => t.dataset.thing).sort();
+      const st = () => document.querySelector('#view .study'), things = () => [...st().querySelectorAll('.thing')].map(t => t.dataset.thing || 'w:' + t.dataset.ware).sort();
       const study = { room: st().dataset.room, things: things(), sofa: !!st().querySelector('svg.art [data-o="w:sofa"]'), bed: !!st().querySelector('svg.art [data-o="w:bed"]') };
       st().querySelector('[data-thing="bdoor"]').click(); let opening = false;
       for (let i = 0; i < 40 && !opening && location.hash === '#/today'; i++) { await wait(50); opening = !!st().querySelector('.fx-door.on[data-door="bdoor"]'); }   /* he walks over, then it swings */
@@ -1111,7 +1119,7 @@ def test_the_bedroom_is_a_room_of_its_own_through_a_door(b):
       st().querySelector('[data-thing="sdoor"]').click(); await wait(3400);
       return JSON.stringify({ study, opening, bed, h, back: [location.hash, st().dataset.room], hero: JSON.parse(localStorage.getItem('nq_hero')).room }); })()"""
     r = json.loads(ev(b, js))
-    assert r['study'] == {'room': 'study', 'things': ['bdoor', 'board', 'calendar', 'cards', 'door', 'drawer', 'notebook', 'phones', 'shelf'], 'sofa': True, 'bed': False}, r
+    assert r['study'] == {'room': 'study', 'things': ['bdoor', 'board', 'calendar', 'cards', 'door', 'drawer', 'notebook', 'phones', 'shelf', 'w:lowShelf'], 'sofa': True, 'bed': False}, r
     assert r['opening'], r   # the door swings open
     assert r['bed'] == {'hash': '#/bedroom', 'room': 'bed', 'things': ['sdoor'], 'bed': True, 'wardrobe': True, 'skies': 2, 'mail': False}, r   # two windows since roomV 8
     assert r['h']['x'] == 1.55 and abs(r['h']['y'] - 3.2) < 1e-6, r   # in just inside the bedroom's door

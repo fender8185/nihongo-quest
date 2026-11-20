@@ -191,7 +191,7 @@ const WORK = (() => {
     const cards = Object.entries(AREAS).map(([area, A]) => { const lv = level(area), js = jobsOf(area), next = A.ranks[lv + 1];
       return `<div class="wk-card"><span class="wk-title">${esc(A.name)}打工證</span><b class="wk-rank" lang="ja">${esc(A.ranks[lv])}</b><span>${next ? `${js.length} 份工作都拿過 S 級就升「${esc(next)}」（${js.filter(hadS).length}／${js.length}）` : `升上來了：所有打工的薪水 +${Math.round(RAISE * 100)}%`}</span></div>
         <table class="wk-tbl"><thead><tr><th>工作</th><th>場所</th><th>底薪</th><th>打過</th><th>最好</th></tr></thead><tbody>${js.map((job) => row(job, PLACES[job])).join('')}${area === 'chinatown' ? gone.map((job) => row(job, GONE[job])).join('') : ''}</tbody></table>`; }).join('');
-    return `<div class="wk-book">${cards}
+    return `<div class="wk-book">${cards}${CRUISE.card()}
       <p class="wk-note">總共打過 ${n} 班${up ? `・打工證加給 +${Math.round(RAISE * 100 * up)}%` : ''}。一天只能在一個地方打一班。中華街的店：大通り 10 點到 19 點；らいらいけん 10 點到 20 點；包包子要王老闆在攤子。</p></div>`;
   }
   const register = (job, def) => { JOBS[job] = def; };

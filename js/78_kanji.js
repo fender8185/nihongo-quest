@@ -47,7 +47,7 @@ Object.assign(ACTIONS, {
   'mark-kana': (el) => {   // 我的標記 on a 五十音 row or a whole script (2★／5★ up, 0★ back to before the mark), the box redrawn in place
     const rows = KANA_ROWS.concat(DAKUTEN_ROWS), script = el.dataset.script === 'kata' ? 'kata' : 'hira', all = el.dataset.rows === 'all', lv = Number(el.dataset.lv);
     const keys = kanaKeys(all ? rows : [rows[Number(el.dataset.rows)]], script); if (!keys.length) return;
-    keys.forEach(k => { if (lv) markItem(k, lv, false); else unmarkItem(k, false); });
+    keys.forEach(k => { if (!lv) unmarkItem(k, false); else if (((state.srs[k] || {}).mark || 0) < lv) markItem(k, lv, false); });   // only up: a row at 5★ stays when the rest come to 2★
     DAILY_CACHE = null; saveState();
     const what = all ? `${script === 'hira' ? '平假名' : '片假名'}全部` : `${REG.byKey.get(keys[0]).ch} 這一行`;
     toast(lv ? `${what}標成 ${lv}★（已經更熟的照舊）${lv === 5 ? '，之後排進五顆的複習' : '，過幾天開始複習'}` : `${what}取消標記：回到標記前，標記後答過的照舊`);

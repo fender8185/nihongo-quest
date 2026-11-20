@@ -387,8 +387,8 @@ const DIARY = (() => {
   let el = null, at = 0, tab = 'g';
   // the books' index stickers down the right edge (2026-11-13, the user's picks: her diary washi with a stab binding, 町の手帳 a kraft
   // grid notebook with an elastic band; both lit as under a desk lamp by night)
-  const tabs = () => `<div class="diary-tabs"><button type="button" data-diary="tab-g" aria-pressed="${tab === 'g'}" aria-label="外婆的日記">日記</button><button type="button" data-diary="tab-town" aria-pressed="${tab === 'town'}">町の手帳</button>${YEN.shown() ? `<button type="button" data-diary="tab-food" aria-pressed="${tab === 'food'}">美食手帳</button>` : ''}${WORK.shown() ? `<button type="button" data-diary="tab-work" aria-pressed="${tab === 'work'}">打工證</button>` : ''}</div>`;   // 美食手帳 (YEN): once there has been 円
-  const book = (body) => `<div class="diary-book ${tab === 'g' ? 'bk-g' : 'bk-note'}">${tabs()}<div class="bk-page">${body}</div></div>`;
+  const tabs = () => `<div class="diary-tabs"><button type="button" data-diary="tab-g" aria-pressed="${tab === 'g'}" aria-label="外婆的日記">日記</button><button type="button" data-diary="tab-town" aria-pressed="${tab === 'town'}">町の手帳</button>${YEN.shown() ? `<button type="button" data-diary="tab-food" aria-pressed="${tab === 'food'}">美食手帳</button>` : ''}${WORK.shown() || CRUISE.guided() ? `<button type="button" data-diary="tab-work" aria-pressed="${tab === 'work'}">打工證</button>` : ''}</div>`;   // 美食手帳 (YEN): once there has been 円
+  const book = (body) => `<div class="diary-book ${tab === 'g' ? 'bk-g' : 'bk-note'}">${tabs()}<div class="bk-page${tab === 'food' || tab === 'work' ? ' bk-plain' : ''}">${body}</div></div>`;
   // 町の手帳 (test, 2026-11-09; a page each since 2026-11-10, the user): a cover — who waits, everyone at a glance (a tap: their
   // page), the test site's tools — then a page a person, turned over (‹ ›, or a swipe): their face, name, who they are (a line more
   // for each event of theirs), and the talks had with them, each to be read through there or played again (no 言靈 the second

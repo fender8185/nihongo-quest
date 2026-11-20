@@ -373,6 +373,15 @@ def test_kana_rows_and_scripts_take_my_marks(b):
     r = json.loads(ev(b, js))
     assert r == {'rows': 17, 'start': '0', 'two': [2] * 5, 'kata': False, 'now': '2', 'open': True, 'five': 5, 'back': False, 'all': True, 'allNow': '5', 'hira': False, 'rowNow': '5'}, r
 
+# the review (2026-11-20): a whole script's mark only goes up — rows already at 5★ stay there when the rest come up to 2★
+def test_a_whole_script_mark_leaves_stronger_rows_be(b):
+    js = """(() => { state.srs = {}; location.hash = '#/vocab/level?lv=PRE_N5'; route(); document.querySelector('.kana-box').open = true;
+      const btn = (row) => document.querySelector(`.kana-box .kana-table[data-script="hira"] [data-act="mark-kana"][data-rows="${row}"]`);
+      btn('all').click(); btn('all').click(); btn(1).click(); const now = btn('all').dataset.now; btn('all').click();
+      return JSON.stringify({ now, a: state.srs['a:あ'].mark, ka: state.srs['a:か'].mark, all: btn('all').dataset.now }); })()"""
+    r = json.loads(ev(b, js))
+    assert r == {'now': '0', 'a': 5, 'ka': 2, 'all': '2'}, r
+
 KANA_SHOWN = "[...box.querySelectorAll('.kana-table')].filter(t => t.offsetParent !== null).map(t => t.dataset.script)"
 
 def test_kana_chart_shows_one_script_on_a_phone_and_both_side_by_side_on_a_wide_screen(b):

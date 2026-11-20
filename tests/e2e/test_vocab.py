@@ -146,6 +146,14 @@ def test_wrong_first_answer_keeps_requeue_and_encores_apart_and_requeue_does_not
     assert len(r['pos']) == 3 and not r['adjacent'], r
     assert r['f'] == {r['fmt1']: [0, 1]}, r
 
+# 2026-11-20, the user: a new item's card only shows what is asked later (its questions come a few later) — its button says it was
+# looked over, not 開始作答
+def test_a_preview_card_is_looked_over_not_answered(b):
+    js = """(() => { const v = REG.vocab.find(x => x.builtin && !state.srs[x.key] && meaningOptions(x)); startSession('items', { items: [v] }); renderPractice();
+      const t = document.getElementById('btnNext').textContent; SESSION = null; document.body.classList.remove('practicing'); return JSON.stringify({ seen: t.includes('看完了'), answer: t.includes('作答') }); })()"""
+    r = json.loads(ev(b, js, [("eval", "location.hash = '#/today'; true")]))
+    assert r == {'seen': True, 'answer': False}, r
+
 def test_preview_card_speaks_the_new_word_even_if_auto_reading_was_saved_off(b):
     # 1.0.15: 作答後自動朗讀 is always on; a value an older version saved as off is ignored
     js = """(() => { const calls = []; const orig = speak; speak = (t) => calls.push(t);
@@ -157,7 +165,7 @@ def test_preview_card_speaks_the_new_word_even_if_auto_reading_was_saved_off(b):
 
 TESTS = [test_themes_cover_every_builtin_word_once, test_theme_tab_lists_cards_and_opens_the_word_table, test_themed_practice_uses_only_that_theme,
          test_mastered_means_five_stars_and_a_spelled_reading, test_four_star_words_not_yet_spelled_are_asked_to_spell, test_answering_records_the_format_and_flash_ratings_count_as_one, test_unpassed_formats_are_preferred_on_review,
-         test_new_word_shows_a_preview_card_before_its_question,
+         test_new_word_shows_a_preview_card_before_its_question, test_a_preview_card_is_looked_over_not_answered,
          test_a_new_word_comes_back_once_in_another_format_without_rescheduling, test_no_encore_when_no_other_format_can_be_built, test_words_already_known_get_no_encore,
          test_wrong_first_answer_keeps_requeue_and_encores_apart_and_requeue_does_not_count_as_a_pass, test_preview_card_speaks_the_new_word_even_if_auto_reading_was_saved_off]
 

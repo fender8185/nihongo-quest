@@ -163,11 +163,13 @@ const YEN = (() => {
   // ---- 美食手帳 (a page of 町の手帳): each menu, what has been had (the day first had) and what not yet ----
   // its pages: a menu each, those of the same name (shop: the 緣日's stalls, 2026-11-13, the user) together on one
   const pages = () => { const by = new Map(); Object.values(M()).forEach((mu) => { const n = mu.shop || mu.title; by.set(n, (by.get(n) || []).concat(mu.items)); }); return [...by]; };
+  // a long name broken only between its words (2026-11-20: オレンジジュ／ース): .fb-name keeps kana together, these may part
+  const soft = (h) => h.replace(/(ジュース|ミルクティー|ソーダ)$/, '<wbr>$1');
   function book() {
     const b = state.purse.book, all = Object.values(M()).flatMap((mu) => mu.items), had = all.filter((it) => b[it[0]]).length;
     return `<div class="food-book"><p class="fb-count">吃過、用過 ${had} / ${all.length} 樣・一共花了 ${yenStr(yenSpent())} 円</p>
       ${pages().map(([name, items]) => `<section class="fb-menu"><h4 lang="ja">${ruby(name)}</h4><div class="fb-items">${items.map((it) => `<div class="fb-item${b[it[0]] ? ' had' : ''}">
-        <span class="fb-pic">${b[it[0]] ? pic(it) : ''}</span><span class="fb-name" lang="ja">${ruby(it[1])}</span><small>${esc(it[2])}</small><small>${yenStr(it[3])} 円</small>${b[it[0]] ? `<i class="fb-stamp" aria-label="${esc(b[it[0]])}">済</i><small class="fb-day">${esc(String(b[it[0]]).slice(5).replace('-', '/'))}</small>` : ''}</div>`).join('')}</div></section>`).join('')}
+        <span class="fb-pic">${b[it[0]] ? pic(it) : ''}</span><span class="fb-name" lang="ja">${soft(ruby(it[1]))}</span><small>${esc(it[2])}</small><small>${yenStr(it[3])} 円</small>${b[it[0]] ? `<i class="fb-stamp" aria-label="${esc(b[it[0]])}">済</i><small class="fb-day">${esc(String(b[it[0]]).slice(5).replace('-', '/'))}</small>` : ''}</div>`).join('')}</div></section>`).join('')}
       <p class="muted small">在鎮上點販賣機、麵包、菜單、黑板、牛奶機、澡堂、籤筒就能買。第一次買的會蓋上章。</p></div>`;
   }
   const shown = () => yenEarned() > 0 || Object.keys(state.purse.book).length > 0;   // its tab: once there has been 円

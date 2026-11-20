@@ -136,6 +136,15 @@ def test_the_food_book_shows_what_has_been_had(b):
     fair = [p for p in r['pages'] if p[0].startswith('縁日')]
     assert len(fair) == 1 and fair[0][1] == r['stalls'] == 13 and not any(p[0] in ('やきそば', 'たこやき', 'りんごあめ') for p in r['pages']), r   # the stalls: one page (2026-11-13, the user)
 
+# 2026-11-20, the user: 美食手帳 and 打工證 on plain paper (the grid too busy), and the food pictures out of place — the classroom
+# picture book's .bk-page rules (150 px pictures, centred text) hit the notebook's page of the same name
+def test_the_food_book_is_plain_paper_with_its_pictures_in_their_rings(b):
+    r = json.loads(ev(b, "(async () => { " + fresh(5000) + """ state.purse.book = { melonpan: '2026-11-11' }; saveState(); await go('town');
+      DIARY.open('food'); await wait(50); const t = document.querySelector('.diary'), pg = t.querySelector('.bk-page'), ring = t.querySelector('.fb-item.had .fb-pic'), p = ring.querySelector('svg').getBoundingClientRect(), o = ring.getBoundingClientRect();
+      const out = { grid: getComputedStyle(pg).backgroundImage !== 'none', inside: p.left >= o.left && p.right <= o.right, align: getComputedStyle(pg).textAlign };
+      t.querySelector('[data-diary="tab-town"]').click(); await wait(50); out.town = getComputedStyle(document.querySelector('.diary .bk-page')).backgroundImage !== 'none'; DIARY.close(); return JSON.stringify(out); })()"""))
+    assert r == {'grid': False, 'inside': True, 'align': 'start', 'town': True}, r
+
 def test_prices_are_read_out_with_their_sound_changes(b):
     r = json.loads(ev(b, "JSON.stringify([100, 120, 130, 150, 300, 480, 600, 750, 800, 1000, 3000, 8000, 104, 9999].map(YEN.reading))"))
     assert r == ['ひゃくえん', 'ひゃくにじゅうえん', 'ひゃくさんじゅうえん', 'ひゃくごじゅうえん', 'さんびゃくえん', 'よんひゃくはちじゅうえん', 'ろっぴゃくえん', 'ななひゃくごじゅうえん',
