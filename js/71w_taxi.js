@@ -100,7 +100,7 @@ const TAXI_RUN = (() => {
       return `<g class="tx-place" data-place="${id}"><circle cx="${px}" cy="${py - 4}" r="17" fill="#fbf7ec" stroke="#8a7a6e" stroke-width="1.2"/><svg x="${px - 16}" y="${py - 20}" width="32" height="32" viewBox="0 0 100 100">${d}</svg>
         <rect x="${px - lw / 2}" y="${py + 13}" width="${lw}" height="${hasK ? 25 : 18}" rx="3" fill="#fffaf0" stroke="#d8c8a8" stroke-width=".8"/>${hasK ? `<text x="${px}" y="${py + 21}" text-anchor="middle" font-size="7.4" fill="#8a7a6e">${esc(kana)}</text>` : ''}<text x="${px}" y="${py + (hasK ? 34 : 27)}" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2b33" lang="ja">${esc(kanji)}</text></g>`; }).join('');
     const station = `<rect x="140" y="478" width="100" height="26" rx="3" fill="#2f4a6e"/><text x="190" y="496" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">みなと駅</text>`;
-    return `<svg class="tx-map" viewBox="0 0 380 510" aria-hidden="true"><rect width="380" height="510" class="tx-ground"/>${blocks}${roads}${dashes}${zebra.join('')}${station}${places}
+    return `<svg class="tx-map" viewBox="0 0 380 510" aria-hidden="true"><rect width="380" height="510" rx="14" class="tx-ground"/>${blocks}${roads}${dashes}${zebra.join('')}${station}${places}
       <circle class="tx-ring" r="17" cx="-50" cy="-50"/><g class="tx-car" transform="translate(${STATION[0]} ${STATION[1]}) rotate(0)"><ellipse cx="0" cy="1" rx="8" ry="12" fill="#000" opacity=".18"/><rect x="-7" y="-11" width="14" height="22" rx="4" fill="#f3d24a" stroke="#b8961e" stroke-width=".8"/><rect x="-5.4" y="-6" width="10.8" height="5" rx="1.4" fill="#2f3a4a"/><rect x="-5" y="3" width="10" height="4" rx="1.2" fill="#2f3a4a"/><rect x="-3.4" y="-1" width="6.8" height="2.6" rx=".8" fill="#fbf7ec"/><circle cx="-4.4" cy="-10.6" r="1.4" fill="#fff6d8"/><circle cx="4.4" cy="-10.6" r="1.4" fill="#fff6d8"/><circle class="tx-blink l" cx="-6.6" cy="-8" r="1.6" fill="#ff9a2a"/><circle class="tx-blink r" cx="6.6" cy="-8" r="1.6" fill="#ff9a2a"/></g></svg>`;
   }
   function run(ctx) {
@@ -108,8 +108,10 @@ const TAXI_RUN = (() => {
     const T = (sec) => sec * 1000 * JOBS.pat.scale, el = (q) => document.querySelector('.wk-taxi ' + q), live = () => mine === runs && Boolean(el('.tx-map')) && ctx.on();
     let k = [0, 1, 2, 3, 4].find((i) => !(i in score)); if (k === undefined) k = 4;
     let tip = (ctx.kept && ctx.kept.tip) || 0, missed = 0, wait = null, chats = 0, cat = Math.random() < 0.25;   // cat: once a shift maybe, one runs across; tip: kept over a break
-    const word = ([ja, zh], cls = '') => { const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(s.who, ja); };
-    const me = ([ja, zh]) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`; return speakAs('hero', ja); };
+    // 鈴木 and the hero share one line under the map (whoever spoke last), so the card fits a phone's screen (2026-11-21, the user)
+    const talk = (who) => { const t = el('.tx-talk'); if (t) t.dataset.who = who; };
+    const word = ([ja, zh], cls = '') => { talk('drv'); const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(s.who, ja); };
+    const me = ([ja, zh]) => { talk('me'); const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`; return speakAs('hero', ja); };
     const said = (p, min = 0, max = 5000) => JOBS.said(p, min, max);
     const meter = () => { const m = el('.tx-meter b'); if (m) m.textContent = yenStr(R.fare); };
     // what they said last (the way at this crossing, or where to): heard; shown once the ride is over or after two misses
@@ -212,10 +214,11 @@ const TAXI_RUN = (() => {
       else { R.choosing = true; ctl(); arrive(); }
     }
     CLASS.card('wk-taxi', '計程車導航', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
-      <div class="wk-head"><b lang="ja"><ruby>鈴木<rt>すずき</rt></ruby>タクシー</b><span class="wk-n"></span></div>
-      <div class="wk-who"><span class="kr-face">${TOWNEV.face(s.who)}</span><p class="wk-say"></p></div>
-      <div class="tx-top"><span class="kr-face tx-face"></span><p class="tx-bub"></p><div class="tx-meter"><span lang="ja"><ruby>料金<rt>りょうきん</rt></ruby></span><b></b><i>円</i></div></div>
-      <div class="tx-mapbox">${mapSvg()}</div><div class="tx-ctl"></div><div class="tx-pays"></div><p class="wk-me"></p>`, (e) => {
+      <div class="wk-head tx-head"><b lang="ja"><ruby>鈴木<rt>すずき</rt></ruby>タクシー</b><span class="wk-n"></span><div class="tx-meter"><span lang="ja"><ruby>料金<rt>りょうきん</rt></ruby></span><b></b><i>円</i></div></div>
+      <div class="tx-top"><span class="kr-face tx-face"></span><p class="tx-bub"></p></div>
+      <div class="tx-mapbox">${mapSvg()}<div class="tx-pays"></div></div>
+      <div class="tx-talk" data-who="drv"><span class="kr-face">${TOWNEV.face(s.who)}</span><p class="wk-say"></p><p class="wk-me"></p></div>
+      <div class="tx-ctl"></div>`, (e) => {
       if (!R || !live()) return;
       if (e.target.closest('.tx-ear')) {   // heard again: the ring at a crossing waits for it (spec §2.3)
         if (R.phase === 'pay') { speakAs(R.ride.who, s.cust.price[0]); return; }

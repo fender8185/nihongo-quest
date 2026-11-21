@@ -675,16 +675,22 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .lf-in { display: flex; gap: 2px; justify-content: center; } .lf-in .pic { width: 24px; height: 24px; }
 .lf-acts .btn { min-height: 44px; font-size: 17px; }
 /* タクシー (2026-11-20): the passenger and the meter, the town's map with the taxi on it (its blinkers, the ring at a crossing), the
-   four choices, the fare */
-.wk-taxi .cls-card { background: #f4f1e6; color: #2b2b33; border-bottom: 10px solid #e6c23a; }
-.tx-top { display: flex; align-items: center; gap: 8px; margin: 6px 0; } .tx-face { width: 44px; flex: none; } .tx-bub { flex: 1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0; padding: 6px 10px; border-radius: 12px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .1); font-size: 15px; } .tx-bub span { display: block; width: 100%; font-size: 12px; color: #8a7a6e; }
-.tx-meter { display: grid; justify-items: center; padding: 4px 8px; border-radius: 8px; background: #1c1c22; color: #ff6a4a; font-family: system-ui, sans-serif; } .tx-meter span { font-size: 10px; color: #c9cdd4; } .tx-meter b { font-size: 18px; } .tx-meter i { font-style: normal; font-size: 10px; color: #c9cdd4; }
-.tx-mapbox { margin: 0; border-radius: 12px; overflow: hidden; } .tx-map { display: block; width: 100%; height: auto; }
+   four choices, the fare. One screen, no scrolling (2026-11-21, the user): the card as tall as what is seen (dvh: Safari's bars), the
+   map shrinking to what is left, the four choices always at the foot, the fare's answers over the map once it has stopped */
+.wk-taxi .cls-card { background: #f4f1e6; color: #2b2b33; border-bottom: 10px solid #e6c23a; display: flex; flex-direction: column; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); padding: 12px 12px 10px; }
+.wk-taxi .cls-card > * { flex: none; } .wk-taxi .cls-card > .tx-mapbox { flex: 0 1 auto; }
+.tx-head { align-items: center; gap: 8px; } .tx-head b { font-size: 18px; } .tx-head :is(b, .wk-n) { white-space: nowrap; } .tx-head .tx-meter { flex: none; margin-left: auto; }
+@media (max-width: 380px) { .tx-head { gap: 6px; } .tx-head b { font-size: 16px; } .tx-head .wk-n { font-size: 13px; } .tx-meter { padding-inline: 8px; } .tx-meter b { font-size: 18px; } }
+.tx-talk { display: flex; align-items: center; gap: 8px; min-height: 48px; margin-top: 4px; } .tx-talk .kr-face { width: 36px; height: 36px; flex: none; } .tx-talk .wk-say { font-size: 14px; }
+.tx-talk[data-who="me"] :is(.kr-face, .wk-say), .tx-talk:not([data-who="me"]) .wk-me { display: none; } .tx-talk .wk-me { flex: 1; margin: 0; }
+.tx-top { display: flex; align-items: center; gap: 8px; margin: 4px 0 0; min-height: 56px; } .tx-face { width: 44px; flex: none; } .tx-bub { flex: 1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0; padding: 6px 10px; border-radius: 12px; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .1); font-size: 15px; } .tx-bub span { display: block; width: 100%; font-size: 12px; color: #8a7a6e; }
+.tx-meter { display: flex; align-items: baseline; gap: 4px; padding: 2px 10px; border-radius: 8px; background: #1c1c22; color: #ff6a4a; font-family: system-ui, sans-serif; } .tx-meter span { font-size: 11px; color: #c9cdd4; } .tx-meter b { font-size: 20px; } .tx-meter i { font-style: normal; font-size: 11px; color: #c9cdd4; }
+.tx-mapbox { position: relative; aspect-ratio: 380 / 510; min-height: 180px; margin: 4px 0 0; } .tx-map { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .tx-ground { fill: #cfd6c4; } .tx-block { fill: #e6e0d0; stroke: #c9c0aa; stroke-width: 1; } .tx-road { fill: #8d939c; } .tx-dash { stroke: #f4f1ea; stroke-width: 1.2; stroke-dasharray: 6 6; fill: none; } .tx-zebra { stroke: #f4f1ea; stroke-width: 2.4; fill: none; opacity: .8; }
 .tx-ring { fill: none; stroke: #ff9a2a; stroke-width: 3; opacity: 0; } .tx-ring.on { opacity: 1; animation: txRing linear forwards; stroke-dasharray: 107; } @keyframes txRing { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 107; } }
 .tx-blink { opacity: 0; } .tx-car.blink-l .tx-blink.l, .tx-car.blink-r .tx-blink.r { animation: txBlink .4s steps(2) infinite; } @keyframes txBlink { 50% { opacity: 1; } }
-.tx-ctl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; } .tx-go { min-width: 0; min-height: 48px; padding-inline: 4px; font-size: 18px; } .tx-go.stop { background: #d0453c; color: #fff; } .tx-go.picked { box-shadow: 0 0 0 3px #f2c94c; } .tx-go:disabled { opacity: .45; }
-.tx-pays { display: grid; gap: 6px; margin-top: 8px; } .tx-pays:empty { display: none; } .tx-pay { min-height: 44px; font-size: 17px; } .tx-pay.wk-bad { animation: shake .3s ease; }
+.tx-ctl { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 4px; } .tx-go { min-width: 0; min-height: 54px; padding-inline: 4px; font-size: 18px; } .tx-go.stop { background: #d0453c; color: #fff; } .tx-go.picked { box-shadow: 0 0 0 3px #f2c94c; } .tx-go:disabled { opacity: .45; }
+.tx-pays { position: absolute; left: 50%; bottom: 10px; width: min(100% - 20px, 340px); transform: translateX(-50%); display: grid; gap: 6px; padding: 8px; border-radius: 14px; background: rgba(244, 241, 230, .95); box-shadow: 0 4px 16px rgba(0, 0, 0, .25); } .tx-pays:empty { display: none; } .tx-pay { min-height: 44px; font-size: 17px; } .tx-pay.wk-bad { animation: shake .3s ease; }
 /* 券売機 and the ride (2026-11-20): the machine (its screen, a button a fare, the coin slot, the ticket out); inside the car (the
    world going by the windows while it runs, the straps swaying, the LED over the door), the announcement, 降りる */
 .kb-card .cls-card, .rd-card .cls-card { background: #eef1ee; color: #2b2b33; border-bottom: 10px solid #3f9a8c; }
