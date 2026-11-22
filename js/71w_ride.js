@@ -3,7 +3,7 @@
 // The hero's own rides on みなと線: at a station's ticket machine, the fare chart over it (that station 現在地) — find where you are
 // going, press its fare (大人), put the money in: a ticket. On みなと's platform a train stopped with its doors open: aboard (no
 // ticket: buy one first). Inside the car the world going by in the windows, the straps swaying, the LED over the door and the
-// announcements (つぎは 川口、川口です), stop by stop to the end of the line — 白鷺 (the castle) or みなと港 (the harbour); a ticket
+// announcements (つぎは 病院前、病院前です), stop by stop to the end of the line — 白鷺 (the castle) or みなと港 (the harbour); a ticket
 // short of it, the rest paid there (乗り越し精算). Home from either by its station's sign: the machine there, the ride back to
 // みなと's platform. The bus stays free; the train costs, as trains do. One ticket at a time, kept on this device (a new one
 // replaces it; a ride uses it up).
@@ -23,8 +23,8 @@ const RIDE = (() => {
     const fares = [...new Set(EKI.line().filter((x) => x.id !== here).map((x) => EKI.fare(here, x.id)))].sort((a, b) => a - b);
     let pick = 0;
     const chart = `<div class="md-wall kb-wall"><div class="md-chart"><i class="md-rail"></i>${EKI.line().map((x) => x.id === here
-      ? `<div class="md-st here"><b class="md-dot">●</b><span class="md-nm" lang="ja">${EKI.ruby(x.id)}</span><em>現在地</em></div>`
-      : `<div class="md-st"><b class="md-dot${x.rapid ? '' : ' no'}">${x.rapid ? '●' : '○'}</b><span class="md-nm" lang="ja">${EKI.ruby(x.id)}</span><span class="md-f">${EKI.fare(here, x.id)}</span></div>`).join('')}</div>
+      ? `<div class="md-st here"><b class="md-dot">●</b>${EKI.label(x.id, true)}<em>現在地</em></div>`
+      : `<div class="md-st"><b class="md-dot${x.rapid ? '' : ' no'}">${x.rapid ? '●' : '○'}</b>${EKI.label(x.id, true)}<span class="md-f">${EKI.fare(here, x.id)}</span></div>`).join('')}</div>
       <p class="md-key"><span>大人（円）</span><span lang="ja">${ruby(st(here))}から</span></p></div>`;
     const screen = (l, cls = '') => { const e = document.querySelector('.kb-screen'); if (e) { e.innerHTML = `<b lang="ja">${ruby(l[0])}</b><span>${esc(l[1])}</span>`; e.className = 'kb-screen' + (cls ? ' ' + cls : ''); } };
     CLASS.card('kb-card', '券売機', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>

@@ -43,14 +43,14 @@ const MADO = (() => {
   // who asks: each question by the same one (the clips stay few); tickets with a child, a parent
   const CUST = ['nakamura', 'nishimura', 'taro', 'misaki', 'sophia', 'alex', 'kaneda', 'umeko', 'rina', 'yoshimoto', 'ken', 'ai', 'michiyama', 'mike'];
   const sayer = (q, kid) => { let x = 7; for (const c of q) x = (x * 31 + c.charCodeAt(0)) | 0; return kid ? ['kenta', 'maria'][Math.abs(x) % 2] : CUST[Math.abs(x) % CUST.length]; };
-  const STATIONS = ['shirasagi', 'okawa', 'hanada', 'kawaguchi', 'minatoko'];
+  const STATIONS = ['shirasagi', 'daigaku', 'koen', 'byoin', 'minatoko'];
   // a shift from h:m: the first two the fares (plain), then every kind; a minute or three between people
   function make(h, m) {
     const kinds = ['fare', 'fare', ...shuffle(['fare', 'next', 'next', 'track', 'stop', 'stop', 'buy', 'buy'])];
     let t = h * 60 + m, last = '';
     return kinds.map((kind) => {
       t += 1 + Math.floor(Math.random() * 3); const H = Math.floor(t / 60) % 24, M = t % 60;
-      const to = kind === 'next' || kind === 'track' ? pick(['shirasagi', 'minatoko']) : kind === 'stop' ? pick(['kawaguchi', 'hanada', 'okawa']) : pick(STATIONS);
+      const to = kind === 'next' || kind === 'track' ? pick(['shirasagi', 'minatoko']) : kind === 'stop' ? pick(['byoin', 'koen', 'daigaku']) : pick(STATIONS);
       let x, tries = 0; do { x = ask(kind, to, H, M, kind === 'buy' && Math.random() < 0.5); x.who = sayer(x.q[0], x.kid); } while (x.who === last && ++tries < 3); last = x.who;
       return x;
     });
@@ -68,8 +68,8 @@ const MADO_RUN = (() => {
   // the chart's names with their readings on the first shift; after it, the kanji alone (the names read, not matched)
   function chart(task, pickable, first) {
     return `<div class="md-chart${pickable ? ' pick' : ''}"><i class="md-rail"></i>${EKI.line().map((x) => x.id === 'minato'
-      ? `<div class="md-st here"><b class="md-dot">●</b><span class="md-nm" lang="ja">みなと</span><em>現在地</em></div>`
-      : `<button type="button" class="md-st" data-st="${x.id}"${pickable ? '' : ' tabindex="-1"'}><b class="md-dot${x.rapid ? '' : ' no'}">${x.rapid ? '●' : '○'}</b><span class="md-nm" lang="ja">${first ? EKI.ruby(x.id) : esc(EKI.name(x.id))}</span><span class="md-f">${EKI.fare('minato', x.id)}</span><small>${EKI.fare('minato', x.id, true)}</small></button>`).join('')}</div>
+      ? `<div class="md-st here"><b class="md-dot">●</b>${EKI.label(x.id, first)}<em>現在地</em></div>`
+      : `<button type="button" class="md-st" data-st="${x.id}"${pickable ? '' : ' tabindex="-1"'}><b class="md-dot${x.rapid ? '' : ' no'}">${x.rapid ? '●' : '○'}</b>${EKI.label(x.id, first || x.read)}<span class="md-f">${EKI.fare('minato', x.id)}</span><small>${EKI.fare('minato', x.id, true)}</small></button>`).join('')}</div>
       <p class="md-key"><span>● 快速も 止まる</span><span>上：大人　下：子ども（円）</span></p>`;
   }
   const clockSvg = (h, m) => { const a = (m / 60) * 360, b = ((h % 12) + m / 60) * 30; return `<svg viewBox="-20 -20 40 40" aria-hidden="true"><circle r="18" fill="#fbf7ec" stroke="#3b3b44" stroke-width="2"/>${Array.from({ length: 12 }, (_, i) => `<path d="M0 -15.5 V${i % 3 ? -13.6 : -12.6}" stroke="#3b2a1c" stroke-width="${i % 3 ? 0.8 : 1.4}" transform="rotate(${i * 30})"/>`).join('')}<path d="M0 0 V-9" stroke="#2b1c12" stroke-width="2.4" stroke-linecap="round" transform="rotate(${b})"/><path d="M0 2 V-14" stroke="#2b1c12" stroke-width="1.4" stroke-linecap="round" transform="rotate(${a})"/><circle r="1.6" fill="#c8453a"/></svg>`; };
@@ -144,7 +144,7 @@ const MADO_RUN = (() => {
   function lines(add) {
     const s = S(), seen = new Set();
     // every question each could ask, and every answer the hero could give — at each minute the timetable has
-    ['fare', 'track', 'stop', 'buy', 'buy2'].forEach((kind) => MADO.STATIONS.forEach((to) => { if (kind === 'stop' && !['kawaguchi', 'hanada', 'okawa'].includes(to)) return; if (kind === 'track' && !['shirasagi', 'minatoko'].includes(to)) return;
+    ['fare', 'track', 'stop', 'buy', 'buy2'].forEach((kind) => MADO.STATIONS.forEach((to) => { if (kind === 'stop' && !['byoin', 'koen', 'daigaku'].includes(to)) return; if (kind === 'track' && !['shirasagi', 'minatoko'].includes(to)) return;
       const t = MADO.ask(kind === 'buy2' ? 'buy' : kind, to, 10, 0, kind === 'buy2'); add(MADO.sayer(t.q[0], t.kid), t.q[0]); t.opts.forEach((o) => { if (!seen.has(o[0])) { seen.add(o[0]); add('hero', o[0]); } }); }));
     ['shirasagi', 'minatoko'].forEach((to) => { const t = MADO.ask('next', to, 10, 0); add(MADO.sayer(t.q[0]), t.q[0]); });
     for (let h = TOWN.EKI.FIRST; h <= TOWN.EKI.LAST; h++) TOWN.EKI.TIMES.forEach(([m]) => add('hero', `${MADO.timeMark(h, m)}です。`));

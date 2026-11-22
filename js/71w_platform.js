@@ -46,7 +46,7 @@ function pfCar(len, h, dest, cab, tail, under, k) {
 }
 // a train of two cars, len each, joined by the gangway; to: where it is bound (its cab at the leading end: going left, 'l')
 function pfTrain(len, h, x = { kind: '普通', to: 'shirasagi' }, under = false) {
-  const dest = [x.kind, EKI.name(x.to)], left = x.to === 'shirasagi';   // 白鷺: away to the left (かわぐち's side)
+  const dest = [x.kind, EKI.name(x.to)], left = x.to === 'shirasagi';   // 白鷺: away to the left (びょういんまえ's side)
   return `<g>${pfCar(len, h, dest, left ? 'l' : '', left ? '' : 'l', under, 0)}<rect x="${len}" y="-${h - 30}" width="6" height="${h - 44}" ${hc('#3a3d44', '#141428')}/><g transform="translate(${len + 6} 0)">${pfCar(len, h, dest, left ? '' : 'r', left ? 'r' : '', under, 1)}</g></g>`;
 }
 const PF_NEAR = { len: 380, h: 158, at: 180 }, PF_FAR = { len: 380, h: 158, at: 330, k: 0.62, y: 208 };   // where each stands when stopped (its left end)
@@ -95,7 +95,7 @@ function platformHtml() {
   const sign = `<g data-fx="pfsign"><rect x="645" y="182" width="5" height="${F - 182}" ${hc('#6c7884', '#1e2142')}/><rect x="770" y="182" width="5" height="${F - 182}" ${hc('#6c7884', '#1e2142')}/>${groundShade(710, F + 1, 70, 2.4)}
     <rect x="628" y="130" width="164" height="56" rx="4" ${hc('#5a5f6a', '#1c1d3c')}/><rect x="631" y="133" width="158" height="50" rx="3" ${hc('#fbfaf6', '#e9e6d8')}/>
     <text x="710" y="158" text-anchor="middle" font-size="21" font-weight="700" fill="#2b2b33" font-family="system-ui, sans-serif" letter-spacing="3">みなと</text><text x="710" y="167" text-anchor="middle" font-size="6.4" fill="#6a6a74" font-family="system-ui, sans-serif" letter-spacing="1">Minato</text>
-    <rect x="631" y="170" width="158" height="5" fill="#3f9a8c"/><text x="636" y="181" font-size="6.8" fill="#2b2b33" font-family="system-ui, sans-serif">◀ かわぐち</text><text x="784" y="181" text-anchor="end" font-size="6.8" fill="#2b2b33" font-family="system-ui, sans-serif">みなとこう ▶</text></g>`;
+    <rect x="631" y="170" width="158" height="5" fill="#3f9a8c"/><text x="636" y="181" font-size="6.8" fill="#2b2b33" font-family="system-ui, sans-serif">◀ びょういんまえ</text><text x="784" y="181" text-anchor="end" font-size="6.8" fill="#2b2b33" font-family="system-ui, sans-serif">みなとこう ▶</text></g>`;
   // the bins: burnable, cans and bottles, PET bottles — a hole each, their words on the front
   const bins = `<g data-fx="pfbins">${[['#4f7a4a', 'もえる'], ['#3f6aa8', 'かん'], ['#e0a83a', 'PET']].map(([c, w], i) => { const x = 590 + i * 14; return `<rect x="${x}" y="${F - 30}" width="13" height="30" rx="1.5" ${hc('#c9cdd4', '#2a2c50')}/><rect x="${x}" y="${F - 32}" width="13" height="5" rx="1.5" ${hc(c, '#2a2c48')}/><ellipse cx="${x + 6.5}" cy="${F - 29.4}" rx="3.4" ry="1.4" fill="#2b2b33"/><text x="${x + 6.5}" y="${F - 16}" text-anchor="middle" font-size="3.6" font-weight="700" ${hc(c, '#a8a8c8')} font-family="system-ui, sans-serif">${w}</text>`; }).join('')}${groundShade(611, F + 1, 24, 2)}</g>`;
   // the vending machine (as 駅前's)

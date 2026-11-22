@@ -643,13 +643,14 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
    departure board — the glass with whoever is asking, the printed tickets, the replies */
 .wk-window .cls-card { background: #eef1ee; color: #2b2b33; border-bottom: 10px solid #3f9a8c; }
 .md-wall { margin: 6px -6px 6px; padding: 8px 10px 6px; border-radius: 12px; background: #2f4a6e; color: #fff; }
-.md-chart { position: relative; display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; } .md-rail { position: absolute; left: 7%; right: 7%; top: 12px; height: 4px; border-radius: 2px; background: #3f9a8c; }
-.md-st { position: relative; display: grid; justify-items: center; gap: 1px; padding: 2px 0 4px; border: 0; border-radius: 8px; background: none; color: #fff; font: inherit; cursor: default; }
+.md-chart { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; } .md-rail { position: absolute; left: 7%; right: 7%; top: 12px; height: 4px; border-radius: 2px; background: #3f9a8c; }
+.md-st { position: relative; display: grid; justify-items: center; align-content: start; gap: 1px; padding: 2px 0 4px; border: 0; border-radius: 8px; background: none; color: #fff; font: inherit; cursor: default; }
 .md-chart.pick .md-st:not(.here) { cursor: pointer; background: rgba(255, 255, 255, .12); animation: mdPulse 1.4s ease-in-out infinite; } @keyframes mdPulse { 50% { background: rgba(255, 255, 255, .26); } }
 .md-st.wk-hint { box-shadow: 0 0 0 3px #f6e08a; } .md-st.wk-bad { animation: shake .3s ease; }
 .md-dot { position: relative; z-index: 1; font-size: 15px; line-height: 1; color: #fff; text-shadow: 0 0 2px #2f4a6e; } .md-dot.no { color: #cfe6ec; }
-.md-nm { margin-top: 5px; font-size: 14px; font-weight: 700; white-space: nowrap; } .md-nm rt { font-size: 9px; font-weight: 400; } .md-f { font-size: 15px; font-weight: 700; color: #ffe08a; } .md-st small { font-size: 11px; color: #cfe6ec; }
-.md-st.here .md-nm { color: #fff; } .md-st.here em { font-style: normal; font-size: 11px; padding: 0 5px; border-radius: 4px; background: #d0453c; }
+.md-rd { display: flex; align-items: flex-end; justify-content: center; min-height: 11px; margin-top: 2px; font-size: 9.5px; line-height: 11px; text-align: center; word-break: keep-all; color: #cfe6ec; } .md-chart:has(.md-rd.two) .md-rd { min-height: 22px; } .md-nm { font-size: 14px; font-weight: 700; white-space: nowrap; } .md-f { font-size: 15px; font-weight: 700; color: #ffe08a; } .md-st small { font-size: 11px; color: #cfe6ec; }
+@media (max-width: 400px) { .md-chart { gap: 0; } .md-rd { font-size: 9px; } .md-st.here em { padding: 0 3px; } }   /* びょういんまえ over 病院前 in a sixth of a phone (2026-11-22) */
+.md-st.here .md-nm { color: #fff; } .md-st.here em { font-style: normal; font-size: 11px; white-space: nowrap; padding: 0 5px; border-radius: 4px; background: #d0453c; }
 .md-key { display: flex; justify-content: space-between; margin: 2px 4px 6px; font-size: 11px; color: #cfe6ec; }
 .md-row { display: flex; gap: 8px; align-items: stretch; } .md-clock { display: grid; justify-items: center; align-content: center; gap: 2px; padding: 4px 6px; border-radius: 8px; background: #fbf7ec; color: #2b2b33; } .md-clock svg { width: 46px; height: 46px; } .md-clock b { font-size: 14px; }
 .md-board { flex: 1; display: grid; gap: 2px; padding: 4px 6px; border-radius: 6px; background: #141418; font-family: system-ui, sans-serif; }

@@ -189,11 +189,14 @@ const TAXI_RUN = (() => {
     async function paid() {
       const r = R; R.phase = 'done'; ctx.right(r.k, r.miss); el('.tx-pays').innerHTML = ''; playSfx('good'); bub();
       const more = !r.miss && TAXI.tips && Math.random() < 0.5 ? 10 * (1 + Math.floor(Math.random() * 3)) : 0; tip += more; if (more) ctx.keep({ tip });
-      const kk = k; k++;
+      k++;
+      // the card still up (the last ride: the shift already paid, so not ctx.on — 2026-11-22, the user: its results were left under
+      // the card); shut: no more voices (paid all the same)
+      const live2 = () => mine === runs && Boolean(el('.tx-map')) && (ctx.on() || k >= 5);
       const bye = (async () => {
-        await said(me(S().pay.map((x, i) => (i ? x.replace('{p}', r.fare) : x.replace('{P}', YEN.priceMark(r.fare))))), 700); if (!live()) return;   // shut: no more voices (paid all the same)
+        await said(me(S().pay.map((x, i) => (i ? x.replace('{p}', r.fare) : x.replace('{P}', YEN.priceMark(r.fare))))), 700); if (!live2()) return;
         if (more) { await said(speakAs(r.ride.who, s.cust.keep[0]), 600); playSfx('coin', 2); }
-        await said(speakAs(r.ride.who, s.cust.thanks[0]), 600); if (!live()) return;
+        await said(speakAs(r.ride.who, s.cust.thanks[0]), 600); if (!live2()) return;
         if (k < 5) { begin(); return; }
         await said(word(!missed && ctx.done === 0 ? s.all : s.end, 'ok'), 800); if (el('.tx-map')) CLASS.close();
       })();

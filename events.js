@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 91 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 92 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2787,11 +2787,13 @@ const TOWN = {
       ['さとう', '砂糖', 198], ['しお', '塩', 105], ['にく', '肉', 680], ['さかな', '魚', 450], ['みかん', 'みかん', 380], ['バナナ', 'バナナ', 158],
       ['ラーメン', 'ラーメン', 498], ['しゅうまい', 'しゅうまい', 645], ['はるまき', 'はるまき', 398], ['ぎょうざ', '餃子', 880]] },   // to the yen (2026-11-20): ones only 0, 5, 8 — two summed never end in 4 (よえん), 7 or 9
   // 駅前の打工 (2026-11-20, docs/superpowers/specs/2026-11-20-ekimae-work-design.md §6): みなと線, the town's local line end to end —
-  // [id, name, km along the line, 快速 stops there]; fares go by the distance between two stations (FARES: [up to km, 大人 円]; 子ども
+  // [id, name, km along the line, 快速 stops there, its reading always shown]; between the ends N5 words (〜前, as real lines name
+  // stations: 2026-11-22, the user — 大川・花田・川口 were names worth nothing past the game); 白鷺, the castle's town, past N5 (鷺):
+  // its reading always on the chart. Fares go by the distance between two stations (FARES: [up to km, 大人 円]; 子ども
   // half, under 10 円 dropped). Each hour FIRST–LAST from みなと: [minute, 普通／快速, to] — 白鷺 on 1番線, みなと港 on 2番線
   // (原田's chat: 白鷺行きの普通 at 十分 and 四十分, the last at 22:40)
   EKI: {
-    LINE: [['shirasagi', '{白鷺|しらさぎ}', 24, 1], ['okawa', '{大川|おおかわ}', 18, 0], ['hanada', '{花田|はなだ}', 13, 0], ['kawaguchi', '{川口|かわぐち}', 8, 1], ['minato', 'みなと', 3, 1], ['minatoko', 'みなと{港|こう}', 0, 1]],
+    LINE: [['shirasagi', '{白鷺|しらさぎ}', 24, 1, 1], ['daigaku', '{大学|だいがく}{前|まえ}', 18, 0], ['koen', '{公園|こうえん}{前|まえ}', 13, 0], ['byoin', '{病院|びょういん}{前|まえ}', 8, 1], ['minato', 'みなと', 3, 1], ['minatoko', 'みなと{港|こう}', 0, 1]],
     FARES: [[3, 140], [6, 170], [10, 220], [15, 260], [21, 310], [30, 350]],
     TIMES: [[2, '普通', 'minatoko'], [10, '普通', 'shirasagi'], [17, '快速', 'minatoko'], [25, '快速', 'shirasagi'], [32, '普通', 'minatoko'], [40, '普通', 'shirasagi'], [47, '快速', 'minatoko'], [55, '快速', 'shirasagi']],
     FIRST: 6, LAST: 22, END: 40, TRACK: { shirasagi: 1, minatoko: 2 },   // the last train out at 22:40 (原田: 最終は 二十二時四十分)
