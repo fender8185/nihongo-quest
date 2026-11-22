@@ -245,7 +245,7 @@ def test_theme_lane_migrates_old_names(b):
 
 def test_same_theme_name_across_levels(b):
     js = """(() => { state.stage = 'main'; state.srs = {}; state.today.newV = 0; DAILY_CACHE = null; const pool = REG.vocab.filter(v => v.builtin);
-      const th = activeThemes(pool, false); const n5Only = newVocabCandidates(pool, false).filter(v => v.lv === 'N5').slice(0, 6).every(v => th.includes(vocabTheme(v)));
+      const th = activeThemes(pool, false); const n5Only = newVocabCandidates(pool, false).filter(v => v.lv === 'N5' && !menuLane()[2].has(v.key)).slice(0, 6).every(v => th.includes(vocabTheme(v)));   // menu words ride their own lane (2026-11-23)
       const q = buildVocabQueue('c:飲食', 60); const lvs = [...new Set(q.map(x => x.lv))].sort();
       return JSON.stringify({ n5Only, lvs, th }); })()"""
     r = json.loads(ev(b, js))
