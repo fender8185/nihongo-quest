@@ -215,7 +215,9 @@
       const o = older.purse || {}, n = newer.purse || {}, spent = Object.assign({}, o.spent), book = Object.assign({}, o.book);
       Object.entries(n.spent || {}).forEach(([d, v]) => { spent[d] = Math.max(Number(spent[d]) || 0, Number(v) || 0); });
       Object.entries(n.book || {}).forEach(([k, v]) => { if (!book[k] || v < book[k]) book[k] = v; });
-      out.purse = { spent, book };
+      out.purse = Object.assign({}, o, n, { spent, book });   // a key this build does not know: kept (the newer copy's)
+      const gifts = Object.assign({}, o.gifts); Object.entries(n.gifts || {}).forEach(([k, v]) => { if (!gifts[k] || v > gifts[k]) gifts[k] = v; });   // the gifts had (2026-11-22, once a day each): the later day of each
+      if (Object.keys(gifts).length) out.purse.gifts = gifts; else delete out.purse.gifts;
       const gift = Math.max(Number(o.gift) || 0, Number(n.gift) || 0); if (gift) out.purse.gift = gift;   // the test site's 円: only grows
       // the day's foods, drinks, bath, おみくじ: the later day's; the same day, the more of each — the foods and drinks counted since the
       // bath if either copy has had it (out of the bath the hero is hungry again: YEN)

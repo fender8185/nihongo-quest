@@ -259,6 +259,14 @@ test('mergeStates: 円 spent is kept per device (each one only grows) and 美食
   assert.equal(g.gift, 20000);   // the test site's 円 only grows
 });
 
+test('mergeStates: the gifts had (2026-11-22, once a day each): the later day of each; a purse key this build does not know kept', () => {
+  const a = { v: 3, updatedAt: '2026-11-22T01:00:00.000Z', purse: { spent: {}, book: {}, gifts: { tamago: '2026-11-22', manju: '2026-11-20' }, later: { x: 1 } } };
+  const b = { v: 3, updatedAt: '2026-11-22T02:00:00.000Z', purse: { spent: {}, book: {}, gifts: { tamago: '2026-11-21', manju: '2026-11-21' } } };
+  const p = C.mergeStates(a, b).purse;
+  assert.deepEqual(p.gifts, { tamago: '2026-11-22', manju: '2026-11-21' });
+  assert.deepEqual(p.later, { x: 1 });
+});
+
 test('mergeStates: the day\'s foods and drinks — the later day\'s, the more of each, counted since the bath once either copy has had it', () => {
   const at = (t, today) => ({ v: 3, updatedAt: `2026-11-13T0${t}:00:00.000Z`, purse: { spent: {}, book: {}, today } });
   assert.deepEqual(C.mergeStates(at(1, { day: '2026-11-13', f: 2, d: 0 }), at(2, { day: '2026-11-13', f: 1, d: 1, o: 1 })).purse.today, { day: '2026-11-13', f: 2, d: 1, b: 0, o: 1 });

@@ -656,7 +656,7 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .wk-window .wk-bub { flex: 1 1 0; min-width: 0; grid-template-columns: auto 1fr; align-items: center; column-gap: 8px; padding: 6px 10px; font-size: 17px; } .wk-window .wk-bub .wk-ear { grid-row: span 2; } .wk-window .wk-bub > :not(.wk-ear) { grid-column: 2; }
 :is(.md-talk, .lf-talk) { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; } :is(.md-talk, .lf-talk) .kr-face { width: 34px; height: 34px; flex: none; } :is(.md-talk, .lf-talk) .wk-say { font-size: 14px; }
 :is(.md-talk, .lf-talk)[data-who="me"] :is(.kr-face, .wk-say), :is(.md-talk, .lf-talk):not([data-who="me"]) .wk-me { display: none; } :is(.md-talk, .lf-talk) .wk-me { flex: 1; margin: 0; }
-.wk-window .md-opts { margin-top: 6px; } .wk-window .md-opt { min-height: 46px; padding-block: 6px; }
+.wk-window .md-opts { margin-top: 6px; } .wk-window .md-opt { min-height: 44px; padding-block: 6px; }
 .md-wall { margin: 4px -6px 6px; padding: 6px 10px 6px; border-radius: 12px; background: #2f4a6e; color: #fff; }
 .md-chart { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; } .md-rail { position: absolute; left: 7%; right: 7%; top: 12px; height: 4px; border-radius: 2px; background: #3f9a8c; }
 .md-st { position: relative; display: grid; justify-items: center; align-content: start; gap: 1px; padding: 2px 0 4px; border: 0; border-radius: 8px; background: none; color: #fff; font: inherit; cursor: default; }

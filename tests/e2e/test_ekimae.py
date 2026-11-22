@@ -156,6 +156,23 @@ def test_bento_shift_runs_three_trains(b):
     assert r['trains'] == [3, 3, 4] and len(r['score']) == 10 and v == [0, 0, 0, 0, 0, 0, 0, 0, 1, 3], r
     assert r['grade'] == 'B' and r['yen'] == 146, r   # 8 of 10 at once (B 20) on 120, 4% more: 中華街's four S, 經驗 20 (ベテラン)
 
+# the card shut the moment the last passenger has theirs (before the train goes): the shift paid all the same; and one all done but
+# never paid (an older build, the app gone) paid when tapped again, ハル gone home or not (2026-11-22, the review: after 19 時 never)
+def test_bento_paid_when_shut_at_the_end(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + BENTO_HELP + """ location.hash = '#/platform'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      WORK.start(yard(), 'bento'); const out = {};
+      for (let t = 0; t < 3; t++) {
+        for (let i = 0; i < 200 && !(BENTO_RUN.now() && BENTO_RUN.now().t === t && BENTO_RUN.now().phase === 'stop'); i++) await wait(30);
+        const want = BENTO_RUN.now().wins.length; let served = 0;
+        for (let i = 0; i < 300 && served < want; i++) { const c = calling(); if (c.length) { await serve(c[0]); served++; } else await wait(30); }
+      }
+      CLASS.close(); await wait(1500); out.yen = WORK.today().yen; document.querySelectorAll('.wk-result').forEach((x) => x.remove());
+      const d = Object.keys(state.work.res).find((k) => state.work.res[k] === WORK.today()); state.work.res[d] = { place: 'bento', done: 10, score: Object.fromEntries([...Array(10).keys()].map((k) => [k, 0])) };
+      TOWNEV.clock = { h: 21, day: new Date(2026, 10, 10) }; out.can = WORK.can('bento').ok; WORK.start(yard(), 'bento'); await wait(300); out.late = WORK.today().yen;
+      state.work.res[d] = { place: 'bento', done: 3, score: { 0: 0, 1: 0, 2: 0 } }; out.half = WORK.can('bento').ok;
+      document.querySelectorAll('.wk-result').forEach((x) => x.remove()); JOBS.pat.scale = 1; return JSON.stringify(out); })()"""))
+    assert r['yen'] and r['can'] and r['late'] and not r['half'], r
+
 # a shift left after the first train: taken up again at the second, its three passengers
 def test_bento_resume(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + BENTO_HELP + """ location.hash = '#/platform'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
@@ -223,7 +240,8 @@ def test_lost_descriptions(b):
                  '{白|しろ}くて、{古|ふる}い {帽子|ぼうし}です。', '{緑|みどり}で、{小|ちい}さい {本|ほん}です。', '{中|なか}に カードと {写真|しゃしん}が あります。', '{中|なか}に カードと {写真|しゃしん}が {入|はい}って います。'], r
 
 # a shift's ten: each a different thing; four on the counter of its kind, the colour and the other look crossed — one right (a twin:
-# two that look so, the inside tells), or none (ありません); each wrong one shares a look with what was asked for
+# two that look so, the inside tells), or none (ありません); each wrong one shares a look with what was asked for; never two the same
+# but a twin's (2026-11-22, the review: the camera had two colours, so two alike sat on the counter)
 def test_lost_candidates_need_both_looks(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ state.currentUnit = 'm4'; const out = { bad: [], kinds: [], types: {} };
       for (let n = 0; n < 30; n++) { const ts = LOST.make(); out.kinds.push(new Set(ts.map((t) => t.kind)).size);
@@ -232,7 +250,8 @@ def test_lost_candidates_need_both_looks(b):
           if (t.type === 'plain' && match.length !== 1) out.bad.push('plain ' + match.length);
           if (t.type === 'twin' && (match.length !== 2 || match[0].inside.join() === match[1].inside.join() || !match.some((c) => c.inside.join() === t.inside.join()))) out.bad.push('twin');
           if ((t.type === 'none' || t.type === 'gag') && match.length) out.bad.push('none');
-          if (t.cands.some((c) => !same(c) && c.color !== t.color && c.dim !== t.dim)) out.bad.push('far'); }); }
+          if (t.cands.some((c) => !same(c) && c.color !== t.color && c.dim !== t.dim)) out.bad.push('far');
+          if (t.type !== 'twin' && new Set(t.cands.map((c) => c.color + c.dim)).size !== 4) out.bad.push('alike ' + t.kind); }); }
       return JSON.stringify(out); })()"""))
     assert not r['bad'] and set(r['kinds']) == {10}, r
     assert r['types'].get('twin', 0) > 0 and r['types'].get('none', 0) > 0 and r['types'].get('plain', 0) > 150, r
@@ -350,7 +369,18 @@ def test_ride_to_shirasagi(b):
       RIDE.board(yard(), 1); await wait(100); out.to = RIDE.now() && RIDE.now().to; await arrive('#/castle');
       out.at = location.hash; out.ticket = RIDE.ticket(); out.left = yenBalance(); return JSON.stringify(out); })()"""))
     assert not r['without'] and r['to'] == 'shirasagi' and r['at'] == '#/castle' and r['ticket'] is None and r['left'] == 1000, r
+    assert r['said'][-1].startswith('{終点|しゅうてん|終點}、{白鷺|しらさぎ}です。'), r   # 白鷺 is the end of the line
     assert [l for l in r['said'] if l.startswith('つぎは')] == ['つぎは {病院|びょういん}{前|まえ}、{病院|びょういん}{前|まえ}です。', 'つぎは {公園|こうえん}{前|まえ}、{公園|こうえん}{前|まえ}です。', 'つぎは {大学|だいがく}{前|まえ}、{大学|だいがく}{前|まえ}です。', 'つぎは {白鷺|しらさぎ}、{白鷺|しらさぎ}です。'], r
+
+# back from 白鷺 to みなと: みなと is not the end of the line (みなと港 is) — its own arrival, no 終点 (2026-11-22, the review); 白鷺 is
+def test_ride_home_is_not_the_end(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + RIDE_HELP + """ location.hash = '#/castle'; route(); await wait(400); const out = { said: [] };
+      window.speakAs = (w, l) => { if (w === 'ann') out.said.push(l); return Promise.resolve(); };
+      RIDE.machine(yard(), 'shirasagi'); await wait(100); click('.kb-fare[data-f="310"]'); await wait(60); click('.kb-pay'); await wait(200); click('.kb-ride');
+      for (let i = 0; i < 400 && !(RIDE.now() && RIDE.now().phase === 'end'); i++) await wait(20); out.led = document.querySelector('.rd-card').textContent; await arrive('#/platform');
+      out.last = out.said[out.said.length - 1]; out.end = TOWN.EKI.ride.end[0]; return JSON.stringify(out); })()"""))
+    assert r['last'] == 'みなと、みなとです。お{忘れ物|わすれもの|遺失物}の ないように ご{注意|ちゅうい|注意} ください。' and '終点' not in r['led'], r
+    assert r['end'].startswith('{終点|しゅうてん|終點}、'), r
 
 # a ticket short of the end: the rest paid there (乗り越し精算: 170 to 白鷺's 310); back from 白鷺 by its station's sign, home to みなと's platform
 def test_ride_short_ticket_and_back(b):
@@ -482,6 +512,15 @@ def test_lost_asks_what_was_not_said(b):
     assert r['me1'] == 'どんな ものですか。' and r['phase1'] == 'find', r   # its looks tell what it is too: the four out
     assert r['open2'].endswith('{帽子|ぼうし}を {忘|わす}れました。') and 'に' in r['open2'], r
     assert r['score'] == {'0': 2, '1': 0, '2': 0} and r['lines'] == [] and r['gone'] == [], r
+
+# what this round writes survives the app's start (normalizeState, 2026-11-22, the review): a gift's day (else offered again each
+# reload), a shift's keep (the taxi's おつり, 外場's stars) till paid; the taxi's meter voiced to 2,900 円 (a lost ride runs long)
+def test_review_state_kept_and_meter_voiced(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const n = normalizeState(JSON.parse(JSON.stringify(Object.assign(defaultState(), { purse: { spent: {}, book: {}, gifts: { tamago: '2026-11-22', bad: 5 } },
+        work: { res: { '2026-11-22': { place: 'taxi', done: 2, score: { 0: 0, 1: 0 }, keep: { tip: 20 } }, '2026-11-21': { place: 'taxi', done: 5, score: {}, yen: 100, grade: 'S', keep: { tip: 5 } } } } }))));
+      const ls = []; TAXI_RUN.lines((who, l) => ls.push(who + ' ' + l));
+      return JSON.stringify({ gifts: n.purse.gifts, keep: n.work.res['2026-11-22'].keep, paid: 'keep' in n.work.res['2026-11-21'], meter: ls.includes('hero ' + TOWN.WORK.say.taxi.pay[0].replace('{P}', YEN.priceMark(2900))) }); })()"""))
+    assert r == {'gifts': {'tamago': '2026-11-22'}, 'keep': {'tip': 20}, 'paid': False, 'meter': True}, r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":

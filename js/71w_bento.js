@@ -159,20 +159,25 @@ const BENTO_RUN = (() => {
         const w = B.wins.find((x) => x.state === 'calling' && x !== B.sel); if (w) setTimeout(() => { if (live()) say(w, s.cust.hurry[0]); }, 1400);
       }
     }
-    // the train goes (its time up, or everyone served): the doors, away; whoever was not served lost
-    async function depart() {
+    // the train goes (its time up, or everyone served — wait: the thanks heard first): the doors, away; whoever was not served lost.
+    // The last train: the shift paid at once, as its last passenger is scored, the train's going and ハル's word before the results
+    // (2026-11-22, the review: the card shut before it went left it unpaid — and after 19 時, with ハル gone, for good)
+    async function depart(wait = 0) {
       if (!B || B.phase !== 'stop') return; B.phase = 'go'; if (clock) clock.stop();
       const left = B.wins.filter((x) => x.state !== 'done'); left.forEach((x) => { ctx.right(x.k, 3); score[x.k] = 3; x.state = 'lost'; drawWin(x); }); lost += left.length;
       if (left.length) playSfx('bad');
-      B.sel = null; B.hand = {}; bubble(); hand();
-      SND.play('door-chime', { vol: 0.6 }); await sleep(T(0.6)); if (!live()) return;
-      const car = el('.bt-car'); if (car) car.dataset.state = 'out'; SND.play('train-out', { vol: 0.45 });
-      if (left.length) await said(word(s.gone, 'bad'), T(1.2)); else await sleep(T(1.3));
-      if (!live() && t < trains.length - 1) return;
-      if (t < trains.length - 1) { t++; arrive(); return; }
+      const last = t === trains.length - 1, on = () => mine === runs && Boolean(el('.bt-car')), go = last ? on : live;   // paid, the shift is no longer on: the card still up is enough
+      const away = (async () => {
+        if (wait) { await sleep(wait); if (!go()) return false; }
+        B.sel = null; B.hand = {}; bubble(); hand();
+        SND.play('door-chime', { vol: 0.6 }); await sleep(T(0.6)); if (!go()) return false;
+        const car = el('.bt-car'); if (car) car.dataset.state = 'out'; SND.play('train-out', { vol: 0.45 });
+        if (left.length) await said(word(s.gone, 'bad'), T(1.2)); else await sleep(T(1.3));
+        return go();
+      })();
+      if (!last) { if (await away) { t++; arrive(); } return; }
       B.phase = 'end';
-      const bye = said(word(fresh && !missed && !lost ? s.all : s.end, 'ok'), 900).then(() => { if (mine === runs && el('.bt-car')) CLASS.close(); });
-      ctx.finish({}, bye);
+      ctx.finish({}, away.then((ok) => ok && said(word(fresh && !missed && !lost ? s.all : s.end, 'ok'), 900)).then(() => { if (on()) CLASS.close(); }));
     }
     // a window tapped: its passenger now the one served (what was in the hands goes back), heard at once the first time
     async function pickWin(x) {
@@ -205,7 +210,7 @@ const BENTO_RUN = (() => {
       x.state = 'done'; ctx.right(x.k, x.miss); score[x.k] = x.miss; playSfx('good'); B.hand = {}; drawWin(x); bubble(); hand();
       me(s.me.give); say(x, s.cust.thanks[0]).then(() => { if (live()) playSfx('coin', 2); });
       if (!x.miss && Math.random() < 0.3) word(s.ok[Math.floor(Math.random() * s.ok.length)], 'ok');
-      if (B.wins.every((y) => y.state === 'done')) { await sleep(T(1.8)); if (live() && B.phase === 'stop') { if (clock) clock.stop(); depart(); } }
+      if (B.wins.every((y) => y.state === 'done')) { if (t === trains.length - 1) { depart(T(1.8)); return; } await sleep(T(1.8)); if (live() && B.phase === 'stop') depart(); }
     }
     const goods = BENTO.goods();
     CLASS.card('wk-bento', '賣便當', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>

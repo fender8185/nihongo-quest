@@ -49,7 +49,7 @@ const RIDE = (() => {
   // ---- aboard: a ticket from here, enough with the money there is to reach the end; then the ride ----
   function board(yard, track, from = 'minato') {
     const t = ticket(), to = from !== 'minato' ? 'minato' : track === 1 ? 'shirasagi' : 'minatoko';
-    if (!t || t.from !== from) { toast(from === 'minato' ? '要先買票：駅前站房前的紅色券売機。' : '要先在券売機買票。', 3200); if (yard) yPop(yard, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), 'きっぷ…'); return false; }
+    if (!t || t.from !== from) { toast(from === 'minato' ? '要先買票：車站門口的紅色券売機。' : '要先在券売機買票。', 3200); if (yard) yPop(yard, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), 'きっぷ…'); return false; }
     const rest = Math.max(0, EKI.fare(from, to) - t.fare);
     if (rest > yenBalance()) { toast(`這張票只到 ${t.fare} 円的站，錢包也不夠補票（還要 ${rest} 円）。`, 3600); return false; }
     go(from, to); return true;
@@ -88,8 +88,10 @@ const RIDE = (() => {
         if (s === to) break;
         R.phase = 'stop'; run(false); SND.play('door-chime', { vol: 0.5 }); led(EKI.ruby(s)); await sleep(ms(2.2)); SND.play('door-chime', { vol: 0.5 });
       }
-      if (!live()) return; R.phase = 'end'; run(false); SND.play('train-in', { vol: 0.35 }); led(`${EKI.ruby(to)} <small>終点</small>`);
-      say(fill(L().end, { S: st(to), s: EKI.name(to) }));
+      // 終点 only at the line's ends (白鷺, みなと港): みなと is passed through (2026-11-22, the review: it taught 終点 wrong)
+      const ln = EKI.line(), term = to === ln[0].id || to === ln[ln.length - 1].id;
+      if (!live()) return; R.phase = 'end'; run(false); SND.play('train-in', { vol: 0.35 }); led(term ? `${EKI.ruby(to)} <small>終点</small>` : EKI.ruby(to));
+      say(fill(term ? L().end : L().at, { S: st(to), s: EKI.name(to) }));
       el('.rd-end').innerHTML = `${rest ? `<p class="rd-pay" lang="ja">${ruby(fill(L().pay, { P: YEN.priceMark(rest) })[0])}<small>${esc(fill(L().pay, { p: rest })[1])}</small></p>` : ''}<button type="button" class="btn btn-primary rd-off" lang="ja"><span><ruby>降<rt>お</rt></ruby>りる</span></button>`;
     })();
   }
@@ -101,6 +103,6 @@ const RIDE = (() => {
     yHeroWalk(yard, SIGN[here][3], () => machine(yard, here));
   }
   // the announcements for every station (their clips)
-  const lines = (add) => EKI.line().forEach((x) => { add('ann', fill(L().next, { S: st(x.id) })[0]); add('ann', fill(L().end, { S: st(x.id) })[0]); });
+  const lines = (add) => EKI.line().forEach((x, i, ln) => { add('ann', fill(L().next, { S: st(x.id) })[0]); add('ann', fill(i === 0 || i === ln.length - 1 ? L().end : L().at, { S: st(x.id) })[0]); });
   return Object.assign(api, { ticket, keep, machine, board, go, signHtml, fromSign, lines, now: () => R, SCENE });
 })();

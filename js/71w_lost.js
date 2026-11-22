@@ -61,8 +61,8 @@ const LOST = (() => {
     const t = { kind, type, open, color, dim, inside: two(kind), who: type === 'gag' ? 'genzo' : k[4], where: pick(L().where) };
     let cands;
     if (type === 'twin') { const other2 = two(kind, t.inside); cands = [mk(color, dim, t.inside), mk(color, dim, other2), mk(color, other), mk(oc[0], dim)]; }
-    else if (type === 'none' || type === 'gag') cands = [mk(color, other), mk(oc[0], dim), mk(oc[1 % oc.length], dim), mk(oc[0], dim)].map((c, i) => (i === 3 && oc.length > 1 ? mk(color, other) : c));
-    else cands = [mk(color, dim, t.inside), mk(color, other), mk(oc[0], dim), mk(oc[1 % oc.length], dim)];
+    else if (type === 'none' || type === 'gag') cands = [mk(color, other), mk(oc[0], dim), mk(oc[1], dim), mk(oc[2], dim)];   // four colours a kind at least: no two alike (2026-11-22, the review)
+    else cands = [mk(color, dim, t.inside), mk(color, other), mk(oc[0], dim), mk(oc[1], dim)];
     t.cands = shuffle(cands);
     t.lost = fillK(open === 'both' ? S.cust.lost : S.cust[open], kind, t.where); t.it = fillK(S.cust.it, kind); t.at = fillK(S.cust.at, kind, t.where);
     t.desc = describe(t); t.descZh = zhOf(t); t.in = type === 'twin' ? inside(t.inside) : '';

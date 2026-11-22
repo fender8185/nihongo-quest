@@ -243,7 +243,7 @@ const TAXI_RUN = (() => {
       [c.straight, c.dont, c.wrong, c.here, c.far, c.hurry, c.price, c.keep, c.thanks].forEach((l) => say(who, l[0]));
     });
     Object.values(s.go).forEach((l) => say('hero', l[0]));
-    for (let n = -1; n <= 20; n++) say('hero', s.pay[0].replace('{P}', YEN.priceMark(500 + 80 * n)));   // the meter: 500, 80 a block (and the ±80 offered)
+    for (let n = -1; n <= 30; n++) say('hero', s.pay[0].replace('{P}', YEN.priceMark(500 + 80 * n)));   // the meter: 500, 80 a block (and the ±80 offered); a lost ride runs long (to 2,900; past it the device's voice)
     [s.ask, s.wrong, s.on, s.cat, s.end, s.all, ...s.chat].forEach((l) => say(s.who, l[0]));
   }
   return { run, lines, now: () => R };
