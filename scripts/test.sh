@@ -7,6 +7,7 @@ node --check sw.js && node --check sync-core.js && node --check data.js && node 
 node scripts/data-file.js --check   # one entry per line, so grep finds an item (node scripts/data-file.js puts it back)
 node -e "const D=require('./scripts/data-file').load();const bad=D.GRAMMAR.filter(g=>!Number.isInteger(g.sec)||g.sec<-1||g.sec>=(D.LESSONS[g.u]||{sections:[]}).sections.length);if(bad.length){console.log('grammar items without a valid sec:',bad.slice(0,5).map(g=>g.id).join(' '),bad.length);process.exit(1)}"
 node scripts/check-zh-tiles.js | tail -1   # 句意拼貼: the pieces join to the item's Chinese, two or three decoys, none of them a piece
+node scripts/check-option-lengths.js | tail -1   # 2026-11-22: picking the longest option beats chance in no listening, reading or 換句話說 set
 # every file index.html loads from this folder is precached by sw.js, so the app works offline (and in the store builds, which ship these files)
 for f in $(grep -oE '(src|href)="\./[^"]+"' index.html | sed -E 's/^(src|href)="//; s/"$//'); do grep -qF "'$f'" sw.js || { echo "index.html loads $f but sw.js does not precache it"; exit 1; }; done
 # the version shown in settings must match the service-worker cache name
