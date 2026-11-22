@@ -111,6 +111,23 @@ const THEME_LANE_DAYS = 3;
 // teaches them rather than its second or third; the ids stay (records keep them), only the order changes
 const LANE_PULL = { after: 'n5b-057', ids: ['n5b-062', 'n5b-063', 'n5e-005', 'n5e-002', 'n5e-001', 'p5a-003', 'p5a-001', 'p5a-002', 'n5d-004', 'n5e-006'] };
 const laneId = (v) => { const k = LANE_PULL.ids.indexOf(v.id); return k < 0 ? v.id : `${LANE_PULL.after}+${String(k).padStart(2, '0')}`; };
+// 菜單的字 (2026-11-23, the user: food is the town's main thing to do): a menu item can be had once its word is learned (YEN), and
+// 飲食 was the 7th theme, so a beginner earned 円 a month before a menu opened. The words the town's menus ask for (TOWN.MENU's w)
+// come in a lane of their own beside the theme lanes, one new word in three, the everyday drinks and dishes first (MENU_FIRST, the
+// rest in menu order); they do not count against their theme's lane (noteThemeIntro), so 飲食 keeps its own turn. A word of a later
+// level waits for its level (ぶどう, N4); 入門 teaches kana-only words and has no lane
+const MENU_FIRST = ['水', 'お茶', 'パン', 'コーヒー', 'ジュース', '牛乳', 'おにぎり', 'うどん', 'カレー', 'ラーメン', '牛丼', '味噌汁', 'ケーキ', '鶏肉', '魚', '鳥', 'お風呂', 'お弁当'];
+let MENU_LANE = null;   // [REG.vocab it was made from, the words in order, their keys]
+function menuLane() {
+  if (MENU_LANE && MENU_LANE[0] === REG.vocab) return MENU_LANE;
+  const menus = (typeof TOWN !== 'undefined' && TOWN.MENU) || {};
+  const ws = [...new Set(Object.values(menus).flatMap(mu => (mu.items || []).map(it => (it[4] || {}).w).filter(Boolean)))];
+  const rank = (w) => { const i = MENU_FIRST.indexOf(w); return i < 0 ? MENU_FIRST.length : i; };
+  const byW = new Map(); REG.vocab.forEach(v => { if (v.builtin && !byW.has(jaPlain(v.w))) byW.set(jaPlain(v.w), v); });
+  const words = ws.map((w, i) => [w, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(([w]) => byW.get(w)).filter(Boolean);
+  MENU_LANE = [REG.vocab, words, new Set(words.map(v => v.key))];
+  return MENU_LANE;
+}
 function laneOrder() {
   const lane = state.themeLane && Array.isArray(state.themeLane.order) ? state.themeLane : (state.themeLane = { order: [], count: {} });
   if (!lane.count || typeof lane.count !== 'object') lane.count = {};
@@ -130,7 +147,7 @@ function activeThemes(pool, anyLevel) {
 }
 // a new built-in word was introduced: count it against its theme's lane and rotate the lane when the cap is reached
 function noteThemeIntro(key) {
-  const v = REG.byKey && REG.byKey.get(key); if (!v || v.kind !== 'v') return;
+  const v = REG.byKey && REG.byKey.get(key); if (!v || v.kind !== 'v' || menuLane()[2].has(key)) return;   // a menu word came in its own lane
   const c = vocabTheme(v); const order = laneOrder(); const lane = state.themeLane;
   lane.count[c] = (lane.count[c] || 0) + 1;
   if (lane.count[c] < laneCap()) return;
@@ -155,7 +172,13 @@ function newVocabCandidates(pool, anyLevel) {
   const built = [];
   for (let i = 0; lanes.some(l => i < l.length); i++) lanes.forEach(l => { if (i < l.length) built.push(l[i]); });
   built.push(...rest);
-  return built;
+  if (anyLevel || lv === 'PRE_N5') return built;
+  // the menu lane: every third word one the town's menus ask for, of those this list holds (this level's, not seen yet)
+  const here = new Set(built.map(v => v.key)); const menu = menuLane()[1].filter(v => here.has(v.key));
+  if (!menu.length) return built;
+  const inMenu = new Set(menu.map(v => v.key)); const others = built.filter(v => !inMenu.has(v.key)); const out = [];
+  for (let i = 0, j = 0; i < others.length || j < menu.length;) out.push(j < menu.length && (out.length % 3 === 2 || i >= others.length) ? menu[j++] : others[i++]);
+  return out;
 }
 // one item from each group in turn, so consecutive items differ in `keyOf` (grammar point, question type …)
 function roundRobinBy(items, keyOf) {

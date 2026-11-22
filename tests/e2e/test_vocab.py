@@ -178,16 +178,17 @@ def test_new_words_come_from_two_themes_interleaved(b):
       const th2 = activeThemes(pool, false); const c2 = newVocabCandidates(pool, false).slice(0, 9);
       REG.vocab.filter(v => v.builtin && v.lv === 'N5' && vocabTheme(v) !== '副詞與接續').forEach(v => { state.srs[v.key] = { b: 1, due: '2099-01-01', n: 1, ok: 1, ng: 0, s: 3, d: 5, f: {} }; });
       const th3 = activeThemes(pool, false); const c3 = newVocabCandidates(pool, false).slice(0, 6);
-      const pick = (arr) => arr.map(v => [v.lv, vocabTheme(v)]);
+      const pick = (arr) => arr.map(v => [v.lv, vocabTheme(v), menuLane()[2].has(v.key)]);   // 2026-11-23: menu words ride a lane of their own
       return JSON.stringify({ th, c: pick(c), th2, c2: pick(c2), th3, c3: pick(c3) }); })()"""
     r = json.loads(ev(b, js))
     def check(th, c):
-        pre = [x for x in c if x[0] == 'PRE_N5']; n5 = [x for x in c if x[0] == 'N5']
-        assert c[0][0] == 'PRE_N5' and len(pre) >= 3 and all(x[1] == '問候' for x in pre), c   # the PRE_N5 lane (問候 first) is interleaved, not a block (a nearly empty theme lane leaves it more slots)
+        pre = [x for x in c if x[0] == 'PRE_N5']; n5 = [x for x in c if x[0] == 'N5' and not x[2]]; menu = [i for i, x in enumerate(c) if x[2]]
+        assert c[0][0] == 'PRE_N5' and len(pre) >= 2 and all(x[1] == '問候' for x in pre), c   # the PRE_N5 lane (問候 first) is interleaved, not a block (a nearly empty theme lane leaves it more slots)
         assert n5 and all(x[1] in th for x in n5) and n5[0][1] == th[0], (th, c)                   # the other slots come from the two active N5 themes
+        assert all(i % 3 == 2 for i in menu), c                                                    # and every third slot, while any is left, a word the town's menus ask for
     assert len(r['th']) == 2, r
     check(r['th'], r['c']); assert r['th2'][0] == r['th'][1], r; check(r['th2'], r['c2'])
-    assert r['th3'] == ['副詞與接續'] and all(x == ['PRE_N5', '問候'] or x == ['N5', '副詞與接續'] for x in r['c3']), r
+    assert r['th3'] == ['副詞與接續'] and all(x[:2] in (['PRE_N5', '問候'], ['N5', '副詞與接續']) for x in r['c3']), r
 
 def test_today_names_the_active_themes(b):
     out = b.run([("nav", URL), ("wait", READY), ("eval", "location.hash = '#/stats'; route(); JSON.stringify({ t: document.querySelector('.day-card .plan-topics').textContent, th: activeThemes(REG.vocab.filter(v => v.builtin), false) })")])   # 學習分析's 今天 card (test build)

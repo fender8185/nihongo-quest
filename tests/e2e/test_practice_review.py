@@ -168,11 +168,26 @@ def test_every_paraphrase_in_the_bank_builds_its_question(b):
     r = json.loads(ev(b, js))
     assert r['n'] >= 190 and r['bad'] == [], r
 
+# 2026-11-23: the words the town's menus ask for come in a lane of their own, one new word in three, 水 first; they do not count
+# against their theme's lane; 入門 has no such lane
+def test_the_menus_words_come_in_a_lane_of_their_own(b):
+    js = """(() => { state.stage = 'main'; state.kanaKnown = true; state.startChosen = true; state.currentUnit = 'm1'; DAILY_CACHE = null;
+      const cur = curLevel(); const c = newVocabCandidates(REG.vocab.filter(v => vocabEligibleForDaily(v, cur)), false).slice(0, 30);
+      const menu = menuLane()[2]; const at = c.map((v, i) => (menu.has(v.key) ? i : -1)).filter(i => i >= 0); const first = c.find(v => menu.has(v.key));
+      const before = JSON.stringify(laneOrder()) + JSON.stringify(state.themeLane.count); srsAnswer(first.key, true);
+      const counted = before !== JSON.stringify(laneOrder()) + JSON.stringify(state.themeLane.count);
+      const other = c.find(v => !menu.has(v.key)); srsAnswer(other.key, true); const otherCounted = (state.themeLane.count[vocabTheme(other)] || 0) === 1;
+      state.stage = 'pre'; state.kanaKnown = false; DAILY_CACHE = null;
+      const pre = newVocabCandidates(REG.vocab.filter(v => vocabEligibleForDaily(v, curLevel())), false).some(v => menu.has(v.key));
+      return JSON.stringify({ at, first: jaPlain(first.w), counted, otherCounted, pre, words: menuLane()[1].length }); })()"""
+    r = json.loads(ev(b, js))
+    assert r['at'][:5] == [2, 5, 8, 11, 14] and r['first'] == '水' and not r['counted'] and r['otherCounted'] and not r['pre'] and r['words'] >= 30, r
+
 TESTS = [test_a_see_through_word_is_asked_by_its_reading_and_a_false_friend_by_its_kanji, test_the_spelling_tiles_hold_the_kana_a_word_is_mixed_up_with,
          test_a_fill_in_with_no_other_format_is_spelled_with_tiles, test_a_paraphrase_asks_the_words_own_example_with_its_marked_part_underlined,
          test_the_reading_passage_comes_in_the_middle_of_a_set_away_from_listening, test_ten_right_in_a_row_glow_and_a_retry_answered_right_says_it_is_remembered,
          test_pairs_in_match_and_tiles_on_the_line_make_small_sounds, test_the_paraphrase_checker_passes_a_good_item_and_names_each_problem,
-         test_every_paraphrase_in_the_bank_builds_its_question]
+         test_every_paraphrase_in_the_bank_builds_its_question, test_the_menus_words_come_in_a_lane_of_their_own]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
