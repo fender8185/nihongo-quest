@@ -209,6 +209,7 @@ const KUJI = [['大吉', '一切都會很順利！'], ['中吉', '努力會有�
 const SHRINE_STALLS = [['kingyo', 392, '#3f7ac8', '金魚すくい', '金魚撈', 'ojiisan'], ['yakisoba', 470, '#d0453c', 'やきそば', '炒麵攤', 'ojisan'], ['takoyaki', 548, '#e8913a', 'たこやき', '章魚燒攤', 'tako'],
   ['wataame', 626, '#e58fa8', 'わたあめ', '棉花糖攤', 'obasan'], ['ringoame', 704, '#6aa850', 'りんごあめ', '蘋果糖攤', 'obaasan'], ['kakigori', 782, '#4fb3c8', 'かき氷', '剉冰攤', 'oniisan'],
   ['chocobanana', 966, '#8a5ab8', 'チョコバナナ', '巧克力香蕉攤', 'oneesan']];
+const haruHere = () => (TOWNEV.whereIs('haru', TOWNEV.now(), TOWNEV.today()) || {}).place === 'platform';   // ハル at her stall
 const PLACE_USE = {
   yard: [{ id: 'tree', name: '樹', box: [440, 70, 500, 150], kind: 'do', go: [-110, 208], back: 1, pose: 'reach', fx: 'ytree', fxc: 'shake', burst: ['#6f9a5a', '#8ab86e', '#5a8a4a'] },
     { id: 'fence', name: '柵欄', box: [694, 124, 778, 152], kind: 'do', go: [136, 210], back: 1, pose: 'look', say: 'いい眺め〜' }],
@@ -259,8 +260,10 @@ const PLACE_USE = {
     { id: 'jobs', name: '求人看板', box: [688, 114, 802, 178], kind: 'do', go: [145, 126], back: 1, pose: 'look', say: 'アルバイト…？', open: () => WORK.board('ekimae') }],   // 駅前's (2026-11-20), on the station's front
   // みなと駅のホーム (2026-11-20, docs/superpowers/specs/2026-11-20-ekimae-work-design.md §3.4)
   platform: [
-    { id: 'stall', name: '便當攤', box: [116, 104, 304, 254], kind: 'do', go: [-385, 104], back: 1, pose: 'look', say: 'いい におい…' },
-    { id: 'vend', name: '自動販賣機', box: [330, 168, 366, 240], kind: 'do', go: [-252, 112], back: 1, pose: 'reach', say: 'ガコン！', fx: 'pvend', fxc: 'buy', buy: 'vend' },
+    // ハル's stall: her 駅弁 while she is at it (2026-11-22: the station's own food; ordered from her too), its smell while she is not
+    { id: 'stall', name: '便當攤', box: [116, 104, 304, 254], kind: 'do', go: [-385, 104], back: 1, pose: 'look', say: 'いい におい…', when: () => !haruHere() },
+    { id: 'ekiben', name: '便當攤', box: [116, 104, 304, 254], kind: 'do', go: [-385, 104], back: 1, pose: 'look', buy: 'ekiben', when: () => haruHere() },
+    { id: 'vend', name: '自動販賣機', box: [330, 168, 366, 240], kind: 'do', go: [-252, 112], back: 1, pose: 'reach', say: 'ガコン！', fx: 'pvend', fxc: 'buy', buy: 'evend' },   // the station's own: hot cans (2026-11-22)
     { id: 'benchL', name: '長椅', box: [380, 252, 470, 304], kind: 'sit', seats: [-195, -150], top: 90, dep: 66 },
     { id: 'benchR', name: '長椅', box: [490, 252, 580, 304], kind: 'sit', seats: [-85, -40], top: 90, dep: 66 },
     { id: 'bins', name: '垃圾桶', box: [588, 206, 634, 240], kind: 'do', go: [11, 112], back: 1, pose: 'look', toast: () => '垃圾桶，從左邊起：もえるゴミ（可燃）・かん、びん（罐、瓶）・ペットボトル（寶特瓶）' },

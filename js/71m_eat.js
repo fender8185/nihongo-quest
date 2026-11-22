@@ -74,6 +74,7 @@ const EATSCENE = (() => {
     inari: '<path d="M-10 6 C-11 -3 -5 -8 1 -8 C8 -8 12 -2 10 6 C4 9 -4 9 -10 6 Z" fill="#c98a3a"/><path d="M-6 -3 C-3 -6 3 -6 7 -3" fill="none" stroke="#e6b066" stroke-width="1.6" stroke-linecap="round"/>',
     age: '<path d="M-10 -1 L9 -5 L11 6 L-8 9 Z" fill="#d9a14a"/><path d="M-10 -1 L9 -5 L9.4 -3 L-9.6 1 Z" fill="#e8b860"/><path d="M-5 3 h.1 M2 1 h.1 M4 5 h.1" stroke="#b07a2a" stroke-width="1.6" stroke-linecap="round"/>',
     gyoza: '<path d="M-11 6 C-11 -3 -4 -7 1 -7 C7 -7 12 -2 11 6 Z" fill="#f4e2b8"/><path d="M-11 6 C-6 9 6 9 11 6 C8 4 -8 4 -11 6 Z" fill="#c97a2e"/><path d="M-6 -4 l2 3 M-1 -6 l1 3 M4 -6 l0 3 M8 -3 l-1 3" stroke="#e2cc98" stroke-width="1.2" stroke-linecap="round"/>',
+    tamago: '<rect x="-9" y="-1" width="18" height="11" rx="2" fill="#f6d24a"/><path d="M-9 3 h18 M-9 6.4 h18" stroke="#e8b52a" stroke-width="1"/>',   // 駅弁's 玉子焼き
     shoronpo: '<path d="M-10 5 C-11 -3 -5 -9 0 -10 C5 -9 11 -3 10 5 C6 8 -6 8 -10 5 Z" fill="#fbf3e4"/><path d="M0 -10 C-2 -6 -4 -3 -6 1 M0 -10 V2 M0 -10 C2 -6 4 -3 6 1" fill="none" stroke="#e6d8be" stroke-width="1" stroke-linecap="round"/><circle cx="0" cy="-10" r="1.4" fill="#f4ead8"/>'
   };
 
@@ -123,6 +124,18 @@ const EATSCENE = (() => {
     DISH.gyudon = { way: 'chop', steam: STEAM_BOWL, carry: ['beef', 'beef', 'beef'], dips: [[214, 290], [174, 292], [194, 292]], table: (k, ms, uid) => don(k, uid) };
     DISH.sakana = { way: 'chop', steam: [[214, 278], [238, 282]], carry: ['fish', 'rice', 'fish'], dips: [[216, 298], [132, 306], [244, 296]],
       table: (k, ms, uid) => `${TRAY}<path d="M188 290 H286 L280 312 H184 Z" fill="#f2efe6"/>${k < N ? masked(uid, [[214, 298, 18, 12], [0, 0, 0, 0], [250, 298, 60, 20]].slice(0, k), '<path d="M196 300 C206 290 252 288 262 296 L276 290 L274 306 L262 302 C250 310 206 310 196 300 Z" fill="#9aa4b2"/><path d="M204 298 C214 294 244 293 256 297" stroke="#5a6070" stroke-width="2" fill="none"/><path d="M214 296 l6 6 M230 295 l6 6 M246 296 l6 6" stroke="#3a3328" stroke-width="2" opacity=".5"/>') : ''}<path d="M196 312 q8 -6 16 0 Z" fill="#fbf8f0"/><path d="M262 308 l10 -4 l2 6 Z" fill="#f2d23a"/>${RICEBOWL(132, 304, k >= 2)}${SOUPBOWL(176, 318)}` };
+    // 駅弁 (2026-11-22): the box on the table (the さかな's lid leant behind it, its red band); chopsticks to the fish, the rice —
+    // the 幕の内's 玉子焼き, its rice (the 梅干し in the middle), its からあげ — each gone as it is taken
+    const EKIBOX = (wood, edge, inner) => `${SHADOW(194, 346, 96, 9)}<path d="M100 284 H280 L273 342 H107 Z" fill="${wood}"/><path d="M100 284 H280 L279 291 H101 Z" fill="${edge}"/><path d="M108 290 H272 L267 336 H113 Z" fill="${inner}"/>`;
+    const sesame = `<g fill="#2b2420">${[[124, 298], [150, 328], [178, 296], [196, 326], [132, 320], [190, 312]].map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="1.6" ry="1"/>`).join('')}</g>`;
+    DISH.sakanaben = { way: 'chop', carry: ['fish', 'rice', 'fish'], dips: [[148, 306], [130, 326], [178, 302]],
+      table: (k, ms, uid) => `<path d="M112 252 L276 236 L282 270 L118 282 Z" fill="#d9b98a"/><path d="M112 252 L276 236 L276.6 240 L112.6 256 Z" fill="#e9cfa2"/><path d="M180 244 L196 242.4 L200 277 L184 278 Z" fill="#c8322a"/>${EKIBOX('#b98a52', '#d9b07a', '#efe3c8')}
+        ${masked(uid, [[148, 308, 20, 12], [128, 326, 22, 10], [182, 304, 22, 12]].slice(0, k), `<path d="M113 291 H206 V335 H116 Z" fill="#fffaf0"/>${sesame}<path d="M118 316 C126 300 150 296 172 298 L190 292 L196 302 L188 303 L194 312 L186 312 C166 322 136 324 118 316 Z" fill="#a77a4e"/><path d="M122 314 C134 306 152 302 172 302 C158 308 138 312 122 314 Z" fill="#d7b08a"/><path d="M134 304 l6 10 M148 301 l6 11 M162 300 l5 11" stroke="#5a3a22" stroke-width="2.4" stroke-linecap="round" opacity=".7"/><circle cx="124" cy="310" r="1.8" fill="#2b2420"/>`)}
+        <path d="M208 291 V335" stroke="#4f9a52" stroke-width="3"/><path d="M208 292 l5 5 l-5 5 l5 5 l-5 5 l5 5 l-5 5 l5 5 l-5 5" stroke="#7cc46a" stroke-width="2.2" fill="none"/><path d="M216 296 h42 v14 h-42 Z" fill="#f2d23a"/><path d="M216 296 h42" stroke="#fff6b0" stroke-width="2"/><path d="M216 318 C224 312 244 312 254 318 C246 328 224 328 216 318 Z" fill="#e88aa6"/><path d="M218 328 h38 v5 h-38 Z" fill="#f4e07a"/>` };
+    DISH.makunouchi = { way: 'chop', carry: ['tamago', 'rice', 'karaage'], dips: [[218, 300], [150, 318], [251, 302]],
+      table: (k, ms, uid) => `${EKIBOX('#2b2b33', '#c8322a', '#3a3a44')}<path d="M113 291 H196 V335 H116 Z" fill="#e9e1cf"/>${masked(uid, k >= 2 ? [[146, 320, 26, 13]] : [], `<path d="M113 291 H196 V335 H116 Z" fill="#fffaf0"/>${sesame}<circle cx="158" cy="310" r="8" fill="#d03a3a"/><circle cx="155" cy="307" r="2.4" fill="#f08a8a"/>`)}
+        <path d="M197 290 V336 M197 312 H270" stroke="#2b2b33" stroke-width="2.6"/>${k < 1 ? '<path d="M204 294 h28 v14 h-28 Z" fill="#f6d24a"/><path d="M204 299 h28 M204 303 h28" stroke="#e8b52a" stroke-width="1.2"/>' : ''}${k < 3 ? '<path d="M238 308 C238 298 248 295 254 298 C262 295 268 302 265 309 Z" fill="#c47a2e"/><path d="M244 302 q3 -3 6 0 M254 302 q3 -3 6 0" stroke="#e8a85a" stroke-width="1.6" fill="none"/>' : ''}
+        <path d="M204 318 C214 314 236 314 250 317 L260 312 L258 324 L250 322 C236 328 214 328 204 324 Z" fill="#e8b860"/><path d="M212 318 l3 5 M222 317 l3 6 M232 317 l3 6 M242 318 l3 5" stroke="#c98a3a" stroke-width="1.4"/><path d="M252 316 l7 -4 l1 4 Z" fill="#e2603a"/><path d="M206 334 Q214 326 222 334 Z" fill="#fbf6f8"/><path d="M206 334 Q214 326 222 334" stroke="#e86a8a" stroke-width="2" fill="none"/><circle cx="236" cy="331" r="4.4" fill="#ef8a2e"/><path d="M250 333 C250 327 260 326 262 330 C262 334 255 336 250 333 Z" fill="#6a4a3a"/>` };
     const kara = (n, x0, y0) => [[0, 0], [22, -4], [42, 2], [12, 12], [32, 14]].slice(0, n).map(([x, y]) => `<g transform="translate(${x0 + x} ${y0 + y})"><path d="M-12 4 C-14 -6 -2 -10 4 -7 C14 -10 18 2 14 9 C9 16 -8 15 -12 4 Z" fill="#c47a2e"/><path d="M-6 -2 q3 -3 6 0 M4 4 q3 -3 6 0" stroke="#e8a85a" stroke-width="1.6" fill="none"/></g>`).join('');
     DISH.karaage = { way: 'chop', steam: [[214, 278], [238, 282]], carry: ['karaage', 'rice', 'karaage'], dips: [[236, 296], [132, 306], [214, 300]],
       table: (k) => `${TRAY}<ellipse cx="232" cy="300" rx="56" ry="16" fill="#f8f9fb"/><path d="M196 300 q10 -10 22 -2 q8 -8 16 2" stroke="#a6d47a" stroke-width="3" fill="none"/>${kara([5, 3, 3, 0][k], 214, 292)}<path d="M266 296 l10 -6 l4 8 Z" fill="#f2d23a"/>${RICEBOWL(132, 304, k >= 2)}${SOUPBOWL(176, 320)}` };
@@ -195,6 +208,7 @@ const EATSCENE = (() => {
   const DRINK = {
     cola: ['tip', VESSEL.can({ c: '#d8303a', band: '#fff', ink: '#fff', word: 'コーラ' })], coffee: ['tip', VESSEL.can({ c: '#f2e6cf', band: '#7a4a2a', ink: '#7a4a2a', word: 'コーヒー' })],
     water: ['tip', VESSEL.pet()], ramune: ['tip', VESSEL.ramune()],
+    cornsoup: ['tip', VESSEL.can({ c: '#f2c230', band: '#fffaf0', ink: '#c8642c', word: 'コーン' })], oshiruko: ['tip', VESSEL.can({ c: '#7a2a3a', band: '#f4ecd8', ink: '#7a2a3a', word: 'しるこ' })],   // 駅の 自動販売機's hot cans (2026-11-22)
     milk: ['tip', VESSEL.milk({ c: '#fbfbf6', cap: '#3f7ac8', word: '牛乳' })], coffeemilk: ['tip', VESSEL.milk({ c: '#d6a77a', cap: '#8a4a2a', word: 'コーヒー' })], fruitmilk: ['tip', VESSEL.milk({ c: '#f7e3a8', cap: '#e8792a', word: 'フルーツ' })],
     oolong: ['tip', VESSEL.glass({ c: '#b8743a' })],
     soda: ['straw', VESSEL.straw({ c: '#5fd08a', straw: '#e0464a', ice: true })], juice: ['straw', VESSEL.straw({ c: '#f5a030', straw: '#3f9a8c' })],
@@ -319,11 +333,19 @@ const EATSCENE = (() => {
     front: BG.fair.front };
   // 中華街 (2026-11-14): a red wall with a round moon window of lattice, red lanterns either side, gold on the beam; a round table
   // under a red cloth
+  // 駅のホーム (2026-11-22): its roof and lamps, みなと's sign, a train waiting on the far track (its windows lit by night), the yellow
+  // line; had on the bench
+  BG.platform = { back: () => `<rect width="360" height="268" ${dn('#bfe0f4', '#1b2050')}/>${stars}
+      <rect x="-10" y="116" width="380" height="92" rx="10" ${dn('#d9dde3', '#3e4468')}/>${[0, 1, 2, 3, 4].map((i) => `<rect x="${i * 80 - 6}" y="130" width="56" height="34" rx="4" ${dn('#7fa6c4', '#ffe6a8')}/>`).join('')}<rect x="-10" y="174" width="380" height="8" fill="#2f6ab0"/><rect x="-10" y="184" width="380" height="4" fill="#3fa0d8"/>
+      <rect x="-10" y="208" width="380" height="10" fill="#3a3a44"/><rect x="-10" y="218" width="380" height="50" ${dn('#b9b5ac', '#4a4c66')}/><path d="M-10 230 H370" stroke="#f2c94c" stroke-width="7"/><path d="M-10 230 H370" stroke="#d9a820" stroke-width="7" stroke-dasharray="2 6" opacity=".6"/>
+      <rect x="0" y="0" width="360" height="24" ${dn('#8d939c', '#3a3e58')}/><path d="M0 24 H360" stroke="#5a5f6a" stroke-width="3"/>${[24, 336].map((x) => `<rect x="${x - 5}" y="24" width="10" height="244" ${dn('#9aa0aa', '#454a66')}/>`).join('')}${[110, 250].map((x) => `<rect x="${x - 16}" y="24" width="32" height="5" rx="2" fill="#f4f1ea"/><rect x="${x - 16}" y="24" width="32" height="5" rx="2" fill="#fff6c0" ${NIGHT}/>`).join('')}
+      <rect x="40" y="44" width="92" height="40" rx="4" fill="#fbfbf6" stroke="#2f6ab0" stroke-width="2"/><text x="86" y="70" font-size="18" font-weight="700" text-anchor="middle" fill="#2b2b33" font-family="sans-serif">みなと</text><path d="M44 78 H128" stroke="#2f6ab0" stroke-width="3"/>`,
+    front: slats('#a87a50', '#c49568', '#7e5634', [306, 350, 394]) };
   BG.chinatown = { back: () => `<rect width="360" height="268" fill="#a8262e"/><rect width="360" height="30" fill="#2f7a5a"/><path d="M0 30 H360" stroke="#d9b04a" stroke-width="4"/>${Array.from({ length: 18 }, (_, i) => `<path d="M${i * 20 + 10} 34 l5 5 l-5 5 l-5 -5 Z" fill="#d9b04a" opacity=".7"/>`).join('')}
       <circle cx="180" cy="150" r="96" fill="#d9b04a"/><circle cx="180" cy="150" r="88" fill="#f6e2b0"/><path d="M92 150 H268 M180 62 V238 M118 88 L242 212 M242 88 L118 212" stroke="#a8262e" stroke-width="5"/><circle cx="180" cy="150" r="30" fill="none" stroke="#a8262e" stroke-width="5"/>
       ${lantern(32, 70, 18, '#d8303a')}${lantern(328, 70, 18, '#d8303a')}`,
     front: '<path d="M0 268 H360 V420 H0 Z" fill="#c8323a"/><path d="M0 268 H360" stroke="#f6e08a" stroke-width="4"/><path d="M0 300 Q180 310 360 300 M0 360 Q180 370 360 360" stroke="#a8262e" stroke-width="2" fill="none" opacity=".6"/>' };
-  const OUTDOOR = ['street', 'bakery'];
+  const OUTDOOR = ['street', 'bakery', 'platform'];   // had out of a paper, not off a plate (the platform's bench: 2026-11-22)
   let uidN = 0;
   function mount(svg, it, picSvg, still, where) {   // still: motion reduced — drawn once, then once more at the end; where: a BG key
     const uid = `e${++uidN}`, bust = heroArt(state.look), pic = (/<svg[^>]*>(?:<circle class="pd"[^>]*\/>)?([\s\S]*)<\/svg>$/.exec(picSvg || '') || [])[1] || '';

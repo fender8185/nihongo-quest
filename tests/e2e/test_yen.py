@@ -73,7 +73,7 @@ def test_every_food_and_drink_is_had_its_own_way_through_a_whole_meal(b):
       }
       host.remove(); const where = Object.fromEntries(Object.keys(TOWN.MENU).map((m) => [m, YEN.where(m)]));
       return JSON.stringify({ n: items.length, bad, ways, where, bgs: EATSCENE.BG }); })()"""))
-    assert r['n'] == 51 and not r['bad'], r   # 41, 稲荷山の茶屋's three, 中華街's seven (2026-11-14: 福明's four, 龍鳳飯店's three)
+    assert r['n'] == 56 and not r['bad'], r   # 41, 稲荷山の茶屋's three, 中華街's seven (2026-11-14: 福明's four, 龍鳳飯店's three), the station's five (2026-11-22)
     wh = r['where']   # each where it is had: its own backdrop (2026-11-14, the user)
     assert (wh['shokudo'], wh['izakaya'], wh['cafe'], wh['milk'], wh['vend'], wh['bakery']) == ('shokudo', 'izakaya', 'cafe', 'sento', 'street', 'bakery'), wh
     assert all(wh[m] == 'fair' for m in ('yakisoba', 'takoyaki', 'wataame', 'ringoame', 'chocobanana')) and wh['chaya'] == 'chaya' and set(wh.values()) <= set(r['bgs']), wh

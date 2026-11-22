@@ -470,3 +470,21 @@ if __name__ == "__main__":
         srv.terminate()
     print("ALL PASS" if not failed else f"{failed} FAILED")
     sys.exit(1 if failed else 0)
+
+# 2026-11-22, the user: the station sells what nowhere else does — ハル's 駅弁 at her stall (while she is there; ordered from her
+# too), the platform's machine of hot cans; each drawn, had its own way (chopsticks from the box, a can tipped), on the platform,
+# with more to say than the town's (four looks, seven words after); 美食手帳 has their pages
+def test_station_food_sold_on_the_platform(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ s(); location.hash = '#/platform'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      const thing = (id) => PLACE_USE.platform.find((t) => t.id === id), M = TOWN.MENU, items = (m) => M[m].items.map((it) => [it[0], it[3]]);
+      const out = { here: [thing('ekiben').when(), thing('stall').when()], sells: Boolean(YEN.sells(yard(), 'haru')), vend: thing('vend').buy, ekiben: items('ekiben'), evend: items('evend'),
+        pics: M.ekiben.items.concat(M.evend.items).every((it) => YEN.pic(it).includes('<path')), ways: ['sakanaben', 'makunouchi', 'reitomikan', 'cornsoup', 'oshiruko'].map((id) => EATSCENE.way(M.ekiben.items.concat(M.evend.items).find((it) => it[0] === id))),
+        where: [YEN.where('ekiben'), YEN.where('evend')], bg: EATSCENE.BG.includes('platform'),
+        lines: M.ekiben.items.concat(M.evend.items).map((it) => [it[4].look.length, it[4].say.length]), book: YEN.book() };
+      TOWNEV.clock = { h: 21, day: new Date(2026, 10, 10) }; out.late = [thing('ekiben').when(), thing('stall').when()];
+      return JSON.stringify(out); })()"""))
+    assert r['here'] == [True, False] and r['sells'] and r['late'] == [False, True], r   # ハル 7–19 at her stall
+    assert r['vend'] == 'evend' and r['ekiben'] == [['sakanaben', 800], ['makunouchi', 800], ['reitomikan', 300]] and r['evend'] == [['cornsoup', 130], ['oshiruko', 130]], r
+    assert r['pics'] and r['ways'] == ['chop', 'chop', 'bite', 'tip', 'tip'] and r['where'] == ['platform', 'platform'] and r['bg'], r
+    assert all(lk >= 4 and sy >= 7 for lk, sy in r['lines']), r['lines']
+    assert 'みなと弁当' in r['book'] and '自動販売機' in r['book'], r['book'][:300]
