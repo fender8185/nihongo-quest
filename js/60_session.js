@@ -417,9 +417,10 @@ function buildDailyQueue(size = SESSION_SIZE) {
   const vList = ladderFirst(shuffle(take.filter(x => !isG(x) && !isNew(x)))).concat(take.filter(x => !isG(x) && isNew(x)));
   const gList = ladderFirst(shuffle(take.filter(x => isG(x) && !isNew(x)))).concat(take.filter(x => isG(x) && isNew(x)));
   const items = interleave(vList, gList);
-  // listening spread through the session, the reading passage last
+  // listening spread through the session, the reading passage in the middle (2026-11-22: it was last, the longest question at the
+  // most tired moment; a set ends on the short ones)
   Ls.forEach((x, i) => items.splice(Math.min(items.length, Math.round((i + 1) * items.length / (Ls.length + 1)) + i), 0, x));
-  items.push(...R);
+  items.splice(Math.ceil(items.length / 2), 0, ...R);
   return { items, plan, total, newCount: items.filter(isNew).length, reviewCount: items.filter(x => !isNew(x)).length };
 }
 
@@ -864,7 +865,7 @@ function tileModel(e) {
   const q = e && e.q; if (!q || e.done) return null;
   const tiles = (line) => line.length;
   if (q.custom === 'v-spell') return { key: 'spell', need: [...q.options[0].text].length, count: (line) => [...line.map(i => q.tiles[i]).join('')].length };
-  if ((q.custom === 'g-conj-type' || q.custom === 'g-adj-type') && q.inputMode !== 'type') return { key: 'conj', need: conjTokens(q.options[0].text).length, count: tiles };
+  if (spelledForm(q) && q.inputMode !== 'type') return { key: 'conj', need: conjTokens(q.options[0].text).length, count: tiles };
   if (q.custom === 'g-order') return { key: 'order', need: q.orderParts.length, count: tiles };
   if (q.custom === 'g-zh') return { key: 'zh', need: q.zhParts.length, count: tiles };
   return null;
@@ -876,6 +877,7 @@ function tilePut(i, at) {
   const was = line.indexOf(i);
   if (was >= 0) line.splice(was, 1); else if (m.count(line.concat(i)) > m.need) return false;
   line.splice(at == null ? line.length : Math.max(0, Math.min(at, line.length)), 0, i);
+  if (was < 0) playSfx('tap');   // a new tile on the line (2026-11-22); moving one along it is quiet
   return was < 0 || was !== at;
 }
 // the k-th piece on the line back to the tiles; the ones after it move up
@@ -978,7 +980,7 @@ function tileRowHtml(e, giveUp = '我不會，看答案') {
 }
 function customInteractionHtml(e, answered) {
   const q = e.q;
-  if (q.custom === 'g-conj-type' || q.custom === 'g-adj-type') {
+  if (spelledForm(q)) {
     const ans = q.options[0].text;
     const cls = answered ? (e.chosen === q.answer ? 'ok' : 'bad') : '';
     if (q.inputMode === 'type') {
@@ -1114,7 +1116,7 @@ function feedbackHtml(e, sheet = false) {
   }
   return `
     <div class="feedback ${ok ? 'ok' : 'bad'}">
-      <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>' + (e.combo >= 3 ? `<span class="chip chip-accent combo">連對 ${e.combo}</span>` : '')
+      <div class="fb-head ${ok ? 'ok' : 'bad'}">${ok ? icon('check') + '<span>答對了</span>' + (e.combo >= 3 ? `<span class="chip chip-accent combo${e.comboBig ? ' big' : ''}">連對 ${e.combo}</span>` : '') + (e.requeued ? '<span class="chip chip-ok fb-redo">這次記住了</span>' : '')
         : e.missed && e.missed.length ? icon('cross') + `<span>配錯了：<span class="jp">${esc(e.missed.map(x => x.label).join('、'))}</span></span>`   // 配對: the words paired wrong
         : icon('cross') + `<span>答錯了，正確答案是「<span class="jp">${q.kanaOptions ? `${esc(jaPlain(right.text))}（${esc(q.optKana[right.text])}）` : right.jp || q.picOptions ? optionHtml(q, right) : esc(right.text)}</span>」</span>`}</div>
       ${chosen}${sheet && q.revealHtml ? q.revealHtml : ''}${diff}${full}${example}
@@ -1219,7 +1221,8 @@ function answerCurrent(i) {
 function cheer(e, ok) {
   e.comboBefore = SESSION.combo || 0;   // 「手滑，不算」 gives it back
   SESSION.combo = e.combo = ok ? e.comboBefore + 1 : 0;
-  return playSfx(!ok ? 'bad' : e.lvUp ? 'up' : 'ok', e.combo - 1);
+  e.comboBig = ok && e.combo % 10 === 0;   // 連對 10, 20 … (2026-11-22): the ok sound stops rising at 6, so these get their own run and a glowing chip
+  return playSfx(!ok ? 'bad' : e.comboBig ? 'streak' : e.lvUp ? 'up' : 'ok', e.combo - 1);
 }
 // 再練一次: the item comes back 3–5 questions later, in another format when it has one (see prepareEntry)
 function queueRetry(item, mistake, orig) {

@@ -80,7 +80,7 @@ def test_sentence_choice_is_gone_and_week0_keeps_its_five_as_fill_ins(b):
       return JSON.stringify({ types: [...new Set(G.map(g => g.t || 'choice'))], data: DATA.GRAMMAR.filter(g => g.t === 'correct').length, seen: [...seen].sort(), w0, ai }); })()""".replace('__W0__', json.dumps(WEEK0_FILLS, ensure_ascii=False))
     r = json.loads(ev(b, js))
     assert 'correct' not in r['types'] and r['data'] == 0, r
-    assert r['seen'] == ['g-choice', 'g-meaning', 'g-zh'], r   # 2026-11-10: 句意 is 用法 for a particle, 句意拼貼 for the rest
+    assert r['seen'] == ['g-choice', 'g-fill-type', 'g-meaning', 'g-zh'], r   # 2026-11-10: 句意 is 用法 for a particle, 句意拼貼 for the rest; 2026-11-22: an item with neither spells its answer
     assert r['w0'] == {k: {'t': 'choice', 'rest': v} for k, v in WEEK0_FILLS.items()}, r['w0']
     assert r['ai'] is None, r
 

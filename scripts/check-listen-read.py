@@ -2,11 +2,13 @@
 """Check candidate 聽力／閱讀 items before they go into data.js.
 Usage: python3 scripts/check-listen-read.py FILE.json [PORT]
 FILE.json: {"listen": [ {t, lv, u, script|line|scene, q?, op, a, zh?, why}, … ], "read": [ {lv, u, kind, passage, q, op, a, zh, why}, … ]}
-(no ids: the merge assigns them). Each item must: have the fields its type needs; be of its unit's level (a unit of a curriculum
+(no ids: the merge assigns them; an item that carries its bank `id` is an edit of that item, so its own text is not a repeat). Each item must: have the fields its type needs; be of its unit's level (a unit of a curriculum
 outline counts before it is merged); keep the answer among distinct options (dialog/read 4, resp/scene 3); get furigana on every
 kanji (so only words the app knows); use no word above its level (1.0.33: a warning for N5/N4, a problem from N3 up; a name the app lists before さん (林さん) is not one, 1.0.34); not repeat a
 text already in the bank or elsewhere in the file. N3 kinds: a listening dialog may be kind 'gist' (概要理解) or 'point' (ポイント理解), a reading 'long'
 (長文, 500+ characters) or 'info' (情報検索).
+Every batch also reports how often its answer is the uniquely longest option per kind (a WARN above one in the number of options, 2026-11-22:
+a learner who picks the longest should do no better than chance; scripts/check-option-lengths.js holds the bank to it).
 Prints one line per problem and a summary; exit code 1 when anything is wrong (warnings alone keep 0)."""
 import glob, json, os, subprocess, sys, time
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
@@ -47,7 +49,7 @@ JS = r"""((c, OUTLINE) => { const problems = [], warnings = [];
     const above = [...new Set(bases(all).filter(w => LV.has(w) && idx(LV.get(w)) > idx(it.lv) && !low.some(x => x.includes(w))))];
     if (above.length) (idx(it.lv) >= idx('N3') ? problems : warnings).push([label, 'word above ' + it.lv + ': ' + above.join(' ')]);
     const main = jaPlain(it.script || it.line || it.scene || it.passage || '');
-    if (seen.has(main)) p('same text as ' + seen.get(main)); else seen.set(main, label);
+    if (seen.has(main) && seen.get(main) !== it.id) p('same text as ' + seen.get(main)); else seen.set(main, label);
   };
   (c.listen || []).forEach((it, i) => { const label = 'listen#' + i + ' ' + it.u;
     if (it.t === 'dialog') check(label, it, [['script', it.script], ['q', it.q], ['zh', it.zh]], 4);
@@ -65,6 +67,14 @@ JS = r"""((c, OUTLINE) => { const problems = [], warnings = [];
     else if (it.lv === 'N3' && ['essay', 'article'].includes(it.kind) && len < 300) warnings.push([label, 'an N3 essay or article is usually 300+ characters (has ' + len + ')']);
     check(label, it, [['passage', it.passage], ['q', it.q], ['zh', it.zh]], 4);
   });
+  // the answer's length among its options (no [reading]): uniquely longest no more often than chance (one in the number of options)
+  const L = (o) => jaPlain(String(o)).length; const tally = {};
+  [['listen', c.listen || []], ['read', c.read || []]].forEach(([k, list]) => list.forEach(it => { if (!Array.isArray(it.op) || !it.op.includes(it.a)) return;
+    const key = k + (it.t ? '/' + it.t : ''); const t = tally[key] = tally[key] || { n: 0, long: 0, short: 0, opts: it.op.length };
+    const mx = Math.max(...it.op.map(L)), mn = Math.min(...it.op.map(L)); t.n++;
+    if (L(it.a) === mx && it.op.filter(o => L(o) === mx).length === 1) t.long++;
+    if (L(it.a) === mn && it.op.filter(o => L(o) === mn).length === 1) t.short++; }));
+  Object.entries(tally).forEach(([key, t]) => { if (t.n >= 4 && t.long / t.n > 1 / t.opts) warnings.push([key, `the answer is the longest option in ${t.long} of ${t.n} (chance is 1 in ${t.opts}); the shortest in ${t.short}`]); });
   return JSON.stringify({ problems, warnings, nL: (c.listen || []).length, nR: (c.read || []).length }); })(%s, %s)""" % (json.dumps(cands, ensure_ascii=False), json.dumps(OUTLINE))
 try:
     with Browser() as b:

@@ -16,6 +16,31 @@ function zhOverlap(a, b) {
   const ta = String(a || '').trim(), tb = String(b || '').trim();
   return ZH_SYNONYMS.some(g => g.includes(ta) && g.includes(tb));
 }
+// 看字就懂 (2026-11-22, the user): a word whose Chinese meaning holds every one of its kanji (学校＝學校, 毎晩＝每天晚上, 高い＝高、貴)
+// is answered from the characters alone, so its 意思 question shows only the reading and its 中翻日／看圖選字 options are in kana.
+// JA_TW: the Japanese form of a kanji → its Taiwan form(s) where they differ (a pair of characters each, a kanji with several forms
+// once per form); 手紙＝信, 勉強＝學習 share none and keep their kanji: those are the ones worth asking by the kanji
+const JA_TW = new Map();
+('亜亞悪惡圧壓囲圍医醫壱壹隠隱栄榮営營駅驛円圓塩鹽縁緣応應欧歐殴毆桜櫻奥奧横橫温溫穏穩仮假価價画畫会會壊壞懐懷絵繪拡擴殻殼' +
+  '覚覺学學岳嶽楽樂渇渴缶罐巻卷陥陷勧勸寛寬関關歓歡観觀気氣帰歸亀龜戯戲犠犧旧舊拠據挙舉虚虛峡峽挟挾狭狹郷鄉暁曉区區駆驅' +
+  '勲勳薫薰径徑茎莖恵惠掲揭渓溪経經蛍螢軽輕継繼鶏雞芸藝撃擊欠缺県縣倹儉剣劍険險圏圈検檢献獻権權顕顯験驗厳嚴広廣効效恒恆' +
+  '黄黃鉱礦号號国國黒黑砕碎済濟斎齋剤劑雑雜参參桟棧蚕蠶惨慘賛贊残殘糸絲歯齒児兒辞辭湿濕実實写寫釈釋寿壽収收従從渋澀獣獸' +
+  '縦縱粛肅処處叙敘将將称稱渉涉焼燒証證奨獎条條状狀乗乘浄淨剰剩畳疊縄繩壌壤嬢孃譲讓醸釀触觸嘱囑寝寢尽盡図圖粋粹酔醉随隨' +
+  '髄髓数數枢樞瀬瀨声聲静靜斉齊摂攝窃竊専專戦戰浅淺潜潛繊纖践踐銭錢禅禪双雙壮壯争爭荘莊捜搜挿插巣巢痩瘦装裝総總騒騷増增' +
+  '蔵藏臓臟属屬続續堕墮対對体體帯帶滞滯台臺滝瀧択擇沢澤担擔単單胆膽団團弾彈断斷痴癡遅遲昼晝虫蟲鋳鑄庁廳徴徵聴聽転轉伝傳' +
+  '灯燈当當党黨盗盜稲稻闘鬥徳德独獨読讀届屆弐貳悩惱脳腦覇霸拝拜廃廢売賣麦麥発發髪髮抜拔晩晚蛮蠻浜濱払拂仏佛変變辺邊歩步' +
+  '舗鋪宝寶豊豐没沒毎每万萬満滿麺麵黙默弥彌訳譯薬藥与與予預予豫余餘誉譽揺搖様樣謡謠来來頼賴乱亂覧覽竜龍両兩猟獵緑綠涙淚' +
+  '塁壘礼禮励勵戻戾霊靈齢齡暦曆歴歷恋戀炉爐労勞楼樓録錄湾灣内內姉姊説說税稅脱脫鋭銳悦悅閲閱遥遙戸戶呉吳娯娛歳歲隣鄰猫貓' +
+  '窓窗値值産產顔顏彦彥汚污氷冰噛嚙醤醬頬頰粧妝衆眾姫姬弁辨弁辯弁瓣逓遞錬鍊').replace(/(.)(.)/gu, (_, a, b) => { JA_TW.set(a, (JA_TW.get(a) || '') + b); return ''; });
+const SEE_THROUGH = new Map();   // word id → seeThrough(v), worked out once
+function seeThrough(v) {
+  if (!v || !v.builtin) return false;
+  if (SEE_THROUGH.has(v.id)) return SEE_THROUGH.get(v.id);
+  const m = String(v.m || ''); const ks = [...jaPlain(v.w)].filter(c => KANJI_RE.test(c) && c !== '々');
+  const out = ks.length > 0 && ks.every(c => m.includes(c) || [...(JA_TW.get(c) || '')].some(t => m.includes(t)));
+  SEE_THROUGH.set(v.id, out);
+  return out;
+}
 
 const FORM_LABEL = {
   te: 'て形', ta: 'た形', nai: 'ない形', dict: '辭書形', masu: 'ます形', ba: '條件形（ば）', pot: '可能形', vol: '意向形', pass: '受身形', caus: '使役形', imp: '命令形', causpass: '使役受身形'
@@ -188,11 +213,19 @@ function matchPairs(v) {
   for (const { x } of scored) { const w = jaPlain(x.w); if (ws.has(w) || rs.has(kanaKey(x.r)) || ms.has(x.m) || [...ms].some(m => zhOverlap(m, x.m))) continue; ws.add(w); ms.add(x.m); rs.add(kanaKey(x.r)); out.push([w, x.m, x.r, x.key]); if (out.length === MATCH_PAIRS) break; }
   return out.length === MATCH_PAIRS ? out : null;
 }
-// 假名拼字: the reading's characters plus three kana that are not in it
+// 假名拼字: the reading's characters plus three kana that are not in it — first the ones it is mixed up with (2026-11-22: がっこう
+// gets か ご, きょう gets よ, not ね み ろ that no one would take), the way 漢字讀音's wrong readings are made; random kana fill up.
+// A katakana word gets katakana
 function spellTiles(reading) {
-  const chars = [...reading];
-  const pool = Object.keys(KANA_ROMAJI).filter(k => !chars.includes(k) && k !== 'を');
-  return shuffle(chars.concat(shuffle(pool).slice(0, 3)));
+  const kata = /[ァ-ヺ]/.test(reading);
+  const hira = (s) => s.replace(/[ァ-ヶ]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+  const back = (s) => kata ? s.replace(/[ぁ-ゖ]/g, ch => String.fromCharCode(ch.charCodeAt(0) + 0x60)) : s;
+  const chars = [...reading]; const own = new Set([...hira(reading)]);
+  const near = [];
+  readingVariants(hira(reading)).forEach((rule, v) => { for (const c of v) if (!own.has(c) && !near.includes(c) && c !== 'を') near.push(c); });
+  const extra = shuffle(near).slice(0, 3);
+  shuffle(Object.keys(KANA_ROMAJI).filter(k => !own.has(k) && !near.includes(k) && k !== 'を')).forEach(k => { if (extra.length < 3) extra.push(k); });
+  return shuffle(chars.concat(extra.map(back)));
 }
 function recallOptions(v, zh = {}, kana = {}) {
   const pool = vocabPeers(v).filter(x => x.p === v.p && !zhOverlap(x.m, v.m) && x.r !== v.r && jaPlain(x.w) !== jaPlain(v.w));
@@ -348,13 +381,14 @@ function vocabFormats(v) {
     'v-listen': Boolean(v.m && speechAvailable()),
     'v-spell': canSpell(v),
     'v-match': Boolean(v.m && matchPairs(v)),
-    'v-pic': Boolean(picKey(v))
+    'v-pic': Boolean(picKey(v)),
+    'v-para': Boolean(v.ip && b >= 3)   // 換句話說 (2026-11-22): from 熟悉 on
   };
   let weights;
   if (b < 0) weights = { 'v-meaning': 1 };
   else if (b === 0) weights = { 'v-meaning': 3, 'v-listen': 1, 'v-recall': 1, 'v-pic': 1 };   // 看圖選字 now and then, for a word with a picture
   else if (b <= 2) weights = { 'v-meaning': 2, 'v-recall': 2, 'v-cloze': 3, 'v-listen': 1, 'v-reading': 1, 'v-spell': 1, 'v-match': 1, 'v-pic': 1 };
-  else weights = { 'v-cloze': 3, 'v-recall': 2, 'v-reading': 2, 'v-kanji': 1.5, 'v-listen': 1.5, 'v-meaning': 1, 'v-spell': 1.5, 'v-match': 1.5, 'v-pic': 1 };
+  else weights = { 'v-cloze': 3, 'v-recall': 2, 'v-reading': 2, 'v-kanji': 1.5, 'v-listen': 1.5, 'v-meaning': 1, 'v-spell': 1.5, 'v-match': 1.5, 'v-pic': 1, 'v-para': 2 };
   // a format this word has not passed yet is asked first, so it is proven in several ways rather than one
   if (b >= 1) for (const f in weights) if (!rec.f || !rec.f[f] || rec.f[f][0] === 0) weights[f] *= 3;
   return Object.entries(weights).filter(([f]) => can[f]).map(([f, w]) => [f, w]);
@@ -453,6 +487,7 @@ function makeVocabQuestion(v0, ctx = {}) {
   q.speakReading = v.r && !HAS_KANJI.test(v.r) && v.r !== jaPlain(v.w) ? v.r : '';
   q.mistakePrompt = homographReadings(v).length && ownReadingMap(v) ? ownBracket(v) : `${jaPlain(v.w)}${v.r && v.r !== v.w ? `（${v.r}）` : ''}`;   // 私[わたくし]: furi() shows the card's reading
   const lvTag = lvLabel(v.lv);   // 入門, not PRE_N5 (2026-11-10)
+  const see = seeThrough(v);
   const tryBuild = (f) => {
     const info = vSurfaceInfo(v);
     const zh = {}; q.optZh = zh;   // option text -> Chinese meaning of that distractor word
@@ -553,6 +588,21 @@ function makeVocabQuestion(v0, ctx = {}) {
       q.options = [{ text: v.r, jp: true }, { text: '', jp: true }]; q.answer = 0; q.answerText = v.r;
       return true;
     }
+    if (f === 'v-para') {   // 換句話說 (JLPT 言い換え, 2026-11-22): the word's own example with its marked part underlined, four ways to say it
+      const ip = v0.ip; const pv = ip && withExample(v0, ip.x === 2 ? 1 : 0); const m = pv && /\{([^}]*)\}/.exec(pv.ex || '');
+      if (!m || !Array.isArray(ip.d) || ip.d.length !== 3) return false;
+      const pre = pv.ex.slice(0, m.index), post = pv.ex.slice(m.index + m[0].length);
+      q.item = pv;   // the example it was written for is the one shown after answering
+      q.fmt = f; q.label = `單字 · ${lvTag} · 換句話說`;
+      q.instr = '畫線的部分，意思最接近的是？';
+      q.stemHtml = `${furi(exPlain(pre))}<span class="uline">${furi(m[1])}</span>${furi(exPlain(post))}`;
+      q.fullJp = exampleSpeech(pv.ex, pv); q.exMarked = pv.ex; q.fullZh = pv.exZh || '';
+      ip.d.forEach((d, i) => { zh[d] = (ip.z || [])[i + 1] || ''; });
+      q.why = `**${jaPlain(m[1])}**（${v.m}）≈ **${jaPlain(ip.a)}**${(ip.z || [])[0] ? `（${ip.z[0]}）` : ''}`;
+      q.mistakePrompt = `${jaPlain(exPlain(pre))}【${jaPlain(m[1])}】${jaPlain(exPlain(post))} 換句話說`;
+      finalizeOptions(q, ip.a, ip.d, true);
+      return true;
+    }
     if (f === 'v-match') {
       const pairs = matchPairs(v);
       if (!pairs) return false;
@@ -566,20 +616,23 @@ function makeVocabQuestion(v0, ctx = {}) {
       q.options = [{ text: v.m }, { text: '' }]; q.answer = 0; q.answerText = v.m;
       return true;
     }
-    // v-meaning (default)
-    const opts = meaningOptions(v, false, ja);
+    // v-meaning (default); a 看字就懂 word shows only its reading (no word of the same reading among the options) and its kanji once answered
+    const kanaOnly = see && v.r && !HAS_KANJI.test(v.r);
+    const opts = meaningOptions(v, Boolean(kanaOnly), ja);
     if (!opts) return false;
     q.fmt = 'v-meaning'; q.label = `單字 · ${lvTag} · 意思`;
     q.instr = '這個字的意思是？';
-    q.stemHtml = v.r && HAS_KANJI.test(v.w) && !/\[/.test(v.w) ? rubyHtml(jaPlain(v.w), v.r) : furi(v.w);
-    q.stemClass = jaPlain(v.w).length > 8 ? '' : 'word';
+    q.stemHtml = kanaOnly ? esc(v.r) : v.r && HAS_KANJI.test(v.w) && !/\[/.test(v.w) ? rubyHtml(jaPlain(v.w), v.r) : furi(v.w);
+    if (kanaOnly) q.revealHtml = `<div class="q-stem word jp">${wordHtml(v)}</div>`;
+    q.stemClass = (kanaOnly ? v.r : jaPlain(v.w)).length > 8 ? '' : 'word';
     if (v.p) q.subHtml = posChip(v.p);
     finalizeOptions(q, v.m, opts, false);
     q.wide = q.options.some(o => o.text.length > 14);
     return true;
   };
   const finish = () => {
-    const want = ctx.kana === true || (ctx.kana === undefined && srsGet(v.key) && Math.random() < KANA_OPTION_RATE);
+    // a 看字就懂 word's 中翻日 and 看圖選字 always give the options in kana (their kanji would answer it); others now and then
+    const want = ctx.kana === true || (ctx.kana === undefined && ((see && (q.fmt === 'v-recall' || q.fmt === 'v-pic')) || (srsGet(v.key) && Math.random() < KANA_OPTION_RATE)));
     if (want && (q.fmt === 'v-recall' || q.fmt === 'v-pic' || q.fmt === 'v-cloze') && kanaOptionsDistinct(q)) q.kanaOptions = true;
     return q;
   };
@@ -627,16 +680,28 @@ function grammarUsageDistractors(g) {
   return null;
 }
 // a fill-in item's second format: a particle blank asks its 用法; any other item with pieces (zt) puts its Chinese together
-// (句意拼貼, 2026-11-10). The four whole Chinese sentences of other items it had before went: one known word gave them away
+// (句意拼貼, 2026-11-10). The four whole Chinese sentences of other items it had before went: one known word gave them away.
+// An item with neither (keigo, a form to change, a connective: about 390, 2026-11-22) spells its answer with tiles (g-fill-type),
+// so a review is not the same four options again; a one-kana answer (に) has nothing to spell and stays a fill-in only
+const FILL_SPELL = /^[ぁ-ゖァ-ヺー一-鿿々]+(?:\[[ぁ-ゖー]+\][ぁ-ゖァ-ヺー一-鿿々]*)*$/;
+// a question answered by spelling a form with tiles or the keyboard: 動詞／形容詞變化 or a fill-in's answer
+function spelledForm(q) { return Boolean(q && /^g-(conj|adj|fill)-type$/.test(q.custom || '')); }
+function fillSpellable(g) {
+  const a = parenReadingToBracket(g.a || '');
+  if (!FILL_SPELL.test(a) || !splitBlank(g.jp || '')) return false;
+  const n = conjTokens(a).length;
+  return n >= 2 && n <= 10;
+}
 function grammarFormats(g) {
   const f = ['g-choice'];
   if (g.zh && grammarUsageDistractors(g)) f.push('g-meaning');
   else if (g.zh && g.zt) f.push('g-zh');
+  else if (fillSpellable(g)) f.push('g-fill-type');
   return f;
 }
 function pickGrammarFormat(g, rec, avoid, choiceOnly) {   // choiceOnly: a 階段測驗 asks with options only
   if (!rec) return 'g-choice';
-  const pairs = grammarFormats(g).filter(f => !(choiceOnly && f === 'g-zh')).map(f => [f, (!rec.gf || !rec.gf[f] || rec.gf[f][0] === 0) ? 3 : 1]);
+  const pairs = grammarFormats(g).filter(f => !(choiceOnly && (f === 'g-zh' || f === 'g-fill-type'))).map(f => [f, (!rec.gf || !rec.gf[f] || rec.gf[f][0] === 0) ? 3 : 1]);
   return weightedPick(pairs, avoid);
 }
 // 句意拼貼 (2026-11-10, the user): the Japanese sentence over Chinese pieces — its own (g.zt) shuffled with two or three decoys (g.zd)
@@ -694,6 +759,17 @@ function makeGrammarQuestion(g, ctx = {}) {
     // First sighting is always the plain fill-in. (選正確句, every option filled in, went in 1.0.23.)
     const fmt = ctx.forceFmt || pickGrammarFormat(g, rec, ctx.avoidFmt, ctx.choiceOnly);
     if (fmt === 'g-zh' && g.zt) return makeZhPieceQuestion(q, g, b.pre + ans + b.post);
+    if (fmt === 'g-fill-type' && fillSpellable(g)) {   // the answer spelled with tiles: its own pieces and the kana of the wrong options
+      q.fmt = 'g-fill-type'; q.custom = 'g-fill-type'; q.inputMode = state.settings.conjInput === 'type' ? 'type' : 'tiles';
+      q.instr = q.inputMode === 'tiles' ? '點假名，拼出填入空格的答案' : '輸入填入空格的答案';
+      q.stemHtml = `${furi(b.pre)}${blankChip(b.hint)}${furi(b.post)}`;
+      q.fillHtml = furi(ans);
+      q.fullJp = b.pre + ans + b.post;
+      q.mistakePrompt = g.jp;
+      q.tiles = conjTiles(ans, opts.filter(o => o !== ans));
+      q.options = [{ text: ans, jp: true }, { text: '', jp: true }]; q.answer = 0; q.answerText = jaPlain(ans);
+      return q;
+    }
     const usage = fmt === 'g-meaning' && grammarUsageDistractors(g);
     if (usage) {   // particle: ask what it expresses here, options are point names
       const full = b.pre + ans + b.post;

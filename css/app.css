@@ -1957,9 +1957,14 @@ details.mrow .mbody { padding: 4px 0 14px; }
 .q-card.just-bad :is(.opt.wrong, .spell-out.bad, .order-out.bad) { animation: shake .3s ease; }
 /* 1.0.50: the run chip by 答對了, the dots this answer lit and the 升到熟悉 chip; on a phone they wait for the panel to rise */
 @keyframes dotUp { 0% { transform: scale(.2); } 55% { transform: scale(1.8); box-shadow: 0 0 0 3px var(--ok-soft); } }
-.q-card.just-ok :is(.combo, .lv-up) { animation: iconPop .35s cubic-bezier(.3, 1.6, .6, 1); }
+.q-card.just-ok :is(.combo, .lv-up, .fb-redo) { animation: iconPop .35s cubic-bezier(.3, 1.6, .6, 1); }
 .q-card.just-ok .dots i.up { animation: dotUp .5s ease-out .1s backwards; }
-.fb-sheet.rise :is(.combo, .lv-up) { animation: iconPop .35s cubic-bezier(.3, 1.6, .6, 1) .5s backwards; }
+.fb-sheet.rise :is(.combo, .lv-up, .fb-redo) { animation: iconPop .35s cubic-bezier(.3, 1.6, .6, 1) .5s backwards; }
+/* 2026-11-22: 連對 10, 20 … glow gold for a moment (and keep a gold ring); 這次記住了 is the 再練一次 copy answered right */
+@keyframes comboGlow { 0% { transform: scale(.3); opacity: 0; } 45% { transform: scale(1.25); box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 45%, transparent), 0 0 18px 6px color-mix(in srgb, var(--gold) 55%, transparent); } }
+.combo.big { box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 60%, transparent); }
+.q-card.just-ok .combo.big { animation: comboGlow .9s cubic-bezier(.3, 1.4, .5, 1); }
+.fb-sheet.rise .combo.big { animation: comboGlow .9s cubic-bezier(.3, 1.4, .5, 1) .5s backwards; }
 .fb-sheet.rise .dots i.up { animation: dotUp .5s ease-out .6s backwards; }
 .preview { text-align: center; padding: 20px 10px 8px; }
 .preview .word { font-size: 44px; font-weight: 600; line-height: 1.5; }

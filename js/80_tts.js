@@ -400,6 +400,10 @@ function playSfx(kind, step = 0) {
       : kind === 'fanfare' ? [[523, 0, 0.12, 0.09], [659, 0.1, 0.12, 0.09], [784, 0.2, 0.12, 0.09], [1047, 0.3, 0.45, 0.1]]   // 全對 or the day's list done (2026-11-10): do-mi-sol-do
       : kind === 'stamp' ? [[150, 0, 0.18, 0.32, 52], [95, 0.01, 0.22, 0.2, 45]]   // a stamp thumped down (the cruise's grade, 2026-11-13)
       : kind === 'yum' ? [[880, 0, 0.09, 0.08], [1109, 0.07, 0.09, 0.08], [1319, 0.14, 0.09, 0.08], [1760, 0.21, 0.32, 0.09]]   // all eaten up (YEN, 2026-11-13): a quick happy run up
+      : kind === 'tap' ? [[1568, 0, 0.045, 0.03]]   // a tile set on the line (2026-11-22): a soft tick
+      : kind === 'pair' ? [[1047 * Math.pow(2, [0, 2, 4, 5, 7, 9][clamp(step, 0, 5)] / 12), 0, 0.12, 0.06]]   // a 配對 pair found: a 叮 a step up the scale each
+      : kind === 'miss' ? [[262, 0, 0.14, 0.06, 220]]   // a 配對 pair that does not go together: a short low blip, softer than a wrong answer
+      : kind === 'streak' ? [[1047, 0, 0.08, 0.08], [1319, 0.06, 0.08, 0.08], [1568, 0.12, 0.08, 0.08], [2093, 0.18, 0.3, 0.09], [2637, 0.27, 0.32, 0.05]]   // 連對 10, 20 …: a bright run up
       : (kind === 'up' ? [659, 831, 988] : [659, 988]).map((f, i, all) => [f * k, i * 0.075, i === all.length - 1 ? 0.28 : 0.12, 0.12]);
     notes.forEach(([f, at, len, vol, to]) => {
       const o = sfxCtx.createOscillator(), g = sfxCtx.createGain();

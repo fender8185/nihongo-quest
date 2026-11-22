@@ -341,14 +341,14 @@ const ACTIONS = {
   'conj-untap': (el) => tileMove(() => tileTake(Number(el.dataset.k))),
   'tiles-submit': () => tileSubmit(),
   'conj-submit': () => {
-    const e = currentEntry(); if (!e || e.done || !e.q || !(e.q.custom === 'g-conj-type' || e.q.custom === 'g-adj-type')) return;
+    const e = currentEntry(); if (!e || e.done || !e.q || !spelledForm(e.q)) return;
     const inp = document.querySelector('input.conj-in'); e.typed = inp ? inp.value : (e.typed || '');
     if (!kanaKey(e.typed)) { toast('先輸入答案'); return; }
     finishCustom(e, conjMatch(e.typed, e.q.options[0].text), e.typed.trim());
   },
   'custom-giveup': () => {
     const e = currentEntry(); if (!e || e.done || !e.q || !e.q.custom) return;
-    if (e.q.custom === 'g-conj-type' || e.q.custom === 'g-adj-type') { e.conj = conjTokens(e.q.options[0].text).map(t => e.q.tiles.indexOf(t)); }   // show the right form
+    if (spelledForm(e.q)) { e.conj = conjTokens(e.q.options[0].text).map(t => e.q.tiles.indexOf(t)); }   // show the right form
     if (e.q.custom === 'v-spell') { e.spell = [...e.q.options[0].text].map(ch => e.q.tiles.indexOf(ch)); }   // show the right spelling
     if (e.q.custom === 'v-match') {   // reveal every pair; the words not paired yet count as paired wrong
       const m = e.match || { matched: [], wrong: 0, missed: [] }; const missed = (m.missed || []).slice();
@@ -377,9 +377,9 @@ const ACTIONS = {
     const m = e.match = e.match || { sel: null, matched: [], wrong: 0, missed: [] };
     if (!m.sel) return;
     const pair = e.q.pairs.find(p => p[0] === m.sel);
-    if (pair && pair[1] === el.dataset.m) { m.matched.push(m.sel); delete m.flash; }
+    if (pair && pair[1] === el.dataset.m) { m.matched.push(m.sel); delete m.flash; if (m.matched.length < e.q.pairs.length) playSfx('pair', m.matched.length - 1); }   // the last pair: the answer's own sound
     else {   // flash the wrong pair red; the word picked (not the one whose meaning was tapped) is the one paired wrong
-      m.wrong++; m.flash = { w: m.sel, m: el.dataset.m, at: Date.now() }; setTimeout(() => { if (m.flash && Date.now() - m.flash.at >= 550) delete m.flash; }, 600);
+      m.wrong++; m.flash = { w: m.sel, m: el.dataset.m, at: Date.now() }; setTimeout(() => { if (m.flash && Date.now() - m.flash.at >= 550) delete m.flash; }, 600); playSfx('miss');
       if (!m.missed.some(x => x[0] === m.sel)) m.missed.push([m.sel, el.dataset.m]);
     }
     m.sel = null;
