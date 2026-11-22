@@ -22,14 +22,19 @@ def test_a_see_through_word_is_asked_by_its_reading_and_a_false_friend_by_its_ka
       const rc = makeVocabQuestion(v, { forceFmt: 'v-recall' }); const rk = makeVocabQuestion(v, { forceFmt: 'v-recall', kana: false });
       const f = word('手紙'); state.srs[f.key] = rec(2); const fm = makeVocabQuestion(f, { forceFmt: 'v-meaning' });
       const fresh = word('毎晩'); const first = makeVocabQuestion(fresh, {});   // a word never answered: its first question, the reading only
+      const fast = word('速い'); state.srs[fast.key] = rec(2); let homo = 0, plain = 0;   // はやい alone could be 早い (早): never an option beside it
+      for (let i = 0; i < 60; i++) { if (makeVocabQuestion(fast, { forceFmt: 'v-meaning' }).options.some(o => o.text === '早')) homo++; }
+      for (let i = 0; i < 200; i++) { if ((meaningOptions(fast, false) || []).includes('早')) plain++; }
       return JSON.stringify({ see, not, stem: m.stemHtml, noKanji: !/[一-鿿]/.test(m.stemHtml), reveal: m.revealHtml.includes('学校'),
         sameReading: m.options.some(o => REG.vocab.some(x => x.builtin && x.r === v.r && x.m === o.text && x !== v)),
-        recallKana: rc.kanaOptions === true, keepWhenAsked: !rk.kanaOptions, friend: /手紙/.test(fm.stemHtml), firstFmt: first.fmt, firstStem: first.stemHtml }); })()""" % REC
+        recallKana: rc.kanaOptions === true, keepWhenAsked: !rk.kanaOptions, friend: /手紙/.test(fm.stemHtml), firstFmt: first.fmt, firstStem: first.stemHtml, homo, plain,
+        cloze: makeVocabQuestion(v, { forceFmt: 'v-cloze' }).kanaOptions === true }); })()""" % REC
     r = json.loads(ev(b, js))
     assert r['see'] == [True, True, True, True] and r['not'] == [False, False, False, False], r
     assert r['stem'] == 'がっこう' and r['noKanji'] and r['reveal'] and not r['sameReading'], r
     assert r['recallKana'] and r['keepWhenAsked'] and r['friend'], r
     assert r['firstFmt'] == 'v-meaning' and r['firstStem'] == 'まいばん', r
+    assert r['homo'] == 0 and r['plain'] > 0 and r['cloze'], r   # plain: without the filter 早 does come up, so the check can fail
 
 def test_the_spelling_tiles_hold_the_kana_a_word_is_mixed_up_with(b):
     js = """(() => { const out = {};
@@ -52,18 +57,21 @@ def test_a_fill_in_with_no_other_format_is_spelled_with_tiles(b):
       state.srs[g.key] = rec(2);
       const stage = new Set(); for (let i = 0; i < 30; i++) stage.add(pickGrammarFormat(g, state.srs[g.key], null, true));
       out.stage = [...stage];
-      startSession('items', { items: [g, g] }); route(); const e = currentEntry(); e.q = makeGrammarQuestion(g, { forceFmt: 'g-fill-type' }); renderPractice();
+      startSession('items', { items: [g, g, g] }); route(); const e = currentEntry(); e.q = makeGrammarQuestion(g, { forceFmt: 'g-fill-type' }); renderPractice();
       out.instr = e.q.instr; out.tiles = document.querySelectorAll('.spell-tile.conj-tile').length;
       conjTokens(e.q.options[0].text).forEach(tok => { const i = e.q.tiles.findIndex((x, k) => x === tok && !(e.conj || []).includes(k)); tilePut(i); });
       tileSubmit();
       out.right = e.done && e.chosen === e.q.answer; out.gf = state.srs[g.key].gf['g-fill-type']; out.filled = document.querySelector('.blank.filled') !== null;
       out.name = FMT_NAME['g-fill-type'];
+      const k = G.find(x => x.a === '静かな' && grammarFormats(x).includes('g-fill-type'));   // a kanji tile shows the reading it has in the answer
+      nextQuestion(); const e2 = currentEntry(); e2.q = makeGrammarQuestion(k, { forceFmt: 'g-fill-type' }); renderPractice();
+      out.kanjiTile = (document.querySelector('.conj-tile[data-tok="静"]') || {}).innerHTML || '';
       SESSION = null; document.body.classList.remove('practicing');
       return JSON.stringify(out); })()""" % REC
     r = json.loads(ev(b, js))
     assert r['fmts'] == ['g-choice', 'g-fill-type'] and r['particle'] == ['g-choice'] and r['stage'] == ['g-choice'], r
     assert r['instr'] == '點假名，拼出填入空格的答案' and r['tiles'] >= 9 and r['right'] and r['gf'] == [1, 0] and r['filled'], r
-    assert r['name'] == '文法・填空（拼寫）', r
+    assert r['name'] == '文法・填空（拼寫）' and r['kanjiTile'] == '<ruby>静<rt>しず</rt></ruby>', r
 
 def test_a_paraphrase_asks_the_words_own_example_with_its_marked_part_underlined(b):
     js = """(() => { %s
@@ -83,15 +91,16 @@ def test_a_paraphrase_asks_the_words_own_example_with_its_marked_part_underlined
     assert not r['at2'] and r['at3'] and r['fmt'] == 'v-para' and r['under'] and r['n'] == 4 and r['ex'] and r['noZh'], r
     assert r['aside'] and r['why'] and '狭' in r['example'] and r['name'] == '單字・換句話說', r
 
-def test_the_reading_passage_comes_in_the_middle_of_a_set(b):
+def test_the_reading_passage_comes_in_the_middle_of_a_set_away_from_listening(b):
     js = """(() => { %s
       REG.vocab.filter(v => v.builtin && v.lv === 'N5').slice(0, 30).forEach(v => { state.srs[v.key] = rec(2, { due: addDays(t, -1) }); });
       REG.read.filter(x => unitOrder(x.u) <= unitOrder(state.currentUnit)).slice(0, 2).forEach(x => { state.srs[x.key] = rec(2, { due: t, last: addDays(t, -40) }); });
+      listenReachable().slice(0, 3).forEach(x => { state.srs[x.key] = rec(2, { due: t, last: addDays(t, -40) }); });
       delete state.today.plan; DAILY_CACHE = null; const q = buildDailyQueue();
-      const i = q.items.findIndex(x => x.kind === 'r');
-      return JSON.stringify({ i, n: q.items.length }); })()""" % REC
+      const i = q.items.findIndex(x => x.kind === 'r'); const kind = (k) => (q.items[k] || {}).kind;
+      return JSON.stringify({ i, n: q.items.length, listen: q.items.filter(x => x.kind === 'l').length, beside: [kind(i - 1), kind(i + 1)].includes('l') }); })()""" % REC
     r = json.loads(ev(b, js))
-    assert r['i'] >= 0 and abs(r['i'] - r['n'] / 2) <= 1, r
+    assert r['i'] >= 0 and abs(r['i'] - r['n'] / 2) <= 3 and r['listen'] == 3 and not r['beside'], r   # in the middle, never next to a listening item
 
 def test_ten_right_in_a_row_glow_and_a_retry_answered_right_says_it_is_remembered(b):
     js = """(() => { %s
@@ -151,7 +160,9 @@ def test_every_paraphrase_in_the_bank_builds_its_question(b):
       const ws = REG.vocab.filter(v => v.builtin && v.ip); const bad = [];
       ws.forEach(v => { state.srs[v.key] = rec(3); const q = makeVocabQuestion(v, { forceFmt: 'v-para' });
         if (!q || q.fmt !== 'v-para' || q.options.length !== 4 || new Set(q.options.map(o => jaPlain(o.text))).size !== 4 || !q.stemHtml.includes('class="uline"')
-          || q.options[q.answer].text !== v.ip.a || !q.item.ex.includes('{')) bad.push(v.id);
+          || q.options[q.answer].text !== v.ip.a || q.item.ex !== (v.ip.x === 2 ? v.ex2 : v.ex)) bad.push(v.id);
+        const sw = v.ex2 ? makeVocabQuestion(withExample(v, 1), { forceFmt: 'v-para' }) : null;   // 重練答錯的題目 hands over such a copy
+        if (sw && sw.item.ex !== (v.ip.x === 2 ? v.ex2 : v.ex)) bad.push(v.id + ' (copy)');
         delete state.srs[v.key]; });
       return JSON.stringify({ n: ws.length, bad }); })()""" % REC
     r = json.loads(ev(b, js))
@@ -159,7 +170,7 @@ def test_every_paraphrase_in_the_bank_builds_its_question(b):
 
 TESTS = [test_a_see_through_word_is_asked_by_its_reading_and_a_false_friend_by_its_kanji, test_the_spelling_tiles_hold_the_kana_a_word_is_mixed_up_with,
          test_a_fill_in_with_no_other_format_is_spelled_with_tiles, test_a_paraphrase_asks_the_words_own_example_with_its_marked_part_underlined,
-         test_the_reading_passage_comes_in_the_middle_of_a_set, test_ten_right_in_a_row_glow_and_a_retry_answered_right_says_it_is_remembered,
+         test_the_reading_passage_comes_in_the_middle_of_a_set_away_from_listening, test_ten_right_in_a_row_glow_and_a_retry_answered_right_says_it_is_remembered,
          test_pairs_in_match_and_tiles_on_the_line_make_small_sounds, test_the_paraphrase_checker_passes_a_good_item_and_names_each_problem,
          test_every_paraphrase_in_the_bank_builds_its_question]
 

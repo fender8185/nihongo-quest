@@ -21,5 +21,5 @@ for (const [key, s] of sets) {
   if (s.n >= 20 && s.long / s.n > limit) over.push(`${key}: the answer is the longest option in ${s.long} of ${s.n} (limit ${Math.floor(limit * s.n)})`);
 }
 over.forEach(x => console.log(x));
-console.log(`${sets.size} option sets checked; ${over.length ? `${over.length} over the limit` : 'no set lets the longest option beat chance'}`);
+console.log(`${sets.size} option sets checked; ${over.length ? `over the limit: ${over.map(x => x.split(':')[0]).join(', ')}` : 'no set lets the longest option beat chance'}`);   // test.sh shows this line only
 process.exit(over.length ? 1 : 0);

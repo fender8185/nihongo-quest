@@ -420,7 +420,11 @@ function buildDailyQueue(size = SESSION_SIZE) {
   // listening spread through the session, the reading passage in the middle (2026-11-22: it was last, the longest question at the
   // most tired moment; a set ends on the short ones)
   Ls.forEach((x, i) => items.splice(Math.min(items.length, Math.round((i + 1) * items.length / (Ls.length + 1)) + i), 0, x));
-  items.splice(Math.ceil(items.length / 2), 0, ...R);
+  if (R.length) {   // in the middle of the run of other questions that holds the set's middle, so no listening item sits next to it
+    const mid = Math.ceil(items.length / 2); const ls = items.map((x, i) => (x.kind === 'l' ? i : -1)).filter(i => i >= 0);
+    const lo = Math.max(-1, ...ls.filter(i => i < mid)), hi = Math.min(items.length, ...ls.filter(i => i >= mid));
+    items.splice(Math.ceil((lo + 1 + hi) / 2), 0, ...R);
+  }
   return { items, plan, total, newCount: items.filter(isNew).length, reviewCount: items.filter(x => !isNew(x)).length };
 }
 
@@ -991,9 +995,12 @@ function customInteractionHtml(e, answered) {
     }
     const used = e.conj || [];
     const built = used.map(i => q.tiles[i]).join('');
+    // a kanji tile on its own has no reading for furi(): it takes the one it has in the answer (静 of 静かに: しず)
+    const rmap = q._tileRmap || (q._tileRmap = readingMapFrom(q.fullJp || ans));
+    const tileHtml = (tok) => /^[一-鿿々]+$/.test(tok) && rmap[tok] ? rubyHtml(tok, rmap[tok]) : furi(tok);
     return `<div class="spell">
-      <div class="spell-out jp ${cls}">${answered ? furi(built) : used.map((i, k) => placedPiece('conj-untap', k, furi(q.tiles[i]), 'spell-piece', i)).join('')}<span class="caret"></span></div>
-      <div class="spell-tiles">${q.tiles.map((tok, i) => `<button type="button" class="spell-tile conj-tile jp" data-act="conj-tap" data-i="${i}" data-tok="${esc(tok)}" ${used.includes(i) || answered ? 'disabled' : `data-ti="${i}"`}>${furi(tok)}</button>`).join('')}</div>
+      <div class="spell-out jp ${cls}">${answered ? furi(built) : used.map((i, k) => placedPiece('conj-untap', k, tileHtml(q.tiles[i]), 'spell-piece', i)).join('')}<span class="caret"></span></div>
+      <div class="spell-tiles">${q.tiles.map((tok, i) => `<button type="button" class="spell-tile conj-tile jp" data-act="conj-tap" data-i="${i}" data-tok="${esc(tok)}" ${used.includes(i) || answered ? 'disabled' : `data-ti="${i}"`}>${tileHtml(tok)}</button>`).join('')}</div>
       ${answered ? '' : tileRowHtml(e)}
     </div>`;
   }

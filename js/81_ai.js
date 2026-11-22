@@ -87,7 +87,7 @@ async function aiExplainCurrent(btn) {
   if (!e || !e.q || needAi()) return;
   const q = e.q;
   const box = document.getElementById('aiExplainBox');
-  const stem = htmlToPlain(q.stemHtml) || q.mistakePrompt || '';
+  const stem = htmlToPlain(String(q.stemHtml || '').replace(/<span class="uline">([\s\S]*?)<\/span>/g, '【$1】')) || q.mistakePrompt || '';   // the underlined part (讀音, 換句話說) in 【】
   const prompt = `請解析這一題（150 字內）：先用一句話說明考點，再說明正確答案為什麼對，最後簡短說明我選的答案錯在哪裡。
 題型：${q.label}
 題目：${stem}${q.zhText ? `\n中文：${q.zhText}` : ''}

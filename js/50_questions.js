@@ -589,7 +589,8 @@ function makeVocabQuestion(v0, ctx = {}) {
       return true;
     }
     if (f === 'v-para') {   // 換句話說 (JLPT 言い換え, 2026-11-22): the word's own example with its marked part underlined, four ways to say it
-      const ip = v0.ip; const pv = ip && withExample(v0, ip.x === 2 ? 1 : 0); const m = pv && /\{([^}]*)\}/.exec(pv.ex || '');
+      const base = REG.byKey.get(v0.key) || v0;   // a copy (重練答錯的題目) may carry its two examples swapped
+      const ip = base.ip; const pv = ip && withExample(base, ip.x === 2 ? 1 : 0); const m = pv && /\{([^}]*)\}/.exec(pv.ex || '');
       if (!m || !Array.isArray(ip.d) || ip.d.length !== 3) return false;
       const pre = pv.ex.slice(0, m.index), post = pv.ex.slice(m.index + m[0].length);
       q.item = pv;   // the example it was written for is the one shown after answering
@@ -631,8 +632,8 @@ function makeVocabQuestion(v0, ctx = {}) {
     return true;
   };
   const finish = () => {
-    // a 看字就懂 word's 中翻日 and 看圖選字 always give the options in kana (their kanji would answer it); others now and then
-    const want = ctx.kana === true || (ctx.kana === undefined && ((see && (q.fmt === 'v-recall' || q.fmt === 'v-pic')) || (srsGet(v.key) && Math.random() < KANA_OPTION_RATE)));
+    // a 看字就懂 word's 中翻日, 看圖選字 and 例句填空 (its sentence's Chinese holds the kanji) always give the options in kana; others now and then
+    const want = ctx.kana === true || (ctx.kana === undefined && (see || (srsGet(v.key) && Math.random() < KANA_OPTION_RATE)));
     if (want && (q.fmt === 'v-recall' || q.fmt === 'v-pic' || q.fmt === 'v-cloze') && kanaOptionsDistinct(q)) q.kanaOptions = true;
     return q;
   };
