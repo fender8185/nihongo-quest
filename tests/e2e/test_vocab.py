@@ -1054,7 +1054,7 @@ def test_the_picture_question_asks_for_the_word_with_same_group_options_and_neve
         out.fmts.push(vocabFormats(v).some(([f]) => f === 'v-pic'));
         for (let i = 0; i < 6; i++) { const q = makeVocabQuestion(v, { forceFmt: 'v-pic', kana: false });
           const ws = q.options.map(o => jaPlain(o.text)); out.n++;
-          if (q.fmt !== 'v-pic' || !q.stemHtml.includes('<svg') || ws[q.answer] !== w || ws.some(x => PIC_GENERIC.has(x)) || ws.some((x, k) => k !== q.answer && zhOverlap(q.optZh[q.options[k].text] || '', v.m))) out.bad.push(w + ':' + ws.join('/'));
+          if (q.fmt !== 'v-pic' || !q.stemHtml.includes('<svg') || ws[q.answer] !== w || ws.some((x, k) => k !== q.answer && PIC_GENERIC.has(x)) || ws.some((x, k) => k !== q.answer && zhOverlap(q.optZh[q.options[k].text] || '', v.m))) out.bad.push(w + ':' + ws.join('/'));
           out.same += q.options.filter((o, k) => k !== q.answer && (REG.vocab.find(x => x.w === o.text) || {}).c === v.c).length; } }
       const plain = REG.vocab.find(x => x.builtin && x.lv === 'N5' && !picKey(x) && x.p === 'n');
       out.none = makeVocabQuestion(plain, { forceFmt: 'v-pic' }) === null && !vocabFormats(plain).some(([f]) => f === 'v-pic');

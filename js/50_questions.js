@@ -3,7 +3,7 @@
    Question factory: builds a concrete question from a vocab or grammar item
    ========================================================================== */
 const BLANK_RE = /（([^（）]*?)）/;
-const GENERIC_ZH = new Set('的地得了是很在一個和與或、，。；：（）()/ 者做去來人可有不也就要會等件種東西'.split(''));
+const GENERIC_ZH = new Set('的地得了是很在一個和與或、，。；：（）()/ 者做去來人可有不也就要會等件種東西面'.split(''));   // 面 (2026-11-23): 上面／下面／前面 are different places, and 書面語 is a register note
 function zhChars(s) { return new Set([...String(s || '')].filter(c => /[一-鿿]/.test(c) && !GENERIC_ZH.has(c))); }
 // two meanings clash when they share a content character, share a whole comma-separated segment (是 / 嗯、是; 不對 / 不是、不對),
 // or belong to one of the day-one response groups whose glosses are all generic characters (はい・ええ・そうです…)
@@ -352,17 +352,22 @@ function picSvg(key, cls = '', opt = {}) {
   return `<svg class="pic ${cls}" viewBox="0 0 100 100" role="img" aria-label="圖">${opt.disc === false ? '' : '<circle class="pd" cx="50" cy="50" r="47"/>'}${PICS[key]}</svg>`;
 }
 // not a wrong option of 看圖選字: a word that names what any picture shows (食べ物 for おにぎり, 動物 for 犬); words with a drawing
-// of their own (ご飯, 花, 木, 虫) are kept apart from their look-alikes by PIC_NEAR instead
+// of their own (ご飯, 花, 木, 虫) are kept apart from their look-alikes by PIC_NEAR instead. 野菜, 果物, お菓子 and 服 have a drawing
+// of their own too (2026-11-23) and stay here: they are asked by it, never offered as a wrong option (果物 fits an apple)
 const PIC_GENERIC = new Set(['動物', '食べ物', '飲み物', '果物', '野菜', '乗り物', '物', 'もの', '品物', '料理', '食事', 'お菓子', '道具', '家具', '服', '洋服', '衣服', '建物', 'ペット',
   '店', '場所', '所', '町', '人', '生き物', '植物', '自然', '景色', '風景', '天気', '商品', '製品', '機械', '食品', '食料']);
+// the position words (2026-11-23, their pictures: one table or box and a red ball): their 看圖選字 asks among each other first,
+// not among the places of their theme (後ろ among 郵便局 and 病院 is no question)
+const POSITION_WORDS = new Set(['上', '下', '中', '外', '前', '後ろ', '横', '隣', 'そば', '近く', '間', '右', '左', '向こう']);
 function picOptions(v, zh = {}, kana = {}) {
   // never a word whose picture looks like this one (川 for a pond), nor one that shows the same drawing (車 for 自動車)
   const key = picKey(v), near = new Set([...picNear(jaPlain(v.w)), ...picNear(key)]);
-  const pool = vocabPeers(v).filter(x => x.p === v.p && !PIC_GENERIC.has(jaPlain(x.w)) && !near.has(jaPlain(x.w)) && !(key && picKey(x) === key)
+  const pool = vocabPeers(v).filter(x => x.p === v.p && !PIC_GENERIC.has(jaPlain(x.w)) && !near.has(jaPlain(x.w)) && !near.has(picKey(x)) && !(key && picKey(x) === key)   // picKey: 男 shows 男の人's drawing, so it is kept from 先生 too
     && !zhOverlap(x.m, v.m) && x.r !== v.r && jaPlain(x.w) !== jaPlain(v.w));
   // the same group first (傘 with 時計, 鍵, 本), so the picture has to be looked at, and things with a picture of their own before
   // other words of the group (交番 with ホテル and 食堂, not 外 or 北)
-  const scored = pool.map(x => ({ x, s: (x.c === v.c ? 3 : 0) + (picKey(x) ? 2 : 0) + (x.lv === v.lv ? 1 : 0) + Math.random() * 1.5 })).sort((a, b) => b.s - a.s);
+  const pos = POSITION_WORDS.has(jaPlain(v.w));
+  const scored = pool.map(x => ({ x, s: (x.c === v.c ? 3 : 0) + (picKey(x) ? 2 : 0) + (x.lv === v.lv ? 1 : 0) + (pos && POSITION_WORDS.has(jaPlain(x.w)) ? 4 : 0) + Math.random() * 1.5 })).sort((a, b) => b.s - a.s);
   const out = [];
   for (const { x } of scored) { if (!out.includes(x.w)) { out.push(x.w); zh[x.w] = x.m; kana[x.w] = x.r; } if (out.length === 3) break; }
   return out.length === 3 ? out : null;

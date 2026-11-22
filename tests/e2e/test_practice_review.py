@@ -183,11 +183,29 @@ def test_the_menus_words_come_in_a_lane_of_their_own(b):
     r = json.loads(ev(b, js))
     assert r['at'][:5] == [2, 5, 8, 11, 14] and r['first'] == '水' and not r['counted'] and r['otherCounted'] and not r['pre'] and r['words'] >= 30, r
 
+# 2026-11-23 pictures: position words are asked among each other; a word that shows another's drawing (男 → 男の人) is kept from
+# that drawing's look-alikes; a second reading of a drawn spelling (から, じょう) has no picture; 果物 is asked by its picture and
+# never offered as a wrong option
+def test_new_pictures_ask_fair_questions(b):
+    js = """(() => { %s
+      REG.vocab.filter(v => v.builtin && v.lv === 'N5').forEach(v => { state.srs[v.key] = rec(2); });
+      const W = (w, r) => REG.vocab.find(v => v.builtin && jaPlain(v.w) === w && (!r || v.r === r));
+      const opts = (w) => { const s = new Set(); for (let i = 0; i < 30; i++) makeVocabQuestion(W(w), { forceFmt: 'v-pic', kana: false }).options.forEach(o => s.add(jaPlain(o.text))); s.delete(w); return [...s]; };
+      const ushiro = opts('後ろ'), teacher = opts('先生'), apple = opts('りんご');
+      return JSON.stringify({ ushiro, posOnly: ushiro.every(w => POSITION_WORDS.has(w)), teacherMan: teacher.filter(w => ['男', '男の人', '会社員'].includes(w)),
+        appleFruit: apple.includes('果物'), fruit: makeVocabQuestion(W('果物'), { forceFmt: 'v-pic', kana: false }).fmt,
+        kara: picKey(W('空', 'から')), sora: picKey(W('空', 'そら')), jou: picKey(W('上', 'じょう')), ue: picKey(W('上', 'うえ')),
+        verb: vocabFormats(W('食べる')).some(([f]) => f === 'v-pic'), n: REG.vocab.filter(v => v.builtin && picKey(v)).length }); })()""" % REC
+    r = json.loads(ev(b, js))
+    assert r['posOnly'] and len(r['ushiro']) >= 3 and r['teacherMan'] == [] and not r['appleFruit'] and r['fruit'] == 'v-pic', r
+    assert r['kara'] == '' and r['sora'] == '空' and r['jou'] == '' and r['ue'] == '上' and r['verb'] and r['n'] >= 535, r   # 538 on 2026-11-23 (the second readings of 空 上 下 中 have none)
+
 TESTS = [test_a_see_through_word_is_asked_by_its_reading_and_a_false_friend_by_its_kanji, test_the_spelling_tiles_hold_the_kana_a_word_is_mixed_up_with,
          test_a_fill_in_with_no_other_format_is_spelled_with_tiles, test_a_paraphrase_asks_the_words_own_example_with_its_marked_part_underlined,
          test_the_reading_passage_comes_in_the_middle_of_a_set_away_from_listening, test_ten_right_in_a_row_glow_and_a_retry_answered_right_says_it_is_remembered,
          test_pairs_in_match_and_tiles_on_the_line_make_small_sounds, test_the_paraphrase_checker_passes_a_good_item_and_names_each_problem,
-         test_every_paraphrase_in_the_bank_builds_its_question, test_the_menus_words_come_in_a_lane_of_their_own]
+         test_every_paraphrase_in_the_bank_builds_its_question, test_the_menus_words_come_in_a_lane_of_their_own,
+         test_new_pictures_ask_fair_questions]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
