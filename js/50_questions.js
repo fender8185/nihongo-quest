@@ -355,7 +355,7 @@ function picSvg(key, cls = '', opt = {}) {
 // of their own (ご飯, 花, 木, 虫) are kept apart from their look-alikes by PIC_NEAR instead. 野菜, 果物, お菓子 and 服 have a drawing
 // of their own too (2026-11-23) and stay here: they are asked by it, never offered as a wrong option (果物 fits an apple)
 const PIC_GENERIC = new Set(['動物', '食べ物', '飲み物', '果物', '野菜', '乗り物', '物', 'もの', '品物', '料理', '食事', 'お菓子', '道具', '家具', '服', '洋服', '衣服', '建物', 'ペット',
-  '店', '場所', '所', '町', '人', '生き物', '植物', '自然', '景色', '風景', '天気', '商品', '製品', '機械', '食品', '食料']);
+  '店', '場所', '所', '町', '人', '生き物', '植物', '自然', '景色', '風景', '天気', '商品', '製品', '機械', '食品', '食料', '食料品']);
 // the position words (2026-11-23, their pictures: one table or box and a red ball): their 看圖選字 asks among each other first,
 // not among the places of their theme (後ろ among 郵便局 and 病院 is no question)
 const POSITION_WORDS = new Set(['上', '下', '中', '外', '前', '後ろ', '横', '隣', 'そば', '近く', '間', '右', '左', '向こう']);
