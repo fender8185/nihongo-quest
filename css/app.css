@@ -654,8 +654,8 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
    board's rows tighter, 原田's word and the hero's one line under the answers */
 .wk-window .cls-card { padding: 12px 12px 10px; } .wk-window .wk-cust { min-height: 0; gap: 4px 8px; } .wk-window .wk-cust .kr-face { width: 44px; height: 44px; }
 .wk-window .wk-bub { flex: 1 1 0; min-width: 0; grid-template-columns: auto 1fr; align-items: center; column-gap: 8px; padding: 6px 10px; font-size: 17px; } .wk-window .wk-bub .wk-ear { grid-row: span 2; } .wk-window .wk-bub > :not(.wk-ear) { grid-column: 2; }
-.md-talk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; } .md-talk .kr-face { width: 34px; height: 34px; flex: none; } .md-talk .wk-say { font-size: 14px; }
-.md-talk[data-who="me"] :is(.kr-face, .wk-say), .md-talk:not([data-who="me"]) .wk-me { display: none; } .md-talk .wk-me { flex: 1; margin: 0; }
+:is(.md-talk, .lf-talk) { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; } :is(.md-talk, .lf-talk) .kr-face { width: 34px; height: 34px; flex: none; } :is(.md-talk, .lf-talk) .wk-say { font-size: 14px; }
+:is(.md-talk, .lf-talk)[data-who="me"] :is(.kr-face, .wk-say), :is(.md-talk, .lf-talk):not([data-who="me"]) .wk-me { display: none; } :is(.md-talk, .lf-talk) .wk-me { flex: 1; margin: 0; }
 .wk-window .md-opts { margin-top: 6px; } .wk-window .md-opt { min-height: 46px; padding-block: 6px; }
 .md-wall { margin: 4px -6px 6px; padding: 6px 10px 6px; border-radius: 12px; background: #2f4a6e; color: #fff; }
 .md-chart { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; } .md-rail { position: absolute; left: 7%; right: 7%; top: 12px; height: 4px; border-radius: 2px; background: #3f9a8c; }
@@ -680,16 +680,20 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 /* 落とし物 (2026-11-20): the 交番 — its shelf of lost things behind the counter, whoever came in, the questions, the four on the
    counter (the one picked up, its inside), これですか／ありません */
 .wk-lost .cls-card { background: #f1efe8; color: #2b2b33; border-bottom: 10px solid #2b3350; }
-.lf-room { position: relative; margin: 6px -6px 6px; border-radius: 12px; overflow: hidden; background: #e8e4da; } .lf-shelf { display: block; width: 100%; height: auto; opacity: .9; }
-.lf-counter { position: relative; margin-top: -36px; padding: 8px 8px 10px; background: linear-gradient(#a8774a, #8a5e3a); box-shadow: inset 0 4px 0 #d9b48a; } .lf-counter .wk-cust { margin: 0; }
+/* the lost-and-found on one screen (2026-11-22, as the ticket window): the shelf's top two boards, the face beside the bubble and
+   the replay beside what they said, the two answers side by side, 小林's word or the hero's under them */
+.wk-lost .cls-card { padding: 12px 12px 10px; } .wk-lost .wk-cust { min-height: 0; gap: 4px 8px; } .wk-lost .wk-cust .kr-face { width: 44px; height: 44px; }
+.wk-lost .wk-bub { flex: 1 1 0; min-width: 0; grid-template-columns: auto 1fr; align-items: center; column-gap: 8px; padding: 6px 10px; font-size: 17px; } .wk-lost .wk-bub .wk-ear { grid-row: span 6; } .wk-lost .wk-bub > :not(.wk-ear) { grid-column: 2; }
+.lf-room { position: relative; margin: 6px -6px 4px; border-radius: 12px; overflow: hidden; background: #e8e4da; } .lf-shelf { display: block; width: 100%; height: 96px; opacity: .9; }
+.lf-counter { position: relative; margin-top: -22px; padding: 8px 8px 8px; background: linear-gradient(#a8774a, #8a5e3a); box-shadow: inset 0 4px 0 #d9b48a; } .lf-counter .wk-cust { margin: 0; }
 .lf-counter .kr-face { position: relative; } .lf-onhead { position: absolute; left: 50%; top: -9%; width: 54%; transform: translateX(-50%) rotate(-8deg); }
-.lf-qs, .lf-acts { display: grid; gap: 6px; margin-top: 8px; } .lf-q { min-height: 44px; font-size: 17px; text-align: left; justify-content: flex-start; flex-direction: column; align-items: flex-start; white-space: normal; } .lf-q small { display: block; font-size: 12px; color: #8a7a6e; }
+.lf-qs, .lf-acts { display: grid; gap: 6px; margin-top: 6px; } .lf-acts { display: flex; flex-wrap: wrap; } .lf-acts .btn { flex: 1 1 auto; white-space: nowrap; } .lf-acts:empty, .lf-qs:empty { display: none; } .lf-q { min-height: 44px; font-size: 17px; text-align: left; justify-content: flex-start; flex-direction: column; align-items: flex-start; white-space: normal; } .lf-q small { display: block; font-size: 12px; color: #8a7a6e; }
 .lf-q.wk-bad, .lf-cand.wk-bad, .lf-none.wk-bad { animation: shake .3s ease; }
-.lf-cands { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; } .lf-cands:empty { display: none; }
+.lf-cands { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; } .lf-cands:empty { display: none; }
 .lf-cand { position: relative; display: grid; justify-items: center; gap: 2px; padding: 6px 2px; border: 0; border-radius: 10px; background: #fbf7ec; box-shadow: 0 2px 0 #d8c8a8; cursor: pointer; transition: transform .2s; }
 .lf-cand svg { width: 100%; height: auto; max-width: 78px; } .lf-cand.sel { transform: translateY(-6px); box-shadow: 0 0 0 3px #3f9a8c, 0 6px 12px rgba(0, 0, 0, .15); }
 .lf-in { display: flex; gap: 2px; justify-content: center; } .lf-in .pic { width: 24px; height: 24px; }
-.lf-acts .btn { min-height: 44px; font-size: 17px; }
+.lf-acts .btn { min-height: 44px; padding-inline: 12px; font-size: 16px; }
 /* タクシー (2026-11-20): the passenger and the meter, the town's map with the taxi on it (its blinkers, the ring at a crossing), the
    four choices, the fare. One screen, no scrolling (2026-11-21, the user): the card as tall as what is seen (dvh: Safari's bars), the
    map shrinking to what is left, the four choices always at the foot, the fare's answers over the map once it has stopped */

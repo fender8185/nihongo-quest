@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 95 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 96 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -2715,13 +2715,16 @@ const TOWN = {
           fix: ['つぎの {角|かど}を {E}に… あ、すみません、{D}です！', '下個轉角往{e}……啊，抱歉，是{d}！'], fix2: ['{二|ふた}つ{目|め}の {角|かど}を {E}に… あ、すみません、{D}です！', '第二個轉角往{e}……啊，抱歉，是{d}！'],
           stop: ['あの {X}の {前|まえ}で {止|と}めて ください。', '請停在那個{x}前面。'], wrong: ['あっ、ちがいます！', '啊，不對！'], here: ['ここじゃ ありません。', '不是這裡。'], far: ['{遠回|とおまわ|繞遠路}りですよ…。', '繞遠路了喔……'],
           hurry: ['{急|いそ}いで ください！', '請快一點！'], price: ['いくらですか。', '多少錢？'], keep: ['おつりは いいです。', '不用找了。'], thanks: ['ありがとうございました。', '謝謝。'] } },
-      // 落とし物 (2026-11-20, 小林): his greeting to each, four brought out, right now and then, a miss, the thing there after all, the end
-      // (all: everyone helped at once), his own hat (on his head); the hero's (me) and the one who lost it (cust)
+      // 落とし物 (2026-11-20, 小林): his greeting to each, four brought out, right now and then, a thing asked that was already told (asked),
+      // the thing there after all, the end (all: everyone helped at once), his own hat (on his head); the hero's (me: 何を／どこに／どんな,
+      // どんな もの before the thing is said) and the one who lost it (cust: lost — what and where; what, where — only one of them; then
+      // the answers: it, where it was)
       lost: { who: 'kobayashi', hi: ['どうしましたか！', '怎麼了嗎！'], bring: ['ここに {四|よっ}つ あります！', '這裡有四個！'], twin: ['{同|おな}じのが {二|ふた}つ ありますね…。', '有兩個一樣的耶……。'], ok: [['ありました！', '找到了！'], ['さすがで あります！', '真不愧是你！']],
-        miss: ['あれ？ ちがいましたか。', '咦？不對嗎？'], there: ['あ、ありますよ！', '啊，有喔！'], call: ['みつかったら、れんらくします！', '找到的話會聯絡您！'],
+        asked: ['それは もう {聞|き}きましたよ。', '那個已經問過了喔。'], there: ['あ、ありますよ！', '啊，有喔！'], call: ['みつかったら、れんらくします！', '找到的話會聯絡您！'],
         end: ['ごくろうさまで あります！', '辛苦了！'], all: ['さすがです！ {本官|ほんかん|本警察}より はやい！', '真不愧是你！比本官還快！'], head: ['あ！ {頭|あたま}の {上|うえ}に あります！', '啊！在您頭上！'], hat: ['{本官|ほんかん|本警察}の {帽子|ぼうし}も ありません！ …あ、{頭|あたま}の {上|うえ}でした！', '本官的帽子也不見了！……啊，在頭上！'],
-        me: { which: ['どんな {K}ですか。', '是什麼樣的{k}？'], inside: ['{中|なか}に {何|なに}が ありますか。', '裡面有什麼？'], price: ['{K}は いくらですか。', '{k}多少錢？'], like: ['{K}が {好|す}きですか。', '你喜歡{k}嗎？'], give: ['これですか。', '是這個嗎？'], none: ['すみません、ありません。', '不好意思，沒有。'], gag: ['あの… {頭|あたま}の {上|うえ}に あります。', '那個……在您頭上。'] },
-        cust: { lost: ['すみません。{W}{K}を {忘|わす}れました。', '不好意思，我把{k}忘{w}了。'], yes: ['あっ、それです！ ありがとうございます！', '啊，就是那個！謝謝！'], no: ['いいえ、ちがいます。', '不，不是這個。'], sad: ['そうですか…。', '這樣啊……。'], gag: ['あっ、ほんとうだ！', '啊，真的耶！'] } },
+        me: { what: ['{何|なに}を {忘|わす}れましたか。', '忘了什麼？'], where: ['どこに {忘|わす}れましたか。', '忘在哪裡？'], which: ['どんな {K}ですか。', '是什麼樣的{k}？'], thing: ['どんな ものですか。', '是什麼樣的東西？'], inside: ['{中|なか}に {何|なに}が ありますか。', '裡面有什麼？'], give: ['これですか。', '是這個嗎？'], none: ['すみません、ありません。', '不好意思，沒有。'], gag: ['あの… {頭|あたま}の {上|うえ}に あります。', '那個……在您頭上。'] },
+        cust: { lost: ['すみません。{W}{K}を {忘|わす}れました。', '不好意思，我把{k}忘{w}了。'], what: ['すみません。{K}を {忘|わす}れました。', '不好意思，我把{k}忘了。'], where: ['すみません。{W}{忘れ物|わすれもの}を しました。', '不好意思，我把東西忘{w}了。'],
+          it: ['{K}です。', '是{k}。'], at: ['{W}{忘|わす}れました。', '忘{w}了。'], yes: ['あっ、それです！ ありがとうございます！', '啊，就是那個！謝謝！'], no: ['いいえ、ちがいます。', '不，不是這個。'], sad: ['そうですか…。', '這樣啊……。'], gag: ['あっ、ほんとうだ！', '啊，真的耶！'] } },
       // きっぷ売り場 (2026-11-20, 原田): right (now and then), a miss, the end (all: everyone right at once); the hero's greeting, their thanks
       window: { who: 'harada', ok: [['{正確|せいかく|準確}です。', '準確。'], ['よろしい。', '很好。']], miss: ['ちがいます。', '不對。'],
         end: ['おつかれさまでした。{本日|ほんじつ|今天}も {定刻|ていこく|準點}です。', '辛苦了。今天也一切準點。'], all: ['{一秒|いちびょう|一秒}も くるいません。おみごとです。', '一秒都不差。了不起。'],

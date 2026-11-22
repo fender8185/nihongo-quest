@@ -241,10 +241,11 @@ LOST_HELP = """ window.speak = () => Promise.resolve(); window.speakAs = () => P
   state.work.res['2026-10-22'] = { place: 'lost', done: 10, score: {}, yen: 1, grade: 'C' };
   const card = () => document.querySelector('.wk-lost'), click = (q) => { const e = card() && card().querySelector(q); if (e) e.click(); return Boolean(e); };
   const at = (n) => LOST_RUN.now() && LOST_RUN.now().k === n;
+  // a question (what, where, look, inside) asked; asks(): each one not yet told, till the four are out
+  const ask = async (q) => { click(`.lf-q[data-q="${q}"]`); for (let i = 0; i < 200 && LOST_RUN.now().phase === 'tell'; i++) await wait(30); };
+  const asks = async () => { for (let g = 0; g < 5 && ['ask', 'ask2'].includes(LOST_RUN.now().phase); g++) await ask([...card().querySelectorAll('.lf-q')].map((x) => x.dataset.q).find((q) => !LOST_RUN.now().know[q])); };
   async function solve(n) {
-    for (let i = 0; i < 200 && !(at(n) && LOST_RUN.now().phase === 'ask'); i++) await wait(30); const t = LOST_RUN.now().task;
-    click(`.lf-q[data-o="${t.qRight}"]`); for (let i = 0; i < 200 && !['find', 'ask2'].includes(LOST_RUN.now().phase); i++) await wait(30);
-    if (LOST_RUN.now().phase === 'ask2') { click(`.lf-q[data-o="${t.q2Right}"]`); for (let i = 0; i < 200 && LOST_RUN.now().phase !== 'find'; i++) await wait(30); }
+    for (let i = 0; i < 200 && !(at(n) && LOST_RUN.now().phase === 'ask'); i++) await wait(30); const t = LOST_RUN.now().task; await asks();
     if (t.type === 'none') { click('.lf-none'); return; } if (t.type === 'gag') { click('.lf-gag'); return; }
     const c = t.cands.findIndex((x) => x.color === t.color && x.dim === t.dim && x.inside.join() === t.inside.join()); click(`.lf-cand[data-c="${c}"]`); await wait(40); click('.lf-give');
   }"""
@@ -259,15 +260,15 @@ def test_lost_shift_by_hand(b):
 # the wrong one handed over, ありません when it is there: misses; a shift left after three resumes at the fourth
 def test_lost_misses_and_resume(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + LOST_HELP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
-      const realMake = LOST.make; LOST.make = () => { const ts = realMake(); ts[0] = LOST.task('wallet', 'plain'); return ts; };
+      const realMake = LOST.make; LOST.make = () => { const ts = realMake(); ts[0] = LOST.task('wallet', 'plain', 'both'); return ts; };
       WORK.start(yard(), 'lost'); for (let i = 0; i < 200 && !(at(0) && LOST_RUN.now().phase === 'ask'); i++) await wait(30); let t = LOST_RUN.now().task;
-      click(`.lf-q[data-o="${(t.qRight + 1) % 3}"]`); await wait(60); click(`.lf-q[data-o="${t.qRight}"]`); for (let i = 0; i < 200 && LOST_RUN.now().phase !== 'find'; i++) await wait(30);
+      await ask('what'); await ask('look'); for (let i = 0; i < 200 && LOST_RUN.now().phase !== 'find'; i++) await wait(30);
       const wrong = t.cands.findIndex((x) => !(x.color === t.color && x.dim === t.dim)); click(`.lf-cand[data-c="${wrong}"]`); await wait(40); click('.lf-give'); await wait(80);
       click('.lf-none'); await wait(80); const c = t.cands.findIndex((x) => x.color === t.color && x.dim === t.dim); click(`.lf-cand[data-c="${c}"]`); await wait(40); click('.lf-give');
       await solve(1); await solve(2); await wait(200); LOST.make = realMake; CLASS.close(); await wait(100); const score = WORK.today().score;
       WORK.start(yard(), 'lost'); for (let i = 0; i < 200 && !(LOST_RUN.now() && LOST_RUN.now().phase === 'ask'); i++) await wait(30); const k = LOST_RUN.now().k; CLASS.close();
       return JSON.stringify({ score, k }); })()"""))
-    assert r['score'] == {'0': 3, '1': 0, '2': 0} and r['k'] == 3, r   # the question, the wrong wallet, ありません: three misses
+    assert r['score'] == {'0': 3, '1': 0, '2': 0} and r['k'] == 3, r   # what it is asked when it was said, the wrong wallet, ありません: three misses
 
 # ---- タクシー (spec §8) ----
 # left and right as the taxi faces (going down the map, 右 is the map's left); the shortest way; what a passenger says for it —
@@ -439,14 +440,48 @@ def test_review_taxi_turns_face_every_way_and_dont_is_tested(b):
 def test_review_lost_gag_twin_and_chinese(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + LOST_HELP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
       const out = { zh: [LOST.zhOf({ kind: 'bag', color: 'brown', dim: 'big' }), LOST.zhOf({ kind: 'glasses', color: 'black', dim: 'round' })], umb: TOWN.EKI.lost.kinds.umbrella[3] };
-      const realMake = LOST.make; LOST.make = () => { const ts = realMake(); ts[0] = LOST.task('glasses', 'gag'); ts[1] = LOST.task('wallet', 'twin'); return ts; };
+      const realMake = LOST.make; LOST.make = () => { const ts = realMake(); ts[0] = LOST.task('glasses', 'gag'); ts[1] = LOST.task('wallet', 'twin', 'both'); return ts; };
       WORK.start(yard(), 'lost'); for (let i = 0; i < 200 && !(at(0) && LOST_RUN.now().phase === 'ask'); i++) await wait(30); let t = LOST_RUN.now().task;
-      click(`.lf-q[data-o="${t.qRight}"]`); for (let i = 0; i < 200 && LOST_RUN.now().phase !== 'find'; i++) await wait(30); click('.lf-none');
-      for (let i = 0; i < 200 && !(at(1) && LOST_RUN.now().phase === 'ask'); i++) await wait(30); t = LOST_RUN.now().task; click(`.lf-q[data-o="${t.qRight}"]`);
-      for (let i = 0; i < 200 && !['ask2', 'find'].includes(LOST_RUN.now().phase); i++) await wait(30); out.ask2 = LOST_RUN.now().phase; out.q2 = [...card().querySelectorAll('.lf-q')].map((x) => x.textContent).join('|');
+      await asks(); click('.lf-none');
+      for (let i = 0; i < 200 && !(at(1) && LOST_RUN.now().phase === 'ask'); i++) await wait(30); t = LOST_RUN.now().task; await ask('look');
+      for (let i = 0; i < 200 && !['ask2', 'find'].includes(LOST_RUN.now().phase); i++) await wait(30); out.ask2 = LOST_RUN.now().phase; out.q2 = [...card().querySelectorAll('.lf-q')].map((x) => x.dataset.q);
+      out.q2ja = card().querySelector('.lf-q[data-q="inside"]').textContent; const known = out.q2.find((q) => q !== 'inside'); await ask(known); out.phase2 = LOST_RUN.now().phase;
       out.score = WORK.today().score; LOST.make = realMake; CLASS.close(); return JSON.stringify(out); })()"""))
     assert r['zh'] == ['咖啡色的大包包', '黑色的圓形眼鏡'] and r['umb'] == ['big', 'small'], r
-    assert r['score'].get('0') == 0 and r['ask2'] == 'ask2' and '何' in r['q2'], r
+    assert r['score'].get('0') == 0 and r['ask2'] == 'ask2' and '中' in r['q2ja'], r
+    # what is in it asked beside two things already told (no 多少錢／喜歡嗎 any more): one of those asked again a miss
+    assert len(r['q2']) == 3 and 'inside' in r['q2'] and not {'price', 'like'} & set(r['q2']) and r['phase2'] == 'ask2', r
+
+# 2026-11-22, the user: the first question was always どんな…ですか (the other two plainly wrong) — nothing learned. Now what someone
+# says first varies (what and where, only what, only where) and the hero asks what was not said: 何を／どこに／どんな; one already told
+# is a miss (小林: それは もう 聞きましたよ). The bubble, opened after two misses, shows only what was said, never the looks before asked
+def test_lost_asks_what_was_not_said(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + LOST_HELP + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      const heard = []; window.speakAs = (who, l) => { heard.push([who, l]); return Promise.resolve(); };
+      const realMake = LOST.make; LOST.make = () => { const ts = realMake(); ts[0] = LOST.task('wallet', 'plain', 'what'); ts[1] = LOST.task('umbrella', 'plain', 'where'); ts[2] = LOST.task('hat', 'plain', 'both'); return ts; };
+      WORK.start(yard(), 'lost'); for (let i = 0; i < 200 && !(at(0) && LOST_RUN.now().phase === 'ask'); i++) await wait(30);
+      const out = {}, said = (who) => heard.filter((h) => h[0] === who).map((h) => h[1]), qs = () => [...card().querySelectorAll('.lf-q')].map((x) => x.dataset.q).sort().join();
+      let t = LOST_RUN.now().task; out.open0 = said(t.who).pop(); out.qs0 = qs(); out.look0 = card().querySelector('.lf-q[data-q="look"]').textContent;
+      await ask('what'); out.miss0 = said('kobayashi').pop(); out.phase0 = LOST_RUN.now().phase;
+      await ask('where'); out.me0 = said('hero').pop(); out.where0 = said(t.who).pop(); await ask('where');
+      out.bub0 = card().querySelector('.wk-cust .wk-bub').textContent; out.desc0 = t.desc.replace(/\{([^|}]+)\|[^}]+\}/g, '$1');
+      await ask('look'); out.phase0b = LOST_RUN.now().phase; await solve(0);
+      for (let i = 0; i < 200 && !(at(1) && LOST_RUN.now().phase === 'ask'); i++) await wait(30); t = LOST_RUN.now().task;
+      out.open1 = said(t.who).pop(); out.look1 = card().querySelector('.lf-q[data-q="look"]').textContent; await ask('look'); out.me1 = said('hero').pop(); out.phase1 = LOST_RUN.now().phase; await solve(1);
+      for (let i = 0; i < 200 && !(at(2) && LOST_RUN.now().phase === 'ask'); i++) await wait(30); t = LOST_RUN.now().task; out.open2 = said(t.who).pop(); await solve(2);
+      const ls = []; LOST_RUN.lines((who, l) => ls.push(who + ' ' + l));
+      out.lines = ['hero {何|なに}を {忘|わす}れましたか。', 'hero どこに {忘|わす}れましたか。', 'hero どんな ものですか。', 'kobayashi それは もう {聞|き}きましたよ。',
+        'nakamura {財布|さいふ}です。', 'nakamura バスに {忘|わす}れました。', 'nakamura すみません。{財布|さいふ}を {忘|わす}れました。', 'umeko すみません。{公園|こうえん}に {忘れ物|わすれもの}を しました。'].filter((l) => !ls.includes(l));
+      out.gone = ['あれ？ ちがいましたか。'].filter((l) => ls.some((x) => x.endsWith(l)));
+      out.score = WORK.today().score; LOST.make = realMake; CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['open0'] == 'すみません。{財布|さいふ}を {忘|わす}れました。' and r['qs0'] == 'look,what,where' and '財布' in r['look0'], r
+    assert r['miss0'] == 'それは もう {聞|き}きましたよ。' and r['phase0'] == 'ask', r   # 財布 was said: asking what it is again is a miss
+    assert r['me0'] == 'どこに {忘|わす}れましたか。' and r['where0'].endswith('に {忘|わす}れました。'), r
+    assert r['desc0'] not in r['bub0'] and '財布' in r['bub0'] and r['phase0b'] == 'find', r   # two misses: what was said shown, not the looks
+    assert r['open1'].startswith('すみません。') and '{忘れ物|わすれもの}を しました。' in r['open1'] and 'もの' in r['look1'] and '傘' not in r['look1'], r
+    assert r['me1'] == 'どんな ものですか。' and r['phase1'] == 'find', r   # its looks tell what it is too: the four out
+    assert r['open2'].endswith('{帽子|ぼうし}を {忘|わす}れました。') and 'に' in r['open2'], r
+    assert r['score'] == {'0': 2, '1': 0, '2': 0} and r['lines'] == [] and r['gone'] == [], r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 if __name__ == "__main__":
