@@ -375,8 +375,22 @@ def test_review_timetable_ends_and_next_minute(b):
 def test_review_ticket_machine_charges_once(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + RIDE_HELP + """ location.hash = '#/station'; route(); await wait(300);
       RIDE.machine(yard(), 'minato'); await wait(100); click('.kb-fare[data-f="310"]'); await wait(60); click('.kb-pay'); await wait(100); document.querySelector('.kb-pay').click(); await wait(200);
-      const out = { left: yenBalance() }; CLASS.close(); return JSON.stringify(out); })()"""))
-    assert r['left'] == 690, r
+      const out = { left: yenBalance(), ticket: document.querySelector('.kb-ticket').textContent }; CLASS.close(); return JSON.stringify(out); })()"""))
+    assert r['left'] == 690 and '310円' in r['ticket'] and '→ 0円' not in r['ticket'], r   # the ticket the fare paid (2026-11-22: it said 0円)
+
+# 2026-11-22, the user: お金を 入れる's kana and kanji out of line — a button's label one piece (a ruby a flex item of its own sat
+# lower, the gap between the pieces): the machine's buttons, the taxi's four
+ONE = """ const one = (b) => [...b.childNodes].filter((n) => n.nodeType === 1 ? !n.matches('small') : n.textContent.trim()).length === 1; """
+def test_review_ruby_buttons_are_one_piece(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + RIDE_HELP + ONE + """ location.hash = '#/station'; route(); await wait(300);
+      RIDE.machine(yard(), 'shirasagi'); await wait(100); click('.kb-fare'); await wait(60); const out = { pay: one(document.querySelector('.kb-pay')) };
+      click('.kb-pay'); await wait(100); out.ride = one(document.querySelector('.kb-ride')); CLASS.close();
+      return JSON.stringify(out); })()"""))
+    assert r == {'pay': True, 'ride': True}, r
+    r = json.loads(ev(b, "(async () => { " + BEGIN + TAXI_HELP + ONE + """ location.hash = '#/station'; route(); await wait(300); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) };
+      WORK.start(yard(), 'taxi'); for (let i = 0; i < 400 && !(now() && now().choosing); i++) await wait(20);
+      const out = [...document.querySelectorAll('.tx-go')].map(one); CLASS.close(); JOBS.pat.scale = 1; return JSON.stringify(out); })()"""))
+    assert r == [True] * 4, r
 
 # the window's numbers are read, not matched: the replies with a price or a time are in kana only
 def test_review_window_numbers_in_kana(b):

@@ -87,7 +87,7 @@ const MADO_RUN = (() => {
     }
     function opts(on) {
       const o = el('.md-opts'); if (!o) return; const t = R.task;
-      o.innerHTML = on ? t.opts.map(([ja, zh], i) => `<button type="button" class="btn md-opt" data-o="${i}" lang="ja">${NUMERIC.has(t.kind) ? esc(kanaOf(ja)) : ruby(ja)}${first ? `<small>${esc(zh)}</small>` : ''}</button>`).join('') : t.kind === 'buy' && R.phase === 'ask' ? '<p class="md-tip">先在上面的路線圖點客人要去的站，印出車票。</p>' : '';
+      o.innerHTML = on ? t.opts.map(([ja, zh], i) => `<button type="button" class="btn md-opt" data-o="${i}" lang="ja"><span>${NUMERIC.has(t.kind) ? esc(kanaOf(ja)) : ruby(ja)}</span>${first ? `<small>${esc(zh)}</small>` : ''}</button>`).join('') : t.kind === 'buy' && R.phase === 'ask' ? '<p class="md-tip">先在上面的路線圖點客人要去的站，印出車票。</p>' : '';
     }
     function show() {
       const t = tasks[k]; R = { k, task: t, phase: 'hi', printed: t.kind !== 'buy' }; miss = 0; rep = 0;

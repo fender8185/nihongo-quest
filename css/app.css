@@ -2009,6 +2009,7 @@ body.immersive .listen.full .flash .listen-reads .chip { font-size: 18px; } body
 ruby { ruby-position: over; ruby-align: center; }
 /* never smaller than 9px; no letter-spacing, so a long reading (しゅくだい over 宿題) pushes the words beside it no further than it must */
 rt { font-size: max(.5em, 9px); color: var(--ruby); font-weight: 400; user-select: none; }
+:is(.btn-primary, .tx-go.stop) rt { color: inherit; opacity: .8; }   /* on a coloured button its own colour, a little faint (2026-11-22: grey on blue, unread) */
 body.no-furi rt { visibility: hidden; }
 body.no-furi .keep-furi rt { visibility: visible; }
 body.furi-smart ruby.known rt { visibility: hidden; }

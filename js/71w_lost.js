@@ -105,9 +105,9 @@ const LOST_RUN = (() => {
     function stage() {
       const t = R.task, q = el('.lf-qs'), c = el('.lf-cands'), a = el('.lf-acts'); if (!q) return;
       const qs = R.phase === 'ask' ? t.qOpts : R.phase === 'ask2' ? t.q2Opts : null;
-      q.innerHTML = qs ? qs.map(([ja, zh], i) => `<button type="button" class="btn lf-q" data-o="${i}" lang="ja">${ruby(ja)}${first ? `<small>${esc(zh)}</small>` : ''}</button>`).join('') : '';
+      q.innerHTML = qs ? qs.map(([ja, zh], i) => `<button type="button" class="btn lf-q" data-o="${i}" lang="ja"><span>${ruby(ja)}</span>${first ? `<small>${esc(zh)}</small>` : ''}</button>`).join('') : '';
       c.innerHTML = R.phase === 'find' || R.phase === 'done' ? t.cands.map((x, i) => `<button type="button" class="lf-cand${R.sel === i ? ' sel' : ''}" data-c="${i}" aria-label="候補 ${i + 1}">${art(x, 78, 62)}${R.sel === i && x.inside.length ? `<span class="lf-in">${x.inside.map(pic).join('')}</span>` : ''}</button>`).join('') : '';
-      a.innerHTML = R.phase === 'find' ? `<button type="button" class="btn btn-primary lf-give" lang="ja"${R.sel === null ? ' disabled' : ''}>${ruby(s.me.give[0])}</button><button type="button" class="btn lf-none" lang="ja">${ruby(s.me.none[0])}</button>${t.type === 'gag' ? `<button type="button" class="btn lf-gag" lang="ja">${ruby(s.me.gag[0])}</button>` : ''}` : '';
+      a.innerHTML = R.phase === 'find' ? `<button type="button" class="btn btn-primary lf-give" lang="ja"${R.sel === null ? ' disabled' : ''}><span>${ruby(s.me.give[0])}</span></button><button type="button" class="btn lf-none" lang="ja"><span>${ruby(s.me.none[0])}</span></button>${t.type === 'gag' ? `<button type="button" class="btn lf-gag" lang="ja"><span>${ruby(s.me.gag[0])}</span></button>` : ''}` : '';
     }
     function show() {
       const t = tasks[k]; R = { k, task: t, phase: 'hi', sel: null }; miss = 0; rep = 0;

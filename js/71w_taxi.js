@@ -122,7 +122,7 @@ const TAXI_RUN = (() => {
     }
     function ctl() {
       const c = el('.tx-ctl'); if (!c) return; const on = R.phase === 'drive' && R.choosing;
-      c.innerHTML = ['left', 'straight', 'right', 'stop'].map((ch) => `<button type="button" class="btn tx-go${ch === 'stop' ? ' stop' : ''}${R.choice === ch ? ' picked' : ''}" data-ch="${ch}" lang="ja"${on && TAXI.can(R.at, R.h, ch) ? '' : ' disabled'}>${ruby(ch === 'left' ? '{左|ひだり}' : ch === 'right' ? '{右|みぎ}' : ch === 'stop' ? '{止|と}めて' : 'まっすぐ')}</button>`).join('');
+      c.innerHTML = ['left', 'straight', 'right', 'stop'].map((ch) => `<button type="button" class="btn tx-go${ch === 'stop' ? ' stop' : ''}${R.choice === ch ? ' picked' : ''}" data-ch="${ch}" lang="ja"${on && TAXI.can(R.at, R.h, ch) ? '' : ' disabled'}><span>${ruby(ch === 'left' ? '{左|ひだり}' : ch === 'right' ? '{右|みぎ}' : ch === 'stop' ? '{止|と}めて' : 'まっすぐ')}</span></button>`).join('');   // the label one piece in the flex button: a ruby an item of its own sat lower, a gap after it (2026-11-22)
     }
     // the taxi from where it is to (x, y), turned to h, over ms; its blinker while it turns
     function drive(to, h, ms) {

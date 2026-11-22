@@ -30,15 +30,15 @@ const RIDE = (() => {
     CLASS.card('kb-card', '券売機', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
       <div class="wk-head"><b lang="ja"><ruby>券売機<rt>けんばいき</rt></ruby></b><span>${esc(EKI.name(here))}<ruby>駅<rt>えき</rt></ruby></span></div>${chart}
       <div class="kb-machine"><p class="kb-screen"></p><div class="kb-fares">${fares.map((f) => `<button type="button" class="kb-fare" data-f="${f}"><small>大人</small>${f}</button>`).join('')}</div>
-        <div class="kb-row"><span class="kb-wallet">${yenIcon()}${yenStr(yenBalance())} 円</span><button type="button" class="btn btn-primary kb-pay" disabled lang="ja">お<ruby>金<rt>かね</rt></ruby>を <ruby>入<rt>い</rt></ruby>れる</button></div>
+        <div class="kb-row"><span class="kb-wallet">${yenIcon()}${yenStr(yenBalance())} 円</span><button type="button" class="btn btn-primary kb-pay" disabled lang="ja"><span>お<ruby>金<rt>かね</rt></ruby>を <ruby>入<rt>い</rt></ruby>れる</span></button></div>
         <div class="kb-slot"></div></div>`, (e) => {
       const f = e.target.closest('.kb-fare'); if (f) { pick = Number(f.dataset.f); document.querySelectorAll('.kb-fare').forEach((x) => x.classList.toggle('on', x === f)); document.querySelector('.kb-pay').disabled = false; SND.play('tick', { vol: 0.5 }); screen(fill(L().put, { P: YEN.priceMark(pick), p: pick })); return; }
       if (e.target.closest('.kb-pay') && pick) {
         if (yenBalance() < pick) { playSfx('bad'); screen(L().short, 'bad'); toast(`錢包只有 ${yenStr(yenBalance())} 円。`, 2400); return; }
-        spend(pick); keep({ from: here, fare: pick, day: todayStr() }); playSfx('coin', 3); SND.play('paper', { vol: 0.6 }); screen(L().take, 'ok');
+        const paid = pick; spend(pick); keep({ from: here, fare: pick, day: todayStr() }); playSfx('coin', 3); SND.play('paper', { vol: 0.6 }); screen(L().take, 'ok');
         pick = 0; document.querySelector('.kb-pay').disabled = true; document.querySelectorAll('.kb-fare.on').forEach((x) => x.classList.remove('on'));   // paid once (a second tap, nothing)
         const w = document.querySelector('.kb-wallet'); if (w) w.innerHTML = `${yenIcon()}${yenStr(yenBalance())} 円`;
-        document.querySelector('.kb-slot').innerHTML = `<div class="kb-ticket"><span lang="ja">${ruby(st(here))} → ${pick}円区間</span><b>${pick}円</b><small>${todayStr()}・大人</small></div>${here === 'minato' ? '<p class="kb-tip">從剪票口上月台，點停著的電車就能上車。</p>' : `<button type="button" class="btn btn-primary kb-ride" lang="ja"><ruby>電車<rt>でんしゃ</rt></ruby>に <ruby>乗<rt>の</rt></ruby>る</button>`}`;
+        document.querySelector('.kb-slot').innerHTML = `<div class="kb-ticket"><span lang="ja">${ruby(st(here))} → ${paid}円区間</span><b>${paid}円</b><small>${todayStr()}・大人</small></div>${here === 'minato' ? '<p class="kb-tip">從剪票口上月台，點停著的電車就能上車。</p>' : `<button type="button" class="btn btn-primary kb-ride" lang="ja"><span><ruby>電車<rt>でんしゃ</rt></ruby>に <ruby>乗<rt>の</rt></ruby>る</span></button>`}`;
         return;
       }
       if (e.target.closest('.kb-ride')) { CLASS.close(); board(yard, 0, here); }
@@ -90,7 +90,7 @@ const RIDE = (() => {
       }
       if (!live()) return; R.phase = 'end'; run(false); SND.play('train-in', { vol: 0.35 }); led(`${EKI.ruby(to)} <small>終点</small>`);
       say(fill(L().end, { S: st(to), s: EKI.name(to) }));
-      el('.rd-end').innerHTML = `${rest ? `<p class="rd-pay" lang="ja">${ruby(fill(L().pay, { P: YEN.priceMark(rest) })[0])}<small>${esc(fill(L().pay, { p: rest })[1])}</small></p>` : ''}<button type="button" class="btn btn-primary rd-off" lang="ja"><ruby>降<rt>お</rt></ruby>りる</button>`;
+      el('.rd-end').innerHTML = `${rest ? `<p class="rd-pay" lang="ja">${ruby(fill(L().pay, { P: YEN.priceMark(rest) })[0])}<small>${esc(fill(L().pay, { p: rest })[1])}</small></p>` : ''}<button type="button" class="btn btn-primary rd-off" lang="ja"><span><ruby>降<rt>お</rt></ruby>りる</span></button>`;
     })();
   }
   // the station's sign out at 白鷺城 and みなと漁港 (way-edge: at the screen's edge when its spot is off it): walked to, its machine

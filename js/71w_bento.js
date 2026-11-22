@@ -122,7 +122,7 @@ const BENTO_RUN = (() => {
       if (!x) { p.innerHTML = '<span class="bt-hint">點有「！」的車窗，聽乘客要什麼。</span>'; r.innerHTML = ''; return; }
       const open = x.state === 'done' || x.miss >= 2, l = lineOf(x);
       p.innerHTML = `<span class="kr-face bt-who">${TOWNEV.face(x.o.who)}</span><button type="button" class="wk-ear bt-ear" aria-label="再聽一次">${icon('speaker')}</button>${open ? `<b lang="ja">${ruby(l)}</b><small>${esc(x.asked && x.o.kind === 'have' ? x.o.thenZh || '' : BENTO.zhOf(x.o))}</small>` : '<b class="bt-dots">……</b>'}`;
-      r.innerHTML = x.o.kind === 'have' && !x.asked && x.state !== 'done' ? [['yes', TOWN.WORK.say.bento.me.yes], ['no', TOWN.WORK.say.bento.me.no]].map(([k, [ja]]) => `<button type="button" class="btn btn-sm bt-reply" data-r="${k}" lang="ja">${ruby(ja)}</button>`).join('') : '';
+      r.innerHTML = x.o.kind === 'have' && !x.asked && x.state !== 'done' ? [['yes', TOWN.WORK.say.bento.me.yes], ['no', TOWN.WORK.say.bento.me.no]].map(([k, [ja]]) => `<button type="button" class="btn btn-sm bt-reply" data-r="${k}" lang="ja"><span>${ruby(ja)}</span></button>`).join('') : '';
     }
     function hand() {
       const h = el('.bt-hand'); if (!h) return; const ids = Object.keys(B ? B.hand : {}).filter((id) => B.hand[id] > 0);
