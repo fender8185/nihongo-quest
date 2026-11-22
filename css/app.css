@@ -494,6 +494,13 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 /* the cruise ship (CRUISE, test 2026-11-12): it rocks a little at the quay, its wake while it moves, smoke from its funnel; the
    passengers fade in at the door and out going back in; the tour's bar along the foot of the scene (out of sight under a talk) */
 .sky .land .cruise-ship:not(.far):not(.sailing) .cs-bob { animation: csBob 4.6s ease-in-out infinite alternate; } @keyframes csBob { to { transform: translateY(1.6px); } }
+/* far out (2026-11-22, the user): cruising slowly along the open sea's horizon, from where it waits out toward the lighthouse
+   (−10 to +100 px; in the ship's units, a twelfth: −118 to 1176), turning about at either end; its sign along with it (the same time,
+   the same start) */
+.sky .land .cruise-ship.far .cs-drift { transform-box: fill-box; transform-origin: 50% 50%; animation: csDrift 140s ease-in-out -3s infinite; }
+@keyframes csDrift { 0% { transform: translateX(-118px) scaleX(1); } 48% { transform: translateX(1176px) scaleX(1); } 50% { transform: translateX(1176px) scaleX(-1); } 98% { transform: translateX(-118px) scaleX(-1); } 100% { transform: translateX(-118px) scaleX(1); } }
+.sky .cruise-call { animation: csDriftSign 140s ease-in-out -3s infinite; }
+@keyframes csDriftSign { 0% { translate: -10px 0; } 48%, 50% { translate: 100px 0; } 98%, 100% { translate: -10px 0; } }
 .sky .land .cs-wake { opacity: 0; transition: opacity .8s; } .sky .land .cruise-ship.sailing .cs-wake { opacity: 1; }
 .sky .land .cs-smoke { animation: csSmoke 3.4s ease-in-out infinite alternate; } @keyframes csSmoke { from { opacity: .25; transform: translateY(2px); } to { opacity: .65; transform: translateY(-5px); } }
 .sky .land .cruise-front { transition: opacity .5s; }
@@ -715,7 +722,7 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .wk-jobs { list-style: none; margin: 12px 0 8px; padding: 0; display: grid; gap: 6px; } .wk-job { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: rgba(138, 122, 110, .1); color: #6a5a4e; } .wk-job.ok { background: rgba(47, 122, 106, .12); color: #2b2b33; }
 .wk-job p { margin: 0; } .wk-jtop { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; } .wk-jtop b { font-size: 16px; color: #2b2b33; } .wk-jtop small { font-size: 12px; color: #8a7a6e; } .wk-jtop em { margin-left: auto; font-style: normal; font-size: 13px; font-weight: 700; color: #b0602a; }
 .wk-does { font-size: 13px; line-height: 1.5; } .wk-need { font-size: 12.5px; color: #8a7a6e; } .wk-job.ok .wk-need { color: #2f7a6a; font-weight: 700; }   /* each job what it is (2026-11-20) */ .wk-today { margin: 6px 0 4px; font-weight: 700; }
-.wk-book { display: grid; gap: 12px; } .wk-card { display: grid; gap: 2px; justify-items: start; padding: 12px 14px; border: 1.5px dashed #a8946e; border-radius: 12px; background: rgba(255, 250, 236, .5); }
+.wk-book { display: grid; gap: 12px; max-height: min(62vh, 560px); overflow-y: auto; overscroll-behavior: contain; align-content: start; }   /* as 町の手帳: scrolls inside the book (2026-11-22, the user's phone: one card and two areas ran past the screen) */ .wk-card { display: grid; gap: 2px; justify-items: start; padding: 12px 14px; border: 1.5px dashed #a8946e; border-radius: 12px; background: rgba(255, 250, 236, .5); }
 .wk-title { font-size: 13px; color: #8a7a6e; } .wk-rank { font-size: 24px; } .wk-tbl { width: 100%; border-collapse: collapse; font-size: 14px; } .wk-tbl th, .wk-tbl td { padding: 5px 4px; border-bottom: 1px solid rgba(138, 122, 110, .3); text-align: left; } .wk-tbl th { font-size: 12px; color: #8a7a6e; font-weight: 600; } .wk-note { margin: 0; font-size: 12.5px; color: #8a7a6e; }
 .crr-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px dashed #e6d9c4; font-size: 15px; }
 .crr-row > span { display: inline-flex; align-items: center; gap: 6px; } .crr-row :is(.koto-i, .yen-i) { width: 20px; height: 20px; } .crr-row b { font-size: 18px; } .crr-row i { font-style: normal; }
@@ -740,6 +747,7 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .cruise-travel { position: fixed; z-index: 70; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(24, 28, 46, .92); color: #fff; font: 700 20px/1.4 system-ui, sans-serif; text-align: center; opacity: 0; transition: opacity .5s; pointer-events: none; }   /* on to a place further off (a bus ride, a walk): the screen fades, a line says how */
 .cruise-travel.on { opacity: 1; pointer-events: auto; }
 .talk-face .cr-crowd { display: flex; width: 100%; height: 100%; overflow: hidden; } .talk-face .cr-crowd svg { flex: none; width: 56%; height: 100%; margin: 0 -14%; }
+@media (prefers-reduced-motion: reduce) { .sky .land .cruise-ship .cs-drift, .sky .cruise-call { animation: none; } }
 @media (prefers-reduced-motion: reduce) { .sky .land .cruise-ship .cs-bob, .sky .land .cs-smoke { animation: none; } }
 .sky .npc-mugi .mugi-tail { transform-box: fill-box; transform-origin: 0% 100%; animation: mugiWag .45s ease-in-out infinite alternate; }
 .sky .npc-mugi:is(.walk, .run) > svg { animation: mugiTrot .3s ease-in-out infinite alternate; } @keyframes mugiTrot { to { transform: translateY(-7px); } }   /* ムギ on the move (TOWNLIFE): a trot, he has no legs to swing */

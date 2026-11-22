@@ -126,7 +126,8 @@ const CRUISE = (() => {
   function shipSvg() {   // harborHtml: behind the boats, 漁協, the net
     if (!out()) return '';
     const far = !docked();
-    return `<g class="cruise-ship${far ? ' far' : ''}"${far ? ` transform="${xf(FAR.x, FAR.y, FAR.s)}"` : ''}><g class="cs-bob">${shipArt()}</g></g>`;
+    // far out it cruises slowly along the horizon, turning at either end (2026-11-22, the user), its sign along with it (CSS: csDrift)
+    return `<g class="cruise-ship${far ? ' far' : ''}"${far ? ` transform="${xf(FAR.x, FAR.y, FAR.s)}"` : ''}>${far ? '<g class="cs-drift">' : ''}<g class="cs-bob">${shipArt()}</g>${far ? '</g>' : ''}</g>`;
   }
   function rampSvg() {   // harborHtml: in front of the quay (its lines to the bollards, the gangway)
     if (!out()) return '';
@@ -135,7 +136,7 @@ const CRUISE = (() => {
   }
   function callHtml() {   // harborHtml: the ship far out, to be tapped
     if (!waiting()) return '';
-    return `<button type="button" class="thing way-btn cruise-call" data-act="cruise-call" aria-label="豪華郵輪" style="margin-left:${FAR.x - 600 - 32}px;bottom:${370 - FAR.y + 2}px"><span class="tag">${ySign('wave', '豪華郵輪')}</span></button>`;
+    return `<button type="button" class="thing way-btn cruise-call" data-act="cruise-call" aria-label="豪華郵輪" style="margin-left:${FAR.x - 600 - 32}px;bottom:${370 - FAR.y + 2}px"><span class="tag">${ySign('ship', '豪華郵輪')}</span></button>`;
   }
 
   // ---- the people about (高橋 with his flag, the passengers, townsfolk a stop brings out): drawn as the town's, moved here ----
@@ -445,14 +446,17 @@ const CRUISE = (() => {
     cs().on = { trip: t.id, step: 0, stop: t.stops[0].id, place: 'harbor', score: {} }; setLocal(FORCE, ''); saveState();   // in from now on, should the scene be drawn anew halfway
     S.busy = true;
     const y = S.yard, btn = y.querySelector('.cruise-call'), ship = y.querySelector('.cruise-ship'), front = y.querySelector('.cruise-front'), ramp = y.querySelector('.cruise-ramp');
+    // where its cruising had got to (the drift's x, in the ship's own units): in from there, facing the quay
+    const drift = y.querySelector('.cs-drift'), dx = drift ? (() => { try { return new DOMMatrix(getComputedStyle(drift).transform).e * FAR.s; } catch (e) { return 0; } })() : 0, x0 = FAR.x + dx;
+    if (drift) { drift.style.animation = 'none'; drift.style.transform = 'none'; }
     if (btn) btn.remove();
     S.ct = setTimeout(chatter, 6000); S.jt = setTimeout(jostle, 8000);
     yHeroWalk(y, [FOOT_W[0] - 70, 108], () => { yh.back = true; yh.turn = false; yHeroPlace(y); });
-    yPop(y, FAR.x, FAR.y - 34, 'ボーッ！'); SND.play('shiphorn', { vol: 0.45 });
+    yPop(y, x0, FAR.y - 34, 'ボーッ！'); SND.play('shiphorn', { vol: 0.45 });
     if (ship) ship.classList.add('sailing');
     tween(3800, (u) => {   // nearer and nearer: larger as it comes (the scale grows by a ratio, the place moves on evenly)
       if (!ship) return;
-      const s = FAR.s * Math.pow(1 / FAR.s, u), ax = FAR.x + (ANCHOR[0] - FAR.x) * u, ay = FAR.y + (ANCHOR[1] - FAR.y) * u;
+      const s = FAR.s * Math.pow(1 / FAR.s, u), ax = x0 + (ANCHOR[0] - x0) * u, ay = FAR.y + (ANCHOR[1] - FAR.y) * u;
       ship.setAttribute('transform', xf(ax, ay, s));
     }, () => {
       if (ship) { ship.classList.remove('sailing', 'far'); ship.removeAttribute('transform'); }
