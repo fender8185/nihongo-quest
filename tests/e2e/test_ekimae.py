@@ -1,4 +1,4 @@
-"""2026-11-20 駅前の打工 (docs/superpowers/specs/2026-11-20-ekimae-work-design.md): the N5 work area — open once 中華街's 打工證 is
+"""2026-11-20 駅前の打工 (docs/superpowers/specs/2026-11-20-ekimae-work-design.md): the N5 work area — open once the 打工證 (one for all areas, 2026-11-22) is
 一人前, each job by the unit studied (駅弁 m1, きっぷ売り場 m2, 落とし物 m3, タクシー m4); its 求人看板 on 駅前's square."""
 import json, os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(__file__))
@@ -12,7 +12,7 @@ def ev(b, js, pre=()):
     return b.run([("nav", URL), ("wait", READY)] + list(pre) + [("eval", js)])[-1]
 
 # a learner past 入門 (unit m1), no work yet, the town's clock at noon on a weekday (鈴木 at lunch: 10 o'clock where the taxi counts); s(): 中華街's four jobs each with an S shift
-# (its 打工證 一人前); stub(job): a job's runner caught (its ctx in __ctx, nothing drawn)
+# (打工證 經驗 20: ベテラン, 駅前 open, 4% more pay); stub(job): a job's runner caught (its ctx in __ctx, nothing drawn)
 BEGIN = """state.storyV = 99; state.startChosen = true; state.introSeen = true; state.stage = 'main'; state.kanaKnown = true; state.currentUnit = 'm1'; state.completedUnits = [];
   state.town = { done: {}, seen: {}, stops: { station: '2026-11-01' }, talks: {} }; state.koto.found = {}; state.purse = { spent: {}, book: {} }; state.cruise = { done: {}, on: null, res: {} }; state.work = { res: {} };
   ['nq_work_free', 'nq_work_eki', 'nq_work_nums'].forEach((k) => localStorage.removeItem(k));
@@ -54,7 +54,7 @@ def test_ekimae_board_lists_four_jobs(b):
       WORK.board(); await wait(100); out.china = document.querySelector('.wk-board').textContent.includes('包包子');
       return JSON.stringify(out); })()"""))
     assert r['rows'] == 4 and '中華街' in r['text'] and '一人前' in r['text'], r
-    assert r['ok'] == 1 and '駅前打工證' in r['text2'] and r['china'], r
+    assert r['ok'] == 1 and '打工證：' in r['text2'] and '駅前打工證' not in r['text2'] and r['china'], r   # one card for all the areas (2026-11-22)
 
 def test_the_station_has_a_board_to_tap(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ location.hash = '#/station'; route(); await wait(300);
@@ -154,7 +154,7 @@ def test_bento_shift_runs_three_trains(b):
       return JSON.stringify(out); })()"""))
     v = sorted(r['score'].values())
     assert r['trains'] == [3, 3, 4] and len(r['score']) == 10 and v == [0, 0, 0, 0, 0, 0, 0, 0, 1, 3], r
-    assert r['grade'] == 'B' and r['yen'] == 143, r   # 8 of 10 at once (B 20) on 120, 2% more for 中華街's 一人前
+    assert r['grade'] == 'B' and r['yen'] == 146, r   # 8 of 10 at once (B 20) on 120, 4% more: 中華街's four S, 經驗 20 (ベテラン)
 
 # a shift left after the first train: taken up again at the second, its three passengers
 def test_bento_resume(b):
@@ -199,7 +199,7 @@ def test_window_shift_by_hand(b):
       for (let i = 0; i < 300 && WORK.today().yen === undefined; i++) await wait(30);
       const x = WORK.today(); out.score = Object.values(x.score); out.yen = x.yen; document.querySelectorAll('.wk-result').forEach((e) => e.remove()); CLASS.close(); return JSON.stringify(out); })()"""))
     assert r['kinds'][:2] == ['fare', 'fare'] and set(r['kinds']) == {'fare', 'next', 'track', 'stop', 'buy'}, r
-    assert r['score'] == [0] * 10 and r['yen'] == 194, r
+    assert r['score'] == [0] * 10 and r['yen'] == 198, r   # 140 + S 50, 4% more
 
 # a wrong station tapped for tickets, a wrong reply: misses; two and the right one lights; a shift left after three resumes at the fourth
 def test_window_misses_and_resume(b):
@@ -254,7 +254,7 @@ def test_lost_shift_by_hand(b):
       WORK.start(yard(), 'lost'); for (let n = 0; n < 10; n++) await solve(n);
       for (let i = 0; i < 300 && WORK.today().yen === undefined; i++) await wait(30);
       const x = WORK.today(), out = { score: Object.values(x.score), yen: x.yen }; document.querySelectorAll('.wk-result').forEach((e) => e.remove()); CLASS.close(); return JSON.stringify(out); })()"""))
-    assert r['score'] == [0] * 10 and r['yen'] == 214, r   # 160 + S 50, 2% more
+    assert r['score'] == [0] * 10 and r['yen'] == 218, r   # 160 + S 50, 4% more
 
 # the wrong one handed over, ありません when it is there: misses; a shift left after three resumes at the fourth
 def test_lost_misses_and_resume(b):
@@ -303,7 +303,7 @@ def test_taxi_shift_by_hand(b):
       const x = WORK.today(), out = { kinds, score: Object.values(x.score), yen: x.yen, result: Boolean(document.querySelector('.wk-result')), card: Boolean(document.querySelector('.wk-taxi')) }; document.querySelectorAll('.wk-result').forEach((e) => e.remove()); CLASS.close(); JOBS.pat.scale = 1; return JSON.stringify(out); })()"""))
     assert r['kinds'] == [True, True, True, False, False], r
     assert r['result'] and not r['card'], r   # the taxi's card shut once the last has gone: the results not under it (2026-11-22, the user)
-    assert r['score'] == [0] * 5 and r['yen'] == 235, r   # 180 + S 50, 2% more; no おつり in the test
+    assert r['score'] == [0] * 5 and r['yen'] == 239, r   # 180 + S 50, 4% more; no おつり in the test
 
 # a wrong turn: the passenger stops it (a miss), the taxi stays, told again; nothing chosen at a crossing: straight on (a miss when
 # a turn was wanted); a shift left after two rides takes up at the third

@@ -64,36 +64,41 @@ def test_the_keeper_says_how_the_first_time(b):
       return JSON.stringify({ talk: Boolean(t), ran: Boolean(window.__ctx), text: t ? t.textContent : '' }); })()"""))
     assert r['talk'] and not r['ran'] and 'わたして' in r['text'], r
 
-# 2026-11-20, the user: the pay the job's own (站櫃 60, 包包子 80, 收銀 and 外場 100), the grade's on top; 打工證 by area — 中華街's
-# 新人 till each of its four jobs has had an S, then 一人前; a step up, 2% more on all the pay after
+# 2026-11-20, the user: the pay the job's own (站櫃 60, 包包子 80, 收銀 and 外場 100), the grade's on top. 2026-11-22, the user: one
+# 打工證 for all the areas, its 經驗 each job's best shift (S 5, A 4, B 3, C 2, D 1; a job done again counts only if better; a gone
+# job not at all), a step every 10 (新人 → 一人前 → ベテラン …); a step up, 2% more on all the pay after
 def test_pay_grade_and_licence(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """
       const sc = (first) => Object.fromEntries(Array.from({ length: 10 }, (_, k) => [k, k < first ? 0 : 1]));
       const shift = (d, job, grade) => { state.work.res[d] = { place: job, done: 10, score: {}, yen: 1, grade }; }, out = { pays: [WORK.pay('counter', 'S').yen, WORK.pay('buns', 'B').yen, WORK.pay('waiter', 'E', 30).yen, WORK.pay('till', 'A', 10)] };
-      out.grades = [10, 9, 8, 7, 5, 3, 2].map((n) => WORK.grade(sc(n))); out.none = [WORK.title('chinatown'), WORK.ups()];
-      shift('2026-11-01', 'buns', 'S'); shift('2026-11-02', 'counter', 'S'); shift('2026-11-03', 'waiter', 'S'); shift('2026-11-04', 'till', 'A'); shift('2026-11-05', 'till', 'A');   // many shifts: no step up
-      shift('2026-11-06', 'shelf', 'S'); out.three = [WORK.title('chinatown'), WORK.ups(), WORK.pay('till', 'S').yen];
-      shift('2026-11-07', 'counter', 'B'); shift('2026-11-08', 'till', 'S');
-      out.four = [WORK.title('chinatown'), WORK.ups(), WORK.pay('till', 'S'), WORK.pay('counter', 'C').yen];
+      out.grades = [10, 9, 8, 7, 5, 3, 2].map((n) => WORK.grade(sc(n))); out.none = [WORK.title(), WORK.ups(), WORK.xp()];
+      shift('2026-11-01', 'buns', 'B'); shift('2026-11-02', 'counter', 'C'); shift('2026-11-03', 'till', 'A'); shift('2026-11-04', 'till', 'A'); shift('2026-11-05', 'till', 'D');   // 3 + 2 + 4: the A twice counted once
+      shift('2026-11-06', 'shelf', 'S'); out.nine = [WORK.title(), WORK.ups(), WORK.xp(), WORK.pay('till', 'S').yen];   // a gone job's S no help
+      shift('2026-11-07', 'counter', 'B');   // C → B: one more, ten
+      out.ten = [WORK.title(), WORK.ups(), WORK.xp(), WORK.pay('till', 'S'), WORK.pay('counter', 'C').yen];
+      ['waiter', 'buns', 'till', 'counter'].forEach((j, i) => shift('2026-11-1' + i, j, 'S')); out.twenty = [WORK.title(), WORK.ups(), WORK.xp(), WORK.pay('till', 'S').yen];
+      out.ranks = [0, 9, 10, 19, 20, 30, 40, 99].map((x) => WORK.RANKS[WORK.rank(x)][0]);
       return JSON.stringify(out); })()"""))
     assert r['pays'][:3] == [110, 100, 130] and r['pays'][3] == {'base': 100, 'bonus': 30, 'tip': 10, 'raise': 0, 'pct': 0, 'yen': 140}, r
     assert r['grades'] == ['S', 'A', 'B', 'B', 'C', 'D', 'E'], r
-    assert r['none'] == ['新人', 0] and r['three'] == ['新人', 0, 150], r   # an S at three of the four (a gone job's S no help)
-    assert r['four'][:2] == ['一人前', 1] and r['four'][2] == {'base': 100, 'bonus': 50, 'tip': 0, 'raise': 3, 'pct': 2, 'yen': 153} and r['four'][3] == 71, r   # 150 × 1.02; 70 × 1.02
+    assert r['none'] == ['新人', 0, 0] and r['nine'] == ['新人', 0, 9, 150], r
+    assert r['ten'][:3] == ['一人前', 1, 10] and r['ten'][3] == {'base': 100, 'bonus': 50, 'tip': 0, 'raise': 3, 'pct': 2, 'yen': 153} and r['ten'][4] == 71, r   # 150 × 1.02; 70 × 1.02
+    assert r['twenty'] == ['ベテラン', 2, 20, 156], r   # 150 × 1.04
+    assert r['ranks'] == ['新人', '新人', '一人前', '一人前', 'ベテラン', 'バイトリーダー', '達人', '達人'], r
 
-# the shift that brings the fourth S: paid as it was, 升級！ on its results; the next one 2% more
-def test_the_fourth_s_steps_the_card_up(b):
+# the shift that brings the card to 10: paid as it was, 升級！ (and what it gained) on its results; the next one 2% more
+def test_the_tenth_point_steps_the_card_up(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + HELP + """ kana(46); stub('till'); location.hash = '#/chinadori'; route(); await wait(200);
-      ['buns', 'counter', 'waiter'].forEach((job, i) => { state.work.res['2026-11-0' + (i + 1)] = { place: job, done: 10, score: {}, yen: 1, grade: 'S' }; });
+      [['buns', 'S'], ['counter', 'A']].forEach(([job, g], i) => { state.work.res['2026-11-0' + (i + 1)] = { place: job, done: 10, score: {}, yen: 1, grade: g }; });   // 9
       WORK.start(yard(), 'till'); for (let k = 0; k < 10; k++) __ctx.right(k, 0); __ctx.finish(); await wait(200);
       const card = document.querySelector('.wk-result'), out = { yen: WORK.today().yen, text: card.textContent }; card.remove();
       TOWNEV.clock = { h: 12, day: new Date(2026, 10, 11) }; stub('counter'); WORK.start(yard(), 'counter'); for (let k = 0; k < 10; k++) __ctx.right(k, 0); __ctx.finish(); await wait(200);
-      const c2 = document.querySelector('.wk-result'); Object.assign(out, { next: WORK.today().yen, raise: c2.textContent.includes('打工證加給（+2%）') }); c2.remove();
+      const c2 = document.querySelector('.wk-result'); Object.assign(out, { next: WORK.today().yen, raise: c2.textContent.includes('打工證加給（+2%）'), text2: c2.textContent }); c2.remove();
       DIARY.open('town'); await wait(100); document.querySelector('[data-diary="tab-work"]').click(); await wait(100); out.book = document.querySelector('.diary').textContent; DIARY.close();
       return JSON.stringify(out); })()"""))
-    assert r['yen'] == 150 and '升級' in r['text'] and '一人前' in r['text'], r
-    assert r['next'] == 112 and r['raise'], r   # 110 × 1.02
-    assert '中華街打工證' in r['book'] and '一人前' in r['book'] and '總共打過 5 班' in r['book'] and '+2%' in r['book'], r
+    assert r['yen'] == 150 and '升級' in r['text'] and '一人前' in r['text'] and '經驗 14（+5）' in r['text'] and '駅前' in r['text'], r   # 駅前 opens with it
+    assert r['next'] == 112 and r['raise'] and '經驗 15（+1）' in r['text2'], r   # 110 × 1.02; 站櫃 A → S: one more
+    assert '打工證' in r['book'] and '一人前' in r['book'] and '總共打過 4 班' in r['book'] and '+2%' in r['book'] and '中華街' in r['book'] and '駅前' in r['book'], r
 
 def test_the_pay_goes_into_the_wallet(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ kana(46); stub('counter'); location.hash = '#/chinadori'; route(); await wait(200);
@@ -103,7 +108,7 @@ def test_the_pay_goes_into_the_wallet(b):
       out.tab = Boolean(document.querySelector('[data-diary="tab-work"]')); document.querySelector('[data-diary="tab-work"]').click(); await wait(100);
       out.book = document.querySelector('.diary').textContent; DIARY.close();
       return JSON.stringify(out); })()"""))
-    assert r['got'] == 90 and r['card'] and '中華街打工證' in r['text'] and '新人' in r['text'] and '（0／4）' in r['text'], r   # 9 of 10 at once: A, +30 on 站櫃's 60
+    assert r['got'] == 90 and r['card'] and '打工證' in r['text'] and '新人' in r['text'] and '經驗 4（+4）' in r['text'] and '再 6 點升「一人前」' in r['text'], r   # 9 of 10 at once: A, +30 on 站櫃's 60
     assert r['tab'] and '新人' in r['book'] and '總共打過 1 班' in r['book'] and '60 円' in r['book'], r
 
 # a keeper's choices (2026-11-20, the user: no blue button — picked as a reply in the talk): what the hero would say, each where it goes
@@ -138,7 +143,7 @@ def test_the_board_lists_the_four_jobs(b):
       return JSON.stringify({ inner, out, does, rows, text, today }); })()"""))
     assert not r['inner'] and r['out'] and r['does'] == 4, r
     assert r['rows'] == [['buns', True], ['counter', True], ['waiter', False], ['till', False]], r
-    assert all(w in r['text'] for w in ['底薪 80 円', '底薪 60 円', '底薪 100 円', '中華街打工證：新人']), r
+    assert all(w in r['text'] for w in ['底薪 80 円', '底薪 60 円', '底薪 100 円', '打工證：新人']), r
     assert all(w in r['text'] for w in ['包包子', '站櫃', '外場', '收銀', '30', '「いくら」「円」和數字']) and '今天' in r['today'] and '站櫃' in r['today'], r
 
 def test_the_board_names_the_words_still_needed(b):   # 外場's kana seen, its three 入門 words not: not ✓ yet, the words said
@@ -576,15 +581,15 @@ def test_the_licence_page_has_the_cruise_guide_too(b):
       location.hash = '#/chinatown'; route(); await wait(300); DIARY.open('town'); await wait(100); const out = { tab: Boolean(document.querySelector('[data-diary="tab-work"]')) };
       document.querySelector('[data-diary="tab-work"]').click(); await wait(100); const t = document.querySelector('.diary');
       out.cards = [...t.querySelectorAll('.wk-card .wk-title')].map((x) => x.textContent); out.rank = t.querySelectorAll('.wk-card .wk-rank')[1].textContent;
-      out.row = [...t.querySelectorAll('.wk-tbl')[1].querySelectorAll('tbody td')].map((x) => x.textContent); out.grid = getComputedStyle(t.querySelector('.bk-page')).backgroundImage !== 'none'; DIARY.close(); return JSON.stringify(out); })()"""))
-    assert r == {'tab': True, 'cards': ['中華街打工證', '郵輪導覽ガイド證'], 'rank': '見習いガイド', 'row': ['1', '環島一周', 'A', '5,800 円'], 'grid': False}, r
+      out.row = [...t.querySelectorAll('.wk-card')[1].nextElementSibling.querySelectorAll('tbody td')].map((x) => x.textContent); out.grid = getComputedStyle(t.querySelector('.bk-page')).backgroundImage !== 'none'; DIARY.close(); return JSON.stringify(out); })()"""))
+    assert r == {'tab': True, 'cards': ['打工證', '郵輪導覽ガイド證'], 'rank': '見習いガイド', 'row': ['1', '環島一周', 'A', '5,800 円'], 'grid': False}, r
 
 # the review (2026-11-20): the guide's rank by the trips done, as the cruise's own results count them — a trip with no pay kept
 # (an old build's, or skipped to on the test site) still counts, its grade and pay a dash
 def test_the_guide_card_counts_every_trip_done(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ state.cruise = { done: { t1: '2026-11-01', t2: '2026-11-02' }, on: null, res: { t2: { first: 20, asks: 20, koto: 40, base: 5000, bonus: 1000, yen: 6000, grade: 5, day: '2026-11-02' } } }; saveState();
       location.hash = '#/chinatown'; route(); await wait(300); DIARY.open('work'); await wait(100); const t = document.querySelector('.diary');
-      const out = { next: t.querySelectorAll('.wk-card')[1].textContent.includes('再帶 1 趟'), rank: t.querySelectorAll('.wk-card .wk-rank')[1].textContent, rows: [...t.querySelectorAll('.wk-tbl')[1].querySelectorAll('tbody tr')].map((x) => [...x.children].map((c) => c.textContent).join('|')) }; DIARY.close(); return JSON.stringify(out); })()"""))
+      const out = { next: t.querySelectorAll('.wk-card')[1].textContent.includes('再帶 1 趟'), rank: t.querySelectorAll('.wk-card .wk-rank')[1].textContent, rows: [...t.querySelectorAll('.wk-card')[1].nextElementSibling.querySelectorAll('tbody tr')].map((x) => [...x.children].map((c) => c.textContent).join('|')) }; DIARY.close(); return JSON.stringify(out); })()"""))
     assert r['next'] and r['rank'] == '見習いガイド' and len(r['rows']) == 2 and r['rows'][0].endswith('|—|—') and r['rows'][1].endswith('|S|6,000 円'), r
 
 # the review (2026-11-20): a replay by the speaker at the counter is not the hero's time — the clock waits while it is said
