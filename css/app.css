@@ -529,6 +529,7 @@ body.scene-day .sky :is(.night, .flies), body.scene-night .sky :is(.dayset, .flo
 .es-name { margin: 0; font-size: 22px; font-weight: 800; }
 .es-face { margin: 8px auto 0; width: min(100%, 300px, calc((100dvh - 300px) * .857)); min-width: 200px; }   /* the close-up (EATSCENE, 360 × 420), short of the screen's height on a small phone */
 .es-stage { display: block; width: 100%; height: auto; border-radius: 14px; box-shadow: inset 0 0 0 1px rgba(90, 60, 30, .12); }
+.es-stage .ps { fill: #5a3a1e; fill-opacity: .2; }   /* a picture's own shadow on the table: soft, as .pic has it (2026-11-22: black, unstyled here) */
 .es-bubble { position: relative; margin: 10px 0 0; padding: 10px 14px; border-radius: 16px; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .08); }
 .es-bubble::before { content: ''; position: absolute; left: 26%; top: -8px; border: 8px solid transparent; border-top: 0; border-bottom-color: #fff; }
 .es-bubble.pop { animation: kotoBump .3s ease-out; } .es-say { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.9; } .es-zh { margin: 2px 0 0; font-size: 13px; color: #8a7a6e; }
@@ -649,7 +650,14 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 /* きっぷ売り場 (2026-11-20): the wall over the window — the route and its fares (pick a station for tickets), the clock and the
    departure board — the glass with whoever is asking, the printed tickets, the replies */
 .wk-window .cls-card { background: #eef1ee; color: #2b2b33; border-bottom: 10px solid #3f9a8c; }
-.md-wall { margin: 6px -6px 6px; padding: 8px 10px 6px; border-radius: 12px; background: #2f4a6e; color: #fff; }
+/* the ticket window on one screen (2026-11-22, the user's phone): the customer's face smaller, the replay beside the question, the
+   board's rows tighter, 原田's word and the hero's one line under the answers */
+.wk-window .cls-card { padding: 12px 12px 10px; } .wk-window .wk-cust { min-height: 0; gap: 4px 8px; } .wk-window .wk-cust .kr-face { width: 44px; height: 44px; }
+.wk-window .wk-bub { flex: 1 1 0; min-width: 0; grid-template-columns: auto 1fr; align-items: center; column-gap: 8px; padding: 6px 10px; font-size: 17px; } .wk-window .wk-bub .wk-ear { grid-row: span 2; } .wk-window .wk-bub > :not(.wk-ear) { grid-column: 2; }
+.md-talk { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 4px; } .md-talk .kr-face { width: 34px; height: 34px; flex: none; } .md-talk .wk-say { font-size: 14px; }
+.md-talk[data-who="me"] :is(.kr-face, .wk-say), .md-talk:not([data-who="me"]) .wk-me { display: none; } .md-talk .wk-me { flex: 1; margin: 0; }
+.wk-window .md-opts { margin-top: 6px; } .wk-window .md-opt { min-height: 46px; padding-block: 6px; }
+.md-wall { margin: 4px -6px 6px; padding: 6px 10px 6px; border-radius: 12px; background: #2f4a6e; color: #fff; }
 .md-chart { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; } .md-rail { position: absolute; left: 7%; right: 7%; top: 12px; height: 4px; border-radius: 2px; background: #3f9a8c; }
 .md-st { position: relative; display: grid; justify-items: center; align-content: start; gap: 1px; padding: 2px 0 4px; border: 0; border-radius: 8px; background: none; color: #fff; font: inherit; cursor: default; }
 .md-chart.pick .md-st:not(.here) { cursor: pointer; background: rgba(255, 255, 255, .12); animation: mdPulse 1.4s ease-in-out infinite; } @keyframes mdPulse { 50% { background: rgba(255, 255, 255, .26); } }
@@ -659,8 +667,8 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 @media (max-width: 400px) { .md-chart { gap: 0; } .md-rd { font-size: 9px; } .md-st.here em { padding: 0 3px; } }   /* びょういんまえ over 病院前 in a sixth of a phone (2026-11-22) */
 .md-st.here .md-nm { color: #fff; } .md-st.here em { font-style: normal; font-size: 11px; white-space: nowrap; padding: 0 5px; border-radius: 4px; background: #d0453c; }
 .md-key { display: flex; justify-content: space-between; margin: 2px 4px 6px; font-size: 11px; color: #cfe6ec; }
-.md-row { display: flex; gap: 8px; align-items: stretch; } .md-clock { display: grid; justify-items: center; align-content: center; gap: 2px; padding: 4px 6px; border-radius: 8px; background: #fbf7ec; color: #2b2b33; } .md-clock svg { width: 46px; height: 46px; } .md-clock b { font-size: 14px; }
-.md-board { flex: 1; display: grid; gap: 2px; padding: 4px 6px; border-radius: 6px; background: #141418; font-family: system-ui, sans-serif; }
+.md-row { display: flex; gap: 8px; align-items: stretch; } .md-clock { display: grid; justify-items: center; align-content: center; gap: 2px; padding: 4px 6px; border-radius: 8px; background: #fbf7ec; color: #2b2b33; } .md-clock svg { width: 40px; height: 40px; } .md-clock b { font-size: 14px; }
+.md-board { flex: 1; display: grid; gap: 0; padding: 3px 6px; border-radius: 6px; background: #141418; font-family: system-ui, sans-serif; }
 .md-board p { display: grid; grid-template-columns: 2.2em 3.2em 2.4em 1fr 1.2em; align-items: center; gap: 4px; margin: 0; font-size: 13px; color: #ffae3a; } .md-board p > span:first-child { font-size: 10px; } .md-board b { font-weight: 700; }
 .md-board i { font-style: normal; color: #5fd07a; } .md-board i.r { color: #ff6a4a; } .md-board em { font-style: normal; text-align: right; }
 .md-glass { position: relative; padding: 10px 10px 8px; border-radius: 12px; background: linear-gradient(160deg, rgba(207, 230, 236, .9), rgba(185, 212, 224, .75)); box-shadow: inset 0 0 0 3px #c9cdd4; }
@@ -685,7 +693,7 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 /* タクシー (2026-11-20): the passenger and the meter, the town's map with the taxi on it (its blinkers, the ring at a crossing), the
    four choices, the fare. One screen, no scrolling (2026-11-21, the user): the card as tall as what is seen (dvh: Safari's bars), the
    map shrinking to what is left, the four choices always at the foot, the fare's answers over the map once it has stopped */
-.wk-taxi .cls-card { background: #f4f1e6; color: #2b2b33; border-bottom: 10px solid #e6c23a; display: flex; flex-direction: column; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); padding: 12px 12px 10px; }
+.wk-taxi .cls-card { background: #f4f1e6; color: #2b2b33; border-bottom: 10px solid #e6c23a; display: flex; flex-direction: column; max-height: calc(100vh - 32px); max-height: calc(100dvh - max(16px, env(safe-area-inset-top, 0px)) - max(16px, env(safe-area-inset-bottom, 0px))); padding: 12px 12px 10px; }
 .wk-taxi .cls-card > * { flex: none; } .wk-taxi .cls-card > .tx-mapbox { flex: 0 1 auto; }
 .tx-head { align-items: center; gap: 8px; } .tx-head b { font-size: 18px; } .tx-head :is(b, .wk-n) { white-space: nowrap; } .tx-head .tx-meter { flex: none; margin-left: auto; }
 @media (max-width: 380px) { .tx-head { gap: 6px; } .tx-head b { font-size: 16px; } .tx-head .wk-n { font-size: 13px; } .tx-meter { padding-inline: 8px; } .tx-meter b { font-size: 18px; } }
@@ -2324,8 +2332,8 @@ svg.defs-only { position: absolute; width: 0; height: 0; overflow: hidden; }
 .sky .land [data-fx="radio"].playing .rbody { animation: radioBob .4s ease-in-out infinite alternate; } @keyframes radioBob { to { transform: translateY(-1px); } }
 @media (prefers-reduced-motion: reduce) { .sky .land [data-fx="radio"].playing :is(.rnote, .rbody), .sky .land [data-fx="kcat"].purr .chead, .sky .land [data-fx="kbikes"].ring g g { animation: none; } }
 /* a card over the classroom: the blackboard, かるた, the song, a picture book */
-.cls { position: fixed; inset: 0; z-index: 77; display: grid; place-items: center; padding: 16px; background: rgba(30, 24, 16, .5); animation: talkIn .25s ease-out; }
-.cls-card { position: relative; width: min(560px, 100%); max-height: calc(100vh - 32px); overflow: auto; padding: 18px 16px 16px; border-radius: 18px; background: var(--bg-elev); color: var(--fg); box-shadow: 0 12px 40px rgba(0, 0, 0, .35); }
+.cls { position: fixed; inset: 0; z-index: 77; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px)); background: rgba(30, 24, 16, .5); animation: talkIn .25s ease-out; }
+.cls-card { position: relative; width: min(560px, 100%); max-height: calc(100vh - 32px); max-height: calc(100dvh - max(16px, env(safe-area-inset-top, 0px)) - max(16px, env(safe-area-inset-bottom, 0px))); overflow: auto;   /* clear of the notch and the home bar (2026-11-22) */ padding: 18px 16px 16px; border-radius: 18px; background: var(--bg-elev); color: var(--fg); box-shadow: 0 12px 40px rgba(0, 0, 0, .35); }
 .cls-x { position: absolute; top: 8px; right: 8px; width: 36px; height: 36px; border: 0; border-radius: 50%; font-size: 16px; color: var(--fg-2); background: var(--bg-sunken); cursor: pointer; z-index: 2; }
 .kr-face { display: block; width: 46px; height: 46px; border-radius: 50%; overflow: hidden; background: var(--bg-sunken); } .kr-face svg { width: 100%; height: 100%; }
 .kr-say { position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, 4px); padding: 3px 9px; border-radius: 10px; font-style: normal; font-size: 13px; white-space: nowrap; color: #2b2b33; background: #fffdf6; box-shadow: 0 2px 6px rgba(0, 0, 0, .2); opacity: 0; pointer-events: none; }

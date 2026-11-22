@@ -227,7 +227,10 @@ const WORK = (() => {
       const f = (now) => { const u = Math.min(1, (now - t0) / 600); put(x, from + (to - from) * (1 - Math.pow(1 - u, 3))); if (Math.floor(u * 5) > ticks) { ticks = Math.floor(u * 5); playSfx('coin', ticks); } if (u < 1) requestAnimationFrame(f); else if (k === nums.length - 1) setTimeout(thud, 250); };
       requestAnimationFrame(f);
     }, 300 + k * 650));
-    el.querySelector('.crr-ok').addEventListener('click', () => { el.remove(); if (typeof kotoButtons === 'function') kotoButtons(document); });
+    // put away: a gift for a shift done so well (原田's 白鷺まんじゅう for an S at the window, 2026-11-22), said by its giver, then had
+    const gk = YEN.giftFor(job, g), gx = gk && YEN.gifts()[gk];
+    el.querySelector('.crr-ok').addEventListener('click', () => { el.remove(); if (typeof kotoButtons === 'function') kotoButtons(document);
+      const y = document.querySelector('.yard'); if (gx && y) TALK.open(y, gx.who, gx.give, () => YEN.gift(gk)); });
     el.addEventListener('click', (e) => { const b = e.target.closest('[data-say]'); if (b) { primeTtsPlayer(); speakAs(b.dataset.who, b.dataset.say); } });   // a line heard again
   }
   // 町の手帳's 打工證 page (2026-11-22, the user: one card, the jobs under it by area): its step and 經驗 (a bar to the next), the

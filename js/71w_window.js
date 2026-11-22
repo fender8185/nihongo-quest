@@ -78,8 +78,10 @@ const MADO_RUN = (() => {
     const mine = ++runs, s = S(), now = TOWNEV.now(), tasks = MADO.make(Math.floor(now), Math.floor((now % 1) * 60)), first = !Object.values(state.work.res).some((r) => r.place === 'window' && r.yen !== undefined);
     const el = (q) => document.querySelector('.wk-window ' + q), live = () => mine === runs && Boolean(el('.md-glass')) && ctx.on();
     let k = ctx.done, miss = 0, P = null, rep = 0, missed = 0, lost = 0;
-    const word = ([ja, zh], cls = '') => { const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(s.who, ja); };
-    const me = ([ja, zh]) => { const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`; return speakAs('hero', ja); };
+    // 原田 and the hero share the line under the answers (whoever spoke last), the card one screen on a phone (2026-11-22, the user)
+    const talk = (who) => { const t = el('.md-talk'); if (t) t.dataset.who = who; };
+    const word = ([ja, zh], cls = '') => { talk('drv'); const p = el('.wk-say'); if (p) { p.innerHTML = `<b lang="ja">${ruby(ja)}</b><span>${esc(zh)}</span>`; p.className = 'wk-say' + (cls ? ' ' + cls : ''); } return speakAs(s.who, ja); };
+    const me = ([ja, zh]) => { talk('me'); const p = el('.wk-me'); if (p) p.innerHTML = `<b lang="ja">${ruby(ja)}</b>${first ? `<span>${esc(zh)}</span>` : ''}`; return speakAs('hero', ja); };
     const said = (p, min = 0, max = 5000) => JOBS.said(p, min, max);
     function bub(open) {
       const t = R.task, b = el('.wk-bub'); if (!b) return;
@@ -87,7 +89,7 @@ const MADO_RUN = (() => {
     }
     function opts(on) {
       const o = el('.md-opts'); if (!o) return; const t = R.task;
-      o.innerHTML = on ? t.opts.map(([ja, zh], i) => `<button type="button" class="btn md-opt" data-o="${i}" lang="ja"><span>${NUMERIC.has(t.kind) ? esc(kanaOf(ja)) : ruby(ja)}</span>${first ? `<small>${esc(zh)}</small>` : ''}</button>`).join('') : t.kind === 'buy' && R.phase === 'ask' ? '<p class="md-tip">先在上面的路線圖點客人要去的站，印出車票。</p>' : '';
+      o.innerHTML = on ? t.opts.map(([ja, zh], i) => `<button type="button" class="btn md-opt" data-o="${i}" lang="ja"><span>${NUMERIC.has(t.kind) ? esc(kanaOf(ja)) : ruby(ja)}</span></button>`).join('') : t.kind === 'buy' && R.phase === 'ask' ? '<p class="md-tip">先在上面的路線圖點客人要去的站，印出車票。</p>' : '';   // the Japanese only, the first shift too (2026-11-22, the user: 「16:10。」 under it, the digits read off)
     }
     function show() {
       const t = tasks[k]; R = { k, task: t, phase: 'hi', printed: t.kind !== 'buy' }; miss = 0; rep = 0;
@@ -129,10 +131,9 @@ const MADO_RUN = (() => {
     }
     CLASS.card('wk-window', '售票窗口', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
       <div class="wk-head"><b lang="ja">きっぷうりば</b><span class="wk-n"></span></div>
-      <div class="wk-who"><span class="kr-face">${TOWNEV.face(s.who)}</span><p class="wk-say"></p></div>
       <div class="md-wall"></div>
       <div class="md-glass"><i class="md-hole" aria-hidden="true"></i><div class="wk-cust"></div><div class="md-ticket"></div></div>
-      <div class="md-opts"></div><p class="wk-me"></p>`, (e) => {
+      <div class="md-opts"></div><div class="md-talk" data-who="drv"><span class="kr-face">${TOWNEV.face(s.who)}</span><p class="wk-say"></p><p class="wk-me"></p></div>`, (e) => {
       if (!R || R.phase !== 'ask' || !live()) return;
       if (e.target.closest('.md-ear')) { const q = P, r = rep = rep + 1; q.hold(); said(speakAs(R.task.who, R.task.q[0])).then(() => { if (rep === r) { rep = 0; if (P === q) q.go(); } }); return; }
       const st = e.target.closest('.md-st[data-st]'); if (st && !R.printed) { if (st.dataset.st === R.task.to) print(R.task.to); else wrong(st); return; }

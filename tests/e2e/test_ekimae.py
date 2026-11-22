@@ -488,3 +488,22 @@ def test_station_food_sold_on_the_platform(b):
     assert r['pics'] and r['ways'] == ['chop', 'chop', 'bite', 'tip', 'tip'] and r['where'] == ['platform', 'platform'] and r['bg'], r
     assert all(lk >= 4 and sy >= 7 for lk, sy in r['lines']), r['lines']
     assert 'みなと弁当' in r['book'] and '自動販売機' in r['book'], r['book'][:300]
+
+# 2026-11-22, the user: a food or two not bought but given — ハル's 玉子焼き for 「おなかが すきました…」 picked in her talk (once a
+# day), 原田's 白鷺まんじゅう once a shift at the window is graded S (its results put away); each had at once, stamped into 美食手帳
+# (もらったもの, its hint before it is had)
+def test_gifts_for_a_word_and_for_an_s(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ s(); reg(); window.speakAs = () => Promise.resolve(); location.hash = '#/platform'; route(); await wait(400); TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; route(); await wait(400);
+      const out = { before: YEN.book().includes('？？？') };
+      const talkTo = async (id) => { document.querySelector(`.npc[data-npc="${id}"]`).click(); for (let i = 0; i < 60 && !document.querySelector('.talk'); i++) await wait(100); await wait(300); };
+      const through = async () => { for (let i = 0; i < 40 && !document.querySelector('.eat-scene'); i++) { const t = document.querySelector('.talk'); if (t) t.click(); await wait(150); } return Boolean(document.querySelector('.eat-scene')); };
+      await talkTo('haru'); const p = document.querySelector('.talk [data-go="gift"]'); out.pick = p ? p.textContent.trim() : null; if (p) p.click(); await wait(200);
+      out.ate = await through(); out.what = (document.querySelector('.eat-scene .es-name') || {}).textContent; document.querySelectorAll('.eat-scene').forEach((x) => x.remove());
+      out.book = Boolean(state.purse.book.tamagoyaki); TALK.close(); document.querySelectorAll('.talk').forEach((x) => x.remove()); await talkTo('haru'); out.again = Boolean(document.querySelector('.talk [data-go="gift"]')); TALK.close(); document.querySelectorAll('.talk').forEach((x) => x.remove());
+      location.hash = '#/station'; route(); await wait(400); stub('window');
+      WORK.start(yard(), 'window'); await wait(300); for (let k = 0; k < 10; k++) __ctx.right(k, 0); __ctx.finish(); await wait(300);
+      document.querySelector('.wk-result .crr-ok').click(); await wait(300); out.harada = Boolean(document.querySelector('.talk')); out.ate2 = await through();
+      out.what2 = (document.querySelector('.eat-scene .es-name') || {}).textContent; document.querySelectorAll('.eat-scene').forEach((x) => x.remove()); out.book2 = Boolean(state.purse.book.shirasagimanju);
+      out.page = YEN.book(); return JSON.stringify(out); })()"""))
+    assert r['before'] and r['pick'] == 'おなかが すきました…' and r['ate'] and 'たまごやき' in r['what'] and r['book'] and not r['again'], r
+    assert r['harada'] and r['ate2'] and 'まんじゅう' in r['what2'] and r['book2'] and 'もらったもの' in r['page'] and '非賣品' in r['page'], r

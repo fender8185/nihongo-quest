@@ -10,10 +10,10 @@ const EKI = (() => {
   const kana = (id) => { const s = row(id); return s ? s[1].replace(MARK, '$2') : id; };   // as said: こうえんまえ
   const ruby = (id) => { const s = row(id); return s ? esc(s[1]).replace(MARK, '<ruby>$1<rt>$2</rt></ruby>') : esc(id); };
   // a station on a chart: its name, its reading over it as a station's sign has it (the whole word, not kanji by kanji: three
-  // 〜前 in a row in a sixth of a phone each — 2026-11-22), free to break between its words (だいがく／まえ: two, two lines kept
-  // for every reading on the chart); no reading (read: false, or a name in kana) an empty line, the names level
+  // 〜前 in a row in a sixth of a phone each — 2026-11-22), its words on lines of their own (だいがく／まえ: two lines kept for
+  // every reading on the chart; run on, three 〜前 read as one word); no reading (read: false, or a name in kana) an empty line, the names level
   const label = (id, read) => { const s = row(id), parts = s ? s[1].match(/\{[^}]*\}|[^{]+/g).map((x) => x.replace(MARK, '$2')) : [id], rd = read && kana(id) !== name(id);
-    return `<span class="md-rd${rd && parts.length > 1 ? ' two' : ''}">${rd ? parts.map(esc).join('\u200b') : ''}</span><span class="md-nm" lang="ja">${esc(name(id))}</span>`; };
+    return `<span class="md-rd${rd && parts.length > 1 ? ' two' : ''}"><span>${rd ? parts.map(esc).join('<br>') : ''}</span></span><span class="md-nm" lang="ja">${esc(name(id))}</span>`; };
   const line = () => E().LINE.map(([id, , km, rapid, read], i) => ({ id, name: name(id), kana: kana(id), km, rapid: Boolean(rapid), read: Boolean(read), i }));
   const km = (id) => (row(id) || [, , 0])[2];
   // the fare between two stations: by the distance (FARES' bands); a child's half, under 10 円 dropped

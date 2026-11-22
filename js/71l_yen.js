@@ -166,11 +166,14 @@ const YEN = (() => {
   // a long name broken only between its words (2026-11-20: オレンジジュ／ース): .fb-name keeps kana together, these may part
   const soft = (h) => h.replace(/(ジュース|ミルクティー|ソーダ)$/, '<wbr>$1');
   function book() {
-    const b = state.purse.book, all = Object.values(M()).flatMap((mu) => mu.items), had = all.filter((it) => b[it[0]]).length;
+    const b = state.purse.book, gs = Object.values(G()), all = Object.values(M()).flatMap((mu) => mu.items).concat(gs.map((x) => x.item)), had = all.filter((it) => b[it[0]]).length;
+    // もらったもの: what was given, not bought (its hint before it is had)
+    const gave = gs.length ? `<section class="fb-menu fb-gifts"><h4 lang="ja">もらったもの</h4><div class="fb-items">${gs.map((x) => { const it = x.item, h = b[it[0]];
+      return `<div class="fb-item${h ? ' had' : ''}"><span class="fb-pic">${h ? pic(it) : ''}</span><span class="fb-name" lang="ja">${h ? soft(ruby(it[1])) : '？？？'}</span><small>${esc(h ? it[2] : x.how)}</small><small>非賣品</small>${h ? `<i class="fb-stamp" aria-label="${esc(h)}">済</i><small class="fb-day">${esc(String(h).slice(5).replace('-', '/'))}</small>` : ''}</div>`; }).join('')}</div></section>` : '';
     return `<div class="food-book"><p class="fb-count">吃過、用過 ${had} / ${all.length} 樣・一共花了 ${yenStr(yenSpent())} 円</p>
       ${pages().map(([name, items]) => `<section class="fb-menu"><h4 lang="ja">${ruby(name)}</h4><div class="fb-items">${items.map((it) => `<div class="fb-item${b[it[0]] ? ' had' : ''}">
-        <span class="fb-pic">${b[it[0]] ? pic(it) : ''}</span><span class="fb-name" lang="ja">${soft(ruby(it[1]))}</span><small>${esc(it[2])}</small><small>${yenStr(it[3])} 円</small>${b[it[0]] ? `<i class="fb-stamp" aria-label="${esc(b[it[0]])}">済</i><small class="fb-day">${esc(String(b[it[0]]).slice(5).replace('-', '/'))}</small>` : ''}</div>`).join('')}</div></section>`).join('')}
-      <p class="muted small">在鎮上點販賣機、麵包、菜單、黑板、牛奶機、澡堂、籤筒就能買。第一次買的會蓋上章。</p></div>`;
+        <span class="fb-pic">${b[it[0]] ? pic(it) : ''}</span><span class="fb-name" lang="ja">${soft(ruby(it[1]))}</span><small>${esc(it[2])}</small><small>${yenStr(it[3])} 円</small>${b[it[0]] ? `<i class="fb-stamp" aria-label="${esc(b[it[0]])}">済</i><small class="fb-day">${esc(String(b[it[0]]).slice(5).replace('-', '/'))}</small>` : ''}</div>`).join('')}</div></section>`).join('')}${gave}
+      <p class="muted small">在鎮上點販賣機、麵包、菜單、黑板、牛奶機、澡堂、籤筒就能買。第一次買的會蓋上章。有些東西買不到，要別人送。</p></div>`;
   }
   const shown = () => yenEarned() > 0 || Object.keys(state.purse.book).length > 0;   // its tab: once there has been 円
   // the test site's tools (町の手帳): 円 given, every menu open (or not), the day's foods and drinks back to none
@@ -196,5 +199,17 @@ const YEN = (() => {
     const p = state.purse, first = !p.book[id]; if (first) { p.book[id] = day(); saveState(); }
     have(yard, t, mu); setTimeout(() => eat(it, first, m), 1300);
   }
-  return { open, buy, toggleZh, lines, book, shown, reading, priceMark, known, left, tool, allOpen, sells, pic, where, treat };
+  // もらいもの (2026-11-22, the user): a gift had as a treat is — its stamp the first time, no 円, nothing counted for the day. ask: the
+  // reply that brings it, in its giver's talk where they are while it has not been given today; job: given as its shift's results
+  // are put away, the grade reached
+  const G = () => (typeof TOWN !== 'undefined' && TOWN.GIFTS) || {};
+  const given = () => (state.purse.gifts = state.purse.gifts || {});
+  const giftAsk = (id, place) => Object.keys(G()).find((g) => G()[g].ask && G()[g].who === id && G()[g].place === place && given()[g] !== day()) || null;
+  const giftFor = (job, grade) => Object.keys(G()).find((g) => G()[g].job === job && G()[g].grade === grade) || null;
+  function gift(g) {
+    const x = G()[g]; if (!x) return; const it = x.item, p = state.purse, first = !p.book[it[0]];
+    given()[g] = day(); if (first) p.book[it[0]] = day(); saveState();
+    setTimeout(() => eat(it, first, x.bg), 300);
+  }
+  return { open, buy, toggleZh, lines, book, shown, reading, priceMark, known, left, tool, allOpen, sells, pic, where, treat, gifts: G, giftAsk, giftFor, gift };
 })();

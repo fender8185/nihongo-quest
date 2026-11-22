@@ -1,4 +1,4 @@
-/* Nihongo Quest town events. EVENTS_VERSION 93 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
+/* Nihongo Quest town events. EVENTS_VERSION 94 — bump the version in index.html's <script src> and sw.js PRECACHE when this file changes.
    The people of the town (CAST: look, who they are, where they are by the hour), what they say when there is nothing on (CHAT, by
    the unit from which it can be said), and the events that open as the course goes on (EVENTS, in order, one a line).
    Japanese: every kanji in {漢字|かな}; a word above the event's level or not in the course glossed {漢字|かな|中文}.
@@ -3071,5 +3071,27 @@ const TOWN = {
           ['のむ おやつ みたいです。', '像是用喝的點心。'], ['おなかの なかが ぽかぽか します。', '肚子裡暖呼呼的。'], ['ふゆの ホームに ぴったりです。', '很適合冬天的月台。'],
           ['あまくて… ちょっと のどが かわきました。', '好甜……有點口渴了。']] }]],
       have: 'あたたかい…' }
+  },
+  // もらいもの (2026-11-22, the user: a food or two not bought — given after a word, or for a job done well): who gives it and where;
+  // ask: the hero's reply in their talk that brings it (once a day), or job and grade: the shift it comes after (its results put away);
+  // give: what they say giving it; item: as a menu's ([id, name, Chinese, 0, { k, pic, look, say }]); bg: the menu whose place it is
+  // had at; how: 美食手帳's hint before it is had
+  GIFTS: {
+    tamago: { who: 'haru', place: 'platform', ask: ['おなかが すきました…', '肚子餓了……'], bg: 'ekiben', how: '在月台跟ハル說「おなかが すきました」',
+      give: [['あら、それは たいへん！', '哎呀，那可不得了！'], ['これ、ちょっと こげちゃった たまごやき。たべな！', '這個是有點煎焦的玉子燒。吃吧！']],
+      item: ['tamagoyaki', 'ハルさんの たまごやき', 'ハル的玉子燒', 0, { k: 'f', pic: 'たまごやき',
+        look: [['きいろくて ふわふわ… でも、はしっこが ちょっと くろい。', '黃黃的軟綿綿……不過邊邊有點黑。'], ['ハルさんの てづくりです！', '是ハル小姐親手做的！'],
+          ['あまい においが します。', '有甜甜的香味。'], ['「こげた ところが おいしいんだよ」と ハルさんが いいました。', 'ハル小姐說「焦掉的地方才好吃呢」。']],
+        say: [['あまい！ おさとうが たっぷり！', '好甜！加了好多糖！'], ['ふわふわで、くちの なかで とけます。', '軟綿綿的，在嘴裡化開。'], ['こげた ところ… ほんとうに こうばしくて おいしい！', '焦的地方……真的好香好好吃！'],
+          ['おべんとうの たまごやきより、あたたかいです。', '比便當裡的玉子燒還溫熱。'], ['なんだか、おばあちゃんの あじが します。', '總覺得有外婆的味道。'], ['ハルさん、ありがとう ございます！', 'ハル小姐，謝謝您！'],
+          ['げんきが でました！ また がんばります！', '恢復精神了！我會再加油！']] }] },
+    manju: { who: 'harada', place: 'station', job: 'window', grade: 'S', bg: 'ekiben', how: '售票窗口打工拿到 S 級',
+      give: [['きょうは かんぺきでしたね。', '今天完美無缺呢。'], ['{駅長|えきちょう|站長}の おみやげです。ひとつ どうぞ。', '這是站長的伴手禮。請拿一個。']],
+      item: ['shirasagimanju', '{白鷺|しらさぎ}まんじゅう', '白鷺饅頭', 0, { k: 'f', pic: '白鷺まんじゅう',
+        look: [['まるくて、ちゃいろくて、つやつや！', '圓圓的、咖啡色、亮亮的！'], ['うえに おしろの もようが あります。', '上面印著城堡的圖案。'],
+          ['{白鷺|しらさぎ}の めいぶつ だそうです。', '聽說是白鷺的名產。'], ['ふくろを あけると、あまい におい…', '一打開袋子，甜甜的香味……']],
+        say: [['かわが しっとり して います。', '外皮濕潤柔軟。'], ['なかは こしあん！ なめらかです。', '裡面是豆沙！好細滑。'], ['あまさが ちょうど いいです。', '甜度剛剛好。'],
+          ['あったかい おちゃが のみたく なりました。', '好想喝熱茶。'], ['おしろの もようを たべるのが もったいない…', '把城堡圖案吃掉好可惜……'], ['いつか、{白鷺|しらさぎ}の おしろに いって みたいです。', '總有一天想去白鷺城看看。'],
+          ['{原田|はらだ}さん、ごちそうさまでした！', '原田先生，謝謝招待！']] }] }
   }
 };

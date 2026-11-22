@@ -264,7 +264,8 @@ const TOWNEV = (() => {
       const job = !e && WORK.offer(id, yard.dataset.place);   // one who takes on a beginner for a shift (中華街の打工, 2026-11-14): the rules first, はい to begin (2026-11-19)
       // their greeting, and what the hero says back picked as a reply is (2026-11-20, the user: no blue button, the talk goes on
       // from the line picked): ordering, working (yes to their はたらく？ — or asked for, after a shop's greeting), or just a word
-      const pick = [sells && [...sells.ask, sells.go, 'order'], job && [...WORK.ask(id, !sells), () => WORK.intro(yard, job), 'work'], [...DROP_BY, chat, 'chat']].filter(Boolean);
+      const gift = !e && YEN.giftAsk(id, yard.dataset.place), give = gift && YEN.gifts()[gift];   // a word that brings a gift (ハル: おなかが すきました, 2026-11-22)
+      const pick = [sells && [...sells.ask, sells.go, 'order'], job && [...WORK.ask(id, !sells), () => WORK.intro(yard, job), 'work'], give && [...give.ask, () => TALK.open(yard, id, give.give, () => YEN.gift(gift)), 'gift'], [...DROP_BY, chat, 'chat']].filter(Boolean);
       if (e) TALK.open(yard, id, linesOf(e), ended, null, { ev: true });
       else if (pick.length > 1) { const hi = sells ? sells.hello : WORK.hello(id); TALK.open(yard, id, [[id, hi[0], hi[1], { pick }]], null, null, { ev: true }); }
       else chat();
