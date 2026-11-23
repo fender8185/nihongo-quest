@@ -625,23 +625,50 @@ def test_trip_six_walks_the_market_and_lunches_at_the_sushi_bar(b):
     assert r['res']['asks'] == r['asks'] and r['res']['first'] == r['asks'] and r['res']['grade'] == 5, r   # S
 
 def test_an_outdoor_meal_reached_by_following_seats_them_as_one_drawn_there(b):
-    # 2026-11-23 (Task 1's open case): the group walked over next door (稲荷神社 → 奥社) to a meal out of doors — they sit down on the
-    # place's seats on the way in (the 茶屋's 縁台), the rest standing round the crowd's spot, as a group drawn there already does; five
-    # seconds at it after the talk
+    # 2026-11-23 (Task 1's open case; the review: in real motion): the group walked over next door (稲荷神社 → 奥社) to a meal out of
+    # doors — they come in behind the hero by the tunnel they came through (not drawn at their places: that is reduced motion), walk
+    # over and sit down on the place's seats (the 茶屋's 縁台), the rest standing round the crowd's spot, as a group drawn there
+    # already does; five seconds at it after the talk
     r = json.loads(ev(b, "(async () => { " + FRESH + TRY + """ T1.stops = [stop('hi', 'harbor', [180, 56], [40, 40]), stop('sh', 'shrine', [300, 62], [180, 54]),
         stop('ok', 'oku', [330, 80], [460, 96], { eat: true, ask: 1 }), stop('bye', 'harbor', [180, 56], [40, 40], { go: 'bus', bye: true })];
-      at('ok', 'shrine'); await go('shrine'); await until(() => document.querySelector('#view .cr-takahashi .ev-mark')); document.querySelector('#view .cr-takahashi .ev-mark').closest('.tourist').click();
-      await until(() => y() && y().dataset.place === 'oku' && document.querySelector('.talk-card'), 15000); const during = [...document.querySelectorAll('#view .tourist.bench')].map((e) => Math.round(XY(e)[0]));
+      at('ok', 'shrine'); await go('shrine'); await until(() => document.querySelector('#view .cr-takahashi .ev-mark'));
+      window.matchMedia = mm;   // real motion from here: the walk over, and in from the tunnel's mouth
+      document.querySelector('#view .cr-takahashi .ev-mark').closest('.tourist').click();
+      await until(() => y() && y().dataset.place === 'oku' && tourists().length === 9, 10000); const first = tourists().map((e) => Math.round(XY(e)[0]));
+      await until(() => document.querySelector('.talk-card'), 30000);
       await drive(() => state.cruise.on.stop === 'bye', 30000); await wait(150);
+      const bar = document.querySelector('.cruise-bar').textContent, mark = !!document.querySelector('#view .cr-takahashi .ev-mark');
+      await until(() => !document.querySelector('#view .tourist.walk, #view .tourist.run'), 20000);
       const seats = PLACE_USE.oku.filter((t) => t.kind === 'sit').flatMap((t) => t.seats), sat = [...document.querySelectorAll('#view .tourist.bench')].map((e) => Math.round(XY(e)[0]));
       const ring = tourists().filter((e) => !e.matches('.bench, .cr-takahashi')).map(XY);
-      return JSON.stringify({ place: y().dataset.place, on: state.cruise.on.place, during, seats, sat, ring, bar: document.querySelector('.cruise-bar').textContent, mark: !!document.querySelector('#view .cr-takahashi .ev-mark') }); })()"""))
+      return JSON.stringify({ place: y().dataset.place, on: state.cruise.on.place, first, seats, sat, ring, bar, mark, tunnel: OKU_TUNNEL }); })()"""))
     assert r['place'] == 'oku' and r['on'] == 'oku', r
-    assert len(r['seats']) >= 2 and sorted(r['during']) == sorted(r['seats']) and sorted(r['sat']) == sorted(r['seats']), r   # sat down as they came in, before the talk
+    assert len(r['first']) == 9 and all(abs(x - r['tunnel']) <= 40 for x in r['first']), r   # 高橋 and the eight in by the tunnel's mouth
+    assert len(r['seats']) >= 2 and sorted(r['sat']) == sorted(r['seats']), r   # walked over and sat down, one to a seat
     cx, cy = 442, 96   # the crowd's spot (112 from the hero at most)
     xs, ys = [p[0] for p in r['ring']], [p[1] for p in r['ring']]
     assert len(r['ring']) == 8 - len(r['sat']) and min(xs) < cx < max(xs) and min(ys) < cy < max(ys), r   # the rest stand round it
     assert '用餐' in r['bar'] and not r['mark'], r   # at it five seconds
+
+def test_walking_in_to_a_meal_out_of_doors_one_sits_down_on_reaching_his_seat(b):
+    # 2026-11-23 (the review): the walk in's own seating, in real motion — out of みなと寿司 onto the harbour for a meal there, the one
+    # whose seat is the bollard by the shop's door gets there first and sits down at once, before the stop begins (the moment its
+    # townsperson is brought out: bringOut), while the others still walk over
+    # (the harbour first seen with this stop: come back to a place, they stand as at the last stop done there — rest)
+    r = json.loads(ev(b, "(async () => { " + FRESH + TRY + """ T1.stops = [stop('su', 'sushi', [6.4, 9.4], [8.4, 9.6], { room: true }),
+        stop('sea', 'harbor', [120, 70], [200, 80], { eat: true, cast: { tome: [60, 116] } }), stop('bye', 'harbor', [180, 56], [40, 40], { bye: true })];
+      at('sea', 'sushi'); await go('sushi'); await until(() => document.querySelector('#view .cr-takahashi .ev-mark'));
+      let begun = null; const mo = new MutationObserver(() => { if (!begun && y() && y().dataset.place === 'harbor' && y().querySelector('.cr-extra.npc-tome')) begun = [...document.querySelectorAll('#view .tourist.bench')].map((e) => [e.dataset.who, Math.round(XY(e)[0])]); });
+      mo.observe(document.getElementById('view'), { childList: true, subtree: true });
+      window.matchMedia = mm;   // real motion from here
+      document.querySelector('#view .cr-takahashi .ev-mark').closest('.tourist').click();
+      await until(() => y() && y().dataset.place === 'harbor' && tourists().length === 9, 10000); const first = tourists().map((e) => Math.round(XY(e)[0]));
+      await until(() => begun, 15000); mo.disconnect();
+      const seats = PLACE_USE.harbor.filter((t) => t.kind === 'sit').flatMap((t) => t.seats);
+      return JSON.stringify({ first, begun, seats, door: (SUSHI.DOOR[0] + SUSHI.DOOR[1]) / 2 - 600 }); })()"""))
+    assert len(r['first']) == 9 and all(abs(x - r['door']) <= 40 for x in r['first']), r   # in behind the hero by the shop's door
+    near = min(r['seats'], key=lambda x: abs(x - r['door']))   # the bollard by the door (the other is far along the quay)
+    assert r['begun'] is not None and [x for _, x in r['begun']] == [near], r   # sat on it as he got there, before the stop began; no one else yet
 
 def test_an_outdoor_meal_with_nowhere_to_sit_stands_them_all_round(b):
     # 2026-11-23 (Task 1's open case): a meal out of doors where the place has no seats (the beach: no bench) — all of them stand
@@ -703,22 +730,25 @@ def test_townsfolk_on_a_trip_speak_in_their_own_voices_and_are_made_for_the_gene
 
 def test_market_shopper_keeps_clear_of_kenji_by_his_net(b):
     # 2026-11-23 (the review of the 朝市): 10:00–14:00 健二 stands by his net at the harbour's left; the 朝市 standing then (a t6 stop
-    # at the harbour at noon) puts no shopper on top of him
+    # at the harbour at noon) puts its fish stall's end shopper between the fish and the dried fish instead (ICHIBA.SPARE), clear of
+    # him and his stroll; before he comes, all three where they stand (ICHIBA.SHOPPERS)
     r = json.loads(ev(b, "(async () => { " + FRESH + TRY + """ state.town.seen.kenji = 1; saveState();
       T1.stops = [stop('hi', 'harbor', [180, 56], [40, 40], { market: true }), stop('bye', 'harbor', [180, 56], [40, 40], { go: 'bus', bye: true })]; at('hi', 'harbor');
       const look = async (h) => { TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; location.hash = '#/harbor'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
-        const k = y().querySelector('.npc-kenji'), kx = k && npcAt(k), sh = [...y().querySelectorAll('.ic-shopper')].map((e) => XY(e)[0]);
-        return { kenji: Boolean(k), shoppers: sh.length, near: k ? Math.round(Math.min(...sh.map((x) => Math.abs(x - kx)))) : null }; };
-      return JSON.stringify({ noon: await look(12), eight: await look(8) }); })()"""))
-    assert r['noon']['kenji'] and r['noon']['shoppers'] >= 2 and r['noon']['near'] >= 36, r   # 健二 at his net, the shoppers away from him
-    assert not r['eight']['kenji'] and r['eight']['shoppers'] == 3, r   # before he comes: all three where they were
+        return { kenji: !!y().querySelector('.npc-kenji'), xs: [...y().querySelectorAll('.ic-shopper')].map((e) => XY(e)[0]) }; };
+      const net = TOWN.SPOTS.harbor.net;
+      return JSON.stringify({ noon: await look(12), eight: await look(8), at: ICHIBA.SHOPPERS.map((q) => q[0]), spare: ICHIBA.SPARE[0], net: [net.X, (net.roam || [70])[0]] }); })()"""))
+    [kx, roam], at = r['net'], r['at']
+    assert r['noon']['kenji'] and r['noon']['xs'] == [r['spare']] + at[1:], r   # 健二 at his net; the first shopper moved, three still
+    assert all(abs(x - kx) >= 40 + roam for x in r['noon']['xs']), r   # none within his reach: 40 px and his stroll
+    assert not r['eight']['kenji'] and r['eight']['xs'] == at, r   # before he comes: all three where they stand
 
 def test_each_trip_keeps_to_its_units_grammar(b):
-    # 2026-11-23 (the review): a trip says nothing a later unit teaches — no 見える／聞こえる (m7) from t3 on, and t5 (m5) none of m6's
+    # 2026-11-23 (the review): a trip says nothing a later unit teaches — no 見える／聞こえる, 〜なくなる, 〜ようになる (m7) from t3 on, and t5 (m5) none of m6's
     # 前に・後で、から・ので、とき・ながら、〜たり
     r = json.loads(ev(b, """(() => { const text = (t) => t.stops.flatMap((s) => s.lines.flatMap((l) => (Array.isArray(l) ? [l[1]] : l.opts.map((o) => o[0]))).concat((s.after || []).map((a) => a[1]))).map((s) => s.replace(/\\{([^|}]+)\\|[^}]+\\}/g, '$1'));
       const trips = TOWN.CRUISE.TRIPS, t5 = trips.find((t) => t.id === 't5');
-      const m7 = trips.filter((t) => ['t3', 't4', 't5', 't6'].includes(t.id)).flatMap((t) => text(t).filter((s) => /見え|聞こえ/.test(s)).map((s) => [t.id, s]));
+      const m7 = trips.filter((t) => ['t3', 't4', 't5', 't6'].includes(t.id)).flatMap((t) => text(t).filter((s) => /見え|聞こえ|なく ?な[りるっ]|よう ?に ?な[りるっ]/.test(s)).map((s) => [t.id, s]));
       const m6 = t5 ? text(t5).filter((s) => /前に|後で|ので|ながら|とき|[たっだ]り[、 ]|から[、。！？ね]|からです/.test(s)) : ['no t5'];
       return JSON.stringify({ m7, m6 }); })()"""))
     assert r['m7'] == [] and r['m6'] == [], r

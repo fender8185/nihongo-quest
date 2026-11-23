@@ -165,14 +165,21 @@ test('a word at a meal about what is eaten there is said there only: an EAT line
   assert.deepEqual(cr([['m1', 'やきとり！', '烤雞肉串！', 'izakaya']]), ['cruise']);   // not { at }
   assert.deepEqual(cr([['m1', 'やきとり！', '烤雞肉串！', { at: 'izakaya', h: 'am' }]]), ['cruise']);   // nothing but where
 });
-test('a trip line may be said by a stall keeper (YATAI) as by someone of the town; a name that is neither is not', () => {
-  const said = (who, YATAI) => kinds(check(town([ev()], { PLACES: ['town', 'beach', 'harbor'], YATAI, CRUISE: { PEOPLE: {}, OFF: {}, SAY: {}, TRIPS: [{ id: 't1', u: 'm1', title: 't',
-    stops: [{ id: 's0', at: 'harbor', title: 't', hero: [0, 50], crowd: [40, 40], lines: [[who, 'はい。', '是。']], after: [[who, 'ええ。']], bye: true }] }] } }), DATA).filter((p) => !/reply choices/.test(p)));
-  const keeper = { sakanaya: { name: '魚屋のおじさん', look: { face: 'round' } } };
-  assert.deepEqual(said('sakanaya', keeper), []);   // the 朝市's fish man, at his stall
-  assert.deepEqual(said('miku', keeper), []);   // someone of the town
-  assert.deepEqual(said('sakanaya'), ['ref']);   // no such keeper
-  assert.deepEqual(said('nobody', keeper), ['ref']);
+test('a stall keeper (YATAI) speaks on a trip only at a stop where their stall stands — the 朝市\'s at a stop flagged market', () => {
+  const said = (who, YATAI, stop = {}) => kinds(check(town([ev()], { PLACES: ['town', 'beach', 'harbor', 'oku'], YATAI, CRUISE: { PEOPLE: {}, OFF: {}, SAY: {}, TRIPS: [{ id: 't1', u: 'm1', title: 't',
+    stops: [{ id: 's0', at: 'harbor', title: 't', hero: [0, 50], crowd: [40, 40], lines: [] }, Object.assign({ id: 's1', at: 'harbor', title: 't', hero: [0, 50], crowd: [40, 40], lines: [[who, 'はい。', '是。']], after: [[who, 'ええ。']] }, stop),
+      { id: 's2', at: 'harbor', title: 't', hero: [0, 50], crowd: [40, 40], lines: [], bye: true }] }] } }), DATA).filter((p) => !/reply choices/.test(p)));   // the harbour, the stop, the harbour
+  const look = { face: 'round' }, market = { sakanaya: { at: 'harbor', market: true, name: '魚屋のおじさん', look } }, chaya = { chaya: { at: 'oku', name: '茶屋のおかみ', look } };
+  assert.deepEqual(said('sakanaya', market, { market: true }), []);   // the 朝市's fish man at a stop it stands for
+  assert.deepEqual(said('sakanaya', market), ['cruise']);   // the harbour, but no market there then
+  assert.deepEqual(said('chaya', chaya, { at: 'oku' }), []);   // 奥社's おかみ at 奥社
+  assert.deepEqual(said('chaya', chaya), ['cruise']);   // not at the harbour
+  assert.deepEqual(said('sakanaya', { sakanaya: { name: '魚屋のおじさん', look } }, { market: true }), ['cruise']);   // a keeper who says no place
+  assert.deepEqual(said('miku', market), []);   // someone of the town (brought out)
+  assert.deepEqual(said('sakanaya', undefined, { market: true }), ['ref']);   // no such keeper
+  assert.deepEqual(said('nobody', market, { market: true }), ['ref']);
+  assert.deepEqual(said('miku', { x: { at: 'moon', name: 'X', look } }), ['ref']);   // a stall at no place there is
+  assert.deepEqual(said('miku', { x: { at: 'oku', market: true, name: 'X', look } }), ['menu']);   // the 朝市 is at the harbour
 });
 test('away after an event that exists; helps at a shop someone keeps', () => {
   const cast = (o) => ({ CAST: { miku: Object.assign({ name: '美玖', hours: [[7, 20, 'town', 'bakeryIn']] }, o), kenta: { name: '健太', shop: 'bakery', hours: [[5, 21, 'town', 'bakery']] } } });

@@ -101,9 +101,11 @@ function check(T, D, opts = {}) {
   });
   if (used.size) { const lo = Math.min(...used), hi = Math.max(...used); for (let i = lo; i <= hi; i++) if (!used.has(i)) bad('gap', units[i], 'no events'); }
   // what 円 buys (MENU): ids once, a price, the names and lines readable from the first unit, a keeper who is in the town and says it
-  Object.entries(T.YATAI || {}).forEach(([id, v]) => {   // the 緣日's stall keepers: a name, a look, no one of the town's
+  Object.entries(T.YATAI || {}).forEach(([id, v]) => {   // the stall keepers: a name, a look, no one of the town's; where their stall stands
     if (cast[id]) bad('ref', `yatai ${id}`, 'a stall keeper with the id of someone in the town');
     if (!v || !v.name || !v.look || typeof v.look !== 'object') bad('menu', `yatai ${id}`, 'a stall keeper has a name and a look');
+    if (v && v.at !== undefined && !places.includes(v.at)) bad('ref', `yatai ${id}`, `no place ${v.at} for the stall (at)`);
+    if (v && v.market !== undefined && (v.market !== true || v.at !== 'harbor')) bad('menu', `yatai ${id}`, 'market: true is a stall of the 朝市, at the harbour');
   });
   const menuIds = new Set();
   Object.entries(T.MENU || {}).forEach(([m, mu]) => {
@@ -160,9 +162,14 @@ function check(T, D, opts = {}) {
       if (t.needs && !ids.has(t.needs)) bad('ref', where, `needs no event ${t.needs}`);
       if (t.join && (!people[t.join] || people[t.join].from !== t.id)) bad('cruise', where, `${t.join} does not join on it`);
       const aboard = (id) => Boolean(people[id]) && tIdx(people[id].from) >= 0 && tIdx(people[id].from) <= k;
-      // who may speak on it: the hero, all of them, someone of the town (brought out: cast), a stall keeper at their stall (YATAI: the
-      // 朝市's, 奥社's 茶屋), a passenger already aboard
-      const sayer = (id, at) => { if (id === 'hero' || id === 'all' || cast[id] || (T.YATAI || {})[id]) return; if (!people[id]) bad('ref', at, `no one called ${id}`); else if (!aboard(id)) bad('cruise', at, `${id} joins on a later trip`); };
+      // who may speak at a stop: the hero, all of them, someone of the town (brought out: cast), a stall keeper at their stall — a stop
+      // of the place it stands at (YATAI at), the 朝市's a stop it stands for (market) — a passenger already aboard
+      const sayer = (s) => (id, at) => {
+        if (id === 'hero' || id === 'all' || cast[id]) return;
+        const k = (T.YATAI || {})[id];
+        if (k) { if (k.at !== s.at) bad('cruise', at, `${id} keeps a stall at ${k.at || 'no place (at)'}, not ${s.at}`); else if (k.market && !s.market) bad('cruise', at, `${id}'s stall is the 朝市's: a stop flagged market`); return; }
+        if (!people[id]) bad('ref', at, `no one called ${id}`); else if (!aboard(id)) bad('cruise', at, `${id} joins on a later trip`);
+      };
       const stops = t.stops || [], sids = new Set(); let asks = 0;
       stops.forEach((s) => {
         const sw = `${where}.${s.id}`;
@@ -177,7 +184,7 @@ function check(T, D, opts = {}) {
         if (s.bus !== undefined && (s.at !== 'street' || !Number.isFinite(s.bus))) bad('cruise', sw, 'a bus pulls in on the street only, at an X');
         if (s.seat && !s.room) bad('cruise', sw, 'they sit down in a room only');
         if (s.eat !== undefined && (s.eat !== true || s.room)) bad('cruise', sw, 'eat: true is a meal out of doors (in a room: seat)');
-        talkLines(s.lines, u, sw, sayer);
+        talkLines(s.lines, u, sw, sayer(s));
         (s.lines || []).forEach((l, i) => {
           if (!Array.isArray(l) || l[3] === undefined) return;
           const o = l[3], at = `${sw}#${i}`;
@@ -187,7 +194,7 @@ function check(T, D, opts = {}) {
           if (o.cry !== undefined && !CRIES.has(o.cry)) bad('ref', at, `no cry ${o.cry}`);
         });
         asks += (s.lines || []).filter((l) => !Array.isArray(l)).length;
-        (s.after || []).forEach(([id, ja], i) => { sayer(id, `${sw}.after${i}`); text(ja, u, `${sw}.after${i}`); });
+        (s.after || []).forEach(([id, ja], i) => { sayer(s)(id, `${sw}.after${i}`); text(ja, u, `${sw}.after${i}`); });
       });
       if (asks < 20) bad('cruise', where, `${asks} reply choices: at least 20`);
       if (stops.length && (stops[0].at !== 'harbor' || stops[stops.length - 1].at !== 'harbor' || !stops[stops.length - 1].bye)) bad('cruise', where, 'a trip begins at the harbour and ends there, seeing them off (bye)');

@@ -202,12 +202,16 @@ const ICHIBA = (() => {
   const perched = (x, y) => `<g class="ic-gull" transform="translate(${x} ${y})"><path d="M-6 0 Q-3 -6 3 -5 Q7 -3 6 1 Q3 3 -2 2.4 Z" ${hc('#f6f6f2', '#7a7ea8')}/><path d="M-4 -1 Q0 -4 4 -2 Q1 1 -4 -1 Z" ${hc('#b4bac4', '#5a5e88')}/><circle cx="4.6" cy="-4.6" r="2.6" ${hc('#f6f6f2', '#7a7ea8')}/><circle cx="5.4" cy="-5.2" r=".6" fill="#2b2420"/><path d="M7 -4.6 l3 .6 l-3 .8 Z" ${hc('#e6c23a', '#5a4a3a')}/><path d="M-1 2.4 v2 M2 2.4 v2" stroke="#e6a23c" stroke-width=".8"/></g>`;
   const SHOPPERS = [[-232, 106, 'back turn'], [-66, 110, 'back turn'], [26, 104, 'back turn flip']];   // [X, Y, which way]: at the fish's end, between the dried fish and the grill, past the grill — looking in, not over the goods
   // one of the town standing where a shopper would (健二 by his net, 10:00–14:00): that shopper between the fish and the dried fish
-  // instead (2026-11-23: the two overlapped at a t6 stop at noon)
+  // instead (2026-11-23: the two overlapped at a t6 stop at noon) — the spare spot for one only, and only while it is clear too;
+  // else that shopper stays away. Clear: 40 px from where they stand and as far again as they stroll (castHtml's: none for one
+  // waiting, sat or kneeling, or roam 0; else their spot's roam, [70, 18] when it has none)
   const SPARE = [-152, 108, 'back turn'];
   function shoppers() {
     if (typeof PASSERS !== 'object') return '';
-    const town = TOWNEV.here('harbor').map((p) => [p.spot.X, (p.spot.roam || [0])[0] || 0]), clear = ([X]) => town.every(([x, r]) => Math.abs(x - X) >= 40 + r);
-    return SHOPPERS.map((q) => (clear(q) ? q : SPARE)).map(([X, Y, how]) => { const { look, wear } = PASSERS.look(), k = yScale(Y);
+    const town = TOWNEV.here('harbor').map(({ spot, host }) => [spot.X, host || spot.sit || spot.kneel || spot.roam === 0 ? 0 : (spot.roam || [70, 18])[0]]);
+    const clear = ([X]) => town.every(([x, r]) => Math.abs(x - X) >= 40 + r), at = []; let spare = clear(SPARE);
+    SHOPPERS.forEach((q) => { if (clear(q)) at.push(q); else if (spare) { at.push(SPARE); spare = false; } });
+    return at.map(([X, Y, how]) => { const { look, wear } = PASSERS.look(), k = yScale(Y);
       return `<div class="hero npc ic-shopper ${how}" aria-hidden="true" style="transform:translate(${X}px,${-Y}px) scale(${k.toFixed(3)});z-index:${300 - Y}">${HERO.svg({ look, wear })}</div>`; }).join('');
   }
   // the market drawn (harborHtml): its stalls each a layer of their own before the quay's back, the gulls, the shoppers; empty when
@@ -237,7 +241,7 @@ const ICHIBA = (() => {
     if (changed) y.dataset.sig = y.dataset.sig.replace(/^[^|]*/, sig());
   }
   saveHooks.push(() => sync());
-  return { STALLS, W, open, here, now, sig, html, sync, SHOPPERS };
+  return { STALLS, W, open, here, now, sig, html, sync, SHOPPERS, SPARE };
 })();
 
 // ---- the things to tap: in the shop (its stools and tables to sit at, the tags to order from — shut while 源さん is away, saying
