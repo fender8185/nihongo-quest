@@ -357,7 +357,7 @@ def test_ticket_machine_sells_by_fare(b):
       click('.kb-fare[data-f="310"]'); await wait(60); click('.kb-pay'); await wait(300); out.ticket = RIDE.ticket(); out.left = yenBalance(); CLASS.close();
       state.purse.gift = 0; state.purse.spent = {}; saveState(); RIDE.keep(null); RIDE.machine(yard(), 'minato'); await wait(100); click('.kb-fare[data-f="140"]'); await wait(60); click('.kb-pay'); await wait(300);
       out.none = RIDE.ticket(); out.said = document.querySelector('.kb-screen').textContent; CLASS.close(); return JSON.stringify(out); })()"""))
-    assert r['fares'] == [140, 170, 220, 260, 310], r
+    assert r['fares'] == [140, 170, 220, 260, 310, 350, 420], r   # みなと線's five, and やまなみ線's 森下 350 and 湯の花 420 past 白鷺 (2026-11-23, test_onsen.py)
     assert r['ticket']['from'] == 'minato' and r['ticket']['fare'] == 310 and r['left'] == 690, r
     assert r['none'] is None and 'たりません' in r['said'], r
 

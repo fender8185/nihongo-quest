@@ -53,7 +53,7 @@ function isoZ(u, v, on = 0) {
 INDOOR.forEach((pl) => Object.values(TOWN.SPOTS[pl] || {}).forEach((sp) => { if (sp.u !== undefined) { [sp.X, sp.Y] = isoXY(sp.u, sp.v, sp.h || 0); sp.foot = isoXY(sp.u, sp.v); } }));
 // how far up each place the hero walks (Y px up): the ground in front of its buildings, never up onto them (2026-11-10, the user);
 // the yard up to its house, the main road to its far pavement, a room to its floor
-const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128, oku: 124, kominkan: 128, kyoshitsu: 128, chinatown: 128, rairai: 128, platform: 128, sushi: 128 };
+const WALK_TOP = { yard: 214, street: 134, beach: 118, town: 126, harbor: 120, park: 126, shokudo: 128, izakaya: 128, station: 128, sento: 128, shrine: 128, castle: 128, oku: 124, kominkan: 128, kyoshitsu: 128, chinatown: 128, rairai: 128, platform: 128, sushi: 128, onsen: 128 };
 const walkTop = (place, X) => (place === 'yard' && X !== undefined ? Math.round(214 - Math.max(0, Math.abs(X) - 300) * 0.22) : place === 'chinadori' ? (X === undefined ? DORI.FAR : DORI.top(X)) : WALK_TOP[place] || 214);   // 中華街大通り: its trapezoid (DORI)   // the yard: a hilltop, lower towards its sides — not out over the edge
 // what stands in the way in each place (2026-11-10, the user: he walked about as if every place were flat ground): the ground the
 // things there stand on, [X0, X1, Y0, Y1] in his units — benches, crates, tables and stools, the sandbox, the beach's grassy bank
@@ -68,6 +68,7 @@ const WALK_BLOCK = {
   // みなと駅のホーム (2026-11-20): ハル's stall, the vending machine, the two benches, the bins, the waiting room, the stairs' housing
   platform: [[-484, -296, 110, 140], [-272, -232, 118, 140], [-222, -128, 62, 80], [-112, -18, 62, 80], [-12, 34, 118, 140], [213, 367, 116, 140], [416, 570, 118, 140]],
   kominkan: [[296, 404, 100, 140]],   // the bike shelter
+  onsen: [[-118, 86, 104, 140], [394, 552, 58, 74]],   // 湯の花駅前 (2026-11-23): the 足湯's pool, the 人力車 (ONSEN.BATH, RICK)
   // the two rooms (seen at 45°): [u0, u1, v0, v1] on the floor — the kitchen and the counter, the stools, the tables with their
   // chairs, the crates and the barrels, the tatami
   shokudo: [[0, 15, 0, 2.8], [3.4, 12.1, 2.8, 3.9], [5.9, 10.1, 6.6, 10], [12.4, 16.6, 6.6, 10], [0.4, 2.2, 9.4, 11.2]],
@@ -422,7 +423,7 @@ function useThing(yard, t) {   // the hero over to a thing of the place, and its
     const taken = [...yard.querySelectorAll('.npc.bench')].map(npcAt), tap = yard._at ? yard._at.x : (x0 + x1) / 2 - 600;
     const seat = t.seats.filter((x) => taken.every((n) => !(Math.abs(n - x) < 30))).sort((a, b) => Math.abs(a - tap) - Math.abs(b - tap))[0];
     if (seat === undefined) { yPop(yard, (x0 + x1) / 2, y0 - 4, '坐滿了'); return; }
-    yHeroWalk(yard, t.go || [seat, Math.max(14, t.dep - 16)], () => ySit(yard, t, seat));
+    yHeroWalk(yard, t.go || [seat, t.front || Math.max(14, t.dep - 16)], () => ySit(yard, t, seat));   // front: up to it there first (湯の花's 足湯: its pool's rim)
   } else if (t.kind === 'seat') {   // in a room: [u, v, h, how he sits] — a free one nearest the tap
     const taken = [...yard.querySelectorAll('.npc')].map(npcXY), tap = yard._at ? [yard._at.x, yard._at.y] : null;
     const free = t.seats.filter(([u, v, h]) => { const [X, Y] = isoXY(u, v, h); return taken.every(([nx, ny]) => Math.hypot(nx - X, ny - Y) > 14); });
@@ -439,6 +440,7 @@ function ySit(yard, t, X) {
   yh.use = { up: [yh.X, yh.Y] }; yh.X = X; yh.s = s; yh.Y = t.top - 40 * s; yh.z = t.z || 300 - t.dep - 1;
   yh.back = false; yh.flip = false; yh.turn = false; h.classList.add('bench'); yHeroPlace(yard); SND.use(yPlace, t);
   if (t.say) yPop(yard, X + 600, 370 - yh.Y - 185 * s, t.say);   // over his head
+  if (t.sat) t.sat(yard, X); if (t.up) yh.use.off = () => t.up(yard);   // a seat of its own sort (湯の花's 足湯: his feet in the water; the 人力車: a photo), and up again
   if (t.kind !== 'ride') return;
   const part = yard.querySelector(`.land [data-fx="${t.fx}"]`), svg = h.querySelector('svg');
   if (svg) svg.style.transformOrigin = `60px ${(200 - (t.piv - yh.Y) / s).toFixed(1)}px`;   // the point they turn round, in his drawing's px
@@ -446,6 +448,7 @@ function ySit(yard, t, X) {
 }
 function yUseEnd(yard) {   // up off a seat, a ride, the slide (a walk, the place drawn anew)
   const u = yh.use; if (!u) return; yh.use = null; yh.s = 0; yh.z = 0;
+  if (u.off) u.off();
   if (u.part) u.part.classList.remove('ride-swing', 'ride-rock');
   const h = yard && yard.querySelector('.yhero');
   if (h) { h.classList.remove('bench', 'kneel', 'ride-swing', 'ride-rock', 'sliding', 'walk'); const svg = h.querySelector('svg'); if (svg) svg.style.transformOrigin = ''; }

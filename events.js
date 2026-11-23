@@ -7,9 +7,9 @@
 const TOWN = {
   // the places index.html draws people in (a new one goes here when it is drawn: street, station, sento, shrine, castle; 奥社 —
   // drawn since 2026-11-14 — with t5's stops there, 2026-11-23)
-  PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park', 'kominkan', 'kyoshitsu', 'chinatown', 'chinadori', 'rairai', 'platform', 'sushi', 'oku'],
+  PLACES: ['beach', 'town', 'shokudo', 'izakaya', 'street', 'station', 'sento', 'shrine', 'castle', 'harbor', 'park', 'kominkan', 'kyoshitsu', 'chinatown', 'chinadori', 'rairai', 'platform', 'sushi', 'oku', 'onsen'],
   // names of people, shops and places: no gloss needed
-  NAMES: ['浜田', 'ハル', '白鷺', '美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '影山', '水野', '星野', '味村', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街', '源'],
+  NAMES: ['浜田', 'ハル', '白鷺', '美玖', '健太', '森', '陽菜', '日向', '林', '美玲', '小春', '台湾', '東京', '渚', '健二', '鉄平', '剛', '大山', 'タロウ', '原田', '小林', 'みなと', '駅前', '松', '源三', '月の湯', '美咲', '中村', '佐藤', '鈴木', '茂', 'アレックス', 'ドイツ', '千早', 'タツ', '稲荷', '白鷺城', '沖縄', '高橋', 'ソフィア', 'フランス', '西村', 'あかり', '和子', '佐野', '金田', '梅子', '吉本', '健', '愛', '道山', '大阪', 'ロイヤル・かもめ', '影山', '水野', '星野', '味村', '陳', '宇翔', 'チェン', 'マリア', 'サントス', 'ルーカス', 'ブラジル', '堀', '文蔵', '公民館', '王', '福明', '龍鳳', '中華街', '源', '湯の花', '森下'],
   // the shops' hours (the world's time: the phone's, or where a sleep moved it on; to < from runs past midnight)
   HOURS: { salon: [10, 19], bakery: [6, 14], shokudo: [11, 20], cafe: [8, 18], flowers: [10, 19], izakaya: [18, 1], goods: [10, 18], ennichi: [18, 23], chaya: [9, 17], kominkan: [9, 22], butaman: [10, 20], ryuho: [11, 21], dori: [10, 19], rairai: [10, 20] },
   // the hours a sleep in bed wakes to (早上, 中午, 傍晚, 晚上): every event's person is at its place at one of them, weekdays and weekends
@@ -38,6 +38,7 @@ const TOWN = {
     rairai: { pass: { u: 6.9, v: 0.85 } },   // らいらいけん (2026-11-15): 黄 behind the pass
     platform: { stand: { X: -376, Y: 128, roam: [4, 2] } },   // みなと駅のホーム (2026-11-20): ハル behind her bento stall
     sushi: { counter: { u: 10.6, v: 1.75 } },   // みなと寿司 (2026-11-23): 源さん behind the counter, his hands at work over it (SUSHI)
+    onsen: { window: { X: 166, Y: 136, roam: 0 } },   // 湯の花駅前 (2026-11-23): あかり behind the 観光案内所's counter window (ONSEN)
     kyoshitsu: { teach: { u: 4.6, v: 3.6 }, desk1: { u: 5.6, v: 5.85, sit: 1, pose: 'turn flip' }, desk2: { u: 13, v: 5.85, sit: 1, pose: 'turn flip' }, desk3: { u: 16.6, v: 5.85, sit: 1, pose: 'turn flip' }, tatami: { u: 19.4, v: 12.4, h: 0.5, kneel: 1, pose: 'turn flip' } }
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they
@@ -162,6 +163,11 @@ const TOWN = {
     gen: { name: '源さん', kana: 'げんさん', role: 'すし屋「みなと寿司」の大将', look: { face: 'pointed', skin: '#e8bd98', cheeks: 'none', fringe: 'none', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#a3a3a8', eyes: 'sharp', eyeColor: '#2a2730', brows: 'thick', mouth: 'flat', beard: 'stubble', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'nejiri' },
       bio: ['漁港「みなと寿司」的大將，65 歲。頭綁布巾、穿白色板前服，話很少、手很快，偶爾冷冷地冒出一句好笑的。', '每天天還沒亮就去漁港挑魚；健二捕的魚他最信得過。中午和晚上開店，中間休息。'],
       hours: [[10, 14, 'sushi', 'counter'], [17, 21, 'sushi', 'counter']] },
+    // 湯の花温泉 (2026-11-23, docs/superpowers/specs/2026-11-23-onsen-work-design.md §4): the 観光案内所's あかり — bright です・ます,
+    // the town's own 法被 (♨ on its back), at her window by day
+    akari: { name: '森 あかり', kana: 'もり あかり', role: '観光案内所', look: { face: 'oval', skin: '#f6d8c0', cheeks: 'blush', fringe: 'airy', sides: 'wisps', hairBack: 'short', hairTop: 'ponytail', hairColor: '#5a3a26', eyes: 'big', eyeColor: '#3a2a20', brows: 'soft', mouth: 'grin', beard: 'none', topStyle: 'yuhappi', top: '#2f4f7a', bottomStyle: 'pants', bottom: '#3f4660', shoeStyle: 'sneaker', shoe: '#ecebe6' },
+      bio: ['湯の花溫泉觀光案內所的人，26 歲。綁著馬尾，穿著背後印著「♨」的法被，每天都很有精神。', '在湯の花長大，去東京工作了幾年又回到家鄉；最喜歡跟搭電車來的人介紹這個小鎮。說話是有精神的です・ます。'],
+      hours: [[9, 18, 'onsen', 'window']] },
     granny: { name: 'おばあちゃん', kana: 'おばあちゃん', role: '外婆（信）', look: { face: 'round', skin: '#f3d1b5', cheeks: 'soft', fringe: 'sidepart', sides: 'short', hairBack: 'short', hairTop: 'bun', hairColor: '#a3a3a8', eyes: 'happy', eyeColor: '#5a3a28', brows: 'soft', mouth: 'smile', beard: 'none', topStyle: 'sweater', top: '#b8a27a', bottomStyle: 'skirt', bottom: '#6e4f3a', shoeStyle: 'loafer', shoe: '#6e4f3a' }, wear: { face: 'glasses' },
       bio: ['你的外婆。在海邊的小屋住了一輩子，鎮上每個人都記得她。', '她留給渚一封信，要等你會說日文才交給你。'],
       hours: [] }
@@ -172,6 +178,28 @@ const TOWN = {
   // changed since they last saw the hero or a thing worn, fest 'halloween', about: someone the hero has met. fresh, look and fest
   // are news: said first, once. How each of them talks: docs/town-voices.md
   CHAT: {
+    // 湯の花駅前 (2026-11-23): あかり — bright です・ます, all about her town; from m1 for an N5 learner who rides up, more by N4
+    akari: [
+      ['m1', 'ようこそ！ ここは {山|やま}の {温泉|おんせん}の {町|まち}です。', '歡迎！這裡是山裡的溫泉小鎮。'],
+      ['m1', '{駅|えき}の {前|まえ}に {足湯|あしゆ|泡腳池}が あります。お{金|かね}は いりません！', '車站前面有足湯。不用錢喔！'],
+      ['m1', '{地図|ちず}、どうぞ！ {湯畑|ゆばたけ|溫泉源頭}は この {道|みち}の {先|さき}です。', '地圖請拿！湯畑就在這條路的前面。'],
+      ['m1', 'おはようございます！ {今日|きょう}も いい {天気|てんき}ですね。', '早安！今天天氣也很好呢。', { h: 'am' }],
+      ['m1', 'もうすぐ しまります。また {明日|あした}！', '快要關門了。明天見！', { h: 'pm' }],
+      ['m2', 'ここの お{湯|ゆ|溫泉水}は ちょっと あついです。でも、とても きもちいいですよ！', '這裡的溫泉水有點燙。不過非常舒服喔！'],
+      ['m2', '{湯畑|ゆばたけ|溫泉源頭}の けむりは {白|しろ}くて {大|おお}きいです。{夜|よる}は もっと きれいですよ！', '湯畑的蒸氣又白又大。晚上更漂亮喔！'],
+      ['m3', '{電車|でんしゃ}で {来|き|來}て、{足湯|あしゆ|泡腳池}に {入|はい}って、おまんじゅうを {食|た}べる。いい {一日|いちにち}ですね！', '搭電車來、泡泡腳、吃個饅頭。真是美好的一天呢！'],
+      ['m4', 'この はっぴの マーク、{知|し}って いますか。「{温泉|おんせん}」の しるしです！', '你知道這件法被上的記號嗎？是「溫泉」的記號喔！'],
+      ['m4', '{足湯|あしゆ|泡腳池}で {写真|しゃしん}を とっても いいですよ。でも、{顔|かお}を {洗|あら}っては いけません！', '在足湯拍照沒關係喔。不過不可以在裡面洗臉！'],
+      ['m5', 'はじめてですか。じゃあ、まず {足湯|あしゆ|泡腳池}へ どうぞ！ {疲|つか}れが なくなりますよ。', '第一次來嗎？那就先去泡足湯吧！累都會不見喔。'],
+      ['m6', 'お{風呂|ふろ}に {入|はい}る {前|まえ}に、お{水|みず}を {飲|の}んで くださいね。', '泡湯之前，記得先喝點水喔。'],
+      ['m6', '{夜|よる}は {湯畑|ゆばたけ|溫泉源頭}の ライトアップが あるので、ぜひ {見|み}に {行|い}って ください！', '晚上湯畑有點燈，一定要去看看！'],
+      ['m7', '{駅|えき}から {湯畑|ゆばたけ|溫泉源頭}まで {歩|ある}いて {行|い}けますよ。{十分|じゅっぷん}ぐらいです。', '從車站走路就能到湯畑喔，大概十分鐘。'],
+      ['m7', '{日本語|にほんご}、{上手|じょうず}に {話|はな}せるように なりましたね！', '你的日語變得很會說了呢！', { talks: 3 }],
+      ['m7', 'わたし、{前|まえ}は {東京|とうきょう}で {働|はたら}いて いました。でも、{山|やま}が {見|み}えない {町|まち}は さびしくて。', '我以前在東京工作。可是看不到山的城市好寂寞。', { talks: 8 }],
+      ['m8', '{地図|ちず}は {窓口|まどぐち|窗口}に {置|お}いて あります。ご{自由|じゆう}に どうぞ！', '地圖放在窗口，請自由取用！'],
+      ['m11', 'この はっぴは、{祖母|そぼ}が {作|つく}って くれたんです。', '這件法被是我奶奶幫我做的。', { talks: 15 }],
+      ['m15', '{旅館|りょかん}の {佐藤|さとう}さんの {敬語|けいご}は すごいですよ。わたしも よく {教|おし}えて いただいて います。', '旅館的佐藤先生敬語超厲害的。我也常常請他教我。']
+    ],
     // みなと駅のホーム (2026-11-20): ハル — loud, quick, kind; an old woman's plain speech; 五十 years of bentos on this platform
     haru: [
       ['m1', 'いらっしゃい！ みなと{弁当|べんとう}だよ！', '歡迎！みなと便當喔！'],
@@ -3330,9 +3358,16 @@ const TOWN = {
   // (原田's chat: 白鷺行きの普通 at 十分 and 四十分, the last at 22:40)
   EKI: {
     LINE: [['shirasagi', '{白鷺|しらさぎ}', 24, 1, 1], ['daigaku', '{大学|だいがく}{前|まえ}', 18, 0], ['koen', '{公園|こうえん}{前|まえ}', 13, 0], ['byoin', '{病院|びょういん}{前|まえ}', 8, 1], ['minato', 'みなと', 3, 1], ['minatoko', 'みなと{港|こう}', 0, 1]],
-    FARES: [[3, 140], [6, 170], [10, 220], [15, 260], [21, 310], [30, 350]],
+    FARES: [[3, 140], [6, 170], [10, 220], [15, 260], [21, 310], [30, 350], [40, 420], [50, 480]],   // ≤40 km, ≤50 km: やまなみ線's (2026-11-23)
     TIMES: [[2, '普通', 'minatoko'], [10, '普通', 'shirasagi'], [17, '快速', 'minatoko'], [25, '快速', 'shirasagi'], [32, '普通', 'minatoko'], [40, '普通', 'shirasagi'], [47, '快速', 'minatoko'], [55, '快速', 'shirasagi']],
     FIRST: 6, LAST: 22, END: 40, TRACK: { shirasagi: 1, minatoko: 2 },   // the last train out at 22:40 (原田: 最終は 二十二時四十分)
+    // やまなみ線 (2026-11-23, docs/superpowers/specs/2026-11-23-onsen-work-design.md §2.1): on from みなと線's end at 白鷺 up into the
+    // mountains, a one-car diesel — its stations [id, as written, km from みなと港 as LINE's are]; its trains out of 白鷺 and out of
+    // 湯の花 at these minutes of every hour from FIRST to LAST (the last out of 湯の花 22:50); the track each leaves from
+    YAMA: {
+      LINE: [['shirasagi', '{白鷺|しらさぎ}', 24], ['morishita', '{森下|もりした}', 31], ['yunohana', '{湯の花|ゆのはな}', 38]],
+      TIMES: { shirasagi: [5, 35], yunohana: [20, 50] }, FIRST: 6, LAST: 22, TRACK: { shirasagi: 3, yunohana: 1 }
+    },
     // 駅弁の立ち売り (2026-11-20, spec §4): the tray's goods [id, word, picture, counter (つ, 本, none), hot／cold (from m2, in place of
     // the one お茶), 中文]; two things asked for together (pairs: [id, n, id, n] — お茶 hot or cold from m2); an ask first (have:
     // [line, 中文, what of the tray it is (none: not sold here), what instead, how many]); from m6 a reason first (why: [reason, 中文,
@@ -3384,8 +3419,19 @@ const TOWN = {
       pick: ['{行|い}き{先|さき}の {運賃|うんちん|車資}の ボタンを {押|お}して ください。', '請按目的地的票價按鈕。'], put: ['{P}です。お{金|かね}を {入|い}れて ください。', '{p} 日圓。請投錢。'],
       take: ['きっぷを お{取|と|拿}りください。', '請取票。'], short: ['お{金|かね}が たりません。', '錢不夠。'],
       next: ['つぎは {S}、{S}です。', '下一站是{s}。'], at: ['{S}、{S}です。お{忘れ物|わすれもの|遺失物}の ないように ご{注意|ちゅうい|注意} ください。', '{s}到了。請注意不要遺忘隨身物品。'], end: ['{終点|しゅうてん|終點}、{S}です。お{忘れ物|わすれもの|遺失物}の ないように ご{注意|ちゅうい|注意} ください。', '終點{s}到了。請注意不要遺忘隨身物品。'],
-      pay: ['{乗り越し精算|のりこしせいさん|補票}：あと {P}', '補票：還要 {p} 日圓'], none: ['きっぷが ありません…。', '沒有車票……。']
+      pay: ['{乗り越し精算|のりこしせいさん|補票}：あと {P}', '補票：還要 {p} 日圓'], none: ['きっぷが ありません…。', '沒有車票……。'],
+      // やまなみ線 (2026-11-23, spec §2.2): the lines' names ({L}); at 白鷺 riding on, the change said in place of 終点's word ({L}:
+      // the line changed to); the end of the line near; the buttons — on from 白鷺 by the other line, and which train from 白鷺's machine
+      lines: { minato: ['みなと{線|せん}', 'みなと線'], yama: ['やまなみ{線|せん}', 'やまなみ線'] },
+      change: ['{終点|しゅうてん|終點}、{S}です。{L}は お{乗り換え|のりかえ|轉乘}です。', '終點{s}到了。往{l}的旅客請在這裡轉車。'],
+      soon: ['まもなく {終点|しゅうてん|終點}、{S}です。', '即將抵達終點{s}。'],
+      on: ['{L}に {乗り換える|のりかえる|轉乘}', '轉搭{l}'], aboard: ['{L}に {乗|の}る', '搭{l}']
     }
+  },
+  // 湯の花温泉 (2026-11-23, docs/superpowers/specs/2026-11-23-onsen-work-design.md §4): あかり's ようこそ the first time the hero is at
+  // 湯の花駅前 while she is (ONSEN.mount; state.town.arrived) — [her line, 中文, what the place is]
+  ONSEN: {
+    welcome: ['ようこそ、{湯の花|ゆのはな}{温泉|おんせん}へ！', '歡迎來到湯之花溫泉！', '湯の花温泉：搭電車才到得了的溫泉町。這裡的打工要打工證「ベテラン」，還要學到 N4（第 7 單元起）。']
   },
   YATAI: {
     ryuho: { at: 'chinatown', name: '龍鳳飯店の店長', kana: 'りゅうほうはんてんの てんちょう', role: '中華料理店', look: { face: 'oval', skin: '#f3d1b5', cheeks: 'none', fringe: 'swept', sides: 'above', hairBack: 'short', hairTop: 'none', hairColor: '#2a2524', eyes: 'normal', eyeColor: '#2a2730', brows: 'straight', mouth: 'smile', beard: 'none', topStyle: 'chef', top: '#ecebe6', bottomStyle: 'pants', bottom: '#2b2b33', shoeStyle: 'loafer', shoe: '#2b2b33' }, wear: { head: 'chefcap' } },   // 中華街 (2026-11-14)

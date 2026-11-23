@@ -51,7 +51,7 @@
   //   lists by id   (mistakes, custom cards, custom grammar/exam, exam history): union, the later copy's version
   //   id sets       (completedUnits, hidden, lessonSeen): union
   //   言靈          (koto): each count by day and device the larger, bonus days a union; owned (things bought): a union by id
-  //   town          (the town's events): done, seen, stops each a union by id; talks (chats with each person) the larger count
+  //   town          (the town's events): done, seen, stops, arrived each a union by id; talks (chats with each person) the larger count
   //   cruise        (the cruise ship's trips): done a union; the one under way: the later trip, further on, unless done on either
   //   everything else (settings, currentUnit, today, placed, wear, …): from the copy saved later
   function stampOf(s) { return (s && typeof s.updatedAt === 'string') ? s.updatedAt : ''; }
@@ -208,6 +208,7 @@
       const talks = {}; [o.talks, n.talks].forEach((t) => Object.entries(t || {}).forEach(([id, k]) => { talks[id] = Math.max(talks[id] || 0, Number(k) || 0); }));   // the chats with each: the more (as numbers)
       out.town = Object.assign({}, n, { done: Object.assign({}, o.done, n.done), seen: Object.assign({}, o.seen, n.seen), stops: Object.assign({}, o.stops, n.stops), talks });
       if (o.traps || n.traps) out.town.traps = Object.assign({}, o.traps, n.traps);   // 中華街's 漢字陷阱 seen through (2026-11-14): once on either device, for good
+      if (o.arrived || n.arrived) out.town.arrived = Object.assign({}, o.arrived, n.arrived);   // a place first come to (湯の花's ようこそ, 2026-11-23): once on either device, for good
     }
     if (older.cruise || newer.cruise) out.cruise = mergeCruise(older.cruise, newer.cruise);
     if (older.work || newer.work) out.work = mergeWork(older.work, newer.work);

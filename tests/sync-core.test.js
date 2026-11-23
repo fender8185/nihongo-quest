@@ -191,6 +191,16 @@ test('mergeStates: the town events done, people met and bus stops opened on eith
   assert.deepEqual(m.town.stops, { station: 1 });
   assert.deepEqual(C.mergeStates({ updatedAt: '2026-11-10T10:00:00.000Z' }, b).town.done, { 'm0-2': '2026-11-10' }, 'an old save without town keeps the other side');
 });
+test('mergeStates: a place first arrived at on either device stays arrived — 湯の花\'s greeting is said once (2026-11-23)', () => {
+  const a = { updatedAt: '2026-11-23T10:00:00.000Z', town: { done: {}, seen: {}, stops: {}, arrived: { onsen: 1 } } };
+  const b = { updatedAt: '2026-11-23T09:00:00.000Z', town: { done: {}, seen: { akari: 1 }, stops: {} } };
+  assert.deepEqual(C.mergeStates(a, b).town.arrived, { onsen: 1 });
+  assert.deepEqual(C.mergeStates(b, a).town.arrived, { onsen: 1 }, 'the copy saved later without it does not drop it');
+  const c = { updatedAt: '2026-11-23T11:00:00.000Z', town: { done: {}, seen: {}, stops: {}, arrived: { yudori: 1 } } };
+  assert.deepEqual(C.mergeStates(a, c).town.arrived, { onsen: 1, yudori: 1 });
+  assert.deepEqual(C.mergeStates(a, b).town.seen, { akari: 1 }, 'the people met stay the people met');
+  assert.equal(C.mergeStates(b, { updatedAt: '2026-11-23T08:00:00.000Z', town: { done: {} } }).town.arrived, undefined, 'neither arrived anywhere: nothing invented');
+});
 test('mergeStates: how often the hero chatted with each person keeps the larger count (2026-11-12)', () => {
   const a = { updatedAt: '2026-11-12T10:00:00.000Z', town: { done: {}, seen: {}, stops: {}, talks: { kenta: 3, miku: 1 } } };
   const b = { updatedAt: '2026-11-12T09:00:00.000Z', town: { done: {}, seen: {}, stops: {}, talks: { kenta: 5, tome: 2 } } };

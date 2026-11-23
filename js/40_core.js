@@ -421,6 +421,7 @@ function normalizeState(s) {
   out.koto = { daySets: obj(kt.daySets), days: Array.isArray(kt.days) ? kt.days : [], listen: obj(kt.listen), mail: obj(kt.mail), found: obj(kt.found), sets: obj(kt.sets), gift: Number(kt.gift) || 0 };
   const tw = obj(out.town), talks = {}; Object.entries(obj(tw.talks)).forEach(([id, n]) => { const k = Math.floor(Number(n)); if (k > 0) talks[id] = k; });
   out.town = { done: obj(tw.done), seen: obj(tw.seen), stops: obj(tw.stops), talks };
+  const came = Object.keys(obj(tw.arrived)).filter((k) => tw.arrived[k]); if (came.length) out.town.arrived = Object.fromEntries(came.map((k) => [k, 1]));   // places first come to (湯の花, 2026-11-23): its greeting said once
   const cr = obj(out.cruise), on = cr.on && typeof cr.on === 'object' && typeof cr.on.trip === 'string' ? cr.on : null;
   const num = (v) => Math.max(0, Math.floor(Number(v)) || 0), score = (sc) => Object.fromEntries(Object.entries(obj(sc)).filter(([k]) => /^[\w-]+\.\d+$/.test(k)).map(([k, v]) => [k, num(v)]));
   const res = Object.fromEntries(Object.entries(obj(cr.res)).filter(([, r]) => r && typeof r === 'object').map(([t, r]) => [t, { first: num(r.first), asks: num(r.asks), koto: num(r.koto), yen: num(r.yen), grade: num(r.grade), day: typeof r.day === 'string' ? r.day : '' }]));

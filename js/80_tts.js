@@ -141,7 +141,11 @@ const CAST_VOICE = {
   // gruffer than 鈴木 (Rasalgethi: slower, a semitone down), the fish man brisker than 剛 (Alnilam), the dried-fish grandmother lower
   // than トメ and 周 (Pulcherrima), the grill's young woman brighter than ソフィア (Zephyr)
   gen: ['Rasalgethi', 0.9, 0, -1], sakanaya: ['Alnilam', 1.08], himonoya: ['Pulcherrima', 0.96, 0, -1], hamayaki: ['Zephyr', 1.08],
-  ann: ['Kore', 0.96]   // みなと線's announcements in the car (2026-11-20)
+  // 湯の花温泉's あかり (2026-11-23): no Chirp 3 HD voice is left unused, so she shares 陽菜's (and the 緣日's chocolate-banana
+  // stall's) Laomedeia — the upbeat one — with neither ever where she is (nobody from the harbour town comes up to 湯の花): made a
+  // little slower and played a semitone up, so she is brighter and younger than 陽菜, at much her pace
+  akari: ['Laomedeia', 0.96, 0, 1],
+  ann: ['Kore', 0.96]   // みなと線's announcements in the car (2026-11-20); やまなみ線's too (2026-11-23)
 };
 // ムギ (2026-11-12, the user, by ear): a boy's voice pitched up, a mascot's — a grown man saying ワン, or a real bark beside a
 // plain voice, broke the spell; her lines open with ワン！ and no longer end in it (events.js 42)

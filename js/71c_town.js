@@ -189,7 +189,7 @@ const TOWNEV = (() => {
   const linesOf = (e) => (e.met && state.town.done[e.met.if] ? e.met.head.concat(e.lines.slice(e.met.from)) : e.lines);
   // the people at a place now: those met, where their hours put them, and whoever an event there waits on (marked ！); in the
   // 日本語教室 and 中華街 everyone there, met or not (a class one walks into, a street of stalls)
-  const SEEN_UNMET = ['kyoshitsu', 'chinatown', 'chinadori', 'rairai', 'platform', 'sushi'];
+  const SEEN_UNMET = ['kyoshitsu', 'chinatown', 'chinadori', 'rairai', 'platform', 'sushi', 'onsen'];   // 湯の花駅前 (2026-11-23): あかり at her window from the first
   function here(place) {
     const out = [];
     Object.keys(T().CAST).forEach((id) => {
@@ -218,7 +218,8 @@ const TOWNEV = (() => {
   ADJ.chinatown.push('chinadori'); ADJ.chinadori = ['chinatown', 'rairai']; ADJ.rairai = ['chinadori'];
   ADJ.harbor.push('sushi'); ADJ.sushi = ['harbor'];   // みなと寿司's door on the harbour (2026-11-23)
   ADJ.station.push('platform'); ADJ.platform = ['station'];   // up through 駅前's 改札 to みなと駅's platform (2026-11-20)   // through 中華街's 牌樓 into 大通り (2026-11-14), and into らいらいけん (2026-11-15)
-  const PLACE_NAME = { yard: '院子', town: '小鎮', beach: '海邊', street: '公車站', harbor: 'みなと漁港', park: 'ひだまり公園', shokudo: 'まんぷく食堂', izakaya: '居酒屋とり吉', station: '駅前', sento: '月の湯', shrine: '稲荷神社', castle: '白鷺城', oku: '稲荷山・奥社', kominkan: '公民館', kyoshitsu: '日本語教室', chinatown: '中華街', chinadori: '中華街大通り', rairai: 'らいらいけん', platform: 'みなと駅ホーム', sushi: 'みなと寿司' };
+  ADJ.onsen = [];   // 湯の花温泉 (2026-11-23): a ring of its own, joined to the town's by the train only (RIDE), never on foot
+  const PLACE_NAME = { yard: '院子', town: '小鎮', beach: '海邊', street: '公車站', harbor: 'みなと漁港', park: 'ひだまり公園', shokudo: 'まんぷく食堂', izakaya: '居酒屋とり吉', station: '駅前', sento: '月の湯', shrine: '稲荷神社', castle: '白鷺城', oku: '稲荷山・奥社', kominkan: '公民館', kyoshitsu: '日本語教室', chinatown: '中華街', chinadori: '中華街大通り', rairai: 'らいらいけん', platform: 'みなと駅ホーム', sushi: 'みなと寿司', onsen: '湯の花駅前' };
   function hop(from, to) {
     if (from === to || !ADJ[from]) return null;
     const first = { [from]: null }, q = [from];   // breadth first: the first step of the way each place was reached by
@@ -577,6 +578,7 @@ function talkLines() {
   Object.values(NPC.DOOR).forEach((ls) => ls.forEach((l) => add('hero', l[0])));
   DIARY.PAGES.forEach((p) => add('granny', DIARY.said(p)));
   add('hero', TOWNEV.DROP_BY[0]); CRUISE.lines(add); YEN.lines(add); CLASS.lines(add); CHINA.lines(add); WORK.lines(add); RIDE.lines(add);   // the cruise's, buying with 円, 日本語教室's かるた and singing
+  if (TOWN.ONSEN && TOWN.ONSEN.welcome) add('akari', TOWN.ONSEN.welcome[0]);   // 湯の花's ようこそ, the first time (2026-11-23)
   Object.keys(TOWN.YATAI || {}).forEach((id) => { const v = TOWN.YATAI[id]; if (v.scoop) add(id, v.scoop[0]); (v.call || []).forEach((l) => add(id, l[0])); });   // the goldfish's old man; the 朝市's keepers calling out
   return out;
 }
@@ -1522,7 +1524,7 @@ function streetHtml() {
 // between the places out of doors (test, 2026-11-09): the yard's path down to the main road, the yard's left edge along to the
 // beach. The hero walks to the way out (out), fades, and the other place opens with him coming in (in: where he appears, where
 // he walks to; yh.arrive)
-const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', harbor: '#/harbor', park: '#/park', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento', shrine: '#/shrine', castle: '#/castle', oku: '#/oku', kominkan: '#/kominkan', kyoshitsu: '#/kyoshitsu', chinatown: '#/chinatown', chinadori: '#/chinadori', rairai: '#/rairai', platform: '#/platform', sushi: '#/sushi' };
+const PLACE_ROUTE = { yard: '#/outside', street: '#/street', beach: '#/beach', town: '#/town', harbor: '#/harbor', park: '#/park', shokudo: '#/shokudo', izakaya: '#/izakaya', station: '#/station', sento: '#/sento', shrine: '#/shrine', castle: '#/castle', oku: '#/oku', kominkan: '#/kominkan', kyoshitsu: '#/kyoshitsu', chinatown: '#/chinatown', chinadori: '#/chinadori', rairai: '#/rairai', platform: '#/platform', sushi: '#/sushi', onsen: '#/onsen' };
 // where a place's sight stands, for the camera to look at on the way in (2026-11-10: 白鷺城 was off the screen of a phone)
 const PLACE_LOOK = { castle: 280, shokudo: 130 };
 // a sight too big for a phone's screen, seen whole (yWide): [x0, x1, top] in the land's units — 白鷺城's keeps, their walls to the
@@ -1569,6 +1571,7 @@ const WAYS = {
   'platform>station': { out: () => [493, 122], in: () => [[-20, 126], [-20, 92]] },
   // off a train (RIDE, 2026-11-20): in from the station's side of the place (白鷺城, みなと漁港), out of the car at みなと's platform
   'train>castle': { in: () => [[-590, 100], [-510, 100]] }, 'train>harbor': { in: () => [[-590, 40], [-510, 40]] }, 'train>platform': { in: () => [[-110, 126], [-110, 96]] },
+  'train>onsen': { in: () => [[-490, 126], [-440, 92]] },   // 湯の花 (2026-11-23): out of its station's 改札 onto the square
   'town>park': { out: () => [180, 4], in: () => [[PARK_PATH, 214], [PARK_PATH - 20, 104]] },
   'park>town': { out: () => [PARK_PATH, 222], in: () => [[180, 6], [180, 50]] }
 };
@@ -2494,7 +2497,7 @@ function yardHtml(pct, place = 'yard') {
         <div class="birds"><div class="flock">${[[52, 14], [38, 6], [38, 22], [24, 0], [24, 28]].map(([x, y]) => `<i style="left:${x}px;top:${y}px"></i>`).join('')}</div></div>
       </div>
       <div class="yworld" style="width:${yw}px;margin-left:${-yw / 2}px">
-      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'harbor' ? harborHtml() : place === 'park' ? parkHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : place === 'shrine' ? shrineHtml() : place === 'castle' ? castleHtml() : place === 'oku' ? okuHtml() : place === 'kominkan' ? kominkanHtml() : place === 'kyoshitsu' ? kyoshitsuHtml() : place === 'chinatown' ? chinatownHtml() : place === 'chinadori' ? chinadoriHtml() : place === 'rairai' ? rairaiHtml() : place === 'platform' ? platformHtml() : place === 'sushi' ? sushiHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
+      ${place === 'beach' ? beachHtml() : place === 'town' ? townHtml() : place === 'harbor' ? harborHtml() : place === 'park' ? parkHtml() : place === 'shokudo' ? shokudoHtml() : place === 'izakaya' ? izakayaHtml() : place === 'station' ? stationHtml() : place === 'sento' ? sentoHtml() : place === 'shrine' ? shrineHtml() : place === 'castle' ? castleHtml() : place === 'oku' ? okuHtml() : place === 'kominkan' ? kominkanHtml() : place === 'kyoshitsu' ? kyoshitsuHtml() : place === 'chinatown' ? chinatownHtml() : place === 'chinadori' ? chinadoriHtml() : place === 'rairai' ? rairaiHtml() : place === 'platform' ? platformHtml() : place === 'sushi' ? sushiHtml() : place === 'onsen' ? onsenHtml() : street ? streetHtml() : `<svg class="mtn" viewBox="0 0 1200 600" preserveAspectRatio="xMidYMax slice">
         <defs><radialGradient id="shopGlow"><stop offset="0" stop-color="rgba(255,196,110,.55)"/><stop offset=".5" stop-color="rgba(255,196,110,.16)"/><stop offset="1" stop-color="rgba(255,196,110,0)"/></radialGradient></defs>
         <path class="m-far" d="M520 600 V340 C560 330 600 314 640 304 C670 296 700 294 730 298 C770 306 810 328 860 342 V600 Z"/>
         <path class="m-main" d="${HILL} V600 Z"/><path class="m-shade" d="M482 250 C494 248 506 256 520 268 C552 296 594 326 646 350 V372 C590 340 548 306 516 280 C502 268 492 258 482 250 Z"/><path class="m-rim" d="${HILL}"/>

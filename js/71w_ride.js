@@ -7,26 +7,41 @@
 // short of it, the rest paid there (乗り越し精算). Home from either by its station's sign: the machine there, the ride back to
 // みなと's platform. The bus stays free; the train costs, as trains do. One ticket at a time, kept on this device (a new one
 // replaces it; a ride uses it up).
+// 2026-11-23 (湯の花温泉, docs/superpowers/specs/2026-11-23-onsen-work-design.md §2.2): やまなみ線 on from 白鷺 to 湯の花, a one-car diesel.
+// Every chart has it past 白鷺 (のりかえ); a ticket further than 白鷺 rides on — the change at 白鷺 (its announcement, the hero across
+// the platform to the other train) — and at 白鷺 a shorter one may ride on all the same, the rest paid at the end; 白鷺's machine asks
+// which train. Up the valley: the river, a bridge, two tunnels, cedars, the steam of the town; off at 湯の花駅前 (SCENE). No
+// announcement cuts another: each waits for the one before to be said (a clip that never ends: 8 s at most)
 const RIDE = (() => {
-  const TK = 'nq_ticket', SCENE = { shirasagi: 'castle', minatoko: 'harbor', minato: 'platform' };
+  const TK = 'nq_ticket', SCENE = { shirasagi: 'castle', minatoko: 'harbor', minato: 'platform', yunohana: 'onsen' };
   const MARK = /\{([^|}]+)\|([^|}]+)(?:\|[^}]+)?\}/g, ruby = (s) => esc(s).replace(MARK, '<ruby>$1<rt>$2</rt></ruby>');
   const L = () => TOWN.EKI.ride, api = { speed: 1 };
-  let R = null, runs = 0;   // the ride now (the tests): { from, to, i, phase }
+  let R = null, runs = 0;   // the ride now (the tests): { from, to, i, phase, at, line }
   const ms = (s) => (s * 1000) / api.speed;
   const ticket = () => { try { return JSON.parse(localStorage.getItem(TK) || 'null'); } catch (e) { return null; } };
   const keep = (t) => { try { if (t) localStorage.setItem(TK, JSON.stringify(t)); else localStorage.removeItem(TK); } catch (e) { /* none kept */ } };
   const spend = (n) => { const p = state.purse, dev = kotoDevice(); p.spent = p.spent || {}; p.spent[dev] = (Number(p.spent[dev]) || 0) + n; saveState(); if (typeof kotoButtons === 'function') kotoButtons(document); };
-  const st = (id) => TOWN.EKI.LINE.find((x) => x[0] === id)[1];
-  const fill = (l, o) => [l[0].replace(/\{S\}/g, o.S || '').replace('{P}', o.P || ''), l[1].replace(/\{s\}/g, o.s || '').replace('{p}', o.p || '')];
+  const st = (id) => ([...TOWN.EKI.LINE, ...((TOWN.EKI.YAMA || {}).LINE || [])].find((x) => x[0] === id) || [, id])[1];
+  const fill = (l, o) => [l[0].replace(/\{S\}/g, o.S || '').replace('{P}', o.P || '').replace('{L}', o.L || ''), l[1].replace(/\{s\}/g, o.s || '').replace('{p}', o.p || '').replace('{l}', o.l || '')];
+  const lineName = (ln) => L().lines[ln] || ['', ''];
+  const night = () => { try { return sceneClock(lightHour(sceneHour())).day < 0.5; } catch (e) { return false; } };
   // ---- the machine: the chart (fares from here), its screen, a button a fare, the coin slot, the ticket out ----
+  // やまなみ線's part of a chart (2026-11-23): a row under みなと線's, from 白鷺 (のりかえ, under it) to 湯の花, its fares from here
+  const yamaRow = (here) => `<div class="os-yama"><i class="os-rail"></i><div class="md-st os-jct"><b class="md-dot">◎</b><span class="os-chg" lang="ja">のりかえ</span></div>
+    ${EKI.yama().slice(1).map((x) => (x.id === here ? `<div class="md-st here"><b class="md-dot">●</b>${EKI.label(x.id, true)}<em>現在地</em></div>`
+      : `<div class="md-st"><b class="md-dot">●</b>${EKI.label(x.id, true)}<span class="md-f">${EKI.fare(here, x.id)}</span></div>`)).join('')}
+    <p class="os-name" lang="ja">${ruby(lineName('yama')[0])}</p></div>`;
   function machine(yard, here) {
-    const fares = [...new Set(EKI.line().filter((x) => x.id !== here).map((x) => EKI.fare(here, x.id)))].sort((a, b) => a - b);
+    const all = EKI.line().concat(EKI.yama().slice(1)), fares = [...new Set(all.filter((x) => x.id !== here).map((x) => EKI.fare(here, x.id)))].sort((a, b) => a - b);
     let pick = 0;
     const chart = `<div class="md-wall kb-wall"><div class="md-chart"><i class="md-rail"></i>${EKI.line().map((x) => x.id === here
       ? `<div class="md-st here"><b class="md-dot">●</b>${EKI.label(x.id, true)}<em>現在地</em></div>`
       : `<div class="md-st"><b class="md-dot${x.rapid ? '' : ' no'}">${x.rapid ? '●' : '○'}</b>${EKI.label(x.id, true)}<span class="md-f">${EKI.fare(here, x.id)}</span></div>`).join('')}</div>
-      <p class="md-key"><span>大人（円）</span><span lang="ja">${ruby(st(here))}から</span></p></div>`;
+      ${yamaRow(here)}<p class="md-key"><span>大人（円）</span><span lang="ja">${ruby(st(here))}から</span></p></div>`;
     const screen = (l, cls = '') => { const e = document.querySelector('.kb-screen'); if (e) { e.innerHTML = `<b lang="ja">${ruby(l[0])}</b><span>${esc(l[1])}</span>`; e.className = 'kb-screen' + (cls ? ' ' + cls : ''); } };
+    // aboard from here: one train (its line), or at 白鷺 either — みなと線 home first (as it was), やまなみ線 up to 湯の花
+    const rides = here === 'shirasagi' ? ['minato', 'yama'] : [EKI.lineOf(here)];
+    const rideBtn = (ln) => `<button type="button" class="btn btn-primary kb-ride" data-line="${ln}" lang="ja"><span>${rides.length > 1 ? ruby(fill(L().aboard, { L: lineName(ln)[0] })[0]) : `<ruby>電車<rt>でんしゃ</rt></ruby>に <ruby>乗<rt>の</rt></ruby>る`}</span></button>`;
     CLASS.card('kb-card', '券売機', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
       <div class="wk-head"><b lang="ja"><ruby>券売機<rt>けんばいき</rt></ruby></b><span>${esc(EKI.name(here))}<ruby>駅<rt>えき</rt></ruby></span></div>${chart}
       <div class="kb-machine"><p class="kb-screen"></p><div class="kb-fares">${fares.map((f) => `<button type="button" class="kb-fare" data-f="${f}"><small>大人</small>${f}</button>`).join('')}</div>
@@ -38,19 +53,28 @@ const RIDE = (() => {
         const paid = pick; spend(pick); keep({ from: here, fare: pick, day: todayStr() }); playSfx('coin', 3); SND.play('paper', { vol: 0.6 }); screen(L().take, 'ok');
         pick = 0; document.querySelector('.kb-pay').disabled = true; document.querySelectorAll('.kb-fare.on').forEach((x) => x.classList.remove('on'));   // paid once (a second tap, nothing)
         const w = document.querySelector('.kb-wallet'); if (w) w.innerHTML = `${yenIcon()}${yenStr(yenBalance())} 円`;
-        document.querySelector('.kb-slot').innerHTML = `<div class="kb-ticket"><span lang="ja">${ruby(st(here))} → ${paid}円区間</span><b>${paid}円</b><small>${todayStr()}・大人</small></div>${here === 'minato' ? '<p class="kb-tip">從剪票口上月台，點停著的電車就能上車。</p>' : `<button type="button" class="btn btn-primary kb-ride" lang="ja"><span><ruby>電車<rt>でんしゃ</rt></ruby>に <ruby>乗<rt>の</rt></ruby>る</span></button>`}`;
+        const far = paid > EKI.fare('minato', 'shirasagi');   // みなと: past 白鷺 — 1番線, and the change there
+        document.querySelector('.kb-slot').innerHTML = `<div class="kb-ticket"><span lang="ja">${ruby(st(here))} → ${paid}円区間</span><b>${paid}円</b><small>${todayStr()}・大人</small></div>${here === 'minato' ? `<p class="kb-tip">${far ? '從剪票口上月台，搭 1番線（往白鷺），到白鷺換やまなみ線。' : '從剪票口上月台，點停著的電車就能上車。'}</p>` : `<div class="os-rides">${rides.map(rideBtn).join('')}</div>`}`;
         return;
       }
-      if (e.target.closest('.kb-ride')) { CLASS.close(); board(yard, 0, here); }
+      const b = e.target.closest('.kb-ride'); if (b) { CLASS.close(); board(yard, 0, here, b.dataset.line); }
     });
     const c = document.querySelector('.cls.kb-card'); if (c) c.dataset.here = here;   // which station's machine (the tests)
     screen(L().pick);
   }
   // ---- aboard: a ticket from here, enough with the money there is to reach the end; then the ride ----
-  function board(yard, track, from = 'minato') {
-    const t = ticket(), to = from !== 'minato' ? 'minato' : track === 1 ? 'shirasagi' : 'minatoko';
+  // where a train from here takes the hero: from みなと 1番線 to 白鷺 — on to 湯の花 with a ticket past 白鷺 — and 2番線 to みなと港;
+  // from 白鷺 by the line picked; from 湯の花 to 白鷺, or home to みなと with a ticket past 白鷺; from みなと港 home (or on to 湯の花)
+  function dest(from, track, line, fare) {
+    if (from === 'minato') return track === 2 ? 'minatoko' : fare > EKI.fare('minato', 'shirasagi') ? 'yunohana' : 'shirasagi';
+    if (from === 'shirasagi') return line === 'yama' ? 'yunohana' : 'minato';
+    if (EKI.lineOf(from) === 'yama') return fare > EKI.fare(from, 'shirasagi') ? 'minato' : 'shirasagi';
+    return fare > EKI.fare(from, 'shirasagi') ? 'yunohana' : 'minato';
+  }
+  function board(yard, track, from = 'minato', line) {
+    const t = ticket();
     if (!t || t.from !== from) { toast(from === 'minato' ? '要先買票：車站門口的紅色券売機。' : '要先在券売機買票。', 3200); if (yard) yPop(yard, yh.X + 600, 370 - yh.Y - 200 * yScale(yh.Y), 'きっぷ…'); return false; }
-    const rest = Math.max(0, EKI.fare(from, to) - t.fare);
+    const to = dest(from, track, line, t.fare), rest = Math.max(0, EKI.fare(from, to) - t.fare);
     if (rest > yenBalance()) { toast(`這張票只到 ${t.fare} 円的站，錢包也不夠補票（還要 ${rest} 円）。`, 3600); return false; }
     go(from, to); return true;
   }
@@ -64,36 +88,150 @@ const RIDE = (() => {
     <path d="M0 22 H360" stroke="#b0aca2" stroke-width="3"/>${[30, 70, 110, 150, 190, 230, 270, 310].map((x, i) => `<g class="rd-strap" style="animation-delay:-${(i * 0.3).toFixed(1)}s"><path d="M${x} 22 v10" stroke="#8a8f99" stroke-width="1.6"/><circle cx="${x}" cy="37" r="4.6" fill="none" stroke="#e8e4da" stroke-width="2.4"/></g>`).join('')}
     <rect x="0" y="112" width="360" height="40" fill="#5a7aa8"/><rect x="0" y="112" width="360" height="5" fill="#6f8fbc"/><rect x="0" y="150" width="360" height="16" fill="#4a6a98"/><path d="M90 112 v54 M180 112 v54 M270 112 v54" stroke="#3f5f8a" stroke-width="2"/>
     <rect x="0" y="166" width="360" height="44" fill="#b8b2a4"/><path d="M0 172 H360" stroke="#a8a296" stroke-width="2"/></svg>`;
+  // ---- やまなみ線's car (2026-11-23): one diesel car — box seats in green moquette under each window (two backs facing, a little
+  // table under the sill), sash windows, a luggage rack, a fan and two lamps in the ceiling (lit warm in a tunnel, and by night), a
+  // wooden floor. In the windows the valley going by (far ridges, cedars, deciduous trees in the season's colours, the river below);
+  // by night the dark hills under the stars, a lit window here and there. Over it as the ride goes: the bridge (red trusses racing
+  // past, the river far below), a tunnel (dark, its lamps streaking by), the town's roofs and its steam at the end ----
+  const SEASON = () => { const m = (typeof sceneDate === 'function' ? sceneDate() : new Date()).getMonth() + 1; return m >= 3 && m <= 5 ? ['#f2c4d0', '#e8a8bc'] : m >= 6 && m <= 8 ? ['#6aa860', '#88bc6e'] : m >= 9 && m <= 11 ? ['#d8653a', '#e8a23a'] : ['#9a8a7a', '#b0a294']; };
+  function valley(n) {
+    const [c1, c2] = SEASON(), far = n ? '#232a4e' : '#a9bccb', mid = n ? '#18223c' : '#5f8a6a', cedar = n ? '#101a2c' : '#3f6a4c', cedar2 = n ? '#14203a' : '#4f7a5a', river = n ? '#2a3a6a' : '#8fc4dc';
+    let s = '';
+    for (let i = 0; i < 12; i++) {
+      const x = i * 90, h = [0, 8, 3, 10, 5, 2, 9, 4, 7, 1, 6, 3][i];
+      s += `<path d="M${x} ${62 - h * 0.6} q22 -14 45 -6 q24 -12 45 2 V100 H${x} Z" fill="${far}"/>`
+        + `<path d="M${x} ${74 - h * 0.5} q30 -12 56 -4 q20 -8 34 0 V100 H${x} Z" fill="${mid}"/>`
+        + [8, 26, 47, 66, 82].map((d, k) => { const tx = x + d, ty = 78 + ((i + k) % 3) * 3, th = 14 + ((i * 3 + k) % 4) * 3; return `<path d="M${tx} ${ty - th} l${k % 2 ? 5 : 6} ${th} h${k % 2 ? -10 : -12} Z" fill="${k % 2 ? cedar : cedar2}"/>`; }).join('')
+        + (i % 4 === 1 && !n ? `<circle cx="${x + 36}" cy="84" r="5" fill="${c1}"/><circle cx="${x + 42}" cy="86" r="4" fill="${c2}"/>` : '')
+        + (i % 3 === 0 ? `<path d="M${x} 94 q22 -3 45 0 t45 0 V100 H${x} Z" fill="${river}"/><path d="M${x + 12} 96 h10 M${x + 52} 97 h12" stroke="${n ? '#4a5a8a' : '#fff'}" stroke-opacity=".6" stroke-width="1"/>` : `<rect x="${x}" y="94" width="90" height="6" fill="${n ? '#141c30' : '#6f9a5a'}"/>`)
+        + (n && i % 5 === 2 ? `<rect x="${x + 60}" y="80" width="3" height="2.4" fill="#ffd98a"/>` : '');
+    }
+    return s;
+  }
+  const dcar = (n) => `<svg class="rd-car os-dcar${n ? ' os-night' : ''}" viewBox="0 0 360 210" aria-hidden="true"><defs><clipPath id="osWin">${[24, 138, 252].map((x) => `<rect x="${x}" y="36" width="84" height="60" rx="4"/>`).join('')}</clipPath>
+      <linearGradient id="osSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${n ? '#141a3a' : '#9fc8e0'}"/><stop offset="1" stop-color="${n ? '#2a2f5a' : '#e2eef2'}"/></linearGradient></defs>
+    <rect width="360" height="210" fill="#efe6d0"/><rect y="0" width="360" height="14" fill="#d8ccb2"/><path d="M0 14 H360" stroke="#c4b69a" stroke-width="2"/>
+    <g class="os-lamp">${[90, 270].map((x) => `<rect x="${x - 26}" y="3" width="52" height="6" rx="3" fill="#fff7dc"/><ellipse cx="${x}" cy="14" rx="70" ry="16" fill="#ffe8a8" opacity=".35"/>`).join('')}</g>
+    <g transform="translate(180 7)"><circle r="6" fill="#c9c2b0"/><g class="os-fan">${[0, 120, 240].map((a) => `<ellipse cx="0" cy="-5" rx="2.6" ry="5" fill="#a89e88" transform="rotate(${a})"/>`).join('')}</g><circle r="1.8" fill="#6a6252"/></g>
+    <g clip-path="url(#osWin)"><rect x="0" y="30" width="360" height="72" fill="url(#osSky)"/>${n ? [[40, 44], [120, 40], [200, 48], [300, 42], [330, 52]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r=".9" fill="#fff"/>`).join('') : ''}
+      <g class="rd-strip">${valley(n)}<g transform="translate(1080 0)">${valley(n)}</g></g>
+      <g class="os-brg"><rect x="0" y="80" width="360" height="22" fill="${n ? '#18223c' : '#7fb0c8'}"/><path d="M0 92 q30 -4 60 0 t60 0 t60 0 t60 0 t60 0 t60 0" fill="none" stroke="${n ? '#3a4a7a' : '#fff'}" stroke-width="1.4" opacity=".7"/>
+        <g class="os-truss">${Array.from({ length: 10 }, (_, k) => { const x = k * 72; return `<path d="M${x} 30 v72 M${x} 40 L${x + 72} 98 M${x + 72} 40 L${x} 98" stroke="${n ? '#6a2a30' : '#c8322a'}" stroke-width="4"/>`; }).join('')}<path d="M0 40 H720 M0 98 H720" stroke="${n ? '#6a2a30' : '#a8262e'}" stroke-width="5"/></g></g>
+      <g class="os-tun"><rect x="0" y="30" width="360" height="72" fill="#141418"/><g class="os-tlamps">${Array.from({ length: 8 }, (_, k) => `<rect x="${k * 90 + 20}" y="44" width="10" height="3" rx="1.5" fill="#ffb24a"/>`).join('')}</g></g>
+      <g class="os-yu">${[[10, 80, 46], [70, 76, 54], [140, 82, 40], [190, 74, 60], [262, 80, 48], [318, 76, 44]].map(([x, y, w], k) => `<path d="M${x} ${y} l${w / 2} -10 l${w / 2} 10 Z" fill="${n ? '#2a2c48' : '#5a6478'}"/><rect x="${x + 4}" y="${y}" width="${w - 8}" height="${102 - y}" fill="${n ? '#3a3050' : '#efe2c8'}"/><rect x="${x + 10}" y="${y + 6}" width="8" height="6" fill="${n ? '#ffd98a' : '#8a6a48'}"/>
+        <g class="os-puff" style="animation-delay:-${(k * 0.6).toFixed(1)}s"><circle cx="${x + w / 2}" cy="${y - 14}" r="7" fill="#fff" opacity="${n ? 0.35 : 0.8}"/><circle cx="${x + w / 2 + 6}" cy="${y - 22}" r="9" fill="#fff" opacity="${n ? 0.3 : 0.7}"/></g>`).join('')}</g></g>
+    ${[24, 138, 252].map((x) => `<rect x="${x}" y="36" width="84" height="60" rx="4" fill="none" stroke="#b8b0a0" stroke-width="5"/><path d="M${x} 64 h84" stroke="#b8b0a0" stroke-width="3"/><path d="M${x + 8} 90 l16 -48" stroke="#fff" stroke-opacity=".22" stroke-width="3"/><rect x="${x - 2}" y="96" width="88" height="6" rx="2" fill="#8a6a48"/>`).join('')}
+    <path d="M0 26 H360" stroke="#a8a294" stroke-width="2"/><path d="M0 30 H360" stroke="#a8a294" stroke-width="1" stroke-dasharray="3 3"/>
+    ${[24, 138, 252].map((x) => `<rect x="${x - 14}" y="104" width="20" height="62" rx="6" fill="#3f6a52"/><rect x="${x + 78}" y="104" width="20" height="62" rx="6" fill="#3f6a52"/><path d="M${x - 10} 110 v50 M${x + 94} 110 v50" stroke="#5a8a6a" stroke-width="2" opacity=".6"/>
+      <rect x="${x + 6}" y="140" width="72" height="18" rx="4" fill="#4a7a5e"/><path d="M${x + 6} 158 h72" stroke="#2f4f3c" stroke-width="3"/><rect x="${x + 30}" y="102" width="24" height="5" rx="1" fill="#a8845a"/>`).join('')}
+    <rect x="0" y="166" width="360" height="44" fill="#8a6a4a"/>${Array.from({ length: 9 }, (_, k) => `<path d="M${k * 40} 166 V210" stroke="#7a5a3c" stroke-width="1.4"/>`).join('')}<path d="M0 170 H360" stroke="#6e5036" stroke-width="2"/>
+    <rect class="os-dim" width="360" height="210" fill="#141830" opacity="0"/></svg>`;
+  // ---- the change at 白鷺 (2026-11-23): 白鷺's platform under its canopy, the castle far off on its hill; the train come in on the
+  // left (its last door open), the one to change to waiting on the right — its cab, its LED (湯の花, or みなと home), its doors open;
+  // やまなみ線's one diesel car cream with a dark green band (みなと線's colours, the same company), its exhaust puffing — the sign for
+  // its のりば between them, the hero across from the one to the other ----
+  function chg(toLine, n) {
+    const yama = toLine === 'yama', sky = n ? ['#141a3a', '#2c3260'] : ['#a8cce2', '#e4eff3'], glass = n ? '#ffe2a0' : '#9fc0d0';
+    const paint = (kind) => (kind === 'yama' ? { body: n ? '#3a3f66' : '#f3ead2', band: n ? '#163028' : '#2f5a3a' } : { body: n ? '#3a3f66' : '#f1ece0', band: n ? '#24485a' : '#3f9a8c' });
+    const puff = (x) => `<rect x="${x - 13}" y="62" width="26" height="8" rx="2" fill="${n ? '#2a2c48' : '#8a8f99'}"/><g class="os-puff"><circle cx="${x}" cy="56" r="6" fill="${n ? '#5a5e80' : '#9a9a9a'}" opacity=".55"/><circle cx="${x + 6}" cy="46" r="8" fill="${n ? '#5a5e80' : '#b0b0b0'}" opacity=".4"/></g>`;
+    // the train come in: its body from the left edge to x 110, its last door (open) at its end
+    const came = (kind) => { const c = paint(kind); return `<rect x="-40" y="70" width="150" height="78" rx="6" fill="${c.body}"/><rect x="-40" y="116" width="150" height="10" fill="${c.band}"/><rect x="-40" y="128" width="150" height="2.4" fill="#e6a23c"/>
+      ${[-26, 14, 54].map((wx) => `<rect x="${wx}" y="82" width="28" height="22" rx="3" fill="${glass}"/>`).join('')}<rect x="88" y="80" width="18" height="66" fill="${n ? '#1c1d3c' : '#5a5e6a'}"/><rect x="104" y="80" width="6" height="66" fill="${c.body}"/>${kind === 'yama' ? puff(30) : ''}`; };
+    // the one waiting: from x 228 on, its cab at that end — the front window, a headlight, its LED — a door open midway
+    const waits = (kind) => { const c = paint(kind); return `<path d="M228 148 V82 Q228 70 242 70 H400 V148 Z" fill="${c.body}"/><rect x="228" y="116" width="172" height="10" fill="${c.band}"/><rect x="228" y="128" width="172" height="2.4" fill="#e6a23c"/>
+      <rect x="234" y="80" width="22" height="26" rx="4" fill="${glass}"/><circle cx="236" cy="138" r="3.4" fill="${n ? '#fff6c8' : '#f4efe4'}"/>${n ? '<circle cx="236" cy="138" r="9" fill="#fff6c8" opacity=".3"/>' : ''}
+      <rect x="238" y="72" width="32" height="7" rx="1.5" fill="#141418"/><text x="254" y="77.6" text-anchor="middle" font-size="5.6" font-weight="700" fill="#ffae3a" font-family="system-ui, sans-serif">${yama ? '湯の花' : 'みなと'}</text>
+      ${[268, 344].map((wx) => `<rect x="${wx}" y="82" width="26" height="22" rx="3" fill="${glass}"/>`).join('')}<rect x="304" y="80" width="26" height="66" fill="${n ? '#1c1d3c' : '#5a5e6a'}"/><rect x="302" y="80" width="3" height="66" fill="${c.body}"/>${kind === 'yama' ? puff(330) : ''}`; };
+    const word = yama ? 'やまなみ線' : 'みなと線';
+    return `<svg class="rd-car os-chgsvg" viewBox="0 0 360 210" aria-hidden="true"><defs><linearGradient id="osCsky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky[0]}"/><stop offset="1" stop-color="${sky[1]}"/></linearGradient></defs>
+      <rect width="360" height="210" fill="url(#osCsky)"/>${n ? [[30, 20], [90, 34], [250, 18], [320, 30]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1" fill="#fff"/>`).join('') : ''}
+      <path d="M0 96 q60 -40 120 -22 q50 -30 110 -6 q60 -26 130 8 V150 H0 Z" fill="${n ? '#1e2448' : '#b4c6d2'}"/><path d="M0 112 q80 -26 170 -8 q90 -22 190 4 V150 H0 Z" fill="${n ? '#18203c' : '#8fae9a'}"/>
+      <g transform="translate(176 92)"><path d="M-16 20 h32 l-3 -8 h-26 Z" fill="${n ? '#3a3d66' : '#e8e4da'}"/><path d="M-11 12 h22 l-4 -6 h-14 Z" fill="${n ? '#4a4e7a' : '#f4f1ea'}"/><path d="M-9 6 L0 -2 L9 6 Z" fill="${n ? '#2a2c48' : '#5f6f8a'}"/>${n ? '<circle cx="0" cy="12" r="14" fill="#ffe9b0" opacity=".25"/>' : ''}</g>
+      <rect x="0" y="22" width="360" height="12" fill="${n ? '#2a2c48' : '#6a7280'}"/><rect x="0" y="34" width="360" height="3" fill="${n ? '#1c1d3c' : '#545b66'}"/>${[60, 180, 300].map((x) => `<rect x="${x - 3}" y="37" width="6" height="113" fill="${n ? '#2a2c48' : '#7a828e'}"/>`).join('')}
+      ${n ? [60, 180, 300].map((x) => `<ellipse cx="${x}" cy="40" rx="26" ry="6" fill="#fff3c8" opacity=".5"/>`).join('') : ''}
+      ${came(yama ? 'minato' : 'yama')}${waits(toLine)}
+      <rect x="0" y="148" width="360" height="30" fill="${n ? '#3a3c5c' : '#cfcac0'}"/><rect x="0" y="148" width="360" height="5" fill="${n ? '#5a5a3a' : '#e6c23a'}"/>${Array.from({ length: 12 }, (_, k) => `<path d="M${k * 32} 156 v22" stroke="${n ? '#2e3050' : '#b8b2a8'}" stroke-width="1"/>`).join('')}
+      <rect x="0" y="178" width="360" height="32" fill="${n ? '#24263e' : '#9a958a'}"/>
+      <path d="M134 37 v8 M226 37 v8" stroke="${n ? '#5a5e80' : '#4a4e5a'}" stroke-width="1.4"/><rect x="128" y="44" width="104" height="26" rx="3" fill="#fbf8f0"/><rect x="128" y="44" width="104" height="8" rx="2" fill="${yama ? '#2f5a3a' : '#3f9a8c'}"/>
+      <text x="180" y="50.6" text-anchor="middle" font-size="6" font-weight="700" fill="#fff" font-family="system-ui, sans-serif">${yama ? '3番線' : '1番線'}</text>
+      <text x="176" y="64" text-anchor="middle" font-size="10" font-weight="700" fill="#2b2b33" font-family="system-ui, sans-serif">${word} のりば →</text></svg>`;
+  }
+  // the hero across 白鷺's platform (the change): walking, from the train come in to the one waiting
+  const walker = () => `<div class="hero os-walker walk turn" aria-hidden="true">${HERO.svg({ look: state.look, wear: state.wear })}</div>`;
   function go(from, to) {
-    const mine = ++runs, stops = EKI.stops('普通', to, from), t = ticket(), rest = Math.max(0, EKI.fare(from, to) - (t ? t.fare : 0));
-    R = { from, to, i: 0, phase: 'run' };
-    const el = (q) => document.querySelector('.rd-card ' + q), live = () => mine === runs && Boolean(el('.rd-car'));
+    const mine = ++runs, t = ticket(), paid = t ? t.fare : 0, first = EKI.legs(from, to)[0];
+    R = { from, to, i: 0, phase: 'run', at: from, line: first.line };
+    const el = (q) => document.querySelector('.rd-card ' + q), live = () => mine === runs && Boolean(el('.rd-box'));
     const led = (html) => { const e = el('.rd-led'); if (e) e.innerHTML = html; };
-    const say = (l) => { const e = el('.rd-ann'); if (e) e.innerHTML = `<b lang="ja">${ruby(l[0])}</b><span>${esc(l[1])}</span>`; return speakAs('ann', l[0]); };
+    let talking = Promise.resolve();
+    const said = (p) => Promise.race([Promise.resolve(p).catch(() => {}), sleep(8000)]);
+    // an announcement: once the one before it is said (2026-11-23: none cuts another — the change's least of all)
+    const say = (l) => { talking = said(talking).then(() => { if (!live()) return null; const e = el('.rd-ann'); if (e) e.innerHTML = `<b lang="ja">${ruby(l[0])}</b><span>${esc(l[1])}</span>`; return said(speakAs('ann', l[0])); }); return talking; };
     const run = (on) => { const c = el('.rd-car'); if (c) c.classList.toggle('stop', !on); };
-    CLASS.card('rd-card', 'みなと線', `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
-      <div class="wk-head"><b lang="ja">みなと<ruby>線<rt>せん</rt></ruby></b><span lang="ja">${ruby(st(from))} → ${ruby(st(to))}</span></div>
-      <div class="rd-box"><p class="rd-led" lang="ja"></p>${car(to)}</div><p class="rd-ann"></p><div class="rd-end"></div>`, (e) => {
-      if (!e.target.closest('.rd-off') || R.phase !== 'end') return;
-      if (rest) spend(rest);
-      keep(null); R.phase = 'off'; CLASS.close(); SND.play('door-chime', { vol: 0.6 });
-      const place = SCENE[to]; yh.arrive = { from: 'train', to: place }; window.go(PLACE_ROUTE[place]);
-    });
-    (async () => {
-      SND.play('train-out', { vol: 0.4 });
-      for (let i = 0; i < stops.length; i++) {
-        if (!live()) return; R.i = i; R.phase = 'run'; run(true); const s = stops[i], o = { S: st(s), s: EKI.name(s) };
-        led(`<small>つぎは</small> ${EKI.ruby(s)}`); say(fill(L().next, o));
-        await sleep(ms(4.5)); if (!live()) return;
-        if (s === to) break;
-        R.phase = 'stop'; run(false); SND.play('door-chime', { vol: 0.5 }); led(EKI.ruby(s)); await sleep(ms(2.2)); SND.play('door-chime', { vol: 0.5 });
+    const rest = () => Math.max(0, EKI.fare(from, R.to) - paid);
+    const head = () => `<b lang="ja">${ruby(lineName(R.line)[0])}</b><span lang="ja">${ruby(st(from))} → ${ruby(st(R.to))}</span>`;
+    const view = (svg) => { const b = el('.rd-box'); if (!b) return; b.querySelectorAll('.rd-car, .os-walker').forEach((x) => x.remove()); b.insertAdjacentHTML('beforeend', svg); const h = el('.wk-head'); if (h) h.innerHTML = head(); };
+    const carFor = (leg) => (leg.line === 'yama' ? dcar(night()) : car(leg.to));
+    CLASS.card('rd-card', lineName(first.line)[1], `<button type="button" class="cls-x" data-cls="x" aria-label="關閉">✕</button>
+      <div class="wk-head">${head()}</div>
+      <div class="rd-box"><p class="rd-led" lang="ja"></p>${carFor(first)}</div><p class="rd-ann"></p><div class="rd-end"></div>`, (e) => {
+      if (e.target.closest('.os-on') && R.phase === 'end' && R.at === 'shirasagi') {   // on from 白鷺 by the other line, the rest paid at its end
+        const on = R.line === 'minato' ? 'yunohana' : 'minato', more = Math.max(0, EKI.fare(from, on) - paid);
+        if (more > yenBalance()) { toast(`錢包不夠補票（到${EKI.name(on)}還要 ${more} 円）。`, 3200); return; }
+        R.to = on; el('.rd-end').innerHTML = ''; ride(EKI.legs('shirasagi', on), true); return;
       }
-      // 終点 only at the line's ends (白鷺, みなと港): みなと is passed through (2026-11-22, the review: it taught 終点 wrong)
-      const ln = EKI.line(), term = to === ln[0].id || to === ln[ln.length - 1].id;
-      if (!live()) return; R.phase = 'end'; run(false); SND.play('train-in', { vol: 0.35 }); led(term ? `${EKI.ruby(to)} <small>終点</small>` : EKI.ruby(to));
-      say(fill(term ? L().end : L().at, { S: st(to), s: EKI.name(to) }));
-      el('.rd-end').innerHTML = `${rest ? `<p class="rd-pay" lang="ja">${ruby(fill(L().pay, { P: YEN.priceMark(rest) })[0])}<small>${esc(fill(L().pay, { p: rest })[1])}</small></p>` : ''}<button type="button" class="btn btn-primary rd-off" lang="ja"><span><ruby>降<rt>お</rt></ruby>りる</span></button>`;
-    })();
+      if (!e.target.closest('.rd-off') || R.phase !== 'end') return;
+      const r = rest(); if (r) spend(r);
+      keep(null); R.phase = 'off'; CLASS.close(); SND.play('door-chime', { vol: 0.6 });
+      const place = SCENE[R.at]; yh.arrive = { from: 'train', to: place }; window.go(PLACE_ROUTE[place]);
+    });
+    // the change at 白鷺 to the other line: the platform, the hero across it while it is said (said: the change's announcement)
+    async function change(toLine, sayIt) {
+      R.phase = 'change'; R.at = 'shirasagi'; run(false); led('');   // off the train: the platform's own sign says where
+      const l = sayIt ? say(fill(L().change, { S: st('shirasagi'), s: EKI.name('shirasagi'), L: lineName(toLine)[0], l: lineName(toLine)[1] })) : null;
+      SND.play(toLine === 'yama' ? 'train-in' : 'diesel-in', { vol: 0.35 });
+      const b = el('.rd-box'); if (b) { b.querySelectorAll('.rd-car').forEach((x) => x.remove()); b.insertAdjacentHTML('beforeend', chg(toLine, night()) + walker()); const w = b.querySelector('.os-walker'); if (w) w.style.setProperty('--os-walk', `${ms(3.6) / 1000}s`); }
+      await Promise.all([l ? said(l) : null, sleep(ms(4.2))]);
+    }
+    // the valley's sights as a やまなみ線 leg runs: [what, from (s), for (s)] by which way and which stretch
+    const SIGHTS = { up: [[['brg', 1.2, 2.4]], [['tun', 0.8, 1.6], ['tun', 3.0, 1.3], ['yu', 4.5, 3]]], down: [[['yu', 0, 1.4], ['tun', 1.4, 1.3], ['tun', 3.4, 1.6]], [['brg', 2.2, 2.4]]] };
+    const SIGHT_SND = { brg: 'bridge', tun: 'tunnel' };
+    function sights(leg, k) {
+      const up = leg.to === 'yunohana', list = (SIGHTS[up ? 'up' : 'down'][k] || []);
+      list.forEach(([w, at, len]) => setTimeout(() => {
+        const c = el('.os-dcar'); if (!live() || !c) return;
+        if (w === 'tun') SND.play('diesel-horn', { vol: 0.35 });
+        if (SIGHT_SND[w]) SND.play(SIGHT_SND[w], { vol: 0.5 });
+        c.classList.add('os-in-' + w); setTimeout(() => { if (w !== 'yu' || !up) c.classList.remove('os-in-' + w); }, ms(len));
+      }, ms(at)));
+    }
+    async function ride(legs, onward) {
+      for (let k = 0; k < legs.length; k++) {
+        const leg = legs[k], yl = leg.line === 'yama';
+        if (k > 0 || onward) { await change(leg.line, !onward); if (!live()) return; R.line = leg.line; view(carFor(leg)); }
+        R.line = leg.line; const stops = EKI.stops('普通', leg.to, leg.from), last = k === legs.length - 1;
+        SND.play(yl ? 'diesel-out' : 'train-out', { vol: 0.4 });
+        for (let i = 0; i < stops.length; i++) {
+          if (!live()) return; R.i = i; R.phase = 'run'; run(true); const s = stops[i], o = { S: st(s), s: EKI.name(s) }, endRun = s === leg.to;
+          led(`<small>つぎは</small> ${EKI.ruby(s)}`);
+          if (yl) sights(leg, i);
+          say(fill(L().next, o));
+          if (yl && endRun && s === 'yunohana') setTimeout(() => { if (live()) say(fill(L().soon, o)); }, ms(4.5));   // up the valley: まもなく 終点 as the town comes in sight
+          await sleep(ms(yl ? 6.2 : 4.5)); if (!live()) return;
+          if (endRun) break;
+          R.phase = 'stop'; R.at = s; run(false); SND.play('door-chime', { vol: 0.5 }); led(EKI.ruby(s)); await sleep(ms(2.2)); SND.play('door-chime', { vol: 0.5 });
+        }
+        if (!last) continue;
+        // 終点 only at the lines' ends (白鷺, みなと港, 湯の花): みなと is passed through (2026-11-22, the review: it taught 終点 wrong)
+        const term = ['shirasagi', 'minatoko', 'yunohana'].includes(leg.to);
+        if (!live()) return; run(false); SND.play(yl ? 'diesel-in' : 'train-in', { vol: 0.35 }); led(term ? `${EKI.ruby(leg.to)} <small>終点</small>` : EKI.ruby(leg.to));
+        const r = rest(), other = leg.to === 'shirasagi' ? (leg.line === 'minato' ? 'yama' : 'minato') : '';
+        el('.rd-end').innerHTML = `${r ? `<p class="rd-pay" lang="ja">${ruby(fill(L().pay, { P: YEN.priceMark(r) })[0])}<small>${esc(fill(L().pay, { p: r })[1])}</small></p>` : ''}<button type="button" class="btn btn-primary rd-off" lang="ja"><span><ruby>降<rt>お</rt></ruby>りる</span></button>${other ? `<button type="button" class="btn os-on" lang="ja"><span>${ruby(fill(L().on, { L: lineName(other)[0] })[0])}</span></button>` : ''}`;
+        R.phase = 'end'; R.at = leg.to;   // its buttons first: a tap the moment it is 'end' finds them
+        say(fill(term ? L().end : L().at, { S: st(leg.to), s: EKI.name(leg.to) }));
+      }
+    }
+    ride(EKI.legs(from, to), false);
   }
   // the station's sign out at 白鷺城 and みなと漁港 (way-edge: at the screen's edge when its spot is off it): walked to, its machine
   const SIGN = { shirasagi: ['白鷺駅', -560, 64, [-540, 110]], minatoko: ['みなと港駅', -556, 14, [-530, 30]] };
@@ -102,7 +240,12 @@ const RIDE = (() => {
     const yard = el.closest('.yard'), here = el.dataset.here; if (!yard || !SIGN[here]) return; yNamed(el);
     yHeroWalk(yard, SIGN[here][3], () => machine(yard, here));
   }
-  // the announcements for every station (their clips)
-  const lines = (add) => EKI.line().forEach((x, i, ln) => { add('ann', fill(L().next, { S: st(x.id) })[0]); add('ann', fill(i === 0 || i === ln.length - 1 ? L().end : L().at, { S: st(x.id) })[0]); });
+  // the announcements for every station (their clips): みなと線's next and arrival at each; やまなみ線's (2026-11-23) — つぎは 森下 (both
+  // ways) and 湯の花, まもなく 終点 and 終点 at 湯の花, the change at 白鷺 either way (つぎは 白鷺 and 白鷺's 終点 are みなと線's already)
+  const lines = (add) => {
+    EKI.line().forEach((x, i, ln) => { add('ann', fill(L().next, { S: st(x.id) })[0]); add('ann', fill(i === 0 || i === ln.length - 1 ? L().end : L().at, { S: st(x.id) })[0]); });
+    ['morishita', 'yunohana'].forEach((id) => add('ann', fill(L().next, { S: st(id) })[0])); add('ann', fill(L().soon, { S: st('yunohana') })[0]); add('ann', fill(L().end, { S: st('yunohana') })[0]);
+    ['yama', 'minato'].forEach((ln) => add('ann', fill(L().change, { S: st('shirasagi'), L: lineName(ln)[0] })[0]));
+  };
   return Object.assign(api, { ticket, keep, machine, board, go, signHtml, fromSign, lines, now: () => R, SCENE });
 })();

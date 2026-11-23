@@ -22,10 +22,11 @@ const SND = (() => {
   }
   // a loop's or a footstep file's length as made (s): a decoder that leaves the encoder's 2112 samples of lead-in at the start
   // (Chrome and Safari take them off) gives a longer buffer, and the sound then begins that much later (lead)
-  const MADE = { 'amb-harbor': 37.5, 'amb-station': 31.4, 'amb-clock': 20 };
+  const MADE = { 'amb-harbor': 37.5, 'amb-station': 31.4, 'amb-clock': 20, 'amb-river': 11 };
   const made = (name) => MADE[name] || (name.startsWith('amb-') ? 38 : name.startsWith('steps-') ? 2 : 0);
   const lead = (name, b) => { const n = made(name), x = n ? b.duration - n : 0; return x > 0.03 && x < 0.2 ? 2112 / 44100 : 0; };
   function load(c, name) {
+    if (!bufs[name] && MADE_LOOPS[name]) bufs[name] = Promise.resolve().then(() => MADE_LOOPS[name](c)).catch(() => null);   // made here (湯の花's river)
     if (!bufs[name]) {
       bufs[name] = fetch(FILE(name)).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
         .then((a) => new Promise((ok, no) => c.decodeAudioData(a, ok, no)))   // the callback form: older Safari has no promise
@@ -73,8 +74,35 @@ const SND = (() => {
     'train-in': (c, to, v) => { noise(c, to, 0, 5.6, 0.5 * v, 160, 90, 0.7); for (let k = 0; k < 10; k++) noise(c, to, 0.4 + k * (0.55 - k * 0.03), 0.07, 0.35 * v, 900, 0, 2); tone(c, to, 2900, 4.4, 1.3, 0.025 * v, 'sine', 2600); tone(c, to, 3480, 4.6, 1.1, 0.015 * v, 'sine', 3200); },
     'train-out': (c, to, v) => { noise(c, to, 0, 5.6, 0.5 * v, 90, 220, 0.7); tone(c, to, 180, 0.2, 3.4, 0.03 * v, 'sawtooth', 620); for (let k = 0; k < 10; k++) noise(c, to, 0.6 + k * (0.32 + k * 0.02), 0.06, 0.3 * v, 900, 0, 2); },
     'door-chime': (c, to, v) => [0, 0.5].forEach((at) => { tone(c, to, 1046, at, 0.36, 0.1 * v); tone(c, to, 784, at + 0.18, 0.5, 0.1 * v); }),
-    'dep-bell': (c, to, v) => [[784, 0], [988, 0.18], [1175, 0.36], [988, 0.54], [1319, 0.72], [1175, 0.9], [988, 1.08], [1175, 1.26], [1568, 1.5]].forEach(([f, at]) => { tone(c, to, f, at, 0.42, 0.08 * v, 'triangle'); tone(c, to, f * 2, at, 0.2, 0.015 * v); })
+    'dep-bell': (c, to, v) => [[784, 0], [988, 0.18], [1175, 0.36], [988, 0.54], [1319, 0.72], [1175, 0.9], [988, 1.08], [1175, 1.26], [1568, 1.5]].forEach(([f, at]) => { tone(c, to, f, at, 0.42, 0.08 * v, 'triangle'); tone(c, to, f * 2, at, 0.2, 0.015 * v); }),
+    // やまなみ線's diesel (2026-11-23): away — the engine's low growl winding up, its putter quickening; in — the growl dying down,
+    // the brakes' sigh; its horn ポーッ (two notes held, a third apart); over the bridge the wheels' clatter, quick and hollow
+    // over the river; into a tunnel the roar closing round (muffled, low)
+    'diesel-out': (c, to, v) => { noise(c, to, 0, 4.6, 0.45 * v, 70, 150, 0.8); tone(c, to, 40, 0, 4.4, 0.07 * v, 'sawtooth', 76); for (let k = 0; k < 12; k++) noise(c, to, 0.3 + k * (0.42 - k * 0.022), 0.08, 0.32 * v, 260, 0, 1.4); },
+    'diesel-in': (c, to, v) => { noise(c, to, 0, 4.4, 0.42 * v, 150, 80, 0.8); tone(c, to, 70, 0, 3.8, 0.06 * v, 'sawtooth', 38); for (let k = 0; k < 8; k++) noise(c, to, 0.3 + k * (0.3 + k * 0.04), 0.07, 0.28 * v, 260, 0, 1.4); noise(c, to, 3.6, 0.8, 0.18 * v, 3000, 2600, 3); },
+    'diesel-horn': (c, to, v) => [[440, 0.13], [554, 0.1], [220, 0.04]].forEach(([f, a], k) => held(c, to, f, 0, 1.15, a * v, k === 2 ? 'square' : 'triangle')),
+    bridge: (c, to, v) => { noise(c, to, 0, 2.6, 0.32 * v, 120, 200, 0.9); for (let k = 0; k < 10; k++) [0, 0.09].forEach((d) => { noise(c, to, k * 0.26 + d, 0.05, 0.4 * v, 1800, 0, 2.4); tone(c, to, 330, k * 0.26 + d, 0.12, 0.03 * v, 'sine', 300); }); },
+    tunnel: (c, to, v) => { noise(c, to, 0, 2, 0.6 * v, 180, 320, 0.6); noise(c, to, 0.3, 1.5, 0.3 * v, 90, 140, 0.7); tone(c, to, 58, 0, 1.9, 0.06 * v, 'sine', 64); }
   };
+  // a note held (a horn's): in, held, out — tone's own is a pluck
+  function held(c, to, f, at, len, vol, type) {
+    const o = c.createOscillator(), g = c.createGain(), t = c.currentTime + 0.02 + at;
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.06); g.gain.setValueAtTime(vol, t + len - 0.2); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g); g.connect(to); o.start(t); o.stop(t + len + 0.03);
+  }
+  // ---- loops made here, no file (2026-11-23): 湯の花's river under the station square — a mountain stream's rush (noise, softened,
+  // swelling slowly) with water burbling over stones now and then; 12 s made, the last second faded into the first, looped over 11 ----
+  const MADE_LOOPS = { 'amb-river': (c) => {
+    const sr = c.sampleRate, n = Math.floor(sr * 12), xf = sr, b = c.createBuffer(1, n, sr), d = b.getChannelData(0);
+    let lo = 0, hi = 0;
+    for (let i = 0; i < n; i++) { const w = Math.random() * 2 - 1, t = i / sr; lo += 0.05 * (w - lo); hi += 0.45 * (w - hi); d[i] = (lo * 1.8 + (w - hi) * 0.08) * (0.78 + 0.22 * Math.sin(t * Math.PI / 3) * Math.sin(t * 2.7 + 1)); }
+    for (let k = 0; k < 110; k++) { const at = Math.floor(Math.random() * (n - sr * 0.2)), f = 280 + Math.random() * 620, len = Math.floor(sr * (0.03 + Math.random() * 0.07)), a = 0.03 + Math.random() * 0.04; for (let j = 0; j < len; j++) d[at + j] += a * Math.sin(2 * Math.PI * f * (1 + 0.4 * j / len) * j / sr) * Math.exp(-3 * j / len); }
+    for (let j = 0; j < xf; j++) { const g = j / xf; d[j] = d[j] * g + d[n - xf + j] * (1 - g); }   // seamless over [0, n − xf)
+    let sum = 0; for (let i = 0; i < n - xf; i++) sum += d[i] * d[i];
+    const k = 0.05 / Math.sqrt(sum / (n - xf) || 1); for (let i = 0; i < n; i++) d[i] = Math.max(-0.5, Math.min(0.5, d[i] * k));   // about −26 dBFS, as the files
+    return b;
+  } };
   // one sound now (or after delay s): its file, else its SYNTH; vol, rate, a slice [offset, length] of the file
   function play(name, o = {}) {
     const c = ctx(); if (!c || !name) return;
@@ -105,7 +133,7 @@ const SND = (() => {
   const GROUND = {
     yard: { way: 'gravel', off: 'grass' }, park: { way: 'concrete', off: 'gravel' }, beach: { way: 'wood', off: 'sand' }, harbor: { way: 'sand', off: 'concrete' },
     street: { off: 'concrete' }, town: { off: 'concrete' }, station: { off: 'concrete' }, sento: { off: 'concrete' },
-    shrine: { off: 'gravel' }, oku: { off: 'gravel' }, castle: { off: 'gravel' }, shokudo: { off: 'concrete' }, izakaya: { off: 'wood' }, room: { off: 'wood' }, kominkan: { off: 'concrete' }, kyoshitsu: { off: 'wood' }, rairai: { off: 'concrete' }, sushi: { off: 'concrete' }, chinatown: { off: 'concrete' }, platform: { off: 'concrete' }, chinadori: { off: 'concrete' }
+    shrine: { off: 'gravel' }, oku: { off: 'gravel' }, castle: { off: 'gravel' }, shokudo: { off: 'concrete' }, izakaya: { off: 'wood' }, room: { off: 'wood' }, kominkan: { off: 'concrete' }, kyoshitsu: { off: 'wood' }, rairai: { off: 'concrete' }, sushi: { off: 'concrete' }, chinatown: { off: 'concrete' }, platform: { off: 'concrete' }, chinadori: { off: 'concrete' }, onsen: { off: 'concrete' }
   };
   const groundOf = (place, kind) => { const g = GROUND[place]; return g ? g[kind] || g.off : ''; };
   // ---- each place's background: [layer, how loud by day, by night] (sounds/amb-<layer>-1.m4a, looping); room: through the window,
@@ -131,6 +159,7 @@ const SND = (() => {
     chinadori: [['town', 0.5, 0.3], ['restaurant', 0.3, 0.25]],   // 大通り (2026-11-14): its shops and kitchens either side
     rairai: [['restaurant', 0.55, 0.45]],   // らいらいけん (2026-11-15): its kitchen and its tables
     sushi: [['restaurant', 0.35, 0.3], ['harbor', 0.14, 0.12]],   // みなと寿司 (2026-11-23): a quiet counter, the harbour outside its door
+    onsen: [['river', 0.55, 0.5], ['birds', 0.55, 0], ['wind', 0.25, 0.2], ['insects', 0, 0.2]],   // 湯の花駅前 (2026-11-23): the river below, the mountain's birds
     izakaya: [['izakaya', 0.6, 0.6]],
     shop: [['clock', 0.5, 0.5]],
     room: [['birds', 0.18, 0], ['insects', 0, 0.07]]
@@ -139,7 +168,8 @@ const SND = (() => {
   const NOW_AND_THEN = {
     shrine: [['crow', 45, 100, 0.3, 'day']], oku: [['crow', 60, 140, 0.25, 'day']], park: [['crow', 90, 180, 0.15, 'day']], castle: [['crow', 80, 160, 0.2, 'day']],
     beach: [['gull', 35, 80, 0.25, 'day']], harbor: [['gull', 30, 70, 0.25, 'day']],
-    town: [['bike', 40, 90, 0.5, 'day']], street: [['piyo', 50, 110, 0.6, '']], station: [['chime', 70, 140, 0.5, '']]
+    town: [['bike', 40, 90, 0.5, 'day']], street: [['piyo', 50, 110, 0.6, '']], station: [['chime', 70, 140, 0.5, '']],
+    onsen: [['diesel-horn', 70, 150, 0.12, ''], ['crow', 90, 180, 0.15, 'day']]   // 湯の花 (2026-11-23): the diesel's horn far off down the valley
   };
   // more while something stands there (2026-11-23): the 朝市 at the harbour — people about it, gulls after the fish (ICHIBA)
   const MARKET = () => typeof ICHIBA === 'object' && ICHIBA.now();
@@ -240,6 +270,7 @@ const USE_SND = {
   'station.vend': 'can-drop', 'station.jobs': 'paper', 'platform.vend': 'can-drop', 'platform.bins': 'drawer', 'platform.wait': 'slide-door', 'platform.stall': 'paper', 'station.pigeons': 'wings', 'station.taxi': 'horn', 'station.gate': 'ic',
   'sento.milk': 'bottle', 'sento.cat': 'purr', 'sento.bath': 'bath', 'sento.laundry': 'washer',
   'chinatown.post': 'paper', 'chinatown.notice': 'paper', 'chinatown.shirt': 'cloth', 'chinatown.seiro': 'pour', 'chinatown.panda': 'cushion', 'chinatown.rmenu': 'paper', 'chinatown.yuka': 'place', 'chinatown.shishi': 'clap', 'chinatown.uranai': 'sparkle',
+  'onsen.gate': 'tick', 'onsen.clock': 'tick', 'onsen.post': 'letter', 'onsen.ashiyu': 'plop', 'onsen.annai': 'slide-door', 'onsen.jobs': 'paper', 'onsen.map': 'paper', 'onsen.rick': 'cushion',   // 湯の花駅前 (2026-11-23)
   'harbor.sushi': 'slide-door', 'harbor.sakana': 'flop', 'harbor.himono': 'rustle', 'harbor.yaki': 'sizzle',
   'sushi.stool': 'sit', 'sushi.table': 'dishes', 'sushi.menu': 'paper', 'sushi.fuda': 'paper', 'sushi.case': 'sparkle', 'sushi.gyotaku': 'paper',
   'rairai.pass': 'sizzle', 'rairai.register': 'suzu', 'rairai.table': 'dishes', 'rairai.menu': 'paper', 'rairai.poster': 'paper', 'rairai.tank': 'splash', 'rairai.toilet': 'door-close',

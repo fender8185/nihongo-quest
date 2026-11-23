@@ -727,6 +727,37 @@ span.wk-good { cursor: default; } span.wk-good small { font-size: 15px; font-wei
 .rd-ann { display: grid; gap: 2px; min-height: 48px; margin: 6px 0; padding: 6px 10px; border-radius: 10px; background: #fff; font-size: 15px; } .rd-ann span { font-size: 12px; color: #8a7a6e; }
 .rd-end { display: grid; gap: 6px; } .rd-pay { margin: 0; padding: 6px 10px; border-radius: 8px; background: #fde4cf; color: #8a3a1a; } .rd-pay small { display: block; font-size: 12px; } .rd-off { min-height: 48px; font-size: 18px; }
 @media (prefers-reduced-motion: reduce) { .rd-strip, .rd-strap { animation: none; } }
+/* 湯の花温泉 (2026-11-23): やまなみ線 on every machine's chart — a row under みなと線's from 白鷺 (◎ のりかえ, a stub up to it) to 湯の花;
+   白鷺's machine: which train; the ride's 乗り換える at 白鷺; the diesel's car (its bridge, tunnels and the town in the windows, the fan,
+   the lamps lit in a tunnel and by night); the change on 白鷺's platform, the hero walking across */
+.os-yama { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; margin-top: 4px; }
+.os-rail { position: absolute; left: 8.3%; width: 33.4%; top: 12px; height: 4px; border-radius: 2px; background: #7cc48a; }
+.os-jct::before { content: ''; position: absolute; left: calc(50% - 2px); top: -10px; height: 18px; width: 4px; border-radius: 2px; background: #7cc48a; }
+.os-jct .md-dot { color: #7cc48a; text-shadow: none; } .os-chg { margin-top: 3px; font-size: 10px; font-weight: 700; color: #ffe08a; white-space: nowrap; }
+.os-name { grid-column: 4 / 7; align-self: start; margin: 8px 0 0; font-size: 12.5px; font-weight: 700; color: #cfe6ec; text-align: center; white-space: nowrap; } .os-name rt { font-size: 7px; }
+.os-rides { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; width: 100%; } .os-rides .kb-ride { min-height: 44px; padding-inline: 6px; }
+.rd-end .os-on { min-height: 48px; font-size: 16px; } .rd-led:empty { display: none; }
+.os-dcar :is(.os-brg, .os-tun, .os-yu) { opacity: 0; transition: opacity .35s; } .os-dcar:is(.os-in-brg) .os-brg, .os-dcar.os-in-tun .os-tun, .os-dcar.os-in-yu .os-yu { opacity: 1; }
+.os-dcar .os-truss { animation: osTruss .45s linear infinite; } @keyframes osTruss { to { transform: translateX(-72px); } }
+.os-dcar .os-tlamps { animation: osTlamps .35s linear infinite; } @keyframes osTlamps { to { transform: translateX(-90px); } }
+.os-dcar .os-lamp { opacity: .2; transition: opacity .3s; } .os-dcar:is(.os-in-tun, .os-night) .os-lamp { opacity: 1; }
+.os-dcar .os-fan { transform-box: fill-box; transform-origin: center; animation: osFan .8s linear infinite; } @keyframes osFan { to { transform: rotate(360deg); } }
+:is(.os-dcar, .os-chgsvg) .os-puff { transform-box: fill-box; transform-origin: center; animation: osPuff 2.4s ease-out infinite; } @keyframes osPuff { 0% { transform: translate(0, 6px) scale(.5); opacity: 0; } 30% { opacity: 1; } 100% { transform: translate(4px, -14px) scale(1.5); opacity: 0; } }
+.os-walker { position: absolute; left: 21%; bottom: 21%; width: 12%; pointer-events: none; animation: osWalk var(--os-walk, 3.6s) linear forwards; }
+.os-walker svg { display: block; width: 100%; height: auto; overflow: visible; }
+.os-walker :is(.f-front, .f-back, .f-back3) { display: none; } .os-walker .f-front3 { display: inline; } .os-walker :is(.bob, .leg, .arm, .head, .eyes) { transform-box: view-box; }
+.os-walker .leg.l { transform-origin: -7px -27px; animation: heroLeg .42s ease-in-out infinite alternate; } .os-walker .leg.r { transform-origin: 11px -27px; animation: heroLeg .42s ease-in-out infinite alternate-reverse; }
+.os-walker .arm.l { transform-origin: -11.5px -63.5px; animation: heroArm .42s ease-in-out infinite alternate-reverse; } .os-walker .arm.r { transform-origin: 15.5px -63.5px; animation: heroArm .42s ease-in-out infinite alternate; }
+.os-walker .bob { --lean: 2deg; animation: heroStep .21s ease-in-out infinite alternate; }
+@keyframes osWalk { from { left: 21%; } 85% { left: 77%; opacity: 1; } to { left: 80%; opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .os-dcar :is(.os-truss, .os-tlamps, .os-fan), :is(.os-dcar, .os-chgsvg) .os-puff, .os-walker, .os-walker * { animation: none !important; } .os-walker { left: 77%; } }
+/* 湯の花駅前 (2026-11-23): the town's steam rising behind, the diesel over its bridge now and then; the hero in the 足湯 (his legs down
+   in the water); a photo in the 人力車 (the flash) */
+.sky .land .os-steam { transform-box: fill-box; transform-origin: center; animation: osSteam 9s ease-out infinite; opacity: 0; filter: blur(6px); } @keyframes osSteam { 0% { transform: translate(0, 24px) scale(.6); opacity: 0; } 25% { opacity: .85; } 100% { transform: translate(28px, -124px) scale(2.2); opacity: 0; } }
+.sky .land .os-far-train > g { animation: osCross 34s linear infinite; } @keyframes osCross { 0%, 55% { transform: translateX(536px); opacity: 0; } 57% { opacity: 1; } 78% { opacity: 1; } 80%, 100% { transform: translateX(664px); opacity: 0; } }
+.yard .hero.bench.os-soak .legs { transform: scaleY(.92); }
+.os-flash { position: absolute; inset: 0; z-index: 50; background: #fff; pointer-events: none; animation: osFlash .6s ease-out forwards; } @keyframes osFlash { from { opacity: .85; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .sky .land :is(.os-steam, .os-far-train > g) { animation: none; } .os-flash { display: none; } }
 /* the replay buttons in 駅前's cards: a finger's size (the shared .wk-ear is 26 high) */
 :is(.wk-bento, .wk-window, .wk-lost, .wk-taxi) .wk-ear { min-height: 40px; min-width: 44px; }
 .wk-lock { margin: 10px 0 4px; padding: 8px 10px; border-radius: 10px; background: #fde4cf; color: #8a3a1a; font-size: 14px; line-height: 1.5; }
