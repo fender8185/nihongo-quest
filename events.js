@@ -38,7 +38,7 @@ const TOWN = {
     rairai: { pass: { u: 6.9, v: 0.85 } },   // らいらいけん (2026-11-15): 黄 behind the pass
     platform: { stand: { X: -376, Y: 128, roam: [4, 2] } },   // みなと駅のホーム (2026-11-20): ハル behind her bento stall
     sushi: { counter: { u: 10.6, v: 1.75 } },   // みなと寿司 (2026-11-23): 源さん behind the counter, his hands at work over it (SUSHI)
-    onsen: { window: { X: 166, Y: 136, roam: 0 } },   // 湯の花駅前 (2026-11-23): あかり behind the 観光案内所's counter window (ONSEN)
+    onsen: { window: { X: 158, Y: 136, roam: 0 } },   // 湯の花駅前 (2026-11-23): あかり behind the 観光案内所's counter window (ONSEN), her face between its mullions
     kyoshitsu: { teach: { u: 4.6, v: 3.6 }, desk1: { u: 5.6, v: 5.85, sit: 1, pose: 'turn flip' }, desk2: { u: 13, v: 5.85, sit: 1, pose: 'turn flip' }, desk3: { u: 16.6, v: 5.85, sit: 1, pose: 'turn flip' }, tatami: { u: 19.4, v: 12.4, h: 0.5, kneel: 1, pose: 'turn flip' } }
   },
   // shop: the shop they keep (its door says 準備中 until they are met); art 'npc': drawn by index.html (小春, ムギ: NPCS), shown once they

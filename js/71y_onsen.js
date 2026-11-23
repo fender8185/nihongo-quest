@@ -15,7 +15,7 @@ const ONSEN = (() => {
   const akariHere = (h = TOWNEV.now()) => (TOWNEV.whereIs('akari', h, TOWNEV.today()) || {}).place === 'onsen';
   const month = () => (typeof sceneDate === 'function' ? sceneDate() : new Date()).getMonth() + 1;
   // the season's trees on the slope: spring's blossom, summer's green, autumn's reds and golds, winter's bare boughs (and snow)
-  const leaves = () => { const m = month(); return m >= 3 && m <= 5 ? ['#f2c4d0', '#f8dce4', '#8ab86e'] : m >= 6 && m <= 8 ? ['#6aa860', '#86bc6a', '#5a9a52'] : m >= 9 && m <= 11 ? ['#d8653a', '#e8a23a', '#c8452e'] : ['#9a8a7a', '#b0a294', '#8a7a6a']; };
+  const leaves = () => seasonLeaves(month());   // the season's trees (71w_ride.js: the diesel's windows have the same)
   // a ridge through points, smoothed (each corner a curve to the next midpoint), down to y = base
   const ridge = (pts, base) => { let d = `M${pts[0][0]} ${base} L${pts[0][0]} ${pts[0][1]}`; for (let i = 1; i < pts.length - 1; i++) { const [x, y] = pts[i], [nx, ny] = pts[i + 1]; d += ` Q${x} ${y} ${f((x + nx) / 2)} ${f((y + ny) / 2)}`; } const [lx, ly] = pts[pts.length - 1]; return `${d} L${lx} ${ly} L${lx} ${base} Z`; };
   const cedar = (x, y, h, k) => `<path d="M${f(x)} ${f(y - h)} L${f(x + h * 0.2)} ${f(y - h * 0.45)} L${f(x + h * 0.14)} ${f(y - h * 0.45)} L${f(x + h * 0.27)} ${f(y)} L${f(x - h * 0.27)} ${f(y)} L${f(x - h * 0.14)} ${f(y - h * 0.45)} L${f(x - h * 0.2)} ${f(y - h * 0.45)} Z" ${k ? hc('#3f6a4c', '#0e1828') : hc('#4f7a58', '#121e34')}/><path d="M${f(x)} ${f(y - h)} L${f(x + h * 0.27)} ${f(y)} H${f(x)} Z" fill="#000" fill-opacity=".12"/>`;
@@ -23,6 +23,11 @@ const ONSEN = (() => {
   // with a fringe of cedars, then the near hill under its cedars and the season's trees; a gorge cut in it and the line's red truss
   // bridge across (the diesel over it now and then, in and out of the trees), a fall of water under it; mist along the valley; the
   // town's steam rising on the right ----
+  // ---- steam (湯の花駅前's, and 湯けむり通り's and 湯畑's to come): soft puffs — a radial gradient, its colour at the heart fading out to
+  // nothing, no filter — rising and swelling by transform only (.os-steam), cheap on a phone. steamDefs(): the gradient, once in a
+  // land's <svg> (its colour --os-puff: white by day, a dim lilac by night); steam(puffs): [x, y, r, delay s] each ----
+  const steamDefs = () => `<defs><radialGradient id="osPuff"><stop offset="0" style="stop-color:var(--os-puff)" stop-opacity=".95"/><stop offset=".5" style="stop-color:var(--os-puff)" stop-opacity=".5"/><stop offset="1" style="stop-color:var(--os-puff)" stop-opacity="0"/></radialGradient></defs>`;
+  const steam = (puffs) => puffs.map(([x, y, r, d]) => `<circle class="os-steam" cx="${x}" cy="${y}" r="${r}" fill="url(#osPuff)" style="animation-delay:-${d}s"/>`).join('');
   const lerpY = (P, x) => { const i = Math.max(0, P.findIndex((p) => p[0] > x) - 1), [x0, y0] = P[i], [x1, y1] = P[i + 1] || P[i]; return y0 + (y1 - y0) * ((x - x0) / ((x1 - x0) || 1)); };
   const FAR = [[-20, -40], [80, -96], [170, -70], [260, -128], [360, -84], [450, -110], [540, -150], [640, -104], [730, -138], [820, -92], [920, -120], [1020, -80], [1110, -112], [1220, -70]];
   const MID = [[-20, 30], [100, -20], [200, 10], [300, -40], [420, 0], [520, -30], [600, -56], [690, -20], [780, -44], [880, -4], [980, -30], [1080, 6], [1220, -16]];
@@ -51,11 +56,17 @@ const ONSEN = (() => {
       <path d="M546 60 h14 l-3 30 h-8 Z M662 60 h14 l-2 32 h-9 Z" ${hc('#9a9284', '#2a2a44')}/>${truss(false)}
       <g class="os-far-train"><g><rect x="0" y="51" width="24" height="9" rx="2" ${hc('#f3ead2', '#3a3f66')}/><rect x="0" y="56.4" width="24" height="2.2" ${hc('#2f5a3a', '#163028')}/><rect x="3" y="52.6" width="4.4" height="2.8" ${hc('#9fc0d0', '#ffe2a0')}/><rect x="10" y="52.6" width="4.4" height="2.8" ${hc('#9fc0d0', '#ffe2a0')}/><rect x="17" y="52.6" width="4.4" height="2.8" ${hc('#9fc0d0', '#ffe2a0')}/></g></g>
       ${truss(true)}<path d="M550 62 H672" ${hs('#6a2a26', '#3a1a24')} stroke-width="3"/>${cedar(546, 74, 40, 1)}${cedar(538, 86, 34, 0)}${cedar(676, 76, 42, 0)}${cedar(686, 88, 32, 1)}`;
-    const steam = [[996, 130, 20, 0], [1004, 118, 16, 4.5], [1040, 116, 24, 2.3], [1052, 104, 18, 6.8], [1092, 128, 22, 4.6], [1100, 112, 17, 0.9], [1140, 108, 27, 1.2], [1148, 96, 20, 5.6], [1188, 122, 21, 6.1], [1196, 104, 18, 2.9], [1066, 96, 18, 7.4], [1164, 88, 23, 3.4]].map(([x, y, r, d]) => `<circle cx="${x}" cy="${y}" r="${r}" ${hcx('os-steam', '#ffffff', '#b8b0d8', `animation-delay:-${d}s`)}/>`).join('');
+    // the river along the valley floor (the review, 2026-11-23: only its fall was drawn): out of the gorge's foot and away either way
+    // under the trees (seen past the station's end and through the 足湯's open sides), foam where the fall meets it, glints
+    const river = `<path d="M420 155 Q480 149 548 153 Q590 157 608 152 Q650 147 712 153 Q760 157 800 152 L800 161 Q760 165 712 161 Q650 157 608 161 Q590 165 548 161 Q480 157 420 163 Z" ${hc('#8fc4dc', '#2a3a6a')}/>
+      <path d="M420 155 Q480 149 548 153 Q590 157 608 152 Q650 147 712 153 Q760 157 800 152" fill="none" ${hs('#4f7a58', '#121e34')} stroke-width="1.6"/>
+      <path d="M598 151 q5 -3 10 0 q5 3 10 0" fill="none" stroke="#fff" stroke-width="2.4" style="stroke-opacity:calc(.3 + .5 * var(--day))"/>
+      <path d="M452 157 h16 M500 156 h12 M560 157 h14 M650 155 h16 M700 157 h12 M748 158 h14" stroke="#fff" stroke-width="1" style="stroke-opacity:calc(.12 + .5 * var(--day))"/>`;
+    const puffs = steam([[996, 130, 28, 0], [1004, 118, 22, 4.5], [1040, 116, 34, 2.3], [1052, 104, 26, 6.8], [1092, 128, 30, 4.6], [1100, 112, 24, 0.9], [1140, 108, 38, 1.2], [1148, 96, 28, 5.6], [1188, 122, 30, 6.1], [1196, 104, 26, 2.9], [1066, 96, 26, 7.4], [1164, 88, 32, 3.4]]);
     return `<path d="${ridge(FAR, F)}" ${hc('#a9b9cb', '#1d2346')}/>${shade}${snow}
       <path d="${ridge(MID, F)}" ${hc('#86a2a8', '#1a2240')}/>${fringe}<rect x="-20" y="20" width="1240" height="40" fill="#fff" style="opacity:calc(.12 * var(--day))"/>
-      <path d="${ridge(NEAR, F)}" ${hc('#5f8a66', '#15213a')}/>${gorge}${trees}
-      <rect x="-20" y="128" width="1240" height="26" fill="#fff" style="opacity:calc(.16 * var(--day))"/>${steam}`;
+      <path d="${ridge(NEAR, F)}" ${hc('#5f8a66', '#15213a')}/>${gorge}${trees}${river}
+      <rect x="-20" y="128" width="1240" height="26" fill="#fff" style="opacity:calc(.16 * var(--day))"/>${puffs}`;
   }
   // ---- the station: a long wooden building under a hipped roof of grey tiles (their rows and courses, the ridge with its end
   // tiles, the eaves' underside and their shadow on the wall), white walls between dark posts over a stone base, its side wall
@@ -140,7 +151,7 @@ const ONSEN = (() => {
   // ---- 観光案内所: a small gable-fronted house (the roof's far slope going back, its side wall), the green board with its name,
   // the round i sign out on a bracket, the counter window — inside, the racks of leaflets and あかり (9–18; lit while she is there)
   // — its sliding door with a hanging sign; the counter's front and the wall under it before her ----
-  const ANNAI = { x0: 712, x1: 868, win: [724, 816], sill: 212 };
+  const ANNAI = { x0: 712, x1: 868, win: [724, 816], sill: 217, bars: [742, 776, 796] };   // bars: the window's mullions — あかり's face in the wide pane between the first two (SPOTS.onsen.window)
   function annaiBack(open) {
     const { x0, x1, win: [w0, w1], sill } = ANNAI, cx = (x0 + x1) / 2;
     const racks = [180, 192, 204].map((y, r) => Array.from({ length: 11 }, (_, k) => `<rect x="${w0 + 6 + k * 9.6}" y="${y - (k % 3)}" width="7" height="${9 + (k % 3)}" fill="${['#e6a23c', '#3f9a8c', '#d0574b', '#5a78c8', '#f2e8c8', '#8ab86e'][(k + r * 2) % 6]}"/>`).join('')).join('');
@@ -160,14 +171,15 @@ const ONSEN = (() => {
       <rect x="${x0 - 2}" y="228" width="${x1 - x0 + 18}" height="8" ${hc('#a8a296', '#2a2a46')}/>
       <g transform="translate(${x0 - 12} 150)"><path d="M10 2 h12" ${hs('#3b3b44', '#1c1d3c')} stroke-width="2"/><circle cx="8" cy="12" r="9" ${hc('#2f8a5a', '#1a4030')}/><circle cx="8" cy="12" r="7.4" fill="none" stroke="#fff" stroke-width="1"/><text x="8" y="16.4" text-anchor="middle" font-size="12" font-weight="800" fill="#fff" font-family="Georgia, serif">i</text><path d="M8 2 v1" stroke="#3b3b44" stroke-width="2"/></g>`;
   }
-  // the counter in front of あかり: its ledge, the wall under it and its wainscot, a pane of glass over her with its light on it
+  // the counter in front of あかり: its ledge, the wooden front under it, a pane of glass over her with its light on it, the mullions
+  // either side of her face (ANNAI.bars), a card on the counter under the right-hand pane
   function annaiFront() {
     const { win: [w0, w1], sill } = ANNAI;
     return `<rect x="${w0}" y="174" width="${w1 - w0}" height="${sill - 174}" fill="#cfe6ec" opacity=".12"/><path d="M${w0 + 8} ${sill - 4} l16 -32 M${w0 + 18} ${sill - 4} l8 -16 M${w1 - 30} ${sill - 4} l14 -28" stroke="#fff" stroke-opacity=".35" stroke-width="2.4"/>
-      <path d="${Array.from({ length: 3 }, (_, i) => `M${w0 + (i + 1) * (w1 - w0) / 4} 174 V${sill}`).join(' ')}" ${hs('#5a3e2a', '#1e1830')} stroke-width="2"/>
+      <path d="${ANNAI.bars.map((x) => `M${x} 174 V${sill}`).join(' ')}" ${hs('#5a3e2a', '#1e1830')} stroke-width="2"/>
       <rect x="${w0 - 6}" y="${sill}" width="${w1 - w0 + 12}" height="5" rx="1" ${hc('#a8743f', '#3a2c30')}/><rect x="${w0 - 6}" y="${sill + 4}" width="${w1 - w0 + 12}" height="2" fill="#2b1c12" fill-opacity=".3"/>
-      <rect x="${w0 - 3}" y="${sill + 6}" width="${w1 - w0 + 6}" height="${228 - sill - 6}" ${hc('#f3ede0', '#2a2c50')}/><rect x="${w0 - 3}" y="216" width="${w1 - w0 + 6}" height="12" ${hc('#7a5a3c', '#2a2234')}/><path d="${Array.from({ length: 16 }, (_, i) => `M${w0 + 2 + i * 7} 217 v10`).join(' ')}" ${hs('#5a3e2a', '#1e1830')} stroke-width="1"/>
-      <rect x="${w0 - 6}" y="228" width="${w1 - w0 + 12}" height="8" ${hc('#a8a296', '#2a2a46')}/><rect x="${w0 + 30}" y="${sill - 10}" width="22" height="10" rx="1" ${hc('#fbf8f0', '#3a3c5a')}/><path d="M${w0 + 33} ${sill - 7} h16 M${w0 + 33} ${sill - 4} h12" stroke="#3f9a8c" stroke-width="1"/>`;
+      <rect x="${w0 - 3}" y="${sill + 6}" width="${w1 - w0 + 6}" height="${228 - sill - 6}" ${hc('#7a5a3c', '#2a2234')}/><path d="${Array.from({ length: 16 }, (_, i) => `M${w0 + 2 + i * 7} ${sill + 7} V227`).join(' ')}" ${hs('#5a3e2a', '#1e1830')} stroke-width="1"/>
+      <rect x="${w0 - 6}" y="228" width="${w1 - w0 + 12}" height="8" ${hc('#a8a296', '#2a2a46')}/><rect x="${w0 + 72}" y="${sill - 10}" width="18" height="10" rx="1" ${hc('#fbf8f0', '#3a3c5a')}/><path d="M${w0 + 75} ${sill - 7} h12 M${w0 + 75} ${sill - 4} h9" stroke="#3f9a8c" stroke-width="1"/>`;
   }
   // ---- 求人看板 (湯の花温泉's): a cork board on two posts under a little shingled roof, アルバイト募集 on its red band and four
   // flyers — the info desk's i, a futon, a gift box, a key on its wooden tag (the town's jobs: Task 4 puts them up) ----
@@ -243,7 +255,7 @@ const ONSEN = (() => {
   }
   function html() {
     const open = akariHere();
-    return `<svg class="land tall onsen-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}
+    return `<svg class="land tall onsen-land" viewBox="0 -400 1200 770" preserveAspectRatio="xMidYMax slice">${GLOW_DEFS}${steamDefs()}
       ${hills()}${station()}${bathBack()}${annaiBack(open)}${jobBoard()}${mapBoard()}${street()}${square()}
     </svg>
     ${landProp(110, bathFront(), null, [BATH.x0 - 12, 140, BATH.x1 + 24, BATH.water[1] + 14])}
@@ -297,7 +309,7 @@ const ONSEN = (() => {
   function photo(yard) {
     setTimeout(() => { if (!yard.isConnected || !yh.use) return; SND.play('shutter', { vol: 0.7 }); const fl = document.createElement('i'); fl.className = 'os-flash'; yard.appendChild(fl); setTimeout(() => fl.remove(), 700); }, 1100);
   }
-  return { html, mount, soak, boardSay, window: window_, photo };
+  return { html, mount, soak, boardSay, window: window_, photo, steam, steamDefs };   // steam, steamDefs: 湯けむり通り's and 湯畑's too
 })();
 function onsenHtml() { return ONSEN.html(); }
 // the things on 湯の花駅前 to use (spec §3.1): the 改札 (the way home: its ticket machine), the departure board, the bench and the post
@@ -310,7 +322,7 @@ PLACE_USE.onsen = [
   { id: 'post', name: '郵筒', box: [444, 188, 466, 236], kind: 'do', go: [-145, 126], back: 1, pose: 'reach', say: 'ポトン' },
   // the 足湯: sat on its back bench over the water (walked up to its front first), his feet in it; up again, his shoes back on
   { id: 'ashiyu', name: '足湯', box: [488, 196, 680, 262], kind: 'sit', seats: [-80, -40, 0, 40, 72], top: 144, dep: 138, front: 102, z: 160, say: 'あったか〜い', sat: (y, X) => ONSEN.soak(y, X, true), up: (y) => ONSEN.soak(y, 0, false) },
-  { id: 'annai', name: '観光案内所', box: [722, 150, 818, 212], kind: 'do', go: [166, 126], back: 1, pose: 'look', open: (y) => ONSEN.window(y) },
+  { id: 'annai', name: '観光案内所', box: [722, 150, 818, 212], kind: 'do', go: [196, 126], back: 1, pose: 'look', open: (y) => ONSEN.window(y) },   // beside the window, not before her face
   { id: 'jobs', name: '求人看板', box: [898, 156, 966, 212], kind: 'do', go: [332, 126], back: 1, pose: 'look', say: 'アルバイト…？', toast: '湯の花温泉的打工：要打工證「ベテラン」，還要學到 N4（第 7 單元起）。' },
   { id: 'map', name: '觀光地圖', box: [978, 108, 1088, 200], kind: 'do', go: [434, 126], back: 1, pose: 'look', toast: '湯の花温泉 觀光地圖：從車站往右是「湯けむり通り」，伴手禮店和旅館「花月」都在路邊；一直走到底，冒著白煙的是「湯畑」。' },
   { id: 'rick', name: '人力車', box: [984, 206, 1090, 306], kind: 'sit', seats: [432], top: 132, dep: 66, z: 234, say: 'はい、チーズ！', sat: (y) => ONSEN.photo(y) }

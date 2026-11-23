@@ -206,7 +206,7 @@
     if (older.town || newer.town) {   // the town's events done, people met, bus stops opened: once on either device, for good
       const o = older.town || {}, n = newer.town || {};
       const talks = {}; [o.talks, n.talks].forEach((t) => Object.entries(t || {}).forEach(([id, k]) => { talks[id] = Math.max(talks[id] || 0, Number(k) || 0); }));   // the chats with each: the more (as numbers)
-      out.town = Object.assign({}, n, { done: Object.assign({}, o.done, n.done), seen: Object.assign({}, o.seen, n.seen), stops: Object.assign({}, o.stops, n.stops), talks });
+      out.town = Object.assign({}, o, n, { done: Object.assign({}, o.done, n.done), seen: Object.assign({}, o.seen, n.seen), stops: Object.assign({}, o.stops, n.stops), talks });   // a key either copy has (a later build's): kept, the later copy's where both do (2026-11-23)
       if (o.traps || n.traps) out.town.traps = Object.assign({}, o.traps, n.traps);   // 中華街's 漢字陷阱 seen through (2026-11-14): once on either device, for good
       if (o.arrived || n.arrived) out.town.arrived = Object.assign({}, o.arrived, n.arrived);   // a place first come to (湯の花's ようこそ, 2026-11-23): once on either device, for good
     }

@@ -13,7 +13,7 @@ def ev(b, js, pre=()):
 
 # a learner in the course (m6), no work, the town's clock at 10 on a weekday, 1000 円 to spend; the ride at twenty times its pace,
 # the voices quiet. arrive(to): the ride left to run to its end there (降りる tapped), walked in; phases: the ride's phases as they
-# went by (RIDE.now().phase, each change of it)
+# went by, 'phase@station' — recorded by RIDE itself (RIDE.trace, the tests' hook: no sampling to miss a short stop)
 BEGIN = """state.storyV = 99; state.startChosen = true; state.introSeen = true; state.stage = 'main'; state.kanaKnown = true; state.currentUnit = 'm6'; state.completedUnits = [];
   state.town = { done: {}, seen: {}, stops: { station: '2026-11-01', castle: '2026-11-01' }, talks: {} }; state.koto.found = {}; state.purse = { spent: {}, book: {}, gift: 1000 }; state.cruise = { done: {}, on: null, res: {} }; state.work = { res: {} };
   TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; saveState(); DAILY_CACHE = null;
@@ -21,9 +21,8 @@ BEGIN = """state.storyV = 99; state.startChosen = true; state.introSeen = true; 
   window.speak = () => Promise.resolve(); window.speakAs = () => Promise.resolve(); RIDE.speed = 20; RIDE.keep(null);
   const click = (q) => { const e = document.querySelector(q); if (e && !e.disabled) e.click(); return Boolean(e && !e.disabled); };
   const at = async (place) => { location.hash = '#/' + place; document.getElementById('view').innerHTML = ''; route(); await wait(400); };
-  const phases = [];
-  const note = () => { const n = RIDE.now(), k = n ? n.phase + (n.at ? '@' + n.at : '') : '-'; if (phases[phases.length - 1] !== k) phases.push(k); };
-  const watch = async (done, ms = 15000) => { const t0 = Date.now(); while (!done() && Date.now() - t0 < ms) { note(); await wait(10); } note(); return done(); };
+  const phases = RIDE.trace = [];
+  const watch = async (done, ms = 15000) => { const t0 = Date.now(); while (!done() && Date.now() - t0 < ms) await wait(10); return done(); };
   const end = (st) => () => { const n = RIDE.now(); return Boolean(n && n.phase === 'end' && n.at === st); };
   async function arrive(st, to) { await watch(end(st)); click('.rd-off'); await watch(() => location.hash === to, 5000); await wait(600); }"""
 
@@ -118,31 +117,80 @@ def test_foot_bath_and_first_greeting(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {}, toasts = [], said = []; window.toast = (m) => toasts.push(m); window.speakAs = (w, l) => { said.push([w, l]); return Promise.resolve(); };
       const greeted = () => said.filter(([w, l]) => w === 'akari' && /ようこそ/.test(l)).length, told = () => toasts.filter((m) => /ベテラン/.test(m)).length;
       TOWNEV.clock = { h: 21, day: new Date(2026, 10, 10) }; await at('onsen'); await wait(1500); out.night = [greeted(), told(), JSON.stringify(state.town.arrived || {})];
+      click('.use-btn[data-use="annai"]'); await watch(() => toasts.some((m) => /観光案内所/.test(m)), 5000); out.shut = toasts.filter((m) => /観光案内所/.test(m)).join('|');
       TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; await at('onsen'); await wait(1500); out.akari = Boolean(document.querySelector('.npc-akari')); out.first = [greeted(), told(), state.town.arrived];
       out.line = (said.find(([w]) => w === 'akari') || [])[1];
       click('.use-btn[data-use="ashiyu"]'); await watch(() => document.querySelector('.yhero.bench'), 6000); await wait(300);
       const h = document.querySelector('.yhero'); out.sat = h ? [...h.classList].filter((c) => ['bench', 'os-soak'].includes(c)) : [];
-      out.pop = [...document.querySelectorAll('.ypop')].map((e) => e.textContent).join('|');
+      out.pop = [...document.querySelectorAll('.ypop')].map((e) => e.textContent).join('|'); out.rings = document.querySelectorAll('.os-soakrings > *').length;
+      await new Promise((q) => yHeroWalk(yard(), [-300, 60], q)); await wait(100);   // up again and away: shoes back on
+      out.up = [Boolean(document.querySelector('.yhero.os-soak')), document.querySelectorAll('.os-soakrings > *').length, Boolean(yh.use)];
       await at('platform'); await at('onsen'); await wait(1500); out.again = [greeted(), told()];
       out.kept = normalizeState(JSON.parse(JSON.stringify(state))).town.arrived;
       return JSON.stringify(out); })()"""))
     assert r['night'] == [0, 0, '{}'], r   # nobody at the window by night: no greeting yet
+    assert '9:00' in r['shut'] and '18:00' in r['shut'], r   # the window by night: when it opens
     assert r['akari'] and r['first'] == [1, 1, {'onsen': 1}] and r['line'] == 'ようこそ、{湯の花|ゆのはな}{温泉|おんせん}へ！', r
-    assert r['sat'] == ['bench', 'os-soak'] and 'あったか' in r['pop'], r
+    assert r['sat'] == ['bench', 'os-soak'] and 'あったか' in r['pop'] and r['rings'] >= 3, r   # his feet in it: rings and his shoes on the rim
+    assert r['up'] == [False, 0, False], r   # up and away: out of the water, his shoes gone from the rim
     assert r['again'] == [1, 1] and r['kept'] == {'onsen': 1}, r
 
-# Review Focus 5: no announcement cuts another — the change at 白鷺 is said to its end before つぎは 森下 (a clip that takes 0.9 s, the
-# ride itself at twenty times its pace); none at all starts while one is still being said
+# Review Focus 5: no announcement cuts another — the change at 白鷺 is said to its end before つぎは 森下 (a clip of 0.9 s), and none at
+# all starts while one is still being said: every clip (0.4 s) is longer than a stretch between stations at twenty times the pace
+# (0.225–0.31 s), so lines said without waiting would overlap
 def test_the_change_announcement_is_not_cut(b):
     r = json.loads(ev(b, "(async () => { " + BEGIN + """ const log = [];
       window.speakAs = (w, l) => { if (w !== 'ann') return Promise.resolve(); log.push(['say', l, performance.now()]); const long = /乗り換え/.test(l);
-        return new Promise((ok) => setTimeout(() => { log.push(['done', l, performance.now()]); ok(); }, long ? 900 : 30)); };
+        return new Promise((ok) => setTimeout(() => { log.push(['done', l, performance.now()]); ok(); }, long ? 900 : 400)); };
       RIDE.keep({ from: 'minato', fare: 420, day: todayStr() }); await at('platform'); RIDE.board(yard(), 1); await arrive('yunohana', '#/onsen');
       const says = log.filter((x) => x[0] === 'say'), ch = says.findIndex((x) => /乗り換え/.test(x[1])), doneAt = (k) => (log.find((x) => x[0] === 'done' && x[1] === says[k][1] && x[2] >= says[k][2]) || [])[2];
       const cut = says.slice(1).filter((x, k) => !(doneAt(k) <= x[2] + 1)).map((x) => x[1]);
       return JSON.stringify({ n: says.length, ch, next: ch >= 0 && says[ch + 1] ? says[ch + 1][1] : null, gap: ch >= 0 && says[ch + 1] ? says[ch + 1][2] - doneAt(ch) : null, cut, at: location.hash }); })()"""))
     assert r['ch'] > 0 and r['next'] == 'つぎは {森下|もりした}、{森下|もりした}です。' and r['gap'] is not None and r['gap'] >= 0, r
     assert r['cut'] == [] and r['at'] == '#/onsen', r
+
+# the town's keys this build does not rebuild itself are kept, through a load and a sync both (2026-11-23, the review's I2: 中華街's 漢字陷阱
+# — traps — were dropped at every load): traps, arrived, and a key a later build adds; a 1.21.0 device's copy (newer, without them)
+# merged in does not take them away
+def test_town_keys_survive_a_load_and_a_merge(b):
+    r = json.loads(ev(b, """(() => { const base = JSON.parse(JSON.stringify(state));
+      const mine = Object.assign({}, base, { updatedAt: '2026-11-23T10:00:00.000Z', town: { done: { a1: '2026-11-01' }, seen: { kenta: 1 }, stops: {}, talks: {}, traps: { 手紙: 1 }, arrived: { onsen: 1 }, later: { k: 1 } } });
+      const theirs = Object.assign({}, base, { updatedAt: '2026-11-23T11:00:00.000Z', town: { done: {}, seen: { akari: 1 }, stops: {}, talks: {} } });
+      const loaded = normalizeState(JSON.parse(JSON.stringify(mine))), merged = normalizeState(SyncCore.mergeStates(loaded, normalizeState(JSON.parse(JSON.stringify(theirs)))));
+      const pick = (t) => [t.traps || null, t.arrived || null, t.later || null];
+      return JSON.stringify({ loaded: pick(loaded.town), merged: pick(merged.town), seen: merged.town.seen, done: merged.town.done, bare: normalizeState({}).town }); })()"""))
+    assert r['loaded'] == [{'手紙': 1}, {'onsen': 1}, {'k': 1}], r   # a reload keeps them
+    assert r['merged'] == [{'手紙': 1}, {'onsen': 1}, {'k': 1}] and r['seen'] == {'kenta': 1, 'akari': 1} and r['done'] == {'a1': '2026-11-01'}, r   # a sync too
+    assert r['bare'] == {'done': {}, 'seen': {}, 'stops': {}, 'talks': {}}, r   # nothing invented
+
+# a ticket past 白鷺 whose rest the wallet cannot pay ends at 白鷺 — it covers that far — and is never refused (350, 森下's fare, with 50 円);
+# with the money it goes on to 湯の花 and pays the 70 there; 乗り換える at 白鷺 with too little: a toast, and still the way off
+def test_a_short_wallet_ends_at_shirasagi_and_rides_on_only_with_the_money(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
+      state.purse.gift = 50; saveState(); RIDE.keep({ from: 'minato', fare: 350, day: todayStr() }); await at('platform');
+      out.boarded = RIDE.board(yard(), 1); out.to = RIDE.now() && RIDE.now().to; await watch(end('shirasagi'));
+      click('.rd-card .os-on'); await wait(200); out.on = [RIDE.now().phase, Boolean(document.querySelector('.rd-card .rd-off')), toasts.filter((m) => /錢包不夠/.test(m)).length];
+      await arrive('shirasagi', '#/castle'); out.castle = [location.hash, yenBalance()];
+      state.purse.gift = 1000; saveState(); RIDE.keep({ from: 'minato', fare: 350, day: todayStr() }); await at('platform');
+      RIDE.board(yard(), 1); out.to2 = RIDE.now() && RIDE.now().to; await arrive('yunohana', '#/onsen'); out.onsen = [location.hash, yenBalance()];
+      return JSON.stringify(out); })()"""))
+    assert r['boarded'] and r['to'] == 'shirasagi' and r['on'] == ['end', True, 1] and r['castle'] == ['#/castle', 50], r
+    assert r['to2'] == 'yunohana' and r['onsen'] == ['#/onsen', 930], r
+
+# no free ride home (the coordinator's ruling 6): 湯の花's machine, the money short — the app's own way home (書房) in the card and in
+# its toast; a ticket to 湯の花 bought with too little left for the way back (260 to 白鷺): a warning, the ticket sold all the same
+def test_short_of_money_the_way_home_is_named(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
+      state.purse.gift = 100; saveState(); await at('onsen'); RIDE.machine(yard(), 'yunohana'); await wait(100);
+      click('.kb-fare[data-f="220"]'); await wait(60); click('.kb-pay'); await wait(200);
+      out.home = [Boolean(document.querySelector('.kb-card .os-home')), toasts.filter((m) => /書房/.test(m)).length, RIDE.ticket()];
+      click('.kb-card .os-home'); await watch(() => location.hash === '#/today', 3000); out.at = location.hash;
+      state.purse.gift = 500; saveState(); await at('station'); RIDE.machine(yard(), 'minato'); await wait(100);
+      click('.kb-fare[data-f="420"]'); await wait(60); click('.kb-pay'); await wait(200); CLASS.close();
+      out.warn = [toasts.filter((m) => /260/.test(m) && /湯の花/.test(m)).length, RIDE.ticket() && RIDE.ticket().fare, yenBalance()];
+      return JSON.stringify(out); })()"""))
+    assert r['home'] == [True, 1, None] and r['at'] == '#/today', r
+    assert r['warn'] == [1, 420, 80], r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 

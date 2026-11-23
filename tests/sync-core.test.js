@@ -201,6 +201,14 @@ test('mergeStates: a place first arrived at on either device stays arrived — �
   assert.deepEqual(C.mergeStates(a, b).town.seen, { akari: 1 }, 'the people met stay the people met');
   assert.equal(C.mergeStates(b, { updatedAt: '2026-11-23T08:00:00.000Z', town: { done: {} } }).town.arrived, undefined, 'neither arrived anywhere: nothing invented');
 });
+test('mergeStates: a town key either copy has is kept, the later copy\'s where both do — 漢字陷阱, a later build\'s key (2026-11-23)', () => {
+  const older = { updatedAt: '2026-11-23T10:00:00.000Z', town: { done: {}, seen: {}, stops: {}, traps: { 手紙: 1 }, later: { k: 1 }, both: 'old' } };
+  const newer = { updatedAt: '2026-11-23T11:00:00.000Z', town: { done: {}, seen: {}, stops: {}, both: 'new' } };
+  const m = C.mergeStates(older, newer);
+  assert.deepEqual(m.town.traps, { 手紙: 1 });
+  assert.deepEqual(m.town.later, { k: 1 }, 'a key only the copy saved earlier has (a device on an older build saved later) is not lost');
+  assert.equal(m.town.both, 'new');
+});
 test('mergeStates: how often the hero chatted with each person keeps the larger count (2026-11-12)', () => {
   const a = { updatedAt: '2026-11-12T10:00:00.000Z', town: { done: {}, seen: {}, stops: {}, talks: { kenta: 3, miku: 1 } } };
   const b = { updatedAt: '2026-11-12T09:00:00.000Z', town: { done: {}, seen: {}, stops: {}, talks: { kenta: 5, tome: 2 } } };

@@ -13,6 +13,7 @@ const SND = (() => {
   const TOP = 0.2;   // 環境音 at 100%: a fifth of what it was (2026-11-14, the user: the default was frightening)
   let C = null, bus = null, amb = null, ducks = 0, unduckT = 0;
   const bufs = {};   // a file's name → the promise of its AudioBuffer (null: not to be had; asked again a minute later)
+  const madeOnce = {};   // a loop made here → its AudioBuffer, kept for the session (bufs lets a layer's go when it stops: making it again would cost more)
   const vol = () => Math.min(1, Math.max(0, Number(state.settings.ambientVol) || 0));   // 設定 › 環境音 (0: none)
   const gain = () => vol() * TOP * (ducks ? DUCK : 1);   // the whole of it: its setting, under Japanese read aloud
   function ctx() { if (!vol()) return null; const c = audioCtx(); if (c && c !== C) { C = c; bus = amb = null; } return c; }
@@ -26,7 +27,7 @@ const SND = (() => {
   const made = (name) => MADE[name] || (name.startsWith('amb-') ? 38 : name.startsWith('steps-') ? 2 : 0);
   const lead = (name, b) => { const n = made(name), x = n ? b.duration - n : 0; return x > 0.03 && x < 0.2 ? 2112 / 44100 : 0; };
   function load(c, name) {
-    if (!bufs[name] && MADE_LOOPS[name]) bufs[name] = Promise.resolve().then(() => MADE_LOOPS[name](c)).catch(() => null);   // made here (湯の花's river)
+    if (!bufs[name] && MADE_LOOPS[name]) bufs[name] = Promise.resolve().then(() => madeOnce[name] || (madeOnce[name] = MADE_LOOPS[name](c))).catch(() => null);   // made here (湯の花's river): once a session
     if (!bufs[name]) {
       bufs[name] = fetch(FILE(name)).then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
         .then((a) => new Promise((ok, no) => c.decodeAudioData(a, ok, no)))   // the callback form: older Safari has no promise
