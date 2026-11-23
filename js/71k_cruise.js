@@ -140,8 +140,8 @@ const CRUISE = (() => {
   }
 
   // ---- the people about (高橋 with his flag, the passengers, townsfolk a stop brings out): drawn as the town's, moved here ----
-  let S = null;   // { yard, place, indoor, ppl: Map id → { el, id, pos, k, walk, z, seat }, extra: [els], raf, t: timers, busy, ct, jt }
-  let lastPlace = '', pend = '', carry = false;   // the place drawn before; the place they were led to (its stop begins); taken there by travel()
+  let S = null;   // { yard, place, indoor, ppl: Map id → { el, id, pos, k, walk, z, seat, s }, extra: [els], raf, t: timers, busy, ct, jt, eat }
+  let lastPlace = '', pend = '', carry = '';   // the place drawn before; the place they were led to (its stop begins); taken there by travel() — how: bus, train, walk
   const alive = () => Boolean(S && S.yard.isConnected);
   const fresh = (yard, place) => ({ yard, place, indoor: INDOOR.includes(place), ppl: new Map(), extra: [], raf: 0, t: [], busy: false });
   const FLAG = `<g class="cr-flag"><path d="M34 -40 V-252" stroke="#6e4f3a" stroke-width="3.4" stroke-linecap="round"/><path d="M35.5 -252 h58 v38 h-58 Z" fill="#f08a3c"/><path d="M35.5 -252 h58 v6 h-58 Z" fill="#fff" fill-opacity=".3"/>`
@@ -159,18 +159,22 @@ const CRUISE = (() => {
   }
   function put(p) {
     const [X, Y] = p.pos;
-    p.el.style.transform = `translate(${X.toFixed(1)}px,${(-Y).toFixed(1)}px) scale(${(yScale(Y) * p.k).toFixed(3)})`;
+    p.el.style.transform = `translate(${X.toFixed(1)}px,${(-Y).toFixed(1)}px) scale(${((p.s || yScale(Y)) * p.k).toFixed(3)})`;   // s: on a seat out of doors, the size where it stands
     p.el.style.zIndex = String(p.z || (S.indoor ? isoZ(...isoUV(X, Y)) : 300 - Math.round(Y)));   // in a room: by where they stand on its floor
   }
   const face = (p) => { p.el.classList.toggle('back', p.back); p.el.classList.toggle('turn', p.turn); p.el.classList.toggle('flip', p.flip); };
   const turnTo = (p, x) => { if (p.seat) return; const dx = x - p.pos[0]; p.back = false; p.turn = Math.abs(dx) > 16; if (p.turn) p.flip = dx < 0; face(p); };
-  // sat down in a room's seat [u, v, h, how] (as the town's people sit: on a chair or a stool, kneeling on a cushion), up again
+  // sat down in a room's seat [u, v, h, how] (as the town's people sit: on a chair or a stool, kneeling on a cushion) — or out of
+  // doors on one of the place's, { t: its PLACE_USE (kind 'sit'), X }, as the hero sits there (ySit: on its top, the size where it
+  // stands, drawn behind what stands before it), facing us; up again where one steps up to it (foot)
   function sit(p, q) {
+    if (!Array.isArray(q)) { const k = yScale(q.t.dep); p.seat = q; p.s = k; p.pos = [q.X, q.t.top - 40 * k * p.k]; p.z = q.t.z || 300 - q.t.dep - 1; p.back = p.turn = p.flip = false; p.el.classList.add('bench'); face(p); put(p); return; }
     const [u, v, h, how] = q, f = how.split(' ');
     p.seat = q; p.pos = isoXY(u, v, h); p.z = isoZ(u, v + 0.45); p.back = f.includes('back'); p.turn = f.includes('turn'); p.flip = f.includes('flip');
     p.el.classList.add(f.includes('kneel') ? 'kneel' : 'bench'); face(p); put(p);
   }
-  function stand(p) { if (!p.seat) return; p.pos = isoXY(p.seat[0], p.seat[1]); p.seat = null; p.z = 0; p.el.classList.remove('bench', 'kneel'); put(p); }
+  const foot = (q) => (Array.isArray(q) ? isoXY(q[0], q[1]) : [q.X, Math.max(14, q.t.dep - 16)]);
+  function stand(p) { if (!p.seat) return; p.pos = foot(p.seat); p.seat = null; p.s = 0; p.z = 0; p.el.classList.remove('bench', 'kneel'); put(p); }
   // along the ground round what stands in the way (o.path: these points as they are — the gangway; o.free: off the ground's top);
   // o.v: px a second, o.delay: ms before setting off, o.done
   function walkTo(p, goal, o = {}) {
@@ -213,7 +217,7 @@ const CRUISE = (() => {
     const old = S.yard.querySelector(`.ysay[data-who="cr-${id}"]`); if (old) old.remove();
     if (o.wait !== undefined) S.hold = Date.now() + ms;   // the idle chatter keeps out of their way meanwhile
     if (o.wait !== undefined && S.yard.querySelectorAll('.ysay.cr-say').length >= room()) { if (o.wait < 8) S.t.push(setTimeout(() => { if (!TALK.on()) say(id, ja, ms, { wait: o.wait + 1 }); }, 700)); return; }
-    const b = yBubble(S.yard, p.pos[0] + 600, 370 - p.pos[1] - 196 * yScale(p.pos[1]) * p.k, ruby(ja), ms);
+    const b = yBubble(S.yard, p.pos[0] + 600, 370 - p.pos[1] - 196 * (p.s || yScale(p.pos[1])) * p.k, ruby(ja), ms);
     if (b) { b.dataset.who = 'cr-' + id; b.classList.add('cr-say'); if (!o.all) clear(b); }
   }
   function clear(b) {   // in from the screen's edge (its tail still to the speaker), then up over the bubble it overlaps
@@ -245,15 +249,15 @@ const CRUISE = (() => {
     S.jt = setTimeout(jostle, rnd(1400, 2800));
     if (TALK.on() || S.busy || calm()) return;
     const idle = [...S.ppl.values()].filter((p) => !p.walk && !p.seat && p.id !== 'takahashi' && !p.away); if (!idle.length) return;
-    const p = pick(idle), [X, Y] = p.pos;
-    if (!S.indoor && S.home) {
+    const p = pick(idle), [X, Y] = p.pos, mid = S.eat;   // at a meal out of doors: no wandering off from the ring, its middle looked at
+    if (!S.indoor && S.home && !mid) {
       const [hx, hy] = S.home, off = Math.abs(X - hx) > 70 || Math.abs(Y - hy) > 20;
       if (off && Math.random() < 0.45) { walkTo(p, [hx + rnd(-45, 45), hy + rnd(-6, 6)], { v: rnd(60, 85), done: () => turnTo(p, yh.X) }); return; }
       const out = [...S.ppl.values()].filter((q) => q.id !== 'takahashi' && (Math.abs(q.pos[0] - hx) > 70 || Math.abs(q.pos[1] - hy) > 20)).length;
       if (!off && out < 3 && Math.random() < 0.45) { const w = roam(hx, hy); if (w) { walkTo(p, w.to, { v: rnd(55, 75), done: () => { if (w.at !== undefined) turnTo(p, w.at); } }); return; } }
     }
     const to = S.indoor ? isoClamp([X + rnd(-14, 14), Y + rnd(-5, 5)], 1) : [X + rnd(-14, 14), Math.max(14, Math.min(walkTop(S.place, X), Y + rnd(-5, 5)))];
-    walkTo(p, to, { path: [p.pos, to], v: 45, done: () => turnTo(p, yh.X) });
+    walkTo(p, to, { path: [p.pos, to], v: 45, done: () => turnTo(p, mid ? mid[0] : yh.X) });
   }
   // somewhere to wander to from the crowd at hx, hy: a thing of the place close by (its spot: PLACE_USE's go; at: where to look),
   // else open ground — not the road, nothing standing there, within a phone's view
@@ -289,6 +293,34 @@ const CRUISE = (() => {
     const taken = [...S.yard.querySelectorAll('.npc[data-npc], .cr-extra')].map(npcXY), sat = [...S.ppl.values()].filter((p) => p.seat).map((p) => p.seat);
     return all.filter((q) => { const [X, Y] = isoXY(q[0], q[1], q[2]); return !sat.includes(q) && taken.every(([nx, ny]) => Math.hypot(nx - X, ny - Y) > 14); });
   }
+  // out of doors the place's seats (PLACE_USE kind 'sit': a bench, a bollard, the 茶屋's 縁台; seats: their X), one person each —
+  // { t, X } that no one of the town sits on (as the hero finds them taken: useThing) nor a passenger
+  function benches() {
+    const taken = [...S.yard.querySelectorAll('.npc.bench:not(.tourist)')].map(npcAt).concat([...S.ppl.values()].map((p) => p.seat && p.seat.X).filter(Number.isFinite));
+    return (PLACE_USE[S.place] || []).filter((t) => t.kind === 'sit').flatMap((t) => t.seats.map((X) => ({ t, X }))).filter((q) => taken.every((x) => Math.abs(x - q.X) >= 30));
+  }
+  // those with no seat at a meal out of doors stand round in a loose ring about the crowd's spot (2026-11-23, spec §1.2): an
+  // ellipse as the ground is seen, wider the more they are (by its depth) but clear of the hero, on the ground; turned by the
+  // stop's place in the trip, so the ring a place is drawn with is the one its stop then has them in (a step or two apart)
+  function ring(s, i, ids) {
+    const [cx, cy] = crowdAt(s), n = ids.length, rx = Math.max(36, Math.min(n * 12 * yScale(cy) / yScale(60), Math.abs(cx - heroAt(s)[0]) - 36)), out = {};
+    ids.forEach((id, k) => {
+      const a = i * 1.9 + (k / n) * 2 * Math.PI + rnd(-0.15, 0.15), X = cx + Math.cos(a) * rx + rnd(-4, 4), Y = cy + Math.sin(a) * rx * 0.26 + rnd(-2, 2);
+      out[id] = yFree(S.place, [X, Math.max(14, Math.min(walkTop(S.place, X), Y))]);
+    });
+    return out;
+  }
+  const meal = (s) => (s.seat ? S.indoor : Boolean(s.eat) && !S.indoor);   // they sit down to eat: a room's seats, or out of doors (eat) the place's
+  // where each goes at a stop: their place in the crowd round its spot (slots) — at a meal a seat each in turn while there are any
+  // (not the one lost elsewhere, nor one sat down already), out of doors the rest round in a ring (ring: its middle; S.eat)
+  function spots(s, i, ids) {
+    const m = meal(s), free = !m ? [] : S.indoor ? seats() : benches(), seat = {}, at = slots(s, i, ids);
+    const sat = (id) => Boolean((S.ppl.get(id) || {}).seat), lost = (id) => Boolean(s.lost) && s.lost[0] === id, out = m && !S.indoor;
+    if (m) ids.forEach((id) => { if (!sat(id) && !lost(id) && free.length) seat[id] = free.shift(); });
+    if (out) Object.assign(at, ring(s, i, ids.filter((id) => !seat[id] && !sat(id) && !lost(id))));
+    return { meal: m, seat, at, ring: out ? crowdAt(s) : null };
+  }
+  const round = () => { if (S.eat) S.ppl.forEach((p) => { if (p.id !== 'takahashi' && !p.walk) turnTo(p, S.eat[0]); }); };   // the ring at a meal turned to its middle (not those sat down: turnTo)
   const facing = (s) => { const h = heroAt(s)[0], c = crowdAt(s)[0]; S.ppl.forEach((p) => { if (!p.walk) turnTo(p, p.id === 'takahashi' ? c : h); }); };
   // the camera over them all: between the crowd's far side and 高橋 (a phone shows some 250 of the land's px), gliding there
   function frameAll(s) {
@@ -321,8 +353,8 @@ const CRUISE = (() => {
     if (!t) { if (b) b.remove(); if (g) mark(g, false); return; }
     if (!b) { b = document.createElement('div'); b.className = 'cruise-bar'; b.setAttribute('role', 'status'); S.yard.appendChild(b); }
     const on = cs().on, i = nextStop(t, stepOf(t, on)), s = t.stops[i], n = t.stops.length, here = on.place === S.place;
-    const near = Boolean(WAYS[`${S.place}>${s.at}`]), ready = here && !S.busy && !S.quiet && !eating();
-    const go = s.at === S.place ? (s.bye ? '送客人上船' : '') : !near && s.go === 'bus' ? `搭公車去${placeName(s.at)}` : `一起去${placeName(s.at)}`;
+    const near = Boolean(WAYS[`${S.place}>${s.at}`]), ready = here && !S.busy && !S.quiet && !eating(), by = !near && { bus: '搭公車去', train: '搭電車去' }[s.go];
+    const go = s.at === S.place ? (s.bye ? '送客人上船' : '') : `${by || '一起去'}${placeName(s.at)}`;
     b.innerHTML = !here ? `<span class="cb-t">遊客在${esc(placeName(on.place))}等你</span>`
       : `<span class="cb-n">${i + 1}/${n}</span><span class="cb-t">${esc(s.title)}</span>${go ? `<span class="cb-go">${esc(go)}</span>` : ''}<span class="cb-busy">${S.busy ? '導覽中…' : eating() ? '大家正在用餐…點遊客聊聊' : ready ? '點高橋頭上的「！」' : ''}</span>`;
     if (g) mark(g, ready);
@@ -335,10 +367,11 @@ const CRUISE = (() => {
     g.el.classList.toggle('ev-host', on);
   }
 
-  // ---- a stop: the hero and 高橋 to their places, the passengers crowding round (or sitting down; one lost elsewhere), the talk ----
+  // ---- a stop: the hero and 高橋 to their places, the passengers crowding round (or sitting down to eat, out of doors those with
+  // no seat round in a ring; one lost elsewhere), the talk ----
   function run(i) {
     if (!alive() || S.busy) return;
-    const t = current(), s = t.stops[i], ids = [...S.ppl.keys()].filter((id) => id !== 'takahashi'), at = slots(s, i, ids), sc = S;
+    const t = current(), s = t.stops[i], ids = [...S.ppl.keys()].filter((id) => id !== 'takahashi'), sc = S;
     S.busy = true; bar(); bringOut(s); busIn(s); S.home = S.indoor ? null : crowdAt(s);
     let left = 1, fin = false;
     const there = () => { if (--left > 0 || fin) return; fin = true; setTimeout(begin, 250); };
@@ -351,13 +384,12 @@ const CRUISE = (() => {
     };
     left++; yHeroWalk(S.yard, heroAt(s), there);
     left++; walkTo(S.ppl.get('takahashi'), guideAt(s), { v: 120, done: there });
-    const free = s.seat && S.indoor ? seats() : [];
+    const m = spots(s, i, ids); S.eat = m.ring;   // after bringOut: a seat the stop's townsfolk stand at is taken
     ids.forEach((id, k) => {
       const p = S.ppl.get(id); if (!p) return;
-      const lost = s.lost && s.lost[0] === id; p.away = lost;
-      if (s.seat && S.indoor && p.seat) return;   // sat down already
-      const q = s.seat && S.indoor ? free.shift() : null;
-      left++; walkTo(p, lost ? s.lost[1] : q ? isoXY(q[0], q[1]) : at[id], { delay: k * 80 + rnd(0, 220), v: id === 'umeko' ? 160 : id === 'michiyama' ? 75 : rnd(88, 115), done: () => { if (q) sit(p, q); there(); } });
+      const lost = s.lost && s.lost[0] === id, q = m.seat[id]; p.away = lost;
+      if (m.meal && p.seat) return;   // sat down already
+      left++; walkTo(p, lost ? s.lost[1] : q ? foot(q) : m.at[id], { delay: k * 80 + rnd(0, 220), v: id === 'umeko' ? 160 : id === 'michiyama' ? 75 : rnd(88, 115), done: () => { if (q) sit(p, q); there(); } });
     });
     there();
     const late = (n) => { if (fin || S !== sc) return; if (n < 12 && [...sc.ppl.values()].some((p) => p.walk && !p.away)) { sc.t.push(setTimeout(() => late(n + 1), 400)); return; } left = 1; there(); };
@@ -388,7 +420,7 @@ const CRUISE = (() => {
     if (s.bye) { farewell(t, s); return; }
     const ids = [...S.ppl.keys()].filter((id) => id !== 'takahashi');
     (s.after || []).forEach(([id, ja], k) => S.t.push(setTimeout(() => { if (TALK.on()) return; if (id === 'all') ids.forEach((q) => say(q, ja, 1800, { all: true })); else say(id, ja, undefined, { wait: 0 }); }, 300 + k * 650)));   // not over the next talk
-    if (s.seat && S.indoor) { S.meal = Date.now() + 5000; S.t.push(setTimeout(() => { if (alive()) bar(); }, 5050)); }   // they eat a while: tapped, each has a word at the table
+    if (meal(s)) { S.meal = Date.now() + 5000; S.t.push(setTimeout(() => { if (alive()) bar(); }, 5050)); round(); }   // they eat a while (at a table, or out of doors): tapped, each has a word for it
     S.busy = false; bar();
   }
   const eating = () => Boolean(S && S.meal && Date.now() < S.meal);
@@ -409,15 +441,16 @@ const CRUISE = (() => {
     const h = S.yard.querySelector('.yhero');   // a shop's door (食堂, 居酒屋), in or out
     yHeroWalk(S.yard, o, () => { if (h) h.classList.add('out'); setTimeout(() => { yh.arrive = { from: yPlace, to: s.at }; go(PLACE_ROUTE[s.at]); }, 260); }, true);
   }
+  const HOW = { bus: '🚌 大家一起搭公車去', train: '🚃 大家一起搭電車去' };   // how they go (a stop's go), else on foot
   function travel(s) {
-    const words = s.go === 'bus' ? `🚌 大家一起搭公車去${placeName(s.at)}` : `🚶 大家一起走去${placeName(s.at)}`;
+    const words = (HOW[s.go] || '🚶 大家一起走去') + placeName(s.at);
     const v = document.createElement('div'); v.className = 'cruise-travel'; v.innerHTML = `<span>${esc(words)}</span>`; document.body.appendChild(v);
-    pend = s.at; carry = true; S.busy = true; bar();
+    pend = s.at; carry = HOW[s.go] ? s.go : 'walk'; S.busy = true; bar();
     requestAnimationFrame(() => v.classList.add('on'));
     const bus = s.go === 'bus' && BUS_AT[s.at], start = bus ? [bus.X - 60, Math.max(14, bus.Y + 20)] : heroAt(s);
     setTimeout(() => {
       try { const h = JSON.parse(localStorage.getItem('nq_hero') || '{}') || {}; h[s.at] = { X: Math.round(start[0]), Y: Math.round(start[1]) }; localStorage.setItem('nq_hero', JSON.stringify(h)); } catch (e) { /* no storage */ }
-      yh.arrive = null; yPlace = '';   // drawn anew there, where the bus or the walk brings him
+      yh.arrive = s.go === 'train' && WAYS[`train>${s.at}`] ? { from: 'train', to: s.at } : null; yPlace = '';   // drawn anew there, where the bus or the walk brings him — off a train in from the station's side (みなと漁港: its sign to みなと駅), they behind him
       go(PLACE_ROUTE[s.at]);
       setTimeout(() => { v.classList.remove('on'); setTimeout(() => v.remove(), 600); }, 500);
     }, calm() ? 200 : 1500);
@@ -593,7 +626,7 @@ const CRUISE = (() => {
   function mount(yard, place) {
     const from = lastPlace; lastPlace = place;
     stop();
-    const was = { pend, carry }; pend = ''; carry = false;
+    const was = { pend, carry }; pend = ''; carry = '';
     if (!C()) return;
     if (waiting()) {   // far out at sea: said once a day out and about, seen from the harbour
       if (local(TOLD) !== day()) { setLocal(TOLD, day()); toast(place === 'harbor' ? '海上有一艘好大的郵輪！點它看看。' : '漁港外的海上，好像來了一艘好大的郵輪！', 3600); }
@@ -606,17 +639,19 @@ const CRUISE = (() => {
     const way = from && from !== place ? WAYS[`${from}>${place}`] : null;
     const follow = (was.carry && was.pend === place) || (from === on.place && Boolean(way));   // taken there, or come along next door
     if (follow) { on.place = place; saveLocal(); MUSIC.sync(); }   // the tour's music along with them (route synced it before they were here)
+    // taken there by bus to a stop the story has not opened yet (稲荷神社 before m8-1, 月の湯 before m4-1): open from now on, said
+    // once (2026-11-23, spec §1.3) — the story's own opening still plays later, as m10-1's does with 白鷺城 open since m1-6
+    if (follow && was.carry === 'bus' && BUS_PLACES.includes(place) && !busOpen(place)) { state.town.stops[place] = 1; saveState(); toast(`跟著導覽認識了${placeName(place)}，之後可以自己搭公車來`, 3600); }
     if (on.place === place) {
-      const [s, k] = rest(t, stepOf(t, on), place), ids = party(t), at = slots(s, k, ids); S.home = S.indoor ? null : crowdAt(s);
-      if (follow && !calm()) {   // in behind him: by the way he came, or round him where the bus or the walk brought him
+      const [s, k] = rest(t, stepOf(t, on), place), ids = party(t), m = spots(s, k, ids), at = m.at; S.home = S.indoor ? null : crowdAt(s); S.eat = m.ring;
+      if (follow && !calm()) {   // in behind him: by the way he came, or round him where the bus, the train or the walk brought him
         const in0 = was.carry ? [yh.X, yh.Y] : way.in()[0], near = (d) => (S.indoor ? isoClamp([in0[0] + rnd(-d, d), in0[1] + rnd(-d / 4, d / 4)], 1) : [in0[0] + rnd(-d, d), Math.min(walkTop(place, in0[0]), in0[1] + rnd(-4, 4))]);
         walkTo(el('takahashi', near(20)), guideAt(s), { delay: 300, v: 130, free: true });
-        ids.forEach((id, j) => { const p = el(id, near(30)); p.el.classList.add('cr-in'); walkTo(p, at[id], { delay: 400 + j * 160, v: rnd(100, 130), free: true }); });
-      } else {
+        ids.forEach((id, j) => { const p = el(id, near(30)), q = m.seat[id]; p.el.classList.add('cr-in'); walkTo(p, q ? foot(q) : at[id], { delay: 400 + j * 160, v: rnd(100, 130), free: true, done: q && (() => sit(p, q)) }); });
+      } else {   // there already: at a meal sat down (out of doors the rest round in their ring)
         el('takahashi', guideAt(s));
-        const free = s.seat && S.indoor ? seats() : [];
-        ids.forEach((id) => { const p = el(id, at[id]), q = free.shift(); if (q) sit(p, q); });
-        facing(s); setTimeout(() => frameAll(s), 60);
+        ids.forEach((id) => { const p = el(id, at[id]), q = m.seat[id]; if (q) sit(p, q); });
+        facing(s); round(); setTimeout(() => frameAll(s), 60);
       }
       if (follow && was.pend === place) {   // led here for the next stop: on to it once they are in
         S.busy = true; S.t.push(setTimeout(() => { if (!alive()) return; S.busy = false; const i = nextStop(t, stepOf(t, cs().on)); if (t.stops[i].at === place) run(i); else bar(); }, calm() ? 300 : 400 + ids.length * 160 + 1600));
@@ -630,7 +665,7 @@ const CRUISE = (() => {
     const id = b.dataset.who, p = alive() && S.ppl.get(id), t = current(); if (!p || !t) return;
     if (id === 'takahashi' && !S.busy && !TALK.on() && cs().on.place === S.place) { next(); return; }
     HERO.react(b);
-    const ls = p.seat && eatLines(t, id).length ? eatLines(t, id) : sayLines(t, id); if (!ls.length) return;
+    const ls = (p.seat || S.eat) && eatLines(t, id).length ? eatLines(t, id) : sayLines(t, id); if (!ls.length) return;   // at a meal (out of doors standing round too): a word for it
     const l = pick(ls); say(id, l[1], 2600); if (!TALK.on()) speakAs(id, l[1]);
   }
   // the talk card's face for one of them, or the passengers together ('all': three of them)

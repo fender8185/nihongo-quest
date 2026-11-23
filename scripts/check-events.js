@@ -125,7 +125,8 @@ function check(T, D, opts = {}) {
   });
 
   // the cruise ship (CRUISE): its passengers (a group that only grows: each joins on a trip), what they say (by unit), its trips
-  // one a unit in order, each with 20 reply choices or more, said only by those aboard by then; from the harbour back to it
+  // one a unit in order, each with 20 reply choices or more, said only by those aboard by then; from the harbour back to it; a stop
+  // gone to by bus, train or on foot (go), a meal at a room's table (seat) or out of doors on the place's benches (eat)
   const cr = T.CRUISE;
   if (cr) {
     const people = cr.PEOPLE || {}, trips = cr.TRIPS || [], tIdx = (id) => trips.findIndex((t) => t.id === id);
@@ -163,10 +164,11 @@ function check(T, D, opts = {}) {
         if (s.lost && (!aboard(s.lost[0]) || !Array.isArray(s.lost[1]))) bad('cruise', sw, 'lost is [a passenger aboard, [X, Y]]');
         if (s.need !== undefined && !cast[s.need]) bad('ref', sw, `needs no one called ${s.need}`);
         Object.keys(s.cast || {}).forEach((id) => { if (!cast[id]) bad('ref', sw, `no one called ${id} to bring out`); });
-        if (s.go !== undefined && !['bus', 'walk'].includes(s.go)) bad('cruise', sw, `go is bus or walk, not ${s.go}`);
+        if (s.go !== undefined && !['bus', 'train', 'walk'].includes(s.go)) bad('cruise', sw, `go is bus, train or walk, not ${s.go}`);
         if (s.guide !== undefined && (!Array.isArray(s.guide) || s.guide.length !== 2)) bad('cruise', sw, 'guide is [X, Y] (a room: [u, v])');
         if (s.bus !== undefined && (s.at !== 'street' || !Number.isFinite(s.bus))) bad('cruise', sw, 'a bus pulls in on the street only, at an X');
         if (s.seat && !s.room) bad('cruise', sw, 'they sit down in a room only');
+        if (s.eat !== undefined && (s.eat !== true || s.room)) bad('cruise', sw, 'eat: true is a meal out of doors (in a room: seat)');
         talkLines(s.lines, u, sw, sayer);
         (s.lines || []).forEach((l, i) => {
           if (!Array.isArray(l) || l[3] === undefined) return;

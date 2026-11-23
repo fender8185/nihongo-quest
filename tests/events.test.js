@@ -129,6 +129,17 @@ test('every event can be met at one of the times the bed wakes to', () => {
   assert.deepEqual(kinds(check(town([ev()], { CAST: late, WAKE: [8, 12, 17, 20] }), DATA)), ['wake']);
   assert.deepEqual(check(town([ev()], { WAKE: [8, 12, 17, 20] }), DATA), []);
 });
+test('a cruise stop is gone to by bus, train or on foot, a meal at a table or out of doors; a trip is from the harbour back to it', () => {
+  const trip = (...stops) => check(town([ev()], { PLACES: ['town', 'beach', 'harbor', 'platform', 'izakaya'], CRUISE: { PEOPLE: {}, OFF: {}, SAY: {}, TRIPS: [{ id: 't1', u: 'm1', title: 't',
+    stops: stops.map((o, i) => Object.assign({ id: 's' + i, at: 'harbor', title: 't', hero: [0, 50], crowd: [40, 40], lines: [] }, o)) }] } }), DATA).filter((p) => !/reply choices/.test(p));   // (20 a trip: not this test's)
+  const bye = { bye: true };
+  assert.deepEqual(trip({}, { at: 'platform', eat: true }, { go: 'train' }, { at: 'izakaya', go: 'bus', room: true, seat: true, hero: [4, 11], crowd: [7, 12] }, { go: 'walk', ...bye }), []);
+  assert.deepEqual(kinds(trip({}, { go: 'boat' }, bye)), ['cruise']);
+  assert.deepEqual(kinds(trip({}, { at: 'izakaya', room: true, eat: true, hero: [4, 11], crowd: [7, 12] }, bye)), ['cruise']);   // in a room: its seats (seat)
+  assert.deepEqual(kinds(trip({}, { at: 'platform', eat: 1 }, bye)), ['cruise']);
+  assert.deepEqual(kinds(trip({ at: 'platform' }, { go: 'train', ...bye })), ['cruise']);   // begun at the harbour
+  assert.deepEqual(kinds(trip({}, { at: 'platform', go: 'train', ...bye })), ['cruise']);   // seen off there
+});
 test('away after an event that exists; helps at a shop someone keeps', () => {
   const cast = (o) => ({ CAST: { miku: Object.assign({ name: '美玖', hours: [[7, 20, 'town', 'bakeryIn']] }, o), kenta: { name: '健太', shop: 'bakery', hours: [[5, 21, 'town', 'bakery']] } } });
   assert.deepEqual(check(town([ev()], cast({ away: 'e1', helps: 'bakery' })), DATA), []);

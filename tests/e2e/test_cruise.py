@@ -14,13 +14,9 @@ READY = "typeof state === 'object' && !!state.updatedAt && typeof speakScript ==
 def ev(b, js, pre=()):
     return b.run([("nav", URL), ("wait", READY)] + list(pre) + [("eval", js)], timeout=90)[-1]
 
-# a main-course account at m2 (past t1's m1) at 10 in the morning, ムギ met, 高橋 met at the castle (m1-7), no town event waiting;
-# motion reduced so walks and the ship's run in are over at once (the passengers still come down one at a time)
-FRESH = """state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storyV = 9; state.startChosen = true; state.currentUnit = 'm2';
-  state.met = { koharu: 1, mugi: 1 }; state.town = { done: { 'm1-6': '2026-11-09', 'm1-7': '2026-11-09' }, seen: {}, stops: { castle: 1 }, talks: {} };
-  state.cruise = { done: {}, on: null }; saveState(); DAILY_CACHE = null;
-  localStorage.removeItem('nq_wake'); localStorage.removeItem('nq_cruise_force'); localStorage.removeItem('nq_cruise_told'); TOWN.EVENTS = [];
-  const mm = window.matchMedia; window.matchMedia = (q) => (/reduced-motion/.test(q) ? { matches: true } : mm.call(window, q));
+# the page's helpers: motion reduced so walks and the ship's run in are over at once (the passengers still come down one at a
+# time; mm: the real one); to a place at 10 in the morning, through the talks and on along the bar (drive), the ship called in
+KIT = """const mm = window.matchMedia; window.matchMedia = (q) => (/reduced-motion/.test(q) ? { matches: true } : mm.call(window, q));
   const wait = (ms) => new Promise(q => setTimeout(q, ms)), y = () => document.querySelector('#view .yard');
   const go = async (place) => { TOWNEV.clock = { h: 10, day: new Date(2026, 10, 10) }; location.hash = '#/' + place; document.getElementById('view').innerHTML = ''; route(); await wait(300); };
   const people = () => [...document.querySelectorAll('#view .tourist')].map((e) => e.dataset.who);
@@ -35,6 +31,28 @@ FRESH = """state.stage = 'main'; state.kanaKnown = true; state.introSeen = true;
       await wait(60); }
     return { seen, places: [...places].sort(), sat }; };
   const call = async () => { await go('harbor'); document.querySelector('.cruise-call').click(); await wait(100); document.querySelector('[data-act=cruise-start]').click(); await until(() => document.querySelector('.talk-card')); };"""
+# a main-course account at m2 (past t1's m1), ムギ met, 高橋 met at the castle (m1-7), no town event waiting
+FRESH = """state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storyV = 9; state.startChosen = true; state.currentUnit = 'm2';
+  state.met = { koharu: 1, mugi: 1 }; state.town = { done: { 'm1-6': '2026-11-09', 'm1-7': '2026-11-09' }, seen: {}, stops: { castle: 1 }, talks: {} };
+  state.cruise = { done: {}, on: null }; saveState(); DAILY_CACHE = null;
+  localStorage.removeItem('nq_wake'); localStorage.removeItem('nq_cruise_force'); localStorage.removeItem('nq_cruise_told'); TOWN.EVENTS = [];
+  """ + KIT
+# a trip of the test's own (2026-11-23, docs/superpowers/specs/2026-11-23-cruise-t3-t6-design.md §1.1–§1.3): t1's stops put
+# aside for stops written here — 高橋's line, and a reply choice where asked — and the group set down before one of them (at: the
+# next stop, where they wait, the replies so far)
+TRY = """const T1 = TOWN.CRUISE.TRIPS[0], line = ['takahashi', 'はい、こちらです。', '來，這邊請。'], reply = { ask: '回答', opts: [['はい。', 1], ['いいえ。', 0, '不對']], pt: 'm1' };
+  const stop = (id, place, hero, crowd, { ask, ...o } = {}) => Object.assign({ id, at: place, title: '站' + id, hero, crowd, lines: ask ? [line, reply] : [line] }, o);
+  const at = (id, place, score = {}) => { state.cruise.on = { trip: 't1', step: T1.stops.findIndex((s) => s.id === id), stop: id, place, score }; saveState(); };
+  const XY = (e) => { const m = /translate\\(([-\\d.]+)px,\\s*([-\\d.]+)px\\)/.exec(e.style.transform); return [+m[1], -m[2]]; };
+  const tourists = () => [...document.querySelectorAll('#view .tourist')];"""
+# みなと駅's platform, then by train to the harbour (spec §1.1); 奥社's 茶屋 for a meal out of doors (§1.2); by bus to 稲荷神社,
+# 白鷺城 and 稲荷神社 again (§1.3)
+TRAIN = """[stop('hi', 'harbor', [180, 56], [40, 40]), stop('pf', 'platform', [300, 64], [150, 50], { ask: 1 }),
+  stop('tr', 'harbor', [-200, 56], [-330, 44], { go: 'train', ask: 1 }), stop('bye', 'harbor', [180, 56], [40, 40], { bye: true })]"""
+MEAL = """[stop('hi', 'harbor', [180, 56], [40, 40]), stop('ok', 'oku', [330, 80], [460, 96], { eat: true, ask: 1 }),
+  stop('nx', 'oku', [-100, 80], [-230, 90], { ask: 1 }), stop('bye', 'harbor', [180, 56], [40, 40], { go: 'bus', bye: true })]"""
+BUS = """[stop('hi', 'harbor', [180, 56], [40, 40]), stop('sh', 'shrine', [300, 62], [180, 54], { go: 'bus' }), stop('cs', 'castle', [90, 60], [230, 54], { go: 'bus' }),
+  stop('sh2', 'shrine', [300, 62], [180, 54], { go: 'bus' }), stop('bye', 'harbor', [180, 56], [40, 40], { go: 'bus', bye: true })]"""
 
 def titles(b, k):
     return [s['title'] for s in json.loads(ev(b, f"JSON.stringify(TOWN.CRUISE.TRIPS[{k}].stops)"))]
@@ -219,6 +237,95 @@ def test_the_pay_goes_by_the_share_right_at_once_and_the_courses_level(b):
     assert r['all'] == [20, 20, 40, 6000, 5] and r['most'] == [17, 20, 36, 5800, 4] and r['half'] == [10, 20, 25, 5400, 2] and r['none'] == [2, 20, 8, 5000, 0], r   # S A C E
     assert r['n4'] == 8000 and r['n3'] == 10000, r
     assert r['ranks'] == ['', '見習いガイド', '見習いガイド', 'ガイド', 'ガイド', 'ベテランガイド', 'ベテランガイド', '主任ガイド', '主任ガイド'], r
+
+def test_a_train_takes_the_group_to_the_harbour(b):
+    # 2026-11-23 (spec §1.1): a stop the group goes to by train — the screen fades under 「🚃 …」, then they all come in from the
+    # side the station is on (みなと漁港: its sign to みなと駅, at the left edge) and over to the stop, on the harbour's ground
+    r = json.loads(ev(b, "(async () => { " + FRESH + TRY + " T1.stops = " + TRAIN + """; at('pf', 'platform'); await go('platform');
+      await drive(() => state.cruise.on.stop === 'tr', 30000); await until(() => document.querySelector('#view .cr-takahashi .ev-mark'));
+      const bar = (document.querySelector('.cruise-bar .cb-go') || {}).textContent || '';
+      window.matchMedia = mm; CRUISE.next(); const cap = (document.querySelector('.cruise-travel') || {}).textContent || '';   // walking in as they do
+      await until(() => y() && y().dataset.place === 'harbor', 8000); const first = tourists().map((e) => Math.round(XY(e)[0]));
+      await until(() => document.querySelector('.talk-card'), 20000); await until(() => !document.querySelector('#view .tourist.walk, #view .tourist.run'), 15000);
+      const lim = ycam.YW / 2 - 20, bs = walkBlocks('harbor'), off = tourists().map((e) => [e.dataset.who, ...XY(e)]).filter(([, X, Y]) => Math.abs(X) > lim || Y < 12 || Y > walkTop('harbor', X) || bs.some((k) => yIn(k, [X, Y])));
+      return JSON.stringify({ bar, cap, place: y().dataset.place, first, off, on: state.cruise.on }); })()"""))
+    assert r['bar'] == '搭電車去みなと漁港' and r['cap'] == '🚃 大家一起搭電車去みなと漁港' and r['place'] == 'harbor', r
+    assert len(r['first']) == 9 and all(x < -500 for x in r['first']), r   # 高橋 and the eight, in from the station's side
+    assert r['off'] == [] and r['on']['place'] == 'harbor' and r['on']['stop'] == 'tr', r   # on the harbour's ground for the stop
+
+def test_an_outdoor_meal_seats_them_on_benches_and_locks(b):
+    # 2026-11-23 (spec §1.2): a meal out of doors (eat) — one to each seat of the place's (奥社: the 茶屋's 縁台), the rest
+    # standing round in a loose ring; five seconds over it before the next stop, as at a table; on a phone's screen any of them
+    # tapped, sat or standing, has a word for the meal
+    out = b.run([("metrics", (390, 844)), ("nav", URL), ("wait", READY), ("eval", "(async () => { " + FRESH + TRY + " T1.stops = " + MEAL + """; at('ok', 'oku'); await go('oku');
+      await drive(() => state.cruise.on.stop === 'nx', 30000); const t0 = Date.now(); await wait(150);
+      const seats = PLACE_USE.oku.filter((t) => t.kind === 'sit').flatMap((t) => t.seats), sat = [...document.querySelectorAll('#view .tourist.bench')].map((e) => Math.round(XY(e)[0]));
+      const ring = tourists().filter((e) => !e.matches('.bench, .cr-takahashi')).map(XY), lock = { bar: document.querySelector('.cruise-bar').textContent, mark: !!document.querySelector('#view .cr-takahashi .ev-mark') };
+      CRUISE.next(); await wait(200); lock.went = state.cruise.on.stop !== 'nx' || !!document.querySelector('.talk-card, .cruise-travel');
+      const realS = speakAs, heard = []; speakAs = (w, l) => { heard.push([w, l]); return Promise.resolve(); };
+      const tap = (e) => { if (!e) return null; const r = [...e.querySelectorAll('.head')].map((h) => h.getBoundingClientRect()).find((q) => q.width > 0), x = (r.left + r.right) / 2, yy = (r.top + r.bottom) / 2;   // where a finger lands: on the head (the one shown, as they face)
+        const hit = document.elementFromPoint(x, yy), w = hit && hit.closest('.tourist'); if (w) hit.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: x, clientY: yy })); return w ? [w.dataset.who, w.matches('.bench')] : null; };
+      const taps = [tap(document.querySelector('#view .tourist.bench')), tap(tourists().find((e) => !e.matches('.bench, .cr-takahashi')))]; await wait(100); speakAs = realS;
+      const eat = (id) => (TOWN.CRUISE.EAT[id] || []).filter((l) => l[0] === 'm1').map((l) => l[1]);
+      await until(() => document.querySelector('#view .cr-takahashi .ev-mark'), 8000); const later = Date.now() - t0;
+      CRUISE.next(); const went = await until(() => document.querySelector('.talk-card'), 5000);
+      return JSON.stringify({ seats, sat, ring, lock, taps, eats: heard.map(([w, l]) => eat(w).includes(l)), later, went: !!went, w: innerWidth }); })()""")], timeout=90)
+    r = json.loads(out[-1])
+    assert r['w'] == 390 and len(r['seats']) >= 2 and sorted(r['sat']) == sorted(r['seats']), r   # one to a seat, all taken (no one of the town sits at 奥社)
+    cx, cy = 442, 96   # the crowd's spot (112 from the hero at most)
+    xs, ys = [p[0] for p in r['ring']], [p[1] for p in r['ring']]
+    assert len(r['ring']) == 8 - len(r['sat']) and min(xs) < cx < max(xs) and min(ys) < cy < max(ys), r   # the rest stand round it
+    assert '用餐' in r['lock']['bar'] and not r['lock']['mark'] and not r['lock']['went'], r   # at it five seconds: not on yet
+    assert r['taps'][0] and r['taps'][0][1] and r['taps'][1] and not r['taps'][1][1] and len(r['eats']) == 2 and all(r['eats']), r   # sat or standing: a word for the meal
+    assert 4800 < r['later'] < 6500 and r['went'], r
+    # a seat one of the town sits on (西村, on 駅前's bench 10–16) is not theirs: the others only, one each
+    r = json.loads(ev(b, "(async () => { " + FRESH + TRY + """ state.town.seen.nishimura = 1;
+      T1.stops = [stop('hi', 'harbor', [180, 56], [40, 40]), stop('st', 'station', [60, 76], [-60, 72], { eat: true }), stop('bye', 'harbor', [180, 56], [40, 40], { go: 'bus', bye: true })];
+      at('st', 'station'); await go('station'); await drive(() => state.cruise.on.stop === 'bye', 30000); await wait(150); const her = document.querySelector('#view .npc-nishimura');
+      return JSON.stringify({ her: her && [her.matches('.bench'), Math.round(npcAt(her))], sat: [...document.querySelectorAll('#view .tourist.bench')].map((e) => Math.round(XY(e)[0])),
+        seats: PLACE_USE.station.filter((t) => t.kind === 'sit').flatMap((t) => t.seats) }); })()"""))
+    assert r['her'] == [True, -355] and sorted(r['sat']) == sorted(x for x in r['seats'] if x != -355), r
+
+def test_the_tour_opens_a_bus_stop_it_takes_them_to(b):
+    # 2026-11-23 (spec §1.3): a bus stop the story has not opened yet (稲荷神社: m8-1's) is opened by the group arriving there with
+    # the tour, said once; 白鷺城 (open already) says nothing; the story's own opening still waits to be played
+    r = json.loads(ev(b, "(async () => { const story = TOWN.EVENTS; " + FRESH + TRY + " T1.stops = " + BUS + """; at('sh', 'harbor'); await go('harbor');
+      const toasts = [], realT = toast; toast = (m, ms) => { toasts.push(m); return realT(m, ms); };
+      const before = Boolean(state.town.stops.shrine), d = await drive(() => state.cruise.on.stop === 'bye', 90000); toast = realT;
+      TOWN.EVENTS = story; state.currentUnit = 'm9';   // the course past m8: its events open
+      return JSON.stringify({ before, stops: state.town.stops, opened: toasts.filter((m) => /導覽/.test(m)), places: d.places, seen: d.seen,
+        due: TOWNEV.due().some((e) => e.id === 'm8-1'), done: Boolean(state.town.done['m8-1']) }); })()"""))
+    assert not r['before'] and r['stops'] == {'castle': 1, 'shrine': 1}, r   # open from now on: the bus takes the hero there himself
+    assert r['opened'] == ['跟著導覽認識了稲荷神社，之後可以自己搭公車來'], r   # once, there; not for 白鷺城, open already, nor the second time
+    assert r['places'] == ['castle', 'harbor', 'shrine'] and r['seen'] == ['站sh', '站cs', '站sh2'], r
+    assert r['due'] and not r['done'], r   # m8-1 (陽菜, opening it in the story) still to come
+
+def test_reload_mid_train_or_meal_resumes_without_double_score(b):
+    # 2026-11-23 (the review): the page reloaded under the train's caption, or over a meal out of doors — the trip takes up again
+    # at the stop it was at, the replies given kept and none given twice
+    def twice(stops, first, place, step):
+        return b.run([("nav", URL), ("wait", READY), ("eval", "(async () => { " + FRESH + TRY + " T1.stops = " + stops + "; at('" + first + "', '" + place + "', { 'hi.0': 0 }); await go('" + place + """');
+          await drive(() => state.cruise.on.stop !== '""" + first + """', 30000); await until(() => !document.querySelector('.talk-card')); await wait(400);
+          """ + step + """
+          return JSON.stringify({ on: state.cruise.on, bar: document.querySelector('.cruise-bar').textContent, cap: (document.querySelector('.cruise-travel') || {}).textContent || '' }); })()"""),
+          ("nav", URL), ("wait", READY), ("eval", "(async () => { const on = JSON.parse(JSON.stringify(state.cruise.on)); TOWN.EVENTS = []; " + KIT + TRY + " T1.stops = " + stops + """;
+          await go(on.place); const sat = document.querySelectorAll('#view .tourist.bench').length, bar = [...document.querySelectorAll('.cruise-bar span')].map((e) => e.textContent);
+          await drive(() => state.cruise.on.stop === 'bye', 60000);
+          return JSON.stringify({ on, sat, bar, after: state.cruise.on, place: y().dataset.place }); })()""")], timeout=120)
+    # the train: the platform's stop done, the caption up (a second and a half, walking as it is) and the page gone under it
+    out = twice(TRAIN, 'pf', 'platform', "window.matchMedia = mm; CRUISE.next();")
+    was, r = json.loads(out[0]), json.loads(out[1])
+    assert '🚃' in was['cap'] and was['on']['stop'] == 'tr' and was['on']['place'] == 'platform' and sorted(was['on']['score']) == ['hi.0', 'pf.0'], was
+    assert r['on'] == was['on'] and r['bar'][1:3] == ['站tr', '搭電車去みなと漁港'], r   # still on the platform, the train still to take
+    assert r['place'] == 'harbor' and r['after']['stop'] == 'bye' and sorted(r['after']['score']) == ['hi.0', 'pf.0', 'tr.0'], r
+    assert {k: r['after']['score'][k] for k in was['on']['score']} == was['on']['score'], r   # those given before, as they were
+    # the meal: its talk over, the five seconds at it not
+    out = twice(MEAL, 'ok', 'oku', "")
+    was, r = json.loads(out[0]), json.loads(out[1])
+    assert '用餐' in was['bar'] and was['on']['stop'] == 'nx' and was['on']['place'] == 'oku' and sorted(was['on']['score']) == ['hi.0', 'ok.0'], was
+    assert r['on'] == was['on'] and r['sat'] >= 2 and r['bar'][1] == '站nx', r   # sat down again at the meal, the next stop next
+    assert r['after']['stop'] == 'bye' and sorted(r['after']['score']) == ['hi.0', 'nx.0', 'ok.0'], r
+    assert {k: r['after']['score'][k] for k in was['on']['score']} == was['on']['score'], r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
