@@ -30,7 +30,10 @@ KIT = """const mm = window.matchMedia; window.matchMedia = (q) => (/reduced-moti
       const b = document.querySelector('#view .cr-takahashi .ev-mark'); if (b) { seen.push(document.querySelector('.cruise-bar .cb-t').textContent); b.closest('.tourist').click(); await wait(40); continue; }   // 高橋's 「！」
       await wait(60); }
     return { seen, places: [...places].sort(), sat }; };
-  const call = async () => { await go('harbor'); document.querySelector('.cruise-call').click(); await wait(100); document.querySelector('[data-act=cruise-start]').click(); await until(() => document.querySelector('.talk-card')); };"""
+  const call = async () => { await go('harbor'); document.querySelector('.cruise-call').click(); await wait(100); document.querySelector('[data-act=cruise-start]').click(); await until(() => document.querySelector('.talk-card')); };
+  // the tour's own waits (the ship's coming and going, a meal's five seconds, a ride, the walks' delays) a twentieth of their real
+  // length (CRUISE.setPace): for a test that does not measure them — a whole trip in seconds, not a minute
+  const fast = () => CRUISE.setPace(0.05);"""
 # a main-course account at m2 (past t1's m1), ムギ met, 高橋 met at the castle (m1-7), no town event waiting
 FRESH = """state.stage = 'main'; state.kanaKnown = true; state.introSeen = true; state.storyV = 9; state.startChosen = true; state.currentUnit = 'm2';
   state.met = { koharu: 1, mugi: 1 }; state.town = { done: { 'm1-6': '2026-11-09', 'm1-7': '2026-11-09' }, seen: {}, stops: { castle: 1 }, talks: {} };
@@ -96,7 +99,7 @@ def test_tapped_it_asks_first_then_comes_in_and_they_come_down_one_by_one(b):
 
 def test_trip_one_goes_right_round_the_town_into_the_shokudo_and_back(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ const errs = []; window.addEventListener('error', (e) => errs.push(String(e.message)));
-      await call(); const d = await drive(() => !!state.cruise.done.t1, 150000);
+      fast(); await call(); const d = await drive(() => !!state.cruise.done.t1, 150000);
       await wait(300); const box = document.querySelector('.cr-result'), res = state.cruise.res.t1;
       const shown = box && { stamp: box.querySelector('.crr-stamp b').textContent, nums: [...box.querySelectorAll('i[data-n]')].map((x) => x.textContent), rank: box.querySelector('.crr-rank').textContent };
       box.querySelector('.crr-ok').click(); await wait(200); const intro = (document.querySelector('.talk-card') || {}).textContent || '';
@@ -118,7 +121,7 @@ def test_trip_one_goes_right_round_the_town_into_the_shokudo_and_back(b):
 
 def test_trip_two_brings_mike_by_bus_to_the_castle_and_into_the_izakaya(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ const errs = []; window.addEventListener('error', (e) => errs.push(String(e.message)));
-      CRUISE.skipTo('t2'); await go('harbor'); document.querySelector('.cruise-call').click(); await wait(100);
+      fast(); CRUISE.skipTo('t2'); await go('harbor'); document.querySelector('.cruise-call').click(); await wait(100);
       const asked = document.querySelector('.modal').textContent; document.querySelector('[data-act=cruise-start]').click();
       await until(() => document.querySelector('.talk-card')); const party = people().length;
       const d = await drive(() => !!state.cruise.done.t2, 150000);
@@ -128,7 +131,7 @@ def test_trip_two_brings_mike_by_bus_to_the_castle_and_into_the_izakaya(b):
     assert r['done'] == ['t1', 't2'] and r['errs'] == [], r
 
 def test_left_halfway_they_wait_where_they_are_even_after_a_reload(b):
-    out = b.run([("nav", URL), ("wait", READY), ("eval", "(async () => { " + FRESH + """ await call();
+    out = b.run([("nav", URL), ("wait", READY), ("eval", "(async () => { " + FRESH + """ fast(); await call();
       await drive(() => state.cruise.on && state.cruise.on.place === 'town', 80000); await until(() => document.querySelector('#view .cr-takahashi .ev-mark'));
       return JSON.stringify(state.cruise.on); })()"""), ("nav", URL), ("wait", READY), ("eval", """(async () => {
       const wait = (ms) => new Promise(q => setTimeout(q, ms)), y = () => document.querySelector('#view .yard'), people = () => document.querySelectorAll('#view .tourist').length;
@@ -142,7 +145,7 @@ def test_left_halfway_they_wait_where_they_are_even_after_a_reload(b):
     assert r['town']['people'] == 9 and '「！」' in r['town']['bar'], r   # on by 高橋's 「！」
 
 def test_off_next_door_they_come_along_off_further_they_stay(b):
-    r = json.loads(ev(b, "(async () => { " + FRESH + """ await call(); await drive(() => state.cruise.on.step >= 1, 20000);
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ fast(); await call(); await drive(() => state.cruise.on.step >= 1, 20000);
       await until(() => document.querySelector('#view .cr-takahashi .ev-mark'));
       await go('beach'); await wait(200); const beach = { people: people().length, place: state.cruise.on.place };
       await go('castle'); const castle = { people: people().length, bar: (y().querySelector('.cruise-bar') || {}).textContent || '' };
@@ -211,7 +214,7 @@ def test_together_they_speak_as_one_quick_retort_a_laugh_is_a_laugh_and_a_cry_is
 
 def test_the_tour_has_its_own_music_where_the_passengers_are_and_the_ship_its_horn(b):
     r = json.loads(ev(b, "(async () => { " + FRESH + """ const played = [], realP = SND.play; SND.play = (n, o) => { played.push(n); };
-      await call(); SND.play = realP;
+      fast(); await call(); SND.play = realP;
       const at = (r) => CRUISE.tune(r), on = state.cruise.on;
       const here = at('harbor'), there = at('town'); on.place = 'izakaya'; const iz = at('izakaya'); on.place = 'harbor';
       const rec = MUSIC.RECORDS.find((x) => x.id === 'minato');
@@ -220,7 +223,7 @@ def test_the_tour_has_its_own_music_where_the_passengers_are_and_the_ship_its_ho
     assert r['horn'] == 2 and r['steps'] and r['rec'] == ['cruise', 'music/minato-1.m4a'], r   # far out and as it docks; down the gangway
 
 def test_on_the_main_road_they_keep_to_the_pavement_and_a_bus_pulls_in_at_the_stop(b):
-    r = json.loads(ev(b, "(async () => { " + FRESH + """ await call();
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ fast(); await call();
       await drive(() => state.cruise.on && state.cruise.on.step >= 18, 120000);
       await until(() => document.querySelector('#view .cr-takahashi .ev-mark')); document.querySelector('#view .cr-takahashi .ev-mark').closest('.tourist').click();
       await until(() => document.querySelector('.talk-card')); await wait(400);
@@ -231,7 +234,7 @@ def test_on_the_main_road_they_keep_to_the_pavement_and_a_bus_pulls_in_at_the_st
 
 def test_at_the_table_they_eat_a_while_and_each_has_a_word_when_tapped(b):
     # 2026-11-13, the user: sat down and spread out they could each be talked to; 下一站 shows 用餐中 for five seconds
-    r = json.loads(ev(b, "(async () => { " + FRESH + """ await call();
+    r = json.loads(ev(b, "(async () => { " + FRESH + """ fast(); await call(); await drive(() => state.cruise.on && state.cruise.on.step >= 13, 120000); CRUISE.setPace(1);   // its meal's five seconds as they are
       await drive(() => state.cruise.on && state.cruise.on.step >= 14 && !document.querySelector('.talk-card'), 120000);
       await wait(200); const bar = document.querySelector('.cruise-bar').textContent, btn = !!document.querySelector('#view .cr-takahashi .ev-mark');
       const sat = document.querySelector('#view .tourist.bench:not(.cr-takahashi)'), id = sat && sat.dataset.who;
@@ -305,7 +308,7 @@ def test_an_outdoor_meal_seats_them_on_benches_and_locks(b):
 def test_the_tour_opens_a_bus_stop_it_takes_them_to(b):
     # 2026-11-23 (spec §1.3): a bus stop the story has not opened yet (稲荷神社: m8-1's) is opened by the group arriving there with
     # the tour, said once; 白鷺城 (open already) says nothing; the story's own opening still waits to be played
-    r = json.loads(ev(b, "(async () => { const story = TOWN.EVENTS; " + FRESH + TRY + " T1.stops = " + BUS + """; at('sh', 'harbor'); await go('harbor');
+    r = json.loads(ev(b, "(async () => { const story = TOWN.EVENTS; " + FRESH + TRY + " T1.stops = " + BUS + """; fast(); at('sh', 'harbor'); await go('harbor');
       const toasts = [], realT = toast; toast = (m, ms) => { toasts.push(m); return realT(m, ms); };
       const before = Boolean(state.town.stops.shrine), d = await drive(() => state.cruise.on.stop === 'bye', 90000); toast = realT;
       TOWN.EVENTS = story; state.currentUnit = 'm9';   // the course past m8: its events open
@@ -382,7 +385,7 @@ def test_trip_three_rides_the_train_back_and_eats_bento_on_the_platform(b):
     # gate to the platform, where ハル sells the group her 駅弁 and they eat them there out of doors (eat), then home by train to the
     # harbour; every reply right at once: grade S. His photos go off with a shutter's カシャ (a sound there is)
     r = json.loads(ev(b, "(async () => { " + FRESH + RIGHT + """ const errs = []; window.addEventListener('error', (e) => errs.push(String(e.message)));
-      CRUISE.skipTo('t3'); await call(); const party = people(), t = trip('t3');
+      fast(); CRUISE.skipTo('t3'); await call(); const party = people(), t = trip('t3');
       // after the 駅弁's talk: ひかる, new today, sat down to his dream 駅弁; after the 電車 stop's: their train in at 二番線, doors open,
       // the other track empty, the timetable held, no 搭車 button for the hero (2026-11-23, the review)
       let meal = null, board = null; const quiet = () => !document.querySelector('.talk-card'), on = () => state.cruise.on || {};
@@ -407,7 +410,7 @@ def test_trip_four_bathes_by_the_rules_and_lunches_at_rairai(b):
     # 2026-11-23 (spec §3): t4「月の湯と 中華街」— 水野 comes down last; by bus to 月の湯 (松's rules; its stop opened by the tour),
     # by bus to 中華街 (王 making 豚まん), through the 牌樓 into 大通り and in to らいらいけん, sat down at its tables (黄), home by bus
     r = json.loads(ev(b, "(async () => { " + FRESH + RIGHT + """ const errs = []; window.addEventListener('error', (e) => errs.push(String(e.message)));
-      CRUISE.skipTo('t4'); await call(); const party = people(), t = trip('t4');
+      fast(); CRUISE.skipTo('t4'); await call(); const party = people(), t = trip('t4');
       // at らいらいけん after its talk: 水野, new today (his appetite the joke), sat at a table — tapped, a word for the meal (EAT), not chatter
       let mz = null; const look = async (p) => { if (mz || p !== 'rairai' || document.querySelector('.talk-card') || (state.cruise.on || {}).stop !== 'bye') return;
         const e = document.querySelector('#view .cr-mizuno'), realS = speakAs, heard = []; if (!e) return; speakAs = (w, l) => { heard.push(l); return Promise.resolve(); };
@@ -564,6 +567,161 @@ def test_thirteen_sit_down_to_lunch_at_minato_sushi(b):
     assert r['party'] == 13 and r['place'] == 'sushi', r
     assert r['sat'] == 13 and r['aji'] and r['standing'] == ['takahashi'], r   # every one of them sat down (味村 too); 高橋 standing by
     assert r['near'] >= 30 and r['gen'], r
+
+def test_trip_five_climbs_to_oku_and_eats_at_the_chaya(b):
+    # 2026-11-23 (spec §4): t5「千本鳥居」— ミヨコ comes down last; by bus to 稲荷神社, its stop not opened by the story yet (m8-1):
+    # the tour opens it; 道山 lost at the 千本鳥居's mouth (as ミヨコ saw coming) and found; up through the torii to 奥社, lunch at its
+    # 茶屋 out of doors (eat) — ミヨコ, new today, on its 縁台, the rest standing round, the おかみ there — down again, home by bus;
+    # every reply right at once: grade S
+    r = json.loads(ev(b, "(async () => { " + FRESH + RIGHT + """ const errs = []; window.addEventListener('error', (e) => errs.push(String(e.message)));
+      fast(); CRUISE.skipTo('t5'); const shut = !state.town.stops.shrine; await call(); const party = people(), t = trip('t5');
+      const XY = (e) => { const m = /translate\\(([-\\d.]+)px,\\s*([-\\d.]+)px\\)/.exec(e.style.transform); return [+m[1], -m[2]]; };
+      const quiet = () => !document.querySelector('.talk-card'), on = () => state.cruise.on || {}, at = (id) => { const e = document.querySelector(`#view .cr-${id}`); return e && XY(e); };
+      // 道山 during the 千本鳥居's talk (away by the torii's mouth) and after it (back with them); at the 茶屋 after its talk: who sits
+      let lost = null, found = null, meal = null; const look = async (p) => {
+        const s = (trip('t5').stops.find((x) => x.id === on().stop) || {});
+        if (!lost && p === 'shrine' && on().stop === 'senbon' && !quiet()) lost = { me: at('michiyama'), crowd: s.crowd };
+        if (!found && p === 'shrine' && on().stop === 'okusha' && quiet()) found = { me: at('michiyama'), crowd: trip('t5').stops.find((x) => x.id === 'senbon').crowd };
+        if (!meal && p === 'oku' && on().stop === 'gezan' && quiet()) meal = { sat: [...document.querySelectorAll('#view .tourist.bench')].map((e) => e.dataset.who), seats: PLACE_USE.oku.filter((x) => x.kind === 'sit').flatMap((x) => x.seats).length,
+          chaya: !!y().querySelector('.use-btn[data-use="chaya"]'), bar: document.querySelector('.cruise-bar').textContent }; };
+      const d = await tour(() => !!state.cruise.done.t5, look);
+      return JSON.stringify(Object.assign(d, { shut, party: party.length, last: CRUISE.party(t).slice(-1)[0], errs, res: state.cruise.res.t5, asks: asks(t).length, pts: asks(t).map((a) => a.pt),
+        eats: t.stops.filter((s) => s.eat).map((s) => s.at), stops: state.town.stops, lost, found, meal, says: [...new Set(t.stops.flatMap((s) => s.lines).filter((l) => Array.isArray(l)).map((l) => l[0]))] })); })()"""))
+    assert r.get('stuck') is None and r['errs'] == [], r
+    assert r['party'] == 13 and r['last'] == 'miyoko', r   # the eight, マイク, ひかる, 水野, ミヨコ (down last), 高橋
+    assert r['seen'] == titles(b, 4)[1:] and r['order'] == ['harbor', 'shrine', 'oku', 'shrine', 'harbor'], r   # by bus, up through the torii, down, home by bus
+    assert r['shut'] and r['stops'].get('shrine') == 1, r   # 稲荷神社's stop: shut before, opened by the tour
+    lost, found = r['lost'], r['found']
+    assert lost and abs(lost['me'][0] - lost['crowd'][0]) > 50 and found and abs(found['me'][0] - found['crowd'][0]) < 60, r   # 道山 away by the torii, then back with them
+    assert r['eats'] == ['oku'] and r['meal']['chaya'] and '用餐' in r['meal']['bar'], r['meal']   # the 茶屋 open, a meal out of doors
+    assert 'miyoko' in r['meal']['sat'] and len(r['meal']['sat']) == r['meal']['seats'] and r['sat']['oku'] == r['meal']['seats'], r['meal']   # its 縁台 full, ミヨコ on it; the rest round
+    assert 'chihaya' in r['says'] and 'chaya' in r['says'] and 'chihaya' in r['folk']['shrine'], r   # 千早 at the hall, the 茶屋's おかみ
+    assert r['asks'] >= 20 and r['pts'].count('m5') > len(r['pts']) / 2, r
+    assert r['res']['asks'] == r['asks'] and r['res']['first'] == r['asks'] and r['res']['grade'] == 5, r   # S
+
+def test_trip_six_walks_the_market_and_lunches_at_the_sushi_bar(b):
+    # 2026-11-23 (spec §5): t6「朝市と すし」at 15:00 — no 朝市 at that hour, yet its stalls stand all the time the group is at the
+    # harbour (its stops there flagged market) and are gone again after; the market's keepers speak at their stalls; 味村 comes down
+    # last; lunch at みなと寿司 in 源さん's break (brought out), all thirteen sat at its counter and tables; every reply right at once: S
+    r = json.loads(ev(b, "(async () => { " + FRESH + RIGHT + """ const errs = []; window.addEventListener('error', (e) => errs.push(String(e.message)));
+      const at15 = async (place) => { TOWNEV.clock = { h: 15, day: new Date(2026, 10, 10) }; location.hash = '#/' + place; document.getElementById('view').innerHTML = ''; route(); await wait(300); };
+      fast(); CRUISE.skipTo('t6'); state.currentUnit = 'm6'; saveState(); await at15('harbor'); const before = y().querySelectorAll('.ic-stall').length;
+      document.querySelector('.cruise-call').click(); await wait(100); document.querySelector('[data-act=cruise-start]').click(); await until(() => document.querySelector('.talk-card'));
+      const party = people(), t = trip('t6'), stalls = {}, names = new Set();
+      const look = async (p) => { const c = document.querySelector('.talk-card:not(.asking) .talk-name'); if (c) names.add(c.firstChild.textContent);
+        if (p === 'harbor') { const n = y().querySelectorAll('.ic-stall').length; stalls[n] = (stalls[n] || 0) + 1; } };
+      const d = await tour(() => !!state.cruise.done.t6, look);
+      await at15('harbor'); const after = y().querySelectorAll('.ic-stall').length;
+      return JSON.stringify(Object.assign(d, { before, after, stalls, names: [...names], party: party.length, last: CRUISE.party(t).slice(-1)[0], errs, res: state.cruise.res.t6, asks: asks(t).length, pts: asks(t).map((a) => a.pt),
+        seat: t.stops.filter((s) => s.seat).map((s) => s.at), market: t.stops.filter((s) => s.at === 'harbor').map((s) => Boolean(s.market)), h: TOWNEV.clock.h })); })()"""))
+    assert r.get('stuck') is None and r['errs'] == [], r
+    assert r['party'] == 14 and r['last'] == 'ajimura', r   # thirteen now, 味村 down last; 高橋
+    assert r['seen'] == titles(b, 5)[1:] and r['order'] == ['harbor', 'sushi', 'harbor'], r   # the market, in next door to lunch, out again
+    assert r['h'] == 15 and r['before'] == 0 and r['after'] == 0 and r['market'] and all(r['market']), r   # none at 15:00 before or after
+    assert list(r['stalls']) == ['3'], r['stalls']   # all the time they are at the harbour: the three stalls
+    assert all(n in r['names'] for n in ['魚屋のおじさん', '干物屋のおばあさん', '浜焼きのお姉さん', '源さん']), r['names']   # the keepers say their own lines
+    assert r['seat'] == ['sushi'] and r['sat']['sushi'] == 13 and 'gen' in r['folk']['sushi'], r   # all thirteen sat; 源さん there in his break
+    assert r['asks'] >= 20 and r['pts'].count('m6') > len(r['pts']) / 2, r
+    assert r['res']['asks'] == r['asks'] and r['res']['first'] == r['asks'] and r['res']['grade'] == 5, r   # S
+
+def test_an_outdoor_meal_reached_by_following_seats_them_as_one_drawn_there(b):
+    # 2026-11-23 (Task 1's open case): the group walked over next door (稲荷神社 → 奥社) to a meal out of doors — they sit down on the
+    # place's seats on the way in (the 茶屋's 縁台), the rest standing round the crowd's spot, as a group drawn there already does; five
+    # seconds at it after the talk
+    r = json.loads(ev(b, "(async () => { " + FRESH + TRY + """ T1.stops = [stop('hi', 'harbor', [180, 56], [40, 40]), stop('sh', 'shrine', [300, 62], [180, 54]),
+        stop('ok', 'oku', [330, 80], [460, 96], { eat: true, ask: 1 }), stop('bye', 'harbor', [180, 56], [40, 40], { go: 'bus', bye: true })];
+      at('ok', 'shrine'); await go('shrine'); await until(() => document.querySelector('#view .cr-takahashi .ev-mark')); document.querySelector('#view .cr-takahashi .ev-mark').closest('.tourist').click();
+      await until(() => y() && y().dataset.place === 'oku' && document.querySelector('.talk-card'), 15000); const during = [...document.querySelectorAll('#view .tourist.bench')].map((e) => Math.round(XY(e)[0]));
+      await drive(() => state.cruise.on.stop === 'bye', 30000); await wait(150);
+      const seats = PLACE_USE.oku.filter((t) => t.kind === 'sit').flatMap((t) => t.seats), sat = [...document.querySelectorAll('#view .tourist.bench')].map((e) => Math.round(XY(e)[0]));
+      const ring = tourists().filter((e) => !e.matches('.bench, .cr-takahashi')).map(XY);
+      return JSON.stringify({ place: y().dataset.place, on: state.cruise.on.place, during, seats, sat, ring, bar: document.querySelector('.cruise-bar').textContent, mark: !!document.querySelector('#view .cr-takahashi .ev-mark') }); })()"""))
+    assert r['place'] == 'oku' and r['on'] == 'oku', r
+    assert len(r['seats']) >= 2 and sorted(r['during']) == sorted(r['seats']) and sorted(r['sat']) == sorted(r['seats']), r   # sat down as they came in, before the talk
+    cx, cy = 442, 96   # the crowd's spot (112 from the hero at most)
+    xs, ys = [p[0] for p in r['ring']], [p[1] for p in r['ring']]
+    assert len(r['ring']) == 8 - len(r['sat']) and min(xs) < cx < max(xs) and min(ys) < cy < max(ys), r   # the rest stand round it
+    assert '用餐' in r['bar'] and not r['mark'], r   # at it five seconds
+
+def test_an_outdoor_meal_with_nowhere_to_sit_stands_them_all_round(b):
+    # 2026-11-23 (Task 1's open case): a meal out of doors where the place has no seats (the beach: no bench) — all of them stand
+    # round in the ring, the five seconds and the words at a meal as anywhere, and on to the end of the trip
+    r = json.loads(ev(b, "(async () => { " + FRESH + TRY + """ const errs = []; window.addEventListener('error', (e) => errs.push(String(e.message)));
+      T1.stops = [stop('hi', 'harbor', [180, 56], [40, 40]), stop('pic', 'beach', [-200, 60], [-320, 70], { eat: true, ask: 1 }), stop('bye', 'harbor', [180, 56], [40, 40], { bye: true })];
+      at('pic', 'beach'); await go('beach'); await drive(() => state.cruise.on.stop === 'bye', 30000); await wait(150);
+      const seats = (PLACE_USE.beach || []).filter((t) => t.kind === 'sit').length, sat = document.querySelectorAll('#view .tourist.bench').length, ring = tourists().filter((e) => !e.matches('.cr-takahashi')).map(XY);
+      const bar = document.querySelector('.cruise-bar').textContent, realS = speakAs, heard = []; speakAs = (w, l) => { heard.push([w, l]); return Promise.resolve(); };
+      document.querySelector('#view .tourist.cr-umeko').click(); await wait(50); speakAs = realS;
+      const word = (heard[0] || [])[1], eat = (TOWN.CRUISE.EAT.umeko || []).map((l) => l[1]);
+      fast(); await drive(() => !!state.cruise.done.t1, 40000);
+      return JSON.stringify({ seats, sat, ring, bar, word, eat, done: !!state.cruise.done.t1, errs }); })()"""))
+    assert r['seats'] == 0 and r['sat'] == 0, r   # nowhere to sit, no one sat
+    cx, cy = -312, 70   # the crowd's spot (112 from the hero at most)
+    xs, ys = [p[0] for p in r['ring']], [p[1] for p in r['ring']]
+    assert len(r['ring']) == 8 and min(xs) < cx < max(xs) and min(ys) < cy < max(ys), r   # all eight round it
+    assert '用餐' in r['bar'] and r['word'] in r['eat'], r   # at it five seconds, a word for the meal
+    assert r['done'] and r['errs'] == [], r   # on to the end all the same
+
+def test_a_word_about_the_chayas_food_is_never_said_at_the_sushi_bar_nor_the_other_way(b):
+    # 2026-11-23 (ruling 5): words at a meal about a dish carry where it is eaten — at 奥社's 茶屋 (いなり寿司, きつねうどん, 甘酒) and
+    # at みなと寿司 (the sushi) — tapped at the one, never the other's
+    r = json.loads(ev(b, "(async () => { " + FRESH + TRY + """ T1.u = 'm6'; TOWNEV.clock = { h: 12, day: new Date(2026, 10, 10) };   // t1's eight, their words up to m6
+      const tag = (w, l) => { const L = (TOWN.CRUISE.EAT[w] || []).find((x) => x[1] === l); return L && L[3] ? [].concat(L[3].at) : null; };
+      const heard = async (place, mid) => { T1.stops = [stop('hi', 'harbor', [180, 56], [40, 40]), mid, stop('bye', 'harbor', [180, 56], [40, 40], { go: 'bus', bye: true })];
+        at(mid.id, place); location.hash = '#/' + place; document.getElementById('view').innerHTML = ''; route(); await wait(300); await drive(() => state.cruise.on.stop === 'bye', 30000); await wait(100);
+        const realS = speakAs, out = []; speakAs = (w, l) => { out.push([w, l]); return Promise.resolve(); };
+        for (let n = 0; n < 30; n++) for (const id of ['yuta', 'kaneda', 'rina', 'umeko', 'ken']) { const e = document.querySelector(`#view .cr-${id}`); if (e) { e.click(); await wait(5); } }
+        speakAs = realS; return out.map(([w, l]) => tag(w, l)).filter(Boolean); };
+      const oku = await heard('oku', stop('ok', 'oku', [330, 80], [460, 96], { eat: true })), sushi = await heard('sushi', stop('su', 'sushi', [9.4, 9.2], [11.2, 9.6], { room: true, seat: true }));
+      const all = Object.values(TOWN.CRUISE.EAT).flat().filter((l) => l[3]).map((l) => [].concat(l[3].at));
+      return JSON.stringify({ oku, sushi, tagged: { oku: all.filter((a) => a.includes('oku')).length, sushi: all.filter((a) => a.includes('sushi')).length } }); })()"""))
+    assert r['tagged']['oku'] >= 4 and r['tagged']['sushi'] >= 4, r['tagged']   # the 茶屋's dishes and the sushi have their words
+    assert r['oku'] and all('oku' in a for a in r['oku']), r['oku']   # at the 茶屋: its own come up, never the sushi's
+    assert r['sushi'] and all('sushi' in a for a in r['sushi']), r['sushi']   # at the counter: the sushi's, never the 茶屋's
+
+def test_the_tour_opens_the_chaya_for_its_meal_whatever_the_hour(b):
+    # 2026-11-23 (t5): 奥社's 茶屋 keeps 9:00–17:00; the tour's meal there at 20:00 finds it open (its おかみ, its menu) as the town's
+    # shops are for the group (CRUISE.opens) — on one's own at that hour it is shut
+    r = json.loads(ev(b, "(async () => { " + FRESH + TRY + """ const look = async () => { TOWNEV.clock = { h: 20, day: new Date(2026, 10, 10) }; location.hash = '#/oku'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
+        return { btn: !!y().querySelector('.use-btn[data-use="chaya"]'), noren: /茶屋<\\/text>/.test(y().querySelector('.oku-land').innerHTML) }; };
+      const alone = await look();
+      T1.stops = [stop('hi', 'harbor', [180, 56], [40, 40]), stop('ok', 'oku', [330, 80], [460, 96], { eat: true }), stop('bye', 'harbor', [180, 56], [40, 40], { go: 'bus', bye: true })];
+      at('ok', 'oku'); const tour = await look();
+      return JSON.stringify({ alone, tour }); })()"""))
+    assert r['alone'] == {'btn': False, 'noren': False}, r   # 20:00: shut
+    assert r['tour'] == {'btn': True, 'noren': True}, r   # open for the group's meal
+
+def test_townsfolk_on_a_trip_speak_in_their_own_voices_and_are_made_for_the_generator(b):
+    # 2026-11-23 (ruling): the 朝市's keepers (TOWN.YATAI), 奥社's おかみ and 源さん speak on t5 and t6 — each line in that speaker's own
+    # voice (CAST_VOICE), listed for the generator (talkLines: the cruise's lines, whose they are) and so made as a clip in that voice
+    r = json.loads(ev(b, """(() => { const listed = talkLines(), keep = new Set(['chaya', 'sakanaya', 'himonoya', 'hamayaki', 'gen', 'chihaya']);
+      const lines = TOWN.CRUISE.TRIPS.filter((t) => ['t5', 't6'].includes(t.id)).flatMap((t) => t.stops.flatMap((s) => s.lines)).filter((l) => Array.isArray(l) && keep.has(l[0]));
+      return JSON.stringify({ who: [...new Set(lines.map((l) => l[0]))].sort(), voiceless: lines.filter((l) => !CAST_VOICE[l[0]]).map((l) => l[0]),
+        unlisted: lines.filter((l) => !listed.some(([w, ja]) => w === l[0] && ja === l[1])).map((l) => l.slice(0, 2)) }); })()"""))
+    assert r['who'] == sorted(['chaya', 'sakanaya', 'himonoya', 'hamayaki', 'gen', 'chihaya']), r
+    assert r['voiceless'] == [] and r['unlisted'] == [], r
+
+def test_market_shopper_keeps_clear_of_kenji_by_his_net(b):
+    # 2026-11-23 (the review of the 朝市): 10:00–14:00 健二 stands by his net at the harbour's left; the 朝市 standing then (a t6 stop
+    # at the harbour at noon) puts no shopper on top of him
+    r = json.loads(ev(b, "(async () => { " + FRESH + TRY + """ state.town.seen.kenji = 1; saveState();
+      T1.stops = [stop('hi', 'harbor', [180, 56], [40, 40], { market: true }), stop('bye', 'harbor', [180, 56], [40, 40], { go: 'bus', bye: true })]; at('hi', 'harbor');
+      const look = async (h) => { TOWNEV.clock = { h, day: new Date(2026, 10, 10) }; location.hash = '#/harbor'; document.getElementById('view').innerHTML = ''; route(); await wait(300);
+        const k = y().querySelector('.npc-kenji'), kx = k && npcAt(k), sh = [...y().querySelectorAll('.ic-shopper')].map((e) => XY(e)[0]);
+        return { kenji: Boolean(k), shoppers: sh.length, near: k ? Math.round(Math.min(...sh.map((x) => Math.abs(x - kx)))) : null }; };
+      return JSON.stringify({ noon: await look(12), eight: await look(8) }); })()"""))
+    assert r['noon']['kenji'] and r['noon']['shoppers'] >= 2 and r['noon']['near'] >= 36, r   # 健二 at his net, the shoppers away from him
+    assert not r['eight']['kenji'] and r['eight']['shoppers'] == 3, r   # before he comes: all three where they were
+
+def test_each_trip_keeps_to_its_units_grammar(b):
+    # 2026-11-23 (the review): a trip says nothing a later unit teaches — no 見える／聞こえる (m7) from t3 on, and t5 (m5) none of m6's
+    # 前に・後で、から・ので、とき・ながら、〜たり
+    r = json.loads(ev(b, """(() => { const text = (t) => t.stops.flatMap((s) => s.lines.flatMap((l) => (Array.isArray(l) ? [l[1]] : l.opts.map((o) => o[0]))).concat((s.after || []).map((a) => a[1]))).map((s) => s.replace(/\\{([^|}]+)\\|[^}]+\\}/g, '$1'));
+      const trips = TOWN.CRUISE.TRIPS, t5 = trips.find((t) => t.id === 't5');
+      const m7 = trips.filter((t) => ['t3', 't4', 't5', 't6'].includes(t.id)).flatMap((t) => text(t).filter((s) => /見え|聞こえ/.test(s)).map((s) => [t.id, s]));
+      const m6 = t5 ? text(t5).filter((s) => /前に|後で|ので|ながら|とき|[たっだ]り[、 ]|から[、。！？ね]|からです/.test(s)) : ['no t5'];
+      return JSON.stringify({ m7, m6 }); })()"""))
+    assert r['m7'] == [] and r['m6'] == [], r
 
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 

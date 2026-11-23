@@ -15,6 +15,10 @@ const CRUISE = (() => {
   const TOLD = 'nq_cruise_told', FORCE = 'nq_cruise_force';
   try { localStorage.removeItem('nq_cruise'); } catch (e) { /* the first test build's: no longer used */ }
   const calm = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // how long the tour's own waits last, as a share of their real length: 1 in the app; the e2e tests' whole-trip tours set it
+  // lower (setPace) so a trip's meal, its rides and the ship's coming and going do not take minutes (2026-11-23)
+  let pace = 1;
+  const paced = (n) => n * pace;
   const rnd = (a, b) => a + Math.random() * (b - a);
   const pick = (a) => a[Math.floor(Math.random() * a.length)];
   const MARK = /\{([^|}]+)\|([^|}]+)(?:\|([^}]+))?\}/g;
@@ -382,7 +386,7 @@ const CRUISE = (() => {
     S.busy = true; bar(); bringOut(s); busIn(s); S.home = S.indoor ? null : crowdAt(s);
     const board = S.place === 'platform' && ride(t, i + 1); if (board) PLATFORM.berth(S.yard, board);   // the stop before a ride on: its train in, doors open
     let left = 1, fin = false;
-    const there = () => { if (--left > 0 || fin) return; fin = true; setTimeout(begin, 250); };
+    const there = () => { if (--left > 0 || fin) return; fin = true; setTimeout(begin, paced(250)); };
     const begin = () => {
       if (S !== sc || !alive()) return;
       yh.flip = crowdAt(s)[0] < yh.X; yh.turn = true; yh.back = false; yHeroPlace(S.yard); facing(s); frameAll(s);
@@ -397,11 +401,11 @@ const CRUISE = (() => {
       const p = S.ppl.get(id); if (!p) return;
       const lost = s.lost && s.lost[0] === id, q = m.seat[id]; p.away = lost;
       if (m.meal && p.seat) return;   // sat down already
-      left++; walkTo(p, lost ? s.lost[1] : q ? foot(q) : m.at[id], { delay: k * 80 + rnd(0, 220), v: id === 'umeko' ? 160 : id === 'michiyama' ? 75 : rnd(88, 115), done: () => { if (q) sit(p, q); there(); } });
+      left++; walkTo(p, lost ? s.lost[1] : q ? foot(q) : m.at[id], { delay: paced(k * 80 + rnd(0, 220)), v: id === 'umeko' ? 160 : id === 'michiyama' ? 75 : rnd(88, 115), done: () => { if (q) sit(p, q); there(); } });
     });
     there();
-    const late = (n) => { if (fin || S !== sc) return; if (n < 12 && [...sc.ppl.values()].some((p) => p.walk && !p.away)) { sc.t.push(setTimeout(() => late(n + 1), 400)); return; } left = 1; there(); };
-    S.t.push(setTimeout(() => late(0), 5200));   // a walk cut short (the hero sent elsewhere): on after 5 s all the same — those still on their way (a long way over) waited for a few seconds more
+    const late = (n) => { if (fin || S !== sc) return; if (n < 12 && [...sc.ppl.values()].some((p) => p.walk && !p.away)) { sc.t.push(setTimeout(() => late(n + 1), paced(400))); return; } left = 1; there(); };
+    S.t.push(setTimeout(() => late(0), paced(5200)));   // a walk cut short (the hero sent elsewhere): on after 5 s all the same — those still on their way (a long way over) waited for a few seconds more
   }
   // a ride on by train from みなと駅's platform next (t3's 電車 stop, 2026-11-23, the review: the words said the みなと港 train was in
   // at 二番線, the picture had the timetable's 白鷺 train): its train stands in at its track, doors open, from the stop before the ride
@@ -434,7 +438,7 @@ const CRUISE = (() => {
     if (s.bye) { farewell(t, s); return; }
     const ids = [...S.ppl.keys()].filter((id) => id !== 'takahashi');
     (s.after || []).forEach(([id, ja], k) => S.t.push(setTimeout(() => { if (TALK.on()) return; if (id === 'all') ids.forEach((q) => say(q, ja, 1800, { all: true })); else say(id, ja, undefined, { wait: 0 }); }, 300 + k * 650)));   // not over the next talk
-    if (meal(s)) { S.meal = Date.now() + 5000; S.t.push(setTimeout(() => { if (alive()) bar(); }, 5050)); round(); }   // they eat a while (at a table, or out of doors): tapped, each has a word for it
+    if (meal(s)) { S.meal = Date.now() + paced(5000); S.t.push(setTimeout(() => { if (alive()) bar(); }, paced(5000) + 50)); round(); }   // they eat a while (at a table, or out of doors): tapped, each has a word for it
     S.busy = false; bar();
   }
   const eating = () => Boolean(S && S.meal && Date.now() < S.meal);
@@ -449,11 +453,11 @@ const CRUISE = (() => {
     if (!way) { travel(s); return; }
     pend = s.at; S.busy = true; bar();
     const o = way.out(), top = (x) => (S.indoor ? x : Math.min(walkTop(S.place, x[0]), x[1]));
-    S.ppl.forEach((p) => walkTo(p, S.indoor ? o : [o[0] + rnd(-36, 36), top([o[0], o[1] + rnd(-6, 6)])], { delay: rnd(100, 700), v: rnd(95, 125), free: true }));
+    S.ppl.forEach((p) => walkTo(p, S.indoor ? o : [o[0] + rnd(-36, 36), top([o[0], o[1] + rnd(-6, 6)])], { delay: paced(rnd(100, 700)), v: rnd(95, 125), free: true }));
     const btn = S.yard.querySelector(`[data-act="go-place"][data-to="${s.at}"]`);
     if (btn) { yGo(btn, s.at); return; }
     const h = S.yard.querySelector('.yhero');   // a shop's door (食堂, 居酒屋), in or out
-    yHeroWalk(S.yard, o, () => { if (h) h.classList.add('out'); setTimeout(() => { yh.arrive = { from: yPlace, to: s.at }; go(PLACE_ROUTE[s.at]); }, 260); }, true);
+    yHeroWalk(S.yard, o, () => { if (h) h.classList.add('out'); setTimeout(() => { yh.arrive = { from: yPlace, to: s.at }; go(PLACE_ROUTE[s.at]); }, paced(260)); }, true);
   }
   const HOW = { bus: '🚌 大家一起搭公車去', train: '🚃 大家一起搭電車去' };   // how they go (a stop's go), else on foot
   function travel(s) {
@@ -466,8 +470,8 @@ const CRUISE = (() => {
       try { const h = JSON.parse(localStorage.getItem('nq_hero') || '{}') || {}; h[s.at] = { X: Math.round(start[0]), Y: Math.round(start[1]) }; localStorage.setItem('nq_hero', JSON.stringify(h)); } catch (e) { /* no storage */ }
       yh.arrive = s.go === 'train' && WAYS[`train>${s.at}`] ? { from: 'train', to: s.at } : null; yPlace = '';   // drawn anew there, where the bus or the walk brings him — off a train in from the station's side (みなと漁港: its sign to みなと駅), they behind him
       go(PLACE_ROUTE[s.at]);
-      setTimeout(() => { v.classList.remove('on'); setTimeout(() => v.remove(), 600); }, 500);
-    }, calm() ? 200 : 1500);
+      setTimeout(() => { v.classList.remove('on'); setTimeout(() => v.remove(), 600); }, paced(500));
+    }, paced(calm() ? 200 : 1500));
   }
 
   // ---- in: the ship tapped far out (asked first: a long one), in it comes ----
@@ -501,7 +505,7 @@ const CRUISE = (() => {
     yHeroWalk(y, [FOOT_W[0] - 70, 108], () => { yh.back = true; yh.turn = false; yHeroPlace(y); });
     yPop(y, x0, FAR.y - 34, 'ボーッ！'); SND.play('shiphorn', { vol: 0.45 });
     if (ship) ship.classList.add('sailing');
-    tween(3800, (u) => {   // nearer and nearer: larger as it comes (the scale grows by a ratio, the place moves on evenly)
+    tween(paced(3800), (u) => {   // nearer and nearer: larger as it comes (the scale grows by a ratio, the place moves on evenly)
       if (!ship) return;
       const s = FAR.s * Math.pow(1 / FAR.s, u), ax = x0 + (ANCHOR[0] - x0) * u, ay = FAR.y + (ANCHOR[1] - FAR.y) * u;
       ship.setAttribute('transform', xf(ax, ay, s));
@@ -509,7 +513,7 @@ const CRUISE = (() => {
       if (ship) { ship.classList.remove('sailing', 'far'); ship.removeAttribute('transform'); }
       yPop(y, 770, -70, 'ボーーッ！'); SND.play('shiphorn', { vol: 0.8 });
       if (front) front.style.opacity = '';
-      tween(800, (u) => { if (ramp) ramp.setAttribute('transform', rampT(u)); }, () => comeOff(t));
+      tween(paced(800), (u) => { if (ramp) ramp.setAttribute('transform', rampT(u)); }, () => comeOff(t));
     }, (u) => (u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2) * 0.35 + (1 - Math.pow(1 - u, 3)) * 0.65);
   }
   // three steps on the gangway's boards, someone going down or up it
@@ -525,10 +529,10 @@ const CRUISE = (() => {
       walkTo(p, FOOT_W, { path: [DOOR_W, FOOT_W], v: 70, done: () => {
         const off = offLine(t, id); if (off) say(id, off[1], 2600);
         const lost = s0.lost && s0.lost[0] === id; p.away = lost;
-        walkTo(p, lost ? s0.lost[1] : at[id], { delay: 500, v: id === 'umeko' ? 160 : 100, done: () => turnTo(p, g.pos[0]) });
+        walkTo(p, lost ? s0.lost[1] : at[id], { delay: paced(500), v: id === 'umeko' ? 160 : 100, done: () => turnTo(p, g.pos[0]) });
       } });
-    }, 900 + k * 850)));
-    S.t.push(setTimeout(() => { if (!alive()) return; S.busy = false; run(nextStop(t, 0)); }, 900 + ids.length * 850 + 2600));
+    }, paced(900 + k * 850))));
+    S.t.push(setTimeout(() => { if (!alive()) return; S.busy = false; run(nextStop(t, 0)); }, paced(900 + ids.length * 850 + 2600)));
   }
   // seen off: up the gangway one at a time with a last word, the gangway in, a blast, the ship away to the right; 高橋 waves it off
   function farewell(t, s) {
@@ -536,24 +540,24 @@ const CRUISE = (() => {
     S.quiet = true; bar();
     ids.forEach((id, k) => S.t.push(setTimeout(() => {
       const p = S.ppl.get(id); if (!p) return;
-      walkTo(p, FOOT_W, { v: 120, done: () => { say(id, bye[id] || 'さようなら〜！', 2400); treads(); walkTo(p, DOOR_W, { path: [FOOT_W, DOOR_W], v: 60, delay: 300, done: () => { p.el.classList.add('cr-gone'); S.t.push(setTimeout(() => { p.el.remove(); S.ppl.delete(id); }, 450)); } }); } });
-    }, k * 700)));
-    const after = ids.length * 700 + 4200, g = S.ppl.get('takahashi');
+      walkTo(p, FOOT_W, { v: 120, done: () => { say(id, bye[id] || 'さようなら〜！', 2400); treads(); walkTo(p, DOOR_W, { path: [FOOT_W, DOOR_W], v: 60, delay: paced(300), done: () => { p.el.classList.add('cr-gone'); S.t.push(setTimeout(() => { p.el.remove(); S.ppl.delete(id); }, paced(450))); } }); } });
+    }, paced(k * 700))));
+    const after = paced(ids.length * 700 + 4200), g = S.ppl.get('takahashi');
     S.t.push(setTimeout(() => {
       if (!alive()) return;
       const ship = y.querySelector('.cruise-ship'), front = y.querySelector('.cruise-front'), ramp = y.querySelector('.cruise-ramp');
-      tween(700, (u) => { if (ramp) ramp.setAttribute('transform', rampT(1 - u)); }, () => {
+      tween(paced(700), (u) => { if (ramp) ramp.setAttribute('transform', rampT(1 - u)); }, () => {
         if (front) front.style.opacity = '0';
         yPop(y, 770, -70, 'ボーーッ！'); SND.play('shiphorn', { vol: 0.8 });
         if (g) { turnTo(g, 400); g.el.classList.add('wave'); setTimeout(() => g.el.classList.remove('wave'), 1200); say('takahashi', 'さようなら〜！', 2400); }
         if (ship) ship.classList.add('sailing');
-        tween(4600, (u) => { if (ship) { ship.setAttribute('transform', `translate(${(900 * u).toFixed(1)} 0)`); ship.style.opacity = String(Math.min(1, (1 - u) * 4)); } }, () => {
+        tween(paced(4600), (u) => { if (ship) { ship.setAttribute('transform', `translate(${(900 * u).toFixed(1)} 0)`); ship.style.opacity = String(Math.min(1, (1 - u) * 4)); } }, () => {
           const r = result(t, (cs().on || {}).score), before = yenBalance(), first = !Object.values(cs().res || {}).some((x) => x && x.yen > 0);   // first: no pay before this (not a wallet spent down to 0)
           (cs().res = cs().res || {})[t.id] = { first: r.first, asks: r.asks, koto: r.koto, yen: r.yen, grade: r.grade, day: r.day }; state.koto.found['cruise-' + t.id] = r.koto;
           cs().done[t.id] = day(); cs().on = null; setLocal(FORCE, ''); saveState();
           if (ship) ship.remove();
           results(t, r, before, { first });
-          if (g) S.t.push(setTimeout(() => { if (alive()) walkTo(g, [ycam.YW / 2 + 60, 50], { v: 120, free: true, done: () => { g.el.remove(); S.ppl.delete('takahashi'); } }); }, 1600));
+          if (g) S.t.push(setTimeout(() => { if (alive()) walkTo(g, [ycam.YW / 2 + 60, 50], { v: 120, free: true, done: () => { g.el.remove(); S.ppl.delete('takahashi'); } }); }, paced(1600)));
           S.busy = false; S.quiet = false; bar();
         }, (u) => u * u);
       });
@@ -652,7 +656,7 @@ const CRUISE = (() => {
     S = fresh(yard, place);
     const way = from && from !== place ? WAYS[`${from}>${place}`] : null;
     const follow = (was.carry && was.pend === place) || (from === on.place && Boolean(way));   // taken there, or come along next door
-    if (follow) { on.place = place; saveLocal(); MUSIC.sync(); }   // the tour's music along with them (route synced it before they were here)
+    if (follow) { on.place = place; saveLocal(); MUSIC.sync(); if (typeof ICHIBA === 'object') ICHIBA.sync(); }   // the tour's music along with them, the 朝市 up for a market trip's (route drew and synced them before they were here)
     // taken there by bus to a stop the story has not opened yet (稲荷神社 before m8-1, 月の湯 before m4-1): open from now on, said
     // once (2026-11-23, spec §1.3) — the story's own opening still plays later, as m10-1's does with 白鷺城 open since m1-6
     if (follow && was.carry === 'bus' && BUS_PLACES.includes(place) && !busOpen(place)) { state.town.stops[place] = 1; saveState(); toast(`跟著導覽認識了${placeName(place)}，之後可以自己搭公車來`, 3600); }
@@ -660,15 +664,15 @@ const CRUISE = (() => {
       const [s, k] = rest(t, stepOf(t, on), place), ids = party(t), m = spots(s, k, ids), at = m.at; S.home = S.indoor ? null : crowdAt(s); S.eat = m.ring;
       if (follow && !calm()) {   // in behind him: by the way he came, or round him where the bus, the train or the walk brought him
         const in0 = was.carry ? [yh.X, yh.Y] : way.in()[0], near = (d) => (S.indoor ? isoClamp([in0[0] + rnd(-d, d), in0[1] + rnd(-d / 4, d / 4)], 1) : [in0[0] + rnd(-d, d), Math.min(walkTop(place, in0[0]), in0[1] + rnd(-4, 4))]);
-        walkTo(el('takahashi', near(20)), guideAt(s), { delay: 300, v: 130, free: true });
-        ids.forEach((id, j) => { const p = el(id, near(30)), q = m.seat[id]; p.el.classList.add('cr-in'); walkTo(p, q ? foot(q) : at[id], { delay: 400 + j * 160, v: rnd(100, 130), free: true, done: q && (() => sit(p, q)) }); });
+        walkTo(el('takahashi', near(20)), guideAt(s), { delay: paced(300), v: 130, free: true });
+        ids.forEach((id, j) => { const p = el(id, near(30)), q = m.seat[id]; p.el.classList.add('cr-in'); walkTo(p, q ? foot(q) : at[id], { delay: paced(400 + j * 160), v: rnd(100, 130), free: true, done: q && (() => sit(p, q)) }); });
       } else {   // there already: at a meal sat down (out of doors the rest round in their ring)
         el('takahashi', guideAt(s));
         ids.forEach((id) => { const p = el(id, at[id]), q = m.seat[id]; if (q) sit(p, q); });
         facing(s); round(); setTimeout(() => frameAll(s), 60);
       }
       if (follow && was.pend === place) {   // led here for the next stop: on to it once they are in
-        S.busy = true; S.t.push(setTimeout(() => { if (!alive()) return; S.busy = false; const i = nextStop(t, stepOf(t, cs().on)); if (t.stops[i].at === place) run(i); else bar(); }, calm() ? 300 : 400 + ids.length * 160 + 1600));
+        S.busy = true; S.t.push(setTimeout(() => { if (!alive()) return; S.busy = false; const i = nextStop(t, stepOf(t, cs().on)); if (t.stops[i].at === place) run(i); else bar(); }, paced(calm() ? 300 : 400 + ids.length * 160 + 1600)));
       }
     }
     bar();
@@ -720,5 +724,6 @@ const CRUISE = (() => {
   function force() { const t = trips().find((x) => !cs().done[x.id]); if (!t) return null; cs().on = null; saveState(); setLocal(FORCE, t.id); setLocal(TOLD, ''); return t; }
   function reset() { state.cruise = { done: {}, on: null, res: {} }; saveState(); setLocal(FORCE, ''); setLocal(TOLD, ''); }
   function skipTo(id) { const k = tripIdx(id); if (k < 0) return; state.cruise = { done: Object.fromEntries(trips().slice(0, k).map((t) => [t.id, '2000-01-01'])), on: null, res: {} }; saveState(); setLocal(FORCE, id); setLocal(TOLD, ''); }
-  return { out, docked, waiting, current, shipSvg, rampSvg, callHtml, mount, call: () => call(), start: () => start(), next: () => next(), who, face: talkFace, tag, opens, away, lines, chorus, tune, result, rankOf, card, guided, preview, force, reset, skipTo, person, party, boarding, trips: () => trips() };
+  return { out, docked, waiting, current, shipSvg, rampSvg, callHtml, mount, call: () => call(), start: () => start(), next: () => next(), who, face: talkFace, tag, opens, away, lines, chorus, tune, result, rankOf, card, guided, preview, force, reset, skipTo, person, party, boarding, trips: () => trips(),
+    setPace: (k) => { pace = k; } };   // the e2e tests' whole-trip tours: the tour's waits k of their real length (the app: 1, never set)
 })();

@@ -1872,7 +1872,7 @@ const SHRINE_TUNNEL = -410;
 function okuHtml() {
   const F = 236, SHU = ['#d6452f', '#5a2030'], SHU_D = ['#b23624', '#461a28'], CU = ['#6fa08c', '#1a2a3a'], CU_D = ['#4f8270', '#122034'], GOLD = ['#d9b04a', '#a88a4a'];
   const STONE = ['#a9a497', '#2c2e4c'], STONE_L = ['#c3bdb0', '#3a3c5e'], WOOD = ['#8a5a36', '#2a2040'], NIGHT = 'style="opacity:calc(1 - var(--md, var(--day, 1)))"';
-  const open = TOWNEV.isOpen('chaya', (TOWNEV.clock && TOWNEV.clock.h) ?? sceneHour());
+  const open = TOWNEV.isOpen('chaya', (TOWNEV.clock && TOWNEV.clock.h) ?? sceneHour()) || CRUISE.opens('oku');   // the cruise's group up here for its meal (t5): open for them whatever the hour
   // the town far below, through the gap in the trees: fields and roofs, the castle, the sea; its windows lit by night
   const view = `<path d="M930 160 C1010 152 1110 156 1200 150 V236 H930 Z" ${hc('#c4d2c0', '#1e2440')}/><path d="M930 160 C1010 152 1110 156 1200 150 V146 H930 Z" ${hc('#9cc4dc', '#1a2850')}/>
     ${[[948, 196], [972, 204], [996, 190], [1020, 210], [1046, 196], [1072, 214], [1150, 192], [1174, 206], [1188, 186], [962, 222], [1004, 226], [1160, 224]].map(([x, y], k) => `<rect x="${x}" y="${y}" width="${9 + (k % 3) * 2}" height="6" ${hc(['#e8e0d0', '#d8c8b0', '#c9d2dc'][k % 3], '#2a2c4c')}/><path d="M${x - 1} ${y} L${x + 4.5 + (k % 3)} ${y - 4} L${x + 10 + (k % 3) * 2} ${y} Z" ${hc(['#8a5a4a', '#5a6a8a', '#7a4a3a'][k % 3], '#1c1e3a')}/>`).join('')}

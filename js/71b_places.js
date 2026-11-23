@@ -294,7 +294,7 @@ const PLACE_USE = {
     { id: 'okuema', name: '狐狸繪馬', box: [608, 140, 696, 236], kind: 'do', go: [52, 122], back: 1, pose: 'look', say: 'きつねの かおの えまだ！', fx: 'okuema', fxc: 'jingle', ms: 2200 },
     { id: 'omokaru', name: 'おもかる石', box: [700, 160, 762, 236], kind: 'do', go: [130, 122], back: 1, pose: 'reach', fx: 'omokaru', fxc: 'lift', ms: 1800,
       pick: () => (Math.random() < 0.5 ? ['かるい！', 'おもかる石：比想像中輕——願望會實現！'] : ['おもい…！', 'おもかる石：比想像中重——再加把勁吧。']) },
-    { id: 'chaya', name: '茶屋', box: [900, 124, 1044, 236], kind: 'do', go: [370, 122], back: 1, pose: 'look', buy: 'chaya', when: () => TOWNEV.isOpen('chaya', (TOWNEV.clock && TOWNEV.clock.h) ?? sceneHour()) },
+    { id: 'chaya', name: '茶屋', box: [900, 124, 1044, 236], kind: 'do', go: [370, 122], back: 1, pose: 'look', buy: 'chaya', when: () => TOWNEV.isOpen('chaya', (TOWNEV.clock && TOWNEV.clock.h) ?? sceneHour()) || CRUISE.opens('oku') },   // open to the cruise's group at its meal here (t5)
     { id: 'view', name: '眺望', box: [1124, 120, 1200, 236], kind: 'do', go: [560, 118], back: 1, pose: 'look', say: 'まちが ぜんぶ みえる！' },
     { id: 'endai', name: '緣台', box: [1042, 200, 1126, 236], kind: 'sit', seats: [465, 503], top: 164, dep: 134 }],   // the 茶屋's bench under its red parasol, two to it (2026-11-23: the tour's meal there sits on it too)
   // 公民館 (2026-11-14): the notice board, the lost cat under it (the one on the poster), the flower beds, the nobori, the bikes,

@@ -160,7 +160,9 @@ function check(T, D, opts = {}) {
       if (t.needs && !ids.has(t.needs)) bad('ref', where, `needs no event ${t.needs}`);
       if (t.join && (!people[t.join] || people[t.join].from !== t.id)) bad('cruise', where, `${t.join} does not join on it`);
       const aboard = (id) => Boolean(people[id]) && tIdx(people[id].from) >= 0 && tIdx(people[id].from) <= k;
-      const sayer = (id, at) => { if (id === 'hero' || id === 'all' || cast[id]) return; if (!people[id]) bad('ref', at, `no one called ${id}`); else if (!aboard(id)) bad('cruise', at, `${id} joins on a later trip`); };
+      // who may speak on it: the hero, all of them, someone of the town (brought out: cast), a stall keeper at their stall (YATAI: the
+      // 朝市's, 奥社's 茶屋), a passenger already aboard
+      const sayer = (id, at) => { if (id === 'hero' || id === 'all' || cast[id] || (T.YATAI || {})[id]) return; if (!people[id]) bad('ref', at, `no one called ${id}`); else if (!aboard(id)) bad('cruise', at, `${id} joins on a later trip`); };
       const stops = t.stops || [], sids = new Set(); let asks = 0;
       stops.forEach((s) => {
         const sw = `${where}.${s.id}`;
