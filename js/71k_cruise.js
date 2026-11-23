@@ -44,8 +44,9 @@ const CRUISE = (() => {
   const out = () => Boolean(current() || waiting());
   const docked = () => Boolean(current());
   const people = () => C().PEOPLE;
-  // the group on a trip: all who joined by then, in the order they come down (the newest last)
-  const party = (t) => { const k = tripIdx(t.id), P = people(); return Object.keys(P).filter((id) => tripIdx(P[id].from) <= k).sort((a, b) => tripIdx(P[a].from) - tripIdx(P[b].from)); };
+  // the group on a trip: all who joined by then, in the order they come down (the newest last); one whose trip is not written yet
+  // (2026-11-23: the passengers written before their trips) is on none
+  const party = (t) => { const k = tripIdx(t.id), P = people(), on = (id) => tripIdx(P[id].from); return Object.keys(P).filter((id) => on(id) >= 0 && on(id) <= k).sort((a, b) => on(a) - on(b)); };
   const fits = (t) => (l) => unitI(l[0]) <= unitI(t.u);   // said by the trip's unit
   const offLine = (t, id) => (C().OFF[id] || []).filter(fits(t)).pop();
   const sayLines = (t, id) => (C().SAY[id] || []).filter(fits(t));

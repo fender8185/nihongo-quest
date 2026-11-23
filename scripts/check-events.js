@@ -124,16 +124,18 @@ function check(T, D, opts = {}) {
     });
   });
 
-  // the cruise ship (CRUISE): its passengers (a group that only grows: each joins on a trip), what they say (by unit), its trips
-  // one a unit in order, each with 20 reply choices or more, said only by those aboard by then; from the harbour back to it; a stop
-  // gone to by bus, train or on foot (go), a meal at a room's table (seat) or out of doors on the place's benches (eat)
+  // the cruise ship (CRUISE): its passengers (a group that only grows: each joins on a trip — or one still to be written, named as
+  // the trips are, t and its number, after the last: aboard none till then), what they say (by unit), its trips one a unit in
+  // order, each with 20 reply choices or more, said only by those aboard by then; from the harbour back to it; a stop gone to by
+  // bus, train or on foot (go), a meal at a room's table (seat) or out of doors on the place's benches (eat)
   const cr = T.CRUISE;
   if (cr) {
     const people = cr.PEOPLE || {}, trips = cr.TRIPS || [], tIdx = (id) => trips.findIndex((t) => t.id === id);
+    const tNo = (id) => Number((/^t(\d+)$/.exec(id) || [])[1]) || 0, toCome = (id) => tIdx(id) < 0 && tNo(id) > Math.max(0, ...trips.map((t) => tNo(t.id)));
     text(cr.ship || '', 'm1', 'cruise ship');
     Object.entries(people).forEach(([id, p]) => {
       if (cast[id]) bad('cruise', `cruise ${id}`, 'a passenger with a town person\'s id');
-      if (tIdx(p.from) < 0) bad('cruise', `cruise ${id}`, `joins on no trip ${p.from}`);
+      if (tIdx(p.from) < 0 && !toCome(p.from)) bad('cruise', `cruise ${id}`, `joins on no trip ${p.from}`);
       if (!(cr.OFF || {})[id]) bad('cruise', `cruise ${id}`, 'never comes off the ship (OFF)');
     });
     const said = (kind, id, ls) => (ls || []).forEach((l, i) => { const at = `cruise ${kind} ${id}#${i}`; if (unitIdx(l[0]) < 0) bad('ref', at, `no unit ${l[0]}`); else text(l[1], l[0], at); });
@@ -153,7 +155,7 @@ function check(T, D, opts = {}) {
       if (unitIdx(u) <= lastU) bad('cruise', where, 'the trips go on unit by unit'); lastU = unitIdx(u);
       if (t.needs && !ids.has(t.needs)) bad('ref', where, `needs no event ${t.needs}`);
       if (t.join && (!people[t.join] || people[t.join].from !== t.id)) bad('cruise', where, `${t.join} does not join on it`);
-      const aboard = (id) => Boolean(people[id]) && tIdx(people[id].from) <= k;
+      const aboard = (id) => Boolean(people[id]) && tIdx(people[id].from) >= 0 && tIdx(people[id].from) <= k;
       const sayer = (id, at) => { if (id === 'hero' || id === 'all' || cast[id]) return; if (!people[id]) bad('ref', at, `no one called ${id}`); else if (!aboard(id)) bad('cruise', at, `${id} joins on a later trip`); };
       const stops = t.stops || [], sids = new Set(); let asks = 0;
       stops.forEach((s) => {

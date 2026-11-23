@@ -327,7 +327,41 @@ def test_reload_mid_train_or_meal_resumes_without_double_score(b):
     assert r['after']['stop'] == 'bye' and sorted(r['after']['score']) == ['hi.0', 'nx.0', 'ok.0'], r
     assert {k: r['after']['score'][k] for k in was['on']['score']} == was['on']['score'], r
 
-TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
+# the four who join one a trip from t3 (spec §1.4): the trip each comes down on last, and its unit (one trip a unit)
+NEW = {'hikaru': ['t3', 'm3'], 'mizuno': ['t4', 'm4'], 'miyoko': ['t5', 'm5'], 'ajimura': ['t6', 'm6']}
+
+def test_four_new_passengers_join_one_a_trip_with_their_own_voice(b):
+    # 2026-11-23 (spec §1.4): one more a trip — ひかる on t3, 水野 on t4, ミヨコ on t5, 味村 on t6 — each drawn in the hero's parts,
+    # in a voice no one else on a tour has (all 30 Chirp 3 HD voices are someone's already: theirs said its own way, as
+    # 日本語教室's), with words from their own trip's unit on; aboard from that trip only (a trip not written yet: none)
+    r = json.loads(ev(b, """(() => { const C = TOWN.CRUISE, P = C.PEOPLE, NEW = """ + json.dumps(NEW) + """;
+      const tIdx = (id) => C.TRIPS.findIndex((t) => t.id === id), uIdx = (u) => TOWNEV.unitIdx(u), name = (w) => (CAST_VOICE[w] || [])[0];
+      const heard = new Set(['hero', 'takahashi', ...Object.keys(P)]);   // whom a tour hears: the passengers, the hero, 高橋, anyone on a trip
+      C.TRIPS.forEach((t) => t.stops.forEach((s) => { (s.lines || []).forEach((l) => { if (Array.isArray(l)) heard.add(l[0]); }); (s.after || []).forEach((l) => heard.add(l[0])); Object.keys(s.cast || {}).forEach((w) => heard.add(w)); }));
+      const full = (v) => JSON.stringify([v[0], v[1] || 1, v[2] || 0, v[3] || 0]);   // a voice as it is made and played
+      return JSON.stringify(Object.fromEntries(Object.entries(NEW).map(([id, [trip, u]]) => { const p = P[id] || {}, v = CAST_VOICE[id] || [], lk = p.look || {}, wear = p.wear || {};
+        return [id, { from: p.from, named: Boolean(p.name && p.kana && p.role),
+          look: Object.keys(HERO.LOOK0).filter((k) => HERO.norm(lk)[k] !== lk[k]), wear: ['head', 'face', 'neck', 'back', 'body'].filter((k) => wear[k] && !HERO.slots.includes(wear[k])),
+          chirp: Boolean(v[0]) && !OLD_VOICE.test(v[0]), shared: [...heard].filter((w) => w !== id && name(w) === v[0]), same: Object.keys(CAST_VOICE).filter((w) => w !== id && full(CAST_VOICE[w]) === full(v)),
+          first: ['OFF', 'SAY', 'EAT'].map((k) => (C[k][id] || []).map((l) => l[0]).sort((a, c) => uIdx(a) - uIdx(c))[0] || ''),
+          aboard: C.TRIPS.filter((t) => CRUISE.party(t).includes(id)).map((t) => t.id), due: C.TRIPS.filter((t) => tIdx(trip) >= 0 && tIdx(t.id) >= tIdx(trip)).map((t) => t.id),
+          unit: (C.TRIPS.find((t) => t.id === trip) || { u }).u }]; }))); })()"""))
+    for id, (trip, u) in NEW.items():
+        p = r[id]
+        assert p['from'] == trip and p['named'] and p['look'] == [] and p['wear'] == [], (id, p)   # every part one the hero's drawing has
+        assert p['chirp'] and p['shared'] == [] and p['same'] == [], (id, p)   # a Chirp 3 HD voice no one on a tour has, and no one's as it is
+        assert p['first'] == [u, u, u] and p['unit'] == u, (id, p)   # off the ship, chatting and at a meal: from their own trip's unit
+        assert p['aboard'] == p['due'], (id, p)   # on their own trip and the ones after, never before
+
+def test_the_old_members_have_something_new_to_say_each_unit(b):
+    # 2026-11-23 (spec §1.4): the chatter grows with the learner — each of the nine who came on t1 and t2 has something new to say
+    # on each trip from t3 to t6, in that unit's grammar
+    r = json.loads(ev(b, """(() => { const C = TOWN.CRUISE, old = Object.keys(C.PEOPLE).filter((id) => ['t1', 't2'].includes(C.PEOPLE[id].from));
+      return JSON.stringify({ old, missing: old.flatMap((id) => ['m3', 'm4', 'm5', 'm6'].filter((u) => !(C.SAY[id] || []).some((l) => l[0] === u)).map((u) => `${id} ${u}`)) }); })()"""))
+    assert sorted(r['old']) == sorted(['umeko', 'kaneda', 'yuta', 'rina', 'yoshimoto', 'ken', 'ai', 'michiyama', 'mike']), r
+    assert r['missing'] == [], r
+
+TESTS =[f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
 if __name__ == "__main__":
     srv = subprocess.Popen([sys.executable, os.path.join(ROOT, "tests", "e2e", "serve.py"), str(PORT), "--bind", "127.0.0.1"], cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

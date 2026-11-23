@@ -123,6 +123,11 @@ const CAST_VOICE = {
   tatsu: ['Sadachbia', 1.06], takahashi: ['Sadaltager', 0.95], sophia: ['Zephyr', 1], nishimura: ['Kore', 1.04], sano: ['Charon', 1],
   // the cruise's passengers (CRUISE, test 2026-11-12)
   kaneda: ['Enceladus', 0.92], umeko: ['Callirrhoe', 1.1], yuta: ['Autonoe', 0.91, 0, 3], rina: ['Leda', 1.06], yoshimoto: ['Charon', 1.06], ken: ['Orus', 1.02], ai: ['Erinome', 1.02], michiyama: ['Schedar', 0.96], mike: ['Puck', 1],
+  // the four who join on t3–t6 (2026-11-23): all 30 Chirp 3 HD voices are someone's already, so each has one no one on a tour
+  // has (not the passengers', 高橋's, the hero's, nor theirs who speak or are brought out on a trip), said its own way as
+  // 日本語教室's are — ひかる Fenrir's excitable (やきそば屋, 陳), 水野 Sadachbia's lively (タツ), ミヨコ Vindemiatrix's gentle
+  // slower and a semitone down (美咲), 味村 Algieba's smooth a semitone down (渚)
+  hikaru: ['Fenrir', 1.08], mizuno: ['Sadachbia', 1], miyoko: ['Vindemiatrix', 0.96, 0, -1], ajimura: ['Algieba', 0.98, 0, -1],
   // the 緣日's stall keepers (YATAI, test 2026-11-13)
   ojisan: ['Fenrir', 1.02], obasan: ['Aoede', 1.02], oniisan: ['Umbriel', 1.08],
   tako: ['Achird', 1.06], obaasan: ['Gacrux', 0.9], oneesan: ['Laomedeia', 1.04], ojiisan: ['Iapetus', 0.88],   // later the same day: someone at every stall
