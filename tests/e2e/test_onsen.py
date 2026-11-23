@@ -192,6 +192,28 @@ def test_short_of_money_the_way_home_is_named(b):
     assert r['home'] == [True, 1, None] and r['at'] == '#/today', r
     assert r['warn'] == [1, 420, 80], r
 
+# a machine never sells a ticket no train from there can take with the money left (the coordinator's ruling, fix round 2): 湯の花's 220
+# (森下: no scene) with 230 円 would leave 10, and the train to 白鷺 wants 40 more — refused as if too little money, the wallet untouched,
+# the way home named; 白鷺's 170 with 200 円 likewise (either train wants more than the 30 left); a ticket that one of 白鷺's trains can
+# take is sold, the other's button then refused in the card, the way home named, the ride by the other still there; みなと's always (2番線)
+def test_no_ticket_is_sold_that_cannot_be_ridden(b):
+    r = json.loads(ev(b, "(async () => { " + BEGIN + """ const out = {}, toasts = []; window.toast = (m) => toasts.push(m);
+      const buy = async (f) => { click(`.kb-fare[data-f="${f}"]`); await wait(60); click('.kb-pay'); await wait(200); };
+      const money = (n) => { state.purse = { spent: {}, book: {}, gift: n }; saveState(); };
+      money(230); await at('onsen'); RIDE.machine(yard(), 'yunohana'); await wait(100); await buy(220);
+      out.yunohana = [yenBalance(), RIDE.ticket(), Boolean(document.querySelector('.kb-card .os-home')), toasts.filter((m) => /書房/.test(m)).length]; CLASS.close();
+      toasts.length = 0; money(200); await at('castle'); RIDE.machine(yard(), 'shirasagi'); await wait(100); await buy(170);
+      out.castle = [yenBalance(), RIDE.ticket(), Boolean(document.querySelector('.kb-card .os-home')), toasts.filter((m) => /書房/.test(m)).length]; CLASS.close();
+      toasts.length = 0; money(290); RIDE.machine(yard(), 'shirasagi'); await wait(100); await buy(260); out.sold = [yenBalance(), (RIDE.ticket() || {}).fare];
+      click('.kb-ride[data-line="minato"]'); await wait(200);
+      out.refused = [Boolean(document.querySelector('.kb-card')), Boolean(document.querySelector('.kb-card .os-home')), Boolean(document.querySelector('.kb-ride[data-line="yama"]')), toasts.filter((m) => /書房/.test(m) && /50/.test(m)).length, RIDE.now() ? RIDE.now().to : null];
+      CLASS.close(); money(150); await at('station'); RIDE.machine(yard(), 'minato'); await wait(100); await buy(140); out.minato = [yenBalance(), (RIDE.ticket() || {}).fare]; CLASS.close();
+      return JSON.stringify(out); })()"""))
+    assert r['yunohana'] == [230, None, True, 1], r   # nothing taken, no ticket, the way home in the card and the toast
+    assert r['castle'] == [200, None, True, 1], r
+    assert r['sold'] == [30, 260] and r['refused'] == [True, True, True, 1, None], r   # みなと線 wants 50 more: refused in the card; やまなみ線 still to hand
+    assert r['minato'] == [10, 140], r   # みなと's: 2番線 to みなと港 takes any ticket
+
 TESTS = [f for n, f in sorted(globals().items()) if n.startswith('test_') and callable(f)]
 
 if __name__ == "__main__":
